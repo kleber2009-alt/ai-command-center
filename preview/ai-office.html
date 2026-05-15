@@ -1,0 +1,436 @@
+<!doctype html>
+<html lang="ru">
+<head>
+<meta charset="utf-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1" />
+<title>AI OFFICE — AI-офис под ключ для онлайн-школ</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=JetBrains+Mono:wght@400;500;700&display=swap" rel="stylesheet">
+<script src="https://cdn.tailwindcss.com"></script>
+<script>
+  tailwind.config = {
+    theme: {
+      extend: {
+        colors: {
+          ink: '#080808',
+          bone: '#f5f0e8',
+          lime: '#c8f060',
+          azure: '#60c8f0',
+        },
+        fontFamily: {
+          serif: ['Georgia', 'Times New Roman', 'serif'],
+          mono: ['"JetBrains Mono"', 'ui-monospace', 'monospace'],
+        },
+      }
+    }
+  }
+</script>
+<style>
+  html, body { background: #080808; color: #f5f0e8; }
+  body { font-family: Georgia, 'Times New Roman', serif; }
+  .font-mono { font-family: 'JetBrains Mono', ui-monospace, monospace; }
+  .outline-num {
+    -webkit-text-stroke: 1px #f5f0e8;
+    color: transparent;
+  }
+  .outline-num-lime {
+    -webkit-text-stroke: 1px #c8f060;
+    color: transparent;
+  }
+  .fade-up {
+    opacity: 0;
+    transform: translateY(24px);
+    transition: opacity .6s ease-out, transform .6s ease-out;
+  }
+  .fade-up.visible {
+    opacity: 1;
+    transform: translateY(0);
+  }
+  .faq-body { max-height: 0; overflow: hidden; transition: max-height .35s ease, opacity .25s ease, padding .25s ease; opacity: 0; }
+  .faq-item.open .faq-body { max-height: 500px; opacity: 1; }
+  .faq-item.open .faq-toggle { transform: rotate(45deg); }
+  .faq-toggle { transition: transform .25s ease; display: inline-block; }
+  ::selection { background: #c8f060; color: #080808; }
+</style>
+</head>
+<body class="bg-ink text-bone antialiased">
+
+<!-- NAV -->
+<header class="sticky top-0 z-50 bg-ink/90 backdrop-blur border-b border-bone/10">
+  <nav class="max-w-7xl mx-auto px-6 py-5 flex items-center justify-between">
+    <a href="#top" class="font-mono text-sm tracking-[0.2em] text-bone">AI OFFICE</a>
+    <ul class="hidden md:flex items-center gap-10 font-mono text-[11px] tracking-[0.18em] uppercase text-bone/70">
+      <li><a href="#how" class="hover:text-lime transition-colors">Как это работает</a></li>
+      <li><a href="#included" class="hover:text-lime transition-colors">Что входит</a></li>
+      <li><a href="#pricing" class="hover:text-lime transition-colors">Цены</a></li>
+      <li><a href="#faq" class="hover:text-lime transition-colors">FAQ</a></li>
+    </ul>
+    <a href="#pricing" class="font-mono text-[11px] tracking-[0.18em] uppercase border border-bone/30 px-4 py-2 hover:border-lime hover:text-lime transition-colors">Начать</a>
+  </nav>
+</header>
+
+<!-- HERO -->
+<section id="top" class="relative border-b border-bone/10">
+  <div class="max-w-7xl mx-auto px-6 pt-24 pb-32 md:pt-32 md:pb-40">
+    <div class="fade-up font-mono text-[11px] tracking-[0.25em] uppercase text-bone/50 mb-8">[ AI-офис под ключ — для онлайн-школ и инфобизнеса ]</div>
+    <h1 class="fade-up text-5xl md:text-7xl lg:text-8xl leading-[0.95] tracking-tight max-w-5xl">
+      Ваш бизнес работает на&nbsp;AI. <span class="italic text-lime">Пока вы спите.</span>
+    </h1>
+    <p class="fade-up mt-10 max-w-2xl text-lg md:text-xl text-bone/70 leading-relaxed">
+      Полностью настроим AI-офис для вашей онлайн-школы за 30 дней. Контент, поддержка, продажи и аналитика — на автопилоте. Без найма, без курсов, без боли.
+    </p>
+    <div class="fade-up mt-12 flex flex-col sm:flex-row gap-[2px]">
+      <a href="#pricing" class="bg-lime text-ink px-8 py-5 font-mono text-xs tracking-[0.2em] uppercase hover:bg-bone transition-colors text-center">Получить AI-офис →</a>
+      <a href="#included" class="border border-bone/30 text-bone px-8 py-5 font-mono text-xs tracking-[0.2em] uppercase hover:border-lime hover:text-lime transition-colors text-center">Что входит</a>
+    </div>
+    <div class="fade-up mt-24 grid grid-cols-2 md:grid-cols-4 gap-[2px] border-t border-bone/10 pt-10">
+      <div class="px-2"><div class="font-mono text-3xl md:text-4xl text-bone">30</div><div class="font-mono text-[10px] tracking-[0.2em] uppercase text-bone/50 mt-2">дней до запуска</div></div>
+      <div class="px-2"><div class="font-mono text-3xl md:text-4xl text-bone">7</div><div class="font-mono text-[10px] tracking-[0.2em] uppercase text-bone/50 mt-2">AI-инструментов</div></div>
+      <div class="px-2"><div class="font-mono text-3xl md:text-4xl text-bone">24/7</div><div class="font-mono text-[10px] tracking-[0.2em] uppercase text-bone/50 mt-2">работа без отдыха</div></div>
+      <div class="px-2"><div class="font-mono text-3xl md:text-4xl text-bone">0</div><div class="font-mono text-[10px] tracking-[0.2em] uppercase text-bone/50 mt-2">найма сотрудников</div></div>
+    </div>
+  </div>
+</section>
+
+<!-- PAIN -->
+<section class="border-b border-bone/10">
+  <div class="max-w-7xl mx-auto px-6 py-24 md:py-32">
+    <div class="fade-up font-mono text-[11px] tracking-[0.25em] uppercase text-bone/50 mb-6">[ 01 — Проблема ]</div>
+    <h2 class="fade-up text-4xl md:text-6xl leading-[1] tracking-tight max-w-4xl mb-16">
+      Если что-то из этого <span class="italic text-azure">про вас</span> — читайте дальше.
+    </h2>
+    <div class="grid md:grid-cols-3 gap-[2px]">
+      <div class="fade-up bg-bone/5 border border-bone/10 p-8 md:p-10 h-full">
+        <div class="outline-num text-7xl md:text-8xl leading-none mb-8">01</div>
+        <h3 class="text-2xl md:text-3xl mb-4 leading-tight">Вы делаете всё руками</h3>
+        <p class="text-bone/65 leading-relaxed">Письма, посты, ответы клиентам, отчёты. Каждый день одно и то же — а свободного времени нет.</p>
+      </div>
+      <div class="fade-up bg-bone/5 border border-bone/10 p-8 md:p-10 h-full">
+        <div class="outline-num text-7xl md:text-8xl leading-none mb-8">02</div>
+        <h3 class="text-2xl md:text-3xl mb-4 leading-tight">Команда тонет в рутине</h3>
+        <p class="text-bone/65 leading-relaxed">Менеджеры пишут шаблонные ответы, маркетологи постят вручную, продажники теряют лиды. Деньги утекают.</p>
+      </div>
+      <div class="fade-up bg-bone/5 border border-bone/10 p-8 md:p-10 h-full">
+        <div class="outline-num text-7xl md:text-8xl leading-none mb-8">03</div>
+        <h3 class="text-2xl md:text-3xl mb-4 leading-tight">Конкуренты уже на AI</h3>
+        <p class="text-bone/65 leading-relaxed">Пока вы думаете «нужен ли мне AI», они уже сократили издержки на 40% и удвоили выручку.</p>
+      </div>
+    </div>
+  </div>
+</section>
+
+<!-- SOLUTION -->
+<section id="included" class="border-b border-bone/10">
+  <div class="max-w-7xl mx-auto px-6 py-24 md:py-32">
+    <div class="fade-up font-mono text-[11px] tracking-[0.25em] uppercase text-bone/50 mb-6">[ 02 — Решение ]</div>
+    <h2 class="fade-up text-4xl md:text-6xl leading-[1] tracking-tight max-w-4xl mb-16">
+      Что вы <span class="italic text-lime">получите</span> за 30 дней.
+    </h2>
+    <div class="grid md:grid-cols-2 gap-[2px]">
+      <div class="fade-up bg-bone/5 border border-bone/10 p-8 md:p-12 h-full flex flex-col">
+        <div class="flex items-start justify-between gap-6 mb-8">
+          <div class="outline-num text-7xl md:text-8xl leading-none">01</div>
+          <div class="flex flex-wrap gap-[2px] justify-end max-w-[60%]">
+            <span class="font-mono text-[10px] tracking-[0.15em] uppercase border border-bone/20 px-2 py-1 text-bone/60">Контент</span>
+            <span class="font-mono text-[10px] tracking-[0.15em] uppercase border border-bone/20 px-2 py-1 text-bone/60">SMM</span>
+            <span class="font-mono text-[10px] tracking-[0.15em] uppercase border border-bone/20 px-2 py-1 text-bone/60">Email</span>
+          </div>
+        </div>
+        <h3 class="text-3xl md:text-4xl mb-5 leading-tight">ChatGPT для контента</h3>
+        <p class="text-bone/65 leading-relaxed text-lg">Связка GPT + ваш бренд-голос. Посты, рассылки, скрипты вебинаров, описания курсов — за минуты, не за дни.</p>
+      </div>
+      <div class="fade-up bg-bone/5 border border-bone/10 p-8 md:p-12 h-full flex flex-col">
+        <div class="flex items-start justify-between gap-6 mb-8">
+          <div class="outline-num text-7xl md:text-8xl leading-none">02</div>
+          <div class="flex flex-wrap gap-[2px] justify-end max-w-[60%]">
+            <span class="font-mono text-[10px] tracking-[0.15em] uppercase border border-bone/20 px-2 py-1 text-bone/60">Telegram</span>
+            <span class="font-mono text-[10px] tracking-[0.15em] uppercase border border-bone/20 px-2 py-1 text-bone/60">Сайт</span>
+            <span class="font-mono text-[10px] tracking-[0.15em] uppercase border border-bone/20 px-2 py-1 text-bone/60">Email</span>
+          </div>
+        </div>
+        <h3 class="text-3xl md:text-4xl mb-5 leading-tight">AI для поддержки клиентов</h3>
+        <p class="text-bone/65 leading-relaxed text-lg">Чат-бот на базе вашей базы знаний. Отвечает в Telegram, на сайте и в почте 24/7. Доводит до покупки.</p>
+      </div>
+      <div class="fade-up bg-bone/5 border border-bone/10 p-8 md:p-12 h-full flex flex-col">
+        <div class="flex items-start justify-between gap-6 mb-8">
+          <div class="outline-num text-7xl md:text-8xl leading-none">03</div>
+          <div class="flex flex-wrap gap-[2px] justify-end max-w-[60%]">
+            <span class="font-mono text-[10px] tracking-[0.15em] uppercase border border-bone/20 px-2 py-1 text-bone/60">Воронки</span>
+            <span class="font-mono text-[10px] tracking-[0.15em] uppercase border border-bone/20 px-2 py-1 text-bone/60">CRM</span>
+            <span class="font-mono text-[10px] tracking-[0.15em] uppercase border border-bone/20 px-2 py-1 text-bone/60">A/B</span>
+          </div>
+        </div>
+        <h3 class="text-3xl md:text-4xl mb-5 leading-tight">Автоматизированные воронки</h3>
+        <p class="text-bone/65 leading-relaxed text-lg">AI-сегментация лидов, персональные цепочки писем, динамические офферы. Конверсия x2 без увеличения трафика.</p>
+      </div>
+      <div class="fade-up bg-bone/5 border border-bone/10 p-8 md:p-12 h-full flex flex-col">
+        <div class="flex items-start justify-between gap-6 mb-8">
+          <div class="outline-num text-7xl md:text-8xl leading-none">04</div>
+          <div class="flex flex-wrap gap-[2px] justify-end max-w-[60%]">
+            <span class="font-mono text-[10px] tracking-[0.15em] uppercase border border-bone/20 px-2 py-1 text-bone/60">BI</span>
+            <span class="font-mono text-[10px] tracking-[0.15em] uppercase border border-bone/20 px-2 py-1 text-bone/60">Метрики</span>
+            <span class="font-mono text-[10px] tracking-[0.15em] uppercase border border-bone/20 px-2 py-1 text-bone/60">AI-инсайты</span>
+          </div>
+        </div>
+        <h3 class="text-3xl md:text-4xl mb-5 leading-tight">Аналитика-дашборд</h3>
+        <p class="text-bone/65 leading-relaxed text-lg">Один экран, где видно деньги, лидов, ретеншн и точки роста. AI подсказывает, что починить в первую очередь.</p>
+      </div>
+    </div>
+  </div>
+</section>
+
+<!-- HOW IT WORKS -->
+<section id="how" class="border-b border-bone/10">
+  <div class="max-w-7xl mx-auto px-6 py-24 md:py-32">
+    <div class="fade-up font-mono text-[11px] tracking-[0.25em] uppercase text-bone/50 mb-6">[ 03 — Процесс ]</div>
+    <h2 class="fade-up text-4xl md:text-6xl leading-[1] tracking-tight max-w-4xl mb-20">
+      От аудита до запуска — <span class="italic text-azure">30 дней</span>.
+    </h2>
+    <div class="relative">
+      <div class="absolute left-0 right-0 top-[88px] h-px bg-bone/15 hidden md:block"></div>
+      <div class="grid md:grid-cols-3 gap-[2px]">
+        <div class="fade-up relative bg-ink border border-bone/10 p-8 md:p-10 h-full">
+          <div class="font-mono text-[11px] tracking-[0.2em] uppercase text-lime mb-6">День 1–5</div>
+          <div class="relative z-10 mb-6"><div class="w-4 h-4 bg-lime hidden md:block"></div></div>
+          <div class="outline-num text-6xl leading-none mb-6">01</div>
+          <h3 class="text-3xl md:text-4xl mb-4 leading-tight">Аудит</h3>
+          <p class="text-bone/65 leading-relaxed">Разбираем ваш бизнес по швам: процессы, команда, метрики, узкие места. Составляем карту внедрения AI с точным ROI по каждому инструменту.</p>
+        </div>
+        <div class="fade-up relative bg-ink border border-bone/10 p-8 md:p-10 h-full">
+          <div class="font-mono text-[11px] tracking-[0.2em] uppercase text-lime mb-6">День 6–25</div>
+          <div class="relative z-10 mb-6"><div class="w-4 h-4 bg-lime hidden md:block"></div></div>
+          <div class="outline-num text-6xl leading-none mb-6">02</div>
+          <h3 class="text-3xl md:text-4xl mb-4 leading-tight">Настройка</h3>
+          <p class="text-bone/65 leading-relaxed">Подключаем и обучаем все AI-инструменты под ваш бренд-голос, продукты и аудиторию. Интегрируем с вашей CRM, рассылками и сайтом.</p>
+        </div>
+        <div class="fade-up relative bg-ink border border-bone/10 p-8 md:p-10 h-full">
+          <div class="font-mono text-[11px] tracking-[0.2em] uppercase text-lime mb-6">День 26–30</div>
+          <div class="relative z-10 mb-6"><div class="w-4 h-4 bg-lime hidden md:block"></div></div>
+          <div class="outline-num text-6xl leading-none mb-6">03</div>
+          <h3 class="text-3xl md:text-4xl mb-4 leading-tight">Запуск</h3>
+          <p class="text-bone/65 leading-relaxed">Передаём готовый AI-офис, обучаем команду, контролируем первую неделю работы. Если что-то ломается — чиним сами.</p>
+        </div>
+      </div>
+    </div>
+  </div>
+</section>
+
+<!-- PRICING -->
+<section id="pricing" class="border-b border-bone/10">
+  <div class="max-w-7xl mx-auto px-6 py-24 md:py-32">
+    <div class="fade-up font-mono text-[11px] tracking-[0.25em] uppercase text-bone/50 mb-6">[ 04 — Цены ]</div>
+    <h2 class="fade-up text-4xl md:text-6xl leading-[1] tracking-tight max-w-4xl mb-6">
+      Один платёж. <span class="italic text-lime">Никаких подписок.</span>
+    </h2>
+    <p class="fade-up text-bone/60 max-w-2xl text-lg mb-16">Платите один раз — пользуетесь годами. Все лицензии на AI-инструменты остаются у вас.</p>
+
+    <div class="grid md:grid-cols-2 gap-[2px]">
+      <div class="fade-up h-full p-10 md:p-12 flex flex-col bg-bone/5 border border-bone/10">
+        <div class="font-mono text-[11px] tracking-[0.25em] uppercase text-bone/50 mb-4">Тариф Start</div>
+        <div class="flex items-baseline gap-2 mb-6"><span class="font-mono text-6xl md:text-7xl text-bone">$990</span></div>
+        <p class="text-bone/65 mb-10 leading-relaxed text-lg">Базовая настройка для тех, кто хочет попробовать AI без больших вложений.</p>
+        <ul class="space-y-3 mb-10 flex-1">
+          <li class="flex items-start gap-3 text-bone/80"><span class="font-mono mt-1 text-xs text-azure">→</span><span>Базовая настройка AI-офиса</span></li>
+          <li class="flex items-start gap-3 text-bone/80"><span class="font-mono mt-1 text-xs text-azure">→</span><span>3 AI-инструмента на выбор</span></li>
+          <li class="flex items-start gap-3 text-bone/80"><span class="font-mono mt-1 text-xs text-azure">→</span><span>Обучение по бренд-голосу</span></li>
+          <li class="flex items-start gap-3 text-bone/80"><span class="font-mono mt-1 text-xs text-azure">→</span><span>Интеграция с одной платформой</span></li>
+          <li class="flex items-start gap-3 text-bone/80"><span class="font-mono mt-1 text-xs text-azure">→</span><span>Передача доступов и инструкций</span></li>
+          <li class="flex items-start gap-3 text-bone/80"><span class="font-mono mt-1 text-xs text-azure">→</span><span>7 дней поддержки после запуска</span></li>
+        </ul>
+        <a href="#cta" class="block text-center font-mono text-xs tracking-[0.2em] uppercase px-8 py-5 transition-colors border border-bone/30 text-bone hover:border-lime hover:text-lime">Выбрать Start</a>
+      </div>
+
+      <div class="fade-up h-full p-10 md:p-12 flex flex-col border-2 border-lime bg-ink relative">
+        <div class="absolute -top-px right-8 bg-lime text-ink font-mono text-[10px] tracking-[0.2em] uppercase px-3 py-1">Рекомендуем</div>
+        <div class="font-mono text-[11px] tracking-[0.25em] uppercase text-bone/50 mb-4">Тариф Pro</div>
+        <div class="flex items-baseline gap-2 mb-6"><span class="font-mono text-6xl md:text-7xl text-bone">$2490</span></div>
+        <p class="text-bone/65 mb-10 leading-relaxed text-lg">Полный AI-офис под ключ. Всё, что нужно, чтобы бизнес работал сам.</p>
+        <ul class="space-y-3 mb-10 flex-1">
+          <li class="flex items-start gap-3 text-bone/80"><span class="font-mono mt-1 text-xs text-lime">→</span><span>Полный AI-офис под ключ</span></li>
+          <li class="flex items-start gap-3 text-bone/80"><span class="font-mono mt-1 text-xs text-lime">→</span><span>7 AI-инструментов в связке</span></li>
+          <li class="flex items-start gap-3 text-bone/80"><span class="font-mono mt-1 text-xs text-lime">→</span><span>Обучение бренд-голосу и продуктам</span></li>
+          <li class="flex items-start gap-3 text-bone/80"><span class="font-mono mt-1 text-xs text-lime">→</span><span>Интеграция с CRM, рассылками, сайтом</span></li>
+          <li class="flex items-start gap-3 text-bone/80"><span class="font-mono mt-1 text-xs text-lime">→</span><span>Персональные воронки и сегменты</span></li>
+          <li class="flex items-start gap-3 text-bone/80"><span class="font-mono mt-1 text-xs text-lime">→</span><span>Аналитика-дашборд с AI-инсайтами</span></li>
+          <li class="flex items-start gap-3 text-bone/80"><span class="font-mono mt-1 text-xs text-lime">→</span><span>30 дней сопровождения после запуска</span></li>
+          <li class="flex items-start gap-3 text-bone/80"><span class="font-mono mt-1 text-xs text-lime">→</span><span>Приоритетная техподдержка</span></li>
+        </ul>
+        <a href="#cta" class="block text-center font-mono text-xs tracking-[0.2em] uppercase px-8 py-5 transition-colors bg-lime text-ink hover:bg-bone">Выбрать Pro</a>
+      </div>
+    </div>
+  </div>
+</section>
+
+<!-- TESTIMONIALS -->
+<section class="border-b border-bone/10">
+  <div class="max-w-7xl mx-auto px-6 py-24 md:py-32">
+    <div class="fade-up font-mono text-[11px] tracking-[0.25em] uppercase text-bone/50 mb-6">[ 05 — Кейсы ]</div>
+    <h2 class="fade-up text-4xl md:text-6xl leading-[1] tracking-tight max-w-4xl mb-16">
+      Что говорят <span class="italic text-azure">владельцы школ</span>.
+    </h2>
+    <div class="grid md:grid-cols-3 gap-[2px]">
+      <figure class="fade-up bg-bone/5 border border-bone/10 p-8 md:p-10 h-full flex flex-col">
+        <div class="text-5xl text-lime leading-none mb-6">&ldquo;</div>
+        <blockquote class="text-xl md:text-2xl leading-snug flex-1 mb-8">За месяц закрыли вопрос с поддержкой клиентов — бот отвечает на 80% запросов, оставшиеся 20% идут менеджеру с готовым контекстом. Сэкономили двух человек в штате.</blockquote>
+        <figcaption class="border-t border-bone/15 pt-5">
+          <div class="text-lg">Анна Воронова</div>
+          <div class="font-mono text-[10px] tracking-[0.18em] uppercase text-bone/55 mt-1">Школа дизайна, 12k учеников</div>
+        </figcaption>
+      </figure>
+      <figure class="fade-up bg-bone/5 border border-bone/10 p-8 md:p-10 h-full flex flex-col">
+        <div class="text-5xl text-lime leading-none mb-6">&ldquo;</div>
+        <blockquote class="text-xl md:text-2xl leading-snug flex-1 mb-8">Раньше я писал прогревы по три дня. Теперь — час на бриф, час на правки, рассылка ушла. Выручка с запусков +37% за квартал.</blockquote>
+        <figcaption class="border-t border-bone/15 pt-5">
+          <div class="text-lg">Михаил Резников</div>
+          <div class="font-mono text-[10px] tracking-[0.18em] uppercase text-bone/55 mt-1">Курсы по копирайтингу</div>
+        </figcaption>
+      </figure>
+      <figure class="fade-up bg-bone/5 border border-bone/10 p-8 md:p-10 h-full flex flex-col">
+        <div class="text-5xl text-lime leading-none mb-6">&ldquo;</div>
+        <blockquote class="text-xl md:text-2xl leading-snug flex-1 mb-8">Дашборд показывает то, что я раньше собирала вручную в десяти таблицах. И главное — AI говорит, где у меня дыра в воронке. Реально как штатный аналитик.</blockquote>
+        <figcaption class="border-t border-bone/15 pt-5">
+          <div class="text-lg">Екатерина Лагутина</div>
+          <div class="font-mono text-[10px] tracking-[0.18em] uppercase text-bone/55 mt-1">Онлайн-школа английского</div>
+        </figcaption>
+      </figure>
+    </div>
+  </div>
+</section>
+
+<!-- FAQ -->
+<section id="faq" class="border-b border-bone/10">
+  <div class="max-w-5xl mx-auto px-6 py-24 md:py-32">
+    <div class="fade-up font-mono text-[11px] tracking-[0.25em] uppercase text-bone/50 mb-6">[ 06 — FAQ ]</div>
+    <h2 class="fade-up text-4xl md:text-6xl leading-[1] tracking-tight mb-16">
+      Частые <span class="italic text-lime">вопросы</span>.
+    </h2>
+    <div class="border-t border-bone/15" id="faq-list">
+      <div class="faq-item open border-b border-bone/15">
+        <button class="faq-trigger w-full flex items-start justify-between gap-8 py-7 text-left">
+          <div class="flex items-start gap-6 flex-1">
+            <span class="font-mono text-[11px] tracking-[0.2em] text-bone/40 mt-2">01</span>
+            <span class="text-2xl md:text-3xl leading-snug">Что если я не разбираюсь в AI?</span>
+          </div>
+          <span class="faq-toggle font-mono text-2xl text-bone/70 mt-1">+</span>
+        </button>
+        <div class="faq-body"><p class="pb-7 pl-14 pr-10 text-bone/70 leading-relaxed text-lg max-w-3xl">Это нормально. В этом и смысл услуги: вы платите за то, чтобы не разбираться. Мы настраиваем, обучаем команду, оставляем понятные инструкции. От вас — доступ к аккаунтам и час на бриф.</p></div>
+      </div>
+      <div class="faq-item border-b border-bone/15">
+        <button class="faq-trigger w-full flex items-start justify-between gap-8 py-7 text-left">
+          <div class="flex items-start gap-6 flex-1">
+            <span class="font-mono text-[11px] tracking-[0.2em] text-bone/40 mt-2">02</span>
+            <span class="text-2xl md:text-3xl leading-snug">Сколько на самом деле длится внедрение?</span>
+          </div>
+          <span class="faq-toggle font-mono text-2xl text-bone/70 mt-1">+</span>
+        </button>
+        <div class="faq-body"><p class="pb-7 pl-14 pr-10 text-bone/70 leading-relaxed text-lg max-w-3xl">Тариф Pro — 30 календарных дней от старта до передачи. Start — до 14 дней. Если у вас сложная CRM или нестандартные интеграции, на этапе аудита мы это обсудим и пропишем в договоре.</p></div>
+      </div>
+      <div class="faq-item border-b border-bone/15">
+        <button class="faq-trigger w-full flex items-start justify-between gap-8 py-7 text-left">
+          <div class="flex items-start gap-6 flex-1">
+            <span class="font-mono text-[11px] tracking-[0.2em] text-bone/40 mt-2">03</span>
+            <span class="text-2xl md:text-3xl leading-snug">Подойдёт ли это моей школе?</span>
+          </div>
+          <span class="faq-toggle font-mono text-2xl text-bone/70 mt-1">+</span>
+        </button>
+        <div class="faq-body"><p class="pb-7 pl-14 pr-10 text-bone/70 leading-relaxed text-lg max-w-3xl">Если вы продаёте онлайн-обучение, у вас есть база клиентов и хотя бы один менеджер — да. Мы работали со школами от 500 до 50 000 учеников. На аудите честно скажем, есть ли смысл.</p></div>
+      </div>
+      <div class="faq-item border-b border-bone/15">
+        <button class="faq-trigger w-full flex items-start justify-between gap-8 py-7 text-left">
+          <div class="flex items-start gap-6 flex-1">
+            <span class="font-mono text-[11px] tracking-[0.2em] text-bone/40 mt-2">04</span>
+            <span class="text-2xl md:text-3xl leading-snug">А если я хочу заменить всю команду на AI?</span>
+          </div>
+          <span class="faq-toggle font-mono text-2xl text-bone/70 mt-1">+</span>
+        </button>
+        <div class="faq-body"><p class="pb-7 pl-14 pr-10 text-bone/70 leading-relaxed text-lg max-w-3xl">Не сработает и не нужно. AI заменяет рутину, а не людей. Лучший результат — когда AI снимает 60–80% задач, а команда фокусируется на стратегии, продукте и клиентах высокого чека.</p></div>
+      </div>
+      <div class="faq-item border-b border-bone/15">
+        <button class="faq-trigger w-full flex items-start justify-between gap-8 py-7 text-left">
+          <div class="flex items-start gap-6 flex-1">
+            <span class="font-mono text-[11px] tracking-[0.2em] text-bone/40 mt-2">05</span>
+            <span class="text-2xl md:text-3xl leading-snug">Что включает поддержка после запуска?</span>
+          </div>
+          <span class="faq-toggle font-mono text-2xl text-bone/70 mt-1">+</span>
+        </button>
+        <div class="faq-body"><p class="pb-7 pl-14 pr-10 text-bone/70 leading-relaxed text-lg max-w-3xl">В тарифе Pro — 30 дней: правки промптов, донастройка воронок, обучение новых сотрудников, реакция на инциденты в течение 4 часов. Дальше — по запросу или абонентка.</p></div>
+      </div>
+    </div>
+  </div>
+</section>
+
+<!-- FINAL CTA -->
+<section id="cta" class="bg-ink border-b border-bone/10">
+  <div class="max-w-7xl mx-auto px-6 py-32 md:py-48 text-center">
+    <div class="fade-up font-mono text-[11px] tracking-[0.25em] uppercase text-lime mb-10">[ Готовы? ]</div>
+    <h2 class="fade-up text-5xl md:text-8xl leading-[0.95] tracking-tight max-w-5xl mx-auto">
+      Через 30 дней ваш бизнес <span class="italic text-lime">работает без вас</span>.
+    </h2>
+    <p class="fade-up mt-10 text-lg md:text-xl text-bone/60 max-w-2xl mx-auto leading-relaxed">
+      Оставьте заявку — назначим короткий звонок, посмотрим на ваши процессы и скажем, какой тариф подойдёт.
+    </p>
+    <a href="mailto:hello@ai-office.io" class="fade-up inline-block mt-12 bg-lime text-ink px-12 py-6 font-mono text-xs tracking-[0.25em] uppercase hover:bg-bone transition-colors">Запустить AI-офис →</a>
+    <div class="fade-up mt-10 font-mono text-[11px] tracking-[0.2em] uppercase text-bone/40">Без обязательств · Аудит бесплатно</div>
+  </div>
+</section>
+
+<!-- FOOTER -->
+<footer class="bg-ink">
+  <div class="max-w-7xl mx-auto px-6 py-16">
+    <div class="grid md:grid-cols-4 gap-[2px]">
+      <div class="md:col-span-2 pr-6">
+        <div class="font-mono text-sm tracking-[0.2em] text-bone mb-6">AI OFFICE</div>
+        <p class="text-bone/55 leading-relaxed max-w-md">AI-офис под ключ для онлайн-школ и инфобизнеса. Внедряем, обучаем, сопровождаем.</p>
+      </div>
+      <div>
+        <div class="font-mono text-[10px] tracking-[0.2em] uppercase text-bone/40 mb-5">Навигация</div>
+        <ul class="space-y-3 text-bone/75">
+          <li><a href="#how" class="hover:text-lime transition-colors">Как это работает</a></li>
+          <li><a href="#included" class="hover:text-lime transition-colors">Что входит</a></li>
+          <li><a href="#pricing" class="hover:text-lime transition-colors">Цены</a></li>
+          <li><a href="#faq" class="hover:text-lime transition-colors">FAQ</a></li>
+        </ul>
+      </div>
+      <div>
+        <div class="font-mono text-[10px] tracking-[0.2em] uppercase text-bone/40 mb-5">Контакты</div>
+        <ul class="space-y-3 text-bone/75">
+          <li><a href="mailto:hello@ai-office.io" class="hover:text-lime transition-colors">hello@ai-office.io</a></li>
+          <li><a href="#" class="hover:text-lime transition-colors">Telegram</a></li>
+        </ul>
+      </div>
+    </div>
+    <div class="mt-16 pt-8 border-t border-bone/10 flex flex-col md:flex-row gap-4 justify-between font-mono text-[10px] tracking-[0.2em] uppercase text-bone/40">
+      <div>© 2026 AI OFFICE. Все права защищены.</div>
+      <div>Сделано вручную. Запущено на автопилоте.</div>
+    </div>
+  </div>
+</footer>
+
+<script>
+  // Fade-up on scroll
+  const io = new IntersectionObserver((entries) => {
+    entries.forEach((e) => {
+      if (e.isIntersecting) {
+        e.target.classList.add('visible');
+        io.unobserve(e.target);
+      }
+    });
+  }, { rootMargin: '-80px 0px', threshold: 0.05 });
+  document.querySelectorAll('.fade-up').forEach((el, i) => {
+    el.style.transitionDelay = (i % 4) * 80 + 'ms';
+    io.observe(el);
+  });
+
+  // FAQ accordion
+  document.querySelectorAll('.faq-trigger').forEach((btn) => {
+    btn.addEventListener('click', () => {
+      const item = btn.parentElement;
+      const wasOpen = item.classList.contains('open');
+      document.querySelectorAll('.faq-item').forEach((i) => i.classList.remove('open'));
+      if (!wasOpen) item.classList.add('open');
+    });
+  });
+</script>
+</body>
+</html>
