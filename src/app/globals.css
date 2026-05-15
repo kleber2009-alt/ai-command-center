@@ -5,3 +5,18 @@
 @import url('https://fonts.googleapis.com/css2?family=JetBrains+Mono:wght@400;500;700&display=swap');
 
 * { box-sizing: border-box; }
+
+html, body {
+  background: #080808;
+  color: #f5f0e8;
+}
+
+.outline-num {
+  -webkit-text-stroke: 1px #f5f0e8;
+  color: transparent;
+}
+
+.outline-num-lime {
+  -webkit-text-stroke: 1px #c8f060;
+  color: transparent;
+}
