@@ -1,12 +1,5 @@
 import { NextRequest, NextResponse } from 'next/server'
-import {
-  YoutubeTranscript,
-  YoutubeTranscriptDisabledError,
-  YoutubeTranscriptNotAvailableError,
-  YoutubeTranscriptNotAvailableLanguageError,
-  YoutubeTranscriptVideoUnavailableError,
-  YoutubeTranscriptTooManyRequestError,
-} from 'youtube-transcript'
+import { fetchYoutubeCaptions, getYoutubeVideoId, YoutubeCaptionsError } from '@/lib/youtube-captions'
 import { getServerSupabase, makeTitle, Paragraph } from '@/lib/transcripts-db'
 
 export const maxDuration = 60
@@ -22,10 +15,8 @@ type Ok = {
 type Err = { error: string; status: number }
 type Result = Ok | Err
 
-const YT_RE = /(?:youtube\.com\/(?:watch\?v=|shorts\/|embed\/)|youtu\.be\/)([\w-]{11})/i
-
 function isYoutube(url: string): boolean {
-  return YT_RE.test(url)
+  return getYoutubeVideoId(url) !== null
 }
 
 function groupSegmentsIntoParagraphs(
@@ -66,61 +57,38 @@ function decodeHtmlEntities(s: string): string {
 }
 
 async function fetchYoutube(url: string, language: 'auto' | 'ru' | 'en'): Promise<Result> {
-  const fetchOpts = language === 'auto' ? undefined : { lang: language }
-  let segments
   try {
-    segments = await YoutubeTranscript.fetchTranscript(url, fetchOpts)
+    const { segments, language: detectedLang } = await fetchYoutubeCaptions(url, language)
+    if (segments.length === 0) {
+      return { error: 'YouTube вернул пустые субтитры', status: 400 }
+    }
+    const normalized = segments.map(s => ({
+      text: decodeHtmlEntities(s.text).trim(),
+      offset: s.offset,
+      duration: s.duration,
+    }))
+    const flatTranscript = normalized.map(s => s.text).join(' ')
+    const paragraphs = groupSegmentsIntoParagraphs(normalized)
+    const last = normalized[normalized.length - 1]
+    const duration = (last.offset + last.duration) / 1000
+
+    return {
+      transcript: flatTranscript,
+      paragraphs,
+      duration,
+      detectedLanguage: detectedLang,
+      source: 'youtube',
+    }
   } catch (e: any) {
-    if (e instanceof YoutubeTranscriptDisabledError) {
-      return { error: 'У этого видео отключены субтитры на YouTube', status: 400 }
+    if (e instanceof YoutubeCaptionsError) {
+      const status = e.code === 'fetch-blocked' ? 503 : 400
+      const hint =
+        e.code === 'fetch-blocked'
+          ? '. YouTube блокирует серверные IP — попробуйте позже или используйте прямую ссылку на mp3/mp4'
+          : ''
+      return { error: e.message + hint, status }
     }
-    if (e instanceof YoutubeTranscriptNotAvailableError) {
-      return { error: 'У этого видео нет субтитров на YouTube', status: 400 }
-    }
-    if (e instanceof YoutubeTranscriptNotAvailableLanguageError) {
-      if (language !== 'auto') {
-        try {
-          segments = await YoutubeTranscript.fetchTranscript(url)
-        } catch {
-          return {
-            error: `Субтитры на «${language}» недоступны, и автоязык тоже не получилось получить`,
-            status: 400,
-          }
-        }
-      } else {
-        return { error: 'Субтитры на запрошенном языке недоступны', status: 400 }
-      }
-    } else if (e instanceof YoutubeTranscriptVideoUnavailableError) {
-      return { error: 'Видео недоступно (приватное, удалено или с ограничением региона)', status: 400 }
-    } else if (e instanceof YoutubeTranscriptTooManyRequestError) {
-      return { error: 'YouTube временно блокирует запросы. Попробуйте позже', status: 429 }
-    } else {
-      return { error: `YouTube: ${e?.message || 'неизвестная ошибка'}`, status: 500 }
-    }
-  }
-
-  if (!segments || segments.length === 0) {
-    return { error: 'Пустой транскрипт от YouTube', status: 400 }
-  }
-
-  const normalized = segments.map(s => ({
-    text: decodeHtmlEntities(s.text).trim(),
-    offset: s.offset,
-    duration: s.duration,
-  }))
-
-  const flatTranscript = normalized.map(s => s.text).join(' ')
-  const paragraphs = groupSegmentsIntoParagraphs(normalized)
-  const last = normalized[normalized.length - 1]
-  const duration = (last.offset + last.duration) / 1000
-  const detectedLanguage = (segments[0] as any)?.lang ?? null
-
-  return {
-    transcript: flatTranscript,
-    paragraphs,
-    duration,
-    detectedLanguage,
-    source: 'youtube',
+    return { error: e?.message || 'Ошибка YouTube', status: 500 }
   }
 }
 

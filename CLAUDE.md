@@ -18,8 +18,14 @@ No test runner is configured.
 The app fails silently / falls back to demo data when these are missing — set them in `.env.local`:
 
 - `NEXT_PUBLIC_SUPABASE_URL`, `NEXT_PUBLIC_SUPABASE_ANON_KEY` — used by the browser client in `src/lib/supabase.ts`.
-- `SUPABASE_SERVICE_KEY` — used **only** by the server route `src/app/api/metrics/route.ts`. Do not expose this to the client.
-- `ANTHROPIC_API_KEY` — used by `src/app/api/command/route.ts` to call `api.anthropic.com`. Without it, the route returns a single fallback task with a setup-error message.
+- `SUPABASE_SERVICE_KEY` — used by `src/app/api/metrics/route.ts` and by the `/api/transcribe*` routes through `src/lib/transcripts-db.ts`. Do not expose this to the client.
+- `ANTHROPIC_API_KEY` — used by `src/app/api/command/route.ts`, `src/app/api/transcribe/summarize/route.ts`, and `src/app/api/transcribe/translate/route.ts`. Without it, those routes return a setup-error message.
+- `DEEPGRAM_API_KEY` — used by `src/app/api/transcribe/route.ts` for any non-YouTube URL (direct media files). YouTube goes through the `youtube-transcript` npm package and does **not** need this key.
+
+## Supabase migrations
+
+`supabase/migrations/` contains the SQL the user is expected to run manually in the Supabase SQL Editor. Currently:
+- `001_transcripts.sql` creates the `transcripts` table used by `/transcribe` history. The feature degrades gracefully when this table or the env vars are missing — `getServerSupabase()` returns `null` and saves/history just no-op.
 
 ## Architecture
 
@@ -33,9 +39,14 @@ Next.js 14 App Router + React 18 + TypeScript + Tailwind. UI strings are Russian
 1. On mount, `loadMetrics()` GETs `/api/metrics`. On failure it falls back to hardcoded demo data — don't remove this fallback unless the user explicitly asks.
 2. "Запустить команду" button calls `runTeam()`, which loops through `AI_AGENTS` from `src/lib/agents.ts` **sequentially** (not in parallel) with an artificial 800–1400 ms delay per agent to animate the "thinking → done" states. Each iteration POSTs to `/api/command` and accumulates returned tasks into local state.
 
-**Two API routes**:
+**API routes**:
 - `GET /api/metrics` — server-side Supabase query using the service key. Reads `users`, `progress` (status='completed'), `subscriptions` (status='active') and computes MRR from `planPrices = { pro: 29, builder: 79, architect: 199 }`. Several outputs (`achieved`, `monthGoal`, `dailyNeeded`, `goalPercent`) are currently **hardcoded** — they are not yet derived from real data.
 - `POST /api/command` — proxy to Anthropic Messages API (`claude-haiku-4-5-20251001`, `max_tokens: 300`). Request body is `{ agentId }`. The route picks a Russian prompt from `AGENT_PROMPTS` keyed by `agentId` and instructs the model to return **only** a JSON array of `{text, impact}`. The parser strips markdown fences before `JSON.parse` — keep that defense if you change the prompt.
+- `POST /api/transcribe` — body `{ url, language: 'auto'|'ru'|'en' }`. URL is dispatched by `isYoutube()` (`src/lib/youtube-captions.ts`): YouTube goes through our own captions fetcher (parses `captionTracks` out of the watch-page HTML, picks track by language preference, then hits the signed `timedtext?fmt=json3` URL); anything else goes to Deepgram `nova-2` with the URL passed by reference (no file download in our route). Returns `{ transcript, paragraphs: [{text,start,end}], duration, detectedLanguage, source: 'youtube'|'deepgram', id }`. The `id` is the Supabase row id when the row was saved, else `null`. **Known issue**: YouTube aggressively rate-limits (HTTP 429) requests from datacenter IPs — the route surfaces `"YouTube вернул статус 429"` in that case. We do **not** depend on the `youtube-transcript` npm package; its parser is broken against current YouTube HTML.
+- `POST /api/transcribe/summarize` — body `{ id?, transcript? }`. If `id` is provided and the row already has `summary`+`bullets`, returns the cached pair (`cached: true`). Otherwise calls Claude Haiku with a JSON-only prompt and (when `id` is present) writes the result back to the row. Returns `{ summary, bullets, cached }`.
+- `POST /api/transcribe/translate` — body `{ id?, transcript?, targetLang: 'ru'|'en' }`. Same caching contract as summarize, keyed on `translation.lang === targetLang`. Returns `{ translation, lang, cached }`.
+- `GET /api/transcribe/history` — last 20 rows, columns subset only. Returns `{ items, configured: boolean }` where `configured: false` means Supabase env vars are missing (UI uses this to hide the history section).
+- `GET|DELETE /api/transcribe/history/[id]` — fetch or remove one row.
 
 **Supabase schema assumed by the code** (no migrations in repo):
 - `users(last_active: timestamptz, ...)` — "active 7d" filters `last_active > now()-7d`.
