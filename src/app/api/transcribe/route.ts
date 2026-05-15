@@ -7,11 +7,20 @@ import {
   YoutubeTranscriptVideoUnavailableError,
   YoutubeTranscriptTooManyRequestError,
 } from 'youtube-transcript'
+import { getServerSupabase, makeTitle, Paragraph } from '@/lib/transcripts-db'
 
 export const maxDuration = 60
 
 type Body = { url?: string; language?: 'auto' | 'ru' | 'en' }
-type Paragraph = { text: string; start: number; end: number }
+type Ok = {
+  transcript: string
+  paragraphs: Paragraph[]
+  duration: number | null
+  detectedLanguage: string | null
+  source: 'youtube' | 'deepgram'
+}
+type Err = { error: string; status: number }
+type Result = Ok | Err
 
 const YT_RE = /(?:youtube\.com\/(?:watch\?v=|shorts\/|embed\/)|youtu\.be\/)([\w-]{11})/i
 
@@ -56,42 +65,42 @@ function decodeHtmlEntities(s: string): string {
     .replace(/&nbsp;/g, ' ')
 }
 
-async function handleYoutube(url: string, language: 'auto' | 'ru' | 'en') {
+async function fetchYoutube(url: string, language: 'auto' | 'ru' | 'en'): Promise<Result> {
   const fetchOpts = language === 'auto' ? undefined : { lang: language }
   let segments
   try {
     segments = await YoutubeTranscript.fetchTranscript(url, fetchOpts)
   } catch (e: any) {
     if (e instanceof YoutubeTranscriptDisabledError) {
-      return NextResponse.json({ error: 'У этого видео отключены субтитры на YouTube' }, { status: 400 })
+      return { error: 'У этого видео отключены субтитры на YouTube', status: 400 }
     }
     if (e instanceof YoutubeTranscriptNotAvailableError) {
-      return NextResponse.json({ error: 'У этого видео нет субтитров на YouTube' }, { status: 400 })
+      return { error: 'У этого видео нет субтитров на YouTube', status: 400 }
     }
     if (e instanceof YoutubeTranscriptNotAvailableLanguageError) {
       if (language !== 'auto') {
         try {
           segments = await YoutubeTranscript.fetchTranscript(url)
-        } catch (fallbackErr: any) {
-          return NextResponse.json(
-            { error: `Субтитры на «${language}» недоступны, и автоязык тоже не получилось получить` },
-            { status: 400 },
-          )
+        } catch {
+          return {
+            error: `Субтитры на «${language}» недоступны, и автоязык тоже не получилось получить`,
+            status: 400,
+          }
         }
       } else {
-        return NextResponse.json({ error: 'Субтитры на запрошенном языке недоступны' }, { status: 400 })
+        return { error: 'Субтитры на запрошенном языке недоступны', status: 400 }
       }
     } else if (e instanceof YoutubeTranscriptVideoUnavailableError) {
-      return NextResponse.json({ error: 'Видео недоступно (приватное, удалено или с ограничением региона)' }, { status: 400 })
+      return { error: 'Видео недоступно (приватное, удалено или с ограничением региона)', status: 400 }
     } else if (e instanceof YoutubeTranscriptTooManyRequestError) {
-      return NextResponse.json({ error: 'YouTube временно блокирует запросы. Попробуйте позже' }, { status: 429 })
+      return { error: 'YouTube временно блокирует запросы. Попробуйте позже', status: 429 }
     } else {
-      return NextResponse.json({ error: `YouTube: ${e?.message || 'неизвестная ошибка'}` }, { status: 500 })
+      return { error: `YouTube: ${e?.message || 'неизвестная ошибка'}`, status: 500 }
     }
   }
 
   if (!segments || segments.length === 0) {
-    return NextResponse.json({ error: 'Пустой транскрипт от YouTube' }, { status: 400 })
+    return { error: 'Пустой транскрипт от YouTube', status: 400 }
   }
 
   const normalized = segments.map(s => ({
@@ -106,18 +115,18 @@ async function handleYoutube(url: string, language: 'auto' | 'ru' | 'en') {
   const duration = (last.offset + last.duration) / 1000
   const detectedLanguage = (segments[0] as any)?.lang ?? null
 
-  return NextResponse.json({
+  return {
     transcript: flatTranscript,
     paragraphs,
     duration,
     detectedLanguage,
     source: 'youtube',
-  })
+  }
 }
 
-async function handleDeepgram(url: string, language: 'auto' | 'ru' | 'en') {
+async function fetchDeepgram(url: string, language: 'auto' | 'ru' | 'en'): Promise<Result> {
   if (!process.env.DEEPGRAM_API_KEY) {
-    return NextResponse.json({ error: 'DEEPGRAM_API_KEY не настроен на сервере' }, { status: 500 })
+    return { error: 'DEEPGRAM_API_KEY не настроен на сервере', status: 500 }
   }
 
   const params = new URLSearchParams({
@@ -143,16 +152,13 @@ async function handleDeepgram(url: string, language: 'auto' | 'ru' | 'en') {
 
   if (!res.ok) {
     const errText = await res.text()
-    return NextResponse.json(
-      { error: `Deepgram (${res.status}): ${errText.slice(0, 300)}` },
-      { status: res.status },
-    )
+    return { error: `Deepgram (${res.status}): ${errText.slice(0, 300)}`, status: res.status }
   }
 
   const data = await res.json()
   const channel = data.results?.channels?.[0]
   const alt = channel?.alternatives?.[0]
-  const flatTranscript = alt?.transcript ?? ''
+  const flatTranscript: string = alt?.transcript ?? ''
   const paragraphsObj = alt?.paragraphs?.paragraphs as
     | Array<{ sentences: Array<{ text: string }>; start: number; end: number }>
     | undefined
@@ -164,27 +170,62 @@ async function handleDeepgram(url: string, language: 'auto' | 'ru' | 'en') {
       end: p.end,
     })) ?? []
 
-  return NextResponse.json({
+  return {
     transcript: flatTranscript,
     paragraphs,
     duration: data.metadata?.duration ?? null,
     detectedLanguage: channel?.detected_language ?? null,
     source: 'deepgram',
-  })
+  }
+}
+
+async function saveTranscript(url: string, result: Ok): Promise<string | null> {
+  const supabase = getServerSupabase()
+  if (!supabase) return null
+  try {
+    const { data, error } = await supabase
+      .from('transcripts')
+      .insert({
+        url,
+        title: makeTitle(result.transcript, url),
+        source: result.source,
+        language: result.detectedLanguage,
+        duration: result.duration,
+        transcript: result.transcript,
+        paragraphs: result.paragraphs,
+      })
+      .select('id')
+      .single()
+    if (error) {
+      console.warn('saveTranscript failed:', error.message)
+      return null
+    }
+    return data.id as string
+  } catch (e: any) {
+    console.warn('saveTranscript exception:', e?.message)
+    return null
+  }
 }
 
 export async function POST(req: NextRequest) {
   const { url, language = 'ru' } = (await req.json()) as Body
 
   if (!url || typeof url !== 'string' || !/^https?:\/\//i.test(url)) {
-    return NextResponse.json({ error: 'Укажите ссылку (http/https) на YouTube-видео или прямой файл' }, { status: 400 })
+    return NextResponse.json(
+      { error: 'Укажите ссылку (http/https) на YouTube-видео или прямой файл' },
+      { status: 400 },
+    )
   }
 
   try {
-    if (isYoutube(url)) {
-      return await handleYoutube(url, language)
+    const result = isYoutube(url) ? await fetchYoutube(url, language) : await fetchDeepgram(url, language)
+
+    if ('error' in result) {
+      return NextResponse.json({ error: result.error }, { status: result.status })
     }
-    return await handleDeepgram(url, language)
+
+    const id = await saveTranscript(url, result)
+    return NextResponse.json({ ...result, id })
   } catch (e: any) {
     return NextResponse.json({ error: e?.message || 'Ошибка транскрибации' }, { status: 500 })
   }
