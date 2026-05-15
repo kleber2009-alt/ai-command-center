@@ -94,11 +94,15 @@ def extract(body: ExtractRequest, authorization: str | None = Header(default=Non
     check_auth(authorization)
 
     opts = {
-        "format": "bestaudio/best",
+        "format": "bestaudio[ext=m4a]/bestaudio/best[height<=720]/best",
         "quiet": True,
         "no_warnings": True,
         "skip_download": True,
         "extract_flat": False,
+        # Try multiple player clients to bypass YouTube anti-bot
+        "extractor_args": {
+            "youtube": {"player_client": ["ios", "android", "web"]},
+        },
     }
 
     cookies_file = _load_cookies()
@@ -109,7 +113,17 @@ def extract(body: ExtractRequest, authorization: str | None = Header(default=Non
         with yt_dlp.YoutubeDL(opts) as ydl:
             info = ydl.extract_info(str(body.url), download=False)
     except yt_dlp.utils.DownloadError as e:
-        raise HTTPException(status_code=400, detail=str(e))
+        msg = str(e)
+        hint = ""
+        lower = msg.lower()
+        if "requested format is not available" in lower or "no video formats" in lower:
+            hint = (
+                " (hint: YouTube блокирует анонимный доступ — добавьте YouTube cookies "
+                "в COOKIES_B64 на Railway)"
+            )
+        elif "login required" in lower or "rate-limit" in lower or "private" in lower:
+            hint = " (hint: добавьте cookies для этого сайта в COOKIES_B64)"
+        raise HTTPException(status_code=400, detail=msg + hint)
     except Exception as e:
         raise HTTPException(status_code=500, detail=f"{type(e).__name__}: {e}")
 

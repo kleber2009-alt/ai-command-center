@@ -3,6 +3,7 @@ import { useEffect, useState } from 'react'
 import {
   AudioLines, Loader2, Copy, Check, TriangleAlert, Link as LinkIcon,
   Download, FileText, Sparkles, Languages, History, Trash2, ChevronRight, Youtube, FileAudio,
+  LayoutGrid, Video, Shuffle, Send,
 } from 'lucide-react'
 
 type Paragraph = { text: string; start: number; end: number }
@@ -17,6 +18,26 @@ type Result = {
 }
 type Summary = { summary: string; bullets: string[] }
 type Translation = { text: string; lang: 'ru' | 'en' }
+
+type CarouselContent = { slides: Array<{ n: number; title: string; body: string }> }
+type ReelsContent = {
+  hook: string
+  promise: string
+  body: Array<{ time: string; text: string }>
+  cta: string
+  text_on_screen: string[]
+  caption: string
+  hashtags: string[]
+}
+type TgPostContent = { text: string }
+
+type GenType = 'carousel' | 'reels-new' | 'reels-remix' | 'tg-post'
+type Generations = {
+  carousel?: CarouselContent
+  'reels-new'?: ReelsContent
+  'reels-remix'?: ReelsContent
+  'tg-post'?: TgPostContent
+}
 
 type HistoryItem = {
   id: string
@@ -73,6 +94,84 @@ function safeFilename(s: string | null, fallback = 'transcript'): string {
     .slice(0, 60) || fallback
 }
 
+function ReelsCard({
+  reels,
+  variant,
+  onCopy,
+  formatForCopy,
+}: {
+  reels: ReelsContent
+  variant: 'new' | 'remix'
+  onCopy: (text: string) => void
+  formatForCopy: (r: ReelsContent) => string
+}) {
+  const isNew = variant === 'new'
+  const Icon = isNew ? Video : Shuffle
+  const title = isNew ? 'Рилс — новый сценарий' : 'Рилс — ремикс'
+  const wrapClasses = isNew
+    ? 'bg-fuchsia-500/5 border-fuchsia-500/20'
+    : 'bg-pink-500/5 border-pink-500/20'
+  const headerClasses = isNew ? 'border-fuchsia-500/10' : 'border-pink-500/10'
+  const iconClasses = isNew ? 'text-fuchsia-400' : 'text-pink-400'
+  const titleClasses = isNew ? 'text-fuchsia-300' : 'text-pink-300'
+  return (
+    <div className={`${wrapClasses} border rounded-xl overflow-hidden`}>
+      <div className={`px-5 py-3 border-b ${headerClasses} flex items-center justify-between`}>
+        <div className="flex items-center gap-2">
+          <Icon className={`w-4 h-4 ${iconClasses}`} />
+          <h3 className={`text-xs font-semibold ${titleClasses} uppercase tracking-wider`}>{title}</h3>
+        </div>
+        <button
+          onClick={() => onCopy(formatForCopy(reels))}
+          className="flex items-center gap-1.5 px-2.5 py-1.5 rounded-lg text-[11px] text-slate-400 border border-slate-700/50 hover:border-slate-600 hover:text-slate-200 transition-all"
+        >
+          <Copy className="w-3 h-3" /> Копировать всё
+        </button>
+      </div>
+      <div className="p-5 space-y-4 max-h-[70vh] overflow-y-auto">
+        <Section label="HOOK · 0-3 сек" text={reels.hook} />
+        <Section label="PROMISE · 3-7 сек" text={reels.promise} />
+        <div>
+          <div className="text-[10px] text-slate-500 uppercase tracking-wider font-medium mb-2">Body</div>
+          <div className="space-y-2">
+            {reels.body.map((b, i) => (
+              <div key={i} className="flex gap-3 bg-slate-900/40 rounded-lg p-3">
+                <span className="text-[11px] text-slate-500 font-mono tabular-nums flex-shrink-0 w-16">{b.time}</span>
+                <p className="text-sm text-slate-200 leading-relaxed flex-1">{b.text}</p>
+              </div>
+            ))}
+          </div>
+        </div>
+        <Section label="CTA · 50-60 сек" text={reels.cta} />
+        {reels.text_on_screen.length > 0 && (
+          <div>
+            <div className="text-[10px] text-slate-500 uppercase tracking-wider font-medium mb-2">Text on screen</div>
+            <div className="flex flex-wrap gap-1.5">
+              {reels.text_on_screen.map((s, i) => (
+                <span key={i} className="text-xs text-slate-300 bg-slate-700/40 px-2 py-1 rounded">{s}</span>
+              ))}
+            </div>
+          </div>
+        )}
+        <Section label="Caption" text={reels.caption} />
+        {reels.hashtags.length > 0 && (
+          <div className="text-xs text-indigo-400 font-mono break-words">{reels.hashtags.join(' ')}</div>
+        )}
+      </div>
+    </div>
+  )
+}
+
+function Section({ label, text }: { label: string; text: string }) {
+  if (!text) return null
+  return (
+    <div>
+      <div className="text-[10px] text-slate-500 uppercase tracking-wider font-medium mb-1">{label}</div>
+      <p className="text-sm text-slate-200 leading-relaxed">{text}</p>
+    </div>
+  )
+}
+
 function timeAgo(iso: string): string {
   const sec = (Date.now() - new Date(iso).getTime()) / 1000
   if (sec < 60) return 'только что'
@@ -97,6 +196,9 @@ export default function TranscribePage() {
   const [translation, setTranslation] = useState<Translation | null>(null)
   const [translationLoading, setTranslationLoading] = useState(false)
 
+  const [generations, setGenerations] = useState<Generations>({})
+  const [genLoading, setGenLoading] = useState<GenType | null>(null)
+
   const [history, setHistory] = useState<HistoryItem[]>([])
   const [historyConfigured, setHistoryConfigured] = useState(true)
 
@@ -116,6 +218,7 @@ export default function TranscribePage() {
   function resetSecondary() {
     setSummary(null)
     setTranslation(null)
+    setGenerations({})
   }
 
   async function submit(e: React.FormEvent) {
@@ -167,6 +270,9 @@ export default function TranscribePage() {
         }
         if (data.translation) {
           setTranslation({ text: data.translation.text, lang: data.translation.lang })
+        }
+        if (data.generations) {
+          setGenerations(data.generations)
         }
         setUrl(data.url)
       }
@@ -257,6 +363,44 @@ export default function TranscribePage() {
     } finally {
       setTranslationLoading(false)
     }
+  }
+
+  async function generate(type: GenType) {
+    if (!result) return
+    setGenLoading(type)
+    setGenerations(prev => ({ ...prev, [type]: undefined }))
+    try {
+      const res = await fetch('/api/transcribe/generate', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ id: result.id, transcript: result.transcript, type }),
+      })
+      const data = await res.json()
+      if (!res.ok) {
+        setError(data.error || 'Не удалось сгенерировать контент')
+      } else {
+        setGenerations(prev => ({ ...prev, [type]: data.content }))
+      }
+    } catch (err: any) {
+      setError(err?.message || 'Сетевая ошибка')
+    } finally {
+      setGenLoading(null)
+    }
+  }
+
+  function copyText(text: string) {
+    navigator.clipboard.writeText(text)
+  }
+
+  function formatCarouselForCopy(c: CarouselContent): string {
+    return c.slides.map(s => `Слайд ${s.n}: ${s.title}\n${s.body}`).join('\n\n')
+  }
+
+  function formatReelsForCopy(r: ReelsContent): string {
+    const bodyText = r.body.map(b => `[${b.time}] ${b.text}`).join('\n')
+    const onScreen = r.text_on_screen.length ? `\nText on screen:\n${r.text_on_screen.map(s => `• ${s}`).join('\n')}` : ''
+    const hashtags = r.hashtags.length ? `\n\n${r.hashtags.join(' ')}` : ''
+    return `HOOK: ${r.hook}\n\nPROMISE: ${r.promise}\n\nBODY:\n${bodyText}\n\nCTA: ${r.cta}${onScreen}\n\nCAPTION:\n${r.caption}${hashtags}`
   }
 
   const otherLang: 'ru' | 'en' = result?.detectedLanguage === 'en' ? 'ru' : 'en'
@@ -457,9 +601,7 @@ export default function TranscribePage() {
                   </h3>
                 </div>
                 <button
-                  onClick={() => {
-                    navigator.clipboard.writeText(translation.text)
-                  }}
+                  onClick={() => copyText(translation.text)}
                   className="flex items-center gap-1.5 px-2.5 py-1.5 rounded-lg text-[11px] text-slate-400 border border-slate-700/50 hover:border-slate-600 hover:text-slate-200 transition-all"
                 >
                   <Copy className="w-3 h-3" /> Копировать
@@ -467,6 +609,109 @@ export default function TranscribePage() {
               </div>
               <div className="p-5 max-h-[50vh] overflow-y-auto">
                 <p className="text-sm text-slate-200 leading-relaxed whitespace-pre-wrap">{translation.text}</p>
+              </div>
+            </div>
+          )}
+
+          {/* Content generation actions */}
+          <div className="border-t border-slate-800 pt-4">
+            <div className="text-[10px] text-slate-500 uppercase tracking-wider font-medium mb-3">
+              Превратить в контент
+            </div>
+            <div className="flex flex-wrap gap-2">
+              <button
+                onClick={() => generate('carousel')}
+                disabled={genLoading === 'carousel'}
+                className="flex items-center gap-2 px-4 py-2 rounded-lg text-sm font-medium transition-all border bg-cyan-600/15 border-cyan-500/30 text-cyan-300 hover:bg-cyan-600/25 disabled:opacity-50"
+              >
+                {genLoading === 'carousel' ? <Loader2 className="w-4 h-4 animate-spin" /> : <LayoutGrid className="w-4 h-4" />}
+                Карусель
+              </button>
+              <button
+                onClick={() => generate('reels-new')}
+                disabled={genLoading === 'reels-new'}
+                className="flex items-center gap-2 px-4 py-2 rounded-lg text-sm font-medium transition-all border bg-fuchsia-600/15 border-fuchsia-500/30 text-fuchsia-300 hover:bg-fuchsia-600/25 disabled:opacity-50"
+              >
+                {genLoading === 'reels-new' ? <Loader2 className="w-4 h-4 animate-spin" /> : <Video className="w-4 h-4" />}
+                Рилс новый
+              </button>
+              <button
+                onClick={() => generate('reels-remix')}
+                disabled={genLoading === 'reels-remix'}
+                className="flex items-center gap-2 px-4 py-2 rounded-lg text-sm font-medium transition-all border bg-pink-600/15 border-pink-500/30 text-pink-300 hover:bg-pink-600/25 disabled:opacity-50"
+              >
+                {genLoading === 'reels-remix' ? <Loader2 className="w-4 h-4 animate-spin" /> : <Shuffle className="w-4 h-4" />}
+                Рилс ремикс
+              </button>
+              <button
+                onClick={() => generate('tg-post')}
+                disabled={genLoading === 'tg-post'}
+                className="flex items-center gap-2 px-4 py-2 rounded-lg text-sm font-medium transition-all border bg-sky-600/15 border-sky-500/30 text-sky-300 hover:bg-sky-600/25 disabled:opacity-50"
+              >
+                {genLoading === 'tg-post' ? <Loader2 className="w-4 h-4 animate-spin" /> : <Send className="w-4 h-4" />}
+                Пост в Telegram
+              </button>
+            </div>
+          </div>
+
+          {/* Carousel */}
+          {generations.carousel && (
+            <div className="bg-cyan-500/5 border border-cyan-500/20 rounded-xl overflow-hidden">
+              <div className="px-5 py-3 border-b border-cyan-500/10 flex items-center justify-between">
+                <div className="flex items-center gap-2">
+                  <LayoutGrid className="w-4 h-4 text-cyan-400" />
+                  <h3 className="text-xs font-semibold text-cyan-300 uppercase tracking-wider">
+                    Карусель · {generations.carousel.slides.length} слайдов
+                  </h3>
+                </div>
+                <button
+                  onClick={() => copyText(formatCarouselForCopy(generations.carousel!))}
+                  className="flex items-center gap-1.5 px-2.5 py-1.5 rounded-lg text-[11px] text-slate-400 border border-slate-700/50 hover:border-slate-600 hover:text-slate-200 transition-all"
+                >
+                  <Copy className="w-3 h-3" /> Копировать всё
+                </button>
+              </div>
+              <div className="p-5 grid grid-cols-1 md:grid-cols-2 gap-3 max-h-[60vh] overflow-y-auto">
+                {generations.carousel.slides.map(slide => (
+                  <div key={slide.n} className="bg-slate-900/40 border border-slate-700/50 rounded-lg p-4 relative group">
+                    <div className="absolute top-2 right-2 text-[10px] text-slate-600 font-mono">#{slide.n}</div>
+                    <div className="text-sm font-semibold text-slate-100 mb-2 pr-8">{slide.title}</div>
+                    <div className="text-xs text-slate-300 leading-relaxed whitespace-pre-wrap">{slide.body}</div>
+                  </div>
+                ))}
+              </div>
+            </div>
+          )}
+
+          {/* Reels new */}
+          {generations['reels-new'] && (
+            <ReelsCard reels={generations['reels-new']} variant="new" onCopy={copyText} formatForCopy={formatReelsForCopy} />
+          )}
+
+          {/* Reels remix */}
+          {generations['reels-remix'] && (
+            <ReelsCard reels={generations['reels-remix']} variant="remix" onCopy={copyText} formatForCopy={formatReelsForCopy} />
+          )}
+
+          {/* Telegram post */}
+          {generations['tg-post'] && (
+            <div className="bg-sky-500/5 border border-sky-500/20 rounded-xl overflow-hidden">
+              <div className="px-5 py-3 border-b border-sky-500/10 flex items-center justify-between">
+                <div className="flex items-center gap-2">
+                  <Send className="w-4 h-4 text-sky-400" />
+                  <h3 className="text-xs font-semibold text-sky-300 uppercase tracking-wider">
+                    Пост в Telegram · {generations['tg-post'].text.length} символов
+                  </h3>
+                </div>
+                <button
+                  onClick={() => copyText(generations['tg-post']!.text)}
+                  className="flex items-center gap-1.5 px-2.5 py-1.5 rounded-lg text-[11px] text-slate-400 border border-slate-700/50 hover:border-slate-600 hover:text-slate-200 transition-all"
+                >
+                  <Copy className="w-3 h-3" /> Копировать
+                </button>
+              </div>
+              <div className="p-5 max-h-[60vh] overflow-y-auto">
+                <p className="text-sm text-slate-200 leading-relaxed whitespace-pre-wrap">{generations['tg-post'].text}</p>
               </div>
             </div>
           )}

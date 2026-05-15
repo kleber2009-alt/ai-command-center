@@ -26,8 +26,9 @@ The app fails silently / falls back to demo data when these are missing — set 
 
 ## Supabase migrations
 
-`supabase/migrations/` contains the SQL the user is expected to run manually in the Supabase SQL Editor. Currently:
+`supabase/migrations/` contains the SQL the user is expected to run manually in the Supabase SQL Editor:
 - `001_transcripts.sql` creates the `transcripts` table used by `/transcribe` history. The feature degrades gracefully when this table or the env vars are missing — `getServerSupabase()` returns `null` and saves/history just no-op.
+- `002_generations.sql` adds a `generations jsonb` column for caching carousel / reels / telegram-post generations per transcript.
 
 ## Architecture
 
@@ -53,6 +54,7 @@ Next.js 14 App Router + React 18 + TypeScript + Tailwind. UI strings are Russian
 - `POST /api/transcribe/translate` — body `{ id?, transcript?, targetLang: 'ru'|'en' }`. Same caching contract as summarize, keyed on `translation.lang === targetLang`. Returns `{ translation, lang, cached }`.
 - `GET /api/transcribe/history` — last 20 rows, columns subset only. Returns `{ items, configured: boolean }` where `configured: false` means Supabase env vars are missing (UI uses this to hide the history section).
 - `GET|DELETE /api/transcribe/history/[id]` — fetch or remove one row.
+- `POST /api/transcribe/generate` — body `{ id?, transcript?, type: 'carousel'|'reels-new'|'reels-remix'|'tg-post' }`. Sends a carefully structured Russian prompt to Claude Haiku per type and returns `{ type, content, cached }`. Content shape varies by type (slides array for carousel, hook/body/cta for reels, plain text for tg-post). Cached in `transcripts.generations` jsonb keyed by type. Prompts live inline in `src/app/api/transcribe/generate/route.ts` (`buildPrompt`).
 
 **Supabase schema assumed by the code** (no migrations in repo):
 - `users(last_active: timestamptz, ...)` — "active 7d" filters `last_active > now()-7d`.

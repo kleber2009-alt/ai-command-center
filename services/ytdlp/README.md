@@ -41,22 +41,30 @@ your browser as a Netscape `cookies.txt` file and feed them to the service.
 The service accepts cookies via env var (base64-encoded) so you don't need
 to mount a file.
 
+A single `cookies.txt` can contain cookies for **multiple domains**
+(Netscape format includes the domain on each line). Recommended: export
+from both `youtube.com` and `instagram.com` and concatenate.
+
 ```bash
-# On your machine, encode the file:
-base64 -w 0 cookies.txt
-# Copy the output (one long string)
+# 1. Open youtube.com → click extension → Export → save as yt_cookies.txt
+# 2. Open instagram.com → click extension → Export → save as ig_cookies.txt
+# 3. Combine and base64 (macOS):
+cat ~/Downloads/yt_cookies.txt ~/Downloads/ig_cookies.txt > combined.txt
+base64 -i combined.txt | pbcopy
+# Linux/WSL:
+cat yt_cookies.txt ig_cookies.txt | base64 -w 0
 ```
 
-On Railway, add the env var:
+On Railway, set the env var:
 
-- `INSTAGRAM_COOKIES_B64` (or generic `COOKIES_B64`) = the base64 string
+- `COOKIES_B64` (or `INSTAGRAM_COOKIES_B64` — both work) = the base64 string
 
-Restart the Railway service. On the first call yt-dlp will write the
-cookies to a temp file and use them for every extraction.
+Railway redeploys the service automatically. On the first call yt-dlp will
+write the cookies to a temp file and use them for every extraction.
 
-> ⚠️ The cookies expire (Instagram rotates session tokens every few weeks).
-> When you start getting 401/login-required errors again, re-export cookies
-> and update the env var.
+> ⚠️ Cookies expire (Instagram and YouTube rotate session tokens every few
+> weeks). When you start getting 401 / login-required / "format not
+> available" errors again, re-export cookies and update the env var.
 
 ## Deploy on Railway
 

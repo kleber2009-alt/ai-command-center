@@ -2,6 +2,25 @@ import { createClient, SupabaseClient } from '@supabase/supabase-js'
 
 export type Paragraph = { text: string; start: number; end: number }
 
+export type CarouselSlide = { n: number; title: string; body: string }
+export type ReelsScript = {
+  hook: string
+  promise: string
+  body: Array<{ time: string; text: string }>
+  cta: string
+  text_on_screen: string[]
+  caption: string
+  hashtags: string[]
+}
+export type TgPost = { text: string }
+
+export type Generations = {
+  carousel?: { slides: CarouselSlide[] }
+  'reels-new'?: ReelsScript
+  'reels-remix'?: ReelsScript
+  'tg-post'?: TgPost
+}
+
 export type TranscriptRow = {
   id: string
   created_at: string
@@ -15,6 +34,7 @@ export type TranscriptRow = {
   summary: string | null
   bullets: string[] | null
   translation: { lang: string; text: string } | null
+  generations: Generations | null
 }
 
 let cached: SupabaseClient | null = null
