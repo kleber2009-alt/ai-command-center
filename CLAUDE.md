@@ -20,7 +20,7 @@ The app fails silently / falls back to demo data when these are missing — set 
 - `NEXT_PUBLIC_SUPABASE_URL`, `NEXT_PUBLIC_SUPABASE_ANON_KEY` — used by the browser client in `src/lib/supabase.ts`.
 - `SUPABASE_SERVICE_KEY` — used by `src/app/api/metrics/route.ts` and by the `/api/transcribe*` routes through `src/lib/transcripts-db.ts`. Do not expose this to the client.
 - `ANTHROPIC_API_KEY` — used by `src/app/api/command/route.ts`, `src/app/api/transcribe/summarize/route.ts`, and `src/app/api/transcribe/translate/route.ts`. Without it, those routes return a setup-error message.
-- `DEEPGRAM_API_KEY` — used by `src/app/api/transcribe/route.ts` for any non-YouTube URL (direct media files). YouTube goes through the `youtube-transcript` npm package and does **not** need this key.
+- `DEEPGRAM_API_KEY` — used by `src/app/api/transcribe/route.ts` for any non-YouTube URL (direct media files). YouTube goes through our own captions fetcher (`src/lib/youtube-captions.ts`) and does **not** need this key.
 
 ## Supabase migrations
 
@@ -33,7 +33,7 @@ Next.js 14 App Router + React 18 + TypeScript + Tailwind. UI strings are Russian
 
 **Routing**: `src/app/page.tsx` redirects `/` → `/dashboard`. All authenticated-style pages live under the `(dashboard)` route group, which provides the fixed sidebar shell (`src/app/(dashboard)/layout.tsx`). The route group does not add a URL segment — pages render at `/dashboard`, `/team`, `/tasks`, etc.
 
-**Page status**: Only `/dashboard` is implemented. `/team`, `/tasks`, `/metrics`, `/briefing`, `/settings` are placeholder stubs (`"В разработке"`). When asked to "build out X page", you are starting from an empty stub — use `dashboard/page.tsx` as the style reference (slate-800/50 cards with `border-slate-700/50`, JetBrains Mono for numerics, `animate-slide-in` wrapper).
+**Page status**: `/dashboard` and `/transcribe` are implemented. `/team`, `/tasks`, `/metrics`, `/briefing`, `/settings` are placeholder stubs (`"В разработке"`, ~9 lines each). When asked to "build out X page", you are starting from an empty stub — use `dashboard/page.tsx` as the style reference (slate-800/50 cards with `border-slate-700/50`, JetBrains Mono for numerics, `animate-slide-in` wrapper).
 
 **The dashboard cycle** (`src/app/(dashboard)/dashboard/page.tsx`):
 1. On mount, `loadMetrics()` GETs `/api/metrics`. On failure it falls back to hardcoded demo data — don't remove this fallback unless the user explicitly asks.
@@ -41,17 +41,18 @@ Next.js 14 App Router + React 18 + TypeScript + Tailwind. UI strings are Russian
 
 **API routes**:
 - `GET /api/metrics` — server-side Supabase query using the service key. Reads `users`, `progress` (status='completed'), `subscriptions` (status='active') and computes MRR from `planPrices = { pro: 29, builder: 79, architect: 199 }`. Several outputs (`achieved`, `monthGoal`, `dailyNeeded`, `goalPercent`) are currently **hardcoded** — they are not yet derived from real data.
-- `POST /api/command` — proxy to Anthropic Messages API (`claude-haiku-4-5-20251001`, `max_tokens: 300`). Request body is `{ agentId }`. The route picks a Russian prompt from `AGENT_PROMPTS` keyed by `agentId` and instructs the model to return **only** a JSON array of `{text, impact}`. The parser strips markdown fences before `JSON.parse` — keep that defense if you change the prompt.
+- `POST /api/command` — proxy to Anthropic Messages API (`claude-haiku-4-5-20251001`, `max_tokens: 800`). Request body is `{ agentId }`. The route picks a Russian prompt from `AGENT_PROMPTS` keyed by `agentId` and instructs the model to return **only** a JSON array of `{text, impact}`. The parser (`extractJsonArray`) strips markdown fences and slices between the first `[` and last `]` before `JSON.parse` — keep that defense if you change the prompt. All failure modes (missing key, non-2xx, empty content, parse error, network) return `{ tasks: [{ text, impact: '—' }] }` rather than HTTP errors, so the UI can always render something.
 - `POST /api/transcribe` — body `{ url, language: 'auto'|'ru'|'en' }`. URL is dispatched by `isYoutube()` (`src/lib/youtube-captions.ts`): YouTube goes through our own captions fetcher (parses `captionTracks` out of the watch-page HTML, picks track by language preference, then hits the signed `timedtext?fmt=json3` URL); anything else goes to Deepgram `nova-2` with the URL passed by reference (no file download in our route). Returns `{ transcript, paragraphs: [{text,start,end}], duration, detectedLanguage, source: 'youtube'|'deepgram', id }`. The `id` is the Supabase row id when the row was saved, else `null`. **Known issue**: YouTube aggressively rate-limits (HTTP 429) requests from datacenter IPs — the route surfaces `"YouTube вернул статус 429"` in that case. We do **not** depend on the `youtube-transcript` npm package; its parser is broken against current YouTube HTML.
 - `POST /api/transcribe/summarize` — body `{ id?, transcript? }`. If `id` is provided and the row already has `summary`+`bullets`, returns the cached pair (`cached: true`). Otherwise calls Claude Haiku with a JSON-only prompt and (when `id` is present) writes the result back to the row. Returns `{ summary, bullets, cached }`.
 - `POST /api/transcribe/translate` — body `{ id?, transcript?, targetLang: 'ru'|'en' }`. Same caching contract as summarize, keyed on `translation.lang === targetLang`. Returns `{ translation, lang, cached }`.
 - `GET /api/transcribe/history` — last 20 rows, columns subset only. Returns `{ items, configured: boolean }` where `configured: false` means Supabase env vars are missing (UI uses this to hide the history section).
 - `GET|DELETE /api/transcribe/history/[id]` — fetch or remove one row.
 
-**Supabase schema assumed by the code** (no migrations in repo):
+**Supabase schema assumed by the code** (no migrations in repo for these tables — only `transcripts` is migrated):
 - `users(last_active: timestamptz, ...)` — "active 7d" filters `last_active > now()-7d`.
 - `progress(status: text, ...)` — completion rate counts `status='completed'`, and the denominator assumes **26 lessons per user** (`users.length * 26`). Update this constant if the curriculum changes.
 - `subscriptions(status: text, plan: 'pro'|'builder'|'architect')` — MRR is `$29/$79/$199` per active sub.
+- `transcripts(...)` — full shape in `TranscriptRow` (`src/lib/transcripts-db.ts`); created by `supabase/migrations/001_transcripts.sql`.
 
 **Two metrics implementations exist**: `getMetrics()` in `src/lib/supabase.ts` (client-side, anon key) and the `GET /api/metrics` route (server-side, service key). The dashboard uses the route; `getMetrics` is currently unused. Prefer extending the route — don't add new callers of the client-side `getMetrics` without a reason, since RLS on `subscriptions` would likely block it.
 
