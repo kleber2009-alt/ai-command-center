@@ -1,0 +1,200 @@
+import { NextRequest, NextResponse } from 'next/server'
+import { fetchYoutubeCaptions, getYoutubeVideoId, YoutubeCaptionsError } from '@/lib/youtube-captions'
+import { getServerSupabase, makeTitle, Paragraph } from '@/lib/transcripts-db'
+
+export const maxDuration = 60
+
+type Body = { url?: string; language?: 'auto' | 'ru' | 'en' }
+type Ok = {
+  transcript: string
+  paragraphs: Paragraph[]
+  duration: number | null
+  detectedLanguage: string | null
+  source: 'youtube' | 'deepgram'
+}
+type Err = { error: string; status: number }
+type Result = Ok | Err
+
+function isYoutube(url: string): boolean {
+  return getYoutubeVideoId(url) !== null
+}
+
+function groupSegmentsIntoParagraphs(
+  segments: Array<{ text: string; offset: number; duration: number }>,
+  chunkSeconds = 25,
+): Paragraph[] {
+  if (segments.length === 0) return []
+  const paragraphs: Paragraph[] = []
+  let current: { texts: string[]; start: number; end: number } | null = null
+
+  for (const seg of segments) {
+    const startSec = seg.offset / 1000
+    const endSec = (seg.offset + seg.duration) / 1000
+    if (!current) {
+      current = { texts: [seg.text], start: startSec, end: endSec }
+    } else if (endSec - current.start > chunkSeconds) {
+      paragraphs.push({ text: current.texts.join(' '), start: current.start, end: current.end })
+      current = { texts: [seg.text], start: startSec, end: endSec }
+    } else {
+      current.texts.push(seg.text)
+      current.end = endSec
+    }
+  }
+  if (current) {
+    paragraphs.push({ text: current.texts.join(' '), start: current.start, end: current.end })
+  }
+  return paragraphs
+}
+
+function decodeHtmlEntities(s: string): string {
+  return s
+    .replace(/&amp;/g, '&')
+    .replace(/&#39;/g, "'")
+    .replace(/&quot;/g, '"')
+    .replace(/&lt;/g, '<')
+    .replace(/&gt;/g, '>')
+    .replace(/&nbsp;/g, ' ')
+}
+
+async function fetchYoutube(url: string, language: 'auto' | 'ru' | 'en'): Promise<Result> {
+  try {
+    const { segments, language: detectedLang } = await fetchYoutubeCaptions(url, language)
+    if (segments.length === 0) {
+      return { error: 'YouTube вернул пустые субтитры', status: 400 }
+    }
+    const normalized = segments.map(s => ({
+      text: decodeHtmlEntities(s.text).trim(),
+      offset: s.offset,
+      duration: s.duration,
+    }))
+    const flatTranscript = normalized.map(s => s.text).join(' ')
+    const paragraphs = groupSegmentsIntoParagraphs(normalized)
+    const last = normalized[normalized.length - 1]
+    const duration = (last.offset + last.duration) / 1000
+
+    return {
+      transcript: flatTranscript,
+      paragraphs,
+      duration,
+      detectedLanguage: detectedLang,
+      source: 'youtube',
+    }
+  } catch (e: any) {
+    if (e instanceof YoutubeCaptionsError) {
+      const status = e.code === 'fetch-blocked' ? 503 : 400
+      const hint =
+        e.code === 'fetch-blocked'
+          ? '. YouTube блокирует серверные IP — попробуйте позже или используйте прямую ссылку на mp3/mp4'
+          : ''
+      return { error: e.message + hint, status }
+    }
+    return { error: e?.message || 'Ошибка YouTube', status: 500 }
+  }
+}
+
+async function fetchDeepgram(url: string, language: 'auto' | 'ru' | 'en'): Promise<Result> {
+  if (!process.env.DEEPGRAM_API_KEY) {
+    return { error: 'DEEPGRAM_API_KEY не настроен на сервере', status: 500 }
+  }
+
+  const params = new URLSearchParams({
+    model: 'nova-2',
+    punctuate: 'true',
+    paragraphs: 'true',
+    smart_format: 'true',
+  })
+  if (language === 'auto') {
+    params.set('detect_language', 'true')
+  } else {
+    params.set('language', language)
+  }
+
+  const res = await fetch(`https://api.deepgram.com/v1/listen?${params}`, {
+    method: 'POST',
+    headers: {
+      Authorization: `Token ${process.env.DEEPGRAM_API_KEY}`,
+      'Content-Type': 'application/json',
+    },
+    body: JSON.stringify({ url }),
+  })
+
+  if (!res.ok) {
+    const errText = await res.text()
+    return { error: `Deepgram (${res.status}): ${errText.slice(0, 300)}`, status: res.status }
+  }
+
+  const data = await res.json()
+  const channel = data.results?.channels?.[0]
+  const alt = channel?.alternatives?.[0]
+  const flatTranscript: string = alt?.transcript ?? ''
+  const paragraphsObj = alt?.paragraphs?.paragraphs as
+    | Array<{ sentences: Array<{ text: string }>; start: number; end: number }>
+    | undefined
+
+  const paragraphs: Paragraph[] =
+    paragraphsObj?.map(p => ({
+      text: p.sentences.map(s => s.text).join(' '),
+      start: p.start,
+      end: p.end,
+    })) ?? []
+
+  return {
+    transcript: flatTranscript,
+    paragraphs,
+    duration: data.metadata?.duration ?? null,
+    detectedLanguage: channel?.detected_language ?? null,
+    source: 'deepgram',
+  }
+}
+
+async function saveTranscript(url: string, result: Ok): Promise<string | null> {
+  const supabase = getServerSupabase()
+  if (!supabase) return null
+  try {
+    const { data, error } = await supabase
+      .from('transcripts')
+      .insert({
+        url,
+        title: makeTitle(result.transcript, url),
+        source: result.source,
+        language: result.detectedLanguage,
+        duration: result.duration,
+        transcript: result.transcript,
+        paragraphs: result.paragraphs,
+      })
+      .select('id')
+      .single()
+    if (error) {
+      console.warn('saveTranscript failed:', error.message)
+      return null
+    }
+    return data.id as string
+  } catch (e: any) {
+    console.warn('saveTranscript exception:', e?.message)
+    return null
+  }
+}
+
+export async function POST(req: NextRequest) {
+  const { url, language = 'ru' } = (await req.json()) as Body
+
+  if (!url || typeof url !== 'string' || !/^https?:\/\//i.test(url)) {
+    return NextResponse.json(
+      { error: 'Укажите ссылку (http/https) на YouTube-видео или прямой файл' },
+      { status: 400 },
+    )
+  }
+
+  try {
+    const result = isYoutube(url) ? await fetchYoutube(url, language) : await fetchDeepgram(url, language)
+
+    if ('error' in result) {
+      return NextResponse.json({ error: result.error }, { status: result.status })
+    }
+
+    const id = await saveTranscript(url, result)
+    return NextResponse.json({ ...result, id })
+  } catch (e: any) {
+    return NextResponse.json({ error: e?.message || 'Ошибка транскрибации' }, { status: 500 })
+  }
+}
