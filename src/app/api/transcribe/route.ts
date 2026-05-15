@@ -197,11 +197,16 @@ async function saveTranscript(url: string, result: Ok): Promise<string | null> {
 async function dispatch(url: string, language: 'auto' | 'ru' | 'en'): Promise<Result> {
   if (isYoutube(url)) {
     const captionsResult = await fetchYoutubeCaptionsPath(url, language)
-    // Fall back to yt-dlp + Deepgram only if YouTube blocked us at the IP level
-    // (rate limit / empty body). Other errors — no subtitles, wrong language —
-    // are not solvable by re-downloading audio.
-    if ('error' in captionsResult && captionsResult.status === 503 && isYtdlpServiceConfigured()) {
-      return await fetchViaYtdlpThenDeepgram(url, language)
+    if (!('error' in captionsResult)) return captionsResult
+
+    // Fall back to yt-dlp + Deepgram for any captions-side failure
+    // (no subtitles, IP block, wrong language) when the service is
+    // configured. The only error we don't try to rescue is a bad URL.
+    if (isYtdlpServiceConfigured()) {
+      const ytdlpResult = await fetchViaYtdlpThenDeepgram(url, language)
+      if (!('error' in ytdlpResult)) return ytdlpResult
+      // Both failed — surface the more informative of the two
+      return ytdlpResult.status >= 500 ? captionsResult : ytdlpResult
     }
     return captionsResult
   }
