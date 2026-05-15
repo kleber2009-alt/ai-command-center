@@ -1,10 +1,11 @@
 'use client'
-import { useEffect, useState } from 'react'
+import { useEffect, useRef, useState } from 'react'
 import {
   AudioLines, Loader2, Copy, Check, TriangleAlert, Link as LinkIcon,
   Download, FileText, Sparkles, Languages, History, Trash2, ChevronRight, Youtube, FileAudio,
   LayoutGrid, Video, Shuffle, Send,
 } from 'lucide-react'
+import { getTelegram, isInTelegram } from '@/lib/telegram'
 
 type Paragraph = { text: string; start: number; end: number }
 type Source = 'youtube' | 'deepgram' | 'ytdlp+deepgram'
@@ -202,6 +203,9 @@ export default function TranscribePage() {
   const [history, setHistory] = useState<HistoryItem[]>([])
   const [historyConfigured, setHistoryConfigured] = useState(true)
 
+  const [inTg, setInTg] = useState(false)
+  const submitRef = useRef<() => void>(() => {})
+
   async function loadHistory() {
     try {
       const res = await fetch('/api/transcribe/history')
@@ -213,7 +217,28 @@ export default function TranscribePage() {
 
   useEffect(() => {
     loadHistory()
+    setInTg(isInTelegram())
   }, [])
+
+  // Sync Telegram MainButton with form state
+  useEffect(() => {
+    const tg = getTelegram()
+    if (!tg) return
+    const btn = tg.MainButton
+    btn.setText(loading ? 'Обрабатываем…' : 'Получить текст')
+    if (loading) btn.showProgress(false)
+    else btn.hideProgress()
+    if (!url.trim() || loading) btn.disable()
+    else btn.enable()
+    btn.show()
+
+    const handler = () => submitRef.current()
+    btn.onClick(handler)
+    return () => {
+      btn.offClick(handler)
+      btn.hide()
+    }
+  }, [url, loading])
 
   function resetSecondary() {
     setSummary(null)
@@ -221,8 +246,11 @@ export default function TranscribePage() {
     setGenerations({})
   }
 
-  async function submit(e: React.FormEvent) {
-    e.preventDefault()
+  async function submit(e?: React.FormEvent) {
+    if (e) e.preventDefault()
+    if (!url.trim() || loading) return
+    const tg = getTelegram()
+    tg?.HapticFeedback.impactOccurred('light')
     setError(null)
     setResult(null)
     resetSecondary()
@@ -236,16 +264,25 @@ export default function TranscribePage() {
       const data = await res.json()
       if (!res.ok) {
         setError(data.error || 'Не удалось получить транскрипт')
+        tg?.HapticFeedback.notificationOccurred('error')
       } else {
         setResult(data)
         loadHistory()
+        tg?.HapticFeedback.notificationOccurred('success')
       }
     } catch (err: any) {
       setError(err?.message || 'Сетевая ошибка')
+      tg?.HapticFeedback.notificationOccurred('error')
     } finally {
       setLoading(false)
     }
   }
+
+  // Keep latest submit() in a ref so the MainButton onClick handler
+  // always calls the current closure (with up-to-date url/language).
+  useEffect(() => {
+    submitRef.current = () => submit()
+  })
 
   async function loadFromHistory(id: string) {
     setError(null)
@@ -454,24 +491,31 @@ export default function TranscribePage() {
               ))}
             </div>
           </div>
-          <button
-            type="submit"
-            disabled={loading || !url.trim()}
-            className="flex items-center gap-2 px-5 py-2.5 rounded-lg text-sm font-medium transition-all border bg-indigo-600 border-indigo-500 text-white hover:bg-indigo-500 disabled:opacity-50 disabled:cursor-not-allowed"
-          >
-            {loading ? (
-              <>
-                <Loader2 className="w-4 h-4 animate-spin" />
-                Обрабатываем...
-              </>
-            ) : (
-              <>
-                <AudioLines className="w-4 h-4" />
-                Получить текст
-              </>
-            )}
-          </button>
+          {!inTg && (
+            <button
+              type="submit"
+              disabled={loading || !url.trim()}
+              className="flex items-center gap-2 px-5 py-2.5 rounded-lg text-sm font-medium transition-all border bg-indigo-600 border-indigo-500 text-white hover:bg-indigo-500 disabled:opacity-50 disabled:cursor-not-allowed"
+            >
+              {loading ? (
+                <>
+                  <Loader2 className="w-4 h-4 animate-spin" />
+                  Обрабатываем...
+                </>
+              ) : (
+                <>
+                  <AudioLines className="w-4 h-4" />
+                  Получить текст
+                </>
+              )}
+            </button>
+          )}
         </div>
+        {inTg && (
+          <p className="text-[11px] text-slate-600 text-center">
+            Нажми «Получить текст» внизу экрана
+          </p>
+        )}
       </form>
 
       {/* Error */}
