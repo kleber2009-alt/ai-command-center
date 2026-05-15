@@ -115,7 +115,22 @@ async function fetchJson3(baseUrl: string): Promise<CaptionSegment[]> {
   if (!res.ok) {
     throw new YoutubeCaptionsError('fetch-failed', `Эндпоинт субтитров вернул ${res.status}`)
   }
-  const data = (await res.json()) as Json3Response
+  const body = await res.text()
+  if (!body.trim()) {
+    throw new YoutubeCaptionsError(
+      'fetch-blocked',
+      'YouTube вернул пустой ответ на запрос субтитров — IP сервера, скорее всего, в чёрном списке',
+    )
+  }
+  let data: Json3Response
+  try {
+    data = JSON.parse(body) as Json3Response
+  } catch {
+    throw new YoutubeCaptionsError(
+      'fetch-blocked',
+      'YouTube вернул не-JSON на запрос субтитров (вероятно, страница-заглушка для заблокированных IP)',
+    )
+  }
   if (!data.events) return []
 
   const segments: CaptionSegment[] = []

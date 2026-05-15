@@ -6,13 +6,14 @@ import {
 } from 'lucide-react'
 
 type Paragraph = { text: string; start: number; end: number }
+type Source = 'youtube' | 'deepgram' | 'ytdlp+deepgram'
 type Result = {
   id: string | null
   transcript: string
   paragraphs: Paragraph[]
   duration: number | null
   detectedLanguage: string | null
-  source: 'youtube' | 'deepgram'
+  source: Source
 }
 type Summary = { summary: string; bullets: string[] }
 type Translation = { text: string; lang: 'ru' | 'en' }
@@ -280,12 +281,12 @@ export default function TranscribePage() {
               value={url}
               onChange={e => setUrl(e.target.value)}
               required
-              placeholder="https://youtube.com/watch?v=... или https://example.com/audio.mp3"
+              placeholder="https://youtube.com/... · https://instagram.com/reel/... · или прямой mp3/mp4"
               className="w-full pl-9 pr-3 py-2.5 bg-slate-900/60 border border-slate-700 rounded-lg text-sm text-slate-200 placeholder:text-slate-600 focus:outline-none focus:border-indigo-500/60 focus:ring-1 focus:ring-indigo-500/30 transition-all font-mono"
             />
           </div>
           <p className="text-[11px] text-slate-600 mt-1.5">
-            YouTube (через субтитры) или прямой файл: mp3, wav, m4a, ogg, mp4, mov, webm.
+            YouTube · Instagram Reels · TikTok · прямые файлы (mp3, wav, m4a, ogg, mp4, mov, webm).
           </p>
         </div>
 
@@ -352,6 +353,10 @@ export default function TranscribePage() {
                   {result.source === 'youtube' ? (
                     <span className="flex items-center gap-1 px-1.5 py-0.5 rounded bg-rose-500/10 text-rose-400">
                       <Youtube className="w-3 h-3" /> YouTube
+                    </span>
+                  ) : result.source === 'ytdlp+deepgram' ? (
+                    <span className="flex items-center gap-1 px-1.5 py-0.5 rounded bg-amber-500/10 text-amber-400">
+                      <FileAudio className="w-3 h-3" /> yt-dlp + Deepgram
                     </span>
                   ) : (
                     <span className="flex items-center gap-1 px-1.5 py-0.5 rounded bg-indigo-500/10 text-indigo-400">
