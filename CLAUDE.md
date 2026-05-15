@@ -53,3 +53,43 @@ Next.js 14 App Router + React 18 + TypeScript + Tailwind. UI strings are Russian
 - The `BRIEFING` block on the dashboard is hardcoded demo content, not fetched. When wiring it to real data, replace the constant rather than reading from it.
 - `next.config.js` is empty — no custom image domains, headers, or rewrites. Add them here if needed rather than via middleware.
 - The model identifier `claude-haiku-4-5-20251001` is the production target; the version string visible in the sidebar footer (`claude-sonnet-4-6`) is cosmetic and out of sync — update both if you change models.
+
+## Design System — AI Mastery Platform
+
+Authoritative visual contract for the platform. All new UI must follow these tokens and rules.
+
+### Colors
+
+- Background: `#080808`
+- Text: `#f5f0e8` (never use pure `#ffffff`)
+- Accent primary: `#c8f060` (lime)
+- Accent secondary: `#60c8f0` (blue)
+- Accent tertiary: `#f06090` (pink)
+
+### Typography
+
+- Headings & body: **Georgia**
+- Labels, numbers, code: **JetBrains Mono**
+- Labels: 10–11px, ALL CAPS, JetBrains Mono
+- Decorative numbers (`01`, `02`, `03`): outline style, large, sit behind content
+
+### Layout
+
+- Card gaps: **2px**
+- No `box-shadow` anywhere
+- Sharp corners only — `border-radius: 0`
+- Mobile-first, fully responsive
+
+### Motion
+
+- Framer Motion `fade-up` on scroll
+- Stagger `0.1s` between sibling items
+
+### Hard rules
+
+- Never use rounded corners
+- Never use `box-shadow`
+- Never use pure white — always `#f5f0e8`
+- Outline decorative numbers are background-only; they must not block interaction
+- All components must read colors/fonts from CSS variables that map to the tokens above — don't hardcode hex values in components
+
