@@ -83,12 +83,12 @@ export default function TranscribePage() {
               value={url}
               onChange={e => setUrl(e.target.value)}
               required
-              placeholder="https://example.com/audio.mp3"
+              placeholder="https://youtube.com/watch?v=... или https://example.com/audio.mp3"
               className="w-full pl-9 pr-3 py-2.5 bg-slate-900/60 border border-slate-700 rounded-lg text-sm text-slate-200 placeholder:text-slate-600 focus:outline-none focus:border-indigo-500/60 focus:ring-1 focus:ring-indigo-500/30 transition-all font-mono"
             />
           </div>
           <p className="text-[11px] text-slate-600 mt-1.5">
-            Поддерживаются: mp3, wav, m4a, ogg, flac, mp4, mov, webm. До ~2 часов.
+            YouTube (через субтитры) или прямой файл: mp3, wav, m4a, ogg, mp4, mov, webm.
           </p>
         </div>
 
