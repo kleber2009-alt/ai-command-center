@@ -1,4 +1,7 @@
+import base64
 import os
+import tempfile
+from pathlib import Path
 from fastapi import FastAPI, HTTPException, Header
 from pydantic import BaseModel, HttpUrl
 import yt_dlp
@@ -6,6 +9,36 @@ import yt_dlp
 app = FastAPI(title="ytdlp-extractor", version="1.0.0")
 
 API_KEY = os.environ.get("YTDLP_SERVICE_API_KEY")
+
+# Optional cookies for sites that gate scraping (Instagram, Facebook,
+# some YouTube videos). Provide the contents of a cookies.txt file
+# (Netscape format) as base64 in INSTAGRAM_COOKIES_B64 / COOKIES_B64,
+# OR mount a file at COOKIES_FILE.
+_COOKIES_FILE_PATH: Path | None = None
+
+
+def _load_cookies() -> Path | None:
+    global _COOKIES_FILE_PATH
+    if _COOKIES_FILE_PATH and _COOKIES_FILE_PATH.exists():
+        return _COOKIES_FILE_PATH
+
+    cookies_path = os.environ.get("COOKIES_FILE")
+    if cookies_path and Path(cookies_path).exists():
+        _COOKIES_FILE_PATH = Path(cookies_path)
+        return _COOKIES_FILE_PATH
+
+    b64 = os.environ.get("INSTAGRAM_COOKIES_B64") or os.environ.get("COOKIES_B64")
+    if b64:
+        try:
+            decoded = base64.b64decode(b64)
+            tmp = Path(tempfile.gettempdir()) / "ytdlp_cookies.txt"
+            tmp.write_bytes(decoded)
+            _COOKIES_FILE_PATH = tmp
+            return tmp
+        except Exception as e:
+            print(f"[ytdlp] Failed to decode cookies: {e}")
+
+    return None
 
 
 def check_auth(authorization: str | None) -> None:
@@ -67,6 +100,10 @@ def extract(body: ExtractRequest, authorization: str | None = Header(default=Non
         "skip_download": True,
         "extract_flat": False,
     }
+
+    cookies_file = _load_cookies()
+    if cookies_file:
+        opts["cookiefile"] = str(cookies_file)
 
     try:
         with yt_dlp.YoutubeDL(opts) as ydl:

@@ -24,6 +24,40 @@ If `YTDLP_SERVICE_API_KEY` is set on the service, callers must send
 `Authorization: Bearer <key>`. Otherwise the endpoint is open. Set this on
 Railway so only your Vercel app can hit it.
 
+## Cookies for Instagram / Facebook / age-gated YouTube
+
+Many sites block scraping unless yt-dlp presents the cookies of a logged-in
+session. To unlock Instagram Reels in particular, export cookies from
+your browser as a Netscape `cookies.txt` file and feed them to the service.
+
+### How to get the cookies file
+
+1. Log into the target site in your browser (e.g. instagram.com)
+2. Install the browser extension **Get cookies.txt LOCALLY** (Chrome/Firefox)
+3. Open the site, click the extension, **Export** → save `cookies.txt`
+
+### How to feed it to the service
+
+The service accepts cookies via env var (base64-encoded) so you don't need
+to mount a file.
+
+```bash
+# On your machine, encode the file:
+base64 -w 0 cookies.txt
+# Copy the output (one long string)
+```
+
+On Railway, add the env var:
+
+- `INSTAGRAM_COOKIES_B64` (or generic `COOKIES_B64`) = the base64 string
+
+Restart the Railway service. On the first call yt-dlp will write the
+cookies to a temp file and use them for every extraction.
+
+> ⚠️ The cookies expire (Instagram rotates session tokens every few weeks).
+> When you start getting 401/login-required errors again, re-export cookies
+> and update the env var.
+
 ## Deploy on Railway
 
 1. Create a new project on https://railway.app
