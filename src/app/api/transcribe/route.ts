@@ -1,6 +1,12 @@
 import { NextRequest, NextResponse } from 'next/server'
 import { fetchYoutubeCaptions, getYoutubeVideoId, YoutubeCaptionsError } from '@/lib/youtube-captions'
 import { getServerSupabase, makeTitle, Paragraph } from '@/lib/transcripts-db'
+import {
+  extractDirectMediaUrl,
+  isSocialMediaUrl,
+  isYtdlpServiceConfigured,
+  YtdlpServiceError,
+} from '@/lib/ytdlp-client'
 
 export const maxDuration = 60
 
@@ -10,7 +16,7 @@ type Ok = {
   paragraphs: Paragraph[]
   duration: number | null
   detectedLanguage: string | null
-  source: 'youtube' | 'deepgram'
+  source: 'youtube' | 'deepgram' | 'ytdlp+deepgram'
 }
 type Err = { error: string; status: number }
 type Result = Ok | Err
@@ -56,7 +62,7 @@ function decodeHtmlEntities(s: string): string {
     .replace(/&nbsp;/g, ' ')
 }
 
-async function fetchYoutube(url: string, language: 'auto' | 'ru' | 'en'): Promise<Result> {
+async function fetchYoutubeCaptionsPath(url: string, language: 'auto' | 'ru' | 'en'): Promise<Result> {
   try {
     const { segments, language: detectedLang } = await fetchYoutubeCaptions(url, language)
     if (segments.length === 0) {
@@ -82,13 +88,26 @@ async function fetchYoutube(url: string, language: 'auto' | 'ru' | 'en'): Promis
   } catch (e: any) {
     if (e instanceof YoutubeCaptionsError) {
       const status = e.code === 'fetch-blocked' ? 503 : 400
-      const hint =
-        e.code === 'fetch-blocked'
-          ? '. YouTube блокирует серверные IP — попробуйте позже или используйте прямую ссылку на mp3/mp4'
-          : ''
-      return { error: e.message + hint, status }
+      return { error: e.message, status }
     }
     return { error: e?.message || 'Ошибка YouTube', status: 500 }
+  }
+}
+
+async function fetchViaYtdlpThenDeepgram(
+  url: string,
+  language: 'auto' | 'ru' | 'en',
+): Promise<Result> {
+  try {
+    const { url: directUrl } = await extractDirectMediaUrl(url)
+    const deepgramResult = await fetchDeepgram(directUrl, language)
+    if ('error' in deepgramResult) return deepgramResult
+    return { ...deepgramResult, source: 'ytdlp+deepgram' }
+  } catch (e: any) {
+    if (e instanceof YtdlpServiceError) {
+      return { error: e.message, status: e.status }
+    }
+    return { error: e?.message || 'Ошибка yt-dlp', status: 500 }
   }
 }
 
@@ -175,18 +194,43 @@ async function saveTranscript(url: string, result: Ok): Promise<string | null> {
   }
 }
 
+async function dispatch(url: string, language: 'auto' | 'ru' | 'en'): Promise<Result> {
+  if (isYoutube(url)) {
+    const captionsResult = await fetchYoutubeCaptionsPath(url, language)
+    // Fall back to yt-dlp + Deepgram only if YouTube blocked us at the IP level
+    // (rate limit / empty body). Other errors — no subtitles, wrong language —
+    // are not solvable by re-downloading audio.
+    if ('error' in captionsResult && captionsResult.status === 503 && isYtdlpServiceConfigured()) {
+      return await fetchViaYtdlpThenDeepgram(url, language)
+    }
+    return captionsResult
+  }
+
+  if (isSocialMediaUrl(url)) {
+    if (!isYtdlpServiceConfigured()) {
+      return {
+        error: 'Для Instagram / TikTok / X нужен yt-dlp сервис. Настройте YTDLP_SERVICE_URL.',
+        status: 503,
+      }
+    }
+    return await fetchViaYtdlpThenDeepgram(url, language)
+  }
+
+  return await fetchDeepgram(url, language)
+}
+
 export async function POST(req: NextRequest) {
   const { url, language = 'ru' } = (await req.json()) as Body
 
   if (!url || typeof url !== 'string' || !/^https?:\/\//i.test(url)) {
     return NextResponse.json(
-      { error: 'Укажите ссылку (http/https) на YouTube-видео или прямой файл' },
+      { error: 'Укажите ссылку (http/https) на YouTube-видео, Instagram-Reel или прямой медиафайл' },
       { status: 400 },
     )
   }
 
   try {
-    const result = isYoutube(url) ? await fetchYoutube(url, language) : await fetchDeepgram(url, language)
+    const result = await dispatch(url, language)
 
     if ('error' in result) {
       return NextResponse.json({ error: result.error }, { status: result.status })
