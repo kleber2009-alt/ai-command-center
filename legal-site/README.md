@@ -46,9 +46,24 @@ src/
     Footer.tsx
 ```
 
-## Деплой
+## Деплой на Netlify
 
-Vercel: импортировать репо, прописать env-переменные в Project Settings → Environment Variables, задеплоить.
+Через git-импорт (без CLI):
+
+1. Запушить ветку (уже сделано).
+2. https://app.netlify.com → **Add new site** → **Import an existing project** → выбрать репозиторий.
+3. В настройках сборки указать:
+   - **Branch to deploy**: `claude/legal-company-site-Iy5a0` (или `main` после мержа).
+   - **Base directory**: `legal-site`
+   - Команду сборки и publish-папку Netlify прочитает из `legal-site/netlify.toml` (`npm run build`, `.next`).
+4. **Site configuration → Environment variables** → добавить:
+   - `TELEGRAM_BOT_TOKEN`
+   - `TELEGRAM_CHAT_ID`
+   - `NEXT_PUBLIC_TELEGRAM_USERNAME`
+   - `NEXT_PUBLIC_WHATSAPP_PHONE`
+5. **Deploy site**. После сборки API-роут `/api/lead` поднимется как Netlify Function автоматически (через `@netlify/plugin-nextjs`).
+
+> Netlify Drop (drag-and-drop одной папкой) не подойдёт — он деплоит только статические файлы, а у нас серверный роут для отправки в Telegram.
 
 ## Дальше
 
