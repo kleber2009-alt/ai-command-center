@@ -808,7 +808,7 @@ export default function TranscribePage() {
 
       {!historyConfigured && (
         <div className="text-[11px] text-slate-600 px-1">
-          История транскриптов выключена — добавьте <code className="text-slate-500">NEXT_PUBLIC_SUPABASE_URL</code> и <code className="text-slate-500">SUPABASE_SERVICE_KEY</code>, а также выполните миграцию <code className="text-slate-500">supabase/migrations/001_transcripts.sql</code>.
+          История транскриптов выключена — нужно задать <code className="text-slate-500">DATABASE_URL</code> и выполнить миграцию <code className="text-slate-500">infra/db/init/001_schema.sql</code>.
         </div>
       )}
     </div>

@@ -1,6 +1,6 @@
 import { NextRequest, NextResponse } from 'next/server'
 import { fetchYoutubeCaptions, getYoutubeVideoId, YoutubeCaptionsError } from '@/lib/youtube-captions'
-import { getServerSupabase, makeTitle, Paragraph } from '@/lib/transcripts-db'
+import { getTranscriptsDb, makeTitle, Paragraph } from '@/lib/transcripts-db'
 import {
   extractDirectMediaUrl,
   isSocialMediaUrl,
@@ -167,27 +167,18 @@ async function fetchDeepgram(url: string, language: 'auto' | 'ru' | 'en'): Promi
 }
 
 async function saveTranscript(url: string, result: Ok): Promise<string | null> {
-  const supabase = getServerSupabase()
-  if (!supabase) return null
+  const db = getTranscriptsDb()
+  if (!db) return null
   try {
-    const { data, error } = await supabase
-      .from('transcripts')
-      .insert({
-        url,
-        title: makeTitle(result.transcript, url),
-        source: result.source,
-        language: result.detectedLanguage,
-        duration: result.duration,
-        transcript: result.transcript,
-        paragraphs: result.paragraphs,
-      })
-      .select('id')
-      .single()
-    if (error) {
-      console.warn('saveTranscript failed:', error.message)
-      return null
-    }
-    return data.id as string
+    return await db.insertTranscript({
+      url,
+      title: makeTitle(result.transcript, url),
+      source: result.source,
+      language: result.detectedLanguage,
+      duration: result.duration,
+      transcript: result.transcript,
+      paragraphs: result.paragraphs,
+    })
   } catch (e: any) {
     console.warn('saveTranscript exception:', e?.message)
     return null

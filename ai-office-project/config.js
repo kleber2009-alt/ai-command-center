@@ -1,26 +1,16 @@
 /* ═══════════════════════════════════════════════════════════════════
-   config.js — единый конфиг и backend-интеграции
+   config.js — единый конфиг и backend-интеграции (self-hosted)
    ───────────────────────────────────────────────────────────────────
-   Что внутри:
-   · Supabase URL + ANON (anon-key безопасно — RLS защищает данные)
-   · Telegram-уведомления через /api/notify-tg (Netlify Function,
-     токен НЕ виден в браузере — лежит в env vars)
-   · Глобальные функции для всех форм проекта
-
-   ⚠ Безопасность:
-   · Supabase anon-key безопасен (так задумано Supabase)
-   · TG-токен НЕ должен быть в client JS (мы выводим через Netlify Fn)
-   · Если /api/notify-tg возвращает 503 — задеплой через GitHub
-     + установи env vars TG_BOT_TOKEN + TG_CHAT_ID
+   После миграции с Supabase/Netlify на свой сервер:
+   · Lead-формы шлют POST на /api/leads (наш Fastify backend → Postgres)
+   · Telegram-уведомления через /api/notify-tg (наш backend)
+   · Никаких прямых обращений к Supabase REST — всё идёт same-origin.
    ═══════════════════════════════════════════════════════════════════ */
 (function () {
   if (window.AIOConfig) return;
 
-  // ── Supabase (anon-key public OK · RLS-protected) ──
-  const SUPABASE_URL  = 'https://cslvbnladhfjrdbtnwkm.supabase.co';
-  const SUPABASE_ANON = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6ImNzbHZibmxhZGhmanJkYnRud2ttIiwicm9sZSI6ImFub24iLCJpYXQiOjE3Nzg1ODk2NzYsImV4cCI6MjA5NDE2NTY3Nn0.0VjY3ihxWMjDRBoWpPQiAAKEYRveKKbUHzt4969kATk';
-
-  // ── Telegram через серверный proxy (токен в Netlify env vars) ──
+  // Все API-вызовы same-origin — никаких внешних URL.
+  const LEADS_URL    = '/api/leads';
   const TG_PROXY_URL = '/api/notify-tg';
 
   // ── Flags ──
@@ -34,7 +24,7 @@
     return new Date().toLocaleString('ru-RU', { timeZone: 'Europe/Moscow' });
   }
 
-  /** Save lead into Supabase /leads (RLS-protected anon insert). */
+  /** Save lead via our /api/leads endpoint (writes to Postgres). */
   async function saveLead(data) {
     try {
       const payload = {
@@ -50,21 +40,16 @@
         source:             data.source     || 'ai_office_form',
         ref_data:           S ? S.getReferral() : null,
       };
-      const res = await fetch(`${SUPABASE_URL}/rest/v1/leads`, {
+      const res = await fetch(LEADS_URL, {
         method: 'POST',
-        headers: {
-          'Content-Type':  'application/json',
-          'apikey':         SUPABASE_ANON,
-          'Authorization': `Bearer ${SUPABASE_ANON}`,
-          'Prefer':        'return=minimal',
-        },
+        headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify(payload),
       });
-      if (res.ok) { console.log('%c✓ Supabase: lead saved', 'color:#34d058'); return true; }
-      console.warn('[supabase] ' + res.status + ': ' + (await res.text()));
+      if (res.ok) { console.log('%c✓ lead saved', 'color:#34d058'); return true; }
+      console.warn('[leads] ' + res.status + ': ' + (await res.text()).slice(0, 200));
       return false;
     } catch (e) {
-      console.warn('[supabase] network fail:', e.message);
+      console.warn('[leads] network fail:', e.message);
       return false;
     }
   }
@@ -194,8 +179,7 @@
   }
 
   window.AIOConfig = {
-    SUPABASE_URL, SUPABASE_ANON,
-    TG_PROXY_URL,
+    LEADS_URL, TG_PROXY_URL,
     saveLead, notifyTelegram,
     submitLead, submitPartner, submitVideoLead, submitLeadMagnet,
   };

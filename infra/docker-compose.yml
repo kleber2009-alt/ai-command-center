@@ -1,0 +1,106 @@
+# ═══════════════════════════════════════════════════════════════════
+# infra/docker-compose.yml — full self-hosted stack
+# ───────────────────────────────────────────────────────────────────
+# Run from this directory:
+#   cp .env.example .env && $EDITOR .env
+#   docker compose up -d --build
+#
+# Services:
+#   postgres   — shared DB for transcripts, leads, voices, bot users
+#   ai-office  — Fastify backend for ai-office-project (/api/*)
+#   transcribe — Next.js standalone for ai-command-center (/transcribe)
+#   caddy      — reverse proxy with auto-TLS (Let's Encrypt)
+# ═══════════════════════════════════════════════════════════════════
+
+services:
+  postgres:
+    image: postgres:16-alpine
+    restart: unless-stopped
+    environment:
+      POSTGRES_DB: ${POSTGRES_DB}
+      POSTGRES_USER: ${POSTGRES_USER}
+      POSTGRES_PASSWORD: ${POSTGRES_PASSWORD}
+    volumes:
+      - postgres_data:/var/lib/postgresql/data
+      - ./db/init:/docker-entrypoint-initdb.d:ro
+    healthcheck:
+      test: ['CMD-SHELL', 'pg_isready -U ${POSTGRES_USER} -d ${POSTGRES_DB}']
+      interval: 10s
+      timeout: 5s
+      retries: 5
+      start_period: 30s
+    networks: [internal]
+
+  ai-office:
+    build:
+      context: ..
+      dockerfile: infra/services/ai-office/Dockerfile
+    restart: unless-stopped
+    environment:
+      NODE_ENV: production
+      PORT: 3000
+      DATABASE_URL: postgres://${POSTGRES_USER}:${POSTGRES_PASSWORD}@postgres:5432/${POSTGRES_DB}
+      PUBLIC_BASE_URL: ${PUBLIC_BASE_URL}
+      VOICE_NOTES_DIR: /data/voice-notes
+      ANTHROPIC_API_KEY: ${ANTHROPIC_API_KEY}
+      ELEVENLABS_API_KEY: ${ELEVENLABS_API_KEY}
+      TG_BOT_TOKEN: ${TG_BOT_TOKEN}
+      TG_CHAT_ID: ${TG_CHAT_ID}
+      TG_VOICE_BOT_TOKEN: ${TG_VOICE_BOT_TOKEN}
+      TG_WEBHOOK_SECRET: ${TG_WEBHOOK_SECRET}
+    volumes:
+      - voice_notes:/data/voice-notes
+    depends_on:
+      postgres:
+        condition: service_healthy
+    networks: [internal]
+
+  transcribe:
+    build:
+      context: ..
+      dockerfile: infra/services/transcribe/Dockerfile
+    restart: unless-stopped
+    environment:
+      NODE_ENV: production
+      PORT: 3000
+      HOSTNAME: 0.0.0.0
+      DATABASE_URL: postgres://${POSTGRES_USER}:${POSTGRES_PASSWORD}@postgres:5432/${POSTGRES_DB}
+      ANTHROPIC_API_KEY: ${ANTHROPIC_API_KEY}
+      DEEPGRAM_API_KEY: ${DEEPGRAM_API_KEY}
+      YTDLP_SERVICE_URL: ${YTDLP_SERVICE_URL:-}
+      YTDLP_SERVICE_API_KEY: ${YTDLP_SERVICE_API_KEY:-}
+    depends_on:
+      postgres:
+        condition: service_healthy
+    networks: [internal]
+
+  caddy:
+    image: caddy:2-alpine
+    restart: unless-stopped
+    ports:
+      - '80:80'
+      - '443:443'
+      - '443:443/udp'
+    environment:
+      PUBLIC_HOST: ${PUBLIC_HOST}
+      ACME_EMAIL: ${ACME_EMAIL}
+    volumes:
+      - ./Caddyfile:/etc/caddy/Caddyfile:ro
+      - ../ai-office-project:/srv/ai-office:ro
+      - voice_notes:/srv/voice-notes:ro
+      - caddy_data:/data
+      - caddy_config:/config
+    depends_on:
+      - ai-office
+      - transcribe
+    networks: [internal]
+
+volumes:
+  postgres_data:
+  voice_notes:
+  caddy_data:
+  caddy_config:
+
+networks:
+  internal:
+    driver: bridge

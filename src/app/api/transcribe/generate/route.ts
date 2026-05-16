@@ -1,5 +1,5 @@
 import { NextRequest, NextResponse } from 'next/server'
-import { getServerSupabase } from '@/lib/transcripts-db'
+import { getTranscriptsDb } from '@/lib/transcripts-db'
 
 export const maxDuration = 60
 
@@ -200,16 +200,12 @@ export async function POST(req: NextRequest) {
   }
 
   let text = transcript
-  const supabase = getServerSupabase()
+  const db = getTranscriptsDb()
 
-  if (id && supabase) {
-    const { data, error } = await supabase
-      .from('transcripts')
-      .select('transcript, generations')
-      .eq('id', id)
-      .single()
-    if (error) {
-      return NextResponse.json({ error: `Не найден транскрипт: ${error.message}` }, { status: 404 })
+  if (id && db) {
+    const data = await db.getById(id)
+    if (!data) {
+      return NextResponse.json({ error: 'Не найден транскрипт' }, { status: 404 })
     }
     const cached = data.generations?.[type]
     if (cached) {
@@ -268,14 +264,8 @@ export async function POST(req: NextRequest) {
       return NextResponse.json({ error: e.message }, { status: 500 })
     }
 
-    if (id && supabase) {
-      const { data: row } = await supabase
-        .from('transcripts')
-        .select('generations')
-        .eq('id', id)
-        .single()
-      const merged = { ...(row?.generations ?? {}), [type]: validated }
-      await supabase.from('transcripts').update({ generations: merged }).eq('id', id)
+    if (id && db) {
+      await db.updateGeneration(id, type, validated)
     }
 
     return NextResponse.json({ type, content: validated, cached: false })
