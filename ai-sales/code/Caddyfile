@@ -1,0 +1,38 @@
+# AI Command Center + AI Sales · Caddy reverse proxy
+#
+# Один внешний домен → роутинг по префиксу:
+#   /              → dashboard (Next.js на :3000)
+#   /api/sales/*   → api (FastAPI на :8000), префикс срезается
+#   /webhooks/*    → api (Telegram / Instagram webhooks)
+#   /docs, /openapi.json → api (Swagger)
+#
+# DOMAIN задаётся в .env. Для локалки оставь "localhost", для прод-сервера
+# выстави, например: DOMAIN=46-62-215-11.nip.io  →  Let's Encrypt подхватит.
+#
+# Если DOMAIN=localhost — Caddy сгенерирует self-signed для HTTPS.
+
+{$DOMAIN} {
+    encode gzip
+
+    # Webhooks → FastAPI (БЕЗ срезания префикса — Telegram/IG ждут точные URL)
+    handle_path /api/sales/* {
+        reverse_proxy api:8000
+    }
+
+    handle /webhooks/* {
+        reverse_proxy api:8000
+    }
+
+    handle /docs {
+        reverse_proxy api:8000
+    }
+
+    handle /openapi.json {
+        reverse_proxy api:8000
+    }
+
+    # Всё остальное → Next.js dashboard
+    handle {
+        reverse_proxy dashboard:3000
+    }
+}

@@ -1,0 +1,14 @@
+node_modules
+.next
+.git
+.gitignore
+.env*
+!.env.example
+README.md
+ai-sales
+.claude
+.claude-plugin
+npm-debug.log*
+.DS_Store
+Dockerfile
+.dockerignore

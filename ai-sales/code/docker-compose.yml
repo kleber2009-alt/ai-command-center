@@ -132,8 +132,49 @@ services:
       - ../agent-prompts:/app/../agent-prompts:ro
       - ../voice-input:/app/../voice-input:rw
 
+  # ============ AI Command Center · Next.js dashboard ============
+  dashboard:
+    build:
+      context: ../..
+      dockerfile: Dockerfile
+    container_name: aisales-dashboard
+    restart: unless-stopped
+    depends_on:
+      postgres:
+        condition: service_healthy
+    environment:
+      NODE_ENV: production
+      DATABASE_URL: postgresql://aisales:${POSTGRES_PASSWORD:-aisales_local_dev}@postgres:5432/aisales
+      ANTHROPIC_API_KEY: ${ANTHROPIC_API_KEY:-}
+    ports:
+      - "127.0.0.1:3000:3000"
+
+  # ============ Caddy reverse proxy ============
+  # Терминирует HTTPS через Let's Encrypt (nip.io домен на проде)
+  # и роутит:  /            → dashboard:3000
+  #            /api/sales/* → api:8000   (без префикса)
+  #            /webhooks/*  → api:8000
+  caddy:
+    image: caddy:2-alpine
+    container_name: aisales-caddy
+    restart: unless-stopped
+    depends_on:
+      - api
+      - dashboard
+    ports:
+      - "80:80"
+      - "443:443"
+    volumes:
+      - ./Caddyfile:/etc/caddy/Caddyfile:ro
+      - aisales_caddy_data:/data
+      - aisales_caddy_config:/config
+    environment:
+      DOMAIN: ${DOMAIN:-localhost}
+
 volumes:
   aisales_pg_data:
   aisales_redis_data:
   aisales_qdrant_data:
   aisales_minio_data:
+  aisales_caddy_data:
+  aisales_caddy_config:
