@@ -134,7 +134,7 @@ export default function AdminPage() {
       <div className="text-slate-300 space-y-3">
         <h1 className="text-xl font-bold">Дашборд задач</h1>
         <p className="text-sm text-slate-400">
-          Supabase не настроен. Добавьте <code>NEXT_PUBLIC_SUPABASE_URL</code> и <code>SUPABASE_SERVICE_KEY</code>,
+          База не настроена. Добавьте <code>DATABASE_URL</code>,
           выполните миграции <code>001_transcripts.sql</code> и <code>003_tasks.sql</code>.
         </p>
       </div>

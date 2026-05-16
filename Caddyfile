@@ -1,0 +1,18 @@
+# Caddy auto-provisions a Let's Encrypt cert for ${DOMAIN} and proxies
+# everything to the Next.js app on the internal Docker network.
+#
+# Make sure the domain's A record points to this server's public IP
+# BEFORE running `docker compose up`, otherwise the ACME challenge fails.
+
+{$DOMAIN} {
+    encode gzip zstd
+    reverse_proxy app:3000
+
+    # Reasonable security headers for a public web app.
+    header {
+        Strict-Transport-Security "max-age=31536000; includeSubDomains"
+        X-Content-Type-Options    "nosniff"
+        Referrer-Policy           "strict-origin-when-cross-origin"
+        Permissions-Policy        "interest-cohort=()"
+    }
+}

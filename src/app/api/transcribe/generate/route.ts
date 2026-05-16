@@ -1,5 +1,5 @@
 import { NextRequest, NextResponse } from 'next/server'
-import { getServerSupabase } from '@/lib/transcripts-db'
+import { isDbConfigured, query, queryOne } from '@/lib/db'
 
 export const maxDuration = 60
 
@@ -200,22 +200,25 @@ export async function POST(req: NextRequest) {
   }
 
   let text = transcript
-  const supabase = getServerSupabase()
+  const dbOn = isDbConfigured()
 
-  if (id && supabase) {
-    const { data, error } = await supabase
-      .from('transcripts')
-      .select('transcript, generations')
-      .eq('id', id)
-      .single()
-    if (error) {
-      return NextResponse.json({ error: `Не найден транскрипт: ${error.message}` }, { status: 404 })
+  if (id && dbOn) {
+    try {
+      const row = await queryOne<{ transcript: string; generations: Record<string, any> | null }>(
+        `select transcript, generations from transcripts where id = $1`,
+        [id],
+      )
+      if (!row) {
+        return NextResponse.json({ error: 'Транскрипт не найден' }, { status: 404 })
+      }
+      const cached = row.generations?.[type]
+      if (cached) {
+        return NextResponse.json({ type, content: cached, cached: true })
+      }
+      text = row.transcript
+    } catch (e: any) {
+      return NextResponse.json({ error: `БД: ${e?.message}` }, { status: 500 })
     }
-    const cached = data.generations?.[type]
-    if (cached) {
-      return NextResponse.json({ type, content: cached, cached: true })
-    }
-    text = data.transcript
   }
 
   if (!text || text.trim().length === 0) {
@@ -268,14 +271,17 @@ export async function POST(req: NextRequest) {
       return NextResponse.json({ error: e.message }, { status: 500 })
     }
 
-    if (id && supabase) {
-      const { data: row } = await supabase
-        .from('transcripts')
-        .select('generations')
-        .eq('id', id)
-        .single()
+    if (id && dbOn) {
+      // jsonb_set wouldn't merge top-level keys, so we read-merge-write.
+      const row = await queryOne<{ generations: Record<string, any> | null }>(
+        `select generations from transcripts where id = $1`,
+        [id],
+      )
       const merged = { ...(row?.generations ?? {}), [type]: validated }
-      await supabase.from('transcripts').update({ generations: merged }).eq('id', id)
+      await query(
+        `update transcripts set generations = $1::jsonb where id = $2`,
+        [JSON.stringify(merged), id],
+      )
     }
 
     return NextResponse.json({ type, content: validated, cached: false })

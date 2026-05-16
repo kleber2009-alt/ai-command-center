@@ -1,6 +1,6 @@
 import { NextRequest, NextResponse } from 'next/server'
-import { getServerSupabase } from '@/lib/transcripts-db'
-import type { TaskStatus, TaskPriority } from '@/lib/tasks-db'
+import { isDbConfigured, query, queryOne } from '@/lib/db'
+import type { Task, TaskStatus, TaskPriority } from '@/lib/tasks-db'
 
 type PatchBody = Partial<{
   title: string
@@ -12,45 +12,54 @@ type PatchBody = Partial<{
 }>
 
 export async function PATCH(req: NextRequest, { params }: { params: { id: string } }) {
-  const supabase = getServerSupabase()
-  if (!supabase) {
-    return NextResponse.json({ error: 'Supabase не настроен' }, { status: 503 })
+  if (!isDbConfigured()) {
+    return NextResponse.json({ error: 'DATABASE_URL не настроен' }, { status: 503 })
   }
   const body = (await req.json()) as PatchBody
 
-  // Whitelist allowed fields
-  const update: Record<string, unknown> = {}
-  if (typeof body.title === 'string') update.title = body.title
-  if (body.description === null || typeof body.description === 'string') update.description = body.description
-  if (body.status) update.status = body.status
-  if (body.priority) update.priority = body.priority
-  if (body.stage === null || typeof body.stage === 'string') update.stage = body.stage
-  if (typeof body.position === 'number') update.position = body.position
+  const sets: string[] = []
+  const values: unknown[] = []
+  let i = 1
+  const push = (col: string, val: unknown) => {
+    sets.push(`${col} = $${i}`)
+    values.push(val)
+    i++
+  }
 
-  if (Object.keys(update).length === 0) {
+  if (typeof body.title === 'string') push('title', body.title)
+  if (body.description === null || typeof body.description === 'string') push('description', body.description)
+  if (body.status) push('status', body.status)
+  if (body.priority) push('priority', body.priority)
+  if (body.stage === null || typeof body.stage === 'string') push('stage', body.stage)
+  if (typeof body.position === 'number') push('position', body.position)
+
+  if (sets.length === 0) {
     return NextResponse.json({ error: 'Нечего обновлять' }, { status: 400 })
   }
 
-  const { data, error } = await supabase
-    .from('tasks')
-    .update(update)
-    .eq('id', params.id)
-    .select('*')
-    .single()
-  if (error) {
-    return NextResponse.json({ error: error.message }, { status: 500 })
+  values.push(params.id)
+  try {
+    const row = await queryOne<Task>(
+      `update tasks set ${sets.join(', ')} where id = $${i} returning *`,
+      values,
+    )
+    if (!row) {
+      return NextResponse.json({ error: 'Задача не найдена' }, { status: 404 })
+    }
+    return NextResponse.json(row)
+  } catch (e: any) {
+    return NextResponse.json({ error: e?.message || 'Ошибка БД' }, { status: 500 })
   }
-  return NextResponse.json(data)
 }
 
 export async function DELETE(_req: NextRequest, { params }: { params: { id: string } }) {
-  const supabase = getServerSupabase()
-  if (!supabase) {
-    return NextResponse.json({ error: 'Supabase не настроен' }, { status: 503 })
+  if (!isDbConfigured()) {
+    return NextResponse.json({ error: 'DATABASE_URL не настроен' }, { status: 503 })
   }
-  const { error } = await supabase.from('tasks').delete().eq('id', params.id)
-  if (error) {
-    return NextResponse.json({ error: error.message }, { status: 500 })
+  try {
+    await query(`delete from tasks where id = $1`, [params.id])
+    return NextResponse.json({ ok: true })
+  } catch (e: any) {
+    return NextResponse.json({ error: e?.message || 'Ошибка БД' }, { status: 500 })
   }
-  return NextResponse.json({ ok: true })
 }

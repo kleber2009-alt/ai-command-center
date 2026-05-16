@@ -1,4 +1,4 @@
-import { getServerSupabase } from './transcripts-db'
+import { isDbConfigured, query, queryOne } from './db'
 
 export type MeProfile = {
   bio: string
@@ -39,53 +39,71 @@ export type MeChunkMatch = {
   similarity: number
 }
 
-export { getServerSupabase }
+type ProfileRow = {
+  bio: string | null
+  projects: string | null
+  academy: string | null
+  social: string | null
+  voice: string | null
+  custom: Record<string, string> | null
+  updated_at: string | null
+}
+
+function rowToProfile(row: ProfileRow | null): MeProfile {
+  if (!row) return EMPTY_PROFILE
+  return {
+    bio: row.bio ?? '',
+    projects: row.projects ?? '',
+    academy: row.academy ?? '',
+    social: row.social ?? '',
+    voice: row.voice ?? '',
+    custom: row.custom ?? {},
+    updated_at: row.updated_at ?? new Date(0).toISOString(),
+  }
+}
 
 export async function loadProfile(): Promise<MeProfile> {
-  const supabase = getServerSupabase()
-  if (!supabase) return EMPTY_PROFILE
-  const { data } = await supabase.from('me_profile').select('*').eq('id', 'singleton').single()
-  if (!data) return EMPTY_PROFILE
-  return {
-    bio: data.bio ?? '',
-    projects: data.projects ?? '',
-    academy: data.academy ?? '',
-    social: data.social ?? '',
-    voice: data.voice ?? '',
-    custom: data.custom ?? {},
-    updated_at: data.updated_at ?? new Date(0).toISOString(),
+  if (!isDbConfigured()) return EMPTY_PROFILE
+  try {
+    const row = await queryOne<ProfileRow>(
+      `select bio, projects, academy, social, voice, custom, updated_at
+       from me_profile where id = 'singleton'`,
+    )
+    return rowToProfile(row)
+  } catch (e: any) {
+    console.warn('[me-db] loadProfile failed:', e?.message)
+    return EMPTY_PROFILE
   }
 }
 
 export async function saveProfile(p: Partial<MeProfile>): Promise<MeProfile | null> {
-  const supabase = getServerSupabase()
-  if (!supabase) return null
-  const { data } = await supabase
-    .from('me_profile')
-    .upsert(
-      {
-        id: 'singleton',
-        bio: p.bio,
-        projects: p.projects,
-        academy: p.academy,
-        social: p.social,
-        voice: p.voice,
-        custom: p.custom,
-        updated_at: new Date().toISOString(),
-      },
-      { onConflict: 'id' },
+  if (!isDbConfigured()) return null
+  try {
+    const row = await queryOne<ProfileRow>(
+      `insert into me_profile (id, bio, projects, academy, social, voice, custom, updated_at)
+       values ('singleton', $1, $2, $3, $4, $5, $6::jsonb, now())
+       on conflict (id) do update set
+         bio = excluded.bio,
+         projects = excluded.projects,
+         academy = excluded.academy,
+         social = excluded.social,
+         voice = excluded.voice,
+         custom = excluded.custom,
+         updated_at = excluded.updated_at
+       returning bio, projects, academy, social, voice, custom, updated_at`,
+      [
+        p.bio ?? null,
+        p.projects ?? null,
+        p.academy ?? null,
+        p.social ?? null,
+        p.voice ?? null,
+        JSON.stringify(p.custom ?? {}),
+      ],
     )
-    .select()
-    .single()
-  if (!data) return null
-  return {
-    bio: data.bio ?? '',
-    projects: data.projects ?? '',
-    academy: data.academy ?? '',
-    social: data.social ?? '',
-    voice: data.voice ?? '',
-    custom: data.custom ?? {},
-    updated_at: data.updated_at ?? new Date().toISOString(),
+    return rowToProfile(row)
+  } catch (e: any) {
+    console.warn('[me-db] saveProfile failed:', e?.message)
+    return null
   }
 }
 
@@ -100,3 +118,6 @@ export function profileToContext(p: MeProfile): string {
   for (const [k, v] of custom) parts.push(`## ${k}\n${v.trim()}`)
   return parts.join('\n\n')
 }
+
+// Re-export db helpers so callers don't need to import from two places.
+export { query, queryOne, isDbConfigured } from './db'

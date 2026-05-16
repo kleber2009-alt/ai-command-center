@@ -1,6 +1,7 @@
 import { NextRequest, NextResponse } from 'next/server'
 import { fetchYoutubeCaptions, getYoutubeVideoId, YoutubeCaptionsError } from '@/lib/youtube-captions'
-import { getServerSupabase, makeTitle, Paragraph } from '@/lib/transcripts-db'
+import { makeTitle, Paragraph } from '@/lib/transcripts-db'
+import { isDbConfigured, queryOne } from '@/lib/db'
 import {
   extractDirectMediaUrl,
   isSocialMediaUrl,
@@ -167,29 +168,25 @@ async function fetchDeepgram(url: string, language: 'auto' | 'ru' | 'en'): Promi
 }
 
 async function saveTranscript(url: string, result: Ok): Promise<string | null> {
-  const supabase = getServerSupabase()
-  if (!supabase) return null
+  if (!isDbConfigured()) return null
   try {
-    const { data, error } = await supabase
-      .from('transcripts')
-      .insert({
+    const row = await queryOne<{ id: string }>(
+      `insert into transcripts (url, title, source, language, duration, transcript, paragraphs)
+       values ($1, $2, $3, $4, $5, $6, $7::jsonb)
+       returning id`,
+      [
         url,
-        title: makeTitle(result.transcript, url),
-        source: result.source,
-        language: result.detectedLanguage,
-        duration: result.duration,
-        transcript: result.transcript,
-        paragraphs: result.paragraphs,
-      })
-      .select('id')
-      .single()
-    if (error) {
-      console.warn('saveTranscript failed:', error.message)
-      return null
-    }
-    return data.id as string
+        makeTitle(result.transcript, url),
+        result.source,
+        result.detectedLanguage,
+        result.duration,
+        result.transcript,
+        JSON.stringify(result.paragraphs),
+      ],
+    )
+    return row?.id ?? null
   } catch (e: any) {
-    console.warn('saveTranscript exception:', e?.message)
+    console.warn('saveTranscript failed:', e?.message)
     return null
   }
 }

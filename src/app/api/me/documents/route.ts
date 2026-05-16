@@ -1,9 +1,13 @@
 import { NextRequest, NextResponse } from 'next/server'
 import { chunkText } from '@/lib/chunking'
 import { embedBatch } from '@/lib/embeddings'
-import { getServerSupabase } from '@/lib/me-db'
+import { isDbConfigured, query, queryMany, queryOne, getPool } from '@/lib/db'
 
 export const maxDuration = 120
+
+function toPgvectorLiteral(vec: number[]): string {
+  return '[' + vec.join(',') + ']'
+}
 
 async function extractFileText(file: File): Promise<string> {
   const name = file.name.toLowerCase()
@@ -37,22 +41,24 @@ async function extractFileText(file: File): Promise<string> {
 }
 
 export async function GET() {
-  const supabase = getServerSupabase()
-  if (!supabase) return NextResponse.json({ items: [], configured: false })
-  const { data, error } = await supabase
-    .from('me_documents')
-    .select('id, created_at, title, source_type, source_meta, char_count, chunk_count')
-    .order('created_at', { ascending: false })
-    .limit(200)
-  if (error) return NextResponse.json({ error: error.message }, { status: 500 })
-  return NextResponse.json({ items: data ?? [], configured: true })
+  if (!isDbConfigured()) return NextResponse.json({ items: [], configured: false })
+  try {
+    const items = await queryMany(
+      `select id, created_at, title, source_type, source_meta, char_count, chunk_count
+       from me_documents
+       order by created_at desc
+       limit 200`,
+    )
+    return NextResponse.json({ items, configured: true })
+  } catch (e: any) {
+    return NextResponse.json({ error: e?.message || 'Ошибка БД' }, { status: 500 })
+  }
 }
 
 export async function POST(req: NextRequest) {
-  const supabase = getServerSupabase()
-  if (!supabase) {
+  if (!isDbConfigured()) {
     return NextResponse.json(
-      { error: 'Supabase не настроен. Нужны NEXT_PUBLIC_SUPABASE_URL и SUPABASE_SERVICE_KEY + миграция 003_me.sql.' },
+      { error: 'DATABASE_URL не настроен. Поднимите Postgres + расширение vector и выполните миграцию 003_me.sql.' },
       { status: 500 },
     )
   }
@@ -102,35 +108,35 @@ export async function POST(req: NextRequest) {
     return NextResponse.json({ error: e?.message || 'Ошибка эмбеддинга' }, { status: 500 })
   }
 
-  const { data: doc, error: docErr } = await supabase
-    .from('me_documents')
-    .insert({
-      title,
-      source_type,
-      source_meta,
-      original_text: text,
-      char_count: text.length,
-      chunk_count: chunks.length,
-    })
-    .select('id, created_at, title, source_type, source_meta, char_count, chunk_count')
-    .single()
-
-  if (docErr || !doc) {
-    return NextResponse.json({ error: docErr?.message || 'Ошибка вставки документа' }, { status: 500 })
+  // Use a transaction so that a failed chunk insert rolls back the document.
+  const pool = getPool()
+  if (!pool) {
+    return NextResponse.json({ error: 'DATABASE_URL не настроен' }, { status: 500 })
   }
+  const client = await pool.connect()
+  try {
+    await client.query('begin')
+    const docRes = await client.query(
+      `insert into me_documents (title, source_type, source_meta, original_text, char_count, chunk_count)
+       values ($1, $2, $3::jsonb, $4, $5, $6)
+       returning id, created_at, title, source_type, source_meta, char_count, chunk_count`,
+      [title, source_type, JSON.stringify(source_meta), text, text.length, chunks.length],
+    )
+    const doc = docRes.rows[0]
 
-  const rows = chunks.map((c, i) => ({
-    document_id: doc.id,
-    chunk_index: i,
-    content: c,
-    embedding: embeddings[i] as any,
-  }))
-
-  const { error: chunkErr } = await supabase.from('me_chunks').insert(rows)
-  if (chunkErr) {
-    await supabase.from('me_documents').delete().eq('id', doc.id)
-    return NextResponse.json({ error: `Ошибка вставки чанков: ${chunkErr.message}` }, { status: 500 })
+    for (let i = 0; i < chunks.length; i++) {
+      await client.query(
+        `insert into me_chunks (document_id, chunk_index, content, embedding)
+         values ($1, $2, $3, $4::vector)`,
+        [doc.id, i, chunks[i], toPgvectorLiteral(embeddings[i])],
+      )
+    }
+    await client.query('commit')
+    return NextResponse.json({ document: doc })
+  } catch (e: any) {
+    await client.query('rollback').catch(() => {})
+    return NextResponse.json({ error: e?.message || 'Ошибка БД' }, { status: 500 })
+  } finally {
+    client.release()
   }
-
-  return NextResponse.json({ document: doc })
 }
