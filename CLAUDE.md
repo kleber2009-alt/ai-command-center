@@ -2,18 +2,36 @@
 
 This file provides guidance to Claude Code (claude.ai/code) when working with code in this repository.
 
-## What this app is
+## What this repo is
 
-A single-purpose web app and Telegram Mini App for transcribing video / audio
-links and turning the transcript into short-form content (carousel slides,
-Reels script, Telegram post). Hosted on Vercel; the Telegram Mini App entry
-point is `/transcribe`.
+A monorepo (npm workspaces) bundling several related projects under one
+roof. The flagship app is the transcription Mini App; the others are
+support services and a legacy static site kept for reference.
 
-The repo previously hosted an "AI Business Command Center" dashboard with
-agent simulators. All of that was stripped — only the transcription pipeline
-remains.
+```
+/
+├── apps/
+│   ├── transcribe/   # Next.js 14 app + Telegram Mini App (the flagship)
+│   ├── ytdlp/        # FastAPI + yt-dlp companion microservice (Railway)
+│   └── ai-office/    # legacy static "AI Business Command Center" site
+├── packages/         # reserved for shared code (empty)
+├── supabase/         # SQL migrations shared across apps
+└── docs/
+```
+
+Only `apps/transcribe` is a node workspace; `apps/ytdlp` is Python and
+`apps/ai-office` is static HTML. Root `package.json` lists workspaces and
+proxies `dev/build/start/lint` to `apps/transcribe`.
+
+The transcribe app is a single-purpose web app and Telegram Mini App for
+transcribing video / audio links and turning the transcript into short-form
+content (carousel slides, Reels script, Telegram post). Hosted on Vercel;
+the Telegram Mini App entry point is `/transcribe`. **On Vercel set the
+project Root Directory to `apps/transcribe`** (since the layout moved).
 
 ## Commands
+
+Run from the repo root (npm workspaces proxies into `apps/transcribe`):
 
 ```bash
 npm run dev      # Next.js dev server (default :3000)
@@ -22,26 +40,27 @@ npm start        # serve the production build
 npm run lint     # next lint
 ```
 
-No test runner is configured.
+You can also `cd apps/transcribe && npm run …` directly. No test runner is
+configured.
 
 ## Required environment variables
 
 The app degrades gracefully when these are missing — set them in `.env.local`
 for local dev and in Vercel/Railway project envs for prod:
 
-- `ANTHROPIC_API_KEY` — used by `src/app/api/transcribe/summarize/route.ts`,
-  `src/app/api/transcribe/translate/route.ts`, `src/app/api/transcribe/generate/route.ts`.
-- `DEEPGRAM_API_KEY` — used by `src/app/api/transcribe/route.ts` for any
+- `ANTHROPIC_API_KEY` — used by `apps/transcribe/src/app/api/transcribe/summarize/route.ts`,
+  `apps/transcribe/src/app/api/transcribe/translate/route.ts`, `apps/transcribe/src/app/api/transcribe/generate/route.ts`.
+- `DEEPGRAM_API_KEY` — used by `apps/transcribe/src/app/api/transcribe/route.ts` for any
   non-YouTube URL. YouTube goes through our own captions parser and does
   **not** need this key on its own (yt-dlp fallback does feed Deepgram).
 - `NEXT_PUBLIC_SUPABASE_URL`, `NEXT_PUBLIC_SUPABASE_ANON_KEY` — used by the
-  browser client in `src/lib/supabase.ts`. Currently the browser client is
+  browser client in `apps/transcribe/src/lib/supabase.ts`. Currently the browser client is
   only used by the page for typed types; nothing reads through it at runtime.
 - `SUPABASE_SERVICE_KEY` — used by the `/api/transcribe*` routes through
-  `src/lib/transcripts-db.ts`. Required for history and generation caching.
+  `apps/transcribe/src/lib/transcripts-db.ts`. Required for history and generation caching.
   Do **not** expose this to the client.
 - `YTDLP_SERVICE_URL` (optional) — base URL of the companion yt-dlp
-  microservice in `services/ytdlp/` (deploy on Railway). When set,
+  microservice in `apps/ytdlp/` (deploy on Railway). When set,
   `/api/transcribe` falls back to yt-dlp + Deepgram for YouTube when our
   captions parser is IP-blocked, and uses yt-dlp + Deepgram for Instagram
   Reels / TikTok / X.
@@ -56,6 +75,10 @@ SQL Editor:
 - `002_generations.sql` — `generations jsonb` column for caching
   carousel / reels / telegram-post outputs.
 - `003_tasks.sql` — `tasks` table for the project board at `/admin`.
+- `003_me.sql` — `me_profile` / `me_notes` tables for the `/me` page.
+- `004_tasks_project.sql` — adds `project text` column to `tasks` so the
+  `/admin` board can split tasks per monorepo project
+  (`transcribe` | `ytdlp` | `ai-office` | `general`, default `general`).
 
 `supabase/seed_initial_tasks.sql` (not under `migrations/`) is an optional
 one-shot seed that populates the `/admin` board with the current project
@@ -66,21 +89,23 @@ saves/history/caching just no-op.
 
 ## Architecture
 
-Next.js 14 App Router + React 18 + TypeScript + Tailwind. UI strings are
-Russian; comments/identifiers stay English. Path alias `@/* → src/*`
-(`tsconfig.json`). Dark mode is forced at `<html className="dark">`.
+Next.js 14 App Router + React 18 + TypeScript + Tailwind (all inside
+`apps/transcribe/`). UI strings are Russian; comments/identifiers stay
+English. Path alias `@/* → apps/transcribe/src/*`
+(`apps/transcribe/tsconfig.json`). Dark mode is forced at
+`<html className="dark">`.
 
-**Routing**: `src/app/page.tsx` redirects `/` → `/transcribe`. The
-transcribe page has its own layout (`src/app/transcribe/layout.tsx`)
+**Routing**: `apps/transcribe/src/app/page.tsx` redirects `/` → `/transcribe`. The
+transcribe page has its own layout (`apps/transcribe/src/app/transcribe/layout.tsx`)
 providing a mobile-first centered container (max-w-2xl) — there is no
 sidebar. Everything is one page.
 
 `/admin` is a separate route group with its own wider layout
-(`src/app/admin/layout.tsx`, max-w-7xl) — kanban project board.
+(`apps/transcribe/src/app/admin/layout.tsx`, max-w-7xl) — kanban project board.
 Currently NO auth — anyone with the URL can read/write tasks.
 Track "Закрыть /admin от посторонних" task before public launch.
 
-**The flow** (`src/app/transcribe/page.tsx`):
+**The flow** (`apps/transcribe/src/app/transcribe/page.tsx`):
 1. Mount → calls `loadHistory()` and `setInTg(isInTelegram())`.
 2. User pastes a URL + picks a language → submits.
 3. `POST /api/transcribe` returns transcript + paragraphs + metadata. Row is
@@ -103,7 +128,7 @@ Track "Закрыть /admin от посторонних" task before public lau
   detectedLanguage, source: 'youtube'|'deepgram'|'ytdlp+deepgram', id }`.
   **Known issue**: YouTube actively rate-limits datacenter IPs (Vercel
   included) — that's why the yt-dlp fallback exists. For Instagram and most
-  YouTube on Railway, cookies are required (see `services/ytdlp/README.md`).
+  YouTube on Railway, cookies are required (see `apps/ytdlp/README.md`).
 - `POST /api/transcribe/summarize` — body `{ id?, transcript? }`. Returns
   `{ summary, bullets, cached }`. Caches on the row.
 - `POST /api/transcribe/translate` — body `{ id?, transcript?,
@@ -117,13 +142,17 @@ Track "Закрыть /admin от посторонних" task before public lau
 - `GET /api/transcribe/history` — last 20 rows. Returns
   `{ items, configured: boolean }`.
 - `GET|DELETE /api/transcribe/history/[id]` — one row.
-- `GET /api/tasks` — list all tasks for `/admin` board. Returns `{ items, configured }`.
-- `POST /api/tasks` — create task. Body `{ title, description?, status?, priority?, stage? }`.
-- `PATCH /api/tasks/[id]` — update fields. `DELETE /api/tasks/[id]` removes.
+- `GET /api/tasks?project=transcribe` — list tasks for `/admin` board.
+  Optional `project` query param filters server-side. Returns
+  `{ items, configured }`.
+- `POST /api/tasks` — create task. Body `{ title, description?, status?,
+  priority?, stage?, project? }`. `project` defaults to `'general'`.
+- `PATCH /api/tasks/[id]` — update fields (including `project`).
+  `DELETE /api/tasks/[id]` removes.
 
 ## Telegram Mini App
 
-The app loads `telegram-web-app.js` in `src/app/layout.tsx`. On mount,
+The app loads `telegram-web-app.js` in `apps/transcribe/src/app/layout.tsx`. On mount,
 `src/components/TelegramInit.tsx` calls `tg.ready()` + `tg.expand()` and
 mirrors `themeParams` to CSS variables on `<html>`. The transcribe page:
 
@@ -142,17 +171,17 @@ implemented — every API route is open.
 
 ## yt-dlp companion service
 
-`services/ytdlp/` — FastAPI + yt-dlp Docker service to run on Railway.
+`apps/ytdlp/` — FastAPI + yt-dlp Docker service to run on Railway.
 Exposes `POST /extract { url }` → `{ url, title, duration, ext, extractor }`,
 where `url` is a signed direct media URL Deepgram can ingest. Auth via
 `Authorization: Bearer $YTDLP_SERVICE_API_KEY`. Cookies for Instagram /
 YouTube can be provided as base64 in `INSTAGRAM_COOKIES_B64` / `COOKIES_B64`
-(both names accepted) — see `services/ytdlp/README.md`.
+(both names accepted) — see `apps/ytdlp/README.md`.
 
 ## Conventions
 
 - Client-only React components must start with `'use client'`. Route
-  handlers and `src/lib/supabase.ts` do not.
+  handlers and `apps/transcribe/src/lib/supabase.ts` do not.
 - Icons come from `lucide-react`. No emojis in UI; they are user-facing
   decoration only and we don't have any in the current app.
 - `next.config.js` is empty — no custom image domains, headers, or rewrites.

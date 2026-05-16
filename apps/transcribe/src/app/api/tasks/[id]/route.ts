@@ -1,6 +1,6 @@
 import { NextRequest, NextResponse } from 'next/server'
 import { getServerSupabase } from '@/lib/transcripts-db'
-import type { TaskStatus, TaskPriority } from '@/lib/tasks-db'
+import type { TaskStatus, TaskPriority, TaskProject } from '@/lib/tasks-db'
 
 type PatchBody = Partial<{
   title: string
@@ -9,6 +9,7 @@ type PatchBody = Partial<{
   priority: TaskPriority
   stage: string | null
   position: number
+  project: TaskProject
 }>
 
 export async function PATCH(req: NextRequest, { params }: { params: { id: string } }) {
@@ -26,6 +27,7 @@ export async function PATCH(req: NextRequest, { params }: { params: { id: string
   if (body.priority) update.priority = body.priority
   if (body.stage === null || typeof body.stage === 'string') update.stage = body.stage
   if (typeof body.position === 'number') update.position = body.position
+  if (body.project) update.project = body.project
 
   if (Object.keys(update).length === 0) {
     return NextResponse.json({ error: 'Нечего обновлять' }, { status: 400 })
