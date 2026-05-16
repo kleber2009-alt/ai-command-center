@@ -1,6 +1,6 @@
 import { NextRequest, NextResponse } from 'next/server'
 import { embed } from '@/lib/embeddings'
-import { getServerSupabase, loadProfile, profileToContext } from '@/lib/me-db'
+import { loadProfile, profileToContext, searchChunks, type MeChunkMatch } from '@/lib/me-db'
 import { streamAnthropic } from '@/lib/anthropic-stream'
 
 export const maxDuration = 60
@@ -28,43 +28,32 @@ export async function POST(req: NextRequest) {
   if (!process.env.ANTHROPIC_API_KEY) {
     return NextResponse.json({ error: 'ANTHROPIC_API_KEY не настроен' }, { status: 500 })
   }
-  const supabase = getServerSupabase()
-  if (!supabase) {
-    return NextResponse.json(
-      { error: 'Supabase не настроен. Нужны NEXT_PUBLIC_SUPABASE_URL и SUPABASE_SERVICE_KEY + миграция 003_me.sql.' },
-      { status: 500 },
-    )
-  }
 
-  const profile = await loadProfile()
+  const profile = loadProfile()
   const profileBlock = profileToContext(profile)
 
   const lastUser = messages[messages.length - 1].content
   let contextBlock = ''
-  let citations: Array<{ document_id: string; document_title: string; chunk_index: number; similarity: number }> = []
+  let citations: Array<{ document_id: number; document_title: string; chunk_index: number; similarity: number }> = []
 
   if (process.env.OPENAI_API_KEY) {
     try {
       const queryVec = await embed(lastUser)
-      const { data: matches, error } = await supabase.rpc('match_me_chunks', {
-        query_embedding: queryVec as any,
-        match_count: topK,
-      })
-      if (!error && Array.isArray(matches)) {
-        const filtered = matches.filter((m: any) => (m.similarity ?? 0) > 0.2)
-        contextBlock = filtered
-          .map(
-            (m: any, i: number) =>
-              `### Фрагмент ${i + 1} — [${m.document_title}] (sim ${(m.similarity * 100).toFixed(0)}%)\n${m.content}`,
-          )
-          .join('\n\n---\n\n')
-        citations = filtered.map((m: any) => ({
-          document_id: m.document_id,
-          document_title: m.document_title,
-          chunk_index: m.chunk_index,
-          similarity: m.similarity,
-        }))
-      }
+      const matches: MeChunkMatch[] = searchChunks(queryVec, topK).filter(
+        (m) => m.similarity > 0.2,
+      )
+      contextBlock = matches
+        .map(
+          (m, i) =>
+            `### Фрагмент ${i + 1} — [${m.document_title}] (sim ${(m.similarity * 100).toFixed(0)}%)\n${m.content}`,
+        )
+        .join('\n\n---\n\n')
+      citations = matches.map((m) => ({
+        document_id: m.document_id,
+        document_title: m.document_title,
+        chunk_index: m.chunk_index,
+        similarity: m.similarity,
+      }))
     } catch (e: any) {
       console.warn('[me/chat] retrieval failed:', e?.message)
     }

@@ -1,6 +1,6 @@
 import { NextRequest, NextResponse } from 'next/server'
 import { fetchYoutubeCaptions, getYoutubeVideoId, YoutubeCaptionsError } from '@/lib/youtube-captions'
-import { getServerSupabase, makeTitle, Paragraph } from '@/lib/transcripts-db'
+import { insertTranscript, makeTitle, Paragraph } from '@/lib/transcripts-db'
 import {
   extractDirectMediaUrl,
   isSocialMediaUrl,
@@ -166,28 +166,17 @@ async function fetchDeepgram(url: string, language: 'auto' | 'ru' | 'en'): Promi
   }
 }
 
-async function saveTranscript(url: string, result: Ok): Promise<string | null> {
-  const supabase = getServerSupabase()
-  if (!supabase) return null
+function saveTranscript(url: string, result: Ok): string | null {
   try {
-    const { data, error } = await supabase
-      .from('transcripts')
-      .insert({
-        url,
-        title: makeTitle(result.transcript, url),
-        source: result.source,
-        language: result.detectedLanguage,
-        duration: result.duration,
-        transcript: result.transcript,
-        paragraphs: result.paragraphs,
-      })
-      .select('id')
-      .single()
-    if (error) {
-      console.warn('saveTranscript failed:', error.message)
-      return null
-    }
-    return data.id as string
+    return insertTranscript({
+      url,
+      title: makeTitle(result.transcript, url),
+      source: result.source,
+      language: result.detectedLanguage,
+      duration: result.duration,
+      transcript: result.transcript,
+      paragraphs: result.paragraphs,
+    })
   } catch (e: any) {
     console.warn('saveTranscript exception:', e?.message)
     return null
@@ -241,7 +230,7 @@ export async function POST(req: NextRequest) {
       return NextResponse.json({ error: result.error }, { status: result.status })
     }
 
-    const id = await saveTranscript(url, result)
+    const id = saveTranscript(url, result)
     return NextResponse.json({ ...result, id })
   } catch (e: any) {
     return NextResponse.json({ error: e?.message || 'Ошибка транскрибации' }, { status: 500 })

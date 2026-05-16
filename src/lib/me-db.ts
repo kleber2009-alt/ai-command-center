@@ -1,4 +1,4 @@
-import { getServerSupabase } from './transcripts-db'
+import { getDb, embeddingToBuffer } from './db'
 
 export type MeProfile = {
   bio: string
@@ -21,7 +21,7 @@ export const EMPTY_PROFILE: MeProfile = {
 }
 
 export type MeDocumentRow = {
-  id: string
+  id: number
   created_at: string
   title: string
   source_type: 'paste' | 'file' | 'transcript'
@@ -30,63 +30,89 @@ export type MeDocumentRow = {
   chunk_count: number
 }
 
+export type MeDocumentFullRow = MeDocumentRow & {
+  original_text: string
+}
+
 export type MeChunkMatch = {
-  id: string
-  document_id: string
+  id: number
+  document_id: number
   document_title: string
   chunk_index: number
   content: string
   similarity: number
 }
 
-export { getServerSupabase }
-
-export async function loadProfile(): Promise<MeProfile> {
-  const supabase = getServerSupabase()
-  if (!supabase) return EMPTY_PROFILE
-  const { data } = await supabase.from('me_profile').select('*').eq('id', 'singleton').single()
-  if (!data) return EMPTY_PROFILE
-  return {
-    bio: data.bio ?? '',
-    projects: data.projects ?? '',
-    academy: data.academy ?? '',
-    social: data.social ?? '',
-    voice: data.voice ?? '',
-    custom: data.custom ?? {},
-    updated_at: data.updated_at ?? new Date(0).toISOString(),
+function safeParseObject(s: string | null | undefined): Record<string, any> {
+  if (!s) return {}
+  try {
+    const v = JSON.parse(s)
+    return v && typeof v === 'object' ? v : {}
+  } catch {
+    return {}
   }
 }
 
-export async function saveProfile(p: Partial<MeProfile>): Promise<MeProfile | null> {
-  const supabase = getServerSupabase()
-  if (!supabase) return null
-  const { data } = await supabase
-    .from('me_profile')
-    .upsert(
-      {
-        id: 'singleton',
-        bio: p.bio,
-        projects: p.projects,
-        academy: p.academy,
-        social: p.social,
-        voice: p.voice,
-        custom: p.custom,
-        updated_at: new Date().toISOString(),
-      },
-      { onConflict: 'id' },
+/** Local SQLite is always available; kept for callsite parity with the old Supabase API. */
+export function isDbConfigured(): boolean {
+  return true
+}
+
+export function loadProfile(): MeProfile {
+  const row = getDb()
+    .prepare(
+      `SELECT bio, projects, academy, social, voice, custom, updated_at
+       FROM me_profile WHERE id = 'singleton'`,
     )
-    .select()
-    .single()
-  if (!data) return null
+    .get() as
+    | {
+        bio: string
+        projects: string
+        academy: string
+        social: string
+        voice: string
+        custom: string
+        updated_at: string
+      }
+    | undefined
+
+  if (!row) return EMPTY_PROFILE
   return {
-    bio: data.bio ?? '',
-    projects: data.projects ?? '',
-    academy: data.academy ?? '',
-    social: data.social ?? '',
-    voice: data.voice ?? '',
-    custom: data.custom ?? {},
-    updated_at: data.updated_at ?? new Date().toISOString(),
+    bio: row.bio ?? '',
+    projects: row.projects ?? '',
+    academy: row.academy ?? '',
+    social: row.social ?? '',
+    voice: row.voice ?? '',
+    custom: safeParseObject(row.custom),
+    updated_at: row.updated_at ?? new Date(0).toISOString(),
   }
+}
+
+export function saveProfile(p: Partial<MeProfile>): MeProfile {
+  const now = new Date().toISOString()
+  getDb()
+    .prepare(
+      `INSERT INTO me_profile (id, bio, projects, academy, social, voice, custom, updated_at)
+       VALUES ('singleton', ?, ?, ?, ?, ?, ?, ?)
+       ON CONFLICT(id) DO UPDATE SET
+         bio = excluded.bio,
+         projects = excluded.projects,
+         academy = excluded.academy,
+         social = excluded.social,
+         voice = excluded.voice,
+         custom = excluded.custom,
+         updated_at = excluded.updated_at`,
+    )
+    .run(
+      p.bio ?? '',
+      p.projects ?? '',
+      p.academy ?? '',
+      p.social ?? '',
+      p.voice ?? '',
+      JSON.stringify(p.custom ?? {}),
+      now,
+    )
+  return loadProfile()
 }
 
 export function profileToContext(p: MeProfile): string {
@@ -96,7 +122,129 @@ export function profileToContext(p: MeProfile): string {
   if (p.academy.trim()) parts.push(`## Академия / знания\n${p.academy.trim()}`)
   if (p.social.trim()) parts.push(`## Соцсети\n${p.social.trim()}`)
   if (p.voice.trim()) parts.push(`## Голос и стиль\n${p.voice.trim()}`)
-  const custom = Object.entries(p.custom ?? {}).filter(([, v]) => typeof v === 'string' && v.trim())
+  const custom = Object.entries(p.custom ?? {}).filter(
+    ([, v]) => typeof v === 'string' && v.trim(),
+  )
   for (const [k, v] of custom) parts.push(`## ${k}\n${v.trim()}`)
   return parts.join('\n\n')
+}
+
+export function listDocuments(limit = 200): MeDocumentRow[] {
+  const rows = getDb()
+    .prepare(
+      `SELECT id, created_at, title, source_type, source_meta, char_count, chunk_count
+       FROM me_documents ORDER BY created_at DESC LIMIT ?`,
+    )
+    .all(limit) as Array<
+    Omit<MeDocumentRow, 'source_meta'> & { source_meta: string }
+  >
+  return rows.map((r) => ({ ...r, source_meta: safeParseObject(r.source_meta) }))
+}
+
+export function getDocument(id: number): MeDocumentFullRow | null {
+  const row = getDb()
+    .prepare(
+      `SELECT id, created_at, title, source_type, source_meta, original_text, char_count, chunk_count
+       FROM me_documents WHERE id = ?`,
+    )
+    .get(id) as
+    | (Omit<MeDocumentFullRow, 'source_meta'> & { source_meta: string })
+    | undefined
+  if (!row) return null
+  return { ...row, source_meta: safeParseObject(row.source_meta) }
+}
+
+export function deleteDocument(id: number): boolean {
+  const db = getDb()
+  const tx = db.transaction((docId: number) => {
+    const chunkIds = db
+      .prepare(`SELECT id FROM me_chunks WHERE document_id = ?`)
+      .all(docId) as Array<{ id: number }>
+    const delVec = db.prepare(`DELETE FROM vec_me_chunks WHERE rowid = ?`)
+    for (const { id: cid } of chunkIds) delVec.run(cid)
+    const info = db.prepare(`DELETE FROM me_documents WHERE id = ?`).run(docId)
+    return info.changes > 0
+  })
+  return tx(id)
+}
+
+export function createDocumentWithEmbeddings(input: {
+  title: string
+  source_type: 'paste' | 'file' | 'transcript'
+  source_meta: Record<string, any>
+  original_text: string
+  chunks: string[]
+  embeddings: number[][]
+}): MeDocumentRow {
+  if (input.chunks.length !== input.embeddings.length) {
+    throw new Error('chunks and embeddings length mismatch')
+  }
+  const db = getDb()
+  const tx = db.transaction(() => {
+    const docInfo = db
+      .prepare(
+        `INSERT INTO me_documents (title, source_type, source_meta, original_text, char_count, chunk_count)
+         VALUES (?, ?, ?, ?, ?, ?)`,
+      )
+      .run(
+        input.title,
+        input.source_type,
+        JSON.stringify(input.source_meta ?? {}),
+        input.original_text,
+        input.original_text.length,
+        input.chunks.length,
+      )
+    const docId = Number(docInfo.lastInsertRowid)
+
+    const insChunk = db.prepare(
+      `INSERT INTO me_chunks (document_id, chunk_index, content) VALUES (?, ?, ?)`,
+    )
+    const insVec = db.prepare(`INSERT INTO vec_me_chunks (rowid, embedding) VALUES (?, ?)`)
+    for (let i = 0; i < input.chunks.length; i++) {
+      const chunkInfo = insChunk.run(docId, i, input.chunks[i])
+      const chunkId = Number(chunkInfo.lastInsertRowid)
+      insVec.run(chunkId, embeddingToBuffer(input.embeddings[i]))
+    }
+    return docId
+  })
+  const docId = tx()
+  const row = db
+    .prepare(
+      `SELECT id, created_at, title, source_type, source_meta, char_count, chunk_count
+       FROM me_documents WHERE id = ?`,
+    )
+    .get(docId) as Omit<MeDocumentRow, 'source_meta'> & { source_meta: string }
+  return { ...row, source_meta: safeParseObject(row.source_meta) }
+}
+
+export function searchChunks(queryEmbedding: number[], k = 8): MeChunkMatch[] {
+  const buf = embeddingToBuffer(queryEmbedding)
+  const rows = getDb()
+    .prepare(
+      `SELECT
+         c.id, c.document_id, c.chunk_index, c.content,
+         d.title AS document_title,
+         vec.distance
+       FROM vec_me_chunks AS vec
+       JOIN me_chunks AS c ON c.id = vec.rowid
+       JOIN me_documents AS d ON d.id = c.document_id
+       WHERE vec.embedding MATCH ? AND k = ?
+       ORDER BY vec.distance`,
+    )
+    .all(buf, k) as Array<{
+    id: number
+    document_id: number
+    chunk_index: number
+    content: string
+    document_title: string
+    distance: number
+  }>
+  return rows.map((r) => ({
+    id: r.id,
+    document_id: r.document_id,
+    document_title: r.document_title,
+    chunk_index: r.chunk_index,
+    content: r.content,
+    similarity: 1 - r.distance,
+  }))
 }

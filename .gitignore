@@ -11,3 +11,8 @@ npm-debug.log*
 .turbo
 next-env.d.ts
 tsconfig.tsbuildinfo
+data/
+*.db
+*.db-journal
+*.db-wal
+*.db-shm

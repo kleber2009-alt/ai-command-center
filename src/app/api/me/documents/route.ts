@@ -1,7 +1,7 @@
 import { NextRequest, NextResponse } from 'next/server'
 import { chunkText } from '@/lib/chunking'
 import { embedBatch } from '@/lib/embeddings'
-import { getServerSupabase } from '@/lib/me-db'
+import { createDocumentWithEmbeddings, listDocuments } from '@/lib/me-db'
 
 export const maxDuration = 120
 
@@ -37,25 +37,14 @@ async function extractFileText(file: File): Promise<string> {
 }
 
 export async function GET() {
-  const supabase = getServerSupabase()
-  if (!supabase) return NextResponse.json({ items: [], configured: false })
-  const { data, error } = await supabase
-    .from('me_documents')
-    .select('id, created_at, title, source_type, source_meta, char_count, chunk_count')
-    .order('created_at', { ascending: false })
-    .limit(200)
-  if (error) return NextResponse.json({ error: error.message }, { status: 500 })
-  return NextResponse.json({ items: data ?? [], configured: true })
+  try {
+    return NextResponse.json({ items: listDocuments(200), configured: true })
+  } catch (e: any) {
+    return NextResponse.json({ error: e?.message || 'Ошибка чтения базы' }, { status: 500 })
+  }
 }
 
 export async function POST(req: NextRequest) {
-  const supabase = getServerSupabase()
-  if (!supabase) {
-    return NextResponse.json(
-      { error: 'Supabase не настроен. Нужны NEXT_PUBLIC_SUPABASE_URL и SUPABASE_SERVICE_KEY + миграция 003_me.sql.' },
-      { status: 500 },
-    )
-  }
   if (!process.env.OPENAI_API_KEY) {
     return NextResponse.json({ error: 'OPENAI_API_KEY не настроен' }, { status: 500 })
   }
@@ -102,35 +91,17 @@ export async function POST(req: NextRequest) {
     return NextResponse.json({ error: e?.message || 'Ошибка эмбеддинга' }, { status: 500 })
   }
 
-  const { data: doc, error: docErr } = await supabase
-    .from('me_documents')
-    .insert({
+  try {
+    const doc = createDocumentWithEmbeddings({
       title,
       source_type,
       source_meta,
       original_text: text,
-      char_count: text.length,
-      chunk_count: chunks.length,
+      chunks,
+      embeddings,
     })
-    .select('id, created_at, title, source_type, source_meta, char_count, chunk_count')
-    .single()
-
-  if (docErr || !doc) {
-    return NextResponse.json({ error: docErr?.message || 'Ошибка вставки документа' }, { status: 500 })
+    return NextResponse.json({ document: doc })
+  } catch (e: any) {
+    return NextResponse.json({ error: e?.message || 'Ошибка сохранения документа' }, { status: 500 })
   }
-
-  const rows = chunks.map((c, i) => ({
-    document_id: doc.id,
-    chunk_index: i,
-    content: c,
-    embedding: embeddings[i] as any,
-  }))
-
-  const { error: chunkErr } = await supabase.from('me_chunks').insert(rows)
-  if (chunkErr) {
-    await supabase.from('me_documents').delete().eq('id', doc.id)
-    return NextResponse.json({ error: `Ошибка вставки чанков: ${chunkErr.message}` }, { status: 500 })
-  }
-
-  return NextResponse.json({ document: doc })
 }

@@ -1,0 +1,67 @@
+services:
+  app:
+    build:
+      context: .
+      dockerfile: Dockerfile
+    container_name: ai-command-app
+    restart: unless-stopped
+    environment:
+      NODE_ENV: production
+      PORT: "3000"
+      DB_PATH: /app/data/app.db
+      # External APIs — set these in .env next to this file
+      ANTHROPIC_API_KEY: ${ANTHROPIC_API_KEY:-}
+      OPENAI_API_KEY: ${OPENAI_API_KEY:-}
+      DEEPGRAM_API_KEY: ${DEEPGRAM_API_KEY:-}
+      # The yt-dlp companion service runs on the same Docker network
+      YTDLP_SERVICE_URL: http://ytdlp:8000
+      YTDLP_SERVICE_API_KEY: ${YTDLP_SERVICE_API_KEY:-}
+    volumes:
+      - ./data:/app/data
+    depends_on:
+      - ytdlp
+    expose:
+      - "3000"
+    networks:
+      - app
+
+  ytdlp:
+    build:
+      context: ./services/ytdlp
+      dockerfile: Dockerfile
+    container_name: ai-command-ytdlp
+    restart: unless-stopped
+    environment:
+      YTDLP_SERVICE_API_KEY: ${YTDLP_SERVICE_API_KEY:-}
+      COOKIES_B64: ${COOKIES_B64:-}
+      INSTAGRAM_COOKIES_B64: ${INSTAGRAM_COOKIES_B64:-}
+    expose:
+      - "8000"
+    networks:
+      - app
+
+  caddy:
+    image: caddy:2-alpine
+    container_name: ai-command-caddy
+    restart: unless-stopped
+    ports:
+      - "80:80"
+      - "443:443"
+    environment:
+      DOMAIN: ${DOMAIN:-localhost}
+    volumes:
+      - ./Caddyfile:/etc/caddy/Caddyfile:ro
+      - caddy_data:/data
+      - caddy_config:/config
+    depends_on:
+      - app
+    networks:
+      - app
+
+volumes:
+  caddy_data:
+  caddy_config:
+
+networks:
+  app:
+    driver: bridge

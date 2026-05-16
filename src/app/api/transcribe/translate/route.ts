@@ -1,5 +1,5 @@
 import { NextRequest, NextResponse } from 'next/server'
-import { getServerSupabase } from '@/lib/transcripts-db'
+import { getTranscript, updateTranscriptTranslation } from '@/lib/transcripts-db'
 
 export const maxDuration = 60
 
@@ -30,20 +30,15 @@ export async function POST(req: NextRequest) {
   }
 
   let text = transcript
-  const supabase = getServerSupabase()
-  if (id && supabase) {
-    const { data, error } = await supabase
-      .from('transcripts')
-      .select('transcript, translation')
-      .eq('id', id)
-      .single()
-    if (error) {
-      return NextResponse.json({ error: `Не найден транскрипт: ${error.message}` }, { status: 404 })
+  if (id) {
+    const row = getTranscript(id)
+    if (!row) {
+      return NextResponse.json({ error: 'Не найден транскрипт' }, { status: 404 })
     }
-    if (data.translation && data.translation.lang === targetLang) {
-      return NextResponse.json({ translation: data.translation.text, lang: targetLang, cached: true })
+    if (row.translation && row.translation.lang === targetLang) {
+      return NextResponse.json({ translation: row.translation.text, lang: targetLang, cached: true })
     }
-    text = data.transcript
+    text = row.transcript
   }
 
   if (!text || text.trim().length === 0) {
@@ -76,11 +71,8 @@ export async function POST(req: NextRequest) {
     const data = await res.json()
     const translation: string = (data.content?.[0]?.text || '').trim()
 
-    if (id && supabase) {
-      await supabase
-        .from('transcripts')
-        .update({ translation: { lang: targetLang, text: translation } })
-        .eq('id', id)
+    if (id) {
+      updateTranscriptTranslation(id, targetLang, translation)
     }
 
     return NextResponse.json({ translation, lang: targetLang, cached: false })

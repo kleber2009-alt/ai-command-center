@@ -1,22 +1,18 @@
 import { NextRequest, NextResponse } from 'next/server'
-import { getServerSupabase } from '@/lib/me-db'
+import { deleteDocument, getDocument } from '@/lib/me-db'
 
 export async function GET(_req: NextRequest, { params }: { params: { id: string } }) {
-  const supabase = getServerSupabase()
-  if (!supabase) return NextResponse.json({ error: 'Supabase не настроен' }, { status: 500 })
-  const { data, error } = await supabase
-    .from('me_documents')
-    .select('*')
-    .eq('id', params.id)
-    .single()
-  if (error || !data) return NextResponse.json({ error: error?.message || 'Не найдено' }, { status: 404 })
-  return NextResponse.json({ document: data })
+  const id = Number(params.id)
+  if (!Number.isInteger(id)) return NextResponse.json({ error: 'Невалидный id' }, { status: 400 })
+  const doc = getDocument(id)
+  if (!doc) return NextResponse.json({ error: 'Не найдено' }, { status: 404 })
+  return NextResponse.json({ document: doc })
 }
 
 export async function DELETE(_req: NextRequest, { params }: { params: { id: string } }) {
-  const supabase = getServerSupabase()
-  if (!supabase) return NextResponse.json({ error: 'Supabase не настроен' }, { status: 500 })
-  const { error } = await supabase.from('me_documents').delete().eq('id', params.id)
-  if (error) return NextResponse.json({ error: error.message }, { status: 500 })
+  const id = Number(params.id)
+  if (!Number.isInteger(id)) return NextResponse.json({ error: 'Невалидный id' }, { status: 400 })
+  const ok = deleteDocument(id)
+  if (!ok) return NextResponse.json({ error: 'Не найдено' }, { status: 404 })
   return NextResponse.json({ ok: true })
 }

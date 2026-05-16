@@ -4,16 +4,31 @@ This file provides guidance to Claude Code (claude.ai/code) when working with co
 
 ## What this app is
 
-A single-purpose web app and Telegram Mini App for transcribing video / audio
-links and turning the transcript into short-form content (carousel slides,
-Reels script, Telegram post). Hosted on Vercel; the Telegram Mini App entry
-point is `/transcribe`.
+A single-purpose web app and Telegram Mini App with three surfaces:
+
+- **/transcribe** — paste a video / audio link → transcript + summary / translation / carousel / Reels / Telegram-post generation.
+- **/assistants** — a list of 9 specialized AI assistants, each with its own system prompt and chat window.
+- **/me** — personal "second brain": structured profile + RAG-backed chat over a private library of pasted text and uploaded files.
 
 The repo previously hosted an "AI Business Command Center" dashboard with
-agent simulators. All of that was stripped — only the transcription pipeline
-remains.
+agent simulators. All of that was stripped — only the surfaces above remain.
+
+## Hosting
+
+**Self-hosted via Docker Compose.** There is no Vercel / Supabase / managed
+DB. Run `docker compose up -d --build` on your VPS (or anywhere with Docker).
+Three containers: the Next.js app, the yt-dlp Python service, and Caddy as
+reverse proxy + automatic TLS. See `docker-compose.yml`, `Dockerfile`,
+`Caddyfile`, `.env.example`.
+
+The database is **SQLite + sqlite-vec** in `./data/app.db`. The schema is
+embedded in `src/lib/db.ts` and auto-created on first start. Back up the DB
+with `cp` or `rsync` from the `./data` volume.
 
 ## Commands
+
+Local dev (the Next.js process talks directly to a SQLite file at
+`$DB_PATH` or `./data/app.db`):
 
 ```bash
 npm run dev      # Next.js dev server (default :3000)
@@ -22,91 +37,87 @@ npm start        # serve the production build
 npm run lint     # next lint
 ```
 
+Docker (full stack, the way production runs):
+
+```bash
+docker compose up -d --build         # build + start app, ytdlp, caddy
+docker compose logs -f app           # tail Next.js logs
+docker compose down                  # stop everything (data volume persists)
+```
+
 No test runner is configured.
 
-## Required environment variables
+## Environment variables
 
-The app degrades gracefully when these are missing — set them in `.env.local`
-for local dev and in Vercel/Railway project envs for prod:
+Set in `.env` next to `docker-compose.yml` (production) or `.env.local` (local
+dev). All routes degrade gracefully when keys are missing.
 
-- `ANTHROPIC_API_KEY` — used by `src/app/api/transcribe/summarize/route.ts`,
-  `src/app/api/transcribe/translate/route.ts`, `src/app/api/transcribe/generate/route.ts`.
-- `DEEPGRAM_API_KEY` — used by `src/app/api/transcribe/route.ts` for any
-  non-YouTube URL. YouTube goes through our own captions parser and does
-  **not** need this key on its own (yt-dlp fallback does feed Deepgram).
-- `NEXT_PUBLIC_SUPABASE_URL`, `NEXT_PUBLIC_SUPABASE_ANON_KEY` — used by the
-  browser client in `src/lib/supabase.ts`. Currently the browser client is
-  only used by the page for typed types; nothing reads through it at runtime.
-- `SUPABASE_SERVICE_KEY` — used by the `/api/transcribe*` routes through
-  `src/lib/transcripts-db.ts`. Required for history and generation caching.
-  Do **not** expose this to the client.
-- `YTDLP_SERVICE_URL` (optional) — base URL of the companion yt-dlp
-  microservice in `services/ytdlp/` (deploy on Railway). When set,
-  `/api/transcribe` falls back to yt-dlp + Deepgram for YouTube when our
-  captions parser is IP-blocked, and uses yt-dlp + Deepgram for Instagram
-  Reels / TikTok / X.
-- `YTDLP_SERVICE_API_KEY` (optional) — if the yt-dlp service is started with
-  this env var, the main app must send `Authorization: Bearer <key>`.
-
-## Supabase migrations
-
-`supabase/migrations/` contains SQL the user runs manually in the Supabase
-SQL Editor:
-- `001_transcripts.sql` — `transcripts` table for `/transcribe` history.
-- `002_generations.sql` — `generations jsonb` column for caching
-  carousel / reels / telegram-post outputs.
-
-Without these tables (or env vars), `getServerSupabase()` returns `null` and
-saves/history/caching just no-op.
+- `ANTHROPIC_API_KEY` — used by every chat / summarize / translate / generate route.
+- `OPENAI_API_KEY` — required for the `/me` library: embedding documents via
+  `text-embedding-3-small` (1536d). Without it, `/me/library` can't ingest
+  new docs and `/me/chat` falls back to profile-only context.
+- `DEEPGRAM_API_KEY` — used by `/api/transcribe` for any non-YouTube URL.
+- `DB_PATH` — SQLite file path. Defaults to `./data/app.db`. In the Docker
+  image it's set to `/app/data/app.db` (volume-mounted from `./data`).
+- `YTDLP_SERVICE_URL` — base URL of the companion yt-dlp service. In
+  docker-compose this is wired to `http://ytdlp:8000` automatically.
+- `YTDLP_SERVICE_API_KEY` — bearer token shared between the app and the
+  yt-dlp service.
+- `DOMAIN` — Caddy serves on this domain. Real domain for prod (auto
+  Let's Encrypt); `localhost` for local Docker testing.
 
 ## Architecture
 
 Next.js 14 App Router + React 18 + TypeScript + Tailwind. UI strings are
-Russian; comments/identifiers stay English. Path alias `@/* → src/*`
-(`tsconfig.json`). Dark mode is forced at `<html className="dark">`.
+Russian; comments / identifiers stay English. Path alias `@/* → src/*`
+(`tsconfig.json`). Light Apple-style theme: white surfaces, system font,
+`#0071e3` accent.
 
-**Routing**: `src/app/page.tsx` redirects `/` → `/transcribe`. The
-transcribe page has its own layout (`src/app/transcribe/layout.tsx`)
-providing a mobile-first centered container (max-w-2xl) — there is no
-sidebar. Everything is one page.
+**Routing**:
 
-**The flow** (`src/app/transcribe/page.tsx`):
-1. Mount → calls `loadHistory()` and `setInTg(isInTelegram())`.
-2. User pastes a URL + picks a language → submits.
-3. `POST /api/transcribe` returns transcript + paragraphs + metadata. Row is
-   inserted into `transcripts` if Supabase is configured.
-4. User can then trigger: Copy / .txt / .srt download / Summary / Translate
-   / Carousel / Reels-new / Reels-remix / TG-post. Each generation calls a
-   dedicated endpoint and gets cached on the same row.
+- `/` redirects to `/transcribe`.
+- `/transcribe` — transcription + content generation.
+- `/assistants` and `/assistants/[id]` — 9 specialized assistants.
+- `/me`, `/me/profile`, `/me/library` — second brain.
+
+**Data layer** (`src/lib/db.ts`):
+
+- Process-wide `better-sqlite3` connection with `journal_mode=WAL`,
+  `foreign_keys=ON`. Schema is auto-applied on first import.
+- Vector search via `sqlite-vec`: `vec_me_chunks` virtual table keyed by
+  `me_chunks.id`. Cosine distance returned, similarity = `1 - distance`.
+- Embeddings stored as `Float32Array` blobs.
+
+**Tables**:
+
+- `transcripts` — every successful `/api/transcribe` run, with JSON columns
+  for paragraphs / bullets / translation / generations.
+- `me_profile` — single-row (id='singleton') structured profile.
+- `me_documents` — library entries with `original_text` + metadata.
+- `me_chunks` — chunks of documents; embeddings referenced by id from
+  `vec_me_chunks`.
+
+**Streaming chat**:
+
+- Both `/api/me/chat` and `/api/assistants/chat` return NDJSON streams via
+  `streamAnthropic()` in `src/lib/anthropic-stream.ts`. The client reads
+  them with `readNdjson()` from `src/lib/stream-client.ts`.
+- The `/me/chat` stream's first event carries retrieved citations.
 
 **API routes**:
-- `POST /api/transcribe` — body `{ url, language: 'auto'|'ru'|'en' }`. The
-  `dispatch()` function routes by URL type:
-  - **YouTube** → our captions parser (`src/lib/youtube-captions.ts`). On
-    any failure (no subs / IP block / wrong language) and when
-    `YTDLP_SERVICE_URL` is set, falls back to **yt-dlp + Deepgram**.
-  - **Social URLs** (Instagram, TikTok, X, Vimeo, SoundCloud — see
-    `isSocialMediaUrl()` in `src/lib/ytdlp-client.ts`) → always **yt-dlp +
-    Deepgram**. Without `YTDLP_SERVICE_URL` returns 503.
-  - **Anything else** → Deepgram `nova-2` directly, URL passed by reference.
-  Returns `{ transcript, paragraphs: [{text,start,end}], duration,
-  detectedLanguage, source: 'youtube'|'deepgram'|'ytdlp+deepgram', id }`.
-  **Known issue**: YouTube actively rate-limits datacenter IPs (Vercel
-  included) — that's why the yt-dlp fallback exists. For Instagram and most
-  YouTube on Railway, cookies are required (see `services/ytdlp/README.md`).
-- `POST /api/transcribe/summarize` — body `{ id?, transcript? }`. Returns
-  `{ summary, bullets, cached }`. Caches on the row.
-- `POST /api/transcribe/translate` — body `{ id?, transcript?,
-  targetLang: 'ru'|'en' }`. Returns `{ translation, lang, cached }`.
-- `POST /api/transcribe/generate` — body `{ id?, transcript?, type:
-  'carousel'|'reels-new'|'reels-remix'|'tg-post' }`. Sends a structured
-  Russian prompt to Claude Haiku and returns `{ type, content, cached }`.
-  Content shape varies (slides array for carousel; hook/body/cta object
-  for reels; `{ text }` for tg-post). Cached in `transcripts.generations`
-  jsonb keyed by type. Prompts live inline in `buildPrompt()`.
-- `GET /api/transcribe/history` — last 20 rows. Returns
-  `{ items, configured: boolean }`.
-- `GET|DELETE /api/transcribe/history/[id]` — one row.
+
+- `POST /api/transcribe` — body `{ url, language }`. Routes by URL type:
+  YouTube → captions (with yt-dlp+Deepgram fallback), social URLs → yt-dlp
+  + Deepgram, anything else → Deepgram directly.
+- `POST /api/transcribe/summarize` / `translate` / `generate` — cache
+  results in the transcript row.
+- `GET /api/transcribe/history`, `GET|DELETE /api/transcribe/history/[id]`.
+- `GET|PUT /api/me/profile`.
+- `GET|POST /api/me/documents` — `POST` accepts JSON `{title, text}` or
+  multipart with a file (.txt / .md / .csv / .json / .pdf / .docx).
+- `GET|DELETE /api/me/documents/[id]`.
+- `POST /api/me/chat` — RAG; streams NDJSON with `meta` citations event.
+- `POST /api/assistants/chat` — streams NDJSON.
 
 ## Telegram Mini App
 
@@ -114,10 +125,9 @@ The app loads `telegram-web-app.js` in `src/app/layout.tsx`. On mount,
 `src/components/TelegramInit.tsx` calls `tg.ready()` + `tg.expand()` and
 mirrors `themeParams` to CSS variables on `<html>`. The transcribe page:
 
-- Detects Telegram on mount via `isInTelegram()` (`initData` non-empty)
+- Detects Telegram on mount via `isInTelegram()` (`initData` non-empty).
 - Hides its in-page submit button and binds `Telegram.WebApp.MainButton` to
-  the same submit handler. The MainButton's text, enabled state, and
-  progress spinner are kept in sync via a `useEffect`.
+  the same submit handler.
 - Fires `HapticFeedback` on submit start, success, and error.
 
 Outside Telegram everything still works — the SDK calls are guarded by
@@ -129,18 +139,22 @@ implemented — every API route is open.
 
 ## yt-dlp companion service
 
-`services/ytdlp/` — FastAPI + yt-dlp Docker service to run on Railway.
-Exposes `POST /extract { url }` → `{ url, title, duration, ext, extractor }`,
+`services/ytdlp/` — FastAPI + yt-dlp Docker service. Exposes
+`POST /extract { url }` → `{ url, title, duration, ext, extractor }`,
 where `url` is a signed direct media URL Deepgram can ingest. Auth via
 `Authorization: Bearer $YTDLP_SERVICE_API_KEY`. Cookies for Instagram /
-YouTube can be provided as base64 in `INSTAGRAM_COOKIES_B64` / `COOKIES_B64`
-(both names accepted) — see `services/ytdlp/README.md`.
+YouTube can be provided as base64 in `INSTAGRAM_COOKIES_B64` /
+`COOKIES_B64` — see `services/ytdlp/README.md`. Wired into the same Docker
+network in `docker-compose.yml`, so the app reaches it at
+`http://ytdlp:8000`.
 
 ## Conventions
 
 - Client-only React components must start with `'use client'`. Route
-  handlers and `src/lib/supabase.ts` do not.
-- Icons come from `lucide-react`. No emojis in UI; they are user-facing
-  decoration only and we don't have any in the current app.
-- `next.config.js` is empty — no custom image domains, headers, or rewrites.
-- Production model is `claude-haiku-4-5-20251001` across all routes.
+  handlers and `src/lib/*` do not.
+- Icons come from `lucide-react`. No emojis in UI.
+- `next.config.js` has `output: 'standalone'` (for Docker) and marks
+  `better-sqlite3`, `sqlite-vec`, `pdf-parse`, `mammoth` as external so
+  webpack doesn't try to bundle their native bits.
+- Production models: `claude-haiku-4-5-20251001` for the transcribe
+  generators, `claude-sonnet-4-6` for the chat endpoints.

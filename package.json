@@ -9,15 +9,17 @@
     "lint": "next lint"
   },
   "dependencies": {
-    "@supabase/supabase-js": "^2.39.0",
+    "better-sqlite3": "^12.10.0",
     "lucide-react": "^0.383.0",
     "mammoth": "^1.12.0",
     "next": "^14.2.35",
     "pdf-parse": "^2.4.5",
     "react": "^18",
-    "react-dom": "^18"
+    "react-dom": "^18",
+    "sqlite-vec": "^0.1.9"
   },
   "devDependencies": {
+    "@types/better-sqlite3": "^7.6.13",
     "@types/node": "^20",
     "@types/react": "^18",
     "@types/react-dom": "^18",
