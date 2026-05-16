@@ -4,7 +4,7 @@ import Link from 'next/link'
 import {
   AudioLines, Loader2, Copy, Check, TriangleAlert, Link as LinkIcon,
   Download, FileText, Sparkles, Languages, History, Trash2, ChevronRight, Youtube, FileAudio,
-  LayoutGrid, Video, Shuffle, Send, Bot,
+  LayoutGrid, Video, Shuffle, Send, Bot, Brain,
 } from 'lucide-react'
 import { getTelegram, isInTelegram } from '@/lib/telegram'
 
@@ -468,14 +468,24 @@ export default function TranscribePage() {
             YouTube или прямая ссылка → текст, саммари, перевод
           </p>
         </div>
-        <Link
-          href="/assistants"
-          className="inline-flex items-center gap-1.5 rounded-full border border-apple-line bg-white px-3 py-1.5 text-[13px] font-medium text-apple-ink shadow-apple-sm transition-colors hover:bg-apple-bg-soft"
-          title="ИИ-ассистенты"
-        >
-          <Bot className="h-4 w-4" />
-          Ассистенты
-        </Link>
+        <div className="flex items-center gap-1.5">
+          <Link
+            href="/me"
+            className="inline-flex items-center gap-1.5 rounded-full border border-apple-line bg-white px-3 py-1.5 text-[13px] font-medium text-apple-ink shadow-apple-sm transition-colors hover:bg-apple-bg-soft"
+            title="Второй мозг"
+          >
+            <Brain className="h-4 w-4" />
+            Я
+          </Link>
+          <Link
+            href="/assistants"
+            className="inline-flex items-center gap-1.5 rounded-full border border-apple-line bg-white px-3 py-1.5 text-[13px] font-medium text-apple-ink shadow-apple-sm transition-colors hover:bg-apple-bg-soft"
+            title="ИИ-ассистенты"
+          >
+            <Bot className="h-4 w-4" />
+            Ассистенты
+          </Link>
+        </div>
       </div>
 
       {/* Form */}
