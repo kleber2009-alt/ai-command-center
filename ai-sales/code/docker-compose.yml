@@ -24,6 +24,7 @@ services:
       - ../04-database/003_analytics_schema.sql:/docker-entrypoint-initdb.d/02-analytics.sql:ro
       - ../04-database/004_platform_metrics.sql:/docker-entrypoint-initdb.d/03-platform.sql:ro
       - ../04-database/005_platform_seed.sql:/docker-entrypoint-initdb.d/04-platform-seed.sql:ro
+      - ../04-database/006_agent_tasks.sql:/docker-entrypoint-initdb.d/05-agent-tasks.sql:ro
     healthcheck:
       test: ["CMD-SHELL", "pg_isready -U aisales -d aisales"]
       interval: 10s
