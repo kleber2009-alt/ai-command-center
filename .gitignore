@@ -20,6 +20,9 @@ yarn-error.log*
 # local env files
 .env*.local
 .env
+ai-sales/code/.env
+ai-sales/code/.env.*
+!ai-sales/code/.env.example
 
 # vercel
 .vercel
@@ -27,3 +30,21 @@ yarn-error.log*
 # typescript
 *.tsbuildinfo
 next-env.d.ts
+
+# python (ai-sales)
+__pycache__/
+*.py[cod]
+*$py.class
+*.egg-info/
+.venv/
+venv/
+.pytest_cache/
+.mypy_cache/
+.ruff_cache/
+
+# ai-sales runtime artefacts
+ai-sales/code/media/
+ai-sales/code/logs/
+ai-sales/voice-input/*.wav
+ai-sales/voice-input/*.mp3
+ai-sales/voice-input/*.m4a

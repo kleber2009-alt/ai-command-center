@@ -1,0 +1,179 @@
+<!DOCTYPE html>
+<html lang="ru">
+<head>
+<meta charset="UTF-8">
+<title>Карусель 02 — 5 Ошибок · 10 слайдов</title>
+<style>
+  *, *::before, *::after { margin:0; padding:0; box-sizing:border-box; }
+  body { background:#080808; padding:24px 0; display:flex; flex-direction:column; align-items:center; gap:24px; font-family:Georgia, serif; }
+  .slide { width:1080px; height:1350px; background:#080808; color:#f5f0e8; padding:80px 70px; position:relative; display:flex; flex-direction:column; border:1px solid #1a1a1a; overflow:hidden; }
+  .slide-num { position:absolute; top:40px; right:60px; font-family:'SF Mono',monospace; font-size:14px; color:#3a3a3a; letter-spacing:0.18em; font-weight:700; }
+  .slide-num .of { color:#5a5550; }
+  .brand { position:absolute; bottom:40px; left:60px; font-family:'SF Mono',monospace; font-size:13px; color:#5a5550; letter-spacing:0.18em; font-weight:700; text-transform:uppercase; }
+  .brand .a { color:#c8f060; }
+  .swipe { position:absolute; bottom:40px; right:60px; font-family:'SF Mono',monospace; font-size:13px; color:#c8f060; letter-spacing:0.18em; font-weight:700; text-transform:uppercase; }
+  .label { font-family:'SF Mono',monospace; font-size:14px; text-transform:uppercase; letter-spacing:0.16em; color:#b8b3a8; font-weight:700; margin-bottom:24px; }
+  .mistake-num { font-family:'SF Mono',monospace; font-size:280px; line-height:0.9; color:#3a3a3a; font-weight:700; letter-spacing:-0.05em; }
+  .mistake-num .a { color:#c8f060; }
+  .h-hook { font-family:Georgia, serif; font-size:108px; line-height:0.98; letter-spacing:-0.03em; }
+  .h-hook .a { color:#c8f060; font-style:italic; }
+  .h-1 { font-family:Georgia, serif; font-size:68px; line-height:1.05; letter-spacing:-0.02em; }
+  .h-1 .a { color:#c8f060; font-style:italic; }
+  .h-2 { font-family:Georgia, serif; font-size:54px; line-height:1.1; }
+  .body-text { font-family:Georgia, serif; font-size:30px; line-height:1.5; color:#d8d2c6; }
+  .body-text strong { color:#f5f0e8; font-weight:700; }
+  .center { flex:1; display:flex; flex-direction:column; justify-content:center; }
+  .divider { width:80px; height:3px; background:#c8f060; margin:30px 0; }
+  .fix-block { background:#0d1216; border-left:4px solid #60c8f0; padding:24px 28px; margin-top:30px; }
+  .fix-block .ttl { font-family:'SF Mono',monospace; font-size:14px; color:#60c8f0; letter-spacing:0.18em; font-weight:700; margin-bottom:14px; text-transform:uppercase; }
+  .fix-block .txt { font-family:Georgia, serif; font-size:28px; line-height:1.45; color:#f5f0e8; }
+</style>
+</head>
+<body>
+
+<!-- SLIDE 1 — HOOK -->
+<div class="slide">
+  <div class="slide-num">01 <span class="of">/ 10</span></div>
+  <div class="center">
+    <div class="label">Для всех кто продаёт в Direct</div>
+    <div class="h-hook"><span class="a">5</span> ошибок,<br/>которые<br/>убивают<br/>продажи в<br/>Instagram.</div>
+    <div class="body-text" style="margin-top:50px;">Делал каждую. Теперь делюсь.</div>
+  </div>
+  <div class="brand"><span class="a">●</span> AI SALES · @username</div>
+  <div class="swipe">SWIPE →</div>
+</div>
+
+<!-- SLIDE 2 — MISTAKE 1 -->
+<div class="slide">
+  <div class="slide-num">02 <span class="of">/ 10</span></div>
+  <div class="mistake-num"><span class="a">0</span>1</div>
+  <div class="center" style="flex:0;">
+    <div class="h-1" style="margin-top:30px;">Отвечать <span class="a">быстро.</span><br/>Любой ценой.</div>
+    <div class="body-text" style="margin-top:30px;">Кажется хорошим тоном. На деле —<br/><strong>выглядит как бот.</strong> Клиент написал в<br/>23:17 — а ты ответил в 23:18.<br/>Подозрительно.</div>
+  </div>
+  <div class="fix-block">
+    <div class="ttl">↗ КАК ПРАВИЛЬНО</div>
+    <div class="txt">Задержка 30-90 секунд на короткие сообщения. До 5 минут на серьёзные. Имитируй живой темп.</div>
+  </div>
+  <div class="brand"><span class="a">●</span> AI SALES</div>
+  <div class="swipe">→</div>
+</div>
+
+<!-- SLIDE 3 — MISTAKE 2 -->
+<div class="slide">
+  <div class="slide-num">03 <span class="of">/ 10</span></div>
+  <div class="mistake-num"><span class="a">0</span>2</div>
+  <div class="center" style="flex:0;">
+    <div class="h-1" style="margin-top:30px;">Сразу <span class="a">продавать</span></div>
+    <div class="body-text" style="margin-top:30px;">«Привет! Меня зовут N, у нас есть классный<br/>продукт, давай расскажу!»<br/><br/>Клиент только что зашёл. Он ещё не знает<br/>чего хочет. А ты уже продаёшь.</div>
+  </div>
+  <div class="fix-block">
+    <div class="ttl">↗ КАК ПРАВИЛЬНО</div>
+    <div class="txt">Сначала вопрос — «расскажи о себе». Сначала <strong>понять</strong>. Продавать — только когда есть что предложить под боль.</div>
+  </div>
+  <div class="brand"><span class="a">●</span> AI SALES</div>
+  <div class="swipe">→</div>
+</div>
+
+<!-- SLIDE 4 — MISTAKE 3 -->
+<div class="slide">
+  <div class="slide-num">04 <span class="of">/ 10</span></div>
+  <div class="mistake-num"><span class="a">0</span>3</div>
+  <div class="center" style="flex:0;">
+    <div class="h-1" style="margin-top:30px;">Каталог <span class="a">в лоб</span></div>
+    <div class="body-text" style="margin-top:30px;">Клиент задал один вопрос —<br/>а ты вываливаешь все 5 продуктов:<br/>«Вот вариант A, B, C, D, E…»<br/><br/>Он не выберет. Он напишет «подумаю».</div>
+  </div>
+  <div class="fix-block">
+    <div class="ttl">↗ КАК ПРАВИЛЬНО</div>
+    <div class="txt">Один продукт за раз. Тот, который лучше под его боль. Если не угадал — предложи второй. <strong>Не три сразу.</strong></div>
+  </div>
+  <div class="brand"><span class="a">●</span> AI SALES</div>
+  <div class="swipe">→</div>
+</div>
+
+<!-- SLIDE 5 — MISTAKE 4 -->
+<div class="slide">
+  <div class="slide-num">05 <span class="of">/ 10</span></div>
+  <div class="mistake-num"><span class="a">0</span>4</div>
+  <div class="center" style="flex:0;">
+    <div class="h-1" style="margin-top:30px;">Скидка <span class="a">после «дорого»</span></div>
+    <div class="body-text" style="margin-top:30px;">Клиент: «дорого»<br/>Ты: «окей, могу дать 10%»<br/><br/><strong>Поздравляю.</strong> Цена обесценена.<br/>Следующий клиент тоже скажет «дорого»,<br/>зная что можно торговаться.</div>
+  </div>
+  <div class="fix-block">
+    <div class="ttl">↗ КАК ПРАВИЛЬНО</div>
+    <div class="txt">Не давать скидку без условия. «Скидка возможна — если берёшь годовой пакет / приводишь друга / даёшь публиковать кейс».</div>
+  </div>
+  <div class="brand"><span class="a">●</span> AI SALES</div>
+  <div class="swipe">→</div>
+</div>
+
+<!-- SLIDE 6 — MISTAKE 5 -->
+<div class="slide">
+  <div class="slide-num">06 <span class="of">/ 10</span></div>
+  <div class="mistake-num"><span class="a">0</span>5</div>
+  <div class="center" style="flex:0;">
+    <div class="h-1" style="margin-top:30px;">Followup как <span class="a">спам</span></div>
+    <div class="body-text" style="margin-top:30px;">«Привет! Не забыл про нас? У нас осталось<br/>2 места по старой цене!»<br/><br/>Клиент закрывает чат. Навсегда.</div>
+  </div>
+  <div class="fix-block">
+    <div class="ttl">↗ КАК ПРАВИЛЬНО</div>
+    <div class="txt">Followup = ценность. Кейс, статья, новость по его нише. <strong>Не «купи»</strong>, а «подумал о тебе когда увидел вот это».</div>
+  </div>
+  <div class="brand"><span class="a">●</span> AI SALES</div>
+  <div class="swipe">→</div>
+</div>
+
+<!-- SLIDE 7-8 — SUMMARY -->
+<div class="slide">
+  <div class="slide-num">07 <span class="of">/ 10</span></div>
+  <div class="center">
+    <div class="label">Если коротко:</div>
+    <div class="h-2" style="margin-top:30px;">
+      <span style="color:#5a5550;">01.</span> Не отвечай быстрее живого<br/><br/>
+      <span style="color:#5a5550;">02.</span> Не продавай до <span class="a">понимания</span><br/><br/>
+      <span style="color:#5a5550;">03.</span> Не вываливай каталог<br/><br/>
+      <span style="color:#5a5550;">04.</span> Не давай <span class="a">скидку</span> без условия<br/><br/>
+      <span style="color:#5a5550;">05.</span> Followup = ценность
+    </div>
+  </div>
+  <div class="brand"><span class="a">●</span> AI SALES</div>
+  <div class="swipe">→</div>
+</div>
+
+<!-- SLIDE 8 — META RULE -->
+<div class="slide">
+  <div class="slide-num">08 <span class="of">/ 10</span></div>
+  <div class="center">
+    <div class="label">Главное правило</div>
+    <div class="h-hook">Веди как <span class="a">человек.</span><br/>Думай как<br/>система.</div>
+    <div class="body-text" style="margin-top:60px;">Если каждое твоё сообщение проходит<br/>проверку «<strong>я бы это написал/написала<br/>другу</strong>» — ты на правильном пути.</div>
+  </div>
+  <div class="brand"><span class="a">●</span> AI SALES</div>
+  <div class="swipe">→</div>
+</div>
+
+<!-- SLIDE 9 — REVEAL -->
+<div class="slide">
+  <div class="slide-num">09 <span class="of">/ 10</span></div>
+  <div class="center">
+    <div class="label">P.S.</div>
+    <div class="h-1">Я не сам это всё<br/>отслеживаю.</div>
+    <div class="h-2" style="margin-top:30px;">У меня <span class="a">4 AI-агента,</span><br/>которые делают это<br/>за меня в IG и TG.</div>
+    <div class="body-text" style="margin-top:30px;">Если интересно как — посмотри последний пост.</div>
+  </div>
+  <div class="brand"><span class="a">●</span> AI SALES</div>
+  <div class="swipe">→</div>
+</div>
+
+<!-- SLIDE 10 — CTA -->
+<div class="slide">
+  <div class="slide-num">10 <span class="of">/ 10</span></div>
+  <div class="center">
+    <div class="h-1" style="text-align:center;">Сохрани этот пост.<br/>Покажи команде.</div>
+    <div class="h-2" style="text-align:center; margin-top:40px;">И напиши в директ<br/><span class="a">«5 ошибок»</span> — пришлю<br/>чек-лист в PDF.</div>
+  </div>
+  <div class="brand"><span class="a">●</span> AI SALES · @username</div>
+</div>
+
+</body>
+</html>

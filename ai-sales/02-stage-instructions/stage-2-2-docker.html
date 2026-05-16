@@ -1,0 +1,577 @@
+<!DOCTYPE html>
+<html lang="ru">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover">
+<meta name="theme-color" content="#080808">
+<meta name="color-scheme" content="dark only">
+<title>Этап 2.2 — Docker и сервисы</title>
+<style>
+  *, *::before, *::after { margin:0; padding:0; box-sizing:border-box; -webkit-tap-highlight-color:transparent; }
+  html { background:#080808 !important; -webkit-text-size-adjust:100%; }
+  body { background:#080808 !important; color:#f5f0e8 !important; font-family:Georgia,'Times New Roman',serif; font-size:17px; line-height:1.6; overflow-x:hidden; min-height:100vh; }
+  .label { font-family:'SF Mono','Menlo',monospace; font-size:11px; text-transform:uppercase; letter-spacing:0.12em; color:#b8b3a8 !important; font-weight:700; }
+  .topbar { position:sticky; top:0; background:#080808 !important; border-bottom:1px solid #2a2a2a; padding:14px 20px; z-index:50; display:flex; align-items:center; gap:12px; }
+  .topbar-title { font-family:Georgia,serif; font-size:16px; line-height:1; color:#f5f0e8 !important; flex:1; }
+  .topbar-title .accent { color:#c8f060 !important; font-style:italic; }
+  .topbar-stage { font-family:'SF Mono',monospace; font-size:10px; color:#c8f060 !important; font-weight:700; letter-spacing:0.12em; }
+  
+  .container { padding:28px 20px 80px; max-width:680px; margin:0 auto; }
+  
+  .header { margin-bottom:28px; padding-bottom:20px; border-bottom:1px solid #2a2a2a; }
+  .header .label { margin-bottom:10px; }
+  .header h1 { font-family:Georgia,serif; font-size:32px; font-weight:normal; line-height:1.1; letter-spacing:-0.01em; margin-bottom:12px; color:#f5f0e8 !important; }
+  .header h1 .accent { color:#c8f060 !important; font-style:italic; }
+  .header p { color:#c5bfb3 !important; font-size:15px; line-height:1.5; }
+  
+  .stage-meta { display:grid; grid-template-columns:1fr 1fr; gap:3px; margin:20px 0; }
+  .meta-card { background:#1a1a1a; border:1px solid #2a2a2a; padding:14px 16px; }
+  .meta-card .label { display:block; margin-bottom:6px; font-size:10px; }
+  .meta-card .val { font-family:Georgia,serif; font-size:18px; color:#c8f060 !important; }
+  
+  h2 { font-family:Georgia,serif; font-size:24px; font-weight:normal; line-height:1.2; margin:40px 0 12px; color:#f5f0e8 !important; }
+  h2 .sec { display:block; font-family:'SF Mono',monospace; font-size:10px; font-weight:700; color:#c8f060 !important; letter-spacing:0.15em; text-transform:uppercase; margin-bottom:6px; }
+  h3 { font-family:'SF Mono',monospace; font-size:11px; font-weight:700; text-transform:uppercase; letter-spacing:0.15em; color:#c8f060 !important; margin:24px 0 12px; padding-bottom:6px; border-bottom:1px solid #2a2a2a; }
+  
+  p { margin-bottom:14px; font-size:16px; line-height:1.6; color:#f5f0e8 !important; }
+  .lead { font-size:17px; font-style:italic; color:#d8d2c6 !important; margin-bottom:20px; line-height:1.5; }
+  
+  ul, ol { margin:12px 0 16px; padding-left:24px; }
+  li { margin-bottom:8px; font-size:15.5px; line-height:1.55; color:#f5f0e8 !important; }
+  strong { color:#ffffff !important; font-weight:700; }
+  
+  .step-card { background:#1a1a1a; border:1px solid #2a2a2a; padding:0; margin:16px 0; }
+  .step-head { padding:16px 20px; border-bottom:1px solid #2a2a2a; display:flex; align-items:center; gap:14px; }
+  .step-num { font-family:'SF Mono',monospace; font-size:20px; font-weight:700; color:#c8f060 !important; line-height:1; flex-shrink:0; }
+  .step-title { font-family:Georgia,serif; font-size:18px; color:#f5f0e8 !important; line-height:1.3; flex:1; }
+  .step-time { font-family:'SF Mono',monospace; font-size:10px; color:#b8b3a8 !important; font-weight:700; letter-spacing:0.1em; }
+  .step-body { padding:16px 20px; }
+  .step-body p { font-size:15px; margin-bottom:12px; }
+  .step-body p:last-child { margin-bottom:0; }
+  
+  .code { background:#0a0a0a; border:1px solid #2a2a2a; border-left:3px solid #c8f060; padding:14px 16px; margin:12px 0; font-family:'SF Mono',monospace; font-size:13px; line-height:1.6; color:#f5f0e8 !important; overflow-x:auto; white-space:pre; -webkit-overflow-scrolling:touch; }
+  .code .comment { color:#b8b3a8 !important; font-style:italic; }
+  .code .cmd { color:#c8f060 !important; font-weight:700; }
+  .code .str { color:#60c8f0 !important; }
+  .code .key { color:#f06090 !important; }
+  
+  code { font-family:'SF Mono',monospace; font-size:13px; background:#1a1a1a; padding:2px 6px; color:#c8f060 !important; border:1px solid #2a2a2a; }
+  
+  .note, .warn, .ok { padding:14px 16px; margin:14px 0; font-size:14.5px; line-height:1.5; }
+  .note { background:#0f1f28; border-left:3px solid #60c8f0; color:#e8e3d6 !important; }
+  .warn { background:#28121b; border-left:3px solid #f06090; color:#e8e3d6 !important; }
+  .ok { background:#1a2510; border-left:3px solid #c8f060; color:#e8e3d6 !important; }
+  .note strong, .warn strong, .ok strong { color:#fff !important; }
+  
+  .check { list-style:none !important; padding-left:0 !important; margin:14px 0 !important; }
+  .check li { padding:12px 14px; background:#1a1a1a; border:1px solid #2a2a2a; margin-bottom:3px; font-size:14.5px; line-height:1.5; display:flex; gap:12px; align-items:flex-start; color:#f5f0e8 !important; }
+  .check li::before { content:'☐'; color:#c8f060 !important; font-family:'SF Mono',monospace; font-size:18px; font-weight:700; flex-shrink:0; line-height:1.3; }
+  
+  .data { margin:14px 0; }
+  .row { background:#1a1a1a; border:1px solid #2a2a2a; padding:14px 16px; margin-bottom:3px; }
+  .row .field { display:flex; justify-content:space-between; align-items:baseline; padding:7px 0; border-bottom:1px solid #2a2a2a; gap:12px; }
+  .row .field:last-child { border-bottom:none; }
+  .row .k { font-family:'SF Mono',monospace; font-size:10px; font-weight:700; text-transform:uppercase; letter-spacing:0.1em; color:#b8b3a8 !important; flex-shrink:0; }
+  .row .v { font-size:14.5px; text-align:right; line-height:1.4; color:#f5f0e8 !important; }
+  .row .v.lime { color:#c8f060 !important; font-weight:700; }
+  .row .v.cyan { color:#60c8f0 !important; font-weight:700; }
+  
+  .service-card { background:#1a1a1a; border:1px solid #2a2a2a; border-left:3px solid #c8f060; padding:16px 20px; margin:12px 0; }
+  .service-card.cyan { border-left-color:#60c8f0; }
+  .service-card.pink { border-left-color:#f06090; }
+  .service-card .stag { font-family:'SF Mono',monospace; font-size:10px; font-weight:700; color:#c8f060 !important; letter-spacing:0.12em; text-transform:uppercase; margin-bottom:6px; }
+  .service-card.cyan .stag { color:#60c8f0 !important; }
+  .service-card.pink .stag { color:#f06090 !important; }
+  .service-card h4 { font-family:Georgia,serif; font-size:19px; font-weight:normal; margin-bottom:6px; color:#f5f0e8 !important; }
+  .service-card p { font-size:14px; line-height:1.5; color:#c5bfb3 !important; margin-bottom:6px; }
+  .service-card .port { font-family:'SF Mono',monospace; font-size:12px; color:#c8f060 !important; font-weight:700; }
+  
+  .footer { margin-top:48px; padding:24px 0; border-top:1px solid #2a2a2a; text-align:center; font-family:'SF Mono',monospace; font-size:10px; font-weight:700; text-transform:uppercase; letter-spacing:0.12em; color:#b8b3a8 !important; line-height:1.8; }
+  
+  @media (min-width:768px) {
+    .container { padding:40px 32px 100px; }
+    .header h1 { font-size:42px; }
+    h2 { font-size:30px; }
+  }
+</style>
+</head>
+<body>
+<header class="topbar">
+  <div class="topbar-stage">Stage 2.2</div>
+  <div class="topbar-title">AI Sales <span class="accent">System</span></div>
+</header>
+
+<div class="container">
+  <div class="header">
+    <div class="label">Этап 2 / Инфраструктура · Подэтап 2.2</div>
+    <h1>Docker и <span class="accent">сервисы</span></h1>
+    <p>Поднимаем всю инфраструктуру одной командой: PostgreSQL, Redis, Qdrant, MinIO. После этого этапа у тебя работающие БД, готовые принять данные.</p>
+  </div>
+  
+  <div class="stage-meta">
+    <div class="meta-card"><div class="label">Время</div><div class="val">60–90 мин</div></div>
+    <div class="meta-card"><div class="label">Сложность</div><div class="val">Средняя</div></div>
+    <div class="meta-card"><div class="label">Где</div><div class="val">На VPS</div></div>
+    <div class="meta-card"><div class="label">Что готовим</div><div class="val">4 сервиса</div></div>
+  </div>
+
+  <h2><span class="sec">Section 01</span>Что мы поднимаем</h2>
+  <p class="lead">Каждый сервис — изолированный контейнер Docker. Можно перезапустить, обновить, удалить отдельно, не трогая остальное.</p>
+  
+  <div class="service-card">
+    <div class="stag">Service 01 / Database</div>
+    <h4>PostgreSQL 16</h4>
+    <p>Основная реляционная БД. Хранит клиентов, диалоги, сообщения, действия, аналитику.</p>
+    <div class="port">PORT 5432 (внутренний)</div>
+  </div>
+  
+  <div class="service-card cyan">
+    <div class="stag">Service 02 / Cache & Queue</div>
+    <h4>Redis 7</h4>
+    <p>Кеш и брокер очередей Celery. Через него агенты получают задачи на обработку сообщений.</p>
+    <div class="port">PORT 6379 (внутренний)</div>
+  </div>
+  
+  <div class="service-card pink">
+    <div class="stag">Service 03 / Vector DB</div>
+    <h4>Qdrant</h4>
+    <p>Векторная база для RAG. Хранит embeddings базы знаний, по которым ищут агенты.</p>
+    <div class="port">PORT 6333 (внутренний)</div>
+  </div>
+  
+  <div class="service-card">
+    <div class="stag">Service 04 / Object Storage</div>
+    <h4>MinIO (S3-совместимое)</h4>
+    <p>Хранение аудио, видео-кружочков, скриншотов. API совместим с AWS S3 — позже легко мигрировать.</p>
+    <div class="port">PORT 9000 + 9001 (внутренний)</div>
+  </div>
+
+  <h2><span class="sec">Section 02</span>Установка Docker</h2>
+  <p class="lead">Подключись к серверу: <code>ssh aisales@твой-ip</code>.</p>
+  
+  <div class="step-card">
+    <div class="step-head">
+      <div class="step-num">01</div>
+      <div class="step-title">Удаляем старые версии</div>
+      <div class="step-time">2 мин</div>
+    </div>
+    <div class="step-body">
+      <p>На свежей Ubuntu могут быть старые пакеты Docker. Убираем:</p>
+      <div class="code"><span class="cmd">sudo</span> apt remove docker docker-engine docker.io containerd runc -y</div>
+      <p>Может вывести «not installed» — это нормально.</p>
+    </div>
+  </div>
+  
+  <div class="step-card">
+    <div class="step-head">
+      <div class="step-num">02</div>
+      <div class="step-title">Зависимости</div>
+      <div class="step-time">3 мин</div>
+    </div>
+    <div class="step-body">
+      <div class="code"><span class="cmd">sudo</span> apt update
+<span class="cmd">sudo</span> apt install -y ca-certificates curl gnupg lsb-release</div>
+    </div>
+  </div>
+  
+  <div class="step-card">
+    <div class="step-head">
+      <div class="step-num">03</div>
+      <div class="step-title">GPG-ключ Docker</div>
+      <div class="step-time">2 мин</div>
+    </div>
+    <div class="step-body">
+      <div class="code"><span class="cmd">sudo</span> install -m 0755 -d /etc/apt/keyrings
+<span class="cmd">curl</span> -fsSL https://download.docker.com/linux/ubuntu/gpg | <span class="cmd">sudo</span> gpg --dearmor -o /etc/apt/keyrings/docker.gpg
+<span class="cmd">sudo</span> chmod a+r /etc/apt/keyrings/docker.gpg</div>
+    </div>
+  </div>
+  
+  <div class="step-card">
+    <div class="step-head">
+      <div class="step-num">04</div>
+      <div class="step-title">Репозиторий Docker</div>
+      <div class="step-time">2 мин</div>
+    </div>
+    <div class="step-body">
+      <p>Одной строкой, скопируй полностью:</p>
+      <div class="code"><span class="cmd">echo</span> <span class="str">"deb [arch=$(dpkg --print-architecture) signed-by=/etc/apt/keyrings/docker.gpg] https://download.docker.com/linux/ubuntu $(lsb_release -cs) stable"</span> | <span class="cmd">sudo</span> tee /etc/apt/sources.list.d/docker.list > /dev/null</div>
+    </div>
+  </div>
+  
+  <div class="step-card">
+    <div class="step-head">
+      <div class="step-num">05</div>
+      <div class="step-title">Установка Docker Engine</div>
+      <div class="step-time">5 мин</div>
+    </div>
+    <div class="step-body">
+      <div class="code"><span class="cmd">sudo</span> apt update
+<span class="cmd">sudo</span> apt install -y docker-ce docker-ce-cli containerd.io docker-buildx-plugin docker-compose-plugin</div>
+    </div>
+  </div>
+  
+  <div class="step-card">
+    <div class="step-head">
+      <div class="step-num">06</div>
+      <div class="step-title">Запускаем Docker без sudo</div>
+      <div class="step-time">3 мин</div>
+    </div>
+    <div class="step-body">
+      <p>Чтобы не писать sudo перед каждой командой docker:</p>
+      <div class="code"><span class="cmd">sudo</span> usermod -aG docker $USER</div>
+      <p>Переподключись по SSH (выйди и зайди снова), чтобы группы применились:</p>
+      <div class="code"><span class="cmd">exit</span>
+<span class="comment"># на Маке снова:</span>
+<span class="cmd">ssh</span> aisales@твой-ip</div>
+    </div>
+  </div>
+  
+  <div class="step-card">
+    <div class="step-head">
+      <div class="step-num">07</div>
+      <div class="step-title">Проверка</div>
+      <div class="step-time">2 мин</div>
+    </div>
+    <div class="step-body">
+      <div class="code"><span class="cmd">docker</span> --version
+<span class="cmd">docker</span> compose version
+<span class="cmd">docker</span> run hello-world</div>
+      <p>Последняя команда скачает тестовый контейнер и напечатает «Hello from Docker». Если так — всё работает.</p>
+    </div>
+  </div>
+  
+  <div class="ok"><strong>Проверка:</strong> docker run hello-world выводит приветствие без ошибок.</div>
+
+  <h2><span class="sec">Section 03</span>Структура проекта</h2>
+  <p class="lead">Создаём папки и конфиги для платформы.</p>
+  
+  <div class="step-card">
+    <div class="step-head">
+      <div class="step-num">08</div>
+      <div class="step-title">Папка проекта</div>
+      <div class="step-time">2 мин</div>
+    </div>
+    <div class="step-body">
+      <div class="code"><span class="cmd">mkdir</span> -p ~/aisales
+<span class="cmd">cd</span> ~/aisales
+<span class="cmd">mkdir</span> -p data/postgres data/redis data/qdrant data/minio</div>
+      <p>Так выглядит структура:</p>
+      <div class="code">~/aisales/
+├── docker-compose.yml    <span class="comment"># создадим дальше</span>
+├── .env                  <span class="comment"># секреты</span>
+└── data/
+    ├── postgres/         <span class="comment"># данные БД</span>
+    ├── redis/
+    ├── qdrant/
+    └── minio/</div>
+    </div>
+  </div>
+  
+  <div class="step-card">
+    <div class="step-head">
+      <div class="step-num">09</div>
+      <div class="step-title">Файл .env с секретами</div>
+      <div class="step-time">5 мин</div>
+    </div>
+    <div class="step-body">
+      <p>Сгенерируем сильные пароли. Выполни на сервере:</p>
+      <div class="code"><span class="cmd">openssl</span> rand -base64 24
+<span class="comment"># повтори 4 раза, получишь 4 разных пароля</span></div>
+      <p>Создай файл .env:</p>
+      <div class="code"><span class="cmd">nano</span> ~/aisales/.env</div>
+      <p>Вставь содержимое (вместо PASTE_HERE — твои сгенерированные пароли):</p>
+      <div class="code"><span class="comment"># PostgreSQL</span>
+POSTGRES_USER<span class="key">=</span><span class="str">aisales</span>
+POSTGRES_PASSWORD<span class="key">=</span><span class="str">PASTE_HERE_1</span>
+POSTGRES_DB<span class="key">=</span><span class="str">aisales</span>
+
+<span class="comment"># Redis</span>
+REDIS_PASSWORD<span class="key">=</span><span class="str">PASTE_HERE_2</span>
+
+<span class="comment"># Qdrant</span>
+QDRANT_API_KEY<span class="key">=</span><span class="str">PASTE_HERE_3</span>
+
+<span class="comment"># MinIO</span>
+MINIO_ROOT_USER<span class="key">=</span><span class="str">aisales</span>
+MINIO_ROOT_PASSWORD<span class="key">=</span><span class="str">PASTE_HERE_4</span></div>
+      <p>Сохрани: <code>Ctrl+O</code> → Enter → <code>Ctrl+X</code>.</p>
+    </div>
+  </div>
+  
+  <div class="warn"><strong>Сохрани .env в безопасное место</strong> (например, в твой менеджер паролей). Если потеряешь — потеряешь доступ к БД.</div>
+
+  <h2><span class="sec">Section 04</span>docker-compose.yml</h2>
+  <p class="lead">Главный файл — описывает все сервисы. Запускается одной командой.</p>
+  
+  <div class="step-card">
+    <div class="step-head">
+      <div class="step-num">10</div>
+      <div class="step-title">Создаём docker-compose.yml</div>
+      <div class="step-time">10 мин</div>
+    </div>
+    <div class="step-body">
+      <div class="code"><span class="cmd">nano</span> ~/aisales/docker-compose.yml</div>
+      <p>Вставь полностью этот блок:</p>
+    </div>
+  </div>
+  
+  <div class="code">services:
+
+  postgres:
+    image: postgres:16-alpine
+    container_name: aisales-postgres
+    restart: unless-stopped
+    environment:
+      POSTGRES_USER: ${POSTGRES_USER}
+      POSTGRES_PASSWORD: ${POSTGRES_PASSWORD}
+      POSTGRES_DB: ${POSTGRES_DB}
+    volumes:
+      - ./data/postgres:/var/lib/postgresql/data
+    ports:
+      - "127.0.0.1:5432:5432"
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U ${POSTGRES_USER}"]
+      interval: 10s
+      timeout: 5s
+      retries: 5
+    networks:
+      - aisales-net
+
+  redis:
+    image: redis:7-alpine
+    container_name: aisales-redis
+    restart: unless-stopped
+    command: redis-server --requirepass ${REDIS_PASSWORD} --appendonly yes
+    volumes:
+      - ./data/redis:/data
+    ports:
+      - "127.0.0.1:6379:6379"
+    healthcheck:
+      test: ["CMD", "redis-cli", "-a", "${REDIS_PASSWORD}", "ping"]
+      interval: 10s
+      timeout: 5s
+      retries: 5
+    networks:
+      - aisales-net
+
+  qdrant:
+    image: qdrant/qdrant:latest
+    container_name: aisales-qdrant
+    restart: unless-stopped
+    environment:
+      QDRANT__SERVICE__API_KEY: ${QDRANT_API_KEY}
+    volumes:
+      - ./data/qdrant:/qdrant/storage
+    ports:
+      - "127.0.0.1:6333:6333"
+      - "127.0.0.1:6334:6334"
+    networks:
+      - aisales-net
+
+  minio:
+    image: minio/minio:latest
+    container_name: aisales-minio
+    restart: unless-stopped
+    command: server /data --console-address ":9001"
+    environment:
+      MINIO_ROOT_USER: ${MINIO_ROOT_USER}
+      MINIO_ROOT_PASSWORD: ${MINIO_ROOT_PASSWORD}
+    volumes:
+      - ./data/minio:/data
+    ports:
+      - "127.0.0.1:9000:9000"
+      - "127.0.0.1:9001:9001"
+    healthcheck:
+      test: ["CMD", "curl", "-f", "http://localhost:9000/minio/health/live"]
+      interval: 30s
+      timeout: 10s
+      retries: 3
+    networks:
+      - aisales-net
+
+networks:
+  aisales-net:
+    driver: bridge</div>
+  
+  <div class="note">Все порты привязаны к <code>127.0.0.1</code> — это значит, что сервисы доступны только изнутри сервера, не торчат в интернет. Это критично для безопасности.</div>
+
+  <h2><span class="sec">Section 05</span>Запуск</h2>
+  
+  <div class="step-card">
+    <div class="step-head">
+      <div class="step-num">11</div>
+      <div class="step-title">Первый старт</div>
+      <div class="step-time">5 мин</div>
+    </div>
+    <div class="step-body">
+      <div class="code"><span class="cmd">cd</span> ~/aisales
+<span class="cmd">docker</span> compose up -d</div>
+      <p>Флаг <code>-d</code> — запуск в фоне. Скачаются образы (~500 МБ), создадутся контейнеры. Подожди 1–2 минуты.</p>
+    </div>
+  </div>
+  
+  <div class="step-card">
+    <div class="step-head">
+      <div class="step-num">12</div>
+      <div class="step-title">Проверка статусов</div>
+      <div class="step-time">2 мин</div>
+    </div>
+    <div class="step-body">
+      <div class="code"><span class="cmd">docker</span> compose ps</div>
+      <p>Должны быть 4 строки со статусом <code>running</code> и <code>healthy</code> (у тех, где есть healthcheck).</p>
+      <p>Логи если что-то странное:</p>
+      <div class="code"><span class="cmd">docker</span> compose logs postgres
+<span class="cmd">docker</span> compose logs redis
+<span class="cmd">docker</span> compose logs qdrant
+<span class="cmd">docker</span> compose logs minio</div>
+    </div>
+  </div>
+
+  <h2><span class="sec">Section 06</span>Проверка каждого сервиса</h2>
+  <p class="lead">Подключаемся к каждой БД и убеждаемся, что работает.</p>
+  
+  <div class="step-card">
+    <div class="step-head">
+      <div class="step-num">13</div>
+      <div class="step-title">PostgreSQL</div>
+      <div class="step-time">3 мин</div>
+    </div>
+    <div class="step-body">
+      <div class="code"><span class="cmd">docker</span> exec -it aisales-postgres psql -U aisales -d aisales</div>
+      <p>Зайдёшь в консоль БД. Проверь:</p>
+      <div class="code">SELECT version();
+\q</div>
+      <p>Должна напечатать версию PostgreSQL 16.x. <code>\q</code> — выход.</p>
+    </div>
+  </div>
+  
+  <div class="step-card">
+    <div class="step-head">
+      <div class="step-num">14</div>
+      <div class="step-title">Redis</div>
+      <div class="step-time">2 мин</div>
+    </div>
+    <div class="step-body">
+      <div class="code"><span class="cmd">docker</span> exec -it aisales-redis redis-cli</div>
+      <p>В redis-cli:</p>
+      <div class="code">AUTH <span class="str">"твой_REDIS_PASSWORD_из_env"</span>
+PING
+exit</div>
+      <p>На PING должен ответить PONG.</p>
+    </div>
+  </div>
+  
+  <div class="step-card">
+    <div class="step-head">
+      <div class="step-num">15</div>
+      <div class="step-title">Qdrant</div>
+      <div class="step-time">2 мин</div>
+    </div>
+    <div class="step-body">
+      <p>Проверь через curl:</p>
+      <div class="code"><span class="cmd">curl</span> -H <span class="str">"api-key: твой_QDRANT_API_KEY"</span> http://localhost:6333/collections</div>
+      <p>Должен вернуть JSON с пустым массивом коллекций. Это норма — коллекции создадим позже.</p>
+    </div>
+  </div>
+  
+  <div class="step-card">
+    <div class="step-head">
+      <div class="step-num">16</div>
+      <div class="step-title">MinIO</div>
+      <div class="step-time">3 мин</div>
+    </div>
+    <div class="step-body">
+      <p>MinIO имеет веб-консоль. Чтобы попасть в неё с Мака, открой SSH-туннель:</p>
+      <p>В <strong>новом окне Терминала</strong> на Маке:</p>
+      <div class="code"><span class="cmd">ssh</span> -L 9001:localhost:9001 aisales@твой-ip</div>
+      <p>Затем в браузере на Маке: <code>http://localhost:9001</code></p>
+      <p>Зайди с логином <code>aisales</code> и паролем из MINIO_ROOT_PASSWORD. Должна открыться панель.</p>
+      <p>Создай первый bucket: «Buckets» → «Create Bucket» → имя <code>aisales-media</code>.</p>
+    </div>
+  </div>
+  
+  <div class="ok"><strong>Все 4 сервиса работают.</strong> У тебя готовая инфраструктура для агентов: реляционная БД, кеш-очередь, векторная БД и хранилище файлов.</div>
+
+  <h2><span class="sec">Section 07</span>Управление</h2>
+  <p class="lead">Команды, которые понадобятся в работе.</p>
+  
+  <div class="data">
+    <div class="row">
+      <div class="field"><span class="k">Запустить всё</span><span class="v lime">docker compose up -d</span></div>
+      <div class="field"><span class="k">Остановить</span><span class="v">docker compose stop</span></div>
+      <div class="field"><span class="k">Перезапустить</span><span class="v">docker compose restart</span></div>
+      <div class="field"><span class="k">Удалить + данные</span><span class="v cyan">docker compose down -v</span></div>
+      <div class="field"><span class="k">Логи в реальном времени</span><span class="v">docker compose logs -f</span></div>
+      <div class="field"><span class="k">Статус</span><span class="v">docker compose ps</span></div>
+      <div class="field"><span class="k">Использование ресурсов</span><span class="v">docker stats</span></div>
+    </div>
+  </div>
+  
+  <div class="warn"><strong>Никогда не запускай <code>down -v</code></strong> без бэкапа — это удалит все данные. Команда <code>down</code> без -v безопасна, она только останавливает.</div>
+
+  <h2><span class="sec">Section 08</span>Бэкапы</h2>
+  <p class="lead">Раз в сутки автоматически бэкапим БД.</p>
+  
+  <div class="step-card">
+    <div class="step-head">
+      <div class="step-num">17</div>
+      <div class="step-title">Скрипт бэкапа</div>
+      <div class="step-time">5 мин</div>
+    </div>
+    <div class="step-body">
+      <div class="code"><span class="cmd">nano</span> ~/aisales/backup.sh</div>
+      <p>Вставь:</p>
+      <div class="code">#!/bin/bash
+DATE=$(date +%Y%m%d_%H%M%S)
+BACKUP_DIR=~/aisales/backups
+mkdir -p $BACKUP_DIR
+docker exec aisales-postgres pg_dump -U aisales aisales | gzip > $BACKUP_DIR/postgres_$DATE.sql.gz
+find $BACKUP_DIR -name "postgres_*.sql.gz" -mtime +30 -delete
+echo "Backup done: postgres_$DATE.sql.gz"</div>
+      <p>Сделай исполняемым:</p>
+      <div class="code"><span class="cmd">chmod</span> +x ~/aisales/backup.sh
+~/aisales/backup.sh</div>
+      <p>Проверь, что файл появился:</p>
+      <div class="code"><span class="cmd">ls</span> -lh ~/aisales/backups/</div>
+    </div>
+  </div>
+  
+  <div class="step-card">
+    <div class="step-head">
+      <div class="step-num">18</div>
+      <div class="step-title">Cron — автозапуск</div>
+      <div class="step-time">3 мин</div>
+    </div>
+    <div class="step-body">
+      <div class="code"><span class="cmd">crontab</span> -e</div>
+      <p>Если спросит редактор — выбери nano (вариант 1). В конец файла добавь:</p>
+      <div class="code">0 3 * * * /home/aisales/aisales/backup.sh >> /home/aisales/aisales/backups/backup.log 2>&amp;1</div>
+      <p>Это значит «каждый день в 3:00 ночи». Сохрани и выйди.</p>
+    </div>
+  </div>
+  
+  <div class="note">Позже добавим выгрузку бэкапов на S3 — пока хватит локальных. Они хранятся 30 дней, потом старые удаляются автоматически.</div>
+
+  <h2><span class="sec">Section 09</span>Чек-лист завершения</h2>
+  
+  <ul class="check">
+    <li>Docker и docker-compose установлены</li>
+    <li>Команда docker запускается без sudo</li>
+    <li>Создана папка ~/aisales со структурой</li>
+    <li>Файл .env с 4 паролями (сохранён в безопасное место)</li>
+    <li>docker-compose.yml создан и работает</li>
+    <li>PostgreSQL отвечает на запросы</li>
+    <li>Redis отвечает PONG</li>
+    <li>Qdrant отвечает на /collections</li>
+    <li>MinIO открывается в веб-консоли, создан bucket aisales-media</li>
+    <li>Скрипт бэкапа создан и работает</li>
+    <li>Cron настроен на ежедневный запуск</li>
+  </ul>
+  
+  <div class="note">Когда сделаешь все пункты — пиши «Этап 2.2 готов». Следующий — 2.3: создание схемы БД, миграции, первые таблицы для клиентов и сообщений.</div>
+
+  <div class="footer">AI Sales System · Stage 2.2 · Docker</div>
+</div>
+</body>
+</html>

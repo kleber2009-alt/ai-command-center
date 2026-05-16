@@ -1,0 +1,444 @@
+<!DOCTYPE html>
+<html lang="ru">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<meta name="theme-color" content="#080808">
+<meta name="color-scheme" content="dark only">
+<title>AI Sales · Carousels</title>
+<style>
+  *, *::before, *::after { margin:0; padding:0; box-sizing:border-box; }
+  html, body { background:#080808; color:#f5f0e8; min-height:100vh; }
+  body { font-family:Georgia, 'Times New Roman', serif; font-size:15px; line-height:1.5; overflow-x:hidden; }
+  .label { font-family:'SF Mono','JetBrains Mono','Menlo',monospace; font-size:10px; text-transform:uppercase; letter-spacing:0.14em; color:#b8b3a8; font-weight:700; }
+  .mono { font-family:'SF Mono','JetBrains Mono','Menlo',monospace; }
+
+  /* TOPBAR */
+  .topbar { position:sticky; top:0; z-index:50; display:flex; align-items:center; justify-content:space-between; padding:14px 24px; background:#080808; border-bottom:1px solid #2a2a2a; gap:18px; flex-wrap:wrap; }
+  .topbar-left { display:flex; align-items:center; gap:18px; min-width:0; }
+  .topbar-title { font-family:Georgia,serif; font-size:18px; line-height:1; white-space:nowrap; }
+  .topbar-title .accent { color:#c8f060; font-style:italic; }
+  .topbar-nav { display:flex; gap:2px; }
+  .nav-link { background:transparent; border:1px solid #2a2a2a; color:#b8b3a8; padding:7px 14px; font-family:'SF Mono',monospace; font-size:10px; text-transform:uppercase; letter-spacing:0.14em; font-weight:700; text-decoration:none; }
+  .nav-link.active { background:#c8f060; color:#080808; border-color:#c8f060; }
+  .nav-link:hover:not(.active) { border-color:#c8f060; color:#f5f0e8; }
+  .topbar-meta { font-family:'SF Mono',monospace; font-size:11px; color:#b8b3a8; letter-spacing:0.12em; }
+  .topbar-meta .v { color:#c8f060; }
+
+  /* SHELL */
+  .shell { max-width:1480px; margin:0 auto; padding:18px 24px 80px; display:grid; gap:2px; }
+  .sec-head { display:flex; align-items:baseline; gap:14px; padding:18px 2px 10px; }
+  .sec-num { font-family:'SF Mono',monospace; font-size:10px; color:#c8f060; letter-spacing:0.18em; font-weight:700; }
+  .sec-title { font-family:Georgia,serif; font-size:14px; font-style:italic; color:#b8b3a8; }
+  .sec-spacer { flex:1; border-bottom:1px solid #1a1a1a; transform:translateY(-2px); }
+
+  /* HERO */
+  .hero { display:grid; grid-template-columns:2fr 1fr 1fr; gap:2px; }
+  @media (max-width:900px) { .hero { grid-template-columns:1fr; } }
+  .hero-main { background:#0f0f0f; border:1px solid #1a1a1a; padding:32px 36px; }
+  .hero-main h1 { font-family:Georgia,serif; font-size:48px; font-weight:normal; line-height:1.05; letter-spacing:-0.02em; margin:14px 0 18px; }
+  .hero-main h1 .accent { color:#c8f060; font-style:italic; }
+  .hero-main p { color:#b8b3a8; font-size:15px; line-height:1.6; max-width:580px; }
+  .hero-stat { background:#0f0f0f; border:1px solid #1a1a1a; padding:22px 24px 20px; display:flex; flex-direction:column; gap:8px; }
+  .hero-stat .num { font-family:'SF Mono',monospace; font-size:10px; color:#3a3a3a; letter-spacing:0.18em; font-weight:700; }
+  .hero-stat .lbl { font-family:'SF Mono',monospace; font-size:10px; color:#b8b3a8; letter-spacing:0.14em; font-weight:700; text-transform:uppercase; line-height:1.3; }
+  .hero-stat .val { font-family:Georgia,serif; font-size:48px; line-height:1; letter-spacing:-0.02em; margin-top:auto; }
+  .hero-stat .val.lime { color:#c8f060; }
+  .hero-stat .val .sfx { font-size:18px; color:#5a5550; }
+  .hero-stat .sub { font-family:'SF Mono',monospace; font-size:10px; color:#5a5550; letter-spacing:0.08em; }
+
+  /* CAROUSEL GRID */
+  .grid { display:grid; grid-template-columns:repeat(2, 1fr); gap:2px; }
+  @media (max-width:900px) { .grid { grid-template-columns:1fr; } }
+  .card { background:#0f0f0f; border:1px solid #1a1a1a; display:grid; grid-template-rows:auto 1fr; }
+  .card:hover { border-color:#3a3a3a; }
+  .card-preview { background:#080808; padding:24px 28px 0; aspect-ratio:1080/650; position:relative; overflow:hidden; border-bottom:1px solid #1a1a1a; }
+  .card-preview .slide-stack { display:flex; gap:8px; height:100%; align-items:flex-start; padding-top:14px; }
+  .card-preview .mini-slide { flex:1; aspect-ratio:9/12; background:#0a0a0a; border:1px solid #1a1a1a; padding:10px; display:flex; flex-direction:column; justify-content:space-between; transform:translateY(0); transition:transform 0.2s; }
+  .card-preview .mini-slide:nth-child(odd) { transform:translateY(8px); }
+  .card-preview .mini-slide .tc { font-family:'SF Mono',monospace; font-size:7px; color:#c8f060; letter-spacing:0.15em; font-weight:700; }
+  .card-preview .mini-slide .h { font-family:Georgia,serif; font-size:13px; line-height:1.1; color:#f5f0e8; font-weight:normal; }
+  .card-preview .mini-slide .h .a { color:#c8f060; font-style:italic; }
+  .card-preview .mini-slide .b { font-family:'SF Mono',monospace; font-size:6px; color:#5a5550; letter-spacing:0.1em; }
+  .card-preview .fade { position:absolute; bottom:0; left:0; right:0; height:60px; background:linear-gradient(180deg, transparent, #0f0f0f); pointer-events:none; }
+  .card-preview .badge { position:absolute; top:14px; right:14px; font-family:'SF Mono',monospace; font-size:9px; padding:3px 8px; background:#1a1a1a; color:#c8f060; letter-spacing:0.12em; font-weight:700; border:1px solid #2a3a14; }
+
+  .card-info { padding:20px 24px 22px; display:flex; flex-direction:column; gap:14px; }
+  .card-title { font-family:Georgia,serif; font-size:24px; line-height:1.2; }
+  .card-title .accent { color:#c8f060; font-style:italic; }
+  .card-desc { color:#b8b3a8; font-size:14px; line-height:1.5; }
+  .card-meta { display:grid; grid-template-columns:repeat(4, 1fr); gap:2px; padding-top:10px; border-top:1px solid #1a1a1a; }
+  .card-meta .m { background:#141414; padding:10px 12px; }
+  .card-meta .m .k { font-family:'SF Mono',monospace; font-size:9px; color:#5a5550; letter-spacing:0.12em; font-weight:700; text-transform:uppercase; }
+  .card-meta .m .v { font-family:'SF Mono',monospace; font-size:12px; color:#f5f0e8; margin-top:3px; font-weight:700; }
+  .card-meta .m .v.lime { color:#c8f060; }
+  .card-actions { display:flex; gap:2px; margin-top:auto; padding-top:14px; }
+  .btn { flex:1; padding:12px; background:transparent; color:#f5f0e8; border:1px solid #2a2a2a; font-family:'SF Mono',monospace; font-size:11px; font-weight:700; letter-spacing:0.14em; text-transform:uppercase; text-align:center; text-decoration:none; cursor:pointer; }
+  .btn:hover { border-color:#c8f060; color:#c8f060; }
+  .btn.primary { background:#c8f060; color:#080808; border-color:#c8f060; }
+  .btn.primary:hover { background:#d8ff70; color:#080808; }
+
+  /* STRUCTURE PANEL */
+  .struct { background:#0f0f0f; border:1px solid #1a1a1a; padding:22px 26px; display:grid; grid-template-columns:1fr 1fr 1fr; gap:24px; }
+  @media (max-width:900px) { .struct { grid-template-columns:1fr; } }
+  .struct h3 { font-family:Georgia,serif; font-size:18px; margin-bottom:14px; }
+  .struct h3 .accent { color:#c8f060; font-style:italic; }
+  .struct ol { font-family:'SF Mono',monospace; font-size:11px; color:#b8b3a8; line-height:1.8; list-style:none; padding:0; }
+  .struct ol li { padding:4px 0; border-bottom:1px solid #1a1a1a; }
+  .struct ol li:last-child { border-bottom:none; }
+  .struct ol li .num { color:#c8f060; font-weight:700; display:inline-block; width:24px; }
+  .struct ol li .body { color:#f5f0e8; }
+
+  /* PROCESS */
+  .process { background:#0f0f0f; border:1px solid #1a1a1a; padding:22px 26px; }
+  .process h3 { font-family:Georgia,serif; font-size:20px; margin-bottom:16px; }
+  .process h3 .accent { color:#c8f060; font-style:italic; }
+  .process-flow { display:grid; grid-template-columns:repeat(8, 1fr); gap:2px; }
+  @media (max-width:900px) { .process-flow { grid-template-columns:repeat(4, 1fr); } }
+  @media (max-width:560px) { .process-flow { grid-template-columns:repeat(2, 1fr); } }
+  .step { background:#141414; padding:14px 14px 12px; min-height:110px; display:flex; flex-direction:column; gap:6px; position:relative; }
+  .step .step-num { font-family:'SF Mono',monospace; font-size:10px; color:#5a5550; letter-spacing:0.15em; font-weight:700; }
+  .step .step-name { font-family:'SF Mono',monospace; font-size:10px; color:#c8f060; letter-spacing:0.12em; font-weight:700; text-transform:uppercase; }
+  .step .step-desc { font-family:Georgia,serif; font-size:12px; color:#d8d2c6; line-height:1.35; margin-top:auto; }
+  .step.done { background:#161e0d; }
+  .step.done .step-name { color:#c8f060; }
+  .step.todo { opacity:0.55; }
+
+  /* FOOTER */
+  .foot { padding:32px 0 0; text-align:center; color:#5a5550; font-family:'SF Mono',monospace; font-size:10px; letter-spacing:0.15em; text-transform:uppercase; }
+  .foot a { color:#c8f060; text-decoration:none; }
+</style>
+</head>
+<body>
+
+<header class="topbar">
+  <div class="topbar-left">
+    <div class="topbar-title">AI Sales <span class="accent">Carousels</span></div>
+    <nav class="topbar-nav">
+      <a class="nav-link" href="/01-portal/ai-sales-portal.html">Портал</a>
+      <a class="nav-link" href="/06-dashboard-prototype/pulse.html">Pulse</a>
+      <a class="nav-link" href="/06-dashboard-prototype/pipeline.html">Pipeline</a>
+      <a class="nav-link" href="/06-dashboard-prototype/conversation.html">Conv</a>
+      <a class="nav-link" href="/06-dashboard-prototype/project.html">Project</a>
+      <a class="nav-link" href="/06-dashboard-prototype/agents.html">Agents</a>
+      <a class="nav-link active" href="#">Carousels</a>
+      <a class="nav-link" href="/reels/index.html">Reels</a>
+    </nav>
+  </div>
+  <div class="topbar-meta"><span>обновлено</span> <span class="v">15 МАЯ 2026</span></div>
+</header>
+
+<main class="shell">
+
+  <!-- HERO -->
+  <div class="sec-head">
+    <span class="sec-num">/00</span>
+    <span class="sec-title">Carousels system</span>
+    <span class="sec-spacer"></span>
+  </div>
+
+  <div class="hero">
+    <div class="hero-main">
+      <span class="label">Контент-машина · Instagram</span>
+      <h1>Карусели <span class="accent">на потоке</span></h1>
+      <p>Шаблонная система генерации Instagram-каруселей в дизайн-системе AI Mastery. Каждый шаблон — это структура, в которую AI подставляет тему, сегмент и продукт, читая базу знаний. Финальный экспорт — 10 PNG-слайдов 1080×1350.</p>
+    </div>
+    <div class="hero-stat">
+      <span class="num">01</span>
+      <span class="lbl">Шаблонов<br/>готово</span>
+      <div class="val lime">3<span class="sfx">/3</span></div>
+      <span class="sub">ALL TEMPLATES READY</span>
+    </div>
+    <div class="hero-stat">
+      <span class="num">02</span>
+      <span class="lbl">Слайдов<br/>в каждой</span>
+      <div class="val">10</div>
+      <span class="sub">1080×1350 · IG vertical</span>
+    </div>
+  </div>
+
+  <!-- CAROUSEL GALLERY -->
+  <div class="sec-head">
+    <span class="sec-num">/01</span>
+    <span class="sec-title">3 готовых драфта</span>
+    <span class="sec-spacer"></span>
+  </div>
+
+  <div class="grid" style="grid-template-columns:repeat(3, 1fr); ">
+    <style>@media (max-width:1100px) { .grid { grid-template-columns:repeat(1, 1fr) !important; } }</style>
+
+    <!-- CARD 1: PAIN/SOLUTION -->
+    <div class="card">
+      <div class="card-preview">
+        <div class="badge">PAIN → SOLUTION</div>
+        <div class="slide-stack">
+          <div class="mini-slide">
+            <div class="tc">01 / 10</div>
+            <div class="h">3 часа<br/>в день.<br/><span class="a">впустую.</span></div>
+            <div class="b">HOOK</div>
+          </div>
+          <div class="mini-slide">
+            <div class="tc">03 / 10</div>
+            <div class="h">73%<br/>повторяющихся<br/>действий</div>
+            <div class="b">AMPLIFY</div>
+          </div>
+          <div class="mini-slide">
+            <div class="tc">06 / 10</div>
+            <div class="h">Проблема<br/>в системе.</div>
+            <div class="b">REVEAL</div>
+          </div>
+          <div class="mini-slide">
+            <div class="tc">08 / 10</div>
+            <div class="h"><span class="a">Автопилот</span><br/>SMM.</div>
+            <div class="b">SOLUTION</div>
+          </div>
+          <div class="mini-slide">
+            <div class="tc">10 / 10</div>
+            <div class="h">В DIRECT →</div>
+            <div class="b">CTA</div>
+          </div>
+        </div>
+        <div class="fade"></div>
+      </div>
+      <div class="card-info">
+        <div class="card-title">01 · «3 часа <span class="accent">впустую</span>»</div>
+        <div class="card-desc">Классическая структура «боль → причина → решение». Подходит для холодного трафика, который не знает о тебе. 10 слайдов, hook через шок-цифру.</div>
+        <div class="card-meta">
+          <div class="m"><div class="k">Тип</div><div class="v">Pain/Solution</div></div>
+          <div class="m"><div class="k">Слайдов</div><div class="v lime">10</div></div>
+          <div class="m"><div class="k">Сегмент</div><div class="v">A · агентства</div></div>
+          <div class="m"><div class="k">Тема</div><div class="v">Автоматизация SMM</div></div>
+        </div>
+        <div class="card-actions">
+          <a class="btn primary" href="/carousels/carousel-01-pain-solution.html" target="_blank">↗ Открыть · 10 слайдов</a>
+          <a class="btn" href="#export-1">📥 Экспорт PNG</a>
+        </div>
+      </div>
+    </div>
+
+    <!-- CARD 2: 5 MISTAKES -->
+    <div class="card">
+      <div class="card-preview">
+        <div class="badge">N MISTAKES</div>
+        <div class="slide-stack">
+          <div class="mini-slide">
+            <div class="tc">01 / 10</div>
+            <div class="h"><span class="a">5</span> ошибок,<br/>которые<br/>убивают<br/>продажи.</div>
+            <div class="b">HOOK</div>
+          </div>
+          <div class="mini-slide">
+            <div class="tc">02 / 10</div>
+            <div class="h"><span style="font-size:22px; color:#c8f060;">01</span><br/>Отвечать<br/>быстро.</div>
+            <div class="b">MISTAKE 1</div>
+          </div>
+          <div class="mini-slide">
+            <div class="tc">04 / 10</div>
+            <div class="h"><span style="font-size:22px; color:#c8f060;">03</span><br/>Каталог<br/>в лоб</div>
+            <div class="b">MISTAKE 3</div>
+          </div>
+          <div class="mini-slide">
+            <div class="tc">07 / 10</div>
+            <div class="h">Если<br/>коротко:<br/>5 правил</div>
+            <div class="b">SUMMARY</div>
+          </div>
+          <div class="mini-slide">
+            <div class="tc">10 / 10</div>
+            <div class="h">Сохрани.<br/>Покажи<br/>команде.</div>
+            <div class="b">CTA</div>
+          </div>
+        </div>
+        <div class="fade"></div>
+      </div>
+      <div class="card-info">
+        <div class="card-title">02 · «5 ошибок <span class="accent">в директе</span>»</div>
+        <div class="card-desc">Формат-листинг. Один из лучших по сохранениям — даёт ощутимую пользу за 30 сек. Каждая ошибка с разбором и fix-блоком в дизайне.</div>
+        <div class="card-meta">
+          <div class="m"><div class="k">Тип</div><div class="v">N Mistakes</div></div>
+          <div class="m"><div class="k">Слайдов</div><div class="v lime">10</div></div>
+          <div class="m"><div class="k">Сегмент</div><div class="v">B · фрилансеры</div></div>
+          <div class="m"><div class="k">Тема</div><div class="v">Продажи в IG</div></div>
+        </div>
+        <div class="card-actions">
+          <a class="btn primary" href="/carousels/carousel-02-mistakes.html" target="_blank">↗ Открыть · 10 слайдов</a>
+          <a class="btn" href="#export-2">📥 Экспорт PNG</a>
+        </div>
+      </div>
+    </div>
+
+    <!-- CARD 3: CASE STUDY -->
+    <div class="card">
+      <div class="card-preview">
+        <div class="badge">CASE STUDY</div>
+        <div class="slide-stack">
+          <div class="mini-slide">
+            <div class="tc">01 / 10</div>
+            <div class="h"><span class="a">+1.2x</span><br/>оборот<br/>за 3 мес</div>
+            <div class="b">HOOK · ЦИФРА</div>
+          </div>
+          <div class="mini-slide">
+            <div class="tc">03 / 10</div>
+            <div class="h">Было:<br/>×низкая<br/>конверсия</div>
+            <div class="b">SITUATION</div>
+          </div>
+          <div class="mini-slide">
+            <div class="tc">05 / 10</div>
+            <div class="h">Поставили<br/><span class="a">AI-агента</span></div>
+            <div class="b">SOLUTION</div>
+          </div>
+          <div class="mini-slide">
+            <div class="tc">07 / 10</div>
+            <div class="h">14.2%<br/>конверсия<br/>+18ч/нед</div>
+            <div class="b">RESULTS</div>
+          </div>
+          <div class="mini-slide">
+            <div class="tc">10 / 10</div>
+            <div class="h">«КЕЙС» →<br/>в директ</div>
+            <div class="b">CTA</div>
+          </div>
+        </div>
+        <div class="fade"></div>
+      </div>
+      <div class="card-info">
+        <div class="card-title">03 · «Кейс <span class="accent">+1.2x за 3 мес</span>»</div>
+        <div class="card-desc">Case Study формат. Hook через результат-цифру, разбор «до/что пробовали/что сделали/результат», заканчивается цитатой клиента + CTA. Идеально для прогрева холодного трафика через социальное доказательство.</div>
+        <div class="card-meta">
+          <div class="m"><div class="k">Тип</div><div class="v">Case Study</div></div>
+          <div class="m"><div class="k">Слайдов</div><div class="v lime">10</div></div>
+          <div class="m"><div class="k">Сегмент</div><div class="v">A · агентства</div></div>
+          <div class="m"><div class="k">Тема</div><div class="v">Кейс внедрения</div></div>
+        </div>
+        <div class="card-actions">
+          <a class="btn primary" href="/carousels/carousel-03-case-study.html" target="_blank">↗ Открыть · 10 слайдов</a>
+          <a class="btn" href="#export-3">📥 Экспорт PNG</a>
+        </div>
+      </div>
+    </div>
+
+  </div>
+
+  <!-- 3 STRUCTURES -->
+  <div class="sec-head">
+    <span class="sec-num">/02</span>
+    <span class="sec-title">3 типа структур</span>
+    <span class="sec-spacer"></span>
+  </div>
+
+  <div class="struct">
+    <div>
+      <h3>01 — <span class="accent">Pain / Solution</span></h3>
+      <ol>
+        <li><span class="num">01</span><span class="body">Hook · провокация</span></li>
+        <li><span class="num">02</span><span class="body">Назвать боль</span></li>
+        <li><span class="num">03</span><span class="body">Усилить боль</span></li>
+        <li><span class="num">04</span><span class="body">Что обычно делают</span></li>
+        <li><span class="num">05</span><span class="body">Почему не работает</span></li>
+        <li><span class="num">06</span><span class="body">Настоящая причина</span></li>
+        <li><span class="num">07</span><span class="body">Намёк на решение</span></li>
+        <li><span class="num">08</span><span class="body">Решение</span></li>
+        <li><span class="num">09</span><span class="body">Результат / кейс</span></li>
+        <li><span class="num">10</span><span class="body">CTA</span></li>
+      </ol>
+    </div>
+    <div>
+      <h3>02 — <span class="accent">Case Study</span></h3>
+      <ol>
+        <li><span class="num">01</span><span class="body">Hook · цифра-результат</span></li>
+        <li><span class="num">02</span><span class="body">Кто это (анонимно)</span></li>
+        <li><span class="num">03</span><span class="body">Ситуация ДО</span></li>
+        <li><span class="num">04</span><span class="body">Что не работало</span></li>
+        <li><span class="num">05</span><span class="body">Что попробовали</span></li>
+        <li><span class="num">06</span><span class="body">Наше решение</span></li>
+        <li><span class="num">07</span><span class="body">Детали</span></li>
+        <li><span class="num">08</span><span class="body">Результат-цифры</span></li>
+        <li><span class="num">09</span><span class="body">Цитата клиента</span></li>
+        <li><span class="num">10</span><span class="body">CTA «хочешь так же?»</span></li>
+      </ol>
+    </div>
+    <div>
+      <h3>03 — <span class="accent">N Mistakes</span></h3>
+      <ol>
+        <li><span class="num">01</span><span class="body">Hook · «5 ошибок…»</span></li>
+        <li><span class="num">02</span><span class="body">Mistake 1 + fix</span></li>
+        <li><span class="num">03</span><span class="body">Mistake 2 + fix</span></li>
+        <li><span class="num">04</span><span class="body">Mistake 3 + fix</span></li>
+        <li><span class="num">05</span><span class="body">Mistake 4 + fix</span></li>
+        <li><span class="num">06</span><span class="body">Mistake 5 + fix</span></li>
+        <li><span class="num">07</span><span class="body">Summary списком</span></li>
+        <li><span class="num">08</span><span class="body">Главное правило</span></li>
+        <li><span class="num">09</span><span class="body">Reveal / P.S.</span></li>
+        <li><span class="num">10</span><span class="body">CTA</span></li>
+      </ol>
+    </div>
+  </div>
+
+  <!-- PROCESS -->
+  <div class="sec-head">
+    <span class="sec-num">/03</span>
+    <span class="sec-title">Связка по каруселям · полный процесс</span>
+    <span class="sec-spacer"></span>
+  </div>
+
+  <div class="process">
+    <h3>Идея → <span class="accent">опубликованный пост</span></h3>
+    <div class="process-flow">
+
+      <div class="step done">
+        <div class="step-num">01</div>
+        <div class="step-name">Idea</div>
+        <div class="step-desc">Тема из контент-памяти / диалогов / трендов</div>
+      </div>
+
+      <div class="step todo">
+        <div class="step-num">02</div>
+        <div class="step-name">Script</div>
+        <div class="step-desc">AI генерирует контент по выбранной структуре</div>
+      </div>
+
+      <div class="step done">
+        <div class="step-num">03</div>
+        <div class="step-name">Design</div>
+        <div class="step-desc">HTML-рендер в дизайн-системе AI Mastery</div>
+      </div>
+
+      <div class="step todo">
+        <div class="step-num">04</div>
+        <div class="step-name">Review</div>
+        <div class="step-desc">Илья проверяет, правит текст</div>
+      </div>
+
+      <div class="step todo">
+        <div class="step-num">05</div>
+        <div class="step-name">Export</div>
+        <div class="step-desc">Puppeteer → 10 PNG 1080×1350</div>
+      </div>
+
+      <div class="step todo">
+        <div class="step-num">06</div>
+        <div class="step-name">Caption</div>
+        <div class="step-desc">Текст под пост + 30 хэштегов</div>
+      </div>
+
+      <div class="step todo">
+        <div class="step-num">07</div>
+        <div class="step-name">Schedule</div>
+        <div class="step-desc">Запланировать на оптимальный слот</div>
+      </div>
+
+      <div class="step todo">
+        <div class="step-num">08</div>
+        <div class="step-name">Publish</div>
+        <div class="step-desc">IG Graph API → пост вышел</div>
+      </div>
+
+    </div>
+  </div>
+
+  <div class="foot">
+    AI Sales · Carousels system v0.1 · <a href="/01-portal/ai-sales-portal.html">портал</a> · <a href="/06-dashboard-prototype/project.html">project</a> · <a href="/reels/index.html">→ reels</a>
+  </div>
+
+</main>
+
+<script src="/assets/sidebar.js" defer></script>
+</body>
+</html>

@@ -1,0 +1,163 @@
+<!DOCTYPE html>
+<html lang="ru">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Reel 02 — Tutorial · 75s</title>
+<style>
+  *, *::before, *::after { margin:0; padding:0; box-sizing:border-box; }
+  html, body { background:#080808; color:#f5f0e8; min-height:100vh; }
+  body { font-family:Georgia, serif; font-size:15px; line-height:1.5; padding:24px; }
+  .topbar { max-width:1480px; margin:0 auto 28px; display:flex; justify-content:space-between; align-items:baseline; padding-bottom:16px; border-bottom:1px solid #2a2a2a; }
+  .topbar .t { font-family:Georgia, serif; font-size:24px; }
+  .topbar .t .a { color:#c8f060; font-style:italic; }
+  .topbar .meta { font-family:'SF Mono',monospace; font-size:11px; color:#b8b3a8; letter-spacing:0.12em; text-transform:uppercase; }
+  .meta .v { color:#c8f060; }
+  .shell { max-width:1480px; margin:0 auto; display:grid; gap:2px; }
+  .sec-head { display:flex; align-items:baseline; gap:14px; padding:18px 2px 10px; }
+  .sec-num { font-family:'SF Mono',monospace; font-size:10px; color:#c8f060; letter-spacing:0.18em; font-weight:700; }
+  .sec-title { font-family:Georgia,serif; font-size:14px; font-style:italic; color:#b8b3a8; }
+  .sec-spacer { flex:1; border-bottom:1px solid #1a1a1a; transform:translateY(-2px); }
+  .meta-card { background:#0f0f0f; border:1px solid #1a1a1a; display:grid; grid-template-columns:repeat(4, 1fr); gap:2px; }
+  .meta-card .field { background:#141414; padding:16px 18px; }
+  .meta-card .field .k { font-family:'SF Mono',monospace; font-size:10px; color:#b8b3a8; letter-spacing:0.14em; font-weight:700; text-transform:uppercase; margin-bottom:6px; }
+  .meta-card .field .v { font-family:Georgia, serif; font-size:18px; }
+  .meta-card .field .v.lime { color:#c8f060; }
+  .storyboard { display:grid; grid-template-columns:repeat(6, 1fr); gap:2px; }
+  @media (max-width:1400px) { .storyboard { grid-template-columns:repeat(3, 1fr); } }
+  @media (max-width:700px) { .storyboard { grid-template-columns:repeat(2, 1fr); } }
+  .frame { background:#0f0f0f; border:1px solid #1a1a1a; }
+  .frame-vid { aspect-ratio:9/16; padding:16px; display:flex; flex-direction:column; justify-content:space-between; position:relative; border-bottom:1px solid #1a1a1a; background:#080808; }
+  .frame-vid .timecode { font-family:'SF Mono',monospace; font-size:10px; color:#c8f060; letter-spacing:0.14em; font-weight:700; }
+  .frame-vid .scene { font-family:Georgia, serif; font-size:16px; line-height:1.25; }
+  .frame-vid .visual { font-family:'SF Mono',monospace; font-size:9px; color:#5a5550; letter-spacing:0.1em; text-transform:uppercase; }
+  .frame-info { padding:12px 14px; font-size:12.5px; line-height:1.5; }
+  .frame-info .audio { color:#60c8f0; font-family:'SF Mono',monospace; font-size:9px; letter-spacing:0.12em; text-transform:uppercase; font-weight:700; margin-bottom:5px; }
+  .frame-info .voice { color:#d8d2c6; font-style:italic; }
+  .frame.hook { border-color:#c8f060; }
+  .frame.hook .frame-vid { background:linear-gradient(180deg, #1a2a0d, #080808); }
+  .frame.cta { border-color:#60c8f0; }
+  .frame.step .frame-vid { background:linear-gradient(180deg, #0f1216, #080808); }
+  .step-num-vis { font-family:'SF Mono',monospace; font-size:64px; color:#c8f060; font-weight:700; line-height:1; letter-spacing:-0.04em; }
+  .notes { background:#0f0f0f; border:1px solid #1a1a1a; padding:22px 24px; }
+  .notes h3 { font-family:Georgia, serif; font-size:20px; margin-bottom:14px; }
+  .notes h3 .a { color:#c8f060; font-style:italic; }
+  .notes ul { margin-left:20px; }
+  .notes li { padding:5px 0; color:#d8d2c6; font-size:14.5px; line-height:1.5; }
+  .notes li strong { color:#f5f0e8; }
+</style>
+</head>
+<body>
+
+<div class="topbar">
+  <div class="t">Reel <span class="a">02</span> · 3-Step Tutorial</div>
+  <div class="meta"><span>длительность</span> <span class="v">75s</span> · <span>формат</span> <span class="v">screen recording + voice</span> · <span>цель</span> <span class="v">сохранения</span></div>
+</div>
+
+<div class="shell">
+
+  <div class="sec-head"><span class="sec-num">/00</span><span class="sec-title">Метаданные</span><span class="sec-spacer"></span></div>
+  <div class="meta-card">
+    <div class="field"><div class="k">Тема</div><div class="v">Как написать первое сообщение клиенту в IG</div></div>
+    <div class="field"><div class="k">Сегмент</div><div class="v lime">B · фрилансеры</div></div>
+    <div class="field"><div class="k">Длина</div><div class="v">75 секунд</div></div>
+    <div class="field"><div class="k">Цель</div><div class="v lime">сохранения 5%+</div></div>
+  </div>
+
+  <div class="sec-head"><span class="sec-num">/01</span><span class="sec-title">Раскадровка · 6 кадров</span><span class="sec-spacer"></span></div>
+  <div class="storyboard">
+
+    <div class="frame hook">
+      <div class="frame-vid">
+        <div class="timecode">00:00 — 00:05 · HOOK</div>
+        <div class="scene">90% твоих<br/>первых<br/>сообщений в<br/>директ — <span style="color:#c8f060;">мусор.</span></div>
+        <div class="visual">⎚ Talking head crash zoom</div>
+      </div>
+      <div class="frame-info">
+        <div class="audio">↗ AUDIO</div>
+        <div class="voice">«Девяносто процентов твоих первых сообщений в директ — мусор. Сейчас покажу как писать чтобы отвечали.»</div>
+      </div>
+    </div>
+
+    <div class="frame">
+      <div class="frame-vid">
+        <div class="timecode">00:05 — 00:15 · TEASE</div>
+        <div class="scene">3 правила.<br/>На примерах.<br/><br/>Поехали.</div>
+        <div class="visual">⎚ Screen recording IG</div>
+      </div>
+      <div class="frame-info">
+        <div class="audio">↗ AUDIO</div>
+        <div class="voice">«Три правила, на конкретных примерах. Сохраняй пост, проверишь себя завтра.»</div>
+      </div>
+    </div>
+
+    <div class="frame step">
+      <div class="frame-vid">
+        <div class="timecode">00:15 — 00:35 · STEP 1</div>
+        <div class="step-num-vis">01</div>
+        <div class="scene">Не «Привет!<br/>Меня зовут N»<br/><br/><span style="color:#c8f060;">→ «Видел твой пост<br/>про X. Вопрос:»</span></div>
+        <div class="visual">⎚ Screen rec: 2 примера</div>
+      </div>
+      <div class="frame-info">
+        <div class="audio">↗ AUDIO</div>
+        <div class="voice">«Первое. Никогда не "Привет, меня зовут". Вместо этого — конкретная ссылка на его контент плюс вопрос. Запросто, естественно.»</div>
+      </div>
+    </div>
+
+    <div class="frame step">
+      <div class="frame-vid">
+        <div class="timecode">00:35 — 00:50 · STEP 2</div>
+        <div class="step-num-vis">02</div>
+        <div class="scene">Один вопрос.<br/>Не три.<br/><br/><span style="color:#c8f060;">Открытый,<br/>короткий.</span></div>
+        <div class="visual">⎚ Screen rec: bad vs good</div>
+      </div>
+      <div class="frame-info">
+        <div class="audio">↗ AUDIO</div>
+        <div class="voice">«Второе. Один вопрос. Не три, не пять. И обязательно открытый — на который нельзя ответить да/нет.»</div>
+      </div>
+    </div>
+
+    <div class="frame step">
+      <div class="frame-vid">
+        <div class="timecode">00:50 — 01:05 · STEP 3</div>
+        <div class="step-num-vis">03</div>
+        <div class="scene">Без CTA<br/>в первом.<br/><br/><span style="color:#c8f060;">Сначала диалог.<br/>Потом продажа.</span></div>
+        <div class="visual">⎚ Screen rec: пример без CTA</div>
+      </div>
+      <div class="frame-info">
+        <div class="audio">↗ AUDIO</div>
+        <div class="voice">«Третье. Никаких ссылок, никаких "приходи на консультацию" в первом сообщении. Сначала диалог. Продажа — потом.»</div>
+      </div>
+    </div>
+
+    <div class="frame cta">
+      <div class="frame-vid">
+        <div class="timecode">01:05 — 01:15 · CTA</div>
+        <div class="scene">Сохрани.<br/>Покажи себе<br/>завтра.<br/><br/><span style="color:#60c8f0;">DM «директ»</span></div>
+        <div class="visual">⎚ Subtitle CTA</div>
+      </div>
+      <div class="frame-info">
+        <div class="audio">↗ AUDIO</div>
+        <div class="voice">«Сохрани и покажи себе перед следующим директом. Хочешь полный гайд — напиши "директ" в личку. Пришлю PDF.»</div>
+      </div>
+    </div>
+
+  </div>
+
+  <div class="sec-head"><span class="sec-num">/02</span><span class="sec-title">Монтаж · ключевые приёмы</span><span class="sec-spacer"></span></div>
+  <div class="notes">
+    <h3>Что <span class="a">критично</span></h3>
+    <ul>
+      <li><strong>Screen recording IG-директа</strong> — большая часть видео. Нужны 2-3 реальных примера BAD vs GOOD сообщений, скриншоты живые.</li>
+      <li><strong>Большие цифры 01/02/03</strong> — визуальный якорь между блоками. Должны быть моноширинные, лайм-цвета.</li>
+      <li><strong>Темп ускорить во время скриншотов</strong> — голос держит ритм 175 wpm, скриншоты сменяют каждые 2-3 сек.</li>
+      <li><strong>Subtitle обязательны на каждый ключевой тезис</strong> — «90% мусор», «не привет», «один вопрос», «без CTA».</li>
+      <li><strong>Контраст в hook</strong>: первая фраза должна звучать резко, провокационно. Без улыбки в кадре.</li>
+      <li><strong>Музыка</strong>: lo-fi инструментал, без вокала. −15 dB от голоса.</li>
+    </ul>
+  </div>
+
+</div>
+
+</body>
+</html>

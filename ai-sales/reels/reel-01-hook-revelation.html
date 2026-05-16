@@ -1,0 +1,207 @@
+<!DOCTYPE html>
+<html lang="ru">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Reel 01 — Hook Revelation · 60s</title>
+<style>
+  *, *::before, *::after { margin:0; padding:0; box-sizing:border-box; }
+  html, body { background:#080808; color:#f5f0e8; min-height:100vh; }
+  body { font-family:Georgia, serif; font-size:15px; line-height:1.5; padding:24px; }
+  .topbar { max-width:1480px; margin:0 auto 28px; display:flex; justify-content:space-between; align-items:baseline; padding-bottom:16px; border-bottom:1px solid #2a2a2a; }
+  .topbar .t { font-family:Georgia, serif; font-size:24px; }
+  .topbar .t .a { color:#c8f060; font-style:italic; }
+  .topbar .meta { font-family:'SF Mono',monospace; font-size:11px; color:#b8b3a8; letter-spacing:0.12em; text-transform:uppercase; }
+  .meta .v { color:#c8f060; }
+
+  .shell { max-width:1480px; margin:0 auto; display:grid; grid-template-columns:1fr; gap:2px; }
+
+  .sec-head { display:flex; align-items:baseline; gap:14px; padding:18px 2px 10px; }
+  .sec-num { font-family:'SF Mono',monospace; font-size:10px; color:#c8f060; letter-spacing:0.18em; font-weight:700; }
+  .sec-title { font-family:Georgia,serif; font-size:14px; font-style:italic; color:#b8b3a8; }
+  .sec-spacer { flex:1; border-bottom:1px solid #1a1a1a; transform:translateY(-2px); }
+
+  .meta-card { background:#0f0f0f; border:1px solid #1a1a1a; padding:22px 24px; display:grid; grid-template-columns:repeat(4, 1fr); gap:2px; }
+  .meta-card .field { background:#141414; padding:16px 18px; }
+  .meta-card .field .k { font-family:'SF Mono',monospace; font-size:10px; color:#b8b3a8; letter-spacing:0.14em; font-weight:700; text-transform:uppercase; margin-bottom:6px; }
+  .meta-card .field .v { font-family:Georgia, serif; font-size:18px; }
+  .meta-card .field .v.lime { color:#c8f060; }
+
+  /* STORYBOARD */
+  .storyboard { display:grid; grid-template-columns:repeat(5, 1fr); gap:2px; }
+  @media (max-width:1100px) { .storyboard { grid-template-columns:repeat(2, 1fr); } }
+  .frame { background:#0f0f0f; border:1px solid #1a1a1a; padding:0; }
+  .frame-vid { aspect-ratio:9/16; background:#080808; padding:18px; display:flex; flex-direction:column; justify-content:space-between; position:relative; border-bottom:1px solid #1a1a1a; }
+  .frame-vid .timecode { font-family:'SF Mono',monospace; font-size:10px; color:#c8f060; letter-spacing:0.14em; font-weight:700; }
+  .frame-vid .scene { font-family:Georgia, serif; font-size:18px; line-height:1.25; color:#f5f0e8; }
+  .frame-vid .visual { font-family:'SF Mono',monospace; font-size:10px; color:#5a5550; letter-spacing:0.1em; text-transform:uppercase; }
+  .frame-info { padding:14px 16px; font-size:13px; line-height:1.5; }
+  .frame-info .audio { color:#60c8f0; font-family:'SF Mono',monospace; font-size:10px; letter-spacing:0.12em; text-transform:uppercase; font-weight:700; margin-bottom:6px; }
+  .frame-info .voice { color:#d8d2c6; font-style:italic; }
+  .frame-info .sfx { font-family:'SF Mono',monospace; font-size:10px; color:#f06090; margin-top:6px; letter-spacing:0.08em; }
+
+  .frame.hook { border-color:#c8f060; }
+  .frame.hook .frame-vid { background:linear-gradient(180deg, #1a2a0d 0%, #080808 100%); }
+  .frame.cta { border-color:#60c8f0; }
+
+  /* TIMELINE */
+  .timeline-block { background:#0f0f0f; border:1px solid #1a1a1a; padding:22px 24px; }
+  .tl-line { display:grid; grid-template-columns:60px 1fr; gap:14px; padding:10px 0; border-bottom:1px solid #1a1a1a; }
+  .tl-line:last-child { border-bottom:none; }
+  .tl-line .t { font-family:'SF Mono',monospace; font-size:11px; color:#c8f060; letter-spacing:0.1em; font-weight:700; }
+  .tl-line .e { font-size:14px; line-height:1.55; color:#f5f0e8; }
+  .tl-line .e .meta { font-family:'SF Mono',monospace; font-size:10px; color:#5a5550; letter-spacing:0.08em; text-transform:uppercase; margin-top:4px; }
+
+  /* NOTES */
+  .notes { background:#0f0f0f; border:1px solid #1a1a1a; padding:22px 24px; }
+  .notes h3 { font-family:Georgia, serif; font-size:20px; margin-bottom:14px; }
+  .notes h3 .a { color:#c8f060; font-style:italic; }
+  .notes ul { margin-left:20px; }
+  .notes li { padding:5px 0; color:#d8d2c6; font-size:14.5px; line-height:1.5; }
+  .notes li strong { color:#f5f0e8; }
+</style>
+</head>
+<body>
+
+<div class="topbar">
+  <div class="t">Reel <span class="a">01</span> · Hook Revelation</div>
+  <div class="meta"><span>длительность</span> <span class="v">60s</span> · <span>формат</span> <span class="v">talking head + B-roll</span> · <span>цель</span> <span class="v">CTR в директ</span></div>
+</div>
+
+<div class="shell">
+
+  <!-- META -->
+  <div class="sec-head">
+    <span class="sec-num">/00</span>
+    <span class="sec-title">Метаданные</span>
+    <span class="sec-spacer"></span>
+  </div>
+
+  <div class="meta-card">
+    <div class="field"><div class="k">Тема</div><div class="v">AI заменил мою команду продаж</div></div>
+    <div class="field"><div class="k">Сегмент</div><div class="v lime">A · агентства</div></div>
+    <div class="field"><div class="k">Длина</div><div class="v">60 секунд</div></div>
+    <div class="field"><div class="k">Цель</div><div class="v lime">300+ переходов в директ</div></div>
+  </div>
+
+  <!-- STORYBOARD -->
+  <div class="sec-head">
+    <span class="sec-num">/01</span>
+    <span class="sec-title">Раскадровка · 5 кадров</span>
+    <span class="sec-spacer"></span>
+  </div>
+
+  <div class="storyboard">
+
+    <!-- FRAME 1: HOOK -->
+    <div class="frame hook">
+      <div class="frame-vid">
+        <div class="timecode">00:00 — 00:03 · HOOK</div>
+        <div class="scene">«Я уволил<br/>4 продажников.<br/><span style="color:#c8f060;">И вырос<br/>на 30%.»</span></div>
+        <div class="visual">⎚ Talking head, тёмный фон<br/>⎚ Текст overlay крупно</div>
+      </div>
+      <div class="frame-info">
+        <div class="audio">↗ AUDIO</div>
+        <div class="voice">«Я уволил четырёх продажников. И за два месяца вырос на тридцать процентов.»</div>
+        <div class="sfx">🔊 «Whoosh» на смене текста</div>
+      </div>
+    </div>
+
+    <!-- FRAME 2: TEASE -->
+    <div class="frame">
+      <div class="frame-vid">
+        <div class="timecode">00:03 — 00:15 · TEASE</div>
+        <div class="scene">Сейчас расскажу<br/>как.<br/><br/>Спойлер:<br/>дело не в AI.</div>
+        <div class="visual">⎚ Кадры из дашборда<br/>⎚ Цифры на экране</div>
+      </div>
+      <div class="frame-info">
+        <div class="audio">↗ AUDIO</div>
+        <div class="voice">«Сейчас расскажу как. И сразу спойлер — дело не в том что я заменил их AI. Дело в том, что я понял три вещи про продажи.»</div>
+        <div class="sfx">🔊 Низкий бас-удар</div>
+      </div>
+    </div>
+
+    <!-- FRAME 3: REVEAL 1 -->
+    <div class="frame">
+      <div class="frame-vid">
+        <div class="timecode">00:15 — 00:30 · BLOCK 1</div>
+        <div class="scene"><span style="color:#5a5550;">01</span><br/>Хороший<br/>продажник —<br/>дорого.</div>
+        <div class="visual">⎚ Цифра «120к/мес × 4»<br/>⎚ B-roll: счета</div>
+      </div>
+      <div class="frame-info">
+        <div class="audio">↗ AUDIO</div>
+        <div class="voice">«Первое — хороший продажник стоит сто двадцать тысяч в месяц. Четыре — почти полмиллиона. Это не зарплата. Это абонемент.»</div>
+      </div>
+    </div>
+
+    <!-- FRAME 4: REVEAL 2-3 -->
+    <div class="frame">
+      <div class="frame-vid">
+        <div class="timecode">00:30 — 00:50 · BLOCK 2+3</div>
+        <div class="scene"><span style="color:#5a5550;">02</span> Спит 8 часов<br/><span style="color:#5a5550;">03</span> Забывает<br/>контекст</div>
+        <div class="visual">⎚ B-roll: ночной город<br/>⎚ B-roll: чат с пропущенным</div>
+      </div>
+      <div class="frame-info">
+        <div class="audio">↗ AUDIO</div>
+        <div class="voice">«Второе — он спит. Восемь часов клиент пишет вечером — никто не отвечает. Третье — забывает контекст. Третий раз спрашивает то, о чём я говорил месяц назад.»</div>
+      </div>
+    </div>
+
+    <!-- FRAME 5: CLIMAX + CTA -->
+    <div class="frame cta">
+      <div class="frame-vid">
+        <div class="timecode">00:50 — 01:00 · CTA</div>
+        <div class="scene">Решил<br/>иначе.<br/><br/><span style="color:#60c8f0;">«AI»<br/>в директ →</span></div>
+        <div class="visual">⎚ Talking head close-up<br/>⎚ Subtitle CTA жирно</div>
+      </div>
+      <div class="frame-info">
+        <div class="audio">↗ AUDIO</div>
+        <div class="voice">«Я решил иначе. И за два месяца это вернуло мне триста часов в неделю. Если хочешь узнать как — напиши в директ "AI" — пришлю разбор.»</div>
+        <div class="sfx">🔊 Финальный звук + субтитры</div>
+      </div>
+    </div>
+
+  </div>
+
+  <!-- TIMELINE -->
+  <div class="sec-head">
+    <span class="sec-num">/02</span>
+    <span class="sec-title">Тайминг-план</span>
+    <span class="sec-spacer"></span>
+  </div>
+
+  <div class="timeline-block">
+    <div class="tl-line"><span class="t">00:00</span><span class="e">Кадр-загвоздка. Илья смотрит в камеру. Тёмный фон.<div class="meta">CUT 1 · 3 секунды · близко</div></span></div>
+    <div class="tl-line"><span class="t">00:03</span><span class="e">Whoosh. Текст overlay появляется буквами.<div class="meta">B-ROLL · numerals on screen</div></span></div>
+    <div class="tl-line"><span class="t">00:05</span><span class="e">Смена кадра — Илья показывает дашборд / экран.<div class="meta">CUT 2 · 5 секунд · средний план</div></span></div>
+    <div class="tl-line"><span class="t">00:15</span><span class="e">«Первое...» — переход на talking head + цифра «120к/мес» overlay.<div class="meta">CUT 3 · 8 секунд</div></span></div>
+    <div class="tl-line"><span class="t">00:23</span><span class="e">B-roll: счета зарплат / банк (5 сек), наложение голоса.<div class="meta">B-ROLL</div></span></div>
+    <div class="tl-line"><span class="t">00:28</span><span class="e">«Второе...» — обратно talking head, потом B-roll: ночной офис, темный город.<div class="meta">CUT 4 · 10 секунд</div></span></div>
+    <div class="tl-line"><span class="t">00:38</span><span class="e">«Третье...» — кадр со скроллом чата, видны старые сообщения.<div class="meta">B-ROLL screen recording</div></span></div>
+    <div class="tl-line"><span class="t">00:50</span><span class="e">Climax: «Я решил иначе» — close up, прямой взгляд.<div class="meta">CUT 5 · 5 секунд · крупно</div></span></div>
+    <div class="tl-line"><span class="t">00:55</span><span class="e">CTA: «напиши AI в директ» — текст overlay жирно, чёткая call-to-action.<div class="meta">CUT 6 · 5 секунд + субтитр</div></span></div>
+  </div>
+
+  <!-- NOTES -->
+  <div class="sec-head">
+    <span class="sec-num">/03</span>
+    <span class="sec-title">Монтажные заметки</span>
+    <span class="sec-spacer"></span>
+  </div>
+
+  <div class="notes">
+    <h3>Что <span class="a">критично</span> при монтаже</h3>
+    <ul>
+      <li><strong>Кадр на 3-й секунде</strong> должен резко контрастировать с первым — иначе скролл. Можно сменить локацию или ракурс.</li>
+      <li><strong>Цифры на экране</strong> — обязательны на «120к/мес» и «300 часов». Цифры удерживают.</li>
+      <li><strong>Subtitle стиль</strong>: JetBrains Mono / SF Mono, белый текст с тёмной обводкой. Никаких «kinetic typography» с эмодзи.</li>
+      <li><strong>Музыка</strong>: спокойная, инструментальная, без слов. Громкость −15 dB относительно голоса.</li>
+      <li><strong>Hook (0-3s)</strong> можно тестировать в 3 версиях: «4 продажников», «всю команду», «менеджера». Что даст лучший CTR.</li>
+      <li><strong>CTA-keyword «AI»</strong> — должен совпадать с автоответом в IG. Илья напишет правило: входящее «AI» → автоматически открывает диалог с агентом.</li>
+    </ul>
+  </div>
+
+</div>
+
+</body>
+</html>

@@ -1,0 +1,1023 @@
+<!DOCTYPE html>
+<html lang="ru">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover">
+<meta name="theme-color" content="#080808">
+<meta name="color-scheme" content="dark only">
+<title>Этап 2.4 — FastAPI</title>
+<style>
+  *, *::before, *::after { margin:0; padding:0; box-sizing:border-box; -webkit-tap-highlight-color:transparent; }
+  html { background:#080808 !important; -webkit-text-size-adjust:100%; }
+  body { background:#080808 !important; color:#f5f0e8 !important; font-family:Georgia,'Times New Roman',serif; font-size:17px; line-height:1.6; overflow-x:hidden; min-height:100vh; }
+  .label { font-family:'SF Mono','Menlo',monospace; font-size:11px; text-transform:uppercase; letter-spacing:0.12em; color:#b8b3a8 !important; font-weight:700; }
+  .topbar { position:sticky; top:0; background:#080808 !important; border-bottom:1px solid #2a2a2a; padding:14px 20px; z-index:50; display:flex; align-items:center; gap:12px; }
+  .topbar-title { font-family:Georgia,serif; font-size:16px; line-height:1; color:#f5f0e8 !important; flex:1; }
+  .topbar-title .accent { color:#c8f060 !important; font-style:italic; }
+  .topbar-stage { font-family:'SF Mono',monospace; font-size:10px; color:#c8f060 !important; font-weight:700; letter-spacing:0.12em; }
+  .container { padding:28px 20px 80px; max-width:680px; margin:0 auto; }
+  .header { margin-bottom:28px; padding-bottom:20px; border-bottom:1px solid #2a2a2a; }
+  .header .label { margin-bottom:10px; }
+  .header h1 { font-family:Georgia,serif; font-size:32px; font-weight:normal; line-height:1.1; letter-spacing:-0.01em; margin-bottom:12px; color:#f5f0e8 !important; }
+  .header h1 .accent { color:#c8f060 !important; font-style:italic; }
+  .header p { color:#c5bfb3 !important; font-size:15px; line-height:1.5; }
+  .stage-meta { display:grid; grid-template-columns:1fr 1fr; gap:3px; margin:20px 0; }
+  .meta-card { background:#1a1a1a; border:1px solid #2a2a2a; padding:14px 16px; }
+  .meta-card .label { display:block; margin-bottom:6px; font-size:10px; }
+  .meta-card .val { font-family:Georgia,serif; font-size:18px; color:#c8f060 !important; }
+  h2 { font-family:Georgia,serif; font-size:24px; font-weight:normal; line-height:1.2; margin:40px 0 12px; color:#f5f0e8 !important; }
+  h2 .sec { display:block; font-family:'SF Mono',monospace; font-size:10px; font-weight:700; color:#c8f060 !important; letter-spacing:0.15em; text-transform:uppercase; margin-bottom:6px; }
+  h3 { font-family:'SF Mono',monospace; font-size:11px; font-weight:700; text-transform:uppercase; letter-spacing:0.15em; color:#c8f060 !important; margin:24px 0 12px; padding-bottom:6px; border-bottom:1px solid #2a2a2a; }
+  p { margin-bottom:14px; font-size:16px; line-height:1.6; color:#f5f0e8 !important; }
+  .lead { font-size:17px; font-style:italic; color:#d8d2c6 !important; margin-bottom:20px; line-height:1.5; }
+  ul, ol { margin:12px 0 16px; padding-left:24px; }
+  li { margin-bottom:8px; font-size:15.5px; line-height:1.55; color:#f5f0e8 !important; }
+  strong { color:#ffffff !important; font-weight:700; }
+  .step-card { background:#1a1a1a; border:1px solid #2a2a2a; padding:0; margin:16px 0; }
+  .step-head { padding:16px 20px; border-bottom:1px solid #2a2a2a; display:flex; align-items:center; gap:14px; }
+  .step-num { font-family:'SF Mono',monospace; font-size:20px; font-weight:700; color:#c8f060 !important; line-height:1; flex-shrink:0; }
+  .step-title { font-family:Georgia,serif; font-size:18px; color:#f5f0e8 !important; line-height:1.3; flex:1; }
+  .step-time { font-family:'SF Mono',monospace; font-size:10px; color:#b8b3a8 !important; font-weight:700; letter-spacing:0.1em; }
+  .step-body { padding:16px 20px; }
+  .step-body p { font-size:15px; margin-bottom:12px; }
+  .step-body p:last-child { margin-bottom:0; }
+  .code { background:#0a0a0a; border:1px solid #2a2a2a; border-left:3px solid #c8f060; padding:14px 16px; margin:12px 0; font-family:'SF Mono',monospace; font-size:13px; line-height:1.6; color:#f5f0e8 !important; overflow-x:auto; white-space:pre; -webkit-overflow-scrolling:touch; }
+  .code .comment { color:#b8b3a8 !important; font-style:italic; }
+  .code .cmd { color:#c8f060 !important; font-weight:700; }
+  .code .str { color:#60c8f0 !important; }
+  .code .key { color:#f06090 !important; font-weight:700; }
+  .code .type { color:#c8f060 !important; }
+  .code .deco { color:#f06090 !important; }
+  code { font-family:'SF Mono',monospace; font-size:13px; background:#1a1a1a; padding:2px 6px; color:#c8f060 !important; border:1px solid #2a2a2a; }
+  .note, .warn, .ok { padding:14px 16px; margin:14px 0; font-size:14.5px; line-height:1.5; }
+  .note { background:#0f1f28; border-left:3px solid #60c8f0; color:#e8e3d6 !important; }
+  .warn { background:#28121b; border-left:3px solid #f06090; color:#e8e3d6 !important; }
+  .ok { background:#1a2510; border-left:3px solid #c8f060; color:#e8e3d6 !important; }
+  .note strong, .warn strong, .ok strong { color:#fff !important; }
+  .check { list-style:none !important; padding-left:0 !important; margin:14px 0 !important; }
+  .check li { padding:12px 14px; background:#1a1a1a; border:1px solid #2a2a2a; margin-bottom:3px; font-size:14.5px; line-height:1.5; display:flex; gap:12px; align-items:flex-start; color:#f5f0e8 !important; }
+  .check li::before { content:'☐'; color:#c8f060 !important; font-family:'SF Mono',monospace; font-size:18px; font-weight:700; flex-shrink:0; line-height:1.3; }
+  .data { margin:14px 0; }
+  .row { background:#1a1a1a; border:1px solid #2a2a2a; padding:14px 16px; margin-bottom:3px; }
+  .row .field { display:flex; justify-content:space-between; align-items:baseline; padding:7px 0; border-bottom:1px solid #2a2a2a; gap:12px; }
+  .row .field:last-child { border-bottom:none; }
+  .row .k { font-family:'SF Mono',monospace; font-size:10px; font-weight:700; text-transform:uppercase; letter-spacing:0.1em; color:#b8b3a8 !important; flex-shrink:0; }
+  .row .v { font-size:14.5px; text-align:right; line-height:1.4; color:#f5f0e8 !important; }
+  .row .v.lime { color:#c8f060 !important; font-weight:700; }
+  .row .v.cyan { color:#60c8f0 !important; font-weight:700; }
+  .tree { background:#0a0a0a; border:1px solid #2a2a2a; padding:18px 16px; margin:14px 0; font-family:'SF Mono',monospace; font-size:12px; line-height:1.85; overflow-x:auto; white-space:pre; color:#f5f0e8 !important; }
+  .tree .folder { color:#c8f060 !important; font-weight:700; }
+  .tree .file { color:#f5f0e8 !important; }
+  .tree .desc { color:#b8b3a8 !important; font-style:italic; }
+  .footer { margin-top:48px; padding:24px 0; border-top:1px solid #2a2a2a; text-align:center; font-family:'SF Mono',monospace; font-size:10px; font-weight:700; text-transform:uppercase; letter-spacing:0.12em; color:#b8b3a8 !important; line-height:1.8; }
+  @media (min-width:768px) {
+    .container { padding:40px 32px 100px; }
+    .header h1 { font-size:42px; }
+    h2 { font-size:30px; }
+  }
+</style>
+</head>
+<body>
+<header class="topbar">
+  <div class="topbar-stage">Stage 2.4</div>
+  <div class="topbar-title">AI Sales <span class="accent">System</span></div>
+</header>
+
+<div class="container">
+  <div class="header">
+    <div class="label">Этап 2 / Инфраструктура · Подэтап 2.4</div>
+    <h1>FastAPI <span class="accent">каркас</span></h1>
+    <p>Создаём backend-приложение. После этого этапа у тебя будет API, который принимает HTTP-запросы и работает с БД.</p>
+  </div>
+
+  <div class="stage-meta">
+    <div class="meta-card"><div class="label">Время</div><div class="val">90–120 мин</div></div>
+    <div class="meta-card"><div class="label">Сложность</div><div class="val">Высокая</div></div>
+    <div class="meta-card"><div class="label">Файлов</div><div class="val">~15</div></div>
+    <div class="meta-card"><div class="label">Endpoints</div><div class="val">12</div></div>
+  </div>
+
+  <h2><span class="sec">Section 01</span>Что строим</h2>
+  <p class="lead">FastAPI — Python-фреймворк для создания API. Он принимает запросы по HTTP, общается с БД, отдаёт JSON.</p>
+
+  <p>На этом этапе будет:</p>
+  <ul>
+    <li><strong>Структура проекта</strong> — папки и файлы как у профессионалов</li>
+    <li><strong>SQLAlchemy</strong> — Python-классы вместо чистого SQL</li>
+    <li><strong>Pydantic</strong> — валидация входящих/исходящих данных</li>
+    <li><strong>JWT-авторизация</strong> — токены для входа в систему</li>
+    <li><strong>12 endpoints</strong> — login, CRUD для клиентов, для сообщений</li>
+    <li><strong>Swagger</strong> — автоматическая документация API</li>
+  </ul>
+
+  <h2><span class="sec">Section 02</span>Структура проекта</h2>
+  <p class="lead">Создаём папку app внутри ~/aisales. Это и есть наше Python-приложение.</p>
+
+  <div class="step-card">
+    <div class="step-head">
+      <div class="step-num">01</div>
+      <div class="step-title">Создаём структуру папок</div>
+      <div class="step-time">5 мин</div>
+    </div>
+    <div class="step-body">
+      <p>На сервере:</p>
+      <div class="code"><span class="cmd">cd</span> ~/aisales
+<span class="cmd">mkdir</span> -p app/{core,models,schemas,routers,services,utils}
+<span class="cmd">touch</span> app/__init__.py
+<span class="cmd">touch</span> app/{core,models,schemas,routers,services,utils}/__init__.py</div>
+    </div>
+  </div>
+
+  <p>Структура будет такая:</p>
+  <div class="tree">~/aisales/app/
+├── __init__.py
+├── main.py             <span class="desc"># точка входа FastAPI</span>
+├── core/               <span class="desc"># ядро</span>
+│   ├── config.py       <span class="desc"># настройки из .env</span>
+│   ├── database.py     <span class="desc"># подключение к PostgreSQL</span>
+│   ├── security.py     <span class="desc"># JWT, хеширование</span>
+│   └── deps.py         <span class="desc"># зависимости</span>
+├── models/             <span class="desc"># SQLAlchemy модели</span>
+│   ├── user.py
+│   ├── client.py
+│   └── message.py
+├── schemas/            <span class="desc"># Pydantic-схемы</span>
+│   ├── user.py
+│   ├── client.py
+│   └── message.py
+├── routers/            <span class="desc"># группы endpoints</span>
+│   ├── auth.py
+│   ├── clients.py
+│   ├── messages.py
+│   └── health.py
+├── services/           <span class="desc"># бизнес-логика</span>
+└── utils/              <span class="desc"># утилиты</span></div>
+
+  <h2><span class="sec">Section 03</span>Зависимости Python</h2>
+
+  <div class="step-card">
+    <div class="step-head">
+      <div class="step-num">02</div>
+      <div class="step-title">requirements.txt</div>
+      <div class="step-time">3 мин</div>
+    </div>
+    <div class="step-body">
+      <div class="code"><span class="cmd">nano</span> ~/aisales/requirements.txt</div>
+      <p>Вставь:</p>
+      <div class="code">fastapi==0.115.0
+uvicorn[standard]==0.30.6
+sqlalchemy==2.0.35
+psycopg2-binary==2.9.9
+alembic==1.13.3
+pydantic==2.9.2
+pydantic-settings==2.5.2
+python-jose[cryptography]==3.3.0
+passlib[bcrypt]==1.7.4
+python-multipart==0.0.12
+redis==5.1.0
+httpx==0.27.2
+python-dotenv==1.0.1</div>
+    </div>
+  </div>
+
+  <h2><span class="sec">Section 04</span>Dockerfile для FastAPI</h2>
+  <p class="lead">Заворачиваем приложение в контейнер, как все остальные сервисы.</p>
+
+  <div class="step-card">
+    <div class="step-head">
+      <div class="step-num">03</div>
+      <div class="step-title">Dockerfile</div>
+      <div class="step-time">3 мин</div>
+    </div>
+    <div class="step-body">
+      <div class="code"><span class="cmd">nano</span> ~/aisales/Dockerfile</div>
+      <p>Вставь:</p>
+    </div>
+  </div>
+
+  <div class="code">FROM python:3.12-slim
+
+WORKDIR /app
+
+RUN apt-get update && apt-get install -y --no-install-recommends \
+    gcc libpq-dev curl \
+    && rm -rf /var/lib/apt/lists/*
+
+COPY requirements.txt .
+RUN pip install --no-cache-dir -r requirements.txt
+
+COPY ./app /app/app
+
+EXPOSE 8000
+
+HEALTHCHECK --interval=30s --timeout=10s --start-period=10s \
+    CMD curl -f http://localhost:8000/health || exit 1
+
+CMD ["uvicorn", "app.main:app", "--host", "0.0.0.0", "--port", "8000"]</div>
+
+  <h2><span class="sec">Section 05</span>Конфигурация (core/config.py)</h2>
+  <p class="lead">Все секреты — из .env. В коде только переменные.</p>
+
+  <div class="step-card">
+    <div class="step-head">
+      <div class="step-num">04</div>
+      <div class="step-title">core/config.py</div>
+      <div class="step-time">5 мин</div>
+    </div>
+    <div class="step-body">
+      <div class="code"><span class="cmd">nano</span> ~/aisales/app/core/config.py</div>
+      <p>Вставь:</p>
+    </div>
+  </div>
+
+  <div class="code"><span class="key">from</span> pydantic_settings <span class="key">import</span> BaseSettings, SettingsConfigDict
+<span class="key">from</span> functools <span class="key">import</span> lru_cache
+
+
+<span class="key">class</span> <span class="type">Settings</span>(BaseSettings):
+    model_config = SettingsConfigDict(env_file=<span class="str">".env"</span>, extra=<span class="str">"ignore"</span>)
+
+    <span class="comment"># App</span>
+    APP_NAME: str = <span class="str">"AI Sales System"</span>
+    APP_ENV: str = <span class="str">"production"</span>
+    DEBUG: bool = <span class="key">False</span>
+
+    <span class="comment"># Database</span>
+    POSTGRES_USER: str
+    POSTGRES_PASSWORD: str
+    POSTGRES_DB: str
+    POSTGRES_HOST: str = <span class="str">"postgres"</span>
+    POSTGRES_PORT: int = 5432
+
+    @property
+    <span class="key">def</span> <span class="type">database_url</span>(self) -> str:
+        <span class="key">return</span> (
+            f<span class="str">"postgresql://{self.POSTGRES_USER}:{self.POSTGRES_PASSWORD}"</span>
+            f<span class="str">"@{self.POSTGRES_HOST}:{self.POSTGRES_PORT}/{self.POSTGRES_DB}"</span>
+        )
+
+    <span class="comment"># Redis</span>
+    REDIS_PASSWORD: str
+    REDIS_HOST: str = <span class="str">"redis"</span>
+    REDIS_PORT: int = 6379
+
+    @property
+    <span class="key">def</span> <span class="type">redis_url</span>(self) -> str:
+        <span class="key">return</span> f<span class="str">"redis://:{self.REDIS_PASSWORD}@{self.REDIS_HOST}:{self.REDIS_PORT}/0"</span>
+
+    <span class="comment"># JWT</span>
+    JWT_SECRET_KEY: str
+    JWT_ALGORITHM: str = <span class="str">"HS256"</span>
+    JWT_EXPIRE_MINUTES: int = 60 * 24 * 7  <span class="comment"># неделя</span>
+
+    <span class="comment"># Qdrant</span>
+    QDRANT_API_KEY: str
+    QDRANT_HOST: str = <span class="str">"qdrant"</span>
+    QDRANT_PORT: int = 6333
+
+
+@lru_cache
+<span class="key">def</span> <span class="type">get_settings</span>() -> Settings:
+    <span class="key">return</span> Settings()
+
+
+settings = get_settings()</div>
+
+  <h2><span class="sec">Section 06</span>Добавляем JWT_SECRET_KEY в .env</h2>
+
+  <div class="step-card">
+    <div class="step-head">
+      <div class="step-num">05</div>
+      <div class="step-title">Генерируем секрет</div>
+      <div class="step-time">2 мин</div>
+    </div>
+    <div class="step-body">
+      <div class="code"><span class="cmd">openssl</span> rand -hex 32</div>
+      <p>Открой .env и добавь:</p>
+      <div class="code"><span class="cmd">nano</span> ~/aisales/.env</div>
+      <div class="code"><span class="comment"># JWT</span>
+JWT_SECRET_KEY=твой_сгенерированный_секрет</div>
+    </div>
+  </div>
+
+  <h2><span class="sec">Section 07</span>Подключение к БД (core/database.py)</h2>
+
+  <div class="step-card">
+    <div class="step-head">
+      <div class="step-num">06</div>
+      <div class="step-title">core/database.py</div>
+      <div class="step-time">3 мин</div>
+    </div>
+    <div class="step-body">
+      <div class="code"><span class="cmd">nano</span> ~/aisales/app/core/database.py</div>
+    </div>
+  </div>
+
+  <div class="code"><span class="key">from</span> sqlalchemy <span class="key">import</span> create_engine
+<span class="key">from</span> sqlalchemy.orm <span class="key">import</span> sessionmaker, declarative_base
+<span class="key">from</span> app.core.config <span class="key">import</span> settings
+
+
+engine = create_engine(
+    settings.database_url,
+    pool_pre_ping=<span class="key">True</span>,
+    pool_size=10,
+    max_overflow=20,
+)
+
+SessionLocal = sessionmaker(autocommit=<span class="key">False</span>, autoflush=<span class="key">False</span>, bind=engine)
+
+Base = declarative_base()
+
+
+<span class="key">def</span> <span class="type">get_db</span>():
+    db = SessionLocal()
+    <span class="key">try</span>:
+        <span class="key">yield</span> db
+    <span class="key">finally</span>:
+        db.close()</div>
+
+  <h2><span class="sec">Section 08</span>Безопасность (core/security.py)</h2>
+  <p class="lead">Хеширование паролей и JWT-токены.</p>
+
+  <div class="step-card">
+    <div class="step-head">
+      <div class="step-num">07</div>
+      <div class="step-title">core/security.py</div>
+      <div class="step-time">5 мин</div>
+    </div>
+    <div class="step-body">
+      <div class="code"><span class="cmd">nano</span> ~/aisales/app/core/security.py</div>
+    </div>
+  </div>
+
+  <div class="code"><span class="key">from</span> datetime <span class="key">import</span> datetime, timedelta, timezone
+<span class="key">from</span> typing <span class="key">import</span> Optional
+<span class="key">from</span> jose <span class="key">import</span> jwt, JWTError
+<span class="key">from</span> passlib.context <span class="key">import</span> CryptContext
+
+<span class="key">from</span> app.core.config <span class="key">import</span> settings
+
+
+pwd_context = CryptContext(schemes=[<span class="str">"bcrypt"</span>], deprecated=<span class="str">"auto"</span>)
+
+
+<span class="key">def</span> <span class="type">verify_password</span>(plain: str, hashed: str) -> bool:
+    <span class="key">return</span> pwd_context.verify(plain, hashed)
+
+
+<span class="key">def</span> <span class="type">hash_password</span>(password: str) -> str:
+    <span class="key">return</span> pwd_context.hash(password)
+
+
+<span class="key">def</span> <span class="type">create_access_token</span>(data: dict, expires_minutes: Optional[int] = <span class="key">None</span>) -> str:
+    to_encode = data.copy()
+    expire = datetime.now(timezone.utc) + timedelta(
+        minutes=expires_minutes <span class="key">or</span> settings.JWT_EXPIRE_MINUTES
+    )
+    to_encode.update({<span class="str">"exp"</span>: expire})
+    <span class="key">return</span> jwt.encode(to_encode, settings.JWT_SECRET_KEY, algorithm=settings.JWT_ALGORITHM)
+
+
+<span class="key">def</span> <span class="type">decode_token</span>(token: str) -> Optional[dict]:
+    <span class="key">try</span>:
+        <span class="key">return</span> jwt.decode(token, settings.JWT_SECRET_KEY, algorithms=[settings.JWT_ALGORITHM])
+    <span class="key">except</span> JWTError:
+        <span class="key">return</span> <span class="key">None</span></div>
+
+  <h2><span class="sec">Section 09</span>SQLAlchemy модели</h2>
+  <p class="lead">Python-классы, которые соответствуют таблицам в БД.</p>
+
+  <div class="step-card">
+    <div class="step-head">
+      <div class="step-num">08</div>
+      <div class="step-title">models/user.py</div>
+      <div class="step-time">3 мин</div>
+    </div>
+    <div class="step-body">
+      <div class="code"><span class="cmd">nano</span> ~/aisales/app/models/user.py</div>
+    </div>
+  </div>
+
+  <div class="code"><span class="key">from</span> sqlalchemy <span class="key">import</span> Column, String, Boolean, DateTime, Enum
+<span class="key">from</span> sqlalchemy.dialects.postgresql <span class="key">import</span> UUID
+<span class="key">from</span> sqlalchemy.sql <span class="key">import</span> func
+<span class="key">import</span> uuid
+<span class="key">import</span> enum
+
+<span class="key">from</span> app.core.database <span class="key">import</span> Base
+
+
+<span class="key">class</span> <span class="type">UserRole</span>(str, enum.Enum):
+    admin = <span class="str">"admin"</span>
+    manager = <span class="str">"manager"</span>
+    viewer = <span class="str">"viewer"</span>
+
+
+<span class="key">class</span> <span class="type">User</span>(Base):
+    __tablename__ = <span class="str">"users"</span>
+
+    id = Column(UUID(as_uuid=<span class="key">True</span>), primary_key=<span class="key">True</span>, default=uuid.uuid4)
+    email = Column(String(255), unique=<span class="key">True</span>, nullable=<span class="key">False</span>, index=<span class="key">True</span>)
+    password_hash = Column(String(255), nullable=<span class="key">False</span>)
+    name = Column(String(255), nullable=<span class="key">False</span>)
+    role = Column(Enum(UserRole, name=<span class="str">"user_role"</span>), nullable=<span class="key">False</span>, default=UserRole.viewer)
+    is_active = Column(Boolean, nullable=<span class="key">False</span>, default=<span class="key">True</span>)
+    last_login_at = Column(DateTime(timezone=<span class="key">True</span>))
+    created_at = Column(DateTime(timezone=<span class="key">True</span>), server_default=func.now())
+    updated_at = Column(DateTime(timezone=<span class="key">True</span>), server_default=func.now())</div>
+
+  <div class="step-card">
+    <div class="step-head">
+      <div class="step-num">09</div>
+      <div class="step-title">models/client.py</div>
+      <div class="step-time">3 мин</div>
+    </div>
+    <div class="step-body">
+      <div class="code"><span class="cmd">nano</span> ~/aisales/app/models/client.py</div>
+    </div>
+  </div>
+
+  <div class="code"><span class="key">from</span> sqlalchemy <span class="key">import</span> Column, String, Integer, DateTime, Enum, ARRAY, Text, BigInteger, Numeric
+<span class="key">from</span> sqlalchemy.dialects.postgresql <span class="key">import</span> UUID, JSONB
+<span class="key">from</span> sqlalchemy.sql <span class="key">import</span> func
+<span class="key">import</span> uuid
+<span class="key">import</span> enum
+
+<span class="key">from</span> app.core.database <span class="key">import</span> Base
+
+
+<span class="key">class</span> <span class="type">FunnelStage</span>(str, enum.Enum):
+    hello = <span class="str">"hello"</span>
+    discovery = <span class="str">"discovery"</span>
+    pitch = <span class="str">"pitch"</span>
+    objections = <span class="str">"objections"</span>
+    close = <span class="str">"close"</span>
+    followup = <span class="str">"followup"</span>
+    closed_won = <span class="str">"closed_won"</span>
+    closed_lost = <span class="str">"closed_lost"</span>
+
+
+<span class="key">class</span> <span class="type">ClientSegment</span>(str, enum.Enum):
+    segment_a = <span class="str">"segment_a"</span>
+    segment_b = <span class="str">"segment_b"</span>
+    segment_c = <span class="str">"segment_c"</span>
+    unknown = <span class="str">"unknown"</span>
+
+
+<span class="key">class</span> <span class="type">Client</span>(Base):
+    __tablename__ = <span class="str">"clients"</span>
+
+    id = Column(UUID(as_uuid=<span class="key">True</span>), primary_key=<span class="key">True</span>, default=uuid.uuid4)
+    ig_username = Column(String(255))
+    ig_user_id = Column(String(100), index=<span class="key">True</span>)
+    tg_username = Column(String(255))
+    tg_user_id = Column(BigInteger, index=<span class="key">True</span>)
+    phone = Column(String(50))
+    email = Column(String(255))
+    display_name = Column(String(255))
+    segment = Column(Enum(ClientSegment, name=<span class="str">"client_segment"</span>), default=ClientSegment.unknown)
+    funnel_stage = Column(Enum(FunnelStage, name=<span class="str">"funnel_stage"</span>), default=FunnelStage.hello)
+    qual_score = Column(Integer, default=0)
+    predicted_deal_amount = Column(Numeric(10, 2))
+    source = Column(String(100))
+    tags = Column(ARRAY(String), default=list)
+    notes = Column(Text)
+    metadata_json = Column(<span class="str">"metadata"</span>, JSONB, default=dict)
+    consent_given_at = Column(DateTime(timezone=<span class="key">True</span>))
+    first_contact_at = Column(DateTime(timezone=<span class="key">True</span>))
+    last_contact_at = Column(DateTime(timezone=<span class="key">True</span>))
+    created_at = Column(DateTime(timezone=<span class="key">True</span>), server_default=func.now())
+    updated_at = Column(DateTime(timezone=<span class="key">True</span>), server_default=func.now())</div>
+
+  <h2><span class="sec">Section 10</span>Pydantic-схемы</h2>
+  <p class="lead">Что приходит и уходит через API. Автоматическая валидация.</p>
+
+  <div class="step-card">
+    <div class="step-head">
+      <div class="step-num">10</div>
+      <div class="step-title">schemas/user.py</div>
+      <div class="step-time">3 мин</div>
+    </div>
+    <div class="step-body">
+      <div class="code"><span class="cmd">nano</span> ~/aisales/app/schemas/user.py</div>
+    </div>
+  </div>
+
+  <div class="code"><span class="key">from</span> pydantic <span class="key">import</span> BaseModel, EmailStr, ConfigDict
+<span class="key">from</span> typing <span class="key">import</span> Optional
+<span class="key">from</span> uuid <span class="key">import</span> UUID
+<span class="key">from</span> datetime <span class="key">import</span> datetime
+
+<span class="key">from</span> app.models.user <span class="key">import</span> UserRole
+
+
+<span class="key">class</span> <span class="type">UserBase</span>(BaseModel):
+    email: EmailStr
+    name: str
+    role: UserRole = UserRole.viewer
+
+
+<span class="key">class</span> <span class="type">UserCreate</span>(UserBase):
+    password: str
+
+
+<span class="key">class</span> <span class="type">UserOut</span>(UserBase):
+    id: UUID
+    is_active: bool
+    last_login_at: Optional[datetime] = <span class="key">None</span>
+    created_at: datetime
+
+    model_config = ConfigDict(from_attributes=<span class="key">True</span>)
+
+
+<span class="key">class</span> <span class="type">LoginRequest</span>(BaseModel):
+    email: EmailStr
+    password: str
+
+
+<span class="key">class</span> <span class="type">TokenResponse</span>(BaseModel):
+    access_token: str
+    token_type: str = <span class="str">"bearer"</span>
+    user: UserOut</div>
+
+  <div class="step-card">
+    <div class="step-head">
+      <div class="step-num">11</div>
+      <div class="step-title">schemas/client.py</div>
+      <div class="step-time">3 мин</div>
+    </div>
+    <div class="step-body">
+      <div class="code"><span class="cmd">nano</span> ~/aisales/app/schemas/client.py</div>
+    </div>
+  </div>
+
+  <div class="code"><span class="key">from</span> pydantic <span class="key">import</span> BaseModel, ConfigDict, Field
+<span class="key">from</span> typing <span class="key">import</span> Optional
+<span class="key">from</span> uuid <span class="key">import</span> UUID
+<span class="key">from</span> datetime <span class="key">import</span> datetime
+<span class="key">from</span> decimal <span class="key">import</span> Decimal
+
+<span class="key">from</span> app.models.client <span class="key">import</span> FunnelStage, ClientSegment
+
+
+<span class="key">class</span> <span class="type">ClientBase</span>(BaseModel):
+    ig_username: Optional[str] = <span class="key">None</span>
+    tg_username: Optional[str] = <span class="key">None</span>
+    phone: Optional[str] = <span class="key">None</span>
+    email: Optional[str] = <span class="key">None</span>
+    display_name: Optional[str] = <span class="key">None</span>
+    segment: ClientSegment = ClientSegment.unknown
+    funnel_stage: FunnelStage = FunnelStage.hello
+    qual_score: int = Field(default=0, ge=0, le=100)
+    source: Optional[str] = <span class="key">None</span>
+    tags: list[str] = []
+    notes: Optional[str] = <span class="key">None</span>
+
+
+<span class="key">class</span> <span class="type">ClientCreate</span>(ClientBase):
+    <span class="key">pass</span>
+
+
+<span class="key">class</span> <span class="type">ClientUpdate</span>(BaseModel):
+    display_name: Optional[str] = <span class="key">None</span>
+    segment: Optional[ClientSegment] = <span class="key">None</span>
+    funnel_stage: Optional[FunnelStage] = <span class="key">None</span>
+    qual_score: Optional[int] = <span class="key">None</span>
+    tags: Optional[list[str]] = <span class="key">None</span>
+    notes: Optional[str] = <span class="key">None</span>
+
+
+<span class="key">class</span> <span class="type">ClientOut</span>(ClientBase):
+    id: UUID
+    predicted_deal_amount: Optional[Decimal] = <span class="key">None</span>
+    first_contact_at: Optional[datetime] = <span class="key">None</span>
+    last_contact_at: Optional[datetime] = <span class="key">None</span>
+    created_at: datetime
+    updated_at: datetime
+
+    model_config = ConfigDict(from_attributes=<span class="key">True</span>)</div>
+
+  <h2><span class="sec">Section 11</span>Зависимости (core/deps.py)</h2>
+  <p class="lead">Текущий пользователь из JWT-токена в каждом запросе.</p>
+
+  <div class="step-card">
+    <div class="step-head">
+      <div class="step-num">12</div>
+      <div class="step-title">core/deps.py</div>
+      <div class="step-time">3 мин</div>
+    </div>
+    <div class="step-body">
+      <div class="code"><span class="cmd">nano</span> ~/aisales/app/core/deps.py</div>
+    </div>
+  </div>
+
+  <div class="code"><span class="key">from</span> fastapi <span class="key">import</span> Depends, HTTPException, status
+<span class="key">from</span> fastapi.security <span class="key">import</span> OAuth2PasswordBearer
+<span class="key">from</span> sqlalchemy.orm <span class="key">import</span> Session
+
+<span class="key">from</span> app.core.database <span class="key">import</span> get_db
+<span class="key">from</span> app.core.security <span class="key">import</span> decode_token
+<span class="key">from</span> app.models.user <span class="key">import</span> User
+
+
+oauth2_scheme = OAuth2PasswordBearer(tokenUrl=<span class="str">"/auth/login"</span>)
+
+
+<span class="key">def</span> <span class="type">get_current_user</span>(
+    token: str = Depends(oauth2_scheme),
+    db: Session = Depends(get_db)
+) -> User:
+    credentials_exception = HTTPException(
+        status_code=status.HTTP_401_UNAUTHORIZED,
+        detail=<span class="str">"Could not validate credentials"</span>,
+    )
+
+    payload = decode_token(token)
+    <span class="key">if not</span> payload:
+        <span class="key">raise</span> credentials_exception
+
+    user_id = payload.get(<span class="str">"sub"</span>)
+    <span class="key">if not</span> user_id:
+        <span class="key">raise</span> credentials_exception
+
+    user = db.query(User).filter(User.id == user_id).first()
+    <span class="key">if not</span> user <span class="key">or not</span> user.is_active:
+        <span class="key">raise</span> credentials_exception
+
+    <span class="key">return</span> user
+
+
+<span class="key">def</span> <span class="type">require_admin</span>(user: User = Depends(get_current_user)) -> User:
+    <span class="key">if</span> user.role != <span class="str">"admin"</span>:
+        <span class="key">raise</span> HTTPException(status_code=403, detail=<span class="str">"Admin access required"</span>)
+    <span class="key">return</span> user</div>
+
+  <h2><span class="sec">Section 12</span>Роутеры (endpoints)</h2>
+
+  <div class="step-card">
+    <div class="step-head">
+      <div class="step-num">13</div>
+      <div class="step-title">routers/health.py</div>
+      <div class="step-time">2 мин</div>
+    </div>
+    <div class="step-body">
+      <div class="code"><span class="cmd">nano</span> ~/aisales/app/routers/health.py</div>
+    </div>
+  </div>
+
+  <div class="code"><span class="key">from</span> fastapi <span class="key">import</span> APIRouter, Depends
+<span class="key">from</span> sqlalchemy.orm <span class="key">import</span> Session
+<span class="key">from</span> sqlalchemy <span class="key">import</span> text
+
+<span class="key">from</span> app.core.database <span class="key">import</span> get_db
+
+
+router = APIRouter(tags=[<span class="str">"system"</span>])
+
+
+@router.get(<span class="str">"/health"</span>)
+<span class="key">def</span> <span class="type">health_check</span>(db: Session = Depends(get_db)):
+    <span class="key">try</span>:
+        db.execute(text(<span class="str">"SELECT 1"</span>))
+        db_ok = <span class="key">True</span>
+    <span class="key">except</span> Exception:
+        db_ok = <span class="key">False</span>
+
+    <span class="key">return</span> {
+        <span class="str">"status"</span>: <span class="str">"ok"</span> <span class="key">if</span> db_ok <span class="key">else</span> <span class="str">"degraded"</span>,
+        <span class="str">"database"</span>: <span class="str">"up"</span> <span class="key">if</span> db_ok <span class="key">else</span> <span class="str">"down"</span>,
+    }</div>
+
+  <div class="step-card">
+    <div class="step-head">
+      <div class="step-num">14</div>
+      <div class="step-title">routers/auth.py</div>
+      <div class="step-time">5 мин</div>
+    </div>
+    <div class="step-body">
+      <div class="code"><span class="cmd">nano</span> ~/aisales/app/routers/auth.py</div>
+    </div>
+  </div>
+
+  <div class="code"><span class="key">from</span> fastapi <span class="key">import</span> APIRouter, Depends, HTTPException, status
+<span class="key">from</span> sqlalchemy.orm <span class="key">import</span> Session
+<span class="key">from</span> datetime <span class="key">import</span> datetime, timezone
+
+<span class="key">from</span> app.core.database <span class="key">import</span> get_db
+<span class="key">from</span> app.core.security <span class="key">import</span> verify_password, create_access_token
+<span class="key">from</span> app.models.user <span class="key">import</span> User
+<span class="key">from</span> app.schemas.user <span class="key">import</span> LoginRequest, TokenResponse, UserOut
+<span class="key">from</span> app.core.deps <span class="key">import</span> get_current_user
+
+
+router = APIRouter(prefix=<span class="str">"/auth"</span>, tags=[<span class="str">"auth"</span>])
+
+
+@router.post(<span class="str">"/login"</span>, response_model=TokenResponse)
+<span class="key">def</span> <span class="type">login</span>(payload: LoginRequest, db: Session = Depends(get_db)):
+    user = db.query(User).filter(User.email == payload.email).first()
+    <span class="key">if not</span> user <span class="key">or not</span> verify_password(payload.password, user.password_hash):
+        <span class="key">raise</span> HTTPException(
+            status_code=status.HTTP_401_UNAUTHORIZED,
+            detail=<span class="str">"Invalid credentials"</span>,
+        )
+    <span class="key">if not</span> user.is_active:
+        <span class="key">raise</span> HTTPException(status_code=403, detail=<span class="str">"User is disabled"</span>)
+
+    user.last_login_at = datetime.now(timezone.utc)
+    db.commit()
+
+    token = create_access_token({<span class="str">"sub"</span>: str(user.id), <span class="str">"role"</span>: user.role.value})
+    <span class="key">return</span> TokenResponse(access_token=token, user=UserOut.model_validate(user))
+
+
+@router.get(<span class="str">"/me"</span>, response_model=UserOut)
+<span class="key">def</span> <span class="type">me</span>(user: User = Depends(get_current_user)):
+    <span class="key">return</span> UserOut.model_validate(user)</div>
+
+  <div class="step-card">
+    <div class="step-head">
+      <div class="step-num">15</div>
+      <div class="step-title">routers/clients.py</div>
+      <div class="step-time">8 мин</div>
+    </div>
+    <div class="step-body">
+      <div class="code"><span class="cmd">nano</span> ~/aisales/app/routers/clients.py</div>
+    </div>
+  </div>
+
+  <div class="code"><span class="key">from</span> fastapi <span class="key">import</span> APIRouter, Depends, HTTPException, Query
+<span class="key">from</span> sqlalchemy.orm <span class="key">import</span> Session
+<span class="key">from</span> typing <span class="key">import</span> Optional
+<span class="key">from</span> uuid <span class="key">import</span> UUID
+
+<span class="key">from</span> app.core.database <span class="key">import</span> get_db
+<span class="key">from</span> app.core.deps <span class="key">import</span> get_current_user
+<span class="key">from</span> app.models.user <span class="key">import</span> User
+<span class="key">from</span> app.models.client <span class="key">import</span> Client, FunnelStage, ClientSegment
+<span class="key">from</span> app.schemas.client <span class="key">import</span> ClientCreate, ClientUpdate, ClientOut
+
+
+router = APIRouter(prefix=<span class="str">"/clients"</span>, tags=[<span class="str">"clients"</span>])
+
+
+@router.get(<span class="str">""</span>, response_model=list[ClientOut])
+<span class="key">def</span> <span class="type">list_clients</span>(
+    funnel_stage: Optional[FunnelStage] = <span class="key">None</span>,
+    segment: Optional[ClientSegment] = <span class="key">None</span>,
+    min_score: Optional[int] = Query(<span class="key">None</span>, ge=0, le=100),
+    skip: int = Query(0, ge=0),
+    limit: int = Query(50, ge=1, le=200),
+    db: Session = Depends(get_db),
+    _: User = Depends(get_current_user),
+):
+    q = db.query(Client)
+    <span class="key">if</span> funnel_stage:
+        q = q.filter(Client.funnel_stage == funnel_stage)
+    <span class="key">if</span> segment:
+        q = q.filter(Client.segment == segment)
+    <span class="key">if</span> min_score <span class="key">is not</span> <span class="key">None</span>:
+        q = q.filter(Client.qual_score >= min_score)
+    <span class="key">return</span> q.order_by(Client.qual_score.desc()).offset(skip).limit(limit).all()
+
+
+@router.post(<span class="str">""</span>, response_model=ClientOut, status_code=201)
+<span class="key">def</span> <span class="type">create_client</span>(
+    payload: ClientCreate,
+    db: Session = Depends(get_db),
+    _: User = Depends(get_current_user),
+):
+    client = Client(**payload.model_dump())
+    db.add(client)
+    db.commit()
+    db.refresh(client)
+    <span class="key">return</span> client
+
+
+@router.get(<span class="str">"/{client_id}"</span>, response_model=ClientOut)
+<span class="key">def</span> <span class="type">get_client</span>(
+    client_id: UUID,
+    db: Session = Depends(get_db),
+    _: User = Depends(get_current_user),
+):
+    client = db.query(Client).filter(Client.id == client_id).first()
+    <span class="key">if not</span> client:
+        <span class="key">raise</span> HTTPException(status_code=404, detail=<span class="str">"Client not found"</span>)
+    <span class="key">return</span> client
+
+
+@router.patch(<span class="str">"/{client_id}"</span>, response_model=ClientOut)
+<span class="key">def</span> <span class="type">update_client</span>(
+    client_id: UUID,
+    payload: ClientUpdate,
+    db: Session = Depends(get_db),
+    _: User = Depends(get_current_user),
+):
+    client = db.query(Client).filter(Client.id == client_id).first()
+    <span class="key">if not</span> client:
+        <span class="key">raise</span> HTTPException(status_code=404, detail=<span class="str">"Client not found"</span>)
+
+    <span class="key">for</span> field, value <span class="key">in</span> payload.model_dump(exclude_unset=<span class="key">True</span>).items():
+        setattr(client, field, value)
+
+    db.commit()
+    db.refresh(client)
+    <span class="key">return</span> client
+
+
+@router.delete(<span class="str">"/{client_id}"</span>, status_code=204)
+<span class="key">def</span> <span class="type">delete_client</span>(
+    client_id: UUID,
+    db: Session = Depends(get_db),
+    _: User = Depends(get_current_user),
+):
+    client = db.query(Client).filter(Client.id == client_id).first()
+    <span class="key">if not</span> client:
+        <span class="key">raise</span> HTTPException(status_code=404, detail=<span class="str">"Client not found"</span>)
+    db.delete(client)
+    db.commit()
+    <span class="key">return None</span></div>
+
+  <h2><span class="sec">Section 13</span>Точка входа (main.py)</h2>
+
+  <div class="step-card">
+    <div class="step-head">
+      <div class="step-num">16</div>
+      <div class="step-title">app/main.py</div>
+      <div class="step-time">3 мин</div>
+    </div>
+    <div class="step-body">
+      <div class="code"><span class="cmd">nano</span> ~/aisales/app/main.py</div>
+    </div>
+  </div>
+
+  <div class="code"><span class="key">from</span> fastapi <span class="key">import</span> FastAPI
+<span class="key">from</span> fastapi.middleware.cors <span class="key">import</span> CORSMiddleware
+
+<span class="key">from</span> app.core.config <span class="key">import</span> settings
+<span class="key">from</span> app.routers <span class="key">import</span> health, auth, clients
+
+
+app = FastAPI(
+    title=settings.APP_NAME,
+    version=<span class="str">"0.1.0"</span>,
+    docs_url=<span class="str">"/docs"</span>,
+    redoc_url=<span class="str">"/redoc"</span>,
+)
+
+app.add_middleware(
+    CORSMiddleware,
+    allow_origins=[<span class="str">"*"</span>],
+    allow_credentials=<span class="key">True</span>,
+    allow_methods=[<span class="str">"*"</span>],
+    allow_headers=[<span class="str">"*"</span>],
+)
+
+app.include_router(health.router)
+app.include_router(auth.router)
+app.include_router(clients.router)
+
+
+@app.get(<span class="str">"/"</span>)
+<span class="key">def</span> <span class="type">root</span>():
+    <span class="key">return</span> {<span class="str">"app"</span>: settings.APP_NAME, <span class="str">"status"</span>: <span class="str">"running"</span>}</div>
+
+  <h2><span class="sec">Section 14</span>Добавляем сервис в docker-compose</h2>
+
+  <div class="step-card">
+    <div class="step-head">
+      <div class="step-num">17</div>
+      <div class="step-title">Обновляем docker-compose.yml</div>
+      <div class="step-time">3 мин</div>
+    </div>
+    <div class="step-body">
+      <div class="code"><span class="cmd">nano</span> ~/aisales/docker-compose.yml</div>
+      <p>Добавь блок <strong>api</strong> внутри <code>services:</code> (перед <code>networks:</code>):</p>
+    </div>
+  </div>
+
+  <div class="code">  api:
+    build: .
+    container_name: aisales-api
+    restart: unless-stopped
+    env_file: .env
+    environment:
+      POSTGRES_HOST: postgres
+      REDIS_HOST: redis
+      QDRANT_HOST: qdrant
+    depends_on:
+      postgres:
+        condition: service_healthy
+      redis:
+        condition: service_healthy
+    ports:
+      - "127.0.0.1:8000:8000"
+    networks:
+      - aisales-net</div>
+
+  <h2><span class="sec">Section 15</span>Запуск</h2>
+
+  <div class="step-card">
+    <div class="step-head">
+      <div class="step-num">18</div>
+      <div class="step-title">Собираем образ и запускаем</div>
+      <div class="step-time">5 мин</div>
+    </div>
+    <div class="step-body">
+      <div class="code"><span class="cmd">cd</span> ~/aisales
+<span class="cmd">docker</span> compose build api
+<span class="cmd">docker</span> compose up -d api</div>
+      <p>Сборка займёт ~3 минуты (скачка Python и пакетов).</p>
+    </div>
+  </div>
+
+  <div class="step-card">
+    <div class="step-head">
+      <div class="step-num">19</div>
+      <div class="step-title">Проверка</div>
+      <div class="step-time">3 мин</div>
+    </div>
+    <div class="step-body">
+      <p>Health-check:</p>
+      <div class="code"><span class="cmd">curl</span> http://localhost:8000/health</div>
+      <p>Должен ответить: <code>{"status":"ok","database":"up"}</code></p>
+      <p>Логи API:</p>
+      <div class="code"><span class="cmd">docker</span> compose logs api</div>
+    </div>
+  </div>
+
+  <h2><span class="sec">Section 16</span>Тестирование через Swagger</h2>
+  <p class="lead">FastAPI генерирует интерактивную документацию автоматически.</p>
+
+  <div class="step-card">
+    <div class="step-head">
+      <div class="step-num">20</div>
+      <div class="step-title">SSH-туннель и открытие Swagger</div>
+      <div class="step-time">3 мин</div>
+    </div>
+    <div class="step-body">
+      <p>В новом окне Терминала на Маке:</p>
+      <div class="code"><span class="cmd">ssh</span> -L 8000:localhost:8000 aisales@твой-ip</div>
+      <p>В браузере: <code>http://localhost:8000/docs</code></p>
+      <p>Увидишь интерфейс Swagger со всеми endpoints. Это уже работающий API.</p>
+    </div>
+  </div>
+
+  <div class="step-card">
+    <div class="step-head">
+      <div class="step-num">21</div>
+      <div class="step-title">Тест: логин</div>
+      <div class="step-time">3 мин</div>
+    </div>
+    <div class="step-body">
+      <p>В Swagger найди <code>POST /auth/login</code> → «Try it out». Введи:</p>
+      <div class="code">{
+  <span class="str">"email"</span>: <span class="str">"ilia@example.com"</span>,
+  <span class="str">"password"</span>: <span class="str">"твой_пароль_из_2.3"</span>
+}</div>
+      <p>«Execute». Должен прийти ответ с <code>access_token</code>.</p>
+    </div>
+  </div>
+
+  <div class="step-card">
+    <div class="step-head">
+      <div class="step-num">22</div>
+      <div class="step-title">Тест: список клиентов</div>
+      <div class="step-time">3 мин</div>
+    </div>
+    <div class="step-body">
+      <p>В Swagger вверху — кнопка «Authorize». Вставь токен из предыдущего шага (без слова Bearer). «Authorize» → «Close».</p>
+      <p>Теперь <code>GET /clients</code> → «Execute». Должна вернуться тестовая Анна, которую создавали в этапе 2.3.</p>
+    </div>
+  </div>
+
+  <div class="ok"><strong>API работает.</strong> У тебя готовый backend, который принимает запросы, проверяет авторизацию, работает с БД.</div>
+
+  <h2><span class="sec">Section 17</span>Чек-лист завершения</h2>
+
+  <ul class="check">
+    <li>Создана структура папок app/ со всеми подпапками</li>
+    <li>requirements.txt создан</li>
+    <li>Dockerfile создан</li>
+    <li>JWT_SECRET_KEY добавлен в .env</li>
+    <li>core/config.py, database.py, security.py, deps.py созданы</li>
+    <li>models/user.py и models/client.py созданы</li>
+    <li>schemas/user.py и schemas/client.py созданы</li>
+    <li>routers/health.py, auth.py, clients.py созданы</li>
+    <li>main.py создан</li>
+    <li>docker-compose.yml дополнен сервисом api</li>
+    <li>docker compose build api прошёл без ошибок</li>
+    <li>docker compose up -d api запустил контейнер</li>
+    <li>/health возвращает status: ok</li>
+    <li>Swagger открывается по /docs</li>
+    <li>Логин по email/паролю возвращает токен</li>
+    <li>GET /clients с токеном возвращает Анну</li>
+  </ul>
+
+  <div class="note">Когда всё работает — пиши «Этап 2.4 готов». Это финальный подэтап инфраструктуры. После него — Этап 2.5: домен, SSL, Nginx — публичный доступ к API из интернета.</div>
+
+  <div class="footer">AI Sales System · Stage 2.4 · FastAPI</div>
+</div>
+</body>
+</html>

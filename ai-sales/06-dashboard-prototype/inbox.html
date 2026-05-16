@@ -1,0 +1,574 @@
+<!DOCTYPE html>
+<html lang="ru">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<meta name="theme-color" content="#080808">
+<meta name="color-scheme" content="dark only">
+<title>AI Sales · Inbox</title>
+<style>
+  *, *::before, *::after { margin:0; padding:0; box-sizing:border-box; }
+  html, body { background:#080808; color:#f5f0e8; min-height:100vh; }
+  body { font-family:Georgia, serif; font-size:15px; line-height:1.5; overflow-x:hidden; }
+  .label { font-family:'SF Mono',monospace; font-size:10px; text-transform:uppercase; letter-spacing:0.14em; color:#b8b3a8; font-weight:700; }
+  .mono { font-family:'SF Mono',monospace; }
+
+  .topbar { position:sticky; top:0; z-index:50; display:flex; align-items:center; justify-content:space-between; padding:14px 24px; background:#080808; border-bottom:1px solid #2a2a2a; gap:18px; }
+  .topbar-title { font-family:Georgia,serif; font-size:18px; }
+  .topbar-title .accent { color:#c8f060; font-style:italic; }
+  .topbar-meta { font-family:'SF Mono',monospace; font-size:11px; color:#b8b3a8; letter-spacing:0.12em; }
+  .topbar-meta .v { color:#c8f060; }
+  .topbar-meta .pink { color:#f06090; }
+
+  .shell { max-width:1480px; margin:0 auto; padding:18px 24px 80px; display:grid; gap:2px; grid-template-columns:280px 1fr; }
+  @media (max-width:900px) { .shell { grid-template-columns:1fr; } }
+  .sec-head { display:flex; align-items:baseline; gap:14px; padding:18px 2px 10px; grid-column:1/-1; }
+  .sec-num { font-family:'SF Mono',monospace; font-size:10px; color:#c8f060; letter-spacing:0.18em; font-weight:700; }
+  .sec-title { font-family:Georgia,serif; font-size:14px; font-style:italic; color:#b8b3a8; }
+  .sec-spacer { flex:1; border-bottom:1px solid #1a1a1a; transform:translateY(-2px); }
+
+  /* LEFT — FILTERS */
+  .filters {
+    background:#0a0a0a;
+    border:1px solid #1a1a1a;
+    padding:18px 0;
+    height:min-content;
+  }
+  .filter-cat {
+    border-bottom:1px solid #1a1a1a;
+    padding:14px 22px 16px;
+  }
+  .filter-cat:last-child { border-bottom:none; }
+  .filter-cat h4 {
+    font-family:'SF Mono',monospace; font-size:10px;
+    text-transform:uppercase; letter-spacing:0.14em;
+    color:#5a5550; font-weight:700;
+    margin-bottom:10px;
+  }
+  .filter-item {
+    display:flex; justify-content:space-between; align-items:center;
+    padding:7px 0;
+    cursor:pointer;
+    font-family:'SF Mono',monospace; font-size:11px;
+    color:#b8b3a8;
+    letter-spacing:0.06em;
+    text-transform:uppercase;
+    font-weight:700;
+  }
+  .filter-item:hover { color:#f5f0e8; }
+  .filter-item.active { color:#c8f060; }
+  .filter-item .count {
+    background:#141414;
+    padding:2px 7px;
+    font-size:10px;
+    color:#b8b3a8;
+  }
+  .filter-item.active .count {
+    background:#2a3a14;
+    color:#c8f060;
+  }
+  .filter-item.urgent .count {
+    background:#28121b;
+    color:#f06090;
+    animation:pulse 2s infinite;
+  }
+  @keyframes pulse { 0%,100% { opacity:1; } 50% { opacity:0.6; } }
+
+  /* RIGHT — INBOX LIST */
+  .inbox-main {
+    background:#0a0a0a;
+    border:1px solid #1a1a1a;
+  }
+  .inbox-controls {
+    padding:14px 22px;
+    border-bottom:1px solid #1a1a1a;
+    display:flex; justify-content:space-between; align-items:center;
+    flex-wrap:wrap; gap:12px;
+  }
+  .inbox-search {
+    background:#141414;
+    border:1px solid #2a2a2a;
+    color:#f5f0e8;
+    padding:8px 14px;
+    font-family:'SF Mono',monospace; font-size:11px;
+    min-width:220px;
+    outline:none;
+  }
+  .inbox-search:focus { border-color:#c8f060; }
+  .inbox-search::placeholder { color:#5a5550; }
+  .inbox-actions { display:flex; gap:4px; }
+  .ic-btn {
+    font-family:'SF Mono',monospace; font-size:10px;
+    padding:7px 12px;
+    background:transparent;
+    border:1px solid #2a2a2a;
+    color:#b8b3a8;
+    cursor:pointer;
+    letter-spacing:0.12em;
+    font-weight:700;
+    text-transform:uppercase;
+  }
+  .ic-btn:hover { border-color:#c8f060; color:#c8f060; }
+
+  /* ITEM */
+  .item {
+    display:grid;
+    grid-template-columns:auto 1fr auto;
+    gap:14px;
+    padding:16px 22px;
+    border-bottom:1px solid #131313;
+    align-items:center;
+    cursor:pointer;
+    transition:background 0.1s;
+    position:relative;
+  }
+  .item:hover { background:#0f0f0f; }
+  .item.unread::before {
+    content:'';
+    position:absolute;
+    left:0; top:0; bottom:0;
+    width:3px;
+  }
+  .item.unread.escalation::before { background:#f06090; }
+  .item.unread.task::before { background:#c8f060; }
+  .item.unread.alert::before { background:#f0a060; }
+  .item.unread.payment::before { background:#60c8f0; }
+
+  .item-icon {
+    width:36px; height:36px;
+    background:#141414;
+    border:1px solid #2a2a2a;
+    display:flex; align-items:center; justify-content:center;
+    font-family:'SF Mono',monospace; font-size:14px;
+    font-weight:700;
+    flex-shrink:0;
+  }
+  .item-icon.escalation { color:#f06090; border-color:#28121b; background:#1a0d10; }
+  .item-icon.task { color:#c8f060; border-color:#1a2a14; background:#0d120a; }
+  .item-icon.alert { color:#f0a060; border-color:#2a2014; background:#161410; }
+  .item-icon.payment { color:#60c8f0; border-color:#0f1f28; background:#0a1218; }
+  .item-icon.digest { color:#b8b3a8; }
+
+  .item-body {
+    min-width:0;
+  }
+  .item-head {
+    display:flex; gap:10px; align-items:baseline;
+    margin-bottom:4px;
+    flex-wrap:wrap;
+  }
+  .item-from {
+    font-family:'SF Mono',monospace; font-size:10px;
+    color:#5a5550;
+    letter-spacing:0.1em;
+    text-transform:uppercase;
+    font-weight:700;
+  }
+  .item-from .who { color:#b8b3a8; }
+  .item-tag {
+    font-family:'SF Mono',monospace; font-size:9px;
+    padding:2px 7px;
+    font-weight:700;
+    letter-spacing:0.12em;
+    text-transform:uppercase;
+  }
+  .item-tag.urgent { background:#28121b; color:#f06090; }
+  .item-tag.p1 { background:#2a2014; color:#f0a060; }
+  .item-tag.p2 { background:#0f1f28; color:#60c8f0; }
+  .item-tag.p3 { background:#1a1a1a; color:#b8b3a8; }
+
+  .item-title {
+    font-family:Georgia, serif; font-size:15.5px;
+    line-height:1.35;
+    color:#f5f0e8;
+  }
+  .item.read .item-title {
+    color:#b8b3a8;
+  }
+  .item-preview {
+    font-family:'SF Mono',monospace; font-size:11px;
+    color:#5a5550;
+    line-height:1.5;
+    margin-top:4px;
+    overflow:hidden;
+    text-overflow:ellipsis;
+    white-space:nowrap;
+  }
+
+  .item-meta {
+    text-align:right;
+    flex-shrink:0;
+  }
+  .item-when {
+    font-family:'SF Mono',monospace; font-size:10px;
+    color:#5a5550;
+    letter-spacing:0.06em;
+    text-transform:uppercase;
+    font-weight:700;
+  }
+  .item.unread .item-when { color:#c8f060; }
+  .item-quick-action {
+    margin-top:5px;
+    font-family:'SF Mono',monospace; font-size:9px;
+    padding:3px 9px;
+    background:transparent;
+    border:1px solid #2a2a2a;
+    color:#b8b3a8;
+    cursor:pointer;
+    letter-spacing:0.12em;
+    font-weight:700;
+    text-transform:uppercase;
+  }
+  .item-quick-action:hover { border-color:#c8f060; color:#c8f060; }
+  .item-quick-action.warn:hover { border-color:#f06090; color:#f06090; }
+
+  /* DAY SEPARATOR */
+  .day-sep {
+    padding:14px 22px 8px;
+    font-family:'SF Mono',monospace; font-size:10px;
+    color:#5a5550;
+    letter-spacing:0.18em;
+    text-transform:uppercase;
+    font-weight:700;
+    background:#0a0a0a;
+    border-bottom:1px solid #1a1a1a;
+  }
+  .day-sep .v {
+    color:#b8b3a8;
+  }
+</style>
+</head>
+<body>
+
+<header class="topbar">
+  <div class="topbar-title">AI Sales <span class="accent">Inbox</span></div>
+  <div class="topbar-meta">
+    <span class="pink">● 3 эскалации</span> ·
+    <span class="v">7 задач от РОПа</span> ·
+    14 уведомлений
+  </div>
+</header>
+
+<main class="shell">
+
+  <div class="sec-head">
+    <span class="sec-num">/01</span>
+    <span class="sec-title">Центр уведомлений · всё в одном месте</span>
+    <span class="sec-spacer"></span>
+  </div>
+
+  <!-- LEFT: FILTERS -->
+  <aside class="filters">
+
+    <div class="filter-cat">
+      <h4>По типу</h4>
+      <div class="filter-item active">
+        <span>Все</span><span class="count">24</span>
+      </div>
+      <div class="filter-item urgent">
+        <span>⚠ Эскалации</span><span class="count">3</span>
+      </div>
+      <div class="filter-item">
+        <span>✓ Задачи РОП</span><span class="count">7</span>
+      </div>
+      <div class="filter-item">
+        <span>⚡ Алерты системы</span><span class="count">2</span>
+      </div>
+      <div class="filter-item">
+        <span>💳 Оплаты</span><span class="count">4</span>
+      </div>
+      <div class="filter-item">
+        <span>📊 Дайджесты</span><span class="count">2</span>
+      </div>
+      <div class="filter-item">
+        <span>🎯 Канал событий</span><span class="count">6</span>
+      </div>
+    </div>
+
+    <div class="filter-cat">
+      <h4>Статус</h4>
+      <div class="filter-item">
+        <span>● Непрочитано</span><span class="count">11</span>
+      </div>
+      <div class="filter-item">
+        <span>○ Прочитано</span><span class="count">13</span>
+      </div>
+      <div class="filter-item">
+        <span>★ Помечено</span><span class="count">3</span>
+      </div>
+      <div class="filter-item">
+        <span>✓ Закрыто сегодня</span><span class="count">8</span>
+      </div>
+    </div>
+
+    <div class="filter-cat">
+      <h4>Приоритет</h4>
+      <div class="filter-item">
+        <span style="color:#f06090;">P1 · критично</span><span class="count">4</span>
+      </div>
+      <div class="filter-item">
+        <span style="color:#f0a060;">P2 · важно</span><span class="count">9</span>
+      </div>
+      <div class="filter-item">
+        <span style="color:#60c8f0;">P3 · нормально</span><span class="count">11</span>
+      </div>
+    </div>
+
+    <div class="filter-cat">
+      <h4>Канал источника</h4>
+      <div class="filter-item">
+        <span>📷 Instagram</span><span class="count">8</span>
+      </div>
+      <div class="filter-item">
+        <span>✈ Telegram</span><span class="count">7</span>
+      </div>
+      <div class="filter-item">
+        <span>⚙ Система</span><span class="count">9</span>
+      </div>
+    </div>
+
+  </aside>
+
+  <!-- RIGHT: INBOX LIST -->
+  <section class="inbox-main">
+
+    <div class="inbox-controls">
+      <input class="inbox-search" placeholder="🔍  поиск по уведомлениям" />
+      <div class="inbox-actions">
+        <button class="ic-btn">✓ Все прочитано</button>
+        <button class="ic-btn">📋 Архив</button>
+      </div>
+    </div>
+
+    <!-- TODAY -->
+    <div class="day-sep">Сегодня · <span class="v">16 мая 2026</span></div>
+
+    <div class="item unread escalation">
+      <div class="item-icon escalation">⚠</div>
+      <div class="item-body">
+        <div class="item-head">
+          <span class="item-from">от <span class="who">IG-Менеджер</span></span>
+          <span class="item-tag urgent">URGENT</span>
+          <span class="item-tag p1">P1</span>
+        </div>
+        <div class="item-title">@anna_volkova — эскалация: «вы меня обманули, верните деньги»</div>
+        <div class="item-preview">сегмент A · ждёт твоего ответа уже 14 минут · диалог 23 сообщений</div>
+      </div>
+      <div class="item-meta">
+        <div class="item-when">21:18</div>
+        <button class="item-quick-action warn">↗ ОТВЕТИТЬ</button>
+      </div>
+    </div>
+
+    <div class="item unread task">
+      <div class="item-icon task">✓</div>
+      <div class="item-body">
+        <div class="item-head">
+          <span class="item-from">от <span class="who">РОП</span></span>
+          <span class="item-tag p1">P1</span>
+        </div>
+        <div class="item-title">Закрыть созвон с @nina_pro в среду 10:00 — она ждёт твоего подтверждения</div>
+        <div class="item-preview">сегмент A · score 85 · сумма ~120к ₽ · close stage</div>
+      </div>
+      <div class="item-meta">
+        <div class="item-when">21:00</div>
+        <button class="item-quick-action">✎ ОТВЕТИТЬ</button>
+      </div>
+    </div>
+
+    <div class="item unread escalation">
+      <div class="item-icon escalation">⚠</div>
+      <div class="item-body">
+        <div class="item-head">
+          <span class="item-from">от <span class="who">TG-Менеджер</span></span>
+          <span class="item-tag urgent">URGENT</span>
+          <span class="item-tag p1">P1</span>
+        </div>
+        <div class="item-title">@viktor_pavlov — запрос NDA + счёт на юр.лицо</div>
+        <div class="item-preview">корпоративный домен @lab-vk.ru · сумма ~450к ₽ · VIP-флаг</div>
+      </div>
+      <div class="item-meta">
+        <div class="item-when">20:42</div>
+        <button class="item-quick-action warn">↗ ОТВЕТИТЬ</button>
+      </div>
+    </div>
+
+    <div class="item unread payment">
+      <div class="item-icon payment">₽</div>
+      <div class="item-body">
+        <div class="item-head">
+          <span class="item-from">от <span class="who">платёжный шлюз</span></span>
+          <span class="item-tag p2">P2</span>
+        </div>
+        <div class="item-title">Оплата: @dmitry88 — 45 000 ₽ · Автопилот SMM</div>
+        <div class="item-preview">Tinkoff Business · подтверждено · onboarding-агенту передано</div>
+      </div>
+      <div class="item-meta">
+        <div class="item-when">21:03</div>
+        <button class="item-quick-action">▶ ОТКРЫТЬ</button>
+      </div>
+    </div>
+
+    <div class="item unread alert">
+      <div class="item-icon alert">⚡</div>
+      <div class="item-body">
+        <div class="item-head">
+          <span class="item-from">от <span class="who">Аналитик</span></span>
+          <span class="item-tag p2">P2</span>
+        </div>
+        <div class="item-title">Voice consistency упала до 82% — нужно ревью последних 12 ответов IG-агента</div>
+        <div class="item-preview">диапазон 14:00-21:00 · 3 ответа &lt; 70% similarity · возможно ChatGPT-style</div>
+      </div>
+      <div class="item-meta">
+        <div class="item-when">20:55</div>
+        <button class="item-quick-action">↗ ОТКРЫТЬ</button>
+      </div>
+    </div>
+
+    <div class="item unread task">
+      <div class="item-icon task">✎</div>
+      <div class="item-body">
+        <div class="item-head">
+          <span class="item-from">от <span class="who">РОП</span></span>
+          <span class="item-tag p2">P2</span>
+        </div>
+        <div class="item-title">Knowledge gap: «гарантия возврата для Премиум» — спрашивали 7 раз за неделю</div>
+        <div class="item-preview">→ КОЛЛЕКЦИЯ ПРОДУКТЫ · нужна 1 запись · ~10 мин работы</div>
+      </div>
+      <div class="item-meta">
+        <div class="item-when">20:30</div>
+        <button class="item-quick-action">+ СОЗДАТЬ</button>
+      </div>
+    </div>
+
+    <div class="item read alert">
+      <div class="item-icon alert">⚡</div>
+      <div class="item-body">
+        <div class="item-head">
+          <span class="item-from">от <span class="who">система</span></span>
+          <span class="item-tag p3">P3</span>
+        </div>
+        <div class="item-title">Qdrant: latency &gt; 800ms на 3-х запросах подряд</div>
+        <div class="item-preview">возможна деградация индекса · автоматическая переиндексация запланирована на 03:00</div>
+      </div>
+      <div class="item-meta">
+        <div class="item-when">20:15</div>
+      </div>
+    </div>
+
+    <div class="item read task">
+      <div class="item-icon task">✎</div>
+      <div class="item-body">
+        <div class="item-head">
+          <span class="item-from">от <span class="who">РОП</span></span>
+          <span class="item-tag p2">P2</span>
+        </div>
+        <div class="item-title">Обновить промпт IG-Менеджера: 3 раза не справился с возражением «у нас уже SMM-щик»</div>
+        <div class="item-preview">→ AGENT-PROMPTS/01-IG-MANAGER.MD · добавить вариант в objections</div>
+      </div>
+      <div class="item-meta">
+        <div class="item-when">19:48</div>
+      </div>
+    </div>
+
+    <div class="item read payment">
+      <div class="item-icon payment">₽</div>
+      <div class="item-body">
+        <div class="item-head">
+          <span class="item-from">от <span class="who">платёжный шлюз</span></span>
+        </div>
+        <div class="item-title">Оплата: @_lera_ — 89 000 ₽ · пакет Премиум</div>
+        <div class="item-preview">closed_won · onboarding запущен</div>
+      </div>
+      <div class="item-meta">
+        <div class="item-when">19:32</div>
+      </div>
+    </div>
+
+    <!-- YESTERDAY -->
+    <div class="day-sep">Вчера · <span class="v">15 мая 2026</span></div>
+
+    <div class="item read digest">
+      <div class="item-icon digest">📊</div>
+      <div class="item-body">
+        <div class="item-head">
+          <span class="item-from">от <span class="who">РОП</span></span>
+          <span class="item-tag p3">DIGEST</span>
+        </div>
+        <div class="item-title">Итоги дня · 6 оплат на 284 000 ₽ · конверсия 12.8% · автономия 87%</div>
+        <div class="item-preview">3 горячих лида на завтра · 1 эскалация решена · план: закрыть @marina_v и @nina_pro</div>
+      </div>
+      <div class="item-meta">
+        <div class="item-when">21:00</div>
+      </div>
+    </div>
+
+    <div class="item read escalation">
+      <div class="item-icon escalation">⚠</div>
+      <div class="item-body">
+        <div class="item-head">
+          <span class="item-from">от <span class="who">IG-Менеджер</span></span>
+          <span class="item-tag p1">P1</span>
+        </div>
+        <div class="item-title">@sergey_negative — эскалация: жалоба на качество созвона</div>
+        <div class="item-preview">resolved by Илья · 18:42 · клиент успокоен, переведён в followup</div>
+      </div>
+      <div class="item-meta">
+        <div class="item-when">17:35</div>
+      </div>
+    </div>
+
+    <div class="item read task">
+      <div class="item-icon task">✎</div>
+      <div class="item-body">
+        <div class="item-head">
+          <span class="item-from">от <span class="who">РОП</span></span>
+          <span class="item-tag p2">P2</span>
+        </div>
+        <div class="item-title">Создать кейс агентства EdTech — для контента</div>
+        <div class="item-preview">→ DONE · опубликовано как Reel «+1.2x за 3 мес»</div>
+      </div>
+      <div class="item-meta">
+        <div class="item-when">14:22</div>
+      </div>
+    </div>
+
+    <div class="item read digest">
+      <div class="item-icon digest">📊</div>
+      <div class="item-body">
+        <div class="item-head">
+          <span class="item-from">от <span class="who">РОП</span></span>
+          <span class="item-tag p3">DIGEST</span>
+        </div>
+        <div class="item-title">Утренний дайджест · 3 горячих + 1 эскалация ждут тебя</div>
+        <div class="item-preview">тренд: за неделю +4% автономии · 2 новых kg темы для базы знаний</div>
+      </div>
+      <div class="item-meta">
+        <div class="item-when">09:00</div>
+      </div>
+    </div>
+
+  </section>
+
+</main>
+
+<script src="/assets/sidebar.js" defer></script>
+<script>
+  document.querySelectorAll('.filter-item').forEach(f => {
+    f.addEventListener('click', () => {
+      const cat = f.closest('.filter-cat');
+      if (cat) cat.querySelectorAll('.filter-item').forEach(x => x.classList.remove('active'));
+      f.classList.add('active');
+    });
+  });
+  document.querySelectorAll('.item').forEach(it => {
+    it.addEventListener('click', (e) => {
+      if (e.target.tagName === 'BUTTON') return;
+      it.classList.remove('unread');
+      it.classList.add('read');
+    });
+  });
+</script>
+
+</body>
+</html>

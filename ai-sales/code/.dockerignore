@@ -1,0 +1,21 @@
+# Не копировать в Docker-образ
+venv/
+__pycache__/
+*.pyc
+*.pyo
+*.pyd
+.pytest_cache/
+.ruff_cache/
+.coverage
+.env
+.env.local
+.git/
+.gitignore
+.idea/
+.vscode/
+node_modules/
+*.log
+.DS_Store
+tests/
+README*.md
+DEPLOY*.md
