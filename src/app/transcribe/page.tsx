@@ -1,9 +1,10 @@
 'use client'
 import { useEffect, useRef, useState } from 'react'
+import Link from 'next/link'
 import {
   AudioLines, Loader2, Copy, Check, TriangleAlert, Link as LinkIcon,
   Download, FileText, Sparkles, Languages, History, Trash2, ChevronRight, Youtube, FileAudio,
-  LayoutGrid, Video, Shuffle, Send,
+  LayoutGrid, Video, Shuffle, Send, Bot,
 } from 'lucide-react'
 import { getTelegram, isInTelegram } from '@/lib/telegram'
 
@@ -444,9 +445,19 @@ export default function TranscribePage() {
 
   return (
     <div className="animate-slide-in space-y-5">
-      <div>
-        <h1 className="text-xl font-bold text-slate-100">Транскрибация</h1>
-        <p className="text-sm text-slate-500 mt-0.5">YouTube или прямая ссылка → текст, саммари, перевод</p>
+      <div className="flex items-start justify-between gap-3">
+        <div>
+          <h1 className="text-xl font-bold text-slate-100">Транскрибация</h1>
+          <p className="text-sm text-slate-500 mt-0.5">YouTube или прямая ссылка → текст, саммари, перевод</p>
+        </div>
+        <Link
+          href="/assistants"
+          className="inline-flex items-center gap-1.5 rounded-lg border border-slate-700 bg-slate-800/60 px-2.5 py-1.5 text-xs font-medium text-slate-200 hover:bg-slate-800 hover:border-slate-600"
+          title="ИИ-ассистенты"
+        >
+          <Bot className="h-4 w-4" />
+          Ассистенты
+        </Link>
       </div>
 
       {/* Form */}
