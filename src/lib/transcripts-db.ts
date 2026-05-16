@@ -39,12 +39,24 @@ export type TranscriptRow = {
 
 let cached: SupabaseClient | null = null
 
+function normalizeSupabaseUrl(raw: string): string {
+  // Users sometimes paste the full REST endpoint
+  // (https://xxx.supabase.co/rest/v1/) into the URL var. supabase-js
+  // appends "/rest/v1/..." itself, so we strip any path/trailing slash
+  // and keep just the origin.
+  try {
+    return new URL(raw).origin
+  } catch {
+    return raw.replace(/\/(rest\/v1\/?)?$/i, '').replace(/\/+$/, '')
+  }
+}
+
 export function getServerSupabase(): SupabaseClient | null {
   if (cached) return cached
-  const url = process.env.NEXT_PUBLIC_SUPABASE_URL
+  const rawUrl = process.env.NEXT_PUBLIC_SUPABASE_URL
   const key = process.env.SUPABASE_SERVICE_KEY
-  if (!url || !key) return null
-  cached = createClient(url, key, { auth: { persistSession: false } })
+  if (!rawUrl || !key) return null
+  cached = createClient(normalizeSupabaseUrl(rawUrl), key, { auth: { persistSession: false } })
   return cached
 }
 
