@@ -201,6 +201,23 @@ footer a{color:var(--a2);text-decoration:none}
     <div id="voiceContainer">
       <p class="empty">Введи handle выше — покажу твой активный голос (если есть).</p>
     </div>
+
+    <div style="margin-top:16px;display:flex;gap:10px;flex-wrap:wrap;align-items:center">
+      <button class="btn btn-outline" id="tokenBtn" disabled>🔑 Получить код для Telegram-бота</button>
+      <span style="font-size:10px;color:var(--muted)" id="tokenHint">привязка @your_voice_bot к этому голосу</span>
+    </div>
+
+    <div class="status" id="tokenStatus"></div>
+
+    <div id="tokenBox" style="display:none;margin-top:14px;padding:16px;background:var(--s2);border:1px solid var(--accent);border-radius:10px">
+      <div style="font-size:9px;text-transform:uppercase;letter-spacing:2px;color:var(--accent);margin-bottom:8px">Одноразовый код · действует 1 час</div>
+      <div id="tokenCode" style="font-size:28px;font-weight:700;letter-spacing:4px;font-variant-numeric:tabular-nums;color:var(--accent);margin-bottom:10px;font-family:var(--font)">—</div>
+      <div style="font-size:11px;color:var(--text);line-height:1.7">
+        Открой <a id="botLink" target="_blank" rel="noopener" href="#" style="color:var(--a2)">бота в Telegram</a> и пришли:<br>
+        <code id="tokenCmd" style="display:inline-block;margin-top:6px;padding:6px 10px;background:rgba(255,255,255,.05);border-radius:6px;font-size:11px;color:var(--a2);user-select:all">/start @handle XXX-XXX</code>
+      </div>
+      <div style="font-size:10px;color:var(--muted);margin-top:10px" id="tokenExpiry"></div>
+    </div>
   </section>
 
   <!-- ─── 4. Тестовая генерация ─── -->
@@ -237,6 +254,9 @@ footer a{color:var(--a2);text-decoration:none}
 const OWNER_KEY = 'aio_voice_owner_handle';
 const $ = (id) => document.getElementById(id);
 
+// Set this once you know your bot's username (e.g., 'aio_voice_bot').
+const BOT_USERNAME = (window.AIO_VOICE_BOT_USERNAME || 'aio_voice_bot');
+
 const ownerInput = $('owner');
 const recBtn = $('recBtn');
 const recTime = $('recTime');
@@ -256,6 +276,13 @@ const genPreview = $('genPreview');
 const genPlayer = $('genPlayer');
 const genDownload = $('genDownload');
 const charCount = $('charCount');
+const tokenBtn = $('tokenBtn');
+const tokenStatus = $('tokenStatus');
+const tokenBox = $('tokenBox');
+const tokenCode = $('tokenCode');
+const tokenCmd = $('tokenCmd');
+const tokenExpiry = $('tokenExpiry');
+const botLink = $('botLink');
 
 // ── State ──
 let recorder = null;
@@ -365,6 +392,7 @@ function updateButtons() {
   const ownerOk = ownerInput.value.trim().length >= 2;
   cloneBtn.disabled = !(ownerOk && currentBlob);
   genBtn.disabled = !(ownerOk && (currentVoice || false));
+  tokenBtn.disabled = !(ownerOk && (currentVoice || false));
 }
 
 // ── Создать voice clone ──
@@ -520,6 +548,43 @@ function showStatus(el, kind, msg, detail) {
   el.className = 'status show ' + kind;
   el.innerHTML = escapeHtml(msg) + (detail ? `<pre>${escapeHtml(detail)}</pre>` : '');
 }
+
+// ── Binding token ──
+tokenBtn.addEventListener('click', async () => {
+  const owner = ownerInput.value.trim();
+  if (!owner) return;
+  tokenBtn.disabled = true;
+  tokenBtn.textContent = '...генерирую';
+  tokenBox.style.display = 'none';
+  tokenStatus.classList.remove('show');
+
+  try {
+    const res = await fetch('/api/voice-binding-token', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ owner_handle: owner }),
+    });
+    const data = await res.json();
+    if (!res.ok || !data.ok) {
+      showStatus(tokenStatus, 'error',
+        `Не получилось (HTTP ${res.status})`,
+        data.error || data.hint || JSON.stringify(data));
+      return;
+    }
+    tokenCode.textContent = data.token;
+    tokenCmd.textContent = `/start ${owner} ${data.token}`;
+    botLink.href = `https://t.me/${BOT_USERNAME}?start=` + encodeURIComponent(`bind_${data.token}`);
+    botLink.textContent = `@${BOT_USERNAME}`;
+    const exp = new Date(data.expires_at);
+    tokenExpiry.textContent = `Действует до: ${exp.toLocaleTimeString('ru-RU', { hour: '2-digit', minute: '2-digit' })} МСК (~1 час)`;
+    tokenBox.style.display = 'block';
+  } catch (e) {
+    showStatus(tokenStatus, 'error', 'Сеть упала: ' + (e.message || e));
+  } finally {
+    tokenBtn.disabled = !(ownerInput.value.trim() && currentVoice);
+    tokenBtn.textContent = '🔑 Получить код для Telegram-бота';
+  }
+});
 
 function escapeHtml(s) {
   return String(s).replace(/[&<>"']/g, (c) => ({ '&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;' }[c]));

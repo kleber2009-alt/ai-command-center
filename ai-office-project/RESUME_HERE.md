@@ -22,14 +22,15 @@
 | 🎤 **Voice clone** | TTS твоим голосом | **ElevenLabs** (выбрано) | ✅ Commit 1 |
 | 🎭 **Sample collection** | UI для загрузки голоса | `persona-train.html` | ✅ Commit 1 |
 | 📨 **TG composer bot** | Бот озвучивает текст owner'а, owner пересылает | Telegram Bot API | ✅ Commit 2 |
-| 🔒 **Handle verification** | Защита от impersonation в боте | code-проверка | ⏳ Commit 3 |
-| ✅ **Subscriber relay** | Подписчики пишут боту → AI-ответ → approval | TG inline-кнопки | ⏳ Commit 3+ |
+| 🔒 **Handle verification** | Одноразовый код XXX-XXX для привязки бота | `voice_binding_tokens` | ✅ Commit 3 |
+| ✅ **Subscriber relay** | Подписчики пишут боту → AI-ответ → approval | TG inline-кнопки | ⏳ Commit 4+ |
 | 🎬 **Video circles** | Кружки Telegram | D-ID / HeyGen | ⏳ Commit 4 |
 | ✍️ **Style match** | Тексты в твоём стиле | Claude + персональный промпт | ⏳ Commit 4 |
 | 📷 **IG posting** | Stories/Reels/DM | Instagram Graph API | ⏳ Commit 5 |
 
-**Что прямо сейчас нужно от тебя для запуска Commit 1+2:**
-1. В Supabase SQL Editor прогнать **обе миграции**: `003_voice.sql` + `004_voice_bot.sql`
+**Что прямо сейчас нужно от тебя для запуска Commit 1+2+3:**
+1. В Supabase SQL Editor прогнать **три миграции** по порядку:
+   `003_voice.sql` → `004_voice_bot.sql` → `005_binding_tokens.sql`
 2. Купить ElevenLabs Starter ($5/мес минимум — Free не даёт voice cloning)
 3. Создать бота у @BotFather (`/newbot` → токен)
 4. В Netlify env vars добавить:
@@ -39,8 +40,9 @@
    - `TG_VOICE_BOT_TOKEN` (новый бот из шага 3)
    - `TG_WEBHOOK_SECRET` (любая строка 32+ символов, опционально)
 5. `curl -X POST` для `setWebhook` (полная команда — в `docs/PHASE_5.md`)
-6. Открыть `/persona-train` → записать голос → проверить в браузере
-7. Написать боту `/start @твой_handle` → послать текстовое сообщение
+6. Открыть `/persona-train` → записать голос → нажать «🔑 Получить код для Telegram-бота»
+7. Скопировать `/start @handle XXX-XXX` → отправить боту
+8. После «✅ Привязал к голосу …» — любой текст в бот → voice-note обратно
 
 Полная документация: [`docs/PHASE_5.md`](docs/PHASE_5.md)
 

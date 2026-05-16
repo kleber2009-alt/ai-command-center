@@ -5,7 +5,9 @@
 // Composer bot (Phase 5 · Commit 2).
 //
 // FLOW
-//   /start <owner_handle>   → bind this TG chat to that owner's voice
+//   /start <handle> <TOKEN> → bind this TG chat to that owner's voice
+//                             (TOKEN is issued by /api/voice-binding-token
+//                              after voice creation in /persona-train)
 //   /voice                  → show current bound voice
 //   /settings               → show TTS preferences (read-only for now)
 //   /clear                  → unbind chat
@@ -117,6 +119,10 @@ async function handleMessage(env, msg) {
   if (text.startsWith('/start ')) {
     return cmdStart(env, chatId, userId, username, text.slice(7).trim());
   }
+  if (text.startsWith('/verify ') || text.startsWith('/bind ')) {
+    // Aliases — same handler.
+    return cmdStart(env, chatId, userId, username, text.replace(/^\/(verify|bind)\s+/, '').trim());
+  }
   if (text === '/help') {
     return sendText(env.TG_TOKEN, chatId, HELP_TEXT, { parse_mode: 'HTML' });
   }
@@ -151,12 +157,31 @@ async function handleCallback(env, cq) {
 
 // ═══ Commands ══════════════════════════════════════════════════════
 
-async function cmdStart(env, chatId, userId, username, handleArg) {
-  const ownerHandle = normalizeHandle(handleArg);
+async function cmdStart(env, chatId, userId, username, args) {
+  // Parse: "@handle TOKEN-XXX" or "handle TOKEN" or just "@handle" (no token).
+  const parts = String(args || '').trim().split(/\s+/).filter(Boolean);
+  if (!parts.length) {
+    return sendText(env.TG_TOKEN, chatId,
+      '⚠ Привязка чата требует одноразовый токен.\n\n' +
+      'Создай голос на <a href="https://ai-growth-office.ru/persona-train">/persona-train</a>, ' +
+      'там после клонирования покажется код.\n\n' +
+      'Затем сюда: <code>/start @твой_handle XXX-XXX</code>',
+      { parse_mode: 'HTML', disable_web_page_preview: true });
+  }
+
+  const ownerHandle = normalizeHandle(parts[0]);
+  const rawToken = (parts[1] || '').toUpperCase().replace(/[^A-Z0-9-]/g, '');
   if (!ownerHandle) {
     return sendText(env.TG_TOKEN, chatId,
-      '⚠ Укажи свой handle:\n<code>/start @your_handle</code>',
+      '⚠ Не понял handle. Формат:\n<code>/start @your_handle XXX-XXX</code>',
       { parse_mode: 'HTML' });
+  }
+  if (!rawToken || rawToken.length < 5) {
+    return sendText(env.TG_TOKEN, chatId,
+      `⚠ Нужен одноразовый код.\n\n` +
+      `Получи его на <a href="https://ai-growth-office.ru/persona-train">/persona-train</a> ` +
+      `(после создания голоса для <code>${escapeHtml(ownerHandle)}</code>).`,
+      { parse_mode: 'HTML', disable_web_page_preview: true });
   }
 
   // Verify a voice exists for this handle.
@@ -167,10 +192,43 @@ async function cmdStart(env, chatId, userId, username, handleArg) {
   if (!voice) {
     return sendText(env.TG_TOKEN, chatId,
       `❌ Голос для <b>${escapeHtml(ownerHandle)}</b> не найден.\n\n` +
-      `Сначала создай его на <a href="https://ai-growth-office.ru/persona-train">/persona-train</a>, ` +
-      `потом возвращайся и снова напиши /start.`,
+      `Сначала создай его на <a href="https://ai-growth-office.ru/persona-train">/persona-train</a>.`,
       { parse_mode: 'HTML', disable_web_page_preview: true });
   }
+
+  // Validate token: must exist, match handle, not used, not expired.
+  const token = await sbSelectOne(
+    env.supaUrl, env.serviceKey,
+    `/rest/v1/voice_binding_tokens?token=eq.${encodeURIComponent(rawToken)}&owner_handle=eq.${encodeURIComponent(ownerHandle)}&used_at=is.null&select=*&limit=1`,
+  );
+  if (!token) {
+    return sendText(env.TG_TOKEN, chatId,
+      `❌ Код неверный, использован или просрочен.\n\n` +
+      `Создай новый код на <a href="https://ai-growth-office.ru/persona-train">/persona-train</a> ` +
+      `(кнопка «Получить код привязки»).`,
+      { parse_mode: 'HTML', disable_web_page_preview: true });
+  }
+  if (new Date(token.expires_at).getTime() < Date.now()) {
+    return sendText(env.TG_TOKEN, chatId,
+      `❌ Код просрочен (старше 1 часа). Сгенерируй новый.`);
+  }
+
+  // Mark token as used.
+  await fetch(
+    `${env.supaUrl}/rest/v1/voice_binding_tokens?token=eq.${encodeURIComponent(rawToken)}`,
+    {
+      method: 'PATCH',
+      headers: {
+        apikey: env.serviceKey,
+        Authorization: `Bearer ${env.serviceKey}`,
+        'Content-Type': 'application/json',
+      },
+      body: JSON.stringify({
+        used_at: new Date().toISOString(),
+        used_by_chat_id: chatId,
+      }),
+    },
+  );
 
   // Upsert bot_user.
   const res = await fetch(`${env.supaUrl}/rest/v1/voice_bot_users`, {
@@ -429,7 +487,7 @@ const START_WELCOME = `
 
 const HELP_TEXT = `
 <b>Команды:</b>
-<code>/start @handle</code> — привязать чат к твоему голосу
+<code>/start @handle XXX-XXX</code> — привязать чат (нужен код с /persona-train)
 <code>/voice</code> — показать активный голос
 <code>/settings</code> — настройки TTS (read-only)
 <code>/clear</code> — отвязать чат

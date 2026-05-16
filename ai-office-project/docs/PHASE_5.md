@@ -4,7 +4,8 @@
 > Дата: начато 16.05.2026.
 > · **Commit 1 (✅):** клон голоса + генерация voice-notes для предпросмотра.
 > · **Commit 2 (✅):** Telegram Voice Composer Bot — owner пишет боту, получает voice-note своим голосом и пересылает кому угодно.
-> · **Commit 3 (далее):** видео-кружки через D-ID, либо subscriber-relay approval-flow.
+> · **Commit 3 (✅):** одноразовые binding-токены — защита от impersonation в боте.
+> · **Commit 4 (далее):** видео-кружки через D-ID, либо subscriber-relay approval-flow.
 
 ---
 
@@ -50,10 +51,12 @@
 | `netlify/functions/voice-clone.js` | 1 | `POST /api/voice-clone` — multipart audio → ElevenLabs → Supabase |
 | `netlify/functions/voice-generate.js` | 1 | `POST /api/voice-generate` — text → TTS → Storage → URL |
 | `netlify/functions/voice-list.js` | 1 | `GET /api/voice-list?owner=@handle` — активный голос + архив |
-| `netlify/functions/tg-voice-webhook.js` | 2 | `POST /api/tg-voice-webhook` — Telegram Bot webhook |
+| `netlify/functions/tg-voice-webhook.js` | 2,3 | `POST /api/tg-voice-webhook` — Telegram Bot webhook |
 | `netlify/functions/_shared/voice-pipeline.js` | 2 | Общая логика TTS + Storage + лог (используется в `voice-generate` и `tg-voice-webhook`) |
+| `netlify/functions/voice-binding-token.js` | 3 | `POST /api/voice-binding-token` — одноразовый код для привязки бота |
 | `supabase/migrations/003_voice.sql` | 1 | Таблицы `voices`, `voice_generations` + storage bucket + RLS |
 | `supabase/migrations/004_voice_bot.sql` | 2 | Таблица `voice_bot_users` + TG-колонки в `voice_generations` |
+| `supabase/migrations/005_binding_tokens.sql` | 3 | Таблица `voice_binding_tokens` (одноразовые коды привязки) |
 | `docs/PHASE_5.md` | — | Этот файл |
 
 ---
@@ -295,11 +298,52 @@ help - Помощь
 - ✅ Каждая генерация логируется в `voice_generations` с `tg_chat_id`, `tg_message_id`, `text`.
 - ✅ Webhook опционально защищён `TG_WEBHOOK_SECRET` (заголовок `X-Telegram-Bot-Api-Secret-Token`).
 - ✅ Owner-binding явный через `/start @handle` — нельзя случайно озвучить чужим голосом.
-- ⚠ Нет авторизации владельца handle — если злоумышленник знает чужой handle, он может биндить чат к этому голосу и генерировать voice-notes. Решается в Commit 3 (например, через verification-code, отправленный на email или в `/persona-train` UI).
+- ✅ **Commit 3 закрыл impersonation:** `/start @handle` без одноразового
+  токена отклоняется. Токен (6 символов, формат `XXX-XXX`) выдаётся
+  на `/persona-train` после создания голоса, действует 1 час, одноразовый.
 
 ---
 
-## Что дальше (Commit 3 — на выбор)
+## Commit 3 — Handle verification
+
+**Что делает:** закрывает дыру Commit 2, когда любой, знающий чужой
+handle, мог биндить свой TG-чат к чужому голосу.
+
+**Flow:**
+```
+1. Owner создал голос на /persona-train
+2. Жмёт "🔑 Получить код для Telegram-бота"
+   → POST /api/voice-binding-token { owner_handle }
+   → 200 { token: "H3K-9PT", expires_at, voice_id }
+3. UI показывает код в большом блоке + кнопку открыть бота
+4. Owner идёт в бот, шлёт: /start @handle H3K-9PT
+5. Бот проверяет токен:
+   · существует?
+   · принадлежит этому handle?
+   · не использован?
+   · не просрочен (<1 час)?
+6. Если ОК → POST /rest/v1/voice_bot_users (upsert) + PATCH token.used_at
+7. Если NOT ОК → отказ с подсказкой "получи новый код"
+```
+
+**Token формат:** 6 символов из `ABCDEFGHJKLMNPQRTUVWXY23456789` (исключены
+0/O/1/I/5/S — амбигуэтные при наборе), формат `XXX-XXX`. ~30B комбинаций,
+1 час TTL, single-active per handle (новый код инвалидирует прошлые),
+rate-limit 5/час на handle.
+
+**Файлы:** `voice-binding-token.js`, `005_binding_tokens.sql`,
+update к `tg-voice-webhook.js` (`cmdStart` теперь требует токен),
+блок «Получить код для Telegram-бота» в `persona-train.html`.
+
+**Что осталось настроить:**
+- Прогнать `005_binding_tokens.sql` в Supabase
+- (Опц.) задать `window.AIO_VOICE_BOT_USERNAME` где-нибудь в global config,
+  иначе по умолчанию `aio_voice_bot` — это меняет только ссылку
+  «открыть бота», команда `/start ... TOKEN` работает с любым ботом.
+
+---
+
+## Что дальше (Commit 4 — на выбор)
 
 **Вариант A — subscriber relay flow** (расширение voice-бота):
 - Юзеры пишут боту напрямую → бот показывает owner'у входящие → owner выбирает «AI-ответ / Свой текст» → preview voice → ✅ отправить
@@ -321,4 +365,4 @@ help - Помощь
 
 ---
 
-_Last updated: 2026-05-16, после Commit 2._
+_Last updated: 2026-05-16, после Commit 3._

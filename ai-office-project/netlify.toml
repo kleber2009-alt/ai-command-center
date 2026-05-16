@@ -47,6 +47,12 @@
   status = 200
   force = true
 
+[[redirects]]
+  from = "/api/voice-binding-token"
+  to = "/.netlify/functions/voice-binding-token"
+  status = 200
+  force = true
+
 # ── Clean URLs ──
 [[redirects]]
   from = "/navigation"
