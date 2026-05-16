@@ -55,6 +55,11 @@ SQL Editor:
 - `001_transcripts.sql` — `transcripts` table for `/transcribe` history.
 - `002_generations.sql` — `generations jsonb` column for caching
   carousel / reels / telegram-post outputs.
+- `003_tasks.sql` — `tasks` table for the project board at `/admin`.
+
+`supabase/seed_initial_tasks.sql` (not under `migrations/`) is an optional
+one-shot seed that populates the `/admin` board with the current project
+backlog. Idempotent via `WHERE NOT EXISTS`.
 
 Without these tables (or env vars), `getServerSupabase()` returns `null` and
 saves/history/caching just no-op.
@@ -69,6 +74,11 @@ Russian; comments/identifiers stay English. Path alias `@/* → src/*`
 transcribe page has its own layout (`src/app/transcribe/layout.tsx`)
 providing a mobile-first centered container (max-w-2xl) — there is no
 sidebar. Everything is one page.
+
+`/admin` is a separate route group with its own wider layout
+(`src/app/admin/layout.tsx`, max-w-7xl) — kanban project board.
+Currently NO auth — anyone with the URL can read/write tasks.
+Track "Закрыть /admin от посторонних" task before public launch.
 
 **The flow** (`src/app/transcribe/page.tsx`):
 1. Mount → calls `loadHistory()` and `setInTg(isInTelegram())`.
@@ -107,6 +117,9 @@ sidebar. Everything is one page.
 - `GET /api/transcribe/history` — last 20 rows. Returns
   `{ items, configured: boolean }`.
 - `GET|DELETE /api/transcribe/history/[id]` — one row.
+- `GET /api/tasks` — list all tasks for `/admin` board. Returns `{ items, configured }`.
+- `POST /api/tasks` — create task. Body `{ title, description?, status?, priority?, stage? }`.
+- `PATCH /api/tasks/[id]` — update fields. `DELETE /api/tasks/[id]` removes.
 
 ## Telegram Mini App
 
