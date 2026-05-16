@@ -1,0 +1,487 @@
+<!DOCTYPE html>
+<html lang="ru">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width,initial-scale=1">
+<title>Сценарии применения · 5 модельных кейсов · AI Growth Office</title>
+<meta name="description" content="5 типовых сценариев: эксперт-психолог 500к/мес, онлайн-школа языков, SMM-агентство, tech-стартап, бренд-консультант. Какие AI-агенты подключают и какой результат через 90 дней.">
+
+<!-- ═══ SEO ═══ -->
+<link rel="canonical" href="https://ai-growth-office.ru/cases.html">
+<meta name="keywords" content="AI агенты, кейсы, сценарии применения, AI-офис, рост бизнеса, контент-маркетинг, воронки">
+<meta name="author" content="Нейрозапуск · AI Growth Office">
+
+<!-- ═══ OG ═══ -->
+<meta property="og:type" content="website">
+<meta property="og:url" content="https://ai-growth-office.ru/cases.html">
+<meta property="og:title" content="Сценарии применения · 5 модельных кейсов · AI Growth Office">
+<meta property="og:description" content="5 типовых сценариев: эксперт-психолог 500к/мес, онлайн-школа, SMM-агентство, tech-стартап, бренд-консультант. Метрики через 90 дней.">
+<meta property="og:image" content="https://ai-growth-office.ru/og-image.jpg">
+<meta property="og:image:width" content="1200">
+<meta property="og:image:height" content="630">
+<meta property="og:locale" content="ru_RU">
+<meta property="og:site_name" content="AI Growth Office">
+
+<!-- ═══ TWITTER ═══ -->
+<meta name="twitter:card" content="summary_large_image">
+<meta name="twitter:title" content="Сценарии применения · AI Growth Office">
+<meta name="twitter:description" content="5 типовых сценариев применения AI-офиса с метриками через 90 дней.">
+<meta name="twitter:image" content="https://ai-growth-office.ru/og-image.jpg">
+<meta name="robots" content="index, follow">
+
+<link rel="icon" type="image/svg+xml" href="data:image/svg+xml,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 32 32'><rect width='32' height='32' rx='6' fill='%23080808'/><text y='24' x='5' font-size='20'>📈</text></svg>">
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<style>
+@import url('https://fonts.googleapis.com/css2?family=JetBrains+Mono:wght@400;700&family=Inter:wght@400;500;600;700;800&display=swap');
+*{box-sizing:border-box;margin:0;padding:0}
+:root{
+  --bg:#0a0c14;--card:#13162a;--card2:#181b30;--card3:#1e2240;--border:rgba(255,255,255,.08);
+  --text:#e8e4f0;--muted:#7a82a0;--dim:rgba(255,255,255,.4);
+  --accent:#c8f060;--a2:#60c8f0;--a3:#f06090;--orange:#f0640a;--green:#34d058;--yellow:#ffd040;
+  --font:'JetBrains Mono',monospace;--ui:'Inter',sans-serif;
+}
+html,body{background:var(--bg);color:var(--text);font-family:var(--ui);min-height:100vh;line-height:1.6}
+body{padding:32px 24px 80px;background:radial-gradient(ellipse at top,#1a2a4a 0%,#0a0c14 60%)}
+
+.wrap{max-width:980px;margin:0 auto}
+
+/* ── HERO ── */
+.hero{text-align:center;margin-bottom:28px}
+.tag{display:inline-block;font-family:var(--font);font-size:9px;text-transform:uppercase;letter-spacing:2px;color:var(--accent);padding:5px 11px;border-radius:6px;background:rgba(200,240,96,.08);border:1px solid rgba(200,240,96,.2);margin-bottom:14px}
+.hero h1{font-size:36px;font-weight:800;letter-spacing:-.5px;line-height:1.15;margin-bottom:10px}
+.hero h1 .grad{background:linear-gradient(90deg,#c8f060,#60c8f0);-webkit-background-clip:text;-webkit-text-fill-color:transparent}
+.hero p{color:var(--muted);font-size:14px;max-width:680px;margin:0 auto}
+
+/* ── HONEST DISCLAIMER ── */
+.disclaimer{background:rgba(255,176,32,.06);border:1px solid rgba(255,176,32,.25);border-left:3px solid #ffb020;border-radius:12px;padding:14px 18px;margin:24px auto;max-width:780px;display:flex;align-items:flex-start;gap:12px}
+.disclaimer-em{font-size:22px;flex-shrink:0;line-height:1}
+.disclaimer-text{font-size:12.5px;color:rgba(232,228,240,.85);line-height:1.6}
+.disclaimer-text b{color:#ffb020;font-weight:700}
+.disclaimer-text a{color:var(--a2);text-decoration:none;border-bottom:1px solid rgba(96,200,240,.3)}
+
+/* ── FILTERS ── */
+.chips{display:flex;flex-wrap:wrap;gap:6px;justify-content:center;margin-bottom:28px}
+.chip{display:inline-flex;align-items:center;gap:6px;padding:8px 14px;border-radius:10px;background:var(--card);border:1.5px solid var(--border);color:var(--muted);font:700 11px/1 var(--ui);cursor:pointer;transition:all .15s;letter-spacing:.3px}
+.chip:hover{border-color:rgba(255,255,255,.18);color:var(--text)}
+.chip.active{background:var(--accent);color:#080808;border-color:var(--accent)}
+
+/* ── CASE ── */
+.case{background:var(--card);border:1.5px solid var(--border);border-radius:18px;padding:0;margin-bottom:24px;overflow:hidden;transition:border-color .2s}
+.case:hover{border-color:rgba(200,240,96,.2)}
+
+.case-hd{padding:22px 26px 18px;border-bottom:1px solid var(--border);background:linear-gradient(135deg,rgba(200,240,96,.04),transparent);position:relative}
+.case-num{position:absolute;top:14px;right:18px;font-family:var(--font);font-size:9px;font-weight:700;color:var(--muted);letter-spacing:1.5px}
+.case-type{display:inline-block;font-family:var(--font);font-size:9.5px;font-weight:700;letter-spacing:1.5px;text-transform:uppercase;padding:4px 10px;border-radius:6px;margin-bottom:10px}
+.case-type.expert{background:rgba(96,200,240,.1);color:var(--a2);border:1px solid rgba(96,200,240,.25)}
+.case-type.school{background:rgba(255,64,128,.1);color:var(--a3);border:1px solid rgba(255,64,128,.25)}
+.case-type.agency{background:rgba(255,176,32,.1);color:#ffb020;border:1px solid rgba(255,176,32,.25)}
+.case-type.tech{background:rgba(200,240,96,.1);color:var(--accent);border:1px solid rgba(200,240,96,.25)}
+
+.case-tit{font-size:23px;font-weight:800;letter-spacing:-.3px;line-height:1.25;margin-bottom:6px}
+.case-sub{font-size:13px;color:var(--muted);line-height:1.55}
+
+.case-body{padding:22px 26px}
+
+.case-row{display:grid;grid-template-columns:170px 1fr;gap:18px;padding:14px 0;border-bottom:1px solid var(--border);align-items:flex-start}
+.case-row:last-child{border-bottom:none}
+@media(max-width:640px){.case-row{grid-template-columns:1fr;gap:6px}}
+.case-row-lbl{font-family:var(--font);font-size:9.5px;color:var(--accent);text-transform:uppercase;letter-spacing:1.5px;font-weight:700;padding-top:2px}
+.case-row-val{font-size:13.5px;color:rgba(232,228,240,.9);line-height:1.65}
+.case-row-val ul{padding-left:18px;margin:4px 0}
+.case-row-val li{margin:4px 0}
+
+/* Agents grid in case */
+.case-agents{display:flex;flex-wrap:wrap;gap:6px;margin-top:6px}
+.case-agent{display:inline-flex;align-items:center;gap:6px;background:var(--card2);border:1px solid var(--border);border-radius:9px;padding:6px 10px;font-size:11px}
+.case-agent .em{font-size:14px}
+.case-agent b{color:var(--text);font-weight:700;font-size:11.5px}
+.case-agent span{color:var(--muted);font-size:10.5px}
+
+/* Workflow steps */
+.workflow{display:flex;flex-direction:column;gap:8px;margin-top:6px}
+.wf-step{display:flex;gap:12px;align-items:flex-start;padding:9px 12px;background:var(--card2);border-radius:9px;border-left:2px solid var(--accent)}
+.wf-num{font-family:var(--font);font-size:10px;font-weight:800;color:var(--accent);min-width:22px;padding-top:1px;letter-spacing:.5px}
+.wf-txt{font-size:12.5px;color:rgba(232,228,240,.85);line-height:1.55}
+
+/* Metrics */
+.metrics{display:grid;grid-template-columns:repeat(auto-fit,minmax(140px,1fr));gap:10px;margin-top:8px}
+.metric{background:linear-gradient(135deg,var(--card2),var(--card3));border:1px solid var(--border);border-radius:11px;padding:12px 14px;position:relative;overflow:hidden}
+.metric::before{content:'';position:absolute;left:0;top:0;bottom:0;width:2px;background:var(--mc,var(--accent))}
+.metric-em{font-size:15px;margin-bottom:4px}
+.metric-val{font-size:22px;font-weight:800;line-height:1.1;letter-spacing:-.5px;color:var(--mc,var(--accent));margin-bottom:2px}
+.metric-lbl{font-size:10px;color:var(--muted);font-family:var(--font);text-transform:uppercase;letter-spacing:.8px;line-height:1.3}
+.metric-delta{font-size:10px;color:var(--green);font-weight:700;margin-top:3px}
+.metric-delta.neg{color:var(--a3)}
+
+/* Bottom CTA per case */
+.case-cta{padding:16px 26px;background:rgba(200,240,96,.04);border-top:1px solid var(--border);display:flex;align-items:center;justify-content:space-between;gap:14px;flex-wrap:wrap}
+.case-cta-text{font-size:12.5px;color:rgba(232,228,240,.78);flex:1;min-width:200px}
+.case-cta-text b{color:var(--accent);font-weight:700}
+.case-cta-btn{background:linear-gradient(90deg,#c8f060,#60c8f0);color:#080808;text-decoration:none;padding:10px 18px;border-radius:10px;font:800 11.5px/1 var(--ui);letter-spacing:.4px;flex-shrink:0;transition:transform .15s}
+.case-cta-btn:hover{transform:translateY(-1px);box-shadow:0 6px 18px rgba(200,240,96,.3)}
+
+/* ── BOTTOM ── */
+.final-cta{text-align:center;margin-top:48px;padding:32px;background:linear-gradient(135deg,rgba(200,240,96,.08),rgba(96,200,240,.05));border:1.5px solid rgba(200,240,96,.2);border-radius:18px}
+.final-cta h2{font-size:24px;font-weight:800;letter-spacing:-.3px;margin-bottom:10px}
+.final-cta p{color:var(--muted);font-size:13.5px;max-width:520px;margin:0 auto 18px;line-height:1.65}
+.final-cta a{display:inline-block;background:linear-gradient(90deg,#c8f060,#60c8f0);color:#080808;text-decoration:none;padding:13px 26px;border-radius:11px;font:800 12px/1 var(--ui);letter-spacing:.4px;transition:transform .15s}
+.final-cta a:hover{transform:translateY(-2px)}
+
+.legal{max-width:980px;margin:32px auto 0;text-align:center;color:var(--muted);font-size:11px}
+.legal a{color:var(--muted);text-decoration:none;border-bottom:1px solid transparent;margin:0 8px;transition:all .15s}
+.legal a:hover{color:var(--accent);border-color:var(--accent)}
+</style>
+<!-- ═══ PWA ═══ -->
+<link rel="manifest" href="/manifest.json">
+<meta name="theme-color" content="#0a0c14">
+<meta name="apple-mobile-web-app-capable" content="yes">
+<meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
+<meta name="apple-mobile-web-app-title" content="AI Office">
+<link rel="apple-touch-icon" href="/icon-192.png">
+</head>
+<body data-user="Илья Палий" data-email="ilia.info.paliy@gmail.com">
+
+<div class="wrap">
+
+  <div class="hero">
+    <div class="tag">📈 Сценарии применения</div>
+    <h1>Как работает <span class="grad">AI Growth Office</span></h1>
+    <p>5 типовых сценариев применения под основные портреты ЦА. Каждый показывает: какие агенты подключают, какой пайплайн собирают, что получают на выходе через 30/60/90 дней.</p>
+  </div>
+
+  <div class="disclaimer">
+    <div class="disclaimer-em">⚠</div>
+    <div class="disclaimer-text">
+      <b>Прозрачность:</b> это <b>модельные сценарии применения</b>, а не реальные клиентские кейсы. Цифры взвешены на основе типичных метрик в нишах. Назначение: показать конкретное применение продукта под твой портрет ЦА. Реальные кейсы появятся здесь после первых клиентов — пиши в Telegram <a href="https://t.me/AI_Growth_Office_Bot" target="_blank">@AI_Growth_Office_Bot</a> если хочешь стать первым.
+    </div>
+  </div>
+
+  <!-- Filters -->
+  <div class="chips" id="chips">
+    <button class="chip active" data-type="all">⭐ Все 5</button>
+    <button class="chip" data-type="expert">🎓 Эксперт-одиночка</button>
+    <button class="chip" data-type="school">🏫 Онлайн-школа</button>
+    <button class="chip" data-type="agency">💼 Агентство</button>
+    <button class="chip" data-type="tech">🚀 Tech-стартап</button>
+  </div>
+
+  <div id="cases"></div>
+
+  <!-- Demo-dashboard CTA -->
+  <a href="dashboard-demo.html" style="display:grid;grid-template-columns:auto 1fr auto;gap:18px;align-items:center;padding:22px 26px;background:linear-gradient(135deg,rgba(96,200,240,.06),rgba(200,240,96,.04));border:1px solid rgba(96,200,240,.22);border-radius:16px;text-decoration:none;margin:24px auto;max-width:920px;transition:transform .15s,border-color .15s" onmouseover="this.style.transform='translateY(-2px)';this.style.borderColor='rgba(96,200,240,.5)'" onmouseout="this.style.transform='';this.style.borderColor='rgba(96,200,240,.22)'">
+    <span style="font-size:38px">📊</span>
+    <div>
+      <div style="font-family:'JetBrains Mono',monospace;font-size:9.5px;text-transform:uppercase;letter-spacing:2px;color:#60c8f0;margin-bottom:5px">Демо-кабинет результатов</div>
+      <div style="font-size:16px;font-weight:800;color:#e9eef7;line-height:1.25;margin-bottom:4px">Посмотри, как выглядит кабинет клиента через <span style="color:#c8f060">60 дней</span> работы</div>
+      <div style="font-size:12px;color:#9aa3b2;line-height:1.5">KPI, контент-фабрика на 147 единиц, воронка продаж, история чатов с агентами, финансовый отчёт.</div>
+    </div>
+    <span style="background:linear-gradient(90deg,#c8f060,#60c8f0);color:#080808;padding:10px 16px;border-radius:9px;font-family:-apple-system,sans-serif;font-size:12px;font-weight:800;letter-spacing:.3px;white-space:nowrap">Открыть →</span>
+  </a>
+
+  <!-- Final CTA -->
+  <div class="final-cta">
+    <h2>Твой сценарий — другой?</h2>
+    <p>Заполни бриф за 5 минут — AI подберёт команду конкретно под твой бизнес, цели и боли. Бесплатно, без обязательств.</p>
+    <a href="onboarding.html">Заполнить бриф →</a>
+  </div>
+
+  <div class="legal">
+    <a href="pricing.html">💎 Тарифы</a>
+    <a href="faq.html">❓ FAQ</a>
+    <a href="privacy.html">🔒 Политика</a>
+    <a href="terms.html">📜 Условия</a>
+  </div>
+
+</div>
+
+<script>
+const CASES = [
+  {
+    id: 'expert-psychologist',
+    type: 'expert',
+    typeLabel: 'Эксперт-одиночка',
+    title: 'Психолог по тревожности · с 180к на 520к/мес за 90 дней',
+    subtitle: 'Женщина-эксперт 36 лет, в декрете. Контент урывками между ребёнком и клиентами. Не успевает делать запуски.',
+    pain: [
+      'Делает 1 пост в 2 дня, охваты 800-1500 — стагнация',
+      'Один запуск курса 28к в квартал, выручка дёрганая',
+      'Direct отвечает сама после 22:00, выгорает',
+    ],
+    agents: [
+      {em:'📐', name:'Sofia', role:'Стратегия контента'},
+      {em:'🎬', name:'Maverick', role:'Reels-сценарии'},
+      {em:'🎯', name:'Hunter', role:'Хуки 3 секунды'},
+      {em:'💬', name:'Алиса', role:'Скрипты Direct'},
+      {em:'🔀', name:'Leo', role:'Воронка прогрева'},
+      {em:'📊', name:'Ника', role:'Аналитика +48ч'},
+    ],
+    workflow: [
+      'Заполнила бриф · Sofia собрала контент-матрицу на 30 дней: 4 рубрики, 12 болей ЦА',
+      'Maverick + Hunter генерируют по 5 Reels в неделю, сценарии готовые к съёмке',
+      'Leo построил воронку: лид-магнит «5 признаков тревожности» → 5 писем прогрева → курс',
+      'Алиса написала скрипты Direct для 8 типовых возражений',
+      'Каждые 48 часов Ника анализирует посты: масштабировать / переделать / забыть',
+      'Через 60 дней — повторный запуск курса по обновлённой воронке',
+    ],
+    metrics: [
+      {em:'📈', val:'1500→4200', lbl:'Средний охват', delta:'+180%', color:'#34d058'},
+      {em:'💰', val:'180→520', lbl:'Выручка к, ₽', delta:'+189%', color:'#c8f060'},
+      {em:'🎬', val:'15→30', lbl:'Reels в месяц', delta:'+100%', color:'#60c8f0'},
+      {em:'⏱', val:'4→1.5', lbl:'Часов на контент/день', delta:'−63%', color:'#34d058'},
+    ],
+    cta: 'Тариф <b>Pro</b> (1990 ₽/мес) — окупается с первой допродажи курса',
+  },
+  {
+    id: 'school-languages',
+    type: 'school',
+    typeLabel: 'Онлайн-школа',
+    title: 'Школа английского · запуск нового курса 4.2 млн ₽',
+    subtitle: 'Школа с командой из 4 человек: продюсер, методист, SMM-щик, ассистент. Делают 3 запуска курса в год.',
+    pain: [
+      'Запуски занимают 6 недель команды, контент-фабрика выгорает',
+      'SMM не успевает за расписанием продюсера, конфликты',
+      'После запуска неделя простоя — нет времени собрать данные',
+    ],
+    agents: [
+      {em:'📋', name:'CMO Atlas', role:'План запуска'},
+      {em:'🔮', name:'Oracle', role:'JTBD анализ'},
+      {em:'📐', name:'Sofia', role:'Контент-стратегия'},
+      {em:'📡', name:'Pulse', role:'Тренды Reels'},
+      {em:'🎬', name:'Maverick', role:'30 Reels'},
+      {em:'📑', name:'Nova', role:'10 каруселей'},
+      {em:'✉️', name:'Echo', role:'Telegram-прогрев'},
+      {em:'🔀', name:'Leo', role:'Customer journey'},
+      {em:'💎', name:'Selene', role:'Усиление оффера'},
+      {em:'📢', name:'Vector', role:'Креативы для ads'},
+    ],
+    workflow: [
+      'Atlas разбил запуск на 14 шагов · команда видит роадмап целиком',
+      'Oracle проанализировал ЦА: 3 сегмента, JTBD для каждого, триггеры покупки',
+      'Sofia собрала контент-матрицу: hero-контент, прогрев, продажи',
+      'Pulse нашёл 5 актуальных трендов под нишу языкового обучения',
+      'Maverick + Hunter за 2 дня — 30 готовых Reels-сценариев',
+      'Nova — 10 каруселей под этапы прогрева, Echo — 7 ТГ-постов',
+      'Leo построил воронку: квиз → лид-магнит → автосерия → live → продажа',
+      'Selene усилила оффер: 3 пакета, urgency-механика, social proof',
+      'Vector подготовил 6 креатив-гипотез для Meta Ads + VK Ads',
+      'Команда отрабатывает контент, не создаёт его',
+    ],
+    metrics: [
+      {em:'💰', val:'4.2M', lbl:'Выручка запуска, ₽', delta:'+85% vs прошлый', color:'#c8f060'},
+      {em:'⏱', val:'6→2.5', lbl:'Недели на подготовку', delta:'−58%', color:'#34d058'},
+      {em:'🎯', val:'3.8%', lbl:'Конверсия в покупку', delta:'+1.6 п.п.', color:'#60c8f0'},
+      {em:'📊', val:'CAC −34%', lbl:'Стоимость привлечения', delta:'оптимизация', color:'#34d058'},
+    ],
+    cta: 'Тариф <b>Team</b> (4990 ₽/мес · 5 мест) — каждый член команды в системе',
+  },
+  {
+    id: 'agency-smm',
+    type: 'agency',
+    typeLabel: 'Маркетинг-агентство / SMM-фрилансер',
+    title: 'SMM-фрилансер · с 6 клиентов до 14 без найма',
+    subtitle: 'Соло-фрилансер 4 года в нише. Упёрся в потолок 250к/мес. Не может взять больше клиентов — не хватает рук.',
+    pain: [
+      '6 клиентов = 60 часов в неделю, продлять нельзя',
+      'Делает одну и ту же работу для разных ниш — рутина',
+      'Не успевает с аналитикой и отчётами, клиенты жалуются',
+    ],
+    agents: [
+      {em:'📐', name:'Sofia', role:'Контент-стратегия на нишу'},
+      {em:'🎬', name:'Maverick', role:'Reels-сценарии'},
+      {em:'🎯', name:'Hunter', role:'Хуки A/B-тест'},
+      {em:'📑', name:'Nova', role:'Карусели'},
+      {em:'📡', name:'Pulse', role:'Конкуренты + тренды'},
+      {em:'📊', name:'Ника', role:'Еженедельные отчёты'},
+      {em:'🎨', name:'Aura', role:'Бренд-консистентность'},
+    ],
+    workflow: [
+      'Под каждого клиента создал отдельный контекст (ниша/цель/ЦА)',
+      'AI генерит черновики — фрилансер шлифует и продаёт как свою работу',
+      'Маржинальность работы вырос с 60% до 85%',
+      'Pulse раз в неделю даёт сводку трендов по 14 нишам — экономит 8 часов',
+      'Ника генерит еженедельные отчёты клиентам с метриками и инсайтами',
+      'Aura следит чтобы контент не «съезжал» от бренд-гайдов',
+    ],
+    metrics: [
+      {em:'👥', val:'6→14', lbl:'Клиентов', delta:'+133%', color:'#c8f060'},
+      {em:'💰', val:'250→580', lbl:'Выручка к/мес, ₽', delta:'+132%', color:'#c8f060'},
+      {em:'⏱', val:'60→52', lbl:'Часов в неделю', delta:'−13% при +8 клиентах', color:'#34d058'},
+      {em:'📈', val:'60%→85%', lbl:'Маржинальность', delta:'+25 п.п.', color:'#34d058'},
+    ],
+    cta: 'Тариф <b>Pro</b> (1990 ₽/мес) — окупается с первого нового клиента',
+  },
+  {
+    id: 'tech-startup',
+    type: 'tech',
+    typeLabel: 'Tech-стартап',
+    title: 'SaaS-стартап · MVP за 6 недель вместо 4 месяцев',
+    subtitle: 'Solo-фаундер с идеей SaaS для барбершопов. Технических знаний поверхностно, нанять дев-команду не на что.',
+    pain: [
+      'Идея есть, MVP за 4-6 месяцев без команды нереально',
+      'Нет понимания технических решений, рискует наделать дорогих ошибок',
+      'Параллельно нужен маркетинг — продвигать MVP когда сделает',
+    ],
+    agents: [
+      {em:'👔', name:'Макс (CTO)', role:'Архитектура'},
+      {em:'📋', name:'София (PM)', role:'User stories'},
+      {em:'🎨', name:'Мира (UX)', role:'Дизайн-флоу'},
+      {em:'💻', name:'Кодер (FE)', role:'Frontend-структура'},
+      {em:'🏛', name:'Арчи (BE)', role:'API + Supabase'},
+      {em:'🧠', name:'Нейрон (AI)', role:'AI-фичи MVP'},
+      {em:'🔗', name:'Авто', role:'Интеграции CRM'},
+      {em:'✅', name:'Вера (QA)', role:'Тест-кейсы'},
+      {em:'🚀', name:'Деплой', role:'CI/CD'},
+    ],
+    workflow: [
+      'Макс предложил стек: Next.js + Supabase + Stripe = MVP за 4 недели',
+      'София разбила фичи на 24 user stories, расставила приоритеты',
+      'Мира выдала макеты ключевых экранов в виде описаний для no-code сборки',
+      'Кодер + Арчи — пошаговый план разработки с готовыми сниппетами',
+      'Нейрон собрал AI-фичу: автоматическая запись клиентов на основе истории',
+      'Авто настроил вебхуки для интеграции с CRM и Telegram-нотификации',
+      'Вера составила 47 тест-кейсов для регрессии перед запуском',
+      'Деплой настроил Netlify + Supabase prod, environment, мониторинг',
+    ],
+    metrics: [
+      {em:'🚀', val:'6 нед', lbl:'MVP запущен', delta:'vs 4+ мес', color:'#c8f060'},
+      {em:'💰', val:'≈0₽', lbl:'На разработку', delta:'без найма', color:'#34d058'},
+      {em:'👥', val:'8 пилотов', lbl:'Бета-клиентов', delta:'через 2 нед после запуска', color:'#60c8f0'},
+      {em:'🐛', val:'12', lbl:'Багов в проде за месяц', delta:'все мелкие', color:'#34d058'},
+    ],
+    cta: 'Тариф <b>Pro</b> (1990 ₽/мес) — Tech-отдел + AI-отдел в одной подписке',
+  },
+  {
+    id: 'brand-consultant',
+    type: 'expert',
+    typeLabel: 'Эксперт-одиночка',
+    title: 'Бренд-консультант · upsell с 80к до 280к за продукт',
+    subtitle: 'Консультант по личному брендингу. Услуги от 40 до 80к, хочет добавить премиум-программу.',
+    pain: [
+      'Базовая консультация даёт 40-80к, потолок маржи',
+      'Нет понимания как упаковать премиум-продукт',
+      'Бренд размыт — конкуренты предлагают то же самое',
+    ],
+    agents: [
+      {em:'📦', name:'Оскар', role:'Продуктовая упаковка'},
+      {em:'🔮', name:'Oracle', role:'Профиль премиум-клиента'},
+      {em:'📐', name:'Sofia', role:'Стратегия позиционирования'},
+      {em:'🎨', name:'Aura', role:'Бренд-айдентика'},
+      {em:'💎', name:'Selene', role:'Психология премиума'},
+      {em:'💬', name:'Алиса', role:'Sales-скрипты VIP'},
+    ],
+    workflow: [
+      'Oracle описал JTBD премиум-клиентов: что они РЕАЛЬНО покупают, не «бренд»',
+      'Оскар собрал лестницу продуктов: лид-магнит → диагностика → 4-месячная программа',
+      'Sofia переписала позиционирование под нишу «премиум-эксперты»',
+      'Aura создал бренд-гайд: 3 цвета, tone of voice, что НЕ делаем',
+      'Selene разобрал триггеры покупки премиума: социальное доказательство, эксклюзивность',
+      'Алиса написала Sales-скрипты для созвонов с премиум-лидами',
+    ],
+    metrics: [
+      {em:'💎', val:'280к', lbl:'Премиум-программа, ₽', delta:'новый продукт', color:'#c8f060'},
+      {em:'🎯', val:'12%', lbl:'Конверсия диагностика→VIP', delta:'из теплого трафика', color:'#34d058'},
+      {em:'💰', val:'80→210', lbl:'Средний чек, к₽', delta:'+162%', color:'#c8f060'},
+      {em:'📈', val:'3.2x', lbl:'Выручка за квартал', delta:'к прошлому', color:'#34d058'},
+    ],
+    cta: 'Тариф <b>Pro</b> (1990 ₽/мес) — окупается с одной премиум-продажи',
+  },
+];
+
+let currentFilter = 'all';
+
+function renderCases() {
+  const filtered = currentFilter === 'all' ? CASES : CASES.filter(c => c.type === currentFilter);
+  const html = filtered.map((c, i) => `
+    <article class="case" data-type="${c.type}">
+      <div class="case-hd">
+        <div class="case-num">КЕЙС ${String(i+1).padStart(2,'0')}</div>
+        <div class="case-type ${c.type}">${escapeHTML(c.typeLabel)}</div>
+        <h2 class="case-tit">${escapeHTML(c.title)}</h2>
+        <div class="case-sub">${escapeHTML(c.subtitle)}</div>
+      </div>
+
+      <div class="case-body">
+        <div class="case-row">
+          <div class="case-row-lbl">🔥 Боли</div>
+          <div class="case-row-val">
+            <ul>${c.pain.map(p => `<li>${escapeHTML(p)}</li>`).join('')}</ul>
+          </div>
+        </div>
+
+        <div class="case-row">
+          <div class="case-row-lbl">👥 AI-команда</div>
+          <div class="case-row-val">
+            <div class="case-agents">
+              ${c.agents.map(a => `<div class="case-agent"><span class="em">${a.em}</span><b>${escapeHTML(a.name)}</b><span>· ${escapeHTML(a.role)}</span></div>`).join('')}
+            </div>
+          </div>
+        </div>
+
+        <div class="case-row">
+          <div class="case-row-lbl">🔗 Workflow</div>
+          <div class="case-row-val">
+            <div class="workflow">
+              ${c.workflow.map((step, j) => `<div class="wf-step"><div class="wf-num">${String(j+1).padStart(2,'0')}</div><div class="wf-txt">${escapeHTML(step)}</div></div>`).join('')}
+            </div>
+          </div>
+        </div>
+
+        <div class="case-row">
+          <div class="case-row-lbl">📊 Результат · 90 дней</div>
+          <div class="case-row-val">
+            <div class="metrics">
+              ${c.metrics.map(m => `<div class="metric" style="--mc:${m.color}">
+                <div class="metric-em">${m.em}</div>
+                <div class="metric-val">${escapeHTML(m.val)}</div>
+                <div class="metric-lbl">${escapeHTML(m.lbl)}</div>
+                ${m.delta?`<div class="metric-delta${m.delta.startsWith('-') || m.delta.startsWith('−')?' neg':''}">${escapeHTML(m.delta)}</div>`:''}
+              </div>`).join('')}
+            </div>
+          </div>
+        </div>
+      </div>
+
+      <div class="case-cta">
+        <div class="case-cta-text">${c.cta}</div>
+        <a class="case-cta-btn" href="onboarding.html">Собрать такой офис →</a>
+      </div>
+    </article>
+  `).join('');
+  document.getElementById('cases').innerHTML = html || '<div style="text-align:center;padding:40px;color:var(--muted);font-style:italic">Нет кейсов в этой категории</div>';
+}
+
+document.getElementById('chips').addEventListener('click', e => {
+  if (e.target.tagName === 'BUTTON') {
+    document.querySelectorAll('#chips .chip').forEach(c => c.classList.remove('active'));
+    e.target.classList.add('active');
+    currentFilter = e.target.dataset.type;
+    renderCases();
+  }
+});
+
+function escapeHTML(s) {
+  return String(s||'').replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;').replace(/"/g,'&quot;');
+}
+
+renderCases();
+</script>
+
+<script src="api-fallback.js" defer></script>
+<script src="state.js"></script>
+<script src="mock-backend.js"></script>
+<script src="config.js"></script>
+<script src="analytics.js" defer></script>
+<script src="sidebar.js" defer></script>
+<script src="alisa-widget.js" defer></script>
+<script src="cookies.js" defer></script>
+<script>
+// PWA service worker registration
+if ('serviceWorker' in navigator && location.protocol === 'https:') {
+  window.addEventListener('load', () => {
+    navigator.serviceWorker.register('/sw.js').catch(e => console.warn('SW reg failed:', e.message));
+  });
+}
+</script>
+</body>
+</html>

@@ -1,0 +1,486 @@
+<!doctype html>
+<html lang="ru">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1">
+<title>Глоссарий терминов AI · 25 понятий простыми словами · AI Growth Office</title>
+<meta name="description" content="25 терминов из мира AI: что такое агент, промпт, контекст, токен, RAG, MCP, fine-tuning, embedding, hallucination. Простыми словами с примерами.">
+<meta name="keywords" content="глоссарий AI, что такое AI агент, промпт-инжиниринг, токен AI, RAG что это, MCP протокол, AI термины">
+<meta name="author" content="AI Growth Office">
+<link rel="canonical" href="https://ai-growth-office.ru/glossary.html">
+
+<meta property="og:type" content="article">
+<meta property="og:url" content="https://ai-growth-office.ru/glossary.html">
+<meta property="og:title" content="Глоссарий AI · 25 терминов простыми словами">
+<meta property="og:description" content="Агент, промпт, контекст, токен, RAG, MCP, embedding, hallucination — что это и как использовать в работе.">
+<meta property="og:image" content="https://ai-growth-office.ru/og-image.jpg">
+<meta property="og:image:width" content="1200">
+<meta property="og:image:height" content="630">
+<meta property="og:locale" content="ru_RU">
+<meta property="og:site_name" content="AI Growth Office">
+
+<meta name="twitter:card" content="summary_large_image">
+<meta name="twitter:title" content="Глоссарий AI-терминов · AI Growth Office">
+<meta name="twitter:description" content="25 терминов из мира AI простыми словами. С примерами и связями.">
+
+<link rel="manifest" href="/manifest.json">
+<meta name="theme-color" content="#0a0c14">
+<meta name="apple-mobile-web-app-capable" content="yes">
+<meta name="apple-mobile-web-app-title" content="AI Office">
+<link rel="apple-touch-icon" href="/icon-192.png">
+
+<script type="application/ld+json">
+{
+  "@context":"https://schema.org",
+  "@type":"DefinedTermSet",
+  "name":"Глоссарий AI · AI Growth Office",
+  "description":"25 базовых терминов из мира AI и AI-агентов простыми словами"
+}
+</script>
+
+<style>
+:root{
+  --bg:#0a0c14;--panel:rgba(255,255,255,.04);--panel2:rgba(255,255,255,.025);--border:rgba(255,255,255,.08);
+  --text:#e9eef7;--muted:#9aa3b2;--dim:#7c8a99;
+  --accent:#c8f060;--a2:#60c8f0;--a3:#f060c8;
+  --green:#34d058;--gold:#f0b429;--purple:#a060f0;
+  --ui:-apple-system,BlinkMacSystemFont,'Inter','Segoe UI',sans-serif;
+  --mono:'JetBrains Mono','SF Mono',monospace;
+}
+*{box-sizing:border-box;margin:0;padding:0}
+html,body{background:var(--bg);color:var(--text);font-family:var(--ui);min-height:100vh;scroll-behavior:smooth}
+body{background:radial-gradient(circle at 80% 0%,rgba(96,200,240,.05),transparent 55%),radial-gradient(circle at 0% 90%,rgba(200,240,96,.04),transparent 55%),var(--bg)}
+
+.wrap{max-width:1200px;margin:0 auto;padding:40px 24px 80px}
+.crumbs{font-size:11px;color:var(--muted);margin-bottom:18px;letter-spacing:.4px}
+.crumbs a{color:var(--muted);text-decoration:none;border-bottom:1px dotted rgba(255,255,255,.15)}
+.crumbs a:hover{color:var(--accent)}
+
+.hero{text-align:center;margin-bottom:36px;padding:14px 0 20px}
+.hero .tag{display:inline-block;font-size:10px;font-weight:700;color:var(--a2);background:rgba(96,200,240,.08);border:1px solid rgba(96,200,240,.2);padding:6px 14px;border-radius:99px;letter-spacing:1.5px;text-transform:uppercase;margin-bottom:18px}
+.hero h1{font-size:clamp(32px,5vw,46px);font-weight:800;letter-spacing:-.4px;line-height:1.08;margin-bottom:14px}
+.hero h1 .g{background:linear-gradient(90deg,#60c8f0,#c8f060);-webkit-background-clip:text;-webkit-text-fill-color:transparent}
+.hero p{font-size:15px;color:var(--muted);max-width:600px;margin:0 auto;line-height:1.6}
+
+/* Search */
+.search{max-width:520px;margin:30px auto 0;position:relative}
+.search input{
+  width:100%;background:var(--panel);border:1.5px solid var(--border);
+  padding:14px 50px 14px 48px;border-radius:12px;color:var(--text);
+  font:600 14px/1 var(--ui);outline:none;transition:border-color .15s;
+}
+.search input:focus{border-color:rgba(96,200,240,.45)}
+.search input::placeholder{color:var(--dim)}
+.search::before{content:'🔍';position:absolute;left:16px;top:50%;transform:translateY(-50%);font-size:18px;opacity:.7;pointer-events:none}
+.search .clear{position:absolute;right:12px;top:50%;transform:translateY(-50%);background:rgba(255,255,255,.08);border:0;color:var(--muted);width:26px;height:26px;border-radius:50%;cursor:pointer;font-size:14px;display:none}
+.search.has-value .clear{display:flex;align-items:center;justify-content:center}
+
+/* Category chips */
+.cats{display:flex;justify-content:center;gap:6px;margin:24px 0 30px;flex-wrap:wrap}
+.cat{background:var(--panel);border:1px solid var(--border);color:var(--muted);padding:8px 14px;border-radius:99px;font:700 11.5px/1 var(--ui);cursor:pointer;letter-spacing:.4px;transition:all .15s}
+.cat:hover{color:var(--text);border-color:rgba(255,255,255,.18)}
+.cat.act{background:rgba(96,200,240,.12);color:var(--a2);border-color:rgba(96,200,240,.3)}
+.cat .ct{margin-left:6px;font-size:9.5px;font-family:var(--mono);opacity:.7}
+
+/* Alphabet jumper */
+.alpha{display:flex;justify-content:center;gap:3px;margin-bottom:28px;flex-wrap:wrap}
+.alpha a{font-size:11px;font-weight:800;color:var(--muted);padding:5px 8px;border-radius:6px;text-decoration:none;font-family:var(--mono);letter-spacing:.5px;transition:color .12s,background .12s}
+.alpha a:hover{color:var(--accent);background:rgba(200,240,96,.08)}
+.alpha a.has{color:var(--text)}
+
+/* Glossary grid */
+.glsry{display:grid;grid-template-columns:repeat(auto-fill,minmax(360px,1fr));gap:14px}
+.term{background:var(--panel);border:1px solid var(--border);border-radius:14px;padding:20px 22px;transition:border-color .2s,transform .2s,box-shadow .2s;scroll-margin-top:24px}
+.term:hover{border-color:rgba(96,200,240,.25);transform:translateY(-2px);box-shadow:0 12px 32px rgba(0,0,0,.3)}
+.term.hl{border-color:rgba(200,240,96,.5);box-shadow:0 0 0 3px rgba(200,240,96,.12)}
+.term .top{display:flex;align-items:flex-start;justify-content:space-between;margin-bottom:10px;gap:10px}
+.term .nm{font-size:18px;font-weight:800;letter-spacing:-.3px;line-height:1.15}
+.term .nm-en{font-size:11.5px;color:var(--dim);font-family:var(--mono);font-weight:700;margin-top:3px;letter-spacing:.5px}
+.term .cat-badge{font-size:9px;font-weight:800;letter-spacing:.7px;text-transform:uppercase;padding:3px 8px;border-radius:6px;font-family:var(--mono);flex-shrink:0}
+.term .cat-badge.basic{color:var(--accent);background:rgba(200,240,96,.1);border:1px solid rgba(200,240,96,.25)}
+.term .cat-badge.tech{color:var(--a2);background:rgba(96,200,240,.1);border:1px solid rgba(96,200,240,.25)}
+.term .cat-badge.advanced{color:var(--purple);background:rgba(160,96,240,.1);border:1px solid rgba(160,96,240,.25)}
+.term .cat-badge.business{color:var(--gold);background:rgba(240,180,41,.1);border:1px solid rgba(240,180,41,.25)}
+.term .def{font-size:13.5px;line-height:1.6;color:rgba(233,238,247,.9);margin-bottom:12px}
+.term .def b{color:var(--text);font-weight:700}
+.term .ex{font-size:12.5px;color:var(--muted);line-height:1.55;padding:10px 12px;background:rgba(0,0,0,.25);border-left:2px solid var(--accent);border-radius:0 8px 8px 0;margin-bottom:10px}
+.term .ex b{color:var(--accent);font-weight:700}
+.term .links{font-size:11px;color:var(--dim);display:flex;align-items:center;gap:6px;flex-wrap:wrap}
+.term .links span{font-weight:700;letter-spacing:.4px}
+.term .links a{color:var(--a2);text-decoration:none;font-weight:700;border:1px solid rgba(96,200,240,.18);background:rgba(96,200,240,.05);padding:3px 8px;border-radius:6px;font-size:10.5px;transition:background .15s}
+.term .links a:hover{background:rgba(96,200,240,.15)}
+
+.empty{text-align:center;padding:60px 20px;color:var(--muted);font-size:14px;display:none}
+.empty.show{display:block}
+.empty .em{font-size:38px;margin-bottom:12px;opacity:.6}
+
+/* CTA */
+.cta-end{margin-top:40px;text-align:center;padding:42px 28px;background:linear-gradient(135deg,rgba(200,240,96,.05),rgba(96,200,240,.04));border:1px solid rgba(200,240,96,.18);border-radius:18px}
+.cta-end h3{font-size:22px;font-weight:800;letter-spacing:-.2px;margin-bottom:8px}
+.cta-end p{color:var(--muted);font-size:13.5px;margin-bottom:22px;max-width:520px;margin-left:auto;margin-right:auto;line-height:1.55}
+.cta-end .btns{display:flex;justify-content:center;gap:10px;flex-wrap:wrap}
+.cta-end a{display:inline-flex;align-items:center;gap:8px;padding:13px 24px;border-radius:12px;font:800 13px/1 var(--ui);letter-spacing:.4px;text-decoration:none;transition:transform .15s}
+.cta-end .b1{background:linear-gradient(90deg,#c8f060,#60c8f0);color:#080808;box-shadow:0 6px 20px rgba(200,240,96,.3)}
+.cta-end .b1:hover{transform:translateY(-2px)}
+.cta-end .b2{background:transparent;color:var(--text);border:1.5px solid var(--border)}
+.cta-end .b2:hover{border-color:rgba(255,255,255,.18)}
+
+@media (max-width:560px){
+  .hero h1{font-size:26px}
+  .glsry{grid-template-columns:1fr}
+}
+</style>
+</head>
+<body data-user="Илья Палий" data-email="ilia.info.paliy@gmail.com">
+
+<div class="wrap">
+
+<div class="crumbs">
+  <a href="index.html">Главная</a> · Глоссарий AI-терминов
+</div>
+
+<div class="hero">
+  <div class="tag">📚 Глоссарий · 25 терминов</div>
+  <h1>AI без жаргона:<br>что значат <span class="g">все эти слова</span></h1>
+  <p>От «агент» до «MCP»: 25 базовых понятий из мира AI и AI-агентов простыми словами. С примерами и связями между терминами. Найди слово — поймёшь, о чём вообще речь.</p>
+</div>
+
+<!-- SEARCH -->
+<div class="search" id="searchBox">
+  <input type="text" id="searchInput" placeholder="Найти термин… (например: «промпт», «токен», «RAG»)">
+  <button class="clear" id="clearBtn" aria-label="Очистить">✕</button>
+</div>
+
+<!-- CATEGORIES -->
+<div class="cats" id="cats">
+  <button class="cat act" data-cat="all">Все <span class="ct">25</span></button>
+  <button class="cat" data-cat="basic">🟢 Базовые <span class="ct">10</span></button>
+  <button class="cat" data-cat="tech">🔵 Технические <span class="ct">8</span></button>
+  <button class="cat" data-cat="advanced">🟣 Продвинутые <span class="ct">4</span></button>
+  <button class="cat" data-cat="business">🟡 Бизнес <span class="ct">3</span></button>
+</div>
+
+<!-- ALPHABET -->
+<div class="alpha" id="alpha"></div>
+
+<!-- GLOSSARY -->
+<div class="glsry" id="glsry"></div>
+
+<div class="empty" id="empty">
+  <div class="em">🔍</div>
+  Ничего не нашлось. Попробуй другой запрос или сбрось фильтр категории.
+</div>
+
+<!-- CTA -->
+<div class="cta-end">
+  <h3>Теперь, когда знаешь термины — собери свой AI-офис</h3>
+  <p>Заполни бриф за 5 минут — AI подберёт команду под твою задачу. Бесплатно, без обязательств.</p>
+  <div class="btns">
+    <a class="b1" href="onboarding.html">📋 Заполнить бриф →</a>
+    <a class="b2" href="how-it-works.html">📖 Как это работает</a>
+    <a class="b2" href="agents.html">🤖 Каталог 169 агентов</a>
+  </div>
+</div>
+
+</div>
+
+<script src="api-fallback.js"></script>
+<script src="state.js"></script>
+<script src="mock-backend.js"></script>
+<script src="config.js"></script>
+<script src="analytics.js" defer></script>
+<script src="sidebar.js" defer></script>
+<script src="alisa-widget.js" defer></script>
+<script>
+const TERMS = [
+  // BASIC
+  { nm:'AI · Искусственный интеллект', en:'Artificial Intelligence',
+    cat:'basic',
+    def:'Программа, которая <b>имитирует мышление человека</b>: понимает текст, отвечает, делает выводы, учится на примерах. Современный AI = большие языковые модели (LLM) типа Claude, ChatGPT.',
+    ex:'Когда ты пишешь Sofia «придумай 10 хуков для Reels» — за этим стоит LLM, которая прочитала миллионы текстов и научилась генерировать новые.',
+    rel:['LLM','Промпт'] },
+
+  { nm:'AI-агент', en:'AI Agent',
+    cat:'basic',
+    def:'AI с <b>конкретной ролью</b> и набором инструкций — как сотрудник на должности. Не просто «отвечает на вопросы», а решает узкую задачу: пишет посты, анализирует данные, ведёт продажи.',
+    ex:'В AI Growth Office 169 агентов — каждый со своим характером и навыком. Sofia — контент-маркетолог, Алиса — продажи, Аналитик — отчёты.',
+    rel:['Промпт','Контекст','System prompt'] },
+
+  { nm:'Промпт', en:'Prompt',
+    cat:'basic',
+    def:'<b>Запрос или инструкция</b>, которую ты даёшь AI. Чем точнее промпт — тем лучше ответ. От качества промпта зависит 80% результата.',
+    ex:'Плохой промпт: «напиши пост». Хороший: «Напиши пост для Instagram психотерапевта 30+, тема — тревога, формат — 3 типа тревоги, тон — экспертный, не банальный, 800 знаков».',
+    rel:['Контекст','System prompt','Few-shot'] },
+
+  { nm:'Контекст', en:'Context',
+    cat:'basic',
+    def:'<b>Информация, которую AI «помнит»</b> в диалоге: твой бизнес, цели, предыдущие сообщения. Чем больше контекста — тем релевантнее ответы.',
+    ex:'AI Growth Office сохраняет твой бриф в контексте каждого агента. Поэтому Sofia не переспрашивает каждый раз «а в какой ты нише».',
+    rel:['Context window','Memory','Бриф'] },
+
+  { nm:'System prompt', en:'System Prompt',
+    cat:'basic',
+    def:'<b>«Должностная инструкция» агента</b> — описание его роли, стиля, ограничений. Невидим для пользователя, но определяет, КАК агент отвечает.',
+    ex:'У Алисы system prompt: «Ты AI-консьерж AI Growth Office. Отвечай дружелюбно, на ты, коротко (3-7 предложений), знаешь все 169 агентов и тарифы».',
+    rel:['Промпт','AI-агент'] },
+
+  { nm:'Галлюцинация', en:'Hallucination',
+    cat:'basic',
+    def:'Когда AI <b>уверенно врёт</b> — выдумывает факты, цитаты, имена. Не потому что «обманывает», а потому что модель статистически достраивает текст и иногда промахивается.',
+    ex:'AI может «процитировать» исследование, которого не существует. Решение — всегда проверять важные факты, особенно цифры, даты и имена.',
+    rel:['LLM','Confidence'] },
+
+  { nm:'LLM · Большая языковая модель', en:'Large Language Model',
+    cat:'basic',
+    def:'<b>Огромная нейросеть</b>, обученная на миллиардах текстов. Понимает контекст, грамматику, факты. Примеры: Claude (Anthropic), GPT (OpenAI), Llama (Meta), DeepSeek.',
+    ex:'AI Growth Office использует Claude Sonnet 4.5 — одну из самых умных моделей для бизнес-задач. Стоимость одного запроса — копейки.',
+    rel:['AI','Token'] },
+
+  { nm:'Чат-бот', en:'Chatbot',
+    cat:'basic',
+    def:'Программа, с которой ты <b>общаешься как с человеком</b> в чате. Современные чат-боты на LLM могут быть очень умными, но без конкретной роли — не AI-агент.',
+    ex:'ChatGPT в браузере — это чат-бот общего назначения. Sofia в AI Growth Office — это уже AI-агент: у неё конкретная роль (контент) и контекст твоего бизнеса.',
+    rel:['AI-агент','LLM'] },
+
+  { nm:'Streaming · Стриминг', en:'Streaming Response',
+    cat:'basic',
+    def:'Когда ответ AI <b>появляется по словам</b>, а не вываливается целиком в конце. Создаёт ощущение «думает прямо сейчас» и позволяет читать сразу.',
+    ex:'В Marketing/Tech/Sales Workspace ответы агентов стримятся через SSE (Server-Sent Events). Первое слово появляется за 1-2 секунды.',
+    rel:['API','SSE'] },
+
+  { nm:'Бриф', en:'Brief',
+    cat:'basic',
+    def:'<b>Описание твоего бизнеса</b> для AI: ниша, продукт, цели, аудитория, боли. Бриф = контекст, который агенты используют в каждом запросе.',
+    ex:'В AI Growth Office бриф = 10 шагов: тип бизнеса, ниша, цель на 90 дней, текущая выручка, команда, боли. Заполняешь раз — работает на всех агентов.',
+    rel:['Контекст','Onboarding'] },
+
+  // TECHNICAL
+  { nm:'Токен', en:'Token',
+    cat:'tech',
+    def:'<b>«Кусочек текста»</b>, которым AI меряет длину. Обычно ~4 символа = 1 токен в английском, в русском — больше. Длина ответа измеряется в токенах. Биллинг — тоже.',
+    ex:'Фраза «Привет, как дела?» — это ~6 токенов. Лимит ответа max_tokens=600 = ~2 000 символов = средний пост в Telegram.',
+    rel:['LLM','Context window'] },
+
+  { nm:'Context window', en:'Context Window',
+    cat:'tech',
+    def:'<b>Максимум информации</b>, которую AI может «держать в голове» одновременно. У Claude 4.5 = 200 000 токенов (~500 страниц текста).',
+    ex:'Если разговор превысит context window — AI начинает «забывать» начало. Поэтому в AI Office история чата ограничена 40 последними ходами на агента.',
+    rel:['Токен','Memory'] },
+
+  { nm:'API', en:'API',
+    cat:'tech',
+    def:'<b>Программный интерфейс</b> для общения с AI — без сайта, прямо из кода. Через API ты можешь подключить AI к своему сервису, боту, CRM.',
+    ex:'AI Growth Office обращается к Claude через `/api/chat` — Netlify Function проксирует запросы и скрывает ключ от пользователей.',
+    rel:['LLM','Endpoint'] },
+
+  { nm:'SSE · Server-Sent Events', en:'Server-Sent Events',
+    cat:'tech',
+    def:'<b>Технология стриминга</b>: сервер отправляет данные клиенту маленькими кусками через одно соединение. Используется для «текст появляется по словам».',
+    ex:'В Marketing Workspace при клике на «Запустить задачу» открывается SSE-стрим — текст рендерится в окно прямо во время генерации.',
+    rel:['Streaming','API'] },
+
+  { nm:'Embedding', en:'Embedding',
+    cat:'tech',
+    def:'<b>Числовое представление текста</b> — список из 1500+ чисел, которое отражает смысл. Похожие тексты дают похожие числа. Основа для поиска по смыслу.',
+    ex:'«Психотерапевт» и «психолог» близки в embedding-пространстве. Поэтому RAG может найти твой пост «о тревоге», когда клиент спросит «как успокоиться».',
+    rel:['RAG','Vector DB'] },
+
+  { nm:'Few-shot prompting', en:'Few-shot',
+    cat:'tech',
+    def:'Приём промпт-инжиниринга: <b>даёшь AI 2-5 примеров</b> того, что хочешь, прежде чем задать настоящий вопрос. Сильно повышает качество.',
+    ex:'Вместо «придумай слоган» — пиши: «Примеры слоганов в моём стиле: 1) X, 2) Y, 3) Z. Теперь придумай новый для продукта A». Результат в 3× лучше.',
+    rel:['Промпт','Промпт-инжиниринг'] },
+
+  { nm:'Fine-tuning', en:'Fine-tuning',
+    cat:'tech',
+    def:'<b>Дообучение готовой LLM</b> на твоих данных. Делает модель «своей» — она начинает писать в твоём стиле, знает твои продукты, использует твою лексику.',
+    ex:'Если у тебя 1000+ постов в одном стиле — можно зафайнтюнить модель на них, и она будет писать продолжение неотличимо от тебя. Стоит от $50.',
+    rel:['LLM','Training'] },
+
+  { nm:'Temperature', en:'Temperature',
+    cat:'tech',
+    def:'Параметр AI: <b>насколько креативно</b> отвечать. 0 = всегда одинаковые ответы, чёткие, факты. 1 = разнообразные, креативные. 2 = бредовые.',
+    ex:'Для генерации идей и хуков — temperature 0.8-1.0 (нужна креативность). Для извлечения данных из текста — 0.1-0.3 (нужна точность).',
+    rel:['LLM','Промпт'] },
+
+  // ADVANCED
+  { nm:'RAG · Retrieval-Augmented Generation', en:'RAG',
+    cat:'advanced',
+    def:'<b>«AI ищет в твоей базе знаний»</b>: перед ответом подгружает релевантные документы из БД, потом отвечает с учётом этих документов. Решает проблему «модель не знает мою специфику».',
+    ex:'Загружаешь свои 200 постов в векторную БД. Спрашиваешь Sofia: «напиши пост про X». Она ищет похожие твои посты, читает их и пишет в твоём стиле.',
+    rel:['Embedding','Vector DB','LLM'] },
+
+  { nm:'MCP · Model Context Protocol', en:'MCP',
+    cat:'advanced',
+    def:'<b>Открытый стандарт</b> от Anthropic для подключения AI к внешним инструментам: базам данных, файловым системам, API, IDE. AI получает «руки и глаза».',
+    ex:'Через MCP Claude может: читать твои файлы, искать в Notion, отправлять email через Resend, делать запросы в твою CRM. Без custom integration на каждый сервис.',
+    rel:['API','Tools','Function calling'] },
+
+  { nm:'Function calling · Tool use', en:'Function Calling',
+    cat:'advanced',
+    def:'AI может <b>вызывать функции</b> в твоём коде — отправлять email, искать в Google, обновлять CRM. Превращает чат-бота в полноценного агента-исполнителя.',
+    ex:'Алиса не просто пишет скрипт продаж — она может: создать запись в CRM, поставить задачу в TG-чате, написать клиенту через интеграцию.',
+    rel:['MCP','API','AI-агент'] },
+
+  { nm:'Vector Database · Векторная БД', en:'Vector DB',
+    cat:'advanced',
+    def:'<b>База данных для поиска по смыслу</b>, не по словам. Хранит embeddings документов. Примеры: Pinecone, Weaviate, pgvector. Основа RAG.',
+    ex:'Все твои посты, документы, переписки можно загрузить в векторную БД. Дальше AI ищет «похожие по смыслу» — даже если в запросе нет точных слов из документа.',
+    rel:['RAG','Embedding'] },
+
+  // BUSINESS
+  { nm:'AI Office · AI-офис', en:'AI Office',
+    cat:'business',
+    def:'<b>Виртуальная команда AI-агентов</b> под твой бизнес. Каждый агент = специалист (контент, продажи, аналитика). Заменяет/дополняет штатную команду.',
+    ex:'AI Growth Office = 169 агентов в 4 отделах. Заполняешь бриф → AI собирает команду под твою задачу → работаешь в кабинете 24/7.',
+    rel:['AI-агент','Бриф'] },
+
+  { nm:'Pricing per token', en:'Token-based pricing',
+    cat:'business',
+    def:'<b>Биллинг по количеству токенов</b>: платишь за input (твой запрос) + output (ответ AI). Чем длиннее — тем дороже. Цены: $1-15 за миллион токенов.',
+    ex:'Один разговор с агентом в AI Office = 1 000-3 000 токенов = $0.005-0.05. В Pro-тарифе включён безлимит, мы покрываем расходы внутри подписки.',
+    rel:['Токен','API'] },
+
+  { nm:'AI ROI · Окупаемость AI', en:'AI ROI',
+    cat:'business',
+    def:'<b>Возврат инвестиций</b> в AI-инструменты. Метрики: сэкономленные часы команды, дополнительная выручка от роста охватов, скорость выпуска продукта.',
+    ex:'Эксперт-психолог 500K выручки + AI Office Pro 1990₽/мес → +30 клиентов за 90 дней → +200K/мес → ROI ≈ 100×. Калькулятор на /roi.html.',
+    rel:['AI Office'] }
+];
+
+const $glsry = document.getElementById('glsry');
+const $empty = document.getElementById('empty');
+const $search= document.getElementById('searchInput');
+const $alpha = document.getElementById('alpha');
+const $box   = document.getElementById('searchBox');
+const $clear = document.getElementById('clearBtn');
+
+let activeCat = 'all';
+let activeQuery = '';
+
+// Build alphabet
+function buildAlpha() {
+  const allLetters = 'A B C D E F G H I J K L M N O P Q R S T U V W X Y Z А Б В Г Д Е Ж З И К Л М Н О П Р С Т У Ф Х Ц Ч Ш Э Ю Я'.split(' ');
+  const usedLetters = new Set();
+  TERMS.forEach(t => {
+    const ch = t.nm.replace(/^[^a-zA-Zа-яА-Я]+/, '').charAt(0).toUpperCase();
+    usedLetters.add(ch);
+  });
+  $alpha.innerHTML = allLetters.map(l => {
+    if (!usedLetters.has(l)) return '';
+    return `<a class="has" href="#l-${l}">${l}</a>`;
+  }).join('');
+}
+
+function makeId(name) {
+  return 'term-' + name.toLowerCase().replace(/[^a-zа-я0-9]+/g, '-').replace(/^-+|-+$/g, '');
+}
+
+function render() {
+  const q = activeQuery.toLowerCase().trim();
+  const filtered = TERMS.filter(t => {
+    if (activeCat !== 'all' && t.cat !== activeCat) return false;
+    if (q) {
+      const hay = (t.nm + ' ' + t.en + ' ' + t.def + ' ' + t.ex).toLowerCase();
+      if (!hay.includes(q)) return false;
+    }
+    return true;
+  });
+
+  if (!filtered.length) {
+    $glsry.style.display = 'none';
+    $empty.classList.add('show');
+    return;
+  }
+  $glsry.style.display = '';
+  $empty.classList.remove('show');
+
+  // group by first letter; emit anchor before first occurrence
+  const renderedLetters = new Set();
+  const sorted = [...filtered].sort((a, b) => a.nm.localeCompare(b.nm, 'ru'));
+  $glsry.innerHTML = sorted.map(t => {
+    const ch = t.nm.replace(/^[^a-zA-Zа-яА-Я]+/, '').charAt(0).toUpperCase();
+    let anchor = '';
+    if (!renderedLetters.has(ch)) {
+      renderedLetters.add(ch);
+      anchor = `<span id="l-${ch}" style="position:absolute;margin-top:-80px"></span>`;
+    }
+    const rels = (t.rel || []).map(r => {
+      const target = TERMS.find(x => x.nm.toLowerCase().includes(r.toLowerCase()) || (x.en && x.en.toLowerCase() === r.toLowerCase()));
+      const id = target ? '#' + makeId(target.nm) : null;
+      return id
+        ? `<a href="${id}" onclick="hl('${id.slice(1)}');">${r}</a>`
+        : `<span style="color:var(--dim);font-weight:500">${r}</span>`;
+    }).join('');
+    return `
+      ${anchor}
+      <article class="term" id="${makeId(t.nm)}">
+        <div class="top">
+          <div>
+            <div class="nm">${highlight(t.nm, q)}</div>
+            <div class="nm-en">${t.en}</div>
+          </div>
+          <span class="cat-badge ${t.cat}">${catLabel(t.cat)}</span>
+        </div>
+        <div class="def">${highlight(t.def, q)}</div>
+        <div class="ex"><b>Пример:</b> ${highlight(t.ex, q)}</div>
+        ${rels ? `<div class="links"><span>СВЯЗАНО:</span> ${rels}</div>` : ''}
+      </article>`;
+  }).join('');
+}
+
+function highlight(s, q) {
+  if (!q) return s;
+  const re = new RegExp('(' + q.replace(/[.*+?^${}()|[\]\\]/g, '\\$&') + ')', 'gi');
+  return s.replace(re, '<mark style="background:rgba(200,240,96,.22);color:var(--accent);padding:0 3px;border-radius:3px">$1</mark>');
+}
+
+function catLabel(c) {
+  return {basic:'Базовое',tech:'Технич.',advanced:'Продв.',business:'Бизнес'}[c] || c;
+}
+
+window.hl = function(id) {
+  document.querySelectorAll('.term.hl').forEach(el => el.classList.remove('hl'));
+  setTimeout(() => {
+    const el = document.getElementById(id);
+    if (el) {
+      el.classList.add('hl');
+      setTimeout(() => el.classList.remove('hl'), 1800);
+    }
+  }, 200);
+};
+
+// Events
+$search.addEventListener('input', e => {
+  activeQuery = e.target.value;
+  $box.classList.toggle('has-value', !!activeQuery);
+  render();
+});
+$clear.addEventListener('click', () => {
+  $search.value = '';
+  activeQuery = '';
+  $box.classList.remove('has-value');
+  render();
+  $search.focus();
+});
+document.getElementById('cats').addEventListener('click', e => {
+  if (e.target.classList.contains('cat')) {
+    document.querySelectorAll('.cat').forEach(c => c.classList.remove('act'));
+    e.target.classList.add('act');
+    activeCat = e.target.dataset.cat;
+    render();
+  }
+});
+
+buildAlpha();
+render();
+
+// PWA
+if ('serviceWorker' in navigator && location.protocol === 'https:') {
+  window.addEventListener('load', () => {
+    navigator.serviceWorker.register('/sw.js').catch(e => console.warn('SW reg failed:', e.message));
+  });
+}
+</script>
+</body>
+</html>
