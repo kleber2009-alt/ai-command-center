@@ -1,6 +1,6 @@
 import { NextRequest, NextResponse } from 'next/server'
 import { getServerSupabase } from '@/lib/transcripts-db'
-import type { TaskStatus, TaskPriority } from '@/lib/tasks-db'
+import type { TaskStatus, TaskPriority, TaskProject } from '@/lib/tasks-db'
 
 type CreateBody = {
   title: string
@@ -8,19 +8,23 @@ type CreateBody = {
   status?: TaskStatus
   priority?: TaskPriority
   stage?: string
+  project?: TaskProject
 }
 
-export async function GET() {
+export async function GET(req: NextRequest) {
   const supabase = getServerSupabase()
   if (!supabase) {
     return NextResponse.json({ items: [], configured: false })
   }
-  const { data, error } = await supabase
+  const project = req.nextUrl.searchParams.get('project')
+  let query = supabase
     .from('tasks')
     .select('*')
     .order('status', { ascending: true })
     .order('position', { ascending: true })
     .order('created_at', { ascending: true })
+  if (project) query = query.eq('project', project)
+  const { data, error } = await query
   if (error) {
     return NextResponse.json({ error: error.message }, { status: 500 })
   }
@@ -56,6 +60,7 @@ export async function POST(req: NextRequest) {
       status,
       priority: body.priority ?? 'medium',
       stage: body.stage ?? null,
+      project: body.project ?? 'general',
       position: nextPosition,
     })
     .select('*')

@@ -5,7 +5,9 @@ import {
   Plus, Trash2, X, Loader2, CircleDot, CircleDashed, CircleAlert, CircleCheck, GripVertical,
 } from 'lucide-react'
 import {
-  Task, TaskStatus, TaskPriority, TASK_STATUSES, STATUS_LABEL, PRIORITY_LABEL,
+  Task, TaskStatus, TaskPriority, TaskProject,
+  TASK_STATUSES, STATUS_LABEL, PRIORITY_LABEL,
+  TASK_PROJECTS, PROJECT_LABEL,
 } from '@/lib/tasks-db'
 
 const STATUS_COLORS: Record<TaskStatus, { col: string; chip: string; icon: any }> = {
@@ -27,10 +29,11 @@ export default function AdminPage() {
   const [configured, setConfigured] = useState(true)
   const [error, setError] = useState<string | null>(null)
   const [stageFilter, setStageFilter] = useState<string>('all')
+  const [projectFilter, setProjectFilter] = useState<TaskProject | 'all'>('all')
   const [editing, setEditing] = useState<Task | null>(null)
   const [creating, setCreating] = useState<TaskStatus | null>(null)
-  const [draft, setDraft] = useState<{ title: string; description: string; priority: TaskPriority; stage: string }>({
-    title: '', description: '', priority: 'medium', stage: '',
+  const [draft, setDraft] = useState<{ title: string; description: string; priority: TaskPriority; stage: string; project: TaskProject }>({
+    title: '', description: '', priority: 'medium', stage: '', project: 'general',
   })
 
   async function load() {
@@ -61,10 +64,21 @@ export default function AdminPage() {
   }, [tasks])
 
   const filtered = useMemo(() => {
-    if (stageFilter === 'all') return tasks
-    if (stageFilter === '(no stage)') return tasks.filter(t => !t.stage)
-    return tasks.filter(t => t.stage === stageFilter)
-  }, [tasks, stageFilter])
+    let list = tasks
+    if (projectFilter !== 'all') list = list.filter(t => (t.project ?? 'general') === projectFilter)
+    if (stageFilter === '(no stage)') return list.filter(t => !t.stage)
+    if (stageFilter !== 'all') return list.filter(t => t.stage === stageFilter)
+    return list
+  }, [tasks, stageFilter, projectFilter])
+
+  const projectCounts = useMemo(() => {
+    const c: Record<TaskProject | 'all', number> = { all: tasks.length, transcribe: 0, ytdlp: 0, 'ai-office': 0, general: 0 }
+    tasks.forEach(t => {
+      const p = (t.project ?? 'general') as TaskProject
+      c[p] = (c[p] ?? 0) + 1
+    })
+    return c
+  }, [tasks])
 
   async function updateTask(id: string, patch: Partial<Task>) {
     setTasks(prev => prev.map(t => t.id === id ? { ...t, ...patch } as Task : t))
@@ -107,6 +121,7 @@ export default function AdminPage() {
           description: draft.description.trim() || undefined,
           priority: draft.priority,
           stage: draft.stage.trim() || undefined,
+          project: draft.project,
           status,
         }),
       })
@@ -116,7 +131,7 @@ export default function AdminPage() {
       } else {
         setTasks(prev => [...prev, data])
         setCreating(null)
-        setDraft({ title: '', description: '', priority: 'medium', stage: '' })
+        setDraft({ title: '', description: '', priority: 'medium', stage: '', project: 'general' })
       }
     } catch (e: any) {
       setError(e?.message || 'Сетевая ошибка')
@@ -169,6 +184,29 @@ export default function AdminPage() {
         </div>
       </div>
 
+      {/* Project tabs */}
+      <div className="flex items-center gap-1 flex-wrap border-b border-slate-800 pb-0">
+        {(['all', ...TASK_PROJECTS] as const).map(p => {
+          const active = projectFilter === p
+          const label = p === 'all' ? 'Все проекты' : PROJECT_LABEL[p]
+          const count = projectCounts[p]
+          return (
+            <button
+              key={p}
+              onClick={() => setProjectFilter(p as TaskProject | 'all')}
+              className={`px-3 py-1.5 text-xs rounded-t-lg border-b-2 transition-colors ${
+                active
+                  ? 'border-indigo-500 text-slate-100 bg-slate-800/40'
+                  : 'border-transparent text-slate-500 hover:text-slate-300'
+              }`}
+            >
+              {label}
+              <span className="ml-1.5 text-[10px] text-slate-600">{count}</span>
+            </button>
+          )
+        })}
+      </div>
+
       {error && (
         <div className="bg-rose-500/5 border border-rose-500/20 rounded-xl p-3 text-sm text-slate-300">
           {error}
@@ -195,7 +233,7 @@ export default function AdminPage() {
                   <span className="text-[10px] text-slate-600">{list.length}</span>
                 </div>
                 <button
-                  onClick={() => { setCreating(status); setDraft({ title: '', description: '', priority: 'medium', stage: stageFilter !== 'all' && stageFilter !== '(no stage)' ? stageFilter : '' }) }}
+                  onClick={() => { setCreating(status); setDraft({ title: '', description: '', priority: 'medium', stage: stageFilter !== 'all' && stageFilter !== '(no stage)' ? stageFilter : '', project: projectFilter !== 'all' ? projectFilter : 'general' }) }}
                   className="text-slate-500 hover:text-slate-200 transition-colors"
                   title="Новая задача"
                 >
@@ -224,6 +262,11 @@ export default function AdminPage() {
                     )}
                     <div className="flex items-center justify-between gap-1.5 pl-3">
                       <div className="flex items-center gap-1.5 flex-wrap">
+                        {projectFilter === 'all' && (
+                          <span className="text-[9px] uppercase tracking-wider font-medium px-1.5 py-0.5 rounded bg-indigo-500/10 text-indigo-300 border border-indigo-500/20">
+                            {PROJECT_LABEL[(task.project ?? 'general') as TaskProject]}
+                          </span>
+                        )}
                         {task.stage && (
                           <span className="text-[9px] uppercase tracking-wider font-medium px-1.5 py-0.5 rounded bg-slate-700/40 text-slate-400">
                             {task.stage}
@@ -298,6 +341,17 @@ export default function AdminPage() {
                 </select>
               </Field>
             </div>
+            <Field label="Проект">
+              <select
+                value={draft.project}
+                onChange={e => setDraft({ ...draft, project: e.target.value as TaskProject })}
+                className="w-full px-3 py-2 bg-slate-900/60 border border-slate-700 rounded-lg text-sm text-slate-200 focus:outline-none focus:border-indigo-500/60"
+              >
+                {TASK_PROJECTS.map(p => (
+                  <option key={p} value={p}>{PROJECT_LABEL[p]}</option>
+                ))}
+              </select>
+            </Field>
             <div className="flex justify-end gap-2 pt-2">
               <button
                 onClick={() => setCreating(null)}
@@ -367,6 +421,7 @@ function EditForm({ task, onChange, onDelete }: { task: Task; onChange: (patch: 
   const [stage, setStage] = useState(task.stage ?? '')
   const [priority, setPriority] = useState<TaskPriority>(task.priority)
   const [status, setStatus] = useState<TaskStatus>(task.status)
+  const [project, setProject] = useState<TaskProject>((task.project ?? 'general') as TaskProject)
 
   function flush() {
     const patch: Partial<Task> = {}
@@ -375,6 +430,7 @@ function EditForm({ task, onChange, onDelete }: { task: Task; onChange: (patch: 
     if ((stage || null) !== task.stage) patch.stage = stage || null
     if (priority !== task.priority) patch.priority = priority
     if (status !== task.status) patch.status = status
+    if (project !== (task.project ?? 'general')) patch.project = project
     if (Object.keys(patch).length) onChange(patch)
   }
 
@@ -431,6 +487,17 @@ function EditForm({ task, onChange, onDelete }: { task: Task; onChange: (patch: 
           </select>
         </Field>
       </div>
+      <Field label="Проект">
+        <select
+          value={project}
+          onChange={e => { setProject(e.target.value as TaskProject); setTimeout(flush, 0) }}
+          className="w-full px-3 py-2 bg-slate-900/60 border border-slate-700 rounded-lg text-sm text-slate-200 focus:outline-none focus:border-indigo-500/60"
+        >
+          {TASK_PROJECTS.map(p => (
+            <option key={p} value={p}>{PROJECT_LABEL[p]}</option>
+          ))}
+        </select>
+      </Field>
       <div className="flex items-center justify-between pt-2">
         <button
           onClick={onDelete}
