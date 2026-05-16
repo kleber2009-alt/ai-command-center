@@ -1,0 +1,68 @@
+#cloud-config
+# Hetzner Cloud user-data — paste this into the "Cloud config" / "User
+# data" field when creating a new server (Ubuntu 22.04 / 24.04 image).
+#
+# The server boots fully provisioned: Docker installed, firewall up,
+# swap configured, repo cloned to /opt/ai-command-center, ready for
+# `docker compose up -d --build` once you fill in /opt/ai-command-center/.env.
+#
+# Substitute:
+#   <REPO_URL>   — e.g. https://github.com/kleber2009-alt/ai-command-center.git
+#   <BRANCH>     — main / claude/review-repo-projects-Vibjj / ...
+
+package_update: true
+package_upgrade: true
+
+packages:
+  - ca-certificates
+  - curl
+  - git
+  - ufw
+  - htop
+  - tmux
+  - unattended-upgrades
+
+write_files:
+  - path: /etc/sysctl.d/99-ai-cc.conf
+    content: |
+      # Allow Docker to bind low ports as non-root + bump connection limits.
+      net.ipv4.ip_unprivileged_port_start=80
+      net.core.somaxconn=4096
+    permissions: '0644'
+
+runcmd:
+  # 1. Docker Engine + compose plugin
+  - curl -fsSL https://get.docker.com | sh
+  - usermod -aG docker root
+
+  # 2. Firewall
+  - ufw --force default deny incoming
+  - ufw --force default allow outgoing
+  - ufw allow 22/tcp
+  - ufw allow 80/tcp
+  - ufw allow 443/tcp
+  - ufw allow 443/udp
+  - ufw --force enable
+
+  # 3. Swap (2 GB — helps Next.js build on CX22)
+  - fallocate -l 2G /swapfile
+  - chmod 600 /swapfile
+  - mkswap /swapfile
+  - swapon /swapfile
+  - sh -c 'echo "/swapfile none swap sw 0 0" >> /etc/fstab'
+
+  # 4. Apply sysctl
+  - sysctl --system
+
+  # 5. Clone the repo (replace placeholders before pasting!)
+  - mkdir -p /opt/ai-command-center
+  - git clone -b <BRANCH> <REPO_URL> /opt/ai-command-center
+  - cp /opt/ai-command-center/.env.example /opt/ai-command-center/.env
+
+  # 6. Leave the user to fill in /opt/ai-command-center/.env, then:
+  #      cd /opt/ai-command-center && docker compose up -d --build
+
+final_message: |
+  Setup done. Next:
+    1. Fill in /opt/ai-command-center/.env (DOMAIN, POSTGRES_PASSWORD, API keys)
+    2. cd /opt/ai-command-center && docker compose up -d --build
