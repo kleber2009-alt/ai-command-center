@@ -1,10 +1,6 @@
 [build]
   command = "npm run build"
-  publish = ".next"
+  publish = "out"
 
-[[plugins]]
-  package = "@netlify/plugin-nextjs"
-
-# Подсказка по env для команды деплоя (заполняются в UI Netlify, не в файле):
-# TELEGRAM_BOT_TOKEN, TELEGRAM_CHAT_ID,
+# Env, доступные клиентскому коду на сборке (заполняются в UI Netlify):
 # NEXT_PUBLIC_TELEGRAM_USERNAME, NEXT_PUBLIC_WHATSAPP_PHONE

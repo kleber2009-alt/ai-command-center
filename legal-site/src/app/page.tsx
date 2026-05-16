@@ -1,6 +1,6 @@
 import Hero from "@/components/Hero";
 import Services from "@/components/Services";
-import LeadSection from "@/components/LeadSection";
+import Contacts from "@/components/Contacts";
 import Footer from "@/components/Footer";
 
 export default function Page() {
@@ -8,7 +8,7 @@ export default function Page() {
     <main className="mx-auto max-w-5xl px-5 sm:px-8">
       <Hero />
       <Services />
-      <LeadSection />
+      <Contacts />
       <Footer />
     </main>
   );

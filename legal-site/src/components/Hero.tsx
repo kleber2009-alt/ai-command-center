@@ -18,10 +18,10 @@ export default function Hero() {
       </p>
       <div className="mt-8 flex flex-wrap gap-3">
         <a
-          href="#lead"
+          href="#contacts"
           className="inline-flex items-center px-6 py-3 rounded-md bg-accent text-ink-950 font-medium hover:bg-accent-dark transition-colors"
         >
-          Оставить заявку
+          Связаться
         </a>
         <a
           href="#services"

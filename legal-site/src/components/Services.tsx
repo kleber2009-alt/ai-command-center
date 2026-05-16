@@ -1,4 +1,4 @@
-import { User, Briefcase, FileSignature } from "lucide-react";
+import { User, Briefcase, FileSignature, HeartHandshake } from "lucide-react";
 
 const services = [
   {
@@ -19,6 +19,12 @@ const services = [
     description:
       "Проверка контрагентов, due diligence, разработка и экспертиза договоров, M&A. Чтобы подпись стояла только под безопасным документом.",
   },
+  {
+    icon: HeartHandshake,
+    title: "Пенсионерам",
+    description:
+      "Перерасчёт пенсии, оформление льгот и субсидий, споры с СФР, жилищные и наследственные вопросы. Помогаем разобраться без хождения по инстанциям.",
+  },
 ];
 
 export default function Services() {
@@ -26,9 +32,9 @@ export default function Services() {
     <section id="services" className="py-16 sm:py-24 border-t border-white/10">
       <h2 className="font-serif text-3xl sm:text-4xl text-white">Услуги</h2>
       <p className="mt-3 text-white/60">
-        Скоро дополним направления. Сейчас работаем по этим трём ключевым блокам.
+        Скоро дополним направления. Сейчас работаем по этим ключевым блокам.
       </p>
-      <div className="mt-10 grid gap-5 sm:grid-cols-3">
+      <div className="mt-10 grid gap-5 sm:grid-cols-2 lg:grid-cols-4">
         {services.map(({ icon: Icon, title, description }) => (
           <div
             key={title}

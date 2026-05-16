@@ -1,8 +1,9 @@
 # Legal site — MVP
 
-Лендинг юридической компании: услуги, форма заявки → Telegram, контакты для прямой связи.
+Лендинг юридической компании: hero, услуги, прямые контакты (Telegram + WhatsApp).
+Полностью статический сайт, без бэкенда.
 
-Стек: Next.js 14 (App Router) + TypeScript + Tailwind.
+Стек: Next.js 14 (App Router, static export) + TypeScript + Tailwind.
 
 ## Запуск
 
@@ -12,62 +13,63 @@ cp .env.example .env.local   # затем заполнить переменны�
 npm run dev                  # http://localhost:3000
 ```
 
+## Сборка
+
+```bash
+npm run build   # генерирует папку out/ со статикой
+```
+
 ## Переменные окружения
 
-| Переменная                       | Назначение                                                            |
-| -------------------------------- | --------------------------------------------------------------------- |
-| `TELEGRAM_BOT_TOKEN`             | Токен бота от `@BotFather`. Серверная переменная.                     |
-| `TELEGRAM_CHAT_ID`               | Куда слать заявки (личный чат, группа, канал). Серверная переменная.  |
-| `NEXT_PUBLIC_TELEGRAM_USERNAME`  | Юзернейм для кнопки «Telegram» в контактах, без `@`.                  |
-| `NEXT_PUBLIC_WHATSAPP_PHONE`     | Телефон для кнопки «WhatsApp», в формате `79991234567` (без `+`).     |
+Обе подставляются на этапе сборки и попадают в клиентский JS — секретов тут нет.
 
-### Как получить chat_id
+| Переменная                       | Назначение                                                          |
+| -------------------------------- | ------------------------------------------------------------------- |
+| `NEXT_PUBLIC_TELEGRAM_USERNAME`  | Юзернейм для кнопки «Telegram», без `@`.                            |
+| `NEXT_PUBLIC_WHATSAPP_PHONE`     | Телефон для кнопки «WhatsApp», в формате `79991234567` (без `+`).   |
 
-1. Создать бота у `@BotFather` → получить токен.
-2. Если заявки в группу — добавить бота в группу админом и написать туда любое сообщение.
-3. Открыть `https://api.telegram.org/bot<token>/getUpdates` — в JSON найти `chat.id`
-   (для групп он отрицательный, например `-1001234567890`).
+## Деплой на Netlify
+
+### Вариант 1 — Netlify Drop (drag-and-drop одной папки)
+
+```bash
+NEXT_PUBLIC_TELEGRAM_USERNAME=legal_company \
+NEXT_PUBLIC_WHATSAPP_PHONE=79991234567 \
+npm run build
+```
+
+Открыть https://app.netlify.com/drop → перетащить папку `out/`. Сайт поднимется
+за секунды. Чтобы поменять контакты — пересобрать с новыми env и перетащить заново.
+
+### Вариант 2 — Git-импорт (автообновление при push)
+
+1. https://app.netlify.com → **Add new site** → **Import an existing project** → выбрать репо.
+2. Настройки сборки (большинство подтянется из `netlify.toml`):
+   - **Base directory**: `legal-site`
+   - **Build command**: `npm run build`
+   - **Publish directory**: `out`
+3. **Site configuration → Environment variables** → `NEXT_PUBLIC_TELEGRAM_USERNAME`, `NEXT_PUBLIC_WHATSAPP_PHONE`.
+4. **Deploy site**.
 
 ## Структура
 
 ```
 src/
   app/
-    api/lead/route.ts   # POST /api/lead → Telegram sendMessage
     layout.tsx
     page.tsx            # одна страница, все секции
     globals.css
   components/
     Hero.tsx
-    Services.tsx        # 3 блока — потом дополним
-    LeadSection.tsx
-    LeadForm.tsx        # клиентский компонент
-    Contacts.tsx        # Telegram + WhatsApp
+    Services.tsx        # 3 общих блока — потом дополним
+    Contacts.tsx        # Telegram + WhatsApp кнопки
     Footer.tsx
 ```
-
-## Деплой на Netlify
-
-Через git-импорт (без CLI):
-
-1. Запушить ветку (уже сделано).
-2. https://app.netlify.com → **Add new site** → **Import an existing project** → выбрать репозиторий.
-3. В настройках сборки указать:
-   - **Branch to deploy**: `claude/legal-company-site-Iy5a0` (или `main` после мержа).
-   - **Base directory**: `legal-site`
-   - Команду сборки и publish-папку Netlify прочитает из `legal-site/netlify.toml` (`npm run build`, `.next`).
-4. **Site configuration → Environment variables** → добавить:
-   - `TELEGRAM_BOT_TOKEN`
-   - `TELEGRAM_CHAT_ID`
-   - `NEXT_PUBLIC_TELEGRAM_USERNAME`
-   - `NEXT_PUBLIC_WHATSAPP_PHONE`
-5. **Deploy site**. После сборки API-роут `/api/lead` поднимется как Netlify Function автоматически (через `@netlify/plugin-nextjs`).
-
-> Netlify Drop (drag-and-drop одной папкой) не подойдёт — он деплоит только статические файлы, а у нас серверный роут для отправки в Telegram.
 
 ## Дальше
 
 - Дополнить список услуг (`src/components/Services.tsx`).
 - Сделать отдельные страницы под каждую услугу (`src/app/services/[slug]/page.tsx`).
-- Добавить hCaptcha / Turnstile в `/api/lead` против спама.
-- Сохранять заявки не только в Telegram, но и в БД.
+- Если позже понадобится форма заявок — добавим серверный роут и переедем
+  с `output: 'export'` на обычный SSR-деплой (тогда Drop уже не подойдёт).
+```
