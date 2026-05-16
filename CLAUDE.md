@@ -65,19 +65,39 @@ Next.js 14 App Router + React 18 + TypeScript + Tailwind. UI strings are
 Russian; comments/identifiers stay English. Path alias `@/* → src/*`
 (`tsconfig.json`). Dark mode is forced at `<html className="dark">`.
 
-**Routing**: `src/app/page.tsx` redirects `/` → `/transcribe`. The
-transcribe page has its own layout (`src/app/transcribe/layout.tsx`)
-providing a mobile-first centered container (max-w-2xl) — there is no
-sidebar. Everything is one page.
+**Routing**: `src/app/page.tsx` redirects `/` → `/transcribe`. All
+user-facing pages live under the `(app)` route group with a shared shell
+(`src/app/(app)/layout.tsx`) that provides a sticky top nav (`AppNav`) and
+a mobile-first centered container (max-w-2xl). Routes:
 
-**The flow** (`src/app/transcribe/page.tsx`):
-1. Mount → calls `loadHistory()` and `setInTg(isInTelegram())`.
+- `/transcribe` — URL input + language picker + last-10 history list.
+  After a successful transcription the page navigates to `/t/[id]`.
+- `/history` — full history (last 50 rows).
+- `/t/[id]` — view the transcript. Has its own sub-nav (`TranscriptTabs`)
+  with one tab per feature, defined in `src/app/(app)/t/[id]/layout.tsx`.
+- `/t/[id]/summary` · `/translate` · `/carousel` · `/reels-new` ·
+  `/reels-remix` · `/tg-post` — one page per generation feature. Each
+  page loads the transcript via `useTranscript(id)` and renders a single
+  Generate / Regenerate button + the cached result.
+
+**Transcript loading** (`src/lib/transcript-cache.ts` + `useTranscript`):
+- Real Supabase ids → fetched from `/api/transcribe/history/[id]`.
+- "Local" ids (`local-…`, used when Supabase isn't configured) → cached
+  in `sessionStorage` under `transcript-cache:<id>` so feature pages still
+  work in-session. Generation pages pass `transcript` directly to the API
+  and merge the response back into local cache via `patchLocal()`.
+
+**The flow** (`src/app/(app)/transcribe/page.tsx`):
+1. Mount → `setInTg(isInTelegram())`.
 2. User pastes a URL + picks a language → submits.
-3. `POST /api/transcribe` returns transcript + paragraphs + metadata. Row is
-   inserted into `transcripts` if Supabase is configured.
-4. User can then trigger: Copy / .txt / .srt download / Summary / Translate
-   / Carousel / Reels-new / Reels-remix / TG-post. Each generation calls a
-   dedicated endpoint and gets cached on the same row.
+3. `POST /api/transcribe` returns transcript + paragraphs + metadata. Row
+   is inserted into `transcripts` if Supabase is configured.
+4. The result is saved to `sessionStorage` (real id or `local-…`) and the
+   router navigates to `/t/[id]`.
+5. Inside `/t/[id]/*` the user copies / downloads .txt/.srt / triggers
+   Summary / Translate / Carousel / Reels-new / Reels-remix / TG-post.
+   Each generation calls a dedicated endpoint and gets cached on the
+   Supabase row (or in `sessionStorage` for local ids).
 
 **API routes**:
 - `POST /api/transcribe` — body `{ url, language: 'auto'|'ru'|'en' }`. The
