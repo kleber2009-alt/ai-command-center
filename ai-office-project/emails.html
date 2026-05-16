@@ -1,0 +1,548 @@
+<!DOCTYPE html>
+<html lang="ru">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width,initial-scale=1">
+<title>Email-шаблоны воронки прогрева · AI Growth Office</title>
+<meta name="description" content="7 готовых HTML email-шаблонов для воронки прогрева: welcome, value, кейс, оффер, дожим, последний шанс, после покупки. Готовые к подключению через Resend/Brevo/Sendpulse.">
+
+<link rel="canonical" href="https://ai-growth-office.ru/emails.html">
+<meta name="keywords" content="email шаблоны, воронка прогрева, welcome email, email маркетинг">
+<meta name="author" content="Нейрозапуск · AI Growth Office">
+
+<meta property="og:type" content="website">
+<meta property="og:url" content="https://ai-growth-office.ru/emails.html">
+<meta property="og:title" content="7 готовых email-шаблонов для воронки прогрева">
+<meta property="og:description" content="Welcome · Value · Кейс · Оффер · Дожим · Последний шанс · После покупки. HTML + копи-паст в Resend/Brevo.">
+<meta property="og:image" content="https://ai-growth-office.ru/og-image.jpg">
+<meta property="og:image:width" content="1200">
+<meta property="og:image:height" content="630">
+<meta property="og:locale" content="ru_RU">
+<meta property="og:site_name" content="AI Growth Office">
+
+<meta name="twitter:card" content="summary_large_image">
+<meta name="twitter:title" content="7 готовых email-шаблонов для воронки прогрева">
+<meta name="twitter:description" content="HTML шаблоны для Resend/Brevo. Готовые к подключению.">
+<meta name="twitter:image" content="https://ai-growth-office.ru/og-image.jpg">
+<meta name="robots" content="index, follow">
+
+<link rel="icon" type="image/svg+xml" href="data:image/svg+xml,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 32 32'><rect width='32' height='32' rx='6' fill='%23080808'/><text y='24' x='5' font-size='20'>✉️</text></svg>">
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+
+<!-- PWA -->
+<link rel="manifest" href="/manifest.json">
+<meta name="theme-color" content="#0a0c14">
+<meta name="apple-mobile-web-app-capable" content="yes">
+<meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
+<meta name="apple-mobile-web-app-title" content="AI Office">
+<link rel="apple-touch-icon" href="/icon-192.png">
+
+<style>
+@import url('https://fonts.googleapis.com/css2?family=JetBrains+Mono:wght@400;700&family=Inter:wght@400;500;600;700;800&display=swap');
+*{box-sizing:border-box;margin:0;padding:0}
+:root{
+  --bg:#0a0c14;--card:#13162a;--card2:#181b30;--border:rgba(255,255,255,.08);
+  --text:#e8e4f0;--muted:#7a82a0;--dim:rgba(255,255,255,.4);
+  --accent:#c8f060;--a2:#60c8f0;--a3:#f06090;
+  --font:'JetBrains Mono',monospace;--ui:'Inter',sans-serif;
+}
+html,body{background:var(--bg);color:var(--text);font-family:var(--ui);min-height:100vh;line-height:1.6}
+body{padding:32px 24px 80px;background:radial-gradient(ellipse at top,#1a2a4a 0%,#0a0c14 60%)}
+
+.wrap{max-width:1080px;margin:0 auto}
+
+.hero{text-align:center;margin-bottom:32px}
+.tag{display:inline-block;font-family:var(--font);font-size:9px;text-transform:uppercase;letter-spacing:2px;color:var(--accent);padding:5px 11px;border-radius:6px;background:rgba(200,240,96,.08);border:1px solid rgba(200,240,96,.2);margin-bottom:14px;font-weight:700}
+.hero h1{font-size:34px;font-weight:800;letter-spacing:-.5px;line-height:1.15;margin-bottom:10px}
+.hero h1 .grad{background:linear-gradient(90deg,#c8f060,#60c8f0);-webkit-background-clip:text;-webkit-text-fill-color:transparent}
+.hero p{color:var(--muted);font-size:14px;max-width:680px;margin:0 auto;line-height:1.65}
+
+.flow-bar{margin:24px auto;max-width:980px;display:flex;align-items:center;gap:6px;flex-wrap:wrap;justify-content:center;background:var(--card);border:1.5px solid var(--border);border-radius:14px;padding:14px 18px;font-family:var(--font);font-size:10px}
+.flow-node{display:inline-flex;align-items:center;gap:5px;padding:6px 10px;border-radius:8px;background:var(--card2);color:var(--muted);font-weight:700;letter-spacing:.3px}
+.flow-node.accent{background:rgba(200,240,96,.1);color:var(--accent);border:1px solid rgba(200,240,96,.25)}
+.flow-arr{color:var(--dim)}
+
+.tabs{display:flex;gap:6px;flex-wrap:wrap;justify-content:center;margin:24px 0 20px}
+.tab{font:700 11px/1 var(--ui);padding:9px 14px;border-radius:10px;background:var(--card);border:1.5px solid var(--border);color:var(--muted);cursor:pointer;transition:all .15s;display:inline-flex;align-items:center;gap:6px}
+.tab:hover{border-color:rgba(255,255,255,.18);color:var(--text)}
+.tab.active{background:var(--accent);color:#0a0c14;border-color:var(--accent)}
+.tab .num{font-family:var(--font);font-weight:700;opacity:.7;font-size:9px}
+.tab.active .num{opacity:.6;color:#0a0c14}
+
+.email-card{background:var(--card);border:1.5px solid var(--border);border-radius:16px;overflow:hidden;margin-bottom:24px;display:none}
+.email-card.show{display:block;animation:fade .25s}
+@keyframes fade{from{opacity:0;transform:translateY(8px)}to{opacity:1}}
+
+.ec-hd{padding:18px 24px 16px;border-bottom:1px solid var(--border);background:linear-gradient(135deg,rgba(200,240,96,.04),transparent)}
+.ec-row{display:flex;gap:14px;align-items:center;flex-wrap:wrap;margin-bottom:10px}
+.ec-num{font-family:var(--font);font-size:42px;font-weight:800;letter-spacing:-2px;color:transparent;-webkit-text-stroke:1.5px var(--accent);line-height:1}
+.ec-info{flex:1;min-width:200px}
+.ec-day{font-family:var(--font);font-size:9.5px;color:var(--accent);text-transform:uppercase;letter-spacing:1.5px;font-weight:700;margin-bottom:3px}
+.ec-tit{font-size:20px;font-weight:800;letter-spacing:-.2px;line-height:1.25;margin-bottom:4px}
+.ec-sub{font-size:12.5px;color:var(--muted);line-height:1.55}
+.ec-meta{font-family:var(--font);font-size:10.5px;color:var(--muted);margin-top:8px;display:flex;gap:14px;flex-wrap:wrap}
+.ec-meta b{color:var(--text);font-weight:700;margin-right:4px}
+
+.ec-body{padding:0;display:grid;grid-template-columns:1fr 1fr;gap:0}
+@media(max-width:780px){.ec-body{grid-template-columns:1fr}}
+
+.ec-preview{padding:24px;background:#fff;color:#1a1a2e;border-right:1px solid var(--border);overflow-y:auto;max-height:560px}
+@media(max-width:780px){.ec-preview{border-right:none;border-bottom:1px solid var(--border)}}
+.ec-preview-bar{background:#f5f5fa;border-radius:6px;padding:8px 12px;margin-bottom:14px;font:11px/1.5 -apple-system,sans-serif;color:#6a6a8a;border:1px solid #e0e0ea}
+.ec-preview-bar b{color:#1a1a2e;font-weight:700;display:inline-block;width:54px}
+
+.ec-html{font:14px/1.65 -apple-system, BlinkMacSystemFont, 'Inter', sans-serif;color:#1a1a2e}
+.ec-html h1{font-size:24px;font-weight:800;margin:8px 0 12px;letter-spacing:-.5px;color:#0a0c14}
+.ec-html h2{font-size:17px;font-weight:700;margin:14px 0 8px;color:#0a0c14}
+.ec-html p{margin:8px 0;color:#3a3a5a}
+.ec-html strong{color:#0a0c14;font-weight:700}
+.ec-html ul{padding-left:22px;margin:8px 0;color:#3a3a5a}
+.ec-html li{margin:4px 0}
+.ec-html .cta{display:inline-block;background:linear-gradient(90deg,#c8f060,#60c8f0);color:#0a0c14 !important;text-decoration:none;padding:11px 22px;border-radius:10px;font-weight:800;margin:14px 0;font-size:13px;letter-spacing:.3px}
+.ec-html blockquote{margin:14px 0;padding:10px 14px;border-left:3px solid #c8f060;background:#f8fce8;font-style:italic;color:#3a4020;font-size:13px;border-radius:0 8px 8px 0}
+.ec-html .ftr{margin-top:24px;padding-top:14px;border-top:1px solid #e0e0ea;font-size:11px;color:#6a6a8a;line-height:1.5}
+.ec-html .ftr a{color:#6a8a30}
+
+.ec-code{padding:24px;overflow-y:auto;max-height:560px;background:#0a0c18;position:relative}
+.ec-code-label{position:absolute;top:8px;right:14px;font-family:var(--font);font-size:9px;font-weight:700;color:var(--accent);letter-spacing:1.5px;background:rgba(200,240,96,.1);padding:3px 8px;border-radius:5px;border:1px solid rgba(200,240,96,.25)}
+.ec-code pre{font:11.5px/1.6 var(--font);color:rgba(232,228,240,.92);white-space:pre-wrap;word-break:break-word;margin-top:24px}
+
+.ec-actions{padding:14px 24px;border-top:1px solid var(--border);background:var(--card2);display:flex;gap:10px;flex-wrap:wrap}
+.ec-btn{background:var(--card);border:1.5px solid var(--border);color:var(--text);padding:8px 14px;border-radius:8px;font:700 10.5px/1 var(--ui);cursor:pointer;letter-spacing:.3px;transition:all .15s;display:inline-flex;align-items:center;gap:6px}
+.ec-btn:hover{border-color:var(--accent);color:var(--accent)}
+.ec-btn.copied{background:rgba(46,204,64,.1);border-color:rgba(46,204,64,.3);color:#34d058}
+
+.guide{background:linear-gradient(135deg,rgba(200,240,96,.06),rgba(96,200,240,.04));border:1.5px solid rgba(200,240,96,.2);border-radius:14px;padding:20px 24px;margin-top:24px}
+.guide h3{font-size:16px;font-weight:800;color:var(--accent);margin-bottom:10px;letter-spacing:-.2px}
+.guide ol{padding-left:22px;color:rgba(232,228,240,.85);font-size:13px;line-height:1.65}
+.guide li{margin:6px 0}
+.guide code{background:var(--card2);padding:2px 6px;border-radius:4px;font:11.5px var(--font);color:var(--a2);border:1px solid var(--border)}
+
+.legal{max-width:980px;margin:32px auto 0;text-align:center;color:var(--muted);font-size:11px}
+.legal a{color:var(--muted);text-decoration:none;border-bottom:1px solid transparent;margin:0 8px;transition:all .15s}
+.legal a:hover{color:var(--accent);border-color:var(--accent)}
+</style>
+</head>
+<body data-user="Илья Палий" data-email="ilia.info.paliy@gmail.com">
+
+<div class="wrap">
+
+  <div class="hero">
+    <div class="tag">✉️ 7 Email-шаблонов</div>
+    <h1>Воронка прогрева <span class="grad">в email</span></h1>
+    <p>7 готовых HTML-писем под полную цепочку: от первого касания до повторной продажи. Скопируй HTML — вставь в Resend / Brevo / Sendpulse / Mailchimp. Подставь свои переменные через <code style="color:var(--accent);background:rgba(200,240,96,.08);padding:1px 5px;border-radius:3px;font-family:var(--font);font-size:11px">{{var}}</code>.</p>
+  </div>
+
+  <div class="flow-bar">
+    <span class="flow-node accent">📥 Лид-магнит</span>
+    <span class="flow-arr">→</span>
+    <span class="flow-node">День 0</span>
+    <span class="flow-arr">→</span>
+    <span class="flow-node">+1</span>
+    <span class="flow-arr">→</span>
+    <span class="flow-node">+3</span>
+    <span class="flow-arr">→</span>
+    <span class="flow-node">+5</span>
+    <span class="flow-arr">→</span>
+    <span class="flow-node">+7</span>
+    <span class="flow-arr">→</span>
+    <span class="flow-node">+10</span>
+    <span class="flow-arr">→</span>
+    <span class="flow-node accent">💰 Покупка</span>
+  </div>
+
+  <div class="tabs" id="tabs"></div>
+
+  <div id="emails"></div>
+
+  <div class="guide">
+    <h3>📚 Как подключить в Resend / Brevo / Sendpulse</h3>
+    <ol>
+      <li><b>Resend</b>: создай шаблон в дашборде → вставь HTML из вкладки «HTML-код» → используй <code>{{var}}</code> синтаксис в коде и передавай данные через <code>data</code> в API-вызове</li>
+      <li><b>Brevo (Sendinblue)</b>: Templates → HTML editor → paste → переменные через <code>{{ contact.NAME }}</code> или <code>{{ params.X }}</code></li>
+      <li><b>Sendpulse</b>: Шаблоны → Создать HTML → вставить → переменные <code>{{var}}</code> работают из коробки</li>
+      <li><b>Mailchimp</b>: Templates → Code your own → Paste in code → используй <code>*|FNAME|*</code> для динамических полей (замени <code>{{name}}</code> на <code>*|FNAME|*</code>)</li>
+      <li><b>Триггеры</b>: настрой автоматические цепочки — Day 0 на регистрации, +1, +3, +5, +7, +10 по таймеру + условные ветки (купил → стоп цепочки, ушёл → дожим)</li>
+    </ol>
+  </div>
+
+  <div class="legal">
+    <a href="onboarding.html">📋 Собрать офис</a>
+    <a href="marketing-workspace.html">🎯 Marketing Workspace</a>
+    <a href="sales-workspace.html">💬 Sales Workspace</a>
+    <a href="lead-magnet-gate.html">📄 PDF · 10 промптов</a>
+  </div>
+
+</div>
+
+<script>
+// ═══ EMAIL TEMPLATES ═══
+const EMAILS = [
+  {
+    id: 1, day: 'День 0',
+    title: '👋 Welcome · сразу после подписки',
+    subject: '{{name}}, держи свои 10 промптов',
+    sub: 'Цель: моментальная доставка обещанного + первый контакт без продажи. Открываемость → доверие.',
+    cta: 'Скачать PDF',
+    html: `<h1>{{name}}, спасибо! 🎉</h1>
+<p>Держи свой PDF с <strong>10 готовыми промптами</strong> для AI-агентов — каждый под конкретную задачу контента, продаж и аналитики.</p>
+
+<a class="cta" href="{{pdf_url}}">📥 Скачать PDF</a>
+
+<p>Что внутри:</p>
+<ul>
+  <li><strong>10 промптов</strong> готовых к копи-паст</li>
+  <li><strong>6 направлений</strong>: контент, Reels, карусели, воронки, аналитика, бренд</li>
+  <li><strong>14 страниц</strong> — без воды, только применимое</li>
+</ul>
+
+<blockquote>💡 Если в течение 10 минут письмо не пришло — проверь спам и добавь нас в адресную книгу. На некоторых клиентах (Mail.ru, Yandex) первое письмо часто туда падает.</blockquote>
+
+<p>Завтра пришлю одну конкретную идею как из 1 промпта получить контент-план на месяц — реальная история одной нашей клиентки.</p>
+
+<p>А пока — попробуй <strong>Промпт #2 (Reels)</strong>. Это самый быстрый результат.</p>
+
+<p>До завтра,<br>Илья · AI Growth Office</p>
+
+<div class="ftr">
+  Это письмо отправлено потому что ты скачал PDF на ai-growth-office.ru. <br>
+  <a href="{{unsubscribe_url}}">Отписаться</a> · <a href="https://t.me/AI_Growth_Office_Bot">Telegram-канал</a> · <a href="https://ai-growth-office.ru/privacy.html">Политика</a>
+</div>`
+  },
+  {
+    id: 2, day: 'День +1',
+    title: '📖 История · как Sofia сделала план на месяц за 20 минут',
+    subject: 'Как один промпт = контент-план на месяц',
+    sub: 'Цель: доказать что промпты реально работают. Конкретная история без продажи продукта.',
+    cta: 'Открыть AI Growth Office',
+    html: `<h1>Привет, {{name}} 👋</h1>
+
+<p>Помнишь обещанную историю? Вот она.</p>
+
+<p>Психолог из Москвы, 36 лет, в декрете. Контент урывками между ребёнком и клиентами. Охваты 800–1500, стагнация уже 4 месяца.</p>
+
+<p>Она открыла наш PDF, взяла <strong>промпт #1 «Контент-стратегия на месяц»</strong>, подставила:</p>
+
+<blockquote>Ниша: онлайн-психолог по тревожности у женщин<br>Продукт: курс 28 000 ₽ + клуб 3 500 ₽/мес<br>ЦА: женщины 30–42, в декрете, тревожные<br>Цель: 500к ₽/мес</blockquote>
+
+<p>За <strong>20 минут</strong> Claude выдал:</p>
+<ul>
+  <li>Контент-матрицу из 4 рубрик</li>
+  <li>12 тем постов на 4 недели</li>
+  <li>3 точки конверсии в месяц</li>
+  <li>Календарь публикаций</li>
+</ul>
+
+<p>Результат через 90 дней: <strong>1500 → 4200 охваты, 180к → 520к ₽/мес</strong>.</p>
+
+<p>Я не рассказываю это чтобы продать. Я рассказываю чтобы ты <strong>сегодня вечером</strong> сел за свой PDF и попробовал минимум 2 промпта.</p>
+
+<a class="cta" href="https://ai-growth-office.ru/">Открыть AI Growth Office</a>
+
+<p>P.S. Если хочешь чтобы это работало автоматически — у нас есть 169 таких агентов в каталоге. Завтра расскажу как они связываются между собой в команду.</p>
+
+<p>Илья</p>
+
+<div class="ftr">
+  <a href="{{unsubscribe_url}}">Отписаться</a> · ai-growth-office.ru
+</div>`
+  },
+  {
+    id: 3, day: 'День +3',
+    title: '🏢 169 агентов · как они работают командой',
+    subject: 'Что если у тебя будет 30 специалистов в браузере',
+    sub: 'Цель: показать масштаб продукта. Открыть глаза на возможности.',
+    cta: 'Посмотреть 169 агентов',
+    html: `<h1>{{name}}, что если…</h1>
+
+<p>Представь: у тебя есть личный <strong>стратег, контент-продюсер, копирайтер, маркетолог, аналитик, психолог продаж, бренд-консультант и трендвотчер</strong> — все одновременно.</p>
+
+<p>Они помнят твой бизнес, контекст, цели, ЦА.</p>
+
+<p>Они умеют работать <strong>в команде</strong> — Sofia отдаёт стратегию Maverick'у, тот пишет сценарии и передаёт Hunter'у на хуки, Hunter отдаёт в Nova на карусели, а Nika считает результат через 48 часов.</p>
+
+<p>И ты платишь не <strong>500 000 ₽/мес</strong> зарплаты, а <strong>1990 ₽/мес подписки</strong>.</p>
+
+<p>Это не идея из будущего — это AI Growth Office. <strong>169 специализированных AI-агентов</strong> в 14 департаментах:</p>
+<ul>
+  <li>🎯 <strong>Marketing</strong> — 30 агентов (Sofia, Maverick, Hunter, Nova, Echo и др.)</li>
+  <li>💻 <strong>Engineering</strong> — 29 агентов (Frontend, Backend, AI Engineer, DevOps)</li>
+  <li>💬 <strong>Sales</strong> — 8 агентов (Direct, прогрев, возражения, дожимы)</li>
+  <li>🎨 <strong>Design</strong> — 8 агентов</li>
+  <li><em>...и ещё 10 департаментов</em></li>
+</ul>
+
+<a class="cta" href="https://ai-growth-office.ru/agents.html">Открыть каталог 169 агентов →</a>
+
+<p>Завтра — кейс. На этот раз про команду из 4 человек, которая сделала запуск на 4.2 млн ₽ за 2.5 недели вместо 6.</p>
+
+<p>Илья</p>
+
+<div class="ftr">
+  <a href="{{unsubscribe_url}}">Отписаться</a> · ai-growth-office.ru/agents.html
+</div>`
+  },
+  {
+    id: 4, day: 'День +5',
+    title: '📊 Кейс · школа английского, запуск 4.2 млн ₽',
+    subject: '4.2 млн ₽ за 2.5 недели вместо 6 (кейс)',
+    sub: 'Цель: социальное доказательство. Конкретный кейс с цифрами под близкий тип бизнеса.',
+    cta: 'Прочитать все 5 кейсов',
+    html: `<h1>{{name}}, обещанный кейс 📊</h1>
+
+<p>Онлайн-школа английского. Команда — 4 человека: продюсер, методист, SMM, ассистент. Делают 3 запуска курса в год.</p>
+
+<p><strong>Боль:</strong> каждый запуск занимает 6 недель команды, контент-фабрика выгорает, SMM не успевает за расписанием продюсера.</p>
+
+<p>Подключили AI Growth Office. AI собрал команду из <strong>10 агентов</strong> под их задачу:</p>
+
+<blockquote>📋 Atlas (CMO) разбил запуск на 14 шагов<br>🔮 Oracle проанализировал ЦА — 3 сегмента, JTBD каждого<br>📐 Sofia собрала контент-матрицу<br>📡 Pulse нашёл 5 актуальных трендов<br>🎬 Maverick + Hunter за 2 дня сделали 30 готовых Reels-сценариев<br>📑 Nova — 10 каруселей, ✉️ Echo — 7 ТГ-постов<br>🔀 Leo построил воронку, 💎 Selene усилила оффер<br>📢 Vector подготовил 6 креатив-гипотез для Meta Ads</blockquote>
+
+<p><strong>Результат через 90 дней:</strong></p>
+<ul>
+  <li>💰 <strong>4.2 млн ₽</strong> выручка запуска (+85% vs прошлый запуск)</li>
+  <li>⏱ Подготовка: <strong>2.5 недели</strong> вместо 6 (−58%)</li>
+  <li>🎯 Конверсия в покупку: <strong>3.8%</strong> (+1.6 п.п.)</li>
+  <li>📊 CAC: <strong>−34%</strong></li>
+</ul>
+
+<p>Команда занимается экспертизой. AI-офис делает рутину.</p>
+
+<a class="cta" href="https://ai-growth-office.ru/cases.html">Прочитать ещё 4 кейса →</a>
+
+<p>Завтра — про тарифы. Без втюхивания, просто что входит в каждый.</p>
+
+<p>Илья</p>
+
+<div class="ftr">
+  Это <strong>модельный сценарий применения</strong>, не реальный клиент.<br>
+  Цифры взвешены на основе типичных метрик в нише языкового образования.<br>
+  <a href="{{unsubscribe_url}}">Отписаться</a> · ai-growth-office.ru
+</div>`
+  },
+  {
+    id: 5, day: 'День +7',
+    title: '💎 Оффер · что входит в тарифы (без давления)',
+    subject: 'Что входит в Pro за 1990 ₽',
+    sub: 'Цель: прямое продающее письмо с детальным разбором тарифов. Без агрессии, как «информирую».',
+    cta: 'Смотреть тарифы',
+    html: `<h1>{{name}}, давай конкретно</h1>
+
+<p>Раньше рассказывал что AI Growth Office делает. Сегодня — что входит в подписку и зачем платить.</p>
+
+<h2>4 тарифа</h2>
+
+<p><strong>Free · 0 ₽</strong></p>
+<ul>
+  <li>3 запуска сценария в месяц</li>
+  <li>1 отдел на выбор</li>
+  <li>20 сообщений в чате / день</li>
+</ul>
+<p><em>Для попробовать. Без карты.</em></p>
+
+<p><strong>Pro · 1990 ₽/мес</strong> ← самый популярный</p>
+<ul>
+  <li>∞ запусков сценариев</li>
+  <li>Все 3 отдела (34 главных агента + каталог 169)</li>
+  <li>Память контекста бизнеса</li>
+  <li>Экспорт в PDF / DOCX / Markdown</li>
+  <li>История диалогов 90 дней</li>
+</ul>
+<p><em>В 30 раз дешевле SMM-щика. Окупается с одной допродажи курса.</em></p>
+
+<p><strong>Team · 4990 ₽/мес</strong></p>
+<ul>
+  <li>Всё из Pro + 5 мест в команде</li>
+  <li>Общий контекст для команды</li>
+  <li>Совместная история диалогов</li>
+</ul>
+
+<p><strong>Enterprise · от 25 000 ₽/мес</strong></p>
+<p>Кастомные агенты под нишу, white-label, API. Для бизнеса 5+ млн в месяц.</p>
+
+<a class="cta" href="https://ai-growth-office.ru/pricing.html">Подробное сравнение →</a>
+
+<p>Возврат полный в течение 14 дней — без вопросов.</p>
+
+<blockquote>P.S. Если у тебя <strong>есть вопрос</strong> — напиши прямо в ответ. Я читаю каждое письмо.</blockquote>
+
+<p>Илья</p>
+
+<div class="ftr">
+  <a href="{{unsubscribe_url}}">Отписаться</a> · ai-growth-office.ru/pricing.html
+</div>`
+  },
+  {
+    id: 6, day: 'День +10',
+    title: '⏰ Последний шанс · честно',
+    subject: '{{name}}, не дожимаю — просто финал',
+    sub: 'Цель: финальное касание. Без агрессии, с честностью. Тех кто не купил — оставить в покое.',
+    cta: 'Зайти и собрать офис',
+    html: `<h1>{{name}}, последнее письмо в этой цепочке</h1>
+
+<p>Я не люблю серии «купи купи купи». Поэтому это финальное письмо.</p>
+
+<p>За 10 дней я рассказал тебе:</p>
+<ul>
+  <li>Что такое AI-офис и как он работает</li>
+  <li>Историю как Sofia собрала контент-план за 20 минут</li>
+  <li>Что у нас 169 агентов в 14 департаментах</li>
+  <li>Кейс школы английского — 4.2 млн за 2.5 недели</li>
+  <li>Что входит в каждый тариф</li>
+</ul>
+
+<p>Сейчас — реальный честный вопрос:</p>
+
+<blockquote><strong>Если бы у тебя был AI-офис из 30 агентов, которые знают твой бизнес и работают параллельно — что бы ты сделал?</strong></blockquote>
+
+<p>Если ответ «ничего не изменится» — спасибо что читал. Я отписываю тебя от продающей цепочки. Иногда буду присылать новые промпты раз в месяц.</p>
+
+<p>Если ответ «я бы запустил Х, сделал Y, попробовал Z» — заходи. <strong>Free тариф навсегда бесплатный</strong>, без карты. Попробуй 3 сценария — и решишь дальше сам.</p>
+
+<a class="cta" href="https://ai-growth-office.ru/onboarding.html">Собрать свой AI-офис →</a>
+
+<p>В любом случае — спасибо за внимание.</p>
+
+<p>Илья<br>AI Growth Office</p>
+
+<div class="ftr">
+  Эта цепочка завершилась. Дальше буду писать только новые промпты раз в месяц (можешь отписаться).<br>
+  <a href="{{unsubscribe_url}}">Полная отписка</a> · ai-growth-office.ru
+</div>`
+  },
+  {
+    id: 7, day: 'После покупки',
+    title: '🎉 Welcome Pro · после оплаты',
+    subject: '🎉 Pro активирован · вот что делать в первые 30 минут',
+    sub: 'Цель: убрать post-purchase regret + onboard. Снижение возвратов = первая ценность за 30 минут.',
+    cta: 'Войти в офис',
+    html: `<h1>🎉 {{name}}, welcome to Pro!</h1>
+
+<p>Оплата прошла, доступ открыт. Чек на электронную почту придёт автоматически в течение 5 минут.</p>
+
+<p><strong>Что сделать прямо сейчас (за 30 минут):</strong></p>
+
+<h2>1. Заполнить бриф</h2>
+<p>5 минут на 10 вопросов про твой бизнес. AI запомнит и будет учитывать во всех запусках.</p>
+<a class="cta" href="https://ai-growth-office.ru/onboarding.html">📋 Заполнить бриф</a>
+
+<h2>2. Дать AI собрать команду</h2>
+<p>На основе брифа AI выберет из 169 агентов 8–15 наиболее релевантных. Можешь оставить или поменять.</p>
+
+<h2>3. Запустить первый сценарий</h2>
+<p>Рекомендую начать с <strong>«Контент-фабрика · анализ страницы»</strong> — за 5 минут получишь полный аудит своего профиля с рекомендациями.</p>
+
+<blockquote>💡 Совет: если у тебя есть Notion / Google Docs — открой страницу AI Growth Office в одном окне и Notion в другом. AI-ответы копируй сразу туда. К концу первого вечера у тебя будет своя база инсайтов.</blockquote>
+
+<h2>Где помощь</h2>
+<ul>
+  <li><strong>FAQ:</strong> <a href="https://ai-growth-office.ru/faq.html">15 ответов</a></li>
+  <li><strong>Telegram:</strong> <a href="https://t.me/AI_Growth_Office_Bot">@AI_Growth_Office_Bot</a> — пишу лично в течение часа</li>
+  <li><strong>Email:</strong> <a href="mailto:ilia.info.paliy@gmail.com">ilia.info.paliy@gmail.com</a></li>
+</ul>
+
+<p>Возврат полный в течение 14 дней — без вопросов. Но я уверен, после первой недели ты не захочешь возвращать.</p>
+
+<a class="cta" href="https://ai-growth-office.ru/dashboard.html">Войти в свой AI-офис →</a>
+
+<p>Илья · AI Growth Office</p>
+
+<div class="ftr">
+  Чек об оплате · <a href="{{receipt_url}}">скачать</a><br>
+  Управление подпиской · <a href="https://ai-growth-office.ru/dashboard.html">личный кабинет</a><br>
+  <a href="{{unsubscribe_url}}">Отписка от писем</a>
+</div>`
+  }
+];
+
+const tabs = document.getElementById('tabs');
+const emailsContainer = document.getElementById('emails');
+
+tabs.innerHTML = EMAILS.map((e, i) => `<button class="tab${i===0?' active':''}" data-id="${e.id}"><span class="num">${String(i+1).padStart(2,'0')}</span>${escapeAttr(e.day)}</button>`).join('');
+
+emailsContainer.innerHTML = EMAILS.map((e, i) => `
+  <div class="email-card${i===0?' show':''}" data-id="${e.id}">
+    <div class="ec-hd">
+      <div class="ec-row">
+        <div class="ec-num">${String(i+1).padStart(2,'0')}</div>
+        <div class="ec-info">
+          <div class="ec-day">${escapeHTML(e.day)} · письмо ${i+1}/7</div>
+          <div class="ec-tit">${escapeHTML(e.title)}</div>
+          <div class="ec-sub">${escapeHTML(e.sub)}</div>
+        </div>
+      </div>
+      <div class="ec-meta">
+        <span><b>📬 Subject:</b>${escapeHTML(e.subject)}</span>
+        <span><b>🎯 CTA:</b>${escapeHTML(e.cta)}</span>
+      </div>
+    </div>
+
+    <div class="ec-body">
+      <div class="ec-preview">
+        <div class="ec-preview-bar">
+          <div><b>От:</b> Илья · AI Growth Office &lt;ilia@ai-growth-office.ru&gt;</div>
+          <div><b>Кому:</b> {{email}} ({{name}})</div>
+          <div><b>Тема:</b> ${escapeHTML(e.subject)}</div>
+        </div>
+        <div class="ec-html">${e.html}</div>
+      </div>
+      <div class="ec-code">
+        <div class="ec-code-label">HTML</div>
+        <pre id="code-${e.id}">${escapeHTML(e.html)}</pre>
+      </div>
+    </div>
+
+    <div class="ec-actions">
+      <button class="ec-btn" onclick="copyEmail(${e.id}, 'html')">📋 Скопировать HTML</button>
+      <button class="ec-btn" onclick="copyEmail(${e.id}, 'subject')">📬 Скопировать Subject</button>
+      <button class="ec-btn" onclick="copyEmail(${e.id}, 'all')">📦 Скопировать всё (subject + HTML)</button>
+    </div>
+  </div>
+`).join('');
+
+tabs.querySelectorAll('.tab').forEach(t => {
+  t.onclick = () => {
+    tabs.querySelectorAll('.tab').forEach(x => x.classList.remove('active'));
+    t.classList.add('active');
+    document.querySelectorAll('.email-card').forEach(c => c.classList.remove('show'));
+    document.querySelector(`.email-card[data-id="${t.dataset.id}"]`).classList.add('show');
+    window.scrollTo({top: tabs.offsetTop - 20, behavior: 'smooth'});
+  };
+});
+
+window.copyEmail = (id, type) => {
+  const e = EMAILS.find(x => x.id === id);
+  if (!e) return;
+  let text = '';
+  if (type === 'html') text = e.html;
+  else if (type === 'subject') text = e.subject;
+  else text = `SUBJECT: ${e.subject}\n\nHTML:\n${e.html}`;
+  navigator.clipboard.writeText(text).then(() => {
+    const btn = event.target;
+    const orig = btn.textContent;
+    btn.textContent = '✓ Скопировано';
+    btn.classList.add('copied');
+    setTimeout(() => { btn.textContent = orig; btn.classList.remove('copied'); }, 1500);
+  }).catch(() => alert('Не удалось скопировать — выдели вручную'));
+};
+
+function escapeHTML(s) { return String(s||'').replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;').replace(/"/g,'&quot;'); }
+function escapeAttr(s) { return escapeHTML(s); }
+</script>
+
+<script>
+if ('serviceWorker' in navigator && location.protocol === 'https:') {
+  window.addEventListener('load', () => navigator.serviceWorker.register('/sw.js').catch(() => {}));
+}
+</script>
+
+<script src="api-fallback.js" defer></script>
+<script src="state.js"></script>
+<script src="mock-backend.js"></script>
+<script src="config.js"></script>
+<script src="analytics.js" defer></script>
+<script src="sidebar.js" defer></script>
+<script src="cookies.js" defer></script>
+</body>
+</html>

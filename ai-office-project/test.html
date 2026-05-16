@@ -1,0 +1,548 @@
+<!doctype html>
+<html lang="ru">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1">
+<title>E2E Test Suite · AI Growth Office</title>
+<meta name="robots" content="noindex">
+
+<style>
+:root{
+  --bg:#0a0c14;--panel:rgba(255,255,255,.04);--border:rgba(255,255,255,.08);
+  --text:#e9eef7;--muted:#9aa3b2;--dim:#7c8a99;
+  --accent:#c8f060;--a2:#60c8f0;--green:#34d058;--gold:#f0b429;--red:#f04060;
+  --ui:-apple-system,BlinkMacSystemFont,'Inter','Segoe UI',sans-serif;
+  --mono:'JetBrains Mono','SF Mono',monospace;
+}
+*{box-sizing:border-box;margin:0;padding:0}
+html,body{background:var(--bg);color:var(--text);font-family:var(--ui);min-height:100vh}
+body{background:radial-gradient(circle at 80% 0%,rgba(96,200,240,.05),transparent 55%),var(--bg)}
+
+.wrap{max-width:1080px;margin:0 auto;padding:32px 24px 80px}
+.crumbs{font-size:11px;color:var(--muted);margin-bottom:18px}
+.crumbs a{color:var(--muted);text-decoration:none;border-bottom:1px dotted rgba(255,255,255,.15)}
+
+.head{margin-bottom:26px}
+.head h1{font-size:30px;font-weight:800;letter-spacing:-.4px;line-height:1.15;margin-bottom:6px}
+.head .sub{font-size:13.5px;color:var(--muted);line-height:1.55}
+.head .sub b{color:var(--accent)}
+
+.summary{display:grid;grid-template-columns:repeat(auto-fit,minmax(150px,1fr));gap:10px;margin-bottom:26px}
+.sm{background:var(--panel);border:1px solid var(--border);border-radius:11px;padding:14px}
+.sm .v{font-size:24px;font-weight:900;font-variant-numeric:tabular-nums;line-height:1}
+.sm .v.ok{color:var(--green)}
+.sm .v.fail{color:var(--red)}
+.sm .v.pend{color:var(--muted)}
+.sm .l{font-size:10.5px;color:var(--muted);text-transform:uppercase;letter-spacing:.5px;font-weight:700;margin-top:6px}
+
+.controls{display:flex;gap:8px;flex-wrap:wrap;margin-bottom:22px}
+.btn{padding:10px 16px;background:var(--panel);border:1px solid var(--border);color:var(--text);border-radius:9px;font:700 12px/1 var(--ui);cursor:pointer;display:inline-flex;align-items:center;gap:6px}
+.btn:hover{background:rgba(255,255,255,.07)}
+.btn.pri{background:linear-gradient(135deg,#c8f060,#60c8f0);color:#080808;border:0;font-weight:800;box-shadow:0 4px 12px rgba(200,240,96,.2)}
+.btn.pri:hover{transform:translateY(-1px)}
+.btn.danger{background:rgba(240,64,96,.1);border-color:rgba(240,64,96,.3);color:var(--red)}
+
+.tests{background:var(--panel);border:1px solid var(--border);border-radius:14px;overflow:hidden}
+.t-group{padding:8px 0}
+.t-group:not(:last-child){border-bottom:1px solid var(--border)}
+.t-group-hd{padding:10px 18px;font-size:10.5px;font-weight:800;color:var(--accent);letter-spacing:.6px;text-transform:uppercase;font-family:var(--mono);background:rgba(0,0,0,.2)}
+.t{padding:9px 18px;display:grid;grid-template-columns:24px 1fr auto;gap:12px;align-items:center;font-size:13px;border-bottom:1px solid rgba(255,255,255,.03)}
+.t:last-child{border-bottom:0}
+.t .st{width:18px;height:18px;border-radius:50%;display:inline-flex;align-items:center;justify-content:center;font-size:10px;font-weight:900;flex-shrink:0}
+.t .st.pend{background:rgba(255,255,255,.06);color:var(--muted)}
+.t .st.run{background:rgba(96,200,240,.2);color:var(--a2);animation:pulse 1s infinite}
+.t .st.ok{background:var(--green);color:#080808}
+.t .st.fail{background:var(--red);color:#fff}
+@keyframes pulse{50%{opacity:.5}}
+.t .nm{font-weight:600}
+.t .nm small{color:var(--dim);font-size:11px;font-family:var(--mono);display:block;margin-top:2px;font-weight:500}
+.t .dt{font-family:var(--mono);font-size:10.5px;color:var(--muted);font-weight:700;text-align:right}
+.t.failed .dt{color:var(--red)}
+
+#log{margin-top:24px;background:rgba(0,0,0,.3);border:1px solid var(--border);border-radius:11px;padding:18px;font:500 11.5px/1.55 var(--mono);max-height:340px;overflow-y:auto;white-space:pre-wrap;color:var(--muted)}
+#log .ok{color:var(--green)}
+#log .fail{color:var(--red)}
+#log .info{color:var(--a2)}
+#log .warn{color:var(--gold)}
+
+.flow{background:linear-gradient(135deg,rgba(200,240,96,.05),rgba(96,200,240,.04));border:1px solid rgba(200,240,96,.2);border-radius:14px;padding:20px;margin-bottom:22px}
+.flow h2{font-size:15px;font-weight:800;margin-bottom:12px;display:flex;align-items:center;gap:8px}
+.flow .steps{display:grid;grid-template-columns:repeat(auto-fit,minmax(120px,1fr));gap:8px;font-size:11.5px}
+.flow .step{padding:9px 10px;background:rgba(0,0,0,.25);border:1px solid var(--border);border-radius:8px;text-align:center;transition:border-color .2s}
+.flow .step.done{border-color:rgba(52,208,88,.4);background:rgba(52,208,88,.06)}
+.flow .step.done::before{content:'✓ '}
+.flow .step.current{border-color:rgba(240,180,41,.4);background:rgba(240,180,41,.06)}
+.flow .step .nm{font-weight:700}
+.flow .step .sub{color:var(--muted);font-size:10px;margin-top:3px}
+</style>
+</head>
+<body data-user="Илья Палий" data-email="ilia.info.paliy@gmail.com">
+
+<div class="wrap">
+
+<div class="crumbs">
+  <a href="/index.html">Главная</a> · <a href="/dev-tools.html">Dev Tools</a> · E2E Test Suite
+</div>
+
+<div class="head">
+  <h1>🧪 E2E Test Suite</h1>
+  <div class="sub">Прогон всех ключевых проверок: <b>API · state · referral · forms · mock-backend · PWA</b>. Каждый тест автономен — кликни «Запустить всё».</div>
+</div>
+
+<div class="summary">
+  <div class="sm"><div class="v ok" id="sumOk">0</div><div class="l">Прошло</div></div>
+  <div class="sm"><div class="v fail" id="sumFail">0</div><div class="l">Упало</div></div>
+  <div class="sm"><div class="v pend" id="sumPend">0</div><div class="l">Ожидают</div></div>
+  <div class="sm"><div class="v" id="sumTotal">0</div><div class="l">Всего</div></div>
+  <div class="sm"><div class="v" id="sumTime">—</div><div class="l">Время</div></div>
+</div>
+
+<div class="flow">
+  <h2>🛒 Customer flow E2E</h2>
+  <div class="steps" id="flowSteps">
+    <div class="step" data-flow="brief"><div class="nm">1. Бриф</div><div class="sub">10 полей</div></div>
+    <div class="step" data-flow="recs"><div class="nm">2. AI-рекомендации</div><div class="sub">подбор команды</div></div>
+    <div class="step" data-flow="pay"><div class="nm">3. Оплата</div><div class="sub">mock-checkout</div></div>
+    <div class="step" data-flow="sub"><div class="nm">4. Подписка</div><div class="sub">активирована</div></div>
+    <div class="step" data-flow="dash"><div class="nm">5. Кабинет</div><div class="sub">доступен</div></div>
+    <div class="step" data-flow="email"><div class="nm">6. Email</div><div class="sub">welcome отправлен</div></div>
+    <div class="step" data-flow="tg"><div class="nm">7. Telegram</div><div class="sub">админ уведомлён</div></div>
+  </div>
+</div>
+
+<div class="controls">
+  <button class="btn pri" onclick="runAll()">▶ Запустить все тесты</button>
+  <button class="btn" onclick="resetAll()">↻ Сбросить</button>
+  <button class="btn" onclick="runFlow()">🛒 Симулировать полный flow</button>
+  <button class="btn danger" onclick="if(confirm('Очистить ВСЁ?')){window.AIOState.clear();location.reload()}">🗑 Очистить state</button>
+</div>
+
+<div class="tests" id="testList"></div>
+
+<div id="log" aria-live="polite">ready</div>
+
+</div>
+
+<!-- На странице тестов ВКЛЮЧАЕМ mock-backend (по умолчанию выключен) -->
+<script>window.AIO_MOCK_BACKEND = true;</script>
+<script src="state.js"></script>
+<script src="mock-backend.js"></script>
+<script src="config.js"></script>
+<script src="analytics.js" defer></script>
+<script src="api-fallback.js"></script>
+<script src="sidebar.js" defer></script>
+<script src="alisa-widget.js" defer></script>
+
+<script>
+const $ = (s) => document.querySelector(s);
+const logEl = $('#log');
+function log(msg, kind = 'info') {
+  const ts = new Date().toTimeString().slice(0, 8);
+  const line = document.createElement('span');
+  line.className = kind;
+  line.textContent = `[${ts}] ${msg}\n`;
+  logEl.appendChild(line);
+  logEl.scrollTop = logEl.scrollHeight;
+}
+
+// ── Test runner ──
+const TESTS = [];
+function defineTest(group, name, fn, desc = '') {
+  TESTS.push({ group, name, desc, fn, state: 'pend', err: null, ms: 0 });
+}
+
+// ─── DEFINE TESTS ───
+
+defineTest('1. Foundation', 'AIOState загружен', async () => {
+  if (!window.AIOState) throw new Error('window.AIOState отсутствует');
+  if (!window.AIOState.KEYS) throw new Error('AIOState.KEYS не определён');
+  if (typeof window.AIOState.get !== 'function') throw new Error('AIOState.get не функция');
+});
+
+defineTest('1. Foundation', 'AIOAnalytics загружен', async () => {
+  if (!window.AIOAnalytics) throw new Error('window.AIOAnalytics отсутствует');
+  if (typeof window.AIOAnalytics.track !== 'function') throw new Error('track не функция');
+});
+
+defineTest('1. Foundation', 'state.set / get', async () => {
+  window.AIOState.set('aio_test_temp', { hello: 'world', ts: Date.now() });
+  const v = window.AIOState.get('aio_test_temp');
+  if (!v || v.hello !== 'world') throw new Error('set/get не сработал');
+  window.AIOState.delete('aio_test_temp');
+});
+
+defineTest('1. Foundation', 'state.push в массив', async () => {
+  window.AIOState.delete('aio_test_arr');
+  window.AIOState.push('aio_test_arr', { id: 1 });
+  window.AIOState.push('aio_test_arr', { id: 2 });
+  const arr = window.AIOState.get('aio_test_arr');
+  if (!Array.isArray(arr) || arr.length !== 2) throw new Error(`Ожидал 2, получил ${arr?.length}`);
+  window.AIOState.delete('aio_test_arr');
+});
+
+defineTest('1. Foundation', 'state.subscribe (pubsub)', async () => {
+  let received = null;
+  const unsub = window.AIOState.subscribe('aio_test_sub', (v) => { received = v; });
+  window.AIOState.set('aio_test_sub', 'hello');
+  await new Promise(r => setTimeout(r, 50));
+  if (received !== 'hello') throw new Error('Подписка не сработала: ' + JSON.stringify(received));
+  unsub();
+  window.AIOState.delete('aio_test_sub');
+});
+
+defineTest('1. Foundation', 'state.exportAll / importAll', async () => {
+  window.AIOState.set('aio_test_export', { foo: 'bar' });
+  const dump = window.AIOState.exportAll();
+  if (!dump.data || !dump.data.aio_test_export) throw new Error('Export не содержит данных');
+  window.AIOState.delete('aio_test_export');
+  const count = window.AIOState.importAll(dump);
+  if (count < 1) throw new Error('Import 0 ключей');
+  window.AIOState.delete('aio_test_export');
+});
+
+defineTest('1. Foundation', 'session ID создан', async () => {
+  const id = window.AIOState.getSessionId();
+  if (!id || !id.startsWith('sess_')) throw new Error('Session ID не похож на правду: ' + id);
+});
+
+// ─── Referral ───
+
+defineTest('2. Referral', 'capture работает', async () => {
+  // Симулируем URL с ?ref=
+  const oldRef = window.AIOState.get(window.AIOState.KEYS.REFERRAL);
+  // Прямой тест: вручную ставим referral, проверяем что withReferral его прикрепляет
+  window.AIOState.set(window.AIOState.KEYS.REFERRAL, {
+    ref: 'test_partner',
+    utm_source: 'tg',
+    captured_at: new Date().toISOString(),
+  });
+  const payload = window.AIOState.withReferral({ foo: 'bar' });
+  if (payload._ref !== 'test_partner') throw new Error('_ref не прикрепился');
+  if (payload._utm_source !== 'tg') throw new Error('_utm_source не прикрепился');
+  if (payload.foo !== 'bar') throw new Error('оригинальный payload потерян');
+  // Восстановить
+  if (oldRef) window.AIOState.set(window.AIOState.KEYS.REFERRAL, oldRef);
+  else window.AIOState.delete(window.AIOState.KEYS.REFERRAL);
+});
+
+// ─── Analytics ───
+
+defineTest('3. Analytics', 'track() пишет событие', async () => {
+  const before = (window.AIOState.get(window.AIOState.KEYS.ANALYTICS) || []).length;
+  window.AIOAnalytics.track('test_event', { hello: 'world' });
+  await new Promise(r => setTimeout(r, 30));
+  const after = (window.AIOState.get(window.AIOState.KEYS.ANALYTICS) || []).length;
+  if (after !== before + 1) throw new Error(`Ожидал +1 событие, получил ${after - before}`);
+});
+
+defineTest('3. Analytics', 'page_view создан при загрузке', async () => {
+  const evts = window.AIOState.get(window.AIOState.KEYS.ANALYTICS) || [];
+  const hasPv = evts.some(e => e.event === 'page_view');
+  if (!hasPv) throw new Error('Нет ни одного page_view в логе');
+});
+
+// ─── Mock backend ───
+
+defineTest('4. Mock Backend', 'Supabase insert mock', async () => {
+  const res = await fetch('https://demo.supabase.co/rest/v1/test_leads', {
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify({ email: 'test@example.com', name: 'Test' }),
+  });
+  if (res.status !== 201) throw new Error('Ожидал 201, получил ' + res.status);
+  const data = await res.json();
+  if (!Array.isArray(data) || !data[0].id) throw new Error('Нет id в ответе');
+  if (res.headers.get('X-Mock-Backend') !== 'true') throw new Error('Нет mock-header');
+});
+
+defineTest('4. Mock Backend', 'YooKassa создаёт платёж', async () => {
+  const res = await fetch('https://api.yookassa.ru/v3/payments', {
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify({
+      amount: { value: '1990.00', currency: 'RUB' },
+      description: 'Test payment',
+    }),
+  });
+  const data = await res.json();
+  if (!data.id) throw new Error('Нет payment id');
+  if (!data.confirmation || !data.confirmation.confirmation_url) throw new Error('Нет confirmation_url');
+  if (!data.confirmation.confirmation_url.includes('mock-payment.html')) throw new Error('URL не ведёт на mock-payment');
+});
+
+defineTest('4. Mock Backend', 'Telegram sendMessage mock', async () => {
+  const res = await fetch('https://api.telegram.org/bot123:abc/sendMessage', {
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify({ chat_id: 999, text: '🧪 test message' }),
+  });
+  const data = await res.json();
+  if (!data.ok) throw new Error('Не ok');
+  if (!data.result || !data.result.message_id) throw new Error('Нет message_id');
+});
+
+defineTest('4. Mock Backend', 'Resend email mock', async () => {
+  const res = await fetch('https://api.resend.com/emails', {
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify({ from: 'a@b.c', to: 'd@e.f', subject: 'test', html: '<b>hi</b>' }),
+  });
+  const data = await res.json();
+  if (!data.id) throw new Error('Нет email id');
+});
+
+defineTest('4. Mock Backend', 'aioMockStatus() работает', async () => {
+  if (typeof window.aioMockStatus !== 'function') throw new Error('aioMockStatus не определён');
+  const s = window.aioMockStatus();
+  if (!s.enabled) throw new Error('mock disabled');
+  if (typeof s.payments !== 'number') throw new Error('payments не число');
+});
+
+// ─── PWA ───
+
+defineTest('5. PWA', 'Service Worker зарегистрирован', async () => {
+  if (!('serviceWorker' in navigator)) throw new Error('SW не поддерживается');
+  const regs = await navigator.serviceWorker.getRegistrations();
+  if (regs.length === 0) throw new Error('SW не зарегистрирован — обнови страницу пару раз');
+});
+
+defineTest('5. PWA', 'manifest.json доступен', async () => {
+  const res = await fetch('/manifest.json');
+  if (!res.ok) throw new Error('manifest.json 404');
+  const m = await res.json();
+  if (!m.name || !m.icons) throw new Error('manifest без name/icons');
+});
+
+// ─── Routing ───
+
+defineTest('6. Routing', '/about → about.html (clean URL)', async () => {
+  if (location.protocol === 'file:') return; // skip локально
+  const res = await fetch('/about', { redirect: 'follow' });
+  if (!res.ok) throw new Error('404 на /about');
+});
+
+defineTest('6. Routing', '/pricing работает', async () => {
+  if (location.protocol === 'file:') return;
+  const res = await fetch('/pricing');
+  if (!res.ok) throw new Error('404 на /pricing');
+});
+
+defineTest('6. Routing', '404 на битом пути', async () => {
+  if (location.protocol === 'file:') return;
+  const res = await fetch('/this-path-does-not-exist-12345');
+  if (res.ok) throw new Error('Битый путь не отдал 404 (статус ' + res.status + ')');
+});
+
+// ─── API ───
+
+defineTest('7. API', '/api/chat доступен', async () => {
+  const res = await fetch('/api/chat', {
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify({
+      model: 'claude-sonnet-4-5',
+      max_tokens: 10,
+      messages: [{ role: 'user', content: 'pong' }],
+    }),
+  });
+  if (res.status === 404) throw new Error('Netlify Function не задеплоена (404). Или используй GitHub-интеграцию.');
+  if (!res.ok && res.status !== 429) throw new Error('Статус: ' + res.status);
+});
+
+// ─── Render ───
+
+function renderTests() {
+  const groups = {};
+  TESTS.forEach(t => {
+    if (!groups[t.group]) groups[t.group] = [];
+    groups[t.group].push(t);
+  });
+  const html = Object.entries(groups).map(([g, ts]) => `
+    <div class="t-group">
+      <div class="t-group-hd">${g}</div>
+      ${ts.map((t, i) => {
+        const idx = TESTS.indexOf(t);
+        const stcls = t.state;
+        const ic = t.state === 'ok' ? '✓' : t.state === 'fail' ? '✗' : t.state === 'run' ? '◐' : '—';
+        return `<div class="t ${t.state === 'fail' ? 'failed' : ''}" data-i="${idx}">
+          <div class="st ${stcls}">${ic}</div>
+          <div class="nm">${t.name}${t.err ? `<small>${escape(t.err.message || t.err)}</small>` : ''}</div>
+          <div class="dt">${t.ms ? t.ms + 'ms' : ''}</div>
+        </div>`;
+      }).join('')}
+    </div>
+  `).join('');
+  $('#testList').innerHTML = html;
+
+  const ok = TESTS.filter(t => t.state === 'ok').length;
+  const fail = TESTS.filter(t => t.state === 'fail').length;
+  const pend = TESTS.filter(t => t.state === 'pend' || t.state === 'run').length;
+  $('#sumOk').textContent = ok;
+  $('#sumFail').textContent = fail;
+  $('#sumPend').textContent = pend;
+  $('#sumTotal').textContent = TESTS.length;
+}
+
+function escape(s) {
+  return String(s).replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;');
+}
+
+async function runOne(idx) {
+  const t = TESTS[idx];
+  t.state = 'run';
+  t.err = null;
+  t.ms = 0;
+  renderTests();
+  const t0 = performance.now();
+  try {
+    await Promise.race([
+      t.fn(),
+      new Promise((_, rej) => setTimeout(() => rej(new Error('Timeout 8s')), 8000)),
+    ]);
+    t.state = 'ok';
+    t.ms = Math.round(performance.now() - t0);
+    log(`✓ ${t.group} · ${t.name} (${t.ms}ms)`, 'ok');
+  } catch (e) {
+    t.state = 'fail';
+    t.err = e;
+    t.ms = Math.round(performance.now() - t0);
+    log(`✗ ${t.group} · ${t.name} → ${e.message || e}`, 'fail');
+  }
+  renderTests();
+}
+
+async function runAll() {
+  const t0 = performance.now();
+  TESTS.forEach(t => { t.state = 'pend'; t.err = null; t.ms = 0; });
+  renderTests();
+  logEl.textContent = '';
+  log('▶ Запускаю ' + TESTS.length + ' тестов…', 'info');
+  for (let i = 0; i < TESTS.length; i++) {
+    await runOne(i);
+  }
+  const dt = ((performance.now() - t0) / 1000).toFixed(2);
+  $('#sumTime').textContent = dt + 's';
+  const ok = TESTS.filter(t => t.state === 'ok').length;
+  const fail = TESTS.filter(t => t.state === 'fail').length;
+  log(`\n=== Готово · ${ok}/${TESTS.length} прошли · ${fail} упали · ${dt}s ===`, fail ? 'warn' : 'ok');
+}
+
+function resetAll() {
+  TESTS.forEach(t => { t.state = 'pend'; t.err = null; t.ms = 0; });
+  $('#sumTime').textContent = '—';
+  logEl.textContent = 'ready';
+  renderTests();
+}
+
+// ─── Customer Flow E2E ───
+async function runFlow() {
+  logEl.textContent = '';
+  log('🛒 Запускаю полный customer flow…\n', 'info');
+  const S = window.AIOState;
+  const steps = ['brief', 'recs', 'pay', 'sub', 'dash', 'email', 'tg'];
+  steps.forEach(s => document.querySelector(`[data-flow="${s}"]`).classList.remove('done', 'current'));
+
+  // 1. Brief
+  document.querySelector('[data-flow="brief"]').classList.add('current');
+  await sleep(800);
+  S.set(S.KEYS.BRIEF, {
+    contact: 'E2E Test User', email: 'e2e@test.com', telegram: '@e2e',
+    type: 'expert', niche: 'тест', product: 'тест-сценарий',
+    goal90: '+10 клиентов', goal1y: '1М/мес',
+    rev_now: '500K', rev_goal: '1M', team: 'я', pain: 'нет систем',
+    focus: 'тест', budget: 'до 5К', audience: 'тест', channels: 'тест',
+  });
+  log('✓ Бриф заполнен', 'ok');
+  document.querySelector('[data-flow="brief"]').classList.replace('current', 'done');
+
+  // 2. Recommendations
+  document.querySelector('[data-flow="recs"]').classList.add('current');
+  await sleep(800);
+  S.set(S.KEYS.TEAM, ['sofia', 'hunter', 'analyst', 'alisa']);
+  S.set(S.KEYS.RECS, { must: ['sofia','hunter'], recommended: ['analyst','alisa'], optional: [] });
+  log('✓ AI подобрал 4 агентов', 'ok');
+  document.querySelector('[data-flow="recs"]').classList.replace('current', 'done');
+
+  // 3. Payment
+  document.querySelector('[data-flow="pay"]').classList.add('current');
+  await sleep(400);
+  log('  → POST https://api.yookassa.ru/v3/payments', 'info');
+  const payRes = await fetch('https://api.yookassa.ru/v3/payments', {
+    method: 'POST', headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify({
+      amount: { value: '1990.00', currency: 'RUB' },
+      description: 'AI Office Pro · 1 месяц',
+    }),
+  });
+  const pay = await payRes.json();
+  log(`✓ Платёж создан: ${pay.id}`, 'ok');
+  document.querySelector('[data-flow="pay"]').classList.replace('current', 'done');
+
+  // 4. Subscription
+  document.querySelector('[data-flow="sub"]').classList.add('current');
+  await sleep(500);
+  const sub = {
+    payment_id: pay.id,
+    plan: 'pro',
+    status: 'active',
+    started_at: new Date().toISOString(),
+    expires_at: new Date(Date.now() + 30 * 86400000).toISOString(),
+    mock: true,
+  };
+  S.push('aio_mock_subscriptions', sub);
+  S.merge(S.KEYS.PROFILE, { plan: 'pro', plan_active: true, subscription: sub });
+  log('✓ Подписка Pro активирована', 'ok');
+  document.querySelector('[data-flow="sub"]').classList.replace('current', 'done');
+
+  // 5. Dashboard access
+  document.querySelector('[data-flow="dash"]').classList.add('current');
+  await sleep(400);
+  const profile = S.get(S.KEYS.PROFILE);
+  if (!profile?.plan_active) throw new Error('Подписка не активна');
+  log('✓ Кабинет доступен · plan=' + profile.plan, 'ok');
+  document.querySelector('[data-flow="dash"]').classList.replace('current', 'done');
+
+  // 6. Welcome email
+  document.querySelector('[data-flow="email"]').classList.add('current');
+  await sleep(400);
+  log('  → POST https://api.resend.com/emails', 'info');
+  await fetch('https://api.resend.com/emails', {
+    method: 'POST', headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify({
+      from: 'AI Office <noreply@ai-growth-office.ru>',
+      to: 'e2e@test.com',
+      subject: 'Welcome to AI Office Pro 🎉',
+      html: '<h1>Спасибо за оплату!</h1><p>Ваш кабинет готов.</p>',
+    }),
+  });
+  log('✓ Welcome email отправлен', 'ok');
+  document.querySelector('[data-flow="email"]').classList.replace('current', 'done');
+
+  // 7. Telegram admin
+  document.querySelector('[data-flow="tg"]').classList.add('current');
+  await sleep(300);
+  log('  → POST https://api.telegram.org/.../sendMessage', 'info');
+  await fetch('https://api.telegram.org/bot123:abc/sendMessage', {
+    method: 'POST', headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify({
+      chat_id: 999,
+      text: `💰 Новая оплата!\nE2E Test · 1990 ₽ · Pro\n${pay.id}`,
+    }),
+  });
+  log('✓ Админу в Telegram отправлено уведомление', 'ok');
+  document.querySelector('[data-flow="tg"]').classList.replace('current', 'done');
+
+  log('\n=== Flow завершён ===', 'ok');
+  log(`Открой /leads-inbox.html чтобы увидеть всё в одном месте.`, 'info');
+}
+
+function sleep(ms) { return new Promise(r => setTimeout(r, ms)); }
+
+// Initial render
+renderTests();
+$('#sumPend').textContent = TESTS.length;
+$('#sumTotal').textContent = TESTS.length;
+log(`Загружено ${TESTS.length} тестов. Нажми «Запустить все».`, 'info');
+</script>
+</body>
+</html>

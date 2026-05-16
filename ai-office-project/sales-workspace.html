@@ -1,0 +1,483 @@
+<!DOCTYPE html>
+<html lang="ru">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width,initial-scale=1">
+<title>Sales Workspace · 4 задачи продаж · AI Growth Office</title>
+<meta name="description" content="4 sales-задачи: скрипты Direct, прогрев аудитории, разбор возражений, дожимы. AI-команда из агентов продаж выдаёт готовые тексты для копирования.">
+
+<link rel="canonical" href="https://ai-growth-office.ru/sales-workspace.html">
+<meta name="keywords" content="скрипты продаж AI, прогрев аудитории, разбор возражений, дожимы, AI для продаж">
+<meta name="author" content="Нейрозапуск · AI Growth Office">
+
+<meta property="og:type" content="website">
+<meta property="og:url" content="https://ai-growth-office.ru/sales-workspace.html">
+<meta property="og:title" content="Sales Workspace · 4 задачи продаж · AI Growth Office">
+<meta property="og:description" content="Скрипты Direct · Прогрев · Возражения · Дожимы — готовые тексты от AI-команды.">
+<meta property="og:image" content="https://ai-growth-office.ru/og-image.jpg">
+<meta property="og:image:width" content="1200">
+<meta property="og:image:height" content="630">
+<meta property="og:locale" content="ru_RU">
+<meta property="og:site_name" content="AI Growth Office">
+
+<meta name="twitter:card" content="summary_large_image">
+<meta name="twitter:title" content="Sales Workspace · 4 задачи продаж">
+<meta name="twitter:description" content="Скрипты Direct · Прогрев · Возражения · Дожимы.">
+<meta name="twitter:image" content="https://ai-growth-office.ru/og-image.jpg">
+<meta name="robots" content="index, follow">
+
+<link rel="icon" type="image/svg+xml" href="data:image/svg+xml,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 32 32'><rect width='32' height='32' rx='6' fill='%23080808'/><text y='24' x='5' font-size='20'>💬</text></svg>">
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<style>
+@import url('https://fonts.googleapis.com/css2?family=JetBrains+Mono:wght@400;700&family=Inter:wght@400;500;600;700;800&display=swap');
+*{box-sizing:border-box;margin:0;padding:0}
+:root{
+  --bg:#0a0c14;--card:#13162a;--card2:#181b30;--border:rgba(255,255,255,.08);
+  --text:#e8e4f0;--muted:#7a82a0;--dim:rgba(255,255,255,.4);
+  --accent:#34d058;--a2:#c8f060;--a3:#f06090;--orange:#f0640a;
+  --font:'JetBrains Mono',monospace;--ui:'Inter',sans-serif;
+}
+html,body{background:var(--bg);color:var(--text);font-family:var(--ui);min-height:100vh;line-height:1.55}
+body{padding:32px 24px 80px;background:radial-gradient(ellipse at top,#1a3a2a 0%,#0a0c14 60%)}
+
+.wrap{max-width:1280px;margin:0 auto}
+
+.hero{text-align:center;margin-bottom:36px}
+.tag{display:inline-block;font-family:var(--font);font-size:9px;text-transform:uppercase;letter-spacing:2px;color:var(--accent);padding:5px 11px;border-radius:6px;background:rgba(52,208,88,.08);border:1px solid rgba(52,208,88,.25);margin-bottom:14px;font-weight:700}
+.hero h1{font-size:38px;font-weight:800;letter-spacing:-.5px;line-height:1.1;margin-bottom:10px}
+.hero h1 .grad{background:linear-gradient(90deg,#34d058,#c8f060);-webkit-background-clip:text;-webkit-text-fill-color:transparent}
+.hero p{color:var(--muted);font-size:14px;max-width:660px;margin:0 auto;line-height:1.65}
+
+.ctx-bar{display:flex;justify-content:center;margin:18px 0 30px}
+.ctx-input{background:var(--card);border:1.5px solid var(--border);border-radius:12px;padding:10px 16px;display:inline-flex;align-items:center;gap:10px;min-width:340px;max-width:90vw}
+.ctx-input label{font-family:var(--font);font-size:9px;color:var(--muted);text-transform:uppercase;letter-spacing:.8px;font-weight:700;flex-shrink:0}
+.ctx-input input{background:transparent;border:none;color:var(--text);font:500 12.5px/1.4 var(--ui);outline:none;flex:1;min-width:0}
+.ctx-input input::placeholder{color:var(--dim)}
+
+.grid{display:grid;grid-template-columns:1fr;gap:22px}
+@media(min-width:900px){.grid{grid-template-columns:1fr 1fr}}
+
+.tc{background:var(--card);border:1.5px solid var(--border);border-radius:16px;overflow:hidden;display:flex;flex-direction:column;transition:all .2s}
+.tc:hover{border-color:rgba(52,208,88,.3);transform:translateY(-2px);box-shadow:0 12px 32px rgba(0,0,0,.4)}
+.tc.t1{border-color:rgba(96,200,240,.2)}
+.tc.t2{border-color:rgba(255,176,32,.2)}
+.tc.t3{border-color:rgba(240,96,144,.2)}
+.tc.t4{border-color:rgba(52,208,88,.25)}
+
+.tc-hd{padding:18px 22px 14px;border-bottom:1px solid var(--border)}
+.tc-num{display:inline-block;font-family:var(--font);font-size:9.5px;font-weight:800;color:#0a0c14;padding:4px 10px;border-radius:5px;letter-spacing:1.2px;margin-bottom:10px}
+.tc.t1 .tc-num{background:linear-gradient(90deg,#60c8f0,#80d8ff)}
+.tc.t2 .tc-num{background:linear-gradient(90deg,#ffb020,#ffd060)}
+.tc.t3 .tc-num{background:linear-gradient(90deg,#f06090,#ff80a8)}
+.tc.t4 .tc-num{background:linear-gradient(90deg,#34d058,#80f098)}
+
+.tc-tit{font-size:18px;font-weight:800;letter-spacing:-.2px;line-height:1.25;margin-bottom:5px;color:var(--text)}
+.tc-sub{font-size:12px;color:var(--muted);line-height:1.55;margin-bottom:10px}
+.tc-agents{display:flex;gap:6px;flex-wrap:wrap}
+.tc-ag{display:inline-flex;align-items:center;gap:5px;font-size:10.5px;padding:4px 9px;border-radius:7px;background:var(--card2);color:var(--text);font-weight:700;border:1px solid var(--border)}
+.tc-ag .em{font-size:13px}
+
+.tc-body{padding:14px 22px;display:flex;flex-direction:column;gap:6px}
+.tc-bullet{display:flex;gap:8px;font-size:12px;color:rgba(232,228,240,.78);line-height:1.55}
+.tc-bullet::before{content:'▸';color:var(--accent);font-weight:700;flex-shrink:0}
+
+.tc-form{padding:14px 22px;background:var(--card2);border-top:1px solid var(--border);display:flex;flex-direction:column;gap:8px}
+.tc-form label{font-size:9.5px;font-weight:700;text-transform:uppercase;letter-spacing:1px;color:var(--accent);font-family:var(--font)}
+.tc-form input,.tc-form textarea,.tc-form select{width:100%;background:var(--card);border:1.5px solid var(--border);border-radius:10px;padding:10px 13px;color:var(--text);font:500 12.5px/1.45 var(--ui);outline:none;resize:vertical}
+.tc-form input:focus,.tc-form textarea:focus,.tc-form select:focus{border-color:rgba(52,208,88,.4)}
+.tc-form textarea{min-height:80px;font-family:var(--ui)}
+.tc-form .form-row{display:grid;grid-template-columns:1fr 1fr;gap:8px}
+
+.tc-actions{padding:14px 22px;display:flex;gap:10px;align-items:center;border-top:1px solid var(--border);background:var(--card)}
+.tc-run{flex:1;background:linear-gradient(90deg,#34d058,#c8f060);color:#0a0c14;border:none;padding:12px 16px;border-radius:11px;font:800 11.5px/1 var(--ui);cursor:pointer;letter-spacing:.4px;transition:all .15s;box-shadow:0 4px 14px rgba(52,208,88,.25)}
+.tc-run:hover{transform:translateY(-1px);box-shadow:0 6px 20px rgba(52,208,88,.4)}
+.tc-run:disabled{opacity:.5;cursor:not-allowed;transform:none}
+.tc-clear{background:transparent;color:var(--muted);border:1.5px solid var(--border);padding:12px 14px;border-radius:11px;font:700 10px/1 var(--ui);cursor:pointer}
+.tc-clear:hover{color:var(--a3);border-color:rgba(240,96,144,.4)}
+
+.tc-out{padding:0 22px 22px;display:none}
+.tc-out.show{display:block}
+.tc-out-hd{display:flex;align-items:center;gap:8px;margin-bottom:10px;padding-top:14px;border-top:1px solid var(--border)}
+.tc-out-pulse{width:8px;height:8px;border-radius:50%;background:var(--accent);animation:pdot 1.5s infinite}
+@keyframes pdot{0%,100%{box-shadow:0 0 0 0 rgba(52,208,88,.5)}70%{box-shadow:0 0 0 5px rgba(52,208,88,0)}}
+.tc-out-tit{font-size:10px;font-weight:800;color:var(--accent);text-transform:uppercase;letter-spacing:1.3px}
+.tc-out-body{background:var(--card2);border-radius:11px;padding:14px 16px;font-size:12.5px;line-height:1.65;color:rgba(232,228,240,.92);white-space:pre-wrap;word-break:break-word;max-height:580px;overflow-y:auto;border:1px solid var(--border)}
+.tc-out-body code{background:rgba(0,0,0,.35);padding:1px 5px;border-radius:3px;font-family:var(--font);font-size:11px;color:var(--a2)}
+.tc-cur{display:inline-block;animation:blink .7s infinite;color:var(--accent)}
+@keyframes blink{0%,100%{opacity:1}50%{opacity:0}}
+
+.legal{max-width:980px;margin:48px auto 0;text-align:center;color:var(--muted);font-size:11px}
+.legal a{color:var(--muted);text-decoration:none;border-bottom:1px solid transparent;margin:0 8px;transition:all .15s}
+.legal a:hover{color:var(--accent);border-color:var(--accent)}
+</style>
+<!-- ═══ PWA ═══ -->
+<link rel="manifest" href="/manifest.json">
+<meta name="theme-color" content="#0a0c14">
+<meta name="apple-mobile-web-app-capable" content="yes">
+<meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
+<meta name="apple-mobile-web-app-title" content="AI Office">
+<link rel="apple-touch-icon" href="/icon-192.png">
+</head>
+<body data-user="Илья Палий" data-email="ilia.info.paliy@gmail.com">
+
+<div class="wrap">
+
+  <div class="hero">
+    <div class="tag">💬 Sales Workspace · 4 задачи</div>
+    <h1>4 задачи отдела <span class="grad">продаж</span></h1>
+    <p>AI-команда из агентов продаж и психологии (Алиса, Selene, Echo) выдаёт готовые скрипты под твою нишу, продукт и портрет ЦА. Скопировал — отправил в Direct.</p>
+  </div>
+
+  <div class="ctx-bar">
+    <div class="ctx-input">
+      <label>Контекст:</label>
+      <input id="salesCtx" placeholder="Ниша · Продукт · Цена (вводи коротко)">
+    </div>
+  </div>
+
+  <div class="grid">
+
+    <!-- TASK 1: DIRECT SCRIPTS -->
+    <div class="tc t1" id="task-1">
+      <div class="tc-hd">
+        <div class="tc-num">ЗАДАЧА 1 · DIRECT</div>
+        <div class="tc-tit">Скрипты Direct · первое касание</div>
+        <div class="tc-sub">Алиса + Echo пишут 5 готовых сообщений для разных сценариев: ответ на сторис, входящий лид, холодное касание, после комментария.</div>
+        <div class="tc-agents">
+          <span class="tc-ag"><span class="em">💬</span>Алиса · Sales</span>
+          <span class="tc-ag"><span class="em">✉️</span>Echo · Tone</span>
+        </div>
+      </div>
+      <div class="tc-body">
+        <div class="tc-bullet">5 готовых скриптов под разные триггеры обращения</div>
+        <div class="tc-bullet">Каждый — с вопросом-крючком чтобы развернуть диалог</div>
+        <div class="tc-bullet">Tone of voice настраивается под твой бренд</div>
+      </div>
+      <div class="tc-form">
+        <label>Из-за чего обычно пишут в Direct</label>
+        <textarea id="t1-trigger" placeholder="После сторис «5 ошибок в…» · после поста-кейса · холодные DM с сайта · комментарии «как купить»"></textarea>
+        <div class="form-row">
+          <div><label>Tone of voice</label><select id="t1-tone"><option>Тёплый и заботливый</option><option>Экспертный и чёткий</option><option>Дружеский, на «ты»</option><option>Формальный, на «вы»</option><option>Провокационный</option></select></div>
+          <div><label>Цель первого сообщения</label><select id="t1-goal"><option>Узнать запрос</option><option>Сразу предложить диагностику</option><option>Прислать кейс</option><option>Записать на live</option></select></div>
+        </div>
+      </div>
+      <div class="tc-actions">
+        <button class="tc-run" onclick="runTask(1)">▶ Запустить · Алиса + Echo</button>
+        <button class="tc-clear" onclick="clearOut(1)">×</button>
+      </div>
+      <div class="tc-out" id="t1-out">
+        <div class="tc-out-hd"><div class="tc-out-pulse"></div><div class="tc-out-tit">5 готовых скриптов</div></div>
+        <div class="tc-out-body" id="t1-out-body"></div>
+      </div>
+    </div>
+
+    <!-- TASK 2: WARMING -->
+    <div class="tc t2" id="task-2">
+      <div class="tc-hd">
+        <div class="tc-num">ЗАДАЧА 2 · ПРОГРЕВ</div>
+        <div class="tc-tit">Цепочка прогрева к продаже</div>
+        <div class="tc-sub">Sofia + Echo проектируют последовательность из 5-7 касаний до покупки с правильной эмоциональной кривой.</div>
+        <div class="tc-agents">
+          <span class="tc-ag"><span class="em">📐</span>Sofia · Стратегия</span>
+          <span class="tc-ag"><span class="em">✉️</span>Echo · Tone</span>
+        </div>
+      </div>
+      <div class="tc-body">
+        <div class="tc-bullet">5-7 касаний с темами, форматами и эмоциями</div>
+        <div class="tc-bullet">Customer journey: какие сомнения закрываем когда</div>
+        <div class="tc-bullet">Готовые формулировки для каждого этапа</div>
+      </div>
+      <div class="tc-form">
+        <label>Канал прогрева</label>
+        <select id="t2-channel"><option>Telegram-канал</option><option>Email-рассылка</option><option>Instagram-сторис</option><option>Reels-серия</option><option>Смешанный (TG + IG)</option></select>
+        <label>Сколько дней до запуска</label>
+        <select id="t2-days"><option>3-5 дней</option><option>7 дней</option><option>10-14 дней</option><option>30 дней (длинный)</option></select>
+        <label>Главное возражение твоей ЦА</label>
+        <input id="t2-objection" placeholder="«Дорого» / «Не верю в результат» / «Сделаю сам» / «Не сейчас»">
+      </div>
+      <div class="tc-actions">
+        <button class="tc-run" onclick="runTask(2)">▶ Запустить · Sofia + Echo</button>
+        <button class="tc-clear" onclick="clearOut(2)">×</button>
+      </div>
+      <div class="tc-out" id="t2-out">
+        <div class="tc-out-hd"><div class="tc-out-pulse"></div><div class="tc-out-tit">Цепочка прогрева</div></div>
+        <div class="tc-out-body" id="t2-out-body"></div>
+      </div>
+    </div>
+
+    <!-- TASK 3: OBJECTIONS -->
+    <div class="tc t3" id="task-3">
+      <div class="tc-hd">
+        <div class="tc-num">ЗАДАЧА 3 · ВОЗРАЖЕНИЯ</div>
+        <div class="tc-tit">Разбор и закрытие возражений</div>
+        <div class="tc-sub">Selene + Алиса разбирают типовые возражения твоей ЦА и дают 2-3 варианта ответа на каждое — мягкий, экспертный, эмоциональный.</div>
+        <div class="tc-agents">
+          <span class="tc-ag"><span class="em">💎</span>Selene · Психология</span>
+          <span class="tc-ag"><span class="em">💬</span>Алиса · Sales</span>
+        </div>
+      </div>
+      <div class="tc-body">
+        <div class="tc-bullet">7-10 типовых возражений твоей ЦА</div>
+        <div class="tc-bullet">Под каждым — 2-3 варианта ответа в разных тонах</div>
+        <div class="tc-bullet">Где это истинное возражение, а где — отговорка</div>
+      </div>
+      <div class="tc-form">
+        <label>Реальные возражения которые слышишь чаще всего</label>
+        <textarea id="t3-real" placeholder="Скопируй сюда несколько реальных сообщений из Direct / голосовых. Чем больше — тем точнее ответы."></textarea>
+        <div class="form-row">
+          <div><label>Цена продукта</label><input id="t3-price" placeholder="30 000 ₽"></div>
+          <div><label>Конкуренты-альтернативы</label><input id="t3-alt" placeholder="Курсы за 5к, сделать самому"></div>
+        </div>
+      </div>
+      <div class="tc-actions">
+        <button class="tc-run" onclick="runTask(3)">▶ Запустить · Selene + Алиса</button>
+        <button class="tc-clear" onclick="clearOut(3)">×</button>
+      </div>
+      <div class="tc-out" id="t3-out">
+        <div class="tc-out-hd"><div class="tc-out-pulse"></div><div class="tc-out-tit">Закрытие возражений</div></div>
+        <div class="tc-out-body" id="t3-out-body"></div>
+      </div>
+    </div>
+
+    <!-- TASK 4: CLOSING -->
+    <div class="tc t4" id="task-4">
+      <div class="tc-hd">
+        <div class="tc-num">ЗАДАЧА 4 · ДОЖИМ</div>
+        <div class="tc-tit">Дожимы тех кто «подумает»</div>
+        <div class="tc-sub">Алиса + Selene пишут серию из 3-4 догоняющих сообщений с правильной кадansion и без давления.</div>
+        <div class="tc-agents">
+          <span class="tc-ag"><span class="em">💬</span>Алиса · Sales</span>
+          <span class="tc-ag"><span class="em">💎</span>Selene · Психология</span>
+        </div>
+      </div>
+      <div class="tc-body">
+        <div class="tc-bullet">3-4 догоняющих сообщения с увеличивающейся urgency</div>
+        <div class="tc-bullet">Когда отправлять каждое (день +1, +3, +7…)</div>
+        <div class="tc-bullet">Финальное «closure» — что писать когда уже всё</div>
+      </div>
+      <div class="tc-form">
+        <label>На каком этапе обычно «подумаю»</label>
+        <select id="t4-stage"><option>Сразу после первого касания</option><option>После прайс-листа</option><option>После диагностики/созвона</option><option>После брони/счёта</option></select>
+        <label>Что обычно отвечают через 3-7 дней</label>
+        <textarea id="t4-reply" placeholder="«Пока не готова» / «Подумаю ещё» / «Сейчас не до этого» / просто не отвечают"></textarea>
+        <div class="form-row">
+          <div><label>Есть ли deadline / урgency</label><input id="t4-urgency" placeholder="набор закрывается через X дней"></div>
+          <div><label>Бонус если купят сейчас</label><input id="t4-bonus" placeholder="скидка 20% / доп. модуль"></div>
+        </div>
+      </div>
+      <div class="tc-actions">
+        <button class="tc-run" onclick="runTask(4)">▶ Запустить · Алиса + Selene</button>
+        <button class="tc-clear" onclick="clearOut(4)">×</button>
+      </div>
+      <div class="tc-out" id="t4-out">
+        <div class="tc-out-hd"><div class="tc-out-pulse"></div><div class="tc-out-tit">Серия дожимов</div></div>
+        <div class="tc-out-body" id="t4-out-body"></div>
+      </div>
+    </div>
+
+  </div>
+
+  <div class="legal">
+    <a href="onboarding.html">📋 Собрать офис</a>
+    <a href="agents.html">🤖 169 агентов</a>
+    <a href="cases.html">📈 Кейсы</a>
+    <a href="pricing.html">💎 Тарифы</a>
+  </div>
+
+</div>
+
+<script>
+const SALES_TASKS = {
+  1: {
+    title: 'Direct Scripts',
+    agents: 'Алиса + Echo',
+    system: `Ты — команда из двух AI-агентов: Алиса (Sales Agent) и Echo (Tone & Voice). Пишете готовые скрипты Direct.
+
+Структура ответа:
+1) Краткий разбор: какие триггеры обращений в Direct у этого бизнеса, что важно учесть
+2) **5 готовых скриптов** под разные сценарии входа (по 60-120 слов каждый):
+   - Сценарий 1: ответ на сторис/пост
+   - Сценарий 2: входящий лид с рекламы
+   - Сценарий 3: холодное касание (рекомендация)
+   - Сценарий 4: ответ после комментария «как купить»
+   - Сценарий 5: возврат «подумаю → пора решать»
+3) Для каждого — заголовок «КОГДА ИСПОЛЬЗОВАТЬ», текст сообщения, вопрос-крючок в конце
+
+Стиль: живо, на языке ЦА. Без шаблонных продажных штампов. Без «дорогой клиент». Готовое к копированию.`,
+    build: () => {
+      const trigger = val('t1-trigger') || 'не указано';
+      const tone = val('t1-tone') || 'Тёплый и заботливый';
+      const goal = val('t1-goal') || 'Узнать запрос';
+      const ctx = val('salesCtx') || '';
+      return `Контекст бизнеса: ${ctx || '(не указан — спроси у клиента или предположи на основе нейтрального формата)'}\nTone of voice: ${tone}\nЦель первого сообщения: ${goal}\n\nИЗ-ЗА ЧЕГО ПИШУТ В DIRECT:\n${trigger}\n\nДайте 5 готовых скриптов как описано в инструкции.`;
+    }
+  },
+  2: {
+    title: 'Прогрев',
+    agents: 'Sofia + Echo',
+    system: `Ты — команда из двух AI-агентов: Sofia (Content Strategist) и Echo (Telegram Content). Проектируете цепочку прогрева к продаже.
+
+Структура ответа:
+1) **Customer journey**: эмоциональная кривая аудитории от первого касания до покупки (5-7 этапов с эмоцией и сомнением)
+2) **5-7 готовых касаний** для выбранного канала:
+   - День / номер касания
+   - Цель этапа (узнать / влюбить / доказать / помочь решиться / купить)
+   - Тема и формат
+   - Готовый текст (250-450 слов для постов / 100-200 для сторис)
+   - Какое сомнение закрываем
+3) **Финальное продающее касание** — отдельным блоком
+
+Стиль: живо, лично, как пишет эксперт. Чередуй личные истории, кейсы, инсайты, отзывы, прямые офферы. Без воды.`,
+    build: () => {
+      const channel = val('t2-channel') || 'Telegram-канал';
+      const days = val('t2-days') || '7 дней';
+      const objection = val('t2-objection') || 'не указано';
+      const ctx = val('salesCtx') || '';
+      return `Контекст бизнеса: ${ctx || '(не указан)'}\nКанал: ${channel}\nПериод: ${days}\nГлавное возражение ЦА: ${objection}\n\nСоберите цепочку прогрева.`;
+    }
+  },
+  3: {
+    title: 'Возражения',
+    agents: 'Selene + Алиса',
+    system: `Ты — команда из двух AI-агентов: Selene (Sales Psychology) и Алиса (Sales Agent). Разбираете возражения ЦА.
+
+Структура ответа:
+1) **Истинная vs ложная природа** каждого возражения (что на самом деле стоит за словами)
+2) **7-10 типовых возражений** с разбором:
+   - Текст возражения как говорит клиент
+   - Что РЕАЛЬНО мешает (страх / непонимание / приоритет)
+   - **3 варианта ответа** в разных тонах:
+     · Мягкий и эмпатичный
+     · Экспертный и логичный
+     · Эмоциональный и провокационный
+   - Какой вариант когда работает
+3) Финальная сводка: какие возражения — отговорки (не дожимаем), какие — реальные (работаем с ними)
+
+Стиль: глубоко, психологично, без агрессивных продаж. Учитывай специфику русскоязычной ЦА.`,
+    build: () => {
+      const real = val('t3-real') || 'нет конкретных примеров — используй типовые для ниши';
+      const price = val('t3-price') || 'не указано';
+      const alt = val('t3-alt') || 'не указано';
+      const ctx = val('salesCtx') || '';
+      return `Контекст бизнеса: ${ctx || '(не указан)'}\nЦена продукта: ${price}\nАльтернативы у конкурентов: ${alt}\n\nРЕАЛЬНЫЕ ВОЗРАЖЕНИЯ:\n${real}\n\nРазберите и дайте ответы.`;
+    }
+  },
+  4: {
+    title: 'Дожимы',
+    agents: 'Алиса + Selene',
+    system: `Ты — команда из двух AI-агентов: Алиса (Sales Agent) и Selene (Sales Psychology). Пишете серию дожимов для тех кто «подумает».
+
+Структура ответа:
+1) Короткий анализ: почему «подумаю» на этом этапе и что стоит за этим у твоей ЦА
+2) **Серия из 4 дожимающих сообщений** с increasing urgency:
+   - **Дожим 1 (день +1):** Мягкое касание — эмпатия, ценность без давления
+   - **Дожим 2 (день +3):** Социальное доказательство — кейс, отзыв, история другого клиента
+   - **Дожим 3 (день +7):** Конкретная выгода или дедлайн / бонус
+   - **Дожим 4 (день +10):** «Финальная честность» — прямо спрашиваем что мешает, готовы услышать «нет»
+3) **Закрывающее сообщение** — если все 4 не сработали (без давления, оставляем дверь открытой на будущее)
+
+Стиль: без давления, без манипуляций, на уровне опытного продажника который ценит долгосрочные отношения. Дожим не как назойливость, а как искренняя забота.`,
+    build: () => {
+      const stage = val('t4-stage') || 'Не указано';
+      const reply = val('t4-reply') || 'не указано';
+      const urgency = val('t4-urgency') || 'нет';
+      const bonus = val('t4-bonus') || 'нет';
+      const ctx = val('salesCtx') || '';
+      return `Контекст бизнеса: ${ctx || '(не указан)'}\nЭтап «подумаю»: ${stage}\nЧто обычно отвечают: ${reply}\nДоступная urgency: ${urgency}\nДоступный бонус: ${bonus}\n\nСоставьте серию дожимов.`;
+    }
+  }
+};
+
+function val(id) { const e = document.getElementById(id); return e ? (e.value || '').trim() : ''; }
+
+window.clearOut = (n) => {
+  const out = document.getElementById('t'+n+'-out');
+  const body = document.getElementById('t'+n+'-out-body');
+  out.classList.remove('show');
+  body.textContent = '';
+};
+
+window.runTask = async (n) => {
+  const task = SALES_TASKS[n];
+  if (!task) return;
+  const out = document.getElementById('t'+n+'-out');
+  const body = document.getElementById('t'+n+'-out-body');
+  out.classList.add('show');
+  body.innerHTML = '<span class="tc-cur">▋</span> Запускаю: <b>' + task.agents + '</b>…';
+
+  try {
+    body.innerHTML = '<span class="tc-cur">▋</span>';
+    const res = await fetch('/api/chat', {
+      method: 'POST',
+      headers: {'Content-Type':'application/json'},
+      body: JSON.stringify({
+        model: 'claude-sonnet-4-5',
+        max_tokens: 2500,
+        stream: true,
+        system: task.system,
+        messages: [{role:'user', content: task.build()}]
+      })
+    });
+    if (!res.ok) {
+      const txt = await res.text();
+      body.innerHTML = '<div style="color:#f06090">⚠ Ошибка API (' + res.status + ')</div>' + escapeHTML(txt.slice(0,400));
+      return;
+    }
+    const reader = res.body.getReader();
+    const dec = new TextDecoder();
+    let full = '';
+    while (true) {
+      const {done, value} = await reader.read();
+      if (done) break;
+      for (const line of dec.decode(value,{stream:true}).split('\n')) {
+        const t = line.trim();
+        if (t.startsWith('data:')) {
+          try {
+            const j = JSON.parse(t.slice(5));
+            const d = j.delta?.text;
+            if (d) {
+              full += d;
+              body.innerHTML = escapeHTML(full) + '<span class="tc-cur">▋</span>';
+              body.scrollTop = body.scrollHeight;
+            }
+          } catch {}
+        }
+      }
+    }
+    body.innerHTML = escapeHTML(full);
+  } catch (err) {
+    body.innerHTML = '<div style="color:#f06090">⚠ Ошибка: ' + escapeHTML(err.message || err) + '</div>';
+  }
+};
+
+function escapeHTML(s) { return String(s||'').replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;').replace(/"/g,'&quot;'); }
+
+// Pre-fill context from saved brief
+try {
+  const brief = JSON.parse(localStorage.getItem('aio_brief') || 'null');
+  if (brief && (brief.niche || brief.product)) {
+    const ctx = [brief.niche, brief.product].filter(Boolean).join(' · ');
+    if (ctx) document.getElementById('salesCtx').value = ctx;
+  }
+} catch {}
+</script>
+
+<script src="api-fallback.js" defer></script>
+<script src="state.js"></script>
+<script src="mock-backend.js"></script>
+<script src="config.js"></script>
+<script src="analytics.js" defer></script>
+<script src="sidebar.js" defer></script>
+<script src="alisa-widget.js" defer></script>
+<script src="cookies.js" defer></script>
+<script>
+// PWA service worker registration
+if ('serviceWorker' in navigator && location.protocol === 'https:') {
+  window.addEventListener('load', () => {
+    navigator.serviceWorker.register('/sw.js').catch(e => console.warn('SW reg failed:', e.message));
+  });
+}
+</script>
+</body>
+</html>

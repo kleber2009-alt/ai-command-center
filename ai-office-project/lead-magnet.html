@@ -1,0 +1,611 @@
+<!DOCTYPE html>
+<html lang="ru">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width,initial-scale=1">
+<title>10 промптов для AI-агентов · бесплатный PDF · AI Growth Office</title>
+<meta name="description" content="10 готовых промптов для контента, продаж, воронок и аналитики. Скопируй, подставь свою нишу — и получи результат. Бесплатный PDF от AI Growth Office.">
+
+<link rel="canonical" href="https://ai-growth-office.ru/lead-magnet.html">
+<meta name="keywords" content="AI промпты, готовые промпты, ChatGPT промпты, AI агенты, контент-маркетинг, воронки продаж, нейросети для бизнеса">
+<meta name="author" content="Нейрозапуск · AI Growth Office">
+
+<meta property="og:type" content="article">
+<meta property="og:url" content="https://ai-growth-office.ru/lead-magnet.html">
+<meta property="og:title" content="10 готовых промптов для AI-агентов · бесплатный PDF">
+<meta property="og:description" content="Контент-план, Reels-хуки, карусели, воронки, аналитика — готовые промпты под нишу. Бесплатно.">
+<meta property="og:image" content="https://ai-growth-office.ru/og-image.jpg">
+<meta property="og:image:width" content="1200">
+<meta property="og:image:height" content="630">
+<meta property="og:locale" content="ru_RU">
+<meta property="og:site_name" content="AI Growth Office">
+
+<meta name="twitter:card" content="summary_large_image">
+<meta name="twitter:title" content="10 готовых промптов для AI-агентов · бесплатный PDF">
+<meta name="twitter:description" content="Контент-план, Reels-хуки, карусели, воронки, аналитика — готовые промпты под нишу.">
+<meta name="twitter:image" content="https://ai-growth-office.ru/og-image.jpg">
+<meta name="robots" content="index, follow">
+
+<link rel="icon" type="image/svg+xml" href="data:image/svg+xml,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 32 32'><rect width='32' height='32' rx='6' fill='%23080808'/><text y='24' x='5' font-size='20'>📄</text></svg>">
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<style>
+@import url('https://fonts.googleapis.com/css2?family=JetBrains+Mono:wght@400;500;700&family=Inter:wght@400;500;600;700;800;900&display=swap');
+*{box-sizing:border-box;margin:0;padding:0}
+:root{
+  --bg:#0a0c14;--paper:#13162a;--paper2:#181b30;--border:rgba(255,255,255,.08);
+  --text:#e8e4f0;--muted:#7a82a0;--dim:rgba(255,255,255,.4);
+  --accent:#c8f060;--a2:#60c8f0;--a3:#f06090;--orange:#f0640a;
+  --font:'JetBrains Mono',monospace;--ui:'Inter',sans-serif;
+}
+html,body{background:var(--bg);color:var(--text);font-family:var(--ui);line-height:1.6;min-height:100vh}
+body{padding:24px 16px 64px;background:radial-gradient(ellipse at top,#1a2a4a 0%,#0a0c14 70%)}
+
+/* ── ACTION BAR (online only, hides in print) ── */
+.actions{position:sticky;top:0;background:rgba(13,16,30,.92);backdrop-filter:blur(14px);border:1.5px solid var(--border);border-radius:14px;padding:12px 16px;margin:0 auto 24px;max-width:780px;display:flex;align-items:center;gap:12px;flex-wrap:wrap;z-index:50;box-shadow:0 10px 32px rgba(0,0,0,.35)}
+.actions-info{flex:1;min-width:0;font-size:12.5px;color:var(--muted)}
+.actions-info b{color:var(--accent);font-weight:700}
+.btn{padding:10px 16px;border-radius:10px;font:800 11.5px/1 var(--ui);letter-spacing:.4px;cursor:pointer;border:1.5px solid transparent;text-decoration:none;display:inline-flex;align-items:center;gap:6px;transition:all .15s;white-space:nowrap}
+.btn-pri{background:linear-gradient(90deg,#c8f060,#60c8f0);color:#080808;box-shadow:0 4px 14px rgba(200,240,96,.25)}
+.btn-pri:hover{transform:translateY(-1px);box-shadow:0 6px 20px rgba(200,240,96,.4)}
+.btn-sec{background:transparent;color:var(--muted);border-color:var(--border)}
+.btn-sec:hover{color:var(--text);border-color:rgba(255,255,255,.18)}
+
+/* ── DOC LAYOUT ── */
+.doc{max-width:780px;margin:0 auto;background:var(--paper);border:1.5px solid var(--border);border-radius:18px;overflow:hidden}
+
+.cover{padding:56px 48px 48px;background:linear-gradient(135deg,rgba(200,240,96,.06),rgba(96,200,240,.04),rgba(240,96,144,.06));border-bottom:1px solid var(--border);position:relative;overflow:hidden}
+.cover::before{content:'';position:absolute;top:-100px;right:-100px;width:300px;height:300px;background:radial-gradient(circle,rgba(200,240,96,.15),transparent 70%);pointer-events:none}
+.cover-tag{display:inline-block;font-family:var(--font);font-size:10px;text-transform:uppercase;letter-spacing:2.5px;color:var(--accent);padding:6px 12px;border-radius:6px;background:rgba(200,240,96,.1);border:1px solid rgba(200,240,96,.3);margin-bottom:24px;font-weight:700}
+.cover h1{font-size:46px;font-weight:900;letter-spacing:-1.2px;line-height:1.05;margin-bottom:14px}
+.cover h1 .grad{background:linear-gradient(90deg,#c8f060,#60c8f0);-webkit-background-clip:text;-webkit-text-fill-color:transparent;background-clip:text}
+.cover-sub{font-size:16px;color:var(--muted);line-height:1.55;max-width:560px;margin-bottom:24px}
+.cover-meta{display:flex;flex-wrap:wrap;gap:18px;font-size:11px;color:var(--muted);font-family:var(--font);text-transform:uppercase;letter-spacing:1.2px}
+.cover-meta b{color:var(--accent);font-weight:700}
+.cover-by{margin-top:30px;display:flex;align-items:center;gap:14px}
+.cover-by .av{width:42px;height:42px;border-radius:12px;background:linear-gradient(135deg,#c8f060,#60c8f0);color:#080808;display:flex;align-items:center;justify-content:center;font-weight:900;font-size:18px;box-shadow:0 4px 14px rgba(200,240,96,.25)}
+.cover-by .info{font-size:12px;line-height:1.4}
+.cover-by .info b{color:var(--text);font-weight:700}
+.cover-by .info span{color:var(--muted);font-size:11px}
+
+/* ── TOC ── */
+.toc{padding:32px 48px 20px;border-bottom:1px solid var(--border)}
+.toc-tit{font-family:var(--font);font-size:10px;text-transform:uppercase;letter-spacing:2px;color:var(--accent);font-weight:700;margin-bottom:14px}
+.toc-list{display:grid;grid-template-columns:1fr 1fr;gap:6px}
+@media(max-width:640px){.toc-list{grid-template-columns:1fr}}
+.toc-item{display:flex;align-items:center;gap:10px;padding:7px 10px;font-size:12.5px;color:rgba(232,228,240,.8);border-radius:8px;text-decoration:none;transition:all .15s}
+.toc-item:hover{background:rgba(255,255,255,.04);color:var(--text)}
+.toc-num{font-family:var(--font);font-size:10px;font-weight:700;color:var(--accent);min-width:24px;letter-spacing:.5px}
+.toc-em{font-size:14px}
+
+/* ── PROMPT CARDS ── */
+.body{padding:40px 48px 32px}
+.prompt{margin-bottom:36px;page-break-inside:avoid;break-inside:avoid}
+.prompt:last-child{margin-bottom:0}
+
+.p-hd{display:flex;align-items:flex-start;gap:14px;margin-bottom:14px}
+.p-num{font-family:var(--font);font-size:38px;font-weight:900;line-height:1;color:transparent;-webkit-text-stroke:1.5px var(--accent);min-width:64px;letter-spacing:-2px}
+.p-info{flex:1;min-width:0;padding-top:4px}
+.p-cat{display:inline-block;font-family:var(--font);font-size:9px;text-transform:uppercase;letter-spacing:1.5px;color:var(--a2);font-weight:700;margin-bottom:6px;padding:3px 8px;background:rgba(96,200,240,.08);border-radius:5px;border:1px solid rgba(96,200,240,.2)}
+.p-tit{font-size:20px;font-weight:800;letter-spacing:-.3px;line-height:1.25;margin-bottom:5px;color:var(--text)}
+.p-agent{font-size:12px;color:var(--muted);display:flex;align-items:center;gap:6px}
+.p-agent .em{font-size:15px}
+.p-agent b{color:rgba(232,228,240,.9);font-weight:700}
+
+.p-use{font-size:12.5px;color:rgba(232,228,240,.7);line-height:1.6;margin-bottom:12px;padding:10px 14px;background:var(--paper2);border-left:3px solid var(--accent);border-radius:0 8px 8px 0;font-style:italic}
+.p-use b{color:var(--accent);font-style:normal;font-weight:700;margin-right:4px}
+
+.p-prompt{background:#0a0c18;border:1.5px solid rgba(200,240,96,.18);border-radius:11px;padding:16px 18px;font-family:var(--font);font-size:11.5px;line-height:1.7;color:rgba(232,228,240,.92);white-space:pre-wrap;word-break:break-word;position:relative;overflow:hidden}
+.p-prompt::before{content:'PROMPT';position:absolute;top:6px;right:10px;font-family:var(--font);font-size:8px;color:var(--accent);letter-spacing:1.5px;font-weight:700;opacity:.7}
+.p-prompt mark{background:rgba(255,176,32,.18);color:#ffd060;padding:1px 4px;border-radius:3px;font-weight:700}
+
+.p-copy{margin-top:10px;background:var(--paper2);border:1px solid var(--border);color:var(--muted);padding:8px 14px;border-radius:9px;font:700 10.5px/1 var(--ui);letter-spacing:.3px;cursor:pointer;transition:all .15s}
+.p-copy:hover{border-color:var(--accent);color:var(--accent)}
+.p-copy.ok{background:rgba(46,204,64,.1);border-color:rgba(46,204,64,.3);color:#2ecc40}
+
+.p-tip{margin-top:10px;font-size:11.5px;color:var(--muted);line-height:1.55;display:flex;align-items:flex-start;gap:8px}
+.p-tip::before{content:'💡';flex-shrink:0;font-size:14px;line-height:1.3}
+
+/* ── FOOTER ── */
+.footer{padding:32px 48px;background:linear-gradient(135deg,rgba(200,240,96,.06),rgba(96,200,240,.04));border-top:1px solid var(--border);text-align:center}
+.footer h2{font-size:22px;font-weight:800;letter-spacing:-.3px;margin-bottom:8px}
+.footer p{color:var(--muted);font-size:13px;max-width:480px;margin:0 auto 18px;line-height:1.6}
+.footer .ftr-cta{display:inline-block;background:linear-gradient(90deg,#c8f060,#60c8f0);color:#080808;text-decoration:none;padding:14px 28px;border-radius:11px;font:800 12px/1 var(--ui);letter-spacing:.4px;transition:transform .15s}
+.footer .ftr-cta:hover{transform:translateY(-2px);box-shadow:0 6px 24px rgba(200,240,96,.35)}
+.footer-meta{margin-top:24px;padding-top:20px;border-top:1px solid var(--border);font-size:11px;color:var(--muted);display:flex;justify-content:center;gap:16px;flex-wrap:wrap}
+.footer-meta a{color:var(--muted);text-decoration:none;border-bottom:1px solid transparent;transition:all .15s}
+.footer-meta a:hover{color:var(--accent);border-color:var(--accent)}
+
+/* ── PRINT STYLES ── */
+@media print {
+  @page { size: A4; margin: 14mm 12mm }
+  body { background: #fff !important; padding: 0 !important; color: #1a1a2e !important }
+  .actions, .p-copy { display: none !important }
+  .doc { background: #fff !important; border: none !important; border-radius: 0 !important; max-width: 100% !important }
+  .cover, .toc, .body, .footer { padding: 18px 0 !important; background: none !important; border-color: rgba(0,0,0,.1) !important }
+  .cover { padding-top: 0 !important; padding-bottom: 24px !important }
+  .cover::before { display: none }
+  .cover h1, .toc-tit, .p-tit, .footer h2 { color: #1a1a2e !important }
+  .cover h1 .grad, .toc-num, .p-cat, .p-num { -webkit-text-fill-color: #4a7820 !important; color: #4a7820 !important; -webkit-text-stroke: 1.5px #4a7820 !important; background: none !important }
+  .cover-sub, .toc-item, .p-use, .p-tip, .footer p { color: #4a4a6a !important }
+  .p-use { background: #f0f5e8 !important; border-color: #4a7820 !important }
+  .p-prompt { background: #f5f7fb !important; border: 1px solid #c8d0e0 !important; color: #1a1a2e !important }
+  .p-prompt mark { background: #fff3cc !important; color: #6a4a00 !important }
+  .p-cat { background: #e8f2fa !important; color: #1a5080 !important; border-color: #4a90c0 !important }
+  .p-agent, .cover-meta, .footer-meta { color: #6a6a8a !important }
+  .p-agent b, .cover-by .info b { color: #1a1a2e !important }
+  .footer-meta { display: block !important; font-size: 9px !important }
+  .footer .ftr-cta { background: #4a7820 !important; color: #fff !important; box-shadow: none !important }
+  .cover-by .av { background: #4a7820 !important; box-shadow: none !important }
+  .prompt { margin-bottom: 28px !important; page-break-inside: avoid }
+  .cover, .toc { page-break-after: always }
+}
+</style>
+<link rel="manifest" href="/manifest.json">
+<meta name="theme-color" content="#0a0c14">
+<meta name="apple-mobile-web-app-capable" content="yes">
+<meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
+<meta name="apple-mobile-web-app-title" content="AI Office">
+<link rel="apple-touch-icon" href="/icon-192.png">
+</head>
+<body data-user="Илья Палий" data-email="ilia.info.paliy@gmail.com">
+
+<!-- Action bar — online only, скрыта при печати -->
+<div class="actions">
+  <div class="actions-info">📄 <b>10 готовых промптов</b> · скачай PDF и пользуйся прямо сейчас</div>
+  <button class="btn btn-sec" onclick="window.print()">🖨 Сохранить как PDF</button>
+  <a class="btn btn-pri" href="onboarding.html">🚀 Собрать AI-офис</a>
+</div>
+
+<div class="doc">
+
+  <!-- COVER -->
+  <div class="cover">
+    <div class="cover-tag">📄 Бесплатный PDF · v1.0</div>
+    <h1>10 готовых <span class="grad">промптов</span><br>для AI-агентов</h1>
+    <div class="cover-sub">Скопируй промпт, подставь свою нишу — и получи готовый результат: контент-план, Reels-хуки, карусели, воронку, аналитику. Работает в ChatGPT, Claude и любой LLM.</div>
+    <div class="cover-meta">
+      <span><b>14</b> страниц</span>
+      <span><b>10</b> промптов</span>
+      <span><b>6</b> направлений</span>
+      <span>· Бесплатно</span>
+    </div>
+    <div class="cover-by">
+      <div class="av">A</div>
+      <div class="info">
+        <b>AI Growth Office</b>
+        <span>от 169 специализированных AI-агентов · ai-growth-office.ru</span>
+      </div>
+    </div>
+  </div>
+
+  <!-- TOC -->
+  <div class="toc">
+    <div class="toc-tit">Содержание · 6 направлений</div>
+    <div class="toc-list">
+      <a class="toc-item" href="#p1"><span class="toc-num">01</span><span class="toc-em">📐</span><span>Контент-стратегия на месяц</span></a>
+      <a class="toc-item" href="#p2"><span class="toc-num">02</span><span class="toc-em">🎬</span><span>5 идей Reels с хуками</span></a>
+      <a class="toc-item" href="#p3"><span class="toc-num">03</span><span class="toc-em">🎯</span><span>10 хуков первых 3 секунд</span></a>
+      <a class="toc-item" href="#p4"><span class="toc-num">04</span><span class="toc-em">📑</span><span>10-слайдовая карусель</span></a>
+      <a class="toc-item" href="#p5"><span class="toc-num">05</span><span class="toc-em">✉️</span><span>5 ТГ-постов прогрева</span></a>
+      <a class="toc-item" href="#p6"><span class="toc-num">06</span><span class="toc-em">🔀</span><span>Воронка за 15 минут</span></a>
+      <a class="toc-item" href="#p7"><span class="toc-num">07</span><span class="toc-em">💎</span><span>Разбор оффера на триггеры</span></a>
+      <a class="toc-item" href="#p8"><span class="toc-num">08</span><span class="toc-em">📊</span><span>Недельный отчёт по метрикам</span></a>
+      <a class="toc-item" href="#p9"><span class="toc-num">09</span><span class="toc-em">🔮</span><span>JTBD-анализ ЦА</span></a>
+      <a class="toc-item" href="#p10"><span class="toc-num">10</span><span class="toc-em">🎨</span><span>Мини-бренд-гайд за 1 запрос</span></a>
+    </div>
+  </div>
+
+  <!-- BODY -->
+  <div class="body">
+
+    <!-- 01 -->
+    <div class="prompt" id="p1">
+      <div class="p-hd">
+        <div class="p-num">01</div>
+        <div class="p-info">
+          <div class="p-cat">📐 Контент</div>
+          <div class="p-tit">Контент-стратегия на месяц</div>
+          <div class="p-agent"><span class="em">📐</span> Sofia · Content Strategist</div>
+        </div>
+      </div>
+      <div class="p-use"><b>Когда нужно:</b> на старте месяца, при запуске нового продукта, при пересборке стратегии после анализа метрик.</div>
+      <pre class="p-prompt">Ты — Content Strategist. Собери для меня контент-стратегию на 30 дней.
+
+Контекст:
+· Ниша: <mark>[твоя ниша]</mark>
+· Продукт: <mark>[что продаёшь и за сколько]</mark>
+· ЦА: <mark>[короткий портрет идеального клиента]</mark>
+· Главная цель: <mark>[выручка / охваты / запуск]</mark>
+· Платформа: <mark>[Instagram / Telegram / TikTok / Reels]</mark>
+
+Дай результат в формате:
+1. Контент-матрица: 4 рубрики × 3 типа контента = 12 слотов в неделю
+2. Темы первых 14 постов с хуком (первая строка) и целью (узнавание/доверие/продажа)
+3. Календарь: что когда публиковать
+4. 3 точки конверсии в месяц (когда продаём)
+
+Стиль: конкретно, по делу, без воды. 350-500 слов.</pre>
+      <button class="p-copy" onclick="copyPrompt(this)">📋 Скопировать промпт</button>
+      <div class="p-tip">Подставь свои данные в <mark style="background:rgba(255,176,32,.18);color:#ffd060;padding:1px 4px;border-radius:3px;font-weight:700">[квадратные скобки]</mark> и отправь в ChatGPT/Claude. Получишь матрицу за 30 секунд.</div>
+    </div>
+
+    <!-- 02 -->
+    <div class="prompt" id="p2">
+      <div class="p-hd">
+        <div class="p-num">02</div>
+        <div class="p-info">
+          <div class="p-cat">🎬 Reels</div>
+          <div class="p-tit">5 идей Reels со сценариями</div>
+          <div class="p-agent"><span class="em">🎬</span> Maverick · Reels Producer</div>
+        </div>
+      </div>
+      <div class="p-use"><b>Когда нужно:</b> сесть и быстро снять 5 Reels за вечер вместо «опять не знаю что снимать».</div>
+      <pre class="p-prompt">Ты — Reels Producer. Сгенерируй 5 идей Reels под мою нишу.
+
+Контекст:
+· Ниша: <mark>[твоя ниша]</mark>
+· ЦА: <mark>[портрет клиента: возраст, боли, желания]</mark>
+· Текущие охваты в среднем: <mark>[цифра]</mark>
+· Тон бренда: <mark>[экспертный / тёплый / провокационный / дружеский]</mark>
+
+Для каждой идеи дай:
+1. Hook (первая строка, 8-12 слов, должна резать скролл)
+2. Setup (как развить, 1 предложение)
+3. Tension (конфликт / неожиданный поворот)
+4. Payoff (что зритель узнал/получил)
+5. CTA (что сделать дальше — подписаться / комментарий / сохранить)
+6. Идея визуала: что показать в кадре
+7. Гипотеза viral-потенциала (1-10) с обоснованием
+
+Стиль: креативно, со ставкой на 3-секундный хук. Каждая идея — на одну боль из ЦА.</pre>
+      <button class="p-copy" onclick="copyPrompt(this)">📋 Скопировать промпт</button>
+      <div class="p-tip">Если идея не зашла — попроси: «дай 5 ещё, но под боль <mark style="background:rgba(255,176,32,.18);color:#ffd060;padding:1px 4px;border-radius:3px;font-weight:700">[конкретная боль]</mark> и формат личной истории».</div>
+    </div>
+
+    <!-- 03 -->
+    <div class="prompt" id="p3">
+      <div class="p-hd">
+        <div class="p-num">03</div>
+        <div class="p-info">
+          <div class="p-cat">🎯 Хуки</div>
+          <div class="p-tit">10 хуков для первых 3 секунд</div>
+          <div class="p-agent"><span class="em">🎯</span> Hunter · Hook Master</div>
+        </div>
+      </div>
+      <div class="p-use"><b>Когда нужно:</b> есть готовый контент, но охваты падают на первой строке. Заменяешь хуки — охваты растут.</div>
+      <pre class="p-prompt">Ты — Hook Master. У меня есть тема контента: <mark>[тема]</mark>
+Под ЦА: <mark>[короткий портрет]</mark>
+
+Сгенерируй 10 хуков по разным триггерам:
+1. Любопытство («Никто тебе не скажет, но…»)
+2. Страх упустить FOMO («Если ты не делаешь Х, ты теряешь…»)
+3. Шок / неожиданность («Я думал что Х, оказалось…»)
+4. Личная история («3 года назад я…»)
+5. Спор с авторитетом («Все говорят Х. Это неправда»)
+6. Конкретная цифра («За 14 дней я…»)
+7. Вопрос («Знаешь почему 90% не получают результата?»)
+8. Социальное доказательство («Клиент сделал Х за 2 недели»)
+9. Парадокс («Чем меньше ты Х, тем больше Y»)
+10. Прямая выгода («Сделай это раз и забудь о Х навсегда»)
+
+Для каждого хука дай:
+· Сам хук (1 строка, 8-12 слов)
+· На какую боль/желание ЦА он бьёт
+· Оценка CTR (1-10)
+
+Стиль: бьющий точно, без воды, без банальностей.</pre>
+      <button class="p-copy" onclick="copyPrompt(this)">📋 Скопировать промпт</button>
+      <div class="p-tip">Возьми топ-3 по CTR и сделай A/B-тест — публикуй один и тот же пост с разными хуками. Через 48 часов отдай метрики Аналитике (промпт #8).</div>
+    </div>
+
+    <!-- 04 -->
+    <div class="prompt" id="p4">
+      <div class="p-hd">
+        <div class="p-num">04</div>
+        <div class="p-info">
+          <div class="p-cat">📑 Карусели</div>
+          <div class="p-tit">Готовая карусель из 10 слайдов</div>
+          <div class="p-agent"><span class="em">📑</span> Nova · Carousel Copywriter</div>
+        </div>
+      </div>
+      <div class="p-use"><b>Когда нужно:</b> карусели — главный конвертер в сохранения и подписки. 30 минут на готовый пост вместо 4 часов.</div>
+      <pre class="p-prompt">Ты — Carousel Copywriter. Напиши карусель из 10 слайдов на тему: <mark>[тема]</mark>
+
+Контекст:
+· Ниша: <mark>[твоя ниша]</mark>
+· ЦА: <mark>[портрет]</mark>
+· Цель карусели: <mark>[подписка / сохранение / комментарии / клик в Direct]</mark>
+
+Структура (нумеруй слайды):
+· Слайд 1: Hook — заголовок-обещание (макс 7 слов) + подзаголовок (1 строка)
+· Слайд 2: Усиление проблемы (зачем читать дальше)
+· Слайд 3: Личный опыт / своя позиция (для доверия)
+· Слайды 4-7: 4 ключевых инсайта (каждый — заголовок + 2-3 строки объяснения)
+· Слайд 8: Главный вывод
+· Слайд 9: Практический шаг (что сделать прямо сейчас)
+· Слайд 10: CTA + крючок (что в следующем посте)
+
+Для каждого слайда:
+· Заголовок (большой шрифт)
+· Текст (2-4 строки)
+· Идея визуала (что на картинке)
+
+Стиль: storytelling, эмоция + польза, без банальностей. Текст готов для копи-паст.</pre>
+      <button class="p-copy" onclick="copyPrompt(this)">📋 Скопировать промпт</button>
+      <div class="p-tip">Сохранения в 3 раза важнее лайков для алгоритма Instagram. Делай каждые 4-5 слайдов «сохрани, чтобы не потерять».</div>
+    </div>
+
+    <!-- 05 -->
+    <div class="prompt" id="p5">
+      <div class="p-hd">
+        <div class="p-num">05</div>
+        <div class="p-info">
+          <div class="p-cat">✉️ Telegram</div>
+          <div class="p-tit">5 ТГ-постов прогрева к продаже</div>
+          <div class="p-agent"><span class="em">✉️</span> Echo · Telegram Content Agent</div>
+        </div>
+      </div>
+      <div class="p-use"><b>Когда нужно:</b> готовишь запуск или live, нужен прогрев 5-7 дней в Telegram-канале до продаж.</div>
+      <pre class="p-prompt">Ты — Telegram Content Agent. Напиши 5 long-form постов прогрева к запуску.
+
+Контекст:
+· Ниша: <mark>[твоя ниша]</mark>
+· Продукт: <mark>[что продаём, за сколько]</mark>
+· ЦА в Telegram: <mark>[тёплая база / холодные / смешанные]</mark>
+· Цель: <mark>[live-продажа / открытие набора / первые продажи]</mark>
+· Tone of voice: <mark>[доверительный / экспертный / провокационный]</mark>
+
+Структура 5 постов:
+1. День -7: «Личная история» — почему ты сделал этот продукт
+2. День -5: «Главный инсайт» — суть подхода, который ты используешь
+3. День -3: «Кейс/доказательство» — конкретный результат (свой или клиента)
+4. День -1: «Открытие набора» — анонс с условиями
+5. День 0: «Дожим / последний шанс» — для тех кто откладывает
+
+Для каждого поста:
+· Цепляющая первая строка (1 предложение, попадает в боль или ставит вопрос)
+· Тело: 250-400 слов
+· P.S. с крючком на следующий пост или CTA
+
+Стиль: лично, как пишет эксперт в свой блог. Без банальностей. С эмоцией.</pre>
+      <button class="p-copy" onclick="copyPrompt(this)">📋 Скопировать промпт</button>
+      <div class="p-tip">Если у тебя есть Direct-переписки с возражениями — добавь их в промпт как контекст. Echo встроит ответы в посты прогрева.</div>
+    </div>
+
+    <!-- 06 -->
+    <div class="prompt" id="p6">
+      <div class="p-hd">
+        <div class="p-num">06</div>
+        <div class="p-info">
+          <div class="p-cat">🔀 Воронки</div>
+          <div class="p-tit">Воронка продаж за 15 минут</div>
+          <div class="p-agent"><span class="em">🔀</span> Leo · Funnel Architect</div>
+        </div>
+      </div>
+      <div class="p-use"><b>Когда нужно:</b> нет понятной воронки — лиды теряются. Этот промпт даёт полную схему пути клиента за один запрос.</div>
+      <pre class="p-prompt">Ты — Funnel Architect. Спроектируй воронку под мой продукт.
+
+Контекст:
+· Продукт: <mark>[название и цена]</mark>
+· Источник трафика: <mark>[Reels / Telegram / Ads / органика]</mark>
+· Холодная или тёплая ЦА: <mark>[уровень осведомлённости]</mark>
+· Текущая конверсия в покупку: <mark>[если знаешь — цифра %, иначе «не знаю»]</mark>
+· Цель: <mark>[увеличить продажи / снизить CAC / поднять LTV]</mark>
+
+Дай:
+1. Customer Journey: 5-7 этапов от первого касания до повторной покупки
+2. На каждом этапе:
+   · Что чувствует клиент (его эмоция)
+   · Какой контент / артефакт показываем
+   · Какое действие хотим от него
+   · Целевая конверсия этапа (% перехода на следующий)
+3. Лид-магнит: что предлагаем в обмен на email/контакт (3 идеи)
+4. Цепочка прогрева: 5-7 писем/постов с темами
+5. Точки потери: где обычно отваливаются и как удержать
+6. KPI воронки: какие метрики смотреть еженедельно
+
+Стиль: схема + конкретные действия. Не теория.</pre>
+      <button class="p-copy" onclick="copyPrompt(this)">📋 Скопировать промпт</button>
+      <div class="p-tip">Дальше отдай эту воронку Sales Psychology (промпт #7) — он найдёт где усилить триггеры покупки.</div>
+    </div>
+
+    <!-- 07 -->
+    <div class="prompt" id="p7">
+      <div class="p-hd">
+        <div class="p-num">07</div>
+        <div class="p-info">
+          <div class="p-cat">💎 Продажи</div>
+          <div class="p-tit">Разбор оффера на психотриггеры</div>
+          <div class="p-agent"><span class="em">💎</span> Selene · Sales Psychology Agent</div>
+        </div>
+      </div>
+      <div class="p-use"><b>Когда нужно:</b> оффер «вроде хороший, но не продаётся». Этот промпт находит слабые места и говорит чем усилить.</div>
+      <pre class="p-prompt">Ты — Sales Psychology Agent. Разбери мой оффер на триггеры покупки.
+
+Мой оффер:
+<mark>[вставь сюда полный текст оффера / описание продукта со страницы продаж]</mark>
+
+ЦА:
+<mark>[короткий портрет]</mark>
+
+Текущая конверсия (если знаешь): <mark>[%]</mark>
+
+Сделай:
+1. Какие триггеры уже зашиты (страх упустить, социальное доказательство, дефицит, экспертность, выгода, контраст с альтернативой) — найди и подсвети
+2. Какие триггеры НЕ работают или отсутствуют — назови их с обоснованием
+3. Что усилить — 5 конкретных правок в тексте (приведи ДО/ПОСЛЕ)
+4. Какие возражения остаются неотвеченными — список с предложением как закрыть
+5. Финальная пере-сборка короткого продающего блока (offer + bonus + urgency + guarantee) — 200 слов
+
+Стиль: жёстко, по делу, с пониманием психологии русскоязычной аудитории.</pre>
+      <button class="p-copy" onclick="copyPrompt(this)">📋 Скопировать промпт</button>
+      <div class="p-tip">Не верь первой версии — попроси «дай ещё 3 варианта переписи offer-блока с разными эмоциональными триггерами».</div>
+    </div>
+
+    <!-- 08 -->
+    <div class="prompt" id="p8">
+      <div class="p-hd">
+        <div class="p-num">08</div>
+        <div class="p-info">
+          <div class="p-cat">📊 Аналитика</div>
+          <div class="p-tit">Недельный отчёт по 6 метрикам</div>
+          <div class="p-agent"><span class="em">📊</span> Nika · Analytics Agent</div>
+        </div>
+      </div>
+      <div class="p-use"><b>Когда нужно:</b> в воскресенье вечером собрать что зашло / что нет / что делать на следующей неделе.</div>
+      <pre class="p-prompt">Ты — Analytics Agent. Сделай для меня недельный отчёт.
+
+Метрики за неделю:
+· Охваты средние: <mark>[цифра]</mark> · разброс: от <mark>[мин]</mark> до <mark>[макс]</mark>
+· ER (engagement rate): <mark>[%]</mark>
+· Сохранения / пост (среднее): <mark>[цифра]</mark>
+· Шеры / пост: <mark>[цифра]</mark>
+· Конверсия в подписку: <mark>[%]</mark>
+· Новых подписчиков: <mark>[цифра]</mark>
+
+Топ-3 поста за неделю по охватам:
+1. <mark>[тема + охват]</mark>
+2. <mark>[тема + охват]</mark>
+3. <mark>[тема + охват]</mark>
+
+Что НЕ зашло:
+<mark>[список + что было плохо]</mark>
+
+Сделай:
+1. Интерпретация каждой метрики: нормально / выше / ниже среднего по нише, что означает
+2. Что РАБОТАЕТ — паттерн в топ-3 постах (тема? формат? хук? время?)
+3. Что НЕ РАБОТАЕТ — диагноз причин (слабый хук / неправильная ЦА / контент перегружен)
+4. 3 конкретных действия на следующую неделю с обоснованием
+5. Гипотеза для A/B-теста на следующую неделю
+
+Стиль: с цифрами, без воды, как от опытного аналитика. 350 слов.</pre>
+      <button class="p-copy" onclick="copyPrompt(this)">📋 Скопировать промпт</button>
+      <div class="p-tip">Создай Notion-страницу «Аналитика недели» — запускай этот промпт каждое воскресенье и веди базу инсайтов.</div>
+    </div>
+
+    <!-- 09 -->
+    <div class="prompt" id="p9">
+      <div class="p-hd">
+        <div class="p-num">09</div>
+        <div class="p-info">
+          <div class="p-cat">🔮 ЦА</div>
+          <div class="p-tit">JTBD-анализ целевой аудитории</div>
+          <div class="p-agent"><span class="em">🔮</span> Oracle · Audience Research</div>
+        </div>
+      </div>
+      <div class="p-use"><b>Когда нужно:</b> на старте проекта, перед запуском нового продукта, при пересборе позиционирования.</div>
+      <pre class="p-prompt">Ты — Audience Research Agent. Сделай JTBD-анализ моей ЦА.
+
+Мой бизнес:
+· Ниша: <mark>[ниша]</mark>
+· Продукт: <mark>[что продаёшь]</mark>
+· Что я знаю о ЦА: <mark>[всё что есть — возраст, пол, доход, поведение]</mark>
+· Мои гипотезы о их болях: <mark>[3-5 болей]</mark>
+
+Сделай:
+1. Выдели 3 ключевых сегмента ЦА с разными мотивами
+2. Для каждого сегмента построй JTBD (Jobs To Be Done):
+   · Functional job: что человек хочет сделать практически
+   · Emotional job: какую эмоцию хочет получить
+   · Social job: как хочет выглядеть для других
+3. Боли (Pains): что мешает решить эту задачу сейчас
+4. Желания (Gains): что хочет получить от идеального решения
+5. Триггеры покупки: что заставит купить именно сейчас
+6. Возражения: типовые «но…» и как их закрывать
+7. Каналы где живёт каждый сегмент (где их искать)
+
+Стиль: глубоко, с реальными формулировками которыми они сами говорят. Без академизма.</pre>
+      <button class="p-copy" onclick="copyPrompt(this)">📋 Скопировать промпт</button>
+      <div class="p-tip">Сохрани результат — он станет «контекстом ЦА» для всех остальных промптов из этого PDF.</div>
+    </div>
+
+    <!-- 10 -->
+    <div class="prompt" id="p10">
+      <div class="p-hd">
+        <div class="p-num">10</div>
+        <div class="p-info">
+          <div class="p-cat">🎨 Бренд</div>
+          <div class="p-tit">Мини-бренд-гайд за 1 запрос</div>
+          <div class="p-agent"><span class="em">🎨</span> Aura · Brand Identity Agent</div>
+        </div>
+      </div>
+      <div class="p-use"><b>Когда нужно:</b> контент «съезжает», разные посты выглядят как от разных людей. Этот промпт собирает единый бренд-код.</div>
+      <pre class="p-prompt">Ты — Brand Identity Agent. Собери для меня мини-бренд-гайд.
+
+Контекст:
+· Ниша: <mark>[ниша]</mark>
+· Я как эксперт: <mark>[3-5 личных качеств, ценностей, особенностей]</mark>
+· ЦА: <mark>[короткий портрет]</mark>
+· Конкуренты-эталоны: <mark>[2-3 имени с пояснением что нравится]</mark>
+· Что НЕ нравится у конкурентов: <mark>[чего я хочу избежать]</mark>
+
+Дай:
+1. Brand essence: одна фраза-суть бренда (макс 12 слов, отвечает «зачем я существую для клиента»)
+2. Tone of Voice: 5 прилагательных + ОДИН пример фразы как звучит мой бренд
+3. Anti-Tone: 3 «как НЕ говорим» — слова и формулировки которые запрещены
+4. Визуальный код:
+   · 3 главных цвета (HEX) с обоснованием психологии
+   · 1-2 шрифта (тип: serif / sans / monospace + настроение)
+   · Стиль фото/визуала (формат, освещение, композиция)
+5. 3 повторяющихся бренд-элемента (что я делаю в каждом посте — фишка узнавания)
+6. 5 запретов: что разрушит бренд, если сделать (примеры действий/слов/визуала)
+7. Архетип бренда по Юнгу (Маг / Любовник / Бунтарь / Заботливый / и т.д.) с обоснованием
+
+Стиль: лаконично и применимо. Это должен быть документ который я повешу на стену и сверюсь перед каждым постом.</pre>
+      <button class="p-copy" onclick="copyPrompt(this)">📋 Скопировать промпт</button>
+      <div class="p-tip">Прошёлся раз — повесь на видное место. Перед публикацией каждого поста сверяй: соответствует ли brand essence?</div>
+    </div>
+
+  </div>
+
+  <!-- FOOTER -->
+  <div class="footer">
+    <h2>Хочешь чтобы это работало автоматически?</h2>
+    <p>В AI Growth Office 169 таких агентов под все ниши и задачи. Заполни бриф за 5 минут — AI сам соберёт твою команду.</p>
+    <a class="ftr-cta" href="onboarding.html">🚀 Собрать свой AI-офис</a>
+    <div class="footer-meta">
+      <a href="https://ai-growth-office.ru/">ai-growth-office.ru</a>
+      <a href="https://t.me/AI_Growth_Office_Bot" target="_blank">@AI_Growth_Office_Bot</a>
+      <span>© 2026 AI Growth Office · Бесплатное распространение разрешено</span>
+    </div>
+  </div>
+
+</div>
+
+<script>
+function copyPrompt(btn) {
+  const promptEl = btn.previousElementSibling;
+  const txt = promptEl.textContent;
+  navigator.clipboard.writeText(txt).then(() => {
+    const orig = btn.textContent;
+    btn.textContent = '✓ Скопировано';
+    btn.classList.add('ok');
+    setTimeout(() => {
+      btn.textContent = orig;
+      btn.classList.remove('ok');
+    }, 1800);
+  }).catch(() => {
+    btn.textContent = '⚠ Не удалось';
+    setTimeout(() => btn.textContent = '📋 Скопировать промпт', 1500);
+  });
+}
+</script>
+
+<script src="api-fallback.js" defer></script>
+<script src="state.js"></script>
+<script src="mock-backend.js"></script>
+<script src="config.js"></script>
+<script src="analytics.js" defer></script>
+<script src="sidebar.js" defer></script>
+<script src="cookies.js" defer></script>
+<script>
+// PWA service worker registration
+if ('serviceWorker' in navigator && location.protocol === 'https:') {
+  window.addEventListener('load', () => {
+    navigator.serviceWorker.register('/sw.js').catch(e => console.warn('SW reg failed:', e.message));
+  });
+}
+</script>
+</body>
+</html>
