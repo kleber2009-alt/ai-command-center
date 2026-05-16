@@ -1,0 +1,31 @@
+.git
+.gitignore
+.github
+.vscode
+.idea
+.DS_Store
+*.log
+*.local
+
+# Local Next.js build artifacts (rebuilt in Docker)
+.next
+node_modules
+npm-debug.log*
+
+# Не нужно в финальный образ Next.js
+ai-office-project/
+services/
+db/
+docs/
+deploy/
+CLAUDE.md
+DEPLOY.md
+docker-compose.yml
+
+# Big build artifact, not needed at runtime
+**/ai-office-deploy.zip
+
+# Local env
+.env
+.env.local
+.env.*.local

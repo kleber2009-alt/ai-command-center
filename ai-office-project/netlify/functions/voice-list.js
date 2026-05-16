@@ -4,13 +4,10 @@
 // GET /api/voice-list?owner=@username
 //   → { ok, current: {...} | null, archived: [...] }
 //
-// Возвращает активный голос владельца + историю архивных.
-// Использует anon-key (RLS allows SELECT), service-key не нужен.
-//
-// Env vars:
-//   SUPABASE_URL       — https://xxx.supabase.co
-//   SUPABASE_ANON_KEY? — anon-key (если не задан — пробуем SUPABASE_SERVICE_KEY)
+// Self-hosted: читает из локального Postgres (таблица voices).
 // ═══════════════════════════════════════════════════════════════════
+
+import { query, isDbConfigured } from '../../server/db.js';
 
 function json(status, payload) {
   return new Response(JSON.stringify(payload), {
@@ -34,47 +31,40 @@ export default async (request) => {
     });
   }
   if (request.method !== 'GET') return json(405, { error: 'method_not_allowed' });
-
-  const SUPABASE_URL = process.env.SUPABASE_URL;
-  const KEY = process.env.SUPABASE_ANON_KEY || process.env.SUPABASE_SERVICE_KEY;
-  if (!SUPABASE_URL || !KEY) {
-    return json(503, { error: 'supabase_not_configured' });
-  }
+  if (!isDbConfigured()) return json(503, { error: 'db_not_configured' });
 
   const url = new URL(request.url);
   const owner = (url.searchParams.get('owner') || '').trim();
   if (!owner) return json(400, { error: 'owner_required' });
 
-  const headers = {
-    apikey: KEY,
-    Authorization: `Bearer ${KEY}`,
-    Accept: 'application/json',
-  };
+  try {
+    const [activeRes, archivedRes] = await Promise.all([
+      query(
+        `select id, display_name, provider, provider_voice_id, sample_seconds, created_at
+           from voices
+          where owner_handle = $1 and archived_at is null
+          order by created_at desc
+          limit 1`,
+        [owner],
+      ),
+      query(
+        `select id, display_name, created_at, archived_at
+           from voices
+          where owner_handle = $1 and archived_at is not null
+          order by archived_at desc
+          limit 10`,
+        [owner],
+      ),
+    ]);
 
-  const [activeRes, archivedRes] = await Promise.all([
-    fetch(
-      `${SUPABASE_URL}/rest/v1/voices?owner_handle=eq.${encodeURIComponent(owner)}&archived_at=is.null&select=id,display_name,provider,provider_voice_id,sample_seconds,created_at&order=created_at.desc&limit=1`,
-      { headers },
-    ),
-    fetch(
-      `${SUPABASE_URL}/rest/v1/voices?owner_handle=eq.${encodeURIComponent(owner)}&archived_at=not.is.null&select=id,display_name,created_at,archived_at&order=archived_at.desc&limit=10`,
-      { headers },
-    ),
-  ]);
-
-  if (!activeRes.ok) {
-    const txt = await activeRes.text();
-    return json(activeRes.status, { error: 'supabase_query_failed', details: txt.slice(0, 400) });
+    return json(200, {
+      ok: true,
+      current: activeRes?.rows[0] || null,
+      archived: archivedRes?.rows || [],
+    });
+  } catch (e) {
+    return json(500, { error: 'db_query_failed', message: String(e?.message || e) });
   }
-
-  const [active] = await activeRes.json();
-  const archived = archivedRes.ok ? await archivedRes.json() : [];
-
-  return json(200, {
-    ok: true,
-    current: active || null,
-    archived,
-  });
 };
 
 export const config = { path: '/api/voice-list' };

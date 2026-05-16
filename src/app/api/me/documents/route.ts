@@ -1,7 +1,8 @@
 import { NextRequest, NextResponse } from 'next/server'
 import { chunkText } from '@/lib/chunking'
 import { embedBatch } from '@/lib/embeddings'
-import { getServerSupabase } from '@/lib/me-db'
+import { isConfigured } from '@/lib/me-db'
+import { withClient, toVectorLiteral } from '@/lib/db'
 
 export const maxDuration = 120
 
@@ -36,23 +37,38 @@ async function extractFileText(file: File): Promise<string> {
   throw new Error(`Не поддерживаю файл: ${file.name}. Используй .txt, .md, .csv, .json, .pdf или .docx.`)
 }
 
+type DocRow = {
+  id: string
+  created_at: string
+  title: string
+  source_type: 'paste' | 'file' | 'transcript'
+  source_meta: Record<string, any>
+  char_count: number
+  chunk_count: number
+}
+
 export async function GET() {
-  const supabase = getServerSupabase()
-  if (!supabase) return NextResponse.json({ items: [], configured: false })
-  const { data, error } = await supabase
-    .from('me_documents')
-    .select('id, created_at, title, source_type, source_meta, char_count, chunk_count')
-    .order('created_at', { ascending: false })
-    .limit(200)
-  if (error) return NextResponse.json({ error: error.message }, { status: 500 })
-  return NextResponse.json({ items: data ?? [], configured: true })
+  if (!isConfigured()) return NextResponse.json({ items: [], configured: false })
+  try {
+    const rows = await withClient(async (c) => {
+      const r = await c.query<DocRow>(
+        `select id, created_at, title, source_type, source_meta, char_count, chunk_count
+           from me_documents
+           order by created_at desc
+           limit 200`,
+      )
+      return r.rows
+    })
+    return NextResponse.json({ items: rows ?? [], configured: true })
+  } catch (e: any) {
+    return NextResponse.json({ error: e?.message || 'Ошибка чтения документов' }, { status: 500 })
+  }
 }
 
 export async function POST(req: NextRequest) {
-  const supabase = getServerSupabase()
-  if (!supabase) {
+  if (!isConfigured()) {
     return NextResponse.json(
-      { error: 'Supabase не настроен. Нужны NEXT_PUBLIC_SUPABASE_URL и SUPABASE_SERVICE_KEY + миграция 003_me.sql.' },
+      { error: 'База данных не настроена. Заполни DATABASE_URL и применит схему db/init/01_schema.sql.' },
       { status: 500 },
     )
   }
@@ -102,35 +118,43 @@ export async function POST(req: NextRequest) {
     return NextResponse.json({ error: e?.message || 'Ошибка эмбеддинга' }, { status: 500 })
   }
 
-  const { data: doc, error: docErr } = await supabase
-    .from('me_documents')
-    .insert({
-      title,
-      source_type,
-      source_meta,
-      original_text: text,
-      char_count: text.length,
-      chunk_count: chunks.length,
+  // Транзакция: либо документ + все чанки вставляются, либо ничего.
+  try {
+    const doc = await withClient(async (client) => {
+      await client.query('begin')
+      try {
+        const docRes = await client.query<DocRow>(
+          `insert into me_documents (title, source_type, source_meta, original_text, char_count, chunk_count)
+           values ($1, $2, $3::jsonb, $4, $5, $6)
+           returning id, created_at, title, source_type, source_meta, char_count, chunk_count`,
+          [title, source_type, JSON.stringify(source_meta), text, text.length, chunks.length],
+        )
+        const docRow = docRes.rows[0]
+
+        // Bulk insert чанков. Pg-параметры строятся динамически на 4 поля × N строк.
+        const values: any[] = []
+        const placeholders: string[] = []
+        chunks.forEach((c, i) => {
+          const base = values.length
+          values.push(docRow.id, i, c, toVectorLiteral(embeddings[i]))
+          placeholders.push(`($${base + 1}, $${base + 2}, $${base + 3}, $${base + 4}::vector)`)
+        })
+
+        await client.query(
+          `insert into me_chunks (document_id, chunk_index, content, embedding)
+           values ${placeholders.join(', ')}`,
+          values,
+        )
+
+        await client.query('commit')
+        return docRow
+      } catch (e) {
+        await client.query('rollback').catch(() => {})
+        throw e
+      }
     })
-    .select('id, created_at, title, source_type, source_meta, char_count, chunk_count')
-    .single()
-
-  if (docErr || !doc) {
-    return NextResponse.json({ error: docErr?.message || 'Ошибка вставки документа' }, { status: 500 })
+    return NextResponse.json({ document: doc })
+  } catch (e: any) {
+    return NextResponse.json({ error: e?.message || 'Ошибка сохранения документа' }, { status: 500 })
   }
-
-  const rows = chunks.map((c, i) => ({
-    document_id: doc.id,
-    chunk_index: i,
-    content: c,
-    embedding: embeddings[i] as any,
-  }))
-
-  const { error: chunkErr } = await supabase.from('me_chunks').insert(rows)
-  if (chunkErr) {
-    await supabase.from('me_documents').delete().eq('id', doc.id)
-    return NextResponse.json({ error: `Ошибка вставки чанков: ${chunkErr.message}` }, { status: 500 })
-  }
-
-  return NextResponse.json({ document: doc })
 }

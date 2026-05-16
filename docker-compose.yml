@@ -1,0 +1,126 @@
+# ═══════════════════════════════════════════════════════════════════════
+# docker-compose.yml — полный self-hosted стек на одной машине (Hetzner)
+# ───────────────────────────────────────────────────────────────────────
+# Сервисы:
+#   · postgres   — Postgres 16 + pgvector (заменяет Supabase)
+#   · ai-office  — статический сайт + Netlify-функции (порт 8080 внутри)
+#   · transcribe — Next.js приложение /transcribe (порт 3000 внутри)
+#   · ytdlp      — companion-сервис yt-dlp (порт 8080 внутри, exposed 8000)
+#   · nginx      — reverse proxy, торчит наружу на 80
+#
+# Запуск: cp .env.example .env, заполнить, `docker compose up -d --build`
+# ═══════════════════════════════════════════════════════════════════════
+
+services:
+  postgres:
+    image: pgvector/pgvector:pg16
+    container_name: ai-postgres
+    restart: unless-stopped
+    environment:
+      POSTGRES_USER: ${POSTGRES_USER:-ai}
+      POSTGRES_PASSWORD: ${POSTGRES_PASSWORD:-changeme_in_env}
+      POSTGRES_DB: ${POSTGRES_DB:-ai}
+    volumes:
+      - postgres-data:/var/lib/postgresql/data
+      # SQL-файлы из ./db/init/ применяются при первом старте контейнера.
+      - ./db/init:/docker-entrypoint-initdb.d:ro
+    # Наружу не выставляем — общаемся через docker-сеть.
+    expose:
+      - "5432"
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U ${POSTGRES_USER:-ai}"]
+      interval: 10s
+      timeout: 5s
+      retries: 5
+      start_period: 20s
+
+  ai-office:
+    build:
+      context: ./ai-office-project
+    image: ai-office:latest
+    container_name: ai-office
+    restart: unless-stopped
+    depends_on:
+      postgres:
+        condition: service_healthy
+    env_file:
+      - .env
+    environment:
+      NODE_ENV: production
+      HOST: "0.0.0.0"
+      PORT: "8080"
+      DATABASE_URL: postgres://${POSTGRES_USER:-ai}:${POSTGRES_PASSWORD:-changeme_in_env}@postgres:5432/${POSTGRES_DB:-ai}
+      VOICE_NOTES_DIR: /data/voice-notes
+    expose:
+      - "8080"
+    volumes:
+      - voice-notes:/data/voice-notes
+    healthcheck:
+      test: ["CMD", "wget", "-qO-", "http://127.0.0.1:8080/healthz"]
+      interval: 30s
+      timeout: 5s
+      retries: 3
+      start_period: 10s
+
+  transcribe:
+    build:
+      context: .
+    image: transcribe:latest
+    container_name: ai-transcribe
+    restart: unless-stopped
+    depends_on:
+      postgres:
+        condition: service_healthy
+      ytdlp:
+        condition: service_started
+    env_file:
+      - .env
+    environment:
+      NODE_ENV: production
+      PORT: "3000"
+      HOSTNAME: "0.0.0.0"
+      DATABASE_URL: postgres://${POSTGRES_USER:-ai}:${POSTGRES_PASSWORD:-changeme_in_env}@postgres:5432/${POSTGRES_DB:-ai}
+      YTDLP_SERVICE_URL: http://ytdlp:8080
+    expose:
+      - "3000"
+    healthcheck:
+      test: ["CMD", "wget", "-qO-", "http://127.0.0.1:3000/"]
+      interval: 30s
+      timeout: 5s
+      retries: 3
+      start_period: 30s
+
+  ytdlp:
+    build:
+      context: ./services/ytdlp
+    image: ytdlp-extractor:latest
+    container_name: ai-ytdlp
+    restart: unless-stopped
+    env_file:
+      - .env
+    environment:
+      PORT: "8080"
+    expose:
+      - "8080"
+
+  nginx:
+    image: nginx:alpine
+    container_name: ai-nginx
+    restart: unless-stopped
+    depends_on:
+      - ai-office
+      - transcribe
+    ports:
+      - "80:80"
+    volumes:
+      - ./deploy/nginx.conf:/etc/nginx/conf.d/default.conf:ro
+      - ./deploy/proxy_common.conf:/etc/nginx/conf.d/proxy_common.conf:ro
+    healthcheck:
+      test: ["CMD", "wget", "-qO-", "http://127.0.0.1/healthz"]
+      interval: 30s
+      timeout: 5s
+      retries: 3
+
+volumes:
+  postgres-data:
+  voice-notes:

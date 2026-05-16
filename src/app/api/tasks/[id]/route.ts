@@ -1,6 +1,6 @@
 import { NextRequest, NextResponse } from 'next/server'
-import { getServerSupabase } from '@/lib/transcripts-db'
-import type { TaskStatus, TaskPriority } from '@/lib/tasks-db'
+import { query, isConfigured } from '@/lib/transcripts-db'
+import type { Task, TaskStatus, TaskPriority } from '@/lib/tasks-db'
 
 type PatchBody = Partial<{
   title: string
@@ -11,46 +11,61 @@ type PatchBody = Partial<{
   position: number
 }>
 
+const ALLOWED = ['title', 'description', 'status', 'priority', 'stage', 'position'] as const
+
 export async function PATCH(req: NextRequest, { params }: { params: { id: string } }) {
-  const supabase = getServerSupabase()
-  if (!supabase) {
-    return NextResponse.json({ error: 'Supabase не настроен' }, { status: 503 })
+  if (!isConfigured()) {
+    return NextResponse.json({ error: 'База данных не настроена' }, { status: 503 })
   }
   const body = (await req.json()) as PatchBody
 
-  // Whitelist allowed fields
-  const update: Record<string, unknown> = {}
-  if (typeof body.title === 'string') update.title = body.title
-  if (body.description === null || typeof body.description === 'string') update.description = body.description
-  if (body.status) update.status = body.status
-  if (body.priority) update.priority = body.priority
-  if (body.stage === null || typeof body.stage === 'string') update.stage = body.stage
-  if (typeof body.position === 'number') update.position = body.position
+  // Whitelist + динамический набор колонок → параметризованный UPDATE.
+  const sets: string[] = []
+  const values: any[] = []
+  for (const key of ALLOWED) {
+    const v = (body as any)[key]
+    if (key === 'title' && typeof v === 'string') {
+      values.push(v); sets.push(`title = $${values.length}`)
+    } else if (key === 'description' && (v === null || typeof v === 'string')) {
+      values.push(v); sets.push(`description = $${values.length}`)
+    } else if (key === 'status' && typeof v === 'string') {
+      values.push(v); sets.push(`status = $${values.length}`)
+    } else if (key === 'priority' && typeof v === 'string') {
+      values.push(v); sets.push(`priority = $${values.length}`)
+    } else if (key === 'stage' && (v === null || typeof v === 'string')) {
+      values.push(v); sets.push(`stage = $${values.length}`)
+    } else if (key === 'position' && typeof v === 'number') {
+      values.push(v); sets.push(`position = $${values.length}`)
+    }
+  }
 
-  if (Object.keys(update).length === 0) {
+  if (sets.length === 0) {
     return NextResponse.json({ error: 'Нечего обновлять' }, { status: 400 })
   }
+  values.push(params.id)
 
-  const { data, error } = await supabase
-    .from('tasks')
-    .update(update)
-    .eq('id', params.id)
-    .select('*')
-    .single()
-  if (error) {
-    return NextResponse.json({ error: error.message }, { status: 500 })
+  try {
+    const res = await query<Task>(
+      `update tasks set ${sets.join(', ')} where id = $${values.length} returning *`,
+      values,
+    )
+    if (!res?.rows[0]) {
+      return NextResponse.json({ error: 'Task не найден' }, { status: 404 })
+    }
+    return NextResponse.json(res.rows[0])
+  } catch (e: any) {
+    return NextResponse.json({ error: e?.message || 'Ошибка обновления' }, { status: 500 })
   }
-  return NextResponse.json(data)
 }
 
 export async function DELETE(_req: NextRequest, { params }: { params: { id: string } }) {
-  const supabase = getServerSupabase()
-  if (!supabase) {
-    return NextResponse.json({ error: 'Supabase не настроен' }, { status: 503 })
+  if (!isConfigured()) {
+    return NextResponse.json({ error: 'База данных не настроена' }, { status: 503 })
   }
-  const { error } = await supabase.from('tasks').delete().eq('id', params.id)
-  if (error) {
-    return NextResponse.json({ error: error.message }, { status: 500 })
+  try {
+    await query(`delete from tasks where id = $1`, [params.id])
+    return NextResponse.json({ ok: true })
+  } catch (e: any) {
+    return NextResponse.json({ error: e?.message || 'Ошибка удаления' }, { status: 500 })
   }
-  return NextResponse.json({ ok: true })
 }

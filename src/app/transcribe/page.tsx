@@ -881,7 +881,7 @@ export default function TranscribePage() {
 
       {!historyConfigured && (
         <p className="px-1 text-[12px] text-apple-faint">
-          История транскриптов выключена — добавьте <code className="rounded bg-apple-bg-soft px-1 py-0.5 text-apple-muted">NEXT_PUBLIC_SUPABASE_URL</code> и <code className="rounded bg-apple-bg-soft px-1 py-0.5 text-apple-muted">SUPABASE_SERVICE_KEY</code>, а также выполните миграцию <code className="rounded bg-apple-bg-soft px-1 py-0.5 text-apple-muted">supabase/migrations/001_transcripts.sql</code>.
+          История транскриптов выключена — задайте <code className="rounded bg-apple-bg-soft px-1 py-0.5 text-apple-muted">DATABASE_URL</code> и применит схему <code className="rounded bg-apple-bg-soft px-1 py-0.5 text-apple-muted">db/init/01_schema.sql</code>.
         </p>
       )}
     </div>

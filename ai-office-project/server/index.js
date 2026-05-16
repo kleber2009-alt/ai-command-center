@@ -31,6 +31,10 @@ const ROOT = path.resolve(__dirname, '..');
 const PORT = parseInt(process.env.PORT, 10) || 8080;
 const HOST = process.env.HOST || '0.0.0.0';
 
+// Каталог, куда voice-generate пишет mp3. Отдаётся клиентам через
+// /files/voice-notes/*. Должен совпадать с VOICE_NOTES_DIR функции.
+const VOICE_NOTES_DIR = process.env.VOICE_NOTES_DIR || '/data/voice-notes';
+
 // ── API routes → Netlify-function modules ─────────────────────────────
 // Lazy-loaded the first time a route is hit so a misconfigured handler
 // doesn't crash the whole server on boot.
@@ -278,6 +282,32 @@ const server = http.createServer(async (req, res) => {
       res.statusCode = 200;
       res.setHeader('Content-Type', 'application/json');
       res.end(JSON.stringify({ ok: true, ts: Date.now() }));
+      log(req, res, started);
+      return;
+    }
+
+    // /files/voice-notes/* — отдаём mp3 сгенерированные voice-generate
+    if (urlPath.startsWith('/files/voice-notes/')) {
+      const rel = decodeURIComponent(urlPath.slice('/files/voice-notes/'.length));
+      // Защита от traversal: запрещаем .. и абсолютные пути.
+      if (rel.includes('..') || rel.startsWith('/')) {
+        res.statusCode = 400; res.end('bad path'); log(req, res, started); return;
+      }
+      const abs = path.join(VOICE_NOTES_DIR, rel);
+      if (!abs.startsWith(VOICE_NOTES_DIR)) {
+        res.statusCode = 400; res.end('bad path'); log(req, res, started); return;
+      }
+      try {
+        const data = await fs.readFile(abs);
+        res.statusCode = 200;
+        res.setHeader('Content-Type', 'audio/mpeg');
+        res.setHeader('Cache-Control', 'public, max-age=86400');
+        res.setHeader('Content-Length', data.length);
+        res.end(data);
+      } catch {
+        res.statusCode = 404;
+        res.end('not found');
+      }
       log(req, res, started);
       return;
     }

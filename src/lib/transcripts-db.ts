@@ -1,4 +1,15 @@
-import { createClient, SupabaseClient } from '@supabase/supabase-js'
+// ═══════════════════════════════════════════════════════════════════
+// src/lib/transcripts-db.ts
+// ───────────────────────────────────────────────────────────────────
+// Шейпы строк transcripts + утилиты. Реальные запросы лежат в
+// route-хендлерах через `query()` из ./db, чтобы каждый эндпоинт сам
+// решал что селектить (минус один абстракционный слой).
+//
+// Хелпер `isConfigured()` сохраняет старое поведение — без БД сайт
+// работает, просто никакие записи не сохраняются.
+// ═══════════════════════════════════════════════════════════════════
+
+export { getPool, query, withClient, isConfigured, toVectorLiteral } from './db'
 
 export type Paragraph = { text: string; start: number; end: number }
 
@@ -35,29 +46,6 @@ export type TranscriptRow = {
   bullets: string[] | null
   translation: { lang: string; text: string } | null
   generations: Generations | null
-}
-
-let cached: SupabaseClient | null = null
-
-function normalizeSupabaseUrl(raw: string): string {
-  // Users sometimes paste the full REST endpoint
-  // (https://xxx.supabase.co/rest/v1/) into the URL var. supabase-js
-  // appends "/rest/v1/..." itself, so we strip any path/trailing slash
-  // and keep just the origin.
-  try {
-    return new URL(raw).origin
-  } catch {
-    return raw.replace(/\/(rest\/v1\/?)?$/i, '').replace(/\/+$/, '')
-  }
-}
-
-export function getServerSupabase(): SupabaseClient | null {
-  if (cached) return cached
-  const rawUrl = process.env.NEXT_PUBLIC_SUPABASE_URL
-  const key = process.env.SUPABASE_SERVICE_KEY
-  if (!rawUrl || !key) return null
-  cached = createClient(normalizeSupabaseUrl(rawUrl), key, { auth: { persistSession: false } })
-  return cached
 }
 
 export function makeTitle(transcript: string, url: string): string {

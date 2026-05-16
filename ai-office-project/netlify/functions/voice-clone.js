@@ -1,29 +1,21 @@
 // ═══════════════════════════════════════════════════════════════════
 // netlify/functions/voice-clone.js
 // ───────────────────────────────────────────────────────────────────
-// POST /api/voice-clone — клонирование голоса через ElevenLabs Instant
-// Voice Clone.
+// POST /api/voice-clone — клонирование голоса через ElevenLabs.
 //
-// Принимает multipart/form-data:
-//   files[]        — одно или несколько аудио (mp3/m4a/wav/ogg, до 11MB суммарно)
-//   owner_handle   — @username или email — владелец голоса (уникальный ключ)
-//   display_name?  — человекочитаемое имя голоса (default = owner_handle)
-//   sample_seconds?— подсказка о длительности (для UI/аналитики)
+// Self-hosted версия (после переезда с Supabase):
+//   · хранит запись в локальном Postgres (таблица voices)
+//   · файлы пока никуда не пишет (mp3 генерится в voice-generate)
 //
-// Делает:
-//   1. Архивирует прошлый голос владельца (если был)
-//   2. Форвардит файлы в ElevenLabs POST /v1/voices/add
-//   3. Сохраняет { provider_voice_id } в Supabase public.voices
-//   4. Возвращает { voice_id, provider_voice_id, display_name }
-//
-// Env vars:
-//   ELEVENLABS_API_KEY    — ключ от api.elevenlabs.io
-//   SUPABASE_URL          — https://xxx.supabase.co
-//   SUPABASE_SERVICE_KEY  — service_role key (bypass RLS, НЕ светить клиенту)
+// Env:
+//   ELEVENLABS_API_KEY  — ключ от api.elevenlabs.io
+//   DATABASE_URL        — postgres://user:pass@host:5432/db
 // ═══════════════════════════════════════════════════════════════════
 
+import { query, isDbConfigured } from '../../server/db.js';
+
 const ELEVENLABS_API = 'https://api.elevenlabs.io/v1';
-const MAX_TOTAL_BYTES = 11 * 1024 * 1024; // ElevenLabs hard cap
+const MAX_TOTAL_BYTES = 11 * 1024 * 1024;
 
 function json(status, payload) {
   return new Response(JSON.stringify(payload), {
@@ -47,31 +39,19 @@ export default async (request) => {
       },
     });
   }
-  if (request.method !== 'POST') {
-    return json(405, { error: 'method_not_allowed' });
-  }
+  if (request.method !== 'POST') return json(405, { error: 'method_not_allowed' });
 
-  const ELEVEN_KEY = process.env.ELEVENLABS_API_KEY;
-  const SUPABASE_URL = process.env.SUPABASE_URL;
-  const SUPABASE_SERVICE_KEY = process.env.SUPABASE_SERVICE_KEY;
-
-  if (!ELEVEN_KEY) {
-    return json(503, {
-      error: 'eleven_not_configured',
-      hint: 'Set ELEVENLABS_API_KEY in Netlify env vars',
-    });
+  if (!process.env.ELEVENLABS_API_KEY) {
+    return json(503, { error: 'eleven_not_configured', hint: 'Задай ELEVENLABS_API_KEY' });
   }
-  if (!SUPABASE_URL || !SUPABASE_SERVICE_KEY) {
-    return json(503, {
-      error: 'supabase_not_configured',
-      hint: 'Set SUPABASE_URL and SUPABASE_SERVICE_KEY in Netlify env vars',
-    });
+  if (!isDbConfigured()) {
+    return json(503, { error: 'db_not_configured', hint: 'Задай DATABASE_URL' });
   }
 
   let form;
   try {
     form = await request.formData();
-  } catch (e) {
+  } catch {
     return json(400, { error: 'bad_request', message: 'Expected multipart/form-data' });
   }
 
@@ -93,7 +73,7 @@ export default async (request) => {
     });
   }
 
-  // ── 1. Forward to ElevenLabs ──
+  // ── ElevenLabs clone ─────────────────────────────────────────────
   const elevenForm = new FormData();
   elevenForm.append('name', displayName);
   elevenForm.append('description', `AI Growth Office voice clone for ${ownerHandle}`);
@@ -105,7 +85,7 @@ export default async (request) => {
   try {
     cloneRes = await fetch(`${ELEVENLABS_API}/voices/add`, {
       method: 'POST',
-      headers: { 'xi-api-key': ELEVEN_KEY },
+      headers: { 'xi-api-key': process.env.ELEVENLABS_API_KEY },
       body: elevenForm,
     });
   } catch (e) {
@@ -127,59 +107,37 @@ export default async (request) => {
     return json(502, { error: 'eleven_no_voice_id', details: cloneData });
   }
 
-  // ── 2. Archive previous active voice for this owner ──
-  await sbFetch(SUPABASE_URL, SUPABASE_SERVICE_KEY, {
-    method: 'PATCH',
-    path: `/rest/v1/voices?owner_handle=eq.${encodeURIComponent(ownerHandle)}&archived_at=is.null`,
-    body: { archived_at: new Date().toISOString() },
-  });
+  // ── Архивируем прошлый активный голос владельца и пишем новый ───
+  try {
+    await query(
+      `update voices set archived_at = now()
+        where owner_handle = $1 and archived_at is null`,
+      [ownerHandle],
+    );
 
-  // ── 3. Insert new voice row ──
-  const insertRes = await sbFetch(SUPABASE_URL, SUPABASE_SERVICE_KEY, {
-    method: 'POST',
-    path: '/rest/v1/voices',
-    headers: { Prefer: 'return=representation' },
-    body: {
-      owner_handle: ownerHandle,
-      display_name: displayName,
-      provider: 'elevenlabs',
-      provider_voice_id: providerVoiceId,
-      sample_seconds: sampleSeconds,
-    },
-  });
+    const insert = await query(
+      `insert into voices (owner_handle, display_name, provider, provider_voice_id, sample_seconds)
+       values ($1, $2, 'elevenlabs', $3, $4)
+       returning id, owner_handle, display_name, provider_voice_id, sample_seconds, created_at`,
+      [ownerHandle, displayName, providerVoiceId, sampleSeconds],
+    );
+    const row = insert.rows[0];
 
-  if (!insertRes.ok) {
-    const txt = await insertRes.text();
+    return json(200, {
+      ok: true,
+      voice_id: row.id,
+      provider_voice_id: row.provider_voice_id,
+      display_name: row.display_name,
+      owner_handle: row.owner_handle,
+      created_at: row.created_at,
+    });
+  } catch (e) {
     return json(500, {
-      error: 'supabase_insert_failed',
-      status: insertRes.status,
-      details: txt.slice(0, 400),
+      error: 'db_insert_failed',
+      message: String(e?.message || e),
       provider_voice_id: providerVoiceId,
     });
   }
-
-  const [row] = await insertRes.json();
-  return json(200, {
-    ok: true,
-    voice_id: row.id,
-    provider_voice_id: row.provider_voice_id,
-    display_name: row.display_name,
-    owner_handle: row.owner_handle,
-    created_at: row.created_at,
-  });
 };
-
-async function sbFetch(url, key, { method, path, body, headers = {} }) {
-  return fetch(`${url}${path}`, {
-    method,
-    headers: {
-      apikey: key,
-      Authorization: `Bearer ${key}`,
-      'Content-Type': 'application/json',
-      ...headers,
-    },
-    body: body ? JSON.stringify(body) : undefined,
-  });
-}
 
 export const config = { path: '/api/voice-clone' };
