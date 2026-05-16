@@ -1,39 +1,52 @@
 import { NextResponse } from 'next/server'
-import { createClient } from '@supabase/supabase-js'
+import { db } from '@/lib/db'
+
+const PLAN_PRICES: Record<string, number> = { pro: 29, builder: 79, architect: 199 }
+const LESSONS_PER_USER = 26
 
 export async function GET() {
   try {
-    const supabase = createClient(
-      process.env.NEXT_PUBLIC_SUPABASE_URL!,
-      process.env.SUPABASE_SERVICE_KEY!
-    )
-
-    const [usersRes, progressRes, subsRes] = await Promise.all([
-      supabase.from('users').select('*'),
-      supabase.from('progress').select('*').eq('status', 'completed'),
-      supabase.from('subscriptions').select('*').eq('status', 'active'),
+    const [{ rows: userRows }, { rows: completedRows }, { rows: subRows }] = await Promise.all([
+      db.query<{ total: string; active7d: string }>(
+        `SELECT
+           COUNT(*)::text AS total,
+           COUNT(*) FILTER (WHERE last_active > NOW() - INTERVAL '7 days')::text AS active7d
+         FROM platform_users`
+      ),
+      db.query<{ completed: string }>(
+        `SELECT COUNT(*)::text AS completed
+         FROM lesson_progress
+         WHERE status = 'completed'`
+      ),
+      db.query<{ plan: string; count: string }>(
+        `SELECT plan, COUNT(*)::text AS count
+         FROM platform_subscriptions
+         WHERE status = 'active'
+         GROUP BY plan`
+      ),
     ])
 
-    const users = usersRes.data || []
-    const progress = progressRes.data || []
-    const subs = subsRes.data || []
+    const totalUsers = Number(userRows[0]?.total ?? 0)
+    const activeUsers7d = Number(userRows[0]?.active7d ?? 0)
+    const completedLessons = Number(completedRows[0]?.completed ?? 0)
 
-    const sevenDaysAgo = new Date(Date.now() - 7 * 86400000).toISOString()
-    const activeUsers = users.filter((u: any) => u.last_active > sevenDaysAgo)
-    const paidUsers = subs.length
+    const paidUsers = subRows.reduce((n, r) => n + Number(r.count), 0)
+    const mrr = subRows.reduce(
+      (sum, r) => sum + (PLAN_PRICES[r.plan] ?? 0) * Number(r.count),
+      0,
+    )
 
-    const planPrices: Record<string, number> = { pro: 29, builder: 79, architect: 199 }
-    const mrr = subs.reduce((sum: number, s: any) => sum + (planPrices[s.plan] || 0), 0)
-
-    const conversionRate = users.length > 0 ? (paidUsers / users.length * 100) : 0
-    const completionRate = users.length > 0 ? (progress.length / (users.length * 26) * 100) : 0
+    const conversionRate = totalUsers > 0 ? (paidUsers / totalUsers) * 100 : 0
+    const completionRate =
+      totalUsers > 0 ? (completedLessons / (totalUsers * LESSONS_PER_USER)) * 100 : 0
 
     const today = new Date()
-    const daysLeft = new Date(today.getFullYear(), today.getMonth() + 1, 0).getDate() - today.getDate()
+    const daysLeft =
+      new Date(today.getFullYear(), today.getMonth() + 1, 0).getDate() - today.getDate()
 
     return NextResponse.json({
-      totalUsers: users.length,
-      activeUsers7d: activeUsers.length,
+      totalUsers,
+      activeUsers7d,
       paidUsers,
       mrr,
       conversionRate: conversionRate.toFixed(1),
