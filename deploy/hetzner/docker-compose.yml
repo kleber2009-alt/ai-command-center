@@ -13,7 +13,7 @@ services:
       NEXT_PUBLIC_SUPABASE_URL: ${NEXT_PUBLIC_SUPABASE_URL}
       NEXT_PUBLIC_SUPABASE_ANON_KEY: ${NEXT_PUBLIC_SUPABASE_ANON_KEY}
       SUPABASE_SERVICE_KEY: ${SUPABASE_SERVICE_KEY}
-      YTDLP_SERVICE_URL: http://ytdlp:8000
+      YTDLP_SERVICE_URL: http://ytdlp:8080
       YTDLP_SERVICE_API_KEY: ${YTDLP_SERVICE_API_KEY}
     expose:
       - "3000"
@@ -29,7 +29,7 @@ services:
       INSTAGRAM_COOKIES_B64: ${INSTAGRAM_COOKIES_B64:-}
       COOKIES_B64: ${COOKIES_B64:-}
     expose:
-      - "8000"
+      - "8080"
 
   caddy:
     image: caddy:2-alpine
