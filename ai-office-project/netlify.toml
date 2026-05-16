@@ -41,6 +41,12 @@
   status = 200
   force = true
 
+[[redirects]]
+  from = "/api/tg-voice-webhook"
+  to = "/.netlify/functions/tg-voice-webhook"
+  status = 200
+  force = true
+
 # ── Clean URLs ──
 [[redirects]]
   from = "/navigation"

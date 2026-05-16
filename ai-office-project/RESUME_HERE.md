@@ -21,17 +21,26 @@
 |---|---|---|---|
 | 🎤 **Voice clone** | TTS твоим голосом | **ElevenLabs** (выбрано) | ✅ Commit 1 |
 | 🎭 **Sample collection** | UI для загрузки голоса | `persona-train.html` | ✅ Commit 1 |
-| 📨 **TG posting** | Бот шлёт voice notes | Telegram Bot API | 🚧 Commit 2 |
-| ✅ **Approval flow** | Юзер аппрувит каждый пост | TG inline-кнопки | 🚧 Commit 2 |
-| 🎬 **Video circles** | Кружки Telegram | D-ID / HeyGen | ⏳ Commit 3 |
-| ✍️ **Style match** | Тексты в твоём стиле | Claude + персональный промпт | ⏳ Commit 3 |
-| 📷 **IG posting** | Stories/Reels/DM | Instagram Graph API | ⏳ Commit 4 |
+| 📨 **TG composer bot** | Бот озвучивает текст owner'а, owner пересылает | Telegram Bot API | ✅ Commit 2 |
+| 🔒 **Handle verification** | Защита от impersonation в боте | code-проверка | ⏳ Commit 3 |
+| ✅ **Subscriber relay** | Подписчики пишут боту → AI-ответ → approval | TG inline-кнопки | ⏳ Commit 3+ |
+| 🎬 **Video circles** | Кружки Telegram | D-ID / HeyGen | ⏳ Commit 4 |
+| ✍️ **Style match** | Тексты в твоём стиле | Claude + персональный промпт | ⏳ Commit 4 |
+| 📷 **IG posting** | Stories/Reels/DM | Instagram Graph API | ⏳ Commit 5 |
 
-**Что прямо сейчас нужно от тебя для запуска Commit 1:**
-1. В Supabase SQL Editor запустить `supabase/migrations/003_voice.sql`
-2. Получить ключ ElevenLabs (тариф Starter $5/мес минимум)
-3. В Netlify env vars добавить: `ELEVENLABS_API_KEY`, `SUPABASE_URL`, `SUPABASE_SERVICE_KEY`
-4. Открыть `/persona-train` → записать 1–3 мин голоса → проверить генерацию
+**Что прямо сейчас нужно от тебя для запуска Commit 1+2:**
+1. В Supabase SQL Editor прогнать **обе миграции**: `003_voice.sql` + `004_voice_bot.sql`
+2. Купить ElevenLabs Starter ($5/мес минимум — Free не даёт voice cloning)
+3. Создать бота у @BotFather (`/newbot` → токен)
+4. В Netlify env vars добавить:
+   - `ELEVENLABS_API_KEY`
+   - `SUPABASE_URL` = `https://cslvbnladhfjrdbtnwkm.supabase.co`
+   - `SUPABASE_SERVICE_KEY` (service_role из Supabase Settings → API)
+   - `TG_VOICE_BOT_TOKEN` (новый бот из шага 3)
+   - `TG_WEBHOOK_SECRET` (любая строка 32+ символов, опционально)
+5. `curl -X POST` для `setWebhook` (полная команда — в `docs/PHASE_5.md`)
+6. Открыть `/persona-train` → записать голос → проверить в браузере
+7. Написать боту `/start @твой_handle` → послать текстовое сообщение
 
 Полная документация: [`docs/PHASE_5.md`](docs/PHASE_5.md)
 

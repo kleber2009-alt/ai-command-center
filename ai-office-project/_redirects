@@ -10,6 +10,7 @@
 /api/voice-clone           /.netlify/functions/voice-clone     200
 /api/voice-generate        /.netlify/functions/voice-generate  200
 /api/voice-list            /.netlify/functions/voice-list      200
+/api/tg-voice-webhook      /.netlify/functions/tg-voice-webhook 200
 
 # Clean URLs
 /navigation                /navigation.html           200

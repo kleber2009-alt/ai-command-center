@@ -202,13 +202,16 @@
 
 ### **Фаза 5: Voice / Video AI-agents · IG + TG** 🔥 (новый приоритет, после Фазы 1)
 
-> **Прогресс (16.05.2026 · Commit 1):** voice-pipeline MVP-0 готов.
-> · `persona-train.html` — UI клонирования голоса + тест-генерация
-> · `netlify/functions/voice-clone.js`, `voice-generate.js`, `voice-list.js`
-> · `supabase/migrations/003_voice.sql` — таблицы `voices`, `voice_generations`, bucket `voice-notes`
-> · Полная документация — `docs/PHASE_5.md`
-> · **Что осталось:** настроить env vars (`ELEVENLABS_API_KEY`, `SUPABASE_SERVICE_KEY`), запустить SQL, проверить flow на `/persona-train`.
-> · **Дальше (Commit 2):** Telegram approval-бот.
+> **Прогресс (16.05.2026):**
+> · **Commit 1 ✅** — voice-pipeline MVP-0: `persona-train.html`, `voice-clone.js`, `voice-generate.js`, `voice-list.js`, миграция `003_voice.sql`.
+> · **Commit 2 ✅** — Telegram Voice Composer Bot: `tg-voice-webhook.js`, `_shared/voice-pipeline.js`, миграция `004_voice_bot.sql`.
+> · Полная документация — `docs/PHASE_5.md`.
+> · **Setup осталось:**
+>   1. Прогнать `003_voice.sql` + `004_voice_bot.sql` в Supabase
+>   2. Купить ElevenLabs Starter, добавить `ELEVENLABS_API_KEY`, `SUPABASE_URL`, `SUPABASE_SERVICE_KEY` в Netlify
+>   3. Создать бота у @BotFather, добавить `TG_VOICE_BOT_TOKEN`
+>   4. `curl setWebhook` (см. PHASE_5.md)
+> · **Дальше (Commit 3):** на выбор — subscriber-relay flow, видео-кружки через D-ID, или handle-verification.
 
 **Идея:** AI-агенты ведут переписку, шлют voice-notes и видео-кружки от лица пользователя в Instagram и Telegram.
 

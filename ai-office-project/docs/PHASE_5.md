@@ -2,8 +2,9 @@
 
 > Stage: **voice-only**, в работе.
 > Дата: начато 16.05.2026.
-> Scope v1: клон голоса + генерация voice-notes для предпросмотра.
-> Scope v2 (следующий коммит): Telegram approval-бот для отправки от лица юзера.
+> · **Commit 1 (✅):** клон голоса + генерация voice-notes для предпросмотра.
+> · **Commit 2 (✅):** Telegram Voice Composer Bot — owner пишет боту, получает voice-note своим голосом и пересылает кому угодно.
+> · **Commit 3 (далее):** видео-кружки через D-ID, либо subscriber-relay approval-flow.
 
 ---
 
@@ -43,14 +44,17 @@
 
 ## Файлы
 
-| Путь | Что делает |
-|---|---|
-| `persona-train.html` | UI: запись с микрофона / загрузка / клон / тест-генерация |
-| `netlify/functions/voice-clone.js` | `POST /api/voice-clone` — multipart audio → ElevenLabs → Supabase |
-| `netlify/functions/voice-generate.js` | `POST /api/voice-generate` — text → TTS → Storage → URL |
-| `netlify/functions/voice-list.js` | `GET /api/voice-list?owner=@handle` — активный голос + архив |
-| `supabase/migrations/003_voice.sql` | Таблицы `voices`, `voice_generations` + storage bucket + RLS |
-| `docs/PHASE_5.md` | Этот файл |
+| Путь | Commit | Что делает |
+|---|---|---|
+| `persona-train.html` | 1 | UI: запись с микрофона / загрузка / клон / тест-генерация |
+| `netlify/functions/voice-clone.js` | 1 | `POST /api/voice-clone` — multipart audio → ElevenLabs → Supabase |
+| `netlify/functions/voice-generate.js` | 1 | `POST /api/voice-generate` — text → TTS → Storage → URL |
+| `netlify/functions/voice-list.js` | 1 | `GET /api/voice-list?owner=@handle` — активный голос + архив |
+| `netlify/functions/tg-voice-webhook.js` | 2 | `POST /api/tg-voice-webhook` — Telegram Bot webhook |
+| `netlify/functions/_shared/voice-pipeline.js` | 2 | Общая логика TTS + Storage + лог (используется в `voice-generate` и `tg-voice-webhook`) |
+| `supabase/migrations/003_voice.sql` | 1 | Таблицы `voices`, `voice_generations` + storage bucket + RLS |
+| `supabase/migrations/004_voice_bot.sql` | 2 | Таблица `voice_bot_users` + TG-колонки в `voice_generations` |
+| `docs/PHASE_5.md` | — | Этот файл |
 
 ---
 
@@ -205,24 +209,116 @@ Content-Type: application/json
 
 ---
 
-## Что дальше (Commit 2)
+## Commit 2 — Telegram Voice Composer Bot
 
-**Telegram approval flow:**
-- `netlify/functions/tg-voice-webhook.js` — принимает Telegram updates
-- Юзер пишет боту `/say <текст>` → бот вызывает `/api/voice-generate` → шлёт voice note **админу** с inline-кнопками `✅ Отправить · ✏️ Переписать · 🗑 Отменить`
-- На `✅` → бот шлёт `sendVoice` оригинальному собеседнику
-- Логирует `voice_generations.status = sent`, `tg_message_id`
+**Идея и safety model:** простейший паттерн «voice composer».
+Owner пишет боту → бот озвучивает текст клонированным голосом → пришлёт
+voice-note **обратно тому же чату**. Дальше owner вручную пересылает
+voice-note кому захочет. Это и есть approval-gate — Telegram-нативная
+пересылка как осознанный шаг. Бот сам никуда не шлёт.
 
-**Что новое потребуется:**
-- Новый bot token (или переиспользовать TG_BOT_TOKEN из notify-tg)
-- `setWebhook` на `https://домен/api/tg-voice-webhook`
-- Дополнительные env vars: `TG_VOICE_BOT_TOKEN`, `TG_ADMIN_CHAT_ID`
+**Поток:**
+```
+1. Owner создаёт voice на /persona-train (Commit 1)
+2. Открывает чат с @your_voice_bot, шлёт /start @owner_handle
+3. Бот проверяет что voice существует → биндит chat_id ↔ owner_handle в voice_bot_users
+4. Owner шлёт текст → бот показывает "🎙 запись..." → /api/voice-generate
+   → присылает voice-note (Telegram fetches MP3 из публичного Supabase Storage URL)
+5. Owner пересылает voice-note куда нужно через нативный TG-share
+```
 
-**Что не делаем в Commit 2:**
-- Видео-кружки (HeyGen/D-ID) — Commit 3
-- Instagram Graph API — Commit 4
-- Auto-reply на входящие DM — Commit 5 (с большой осторожностью)
+### Команды бота
+
+| Команда | Что делает |
+|---|---|
+| `/start` | Приветствие |
+| `/start @handle` | Привязать этот чат к голосу `@handle` |
+| `/voice` | Показать текущий привязанный голос |
+| `/settings` | TTS-настройки (read-only пока) |
+| `/clear` | Отвязать чат |
+| `/help` | Команды |
+| `любой текст` | Озвучить и прислать voice-note |
+
+### Setup
+
+**1. Создать бота у @BotFather:**
+```
+/newbot → AI Growth Office Voice → @your_voice_bot
+→ скопировать токен
+```
+
+**2. Env vars в Netlify** (в дополнение к Commit 1):
+
+| Var | Где взять | Зачем |
+|---|---|---|
+| `TG_VOICE_BOT_TOKEN` | @BotFather | Новый бот для voice flow |
+| `TG_WEBHOOK_SECRET` | сгенерируй сам, любая строка 32+ симв. | (опционально) защита webhook |
+
+**3. Прогнать миграцию:**
+
+В Supabase SQL Editor запустить
+[`supabase/migrations/004_voice_bot.sql`](../supabase/migrations/004_voice_bot.sql).
+
+**4. Установить webhook** (один раз, после деплоя):
+
+```bash
+curl -X POST "https://api.telegram.org/bot$TG_VOICE_BOT_TOKEN/setWebhook" \
+  -d "url=https://ai-growth-office.ru/api/tg-voice-webhook" \
+  -d "secret_token=$TG_WEBHOOK_SECRET" \
+  -d 'allowed_updates=["message","callback_query"]'
+```
+
+Проверка:
+```bash
+curl "https://api.telegram.org/bot$TG_VOICE_BOT_TOKEN/getWebhookInfo"
+```
+
+Health-check Function:
+```bash
+curl https://ai-growth-office.ru/api/tg-voice-webhook
+# → { "ok": true, "service": "tg-voice-webhook" }
+```
+
+**5. Настроить команды у @BotFather:**
+```
+/setcommands → @your_voice_bot
+start - Привязать чат к голосу
+voice - Показать активный голос
+settings - Настройки TTS
+clear - Отвязать чат
+help - Помощь
+```
+
+### Безопасность Commit 2
+
+- ✅ Никакого автопостинга. Бот шлёт только в чат, который ему написал.
+- ✅ Каждая генерация логируется в `voice_generations` с `tg_chat_id`, `tg_message_id`, `text`.
+- ✅ Webhook опционально защищён `TG_WEBHOOK_SECRET` (заголовок `X-Telegram-Bot-Api-Secret-Token`).
+- ✅ Owner-binding явный через `/start @handle` — нельзя случайно озвучить чужим голосом.
+- ⚠ Нет авторизации владельца handle — если злоумышленник знает чужой handle, он может биндить чат к этому голосу и генерировать voice-notes. Решается в Commit 3 (например, через verification-code, отправленный на email или в `/persona-train` UI).
 
 ---
 
-_Last updated: 2026-05-16, после Commit 1._
+## Что дальше (Commit 3 — на выбор)
+
+**Вариант A — subscriber relay flow** (расширение voice-бота):
+- Юзеры пишут боту напрямую → бот показывает owner'у входящие → owner выбирает «AI-ответ / Свой текст» → preview voice → ✅ отправить
+- Полный approval-pipeline, новая таблица `conversations` / `pending_replies`
+
+**Вариант B — видео-кружки через D-ID** (новый media-canal):
+- Owner загружает 1 фото лица в `persona-train.html`
+- Новая Function `/api/video-generate` → D-ID Talks API → mp4 → `sendVideoNote`
+- ~1 неделя работы, +$5/мес D-ID
+
+**Вариант C — handle verification** (security):
+- Verification-code в `persona-train.html` после клонирования голоса
+- Owner вводит code в TG-боте при `/start` → доказывает что владеет handle
+- Без этого Commit 2 уязвим к impersonation
+
+**Что не делаем сейчас:**
+- Instagram Graph API — после Phase 1 (тарифы + платежи)
+- Полностью авто-reply на DM — это юридически и этически тяжело, нужен бизнес-кейс
+
+---
+
+_Last updated: 2026-05-16, после Commit 2._
