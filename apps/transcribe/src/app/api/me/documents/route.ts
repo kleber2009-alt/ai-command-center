@@ -1,7 +1,7 @@
 import { NextRequest, NextResponse } from 'next/server'
 import { chunkText } from '@/lib/chunking'
 import { embedBatch } from '@/lib/embeddings'
-import { getServerSupabase } from '@/lib/me-db'
+import { getDb } from '@/lib/db'
 
 export const maxDuration = 120
 
@@ -36,23 +36,31 @@ async function extractFileText(file: File): Promise<string> {
   throw new Error(`Не поддерживаю файл: ${file.name}. Используй .txt, .md, .csv, .json, .pdf или .docx.`)
 }
 
+function toVectorLiteral(vec: number[]): string {
+  return '[' + vec.join(',') + ']'
+}
+
 export async function GET() {
-  const supabase = getServerSupabase()
-  if (!supabase) return NextResponse.json({ items: [], configured: false })
-  const { data, error } = await supabase
-    .from('me_documents')
-    .select('id, created_at, title, source_type, source_meta, char_count, chunk_count')
-    .order('created_at', { ascending: false })
-    .limit(200)
-  if (error) return NextResponse.json({ error: error.message }, { status: 500 })
-  return NextResponse.json({ items: data ?? [], configured: true })
+  const sql = getDb()
+  if (!sql) return NextResponse.json({ items: [], configured: false })
+  try {
+    const rows = await sql`
+      select id, created_at, title, source_type, source_meta, char_count, chunk_count
+      from me_documents
+      order by created_at desc
+      limit 200
+    `
+    return NextResponse.json({ items: rows, configured: true })
+  } catch (e: any) {
+    return NextResponse.json({ error: e?.message || 'DB error' }, { status: 500 })
+  }
 }
 
 export async function POST(req: NextRequest) {
-  const supabase = getServerSupabase()
-  if (!supabase) {
+  const sql = getDb()
+  if (!sql) {
     return NextResponse.json(
-      { error: 'Supabase не настроен. Нужны NEXT_PUBLIC_SUPABASE_URL и SUPABASE_SERVICE_KEY + миграция 003_me.sql.' },
+      { error: 'Postgres не настроен. Установите DATABASE_URL и накатите db/init.sql.' },
       { status: 500 },
     )
   }
@@ -102,35 +110,33 @@ export async function POST(req: NextRequest) {
     return NextResponse.json({ error: e?.message || 'Ошибка эмбеддинга' }, { status: 500 })
   }
 
-  const { data: doc, error: docErr } = await supabase
-    .from('me_documents')
-    .insert({
-      title,
-      source_type,
-      source_meta,
-      original_text: text,
-      char_count: text.length,
-      chunk_count: chunks.length,
+  try {
+    const result = await sql.begin(async (tx) => {
+      const docRows = await tx`
+        insert into me_documents (title, source_type, source_meta, original_text, char_count, chunk_count)
+        values (
+          ${title},
+          ${source_type},
+          ${tx.json(source_meta)},
+          ${text},
+          ${text.length},
+          ${chunks.length}
+        )
+        returning id, created_at, title, source_type, source_meta, char_count, chunk_count
+      `
+      const doc = docRows[0]
+
+      const rows = chunks.map((c, i) => ({
+        document_id: doc.id,
+        chunk_index: i,
+        content: c,
+        embedding: toVectorLiteral(embeddings[i]),
+      }))
+      await tx`insert into me_chunks ${tx(rows, 'document_id', 'chunk_index', 'content', 'embedding')}`
+      return doc
     })
-    .select('id, created_at, title, source_type, source_meta, char_count, chunk_count')
-    .single()
-
-  if (docErr || !doc) {
-    return NextResponse.json({ error: docErr?.message || 'Ошибка вставки документа' }, { status: 500 })
+    return NextResponse.json({ document: result })
+  } catch (e: any) {
+    return NextResponse.json({ error: e?.message || 'Ошибка сохранения' }, { status: 500 })
   }
-
-  const rows = chunks.map((c, i) => ({
-    document_id: doc.id,
-    chunk_index: i,
-    content: c,
-    embedding: embeddings[i] as any,
-  }))
-
-  const { error: chunkErr } = await supabase.from('me_chunks').insert(rows)
-  if (chunkErr) {
-    await supabase.from('me_documents').delete().eq('id', doc.id)
-    return NextResponse.json({ error: `Ошибка вставки чанков: ${chunkErr.message}` }, { status: 500 })
-  }
-
-  return NextResponse.json({ document: doc })
 }

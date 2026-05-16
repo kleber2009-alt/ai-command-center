@@ -1,5 +1,5 @@
 import { NextRequest, NextResponse } from 'next/server'
-import { getServerSupabase } from '@/lib/transcripts-db'
+import { getDb } from '@/lib/db'
 
 export const maxDuration = 60
 
@@ -200,17 +200,16 @@ export async function POST(req: NextRequest) {
   }
 
   let text = transcript
-  const supabase = getServerSupabase()
+  const sql = getDb()
 
-  if (id && supabase) {
-    const { data, error } = await supabase
-      .from('transcripts')
-      .select('transcript, generations')
-      .eq('id', id)
-      .single()
-    if (error) {
-      return NextResponse.json({ error: `Не найден транскрипт: ${error.message}` }, { status: 404 })
+  if (id && sql) {
+    const rows = await sql`
+      select transcript, generations from transcripts where id = ${id}
+    `
+    if (rows.length === 0) {
+      return NextResponse.json({ error: 'Не найден транскрипт' }, { status: 404 })
     }
+    const data = rows[0]
     const cached = data.generations?.[type]
     if (cached) {
       return NextResponse.json({ type, content: cached, cached: true })
@@ -268,14 +267,13 @@ export async function POST(req: NextRequest) {
       return NextResponse.json({ error: e.message }, { status: 500 })
     }
 
-    if (id && supabase) {
-      const { data: row } = await supabase
-        .from('transcripts')
-        .select('generations')
-        .eq('id', id)
-        .single()
-      const merged = { ...(row?.generations ?? {}), [type]: validated }
-      await supabase.from('transcripts').update({ generations: merged }).eq('id', id)
+    if (id && sql) {
+      // jsonb merge happens server-side via || operator
+      await sql`
+        update transcripts
+        set generations = coalesce(generations, '{}'::jsonb) || ${sql.json({ [type]: validated })}::jsonb
+        where id = ${id}
+      `
     }
 
     return NextResponse.json({ type, content: validated, cached: false })

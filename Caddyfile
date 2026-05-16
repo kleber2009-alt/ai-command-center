@@ -1,0 +1,17 @@
+# Caddy reverse proxy for ai-command-center.
+# Replace example.com with your actual domain before deploying.
+#
+# Caddy auto-fetches Let's Encrypt certs on first request to a
+# registered host. For local dev or quick IP tests, swap the
+# domain block for ":80 { reverse_proxy transcribe:3000 }".
+
+{$DOMAIN:localhost} {
+	# Telegram Mini App + transcribe API + /admin board + /me
+	reverse_proxy transcribe:3000
+}
+
+# Legacy static site under a subdomain.
+# Comment this block out if you don't have ai-office.example.com set up.
+office.{$DOMAIN:localhost} {
+	reverse_proxy ai-office:80
+}

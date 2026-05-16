@@ -1,9 +1,10 @@
 import { NextRequest, NextResponse } from 'next/server'
-import { loadProfile, saveProfile, getServerSupabase, EMPTY_PROFILE } from '@/lib/me-db'
+import { loadProfile, saveProfile, EMPTY_PROFILE } from '@/lib/me-db'
+import { getDb } from '@/lib/db'
 
 export async function GET() {
-  const supabase = getServerSupabase()
-  if (!supabase) {
+  const sql = getDb()
+  if (!sql) {
     return NextResponse.json({ profile: EMPTY_PROFILE, configured: false })
   }
   const profile = await loadProfile()
@@ -11,10 +12,10 @@ export async function GET() {
 }
 
 export async function PUT(req: NextRequest) {
-  const supabase = getServerSupabase()
-  if (!supabase) {
+  const sql = getDb()
+  if (!sql) {
     return NextResponse.json(
-      { error: 'Supabase не настроен. Добавьте NEXT_PUBLIC_SUPABASE_URL и SUPABASE_SERVICE_KEY и выполните миграцию 003_me.sql.' },
+      { error: 'Postgres не настроен. Установите DATABASE_URL и накатите db/init.sql.' },
       { status: 500 },
     )
   }

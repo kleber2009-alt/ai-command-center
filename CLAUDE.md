@@ -11,23 +11,29 @@ support services and a legacy static site kept for reference.
 ```
 /
 ├── apps/
-│   ├── transcribe/   # Next.js 14 app + Telegram Mini App (the flagship)
-│   ├── ytdlp/        # FastAPI + yt-dlp companion microservice (Railway)
-│   └── ai-office/    # legacy static "AI Business Command Center" site
-├── packages/         # reserved for shared code (empty)
-├── supabase/         # SQL migrations shared across apps
-└── docs/
+│   ├── transcribe/    # Next.js 14 app + Telegram Mini App (the flagship)
+│   ├── ytdlp/         # FastAPI + yt-dlp companion microservice
+│   └── ai-office/     # legacy static "AI Business Command Center" site
+├── packages/          # reserved for shared code (empty)
+├── db/                # init.sql (Postgres bootstrap) + optional seed
+├── docs/              # human-facing docs
+├── Caddyfile          # reverse proxy + auto-HTTPS
+├── docker-compose.yml # caddy + transcribe + ytdlp + ai-office + postgres
+└── DEPLOY.md          # deployment guide
 ```
 
 Only `apps/transcribe` is a node workspace; `apps/ytdlp` is Python and
 `apps/ai-office` is static HTML. Root `package.json` lists workspaces and
 proxies `dev/build/start/lint` to `apps/transcribe`.
 
-The transcribe app is a single-purpose web app and Telegram Mini App for
-transcribing video / audio links and turning the transcript into short-form
-content (carousel slides, Reels script, Telegram post). Hosted on Vercel;
-the Telegram Mini App entry point is `/transcribe`. **On Vercel set the
-project Root Directory to `apps/transcribe`** (since the layout moved).
+**Hosting: self-hosted on a single VPS via Docker Compose.** No Vercel,
+no Supabase. The Telegram Mini App entry point is `https://<DOMAIN>/transcribe`,
+served by the `transcribe` container behind Caddy. Postgres (with the
+`pgvector` extension) lives in the same compose, persisted via a named
+volume. See `DEPLOY.md` for the full setup. The transcribe app is a
+single-purpose web app for transcribing video / audio links and turning
+the transcript into short-form content (carousel slides, Reels script,
+Telegram post).
 
 ## Commands
 
@@ -45,47 +51,40 @@ configured.
 
 ## Required environment variables
 
-The app degrades gracefully when these are missing — set them in `.env.local`
-for local dev and in Vercel/Railway project envs for prod:
+`docker compose` reads `.env` at the repo root. The app degrades
+gracefully when keys are missing (history / generation just no-op).
+See `.env.example` for the full list. Highlights:
 
-- `ANTHROPIC_API_KEY` — used by `apps/transcribe/src/app/api/transcribe/summarize/route.ts`,
-  `apps/transcribe/src/app/api/transcribe/translate/route.ts`, `apps/transcribe/src/app/api/transcribe/generate/route.ts`.
-- `DEEPGRAM_API_KEY` — used by `apps/transcribe/src/app/api/transcribe/route.ts` for any
-  non-YouTube URL. YouTube goes through our own captions parser and does
-  **not** need this key on its own (yt-dlp fallback does feed Deepgram).
-- `NEXT_PUBLIC_SUPABASE_URL`, `NEXT_PUBLIC_SUPABASE_ANON_KEY` — used by the
-  browser client in `apps/transcribe/src/lib/supabase.ts`. Currently the browser client is
-  only used by the page for typed types; nothing reads through it at runtime.
-- `SUPABASE_SERVICE_KEY` — used by the `/api/transcribe*` routes through
-  `apps/transcribe/src/lib/transcripts-db.ts`. Required for history and generation caching.
-  Do **not** expose this to the client.
-- `YTDLP_SERVICE_URL` (optional) — base URL of the companion yt-dlp
-  microservice in `apps/ytdlp/` (deploy on Railway). When set,
-  `/api/transcribe` falls back to yt-dlp + Deepgram for YouTube when our
-  captions parser is IP-blocked, and uses yt-dlp + Deepgram for Instagram
-  Reels / TikTok / X.
-- `YTDLP_SERVICE_API_KEY` (optional) — if the yt-dlp service is started with
-  this env var, the main app must send `Authorization: Bearer <key>`.
+- `DOMAIN` — your apex, used by Caddy for auto-HTTPS (`example.com`).
+- `POSTGRES_PASSWORD` — used by the postgres container and embedded
+  into `DATABASE_URL` for the transcribe app.
+- `DATABASE_URL` — points the app at Postgres. Set automatically inside
+  the compose file to `postgres://app:$POSTGRES_PASSWORD@postgres:5432/app`;
+  override only if you run the app outside docker compose.
+- `ANTHROPIC_API_KEY` — needed for summarize / translate / generate / me-chat.
+- `DEEPGRAM_API_KEY` — needed for non-YouTube transcription paths.
+- `OPENAI_API_KEY` — needed for `/me` document embeddings.
+- `YTDLP_SERVICE_URL` — wired to `http://ytdlp:8000` inside compose.
+- `YTDLP_SERVICE_API_KEY` (optional) — shared secret between
+  `transcribe` and `ytdlp` containers.
 
-## Supabase migrations
+## Postgres schema
 
-`supabase/migrations/` contains SQL the user runs manually in the Supabase
-SQL Editor:
-- `001_transcripts.sql` — `transcripts` table for `/transcribe` history.
-- `002_generations.sql` — `generations jsonb` column for caching
-  carousel / reels / telegram-post outputs.
-- `003_tasks.sql` — `tasks` table for the project board at `/admin`.
-- `003_me.sql` — `me_profile` / `me_notes` tables for the `/me` page.
-- `004_tasks_project.sql` — adds `project text` column to `tasks` so the
-  `/admin` board can split tasks per monorepo project
-  (`transcribe` | `ytdlp` | `ai-office` | `general`, default `general`).
+`db/init.sql` is the single source of truth. The postgres container
+mounts it at `/docker-entrypoint-initdb.d/` and runs it once when the
+data volume is empty. It creates `pgcrypto` + `vector` extensions and
+all five tables: `transcripts`, `tasks`, `me_profile`, `me_documents`,
+`me_chunks`. All `create table` statements are guarded with
+`if not exists` so the script can be re-run safely on an existing DB:
+`docker compose exec -T postgres psql -U app -d app < db/init.sql`.
 
-`supabase/seed_initial_tasks.sql` (not under `migrations/`) is an optional
-one-shot seed that populates the `/admin` board with the current project
-backlog. Idempotent via `WHERE NOT EXISTS`.
+`db/seed_initial_tasks.sql` is an optional one-shot seed for the
+`/admin` board. Idempotent via `WHERE NOT EXISTS`.
 
-Without these tables (or env vars), `getServerSupabase()` returns `null` and
-saves/history/caching just no-op.
+DB access goes through `apps/transcribe/src/lib/db.ts` which wraps the
+[`postgres`](https://github.com/porsager/postgres) package. When
+`DATABASE_URL` is missing, `getDb()` returns `null` and saves/history
+just no-op — same graceful-degradation pattern as before.
 
 ## Architecture
 
@@ -109,7 +108,7 @@ Track "Закрыть /admin от посторонних" task before public lau
 1. Mount → calls `loadHistory()` and `setInTg(isInTelegram())`.
 2. User pastes a URL + picks a language → submits.
 3. `POST /api/transcribe` returns transcript + paragraphs + metadata. Row is
-   inserted into `transcripts` if Supabase is configured.
+   inserted into `transcripts` if Postgres is configured.
 4. User can then trigger: Copy / .txt / .srt download / Summary / Translate
    / Carousel / Reels-new / Reels-remix / TG-post. Each generation calls a
    dedicated endpoint and gets cached on the same row.
@@ -126,9 +125,10 @@ Track "Закрыть /admin от посторонних" task before public lau
   - **Anything else** → Deepgram `nova-2` directly, URL passed by reference.
   Returns `{ transcript, paragraphs: [{text,start,end}], duration,
   detectedLanguage, source: 'youtube'|'deepgram'|'ytdlp+deepgram', id }`.
-  **Known issue**: YouTube actively rate-limits datacenter IPs (Vercel
-  included) — that's why the yt-dlp fallback exists. For Instagram and most
-  YouTube on Railway, cookies are required (see `apps/ytdlp/README.md`).
+  **Known issue**: YouTube actively rate-limits datacenter IPs — that's
+  why the yt-dlp fallback exists. For Instagram and most YouTube traffic
+  cookies are required (see `apps/ytdlp/README.md`; mount them as
+  `INSTAGRAM_COOKIES_B64` / `COOKIES_B64` env vars in `.env`).
 - `POST /api/transcribe/summarize` — body `{ id?, transcript? }`. Returns
   `{ summary, bullets, cached }`. Caches on the row.
 - `POST /api/transcribe/translate` — body `{ id?, transcript?,
@@ -171,9 +171,11 @@ implemented — every API route is open.
 
 ## yt-dlp companion service
 
-`apps/ytdlp/` — FastAPI + yt-dlp Docker service to run on Railway.
-Exposes `POST /extract { url }` → `{ url, title, duration, ext, extractor }`,
-where `url` is a signed direct media URL Deepgram can ingest. Auth via
+`apps/ytdlp/` — FastAPI + yt-dlp Docker service. Runs alongside the main
+app inside `docker-compose.yml` and is reachable from the transcribe
+container as `http://ytdlp:8000`. Exposes `POST /extract { url }` →
+`{ url, title, duration, ext, extractor }`, where `url` is a signed
+direct media URL Deepgram can ingest. Auth via
 `Authorization: Bearer $YTDLP_SERVICE_API_KEY`. Cookies for Instagram /
 YouTube can be provided as base64 in `INSTAGRAM_COOKIES_B64` / `COOKIES_B64`
 (both names accepted) — see `apps/ytdlp/README.md`.
@@ -181,8 +183,9 @@ YouTube can be provided as base64 in `INSTAGRAM_COOKIES_B64` / `COOKIES_B64`
 ## Conventions
 
 - Client-only React components must start with `'use client'`. Route
-  handlers and `apps/transcribe/src/lib/supabase.ts` do not.
+  handlers and `apps/transcribe/src/lib/db.ts` do not.
 - Icons come from `lucide-react`. No emojis in UI; they are user-facing
   decoration only and we don't have any in the current app.
-- `next.config.js` is empty — no custom image domains, headers, or rewrites.
+- `apps/transcribe/next.config.js` sets `output: 'standalone'` for the
+  Docker build — don't remove it.
 - Production model is `claude-haiku-4-5-20251001` across all routes.

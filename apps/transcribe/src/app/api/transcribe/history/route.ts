@@ -1,16 +1,16 @@
 import { NextResponse } from 'next/server'
-import { getServerSupabase } from '@/lib/transcripts-db'
+import { getDb } from '@/lib/db'
 
 type ArtifactKey = 'summary' | 'translation' | 'carousel' | 'reels-new' | 'reels-remix' | 'tg-post'
 
 type RawRow = {
   id: string
-  created_at: string
+  created_at: string | Date
   url: string
   title: string | null
   source: string | null
   language: string | null
-  duration: number | null
+  duration: number | string | null
   summary: string | null
   translation: { lang: string; text: string } | null
   generations: Record<string, unknown> | null
@@ -29,23 +29,21 @@ function flagsFor(row: RawRow): ArtifactKey[] {
 }
 
 export async function GET() {
-  const supabase = getServerSupabase()
-  if (!supabase) {
+  const sql = getDb()
+  if (!sql) {
     return NextResponse.json({ items: [], configured: false })
   }
   try {
-    const { data, error } = await supabase
-      .from('transcripts')
-      .select('id, created_at, url, title, source, language, duration, summary, translation, generations')
-      .order('created_at', { ascending: false })
-      .limit(30)
-    if (error) {
-      return NextResponse.json({ error: error.message }, { status: 500 })
-    }
-
-    const items = (data ?? []).map((row: RawRow) => ({
+    const rows = await sql<RawRow[]>`
+      select id, created_at, url, title, source, language, duration,
+             summary, translation, generations
+      from transcripts
+      order by created_at desc
+      limit 30
+    `
+    const items = rows.map((row) => ({
       id: row.id,
-      created_at: row.created_at,
+      created_at: row.created_at instanceof Date ? row.created_at.toISOString() : row.created_at,
       url: row.url,
       title: row.title,
       source: row.source,
@@ -53,7 +51,6 @@ export async function GET() {
       duration: row.duration,
       artifacts: flagsFor(row),
     }))
-
     return NextResponse.json({ items, configured: true })
   } catch (e: any) {
     return NextResponse.json({ error: e?.message || 'Ошибка получения истории' }, { status: 500 })

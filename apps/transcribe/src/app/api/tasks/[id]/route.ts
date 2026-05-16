@@ -1,5 +1,5 @@
 import { NextRequest, NextResponse } from 'next/server'
-import { getServerSupabase } from '@/lib/transcripts-db'
+import { getDb } from '@/lib/db'
 import type { TaskStatus, TaskPriority, TaskProject } from '@/lib/tasks-db'
 
 type PatchBody = Partial<{
@@ -13,13 +13,12 @@ type PatchBody = Partial<{
 }>
 
 export async function PATCH(req: NextRequest, { params }: { params: { id: string } }) {
-  const supabase = getServerSupabase()
-  if (!supabase) {
-    return NextResponse.json({ error: 'Supabase не настроен' }, { status: 503 })
+  const sql = getDb()
+  if (!sql) {
+    return NextResponse.json({ error: 'Postgres не настроен' }, { status: 503 })
   }
   const body = (await req.json()) as PatchBody
 
-  // Whitelist allowed fields
   const update: Record<string, unknown> = {}
   if (typeof body.title === 'string') update.title = body.title
   if (body.description === null || typeof body.description === 'string') update.description = body.description
@@ -33,26 +32,30 @@ export async function PATCH(req: NextRequest, { params }: { params: { id: string
     return NextResponse.json({ error: 'Нечего обновлять' }, { status: 400 })
   }
 
-  const { data, error } = await supabase
-    .from('tasks')
-    .update(update)
-    .eq('id', params.id)
-    .select('*')
-    .single()
-  if (error) {
-    return NextResponse.json({ error: error.message }, { status: 500 })
+  try {
+    const rows = await sql`
+      update tasks set ${sql(update)}
+      where id = ${params.id}
+      returning *
+    `
+    if (rows.length === 0) {
+      return NextResponse.json({ error: 'Не найдено' }, { status: 404 })
+    }
+    return NextResponse.json(rows[0])
+  } catch (e: any) {
+    return NextResponse.json({ error: e?.message || 'DB error' }, { status: 500 })
   }
-  return NextResponse.json(data)
 }
 
 export async function DELETE(_req: NextRequest, { params }: { params: { id: string } }) {
-  const supabase = getServerSupabase()
-  if (!supabase) {
-    return NextResponse.json({ error: 'Supabase не настроен' }, { status: 503 })
+  const sql = getDb()
+  if (!sql) {
+    return NextResponse.json({ error: 'Postgres не настроен' }, { status: 503 })
   }
-  const { error } = await supabase.from('tasks').delete().eq('id', params.id)
-  if (error) {
-    return NextResponse.json({ error: error.message }, { status: 500 })
+  try {
+    await sql`delete from tasks where id = ${params.id}`
+    return NextResponse.json({ ok: true })
+  } catch (e: any) {
+    return NextResponse.json({ error: e?.message || 'DB error' }, { status: 500 })
   }
-  return NextResponse.json({ ok: true })
 }

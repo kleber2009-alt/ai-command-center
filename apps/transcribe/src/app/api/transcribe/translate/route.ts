@@ -1,5 +1,5 @@
 import { NextRequest, NextResponse } from 'next/server'
-import { getServerSupabase } from '@/lib/transcripts-db'
+import { getDb } from '@/lib/db'
 
 export const maxDuration = 60
 
@@ -30,16 +30,15 @@ export async function POST(req: NextRequest) {
   }
 
   let text = transcript
-  const supabase = getServerSupabase()
-  if (id && supabase) {
-    const { data, error } = await supabase
-      .from('transcripts')
-      .select('transcript, translation')
-      .eq('id', id)
-      .single()
-    if (error) {
-      return NextResponse.json({ error: `Не найден транскрипт: ${error.message}` }, { status: 404 })
+  const sql = getDb()
+  if (id && sql) {
+    const rows = await sql`
+      select transcript, translation from transcripts where id = ${id}
+    `
+    if (rows.length === 0) {
+      return NextResponse.json({ error: 'Не найден транскрипт' }, { status: 404 })
     }
+    const data = rows[0]
     if (data.translation && data.translation.lang === targetLang) {
       return NextResponse.json({ translation: data.translation.text, lang: targetLang, cached: true })
     }
@@ -76,11 +75,12 @@ export async function POST(req: NextRequest) {
     const data = await res.json()
     const translation: string = (data.content?.[0]?.text || '').trim()
 
-    if (id && supabase) {
-      await supabase
-        .from('transcripts')
-        .update({ translation: { lang: targetLang, text: translation } })
-        .eq('id', id)
+    if (id && sql) {
+      await sql`
+        update transcripts
+        set translation = ${sql.json({ lang: targetLang, text: translation })}
+        where id = ${id}
+      `
     }
 
     return NextResponse.json({ translation, lang: targetLang, cached: false })

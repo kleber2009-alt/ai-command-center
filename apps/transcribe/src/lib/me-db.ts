@@ -1,4 +1,4 @@
-import { getServerSupabase } from './transcripts-db'
+import { getDb } from './db'
 
 export type MeProfile = {
   bio: string
@@ -39,54 +39,55 @@ export type MeChunkMatch = {
   similarity: number
 }
 
-export { getServerSupabase }
+export { getDb }
 
-export async function loadProfile(): Promise<MeProfile> {
-  const supabase = getServerSupabase()
-  if (!supabase) return EMPTY_PROFILE
-  const { data } = await supabase.from('me_profile').select('*').eq('id', 'singleton').single()
-  if (!data) return EMPTY_PROFILE
+function rowToProfile(row: any): MeProfile {
   return {
-    bio: data.bio ?? '',
-    projects: data.projects ?? '',
-    academy: data.academy ?? '',
-    social: data.social ?? '',
-    voice: data.voice ?? '',
-    custom: data.custom ?? {},
-    updated_at: data.updated_at ?? new Date(0).toISOString(),
+    bio: row.bio ?? '',
+    projects: row.projects ?? '',
+    academy: row.academy ?? '',
+    social: row.social ?? '',
+    voice: row.voice ?? '',
+    custom: row.custom ?? {},
+    updated_at: (row.updated_at instanceof Date ? row.updated_at.toISOString() : row.updated_at) ?? new Date(0).toISOString(),
   }
 }
 
+export async function loadProfile(): Promise<MeProfile> {
+  const sql = getDb()
+  if (!sql) return EMPTY_PROFILE
+  const rows = await sql`select * from me_profile where id = 'singleton'`
+  if (rows.length === 0) return EMPTY_PROFILE
+  return rowToProfile(rows[0])
+}
+
 export async function saveProfile(p: Partial<MeProfile>): Promise<MeProfile | null> {
-  const supabase = getServerSupabase()
-  if (!supabase) return null
-  const { data } = await supabase
-    .from('me_profile')
-    .upsert(
-      {
-        id: 'singleton',
-        bio: p.bio,
-        projects: p.projects,
-        academy: p.academy,
-        social: p.social,
-        voice: p.voice,
-        custom: p.custom,
-        updated_at: new Date().toISOString(),
-      },
-      { onConflict: 'id' },
+  const sql = getDb()
+  if (!sql) return null
+  const rows = await sql`
+    insert into me_profile (id, bio, projects, academy, social, voice, custom, updated_at)
+    values (
+      'singleton',
+      ${p.bio ?? ''},
+      ${p.projects ?? ''},
+      ${p.academy ?? ''},
+      ${p.social ?? ''},
+      ${p.voice ?? ''},
+      ${sql.json(p.custom ?? {})},
+      now()
     )
-    .select()
-    .single()
-  if (!data) return null
-  return {
-    bio: data.bio ?? '',
-    projects: data.projects ?? '',
-    academy: data.academy ?? '',
-    social: data.social ?? '',
-    voice: data.voice ?? '',
-    custom: data.custom ?? {},
-    updated_at: data.updated_at ?? new Date().toISOString(),
-  }
+    on conflict (id) do update set
+      bio = excluded.bio,
+      projects = excluded.projects,
+      academy = excluded.academy,
+      social = excluded.social,
+      voice = excluded.voice,
+      custom = excluded.custom,
+      updated_at = now()
+    returning *
+  `
+  if (rows.length === 0) return null
+  return rowToProfile(rows[0])
 }
 
 export function profileToContext(p: MeProfile): string {

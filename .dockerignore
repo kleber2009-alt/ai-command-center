@@ -1,0 +1,14 @@
+.git
+.gitignore
+node_modules
+**/node_modules
+.next
+**/.next
+.DS_Store
+*.log
+README.md
+DEPLOY.md
+CLAUDE.md
+docs
+ai-office-project
+apps/ai-office

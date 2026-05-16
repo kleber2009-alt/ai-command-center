@@ -11,3 +11,8 @@ npm-debug.log*
 .turbo
 next-env.d.ts
 tsconfig.tsbuildinfo
+
+# self-host artefacts
+caddy_data/
+caddy_config/
+postgres_data/

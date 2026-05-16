@@ -9,11 +9,11 @@
     "lint": "next lint"
   },
   "dependencies": {
-    "@supabase/supabase-js": "^2.39.0",
     "lucide-react": "^0.383.0",
     "mammoth": "^1.12.0",
     "next": "^14.2.35",
     "pdf-parse": "^2.4.5",
+    "postgres": "^3.4.4",
     "react": "^18",
     "react-dom": "^18"
   },

@@ -131,9 +131,8 @@ export default function MeProfileForm() {
         <div className="flex items-start gap-2 rounded-apple-lg border border-amber-200 bg-amber-50 p-4 text-[13px] text-amber-800">
           <TriangleAlert className="mt-0.5 h-4 w-4 shrink-0" />
           <div>
-            Supabase не настроен. Добавь <code className="rounded bg-white/60 px-1">NEXT_PUBLIC_SUPABASE_URL</code> и{' '}
-            <code className="rounded bg-white/60 px-1">SUPABASE_SERVICE_KEY</code> в .env.local, выполни миграцию{' '}
-            <code className="rounded bg-white/60 px-1">supabase/migrations/003_me.sql</code> в Supabase SQL Editor.
+            Postgres не настроен. Задай <code className="rounded bg-white/60 px-1">DATABASE_URL</code> в .env
+            и накатить <code className="rounded bg-white/60 px-1">db/init.sql</code> на свою БД (внутри docker compose это происходит автоматически).
           </div>
         </div>
       )}

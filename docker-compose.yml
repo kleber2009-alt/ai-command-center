@@ -1,0 +1,75 @@
+name: ai-command-center
+
+services:
+  caddy:
+    image: caddy:2-alpine
+    restart: unless-stopped
+    ports:
+      - "80:80"
+      - "443:443"
+      - "443:443/udp"
+    volumes:
+      - ./Caddyfile:/etc/caddy/Caddyfile:ro
+      - caddy_data:/data
+      - caddy_config:/config
+    depends_on:
+      - transcribe
+      - ai-office
+    environment:
+      # Override in .env (or shell) before docker compose up
+      DOMAIN: ${DOMAIN:-localhost}
+
+  transcribe:
+    build:
+      context: .
+      dockerfile: apps/transcribe/Dockerfile
+    image: ai-command-center/transcribe:latest
+    restart: unless-stopped
+    environment:
+      NODE_ENV: production
+      DATABASE_URL: postgres://app:${POSTGRES_PASSWORD:?set POSTGRES_PASSWORD}@postgres:5432/app
+      ANTHROPIC_API_KEY: ${ANTHROPIC_API_KEY}
+      DEEPGRAM_API_KEY: ${DEEPGRAM_API_KEY}
+      OPENAI_API_KEY: ${OPENAI_API_KEY}
+      YTDLP_SERVICE_URL: http://ytdlp:8000
+      YTDLP_SERVICE_API_KEY: ${YTDLP_SERVICE_API_KEY:-}
+    depends_on:
+      postgres:
+        condition: service_healthy
+
+  ytdlp:
+    build:
+      context: ./apps/ytdlp
+    image: ai-command-center/ytdlp:latest
+    restart: unless-stopped
+    environment:
+      YTDLP_SERVICE_API_KEY: ${YTDLP_SERVICE_API_KEY:-}
+      INSTAGRAM_COOKIES_B64: ${INSTAGRAM_COOKIES_B64:-}
+      COOKIES_B64: ${COOKIES_B64:-}
+
+  ai-office:
+    image: nginx:alpine
+    restart: unless-stopped
+    volumes:
+      - ./apps/ai-office:/usr/share/nginx/html:ro
+
+  postgres:
+    image: pgvector/pgvector:pg16
+    restart: unless-stopped
+    environment:
+      POSTGRES_USER: app
+      POSTGRES_PASSWORD: ${POSTGRES_PASSWORD:?set POSTGRES_PASSWORD}
+      POSTGRES_DB: app
+    volumes:
+      - postgres_data:/var/lib/postgresql/data
+      - ./db/init.sql:/docker-entrypoint-initdb.d/init.sql:ro
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U app -d app"]
+      interval: 5s
+      timeout: 5s
+      retries: 10
+
+volumes:
+  postgres_data:
+  caddy_data:
+  caddy_config:

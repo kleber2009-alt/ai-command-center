@@ -1,4 +1,4 @@
-import { createClient, SupabaseClient } from '@supabase/supabase-js'
+import { getDb } from './db'
 
 export type Paragraph = { text: string; start: number; end: number }
 
@@ -37,28 +37,7 @@ export type TranscriptRow = {
   generations: Generations | null
 }
 
-let cached: SupabaseClient | null = null
-
-function normalizeSupabaseUrl(raw: string): string {
-  // Users sometimes paste the full REST endpoint
-  // (https://xxx.supabase.co/rest/v1/) into the URL var. supabase-js
-  // appends "/rest/v1/..." itself, so we strip any path/trailing slash
-  // and keep just the origin.
-  try {
-    return new URL(raw).origin
-  } catch {
-    return raw.replace(/\/(rest\/v1\/?)?$/i, '').replace(/\/+$/, '')
-  }
-}
-
-export function getServerSupabase(): SupabaseClient | null {
-  if (cached) return cached
-  const rawUrl = process.env.NEXT_PUBLIC_SUPABASE_URL
-  const key = process.env.SUPABASE_SERVICE_KEY
-  if (!rawUrl || !key) return null
-  cached = createClient(normalizeSupabaseUrl(rawUrl), key, { auth: { persistSession: false } })
-  return cached
-}
+export { getDb }
 
 export function makeTitle(transcript: string, url: string): string {
   const clean = transcript.trim().replace(/\s+/g, ' ')
