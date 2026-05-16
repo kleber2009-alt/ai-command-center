@@ -101,8 +101,13 @@ sidebar. Everything is one page.
 
 `/admin` is a separate route group with its own wider layout
 (`apps/transcribe/src/app/admin/layout.tsx`, max-w-7xl) — kanban project board.
-Currently NO auth — anyone with the URL can read/write tasks.
-Track "Закрыть /admin от посторонних" task before public launch.
+Protected by HTTP Basic Auth via `apps/transcribe/src/middleware.ts`
+(reads `ADMIN_USERNAME` / `ADMIN_PASSWORD` env vars). The middleware
+also gates `/me`, `/assistants`, and their data-plane APIs
+(`/api/tasks`, `/api/me`, `/api/assistants`). `/transcribe` and
+`/api/transcribe/*` stay open so the Telegram Mini App works for
+anonymous users. When `ADMIN_PASSWORD` is empty, every private path
+returns 401 — fail-secure default.
 
 **The flow** (`apps/transcribe/src/app/transcribe/page.tsx`):
 1. Mount → calls `loadHistory()` and `setInTg(isInTelegram())`.

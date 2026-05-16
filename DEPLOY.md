@@ -90,6 +90,31 @@ Mini App won't connect to a self-signed host though.
 In BotFather, set the Mini App URL to `https://<DOMAIN>/transcribe`.
 That's it — no Vercel / no Supabase involved.
 
+## Admin authentication
+
+The kanban board at `/admin`, the personal `/me` second-brain, and the
+`/assistants` chat are protected by HTTP Basic Auth via
+`apps/transcribe/src/middleware.ts`. Configure two env vars:
+
+```
+ADMIN_USERNAME=admin
+ADMIN_PASSWORD=$(openssl rand -base64 32)
+```
+
+When `ADMIN_PASSWORD` is empty, every request to a private path
+returns 401 (fail-secure). After changing the password, restart the
+app container — no rebuild needed:
+
+```sh
+docker compose restart transcribe
+```
+
+`/transcribe` and `/api/transcribe/*` stay open so the Telegram Mini
+App works for anonymous users. Server-side verification of Telegram
+`initData` against `TELEGRAM_BOT_TOKEN` is not yet wired up — anyone
+who can reach `/api/transcribe` can use it, so don't share the URL
+publicly until that lands.
+
 ## Operational notes
 
 - The transcribe container is stateless. You can scale it horizontally
