@@ -102,10 +102,10 @@ services:
       AISALES_MOCK: ${AISALES_MOCK:-1}
       LOG_LEVEL: ${LOG_LEVEL:-INFO}
       ENV: ${ENV:-dev}
-      # DB
-      POSTGRES_URL: postgresql+asyncpg://aisales:${POSTGRES_PASSWORD:-aisales_local_dev}@postgres:5432/aisales
+      # DB (используем URL-encoded пароль, raw может содержать '/' '+' '@')
+      POSTGRES_URL: postgresql+asyncpg://aisales:${POSTGRES_PASSWORD_URLENC:-${POSTGRES_PASSWORD:-aisales_local_dev}}@postgres:5432/aisales
       # Cache
-      REDIS_URL: redis://:${REDIS_PASSWORD:-aisales_local_dev}@redis:6379/0
+      REDIS_URL: redis://:${REDIS_PASSWORD_URLENC:-${REDIS_PASSWORD:-aisales_local_dev}}@redis:6379/0
       # Vector
       QDRANT_URL: http://qdrant:6333
       # Storage
@@ -144,7 +144,7 @@ services:
         condition: service_healthy
     environment:
       NODE_ENV: production
-      DATABASE_URL: postgresql://aisales:${POSTGRES_PASSWORD:-aisales_local_dev}@postgres:5432/aisales
+      DATABASE_URL: postgresql://aisales:${POSTGRES_PASSWORD_URLENC:-${POSTGRES_PASSWORD:-aisales_local_dev}}@postgres:5432/aisales
       ANTHROPIC_API_KEY: ${ANTHROPIC_API_KEY:-}
     ports:
       - "127.0.0.1:3000:3000"
