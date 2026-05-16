@@ -209,17 +209,17 @@ CREATE INDEX IF NOT EXISTS idx_rop_tasks_status ON rop_tasks (status, priority, 
 DROP TRIGGER IF EXISTS trg_escalations_updated_at ON escalations;
 CREATE TRIGGER trg_escalations_updated_at
     BEFORE UPDATE ON escalations
-    FOR EACH ROW EXECUTE FUNCTION trigger_set_updated_at();
+    FOR EACH ROW EXECUTE FUNCTION set_updated_at();
 
 DROP TRIGGER IF EXISTS trg_gaps_updated_at ON knowledge_gaps;
 CREATE TRIGGER trg_gaps_updated_at
     BEFORE UPDATE ON knowledge_gaps
-    FOR EACH ROW EXECUTE FUNCTION trigger_set_updated_at();
+    FOR EACH ROW EXECUTE FUNCTION set_updated_at();
 
 DROP TRIGGER IF EXISTS trg_rop_tasks_updated_at ON rop_tasks;
 CREATE TRIGGER trg_rop_tasks_updated_at
     BEFORE UPDATE ON rop_tasks
-    FOR EACH ROW EXECUTE FUNCTION trigger_set_updated_at();
+    FOR EACH ROW EXECUTE FUNCTION set_updated_at();
 
 
 -- ------------------------------------------------------------
@@ -229,13 +229,13 @@ CREATE TRIGGER trg_rop_tasks_updated_at
 -- Воронка: количество клиентов на каждом этапе
 CREATE OR REPLACE VIEW v_funnel_snapshot AS
 SELECT
-    c.stage,
+    c.funnel_stage,
     COUNT(*) AS clients_count,
-    AVG(c.score)::INTEGER AS avg_score,
-    COUNT(*) FILTER (WHERE c.segment = 'A') AS seg_a_count
+    AVG(c.qual_score)::INTEGER AS avg_score,
+    COUNT(*) FILTER (WHERE c.segment = 'segment_a') AS seg_a_count
 FROM clients c
-WHERE c.stage NOT IN ('won', 'lost')
-GROUP BY c.stage;
+WHERE c.funnel_stage NOT IN ('closed_won', 'closed_lost')
+GROUP BY c.funnel_stage;
 
 -- Конверсии за период (последние 30 дней)
 CREATE OR REPLACE VIEW v_conversion_30d AS
@@ -278,8 +278,8 @@ SELECT
     e.id,
     e.conversation_id,
     e.client_id,
-    cl.name AS client_name,
-    cl.handle AS client_handle,
+    cl.display_name AS client_name,
+    COALESCE(cl.ig_username, cl.tg_username) AS client_handle,
     e.reason,
     e.urgency,
     e.summary,
