@@ -1,0 +1,88 @@
+# ═══════════════════════════════════════════════════════════════════════
+# .github/workflows/deploy.yml
+# ───────────────────────────────────────────────────────────────────────
+# На push в main (или merge PR) — SSH-им на Hetzner VPS, git pull,
+# пересобираем затронутые контейнеры. Деплой занимает ~30-60 секунд.
+#
+# Repo secrets, которые нужно задать (Settings → Secrets and variables →
+# Actions → New repository secret):
+#   · DEPLOY_HOST        — IP или домен VPS, например 116.203.x.x
+#   · DEPLOY_USER        — `ai` (юзер из DEPLOY.md)
+#   · DEPLOY_SSH_KEY     — приватный SSH-ключ (PEM/OpenSSH), которому
+#                          сервер доверяет. На сервере: `cat >> ~/.ssh/authorized_keys`
+#   · DEPLOY_PATH        — `/opt/ai-stack` (или куда ты склонировал репо)
+#
+# Если хочешь триггерить руками (например после merge) — есть
+# workflow_dispatch внизу.
+# ═══════════════════════════════════════════════════════════════════════
+
+name: Deploy to Hetzner
+
+on:
+  push:
+    branches:
+      - main
+    paths-ignore:
+      - '**.md'
+      - '.github/**'
+      - 'docs/**'
+  workflow_dispatch:
+
+concurrency:
+  group: deploy-${{ github.ref }}
+  cancel-in-progress: false
+
+jobs:
+  deploy:
+    runs-on: ubuntu-latest
+    timeout-minutes: 15
+
+    steps:
+      - name: Sanity check secrets
+        env:
+          DEPLOY_HOST: ${{ secrets.DEPLOY_HOST }}
+          DEPLOY_USER: ${{ secrets.DEPLOY_USER }}
+          DEPLOY_PATH: ${{ secrets.DEPLOY_PATH }}
+        run: |
+          : "${DEPLOY_HOST:?DEPLOY_HOST secret is not set}"
+          : "${DEPLOY_USER:?DEPLOY_USER secret is not set}"
+          : "${DEPLOY_PATH:?DEPLOY_PATH secret is not set}"
+          echo "→ deploy ${{ github.sha }} → $DEPLOY_USER@$DEPLOY_HOST:$DEPLOY_PATH"
+
+      - name: SSH deploy
+        uses: appleboy/ssh-action@v1.2.0
+        with:
+          host: ${{ secrets.DEPLOY_HOST }}
+          username: ${{ secrets.DEPLOY_USER }}
+          key: ${{ secrets.DEPLOY_SSH_KEY }}
+          port: 22
+          # Эти команды выполняются на VPS как $DEPLOY_USER.
+          # Set -e чтобы любой шаг при ошибке валил весь job.
+          script: |
+            set -eu
+            cd "${{ secrets.DEPLOY_PATH }}"
+
+            echo "→ git fetch + reset"
+            git fetch --depth=50 origin
+            git reset --hard "${{ github.sha }}"
+
+            echo "→ docker compose build (only changed)"
+            docker compose build --pull
+
+            echo "→ docker compose up"
+            docker compose up -d --remove-orphans
+
+            echo "→ wait for healthchecks"
+            for i in $(seq 1 30); do
+              if curl -fsS http://127.0.0.1/healthz >/dev/null; then
+                echo "  healthz OK after ${i}s"
+                break
+              fi
+              sleep 2
+            done
+
+            echo "→ status"
+            docker compose ps
+
+            echo "→ prune dangling images"
+            docker image prune -f

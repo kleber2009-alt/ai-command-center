@@ -18,69 +18,63 @@ The audio URL is a signed, time-limited URL hosted by the original CDN
 (googlevideo for YouTube, etc.). The app downloads through Deepgram by
 reference — we don't proxy the media.
 
-## Auth (optional)
+## Как запускается у нас
 
-If `YTDLP_SERVICE_API_KEY` is set on the service, callers must send
-`Authorization: Bearer <key>`. Otherwise the endpoint is open. Set this on
-Railway so only your Vercel app can hit it.
+Через корневой `docker-compose.yml` под именем сервиса `ytdlp`. Next.js
+видит его как `http://ytdlp:8080` (`YTDLP_SERVICE_URL` подставляется
+автоматически в compose). Наружу порт не выставляется — только через
+внутреннюю сеть docker.
 
-## Cookies for Instagram / Facebook / age-gated YouTube
+## Auth (опционально)
 
-Many sites block scraping unless yt-dlp presents the cookies of a logged-in
-session. To unlock Instagram Reels in particular, export cookies from
-your browser as a Netscape `cookies.txt` file and feed them to the service.
+Если задан `YTDLP_SERVICE_API_KEY`, входящие запросы должны нести
+`Authorization: Bearer <key>`. Внутри compose это не обязательно,
+потому что сервис недоступен снаружи. Включи, если решишь пробросить
+его наружу.
 
-### How to get the cookies file
+## Cookies для Instagram / Facebook / age-gated YouTube
 
-1. Log into the target site in your browser (e.g. instagram.com)
-2. Install the browser extension **Get cookies.txt LOCALLY** (Chrome/Firefox)
-3. Open the site, click the extension, **Export** → save `cookies.txt`
+Многие сайты блокируют скрейпинг без cookies залогиненной сессии. Чтобы
+yt-dlp умел брать Instagram Reels и иногда YouTube — нужны cookies.
 
-### How to feed it to the service
+### Как достать cookies-файл
 
-The service accepts cookies via env var (base64-encoded) so you don't need
-to mount a file.
+1. Залогинься в браузере (например, instagram.com).
+2. Поставь расширение **Get cookies.txt LOCALLY** (Chrome / Firefox).
+3. Открой сайт → клик по расширению → **Export** → сохрани `cookies.txt`.
 
-A single `cookies.txt` can contain cookies for **multiple domains**
-(Netscape format includes the domain on each line). Recommended: export
-from both `youtube.com` and `instagram.com` and concatenate.
+### Как скормить сервису
+
+Сервис принимает cookies через env-переменную в base64.
+Один `cookies.txt` может содержать cookies для нескольких доменов
+(Netscape-формат). Рекомендуется собрать в один файл cookies от
+`youtube.com` и `instagram.com`.
 
 ```bash
-# 1. Open youtube.com → click extension → Export → save as yt_cookies.txt
-# 2. Open instagram.com → click extension → Export → save as ig_cookies.txt
-# 3. Combine and base64 (macOS):
+# Linux:
+cat yt_cookies.txt ig_cookies.txt | base64 -w 0
+# macOS:
 cat ~/Downloads/yt_cookies.txt ~/Downloads/ig_cookies.txt > combined.txt
 base64 -i combined.txt | pbcopy
-# Linux/WSL:
-cat yt_cookies.txt ig_cookies.txt | base64 -w 0
 ```
 
-On Railway, set the env var:
+Положи результат в `.env` рядом с `docker-compose.yml`:
 
-- `COOKIES_B64` (or `INSTAGRAM_COOKIES_B64` — both work) = the base64 string
+```
+COOKIES_B64=H4sIAAAAAAA...
+```
 
-Railway redeploys the service automatically. On the first call yt-dlp will
-write the cookies to a temp file and use them for every extraction.
+(работает и старое имя `INSTAGRAM_COOKIES_B64`). Перезапусти стек:
 
-> ⚠️ Cookies expire (Instagram and YouTube rotate session tokens every few
-> weeks). When you start getting 401 / login-required / "format not
-> available" errors again, re-export cookies and update the env var.
+```bash
+docker compose restart ytdlp
+```
 
-## Deploy on Railway
+> ⚠️ Cookies протухают (Instagram и YouTube ротируют сессии раз в
+> несколько недель). Когда снова поползут 401 / login-required —
+> экспортируй и обнови env.
 
-1. Create a new project on https://railway.app
-2. **New** → **Deploy from GitHub repo** → pick `kleber2009-alt/ai-command-center`
-3. After it imports: **Settings** → **Service** → set **Root Directory** to
-   `services/ytdlp` (otherwise Railway tries to build the whole repo as Next.js)
-4. **Variables** → add `YTDLP_SERVICE_API_KEY` with any random long string
-5. **Settings** → **Networking** → **Generate Domain** → copy the
-   `*.up.railway.app` URL
-6. Back in Vercel, add two env vars to the main app:
-   - `YTDLP_SERVICE_URL=https://<your>.up.railway.app`
-   - `YTDLP_SERVICE_API_KEY=<same as on Railway>`
-7. Redeploy Vercel
-
-## Local test
+## Локальный тест без compose
 
 ```bash
 cd services/ytdlp

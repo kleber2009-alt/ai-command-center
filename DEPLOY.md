@@ -159,31 +159,82 @@ curl http://127.0.0.1/api/me/documents | jq '.items | length'
 
 ---
 
-## 5. Бэкапы
+## 5. Безопасность
 
-### Postgres dump nightly (cron):
+### 5.1 Basic-auth на `/admin` и `/board`
 
-```bash
-sudo crontab -e
-# каждый день в 03:00 UTC
-0 3 * * * docker exec ai-postgres pg_dump -U ai ai | gzip > /opt/ai-backups/pg-$(date +\%F).sql.gz
-```
-
-Если использовал Hetzner Volume — монтируй его в `/opt/ai-backups`.
-
-### voice-notes volume:
+`/admin` (ai-office leads-inbox) и `/board` (Next.js kanban) защищены
+nginx basic-auth, htpasswd-строка передаётся через переменную
+`ADMIN_BASIC_AUTH`. Сгенерируй её скриптом:
 
 ```bash
-# Локация на хосте:
-docker volume inspect ai-command-center_voice-notes | grep Mountpoint
-# Бэкап:
-tar czf /opt/ai-backups/voice-notes-$(date +%F).tgz \
-  -C $(docker volume inspect -f '{{ .Mountpoint }}' ai-command-center_voice-notes) .
+./scripts/make-admin-auth.sh admin
+# Пароль: ********
+# → Добавь в .env:
+# ADMIN_BASIC_AUTH='admin:$apr1$abc...:$XYZ'
 ```
+
+Скопируй в `.env`, потом:
+
+```bash
+docker compose up -d nginx
+```
+
+Если переменная пустая — `/admin` и `/board` отдают 401 (что и нужно
+до первой настройки). Кэшируется навсегда у клиента, так что после
+смены пароля проще всего перезайти в инкогнито.
+
+### 5.2 Прочее
+
+- Проверь, что `.env` НЕ закоммичен (`git status` должен быть чистым).
+- `fail2ban` на SSH:
+  ```bash
+  apt install -y fail2ban
+  systemctl enable --now fail2ban
+  ```
+- `ufw` logging если нужен аудит: `ufw logging on`.
 
 ---
 
-## 6. Обновление
+## 6. Бэкапы
+
+### 6.1 Скрипт `scripts/backup.sh`
+
+Делает за один проход pg_dump + tar voice-notes + ротацию:
+
+```bash
+# Ручной прогон
+sudo mkdir -p /opt/ai-backups && sudo chown ai:ai /opt/ai-backups
+./scripts/backup.sh
+
+ls -lh /opt/ai-backups/
+# pg-2026-05-16.sql.gz
+# voice-notes-2026-05-16.tgz
+```
+
+Env:
+- `BACKUP_DIR` (default `/opt/ai-backups`)
+- `BACKUP_KEEP_DAYS` (default 14)
+
+### 6.2 Cron
+
+```bash
+crontab -e -u ai
+# каждый день в 03:00 локального времени
+0 3 * * * cd /opt/ai-stack && ./scripts/backup.sh >> /var/log/ai-backup.log 2>&1
+```
+
+### 6.3 Hetzner snapshot
+
+Hetzner Cloud Console → твой сервер → **Snapshots** → **Take Snapshot**.
+Раз в неделю — €0.0119/GB/мес ≈ €0.5 за 40 GB образ. На случай если
+весь VPS поплохеет.
+
+---
+
+## 7. Обновление
+
+### Руками
 
 ```bash
 cd /opt/ai-stack
@@ -198,9 +249,27 @@ docker compose ps
 docker compose exec -T postgres psql -U ai -d ai < db/init/01_schema.sql
 ```
 
+### Через GitHub Actions
+
+Workflow `.github/workflows/deploy.yml` ssh-ит на VPS при push в `main`.
+Чтобы включить:
+
+1. На сервере как юзер `ai` сгенерь ключ:
+   ```bash
+   ssh-keygen -t ed25519 -f ~/.ssh/gh-deploy -N ''
+   cat ~/.ssh/gh-deploy.pub >> ~/.ssh/authorized_keys
+   cat ~/.ssh/gh-deploy   # → этот приватный ключ положим в GitHub secret
+   ```
+2. GitHub → Settings → Secrets and variables → Actions → New repository secret:
+   - `DEPLOY_HOST` — IP VPS
+   - `DEPLOY_USER` — `ai`
+   - `DEPLOY_SSH_KEY` — содержимое `~/.ssh/gh-deploy`
+   - `DEPLOY_PATH`   — `/opt/ai-stack`
+3. Push в main → Actions → видишь `Deploy to Hetzner`.
+
 ---
 
-## 7. Когда появится домен
+## 8. Когда появится домен
 
 ```bash
 apt install -y certbot python3-certbot-nginx  # на хосте? — нет, у нас nginx в docker
@@ -226,7 +295,7 @@ certbot --nginx -d your-domain.ru
 
 ---
 
-## 8. Что куда смотрит
+## 9. Что куда смотрит
 
 | URL | Контейнер |
 |---|---|
@@ -244,7 +313,7 @@ certbot --nginx -d your-domain.ru
 
 ---
 
-## 9. Лог-команды
+## 10. Лог-команды
 
 ```bash
 # Все сервисы
