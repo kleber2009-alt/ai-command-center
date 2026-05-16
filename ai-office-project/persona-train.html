@@ -1,0 +1,534 @@
+<!DOCTYPE html>
+<html lang="ru">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width,initial-scale=1,maximum-scale=1">
+<title>Persona Train · клонирование голоса · AI Growth Office</title>
+<meta name="description" content="Загрузи 1–3 минуты своего голоса — AI создаст цифровой голос, которым сможет озвучивать сообщения от твоего имени.">
+<meta name="robots" content="noindex">
+<link rel="canonical" href="https://ai-growth-office.ru/persona-train.html">
+<link rel="icon" type="image/svg+xml" href="data:image/svg+xml,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 32 32'><rect width='32' height='32' rx='8' fill='%23080808'/><text y='22' x='4' font-size='20'>🎙</text></svg>">
+
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=JetBrains+Mono:wght@400;700&display=swap">
+
+<style>
+*{box-sizing:border-box;margin:0;padding:0}
+:root{
+  --bg:#080808;--s1:#111118;--s2:#181820;
+  --border:rgba(255,255,255,.08);
+  --text:#e8e4f0;--muted:#6b6880;
+  --accent:#c8f060;--a2:#60c8f0;--a3:#f06090;
+  --orange:#f0640a;--red:#f04060;--green:#60f090;
+  --font:'JetBrains Mono',monospace;
+}
+html,body{background:var(--bg);color:var(--text);font-family:var(--font);min-height:100vh;-webkit-font-smoothing:antialiased}
+
+.wrap{max-width:720px;margin:0 auto;padding:48px 20px 80px}
+
+header{margin-bottom:32px}
+.tag{font-size:9px;text-transform:uppercase;letter-spacing:3px;color:var(--accent);margin-bottom:12px}
+h1{font-size:clamp(28px,5vw,40px);font-weight:700;letter-spacing:-1.5px;line-height:1.1;margin-bottom:12px}
+h1 span{color:var(--accent)}
+.lead{font-size:13px;color:var(--muted);line-height:1.7;max-width:560px}
+
+.card{background:var(--s1);border:1px solid var(--border);border-radius:14px;padding:24px;margin-bottom:20px}
+.card h2{font-size:14px;text-transform:uppercase;letter-spacing:2px;color:var(--muted);margin-bottom:18px;font-weight:700}
+.card h2 span{color:var(--accent);font-size:10px;margin-left:8px}
+
+.row{display:flex;gap:12px;align-items:center;flex-wrap:wrap}
+
+label{display:block;font-size:10px;text-transform:uppercase;letter-spacing:1.5px;color:var(--muted);margin-bottom:6px;font-weight:700}
+input[type=text],textarea{
+  width:100%;background:var(--s2);border:1px solid var(--border);border-radius:10px;
+  color:var(--text);font-family:var(--font);font-size:13px;padding:12px 14px;
+  outline:none;transition:border-color .15s;
+}
+input[type=text]:focus,textarea:focus{border-color:var(--accent)}
+textarea{resize:vertical;min-height:90px;line-height:1.55}
+
+.btn{
+  padding:12px 20px;border-radius:10px;font-size:11px;font-weight:700;
+  font-family:var(--font);letter-spacing:1px;cursor:pointer;transition:all .15s;
+  text-transform:uppercase;border:none;display:inline-flex;align-items:center;gap:8px;
+}
+.btn:disabled{opacity:.4;cursor:not-allowed}
+.btn-accent{background:var(--accent);color:#080808}
+.btn-accent:not(:disabled):hover{background:#aed040;transform:translateY(-1px)}
+.btn-outline{background:none;border:1.5px solid rgba(96,200,240,.45);color:var(--a2)}
+.btn-outline:not(:disabled):hover{background:rgba(96,200,240,.08)}
+.btn-red{background:var(--red);color:#fff}
+.btn-red:not(:disabled):hover{background:#d03050}
+.btn-ghost{background:none;color:var(--muted);border:1px solid var(--border)}
+.btn-ghost:not(:disabled):hover{color:var(--text);border-color:var(--text)}
+
+.recorder{
+  display:flex;flex-direction:column;align-items:center;gap:18px;
+  padding:24px;background:var(--s2);border:1px dashed var(--border);border-radius:14px;
+}
+.rec-circle{
+  width:88px;height:88px;border-radius:50%;
+  background:radial-gradient(circle,var(--red),#a02040);
+  display:flex;align-items:center;justify-content:center;cursor:pointer;
+  border:none;color:#fff;font-size:32px;transition:transform .15s;
+  box-shadow:0 4px 24px rgba(240,64,96,.3);
+}
+.rec-circle:hover{transform:scale(1.05)}
+.rec-circle.recording{animation:pulse 1.4s ease-in-out infinite;background:radial-gradient(circle,#f0b429,#a07020)}
+@keyframes pulse{0%,100%{box-shadow:0 4px 24px rgba(240,180,41,.3)}50%{box-shadow:0 4px 36px rgba(240,180,41,.6)}}
+.rec-time{font-size:24px;font-weight:700;letter-spacing:1px;color:var(--text);font-variant-numeric:tabular-nums}
+.rec-hint{font-size:11px;color:var(--muted);text-align:center;line-height:1.6}
+.rec-hint b{color:var(--accent)}
+
+.bar{height:6px;background:var(--s2);border-radius:3px;overflow:hidden;margin:6px 0}
+.bar-fill{height:100%;background:linear-gradient(90deg,var(--red) 0%,var(--orange) 30%,var(--accent) 60%,var(--green) 100%);transition:width .3s;width:0%}
+
+.audio-preview{
+  display:flex;align-items:center;gap:12px;padding:12px 14px;
+  background:var(--s2);border:1px solid var(--border);border-radius:10px;
+  margin-top:12px;
+}
+.audio-preview audio{flex:1;max-width:100%}
+.audio-preview .meta{font-size:10px;color:var(--muted);white-space:nowrap}
+
+.status{
+  padding:12px 16px;border-radius:8px;font-size:12px;line-height:1.55;
+  display:none;margin-top:12px;
+}
+.status.show{display:block}
+.status.success{background:rgba(96,240,144,.08);border:1px solid rgba(96,240,144,.3);color:var(--green)}
+.status.error{background:rgba(240,64,96,.08);border:1px solid rgba(240,64,96,.3);color:var(--red)}
+.status.info{background:rgba(96,200,240,.08);border:1px solid rgba(96,200,240,.3);color:var(--a2)}
+.status pre{font-size:10px;white-space:pre-wrap;margin-top:8px;opacity:.7}
+
+.voice-card{
+  display:flex;justify-content:space-between;align-items:flex-start;
+  padding:16px;background:var(--s2);border:1px solid rgba(200,240,96,.2);border-radius:10px;
+}
+.voice-card .label{font-size:9px;text-transform:uppercase;letter-spacing:2px;color:var(--accent);margin-bottom:4px}
+.voice-card .name{font-size:14px;font-weight:700}
+.voice-card .meta{font-size:10px;color:var(--muted);margin-top:6px;line-height:1.5}
+.voice-card code{font-family:var(--font);font-size:10px;color:var(--a2);background:rgba(96,200,240,.08);padding:2px 6px;border-radius:4px}
+
+.empty{font-size:12px;color:var(--muted);font-style:italic}
+
+.nav-back{
+  display:inline-flex;align-items:center;gap:6px;font-size:10px;color:var(--muted);
+  text-decoration:none;text-transform:uppercase;letter-spacing:1.5px;margin-bottom:24px;
+}
+.nav-back:hover{color:var(--accent)}
+
+.note{
+  font-size:10.5px;color:var(--muted);line-height:1.7;padding:14px 16px;
+  background:rgba(255,255,255,.02);border-left:2px solid var(--accent);border-radius:6px;
+  margin-top:14px;
+}
+.note b{color:var(--text)}
+
+footer{text-align:center;margin-top:48px;font-size:10px;color:var(--muted);letter-spacing:1px}
+footer a{color:var(--a2);text-decoration:none}
+
+@media(max-width:540px){
+  .wrap{padding:32px 16px 60px}
+  .rec-circle{width:72px;height:72px;font-size:26px}
+}
+</style>
+</head>
+<body>
+
+<div class="wrap">
+  <a class="nav-back" href="/">← На главную</a>
+
+  <header>
+    <div class="tag">Phase 5 · MVP-0 · Voice Clone</div>
+    <h1>Создай <span>цифровой голос</span></h1>
+    <p class="lead">
+      Загрузи 1–3 минуты своего чистого голоса (моноречь, без музыки и шума).
+      AI создаст клон — потом сможешь сгенерировать любую voice-note этим голосом.
+      Технология: ElevenLabs Instant Voice Clone, модель <code style="font-size:11px;color:var(--a2)">eleven_multilingual_v2</code> (поддерживает русский).
+    </p>
+  </header>
+
+  <!-- ─── 1. Кто ты? ─── -->
+  <section class="card">
+    <h2>1. Кто владелец голоса <span>обязательно</span></h2>
+    <label for="owner">Telegram-username или email</label>
+    <input type="text" id="owner" placeholder="@your_handle" autocomplete="off">
+    <p class="note">
+      Используется как уникальный ключ владельца голоса. Если уже есть голос для этого handle — он будет архивирован, и создан новый.
+    </p>
+  </section>
+
+  <!-- ─── 2. Запись или загрузка ─── -->
+  <section class="card">
+    <h2>2. Запиши или загрузи аудио <span>1–3 мин</span></h2>
+
+    <div class="recorder">
+      <button class="rec-circle" id="recBtn" type="button" title="Запись">🎙</button>
+      <div class="rec-time" id="recTime">00:00</div>
+      <div class="bar"><div class="bar-fill" id="recBar"></div></div>
+      <div class="rec-hint">
+        Нажми кнопку → говори чётко, без музыки на фоне.<br>
+        Минимум <b>60 сек</b>, оптимально <b>2–3 мин</b>. До 11 MB.
+      </div>
+    </div>
+
+    <div style="margin-top:18px">
+      <label>...или загрузи готовый файл (mp3 / m4a / wav / ogg)</label>
+      <input type="file" id="fileInput" accept="audio/*" multiple style="font-size:12px;color:var(--muted)">
+    </div>
+
+    <div class="audio-preview" id="audioPreview" style="display:none">
+      <audio id="audioPlayer" controls></audio>
+      <span class="meta" id="audioMeta"></span>
+      <button class="btn btn-ghost" type="button" id="clearAudio">✕</button>
+    </div>
+
+    <div style="margin-top:18px;display:flex;gap:10px;flex-wrap:wrap">
+      <button class="btn btn-accent" id="cloneBtn" disabled>Создать голос →</button>
+      <span style="font-size:10px;color:var(--muted);align-self:center">
+        ~5–15 сек на обработку
+      </span>
+    </div>
+
+    <div class="status" id="cloneStatus"></div>
+  </section>
+
+  <!-- ─── 3. Текущий голос ─── -->
+  <section class="card">
+    <h2>3. Активный голос</h2>
+    <div id="voiceContainer">
+      <p class="empty">Введи handle выше — покажу твой активный голос (если есть).</p>
+    </div>
+  </section>
+
+  <!-- ─── 4. Тестовая генерация ─── -->
+  <section class="card">
+    <h2>4. Тест: сгенерируй voice-note</h2>
+    <label for="testText">Текст (до 1500 символов)</label>
+    <textarea id="testText" placeholder="Привет! Это тест моего AI-голоса.">Привет! Это тест моего цифрового голоса. Если ты это слышишь — клонирование сработало.</textarea>
+
+    <div style="margin-top:14px;display:flex;gap:10px;flex-wrap:wrap;align-items:center">
+      <button class="btn btn-accent" id="genBtn" disabled>🎧 Сгенерировать</button>
+      <span style="font-size:10px;color:var(--muted)" id="charCount">0 символов</span>
+    </div>
+
+    <div class="status" id="genStatus"></div>
+
+    <div class="audio-preview" id="genPreview" style="display:none">
+      <audio id="genPlayer" controls></audio>
+      <a class="btn btn-ghost" id="genDownload" download="voice-note.mp3" title="Скачать">⬇</a>
+    </div>
+  </section>
+
+  <footer>
+    AI Growth Office · Phase 5 MVP-0 ·
+    <a href="/docs/PHASE_5.md">Документация</a> ·
+    <a href="/dev-tools.html">Dev-tools</a>
+  </footer>
+</div>
+
+<script>
+// ═══════════════════════════════════════════════════════════════════
+// persona-train.html — UI логика
+// ═══════════════════════════════════════════════════════════════════
+
+const OWNER_KEY = 'aio_voice_owner_handle';
+const $ = (id) => document.getElementById(id);
+
+const ownerInput = $('owner');
+const recBtn = $('recBtn');
+const recTime = $('recTime');
+const recBar = $('recBar');
+const fileInput = $('fileInput');
+const audioPreview = $('audioPreview');
+const audioPlayer = $('audioPlayer');
+const audioMeta = $('audioMeta');
+const clearAudioBtn = $('clearAudio');
+const cloneBtn = $('cloneBtn');
+const cloneStatus = $('cloneStatus');
+const voiceContainer = $('voiceContainer');
+const testText = $('testText');
+const genBtn = $('genBtn');
+const genStatus = $('genStatus');
+const genPreview = $('genPreview');
+const genPlayer = $('genPlayer');
+const genDownload = $('genDownload');
+const charCount = $('charCount');
+
+// ── State ──
+let recorder = null;
+let recordingStartedAt = 0;
+let recTimer = null;
+let collectedChunks = [];
+let currentBlob = null;       // запись или загрузка
+let currentMime = 'audio/mp3';
+let currentVoice = null;      // объект из /api/voice-list
+
+// ── Восстановить handle ──
+try {
+  const saved = localStorage.getItem(OWNER_KEY);
+  if (saved) ownerInput.value = saved;
+} catch {}
+
+ownerInput.addEventListener('input', () => {
+  try { localStorage.setItem(OWNER_KEY, ownerInput.value.trim()); } catch {}
+  updateButtons();
+  scheduleVoiceLoad();
+});
+
+// ── Запись с микрофона ──
+recBtn.addEventListener('click', async () => {
+  if (recorder && recorder.state === 'recording') {
+    recorder.stop();
+    return;
+  }
+  try {
+    const stream = await navigator.mediaDevices.getUserMedia({ audio: {
+      echoCancellation: true, noiseSuppression: true, autoGainControl: true,
+    }});
+    const mime = MediaRecorder.isTypeSupported('audio/webm;codecs=opus')
+      ? 'audio/webm;codecs=opus'
+      : (MediaRecorder.isTypeSupported('audio/mp4') ? 'audio/mp4' : '');
+    recorder = mime ? new MediaRecorder(stream, { mimeType: mime }) : new MediaRecorder(stream);
+    currentMime = recorder.mimeType || 'audio/webm';
+    collectedChunks = [];
+
+    recorder.ondataavailable = (e) => { if (e.data?.size) collectedChunks.push(e.data); };
+    recorder.onstop = () => {
+      stream.getTracks().forEach((t) => t.stop());
+      const blob = new Blob(collectedChunks, { type: currentMime });
+      setCurrentAudio(blob, `recording.${currentMime.includes('mp4') ? 'm4a' : 'webm'}`);
+      recBtn.classList.remove('recording');
+      recBtn.textContent = '🎙';
+      clearInterval(recTimer);
+    };
+
+    recorder.start();
+    recordingStartedAt = Date.now();
+    recBtn.classList.add('recording');
+    recBtn.textContent = '⏹';
+    cloneStatus.classList.remove('show');
+    recTimer = setInterval(updateRecTime, 100);
+  } catch (e) {
+    showStatus(cloneStatus, 'error', 'Не получилось включить микрофон: ' + (e.message || e));
+  }
+});
+
+function updateRecTime() {
+  const s = Math.floor((Date.now() - recordingStartedAt) / 1000);
+  const mm = String(Math.floor(s / 60)).padStart(2, '0');
+  const ss = String(s % 60).padStart(2, '0');
+  recTime.textContent = `${mm}:${ss}`;
+  recBar.style.width = Math.min(100, (s / 180) * 100) + '%'; // 3 мин = 100%
+  if (s >= 600) {
+    // авто-стоп на 10 мин
+    if (recorder?.state === 'recording') recorder.stop();
+  }
+}
+
+// ── Загрузка файла ──
+fileInput.addEventListener('change', (e) => {
+  const files = Array.from(e.target.files || []);
+  if (!files.length) return;
+  if (files.length === 1) {
+    setCurrentAudio(files[0], files[0].name);
+  } else {
+    const blob = new Blob(files, { type: files[0].type || 'audio/mpeg' });
+    setCurrentAudio(blob, `multi-${files.length}-files.mp3`);
+  }
+});
+
+function setCurrentAudio(blob, name) {
+  currentBlob = blob;
+  currentBlob.name = name;
+  const url = URL.createObjectURL(blob);
+  audioPlayer.src = url;
+  audioMeta.textContent = `${name} · ${(blob.size / 1024).toFixed(0)} KB`;
+  audioPreview.style.display = 'flex';
+  updateButtons();
+}
+
+clearAudioBtn.addEventListener('click', () => {
+  currentBlob = null;
+  audioPreview.style.display = 'none';
+  audioPlayer.src = '';
+  fileInput.value = '';
+  recTime.textContent = '00:00';
+  recBar.style.width = '0%';
+  updateButtons();
+});
+
+// ── Кнопки enable/disable ──
+function updateButtons() {
+  const ownerOk = ownerInput.value.trim().length >= 2;
+  cloneBtn.disabled = !(ownerOk && currentBlob);
+  genBtn.disabled = !(ownerOk && (currentVoice || false));
+}
+
+// ── Создать voice clone ──
+cloneBtn.addEventListener('click', async () => {
+  const owner = ownerInput.value.trim();
+  if (!owner || !currentBlob) return;
+
+  cloneBtn.disabled = true;
+  cloneBtn.textContent = '...загрузка';
+  showStatus(cloneStatus, 'info', 'Отправляем в ElevenLabs… (5–15 сек)');
+
+  const fd = new FormData();
+  fd.append('owner_handle', owner);
+  fd.append('display_name', owner);
+  if (audioPlayer.duration && isFinite(audioPlayer.duration)) {
+    fd.append('sample_seconds', Math.round(audioPlayer.duration));
+  }
+  fd.append('files', currentBlob, currentBlob.name || 'sample.mp3');
+
+  try {
+    const res = await fetch('/api/voice-clone', { method: 'POST', body: fd });
+    const data = await res.json();
+    if (!res.ok || !data.ok) {
+      const detail = data.details || data.message || data.error || JSON.stringify(data);
+      showStatus(cloneStatus, 'error',
+        `Не получилось создать голос (HTTP ${res.status})`,
+        detail);
+      return;
+    }
+    showStatus(cloneStatus, 'success',
+      `✓ Голос создан: ${data.display_name}`,
+      `voice_id: ${data.voice_id}\nprovider_voice_id: ${data.provider_voice_id}`);
+    loadVoice();
+  } catch (e) {
+    showStatus(cloneStatus, 'error', 'Сеть упала: ' + (e.message || e));
+  } finally {
+    cloneBtn.disabled = false;
+    cloneBtn.textContent = 'Создать голос →';
+  }
+});
+
+// ── Загрузка текущего голоса ──
+let voiceLoadTimer = null;
+function scheduleVoiceLoad() {
+  clearTimeout(voiceLoadTimer);
+  voiceLoadTimer = setTimeout(loadVoice, 400);
+}
+
+async function loadVoice() {
+  const owner = ownerInput.value.trim();
+  if (!owner) {
+    currentVoice = null;
+    renderVoice(null);
+    updateButtons();
+    return;
+  }
+  try {
+    const res = await fetch(`/api/voice-list?owner=${encodeURIComponent(owner)}`);
+    if (!res.ok) {
+      renderVoice(null, `HTTP ${res.status} — backend ещё не задеплоен?`);
+      return;
+    }
+    const data = await res.json();
+    currentVoice = data.current || null;
+    renderVoice(data.current, null, data.archived);
+  } catch (e) {
+    renderVoice(null, e.message || 'network error');
+  } finally {
+    updateButtons();
+  }
+}
+
+function renderVoice(v, errMsg, archived) {
+  if (errMsg) {
+    voiceContainer.innerHTML = `<p class="empty" style="color:var(--orange)">⚠ ${errMsg}</p>`;
+    return;
+  }
+  if (!v) {
+    voiceContainer.innerHTML = `<p class="empty">Активного голоса нет — создай выше.</p>`;
+    return;
+  }
+  const created = new Date(v.created_at).toLocaleString('ru-RU', { timeZone: 'Europe/Moscow' });
+  let html = `
+    <div class="voice-card">
+      <div>
+        <div class="label">Активный голос</div>
+        <div class="name">${escapeHtml(v.display_name || '—')}</div>
+        <div class="meta">
+          Создан: ${created} МСК<br>
+          Sample: ${v.sample_seconds ? v.sample_seconds + 'с' : '—'} ·
+          Провайдер: <code>${v.provider}</code> ·
+          <code>${v.provider_voice_id}</code>
+        </div>
+      </div>
+    </div>`;
+  if (archived?.length) {
+    html += `<p style="font-size:10px;color:var(--muted);margin-top:10px">Архив: ${archived.length} прошлых голос${archived.length === 1 ? '' : (archived.length < 5 ? 'а' : 'ов')}</p>`;
+  }
+  voiceContainer.innerHTML = html;
+}
+
+// ── Тест-генерация ──
+testText.addEventListener('input', () => {
+  const len = testText.value.length;
+  charCount.textContent = `${len} символов` + (len > 1500 ? ' (слишком длинно!)' : '');
+  charCount.style.color = len > 1500 ? 'var(--red)' : 'var(--muted)';
+});
+testText.dispatchEvent(new Event('input'));
+
+genBtn.addEventListener('click', async () => {
+  const owner = ownerInput.value.trim();
+  const text = testText.value.trim();
+  if (!owner || !text || !currentVoice) return;
+
+  genBtn.disabled = true;
+  genBtn.textContent = '...генерация';
+  genPreview.style.display = 'none';
+  showStatus(genStatus, 'info', 'Озвучиваем через ElevenLabs… (3–8 сек)');
+
+  try {
+    const res = await fetch('/api/voice-generate', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({
+        text,
+        voice_id: currentVoice.id,
+        source: 'persona-train',
+      }),
+    });
+    const data = await res.json();
+    if (!res.ok || !data.ok) {
+      showStatus(genStatus, 'error',
+        `Не получилось (HTTP ${res.status})`,
+        data.details || data.message || JSON.stringify(data));
+      return;
+    }
+    showStatus(genStatus, 'success',
+      `✓ Готово: ${data.char_count} символов, ${(data.bytes / 1024).toFixed(0)} KB`,
+      `generation_id: ${data.generation_id}`);
+    genPlayer.src = data.audio_url;
+    genDownload.href = data.audio_url;
+    genPreview.style.display = 'flex';
+    genPlayer.play().catch(() => {});
+  } catch (e) {
+    showStatus(genStatus, 'error', 'Сеть упала: ' + (e.message || e));
+  } finally {
+    genBtn.disabled = !(ownerInput.value.trim() && currentVoice);
+    genBtn.textContent = '🎧 Сгенерировать';
+  }
+});
+
+function showStatus(el, kind, msg, detail) {
+  el.className = 'status show ' + kind;
+  el.innerHTML = escapeHtml(msg) + (detail ? `<pre>${escapeHtml(detail)}</pre>` : '');
+}
+
+function escapeHtml(s) {
+  return String(s).replace(/[&<>"']/g, (c) => ({ '&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;' }[c]));
+}
+
+// ── Init ──
+if (ownerInput.value) loadVoice();
+updateButtons();
+</script>
+
+</body>
+</html>

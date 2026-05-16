@@ -13,23 +13,27 @@
 
 ---
 
-## 🎯 Следующий приоритет (новое направление — Phase 5)
-
-После завершения текущего бэкенда — **новый главный фокус**:
+## 🎯 Phase 5 · в работе (стартовала 16.05.2026)
 
 > **«AI-агенты пишут / говорят / снимают кружки от твоего лица на IG + TG»**
 
-Что нужно построить:
-
 | Блок | Что | Сервис | Статус |
 |---|---|---|---|
-| 🎤 **Voice clone** | TTS твоим голосом | ElevenLabs / OpenAI TTS / Yandex SpeechKit | не начато |
-| 🎬 **Video circles** | Кружки Telegram + Reels-головы | HeyGen / D-ID / Synthesia | не начато |
-| ✍️ **Style match** | Тексты в твоём стиле | Claude + fine-tune на твоих постах | не начато |
-| 📨 **TG posting** | Бот шлёт voice + circle messages | Telegram Bot API | не начато |
-| 📷 **IG posting** | Постинг Stories/Reels/comments | Instagram Graph API / Buffer | не начато |
-| 🎭 **Sample collection** | UI для загрузки голоса/видео/текстов | new page `/persona-train.html` | не начато |
-| ✅ **Approval flow** | Юзер аппрувит каждый пост перед публикацией | Telegram inline-кнопки | не начато |
+| 🎤 **Voice clone** | TTS твоим голосом | **ElevenLabs** (выбрано) | ✅ Commit 1 |
+| 🎭 **Sample collection** | UI для загрузки голоса | `persona-train.html` | ✅ Commit 1 |
+| 📨 **TG posting** | Бот шлёт voice notes | Telegram Bot API | 🚧 Commit 2 |
+| ✅ **Approval flow** | Юзер аппрувит каждый пост | TG inline-кнопки | 🚧 Commit 2 |
+| 🎬 **Video circles** | Кружки Telegram | D-ID / HeyGen | ⏳ Commit 3 |
+| ✍️ **Style match** | Тексты в твоём стиле | Claude + персональный промпт | ⏳ Commit 3 |
+| 📷 **IG posting** | Stories/Reels/DM | Instagram Graph API | ⏳ Commit 4 |
+
+**Что прямо сейчас нужно от тебя для запуска Commit 1:**
+1. В Supabase SQL Editor запустить `supabase/migrations/003_voice.sql`
+2. Получить ключ ElevenLabs (тариф Starter $5/мес минимум)
+3. В Netlify env vars добавить: `ELEVENLABS_API_KEY`, `SUPABASE_URL`, `SUPABASE_SERVICE_KEY`
+4. Открыть `/persona-train` → записать 1–3 мин голоса → проверить генерацию
+
+Полная документация: [`docs/PHASE_5.md`](docs/PHASE_5.md)
 
 **Customer flow в новой концепции:**
 ```
