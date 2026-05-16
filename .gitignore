@@ -10,3 +10,4 @@ npm-debug.log*
 .vercel
 .turbo
 next-env.d.ts
+tsconfig.tsbuildinfo
