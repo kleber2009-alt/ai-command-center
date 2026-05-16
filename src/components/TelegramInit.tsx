@@ -17,6 +17,14 @@ export default function TelegramInit() {
     tg.ready()
     tg.expand()
 
+    // Drop the raw initData into a cookie so server middleware can read it
+    // on every API call without us threading a header through every fetch.
+    // Not httpOnly (we set it from JS); SameSite=Lax is enough because we
+    // never use it for cross-site auth.
+    if (tg.initData) {
+      document.cookie = `tg_init_data=${encodeURIComponent(tg.initData)}; path=/; max-age=86400; samesite=lax`
+    }
+
     const applyTheme = () => {
       const t = tg.themeParams
       const root = document.documentElement

@@ -136,9 +136,25 @@ mirrors `themeParams` to CSS variables on `<html>`. The transcribe page:
 Outside Telegram everything still works — the SDK calls are guarded by
 `getTelegram()` returning `null`.
 
-See `docs/TELEGRAM_MINI_APP.md` for BotFather setup steps. Server-side
-verification of `initData` against `TELEGRAM_BOT_TOKEN` is not yet
-implemented — every API route is open.
+`TelegramInit` also drops the raw `initData` into a `tg_init_data` cookie
+(non-httponly, SameSite=Lax) so server middleware can verify the
+signature on every API call without us threading a header through
+every fetch.
+
+## Access control
+
+Both layers are **opt-in** via env vars — when the env var isn't set,
+the corresponding paths are open (keeps local dev frictionless).
+
+- **`/admin` and `/api/tasks/*`** → HTTP Basic Auth gated by
+  `ADMIN_BASIC_AUTH` (format `user:password`). Browser auto-prompts.
+- **`/api/transcribe/*` and `/api/me/*`** → Telegram initData HMAC
+  verified against `TELEGRAM_BOT_TOKEN`. Middleware reads initData
+  from `X-Telegram-Init-Data` header or `tg_init_data` cookie.
+
+Implementation lives in `src/middleware.ts` (Edge runtime) +
+`src/lib/auth.ts` (Web Crypto SubtleCrypto, no `node:crypto`).
+See `docs/TELEGRAM_MINI_APP.md` for BotFather setup.
 
 ## yt-dlp companion service
 
