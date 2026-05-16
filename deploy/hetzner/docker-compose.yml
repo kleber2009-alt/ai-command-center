@@ -1,0 +1,51 @@
+services:
+  app:
+    build:
+      context: ../..
+      dockerfile: Dockerfile
+      args:
+        NEXT_PUBLIC_SUPABASE_URL: ${NEXT_PUBLIC_SUPABASE_URL}
+        NEXT_PUBLIC_SUPABASE_ANON_KEY: ${NEXT_PUBLIC_SUPABASE_ANON_KEY}
+    restart: unless-stopped
+    environment:
+      ANTHROPIC_API_KEY: ${ANTHROPIC_API_KEY}
+      DEEPGRAM_API_KEY: ${DEEPGRAM_API_KEY}
+      NEXT_PUBLIC_SUPABASE_URL: ${NEXT_PUBLIC_SUPABASE_URL}
+      NEXT_PUBLIC_SUPABASE_ANON_KEY: ${NEXT_PUBLIC_SUPABASE_ANON_KEY}
+      SUPABASE_SERVICE_KEY: ${SUPABASE_SERVICE_KEY}
+      YTDLP_SERVICE_URL: http://ytdlp:8000
+      YTDLP_SERVICE_API_KEY: ${YTDLP_SERVICE_API_KEY}
+    expose:
+      - "3000"
+    depends_on:
+      - ytdlp
+
+  ytdlp:
+    build:
+      context: ../../services/ytdlp
+    restart: unless-stopped
+    environment:
+      YTDLP_SERVICE_API_KEY: ${YTDLP_SERVICE_API_KEY}
+      INSTAGRAM_COOKIES_B64: ${INSTAGRAM_COOKIES_B64:-}
+      COOKIES_B64: ${COOKIES_B64:-}
+    expose:
+      - "8000"
+
+  caddy:
+    image: caddy:2-alpine
+    restart: unless-stopped
+    ports:
+      - "80:80"
+      - "443:443"
+    volumes:
+      - ./Caddyfile:/etc/caddy/Caddyfile:ro
+      - caddy_data:/data
+      - caddy_config:/config
+    environment:
+      DOMAIN: ${DOMAIN}
+    depends_on:
+      - app
+
+volumes:
+  caddy_data:
+  caddy_config:

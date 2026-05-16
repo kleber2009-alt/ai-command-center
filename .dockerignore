@@ -1,0 +1,10 @@
+node_modules
+.next
+.git
+.env*
+.vscode
+deploy
+services
+docs
+README.md
+CLAUDE.md
