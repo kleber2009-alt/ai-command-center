@@ -1,6 +1,7 @@
 import { NextRequest, NextResponse } from 'next/server'
 import { embed } from '@/lib/embeddings'
 import { getServerSupabase, loadProfile, profileToContext } from '@/lib/me-db'
+import { streamAnthropic } from '@/lib/anthropic-stream'
 
 export const maxDuration = 60
 
@@ -24,11 +25,9 @@ export async function POST(req: NextRequest) {
   if (messages.length === 0 || messages[messages.length - 1].role !== 'user') {
     return NextResponse.json({ error: 'Последнее сообщение должно быть от пользователя' }, { status: 400 })
   }
-
   if (!process.env.ANTHROPIC_API_KEY) {
     return NextResponse.json({ error: 'ANTHROPIC_API_KEY не настроен' }, { status: 500 })
   }
-
   const supabase = getServerSupabase()
   if (!supabase) {
     return NextResponse.json(
@@ -77,36 +76,13 @@ export async function POST(req: NextRequest) {
   else systemParts.push('## Контекст\n(релевантных фрагментов не найдено — используй только профиль и общие знания)')
   const system = systemParts.join('\n\n')
 
-  try {
-    const res = await fetch('https://api.anthropic.com/v1/messages', {
-      method: 'POST',
-      headers: {
-        'Content-Type': 'application/json',
-        'x-api-key': process.env.ANTHROPIC_API_KEY,
-        'anthropic-version': '2023-06-01',
-      },
-      body: JSON.stringify({
-        model: 'claude-sonnet-4-6',
-        max_tokens: 4096,
-        system,
-        messages: messages.map((m) => ({ role: m.role, content: m.content.slice(0, 50000) })),
-      }),
-    })
-
-    if (!res.ok) {
-      const errText = await res.text()
-      return NextResponse.json(
-        { error: `Anthropic (${res.status}): ${errText.slice(0, 300)}` },
-        { status: res.status },
-      )
-    }
-
-    const data = await res.json()
-    const text = data.content?.[0]?.text || ''
-    if (!text) return NextResponse.json({ error: 'Пустой ответ от модели' }, { status: 500 })
-
-    return NextResponse.json({ text, citations })
-  } catch (e: any) {
-    return NextResponse.json({ error: e?.message || 'Ошибка генерации' }, { status: 500 })
-  }
+  return streamAnthropic(
+    {
+      apiKey: process.env.ANTHROPIC_API_KEY,
+      model: 'claude-sonnet-4-6',
+      system,
+      messages: messages.map((m) => ({ role: m.role, content: m.content.slice(0, 50000) })),
+    },
+    { citations },
+  )
 }

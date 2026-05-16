@@ -2,6 +2,7 @@
 import { useEffect, useRef, useState } from 'react'
 import { Brain, Check, Copy, Loader2, Send, Sparkles, Trash2, TriangleAlert } from 'lucide-react'
 import MeTabs from './MeTabs'
+import { readNdjson } from '@/lib/stream-client'
 
 type Msg = { role: 'user' | 'assistant'; content: string; citations?: Citation[] }
 type Citation = { document_id: string; document_title: string; chunk_index: number; similarity: number }
@@ -35,7 +36,7 @@ export default function MeChat() {
 
   useEffect(() => {
     bottomRef.current?.scrollIntoView({ behavior: 'smooth', block: 'end' })
-  }, [messages, loading])
+  }, [messages])
 
   useEffect(() => {
     const el = inputRef.current
@@ -49,7 +50,7 @@ export default function MeChat() {
     if (!text || loading) return
     setError(null)
     const next: Msg[] = [...messages, { role: 'user', content: text }]
-    setMessages(next)
+    setMessages([...next, { role: 'assistant', content: '' }])
     setInput('')
     setLoading(true)
     try {
@@ -58,11 +59,40 @@ export default function MeChat() {
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({ messages: next.map((m) => ({ role: m.role, content: m.content })) }),
       })
-      const data = await res.json()
-      if (!res.ok) throw new Error(data?.error || `Ошибка ${res.status}`)
-      setMessages([...next, { role: 'assistant', content: data.text, citations: data.citations }])
+      if (!res.ok) {
+        const data = await res.json().catch(() => ({}))
+        throw new Error(data?.error || `Ошибка ${res.status}`)
+      }
+      let citations: Citation[] = []
+      let acc = ''
+      let streamError: string | null = null
+      await readNdjson(res, (e) => {
+        if (e.type === 'meta' && Array.isArray((e as any).citations)) {
+          citations = (e as any).citations
+        } else if (e.type === 'delta') {
+          acc += e.text
+          setMessages((m) => {
+            const copy = m.slice()
+            const last = copy[copy.length - 1]
+            if (last && last.role === 'assistant') {
+              copy[copy.length - 1] = { ...last, content: acc, citations }
+            }
+            return copy
+          })
+        } else if (e.type === 'error') {
+          streamError = e.error
+        }
+      })
+      if (streamError) throw new Error(streamError)
+      if (!acc) throw new Error('Пустой ответ от модели')
     } catch (e: any) {
       setError(e?.message || 'Ошибка отправки')
+      setMessages((m) => {
+        const copy = m.slice()
+        const last = copy[copy.length - 1]
+        if (last && last.role === 'assistant' && !last.content) copy.pop()
+        return copy
+      })
     } finally {
       setLoading(false)
     }
@@ -145,15 +175,25 @@ export default function MeChat() {
                     : 'group relative rounded-[20px] rounded-bl-md border border-apple-line bg-white px-3.5 py-2.5 text-[15px] leading-snug text-apple-ink shadow-apple-sm'
                 }
               >
-                <pre className="whitespace-pre-wrap break-words font-sans text-[15px] leading-relaxed">{m.content}</pre>
-                <button
-                  type="button"
-                  onClick={() => copyMessage(m.content, i)}
-                  className="absolute -bottom-2 -right-2 grid h-7 w-7 place-items-center rounded-full border border-apple-line bg-white text-apple-muted opacity-0 shadow-apple-sm transition group-hover:opacity-100"
-                  aria-label="Скопировать"
-                >
-                  {copiedIdx === i ? <Check className="h-3.5 w-3.5 text-emerald-500" /> : <Copy className="h-3.5 w-3.5" />}
-                </button>
+                {m.role === 'assistant' && m.content === '' ? (
+                  <span className="flex items-center gap-1 py-1">
+                    <span className="h-1.5 w-1.5 animate-pulse rounded-full bg-apple-faint" style={{ animationDelay: '0ms' }} />
+                    <span className="h-1.5 w-1.5 animate-pulse rounded-full bg-apple-faint" style={{ animationDelay: '150ms' }} />
+                    <span className="h-1.5 w-1.5 animate-pulse rounded-full bg-apple-faint" style={{ animationDelay: '300ms' }} />
+                  </span>
+                ) : (
+                  <pre className="whitespace-pre-wrap break-words font-sans text-[15px] leading-relaxed">{m.content}</pre>
+                )}
+                {m.content && (
+                  <button
+                    type="button"
+                    onClick={() => copyMessage(m.content, i)}
+                    className="absolute -bottom-2 -right-2 grid h-7 w-7 place-items-center rounded-full border border-apple-line bg-white text-apple-muted opacity-0 shadow-apple-sm transition group-hover:opacity-100"
+                    aria-label="Скопировать"
+                  >
+                    {copiedIdx === i ? <Check className="h-3.5 w-3.5 text-emerald-500" /> : <Copy className="h-3.5 w-3.5" />}
+                  </button>
+                )}
               </div>
               {m.role === 'assistant' && m.citations && m.citations.length > 0 && (
                 <div className="mt-2 flex flex-wrap gap-1.5">
@@ -171,18 +211,6 @@ export default function MeChat() {
             </div>
           </div>
         ))}
-
-        {loading && (
-          <div className="flex justify-start">
-            <div className="flex items-center gap-2 rounded-[20px] rounded-bl-md border border-apple-line bg-white px-3.5 py-2.5 text-[13px] text-apple-muted shadow-apple-sm">
-              <span className="flex gap-1">
-                <span className="h-1.5 w-1.5 animate-pulse rounded-full bg-apple-faint" style={{ animationDelay: '0ms' }} />
-                <span className="h-1.5 w-1.5 animate-pulse rounded-full bg-apple-faint" style={{ animationDelay: '150ms' }} />
-                <span className="h-1.5 w-1.5 animate-pulse rounded-full bg-apple-faint" style={{ animationDelay: '300ms' }} />
-              </span>
-            </div>
-          </div>
-        )}
 
         {error && (
           <div className="flex items-start gap-2 rounded-apple-lg border border-red-200 bg-red-50 p-3 text-[13px] text-red-700 sm:text-sm">

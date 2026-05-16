@@ -206,6 +206,8 @@ export default function TranscribePage() {
   const [error, setError] = useState<string | null>(null)
   const [result, setResult] = useState<Result | null>(null)
   const [copied, setCopied] = useState(false)
+  const [importing, setImporting] = useState(false)
+  const [importedAt, setImportedAt] = useState<string | null>(null)
 
   const [summary, setSummary] = useState<Summary | null>(null)
   const [summaryLoading, setSummaryLoading] = useState(false)
@@ -346,6 +348,34 @@ export default function TranscribePage() {
         resetSecondary()
       }
     } catch {}
+  }
+
+  async function importToBrain() {
+    if (!result || importing) return
+    const text = result.paragraphs.length
+      ? result.paragraphs.map(p => p.text).join('\n\n')
+      : result.transcript
+    if (!text.trim()) return
+    setImporting(true)
+    setError(null)
+    try {
+      const titleSeed = text.trim().slice(0, 80).replace(/\s+/g, ' ')
+      const res = await fetch('/api/me/documents', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          title: titleSeed + (text.length > 80 ? '…' : ''),
+          text,
+        }),
+      })
+      const data = await res.json()
+      if (!res.ok) throw new Error(data?.error || `Ошибка ${res.status}`)
+      setImportedAt(result.id)
+    } catch (e: any) {
+      setError(e?.message || 'Не удалось добавить в базу')
+    } finally {
+      setImporting(false)
+    }
   }
 
   async function copyTranscript() {
@@ -604,6 +634,13 @@ export default function TranscribePage() {
                 </SoftButton>
                 <SoftButton onClick={exportTxt} icon={<Download className="h-3.5 w-3.5" />}>.txt</SoftButton>
                 <SoftButton onClick={exportSrt} disabled={result.paragraphs.length === 0} icon={<FileText className="h-3.5 w-3.5" />}>.srt</SoftButton>
+                <SoftButton
+                  onClick={importToBrain}
+                  disabled={importing || importedAt === result.id}
+                  icon={importedAt === result.id ? <Check className="h-3.5 w-3.5 text-emerald-500" /> : importing ? <Loader2 className="h-3.5 w-3.5 animate-spin" /> : <Brain className="h-3.5 w-3.5" />}
+                >
+                  {importedAt === result.id ? 'В базе' : importing ? 'Сохраняем' : 'В мой мозг'}
+                </SoftButton>
               </div>
             </div>
             <div className="max-h-[50vh] overflow-y-auto p-5">
