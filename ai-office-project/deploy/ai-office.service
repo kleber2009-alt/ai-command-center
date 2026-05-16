@@ -1,0 +1,60 @@
+# ═══════════════════════════════════════════════════════════════════════
+# /etc/systemd/system/ai-office.service
+# ───────────────────────────────────────────────────────────────────────
+# Запускает Node.js сервер ai-office-project как systemd-сервис.
+# Установка:
+#   1. sudo cp deploy/ai-office.service /etc/systemd/system/
+#   2. Подправь User=, WorkingDirectory= и EnvironmentFile= под свой путь.
+#   3. sudo systemctl daemon-reload && sudo systemctl enable --now ai-office
+# ═══════════════════════════════════════════════════════════════════════
+
+[Unit]
+Description=AI Growth Office (static site + API proxy)
+Documentation=https://github.com/kleber2009-alt/ai-command-center
+After=network-online.target
+Wants=network-online.target
+
+[Service]
+Type=simple
+# ВАЖНО: создай отдельного пользователя (sudo useradd -r -s /bin/false aioffice)
+# или поставь свой логин.
+User=aioffice
+Group=aioffice
+
+# Путь к ai-office-project на сервере. Поменяй под себя.
+WorkingDirectory=/opt/ai-office-project
+
+# Файл с переменными окружения (формат KEY=value, по одной на строку).
+# Создай из .env.example.
+EnvironmentFile=/opt/ai-office-project/.env
+
+Environment=NODE_ENV=production
+Environment=HOST=0.0.0.0
+Environment=PORT=8080
+
+ExecStart=/usr/bin/node server/index.js
+
+Restart=on-failure
+RestartSec=5s
+StartLimitIntervalSec=60
+StartLimitBurst=5
+
+# Безопасность.
+NoNewPrivileges=true
+PrivateTmp=true
+ProtectSystem=strict
+ProtectHome=true
+ReadWritePaths=/opt/ai-office-project
+ProtectKernelTunables=true
+ProtectKernelModules=true
+ProtectControlGroups=true
+RestrictSUIDSGID=true
+LockPersonality=true
+
+# Логи в journald.
+StandardOutput=journal
+StandardError=journal
+SyslogIdentifier=ai-office
+
+[Install]
+WantedBy=multi-user.target

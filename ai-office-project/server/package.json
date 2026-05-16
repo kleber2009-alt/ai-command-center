@@ -1,0 +1,14 @@
+{
+  "name": "ai-office-server",
+  "version": "1.0.0",
+  "private": true,
+  "type": "module",
+  "description": "Self-hosted HTTP server for ai-office-project (replaces Netlify).",
+  "main": "index.js",
+  "engines": {
+    "node": ">=20.0.0"
+  },
+  "scripts": {
+    "start": "node index.js"
+  }
+}

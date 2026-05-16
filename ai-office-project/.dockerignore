@@ -1,0 +1,27 @@
+.git
+.gitignore
+.github
+.vscode
+.idea
+.DS_Store
+*.log
+
+# Big build artifact, not needed at runtime.
+ai-office-deploy.zip
+
+# Local env (use --env-file or compose env_file instead).
+.env
+.env.local
+.env.*.local
+
+# Docs are not served, skip to keep the image small.
+docs/
+HANDOFF.md
+RESUME_HERE.md
+
+# Netlify CLI cache, if anyone ran it locally.
+.netlify
+
+# Anything Node may have left behind.
+node_modules
+npm-debug.log*
