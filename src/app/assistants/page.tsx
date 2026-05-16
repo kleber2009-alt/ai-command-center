@@ -11,35 +11,35 @@ const ICONS: Record<string, any> = {
 
 export default function AssistantsPage() {
   return (
-    <div className="space-y-4">
-      <header className="space-y-1">
-        <h1 className="text-xl font-semibold sm:text-2xl">ИИ-ассистенты</h1>
-        <p className="text-sm text-slate-400">
+    <div className="space-y-6">
+      <header className="space-y-1.5">
+        <h1 className="text-[28px] font-semibold leading-tight tracking-tight text-apple-ink sm:text-[34px]">
+          ИИ-ассистенты
+        </h1>
+        <p className="text-[15px] text-apple-muted sm:text-base">
           Выбери ассистента — у каждого свой промпт и своя задача.
         </p>
       </header>
 
-      <ul className="space-y-2">
-        {assistants.map((a) => {
+      <ul className="overflow-hidden rounded-apple-lg border border-apple-line bg-white shadow-apple-sm">
+        {assistants.map((a, i) => {
           const Icon = ICONS[a.icon] ?? Sparkles
           return (
-            <li key={a.id}>
+            <li key={a.id} className={i > 0 ? 'border-t border-apple-line' : ''}>
               <Link
                 href={`/assistants/${a.id}`}
-                className="group flex items-start gap-3 rounded-xl border border-slate-800 bg-slate-900/60 p-4 transition hover:border-slate-700 hover:bg-slate-900"
+                className="group flex items-center gap-4 px-4 py-4 transition-colors hover:bg-apple-bg-soft sm:px-5"
               >
-                <div className="grid h-10 w-10 shrink-0 place-items-center rounded-lg bg-slate-800 text-slate-200 group-hover:bg-slate-700">
-                  <Icon className="h-5 w-5" />
+                <div className="grid h-10 w-10 shrink-0 place-items-center rounded-full bg-apple-bg-soft text-apple-ink transition-colors group-hover:bg-white group-hover:shadow-apple-sm">
+                  <Icon className="h-[18px] w-[18px]" />
                 </div>
                 <div className="min-w-0 flex-1">
-                  <div className="flex items-center justify-between gap-2">
-                    <h2 className="truncate text-sm font-medium text-slate-100 sm:text-base">{a.name}</h2>
-                    <ChevronRight className="h-4 w-4 shrink-0 text-slate-500 group-hover:text-slate-300" />
-                  </div>
-                  <p className="mt-1 line-clamp-3 text-xs text-slate-400 sm:text-sm">
+                  <h2 className="truncate text-[15px] font-medium text-apple-ink sm:text-base">{a.name}</h2>
+                  <p className="mt-0.5 line-clamp-2 text-[13px] leading-snug text-apple-muted sm:text-sm">
                     {a.description}
                   </p>
                 </div>
+                <ChevronRight className="h-4 w-4 shrink-0 text-apple-faint group-hover:text-apple-muted" />
               </Link>
             </li>
           )

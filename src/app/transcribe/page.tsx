@@ -107,39 +107,29 @@ function ReelsCard({
   onCopy: (text: string) => void
   formatForCopy: (r: ReelsContent) => string
 }) {
-  const isNew = variant === 'new'
-  const Icon = isNew ? Video : Shuffle
-  const title = isNew ? 'Рилс — новый сценарий' : 'Рилс — ремикс'
-  const wrapClasses = isNew
-    ? 'bg-fuchsia-500/5 border-fuchsia-500/20'
-    : 'bg-pink-500/5 border-pink-500/20'
-  const headerClasses = isNew ? 'border-fuchsia-500/10' : 'border-pink-500/10'
-  const iconClasses = isNew ? 'text-fuchsia-400' : 'text-pink-400'
-  const titleClasses = isNew ? 'text-fuchsia-300' : 'text-pink-300'
+  const Icon = variant === 'new' ? Video : Shuffle
+  const title = variant === 'new' ? 'Рилс — новый сценарий' : 'Рилс — ремикс'
   return (
-    <div className={`${wrapClasses} border rounded-xl overflow-hidden`}>
-      <div className={`px-5 py-3 border-b ${headerClasses} flex items-center justify-between`}>
+    <div className="overflow-hidden rounded-apple-lg border border-apple-line bg-white shadow-apple-sm">
+      <div className="flex items-center justify-between gap-2 border-b border-apple-line px-5 py-3">
         <div className="flex items-center gap-2">
-          <Icon className={`w-4 h-4 ${iconClasses}`} />
-          <h3 className={`text-xs font-semibold ${titleClasses} uppercase tracking-wider`}>{title}</h3>
+          <Icon className="h-4 w-4 text-apple-muted" />
+          <h3 className="text-[13px] font-semibold text-apple-ink">{title}</h3>
         </div>
-        <button
-          onClick={() => onCopy(formatForCopy(reels))}
-          className="flex items-center gap-1.5 px-2.5 py-1.5 rounded-lg text-[11px] text-slate-400 border border-slate-700/50 hover:border-slate-600 hover:text-slate-200 transition-all"
-        >
-          <Copy className="w-3 h-3" /> Копировать всё
-        </button>
+        <SoftButton onClick={() => onCopy(formatForCopy(reels))} icon={<Copy className="h-3.5 w-3.5" />}>
+          Копировать всё
+        </SoftButton>
       </div>
-      <div className="p-5 space-y-4 max-h-[70vh] overflow-y-auto">
+      <div className="max-h-[70vh] space-y-4 overflow-y-auto p-5">
         <Section label="HOOK · 0-3 сек" text={reels.hook} />
         <Section label="PROMISE · 3-7 сек" text={reels.promise} />
         <div>
-          <div className="text-[10px] text-slate-500 uppercase tracking-wider font-medium mb-2">Body</div>
+          <div className="mb-2 text-[11px] font-medium uppercase tracking-wide text-apple-faint">Body</div>
           <div className="space-y-2">
             {reels.body.map((b, i) => (
-              <div key={i} className="flex gap-3 bg-slate-900/40 rounded-lg p-3">
-                <span className="text-[11px] text-slate-500 font-mono tabular-nums flex-shrink-0 w-16">{b.time}</span>
-                <p className="text-sm text-slate-200 leading-relaxed flex-1">{b.text}</p>
+              <div key={i} className="flex gap-3 rounded-xl bg-apple-bg-soft p-3">
+                <span className="w-16 flex-shrink-0 font-mono text-[12px] tabular-nums text-apple-faint">{b.time}</span>
+                <p className="flex-1 text-[14px] leading-relaxed text-apple-ink">{b.text}</p>
               </div>
             ))}
           </div>
@@ -147,17 +137,17 @@ function ReelsCard({
         <Section label="CTA · 50-60 сек" text={reels.cta} />
         {reels.text_on_screen.length > 0 && (
           <div>
-            <div className="text-[10px] text-slate-500 uppercase tracking-wider font-medium mb-2">Text on screen</div>
+            <div className="mb-2 text-[11px] font-medium uppercase tracking-wide text-apple-faint">Text on screen</div>
             <div className="flex flex-wrap gap-1.5">
               {reels.text_on_screen.map((s, i) => (
-                <span key={i} className="text-xs text-slate-300 bg-slate-700/40 px-2 py-1 rounded">{s}</span>
+                <span key={i} className="rounded-md bg-apple-bg-soft px-2 py-1 text-[13px] text-apple-ink">{s}</span>
               ))}
             </div>
           </div>
         )}
         <Section label="Caption" text={reels.caption} />
         {reels.hashtags.length > 0 && (
-          <div className="text-xs text-indigo-400 font-mono break-words">{reels.hashtags.join(' ')}</div>
+          <div className="break-words font-mono text-[13px] text-apple-blue">{reels.hashtags.join(' ')}</div>
         )}
       </div>
     </div>
@@ -168,9 +158,33 @@ function Section({ label, text }: { label: string; text: string }) {
   if (!text) return null
   return (
     <div>
-      <div className="text-[10px] text-slate-500 uppercase tracking-wider font-medium mb-1">{label}</div>
-      <p className="text-sm text-slate-200 leading-relaxed">{text}</p>
+      <div className="mb-1 text-[11px] font-medium uppercase tracking-wide text-apple-faint">{label}</div>
+      <p className="text-[14px] leading-relaxed text-apple-ink">{text}</p>
     </div>
+  )
+}
+
+function SoftButton({
+  onClick,
+  icon,
+  disabled,
+  children,
+}: {
+  onClick?: () => void
+  icon?: React.ReactNode
+  disabled?: boolean
+  children: React.ReactNode
+}) {
+  return (
+    <button
+      type="button"
+      onClick={onClick}
+      disabled={disabled}
+      className="inline-flex items-center gap-1.5 rounded-full border border-apple-line bg-white px-3 py-1.5 text-[12px] font-medium text-apple-ink shadow-apple-sm transition-colors hover:bg-apple-bg-soft disabled:cursor-not-allowed disabled:opacity-50"
+    >
+      {icon}
+      {children}
+    </button>
   )
 }
 
@@ -444,15 +458,19 @@ export default function TranscribePage() {
   const otherLang: 'ru' | 'en' = result?.detectedLanguage === 'en' ? 'ru' : 'en'
 
   return (
-    <div className="animate-slide-in space-y-5">
+    <div className="animate-slide-in space-y-6">
       <div className="flex items-start justify-between gap-3">
         <div>
-          <h1 className="text-xl font-bold text-slate-100">Транскрибация</h1>
-          <p className="text-sm text-slate-500 mt-0.5">YouTube или прямая ссылка → текст, саммари, перевод</p>
+          <h1 className="text-[28px] font-semibold leading-tight tracking-tight text-apple-ink sm:text-[34px]">
+            Транскрибация
+          </h1>
+          <p className="mt-1 text-[15px] text-apple-muted sm:text-base">
+            YouTube или прямая ссылка → текст, саммари, перевод
+          </p>
         </div>
         <Link
           href="/assistants"
-          className="inline-flex items-center gap-1.5 rounded-lg border border-slate-700 bg-slate-800/60 px-2.5 py-1.5 text-xs font-medium text-slate-200 hover:bg-slate-800 hover:border-slate-600"
+          className="inline-flex items-center gap-1.5 rounded-full border border-apple-line bg-white px-3 py-1.5 text-[13px] font-medium text-apple-ink shadow-apple-sm transition-colors hover:bg-apple-bg-soft"
           title="ИИ-ассистенты"
         >
           <Bot className="h-4 w-4" />
@@ -461,40 +479,40 @@ export default function TranscribePage() {
       </div>
 
       {/* Form */}
-      <form onSubmit={submit} className="bg-slate-800/50 border border-slate-700/50 rounded-xl p-5 space-y-4">
+      <form onSubmit={submit} className="space-y-4 rounded-apple-lg border border-apple-line bg-white p-5 shadow-apple-sm">
         <div>
-          <label className="text-[10px] text-slate-500 uppercase tracking-wider font-medium mb-2 block">
+          <label className="mb-2 block text-[12px] font-medium text-apple-muted">
             URL медиафайла
           </label>
           <div className="relative">
-            <LinkIcon className="w-4 h-4 text-slate-500 absolute left-3 top-1/2 -translate-y-1/2 pointer-events-none" />
+            <LinkIcon className="pointer-events-none absolute left-3.5 top-1/2 h-4 w-4 -translate-y-1/2 text-apple-faint" />
             <input
               type="url"
               value={url}
               onChange={e => setUrl(e.target.value)}
               required
-              placeholder="https://youtube.com/... · https://instagram.com/reel/... · или прямой mp3/mp4"
-              className="w-full pl-9 pr-3 py-2.5 bg-slate-900/60 border border-slate-700 rounded-lg text-sm text-slate-200 placeholder:text-slate-600 focus:outline-none focus:border-indigo-500/60 focus:ring-1 focus:ring-indigo-500/30 transition-all font-mono"
+              placeholder="https://youtube.com/... · https://instagram.com/reel/... · mp3/mp4"
+              className="w-full rounded-xl border border-apple-line bg-apple-bg-soft py-2.5 pl-10 pr-3 text-[14px] text-apple-ink placeholder:text-apple-faint outline-none transition-all focus:border-apple-line-strong focus:bg-white focus:shadow-apple-sm"
             />
           </div>
-          <p className="text-[11px] text-slate-600 mt-1.5">
-            YouTube · Instagram Reels · TikTok · прямые файлы (mp3, wav, m4a, ogg, mp4, mov, webm).
+          <p className="mt-2 text-[12px] text-apple-faint">
+            YouTube · Instagram Reels · TikTok · прямые файлы (mp3, wav, m4a, ogg, mp4, mov, webm)
           </p>
         </div>
 
-        <div className="flex items-end gap-3">
+        <div className="flex flex-wrap items-end gap-3">
           <div className="flex-1">
-            <label className="text-[10px] text-slate-500 uppercase tracking-wider font-medium mb-2 block">Язык</label>
-            <div className="flex gap-1.5">
+            <label className="mb-2 block text-[12px] font-medium text-apple-muted">Язык</label>
+            <div className="inline-flex rounded-full bg-apple-bg-soft p-0.5">
               {(['ru', 'en', 'auto'] as const).map(lang => (
                 <button
                   key={lang}
                   type="button"
                   onClick={() => setLanguage(lang)}
-                  className={`px-3 py-2 rounded-lg text-xs font-medium transition-all border ${
+                  className={`rounded-full px-3.5 py-1.5 text-[13px] font-medium transition-all ${
                     language === lang
-                      ? 'bg-indigo-600/20 text-indigo-300 border-indigo-500/30'
-                      : 'bg-slate-900/40 text-slate-400 border-slate-700/50 hover:border-slate-600 hover:text-slate-300'
+                      ? 'bg-white text-apple-ink shadow-apple-sm'
+                      : 'text-apple-muted hover:text-apple-ink'
                   }`}
                 >
                   {lang === 'ru' ? 'Русский' : lang === 'en' ? 'English' : 'Авто'}
@@ -506,16 +524,16 @@ export default function TranscribePage() {
             <button
               type="submit"
               disabled={loading || !url.trim()}
-              className="flex items-center gap-2 px-5 py-2.5 rounded-lg text-sm font-medium transition-all border bg-indigo-600 border-indigo-500 text-white hover:bg-indigo-500 disabled:opacity-50 disabled:cursor-not-allowed"
+              className="inline-flex items-center gap-2 rounded-full bg-apple-blue px-5 py-2.5 text-[14px] font-medium text-white transition-colors hover:bg-apple-blue-hover active:bg-apple-blue-pressed disabled:cursor-not-allowed disabled:bg-apple-line-strong"
             >
               {loading ? (
                 <>
-                  <Loader2 className="w-4 h-4 animate-spin" />
-                  Обрабатываем...
+                  <Loader2 className="h-4 w-4 animate-spin" />
+                  Обрабатываем…
                 </>
               ) : (
                 <>
-                  <AudioLines className="w-4 h-4" />
+                  <AudioLines className="h-4 w-4" />
                   Получить текст
                 </>
               )}
@@ -523,7 +541,7 @@ export default function TranscribePage() {
           )}
         </div>
         {inTg && (
-          <p className="text-[11px] text-slate-600 text-center">
+          <p className="text-center text-[12px] text-apple-faint">
             Нажми «Получить текст» внизу экрана
           </p>
         )}
@@ -531,77 +549,69 @@ export default function TranscribePage() {
 
       {/* Error */}
       {error && (
-        <div className="flex items-start gap-2.5 bg-rose-500/5 border border-rose-500/20 rounded-xl p-4">
-          <TriangleAlert className="w-4 h-4 text-rose-400 mt-0.5 flex-shrink-0" />
+        <div className="flex items-start gap-2.5 rounded-apple-lg border border-red-200 bg-red-50 p-4">
+          <TriangleAlert className="mt-0.5 h-4 w-4 flex-shrink-0 text-red-600" />
           <div>
-            <div className="text-xs text-rose-400 uppercase tracking-wider font-medium mb-1">Ошибка</div>
-            <p className="text-sm text-slate-300 break-words">{error}</p>
+            <div className="mb-0.5 text-[12px] font-medium text-red-700">Ошибка</div>
+            <p className="break-words text-[14px] text-red-700">{error}</p>
           </div>
         </div>
       )}
 
       {/* Result */}
       {result && (
-        <div className="space-y-4">
+        <div className="space-y-5">
           {/* Transcript card */}
-          <div className="bg-slate-800/50 border border-slate-700/50 rounded-xl overflow-hidden">
-            <div className="px-5 py-3 border-b border-slate-700/40 flex items-center justify-between flex-wrap gap-2">
-              <div className="flex items-center gap-3 flex-wrap">
-                <h3 className="text-xs font-semibold text-slate-400 uppercase tracking-wider">Транскрипт</h3>
-                <div className="flex items-center gap-2 text-[11px] text-slate-500 font-mono">
+          <div className="overflow-hidden rounded-apple-lg border border-apple-line bg-white shadow-apple-sm">
+            <div className="flex flex-wrap items-center justify-between gap-2 border-b border-apple-line px-5 py-3">
+              <div className="flex flex-wrap items-center gap-2.5">
+                <h3 className="text-[13px] font-semibold text-apple-ink">Транскрипт</h3>
+                <div className="flex items-center gap-1.5 text-[11px] text-apple-faint">
                   {result.source === 'youtube' ? (
-                    <span className="flex items-center gap-1 px-1.5 py-0.5 rounded bg-rose-500/10 text-rose-400">
-                      <Youtube className="w-3 h-3" /> YouTube
+                    <span className="inline-flex items-center gap-1 rounded-md bg-apple-bg-soft px-1.5 py-0.5 text-apple-muted">
+                      <Youtube className="h-3 w-3" /> YouTube
                     </span>
                   ) : result.source === 'ytdlp+deepgram' ? (
-                    <span className="flex items-center gap-1 px-1.5 py-0.5 rounded bg-amber-500/10 text-amber-400">
-                      <FileAudio className="w-3 h-3" /> yt-dlp + Deepgram
+                    <span className="inline-flex items-center gap-1 rounded-md bg-apple-bg-soft px-1.5 py-0.5 text-apple-muted">
+                      <FileAudio className="h-3 w-3" /> yt-dlp + Deepgram
                     </span>
                   ) : (
-                    <span className="flex items-center gap-1 px-1.5 py-0.5 rounded bg-indigo-500/10 text-indigo-400">
-                      <FileAudio className="w-3 h-3" /> Deepgram
+                    <span className="inline-flex items-center gap-1 rounded-md bg-apple-bg-soft px-1.5 py-0.5 text-apple-muted">
+                      <FileAudio className="h-3 w-3" /> Deepgram
                     </span>
                   )}
                   {result.duration !== null && <span>{formatTime(result.duration)}</span>}
                   {result.detectedLanguage && (
-                    <span className="px-1.5 py-0.5 rounded bg-slate-700/40 text-slate-400 uppercase">
+                    <span className="rounded-md bg-apple-bg-soft px-1.5 py-0.5 uppercase text-apple-muted">
                       {result.detectedLanguage}
                     </span>
                   )}
                 </div>
               </div>
               <div className="flex items-center gap-1.5">
-                <button onClick={copyTranscript} className="flex items-center gap-1.5 px-2.5 py-1.5 rounded-lg text-[11px] text-slate-400 border border-slate-700/50 hover:border-slate-600 hover:text-slate-200 transition-all">
-                  {copied ? (<><Check className="w-3 h-3 text-emerald-400" /> Скопировано</>) : (<><Copy className="w-3 h-3" /> Копировать</>)}
-                </button>
-                <button onClick={exportTxt} className="flex items-center gap-1.5 px-2.5 py-1.5 rounded-lg text-[11px] text-slate-400 border border-slate-700/50 hover:border-slate-600 hover:text-slate-200 transition-all">
-                  <Download className="w-3 h-3" /> .txt
-                </button>
-                <button
-                  onClick={exportSrt}
-                  disabled={result.paragraphs.length === 0}
-                  className="flex items-center gap-1.5 px-2.5 py-1.5 rounded-lg text-[11px] text-slate-400 border border-slate-700/50 hover:border-slate-600 hover:text-slate-200 transition-all disabled:opacity-40 disabled:cursor-not-allowed"
-                >
-                  <FileText className="w-3 h-3" /> .srt
-                </button>
+                <SoftButton onClick={copyTranscript} icon={copied ? <Check className="h-3.5 w-3.5 text-emerald-500" /> : <Copy className="h-3.5 w-3.5" />}>
+                  {copied ? 'Скопировано' : 'Копировать'}
+                </SoftButton>
+                <SoftButton onClick={exportTxt} icon={<Download className="h-3.5 w-3.5" />}>.txt</SoftButton>
+                <SoftButton onClick={exportSrt} disabled={result.paragraphs.length === 0} icon={<FileText className="h-3.5 w-3.5" />}>.srt</SoftButton>
               </div>
             </div>
-            <div className="p-5 max-h-[50vh] overflow-y-auto">
+            <div className="max-h-[50vh] overflow-y-auto p-5">
               {result.paragraphs.length > 0 ? (
                 <div className="space-y-4">
                   {result.paragraphs.map((p, i) => (
                     <div key={i} className="flex gap-3">
-                      <span className="text-[11px] text-slate-600 font-mono tabular-nums flex-shrink-0 pt-0.5 w-14">
+                      <span className="w-14 flex-shrink-0 pt-0.5 font-mono text-[11px] tabular-nums text-apple-faint">
                         {formatTime(p.start)}
                       </span>
-                      <p className="text-sm text-slate-200 leading-relaxed flex-1">{p.text}</p>
+                      <p className="flex-1 text-[15px] leading-relaxed text-apple-ink">{p.text}</p>
                     </div>
                   ))}
                 </div>
               ) : result.transcript ? (
-                <p className="text-sm text-slate-200 leading-relaxed whitespace-pre-wrap">{result.transcript}</p>
+                <p className="whitespace-pre-wrap text-[15px] leading-relaxed text-apple-ink">{result.transcript}</p>
               ) : (
-                <p className="text-sm text-slate-500 italic">Пустой результат</p>
+                <p className="italic text-apple-faint">Пустой результат</p>
               )}
             </div>
           </div>
@@ -611,33 +621,33 @@ export default function TranscribePage() {
             <button
               onClick={generateSummary}
               disabled={summaryLoading}
-              className="flex items-center gap-2 px-4 py-2 rounded-lg text-sm font-medium transition-all border bg-violet-600/15 border-violet-500/30 text-violet-300 hover:bg-violet-600/25 disabled:opacity-50"
+              className="inline-flex items-center gap-2 rounded-full border border-apple-line bg-white px-4 py-2 text-[14px] font-medium text-apple-ink shadow-apple-sm transition-colors hover:bg-apple-bg-soft disabled:opacity-50"
             >
-              {summaryLoading ? <Loader2 className="w-4 h-4 animate-spin" /> : <Sparkles className="w-4 h-4" />}
+              {summaryLoading ? <Loader2 className="h-4 w-4 animate-spin" /> : <Sparkles className="h-4 w-4 text-apple-blue" />}
               Сгенерировать саммари
             </button>
             <button
               onClick={() => translateTo(otherLang)}
               disabled={translationLoading}
-              className="flex items-center gap-2 px-4 py-2 rounded-lg text-sm font-medium transition-all border bg-emerald-600/15 border-emerald-500/30 text-emerald-300 hover:bg-emerald-600/25 disabled:opacity-50"
+              className="inline-flex items-center gap-2 rounded-full border border-apple-line bg-white px-4 py-2 text-[14px] font-medium text-apple-ink shadow-apple-sm transition-colors hover:bg-apple-bg-soft disabled:opacity-50"
             >
-              {translationLoading ? <Loader2 className="w-4 h-4 animate-spin" /> : <Languages className="w-4 h-4" />}
+              {translationLoading ? <Loader2 className="h-4 w-4 animate-spin" /> : <Languages className="h-4 w-4 text-apple-blue" />}
               Перевести на {otherLang === 'ru' ? 'русский' : 'английский'}
             </button>
           </div>
 
           {/* Summary */}
           {summary && (
-            <div className="bg-violet-500/5 border border-violet-500/20 rounded-xl p-5">
-              <div className="flex items-center gap-2 mb-3">
-                <Sparkles className="w-4 h-4 text-violet-400" />
-                <h3 className="text-xs font-semibold text-violet-300 uppercase tracking-wider">Саммари</h3>
+            <div className="rounded-apple-lg border border-apple-line bg-white p-5 shadow-apple-sm">
+              <div className="mb-3 flex items-center gap-2">
+                <Sparkles className="h-4 w-4 text-apple-blue" />
+                <h3 className="text-[13px] font-semibold text-apple-ink">Саммари</h3>
               </div>
-              <p className="text-sm text-slate-200 leading-relaxed mb-3">{summary.summary}</p>
+              <p className="mb-3 text-[15px] leading-relaxed text-apple-ink">{summary.summary}</p>
               <ul className="space-y-1.5">
                 {summary.bullets.map((b, i) => (
-                  <li key={i} className="text-sm text-slate-300 flex gap-2">
-                    <span className="text-violet-400 flex-shrink-0">•</span>
+                  <li key={i} className="flex gap-2 text-[14px] text-apple-ink">
+                    <span className="flex-shrink-0 text-apple-blue">•</span>
                     <span>{b}</span>
                   </li>
                 ))}
@@ -647,91 +657,72 @@ export default function TranscribePage() {
 
           {/* Translation */}
           {translation && (
-            <div className="bg-emerald-500/5 border border-emerald-500/20 rounded-xl overflow-hidden">
-              <div className="px-5 py-3 border-b border-emerald-500/10 flex items-center justify-between">
+            <div className="overflow-hidden rounded-apple-lg border border-apple-line bg-white shadow-apple-sm">
+              <div className="flex items-center justify-between border-b border-apple-line px-5 py-3">
                 <div className="flex items-center gap-2">
-                  <Languages className="w-4 h-4 text-emerald-400" />
-                  <h3 className="text-xs font-semibold text-emerald-300 uppercase tracking-wider">
+                  <Languages className="h-4 w-4 text-apple-blue" />
+                  <h3 className="text-[13px] font-semibold text-apple-ink">
                     Перевод на {translation.lang === 'ru' ? 'русский' : 'английский'}
                   </h3>
                 </div>
-                <button
-                  onClick={() => copyText(translation.text)}
-                  className="flex items-center gap-1.5 px-2.5 py-1.5 rounded-lg text-[11px] text-slate-400 border border-slate-700/50 hover:border-slate-600 hover:text-slate-200 transition-all"
-                >
-                  <Copy className="w-3 h-3" /> Копировать
-                </button>
+                <SoftButton onClick={() => copyText(translation.text)} icon={<Copy className="h-3.5 w-3.5" />}>
+                  Копировать
+                </SoftButton>
               </div>
-              <div className="p-5 max-h-[50vh] overflow-y-auto">
-                <p className="text-sm text-slate-200 leading-relaxed whitespace-pre-wrap">{translation.text}</p>
+              <div className="max-h-[50vh] overflow-y-auto p-5">
+                <p className="whitespace-pre-wrap text-[15px] leading-relaxed text-apple-ink">{translation.text}</p>
               </div>
             </div>
           )}
 
           {/* Content generation actions */}
-          <div className="border-t border-slate-800 pt-4">
-            <div className="text-[10px] text-slate-500 uppercase tracking-wider font-medium mb-3">
+          <div className="border-t border-apple-line pt-5">
+            <div className="mb-3 text-[12px] font-medium text-apple-muted">
               Превратить в контент
             </div>
             <div className="flex flex-wrap gap-2">
-              <button
-                onClick={() => generate('carousel')}
-                disabled={genLoading === 'carousel'}
-                className="flex items-center gap-2 px-4 py-2 rounded-lg text-sm font-medium transition-all border bg-cyan-600/15 border-cyan-500/30 text-cyan-300 hover:bg-cyan-600/25 disabled:opacity-50"
-              >
-                {genLoading === 'carousel' ? <Loader2 className="w-4 h-4 animate-spin" /> : <LayoutGrid className="w-4 h-4" />}
-                Карусель
-              </button>
-              <button
-                onClick={() => generate('reels-new')}
-                disabled={genLoading === 'reels-new'}
-                className="flex items-center gap-2 px-4 py-2 rounded-lg text-sm font-medium transition-all border bg-fuchsia-600/15 border-fuchsia-500/30 text-fuchsia-300 hover:bg-fuchsia-600/25 disabled:opacity-50"
-              >
-                {genLoading === 'reels-new' ? <Loader2 className="w-4 h-4 animate-spin" /> : <Video className="w-4 h-4" />}
-                Рилс новый
-              </button>
-              <button
-                onClick={() => generate('reels-remix')}
-                disabled={genLoading === 'reels-remix'}
-                className="flex items-center gap-2 px-4 py-2 rounded-lg text-sm font-medium transition-all border bg-pink-600/15 border-pink-500/30 text-pink-300 hover:bg-pink-600/25 disabled:opacity-50"
-              >
-                {genLoading === 'reels-remix' ? <Loader2 className="w-4 h-4 animate-spin" /> : <Shuffle className="w-4 h-4" />}
-                Рилс ремикс
-              </button>
-              <button
-                onClick={() => generate('tg-post')}
-                disabled={genLoading === 'tg-post'}
-                className="flex items-center gap-2 px-4 py-2 rounded-lg text-sm font-medium transition-all border bg-sky-600/15 border-sky-500/30 text-sky-300 hover:bg-sky-600/25 disabled:opacity-50"
-              >
-                {genLoading === 'tg-post' ? <Loader2 className="w-4 h-4 animate-spin" /> : <Send className="w-4 h-4" />}
-                Пост в Telegram
-              </button>
+              {([
+                ['carousel', 'Карусель', LayoutGrid] as const,
+                ['reels-new', 'Рилс новый', Video] as const,
+                ['reels-remix', 'Рилс ремикс', Shuffle] as const,
+                ['tg-post', 'Пост в Telegram', Send] as const,
+              ]).map(([t, label, Ico]) => (
+                <button
+                  key={t}
+                  onClick={() => generate(t)}
+                  disabled={genLoading === t}
+                  className="inline-flex items-center gap-2 rounded-full border border-apple-line bg-white px-4 py-2 text-[14px] font-medium text-apple-ink shadow-apple-sm transition-colors hover:bg-apple-bg-soft disabled:opacity-50"
+                >
+                  {genLoading === t ? <Loader2 className="h-4 w-4 animate-spin" /> : <Ico className="h-4 w-4 text-apple-blue" />}
+                  {label}
+                </button>
+              ))}
             </div>
           </div>
 
           {/* Carousel */}
           {generations.carousel && (
-            <div className="bg-cyan-500/5 border border-cyan-500/20 rounded-xl overflow-hidden">
-              <div className="px-5 py-3 border-b border-cyan-500/10 flex items-center justify-between">
+            <div className="overflow-hidden rounded-apple-lg border border-apple-line bg-white shadow-apple-sm">
+              <div className="flex items-center justify-between border-b border-apple-line px-5 py-3">
                 <div className="flex items-center gap-2">
-                  <LayoutGrid className="w-4 h-4 text-cyan-400" />
-                  <h3 className="text-xs font-semibold text-cyan-300 uppercase tracking-wider">
+                  <LayoutGrid className="h-4 w-4 text-apple-blue" />
+                  <h3 className="text-[13px] font-semibold text-apple-ink">
                     Карусель · {generations.carousel.slides.length} слайдов
                   </h3>
                 </div>
-                <button
+                <SoftButton
                   onClick={() => copyText(formatCarouselForCopy(generations.carousel!))}
-                  className="flex items-center gap-1.5 px-2.5 py-1.5 rounded-lg text-[11px] text-slate-400 border border-slate-700/50 hover:border-slate-600 hover:text-slate-200 transition-all"
+                  icon={<Copy className="h-3.5 w-3.5" />}
                 >
-                  <Copy className="w-3 h-3" /> Копировать всё
-                </button>
+                  Копировать всё
+                </SoftButton>
               </div>
-              <div className="p-5 grid grid-cols-1 md:grid-cols-2 gap-3 max-h-[60vh] overflow-y-auto">
+              <div className="grid max-h-[60vh] grid-cols-1 gap-3 overflow-y-auto p-5 md:grid-cols-2">
                 {generations.carousel.slides.map(slide => (
-                  <div key={slide.n} className="bg-slate-900/40 border border-slate-700/50 rounded-lg p-4 relative group">
-                    <div className="absolute top-2 right-2 text-[10px] text-slate-600 font-mono">#{slide.n}</div>
-                    <div className="text-sm font-semibold text-slate-100 mb-2 pr-8">{slide.title}</div>
-                    <div className="text-xs text-slate-300 leading-relaxed whitespace-pre-wrap">{slide.body}</div>
+                  <div key={slide.n} className="relative rounded-xl border border-apple-line bg-apple-bg-elev p-4">
+                    <div className="absolute right-3 top-2 font-mono text-[11px] text-apple-faint">#{slide.n}</div>
+                    <div className="mb-2 pr-8 text-[15px] font-semibold text-apple-ink">{slide.title}</div>
+                    <div className="whitespace-pre-wrap text-[13px] leading-relaxed text-apple-muted">{slide.body}</div>
                   </div>
                 ))}
               </div>
@@ -750,23 +741,20 @@ export default function TranscribePage() {
 
           {/* Telegram post */}
           {generations['tg-post'] && (
-            <div className="bg-sky-500/5 border border-sky-500/20 rounded-xl overflow-hidden">
-              <div className="px-5 py-3 border-b border-sky-500/10 flex items-center justify-between">
+            <div className="overflow-hidden rounded-apple-lg border border-apple-line bg-white shadow-apple-sm">
+              <div className="flex items-center justify-between border-b border-apple-line px-5 py-3">
                 <div className="flex items-center gap-2">
-                  <Send className="w-4 h-4 text-sky-400" />
-                  <h3 className="text-xs font-semibold text-sky-300 uppercase tracking-wider">
+                  <Send className="h-4 w-4 text-apple-blue" />
+                  <h3 className="text-[13px] font-semibold text-apple-ink">
                     Пост в Telegram · {generations['tg-post'].text.length} символов
                   </h3>
                 </div>
-                <button
-                  onClick={() => copyText(generations['tg-post']!.text)}
-                  className="flex items-center gap-1.5 px-2.5 py-1.5 rounded-lg text-[11px] text-slate-400 border border-slate-700/50 hover:border-slate-600 hover:text-slate-200 transition-all"
-                >
-                  <Copy className="w-3 h-3" /> Копировать
-                </button>
+                <SoftButton onClick={() => copyText(generations['tg-post']!.text)} icon={<Copy className="h-3.5 w-3.5" />}>
+                  Копировать
+                </SoftButton>
               </div>
-              <div className="p-5 max-h-[60vh] overflow-y-auto">
-                <p className="text-sm text-slate-200 leading-relaxed whitespace-pre-wrap">{generations['tg-post'].text}</p>
+              <div className="max-h-[60vh] overflow-y-auto p-5">
+                <p className="whitespace-pre-wrap text-[15px] leading-relaxed text-apple-ink">{generations['tg-post'].text}</p>
               </div>
             </div>
           )}
@@ -775,29 +763,29 @@ export default function TranscribePage() {
 
       {/* History */}
       {historyConfigured && history.length > 0 && (
-        <div className="bg-slate-800/50 border border-slate-700/50 rounded-xl overflow-hidden">
-          <div className="px-5 py-3 border-b border-slate-700/40 flex items-center gap-2">
-            <History className="w-4 h-4 text-slate-400" />
-            <h3 className="text-xs font-semibold text-slate-400 uppercase tracking-wider">История</h3>
-            <span className="text-[10px] text-slate-600">({history.length})</span>
+        <div className="overflow-hidden rounded-apple-lg border border-apple-line bg-white shadow-apple-sm">
+          <div className="flex items-center gap-2 border-b border-apple-line px-5 py-3">
+            <History className="h-4 w-4 text-apple-muted" />
+            <h3 className="text-[13px] font-semibold text-apple-ink">История</h3>
+            <span className="text-[12px] text-apple-faint">({history.length})</span>
           </div>
-          <div className="divide-y divide-slate-700/30 max-h-[60vh] overflow-y-auto">
+          <div className="max-h-[60vh] divide-y divide-apple-line overflow-y-auto">
             {history.map(item => (
               <button
                 key={item.id}
                 onClick={() => loadFromHistory(item.id)}
-                className="w-full px-4 py-3 flex items-start gap-3 hover:bg-slate-700/20 transition-colors text-left group"
+                className="group flex w-full items-start gap-3 px-5 py-3 text-left transition-colors hover:bg-apple-bg-soft"
               >
-                <div className="flex-shrink-0 mt-1">
+                <div className="mt-1 flex-shrink-0 text-apple-muted">
                   {item.source === 'youtube' ? (
-                    <Youtube className="w-4 h-4 text-rose-400" />
+                    <Youtube className="h-4 w-4" />
                   ) : (
-                    <FileAudio className="w-4 h-4 text-indigo-400" />
+                    <FileAudio className="h-4 w-4" />
                   )}
                 </div>
-                <div className="flex-1 min-w-0">
-                  <div className="text-sm text-slate-200 truncate">{item.title || item.url}</div>
-                  <div className="text-[11px] text-slate-500 mt-0.5 flex items-center gap-2 flex-wrap">
+                <div className="min-w-0 flex-1">
+                  <div className="truncate text-[14px] text-apple-ink">{item.title || item.url}</div>
+                  <div className="mt-0.5 flex flex-wrap items-center gap-1.5 text-[12px] text-apple-faint">
                     <span>{timeAgo(item.created_at)}</span>
                     {item.duration && <span>· {formatTime(item.duration)}</span>}
                     {item.language && <span>· {item.language}</span>}
@@ -805,12 +793,12 @@ export default function TranscribePage() {
                 </div>
                 <button
                   onClick={e => deleteHistoryItem(item.id, e)}
-                  className="flex-shrink-0 p-1.5 rounded-lg text-slate-600 hover:text-rose-400 hover:bg-rose-500/10 opacity-0 group-hover:opacity-100 transition-all"
+                  className="flex-shrink-0 rounded-full p-1.5 text-apple-faint opacity-0 transition-all hover:bg-red-50 hover:text-red-500 group-hover:opacity-100"
                   title="Удалить"
                 >
-                  <Trash2 className="w-3.5 h-3.5" />
+                  <Trash2 className="h-3.5 w-3.5" />
                 </button>
-                <ChevronRight className="w-3.5 h-3.5 text-slate-600 flex-shrink-0 mt-1.5" />
+                <ChevronRight className="mt-1.5 h-3.5 w-3.5 flex-shrink-0 text-apple-faint" />
               </button>
             ))}
           </div>
@@ -818,9 +806,9 @@ export default function TranscribePage() {
       )}
 
       {!historyConfigured && (
-        <div className="text-[11px] text-slate-600 px-1">
-          История транскриптов выключена — добавьте <code className="text-slate-500">NEXT_PUBLIC_SUPABASE_URL</code> и <code className="text-slate-500">SUPABASE_SERVICE_KEY</code>, а также выполните миграцию <code className="text-slate-500">supabase/migrations/001_transcripts.sql</code>.
-        </div>
+        <p className="px-1 text-[12px] text-apple-faint">
+          История транскриптов выключена — добавьте <code className="rounded bg-apple-bg-soft px-1 py-0.5 text-apple-muted">NEXT_PUBLIC_SUPABASE_URL</code> и <code className="rounded bg-apple-bg-soft px-1 py-0.5 text-apple-muted">SUPABASE_SERVICE_KEY</code>, а также выполните миграцию <code className="rounded bg-apple-bg-soft px-1 py-0.5 text-apple-muted">supabase/migrations/001_transcripts.sql</code>.
+        </p>
       )}
     </div>
   )

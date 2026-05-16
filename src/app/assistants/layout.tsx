@@ -1,7 +1,7 @@
 export default function AssistantsLayout({ children }: { children: React.ReactNode }) {
   return (
-    <main className="min-h-screen bg-slate-950">
-      <div className="mx-auto w-full max-w-2xl px-3 pb-24 pt-4 sm:px-5 sm:pt-6 sm:pb-10">
+    <main className="min-h-screen bg-white">
+      <div className="mx-auto w-full max-w-2xl px-4 pb-24 pt-5 sm:px-6 sm:pt-8 sm:pb-12">
         {children}
       </div>
     </main>
