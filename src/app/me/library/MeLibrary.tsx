@@ -45,6 +45,7 @@ export default function MeLibrary() {
   const [text, setText] = useState('')
   const [file, setFile] = useState<File | null>(null)
   const [adding, setAdding] = useState(false)
+  const [filter, setFilter] = useState<'all' | 'paste' | 'file' | 'transcript'>('all')
   const fileInput = useRef<HTMLInputElement | null>(null)
 
   async function refresh() {
@@ -250,20 +251,58 @@ export default function MeLibrary() {
 
       {/* List */}
       <section>
-        <h2 className="mb-3 text-[13px] font-semibold text-apple-muted">
-          В базе: {items.length} {items.length === 1 ? 'документ' : items.length < 5 && items.length > 0 ? 'документа' : 'документов'}
-        </h2>
-        {loading ? (
-          <div className="flex items-center gap-2 text-apple-muted">
-            <Loader2 className="h-4 w-4 animate-spin" /> Загружаем…
-          </div>
-        ) : items.length === 0 ? (
-          <div className="rounded-apple-lg border border-dashed border-apple-line p-6 text-center text-[13px] text-apple-faint">
-            База пустая. Добавь первый материал — и я смогу опираться на него в ответах.
-          </div>
-        ) : (
+        <div className="mb-3 flex flex-wrap items-center justify-between gap-2">
+          <h2 className="text-[13px] font-semibold text-apple-muted">
+            В базе: {items.length} {items.length === 1 ? 'документ' : items.length < 5 && items.length > 0 ? 'документа' : 'документов'}
+          </h2>
+          {items.length > 0 && (
+            <div className="inline-flex rounded-full bg-apple-bg-soft p-0.5">
+              {([
+                ['all', 'Все'],
+                ['paste', 'Текст'],
+                ['file', 'Файлы'],
+                ['transcript', 'Транскрипты'],
+              ] as const).map(([k, label]) => (
+                <button
+                  key={k}
+                  type="button"
+                  onClick={() => setFilter(k)}
+                  className={`rounded-full px-3 py-1 text-[12px] font-medium transition-all ${
+                    filter === k ? 'bg-white text-apple-ink shadow-apple-sm' : 'text-apple-muted hover:text-apple-ink'
+                  }`}
+                >
+                  {label}
+                </button>
+              ))}
+            </div>
+          )}
+        </div>
+        {(() => {
+          const visible = filter === 'all' ? items : items.filter((d) => d.source_type === filter)
+          if (loading) {
+            return (
+              <div className="flex items-center gap-2 text-apple-muted">
+                <Loader2 className="h-4 w-4 animate-spin" /> Загружаем…
+              </div>
+            )
+          }
+          if (items.length === 0) {
+            return (
+              <div className="rounded-apple-lg border border-dashed border-apple-line p-6 text-center text-[13px] text-apple-faint">
+                База пустая. Добавь первый материал — и я смогу опираться на него в ответах.
+              </div>
+            )
+          }
+          if (visible.length === 0) {
+            return (
+              <div className="rounded-apple-lg border border-dashed border-apple-line p-6 text-center text-[13px] text-apple-faint">
+                По этому фильтру пусто.
+              </div>
+            )
+          }
+          return (
           <ul className="overflow-hidden rounded-apple-lg border border-apple-line bg-white shadow-apple-sm">
-            {items.map((d, i) => {
+            {visible.map((d, i) => {
               const Icon =
                 d.source_type === 'paste' ? FileText : d.source_type === 'transcript' ? FileAudio : FileType
               return (
@@ -308,7 +347,8 @@ export default function MeLibrary() {
               )
             })}
           </ul>
-        )}
+          )
+        })()}
       </section>
     </div>
   )

@@ -3,7 +3,7 @@ import { useEffect, useRef, useState } from 'react'
 import Link from 'next/link'
 import { useRouter } from 'next/navigation'
 import {
-  ArrowLeft, Check, FileAudio, FileText, FileType, Loader2, Save, Trash2, TriangleAlert,
+  ArrowLeft, Check, ExternalLink, FileAudio, FileText, FileType, Loader2, Save, Trash2, TriangleAlert,
 } from 'lucide-react'
 import MeTabs from '../../MeTabs'
 import { apiFetch } from '@/lib/api-client'
@@ -179,6 +179,35 @@ export default function MeDocumentDetail({ id }: { id: string }) {
               </button>
             </div>
           </section>
+
+          {doc.source_type === 'transcript' && doc.source_meta && (
+            <section className="rounded-apple-lg border border-apple-line bg-white p-4 shadow-apple-sm">
+              <div className="mb-2 text-[12px] font-medium text-apple-muted">Источник: транскрипт</div>
+              <div className="space-y-1 text-[13px] text-apple-ink">
+                {doc.source_meta.url && (
+                  <div className="flex items-start gap-2">
+                    <span className="shrink-0 text-apple-faint">URL:</span>
+                    <a
+                      href={doc.source_meta.url}
+                      target="_blank"
+                      rel="noopener noreferrer"
+                      className="inline-flex min-w-0 items-center gap-1 truncate text-apple-blue hover:underline"
+                    >
+                      <span className="truncate">{doc.source_meta.url}</span>
+                      <ExternalLink className="h-3 w-3 shrink-0" />
+                    </a>
+                  </div>
+                )}
+                <div className="flex flex-wrap items-center gap-2 text-[12px] text-apple-faint">
+                  {doc.source_meta.source && <span>{doc.source_meta.source}</span>}
+                  {typeof doc.source_meta.duration === 'number' && (
+                    <span>· {Math.round(doc.source_meta.duration)} сек</span>
+                  )}
+                  {doc.source_meta.language && <span>· {doc.source_meta.language}</span>}
+                </div>
+              </div>
+            </section>
+          )}
 
           <section className="rounded-apple-lg border border-apple-line bg-white p-5 shadow-apple-sm">
             <label className="mb-2 block text-[13px] font-semibold text-apple-ink">Оригинальный текст</label>
