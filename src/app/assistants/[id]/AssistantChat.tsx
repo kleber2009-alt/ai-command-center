@@ -16,7 +16,7 @@ const ICONS: Record<string, any> = {
   Target, MessagesSquare, Send, Flame, Package, Filter, BookOpen, Magnet, LayoutGrid, Sparkles,
 }
 
-type Msg = { role: 'user' | 'assistant'; content: string }
+type Msg = { role: 'user' | 'assistant'; content: string; followups?: string[] }
 
 type Props = {
   id: string
@@ -188,6 +188,27 @@ export default function AssistantChat({ id, name, description, icon, buttonText,
       if (streamError) throw new Error(streamError)
       if (!acc) throw new Error('Пустой ответ от модели')
       if (isInTelegram()) getTelegram()?.HapticFeedback?.notificationOccurred?.('success')
+      // Fire-and-forget: ask Haiku for 3 follow-ups, attach to last assistant message when ready.
+      const conversation = [...next, { role: 'assistant' as const, content: acc }]
+      apiFetch('/api/me/chat/followups', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ messages: conversation }),
+      })
+        .then((r) => (r.ok ? r.json() : Promise.resolve({ questions: [] })))
+        .then((data) => {
+          const qs: string[] = Array.isArray(data?.questions) ? data.questions : []
+          if (qs.length === 0) return
+          setMessages((m) => {
+            const copy = m.slice()
+            const last = copy[copy.length - 1]
+            if (last && last.role === 'assistant') {
+              copy[copy.length - 1] = { ...last, followups: qs }
+            }
+            return copy
+          })
+        })
+        .catch(() => {})
     } catch (e: any) {
       setError(e?.message || 'Ошибка отправки')
       setMessages((m) => {
@@ -338,11 +359,12 @@ export default function AssistantChat({ id, name, description, icon, buttonText,
             key={i}
             className={m.role === 'user' ? 'flex justify-end' : 'flex justify-start'}
           >
+            <div className={m.role === 'user' ? 'max-w-[88%]' : 'max-w-[92%]'}>
             <div
               className={
                 m.role === 'user'
-                  ? 'group relative max-w-[88%] rounded-[20px] rounded-br-md bg-apple-blue px-3.5 py-2.5 text-[15px] leading-snug text-white shadow-apple-sm'
-                  : 'group relative max-w-[92%] rounded-[20px] rounded-bl-md border border-apple-line bg-white px-3.5 py-2.5 text-[15px] leading-snug text-apple-ink shadow-apple-sm'
+                  ? 'group relative rounded-[20px] rounded-br-md bg-apple-blue px-3.5 py-2.5 text-[15px] leading-snug text-white shadow-apple-sm'
+                  : 'group relative rounded-[20px] rounded-bl-md border border-apple-line bg-white px-3.5 py-2.5 text-[15px] leading-snug text-apple-ink shadow-apple-sm'
               }
             >
               {m.role === 'assistant' && m.content === '' ? (
@@ -366,6 +388,24 @@ export default function AssistantChat({ id, name, description, icon, buttonText,
                   {copiedIdx === i ? <Check className="h-3.5 w-3.5 text-emerald-500" /> : <Copy className="h-3.5 w-3.5" />}
                 </button>
               )}
+            </div>
+            {m.role === 'assistant' && m.followups && m.followups.length > 0 && (
+              <div className="mt-2 flex flex-wrap gap-1.5">
+                {m.followups.map((q, qi) => (
+                  <button
+                    key={qi}
+                    type="button"
+                    onClick={() => {
+                      setInput(q)
+                      inputRef.current?.focus()
+                    }}
+                    className="rounded-full border border-apple-line bg-white px-3 py-1.5 text-[12.5px] text-apple-ink shadow-apple-sm transition-colors hover:bg-apple-bg-soft"
+                  >
+                    {q}
+                  </button>
+                ))}
+              </div>
+            )}
             </div>
           </div>
         ))}
