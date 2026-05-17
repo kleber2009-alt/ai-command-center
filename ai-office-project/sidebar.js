@@ -12,7 +12,13 @@
   window.__aioSidebarLoaded = true;
 
   const ITEMS = [
+    // ═════════ ПРОЕКТЫ ═════════
+    { sep: true, label: 'Проекты' },
+    { icon: '🎙', label: 'Транскрибация',            href: '/transcribe',     highlight: true },
+    { icon: '🗣', label: 'Голос · клонирование',     href: 'persona-train.html', highlight: true },
+
     // ═════════ ОРИЕНТАЦИЯ ═════════
+    { sep: true, label: 'Ориентация' },
     { icon: '🧭', label: 'Навигация · карта сайта', href: 'navigation.html', highlight: true },
     { icon: '📱', label: 'Telegram Mini App',        href: 'mini-app-preview.html' },
     { icon: '🏠', label: 'Главная',                  href: 'index.html'      },
