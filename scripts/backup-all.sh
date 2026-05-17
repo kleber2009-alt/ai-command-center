@@ -93,6 +93,11 @@ dump_sqlite() {
     skip "$container не запущен"
     return
   fi
+  # Если БД ещё ни разу не открывалась — файла нет, бэкапить нечего.
+  if ! docker exec "$container" test -f "$path" 2>/dev/null; then
+    skip "$container:$path (БД ещё не создана — приложение не использовалось)"
+    return
+  fi
 
   # A: sqlite3 внутри контейнера
   if docker exec "$container" sh -c 'command -v sqlite3' >/dev/null 2>&1; then
