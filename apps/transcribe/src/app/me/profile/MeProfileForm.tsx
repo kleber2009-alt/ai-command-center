@@ -3,6 +3,7 @@ import { useEffect, useRef, useState } from 'react'
 import Link from 'next/link'
 import { ArrowLeft, Check, Loader2, Save, TriangleAlert } from 'lucide-react'
 import MeTabs from '../MeTabs'
+import { apiFetch } from '@/lib/telegram'
 
 type Profile = {
   bio: string
@@ -59,7 +60,7 @@ export default function MeProfileForm() {
 
   useEffect(() => {
     let cancelled = false
-    fetch('/api/me/profile')
+    apiFetch('/api/me/profile')
       .then((r) => r.json())
       .then((data) => {
         if (cancelled) return
@@ -87,7 +88,7 @@ export default function MeProfileForm() {
     setSaving(true)
     setError(null)
     try {
-      const res = await fetch('/api/me/profile', {
+      const res = await apiFetch('/api/me/profile', {
         method: 'PUT',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify(profile),

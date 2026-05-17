@@ -1,4 +1,5 @@
-import { NextResponse } from 'next/server'
+import { NextRequest, NextResponse } from 'next/server'
+import { guardRequest } from '@/lib/api-guard'
 import { getServerSupabase } from '@/lib/transcripts-db'
 
 type ArtifactKey = 'summary' | 'translation' | 'carousel' | 'reels-new' | 'reels-remix' | 'tg-post'
@@ -28,7 +29,12 @@ function flagsFor(row: RawRow): ArtifactKey[] {
   return flags
 }
 
-export async function GET() {
+export async function GET(req: NextRequest) {
+  const guard = guardRequest(req, {
+    rateLimit: { key: 'history-list', max: 60, windowMs: 60_000 },
+  })
+  if (!guard.ok) return guard.response
+
   const supabase = getServerSupabase()
   if (!supabase) {
     return NextResponse.json({ items: [], configured: false })

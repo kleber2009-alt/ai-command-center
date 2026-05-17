@@ -1,4 +1,5 @@
 import { NextRequest, NextResponse } from 'next/server'
+import { guardRequest } from '@/lib/api-guard'
 import { getServerSupabase } from '@/lib/transcripts-db'
 import type { TaskStatus, TaskPriority, TaskProject } from '@/lib/tasks-db'
 
@@ -13,6 +14,11 @@ type PatchBody = Partial<{
 }>
 
 export async function PATCH(req: NextRequest, { params }: { params: { id: string } }) {
+  const guard = guardRequest(req, {
+    rateLimit: { key: 'tasks-mod', max: 30, windowMs: 60_000 },
+  })
+  if (!guard.ok) return guard.response
+
   const supabase = getServerSupabase()
   if (!supabase) {
     return NextResponse.json({ error: 'Supabase не настроен' }, { status: 503 })
@@ -45,7 +51,12 @@ export async function PATCH(req: NextRequest, { params }: { params: { id: string
   return NextResponse.json(data)
 }
 
-export async function DELETE(_req: NextRequest, { params }: { params: { id: string } }) {
+export async function DELETE(req: NextRequest, { params }: { params: { id: string } }) {
+  const guard = guardRequest(req, {
+    rateLimit: { key: 'tasks-mod', max: 30, windowMs: 60_000 },
+  })
+  if (!guard.ok) return guard.response
+
   const supabase = getServerSupabase()
   if (!supabase) {
     return NextResponse.json({ error: 'Supabase не настроен' }, { status: 503 })

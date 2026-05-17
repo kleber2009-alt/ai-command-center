@@ -1,4 +1,5 @@
 import { NextRequest, NextResponse } from 'next/server'
+import { guardRequest } from '@/lib/api-guard'
 import { chunkText } from '@/lib/chunking'
 import { embedBatch } from '@/lib/embeddings'
 import { getServerSupabase } from '@/lib/me-db'
@@ -36,7 +37,12 @@ async function extractFileText(file: File): Promise<string> {
   throw new Error(`Не поддерживаю файл: ${file.name}. Используй .txt, .md, .csv, .json, .pdf или .docx.`)
 }
 
-export async function GET() {
+export async function GET(req: NextRequest) {
+  const guard = guardRequest(req, {
+    rateLimit: { key: 'docs-list', max: 60, windowMs: 60_000 },
+  })
+  if (!guard.ok) return guard.response
+
   const supabase = getServerSupabase()
   if (!supabase) return NextResponse.json({ items: [], configured: false })
   const { data, error } = await supabase
@@ -49,6 +55,12 @@ export async function GET() {
 }
 
 export async function POST(req: NextRequest) {
+  // PDF parsing + OpenAI embeddings — tighter limit on creation.
+  const guard = guardRequest(req, {
+    rateLimit: { key: 'docs-create', max: 10, windowMs: 60_000 },
+  })
+  if (!guard.ok) return guard.response
+
   const supabase = getServerSupabase()
   if (!supabase) {
     return NextResponse.json(

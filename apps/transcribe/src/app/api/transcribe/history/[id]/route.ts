@@ -1,7 +1,13 @@
 import { NextRequest, NextResponse } from 'next/server'
+import { guardRequest } from '@/lib/api-guard'
 import { getServerSupabase } from '@/lib/transcripts-db'
 
-export async function GET(_req: NextRequest, { params }: { params: { id: string } }) {
+export async function GET(req: NextRequest, { params }: { params: { id: string } }) {
+  const guard = guardRequest(req, {
+    rateLimit: { key: 'history-item', max: 60, windowMs: 60_000 },
+  })
+  if (!guard.ok) return guard.response
+
   const supabase = getServerSupabase()
   if (!supabase) {
     return NextResponse.json({ error: 'Supabase не настроен' }, { status: 503 })
@@ -13,7 +19,12 @@ export async function GET(_req: NextRequest, { params }: { params: { id: string 
   return NextResponse.json(data)
 }
 
-export async function DELETE(_req: NextRequest, { params }: { params: { id: string } }) {
+export async function DELETE(req: NextRequest, { params }: { params: { id: string } }) {
+  const guard = guardRequest(req, {
+    rateLimit: { key: 'history-item', max: 60, windowMs: 60_000 },
+  })
+  if (!guard.ok) return guard.response
+
   const supabase = getServerSupabase()
   if (!supabase) {
     return NextResponse.json({ error: 'Supabase не настроен' }, { status: 503 })

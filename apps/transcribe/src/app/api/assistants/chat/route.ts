@@ -1,4 +1,5 @@
 import { NextRequest, NextResponse } from 'next/server'
+import { guardRequest } from '@/lib/api-guard'
 import { getAssistant } from '@/data/assistants'
 import { streamAnthropic } from '@/lib/anthropic-stream'
 
@@ -8,6 +9,11 @@ type Msg = { role: 'user' | 'assistant'; content: string }
 type Body = { assistantId: string; messages: Msg[] }
 
 export async function POST(req: NextRequest) {
+  const guard = guardRequest(req, {
+    rateLimit: { key: 'assistants-chat', max: 20, windowMs: 60_000 },
+  })
+  if (!guard.ok) return guard.response
+
   const { assistantId, messages } = (await req.json()) as Body
 
   if (!assistantId || !Array.isArray(messages) || messages.length === 0) {
