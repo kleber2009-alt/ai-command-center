@@ -1,56 +1,107 @@
 import { NextResponse } from 'next/server'
 import type { NextRequest } from 'next/server'
+import { verifyTelegramInitData } from './lib/telegram-verify'
 
-// HTTP Basic Auth for private surfaces. Public Mini App entry points
-// (/transcribe and /api/transcribe/*) are excluded via the matcher
-// below — they need to work for anonymous Telegram users.
+// Two gates running in middleware:
 //
-// When ADMIN_PASSWORD is empty, the middleware returns 401 on every
-// matched request — fail-secure default.
+// 1. HTTP Basic Auth on the private surfaces (/admin, /me, /assistants
+//    and their data-plane APIs). /transcribe stays open so the Telegram
+//    Mini App works for anonymous users.
+//
+// 2. Telegram initData verification on the public Mini App APIs
+//    (/api/transcribe/*). Opt-in: when TELEGRAM_BOT_TOKEN is set, every
+//    request must carry a valid `X-Telegram-Init-Data` header (or a
+//    matching Basic Auth, so the owner can still hit the API from a
+//    browser). When the token is unset, the gate is bypassed — useful
+//    for local dev.
+//
+// Fail-secure: when env vars are empty, the matched private paths
+// return 401 on every request.
 
-const REALM = 'ai-command-center admin'
+const REALM = 'ai-command-center'
 
-export function middleware(req: NextRequest) {
-  const username = process.env.ADMIN_USERNAME || 'admin'
-  const password = process.env.ADMIN_PASSWORD || ''
+const BASIC_AUTH_PATHS = [
+  /^\/admin(?:\/|$)/,
+  /^\/me(?:\/|$)/,
+  /^\/assistants(?:\/|$)/,
+  /^\/api\/tasks(?:\/|$)/,
+  /^\/api\/me(?:\/|$)/,
+  /^\/api\/assistants(?:\/|$)/,
+]
 
-  if (!password) {
-    return unauthorized('ADMIN_PASSWORD is not set on the server')
+const TELEGRAM_PATHS = [/^\/api\/transcribe(?:\/|$)/]
+
+export async function middleware(req: NextRequest) {
+  const { pathname } = req.nextUrl
+
+  if (BASIC_AUTH_PATHS.some((re) => re.test(pathname))) {
+    return checkBasicAuth(req)
   }
 
-  const header = req.headers.get('authorization') || ''
-  if (!header.toLowerCase().startsWith('basic ')) {
-    return unauthorized()
-  }
-
-  let decoded: string
-  try {
-    decoded = atob(header.slice(6).trim())
-  } catch {
-    return unauthorized()
-  }
-
-  const sep = decoded.indexOf(':')
-  if (sep < 0) return unauthorized()
-  const user = decoded.slice(0, sep)
-  const pass = decoded.slice(sep + 1)
-
-  if (!timingSafeEqual(user, username) || !timingSafeEqual(pass, password)) {
-    return unauthorized()
+  if (TELEGRAM_PATHS.some((re) => re.test(pathname))) {
+    return checkTelegramOrBasicAuth(req)
   }
 
   return NextResponse.next()
 }
 
-function unauthorized(message = 'Authentication required') {
-  return new NextResponse(message, {
+function checkBasicAuth(req: NextRequest): NextResponse {
+  const ok = matchBasicAuth(req)
+  return ok ? NextResponse.next() : unauthorized()
+}
+
+async function checkTelegramOrBasicAuth(req: NextRequest): Promise<NextResponse> {
+  const botToken = process.env.TELEGRAM_BOT_TOKEN || ''
+  if (!botToken) return NextResponse.next() // dev mode — gate disabled
+
+  const initData = req.headers.get('x-telegram-init-data') || ''
+  if (initData) {
+    const result = await verifyTelegramInitData(initData, botToken)
+    if (result.ok) {
+      // Surface the verified user id to downstream handlers / logs.
+      const res = NextResponse.next()
+      res.headers.set('x-telegram-user-id', String(result.userId))
+      return res
+    }
+    // Fall through to Basic Auth on initData failure — lets the owner
+    // recover via browser even if the Mini App misbehaves.
+  }
+
+  if (matchBasicAuth(req)) return NextResponse.next()
+  return new NextResponse('Telegram verification or admin auth required', {
     status: 401,
     headers: { 'WWW-Authenticate': `Basic realm="${REALM}", charset="UTF-8"` },
   })
 }
 
-// Constant-time string comparison to avoid leaking length / prefix
-// info via timing. Inputs are normalized to equal length first.
+function matchBasicAuth(req: NextRequest): boolean {
+  const username = process.env.ADMIN_USERNAME || 'admin'
+  const password = process.env.ADMIN_PASSWORD || ''
+  if (!password) return false
+
+  const header = req.headers.get('authorization') || ''
+  if (!header.toLowerCase().startsWith('basic ')) return false
+
+  let decoded: string
+  try {
+    decoded = atob(header.slice(6).trim())
+  } catch {
+    return false
+  }
+  const sep = decoded.indexOf(':')
+  if (sep < 0) return false
+  const user = decoded.slice(0, sep)
+  const pass = decoded.slice(sep + 1)
+  return timingSafeEqual(user, username) && timingSafeEqual(pass, password)
+}
+
+function unauthorized(): NextResponse {
+  return new NextResponse('Authentication required', {
+    status: 401,
+    headers: { 'WWW-Authenticate': `Basic realm="${REALM}", charset="UTF-8"` },
+  })
+}
+
 function timingSafeEqual(a: string, b: string): boolean {
   const len = Math.max(a.length, b.length)
   let mismatch = a.length === b.length ? 0 : 1
@@ -74,5 +125,7 @@ export const config = {
     '/api/me/:path*',
     '/api/assistants',
     '/api/assistants/:path*',
+    '/api/transcribe',
+    '/api/transcribe/:path*',
   ],
 }

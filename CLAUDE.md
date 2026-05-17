@@ -168,11 +168,18 @@ mirrors `themeParams` to CSS variables on `<html>`. The transcribe page:
 - Fires `HapticFeedback` on submit start, success, and error.
 
 Outside Telegram everything still works — the SDK calls are guarded by
-`getTelegram()` returning `null`.
+`getTelegram()` returning `null`. API calls from the page go through
+`apiFetch()` (`apps/transcribe/src/lib/api-fetch.ts`), which attaches
+`X-Telegram-Init-Data` automatically when running inside Telegram.
 
 See `docs/TELEGRAM_MINI_APP.md` for BotFather setup steps. Server-side
-verification of `initData` against `TELEGRAM_BOT_TOKEN` is not yet
-implemented — every API route is open.
+verification of `initData` against `TELEGRAM_BOT_TOKEN` lives in
+`apps/transcribe/src/lib/telegram-verify.ts` and is wired into
+`middleware.ts` on `/api/transcribe/*`. Opt-in: when
+`TELEGRAM_BOT_TOKEN` is unset the gate is bypassed (dev mode); set it
+in production. The middleware accepts either valid initData or Basic
+Auth credentials, so the owner can still hit the API from a regular
+browser.
 
 ## yt-dlp companion service
 

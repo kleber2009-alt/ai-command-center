@@ -109,11 +109,21 @@ app container — no rebuild needed:
 docker compose restart transcribe
 ```
 
-`/transcribe` and `/api/transcribe/*` stay open so the Telegram Mini
-App works for anonymous users. Server-side verification of Telegram
-`initData` against `TELEGRAM_BOT_TOKEN` is not yet wired up — anyone
-who can reach `/api/transcribe` can use it, so don't share the URL
-publicly until that lands.
+`/transcribe` is open so the Telegram Mini App can render for anonymous
+users, but `/api/transcribe/*` is protected by Telegram initData
+verification when `TELEGRAM_BOT_TOKEN` is set in `.env`. The Mini App
+client automatically forwards `Telegram.WebApp.initData` in the
+`X-Telegram-Init-Data` header; the middleware re-computes the HMAC
+against the bot token and rejects forged requests. Browser access from
+your own machine still works via the same Basic Auth — the middleware
+accepts either credential.
+
+When `TELEGRAM_BOT_TOKEN` is empty, the gate is bypassed and
+`/api/transcribe/*` is wide open. Never run production like that — a
+single curl loop can drain your Anthropic / Deepgram budget.
+
+Get the token from @BotFather → your bot → `API Token`. After setting
+it, `docker compose restart transcribe`.
 
 ## Operational notes
 

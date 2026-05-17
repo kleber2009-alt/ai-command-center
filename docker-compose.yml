@@ -35,6 +35,7 @@ services:
       YTDLP_SERVICE_API_KEY: ${YTDLP_SERVICE_API_KEY:-}
       ADMIN_USERNAME: ${ADMIN_USERNAME:-admin}
       ADMIN_PASSWORD: ${ADMIN_PASSWORD:-}
+      TELEGRAM_BOT_TOKEN: ${TELEGRAM_BOT_TOKEN:-}
     depends_on:
       postgres:
         condition: service_healthy
