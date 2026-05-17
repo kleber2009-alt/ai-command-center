@@ -1,0 +1,233 @@
+<!DOCTYPE html>
+<html lang="ru">
+<head>
+<meta charset="UTF-8">
+<title>Карусель 03 — Case Study · 10 слайдов</title>
+<style>
+  *, *::before, *::after { margin:0; padding:0; box-sizing:border-box; }
+  body { background:#080808; padding:24px 0; display:flex; flex-direction:column; align-items:center; gap:24px; font-family:Georgia, serif; }
+  .slide { width:1080px; height:1350px; background:#080808; color:#f5f0e8; padding:80px 70px; position:relative; display:flex; flex-direction:column; border:1px solid #1a1a1a; overflow:hidden; }
+  .slide-num { position:absolute; top:40px; right:60px; font-family:'SF Mono',monospace; font-size:14px; color:#3a3a3a; letter-spacing:0.18em; font-weight:700; }
+  .slide-num .of { color:#5a5550; }
+  .brand { position:absolute; bottom:40px; left:60px; font-family:'SF Mono',monospace; font-size:13px; color:#5a5550; letter-spacing:0.18em; font-weight:700; text-transform:uppercase; }
+  .brand .a { color:#c8f060; }
+  .swipe { position:absolute; bottom:40px; right:60px; font-family:'SF Mono',monospace; font-size:13px; color:#c8f060; letter-spacing:0.18em; font-weight:700; text-transform:uppercase; }
+  .label { font-family:'SF Mono',monospace; font-size:14px; text-transform:uppercase; letter-spacing:0.16em; color:#b8b3a8; font-weight:700; margin-bottom:24px; }
+  .step-num { font-family:'SF Mono',monospace; font-size:16px; color:#c8f060; letter-spacing:0.2em; font-weight:700; margin-bottom:18px; }
+  .h-hook { font-family:Georgia, serif; font-size:108px; line-height:0.98; letter-spacing:-0.03em; }
+  .h-hook .a { color:#c8f060; font-style:italic; }
+  .h-1 { font-family:Georgia, serif; font-size:78px; line-height:1.05; letter-spacing:-0.02em; }
+  .h-2 { font-family:Georgia, serif; font-size:54px; line-height:1.1; }
+  .h-2 .a { color:#c8f060; font-style:italic; }
+  .body-text { font-family:Georgia, serif; font-size:30px; line-height:1.5; color:#d8d2c6; }
+  .body-text strong { color:#f5f0e8; font-weight:700; }
+  .num-mega { font-family:Georgia, serif; font-size:280px; line-height:1; letter-spacing:-0.05em; color:#c8f060; font-style:italic; }
+  .num-mega .sfx { font-size:80px; color:#5a5550; font-style:normal; }
+  .center { flex:1; display:flex; flex-direction:column; justify-content:center; }
+  .divider { width:80px; height:3px; background:#c8f060; margin:30px 0; }
+  .pull-quote { font-family:Georgia, serif; font-size:44px; line-height:1.3; font-style:italic; color:#d8d2c6; border-left:6px solid #c8f060; padding-left:36px; }
+  .quote-attr { font-family:'SF Mono',monospace; font-size:18px; color:#b8b3a8; margin-top:30px; letter-spacing:0.1em; text-transform:uppercase; }
+  .anon-card { background:#0f0f0f; border:1px solid #1a1a1a; padding:36px 40px; margin-top:30px; }
+  .anon-card .field { display:flex; justify-content:space-between; padding:14px 0; border-bottom:1px solid #1a1a1a; font-size:24px; color:#f5f0e8; line-height:1.3; }
+  .anon-card .field:last-child { border-bottom:none; }
+  .anon-card .field .k { font-family:'SF Mono',monospace; font-size:14px; color:#b8b3a8; text-transform:uppercase; letter-spacing:0.14em; font-weight:700; }
+  .anon-card .field .v { font-family:Georgia, serif; }
+  .anon-card .field .v.lime { color:#c8f060; }
+  .bullet-list { font-size:32px; line-height:1.5; color:#f5f0e8; margin-top:30px; }
+  .bullet-list li { padding:12px 0; list-style:none; padding-left:36px; position:relative; }
+  .bullet-list li::before { content:'×'; position:absolute; left:0; color:#f06090; font-weight:700; font-family:'SF Mono',monospace; font-size:32px; line-height:1.5; }
+  .bullet-list.ok li::before { content:'✓'; color:#c8f060; }
+  .result-grid { display:grid; grid-template-columns:1fr 1fr; gap:30px; margin-top:30px; }
+  .result-card { background:#0d1216; border:1px solid #1a2a14; border-left:4px solid #c8f060; padding:24px 28px; }
+  .result-card .k { font-family:'SF Mono',monospace; font-size:12px; color:#b8b3a8; letter-spacing:0.14em; text-transform:uppercase; font-weight:700; }
+  .result-card .v { font-family:Georgia, serif; font-size:68px; color:#c8f060; line-height:1; letter-spacing:-0.02em; margin-top:12px; font-style:italic; }
+  .result-card .v .sfx { font-size:24px; color:#5a5550; font-style:normal; }
+  .cta-band { background:#c8f060; padding:24px 30px; margin-top:30px; }
+  .cta-band .h { font-family:Georgia, serif; font-size:38px; line-height:1.2; color:#080808; font-style:italic; }
+  .cta-band .b { font-family:'SF Mono',monospace; font-size:14px; color:#080808; letter-spacing:0.14em; margin-top:8px; font-weight:700; text-transform:uppercase; }
+</style>
+</head>
+<body>
+
+<!-- SLIDE 1: HOOK CIFRA -->
+<div class="slide">
+  <div class="slide-num">01 <span class="of">/ 10</span></div>
+  <div class="center">
+    <div class="label">Кейс клиента · май 2026</div>
+    <div class="num-mega">+1.2<span class="sfx">x</span></div>
+    <div class="h-1" style="margin-top:30px;">оборот за <span style="color:#c8f060; font-style:italic;">3 месяца.</span></div>
+    <div class="body-text" style="margin-top:30px;">Без новой команды.<br/>Без нового рекламного бюджета.<br/><br/><strong>Только переделали то, что уже было.</strong></div>
+  </div>
+  <div class="brand"><span class="a">●</span> AI SALES · @username</div>
+  <div class="swipe">SWIPE →</div>
+</div>
+
+<!-- SLIDE 2: КТО -->
+<div class="slide">
+  <div class="slide-num">02 <span class="of">/ 10</span></div>
+  <div class="center">
+    <div class="step-num">/ 01 — КТО</div>
+    <div class="h-2">Маркетинговое агентство.<br/><span class="a">Москва.</span></div>
+    <div class="anon-card">
+      <div class="field"><span class="k">Команда</span><span class="v">8 человек</span></div>
+      <div class="field"><span class="k">Клиентов</span><span class="v">12 на рекуррентном</span></div>
+      <div class="field"><span class="k">Оборот</span><span class="v">1.2 млн ₽/мес</span></div>
+      <div class="field"><span class="k">Ниша</span><span class="v">EdTech + B2B SaaS</span></div>
+      <div class="field"><span class="k">Возраст</span><span class="v">2.5 года</span></div>
+    </div>
+  </div>
+  <div class="brand"><span class="a">●</span> AI SALES</div>
+  <div class="swipe">→</div>
+</div>
+
+<!-- SLIDE 3: ДО -->
+<div class="slide">
+  <div class="slide-num">03 <span class="of">/ 10</span></div>
+  <div class="center">
+    <div class="step-num">/ 02 — БЫЛО</div>
+    <div class="h-1">Стабильно. <span style="color:#5a5550;">И стагно.</span></div>
+    <ul class="bullet-list">
+      <li>Лидов хватало, но плохие</li>
+      <li>Воронка терялась после первого ответа</li>
+      <li>Менеджер уходил в отпуск — лиды копились</li>
+      <li>Закрытие &lt; 8%</li>
+    </ul>
+  </div>
+  <div class="brand"><span class="a">●</span> AI SALES</div>
+  <div class="swipe">→</div>
+</div>
+
+<!-- SLIDE 4: ЧТО ПРОБОВАЛИ -->
+<div class="slide">
+  <div class="slide-num">04 <span class="of">/ 10</span></div>
+  <div class="center">
+    <div class="step-num">/ 03 — ЧТО ПРОБОВАЛИ</div>
+    <div class="h-2">И почему <span class="a">не сработало</span></div>
+    <ul class="bullet-list">
+      <li>Наняли junior-менеджера — терял контекст</li>
+      <li>Шаблоны в Notion — никто не использовал</li>
+      <li>CRM Bitrix — поставили, забили через месяц</li>
+      <li>ChatGPT для текстов — выглядел как ChatGPT</li>
+    </ul>
+  </div>
+  <div class="brand"><span class="a">●</span> AI SALES</div>
+  <div class="swipe">→</div>
+</div>
+
+<!-- SLIDE 5: РЕШЕНИЕ ОДНО -->
+<div class="slide">
+  <div class="slide-num">05 <span class="of">/ 10</span></div>
+  <div class="center">
+    <div class="step-num">/ 04 — ЧТО СДЕЛАЛИ</div>
+    <div class="h-hook">Поставили<br/><span class="a">AI-агента.</span></div>
+    <div class="body-text" style="margin-top:60px;">Который говорит голосом основателя,<br/>читает базу знаний,<br/>и работает 24/7 в IG и TG.</div>
+  </div>
+  <div class="brand"><span class="a">●</span> AI SALES</div>
+  <div class="swipe">→</div>
+</div>
+
+<!-- SLIDE 6: ДЕТАЛИ ВНЕДРЕНИЯ -->
+<div class="slide">
+  <div class="slide-num">06 <span class="of">/ 10</span></div>
+  <div class="center">
+    <div class="step-num">/ 05 — КАК ИМЕННО</div>
+    <div class="h-2">Внедрение · <span class="a">5 дней</span></div>
+    <ul class="bullet-list ok">
+      <li>День 1-2: собрали базу знаний (5 коллекций)</li>
+      <li>День 3: записали голос (30 мин аудио)</li>
+      <li>День 4: подключили IG + TG webhooks</li>
+      <li>День 5: канареечный запуск на 10% лидов</li>
+    </ul>
+    <div class="body-text" style="margin-top:30px;"><strong>Без остановки текущей работы.</strong></div>
+  </div>
+  <div class="brand"><span class="a">●</span> AI SALES</div>
+  <div class="swipe">→</div>
+</div>
+
+<!-- SLIDE 7: РЕЗУЛЬТАТ ЦИФРЫ -->
+<div class="slide">
+  <div class="slide-num">07 <span class="of">/ 10</span></div>
+  <div class="center">
+    <div class="step-num">/ 06 — ЧТО ВЫШЛО</div>
+    <div class="h-2">Через <span class="a">3 месяца:</span></div>
+    <div class="result-grid">
+      <div class="result-card">
+        <div class="k">Оборот</div>
+        <div class="v">+1.2<span class="sfx">x</span></div>
+      </div>
+      <div class="result-card">
+        <div class="k">Конверсия</div>
+        <div class="v">7.8 → 14.2<span class="sfx">%</span></div>
+      </div>
+      <div class="result-card">
+        <div class="k">Скорость ответа</div>
+        <div class="v">3.5ч → 1.2<span class="sfx">с</span></div>
+      </div>
+      <div class="result-card">
+        <div class="k">Сэкономлено<br/>часов/нед</div>
+        <div class="v">18</div>
+      </div>
+    </div>
+  </div>
+  <div class="brand"><span class="a">●</span> AI SALES</div>
+  <div class="swipe">→</div>
+</div>
+
+<!-- SLIDE 8: ТО ЖЕ САМОЕ ДЕТАЛЬНЕЕ -->
+<div class="slide">
+  <div class="slide-num">08 <span class="of">/ 10</span></div>
+  <div class="center">
+    <div class="step-num">/ 07 — РАЗБИРАЕМ</div>
+    <div class="h-2">Откуда <span class="a">+1.2x?</span></div>
+    <div class="body-text" style="margin-top:30px; font-size:28px; line-height:1.7;">
+      • <strong>Скорость ответа</strong> в 10 000 раз ↗ удержание<br/>
+      • <strong>Воронка 24/7</strong> ↗ закрытие ночных лидов<br/>
+      • <strong>Менеджер</strong> освободился ↗ ходит на встречи<br/>
+      • <strong>База знаний</strong> ↗ агент знает все продукты<br/>
+      <br/>
+      Не «волшебство AI».<br/>
+      <strong>Просто меньше провалов на пути клиента.</strong>
+    </div>
+  </div>
+  <div class="brand"><span class="a">●</span> AI SALES</div>
+  <div class="swipe">→</div>
+</div>
+
+<!-- SLIDE 9: ЦИТАТА -->
+<div class="slide">
+  <div class="slide-num">09 <span class="of">/ 10</span></div>
+  <div class="center">
+    <div class="step-num">/ 08 — ЧТО СКАЗАЛ КЛИЕНТ</div>
+    <div class="pull-quote" style="margin-top:30px;">
+      «Знаешь, я переживал —<br/>
+      боялся что клиенты заметят AI.<br/>
+      <br/>
+      За три месяца —<br/>
+      <span style="color:#c8f060; font-style:italic;">ни одного</span><br/>
+      такого комментария.<br/>
+      <br/>
+      А некоторые приходят и хвалят,<br/>
+      что мы стали быстрее реагировать.»
+    </div>
+    <div class="quote-attr">— Алексей, founder · май 2026</div>
+  </div>
+  <div class="brand"><span class="a">●</span> AI SALES</div>
+  <div class="swipe">→</div>
+</div>
+
+<!-- SLIDE 10: CTA -->
+<div class="slide">
+  <div class="slide-num">10 <span class="of">/ 10</span></div>
+  <div class="center">
+    <div class="h-1" style="text-align:center;">Хочешь<br/>так же?</div>
+    <div class="cta-band">
+      <div class="h">Напиши «КЕЙС» в директ</div>
+      <div class="b">→ пришлю детали внедрения + чек-лист</div>
+    </div>
+    <div class="body-text" style="text-align:center; margin-top:40px; font-size:24px; color:#b8b3a8;">5 дней внедрения. Без остановки работы.<br/>Гарантия возврата 14 дней.</div>
+  </div>
+  <div class="brand"><span class="a">●</span> AI SALES · @username</div>
+</div>
+
+</body>
+</html>

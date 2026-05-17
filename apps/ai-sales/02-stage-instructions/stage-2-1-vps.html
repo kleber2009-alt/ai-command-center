@@ -1,0 +1,374 @@
+<!DOCTYPE html>
+<html lang="ru">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover">
+<meta name="theme-color" content="#080808">
+<meta name="color-scheme" content="dark only">
+<title>Этап 2.1 — Настройка VPS</title>
+<style>
+  *, *::before, *::after { margin:0; padding:0; box-sizing:border-box; -webkit-tap-highlight-color:transparent; }
+  html { background:#080808 !important; -webkit-text-size-adjust:100%; }
+  body { background:#080808 !important; color:#f5f0e8 !important; font-family:Georgia,'Times New Roman',serif; font-size:17px; line-height:1.6; overflow-x:hidden; min-height:100vh; }
+  .label { font-family:'SF Mono','Menlo',monospace; font-size:11px; text-transform:uppercase; letter-spacing:0.12em; color:#b8b3a8 !important; font-weight:700; }
+  .topbar { position:sticky; top:0; background:#080808 !important; border-bottom:1px solid #2a2a2a; padding:14px 20px; z-index:50; display:flex; align-items:center; gap:12px; }
+  .topbar-title { font-family:Georgia,serif; font-size:16px; line-height:1; color:#f5f0e8 !important; flex:1; }
+  .topbar-title .accent { color:#c8f060 !important; font-style:italic; }
+  .topbar-stage { font-family:'SF Mono',monospace; font-size:10px; color:#c8f060 !important; font-weight:700; letter-spacing:0.12em; }
+  
+  .container { padding:28px 20px 80px; max-width:680px; margin:0 auto; }
+  
+  .header { margin-bottom:28px; padding-bottom:20px; border-bottom:1px solid #2a2a2a; }
+  .header .label { margin-bottom:10px; }
+  .header h1 { font-family:Georgia,serif; font-size:32px; font-weight:normal; line-height:1.1; letter-spacing:-0.01em; margin-bottom:12px; color:#f5f0e8 !important; }
+  .header h1 .accent { color:#c8f060 !important; font-style:italic; }
+  .header p { color:#c5bfb3 !important; font-size:15px; line-height:1.5; }
+  
+  .stage-meta { display:grid; grid-template-columns:1fr 1fr; gap:3px; margin:20px 0; }
+  .meta-card { background:#1a1a1a; border:1px solid #2a2a2a; padding:14px 16px; }
+  .meta-card .label { display:block; margin-bottom:6px; font-size:10px; }
+  .meta-card .val { font-family:Georgia,serif; font-size:18px; color:#c8f060 !important; }
+  
+  h2 { font-family:Georgia,serif; font-size:24px; font-weight:normal; line-height:1.2; margin:40px 0 12px; color:#f5f0e8 !important; }
+  h2 .sec { display:block; font-family:'SF Mono',monospace; font-size:10px; font-weight:700; color:#c8f060 !important; letter-spacing:0.15em; text-transform:uppercase; margin-bottom:6px; }
+  h3 { font-family:'SF Mono',monospace; font-size:11px; font-weight:700; text-transform:uppercase; letter-spacing:0.15em; color:#c8f060 !important; margin:24px 0 12px; padding-bottom:6px; border-bottom:1px solid #2a2a2a; }
+  
+  p { margin-bottom:14px; font-size:16px; line-height:1.6; color:#f5f0e8 !important; }
+  .lead { font-size:17px; font-style:italic; color:#d8d2c6 !important; margin-bottom:20px; line-height:1.5; }
+  
+  ul, ol { margin:12px 0 16px; padding-left:24px; }
+  li { margin-bottom:8px; font-size:15.5px; line-height:1.55; color:#f5f0e8 !important; }
+  strong { color:#ffffff !important; font-weight:700; }
+  
+  /* STEP */
+  .step-card { background:#1a1a1a; border:1px solid #2a2a2a; padding:0; margin:16px 0; }
+  .step-head { padding:16px 20px; border-bottom:1px solid #2a2a2a; display:flex; align-items:center; gap:14px; }
+  .step-num { font-family:'SF Mono',monospace; font-size:20px; font-weight:700; color:#c8f060 !important; line-height:1; flex-shrink:0; }
+  .step-title { font-family:Georgia,serif; font-size:18px; color:#f5f0e8 !important; line-height:1.3; flex:1; }
+  .step-time { font-family:'SF Mono',monospace; font-size:10px; color:#b8b3a8 !important; font-weight:700; letter-spacing:0.1em; }
+  .step-body { padding:16px 20px; }
+  .step-body p { font-size:15px; margin-bottom:12px; }
+  .step-body p:last-child { margin-bottom:0; }
+  
+  /* CODE BLOCK */
+  .code { background:#0a0a0a; border:1px solid #2a2a2a; border-left:3px solid #c8f060; padding:14px 16px; margin:12px 0; font-family:'SF Mono',monospace; font-size:13px; line-height:1.6; color:#f5f0e8 !important; overflow-x:auto; white-space:pre; -webkit-overflow-scrolling:touch; }
+  .code .comment { color:#b8b3a8 !important; font-style:italic; }
+  .code .cmd { color:#c8f060 !important; font-weight:700; }
+  .code .str { color:#60c8f0 !important; }
+  
+  /* INLINE CODE */
+  code { font-family:'SF Mono',monospace; font-size:13px; background:#1a1a1a; padding:2px 6px; color:#c8f060 !important; border:1px solid #2a2a2a; }
+  
+  /* CALLOUTS */
+  .note, .warn, .ok { padding:14px 16px; margin:14px 0; font-size:14.5px; line-height:1.5; }
+  .note { background:#0f1f28; border-left:3px solid #60c8f0; color:#e8e3d6 !important; }
+  .warn { background:#28121b; border-left:3px solid #f06090; color:#e8e3d6 !important; }
+  .ok { background:#1a2510; border-left:3px solid #c8f060; color:#e8e3d6 !important; }
+  .note strong, .warn strong, .ok strong { color:#fff !important; }
+  
+  /* CHECKLIST */
+  .check { list-style:none !important; padding-left:0 !important; margin:14px 0 !important; }
+  .check li { padding:12px 14px; background:#1a1a1a; border:1px solid #2a2a2a; margin-bottom:3px; font-size:14.5px; line-height:1.5; display:flex; gap:12px; align-items:flex-start; color:#f5f0e8 !important; }
+  .check li::before { content:'☐'; color:#c8f060 !important; font-family:'SF Mono',monospace; font-size:18px; font-weight:700; flex-shrink:0; line-height:1.3; }
+  
+  /* TABLE → CARDS */
+  .data { margin:14px 0; }
+  .row { background:#1a1a1a; border:1px solid #2a2a2a; padding:14px 16px; margin-bottom:3px; }
+  .row .field { display:flex; justify-content:space-between; align-items:baseline; padding:7px 0; border-bottom:1px solid #2a2a2a; gap:12px; }
+  .row .field:last-child { border-bottom:none; }
+  .row .k { font-family:'SF Mono',monospace; font-size:10px; font-weight:700; text-transform:uppercase; letter-spacing:0.1em; color:#b8b3a8 !important; flex-shrink:0; }
+  .row .v { font-size:14.5px; text-align:right; line-height:1.4; color:#f5f0e8 !important; }
+  .row .v.lime { color:#c8f060 !important; font-weight:700; }
+  .row .v.cyan { color:#60c8f0 !important; font-weight:700; }
+  
+  /* COMPARE */
+  .compare { margin:14px 0; }
+  .opt { background:#1a1a1a; border:1px solid #2a2a2a; padding:16px 20px; margin-bottom:3px; }
+  .opt .opt-tag { font-family:'SF Mono',monospace; font-size:10px; font-weight:700; letter-spacing:0.12em; text-transform:uppercase; margin-bottom:8px; }
+  .opt .opt-tag.win { color:#c8f060 !important; }
+  .opt .opt-tag.alt { color:#60c8f0 !important; }
+  .opt h4 { font-family:Georgia,serif; font-size:18px; font-weight:normal; margin-bottom:8px; color:#f5f0e8 !important; }
+  .opt .price { font-family:'SF Mono',monospace; font-size:14px; color:#c8f060 !important; font-weight:700; margin-bottom:10px; }
+  .opt p { font-size:14px; line-height:1.5; color:#c5bfb3 !important; margin-bottom:8px; }
+  
+  /* CTA */
+  .cta { display:block; margin:32px 0 16px; padding:22px 20px; background:#1a1a1a; border:1px solid #c8f060; text-align:center; color:#f5f0e8 !important; text-decoration:none; }
+  .cta:active { background:#2a3a14; }
+  .cta .label { display:block; margin-bottom:6px; color:#c8f060 !important; }
+  .cta .title { font-family:Georgia,serif; font-size:18px; color:#f5f0e8 !important; }
+  
+  .footer { margin-top:48px; padding:24px 0; border-top:1px solid #2a2a2a; text-align:center; font-family:'SF Mono',monospace; font-size:10px; font-weight:700; text-transform:uppercase; letter-spacing:0.12em; color:#b8b3a8 !important; line-height:1.8; }
+  
+  @media (min-width:768px) {
+    .container { padding:40px 32px 100px; }
+    .header h1 { font-size:42px; }
+    h2 { font-size:30px; }
+  }
+</style>
+</head>
+<body>
+<header class="topbar">
+  <div class="topbar-stage">Stage 2.1</div>
+  <div class="topbar-title">AI Sales <span class="accent">System</span></div>
+</header>
+
+<div class="container">
+  <div class="header">
+    <div class="label">Этап 2 / Инфраструктура · Подэтап 2.1</div>
+    <h1>Покупка и настройка <span class="accent">VPS</span></h1>
+    <p>Первый шаг к рабочей платформе. Покупаем сервер, заходим по SSH, делаем безопасным.</p>
+  </div>
+  
+  <div class="stage-meta">
+    <div class="meta-card"><div class="label">Время</div><div class="val">40–60 мин</div></div>
+    <div class="meta-card"><div class="label">Сложность</div><div class="val">Низкая</div></div>
+    <div class="meta-card"><div class="label">Стоимость</div><div class="val">~3000₽/мес</div></div>
+    <div class="meta-card"><div class="label">Что нужно</div><div class="val">Карта + почта</div></div>
+  </div>
+
+  <h2><span class="sec">Section 01</span>Что такое VPS и зачем</h2>
+  <p class="lead">VPS — виртуальный сервер, всегда работающий компьютер в дата-центре. На нём будут жить наши агенты, база данных, дашборд.</p>
+  
+  <p>Локальный компьютер для этого не подходит: ты выключаешь его, теряешь интернет, уезжаешь. Платформа должна работать 24/7 — отвечать клиентам в любое время.</p>
+  
+  <p>Альтернативы вроде «облачных функций» (AWS Lambda и т.д.) — сложнее и дороже для нашей задачи. VPS — золотая середина.</p>
+
+  <h2><span class="sec">Section 02</span>Выбор провайдера</h2>
+  <p class="lead">У нас есть данные российских клиентов → серверы в РФ обязательны по 152-ФЗ.</p>
+  
+  <div class="compare">
+    <div class="opt">
+      <div class="opt-tag win">Рекомендую → главный</div>
+      <h4>Selectel</h4>
+      <div class="price">~2 800 ₽/мес за нужную конфигурацию</div>
+      <p>Российский провайдер. Серверы в Москве и СПб. Соблюдение 152-ФЗ из коробки, оплата с российских карт.</p>
+      <p><strong>Конфиг:</strong> 8 vCPU · 16 ГБ RAM · 200 ГБ NVMe SSD · Ubuntu 24.04</p>
+    </div>
+    <div class="opt">
+      <div class="opt-tag alt">Альтернатива</div>
+      <h4>Timeweb Cloud</h4>
+      <div class="price">~3 200 ₽/мес</div>
+      <p>Тоже российский, проще интерфейс. Подходит, если Selectel показался сложным.</p>
+    </div>
+    <div class="opt">
+      <div class="opt-tag alt">Альтернатива</div>
+      <h4>VK Cloud (Mail.ru)</h4>
+      <div class="price">~3 500 ₽/мес</div>
+      <p>Крупный игрок, подойдёт если важна высокая SLA.</p>
+    </div>
+  </div>
+  
+  <div class="warn"><strong>Не бери Hetzner и AWS</strong> на старте — несмотря на качество, серверы за рубежом создадут юридические проблемы по 152-ФЗ.</div>
+
+  <h2><span class="sec">Section 03</span>Покупка сервера в Selectel</h2>
+  
+  <div class="step-card">
+    <div class="step-head">
+      <div class="step-num">01</div>
+      <div class="step-title">Регистрация</div>
+      <div class="step-time">5 мин</div>
+    </div>
+    <div class="step-body">
+      <p>Открой <code>selectel.ru</code>, нажми «Регистрация». Используй рабочий email и телефон. Тариф для физлица — норм для старта, потом перейдёшь на ИП.</p>
+    </div>
+  </div>
+  
+  <div class="step-card">
+    <div class="step-head">
+      <div class="step-num">02</div>
+      <div class="step-title">Раздел «Облачные серверы»</div>
+      <div class="step-time">2 мин</div>
+    </div>
+    <div class="step-body">
+      <p>В панели — раздел «Облачная платформа» → «Серверы». Нажимаешь «Создать сервер».</p>
+    </div>
+  </div>
+  
+  <div class="step-card">
+    <div class="step-head">
+      <div class="step-num">03</div>
+      <div class="step-title">Параметры сервера</div>
+      <div class="step-time">5 мин</div>
+    </div>
+    <div class="step-body">
+      <p>Выбери эти параметры:</p>
+      <div class="data">
+        <div class="row">
+          <div class="field"><span class="k">Регион</span><span class="v lime">Москва (ru-1)</span></div>
+          <div class="field"><span class="k">Тип</span><span class="v lime">Cloud Server (Standard line)</span></div>
+          <div class="field"><span class="k">ОС</span><span class="v lime">Ubuntu 24.04 LTS</span></div>
+          <div class="field"><span class="k">vCPU</span><span class="v lime">8</span></div>
+          <div class="field"><span class="k">RAM</span><span class="v lime">16 GB</span></div>
+          <div class="field"><span class="k">Диск</span><span class="v lime">200 GB NVMe SSD</span></div>
+          <div class="field"><span class="k">Сеть</span><span class="v lime">Публичный IPv4</span></div>
+        </div>
+      </div>
+      <p>Имя сервера: <code>aisales-prod-01</code> — удобно для админки.</p>
+    </div>
+  </div>
+  
+  <div class="step-card">
+    <div class="step-head">
+      <div class="step-num">04</div>
+      <div class="step-title">SSH-ключ</div>
+      <div class="step-time">5 мин</div>
+    </div>
+    <div class="step-body">
+      <p>Не выбирай «пароль» — это небезопасно. Только SSH-ключ.</p>
+      <p>На своём Маке открой <code>Терминал</code> (Spotlight → Terminal):</p>
+      <div class="code"><span class="cmd">ssh-keygen</span> -t ed25519 -C <span class="str">"ilia@aisales"</span></div>
+      <p>Нажми Enter три раза (без пароля для простоты). Затем выведи публичный ключ:</p>
+      <div class="code"><span class="cmd">cat</span> ~/.ssh/id_ed25519.pub</div>
+      <p>Скопируй всю длинную строку (начинается с <code>ssh-ed25519</code>) и вставь в Selectel в поле «SSH-ключ» при создании сервера.</p>
+    </div>
+  </div>
+  
+  <div class="step-card">
+    <div class="step-head">
+      <div class="step-num">05</div>
+      <div class="step-title">Оплата и запуск</div>
+      <div class="step-time">3 мин</div>
+    </div>
+    <div class="step-body">
+      <p>Пополни баланс на сумму ~5000 ₽ (хватит на 1.5 месяца с запасом). Нажми «Создать». Сервер запустится за 1–2 минуты.</p>
+      <p>На карточке сервера ты увидишь публичный IP — что-то вроде <code>89.108.xxx.xxx</code>. <strong>Запиши его.</strong></p>
+    </div>
+  </div>
+  
+  <div class="ok"><strong>Проверка после шага:</strong> в админке Selectel сервер со статусом «Active», виден IP-адрес, есть SSH-ключ.</div>
+
+  <h2><span class="sec">Section 04</span>Первое подключение</h2>
+  
+  <div class="step-card">
+    <div class="step-head">
+      <div class="step-num">06</div>
+      <div class="step-title">SSH-вход</div>
+      <div class="step-time">2 мин</div>
+    </div>
+    <div class="step-body">
+      <p>На Маке в Терминале выполни (замени IP на свой):</p>
+      <div class="code"><span class="cmd">ssh</span> root@89.108.xxx.xxx</div>
+      <p>При первом подключении спросит <span class="str">"Are you sure?"</span> — пиши <code>yes</code>. Если всё ок, увидишь приветствие Ubuntu и приглашение <code>root@aisales-prod-01:~#</code>.</p>
+    </div>
+  </div>
+  
+  <div class="warn"><strong>Если не пускает:</strong> проверь, что IP правильный и SSH-ключ загружен в Selectel. Если всё равно — пиши мне сюда с текстом ошибки.</div>
+  
+  <div class="step-card">
+    <div class="step-head">
+      <div class="step-num">07</div>
+      <div class="step-title">Обновление системы</div>
+      <div class="step-time">5 мин</div>
+    </div>
+    <div class="step-body">
+      <p>На сервере выполни две команды:</p>
+      <div class="code"><span class="cmd">apt</span> update
+<span class="cmd">apt</span> upgrade -y</div>
+      <p>Подожди, пока скачаются и установятся обновления.</p>
+    </div>
+  </div>
+
+  <h2><span class="sec">Section 05</span>Безопасность</h2>
+  <p class="lead">Сервер открыт во внешний мир. До установки приложений закроем его как сейф.</p>
+  
+  <div class="step-card">
+    <div class="step-head">
+      <div class="step-num">08</div>
+      <div class="step-title">Отдельный пользователь</div>
+      <div class="step-time">5 мин</div>
+    </div>
+    <div class="step-body">
+      <p>Никогда не работай под root. Создаём пользователя <code>aisales</code>:</p>
+      <div class="code"><span class="cmd">adduser</span> aisales
+<span class="comment"># задай пароль (запомни/запиши), остальные поля Enter</span>
+<span class="cmd">usermod</span> -aG sudo aisales</div>
+      <p>Скопируем SSH-ключ root для нового пользователя:</p>
+      <div class="code"><span class="cmd">rsync</span> --archive --chown=aisales:aisales ~/.ssh /home/aisales</div>
+    </div>
+  </div>
+  
+  <div class="step-card">
+    <div class="step-head">
+      <div class="step-num">09</div>
+      <div class="step-title">Проверь нового пользователя</div>
+      <div class="step-time">2 мин</div>
+    </div>
+    <div class="step-body">
+      <p>Открой <strong>новое</strong> окно Терминала (старое не закрывай). В новом:</p>
+      <div class="code"><span class="cmd">ssh</span> aisales@89.108.xxx.xxx</div>
+      <p>Должно пустить. Если работает — закрой старое окно с root, дальше работаем под aisales.</p>
+    </div>
+  </div>
+  
+  <div class="step-card">
+    <div class="step-head">
+      <div class="step-num">10</div>
+      <div class="step-title">Firewall (UFW)</div>
+      <div class="step-time">5 мин</div>
+    </div>
+    <div class="step-body">
+      <p>Под пользователем aisales (а не root) выполни:</p>
+      <div class="code"><span class="cmd">sudo</span> ufw allow OpenSSH
+<span class="cmd">sudo</span> ufw allow 80/tcp
+<span class="cmd">sudo</span> ufw allow 443/tcp
+<span class="cmd">sudo</span> ufw enable</div>
+      <p>На вопрос «Proceed?» — <code>y</code>. Это открыло только HTTP, HTTPS и SSH.</p>
+      <p>Проверь статус:</p>
+      <div class="code"><span class="cmd">sudo</span> ufw status</div>
+    </div>
+  </div>
+  
+  <div class="step-card">
+    <div class="step-head">
+      <div class="step-num">11</div>
+      <div class="step-title">Запрет входа по паролю</div>
+      <div class="step-time">3 мин</div>
+    </div>
+    <div class="step-body">
+      <p>Чтобы никто не подобрал пароль брутфорсом:</p>
+      <div class="code"><span class="cmd">sudo</span> nano /etc/ssh/sshd_config</div>
+      <p>Найди (Ctrl+W в nano) и измени строки:</p>
+      <div class="code">PasswordAuthentication <span class="str">no</span>
+PermitRootLogin <span class="str">no</span></div>
+      <p>Сохрани: <code>Ctrl+O</code> → Enter → <code>Ctrl+X</code>. Перезапусти SSH:</p>
+      <div class="code"><span class="cmd">sudo</span> systemctl restart ssh</div>
+    </div>
+  </div>
+  
+  <div class="step-card">
+    <div class="step-head">
+      <div class="step-num">12</div>
+      <div class="step-title">Установка fail2ban</div>
+      <div class="step-time">3 мин</div>
+    </div>
+    <div class="step-body">
+      <p>Автоматический бан тех, кто долбится в SSH:</p>
+      <div class="code"><span class="cmd">sudo</span> apt install fail2ban -y
+<span class="cmd">sudo</span> systemctl enable fail2ban
+<span class="cmd">sudo</span> systemctl start fail2ban</div>
+    </div>
+  </div>
+  
+  <div class="ok"><strong>Проверка после раздела:</strong> ты заходишь по SSH только как <code>aisales</code>, root и пароли заблокированы, открыты только нужные порты.</div>
+
+  <h2><span class="sec">Section 06</span>Что дальше</h2>
+  <p class="lead">Сервер куплен, защищён, готов к нагрузке. Следующий шаг — установить Docker и развернуть все базы.</p>
+  
+  <h3>Чек-лист завершения 2.1</h3>
+  <ul class="check">
+    <li>Создан VPS в Selectel с правильной конфигурацией</li>
+    <li>Записан публичный IP сервера</li>
+    <li>SSH-ключ работает с локального Мака</li>
+    <li>Создан пользователь aisales с правами sudo</li>
+    <li>Включён UFW firewall с нужными портами</li>
+    <li>Запрещён вход по паролю и под root</li>
+    <li>Установлен и запущен fail2ban</li>
+    <li>Система обновлена (apt upgrade)</li>
+  </ul>
+  
+  <div class="note">Когда выполнишь все пункты — напиши «Этап 2.1 готов». Я подготовлю следующий документ — установка Docker и всего стека сервисов.</div>
+
+  <div class="footer">AI Sales System · Stage 2.1 · Infrastructure</div>
+</div>
+</body>
+</html>

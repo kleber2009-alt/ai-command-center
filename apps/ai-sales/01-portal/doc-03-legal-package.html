@@ -1,0 +1,320 @@
+<!DOCTYPE html>
+<html lang="ru">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Юридический пакет — AI Sales System</title>
+<style>
+  * { margin: 0; padding: 0; box-sizing: border-box; }
+  :root {
+    --bg: #080808; --text: #f5f0e8; --lime: #c8f060;
+    --cyan: #60c8f0; --pink: #f06090;
+    --muted: rgba(245,240,232,0.5); --dim: rgba(245,240,232,0.3);
+    --border: rgba(245,240,232,0.1); --card: #0f0f0f;
+  }
+  body {
+    background: var(--bg); color: var(--text);
+    font-family: Georgia, serif; line-height: 1.65;
+    padding: 48px 24px 96px;
+  }
+  .container { max-width: 880px; margin: 0 auto; }
+  .label { font-family: 'JetBrains Mono', monospace; font-size: 10px;
+           text-transform: uppercase; letter-spacing: 0.15em; color: var(--muted); }
+  
+  .doc-header { border-bottom: 1px solid var(--border); padding-bottom: 32px; margin-bottom: 48px; }
+  .doc-header .doc-num {
+    font-family: Georgia, serif; font-style: italic; font-size: 96px;
+    color: transparent; -webkit-text-stroke: 1px var(--pink); line-height: 0.9;
+  }
+  .doc-header h1 {
+    font-family: Georgia, serif; font-size: 52px; font-weight: normal;
+    letter-spacing: -0.02em; line-height: 1.05; margin: 8px 0 16px;
+  }
+  .doc-header h1 .accent { color: var(--pink); font-style: italic; }
+  .doc-header .doc-sub { font-size: 18px; color: var(--muted); }
+  
+  .disclaimer {
+    background: rgba(240,96,144,0.06); border: 1px solid rgba(240,96,144,0.2);
+    padding: 24px 28px; margin-bottom: 48px;
+  }
+  .disclaimer-title { color: var(--pink); margin-bottom: 8px; }
+  
+  section { margin-bottom: 56px; }
+  section .sec-num {
+    font-family: Georgia, serif; font-style: italic; font-size: 64px;
+    color: transparent; -webkit-text-stroke: 1px var(--lime); line-height: 1;
+  }
+  section h2 {
+    font-family: Georgia, serif; font-size: 32px; font-weight: normal;
+    margin: 8px 0; line-height: 1.15;
+  }
+  section .sec-sub {
+    font-family: 'JetBrains Mono', monospace; font-size: 10px; text-transform: uppercase;
+    letter-spacing: 0.15em; color: var(--pink); margin-bottom: 24px;
+  }
+  
+  h3 {
+    font-family: 'JetBrains Mono', monospace; font-size: 11px; text-transform: uppercase;
+    letter-spacing: 0.15em; margin: 32px 0 16px;
+    padding-bottom: 8px; border-bottom: 1px solid var(--border);
+  }
+  
+  p { margin-bottom: 16px; font-size: 16px; }
+  .lead { font-size: 18px; margin-bottom: 24px; font-style: italic; }
+  
+  ul, ol { margin: 12px 0 16px 24px; }
+  li { margin-bottom: 8px; font-size: 15px; }
+  
+  .quote-box {
+    background: var(--card); padding: 24px 28px;
+    border-left: 2px solid var(--cyan); margin: 20px 0;
+    font-style: italic; font-size: 15px;
+  }
+  .quote-box-title {
+    font-family: 'JetBrains Mono', monospace; font-size: 10px;
+    text-transform: uppercase; letter-spacing: 0.15em;
+    color: var(--cyan); margin-bottom: 12px; font-style: normal;
+  }
+  
+  .checklist { list-style: none; margin: 0; }
+  .checklist li {
+    display: grid; grid-template-columns: 24px 1fr;
+    gap: 12px; padding: 12px 0;
+    border-bottom: 1px dotted rgba(245,240,232,0.05);
+    font-size: 15px;
+  }
+  .checklist li::before {
+    content: '☐'; color: var(--lime); font-family: 'JetBrains Mono', monospace;
+    font-size: 18px; line-height: 1;
+  }
+  
+  table { width: 100%; border-collapse: collapse; margin: 16px 0; font-size: 14px; }
+  th { font-family: 'JetBrains Mono', monospace; font-size: 10px; text-transform: uppercase;
+       letter-spacing: 0.1em; color: var(--muted); text-align: left; padding: 12px 8px;
+       border-bottom: 1px solid var(--border); }
+  td { padding: 12px 8px; border-bottom: 1px dotted rgba(245,240,232,0.05); vertical-align: top; }
+  
+  .risk-card { background: var(--card); padding: 20px 24px; margin: 12px 0; position: relative; }
+  .risk-level { position: absolute; top: 20px; right: 24px;
+                font-family: 'JetBrains Mono', monospace; font-size: 10px;
+                text-transform: uppercase; letter-spacing: 0.1em; }
+  .risk-high { color: var(--pink); }
+  .risk-med { color: var(--cyan); }
+  .risk-low { color: var(--lime); }
+  .risk-card h4 { font-family: Georgia, serif; font-size: 18px; font-weight: normal; margin-bottom: 8px; padding-right: 60px; }
+  .risk-card p { font-size: 14px; margin-bottom: 4px; }
+  .risk-card .solution { color: var(--lime); font-size: 13px; font-family: 'JetBrains Mono', monospace; margin-top: 8px; }
+  
+  .warn { background: rgba(240,96,144,0.04); border-left: 2px solid var(--pink);
+          padding: 16px 20px; margin: 16px 0; font-size: 14px; }
+  .note { background: rgba(96,200,240,0.04); border-left: 2px solid var(--cyan);
+          padding: 16px 20px; margin: 16px 0; font-size: 14px; }
+  
+  .footer { margin-top: 80px; padding-top: 32px; border-top: 1px solid var(--border);
+            display: flex; justify-content: space-between; font-family: 'JetBrains Mono', monospace;
+            font-size: 10px; text-transform: uppercase; letter-spacing: 0.15em; color: var(--muted); }
+  
+  @media (max-width: 640px) {
+    body { padding: 24px 16px 48px; }
+    .doc-header h1 { font-size: 36px; }
+  }
+</style>
+</head>
+<body>
+<div class="container">
+
+<header class="doc-header">
+  <div class="doc-num">03</div>
+  <div class="label">Legal Package / v0.1</div>
+  <h1>Юридический <span class="accent">пакет</span></h1>
+  <p class="doc-sub">152-ФЗ, GDPR, дисклеймер ИИ. То, без чего систему запускать нельзя.</p>
+</header>
+
+<div class="disclaimer">
+  <div class="label disclaimer-title">Дисклеймер от Claude</div>
+  <p style="font-size: 14px;">Это рабочий чек-лист, а не юридическая консультация. Я ИИ, а не юрист. Перед запуском в продакшн обязательно показать пакет реальному юристу, специализирующемуся на персональных данных и интернет-маркетинге. В РФ это юрист по 152-ФЗ + IT, в ЕС — юрист по GDPR. Стоимость такой консультации 30–80 тыс ₽, окупается одним предотвращённым штрафом.</p>
+</div>
+
+<section>
+  <div class="sec-num">01</div>
+  <div class="sec-sub">Risk landscape</div>
+  <h2>Карта рисков</h2>
+  <p class="lead">Что конкретно может пойти не так и сколько это будет стоить.</p>
+  
+  <div class="risk-card">
+    <div class="risk-level risk-high">High risk</div>
+    <h4>Обработка переписки без согласия (РФ, 152-ФЗ)</h4>
+    <p>Штраф для ИП: до 100 тыс ₽ за факт, до 700 тыс ₽ при отягчающих. Для юрлиц — до 18 млн ₽ за повторное нарушение.</p>
+    <div class="solution">→ Согласие в первом сообщении + публичная политика обработки</div>
+  </div>
+  
+  <div class="risk-card">
+    <div class="risk-level risk-high">High risk</div>
+    <h4>Несообщение, что общается ИИ (ЕС, AI Act)</h4>
+    <p>С августа 2026 действует прямой запрет ЕС на «обман пользователя» через ИИ. Штраф — до 7% мировой выручки или 35 млн €.</p>
+    <div class="solution">→ Дисклеймер в первом сообщении + bio + оферта</div>
+  </div>
+  
+  <div class="risk-card">
+    <div class="risk-level risk-med">Medium risk</div>
+    <h4>Обработка биометрии (голос, лицо)</h4>
+    <p>Клон голоса и видео-аватар = биометрические ПДн. В РФ требуют отдельного письменного согласия и регистрации в ЕБС или согласия клиента.</p>
+    <div class="solution">→ Согласие при клонировании только твоё, биометрию клиентов не обрабатываем</div>
+  </div>
+  
+  <div class="risk-card">
+    <div class="risk-level risk-med">Medium risk</div>
+    <h4>Хранение чужих данных в зарубежных сервисах</h4>
+    <p>OpenAI, Claude API, ElevenLabs — серверы в США. Передача ПДн россиян за рубеж требует уведомления Роскомнадзора и согласия субъекта.</p>
+    <div class="solution">→ Анонимизация перед отправкой в API + уведомление РКН</div>
+  </div>
+  
+  <div class="risk-card">
+    <div class="risk-level risk-low">Low risk (но важно)</div>
+    <h4>Право на удаление и доступ к данным</h4>
+    <p>Любой клиент по запросу может потребовать удалить его переписку и/или предоставить копию. Нет процесса = претензия.</p>
+    <div class="solution">→ Шаблон ответа на запрос + кнопка «удалить мои данные» в CRM</div>
+  </div>
+</section>
+
+<section>
+  <div class="sec-num">02</div>
+  <div class="sec-sub">Disclaimer texts</div>
+  <h2>Тексты дисклеймера</h2>
+  <p class="lead">Готовые формулировки в твоём стиле. После твоих правок становятся канонами.</p>
+  
+  <h3>В bio Instagram (короткий)</h3>
+  <div class="quote-box">
+    <div class="quote-box-title">Версия А — лаконичная</div>
+    Со мной помогает AI-ассистент 🤖 На важных вопросах подключаюсь лично
+  </div>
+  <div class="quote-box">
+    <div class="quote-box-title">Версия B — игровая</div>
+    В директе встретит AI, обученный на мне. Хочешь сразу меня — напиши «Илья»
+  </div>
+  
+  <h3>В закреплённом сообщении TG-канала</h3>
+  <div class="quote-box">
+    <div class="quote-box-title">Полный текст</div>
+    Привет! Это канал Ильи. В личных сообщениях и группах вам поможет AI-ассистент — он обучен на моих материалах, моём стиле общения и моём голосе. Цель проста: ответить быстро, по делу и без «копи-пасты». На сложных вопросах, личных историях и при оплате подключаюсь лично я. Если хочешь сразу со мной — просто напиши «Илья», и ассистент передаст. Мы храним ваши сообщения только для качества ответов. Полная политика обработки данных: <span style="color: var(--lime)">[ссылка]</span>
+  </div>
+  
+  <h3>Первое сообщение нового диалога (IG + TG)</h3>
+  <div class="quote-box">
+    <div class="quote-box-title">Версия для холодных входящих</div>
+    Привет! С тобой общается AI-ассистент Ильи 🤖 Я обучен на его материалах и стиле, помогаю быстро отвечать на вопросы. Илья подключается лично на важных моментах. Если хочешь сразу к нему — напиши «Илья», передам. Продолжая переписку, ты соглашаешься с обработкой данных <span style="color: var(--lime)">[ссылка]</span>. Чем могу помочь?
+  </div>
+  <div class="quote-box">
+    <div class="quote-box-title">Версия для тёплых лидов (был на эфире)</div>
+    Привет! Видел, что ты был у Ильи на эфире — рад тебе 🙌 Напишу честно: с тобой сейчас общается AI-ассистент Ильи. Он обучен на его контенте и стиле, помогает мне отвечать быстро. На главных моментах Илья подключается лично. Расскажи, что было самым полезным на эфире и что хочется забрать дальше?
+  </div>
+  
+  <h3>На вопрос «ты человек или ИИ?»</h3>
+  <div class="quote-box">
+    <div class="quote-box-title">Обязательный честный ответ</div>
+    Хороший вопрос. Я AI-ассистент Ильи — обучен на его материалах и говорю в его стиле, но я не Илья. Лично он подключается, когда это важно. Хочешь сразу к нему — скажи слово, и передам. Это не отменяет ответа на твой вопрос, давай продолжим?
+  </div>
+</section>
+
+<section>
+  <div class="sec-num">03</div>
+  <div class="sec-sub">Consent flow</div>
+  <h2>Сбор согласия на обработку</h2>
+  <p class="lead">152-ФЗ требует «информированного добровольного» согласия. Молчание клиента — не согласие.</p>
+  
+  <h3>Где собираем согласие</h3>
+  <table>
+    <tr><th>Точка контакта</th><th>Механизм</th><th>Что фиксируем</th></tr>
+    <tr><td>Первое сообщение в директ</td><td>«Продолжая переписку, ты соглашаешься...»</td><td>Дата + ID диалога + текст согласия</td></tr>
+    <tr><td>Лид-форма на сайте</td><td>Чекбокс «Согласен на обработку»</td><td>Дата + IP + текст</td></tr>
+    <tr><td>Лендинг продукта</td><td>Кнопка «Купить» = акцепт оферты</td><td>Дата + IP + cookie</td></tr>
+    <tr><td>Запись на бесплатный эфир</td><td>Чекбокс отдельно для маркетинговых рассылок</td><td>Дата + email + текст</td></tr>
+  </table>
+  
+  <h3>Минимальный текст согласия (РФ)</h3>
+  <div class="quote-box">
+    Я даю согласие ИП [ФИО / название юрлица] (ИНН ___, далее «Оператор») на обработку моих персональных данных (имя, контактные данные, переписка в мессенджерах) с целью продажи образовательных продуктов и поддержки клиентов. Способы обработки: сбор, запись, систематизация, накопление, хранение, использование, передача третьим лицам только в рамках исполнения договора, удаление. Срок: до отзыва согласия. Согласие может быть отозвано письменным заявлением на email ___.
+  </div>
+  
+  <div class="warn">Этот текст нужно адаптировать под твоё юрлицо/ИП и согласовать с реальным юристом перед запуском. Я набросал основу.</div>
+</section>
+
+<section>
+  <div class="sec-num">04</div>
+  <div class="sec-sub">Documents</div>
+  <h2>Документы для сайта и оферты</h2>
+  <p class="lead">Что должно лежать на сайте на постоянной основе и регулярно обновляться.</p>
+  
+  <ul class="checklist">
+    <li>Политика обработки персональных данных (152-ФЗ + GDPR, единый документ)</li>
+    <li>Согласие на обработку ПДн (отдельный документ, на который ссылается политика)</li>
+    <li>Публичная оферта на покупку курса/продукта</li>
+    <li>Уведомление об использовании AI-ассистента (отдельный раздел оферты)</li>
+    <li>Cookie-policy (для сайта)</li>
+    <li>Уведомление Роскомнадзора о начале обработки ПДн (через rkn.gov.ru)</li>
+    <li>Уведомление о трансграничной передаче (если используешь зарубежные API)</li>
+    <li>Реестр обработки персональных данных (внутренний документ)</li>
+    <li>Регламент реакции на запросы субъектов (доступ, удаление, отзыв согласия)</li>
+    <li>Регламент уведомлений об инцидентах (утечка данных)</li>
+  </ul>
+  
+  <div class="note">Готовые шаблоны политик с учётом AI — можно купить на специализированных сервисах (стоимость ≈ 5–15 тыс ₽) и адаптировать с юристом. Я могу сделать черновики каждого документа отдельно, когда дойдём до этапа подготовки правовой базы.</div>
+</section>
+
+<section>
+  <div class="sec-num">05</div>
+  <div class="sec-sub">Data hygiene</div>
+  <h2>Гигиена работы с данными</h2>
+  <p class="lead">Технические практики, которые снижают юридический риск.</p>
+  
+  <h3>В LLM-промпт</h3>
+  <ul>
+    <li>Не передавать в API имена клиентов открыто — заменять на токены (USER_42)</li>
+    <li>Не передавать номера телефонов и email открыто — маскировать</li>
+    <li>Не передавать номера карт и платёжные данные никогда</li>
+    <li>Логи API-запросов хранить отдельно с шифрованием</li>
+  </ul>
+  
+  <h3>В базу знаний</h3>
+  <ul>
+    <li>Кейсы клиентов — только с письменного согласия публикации</li>
+    <li>Имена в кейсах — изменённые либо инициалы</li>
+    <li>Если используются реальные переписки для обучения — обезличенные</li>
+  </ul>
+  
+  <h3>В хранение</h3>
+  <ul>
+    <li>База данных на серверах в РФ (для российских клиентов) — Selectel, VK Cloud, Yandex Cloud</li>
+    <li>Шифрование при передаче (HTTPS) и при хранении (AES-256)</li>
+    <li>Доступ к БД только по VPN, двухфакторная аутентификация для админов</li>
+    <li>Бэкапы 30 дней, дальше — обезличивание</li>
+    <li>Срок хранения переписок — 3 года (соответствует ГК РФ по обязательствам)</li>
+  </ul>
+</section>
+
+<section>
+  <div class="sec-num">06</div>
+  <div class="sec-sub">Action plan</div>
+  <h2>План действий по легализации</h2>
+  
+  <ol style="margin-left: 24px; font-size: 16px;">
+    <li><strong>Неделя 1.</strong> Консультация с IT-юристом по 152-ФЗ. Бриф из этого документа.</li>
+    <li><strong>Неделя 1–2.</strong> Подготовка политики обработки + оферты + согласия. С юристом.</li>
+    <li><strong>Неделя 2.</strong> Уведомление Роскомнадзора о начале обработки.</li>
+    <li><strong>Неделя 2–3.</strong> Внедрение технической гигиены: токенизация, шифрование, права доступа.</li>
+    <li><strong>Неделя 3.</strong> Настройка дисклеймеров во всех каналах.</li>
+    <li><strong>Неделя 3–4.</strong> Регламенты реакции на запросы клиентов.</li>
+    <li><strong>Старт продакшна.</strong> Юридический пакет полностью готов и опубликован до первого сообщения от AI-агента.</li>
+  </ol>
+  
+  <div class="warn">До прохождения этого пути запускать систему в продакшн нельзя. Можно тестировать на тебе и команде, обучать модели, готовить инфраструктуру — но не общаться с реальными клиентами.</div>
+</section>
+
+<div class="footer">
+  <div>AI Sales System / Legal Package v0.1</div>
+  <div>Document 003 of 9</div>
+</div>
+
+</div>
+</body>
+</html>

@@ -1,0 +1,343 @@
+<!DOCTYPE html>
+<html lang="ru">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<meta name="theme-color" content="#080808">
+<meta name="color-scheme" content="dark only">
+<title>AI Sales · Settings</title>
+<style>
+  *, *::before, *::after { margin:0; padding:0; box-sizing:border-box; }
+  html, body { background:#080808; color:#f5f0e8; min-height:100vh; }
+  body { font-family:Georgia, 'Times New Roman', serif; font-size:15px; line-height:1.5; overflow-x:hidden; }
+  .label { font-family:'SF Mono','JetBrains Mono','Menlo',monospace; font-size:10px; text-transform:uppercase; letter-spacing:0.14em; color:#b8b3a8; font-weight:700; }
+  .mono { font-family:'SF Mono','JetBrains Mono','Menlo',monospace; }
+
+  .topbar { position:sticky; top:0; z-index:50; display:flex; align-items:center; justify-content:space-between; padding:14px 24px; background:#080808; border-bottom:1px solid #2a2a2a; gap:18px; }
+  .topbar-title { font-family:Georgia,serif; font-size:18px; }
+  .topbar-title .accent { color:#c8f060; font-style:italic; }
+  .topbar-meta { font-family:'SF Mono',monospace; font-size:11px; color:#b8b3a8; letter-spacing:0.12em; }
+
+  .shell { max-width:1100px; margin:0 auto; padding:18px 24px 80px; display:grid; gap:2px; }
+  .sec-head { display:flex; align-items:baseline; gap:14px; padding:18px 2px 10px; }
+  .sec-num { font-family:'SF Mono',monospace; font-size:10px; color:#c8f060; letter-spacing:0.18em; font-weight:700; }
+  .sec-title { font-family:Georgia,serif; font-size:14px; font-style:italic; color:#b8b3a8; }
+  .sec-spacer { flex:1; border-bottom:1px solid #1a1a1a; transform:translateY(-2px); }
+
+  .panel { background:#0f0f0f; border:1px solid #1a1a1a; padding:24px 28px; margin-bottom:2px; }
+  .panel h3 { font-family:Georgia,serif; font-size:20px; font-weight:normal; margin-bottom:18px; }
+  .panel h3 .accent { color:#c8f060; font-style:italic; }
+  .panel p.desc { color:#b8b3a8; font-size:14px; line-height:1.6; margin-bottom:14px; }
+
+  .row { display:grid; grid-template-columns:240px 1fr auto; gap:18px; padding:14px 0; border-bottom:1px solid #1a1a1a; align-items:center; }
+  .row:last-child { border-bottom:none; }
+  .row .key { font-family:Georgia,serif; font-size:15px; }
+  .row .key .sub { font-family:'SF Mono',monospace; font-size:10px; color:#5a5550; letter-spacing:0.08em; display:block; margin-top:4px; text-transform:uppercase; }
+  .row .val { font-family:'SF Mono',monospace; font-size:13px; color:#f5f0e8; }
+  .row .val input { background:#141414; border:1px solid #2a2a2a; color:#f5f0e8; padding:8px 12px; font-family:'SF Mono',monospace; font-size:12px; width:100%; }
+  .row .val input:focus { outline:none; border-color:#c8f060; }
+  .row .val.status-on { color:#c8f060; }
+  .row .val.status-off { color:#5a5550; }
+  .row .val.status-warn { color:#f0a060; }
+  .row .val.status-err { color:#f06090; }
+
+  /* Toggle */
+  .toggle { position:relative; width:42px; height:22px; background:#2a2a2a; cursor:pointer; transition:background 0.15s; }
+  .toggle::after { content:''; position:absolute; left:2px; top:2px; width:18px; height:18px; background:#5a5550; transition:transform 0.15s, background 0.15s; }
+  .toggle.on { background:#1a2a14; }
+  .toggle.on::after { background:#c8f060; transform:translateX(20px); }
+
+  /* Range slider visual */
+  .range-vis { display:flex; align-items:center; gap:14px; min-width:200px; }
+  .range-vis .bar { flex:1; height:4px; background:#1a1a1a; position:relative; cursor:pointer; }
+  .range-vis .bar .fill { height:100%; background:#c8f060; }
+  .range-vis .bar .handle { position:absolute; width:14px; height:14px; background:#c8f060; top:-5px; }
+  .range-vis .val-num { font-family:'SF Mono',monospace; font-size:12px; color:#c8f060; font-weight:700; min-width:36px; text-align:right; }
+
+  /* Select */
+  .select-pill { display:inline-flex; gap:2px; }
+  .select-pill button { font-family:'SF Mono',monospace; font-size:10px; padding:6px 12px; background:#141414; border:1px solid #2a2a2a; color:#b8b3a8; cursor:pointer; letter-spacing:0.12em; font-weight:700; text-transform:uppercase; }
+  .select-pill button.active { background:#c8f060; color:#080808; border-color:#c8f060; }
+
+  /* Test button */
+  .btn-test { background:transparent; border:1px solid #2a2a2a; color:#c8f060; padding:7px 14px; font-family:'SF Mono',monospace; font-size:10px; font-weight:700; letter-spacing:0.14em; text-transform:uppercase; cursor:pointer; }
+  .btn-test:hover { border-color:#c8f060; }
+
+  /* Save band */
+  .save-band { position:sticky; bottom:24px; background:#0f1a14; border:1px solid #2a3a14; padding:14px 24px; display:flex; justify-content:space-between; align-items:center; margin-top:2px; }
+  .save-band .label { color:#c8f060; }
+  .save-band button { padding:9px 20px; background:#c8f060; color:#080808; border:none; font-family:'SF Mono',monospace; font-size:11px; font-weight:700; letter-spacing:0.14em; text-transform:uppercase; cursor:pointer; }
+</style>
+</head>
+<body>
+
+<header class="topbar">
+  <div class="topbar-title">AI Sales <span class="accent">Settings</span></div>
+  <div class="topbar-meta">v0.1 · system config</div>
+</header>
+
+<main class="shell">
+
+  <!-- API KEYS -->
+  <div class="sec-head"><span class="sec-num">/01</span><span class="sec-title">API ключи и подключения</span><span class="sec-spacer"></span></div>
+
+  <div class="panel">
+    <h3>Anthropic <span class="accent">Claude</span></h3>
+    <p class="desc">Основная модель для генерации ответов агентов. Opus 4.7 для IG/TG/РОП, Sonnet 4.6 для Аналитика.</p>
+
+    <div class="row">
+      <div class="key">API Key<span class="sub">ANTHROPIC_API_KEY</span></div>
+      <div class="val"><input type="password" placeholder="sk-ant-..." value="" /></div>
+      <button class="btn-test">Тест</button>
+    </div>
+    <div class="row">
+      <div class="key">Статус подключения</div>
+      <div class="val status-err">● НЕ НАСТРОЕНО · агенты в mock-режиме</div>
+      <span></span>
+    </div>
+    <div class="row">
+      <div class="key">Расход за сутки</div>
+      <div class="val">— (не подключено)</div>
+      <span></span>
+    </div>
+  </div>
+
+  <div class="panel">
+    <h3>Voyage <span class="accent">эмбеддинги</span></h3>
+    <p class="desc">Voyage-3 для индексации базы знаний и поиска похожих чанков (RAG).</p>
+    <div class="row">
+      <div class="key">API Key<span class="sub">VOYAGE_API_KEY</span></div>
+      <div class="val"><input type="password" placeholder="pa-..." /></div>
+      <button class="btn-test">Тест</button>
+    </div>
+    <div class="row">
+      <div class="key">Статус</div>
+      <div class="val status-err">● НЕ НАСТРОЕНО · RAG в mock</div>
+      <span></span>
+    </div>
+  </div>
+
+  <div class="panel">
+    <h3>ElevenLabs <span class="accent">голос</span></h3>
+    <p class="desc">PVC (Professional Voice Clone) Ильи. Используется для аудио-ответов в IG/TG и кружочков через Wav2Lip.</p>
+    <div class="row">
+      <div class="key">API Key<span class="sub">ELEVENLABS_API_KEY</span></div>
+      <div class="val"><input type="password" /></div>
+      <button class="btn-test">Тест</button>
+    </div>
+    <div class="row">
+      <div class="key">Voice ID</div>
+      <div class="val"><input type="text" placeholder="не создан" /></div>
+      <span></span>
+    </div>
+    <div class="row">
+      <div class="key">Статус PVC</div>
+      <div class="val status-warn">● ОЖИДАЕТ · нужно 30+ мин аудио</div>
+      <span></span>
+    </div>
+  </div>
+
+  <div class="panel">
+    <h3>Instagram <span class="accent">Graph API</span></h3>
+    <div class="row">
+      <div class="key">App Secret</div>
+      <div class="val"><input type="password" /></div>
+      <button class="btn-test">Тест</button>
+    </div>
+    <div class="row">
+      <div class="key">Page Access Token</div>
+      <div class="val"><input type="password" /></div>
+      <span></span>
+    </div>
+    <div class="row">
+      <div class="key">Verify Token</div>
+      <div class="val"><input type="text" value="aisales-verify-changeme" /></div>
+      <span></span>
+    </div>
+    <div class="row">
+      <div class="key">Webhook URL</div>
+      <div class="val">https://api.aisales.local/webhooks/instagram</div>
+      <span></span>
+    </div>
+  </div>
+
+  <div class="panel">
+    <h3>Telegram <span class="accent">Bot</span></h3>
+    <div class="row">
+      <div class="key">Bot Token<span class="sub">от @BotFather</span></div>
+      <div class="val"><input type="password" /></div>
+      <button class="btn-test">Тест</button>
+    </div>
+    <div class="row">
+      <div class="key">Webhook Secret</div>
+      <div class="val"><input type="password" /></div>
+      <span></span>
+    </div>
+    <div class="row">
+      <div class="key">Илья TG Chat ID<span class="sub">для эскалаций</span></div>
+      <div class="val"><input type="text" placeholder="123456789" /></div>
+      <span></span>
+    </div>
+  </div>
+
+  <!-- AGENT BEHAVIOR -->
+  <div class="sec-head"><span class="sec-num">/02</span><span class="sec-title">Поведение агентов</span><span class="sec-spacer"></span></div>
+
+  <div class="panel">
+    <h3>Темп <span class="accent">ответов</span></h3>
+    <p class="desc">Имитация живой переписки — задержка между чтением и ответом.</p>
+
+    <div class="row">
+      <div class="key">Min задержка</div>
+      <div class="val">
+        <div class="range-vis">
+          <div class="bar"><div class="fill" style="width:30%;"></div><div class="handle" style="left:30%;"></div></div>
+          <span class="val-num">30s</span>
+        </div>
+      </div>
+      <span></span>
+    </div>
+    <div class="row">
+      <div class="key">Max задержка</div>
+      <div class="val">
+        <div class="range-vis">
+          <div class="bar"><div class="fill" style="width:60%;"></div><div class="handle" style="left:60%;"></div></div>
+          <span class="val-num">120s</span>
+        </div>
+      </div>
+      <span></span>
+    </div>
+    <div class="row">
+      <div class="key">Ночной режим<span class="sub">не отвечать 23:00 – 08:00</span></div>
+      <div class="val"></div>
+      <div class="toggle on" data-key="night_mode"></div>
+    </div>
+  </div>
+
+  <div class="panel">
+    <h3>Эскалация <span class="accent">на Илью</span></h3>
+    <div class="row">
+      <div class="key">Жалоба / угроза</div>
+      <div class="val status-on">● ВКЛ · &lt; 5 мин</div>
+      <div class="toggle on"></div>
+    </div>
+    <div class="row">
+      <div class="key">Чувствительные темы</div>
+      <div class="val status-on">● ВКЛ · &lt; 30 мин</div>
+      <div class="toggle on"></div>
+    </div>
+    <div class="row">
+      <div class="key">VIP-клиент</div>
+      <div class="val status-on">● ВКЛ · &lt; 1 час</div>
+      <div class="toggle on"></div>
+    </div>
+    <div class="row">
+      <div class="key">Сумма выше</div>
+      <div class="val">
+        <div class="range-vis">
+          <div class="bar"><div class="fill" style="width:40%;"></div><div class="handle" style="left:40%;"></div></div>
+          <span class="val-num">200к ₽</span>
+        </div>
+      </div>
+      <div class="toggle on"></div>
+    </div>
+    <div class="row">
+      <div class="key">Прямой запрос «к самому»</div>
+      <div class="val status-on">● ВКЛ · мгновенно</div>
+      <div class="toggle on"></div>
+    </div>
+  </div>
+
+  <div class="panel">
+    <h3>Скоринг <span class="accent">клиентов</span></h3>
+    <div class="row">
+      <div class="key">Порог сегмента A</div>
+      <div class="val">
+        <div class="range-vis">
+          <div class="bar"><div class="fill" style="width:70%;"></div><div class="handle" style="left:70%;"></div></div>
+          <span class="val-num">70+</span>
+        </div>
+      </div>
+      <span></span>
+    </div>
+    <div class="row">
+      <div class="key">Порог сегмента B</div>
+      <div class="val">
+        <div class="range-vis">
+          <div class="bar"><div class="fill" style="width:40%;"></div><div class="handle" style="left:40%;"></div></div>
+          <span class="val-num">40+</span>
+        </div>
+      </div>
+      <span></span>
+    </div>
+    <div class="row">
+      <div class="key">Re-scoring частота</div>
+      <div class="val">
+        <div class="select-pill">
+          <button>1h</button>
+          <button class="active">6h</button>
+          <button>12h</button>
+          <button>24h</button>
+        </div>
+      </div>
+      <span></span>
+    </div>
+  </div>
+
+  <!-- NOTIFICATIONS -->
+  <div class="sec-head"><span class="sec-num">/03</span><span class="sec-title">Уведомления Илье</span><span class="sec-spacer"></span></div>
+
+  <div class="panel">
+    <div class="row">
+      <div class="key">Утренний дайджест</div>
+      <div class="val status-on">● 09:00 ежедневно</div>
+      <div class="toggle on"></div>
+    </div>
+    <div class="row">
+      <div class="key">Вечерний дайджест</div>
+      <div class="val status-on">● 21:00 ежедневно</div>
+      <div class="toggle on"></div>
+    </div>
+    <div class="row">
+      <div class="key">Недельный отчёт</div>
+      <div class="val status-on">● ПН 10:00</div>
+      <div class="toggle on"></div>
+    </div>
+    <div class="row">
+      <div class="key">Эскалации</div>
+      <div class="val status-on">● мгновенно</div>
+      <div class="toggle on"></div>
+    </div>
+    <div class="row">
+      <div class="key">Оплата получена</div>
+      <div class="val status-on">● мгновенно</div>
+      <div class="toggle on"></div>
+    </div>
+    <div class="row">
+      <div class="key">Горячий лид без ответа &gt; 30 мин</div>
+      <div class="val status-on">● ВКЛ</div>
+      <div class="toggle on"></div>
+    </div>
+  </div>
+
+  <!-- SAVE BAR -->
+  <div class="save-band">
+    <span class="label">● 3 изменения · не сохранено</span>
+    <button>СОХРАНИТЬ КОНФИГУРАЦИЮ</button>
+  </div>
+
+</main>
+
+<script src="/assets/sidebar.js" defer></script>
+<script>
+  document.querySelectorAll('.toggle').forEach(t => t.addEventListener('click', () => t.classList.toggle('on')));
+  document.querySelectorAll('.select-pill').forEach(sp => {
+    sp.querySelectorAll('button').forEach(b => b.addEventListener('click', () => {
+      sp.querySelectorAll('button').forEach(x => x.classList.remove('active'));
+      b.classList.add('active');
+    }));
+  });
+</script>
+
+</body>
+</html>

@@ -14,6 +14,7 @@ support services and a legacy static site kept for reference.
 │   ├── transcribe/   # Next.js 14 app + Telegram Mini App (the flagship)
 │   ├── tg-agent/     # Node.js Telegram group AI agent (Railway, long-polling)
 │   ├── ytdlp/        # FastAPI + yt-dlp companion microservice (Railway)
+│   ├── ai-sales/     # Multi-agent IG+TG sales system (FastAPI on Hetzner + Netlify portal)
 │   └── ai-office/    # legacy static "AI Business Command Center" site
 ├── packages/         # reserved for shared code (empty)
 ├── supabase/         # SQL migrations shared across apps
@@ -21,7 +22,8 @@ support services and a legacy static site kept for reference.
 ```
 
 `apps/transcribe` and `apps/tg-agent` are node workspaces; `apps/ytdlp`
-is Python and `apps/ai-office` is static HTML. Root `package.json`
+and `apps/ai-sales/code` are Python; `apps/ai-office` and the
+`apps/ai-sales` portal/dashboard prototype are static HTML. Root `package.json`
 proxies `dev/build/start/lint` to `apps/transcribe` and exposes
 `tg-agent:dev|build|start|typecheck` for the Telegram agent.
 
@@ -335,6 +337,40 @@ Pipeline (`apps/tg-agent/src/bot.ts`):
   compose up -d --build`. See the app's README for the full deploy
   walkthrough including Caddy/Cloudflare Tunnel for HTTPS and a
   backup cron snippet.
+
+
+## AI Sales System (ai-sales)
+
+`apps/ai-sales/` — multi-agent sales system for Instagram + Telegram.
+Replaces a human sales manager with 4 Claude-backed agents (IG-manager,
+TG-manager, Analyst, ROP/head-of-sales). The owner's voice is cloned via
+ElevenLabs PVC and all agents read a shared RAG knowledge base.
+
+The codebase is **a snapshot/backup**, not a node workspace — root
+`package.json` does not proxy commands here. Two deployable pieces:
+
+- **Static portal + dashboard prototype** (root + `01-portal/` +
+  `06-dashboard-prototype/`) deploys to **Netlify** via `netlify.toml`.
+  Pure HTML, no build step. Configured redirects: `/dashboard`,
+  `/pulse`, `/pipeline`, `/conv`, `/project`, `/agents`, `/portal`,
+  `/roadmap` → corresponding HTML files.
+- **FastAPI backend** in `apps/ai-sales/code/` — Python 3.12 +
+  LangGraph + Anthropic SDK + Qdrant + Postgres + Redis + MinIO.
+  Deploys to **Hetzner CPX31** via the bundled `docker-compose.yml`
+  (5 services: postgres, redis, qdrant, minio, api). `AISALES_MOCK=1`
+  runs the agents without real API keys for local dev. See
+  `apps/ai-sales/code/DEPLOY.md` for the server walkthrough.
+
+SQL schema in `apps/ai-sales/04-database/` (8 tables: clients,
+conversations, messages, etc.) is auto-loaded into Postgres on first
+container start via `docker-entrypoint-initdb.d`.
+
+Agent system prompts live in `apps/ai-sales/agent-prompts/` and are
+loaded at startup by `code/agents/prompts_loader.py`. The voice/tone
+input collected for ElevenLabs lives in `apps/ai-sales/voice-input/`.
+
+Env contract: `apps/ai-sales/code/.env.example` lists every key. See
+`apps/ai-sales/README.md` for the full project status & infra notes.
 
 
 ## Conventions

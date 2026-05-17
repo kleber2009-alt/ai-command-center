@@ -1,0 +1,1130 @@
+<!DOCTYPE html>
+<html lang="ru">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover">
+<title>AI Sales System — Дорожная карта</title>
+<style>
+  * { margin: 0; padding: 0; box-sizing: border-box; -webkit-tap-highlight-color: transparent; }
+  :root {
+    --bg: #080808;
+    --text: #f5f0e8;
+    --lime: #c8f060;
+    --cyan: #60c8f0;
+    --pink: #f06090;
+    --muted: rgba(245, 240, 232, 0.55);
+    --dim: rgba(245, 240, 232, 0.35);
+    --border: rgba(245, 240, 232, 0.1);
+    --card: #131313;
+  }
+  html { -webkit-text-size-adjust: 100%; }
+  body {
+    background: var(--bg);
+    color: var(--text);
+    font-family: Georgia, serif;
+    font-size: 17px;
+    line-height: 1.6;
+    overflow-x: hidden;
+  }
+  .label {
+    font-family: 'JetBrains Mono', 'SF Mono', monospace;
+    font-size: 11px;
+    text-transform: uppercase;
+    letter-spacing: 0.12em;
+    color: var(--muted);
+  }
+  
+  .topbar {
+    position: sticky;
+    top: 0;
+    background: rgba(8, 8, 8, 0.95);
+    backdrop-filter: blur(12px);
+    -webkit-backdrop-filter: blur(12px);
+    border-bottom: 1px solid var(--border);
+    padding: 14px 20px;
+    z-index: 50;
+  }
+  .topbar-title {
+    font-family: Georgia, serif;
+    font-size: 16px;
+    line-height: 1;
+  }
+  .topbar-title .accent { color: var(--lime); font-style: italic; }
+  
+  .doc {
+    padding: 28px 20px 80px;
+    max-width: 680px;
+    margin: 0 auto;
+  }
+  
+  .doc-header {
+    margin-bottom: 32px;
+    padding-bottom: 20px;
+    border-bottom: 1px solid var(--border);
+  }
+  .doc-header .label { margin-bottom: 10px; }
+  .doc-header h1 {
+    font-family: Georgia, serif;
+    font-size: 30px;
+    font-weight: normal;
+    line-height: 1.1;
+    letter-spacing: -0.01em;
+    margin-bottom: 12px;
+  }
+  .doc-header h1 .accent { color: var(--lime); font-style: italic; }
+  .doc-header p {
+    color: var(--muted);
+    font-size: 15px;
+  }
+  
+  h2 {
+    font-family: Georgia, serif;
+    font-size: 22px;
+    font-weight: normal;
+    line-height: 1.2;
+    margin: 36px 0 8px;
+    letter-spacing: -0.01em;
+  }
+  h2 .sec {
+    display: block;
+    font-family: 'JetBrains Mono', monospace;
+    font-size: 10px;
+    color: var(--lime);
+    letter-spacing: 0.15em;
+    text-transform: uppercase;
+    margin-bottom: 4px;
+  }
+  h3 {
+    font-family: 'JetBrains Mono', monospace;
+    font-size: 11px;
+    text-transform: uppercase;
+    letter-spacing: 0.15em;
+    color: var(--lime);
+    margin: 24px 0 12px;
+    padding-bottom: 6px;
+    border-bottom: 1px solid var(--border);
+  }
+  p { margin-bottom: 14px; font-size: 16px; line-height: 1.6; }
+  .lead {
+    font-size: 17px;
+    font-style: italic;
+    margin-bottom: 20px;
+    line-height: 1.5;
+  }
+  ul, ol { margin: 12px 0 16px; padding-left: 24px; }
+  li { margin-bottom: 8px; font-size: 15px; line-height: 1.55; }
+  strong { color: var(--text); }
+  
+  .note, .warn {
+    padding: 14px 16px;
+    margin: 16px 0;
+    font-size: 14px;
+    line-height: 1.5;
+  }
+  .note {
+    background: rgba(96, 200, 240, 0.06);
+    border-left: 3px solid var(--cyan);
+  }
+  .warn {
+    background: rgba(240, 96, 144, 0.06);
+    border-left: 3px solid var(--pink);
+  }
+  
+  /* PHASE OVERVIEW */
+  .phase-overview {
+    display: flex;
+    flex-direction: column;
+    gap: 2px;
+    margin: 20px 0;
+  }
+  .phase-card {
+    background: var(--card);
+    padding: 16px 18px;
+    display: flex;
+    gap: 14px;
+    align-items: flex-start;
+  }
+  .ph-num {
+    font-family: Georgia, serif;
+    font-size: 30px;
+    color: var(--lime);
+    font-style: italic;
+    line-height: 1;
+    flex-shrink: 0;
+  }
+  .ph-body { flex: 1; }
+  .ph-title {
+    font-family: Georgia, serif;
+    font-size: 17px;
+    margin-bottom: 4px;
+    line-height: 1.3;
+  }
+  .ph-meta {
+    font-family: 'JetBrains Mono', monospace;
+    font-size: 10px;
+    text-transform: uppercase;
+    letter-spacing: 0.08em;
+    color: var(--cyan);
+    margin-bottom: 6px;
+  }
+  .ph-desc {
+    font-size: 13px;
+    color: var(--muted);
+    line-height: 1.5;
+  }
+  
+  /* DATA TABLE */
+  .data-table { margin: 16px 0; }
+  .dt-row {
+    background: var(--card);
+    padding: 14px 16px;
+    margin-bottom: 2px;
+  }
+  .dt-field {
+    display: flex;
+    justify-content: space-between;
+    align-items: baseline;
+    padding: 6px 0;
+    border-bottom: 1px dotted rgba(245, 240, 232, 0.06);
+    gap: 12px;
+  }
+  .dt-field:last-child { border-bottom: none; }
+  .dt-label {
+    font-family: 'JetBrains Mono', monospace;
+    font-size: 10px;
+    text-transform: uppercase;
+    letter-spacing: 0.1em;
+    color: var(--muted);
+    flex-shrink: 0;
+  }
+  .dt-value {
+    font-size: 14px;
+    text-align: right;
+    line-height: 1.4;
+  }
+  .dt-value.lime { color: var(--lime); }
+  .dt-value.cyan { color: var(--cyan); }
+  
+  /* GANTT */
+  .gantt-card {
+    background: var(--card);
+    padding: 18px 16px;
+    margin: 20px 0;
+    overflow-x: auto;
+    -webkit-overflow-scrolling: touch;
+  }
+  .gantt-row {
+    display: grid;
+    grid-template-columns: 86px 1fr;
+    gap: 10px;
+    align-items: center;
+    padding: 7px 0;
+    border-bottom: 1px dotted rgba(245,240,232,0.06);
+  }
+  .gantt-row:last-child { border-bottom: none; }
+  .gantt-label {
+    font-family: 'JetBrains Mono', monospace;
+    font-size: 10px;
+    text-transform: uppercase;
+    letter-spacing: 0.05em;
+    color: var(--muted);
+    line-height: 1.3;
+  }
+  .gantt-bar-wrap {
+    position: relative;
+    height: 20px;
+    background: rgba(245,240,232,0.04);
+  }
+  .gantt-bar {
+    position: absolute;
+    top: 0;
+    bottom: 0;
+    background: var(--lime);
+    opacity: 0.85;
+  }
+  .gantt-bar.c2 { background: var(--cyan); }
+  .gantt-bar.c3 { background: var(--pink); }
+  .gantt-weeks {
+    display: grid;
+    grid-template-columns: 86px 1fr;
+    gap: 10px;
+    margin-bottom: 10px;
+    font-family: 'JetBrains Mono', monospace;
+    font-size: 9px;
+    color: var(--dim);
+  }
+  .gantt-weeks-grid {
+    display: grid;
+    grid-template-columns: repeat(12, 1fr);
+    text-align: center;
+  }
+  
+  /* STACK */
+  .stack-card {
+    background: var(--card);
+    padding: 18px 20px;
+    margin-bottom: 2px;
+  }
+  .stack-card .role {
+    font-family: 'JetBrains Mono', monospace;
+    font-size: 10px;
+    text-transform: uppercase;
+    letter-spacing: 0.12em;
+    color: var(--lime);
+    margin-bottom: 6px;
+  }
+  .stack-card .tech {
+    font-family: Georgia, serif;
+    font-size: 17px;
+    line-height: 1.3;
+    margin-bottom: 6px;
+  }
+  .stack-card .why {
+    font-size: 13px;
+    color: var(--muted);
+    line-height: 1.45;
+  }
+  
+  /* TIMELINE STAGES */
+  .tl-stage {
+    background: var(--card);
+    padding: 22px 20px;
+    margin-bottom: 2px;
+  }
+  .tl-head {
+    display: flex;
+    align-items: flex-start;
+    gap: 14px;
+    margin-bottom: 14px;
+  }
+  .tl-num {
+    font-family: Georgia, serif;
+    font-size: 28px;
+    color: var(--lime);
+    font-style: italic;
+    line-height: 1;
+    flex-shrink: 0;
+    padding-top: 2px;
+  }
+  .tl-body { flex: 1; min-width: 0; }
+  .tl-title {
+    font-family: Georgia, serif;
+    font-size: 19px;
+    line-height: 1.25;
+    margin-bottom: 4px;
+  }
+  .tl-meta {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 6px 12px;
+    font-family: 'JetBrains Mono', monospace;
+    font-size: 10px;
+    text-transform: uppercase;
+    letter-spacing: 0.08em;
+    color: var(--muted);
+  }
+  .tl-meta .week { color: var(--cyan); }
+  .tl-meta .pri-1 { color: var(--pink); }
+  .tl-meta .pri-2 { color: var(--cyan); }
+  .tl-meta .pri-3 { color: var(--lime); }
+  .tl-goal {
+    font-size: 14px;
+    line-height: 1.5;
+    color: var(--text);
+    margin-bottom: 14px;
+    font-style: italic;
+    padding-left: 12px;
+    border-left: 2px solid var(--lime);
+  }
+  .tl-tasks {
+    list-style: none !important;
+    padding-left: 0 !important;
+    margin: 0 !important;
+  }
+  .tl-tasks li {
+    display: flex;
+    gap: 10px;
+    padding: 8px 0;
+    font-size: 14px;
+    line-height: 1.45;
+    border-bottom: 1px dotted rgba(245,240,232,0.06);
+  }
+  .tl-tasks li:last-child { border-bottom: none; }
+  .tl-tasks li::before {
+    content: '☐';
+    color: var(--lime);
+    font-family: 'JetBrains Mono', monospace;
+    font-size: 15px;
+    flex-shrink: 0;
+    line-height: 1.4;
+  }
+  .task-meta {
+    display: block;
+    font-family: 'JetBrains Mono', monospace;
+    font-size: 10px;
+    color: var(--muted);
+    letter-spacing: 0.06em;
+    margin-top: 3px;
+  }
+  .tl-deliv {
+    margin-top: 14px;
+    padding-top: 12px;
+    border-top: 1px solid var(--border);
+    font-family: 'JetBrains Mono', monospace;
+    font-size: 11px;
+    text-transform: uppercase;
+    letter-spacing: 0.1em;
+    color: var(--cyan);
+    line-height: 1.5;
+  }
+  .tl-deliv::before { content: '◆ '; }
+  
+  /* RISK MATRIX */
+  .risk-matrix {
+    display: flex;
+    flex-direction: column;
+    gap: 2px;
+    margin: 18px 0;
+  }
+  .risk-item {
+    background: var(--card);
+    padding: 16px 18px;
+  }
+  .risk-head {
+    display: flex;
+    justify-content: space-between;
+    align-items: baseline;
+    margin-bottom: 8px;
+    gap: 10px;
+  }
+  .risk-name {
+    font-family: Georgia, serif;
+    font-size: 16px;
+    line-height: 1.3;
+    flex: 1;
+  }
+  .risk-badge {
+    font-family: 'JetBrains Mono', monospace;
+    font-size: 9px;
+    text-transform: uppercase;
+    letter-spacing: 0.1em;
+    padding: 3px 8px;
+    flex-shrink: 0;
+  }
+  .risk-badge.hi { background: rgba(240,96,144,0.15); color: var(--pink); }
+  .risk-badge.md { background: rgba(96,200,240,0.15); color: var(--cyan); }
+  .risk-badge.lo { background: rgba(200,240,96,0.15); color: var(--lime); }
+  .risk-body {
+    font-size: 13px;
+    line-height: 1.5;
+    color: var(--muted);
+    margin-bottom: 8px;
+  }
+  .risk-fix {
+    font-size: 12px;
+    line-height: 1.5;
+    color: var(--lime);
+    font-family: 'JetBrains Mono', monospace;
+  }
+  .risk-fix::before { content: '→ '; }
+  
+  /* CHECKLIST */
+  .checklist {
+    list-style: none !important;
+    padding-left: 0 !important;
+    margin: 12px 0;
+  }
+  .checklist li {
+    padding: 12px 0;
+    border-bottom: 1px dotted rgba(245, 240, 232, 0.08);
+    font-size: 15px;
+    line-height: 1.5;
+    display: flex;
+    gap: 12px;
+    align-items: flex-start;
+  }
+  .checklist li:last-child { border-bottom: none; }
+  .checklist li::before {
+    content: '☐';
+    color: var(--lime);
+    font-family: 'JetBrains Mono', monospace;
+    font-size: 17px;
+    flex-shrink: 0;
+  }
+  .checklist .count {
+    display: block;
+    font-family: 'JetBrains Mono', monospace;
+    font-size: 11px;
+    color: var(--lime);
+    margin-top: 4px;
+  }
+  
+  .doc-footer {
+    margin-top: 48px;
+    padding-top: 24px;
+    border-top: 1px solid var(--border);
+    text-align: center;
+    font-family: 'JetBrains Mono', monospace;
+    font-size: 10px;
+    text-transform: uppercase;
+    letter-spacing: 0.12em;
+    color: var(--muted);
+    line-height: 1.8;
+  }
+  
+  @media (min-width: 768px) {
+    .topbar { padding: 16px 32px; }
+    .doc { padding: 40px 32px 100px; }
+    .doc-header h1 { font-size: 40px; }
+    h2 { font-size: 28px; }
+  }
+</style>
+</head>
+<body>
+
+<header class="topbar">
+  <div class="topbar-title">AI Sales <span class="accent">System</span> · Roadmap</div>
+</header>
+
+<main class="doc">
+  <header class="doc-header">
+    <div class="label">Document 00 / Roadmap</div>
+    <h1>Дорожная <span class="accent">карта</span></h1>
+    <p>9 этапов, 12 недель от первого решения до запуска первого агента. По этому плану работаем.</p>
+  </header>
+
+  <h2><span class="sec">Section 01</span>Контур проекта</h2>
+  <p class="lead">Что строим — конкретно.</p>
+  
+  <h3>6 элементов системы</h3>
+  <div class="phase-overview">
+    <div class="phase-card">
+      <div class="ph-num">1</div>
+      <div class="ph-body">
+        <div class="ph-title">IG-агент в директе</div>
+        <div class="ph-meta">Менеджер</div>
+        <div class="ph-desc">Текст + аудио из базы знаний с пониманием контекста</div>
+      </div>
+    </div>
+    <div class="phase-card">
+      <div class="ph-num">2</div>
+      <div class="ph-body">
+        <div class="ph-title">TG-агент в личном Telegram</div>
+        <div class="ph-meta">Менеджер продаж</div>
+        <div class="ph-desc">Кружочки, аудио, текст от твоего лица</div>
+      </div>
+    </div>
+    <div class="phase-card">
+      <div class="ph-num">3</div>
+      <div class="ph-body">
+        <div class="ph-title">Аналитик</div>
+        <div class="ph-meta">QA + рекомендации</div>
+        <div class="ph-desc">Читает переписки, даёт правки агентам, эскалирует</div>
+      </div>
+    </div>
+    <div class="phase-card">
+      <div class="ph-num">4</div>
+      <div class="ph-body">
+        <div class="ph-title">РОП</div>
+        <div class="ph-meta">Управление</div>
+        <div class="ph-desc">План, дайджесты, постановка задач, алерты по горячим лидам</div>
+      </div>
+    </div>
+    <div class="phase-card">
+      <div class="ph-num">5</div>
+      <div class="ph-body">
+        <div class="ph-title">База знаний</div>
+        <div class="ph-meta">Источник истины</div>
+        <div class="ph-desc">RAG, Notion → Qdrant, на ней обучаются все агенты</div>
+      </div>
+    </div>
+    <div class="phase-card">
+      <div class="ph-num">6</div>
+      <div class="ph-body">
+        <div class="ph-title">Дашборд CRM</div>
+        <div class="ph-meta">Управление и контроль</div>
+        <div class="ph-desc">Путь клиента, статусы, действия, метрики, аналитика</div>
+      </div>
+    </div>
+  </div>
+
+  <h3>Ключевые решения</h3>
+  <div class="data-table">
+    <div class="dt-row">
+      <div class="dt-field"><span class="dt-label">LLM</span><span class="dt-value lime">Claude Opus 4.7</span></div>
+      <div class="dt-field"><span class="dt-label">Контекст</span><span class="dt-value">актуальный, отлично понимает русский</span></div>
+    </div>
+    <div class="dt-row">
+      <div class="dt-field"><span class="dt-label">Подход</span><span class="dt-value lime">Платформа</span></div>
+      <div class="dt-field"><span class="dt-label">Контекст</span><span class="dt-value">единая система, агенты — модули на ней</span></div>
+    </div>
+    <div class="dt-row">
+      <div class="dt-field"><span class="dt-label">Каналы</span><span class="dt-value lime">IG + TG</span></div>
+      <div class="dt-field"><span class="dt-label">Контекст</span><span class="dt-value">личные аккаунты, не публичные боты</span></div>
+    </div>
+    <div class="dt-row">
+      <div class="dt-field"><span class="dt-label">Модальности</span><span class="dt-value lime">текст + аудио + видео</span></div>
+      <div class="dt-field"><span class="dt-label">Контекст</span><span class="dt-value">клон голоса + кружочки в TG</span></div>
+    </div>
+  </div>
+
+  <h2><span class="sec">Section 02</span>Сроки</h2>
+  <p class="lead">12 недель от старта до запуска первого агента в боевой режим. Этапы 1–3 идут параллельно.</p>
+  
+  <div class="gantt-card">
+    <div class="gantt-weeks">
+      <div></div>
+      <div class="gantt-weeks-grid">
+        <div>1</div><div>2</div><div>3</div><div>4</div><div>5</div><div>6</div><div>7</div><div>8</div><div>9</div><div>10</div><div>11</div><div>12</div>
+      </div>
+    </div>
+    <div class="gantt-row">
+      <div class="gantt-label">01 Фундамент</div>
+      <div class="gantt-bar-wrap"><div class="gantt-bar" style="left:0%; width:16.6%"></div></div>
+    </div>
+    <div class="gantt-row">
+      <div class="gantt-label">02 Голос</div>
+      <div class="gantt-bar-wrap"><div class="gantt-bar c2" style="left:8.3%; width:25%"></div></div>
+    </div>
+    <div class="gantt-row">
+      <div class="gantt-label">03 Юр-пакет</div>
+      <div class="gantt-bar-wrap"><div class="gantt-bar c3" style="left:8.3%; width:25%"></div></div>
+    </div>
+    <div class="gantt-row">
+      <div class="gantt-label">04 База знаний</div>
+      <div class="gantt-bar-wrap"><div class="gantt-bar c2" style="left:16.6%; width:33.3%"></div></div>
+    </div>
+    <div class="gantt-row">
+      <div class="gantt-label">05 Платформа</div>
+      <div class="gantt-bar-wrap"><div class="gantt-bar" style="left:16.6%; width:41.7%"></div></div>
+    </div>
+    <div class="gantt-row">
+      <div class="gantt-label">06 IG-агент</div>
+      <div class="gantt-bar-wrap"><div class="gantt-bar" style="left:41.7%; width:25%"></div></div>
+    </div>
+    <div class="gantt-row">
+      <div class="gantt-label">07 TG-агент</div>
+      <div class="gantt-bar-wrap"><div class="gantt-bar" style="left:50%; width:25%"></div></div>
+    </div>
+    <div class="gantt-row">
+      <div class="gantt-label">08 Аналит+РОП</div>
+      <div class="gantt-bar-wrap"><div class="gantt-bar c2" style="left:58.3%; width:25%"></div></div>
+    </div>
+    <div class="gantt-row">
+      <div class="gantt-label">09 Запуск</div>
+      <div class="gantt-bar-wrap"><div class="gantt-bar c3" style="left:75%; width:25%"></div></div>
+    </div>
+  </div>
+  
+  <div class="note">Этапы 1–3 параллельны: ты наполняешь конституцию и собираешь голос, юрист готовит пакет, разработчики поднимают платформу.</div>
+
+  <h2><span class="sec">Section 03</span>Стек</h2>
+  <p class="lead">Что выбрали и почему.</p>
+  
+  <div class="stack-card">
+    <div class="role">LLM</div>
+    <div class="tech">Claude Opus 4.7 + Sonnet 4.6 + Haiku 4.5</div>
+    <div class="why">Opus — мозг агентов на сложных задачах. Sonnet — для Аналитика и фоновых. Haiku — классификация и быстрые действия. Маршрутизация экономит до 70% бюджета</div>
+  </div>
+  <div class="stack-card">
+    <div class="role">RAG</div>
+    <div class="tech">Voyage-3 + Qdrant self-hosted</div>
+    <div class="why">Voyage-3 — лучшие эмбеддинги для русского. Qdrant — self-hosted, контроль над данными для 152-ФЗ</div>
+  </div>
+  <div class="stack-card">
+    <div class="role">Голос</div>
+    <div class="tech">ElevenLabs Professional Voice Clone</div>
+    <div class="why">Лучшее клонирование голоса на русском. Кэш популярных фраз снижает API-стоимость в 3–5 раз</div>
+  </div>
+  <div class="stack-card">
+    <div class="role">Видео-кружочки</div>
+    <div class="tech">HeyGen + Wav2Lip гибрид</div>
+    <div class="why">HeyGen — генеративный аватар для редких сценариев. Wav2Lip — подмена губ на твоих живых кружочках, естественнее</div>
+  </div>
+  <div class="stack-card">
+    <div class="role">Транскрипция</div>
+    <div class="tech">Whisper Large v3</div>
+    <div class="why">Распознаёт входящие аудио клиентов. На GPU быстрее в 5–10 раз</div>
+  </div>
+  <div class="stack-card">
+    <div class="role">Бэкенд</div>
+    <div class="tech">Python 3.12 + FastAPI + LangGraph</div>
+    <div class="why">LangGraph — оркестрация мульти-агентного state machine, идеально для 4 ролей</div>
+  </div>
+  <div class="stack-card">
+    <div class="role">Очереди</div>
+    <div class="tech">Redis + Celery</div>
+    <div class="why">Человеческие паузы перед ответом, retry, отложенные дожимы, кэш аудио</div>
+  </div>
+  <div class="stack-card">
+    <div class="role">База данных</div>
+    <div class="tech">PostgreSQL 16</div>
+    <div class="why">Клиенты, диалоги, действия, аналитика. Шифрование на уровне таблиц</div>
+  </div>
+  <div class="stack-card">
+    <div class="role">Дашборд</div>
+    <div class="tech">Next.js 15 + shadcn/ui</div>
+    <div class="why">Дизайн-система AI Mastery встроена. Server Components для скорости</div>
+  </div>
+  <div class="stack-card">
+    <div class="role">Хостинг</div>
+    <div class="tech">Selectel VPS (РФ) + Hetzner (бэкап)</div>
+    <div class="why">152-ФЗ требует данные россиян в РФ. Selectel 8CPU/32GB на старт</div>
+  </div>
+  <div class="stack-card">
+    <div class="role">Каналы</div>
+    <div class="tech">IG Graph API + Telegram MTProto</div>
+    <div class="why">IG — официально через Business-аккаунт. TG — MTProto-сессия через Telethon для личного аккаунта</div>
+  </div>
+  <div class="stack-card">
+    <div class="role">Мониторинг</div>
+    <div class="tech">Grafana + Prometheus + Loki</div>
+    <div class="why">Метрики, логи, алерты на сбои и аномалии в поведении агентов</div>
+  </div>
+
+  <h2><span class="sec">Section 04</span>Этапы и задачи</h2>
+  <p class="lead">9 этапов. У каждого — цель, задачи, исполнитель, deliverable.</p>
+  
+  <div class="tl-stage">
+    <div class="tl-head">
+      <div class="tl-num">01</div>
+      <div class="tl-body">
+        <div class="tl-title">Фундамент</div>
+        <div class="tl-meta">
+          <span class="week">Неделя 1–2</span>
+          <span class="pri-1">P0 / блокирующий</span>
+          <span>Ты + Claude</span>
+        </div>
+      </div>
+    </div>
+    <div class="tl-goal">Зафиксировать конституцию: продукт, ICP, KPI, тон, эскалации, red lines.</div>
+    <ul class="tl-tasks">
+      <li><div>Заполнить конституцию: продукт + УТП + соц.доказательства<span class="task-meta">→ документ 01 раздел 02</span></div></li>
+      <li><div>Описать 2–3 сегмента ICP с болями, страхами, возражениями<span class="task-meta">→ переиспользовать исследование 524 ответов</span></div></li>
+      <li><div>Прописать воронку 7 этапов: цели, действия, выходы<span class="task-meta">→ документ 01 раздел 04</span></div></li>
+      <li><div>Сформулировать тон голоса: 5 прилагательных, маркеры, запрещённые слова<span class="task-meta">→ документ 01 раздел 06</span></div></li>
+      <li><div>Зафиксировать триггеры эскалации жёсткие и мягкие<span class="task-meta">→ документ 01 раздел 07</span></div></li>
+      <li><div>Утвердить red lines — что строго нельзя<span class="task-meta">→ документ 01 раздел 08</span></div></li>
+      <li><div>Назначить ответственного за CRM-сопровождение и эскалации<span class="task-meta">→ роль + SLA</span></div></li>
+    </ul>
+    <div class="tl-deliv">Готовая Конституция проекта v1.0</div>
+  </div>
+  
+  <div class="tl-stage">
+    <div class="tl-head">
+      <div class="tl-num">02</div>
+      <div class="tl-body">
+        <div class="tl-title">Сбор голоса</div>
+        <div class="tl-meta">
+          <span class="week">Неделя 2–4</span>
+          <span class="pri-1">P0 / параллельно</span>
+          <span>Ты</span>
+        </div>
+      </div>
+    </div>
+    <div class="tl-goal">Собрать тексты, аудио и видео — материал, на котором обучатся агенты.</div>
+    <ul class="tl-tasks">
+      <li><div>Выгрузить архив Instagram Direct через Your Activity → Download<span class="task-meta">→ 1 час</span></div></li>
+      <li><div>Выгрузить архив Telegram (Settings → Export Chat History)<span class="task-meta">→ 1 час</span></div></li>
+      <li><div>Отобрать 100+ образцов сообщений по 10 категориям<span class="task-meta">→ Google Sheet</span></div></li>
+      <li><div>Заказать конденсаторный USB-микрофон (Rode NT-USB / Shure MV7)<span class="task-meta">→ 15–30 тыс ₽</span></div></li>
+      <li><div>Подготовить тихое помещение, проверить уровни записи<span class="task-meta">→ 1–2 часа</span></div></li>
+      <li><div>Записать 30+ минут чистого голоса по сценариям<span class="task-meta">→ 48 кГц / 24 бит / WAV</span></div></li>
+      <li><div>Загрузить в ElevenLabs, создать Professional Voice Clone<span class="task-meta">→ результат через 24 часа</span></div></li>
+      <li><div>Снять 20+ нейтральных кружочков 30–60 сек для Wav2Lip<span class="task-meta">→ 640×640 минимум</span></div></li>
+      <li><div>Тестовая генерация: кружочек с синтезированной речью<span class="task-meta">→ финальная проверка</span></div></li>
+    </ul>
+    <div class="tl-deliv">Голосовая модель + видео-шаблоны + 100 текстовых образцов</div>
+  </div>
+  
+  <div class="tl-stage">
+    <div class="tl-head">
+      <div class="tl-num">03</div>
+      <div class="tl-body">
+        <div class="tl-title">Юридический пакет</div>
+        <div class="tl-meta">
+          <span class="week">Неделя 2–4</span>
+          <span class="pri-1">P0 / параллельно</span>
+          <span>Юрист + ты</span>
+        </div>
+      </div>
+    </div>
+    <div class="tl-goal">Закрыть юридические риски до первого реального диалога с клиентом.</div>
+    <ul class="tl-tasks">
+      <li><div>Найти IT-юриста с практикой 152-ФЗ + AI<span class="task-meta">→ 30–80 тыс ₽ за пакет</span></div></li>
+      <li><div>Подготовить политику обработки ПДн (152-ФЗ + GDPR)<span class="task-meta">→ шаблон + кастом</span></div></li>
+      <li><div>Подготовить отдельное согласие на обработку<span class="task-meta">→ для лидформ</span></div></li>
+      <li><div>Подготовить публичную оферту<span class="task-meta">→ на продукт</span></div></li>
+      <li><div>Уведомить Роскомнадзор о начале обработки ПДн<span class="task-meta">→ rkn.gov.ru</span></div></li>
+      <li><div>Согласие на трансграничную передачу (Claude API в США)<span class="task-meta">→ обязательно для РКН</span></div></li>
+      <li><div>Согласовать тексты дисклеймера для bio / закрепа / первого сообщения<span class="task-meta">→ документ 03 раздел 02</span></div></li>
+      <li><div>Регламент реакции на запросы субъектов (удаление, доступ)<span class="task-meta">→ внутренний</span></div></li>
+      <li><div>Реестр обработки ПДн (внутренний документ)<span class="task-meta">→ обязательно по 152-ФЗ</span></div></li>
+    </ul>
+    <div class="tl-deliv">Полный юридический пакет: 10 документов + уведомление РКН</div>
+  </div>
+  
+  <div class="tl-stage">
+    <div class="tl-head">
+      <div class="tl-num">04</div>
+      <div class="tl-body">
+        <div class="tl-title">База знаний</div>
+        <div class="tl-meta">
+          <span class="week">Неделя 3–6</span>
+          <span class="pri-1">P0 / параллельно</span>
+          <span>Ты + редактор + разработчик</span>
+        </div>
+      </div>
+    </div>
+    <div class="tl-goal">Наполнить 10 коллекций до MVP-объёма, запустить синк Notion → Qdrant.</div>
+    <ul class="tl-tasks">
+      <li><div>Создать структуру в Notion (10 коллекций, схема документа)<span class="task-meta">→ документ 04 раздел 02</span></div></li>
+      <li><div>Описать продукт: 5 документов (обзор, тарифы, программа, бонусы, команда)<span class="task-meta">→ ты</span></div></li>
+      <li><div>Адаптировать 3 сегмента ICP в документы базы<span class="task-meta">→ из исследования 524</span></div></li>
+      <li><div>Написать скрипты для 6 этапов воронки (минимум по 1)<span class="task-meta">→ ты + редактор</span></div></li>
+      <li><div>Создать банк 20 базовых возражений с 2–3 формулировками ответа<span class="task-meta">→ из реальных переписок</span></div></li>
+      <li><div>Описать 5 ярких кейсов (с согласием клиентов)<span class="task-meta">→ для социального доказательства</span></div></li>
+      <li><div>Внести голос бренда: правила, словарь, запрещённое<span class="task-meta">→ из этапа 02</span></div></li>
+      <li><div>Составить FAQ (15 вопросов)<span class="task-meta">→ оплата, гарантии, доступ</span></div></li>
+      <li><div>Развернуть Qdrant на VPS<span class="task-meta">→ self-hosted</span></div></li>
+      <li><div>Написать парсер Notion API → чанкинг → Voyage-3 → Qdrant<span class="task-meta">→ Python скрипт</span></div></li>
+      <li><div>Настроить cron-синк каждые 5 минут<span class="task-meta">→ только status=published</span></div></li>
+      <li><div>Протестировать поиск: запросы агента → топ-5 чанков<span class="task-meta">→ hybrid + rerank</span></div></li>
+    </ul>
+    <div class="tl-deliv">Рабочая RAG-база с MVP-наполнением + автосинк</div>
+  </div>
+  
+  <div class="tl-stage">
+    <div class="tl-head">
+      <div class="tl-num">05</div>
+      <div class="tl-body">
+        <div class="tl-title">Платформа</div>
+        <div class="tl-meta">
+          <span class="week">Неделя 3–7</span>
+          <span class="pri-1">P0 / основной</span>
+          <span>Разработчики (2 чел.)</span>
+        </div>
+      </div>
+    </div>
+    <div class="tl-goal">Развернуть инфраструктуру, базу данных, оркестратор. На неё навешиваются агенты.</div>
+    <ul class="tl-tasks">
+      <li><div>Арендовать VPS Selectel 8CPU/32GB в РФ<span class="task-meta">→ для 152-ФЗ</span></div></li>
+      <li><div>Настроить Docker / docker-compose, домены, SSL<span class="task-meta">→ DevOps базовая</span></div></li>
+      <li><div>Развернуть PostgreSQL 16 + миграции<span class="task-meta">→ Alembic</span></div></li>
+      <li><div>Создать схему БД: clients, conversations, messages, actions, analytics<span class="task-meta">→ документ 05 раздел 05</span></div></li>
+      <li><div>Развернуть Redis + Celery для очередей и пауз<span class="task-meta">→ человеческие задержки</span></div></li>
+      <li><div>Базовый FastAPI: эндпоинты входа сообщений, статусы<span class="task-meta">→ webhooks от каналов</span></div></li>
+      <li><div>Подключить Claude API (Opus 4.7 / Sonnet 4.6 / Haiku 4.5)<span class="task-meta">→ ключи + лимиты</span></div></li>
+      <li><div>Настроить LangGraph оркестратор для 4 агентов<span class="task-meta">→ state machine</span></div></li>
+      <li><div>Интегрировать ElevenLabs API + кэш аудио<span class="task-meta">→ Redis blob</span></div></li>
+      <li><div>Интегрировать Whisper Large v3 для входящих аудио<span class="task-meta">→ self-hosted GPU или OpenAI API</span></div></li>
+      <li><div>Развернуть Grafana + Prometheus + Loki<span class="task-meta">→ мониторинг + алерты</span></div></li>
+      <li><div>GitHub Actions: тесты + автодеплой<span class="task-meta">→ CI/CD</span></div></li>
+      <li><div>Бэкапы PostgreSQL ежедневные, шифрованные<span class="task-meta">→ S3 / Selectel Cloud Storage</span></div></li>
+    </ul>
+    <div class="tl-deliv">Работающая инфраструктура: API, БД, очереди, мониторинг</div>
+  </div>
+  
+  <div class="tl-stage">
+    <div class="tl-head">
+      <div class="tl-num">06</div>
+      <div class="tl-body">
+        <div class="tl-title">IG-агент</div>
+        <div class="tl-meta">
+          <span class="week">Неделя 6–8</span>
+          <span class="pri-2">P1 / на платформе</span>
+          <span>Разработчики + ты</span>
+        </div>
+      </div>
+    </div>
+    <div class="tl-goal">Первый рабочий агент: входящие в IG Direct, текст + аудио, ведёт до этапа Close.</div>
+    <ul class="tl-tasks">
+      <li><div>Перевести Instagram-аккаунт в Business / Creator<span class="task-meta">→ обязательно для Graph API</span></div></li>
+      <li><div>Зарегистрировать Meta-приложение, получить Page Access Token<span class="task-meta">→ developers.facebook.com</span></div></li>
+      <li><div>Запросить разрешения instagram_manage_messages<span class="task-meta">→ App Review</span></div></li>
+      <li><div>Настроить вебхук для входящих сообщений<span class="task-meta">→ POST на наш API</span></div></li>
+      <li><div>Написать промпт IG-агента (роль, тон, ограничения, формат вывода)<span class="task-meta">→ Claude Opus 4.7</span></div></li>
+      <li><div>Flow: вход → классификатор сегмента → этап воронки → RAG → ответ<span class="task-meta">→ LangGraph</span></div></li>
+      <li><div>Логика «человеческих пауз» (5–60 сек, разные по времени суток)<span class="task-meta">→ Celery delay</span></div></li>
+      <li><div>Решение «текст / аудио» (вероятность + контекст)<span class="task-meta">→ примерно 30% аудио</span></div></li>
+      <li><div>Генерация аудио через ElevenLabs + кэш популярных<span class="task-meta">→ снижение расходов</span></div></li>
+      <li><div>Проверка триггеров эскалации перед отправкой<span class="task-meta">→ безопасность</span></div></li>
+      <li><div>Тестовый прогон на 50 синтетических диалогах<span class="task-meta">→ QA</span></div></li>
+      <li><div>Тестирование с командой (5 человек, 1 неделя)<span class="task-meta">→ ты читаешь все ответы</span></div></li>
+    </ul>
+    <div class="tl-deliv">Работающий IG-агент в shadow mode (без отправки клиентам)</div>
+  </div>
+  
+  <div class="tl-stage">
+    <div class="tl-head">
+      <div class="tl-num">07</div>
+      <div class="tl-body">
+        <div class="tl-title">TG-агент</div>
+        <div class="tl-meta">
+          <span class="week">Неделя 7–9</span>
+          <span class="pri-2">P1 / на платформе</span>
+          <span>Разработчики + ты</span>
+        </div>
+      </div>
+    </div>
+    <div class="tl-goal">Агент в личном Telegram: текст + аудио + кружочки.</div>
+    <ul class="tl-tasks">
+      <li><div>Получить api_id и api_hash на my.telegram.org<span class="task-meta">→ для MTProto</span></div></li>
+      <li><div>Подключить Telethon с personal-сессией<span class="task-meta">→ внимательно к ToS</span></div></li>
+      <li><div>Обработчик входящих NewMessage<span class="task-meta">→ только директ, не каналы</span></div></li>
+      <li><div>Адаптировать промпт TG-агента (более неформальный тон)<span class="task-meta">→ Claude Opus 4.7</span></div></li>
+      <li><div>Решение «текст / аудио / кружочек» (вероятности)<span class="task-meta">→ 60 / 25 / 15</span></div></li>
+      <li><div>Pipeline кружочка: ElevenLabs аудио → Wav2Lip + видео-шаблон → 640×640 mp4<span class="task-meta">→ нужен GPU</span></div></li>
+      <li><div>Отправка через MTProto: send_file с типом video_note<span class="task-meta">→ круглый формат</span></div></li>
+      <li><div>Логика человеческих пауз для TG<span class="task-meta">→ Celery</span></div></li>
+      <li><div>Защита от триггеров «массовая рассылка» Telegram<span class="task-meta">→ ограничение rate</span></div></li>
+      <li><div>Тестовый прогон с командой<span class="task-meta">→ 5 человек, 1 неделя</span></div></li>
+    </ul>
+    <div class="tl-deliv">Работающий TG-агент в shadow mode</div>
+  </div>
+  
+  <div class="tl-stage">
+    <div class="tl-head">
+      <div class="tl-num">08</div>
+      <div class="tl-body">
+        <div class="tl-title">Аналитик + РОП</div>
+        <div class="tl-meta">
+          <span class="week">Неделя 8–10</span>
+          <span class="pri-2">P1 / на платформе</span>
+          <span>Разработчики</span>
+        </div>
+      </div>
+    </div>
+    <div class="tl-goal">Запустить два управляющих агента, замыкающих контур качества.</div>
+    <ul class="tl-tasks">
+      <li><div>Промпт Аналитика: чек-лист скоринга 0–100 баллов<span class="task-meta">→ Sonnet 4.6 (дешевле)</span></div></li>
+      <li><div>Cron каждый час: пройти открытые диалоги, поставить скор<span class="task-meta">→ Celery beat</span></div></li>
+      <li><div>Логика рекомендаций: конкретные фразы для агентов<span class="task-meta">→ запись в диалог</span></div></li>
+      <li><div>Эскалация диалогов со скором ≤ 40 на РОПа<span class="task-meta">→ алерт</span></div></li>
+      <li><div>Промпт РОПа: декомпозиция плана продаж<span class="task-meta">→ Opus 4.7</span></div></li>
+      <li><div>Утренний дайджест: 9:00, в Telegram тебе<span class="task-meta">→ вчера / сегодня / риски</span></div></li>
+      <li><div>Вечерний дайджест: 21:00, итоги дня<span class="task-meta">→ план vs факт</span></div></li>
+      <li><div>Алерты по горячим лидам (скор ≥ 85, готов к оплате)<span class="task-meta">→ push в TG</span></div></li>
+      <li><div>Постановка задач IG/TG-агентам через РОПа<span class="task-meta">→ внутренние сообщения</span></div></li>
+    </ul>
+    <div class="tl-deliv">Полный контур из 4 агентов работает</div>
+  </div>
+  
+  <div class="tl-stage">
+    <div class="tl-head">
+      <div class="tl-num">09</div>
+      <div class="tl-body">
+        <div class="tl-title">Дашборд и запуск</div>
+        <div class="tl-meta">
+          <span class="week">Неделя 10–12</span>
+          <span class="pri-3">P2 / параллельно с этапом 8</span>
+          <span>Frontend + ты</span>
+        </div>
+      </div>
+    </div>
+    <div class="tl-goal">Запустить CRM-дашборд и постепенно вывести систему из shadow в боевой режим.</div>
+    <ul class="tl-tasks">
+      <li><div>Развернуть Next.js 15 + shadcn/ui с дизайн-системой AI Mastery<span class="task-meta">→ документ 06</span></div></li>
+      <li><div>Авторизация: ты + назначенный оператор<span class="task-meta">→ 2 роли</span></div></li>
+      <li><div>Экран Главный: метрики + воронка + алерты + лента<span class="task-meta">→ документ 06 экран 01</span></div></li>
+      <li><div>Экран Клиенты: список с фильтрами и поиском<span class="task-meta">→ документ 06 экран 02</span></div></li>
+      <li><div>Экран Клиент: карточка с историей IG + TG, скоринг, действия<span class="task-meta">→ документ 06 экран 03</span></div></li>
+      <li><div>Экран Аналитика: графики, конверсии, A/B<span class="task-meta">→ документ 06 экран 04</span></div></li>
+      <li><div>Экран Настройки агентов: промпты, тон, A/B тесты<span class="task-meta">→ документ 06 экран 06</span></div></li>
+      <li><div>Уведомления push в Telegram тебе<span class="task-meta">→ через бота</span></div></li>
+      <li><div>Закрытый пилот: только ты + ассистент, 20–50 диалогов<span class="task-meta">→ shadow mode</span></div></li>
+      <li><div>Полу-shadow: агент пишет драфт, ты нажимаешь «отправить»<span class="task-meta">→ 1 неделя</span></div></li>
+      <li><div>Авто-режим на сегмент А с дисклеймером<span class="task-meta">→ 30% трафика</span></div></li>
+      <li><div>Постепенное расширение до 100% трафика<span class="task-meta">→ 2–3 недели</span></div></li>
+    </ul>
+    <div class="tl-deliv">Боевой запуск + CRM-дашборд для управления</div>
+  </div>
+
+  <h2><span class="sec">Section 05</span>Команда</h2>
+  <p class="lead">Что точно понадобится со стороны людей.</p>
+  
+  <div class="data-table">
+    <div class="dt-row">
+      <div class="dt-field"><span class="dt-label">Роль</span><span class="dt-value">Ты</span></div>
+      <div class="dt-field"><span class="dt-label">Загрузка</span><span class="dt-value lime">10–15 ч/нед</span></div>
+      <div class="dt-field"><span class="dt-label">Что делает</span><span class="dt-value">Решения, голос, контент базы, валидация</span></div>
+    </div>
+    <div class="dt-row">
+      <div class="dt-field"><span class="dt-label">Роль</span><span class="dt-value">Tech Lead</span></div>
+      <div class="dt-field"><span class="dt-label">Загрузка</span><span class="dt-value lime">40 ч/нед × 12</span></div>
+      <div class="dt-field"><span class="dt-label">Что делает</span><span class="dt-value">Архитектура, LangGraph, промпты, интеграции</span></div>
+    </div>
+    <div class="dt-row">
+      <div class="dt-field"><span class="dt-label">Роль</span><span class="dt-value">Backend-разработчик</span></div>
+      <div class="dt-field"><span class="dt-label">Загрузка</span><span class="dt-value lime">40 ч/нед × 10</span></div>
+      <div class="dt-field"><span class="dt-label">Что делает</span><span class="dt-value">API, БД, Celery, интеграции IG/TG</span></div>
+    </div>
+    <div class="dt-row">
+      <div class="dt-field"><span class="dt-label">Роль</span><span class="dt-value">Frontend-разработчик</span></div>
+      <div class="dt-field"><span class="dt-label">Загрузка</span><span class="dt-value lime">40 ч/нед × 4</span></div>
+      <div class="dt-field"><span class="dt-label">Что делает</span><span class="dt-value">Дашборд CRM, дизайн-система</span></div>
+    </div>
+    <div class="dt-row">
+      <div class="dt-field"><span class="dt-label">Роль</span><span class="dt-value">DevOps (part-time)</span></div>
+      <div class="dt-field"><span class="dt-label">Загрузка</span><span class="dt-value lime">10 ч/нед × 12</span></div>
+      <div class="dt-field"><span class="dt-label">Что делает</span><span class="dt-value">Серверы, мониторинг, бэкапы, безопасность</span></div>
+    </div>
+    <div class="dt-row">
+      <div class="dt-field"><span class="dt-label">Роль</span><span class="dt-value">IT-юрист</span></div>
+      <div class="dt-field"><span class="dt-label">Загрузка</span><span class="dt-value lime">фикс 30–80 тыс ₽</span></div>
+      <div class="dt-field"><span class="dt-label">Что делает</span><span class="dt-value">Пакет документов 152-ФЗ + AI Act</span></div>
+    </div>
+    <div class="dt-row">
+      <div class="dt-field"><span class="dt-label">Роль</span><span class="dt-value">Редактор / копирайтер</span></div>
+      <div class="dt-field"><span class="dt-label">Загрузка</span><span class="dt-value lime">20 ч/нед × 6</span></div>
+      <div class="dt-field"><span class="dt-label">Что делает</span><span class="dt-value">Наполнение базы знаний, скрипты, возражения</span></div>
+    </div>
+    <div class="dt-row">
+      <div class="dt-field"><span class="dt-label">Роль</span><span class="dt-value">QA / тестировщик</span></div>
+      <div class="dt-field"><span class="dt-label">Загрузка</span><span class="dt-value lime">20 ч/нед × 4</span></div>
+      <div class="dt-field"><span class="dt-label">Что делает</span><span class="dt-value">Синтетические диалоги, проверка ответов</span></div>
+    </div>
+  </div>
+
+  <h2><span class="sec">Section 06</span>Бюджет MVP</h2>
+  <p class="lead">Реалистичные диапазоны. Низ — команда по выгодным ставкам, верх — рыночный.</p>
+  
+  <h3>Разовые затраты</h3>
+  <div class="data-table">
+    <div class="dt-row">
+      <div class="dt-field"><span class="dt-label">Юридический пакет</span><span class="dt-value lime">30–80 тыс ₽</span></div>
+    </div>
+    <div class="dt-row">
+      <div class="dt-field"><span class="dt-label">Микрофон + акустика</span><span class="dt-value lime">15–40 тыс ₽</span></div>
+    </div>
+    <div class="dt-row">
+      <div class="dt-field"><span class="dt-label">ElevenLabs PVC</span><span class="dt-value lime">$99 setup</span></div>
+    </div>
+    <div class="dt-row">
+      <div class="dt-field"><span class="dt-label">Разработка 12 недель</span><span class="dt-value lime">1.5–4 млн ₽</span></div>
+    </div>
+  </div>
+  
+  <h3>Регулярные (ежемесячно)</h3>
+  <div class="data-table">
+    <div class="dt-row">
+      <div class="dt-field"><span class="dt-label">VPS Selectel</span><span class="dt-value lime">10–20 тыс ₽</span></div>
+    </div>
+    <div class="dt-row">
+      <div class="dt-field"><span class="dt-label">Claude API</span><span class="dt-value lime">$200–800</span></div>
+      <div class="dt-field"><span class="dt-label">Зависит</span><span class="dt-value">от объёма диалогов</span></div>
+    </div>
+    <div class="dt-row">
+      <div class="dt-field"><span class="dt-label">ElevenLabs Pro</span><span class="dt-value lime">$99–330</span></div>
+    </div>
+    <div class="dt-row">
+      <div class="dt-field"><span class="dt-label">Voyage / Qdrant</span><span class="dt-value lime">$50–150</span></div>
+    </div>
+    <div class="dt-row">
+      <div class="dt-field"><span class="dt-label">Поддержка команды</span><span class="dt-value lime">200–500 тыс ₽</span></div>
+    </div>
+  </div>
+  
+  <div class="warn">Бюджет ориентировочный. После выбора команды и подтверждения объёмов — точная смета.</div>
+
+  <h2><span class="sec">Section 07</span>Риски и митигация</h2>
+  <p class="lead">Что может пойти не так и как заранее закрыть.</p>
+  
+  <div class="risk-matrix">
+    <div class="risk-item">
+      <div class="risk-head">
+        <div class="risk-name">Бан личного TG-аккаунта</div>
+        <div class="risk-badge hi">High</div>
+      </div>
+      <div class="risk-body">Telegram банит MTProto-сессии за «массовость», особенно при единообразных ответах.</div>
+      <div class="risk-fix">Жёсткие rate limits, человеческие паузы, вариативность ответов, прогрев аккаунта 1–2 нед</div>
+    </div>
+    <div class="risk-item">
+      <div class="risk-head">
+        <div class="risk-name">Отказ в Meta App Review для IG</div>
+        <div class="risk-badge hi">High</div>
+      </div>
+      <div class="risk-body">Без advanced permissions IG-агент не видит входящие. Review требует тестового видео и обоснования.</div>
+      <div class="risk-fix">Готовить App Review с первой недели; план Б — instagrapi (есть риск бана)</div>
+    </div>
+    <div class="risk-item">
+      <div class="risk-head">
+        <div class="risk-name">Клиенты узнали что ИИ — обиделись</div>
+        <div class="risk-badge md">Medium</div>
+      </div>
+      <div class="risk-body">Кто-то воспримет дисклеймер негативно. Особенно «старые» клиенты, привыкшие к личному общению.</div>
+      <div class="risk-fix">Прозрачность с первого сообщения; премиум-клиентов оставить в личном ведении</div>
+    </div>
+    <div class="risk-item">
+      <div class="risk-head">
+        <div class="risk-name">Стоимость Claude API превысит бюджет</div>
+        <div class="risk-badge md">Medium</div>
+      </div>
+      <div class="risk-body">При росте объёма Opus 4.7 на каждом сообщении = сотни долларов в день.</div>
+      <div class="risk-fix">Маршрутизация: Haiku для классификации → Opus только для сложных ответов + кэш аудио</div>
+    </div>
+    <div class="risk-item">
+      <div class="risk-head">
+        <div class="risk-name">Качество ответов не дотянет до ручного</div>
+        <div class="risk-badge md">Medium</div>
+      </div>
+      <div class="risk-body">Конверсия упадёт на 30–50% по сравнению с тем как ты продаёшь лично.</div>
+      <div class="risk-fix">Запуск через shadow mode: 2 недели ты валидируешь каждый ответ, только потом авто</div>
+    </div>
+    <div class="risk-item">
+      <div class="risk-head">
+        <div class="risk-name">Сроки сдвинутся</div>
+        <div class="risk-badge md">Medium</div>
+      </div>
+      <div class="risk-body">12 недель — для опытной команды. Без опыта в LLM-агентах может затянуться до 16–20.</div>
+      <div class="risk-fix">Технический ауд после этапа 5: если отставание &gt;2 нед — резать scope</div>
+    </div>
+    <div class="risk-item">
+      <div class="risk-head">
+        <div class="risk-name">Голосовой клон звучит «неживо»</div>
+        <div class="risk-badge lo">Low</div>
+      </div>
+      <div class="risk-body">Дешёвая запись или мало материала — «ИИ-эффект» в голосе.</div>
+      <div class="risk-fix">PVC ElevenLabs + 30–60 мин качественной записи; тест на команде до клиентов</div>
+    </div>
+    <div class="risk-item">
+      <div class="risk-head">
+        <div class="risk-name">Утечка переписок клиентов</div>
+        <div class="risk-badge hi">High</div>
+      </div>
+      <div class="risk-body">База диалогов — лакомая цель. Утечка = иск + репутация.</div>
+      <div class="risk-fix">Шифрование at-rest, VPN, 2FA для админов, токенизация ПДн, регулярные пентесты</div>
+    </div>
+  </div>
+
+  <h2><span class="sec">Section 08</span>Что делаем прямо сейчас</h2>
+  <p class="lead">Ближайшие 7 дней — старт этапа 01.</p>
+  
+  <ul class="checklist">
+    <li><div><strong>День 1.</strong> Открыть документ 01 (Конституция). Пройти все «___» и заполнить ответы по продукту, KPI, целям<span class="count">→ 2–3 часа</span></div></li>
+    <li><div><strong>День 2–3.</strong> Прописать 2–3 сегмента ICP, используя исследование 524 ответов<span class="count">→ 4 часа</span></div></li>
+    <li><div><strong>День 3.</strong> Запустить поиск IT-юриста (профильные сообщества, биржи)<span class="count">→ 2 часа</span></div></li>
+    <li><div><strong>День 4.</strong> Заказать микрофон, продумать место записи<span class="count">→ 1 час</span></div></li>
+    <li><div><strong>День 5.</strong> Зафиксировать тон голоса в документе 01 раздел 06<span class="count">→ 2 часа</span></div></li>
+    <li><div><strong>День 6–7.</strong> Параллельно — поиск команды разработки (тех. лид + бэк + фронт)<span class="count">→ постоянно</span></div></li>
+  </ul>
+  
+  <div class="note">К концу первой недели — конституция версии 1.0 готова, юрист и команда в процессе подбора. Это разблокирует этапы 02–05.</div>
+
+  <h2><span class="sec">Section 09</span>Связь с другими документами</h2>
+  
+  <ul>
+    <li>Документ 01 (Конституция) — детали этапа 01</li>
+    <li>Документ 02 (Голос бренда) — детали этапа 02</li>
+    <li>Документ 03 (Юридический пакет) — детали этапа 03</li>
+    <li>Документ 04 (База знаний) — детали этапа 04</li>
+    <li>Документ 05 (Платформа: архитектура) — детали этапа 05 и стека</li>
+    <li>Документ 06 (Дашборд CRM) — детали экранов из этапа 09</li>
+    <li>Документы 07–09 (агенты) — детали этапов 06, 07, 08 — следующие в очереди</li>
+  </ul>
+  
+  <div class="doc-footer">AI Sales System<br>Document 00 / Roadmap<br>Готов к работе</div>
+</main>
+
+</body>
+</html>
