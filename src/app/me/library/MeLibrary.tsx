@@ -2,7 +2,7 @@
 import { useEffect, useRef, useState } from 'react'
 import Link from 'next/link'
 import {
-  ArrowLeft, ChevronRight, FileAudio, FileText, FileType, Loader2, Plus, Trash2, TriangleAlert, Upload,
+  ArrowLeft, ChevronRight, FileAudio, FileText, FileType, Loader2, Pin, Plus, Trash2, TriangleAlert, Upload,
 } from 'lucide-react'
 import MeTabs from '../MeTabs'
 import { apiFetch } from '@/lib/api-client'
@@ -15,6 +15,7 @@ type Doc = {
   source_meta: Record<string, any>
   char_count: number
   chunk_count: number
+  pinned: 0 | 1
 }
 
 function timeAgo(iso: string): string {
@@ -120,6 +121,34 @@ export default function MeLibrary() {
       setError(e?.message || 'Не удалось загрузить')
     } finally {
       setAdding(false)
+    }
+  }
+
+  async function togglePin(id: string, current: 0 | 1) {
+    const next = current ? 0 : 1
+    // Optimistic update with re-sort: pinned rows surface to the top.
+    setItems((it) => {
+      const updated = it.map((d) => (d.id === id ? { ...d, pinned: next as 0 | 1 } : d))
+      updated.sort((a, b) => {
+        if (a.pinned !== b.pinned) return Number(b.pinned) - Number(a.pinned)
+        return new Date(b.created_at).getTime() - new Date(a.created_at).getTime()
+      })
+      return updated
+    })
+    try {
+      const res = await apiFetch(`/api/me/documents/${id}`, {
+        method: 'PUT',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ pinned: !current }),
+      })
+      if (!res.ok) {
+        const data = await res.json().catch(() => ({}))
+        throw new Error(data?.error || `Ошибка ${res.status}`)
+      }
+    } catch (e: any) {
+      setError(e?.message || 'Не удалось закрепить')
+      // Revert optimistic change.
+      setItems((it) => it.map((d) => (d.id === id ? { ...d, pinned: current } : d)))
     }
   }
 
@@ -363,6 +392,19 @@ export default function MeLibrary() {
                       </div>
                       <ChevronRight className="mt-2 h-4 w-4 shrink-0 text-apple-faint group-hover:text-apple-muted" />
                     </Link>
+                    <button
+                      type="button"
+                      onClick={() => togglePin(d.id, d.pinned)}
+                      className={`my-auto grid h-8 w-8 shrink-0 place-items-center rounded-full transition-colors ${
+                        d.pinned
+                          ? 'text-apple-blue hover:bg-apple-bg-soft'
+                          : 'text-apple-faint opacity-0 hover:bg-apple-bg-soft hover:text-apple-ink group-hover:opacity-100'
+                      }`}
+                      aria-label={d.pinned ? 'Открепить' : 'Закрепить'}
+                      title={d.pinned ? 'Открепить' : 'Закрепить'}
+                    >
+                      <Pin className={`h-3.5 w-3.5 ${d.pinned ? 'fill-current' : ''}`} />
+                    </button>
                     <button
                       type="button"
                       onClick={() => remove(d.id)}

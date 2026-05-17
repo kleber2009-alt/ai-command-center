@@ -38,6 +38,7 @@ export type MeDocumentRow = {
   source_meta: Record<string, any>
   char_count: number
   chunk_count: number
+  pinned: 0 | 1
 }
 
 export type MeDocumentFullRow = MeDocumentRow & {
@@ -227,8 +228,10 @@ export function libraryStats(): LibraryStats {
 export function listDocuments(limit = 200): MeDocumentRow[] {
   const rows = getDb()
     .prepare(
-      `SELECT id, created_at, title, source_type, source_meta, char_count, chunk_count
-       FROM me_documents ORDER BY created_at DESC LIMIT ?`,
+      `SELECT id, created_at, title, source_type, source_meta, char_count, chunk_count, pinned
+       FROM me_documents
+       ORDER BY pinned DESC, created_at DESC
+       LIMIT ?`,
     )
     .all(limit) as Array<
     Omit<MeDocumentRow, 'source_meta'> & { source_meta: string }
@@ -239,7 +242,7 @@ export function listDocuments(limit = 200): MeDocumentRow[] {
 export function getDocument(id: number): MeDocumentFullRow | null {
   const row = getDb()
     .prepare(
-      `SELECT id, created_at, title, source_type, source_meta, original_text, char_count, chunk_count
+      `SELECT id, created_at, title, source_type, source_meta, original_text, char_count, chunk_count, pinned
        FROM me_documents WHERE id = ?`,
     )
     .get(id) as
@@ -247,6 +250,19 @@ export function getDocument(id: number): MeDocumentFullRow | null {
     | undefined
   if (!row) return null
   return { ...row, source_meta: safeParseObject(row.source_meta) }
+}
+
+export function setDocumentPinned(id: number, pinned: boolean): MeDocumentRow | null {
+  const db = getDb()
+  const info = db.prepare(`UPDATE me_documents SET pinned = ? WHERE id = ?`).run(pinned ? 1 : 0, id)
+  if (info.changes === 0) return null
+  const row = db
+    .prepare(
+      `SELECT id, created_at, title, source_type, source_meta, char_count, chunk_count, pinned
+       FROM me_documents WHERE id = ?`,
+    )
+    .get(id) as (Omit<MeDocumentRow, 'source_meta'> & { source_meta: string }) | undefined
+  return row ? { ...row, source_meta: safeParseObject(row.source_meta) } : null
 }
 
 export function deleteDocument(id: number): boolean {
@@ -305,7 +321,7 @@ export function createDocumentWithEmbeddings(input: {
   const docId = tx()
   const row = db
     .prepare(
-      `SELECT id, created_at, title, source_type, source_meta, char_count, chunk_count
+      `SELECT id, created_at, title, source_type, source_meta, char_count, chunk_count, pinned
        FROM me_documents WHERE id = ?`,
     )
     .get(docId) as Omit<MeDocumentRow, 'source_meta'> & { source_meta: string }
@@ -318,7 +334,7 @@ export function updateDocumentTitle(id: number, title: string): MeDocumentRow | 
   if (info.changes === 0) return null
   const row = db
     .prepare(
-      `SELECT id, created_at, title, source_type, source_meta, char_count, chunk_count
+      `SELECT id, created_at, title, source_type, source_meta, char_count, chunk_count, pinned
        FROM me_documents WHERE id = ?`,
     )
     .get(id) as (Omit<MeDocumentRow, 'source_meta'> & { source_meta: string }) | undefined
@@ -371,7 +387,7 @@ export function replaceDocumentText(input: {
   if (!ok) return null
   const row = db
     .prepare(
-      `SELECT id, created_at, title, source_type, source_meta, char_count, chunk_count
+      `SELECT id, created_at, title, source_type, source_meta, char_count, chunk_count, pinned
        FROM me_documents WHERE id = ?`,
     )
     .get(input.id) as (Omit<MeDocumentRow, 'source_meta'> & { source_meta: string }) | undefined

@@ -5,6 +5,7 @@ import {
   deleteDocument,
   getDocument,
   replaceDocumentText,
+  setDocumentPinned,
   updateDocumentTitle,
 } from '@/lib/me-db'
 import { requireTelegramAuth } from '@/lib/telegram-auth'
@@ -30,18 +31,39 @@ export async function PUT(req: NextRequest, { params }: { params: { id: string }
   const existing = getDocument(id)
   if (!existing) return NextResponse.json({ error: 'Не найдено' }, { status: 404 })
 
-  const body = (await req.json().catch(() => ({}))) as { title?: string; text?: string }
+  const body = (await req.json().catch(() => ({}))) as {
+    title?: string
+    text?: string
+    pinned?: boolean
+  }
   const title = typeof body.title === 'string' ? body.title.trim() : undefined
   const text = typeof body.text === 'string' ? body.text : undefined
+  const pinned = typeof body.pinned === 'boolean' ? body.pinned : undefined
+
+  // Pin-only update: cheap, no re-embed, no title change.
+  if (pinned !== undefined && title === undefined && text === undefined) {
+    const updated = setDocumentPinned(id, pinned)
+    if (!updated) return NextResponse.json({ error: 'Не удалось обновить' }, { status: 500 })
+    return NextResponse.json({ document: updated, reembedded: false })
+  }
 
   // Title-only update: cheap, no re-embed.
   if (text === undefined || text === existing.original_text) {
     if (title === undefined || title === existing.title) {
+      if (pinned !== undefined && pinned !== Boolean(existing.pinned)) {
+        const updated = setDocumentPinned(id, pinned)
+        if (!updated) return NextResponse.json({ error: 'Не удалось обновить' }, { status: 500 })
+        return NextResponse.json({ document: updated, reembedded: false })
+      }
       return NextResponse.json({ document: existing, reembedded: false })
     }
     const updated = updateDocumentTitle(id, title)
     if (!updated) return NextResponse.json({ error: 'Не удалось обновить' }, { status: 500 })
-    return NextResponse.json({ document: updated, reembedded: false })
+    if (pinned !== undefined && pinned !== Boolean(existing.pinned)) {
+      setDocumentPinned(id, pinned)
+    }
+    const final = getDocument(id)
+    return NextResponse.json({ document: final, reembedded: false })
   }
 
   // Text changed — need to re-chunk + re-embed.
