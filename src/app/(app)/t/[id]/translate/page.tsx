@@ -1,4 +1,5 @@
 'use client'
+import { apiFetch } from '@/lib/telegram'
 import { useState } from 'react'
 import { Languages, Loader2 } from 'lucide-react'
 import { useTranscript } from '@/components/useTranscript'
@@ -21,7 +22,7 @@ export default function TranslatePage({ params }: { params: { id: string } }) {
     setGenError(null)
     setBusy(true)
     try {
-      const res = await fetch('/api/transcribe/translate', {
+      const res = await apiFetch('/api/transcribe/translate', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({

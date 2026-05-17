@@ -1,5 +1,6 @@
 'use client'
 import type { TranscriptData } from './types'
+import { apiFetch } from './telegram'
 
 const PREFIX = 'transcript-cache:'
 
@@ -40,7 +41,7 @@ export async function fetchTranscript(id: string): Promise<TranscriptData | null
     return loadLocal(id)
   }
   try {
-    const res = await fetch(`/api/transcribe/history/${id}`)
+    const res = await apiFetch(`/api/transcribe/history/${id}`)
     if (!res.ok) return null
     const data = await res.json()
     return {

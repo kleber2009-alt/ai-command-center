@@ -2,7 +2,7 @@
 import { useEffect, useRef, useState } from 'react'
 import { useRouter } from 'next/navigation'
 import { AudioLines, Loader2, Link as LinkIcon, TriangleAlert } from 'lucide-react'
-import { getTelegram, isInTelegram } from '@/lib/telegram'
+import { getTelegram, isInTelegram, apiFetch } from '@/lib/telegram'
 import { newLocalId, saveLocal } from '@/lib/transcript-cache'
 import type { TranscriptData } from '@/lib/types'
 import HistoryList from '@/components/HistoryList'
@@ -47,7 +47,7 @@ export default function TranscribePage() {
     setError(null)
     setLoading(true)
     try {
-      const res = await fetch('/api/transcribe', {
+      const res = await apiFetch('/api/transcribe', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({ url: url.trim(), language }),

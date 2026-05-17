@@ -1,0 +1,83 @@
+#cloud-config
+# Hetzner Cloud user-data for first-time provisioning of the transcription
+# app. Pass to `hcloud server create --user-data-from-file ...` or to the
+# Hetzner Cloud API `user_data` field at server creation.
+#
+# Before submitting:
+#   1. Replace the placeholder env values under `write_files: /root/.app.env`
+#      with real values. INSTAGRAM_COOKIES_B64 / COOKIES_B64 may be empty.
+#   2. Optionally change the git branch in the clone command.
+#
+# What the script does on first boot (~9 min total on cpx21):
+#   - installs Docker CE + compose plugin
+#   - adds a 2GB swap file (Next.js build is memory-hungry)
+#   - clones the repo and brings up docker compose
+#   - Caddy auto-issues a Let's Encrypt cert for $DOMAIN (server's
+#     public IPv4 in dashed form + .sslip.io by default; replace once
+#     you have real DNS).
+#
+# Logs live in /var/log/provision.log on the VM.
+
+package_update: true
+package_upgrade: false
+
+write_files:
+  - path: /root/.app.env
+    permissions: '0600'
+    owner: root:root
+    content: |
+      DOMAIN=PLACEHOLDER
+      ANTHROPIC_API_KEY=PLACEHOLDER
+      DEEPGRAM_API_KEY=PLACEHOLDER
+      NEXT_PUBLIC_SUPABASE_URL=PLACEHOLDER
+      NEXT_PUBLIC_SUPABASE_ANON_KEY=
+      SUPABASE_SERVICE_KEY=PLACEHOLDER
+      YTDLP_SERVICE_API_KEY=PLACEHOLDER
+      INSTAGRAM_COOKIES_B64=
+      COOKIES_B64=
+      TELEGRAM_BOT_TOKEN=
+      TELEGRAM_REQUIRE_INIT_DATA=
+
+  - path: /root/provision.sh
+    permissions: '0755'
+    owner: root:root
+    content: |
+      #!/bin/bash
+      exec >>/var/log/provision.log 2>&1
+      set -x
+      date
+      # Discover own public IPv4 via Hetzner metadata, set DOMAIN if it
+      # was left as PLACEHOLDER. Override later by editing /opt/app/deploy/hetzner/.env.
+      SELF_IP=$(curl -fsSL http://169.254.169.254/hetzner/v1/metadata/public-ipv4)
+      if grep -q '^DOMAIN=PLACEHOLDER$' /root/.app.env; then
+        DOMAIN_HOST="$(echo "$SELF_IP" | tr . -).sslip.io"
+        sed -i "s|^DOMAIN=PLACEHOLDER$|DOMAIN=$DOMAIN_HOST|" /root/.app.env
+        echo "Resolved DOMAIN=$DOMAIN_HOST"
+      fi
+      # Docker install
+      apt-get install -y ca-certificates curl git
+      install -m 0755 -d /etc/apt/keyrings
+      curl -fsSL https://download.docker.com/linux/ubuntu/gpg -o /etc/apt/keyrings/docker.asc
+      chmod a+r /etc/apt/keyrings/docker.asc
+      echo "deb [arch=$(dpkg --print-architecture) signed-by=/etc/apt/keyrings/docker.asc] https://download.docker.com/linux/ubuntu noble stable" \
+        > /etc/apt/sources.list.d/docker.list
+      apt-get update
+      apt-get install -y docker-ce docker-ce-cli containerd.io docker-buildx-plugin docker-compose-plugin
+      # Swap so the Next.js build doesn't OOM on a 4GB box
+      fallocate -l 2G /swapfile
+      chmod 600 /swapfile
+      mkswap /swapfile
+      swapon /swapfile
+      echo "/swapfile none swap sw 0 0" >> /etc/fstab
+      # Clone & launch
+      git clone -b main https://github.com/kleber2009-alt/ai-command-center.git /opt/app
+      cp /root/.app.env /opt/app/deploy/hetzner/.env
+      cd /opt/app/deploy/hetzner
+      set -a; source /root/.app.env; set +a
+      docker compose up -d --build
+      docker compose ps
+      date
+      echo "PROVISION DONE"
+
+runcmd:
+  - bash /root/provision.sh

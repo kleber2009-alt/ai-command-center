@@ -4,6 +4,7 @@ import Link from 'next/link'
 import { ChevronRight, FileAudio, History, Trash2, Youtube } from 'lucide-react'
 import { formatTime, timeAgo } from '@/lib/format'
 import { ARTIFACT_LABELS, type HistoryItem } from '@/lib/types'
+import { apiFetch } from '@/lib/telegram'
 
 export default function HistoryList({ limit = 30 }: { limit?: number }) {
   const [items, setItems] = useState<HistoryItem[]>([])
@@ -12,7 +13,7 @@ export default function HistoryList({ limit = 30 }: { limit?: number }) {
 
   async function load() {
     try {
-      const res = await fetch('/api/transcribe/history')
+      const res = await apiFetch('/api/transcribe/history')
       const data = await res.json()
       setItems((data.items ?? []).slice(0, limit))
       setConfigured(data.configured !== false)
@@ -31,7 +32,7 @@ export default function HistoryList({ limit = 30 }: { limit?: number }) {
     e.stopPropagation()
     if (!confirm('Удалить этот транскрипт?')) return
     try {
-      await fetch(`/api/transcribe/history/${id}`, { method: 'DELETE' })
+      await apiFetch(`/api/transcribe/history/${id}`, { method: 'DELETE' })
       load()
     } catch {}
   }

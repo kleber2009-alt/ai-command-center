@@ -1,4 +1,5 @@
 'use client'
+import { apiFetch } from '@/lib/telegram'
 import { useState } from 'react'
 import { Loader2, Sparkles } from 'lucide-react'
 import { useTranscript } from '@/components/useTranscript'
@@ -20,7 +21,7 @@ export default function SummaryPage({ params }: { params: { id: string } }) {
     setGenError(null)
     setBusy(true)
     try {
-      const res = await fetch('/api/transcribe/summarize', {
+      const res = await apiFetch('/api/transcribe/summarize', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({

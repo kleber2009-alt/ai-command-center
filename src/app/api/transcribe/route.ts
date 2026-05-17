@@ -7,6 +7,7 @@ import {
   isYtdlpServiceConfigured,
   YtdlpServiceError,
 } from '@/lib/ytdlp-client'
+import { guardRequest } from '@/lib/api-guard'
 
 export const maxDuration = 60
 
@@ -225,6 +226,9 @@ async function dispatch(url: string, language: 'auto' | 'ru' | 'en'): Promise<Re
 }
 
 export async function POST(req: NextRequest) {
+  const guard = guardRequest(req, { max: 5, windowMs: 60_000 })
+  if (!guard.ok) return guard.res
+
   const { url, language = 'ru' } = (await req.json()) as Body
 
   if (!url || typeof url !== 'string' || !/^https?:\/\//i.test(url)) {

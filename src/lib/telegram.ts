@@ -102,3 +102,14 @@ export function isInTelegram(): boolean {
   // initData is empty when opened outside Telegram (or with disabled WebApp)
   return Boolean(tg && tg.initData && tg.initData.length > 0)
 }
+
+// Wrapper around fetch that attaches X-Telegram-Init-Data when running
+// inside a Telegram Mini App. Server-side guardRequest verifies the HMAC
+// when TELEGRAM_BOT_TOKEN is set; outside Telegram the header is absent
+// and the server falls back to IP-based rate limiting only.
+export function apiFetch(input: RequestInfo, init: RequestInit = {}): Promise<Response> {
+  const tg = getTelegram()
+  const headers = new Headers(init.headers)
+  if (tg && tg.initData) headers.set('X-Telegram-Init-Data', tg.initData)
+  return fetch(input, { ...init, headers })
+}

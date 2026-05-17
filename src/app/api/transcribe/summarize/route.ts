@@ -1,5 +1,6 @@
 import { NextRequest, NextResponse } from 'next/server'
 import { getServerSupabase } from '@/lib/transcripts-db'
+import { guardRequest } from '@/lib/api-guard'
 
 export const maxDuration = 60
 
@@ -18,6 +19,9 @@ ${text.slice(0, 30000)}
 {"summary": "...", "bullets": ["...", "...", "...", "...", "..."]}`
 
 export async function POST(req: NextRequest) {
+  const guard = guardRequest(req, { max: 10, windowMs: 60_000 })
+  if (!guard.ok) return guard.res
+
   const { id, transcript } = (await req.json()) as Body
 
   if (!process.env.ANTHROPIC_API_KEY) {
