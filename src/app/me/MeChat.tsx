@@ -270,18 +270,43 @@ export default function MeChat() {
 
       <div className="flex-1 space-y-3 pb-4">
         {messages.length === 0 && (
-          <div className="rounded-apple-lg border border-apple-line bg-apple-bg-elev p-5 shadow-apple-sm">
-            <div className="flex items-center gap-2 text-apple-ink">
-              <Sparkles className="h-4 w-4 text-apple-blue" />
-              <span className="text-[13px] font-semibold">Привет</span>
+          <>
+            <div className="rounded-apple-lg border border-apple-line bg-apple-bg-elev p-5 shadow-apple-sm">
+              <div className="flex items-center gap-2 text-apple-ink">
+                <Sparkles className="h-4 w-4 text-apple-blue" />
+                <span className="text-[13px] font-semibold">Привет</span>
+              </div>
+              <p className="mt-2 text-[15px] leading-relaxed text-apple-ink">
+                Я твой второй мозг. Сначала заполни <a href="/me/profile" className="text-apple-blue hover:underline">Профиль</a> и закинь материалы в <a href="/me/library" className="text-apple-blue hover:underline">Базу</a> — тогда я смогу отвечать о тебе и твоих проектах с опорой на конкретные источники.
+              </p>
+              <p className="mt-3 text-[13px] text-apple-muted">
+                Спрашивай что угодно: о твоих проектах, прошлых решениях, контенте академии, идеях из заметок.
+              </p>
             </div>
-            <p className="mt-2 text-[15px] leading-relaxed text-apple-ink">
-              Я твой второй мозг. Сначала заполни <a href="/me/profile" className="text-apple-blue hover:underline">Профиль</a> и закинь материалы в <a href="/me/library" className="text-apple-blue hover:underline">Базу</a> — тогда я смогу отвечать о тебе и твоих проектах с опорой на конкретные источники.
-            </p>
-            <p className="mt-3 text-[13px] text-apple-muted">
-              Спрашивай что угодно: о твоих проектах, прошлых решениях, контенте академии, идеях из заметок.
-            </p>
-          </div>
+            <div className="rounded-apple-lg border border-apple-line bg-white p-3 shadow-apple-sm">
+              <p className="mb-2 px-1 text-[12px] font-medium text-apple-muted">С чего начать</p>
+              <div className="flex flex-wrap gap-2">
+                {[
+                  'Подведи итог по моим проектам',
+                  'Что я писал на этой неделе?',
+                  'Какие у меня сильные темы по моей нише?',
+                  'Сформулируй мой оффер одним предложением',
+                ].map((s) => (
+                  <button
+                    key={s}
+                    type="button"
+                    onClick={() => {
+                      setInput(s)
+                      inputRef.current?.focus()
+                    }}
+                    className="rounded-full border border-apple-line bg-white px-3 py-1.5 text-[13px] text-apple-ink shadow-apple-sm transition-colors hover:bg-apple-bg-soft"
+                  >
+                    {s}
+                  </button>
+                ))}
+              </div>
+            </div>
+          </>
         )}
 
         {messages.map((m, i) => (

@@ -25,13 +25,14 @@ type Props = {
   icon: string
   buttonText: string
   helpText: string
+  starters?: string[]
 }
 
 function sessionKey(id: string) {
   return `assistant-chat:${id}:session`
 }
 
-export default function AssistantChat({ id, name, description, icon, buttonText, helpText }: Props) {
+export default function AssistantChat({ id, name, description, icon, buttonText, helpText, starters }: Props) {
   const Icon = ICONS[icon] ?? Sparkles
   const [messages, setMessages] = useState<Msg[]>([])
   const [input, setInput] = useState('')
@@ -292,22 +293,44 @@ export default function AssistantChat({ id, name, description, icon, buttonText,
 
       <div className="flex-1 space-y-3 pb-4">
         {messages.length === 0 && (
-          <div className="rounded-apple-lg border border-apple-line bg-apple-bg-elev p-5 shadow-apple-sm">
-            <p className="text-[15px] leading-relaxed text-apple-ink">{description}</p>
-            {helpText && (
-              <button
-                type="button"
-                onClick={showHelp}
-                className="mt-4 inline-flex items-center gap-2 rounded-full bg-apple-blue px-4 py-2 text-[13px] font-medium text-white transition-colors hover:bg-apple-blue-hover active:bg-apple-blue-pressed sm:text-sm"
-              >
-                <Sparkles className="h-4 w-4" />
-                {buttonText}
-              </button>
+          <>
+            <div className="rounded-apple-lg border border-apple-line bg-apple-bg-elev p-5 shadow-apple-sm">
+              <p className="text-[15px] leading-relaxed text-apple-ink">{description}</p>
+              {helpText && (
+                <button
+                  type="button"
+                  onClick={showHelp}
+                  className="mt-4 inline-flex items-center gap-2 rounded-full bg-apple-blue px-4 py-2 text-[13px] font-medium text-white transition-colors hover:bg-apple-blue-hover active:bg-apple-blue-pressed sm:text-sm"
+                >
+                  <Sparkles className="h-4 w-4" />
+                  {buttonText}
+                </button>
+              )}
+              <p className="mt-3 text-[13px] text-apple-muted">
+                Напиши сообщение ниже — ассистент сам уточнит детали, если нужно.
+              </p>
+            </div>
+            {starters && starters.length > 0 && (
+              <div className="rounded-apple-lg border border-apple-line bg-white p-3 shadow-apple-sm">
+                <p className="mb-2 px-1 text-[12px] font-medium text-apple-muted">С чего начать</p>
+                <div className="flex flex-wrap gap-2">
+                  {starters.map((s) => (
+                    <button
+                      key={s}
+                      type="button"
+                      onClick={() => {
+                        setInput(s)
+                        inputRef.current?.focus()
+                      }}
+                      className="rounded-full border border-apple-line bg-white px-3 py-1.5 text-[13px] text-apple-ink shadow-apple-sm transition-colors hover:bg-apple-bg-soft"
+                    >
+                      {s}
+                    </button>
+                  ))}
+                </div>
+              </div>
             )}
-            <p className="mt-3 text-[13px] text-apple-muted">
-              Напиши сообщение ниже — ассистент сам уточнит детали, если нужно.
-            </p>
-          </div>
+          </>
         )}
 
         {messages.map((m, i) => (
