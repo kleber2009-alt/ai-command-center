@@ -1,6 +1,8 @@
 import { NextResponse } from 'next/server'
 import { getServerSupabase } from '@/lib/transcripts-db'
 
+export const dynamic = 'force-dynamic'
+
 type ArtifactKey = 'summary' | 'translation' | 'carousel' | 'reels-new' | 'reels-remix' | 'tg-post'
 
 type RawRow = {
