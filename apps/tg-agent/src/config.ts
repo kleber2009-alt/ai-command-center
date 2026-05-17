@@ -55,6 +55,7 @@ export interface Config {
   confidenceThreshold: number;
   logLevel: LogLevel;
   classifierModel: string;
+  responderModel: string;
 }
 
 export function loadConfig(): Config {
@@ -72,5 +73,6 @@ export function loadConfig(): Config {
     confidenceThreshold: parseThreshold(optional('CONFIDENCE_THRESHOLD')),
     logLevel: parseLogLevel(optional('LOG_LEVEL')),
     classifierModel: optional('CLASSIFIER_MODEL') ?? 'claude-haiku-4-5-20251001',
+    responderModel: optional('RESPONDER_MODEL') ?? 'claude-haiku-4-5-20251001',
   };
 }

@@ -4,15 +4,23 @@ import type { Classifier } from './classifier.js';
 import type { Config } from './config.js';
 import { decide } from './decision.js';
 import type { Logger } from './logger.js';
-import type { IncomingMessage } from './types.js';
+import type { Responder } from './responder.js';
+import type { Action, IncomingMessage } from './types.js';
 
 export interface BotDeps {
   config: Config;
   logger: Logger;
   classifier: Classifier;
+  responder: Responder;
 }
 
-export function createBot({ config, logger, classifier }: BotDeps): Bot {
+const ACTIONS_THAT_REPLY: ReadonlySet<Action> = new Set([
+  'REPLY',
+  'REPLY_SOFT',
+  'REPLY_AND_NOTIFY',
+]);
+
+export function createBot({ config, logger, classifier, responder }: BotDeps): Bot {
   const bot = new Bot(config.telegramBotToken);
 
   bot.on('message:text', async (ctx) => {
@@ -34,26 +42,56 @@ export function createBot({ config, logger, classifier }: BotDeps): Bot {
       text,
     };
 
+    const baseLog = {
+      chatId: incoming.chatId,
+      userId: incoming.userId,
+      username: incoming.username,
+      messageId: incoming.messageId,
+      text: truncate(incoming.text, 200),
+    };
+
     try {
       const classification = await classifier.classify(text);
       const decision = decide(classification, config.confidenceThreshold);
 
       logger.info('classified', {
-        chatId: incoming.chatId,
-        userId: incoming.userId,
-        username: incoming.username,
-        messageId: incoming.messageId,
-        text: truncate(incoming.text, 200),
+        ...baseLog,
         class: classification.class,
         confidence: Number(classification.confidence.toFixed(3)),
         reasoning: classification.reasoning,
         action: decision.action,
         rationale: decision.rationale,
       });
+
+      if (!ACTIONS_THAT_REPLY.has(decision.action)) {
+        return;
+      }
+
+      const authorDisplay =
+        ctx.from?.username ??
+        ctx.from?.first_name ??
+        (incoming.userId !== undefined ? `user${incoming.userId}` : undefined);
+
+      const reply = await responder.generate({
+        messageClass: classification.class,
+        text,
+        authorDisplay,
+      });
+
+      await ctx.reply(reply, {
+        reply_parameters: { message_id: incoming.messageId },
+      });
+
+      logger.info('replied', {
+        ...baseLog,
+        class: classification.class,
+        action: decision.action,
+        replyChars: reply.length,
+        reply: truncate(reply, 200),
+      });
     } catch (err) {
-      logger.error('classification failed', {
-        chatId: incoming.chatId,
-        messageId: incoming.messageId,
+      logger.error('handler failed', {
+        ...baseLog,
         error: err instanceof Error ? err.message : String(err),
       });
     }

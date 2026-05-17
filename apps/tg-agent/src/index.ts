@@ -1,7 +1,9 @@
 import { createBot } from './bot.js';
 import { createClassifier } from './classifier.js';
 import { loadConfig } from './config.js';
+import { loadKnowledgeBase } from './knowledge/index.js';
 import { createLogger } from './logger.js';
+import { createResponder } from './responder.js';
 
 async function main(): Promise<void> {
   const config = loadConfig();
@@ -11,8 +13,15 @@ async function main(): Promise<void> {
     apiKey: config.anthropicApiKey,
     model: config.classifierModel,
   });
+  const responder = createResponder({
+    apiKey: config.anthropicApiKey,
+    model: config.responderModel,
+  });
 
-  const bot = createBot({ config, logger, classifier });
+  const kb = loadKnowledgeBase();
+  logger.info('knowledge base loaded', { bytes: kb.bytes });
+
+  const bot = createBot({ config, logger, classifier, responder });
 
   const shutdown = async (signal: string) => {
     logger.info('shutdown requested', { signal });
@@ -23,7 +32,8 @@ async function main(): Promise<void> {
   process.once('SIGTERM', () => void shutdown('SIGTERM'));
 
   logger.info('starting bot', {
-    model: config.classifierModel,
+    classifierModel: config.classifierModel,
+    responderModel: config.responderModel,
     confidenceThreshold: config.confidenceThreshold,
     allowlistSize: config.allowedChatIds.size,
   });
