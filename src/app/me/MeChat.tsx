@@ -10,7 +10,13 @@ import MarkdownMessage from '@/components/MarkdownMessage'
 import { useVoiceInput } from '@/lib/voice-input'
 
 type Msg = { role: 'user' | 'assistant'; content: string; citations?: Citation[] }
-type Citation = { document_id: string; document_title: string; chunk_index: number; similarity: number }
+type Citation = {
+  document_id: string
+  document_title: string
+  chunk_index: number
+  content?: string
+  similarity: number
+}
 
 const SESSION_KEY = 'me-chat:session-id'
 
@@ -25,6 +31,7 @@ export default function MeChat() {
   const [creatingSession, setCreatingSession] = useState(false)
   const [savingToBrain, setSavingToBrain] = useState(false)
   const [savedToBrain, setSavedToBrain] = useState(false)
+  const [expandedSources, setExpandedSources] = useState<Set<number>>(new Set())
   const bottomRef = useRef<HTMLDivElement | null>(null)
   const inputRef = useRef<HTMLTextAreaElement | null>(null)
 
@@ -310,17 +317,57 @@ export default function MeChat() {
                 )}
               </div>
               {m.role === 'assistant' && m.citations && m.citations.length > 0 && (
-                <div className="mt-2 flex flex-wrap gap-1.5">
-                  {m.citations.map((c, ci) => (
-                    <Link
-                      key={ci}
-                      href={`/me/library/${c.document_id}`}
-                      className="rounded-full bg-apple-bg-soft px-2 py-0.5 text-[11px] text-apple-muted transition-colors hover:bg-white hover:text-apple-ink hover:shadow-apple-sm"
-                      title={`Открыть документ · sim ${(c.similarity * 100).toFixed(0)}%`}
+                <div className="mt-2 space-y-2">
+                  <div className="flex flex-wrap items-center gap-1.5">
+                    {m.citations.map((c, ci) => (
+                      <Link
+                        key={ci}
+                        href={`/me/library/${c.document_id}`}
+                        className="rounded-full bg-apple-bg-soft px-2 py-0.5 text-[11px] text-apple-muted transition-colors hover:bg-white hover:text-apple-ink hover:shadow-apple-sm"
+                        title={`Открыть документ · sim ${(c.similarity * 100).toFixed(0)}%`}
+                      >
+                        [{c.document_title}]
+                      </Link>
+                    ))}
+                    <button
+                      type="button"
+                      onClick={() =>
+                        setExpandedSources((prev) => {
+                          const next = new Set(prev)
+                          if (next.has(i)) next.delete(i)
+                          else next.add(i)
+                          return next
+                        })
+                      }
+                      className="rounded-full px-2 py-0.5 text-[11px] text-apple-blue hover:bg-apple-bg-soft"
                     >
-                      [{c.document_title}]
-                    </Link>
-                  ))}
+                      {expandedSources.has(i) ? 'Скрыть источники' : `Показать источники (${m.citations.length})`}
+                    </button>
+                  </div>
+                  {expandedSources.has(i) && (
+                    <ol className="space-y-2 rounded-xl border border-apple-line bg-apple-bg-elev p-3 text-[12.5px] leading-relaxed text-apple-muted">
+                      {m.citations.map((c, ci) => (
+                        <li key={ci} className="border-b border-apple-line last:border-0 last:pb-0 pb-2">
+                          <div className="mb-1 flex items-center justify-between gap-2">
+                            <Link
+                              href={`/me/library/${c.document_id}`}
+                              className="truncate text-[12px] font-medium text-apple-ink hover:underline"
+                            >
+                              {ci + 1}. {c.document_title}
+                            </Link>
+                            <span className="shrink-0 text-[11px] text-apple-faint">
+                              sim {(c.similarity * 100).toFixed(0)}%
+                            </span>
+                          </div>
+                          {c.content && (
+                            <p className="whitespace-pre-wrap text-[12.5px] text-apple-muted">
+                              {c.content.length > 600 ? c.content.slice(0, 600) + '…' : c.content}
+                            </p>
+                          )}
+                        </li>
+                      ))}
+                    </ol>
+                  )}
                 </div>
               )}
             </div>

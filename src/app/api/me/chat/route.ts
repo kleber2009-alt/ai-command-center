@@ -38,7 +38,13 @@ export async function POST(req: NextRequest) {
 
   const lastUser = messages[messages.length - 1].content
   let contextBlock = ''
-  let citations: Array<{ document_id: number; document_title: string; chunk_index: number; similarity: number }> = []
+  let citations: Array<{
+    document_id: number
+    document_title: string
+    chunk_index: number
+    similarity: number
+    content: string
+  }> = []
 
   if (process.env.OPENAI_API_KEY) {
     try {
@@ -57,6 +63,7 @@ export async function POST(req: NextRequest) {
         document_title: m.document_title,
         chunk_index: m.chunk_index,
         similarity: m.similarity,
+        content: m.content,
       }))
     } catch (e: any) {
       console.warn('[me/chat] retrieval failed:', e?.message)
