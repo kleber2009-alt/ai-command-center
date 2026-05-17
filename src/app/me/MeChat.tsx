@@ -1,7 +1,7 @@
 'use client'
 import { useEffect, useRef, useState } from 'react'
 import Link from 'next/link'
-import { Brain, BookmarkPlus, Check, Copy, History, Loader2, Mic, MessageSquarePlus, Pencil, RefreshCw, Send, Sparkles, Square, Trash2, TriangleAlert, X } from 'lucide-react'
+import { Brain, BookmarkPlus, Check, Copy, Download, History, Loader2, Mic, MessageSquarePlus, Pencil, RefreshCw, Send, Sparkles, Square, Trash2, TriangleAlert, X } from 'lucide-react'
 import MeTabs from './MeTabs'
 import { readNdjson } from '@/lib/stream-client'
 import { apiFetch } from '@/lib/api-client'
@@ -220,6 +220,28 @@ export default function MeChat() {
     } catch {}
   }
 
+  function exportAsMarkdown() {
+    if (messages.length === 0) return
+    const usable = messages.filter((m) => m.content && m.content.trim().length > 0)
+    if (usable.length === 0) return
+    const firstUser = usable.find((m) => m.role === 'user')?.content?.trim() ?? 'Chat'
+    const title = firstUser.slice(0, 60).replace(/\s+/g, ' ')
+    const today = new Date().toISOString().slice(0, 10)
+    const body =
+      `# Чат · ${today}\n\n${title}\n\n---\n\n` +
+      usable
+        .map((m) => `### ${m.role === 'user' ? 'Вопрос' : 'Ответ'}\n\n${m.content.trim()}`)
+        .join('\n\n')
+    const filename = `chat-${today}-${title.replace(/[^a-zA-Zа-яА-Я0-9]+/g, '-').slice(0, 40)}.md`
+    const blob = new Blob([body], { type: 'text/markdown;charset=utf-8' })
+    const url = URL.createObjectURL(blob)
+    const a = document.createElement('a')
+    a.href = url
+    a.download = filename
+    a.click()
+    setTimeout(() => URL.revokeObjectURL(url), 1000)
+  }
+
   async function saveChatToLibrary() {
     if (savingToBrain || messages.length === 0) return
     const usable = messages.filter((m) => m.content && m.content.trim().length > 0)
@@ -268,6 +290,17 @@ export default function MeChat() {
             <p className="truncate text-[12px] text-apple-faint sm:text-[13px]">Знает тебя, твои проекты и материалы</p>
           </div>
           {messages.length > 0 && (
+            <>
+            <button
+              type="button"
+              onClick={exportAsMarkdown}
+              disabled={loading}
+              className="grid h-9 w-9 shrink-0 place-items-center rounded-full text-apple-faint transition-colors hover:bg-apple-bg-soft hover:text-apple-ink disabled:opacity-50"
+              aria-label="Скачать чат как Markdown"
+              title="Скачать чат как Markdown"
+            >
+              <Download className="h-[18px] w-[18px]" />
+            </button>
             <button
               type="button"
               onClick={saveChatToLibrary}
@@ -284,6 +317,7 @@ export default function MeChat() {
                 <BookmarkPlus className="h-[18px] w-[18px]" />
               )}
             </button>
+            </>
           )}
           <button
             type="button"
