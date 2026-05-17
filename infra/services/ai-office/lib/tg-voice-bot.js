@@ -21,10 +21,9 @@ export function isConfigured() {
 }
 
 export async function handleUpdate(update) {
-  // DEBUG: log every inbound update (truncated)
-  try {
-    console.log('[tg-in]', JSON.stringify(update).slice(0, 500));
-  } catch {}
+  if (process.env.LOG_TG_UPDATES === '1') {
+    try { console.log('[tg-in]', JSON.stringify(update).slice(0, 500)); } catch {}
+  }
   if (update.message) {
     await handleMessage(update.message);
   } else if (update.callback_query) {
@@ -283,9 +282,13 @@ async function tgApi(method, payload) {
       headers: { 'Content-Type': 'application/json' },
       body: JSON.stringify(payload),
     });
-    // DEBUG: log every response (2xx and not)
-    const body = await res.clone().text().catch(() => '');
-    console.log(`[tg-out] ${method} → ${res.status}: ${body.slice(0, 300)}`);
+    if (!res.ok) {
+      const body = await res.clone().text().catch(() => '');
+      console.error(`[tg] ${method} → HTTP ${res.status}: ${body.slice(0, 300)}`);
+    } else if (process.env.LOG_TG_UPDATES === '1') {
+      const body = await res.clone().text().catch(() => '');
+      console.log(`[tg-out] ${method} → ${res.status}: ${body.slice(0, 200)}`);
+    }
     return res;
   } catch (e) {
     console.error('[tg]', method, 'failed:', e.message);
