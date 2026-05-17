@@ -115,6 +115,23 @@ services:
     expose:
       - "8080"
 
+  # ── Опциональный аптайм-мониторинг ──────────────────────────────────
+  # Поднимается флагом: `docker compose --profile monitoring up -d`.
+  # По умолчанию выключен, чтобы не жрать RAM на маленьких VPS.
+  # После запуска: http://<IP>:3001 → создаёшь учётку, заводишь монитор
+  # на http://nginx/healthz (или http://ai-office:8080/healthz), потом
+  # webhook в Telegram-бота через TG_BOT_TOKEN/TG_CHAT_ID.
+  uptime-kuma:
+    image: louislam/uptime-kuma:1
+    container_name: ai-uptime
+    restart: unless-stopped
+    profiles: ["monitoring"]
+    logging: *default-logging
+    ports:
+      - "3001:3001"
+    volumes:
+      - uptime-kuma-data:/app/data
+
   nginx:
     image: nginx:alpine
     container_name: ai-nginx
@@ -142,3 +159,4 @@ services:
 volumes:
   postgres-data:
   voice-notes:
+  uptime-kuma-data:
