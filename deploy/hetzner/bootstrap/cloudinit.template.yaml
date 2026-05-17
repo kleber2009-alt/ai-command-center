@@ -13,7 +13,7 @@
 #   - adds a 2GB swap file (Next.js build is memory-hungry)
 #   - clones the repo and brings up docker compose
 #   - Caddy auto-issues a Let's Encrypt cert for $DOMAIN (server's
-#     public IPv4 in dashed form + .sslip.io by default; replace once
+#     public IPv4 in dashed form + .nip.io by default; replace once
 #     you have real DNS).
 #
 # Logs live in /var/log/provision.log on the VM.
@@ -50,7 +50,7 @@ write_files:
       # was left as PLACEHOLDER. Override later by editing /opt/app/deploy/hetzner/.env.
       SELF_IP=$(curl -fsSL http://169.254.169.254/hetzner/v1/metadata/public-ipv4)
       if grep -q '^DOMAIN=PLACEHOLDER$' /root/.app.env; then
-        DOMAIN_HOST="$(echo "$SELF_IP" | tr . -).sslip.io"
+        DOMAIN_HOST="$(echo "$SELF_IP" | tr . -).nip.io"
         sed -i "s|^DOMAIN=PLACEHOLDER$|DOMAIN=$DOMAIN_HOST|" /root/.app.env
         echo "Resolved DOMAIN=$DOMAIN_HOST"
       fi
