@@ -1,10 +1,8 @@
 'use client'
 
 import { useEffect, useMemo, useState } from 'react'
-import Link from 'next/link'
 import {
   Plus, Trash2, X, Loader2, CircleDot, CircleDashed, CircleAlert, CircleCheck, GripVertical,
-  Bot,
 } from 'lucide-react'
 import {
   Task, TaskStatus, TaskPriority, TaskProject,
@@ -172,12 +170,6 @@ export default function AdminPage() {
           </p>
         </div>
         <div className="flex items-center gap-2">
-          <Link
-            href="/admin/tg"
-            className="flex items-center gap-1.5 rounded-lg border border-slate-700 bg-slate-900/60 px-2.5 py-1.5 text-xs text-slate-300 hover:border-indigo-500/40 hover:text-indigo-300"
-          >
-            <Bot className="w-3.5 h-3.5" /> TG-агент
-          </Link>
           {stages.length > 0 && (
             <select
               value={stageFilter}

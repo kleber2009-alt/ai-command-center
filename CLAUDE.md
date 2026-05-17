@@ -81,8 +81,6 @@ SQL Editor:
 - `004_tasks_project.sql` — adds `project text` column to `tasks` so the
   `/admin` board can split tasks per monorepo project
   (`transcribe` | `ytdlp` | `ai-office` | `general`, default `general`).
-- `005_tg_agent.sql` — `tg_chats`, `tg_users`, `tg_messages` for the
-  Telegram group AI agent (`apps/tg-agent` + `/admin/tg` panel).
 
 `supabase/seed_initial_tasks.sql` (not under `migrations/`) is an optional
 one-shot seed that populates the `/admin` board with the current project
@@ -234,18 +232,6 @@ Pipeline (`apps/tg-agent/src/bot.ts`):
   it will only see commands / mentions in groups. Run migration
   `supabase/migrations/005_tg_agent.sql`.
 
-### `/admin/tg` panel
-
-The dashboard lives in the transcribe app at
-`apps/transcribe/src/app/admin/tg/page.tsx`. Lists all chats with
-message / hot-lead counts and an `auto_reply` toggle, and shows
-per-chat recent messages (with class / action / bot reply) and
-users (with lead status). Backed by:
-
-- `GET /api/tg/chats` — chats + aggregates
-- `PATCH /api/tg/chats/[chatId]` — toggle `auto_reply`
-- `GET /api/tg/chats/[chatId]/users` — users with lead status
-- `GET /api/tg/chats/[chatId]/messages?limit=…` — recent messages
 
 ## Conventions
 
