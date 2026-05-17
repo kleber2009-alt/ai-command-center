@@ -1,0 +1,51 @@
+# ═══════════════════════════════════════════════════════════════════
+# Caddy snippet · AI Command Center dashboard
+# ═══════════════════════════════════════════════════════════════════
+# Добавь в /etc/caddy/Caddyfile отдельным site-блоком ИЛИ внутрь
+# существующего 46.62.215.11.nip.io как handle на /command.
+#
+# Перед этим:
+#   cd ~/ai-command-center/apps/aisales
+#   docker compose up -d --build command-center
+# (поднимет контейнер aisales-command-center на 127.0.0.1:3003)
+#
+# Подход 1 — отдельный поддомен (рекомендую: nip.io резолвит wildcards):
+# ───────────────────────────────────────────────────────────────────
+
+cmd.46.62.215.11.nip.io {
+	encode zstd gzip
+
+	reverse_proxy 127.0.0.1:3003 {
+		header_up X-Forwarded-Host {host}
+		header_up X-Forwarded-Proto {scheme}
+	}
+
+	log {
+		output file /var/log/caddy/command-center.log
+		format console
+	}
+}
+
+# После reload caddy:
+#   https://cmd.46.62.215.11.nip.io/dashboard
+#   https://cmd.46.62.215.11.nip.io/team, /tasks, /metrics, /briefing,
+#                                    /settings, /conversations
+
+# ───────────────────────────────────────────────────────────────────
+# Подход 2 — внутри уже работающего 46.62.215.11.nip.io как /command/*.
+# Требует basePath в Next.js, поэтому НЕ рекомендую — оставляю как
+# справку. Если решишь так, добавь в apps/command-center/next.config.js:
+#   basePath: '/command',
+#   assetPrefix: '/command',
+# и пересобери контейнер.
+# ───────────────────────────────────────────────────────────────────
+#
+# Внутри блока 46.62.215.11.nip.io { ... }:
+#
+# @command path /command /command/*
+# handle @command {
+#     reverse_proxy 127.0.0.1:3003 {
+#         header_up X-Forwarded-Host {host}
+#         header_up X-Forwarded-Proto {scheme}
+#     }
+# }

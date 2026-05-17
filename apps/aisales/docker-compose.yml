@@ -138,6 +138,27 @@ services:
       - "127.0.0.1:8001:8000"
     networks: [aisales-net]
 
+  # ── AI Command Center (Next.js dashboard для оператора) ──
+  # См. apps/command-center/. Слушает 3003, ходит в aisales-postgres
+  # за platform_*, agent_tasks, agent_prompt_overrides, revenue_goals.
+  command-center:
+    build:
+      context: ../command-center
+      dockerfile: Dockerfile
+    image: aisales-command-center:latest
+    container_name: aisales-command-center
+    restart: unless-stopped
+    environment:
+      NODE_ENV: production
+      DATABASE_URL: postgresql://${POSTGRES_USER}:${POSTGRES_PASSWORD_URLENC:-${POSTGRES_PASSWORD}}@aisales-postgres:5432/${POSTGRES_DB}
+      ANTHROPIC_API_KEY: ${ANTHROPIC_API_KEY:-}
+    depends_on:
+      postgres:
+        condition: service_healthy
+    ports:
+      - "127.0.0.1:3003:3003"
+    networks: [aisales-net]
+
 networks:
   aisales-net:
     name: aisales_aisales-net
