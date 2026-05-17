@@ -37,40 +37,70 @@ export interface ClassifierOptions {
   model: string;
 }
 
+export interface ClassificationResult {
+  classification: Classification;
+  cacheReadInputTokens: number;
+  cacheCreationInputTokens: number;
+}
+
 export interface Classifier {
   classify(text: string): Promise<Classification>;
+  // Same as classify, but exposes prompt cache hit stats. Useful for
+  // confirming caching is actually firing once the KB / classifier
+  // prefix gets large enough to cross the per-model minimum.
+  classifyWithStats(text: string): Promise<ClassificationResult>;
 }
 
 export function createClassifier({ apiKey, model }: ClassifierOptions): Classifier {
   const client = new Anthropic({ apiKey });
 
+  async function call(text: string): Promise<ClassificationResult> {
+    const response = await client.messages.create({
+      model,
+      max_tokens: 256,
+      // The classifier prompt is fully static — same bytes for every
+      // message. Marking it cacheable lets Anthropic serve it from
+      // the prompt cache once the prefix crosses the per-model
+      // minimum (4096 tokens on Haiku 4.5).
+      system: [
+        {
+          type: 'text',
+          text: CLASSIFIER_SYSTEM_PROMPT,
+          cache_control: { type: 'ephemeral' },
+        },
+      ],
+      tools: [classifyTool],
+      tool_choice: { type: 'tool', name: TOOL_NAME },
+      messages: [
+        {
+          role: 'user',
+          content: `Сообщение из Telegram-чата:\n\n"""\n${text}\n"""`,
+        },
+      ],
+    });
+
+    const toolUse = response.content.find(
+      (block): block is Anthropic.ToolUseBlock =>
+        block.type === 'tool_use' && block.name === TOOL_NAME,
+    );
+
+    if (!toolUse) {
+      throw new Error('Classifier did not return a tool_use block');
+    }
+
+    return {
+      classification: parseClassification(toolUse.input),
+      cacheReadInputTokens: response.usage.cache_read_input_tokens ?? 0,
+      cacheCreationInputTokens: response.usage.cache_creation_input_tokens ?? 0,
+    };
+  }
+
   return {
-    async classify(text: string): Promise<Classification> {
-      const response = await client.messages.create({
-        model,
-        max_tokens: 256,
-        system: CLASSIFIER_SYSTEM_PROMPT,
-        tools: [classifyTool],
-        tool_choice: { type: 'tool', name: TOOL_NAME },
-        messages: [
-          {
-            role: 'user',
-            content: `Сообщение из Telegram-чата:\n\n"""\n${text}\n"""`,
-          },
-        ],
-      });
-
-      const toolUse = response.content.find(
-        (block): block is Anthropic.ToolUseBlock =>
-          block.type === 'tool_use' && block.name === TOOL_NAME,
-      );
-
-      if (!toolUse) {
-        throw new Error('Classifier did not return a tool_use block');
-      }
-
-      return parseClassification(toolUse.input);
+    async classify(text): Promise<Classification> {
+      const r = await call(text);
+      return r.classification;
     },
+    classifyWithStats: call,
   };
 }
 

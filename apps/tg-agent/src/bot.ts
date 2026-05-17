@@ -92,8 +92,11 @@ export function createBot(deps: BotDeps): CreateBotResult {
     try {
       const chatState = chats.touch(chatId, chatTitle);
       let classification;
+      let classifierCacheRead = 0;
       try {
-        classification = await classifier.classify(text);
+        const result = await classifier.classifyWithStats(text);
+        classification = result.classification;
+        classifierCacheRead = result.cacheReadInputTokens;
         health.recordSuccess('classifier');
       } catch (err) {
         health.recordFailure('classifier', err);
@@ -124,6 +127,7 @@ export function createBot(deps: BotDeps): CreateBotResult {
         leadStatus: lead?.status ?? null,
         leadChanged: lead?.changed ?? false,
         autoReply: chatState.autoReply,
+        classifierCacheRead,
       });
 
       const wantsAutoReply = ACTIONS_THAT_REPLY.has(decision.action);
@@ -140,12 +144,15 @@ export function createBot(deps: BotDeps): CreateBotResult {
           (incoming.userId !== undefined ? `user${incoming.userId}` : undefined);
 
         let generated: string | null = null;
+        let responderCacheRead = 0;
         try {
-          generated = await responder.generate({
+          const result = await responder.generateWithStats({
             messageClass: classification.class,
             text,
             authorDisplay,
           });
+          generated = result.text;
+          responderCacheRead = result.cacheReadInputTokens;
           health.recordSuccess('responder');
         } catch (err) {
           health.recordFailure('responder', err);
@@ -169,6 +176,7 @@ export function createBot(deps: BotDeps): CreateBotResult {
               action: decision.action,
               replyChars: reply.length,
               reply: truncate(reply, 200),
+              responderCacheRead,
             });
           } catch (err) {
             health.recordFailure('telegram', err);

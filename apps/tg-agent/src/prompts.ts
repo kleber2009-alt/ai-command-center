@@ -65,20 +65,21 @@ export const RESPONDER_STRATEGIES: Record<string, string> = {
     'Помоги по существу если ответ есть в базе знаний. Если нет — скажи, что передашь Илье или менеджеру, и попроси описать проблему подробнее.',
 };
 
-// Builds the final responder system prompt by stitching together the
-// tone, the strategy for the current class, and the knowledge base.
-export function buildResponderSystemPrompt(
-  messageClass: string,
-  knowledgeBase: string,
-): string {
-  const strategy =
-    RESPONDER_STRATEGIES[messageClass] ??
-    'Ответь кратко и по делу, опираясь на базу знаний.';
+// The responder system prompt is split into two pieces:
+//
+//   1. Static — tone of voice + knowledge base. Same bytes across
+//      every call as long as knowledge_base.md doesn't change.
+//      Marked with cache_control in responder.ts.
+//   2. Dynamic — per-class strategy + the user's message. Lives in
+//      the user turn, after the cache breakpoint.
+//
+// This keeps the cacheable prefix identical regardless of which class
+// the classifier picked. Until the KB grows past Haiku 4.5's 4096-
+// token minimum the cache silently won't activate, but the structure
+// is correct for when it does.
 
+export function buildResponderSystemPrompt(knowledgeBase: string): string {
   return `Ты — AI-ассистент Ильи Палии в Telegram-чате.
-
-Класс входящего сообщения: ${messageClass}
-Стратегия ответа: ${strategy}
 
 ${RESPONDER_TONE}
 
@@ -89,4 +90,30 @@ ${knowledgeBase}
 ---
 
 Если в базе знаний нет нужной информации — НЕ выдумывай. Скажи, что уточнишь, и предложи следующий шаг.`;
+}
+
+// Builds the per-call user turn that carries the volatile context:
+// class, strategy hint, author handle, and the original message text.
+// Lives outside the cache breakpoint by design.
+export function buildResponderUserMessage(args: {
+  messageClass: string;
+  text: string;
+  authorDisplay: string | undefined;
+}): string {
+  const strategy =
+    RESPONDER_STRATEGIES[args.messageClass] ??
+    'Ответь кратко и по делу, опираясь на базу знаний.';
+
+  const author = args.authorDisplay ? `от ${args.authorDisplay}` : 'из чата';
+
+  return `Класс входящего сообщения: ${args.messageClass}
+Стратегия ответа: ${strategy}
+
+Сообщение ${author}:
+
+"""
+${args.text}
+"""
+
+Ответь в чат.`;
 }
