@@ -5,6 +5,7 @@ import MeTabs from './MeTabs'
 import { readNdjson } from '@/lib/stream-client'
 import { apiFetch } from '@/lib/api-client'
 import ChatSessionsDrawer from '@/components/ChatSessionsDrawer'
+import MarkdownMessage from '@/components/MarkdownMessage'
 
 type Msg = { role: 'user' | 'assistant'; content: string; citations?: Citation[] }
 type Citation = { document_id: string; document_title: string; chunk_index: number; similarity: number }
@@ -236,8 +237,10 @@ export default function MeChat() {
                     <span className="h-1.5 w-1.5 animate-pulse rounded-full bg-apple-faint" style={{ animationDelay: '150ms' }} />
                     <span className="h-1.5 w-1.5 animate-pulse rounded-full bg-apple-faint" style={{ animationDelay: '300ms' }} />
                   </span>
+                ) : m.role === 'assistant' ? (
+                  <MarkdownMessage content={m.content} className="text-[15px] leading-relaxed" />
                 ) : (
-                  <pre className="whitespace-pre-wrap break-words font-sans text-[15px] leading-relaxed">{m.content}</pre>
+                  <p className="whitespace-pre-wrap break-words text-[15px] leading-relaxed">{m.content}</p>
                 )}
                 {m.content && (
                   <button

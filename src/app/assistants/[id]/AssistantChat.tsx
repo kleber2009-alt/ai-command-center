@@ -9,6 +9,7 @@ import { getTelegram, isInTelegram } from '@/lib/telegram'
 import { readNdjson } from '@/lib/stream-client'
 import { apiFetch } from '@/lib/api-client'
 import ChatSessionsDrawer from '@/components/ChatSessionsDrawer'
+import MarkdownMessage from '@/components/MarkdownMessage'
 
 const ICONS: Record<string, any> = {
   Target, MessagesSquare, Send, Flame, Package, Filter, BookOpen, Magnet, LayoutGrid, Sparkles,
@@ -271,10 +272,10 @@ export default function AssistantChat({ id, name, description, icon, buttonText,
                   <span className="h-1.5 w-1.5 animate-pulse rounded-full bg-apple-faint" style={{ animationDelay: '150ms' }} />
                   <span className="h-1.5 w-1.5 animate-pulse rounded-full bg-apple-faint" style={{ animationDelay: '300ms' }} />
                 </span>
+              ) : m.role === 'assistant' ? (
+                <MarkdownMessage content={m.content} className="text-[15px] leading-relaxed" />
               ) : (
-                <pre className="whitespace-pre-wrap break-words font-sans text-[15px] leading-relaxed">
-                  {m.content}
-                </pre>
+                <p className="whitespace-pre-wrap break-words text-[15px] leading-relaxed">{m.content}</p>
               )}
               {m.content && (
                 <button
