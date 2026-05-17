@@ -104,9 +104,11 @@ async function main() {
   }
 
   console.log(`\n✓ Скачано: ${ok}, ошибок: ${fail}`);
-  console.log(`Файлы лежат в ${OUT_DIR}. Дальше:`);
-  console.log(`  docker compose cp ${OUT_DIR}/. ai-office:/data/voice-notes/`);
-  console.log(`Или (если volume mount-ится в хост): rsync -a ${OUT_DIR}/ /var/lib/docker/volumes/.../voice-notes/`);
+  console.log(`Файлы лежат в ${OUT_DIR}`);
+  if (OUT_DIR !== '/data/voice-notes') {
+    console.log('Если запускал НЕ внутри контейнера ai-office —');
+    console.log('  docker compose cp ' + OUT_DIR + '/. ai-office:/data/voice-notes/');
+  }
 
   await pool.end();
 }
