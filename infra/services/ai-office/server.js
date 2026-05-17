@@ -37,6 +37,17 @@ fs.mkdirSync(STATIC_DIR, { recursive: true });
 const PORT = parseInt(process.env.PORT || '3000', 10);
 const TG_WEBHOOK_SECRET = process.env.TG_WEBHOOK_SECRET || null;
 
+/**
+ * Normalize an owner handle so persona-train and the TG bot store/lookup
+ * the same string. Adds @ prefix for usernames, lowercases emails.
+ */
+function normalizeOwnerHandle(s) {
+  const t = String(s || '').trim().split(/\s+/)[0];
+  if (!t) return null;
+  if (t.includes('@') && t.includes('.')) return t.toLowerCase();
+  return t.startsWith('@') ? t : '@' + t;
+}
+
 const fastify = Fastify({
   logger: { level: process.env.LOG_LEVEL || 'info' },
   trustProxy: true,
@@ -185,6 +196,7 @@ fastify.post('/api/voice-clone', async (request, reply) => {
   }
 
   if (!ownerHandle) return reply.code(400).send({ error: 'owner_handle_required' });
+  ownerHandle = normalizeOwnerHandle(ownerHandle);
   if (!files.length) return reply.code(400).send({ error: 'no_audio_files' });
 
   const name = displayName || ownerHandle;
@@ -252,8 +264,9 @@ fastify.post('/api/voice-generate', async (request, reply) => {
 
 // ═══ /api/voice-list ════════════════════════════════════════════════
 fastify.get('/api/voice-list', async (request, reply) => {
-  const owner = String(request.query?.owner || '').trim();
-  if (!owner) return reply.code(400).send({ error: 'owner_required' });
+  const raw = String(request.query?.owner || '').trim();
+  if (!raw) return reply.code(400).send({ error: 'owner_required' });
+  const owner = normalizeOwnerHandle(raw);
 
   const [current] = await query(
     `select id, display_name, provider, provider_voice_id, sample_seconds, created_at
@@ -296,8 +309,9 @@ function checkTokenRate(handle) {
 }
 
 fastify.post('/api/voice-binding-token', async (request, reply) => {
-  const ownerHandle = String(request.body?.owner_handle || '').trim();
-  if (!ownerHandle) return reply.code(400).send({ error: 'owner_handle_required' });
+  const rawHandle = String(request.body?.owner_handle || '').trim();
+  if (!rawHandle) return reply.code(400).send({ error: 'owner_handle_required' });
+  const ownerHandle = normalizeOwnerHandle(rawHandle);
   if (!checkTokenRate(ownerHandle)) {
     return reply.code(429).send({ error: 'rate_limited', max_per_hour: 5 });
   }
