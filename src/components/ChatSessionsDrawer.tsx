@@ -1,6 +1,6 @@
 'use client'
 import { useEffect, useState } from 'react'
-import { Loader2, MessageSquarePlus, Trash2, X } from 'lucide-react'
+import { Check, Loader2, MessageSquarePlus, Pencil, Trash2, X } from 'lucide-react'
 import { apiFetch } from '@/lib/api-client'
 
 type Session = {
@@ -41,6 +41,32 @@ export default function ChatSessionsDrawer({
   const [items, setItems] = useState<Session[]>([])
   const [loading, setLoading] = useState(false)
   const [error, setError] = useState<string | null>(null)
+  const [renamingId, setRenamingId] = useState<string | null>(null)
+  const [renameValue, setRenameValue] = useState('')
+
+  async function commitRename(id: string) {
+    const title = renameValue.trim()
+    if (!title) {
+      setRenamingId(null)
+      return
+    }
+    try {
+      const res = await apiFetch(`/api/me/chats/${id}`, {
+        method: 'PUT',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ title }),
+      })
+      if (!res.ok) {
+        const data = await res.json().catch(() => ({}))
+        throw new Error(data?.error || `Ошибка ${res.status}`)
+      }
+      setItems((it) => it.map((s) => (s.id === id ? { ...s, title } : s)))
+    } catch (e: any) {
+      setError(e?.message || 'Не удалось переименовать')
+    } finally {
+      setRenamingId(null)
+    }
+  }
 
   useEffect(() => {
     if (!open) return
@@ -137,36 +163,86 @@ export default function ChatSessionsDrawer({
                 return (
                   <li key={s.id} className={i > 0 ? 'border-t border-apple-line' : ''}>
                     <div className={`group flex items-stretch ${active ? 'bg-apple-bg-soft' : ''}`}>
-                      <button
-                        type="button"
-                        onClick={() => {
-                          onSelect(s.id)
-                          onClose()
-                        }}
-                        className="flex flex-1 flex-col gap-1 px-4 py-3 text-left hover:bg-apple-bg-soft"
-                      >
-                        <div className="flex items-center justify-between gap-2">
-                          <div className="truncate text-[13px] font-medium text-apple-ink">
-                            {s.title || 'Без названия'}
-                          </div>
-                          <span className="shrink-0 text-[11px] text-apple-faint">{timeAgo(s.updated_at)}</span>
+                      {renamingId === s.id ? (
+                        <div className="flex flex-1 items-center gap-2 px-4 py-3">
+                          <input
+                            type="text"
+                            value={renameValue}
+                            onChange={(e) => setRenameValue(e.target.value)}
+                            onKeyDown={(e) => {
+                              if (e.key === 'Enter') {
+                                e.preventDefault()
+                                commitRename(s.id)
+                              } else if (e.key === 'Escape') {
+                                setRenamingId(null)
+                              }
+                            }}
+                            autoFocus
+                            className="flex-1 rounded-lg border border-apple-line bg-white px-2 py-1 text-[13px] text-apple-ink outline-none focus:border-apple-line-strong focus:shadow-apple-sm"
+                          />
+                          <button
+                            type="button"
+                            onClick={() => commitRename(s.id)}
+                            className="grid h-8 w-8 shrink-0 place-items-center rounded-full bg-apple-blue text-white hover:bg-apple-blue-hover"
+                            aria-label="Сохранить"
+                          >
+                            <Check className="h-3.5 w-3.5" />
+                          </button>
+                          <button
+                            type="button"
+                            onClick={() => setRenamingId(null)}
+                            className="grid h-8 w-8 shrink-0 place-items-center rounded-full text-apple-faint hover:bg-apple-bg-soft hover:text-apple-ink"
+                            aria-label="Отменить"
+                          >
+                            <X className="h-3.5 w-3.5" />
+                          </button>
                         </div>
-                        {s.last_message && (
-                          <div className="line-clamp-2 text-[12px] text-apple-muted">{s.last_message}</div>
-                        )}
-                        <div className="text-[11px] text-apple-faint">
-                          {s.message_count} {s.message_count === 1 ? 'сообщение' : 'сообщений'}
-                        </div>
-                      </button>
-                      <button
-                        type="button"
-                        onClick={() => remove(s.id)}
-                        className="my-auto mr-2 grid h-8 w-8 shrink-0 place-items-center rounded-full text-apple-faint transition-colors hover:bg-red-50 hover:text-red-500"
-                        aria-label="Удалить"
-                        title="Удалить"
-                      >
-                        <Trash2 className="h-3.5 w-3.5" />
-                      </button>
+                      ) : (
+                        <>
+                          <button
+                            type="button"
+                            onClick={() => {
+                              onSelect(s.id)
+                              onClose()
+                            }}
+                            className="flex flex-1 flex-col gap-1 px-4 py-3 text-left hover:bg-apple-bg-soft"
+                          >
+                            <div className="flex items-center justify-between gap-2">
+                              <div className="truncate text-[13px] font-medium text-apple-ink">
+                                {s.title || 'Без названия'}
+                              </div>
+                              <span className="shrink-0 text-[11px] text-apple-faint">{timeAgo(s.updated_at)}</span>
+                            </div>
+                            {s.last_message && (
+                              <div className="line-clamp-2 text-[12px] text-apple-muted">{s.last_message}</div>
+                            )}
+                            <div className="text-[11px] text-apple-faint">
+                              {s.message_count} {s.message_count === 1 ? 'сообщение' : 'сообщений'}
+                            </div>
+                          </button>
+                          <button
+                            type="button"
+                            onClick={() => {
+                              setRenameValue(s.title || '')
+                              setRenamingId(s.id)
+                            }}
+                            className="my-auto grid h-8 w-8 shrink-0 place-items-center rounded-full text-apple-faint opacity-0 transition-colors hover:bg-apple-bg-soft hover:text-apple-ink group-hover:opacity-100"
+                            aria-label="Переименовать"
+                            title="Переименовать"
+                          >
+                            <Pencil className="h-3.5 w-3.5" />
+                          </button>
+                          <button
+                            type="button"
+                            onClick={() => remove(s.id)}
+                            className="my-auto mr-2 grid h-8 w-8 shrink-0 place-items-center rounded-full text-apple-faint transition-colors hover:bg-red-50 hover:text-red-500"
+                            aria-label="Удалить"
+                            title="Удалить"
+                          >
+                            <Trash2 className="h-3.5 w-3.5" />
+                          </button>
+                        </>
+                      )}
                     </div>
                   </li>
                 )
