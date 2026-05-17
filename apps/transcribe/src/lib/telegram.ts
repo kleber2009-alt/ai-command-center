@@ -102,3 +102,17 @@ export function isInTelegram(): boolean {
   // initData is empty when opened outside Telegram (or with disabled WebApp)
   return Boolean(tg && tg.initData && tg.initData.length > 0)
 }
+
+// fetch wrapper that automatically attaches x-telegram-init-data
+// when the page is inside Telegram. Use for all /api/* calls so
+// the server-side HMAC validator (if TELEGRAM_BOT_TOKEN is set)
+// can verify the request originated from a real Telegram session.
+// Outside Telegram the call is identical to plain fetch.
+export function apiFetch(input: RequestInfo | URL, init?: RequestInit): Promise<Response> {
+  const tg = getTelegram()
+  if (!tg || !tg.initData) return fetch(input, init)
+
+  const headers = new Headers(init?.headers)
+  headers.set('x-telegram-init-data', tg.initData)
+  return fetch(input, { ...init, headers })
+}
