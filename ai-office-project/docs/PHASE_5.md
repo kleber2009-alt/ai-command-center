@@ -5,7 +5,8 @@
 > · **Commit 1 (✅):** клон голоса + генерация voice-notes для предпросмотра.
 > · **Commit 2 (✅):** Telegram Voice Composer Bot — owner пишет боту, получает voice-note своим голосом и пересылает кому угодно.
 > · **Commit 3 (✅):** одноразовые binding-токены — защита от impersonation в боте.
-> · **Commit 4 (далее):** видео-кружки через D-ID, либо subscriber-relay approval-flow.
+> · **Commit 4 (✅):** subscriber-relay flow — подписчики пишут боту, owner аппрувит AI-ответы голосом.
+> · **Commit 5 (далее):** видео-кружки через D-ID или multi-tenant relay.
 
 ---
 
@@ -365,4 +366,115 @@ update к `tg-voice-webhook.js` (`cmdStart` теперь требует токе
 
 ---
 
-_Last updated: 2026-05-16, после Commit 3._
+## Commit 4 — Subscriber Relay Flow
+
+> Реализовано в self-hosted backend (`infra/services/ai-office/lib/tg-relay.js`).
+> Netlify-Function-версия Commit 1-3 не имеет relay-логики — фича доступна только после миграции на свой сервер.
+
+**Идея:** подписчик пишет боту → owner получает уведомление с inline-кнопками →
+жмёт «🤖 AI-ответ» (Claude генерит текст) → «🎧 Озвучить» (ElevenLabs делает voice) →
+«✅ Отправить» (бот пересылает voice-note подписчику от имени owner).
+
+**Поток:**
+
+```
+[Bob — подписчик] DMs @your_voice_bot: "Привет, расскажи про тариф Pro"
+                            │
+                            ▼
+                  bot resolves chat_id NOT in voice_bot_users
+                  → handleSubscriberInbound(msg)
+                            │
+                            ▼
+                  INSERT voice_relay_inbound (status=pending)
+                            │
+                            ▼
+                  bot отправляет [Alice — owner]:
+                  ┌────────────────────────────────────────┐
+                  │ 📩 Входящее от @bob:                    │
+                  │ "Привет, расскажи про тариф Pro"        │
+                  │ [🤖 AI-ответ] [🔇 Пропустить] [🗑]     │
+                  └────────────────────────────────────────┘
+                            │
+                            ▼  Alice жмёт [🤖 AI-ответ]
+                            ▼
+                  Claude (haiku-4-5) генерит draft:
+                  "Pro — это 1990₽/мес, все 4 отдела…"
+                            │
+                            ▼  edit bubble + новые кнопки:
+                  [🎧 Озвучить] [♻️ Другой вариант] [🗑]
+                            │
+                            ▼  Alice жмёт [🎧 Озвучить]
+                            ▼
+                  ElevenLabs TTS (голос Alice) → mp3 → Storage
+                  bot шлёт Alice preview voice-note
+                            │
+                            ▼  edit bubble:
+                  [✅ Отправить] [🔄 Заново озвучить] [🗑]
+                            │
+                            ▼  Alice жмёт [✅ Отправить]
+                            ▼
+                  bot шлёт voice-note Bob'у (как reply на его сообщение)
+                  voice_generations.recipient_chat_id = Bob's chat_id
+                  voice_relay_inbound.status = 'sent'
+```
+
+### Защита от злоупотреблений
+
+- **Single-tenant в v1.** Бот привязан к ОДНОМУ owner — задаётся в env `TG_VOICE_BOT_OWNER=@alice` или берётся первый row из `voice_bot_users`. Без owner — бот отвечает «настройка не завершена».
+- **Owner-approval строго обязателен** на каждом шаге. Бот **никогда** не шлёт voice-note без явного `[✅ Отправить]`.
+- **Полный аудит-лог** в `voice_relay_inbound` — `text`, `draft_text`, `subscriber_chat_id`, `subscriber_message_id`, статус и timestamps.
+- **MAX_INBOUND_LEN = 2000 символов** — против спама.
+- **Draft tokens ≤ 320** — против раздутых ответов от Claude.
+
+### State machine
+
+```
+pending     ──[🤖]──▶ drafted ──[🎧]──▶ voice_ready ──[✅]──▶ sent
+   │                     │                  │                  ▲
+   │                     └──[♻️ regenerate]─┘                  │
+   └──[🔇]──▶ ignored    ↓                  ↓                  │
+   └──[🗑]──▶ rejected   [🗑]──▶ rejected    [🗑]──▶ rejected  │
+                                                               │
+                              (всё кроме sent можно прервать)──┘
+```
+
+### Файлы Commit 4
+
+| Файл | Что делает |
+|---|---|
+| `infra/db/init/002_relay.sql` | Таблица `voice_relay_inbound` + индексы + auto-update триггер |
+| `infra/services/ai-office/lib/tg-relay.js` | Весь relay-флоу: `handleSubscriberInbound`, `handleRelayCallback`, рендер approval-bubble, state машина |
+| `infra/services/ai-office/lib/anthropic.js` | Минимальная обёртка Claude `chat()` — для AI-drafts |
+| `infra/services/ai-office/lib/tg-voice-bot.js` | Маршрутизатор: owner → voice composer / subscriber → relay |
+| `infra/.env.example` | Новая переменная `TG_VOICE_BOT_OWNER` |
+
+### Setup для уже-развёрнутого сервера
+
+```bash
+# 1) Применить SQL миграцию к существующей БД
+docker exec -i infra-postgres-1 psql -U aio -d aio < ~/ai-command-center/infra/db/init/002_relay.sql
+
+# 2) (опц.) задать TG_VOICE_BOT_OWNER в .env, иначе берётся первый bound owner
+nano ~/ai-command-center/infra/.env
+# добавить:   TG_VOICE_BOT_OWNER=@your_handle
+
+# 3) Подтянуть код и пересобрать
+cd ~/ai-command-center && git pull
+cd infra && docker compose up -d --build ai-office
+
+# 4) Проверка
+docker compose logs ai-office --tail=20
+docker exec infra-postgres-1 psql -U aio -d aio -c "\d voice_relay_inbound"
+```
+
+### Что ещё планируется в Commit 5+
+
+- **Многотенантность:** разные subscribers → разные owners (через deep-link `t.me/bot?start=alice` для роутинга)
+- **Кастомный draft:** owner пишет свой ответ вместо AI-генерированного (требует session-state в боте)
+- **Видео-кружки через D-ID:** voice-note + lip-sync видео → `sendVideoNote`
+- **Style match:** fine-tuned Claude промпт на 30+ постах owner'а
+- **Конверсация:** хранить контекст диалога с подписчиком (несколько turns)
+
+---
+
+_Last updated: 2026-05-17, после Commit 4 (subscriber relay)._

@@ -9,6 +9,7 @@
 import { queryOne, query } from './db.js';
 import { generateVoiceNote } from './voice-pipeline.js';
 import { markGenerationSent } from './generations.js';
+import { handleSubscriberInbound, handleRelayCallback } from './tg-relay.js';
 
 const MAX_INCOMING_LEN = 1500;
 
@@ -23,7 +24,7 @@ export async function handleUpdate(update) {
   if (update.message) {
     await handleMessage(update.message);
   } else if (update.callback_query) {
-    await answerCallback(update.callback_query);
+    await handleCallback(update.callback_query);
   }
 }
 
@@ -34,10 +35,7 @@ async function handleMessage(msg) {
   const username = msg.from?.username || null;
   const text = (msg.text || '').trim();
 
-  if (!text) {
-    return sendText(chatId, '🤖 Я понимаю только текст. Пришли сообщение — озвучу твоим голосом.');
-  }
-
+  // Команды доступны всем (включая subscribers — чтобы /start работал).
   if (text === '/start' || text === '/start@_') {
     return sendText(chatId, START_WELCOME, { parse_mode: 'HTML' });
   }
@@ -50,20 +48,38 @@ async function handleMessage(msg) {
   if (text === '/help') {
     return sendText(chatId, HELP_TEXT, { parse_mode: 'HTML' });
   }
-  if (text === '/voice') {
-    return cmdVoice(chatId);
-  }
-  if (text === '/settings') {
-    return cmdSettings(chatId);
-  }
-  if (text === '/clear') {
-    return cmdClear(chatId);
-  }
-  if (text.startsWith('/')) {
-    return sendText(chatId, '❓ Неизвестная команда. /help — список.');
+
+  // Определяем кто это: owner (привязанный chat) или subscriber.
+  const ownerUser = await getBotUser(chatId);
+
+  if (ownerUser) {
+    if (text === '/voice')    return cmdVoice(chatId);
+    if (text === '/settings') return cmdSettings(chatId);
+    if (text === '/clear')    return cmdClear(chatId);
+    if (text.startsWith('/')) {
+      return sendText(chatId, '❓ Неизвестная команда. /help — список.');
+    }
+    if (!text) {
+      return sendText(chatId, '🤖 Я понимаю только текст. Пришли сообщение — озвучу твоим голосом.');
+    }
+    return generateAndSend(chatId, msg.message_id, text);
   }
 
-  return generateAndSend(chatId, msg.message_id, text);
+  // Subscriber flow — переадресуем владельцу через approval-bubble
+  if (text.startsWith('/')) {
+    return sendText(chatId, '🤖 Доступные команды: /start, /help');
+  }
+  if (!text) {
+    return sendText(chatId, '🤖 Понимаю только текст.');
+  }
+  return handleSubscriberInbound(msg);
+}
+
+// ═══ Callback handler ══════════════════════════════════════════════
+async function handleCallback(cq) {
+  const handled = await handleRelayCallback(cq);
+  if (handled) return;
+  await answerCallback(cq);
 }
 
 // ═══ Commands ══════════════════════════════════════════════════════
