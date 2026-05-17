@@ -12,6 +12,7 @@ support services and a legacy static site kept for reference.
 /
 ├── apps/
 │   ├── transcribe/   # Next.js 14 app + Telegram Mini App (the flagship)
+│   ├── tg-agent/     # Node.js Telegram group AI agent (Railway, long-polling)
 │   ├── ytdlp/        # FastAPI + yt-dlp companion microservice (Railway)
 │   └── ai-office/    # legacy static "AI Business Command Center" site
 ├── packages/         # reserved for shared code (empty)
@@ -19,9 +20,10 @@ support services and a legacy static site kept for reference.
 └── docs/
 ```
 
-Only `apps/transcribe` is a node workspace; `apps/ytdlp` is Python and
-`apps/ai-office` is static HTML. Root `package.json` lists workspaces and
-proxies `dev/build/start/lint` to `apps/transcribe`.
+`apps/transcribe` and `apps/tg-agent` are node workspaces; `apps/ytdlp`
+is Python and `apps/ai-office` is static HTML. Root `package.json`
+proxies `dev/build/start/lint` to `apps/transcribe` and exposes
+`tg-agent:dev|build|start|typecheck` for the Telegram agent.
 
 The transcribe app is a single-purpose web app and Telegram Mini App for
 transcribing video / audio links and turning the transcript into short-form
@@ -177,6 +179,39 @@ where `url` is a signed direct media URL Deepgram can ingest. Auth via
 `Authorization: Bearer $YTDLP_SERVICE_API_KEY`. Cookies for Instagram /
 YouTube can be provided as base64 in `INSTAGRAM_COOKIES_B64` / `COOKIES_B64`
 (both names accepted) — see `apps/ytdlp/README.md`.
+
+## Telegram group AI agent (tg-agent)
+
+`apps/tg-agent/` — Node.js + TypeScript service that joins Telegram
+groups as a regular bot, reads every text message, classifies its
+intent with Claude Haiku, and decides whether the agent should
+respond. **Stage 1**: classify + log only — no actual replies or DB
+writes yet (this is intentional, so we can audit classification
+quality before granting the bot a voice).
+
+- Transport: long-polling via [grammy](https://grammy.dev/). Deploy
+  on Railway with **replicas = 1** — long-polling can't fan out.
+- Classifier: `apps/tg-agent/src/classifier.ts` calls Claude Haiku
+  4.5 with a tool-use schema. 10 classes: `GENERAL_CHAT`,
+  `QUESTION`, `PRODUCT_INTEREST`, `PRICE_REQUEST`, `OBJECTION`,
+  `BUYING_INTENT`, `NEGATIVE`, `SUPPORT_REQUEST`, `OWNER_REQUEST`,
+  `SPAM`.
+- Decision engine: `apps/tg-agent/src/decision.ts` maps class →
+  `Action` (`IGNORE`, `REPLY`, `REPLY_SOFT`, `REPLY_AND_NOTIFY`,
+  `NOTIFY_ONLY`, `DRAFT_FOR_OWNER`). Safety: when
+  `confidence < CONFIDENCE_THRESHOLD` (default 0.7), any non-IGNORE
+  action drops to `DRAFT_FOR_OWNER` — except for `GENERAL_CHAT` /
+  `NEGATIVE` / `SPAM` which stay `IGNORE`.
+- Env (see `apps/tg-agent/.env.example`):
+  `TELEGRAM_BOT_TOKEN`, `ANTHROPIC_API_KEY`, optional
+  `OWNER_TELEGRAM_ID`, `ALLOWED_CHAT_IDS`, `CONFIDENCE_THRESHOLD`,
+  `LOG_LEVEL`, `CLASSIFIER_MODEL`.
+- Setup: in @BotFather run `/setprivacy → Disable` for the bot, or
+  it will only see commands / mentions in groups.
+
+Next stages live in `apps/tg-agent/README.md` ("Что дальше"):
+real replies, knowledge base / RAG, leads table in Supabase, owner
+notifications, `/admin` panel.
 
 ## Conventions
 

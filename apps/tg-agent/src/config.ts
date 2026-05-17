@@ -1,0 +1,76 @@
+import 'dotenv/config';
+
+function required(name: string): string {
+  const value = process.env[name];
+  if (!value || value.trim() === '') {
+    throw new Error(`Missing required env var: ${name}`);
+  }
+  return value;
+}
+
+function optional(name: string): string | undefined {
+  const value = process.env[name];
+  return value && value.trim() !== '' ? value : undefined;
+}
+
+function parseChatIds(raw: string | undefined): Set<number> {
+  if (!raw) return new Set();
+  return new Set(
+    raw
+      .split(',')
+      .map((s) => s.trim())
+      .filter(Boolean)
+      .map((s) => {
+        const n = Number(s);
+        if (!Number.isFinite(n)) {
+          throw new Error(`Invalid chat id in ALLOWED_CHAT_IDS: ${s}`);
+        }
+        return n;
+      }),
+  );
+}
+
+function parseThreshold(raw: string | undefined): number {
+  if (!raw) return 0.7;
+  const n = Number(raw);
+  if (!Number.isFinite(n) || n < 0 || n > 1) {
+    throw new Error(`CONFIDENCE_THRESHOLD must be a number in [0, 1], got: ${raw}`);
+  }
+  return n;
+}
+
+export type LogLevel = 'debug' | 'info' | 'warn' | 'error';
+
+function parseLogLevel(raw: string | undefined): LogLevel {
+  const v = (raw ?? 'info').toLowerCase();
+  if (v === 'debug' || v === 'info' || v === 'warn' || v === 'error') return v;
+  throw new Error(`Invalid LOG_LEVEL: ${raw}`);
+}
+
+export interface Config {
+  telegramBotToken: string;
+  anthropicApiKey: string;
+  ownerTelegramId: number | undefined;
+  allowedChatIds: Set<number>;
+  confidenceThreshold: number;
+  logLevel: LogLevel;
+  classifierModel: string;
+}
+
+export function loadConfig(): Config {
+  const ownerRaw = optional('OWNER_TELEGRAM_ID');
+  const ownerTelegramId = ownerRaw ? Number(ownerRaw) : undefined;
+  if (ownerRaw && !Number.isFinite(ownerTelegramId)) {
+    throw new Error(`OWNER_TELEGRAM_ID must be numeric, got: ${ownerRaw}`);
+  }
+
+  return {
+    telegramBotToken: required('TELEGRAM_BOT_TOKEN'),
+    anthropicApiKey: required('ANTHROPIC_API_KEY'),
+    ownerTelegramId,
+    allowedChatIds: parseChatIds(optional('ALLOWED_CHAT_IDS')),
+    confidenceThreshold: parseThreshold(optional('CONFIDENCE_THRESHOLD')),
+    logLevel: parseLogLevel(optional('LOG_LEVEL')),
+    classifierModel: optional('CLASSIFIER_MODEL') ?? 'claude-haiku-4-5-20251001',
+  };
+}
