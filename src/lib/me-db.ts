@@ -1,8 +1,17 @@
 import { getDb, embeddingToBuffer } from './db'
 
+export type ProjectCard = {
+  id: string
+  name: string
+  description: string
+  stage: string
+  metrics: string
+}
+
 export type MeProfile = {
   bio: string
   projects: string
+  projects_list: ProjectCard[]
   academy: string
   social: string
   voice: string
@@ -13,6 +22,7 @@ export type MeProfile = {
 export const EMPTY_PROFILE: MeProfile = {
   bio: '',
   projects: '',
+  projects_list: [],
   academy: '',
   social: '',
   voice: '',
@@ -58,16 +68,36 @@ export function isDbConfigured(): boolean {
   return true
 }
 
+function safeParseProjects(s: string | null | undefined): ProjectCard[] {
+  if (!s) return []
+  try {
+    const v = JSON.parse(s)
+    if (!Array.isArray(v)) return []
+    return v
+      .filter((p) => p && typeof p === 'object')
+      .map((p: any) => ({
+        id: typeof p.id === 'string' ? p.id : String(p.id ?? Math.random()),
+        name: typeof p.name === 'string' ? p.name : '',
+        description: typeof p.description === 'string' ? p.description : '',
+        stage: typeof p.stage === 'string' ? p.stage : '',
+        metrics: typeof p.metrics === 'string' ? p.metrics : '',
+      }))
+  } catch {
+    return []
+  }
+}
+
 export function loadProfile(): MeProfile {
   const row = getDb()
     .prepare(
-      `SELECT bio, projects, academy, social, voice, custom, updated_at
+      `SELECT bio, projects, projects_list, academy, social, voice, custom, updated_at
        FROM me_profile WHERE id = 'singleton'`,
     )
     .get() as
     | {
         bio: string
         projects: string
+        projects_list: string
         academy: string
         social: string
         voice: string
@@ -80,6 +110,7 @@ export function loadProfile(): MeProfile {
   return {
     bio: row.bio ?? '',
     projects: row.projects ?? '',
+    projects_list: safeParseProjects(row.projects_list),
     academy: row.academy ?? '',
     social: row.social ?? '',
     voice: row.voice ?? '',
@@ -90,13 +121,15 @@ export function loadProfile(): MeProfile {
 
 export function saveProfile(p: Partial<MeProfile>): MeProfile {
   const now = new Date().toISOString()
+  const projectsList = Array.isArray(p.projects_list) ? p.projects_list : []
   getDb()
     .prepare(
-      `INSERT INTO me_profile (id, bio, projects, academy, social, voice, custom, updated_at)
-       VALUES ('singleton', ?, ?, ?, ?, ?, ?, ?)
+      `INSERT INTO me_profile (id, bio, projects, projects_list, academy, social, voice, custom, updated_at)
+       VALUES ('singleton', ?, ?, ?, ?, ?, ?, ?, ?)
        ON CONFLICT(id) DO UPDATE SET
          bio = excluded.bio,
          projects = excluded.projects,
+         projects_list = excluded.projects_list,
          academy = excluded.academy,
          social = excluded.social,
          voice = excluded.voice,
@@ -106,6 +139,7 @@ export function saveProfile(p: Partial<MeProfile>): MeProfile {
     .run(
       p.bio ?? '',
       p.projects ?? '',
+      JSON.stringify(projectsList),
       p.academy ?? '',
       p.social ?? '',
       p.voice ?? '',
@@ -118,7 +152,33 @@ export function saveProfile(p: Partial<MeProfile>): MeProfile {
 export function profileToContext(p: MeProfile): string {
   const parts: string[] = []
   if (p.bio.trim()) parts.push(`## О пользователе\n${p.bio.trim()}`)
-  if (p.projects.trim()) parts.push(`## Проекты\n${p.projects.trim()}`)
+
+  const cards = (p.projects_list ?? []).filter(
+    (c) => c.name.trim() || c.description.trim() || c.stage.trim() || c.metrics.trim(),
+  )
+  if (cards.length > 0 || p.projects.trim()) {
+    let block = '## Проекты'
+    if (cards.length > 0) {
+      block +=
+        '\n' +
+        cards
+          .map((c) => {
+            const head = c.name.trim() || '(без названия)'
+            const meta: string[] = []
+            if (c.stage.trim()) meta.push(`стадия: ${c.stage.trim()}`)
+            if (c.metrics.trim()) meta.push(`метрики: ${c.metrics.trim()}`)
+            const metaLine = meta.length ? ` _(${meta.join(' · ')})_` : ''
+            const desc = c.description.trim() ? `\n${c.description.trim()}` : ''
+            return `- **${head}**${metaLine}${desc}`
+          })
+          .join('\n')
+    }
+    if (p.projects.trim()) {
+      block += (cards.length > 0 ? '\n\n### Заметки\n' : '\n') + p.projects.trim()
+    }
+    parts.push(block)
+  }
+
   if (p.academy.trim()) parts.push(`## Академия / знания\n${p.academy.trim()}`)
   if (p.social.trim()) parts.push(`## Соцсети\n${p.social.trim()}`)
   if (p.voice.trim()) parts.push(`## Голос и стиль\n${p.voice.trim()}`)

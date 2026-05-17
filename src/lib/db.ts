@@ -108,9 +108,31 @@ export function getDb(): Database.Database {
   sqliteVec.load(db)
   db.exec(SCHEMA)
   db.exec(VEC_SCHEMA)
+  runColumnMigrations(db)
 
   cachedDb = db
   return db
+}
+
+// Additive column migrations. SQLite's `CREATE TABLE IF NOT EXISTS` doesn't
+// add columns to existing tables, so anything we add to a row schema after
+// the first deploy needs a one-shot ALTER. Each statement is wrapped in
+// try/catch because SQLite throws "duplicate column" when the migration
+// already ran — that's the idempotent path.
+function runColumnMigrations(db: Database.Database) {
+  const migrations: string[] = [
+    `ALTER TABLE me_profile ADD COLUMN projects_list TEXT NOT NULL DEFAULT '[]'`,
+  ]
+  for (const stmt of migrations) {
+    try {
+      db.exec(stmt)
+    } catch (e: any) {
+      // Ignore "duplicate column name" — migration already applied.
+      if (!String(e?.message || '').includes('duplicate column name')) {
+        console.warn('[db migration] failed:', stmt, e?.message)
+      }
+    }
+  }
 }
 
 export function embeddingToBuffer(vec: number[]): Buffer {
