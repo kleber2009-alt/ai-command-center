@@ -1,0 +1,399 @@
+<!doctype html>
+<html lang="ru">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1">
+<title>ROI-калькулятор · сколько ты экономишь с AI Office · AI Growth Office</title>
+<meta name="description" content="Сравни стоимость своей команды (SMM, копирайтер, таргетолог, дизайнер, разработчик) с AI Office. Получи реальную экономию в ₽/год и срок окупаемости.">
+<meta name="keywords" content="ROI калькулятор, экономия на команде, AI vs найм, стоимость SMM, контент-маркетолог цена, AI Office цена">
+<meta name="author" content="AI Growth Office">
+<link rel="canonical" href="https://ai-growth-office.ru/roi.html">
+
+<meta property="og:type" content="website">
+<meta property="og:url" content="https://ai-growth-office.ru/roi.html">
+<meta property="og:title" content="ROI-калькулятор · сколько ты экономишь с AI Office">
+<meta property="og:description" content="Введи штат → получи реальную экономию в ₽/год и срок окупаемости. Сравнение с AI Office Pro / Team / Enterprise.">
+<meta property="og:image" content="https://ai-growth-office.ru/og-image.jpg">
+<meta property="og:image:width" content="1200">
+<meta property="og:image:height" content="630">
+<meta property="og:image:alt" content="ROI калькулятор AI Growth Office">
+<meta property="og:locale" content="ru_RU">
+<meta property="og:site_name" content="AI Growth Office">
+
+<meta name="twitter:card" content="summary_large_image">
+<meta name="twitter:title" content="ROI-калькулятор · AI Growth Office">
+<meta name="twitter:description" content="Сколько денег ты сэкономишь на команде, если перейдёшь на AI Office. Считай за 2 минуты.">
+<meta name="twitter:image" content="https://ai-growth-office.ru/og-image.jpg">
+
+<link rel="manifest" href="/manifest.json">
+<meta name="theme-color" content="#0a0c14">
+<meta name="apple-mobile-web-app-capable" content="yes">
+<meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
+<meta name="apple-mobile-web-app-title" content="AI Office">
+<link rel="apple-touch-icon" href="/icon-192.png">
+
+<style>
+:root{
+  --bg:#0a0c14;--bg2:#0f1220;--panel:rgba(255,255,255,.04);--border:rgba(255,255,255,.08);
+  --text:#e9eef7;--muted:#9aa3b2;--accent:#c8f060;--a2:#60c8f0;--a3:#f060c8;
+  --green:#34d058;--red:#f04060;
+  --ui:-apple-system,BlinkMacSystemFont,'Inter','Segoe UI',sans-serif;
+}
+*{box-sizing:border-box;margin:0;padding:0}
+html,body{background:var(--bg);color:var(--text);font-family:var(--ui);min-height:100vh}
+body{background:radial-gradient(circle at 70% 0%,rgba(200,240,96,.05),transparent 60%),radial-gradient(circle at 0% 90%,rgba(96,200,240,.05),transparent 60%),var(--bg);}
+
+.wrap{max-width:1240px;margin:0 auto;padding:40px 28px 80px}
+.crumbs{font-size:11px;color:var(--muted);margin-bottom:14px;letter-spacing:.4px}
+.crumbs a{color:var(--muted);text-decoration:none;border-bottom:1px dotted rgba(255,255,255,.15)}
+.crumbs a:hover{color:var(--accent)}
+h1{font-size:36px;font-weight:800;letter-spacing:-.3px;margin-bottom:10px;background:linear-gradient(90deg,#c8f060,#60c8f0);-webkit-background-clip:text;-webkit-text-fill-color:transparent}
+.sub{color:var(--muted);font-size:15px;max-width:680px;margin-bottom:36px;line-height:1.6}
+
+.layout{display:grid;grid-template-columns:1fr 1fr;gap:28px}
+@media(max-width:980px){.layout{grid-template-columns:1fr}}
+
+.card{background:var(--panel);border:1px solid var(--border);border-radius:16px;padding:24px;backdrop-filter:blur(8px)}
+.card h2{font-size:18px;font-weight:800;margin-bottom:6px;display:flex;align-items:center;gap:8px}
+.card .h-sub{font-size:12px;color:var(--muted);margin-bottom:20px}
+
+/* Mode tabs */
+.mode-tabs{display:flex;gap:6px;background:rgba(255,255,255,.03);padding:4px;border-radius:11px;margin-bottom:22px}
+.mode-tab{flex:1;background:transparent;border:0;color:var(--muted);padding:10px 14px;font:700 12.5px/1 var(--ui);letter-spacing:.3px;cursor:pointer;border-radius:8px;transition:all .15s}
+.mode-tab.active{background:rgba(200,240,96,.12);color:var(--accent)}
+.mode-tab:hover:not(.active){color:var(--text)}
+
+/* Team mode */
+.role-list{display:flex;flex-direction:column;gap:12px}
+.role{display:grid;grid-template-columns:32px 1fr 110px;gap:14px;align-items:center;padding:11px 14px;background:rgba(255,255,255,.025);border:1px solid var(--border);border-radius:11px;transition:border-color .15s}
+.role.on{border-color:rgba(200,240,96,.28);background:rgba(200,240,96,.04)}
+.role .em{font-size:20px;text-align:center}
+.role .nm{font-size:13px;font-weight:600}
+.role .nm-sub{font-size:10.5px;color:var(--muted);margin-top:2px}
+.role-cost{position:relative}
+.role-cost input{width:100%;background:rgba(0,0,0,.25);border:1px solid var(--border);color:var(--text);padding:7px 30px 7px 9px;border-radius:7px;font:700 12.5px/1 var(--ui);text-align:right;transition:border-color .15s}
+.role-cost input:focus{outline:none;border-color:var(--accent)}
+.role-cost::after{content:'₽';position:absolute;right:9px;top:50%;transform:translateY(-50%);font-size:11px;color:var(--muted);pointer-events:none}
+.role.off input{opacity:.35}
+
+/* Solo mode */
+.solo-block{display:none;padding-top:4px}
+.solo-block.active{display:block}
+.solo-field{margin-bottom:18px}
+.solo-field label{display:block;font-size:12px;font-weight:600;color:var(--muted);margin-bottom:6px}
+.solo-field .val-display{font-size:24px;font-weight:800;color:var(--accent);margin-top:6px;display:block}
+.solo-slider{width:100%;-webkit-appearance:none;appearance:none;height:6px;background:rgba(255,255,255,.08);border-radius:3px;outline:none}
+.solo-slider::-webkit-slider-thumb{-webkit-appearance:none;width:18px;height:18px;border-radius:50%;background:var(--accent);cursor:pointer;border:0;box-shadow:0 2px 8px rgba(200,240,96,.35)}
+.solo-slider::-moz-range-thumb{width:18px;height:18px;border-radius:50%;background:var(--accent);cursor:pointer;border:0;box-shadow:0 2px 8px rgba(200,240,96,.35)}
+
+/* Plan select */
+.plan-row{display:grid;grid-template-columns:repeat(4,1fr);gap:8px;margin-top:8px}
+.plan-card{background:rgba(255,255,255,.03);border:1.5px solid var(--border);border-radius:10px;padding:12px 10px;text-align:center;cursor:pointer;transition:all .15s}
+.plan-card:hover{border-color:rgba(255,255,255,.18)}
+.plan-card.active{border-color:var(--accent);background:rgba(200,240,96,.08)}
+.plan-card .pn{font-size:12px;font-weight:800;letter-spacing:.4px}
+.plan-card .pp{font-size:11px;color:var(--muted);margin-top:4px}
+.plan-card.active .pp{color:var(--accent)}
+
+/* RESULT side */
+.result-big{font-size:54px;font-weight:900;letter-spacing:-1px;line-height:1;background:linear-gradient(135deg,var(--green),var(--accent));-webkit-background-clip:text;-webkit-text-fill-color:transparent;margin:14px 0 4px;font-variant-numeric:tabular-nums}
+.result-cap{font-size:12.5px;color:var(--muted);font-weight:600}
+.result-pct{display:inline-block;padding:4px 11px;background:rgba(52,208,88,.12);color:var(--green);border-radius:99px;font-size:12px;font-weight:800;margin-top:12px}
+
+.compare{margin-top:24px;display:flex;flex-direction:column;gap:14px}
+.bar-row{position:relative}
+.bar-row .lbl{display:flex;justify-content:space-between;align-items:center;margin-bottom:6px}
+.bar-row .lbl .nm{font-size:12px;font-weight:700;color:var(--muted)}
+.bar-row .lbl .am{font-size:13.5px;font-weight:800;font-variant-numeric:tabular-nums}
+.bar{height:30px;background:rgba(255,255,255,.04);border-radius:8px;overflow:hidden;position:relative}
+.bar .fill{height:100%;border-radius:8px;transition:width .45s cubic-bezier(.2,.8,.4,1)}
+.bar.now .fill{background:linear-gradient(90deg,rgba(240,64,96,.85),rgba(240,180,41,.75))}
+.bar.aio .fill{background:linear-gradient(90deg,var(--green),var(--accent))}
+
+.breakdown{margin-top:22px;border-top:1px solid var(--border);padding-top:18px}
+.brk-row{display:flex;justify-content:space-between;padding:7px 0;font-size:12.5px;color:var(--muted)}
+.brk-row.tot{border-top:1px solid var(--border);margin-top:6px;padding-top:11px;font-weight:800;color:var(--text);font-size:13.5px}
+.brk-row .v{font-variant-numeric:tabular-nums;color:var(--text);font-weight:700}
+
+.payback{margin-top:22px;padding:14px 16px;background:rgba(96,200,240,.08);border:1px solid rgba(96,200,240,.25);border-radius:11px;display:flex;align-items:center;gap:14px}
+.payback .pb-em{font-size:24px}
+.payback .pb-tx{font-size:12.5px;line-height:1.45}
+.payback .pb-tx b{color:var(--a2)}
+
+.cta-row{margin-top:22px;display:flex;gap:10px;flex-wrap:wrap}
+.cta-pri,.cta-sec{display:inline-flex;align-items:center;gap:8px;padding:12px 22px;border-radius:11px;font:800 12.5px/1 var(--ui);letter-spacing:.4px;text-decoration:none;cursor:pointer;border:0;transition:transform .15s,box-shadow .15s;flex:1;justify-content:center;min-width:140px}
+.cta-pri{background:linear-gradient(90deg,#c8f060,#60c8f0);color:#080808;box-shadow:0 4px 14px rgba(200,240,96,.25)}
+.cta-pri:hover{transform:translateY(-1px);box-shadow:0 6px 20px rgba(200,240,96,.4)}
+.cta-sec{background:transparent;color:var(--muted);border:1.5px solid var(--border)}
+.cta-sec:hover{color:var(--text);border-color:rgba(255,255,255,.18)}
+
+.disclaimer{margin-top:36px;font-size:11px;color:var(--muted);line-height:1.6;max-width:900px;text-align:center}
+.disclaimer b{color:var(--text)}
+
+@media(max-width:560px){
+  h1{font-size:28px}
+  .result-big{font-size:42px}
+  .role{grid-template-columns:28px 1fr 100px;gap:10px}
+  .plan-row{grid-template-columns:repeat(2,1fr)}
+}
+</style>
+</head>
+<body data-user="Илья Палий" data-email="ilia.info.paliy@gmail.com">
+
+<div class="wrap">
+
+<div class="crumbs">
+  <a href="index.html">Главная</a> · <a href="pricing.html">Тарифы</a> · ROI-калькулятор
+</div>
+
+<h1>Сколько ты экономишь с AI Office</h1>
+<p class="sub">Введи штат своей команды (или сколько ты делаешь сам) — посчитаем реальную экономию в ₽/год и срок, за который AI Office окупится.</p>
+
+<div class="layout">
+
+  <!-- LEFT: inputs -->
+  <div class="card">
+    <h2>🧮 Твоя текущая ситуация</h2>
+    <div class="h-sub">Включи нужные роли и поправь оклады под свой регион</div>
+
+    <div class="mode-tabs">
+      <button class="mode-tab active" data-mode="team">У меня команда</button>
+      <button class="mode-tab" data-mode="solo">Я делаю сам</button>
+    </div>
+
+    <!-- TEAM mode -->
+    <div id="modeTeam" class="solo-block active">
+      <div class="role-list" id="roleList"></div>
+    </div>
+
+    <!-- SOLO mode -->
+    <div id="modeSolo" class="solo-block">
+      <div class="solo-field">
+        <label>Часов в день уходит на маркетинг/контент/продажи/анализ</label>
+        <input type="range" min="1" max="12" value="4" step="1" class="solo-slider" id="soloHours">
+        <span class="val-display" id="soloHoursVal">4 ч/день</span>
+      </div>
+      <div class="solo-field">
+        <label>Сколько стоит твой час (opportunity cost)</label>
+        <input type="range" min="200" max="5000" value="1500" step="100" class="solo-slider" id="soloRate">
+        <span class="val-display" id="soloRateVal">1 500 ₽/ч</span>
+      </div>
+      <div class="solo-field">
+        <label>Рабочих дней в месяц</label>
+        <input type="range" min="10" max="30" value="22" step="1" class="solo-slider" id="soloDays">
+        <span class="val-display" id="soloDaysVal">22 дня/мес</span>
+      </div>
+    </div>
+
+    <div style="margin-top:26px">
+      <h2 style="font-size:15px">📦 План AI Office</h2>
+      <div class="plan-row" id="planRow">
+        <div class="plan-card" data-plan="0"><div class="pn">FREE</div><div class="pp">0 ₽/мес</div></div>
+        <div class="plan-card active" data-plan="1990"><div class="pn">PRO</div><div class="pp">1 990 ₽/мес</div></div>
+        <div class="plan-card" data-plan="4990"><div class="pn">TEAM</div><div class="pp">4 990 ₽/мес</div></div>
+        <div class="plan-card" data-plan="25000"><div class="pn">ENT</div><div class="pp">25 000 ₽/мес</div></div>
+      </div>
+    </div>
+  </div>
+
+  <!-- RIGHT: result -->
+  <div class="card">
+    <h2>💰 Твоя экономия</h2>
+    <div class="h-sub">Пересчитывается мгновенно при изменении параметров</div>
+
+    <div class="result-cap">Экономия в год при переходе на AI Office</div>
+    <div class="result-big" id="bigSave">0 ₽</div>
+    <span class="result-pct" id="bigPct">−0%</span>
+
+    <div class="compare">
+      <div class="bar-row">
+        <div class="lbl"><span class="nm">Сейчас (твоя команда)</span><span class="am" id="amNow">0 ₽/год</span></div>
+        <div class="bar now"><div class="fill" id="fillNow" style="width:100%"></div></div>
+      </div>
+      <div class="bar-row">
+        <div class="lbl"><span class="nm">AI Office</span><span class="am" id="amAio">0 ₽/год</span></div>
+        <div class="bar aio"><div class="fill" id="fillAio" style="width:0%"></div></div>
+      </div>
+    </div>
+
+    <div class="payback">
+      <div class="pb-em">⏱</div>
+      <div class="pb-tx">AI Office окупится за <b id="paybackTime">— дней</b><br>после первого запуска контент-фабрики или sales-сценария.</div>
+    </div>
+
+    <div class="breakdown">
+      <div class="brk-row"><span>Команда (12 мес)</span><span class="v" id="brkTeam">0 ₽</span></div>
+      <div class="brk-row"><span>AI Office (12 мес)</span><span class="v" id="brkAio">0 ₽</span></div>
+      <div class="brk-row tot"><span>Экономия</span><span class="v" id="brkSave">0 ₽</span></div>
+    </div>
+
+    <div class="cta-row">
+      <a class="cta-pri" href="onboarding.html">Начать с брифа →</a>
+      <a class="cta-sec" href="pricing.html">К тарифам</a>
+    </div>
+  </div>
+
+</div>
+
+<div class="disclaimer">
+  <b>Допущения:</b> расчёт упрощённый и не учитывает налоги/страховые взносы (+30-43% к окладу), отпуска, больничные, найм, обучение, ротацию, аренду рабочего места. С учётом этих расходов реальная экономия выше на 30-50%. AI Office не заменяет полностью human-команду в нишах с регуляторикой (медицина, финансы), но в большинстве задач даёт <b>70-90% результата</b> за <b>3-15%</b> от стоимости.
+</div>
+
+</div>
+
+<script src="api-fallback.js"></script>
+<script src="state.js"></script>
+<script src="mock-backend.js"></script>
+<script src="config.js"></script>
+<script src="analytics.js" defer></script>
+<script src="sidebar.js" defer></script>
+<script src="alisa-widget.js" defer></script>
+<script>
+const ROLES = [
+  { id:'smm', em:'📱', nm:'SMM-менеджер',      sub:'посты, сторис, комьюнити', cost: 35000 },
+  { id:'cm',  em:'✍️', nm:'Контент-маркетолог', sub:'статьи, рассылки, гайды',  cost: 50000 },
+  { id:'tg',  em:'🎯', nm:'Таргетолог',         sub:'настройка рекламы',         cost: 40000 },
+  { id:'dz',  em:'🎨', nm:'Дизайнер',           sub:'обложки, креативы, баннеры', cost: 35000 },
+  { id:'sl',  em:'💬', nm:'Менеджер по продажам', sub:'direct, прогрев, закрытие', cost: 60000 },
+  { id:'an',  em:'📊', nm:'Маркетолог-аналитик', sub:'дашборды, отчёты, инсайты', cost: 70000 },
+  { id:'dev', em:'💻', nm:'Разработчик/верстальщик', sub:'лендинги, автоматизация', cost: 100000 },
+  { id:'pm',  em:'📋', nm:'Project-менеджер',   sub:'координация, дедлайны',     cost: 55000 },
+];
+const DEFAULT_ON = { smm:true, cm:true, tg:false, dz:true, sl:false, an:false, dev:false, pm:false };
+
+let state = {
+  mode: 'team',
+  team: ROLES.reduce((acc,r) => { acc[r.id] = { on: DEFAULT_ON[r.id]||false, cost: r.cost }; return acc; }, {}),
+  solo: { hours: 4, rate: 1500, days: 22 },
+  plan: 1990
+};
+
+const fmt = n => Math.round(n).toLocaleString('ru-RU') + ' ₽';
+
+function render() {
+  const list = document.getElementById('roleList');
+  list.innerHTML = ROLES.map(r => {
+    const s = state.team[r.id];
+    return `
+      <div class="role ${s.on ? 'on' : 'off'}" data-role="${r.id}">
+        <div class="em" style="cursor:pointer" data-toggle="${r.id}">${s.on ? r.em : '➕'}</div>
+        <div style="cursor:pointer" data-toggle="${r.id}">
+          <div class="nm">${r.nm}</div>
+          <div class="nm-sub">${r.sub}</div>
+        </div>
+        <div class="role-cost">
+          <input type="number" min="0" step="1000" value="${s.cost}" data-cost="${r.id}" ${s.on ? '' : 'disabled'}>
+        </div>
+      </div>`;
+  }).join('');
+  list.querySelectorAll('[data-toggle]').forEach(el => {
+    el.addEventListener('click', () => {
+      const id = el.getAttribute('data-toggle');
+      state.team[id].on = !state.team[id].on;
+      render(); calc();
+    });
+  });
+  list.querySelectorAll('[data-cost]').forEach(el => {
+    el.addEventListener('input', () => {
+      const id = el.getAttribute('data-cost');
+      state.team[id].cost = parseInt(el.value || 0);
+      calc();
+    });
+  });
+}
+
+function calc() {
+  let monthNow = 0;
+  if (state.mode === 'team') {
+    monthNow = ROLES.reduce((sum, r) => sum + (state.team[r.id].on ? state.team[r.id].cost : 0), 0);
+  } else {
+    monthNow = state.solo.hours * state.solo.rate * state.solo.days;
+  }
+  const yearNow = monthNow * 12;
+  const yearAio = state.plan * 12;
+  const save = Math.max(0, yearNow - yearAio);
+  const pct = yearNow > 0 ? Math.round((save / yearNow) * 100) : 0;
+
+  document.getElementById('bigSave').textContent = fmt(save) + ' / год';
+  document.getElementById('bigPct').textContent = '−' + pct + '%';
+  document.getElementById('amNow').textContent = fmt(yearNow) + ' / год';
+  document.getElementById('amAio').textContent = fmt(yearAio) + ' / год';
+  document.getElementById('brkTeam').textContent = fmt(yearNow);
+  document.getElementById('brkAio').textContent = fmt(yearAio);
+  document.getElementById('brkSave').textContent = fmt(save);
+
+  // bar widths
+  const maxV = Math.max(yearNow, yearAio, 1);
+  document.getElementById('fillNow').style.width = (yearNow / maxV * 100) + '%';
+  document.getElementById('fillAio').style.width = (yearAio / maxV * 100) + '%';
+
+  // payback: дни, за которые AI Office перекрывает стоимость одного запуска
+  // Допущение: один запуск контент-фабрики = 4-8 часов работы команды.
+  // Возьмём средне: monthNow / 30 дней * 5 дней = "5 дней работы" окупают AI Office
+  let paybackDays = '—';
+  if (monthNow > 0 && state.plan > 0) {
+    const dailyTeam = monthNow / 22; // рабочих дней
+    paybackDays = Math.max(1, Math.ceil(state.plan / dailyTeam));
+    paybackDays = paybackDays + ' ' + plural(paybackDays, 'день', 'дня', 'дней');
+  } else if (state.plan === 0) {
+    paybackDays = 'мгновенно (Free)';
+  }
+  document.getElementById('paybackTime').textContent = paybackDays;
+}
+
+function plural(n, one, two, five) {
+  const a = Math.abs(n) % 100, b = a % 10;
+  if (a > 10 && a < 20) return five;
+  if (b > 1 && b < 5)   return two;
+  if (b === 1)          return one;
+  return five;
+}
+
+// Mode tabs
+document.querySelectorAll('.mode-tab').forEach(btn => {
+  btn.addEventListener('click', () => {
+    document.querySelectorAll('.mode-tab').forEach(b => b.classList.remove('active'));
+    btn.classList.add('active');
+    state.mode = btn.dataset.mode;
+    document.getElementById('modeTeam').classList.toggle('active', state.mode === 'team');
+    document.getElementById('modeSolo').classList.toggle('active', state.mode === 'solo');
+    calc();
+  });
+});
+
+// Solo sliders
+function bindSolo(id, key, suffix, fmtFn) {
+  const el = document.getElementById(id);
+  const lbl = document.getElementById(id + 'Val');
+  el.addEventListener('input', () => {
+    state.solo[key] = parseInt(el.value);
+    lbl.textContent = fmtFn(state.solo[key]);
+    calc();
+  });
+}
+bindSolo('soloHours', 'hours', '', v => v + ' ч/день');
+bindSolo('soloRate',  'rate',  '', v => v.toLocaleString('ru-RU') + ' ₽/ч');
+bindSolo('soloDays',  'days',  '', v => v + ' дн/мес');
+
+// Plan picker
+document.querySelectorAll('.plan-card').forEach(c => {
+  c.addEventListener('click', () => {
+    document.querySelectorAll('.plan-card').forEach(x => x.classList.remove('active'));
+    c.classList.add('active');
+    state.plan = parseInt(c.dataset.plan);
+    calc();
+  });
+});
+
+render();
+calc();
+
+// PWA service worker registration
+if ('serviceWorker' in navigator && location.protocol === 'https:') {
+  window.addEventListener('load', () => {
+    navigator.serviceWorker.register('/sw.js').catch(e => console.warn('SW reg failed:', e.message));
+  });
+}
+</script>
+</body>
+</html>

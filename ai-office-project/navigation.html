@@ -1,0 +1,661 @@
+<!doctype html>
+<html lang="ru">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1">
+<title>Навигация · как пользоваться сайтом · AI Growth Office</title>
+<meta name="description" content="Карта сайта AI Growth Office: пошаговый гид первого визита, «Я хочу...» роутер на нужную страницу, каталог всех 47 страниц по категориям + FAQ.">
+<meta name="keywords" content="AI Growth Office навигация, как пользоваться сайтом, карта сайта, гид по AI Office, помощь">
+<meta name="author" content="AI Growth Office">
+<link rel="canonical" href="https://ai-growth-office.ru/navigation.html">
+
+<meta property="og:type" content="website">
+<meta property="og:url" content="https://ai-growth-office.ru/navigation.html">
+<meta property="og:title" content="Навигация · как пользоваться сайтом · AI Growth Office">
+<meta property="og:description" content="Карта сайта + пошаговый гид + «я хочу...» роутер. Не теряйся среди 47 страниц.">
+<meta property="og:image" content="https://ai-growth-office.ru/og-image.jpg">
+
+<link rel="manifest" href="/manifest.json">
+<meta name="theme-color" content="#0a0c14">
+<meta name="apple-mobile-web-app-capable" content="yes">
+<link rel="apple-touch-icon" href="/icon-192.png">
+
+<style>
+:root{
+  --bg:#0a0c14;--panel:rgba(255,255,255,.04);--panel2:rgba(255,255,255,.025);--border:rgba(255,255,255,.08);
+  --text:#e9eef7;--muted:#9aa3b2;--dim:#7c8a99;
+  --accent:#c8f060;--a2:#60c8f0;--a3:#f060c8;
+  --green:#34d058;--gold:#f0b429;--purple:#a060f0;--red:#f04060;
+  --ui:-apple-system,BlinkMacSystemFont,'Inter','Segoe UI',sans-serif;
+  --mono:'JetBrains Mono','SF Mono',monospace;
+}
+*{box-sizing:border-box;margin:0;padding:0}
+html,body{background:var(--bg);color:var(--text);font-family:var(--ui);min-height:100vh;scroll-behavior:smooth}
+body{background:radial-gradient(circle at 80% 0%,rgba(200,240,96,.05),transparent 55%),radial-gradient(circle at 0% 70%,rgba(96,200,240,.04),transparent 55%),radial-gradient(circle at 90% 100%,rgba(240,96,200,.03),transparent 55%),var(--bg)}
+
+.wrap{max-width:1240px;margin:0 auto;padding:36px 24px 80px}
+.crumbs{font-size:11px;color:var(--muted);margin-bottom:18px;letter-spacing:.4px}
+.crumbs a{color:var(--muted);text-decoration:none;border-bottom:1px dotted rgba(255,255,255,.15)}
+.crumbs a:hover{color:var(--accent)}
+
+/* HERO */
+.hero{text-align:center;margin-bottom:36px;padding:8px 0 20px}
+.hero .tag{display:inline-flex;align-items:center;gap:7px;font-size:10px;font-weight:700;color:var(--accent);background:rgba(200,240,96,.08);border:1px solid rgba(200,240,96,.2);padding:6px 14px;border-radius:99px;letter-spacing:1.5px;text-transform:uppercase;margin-bottom:18px}
+.hero h1{font-size:clamp(36px,5.5vw,56px);font-weight:800;letter-spacing:-.6px;line-height:1.04;margin-bottom:14px}
+.hero h1 .g{background:linear-gradient(90deg,#c8f060,#60c8f0);-webkit-background-clip:text;-webkit-text-fill-color:transparent}
+.hero p{font-size:16px;color:var(--muted);max-width:640px;margin:0 auto;line-height:1.65}
+.hero p b{color:var(--text);font-weight:700}
+
+/* QUICK FILTER / SEARCH */
+.search-bar{max-width:520px;margin:30px auto 14px;position:relative}
+.search-bar input{
+  width:100%;background:rgba(255,255,255,.04);border:1.5px solid var(--border);
+  padding:13px 18px 13px 46px;border-radius:13px;
+  color:var(--text);font:500 14.5px/1 var(--ui);outline:none;
+  transition:border-color .15s,background .15s;
+}
+.search-bar input:focus{border-color:rgba(200,240,96,.35);background:rgba(255,255,255,.06)}
+.search-bar::before{content:'🔍';position:absolute;left:16px;top:50%;transform:translateY(-50%);font-size:16px;opacity:.7;pointer-events:none}
+.search-bar .clear{position:absolute;right:14px;top:50%;transform:translateY(-50%);background:transparent;border:0;color:var(--muted);cursor:pointer;font-size:14px;display:none}
+.search-bar input:not(:placeholder-shown) + .clear{display:block}
+
+/* JUMP NAV */
+.jump-nav{display:flex;justify-content:center;gap:8px;margin-bottom:36px;flex-wrap:wrap}
+.jump-nav a{padding:8px 14px;font-size:11.5px;font-weight:700;color:var(--muted);background:var(--panel);border:1px solid var(--border);border-radius:99px;text-decoration:none;letter-spacing:.4px;transition:all .15s}
+.jump-nav a:hover{color:var(--text);border-color:rgba(255,255,255,.18)}
+
+/* SECTION */
+section{margin-bottom:54px;scroll-margin-top:24px}
+.section-hd{display:flex;align-items:center;gap:14px;margin-bottom:22px}
+.section-hd h2{font-size:24px;font-weight:800;letter-spacing:-.3px;display:flex;align-items:center;gap:9px}
+.section-hd h2 .em{font-size:26px}
+.section-hd .meta{margin-left:auto;font-size:11px;color:var(--muted);font-family:var(--mono);font-weight:700;letter-spacing:.5px;text-transform:uppercase;background:rgba(255,255,255,.03);padding:4px 10px;border-radius:99px;border:1px solid var(--border)}
+.section-intro{font-size:14px;color:var(--muted);line-height:1.6;margin-bottom:24px;max-width:760px}
+
+/* ─── STEPS (Quick Start) ─── */
+.steps{display:grid;grid-template-columns:repeat(auto-fit,minmax(190px,1fr));gap:14px;position:relative}
+.steps::before{
+  content:'';position:absolute;top:34px;left:5%;right:5%;height:2px;
+  background:linear-gradient(90deg,rgba(200,240,96,.3),rgba(96,200,240,.3),rgba(240,96,200,.3),rgba(52,208,88,.3),rgba(240,180,41,.3));
+  z-index:0;
+}
+@media(max-width:780px){.steps::before{display:none}}
+.step{background:var(--panel);border:1.5px solid var(--border);border-radius:14px;padding:24px 20px 20px;text-decoration:none;color:inherit;position:relative;z-index:1;transition:transform .2s,border-color .2s,box-shadow .2s}
+.step:hover{transform:translateY(-3px);border-color:rgba(200,240,96,.3);box-shadow:0 14px 28px rgba(0,0,0,.35)}
+.step .n{position:absolute;top:-14px;left:24px;width:32px;height:32px;border-radius:50%;background:#0a0c14;border:2px solid rgba(200,240,96,.5);color:var(--accent);font-family:var(--mono);font-weight:900;font-size:13px;display:flex;align-items:center;justify-content:center;box-shadow:0 4px 14px rgba(0,0,0,.5)}
+.step .em{font-size:32px;margin-bottom:10px;display:block;line-height:1}
+.step h3{font-size:15px;font-weight:800;margin-bottom:5px;letter-spacing:-.1px;line-height:1.25}
+.step .tm{font-size:10px;color:var(--accent);font-weight:800;letter-spacing:.6px;text-transform:uppercase;font-family:var(--mono);margin-bottom:8px}
+.step .ds{font-size:12.5px;color:var(--muted);line-height:1.55;margin-bottom:10px}
+.step .go{display:inline-flex;align-items:center;gap:5px;font-size:11.5px;color:var(--a2);font-weight:800;letter-spacing:.2px;border-bottom:1px dotted rgba(96,200,240,.35);padding-bottom:1px}
+.step:hover .go{color:var(--accent);border-color:rgba(200,240,96,.5)}
+
+/* ─── INTENT CARDS («Я хочу...») ─── */
+.intent-grid{display:grid;grid-template-columns:repeat(auto-fit,minmax(280px,1fr));gap:14px}
+.intent{background:var(--panel);border:1.5px solid var(--border);border-radius:14px;padding:22px;text-decoration:none;color:inherit;display:flex;gap:16px;align-items:flex-start;transition:transform .2s,border-color .2s,box-shadow .2s}
+.intent:hover{transform:translateY(-2px);border-color:rgba(96,200,240,.3);box-shadow:0 12px 26px rgba(0,0,0,.3)}
+.intent .em{font-size:30px;line-height:1;flex-shrink:0;margin-top:2px}
+.intent .body{flex:1;min-width:0}
+.intent .lbl{font-size:10px;font-weight:800;color:var(--accent);letter-spacing:.7px;text-transform:uppercase;font-family:var(--mono);margin-bottom:4px}
+.intent h3{font-size:15.5px;font-weight:800;margin-bottom:6px;line-height:1.25}
+.intent .ds{font-size:12.5px;color:var(--muted);line-height:1.55;margin-bottom:10px}
+.intent .actions{display:flex;flex-wrap:wrap;gap:5px}
+.intent .actions a{font-size:11px;font-weight:700;color:var(--a2);background:rgba(96,200,240,.06);border:1px solid rgba(96,200,240,.18);padding:4px 9px;border-radius:6px;text-decoration:none;transition:background .15s}
+.intent .actions a:hover{background:rgba(96,200,240,.14)}
+.intent .actions a.main{background:linear-gradient(90deg,#c8f060,#60c8f0);color:#080808;border:0;font-weight:800}
+
+/* ─── CATALOG ─── */
+.catalog{display:grid;grid-template-columns:repeat(auto-fit,minmax(320px,1fr));gap:18px}
+.cat-card{background:var(--panel);border:1px solid var(--border);border-radius:14px;overflow:hidden}
+.cat-card .hd{padding:14px 18px;background:rgba(0,0,0,.2);border-bottom:1px solid var(--border);display:flex;align-items:center;gap:10px}
+.cat-card .hd .em{font-size:22px;line-height:1}
+.cat-card .hd .nm{font-size:14px;font-weight:800;letter-spacing:-.1px}
+.cat-card .hd .ct{margin-left:auto;font-size:10.5px;color:var(--muted);font-family:var(--mono);font-weight:700;background:rgba(255,255,255,.04);padding:3px 8px;border-radius:99px;border:1px solid var(--border)}
+.cat-card .list{padding:8px 0}
+.cat-card .it{display:grid;grid-template-columns:24px 1fr auto;gap:10px;padding:9px 18px;text-decoration:none;color:inherit;align-items:center;transition:background .15s;font-size:13px}
+.cat-card .it:hover{background:rgba(255,255,255,.03)}
+.cat-card .it .ic{font-size:14px;text-align:center;line-height:1;opacity:.85}
+.cat-card .it .nm{font-weight:700;color:var(--text);line-height:1.3}
+.cat-card .it .nm small{display:block;color:var(--muted);font-size:11px;font-weight:500;margin-top:2px;line-height:1.4}
+.cat-card .it .badge{font-size:9px;font-weight:800;color:#080808;background:linear-gradient(90deg,#c8f060,#60c8f0);padding:2px 7px;border-radius:5px;letter-spacing:.4px;text-transform:uppercase;font-family:var(--mono);white-space:nowrap}
+.cat-card .it .badge.new{background:linear-gradient(90deg,#f0b429,#f06090)}
+.cat-card .it .badge.admin{background:rgba(255,255,255,.08);color:var(--muted)}
+.cat-card .it .badge.demo{background:rgba(96,200,240,.16);color:var(--a2)}
+.cat-card .it.hidden{display:none}
+
+/* ─── FAQ ─── */
+.faq-list{max-width:840px;margin:0 auto}
+.faq-q{background:var(--panel);border:1px solid var(--border);border-radius:11px;margin-bottom:8px;overflow:hidden;transition:border-color .15s}
+.faq-q[open]{border-color:rgba(200,240,96,.25)}
+.faq-q summary{padding:15px 20px;cursor:pointer;font-weight:700;font-size:14px;display:flex;justify-content:space-between;align-items:center;list-style:none;line-height:1.4}
+.faq-q summary::-webkit-details-marker{display:none}
+.faq-q summary::after{content:'+';color:var(--accent);font-size:22px;font-weight:300;transition:transform .2s;margin-left:10px;flex-shrink:0}
+.faq-q[open] summary::after{transform:rotate(45deg)}
+.faq-q[open] summary{color:var(--accent)}
+.faq-q .a{padding:0 20px 18px;font-size:13.5px;line-height:1.65;color:rgba(233,238,247,.85)}
+.faq-q .a a{color:var(--a2);text-decoration:none;border-bottom:1px solid rgba(96,200,240,.3);font-weight:700}
+.faq-q .a a:hover{border-bottom-color:var(--a2)}
+.faq-q .a code{background:rgba(255,255,255,.05);padding:2px 7px;border-radius:5px;font-family:var(--mono);font-size:12px;color:var(--a2);border:1px solid rgba(255,255,255,.06)}
+
+/* CTA END */
+.cta-end{margin-top:54px;padding:38px 28px;background:linear-gradient(135deg,rgba(200,240,96,.06),rgba(96,200,240,.04));border:1px solid rgba(200,240,96,.22);border-radius:18px;text-align:center}
+.cta-end h3{font-size:24px;font-weight:800;letter-spacing:-.3px;margin-bottom:10px}
+.cta-end p{color:var(--muted);font-size:14px;margin-bottom:22px;max-width:540px;margin-left:auto;margin-right:auto;line-height:1.55}
+.cta-end .btns{display:flex;justify-content:center;gap:10px;flex-wrap:wrap}
+.cta-end .btns a{display:inline-flex;align-items:center;gap:7px;padding:14px 24px;border-radius:12px;font:800 13px/1 var(--ui);letter-spacing:.3px;text-decoration:none;transition:transform .15s,box-shadow .15s}
+.cta-end .btns .pri{background:linear-gradient(90deg,#c8f060,#60c8f0);color:#080808;box-shadow:0 6px 18px rgba(200,240,96,.3)}
+.cta-end .btns .pri:hover{transform:translateY(-2px);box-shadow:0 10px 26px rgba(200,240,96,.45)}
+.cta-end .btns .sec{background:transparent;color:var(--text);border:1.5px solid var(--border)}
+.cta-end .btns .sec:hover{border-color:rgba(255,255,255,.2)}
+
+.no-results{text-align:center;padding:40px 20px;color:var(--muted);font-size:13px;display:none}
+.no-results.show{display:block}
+</style>
+</head>
+<body data-user="Илья Палий" data-email="ilia.info.paliy@gmail.com">
+
+<div class="wrap">
+
+<div class="crumbs">
+  <a href="/index.html">Главная</a> · Навигация (карта сайта)
+</div>
+
+<!-- HERO -->
+<div class="hero">
+  <div class="tag">🧭 КАРТА САЙТА · 47 СТРАНИЦ</div>
+  <h1>Навигация по <span class="g">AI Growth Office</span></h1>
+  <p>На сайте <b>47 страниц</b> — легко запутаться. Этот гид: <b>5 шагов первого визита</b> + «<b>я хочу…</b>» роутер + <b>каталог</b> + ответы на «<i>где найти X</i>».</p>
+
+  <!-- Search across all items -->
+  <div class="search-bar">
+    <input type="search" id="navSearch" placeholder="Найди страницу — «бриф», «тарифы», «партнёрка»..." autocomplete="off">
+    <button class="clear" onclick="document.getElementById('navSearch').value='';filterPages('')">✕</button>
+  </div>
+
+  <!-- Jump links -->
+  <div class="jump-nav">
+    <a href="#start">🚀 Быстрый старт</a>
+    <a href="#intent">🎯 Я хочу...</a>
+    <a href="#catalog">📂 Каталог</a>
+    <a href="#faq">❓ FAQ</a>
+  </div>
+</div>
+
+<!-- ════════════════════════════════ -->
+<!-- SECTION 1: QUICK START — 5 STEPS -->
+<!-- ════════════════════════════════ -->
+<section id="start">
+  <div class="section-hd">
+    <h2><span class="em">🚀</span>Первый визит · 5 шагов за 15 минут</h2>
+    <span class="meta">If you're new — start here</span>
+  </div>
+  <p class="section-intro">Если ты впервые на сайте — пройди эти 5 шагов по порядку. На каждый — 2-5 минут. В конце у тебя будет понимание продукта и работающий AI-офис под твою задачу.</p>
+
+  <div class="steps">
+
+    <a class="step" href="/how-it-works.html">
+      <span class="n">01</span>
+      <span class="em">📖</span>
+      <div class="tm">≈ 3 минуты</div>
+      <h3>Понять что это</h3>
+      <div class="ds">5 шагов customer journey с анимацией. От пустой страницы до работающего AI-офиса.</div>
+      <span class="go">Открыть «Как это работает» →</span>
+    </a>
+
+    <a class="step" href="/cases.html">
+      <span class="n">02</span>
+      <span class="em">📈</span>
+      <div class="tm">≈ 4 минуты</div>
+      <h3>Увидеть результат</h3>
+      <div class="ds">5 модельных кейсов: психолог, школа, агентство, стартап, бренд-консультант. С цифрами «до» и «после».</div>
+      <span class="go">Посмотреть кейсы →</span>
+    </a>
+
+    <a class="step" href="/roi.html">
+      <span class="n">03</span>
+      <span class="em">🧮</span>
+      <div class="tm">≈ 2 минуты</div>
+      <h3>Посчитать выгоду</h3>
+      <div class="ds">ROI-калькулятор: введи штат и оклады команды → получи реальную экономию в ₽/год.</div>
+      <span class="go">Открыть калькулятор →</span>
+    </a>
+
+    <a class="step" href="/onboarding.html">
+      <span class="n">04</span>
+      <span class="em">📋</span>
+      <div class="tm">≈ 5 минут</div>
+      <h3>Заполнить бриф</h3>
+      <div class="ds">10 простых вопросов о бизнесе: тип, ниша, цели, аудитория, выручка, боль.</div>
+      <span class="go">Начать бриф →</span>
+    </a>
+
+    <a class="step" href="/dashboard.html">
+      <span class="n">05</span>
+      <span class="em">🏢</span>
+      <div class="tm">сразу</div>
+      <h3>Получить кабинет</h3>
+      <div class="ds">AI собирает команду из 169 агентов под твою задачу → персональный AI-офис открыт.</div>
+      <span class="go">Открыть Мой Офис →</span>
+    </a>
+
+  </div>
+</section>
+
+<!-- ════════════════════════════════ -->
+<!-- SECTION 2: INTENT — «Я хочу...» -->
+<!-- ════════════════════════════════ -->
+<section id="intent">
+  <div class="section-hd">
+    <h2><span class="em">🎯</span>«Я хочу...» — найди свою цель</h2>
+    <span class="meta">Task-oriented routing</span>
+  </div>
+  <p class="section-intro">Не нужно идти по шагам — выбери что хочешь сделать прямо сейчас. Каждая карточка ведёт на нужную страницу + альтернативные пути.</p>
+
+  <div class="intent-grid">
+
+    <a class="intent" href="/how-it-works.html">
+      <span class="em">🤔</span>
+      <div class="body">
+        <div class="lbl">Я ХОЧУ ПОНЯТЬ</div>
+        <h3>...что это вообще такое</h3>
+        <div class="ds">AI-офис из 169 агентов под бизнес. Заменяет SMM-команду, аналитика, копирайтера. От 1990 ₽/мес.</div>
+        <div class="actions">
+          <a class="main" href="/how-it-works.html">→ Как это работает</a>
+          <a href="/blog/ai-agents-explained.html">AI-агент простыми словами</a>
+          <a href="/about.html">О проекте</a>
+        </div>
+      </div>
+    </a>
+
+    <a class="intent" href="/cases.html">
+      <span class="em">👀</span>
+      <div class="body">
+        <div class="lbl">Я ХОЧУ УВИДЕТЬ</div>
+        <h3>...как это работает у других</h3>
+        <div class="ds">5 модельных кейсов + мокап кабинета клиента через 60 дней + анимированный диалог 4 агентов.</div>
+        <div class="actions">
+          <a class="main" href="/cases.html">→ 5 кейсов</a>
+          <a href="/dashboard-demo.html">Кабинет 60 дней</a>
+          <a href="/demo-dialogue.html">Live-диалог</a>
+          <a href="/demo.html">Видео</a>
+        </div>
+      </div>
+    </a>
+
+    <a class="intent" href="/roi.html">
+      <span class="em">🧮</span>
+      <div class="body">
+        <div class="lbl">Я ХОЧУ ПОСЧИТАТЬ</div>
+        <h3>...сколько сэкономлю</h3>
+        <div class="ds">ROI-калькулятор по реальным окладам команды. Плюс сравнительная таблица AI vs найм/фриланс/курсы.</div>
+        <div class="actions">
+          <a class="main" href="/roi.html">→ ROI-калькулятор</a>
+          <a href="/compare.html">Сравнительная таблица</a>
+          <a href="/blog/smm-cost-2026.html">Цена SMM 2026</a>
+        </div>
+      </div>
+    </a>
+
+    <a class="intent" href="/onboarding.html">
+      <span class="em">📋</span>
+      <div class="body">
+        <div class="lbl">Я ХОЧУ ПОЛУЧИТЬ</div>
+        <h3>...персональный план под мой бизнес</h3>
+        <div class="ds">Заполни бриф 10 шагов (≈5 минут) — AI подберёт команду агентов под твою задачу и нишу.</div>
+        <div class="actions">
+          <a class="main" href="/onboarding.html">→ Заполнить бриф</a>
+          <a href="/recommend.html">Подбор команды</a>
+          <a href="/dashboard.html">Мой офис</a>
+        </div>
+      </div>
+    </a>
+
+    <a class="intent" href="/pricing.html">
+      <span class="em">💎</span>
+      <div class="body">
+        <div class="lbl">Я ХОЧУ КУПИТЬ</div>
+        <h3>...тариф и работать</h3>
+        <div class="ds">4 тарифа: Free (3 запуска/мес), Pro (1990 ₽), Team (4990 ₽), Enterprise (от 25К). Помесячно или с экономией 2 мес в год.</div>
+        <div class="actions">
+          <a class="main" href="/pricing.html">→ Тарифы</a>
+          <a href="/faq.html">FAQ</a>
+          <a href="/terms.html">Условия</a>
+        </div>
+      </div>
+    </a>
+
+    <a class="intent" href="/partners.html">
+      <span class="em">🤝</span>
+      <div class="body">
+        <div class="lbl">Я ХОЧУ ЗАРАБОТАТЬ</div>
+        <h3>...на партнёрке</h3>
+        <div class="ds">30% с оплат привлечённых клиентов на 12 месяцев. Cookie 60 дней. Для блогеров и агентств.</div>
+        <div class="actions">
+          <a class="main" href="/partners.html">→ Партнёрка 30%</a>
+          <a href="/partner-dashboard.html">Демо-кабинет</a>
+          <a href="/brand-kit.html">Brand Kit</a>
+        </div>
+      </div>
+    </a>
+
+    <a class="intent" href="/lead-magnet-gate.html">
+      <span class="em">📄</span>
+      <div class="body">
+        <div class="lbl">Я ХОЧУ БЕСПЛАТНО</div>
+        <h3>...полезное прямо сейчас</h3>
+        <div class="ds">PDF с 10 готовыми промптами для AI-агентов: контент-план, Reels-хуки, sales-скрипты, аналитика.</div>
+        <div class="actions">
+          <a class="main" href="/lead-magnet-gate.html">→ Скачать PDF</a>
+          <a href="/blog/how-to-write-prompt.html">12 шаблонов промптов</a>
+          <a href="/blog/">Блог · 6 статей</a>
+        </div>
+      </div>
+    </a>
+
+    <a class="intent" href="/agents.html">
+      <span class="em">🤖</span>
+      <div class="body">
+        <div class="lbl">Я ХОЧУ УВИДЕТЬ</div>
+        <h3>...всех 169 агентов</h3>
+        <div class="ds">Полный каталог: 169 AI-агентов в 4 отделах (Growth / Marketing / Tech / Sales) с описанием каждого.</div>
+        <div class="actions">
+          <a class="main" href="/agents.html">→ Каталог 169</a>
+          <a href="/glossary.html">Глоссарий</a>
+        </div>
+      </div>
+    </a>
+
+    <a class="intent" href="/faq.html">
+      <span class="em">❓</span>
+      <div class="body">
+        <div class="lbl">Я ХОЧУ ПОЛУЧИТЬ ОТВЕТ</div>
+        <h3>...на конкретный вопрос</h3>
+        <div class="ds">FAQ + глоссарий 25 AI-терминов + плавающий чат с Алисой (24/7) внизу каждой страницы.</div>
+        <div class="actions">
+          <a class="main" href="/faq.html">→ FAQ</a>
+          <a href="/glossary.html">Глоссарий</a>
+          <a href="#alisa" onclick="document.getElementById('aio-alisa-fab')?.click();return false">💬 Алиса</a>
+        </div>
+      </div>
+    </a>
+
+  </div>
+</section>
+
+<!-- ════════════════════════════════ -->
+<!-- SECTION 3: FULL CATALOG -->
+<!-- ════════════════════════════════ -->
+<section id="catalog">
+  <div class="section-hd">
+    <h2><span class="em">📂</span>Полный каталог — все 47 страниц</h2>
+    <span class="meta">Sorted by purpose</span>
+  </div>
+  <p class="section-intro">Все страницы сайта по категориям, с описанием для чего каждая. Используй поиск выше (🔍), чтобы найти нужную за секунды.</p>
+
+  <div class="no-results" id="noResults">🔍 Ничего не найдено. Попробуй другой запрос или открой <a href="/agents.html" style="color:var(--accent)">каталог агентов</a>.</div>
+
+  <div class="catalog" id="catalogGrid">
+
+    <!-- ─── 1. KEY PAGES ─── -->
+    <div class="cat-card" data-cat="main">
+      <div class="hd"><span class="em">🏠</span><span class="nm">Главные страницы</span><span class="ct">7</span></div>
+      <div class="list">
+        <a class="it" href="/index.html"><span class="ic">🏠</span><span class="nm">Главная<small>Демо живого офиса + live-диалог 4 агентов</small></span></a>
+        <a class="it" href="/how-it-works.html"><span class="ic">📖</span><span class="nm">Как это работает<small>5 шагов customer journey с авто-туром</small></span></a>
+        <a class="it" href="/about.html"><span class="ic">ℹ️</span><span class="nm">О проекте<small>Founder · философия · roadmap · контакты</small></span></a>
+        <a class="it" href="/navigation.html"><span class="ic">🧭</span><span class="nm">Навигация<small>Эта страница — карта сайта</small><span class="badge new">ТЫ ЗДЕСЬ</span></span></a>
+        <a class="it" href="/whats-new.html"><span class="ic">✨</span><span class="nm">Что нового<small>Showcase всех функций · 13 страниц</small></span></a>
+        <a class="it" href="/hub.html"><span class="ic">🗂</span><span class="nm">Каталог hub<small>Старый каталог · оставлен как дублёр</small></span></a>
+        <a class="it" href="/faq.html"><span class="ic">❓</span><span class="nm">FAQ<small>Частые вопросы и ответы</small></span></a>
+      </div>
+    </div>
+
+    <!-- ─── 2. CUSTOMER JOURNEY ─── -->
+    <div class="cat-card" data-cat="journey">
+      <div class="hd"><span class="em">🎯</span><span class="nm">Путь клиента</span><span class="ct">6</span></div>
+      <div class="list">
+        <a class="it" href="/onboarding.html"><span class="ic">📋</span><span class="nm">Бриф · 10 шагов<small>≈5 мин · контакт, ниша, цель, боль, бюджет</small></span></a>
+        <a class="it" href="/recommend.html"><span class="ic">🎯</span><span class="nm">Подбор команды<small>AI выбирает 4-7 агентов под твой бриф</small></span></a>
+        <a class="it" href="/dashboard.html"><span class="ic">🏢</span><span class="nm">Мой Офис<small>Личный кабинет с командой агентов</small></span></a>
+        <a class="it" href="/marketing-workspace.html"><span class="ic">🎨</span><span class="nm">Marketing Workspace<small>4 задачи: исследование, контент, аналитика, отчёт</small></span></a>
+        <a class="it" href="/tech-workspace.html"><span class="ic">⚙️</span><span class="nm">Tech Workspace<small>4 задачи: code review, диагностика, архитектура, deploy</small></span></a>
+        <a class="it" href="/sales-workspace.html"><span class="ic">💬</span><span class="nm">Sales Workspace<small>4 задачи: Direct, прогрев, возражения, дожимы</small></span></a>
+      </div>
+    </div>
+
+    <!-- ─── 3. SALES TOOLS ─── -->
+    <div class="cat-card" data-cat="sales">
+      <div class="hd"><span class="em">💎</span><span class="nm">Sales-инструменты</span><span class="ct">6</span></div>
+      <div class="list">
+        <a class="it" href="/pricing.html"><span class="ic">💎</span><span class="nm">Тарифы<small>Free · Pro 1990₽ · Team 4990₽ · Enterprise 25К</small></span></a>
+        <a class="it" href="/roi.html"><span class="ic">🧮</span><span class="nm">ROI-калькулятор<small>Сколько сэкономишь vs штатной команды</small></span></a>
+        <a class="it" href="/compare.html"><span class="ic">⚖️</span><span class="nm">Сравнение<small>AI vs найм / фриланс / курсы · 12 критериев</small></span></a>
+        <a class="it" href="/cases.html"><span class="ic">📈</span><span class="nm">Кейсы<small>5 модельных сценариев с цифрами</small></span></a>
+        <a class="it" href="/dashboard-demo.html"><span class="ic">📊</span><span class="nm">Демо-результаты · 60 дней<small>Мокап кабинета клиента через 60 дней</small><span class="badge demo">DEMO</span></span></a>
+        <a class="it" href="/demo.html"><span class="ic">📺</span><span class="nm">Видео-демо<small>6 placeholder-слотов под Loom · скоро</small></span></a>
+      </div>
+    </div>
+
+    <!-- ─── 4. EDUCATION ─── -->
+    <div class="cat-card" data-cat="education">
+      <div class="hd"><span class="em">📚</span><span class="nm">Образование и контент</span><span class="ct">12</span></div>
+      <div class="list">
+        <a class="it" href="/blog/"><span class="ic">📚</span><span class="nm">Блог · index<small>6 SEO-статей · фильтр по тегам</small></span></a>
+        <a class="it" href="/blog/ai-vs-hire.html"><span class="ic">📝</span><span class="nm">AI vs фрилансер<small>9 мин · 2100 слов · сравнение по 8 параметрам</small></span></a>
+        <a class="it" href="/blog/smm-cost-2026.html"><span class="ic">📝</span><span class="nm">Цена SMM-щика 2026<small>8 мин · 1800 слов · реальные оклады + налоги</small></span></a>
+        <a class="it" href="/blog/ai-agents-explained.html"><span class="ic">📝</span><span class="nm">Что такое AI-агент<small>7 мин · 1700 слов · простыми словами</small></span></a>
+        <a class="it" href="/blog/how-to-write-prompt.html"><span class="ic">📝</span><span class="nm">12 шаблонов промптов<small>10 мин · 2200 слов · с copy-кнопками</small></span></a>
+        <a class="it" href="/blog/ai-for-online-schools.html"><span class="ic">📝</span><span class="nm">AI для онлайн-школ<small>9 мин · 2100 слов · кейс 4.2М ₽</small></span></a>
+        <a class="it" href="/blog/checklist-choose-ai-tool.html"><span class="ic">📝</span><span class="nm">Чек-лист выбора AI<small>8 мин · 1900 слов · 12 вопросов перед покупкой</small></span></a>
+        <a class="it" href="/agents.html"><span class="ic">🤖</span><span class="nm">169 AI-агентов<small>Полный каталог по отделам · с чатом</small></span></a>
+        <a class="it" href="/glossary.html"><span class="ic">📖</span><span class="nm">Глоссарий<small>25 AI-терминов: промпт, RAG, MCP, токен, embedding</small></span></a>
+        <a class="it" href="/demo-dialogue.html"><span class="ic">💬</span><span class="nm">Live-диалог 4 агентов<small>Анимированный сценарий распределения задач</small></span></a>
+        <a class="it" href="/emails.html"><span class="ic">✉️</span><span class="nm">7 email-шаблонов<small>Welcome → Story → Кейс → Offer → Last chance</small></span></a>
+      </div>
+    </div>
+
+    <!-- ─── 5. LEAD MAGNETS ─── -->
+    <div class="cat-card" data-cat="leads">
+      <div class="hd"><span class="em">📄</span><span class="nm">Лид-магниты и захват</span><span class="ct">2</span></div>
+      <div class="list">
+        <a class="it" href="/lead-magnet-gate.html"><span class="ic">📥</span><span class="nm">Захват email + PDF<small>Форма захвата перед скачиванием</small></span></a>
+        <a class="it" href="/lead-magnet.html"><span class="ic">📄</span><span class="nm">PDF · 10 промптов<small>14 страниц · contents · sales · аналитика</small></span></a>
+      </div>
+    </div>
+
+    <!-- ─── 6. PARTNERS ─── -->
+    <div class="cat-card" data-cat="partners">
+      <div class="hd"><span class="em">🤝</span><span class="nm">Партнёры и рост</span><span class="ct">3</span></div>
+      <div class="list">
+        <a class="it" href="/partners.html"><span class="ic">🤝</span><span class="nm">Партнёрская программа<small>30% с оплат · 12 мес · cookie 60 дней</small></span></a>
+        <a class="it" href="/partner-dashboard.html"><span class="ic">📊</span><span class="nm">Кабинет партнёра<small>Мокап статистики · клики/оплаты/выплаты</small><span class="badge demo">DEMO</span></span></a>
+        <a class="it" href="/brand-kit.html"><span class="ic">🎨</span><span class="nm">Brand Kit<small>Логотипы · палитра · 6 баннеров · 5 готовых месседжей</small></span></a>
+      </div>
+    </div>
+
+    <!-- ─── 7. 3D / PIXEL DEMOS ─── -->
+    <div class="cat-card" data-cat="demos">
+      <div class="hd"><span class="em">🏗</span><span class="nm">3D / Pixel демо-офисы</span><span class="ct">6</span></div>
+      <div class="list">
+        <a class="it" href="/ai-marketing-office-3d.html"><span class="ic">🏙</span><span class="nm">Marketing 3D<small>14 агентов · Three.js · кликабельно</small></span></a>
+        <a class="it" href="/ai-tech-office-3d.html"><span class="ic">💻</span><span class="nm">Tech 3D<small>12 разработчиков · Three.js</small></span></a>
+        <a class="it" href="/ai-tech-office-pixel.html"><span class="ic">🎨</span><span class="nm">Tech Pixel<small>2D Stardew-style · canvas</small></span></a>
+        <a class="it" href="/ai-growth-office-pixel.html"><span class="ic">🌆</span><span class="nm">Growth Pixel<small>2D Stardew-style</small></span></a>
+        <a class="it" href="/ai-growth-office-v6-upgraded.html"><span class="ic">🏞</span><span class="nm">Iso v6<small>Изометрия 2.5D · day-night cycle</small></span></a>
+        <a class="it" href="/pipeline.html"><span class="ic">⚡</span><span class="nm">Pipeline<small>Старый сценарий передачи задач · legacy</small></span></a>
+      </div>
+    </div>
+
+    <!-- ─── 8. ADMIN / DEV ─── -->
+    <div class="cat-card" data-cat="admin">
+      <div class="hd"><span class="em">🛠</span><span class="nm">Админка и разработчик</span><span class="ct">5</span></div>
+      <div class="list">
+        <a class="it" href="/leads-inbox.html"><span class="ic">📬</span><span class="nm">Leads Inbox<small>Все заявки/чаты/брифы в одном месте</small><span class="badge admin">ADMIN</span></span></a>
+        <a class="it" href="/dev-tools.html"><span class="ic">🛠</span><span class="nm">Dev Tools<small>API-тест · env · mock-data · danger-zone</small><span class="badge admin">ADMIN</span></span></a>
+        <a class="it" href="/test.html"><span class="ic">🧪</span><span class="nm">E2E Test Suite<small>19 тестов + полный flow симуляция</small><span class="badge admin">ADMIN</span></span></a>
+        <a class="it" href="/mock-payment.html"><span class="ic">💳</span><span class="nm">Mock-оплата<small>Имитация YooKassa-чекаута</small><span class="badge admin">ADMIN</span></span></a>
+        <a class="it" href="/404.html"><span class="ic">🚫</span><span class="nm">404<small>Страница «не найдено»</small></span></a>
+      </div>
+    </div>
+
+    <!-- ─── 9. TELEGRAM MINI APP ─── -->
+    <div class="cat-card" data-cat="miniapp">
+      <div class="hd"><span class="em">📱</span><span class="nm">Telegram Mini App</span><span class="ct">2</span></div>
+      <div class="list">
+        <a class="it" href="/mini-app-preview.html"><span class="ic">📱</span><span class="nm">Mini App Preview<small>Превью в макете телефона + инструкция настройки бота</small><span class="badge new">NEW</span></span></a>
+        <a class="it" href="/mini-app/" target="_blank"><span class="ic">🚀</span><span class="nm">Mini App · full-screen<small>5 экранов: welcome → brief → team → office → chat</small></span></a>
+      </div>
+    </div>
+
+    <!-- ─── 10. LEGAL ─── -->
+    <div class="cat-card" data-cat="legal">
+      <div class="hd"><span class="em">📜</span><span class="nm">Юридическое</span><span class="ct">2</span></div>
+      <div class="list">
+        <a class="it" href="/privacy.html"><span class="ic">🔒</span><span class="nm">Политика приватности<small>152-ФЗ + GDPR · 13 разделов</small></span></a>
+        <a class="it" href="/terms.html"><span class="ic">📜</span><span class="nm">Условия использования<small>16 разделов · тарифы · возврат · права</small></span></a>
+      </div>
+    </div>
+
+  </div>
+</section>
+
+<!-- ════════════════════════════════ -->
+<!-- SECTION 4: FAQ -->
+<!-- ════════════════════════════════ -->
+<section id="faq">
+  <div class="section-hd">
+    <h2><span class="em">❓</span>FAQ навигации — «где найти X»</h2>
+    <span class="meta">Quick answers</span>
+  </div>
+  <p class="section-intro">Если не знаешь куда зайти — открой нужный пункт. Если ответа здесь нет, нажми <b>💬 Алиса</b> в правом нижнем углу — она знает все 47 страниц.</p>
+
+  <div class="faq-list">
+
+    <details class="faq-q">
+      <summary>Где быстрее всего понять, что такое AI Growth Office?</summary>
+      <div class="a">Открой <a href="/how-it-works.html">«Как это работает»</a> — 5 шагов customer journey с анимацией. Если хочется ещё короче — посмотри <a href="/demo-dialogue.html">Live-диалог 4 агентов</a> (запустится автоматически).</div>
+    </details>
+
+    <details class="faq-q">
+      <summary>Как заполнить бриф?</summary>
+      <div class="a">Открой <a href="/onboarding.html">/onboarding</a> — там 10 шагов, ≈5 минут. Данные сохраняются автоматически в браузере (autosave), даже если закроешь вкладку — продолжишь с того места.</div>
+    </details>
+
+    <details class="faq-q">
+      <summary>Где мой кабинет с агентами?</summary>
+      <div class="a"><a href="/dashboard.html">/dashboard</a> — личный AI-офис. Появляется после заполнения брифа и AI-подбора команды через <a href="/recommend.html">/recommend</a>.</div>
+    </details>
+
+    <details class="faq-q">
+      <summary>Где посчитать сколько я сэкономлю?</summary>
+      <div class="a">Открой <a href="/roi.html">ROI-калькулятор</a>. Введи штат или режим «я делаю сам» + выбери тариф → получи экономию в ₽/год и срок окупаемости. Дополнительно <a href="/compare.html">/compare</a> — сравнение AI vs найм/фриланс/курсы по 12 критериям.</div>
+    </details>
+
+    <details class="faq-q">
+      <summary>Как поговорить с конкретным агентом?</summary>
+      <div class="a">Открой <a href="/dashboard.html">кабинет</a> → клик по нужному агенту → откроется чат. Или открой <a href="/agents.html">каталог 169 агентов</a> → клик «Чат» рядом с агентом.</div>
+    </details>
+
+    <details class="faq-q">
+      <summary>Что такое промпт, RAG, embedding?</summary>
+      <div class="a">Открой <a href="/glossary.html">глоссарий</a> — 25 AI-терминов с простыми объяснениями. Плюс <a href="/blog/ai-agents-explained.html">блог-статья «Что такое AI-агент»</a> с разбором по полочкам.</div>
+    </details>
+
+    <details class="faq-q">
+      <summary>Где готовые промпты которые можно скопировать?</summary>
+      <div class="a">Два места: <a href="/blog/how-to-write-prompt.html">/blog/how-to-write-prompt</a> — 12 шаблонов с copy-кнопками. И <a href="/lead-magnet-gate.html">PDF с 10 промптами</a> — оставь email → скачаешь PDF на 14 страниц.</div>
+    </details>
+
+    <details class="faq-q">
+      <summary>Как стать партнёром?</summary>
+      <div class="a">Открой <a href="/partners.html">/partners</a> → заполни форму (имя, тип, email, ниша). Ответ в 24-48 часов. Перед заявкой посмотри <a href="/partner-dashboard.html">демо-кабинета партнёра</a> и <a href="/brand-kit.html">brand-kit</a> с готовыми материалами.</div>
+    </details>
+
+    <details class="faq-q">
+      <summary>Где увидеть пример работы продукта?</summary>
+      <div class="a">3 места:<br>1) <a href="/dashboard-demo.html">Кабинет клиента через 60 дней</a> — мокап с реалистичными цифрами (5+ KPI, графики, чаты с агентами)<br>2) <a href="/cases.html">5 кейсов</a> — модельные сценарии под разные ниши<br>3) <a href="/demo-dialogue.html">Live-диалог 4 агентов</a> — анимация в реальном времени</div>
+    </details>
+
+    <details class="faq-q">
+      <summary>Где посмотреть мои данные? (бриф, заявки, чаты)</summary>
+      <div class="a"><a href="/leads-inbox.html">/leads-inbox</a> — админ-страница. Все формы, чаты с Алисой, аналитика событий, история запусков. Cross-tab live-обновление. Только видна тебе (хранится в твоём браузере).</div>
+    </details>
+
+    <details class="faq-q">
+      <summary>Как проверить что всё работает?</summary>
+      <div class="a">Открой <a href="/dev-tools.html">/dev-tools</a> → жми «🔌 Тест API» → должно показать pong. Или открой <a href="/test.html">/test</a> → «Запустить все тесты» — 19 автоматических проверок за 5 секунд.</div>
+    </details>
+
+    <details class="faq-q">
+      <summary>Где меню для быстрого доступа?</summary>
+      <div class="a">Слева, на любой странице. Наведи на тонкую полоску слева — она расширится с подписями. В сайдбаре <b>поиск</b> (значок 🔍) — можно отфильтровать пункты, нажав на текст.</div>
+    </details>
+
+    <details class="faq-q">
+      <summary>Можно ли установить как приложение?</summary>
+      <div class="a">Да, это PWA. На iPhone: Safari → кнопка «Поделиться» → «На экран Домой». На Android: Chrome → меню → «Установить приложение». На Mac/Windows: Chrome → значок установки в адресной строке.</div>
+    </details>
+
+    <details class="faq-q">
+      <summary>Что-то сломалось / не открывается / не нашёл нужное</summary>
+      <div class="a">Напиши в Telegram <a href="https://t.me/ilia_paliy" target="_blank" rel="noopener">@ilia_paliy</a> — отвечу за час. Или нажми 💬 в правом нижнем углу — Алиса знает весь сайт и подскажет куда идти.</div>
+    </details>
+
+  </div>
+</section>
+
+<!-- CTA END -->
+<div class="cta-end">
+  <h3>Теперь точно не заблудишься</h3>
+  <p>Если впервые — иди по «Быстрому старту» сверху. Если уже понял что нужно — пользуйся «Я хочу...» роутером. Если совсем не уверен — спроси у Алисы (💬 справа внизу).</p>
+  <div class="btns">
+    <a class="pri" href="/onboarding.html">📋 Заполнить бриф → собрать офис</a>
+    <a class="sec" href="/how-it-works.html">📖 Как это работает</a>
+  </div>
+</div>
+
+</div>
+
+<script src="state.js"></script>
+<script src="mock-backend.js"></script>
+<script src="config.js"></script>
+<script src="analytics.js" defer></script>
+<script src="api-fallback.js"></script>
+<script src="sidebar.js" defer></script>
+<script src="alisa-widget.js" defer></script>
+<script>
+// ─── Search across all catalog items ───
+const $search = document.getElementById('navSearch');
+const $catalog = document.getElementById('catalogGrid');
+const $noResults = document.getElementById('noResults');
+
+function filterPages(q) {
+  q = q.toLowerCase().trim();
+  let totalShown = 0;
+  document.querySelectorAll('.cat-card').forEach(card => {
+    let cardShown = 0;
+    card.querySelectorAll('.it').forEach(it => {
+      const txt = it.textContent.toLowerCase();
+      const match = !q || txt.includes(q);
+      it.classList.toggle('hidden', !match);
+      if (match) cardShown++;
+    });
+    card.style.display = cardShown ? '' : 'none';
+    totalShown += cardShown;
+  });
+  $noResults.classList.toggle('show', q && totalShown === 0);
+  if (window.AIOAnalytics && q) window.AIOAnalytics.track('nav_search', { query: q.slice(0, 50), found: totalShown });
+}
+
+$search.addEventListener('input', e => filterPages(e.target.value));
+$search.addEventListener('keydown', e => {
+  if (e.key === 'Escape') { e.target.value = ''; filterPages(''); }
+});
+
+// PWA
+if ('serviceWorker' in navigator && location.protocol === 'https:') {
+  navigator.serviceWorker.register('/sw.js').catch(()=>{});
+}
+</script>
+</body>
+</html>

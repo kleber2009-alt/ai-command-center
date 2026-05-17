@@ -1,0 +1,497 @@
+<!doctype html>
+<html lang="ru">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1">
+<title>Что нового · все функции в одном месте · AI Growth Office</title>
+<meta name="description" content="13 новых страниц и инструментов: ROI-калькулятор, сравнение, кейсы, видео-демо, диалог агентов, кабинеты, партнёрка. Кликни любую — посмотри функционал.">
+<meta name="robots" content="noindex">
+<link rel="canonical" href="https://ai-growth-office.ru/whats-new.html">
+
+<link rel="manifest" href="/manifest.json">
+<meta name="theme-color" content="#0a0c14">
+<meta name="apple-mobile-web-app-capable" content="yes">
+<meta name="apple-mobile-web-app-title" content="AI Office">
+<link rel="apple-touch-icon" href="/icon-192.png">
+
+<style>
+:root{
+  --bg:#0a0c14;--panel:rgba(255,255,255,.04);--border:rgba(255,255,255,.08);
+  --text:#e9eef7;--muted:#9aa3b2;--dim:#7c8a99;
+  --accent:#c8f060;--a2:#60c8f0;--a3:#f060c8;
+  --green:#34d058;--gold:#f0b429;--purple:#a060f0;
+  --ui:-apple-system,BlinkMacSystemFont,'Inter','Segoe UI',sans-serif;
+  --mono:'JetBrains Mono',monospace;
+}
+*{box-sizing:border-box;margin:0;padding:0}
+html,body{background:var(--bg);color:var(--text);font-family:var(--ui);min-height:100vh}
+body{background:radial-gradient(circle at 80% 0%,rgba(200,240,96,.05),transparent 55%),radial-gradient(circle at 0% 90%,rgba(96,200,240,.04),transparent 55%),var(--bg)}
+
+.wrap{max-width:1280px;margin:0 auto;padding:40px 24px 80px}
+.crumbs{font-size:11px;color:var(--muted);margin-bottom:18px;letter-spacing:.4px}
+.crumbs a{color:var(--muted);text-decoration:none;border-bottom:1px dotted rgba(255,255,255,.15)}
+.crumbs a:hover{color:var(--accent)}
+
+.hero{text-align:center;margin-bottom:42px;padding:14px 0 24px}
+.hero .tag{display:inline-block;font-size:10px;font-weight:700;color:var(--accent);background:rgba(200,240,96,.08);border:1px solid rgba(200,240,96,.2);padding:6px 14px;border-radius:99px;letter-spacing:1.5px;text-transform:uppercase;margin-bottom:18px}
+.hero h1{font-size:clamp(34px,5vw,48px);font-weight:800;letter-spacing:-.5px;line-height:1.05;margin-bottom:14px}
+.hero h1 .g{background:linear-gradient(90deg,#c8f060,#60c8f0);-webkit-background-clip:text;-webkit-text-fill-color:transparent}
+.hero p{font-size:15px;color:var(--muted);max-width:620px;margin:0 auto;line-height:1.6}
+
+.stats-line{display:flex;justify-content:center;gap:30px;margin-top:30px;flex-wrap:wrap}
+.stats-line .v{font-size:32px;font-weight:900;background:linear-gradient(135deg,#c8f060,#60c8f0);-webkit-background-clip:text;-webkit-text-fill-color:transparent;line-height:1;font-variant-numeric:tabular-nums}
+.stats-line .l{font-size:11px;color:var(--muted);margin-top:6px;letter-spacing:.5px;text-transform:uppercase;font-weight:700;text-align:center}
+
+/* Filter chips */
+.filter{display:flex;justify-content:center;gap:6px;margin-bottom:30px;flex-wrap:wrap}
+.f-chip{background:var(--panel);border:1px solid var(--border);color:var(--muted);padding:8px 14px;border-radius:99px;font:700 11.5px/1 var(--ui);cursor:pointer;letter-spacing:.4px;transition:all .15s}
+.f-chip:hover{color:var(--text);border-color:rgba(255,255,255,.18)}
+.f-chip.act{background:rgba(200,240,96,.12);color:var(--accent);border-color:rgba(200,240,96,.3)}
+
+/* Cards */
+.cards{display:grid;grid-template-columns:repeat(auto-fill,minmax(310px,1fr));gap:18px}
+.cd{background:var(--panel);border:1px solid var(--border);border-radius:16px;overflow:hidden;text-decoration:none;color:inherit;display:flex;flex-direction:column;transition:transform .2s,border-color .2s,box-shadow .2s;position:relative}
+.cd:hover{transform:translateY(-4px);border-color:rgba(200,240,96,.3);box-shadow:0 16px 40px rgba(0,0,0,.4)}
+.cd .preview{
+  aspect-ratio:16/10;background:linear-gradient(135deg,#0c0f1e,#0a0c14);
+  display:flex;flex-direction:column;align-items:center;justify-content:center;
+  padding:18px;position:relative;overflow:hidden;border-bottom:1px solid var(--border);
+}
+.cd .preview::before{content:'';position:absolute;inset:0;background:radial-gradient(circle at 30% 20%,rgba(200,240,96,.1),transparent 65%);opacity:.5}
+.cd .preview .big{font-size:50px;margin-bottom:10px;position:relative;z-index:2;line-height:1}
+.cd .preview .lbl{font-size:13.5px;font-weight:800;text-align:center;line-height:1.25;color:#e9eef7;position:relative;z-index:2;letter-spacing:-.1px;max-width:240px}
+
+/* Preview variants */
+.cd .preview.v-tech{background:linear-gradient(135deg,#1a1d35,#0d0f1c)}
+.cd .preview.v-tech::before{background:radial-gradient(circle at 30% 20%,rgba(96,200,240,.15),transparent 65%)}
+.cd .preview.v-sales{background:linear-gradient(135deg,#13251a,#0d0f1c)}
+.cd .preview.v-sales::before{background:radial-gradient(circle at 30% 20%,rgba(52,208,88,.15),transparent 65%)}
+.cd .preview.v-mail{background:linear-gradient(135deg,#251a13,#0d0f1c)}
+.cd .preview.v-mail::before{background:radial-gradient(circle at 30% 20%,rgba(240,180,41,.15),transparent 65%)}
+.cd .preview.v-roi{background:linear-gradient(135deg,#1a2a13,#0d0f1c)}
+.cd .preview.v-roi::before{background:radial-gradient(circle at 30% 20%,rgba(200,240,96,.18),transparent 65%)}
+.cd .preview.v-cmp{background:linear-gradient(135deg,#1a1635,#0d0f1c)}
+.cd .preview.v-cmp::before{background:radial-gradient(circle at 30% 20%,rgba(160,96,240,.15),transparent 65%)}
+.cd .preview.v-how{background:linear-gradient(135deg,#13252a,#0d0f1c)}
+.cd .preview.v-how::before{background:radial-gradient(circle at 30% 20%,rgba(96,200,240,.18),transparent 65%)}
+.cd .preview.v-video{background:linear-gradient(135deg,#251325,#0d0f1c)}
+.cd .preview.v-video::before{background:radial-gradient(circle at 30% 20%,rgba(240,96,200,.15),transparent 65%)}
+.cd .preview.v-dlg{background:linear-gradient(135deg,#1a1d35,#13251a);}
+.cd .preview.v-dlg::before{background:radial-gradient(circle at 30% 20%,rgba(96,200,240,.15),transparent 60%),radial-gradient(circle at 80% 80%,rgba(200,240,96,.12),transparent 60%);opacity:.7}
+.cd .preview.v-prt{background:linear-gradient(135deg,#2a2013,#0d0f1c)}
+.cd .preview.v-prt::before{background:radial-gradient(circle at 30% 20%,rgba(240,180,41,.18),transparent 65%)}
+.cd .preview.v-prtdb{background:linear-gradient(135deg,#252013,#13252a)}
+.cd .preview.v-prtdb::before{background:radial-gradient(circle at 30% 20%,rgba(240,180,41,.15),transparent 60%),radial-gradient(circle at 80% 80%,rgba(96,200,240,.12),transparent 60%)}
+.cd .preview.v-clidb{background:linear-gradient(135deg,#13251a,#1a2a35)}
+.cd .preview.v-clidb::before{background:radial-gradient(circle at 30% 20%,rgba(200,240,96,.18),transparent 60%),radial-gradient(circle at 80% 80%,rgba(96,200,240,.12),transparent 60%)}
+.cd .preview.v-alisa{background:linear-gradient(135deg,#1a1635,#13252a)}
+.cd .preview.v-alisa::before{background:radial-gradient(circle at 30% 20%,rgba(200,240,96,.15),transparent 60%),radial-gradient(circle at 70% 70%,rgba(96,200,240,.15),transparent 60%);opacity:.7}
+.cd .preview.v-pwa{background:linear-gradient(135deg,#13252a,#1a1d35)}
+.cd .preview.v-pwa::before{background:radial-gradient(circle at 50% 50%,rgba(96,200,240,.2),transparent 60%)}
+
+/* Mini-mockup elements inside preview */
+.mok-window{width:200px;background:#0d0f1c;border:1px solid var(--border);border-radius:8px;overflow:hidden;box-shadow:0 8px 24px rgba(0,0,0,.5);position:relative;z-index:2;margin-bottom:0}
+.mok-window .bar{background:rgba(255,255,255,.05);padding:5px 9px;display:flex;gap:4px;border-bottom:1px solid var(--border)}
+.mok-window .bar .dot{width:6px;height:6px;border-radius:50%}
+.mok-window .bar .dot:nth-child(1){background:#ff5f57}
+.mok-window .bar .dot:nth-child(2){background:#febc2e}
+.mok-window .bar .dot:nth-child(3){background:#28c840}
+.mok-window .body{padding:10px}
+.mok-window .body .row{height:6px;background:rgba(255,255,255,.07);border-radius:99px;margin-bottom:5px}
+.mok-window .body .row:nth-child(1){width:100%}
+.mok-window .body .row:nth-child(2){width:75%}
+.mok-window .body .row:nth-child(3){width:90%;background:linear-gradient(90deg,#c8f060,#60c8f0)}
+.mok-window .body .row:nth-child(4){width:60%}
+
+/* Card meta below preview */
+.cd .meta{padding:18px;flex:1;display:flex;flex-direction:column}
+.cd .meta .top{display:flex;align-items:center;gap:8px;margin-bottom:8px}
+.cd .meta .badge{display:inline-block;font-size:9px;font-weight:800;letter-spacing:.7px;text-transform:uppercase;color:#080808;background:linear-gradient(90deg,#c8f060,#60c8f0);padding:3px 8px;border-radius:99px;font-family:var(--mono)}
+.cd .meta .badge.new{background:linear-gradient(90deg,#f0b429,#f06090);color:#080808}
+.cd .meta .badge.demo{background:rgba(96,200,240,.18);color:var(--a2);border:1px solid rgba(96,200,240,.3)}
+.cd .meta .date{margin-left:auto;font-size:10px;color:var(--dim);font-family:var(--mono);font-weight:700;letter-spacing:.4px}
+.cd .meta h3{font-size:17px;font-weight:800;letter-spacing:-.2px;margin-bottom:6px;line-height:1.25}
+.cd .meta p{font-size:12.5px;color:var(--muted);line-height:1.55;margin-bottom:14px;flex:1}
+.cd .meta .ft{display:flex;justify-content:space-between;align-items:center}
+.cd .meta .ft .ar{font-size:13px;font-weight:800;color:var(--accent);transition:transform .15s}
+.cd:hover .meta .ft .ar{transform:translateX(3px)}
+.cd .meta .tags{display:flex;gap:5px;flex-wrap:wrap}
+.cd .meta .tags span{font-size:9.5px;color:var(--muted);background:rgba(255,255,255,.04);padding:3px 7px;border-radius:5px;border:1px solid var(--border);font-weight:700;letter-spacing:.3px;text-transform:uppercase;font-family:var(--mono)}
+
+.section-divider{margin:36px 0 24px;display:flex;align-items:center;gap:14px}
+.section-divider h2{font-size:18px;font-weight:800;letter-spacing:-.2px;white-space:nowrap}
+.section-divider h2 .em{margin-right:7px}
+.section-divider .line{height:1px;background:var(--border);flex:1}
+.section-divider .count{font-size:11px;color:var(--muted);font-family:var(--mono);font-weight:700;letter-spacing:.4px}
+
+/* Footer note */
+.note{margin-top:48px;padding:24px;background:linear-gradient(135deg,rgba(96,200,240,.05),rgba(200,240,96,.03));border:1px solid rgba(96,200,240,.15);border-radius:14px;font-size:13px;line-height:1.6;color:#e9eef7;text-align:center}
+.note b{color:var(--accent);font-weight:700}
+</style>
+</head>
+<body data-user="Илья Палий" data-email="ilia.info.paliy@gmail.com">
+
+<div class="wrap">
+
+<div class="crumbs">
+  <a href="index.html">Главная</a> · Что нового
+</div>
+
+<div class="hero">
+  <div class="tag">✨ Showcase · все новые функции</div>
+  <h1>Все <span class="g">15 новых страниц</span> в одном месте</h1>
+  <p>Каждая карточка ведёт на свою функцию — клик и смотри в работе. Сгруппировано по типу: рабочие пространства, sales-инструменты, мокапы кабинетов, новая инфраструктура.</p>
+
+  <div class="stats-line">
+    <div><div class="v">15</div><div class="l">новых страниц</div></div>
+    <div><div class="v">5</div><div class="l">мокапов кабинетов</div></div>
+    <div><div class="v">3</div><div class="l">workspace с API</div></div>
+    <div><div class="v">22</div><div class="l">страницы с Алисой</div></div>
+  </div>
+</div>
+
+<!-- ───────── WORKSPACES ───────── -->
+<div class="section-divider">
+  <h2><span class="em">🛠</span>Рабочие пространства</h2>
+  <div class="line"></div>
+  <span class="count">3 страницы</span>
+</div>
+
+<div class="cards">
+
+  <a class="cd" href="tech-workspace.html" data-cat="ws">
+    <div class="preview v-tech">
+      <div class="mok-window">
+        <div class="bar"><span class="dot"></span><span class="dot"></span><span class="dot"></span></div>
+        <div class="body"><div class="row"></div><div class="row"></div><div class="row"></div><div class="row"></div></div>
+      </div>
+    </div>
+    <div class="meta">
+      <div class="top"><span class="badge">WORKSPACE</span><span class="date">15.05</span></div>
+      <h3>⚙️ Tech Workspace</h3>
+      <p>4 dev-задачи с реальным /api/chat: Code Review, Bug Diagnosis, Architecture Design, Deploy Checklist. Общий tech-stack input.</p>
+      <div class="ft"><div class="tags"><span>API</span><span>Streaming</span></div><span class="ar">→</span></div>
+    </div>
+  </a>
+
+  <a class="cd" href="sales-workspace.html" data-cat="ws">
+    <div class="preview v-sales">
+      <div style="font-size:54px;position:relative;z-index:2">💬</div>
+      <div style="font-size:14px;font-weight:800;color:#e9eef7;margin-top:14px;position:relative;z-index:2">Sales Workspace</div>
+    </div>
+    <div class="meta">
+      <div class="top"><span class="badge">WORKSPACE</span><span class="date">15.05</span></div>
+      <h3>💬 Sales Workspace</h3>
+      <p>4 sales-задачи: Direct-скрипты, прогрев, отработка возражений, дожимы. Green-themed (#34d058), pre-fills context из брифа.</p>
+      <div class="ft"><div class="tags"><span>API</span><span>Алиса</span></div><span class="ar">→</span></div>
+    </div>
+  </a>
+
+  <a class="cd" href="emails.html" data-cat="ws">
+    <div class="preview v-mail">
+      <div style="font-size:54px;position:relative;z-index:2">✉️</div>
+      <div style="font-size:14px;font-weight:800;color:#e9eef7;margin-top:14px;position:relative;z-index:2">7 готовых шаблонов</div>
+    </div>
+    <div class="meta">
+      <div class="top"><span class="badge">TOOL</span><span class="date">15.05</span></div>
+      <h3>✉️ Email-шаблоны воронки</h3>
+      <p>7 готовых HTML-писем: Welcome → Story → 169 агентов → Кейс → Offer → Last chance → Welcome Pro. Copy HTML / Subject / Both.</p>
+      <div class="ft"><div class="tags"><span>HTML</span><span>Resend</span><span>Brevo</span></div><span class="ar">→</span></div>
+    </div>
+  </a>
+
+</div>
+
+<!-- ───────── SALES INSTRUMENTS ───────── -->
+<div class="section-divider">
+  <h2><span class="em">💎</span>Sales-инструменты</h2>
+  <div class="line"></div>
+  <span class="count">5 страниц</span>
+</div>
+
+<div class="cards">
+
+  <a class="cd" href="roi.html" data-cat="sales">
+    <div class="preview v-roi">
+      <div style="font-size:46px;position:relative;z-index:2">🧮</div>
+      <div style="font-size:30px;font-weight:900;color:#34d058;margin-top:6px;position:relative;z-index:2;font-family:var(--mono)">−296К ₽</div>
+      <div style="font-size:10px;color:#9aa3b2;margin-top:4px;position:relative;z-index:2;letter-spacing:.6px;text-transform:uppercase;font-weight:700">Экономия / мес</div>
+    </div>
+    <div class="meta">
+      <div class="top"><span class="badge">SALES</span><span class="date">15.05</span></div>
+      <h3>🧮 ROI-калькулятор</h3>
+      <p>2 режима: «У меня команда» (8 ролей) и «Я сам» (3 слайдера). Расчёт экономии в ₽/год + срок окупаемости.</p>
+      <div class="ft"><div class="tags"><span>Calc</span><span>Sliders</span></div><span class="ar">→</span></div>
+    </div>
+  </a>
+
+  <a class="cd" href="compare.html" data-cat="sales">
+    <div class="preview v-cmp">
+      <div style="font-size:46px;position:relative;z-index:2">⚖️</div>
+      <div style="display:flex;gap:6px;margin-top:10px;position:relative;z-index:2">
+        <span style="background:rgba(52,208,88,.2);color:#34d058;padding:3px 8px;border-radius:99px;font-size:10px;font-weight:800;border:1px solid rgba(52,208,88,.4);font-family:var(--mono)">9.2</span>
+        <span style="background:rgba(255,255,255,.04);color:#9aa3b2;padding:3px 8px;border-radius:99px;font-size:10px;font-weight:800;border:1px solid var(--border);font-family:var(--mono)">7.0</span>
+        <span style="background:rgba(255,255,255,.04);color:#9aa3b2;padding:3px 8px;border-radius:99px;font-size:10px;font-weight:800;border:1px solid var(--border);font-family:var(--mono)">6.2</span>
+        <span style="background:rgba(255,255,255,.04);color:#9aa3b2;padding:3px 8px;border-radius:99px;font-size:10px;font-weight:800;border:1px solid var(--border);font-family:var(--mono)">5.8</span>
+      </div>
+    </div>
+    <div class="meta">
+      <div class="top"><span class="badge">SALES</span><span class="date">15.05</span></div>
+      <h3>⚖️ Сравнительная таблица</h3>
+      <p>AI Office vs Найм vs Фриланс vs Курсы. 12 критериев, итоговые баллы 9.2/7.0/6.2/5.8 + 6 рекомендаций по ЦА.</p>
+      <div class="ft"><div class="tags"><span>Compare</span><span>Mobile</span></div><span class="ar">→</span></div>
+    </div>
+  </a>
+
+  <a class="cd" href="how-it-works.html" data-cat="sales">
+    <div class="preview v-how">
+      <div style="display:flex;align-items:center;gap:8px;position:relative;z-index:2">
+        <span style="width:30px;height:30px;border-radius:50%;background:linear-gradient(135deg,#c8f060,#60c8f0);color:#080808;display:flex;align-items:center;justify-content:center;font-weight:900">1</span>
+        <span style="font-size:18px">→</span>
+        <span style="width:30px;height:30px;border-radius:50%;background:rgba(200,240,96,.15);color:#c8f060;display:flex;align-items:center;justify-content:center;font-weight:900;border:2px solid rgba(200,240,96,.3)">2</span>
+        <span style="font-size:18px">→</span>
+        <span style="width:30px;height:30px;border-radius:50%;background:rgba(96,200,240,.15);color:#60c8f0;display:flex;align-items:center;justify-content:center;font-weight:900;border:2px solid rgba(96,200,240,.3)">3</span>
+      </div>
+      <div style="font-size:13px;font-weight:700;color:#e9eef7;margin-top:14px;position:relative;z-index:2">+2 шага · 5 минут</div>
+    </div>
+    <div class="meta">
+      <div class="top"><span class="badge">EXPLAINER</span><span class="date">15.05</span></div>
+      <h3>📖 Как это работает</h3>
+      <p>5 шагов customer journey с zigzag-layout + scroll-анимации + кнопка «Авто-тур 30 сек». Mockup-окна на каждый шаг.</p>
+      <div class="ft"><div class="tags"><span>5 шагов</span><span>Auto-tour</span></div><span class="ar">→</span></div>
+    </div>
+  </a>
+
+  <a class="cd" href="demo.html" data-cat="sales">
+    <div class="preview v-video">
+      <div style="width:64px;height:64px;border-radius:50%;background:linear-gradient(135deg,#c8f060,#60c8f0);color:#080808;display:flex;align-items:center;justify-content:center;font-size:24px;box-shadow:0 8px 28px rgba(96,200,240,.4);position:relative;z-index:2">▶</div>
+      <div style="font-size:14px;font-weight:800;color:#e9eef7;margin-top:14px;position:relative;z-index:2">6 видео-слотов</div>
+    </div>
+    <div class="meta">
+      <div class="top"><span class="badge">VIDEO</span><span class="date">15.05</span></div>
+      <h3>📺 Видео-демо страница</h3>
+      <p>Featured 60s + 6 видео под Loom-ready. Lazy-load iframe, форма «уведомить когда выйдет», placeholder с pulse-кнопкой.</p>
+      <div class="ft"><div class="tags"><span>Loom</span><span>Lazy-load</span></div><span class="ar">→</span></div>
+    </div>
+  </a>
+
+  <a class="cd" href="demo-dialogue.html" data-cat="sales">
+    <div class="preview v-dlg">
+      <div style="display:flex;gap:6px;margin-bottom:8px;position:relative;z-index:2">
+        <span style="width:28px;height:28px;border-radius:50%;background:linear-gradient(135deg,#c8f060,#a0e040);display:flex;align-items:center;justify-content:center;font-size:13px">🧠</span>
+        <span style="width:28px;height:28px;border-radius:50%;background:linear-gradient(135deg,#60c8f0,#4a9ed8);display:flex;align-items:center;justify-content:center;font-size:13px">✍️</span>
+        <span style="width:28px;height:28px;border-radius:50%;background:linear-gradient(135deg,#f0b429,#e08020);display:flex;align-items:center;justify-content:center;font-size:13px">🎯</span>
+        <span style="width:28px;height:28px;border-radius:50%;background:linear-gradient(135deg,#f060c8,#c040a0);display:flex;align-items:center;justify-content:center;font-size:13px">📊</span>
+      </div>
+      <div style="font-size:14px;font-weight:800;color:#e9eef7;position:relative;z-index:2;text-align:center;line-height:1.3">Live-диалог<br>4 агентов</div>
+    </div>
+    <div class="meta">
+      <div class="top"><span class="badge new">NEW</span><span class="date">15.05</span></div>
+      <h3>💬 Live-диалог агентов</h3>
+      <p>Анимированный чат: Алиса, Sofia, Хантер, Аналитик обсуждают задачу клиента-психотерапевта. Auto-play + ↻ повтор.</p>
+      <div class="ft"><div class="tags"><span>Anim</span><span>4 агента</span></div><span class="ar">→</span></div>
+    </div>
+  </a>
+
+</div>
+
+<!-- ───────── DASHBOARD MOCKUPS ───────── -->
+<div class="section-divider">
+  <h2><span class="em">📊</span>Мокапы кабинетов</h2>
+  <div class="line"></div>
+  <span class="count">2 страницы</span>
+</div>
+
+<div class="cards">
+
+  <a class="cd" href="dashboard-demo.html" data-cat="mok">
+    <div class="preview v-clidb">
+      <div style="display:grid;grid-template-columns:repeat(3,1fr);gap:6px;width:80%;position:relative;z-index:2">
+        <div style="background:rgba(0,0,0,.4);border:1px solid rgba(200,240,96,.25);border-radius:6px;padding:8px 6px;text-align:center"><div style="font-size:16px;font-weight:900;color:#c8f060;font-family:var(--mono)">728K</div><div style="font-size:7px;color:#9aa3b2;font-weight:700;text-transform:uppercase;margin-top:2px">Выручка</div></div>
+        <div style="background:rgba(0,0,0,.4);border:1px solid rgba(96,200,240,.25);border-radius:6px;padding:8px 6px;text-align:center"><div style="font-size:16px;font-weight:900;color:#60c8f0;font-family:var(--mono)">28</div><div style="font-size:7px;color:#9aa3b2;font-weight:700;text-transform:uppercase;margin-top:2px">Клиентов</div></div>
+        <div style="background:rgba(0,0,0,.4);border:1px solid rgba(240,180,41,.25);border-radius:6px;padding:8px 6px;text-align:center"><div style="font-size:16px;font-weight:900;color:#f0b429;font-family:var(--mono)">147</div><div style="font-size:7px;color:#9aa3b2;font-weight:700;text-transform:uppercase;margin-top:2px">Контент</div></div>
+      </div>
+      <div style="font-size:11px;color:#34d058;margin-top:10px;position:relative;z-index:2;font-weight:800;letter-spacing:.5px;text-transform:uppercase">ROI 8593% за 2 мес</div>
+    </div>
+    <div class="meta">
+      <div class="top"><span class="badge new">NEW</span><span class="badge demo">DEMO</span><span class="date">15.05</span></div>
+      <h3>📊 Кабинет клиента · 60 дней</h3>
+      <p>Мокап результата AI Office: персона Анна-психотерапевт, 500K→728K ₽/мес, +28 клиентов, 147 единиц контента, 186ч сэкономлено.</p>
+      <div class="ft"><div class="tags"><span>9 блоков</span><span>44KB</span></div><span class="ar">→</span></div>
+    </div>
+  </a>
+
+  <a class="cd" href="partner-dashboard.html" data-cat="mok">
+    <div class="preview v-prtdb">
+      <div style="display:flex;align-items:center;gap:12px;position:relative;z-index:2">
+        <div style="width:44px;height:44px;border-radius:50%;background:linear-gradient(135deg,#f0b429,#c8f060);color:#080808;display:flex;align-items:center;justify-content:center;font-weight:900;font-size:18px">А</div>
+        <div>
+          <div style="font-size:13px;font-weight:800;color:#e9eef7">Александр</div>
+          <div style="font-size:10px;color:#f0b429;font-weight:700;margin-top:2px;background:rgba(240,180,41,.15);padding:2px 7px;border-radius:99px;border:1px solid rgba(240,180,41,.3);display:inline-block">🥇 Gold</div>
+        </div>
+      </div>
+      <div style="font-size:24px;font-weight:900;color:#c8f060;margin-top:12px;position:relative;z-index:2;font-family:var(--mono)">28 740 ₽</div>
+      <div style="font-size:9px;color:#9aa3b2;letter-spacing:.5px;text-transform:uppercase;font-weight:700;margin-top:3px;position:relative;z-index:2">MRR этого месяца</div>
+    </div>
+    <div class="meta">
+      <div class="top"><span class="badge demo">DEMO</span><span class="date">15.05</span></div>
+      <h3>📊 Кабинет партнёра</h3>
+      <p>5 KPI · referral-link с copy · SVG-график 30 дней · 5 уровней Bronze→Diamond · activity-feed · 6 промо · история выплат.</p>
+      <div class="ft"><div class="tags"><span>9 блоков</span><span>SVG</span></div><span class="ar">→</span></div>
+    </div>
+  </a>
+
+</div>
+
+<!-- ───────── GROWTH / PARTNERS ───────── -->
+<div class="section-divider">
+  <h2><span class="em">🤝</span>Рост и партнёры</h2>
+  <div class="line"></div>
+  <span class="count">1 страница</span>
+</div>
+
+<div class="cards">
+
+  <a class="cd" href="partners.html" data-cat="grow">
+    <div class="preview v-prt">
+      <div style="font-size:48px;font-weight:900;background:linear-gradient(135deg,#f0b429,#c8f060);-webkit-background-clip:text;-webkit-text-fill-color:transparent;line-height:1;position:relative;z-index:2">30%</div>
+      <div style="font-size:13px;font-weight:800;color:#e9eef7;margin-top:10px;position:relative;z-index:2">за каждого оплатившего</div>
+      <div style="font-size:10.5px;color:#9aa3b2;margin-top:6px;position:relative;z-index:2;letter-spacing:.4px">12 мес · cookie 60 дней</div>
+    </div>
+    <div class="meta">
+      <div class="top"><span class="badge">PARTNERSHIP</span><span class="date">15.05</span></div>
+      <h3>🤝 Партнёрская программа</h3>
+      <p>Hero · 2 типа партнёров · ROI-калькулятор дохода · 4 шага · FAQ из 6 вопросов · форма заявки → localStorage + Telegram.</p>
+      <div class="ft"><div class="tags"><span>Form</span><span>Calc</span><span>FAQ</span></div><span class="ar">→</span></div>
+    </div>
+  </a>
+
+</div>
+
+<!-- ───────── INFRA ───────── -->
+<div class="section-divider">
+  <h2><span class="em">⚙️</span>Инфраструктура</h2>
+  <div class="line"></div>
+  <span class="count">2 фичи</span>
+</div>
+
+<div class="cards">
+
+  <a class="cd" href="#" onclick="alert('Алиса работает на каждой странице — нажми 💬 кнопку справа внизу. Окно с чатом откроется здесь же.');return false;" data-cat="infra">
+    <div class="preview v-alisa">
+      <div style="width:60px;height:60px;border-radius:50%;background:linear-gradient(135deg,#c8f060,#60c8f0);color:#080808;display:flex;align-items:center;justify-content:center;font-size:28px;box-shadow:0 8px 24px rgba(96,200,240,.35);position:relative;z-index:2">💬</div>
+      <div style="font-size:14px;font-weight:800;color:#e9eef7;margin-top:12px;position:relative;z-index:2">Floating · 24/7</div>
+    </div>
+    <div class="meta">
+      <div class="top"><span class="badge new">NEW</span><span class="date">15.05</span></div>
+      <h3>💬 Алиса · чат-консьерж</h3>
+      <p>Плавающий 60px FAB в правом нижнем углу на <b>22 страницах</b>. Знает: 169 агентов, тарифы, customer journey, FAQ, бриф клиента.</p>
+      <div class="ft"><div class="tags"><span>API</span><span>Stream</span><span>Context</span></div><span class="ar">→</span></div>
+    </div>
+  </a>
+
+  <a class="cd" href="#" onclick="alert('PWA уже работает. Открой сайт в Chrome / Safari → меню «Добавить на главный экран» → AI Office установится как нативное приложение.\\n\\nОфлайн-кэш активен для всех страниц кроме /api/chat и сторонних API.');return false;" data-cat="infra">
+    <div class="preview v-pwa">
+      <div style="font-size:56px;position:relative;z-index:2">📱</div>
+      <div style="font-size:13px;font-weight:800;color:#e9eef7;margin-top:10px;position:relative;z-index:2;text-align:center">PWA · установка<br>на iOS / Android / Desktop</div>
+    </div>
+    <div class="meta">
+      <div class="top"><span class="badge">FEATURE</span><span class="date">15.05</span></div>
+      <h3>📱 PWA + Service Worker</h3>
+      <p>manifest.json + sw.js (cache-first для статики, never-cache для API). Иконки 192/512px. Установка как нативное приложение.</p>
+      <div class="ft"><div class="tags"><span>Manifest</span><span>Offline</span></div><span class="ar">→</span></div>
+    </div>
+  </a>
+
+</div>
+
+<!-- ───────── EDUCATION & TRUST ───────── -->
+<div class="section-divider">
+  <h2><span class="em">📚</span>Образование и доверие</h2>
+  <div class="line"></div>
+  <span class="count">2 страницы</span>
+</div>
+
+<div class="cards">
+
+  <a class="cd" href="glossary.html" data-cat="edu">
+    <div class="preview v-cmp">
+      <div style="font-size:48px;position:relative;z-index:2">📚</div>
+      <div style="font-size:14px;font-weight:800;color:#e9eef7;margin-top:12px;position:relative;z-index:2;text-align:center">25 терминов AI<br>простыми словами</div>
+      <div style="display:flex;gap:5px;margin-top:10px;position:relative;z-index:2;flex-wrap:wrap;justify-content:center;max-width:240px">
+        <span style="background:rgba(200,240,96,.1);color:#c8f060;padding:2px 7px;border-radius:99px;font-size:9px;font-weight:800;border:1px solid rgba(200,240,96,.25);font-family:var(--mono)">Промпт</span>
+        <span style="background:rgba(96,200,240,.1);color:#60c8f0;padding:2px 7px;border-radius:99px;font-size:9px;font-weight:800;border:1px solid rgba(96,200,240,.25);font-family:var(--mono)">RAG</span>
+        <span style="background:rgba(160,96,240,.1);color:#a060f0;padding:2px 7px;border-radius:99px;font-size:9px;font-weight:800;border:1px solid rgba(160,96,240,.25);font-family:var(--mono)">MCP</span>
+        <span style="background:rgba(240,180,41,.1);color:#f0b429;padding:2px 7px;border-radius:99px;font-size:9px;font-weight:800;border:1px solid rgba(240,180,41,.25);font-family:var(--mono)">Token</span>
+      </div>
+    </div>
+    <div class="meta">
+      <div class="top"><span class="badge new">NEW</span><span class="date">15.05</span></div>
+      <h3>📚 Глоссарий · 25 AI-терминов</h3>
+      <p>Агент, промпт, контекст, токен, RAG, MCP, embedding, fine-tuning, hallucination — простыми словами с примерами и связями. Поиск + категории + алфавит.</p>
+      <div class="ft"><div class="tags"><span>SEO</span><span>Search</span><span>Schema.org</span></div><span class="ar">→</span></div>
+    </div>
+  </a>
+
+  <a class="cd" href="about.html" data-cat="edu">
+    <div class="preview v-alisa">
+      <div style="width:60px;height:60px;border-radius:50%;background:linear-gradient(135deg,#c8f060,#60c8f0);color:#080808;display:flex;align-items:center;justify-content:center;font-size:26px;font-weight:900;box-shadow:0 8px 24px rgba(96,200,240,.35);position:relative;z-index:2">И</div>
+      <div style="font-size:14px;font-weight:800;color:#e9eef7;margin-top:12px;position:relative;z-index:2;text-align:center">Кто создаёт<br>AI Growth Office</div>
+    </div>
+    <div class="meta">
+      <div class="top"><span class="badge new">NEW</span><span class="date">15.05</span></div>
+      <h3>👋 О проекте</h3>
+      <p>Founder, философия, roadmap на 6 месяцев (timeline с фазами done/now/next), tech stack, контакты, честный disclaimer про MVP-стадию.</p>
+      <div class="ft"><div class="tags"><span>Trust</span><span>Roadmap</span></div><span class="ar">→</span></div>
+    </div>
+  </a>
+
+</div>
+
+<!-- ───────── LEAD MAGNET ───────── -->
+<div class="section-divider">
+  <h2><span class="em">📄</span>Лид-магниты</h2>
+  <div class="line"></div>
+  <span class="count">1 готов</span>
+</div>
+
+<div class="cards">
+
+  <a class="cd" href="lead-magnet-gate.html" data-cat="leads">
+    <div class="preview v-mail">
+      <div style="font-size:56px;position:relative;z-index:2">📄</div>
+      <div style="font-size:13px;font-weight:800;color:#e9eef7;margin-top:10px;position:relative;z-index:2;text-align:center">10 промптов<br>PDF · 14 страниц</div>
+    </div>
+    <div class="meta">
+      <div class="top"><span class="badge">LEAD MAGNET</span><span class="date">15.05</span></div>
+      <h3>📄 PDF · 10 промптов для AI</h3>
+      <p>Бесплатный PDF (1MB, A4 14 страниц). Форма email-захвата перед скачиванием. Контент-план, Reels-хуки, карусели, sales, аналитика.</p>
+      <div class="ft"><div class="tags"><span>PDF</span><span>Gate</span><span>TG</span></div><span class="ar">→</span></div>
+    </div>
+  </a>
+
+</div>
+
+<div class="note">
+  <b>📦 Все 13 функций включены в свежий <code style="font-family:var(--mono);background:rgba(0,0,0,.3);padding:2px 7px;border-radius:5px;color:#c8f060">ai-office-deploy.zip</code></b><br>
+  Перетащи на <a href="https://app.netlify.com/drop" target="_blank" style="color:#60c8f0;text-decoration:none;border-bottom:1px solid rgba(96,200,240,.35)">Netlify Drop</a> и обнови сайт, чтобы увидеть всё в продакшене.
+</div>
+
+</div>
+
+<script src="api-fallback.js"></script>
+<script src="state.js"></script>
+<script src="mock-backend.js"></script>
+<script src="config.js"></script>
+<script src="analytics.js" defer></script>
+<script src="sidebar.js" defer></script>
+<script src="alisa-widget.js" defer></script>
+<script>
+if ('serviceWorker' in navigator && location.protocol === 'https:') {
+  window.addEventListener('load', () => {
+    navigator.serviceWorker.register('/sw.js').catch(e => console.warn('SW reg failed:', e.message));
+  });
+}
+</script>
+</body>
+</html>

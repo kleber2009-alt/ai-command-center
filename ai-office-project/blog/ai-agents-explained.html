@@ -1,0 +1,311 @@
+<!doctype html>
+<html lang="ru">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1">
+<title>Что такое AI-агент простыми словами · AI Growth Office</title>
+<meta name="description" content="AI-агент vs ChatGPT vs скрипт — в чём разница простыми словами. Как работает память, контекст, инструменты. Почему один промпт ≠ свой специалист.">
+<meta name="keywords" content="AI агент простыми словами, что такое AI агент, как работает AI, AI vs ChatGPT, AI агент для бизнеса">
+<meta name="author" content="AI Growth Office">
+<link rel="canonical" href="https://ai-growth-office.ru/blog/ai-agents-explained.html">
+
+<meta property="og:type" content="article">
+<meta property="og:title" content="Что такое AI-агент простыми словами">
+<meta property="og:description" content="AI-агент vs ChatGPT — в чём разница. Как работает память и контекст. Зачем нужны отдельные агенты.">
+<meta property="og:image" content="https://ai-growth-office.ru/og-image.jpg">
+
+<script type="application/ld+json">
+{
+  "@context": "https://schema.org",
+  "@type": "Article",
+  "headline": "Что такое AI-агент простыми словами",
+  "datePublished": "2026-05-16",
+  "author": { "@type": "Person", "name": "Илья Палий" },
+  "publisher": { "@type": "Organization", "name": "AI Growth Office" }
+}
+</script>
+
+<link rel="manifest" href="/manifest.json">
+<meta name="theme-color" content="#0a0c14">
+<link rel="apple-touch-icon" href="/icon-192.png">
+
+<style>
+:root{
+  --bg:#0a0c14;--panel:rgba(255,255,255,.04);--border:rgba(255,255,255,.08);
+  --text:#e9eef7;--muted:#9aa3b2;--dim:#7c8a99;
+  --accent:#c8f060;--a2:#60c8f0;--green:#34d058;--gold:#f0b429;--red:#f04060;
+  --ui:-apple-system,BlinkMacSystemFont,'Inter','Segoe UI',sans-serif;
+  --mono:'JetBrains Mono',monospace;
+}
+*{box-sizing:border-box;margin:0;padding:0}
+html,body{background:var(--bg);color:var(--text);font-family:var(--ui);min-height:100vh}
+body{background:radial-gradient(circle at 70% 0%,rgba(240,96,200,.04),transparent 55%),radial-gradient(circle at 0% 90%,rgba(96,200,240,.04),transparent 55%),var(--bg)}
+
+.wrap{max-width:760px;margin:0 auto;padding:40px 24px 80px}
+.crumbs{font-size:11px;color:var(--muted);margin-bottom:24px;letter-spacing:.4px}
+.crumbs a{color:var(--muted);text-decoration:none;border-bottom:1px dotted rgba(255,255,255,.15)}
+.crumbs a:hover{color:var(--accent)}
+
+.art-meta{display:flex;gap:12px;font-size:11px;color:var(--muted);margin-bottom:14px;flex-wrap:wrap;font-family:var(--mono);font-weight:700;letter-spacing:.4px;text-transform:uppercase}
+.art-meta .cat{color:var(--a2);background:rgba(96,200,240,.08);padding:3px 8px;border-radius:5px;border:1px solid rgba(96,200,240,.15)}
+h1{font-size:clamp(28px,4.5vw,42px);font-weight:800;letter-spacing:-.5px;line-height:1.1;margin-bottom:18px}
+h1 .g{background:linear-gradient(90deg,#f060c8,#60c8f0);-webkit-background-clip:text;-webkit-text-fill-color:transparent}
+.lede{font-size:17px;color:var(--muted);line-height:1.7;margin-bottom:36px;font-weight:500}
+
+h2{font-size:24px;font-weight:800;letter-spacing:-.3px;margin-top:44px;margin-bottom:14px;line-height:1.25}
+h2 .em{margin-right:8px}
+h3{font-size:18px;font-weight:800;margin-top:28px;margin-bottom:10px}
+p{font-size:15.5px;line-height:1.75;margin-bottom:14px;color:rgba(233,238,247,.92)}
+p b{color:var(--text);font-weight:700}
+a{color:var(--a2);text-decoration:none;border-bottom:1px solid rgba(96,200,240,.3)}
+a:hover{border-bottom-color:var(--a2)}
+
+ul, ol{margin:14px 0 18px 22px}
+li{font-size:15.5px;line-height:1.7;margin-bottom:6px;color:rgba(233,238,247,.92)}
+li b{color:var(--text);font-weight:700}
+code{background:rgba(255,255,255,.05);padding:2px 7px;border-radius:5px;font-family:var(--mono);font-size:13px;color:var(--a2);border:1px solid rgba(255,255,255,.06)}
+
+.callout{background:linear-gradient(135deg,rgba(96,200,240,.06),rgba(200,240,96,.04));border:1px solid rgba(96,200,240,.22);border-left:3px solid var(--a2);border-radius:11px;padding:16px 20px;margin:24px 0;font-size:14.5px;line-height:1.65}
+
+.compare-box{background:var(--panel);border:1px solid var(--border);border-radius:14px;padding:20px;margin:20px 0}
+.compare-box h4{font-size:15px;font-weight:800;margin-bottom:12px}
+.compare-box .row{padding:9px 0;border-bottom:1px solid rgba(255,255,255,.04);font-size:14px}
+.compare-box .row:last-child{border:0}
+.compare-box .row b{color:var(--text)}
+
+.example{background:linear-gradient(180deg,rgba(0,0,0,.3),rgba(0,0,0,.15));border:1px solid var(--border);border-radius:11px;padding:18px 20px;margin:18px 0;font-family:var(--mono);font-size:13px;color:var(--muted);line-height:1.65;white-space:pre-wrap}
+.example .label{font-size:9.5px;color:var(--accent);text-transform:uppercase;letter-spacing:.6px;font-weight:800;margin-bottom:8px;display:block;font-family:var(--mono)}
+.example .arr{color:var(--a2);font-weight:800}
+
+.cta-block{margin-top:42px;padding:30px 26px;background:linear-gradient(135deg,rgba(200,240,96,.07),rgba(96,200,240,.05));border:1px solid rgba(200,240,96,.25);border-radius:16px;text-align:center}
+.cta-block h3{font-size:22px;margin-bottom:8px}
+.cta-block p{font-size:14px;color:var(--muted);margin-bottom:20px;max-width:480px;margin-left:auto;margin-right:auto}
+.cta-block .btns{display:flex;justify-content:center;gap:10px;flex-wrap:wrap}
+.cta-block .btns a{display:inline-flex;align-items:center;gap:7px;padding:12px 22px;border-radius:11px;font:800 12.5px/1 var(--ui);letter-spacing:.3px;text-decoration:none}
+.cta-block .btns .pri{background:linear-gradient(90deg,#c8f060,#60c8f0);color:#080808;box-shadow:0 4px 14px rgba(200,240,96,.25)}
+.cta-block .btns .sec{background:transparent;color:var(--text);border:1.5px solid var(--border)}
+
+.related{margin-top:42px;padding-top:24px;border-top:1px solid var(--border)}
+.related h3{font-size:14px;color:var(--muted);font-weight:800;text-transform:uppercase;letter-spacing:.5px;margin-bottom:14px;font-family:var(--mono)}
+.related-grid{display:grid;grid-template-columns:1fr 1fr;gap:10px}
+@media(max-width:560px){.related-grid{grid-template-columns:1fr}}
+.related-grid a{display:block;padding:14px 16px;background:var(--panel);border:1px solid var(--border);border-radius:11px;text-decoration:none;color:inherit;font-size:13px;font-weight:700;line-height:1.4}
+.related-grid a small{display:block;color:var(--muted);font-weight:500;font-size:11px;margin-top:3px;font-family:var(--mono);text-transform:uppercase;letter-spacing:.4px}
+</style>
+</head>
+<body data-user="Илья Палий" data-email="ilia.info.paliy@gmail.com">
+
+<div class="wrap">
+
+<div class="crumbs">
+  <a href="/index.html">Главная</a> · <a href="/blog/">Блог</a> · Что такое AI-агент
+</div>
+
+<div class="art-meta">
+  <span class="cat">ОСНОВЫ · AI</span>
+  <span>16 мая 2026</span>
+  <span>·</span>
+  <span>7 мин чтения</span>
+</div>
+
+<h1>Что такое <span class="g">AI-агент</span><br>простыми словами</h1>
+
+<p class="lede">Простой ответ: AI-агент — это <b>ChatGPT с памятью, ролью и инструментами</b>. Если ChatGPT — это умный собеседник, то агент — это сотрудник, который помнит, что вы обсуждали неделю назад, знает контекст твоего бизнеса и может делать конкретные действия.</p>
+
+<h2><span class="em">🤖</span>В чём разница между ChatGPT, ботом и агентом</h2>
+
+<p>Простая шкала «от тупого к умному»:</p>
+
+<div class="compare-box">
+  <h4>1. Скрипт / бот (нет AI)</h4>
+  <div class="row"><b>Что это:</b> «если пользователь нажал X — ответь Y».</div>
+  <div class="row"><b>Пример:</b> бот в Telegram, который отвечает на «Привет» → «Чем помочь?».</div>
+  <div class="row"><b>Минусы:</b> не понимает нюансов. Скажи «приветствую» — он не поймёт.</div>
+</div>
+
+<div class="compare-box">
+  <h4>2. ChatGPT / Claude / LLM</h4>
+  <div class="row"><b>Что это:</b> «большая языковая модель», которая понимает текст и отвечает.</div>
+  <div class="row"><b>Пример:</b> ChatGPT в браузере.</div>
+  <div class="row"><b>Плюсы:</b> понимает почти любые формулировки, отвечает на сложные вопросы.</div>
+  <div class="row"><b>Минусы:</b> <b>не помнит</b> предыдущих разговоров (если не в одной сессии). Не делает действий — только говорит.</div>
+</div>
+
+<div class="compare-box" style="border-color:rgba(200,240,96,.3);background:linear-gradient(135deg,rgba(200,240,96,.03),transparent)">
+  <h4>3. AI-агент (наш случай)</h4>
+  <div class="row"><b>Что это:</b> LLM + <b>память</b> + <b>роль</b> + <b>инструменты</b> + <b>цикл «думать → действовать → проверять»</b>.</div>
+  <div class="row"><b>Пример:</b> Sofia в AI Growth Office — помнит твой бриф, знает что психотерапевты ценят эмпатию, может писать тексты, проверять метрики, итерировать.</div>
+  <div class="row"><b>Плюсы:</b> помнит, специализируется на одной задаче, может выполнять действия.</div>
+</div>
+
+<h2><span class="em">🧠</span>Что у агента «под капотом»</h2>
+
+<p>Любой AI-агент = 4 компонента:</p>
+
+<h3>1. Модель (мозг)</h3>
+
+<p>Это LLM — Claude, GPT, Gemini, Llama, Yandex GPT. Сама способность понимать и генерировать текст. В нашем случае — Claude Sonnet 4.5.</p>
+
+<h3>2. Системный промпт (личность и роль)</h3>
+
+<p>Это инструкция, как себя вести. Не «отвечай вежливо», а конкретно: что ты делаешь, чего избегаешь, какой у тебя стиль.</p>
+
+<div class="example">
+<span class="label">Пример системного промпта для Sofia</span>
+Ты — <b>Sofia</b>, контент-маркетолог в команде эксперта.
+
+Твоя задача — писать контент-планы, посты, Reels-сценарии для нишевых экспертов (психология, бизнес, инфо-бизнес).
+
+Правила:
+• Пиши коротко, без воды
+• Используй цифры и конкретику
+• Подстраивайся под тон бренда из контекста
+• Если не уверена — задай уточняющий вопрос, не выдумывай
+
+Стиль:
+• Дружелюбный, без снобизма
+• На «ты» (если контекст это позволяет)
+• Закрываешь возражения, не давишь на покупку
+</div>
+
+<p>Один и тот же ChatGPT с разными системными промптами становится разными «людьми». Это и есть «роль агента».</p>
+
+<h3>3. Память и контекст</h3>
+
+<p>Есть три уровня памяти:</p>
+
+<ul>
+  <li><b>Short-term (короткая)</b> — текущий разговор. Все LLM это поддерживают по умолчанию.</li>
+  <li><b>Long-term (долгая)</b> — что обсуждали неделю назад. Реализуется через сохранение всех сообщений в БД и подгрузку нужных через RAG.</li>
+  <li><b>Контекст бизнеса</b> — статичные факты о клиенте (ниша, целевая аудитория, цели), которые подгружаются в каждый разговор.</li>
+</ul>
+
+<p>В AI Growth Office мы используем все 3 уровня. Поэтому Sofia знает, что ты психолог 500K/мес с целью +30 клиентов — она не спросит это в 5-й раз.</p>
+
+<h3>4. Инструменты (tools)</h3>
+
+<p>Агент может не только говорить, но и делать. В простейшем виде:</p>
+
+<ul>
+  <li>Поиск в интернете</li>
+  <li>Чтение PDF и Excel</li>
+  <li>Отправка email</li>
+  <li>Запись в БД</li>
+  <li>Запуск кода</li>
+  <li>Подключение через MCP к Notion / Google Docs / Telegram</li>
+</ul>
+
+<div class="callout">
+  <b>Ключевая идея:</b> агент сам решает, какой инструмент использовать. Не ты говоришь «найди в интернете X» — а агент сам понимает «мне нужно проверить актуальную цену → использую web search».
+</div>
+
+<h2><span class="em">🎭</span>Почему «169 агентов», а не «один большой ChatGPT»</h2>
+
+<p>Часто спрашивают: «Зачем 169 разных агентов? Один Claude может всё».</p>
+
+<p>Технически — да, может. Но качество будет хуже. Вот почему:</p>
+
+<h3>1. Узкая специализация = более точные ответы</h3>
+
+<p>Sofia знает только контент-маркетинг — у неё прокачанные примеры именно этой задачи. Она не путает контент-план с медиа-планированием рекламы.</p>
+
+<p>Если бы Sofia ещё писала код на Python, аналитику, sales-скрипты — её ответы по контенту были бы средне-разбросанными.</p>
+
+<h3>2. Разные роли = разный тон</h3>
+
+<p>Алиса (sales) пишет в стиле «закрываем сделку». Хантер (хуки) — в стиле «провокация и удержание внимания». Аналитик — сухо и с цифрами.</p>
+
+<p>Один AI с инструкцией «пиши и контент, и продажи, и аналитику» будет колебаться между стилями.</p>
+
+<h3>3. Удобство для пользователя</h3>
+
+<p>Когда ты обращаешься к «Sofia» — ты знаешь чего ждать. Когда обращаешься к «AI вообще» — приходится каждый раз объяснять контекст и задачу.</p>
+
+<div class="callout">
+  <b>Аналогия:</b> у тебя в команде один универсал-гений который и SMM, и dev, и продажи делает — но средне. Или у тебя 5 узких специалистов — каждый в своей области лучший. Что выберешь для серьёзной работы?
+</div>
+
+<h2><span class="em">🔄</span>Как агент решает задачу: цикл reason → act → observe</h2>
+
+<p>Это называется <b>ReAct-цикл</b>:</p>
+
+<ol>
+  <li><b>Reason (думать)</b> — что нужно сделать?</li>
+  <li><b>Act (действовать)</b> — использовать инструмент или ответить</li>
+  <li><b>Observe (проверять)</b> — посмотреть результат</li>
+  <li>Если результат не то — вернуться к шагу 1</li>
+</ol>
+
+<p><b>Пример:</b> ты просишь Sofia «напиши пост про тревогу у клиентов 30+, чтобы зашёл».</p>
+
+<ol>
+  <li><b>Reason:</b> «Тема — тревога. Аудитория — 30+. Цель — engagement. Нужно: триггерный заголовок + структура + примеры → проверим, не банально ли»</li>
+  <li><b>Act:</b> пишет первую версию</li>
+  <li><b>Observe:</b> «звучит как Wikipedia, мало эмоций»</li>
+  <li><b>Reason:</b> «Добавлю кейс из жизни, начну со сцены»</li>
+  <li><b>Act:</b> переписывает</li>
+  <li><b>Observe:</b> «лучше, но 380 слов — много для Reels. Сократить»</li>
+  <li><b>Act:</b> отдаёт финальную версию</li>
+</ol>
+
+<p>Это всё происходит внутри одного запроса. Ты видишь только итог.</p>
+
+<h2><span class="em">⚠️</span>Что AI-агент не может (пока)</h2>
+
+<p>Будем честны:</p>
+
+<ul>
+  <li><b>Понимать твою личность за 1 день.</b> Первая неделя — это «период обучения». Дальше становится лучше.</li>
+  <li><b>Принимать стратегические решения за тебя.</b> AI выдаёт варианты — выбираешь ты.</li>
+  <li><b>Гарантировать результат.</b> Никакой инструмент не гарантирует +30 клиентов. Гарантия — только в работе с твоей стороны.</li>
+  <li><b>Заменить интуицию опытного маркетолога</b>, который чувствует тренды раньше, чем они в данных.</li>
+  <li><b>Работать без проверки.</b> Иногда галлюцинирует (выдумывает факты). Финальный взгляд должен быть твой.</li>
+</ul>
+
+<h2><span class="em">🚀</span>Как начать использовать AI-агентов</h2>
+
+<p>Пошагово:</p>
+
+<ol>
+  <li><b>Не пытайся сразу автоматизировать всё.</b> Возьми одну задачу — например, контент-план на неделю</li>
+  <li><b>Опиши контекст подробно</b>: ниша, аудитория, цели, тон бренда. Это базис, который агент будет помнить</li>
+  <li><b>Прокачай 1-2 запроса.</b> Если первый ответ «средне» — скажи что не так и попроси переделать. AI учится в реальном времени</li>
+  <li><b>Сохраняй удачные промпты.</b> Что сработало для одной задачи — сработает и для следующей</li>
+  <li><b>Постепенно расширяй.</b> Когда контент-фабрика налажена → добавь sales-скрипты → аналитику → итерации</li>
+</ol>
+
+<div class="cta-block">
+  <h3>Попробуй прямо сейчас</h3>
+  <p>В AI Growth Office 169 агентов под разные задачи. Заполни бриф — AI сам подберёт твою команду из 4-7 нужных.</p>
+  <div class="btns">
+    <a class="pri" href="/onboarding.html">📋 Заполнить бриф →</a>
+    <a class="sec" href="/glossary.html">📖 Глоссарий AI-терминов</a>
+  </div>
+</div>
+
+<div class="related">
+  <h3>Читать дальше</h3>
+  <div class="related-grid">
+    <a href="/blog/ai-vs-hire.html">AI vs фрилансер<small>~2 100 слов · 9 мин</small></a>
+    <a href="/blog/smm-cost-2026.html">Реальная цена SMM-щика<small>~1 800 слов · 8 мин</small></a>
+    <a href="/glossary.html">25 AI-терминов простыми словами<small>СПРАВОЧНИК</small></a>
+    <a href="/how-it-works.html">Как работает AI Office<small>5 ШАГОВ ЗА 5 МИН</small></a>
+  </div>
+</div>
+
+</div>
+
+<script src="/state.js"></script>
+<script src="/mock-backend.js"></script>
+<script src="/config.js"></script>
+<script src="/analytics.js" defer></script>
+<script src="/api-fallback.js"></script>
+<script src="/sidebar.js" defer></script>
+<script src="/alisa-widget.js" defer></script>
+<script>
+if ('serviceWorker' in navigator && location.protocol === 'https:') {
+  navigator.serviceWorker.register('/sw.js').catch(()=>{});
+}
+</script>
+</body>
+</html>

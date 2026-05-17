@@ -1,0 +1,206 @@
+# ═══ Netlify configuration ═══════════════════════════════════════
+# · Functions directory: netlify/functions
+# · API proxy /api/chat → /.netlify/functions/chat
+# · 404 page: /404.html
+# · ANTHROPIC_API_KEY → Site Settings → Environment Variables
+# ═══════════════════════════════════════════════════════════════════
+
+[build]
+  publish = "."
+  functions = "netlify/functions"
+
+# ── API proxy redirects ──
+[[redirects]]
+  from = "/api/chat"
+  to = "/.netlify/functions/chat"
+  status = 200
+  force = true
+
+[[redirects]]
+  from = "/api/notify-tg"
+  to = "/.netlify/functions/notify-tg"
+  status = 200
+  force = true
+
+# ── Phase 5: voice clone API ──
+[[redirects]]
+  from = "/api/voice-clone"
+  to = "/.netlify/functions/voice-clone"
+  status = 200
+  force = true
+
+[[redirects]]
+  from = "/api/voice-generate"
+  to = "/.netlify/functions/voice-generate"
+  status = 200
+  force = true
+
+[[redirects]]
+  from = "/api/voice-list"
+  to = "/.netlify/functions/voice-list"
+  status = 200
+  force = true
+
+[[redirects]]
+  from = "/api/tg-voice-webhook"
+  to = "/.netlify/functions/tg-voice-webhook"
+  status = 200
+  force = true
+
+[[redirects]]
+  from = "/api/voice-binding-token"
+  to = "/.netlify/functions/voice-binding-token"
+  status = 200
+  force = true
+
+# ── Clean URLs ──
+[[redirects]]
+  from = "/navigation"
+  to = "/navigation.html"
+  status = 200
+
+[[redirects]]
+  from = "/map"
+  to = "/navigation.html"
+  status = 200
+
+[[redirects]]
+  from = "/help"
+  to = "/navigation.html"
+  status = 200
+
+[[redirects]]
+  from = "/app"
+  to = "/mini-app/index.html"
+  status = 200
+
+[[redirects]]
+  from = "/miniapp"
+  to = "/mini-app/index.html"
+  status = 200
+
+[[redirects]]
+  from = "/tma"
+  to = "/mini-app/index.html"
+  status = 200
+
+[[redirects]]
+  from = "/about"
+  to = "/about.html"
+  status = 200
+
+[[redirects]]
+  from = "/pricing"
+  to = "/pricing.html"
+  status = 200
+
+[[redirects]]
+  from = "/cases"
+  to = "/cases.html"
+  status = 200
+
+[[redirects]]
+  from = "/roi"
+  to = "/roi.html"
+  status = 200
+
+[[redirects]]
+  from = "/compare"
+  to = "/compare.html"
+  status = 200
+
+[[redirects]]
+  from = "/demo"
+  to = "/demo.html"
+  status = 200
+
+[[redirects]]
+  from = "/glossary"
+  to = "/glossary.html"
+  status = 200
+
+[[redirects]]
+  from = "/partners"
+  to = "/partners.html"
+  status = 200
+
+[[redirects]]
+  from = "/faq"
+  to = "/faq.html"
+  status = 200
+
+[[redirects]]
+  from = "/onboarding"
+  to = "/onboarding.html"
+  status = 200
+
+[[redirects]]
+  from = "/agents"
+  to = "/agents.html"
+  status = 200
+
+[[redirects]]
+  from = "/persona-train"
+  to = "/persona-train.html"
+  status = 200
+
+[[redirects]]
+  from = "/voice"
+  to = "/persona-train.html"
+  status = 200
+
+# ── Catch-all 404 (must be last) ──
+[[redirects]]
+  from = "/*"
+  to = "/404.html"
+  status = 404
+
+# ── Security headers ──
+[[headers]]
+  for = "/*"
+  [headers.values]
+    X-Frame-Options = "SAMEORIGIN"
+    X-Content-Type-Options = "nosniff"
+    Referrer-Policy = "strict-origin-when-cross-origin"
+    Permissions-Policy = "camera=(), microphone=(), geolocation=()"
+    Strict-Transport-Security = "max-age=31536000; includeSubDomains"
+    X-XSS-Protection = "1; mode=block"
+
+# ── Cache: static assets aggressively ──
+[[headers]]
+  for = "/*.png"
+  [headers.values]
+    Cache-Control = "public, max-age=31536000, immutable"
+
+[[headers]]
+  for = "/*.jpg"
+  [headers.values]
+    Cache-Control = "public, max-age=31536000, immutable"
+
+[[headers]]
+  for = "/*.svg"
+  [headers.values]
+    Cache-Control = "public, max-age=31536000, immutable"
+
+# ── Cache: scripts/CSS revalidate (mutable, but cacheable) ──
+[[headers]]
+  for = "/*.js"
+  [headers.values]
+    Cache-Control = "public, max-age=3600, must-revalidate"
+
+# ── HTML: always revalidate (so updates are seen) ──
+[[headers]]
+  for = "/*.html"
+  [headers.values]
+    Cache-Control = "public, max-age=0, must-revalidate"
+
+# ── manifest + sw.js: never long-cache ──
+[[headers]]
+  for = "/manifest.json"
+  [headers.values]
+    Cache-Control = "public, max-age=0, must-revalidate"
+
+[[headers]]
+  for = "/sw.js"
+  [headers.values]
+    Cache-Control = "public, max-age=0, must-revalidate"

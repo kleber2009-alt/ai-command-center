@@ -1,0 +1,135 @@
+# ═══════════════════════════════════════════════════════════════════
+# infra/docker-compose.yml — full self-hosted stack
+# ───────────────────────────────────────────────────────────────────
+# Run from this directory:
+#   cp .env.example .env && $EDITOR .env
+#   docker compose up -d --build
+#
+# Services:
+#   postgres   — DB for ai-office (leads, voices, bot users)
+#   ai-office  — Fastify backend for ai-office-project (/api/*)
+#   transcribe — Next.js for /transcribe, /assistants, /me (SQLite + sqlite-vec)
+#   ytdlp      — yt-dlp microservice (YouTube/IG/TikTok fallback)
+#   caddy      — reverse proxy with auto-TLS (Let's Encrypt; profile: standalone)
+# ═══════════════════════════════════════════════════════════════════
+
+services:
+  postgres:
+    image: postgres:16-alpine
+    restart: unless-stopped
+    environment:
+      POSTGRES_DB: ${POSTGRES_DB}
+      POSTGRES_USER: ${POSTGRES_USER}
+      POSTGRES_PASSWORD: ${POSTGRES_PASSWORD}
+    volumes:
+      - postgres_data:/var/lib/postgresql/data
+      - ./db/init:/docker-entrypoint-initdb.d:ro
+    healthcheck:
+      test: ['CMD-SHELL', 'pg_isready -U ${POSTGRES_USER} -d ${POSTGRES_DB}']
+      interval: 10s
+      timeout: 5s
+      retries: 5
+      start_period: 30s
+    networks: [internal]
+
+  ai-office:
+    build:
+      context: ..
+      dockerfile: infra/services/ai-office/Dockerfile
+    restart: unless-stopped
+    environment:
+      NODE_ENV: production
+      PORT: 3000
+      DATABASE_URL: postgres://${POSTGRES_USER}:${POSTGRES_PASSWORD}@postgres:5432/${POSTGRES_DB}
+      PUBLIC_BASE_URL: ${PUBLIC_BASE_URL}
+      VOICE_NOTES_DIR: /data/voice-notes
+      ANTHROPIC_API_KEY: ${ANTHROPIC_API_KEY}
+      ELEVENLABS_API_KEY: ${ELEVENLABS_API_KEY}
+      TG_BOT_TOKEN: ${TG_BOT_TOKEN}
+      TG_CHAT_ID: ${TG_CHAT_ID}
+      TG_VOICE_BOT_TOKEN: ${TG_VOICE_BOT_TOKEN}
+      TG_WEBHOOK_SECRET: ${TG_WEBHOOK_SECRET}
+    ports:
+      # Published на 127.0.0.1 чтобы хостовый reverse-proxy (Caddy/nginx)
+      # мог проксировать сюда. Не доступно снаружи без прокси.
+      - '127.0.0.1:3001:3000'
+    volumes:
+      - voice_notes:/data/voice-notes
+    depends_on:
+      postgres:
+        condition: service_healthy
+    networks: [internal]
+
+  transcribe:
+    build:
+      context: ..
+      dockerfile: infra/services/transcribe/Dockerfile
+    restart: unless-stopped
+    environment:
+      NODE_ENV: production
+      PORT: 3000
+      HOSTNAME: 0.0.0.0
+      DB_PATH: /app/data/app.db
+      ANTHROPIC_API_KEY: ${ANTHROPIC_API_KEY}
+      OPENAI_API_KEY: ${OPENAI_API_KEY:-}
+      DEEPGRAM_API_KEY: ${DEEPGRAM_API_KEY:-}
+      TELEGRAM_BOT_TOKEN: ${TELEGRAM_BOT_TOKEN:-}
+      YTDLP_SERVICE_URL: ${YTDLP_SERVICE_URL:-http://ytdlp:8000}
+      YTDLP_SERVICE_API_KEY: ${YTDLP_SERVICE_API_KEY:-}
+    ports:
+      - '127.0.0.1:3002:3000'
+    volumes:
+      - transcribe_data:/app/data
+    depends_on:
+      ytdlp:
+        condition: service_started
+    networks: [internal]
+
+  ytdlp:
+    build:
+      context: ../services/ytdlp
+      dockerfile: Dockerfile
+    restart: unless-stopped
+    environment:
+      YTDLP_SERVICE_API_KEY: ${YTDLP_SERVICE_API_KEY:-}
+      INSTAGRAM_COOKIES_B64: ${INSTAGRAM_COOKIES_B64:-}
+      COOKIES_B64: ${COOKIES_B64:-}
+    networks: [internal]
+
+  # ─── Caddy (optional, only for standalone mode) ───
+  # Use this if you DON'T have a host reverse-proxy.
+  #   docker compose --profile standalone up -d
+  # If you already run nginx/Caddy on the host, skip this — instead add
+  # the snippet from infra/snippets/host-caddy.example.caddy to your
+  # host config (it reverse-proxies 127.0.0.1:3001 + :3002 → here).
+  caddy:
+    image: caddy:2-alpine
+    profiles: [standalone]
+    restart: unless-stopped
+    ports:
+      - '80:80'
+      - '443:443'
+      - '443:443/udp'
+    environment:
+      PUBLIC_HOST: ${PUBLIC_HOST}
+      ACME_EMAIL: ${ACME_EMAIL}
+    volumes:
+      - ./Caddyfile:/etc/caddy/Caddyfile:ro
+      - voice_notes:/srv/voice-notes:ro
+      - caddy_data:/data
+      - caddy_config:/config
+    depends_on:
+      - ai-office
+      - transcribe
+    networks: [internal]
+
+volumes:
+  postgres_data:
+  voice_notes:
+  transcribe_data:
+  caddy_data:
+  caddy_config:
+
+networks:
+  internal:
+    driver: bridge

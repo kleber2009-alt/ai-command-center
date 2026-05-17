@@ -1,0 +1,246 @@
+<!doctype html>
+<html lang="ru">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1">
+<title>Live-диалог 4 AI-агентов · AI Growth Office</title>
+<meta name="description" content="Анимированный диалог 4 AI-агентов в реальном времени: обсуждают задачу клиента-психотерапевта и распределяют контент-фабрику, sales-скрипты, аналитику.">
+<meta name="robots" content="noindex">
+<link rel="canonical" href="https://ai-growth-office.ru/demo-dialogue.html">
+
+<meta property="og:type" content="website">
+<meta property="og:title" content="Live-диалог 4 AI-агентов · AI Growth Office">
+<meta property="og:description" content="Смотри, как 4 AI-агента обсуждают задачу клиента в реальном времени.">
+<meta property="og:image" content="https://ai-growth-office.ru/og-image.jpg">
+
+<link rel="manifest" href="/manifest.json">
+<meta name="theme-color" content="#0a0c14">
+<meta name="apple-mobile-web-app-capable" content="yes">
+<meta name="apple-mobile-web-app-title" content="AI Office">
+<link rel="apple-touch-icon" href="/icon-192.png">
+
+<style>
+:root{
+  --bg:#0a0c14;--panel:rgba(255,255,255,.04);--border:rgba(255,255,255,.08);
+  --text:#e9eef7;--muted:#9aa3b2;--dim:#7c8a99;
+  --accent:#c8f060;--a2:#60c8f0;--a3:#f060c8;--green:#34d058;
+  --ui:-apple-system,BlinkMacSystemFont,'Inter','Segoe UI',sans-serif;
+  --mono:'JetBrains Mono',monospace;
+}
+*{box-sizing:border-box;margin:0;padding:0}
+html,body{background:var(--bg);color:var(--text);font-family:var(--ui);min-height:100vh}
+body{background:radial-gradient(circle at 70% 0%,rgba(200,240,96,.05),transparent 60%),radial-gradient(circle at 0% 90%,rgba(96,200,240,.05),transparent 60%),var(--bg)}
+
+.wrap{max-width:1080px;margin:0 auto;padding:40px 24px 80px}
+.crumbs{font-size:11px;color:var(--muted);margin-bottom:18px;letter-spacing:.4px}
+.crumbs a{color:var(--muted);text-decoration:none;border-bottom:1px dotted rgba(255,255,255,.15)}
+.crumbs a:hover{color:var(--accent)}
+
+.hero{text-align:center;margin-bottom:30px;padding:14px 0 24px}
+.hero .tag{display:inline-block;font-size:10px;font-weight:700;color:var(--accent);background:rgba(200,240,96,.08);border:1px solid rgba(200,240,96,.2);padding:6px 14px;border-radius:99px;letter-spacing:1.5px;text-transform:uppercase;margin-bottom:18px}
+.hero h1{font-size:clamp(28px,4vw,40px);font-weight:800;letter-spacing:-.3px;line-height:1.1;margin-bottom:12px}
+.hero h1 .g{background:linear-gradient(90deg,#c8f060,#60c8f0);-webkit-background-clip:text;-webkit-text-fill-color:transparent}
+.hero p{font-size:14.5px;color:var(--muted);max-width:620px;margin:0 auto;line-height:1.6}
+
+@keyframes dlgDot { 0%,100%{box-shadow:0 0 0 0 rgba(52,208,88,.6)} 50%{box-shadow:0 0 0 5px rgba(52,208,88,0)} }
+@keyframes dlgBlink { 0%,60%,100%{opacity:.3} 30%{opacity:1} }
+@keyframes dlgFadeUp { from{opacity:0;transform:translateY(8px)} to{opacity:1;transform:none} }
+.dlg-msg { animation: dlgFadeUp .35s cubic-bezier(.2,.8,.4,1) }
+.dlg-msg .av { width:38px;height:38px;border-radius:50%;flex-shrink:0;display:flex;align-items:center;justify-content:center;font-size:19px;font-weight:800;color:#080808 }
+.dlg-msg .nm { font-size:13.5px;font-weight:800;letter-spacing:.1px }
+.dlg-msg .role { font-size:10px;color:#9aa3b2;font-weight:700;letter-spacing:.4px;text-transform:uppercase;margin-left:8px }
+.dlg-msg .tm { font-size:10px;color:#7c8a99;margin-left:auto;font-family:var(--mono) }
+.dlg-msg .bd { background:rgba(255,255,255,.04);padding:10px 14px;border-radius:11px;border-bottom-left-radius:4px;font-size:13.5px;line-height:1.55;color:#e9eef7;margin-top:5px;white-space:pre-wrap }
+.dlg-msg .bd .h { background:linear-gradient(120deg,rgba(200,240,96,.18),rgba(96,200,240,.12));padding:1px 5px;border-radius:4px;font-weight:600 }
+#dlgFeed::-webkit-scrollbar { width:6px } #dlgFeed::-webkit-scrollbar-thumb { background:rgba(255,255,255,.1);border-radius:99px }
+
+.cta-end{margin-top:30px;text-align:center;padding:36px 24px;background:linear-gradient(135deg,rgba(200,240,96,.05),rgba(96,200,240,.04));border:1px solid rgba(200,240,96,.18);border-radius:16px}
+.cta-end h3{font-size:22px;font-weight:800;letter-spacing:-.3px;margin-bottom:8px}
+.cta-end p{color:var(--muted);font-size:13px;margin-bottom:20px;max-width:480px;margin-left:auto;margin-right:auto;line-height:1.5}
+.cta-end .btns{display:flex;justify-content:center;gap:10px;flex-wrap:wrap}
+.cta-end a{display:inline-flex;align-items:center;gap:8px;padding:12px 22px;border-radius:11px;font:800 12.5px/1 var(--ui);letter-spacing:.4px;text-decoration:none;transition:transform .15s}
+.cta-end .b1{background:linear-gradient(90deg,#c8f060,#60c8f0);color:#080808;box-shadow:0 4px 14px rgba(200,240,96,.25)}
+.cta-end .b1:hover{transform:translateY(-1px)}
+.cta-end .b2{background:transparent;color:var(--text);border:1.5px solid var(--border)}
+.cta-end .b2:hover{border-color:rgba(255,255,255,.18)}
+</style>
+</head>
+<body data-user="Илья Палий" data-email="ilia.info.paliy@gmail.com">
+
+<div class="wrap">
+
+<div class="crumbs">
+  <a href="index.html">Главная</a> · <a href="whats-new.html">Что нового</a> · Live-диалог 4 агентов
+</div>
+
+<div class="hero">
+  <div class="tag">💬 Live-демо · диалог AI-агентов</div>
+  <h1>Смотри, как <span class="g">4 AI-агента</span> обсуждают задачу</h1>
+  <p>Реальный сценарий: эксперт-психолог 500K выручки хочет +30 клиентов за 90 дней. Команда обсуждает в реальном времени, кто что берёт на себя. Animation auto-plays when ready.</p>
+</div>
+
+<div style="background:linear-gradient(180deg,#0c0f1e,#0a0c14);border:1px solid rgba(255,255,255,.08);border-radius:18px;overflow:hidden;box-shadow:0 24px 60px rgba(0,0,0,.45)" id="dialogWidget">
+
+  <!-- header -->
+  <div style="background:rgba(255,255,255,.03);padding:14px 18px;display:flex;justify-content:space-between;align-items:center;border-bottom:1px solid rgba(255,255,255,.06);flex-wrap:wrap;gap:10px">
+    <div style="display:flex;align-items:center;gap:10px">
+      <div style="display:flex;gap:6px"><span style="width:9px;height:9px;background:#ff5f57;border-radius:50%"></span><span style="width:9px;height:9px;background:#febc2e;border-radius:50%"></span><span style="width:9px;height:9px;background:#28c840;border-radius:50%"></span></div>
+      <span style="font-family:var(--mono);font-size:10.5px;color:#9aa3b2;letter-spacing:.4px">Marketing-Channel · Online</span>
+    </div>
+    <div style="display:flex;gap:8px;align-items:center;font-size:10.5px;color:#9aa3b2;font-family:var(--mono)">
+      <span style="display:inline-block;width:7px;height:7px;background:#34d058;border-radius:50%;animation:dlgDot 1.8s infinite"></span>
+      <span id="dlgStatus">4 агента онлайн</span>
+      <button id="dlgReplay" style="margin-left:8px;background:rgba(96,200,240,.1);border:1px solid rgba(96,200,240,.25);color:#60c8f0;padding:5px 11px;border-radius:7px;font:700 10.5px/1 var(--mono);cursor:pointer;letter-spacing:.4px">↻ Повторить</button>
+    </div>
+  </div>
+
+  <!-- task brief -->
+  <div style="padding:14px 18px;background:linear-gradient(180deg,rgba(200,240,96,.04),transparent);border-bottom:1px solid rgba(255,255,255,.04);display:flex;align-items:center;gap:12px;font-size:13px;line-height:1.5">
+    <span style="font-size:22px">📋</span>
+    <div>
+      <b style="color:#c8f060;font-weight:700">Задача:</b>
+      <span style="color:#e9eef7"> психолог-эксперт, 500K ₽/мес, цель — +30 клиентов / 90 дней. Канал — Instagram + Telegram. Команда, обсудите распределение.</span>
+    </div>
+  </div>
+
+  <!-- messages area -->
+  <div id="dlgFeed" style="min-height:500px;max-height:600px;overflow-y:auto;padding:20px 22px 4px;display:flex;flex-direction:column;gap:14px"></div>
+
+  <!-- typing indicator -->
+  <div id="dlgTyping" style="padding:6px 24px 18px;font-size:11.5px;color:#7c8a99;display:none;align-items:center;gap:6px">
+    <span id="dlgTypingName">Алиса</span> печатает
+    <span style="display:inline-flex;gap:2px">
+      <span style="width:4px;height:4px;background:#7c8a99;border-radius:50%;animation:dlgBlink 1.2s infinite"></span>
+      <span style="width:4px;height:4px;background:#7c8a99;border-radius:50%;animation:dlgBlink 1.2s infinite .2s"></span>
+      <span style="width:4px;height:4px;background:#7c8a99;border-radius:50%;animation:dlgBlink 1.2s infinite .4s"></span>
+    </span>
+  </div>
+
+  <!-- footer CTA -->
+  <div style="padding:14px 18px;background:rgba(0,0,0,.25);border-top:1px solid rgba(255,255,255,.05);display:flex;justify-content:space-between;align-items:center;gap:12px;flex-wrap:wrap">
+    <div style="font-size:12px;color:#9aa3b2">Хочешь так же, но под свою задачу?</div>
+    <a href="onboarding.html" style="display:inline-flex;align-items:center;gap:7px;padding:10px 18px;background:linear-gradient(90deg,#c8f060,#60c8f0);color:#080808;text-decoration:none;border-radius:9px;font-size:12.5px;font-weight:800;letter-spacing:.3px">Собрать свою команду →</a>
+  </div>
+
+</div>
+
+<div class="cta-end">
+  <h3>Так работает каждый день</h3>
+  <p>Каждый агент берёт свой кусок задачи. Ты только согласовываешь финальное решение. Это происходит в твоём кабинете 24/7.</p>
+  <div class="btns">
+    <a class="b1" href="onboarding.html">📋 Заполнить бриф →</a>
+    <a class="b2" href="how-it-works.html">📖 Как это работает</a>
+    <a class="b2" href="dashboard-demo.html">📊 Результат через 60 дней</a>
+  </div>
+</div>
+
+</div>
+
+<script src="api-fallback.js"></script>
+<script src="state.js"></script>
+<script src="mock-backend.js"></script>
+<script src="config.js"></script>
+<script src="analytics.js" defer></script>
+<script src="sidebar.js" defer></script>
+<script src="alisa-widget.js" defer></script>
+<script>
+(function () {
+  const AGENTS = {
+    alisa:    { nm:'Алиса',    role:'CEO · координатор',  em:'🧠', bg:'linear-gradient(135deg,#c8f060,#a0e040)' },
+    sofia:    { nm:'Sofia',    role:'Контент-маркетолог', em:'✍️', bg:'linear-gradient(135deg,#60c8f0,#4a9ed8)' },
+    hunter:   { nm:'Хантер',   role:'Мастер хуков',       em:'🎯', bg:'linear-gradient(135deg,#f0b429,#e08020)' },
+    analytic: { nm:'Аналитик', role:'Маркетолог-аналитик',em:'📊', bg:'linear-gradient(135deg,#f060c8,#c040a0)' }
+  };
+  const SCRIPT = [
+    { who:'alisa',    delay:600,  text:'Команда, новый клиент. Психолог, 500К/мес, хочет +30 клиентов / 90 дней. Канал — Instagram + Telegram. Сейчас постит хаотично, 1-2 раза в неделю. Распределяем?' },
+    { who:'analytic', delay:1400, text:'Беру первичный анализ. Текущая воронка: охваты, CTR, сохранения, конверсия в директ. Через 10 минут — бенчмарки по нише + точки роста.' },
+    { who:'sofia',    delay:1600, text:'Контент-план на 30 дней под цель «+30 клиентов»:\n• 8 экспертных постов (закрывают возражения)\n• 12 Reels (триггеры и сторителлинг)\n• 4 кейса-разбора (соц.доказательство)\n• 6 сторис-серий (прогрев)' },
+    { who:'hunter',   delay:1500, text:'Дам **10 убойных хуков** для Reels — первые 3 секунды:\n→ «3 фразы, которые психолог никогда не скажет»\n→ «Почему ты бесишься на партнёра — не из-за партнёра»\n→ «Я психолог 8 лет. Вот что меня пугает в клиентах»\n…ещё 7' },
+    { who:'analytic', delay:1700, text:'Готово. Бенчмарки по нише «психотерапия»:\n• Средний охват эксперта 500К: 2.5-4К/пост\n• Сейчас у клиента: 800 (в 3× ниже)\n• CTR в директ: 2.1% (норма 5-8%)\n→ Точки роста: формат Reels (есть запас 3-4×) + Telegram-канал (не используется)' },
+    { who:'sofia',    delay:1400, text:'Принято. Усиливаю Reels-блок — увеличу до 18/мес, сократим экспертные посты до 5. Telegram — еженедельный лонгрид + ежедневные мини-инсайты.' },
+    { who:'alisa',    delay:1300, text:'✅ Финальный план: Sofia делает контент-фабрику, Хантер — хуки на каждое Reels, Аналитик — еженедельный отчёт. Я согласовываю с клиентом и веду коммуникацию.\n\n**Запуск через 24 часа**. Прогноз: +30 клиентов за 90 дней при текущем бюджете.' }
+  ];
+
+  const feed = document.getElementById('dlgFeed');
+  const typing = document.getElementById('dlgTyping');
+  const typingNm = document.getElementById('dlgTypingName');
+  const statusEl = document.getElementById('dlgStatus');
+  const replay = document.getElementById('dlgReplay');
+
+  let timers = [];
+  function clearAll() {
+    timers.forEach(t => clearTimeout(t));
+    timers = [];
+    feed.innerHTML = '';
+    typing.style.display = 'none';
+  }
+
+  function fmtTime(min) {
+    const now = new Date();
+    now.setMinutes(now.getMinutes() + min);
+    return now.toTimeString().slice(0, 5);
+  }
+
+  function formatBody(t) {
+    return t
+      .replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;')
+      .replace(/\*\*([^*]+)\*\*/g, '<span class="h">$1</span>')
+      .replace(/\n/g, '<br>');
+  }
+
+  function addMessage(item, minOffset) {
+    const a = AGENTS[item.who];
+    const div = document.createElement('div');
+    div.className = 'dlg-msg';
+    div.style.cssText = 'display:flex;gap:12px;align-items:flex-start';
+    div.innerHTML = `
+      <div class="av" style="background:${a.bg}">${a.em}</div>
+      <div style="flex:1;min-width:0">
+        <div style="display:flex;align-items:center;flex-wrap:wrap">
+          <span class="nm">${a.nm}</span>
+          <span class="role">${a.role}</span>
+          <span class="tm">${fmtTime(minOffset)}</span>
+        </div>
+        <div class="bd">${formatBody(item.text)}</div>
+      </div>`;
+    feed.appendChild(div);
+    feed.scrollTop = feed.scrollHeight;
+  }
+
+  let running = false;
+  function play() {
+    if (running) return;
+    running = true;
+    statusEl.textContent = 'Сценарий: + 30 клиентов / 90 дней';
+    clearAll();
+    let acc = 0;
+    SCRIPT.forEach((item, idx) => {
+      timers.push(setTimeout(() => {
+        typingNm.textContent = AGENTS[item.who].nm;
+        typing.style.display = 'flex';
+      }, acc));
+      acc += Math.min(item.delay, 1700);
+      timers.push(setTimeout(() => {
+        typing.style.display = 'none';
+        addMessage(item, idx * 2);
+      }, acc));
+      acc += 350;
+    });
+    timers.push(setTimeout(() => {
+      statusEl.textContent = '✅ План согласован · 4 агента онлайн';
+      running = false;
+    }, acc + 200));
+  }
+
+  setTimeout(play, 600);
+  replay.addEventListener('click', () => { running = false; play(); });
+})();
+
+if ('serviceWorker' in navigator && location.protocol === 'https:') {
+  window.addEventListener('load', () => {
+    navigator.serviceWorker.register('/sw.js').catch(e => console.warn('SW reg failed:', e.message));
+  });
+}
+</script>
+</body>
+</html>
