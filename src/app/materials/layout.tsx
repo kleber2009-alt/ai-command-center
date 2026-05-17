@@ -1,6 +1,6 @@
 import AppHeader from '@/components/AppHeader'
 
-export default function MeLayout({ children }: { children: React.ReactNode }) {
+export default function MaterialsLayout({ children }: { children: React.ReactNode }) {
   return (
     <>
       <AppHeader />

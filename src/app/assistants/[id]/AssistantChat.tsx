@@ -6,6 +6,7 @@ import {
   MessagesSquare, Mic, Package, Pencil, RefreshCw, Send, Sparkles, Square, Target, TriangleAlert, Trash2, Check, X,
 } from 'lucide-react'
 import { getTelegram, isInTelegram } from '@/lib/telegram'
+import { useTelegramBackButton } from '@/lib/use-telegram-back-button'
 import { readNdjson } from '@/lib/stream-client'
 import { apiFetch } from '@/lib/api-client'
 import ChatSessionsDrawer from '@/components/ChatSessionsDrawer'
@@ -41,6 +42,7 @@ function sessionKey(id: string) {
 }
 
 export default function AssistantChat({ id, name, description, icon, buttonText, helpText, starters }: Props) {
+  useTelegramBackButton()
   const Icon = ICONS[icon] ?? Sparkles
   const [messages, setMessages] = useState<Msg[]>([])
   const [input, setInput] = useState('')

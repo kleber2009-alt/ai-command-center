@@ -594,33 +594,13 @@ export default function TranscribePage() {
 
   return (
     <div className="animate-slide-in space-y-6">
-      <div className="flex items-start justify-between gap-3">
-        <div>
-          <h1 className="text-[28px] font-semibold leading-tight tracking-tight text-apple-ink sm:text-[34px]">
-            Транскрибация
-          </h1>
-          <p className="mt-1 text-[15px] text-apple-muted sm:text-base">
-            YouTube или прямая ссылка → текст, саммари, перевод
-          </p>
-        </div>
-        <div className="flex items-center gap-1.5">
-          <Link
-            href="/me"
-            className="inline-flex items-center gap-1.5 rounded-full border border-apple-line bg-white px-3 py-1.5 text-[13px] font-medium text-apple-ink shadow-apple-sm transition-colors hover:bg-apple-bg-soft"
-            title="Второй мозг"
-          >
-            <Brain className="h-4 w-4" />
-            Я
-          </Link>
-          <Link
-            href="/assistants"
-            className="inline-flex items-center gap-1.5 rounded-full border border-apple-line bg-white px-3 py-1.5 text-[13px] font-medium text-apple-ink shadow-apple-sm transition-colors hover:bg-apple-bg-soft"
-            title="ИИ-ассистенты"
-          >
-            <Bot className="h-4 w-4" />
-            Ассистенты
-          </Link>
-        </div>
+      <div>
+        <h1 className="text-[28px] font-semibold leading-tight tracking-tight text-apple-ink sm:text-[34px]">
+          Транскрибация
+        </h1>
+        <p className="mt-1 text-[15px] text-apple-muted sm:text-base">
+          YouTube или прямая ссылка → текст, саммари, перевод
+        </p>
       </div>
 
       {/* Form */}
@@ -943,7 +923,7 @@ export default function TranscribePage() {
 
       {/* History */}
       {historyConfigured && history.length > 0 && (
-        <div className="overflow-hidden rounded-apple-lg border border-apple-line bg-white shadow-apple-sm">
+        <div id="history" className="overflow-hidden rounded-apple-lg border border-apple-line bg-white shadow-apple-sm scroll-mt-20">
           <div className="flex flex-wrap items-center gap-2 border-b border-apple-line px-5 py-3">
             <History className="h-4 w-4 text-apple-muted" />
             <h3 className="text-[13px] font-semibold text-apple-ink">История</h3>

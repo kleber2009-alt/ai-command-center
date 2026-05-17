@@ -28,11 +28,12 @@
 		file_server
 	}
 
-	# ── Transcribe Next.js — /transcribe, /assistants, /me and their API routes ──
+	# ── Transcribe Next.js — /transcribe, /assistants, /me, /materials and their API routes ──
 	@nextjs path \
 		/transcribe /transcribe/* \
 		/assistants /assistants/* \
 		/me /me/* \
+		/materials /materials/* \
 		/api/transcribe /api/transcribe/* \
 		/api/assistants /api/assistants/* \
 		/api/me /api/me/* \

@@ -7,6 +7,7 @@ import {
 } from 'lucide-react'
 import MeTabs from '../../MeTabs'
 import { apiFetch } from '@/lib/api-client'
+import { useTelegramBackButton } from '@/lib/use-telegram-back-button'
 
 type Doc = {
   id: number
@@ -31,6 +32,7 @@ function timeAgo(iso: string): string {
 }
 
 export default function MeDocumentDetail({ id }: { id: string }) {
+  useTelegramBackButton()
   const router = useRouter()
   const [doc, setDoc] = useState<Doc | null>(null)
   const [loading, setLoading] = useState(true)

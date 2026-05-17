@@ -33,11 +33,12 @@ api.46-62-215-11.nip.io {
 46.62.215.11.nip.io {
 	encode zstd gzip
 
-	# Next.js (/transcribe, /assistants, /me и все их /api/*)
+	# Next.js (/transcribe, /assistants, /me, /materials и все их /api/*)
 	@nextjs path \
 		/transcribe /transcribe/* \
 		/assistants /assistants/* \
 		/me /me/* \
+		/materials /materials/* \
 		/api/transcribe /api/transcribe/* \
 		/api/assistants /api/assistants/* \
 		/api/me /api/me/* \

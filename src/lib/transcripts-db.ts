@@ -164,6 +164,52 @@ export function listTranscripts(limit = 20): TranscriptListItem[] {
     .all(limit) as TranscriptListItem[]
 }
 
+export type MaterialItem = {
+  transcript_id: string
+  created_at: string
+  url: string
+  title: string | null
+  source: string | null
+  types: Array<'carousel' | 'reels-new' | 'reels-remix' | 'tg-post'>
+  generations: Generations
+}
+
+export function listMaterials(limit = 100): MaterialItem[] {
+  const rows = getDb()
+    .prepare(
+      `SELECT id, created_at, url, title, source, generations
+       FROM transcripts
+       WHERE generations IS NOT NULL AND generations != '{}' AND generations != 'null'
+       ORDER BY created_at DESC
+       LIMIT ?`,
+    )
+    .all(limit) as Array<{
+    id: string
+    created_at: string
+    url: string
+    title: string | null
+    source: string | null
+    generations: string | null
+  }>
+  return rows
+    .map((r) => {
+      const generations = parseJson<Generations>(r.generations) ?? {}
+      const types = (['carousel', 'reels-new', 'reels-remix', 'tg-post'] as const).filter(
+        (k) => generations[k] != null,
+      )
+      return {
+        transcript_id: r.id,
+        created_at: r.created_at,
+        url: r.url,
+        title: r.title,
+        source: r.source,
+        types: types as MaterialItem['types'],
+        generations,
+      }
+    })
+    .filter((m) => m.types.length > 0)
+}
+
 export function updateTranscriptSummary(id: string, summary: string, bullets: string[]): void {
   getDb()
     .prepare(`UPDATE transcripts SET summary = ?, bullets = ? WHERE id = ?`)
