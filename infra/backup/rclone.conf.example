@@ -1,0 +1,42 @@
+# ═══════════════════════════════════════════════════════════════════
+# infra/backup/rclone.conf.example
+# ───────────────────────────────────────────────────────────────────
+# Положи в ~/.config/rclone/rclone.conf (или /root/.config/rclone/rclone.conf)
+# Подставь свои ключи. Выбери один провайдер.
+# ═══════════════════════════════════════════════════════════════════
+
+# ── Вариант A · Selectel S3 (Russia) ──
+# Создай bucket в панели: my.selectel.ru → Object Storage → Containers
+# Сервисный пользователь: Account & Roles → Service Users
+[s3]
+type = s3
+provider = Other
+env_auth = false
+access_key_id = SEL_ACCESS_KEY_HERE
+secret_access_key = SEL_SECRET_KEY_HERE
+endpoint = https://s3.ru-1.storage.selcloud.ru
+region = ru-1
+location_constraint = ru-1
+acl = private
+storage_class = STANDARD
+
+# ── Вариант B · Backblaze B2 ──
+# https://secure.backblaze.com → App Keys → Add a New Application Key
+# В коде используй имя bucket, не bucketId.
+#[s3]
+#type = b2
+#account = B2_ACCOUNT_ID
+#key = B2_APPLICATION_KEY
+#hard_delete = false
+
+# ── Вариант C · AWS S3 ──
+#[s3]
+#type = s3
+#provider = AWS
+#access_key_id = AKIA...
+#secret_access_key = ...
+#region = eu-central-1
+
+# ── Проверка ──
+# rclone lsd s3:
+# rclone ls s3:aio-backups

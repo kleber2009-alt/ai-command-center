@@ -1,0 +1,17 @@
+# ═══════════════════════════════════════════════════════════════════
+# infra/backup/cron.example
+# ───────────────────────────────────────────────────────────────────
+# Установка на сервере:
+#   crontab -e
+# Вставить эти строки (без # в начале).
+# Логи: /var/log/aio-backup-*.log
+# ═══════════════════════════════════════════════════════════════════
+
+# Ежедневный дамп БД в 03:00 UTC (06:00 МСК)
+0 3 * * * /root/ai-command-center/infra/backup/backup-db.sh >> /var/log/aio-backup-db.log 2>&1
+
+# Ежечасная синхронизация voice-notes (быстро, только delta)
+15 * * * * /root/ai-command-center/infra/backup/backup-voice-notes.sh >> /var/log/aio-backup-vn.log 2>&1
+
+# Опционально: чистка локальных логов раз в месяц (последние 30 дней)
+0 4 1 * * find /var/log -name 'aio-backup-*.log' -mtime +30 -delete
