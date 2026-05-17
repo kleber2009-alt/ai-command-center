@@ -242,8 +242,7 @@ async function generateAndSend(chatId, messageId, text) {
   });
 
   if (!result.ok) {
-    return sendText(chatId,
-      `❌ Не получилось (${result.code || 'error'}): ${truncate(result.details || '', 200)}`);
+    return sendText(chatId, friendlyError(result));
   }
 
   const sendRes = await tgApi('sendVoice', {
@@ -336,6 +335,45 @@ function escapeHtml(s) {
 function truncate(s, n) {
   s = String(s);
   return s.length > n ? s.slice(0, n - 1) + '…' : s;
+}
+
+/**
+ * Превращает технический ответ generateVoiceNote() в человекочитаемое
+ * сообщение для Telegram, не сваливая JSON-простыню на пользователя.
+ */
+function friendlyError(result) {
+  const code = result.code || 'error';
+  const details = String(result.details || '');
+
+  // ElevenLabs subscription / billing problems
+  if (/payment_issue|payment_required|invalid_subscription/i.test(details)) {
+    return '💳 ElevenLabs: оплата не прошла. Зайди на elevenlabs.io → Subscription и обнови способ оплаты, потом попробуй снова.';
+  }
+  if (/quota_exceeded|character_limit_exceeded/i.test(details)) {
+    return '⚠ ElevenLabs: достигнут лимит символов на этом тарифе. Подожди до следующего цикла или повыси тариф.';
+  }
+  if (/voice_not_found|invalid_voice_id/i.test(details)) {
+    return '⚠ Голос не найден у ElevenLabs (возможно удалён). Создай его заново на /persona-train.';
+  }
+  if (code === 'no_active_voice_for_owner') {
+    return '⚠ Активного голоса нет. Создай на /persona-train.';
+  }
+  if (code === 'text_too_long') {
+    return `⚠ Слишком длинный текст. ${details}`;
+  }
+  if (code === 'storage_upload_failed') {
+    return '⚠ Не удалось сохранить аудиофайл на сервере. Попробуй ещё раз через минуту.';
+  }
+  if (code === 'eleven_tts_failed' && details) {
+    // парсим JSON ошибки ElevenLabs если есть message
+    try {
+      const json = JSON.parse(details);
+      const msg = json.detail?.message || json.message || json.detail?.status;
+      if (msg) return `⚠ ElevenLabs: ${msg}`;
+    } catch {}
+  }
+  // fallback — короткая версия
+  return `❌ Не получилось (${code}): ${truncate(details, 200)}`;
 }
 
 const START_WELCOME = `
