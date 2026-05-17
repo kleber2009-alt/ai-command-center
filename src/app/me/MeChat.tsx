@@ -9,7 +9,7 @@ import ChatSessionsDrawer from '@/components/ChatSessionsDrawer'
 import MarkdownMessage from '@/components/MarkdownMessage'
 import { useVoiceInput } from '@/lib/voice-input'
 
-type Msg = { role: 'user' | 'assistant'; content: string; citations?: Citation[] }
+type Msg = { role: 'user' | 'assistant'; content: string; citations?: Citation[]; followups?: string[] }
 type Citation = {
   document_id: string
   document_title: string
@@ -146,6 +146,27 @@ export default function MeChat() {
       })
       if (streamError) throw new Error(streamError)
       if (!acc) throw new Error('Пустой ответ от модели')
+      // Fire-and-forget: ask Haiku for 3 follow-up questions, attach to last message when ready.
+      const conversation = [...next, { role: 'assistant', content: acc }]
+      apiFetch('/api/me/chat/followups', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ messages: conversation }),
+      })
+        .then((r) => (r.ok ? r.json() : Promise.resolve({ questions: [] })))
+        .then((data) => {
+          const qs: string[] = Array.isArray(data?.questions) ? data.questions : []
+          if (qs.length === 0) return
+          setMessages((m) => {
+            const copy = m.slice()
+            const last = copy[copy.length - 1]
+            if (last && last.role === 'assistant') {
+              copy[copy.length - 1] = { ...last, followups: qs }
+            }
+            return copy
+          })
+        })
+        .catch(() => {})
     } catch (e: any) {
       setError(e?.message || 'Ошибка отправки')
       setMessages((m) => {
@@ -393,6 +414,23 @@ export default function MeChat() {
                       ))}
                     </ol>
                   )}
+                </div>
+              )}
+              {m.role === 'assistant' && m.followups && m.followups.length > 0 && (
+                <div className="mt-2 flex flex-wrap gap-1.5">
+                  {m.followups.map((q, qi) => (
+                    <button
+                      key={qi}
+                      type="button"
+                      onClick={() => {
+                        setInput(q)
+                        inputRef.current?.focus()
+                      }}
+                      className="rounded-full border border-apple-line bg-white px-3 py-1.5 text-[12.5px] text-apple-ink shadow-apple-sm transition-colors hover:bg-apple-bg-soft"
+                    >
+                      {q}
+                    </button>
+                  ))}
                 </div>
               )}
             </div>
