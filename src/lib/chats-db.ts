@@ -126,6 +126,68 @@ export function renameSession(id: string, title: string): boolean {
   return info.changes > 0
 }
 
+export type ChatSearchHit = {
+  session_id: string
+  kind: ChatKind
+  assistant_id: string | null
+  session_title: string
+  session_updated_at: string
+  role: 'user' | 'assistant'
+  content: string
+}
+
+/**
+ * Substring search across all chat messages, scoped by kind (and assistant
+ * when provided). Returns latest matches first; trims each hit's content
+ * to a 240-char window centred on the first occurrence.
+ */
+export function searchMessages(
+  kind: ChatKind,
+  assistantId: string | null,
+  query: string,
+  limit = 30,
+): ChatSearchHit[] {
+  const q = query.trim()
+  if (!q) return []
+  const like = `%${q.replace(/[%_]/g, (m) => `\\${m}`)}%`
+  const db = getDb()
+  const rows = (assistantId === null
+    ? db
+        .prepare(
+          `SELECT m.session_id, s.kind, s.assistant_id, s.title AS session_title,
+                  s.updated_at AS session_updated_at, m.role, m.content
+           FROM chat_messages m
+           JOIN chat_sessions s ON s.id = m.session_id
+           WHERE s.kind = ? AND s.assistant_id IS NULL
+             AND m.content LIKE ? ESCAPE '\\'
+           ORDER BY m.id DESC
+           LIMIT ?`,
+        )
+        .all(kind, like, limit)
+    : db
+        .prepare(
+          `SELECT m.session_id, s.kind, s.assistant_id, s.title AS session_title,
+                  s.updated_at AS session_updated_at, m.role, m.content
+           FROM chat_messages m
+           JOIN chat_sessions s ON s.id = m.session_id
+           WHERE s.kind = ? AND s.assistant_id = ?
+             AND m.content LIKE ? ESCAPE '\\'
+           ORDER BY m.id DESC
+           LIMIT ?`,
+        )
+        .all(kind, assistantId, like, limit)) as ChatSearchHit[]
+
+  const lowerQ = q.toLowerCase()
+  return rows.map((r) => {
+    const idx = r.content.toLowerCase().indexOf(lowerQ)
+    if (idx < 0 || r.content.length <= 240) return r
+    const start = Math.max(0, idx - 80)
+    const end = Math.min(r.content.length, start + 240)
+    const snippet = (start > 0 ? '…' : '') + r.content.slice(start, end) + (end < r.content.length ? '…' : '')
+    return { ...r, content: snippet }
+  })
+}
+
 /**
  * Truncate a session to keep only the first `keepCount` messages
  * (ordered by id ASC). Used by the edit-message flow to drop a tail

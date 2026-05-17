@@ -1,6 +1,6 @@
 'use client'
 import { useEffect, useState } from 'react'
-import { Check, Loader2, MessageSquarePlus, Pencil, Trash2, X } from 'lucide-react'
+import { Check, Loader2, MessageSquarePlus, Pencil, Search, Trash2, X } from 'lucide-react'
 import { apiFetch } from '@/lib/api-client'
 
 type Session = {
@@ -43,6 +43,40 @@ export default function ChatSessionsDrawer({
   const [error, setError] = useState<string | null>(null)
   const [renamingId, setRenamingId] = useState<string | null>(null)
   const [renameValue, setRenameValue] = useState('')
+  const [searchValue, setSearchValue] = useState('')
+  const [searchHits, setSearchHits] = useState<
+    Array<{ session_id: string; session_title: string; role: 'user' | 'assistant'; content: string }>
+  >([])
+  const [searching, setSearching] = useState(false)
+
+  useEffect(() => {
+    if (!open) return
+    const q = searchValue.trim()
+    if (!q) {
+      setSearchHits([])
+      return
+    }
+    let cancelled = false
+    const t = setTimeout(async () => {
+      setSearching(true)
+      try {
+        const params = new URLSearchParams({ kind, q })
+        if (assistantId) params.set('assistantId', assistantId)
+        const r = await apiFetch(`/api/me/chats/search?${params.toString()}`)
+        const data = await r.json()
+        if (cancelled) return
+        setSearchHits(Array.isArray(data?.hits) ? data.hits : [])
+      } catch {
+        if (!cancelled) setSearchHits([])
+      } finally {
+        if (!cancelled) setSearching(false)
+      }
+    }, 250)
+    return () => {
+      cancelled = true
+      clearTimeout(t)
+    }
+  }, [searchValue, open, kind, assistantId])
 
   async function commitRename(id: string) {
     const title = renameValue.trim()
@@ -145,8 +179,54 @@ export default function ChatSessionsDrawer({
           </button>
         </div>
 
+        <div className="border-b border-apple-line p-3">
+          <div className="relative">
+            <Search className="pointer-events-none absolute left-3 top-1/2 h-3.5 w-3.5 -translate-y-1/2 text-apple-faint" />
+            <input
+              type="text"
+              value={searchValue}
+              onChange={(e) => setSearchValue(e.target.value)}
+              placeholder="Поиск по чатам…"
+              className="w-full rounded-full border border-apple-line bg-apple-bg-soft py-1.5 pl-9 pr-3 text-[12px] text-apple-ink placeholder:text-apple-faint outline-none transition-all focus:border-apple-line-strong focus:bg-white"
+            />
+          </div>
+        </div>
+
         <div className="min-h-0 flex-1 overflow-y-auto">
-          {loading ? (
+          {searchValue.trim() ? (
+            searching ? (
+              <div className="flex items-center justify-center gap-2 p-6 text-apple-muted">
+                <Loader2 className="h-4 w-4 animate-spin" /> Ищем…
+              </div>
+            ) : searchHits.length === 0 ? (
+              <div className="p-6 text-center text-[13px] text-apple-faint">
+                Ничего не нашлось в чатах.
+              </div>
+            ) : (
+              <ul>
+                {searchHits.map((h, i) => (
+                  <li key={i} className={i > 0 ? 'border-t border-apple-line' : ''}>
+                    <button
+                      type="button"
+                      onClick={() => {
+                        onSelect(h.session_id)
+                        onClose()
+                      }}
+                      className="flex w-full flex-col gap-1 px-4 py-3 text-left hover:bg-apple-bg-soft"
+                    >
+                      <div className="flex items-center gap-1.5 text-[12px] text-apple-faint">
+                        <span className="rounded-full bg-apple-bg-soft px-1.5 py-0.5 text-[10px] uppercase">
+                          {h.role === 'user' ? 'ты' : 'AI'}
+                        </span>
+                        <span className="truncate font-medium text-apple-ink">{h.session_title || 'Без названия'}</span>
+                      </div>
+                      <div className="text-[12px] leading-snug text-apple-muted">{h.content}</div>
+                    </button>
+                  </li>
+                ))}
+              </ul>
+            )
+          ) : loading ? (
             <div className="flex items-center justify-center gap-2 p-6 text-apple-muted">
               <Loader2 className="h-4 w-4 animate-spin" /> Загружаем…
             </div>

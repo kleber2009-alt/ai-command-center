@@ -3,7 +3,7 @@ import { useEffect, useRef, useState } from 'react'
 import Link from 'next/link'
 import {
   ArrowLeft, BookmarkPlus, BookOpen, Brain, Copy, Filter, Flame, History, LayoutGrid, Loader2, Magnet, MessageSquarePlus,
-  MessagesSquare, Mic, Package, RefreshCw, Send, Sparkles, Square, Target, TriangleAlert, Trash2, Check,
+  MessagesSquare, Mic, Package, Pencil, RefreshCw, Send, Sparkles, Square, Target, TriangleAlert, Trash2, Check, X,
 } from 'lucide-react'
 import { getTelegram, isInTelegram } from '@/lib/telegram'
 import { readNdjson } from '@/lib/stream-client'
@@ -61,6 +61,8 @@ export default function AssistantChat({ id, name, description, icon, buttonText,
   const [savingToBrain, setSavingToBrain] = useState(false)
   const [savedToBrain, setSavedToBrain] = useState(false)
   const [useBrainContext, setUseBrainContext] = useState(false)
+  const [editingIdx, setEditingIdx] = useState<number | null>(null)
+  const [editingValue, setEditingValue] = useState('')
 
   useEffect(() => {
     try {
@@ -172,13 +174,19 @@ export default function AssistantChat({ id, name, description, icon, buttonText,
     el.style.height = Math.min(el.scrollHeight, 200) + 'px'
   }, [input])
 
-  async function send(userText: string, opts: { regenerate?: boolean } = {}) {
+  async function send(
+    userText: string,
+    opts: { regenerate?: boolean; editAtIndex?: number } = {},
+  ) {
     const text = userText.trim()
     if (!text || loading) return
     setError(null)
     const isRegen = !!opts.regenerate
+    const isEdit = typeof opts.editAtIndex === 'number'
     const baseHistory: Msg[] = isRegen
       ? messages.filter((m, i) => !(i === messages.length - 1 && m.role === 'assistant'))
+      : isEdit
+      ? [...messages.slice(0, opts.editAtIndex!), { role: 'user', content: text }]
       : [...messages, { role: 'user', content: text }]
     setMessages([...baseHistory, { role: 'assistant', content: '' }])
     if (!isRegen) setInput('')
@@ -186,6 +194,7 @@ export default function AssistantChat({ id, name, description, icon, buttonText,
     if (isInTelegram()) getTelegram()?.HapticFeedback?.impactOccurred?.('light')
 
     try {
+      const truncateToCount = isEdit ? opts.editAtIndex! : undefined
       const res = await apiFetch('/api/assistants/chat', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
@@ -195,6 +204,7 @@ export default function AssistantChat({ id, name, description, icon, buttonText,
           sessionId,
           regenerate: isRegen || undefined,
           useBrainContext: useBrainContext || undefined,
+          truncateToCount,
         }),
       })
       if (!res.ok) {
@@ -414,6 +424,53 @@ export default function AssistantChat({ id, name, description, icon, buttonText,
             className={m.role === 'user' ? 'flex justify-end' : 'flex justify-start'}
           >
             <div className={m.role === 'user' ? 'max-w-[88%]' : 'max-w-[92%]'}>
+            {m.role === 'user' && editingIdx === i ? (
+              <div className="rounded-[20px] rounded-br-md border border-apple-blue bg-white p-2 shadow-apple-sm">
+                <textarea
+                  value={editingValue}
+                  onChange={(e) => setEditingValue(e.target.value)}
+                  onKeyDown={(e) => {
+                    if (e.key === 'Enter' && (e.metaKey || e.ctrlKey)) {
+                      e.preventDefault()
+                      const v = editingValue.trim()
+                      if (v) {
+                        setEditingIdx(null)
+                        send(v, { editAtIndex: i })
+                      }
+                    } else if (e.key === 'Escape') {
+                      setEditingIdx(null)
+                    }
+                  }}
+                  rows={3}
+                  autoFocus
+                  className="w-full resize-none rounded-lg bg-white p-2 text-[15px] leading-relaxed text-apple-ink outline-none"
+                />
+                <div className="mt-1 flex items-center justify-end gap-1.5">
+                  <button
+                    type="button"
+                    onClick={() => setEditingIdx(null)}
+                    className="grid h-8 w-8 place-items-center rounded-full text-apple-faint hover:bg-apple-bg-soft hover:text-apple-ink"
+                    aria-label="Отменить"
+                    title="Отменить"
+                  >
+                    <X className="h-3.5 w-3.5" />
+                  </button>
+                  <button
+                    type="button"
+                    onClick={() => {
+                      const v = editingValue.trim()
+                      if (!v) return
+                      setEditingIdx(null)
+                      send(v, { editAtIndex: i })
+                    }}
+                    className="inline-flex items-center gap-1.5 rounded-full bg-apple-blue px-3 py-1.5 text-[12px] font-medium text-white hover:bg-apple-blue-hover"
+                  >
+                    <Send className="h-3.5 w-3.5" />
+                    Переотправить
+                  </button>
+                </div>
+              </div>
+            ) : (
             <div
               className={
                 m.role === 'user'
@@ -432,6 +489,20 @@ export default function AssistantChat({ id, name, description, icon, buttonText,
               ) : (
                 <p className="whitespace-pre-wrap break-words text-[15px] leading-relaxed">{m.content}</p>
               )}
+              {m.role === 'user' && m.content && !loading && (
+                <button
+                  type="button"
+                  onClick={() => {
+                    setEditingValue(m.content)
+                    setEditingIdx(i)
+                  }}
+                  className="absolute -bottom-2 -left-2 grid h-7 w-7 place-items-center rounded-full border border-apple-line bg-white text-apple-muted opacity-0 shadow-apple-sm transition group-hover:opacity-100"
+                  aria-label="Редактировать"
+                  title="Редактировать (Esc — отмена, ⌘/Ctrl+Enter — отправить)"
+                >
+                  <Pencil className="h-3.5 w-3.5" />
+                </button>
+              )}
               {m.content && (
                 <button
                   type="button"
@@ -443,6 +514,7 @@ export default function AssistantChat({ id, name, description, icon, buttonText,
                 </button>
               )}
             </div>
+            )}
             {m.role === 'assistant' && m.citations && m.citations.length > 0 && (
               <div className="mt-2 flex flex-wrap gap-1.5">
                 {m.citations.map((c, ci) => (
