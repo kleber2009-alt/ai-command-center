@@ -9,5 +9,18 @@ build/
 npm-debug.log*
 .vercel
 .turbo
+.netlify/
 next-env.d.ts
 tsconfig.tsbuildinfo
+
+# Secrets and local-only credential files (defence in depth — never commit)
+CREDENTIALS.local.md
+CREDENTIALS.md
+*.secret
+*-secret.*
+*.key
+
+# ai-office deploy artefacts — built bundles, not source
+apps/ai-office/ai-office-deploy.zip
+apps/ai-office/ai-office-CAPSULE-*.zip
+apps/ai-office/ai-office-FULL-backup-*.zip

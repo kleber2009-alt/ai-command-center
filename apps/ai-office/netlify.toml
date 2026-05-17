@@ -22,25 +22,6 @@
   status = 200
   force = true
 
-# ── Phase 5: voice clone API ──
-[[redirects]]
-  from = "/api/voice-clone"
-  to = "/.netlify/functions/voice-clone"
-  status = 200
-  force = true
-
-[[redirects]]
-  from = "/api/voice-generate"
-  to = "/.netlify/functions/voice-generate"
-  status = 200
-  force = true
-
-[[redirects]]
-  from = "/api/voice-list"
-  to = "/.netlify/functions/voice-list"
-  status = 200
-  force = true
-
 # ── Clean URLs ──
 [[redirects]]
   from = "/navigation"
@@ -125,16 +106,6 @@
 [[redirects]]
   from = "/agents"
   to = "/agents.html"
-  status = 200
-
-[[redirects]]
-  from = "/persona-train"
-  to = "/persona-train.html"
-  status = 200
-
-[[redirects]]
-  from = "/voice"
-  to = "/persona-train.html"
   status = 200
 
 # ── Catch-all 404 (must be last) ──

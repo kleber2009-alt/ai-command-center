@@ -202,14 +202,6 @@
 
 ### **Фаза 5: Voice / Video AI-agents · IG + TG** 🔥 (новый приоритет, после Фазы 1)
 
-> **Прогресс (16.05.2026 · Commit 1):** voice-pipeline MVP-0 готов.
-> · `persona-train.html` — UI клонирования голоса + тест-генерация
-> · `netlify/functions/voice-clone.js`, `voice-generate.js`, `voice-list.js`
-> · `supabase/migrations/003_voice.sql` — таблицы `voices`, `voice_generations`, bucket `voice-notes`
-> · Полная документация — `docs/PHASE_5.md`
-> · **Что осталось:** настроить env vars (`ELEVENLABS_API_KEY`, `SUPABASE_SERVICE_KEY`), запустить SQL, проверить flow на `/persona-train`.
-> · **Дальше (Commit 2):** Telegram approval-бот.
-
 **Идея:** AI-агенты ведут переписку, шлют voice-notes и видео-кружки от лица пользователя в Instagram и Telegram.
 
 **Customer flow:**

@@ -2,14 +2,17 @@
 # Backup for netlify.toml (works even without Functions support)
 # ═══════════════════════════════════════════════════════════════════
 
+# 🔐 Block public access to credentials/handoff files (404 force)
+/CREDENTIALS*              /404.html                  404!
+/.env*                     /404.html                  404!
+/HANDOFF.md                /404.html                  404!
+/RESUME_HERE.md            /404.html                  404!
+/.gitignore                /404.html                  404!
+/.git/*                    /404.html                  404!
+
 # API proxy (Netlify Functions)
 /api/chat                  /.netlify/functions/chat        200
 /api/notify-tg             /.netlify/functions/notify-tg   200
-
-# Phase 5: voice clone API
-/api/voice-clone           /.netlify/functions/voice-clone     200
-/api/voice-generate        /.netlify/functions/voice-generate  200
-/api/voice-list            /.netlify/functions/voice-list      200
 
 # Clean URLs
 /navigation                /navigation.html           200
@@ -32,8 +35,6 @@
 /faq                       /faq.html                  200
 /onboarding                /onboarding.html           200
 /agents                    /agents.html               200
-/persona-train             /persona-train.html        200
-/voice                     /persona-train.html        200
 /dashboard                 /dashboard.html            200
 /whats-new                 /whats-new.html            200
 /leads                     /leads-inbox.html          200

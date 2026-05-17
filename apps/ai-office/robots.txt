@@ -20,4 +20,14 @@ Disallow: /demo-dialogue.html
 Disallow: /dashboard-demo.html
 Disallow: /partner-dashboard.html
 
+# Critical: блокируем доступ к credentials и backup файлам
+Disallow: /CREDENTIALS
+Disallow: /CREDENTIALS.local.md
+Disallow: /CREDENTIALS.md
+Disallow: /.env
+Disallow: /HANDOFF.md
+Disallow: /RESUME_HERE.md
+Disallow: /.git/
+Disallow: /.gitignore
+
 Sitemap: https://ai-growth-office.ru/sitemap.xml

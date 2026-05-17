@@ -5,23 +5,61 @@ This file provides guidance to Claude Code (claude.ai/code) when working with co
 ## What this repo is
 
 A monorepo (npm workspaces) bundling several related projects under one
-roof. The flagship app is the transcription Mini App; the others are
-support services and a legacy static site kept for reference.
+roof. The flagship app is the transcription Mini App; the second product
+is the AI Growth Office static site; the third is a support service.
 
 ```
 /
 ├── apps/
 │   ├── transcribe/   # Next.js 14 app + Telegram Mini App (the flagship)
 │   ├── ytdlp/        # FastAPI + yt-dlp companion microservice (Railway)
-│   └── ai-office/    # legacy static "AI Business Command Center" site
+│   └── ai-office/    # AI Growth Office — static site + Netlify Functions
 ├── packages/         # reserved for shared code (empty)
 ├── supabase/         # SQL migrations shared across apps
 └── docs/
 ```
 
 Only `apps/transcribe` is a node workspace; `apps/ytdlp` is Python and
-`apps/ai-office` is static HTML. Root `package.json` lists workspaces and
-proxies `dev/build/start/lint` to `apps/transcribe`.
+`apps/ai-office` is static HTML (no build step) with Netlify Functions
+under `apps/ai-office/netlify/functions/`. Root `package.json` lists
+workspaces and proxies `dev/build/start/lint` to `apps/transcribe`.
+
+## AI Growth Office (`apps/ai-office`)
+
+Standalone static site for the "AI Growth Office" product — 70+ HTML
+pages (landing, pricing, ROI calculator, dashboard, 3 workspaces,
+agents catalogue with 169 agents, blog, lead magnet, Telegram Mini App
+under `/mini-app/`). Deployed separately from `transcribe`.
+
+Backend lives in two Netlify Functions:
+- `netlify/functions/chat.js` → `/api/chat` — Anthropic Messages API
+  proxy, hides `ANTHROPIC_API_KEY`, streams SSE, rate-limited 10/min/IP.
+- `netlify/functions/notify-tg.js` → `/api/notify-tg` — Telegram Bot
+  notification proxy, hides `TG_BOT_TOKEN`, rate-limited 20/min/IP.
+
+Required Netlify env vars: `ANTHROPIC_API_KEY`, `TG_BOT_TOKEN`,
+`TG_CHAT_ID`. Site also talks to Supabase from the browser (`config.js`
+hard-codes the project URL + anon key; RLS-protected — anon insert
+policy on `leads` table needs to be set up server-side).
+
+Routing/headers are configured via `netlify.toml` + `_redirects`. Clean
+URLs (`/about`, `/pricing`, …) and security headers (HSTS, X-Frame,
+Permissions-Policy) are in `netlify.toml`. The `_redirects` file
+additionally blocks public access to `CREDENTIALS*`, `.env*`,
+`HANDOFF.md`, `RESUME_HERE.md`, `.gitignore`, `.git/*` (returns 404).
+
+**Deploy:** Netlify "New site from Git" pointed at this repo, with
+**base directory `apps/ai-office`** and publish directory `.` (relative
+to base). The function bundle is auto-detected from
+`apps/ai-office/netlify/functions/`. Custom domain `ai-growth-office.ru`
+is referenced in canonical/og/sitemap meta but not yet attached.
+
+Local preview:
+```bash
+cd apps/ai-office && python3 -m http.server 8000   # static only, no /api/*
+# or, with functions:
+cd apps/ai-office && npx netlify-cli dev
+```
 
 The transcribe app is a single-purpose web app and Telegram Mini App for
 transcribing video / audio links and turning the transcript into short-form

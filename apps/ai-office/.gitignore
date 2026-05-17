@@ -1,0 +1,45 @@
+# ═══ AI Growth Office · .gitignore ═══
+
+# ⚠️ КРИТИЧНО · СЕКРЕТЫ
+CREDENTIALS.local.md
+CREDENTIALS.md
+.env
+.env.local
+.env.*.local
+*.secret
+*.key
+*-secret.*
+
+# Backups
+*.zip
+ai-office-deploy.zip
+ai-office-CAPSULE-*.zip
+ai-office-FULL-backup-*.zip
+
+# macOS
+.DS_Store
+.AppleDouble
+.LSOverride
+Icon
+
+# Editor
+.vscode/
+.idea/
+*.swp
+*.swo
+*~
+
+# Logs
+*.log
+npm-debug.log*
+
+# Netlify locally
+.netlify/
+
+# Node (если когда-нибудь появится)
+node_modules/
+
+# Temp
+*.tmp
+.tmp/
+.cache/
