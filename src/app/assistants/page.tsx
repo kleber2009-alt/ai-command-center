@@ -12,14 +12,9 @@ const ICONS: Record<string, any> = {
 export default function AssistantsPage() {
   return (
     <div className="space-y-6">
-      <header>
-        <h1 className="text-[28px] font-semibold leading-tight tracking-tight text-apple-ink sm:text-[34px]">
-          ИИ-ассистенты
-        </h1>
-        <p className="mt-1 text-[15px] text-apple-muted sm:text-base">
-          Выбери ассистента — у каждого свой промпт и своя задача.
-        </p>
-      </header>
+      <p className="text-[14px] text-apple-muted sm:text-[15px]">
+        Выбери ассистента — у каждого свой промпт и своя задача.
+      </p>
 
       <ul className="overflow-hidden rounded-apple-lg border border-apple-line bg-white shadow-apple-sm">
         {assistants.map((a, i) => {

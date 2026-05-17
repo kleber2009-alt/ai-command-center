@@ -593,15 +593,10 @@ export default function TranscribePage() {
   const otherLang: 'ru' | 'en' = result?.detectedLanguage === 'en' ? 'ru' : 'en'
 
   return (
-    <div className="animate-slide-in space-y-6">
-      <div>
-        <h1 className="text-[28px] font-semibold leading-tight tracking-tight text-apple-ink sm:text-[34px]">
-          Транскрибация
-        </h1>
-        <p className="mt-1 text-[15px] text-apple-muted sm:text-base">
-          YouTube или прямая ссылка → текст, саммари, перевод
-        </p>
-      </div>
+    <div className="animate-slide-in space-y-5">
+      <p className="text-[14px] text-apple-muted sm:text-[15px]">
+        YouTube или прямая ссылка → текст, саммари, перевод
+      </p>
 
       {/* Form */}
       <form onSubmit={submit} className="space-y-4 rounded-apple-lg border border-apple-line bg-white p-5 shadow-apple-sm">

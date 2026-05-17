@@ -115,14 +115,9 @@ export default function MaterialsPage() {
 
   return (
     <div className="animate-slide-in space-y-6">
-      <div>
-        <h1 className="text-[28px] font-semibold leading-tight tracking-tight text-apple-ink sm:text-[34px]">
-          Материалы
-        </h1>
-        <p className="mt-1 text-[15px] text-apple-muted sm:text-base">
-          Карусели, Reels и Telegram-посты, сгенерированные из транскриптов.
-        </p>
-      </div>
+      <p className="text-[14px] text-apple-muted sm:text-[15px]">
+        Карусели, Reels и Telegram-посты, сгенерированные из транскриптов.
+      </p>
 
       {/* Filter pills */}
       <nav className="flex flex-wrap gap-1.5">

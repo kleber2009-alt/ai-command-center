@@ -283,7 +283,7 @@ export default function MeChat() {
 
   return (
     <div className="flex min-h-[calc(100vh-2rem)] flex-col">
-      <header className="sticky top-0 z-10 -mx-4 -mt-5 mb-4 border-b border-apple-line bg-white/85 px-4 py-3 backdrop-blur-xl backdrop-saturate-150 sm:-mx-6 sm:-mt-8 sm:px-6">
+      <header className="-mx-4 -mt-5 mb-4 border-b border-apple-line bg-white px-4 py-3 sm:-mx-6 sm:-mt-8 sm:px-6">
         <div className="flex items-center gap-3">
           <div className="grid h-9 w-9 shrink-0 place-items-center rounded-full bg-apple-bg-soft text-apple-ink">
             <Brain className="h-[18px] w-[18px]" />

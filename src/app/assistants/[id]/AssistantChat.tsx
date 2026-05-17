@@ -315,7 +315,7 @@ export default function AssistantChat({ id, name, description, icon, buttonText,
 
   return (
     <div className="flex min-h-[calc(100vh-2rem)] flex-col">
-      <header className="sticky top-0 z-10 -mx-4 -mt-5 mb-4 border-b border-apple-line bg-white/85 px-4 py-3 backdrop-blur-xl backdrop-saturate-150 sm:-mx-6 sm:-mt-8 sm:px-6">
+      <header className="-mx-4 -mt-5 mb-4 border-b border-apple-line bg-white px-4 py-3 sm:-mx-6 sm:-mt-8 sm:px-6">
         <div className="flex items-center gap-3">
           <Link
             href="/assistants"
