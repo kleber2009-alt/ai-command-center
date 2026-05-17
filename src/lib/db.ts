@@ -123,6 +123,7 @@ function runColumnMigrations(db: Database.Database) {
   const migrations: string[] = [
     `ALTER TABLE me_profile ADD COLUMN projects_list TEXT NOT NULL DEFAULT '[]'`,
     `ALTER TABLE me_documents ADD COLUMN pinned INTEGER NOT NULL DEFAULT 0`,
+    `ALTER TABLE chat_sessions ADD COLUMN pinned INTEGER NOT NULL DEFAULT 0`,
   ]
   for (const stmt of migrations) {
     try {

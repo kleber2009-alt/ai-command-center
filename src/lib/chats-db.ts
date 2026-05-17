@@ -8,6 +8,7 @@ export type ChatSessionRow = {
   kind: ChatKind
   assistant_id: string | null
   title: string
+  pinned: 0 | 1
   created_at: string
   updated_at: string
 }
@@ -38,7 +39,7 @@ export function createSession(kind: ChatKind, assistantId: string | null): ChatS
        VALUES (?, ?, ?, '', ?, ?)`,
     )
     .run(id, kind, assistantId, now, now)
-  return { id, kind, assistant_id: assistantId, title: '', created_at: now, updated_at: now }
+  return { id, kind, assistant_id: assistantId, title: '', pinned: 0, created_at: now, updated_at: now }
 }
 
 export function getSession(id: string): ChatSessionRow | null {
@@ -57,7 +58,7 @@ export function listSessions(kind: ChatKind, assistantId: string | null, limit =
                   (SELECT content FROM chat_messages m WHERE m.session_id = s.id ORDER BY m.id DESC LIMIT 1) AS last_message
            FROM chat_sessions s
            WHERE s.kind = ? AND s.assistant_id IS NULL
-           ORDER BY s.updated_at DESC
+           ORDER BY s.pinned DESC, s.updated_at DESC
            LIMIT ?`,
         )
         .all(kind, limit)
@@ -68,7 +69,7 @@ export function listSessions(kind: ChatKind, assistantId: string | null, limit =
                   (SELECT content FROM chat_messages m WHERE m.session_id = s.id ORDER BY m.id DESC LIMIT 1) AS last_message
            FROM chat_sessions s
            WHERE s.kind = ? AND s.assistant_id = ?
-           ORDER BY s.updated_at DESC
+           ORDER BY s.pinned DESC, s.updated_at DESC
            LIMIT ?`,
         )
         .all(kind, assistantId, limit)) as Array<ChatSessionListItem & { message_count: number | bigint }>
@@ -224,4 +225,11 @@ export function replaceLastAssistant(sessionId: string, content: string): boolea
     return true
   })
   return tx()
+}
+
+export function setSessionPinned(id: string, pinned: boolean): boolean {
+  const info = getDb()
+    .prepare(`UPDATE chat_sessions SET pinned = ? WHERE id = ?`)
+    .run(pinned ? 1 : 0, id)
+  return info.changes > 0
 }

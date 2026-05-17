@@ -1,6 +1,6 @@
 'use client'
 import { useEffect, useState } from 'react'
-import { Check, Loader2, MessageSquarePlus, Pencil, Search, Trash2, X } from 'lucide-react'
+import { Check, Loader2, MessageSquarePlus, Pencil, Pin, Search, Trash2, X } from 'lucide-react'
 import { apiFetch } from '@/lib/api-client'
 
 type Session = {
@@ -8,6 +8,7 @@ type Session = {
   kind: 'me' | 'assistant'
   assistant_id: string | null
   title: string
+  pinned: 0 | 1
   created_at: string
   updated_at: string
   message_count: number
@@ -126,6 +127,32 @@ export default function ChatSessionsDrawer({
       cancelled = true
     }
   }, [open, kind, assistantId])
+
+  async function togglePin(id: string, current: 0 | 1) {
+    const next = current ? 0 : 1
+    setItems((it) => {
+      const updated = it.map((s) => (s.id === id ? { ...s, pinned: next as 0 | 1 } : s))
+      updated.sort((a, b) => {
+        if (a.pinned !== b.pinned) return Number(b.pinned) - Number(a.pinned)
+        return new Date(b.updated_at).getTime() - new Date(a.updated_at).getTime()
+      })
+      return updated
+    })
+    try {
+      const res = await apiFetch(`/api/me/chats/${id}`, {
+        method: 'PUT',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ pinned: !current }),
+      })
+      if (!res.ok) {
+        const data = await res.json().catch(() => ({}))
+        throw new Error(data?.error || `Ошибка ${res.status}`)
+      }
+    } catch (e: any) {
+      setError(e?.message || 'Не удалось закрепить')
+      setItems((it) => it.map((s) => (s.id === id ? { ...s, pinned: current } : s)))
+    }
+  }
 
   async function remove(id: string) {
     if (!confirm('Удалить этот чат?')) return
@@ -299,6 +326,19 @@ export default function ChatSessionsDrawer({
                             <div className="text-[11px] text-apple-faint">
                               {s.message_count} {s.message_count === 1 ? 'сообщение' : 'сообщений'}
                             </div>
+                          </button>
+                          <button
+                            type="button"
+                            onClick={() => togglePin(s.id, s.pinned)}
+                            className={`my-auto grid h-8 w-8 shrink-0 place-items-center rounded-full transition-colors ${
+                              s.pinned
+                                ? 'text-apple-blue hover:bg-apple-bg-soft'
+                                : 'text-apple-faint opacity-0 hover:bg-apple-bg-soft hover:text-apple-ink group-hover:opacity-100'
+                            }`}
+                            aria-label={s.pinned ? 'Открепить' : 'Закрепить'}
+                            title={s.pinned ? 'Открепить' : 'Закрепить'}
+                          >
+                            <Pin className={`h-3.5 w-3.5 ${s.pinned ? 'fill-current' : ''}`} />
                           </button>
                           <button
                             type="button"
