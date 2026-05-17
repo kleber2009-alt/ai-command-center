@@ -3,7 +3,7 @@ import { useEffect, useRef, useState } from 'react'
 import Link from 'next/link'
 import { useRouter } from 'next/navigation'
 import {
-  ArrowLeft, Check, ExternalLink, FileAudio, FileText, FileType, Loader2, Save, Trash2, TriangleAlert,
+  ArrowLeft, Brain, Check, ExternalLink, FileAudio, FileText, FileType, Loader2, Save, Trash2, TriangleAlert,
 } from 'lucide-react'
 import MeTabs from '../../MeTabs'
 import { apiFetch } from '@/lib/api-client'
@@ -168,6 +168,14 @@ export default function MeDocumentDetail({ id }: { id: string }) {
                   )}
                 </div>
               </div>
+              <Link
+                href={`/me?ask=${encodeURIComponent('Расскажи мне про документ «' + (title || doc.title) + '»')}`}
+                className="grid h-9 w-9 shrink-0 place-items-center rounded-full text-apple-faint transition-colors hover:bg-apple-bg-soft hover:text-apple-ink"
+                aria-label="Спросить мозг"
+                title="Спросить второй мозг про этот документ"
+              >
+                <Brain className="h-4 w-4" />
+              </Link>
               <button
                 type="button"
                 onClick={remove}

@@ -35,6 +35,19 @@ export default function MeChat() {
   const bottomRef = useRef<HTMLDivElement | null>(null)
   const inputRef = useRef<HTMLTextAreaElement | null>(null)
 
+  // Honour ?ask=... once: pre-fill the input (don't auto-send).
+  // Read via window.location to avoid a Suspense boundary requirement
+  // that useSearchParams imposes on statically-rendered pages.
+  useEffect(() => {
+    if (typeof window === 'undefined') return
+    const ask = new URL(window.location.href).searchParams.get('ask')
+    if (ask) {
+      setInput(ask)
+      requestAnimationFrame(() => inputRef.current?.focus())
+    }
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [])
+
   const voice = useVoiceInput({
     onResult: (text) => setInput((cur) => (cur ? cur + (cur.endsWith(' ') ? '' : ' ') + text : text)),
     onError: (msg) => setError(msg),
