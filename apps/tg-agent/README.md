@@ -5,15 +5,22 @@ Telegram AI агент для групповых чатов. Читает каж
 в стиле Ильи на основе базы знаний, ведёт CRM статус каждого
 пользователя и уведомляет владельца на горячих лидах.
 
+Один процесс, одна SQLite-БД, один docker-compose. Ни Supabase,
+ни внешних админок.
+
 ## Конвейер
 
 `chats.touch → classifier → decision → leads.touchAndClassify →
 [responder + reply] → messages.log → notifier.notifyOwner`
 
+Параллельно в том же процессе крутится HTTP-админка (Hono) на
+порту 8080 с basic auth — она читает ту же SQLite и переключает
+auto_reply.
+
 ## Что внутри
 
-- **Транспорт:** [grammy](https://grammy.dev/) long-polling. На
-  Railway деплоится с **replicas = 1**.
+- **Транспорт:** [grammy](https://grammy.dev/) long-polling.
+  На одном хосте — replicas = 1.
 - **Классификатор** (`src/classifier.ts`): Claude Haiku 4.5 +
   tool-use, 10 классов (`GENERAL_CHAT`, `QUESTION`,
   `PRODUCT_INTEREST`, `PRICE_REQUEST`, `OBJECTION`, `BUYING_INTENT`,
@@ -24,97 +31,133 @@ Telegram AI агент для групповых чатов. Читает каж
   (0.7 по умолчанию) понижает non-IGNORE до `DRAFT_FOR_OWNER` —
   кроме `GENERAL_CHAT`/`NEGATIVE`/`SPAM`, которые остаются
   `IGNORE`.
-- **Responder** (`src/responder.ts`): Claude Haiku 4.5 со стратегией
-  под каждый класс. Tone-of-voice и стратегии — `src/prompts.ts`,
-  изменения в одном файле. База знаний —
-  `src/knowledge/knowledge_base.md`, markdown, который владелец
-  редактирует напрямую. Запрещено выходить за пределы базы —
-  при отсутствии факта бот честно говорит "уточню у Ильи".
+- **Responder** (`src/responder.ts`): Claude Haiku 4.5 со
+  стратегией под каждый класс. Tone-of-voice и стратегии —
+  `src/prompts.ts`. База знаний — `src/knowledge/knowledge_base.md`,
+  markdown, который владелец редактирует напрямую. Запрещено
+  выходить за пределы базы — при отсутствии факта бот честно
+  говорит "уточню у Ильи".
 - **CRM** (`src/db/leads.ts`): статус на (chat_id, user_id) с
   односторонней лестницей `new → cold → warm → hot → buyer`.
-  `negative` залипает (только ручной override).
-  `SUPPORT_REQUEST` → `support`, если не `buyer`.
+  `negative` залипает, `SUPPORT_REQUEST` → `support`, если не
+  `buyer`.
 - **Уведомления владельцу** (`src/notifier.ts`): DM с триаж-блоком
   на `REPLY_AND_NOTIFY` / `NOTIFY_ONLY` / `DRAFT_FOR_OWNER`.
-  Владелец должен **один раз написать боту в личку** (Telegram
-  блокирует исходящие DM от ботов к пользователям, которые ни разу
-  не общались с ботом).
-- **Kill switch:** `tg_chats.auto_reply` переключается из панели
-  `/admin/tg`. Когда OFF — бот всё ещё классифицирует и пишет в БД,
-  но не отвечает в чат и не дёргает владельца.
-- **Allowlist** чатов через `ALLOWED_CHAT_IDS` для безопасности
-  при тестах.
-- **Логи:** JSON в stdout (готово для Railway).
-- **БД:** Supabase. Без `SUPABASE_URL`/`SUPABASE_SERVICE_KEY` бот
-  продолжает работать без сохранения (stateless mode).
+  Владелец должен один раз написать боту `/start`.
+- **Kill switch:** `tg_chats.auto_reply` переключается из админки.
+  Когда OFF — бот всё ещё классифицирует и пишет в БД, но не
+  отвечает и не дёргает владельца.
+- **Хранилище:** SQLite (`better-sqlite3`). Файл по умолчанию
+  `./data/tg-agent.db`. Схема (`src/db/schema.ts`) применяется
+  автоматически при старте — никаких миграций руками.
+- **Админ-панель** (`src/admin/`): встроенный Hono-сервер +
+  vanilla-JS UI с Tailwind via CDN. Basic auth через
+  `ADMIN_USERNAME` + `ADMIN_PASSWORD`. Без `ADMIN_PASSWORD`
+  админ-сервер просто не стартует.
+- **Логи:** JSON в stdout.
 
-## Локальный запуск
+## Деплой на Хетцнер (docker-compose)
 
 ```bash
-cd apps/tg-agent
-cp .env.example .env   # заполнить минимум TELEGRAM_BOT_TOKEN, ANTHROPIC_API_KEY
-npm install
-npm run dev            # tsx watch
+git clone <repo> && cd ai-command-center/apps/tg-agent
+cp .env.example .env       # заполнить все обязательные поля
+docker compose up -d --build
+docker compose logs -f
 ```
+
+Что нужно положить в `.env`:
+
+| | |
+|---|---|
+| `TELEGRAM_BOT_TOKEN` | от @BotFather |
+| `ANTHROPIC_API_KEY`  | для классификатора и ответчика |
+| `OWNER_TELEGRAM_ID`  | ваш numeric id (узнать у @userinfobot) |
+| `ALLOWED_CHAT_IDS`   | id групп через запятую |
+| `ADMIN_PASSWORD`     | пароль для админки на :8080 |
+| `ADMIN_USERNAME`     | по умолчанию `admin` |
 
 Подготовка Telegram:
 
 1. У [@BotFather](https://t.me/BotFather): `/newbot` → токен.
 2. `/setprivacy` → бот → **Disable**. В privacy mode боты в группах
-   видят только команды и упоминания — нам нужно всё.
-3. Добавить бота в тестовую группу как обычного участника.
-4. Найти `chat.id` группы в логах первого сообщения и положить его
-   в `ALLOWED_CHAT_IDS`.
-5. Для уведомлений: написать боту в личку `/start` со своего
-   аккаунта владельца и положить свой `user_id` в `OWNER_TELEGRAM_ID`.
+   видят только команды и упоминания.
+3. Добавить бота в группу как обычного участника.
+4. Написать боту в личку `/start` со своего аккаунта — иначе
+   Telegram заблокирует исходящие DM от бота.
+5. Запустить compose, посмотреть `docker compose logs` для
+   первого сообщения в группе → скопировать `chat.id` →
+   положить в `ALLOWED_CHAT_IDS`, `docker compose restart`.
 
-Supabase (опционально, но без него нет CRM, истории и kill switch
-из `/admin/tg`):
+Открыть админку: `http://<host>:8080/`, логин/пароль из `.env`.
 
-1. В Supabase SQL Editor выполнить
-   `supabase/migrations/005_tg_agent.sql`.
-2. Положить `SUPABASE_URL` (project URL) и `SUPABASE_SERVICE_KEY`
-   (service-role) в `.env`. Service-role ключ никогда не отдавать
-   на клиент.
+### HTTPS
 
-Базу знаний заполняй прямо в `src/knowledge/knowledge_base.md` —
-секции `Продукты и цены`, `FAQ`, `Возражения`, `Кейсы`, `Правила`,
-`Ссылки`. После правок перезапусти контейнер.
+`docker-compose.yml` отдаёт 8080 голым HTTP — это для теста на
+одной машине. В проде поставьте перед ним TLS-терминатор. Самый
+простой путь:
 
-## Деплой на Railway
+- **Caddy с автоматическим Let's Encrypt:**
+  ```Caddyfile
+  tg.your-domain.tld {
+    reverse_proxy 127.0.0.1:8080
+  }
+  ```
+- **Cloudflare Tunnel** — бесплатно, без открытия порта в
+  интернет, в `cloudflared` указать сервис
+  `http://localhost:8080`.
 
-1. New service → Deploy from Repo → выбрать монорепо.
-2. Settings → **Root Directory**: `apps/tg-agent`.
-3. Build: Dockerfile (автоопределение).
-4. Variables: `TELEGRAM_BOT_TOKEN`, `ANTHROPIC_API_KEY`,
-   `OWNER_TELEGRAM_ID`, `ALLOWED_CHAT_IDS`, опционально
-   `CONFIDENCE_THRESHOLD`, `LOG_LEVEL`, `CLASSIFIER_MODEL`.
-5. Deploy. Long-polling работает в одном экземпляре — **не
-   масштабируйте реплики выше 1**, иначе Telegram будет отдавать
-   апдейты по очереди разным процессам.
+В обоих случаях `ports:` в compose можно поменять на
+`"127.0.0.1:8080:8080"`, чтобы 8080 не светился на публичном IP.
+
+## Локальная разработка
+
+```bash
+cd apps/tg-agent
+cp .env.example .env
+npm install
+npm run dev
+```
+
+База знаний правится прямо в
+`src/knowledge/knowledge_base.md` — секции `Продукты и цены`,
+`FAQ`, `Возражения`, `Кейсы`, `Правила`, `Ссылки`. После правок
+перезапустить процесс (dev-режим перезапускается сам через `tsx
+watch`).
 
 ## Структура
 
 ```
-src/
-├── index.ts                       # точка входа + graceful shutdown
-├── bot.ts                         # grammy: оркестрация конвейера
-├── classifier.ts                  # Claude tool-use → Classification
-├── responder.ts                   # Claude + KB → текст ответа
-├── decision.ts                    # класс + confidence → Action
-├── notifier.ts                    # DM владельцу
-├── prompts.ts                     # все системные промпты + TOV
-├── config.ts                      # env → typed Config
-├── logger.ts                      # JSON-логгер в stdout
-├── types.ts                       # MessageClass, Action, LeadStatus, ...
-├── knowledge/
-│   ├── index.ts                   # loader (один файл, кэш в памяти)
-│   └── knowledge_base.md          # ЭТО редактирует владелец
-└── db/
-    ├── index.ts                   # Supabase client (graceful no-op)
-    ├── chats.ts                   # tg_chats: upsert + auto_reply
-    ├── leads.ts                   # tg_users: state machine
-    └── messages.ts                # tg_messages: лог сообщений
+apps/tg-agent/
+├── docker-compose.yml             # развёртывание на Хетцнере
+├── Dockerfile                     # multi-stage build, native-deps
+├── package.json                   # ESM, "type": "module"
+├── tsconfig.json
+├── .env.example
+├── scripts/
+│   └── copy-assets.mjs            # копирует .md и .html в dist/
+└── src/
+    ├── index.ts                   # точка входа + graceful shutdown
+    ├── bot.ts                     # grammy: оркестрация конвейера
+    ├── classifier.ts              # Claude tool-use → Classification
+    ├── responder.ts               # Claude + KB → текст ответа
+    ├── decision.ts                # класс + confidence → Action
+    ├── notifier.ts                # DM владельцу
+    ├── prompts.ts                 # все системные промпты + TOV
+    ├── config.ts                  # env → typed Config
+    ├── logger.ts                  # JSON-логи в stdout
+    ├── types.ts                   # MessageClass, Action, LeadStatus, …
+    ├── admin/
+    │   ├── server.ts              # Hono + basic auth + JSON API
+    │   └── ui.html                # vanilla SPA, Tailwind via CDN
+    ├── knowledge/
+    │   ├── index.ts               # loader (один файл, кэш в памяти)
+    │   └── knowledge_base.md      # ЭТО редактирует владелец
+    └── db/
+        ├── index.ts               # better-sqlite3 + pragmas
+        ├── schema.ts              # SQL DDL, embedded string
+        ├── chats.ts               # tg_chats: upsert / list / kill switch
+        ├── leads.ts               # tg_users: state machine
+        └── messages.ts            # tg_messages: лог + чтение
 ```
 
 ## Этапы из ТЗ → код
@@ -124,7 +167,27 @@ src/
 | 1. Чтение и классификация | `bot.ts` + `classifier.ts` + `prompts.ts` |
 | 2. Decision engine | `decision.ts` |
 | 3. Генерация ответа | `responder.ts` + `prompts.ts` |
-| 4. База знаний | `knowledge/knowledge_base.md` + `knowledge/index.ts` |
+| 4. База знаний | `knowledge/knowledge_base.md` |
 | 5. Лиды и CRM | `db/leads.ts` + `db/chats.ts` + `db/messages.ts` |
 | 6. Уведомления владельцу | `notifier.ts` |
-| 7. Панель управления | `apps/transcribe/src/app/admin/tg/page.tsx` |
+| 7. Панель управления | `admin/server.ts` + `admin/ui.html` |
+
+## Бэкап
+
+Один файл: `tg-agent-data` docker volume (по умолчанию
+`/var/lib/docker/volumes/tg-agent-data/_data/tg-agent.db`).
+Простейший бэкап в крон:
+
+```bash
+0 4 * * * docker run --rm -v tg-agent-data:/data -v /backup:/backup \
+  alpine cp /data/tg-agent.db /backup/tg-agent.$(date +\%F).db
+```
+
+## Что НЕ сделано
+
+- Авторизация админки — только basic auth поверх HTTP. Перед
+  публичным интернетом обязательно HTTPS (Caddy / Cloudflare).
+- Ручное одобрение `DRAFT_FOR_OWNER` (кнопки в DM) — пока
+  владелец просто видит черновик и отвечает руками.
+- Backfill старых сообщений из истории чата — бот видит только
+  то, что приходит после старта.

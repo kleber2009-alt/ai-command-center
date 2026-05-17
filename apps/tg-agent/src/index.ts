@@ -1,3 +1,4 @@
+import { startAdminServer, type AdminHandle } from './admin/server.js';
 import { createBot } from './bot.js';
 import { createClassifier } from './classifier.js';
 import { loadConfig } from './config.js';
@@ -44,10 +45,26 @@ async function main(): Promise<void> {
   const notifier = createNotifier(bot, config.ownerTelegramId, logger);
   attachNotifier(notifier);
 
+  let admin: AdminHandle | null = null;
+  if (config.adminPassword) {
+    admin = startAdminServer({
+      chats,
+      leads,
+      messages,
+      logger,
+      port: config.adminPort,
+      username: config.adminUsername,
+      password: config.adminPassword,
+    });
+  } else {
+    logger.warn('ADMIN_PASSWORD not set — admin UI disabled');
+  }
+
   const shutdown = async (signal: string) => {
     logger.info('shutdown requested', { signal });
     try {
       await bot.stop();
+      if (admin) await admin.close();
     } finally {
       db.close();
     }

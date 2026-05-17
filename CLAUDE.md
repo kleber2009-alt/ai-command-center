@@ -182,55 +182,68 @@ YouTube can be provided as base64 in `INSTAGRAM_COOKIES_B64` / `COOKIES_B64`
 
 ## Telegram group AI agent (tg-agent)
 
-`apps/tg-agent/` — Node.js + TypeScript service that joins Telegram
-groups as a regular bot, reads every text message, classifies its
-intent with Claude Haiku, generates replies in Ilya's tone-of-voice
-when the decision engine says so, updates per-user lead status, and
-DMs the owner on hot leads / owner mentions / low-confidence drafts.
+`apps/tg-agent/` — single-process Node.js + TypeScript service
+that joins Telegram groups as a regular bot, reads every text
+message, classifies its intent with Claude Haiku, generates
+replies in Ilya's tone-of-voice when the decision engine says so,
+updates per-user lead status, DMs the owner on hot leads, and
+serves an admin dashboard on the same process. Everything lives
+in one container with one SQLite file — no external DB, no
+Vercel, no Supabase.
 
 Pipeline (`apps/tg-agent/src/bot.ts`):
 `chats.touch → classifier → decision → leads.touchAndClassify →
 [responder + ctx.reply] → messages.log → notifier.notifyOwner`.
 
-- Transport: long-polling via [grammy](https://grammy.dev/). Deploy
-  on Railway with **replicas = 1** — long-polling can't fan out.
-- Classifier (`src/classifier.ts`): Claude Haiku 4.5 + tool-use,
-  10 classes (`GENERAL_CHAT`, `QUESTION`, `PRODUCT_INTEREST`,
-  `PRICE_REQUEST`, `OBJECTION`, `BUYING_INTENT`, `NEGATIVE`,
-  `SUPPORT_REQUEST`, `OWNER_REQUEST`, `SPAM`).
-- Decision engine (`src/decision.ts`): maps class → `Action`
+- **Transport:** long-polling via [grammy](https://grammy.dev/).
+  Deploy on Hetzner via the bundled `docker-compose.yml`.
+  **Replicas = 1** — long-polling can't fan out.
+- **Storage:** embedded SQLite via `better-sqlite3`. The schema
+  in `src/db/schema.ts` applies on startup via `db.exec(SCHEMA)`
+  (idempotent, `IF NOT EXISTS` throughout). DB file defaults to
+  `./data/tg-agent.db`; in Docker that's mounted to the
+  `tg-agent-data` named volume.
+- **Admin panel:** Hono HTTP server (`src/admin/server.ts`) +
+  vanilla-JS SPA (`src/admin/ui.html`, Tailwind via CDN) on
+  port 8080, basic auth via `ADMIN_USERNAME` + `ADMIN_PASSWORD`.
+  When `ADMIN_PASSWORD` is empty the admin server does not start
+  (bot runs headless).
+- **Classifier** (`src/classifier.ts`): Claude Haiku 4.5 +
+  tool-use, 10 classes (`GENERAL_CHAT`, `QUESTION`,
+  `PRODUCT_INTEREST`, `PRICE_REQUEST`, `OBJECTION`,
+  `BUYING_INTENT`, `NEGATIVE`, `SUPPORT_REQUEST`,
+  `OWNER_REQUEST`, `SPAM`).
+- **Decision engine** (`src/decision.ts`): maps class → `Action`
   (`IGNORE`, `REPLY`, `REPLY_SOFT`, `REPLY_AND_NOTIFY`,
   `NOTIFY_ONLY`, `DRAFT_FOR_OWNER`). Safety: when
   `confidence < CONFIDENCE_THRESHOLD` (default 0.7), non-IGNORE
   actions drop to `DRAFT_FOR_OWNER` — except `GENERAL_CHAT` /
   `NEGATIVE` / `SPAM` which always stay `IGNORE`.
-- Responder (`src/responder.ts`): Claude Haiku 4.5 with a per-class
-  strategy (PRODUCT_INTEREST → soft funnel, OBJECTION → no-argument
-  acknowledgment, BUYING_INTENT → concrete next step). Tone +
-  strategies live in `src/prompts.ts`. The knowledge base
-  (`src/knowledge/knowledge_base.md`, plain markdown) is embedded
-  verbatim into the system prompt — the responder may only state
-  facts from this file.
-- CRM (`src/db/leads.ts`): per-(chat_id, user_id) status with a
-  one-way commercial ranking `new → cold → warm → hot → buyer`.
-  `negative` is sticky (manual override only). `SUPPORT_REQUEST`
-  → `support` unless already `buyer`.
-- Owner notifications (`src/notifier.ts`): bot DMs
-  `OWNER_TELEGRAM_ID` when action is `REPLY_AND_NOTIFY` /
-  `NOTIFY_ONLY` / `DRAFT_FOR_OWNER`. Owner must `/start` the bot
-  first — Telegram blocks bot-initiated DMs to users who never
-  wrote to the bot.
-- Kill switch: per-chat `tg_chats.auto_reply` boolean — toggled
-  from the `/admin/tg` panel. When OFF the bot still classifies
-  and persists but does not reply and does not notify.
-- Env (see `apps/tg-agent/.env.example`):
+- **Responder** (`src/responder.ts`): Claude Haiku 4.5 with a
+  per-class strategy. Tone + strategies live in `src/prompts.ts`.
+  Knowledge base (`src/knowledge/knowledge_base.md`, plain
+  markdown the owner edits) is embedded into the system prompt —
+  the responder may only state facts from this file.
+- **CRM** (`src/db/leads.ts`): per-(chat_id, user_id) status with
+  a one-way commercial ranking `new → cold → warm → hot → buyer`.
+  `negative` is sticky (manual override only).
+  `SUPPORT_REQUEST` → `support` unless already `buyer`.
+- **Owner notifications** (`src/notifier.ts`): bot DMs
+  `OWNER_TELEGRAM_ID` on `REPLY_AND_NOTIFY` / `NOTIFY_ONLY` /
+  `DRAFT_FOR_OWNER`. Owner must `/start` the bot first.
+- **Kill switch:** per-chat `tg_chats.auto_reply` toggled from the
+  admin panel. When OFF the bot still classifies and persists,
+  but does not reply and does not notify.
+- **Env** (`apps/tg-agent/.env.example`):
   `TELEGRAM_BOT_TOKEN`, `ANTHROPIC_API_KEY`, `OWNER_TELEGRAM_ID`,
   `ALLOWED_CHAT_IDS`, `CONFIDENCE_THRESHOLD`, `LOG_LEVEL`,
-  `CLASSIFIER_MODEL`, `RESPONDER_MODEL`, `SUPABASE_URL`,
-  `SUPABASE_SERVICE_KEY`.
-- Setup: in @BotFather run `/setprivacy → Disable` for the bot, or
-  it will only see commands / mentions in groups. Run migration
-  `supabase/migrations/005_tg_agent.sql`.
+  `CLASSIFIER_MODEL`, `RESPONDER_MODEL`, `DATABASE_PATH`,
+  `ADMIN_PORT`, `ADMIN_USERNAME`, `ADMIN_PASSWORD`.
+- **Setup:** in @BotFather run `/setprivacy → Disable` for the
+  bot. Then `cd apps/tg-agent && cp .env.example .env && docker
+  compose up -d --build`. See the app's README for the full deploy
+  walkthrough including Caddy/Cloudflare Tunnel for HTTPS and a
+  backup cron snippet.
 
 
 ## Conventions
