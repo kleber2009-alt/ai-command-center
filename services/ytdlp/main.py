@@ -105,6 +105,46 @@ def healthz():
     return {"ok": True}
 
 
+@app.get("/diag")
+def diag(url: str, authorization: str | None = Header(default=None)):
+    """Debug endpoint: returns yt-dlp version, cookie file info, and the
+    raw format list yt-dlp can see for the given URL. Useful for diagnosing
+    'Requested format is not available' without an SSH session."""
+    check_auth(authorization)
+    cf = _load_cookies()
+    cookie_domains: list[str] = []
+    if cf and cf.exists():
+        for line in cf.read_text(encoding="utf-8", errors="replace").splitlines():
+            if line and not line.startswith("#") and "\t" in line:
+                cookie_domains.append(line.split("\t")[0])
+    result: dict = {
+        "yt_dlp_version": getattr(yt_dlp.version, "__version__", "unknown"),
+        "cookies_file": str(cf) if cf else None,
+        "cookies_size": cf.stat().st_size if cf and cf.exists() else 0,
+        "cookies_domains": sorted(set(cookie_domains))[:10],
+    }
+    try:
+        opts = {"quiet": True, "no_warnings": True, "skip_download": True,
+                "extractor_args": {"youtube": {"player_client": ["tv_simply", "mweb", "web"]}}}
+        if cf:
+            opts["cookiefile"] = str(cf)
+        with yt_dlp.YoutubeDL(opts) as ydl:
+            info = ydl.extract_info(url, download=False)
+            formats = info.get("formats") or []
+            result["formats_count"] = len(formats)
+            result["formats_sample"] = [
+                {"format_id": f.get("format_id"), "ext": f.get("ext"),
+                 "acodec": f.get("acodec"), "vcodec": f.get("vcodec"),
+                 "abr": f.get("abr"), "tbr": f.get("tbr")}
+                for f in formats[:20]
+            ]
+            result["title"] = info.get("title")
+            result["duration"] = info.get("duration")
+    except Exception as e:
+        result["error"] = str(e)[:500]
+    return result
+
+
 @app.post("/extract", response_model=ExtractResponse)
 def extract(body: ExtractRequest, authorization: str | None = Header(default=None)):
     check_auth(authorization)
