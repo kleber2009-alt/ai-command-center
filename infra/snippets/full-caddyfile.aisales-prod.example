@@ -33,9 +33,16 @@ api.46-62-215-11.nip.io {
 46.62.215.11.nip.io {
 	encode zstd gzip
 
-	# Транскрибер (Next.js standalone)
-	@transcribe path /transcribe /transcribe/* /api/transcribe /api/transcribe/*
-	handle @transcribe {
+	# Next.js (/transcribe, /assistants, /me и все их /api/*)
+	@nextjs path \
+		/transcribe /transcribe/* \
+		/assistants /assistants/* \
+		/me /me/* \
+		/api/transcribe /api/transcribe/* \
+		/api/assistants /api/assistants/* \
+		/api/me /api/me/* \
+		/api/voice /api/voice/*
+	handle @nextjs {
 		reverse_proxy 127.0.0.1:3002
 	}
 
