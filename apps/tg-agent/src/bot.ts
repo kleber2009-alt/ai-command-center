@@ -29,8 +29,6 @@ const ACTIONS_THAT_REPLY: ReadonlySet<Action> = new Set([
 
 export interface CreateBotResult {
   bot: Bot;
-  // Notifier needs `bot.api.sendMessage`, so it's created post-bot and
-  // wired back in via this setter. Cleaner than circular imports.
   attachNotifier(notifier: Notifier): void;
 }
 
@@ -69,12 +67,12 @@ export function createBot(deps: BotDeps): CreateBotResult {
     };
 
     try {
-      const chatState = await chats.touch(chatId, chatTitle);
+      const chatState = chats.touch(chatId, chatTitle);
       const classification = await classifier.classify(text);
       const decision = decide(classification, config.confidenceThreshold);
 
       const lead = incoming.userId !== undefined
-        ? await leads.touchAndClassify(
+        ? leads.touchAndClassify(
             {
               chatId,
               userId: incoming.userId,
@@ -128,7 +126,7 @@ export function createBot(deps: BotDeps): CreateBotResult {
         logger.info('reply suppressed: auto_reply is OFF for this chat', baseLog);
       }
 
-      await messages.log({
+      messages.log({
         chatId,
         userId: incoming.userId,
         telegramMessageId: incoming.messageId,
@@ -140,7 +138,6 @@ export function createBot(deps: BotDeps): CreateBotResult {
         response: reply,
       });
 
-      // Owner notifications run only when the chat hasn't been muted.
       if (chatState.autoReply && notifier && lead) {
         await notifier.notifyOwner({
           chatId,

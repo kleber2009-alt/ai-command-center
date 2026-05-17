@@ -39,6 +39,15 @@ function parseThreshold(raw: string | undefined): number {
   return n;
 }
 
+function parsePort(raw: string | undefined, fallback: number): number {
+  if (!raw) return fallback;
+  const n = Number(raw);
+  if (!Number.isInteger(n) || n < 1 || n > 65535) {
+    throw new Error(`Invalid port: ${raw}`);
+  }
+  return n;
+}
+
 export type LogLevel = 'debug' | 'info' | 'warn' | 'error';
 
 function parseLogLevel(raw: string | undefined): LogLevel {
@@ -56,8 +65,10 @@ export interface Config {
   logLevel: LogLevel;
   classifierModel: string;
   responderModel: string;
-  supabaseUrl: string | undefined;
-  supabaseServiceKey: string | undefined;
+  databasePath: string;
+  adminPort: number;
+  adminUsername: string;
+  adminPassword: string | undefined;
 }
 
 export function loadConfig(): Config {
@@ -76,7 +87,9 @@ export function loadConfig(): Config {
     logLevel: parseLogLevel(optional('LOG_LEVEL')),
     classifierModel: optional('CLASSIFIER_MODEL') ?? 'claude-haiku-4-5-20251001',
     responderModel: optional('RESPONDER_MODEL') ?? 'claude-haiku-4-5-20251001',
-    supabaseUrl: optional('SUPABASE_URL'),
-    supabaseServiceKey: optional('SUPABASE_SERVICE_KEY'),
+    databasePath: optional('DATABASE_PATH') ?? './data/tg-agent.db',
+    adminPort: parsePort(optional('ADMIN_PORT'), 8080),
+    adminUsername: optional('ADMIN_USERNAME') ?? 'admin',
+    adminPassword: optional('ADMIN_PASSWORD'),
   };
 }

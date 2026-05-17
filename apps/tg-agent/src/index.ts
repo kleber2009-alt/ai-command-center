@@ -2,7 +2,7 @@ import { createBot } from './bot.js';
 import { createClassifier } from './classifier.js';
 import { loadConfig } from './config.js';
 import { createChatService } from './db/chats.js';
-import { createDb } from './db/index.js';
+import { openDb } from './db/index.js';
 import { createLeadService } from './db/leads.js';
 import { createMessageStore } from './db/messages.js';
 import { loadKnowledgeBase } from './knowledge/index.js';
@@ -26,10 +26,10 @@ async function main(): Promise<void> {
   const kb = loadKnowledgeBase();
   logger.info('knowledge base loaded', { bytes: kb.bytes });
 
-  const db = createDb(config, logger);
-  const chats = createChatService(db, logger);
-  const leads = createLeadService(db, logger);
-  const messages = createMessageStore(db, logger);
+  const db = openDb({ path: config.databasePath, logger });
+  const chats = createChatService(db);
+  const leads = createLeadService(db);
+  const messages = createMessageStore(db);
 
   const { bot, attachNotifier } = createBot({
     config,
@@ -46,7 +46,11 @@ async function main(): Promise<void> {
 
   const shutdown = async (signal: string) => {
     logger.info('shutdown requested', { signal });
-    await bot.stop();
+    try {
+      await bot.stop();
+    } finally {
+      db.close();
+    }
     process.exit(0);
   };
   process.once('SIGINT', () => void shutdown('SIGINT'));
@@ -57,7 +61,6 @@ async function main(): Promise<void> {
     responderModel: config.responderModel,
     confidenceThreshold: config.confidenceThreshold,
     allowlistSize: config.allowedChatIds.size,
-    dbConfigured: db !== null,
     ownerNotifications: config.ownerTelegramId !== undefined,
   });
 
