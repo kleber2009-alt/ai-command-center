@@ -110,14 +110,20 @@ def extract(body: ExtractRequest, authorization: str | None = Header(default=Non
     check_auth(authorization)
 
     opts = {
-        "format": "bestaudio[ext=m4a]/bestaudio/best[height<=720]/best",
+        # Permissive: any audio, any container; fall back to best video+audio.
+        # Specific selectors like bestaudio[ext=m4a] fail when YouTube doesn't
+        # return that container for a given video.
+        "format": "bestaudio/best",
         "quiet": True,
         "no_warnings": True,
         "skip_download": True,
         "extract_flat": False,
-        # Try multiple player clients to bypass YouTube anti-bot
+        # Multiple player clients improve odds when YouTube changes API:
+        # tv_simply currently returns the most formats anonymously,
+        # mweb is a good fallback, ios/android are deprecated by yt-dlp as
+        # of 2026 but still occasionally help for cookie-authed requests.
         "extractor_args": {
-            "youtube": {"player_client": ["ios", "android", "web"]},
+            "youtube": {"player_client": ["tv_simply", "mweb", "web", "ios"]},
         },
     }
 
