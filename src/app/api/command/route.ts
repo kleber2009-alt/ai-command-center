@@ -3,10 +3,26 @@ import { randomUUID } from 'crypto'
 import { db } from '@/lib/db'
 import { AI_AGENTS } from '@/lib/agents'
 import { AGENT_PROMPTS, AGENT_PROMPT_SUFFIX } from '@/lib/prompts'
+import { rateLimit } from '@/lib/rate-limit'
 
 type Task = { text: string; impact: string }
 
+// 30 запросов / 60 сек на IP. На дашборде 1 цикл = 5 агентов → 6 циклов/мин.
+const MAX_REQ_PER_MIN = 30
+
 export async function POST(req: NextRequest) {
+  const ip =
+    req.headers.get('x-forwarded-for')?.split(',')[0].trim() ??
+    req.headers.get('x-real-ip') ??
+    'local'
+  const limit = rateLimit(`command:${ip}`, MAX_REQ_PER_MIN, 60)
+  if (!limit.ok) {
+    return NextResponse.json(
+      { tasks: [{ text: `Rate limit. Подождите ${limit.retryAfterSec}с.`, impact: '–' }] },
+      { status: 429, headers: { 'Retry-After': String(limit.retryAfterSec) } },
+    )
+  }
+
   const { agentId, runId } = await req.json()
 
   // Сначала смотрим override из БД, потом дефолт из prompts.ts
