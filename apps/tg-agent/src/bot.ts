@@ -7,6 +7,7 @@ import type { DraftRow, DraftService } from './db/drafts.js';
 import type { LeadService } from './db/leads.js';
 import type { MessageStore } from './db/messages.js';
 import { decide } from './decision.js';
+import type { HealthMonitor } from './health.js';
 import type { Logger } from './logger.js';
 import {
   DRAFT_CALLBACK_PATTERN,
@@ -17,6 +18,7 @@ import type { Responder } from './responder.js';
 import type { Action, IncomingMessage } from './types.js';
 
 export interface BotDeps {
+  bot: Bot;
   config: Config;
   logger: Logger;
   classifier: Classifier;
@@ -25,6 +27,7 @@ export interface BotDeps {
   leads: LeadService;
   messages: MessageStore;
   drafts: DraftService;
+  health: HealthMonitor;
 }
 
 const ACTIONS_THAT_REPLY: ReadonlySet<Action> = new Set([
@@ -39,9 +42,8 @@ export interface CreateBotResult {
 }
 
 export function createBot(deps: BotDeps): CreateBotResult {
-  const { config, logger, classifier, responder, chats, leads, messages, drafts } =
+  const { bot, config, logger, classifier, responder, chats, leads, messages, drafts, health } =
     deps;
-  const bot = new Bot(config.telegramBotToken);
   let notifier: Notifier | null = null;
 
   bot.on('message:text', async (ctx) => {
@@ -89,7 +91,14 @@ export function createBot(deps: BotDeps): CreateBotResult {
 
     try {
       const chatState = chats.touch(chatId, chatTitle);
-      const classification = await classifier.classify(text);
+      let classification;
+      try {
+        classification = await classifier.classify(text);
+        health.recordSuccess('classifier');
+      } catch (err) {
+        health.recordFailure('classifier', err);
+        throw err;
+      }
       const decision = decide(classification, config.confidenceThreshold);
 
       const lead = incoming.userId !== undefined
@@ -130,18 +139,30 @@ export function createBot(deps: BotDeps): CreateBotResult {
           ctx.from?.first_name ??
           (incoming.userId !== undefined ? `user${incoming.userId}` : undefined);
 
+        let generated: string | null = null;
         try {
-          const generated = await responder.generate({
+          generated = await responder.generate({
             messageClass: classification.class,
             text,
             authorDisplay,
           });
+          health.recordSuccess('responder');
+        } catch (err) {
+          health.recordFailure('responder', err);
+          logger.error('responder failed', {
+            ...baseLog,
+            action: decision.action,
+            error: err instanceof Error ? err.message : String(err),
+          });
+        }
 
-          if (wantsAutoReply && chatState.autoReply) {
-            reply = generated;
+        if (generated && wantsAutoReply && chatState.autoReply) {
+          reply = generated;
+          try {
             await ctx.reply(reply, {
               reply_parameters: { message_id: incoming.messageId },
             });
+            health.recordSuccess('telegram');
             logger.info('replied', {
               ...baseLog,
               class: classification.class,
@@ -149,20 +170,21 @@ export function createBot(deps: BotDeps): CreateBotResult {
               replyChars: reply.length,
               reply: truncate(reply, 200),
             });
-          } else if (wantsDraft) {
-            draftText = generated;
-            logger.info('draft generated', {
+          } catch (err) {
+            health.recordFailure('telegram', err);
+            logger.error('telegram reply failed', {
               ...baseLog,
-              class: classification.class,
-              draftChars: draftText.length,
-              draft: truncate(draftText, 200),
+              error: err instanceof Error ? err.message : String(err),
             });
+            reply = null;
           }
-        } catch (err) {
-          logger.error('responder failed', {
+        } else if (generated && wantsDraft) {
+          draftText = generated;
+          logger.info('draft generated', {
             ...baseLog,
-            action: decision.action,
-            error: err instanceof Error ? err.message : String(err),
+            class: classification.class,
+            draftChars: draftText.length,
+            draft: truncate(draftText, 200),
           });
         }
       } else if (wantsAutoReply && !chatState.autoReply) {

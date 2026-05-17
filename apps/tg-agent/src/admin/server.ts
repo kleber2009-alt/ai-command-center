@@ -12,6 +12,7 @@ import type { DraftService, DraftStatus } from '../db/drafts.js';
 import type { LeadService } from '../db/leads.js';
 import type { MessageStore } from '../db/messages.js';
 import type { StatsService } from '../db/stats.js';
+import type { HealthMonitor } from '../health.js';
 import type { Logger } from '../logger.js';
 import {
   buildClearCookie,
@@ -39,6 +40,7 @@ export interface AdminDeps {
   messages: MessageStore;
   drafts: DraftService;
   stats: StatsService;
+  health: HealthMonitor;
   logger: Logger;
   port: number;
   username: string;
@@ -266,6 +268,8 @@ function wireApi(app: Hono, deps: AdminDeps): void {
   app.get('/api/stats/leads', (c) =>
     c.json({ items: deps.stats.leadFunnel() }),
   );
+
+  app.get('/api/health', (c) => c.json({ items: deps.health.snapshot() }));
 }
 
 function clampDays(raw: string | undefined, fallback: number, max: number): number {

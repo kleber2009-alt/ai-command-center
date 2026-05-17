@@ -1,3 +1,5 @@
+import { Bot } from 'grammy';
+
 import { startAdminServer, type AdminHandle } from './admin/server.js';
 import { startBackupScheduler, type BackupHandle } from './backup.js';
 import { createBot } from './bot.js';
@@ -9,6 +11,7 @@ import { openDb } from './db/index.js';
 import { createLeadService } from './db/leads.js';
 import { createMessageStore } from './db/messages.js';
 import { createStatsService } from './db/stats.js';
+import { createHealthMonitor } from './health.js';
 import { loadKnowledgeBase } from './knowledge/index.js';
 import { createLogger } from './logger.js';
 import { createNotifier } from './notifier.js';
@@ -37,7 +40,21 @@ async function main(): Promise<void> {
   const drafts = createDraftService(db);
   const stats = createStatsService(db);
 
-  const { bot, attachNotifier } = createBot({
+  // Grammy bot lives separately from the createBot() wrapper so that
+  // health + notifier can hold a reference before message handlers
+  // are registered.
+  const bot = new Bot(config.telegramBotToken);
+
+  const health = createHealthMonitor({
+    bot,
+    ownerTelegramId: config.ownerTelegramId,
+    failureThreshold: config.healthFailureThreshold,
+    alertCooldownMs: config.healthAlertCooldownMinutes * 60_000,
+    logger,
+  });
+
+  const { attachNotifier } = createBot({
+    bot,
     config,
     logger,
     classifier,
@@ -46,6 +63,7 @@ async function main(): Promise<void> {
     leads,
     messages,
     drafts,
+    health,
   });
 
   const notifier = createNotifier({
@@ -66,6 +84,7 @@ async function main(): Promise<void> {
       messages,
       drafts,
       stats,
+      health,
       logger,
       port: config.adminPort,
       username: config.adminUsername,

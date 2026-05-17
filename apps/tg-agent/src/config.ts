@@ -57,6 +57,15 @@ function parseHours(raw: string | undefined, fallback: number): number {
   return n;
 }
 
+function parsePositiveInt(name: string, raw: string | undefined, fallback: number): number {
+  if (!raw) return fallback;
+  const n = Number(raw);
+  if (!Number.isInteger(n) || n < 1) {
+    throw new Error(`${name} must be a positive integer, got: ${raw}`);
+  }
+  return n;
+}
+
 export type LogLevel = 'debug' | 'info' | 'warn' | 'error';
 
 function parseLogLevel(raw: string | undefined): LogLevel {
@@ -81,6 +90,8 @@ export interface Config {
   adminSessionSecret: string | undefined;
   adminPublicUrl: string | undefined;
   backupIntervalHours: number;
+  healthFailureThreshold: number;
+  healthAlertCooldownMinutes: number;
 }
 
 export function loadConfig(): Config {
@@ -106,5 +117,15 @@ export function loadConfig(): Config {
     adminSessionSecret: optional('ADMIN_SESSION_SECRET'),
     adminPublicUrl: optional('ADMIN_PUBLIC_URL'),
     backupIntervalHours: parseHours(optional('BACKUP_INTERVAL_HOURS'), 24),
+    healthFailureThreshold: parsePositiveInt(
+      'HEALTH_FAILURE_THRESHOLD',
+      optional('HEALTH_FAILURE_THRESHOLD'),
+      3,
+    ),
+    healthAlertCooldownMinutes: parsePositiveInt(
+      'HEALTH_ALERT_COOLDOWN_MINUTES',
+      optional('HEALTH_ALERT_COOLDOWN_MINUTES'),
+      60,
+    ),
   };
 }
