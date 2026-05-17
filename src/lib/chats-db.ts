@@ -127,10 +127,25 @@ export function renameSession(id: string, title: string): boolean {
 }
 
 /**
- * Replace the most recent assistant message in a session. Used by the
- * regenerate flow so a re-generation doesn't duplicate the user turn.
- * No-ops when the session has no assistant messages yet.
+ * Truncate a session to keep only the first `keepCount` messages
+ * (ordered by id ASC). Used by the edit-message flow to drop a tail
+ * before re-firing the chat.
  */
+export function truncateSession(sessionId: string, keepCount: number): void {
+  if (keepCount < 0) return
+  const db = getDb()
+  db.prepare(
+    `DELETE FROM chat_messages
+     WHERE session_id = ?
+       AND id NOT IN (
+         SELECT id FROM chat_messages
+         WHERE session_id = ?
+         ORDER BY id ASC
+         LIMIT ?
+       )`,
+  ).run(sessionId, sessionId, keepCount)
+  db.prepare(`UPDATE chat_sessions SET updated_at = ? WHERE id = ?`).run(nowIso(), sessionId)
+}
 export function replaceLastAssistant(sessionId: string, content: string): boolean {
   const db = getDb()
   const tx = db.transaction(() => {

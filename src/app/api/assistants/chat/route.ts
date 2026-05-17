@@ -2,7 +2,7 @@ import { NextRequest, NextResponse } from 'next/server'
 import { getAssistant } from '@/data/assistants'
 import { streamAnthropic } from '@/lib/anthropic-stream'
 import { requireTelegramAuth } from '@/lib/telegram-auth'
-import { appendTurn, getSession, replaceLastAssistant } from '@/lib/chats-db'
+import { appendTurn, getSession, replaceLastAssistant, truncateSession } from '@/lib/chats-db'
 import { loadProfile, profileToContext, searchChunks } from '@/lib/me-db'
 import { embed } from '@/lib/embeddings'
 
@@ -16,6 +16,8 @@ type Body = {
   regenerate?: boolean
   /** When true, retrieve relevant chunks from the second-brain library too. */
   useBrainContext?: boolean
+  /** Drop messages in the session beyond this count before appending the new turn. */
+  truncateToCount?: number
 }
 
 export async function POST(req: NextRequest) {
@@ -111,14 +113,17 @@ export async function POST(req: NextRequest) {
       if (!validSession) return
       if (regenerate) {
         replaceLastAssistant(validSession.id, fullText)
-      } else {
-        const lastUser = cleaned[cleaned.length - 1].content
-        appendTurn({
-          sessionId: validSession.id,
-          userMessage: lastUser,
-          assistantMessage: fullText,
-        })
+        return
       }
+      if (typeof body.truncateToCount === 'number') {
+        truncateSession(validSession.id, body.truncateToCount)
+      }
+      const lastUser = cleaned[cleaned.length - 1].content
+      appendTurn({
+        sessionId: validSession.id,
+        userMessage: lastUser,
+        assistantMessage: fullText,
+      })
     },
   )
 }

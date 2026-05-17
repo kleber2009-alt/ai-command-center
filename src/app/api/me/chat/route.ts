@@ -3,12 +3,19 @@ import { embed } from '@/lib/embeddings'
 import { loadProfile, profileToContext, searchChunks, type MeChunkMatch } from '@/lib/me-db'
 import { streamAnthropic } from '@/lib/anthropic-stream'
 import { requireTelegramAuth } from '@/lib/telegram-auth'
-import { appendTurn, getSession, replaceLastAssistant } from '@/lib/chats-db'
+import { appendTurn, getSession, replaceLastAssistant, truncateSession } from '@/lib/chats-db'
 
 export const maxDuration = 60
 
 type Msg = { role: 'user' | 'assistant'; content: string }
-type Body = { messages: Msg[]; topK?: number; sessionId?: string; regenerate?: boolean }
+type Body = {
+  messages: Msg[]
+  topK?: number
+  sessionId?: string
+  regenerate?: boolean
+  /** When set, drop everything in the session beyond this count before appending the new turn. */
+  truncateToCount?: number
+}
 
 const SYSTEM_INSTRUCTIONS = `Ты — личный «второй мозг» пользователя. Ты знаешь о нём всё, что приведено ниже в блоке ## Профиль и в найденных фрагментах ## Контекст.
 
@@ -92,13 +99,16 @@ export async function POST(req: NextRequest) {
       if (!validSession) return
       if (body.regenerate) {
         replaceLastAssistant(validSession.id, fullText)
-      } else {
-        appendTurn({
-          sessionId: validSession.id,
-          userMessage: lastUser,
-          assistantMessage: fullText,
-        })
+        return
       }
+      if (typeof body.truncateToCount === 'number') {
+        truncateSession(validSession.id, body.truncateToCount)
+      }
+      appendTurn({
+        sessionId: validSession.id,
+        userMessage: lastUser,
+        assistantMessage: fullText,
+      })
     },
   )
 }
