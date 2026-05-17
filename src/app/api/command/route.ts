@@ -8,7 +8,19 @@ type Task = { text: string; impact: string }
 
 export async function POST(req: NextRequest) {
   const { agentId, runId } = await req.json()
-  const prompt = AGENT_PROMPTS[agentId] ?? 'Дай 2 задачи для бизнеса. JSON: [{text, impact}]'
+
+  // Сначала смотрим override из БД, потом дефолт из prompts.ts
+  let prompt = AGENT_PROMPTS[agentId] ?? 'Дай 2 задачи для бизнеса. JSON: [{text, impact}]'
+  try {
+    const { rows } = await db.query<{ prompt: string }>(
+      `SELECT prompt FROM agent_prompt_overrides WHERE agent_id = $1`,
+      [agentId],
+    )
+    if (rows[0]?.prompt) prompt = rows[0].prompt
+  } catch {
+    // если таблицы ещё нет / БД упала — fallback на in-code prompt
+  }
+
   const agent = AI_AGENTS.find(a => a.id === agentId)
   const agentName = agent?.name ?? agentId
   const agentEmoji = agent?.emoji ?? '🤖'
