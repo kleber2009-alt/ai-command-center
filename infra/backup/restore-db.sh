@@ -44,8 +44,7 @@ cleanup() { rm -f "$tmpfile"; }
 trap cleanup EXIT
 
 echo "Downloading…"
-rclone copyto "${REMOTE}:${BUCKET}/${PREFIX}/${fname}" "$tmpfile" --s3-no-check-bucket
-
+rclone copyto "${REMOTE}:${BUCKET}/${PREFIX}/${fname}" "$tmpfile"
 echo "Restoring into ${PG_CONTAINER}/${PG_DB}…"
 gunzip -c "$tmpfile" | docker exec -i "$PG_CONTAINER" psql -U "$PG_USER" -d "$PG_DB"
 

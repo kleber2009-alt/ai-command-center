@@ -46,7 +46,7 @@ echo "[backup-db] dump $((size / 1024)) KB"
 
 # ── 2. rclone copy ──
 echo "[backup-db] uploading to ${REMOTE}:${BUCKET}/${PREFIX}/${fname}…"
-if ! rclone copyto "$tmpfile" "${REMOTE}:${BUCKET}/${PREFIX}/${fname}" --s3-no-check-bucket; then
+if ! rclone copyto "$tmpfile" "${REMOTE}:${BUCKET}/${PREFIX}/${fname}"; then
   echo "[backup-db] FAIL: rclone upload failed"
   curl -fsS -X POST "$TG_NOTIFY_URL" \
     -H "Content-Type: application/json" \
@@ -56,7 +56,7 @@ fi
 
 # ── 3. Retention: delete files older than RETAIN_DAYS ──
 echo "[backup-db] pruning files older than ${RETAIN_DAYS} days…"
-rclone delete "${REMOTE}:${BUCKET}/${PREFIX}/" --min-age "${RETAIN_DAYS}d" --s3-no-check-bucket || true
+rclone delete "${REMOTE}:${BUCKET}/${PREFIX}/" --min-age "${RETAIN_DAYS}d" || true
 
 # ── 4. Success notification (Telegram) ──
 human_size=$(numfmt --to=iec --suffix=B "$size" 2>/dev/null || echo "${size}B")

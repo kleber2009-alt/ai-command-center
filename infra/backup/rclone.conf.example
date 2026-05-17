@@ -3,33 +3,56 @@
 # ───────────────────────────────────────────────────────────────────
 # Положи в ~/.config/rclone/rclone.conf (или /root/.config/rclone/rclone.conf)
 # Подставь свои ключи. Выбери один провайдер.
+#
+# Скрипты бэкапа используют remote с именем "s3" (override через
+# RCLONE_REMOTE env). Если используешь Hetzner Storage Box —
+# переименуй секцию ниже из [hetzner] в [s3], либо запускай скрипты
+# с RCLONE_REMOTE=hetzner.
 # ═══════════════════════════════════════════════════════════════════
 
-# ── Вариант A · Selectel S3 (Russia) ──
+# ── Вариант A · Hetzner Storage Box (SFTP) — ДЕШЁВЫЙ + ТОТ ЖЕ DC ──
+# 1. Hetzner Cloud Console → Storage Boxes → Order new (100GB ~3.20€/мес)
+# 2. После создания получишь:
+#    Username:  u123456
+#    Host:      u123456.your-storagebox.de
+#    Password:  (одноразовый — сразу меняй на свой)
+# 3. SFTP-only режим: порт 23 (НЕ 22)
+# 4. Подставь сюда:
+[hetzner]
+type = sftp
+host = u123456.your-storagebox.de
+user = u123456
+port = 23
+pass = YOUR_RCLONE_OBSCURED_PASSWORD_HERE
+# чтобы получить obscured пароль:
+#   rclone obscure 'твой_пароль_от_storage_box'
+shell_type = unix
+md5sum_command = none
+sha1sum_command = none
+
+# ── Вариант B · Selectel S3 (Russia) ──
 # Создай bucket в панели: my.selectel.ru → Object Storage → Containers
 # Сервисный пользователь: Account & Roles → Service Users
-[s3]
-type = s3
-provider = Other
-env_auth = false
-access_key_id = SEL_ACCESS_KEY_HERE
-secret_access_key = SEL_SECRET_KEY_HERE
-endpoint = https://s3.ru-1.storage.selcloud.ru
-region = ru-1
-location_constraint = ru-1
-acl = private
-storage_class = STANDARD
+#[s3]
+#type = s3
+#provider = Other
+#env_auth = false
+#access_key_id = SEL_ACCESS_KEY_HERE
+#secret_access_key = SEL_SECRET_KEY_HERE
+#endpoint = https://s3.ru-1.storage.selcloud.ru
+#region = ru-1
+#location_constraint = ru-1
+#acl = private
+#storage_class = STANDARD
 
-# ── Вариант B · Backblaze B2 ──
-# https://secure.backblaze.com → App Keys → Add a New Application Key
-# В коде используй имя bucket, не bucketId.
+# ── Вариант C · Backblaze B2 ──
 #[s3]
 #type = b2
 #account = B2_ACCOUNT_ID
 #key = B2_APPLICATION_KEY
 #hard_delete = false
 
-# ── Вариант C · AWS S3 ──
+# ── Вариант D · AWS S3 ──
 #[s3]
 #type = s3
 #provider = AWS
@@ -38,5 +61,5 @@ storage_class = STANDARD
 #region = eu-central-1
 
 # ── Проверка ──
-# rclone lsd s3:
-# rclone ls s3:aio-backups
+# rclone lsd hetzner:           (или s3: если переименовал секцию)
+# rclone mkdir hetzner:aio-backups

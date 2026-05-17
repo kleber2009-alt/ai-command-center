@@ -15,14 +15,25 @@
 
 ## Setup за 5 минут
 
-### 1. Создать bucket у провайдера
+### 1. Создать хранилище у провайдера
 
-**Вариант A — Selectel S3** (российская юрисдикция, ~1₽/GB/мес):
+**Вариант A — Hetzner Storage Box** ⭐ (дешевле всех, в том же DC):
+1. [Hetzner Console](https://console.hetzner.com/) → Storage Boxes → **Order new**
+2. Выбери **BX11** (1TB, ~3.81€/мес) или **меньший** план если доступен
+3. После создания получишь:
+   - **Username:** `u123456`
+   - **Host:** `u123456.your-storagebox.de`
+   - **Initial password** — сразу смени на свой (Console → выбрать Storage Box → Password)
+4. SFTP включён по умолчанию, порт **23** (НЕ 22).
+
+> ⚠ Storage Box в том же DC — если Hetzner весь упадёт, и сервер и бэкап будут недоступны. Для MVP ок, но для полного DR нужен второй провайдер (Selectel/Backblaze) копией.
+
+**Вариант B — Selectel S3** (отдельный провайдер, РФ юрисдикция, ~1₽/GB/мес):
 1. Заведи [my.selectel.ru](https://my.selectel.ru/) → Object Storage → Containers → **Create container**
-2. Name: `aio-backups` (или любое уникальное), Type: **Private**
+2. Name: `aio-backups`, Type: **Private**
 3. Account & Roles → Service Users → **Create user** → role `Object Storage Admin` → запиши ключи
 
-**Вариант B — Backblaze B2** ($0.006/GB/мес, дешевле):
+**Вариант C — Backblaze B2** ($0.006/GB/мес, США):
 1. [backblaze.com/b2/](https://secure.backblaze.com/) → Buckets → **Create a Bucket**
 2. Name: `aio-backups`, Files: **Private**
 3. App Keys → **Add a New Application Key** → запиши `keyID` и `applicationKey`
@@ -40,14 +51,28 @@ rclone --version  # должно быть >= 1.62
 mkdir -p ~/.config/rclone
 cp /root/ai-command-center/infra/backup/rclone.conf.example ~/.config/rclone/rclone.conf
 nano ~/.config/rclone/rclone.conf
-# Раскомментируй секцию своего провайдера, подставь access_key_id + secret
+# Раскомментируй секцию своего провайдера, подставь параметры
+```
+
+**Для Hetzner Storage Box** — нужно obscured пароль (rclone хранит не plaintext):
+```bash
+rclone obscure 'твой_новый_пароль_от_storagebox'
+# скопируй вывод в конфиг как pass = ...
+```
+
+**Имя remote'а в конфиге = имя в скриптах.** По умолчанию скрипты используют `s3:`. Для Hetzner либо переименуй секцию `[hetzner]` в `[s3]`, либо запускай скрипты с `RCLONE_REMOTE=hetzner`:
+
+```bash
+# Вариант 1: переименовать [hetzner] → [s3] в rclone.conf
+# Вариант 2: env var
+export RCLONE_REMOTE=hetzner
 ```
 
 Проверь:
 ```bash
-rclone lsd s3:                       # должен показать список bucket'ов
-rclone mkdir s3:aio-backups          # создаст если нет (или silently ok)
-rclone ls s3:aio-backups             # пусто на старте
+rclone lsd ${RCLONE_REMOTE:-s3}:     # должен показать список bucket'ов / каталогов
+rclone mkdir ${RCLONE_REMOTE:-s3}:aio-backups
+rclone ls ${RCLONE_REMOTE:-s3}:aio-backups  # пусто на старте
 ```
 
 ### 4. Сделать скрипты исполняемыми

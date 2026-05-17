@@ -31,7 +31,7 @@ fi
 echo "[backup-vn] $(date -u +%FT%TZ) syncing $mount_path → ${REMOTE}:${BUCKET}/${PREFIX}/"
 
 if ! rclone sync "$mount_path" "${REMOTE}:${BUCKET}/${PREFIX}" \
-      --s3-no-check-bucket --transfers 4 --checkers 8 --quiet; then
+      --transfers 4 --checkers 8 --quiet; then
   curl -fsS -X POST "$TG_NOTIFY_URL" \
     -H "Content-Type: application/json" \
     -d '{"text":"❌ *Бэкап voice-notes упал:* rclone sync failed"}' || true
