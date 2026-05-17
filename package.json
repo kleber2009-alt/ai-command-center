@@ -3,12 +3,17 @@
   "version": "0.2.0",
   "private": true,
   "workspaces": [
-    "apps/transcribe"
+    "apps/transcribe",
+    "apps/tg-agent"
   ],
   "scripts": {
     "dev": "npm run dev -w apps/transcribe",
     "build": "npm run build -w apps/transcribe",
     "start": "npm run start -w apps/transcribe",
-    "lint": "npm run lint -w apps/transcribe"
+    "lint": "npm run lint -w apps/transcribe",
+    "tg-agent:dev": "npm run dev -w apps/tg-agent",
+    "tg-agent:build": "npm run build -w apps/tg-agent",
+    "tg-agent:start": "npm run start -w apps/tg-agent",
+    "tg-agent:typecheck": "npm run typecheck -w apps/tg-agent"
   }
 }
