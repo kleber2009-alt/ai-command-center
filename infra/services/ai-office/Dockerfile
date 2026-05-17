@@ -17,6 +17,9 @@ ENV NODE_ENV=production
 COPY --from=deps /app/node_modules ./node_modules
 COPY infra/services/ai-office/. ./
 
+# Static HTML/JS/CSS — served by Fastify at root (one backend serves all)
+COPY ai-office-project ./static
+
 # Non-root user
 RUN addgroup -S app && adduser -S app -G app \
  && mkdir -p /data/voice-notes \

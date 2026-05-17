@@ -16,11 +16,23 @@
 import Fastify from 'fastify';
 import cors from '@fastify/cors';
 import multipart from '@fastify/multipart';
+import fastifyStatic from '@fastify/static';
+import fs from 'node:fs';
+import path from 'node:path';
+import { fileURLToPath } from 'node:url';
 import { pool, query, queryOne, waitForDb } from './lib/db.js';
 import { initStorage } from './lib/storage.js';
 import { cloneVoice, isConfigured as elevenConfigured } from './lib/elevenlabs.js';
 import { generateVoiceNote } from './lib/voice-pipeline.js';
 import { handleUpdate as handleTgUpdate, isConfigured as tgVoiceConfigured } from './lib/tg-voice-bot.js';
+
+const __dirname = path.dirname(fileURLToPath(import.meta.url));
+const VOICE_NOTES_DIR = process.env.VOICE_NOTES_DIR || '/data/voice-notes';
+const STATIC_DIR = path.join(__dirname, 'static');
+
+// Ensure dirs exist BEFORE @fastify/static registration (which checks at boot).
+fs.mkdirSync(VOICE_NOTES_DIR, { recursive: true });
+fs.mkdirSync(STATIC_DIR, { recursive: true });
 
 const PORT = parseInt(process.env.PORT || '3000', 10);
 const TG_WEBHOOK_SECRET = process.env.TG_WEBHOOK_SECRET || null;
@@ -34,6 +46,25 @@ const fastify = Fastify({
 await fastify.register(cors, { origin: true, credentials: false });
 await fastify.register(multipart, {
   limits: { fileSize: 11 * 1024 * 1024, files: 5 },
+});
+
+// ── /voice-notes/* — generated audio (mounted volume) ──
+await fastify.register(fastifyStatic, {
+  root: VOICE_NOTES_DIR,
+  prefix: '/voice-notes/',
+  decorateReply: false,
+  cacheControl: true,
+  maxAge: 31536000 * 1000,
+  immutable: true,
+});
+
+// ── / — static HTML/JS/CSS (ai-office-project, baked into image) ──
+await fastify.register(fastifyStatic, {
+  root: STATIC_DIR,
+  prefix: '/',
+  decorateReply: true,
+  cacheControl: true,
+  maxAge: 0,
 });
 
 // ═══ /api/health ════════════════════════════════════════════════════
@@ -340,6 +371,32 @@ fastify.post('/api/tg-voice-webhook', async (request, reply) => {
     // Always return 200 to Telegram — it retries indefinitely on non-2xx.
   }
   return { ok: true };
+});
+
+// ═══ Clean URLs (try .html / index.html / 404.html) ═══════════════
+fastify.setNotFoundHandler(async (request, reply) => {
+  if (request.method !== 'GET' && request.method !== 'HEAD') {
+    return reply.code(404).send({ error: 'not_found' });
+  }
+  const urlPath = request.url.split('?')[0].replace(/^\//, '');
+  if (urlPath.startsWith('api/')) {
+    return reply.code(404).send({ error: 'not_found', path: '/' + urlPath });
+  }
+  const candidates = [
+    urlPath ? `${urlPath}.html` : 'index.html',
+    urlPath ? `${urlPath}/index.html` : null,
+  ].filter(Boolean);
+  for (const candidate of candidates) {
+    try {
+      return await reply.sendFile(candidate, STATIC_DIR);
+    } catch {}
+  }
+  try {
+    reply.code(404);
+    return await reply.sendFile('404.html', STATIC_DIR);
+  } catch {
+    return reply.code(404).send({ error: 'not_found' });
+  }
 });
 
 // ═══ Boot ══════════════════════════════════════════════════════════

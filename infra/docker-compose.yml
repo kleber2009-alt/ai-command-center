@@ -48,6 +48,10 @@ services:
       TG_CHAT_ID: ${TG_CHAT_ID}
       TG_VOICE_BOT_TOKEN: ${TG_VOICE_BOT_TOKEN}
       TG_WEBHOOK_SECRET: ${TG_WEBHOOK_SECRET}
+    ports:
+      # Published на 127.0.0.1 чтобы хостовый reverse-proxy (Caddy/nginx)
+      # мог проксировать сюда. Не доступно снаружи без прокси.
+      - '127.0.0.1:3001:3000'
     volumes:
       - voice_notes:/data/voice-notes
     depends_on:
@@ -69,13 +73,22 @@ services:
       DEEPGRAM_API_KEY: ${DEEPGRAM_API_KEY}
       YTDLP_SERVICE_URL: ${YTDLP_SERVICE_URL:-}
       YTDLP_SERVICE_API_KEY: ${YTDLP_SERVICE_API_KEY:-}
+    ports:
+      - '127.0.0.1:3002:3000'
     depends_on:
       postgres:
         condition: service_healthy
     networks: [internal]
 
+  # ─── Caddy (optional, only for standalone mode) ───
+  # Use this if you DON'T have a host reverse-proxy.
+  #   docker compose --profile standalone up -d
+  # If you already run nginx/Caddy on the host, skip this — instead add
+  # the snippet from infra/snippets/host-caddy.example.caddy to your
+  # host config (it reverse-proxies 127.0.0.1:3001 + :3002 → here).
   caddy:
     image: caddy:2-alpine
+    profiles: [standalone]
     restart: unless-stopped
     ports:
       - '80:80'
@@ -86,7 +99,6 @@ services:
       ACME_EMAIL: ${ACME_EMAIL}
     volumes:
       - ./Caddyfile:/etc/caddy/Caddyfile:ro
-      - ../ai-office-project:/srv/ai-office:ro
       - voice_notes:/srv/voice-notes:ro
       - caddy_data:/data
       - caddy_config:/config

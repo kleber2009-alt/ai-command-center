@@ -1,0 +1,51 @@
+# ═══════════════════════════════════════════════════════════════════
+# Caddy snippet for HOST Caddy (coexist mode)
+# ═══════════════════════════════════════════════════════════════════
+# Use this when the server already runs Caddy (e.g. for another project)
+# and you don't want our docker-compose to fight for ports 80/443.
+#
+# 1. Make sure infra/docker-compose.yml is up WITHOUT the caddy profile:
+#      cd ~/ai-command-center/infra
+#      docker compose up -d --build
+#    (This publishes ai-office on 127.0.0.1:3001 and transcribe on :3002.)
+#
+# 2. Append this block to /etc/caddy/Caddyfile
+#    Replace 46.62.215.11.nip.io with whatever domain you want — Caddy
+#    will auto-issue Let's Encrypt as long as DNS resolves to the server.
+#
+# 3. Reload Caddy:
+#      caddy reload --config /etc/caddy/Caddyfile
+#
+# After this:
+#   https://YOUR-DOMAIN/                     → static HTML (ai-office)
+#   https://YOUR-DOMAIN/api/voice-clone …    → Fastify backend
+#   https://YOUR-DOMAIN/voice-notes/...      → generated audio
+#   https://YOUR-DOMAIN/transcribe           → Next.js transcribe app
+#   https://YOUR-DOMAIN/api/transcribe/...   → Next.js API routes
+# ═══════════════════════════════════════════════════════════════════
+
+46.62.215.11.nip.io {
+	encode zstd gzip
+
+	# Transcribe (Next.js) — its page + API routes
+	@transcribe path /transcribe /transcribe/* /api/transcribe /api/transcribe/*
+	handle @transcribe {
+		reverse_proxy 127.0.0.1:3002 {
+			header_up X-Forwarded-Host {host}
+			header_up X-Forwarded-Proto {scheme}
+		}
+	}
+
+	# Everything else (static HTML + /api/* + /voice-notes/*) → ai-office Fastify
+	handle {
+		reverse_proxy 127.0.0.1:3001 {
+			header_up X-Forwarded-Host {host}
+			header_up X-Forwarded-Proto {scheme}
+		}
+	}
+
+	log {
+		output stdout
+		format console
+	}
+}
