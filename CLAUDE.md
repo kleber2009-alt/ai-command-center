@@ -12,10 +12,9 @@ support services and a legacy static site kept for reference.
 /
 ├── apps/
 │   ├── transcribe/   # Next.js 14 app + Telegram Mini App (the flagship)
-│   ├── tg-agent/     # Node.js Telegram group AI agent (Railway, long-polling)
+│   ├── tg-agent/     # Node.js Telegram group AI agent (Hetzner, long-polling)
 │   ├── ytdlp/        # FastAPI + yt-dlp companion microservice (Railway)
 │   └── ai-office/    # legacy static "AI Business Command Center" site
-├── packages/         # reserved for shared code (empty)
 ├── supabase/         # SQL migrations shared across apps
 └── docs/
 ```
@@ -145,6 +144,9 @@ sharing the deploy URL with anyone.
 4. User can then trigger: Copy / .txt / .srt download / Summary / Translate
    / Carousel / Reels-new / Reels-remix / TG-post. Each generation calls a
    dedicated endpoint and gets cached on the same row.
+5. "В мой мозг" button (`actions row`) POSTs the current transcript to
+   `/api/me/documents`, importing it into the personal RAG library at
+   `/me`. The button flips to "В базе" once the document id is returned.
 
 **API routes**:
 - `POST /api/transcribe` — body `{ url, language: 'auto'|'ru'|'en' }`. The
@@ -191,12 +193,16 @@ sharing the deploy URL with anyone.
   (cascades to its `me_chunks`).
 - `POST /api/me/chat` — body `{ message, history? }`. Retrieves
   top-k chunks via cosine similarity, streams a `claude-sonnet-4-6`
-  reply via SSE (`src/lib/anthropic-stream.ts`).
+  reply as NDJSON (`src/lib/anthropic-stream.ts`, consumed on the
+  client by `src/lib/stream-client.ts`). The first NDJSON line is a
+  meta event carrying the retrieved citations; subsequent lines are
+  token deltas.
 
 **`/assistants` routes**:
 - `POST /api/assistants/chat` — body `{ assistantId, message, history? }`.
   Loads the persona from `src/data/assistants.ts`, streams
-  `claude-sonnet-4-6` with that system prompt.
+  `claude-sonnet-4-6` with that system prompt as NDJSON (same wire
+  format as `/api/me/chat`, no citations meta).
 
 **Security primitives** (`src/lib/`):
 - `rate-limit.ts` — in-memory sliding-window limiter, keyed per
@@ -235,8 +241,9 @@ Outside Telegram everything still works — the SDK calls are guarded by
 `getTelegram()` returning `null`.
 
 See `docs/TELEGRAM_MINI_APP.md` for BotFather setup steps. Server-side
-verification of `initData` against `TELEGRAM_BOT_TOKEN` is not yet
-implemented — every API route is open.
+HMAC verification of `initData` is wired through `src/lib/api-guard.ts` —
+see the "Security primitives" subsection above for the exact behavior
+matrix.
 
 ## yt-dlp companion service
 
@@ -246,6 +253,18 @@ where `url` is a signed direct media URL Deepgram can ingest. Auth via
 `Authorization: Bearer $YTDLP_SERVICE_API_KEY`. Cookies for Instagram /
 YouTube can be provided as base64 in `INSTAGRAM_COOKIES_B64` / `COOKIES_B64`
 (both names accepted) — see `apps/ytdlp/README.md`.
+
+## ai-office (legacy)
+
+`apps/ai-office/` is the original static "AI Business Command Center"
+marketing site, kept around for reference and for one live prototype:
+the ElevenLabs voice-clone flow in `persona-train.html` +
+`netlify/functions/voice-{clone,generate,list}.js`, backed by the
+`voices` / `voice_generations` tables and `voice-notes` storage bucket
+from `apps/ai-office/supabase/migrations/003_voice.sql`. Deployed on
+Netlify (not Vercel) — Netlify Functions are required for the voice
+endpoints, and Netlify Drop will not run them. Treat the rest of the
+app as legacy: nothing in the flagship transcribe app depends on it.
 
 ## Telegram group AI agent (tg-agent)
 
@@ -272,14 +291,26 @@ Pipeline (`apps/tg-agent/src/bot.ts`):
   `tg-agent-data` named volume.
 - **Admin panel:** Hono HTTP server (`src/admin/server.ts`) +
   vanilla-JS SPA (`src/admin/ui.html`, Tailwind via CDN) on
-  port 8080, basic auth via `ADMIN_USERNAME` + `ADMIN_PASSWORD`.
-  When `ADMIN_PASSWORD` is empty the admin server does not start
-  (bot runs headless).
+  port 8080. Two auth modes in `src/admin/auth.ts`:
+  - **Magic link via Telegram** (preferred): set
+    `ADMIN_SESSION_SECRET` and `OWNER_TELEGRAM_ID`. The bot DMs the
+    owner a one-time login URL; the link sets a signed-cookie
+    session for 7 days. Rotating the secret logs everyone out.
+  - **Basic auth** (fallback): set `ADMIN_PASSWORD` (+ optional
+    `ADMIN_USERNAME`). Magic link wins if both are configured. If
+    neither is set, the admin server does not start (bot runs
+    headless).
+  - The admin SPA has three tabs: leads/chats, **drafts** (inline
+    approval queue for `DRAFT_FOR_OWNER`, see below), and
+    **analytics** (`src/db/stats.ts` — daily classifications,
+    leads-by-status, response counts).
 - **Classifier** (`src/classifier.ts`): Claude Haiku 4.5 +
   tool-use, 10 classes (`GENERAL_CHAT`, `QUESTION`,
   `PRODUCT_INTEREST`, `PRICE_REQUEST`, `OBJECTION`,
   `BUYING_INTENT`, `NEGATIVE`, `SUPPORT_REQUEST`,
-  `OWNER_REQUEST`, `SPAM`).
+  `OWNER_REQUEST`, `SPAM`). Anthropic prompt caching is enabled
+  on the (large, static) system prompt + tool definitions to keep
+  per-message cost low at scale.
 - **Decision engine** (`src/decision.ts`): maps class → `Action`
   (`IGNORE`, `REPLY`, `REPLY_SOFT`, `REPLY_AND_NOTIFY`,
   `NOTIFY_ONLY`, `DRAFT_FOR_OWNER`). Safety: when
@@ -289,8 +320,15 @@ Pipeline (`apps/tg-agent/src/bot.ts`):
 - **Responder** (`src/responder.ts`): Claude Haiku 4.5 with a
   per-class strategy. Tone + strategies live in `src/prompts.ts`.
   Knowledge base (`src/knowledge/knowledge_base.md`, plain
-  markdown the owner edits) is embedded into the system prompt —
-  the responder may only state facts from this file.
+  markdown the owner edits) is embedded into the system prompt
+  with prompt caching — the responder may only state facts from
+  this file.
+- **Drafts + inline approval** (`src/db/drafts.ts`): when the
+  decision engine returns `DRAFT_FOR_OWNER`, the proposed reply
+  text is persisted to `tg_drafts` and DM'd to the owner with
+  inline "Approve / Edit / Discard" buttons. Approving sends the
+  draft to the original chat from the bot's account. Same queue
+  shows up under the "drafts" tab in admin.
 - **CRM** (`src/db/leads.ts`): per-(chat_id, user_id) status with
   a one-way commercial ranking `new → cold → warm → hot → buyer`.
   `negative` is sticky (manual override only).
@@ -298,6 +336,16 @@ Pipeline (`apps/tg-agent/src/bot.ts`):
 - **Owner notifications** (`src/notifier.ts`): bot DMs
   `OWNER_TELEGRAM_ID` on `REPLY_AND_NOTIFY` / `NOTIFY_ONLY` /
   `DRAFT_FOR_OWNER`. Owner must `/start` the bot first.
+- **Health monitor** (`src/health.ts`): tracks consecutive
+  Anthropic / Telegram failures. After `HEALTH_FAILURE_THRESHOLD`
+  in a row the bot DMs the owner; cooldown between repeat alerts
+  is `HEALTH_ALERT_COOLDOWN_MINUTES`. A recovery DM is sent when
+  the channel comes back.
+- **Daily backup** (`src/backup.ts`): every
+  `BACKUP_INTERVAL_HOURS` (default 24) the bot ships a gzipped
+  copy of the SQLite file to `OWNER_TELEGRAM_ID` as a document.
+  Telegram caches uploads forever — the owner's DM thread is the
+  backup target, no S3 / SFTP required. Set to 0 to disable.
 - **Kill switch:** per-chat `tg_chats.auto_reply` toggled from the
   admin panel. When OFF the bot still classifies and persists,
   but does not reply and does not notify.
@@ -305,7 +353,10 @@ Pipeline (`apps/tg-agent/src/bot.ts`):
   `TELEGRAM_BOT_TOKEN`, `ANTHROPIC_API_KEY`, `OWNER_TELEGRAM_ID`,
   `ALLOWED_CHAT_IDS`, `CONFIDENCE_THRESHOLD`, `LOG_LEVEL`,
   `CLASSIFIER_MODEL`, `RESPONDER_MODEL`, `DATABASE_PATH`,
-  `ADMIN_PORT`, `ADMIN_USERNAME`, `ADMIN_PASSWORD`.
+  `ADMIN_PORT`, `ADMIN_USERNAME`, `ADMIN_PASSWORD`,
+  `ADMIN_SESSION_SECRET`, `ADMIN_PUBLIC_URL`,
+  `BACKUP_INTERVAL_HOURS`, `HEALTH_FAILURE_THRESHOLD`,
+  `HEALTH_ALERT_COOLDOWN_MINUTES`.
 - **Setup:** in @BotFather run `/setprivacy → Disable` for the
   bot. Then `cd apps/tg-agent && cp .env.example .env && docker
   compose up -d --build`. See the app's README for the full deploy
