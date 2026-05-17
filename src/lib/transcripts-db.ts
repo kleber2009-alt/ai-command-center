@@ -55,15 +55,9 @@ export function getServerSupabase(): SupabaseClient | null {
   if (cached) return cached
   const rawUrl = process.env.NEXT_PUBLIC_SUPABASE_URL
   const key = process.env.SUPABASE_SERVICE_KEY
-  console.log('[supabase] url:', !!rawUrl, 'len=', rawUrl?.length ?? 0, '| key:', !!key, 'len=', key?.length ?? 0)
   if (!rawUrl || !key) return null
-  try {
-    cached = createClient(normalizeSupabaseUrl(rawUrl), key, { auth: { persistSession: false } })
-    return cached
-  } catch (e: any) {
-    console.error('[supabase] createClient threw:', e?.message)
-    return null
-  }
+  cached = createClient(normalizeSupabaseUrl(rawUrl), key, { auth: { persistSession: false } })
+  return cached
 }
 
 export function makeTitle(transcript: string, url: string): string {
