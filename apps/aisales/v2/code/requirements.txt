@@ -1,0 +1,52 @@
+# AI Sales · Python dependencies
+# Версии зафиксированы под Python 3.12
+
+# Core
+fastapi==0.115.0
+uvicorn[standard]==0.32.0
+pydantic==2.9.2
+
+# Async / HTTP
+httpx==0.27.2
+aiogram==3.13.1
+
+# LLM / Agents
+anthropic==0.39.0
+langgraph==0.2.50
+langchain-core==0.3.15
+
+# Vector DB / RAG
+qdrant-client==1.12.1
+voyageai==0.3.0
+
+# DB
+sqlalchemy[asyncio]==2.0.36
+asyncpg==0.30.0
+alembic==1.13.3
+
+# Cache / queue
+redis==5.2.0
+
+# Object storage
+minio==7.2.10
+
+# Auth
+python-jose[cryptography]==3.3.0
+passlib[bcrypt]==1.7.4
+python-multipart==0.0.12
+
+# Audio (Whisper SRT)
+openai==1.54.0  # для whisper transcription
+faster-whisper==1.2.1  # локальная транскрипция без OpenAI API
+
+# TTS / голос
+elevenlabs==1.13.0  # опционально, если хочешь SDK вместо raw HTTP
+
+# Утилиты
+python-dotenv==1.0.1
+loguru==0.7.2
+
+# Dev (опционально)
+pytest==8.3.3
+pytest-asyncio==0.24.0
+httpx==0.27.2
