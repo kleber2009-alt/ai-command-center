@@ -27,18 +27,34 @@ def _load_cookies() -> Path | None:
         _COOKIES_FILE_PATH = Path(cookies_path)
         return _COOKIES_FILE_PATH
 
-    b64 = os.environ.get("INSTAGRAM_COOKIES_B64") or os.environ.get("COOKIES_B64")
-    if b64:
+    # Merge INSTAGRAM_COOKIES_B64 and COOKIES_B64 into a single Netscape
+    # cookies.txt — yt-dlp accepts multiple domains in one file and
+    # picks the right ones based on the URL host.
+    sources = []
+    for var in ("INSTAGRAM_COOKIES_B64", "COOKIES_B64"):
+        b64 = os.environ.get(var)
+        if not b64:
+            continue
         try:
-            decoded = base64.b64decode(b64)
-            tmp = Path(tempfile.gettempdir()) / "ytdlp_cookies.txt"
-            tmp.write_bytes(decoded)
-            _COOKIES_FILE_PATH = tmp
-            return tmp
+            decoded = base64.b64decode(b64).decode("utf-8", errors="replace")
         except Exception as e:
-            print(f"[ytdlp] Failed to decode cookies: {e}")
+            print(f"[ytdlp] Failed to decode {var}: {e}")
+            continue
+        # Strip the Netscape header from secondary files so it doesn't repeat.
+        if sources:
+            decoded = "\n".join(
+                line for line in decoded.splitlines() if not line.startswith("#")
+            )
+        sources.append(decoded.rstrip())
 
-    return None
+    if not sources:
+        return None
+
+    merged = "# Netscape HTTP Cookie File\n" + "\n".join(sources) + "\n"
+    tmp = Path(tempfile.gettempdir()) / "ytdlp_cookies.txt"
+    tmp.write_text(merged, encoding="utf-8")
+    _COOKIES_FILE_PATH = tmp
+    return tmp
 
 
 def check_auth(authorization: str | None) -> None:
