@@ -129,20 +129,22 @@ TARGET_DB_URL="postgres://app:<POSTGRES_PASSWORD из .env>@localhost:5433/app" 
 
 ## 8. Бэкапы
 
-Добавь в cron на сервере (`crontab -e` от пользователя app):
+Скрипт `scripts/backup-db.sh` уже в репо. Cron-задание:
 
 ```cron
-# Каждый день в 4:00 — дамп БД в файл
-0 4 * * * cd /home/app/ai-command-center && docker compose exec -T db pg_dump -U app app | gzip > /home/app/backups/db-$(date +\%F).sql.gz
-# И раз в неделю чистим старше 30 дней
-0 5 * * 0 find /home/app/backups -name 'db-*.sql.gz' -mtime +30 -delete
+0 4 * * * /home/app/ai-command-center/scripts/backup-db.sh >> /home/app/logs/backup.log 2>&1
 ```
 
 ```bash
-mkdir -p ~/backups
+mkdir -p ~/backups ~/logs
+crontab -e   # вставь строку выше
 ```
 
-Для оффсайт-копий — настрой `restic` или `rclone` на любой S3-совместимый.
+Скрипт делает `pg_dump | gzip` в `~/backups/db-<timestamp>.sql.gz` и удаляет файлы старше 30 дней.
+
+Восстановить из дампа: `./scripts/restore-db.sh ~/backups/db-XXXX.sql.gz`.
+
+Для оффсайт-копий — `restic` или `rclone` на любой S3-совместимый бакет.
 
 ## 9. Обновления кода
 

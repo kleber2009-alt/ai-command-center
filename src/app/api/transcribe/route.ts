@@ -8,6 +8,7 @@ import {
   isYtdlpServiceConfigured,
   YtdlpServiceError,
 } from '@/lib/ytdlp-client'
+import { fetchInstagramViaApify, isApifyConfigured, ApifyError } from '@/lib/apify-instagram'
 
 export const maxDuration = 60
 
@@ -17,7 +18,7 @@ type Ok = {
   paragraphs: Paragraph[]
   duration: number | null
   detectedLanguage: string | null
-  source: 'youtube' | 'deepgram' | 'ytdlp+deepgram'
+  source: 'youtube' | 'deepgram' | 'ytdlp+deepgram' | 'apify+deepgram'
 }
 type Err = { error: string; status: number }
 type Result = Ok | Err
@@ -109,6 +110,23 @@ async function fetchViaYtdlpThenDeepgram(
       return { error: e.message, status: e.status }
     }
     return { error: e?.message || 'Ошибка yt-dlp', status: 500 }
+  }
+}
+
+async function fetchViaApifyThenDeepgram(
+  url: string,
+  language: 'auto' | 'ru' | 'en',
+): Promise<Result> {
+  try {
+    const { url: directUrl } = await fetchInstagramViaApify(url)
+    const deepgramResult = await fetchDeepgram(directUrl, language)
+    if ('error' in deepgramResult) return deepgramResult
+    return { ...deepgramResult, source: 'apify+deepgram' }
+  } catch (e: any) {
+    if (e instanceof ApifyError) {
+      return { error: e.message, status: e.status }
+    }
+    return { error: e?.message || 'Ошибка Apify', status: 500 }
   }
 }
 
@@ -209,9 +227,23 @@ async function dispatch(url: string, language: 'auto' | 'ru' | 'en'): Promise<Re
   }
 
   if (isSocialMediaUrl(url)) {
+    // Instagram specifically: prefer Apify when configured (isolates our
+    // IG account + IP). Fall back to yt-dlp if Apify fails or isn't set.
+    const isInstagram = /(?:^|\/\/[^/]*\b)instagram\.com\b/i.test(url)
+    if (isInstagram && isApifyConfigured()) {
+      const apifyResult = await fetchViaApifyThenDeepgram(url, language)
+      if (!('error' in apifyResult)) return apifyResult
+      if (isYtdlpServiceConfigured()) {
+        const ytdlpResult = await fetchViaYtdlpThenDeepgram(url, language)
+        if (!('error' in ytdlpResult)) return ytdlpResult
+        return apifyResult.status >= 500 ? ytdlpResult : apifyResult
+      }
+      return apifyResult
+    }
+
     if (!isYtdlpServiceConfigured()) {
       return {
-        error: 'Для Instagram / TikTok / X нужен yt-dlp сервис. Настройте YTDLP_SERVICE_URL.',
+        error: 'Для Instagram / TikTok / X нужен yt-dlp сервис (YTDLP_SERVICE_URL) или APIFY_API_TOKEN.',
         status: 503,
       }
     }

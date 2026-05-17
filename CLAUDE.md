@@ -47,6 +47,14 @@ for local dev and in Vercel/Railway project envs for prod:
   Reels / TikTok / X.
 - `YTDLP_SERVICE_API_KEY` (optional) — if the yt-dlp service is started with
   this env var, the main app must send `Authorization: Bearer <key>`.
+- `APIFY_API_TOKEN` (optional) — when set, Instagram URLs are routed
+  through Apify's `instagram-scraper` actor before yt-dlp. Isolates our
+  IG account / IP from scraping; fallback chain is Apify → yt-dlp →
+  error. Free tier covers ~12,500 reels/month.
+- `ADMIN_BASIC_AUTH` (optional) — `user:password` to lock /admin and
+  /api/tasks behind HTTP Basic Auth.
+- `TELEGRAM_BOT_TOKEN` (optional) — when set, /api/transcribe and
+  /api/me verify Telegram initData HMAC against this token.
 
 ## Supabase migrations
 
