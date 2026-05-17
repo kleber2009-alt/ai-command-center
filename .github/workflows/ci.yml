@@ -1,0 +1,88 @@
+name: CI
+
+on:
+  push:
+    branches: [main]
+  pull_request:
+
+concurrency:
+  group: ci-${{ github.ref }}
+  cancel-in-progress: true
+
+jobs:
+  dashboard:
+    name: Dashboard · build + lint
+    runs-on: ubuntu-latest
+    timeout-minutes: 8
+
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-node@v4
+        with:
+          node-version: '20'
+          cache: 'npm'
+
+      - run: npm ci --no-audit --no-fund
+
+      - name: Lint
+        run: npm run lint
+
+      - name: Build (standalone)
+        run: npm run build
+        env:
+          # Dummy чтобы /api/* route'ы могли скомпилироваться без
+          # реального подключения. Сами запросы не идут — это build, не runtime.
+          DATABASE_URL: postgresql://x:y@127.0.0.1:5432/x
+          ANTHROPIC_API_KEY: dummy
+
+  sql:
+    name: SQL · syntax check
+    runs-on: ubuntu-latest
+    timeout-minutes: 6
+
+    services:
+      postgres:
+        image: postgres:16-alpine
+        env:
+          POSTGRES_DB: aisales
+          POSTGRES_USER: aisales
+          POSTGRES_PASSWORD: ci_test
+        ports:
+          - 5432:5432
+        options: >-
+          --health-cmd="pg_isready -U aisales -d aisales"
+          --health-interval=5s
+          --health-timeout=3s
+          --health-retries=10
+
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Wait for postgres
+        run: |
+          until pg_isready -h 127.0.0.1 -p 5432 -U aisales; do sleep 1; done
+
+      - name: Apply migrations in order
+        env:
+          PGPASSWORD: ci_test
+        run: |
+          for f in ai-sales/04-database/0*.sql; do
+            echo "== applying $f =="
+            psql -h 127.0.0.1 -U aisales -d aisales -v ON_ERROR_STOP=1 -f "$f"
+          done
+
+      - name: Verify platform_* and agent_* tables exist
+        env:
+          PGPASSWORD: ci_test
+        run: |
+          psql -h 127.0.0.1 -U aisales -d aisales -tAc "
+            SELECT string_agg(tablename, ', ' ORDER BY tablename)
+            FROM pg_tables
+            WHERE schemaname='public'
+              AND tablename IN ('platform_users','lesson_progress','platform_subscriptions',
+                                'agent_tasks','agent_prompt_overrides','revenue_goals')
+          " | tee /tmp/tables.txt
+          grep -q platform_users /tmp/tables.txt
+          grep -q agent_tasks /tmp/tables.txt
+          grep -q revenue_goals /tmp/tables.txt
