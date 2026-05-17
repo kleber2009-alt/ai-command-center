@@ -1,8 +1,9 @@
 # AI Growth Office + Transcribe — статус и роадмап
 
-> **Дата отчёта:** 2026-05-16
+> **Дата отчёта:** 2026-05-17 (обновлено после деплоя на aisales-prod)
 > **Ветка:** `claude/unpack-project-gU5md`
-> **Готовый к деплою commit:** `9bfee75` — self-hosting миграция завершена
+> **Последний коммит:** `b15834b` — full Caddyfile для coexist-mode
+> **Сервер:** Hetzner `aisales-prod` · `46.62.215.11` · Helsinki DC Park 1 · Ubuntu 24.04
 > **Документ для Notion** — можно скопировать целиком в `📦 Handoff · Полный статус проекта`
 
 ---
@@ -87,21 +88,84 @@
 
 ## 4. Что осталось до 100% запуска (твои действия)
 
-| Приоритет | Шаг | Время | Кто делает |
-|---|---|---|---|
-| 🔴 P0 | Hetzner: создать CPX21 (Ubuntu 24.04, 8€/мес) | 5 мин | Ты |
-| 🔴 P0 | DNS: A-запись `ai-growth-office.ru` → IP | 5 мин (+TTL) | Ты |
-| 🔴 P0 | SSH, `git clone`, `cd infra`, `cp .env.example .env` | 3 мин | Ты |
-| 🔴 P0 | Заполнить `infra/.env`: secrets и API-ключи | 5 мин | Ты |
-| 🔴 P0 | `docker compose up -d --build` | 5 мин (билд) | Ты |
-| 🟡 P1 | Проверить `https://your-domain/api/health` → `{ ok, db, elevenlabs }` | 1 мин | Ты |
-| 🟡 P1 | Создать voice-бота у @BotFather, токен в `.env` | 5 мин | Ты |
-| 🟡 P1 | Установить webhook (`curl setWebhook`) | 1 мин | Ты |
-| 🟡 P1 | Пройти E2E: `/persona-train` → запись → код → бот → voice-note | 5 мин | Ты |
-| 🟢 P2 | Купить ElevenLabs Starter ($5/мес) если ещё нет | — | Ты |
-| 🟢 P2 | Старый TG-токен отозвать через @BotFather → `/revoke` (был засветлён) | 1 мин | Ты |
+**Контекст:** на сервере `aisales-prod` уже крутится твой основной продукт AI Sales (FastAPI + Postgres + Redis + Qdrant + MinIO + host Caddy на `api.46-62-215-11.nip.io`). Наш стек встал **рядом** в режиме coexist — на portах `127.0.0.1:3001` (ai-office) и `127.0.0.1:3002` (transcribe).
 
-**Итого до прод-запуска: ~30 минут на чистый Hetzner.**
+### ✅ Уже работает
+
+- 3 контейнера UP и healthy: `infra-postgres-1`, `infra-ai-office-1`, `infra-transcribe-1`
+- `/api/health` отвечает `{"ok":true,"db":true,"elevenlabs":true,"public_base_url":"https://46.62.215.11.nip.io"}`
+- PostgreSQL миграция 001_schema.sql применилась автоматически
+- ElevenLabs API ключ распознан (`elevenlabs:true`)
+- Статика (HTML/JS из ai-office-project) отдаётся через Fastify, чистые URL работают
+- Next.js standalone (транскрибер) собран и отвечает на `/transcribe`
+- ai-office-project/config.js успешно говорит с `/api/leads` (вместо Supabase)
+- Существующий aisales-prod стек НЕ затронут — coexist в одном Docker-демоне
+
+### 🟡 Известная проблема — Host Caddy reload падает
+
+После `cp full-caddyfile.aisales-prod.example /etc/caddy/Caddyfile`:
+- `caddy validate` → `Valid configuration` ✓
+- `systemctl reload caddy` → fails
+
+Точная причина не диагностирована (нужны вывод `systemctl status caddy` + `journalctl -xeu caddy.service`). Предположения:
+- Зомби-процесс/port lock после неудачного reload
+- Проблема с ACME при выпуске нового сертификата для `46.62.215.11.nip.io`
+- Конфликт логирования (нет прав на `/var/log/caddy/aio.log`)
+
+**Воркэраунд:** SSH-туннель с Mac (см. секцию «Как тестировать сейчас» ниже).
+
+### Шаги до полного прода
+
+| Приоритет | Шаг | Время | Статус |
+|---|---|---|---|
+| 🔴 P0 | Починить `systemctl restart caddy` (узнать причину через `journalctl`) | 5-15 мин | блокер для HTTPS |
+| 🟡 P1 | После Caddy — открыть `https://46.62.215.11.nip.io/api/health` | 1 мин | |
+| 🟡 P1 | Создать voice-бота у @BotFather, вписать `TG_VOICE_BOT_TOKEN` в `~/ai-command-center/infra/.env` | 5 мин | |
+| 🟡 P1 | `docker compose restart ai-office` чтобы подтянул токен | 30 сек | |
+| 🟡 P1 | `curl setWebhook ...` (команда в `docs/PHASE_5.md`) | 1 мин | требует HTTPS |
+| 🟡 P1 | E2E: `/persona-train` → запись → код → бот → voice-note | 5 мин | |
+| 🟢 P2 | Купить домен (необязательно — `46.62.215.11.nip.io` работает) | — | |
+| 🟢 P2 | Старый TG-токен `8204536077:AAH…` отозвать через @BotFather → `/revoke` (был засветлён в client-side коде раньше) | 1 мин | security debt |
+
+### Как тестировать прямо сейчас (без HTTPS)
+
+С твоего Mac:
+```bash
+ssh -L 3001:127.0.0.1:3001 -L 3002:127.0.0.1:3002 root@46.62.215.11
+```
+
+Открой в браузере:
+- `http://localhost:3001/` — главная AI Growth Office
+- `http://localhost:3001/persona-train` — клонирование голоса
+- `http://localhost:3001/api/health` — JSON health-check
+- `http://localhost:3002/transcribe` — транскрибатор
+
+Туннель живёт пока окно SSH открыто. Это полноценный тест всего кроме Telegram-ботов (им нужен публичный HTTPS endpoint).
+
+### Полезные команды для дальнейшей работы
+
+```bash
+# Логи наших сервисов
+cd ~/ai-command-center/infra
+docker compose logs -f ai-office          # Fastify backend
+docker compose logs -f transcribe         # Next.js
+docker compose logs --tail=50 postgres    # БД
+
+# Содержимое БД
+docker exec -it infra-postgres-1 psql -U aio -d aio -c "\dt"                              # список таблиц
+docker exec -it infra-postgres-1 psql -U aio -d aio -c "select count(*) from voices"      # голоса
+docker exec -it infra-postgres-1 psql -U aio -d aio -c "select count(*) from leads"       # лиды
+docker exec -it infra-postgres-1 psql -U aio -d aio -c "select count(*) from transcripts" # транскрипты
+
+# Обновление кода
+cd ~/ai-command-center && git pull && cd infra && docker compose up -d --build
+
+# Бэкап БД
+docker exec infra-postgres-1 pg_dump -U aio aio | gzip > /root/backup-aio-$(date +%Y%m%d).sql.gz
+
+# Перезагрузка одного сервиса (после правок .env)
+docker compose restart ai-office
+```
 
 ---
 
