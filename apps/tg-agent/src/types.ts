@@ -39,6 +39,32 @@ export interface IncomingMessage {
   chatTitle: string | undefined;
   userId: number | undefined;
   username: string | undefined;
+  firstName: string | undefined;
+  lastName: string | undefined;
   messageId: number;
   text: string;
+}
+
+export const LEAD_STATUSES = [
+  'new',
+  'cold',
+  'warm',
+  'hot',
+  'buyer',
+  'support',
+  'negative',
+] as const;
+
+export type LeadStatus = (typeof LEAD_STATUSES)[number];
+
+export interface MessageLogRecord {
+  chatId: number;
+  userId: number | undefined;
+  telegramMessageId: number;
+  text: string;
+  class: MessageClass;
+  confidence: number;
+  action: Action;
+  reasoning: string;
+  response: string | null;
 }

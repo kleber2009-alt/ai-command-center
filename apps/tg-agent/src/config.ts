@@ -56,6 +56,8 @@ export interface Config {
   logLevel: LogLevel;
   classifierModel: string;
   responderModel: string;
+  supabaseUrl: string | undefined;
+  supabaseServiceKey: string | undefined;
 }
 
 export function loadConfig(): Config {
@@ -74,5 +76,7 @@ export function loadConfig(): Config {
     logLevel: parseLogLevel(optional('LOG_LEVEL')),
     classifierModel: optional('CLASSIFIER_MODEL') ?? 'claude-haiku-4-5-20251001',
     responderModel: optional('RESPONDER_MODEL') ?? 'claude-haiku-4-5-20251001',
+    supabaseUrl: optional('SUPABASE_URL'),
+    supabaseServiceKey: optional('SUPABASE_SERVICE_KEY'),
   };
 }
