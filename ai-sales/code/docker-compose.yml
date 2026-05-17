@@ -26,6 +26,7 @@ services:
       - ../04-database/005_platform_seed.sql:/docker-entrypoint-initdb.d/04-platform-seed.sql:ro
       - ../04-database/006_agent_tasks.sql:/docker-entrypoint-initdb.d/05-agent-tasks.sql:ro
       - ../04-database/007_agent_prompts.sql:/docker-entrypoint-initdb.d/06-agent-prompts.sql:ro
+      - ../04-database/008_revenue_goals.sql:/docker-entrypoint-initdb.d/07-revenue-goals.sql:ro
     healthcheck:
       test: ["CMD-SHELL", "pg_isready -U aisales -d aisales"]
       interval: 10s
