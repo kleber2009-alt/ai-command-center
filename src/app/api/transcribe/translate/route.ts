@@ -1,5 +1,6 @@
 import { NextRequest, NextResponse } from 'next/server'
 import { getTranscript, updateTranscriptTranslation } from '@/lib/transcripts-db'
+import { streamAnthropic } from '@/lib/anthropic-stream'
 import { requireTelegramAuth } from '@/lib/telegram-auth'
 
 export const maxDuration = 60
@@ -39,7 +40,17 @@ export async function POST(req: NextRequest) {
       return NextResponse.json({ error: 'Не найден транскрипт' }, { status: 404 })
     }
     if (row.translation && row.translation.lang === targetLang) {
-      return NextResponse.json({ translation: row.translation.text, lang: targetLang, cached: true })
+      // Cached: stream the cached text out as a single delta + done, so the
+      // client can use the same NDJSON reader path.
+      const enc = new TextEncoder()
+      const lines = [
+        JSON.stringify({ type: 'meta', lang: targetLang, cached: true }) + '\n',
+        JSON.stringify({ type: 'delta', text: row.translation.text }) + '\n',
+        JSON.stringify({ type: 'done' }) + '\n',
+      ]
+      return new Response(enc.encode(lines.join('')), {
+        headers: { 'Content-Type': 'application/x-ndjson; charset=utf-8' },
+      })
     }
     text = row.transcript
   }
@@ -48,38 +59,17 @@ export async function POST(req: NextRequest) {
     return NextResponse.json({ error: 'Пустой транскрипт' }, { status: 400 })
   }
 
-  try {
-    const res = await fetch('https://api.anthropic.com/v1/messages', {
-      method: 'POST',
-      headers: {
-        'Content-Type': 'application/json',
-        'x-api-key': process.env.ANTHROPIC_API_KEY,
-        'anthropic-version': '2023-06-01',
-      },
-      body: JSON.stringify({
-        model: 'claude-haiku-4-5-20251001',
-        max_tokens: 8192,
-        messages: [{ role: 'user', content: PROMPT(text, targetLang) }],
-      }),
-    })
-
-    if (!res.ok) {
-      const errText = await res.text()
-      return NextResponse.json(
-        { error: `Anthropic (${res.status}): ${errText.slice(0, 300)}` },
-        { status: res.status },
-      )
-    }
-
-    const data = await res.json()
-    const translation: string = (data.content?.[0]?.text || '').trim()
-
-    if (id) {
-      updateTranscriptTranslation(id, targetLang, translation)
-    }
-
-    return NextResponse.json({ translation, lang: targetLang, cached: false })
-  } catch (e: any) {
-    return NextResponse.json({ error: e?.message || 'Ошибка перевода' }, { status: 500 })
-  }
+  return streamAnthropic(
+    {
+      apiKey: process.env.ANTHROPIC_API_KEY,
+      model: 'claude-haiku-4-5-20251001',
+      system: '',
+      messages: [{ role: 'user', content: PROMPT(text, targetLang) }],
+      maxTokens: 8192,
+    },
+    { lang: targetLang, cached: false },
+    async (fullText) => {
+      if (id) updateTranscriptTranslation(id, targetLang, fullText.trim())
+    },
+  )
 }

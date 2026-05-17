@@ -53,6 +53,7 @@ async function* parseAnthropicSse(body: ReadableStream<Uint8Array>): AsyncGenera
 export async function streamAnthropic(
   params: AnthropicCallParams,
   meta?: Record<string, any>,
+  onComplete?: (fullText: string) => void | Promise<void>,
 ): Promise<Response> {
   const upstream = await fetch('https://api.anthropic.com/v1/messages', {
     method: 'POST',
@@ -86,10 +87,19 @@ export async function streamAnthropic(
   const stream = new ReadableStream<Uint8Array>({
     async start(controller) {
       const send = (e: WireEvent) => controller.enqueue(encoder.encode(JSON.stringify(e) + '\n'))
+      let accumulated = ''
       try {
         if (meta) send({ type: 'meta', ...meta })
         for await (const text of parseAnthropicSse(upstream.body!)) {
+          accumulated += text
           send({ type: 'delta', text })
+        }
+        if (onComplete) {
+          try {
+            await onComplete(accumulated)
+          } catch (e: any) {
+            console.warn('[streamAnthropic.onComplete] failed:', e?.message)
+          }
         }
         send({ type: 'done' })
       } catch (e: any) {

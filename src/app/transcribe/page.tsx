@@ -8,6 +8,7 @@ import {
 } from 'lucide-react'
 import { getTelegram, isInTelegram } from '@/lib/telegram'
 import { apiFetch } from '@/lib/api-client'
+import { readNdjson } from '@/lib/stream-client'
 
 type Paragraph = { text: string; start: number; end: number }
 type Source = 'youtube' | 'deepgram' | 'ytdlp+deepgram'
@@ -220,6 +221,9 @@ export default function TranscribePage() {
 
   const [history, setHistory] = useState<HistoryItem[]>([])
   const [historyConfigured, setHistoryConfigured] = useState(true)
+  const [historySelection, setHistorySelection] = useState<Set<string>>(new Set())
+  const [batchImporting, setBatchImporting] = useState(false)
+  const [batchSummary, setBatchSummary] = useState<string | null>(null)
 
   const [inTg, setInTg] = useState(false)
   const submitRef = useRef<() => void>(() => {})
@@ -351,6 +355,47 @@ export default function TranscribePage() {
     } catch {}
   }
 
+  function toggleHistorySelection(id: string) {
+    setHistorySelection(prev => {
+      const next = new Set(prev)
+      if (next.has(id)) next.delete(id)
+      else next.add(id)
+      return next
+    })
+    setBatchSummary(null)
+  }
+
+  function clearHistorySelection() {
+    setHistorySelection(new Set())
+    setBatchSummary(null)
+  }
+
+  async function batchImportToBrain() {
+    if (batchImporting || historySelection.size === 0) return
+    setBatchImporting(true)
+    setBatchSummary(null)
+    setError(null)
+    try {
+      const ids = Array.from(historySelection)
+      const res = await apiFetch('/api/me/documents/import-transcripts', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ ids }),
+      })
+      const data = await res.json()
+      if (!res.ok) throw new Error(data?.error || `Ошибка ${res.status}`)
+      const s = data.summary || { imported: 0, failed: 0, total: ids.length }
+      const parts = [`Добавлено в Базу: ${s.imported} из ${s.total}`]
+      if (s.failed > 0) parts.push(`не смог: ${s.failed}`)
+      setBatchSummary(parts.join(' · '))
+      setHistorySelection(new Set())
+    } catch (e: any) {
+      setError(e?.message || 'Не удалось импортировать')
+    } finally {
+      setBatchImporting(false)
+    }
+  }
+
   async function importToBrain() {
     if (!result || importing) return
     const text = result.paragraphs.length
@@ -428,21 +473,34 @@ export default function TranscribePage() {
   async function translateTo(targetLang: 'ru' | 'en') {
     if (!result) return
     setTranslationLoading(true)
-    setTranslation(null)
+    setTranslation({ text: '', lang: targetLang })
+    setError(null)
     try {
       const res = await apiFetch('/api/transcribe/translate', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({ id: result.id, transcript: result.transcript, targetLang }),
       })
-      const data = await res.json()
       if (!res.ok) {
-        setError(data.error || 'Не удалось перевести')
-      } else {
-        setTranslation({ text: data.translation, lang: data.lang })
+        const data = await res.json().catch(() => ({}))
+        throw new Error(data?.error || `Ошибка ${res.status}`)
       }
+      let acc = ''
+      let streamError: string | null = null
+      await readNdjson(res, (e) => {
+        if (e.type === 'delta') {
+          acc += e.text
+          setTranslation({ text: acc, lang: targetLang })
+        } else if (e.type === 'error') {
+          streamError = e.error
+        }
+      })
+      if (streamError) throw new Error(streamError)
+      if (!acc.trim()) throw new Error('Пустой ответ от модели')
+      setTranslation({ text: acc, lang: targetLang })
     } catch (err: any) {
       setError(err?.message || 'Сетевая ошибка')
+      setTranslation(null)
     } finally {
       setTranslationLoading(false)
     }
@@ -812,43 +870,98 @@ export default function TranscribePage() {
       {/* History */}
       {historyConfigured && history.length > 0 && (
         <div className="overflow-hidden rounded-apple-lg border border-apple-line bg-white shadow-apple-sm">
-          <div className="flex items-center gap-2 border-b border-apple-line px-5 py-3">
+          <div className="flex flex-wrap items-center gap-2 border-b border-apple-line px-5 py-3">
             <History className="h-4 w-4 text-apple-muted" />
             <h3 className="text-[13px] font-semibold text-apple-ink">История</h3>
             <span className="text-[12px] text-apple-faint">({history.length})</span>
-          </div>
-          <div className="max-h-[60vh] divide-y divide-apple-line overflow-y-auto">
-            {history.map(item => (
-              <button
-                key={item.id}
-                onClick={() => loadFromHistory(item.id)}
-                className="group flex w-full items-start gap-3 px-5 py-3 text-left transition-colors hover:bg-apple-bg-soft"
-              >
-                <div className="mt-1 flex-shrink-0 text-apple-muted">
-                  {item.source === 'youtube' ? (
-                    <Youtube className="h-4 w-4" />
-                  ) : (
-                    <FileAudio className="h-4 w-4" />
-                  )}
-                </div>
-                <div className="min-w-0 flex-1">
-                  <div className="truncate text-[14px] text-apple-ink">{item.title || item.url}</div>
-                  <div className="mt-0.5 flex flex-wrap items-center gap-1.5 text-[12px] text-apple-faint">
-                    <span>{timeAgo(item.created_at)}</span>
-                    {item.duration && <span>· {formatTime(item.duration)}</span>}
-                    {item.language && <span>· {item.language}</span>}
-                  </div>
-                </div>
+            {historySelection.size > 0 && (
+              <>
+                <span className="ml-auto text-[12px] text-apple-muted">
+                  выбрано: {historySelection.size}
+                </span>
                 <button
-                  onClick={e => deleteHistoryItem(item.id, e)}
-                  className="flex-shrink-0 rounded-full p-1.5 text-apple-faint opacity-0 transition-all hover:bg-red-50 hover:text-red-500 group-hover:opacity-100"
-                  title="Удалить"
+                  type="button"
+                  onClick={clearHistorySelection}
+                  className="rounded-full px-2.5 py-1 text-[12px] text-apple-muted hover:bg-apple-bg-soft hover:text-apple-ink"
                 >
-                  <Trash2 className="h-3.5 w-3.5" />
+                  Сбросить
                 </button>
-                <ChevronRight className="mt-1.5 h-3.5 w-3.5 flex-shrink-0 text-apple-faint" />
-              </button>
-            ))}
+                <button
+                  type="button"
+                  onClick={batchImportToBrain}
+                  disabled={batchImporting}
+                  className="inline-flex items-center gap-1.5 rounded-full bg-apple-blue px-3 py-1.5 text-[12px] font-medium text-white transition-colors hover:bg-apple-blue-hover disabled:cursor-not-allowed disabled:bg-apple-line-strong"
+                >
+                  {batchImporting ? (
+                    <>
+                      <Loader2 className="h-3.5 w-3.5 animate-spin" />
+                      Эмбеддим…
+                    </>
+                  ) : (
+                    <>
+                      <Brain className="h-3.5 w-3.5" />
+                      В мой мозг ({historySelection.size})
+                    </>
+                  )}
+                </button>
+              </>
+            )}
+          </div>
+          {batchSummary && (
+            <div className="border-b border-apple-line bg-apple-bg-elev px-5 py-2 text-[12px] text-apple-muted">
+              {batchSummary}
+            </div>
+          )}
+          <div className="max-h-[60vh] divide-y divide-apple-line overflow-y-auto">
+            {history.map(item => {
+              const selected = historySelection.has(item.id)
+              return (
+                <div key={item.id} className="group flex items-stretch">
+                  <label
+                    className="flex shrink-0 cursor-pointer items-center pl-5 pr-2"
+                    title="Отметить для импорта в Базу"
+                  >
+                    <input
+                      type="checkbox"
+                      checked={selected}
+                      onChange={() => toggleHistorySelection(item.id)}
+                      className="h-4 w-4 cursor-pointer accent-apple-blue"
+                      onClick={e => e.stopPropagation()}
+                    />
+                  </label>
+                  <button
+                    type="button"
+                    onClick={() => loadFromHistory(item.id)}
+                    className="flex flex-1 items-start gap-3 py-3 pr-2 text-left transition-colors hover:bg-apple-bg-soft"
+                  >
+                    <div className="mt-1 flex-shrink-0 text-apple-muted">
+                      {item.source === 'youtube' ? (
+                        <Youtube className="h-4 w-4" />
+                      ) : (
+                        <FileAudio className="h-4 w-4" />
+                      )}
+                    </div>
+                    <div className="min-w-0 flex-1">
+                      <div className="truncate text-[14px] text-apple-ink">{item.title || item.url}</div>
+                      <div className="mt-0.5 flex flex-wrap items-center gap-1.5 text-[12px] text-apple-faint">
+                        <span>{timeAgo(item.created_at)}</span>
+                        {item.duration && <span>· {formatTime(item.duration)}</span>}
+                        {item.language && <span>· {item.language}</span>}
+                      </div>
+                    </div>
+                    <ChevronRight className="mt-1.5 h-3.5 w-3.5 flex-shrink-0 text-apple-faint" />
+                  </button>
+                  <button
+                    type="button"
+                    onClick={e => deleteHistoryItem(item.id, e)}
+                    className="my-auto mr-3 rounded-full p-1.5 text-apple-faint opacity-0 transition-all hover:bg-red-50 hover:text-red-500 group-hover:opacity-100"
+                    title="Удалить"
+                  >
+                    <Trash2 className="h-3.5 w-3.5" />
+                  </button>
+                </div>
+              )
+            })}
           </div>
         </div>
       )}
