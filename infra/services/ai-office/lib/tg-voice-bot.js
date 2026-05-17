@@ -280,6 +280,10 @@ async function tgApi(method, payload) {
       headers: { 'Content-Type': 'application/json' },
       body: JSON.stringify(payload),
     });
+    if (!res.ok) {
+      const body = await res.clone().text().catch(() => '');
+      console.error(`[tg] ${method} → HTTP ${res.status}: ${body.slice(0, 300)}`);
+    }
     return res;
   } catch (e) {
     console.error('[tg]', method, 'failed:', e.message);
