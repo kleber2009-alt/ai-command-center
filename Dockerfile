@@ -12,7 +12,8 @@ RUN apt-get update && apt-get install -y --no-install-recommends \
 ENV NEXT_TELEMETRY_DISABLED=1
 
 COPY package.json package-lock.json* ./
-RUN npm ci
+RUN npm ci --no-audit --no-fund && \
+    test -d node_modules/next || (echo "npm ci finished but node_modules/next is missing" && exit 1)
 
 COPY . .
 RUN npm run build
