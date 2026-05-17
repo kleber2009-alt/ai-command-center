@@ -2,8 +2,8 @@ import type { Metadata } from 'next'
 import './globals.css'
 
 export const metadata: Metadata = {
-  title: 'AI Business Command Center',
-  description: 'Виртуальный штаб управления бизнесом — AI-команда, которая планирует, выполняет и влияет на результат в деньгах',
+  title: 'AI Command Center · Project Hub',
+  description: 'Каталог всех моих проектов с описанием, ссылками и редактируемым roadmap',
 }
 
 export default function RootLayout({ children }: { children: React.ReactNode }) {
