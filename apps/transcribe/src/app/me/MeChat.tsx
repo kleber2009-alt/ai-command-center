@@ -3,6 +3,7 @@ import { useEffect, useRef, useState } from 'react'
 import { Brain, Check, Copy, Loader2, Send, Sparkles, Trash2, TriangleAlert } from 'lucide-react'
 import MeTabs from './MeTabs'
 import { readNdjson } from '@/lib/stream-client'
+import { apiFetch } from '@/lib/telegram'
 
 type Msg = { role: 'user' | 'assistant'; content: string; citations?: Citation[] }
 type Citation = { document_id: string; document_title: string; chunk_index: number; similarity: number }
@@ -54,7 +55,7 @@ export default function MeChat() {
     setInput('')
     setLoading(true)
     try {
-      const res = await fetch('/api/me/chat', {
+      const res = await apiFetch('/api/me/chat', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({ messages: next.map((m) => ({ role: m.role, content: m.content })) }),

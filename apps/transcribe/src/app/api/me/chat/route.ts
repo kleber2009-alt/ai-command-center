@@ -1,4 +1,5 @@
 import { NextRequest, NextResponse } from 'next/server'
+import { guardRequest } from '@/lib/api-guard'
 import { embed } from '@/lib/embeddings'
 import { getServerSupabase, loadProfile, profileToContext } from '@/lib/me-db'
 import { streamAnthropic } from '@/lib/anthropic-stream'
@@ -18,6 +19,11 @@ const SYSTEM_INSTRUCTIONS = `Ты — личный «второй мозг» п�
 - Соблюдай голос и стиль пользователя, если он описан в блоке "Голос и стиль".`
 
 export async function POST(req: NextRequest) {
+  const guard = guardRequest(req, {
+    rateLimit: { key: 'me-chat', max: 20, windowMs: 60_000 },
+  })
+  if (!guard.ok) return guard.response
+
   const body = (await req.json()) as Body
   const messages = Array.isArray(body.messages) ? body.messages : []
   const topK = Math.max(1, Math.min(20, body.topK ?? 8))

@@ -68,6 +68,19 @@ for local dev and in Vercel/Railway project envs for prod:
   Reels / TikTok / X.
 - `YTDLP_SERVICE_API_KEY` (optional) — if the yt-dlp service is started with
   this env var, the main app must send `Authorization: Bearer <key>`.
+- `OPENAI_API_KEY` — required by `/api/me/documents` (POST) and `/api/me/chat`
+  for `text-embedding-3-small`. Without it the `/me` library can't ingest
+  new documents or do retrieval; the page falls back to a no-RAG mode.
+- `TELEGRAM_BOT_TOKEN` (optional) — when set, `apps/transcribe/src/lib/api-guard.ts`
+  enables Telegram-Mini-App initData HMAC validation on all API routes. Bad
+  signatures return 401; absent header is allowed by default (see next flag).
+- `TELEGRAM_REQUIRE_INIT_DATA` (optional, default unset) — when `"true"` and
+  `TELEGRAM_BOT_TOKEN` is set, every request to an API route protected by
+  `guardRequest` must carry a valid `x-telegram-init-data` header. Browser
+  access without Telegram dies. Enable this **only** when ready for
+  Mini-App-only operation. Clients send the header automatically via
+  `apiFetch()` (`apps/transcribe/src/lib/telegram.ts`), which is wired into
+  every client `fetch('/api/*')` call site in transcribe.
 
 ## Supabase migrations
 

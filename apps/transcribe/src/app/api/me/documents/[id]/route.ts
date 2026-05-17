@@ -1,7 +1,13 @@
 import { NextRequest, NextResponse } from 'next/server'
+import { guardRequest } from '@/lib/api-guard'
 import { getServerSupabase } from '@/lib/me-db'
 
-export async function GET(_req: NextRequest, { params }: { params: { id: string } }) {
+export async function GET(req: NextRequest, { params }: { params: { id: string } }) {
+  const guard = guardRequest(req, {
+    rateLimit: { key: 'docs-item', max: 60, windowMs: 60_000 },
+  })
+  if (!guard.ok) return guard.response
+
   const supabase = getServerSupabase()
   if (!supabase) return NextResponse.json({ error: 'Supabase не настроен' }, { status: 500 })
   const { data, error } = await supabase
@@ -13,7 +19,12 @@ export async function GET(_req: NextRequest, { params }: { params: { id: string 
   return NextResponse.json({ document: data })
 }
 
-export async function DELETE(_req: NextRequest, { params }: { params: { id: string } }) {
+export async function DELETE(req: NextRequest, { params }: { params: { id: string } }) {
+  const guard = guardRequest(req, {
+    rateLimit: { key: 'docs-item', max: 60, windowMs: 60_000 },
+  })
+  if (!guard.ok) return guard.response
+
   const supabase = getServerSupabase()
   if (!supabase) return NextResponse.json({ error: 'Supabase не настроен' }, { status: 500 })
   const { error } = await supabase.from('me_documents').delete().eq('id', params.id)

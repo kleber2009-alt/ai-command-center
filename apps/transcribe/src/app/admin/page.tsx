@@ -9,6 +9,7 @@ import {
   TASK_STATUSES, STATUS_LABEL, PRIORITY_LABEL,
   TASK_PROJECTS, PROJECT_LABEL,
 } from '@/lib/tasks-db'
+import { apiFetch } from '@/lib/telegram'
 
 const STATUS_COLORS: Record<TaskStatus, { col: string; chip: string; icon: any }> = {
   backlog:     { col: 'border-slate-700/40', chip: 'bg-slate-700/40 text-slate-300', icon: CircleDashed },
@@ -39,7 +40,7 @@ export default function AdminPage() {
   async function load() {
     setLoading(true)
     try {
-      const res = await fetch('/api/tasks', { cache: 'no-store' })
+      const res = await apiFetch('/api/tasks', { cache: 'no-store' })
       const data = await res.json()
       if (!res.ok) {
         setError(data.error || 'Не удалось загрузить задачи')
@@ -83,7 +84,7 @@ export default function AdminPage() {
   async function updateTask(id: string, patch: Partial<Task>) {
     setTasks(prev => prev.map(t => t.id === id ? { ...t, ...patch } as Task : t))
     try {
-      const res = await fetch(`/api/tasks/${id}`, {
+      const res = await apiFetch(`/api/tasks/${id}`, {
         method: 'PATCH',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify(patch),
@@ -105,7 +106,7 @@ export default function AdminPage() {
     if (!confirm('Удалить задачу?')) return
     setTasks(prev => prev.filter(t => t.id !== id))
     try {
-      await fetch(`/api/tasks/${id}`, { method: 'DELETE' })
+      await apiFetch(`/api/tasks/${id}`, { method: 'DELETE' })
     } catch {}
     if (editing?.id === id) setEditing(null)
   }
@@ -113,7 +114,7 @@ export default function AdminPage() {
   async function createTask(status: TaskStatus) {
     if (!draft.title.trim()) return
     try {
-      const res = await fetch('/api/tasks', {
+      const res = await apiFetch('/api/tasks', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({

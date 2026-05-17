@@ -1,7 +1,13 @@
 import { NextRequest, NextResponse } from 'next/server'
+import { guardRequest } from '@/lib/api-guard'
 import { loadProfile, saveProfile, getServerSupabase, EMPTY_PROFILE } from '@/lib/me-db'
 
-export async function GET() {
+export async function GET(req: NextRequest) {
+  const guard = guardRequest(req, {
+    rateLimit: { key: 'profile', max: 60, windowMs: 60_000 },
+  })
+  if (!guard.ok) return guard.response
+
   const supabase = getServerSupabase()
   if (!supabase) {
     return NextResponse.json({ profile: EMPTY_PROFILE, configured: false })
@@ -11,6 +17,11 @@ export async function GET() {
 }
 
 export async function PUT(req: NextRequest) {
+  const guard = guardRequest(req, {
+    rateLimit: { key: 'profile', max: 60, windowMs: 60_000 },
+  })
+  if (!guard.ok) return guard.response
+
   const supabase = getServerSupabase()
   if (!supabase) {
     return NextResponse.json(

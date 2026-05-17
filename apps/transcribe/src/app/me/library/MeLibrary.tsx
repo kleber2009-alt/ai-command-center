@@ -5,6 +5,7 @@ import {
   ArrowLeft, FileText, Loader2, Plus, Trash2, TriangleAlert, Upload, FileType, FileBadge, FileAudio,
 } from 'lucide-react'
 import MeTabs from '../MeTabs'
+import { apiFetch } from '@/lib/telegram'
 
 type Doc = {
   id: string
@@ -50,7 +51,7 @@ export default function MeLibrary() {
     setLoading(true)
     setError(null)
     try {
-      const res = await fetch('/api/me/documents')
+      const res = await apiFetch('/api/me/documents')
       const data = await res.json()
       if (!res.ok) throw new Error(data?.error || `Ошибка ${res.status}`)
       setItems(data.items ?? [])
@@ -72,7 +73,7 @@ export default function MeLibrary() {
     setAdding(true)
     setError(null)
     try {
-      const res = await fetch('/api/me/documents', {
+      const res = await apiFetch('/api/me/documents', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({ title: title.trim(), text }),
@@ -97,7 +98,7 @@ export default function MeLibrary() {
       const fd = new FormData()
       fd.append('file', file)
       if (title.trim()) fd.append('title', title.trim())
-      const res = await fetch('/api/me/documents', { method: 'POST', body: fd })
+      const res = await apiFetch('/api/me/documents', { method: 'POST', body: fd })
       const data = await res.json()
       if (!res.ok) throw new Error(data?.error || `Ошибка ${res.status}`)
       setTitle('')
@@ -115,7 +116,7 @@ export default function MeLibrary() {
     if (!confirm('Удалить документ из базы? Это удалит и все его чанки.')) return
     setError(null)
     try {
-      const res = await fetch(`/api/me/documents/${id}`, { method: 'DELETE' })
+      const res = await apiFetch(`/api/me/documents/${id}`, { method: 'DELETE' })
       if (!res.ok) {
         const data = await res.json().catch(() => ({}))
         throw new Error(data?.error || `Ошибка ${res.status}`)

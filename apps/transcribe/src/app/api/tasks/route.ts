@@ -1,4 +1,5 @@
 import { NextRequest, NextResponse } from 'next/server'
+import { guardRequest } from '@/lib/api-guard'
 import { getServerSupabase } from '@/lib/transcripts-db'
 import type { TaskStatus, TaskPriority, TaskProject } from '@/lib/tasks-db'
 
@@ -12,6 +13,11 @@ type CreateBody = {
 }
 
 export async function GET(req: NextRequest) {
+  const guard = guardRequest(req, {
+    rateLimit: { key: 'tasks-list', max: 60, windowMs: 60_000 },
+  })
+  if (!guard.ok) return guard.response
+
   const supabase = getServerSupabase()
   if (!supabase) {
     return NextResponse.json({ items: [], configured: false })
@@ -32,6 +38,11 @@ export async function GET(req: NextRequest) {
 }
 
 export async function POST(req: NextRequest) {
+  const guard = guardRequest(req, {
+    rateLimit: { key: 'tasks-create', max: 30, windowMs: 60_000 },
+  })
+  if (!guard.ok) return guard.response
+
   const supabase = getServerSupabase()
   if (!supabase) {
     return NextResponse.json({ error: 'Supabase не настроен' }, { status: 503 })
