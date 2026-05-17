@@ -1,32 +1,91 @@
 # ═══════════════════════════════════════════════════════════════════
-# Добавь это в infra/Caddyfile между блоками `@nextjs` и `handle /api/*`
-# чтобы Caddy роутил aisales-эндпоинты на правильные контейнеры.
+# infra/snippets/host-aisales-caddy.example.caddy
+# ───────────────────────────────────────────────────────────────────
+# Маршрутизация aisales-API через основной Caddy.
 #
-# ВАЖНО: aisales компоуз сидит на отдельной сети aisales_aisales-net.
-# Caddy из infra-compose не видит контейнеры в aisales-net по имени.
-# Поэтому проксируем на 127.0.0.1:8001 (v2) или :8000 (v1) — порты
-# опубликованы в bind 127.0.0.1.
+# ПРЕДПОСЫЛКИ:
+#   · Caddy крутится на ХОСТЕ (apt install caddy), не в docker.
+#     Проверь: `systemctl status caddy && ss -tlnp | grep :443`
+#     pid из ss должен принадлежать процессу `caddy` на хосте.
+#   · aisales-api-v2 опубликован на 127.0.0.1:8001 (см. apps/aisales/docker-compose.yml).
+#   · aisales-api (v1) опубликован на 127.0.0.1:8000.
 #
-# Альтернатива: соединить сети через `docker network connect
-# infra_internal aisales-api-v2`, тогда можно `reverse_proxy aisales-api-v2:8000`.
+# КУДА ВСТАВИТЬ:
+#   В файл /etc/caddy/Caddyfile, ВНУТРИ блока твоего домена/IP,
+#   ПЕРЕД более общим catch-all `handle /api/*` или `reverse_proxy app:3000`.
+#   Caddy матчит handle сверху вниз, побеждает первый совпавший.
+#
+# ПРИМЕНИТЬ:
+#   sudo caddy validate --config /etc/caddy/Caddyfile
+#   sudo systemctl reload caddy
 # ═══════════════════════════════════════════════════════════════════
 
+# ── aisales API v2 (основная версия) ────────────────────────────────
+# Внешний URL:    https://your-domain/aisales/<endpoint>
+# Внешний URL:    https://your-domain/api/aisales/<endpoint>
+# Идёт на:        127.0.0.1:8001/<endpoint>  (aisales-api-v2)
+# Пример:         GET  /aisales/health        → :8001/health
+# Пример:         POST /aisales/agents/run    → :8001/agents/run
+#
+# strip_prefix снимает приставку, чтобы FastAPI на /health ожидал
+# именно /health, а не /aisales/health.
 @aisales path /aisales /aisales/* /api/aisales /api/aisales/*
 handle @aisales {
     uri strip_prefix /aisales
     uri strip_prefix /api/aisales
-    # 127.0.0.1:8001 — порт, на который aisales-api-v2 опубликован хосту.
-    # Caddy в docker-сети, поэтому используем host.docker.internal или
-    # IP хоста (Hetzner: 172.17.0.1 для дефолтного docker bridge).
-    reverse_proxy 172.17.0.1:8001 {
-        header_up X-Forwarded-Host {host}
+    reverse_proxy 127.0.0.1:8001 {
+        header_up X-Forwarded-Host  {host}
         header_up X-Forwarded-Proto {scheme}
+        # SSE/streaming-friendly: не буферизуем (на случай если v2 что-то стримит)
+        flush_interval -1
+        # Подняли таймаут под долгие LLM-вызовы
+        transport http {
+            response_header_timeout 120s
+            read_timeout            120s
+        }
     }
 }
 
-# Для v1 (если нужен):
-# @aisales-v1 path /aisales/v1 /aisales/v1/*
-# handle @aisales-v1 {
-#     uri strip_prefix /aisales/v1
-#     reverse_proxy 172.17.0.1:8000
+# ── aisales API v1 (старая версия, опционально) ─────────────────────
+# Внешний URL:    https://your-domain/aisales-v1/<endpoint>
+# Идёт на:        127.0.0.1:8000/<endpoint>  (aisales-api)
+# Раскомментируй если v1 нужен извне.
+#
+# @aisales_v1 path /aisales-v1 /aisales-v1/*
+# handle @aisales_v1 {
+#     uri strip_prefix /aisales-v1
+#     reverse_proxy 127.0.0.1:8000 {
+#         header_up X-Forwarded-Host  {host}
+#         header_up X-Forwarded-Proto {scheme}
+#     }
 # }
+
+# ── Опционально: MinIO console (для админских заходов) ──────────────
+# Внешний URL:    https://your-domain/minio/   (basic-auth обязателен!)
+# Идёт на:        127.0.0.1:9001/  (MinIO console)
+# Перед использованием закрой basic_auth.
+#
+# @minio_console path /minio /minio/*
+# handle @minio_console {
+#     basic_auth {
+#         # admin → openssl rand -base64 32 → caddy hash-password
+#         admin <bcrypt-hash>
+#     }
+#     uri strip_prefix /minio
+#     reverse_proxy 127.0.0.1:9001
+# }
+
+# ─────────────────────────────────────────────────────────────────────
+# Проверка из браузера после reload:
+#   curl https://your-domain/aisales/health
+#   → {"status":"ok"} или аналогичный ответ от FastAPI
+#
+# Если получаешь 502 Bad Gateway:
+#   · проверь что aisales-api-v2 запущен: docker ps | grep aisales-api-v2
+#   · проверь порт: ss -tlnp | grep 8001
+#   · из хоста: curl http://127.0.0.1:8001/health (должно работать)
+#
+# Если 404 на /aisales/health, но curl 127.0.0.1:8001/health работает:
+#   · strip_prefix не сработал — проверь точные пути в @aisales matcher
+#   · в caddy log смотри: journalctl -u caddy -f
+# ─────────────────────────────────────────────────────────────────────
