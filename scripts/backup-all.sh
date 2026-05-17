@@ -82,25 +82,65 @@ dump_pg() {
   fi
 }
 
-# ── 2. SQLite online .backup ──────────────────────────────────────────
+# ── 2. SQLite — три пути с graceful fallback ──────────────────────────
+# A) если в контейнере есть sqlite3 → online .backup (самый чистый)
+# B) если на хосте есть sqlite3     → docker cp файл + online .backup на хосте
+# C) fallback                       → tar файлов БД (.db + .db-wal + .db-shm)
+#    WAL восстановится при следующем open.
 dump_sqlite() {
   local container="$1" path="$2" out="$3"
   if ! is_running "$container"; then
     skip "$container не запущен"
     return
   fi
-  local tmp="/tmp/sqlite-bk-$$.db"
-  if docker exec "$container" sqlite3 "$path" ".backup $tmp" 2>/dev/null; then
-    if docker cp "$container:$tmp" "$out" 2>/dev/null; then
+
+  # A: sqlite3 внутри контейнера
+  if docker exec "$container" sh -c 'command -v sqlite3' >/dev/null 2>&1; then
+    local tmp="/tmp/sqlite-bk-$$.db"
+    if docker exec "$container" sqlite3 "$path" ".backup $tmp" 2>/dev/null \
+       && docker cp "$container:$tmp" "$out" 2>/dev/null; then
       docker exec "$container" rm -f "$tmp" 2>/dev/null || true
       gzip -f "$out"
-      ok "$container:$path → $(basename "$out").gz ($(human_size "$out.gz"))"
-    else
-      fail "$container sqlite docker cp failed"
+      ok "$container:$path → $(basename "$out").gz [in-container] ($(human_size "${out}.gz"))"
+      return
     fi
-  else
-    fail "$container sqlite .backup failed"
   fi
+
+  # B: sqlite3 на хосте — копируем БД наружу, делаем .backup, гзипуем
+  if command -v sqlite3 >/dev/null 2>&1; then
+    local host_tmp="/tmp/sqlite-host-$$.db"
+    local host_bk="/tmp/sqlite-host-bk-$$.db"
+    if docker cp "$container:$path" "$host_tmp" 2>/dev/null; then
+      # WAL файл тоже копируем, иначе свежие записи потеряются.
+      docker cp "$container:${path}-wal" "${host_tmp}-wal" 2>/dev/null || true
+      docker cp "$container:${path}-shm" "${host_tmp}-shm" 2>/dev/null || true
+      if sqlite3 "$host_tmp" ".backup $host_bk" 2>/dev/null; then
+        mv "$host_bk" "$out"
+        gzip -f "$out"
+        ok "$container:$path → $(basename "$out").gz [host-sqlite3] ($(human_size "${out}.gz"))"
+        rm -f "$host_tmp" "${host_tmp}-wal" "${host_tmp}-shm"
+        return
+      fi
+      rm -f "$host_tmp" "${host_tmp}-wal" "${host_tmp}-shm" "$host_bk"
+    fi
+  fi
+
+  # C: fallback — tar файлов БД через docker cp
+  local stage="/tmp/sqlite-stage-$$"
+  mkdir -p "$stage"
+  if docker cp "$container:$path" "$stage/" 2>/dev/null; then
+    docker cp "$container:${path}-wal" "$stage/" 2>/dev/null || true
+    docker cp "$container:${path}-shm" "$stage/" 2>/dev/null || true
+    local tar_out="${out%.db}.tgz"
+    if tar czf "$tar_out" -C "$stage" . 2>/dev/null; then
+      ok "$container:$path → $(basename "$tar_out") [tar fallback] ($(human_size "$tar_out"))"
+      rm -rf "$stage"
+      return
+    fi
+    rm -rf "$stage"
+  fi
+
+  fail "$container:$path — все три метода не сработали"
 }
 
 # ── 3. tar bind-каталога ──────────────────────────────────────────────
