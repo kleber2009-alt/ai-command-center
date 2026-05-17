@@ -54,7 +54,9 @@ async function main(): Promise<void> {
   attachNotifier(notifier);
 
   let admin: AdminHandle | null = null;
-  if (config.adminPassword) {
+  const sessionAuthReady =
+    config.adminSessionSecret && config.ownerTelegramId !== undefined;
+  if (config.adminPassword || sessionAuthReady) {
     admin = startAdminServer({
       chats,
       leads,
@@ -62,10 +64,22 @@ async function main(): Promise<void> {
       logger,
       port: config.adminPort,
       username: config.adminUsername,
-      password: config.adminPassword,
+      password: config.adminPassword ?? '',
+      sessionSecret: sessionAuthReady ? config.adminSessionSecret : undefined,
+      ownerTelegramId: config.ownerTelegramId,
+      publicUrl: config.adminPublicUrl,
+      sendMagicLink: sessionAuthReady
+        ? async (telegramId, url) => {
+            await bot.api.sendMessage(
+              telegramId,
+              `Ссылка для входа в админку tg-agent (действует 10 минут):\n${url}`,
+              { link_preview_options: { is_disabled: true } },
+            );
+          }
+        : undefined,
     });
   } else {
-    logger.warn('ADMIN_PASSWORD not set — admin UI disabled');
+    logger.warn('admin UI disabled — set ADMIN_PASSWORD or ADMIN_SESSION_SECRET');
   }
 
   const shutdown = async (signal: string) => {

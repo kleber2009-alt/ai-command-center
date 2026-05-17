@@ -69,6 +69,8 @@ export interface Config {
   adminPort: number;
   adminUsername: string;
   adminPassword: string | undefined;
+  adminSessionSecret: string | undefined;
+  adminPublicUrl: string | undefined;
 }
 
 export function loadConfig(): Config {
@@ -91,5 +93,7 @@ export function loadConfig(): Config {
     adminPort: parsePort(optional('ADMIN_PORT'), 8080),
     adminUsername: optional('ADMIN_USERNAME') ?? 'admin',
     adminPassword: optional('ADMIN_PASSWORD'),
+    adminSessionSecret: optional('ADMIN_SESSION_SECRET'),
+    adminPublicUrl: optional('ADMIN_PUBLIC_URL'),
   };
 }

@@ -10,6 +10,7 @@ const root = dirname(here); // apps/tg-agent
 const assets = [
   ['src/knowledge/knowledge_base.md', 'dist/knowledge/knowledge_base.md'],
   ['src/admin/ui.html', 'dist/admin/ui.html'],
+  ['src/admin/login.html', 'dist/admin/login.html'],
 ];
 
 for (const [from, to] of assets) {
