@@ -1,4 +1,5 @@
 import { startAdminServer, type AdminHandle } from './admin/server.js';
+import { startBackupScheduler, type BackupHandle } from './backup.js';
 import { createBot } from './bot.js';
 import { createClassifier } from './classifier.js';
 import { loadConfig } from './config.js';
@@ -86,9 +87,25 @@ async function main(): Promise<void> {
     logger.warn('admin UI disabled — set ADMIN_PASSWORD or ADMIN_SESSION_SECRET');
   }
 
+  let backup: BackupHandle | null = null;
+  if (config.ownerTelegramId !== undefined) {
+    backup = startBackupScheduler({
+      db,
+      bot,
+      ownerTelegramId: config.ownerTelegramId,
+      intervalHours: config.backupIntervalHours,
+      logger,
+    });
+  } else if (config.backupIntervalHours > 0) {
+    logger.warn(
+      'backup disabled — OWNER_TELEGRAM_ID is not set, nowhere to send the file',
+    );
+  }
+
   const shutdown = async (signal: string) => {
     logger.info('shutdown requested', { signal });
     try {
+      backup?.stop();
       await bot.stop();
       if (admin) await admin.close();
     } finally {

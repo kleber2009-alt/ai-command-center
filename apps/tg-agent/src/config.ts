@@ -48,6 +48,15 @@ function parsePort(raw: string | undefined, fallback: number): number {
   return n;
 }
 
+function parseHours(raw: string | undefined, fallback: number): number {
+  if (!raw) return fallback;
+  const n = Number(raw);
+  if (!Number.isFinite(n) || n < 0) {
+    throw new Error(`BACKUP_INTERVAL_HOURS must be ≥ 0, got: ${raw}`);
+  }
+  return n;
+}
+
 export type LogLevel = 'debug' | 'info' | 'warn' | 'error';
 
 function parseLogLevel(raw: string | undefined): LogLevel {
@@ -71,6 +80,7 @@ export interface Config {
   adminPassword: string | undefined;
   adminSessionSecret: string | undefined;
   adminPublicUrl: string | undefined;
+  backupIntervalHours: number;
 }
 
 export function loadConfig(): Config {
@@ -95,5 +105,6 @@ export function loadConfig(): Config {
     adminPassword: optional('ADMIN_PASSWORD'),
     adminSessionSecret: optional('ADMIN_SESSION_SECRET'),
     adminPublicUrl: optional('ADMIN_PUBLIC_URL'),
+    backupIntervalHours: parseHours(optional('BACKUP_INTERVAL_HOURS'), 24),
   };
 }
