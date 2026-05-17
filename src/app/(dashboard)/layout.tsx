@@ -1,15 +1,16 @@
 'use client'
 import Link from 'next/link'
 import { usePathname } from 'next/navigation'
-import { LayoutDashboard, Users, CheckSquare, BarChart2, FileText, Settings, Zap } from 'lucide-react'
+import { LayoutDashboard, Users, CheckSquare, BarChart2, FileText, Settings, Zap, MessageSquare } from 'lucide-react'
 
 const nav = [
-  { href: '/dashboard', icon: LayoutDashboard, label: 'Dashboard' },
-  { href: '/team',      icon: Users,           label: 'AI Team' },
-  { href: '/tasks',     icon: CheckSquare,     label: 'Задачи' },
-  { href: '/metrics',   icon: BarChart2,       label: 'Метрики' },
-  { href: '/briefing',  icon: FileText,        label: 'Брифинг' },
-  { href: '/settings',  icon: Settings,        label: 'Настройки' },
+  { href: '/dashboard',     icon: LayoutDashboard, label: 'Dashboard' },
+  { href: '/team',          icon: Users,           label: 'AI Team' },
+  { href: '/tasks',         icon: CheckSquare,     label: 'Задачи' },
+  { href: '/conversations', icon: MessageSquare,   label: 'Диалоги' },
+  { href: '/metrics',       icon: BarChart2,       label: 'Метрики' },
+  { href: '/briefing',      icon: FileText,        label: 'Брифинг' },
+  { href: '/settings',      icon: Settings,        label: 'Настройки' },
 ]
 
 export default function DashboardLayout({ children }: { children: React.ReactNode }) {
