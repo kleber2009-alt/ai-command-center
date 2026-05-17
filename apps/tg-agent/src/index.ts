@@ -3,6 +3,7 @@ import { createBot } from './bot.js';
 import { createClassifier } from './classifier.js';
 import { loadConfig } from './config.js';
 import { createChatService } from './db/chats.js';
+import { createDraftService } from './db/drafts.js';
 import { openDb } from './db/index.js';
 import { createLeadService } from './db/leads.js';
 import { createMessageStore } from './db/messages.js';
@@ -31,6 +32,7 @@ async function main(): Promise<void> {
   const chats = createChatService(db);
   const leads = createLeadService(db);
   const messages = createMessageStore(db);
+  const drafts = createDraftService(db);
 
   const { bot, attachNotifier } = createBot({
     config,
@@ -40,9 +42,15 @@ async function main(): Promise<void> {
     chats,
     leads,
     messages,
+    drafts,
   });
 
-  const notifier = createNotifier(bot, config.ownerTelegramId, logger);
+  const notifier = createNotifier({
+    bot,
+    ownerTelegramId: config.ownerTelegramId,
+    drafts,
+    logger,
+  });
   attachNotifier(notifier);
 
   let admin: AdminHandle | null = null;

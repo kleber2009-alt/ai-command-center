@@ -1,13 +1,18 @@
-import { Bot } from 'grammy';
+import { Bot, type CallbackQueryContext, type Context, type Filter } from 'grammy';
 
 import type { Classifier } from './classifier.js';
 import type { Config } from './config.js';
 import type { ChatService } from './db/chats.js';
+import type { DraftRow, DraftService } from './db/drafts.js';
 import type { LeadService } from './db/leads.js';
 import type { MessageStore } from './db/messages.js';
 import { decide } from './decision.js';
 import type { Logger } from './logger.js';
-import type { Notifier } from './notifier.js';
+import {
+  DRAFT_CALLBACK_PATTERN,
+  renderResolutionFooter,
+  type Notifier,
+} from './notifier.js';
 import type { Responder } from './responder.js';
 import type { Action, IncomingMessage } from './types.js';
 
@@ -19,6 +24,7 @@ export interface BotDeps {
   chats: ChatService;
   leads: LeadService;
   messages: MessageStore;
+  drafts: DraftService;
 }
 
 const ACTIONS_THAT_REPLY: ReadonlySet<Action> = new Set([
@@ -33,11 +39,26 @@ export interface CreateBotResult {
 }
 
 export function createBot(deps: BotDeps): CreateBotResult {
-  const { config, logger, classifier, responder, chats, leads, messages } = deps;
+  const { config, logger, classifier, responder, chats, leads, messages, drafts } =
+    deps;
   const bot = new Bot(config.telegramBotToken);
   let notifier: Notifier | null = null;
 
   bot.on('message:text', async (ctx) => {
+    const chatType = ctx.chat.type;
+
+    // Owner DMs: only path we care about here is a reply to an edit
+    // prompt (force_reply'd by the bot). Everything else from the
+    // owner in private is ignored — this isn't a chat surface.
+    if (chatType === 'private') {
+      if (ctx.from?.id === config.ownerTelegramId) {
+        await handleOwnerPrivateMessage(ctx);
+      }
+      return;
+    }
+
+    if (chatType !== 'group' && chatType !== 'supergroup') return;
+
     const text = ctx.message.text;
     const chatId = ctx.chat.id;
     const chatTitle = 'title' in ctx.chat ? ctx.chat.title : undefined;
@@ -96,33 +117,55 @@ export function createBot(deps: BotDeps): CreateBotResult {
         autoReply: chatState.autoReply,
       });
 
-      let reply: string | null = null;
-      const wantsReply = ACTIONS_THAT_REPLY.has(decision.action);
+      const wantsAutoReply = ACTIONS_THAT_REPLY.has(decision.action);
+      const wantsDraft = decision.action === 'DRAFT_FOR_OWNER';
+      const shouldGenerate = (wantsAutoReply && chatState.autoReply) || wantsDraft;
 
-      if (wantsReply && chatState.autoReply) {
+      let reply: string | null = null;
+      let draftText: string | null = null;
+
+      if (shouldGenerate) {
         const authorDisplay =
           ctx.from?.username ??
           ctx.from?.first_name ??
           (incoming.userId !== undefined ? `user${incoming.userId}` : undefined);
 
-        reply = await responder.generate({
-          messageClass: classification.class,
-          text,
-          authorDisplay,
-        });
+        try {
+          const generated = await responder.generate({
+            messageClass: classification.class,
+            text,
+            authorDisplay,
+          });
 
-        await ctx.reply(reply, {
-          reply_parameters: { message_id: incoming.messageId },
-        });
-
-        logger.info('replied', {
-          ...baseLog,
-          class: classification.class,
-          action: decision.action,
-          replyChars: reply.length,
-          reply: truncate(reply, 200),
-        });
-      } else if (wantsReply && !chatState.autoReply) {
+          if (wantsAutoReply && chatState.autoReply) {
+            reply = generated;
+            await ctx.reply(reply, {
+              reply_parameters: { message_id: incoming.messageId },
+            });
+            logger.info('replied', {
+              ...baseLog,
+              class: classification.class,
+              action: decision.action,
+              replyChars: reply.length,
+              reply: truncate(reply, 200),
+            });
+          } else if (wantsDraft) {
+            draftText = generated;
+            logger.info('draft generated', {
+              ...baseLog,
+              class: classification.class,
+              draftChars: draftText.length,
+              draft: truncate(draftText, 200),
+            });
+          }
+        } catch (err) {
+          logger.error('responder failed', {
+            ...baseLog,
+            action: decision.action,
+            error: err instanceof Error ? err.message : String(err),
+          });
+        }
+      } else if (wantsAutoReply && !chatState.autoReply) {
         logger.info('reply suppressed: auto_reply is OFF for this chat', baseLog);
       }
 
@@ -150,6 +193,7 @@ export function createBot(deps: BotDeps): CreateBotResult {
           classification,
           action: decision.action,
           reply,
+          draftText,
           leadStatus: lead.status,
           leadStatusChanged: lead.changed,
         });
@@ -162,11 +206,196 @@ export function createBot(deps: BotDeps): CreateBotResult {
     }
   });
 
+  bot.callbackQuery(DRAFT_CALLBACK_PATTERN, async (ctx) => {
+    if (ctx.from?.id !== config.ownerTelegramId) {
+      await ctx.answerCallbackQuery({ text: 'Только владелец', show_alert: true });
+      return;
+    }
+
+    const match = ctx.match as RegExpMatchArray;
+    const op = match[1] as 'a' | 'e' | 'x';
+    const draftId = Number(match[2]);
+    const draft = drafts.findById(draftId);
+
+    if (!draft) {
+      await ctx.answerCallbackQuery({ text: 'Черновик не найден', show_alert: true });
+      return;
+    }
+
+    if (draft.status === 'sent' || draft.status === 'deleted') {
+      await ctx.answerCallbackQuery({
+        text: `Уже ${draft.status === 'sent' ? 'отправлено' : 'удалено'}`,
+      });
+      // Make sure the keyboard is gone in case the previous edit failed.
+      await removeKeyboard(ctx).catch(() => {});
+      return;
+    }
+
+    if (op === 'a') {
+      await handleApprove(ctx, draft);
+    } else if (op === 'e') {
+      await handleEditRequest(ctx, draft);
+    } else {
+      await handleDelete(ctx, draft);
+    }
+  });
+
   bot.catch((err) => {
     logger.error('bot runtime error', {
       error: err.error instanceof Error ? err.error.message : String(err.error),
     });
   });
+
+  async function handleOwnerPrivateMessage(
+    ctx: Filter<Context, 'message:text'>,
+  ): Promise<void> {
+    const replyTo = ctx.message?.reply_to_message?.message_id;
+    if (!replyTo) return;
+
+    const draft = drafts.findByEditPrompt(replyTo);
+    if (!draft) return;
+
+    const newText = ctx.message?.text?.trim();
+    if (!newText) {
+      await ctx.reply('Пустой текст. Черновик не отправлен.');
+      return;
+    }
+
+    const ok = drafts.markSent(draft.id, newText);
+    if (!ok) {
+      await ctx.reply('Уже разрешён ранее.');
+      return;
+    }
+
+    try {
+      await bot.api.sendMessage(draft.chat_id, newText, {
+        reply_parameters: { message_id: draft.original_message_id },
+      });
+      logger.info('draft sent (edited)', { draftId: draft.id, chars: newText.length });
+      await ctx.reply('✓ Отправлено.');
+      await editDmFooter(draft, 'sent-edited');
+    } catch (err) {
+      logger.error('draft post-edit send failed', {
+        draftId: draft.id,
+        error: err instanceof Error ? err.message : String(err),
+      });
+      await ctx.reply('Не получилось отправить в чат. Попробуй ещё раз.');
+    }
+  }
+
+  async function handleApprove(
+    ctx: CallbackQueryContext<Context>,
+    draft: DraftRow,
+  ): Promise<void> {
+    const ok = drafts.markSent(draft.id, draft.draft_text);
+    if (!ok) {
+      await ctx.answerCallbackQuery({ text: 'Уже разрешён' });
+      return;
+    }
+
+    try {
+      await bot.api.sendMessage(draft.chat_id, draft.draft_text, {
+        reply_parameters: { message_id: draft.original_message_id },
+      });
+      logger.info('draft sent (approved)', {
+        draftId: draft.id,
+        chars: draft.draft_text.length,
+      });
+      await ctx.answerCallbackQuery({ text: 'Отправлено' });
+      await editDmFooter(draft, 'sent');
+    } catch (err) {
+      logger.error('draft approve send failed', {
+        draftId: draft.id,
+        error: err instanceof Error ? err.message : String(err),
+      });
+      await ctx.answerCallbackQuery({
+        text: 'Ошибка отправки. Попробуй ещё раз.',
+        show_alert: true,
+      });
+    }
+  }
+
+  async function handleEditRequest(
+    ctx: CallbackQueryContext<Context>,
+    draft: DraftRow,
+  ): Promise<void> {
+    try {
+      const prompt = await bot.api.sendMessage(
+        ctx.from.id,
+        `Перепиши черновик для draft #${draft.id} и отправь reply'ем сюда. ` +
+          'После этого бот отправит твой текст в чат.',
+        { reply_markup: { force_reply: true, input_field_placeholder: 'Новый текст ответа…' } },
+      );
+      const ok = drafts.markEditing(draft.id, prompt.message_id);
+      if (!ok) {
+        // Race: someone resolved between findById and markEditing.
+        await ctx.answerCallbackQuery({ text: 'Уже разрешён' });
+        return;
+      }
+      await ctx.answerCallbackQuery({ text: 'Жду твой вариант' });
+      await removeKeyboard(ctx).catch(() => {});
+    } catch (err) {
+      logger.error('draft edit prompt failed', {
+        draftId: draft.id,
+        error: err instanceof Error ? err.message : String(err),
+      });
+      await ctx.answerCallbackQuery({ text: 'Не получилось', show_alert: true });
+    }
+  }
+
+  async function handleDelete(
+    ctx: CallbackQueryContext<Context>,
+    draft: DraftRow,
+  ): Promise<void> {
+    const ok = drafts.markDeleted(draft.id);
+    if (!ok) {
+      await ctx.answerCallbackQuery({ text: 'Уже разрешён' });
+      return;
+    }
+    logger.info('draft deleted', { draftId: draft.id });
+    await ctx.answerCallbackQuery({ text: 'Удалено' });
+    await editDmFooter(draft, 'deleted');
+  }
+
+  async function editDmFooter(
+    draft: DraftRow,
+    kind: 'sent' | 'sent-edited' | 'deleted',
+  ): Promise<void> {
+    if (!draft.owner_dm_message_id || config.ownerTelegramId === undefined) return;
+    try {
+      // Append a footer to the DM and strip the keyboard. We have to
+      // re-fetch the original text — Telegram doesn't expose it, so
+      // we just edit the reply markup off and send a short follow-up
+      // marker via a separate message. Editing the original text
+      // would require us to have stored it; not worth the disk.
+      await bot.api.editMessageReplyMarkup(
+        config.ownerTelegramId,
+        draft.owner_dm_message_id,
+        { reply_markup: { inline_keyboard: [] } },
+      );
+      await bot.api.sendMessage(
+        config.ownerTelegramId,
+        renderResolutionFooter(kind).trim(),
+        { reply_parameters: { message_id: draft.owner_dm_message_id } },
+      );
+    } catch (err) {
+      logger.warn('draft DM footer update failed', {
+        draftId: draft.id,
+        error: err instanceof Error ? err.message : String(err),
+      });
+    }
+  }
+
+  async function removeKeyboard(
+    ctx: CallbackQueryContext<Context>,
+  ): Promise<void> {
+    if (!ctx.callbackQuery.message) return;
+    await bot.api.editMessageReplyMarkup(
+      ctx.callbackQuery.message.chat.id,
+      ctx.callbackQuery.message.message_id,
+      { reply_markup: { inline_keyboard: [] } },
+    );
+  }
 
   return {
     bot,
