@@ -1,11 +1,12 @@
 'use client'
 import { useEffect, useRef, useState } from 'react'
-import { Brain, Check, Copy, History, Loader2, MessageSquarePlus, Send, Sparkles, Trash2, TriangleAlert } from 'lucide-react'
+import { Brain, Check, Copy, History, Loader2, Mic, MessageSquarePlus, Send, Sparkles, Square, Trash2, TriangleAlert } from 'lucide-react'
 import MeTabs from './MeTabs'
 import { readNdjson } from '@/lib/stream-client'
 import { apiFetch } from '@/lib/api-client'
 import ChatSessionsDrawer from '@/components/ChatSessionsDrawer'
 import MarkdownMessage from '@/components/MarkdownMessage'
+import { useVoiceInput } from '@/lib/voice-input'
 
 type Msg = { role: 'user' | 'assistant'; content: string; citations?: Citation[] }
 type Citation = { document_id: string; document_title: string; chunk_index: number; similarity: number }
@@ -23,6 +24,11 @@ export default function MeChat() {
   const [creatingSession, setCreatingSession] = useState(false)
   const bottomRef = useRef<HTMLDivElement | null>(null)
   const inputRef = useRef<HTMLTextAreaElement | null>(null)
+
+  const voice = useVoiceInput({
+    onResult: (text) => setInput((cur) => (cur ? cur + (cur.endsWith(' ') ? '' : ' ') + text : text)),
+    onError: (msg) => setError(msg),
+  })
 
   // Resume the last session if we have one, else create a new one.
   useEffect(() => {
@@ -293,14 +299,36 @@ export default function MeChat() {
             value={input}
             onChange={(e) => setInput(e.target.value)}
             onKeyDown={onKeyDown}
-            placeholder="Спроси про себя, проекты, материалы…"
+            placeholder={voice.state === 'recording' ? 'Слушаю…' : 'Спроси про себя, проекты, материалы…'}
             rows={1}
-            disabled={loading}
+            disabled={loading || voice.state !== 'idle'}
             className="max-h-[200px] min-h-[40px] flex-1 resize-none rounded-[20px] border border-apple-line bg-apple-bg-soft px-3.5 py-2 text-[15px] text-apple-ink placeholder:text-apple-faint outline-none transition-all focus:border-apple-line-strong focus:bg-white focus:shadow-apple-sm disabled:opacity-60"
           />
+          {voice.supported && (
+            <button
+              type="button"
+              onClick={voice.toggle}
+              disabled={loading || voice.state === 'transcribing'}
+              className={`grid h-10 w-10 shrink-0 place-items-center rounded-full transition-colors disabled:cursor-not-allowed disabled:bg-apple-line-strong ${
+                voice.state === 'recording'
+                  ? 'bg-red-500 text-white animate-pulse hover:bg-red-600'
+                  : 'border border-apple-line bg-white text-apple-ink hover:bg-apple-bg-soft'
+              }`}
+              aria-label={voice.state === 'recording' ? 'Остановить запись' : 'Голосовой ввод'}
+              title={voice.state === 'recording' ? 'Остановить запись' : 'Голосовой ввод'}
+            >
+              {voice.state === 'transcribing' ? (
+                <Loader2 className="h-4 w-4 animate-spin" />
+              ) : voice.state === 'recording' ? (
+                <Square className="h-4 w-4" />
+              ) : (
+                <Mic className="h-4 w-4" />
+              )}
+            </button>
+          )}
           <button
             type="submit"
-            disabled={loading || !input.trim()}
+            disabled={loading || !input.trim() || voice.state !== 'idle'}
             className="grid h-10 w-10 shrink-0 place-items-center rounded-full bg-apple-blue text-white transition-colors hover:bg-apple-blue-hover active:bg-apple-blue-pressed disabled:cursor-not-allowed disabled:bg-apple-line-strong"
             aria-label="Отправить"
           >

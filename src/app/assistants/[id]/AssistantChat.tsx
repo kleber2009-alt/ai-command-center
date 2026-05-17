@@ -3,13 +3,14 @@ import { useEffect, useRef, useState } from 'react'
 import Link from 'next/link'
 import {
   ArrowLeft, BookOpen, Copy, Filter, Flame, History, LayoutGrid, Loader2, Magnet, MessageSquarePlus,
-  MessagesSquare, Package, Send, Sparkles, Target, TriangleAlert, Trash2, Check,
+  MessagesSquare, Mic, Package, Send, Sparkles, Square, Target, TriangleAlert, Trash2, Check,
 } from 'lucide-react'
 import { getTelegram, isInTelegram } from '@/lib/telegram'
 import { readNdjson } from '@/lib/stream-client'
 import { apiFetch } from '@/lib/api-client'
 import ChatSessionsDrawer from '@/components/ChatSessionsDrawer'
 import MarkdownMessage from '@/components/MarkdownMessage'
+import { useVoiceInput } from '@/lib/voice-input'
 
 const ICONS: Record<string, any> = {
   Target, MessagesSquare, Send, Flame, Package, Filter, BookOpen, Magnet, LayoutGrid, Sparkles,
@@ -42,6 +43,11 @@ export default function AssistantChat({ id, name, description, icon, buttonText,
   const [creatingSession, setCreatingSession] = useState(false)
   const bottomRef = useRef<HTMLDivElement | null>(null)
   const inputRef = useRef<HTMLTextAreaElement | null>(null)
+
+  const voice = useVoiceInput({
+    onResult: (text) => setInput((cur) => (cur ? cur + (cur.endsWith(' ') ? '' : ' ') + text : text)),
+    onError: (msg) => setError(msg),
+  })
 
   useEffect(() => {
     const stored = (() => {
@@ -314,14 +320,36 @@ export default function AssistantChat({ id, name, description, icon, buttonText,
             value={input}
             onChange={(e) => setInput(e.target.value)}
             onKeyDown={onKeyDown}
-            placeholder="Опиши задачу…"
+            placeholder={voice.state === 'recording' ? 'Слушаю…' : 'Опиши задачу…'}
             rows={1}
-            disabled={loading}
+            disabled={loading || voice.state !== 'idle'}
             className="max-h-[200px] min-h-[40px] flex-1 resize-none rounded-[20px] border border-apple-line bg-apple-bg-soft px-3.5 py-2 text-[15px] text-apple-ink placeholder:text-apple-faint outline-none transition-all focus:border-apple-line-strong focus:bg-white focus:shadow-apple-sm disabled:opacity-60"
           />
+          {voice.supported && (
+            <button
+              type="button"
+              onClick={voice.toggle}
+              disabled={loading || voice.state === 'transcribing'}
+              className={`grid h-10 w-10 shrink-0 place-items-center rounded-full transition-colors disabled:cursor-not-allowed disabled:bg-apple-line-strong ${
+                voice.state === 'recording'
+                  ? 'bg-red-500 text-white animate-pulse hover:bg-red-600'
+                  : 'border border-apple-line bg-white text-apple-ink hover:bg-apple-bg-soft'
+              }`}
+              aria-label={voice.state === 'recording' ? 'Остановить запись' : 'Голосовой ввод'}
+              title={voice.state === 'recording' ? 'Остановить запись' : 'Голосовой ввод'}
+            >
+              {voice.state === 'transcribing' ? (
+                <Loader2 className="h-4 w-4 animate-spin" />
+              ) : voice.state === 'recording' ? (
+                <Square className="h-4 w-4" />
+              ) : (
+                <Mic className="h-4 w-4" />
+              )}
+            </button>
+          )}
           <button
             type="submit"
-            disabled={loading || !input.trim()}
+            disabled={loading || !input.trim() || voice.state !== 'idle'}
             className="grid h-10 w-10 shrink-0 place-items-center rounded-full bg-apple-blue text-white transition-colors hover:bg-apple-blue-hover active:bg-apple-blue-pressed disabled:cursor-not-allowed disabled:bg-apple-line-strong"
             aria-label="Отправить"
           >
