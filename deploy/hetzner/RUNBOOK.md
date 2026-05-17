@@ -140,10 +140,38 @@ IDs), but you lose cross-device history and generation caching.
 
 ## When YouTube starts returning "Sign in to confirm you're not a bot"
 
-YouTube rate-limits datacenter IPs. The captions parser bypasses this for
-videos that have captions; for ones that don't, we fall through to yt-dlp
-which needs valid YouTube cookies. Refresh `COOKIES_B64`:
+As of 2026 YouTube aggressively blocks **datacenter IPs even with valid
+cookies**. The login session that worked in a residential browser is
+recognised by YouTube as "uncertain" when the request originates from
+Hetzner/AWS/GCP. yt-dlp emits the bot-check error regardless of how
+fresh the cookies are.
 
+What still works against datacenter IPs:
+- Videos that have public captions → our captions parser (`src/lib/youtube-captions.ts`) bypasses yt-dlp entirely
+- All non-YouTube sources (Instagram, TikTok, X, direct media URLs)
+
+What does **not** reliably work:
+- Auto-transcribed videos with no manual captions, hit through datacenter IP
+
+Options if you need YouTube to work end-to-end:
+1. **Residential proxy** — point yt-dlp at a residential IP using `proxy`
+   in `extractor_args`. Providers: Bright Data, Webshare, Oxylabs (~$5-20/mo).
+2. **Third-party transcription API** — Tactiq, AssemblyAI's YouTube
+   endpoint, etc. take the URL, do their own scraping, return text.
+3. **Browser-on-server** — run a real headless Chrome with a stored
+   session and have it download. Complex.
+
+The Hetzner-only deploy ships with the cookies pipeline, the latest
+yt-dlp, and the most-permissive player_client list — that's the
+maximum yt-dlp can do without a proxy.
+
+For one-off diagnostics: set `DEBUG_YTDLP_DIAG=true` in `.env`,
+`docker compose up -d app`, then
+`curl 'https://<DOMAIN>/api/health/ytdlp?url=https://www.youtube.com/watch?v=...'`
+returns yt-dlp version, cookie domains in the merged file, and the
+raw format list yt-dlp sees. Turn it off when done.
+
+Refresh cookies anyway (might help marginally):
 ```bash
 # from a logged-in browser: export cookies.txt for youtube.com
 base64 -w0 youtube_cookies.txt
