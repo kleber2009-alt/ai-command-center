@@ -1,0 +1,13 @@
+# ═══════════════════════════════════════════════════════════════════
+# infra/monitoring/cron.example
+# ───────────────────────────────────────────────────────────────────
+# Установка:
+#   crontab -e
+#   и вставь строки ниже (без # в начале)
+# ═══════════════════════════════════════════════════════════════════
+
+# Каждые 5 минут — проверка backend + внешних SaaS + диск
+*/5 * * * * cd /root/ai-command-center/infra && set -a && source .env && set +a && /root/ai-command-center/infra/monitoring/check.sh >> /var/log/aio-monitor.log 2>&1
+
+# Чистка лога раз в неделю (оставляем последние 1000 строк)
+0 4 * * 0 tail -1000 /var/log/aio-monitor.log > /var/log/aio-monitor.log.tmp && mv /var/log/aio-monitor.log.tmp /var/log/aio-monitor.log

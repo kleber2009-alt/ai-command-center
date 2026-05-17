@@ -79,19 +79,113 @@ await fastify.register(fastifyStatic, {
 });
 
 // ═══ /api/health ════════════════════════════════════════════════════
-fastify.get('/api/health', async () => {
+// Краткий liveness-проб для мониторинга. Возвращает 200 если БД
+// доступна, 503 если нет. Не делает дорогих внешних вызовов.
+fastify.get('/api/health', async (request, reply) => {
   let dbOk = false;
   try {
     await query('select 1');
     dbOk = true;
   } catch {}
-  return {
-    ok: true,
+  const status = dbOk ? 200 : 503;
+  return reply.code(status).send({
+    ok: dbOk,
     db: dbOk,
-    elevenlabs: elevenConfigured(),
-    tg_voice_bot: tgVoiceConfigured(),
+    elevenlabs_configured: elevenConfigured(),
+    tg_voice_bot_configured: tgVoiceConfigured(),
     public_base_url: process.env.PUBLIC_BASE_URL || null,
-  };
+  });
+});
+
+// ═══ /api/health/full ═══════════════════════════════════════════════
+// Детальная диагностика для отладки. Может выполняться долго (внешние
+// вызовы). Не использовать для частых мониторингов.
+fastify.get('/api/health/full', async (request, reply) => {
+  const checks = {};
+  let allOk = true;
+
+  // DB
+  try {
+    const start = Date.now();
+    await query('select 1');
+    checks.db = { ok: true, latency_ms: Date.now() - start };
+  } catch (e) {
+    checks.db = { ok: false, error: String(e.message || e).slice(0, 200) };
+    allOk = false;
+  }
+
+  // Voices count
+  try {
+    const [row] = await query('select count(*)::int as n from voices where archived_at is null');
+    checks.voices_active = { ok: true, count: row.n };
+  } catch (e) {
+    checks.voices_active = { ok: false, error: String(e.message || e).slice(0, 200) };
+  }
+
+  // Voice generations (last hour)
+  try {
+    const [row] = await query(`select count(*)::int as n from voice_generations where created_at > now() - interval '1 hour'`);
+    checks.generations_last_hour = { ok: true, count: row.n };
+  } catch (e) {
+    checks.generations_last_hour = { ok: false, error: String(e.message || e).slice(0, 200) };
+  }
+
+  // ElevenLabs reachability (cheap HEAD-ish — getMe doesn't exist, use /v1/user)
+  if (elevenConfigured()) {
+    try {
+      const start = Date.now();
+      const res = await fetch('https://api.elevenlabs.io/v1/user', {
+        headers: { 'xi-api-key': process.env.ELEVENLABS_API_KEY },
+      });
+      checks.elevenlabs = {
+        ok: res.ok,
+        status: res.status,
+        latency_ms: Date.now() - start,
+      };
+      if (!res.ok) allOk = false;
+    } catch (e) {
+      checks.elevenlabs = { ok: false, error: String(e.message || e).slice(0, 200) };
+      allOk = false;
+    }
+  } else {
+    checks.elevenlabs = { ok: null, note: 'not configured' };
+  }
+
+  // Telegram Bot
+  if (tgVoiceConfigured()) {
+    try {
+      const start = Date.now();
+      const res = await fetch(
+        `https://api.telegram.org/bot${process.env.TG_VOICE_BOT_TOKEN}/getMe`,
+      );
+      checks.tg_voice_bot = {
+        ok: res.ok,
+        status: res.status,
+        latency_ms: Date.now() - start,
+      };
+      if (!res.ok) allOk = false;
+    } catch (e) {
+      checks.tg_voice_bot = { ok: false, error: String(e.message || e).slice(0, 200) };
+      allOk = false;
+    }
+  } else {
+    checks.tg_voice_bot = { ok: null, note: 'not configured' };
+  }
+
+  // Voice-notes disk usage (best-effort)
+  try {
+    const { statSync } = await import('node:fs');
+    const stat = statSync(process.env.VOICE_NOTES_DIR || '/data/voice-notes');
+    checks.voice_notes_dir = { ok: true, exists: stat.isDirectory() };
+  } catch (e) {
+    checks.voice_notes_dir = { ok: false, error: String(e.message || e).slice(0, 100) };
+  }
+
+  return reply.code(allOk ? 200 : 503).send({
+    ok: allOk,
+    checks,
+    timestamp: new Date().toISOString(),
+  });
 });
 
 // ═══ /api/leads (replaces Supabase REST insert) ═════════════════════
