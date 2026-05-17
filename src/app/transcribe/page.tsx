@@ -8,6 +8,7 @@ import {
 } from 'lucide-react'
 import { getTelegram, isInTelegram } from '@/lib/telegram'
 import { apiFetch } from '@/lib/api-client'
+import MarkdownMessage from '@/components/MarkdownMessage'
 import { readNdjson } from '@/lib/stream-client'
 
 type Paragraph = { text: string; start: number; end: number }
@@ -20,7 +21,7 @@ type Result = {
   detectedLanguage: string | null
   source: Source
 }
-type Summary = { summary: string; bullets: string[] }
+type Summary = { markdown: string }
 type Translation = { text: string; lang: 'ru' | 'en' }
 
 type CarouselContent = { slides: Array<{ n: number; title: string; body: string }> }
@@ -326,8 +327,12 @@ export default function TranscribePage() {
           detectedLanguage: data.language,
           source: data.source,
         })
-        if (data.summary && data.bullets) {
-          setSummary({ summary: data.summary, bullets: data.bullets })
+        if (data.summary || (data.bullets && data.bullets.length > 0)) {
+          const bulletsMd = (data.bullets ?? []).map((b: string) => `- ${b}`).join('\n')
+          const md =
+            (data.summary ? `## Саммари\n${data.summary}` : '') +
+            (bulletsMd ? (data.summary ? '\n\n' : '') + `## Тезисы\n${bulletsMd}` : '')
+          setSummary({ markdown: md })
         }
         if (data.translation) {
           setTranslation({ text: data.translation.text, lang: data.translation.lang })
@@ -452,21 +457,34 @@ export default function TranscribePage() {
   async function generateSummary() {
     if (!result) return
     setSummaryLoading(true)
-    setSummary(null)
+    setSummary({ markdown: '' })
+    setError(null)
     try {
       const res = await apiFetch('/api/transcribe/summarize', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({ id: result.id, transcript: result.transcript }),
       })
-      const data = await res.json()
       if (!res.ok) {
-        setError(data.error || 'Не удалось сгенерировать саммари')
-      } else {
-        setSummary({ summary: data.summary, bullets: data.bullets })
+        const data = await res.json().catch(() => ({}))
+        throw new Error(data?.error || `Ошибка ${res.status}`)
       }
+      let acc = ''
+      let streamError: string | null = null
+      await readNdjson(res, (e) => {
+        if (e.type === 'delta') {
+          acc += e.text
+          setSummary({ markdown: acc })
+        } else if (e.type === 'error') {
+          streamError = e.error
+        }
+      })
+      if (streamError) throw new Error(streamError)
+      if (!acc.trim()) throw new Error('Пустой ответ от модели')
+      setSummary({ markdown: acc })
     } catch (err: any) {
       setError(err?.message || 'Сетевая ошибка')
+      setSummary(null)
     } finally {
       setSummaryLoading(false)
     }
@@ -751,15 +769,15 @@ export default function TranscribePage() {
                 <Sparkles className="h-4 w-4 text-apple-blue" />
                 <h3 className="text-[13px] font-semibold text-apple-ink">Саммари</h3>
               </div>
-              <p className="mb-3 text-[15px] leading-relaxed text-apple-ink">{summary.summary}</p>
-              <ul className="space-y-1.5">
-                {summary.bullets.map((b, i) => (
-                  <li key={i} className="flex gap-2 text-[14px] text-apple-ink">
-                    <span className="flex-shrink-0 text-apple-blue">•</span>
-                    <span>{b}</span>
-                  </li>
-                ))}
-              </ul>
+              {summary.markdown ? (
+                <MarkdownMessage content={summary.markdown} className="text-[15px] leading-relaxed text-apple-ink" />
+              ) : (
+                <span className="flex items-center gap-1 py-1">
+                  <span className="h-1.5 w-1.5 animate-pulse rounded-full bg-apple-faint" style={{ animationDelay: '0ms' }} />
+                  <span className="h-1.5 w-1.5 animate-pulse rounded-full bg-apple-faint" style={{ animationDelay: '150ms' }} />
+                  <span className="h-1.5 w-1.5 animate-pulse rounded-full bg-apple-faint" style={{ animationDelay: '300ms' }} />
+                </span>
+              )}
             </div>
           )}
 

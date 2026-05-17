@@ -1,22 +1,47 @@
 import { NextRequest, NextResponse } from 'next/server'
 import { getTranscript, updateTranscriptSummary } from '@/lib/transcripts-db'
+import { streamAnthropic } from '@/lib/anthropic-stream'
 import { requireTelegramAuth } from '@/lib/telegram-auth'
 
 export const maxDuration = 60
 
 type Body = { id?: string; transcript?: string }
 
-const PROMPT = (text: string) => `Прочитай транскрипт видео или аудиозаписи и сделай:
-1. summary — краткий пересказ в 2-3 предложениях на русском
-2. bullets — 5 ключевых тезисов/идей на русском (каждый одной строкой)
+const PROMPT = (text: string) => `Прочитай транскрипт видео или аудиозаписи и сделай саммари на русском:
+
+1. Сначала блок \`## Саммари\` — 2-3 предложения с сутью.
+2. Затем блок \`## Тезисы\` — 5 ключевых тезисов как маркированный список (\`- ...\`).
+
+Без вступлений и заключений. Только эти два блока.
 
 Транскрипт:
 """
 ${text.slice(0, 30000)}
-"""
+"""`
 
-Отвечай ТОЛЬКО валидным JSON, без markdown-обёртки:
-{"summary": "...", "bullets": ["...", "...", "...", "...", "..."]}`
+/** Pull a "## Саммари ... ## Тезисы\n- ..." markdown back into the legacy
+ *  {summary, bullets} shape so we can keep storing both fields. */
+function parseSummary(markdown: string): { summary: string; bullets: string[] } {
+  const sumMatch = markdown.match(/##\s*Саммари\s*\n([\s\S]*?)(?=\n##\s|$)/i)
+  const bulletsMatch = markdown.match(/##\s*Тезисы\s*\n([\s\S]*)$/i)
+  const summary = sumMatch ? sumMatch[1].trim() : markdown.split(/\n##\s/)[0].trim()
+  const bullets: string[] = []
+  if (bulletsMatch) {
+    for (const line of bulletsMatch[1].split('\n')) {
+      const m = line.match(/^[\s]*[-*•]\s+(.+)$/)
+      if (m) bullets.push(m[1].trim())
+    }
+  }
+  return { summary, bullets }
+}
+
+function ndjsonResponse(events: Array<Record<string, any>>): Response {
+  const enc = new TextEncoder()
+  const body = events.map((e) => JSON.stringify(e) + '\n').join('')
+  return new Response(enc.encode(body), {
+    headers: { 'Content-Type': 'application/x-ndjson; charset=utf-8' },
+  })
+}
 
 export async function POST(req: NextRequest) {
   const gate = requireTelegramAuth(req)
@@ -30,11 +55,15 @@ export async function POST(req: NextRequest) {
   let text = transcript
   if (id) {
     const row = getTranscript(id)
-    if (!row) {
-      return NextResponse.json({ error: 'Не найден транскрипт' }, { status: 404 })
-    }
+    if (!row) return NextResponse.json({ error: 'Не найден транскрипт' }, { status: 404 })
     if (row.summary && row.bullets) {
-      return NextResponse.json({ summary: row.summary, bullets: row.bullets, cached: true })
+      // Replay cached saved summary as a single delta + done.
+      const cachedMd = `## Саммари\n${row.summary}\n\n## Тезисы\n${row.bullets.map((b) => `- ${b}`).join('\n')}`
+      return ndjsonResponse([
+        { type: 'meta', cached: true },
+        { type: 'delta', text: cachedMd },
+        { type: 'done' },
+      ])
     }
     text = row.transcript
   }
@@ -43,40 +72,19 @@ export async function POST(req: NextRequest) {
     return NextResponse.json({ error: 'Пустой транскрипт' }, { status: 400 })
   }
 
-  try {
-    const res = await fetch('https://api.anthropic.com/v1/messages', {
-      method: 'POST',
-      headers: {
-        'Content-Type': 'application/json',
-        'x-api-key': process.env.ANTHROPIC_API_KEY,
-        'anthropic-version': '2023-06-01',
-      },
-      body: JSON.stringify({
-        model: 'claude-haiku-4-5-20251001',
-        max_tokens: 1024,
-        messages: [{ role: 'user', content: PROMPT(text) }],
-      }),
-    })
-
-    if (!res.ok) {
-      const errText = await res.text()
-      return NextResponse.json(
-        { error: `Anthropic (${res.status}): ${errText.slice(0, 300)}` },
-        { status: res.status },
-      )
-    }
-
-    const data = await res.json()
-    const raw = data.content?.[0]?.text || '{}'
-    const cleaned = raw.replace(/```json?|```/g, '').trim()
-    const parsed = JSON.parse(cleaned) as { summary: string; bullets: string[] }
-
-    if (id) {
-      updateTranscriptSummary(id, parsed.summary, parsed.bullets)
-    }
-
-    return NextResponse.json({ summary: parsed.summary, bullets: parsed.bullets, cached: false })
-  } catch (e: any) {
-    return NextResponse.json({ error: e?.message || 'Ошибка генерации саммари' }, { status: 500 })
-  }
+  return streamAnthropic(
+    {
+      apiKey: process.env.ANTHROPIC_API_KEY,
+      model: 'claude-haiku-4-5-20251001',
+      system: '',
+      messages: [{ role: 'user', content: PROMPT(text) }],
+      maxTokens: 1024,
+    },
+    { cached: false },
+    async (fullText) => {
+      if (!id) return
+      const { summary, bullets } = parseSummary(fullText)
+      if (summary || bullets.length > 0) updateTranscriptSummary(id, summary, bullets)
+    },
+  )
 }
