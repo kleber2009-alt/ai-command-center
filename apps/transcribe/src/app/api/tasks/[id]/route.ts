@@ -16,6 +16,7 @@ type PatchBody = Partial<{
 export async function PATCH(req: NextRequest, { params }: { params: { id: string } }) {
   const guard = guardRequest(req, {
     rateLimit: { key: 'tasks-mod', max: 30, windowMs: 60_000 },
+    ownerOnly: true,
   })
   if (!guard.ok) return guard.response
 
@@ -54,6 +55,7 @@ export async function PATCH(req: NextRequest, { params }: { params: { id: string
 export async function DELETE(req: NextRequest, { params }: { params: { id: string } }) {
   const guard = guardRequest(req, {
     rateLimit: { key: 'tasks-mod', max: 30, windowMs: 60_000 },
+    ownerOnly: true,
   })
   if (!guard.ok) return guard.response
 
