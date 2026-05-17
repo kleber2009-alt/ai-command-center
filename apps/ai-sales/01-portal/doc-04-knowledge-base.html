@@ -1,0 +1,357 @@
+<!DOCTYPE html>
+<html lang="ru">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Структура базы знаний — AI Sales System</title>
+<style>
+  * { margin: 0; padding: 0; box-sizing: border-box; }
+  :root {
+    --bg: #080808; --text: #f5f0e8; --lime: #c8f060;
+    --cyan: #60c8f0; --pink: #f06090;
+    --muted: rgba(245,240,232,0.5); --dim: rgba(245,240,232,0.3);
+    --border: rgba(245,240,232,0.1); --card: #0f0f0f;
+  }
+  body {
+    background: var(--bg); color: var(--text);
+    font-family: Georgia, serif; line-height: 1.65;
+    padding: 48px 24px 96px;
+  }
+  .container { max-width: 880px; margin: 0 auto; }
+  .label { font-family: 'JetBrains Mono', monospace; font-size: 10px;
+           text-transform: uppercase; letter-spacing: 0.15em; color: var(--muted); }
+  
+  .doc-header { border-bottom: 1px solid var(--border); padding-bottom: 32px; margin-bottom: 48px; }
+  .doc-header .doc-num {
+    font-family: Georgia, serif; font-style: italic; font-size: 96px;
+    color: transparent; -webkit-text-stroke: 1px var(--lime); line-height: 0.9;
+  }
+  .doc-header h1 {
+    font-family: Georgia, serif; font-size: 52px; font-weight: normal;
+    letter-spacing: -0.02em; line-height: 1.05; margin: 8px 0 16px;
+  }
+  .doc-header h1 .accent { color: var(--lime); font-style: italic; }
+  .doc-header .doc-sub { font-size: 18px; color: var(--muted); }
+  
+  section { margin-bottom: 56px; }
+  section .sec-num {
+    font-family: Georgia, serif; font-style: italic; font-size: 64px;
+    color: transparent; -webkit-text-stroke: 1px var(--cyan); line-height: 1;
+  }
+  section h2 {
+    font-family: Georgia, serif; font-size: 32px; font-weight: normal;
+    margin: 8px 0; line-height: 1.15;
+  }
+  section .sec-sub {
+    font-family: 'JetBrains Mono', monospace; font-size: 10px; text-transform: uppercase;
+    letter-spacing: 0.15em; color: var(--lime); margin-bottom: 24px;
+  }
+  
+  h3 {
+    font-family: 'JetBrains Mono', monospace; font-size: 11px; text-transform: uppercase;
+    letter-spacing: 0.15em; margin: 32px 0 16px;
+    padding-bottom: 8px; border-bottom: 1px solid var(--border);
+  }
+  
+  p { margin-bottom: 16px; font-size: 16px; }
+  .lead { font-size: 18px; margin-bottom: 24px; font-style: italic; }
+  
+  ul, ol { margin: 12px 0 16px 24px; }
+  li { margin-bottom: 8px; font-size: 15px; }
+  
+  /* TREE STRUCTURE */
+  .tree { background: var(--card); padding: 28px; margin: 20px 0;
+          font-family: 'JetBrains Mono', monospace; font-size: 13px;
+          line-height: 1.8; color: var(--text); }
+  .tree .folder { color: var(--lime); }
+  .tree .file { color: var(--text); }
+  .tree .desc { color: var(--muted); font-style: italic; }
+  
+  table { width: 100%; border-collapse: collapse; margin: 16px 0; font-size: 14px; }
+  th { font-family: 'JetBrains Mono', monospace; font-size: 10px; text-transform: uppercase;
+       letter-spacing: 0.1em; color: var(--muted); text-align: left; padding: 12px 8px;
+       border-bottom: 1px solid var(--border); }
+  td { padding: 12px 8px; border-bottom: 1px dotted rgba(245,240,232,0.05); vertical-align: top; }
+  
+  .schema-card { background: var(--card); padding: 24px 28px; margin: 16px 0; }
+  .schema-card h4 { font-family: Georgia, serif; font-size: 20px; font-weight: normal;
+                    margin-bottom: 12px; color: var(--lime); }
+  .schema-row { display: grid; grid-template-columns: 180px 1fr;
+                gap: 16px; padding: 8px 0;
+                border-bottom: 1px dotted rgba(245,240,232,0.05); font-size: 14px; }
+  .schema-row:last-child { border: none; }
+  .schema-row .key { font-family: 'JetBrains Mono', monospace; color: var(--cyan); }
+  
+  .note { background: rgba(96,200,240,0.04); border-left: 2px solid var(--cyan);
+          padding: 16px 20px; margin: 16px 0; font-size: 14px; }
+  .warn { background: rgba(240,96,144,0.04); border-left: 2px solid var(--pink);
+          padding: 16px 20px; margin: 16px 0; font-size: 14px; }
+  
+  .flow {
+    background: var(--card); padding: 28px;
+    font-family: 'JetBrains Mono', monospace; font-size: 12px;
+    color: var(--text); margin: 20px 0; white-space: pre; overflow-x: auto;
+  }
+  .flow .hi { color: var(--lime); }
+  .flow .dim { color: var(--muted); }
+  
+  .footer { margin-top: 80px; padding-top: 32px; border-top: 1px solid var(--border);
+            display: flex; justify-content: space-between; font-family: 'JetBrains Mono', monospace;
+            font-size: 10px; text-transform: uppercase; letter-spacing: 0.15em; color: var(--muted); }
+  
+  @media (max-width: 640px) {
+    body { padding: 24px 16px 48px; }
+    .doc-header h1 { font-size: 36px; }
+  }
+</style>
+</head>
+<body>
+<div class="container">
+
+<header class="doc-header">
+  <div class="doc-num">04</div>
+  <div class="label">Knowledge Base Architecture / v0.1</div>
+  <h1>База <span class="accent">знаний</span><br>система RAG</h1>
+  <p class="doc-sub">Архитектура и структура базы знаний, которая питает всех агентов. Это не Notion-папка — это конкретная инженерная схема.</p>
+</header>
+
+<section>
+  <div class="sec-num">01</div>
+  <div class="sec-sub">Concept</div>
+  <h2>Концепция</h2>
+  <p class="lead">База знаний = единый источник истины для всех агентов. Изменил скрипт в одном месте — обновился у всех.</p>
+  
+  <p>Используем подход <strong>RAG (Retrieval-Augmented Generation)</strong>. Это значит, что вместо «всё пихаем в промпт» — мы храним знания в векторной БД и подтягиваем только то, что релевантно конкретной ситуации.</p>
+  
+  <p>Зачем так:</p>
+  <ul>
+    <li>Промпт остаётся коротким и быстрым</li>
+    <li>База знаний может разрастаться до гигабайт без потери качества</li>
+    <li>Редактируешь в одном месте — Notion — а все агенты сразу видят новое</li>
+    <li>Дешевле по токенам и быстрее по latency</li>
+  </ul>
+  
+  <h3>Архитектурная схема</h3>
+  <div class="flow">
+<span class="dim">Илья пишет/правит контент</span>
+         ↓
+   <span class="hi">NOTION (фронт)</span>
+   <span class="dim">Удобный редактор для тебя</span>
+         ↓
+   Webhook / cron
+         ↓
+   <span class="hi">PARSER</span>
+   <span class="dim">Чанкинг по 500–1000 символов</span>
+         ↓
+   <span class="hi">EMBEDDINGS</span>
+   <span class="dim">OpenAI text-embedding-3-large</span>
+   <span class="dim">или Voyage-3 (лучше для русского)</span>
+         ↓
+   <span class="hi">VECTOR DB</span> (Qdrant)
+   <span class="dim">Хранит векторы + метаданные</span>
+         ↓
+   <span class="dim">Запрос от агента (контекст диалога)</span>
+         ↓
+   <span class="hi">RETRIEVAL</span>
+   <span class="dim">Top-5 релевантных чанков</span>
+         ↓
+   <span class="hi">LLM</span> (Claude/GPT)
+   <span class="dim">Промпт = задача + чанки + диалог</span>
+         ↓
+   <span class="hi">ОТВЕТ КЛИЕНТУ</span>
+  </div>
+</section>
+
+<section>
+  <div class="sec-num">02</div>
+  <div class="sec-sub">Structure</div>
+  <h2>Структура базы знаний</h2>
+  <p class="lead">Десять основных коллекций. Каждая = отдельный «индекс» в векторной БД с своими тегами и метаданными.</p>
+  
+  <div class="tree">
+<span class="folder">📁 knowledge-base/</span>
+├── <span class="folder">01-product/</span>            <span class="desc"># всё о продукте</span>
+│   ├── <span class="file">overview.md</span>          <span class="desc"># что это, для кого</span>
+│   ├── <span class="file">tariffs.md</span>           <span class="desc"># тарифы, цены, что входит</span>
+│   ├── <span class="file">curriculum.md</span>        <span class="desc"># программа, уроки, длительность</span>
+│   ├── <span class="file">bonuses.md</span>           <span class="desc"># бонусы и доп-ценность</span>
+│   └── <span class="file">team.md</span>              <span class="desc"># кто ведёт, эксперты</span>
+│
+├── <span class="folder">02-segments/</span>           <span class="desc"># сегменты ICP</span>
+│   ├── <span class="file">segment-a.md</span>         <span class="desc"># портрет сегмента А</span>
+│   ├── <span class="file">segment-b.md</span>
+│   └── <span class="file">anti-icp.md</span>          <span class="desc"># кому не продаём</span>
+│
+├── <span class="folder">03-scripts/</span>            <span class="desc"># скрипты по этапам воронки</span>
+│   ├── <span class="file">01-hello.md</span>          <span class="desc"># приветствие</span>
+│   ├── <span class="file">02-discovery.md</span>      <span class="desc"># квалификация</span>
+│   ├── <span class="file">03-pitch.md</span>          <span class="desc"># презентация</span>
+│   ├── <span class="file">04-objections.md</span>     <span class="desc"># работа с возражениями</span>
+│   ├── <span class="file">05-close.md</span>          <span class="desc"># закрытие сделки</span>
+│   └── <span class="file">06-followup.md</span>       <span class="desc"># дожим</span>
+│
+├── <span class="folder">04-objections/</span>         <span class="desc"># банк возражений (50+)</span>
+│   ├── <span class="file">price-expensive.md</span>
+│   ├── <span class="file">need-to-think.md</span>
+│   ├── <span class="file">no-time.md</span>
+│   ├── <span class="file">already-tried.md</span>
+│   └── <span class="file">...</span>
+│
+├── <span class="folder">05-cases/</span>              <span class="desc"># кейсы учеников</span>
+│   ├── <span class="file">case-001.md</span>
+│   ├── <span class="file">case-002.md</span>
+│   └── <span class="file">...</span>
+│
+├── <span class="folder">06-voice/</span>              <span class="desc"># голос бренда</span>
+│   ├── <span class="file">tone-rules.md</span>        <span class="desc"># правила тона</span>
+│   ├── <span class="file">vocab.md</span>             <span class="desc"># словарь Ильи</span>
+│   ├── <span class="file">examples-real.md</span>     <span class="desc"># 100+ реальных образцов</span>
+│   └── <span class="file">forbidden.md</span>         <span class="desc"># чего нельзя</span>
+│
+├── <span class="folder">07-faq/</span>                <span class="desc"># FAQ и edge-cases</span>
+│   ├── <span class="file">payment-methods.md</span>
+│   ├── <span class="file">refund-policy.md</span>
+│   ├── <span class="file">access-issues.md</span>
+│   └── <span class="file">...</span>
+│
+├── <span class="folder">08-content/</span>            <span class="desc"># твой контент-архив</span>
+│   ├── <span class="file">blog-posts.md</span>        <span class="desc"># транскрипты постов</span>
+│   ├── <span class="file">live-streams.md</span>      <span class="desc"># транскрипты эфиров</span>
+│   └── <span class="file">stories.md</span>           <span class="desc"># транскрипты сторис</span>
+│
+├── <span class="folder">09-escalation/</span>         <span class="desc"># правила эскалации</span>
+│   ├── <span class="file">hard-triggers.md</span>
+│   └── <span class="file">soft-triggers.md</span>
+│
+└── <span class="folder">10-meta/</span>               <span class="desc"># системное</span>
+    ├── <span class="file">constitution.md</span>      <span class="desc"># главный документ</span>
+    ├── <span class="file">red-lines.md</span>         <span class="desc"># запрещённое</span>
+    └── <span class="file">disclaimer-texts.md</span>  <span class="desc"># тексты дисклеймеров</span>
+  </div>
+</section>
+
+<section>
+  <div class="sec-num">03</div>
+  <div class="sec-sub">Document schema</div>
+  <h2>Схема документа в базе знаний</h2>
+  <p class="lead">Каждый документ имеет yaml-метаданные сверху и тело снизу. Метаданные становятся фильтрами при поиске.</p>
+  
+  <div class="schema-card">
+    <h4>Пример: возражение «дорого»</h4>
+    <div class="schema-row"><span class="key">id</span><span>obj-price-001</span></div>
+    <div class="schema-row"><span class="key">category</span><span>objections</span></div>
+    <div class="schema-row"><span class="key">type</span><span>price</span></div>
+    <div class="schema-row"><span class="key">segments</span><span>[segment-a, segment-b]</span></div>
+    <div class="schema-row"><span class="key">funnel_stage</span><span>04-objections</span></div>
+    <div class="schema-row"><span class="key">priority</span><span>high</span></div>
+    <div class="schema-row"><span class="key">tags</span><span>[deny, price, value-justification]</span></div>
+    <div class="schema-row"><span class="key">examples_count</span><span>10</span></div>
+    <div class="schema-row"><span class="key">last_updated</span><span>2026-05-14</span></div>
+    <div class="schema-row"><span class="key">author</span><span>Ilia</span></div>
+  </div>
+  
+  <h3>Зачем метаданные</h3>
+  <ul>
+    <li>Агент может попросить «дай возражения только для сегмента А» — это работает через фильтр <code>segments</code></li>
+    <li>Аналитик ищет «всё про этап квалификации» — фильтр <code>funnel_stage</code></li>
+    <li>Когда обновляешь скрипт — старая версия не теряется, по <code>last_updated</code> видно эволюцию</li>
+  </ul>
+</section>
+
+<section>
+  <div class="sec-num">04</div>
+  <div class="sec-sub">Sync</div>
+  <h2>Синхронизация с Notion</h2>
+  <p class="lead">Ты редактируешь в Notion. Через 5 минут это уже в векторной БД и доступно агентам.</p>
+  
+  <h3>Архитектура синка</h3>
+  <ol>
+    <li>В Notion заводим database «Knowledge Base» с полями: title, category, segments, status, content</li>
+    <li>Каждая страница в database = один документ</li>
+    <li>Notion Webhook (или cron каждые 5 минут) дёргает наш парсер</li>
+    <li>Парсер забирает только страницы с <code>status = published</code> и <code>updated since last sync</code></li>
+    <li>Чанкинг → embeddings → upsert в Qdrant</li>
+    <li>Лог в дашборд: «обновлено N документов»</li>
+  </ol>
+  
+  <h3>Что использовать</h3>
+  <table>
+    <tr><th>Компонент</th><th>Инструмент</th><th>Альтернатива</th></tr>
+    <tr><td>Источник</td><td>Notion API</td><td>Google Docs API</td></tr>
+    <tr><td>Чанкинг</td><td>LangChain RecursiveCharacterTextSplitter</td><td>LlamaIndex SentenceSplitter</td></tr>
+    <tr><td>Embeddings</td><td>OpenAI text-embedding-3-large</td><td>Voyage-3 (лучше для русского)</td></tr>
+    <tr><td>Vector DB</td><td>Qdrant (self-hosted)</td><td>Pinecone (managed)</td></tr>
+    <tr><td>Оркестрация</td><td>n8n или Python script + cron</td><td>LangChain Hub</td></tr>
+  </table>
+  
+  <div class="note">Для старта рекомендую Qdrant self-hosted на твоём VPS — бесплатно, контроль данных, скорость. Если упрёмся в масштаб — мигрируем на managed.</div>
+</section>
+
+<section>
+  <div class="sec-num">05</div>
+  <div class="sec-sub">Retrieval logic</div>
+  <h2>Логика поиска (retrieval)</h2>
+  <p class="lead">Как агент запрашивает знания из базы в момент ответа клиенту.</p>
+  
+  <h3>Двухступенчатый поиск</h3>
+  <ol>
+    <li><strong>Hybrid search:</strong> комбинация семантического поиска (по векторам) и keyword (BM25). Это даёт стабильнее результат на русском, где синонимов много.</li>
+    <li><strong>Reranking:</strong> Cohere Rerank или собственный re-ranker на основе GPT-4 mini — пересортировывает топ-20 в топ-5.</li>
+  </ol>
+  
+  <h3>Что попадает в промпт агента</h3>
+  <div class="schema-card">
+    <h4>Пример запроса от агента к базе</h4>
+    <div class="schema-row"><span class="key">query</span><span>"Клиент пишет что дорого, как ответить"</span></div>
+    <div class="schema-row"><span class="key">filters</span><span>category=objections, segment=segment-a</span></div>
+    <div class="schema-row"><span class="key">top_k</span><span>5</span></div>
+    <div class="schema-row"><span class="key">rerank</span><span>true</span></div>
+  </div>
+  
+  <p>Ответ базы — 5 чанков с метаданными. Они вставляются в промпт агента как контекст: «вот как ты обычно отвечаешь в таких ситуациях».</p>
+</section>
+
+<section>
+  <div class="sec-num">06</div>
+  <div class="sec-sub">Quality</div>
+  <h2>Контроль качества базы</h2>
+  <p class="lead">База знаний — живая. Регулярно проверяем, что не накопили мусора и противоречий.</p>
+  
+  <ul>
+    <li><strong>Дубликаты.</strong> Раз в неделю — скрипт ищет похожие чанки (косинусное сходство >0.92), помечает на проверку.</li>
+    <li><strong>Противоречия.</strong> Раз в месяц — Аналитик-агент сравнивает скрипты на одну тему, выявляет конфликты в формулировках.</li>
+    <li><strong>Покрытие.</strong> Раз в месяц — анализ диалогов: какие вопросы клиентов не нашли релевантного ответа в базе. Добавить новые документы.</li>
+    <li><strong>Эволюция.</strong> Если конкретный скрипт даёт высокий скоринг аналитика — закрепляем как эталон, помечаем тегом <code>gold</code>.</li>
+    <li><strong>Архивирование.</strong> Старые скрипты не удаляются, а помечаются <code>status=archived</code>. Так сохраняем историю изменений.</li>
+  </ul>
+</section>
+
+<section>
+  <div class="sec-num">07</div>
+  <div class="sec-sub">First content</div>
+  <h2>С чего наполнять</h2>
+  <p class="lead">Минимальный набор контента для запуска MVP.</p>
+  
+  <table>
+    <tr><th>Раздел</th><th>Минимум для MVP</th><th>Полная база</th></tr>
+    <tr><td>Продукт</td><td>5 документов</td><td>15+</td></tr>
+    <tr><td>Сегменты</td><td>2 сегмента детально</td><td>3–5 сегментов</td></tr>
+    <tr><td>Скрипты</td><td>6 этапов, по 1 скрипту</td><td>6 этапов × 3 варианта на сегмент</td></tr>
+    <tr><td>Возражения</td><td>20 базовых</td><td>50+</td></tr>
+    <tr><td>Кейсы</td><td>5 ярких</td><td>20+</td></tr>
+    <tr><td>Голос бренда</td><td>30 текстовых образцов</td><td>100+ текст + 30 мин аудио</td></tr>
+    <tr><td>FAQ</td><td>15 вопросов</td><td>50+</td></tr>
+    <tr><td>Эскалация</td><td>10 триггеров</td><td>20+</td></tr>
+  </table>
+  
+  <div class="warn">MVP-объём собираем параллельно — пока разработчики настраивают инфраструктуру, ты с командой наполняешь Notion. Это критический путь, ускорить разработку нельзя, а сбор контента — можно.</div>
+</section>
+
+<div class="footer">
+  <div>AI Sales System / Knowledge Base Architecture v0.1</div>
+  <div>Document 004 of 9</div>
+</div>
+
+</div>
+</body>
+</html>

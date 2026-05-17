@@ -1,0 +1,684 @@
+<!DOCTYPE html>
+<html lang="ru">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover">
+<meta name="theme-color" content="#080808">
+<meta name="color-scheme" content="dark only">
+<title>Этап 2.3 — Схема БД</title>
+<style>
+  *, *::before, *::after { margin:0; padding:0; box-sizing:border-box; -webkit-tap-highlight-color:transparent; }
+  html { background:#080808 !important; -webkit-text-size-adjust:100%; }
+  body { background:#080808 !important; color:#f5f0e8 !important; font-family:Georgia,'Times New Roman',serif; font-size:17px; line-height:1.6; overflow-x:hidden; min-height:100vh; }
+  .label { font-family:'SF Mono','Menlo',monospace; font-size:11px; text-transform:uppercase; letter-spacing:0.12em; color:#b8b3a8 !important; font-weight:700; }
+  .topbar { position:sticky; top:0; background:#080808 !important; border-bottom:1px solid #2a2a2a; padding:14px 20px; z-index:50; display:flex; align-items:center; gap:12px; }
+  .topbar-title { font-family:Georgia,serif; font-size:16px; line-height:1; color:#f5f0e8 !important; flex:1; }
+  .topbar-title .accent { color:#c8f060 !important; font-style:italic; }
+  .topbar-stage { font-family:'SF Mono',monospace; font-size:10px; color:#c8f060 !important; font-weight:700; letter-spacing:0.12em; }
+  .container { padding:28px 20px 80px; max-width:680px; margin:0 auto; }
+  .header { margin-bottom:28px; padding-bottom:20px; border-bottom:1px solid #2a2a2a; }
+  .header .label { margin-bottom:10px; }
+  .header h1 { font-family:Georgia,serif; font-size:32px; font-weight:normal; line-height:1.1; letter-spacing:-0.01em; margin-bottom:12px; color:#f5f0e8 !important; }
+  .header h1 .accent { color:#c8f060 !important; font-style:italic; }
+  .header p { color:#c5bfb3 !important; font-size:15px; line-height:1.5; }
+  .stage-meta { display:grid; grid-template-columns:1fr 1fr; gap:3px; margin:20px 0; }
+  .meta-card { background:#1a1a1a; border:1px solid #2a2a2a; padding:14px 16px; }
+  .meta-card .label { display:block; margin-bottom:6px; font-size:10px; }
+  .meta-card .val { font-family:Georgia,serif; font-size:18px; color:#c8f060 !important; }
+  h2 { font-family:Georgia,serif; font-size:24px; font-weight:normal; line-height:1.2; margin:40px 0 12px; color:#f5f0e8 !important; }
+  h2 .sec { display:block; font-family:'SF Mono',monospace; font-size:10px; font-weight:700; color:#c8f060 !important; letter-spacing:0.15em; text-transform:uppercase; margin-bottom:6px; }
+  h3 { font-family:'SF Mono',monospace; font-size:11px; font-weight:700; text-transform:uppercase; letter-spacing:0.15em; color:#c8f060 !important; margin:24px 0 12px; padding-bottom:6px; border-bottom:1px solid #2a2a2a; }
+  p { margin-bottom:14px; font-size:16px; line-height:1.6; color:#f5f0e8 !important; }
+  .lead { font-size:17px; font-style:italic; color:#d8d2c6 !important; margin-bottom:20px; line-height:1.5; }
+  ul, ol { margin:12px 0 16px; padding-left:24px; }
+  li { margin-bottom:8px; font-size:15.5px; line-height:1.55; color:#f5f0e8 !important; }
+  strong { color:#ffffff !important; font-weight:700; }
+  .step-card { background:#1a1a1a; border:1px solid #2a2a2a; padding:0; margin:16px 0; }
+  .step-head { padding:16px 20px; border-bottom:1px solid #2a2a2a; display:flex; align-items:center; gap:14px; }
+  .step-num { font-family:'SF Mono',monospace; font-size:20px; font-weight:700; color:#c8f060 !important; line-height:1; flex-shrink:0; }
+  .step-title { font-family:Georgia,serif; font-size:18px; color:#f5f0e8 !important; line-height:1.3; flex:1; }
+  .step-time { font-family:'SF Mono',monospace; font-size:10px; color:#b8b3a8 !important; font-weight:700; letter-spacing:0.1em; }
+  .step-body { padding:16px 20px; }
+  .step-body p { font-size:15px; margin-bottom:12px; }
+  .step-body p:last-child { margin-bottom:0; }
+  .code { background:#0a0a0a; border:1px solid #2a2a2a; border-left:3px solid #c8f060; padding:14px 16px; margin:12px 0; font-family:'SF Mono',monospace; font-size:13px; line-height:1.6; color:#f5f0e8 !important; overflow-x:auto; white-space:pre; -webkit-overflow-scrolling:touch; }
+  .code .comment { color:#b8b3a8 !important; font-style:italic; }
+  .code .cmd { color:#c8f060 !important; font-weight:700; }
+  .code .str { color:#60c8f0 !important; }
+  .code .key { color:#f06090 !important; font-weight:700; }
+  .code .type { color:#c8f060 !important; }
+  code { font-family:'SF Mono',monospace; font-size:13px; background:#1a1a1a; padding:2px 6px; color:#c8f060 !important; border:1px solid #2a2a2a; }
+  .note, .warn, .ok { padding:14px 16px; margin:14px 0; font-size:14.5px; line-height:1.5; }
+  .note { background:#0f1f28; border-left:3px solid #60c8f0; color:#e8e3d6 !important; }
+  .warn { background:#28121b; border-left:3px solid #f06090; color:#e8e3d6 !important; }
+  .ok { background:#1a2510; border-left:3px solid #c8f060; color:#e8e3d6 !important; }
+  .note strong, .warn strong, .ok strong { color:#fff !important; }
+  .check { list-style:none !important; padding-left:0 !important; margin:14px 0 !important; }
+  .check li { padding:12px 14px; background:#1a1a1a; border:1px solid #2a2a2a; margin-bottom:3px; font-size:14.5px; line-height:1.5; display:flex; gap:12px; align-items:flex-start; color:#f5f0e8 !important; }
+  .check li::before { content:'☐'; color:#c8f060 !important; font-family:'SF Mono',monospace; font-size:18px; font-weight:700; flex-shrink:0; line-height:1.3; }
+  .data { margin:14px 0; }
+  .row { background:#1a1a1a; border:1px solid #2a2a2a; padding:14px 16px; margin-bottom:3px; }
+  .row .field { display:flex; justify-content:space-between; align-items:baseline; padding:7px 0; border-bottom:1px solid #2a2a2a; gap:12px; }
+  .row .field:last-child { border-bottom:none; }
+  .row .k { font-family:'SF Mono',monospace; font-size:10px; font-weight:700; text-transform:uppercase; letter-spacing:0.1em; color:#b8b3a8 !important; flex-shrink:0; }
+  .row .v { font-size:14.5px; text-align:right; line-height:1.4; color:#f5f0e8 !important; }
+  .row .v.lime { color:#c8f060 !important; font-weight:700; }
+  .row .v.cyan { color:#60c8f0 !important; font-weight:700; }
+  .table-card { background:#1a1a1a; border:1px solid #2a2a2a; border-left:3px solid #c8f060; padding:16px 20px; margin:14px 0; }
+  .table-card.cyan { border-left-color:#60c8f0; }
+  .table-card.pink { border-left-color:#f06090; }
+  .table-card .tname { font-family:'SF Mono',monospace; font-size:14px; font-weight:700; color:#c8f060 !important; margin-bottom:4px; }
+  .table-card.cyan .tname { color:#60c8f0 !important; }
+  .table-card.pink .tname { color:#f06090 !important; }
+  .table-card h4 { font-family:Georgia,serif; font-size:18px; font-weight:normal; margin-bottom:8px; color:#f5f0e8 !important; }
+  .table-card p { font-size:14px; line-height:1.5; color:#c5bfb3 !important; margin-bottom:6px; }
+  .footer { margin-top:48px; padding:24px 0; border-top:1px solid #2a2a2a; text-align:center; font-family:'SF Mono',monospace; font-size:10px; font-weight:700; text-transform:uppercase; letter-spacing:0.12em; color:#b8b3a8 !important; line-height:1.8; }
+  @media (min-width:768px) {
+    .container { padding:40px 32px 100px; }
+    .header h1 { font-size:42px; }
+    h2 { font-size:30px; }
+  }
+</style>
+</head>
+<body>
+<header class="topbar">
+  <div class="topbar-stage">Stage 2.3</div>
+  <div class="topbar-title">AI Sales <span class="accent">System</span></div>
+</header>
+
+<div class="container">
+  <div class="header">
+    <div class="label">Этап 2 / Инфраструктура · Подэтап 2.3</div>
+    <h1>Схема <span class="accent">БД</span> и миграции</h1>
+    <p>Создаём структуру таблиц: клиенты, диалоги, сообщения, действия, аналитика. После этого этапа БД готова принимать данные от агентов.</p>
+  </div>
+
+  <div class="stage-meta">
+    <div class="meta-card"><div class="label">Время</div><div class="val">60 мин</div></div>
+    <div class="meta-card"><div class="label">Сложность</div><div class="val">Средняя</div></div>
+    <div class="meta-card"><div class="label">Таблиц</div><div class="val">8</div></div>
+    <div class="meta-card"><div class="label">Индексов</div><div class="val">15</div></div>
+  </div>
+
+  <h2><span class="sec">Section 01</span>Что строим</h2>
+  <p class="lead">Восемь таблиц, которые покрывают всю модель данных AI Sales System. Каждая отвечает за один аспект.</p>
+
+  <div class="table-card">
+    <div class="tname">clients</div>
+    <h4>Клиенты</h4>
+    <p>Карточки людей: имена, контакты в IG/TG, сегмент, текущий этап воронки, скоринг.</p>
+  </div>
+
+  <div class="table-card">
+    <div class="tname">conversations</div>
+    <h4>Диалоги</h4>
+    <p>Контейнер для сообщений. Один клиент может иметь несколько диалогов (IG + TG раздельно).</p>
+  </div>
+
+  <div class="table-card">
+    <div class="tname">messages</div>
+    <h4>Сообщения</h4>
+    <p>Текст/аудио/видео — все взаимодействия. Кто автор: клиент, агент или Илья лично.</p>
+  </div>
+
+  <div class="table-card cyan">
+    <div class="tname">actions</div>
+    <h4>Действия системы</h4>
+    <p>Переходы по воронке, эскалации, отправка медиа — журнал всех изменений.</p>
+  </div>
+
+  <div class="table-card cyan">
+    <div class="tname">analytics</div>
+    <h4>Аналитика</h4>
+    <p>Скоринг диалогов от Аналитика, рекомендации, разборы. Связана с conversations.</p>
+  </div>
+
+  <div class="table-card pink">
+    <div class="tname">agents</div>
+    <h4>Конфигурация агентов</h4>
+    <p>Промпты, лимиты, A/B-тесты, версии. Меняешь промпт без правки кода.</p>
+  </div>
+
+  <div class="table-card pink">
+    <div class="tname">users</div>
+    <h4>Пользователи дашборда</h4>
+    <p>Ты, команда, разработчик. С ролями (admin, manager, viewer).</p>
+  </div>
+
+  <div class="table-card pink">
+    <div class="tname">audit_log</div>
+    <h4>Аудит-лог</h4>
+    <p>Кто и когда что менял в системе. Для безопасности и расследований.</p>
+  </div>
+
+  <h2><span class="sec">Section 02</span>Установка psql на Маке</h2>
+  <p class="lead">Чтобы работать с БД с локальной машины — через SSH-туннель.</p>
+
+  <div class="step-card">
+    <div class="step-head">
+      <div class="step-num">01</div>
+      <div class="step-title">Установка клиента PostgreSQL</div>
+      <div class="step-time">5 мин</div>
+    </div>
+    <div class="step-body">
+      <p>На Маке (если не установлен Homebrew — сначала <code>brew.sh</code>):</p>
+      <div class="code"><span class="cmd">brew</span> install libpq
+<span class="cmd">brew</span> link --force libpq</div>
+      <p>Проверь:</p>
+      <div class="code"><span class="cmd">psql</span> --version</div>
+    </div>
+  </div>
+
+  <h2><span class="sec">Section 03</span>Создаём миграцию вручную</h2>
+  <p class="lead">Подключись по SSH: <code>ssh aisales@твой-ip</code>.</p>
+
+  <div class="step-card">
+    <div class="step-head">
+      <div class="step-num">02</div>
+      <div class="step-title">Папка миграций</div>
+      <div class="step-time">2 мин</div>
+    </div>
+    <div class="step-body">
+      <div class="code"><span class="cmd">cd</span> ~/aisales
+<span class="cmd">mkdir</span> -p migrations
+<span class="cmd">nano</span> migrations/001_initial_schema.sql</div>
+    </div>
+  </div>
+
+  <div class="step-card">
+    <div class="step-head">
+      <div class="step-num">03</div>
+      <div class="step-title">SQL — расширения</div>
+      <div class="step-time">2 мин</div>
+    </div>
+    <div class="step-body">
+      <p>В начало файла:</p>
+    </div>
+  </div>
+
+  <div class="code"><span class="comment">-- 001_initial_schema.sql
+-- AI Sales System: первичная схема БД</span>
+
+<span class="key">CREATE EXTENSION IF NOT EXISTS</span> <span class="str">"uuid-ossp"</span>;
+<span class="key">CREATE EXTENSION IF NOT EXISTS</span> <span class="str">"pg_trgm"</span>;
+<span class="key">CREATE EXTENSION IF NOT EXISTS</span> <span class="str">"btree_gin"</span>;</div>
+
+  <p style="margin-top:14px;">Зачем:</p>
+  <ul>
+    <li><strong>uuid-ossp</strong> — генерация UUID для первичных ключей</li>
+    <li><strong>pg_trgm</strong> — быстрый поиск по тексту (для FAQ, базы знаний)</li>
+    <li><strong>btree_gin</strong> — индексы для JSON-полей</li>
+  </ul>
+
+  <h2><span class="sec">Section 04</span>SQL — таблицы</h2>
+  <p class="lead">Добавь в тот же файл миграции. Я разбил по таблицам для понимания.</p>
+
+  <h3>users — пользователи дашборда</h3>
+  <div class="code"><span class="key">CREATE TYPE</span> user_role <span class="key">AS ENUM</span> (<span class="str">'admin'</span>, <span class="str">'manager'</span>, <span class="str">'viewer'</span>);
+
+<span class="key">CREATE TABLE</span> users (
+  id <span class="type">UUID</span> <span class="key">PRIMARY KEY DEFAULT</span> uuid_generate_v4(),
+  email <span class="type">VARCHAR</span>(255) <span class="key">UNIQUE NOT NULL</span>,
+  password_hash <span class="type">VARCHAR</span>(255) <span class="key">NOT NULL</span>,
+  name <span class="type">VARCHAR</span>(255) <span class="key">NOT NULL</span>,
+  role user_role <span class="key">NOT NULL DEFAULT</span> <span class="str">'viewer'</span>,
+  is_active <span class="type">BOOLEAN</span> <span class="key">NOT NULL DEFAULT</span> true,
+  last_login_at <span class="type">TIMESTAMPTZ</span>,
+  created_at <span class="type">TIMESTAMPTZ</span> <span class="key">NOT NULL DEFAULT</span> NOW(),
+  updated_at <span class="type">TIMESTAMPTZ</span> <span class="key">NOT NULL DEFAULT</span> NOW()
+);
+
+<span class="key">CREATE INDEX</span> idx_users_email <span class="key">ON</span> users(email);</div>
+
+  <h3>clients — клиенты</h3>
+  <div class="code"><span class="key">CREATE TYPE</span> funnel_stage <span class="key">AS ENUM</span> (
+  <span class="str">'hello'</span>, <span class="str">'discovery'</span>, <span class="str">'pitch'</span>,
+  <span class="str">'objections'</span>, <span class="str">'close'</span>, <span class="str">'followup'</span>,
+  <span class="str">'closed_won'</span>, <span class="str">'closed_lost'</span>
+);
+
+<span class="key">CREATE TYPE</span> client_segment <span class="key">AS ENUM</span> (
+  <span class="str">'segment_a'</span>, <span class="str">'segment_b'</span>, <span class="str">'segment_c'</span>, <span class="str">'unknown'</span>
+);
+
+<span class="key">CREATE TABLE</span> clients (
+  id <span class="type">UUID</span> <span class="key">PRIMARY KEY DEFAULT</span> uuid_generate_v4(),
+  ig_username <span class="type">VARCHAR</span>(255),
+  ig_user_id <span class="type">VARCHAR</span>(100),
+  tg_username <span class="type">VARCHAR</span>(255),
+  tg_user_id <span class="type">BIGINT</span>,
+  phone <span class="type">VARCHAR</span>(50),
+  email <span class="type">VARCHAR</span>(255),
+  display_name <span class="type">VARCHAR</span>(255),
+  segment client_segment <span class="key">NOT NULL DEFAULT</span> <span class="str">'unknown'</span>,
+  funnel_stage funnel_stage <span class="key">NOT NULL DEFAULT</span> <span class="str">'hello'</span>,
+  qual_score <span class="type">INT</span> <span class="key">NOT NULL DEFAULT</span> 0 <span class="key">CHECK</span> (qual_score <span class="key">BETWEEN</span> 0 <span class="key">AND</span> 100),
+  predicted_deal_amount <span class="type">DECIMAL</span>(10,2),
+  source <span class="type">VARCHAR</span>(100),
+  tags <span class="type">TEXT</span>[] <span class="key">DEFAULT</span> <span class="str">'{}'</span>,
+  notes <span class="type">TEXT</span>,
+  metadata <span class="type">JSONB</span> <span class="key">DEFAULT</span> <span class="str">'{}'</span>::jsonb,
+  consent_given_at <span class="type">TIMESTAMPTZ</span>,
+  first_contact_at <span class="type">TIMESTAMPTZ</span>,
+  last_contact_at <span class="type">TIMESTAMPTZ</span>,
+  created_at <span class="type">TIMESTAMPTZ</span> <span class="key">NOT NULL DEFAULT</span> NOW(),
+  updated_at <span class="type">TIMESTAMPTZ</span> <span class="key">NOT NULL DEFAULT</span> NOW()
+);
+
+<span class="key">CREATE INDEX</span> idx_clients_ig_user_id <span class="key">ON</span> clients(ig_user_id);
+<span class="key">CREATE INDEX</span> idx_clients_tg_user_id <span class="key">ON</span> clients(tg_user_id);
+<span class="key">CREATE INDEX</span> idx_clients_segment <span class="key">ON</span> clients(segment);
+<span class="key">CREATE INDEX</span> idx_clients_funnel_stage <span class="key">ON</span> clients(funnel_stage);
+<span class="key">CREATE INDEX</span> idx_clients_qual_score <span class="key">ON</span> clients(qual_score <span class="key">DESC</span>);
+<span class="key">CREATE INDEX</span> idx_clients_tags <span class="key">ON</span> clients <span class="key">USING</span> gin(tags);</div>
+
+  <h3>conversations — диалоги</h3>
+  <div class="code"><span class="key">CREATE TYPE</span> conversation_channel <span class="key">AS ENUM</span> (<span class="str">'ig'</span>, <span class="str">'tg'</span>);
+<span class="key">CREATE TYPE</span> conversation_status <span class="key">AS ENUM</span> (
+  <span class="str">'active'</span>, <span class="str">'paused'</span>, <span class="str">'closed'</span>, <span class="str">'escalated'</span>
+);
+
+<span class="key">CREATE TABLE</span> conversations (
+  id <span class="type">UUID</span> <span class="key">PRIMARY KEY DEFAULT</span> uuid_generate_v4(),
+  client_id <span class="type">UUID</span> <span class="key">NOT NULL REFERENCES</span> clients(id) <span class="key">ON DELETE CASCADE</span>,
+  channel conversation_channel <span class="key">NOT NULL</span>,
+  status conversation_status <span class="key">NOT NULL DEFAULT</span> <span class="str">'active'</span>,
+  external_id <span class="type">VARCHAR</span>(255),
+  agent_is_active <span class="type">BOOLEAN</span> <span class="key">NOT NULL DEFAULT</span> true,
+  last_message_at <span class="type">TIMESTAMPTZ</span>,
+  message_count <span class="type">INT</span> <span class="key">NOT NULL DEFAULT</span> 0,
+  created_at <span class="type">TIMESTAMPTZ</span> <span class="key">NOT NULL DEFAULT</span> NOW(),
+  updated_at <span class="type">TIMESTAMPTZ</span> <span class="key">NOT NULL DEFAULT</span> NOW(),
+  <span class="key">UNIQUE</span>(client_id, channel)
+);
+
+<span class="key">CREATE INDEX</span> idx_conversations_client <span class="key">ON</span> conversations(client_id);
+<span class="key">CREATE INDEX</span> idx_conversations_status <span class="key">ON</span> conversations(status);
+<span class="key">CREATE INDEX</span> idx_conversations_last_msg <span class="key">ON</span> conversations(last_message_at <span class="key">DESC</span>);</div>
+
+  <h3>messages — сообщения</h3>
+  <div class="code"><span class="key">CREATE TYPE</span> message_direction <span class="key">AS ENUM</span> (<span class="str">'in'</span>, <span class="str">'out'</span>);
+<span class="key">CREATE TYPE</span> message_type <span class="key">AS ENUM</span> (
+  <span class="str">'text'</span>, <span class="str">'audio'</span>, <span class="str">'video'</span>, <span class="str">'image'</span>, <span class="str">'file'</span>
+);
+<span class="key">CREATE TYPE</span> message_author <span class="key">AS ENUM</span> (
+  <span class="str">'client'</span>, <span class="str">'agent_ig'</span>, <span class="str">'agent_tg'</span>, <span class="str">'human'</span>
+);
+
+<span class="key">CREATE TABLE</span> messages (
+  id <span class="type">UUID</span> <span class="key">PRIMARY KEY DEFAULT</span> uuid_generate_v4(),
+  conversation_id <span class="type">UUID</span> <span class="key">NOT NULL REFERENCES</span> conversations(id) <span class="key">ON DELETE CASCADE</span>,
+  client_id <span class="type">UUID</span> <span class="key">NOT NULL REFERENCES</span> clients(id) <span class="key">ON DELETE CASCADE</span>,
+  external_id <span class="type">VARCHAR</span>(255),
+  direction message_direction <span class="key">NOT NULL</span>,
+  type message_type <span class="key">NOT NULL DEFAULT</span> <span class="str">'text'</span>,
+  author message_author <span class="key">NOT NULL</span>,
+  content <span class="type">TEXT</span>,
+  media_url <span class="type">VARCHAR</span>(500),
+  media_metadata <span class="type">JSONB</span> <span class="key">DEFAULT</span> <span class="str">'{}'</span>::jsonb,
+  agent_model <span class="type">VARCHAR</span>(100),
+  prompt_version <span class="type">VARCHAR</span>(50),
+  tokens_used <span class="type">INT</span>,
+  latency_ms <span class="type">INT</span>,
+  cost_usd <span class="type">DECIMAL</span>(10,6),
+  created_at <span class="type">TIMESTAMPTZ</span> <span class="key">NOT NULL DEFAULT</span> NOW()
+);
+
+<span class="key">CREATE INDEX</span> idx_messages_conversation <span class="key">ON</span> messages(conversation_id, created_at <span class="key">DESC</span>);
+<span class="key">CREATE INDEX</span> idx_messages_client <span class="key">ON</span> messages(client_id, created_at <span class="key">DESC</span>);
+<span class="key">CREATE INDEX</span> idx_messages_external <span class="key">ON</span> messages(external_id);
+<span class="key">CREATE INDEX</span> idx_messages_content_trgm <span class="key">ON</span> messages <span class="key">USING</span> gin(content gin_trgm_ops);</div>
+
+  <h3>actions — действия системы</h3>
+  <div class="code"><span class="key">CREATE TYPE</span> action_type <span class="key">AS ENUM</span> (
+  <span class="str">'stage_transition'</span>, <span class="str">'escalation'</span>, <span class="str">'agent_paused'</span>,
+  <span class="str">'agent_resumed'</span>, <span class="str">'human_takeover'</span>, <span class="str">'tag_added'</span>,
+  <span class="str">'tag_removed'</span>, <span class="str">'note_added'</span>, <span class="str">'segment_changed'</span>
+);
+
+<span class="key">CREATE TABLE</span> actions (
+  id <span class="type">UUID</span> <span class="key">PRIMARY KEY DEFAULT</span> uuid_generate_v4(),
+  client_id <span class="type">UUID</span> <span class="key">NOT NULL REFERENCES</span> clients(id) <span class="key">ON DELETE CASCADE</span>,
+  conversation_id <span class="type">UUID</span> <span class="key">REFERENCES</span> conversations(id) <span class="key">ON DELETE SET NULL</span>,
+  user_id <span class="type">UUID</span> <span class="key">REFERENCES</span> users(id) <span class="key">ON DELETE SET NULL</span>,
+  action_type action_type <span class="key">NOT NULL</span>,
+  payload <span class="type">JSONB</span> <span class="key">NOT NULL DEFAULT</span> <span class="str">'{}'</span>::jsonb,
+  triggered_by <span class="type">VARCHAR</span>(100),
+  created_at <span class="type">TIMESTAMPTZ</span> <span class="key">NOT NULL DEFAULT</span> NOW()
+);
+
+<span class="key">CREATE INDEX</span> idx_actions_client <span class="key">ON</span> actions(client_id, created_at <span class="key">DESC</span>);
+<span class="key">CREATE INDEX</span> idx_actions_type <span class="key">ON</span> actions(action_type);</div>
+
+  <h3>analytics — скоринг от Аналитика</h3>
+  <div class="code"><span class="key">CREATE TABLE</span> analytics (
+  id <span class="type">UUID</span> <span class="key">PRIMARY KEY DEFAULT</span> uuid_generate_v4(),
+  conversation_id <span class="type">UUID</span> <span class="key">NOT NULL REFERENCES</span> conversations(id) <span class="key">ON DELETE CASCADE</span>,
+  score <span class="type">INT</span> <span class="key">NOT NULL CHECK</span> (score <span class="key">BETWEEN</span> 0 <span class="key">AND</span> 100),
+  checklist <span class="type">JSONB</span> <span class="key">NOT NULL DEFAULT</span> <span class="str">'{}'</span>::jsonb,
+  recommendations <span class="type">TEXT</span>,
+  missed_signals <span class="type">TEXT</span>[],
+  analyst_model <span class="type">VARCHAR</span>(100),
+  created_at <span class="type">TIMESTAMPTZ</span> <span class="key">NOT NULL DEFAULT</span> NOW()
+);
+
+<span class="key">CREATE INDEX</span> idx_analytics_conversation <span class="key">ON</span> analytics(conversation_id, created_at <span class="key">DESC</span>);
+<span class="key">CREATE INDEX</span> idx_analytics_score <span class="key">ON</span> analytics(score);</div>
+
+  <h3>agents — конфигурация агентов</h3>
+  <div class="code"><span class="key">CREATE TYPE</span> agent_role_type <span class="key">AS ENUM</span> (
+  <span class="str">'ig_manager'</span>, <span class="str">'tg_manager'</span>, <span class="str">'analyst'</span>, <span class="str">'head_of_sales'</span>
+);
+
+<span class="key">CREATE TABLE</span> agents (
+  id <span class="type">UUID</span> <span class="key">PRIMARY KEY DEFAULT</span> uuid_generate_v4(),
+  role agent_role_type <span class="key">NOT NULL</span>,
+  name <span class="type">VARCHAR</span>(255) <span class="key">NOT NULL</span>,
+  model <span class="type">VARCHAR</span>(100) <span class="key">NOT NULL</span>,
+  system_prompt <span class="type">TEXT</span> <span class="key">NOT NULL</span>,
+  prompt_version <span class="type">VARCHAR</span>(50) <span class="key">NOT NULL</span>,
+  is_active <span class="type">BOOLEAN</span> <span class="key">NOT NULL DEFAULT</span> true,
+  config <span class="type">JSONB</span> <span class="key">NOT NULL DEFAULT</span> <span class="str">'{}'</span>::jsonb,
+  ab_test_weight <span class="type">INT</span> <span class="key">NOT NULL DEFAULT</span> 100,
+  created_at <span class="type">TIMESTAMPTZ</span> <span class="key">NOT NULL DEFAULT</span> NOW(),
+  updated_at <span class="type">TIMESTAMPTZ</span> <span class="key">NOT NULL DEFAULT</span> NOW()
+);
+
+<span class="key">CREATE INDEX</span> idx_agents_role_active <span class="key">ON</span> agents(role, is_active);</div>
+
+  <h3>audit_log — аудит</h3>
+  <div class="code"><span class="key">CREATE TABLE</span> audit_log (
+  id <span class="type">UUID</span> <span class="key">PRIMARY KEY DEFAULT</span> uuid_generate_v4(),
+  user_id <span class="type">UUID</span> <span class="key">REFERENCES</span> users(id) <span class="key">ON DELETE SET NULL</span>,
+  entity_type <span class="type">VARCHAR</span>(100) <span class="key">NOT NULL</span>,
+  entity_id <span class="type">UUID</span>,
+  action <span class="type">VARCHAR</span>(100) <span class="key">NOT NULL</span>,
+  changes <span class="type">JSONB</span> <span class="key">NOT NULL DEFAULT</span> <span class="str">'{}'</span>::jsonb,
+  ip_address <span class="type">INET</span>,
+  user_agent <span class="type">TEXT</span>,
+  created_at <span class="type">TIMESTAMPTZ</span> <span class="key">NOT NULL DEFAULT</span> NOW()
+);
+
+<span class="key">CREATE INDEX</span> idx_audit_user <span class="key">ON</span> audit_log(user_id, created_at <span class="key">DESC</span>);
+<span class="key">CREATE INDEX</span> idx_audit_entity <span class="key">ON</span> audit_log(entity_type, entity_id);</div>
+
+  <h2><span class="sec">Section 05</span>Триггер обновления updated_at</h2>
+  <p class="lead">Автоматически проставляет таймстамп при изменении строки.</p>
+
+  <div class="code"><span class="key">CREATE OR REPLACE FUNCTION</span> set_updated_at()
+<span class="key">RETURNS TRIGGER AS</span> $$
+<span class="key">BEGIN</span>
+  NEW.updated_at = NOW();
+  <span class="key">RETURN</span> NEW;
+<span class="key">END</span>;
+$$ <span class="key">LANGUAGE</span> plpgsql;
+
+<span class="key">CREATE TRIGGER</span> trg_clients_updated_at
+  <span class="key">BEFORE UPDATE ON</span> clients
+  <span class="key">FOR EACH ROW EXECUTE FUNCTION</span> set_updated_at();
+
+<span class="key">CREATE TRIGGER</span> trg_conversations_updated_at
+  <span class="key">BEFORE UPDATE ON</span> conversations
+  <span class="key">FOR EACH ROW EXECUTE FUNCTION</span> set_updated_at();
+
+<span class="key">CREATE TRIGGER</span> trg_users_updated_at
+  <span class="key">BEFORE UPDATE ON</span> users
+  <span class="key">FOR EACH ROW EXECUTE FUNCTION</span> set_updated_at();
+
+<span class="key">CREATE TRIGGER</span> trg_agents_updated_at
+  <span class="key">BEFORE UPDATE ON</span> agents
+  <span class="key">FOR EACH ROW EXECUTE FUNCTION</span> set_updated_at();</div>
+
+  <h2><span class="sec">Section 06</span>Применяем миграцию</h2>
+  <p class="lead">Сохрани файл (Ctrl+O, Enter, Ctrl+X) и запусти.</p>
+
+  <div class="step-card">
+    <div class="step-head">
+      <div class="step-num">04</div>
+      <div class="step-title">Запуск миграции</div>
+      <div class="step-time">3 мин</div>
+    </div>
+    <div class="step-body">
+      <p>На сервере, в папке ~/aisales:</p>
+      <div class="code"><span class="cmd">docker</span> exec -i aisales-postgres psql -U aisales -d aisales &lt; migrations/001_initial_schema.sql</div>
+      <p>Должен напечатать «CREATE EXTENSION», «CREATE TYPE», «CREATE TABLE», «CREATE INDEX» много раз. Без слова <code>ERROR</code>.</p>
+    </div>
+  </div>
+
+  <div class="warn"><strong>Если выдало ошибку</strong> «extension already exists» — это норма (если перезапускаешь). «type already exists» — тоже норма. <strong>Любая другая ошибка</strong> — пиши мне сразу.</div>
+
+  <div class="step-card">
+    <div class="step-head">
+      <div class="step-num">05</div>
+      <div class="step-title">Проверка таблиц</div>
+      <div class="step-time">2 мин</div>
+    </div>
+    <div class="step-body">
+      <div class="code"><span class="cmd">docker</span> exec -it aisales-postgres psql -U aisales -d aisales</div>
+      <p>В psql:</p>
+      <div class="code">\dt</div>
+      <p>Должно показать 8 таблиц: actions, agents, analytics, audit_log, clients, conversations, messages, users.</p>
+      <p>Структура конкретной таблицы:</p>
+      <div class="code">\d clients</div>
+      <p>Выход: <code>\q</code></p>
+    </div>
+  </div>
+
+  <h2><span class="sec">Section 07</span>Создаём первого пользователя</h2>
+  <p class="lead">Тебя — как админа. Пароль захешируем в Python.</p>
+
+  <div class="step-card">
+    <div class="step-head">
+      <div class="step-num">06</div>
+      <div class="step-title">Генерация хеша пароля</div>
+      <div class="step-time">3 мин</div>
+    </div>
+    <div class="step-body">
+      <p>На сервере (Python и pip уже стоят):</p>
+      <div class="code"><span class="cmd">pip3</span> install bcrypt --break-system-packages</div>
+      <p>Сгенерируй хеш своего пароля (придумай надёжный, минимум 12 символов):</p>
+      <div class="code"><span class="cmd">python3</span> -c <span class="str">"import bcrypt; print(bcrypt.hashpw(b'ТВОЙ_ПАРОЛЬ', bcrypt.gensalt()).decode())"</span></div>
+      <p>Скопируй результат — длинная строка типа <code>$2b$12$...</code></p>
+    </div>
+  </div>
+
+  <div class="step-card">
+    <div class="step-head">
+      <div class="step-num">07</div>
+      <div class="step-title">Вставляем в БД</div>
+      <div class="step-time">2 мин</div>
+    </div>
+    <div class="step-body">
+      <div class="code"><span class="cmd">docker</span> exec -it aisales-postgres psql -U aisales -d aisales</div>
+      <p>В psql (замени email и хеш):</p>
+      <div class="code"><span class="key">INSERT INTO</span> users (email, password_hash, name, role)
+<span class="key">VALUES</span> (
+  <span class="str">'ilia@example.com'</span>,
+  <span class="str">'$2b$12$ТВОЙ_СГЕНЕРИРОВАННЫЙ_ХЕШ'</span>,
+  <span class="str">'Илья'</span>,
+  <span class="str">'admin'</span>
+);</div>
+      <p>Проверка:</p>
+      <div class="code"><span class="key">SELECT</span> email, name, role <span class="key">FROM</span> users;</div>
+    </div>
+  </div>
+
+  <h2><span class="sec">Section 08</span>Подключение к БД с Мака</h2>
+  <p class="lead">Для удобной работы — через GUI клиент или psql через туннель.</p>
+
+  <div class="step-card">
+    <div class="step-head">
+      <div class="step-num">08</div>
+      <div class="step-title">SSH-туннель</div>
+      <div class="step-time">2 мин</div>
+    </div>
+    <div class="step-body">
+      <p>В новом окне Терминала на Маке:</p>
+      <div class="code"><span class="cmd">ssh</span> -L 5432:localhost:5432 aisales@твой-ip</div>
+      <p>Окно не закрывай — туннель работает, пока оно открыто.</p>
+    </div>
+  </div>
+
+  <div class="step-card">
+    <div class="step-head">
+      <div class="step-num">09</div>
+      <div class="step-title">Подключение через psql</div>
+      <div class="step-time">2 мин</div>
+    </div>
+    <div class="step-body">
+      <p>В ещё одном окне Терминала на Маке:</p>
+      <div class="code">PGPASSWORD=<span class="str">'твой_POSTGRES_PASSWORD'</span> psql -h localhost -U aisales -d aisales</div>
+      <p>Должен зайти. Это значит, с Мака теперь можно работать с БД через GUI-клиенты.</p>
+    </div>
+  </div>
+
+  <div class="step-card">
+    <div class="step-head">
+      <div class="step-num">10</div>
+      <div class="step-title">GUI-клиент (опционально)</div>
+      <div class="step-time">10 мин</div>
+    </div>
+    <div class="step-body">
+      <p>Рекомендую <strong>TablePlus</strong> (tableplus.com) или бесплатный <strong>DBeaver</strong>.</p>
+      <p>Настройки подключения (после установки):</p>
+      <div class="data">
+        <div class="row">
+          <div class="field"><span class="k">Host</span><span class="v lime">localhost</span></div>
+          <div class="field"><span class="k">Port</span><span class="v">5432</span></div>
+          <div class="field"><span class="k">Database</span><span class="v">aisales</span></div>
+          <div class="field"><span class="k">User</span><span class="v">aisales</span></div>
+          <div class="field"><span class="k">Password</span><span class="v cyan">из .env</span></div>
+        </div>
+      </div>
+      <p>Туннель SSH должен быть открыт в отдельном окне.</p>
+    </div>
+  </div>
+
+  <h2><span class="sec">Section 09</span>Тестовые данные</h2>
+  <p class="lead">Один тестовый клиент с диалогом и сообщениями — чтобы убедиться, что связи работают.</p>
+
+  <div class="step-card">
+    <div class="step-head">
+      <div class="step-num">11</div>
+      <div class="step-title">Создаём миграцию seed</div>
+      <div class="step-time">3 мин</div>
+    </div>
+    <div class="step-body">
+      <div class="code"><span class="cmd">nano</span> ~/aisales/migrations/002_seed_test_data.sql</div>
+      <p>Вставь:</p>
+    </div>
+  </div>
+
+  <div class="code"><span class="comment">-- 002_seed_test_data.sql
+-- Тестовые данные для проверки связей</span>
+
+<span class="key">DO</span> $$
+<span class="key">DECLARE</span>
+  test_client_id <span class="type">UUID</span>;
+  test_conv_id <span class="type">UUID</span>;
+<span class="key">BEGIN</span>
+  <span class="comment">-- Клиент</span>
+  <span class="key">INSERT INTO</span> clients (
+    ig_username, display_name, segment,
+    funnel_stage, qual_score, source, tags
+  )
+  <span class="key">VALUES</span> (
+    <span class="str">'test_anna'</span>, <span class="str">'Анна (тест)'</span>, <span class="str">'segment_a'</span>,
+    <span class="str">'discovery'</span>, 65, <span class="str">'instagram_live'</span>, <span class="key">ARRAY</span>[<span class="str">'test'</span>, <span class="str">'priority'</span>]
+  )
+  <span class="key">RETURNING</span> id <span class="key">INTO</span> test_client_id;
+
+  <span class="comment">-- Диалог в IG</span>
+  <span class="key">INSERT INTO</span> conversations (client_id, channel, status, last_message_at, message_count)
+  <span class="key">VALUES</span> (test_client_id, <span class="str">'ig'</span>, <span class="str">'active'</span>, NOW(), 3)
+  <span class="key">RETURNING</span> id <span class="key">INTO</span> test_conv_id;
+
+  <span class="comment">-- 3 тестовых сообщения</span>
+  <span class="key">INSERT INTO</span> messages (conversation_id, client_id, direction, type, author, content, created_at)
+  <span class="key">VALUES</span>
+    (test_conv_id, test_client_id, <span class="str">'in'</span>, <span class="str">'text'</span>, <span class="str">'client'</span>,
+     <span class="str">'Привет! Видела твой эфир, интересно про нейросети'</span>, NOW() - <span class="key">INTERVAL</span> <span class="str">'1 hour'</span>),
+    (test_conv_id, test_client_id, <span class="str">'out'</span>, <span class="str">'text'</span>, <span class="str">'agent_ig'</span>,
+     <span class="str">'Привет, Анна! Рад, что зашла. Расскажи, что больше всего откликнулось на эфире?'</span>, NOW() - <span class="key">INTERVAL</span> <span class="str">'58 minutes'</span>),
+    (test_conv_id, test_client_id, <span class="str">'in'</span>, <span class="str">'text'</span>, <span class="str">'client'</span>,
+     <span class="str">'Тема с автоматизацией клиентов через ИИ. У меня есть онлайн-школа'</span>, NOW() - <span class="key">INTERVAL</span> <span class="str">'55 minutes'</span>);
+
+  <span class="comment">-- Действие: переход на этап discovery</span>
+  <span class="key">INSERT INTO</span> actions (client_id, conversation_id, action_type, payload, triggered_by)
+  <span class="key">VALUES</span> (test_client_id, test_conv_id, <span class="str">'stage_transition'</span>,
+    <span class="str">'{"from": "hello", "to": "discovery"}'</span>::jsonb, <span class="str">'agent_ig'</span>);
+
+  <span class="key">RAISE NOTICE</span> <span class="str">'Test client created: %'</span>, test_client_id;
+<span class="key">END</span>;
+$$;</div>
+
+  <div class="step-card">
+    <div class="step-head">
+      <div class="step-num">12</div>
+      <div class="step-title">Запуск seed</div>
+      <div class="step-time">2 мин</div>
+    </div>
+    <div class="step-body">
+      <div class="code"><span class="cmd">docker</span> exec -i aisales-postgres psql -U aisales -d aisales &lt; migrations/002_seed_test_data.sql</div>
+      <p>Проверь:</p>
+      <div class="code"><span class="cmd">docker</span> exec -it aisales-postgres psql -U aisales -d aisales -c <span class="str">"SELECT display_name, funnel_stage, qual_score FROM clients;"</span></div>
+      <p>Должна быть строка с Анной.</p>
+    </div>
+  </div>
+
+  <div class="ok"><strong>Тестовый клиент создан.</strong> БД работает, связи между таблицами проверены.</div>
+
+  <h2><span class="sec">Section 10</span>Полезные SQL для повседневной работы</h2>
+  <p class="lead">Сохрани эти запросы — пригодятся.</p>
+
+  <h3>Найти горячих лидов</h3>
+  <div class="code"><span class="key">SELECT</span> id, display_name, funnel_stage, qual_score
+<span class="key">FROM</span> clients
+<span class="key">WHERE</span> qual_score >= 75
+  <span class="key">AND</span> funnel_stage <span class="key">NOT IN</span> (<span class="str">'closed_won'</span>, <span class="str">'closed_lost'</span>)
+<span class="key">ORDER BY</span> qual_score <span class="key">DESC</span>;</div>
+
+  <h3>Все сообщения клиента</h3>
+  <div class="code"><span class="key">SELECT</span> direction, type, author, content, created_at
+<span class="key">FROM</span> messages
+<span class="key">WHERE</span> client_id = <span class="str">'UUID_клиента'</span>
+<span class="key">ORDER BY</span> created_at;</div>
+
+  <h3>Метрики дня</h3>
+  <div class="code"><span class="key">SELECT</span>
+  <span class="key">COUNT</span>(*) <span class="key">FILTER</span> (<span class="key">WHERE</span> first_contact_at::date = CURRENT_DATE) <span class="key">AS</span> new_leads,
+  <span class="key">COUNT</span>(*) <span class="key">FILTER</span> (<span class="key">WHERE</span> funnel_stage = <span class="str">'closed_won'</span>
+    <span class="key">AND</span> updated_at::date = CURRENT_DATE) <span class="key">AS</span> sales_today,
+  <span class="key">COUNT</span>(*) <span class="key">FILTER</span> (<span class="key">WHERE</span> qual_score >= 75) <span class="key">AS</span> hot_leads
+<span class="key">FROM</span> clients;</div>
+
+  <h3>Воронка по этапам</h3>
+  <div class="code"><span class="key">SELECT</span> funnel_stage, <span class="key">COUNT</span>(*) <span class="key">AS</span> count
+<span class="key">FROM</span> clients
+<span class="key">GROUP BY</span> funnel_stage
+<span class="key">ORDER BY</span> <span class="key">ARRAY_POSITION</span>(
+  <span class="key">ARRAY</span>[<span class="str">'hello'</span>,<span class="str">'discovery'</span>,<span class="str">'pitch'</span>,<span class="str">'objections'</span>,<span class="str">'close'</span>,<span class="str">'followup'</span>,<span class="str">'closed_won'</span>,<span class="str">'closed_lost'</span>]::funnel_stage[],
+  funnel_stage
+);</div>
+
+  <h2><span class="sec">Section 11</span>Чек-лист завершения</h2>
+
+  <ul class="check">
+    <li>Установлен psql на Маке (опционально)</li>
+    <li>Создана папка ~/aisales/migrations</li>
+    <li>Файл 001_initial_schema.sql создан</li>
+    <li>Миграция применена без ошибок</li>
+    <li>В psql: \dt показывает 8 таблиц</li>
+    <li>Создан пользователь-админ с хешированным паролем</li>
+    <li>SSH-туннель для подключения с Мака работает</li>
+    <li>Файл 002_seed_test_data.sql создан</li>
+    <li>Тестовый клиент «Анна» появился в БД</li>
+    <li>SQL-запросы из раздела 10 возвращают данные</li>
+  </ul>
+
+  <div class="note">Когда сделаешь — пиши «Этап 2.3 готов». Следующий — 2.4: FastAPI-каркас. Создаём Python-приложение, которое будет принимать сообщения, работать с БД и отвечать через Claude.</div>
+
+  <div class="footer">AI Sales System · Stage 2.3 · Database</div>
+</div>
+</body>
+</html>

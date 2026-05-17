@@ -1,0 +1,711 @@
+<!DOCTYPE html>
+<html lang="ru">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover">
+<meta name="theme-color" content="#080808">
+<meta name="color-scheme" content="dark only">
+<title>AI Sales System</title>
+<style>
+  *, *::before, *::after { margin:0; padding:0; box-sizing:border-box; -webkit-tap-highlight-color:transparent; }
+  html { background:#080808 !important; -webkit-text-size-adjust:100%; }
+  body { background:#080808 !important; color:#f5f0e8 !important; font-family:Georgia,'Times New Roman',serif; font-size:17px; line-height:1.6; overflow-x:hidden; min-height:100vh; }
+  .label { font-family:'SF Mono','Menlo',monospace; font-size:11px; text-transform:uppercase; letter-spacing:0.12em; color:#b8b3a8 !important; }
+  .topbar { position:sticky; top:0; background:#080808 !important; border-bottom:1px solid #2a2a2a; padding:14px 20px; z-index:50; display:flex; align-items:center; justify-content:space-between; gap:12px; }
+  .topbar-title { font-family:Georgia,serif; font-size:16px; line-height:1; color:#f5f0e8 !important; }
+  .topbar-title .accent { color:#c8f060 !important; font-style:italic; }
+  .topbar-back { background:transparent; border:1px solid #3a3a3a; color:#f5f0e8 !important; padding:8px 14px; font-family:'SF Mono',monospace; font-size:11px; text-transform:uppercase; letter-spacing:0.1em; cursor:pointer; }
+  .topbar-back:active { background:#c8f060; color:#080808 !important; }
+  .topbar-back.hidden { display:none; }
+  .index { padding:32px 20px 80px; max-width:600px; margin:0 auto; background:#080808; }
+  .index-header { margin-bottom:28px; padding-bottom:24px; border-bottom:1px solid #2a2a2a; }
+  .index-header .label { margin-bottom:8px; }
+  .index-header h1 { font-family:Georgia,serif; font-size:36px; font-weight:normal; line-height:1.05; letter-spacing:-0.01em; margin-bottom:12px; color:#f5f0e8 !important; }
+  .index-header h1 .accent { color:#c8f060 !important; font-style:italic; }
+  .index-header p { color:#c5bfb3 !important; font-size:15px; line-height:1.5; }
+  .progress-block { background:#1a1a1a; padding:18px 20px; margin-bottom:24px; border:1px solid #2a2a2a; }
+  .progress-block .label { margin-bottom:10px; }
+  .progress-bar { height:6px; background:#2a2a2a; margin:12px 0; }
+  .progress-fill { height:100%; background:#c8f060; }
+  .progress-stats { display:flex; justify-content:space-between; font-family:'SF Mono',monospace; font-size:11px; color:#b8b3a8; }
+  .progress-stats .done { color:#c8f060 !important; font-weight:700; }
+  .stage-group { margin-bottom:28px; }
+  .stage-group-title { font-family:'SF Mono',monospace; font-size:11px; text-transform:uppercase; letter-spacing:0.12em; color:#b8b3a8 !important; margin-bottom:10px; padding-left:4px; }
+  .stage-group-title .accent-num { color:#c8f060 !important; }
+  .doc-cards { display:flex; flex-direction:column; gap:3px; }
+  .doc-card { background:#1a1a1a !important; padding:20px 22px; cursor:pointer; display:flex; gap:14px; align-items:flex-start; border:1px solid #2a2a2a; width:100%; text-align:left; color:#f5f0e8 !important; font-family:inherit; }
+  .doc-card:active { background:#252525 !important; border-color:#c8f060; }
+  .doc-card[disabled] { cursor:default; opacity:0.45; }
+  .doc-card-num { font-family:'SF Mono',monospace; font-size:12px; font-weight:700; color:#c8f060 !important; padding-top:3px; flex-shrink:0; letter-spacing:0.1em; width:26px; }
+  .doc-card[disabled] .doc-card-num { color:#b8b3a8 !important; }
+  .doc-card-body { flex:1; min-width:0; }
+  .doc-card-title { font-family:Georgia,serif; font-size:18px; line-height:1.3; margin-bottom:5px; color:#f5f0e8 !important; }
+  .doc-card-desc { font-size:13.5px; color:#b8b3a8 !important; line-height:1.45; }
+  .doc-card-arrow { color:#c8f060 !important; font-size:22px; line-height:1; padding-top:5px; flex-shrink:0; font-weight:700; }
+  .doc-card[disabled] .doc-card-arrow { color:#555 !important; }
+  .doc-status { display:inline-block; font-family:'SF Mono',monospace; font-size:9px; font-weight:700; text-transform:uppercase; letter-spacing:0.12em; padding:3px 7px; margin-top:8px; }
+  .doc-status.ready { background:#2a3a14; color:#c8f060 !important; }
+  .doc-status.soon { background:#14283a; color:#60c8f0 !important; }
+  .doc-status.todo { background:#2a2a2a; color:#b8b3a8 !important; }
+  .doc-page { display:none; padding:28px 20px 80px; max-width:680px; margin:0 auto; background:#080808; }
+  .doc-page.active { display:block; }
+  .doc-page-header { margin-bottom:28px; padding-bottom:20px; border-bottom:1px solid #2a2a2a; }
+  .doc-page-header .label { margin-bottom:10px; }
+  .doc-page-header h1 { font-family:Georgia,serif; font-size:30px; font-weight:normal; line-height:1.1; letter-spacing:-0.01em; margin-bottom:12px; color:#f5f0e8 !important; }
+  .doc-page-header h1 .accent { color:#c8f060 !important; font-style:italic; }
+  .doc-page-header p { color:#c5bfb3 !important; font-size:15px; }
+  .doc-page h2 { font-family:Georgia,serif; font-size:24px; font-weight:normal; line-height:1.2; margin:36px 0 10px; letter-spacing:-0.01em; color:#f5f0e8 !important; }
+  .doc-page h2 .sec-num-inline { display:block; font-family:'SF Mono',monospace; font-size:10px; font-weight:700; color:#c8f060 !important; letter-spacing:0.15em; text-transform:uppercase; margin-bottom:6px; }
+  .doc-page h3 { font-family:'SF Mono',monospace; font-size:11px; font-weight:700; text-transform:uppercase; letter-spacing:0.15em; color:#c8f060 !important; margin:24px 0 12px; padding-bottom:6px; border-bottom:1px solid #2a2a2a; }
+  .doc-page p { margin-bottom:14px; font-size:16px; line-height:1.6; color:#f5f0e8 !important; }
+  .doc-page .lead { font-size:17px; font-style:italic; color:#d8d2c6 !important; margin-bottom:20px; line-height:1.5; }
+  .doc-page ul, .doc-page ol { margin:12px 0 16px; padding-left:24px; }
+  .doc-page li { margin-bottom:8px; font-size:15.5px; line-height:1.55; color:#f5f0e8 !important; }
+  .doc-page strong { color:#ffffff !important; font-weight:700; }
+  .doc-page code { font-family:'SF Mono',monospace; font-size:13px; background:#1a1a1a; padding:2px 6px; color:#c8f060 !important; border:1px solid #2a2a2a; }
+  .fillable { background:#1a1f10; border-left:3px solid #c8f060; padding:12px 14px; margin:8px 0; font-family:'SF Mono',monospace; font-size:13px; color:#d8d2c6 !important; line-height:1.4; }
+  .fillable::before { content:'✎  '; color:#c8f060 !important; }
+  .note, .warn { padding:14px 16px; margin:16px 0; font-size:14.5px; line-height:1.5; }
+  .note { background:#0f1f28; border-left:3px solid #60c8f0; color:#e8e3d6 !important; }
+  .warn { background:#28121b; border-left:3px solid #f06090; color:#e8e3d6 !important; }
+  .quote-box { background:#1a1a1a; padding:16px 18px; margin:14px 0; border:1px solid #2a2a2a; border-left:3px solid #60c8f0; font-size:14.5px; line-height:1.55; font-style:italic; color:#f5f0e8 !important; }
+  .quote-box-title { font-family:'SF Mono',monospace; font-size:10px; font-weight:700; text-transform:uppercase; letter-spacing:0.12em; color:#60c8f0 !important; margin-bottom:8px; font-style:normal; display:block; }
+  .checklist { list-style:none !important; padding-left:0 !important; margin:12px 0 !important; }
+  .checklist li { padding:13px 0; border-bottom:1px solid #2a2a2a; font-size:15px; line-height:1.5; display:flex; gap:12px; align-items:flex-start; color:#f5f0e8 !important; }
+  .checklist li:last-child { border-bottom:none; }
+  .checklist li::before { content:'☐'; color:#c8f060 !important; font-family:'SF Mono',monospace; font-size:18px; font-weight:700; flex-shrink:0; line-height:1.3; }
+  .checklist .count { display:block; font-family:'SF Mono',monospace; font-size:11px; font-weight:700; color:#c8f060 !important; margin-top:4px; }
+  .data-table { margin:16px 0; }
+  .dt-row { background:#1a1a1a; padding:14px 16px; margin-bottom:3px; border:1px solid #2a2a2a; }
+  .dt-row .dt-field { display:flex; justify-content:space-between; align-items:baseline; padding:7px 0; border-bottom:1px solid #2a2a2a; gap:12px; }
+  .dt-row .dt-field:last-child { border-bottom:none; }
+  .dt-row .dt-label { font-family:'SF Mono',monospace; font-size:10px; font-weight:700; text-transform:uppercase; letter-spacing:0.1em; color:#b8b3a8 !important; flex-shrink:0; }
+  .dt-row .dt-value { font-size:14.5px; text-align:right; line-height:1.4; color:#f5f0e8 !important; }
+  .dt-row .dt-value.lime { color:#c8f060 !important; font-weight:700; }
+  .dt-row .dt-value.cyan { color:#60c8f0 !important; font-weight:700; }
+  .dt-row .dt-value.pink { color:#f06090 !important; font-weight:700; }
+  .risk-card { background:#1a1a1a; padding:18px 20px; margin:12px 0; border:1px solid #2a2a2a; }
+  .risk-card .risk-level { font-family:'SF Mono',monospace; font-size:10px; font-weight:700; text-transform:uppercase; letter-spacing:0.12em; margin-bottom:8px; }
+  .risk-card .risk-level.high { color:#f06090 !important; }
+  .risk-card .risk-level.med { color:#60c8f0 !important; }
+  .risk-card .risk-level.low { color:#c8f060 !important; }
+  .risk-card h4 { font-family:Georgia,serif; font-size:17px; font-weight:normal; margin-bottom:8px; line-height:1.3; color:#f5f0e8 !important; }
+  .risk-card p { font-size:14px; line-height:1.5; color:#c5bfb3 !important; margin-bottom:8px; }
+  .risk-card .solution { color:#c8f060 !important; font-size:13px; font-weight:700; font-family:'SF Mono',monospace; margin-top:10px; line-height:1.45; padding-top:8px; border-top:1px solid #2a2a2a; }
+  .tree { background:#1a1a1a; padding:18px 16px; margin:16px 0; border:1px solid #2a2a2a; font-family:'SF Mono',monospace; font-size:12px; line-height:1.85; overflow-x:auto; white-space:pre; color:#f5f0e8 !important; }
+  .tree .folder { color:#c8f060 !important; font-weight:700; }
+  .tree .desc { color:#b8b3a8 !important; font-style:italic; }
+  .flow { background:#1a1a1a; padding:20px 16px; margin:16px 0; border:1px solid #2a2a2a; font-family:'SF Mono',monospace; font-size:12.5px; line-height:1.7; text-align:center; }
+  .flow .step { padding:6px 0; color:#f5f0e8 !important; }
+  .flow .hi { color:#c8f060 !important; font-weight:700; }
+  .flow .dim { color:#b8b3a8 !important; font-size:11px; }
+  .flow .arrow { color:#c8f060 !important; padding:2px 0; font-weight:700; }
+  .summary { display:grid; grid-template-columns:1fr; gap:3px; margin:20px 0; }
+  .sum-card { background:#1a1a1a; padding:18px 20px; border:1px solid #2a2a2a; }
+  .sum-card .num { font-family:Georgia,serif; font-size:38px; line-height:1; margin:8px 0; color:#c8f060 !important; }
+  .sum-card.c2 .num { color:#60c8f0 !important; }
+  .sum-card.c3 .num { color:#f06090 !important; }
+  .sum-card .desc { font-size:13px; color:#b8b3a8 !important; }
+  .schema-card { background:#1a1a1a; padding:18px 20px; margin:14px 0; border:1px solid #2a2a2a; }
+  .schema-card h4 { font-family:Georgia,serif; font-size:18px; font-weight:normal; margin-bottom:12px; color:#c8f060 !important; }
+  .schema-row { display:flex; flex-direction:column; gap:3px; padding:9px 0; border-bottom:1px solid #2a2a2a; font-size:13.5px; color:#f5f0e8 !important; }
+  .schema-row:last-child { border-bottom:none; }
+  .schema-row .key { font-family:'SF Mono',monospace; color:#60c8f0 !important; font-size:11px; font-weight:700; text-transform:uppercase; letter-spacing:0.08em; }
+  .agent-card { background:#1a1a1a; padding:20px; margin:12px 0; border:1px solid #2a2a2a; border-left:4px solid #c8f060; }
+  .agent-card.cyan { border-left-color:#60c8f0; }
+  .agent-card.pink { border-left-color:#f06090; }
+  .agent-card .agent-num { font-family:'SF Mono',monospace; font-size:10px; font-weight:700; color:#c8f060 !important; letter-spacing:0.12em; margin-bottom:8px; text-transform:uppercase; }
+  .agent-card.cyan .agent-num { color:#60c8f0 !important; }
+  .agent-card.pink .agent-num { color:#f06090 !important; }
+  .agent-card h4 { font-family:Georgia,serif; font-size:22px; font-weight:normal; margin-bottom:6px; color:#f5f0e8 !important; }
+  .agent-card .agent-role { font-family:'SF Mono',monospace; font-size:11px; font-weight:700; color:#b8b3a8 !important; text-transform:uppercase; letter-spacing:0.1em; margin-bottom:12px; }
+  .agent-card p { font-size:14.5px; line-height:1.55; margin-bottom:10px; color:#f5f0e8 !important; }
+  .agent-card .agent-tech { font-family:'SF Mono',monospace; font-size:11.5px; font-weight:700; color:#c8f060 !important; padding-top:10px; border-top:1px solid #2a2a2a; margin-top:10px; }
+  .timeline { margin:20px 0; }
+  .tl-item { background:#1a1a1a; padding:16px 20px; margin-bottom:3px; border:1px solid #2a2a2a; display:grid; grid-template-columns:80px 1fr; gap:14px; align-items:start; }
+  .tl-week { font-family:'SF Mono',monospace; font-size:10px; font-weight:700; text-transform:uppercase; letter-spacing:0.12em; color:#c8f060 !important; line-height:1.4; }
+  .tl-body h4 { font-family:Georgia,serif; font-size:16px; font-weight:normal; margin-bottom:4px; line-height:1.3; color:#f5f0e8 !important; }
+  .tl-body p { font-size:13px; color:#b8b3a8 !important; line-height:1.45; margin:0; }
+  .next-doc { margin-top:36px; padding:22px 20px; background:#1a1a1a; text-align:center; cursor:pointer; border:1px solid #c8f060; width:100%; color:#f5f0e8 !important; font-family:inherit; }
+  .next-doc:active { background:#2a3a14; }
+  .next-doc .label { display:block; margin-bottom:8px; color:#c8f060 !important; }
+  .next-doc .title { font-family:Georgia,serif; font-size:18px; color:#f5f0e8 !important; }
+  .next-doc .arrow { color:#c8f060 !important; margin-left:8px; font-weight:700; }
+  .doc-footer { margin-top:48px; padding:24px 0; border-top:1px solid #2a2a2a; text-align:center; font-family:'SF Mono',monospace; font-size:10px; font-weight:700; text-transform:uppercase; letter-spacing:0.12em; color:#b8b3a8 !important; line-height:1.8; }
+  @media (min-width:768px) {
+    .topbar { padding:16px 32px; }
+    .topbar-title { font-size:17px; }
+    .index { padding:48px 32px 100px; }
+    .index-header h1 { font-size:48px; }
+    .doc-page { padding:40px 32px 100px; }
+    .doc-page-header h1 { font-size:42px; }
+    .doc-page h2 { font-size:30px; }
+    .summary { grid-template-columns:repeat(3,1fr); }
+    .schema-row { flex-direction:row; align-items:baseline; gap:16px; }
+    .schema-row .key { width:160px; flex-shrink:0; }
+  }
+</style>
+</head>
+<body>
+<header class="topbar">
+  <div class="topbar-title" id="topbar-title">AI Sales <span class="accent">System</span></div>
+  <button class="topbar-back hidden" id="back-btn">← Назад</button>
+</header>
+<main class="index" id="page-index">
+  <div class="index-header">
+    <div class="label">Project Documents / Foundation</div>
+    <h1>AI Sales <span class="accent">System</span></h1>
+    <p>Мульти-агентная платформа продаж для Instagram + Telegram.</p>
+  </div>
+  <div class="progress-block">
+    <div class="label">Прогресс по документации</div>
+    <div class="progress-bar"><div class="progress-fill" style="width:67%"></div></div>
+    <div class="progress-stats">
+      <span><span class="done">6</span> готовы</span>
+      <span>9 всего</span>
+    </div>
+  </div>
+  <div class="stage-group">
+    <div class="stage-group-title">Этап 1 / <span class="accent-num">Подготовка</span></div>
+    <div class="doc-cards">
+      <button class="doc-card" onclick="openDoc('doc-1')"><div class="doc-card-num">01</div><div class="doc-card-body"><div class="doc-card-title">Конституция проекта</div><div class="doc-card-desc">Цели, KPI, ICP, воронка, эскалации</div><span class="doc-status ready">Ready</span></div><div class="doc-card-arrow">→</div></button>
+      <button class="doc-card" onclick="openDoc('doc-2')"><div class="doc-card-num">02</div><div class="doc-card-body"><div class="doc-card-title">Сбор голоса бренда</div><div class="doc-card-desc">100+ сообщений, 30+ мин аудио</div><span class="doc-status ready">Ready</span></div><div class="doc-card-arrow">→</div></button>
+      <button class="doc-card" onclick="openDoc('doc-3')"><div class="doc-card-num">03</div><div class="doc-card-body"><div class="doc-card-title">Юридический пакет</div><div class="doc-card-desc">152-ФЗ, GDPR, AI Act, дисклеймеры</div><span class="doc-status ready">Ready</span></div><div class="doc-card-arrow">→</div></button>
+      <button class="doc-card" onclick="openDoc('doc-4')"><div class="doc-card-num">04</div><div class="doc-card-body"><div class="doc-card-title">База знаний</div><div class="doc-card-desc">RAG-архитектура, 10 коллекций</div><span class="doc-status ready">Ready</span></div><div class="doc-card-arrow">→</div></button>
+    </div>
+  </div>
+  <div class="stage-group">
+    <div class="stage-group-title">Этап 2 / <span class="accent-num">Платформа</span></div>
+    <div class="doc-cards">
+      <button class="doc-card" onclick="openDoc('doc-5')"><div class="doc-card-num">05</div><div class="doc-card-body"><div class="doc-card-title">Платформа: архитектура</div><div class="doc-card-desc">Стек, 4 агента, БД, очереди</div><span class="doc-status ready">Ready</span></div><div class="doc-card-arrow">→</div></button>
+      <button class="doc-card" onclick="openDoc('doc-6')"><div class="doc-card-num">06</div><div class="doc-card-body"><div class="doc-card-title">Платформа: дашборд и CRM</div><div class="doc-card-desc">Путь клиента, статусы, экраны</div><span class="doc-status ready">Ready</span></div><div class="doc-card-arrow">→</div></button>
+    </div>
+  </div>
+  <div class="stage-group">
+    <div class="stage-group-title">Этап 3 / <span class="accent-num">Агенты</span></div>
+    <div class="doc-cards">
+      <button class="doc-card" disabled><div class="doc-card-num">07</div><div class="doc-card-body"><div class="doc-card-title">IG-агент</div><div class="doc-card-desc">Промпты, интеграция, аудио</div><span class="doc-status soon">Next</span></div><div class="doc-card-arrow">→</div></button>
+      <button class="doc-card" disabled><div class="doc-card-num">08</div><div class="doc-card-body"><div class="doc-card-title">TG-агент</div><div class="doc-card-desc">Кружочки, MTProto, голос</div><span class="doc-status todo">Todo</span></div><div class="doc-card-arrow">→</div></button>
+      <button class="doc-card" disabled><div class="doc-card-num">09</div><div class="doc-card-body"><div class="doc-card-title">Аналитик + РОП</div><div class="doc-card-desc">Скоринг, рекомендации</div><span class="doc-status todo">Todo</span></div><div class="doc-card-arrow">→</div></button>
+    </div>
+  </div>
+</main>
+
+<article class="doc-page" id="doc-1">
+  <header class="doc-page-header">
+    <div class="label">Document 01 / Constitution</div>
+    <h1>Конституция <span class="accent">проекта</span></h1>
+    <p>Главный документ-источник. Все решения сверяются с ним.</p>
+  </header>
+  <h2><span class="sec-num-inline">Section 01</span>Цель и метрики</h2>
+  <p class="lead">Зачем мы это делаем и как поймём, что получилось.</p>
+  <h3>Главная цель</h3>
+  <p>Построить мульти-агентную систему, которая берёт на себя 70–90% входящих коммуникаций в Instagram и Telegram, сохраняя качество личного общения Ильи.</p>
+  <h3>Бизнес-цели</h3>
+  <div class="fillable">Входящих в день: ___</div>
+  <div class="fillable">Текущая конверсия: ___ %</div>
+  <div class="fillable">Целевая конверсия: ___ %</div>
+  <h3>KPI</h3>
+  <div class="data-table">
+    <div class="dt-row"><div class="dt-field"><span class="dt-label">Метрика</span><span class="dt-value">Автономных ответов</span></div><div class="dt-field"><span class="dt-label">Цель</span><span class="dt-value lime">≥ 80%</span></div></div>
+    <div class="dt-row"><div class="dt-field"><span class="dt-label">Метрика</span><span class="dt-value">Первый ответ</span></div><div class="dt-field"><span class="dt-label">Цель</span><span class="dt-value lime">≤ 2 мин</span></div></div>
+    <div class="dt-row"><div class="dt-field"><span class="dt-label">Метрика</span><span class="dt-value">Conv. to qualified</span></div><div class="dt-field"><span class="dt-label">Цель</span><span class="dt-value lime">≥ 50%</span></div></div>
+    <div class="dt-row"><div class="dt-field"><span class="dt-label">Метрика</span><span class="dt-value">Conv. to sale</span></div><div class="dt-field"><span class="dt-label">Цель</span><span class="dt-value lime">≥ 15%</span></div></div>
+    <div class="dt-row"><div class="dt-field"><span class="dt-label">Метрика</span><span class="dt-value">Скоринг</span></div><div class="dt-field"><span class="dt-label">Цель</span><span class="dt-value lime">≥ 75/100</span></div></div>
+  </div>
+  <h2><span class="sec-num-inline">Section 02</span>ICP</h2>
+  <p class="lead">Кто наш клиент.</p>
+  <h3>Сегмент А</h3>
+  <div class="fillable">Название: ___</div>
+  <div class="fillable">Возраст, география: ___</div>
+  <div class="fillable">Главная боль: ___</div>
+  <div class="fillable">Топ-5 возражений: ___</div>
+  <h2><span class="sec-num-inline">Section 03</span>Воронка</h2>
+  <div class="data-table">
+    <div class="dt-row"><div class="dt-field"><span class="dt-label">Этап</span><span class="dt-value lime">1. Hello</span></div><div class="dt-field"><span class="dt-label">Цель</span><span class="dt-value">Контакт</span></div></div>
+    <div class="dt-row"><div class="dt-field"><span class="dt-label">Этап</span><span class="dt-value lime">2. Discovery</span></div><div class="dt-field"><span class="dt-label">Цель</span><span class="dt-value">Квалификация</span></div></div>
+    <div class="dt-row"><div class="dt-field"><span class="dt-label">Этап</span><span class="dt-value lime">3. Pitch</span></div><div class="dt-field"><span class="dt-label">Цель</span><span class="dt-value">Презентация</span></div></div>
+    <div class="dt-row"><div class="dt-field"><span class="dt-label">Этап</span><span class="dt-value lime">4. Objections</span></div><div class="dt-field"><span class="dt-label">Цель</span><span class="dt-value">Снятие сомнений</span></div></div>
+    <div class="dt-row"><div class="dt-field"><span class="dt-label">Этап</span><span class="dt-value lime">5. Close</span></div><div class="dt-field"><span class="dt-label">Цель</span><span class="dt-value">К оплате</span></div></div>
+    <div class="dt-row"><div class="dt-field"><span class="dt-label">Этап</span><span class="dt-value lime">6. Follow-up</span></div><div class="dt-field"><span class="dt-label">Цель</span><span class="dt-value">Дожим</span></div></div>
+  </div>
+  <h2><span class="sec-num-inline">Section 04</span>Эскалация</h2>
+  <p class="lead">Когда агент молчит и зовёт Илью.</p>
+  <h3>Жёсткие триггеры</h3>
+  <ul>
+    <li>Угрозы, агрессия, упоминание полиции</li>
+    <li>Запрос возврата, чарджбэка</li>
+    <li>Вопрос «ты человек или ИИ?» → честный ответ</li>
+    <li>Запрос звонка / встречи</li>
+  </ul>
+  <h3>Мягкие триггеры</h3>
+  <ul>
+    <li>Сумма сделки выше X</li>
+    <li>3+ повторов вопроса</li>
+    <li>Молчание 7+ дней</li>
+  </ul>
+  <h2><span class="sec-num-inline">Section 05</span>Red lines</h2>
+  <ul>
+    <li>Выдавать себя за человека</li>
+    <li>Обещать финансовый результат</li>
+    <li>Медицинские, юридические советы</li>
+    <li>Политика, религия</li>
+    <li>Критика конкурентов поимённо</li>
+  </ul>
+  <button class="next-doc" onclick="openDoc('doc-2')"><span class="label">Следующий</span><span class="title">02 — Сбор голоса бренда<span class="arrow">→</span></span></button>
+  <div class="doc-footer">AI Sales System · Document 01 / 06</div>
+</article>
+
+<article class="doc-page" id="doc-2">
+  <header class="doc-page-header">
+    <div class="label">Document 02 / Voice</div>
+    <h1>Сбор <span class="accent">голоса</span> бренда</h1>
+    <p>Чтобы агенты звучали как Илья.</p>
+  </header>
+  <div class="summary">
+    <div class="sum-card c1"><div class="label">Текст</div><div class="num">100+</div><div class="desc">образцов</div></div>
+    <div class="sum-card c2"><div class="label">Аудио</div><div class="num">30+</div><div class="desc">минут</div></div>
+    <div class="sum-card c3"><div class="label">Видео</div><div class="num">20+</div><div class="desc">кружочков</div></div>
+  </div>
+  <h2><span class="sec-num-inline">Section 01</span>Текстовые образцы</h2>
+  <p class="lead">100+ образцов реальных переписок.</p>
+  <h3>Откуда брать</h3>
+  <ul>
+    <li>Архив Instagram Direct</li>
+    <li>Архив Telegram (Settings → Export)</li>
+    <li>WhatsApp</li>
+  </ul>
+  <h3>Категории</h3>
+  <ul class="checklist">
+    <li><div>Тёплые приветствия<span class="count">→ 15 примеров</span></div></li>
+    <li><div>«Сколько стоит?»<span class="count">→ 10 примеров</span></div></li>
+    <li><div>Презентация продукта<span class="count">→ 10 примеров</span></div></li>
+    <li><div>Возражение «дорого»<span class="count">→ 10 примеров</span></div></li>
+    <li><div>Возражение «подумаю»<span class="count">→ 10 примеров</span></div></li>
+    <li><div>Дожим<span class="count">→ 15 примеров</span></div></li>
+    <li><div>Финальный призыв<span class="count">→ 10 примеров</span></div></li>
+  </ul>
+  <h2><span class="sec-num-inline">Section 02</span>Голос для ElevenLabs</h2>
+  <h3>Требования</h3>
+  <div class="data-table">
+    <div class="dt-row"><div class="dt-field"><span class="dt-label">Длительность</span><span class="dt-value">30–60 мин</span></div></div>
+    <div class="dt-row"><div class="dt-field"><span class="dt-label">Качество</span><span class="dt-value">48 кГц / 24 бит</span></div></div>
+    <div class="dt-row"><div class="dt-field"><span class="dt-label">Микрофон</span><span class="dt-value cyan">Rode NT-USB</span></div></div>
+  </div>
+  <h3>Сценарии</h3>
+  <ul class="checklist">
+    <li><div>Статья из блога 5 мин<span class="count">→ базовая тренировка</span></div></li>
+    <li><div>Приветствия 3 варианта<span class="count">→ первые аудио</span></div></li>
+    <li><div>Презентация 60 сек<span class="count">→ эталон тона</span></div></li>
+    <li><div>Эмоциональная речь<span class="count">→ интонации</span></div></li>
+    <li><div>Спонтанная 5 мин<span class="count">→ естественность</span></div></li>
+  </ul>
+  <h2><span class="sec-num-inline">Section 03</span>Кружочки</h2>
+  <div class="risk-card">
+    <div class="risk-level med">HeyGen / Synthesia</div>
+    <h4>Генеративный аватар</h4>
+    <p>Плюсы: любой текст. Минусы: заметен ИИ-эффект.</p>
+  </div>
+  <div class="risk-card">
+    <div class="risk-level low">Wav2Lip</div>
+    <h4>Подмена губ на твоих кружочках</h4>
+    <p>Плюсы: видео живое. Минусы: нужен пул 20–50 шаблонов.</p>
+  </div>
+  <button class="next-doc" onclick="openDoc('doc-3')"><span class="label">Следующий</span><span class="title">03 — Юридический<span class="arrow">→</span></span></button>
+  <div class="doc-footer">AI Sales System · Document 02 / 06</div>
+</article>
+
+<article class="doc-page" id="doc-3">
+  <header class="doc-page-header">
+    <div class="label">Document 03 / Legal</div>
+    <h1>Юридический <span class="accent">пакет</span></h1>
+    <p>152-ФЗ, GDPR, AI Act.</p>
+  </header>
+  <h2><span class="sec-num-inline">Section 01</span>Карта рисков</h2>
+  <div class="risk-card">
+    <div class="risk-level high">High risk</div>
+    <h4>Обработка без согласия (152-ФЗ)</h4>
+    <p>Штраф для ИП до 100 тыс ₽, для юрлиц до 18 млн ₽.</p>
+    <div class="solution">→ Согласие в первом сообщении</div>
+  </div>
+  <div class="risk-card">
+    <div class="risk-level high">High risk</div>
+    <h4>Несообщение про ИИ (EU AI Act)</h4>
+    <p>Штраф до 7% мировой выручки.</p>
+    <div class="solution">→ Дисклеймер в bio + первом сообщении</div>
+  </div>
+  <div class="risk-card">
+    <div class="risk-level med">Medium risk</div>
+    <h4>Биометрия (клон голоса)</h4>
+    <p>Требует письменного согласия.</p>
+    <div class="solution">→ Только твоё согласие</div>
+  </div>
+  <div class="risk-card">
+    <div class="risk-level med">Medium risk</div>
+    <h4>Данные за рубежом</h4>
+    <p>API в США. Уведомление РКН обязательно.</p>
+    <div class="solution">→ Анонимизация + уведомление</div>
+  </div>
+  <h2><span class="sec-num-inline">Section 02</span>Дисклеймеры</h2>
+  <h3>В bio Instagram</h3>
+  <div class="quote-box">
+    <span class="quote-box-title">Лаконичный</span>
+    Со мной помогает AI-ассистент 🤖 На важных вопросах подключаюсь лично
+  </div>
+  <h3>В TG-канале</h3>
+  <div class="quote-box">
+    <span class="quote-box-title">Полный</span>
+    Привет! Это канал Ильи. В личке поможет AI-ассистент — обучен на моих материалах. На сложных вопросах подключаюсь лично. Хочешь сразу со мной — напиши «Илья».
+  </div>
+  <h3>На «ты человек или ИИ?»</h3>
+  <div class="quote-box">
+    <span class="quote-box-title">Обязательный ответ</span>
+    Я AI-ассистент Ильи — обучен на его материалах. Лично он подключается на важных моментах.
+  </div>
+  <h2><span class="sec-num-inline">Section 03</span>Документы</h2>
+  <ul class="checklist">
+    <li><div>Политика обработки ПДн</div></li>
+    <li><div>Согласие на обработку</div></li>
+    <li><div>Публичная оферта</div></li>
+    <li><div>Уведомление об AI</div></li>
+    <li><div>Cookie-policy</div></li>
+    <li><div>Уведомление РКН</div></li>
+  </ul>
+  <h2><span class="sec-num-inline">Section 04</span>План легализации</h2>
+  <ol>
+    <li><strong>Неделя 1.</strong> Юрист по 152-ФЗ</li>
+    <li><strong>Неделя 1–2.</strong> Политика, оферта</li>
+    <li><strong>Неделя 2.</strong> Уведомление РКН</li>
+    <li><strong>Неделя 2–3.</strong> Техническая гигиена</li>
+    <li><strong>Неделя 3.</strong> Дисклеймеры</li>
+  </ol>
+  <div class="warn">До прохождения этого пути в продакшн нельзя.</div>
+  <button class="next-doc" onclick="openDoc('doc-4')"><span class="label">Следующий</span><span class="title">04 — База знаний<span class="arrow">→</span></span></button>
+  <div class="doc-footer">AI Sales System · Document 03 / 06</div>
+</article>
+
+<article class="doc-page" id="doc-4">
+  <header class="doc-page-header">
+    <div class="label">Document 04 / Knowledge Base</div>
+    <h1>База <span class="accent">знаний</span></h1>
+    <p>Архитектура RAG-системы.</p>
+  </header>
+  <h2><span class="sec-num-inline">Section 01</span>Концепция</h2>
+  <p class="lead">Единый источник истины. Изменил в одном месте — обновилось у всех.</p>
+  <p>Подход — <strong>RAG (Retrieval-Augmented Generation).</strong> Знания в векторной БД.</p>
+  <div class="flow">
+<div class="step"><span class="dim">Илья редактирует</span></div>
+<div class="arrow">↓</div>
+<div class="step"><span class="hi">NOTION</span></div>
+<div class="arrow">↓</div>
+<div class="step"><span class="hi">PARSER</span></div>
+<div class="step"><span class="dim">Чанкинг</span></div>
+<div class="arrow">↓</div>
+<div class="step"><span class="hi">EMBEDDINGS</span></div>
+<div class="step"><span class="dim">Voyage-3</span></div>
+<div class="arrow">↓</div>
+<div class="step"><span class="hi">QDRANT</span></div>
+<div class="arrow">↓</div>
+<div class="step"><span class="hi">CLAUDE OPUS 4.7</span></div>
+<div class="arrow">↓</div>
+<div class="step"><span class="hi">ОТВЕТ КЛИЕНТУ</span></div>
+  </div>
+  <h2><span class="sec-num-inline">Section 02</span>Структура</h2>
+  <div class="tree"><span class="folder">📁 knowledge-base/</span>
+├── <span class="folder">01-product/</span>     <span class="desc"># о продукте</span>
+├── <span class="folder">02-segments/</span>    <span class="desc"># сегменты ICP</span>
+├── <span class="folder">03-scripts/</span>     <span class="desc"># по этапам</span>
+├── <span class="folder">04-objections/</span>  <span class="desc"># банк 50+</span>
+├── <span class="folder">05-cases/</span>       <span class="desc"># кейсы</span>
+├── <span class="folder">06-voice/</span>       <span class="desc"># голос</span>
+├── <span class="folder">07-faq/</span>         <span class="desc"># FAQ</span>
+├── <span class="folder">08-content/</span>     <span class="desc"># архив</span>
+├── <span class="folder">09-escalation/</span>  <span class="desc"># триггеры</span>
+└── <span class="folder">10-meta/</span>        <span class="desc"># системное</span></div>
+  <h2><span class="sec-num-inline">Section 03</span>Минимум для MVP</h2>
+  <div class="data-table">
+    <div class="dt-row"><div class="dt-field"><span class="dt-label">Продукт</span><span class="dt-value lime">5 документов</span></div></div>
+    <div class="dt-row"><div class="dt-field"><span class="dt-label">Сегменты</span><span class="dt-value lime">2 сегмента</span></div></div>
+    <div class="dt-row"><div class="dt-field"><span class="dt-label">Скрипты</span><span class="dt-value lime">6 × 1</span></div></div>
+    <div class="dt-row"><div class="dt-field"><span class="dt-label">Возражения</span><span class="dt-value lime">20</span></div></div>
+    <div class="dt-row"><div class="dt-field"><span class="dt-label">Кейсы</span><span class="dt-value lime">5</span></div></div>
+    <div class="dt-row"><div class="dt-field"><span class="dt-label">Голос</span><span class="dt-value lime">30 образцов</span></div></div>
+  </div>
+  <button class="next-doc" onclick="openDoc('doc-5')"><span class="label">Следующий</span><span class="title">05 — Платформа<span class="arrow">→</span></span></button>
+  <div class="doc-footer">AI Sales System · Document 04 / 06</div>
+</article>
+
+<article class="doc-page" id="doc-5">
+  <header class="doc-page-header">
+    <div class="label">Document 05 / Platform</div>
+    <h1>Платформа: <span class="accent">архитектура</span></h1>
+    <p>Стек, четыре агента, БД.</p>
+  </header>
+  <h2><span class="sec-num-inline">Section 01</span>Концепция</h2>
+  <p class="lead">Платформа — это «скелет». Сначала строим скелет, потом добавляем агентов.</p>
+  <p>Платформа решает четыре задачи:</p>
+  <ul>
+    <li><strong>Принимает</strong> входящие из IG и TG</li>
+    <li><strong>Хранит</strong> состояние клиентов и диалогов</li>
+    <li><strong>Маршрутизирует</strong> сообщения к агенту</li>
+    <li><strong>Показывает</strong> через дашборд</li>
+  </ul>
+  <div class="note">Агенты — модули через единый API. Захотим заменить Claude — меняем один модуль.</div>
+  <h2><span class="sec-num-inline">Section 02</span>Архитектура</h2>
+  <div class="flow">
+<div class="step"><span class="dim">Клиент → IG / TG</span></div>
+<div class="arrow">↓</div>
+<div class="step"><span class="hi">CHANNEL ADAPTERS</span></div>
+<div class="arrow">↓</div>
+<div class="step"><span class="hi">MESSAGE GATEWAY</span></div>
+<div class="step"><span class="dim">FastAPI</span></div>
+<div class="arrow">↓</div>
+<div class="step"><span class="hi">REDIS QUEUE</span></div>
+<div class="arrow">↓</div>
+<div class="step"><span class="hi">ORCHESTRATOR</span></div>
+<div class="arrow">↓</div>
+<div class="step"><span class="hi">AGENT</span></div>
+<div class="step"><span class="dim">Claude Opus + RAG</span></div>
+<div class="arrow">↓</div>
+<div class="step"><span class="hi">RESPONSE BUILDER</span></div>
+<div class="arrow">↓</div>
+<div class="step"><span class="hi">SENDER</span></div>
+<div class="arrow">↓</div>
+<div class="step"><span class="dim">Клиент → ответ</span></div>
+<div class="arrow">↓</div>
+<div class="step"><span class="hi">POSTGRESQL</span></div>
+  </div>
+  <h2><span class="sec-num-inline">Section 03</span>Стек</h2>
+  <h3>Backend</h3>
+  <div class="data-table">
+    <div class="dt-row"><div class="dt-field"><span class="dt-label">Язык</span><span class="dt-value lime">Python 3.12</span></div></div>
+    <div class="dt-row"><div class="dt-field"><span class="dt-label">Фреймворк</span><span class="dt-value lime">FastAPI</span></div></div>
+    <div class="dt-row"><div class="dt-field"><span class="dt-label">Очереди</span><span class="dt-value lime">Redis + Celery</span></div></div>
+    <div class="dt-row"><div class="dt-field"><span class="dt-label">Агенты</span><span class="dt-value lime">LangGraph</span></div></div>
+  </div>
+  <h3>AI / ML</h3>
+  <div class="data-table">
+    <div class="dt-row"><div class="dt-field"><span class="dt-label">LLM основной</span><span class="dt-value lime">Opus 4.7</span></div></div>
+    <div class="dt-row"><div class="dt-field"><span class="dt-label">LLM дешёвый</span><span class="dt-value lime">Sonnet 4.6</span></div></div>
+    <div class="dt-row"><div class="dt-field"><span class="dt-label">Embeddings</span><span class="dt-value lime">Voyage-3</span></div></div>
+    <div class="dt-row"><div class="dt-field"><span class="dt-label">Vector DB</span><span class="dt-value lime">Qdrant</span></div></div>
+    <div class="dt-row"><div class="dt-field"><span class="dt-label">TTS</span><span class="dt-value lime">ElevenLabs PVC</span></div></div>
+    <div class="dt-row"><div class="dt-field"><span class="dt-label">Видео</span><span class="dt-value lime">Wav2Lip</span></div></div>
+  </div>
+  <h3>Данные</h3>
+  <div class="data-table">
+    <div class="dt-row"><div class="dt-field"><span class="dt-label">БД</span><span class="dt-value lime">PostgreSQL 16</span></div></div>
+    <div class="dt-row"><div class="dt-field"><span class="dt-label">Кеш</span><span class="dt-value lime">Redis</span></div></div>
+    <div class="dt-row"><div class="dt-field"><span class="dt-label">Файлы</span><span class="dt-value lime">S3 Selectel</span></div></div>
+  </div>
+  <h3>Frontend</h3>
+  <div class="data-table">
+    <div class="dt-row"><div class="dt-field"><span class="dt-label">Фреймворк</span><span class="dt-value lime">Next.js 15</span></div></div>
+    <div class="dt-row"><div class="dt-field"><span class="dt-label">UI</span><span class="dt-value lime">Tailwind + shadcn</span></div></div>
+    <div class="dt-row"><div class="dt-field"><span class="dt-label">Дизайн</span><span class="dt-value lime">AI Mastery DS</span></div></div>
+  </div>
+  <h2><span class="sec-num-inline">Section 04</span>Четыре агента</h2>
+  <div class="agent-card">
+    <div class="agent-num">Agent 01 / Instagram</div>
+    <h4>IG-Менеджер</h4>
+    <div class="agent-role">Manager · IG Direct</div>
+    <p>Принимает сообщения из Instagram. Отвечает текстом и аудио через ElevenLabs. Ведёт до этапа Close.</p>
+    <div class="agent-tech">Claude Opus 4.7 + RAG + ElevenLabs</div>
+  </div>
+  <div class="agent-card">
+    <div class="agent-num">Agent 02 / Telegram</div>
+    <h4>TG-Менеджер</h4>
+    <div class="agent-role">Manager · Telegram</div>
+    <p>Как IG, плюс видео-кружочки. Единая память с IG-агентом.</p>
+    <div class="agent-tech">Claude Opus 4.7 + ElevenLabs + Wav2Lip</div>
+  </div>
+  <div class="agent-card cyan">
+    <div class="agent-num">Agent 03 / QA</div>
+    <h4>Аналитик</h4>
+    <div class="agent-role">Quality Control</div>
+    <p>Каждые 2–4 часа проверяет переписки. Скоринг 0–100, рекомендации агентам.</p>
+    <div class="agent-tech">Claude Sonnet 4.6</div>
+  </div>
+  <div class="agent-card pink">
+    <div class="agent-num">Agent 04 / РОП</div>
+    <h4>Head of Sales</h4>
+    <div class="agent-role">Management</div>
+    <p>Утром и вечером отчёт. Алерты по горячим лидам. Декомпозиция плана.</p>
+    <div class="agent-tech">Claude Opus 4.7</div>
+  </div>
+  <h2><span class="sec-num-inline">Section 05</span>Каналы</h2>
+  <h3>Instagram</h3>
+  <div class="risk-card">
+    <div class="risk-level low">Безопасный</div>
+    <h4>Instagram Graph API</h4>
+    <p>Официальный API. Business-аккаунт. 24 часа на ответ.</p>
+    <div class="solution">→ Текст автомат, аудио вручную</div>
+  </div>
+  <div class="risk-card">
+    <div class="risk-level high">Рискованный</div>
+    <h4>instagrapi (unofficial)</h4>
+    <p>Можно всё, но риск бана.</p>
+    <div class="solution">→ Только тесты</div>
+  </div>
+  <h3>Telegram</h3>
+  <div class="risk-card">
+    <div class="risk-level low">Безопасный</div>
+    <h4>Bot API</h4>
+    <p>Официально. Без личного имени.</p>
+    <div class="solution">→ @ilia_assistant_bot</div>
+  </div>
+  <div class="risk-card">
+    <div class="risk-level med">Альтернативный</div>
+    <h4>User API (MTProto)</h4>
+    <p>Личный аккаунт, отдельный номер.</p>
+    <div class="solution">→ Отдельный номер для проекта</div>
+  </div>
+  <h2><span class="sec-num-inline">Section 06</span>Схема БД</h2>
+  <div class="schema-card">
+    <h4>clients</h4>
+    <div class="schema-row"><span class="key">id</span><span>UUID</span></div>
+    <div class="schema-row"><span class="key">platform_ids</span><span>IG, TG</span></div>
+    <div class="schema-row"><span class="key">segment</span><span>сегмент ICP</span></div>
+    <div class="schema-row"><span class="key">funnel_stage</span><span>текущий этап</span></div>
+    <div class="schema-row"><span class="key">qual_score</span><span>0–100</span></div>
+  </div>
+  <div class="schema-card">
+    <h4>messages</h4>
+    <div class="schema-row"><span class="key">conversation_id</span><span>FK</span></div>
+    <div class="schema-row"><span class="key">direction</span><span>in / out</span></div>
+    <div class="schema-row"><span class="key">type</span><span>text / audio / video</span></div>
+    <div class="schema-row"><span class="key">author</span><span>client / agent / human</span></div>
+  </div>
+  <h2><span class="sec-num-inline">Section 07</span>Порядок разработки</h2>
+  <div class="timeline">
+    <div class="tl-item"><div class="tl-week">Неделя 1</div><div class="tl-body"><h4>Инфраструктура</h4><p>VPS, Docker, PostgreSQL, Redis, Qdrant</p></div></div>
+    <div class="tl-item"><div class="tl-week">Неделя 2</div><div class="tl-body"><h4>Backend-каркас</h4><p>FastAPI, схема БД, endpoints</p></div></div>
+    <div class="tl-item"><div class="tl-week">Неделя 2–3</div><div class="tl-body"><h4>База знаний</h4><p>Notion API, embeddings, Qdrant</p></div></div>
+    <div class="tl-item"><div class="tl-week">Неделя 3</div><div class="tl-body"><h4>Дашборд MVP</h4><p>Next.js, авторизация, карточка</p></div></div>
+    <div class="tl-item"><div class="tl-week">Неделя 4</div><div class="tl-body"><h4>Каналы</h4><p>IG webhook, TG бот</p></div></div>
+    <div class="tl-item"><div class="tl-week">Неделя 4–5</div><div class="tl-body"><h4>Голос и медиа</h4><p>ElevenLabs PVC, Wav2Lip</p></div></div>
+    <div class="tl-item"><div class="tl-week">Неделя 5</div><div class="tl-body"><h4>Скелет готов</h4><p>Принимает, хранит, показывает</p></div></div>
+  </div>
+  <button class="next-doc" onclick="openDoc('doc-6')"><span class="label">Следующий</span><span class="title">06 — Дашборд<span class="arrow">→</span></span></button>
+  <div class="doc-footer">AI Sales System · Document 05 / 06</div>
+</article>
+
+<article class="doc-page" id="doc-6">
+  <header class="doc-page-header">
+    <div class="label">Document 06 / Dashboard</div>
+    <h1>Платформа: <span class="accent">дашборд</span></h1>
+    <p>Что Илья и команда видят в системе.</p>
+  </header>
+  <h2><span class="sec-num-inline">Section 01</span>Концепция</h2>
+  <p class="lead">Командный центр: что система делает сейчас, что сделала, где блокеры.</p>
+  <p>Три уровня:</p>
+  <ul>
+    <li><strong>Глобально:</strong> воронка, конверсии</li>
+    <li><strong>Список:</strong> кто в работе, кто горячий</li>
+    <li><strong>Карточка:</strong> вся история одного клиента</li>
+  </ul>
+  <h2><span class="sec-num-inline">Section 02</span>Главный экран</h2>
+  <h3>Метрики дня</h3>
+  <div class="data-table">
+    <div class="dt-row"><div class="dt-field"><span class="dt-label">1</span><span class="dt-value">Новые лиды</span></div></div>
+    <div class="dt-row"><div class="dt-field"><span class="dt-label">2</span><span class="dt-value">В работе</span></div></div>
+    <div class="dt-row"><div class="dt-field"><span class="dt-label">3</span><span class="dt-value">Горячие</span></div></div>
+    <div class="dt-row"><div class="dt-field"><span class="dt-label">4</span><span class="dt-value">Оплат сегодня</span></div></div>
+    <div class="dt-row"><div class="dt-field"><span class="dt-label">5</span><span class="dt-value">Сумма оплат</span></div></div>
+    <div class="dt-row"><div class="dt-field"><span class="dt-label">6</span><span class="dt-value">Автономных %</span></div></div>
+  </div>
+  <h3>Воронка</h3>
+  <p>Визуальная воронка 7 этапов. Клик — список клиентов этапа.</p>
+  <h3>Алерты</h3>
+  <ul>
+    <li>Эскалации</li>
+    <li>Горячие лиды без ответа &gt; 30 мин</li>
+    <li>Технические сбои</li>
+  </ul>
+  <h3>Лента активности</h3>
+  <p>Реальное время: агент ответил, переход этапа, оплата.</p>
+  <h2><span class="sec-num-inline">Section 03</span>Список клиентов</h2>
+  <h3>Фильтры</h3>
+  <ul>
+    <li>По каналу (IG / TG)</li>
+    <li>По этапу воронки</li>
+    <li>По сегменту</li>
+    <li>По скорингу</li>
+    <li>По активности</li>
+  </ul>
+  <h2><span class="sec-num-inline">Section 04</span>Карточка клиента</h2>
+  <p class="lead">Главный экран. Вся история в одном месте.</p>
+  <div class="schema-card">
+    <h4>Шапка</h4>
+    <div class="schema-row"><span class="key">Имя</span><span>+ аватар</span></div>
+    <div class="schema-row"><span class="key">Контакты</span><span>@username</span></div>
+    <div class="schema-row"><span class="key">Сегмент</span><span>ICP</span></div>
+    <div class="schema-row"><span class="key">Источник</span><span>откуда пришёл</span></div>
+  </div>
+  <div class="schema-card">
+    <h4>Воронка</h4>
+    <div class="schema-row"><span class="key">Этап</span><span>04 — Objections</span></div>
+    <div class="schema-row"><span class="key">Время</span><span>3 ч 12 мин</span></div>
+    <div class="schema-row"><span class="key">Прогноз</span><span>дата + вероятность</span></div>
+  </div>
+  <div class="schema-card">
+    <h4>Лента IG + TG</h4>
+    <div class="schema-row"><span class="key">Сообщения</span><span>текст/аудио/видео</span></div>
+    <div class="schema-row"><span class="key">Действия</span><span>переходы</span></div>
+    <div class="schema-row"><span class="key">Автор</span><span>агент / Илья</span></div>
+  </div>
+  <div class="schema-card">
+    <h4>Действия</h4>
+    <div class="schema-row"><span class="key">Перехватить</span><span>Илья отвечает</span></div>
+    <div class="schema-row"><span class="key">Эскалировать</span><span>отметить</span></div>
+    <div class="schema-row"><span class="key">Закрыть</span><span>оплата / отказ</span></div>
+  </div>
+  <h2><span class="sec-num-inline">Section 05</span>Уведомления</h2>
+  <div class="data-table">
+    <div class="dt-row"><div class="dt-field"><span class="dt-label">Эскалация</span><span class="dt-value pink">мгновенно</span></div></div>
+    <div class="dt-row"><div class="dt-field"><span class="dt-label">Горячий лид</span><span class="dt-value cyan">≤ 5 мин</span></div></div>
+    <div class="dt-row"><div class="dt-field"><span class="dt-label">Оплата</span><span class="dt-value lime">мгновенно</span></div></div>
+    <div class="dt-row"><div class="dt-field"><span class="dt-label">Утром</span><span class="dt-value">09:00</span></div></div>
+    <div class="dt-row"><div class="dt-field"><span class="dt-label">Вечером</span><span class="dt-value">21:00</span></div></div>
+  </div>
+  <h2><span class="sec-num-inline">Section 06</span>Что дальше</h2>
+  <p class="lead">Следующий шаг — рабочий HTML-прототип дашборда с тестовыми данными.</p>
+  <p>Прототип будет:</p>
+  <ul>
+    <li>В дизайн-системе AI Mastery</li>
+    <li>С реальной структурой экранов</li>
+    <li>С тестовыми данными</li>
+    <li>С навигацией между экранами</li>
+    <li>Адаптивный для мобильного</li>
+  </ul>
+  <div class="doc-footer">AI Sales System · Document 06 / 06</div>
+</article>
+
+<script>
+function openDoc(id) {
+  document.querySelectorAll('.doc-page').forEach(p => p.classList.remove('active'));
+  document.getElementById('page-index').style.display = 'none';
+  document.getElementById(id).classList.add('active');
+  document.getElementById('back-btn').classList.remove('hidden');
+  var titles = {
+    'doc-1': '01 — Конституция',
+    'doc-2': '02 — Голос бренда',
+    'doc-3': '03 — Юридический',
+    'doc-4': '04 — База знаний',
+    'doc-5': '05 — Платформа',
+    'doc-6': '06 — Дашборд'
+  };
+  document.getElementById('topbar-title').innerHTML = titles[id];
+  window.scrollTo({top: 0, behavior: 'instant'});
+}
+function showIndex() {
+  document.querySelectorAll('.doc-page').forEach(p => p.classList.remove('active'));
+  document.getElementById('page-index').style.display = 'block';
+  document.getElementById('back-btn').classList.add('hidden');
+  document.getElementById('topbar-title').innerHTML = 'AI Sales <span class="accent">System</span>';
+  window.scrollTo({top: 0, behavior: 'instant'});
+}
+document.getElementById('back-btn').addEventListener('click', showIndex);
+</script>
+</body>
+</html>

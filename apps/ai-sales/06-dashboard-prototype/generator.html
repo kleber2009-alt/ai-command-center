@@ -1,0 +1,342 @@
+<!DOCTYPE html>
+<html lang="ru">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<meta name="theme-color" content="#080808">
+<meta name="color-scheme" content="dark only">
+<title>AI Sales · Content Generator</title>
+<style>
+  *, *::before, *::after { margin:0; padding:0; box-sizing:border-box; }
+  html, body { background:#080808; color:#f5f0e8; min-height:100vh; }
+  body { font-family:Georgia, serif; font-size:15px; line-height:1.5; overflow-x:hidden; }
+  .label { font-family:'SF Mono',monospace; font-size:10px; text-transform:uppercase; letter-spacing:0.14em; color:#b8b3a8; font-weight:700; }
+
+  .topbar { position:sticky; top:0; z-index:50; display:flex; align-items:center; justify-content:space-between; padding:14px 24px; background:#080808; border-bottom:1px solid #2a2a2a; gap:18px; }
+  .topbar-title { font-family:Georgia,serif; font-size:18px; }
+  .topbar-title .accent { color:#c8f060; font-style:italic; }
+  .topbar-meta { font-family:'SF Mono',monospace; font-size:11px; color:#b8b3a8; letter-spacing:0.12em; }
+  .topbar-meta .v { color:#c8f060; }
+
+  .shell { max-width:1480px; margin:0 auto; padding:18px 24px 80px; display:grid; gap:2px; }
+  .sec-head { display:flex; align-items:baseline; gap:14px; padding:18px 2px 10px; }
+  .sec-num { font-family:'SF Mono',monospace; font-size:10px; color:#c8f060; letter-spacing:0.18em; font-weight:700; }
+  .sec-title { font-family:Georgia,serif; font-size:14px; font-style:italic; color:#b8b3a8; }
+  .sec-spacer { flex:1; border-bottom:1px solid #1a1a1a; transform:translateY(-2px); }
+
+  /* HERO INPUT */
+  .input-panel { background:#0f0f0f; border:1px solid #1a1a1a; padding:28px 32px; }
+  .input-panel .input-label { font-family:'SF Mono',monospace; font-size:10px; color:#b8b3a8; letter-spacing:0.14em; text-transform:uppercase; font-weight:700; margin-bottom:10px; }
+  .input-panel textarea { width:100%; background:#141414; border:1px solid #2a2a2a; color:#f5f0e8; padding:18px 22px; font-family:Georgia, serif; font-size:18px; line-height:1.5; resize:vertical; min-height:80px; }
+  .input-panel textarea:focus { outline:none; border-color:#c8f060; }
+  .input-panel textarea::placeholder { color:#5a5550; }
+
+  /* STEPS */
+  .stepper { display:grid; grid-template-columns:repeat(4, 1fr); gap:2px; margin-top:2px; }
+  @media (max-width:900px) { .stepper { grid-template-columns:repeat(2, 1fr); } }
+  .step { background:#0f0f0f; border:1px solid #1a1a1a; padding:18px 20px 16px; display:flex; flex-direction:column; gap:8px; min-height:110px; }
+  .step .stp-num { font-family:'SF Mono',monospace; font-size:10px; color:#3a3a3a; letter-spacing:0.18em; font-weight:700; }
+  .step.active .stp-num { color:#c8f060; }
+  .step .stp-title { font-family:Georgia, serif; font-size:16px; }
+  .step .stp-val { font-family:'SF Mono',monospace; font-size:11px; color:#b8b3a8; letter-spacing:0.08em; margin-top:auto; }
+  .step.active .stp-val { color:#c8f060; }
+
+  /* CHOICE PANELS */
+  .panel { background:#0f0f0f; border:1px solid #1a1a1a; padding:24px 28px; }
+  .panel h3 { font-family:Georgia, serif; font-size:20px; margin-bottom:14px; font-weight:normal; }
+  .panel h3 .accent { color:#c8f060; font-style:italic; }
+  .panel p.desc { color:#b8b3a8; font-size:14px; margin-bottom:18px; line-height:1.5; }
+
+  /* TEMPLATE GRID */
+  .templates { display:grid; grid-template-columns:repeat(3, 1fr); gap:2px; }
+  @media (max-width:900px) { .templates { grid-template-columns:1fr; } }
+  .template { background:#141414; border:1px solid #2a2a2a; padding:18px 20px 16px; cursor:pointer; min-height:160px; display:flex; flex-direction:column; gap:10px; transition:border-color 0.15s; }
+  .template:hover { border-color:#3a3a3a; }
+  .template.selected { border-color:#c8f060; background:#0d1216; }
+  .template .t-num { font-family:'SF Mono',monospace; font-size:10px; color:#3a3a3a; letter-spacing:0.18em; font-weight:700; }
+  .template.selected .t-num { color:#c8f060; }
+  .template .t-name { font-family:Georgia, serif; font-size:18px; line-height:1.2; }
+  .template .t-desc { font-size:13px; color:#b8b3a8; line-height:1.5; margin-top:auto; }
+  .template .t-meta { font-family:'SF Mono',monospace; font-size:10px; color:#5a5550; letter-spacing:0.08em; }
+
+  /* SEGMENT CHOICE */
+  .seg-grid { display:grid; grid-template-columns:repeat(4, 1fr); gap:2px; }
+  @media (max-width:560px) { .seg-grid { grid-template-columns:repeat(2, 1fr); } }
+  .seg-card { background:#141414; border:1px solid #2a2a2a; padding:16px 18px; cursor:pointer; min-height:120px; display:flex; flex-direction:column; gap:6px; }
+  .seg-card.selected { border-color:#c8f060; background:#0d1216; }
+  .seg-card .s-letter { font-family:Georgia, serif; font-size:48px; line-height:1; color:#5a5550; letter-spacing:-0.02em; }
+  .seg-card.selected .s-letter { color:#c8f060; font-style:italic; }
+  .seg-card .s-name { font-family:'SF Mono',monospace; font-size:10px; color:#b8b3a8; letter-spacing:0.12em; text-transform:uppercase; font-weight:700; margin-top:auto; }
+  .seg-card .s-desc { font-size:12px; color:#5a5550; line-height:1.3; }
+
+  /* RAG SOURCES */
+  .rag-toggles { display:flex; flex-wrap:wrap; gap:4px; }
+  .rag-chip { font-family:'SF Mono',monospace; font-size:10px; padding:7px 14px; background:#141414; border:1px solid #2a2a2a; color:#b8b3a8; cursor:pointer; letter-spacing:0.12em; font-weight:700; text-transform:uppercase; }
+  .rag-chip.active { background:#0d1216; border-color:#60c8f0; color:#60c8f0; }
+
+  /* GENERATE BAR */
+  .gen-bar { background:#0f1a14; border:1px solid #2a3a14; padding:22px 28px; display:flex; justify-content:space-between; align-items:center; gap:18px; flex-wrap:wrap; }
+  .gen-bar .info { display:flex; flex-direction:column; gap:6px; }
+  .gen-bar .info .ttl { font-family:Georgia, serif; font-size:22px; line-height:1.2; }
+  .gen-bar .info .ttl .accent { color:#c8f060; font-style:italic; }
+  .gen-bar .info .meta { font-family:'SF Mono',monospace; font-size:10px; color:#b8b3a8; letter-spacing:0.1em; text-transform:uppercase; }
+  .gen-bar .info .meta .v { color:#c8f060; }
+  .gen-bar button { padding:14px 28px; background:#c8f060; color:#080808; border:none; font-family:'SF Mono',monospace; font-size:12px; font-weight:700; letter-spacing:0.16em; text-transform:uppercase; cursor:pointer; }
+  .gen-bar button:hover { background:#d8ff70; }
+  .gen-bar button.secondary { background:transparent; color:#c8f060; border:1px solid #c8f060; }
+
+  /* PROGRESS / OUTPUT */
+  .progress { background:#0f0f0f; border:1px solid #1a1a1a; padding:24px 28px; display:none; }
+  .progress.active { display:block; }
+  .progress h3 { font-family:Georgia, serif; font-size:20px; margin-bottom:18px; }
+  .progress h3 .accent { color:#c8f060; font-style:italic; }
+  .prog-step { display:grid; grid-template-columns:24px 1fr auto; gap:12px; padding:8px 0; align-items:center; font-family:'SF Mono',monospace; font-size:11px; letter-spacing:0.08em; }
+  .prog-step .mark { color:#5a5550; }
+  .prog-step.done .mark { color:#c8f060; }
+  .prog-step.running .mark { color:#60c8f0; }
+  .prog-step .lbl { color:#b8b3a8; }
+  .prog-step.done .lbl { color:#f5f0e8; }
+  .prog-step .time { color:#5a5550; }
+
+  /* SIDE INFO */
+  .grid-main { display:grid; grid-template-columns:2fr 1fr; gap:2px; }
+  @media (max-width:1000px) { .grid-main { grid-template-columns:1fr; } }
+
+  /* RECENT GENERATIONS */
+  .recent-item { display:grid; grid-template-columns:auto 1fr auto; gap:12px; padding:11px 0; border-bottom:1px solid #1a1a1a; align-items:center; cursor:pointer; }
+  .recent-item:hover { background:#141414; margin:0 -28px; padding-left:28px; padding-right:28px; }
+  .recent-item .tag { font-family:'SF Mono',monospace; font-size:9px; padding:3px 7px; font-weight:700; letter-spacing:0.1em; text-transform:uppercase; }
+  .recent-item .tag.carousel { background:#0f1a14; color:#c8f060; }
+  .recent-item .tag.reel { background:#28121b; color:#f06090; }
+  .recent-item .tag.post { background:#1a1614; color:#f0a060; }
+  .recent-item .info .ttl { font-family:Georgia, serif; font-size:14px; line-height:1.3; }
+  .recent-item .info .when { font-family:'SF Mono',monospace; font-size:10px; color:#5a5550; margin-top:3px; letter-spacing:0.08em; }
+</style>
+</head>
+<body>
+
+<header class="topbar">
+  <div class="topbar-title">AI Sales <span class="accent">Generator</span></div>
+  <div class="topbar-meta"><span>Сегодня: </span><span class="v">5 сгенерировано</span> · <span>в Calendar отправлено: 3</span></div>
+</header>
+
+<main class="shell">
+
+  <!-- STEPS HEADER -->
+  <div class="sec-head">
+    <span class="sec-num">/01</span>
+    <span class="sec-title">Содержание контента</span>
+    <span class="sec-spacer"></span>
+  </div>
+
+  <div class="stepper">
+    <div class="step active">
+      <span class="stp-num">/ 01 ТЕМА</span>
+      <span class="stp-title">О чём</span>
+      <span class="stp-val">→ 1 предложение</span>
+    </div>
+    <div class="step active">
+      <span class="stp-num">/ 02 ШАБЛОН</span>
+      <span class="stp-title">Какая структура</span>
+      <span class="stp-val">→ pain/solution / case / N-mistakes</span>
+    </div>
+    <div class="step active">
+      <span class="stp-num">/ 03 СЕГМЕНТ</span>
+      <span class="stp-title">Для кого</span>
+      <span class="stp-val">→ A / B / C / все</span>
+    </div>
+    <div class="step active">
+      <span class="stp-num">/ 04 ИСТОЧНИКИ</span>
+      <span class="stp-title">Откуда брать</span>
+      <span class="stp-val">→ голос, продукты, кейсы</span>
+    </div>
+  </div>
+
+  <!-- INPUT -->
+  <div class="input-panel">
+    <div class="input-label">/ 01 — ТЕМА · о чём контент (в любой форме)</div>
+    <textarea placeholder="Например: «как агентство EdTech освободило 18 часов в неделю через AI-агента»" rows="2">Как клиент-агентство EdTech освободил себе 18 часов/нед, подключив AI к директу</textarea>
+  </div>
+
+  <!-- TEMPLATE -->
+  <div class="sec-head">
+    <span class="sec-num">/02</span>
+    <span class="sec-title">Шаблон · структура</span>
+    <span class="sec-spacer"></span>
+  </div>
+
+  <div class="panel">
+    <h3>Выбери <span class="accent">структуру</span> повествования</h3>
+    <p class="desc">От шаблона зависит сценарий слайдов, кадры Reel или абзацы поста.</p>
+
+    <div class="templates">
+      <div class="template" data-tmpl="pain-solution">
+        <div class="t-num">/ 01</div>
+        <div class="t-name">Pain → Solution</div>
+        <div class="t-desc">Вскрыть боль · показать неудачные попытки · раскрыть решение. Лучший для холодного трафика.</div>
+        <div class="t-meta">CAROUSEL · 10 слайдов · 200 слов</div>
+      </div>
+      <div class="template selected" data-tmpl="case-study">
+        <div class="t-num">/ 02</div>
+        <div class="t-name">Case Study</div>
+        <div class="t-desc">Hook через результат-цифру → ситуация → что сделали → цифры → цитата. Соц-доказательство.</div>
+        <div class="t-meta">CAROUSEL · 10 слайдов · 280 слов</div>
+      </div>
+      <div class="template" data-tmpl="n-mistakes">
+        <div class="t-num">/ 03</div>
+        <div class="t-name">N Mistakes</div>
+        <div class="t-desc">Список «5 ошибок которые...» с fix-блоком к каждой. Высокий save-rate.</div>
+        <div class="t-meta">CAROUSEL · 10 слайдов · 250 слов</div>
+      </div>
+      <div class="template" data-tmpl="hook-reveal">
+        <div class="t-num">/ 04</div>
+        <div class="t-name">Hook Reveal</div>
+        <div class="t-desc">Провокация в 3 секундах → tease → 3 инсайта → climax → CTA. Для Reels.</div>
+        <div class="t-meta">REEL · 60 секунд · 5 кадров</div>
+      </div>
+      <div class="template" data-tmpl="tutorial">
+        <div class="t-num">/ 05</div>
+        <div class="t-name">Tutorial</div>
+        <div class="t-desc">Hook → 3 практических шага со screen recording → CTA «сохрани». Лидер сохранений.</div>
+        <div class="t-meta">REEL · 75 секунд · 6 кадров</div>
+      </div>
+      <div class="template" data-tmpl="manifesto">
+        <div class="t-num">/ 06</div>
+        <div class="t-name">Manifesto / Opinion</div>
+        <div class="t-desc">Хайповая позиция · 3 аргумента · вывод · открытый вопрос. Для engagement.</div>
+        <div class="t-meta">POST · 280 слов</div>
+      </div>
+    </div>
+  </div>
+
+  <!-- SEGMENT + SOURCES -->
+  <div class="grid-main">
+    <div class="panel">
+      <h3>Целевой <span class="accent">сегмент</span></h3>
+      <p class="desc">От сегмента зависит язык, примеры, типы возражений в контенте.</p>
+      <div class="seg-grid">
+        <div class="seg-card selected" data-seg="A">
+          <span class="s-letter">A</span>
+          <span class="s-desc">Горячий, ICP 70+, готов покупать</span>
+          <span class="s-name">14 клиентов</span>
+        </div>
+        <div class="seg-card" data-seg="B">
+          <span class="s-letter">B</span>
+          <span class="s-desc">Тёплый, ICP 40-70, в раздумьях</span>
+          <span class="s-name">38 клиентов</span>
+        </div>
+        <div class="seg-card" data-seg="C">
+          <span class="s-letter">C</span>
+          <span class="s-desc">Холодный, ICP &lt; 40, далёк от покупки</span>
+          <span class="s-name">52 клиента</span>
+        </div>
+        <div class="seg-card" data-seg="all">
+          <span class="s-letter">∀</span>
+          <span class="s-desc">Все сегменты, универсально</span>
+          <span class="s-name">128 клиентов</span>
+        </div>
+      </div>
+    </div>
+
+    <div class="panel">
+      <h3>Источники <span class="accent">из БЗ</span></h3>
+      <p class="desc">Откуда AI берёт факты, цитаты, стиль.</p>
+      <div class="rag-toggles">
+        <span class="rag-chip active">🎭 Голос и тон</span>
+        <span class="rag-chip active">🛒 Продукты</span>
+        <span class="rag-chip active">🎯 Сегменты</span>
+        <span class="rag-chip active">📚 Контент-память</span>
+        <span class="rag-chip">🛡️ Возражения</span>
+        <span class="rag-chip">💬 Диалоги клиентов</span>
+        <span class="rag-chip">🎙️ Подкасты</span>
+      </div>
+    </div>
+  </div>
+
+  <!-- GENERATE BAR -->
+  <div class="sec-head">
+    <span class="sec-num">/03</span>
+    <span class="sec-title">Генерация</span>
+    <span class="sec-spacer"></span>
+  </div>
+
+  <div class="gen-bar">
+    <div class="info">
+      <div class="ttl">Готов к <span class="accent">генерации</span></div>
+      <div class="meta">case-study · сегмент <span class="v">A</span> · 4 источника · модель <span class="v">claude-opus-4.7</span> · ~$0.08</div>
+    </div>
+    <div>
+      <button class="secondary" id="advBtn">⚙ настройки</button>
+      <button id="genBtn">⚡ СГЕНЕРИРОВАТЬ →</button>
+    </div>
+  </div>
+
+  <!-- PROGRESS -->
+  <div class="progress" id="progress">
+    <h3>Генерация в <span class="accent">процессе...</span></h3>
+    <div class="prog-step done"><span class="mark">▣</span><span class="lbl">Поиск релевантных чанков в RAG</span><span class="time">0.4s</span></div>
+    <div class="prog-step done"><span class="mark">▣</span><span class="lbl">Загрузка голоса из коллекции «🎭»</span><span class="time">0.2s</span></div>
+    <div class="prog-step running"><span class="mark">▶</span><span class="lbl">Claude Opus генерирует сценарий 10 слайдов...</span><span class="time">~8s</span></div>
+    <div class="prog-step"><span class="mark">◇</span><span class="lbl">Рендер HTML по шаблону case-study</span><span class="time"></span></div>
+    <div class="prog-step"><span class="mark">◇</span><span class="lbl">Валидация: voice consistency &gt; 80%</span><span class="time"></span></div>
+    <div class="prog-step"><span class="mark">◇</span><span class="lbl">Экспорт в /carousels/ + добавление в Calendar</span><span class="time"></span></div>
+  </div>
+
+  <!-- RECENT -->
+  <div class="sec-head">
+    <span class="sec-num">/04</span>
+    <span class="sec-title">Недавно сгенерировано</span>
+    <span class="sec-spacer"></span>
+  </div>
+
+  <div class="panel">
+    <div class="recent-item">
+      <span class="tag carousel">CAR</span>
+      <div class="info"><div class="ttl">«3 часа в день. Впустую»</div><div class="when">Pain/Solution · Сегмент A · 12 мин назад · в Calendar</div></div>
+      <button class="seg-card" style="background:transparent; border:1px solid #2a2a2a; padding:7px 14px; font-family:'SF Mono',monospace; font-size:10px; color:#c8f060; font-weight:700; letter-spacing:0.12em;">↗ ОТКРЫТЬ</button>
+    </div>
+    <div class="recent-item">
+      <span class="tag reel">REEL</span>
+      <div class="info"><div class="ttl">«Уволил 4 продажников. +30%»</div><div class="when">Hook Reveal · Сегмент A · 1 час назад · опубликовано</div></div>
+      <button class="seg-card" style="background:transparent; border:1px solid #2a2a2a; padding:7px 14px; font-family:'SF Mono',monospace; font-size:10px; color:#c8f060; font-weight:700; letter-spacing:0.12em;">↗ ОТКРЫТЬ</button>
+    </div>
+    <div class="recent-item">
+      <span class="tag carousel">CAR</span>
+      <div class="info"><div class="ttl">«5 ошибок в директе»</div><div class="when">N Mistakes · Сегмент B · 3 часа назад · в очереди</div></div>
+      <button class="seg-card" style="background:transparent; border:1px solid #2a2a2a; padding:7px 14px; font-family:'SF Mono',monospace; font-size:10px; color:#c8f060; font-weight:700; letter-spacing:0.12em;">↗ ОТКРЫТЬ</button>
+    </div>
+    <div class="recent-item">
+      <span class="tag post">POST</span>
+      <div class="info"><div class="ttl">«AI не для всех. Если ты любишь продавать вручную»</div><div class="when">Manifesto · Все · вчера 18:30</div></div>
+      <button class="seg-card" style="background:transparent; border:1px solid #2a2a2a; padding:7px 14px; font-family:'SF Mono',monospace; font-size:10px; color:#c8f060; font-weight:700; letter-spacing:0.12em;">↗ ОТКРЫТЬ</button>
+    </div>
+  </div>
+
+</main>
+
+<script src="/assets/sidebar.js" defer></script>
+<script>
+  document.querySelectorAll('.template').forEach(t => {
+    t.addEventListener('click', () => {
+      document.querySelectorAll('.template').forEach(x => x.classList.remove('selected'));
+      t.classList.add('selected');
+    });
+  });
+  document.querySelectorAll('.seg-card').forEach(s => {
+    if (!s.dataset.seg) return;
+    s.addEventListener('click', () => {
+      document.querySelectorAll('.seg-card[data-seg]').forEach(x => x.classList.remove('selected'));
+      s.classList.add('selected');
+    });
+  });
+  document.querySelectorAll('.rag-chip').forEach(c => {
+    c.addEventListener('click', () => c.classList.toggle('active'));
+  });
+  document.getElementById('genBtn').addEventListener('click', () => {
+    document.getElementById('progress').classList.add('active');
+    document.getElementById('progress').scrollIntoView({ behavior: 'smooth', block: 'start' });
+  });
+</script>
+
+</body>
+</html>

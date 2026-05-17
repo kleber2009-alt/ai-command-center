@@ -1,0 +1,397 @@
+<!DOCTYPE html>
+<html lang="ru">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Сбор голоса бренда — AI Sales System</title>
+<style>
+  * { margin: 0; padding: 0; box-sizing: border-box; }
+  :root {
+    --bg: #080808; --text: #f5f0e8; --lime: #c8f060;
+    --cyan: #60c8f0; --pink: #f06090;
+    --muted: rgba(245,240,232,0.5); --dim: rgba(245,240,232,0.3);
+    --border: rgba(245,240,232,0.1); --card: #0f0f0f;
+  }
+  body {
+    background: var(--bg); color: var(--text);
+    font-family: Georgia, serif; line-height: 1.6;
+    padding: 48px 24px 96px;
+  }
+  .container { max-width: 880px; margin: 0 auto; }
+  .label { font-family: 'JetBrains Mono', monospace; font-size: 10px;
+           text-transform: uppercase; letter-spacing: 0.15em; color: var(--muted); }
+  
+  .doc-header { border-bottom: 1px solid var(--border); padding-bottom: 32px; margin-bottom: 48px; }
+  .doc-header .doc-num {
+    font-family: Georgia, serif; font-style: italic; font-size: 96px;
+    color: transparent; -webkit-text-stroke: 1px var(--cyan); line-height: 0.9;
+  }
+  .doc-header h1 {
+    font-family: Georgia, serif; font-size: 52px; font-weight: normal;
+    letter-spacing: -0.02em; line-height: 1.05; margin: 8px 0 16px;
+  }
+  .doc-header h1 .accent { color: var(--cyan); font-style: italic; }
+  .doc-header .doc-sub { font-size: 18px; color: var(--muted); }
+  
+  .summary { display: grid; grid-template-columns: repeat(3, 1fr); gap: 2px; margin-bottom: 48px; }
+  .sum-card { background: var(--card); padding: 24px; position: relative; }
+  .sum-card .num { font-family: Georgia, serif; font-size: 48px; line-height: 1; color: var(--lime); margin: 8px 0; }
+  .sum-card.c2 .num { color: var(--cyan); }
+  .sum-card.c3 .num { color: var(--pink); }
+  .sum-card .desc { font-size: 13px; color: var(--muted); }
+  
+  section { margin-bottom: 56px; scroll-margin-top: 24px; }
+  section .sec-num {
+    font-family: Georgia, serif; font-style: italic; font-size: 64px;
+    color: transparent; -webkit-text-stroke: 1px var(--lime); line-height: 1;
+  }
+  section h2 {
+    font-family: Georgia, serif; font-size: 32px; font-weight: normal;
+    margin: 8px 0; line-height: 1.15;
+  }
+  section .sec-sub {
+    font-family: 'JetBrains Mono', monospace; font-size: 10px; text-transform: uppercase;
+    letter-spacing: 0.15em; color: var(--cyan); margin-bottom: 24px;
+  }
+  
+  h3 {
+    font-family: 'JetBrains Mono', monospace; font-size: 11px; text-transform: uppercase;
+    letter-spacing: 0.15em; margin: 32px 0 16px;
+    padding-bottom: 8px; border-bottom: 1px solid var(--border);
+  }
+  
+  p { margin-bottom: 16px; font-size: 16px; }
+  .lead { font-size: 18px; margin-bottom: 24px; font-style: italic; }
+  
+  .checklist { list-style: none; }
+  .checklist li {
+    display: grid; grid-template-columns: 24px 1fr;
+    gap: 12px; padding: 12px 0;
+    border-bottom: 1px dotted rgba(245,240,232,0.05);
+    font-size: 15px;
+  }
+  .checklist li::before {
+    content: '☐'; color: var(--lime); font-family: 'JetBrains Mono', monospace;
+    font-size: 18px; line-height: 1;
+  }
+  .checklist li .count {
+    font-family: 'JetBrains Mono', monospace; font-size: 10px;
+    color: var(--lime); display: block; margin-top: 4px;
+  }
+  
+  .examples { background: var(--card); padding: 20px 24px; margin: 16px 0;
+              border-left: 2px solid var(--cyan); }
+  .examples-title { font-family: 'JetBrains Mono', monospace; font-size: 10px;
+                    text-transform: uppercase; letter-spacing: 0.15em;
+                    color: var(--cyan); margin-bottom: 12px; }
+  .examples ul { list-style: none; }
+  .examples li { padding: 6px 0; font-size: 14px; color: var(--text); }
+  .examples li::before { content: '→ '; color: var(--lime); }
+  
+  .warn { background: rgba(240,96,144,0.04); border-left: 2px solid var(--pink);
+          padding: 16px 20px; margin: 16px 0; font-size: 14px; }
+  .note { background: rgba(96,200,240,0.04); border-left: 2px solid var(--cyan);
+          padding: 16px 20px; margin: 16px 0; font-size: 14px; }
+  
+  table { width: 100%; border-collapse: collapse; margin: 16px 0; font-size: 14px; }
+  th { font-family: 'JetBrains Mono', monospace; font-size: 10px; text-transform: uppercase;
+       letter-spacing: 0.1em; color: var(--muted); text-align: left; padding: 12px 8px;
+       border-bottom: 1px solid var(--border); }
+  td { padding: 12px 8px; border-bottom: 1px dotted rgba(245,240,232,0.05); vertical-align: top; }
+  
+  .progress-track {
+    background: var(--card); padding: 28px; margin: 32px 0;
+  }
+  .pt-row { display: grid; grid-template-columns: 1fr 80px 80px;
+            align-items: center; padding: 10px 0;
+            border-bottom: 1px dotted rgba(245,240,232,0.05); }
+  .pt-row:last-child { border: none; }
+  .pt-label { font-size: 14px; }
+  .pt-target { font-family: 'JetBrains Mono', monospace; font-size: 12px; color: var(--muted); text-align: right; }
+  .pt-current { font-family: 'JetBrains Mono', monospace; font-size: 12px; color: var(--lime); text-align: right; }
+  
+  .footer { margin-top: 80px; padding-top: 32px; border-top: 1px solid var(--border);
+            display: flex; justify-content: space-between; font-family: 'JetBrains Mono', monospace;
+            font-size: 10px; text-transform: uppercase; letter-spacing: 0.15em; color: var(--muted); }
+  
+  @media (max-width: 640px) {
+    body { padding: 24px 16px 48px; }
+    .doc-header h1 { font-size: 36px; }
+    .summary { grid-template-columns: 1fr; }
+  }
+</style>
+</head>
+<body>
+<div class="container">
+
+<header class="doc-header">
+  <div class="doc-num">02</div>
+  <div class="label">Brand Voice Collection / v0.1</div>
+  <h1>Сбор <span class="accent">голоса</span><br>бренда</h1>
+  <p class="doc-sub">Чек-лист и инструкция, что собрать, чтобы агенты звучали как Илья, а не как обезличенный бот.</p>
+</header>
+
+<div class="summary">
+  <div class="sum-card c1">
+    <div class="label">Текст</div>
+    <div class="num">100+</div>
+    <div class="desc">образцов твоих сообщений</div>
+  </div>
+  <div class="sum-card c2">
+    <div class="label">Аудио</div>
+    <div class="num">30+</div>
+    <div class="desc">минут чистой записи голоса</div>
+  </div>
+  <div class="sum-card c3">
+    <div class="label">Видео</div>
+    <div class="num">20+</div>
+    <div class="desc">кружочков-эталонов</div>
+  </div>
+</div>
+
+<section>
+  <div class="sec-num">01</div>
+  <div class="sec-sub">Why this matters</div>
+  <h2>Почему это критично</h2>
+  <p class="lead">Без этого блока агенты будут говорить «как ChatGPT в режиме поддержки» — вежливо, шаблонно и мёртво. Клиенты почувствуют это за 2 сообщения и отвалятся.</p>
+  <p>Конкретно нам нужны три типа данных:</p>
+  <ul style="margin-left: 24px;">
+    <li><strong>Текст</strong> — для тренировки LLM-стиля через few-shot примеры в промпте и через RAG-поиск «как Илья отвечал в похожей ситуации»</li>
+    <li><strong>Аудио</strong> — для клонирования голоса в ElevenLabs (минимум 5 минут чистой речи, но лучше 30–60)</li>
+    <li><strong>Видео</strong> — для генерации кружочков (либо HeyGen-аватар, либо подмена губ Wav2Lip на готовых шаблонах)</li>
+  </ul>
+</section>
+
+<section>
+  <div class="sec-num">02</div>
+  <div class="sec-sub">Text samples</div>
+  <h2>Текстовые сообщения</h2>
+  <p class="lead">Собираем 100+ образцов твоих реальных переписок. Разбиваем по типам ситуаций.</p>
+  
+  <h3>Откуда брать</h3>
+  <ul style="margin-left: 24px;">
+    <li>Архив Instagram Direct (есть выгрузка через настройки)</li>
+    <li>Архив Telegram (Settings → Advanced → Export chat history)</li>
+    <li>Личные переписки в WhatsApp (если используешь для продаж)</li>
+    <li>Комментарии в твоих постах</li>
+  </ul>
+  
+  <h3>Что искать (категории)</h3>
+  <ul class="checklist">
+    <li>
+      <div>Тёплые приветствия новых подписчиков
+        <span class="count">→ 15 примеров</span>
+      </div>
+    </li>
+    <li>
+      <div>Ответы на «сколько стоит?»
+        <span class="count">→ 10 примеров</span>
+      </div>
+    </li>
+    <li>
+      <div>Презентация продукта (расскажи подробнее)
+        <span class="count">→ 10 примеров</span>
+      </div>
+    </li>
+    <li>
+      <div>Отработка возражения «дорого»
+        <span class="count">→ 10 примеров</span>
+      </div>
+    </li>
+    <li>
+      <div>Отработка возражения «подумаю»
+        <span class="count">→ 10 примеров</span>
+      </div>
+    </li>
+    <li>
+      <div>Отработка возражения «не сейчас»
+        <span class="count">→ 5 примеров</span>
+      </div>
+    </li>
+    <li>
+      <div>Дожимающие сообщения (день 1, день 3, день 7)
+        <span class="count">→ 15 примеров</span>
+      </div>
+    </li>
+    <li>
+      <div>Финальный призыв к оплате
+        <span class="count">→ 10 примеров</span>
+      </div>
+    </li>
+    <li>
+      <div>Ответ на агрессию / негатив
+        <span class="count">→ 5 примеров</span>
+      </div>
+    </li>
+    <li>
+      <div>Шутки, лёгкая ирония, отклонения от скрипта
+        <span class="count">→ 10 примеров</span>
+      </div>
+    </li>
+  </ul>
+  
+  <h3>Формат сохранения</h3>
+  <p>Каждый образец — в отдельной строке таблицы:</p>
+  <table>
+    <tr><th>Категория</th><th>Контекст клиента</th><th>Твой ответ</th><th>Реакция / результат</th></tr>
+    <tr>
+      <td>Возражение «дорого»</td>
+      <td>Девушка 28 лет, говорит «у меня нет таких денег»</td>
+      <td>«Понимаю, цена не маленькая. Давай разберём, что в неё входит, чтобы ты увидела ценность за эти деньги...»</td>
+      <td>Купила тариф со скидкой 10%</td>
+    </tr>
+  </table>
+  
+  <div class="note">Я сделаю Google Sheets шаблон с этими колонками отдельно — туда удобно скидывать по мере поиска.</div>
+</section>
+
+<section>
+  <div class="sec-num">03</div>
+  <div class="sec-sub">Audio recording</div>
+  <h2>Запись голоса для ElevenLabs</h2>
+  <p class="lead">Клон твоего голоса. От качества записи зависит, будут ли клиенты слышать «живого Илью» или роботизированную подделку.</p>
+  
+  <h3>Технические требования</h3>
+  <table>
+    <tr><th>Параметр</th><th>Минимум</th><th>Рекомендуется</th></tr>
+    <tr><td>Длительность</td><td>5 минут</td><td>30–60 минут</td></tr>
+    <tr><td>Качество</td><td>48 кГц / 16 бит</td><td>48 кГц / 24 бит</td></tr>
+    <tr><td>Микрофон</td><td>AirPods Pro (с обработкой)</td><td>Конденсаторный USB (Rode NT-USB, Shure MV7)</td></tr>
+    <tr><td>Помещение</td><td>Тихая комната</td><td>Помещение с шумоизоляцией / шкаф с одеждой</td></tr>
+    <tr><td>Формат</td><td>MP3 192 kbps</td><td>WAV / FLAC без потерь</td></tr>
+  </table>
+  
+  <div class="warn">Самые частые ошибки: запись с шумом улицы, эхо в пустой комнате, разный уровень громкости в разных файлах. Хуже всего: запись из машины и громкая бытовая техника на фоне.</div>
+  
+  <h3>Что именно записывать (список сценариев)</h3>
+  <ul class="checklist">
+    <li><div>Длинный читаемый текст на 5 минут — статья из твоего блога, разнообразная лексика<span class="count">→ для базовой тренировки</span></div></li>
+    <li><div>Приветствие нового клиента в трёх вариантах (формальный, дружеский, тёплый)<span class="count">→ для генерации первых аудио</span></div></li>
+    <li><div>Презентация продукта (60 секунд)<span class="count">→ эталон тона</span></div></li>
+    <li><div>Эмоциональная речь: радость, удивление, лёгкая досада<span class="count">→ для эмоциональных аудио</span></div></li>
+    <li><div>Сухой технический ответ (как объясняешь функцию продукта)<span class="count">→ для разнообразия интонаций</span></div></li>
+    <li><div>Спонтанная речь — поток мыслей 5 минут без сценария<span class="count">→ для естественности</span></div></li>
+  </ul>
+  
+  <h3>Инструкция по записи</h3>
+  <ol style="margin-left: 24px;">
+    <li>Расстояние до микрофона: 15–20 см, чуть в сторону от рта (избегать «п», «б» в упор)</li>
+    <li>Поп-фильтр или подушка перед микрофоном</li>
+    <li>Уровень входного сигнала: пики −6 dB, средний −18 dB</li>
+    <li>Каждое предложение перезаписываешь, если запнулся — режим «дубль»</li>
+    <li>Не правишь голос постфактум (без эквалайзера и компрессора) — ElevenLabs хочет «сырой» голос</li>
+  </ol>
+  
+  <h3>Как загружать</h3>
+  <ul style="margin-left: 24px;">
+    <li>В ElevenLabs: Professional Voice Cloning (PVC) — нужно 30+ минут</li>
+    <li>Для быстрого старта: Instant Voice Cloning — достаточно 1 минуты, но качество ниже</li>
+    <li>Рекомендация: начнём с Instant для теста, потом перейдём на PVC</li>
+  </ul>
+</section>
+
+<section>
+  <div class="sec-num">04</div>
+  <div class="sec-sub">Video circles</div>
+  <h2>Видео-кружочки</h2>
+  <p class="lead">Это твоя фишка в Telegram. Кружочки от живого человека = доверие. От ИИ — пока сложная задача, разберём варианты.</p>
+  
+  <h3>Три подхода</h3>
+  <table>
+    <tr><th>Подход</th><th>Что нужно</th><th>Плюсы</th><th>Минусы</th></tr>
+    <tr>
+      <td>HeyGen / Synthesia / D-ID</td>
+      <td>Видео-аватар обученный на тебе</td>
+      <td>Полностью генеративно, любой текст</td>
+      <td>Видно "ИИ-эффект" в мимике</td>
+    </tr>
+    <tr>
+      <td>Wav2Lip + шаблоны</td>
+      <td>20–50 предзаписанных кружочков "на нейтрале", подмена губ</td>
+      <td>Видео живое (твоё), губы синхронны с аудио</td>
+      <td>Нужен пул шаблонов</td>
+    </tr>
+    <tr>
+      <td>Гибрид</td>
+      <td>HeyGen для уникальных ответов, Wav2Lip для типовых</td>
+      <td>Качество + покрытие</td>
+      <td>Сложная оркестрация</td>
+    </tr>
+  </table>
+  
+  <h3>Что записать сейчас (для подхода Wav2Lip + шаблоны)</h3>
+  <ul class="checklist">
+    <li><div>«Нейтральные» кружочки 30–60 сек: ты говоришь любой текст, главное — естественные жесты, мимика, повороты головы<span class="count">→ 20 штук</span></div></li>
+    <li><div>«Тёплый приветственный» — улыбка, открытая поза<span class="count">→ 5 штук</span></div></li>
+    <li><div>«Серьёзный объясняющий» — рабочая поза<span class="count">→ 5 штук</span></div></li>
+    <li><div>«Радостный кейс-стори» — динамика<span class="count">→ 5 штук</span></div></li>
+  </ul>
+  
+  <h3>Технические требования к видео</h3>
+  <ul style="margin-left: 24px;">
+    <li>Разрешение: минимум 640×640 (Telegram сжимает до 384×384)</li>
+    <li>Соотношение сторон: 1:1 (квадрат)</li>
+    <li>Длительность: 30–60 секунд каждый кружочек</li>
+    <li>Фон: ровный, не белый (лучше серый / тёмный)</li>
+    <li>Свет: ровный, без жёстких теней на лице</li>
+    <li>Камера: на уровне глаз</li>
+    <li>Лицо: занимает 50–70% кадра</li>
+  </ul>
+  
+  <div class="note">Если HeyGen — нужно отдельно: 2 минуты «видео-аватара» (смотришь в камеру, говоришь текст с разной интонацией) + 5 минут аудио для голоса. HeyGen потом сам делает реалистичную мимику под любой текст.</div>
+</section>
+
+<section>
+  <div class="sec-num">05</div>
+  <div class="sec-sub">Tracking</div>
+  <h2>Трекинг сбора</h2>
+  <p class="lead">Чтобы видеть, на каком этапе мы.</p>
+  
+  <div class="progress-track">
+    <div class="pt-row">
+      <div class="pt-label">Текстовые образцы</div>
+      <div class="pt-target">target: 100</div>
+      <div class="pt-current">0</div>
+    </div>
+    <div class="pt-row">
+      <div class="pt-label">Аудио (минуты)</div>
+      <div class="pt-target">target: 30</div>
+      <div class="pt-current">0</div>
+    </div>
+    <div class="pt-row">
+      <div class="pt-label">Кружочки нейтральные</div>
+      <div class="pt-target">target: 20</div>
+      <div class="pt-current">0</div>
+    </div>
+    <div class="pt-row">
+      <div class="pt-label">Кружочки эмоциональные</div>
+      <div class="pt-target">target: 15</div>
+      <div class="pt-current">0</div>
+    </div>
+  </div>
+  
+  <p>Эти метрики я внесу в дашборд проекта как отдельные задачи в этапе 1, по мере сбора будем апдейтить прогресс.</p>
+</section>
+
+<section>
+  <div class="sec-num">06</div>
+  <div class="sec-sub">Next step</div>
+  <h2>С чего начать прямо сегодня</h2>
+  
+  <ol style="margin-left: 24px; font-size: 16px;">
+    <li><strong>15 минут</strong> — выгрузи архив Instagram Direct через настройки</li>
+    <li><strong>30 минут</strong> — прочитай вслух любую свою статью на 5 минут, запиши на телефон или микрофон. Это уже даст возможность сделать первый Instant Voice Clone в ElevenLabs и услышать «черновой» свой голос</li>
+    <li><strong>20 минут</strong> — запиши 5 тестовых кружочков на «нейтрале»: смотри в камеру, говори любой текст 30 секунд каждый. Просто наработать стартовую базу шаблонов</li>
+  </ol>
+  
+  <p>Этого хватит на первые два дня работы над базой знаний и тестовую генерацию аудио. Полный объём собираем параллельно с разработкой.</p>
+</section>
+
+<div class="footer">
+  <div>AI Sales System / Brand Voice Collection v0.1</div>
+  <div>Document 002 of 9</div>
+</div>
+
+</div>
+</body>
+</html>

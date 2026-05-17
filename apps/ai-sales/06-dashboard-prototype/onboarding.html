@@ -1,0 +1,705 @@
+<!DOCTYPE html>
+<html lang="ru">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<meta name="theme-color" content="#080808">
+<meta name="color-scheme" content="dark only">
+<title>AI Sales · Onboarding</title>
+<style>
+  *, *::before, *::after { margin:0; padding:0; box-sizing:border-box; }
+  html, body { background:#080808; color:#f5f0e8; min-height:100vh; }
+  body { font-family:Georgia, 'Times New Roman', serif; font-size:15px; line-height:1.5; overflow-x:hidden; }
+  .label { font-family:'SF Mono',monospace; font-size:10px; text-transform:uppercase; letter-spacing:0.14em; color:#b8b3a8; font-weight:700; }
+  .mono { font-family:'SF Mono',monospace; }
+
+  /* ============ TOP NAV ============ */
+  .topbar { display:flex; align-items:center; justify-content:space-between; padding:18px 32px; border-bottom:1px solid #1a1a1a; }
+  .brand { display:flex; align-items:center; gap:14px; }
+  .brand .mark { width:34px; height:34px; border:2px solid #c8f060; display:flex; align-items:center; justify-content:center; font-family:'SF Mono',monospace; font-size:14px; font-weight:700; color:#c8f060; }
+  .brand .name { font-family:Georgia, serif; font-size:18px; }
+  .brand .name .a { color:#c8f060; font-style:italic; }
+  .skip { font-family:'SF Mono',monospace; font-size:10px; color:#5a5550; letter-spacing:0.14em; text-transform:uppercase; font-weight:700; text-decoration:none; }
+  .skip:hover { color:#c8f060; }
+
+  /* ============ STEPS PROGRESS ============ */
+  .steps-bar {
+    background:#0a0a0a;
+    border-bottom:1px solid #1a1a1a;
+    padding:14px 32px;
+    display:grid;
+    grid-template-columns:repeat(6, 1fr);
+    gap:6px;
+  }
+  @media (max-width:900px) {
+    .steps-bar { display:flex; overflow-x:auto; gap:8px; padding:14px 20px; }
+    .steps-bar .step-pill { flex:0 0 140px; }
+  }
+  .step-pill {
+    display:flex; flex-direction:column; gap:5px;
+    padding-top:4px;
+    border-top:2px solid #1a1a1a;
+    cursor:pointer;
+  }
+  .step-pill .num {
+    font-family:'SF Mono',monospace; font-size:10px;
+    color:#5a5550; letter-spacing:0.14em; font-weight:700;
+  }
+  .step-pill .name {
+    font-family:Georgia, serif; font-size:13px;
+    color:#5a5550;
+  }
+  .step-pill.done { border-top-color:#c8f060; }
+  .step-pill.done .num { color:#c8f060; }
+  .step-pill.done .name { color:#b8b3a8; }
+  .step-pill.active { border-top-color:#c8f060; }
+  .step-pill.active .num { color:#c8f060; }
+  .step-pill.active .name { color:#f5f0e8; font-style:italic; }
+
+  /* ============ MAIN ============ */
+  .shell { max-width:920px; margin:0 auto; padding:60px 32px 80px; }
+  @media (max-width:900px) { .shell { padding:36px 20px 60px; } }
+
+  .step-content { display:none; }
+  .step-content.active { display:block; }
+
+  .step-head { margin-bottom:36px; }
+  .step-head .pre { font-family:'SF Mono',monospace; font-size:10px; color:#c8f060; letter-spacing:0.18em; text-transform:uppercase; font-weight:700; margin-bottom:14px; }
+  .step-head h1 { font-family:Georgia, serif; font-size:44px; font-weight:normal; line-height:1.1; letter-spacing:-0.02em; margin-bottom:14px; }
+  @media (max-width:560px) { .step-head h1 { font-size:32px; } }
+  .step-head h1 .a { color:#c8f060; font-style:italic; }
+  .step-head p { font-family:Georgia, serif; font-size:17px; color:#b8b3a8; line-height:1.55; font-style:italic; max-width:640px; }
+
+  /* CARDS */
+  .panel { background:#0f0f0f; border:1px solid #1a1a1a; padding:28px 32px; margin-bottom:2px; }
+  @media (max-width:560px) { .panel { padding:22px 20px; } }
+  .panel h3 { font-family:Georgia, serif; font-size:20px; font-weight:normal; margin-bottom:14px; }
+  .panel h3 .a { color:#c8f060; font-style:italic; }
+  .panel p.desc { color:#b8b3a8; font-size:14.5px; line-height:1.6; margin-bottom:18px; }
+
+  /* INPUTS */
+  .field { margin-bottom:18px; }
+  .field label {
+    display:block;
+    font-family:'SF Mono',monospace; font-size:10px;
+    color:#b8b3a8; letter-spacing:0.14em;
+    text-transform:uppercase; font-weight:700;
+    margin-bottom:8px;
+  }
+  .field label .opt { color:#5a5550; }
+  .field input, .field textarea, .field select {
+    width:100%; background:#141414;
+    border:1px solid #2a2a2a; color:#f5f0e8;
+    padding:13px 16px;
+    font-family:Georgia, serif; font-size:15px;
+    outline:none;
+  }
+  .field input:focus, .field textarea:focus, .field select:focus { border-color:#c8f060; }
+  .field input::placeholder, .field textarea::placeholder { color:#5a5550; }
+  .field textarea { min-height:80px; resize:vertical; }
+  .field-row { display:grid; grid-template-columns:1fr 1fr; gap:14px; }
+  @media (max-width:560px) { .field-row { grid-template-columns:1fr; } }
+
+  /* CHIP CHOICES */
+  .chips { display:flex; flex-wrap:wrap; gap:4px; margin-top:6px; }
+  .chip {
+    font-family:'SF Mono',monospace; font-size:11px;
+    padding:9px 14px; background:#141414;
+    border:1px solid #2a2a2a; color:#b8b3a8;
+    cursor:pointer; letter-spacing:0.1em;
+    font-weight:700; text-transform:uppercase;
+  }
+  .chip.active { background:#0d1216; border-color:#c8f060; color:#c8f060; }
+  .chip:hover:not(.active) { color:#f5f0e8; border-color:#c8f060; }
+
+  /* OPTION CARDS */
+  .options { display:grid; grid-template-columns:repeat(2, 1fr); gap:2px; }
+  @media (max-width:700px) { .options { grid-template-columns:1fr; } }
+  .opt-card {
+    background:#141414; border:1px solid #2a2a2a;
+    padding:22px 24px; cursor:pointer;
+    display:flex; flex-direction:column; gap:8px;
+    min-height:140px;
+  }
+  .opt-card.selected { background:#0d1216; border-color:#c8f060; }
+  .opt-card:hover { border-color:#3a3a3a; }
+  .opt-card.selected:hover { border-color:#c8f060; }
+  .opt-card .badge {
+    font-family:'SF Mono',monospace; font-size:9px;
+    color:#5a5550; letter-spacing:0.14em;
+    text-transform:uppercase; font-weight:700;
+  }
+  .opt-card.selected .badge { color:#c8f060; }
+  .opt-card .name {
+    font-family:Georgia, serif; font-size:20px;
+    line-height:1.2; margin-top:6px;
+  }
+  .opt-card .desc {
+    font-size:13.5px; color:#b8b3a8; line-height:1.5;
+    margin-top:auto;
+  }
+
+  /* CHECKLIST */
+  .checklist { list-style:none; padding:0; }
+  .checklist li {
+    display:grid; grid-template-columns:auto 1fr auto;
+    gap:14px;
+    padding:14px 0; border-bottom:1px solid #1a1a1a;
+    align-items:center;
+  }
+  .checklist li:last-child { border-bottom:none; }
+  .checklist .ico {
+    width:22px; height:22px;
+    border:1px solid #2a2a2a;
+    display:flex; align-items:center; justify-content:center;
+    font-family:'SF Mono',monospace; font-size:12px;
+    color:#5a5550; font-weight:700;
+  }
+  .checklist li.done .ico { background:#1a2a14; border-color:#2a3a14; color:#c8f060; }
+  .checklist li.todo .ico { color:#f0a060; border-color:#2a2014; }
+  .checklist .text {
+    font-family:Georgia, serif; font-size:15px;
+  }
+  .checklist .text .sub {
+    display:block;
+    font-family:'SF Mono',monospace; font-size:10px;
+    color:#5a5550; letter-spacing:0.08em;
+    margin-top:4px; text-transform:uppercase;
+  }
+  .checklist .status {
+    font-family:'SF Mono',monospace; font-size:9px;
+    padding:3px 8px; font-weight:700;
+    letter-spacing:0.12em; text-transform:uppercase;
+  }
+  .checklist .status.ok { background:#1a2a14; color:#c8f060; }
+  .checklist .status.todo { background:#2a2014; color:#f0a060; }
+  .checklist .status.skip { background:#1a1a1a; color:#5a5550; border:1px solid #2a2a2a; }
+
+  /* ============ FOOTER NAV ============ */
+  .foot-nav {
+    position:sticky; bottom:0;
+    background:#080808;
+    border-top:1px solid #1a1a1a;
+    padding:18px 32px;
+    display:flex; justify-content:space-between; align-items:center;
+    gap:18px;
+  }
+  @media (max-width:560px) { .foot-nav { padding:14px 20px; } }
+  .foot-nav .prog {
+    font-family:'SF Mono',monospace; font-size:10px;
+    color:#b8b3a8; letter-spacing:0.12em;
+    text-transform:uppercase; font-weight:700;
+  }
+  .foot-nav .prog .v { color:#c8f060; }
+  .foot-nav .btn-group { display:flex; gap:4px; }
+  .btn {
+    padding:11px 22px;
+    background:transparent; color:#f5f0e8;
+    border:1px solid #2a2a2a;
+    font-family:'SF Mono',monospace; font-size:11px;
+    font-weight:700; letter-spacing:0.14em;
+    text-transform:uppercase; cursor:pointer;
+  }
+  .btn:hover { border-color:#c8f060; color:#c8f060; }
+  .btn:disabled { opacity:0.4; cursor:not-allowed; }
+  .btn-primary {
+    background:#c8f060; color:#080808; border-color:#c8f060;
+  }
+  .btn-primary:hover { background:#d8ff70; border-color:#d8ff70; color:#080808; }
+
+  /* ============ SUMMARY (last step) ============ */
+  .ready-bar {
+    background:#0f1a14; border:1px solid #2a3a14;
+    border-left:3px solid #c8f060;
+    padding:22px 26px;
+    margin-bottom:2px;
+  }
+  .ready-bar h2 {
+    font-family:Georgia, serif; font-size:26px;
+    font-weight:normal; line-height:1.2;
+    margin-bottom:8px;
+  }
+  .ready-bar h2 .a { color:#c8f060; font-style:italic; }
+  .ready-bar p {
+    color:#b8b3a8; font-size:14.5px; line-height:1.5;
+  }
+
+  .next-steps { display:grid; grid-template-columns:repeat(3, 1fr); gap:2px; }
+  @media (max-width:900px) { .next-steps { grid-template-columns:1fr; } }
+  .next-step {
+    background:#0f0f0f; border:1px solid #1a1a1a;
+    padding:22px 24px;
+    display:flex; flex-direction:column; gap:10px;
+    text-decoration:none; color:inherit;
+    cursor:pointer;
+    transition:border-color 0.15s;
+  }
+  .next-step:hover { border-color:#c8f060; }
+  .next-step .num {
+    font-family:'SF Mono',monospace; font-size:10px;
+    color:#c8f060; letter-spacing:0.18em;
+    text-transform:uppercase; font-weight:700;
+  }
+  .next-step .name {
+    font-family:Georgia, serif; font-size:20px;
+    line-height:1.2;
+  }
+  .next-step .desc {
+    color:#b8b3a8; font-size:13px; line-height:1.5;
+  }
+  .next-step .cta {
+    margin-top:auto;
+    font-family:'SF Mono',monospace; font-size:10px;
+    color:#c8f060; letter-spacing:0.14em;
+    text-transform:uppercase; font-weight:700;
+  }
+</style>
+</head>
+<body>
+
+<!-- TOP -->
+<header class="topbar">
+  <div class="brand">
+    <div class="mark">⚡</div>
+    <div class="name">AI Sales <span class="a">Setup</span></div>
+  </div>
+  <a class="skip" href="/06-dashboard-prototype/pulse.html">пропустить →</a>
+</header>
+
+<!-- STEPS PROGRESS -->
+<div class="steps-bar">
+  <div class="step-pill active" data-step="1">
+    <span class="num">/ 01</span><span class="name">Знакомство</span>
+  </div>
+  <div class="step-pill" data-step="2">
+    <span class="num">/ 02</span><span class="name">Бизнес</span>
+  </div>
+  <div class="step-pill" data-step="3">
+    <span class="num">/ 03</span><span class="name">Голос</span>
+  </div>
+  <div class="step-pill" data-step="4">
+    <span class="num">/ 04</span><span class="name">Подключения</span>
+  </div>
+  <div class="step-pill" data-step="5">
+    <span class="num">/ 05</span><span class="name">Каналы</span>
+  </div>
+  <div class="step-pill" data-step="6">
+    <span class="num">/ 06</span><span class="name">Готово</span>
+  </div>
+</div>
+
+<main class="shell">
+
+  <!-- ====== STEP 1 — INTRO ====== -->
+  <div class="step-content active" data-step="1">
+    <div class="step-head">
+      <div class="pre">/ Step 01 of 06 · ~30 секунд</div>
+      <h1>Привет.<br/>Давай <span class="a">познакомимся.</span></h1>
+      <p>Я — AI Sales System. За 6 шагов настроим всё: твой голос, твой бизнес, каналы IG/TG. Потом 4 агента возьмут продажи на себя.</p>
+    </div>
+
+    <div class="panel">
+      <h3>Кто <span class="a">ты</span>?</h3>
+      <div class="field">
+        <label>Имя</label>
+        <input type="text" placeholder="Илья" value="Илья" />
+      </div>
+      <div class="field-row">
+        <div class="field">
+          <label>Email</label>
+          <input type="email" placeholder="ilya@aisales.system" />
+        </div>
+        <div class="field">
+          <label>Telegram</label>
+          <input type="text" placeholder="@username" />
+        </div>
+      </div>
+      <div class="field">
+        <label>Часовой пояс <span class="opt">опционально</span></label>
+        <select>
+          <option>Europe/Moscow (UTC+3)</option>
+          <option>Europe/Berlin (UTC+1)</option>
+          <option>Asia/Dubai (UTC+4)</option>
+          <option>America/Los_Angeles (UTC-8)</option>
+        </select>
+      </div>
+    </div>
+
+    <div class="panel">
+      <h3>Что <span class="a">привело</span>?</h3>
+      <p class="desc">Чтобы система фокусировалась на правильных задачах.</p>
+      <div class="chips">
+        <span class="chip active">Заменить ручной директ</span>
+        <span class="chip">Масштабировать команду</span>
+        <span class="chip">Освободить время</span>
+        <span class="chip">Подключить контент-конвейер</span>
+        <span class="chip">Просто посмотреть</span>
+      </div>
+    </div>
+  </div>
+
+  <!-- ====== STEP 2 — BUSINESS ====== -->
+  <div class="step-content" data-step="2">
+    <div class="step-head">
+      <div class="pre">/ Step 02 of 06 · ~2 минуты</div>
+      <h1>Расскажи про<br/>свой <span class="a">бизнес.</span></h1>
+      <p>Без этого агенты не смогут продавать. Дальше эти данные синхронизируются с базой знаний.</p>
+    </div>
+
+    <div class="panel">
+      <h3>Одна строка про <span class="a">бизнес</span></h3>
+      <div class="field">
+        <label>Что и кому продаёшь</label>
+        <textarea placeholder="Например: помогаю маркетинговым агентствам автоматизировать постинг и закрыть больше клиентов через AI-агентов в IG/TG"></textarea>
+      </div>
+      <div class="field-row">
+        <div class="field">
+          <label>Возраст бизнеса</label>
+          <select>
+            <option>Только запускаю</option>
+            <option>До 1 года</option>
+            <option selected>1-3 года</option>
+            <option>3-5 лет</option>
+            <option>5+ лет</option>
+          </select>
+        </div>
+        <div class="field">
+          <label>Активных клиентов</label>
+          <select>
+            <option>0-10</option>
+            <option>10-50</option>
+            <option selected>50-200</option>
+            <option>200-1000</option>
+            <option>1000+</option>
+          </select>
+        </div>
+      </div>
+    </div>
+
+    <div class="panel">
+      <h3>Ниша <span class="a">клиентов</span></h3>
+      <p class="desc">Кому ты продаёшь? Можно выбрать несколько.</p>
+      <div class="chips">
+        <span class="chip active">SMM-агентства</span>
+        <span class="chip active">EdTech</span>
+        <span class="chip">B2B SaaS</span>
+        <span class="chip">E-commerce</span>
+        <span class="chip">Инфобизнес</span>
+        <span class="chip">Стартапы</span>
+        <span class="chip">Сервисные компании</span>
+        <span class="chip">Личные бренды</span>
+      </div>
+    </div>
+
+    <div class="panel">
+      <h3>Главный <span class="a">продукт</span></h3>
+      <div class="field">
+        <label>Название</label>
+        <input type="text" placeholder="Автопилот SMM" />
+      </div>
+      <div class="field-row">
+        <div class="field">
+          <label>Цена</label>
+          <input type="text" placeholder="80 000 ₽" />
+        </div>
+        <div class="field">
+          <label>Формат</label>
+          <select>
+            <option>Подписка</option>
+            <option>Разовая покупка</option>
+            <option>Абонемент</option>
+            <option>Тариф / Пакет</option>
+          </select>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <!-- ====== STEP 3 — VOICE ====== -->
+  <div class="step-content" data-step="3">
+    <div class="step-head">
+      <div class="pre">/ Step 03 of 06 · ~3 минуты</div>
+      <h1>Дай мне свой <span class="a">голос.</span></h1>
+      <p>Без него агенты звучат как generic AI. С ним — звучат как ты. Выбери способ.</p>
+    </div>
+
+    <div class="options">
+      <div class="opt-card selected" data-voice="podcast">
+        <span class="badge">/ 01 — РЕКОМЕНДУЮ</span>
+        <span class="name">Загружу подкасты</span>
+        <span class="desc">Свои аудио (1-2 эпизода) → whisper-транскрипция → извлечение голоса, ценностей, любимых фраз. Самый точный способ.</span>
+      </div>
+      <div class="opt-card" data-voice="interview">
+        <span class="badge">/ 02</span>
+        <span class="name">Пройду интервью</span>
+        <span class="desc">5 блоков по 10-15 минут. Я задаю вопросы — ты отвечаешь. Подходит, если нет аудио-записей.</span>
+      </div>
+      <div class="opt-card" data-voice="text">
+        <span class="badge">/ 03</span>
+        <span class="name">Загружу переписки</span>
+        <span class="desc">Экспорт IG/TG чатов → анализ стиля. Точно по текстовому общению, но без голоса как тона.</span>
+      </div>
+      <div class="opt-card" data-voice="later">
+        <span class="badge">/ 04</span>
+        <span class="name">Позже</span>
+        <span class="desc">Пропустить этот шаг. Агенты будут работать в generic-режиме до настройки голоса.</span>
+      </div>
+    </div>
+
+    <div class="panel">
+      <h3>Если уже знаешь — <span class="a">сколько у тебя материала</span>?</h3>
+      <div class="chips">
+        <span class="chip">1 эпизод подкаста</span>
+        <span class="chip active">2-3 эпизода</span>
+        <span class="chip">5+ эпизодов</span>
+        <span class="chip">Свой YouTube-канал</span>
+        <span class="chip">Только переписки</span>
+      </div>
+    </div>
+  </div>
+
+  <!-- ====== STEP 4 — CONNECTIONS ====== -->
+  <div class="step-content" data-step="4">
+    <div class="step-head">
+      <div class="pre">/ Step 04 of 06 · ~5 минут</div>
+      <h1>API-ключи и <span class="a">подключения.</span></h1>
+      <p>Без ключей агенты в mock-режиме. Можно пропустить — настроишь в Settings потом.</p>
+    </div>
+
+    <div class="panel">
+      <h3>Anthropic Claude <span class="a">→ обязательно</span></h3>
+      <p class="desc">Основная модель для всех 4 агентов. Opus 4.7 для IG/TG/РОП, Sonnet 4.6 для Аналитика.</p>
+      <div class="field">
+        <label>ANTHROPIC_API_KEY</label>
+        <input type="password" placeholder="sk-ant-..." />
+      </div>
+    </div>
+
+    <div class="panel">
+      <h3>Voyage эмбеддинги <span class="a">→ для RAG</span></h3>
+      <div class="field">
+        <label>VOYAGE_API_KEY</label>
+        <input type="password" placeholder="pa-..." />
+      </div>
+    </div>
+
+    <div class="panel">
+      <h3>Notion <span class="a">→ база знаний</span></h3>
+      <p class="desc">Можно подключить через OAuth — система сама создаст 5 коллекций или прицепится к существующим.</p>
+      <button class="btn" type="button">→ Подключить Notion</button>
+    </div>
+
+    <div class="panel">
+      <h3>ElevenLabs <span class="a">→ голос</span></h3>
+      <p class="desc">Для аудио-ответов и кружочков. Нужно 30+ мин аудио для создания PVC.</p>
+      <div class="field-row">
+        <div class="field">
+          <label>API key</label>
+          <input type="password" />
+        </div>
+        <div class="field">
+          <label>Voice ID <span class="opt">если уже создан</span></label>
+          <input type="text" placeholder="не создан" />
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <!-- ====== STEP 5 — CHANNELS ====== -->
+  <div class="step-content" data-step="5">
+    <div class="step-head">
+      <div class="pre">/ Step 05 of 06 · ~3 минуты</div>
+      <h1>Где будут <span class="a">общаться</span> агенты?</h1>
+      <p>Подключи каналы. Можно начать с одного — например, TG для теста.</p>
+    </div>
+
+    <div class="panel">
+      <h3>Telegram Bot <span class="a">→ быстрее всего</span></h3>
+      <p class="desc">5 минут через @BotFather. Хороший вариант для тестового запуска перед IG.</p>
+      <div class="field-row">
+        <div class="field">
+          <label>Bot Token</label>
+          <input type="password" placeholder="123:ABC..." />
+        </div>
+        <div class="field">
+          <label>Webhook Secret</label>
+          <input type="password" />
+        </div>
+      </div>
+    </div>
+
+    <div class="panel">
+      <h3>Instagram Graph API <span class="a">→ нужна модерация Meta</span></h3>
+      <p class="desc">Требует Facebook Business Manager + верифицированный аккаунт. 1-3 дня на модерацию.</p>
+      <div class="field-row">
+        <div class="field">
+          <label>App Secret</label>
+          <input type="password" />
+        </div>
+        <div class="field">
+          <label>Page Token</label>
+          <input type="password" />
+        </div>
+      </div>
+    </div>
+
+    <div class="panel">
+      <h3>Какие каналы запустить <span class="a">сейчас</span>?</h3>
+      <div class="options">
+        <div class="opt-card selected" data-channel="tg-test">
+          <span class="badge">/ 01</span>
+          <span class="name">Только TG · тестовый</span>
+          <span class="desc">Бот только для меня. Я тестирую → ловлю баги → потом подключу клиентов.</span>
+        </div>
+        <div class="opt-card" data-channel="tg-prod">
+          <span class="badge">/ 02</span>
+          <span class="name">TG · боевой</span>
+          <span class="desc">Бот для клиентов. Реальный трафик.</span>
+        </div>
+        <div class="opt-card" data-channel="both">
+          <span class="badge">/ 03</span>
+          <span class="name">TG + IG · оба</span>
+          <span class="desc">Полный запуск. IG webhooks подключаются после модерации Meta.</span>
+        </div>
+        <div class="opt-card" data-channel="off">
+          <span class="badge">/ 04</span>
+          <span class="name">Пока не запускать</span>
+          <span class="desc">Сначала наполню базу знаний, потом активирую агентов.</span>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <!-- ====== STEP 6 — DONE ====== -->
+  <div class="step-content" data-step="6">
+    <div class="step-head">
+      <div class="pre">/ Step 06 of 06 · готово</div>
+      <h1>Система <span class="a">собрана.</span></h1>
+      <p>Вот что готово, вот что ещё нужно сделать. Открывай Pulse и работай.</p>
+    </div>
+
+    <div class="ready-bar">
+      <h2>✓ Готов к <span class="a">первому диалогу</span></h2>
+      <p>База настроена · 4 агента в режиме mock · TG-бот ждёт первое сообщение · подкасты в обработке</p>
+    </div>
+
+    <div class="panel">
+      <h3>Чек-лист <span class="a">состояния</span></h3>
+      <ul class="checklist">
+        <li class="done">
+          <span class="ico">▣</span>
+          <span class="text">Профиль настроен<span class="sub">Илья · timezone UTC+3</span></span>
+          <span class="status ok">Готово</span>
+        </li>
+        <li class="done">
+          <span class="ico">▣</span>
+          <span class="text">Бизнес-описание заполнено<span class="sub">SMM-агентства + EdTech · Автопилот SMM, 80к</span></span>
+          <span class="status ok">Готово</span>
+        </li>
+        <li class="todo">
+          <span class="ico">⏳</span>
+          <span class="text">Голос: подкасты в обработке<span class="sub">2 файла · whisper транскрибирует</span></span>
+          <span class="status todo">5-10 мин</span>
+        </li>
+        <li class="todo">
+          <span class="ico">!</span>
+          <span class="text">Anthropic API key — не подключен<span class="sub">агенты в mock-режиме</span></span>
+          <span class="status todo">P1</span>
+        </li>
+        <li class="done">
+          <span class="ico">▣</span>
+          <span class="text">Notion подключён<span class="sub">5 коллекций синхронизированы</span></span>
+          <span class="status ok">Готово</span>
+        </li>
+        <li class="done">
+          <span class="ico">▣</span>
+          <span class="text">TG-бот настроен (тестовый)<span class="sub">@aisales_test_bot · ждёт /start</span></span>
+          <span class="status ok">Готово</span>
+        </li>
+        <li class="todo">
+          <span class="ico">⏳</span>
+          <span class="text">IG webhooks — на модерации Meta<span class="sub">обычно 1-3 дня</span></span>
+          <span class="status skip">Позже</span>
+        </li>
+        <li class="todo">
+          <span class="ico">⏳</span>
+          <span class="text">ElevenLabs PVC — нужно больше аудио<span class="sub">сейчас 12 мин, нужно 30+</span></span>
+          <span class="status skip">Позже</span>
+        </li>
+      </ul>
+    </div>
+
+    <div class="next-steps">
+      <a class="next-step" href="/06-dashboard-prototype/pulse.html">
+        <span class="num">/ 01</span>
+        <span class="name">Открыть Pulse</span>
+        <span class="desc">Главный экран · что система делает прямо сейчас</span>
+        <span class="cta">↗ Перейти</span>
+      </a>
+      <a class="next-step" href="/06-dashboard-prototype/kb.html">
+        <span class="num">/ 02</span>
+        <span class="name">Knowledge Base</span>
+        <span class="desc">Наполнить базу знаний · 11 минимальных записей</span>
+        <span class="cta">↗ Открыть</span>
+      </a>
+      <a class="next-step" href="/06-dashboard-prototype/settings.html">
+        <span class="num">/ 03</span>
+        <span class="name">Settings</span>
+        <span class="desc">Добавить API ключи · точная настройка агентов</span>
+        <span class="cta">↗ Настроить</span>
+      </a>
+    </div>
+
+  </div>
+
+</main>
+
+<!-- BOTTOM NAV -->
+<div class="foot-nav">
+  <div class="prog">Шаг <span class="v" id="curStep">1</span> из 6</div>
+  <div class="btn-group">
+    <button class="btn" id="prevBtn" disabled>← Назад</button>
+    <button class="btn btn-primary" id="nextBtn">Дальше →</button>
+  </div>
+</div>
+
+<script>
+  let current = 1;
+  const total = 6;
+  const $ = (s) => document.querySelector(s);
+  const $$ = (s) => document.querySelectorAll(s);
+
+  function show(n) {
+    current = Math.max(1, Math.min(total, n));
+    $$('.step-content').forEach(c => c.classList.toggle('active', +c.dataset.step === current));
+    $$('.step-pill').forEach(p => {
+      const s = +p.dataset.step;
+      p.classList.toggle('active', s === current);
+      p.classList.toggle('done', s < current);
+    });
+    $('#curStep').textContent = current;
+    $('#prevBtn').disabled = current === 1;
+    $('#nextBtn').textContent = current === total ? '→ В PULSE' : 'Дальше →';
+    if (current === total) $('#nextBtn').onclick = () => window.location.href = '/06-dashboard-prototype/pulse.html';
+    else $('#nextBtn').onclick = () => show(current + 1);
+    window.scrollTo({ top: 0, behavior: 'smooth' });
+  }
+
+  $('#nextBtn').addEventListener('click', () => show(current + 1));
+  $('#prevBtn').addEventListener('click', () => show(current - 1));
+  $$('.step-pill').forEach(p => p.addEventListener('click', () => show(+p.dataset.step)));
+
+  // Chip toggle
+  $$('.chip').forEach(c => c.addEventListener('click', () => c.classList.toggle('active')));
+
+  // Option card
+  $$('.opt-card').forEach(o => o.addEventListener('click', () => {
+    const group = o.parentElement;
+    if (!group) return;
+    group.querySelectorAll('.opt-card').forEach(x => x.classList.remove('selected'));
+    o.classList.add('selected');
+  }));
+</script>
+
+</body>
+</html>
