@@ -64,7 +64,12 @@ rsync -a \
 echo "→ rsync v2 → apps/aisales/v2/"
 # v2 структура: code/, agent-prompts/, 04-database/, voice-input/
 # voice-input/ может содержать тестовые медиа — копируем только если небольшое.
-rsync -a --exclude='__pycache__/' --exclude='*.pyc' \
+# КРИТИЧНО: исключаем все .env* (могут содержать реальные секреты —
+# GitHub push protection заблокирует commit с настоящими API-ключами).
+rsync -a \
+  --exclude='__pycache__/' --exclude='*.pyc' \
+  --exclude='.env' --exclude='.env.bak' --exclude='.env.local' --exclude='.env.*.local' \
+  --exclude='/.git/' \
   "$AISALES_V2/code/" apps/aisales/v2/code/
 rsync -a "$AISALES_V2/agent-prompts/" apps/aisales/prompts/
 rsync -a "$AISALES_V2/04-database/" apps/aisales/db-init/
@@ -362,10 +367,14 @@ echo "→ Обновляю .gitignore"
   echo "apps/aisales/data/"
   echo "apps/aisales/v1/data/"
   echo "apps/aisales/v1/backups/"
-  echo "apps/aisales/v1/.env"
   echo "apps/aisales/voice-input-samples/"
   echo "apps/aisales/**/__pycache__/"
   echo "apps/aisales/**/*.pyc"
+  # КРИТИЧНО: ловим любые .env* кроме .env.example в любом подкаталоге aisales
+  echo "apps/aisales/**/.env"
+  echo "apps/aisales/**/.env.bak"
+  echo "apps/aisales/**/.env.local"
+  echo "apps/aisales/**/.env.*.local"
 } >> .gitignore
 
 # Дедуплицируем .gitignore
