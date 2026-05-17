@@ -16,7 +16,32 @@ ElevenLabs, Telegram Bot.
 
 ---
 
-## 1. Hetzner Cloud: подготовка
+## 🚀 TL;DR — деплой за одну команду
+
+```bash
+# 1. ключи
+cp .env.example .env && nano .env
+
+# 2. hcloud-токен (создать: Hetzner Cloud Console → Security → API Tokens → Read & Write)
+export HCLOUD_TOKEN=hcloud_...
+
+# 3. вся пайплайна за раз
+./scripts/deploy-p0.sh
+```
+
+Скрипт сам:
+- создаст CPX21 в Hetzner (~€8/мес) с firewall 22/80/443;
+- дождётся SSH;
+- поставит docker, ufw, postgres-client, создаст юзера `ai`;
+- склонирует репо в `/opt/ai-stack`, скопирует твой `.env`;
+- запустит `docker compose up -d --build`;
+- спросит supabase-кредиты и перенесёт БД + mp3 (можно пропустить).
+
+Если шажить пошагово — см. секции ниже.
+
+---
+
+## 1. Hetzner Cloud: подготовка (вручную)
 
 1. **Создай Cloud Server**: тип CPX21 (3 vCPU / 4 GB RAM, ~€7/мес) или
    CPX31 если планируешь много RAG/эмбеддингов. Образ Ubuntu 22.04+.
