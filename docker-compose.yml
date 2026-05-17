@@ -1,9 +1,18 @@
 name: ai-command-center
 
+# Cap container logs at 10 MB × 3 files per service. Docker's default
+# json-file driver is unbounded and will eat the root disk over time.
+x-logging: &default-logging
+  driver: json-file
+  options:
+    max-size: "10m"
+    max-file: "3"
+
 services:
   caddy:
     image: caddy:2-alpine
     restart: unless-stopped
+    logging: *default-logging
     ports:
       - "80:80"
       - "443:443"
@@ -13,8 +22,10 @@ services:
       - caddy_data:/data
       - caddy_config:/config
     depends_on:
-      - transcribe
-      - ai-office
+      transcribe:
+        condition: service_healthy
+      ai-office:
+        condition: service_started
     environment:
       # Override in .env (or shell) before docker compose up
       DOMAIN: ${DOMAIN:-localhost}
@@ -25,6 +36,7 @@ services:
       dockerfile: apps/transcribe/Dockerfile
     image: ai-command-center/transcribe:latest
     restart: unless-stopped
+    logging: *default-logging
     environment:
       NODE_ENV: production
       DATABASE_URL: postgres://app:${POSTGRES_PASSWORD:?set POSTGRES_PASSWORD}@postgres:5432/app
@@ -39,26 +51,46 @@ services:
     depends_on:
       postgres:
         condition: service_healthy
+      ytdlp:
+        condition: service_healthy
+    healthcheck:
+      test: ["CMD", "node", "-e", "require('http').get('http://127.0.0.1:3000/transcribe',r=>process.exit(r.statusCode<500?0:1)).on('error',()=>process.exit(1))"]
+      interval: 10s
+      timeout: 5s
+      retries: 6
+      start_period: 30s
 
   ytdlp:
     build:
       context: ./apps/ytdlp
     image: ai-command-center/ytdlp:latest
     restart: unless-stopped
+    logging: *default-logging
     environment:
+      # transcribe calls http://ytdlp:8000 (see YTDLP_SERVICE_URL above).
+      # Pin the FastAPI port to 8000 so the two agree.
+      PORT: "8000"
       YTDLP_SERVICE_API_KEY: ${YTDLP_SERVICE_API_KEY:-}
       INSTAGRAM_COOKIES_B64: ${INSTAGRAM_COOKIES_B64:-}
       COOKIES_B64: ${COOKIES_B64:-}
+    healthcheck:
+      test: ["CMD", "python", "-c", "import urllib.request,sys; sys.exit(0 if urllib.request.urlopen('http://127.0.0.1:8000/healthz',timeout=3).status==200 else 1)"]
+      interval: 10s
+      timeout: 5s
+      retries: 6
+      start_period: 20s
 
   ai-office:
     image: nginx:alpine
     restart: unless-stopped
+    logging: *default-logging
     volumes:
       - ./apps/ai-office:/usr/share/nginx/html:ro
 
   postgres:
     image: pgvector/pgvector:pg16
     restart: unless-stopped
+    logging: *default-logging
     environment:
       POSTGRES_USER: app
       POSTGRES_PASSWORD: ${POSTGRES_PASSWORD:?set POSTGRES_PASSWORD}
