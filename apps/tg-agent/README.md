@@ -1,51 +1,85 @@
 # tg-agent
 
-Telegram AI агент для групповых чатов. Читает каждое входящее
-сообщение, классифицирует намерение через Claude и решает, нужно
-ли отвечать или передать владельцу. Этот пакет — **этап 1** проекта
-(чтение + классификация + лог решения). Реальные ответы, БД и
-уведомления владельцу появятся в следующих итерациях.
+Telegram AI агент для групповых чатов. Читает каждое сообщение,
+классифицирует намерение, решает отвечать или молчать, пишет ответ
+в стиле Ильи на основе базы знаний, ведёт CRM статус каждого
+пользователя и уведомляет владельца на горячих лидах.
 
-## Что уже делает
+## Конвейер
 
-- Long-polling-бот на [grammy](https://grammy.dev/) (без webhook'ов).
-- LLM-классификатор на Claude Haiku 4.5 — 10 классов из ТЗ:
-  `GENERAL_CHAT`, `QUESTION`, `PRODUCT_INTEREST`, `PRICE_REQUEST`,
-  `OBJECTION`, `BUYING_INTENT`, `NEGATIVE`, `SUPPORT_REQUEST`,
-  `OWNER_REQUEST`, `SPAM`.
-- Decision engine: класс → действие (`IGNORE` / `REPLY` /
-  `REPLY_SOFT` / `REPLY_AND_NOTIFY` / `NOTIFY_ONLY` /
-  `DRAFT_FOR_OWNER`).
-- Safety: при `confidence < CONFIDENCE_THRESHOLD` (по умолчанию
-  0.7) действия `REPLY*` / `NOTIFY_ONLY` понижаются до
-  `DRAFT_FOR_OWNER`. Класс `GENERAL_CHAT`/`NEGATIVE`/`SPAM` всегда
-  остаётся `IGNORE`.
-- Allowlist чатов через `ALLOWED_CHAT_IDS`.
-- Структурированный JSON-лог в stdout (готово для Railway logs).
+`chats.touch → classifier → decision → leads.touchAndClassify →
+[responder + reply] → messages.log → notifier.notifyOwner`
 
-В этом этапе бот **не отправляет ответы** и **не пишет в БД** —
-все решения только логируются. Это сознательно, чтобы можно было
-посмотреть на качество классификатора на живых сообщениях до того,
-как давать боту право говорить.
+## Что внутри
+
+- **Транспорт:** [grammy](https://grammy.dev/) long-polling. На
+  Railway деплоится с **replicas = 1**.
+- **Классификатор** (`src/classifier.ts`): Claude Haiku 4.5 +
+  tool-use, 10 классов (`GENERAL_CHAT`, `QUESTION`,
+  `PRODUCT_INTEREST`, `PRICE_REQUEST`, `OBJECTION`, `BUYING_INTENT`,
+  `NEGATIVE`, `SUPPORT_REQUEST`, `OWNER_REQUEST`, `SPAM`).
+- **Decision engine** (`src/decision.ts`): класс → действие
+  (`IGNORE`/`REPLY`/`REPLY_SOFT`/`REPLY_AND_NOTIFY`/`NOTIFY_ONLY`/
+  `DRAFT_FOR_OWNER`). Safety: `confidence < CONFIDENCE_THRESHOLD`
+  (0.7 по умолчанию) понижает non-IGNORE до `DRAFT_FOR_OWNER` —
+  кроме `GENERAL_CHAT`/`NEGATIVE`/`SPAM`, которые остаются
+  `IGNORE`.
+- **Responder** (`src/responder.ts`): Claude Haiku 4.5 со стратегией
+  под каждый класс. Tone-of-voice и стратегии — `src/prompts.ts`,
+  изменения в одном файле. База знаний —
+  `src/knowledge/knowledge_base.md`, markdown, который владелец
+  редактирует напрямую. Запрещено выходить за пределы базы —
+  при отсутствии факта бот честно говорит "уточню у Ильи".
+- **CRM** (`src/db/leads.ts`): статус на (chat_id, user_id) с
+  односторонней лестницей `new → cold → warm → hot → buyer`.
+  `negative` залипает (только ручной override).
+  `SUPPORT_REQUEST` → `support`, если не `buyer`.
+- **Уведомления владельцу** (`src/notifier.ts`): DM с триаж-блоком
+  на `REPLY_AND_NOTIFY` / `NOTIFY_ONLY` / `DRAFT_FOR_OWNER`.
+  Владелец должен **один раз написать боту в личку** (Telegram
+  блокирует исходящие DM от ботов к пользователям, которые ни разу
+  не общались с ботом).
+- **Kill switch:** `tg_chats.auto_reply` переключается из панели
+  `/admin/tg`. Когда OFF — бот всё ещё классифицирует и пишет в БД,
+  но не отвечает в чат и не дёргает владельца.
+- **Allowlist** чатов через `ALLOWED_CHAT_IDS` для безопасности
+  при тестах.
+- **Логи:** JSON в stdout (готово для Railway).
+- **БД:** Supabase. Без `SUPABASE_URL`/`SUPABASE_SERVICE_KEY` бот
+  продолжает работать без сохранения (stateless mode).
 
 ## Локальный запуск
 
 ```bash
 cd apps/tg-agent
-cp .env.example .env   # заполнить TELEGRAM_BOT_TOKEN и ANTHROPIC_API_KEY
+cp .env.example .env   # заполнить минимум TELEGRAM_BOT_TOKEN, ANTHROPIC_API_KEY
 npm install
 npm run dev            # tsx watch
 ```
 
-В отдельном чате с [@BotFather](https://t.me/BotFather):
+Подготовка Telegram:
 
-1. `/newbot` → получить токен.
-2. `/setprivacy` → выбрать бота → **Disable**. По умолчанию боты в
-   группах в privacy mode видят только команды и упоминания —
-   нам нужно читать все сообщения.
+1. У [@BotFather](https://t.me/BotFather): `/newbot` → токен.
+2. `/setprivacy` → бот → **Disable**. В privacy mode боты в группах
+   видят только команды и упоминания — нам нужно всё.
 3. Добавить бота в тестовую группу как обычного участника.
-4. Скопировать `chat.id` группы (из логов первого сообщения) и
-   добавить его в `ALLOWED_CHAT_IDS` в `.env`.
+4. Найти `chat.id` группы в логах первого сообщения и положить его
+   в `ALLOWED_CHAT_IDS`.
+5. Для уведомлений: написать боту в личку `/start` со своего
+   аккаунта владельца и положить свой `user_id` в `OWNER_TELEGRAM_ID`.
+
+Supabase (опционально, но без него нет CRM, истории и kill switch
+из `/admin/tg`):
+
+1. В Supabase SQL Editor выполнить
+   `supabase/migrations/005_tg_agent.sql`.
+2. Положить `SUPABASE_URL` (project URL) и `SUPABASE_SERVICE_KEY`
+   (service-role) в `.env`. Service-role ключ никогда не отдавать
+   на клиент.
+
+Базу знаний заполняй прямо в `src/knowledge/knowledge_base.md` —
+секции `Продукты и цены`, `FAQ`, `Возражения`, `Кейсы`, `Правила`,
+`Ссылки`. После правок перезапусти контейнер.
 
 ## Деплой на Railway
 
@@ -63,23 +97,34 @@ npm run dev            # tsx watch
 
 ```
 src/
-├── index.ts        # точка входа, graceful shutdown
-├── bot.ts          # grammy: обработчик сообщений
-├── classifier.ts   # Anthropic tool-use → Classification
-├── decision.ts     # класс + confidence → Action
-├── config.ts       # env → typed Config
-├── logger.ts       # JSON-логгер
-└── types.ts        # MessageClass, Action, Classification, Decision
+├── index.ts                       # точка входа + graceful shutdown
+├── bot.ts                         # grammy: оркестрация конвейера
+├── classifier.ts                  # Claude tool-use → Classification
+├── responder.ts                   # Claude + KB → текст ответа
+├── decision.ts                    # класс + confidence → Action
+├── notifier.ts                    # DM владельцу
+├── prompts.ts                     # все системные промпты + TOV
+├── config.ts                      # env → typed Config
+├── logger.ts                      # JSON-логгер в stdout
+├── types.ts                       # MessageClass, Action, LeadStatus, ...
+├── knowledge/
+│   ├── index.ts                   # loader (один файл, кэш в памяти)
+│   └── knowledge_base.md          # ЭТО редактирует владелец
+└── db/
+    ├── index.ts                   # Supabase client (graceful no-op)
+    ├── chats.ts                   # tg_chats: upsert + auto_reply
+    ├── leads.ts                   # tg_users: state machine
+    └── messages.ts                # tg_messages: лог сообщений
 ```
 
-## Что дальше
+## Этапы из ТЗ → код
 
-- Этап 2: реальная генерация ответов на `QUESTION` /
-  `PRODUCT_INTEREST` и постинг в чат.
-- Этап 3: база знаний (RAG по продуктам Ильи).
-- Этап 4: статусы лидов в Supabase (новая таблица `leads`).
-- Этап 5: уведомления владельцу в личку при
-  `PRICE_REQUEST` / `BUYING_INTENT` / `OWNER_REQUEST` /
-  `DRAFT_FOR_OWNER`.
-- Этап 6: панель в `/admin` (Next.js) — лента классификаций,
-  ручное одобрение черновиков, статусы лидов.
+| Этап | Где живёт |
+| --- | --- |
+| 1. Чтение и классификация | `bot.ts` + `classifier.ts` + `prompts.ts` |
+| 2. Decision engine | `decision.ts` |
+| 3. Генерация ответа | `responder.ts` + `prompts.ts` |
+| 4. База знаний | `knowledge/knowledge_base.md` + `knowledge/index.ts` |
+| 5. Лиды и CRM | `db/leads.ts` + `db/chats.ts` + `db/messages.ts` |
+| 6. Уведомления владельцу | `notifier.ts` |
+| 7. Панель управления | `apps/transcribe/src/app/admin/tg/page.tsx` |

@@ -81,6 +81,8 @@ SQL Editor:
 - `004_tasks_project.sql` — adds `project text` column to `tasks` so the
   `/admin` board can split tasks per monorepo project
   (`transcribe` | `ytdlp` | `ai-office` | `general`, default `general`).
+- `005_tg_agent.sql` — `tg_chats`, `tg_users`, `tg_messages` for the
+  Telegram group AI agent (`apps/tg-agent` + `/admin/tg` panel).
 
 `supabase/seed_initial_tasks.sql` (not under `migrations/`) is an optional
 one-shot seed that populates the `/admin` board with the current project
@@ -184,34 +186,66 @@ YouTube can be provided as base64 in `INSTAGRAM_COOKIES_B64` / `COOKIES_B64`
 
 `apps/tg-agent/` — Node.js + TypeScript service that joins Telegram
 groups as a regular bot, reads every text message, classifies its
-intent with Claude Haiku, and decides whether the agent should
-respond. **Stage 1**: classify + log only — no actual replies or DB
-writes yet (this is intentional, so we can audit classification
-quality before granting the bot a voice).
+intent with Claude Haiku, generates replies in Ilya's tone-of-voice
+when the decision engine says so, updates per-user lead status, and
+DMs the owner on hot leads / owner mentions / low-confidence drafts.
+
+Pipeline (`apps/tg-agent/src/bot.ts`):
+`chats.touch → classifier → decision → leads.touchAndClassify →
+[responder + ctx.reply] → messages.log → notifier.notifyOwner`.
 
 - Transport: long-polling via [grammy](https://grammy.dev/). Deploy
   on Railway with **replicas = 1** — long-polling can't fan out.
-- Classifier: `apps/tg-agent/src/classifier.ts` calls Claude Haiku
-  4.5 with a tool-use schema. 10 classes: `GENERAL_CHAT`,
-  `QUESTION`, `PRODUCT_INTEREST`, `PRICE_REQUEST`, `OBJECTION`,
-  `BUYING_INTENT`, `NEGATIVE`, `SUPPORT_REQUEST`, `OWNER_REQUEST`,
-  `SPAM`.
-- Decision engine: `apps/tg-agent/src/decision.ts` maps class →
-  `Action` (`IGNORE`, `REPLY`, `REPLY_SOFT`, `REPLY_AND_NOTIFY`,
+- Classifier (`src/classifier.ts`): Claude Haiku 4.5 + tool-use,
+  10 classes (`GENERAL_CHAT`, `QUESTION`, `PRODUCT_INTEREST`,
+  `PRICE_REQUEST`, `OBJECTION`, `BUYING_INTENT`, `NEGATIVE`,
+  `SUPPORT_REQUEST`, `OWNER_REQUEST`, `SPAM`).
+- Decision engine (`src/decision.ts`): maps class → `Action`
+  (`IGNORE`, `REPLY`, `REPLY_SOFT`, `REPLY_AND_NOTIFY`,
   `NOTIFY_ONLY`, `DRAFT_FOR_OWNER`). Safety: when
-  `confidence < CONFIDENCE_THRESHOLD` (default 0.7), any non-IGNORE
-  action drops to `DRAFT_FOR_OWNER` — except for `GENERAL_CHAT` /
-  `NEGATIVE` / `SPAM` which stay `IGNORE`.
+  `confidence < CONFIDENCE_THRESHOLD` (default 0.7), non-IGNORE
+  actions drop to `DRAFT_FOR_OWNER` — except `GENERAL_CHAT` /
+  `NEGATIVE` / `SPAM` which always stay `IGNORE`.
+- Responder (`src/responder.ts`): Claude Haiku 4.5 with a per-class
+  strategy (PRODUCT_INTEREST → soft funnel, OBJECTION → no-argument
+  acknowledgment, BUYING_INTENT → concrete next step). Tone +
+  strategies live in `src/prompts.ts`. The knowledge base
+  (`src/knowledge/knowledge_base.md`, plain markdown) is embedded
+  verbatim into the system prompt — the responder may only state
+  facts from this file.
+- CRM (`src/db/leads.ts`): per-(chat_id, user_id) status with a
+  one-way commercial ranking `new → cold → warm → hot → buyer`.
+  `negative` is sticky (manual override only). `SUPPORT_REQUEST`
+  → `support` unless already `buyer`.
+- Owner notifications (`src/notifier.ts`): bot DMs
+  `OWNER_TELEGRAM_ID` when action is `REPLY_AND_NOTIFY` /
+  `NOTIFY_ONLY` / `DRAFT_FOR_OWNER`. Owner must `/start` the bot
+  first — Telegram blocks bot-initiated DMs to users who never
+  wrote to the bot.
+- Kill switch: per-chat `tg_chats.auto_reply` boolean — toggled
+  from the `/admin/tg` panel. When OFF the bot still classifies
+  and persists but does not reply and does not notify.
 - Env (see `apps/tg-agent/.env.example`):
-  `TELEGRAM_BOT_TOKEN`, `ANTHROPIC_API_KEY`, optional
-  `OWNER_TELEGRAM_ID`, `ALLOWED_CHAT_IDS`, `CONFIDENCE_THRESHOLD`,
-  `LOG_LEVEL`, `CLASSIFIER_MODEL`.
+  `TELEGRAM_BOT_TOKEN`, `ANTHROPIC_API_KEY`, `OWNER_TELEGRAM_ID`,
+  `ALLOWED_CHAT_IDS`, `CONFIDENCE_THRESHOLD`, `LOG_LEVEL`,
+  `CLASSIFIER_MODEL`, `RESPONDER_MODEL`, `SUPABASE_URL`,
+  `SUPABASE_SERVICE_KEY`.
 - Setup: in @BotFather run `/setprivacy → Disable` for the bot, or
-  it will only see commands / mentions in groups.
+  it will only see commands / mentions in groups. Run migration
+  `supabase/migrations/005_tg_agent.sql`.
 
-Next stages live in `apps/tg-agent/README.md` ("Что дальше"):
-real replies, knowledge base / RAG, leads table in Supabase, owner
-notifications, `/admin` panel.
+### `/admin/tg` panel
+
+The dashboard lives in the transcribe app at
+`apps/transcribe/src/app/admin/tg/page.tsx`. Lists all chats with
+message / hot-lead counts and an `auto_reply` toggle, and shows
+per-chat recent messages (with class / action / bot reply) and
+users (with lead status). Backed by:
+
+- `GET /api/tg/chats` — chats + aggregates
+- `PATCH /api/tg/chats/[chatId]` — toggle `auto_reply`
+- `GET /api/tg/chats/[chatId]/users` — users with lead status
+- `GET /api/tg/chats/[chatId]/messages?limit=…` — recent messages
 
 ## Conventions
 
