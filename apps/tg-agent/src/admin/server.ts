@@ -8,8 +8,10 @@ import { Hono, type Context as HonoContext } from 'hono';
 import { basicAuth } from 'hono/basic-auth';
 
 import type { ChatService } from '../db/chats.js';
+import type { DraftService, DraftStatus } from '../db/drafts.js';
 import type { LeadService } from '../db/leads.js';
 import type { MessageStore } from '../db/messages.js';
+import type { StatsService } from '../db/stats.js';
 import type { Logger } from '../logger.js';
 import {
   buildClearCookie,
@@ -35,6 +37,8 @@ export interface AdminDeps {
   chats: ChatService;
   leads: LeadService;
   messages: MessageStore;
+  drafts: DraftService;
+  stats: StatsService;
   logger: Logger;
   port: number;
   username: string;
@@ -222,6 +226,52 @@ function wireApi(app: Hono, deps: AdminDeps): void {
     }
     return c.json({ items: deps.leads.listForChat(chatId) });
   });
+
+  // Drafts list — backs the "Черновики" tab. Status query filter
+  // accepts pending|editing|sent|deleted; anything else falls back to
+  // "all drafts".
+  app.get('/api/drafts', (c) => {
+    const limitRaw = Number(c.req.query('limit') ?? 50);
+    const limit = Math.min(
+      MAX_MESSAGE_LIMIT,
+      Number.isFinite(limitRaw) && limitRaw > 0 ? limitRaw : 50,
+    );
+    const statusParam = c.req.query('status');
+    const validStatuses = ['pending', 'editing', 'sent', 'deleted'];
+    const status = validStatuses.includes(statusParam ?? '')
+      ? (statusParam as DraftStatus)
+      : undefined;
+    return c.json({ items: deps.drafts.listRecent(limit, status) });
+  });
+
+  // Analytics endpoints. Each takes optional ?days= for time-bounded
+  // queries; defaults are tuned for the default UI views.
+  app.get('/api/stats/overview', (c) => c.json(deps.stats.overview()));
+
+  app.get('/api/stats/messages-by-day', (c) => {
+    const days = clampDays(c.req.query('days'), 30, 180);
+    return c.json({ items: deps.stats.messagesByDay(days), days });
+  });
+
+  app.get('/api/stats/classes', (c) => {
+    const days = clampDays(c.req.query('days'), 7, 90);
+    return c.json({ items: deps.stats.classDistribution(days), days });
+  });
+
+  app.get('/api/stats/actions', (c) => {
+    const days = clampDays(c.req.query('days'), 7, 90);
+    return c.json({ items: deps.stats.actionDistribution(days), days });
+  });
+
+  app.get('/api/stats/leads', (c) =>
+    c.json({ items: deps.stats.leadFunnel() }),
+  );
+}
+
+function clampDays(raw: string | undefined, fallback: number, max: number): number {
+  const n = Number(raw);
+  if (!Number.isFinite(n) || n <= 0) return fallback;
+  return Math.min(Math.floor(n), max);
 }
 
 function resolveBaseUrl(c: HonoContext, override: string | undefined): string {

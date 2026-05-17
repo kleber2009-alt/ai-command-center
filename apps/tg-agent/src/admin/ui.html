@@ -15,28 +15,39 @@
 <body class="bg-slate-950 text-slate-200 min-h-screen">
   <div class="mx-auto max-w-7xl px-4 py-6 sm:px-6 sm:py-8">
     <header class="flex items-center justify-between">
-      <div class="flex items-center gap-2">
+      <div class="flex items-center gap-3">
         <span class="text-indigo-400">●</span>
         <h1 class="text-lg font-semibold text-slate-100">tg-agent</h1>
+        <nav class="ml-4 flex gap-1 rounded-lg border border-slate-800 bg-slate-900/60 p-1 text-sm">
+          <button data-view="chats"     class="view-btn rounded-md bg-slate-800 px-3 py-1 text-slate-100">Чаты</button>
+          <button data-view="drafts"    class="view-btn rounded-md px-3 py-1 text-slate-400 hover:text-slate-200">Черновики</button>
+          <button data-view="analytics" class="view-btn rounded-md px-3 py-1 text-slate-400 hover:text-slate-200">Аналитика</button>
+        </nav>
         <span id="status" class="text-xs text-slate-500"></span>
       </div>
-      <button id="refresh"
-        class="flex items-center gap-2 rounded-md border border-slate-700 bg-slate-800/60 px-3 py-1.5 text-sm text-slate-300 hover:bg-slate-700/60">
-        ↻ Обновить
-      </button>
+      <div class="flex items-center gap-2">
+        <button id="refresh"
+          class="flex items-center gap-2 rounded-md border border-slate-700 bg-slate-800/60 px-3 py-1.5 text-sm text-slate-300 hover:bg-slate-700/60">
+          ↻ Обновить
+        </button>
+        <a id="logout" href="/logout"
+          class="rounded-md border border-slate-700 bg-slate-800/60 px-3 py-1.5 text-sm text-slate-400 hover:bg-slate-700/60 hover:text-slate-200">
+          Выйти
+        </a>
+      </div>
     </header>
 
     <div id="error" class="mt-4 hidden rounded-md border border-rose-500/30 bg-rose-500/5 p-3 text-sm text-rose-300"></div>
 
-    <div class="mt-6 grid grid-cols-1 gap-6 lg:grid-cols-[360px_1fr]">
+    <!-- VIEW: chats -->
+    <section id="view-chats" class="mt-6 grid grid-cols-1 gap-6 lg:grid-cols-[360px_1fr]">
       <aside>
         <ul id="chatList" class="space-y-2"></ul>
         <div id="chatEmpty" class="hidden rounded-lg border border-slate-800 bg-slate-900/40 p-6 text-sm text-slate-500">
           Чатов пока нет. Добавьте бота в группу — после первого сообщения чат появится здесь.
         </div>
       </aside>
-
-      <section id="detail" class="min-h-[400px] rounded-lg border border-slate-800 bg-slate-900/40">
+      <div id="detail" class="min-h-[400px] rounded-lg border border-slate-800 bg-slate-900/40">
         <div id="detailEmpty" class="flex h-full items-center justify-center p-12 text-sm text-slate-500">
           Выберите чат слева
         </div>
@@ -47,12 +58,10 @@
               <div id="chatMeta" class="text-xs text-slate-500"></div>
             </div>
             <div class="flex gap-1 rounded-lg border border-slate-800 bg-slate-900/60 p-1 text-sm">
-              <button data-tab="messages"
-                class="tab-btn flex items-center gap-1.5 rounded-md bg-slate-800 px-3 py-1.5 text-slate-100">
+              <button data-tab="messages" class="tab-btn flex items-center gap-1.5 rounded-md bg-slate-800 px-3 py-1.5 text-slate-100">
                 Сообщения <span data-count="messages" class="text-slate-500"></span>
               </button>
-              <button data-tab="users"
-                class="tab-btn flex items-center gap-1.5 rounded-md px-3 py-1.5 text-slate-400 hover:text-slate-200">
+              <button data-tab="users" class="tab-btn flex items-center gap-1.5 rounded-md px-3 py-1.5 text-slate-400 hover:text-slate-200">
                 Пользователи <span data-count="users" class="text-slate-500"></span>
               </button>
             </div>
@@ -60,15 +69,59 @@
           <div id="tabMessages" class="mt-4"></div>
           <div id="tabUsers" class="mt-4 hidden"></div>
         </div>
-      </section>
-    </div>
+      </div>
+    </section>
+
+    <!-- VIEW: drafts -->
+    <section id="view-drafts" class="mt-6 hidden">
+      <div class="flex flex-wrap items-center justify-between gap-3 border-b border-slate-800 pb-3">
+        <div class="text-base font-semibold text-slate-100">Черновики ответов</div>
+        <div class="flex flex-wrap gap-1 rounded-lg border border-slate-800 bg-slate-900/60 p-1 text-sm">
+          <button data-draft-filter="all"      class="draft-filter rounded-md bg-slate-800 px-3 py-1 text-slate-100">Все</button>
+          <button data-draft-filter="pending"  class="draft-filter rounded-md px-3 py-1 text-slate-400 hover:text-slate-200">Ожидают</button>
+          <button data-draft-filter="editing"  class="draft-filter rounded-md px-3 py-1 text-slate-400 hover:text-slate-200">На редактировании</button>
+          <button data-draft-filter="sent"     class="draft-filter rounded-md px-3 py-1 text-slate-400 hover:text-slate-200">Отправлены</button>
+          <button data-draft-filter="deleted"  class="draft-filter rounded-md px-3 py-1 text-slate-400 hover:text-slate-200">Удалены</button>
+        </div>
+      </div>
+      <ul id="draftsList" class="mt-4 space-y-3"></ul>
+    </section>
+
+    <!-- VIEW: analytics -->
+    <section id="view-analytics" class="mt-6 hidden space-y-6">
+      <div id="statCards" class="grid grid-cols-2 gap-3 sm:grid-cols-4"></div>
+
+      <div class="grid grid-cols-1 gap-6 lg:grid-cols-2">
+        <div class="rounded-lg border border-slate-800 bg-slate-900/40 p-4">
+          <div class="mb-3 text-sm font-medium text-slate-200">Сообщения по дням <span class="text-slate-500">(30 д)</span></div>
+          <div id="chartMessagesByDay" class="h-40 flex items-end gap-px"></div>
+          <div id="chartMessagesByDayLegend" class="mt-1 flex justify-between text-[10px] text-slate-600"></div>
+        </div>
+        <div class="rounded-lg border border-slate-800 bg-slate-900/40 p-4">
+          <div class="mb-3 text-sm font-medium text-slate-200">Воронка лидов</div>
+          <div id="chartLeadFunnel" class="space-y-1.5"></div>
+        </div>
+      </div>
+
+      <div class="grid grid-cols-1 gap-6 lg:grid-cols-2">
+        <div class="rounded-lg border border-slate-800 bg-slate-900/40 p-4">
+          <div class="mb-3 text-sm font-medium text-slate-200">Классы сообщений <span class="text-slate-500">(7 д)</span></div>
+          <div id="chartClasses" class="space-y-1.5"></div>
+        </div>
+        <div class="rounded-lg border border-slate-800 bg-slate-900/40 p-4">
+          <div class="mb-3 text-sm font-medium text-slate-200">Действия бота <span class="text-slate-500">(7 д)</span></div>
+          <div id="chartActions" class="space-y-1.5"></div>
+        </div>
+      </div>
+    </section>
 
     <footer class="mt-8 text-xs text-slate-600">
-      SQLite · Hono · Tailwind via CDN · авто-обновление не включено, нажмите ↻
+      SQLite · Hono · Tailwind via CDN
     </footer>
   </div>
 
   <script>
+    // ─── shared palettes ────────────────────────────────────────
     const STATUS_LABEL = {
       new: 'Новый', cold: 'Холодный', warm: 'Тёплый', hot: 'Горячий',
       buyer: 'Купил', support: 'Поддержка', negative: 'Негатив',
@@ -81,6 +134,12 @@
       buyer: 'bg-emerald-500/15 text-emerald-300',
       support: 'bg-indigo-500/15 text-indigo-300',
       negative: 'bg-rose-500/15 text-rose-300',
+    };
+    const STATUS_BAR = {
+      new: 'bg-slate-600',     cold: 'bg-sky-500',
+      warm: 'bg-amber-500',    hot: 'bg-orange-500',
+      buyer: 'bg-emerald-500', support: 'bg-indigo-500',
+      negative: 'bg-rose-500',
     };
     const CLASS_COLOR = {
       GENERAL_CHAT: 'text-slate-400',
@@ -102,22 +161,29 @@
       NOTIFY_ONLY: 'bg-amber-500/15 text-amber-300',
       DRAFT_FOR_OWNER: 'bg-violet-500/15 text-violet-300',
     };
+    const DRAFT_STATUS_COLOR = {
+      pending: 'bg-amber-500/15 text-amber-300',
+      editing: 'bg-violet-500/15 text-violet-300',
+      sent: 'bg-emerald-500/15 text-emerald-300',
+      deleted: 'bg-slate-700/40 text-slate-400',
+    };
+    const DRAFT_STATUS_LABEL = {
+      pending: 'Ждёт', editing: 'Редактируется', sent: 'Отправлено', deleted: 'Удалено',
+    };
 
+    // ─── state ─────────────────────────────────────────────────
     const state = {
-      chats: [],
-      selectedId: null,
-      tab: 'messages',
-      messages: [],
-      users: [],
+      view: 'chats',
+      // chats
+      chats: [], selectedId: null, tab: 'messages', messages: [], users: [],
+      // drafts
+      draftFilter: 'all', drafts: [],
+      // analytics
+      analytics: null,
     };
 
     const $ = (id) => document.getElementById(id);
-
-    function escapeHtml(s) {
-      return String(s ?? '').replace(/[&<>"']/g, (c) => ({
-        '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;',
-      })[c]);
-    }
+    const escapeHtml = (s) => String(s ?? '').replace(/[&<>"']/g, (c) => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' }[c]));
 
     function formatRelative(iso) {
       const t = new Date(iso).getTime();
@@ -147,7 +213,11 @@
     }
 
     async function fetchJson(url, options) {
-      const res = await fetch(url, { cache: 'no-store', ...(options || {}) });
+      const res = await fetch(url, { cache: 'no-store', credentials: 'same-origin', ...(options || {}) });
+      if (res.status === 401) {
+        location.href = '/login';
+        throw new Error('unauthenticated');
+      }
       const text = await res.text();
       let data = null;
       try { data = text ? JSON.parse(text) : null; } catch (_) {}
@@ -155,18 +225,30 @@
       return data;
     }
 
-    async function loadChats() {
+    // ─── view routing ──────────────────────────────────────────
+    function switchView(view) {
+      state.view = view;
+      ['chats', 'drafts', 'analytics'].forEach((v) => {
+        $('view-' + v).classList.toggle('hidden', v !== view);
+      });
+      document.querySelectorAll('.view-btn').forEach((b) => {
+        const active = b.getAttribute('data-view') === view;
+        b.className = 'view-btn rounded-md px-3 py-1 ' + (active ? 'bg-slate-800 text-slate-100' : 'text-slate-400 hover:text-slate-200');
+      });
+      refresh();
+    }
+
+    async function refresh() {
       showError(null);
       $('status').textContent = '· загрузка…';
       try {
-        const data = await fetchJson('/api/chats');
-        state.chats = data.items || [];
-        renderChats();
-        if (!state.selectedId && state.chats.length) {
-          selectChat(state.chats[0].chat_id);
-        } else if (state.selectedId) {
-          // Refresh in-place if a chat is already selected.
-          await loadDetail(state.selectedId);
+        if (state.view === 'chats') {
+          await loadChats();
+          if (state.selectedId) await loadDetail(state.selectedId);
+        } else if (state.view === 'drafts') {
+          await loadDrafts();
+        } else if (state.view === 'analytics') {
+          await loadAnalytics();
         }
         $('status').textContent = '· обновлено ' + new Date().toLocaleTimeString('ru-RU');
       } catch (e) {
@@ -175,26 +257,30 @@
       }
     }
 
+    // ─── CHATS view ────────────────────────────────────────────
+    async function loadChats() {
+      const data = await fetchJson('/api/chats');
+      state.chats = data.items || [];
+      renderChats();
+      if (!state.selectedId && state.chats.length) selectChat(state.chats[0].chat_id);
+    }
+
     async function loadDetail(chatId) {
       $('detailEmpty').classList.add('hidden');
       $('detailBody').classList.remove('hidden');
-      try {
-        const [m, u] = await Promise.all([
-          fetchJson('/api/chats/' + chatId + '/messages?limit=50'),
-          fetchJson('/api/chats/' + chatId + '/users'),
-        ]);
-        state.messages = m.items || [];
-        state.users = u.items || [];
-        renderDetail();
-      } catch (e) {
-        showError(e.message);
-      }
+      const [m, u] = await Promise.all([
+        fetchJson('/api/chats/' + chatId + '/messages?limit=50'),
+        fetchJson('/api/chats/' + chatId + '/users'),
+      ]);
+      state.messages = m.items || [];
+      state.users = u.items || [];
+      renderDetail();
     }
 
     function selectChat(chatId) {
       state.selectedId = chatId;
       renderChats();
-      loadDetail(chatId);
+      loadDetail(chatId).catch((e) => showError(e.message));
     }
 
     async function toggleAutoReply(chat, ev) {
@@ -302,9 +388,7 @@
     }
 
     function renderMessages() {
-      if (state.messages.length === 0) {
-        return '<div class="text-sm text-slate-500">Сообщений пока нет.</div>';
-      }
+      if (state.messages.length === 0) return '<div class="text-sm text-slate-500">Сообщений пока нет.</div>';
       const userById = new Map(state.users.map((u) => [u.user_id, u]));
       return '<ul class="space-y-3">' + state.messages.map((m) => {
         const u = m.user_id != null ? userById.get(m.user_id) : null;
@@ -321,20 +405,14 @@
               ${action ? `<span class="rounded px-1.5 py-0.5 text-[10px] font-medium ${ACTION_COLOR[action] || 'bg-slate-700/40 text-slate-300'}">${action}</span>` : ''}
             </div>
             <div class="mt-2 whitespace-pre-wrap text-slate-200">${escapeHtml(m.text)}</div>
-            ${m.response ? `
-              <div class="mt-3 rounded-md border-l-2 border-indigo-500/40 bg-indigo-500/5 px-3 py-2">
-                <div class="text-xs text-indigo-300">→ Ответ бота</div>
-                <div class="mt-1 whitespace-pre-wrap text-sm text-slate-200">${escapeHtml(m.response)}</div>
-              </div>` : ''}
+            ${m.response ? `<div class="mt-3 rounded-md border-l-2 border-indigo-500/40 bg-indigo-500/5 px-3 py-2"><div class="text-xs text-indigo-300">→ Ответ бота</div><div class="mt-1 whitespace-pre-wrap text-sm text-slate-200">${escapeHtml(m.response)}</div></div>` : ''}
             ${m.reasoning ? `<div class="mt-2 text-xs italic text-slate-500">${escapeHtml(m.reasoning)}</div>` : ''}
           </li>`;
       }).join('') + '</ul>';
     }
 
     function renderUsers() {
-      if (state.users.length === 0) {
-        return '<div class="text-sm text-slate-500">Пользователей пока нет.</div>';
-      }
+      if (state.users.length === 0) return '<div class="text-sm text-slate-500">Пользователей пока нет.</div>';
       return '<ul class="divide-y divide-slate-800 rounded-lg border border-slate-800">' + state.users.map((u) => `
         <li class="flex flex-wrap items-center justify-between gap-3 px-4 py-3 text-sm">
           <div class="min-w-0 flex-1">
@@ -347,15 +425,154 @@
         </li>`).join('') + '</ul>';
     }
 
-    document.querySelectorAll('.tab-btn').forEach((btn) => {
-      btn.addEventListener('click', () => {
-        state.tab = btn.getAttribute('data-tab');
-        renderDetail();
-      });
-    });
-    $('refresh').addEventListener('click', loadChats);
+    // ─── DRAFTS view ───────────────────────────────────────────
+    async function loadDrafts() {
+      const url = state.draftFilter === 'all'
+        ? '/api/drafts?limit=100'
+        : '/api/drafts?limit=100&status=' + state.draftFilter;
+      const data = await fetchJson(url);
+      state.drafts = data.items || [];
+      renderDrafts();
+    }
 
-    loadChats();
+    function renderDrafts() {
+      document.querySelectorAll('.draft-filter').forEach((b) => {
+        const active = b.getAttribute('data-draft-filter') === state.draftFilter;
+        b.className = 'draft-filter rounded-md px-3 py-1 ' + (active ? 'bg-slate-800 text-slate-100' : 'text-slate-400 hover:text-slate-200');
+      });
+
+      const list = $('draftsList');
+      if (state.drafts.length === 0) {
+        list.innerHTML = '<li class="rounded-lg border border-slate-800 bg-slate-900/40 p-6 text-sm text-slate-500">Черновиков нет.</li>';
+        return;
+      }
+
+      list.innerHTML = state.drafts.map((d) => `
+        <li class="rounded-lg border border-slate-800 bg-slate-900/40 p-4 text-sm">
+          <div class="flex flex-wrap items-center gap-2 text-xs">
+            <span class="rounded px-1.5 py-0.5 text-[10px] font-medium ${DRAFT_STATUS_COLOR[d.status] || ''}">${DRAFT_STATUS_LABEL[d.status] || d.status}</span>
+            <span class="text-slate-500">${formatRelative(d.created_at)}</span>
+            <span class="text-slate-600">·</span>
+            <span class="text-slate-500">чат ${d.chat_id}</span>
+            ${d.message_class ? `<span class="text-slate-600">·</span><span class="${CLASS_COLOR[d.message_class] || 'text-slate-400'}">${d.message_class}</span>` : ''}
+          </div>
+          <div class="mt-3 rounded-md border-l-2 border-violet-500/40 bg-violet-500/5 px-3 py-2">
+            <div class="text-xs text-violet-300">Черновик</div>
+            <div class="mt-1 whitespace-pre-wrap text-slate-200">${escapeHtml(d.draft_text)}</div>
+          </div>
+          ${d.sent_reply_text && d.sent_reply_text !== d.draft_text ? `
+            <div class="mt-2 rounded-md border-l-2 border-emerald-500/40 bg-emerald-500/5 px-3 py-2">
+              <div class="text-xs text-emerald-300">Отправлено в чат (изменено)</div>
+              <div class="mt-1 whitespace-pre-wrap text-slate-200">${escapeHtml(d.sent_reply_text)}</div>
+            </div>` : ''}
+        </li>`).join('');
+    }
+
+    // ─── ANALYTICS view ────────────────────────────────────────
+    async function loadAnalytics() {
+      const [overview, byDay, classes, actions, leads] = await Promise.all([
+        fetchJson('/api/stats/overview'),
+        fetchJson('/api/stats/messages-by-day?days=30'),
+        fetchJson('/api/stats/classes?days=7'),
+        fetchJson('/api/stats/actions?days=7'),
+        fetchJson('/api/stats/leads'),
+      ]);
+      state.analytics = { overview, byDay: byDay.items, classes: classes.items, actions: actions.items, leads: leads.items };
+      renderAnalytics();
+    }
+
+    function renderAnalytics() {
+      const a = state.analytics;
+      if (!a) return;
+
+      // Overview cards
+      const cards = [
+        { label: 'Чатов',         value: a.overview.total_chats,    sub: '' },
+        { label: 'Пользователей', value: a.overview.total_users,    sub: '' },
+        { label: 'Сообщений / 24ч', value: a.overview.messages_24h, sub: a.overview.messages_7d + ' за 7д' },
+        { label: 'Лидов hot+buyer', value: a.overview.hot_leads + a.overview.buyers, sub: a.overview.hot_leads + ' hot · ' + a.overview.buyers + ' buyer' },
+        { label: 'Черновики: ждут', value: a.overview.drafts_pending, sub: a.overview.drafts_editing + ' редактируется' },
+        { label: 'Черновики: отправлены', value: a.overview.drafts_sent, sub: a.overview.drafts_deleted + ' удалены' },
+      ];
+      $('statCards').innerHTML = cards.map((c) => `
+        <div class="rounded-lg border border-slate-800 bg-slate-900/40 p-3">
+          <div class="text-xs text-slate-500">${c.label}</div>
+          <div class="mt-1 text-2xl font-semibold text-slate-100">${c.value}</div>
+          ${c.sub ? `<div class="mt-0.5 text-[11px] text-slate-500">${c.sub}</div>` : ''}
+        </div>`).join('');
+
+      // Messages by day — vertical bar chart
+      const max = Math.max(1, ...a.byDay.map((b) => b.count));
+      $('chartMessagesByDay').innerHTML = a.byDay.map((b) => {
+        const h = Math.max(2, Math.round((b.count / max) * 100));
+        return `<div title="${b.date}: ${b.count}" class="flex-1 rounded-sm bg-indigo-500/60 hover:bg-indigo-400 transition" style="height:${h}%"></div>`;
+      }).join('');
+      const first = a.byDay[0];
+      const last = a.byDay[a.byDay.length - 1];
+      $('chartMessagesByDayLegend').innerHTML = `<span>${first ? first.date : ''}</span><span>${last ? last.date : ''}</span>`;
+
+      // Lead funnel — horizontal bars in fixed order
+      const leadMax = Math.max(1, ...a.leads.map((l) => l.count));
+      $('chartLeadFunnel').innerHTML = a.leads.map((l) => {
+        const w = Math.round((l.count / leadMax) * 100);
+        return `
+          <div class="flex items-center gap-2 text-xs">
+            <div class="w-20 shrink-0 text-slate-400">${STATUS_LABEL[l.status] || l.status}</div>
+            <div class="relative h-5 flex-1 overflow-hidden rounded bg-slate-800">
+              <div class="h-full ${STATUS_BAR[l.status] || 'bg-slate-500'}" style="width:${w}%"></div>
+            </div>
+            <div class="w-12 shrink-0 text-right text-slate-300">${l.count}</div>
+          </div>`;
+      }).join('');
+
+      // Class distribution
+      const clMax = Math.max(1, ...a.classes.map((c) => c.count));
+      $('chartClasses').innerHTML = a.classes.length === 0
+        ? '<div class="text-sm text-slate-500">Нет данных</div>'
+        : a.classes.map((c) => {
+            const w = Math.round((c.count / clMax) * 100);
+            return `
+              <div class="flex items-center gap-2 text-xs">
+                <div class="w-32 shrink-0 ${CLASS_COLOR[c.class] || 'text-slate-400'}">${c.class}</div>
+                <div class="relative h-5 flex-1 overflow-hidden rounded bg-slate-800">
+                  <div class="h-full bg-indigo-500/60" style="width:${w}%"></div>
+                </div>
+                <div class="w-10 shrink-0 text-right text-slate-300">${c.count}</div>
+              </div>`;
+          }).join('');
+
+      // Action distribution
+      const acMax = Math.max(1, ...a.actions.map((c) => c.count));
+      $('chartActions').innerHTML = a.actions.length === 0
+        ? '<div class="text-sm text-slate-500">Нет данных</div>'
+        : a.actions.map((c) => {
+            const w = Math.round((c.count / acMax) * 100);
+            return `
+              <div class="flex items-center gap-2 text-xs">
+                <div class="w-36 shrink-0">
+                  <span class="rounded px-1.5 py-0.5 text-[10px] font-medium ${ACTION_COLOR[c.action] || 'bg-slate-700/40 text-slate-300'}">${c.action}</span>
+                </div>
+                <div class="relative h-5 flex-1 overflow-hidden rounded bg-slate-800">
+                  <div class="h-full bg-indigo-500/60" style="width:${w}%"></div>
+                </div>
+                <div class="w-10 shrink-0 text-right text-slate-300">${c.count}</div>
+              </div>`;
+          }).join('');
+    }
+
+    // ─── wiring ────────────────────────────────────────────────
+    document.querySelectorAll('.view-btn').forEach((btn) => {
+      btn.addEventListener('click', () => switchView(btn.getAttribute('data-view')));
+    });
+    document.querySelectorAll('.tab-btn').forEach((btn) => {
+      btn.addEventListener('click', () => { state.tab = btn.getAttribute('data-tab'); renderDetail(); });
+    });
+    document.querySelectorAll('.draft-filter').forEach((btn) => {
+      btn.addEventListener('click', () => { state.draftFilter = btn.getAttribute('data-draft-filter'); loadDrafts().catch((e) => showError(e.message)); });
+    });
+    $('refresh').addEventListener('click', refresh);
+
+    refresh();
   </script>
 </body>
 </html>

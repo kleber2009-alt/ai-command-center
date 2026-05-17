@@ -7,6 +7,7 @@ import { createDraftService } from './db/drafts.js';
 import { openDb } from './db/index.js';
 import { createLeadService } from './db/leads.js';
 import { createMessageStore } from './db/messages.js';
+import { createStatsService } from './db/stats.js';
 import { loadKnowledgeBase } from './knowledge/index.js';
 import { createLogger } from './logger.js';
 import { createNotifier } from './notifier.js';
@@ -33,6 +34,7 @@ async function main(): Promise<void> {
   const leads = createLeadService(db);
   const messages = createMessageStore(db);
   const drafts = createDraftService(db);
+  const stats = createStatsService(db);
 
   const { bot, attachNotifier } = createBot({
     config,
@@ -61,6 +63,8 @@ async function main(): Promise<void> {
       chats,
       leads,
       messages,
+      drafts,
+      stats,
       logger,
       port: config.adminPort,
       username: config.adminUsername,

@@ -31,6 +31,7 @@ export interface DraftService {
   create(input: CreateDraftInput): DraftRow;
   findById(id: number): DraftRow | null;
   findByEditPrompt(messageId: number): DraftRow | null;
+  listRecent(limit: number, status: DraftStatus | undefined): DraftRow[];
 
   // Stores the DM message_id that carries the inline keyboard. Called
   // right after the bot sends the draft notification.
@@ -106,6 +107,27 @@ export function createDraftService(db: Db): DraftService {
     WHERE id = ? AND status IN ('pending', 'editing')
   `);
 
+  const listAllStmt = db.prepare(`
+    SELECT id, chat_id, user_id, original_message_id, message_class,
+           draft_text, status, owner_dm_message_id,
+           edit_prompt_message_id, sent_reply_text,
+           created_at, updated_at
+    FROM tg_drafts
+    ORDER BY created_at DESC
+    LIMIT ?
+  `);
+
+  const listByStatusStmt = db.prepare(`
+    SELECT id, chat_id, user_id, original_message_id, message_class,
+           draft_text, status, owner_dm_message_id,
+           edit_prompt_message_id, sent_reply_text,
+           created_at, updated_at
+    FROM tg_drafts
+    WHERE status = ?
+    ORDER BY created_at DESC
+    LIMIT ?
+  `);
+
   return {
     create(input): DraftRow {
       return insertStmt.get(
@@ -125,6 +147,13 @@ export function createDraftService(db: Db): DraftService {
     findByEditPrompt(messageId): DraftRow | null {
       const row = findByEditPromptStmt.get(messageId) as DraftRow | undefined;
       return row ?? null;
+    },
+
+    listRecent(limit, status): DraftRow[] {
+      if (status) {
+        return listByStatusStmt.all(status, limit) as DraftRow[];
+      }
+      return listAllStmt.all(limit) as DraftRow[];
     },
 
     attachOwnerDm(id, dmMessageId): void {
