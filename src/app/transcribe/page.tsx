@@ -7,6 +7,7 @@ import {
   LayoutGrid, Video, Shuffle, Send, Bot, Brain,
 } from 'lucide-react'
 import { getTelegram, isInTelegram } from '@/lib/telegram'
+import { apiFetch } from '@/lib/api-client'
 
 type Paragraph = { text: string; start: number; end: number }
 type Source = 'youtube' | 'deepgram' | 'ytdlp+deepgram'
@@ -225,7 +226,7 @@ export default function TranscribePage() {
 
   async function loadHistory() {
     try {
-      const res = await fetch('/api/transcribe/history')
+      const res = await apiFetch('/api/transcribe/history')
       const data = await res.json()
       setHistory(data.items ?? [])
       setHistoryConfigured(data.configured !== false)
@@ -273,7 +274,7 @@ export default function TranscribePage() {
     resetSecondary()
     setLoading(true)
     try {
-      const res = await fetch('/api/transcribe', {
+      const res = await apiFetch('/api/transcribe', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({ url: url.trim(), language }),
@@ -306,7 +307,7 @@ export default function TranscribePage() {
     resetSecondary()
     setLoading(true)
     try {
-      const res = await fetch(`/api/transcribe/history/${id}`)
+      const res = await apiFetch(`/api/transcribe/history/${id}`)
       const data = await res.json()
       if (!res.ok) {
         setError(data.error || 'Не удалось загрузить транскрипт')
@@ -341,7 +342,7 @@ export default function TranscribePage() {
     e.stopPropagation()
     if (!confirm('Удалить этот транскрипт?')) return
     try {
-      await fetch(`/api/transcribe/history/${id}`, { method: 'DELETE' })
+      await apiFetch(`/api/transcribe/history/${id}`, { method: 'DELETE' })
       loadHistory()
       if (result?.id === id) {
         setResult(null)
@@ -360,7 +361,7 @@ export default function TranscribePage() {
     setError(null)
     try {
       const titleSeed = text.trim().slice(0, 80).replace(/\s+/g, ' ')
-      const res = await fetch('/api/me/documents', {
+      const res = await apiFetch('/api/me/documents', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({
@@ -406,7 +407,7 @@ export default function TranscribePage() {
     setSummaryLoading(true)
     setSummary(null)
     try {
-      const res = await fetch('/api/transcribe/summarize', {
+      const res = await apiFetch('/api/transcribe/summarize', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({ id: result.id, transcript: result.transcript }),
@@ -429,7 +430,7 @@ export default function TranscribePage() {
     setTranslationLoading(true)
     setTranslation(null)
     try {
-      const res = await fetch('/api/transcribe/translate', {
+      const res = await apiFetch('/api/transcribe/translate', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({ id: result.id, transcript: result.transcript, targetLang }),
@@ -452,7 +453,7 @@ export default function TranscribePage() {
     setGenLoading(type)
     setGenerations(prev => ({ ...prev, [type]: undefined }))
     try {
-      const res = await fetch('/api/transcribe/generate', {
+      const res = await apiFetch('/api/transcribe/generate', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({ id: result.id, transcript: result.transcript, type }),
@@ -854,7 +855,7 @@ export default function TranscribePage() {
 
       {!historyConfigured && (
         <p className="px-1 text-[12px] text-apple-faint">
-          История транскриптов выключена — добавьте <code className="rounded bg-apple-bg-soft px-1 py-0.5 text-apple-muted">NEXT_PUBLIC_SUPABASE_URL</code> и <code className="rounded bg-apple-bg-soft px-1 py-0.5 text-apple-muted">SUPABASE_SERVICE_KEY</code>, а также выполните миграцию <code className="rounded bg-apple-bg-soft px-1 py-0.5 text-apple-muted">supabase/migrations/001_transcripts.sql</code>.
+          История транскриптов недоступна — проверь, что <code className="rounded bg-apple-bg-soft px-1 py-0.5 text-apple-muted">DB_PATH</code> указывает на доступный файл и папка <code className="rounded bg-apple-bg-soft px-1 py-0.5 text-apple-muted">./data</code> писабельна.
         </p>
       )}
     </div>

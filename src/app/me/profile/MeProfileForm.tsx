@@ -3,6 +3,7 @@ import { useEffect, useRef, useState } from 'react'
 import Link from 'next/link'
 import { ArrowLeft, Check, Loader2, Save, TriangleAlert } from 'lucide-react'
 import MeTabs from '../MeTabs'
+import { apiFetch } from '@/lib/api-client'
 
 type Profile = {
   bio: string
@@ -59,7 +60,7 @@ export default function MeProfileForm() {
 
   useEffect(() => {
     let cancelled = false
-    fetch('/api/me/profile')
+    apiFetch('/api/me/profile')
       .then((r) => r.json())
       .then((data) => {
         if (cancelled) return
@@ -87,7 +88,7 @@ export default function MeProfileForm() {
     setSaving(true)
     setError(null)
     try {
-      const res = await fetch('/api/me/profile', {
+      const res = await apiFetch('/api/me/profile', {
         method: 'PUT',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify(profile),
@@ -131,9 +132,8 @@ export default function MeProfileForm() {
         <div className="flex items-start gap-2 rounded-apple-lg border border-amber-200 bg-amber-50 p-4 text-[13px] text-amber-800">
           <TriangleAlert className="mt-0.5 h-4 w-4 shrink-0" />
           <div>
-            Supabase не настроен. Добавь <code className="rounded bg-white/60 px-1">NEXT_PUBLIC_SUPABASE_URL</code> и{' '}
-            <code className="rounded bg-white/60 px-1">SUPABASE_SERVICE_KEY</code> в .env.local, выполни миграцию{' '}
-            <code className="rounded bg-white/60 px-1">supabase/migrations/003_me.sql</code> в Supabase SQL Editor.
+            Локальная база недоступна. Проверь переменную <code className="rounded bg-white/60 px-1">DB_PATH</code> и
+            что папка <code className="rounded bg-white/60 px-1">./data</code> доступна на запись.
           </div>
         </div>
       )}

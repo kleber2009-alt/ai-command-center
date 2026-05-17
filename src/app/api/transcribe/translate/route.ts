@@ -1,5 +1,6 @@
 import { NextRequest, NextResponse } from 'next/server'
 import { getTranscript, updateTranscriptTranslation } from '@/lib/transcripts-db'
+import { requireTelegramAuth } from '@/lib/telegram-auth'
 
 export const maxDuration = 60
 
@@ -19,6 +20,8 @@ ${text.slice(0, 30000)}
 """`
 
 export async function POST(req: NextRequest) {
+  const gate = requireTelegramAuth(req)
+  if (gate) return gate
   const { id, transcript, targetLang } = (await req.json()) as Body
 
   if (!targetLang || !['ru', 'en'].includes(targetLang)) {

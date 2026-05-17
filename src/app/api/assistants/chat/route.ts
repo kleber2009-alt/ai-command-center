@@ -1,6 +1,7 @@
 import { NextRequest, NextResponse } from 'next/server'
 import { getAssistant } from '@/data/assistants'
 import { streamAnthropic } from '@/lib/anthropic-stream'
+import { requireTelegramAuth } from '@/lib/telegram-auth'
 
 export const maxDuration = 60
 
@@ -8,6 +9,8 @@ type Msg = { role: 'user' | 'assistant'; content: string }
 type Body = { assistantId: string; messages: Msg[] }
 
 export async function POST(req: NextRequest) {
+  const gate = requireTelegramAuth(req)
+  if (gate) return gate
   const { assistantId, messages } = (await req.json()) as Body
 
   if (!assistantId || !Array.isArray(messages) || messages.length === 0) {

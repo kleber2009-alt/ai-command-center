@@ -2,6 +2,7 @@ import { NextRequest, NextResponse } from 'next/server'
 import { embed } from '@/lib/embeddings'
 import { loadProfile, profileToContext, searchChunks, type MeChunkMatch } from '@/lib/me-db'
 import { streamAnthropic } from '@/lib/anthropic-stream'
+import { requireTelegramAuth } from '@/lib/telegram-auth'
 
 export const maxDuration = 60
 
@@ -18,6 +19,8 @@ const SYSTEM_INSTRUCTIONS = `Ты — личный «второй мозг» п�
 - Соблюдай голос и стиль пользователя, если он описан в блоке "Голос и стиль".`
 
 export async function POST(req: NextRequest) {
+  const gate = requireTelegramAuth(req)
+  if (gate) return gate
   const body = (await req.json()) as Body
   const messages = Array.isArray(body.messages) ? body.messages : []
   const topK = Math.max(1, Math.min(20, body.topK ?? 8))

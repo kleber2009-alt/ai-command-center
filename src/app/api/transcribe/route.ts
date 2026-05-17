@@ -7,6 +7,7 @@ import {
   isYtdlpServiceConfigured,
   YtdlpServiceError,
 } from '@/lib/ytdlp-client'
+import { requireTelegramAuth } from '@/lib/telegram-auth'
 
 export const maxDuration = 60
 
@@ -214,6 +215,8 @@ async function dispatch(url: string, language: 'auto' | 'ru' | 'en'): Promise<Re
 }
 
 export async function POST(req: NextRequest) {
+  const gate = requireTelegramAuth(req)
+  if (gate) return gate
   const { url, language = 'ru' } = (await req.json()) as Body
 
   if (!url || typeof url !== 'string' || !/^https?:\/\//i.test(url)) {

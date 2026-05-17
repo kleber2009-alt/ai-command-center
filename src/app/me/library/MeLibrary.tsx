@@ -2,9 +2,10 @@
 import { useEffect, useRef, useState } from 'react'
 import Link from 'next/link'
 import {
-  ArrowLeft, FileText, Loader2, Plus, Trash2, TriangleAlert, Upload, FileType, FileBadge, FileAudio,
+  ArrowLeft, ChevronRight, FileAudio, FileText, FileType, Loader2, Plus, Trash2, TriangleAlert, Upload,
 } from 'lucide-react'
 import MeTabs from '../MeTabs'
+import { apiFetch } from '@/lib/api-client'
 
 type Doc = {
   id: string
@@ -50,7 +51,7 @@ export default function MeLibrary() {
     setLoading(true)
     setError(null)
     try {
-      const res = await fetch('/api/me/documents')
+      const res = await apiFetch('/api/me/documents')
       const data = await res.json()
       if (!res.ok) throw new Error(data?.error || `Ошибка ${res.status}`)
       setItems(data.items ?? [])
@@ -72,7 +73,7 @@ export default function MeLibrary() {
     setAdding(true)
     setError(null)
     try {
-      const res = await fetch('/api/me/documents', {
+      const res = await apiFetch('/api/me/documents', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({ title: title.trim(), text }),
@@ -97,7 +98,7 @@ export default function MeLibrary() {
       const fd = new FormData()
       fd.append('file', file)
       if (title.trim()) fd.append('title', title.trim())
-      const res = await fetch('/api/me/documents', { method: 'POST', body: fd })
+      const res = await apiFetch('/api/me/documents', { method: 'POST', body: fd })
       const data = await res.json()
       if (!res.ok) throw new Error(data?.error || `Ошибка ${res.status}`)
       setTitle('')
@@ -115,7 +116,7 @@ export default function MeLibrary() {
     if (!confirm('Удалить документ из базы? Это удалит и все его чанки.')) return
     setError(null)
     try {
-      const res = await fetch(`/api/me/documents/${id}`, { method: 'DELETE' })
+      const res = await apiFetch(`/api/me/documents/${id}`, { method: 'DELETE' })
       if (!res.ok) {
         const data = await res.json().catch(() => ({}))
         throw new Error(data?.error || `Ошибка ${res.status}`)
@@ -146,9 +147,8 @@ export default function MeLibrary() {
         <div className="flex items-start gap-2 rounded-apple-lg border border-amber-200 bg-amber-50 p-4 text-[13px] text-amber-800">
           <TriangleAlert className="mt-0.5 h-4 w-4 shrink-0" />
           <div>
-            Supabase не настроен. Нужны <code className="rounded bg-white/60 px-1">NEXT_PUBLIC_SUPABASE_URL</code>,{' '}
-            <code className="rounded bg-white/60 px-1">SUPABASE_SERVICE_KEY</code>, <code className="rounded bg-white/60 px-1">OPENAI_API_KEY</code>{' '}
-            и миграция <code className="rounded bg-white/60 px-1">003_me.sql</code>.
+            База недоступна. Проверь, что переменная <code className="rounded bg-white/60 px-1">DB_PATH</code> указывает на доступный путь, а
+            <code className="rounded bg-white/60 px-1">OPENAI_API_KEY</code> задан в <code className="rounded bg-white/60 px-1">.env</code>.
           </div>
         </div>
       )}
@@ -268,30 +268,36 @@ export default function MeLibrary() {
                 d.source_type === 'paste' ? FileText : d.source_type === 'transcript' ? FileAudio : FileType
               return (
                 <li key={d.id} className={i > 0 ? 'border-t border-apple-line' : ''}>
-                  <div className="flex items-start gap-3 px-4 py-3.5 sm:px-5">
-                    <div className="mt-0.5 grid h-9 w-9 shrink-0 place-items-center rounded-full bg-apple-bg-soft text-apple-muted">
-                      <Icon className="h-[16px] w-[16px]" />
-                    </div>
-                    <div className="min-w-0 flex-1">
-                      <div className="truncate text-[14px] font-medium text-apple-ink">{d.title}</div>
-                      <div className="mt-0.5 flex flex-wrap items-center gap-1.5 text-[12px] text-apple-faint">
-                        <span>{timeAgo(d.created_at)}</span>
-                        <span>·</span>
-                        <span>{d.char_count.toLocaleString('ru-RU')} симв.</span>
-                        <span>·</span>
-                        <span>{d.chunk_count} {d.chunk_count === 1 ? 'фрагмент' : 'фрагментов'}</span>
-                        {d.source_meta?.filename && (
-                          <>
-                            <span>·</span>
-                            <span className="truncate">{d.source_meta.filename}</span>
-                          </>
-                        )}
+                  <div className="group flex items-stretch">
+                    <Link
+                      href={`/me/library/${d.id}`}
+                      className="flex flex-1 items-start gap-3 px-4 py-3.5 transition-colors hover:bg-apple-bg-soft sm:px-5"
+                    >
+                      <div className="mt-0.5 grid h-9 w-9 shrink-0 place-items-center rounded-full bg-apple-bg-soft text-apple-muted group-hover:bg-white group-hover:shadow-apple-sm">
+                        <Icon className="h-[16px] w-[16px]" />
                       </div>
-                    </div>
+                      <div className="min-w-0 flex-1">
+                        <div className="truncate text-[14px] font-medium text-apple-ink">{d.title}</div>
+                        <div className="mt-0.5 flex flex-wrap items-center gap-1.5 text-[12px] text-apple-faint">
+                          <span>{timeAgo(d.created_at)}</span>
+                          <span>·</span>
+                          <span>{d.char_count.toLocaleString('ru-RU')} симв.</span>
+                          <span>·</span>
+                          <span>{d.chunk_count} {d.chunk_count === 1 ? 'фрагмент' : 'фрагментов'}</span>
+                          {d.source_meta?.filename && (
+                            <>
+                              <span>·</span>
+                              <span className="truncate">{d.source_meta.filename}</span>
+                            </>
+                          )}
+                        </div>
+                      </div>
+                      <ChevronRight className="mt-2 h-4 w-4 shrink-0 text-apple-faint group-hover:text-apple-muted" />
+                    </Link>
                     <button
                       type="button"
                       onClick={() => remove(d.id)}
-                      className="grid h-8 w-8 shrink-0 place-items-center rounded-full text-apple-faint transition-colors hover:bg-red-50 hover:text-red-500"
+                      className="my-auto mr-3 grid h-8 w-8 shrink-0 place-items-center rounded-full text-apple-faint transition-colors hover:bg-red-50 hover:text-red-500"
                       aria-label="Удалить"
                       title="Удалить"
                     >

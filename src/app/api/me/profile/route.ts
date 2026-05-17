@@ -1,7 +1,10 @@
 import { NextRequest, NextResponse } from 'next/server'
 import { loadProfile, saveProfile } from '@/lib/me-db'
+import { requireTelegramAuth } from '@/lib/telegram-auth'
 
-export async function GET() {
+export async function GET(req: NextRequest) {
+  const gate = requireTelegramAuth(req)
+  if (gate) return gate
   try {
     return NextResponse.json({ profile: loadProfile(), configured: true })
   } catch (e: any) {
@@ -10,6 +13,8 @@ export async function GET() {
 }
 
 export async function PUT(req: NextRequest) {
+  const gate = requireTelegramAuth(req)
+  if (gate) return gate
   try {
     const body = (await req.json()) as Record<string, any>
     const updated = saveProfile({

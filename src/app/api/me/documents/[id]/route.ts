@@ -1,7 +1,19 @@
 import { NextRequest, NextResponse } from 'next/server'
-import { deleteDocument, getDocument } from '@/lib/me-db'
+import { chunkText } from '@/lib/chunking'
+import { embedBatch } from '@/lib/embeddings'
+import {
+  deleteDocument,
+  getDocument,
+  replaceDocumentText,
+  updateDocumentTitle,
+} from '@/lib/me-db'
+import { requireTelegramAuth } from '@/lib/telegram-auth'
 
-export async function GET(_req: NextRequest, { params }: { params: { id: string } }) {
+export const maxDuration = 120
+
+export async function GET(req: NextRequest, { params }: { params: { id: string } }) {
+  const gate = requireTelegramAuth(req)
+  if (gate) return gate
   const id = Number(params.id)
   if (!Number.isInteger(id)) return NextResponse.json({ error: 'Невалидный id' }, { status: 400 })
   const doc = getDocument(id)
@@ -9,7 +21,60 @@ export async function GET(_req: NextRequest, { params }: { params: { id: string 
   return NextResponse.json({ document: doc })
 }
 
-export async function DELETE(_req: NextRequest, { params }: { params: { id: string } }) {
+export async function PUT(req: NextRequest, { params }: { params: { id: string } }) {
+  const gate = requireTelegramAuth(req)
+  if (gate) return gate
+  const id = Number(params.id)
+  if (!Number.isInteger(id)) return NextResponse.json({ error: 'Невалидный id' }, { status: 400 })
+
+  const existing = getDocument(id)
+  if (!existing) return NextResponse.json({ error: 'Не найдено' }, { status: 404 })
+
+  const body = (await req.json().catch(() => ({}))) as { title?: string; text?: string }
+  const title = typeof body.title === 'string' ? body.title.trim() : undefined
+  const text = typeof body.text === 'string' ? body.text : undefined
+
+  // Title-only update: cheap, no re-embed.
+  if (text === undefined || text === existing.original_text) {
+    if (title === undefined || title === existing.title) {
+      return NextResponse.json({ document: existing, reembedded: false })
+    }
+    const updated = updateDocumentTitle(id, title)
+    if (!updated) return NextResponse.json({ error: 'Не удалось обновить' }, { status: 500 })
+    return NextResponse.json({ document: updated, reembedded: false })
+  }
+
+  // Text changed — need to re-chunk + re-embed.
+  if (!process.env.OPENAI_API_KEY) {
+    return NextResponse.json(
+      { error: 'OPENAI_API_KEY не настроен — нельзя переэмбеддить документ' },
+      { status: 500 },
+    )
+  }
+
+  const cleaned = text.trim()
+  if (!cleaned) return NextResponse.json({ error: 'Пустой текст' }, { status: 400 })
+
+  const chunks = chunkText(cleaned)
+  if (chunks.length === 0) {
+    return NextResponse.json({ error: 'Не удалось разбить текст на куски' }, { status: 400 })
+  }
+
+  let embeddings: number[][]
+  try {
+    embeddings = await embedBatch(chunks)
+  } catch (e: any) {
+    return NextResponse.json({ error: e?.message || 'Ошибка эмбеддинга' }, { status: 500 })
+  }
+
+  const updated = replaceDocumentText({ id, title, text: cleaned, chunks, embeddings })
+  if (!updated) return NextResponse.json({ error: 'Не удалось обновить документ' }, { status: 500 })
+  return NextResponse.json({ document: updated, reembedded: true })
+}
+
+export async function DELETE(req: NextRequest, { params }: { params: { id: string } }) {
+  const gate = requireTelegramAuth(req)
+  if (gate) return gate
   const id = Number(params.id)
   if (!Number.isInteger(id)) return NextResponse.json({ error: 'Невалидный id' }, { status: 400 })
   const ok = deleteDocument(id)

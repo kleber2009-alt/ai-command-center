@@ -7,6 +7,7 @@ import {
 } from 'lucide-react'
 import { getTelegram, isInTelegram } from '@/lib/telegram'
 import { readNdjson } from '@/lib/stream-client'
+import { apiFetch } from '@/lib/api-client'
 
 const ICONS: Record<string, any> = {
   Target, MessagesSquare, Send, Flame, Package, Filter, BookOpen, Magnet, LayoutGrid, Sparkles,
@@ -75,7 +76,7 @@ export default function AssistantChat({ id, name, description, icon, buttonText,
     if (isInTelegram()) getTelegram()?.HapticFeedback?.impactOccurred?.('light')
 
     try {
-      const res = await fetch('/api/assistants/chat', {
+      const res = await apiFetch('/api/assistants/chat', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({ assistantId: id, messages: next }),

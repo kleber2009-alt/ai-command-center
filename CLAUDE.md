@@ -65,6 +65,10 @@ dev). All routes degrade gracefully when keys are missing.
   yt-dlp service.
 - `DOMAIN` — Caddy serves on this domain. Real domain for prod (auto
   Let's Encrypt); `localhost` for local Docker testing.
+- `TELEGRAM_BOT_TOKEN` — when set, every `/api/*` route requires a valid
+  Telegram Mini App `initData` in `Authorization: tma <initData>`. The
+  browser client (`src/lib/api-client.ts`) attaches it automatically when
+  the page is opened inside Telegram. Leave empty to keep the API open.
 
 ## Architecture
 
@@ -115,9 +119,17 @@ Russian; comments / identifiers stay English. Path alias `@/* → src/*`
 - `GET|PUT /api/me/profile`.
 - `GET|POST /api/me/documents` — `POST` accepts JSON `{title, text}` or
   multipart with a file (.txt / .md / .csv / .json / .pdf / .docx).
-- `GET|DELETE /api/me/documents/[id]`.
+- `GET|PUT|DELETE /api/me/documents/[id]` — `PUT` accepts `{title?, text?}`;
+  when `text` changes the document is re-chunked and re-embedded.
 - `POST /api/me/chat` — RAG; streams NDJSON with `meta` citations event.
 - `POST /api/assistants/chat` — streams NDJSON.
+
+**Auth gate** (`src/lib/telegram-auth.ts` + `src/lib/api-client.ts`):
+- When `TELEGRAM_BOT_TOKEN` is set, every API route validates the
+  `Authorization: tma <initData>` header against the bot token using HMAC
+  SHA-256 per Telegram's spec. Empty token → gate is bypassed.
+- Client-side, `apiFetch()` wraps the global `fetch` and injects the
+  header automatically when `window.Telegram.WebApp.initData` is present.
 
 ## Telegram Mini App
 

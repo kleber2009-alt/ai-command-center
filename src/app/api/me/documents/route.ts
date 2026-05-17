@@ -2,6 +2,7 @@ import { NextRequest, NextResponse } from 'next/server'
 import { chunkText } from '@/lib/chunking'
 import { embedBatch } from '@/lib/embeddings'
 import { createDocumentWithEmbeddings, listDocuments } from '@/lib/me-db'
+import { requireTelegramAuth } from '@/lib/telegram-auth'
 
 export const maxDuration = 120
 
@@ -36,7 +37,9 @@ async function extractFileText(file: File): Promise<string> {
   throw new Error(`Не поддерживаю файл: ${file.name}. Используй .txt, .md, .csv, .json, .pdf или .docx.`)
 }
 
-export async function GET() {
+export async function GET(req: NextRequest) {
+  const gate = requireTelegramAuth(req)
+  if (gate) return gate
   try {
     return NextResponse.json({ items: listDocuments(200), configured: true })
   } catch (e: any) {
@@ -45,6 +48,8 @@ export async function GET() {
 }
 
 export async function POST(req: NextRequest) {
+  const gate = requireTelegramAuth(req)
+  if (gate) return gate
   if (!process.env.OPENAI_API_KEY) {
     return NextResponse.json({ error: 'OPENAI_API_KEY не настроен' }, { status: 500 })
   }

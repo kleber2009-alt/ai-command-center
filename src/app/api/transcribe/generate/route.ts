@@ -1,5 +1,6 @@
 import { NextRequest, NextResponse } from 'next/server'
 import { getTranscript, mergeTranscriptGenerations } from '@/lib/transcripts-db'
+import { requireTelegramAuth } from '@/lib/telegram-auth'
 
 export const maxDuration = 60
 
@@ -186,6 +187,8 @@ function validate(type: GenType, content: any): GenContent {
 }
 
 export async function POST(req: NextRequest) {
+  const gate = requireTelegramAuth(req)
+  if (gate) return gate
   const { id, transcript, type } = (await req.json()) as Body
 
   if (!type || !VALID_TYPES.includes(type)) {

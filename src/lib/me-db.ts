@@ -217,6 +217,72 @@ export function createDocumentWithEmbeddings(input: {
   return { ...row, source_meta: safeParseObject(row.source_meta) }
 }
 
+export function updateDocumentTitle(id: number, title: string): MeDocumentRow | null {
+  const db = getDb()
+  const info = db.prepare(`UPDATE me_documents SET title = ? WHERE id = ?`).run(title, id)
+  if (info.changes === 0) return null
+  const row = db
+    .prepare(
+      `SELECT id, created_at, title, source_type, source_meta, char_count, chunk_count
+       FROM me_documents WHERE id = ?`,
+    )
+    .get(id) as (Omit<MeDocumentRow, 'source_meta'> & { source_meta: string }) | undefined
+  return row ? { ...row, source_meta: safeParseObject(row.source_meta) } : null
+}
+
+/** Atomically replace the document text + all its chunks/embeddings. */
+export function replaceDocumentText(input: {
+  id: number
+  title?: string
+  text: string
+  chunks: string[]
+  embeddings: number[][]
+}): MeDocumentRow | null {
+  if (input.chunks.length !== input.embeddings.length) {
+    throw new Error('chunks and embeddings length mismatch')
+  }
+  const db = getDb()
+  const tx = db.transaction(() => {
+    const exists = db.prepare(`SELECT id FROM me_documents WHERE id = ?`).get(input.id)
+    if (!exists) return false
+
+    const oldChunks = db
+      .prepare(`SELECT id FROM me_chunks WHERE document_id = ?`)
+      .all(input.id) as Array<{ id: number }>
+    const delVec = db.prepare(`DELETE FROM vec_me_chunks WHERE rowid = ?`)
+    for (const { id } of oldChunks) delVec.run(id)
+    db.prepare(`DELETE FROM me_chunks WHERE document_id = ?`).run(input.id)
+
+    db.prepare(
+      `UPDATE me_documents
+       SET title = COALESCE(?, title),
+           original_text = ?,
+           char_count = ?,
+           chunk_count = ?
+       WHERE id = ?`,
+    ).run(input.title ?? null, input.text, input.text.length, input.chunks.length, input.id)
+
+    const insChunk = db.prepare(
+      `INSERT INTO me_chunks (document_id, chunk_index, content) VALUES (?, ?, ?)`,
+    )
+    const insVec = db.prepare(`INSERT INTO vec_me_chunks (rowid, embedding) VALUES (?, ?)`)
+    for (let i = 0; i < input.chunks.length; i++) {
+      const info = insChunk.run(input.id, i, input.chunks[i])
+      insVec.run(Number(info.lastInsertRowid), embeddingToBuffer(input.embeddings[i]))
+    }
+    return true
+  })
+  const ok = tx()
+  if (!ok) return null
+  const row = db
+    .prepare(
+      `SELECT id, created_at, title, source_type, source_meta, char_count, chunk_count
+       FROM me_documents WHERE id = ?`,
+    )
+    .get(input.id) as (Omit<MeDocumentRow, 'source_meta'> & { source_meta: string }) | undefined
+  return row ? { ...row, source_meta: safeParseObject(row.source_meta) } : null
+}
+
 export function searchChunks(queryEmbedding: number[], k = 8): MeChunkMatch[] {
   const buf = embeddingToBuffer(queryEmbedding)
   const rows = getDb()

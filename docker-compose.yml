@@ -16,6 +16,8 @@ services:
       # The yt-dlp companion service runs on the same Docker network
       YTDLP_SERVICE_URL: http://ytdlp:8000
       YTDLP_SERVICE_API_KEY: ${YTDLP_SERVICE_API_KEY:-}
+      # Optional: when set, API routes accept only Telegram Mini App initData
+      TELEGRAM_BOT_TOKEN: ${TELEGRAM_BOT_TOKEN:-}
     volumes:
       - ./data:/app/data
     depends_on:
