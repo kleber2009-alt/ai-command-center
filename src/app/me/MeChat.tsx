@@ -1,6 +1,7 @@
 'use client'
 import { useEffect, useRef, useState } from 'react'
-import { Brain, Check, Copy, History, Loader2, Mic, MessageSquarePlus, Send, Sparkles, Square, Trash2, TriangleAlert } from 'lucide-react'
+import Link from 'next/link'
+import { Brain, BookmarkPlus, Check, Copy, History, Loader2, Mic, MessageSquarePlus, Send, Sparkles, Square, Trash2, TriangleAlert } from 'lucide-react'
 import MeTabs from './MeTabs'
 import { readNdjson } from '@/lib/stream-client'
 import { apiFetch } from '@/lib/api-client'
@@ -22,6 +23,8 @@ export default function MeChat() {
   const [sessionId, setSessionId] = useState<string | null>(null)
   const [drawerOpen, setDrawerOpen] = useState(false)
   const [creatingSession, setCreatingSession] = useState(false)
+  const [savingToBrain, setSavingToBrain] = useState(false)
+  const [savedToBrain, setSavedToBrain] = useState(false)
   const bottomRef = useRef<HTMLDivElement | null>(null)
   const inputRef = useRef<HTMLTextAreaElement | null>(null)
 
@@ -157,6 +160,35 @@ export default function MeChat() {
     } catch {}
   }
 
+  async function saveChatToLibrary() {
+    if (savingToBrain || messages.length === 0) return
+    const usable = messages.filter((m) => m.content && m.content.trim().length > 0)
+    if (usable.length === 0) return
+    setSavingToBrain(true)
+    setError(null)
+    try {
+      const body = usable
+        .map((m) => `### ${m.role === 'user' ? 'Вопрос' : 'Ответ'}\n\n${m.content.trim()}`)
+        .join('\n\n')
+      const firstUser = usable.find((m) => m.role === 'user')?.content?.trim() ?? ''
+      const seed = firstUser.slice(0, 60).replace(/\s+/g, ' ')
+      const title = `Чат: ${seed}${firstUser.length > 60 ? '…' : ''}`
+      const res = await apiFetch('/api/me/documents', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ title, text: body }),
+      })
+      const data = await res.json()
+      if (!res.ok) throw new Error(data?.error || `Ошибка ${res.status}`)
+      setSavedToBrain(true)
+      setTimeout(() => setSavedToBrain(false), 1800)
+    } catch (e: any) {
+      setError(e?.message || 'Не удалось сохранить чат')
+    } finally {
+      setSavingToBrain(false)
+    }
+  }
+
   function onKeyDown(e: React.KeyboardEvent<HTMLTextAreaElement>) {
     if (e.key === 'Enter' && !e.shiftKey) {
       e.preventDefault()
@@ -175,6 +207,24 @@ export default function MeChat() {
             <h1 className="truncate text-[15px] font-semibold text-apple-ink sm:text-base">Второй мозг</h1>
             <p className="truncate text-[12px] text-apple-faint sm:text-[13px]">Знает тебя, твои проекты и материалы</p>
           </div>
+          {messages.length > 0 && (
+            <button
+              type="button"
+              onClick={saveChatToLibrary}
+              disabled={loading || savingToBrain}
+              className="grid h-9 w-9 shrink-0 place-items-center rounded-full text-apple-faint transition-colors hover:bg-apple-bg-soft hover:text-apple-ink disabled:opacity-50"
+              aria-label="Сохранить чат в Базу"
+              title={savedToBrain ? 'Сохранено' : 'Сохранить чат в Базу'}
+            >
+              {savingToBrain ? (
+                <Loader2 className="h-[16px] w-[16px] animate-spin" />
+              ) : savedToBrain ? (
+                <Check className="h-[18px] w-[18px] text-emerald-500" />
+              ) : (
+                <BookmarkPlus className="h-[18px] w-[18px]" />
+              )}
+            </button>
+          )}
           <button
             type="button"
             onClick={createNewSession}
@@ -262,13 +312,14 @@ export default function MeChat() {
               {m.role === 'assistant' && m.citations && m.citations.length > 0 && (
                 <div className="mt-2 flex flex-wrap gap-1.5">
                   {m.citations.map((c, ci) => (
-                    <span
+                    <Link
                       key={ci}
-                      className="rounded-full bg-apple-bg-soft px-2 py-0.5 text-[11px] text-apple-muted"
-                      title={`sim ${(c.similarity * 100).toFixed(0)}%`}
+                      href={`/me/library/${c.document_id}`}
+                      className="rounded-full bg-apple-bg-soft px-2 py-0.5 text-[11px] text-apple-muted transition-colors hover:bg-white hover:text-apple-ink hover:shadow-apple-sm"
+                      title={`Открыть документ · sim ${(c.similarity * 100).toFixed(0)}%`}
                     >
                       [{c.document_title}]
-                    </span>
+                    </Link>
                   ))}
                 </div>
               )}

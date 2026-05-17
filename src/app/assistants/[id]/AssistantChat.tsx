@@ -2,7 +2,7 @@
 import { useEffect, useRef, useState } from 'react'
 import Link from 'next/link'
 import {
-  ArrowLeft, BookOpen, Copy, Filter, Flame, History, LayoutGrid, Loader2, Magnet, MessageSquarePlus,
+  ArrowLeft, BookmarkPlus, BookOpen, Copy, Filter, Flame, History, LayoutGrid, Loader2, Magnet, MessageSquarePlus,
   MessagesSquare, Mic, Package, Send, Sparkles, Square, Target, TriangleAlert, Trash2, Check,
 } from 'lucide-react'
 import { getTelegram, isInTelegram } from '@/lib/telegram'
@@ -48,6 +48,38 @@ export default function AssistantChat({ id, name, description, icon, buttonText,
     onResult: (text) => setInput((cur) => (cur ? cur + (cur.endsWith(' ') ? '' : ' ') + text : text)),
     onError: (msg) => setError(msg),
   })
+
+  const [savingToBrain, setSavingToBrain] = useState(false)
+  const [savedToBrain, setSavedToBrain] = useState(false)
+
+  async function saveChatToLibrary() {
+    if (savingToBrain || messages.length === 0) return
+    const usable = messages.filter((m) => m.content && m.content.trim().length > 0)
+    if (usable.length === 0) return
+    setSavingToBrain(true)
+    setError(null)
+    try {
+      const body = usable
+        .map((m) => `### ${m.role === 'user' ? 'Вопрос' : 'Ответ'}\n\n${m.content.trim()}`)
+        .join('\n\n')
+      const firstUser = usable.find((m) => m.role === 'user')?.content?.trim() ?? ''
+      const seed = firstUser.slice(0, 50).replace(/\s+/g, ' ')
+      const title = `${name} · ${seed}${firstUser.length > 50 ? '…' : ''}`
+      const res = await apiFetch('/api/me/documents', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ title, text: body }),
+      })
+      const data = await res.json()
+      if (!res.ok) throw new Error(data?.error || `Ошибка ${res.status}`)
+      setSavedToBrain(true)
+      setTimeout(() => setSavedToBrain(false), 1800)
+    } catch (e: any) {
+      setError(e?.message || 'Не удалось сохранить чат')
+    } finally {
+      setSavingToBrain(false)
+    }
+  }
 
   useEffect(() => {
     const stored = (() => {
@@ -207,6 +239,24 @@ export default function AssistantChat({ id, name, description, icon, buttonText,
             <h1 className="truncate text-[15px] font-semibold text-apple-ink sm:text-base">{name}</h1>
             <p className="truncate text-[12px] text-apple-faint sm:text-[13px]">{description}</p>
           </div>
+          {messages.length > 0 && (
+            <button
+              type="button"
+              onClick={saveChatToLibrary}
+              disabled={loading || savingToBrain}
+              className="grid h-9 w-9 shrink-0 place-items-center rounded-full text-apple-faint transition-colors hover:bg-apple-bg-soft hover:text-apple-ink disabled:opacity-50"
+              aria-label="Сохранить чат в Базу"
+              title={savedToBrain ? 'Сохранено' : 'Сохранить чат в Базу'}
+            >
+              {savingToBrain ? (
+                <Loader2 className="h-[16px] w-[16px] animate-spin" />
+              ) : savedToBrain ? (
+                <Check className="h-[18px] w-[18px] text-emerald-500" />
+              ) : (
+                <BookmarkPlus className="h-[18px] w-[18px]" />
+              )}
+            </button>
+          )}
           <button
             type="button"
             onClick={createNewSession}
