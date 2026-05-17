@@ -2,18 +2,18 @@ import { NextRequest, NextResponse } from 'next/server'
 import { getAssistant } from '@/data/assistants'
 import { streamAnthropic } from '@/lib/anthropic-stream'
 import { requireTelegramAuth } from '@/lib/telegram-auth'
-import { appendTurn, getSession } from '@/lib/chats-db'
+import { appendTurn, getSession, replaceLastAssistant } from '@/lib/chats-db'
 
 export const maxDuration = 60
 
 type Msg = { role: 'user' | 'assistant'; content: string }
-type Body = { assistantId: string; messages: Msg[]; sessionId?: string }
+type Body = { assistantId: string; messages: Msg[]; sessionId?: string; regenerate?: boolean }
 
 export async function POST(req: NextRequest) {
   const gate = requireTelegramAuth(req)
   if (gate) return gate
   const body = (await req.json()) as Body
-  const { assistantId, messages, sessionId } = body
+  const { assistantId, messages, sessionId, regenerate } = body
 
   if (!assistantId || !Array.isArray(messages) || messages.length === 0) {
     return NextResponse.json({ error: 'Нужны поля assistantId и messages[]' }, { status: 400 })
@@ -48,12 +48,16 @@ export async function POST(req: NextRequest) {
     validSession ? { sessionId: validSession.id } : undefined,
     async (fullText) => {
       if (!validSession) return
-      const lastUser = cleaned[cleaned.length - 1].content
-      appendTurn({
-        sessionId: validSession.id,
-        userMessage: lastUser,
-        assistantMessage: fullText,
-      })
+      if (regenerate) {
+        replaceLastAssistant(validSession.id, fullText)
+      } else {
+        const lastUser = cleaned[cleaned.length - 1].content
+        appendTurn({
+          sessionId: validSession.id,
+          userMessage: lastUser,
+          assistantMessage: fullText,
+        })
+      }
     },
   )
 }

@@ -1,7 +1,7 @@
 'use client'
 import { useEffect, useRef, useState } from 'react'
 import Link from 'next/link'
-import { Brain, BookmarkPlus, Check, Copy, History, Loader2, Mic, MessageSquarePlus, Send, Sparkles, Square, Trash2, TriangleAlert } from 'lucide-react'
+import { Brain, BookmarkPlus, Check, Copy, History, Loader2, Mic, MessageSquarePlus, RefreshCw, Send, Sparkles, Square, Trash2, TriangleAlert } from 'lucide-react'
 import MeTabs from './MeTabs'
 import { readNdjson } from '@/lib/stream-client'
 import { apiFetch } from '@/lib/api-client'
@@ -116,21 +116,27 @@ export default function MeChat() {
     el.style.height = Math.min(el.scrollHeight, 200) + 'px'
   }, [input])
 
-  async function send(userText: string) {
+  async function send(userText: string, opts: { regenerate?: boolean } = {}) {
     const text = userText.trim()
     if (!text || loading) return
     setError(null)
-    const next: Msg[] = [...messages, { role: 'user', content: text }]
-    setMessages([...next, { role: 'assistant', content: '' }])
-    setInput('')
+    const isRegen = !!opts.regenerate
+    // For regen, the user message is already in `messages`; just replace the
+    // last assistant bubble with an empty one to stream into.
+    const baseHistory: Msg[] = isRegen
+      ? messages.filter((m, i) => !(i === messages.length - 1 && m.role === 'assistant'))
+      : [...messages, { role: 'user', content: text }]
+    setMessages([...baseHistory, { role: 'assistant', content: '' }])
+    if (!isRegen) setInput('')
     setLoading(true)
     try {
       const res = await apiFetch('/api/me/chat', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({
-          messages: next.map((m) => ({ role: m.role, content: m.content })),
+          messages: baseHistory.map((m) => ({ role: m.role, content: m.content })),
           sessionId,
+          regenerate: isRegen || undefined,
         }),
       })
       if (!res.ok) {
@@ -160,7 +166,7 @@ export default function MeChat() {
       if (streamError) throw new Error(streamError)
       if (!acc) throw new Error('Пустой ответ от модели')
       // Fire-and-forget: ask Haiku for 3 follow-up questions, attach to last message when ready.
-      const conversation = [...next, { role: 'assistant', content: acc }]
+      const conversation = [...baseHistory, { role: 'assistant', content: acc }]
       apiFetch('/api/me/chat/followups', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
@@ -444,6 +450,23 @@ export default function MeChat() {
                       {q}
                     </button>
                   ))}
+                </div>
+              )}
+              {m.role === 'assistant' && m.content && !loading && i === messages.length - 1 && (
+                <div className="mt-1.5">
+                  <button
+                    type="button"
+                    onClick={() => {
+                      // Find the user message before this one to re-fire.
+                      const prevUser = [...messages.slice(0, i)].reverse().find((x) => x.role === 'user')
+                      if (prevUser) send(prevUser.content, { regenerate: true })
+                    }}
+                    className="inline-flex items-center gap-1.5 rounded-full px-2.5 py-1 text-[11px] text-apple-muted hover:bg-apple-bg-soft hover:text-apple-ink"
+                    title="Сгенерировать заново"
+                  >
+                    <RefreshCw className="h-3 w-3" />
+                    Заново
+                  </button>
                 </div>
               )}
             </div>

@@ -125,3 +125,26 @@ export function renameSession(id: string, title: string): boolean {
     .run(title, nowIso(), id)
   return info.changes > 0
 }
+
+/**
+ * Replace the most recent assistant message in a session. Used by the
+ * regenerate flow so a re-generation doesn't duplicate the user turn.
+ * No-ops when the session has no assistant messages yet.
+ */
+export function replaceLastAssistant(sessionId: string, content: string): boolean {
+  const db = getDb()
+  const tx = db.transaction(() => {
+    const last = db
+      .prepare(
+        `SELECT id FROM chat_messages
+         WHERE session_id = ? AND role = 'assistant'
+         ORDER BY id DESC LIMIT 1`,
+      )
+      .get(sessionId) as { id: number } | undefined
+    if (!last) return false
+    db.prepare(`UPDATE chat_messages SET content = ? WHERE id = ?`).run(content, last.id)
+    db.prepare(`UPDATE chat_sessions SET updated_at = ? WHERE id = ?`).run(nowIso(), sessionId)
+    return true
+  })
+  return tx()
+}
