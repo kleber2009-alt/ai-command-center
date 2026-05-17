@@ -1,14 +1,15 @@
 'use client'
 import { useEffect, useRef, useState } from 'react'
-import { Brain, Check, Copy, Loader2, Send, Sparkles, Trash2, TriangleAlert } from 'lucide-react'
+import { Brain, Check, Copy, History, Loader2, MessageSquarePlus, Send, Sparkles, Trash2, TriangleAlert } from 'lucide-react'
 import MeTabs from './MeTabs'
 import { readNdjson } from '@/lib/stream-client'
 import { apiFetch } from '@/lib/api-client'
+import ChatSessionsDrawer from '@/components/ChatSessionsDrawer'
 
 type Msg = { role: 'user' | 'assistant'; content: string; citations?: Citation[] }
 type Citation = { document_id: string; document_title: string; chunk_index: number; similarity: number }
 
-const STORAGE_KEY = 'me-chat:singleton'
+const SESSION_KEY = 'me-chat:session-id'
 
 export default function MeChat() {
   const [messages, setMessages] = useState<Msg[]>([])
@@ -16,24 +17,63 @@ export default function MeChat() {
   const [loading, setLoading] = useState(false)
   const [error, setError] = useState<string | null>(null)
   const [copiedIdx, setCopiedIdx] = useState<number | null>(null)
+  const [sessionId, setSessionId] = useState<string | null>(null)
+  const [drawerOpen, setDrawerOpen] = useState(false)
+  const [creatingSession, setCreatingSession] = useState(false)
   const bottomRef = useRef<HTMLDivElement | null>(null)
   const inputRef = useRef<HTMLTextAreaElement | null>(null)
 
+  // Resume the last session if we have one, else create a new one.
   useEffect(() => {
-    try {
-      const raw = localStorage.getItem(STORAGE_KEY)
-      if (raw) {
-        const parsed = JSON.parse(raw) as Msg[]
-        if (Array.isArray(parsed)) setMessages(parsed)
+    const stored = (() => {
+      try {
+        return localStorage.getItem(SESSION_KEY)
+      } catch {
+        return null
       }
-    } catch {}
+    })()
+    if (stored) {
+      loadSession(stored).catch(() => createNewSession())
+    } else {
+      createNewSession()
+    }
+    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [])
 
-  useEffect(() => {
+  async function createNewSession() {
+    setCreatingSession(true)
     try {
-      localStorage.setItem(STORAGE_KEY, JSON.stringify(messages))
-    } catch {}
-  }, [messages])
+      const res = await apiFetch('/api/me/chats', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ kind: 'me' }),
+      })
+      const data = await res.json()
+      if (!res.ok) throw new Error(data?.error || `Ошибка ${res.status}`)
+      const id: string = data.session.id
+      setSessionId(id)
+      setMessages([])
+      setError(null)
+      try { localStorage.setItem(SESSION_KEY, id) } catch {}
+    } catch (e: any) {
+      setError(e?.message || 'Не удалось создать сессию')
+    } finally {
+      setCreatingSession(false)
+    }
+  }
+
+  async function loadSession(id: string) {
+    const res = await apiFetch(`/api/me/chats/${id}`)
+    if (!res.ok) {
+      try { localStorage.removeItem(SESSION_KEY) } catch {}
+      throw new Error('Сессия не найдена')
+    }
+    const data = await res.json()
+    setSessionId(data.session.id)
+    setMessages((data.messages ?? []).map((m: any) => ({ role: m.role, content: m.content })))
+    setError(null)
+    try { localStorage.setItem(SESSION_KEY, data.session.id) } catch {}
+  }
 
   useEffect(() => {
     bottomRef.current?.scrollIntoView({ behavior: 'smooth', block: 'end' })
@@ -58,7 +98,10 @@ export default function MeChat() {
       const res = await apiFetch('/api/me/chat', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ messages: next.map((m) => ({ role: m.role, content: m.content })) }),
+        body: JSON.stringify({
+          messages: next.map((m) => ({ role: m.role, content: m.content })),
+          sessionId,
+        }),
       })
       if (!res.ok) {
         const data = await res.json().catch(() => ({}))
@@ -99,13 +142,6 @@ export default function MeChat() {
     }
   }
 
-  function clearChat() {
-    if (loading) return
-    if (!confirm('Очистить переписку?')) return
-    setMessages([])
-    setError(null)
-  }
-
   async function copyMessage(text: string, idx: number) {
     try {
       await navigator.clipboard.writeText(text)
@@ -132,23 +168,41 @@ export default function MeChat() {
             <h1 className="truncate text-[15px] font-semibold text-apple-ink sm:text-base">Второй мозг</h1>
             <p className="truncate text-[12px] text-apple-faint sm:text-[13px]">Знает тебя, твои проекты и материалы</p>
           </div>
-          {messages.length > 0 && (
-            <button
-              type="button"
-              onClick={clearChat}
-              disabled={loading}
-              className="grid h-9 w-9 shrink-0 place-items-center rounded-full text-apple-faint transition-colors hover:bg-apple-bg-soft hover:text-apple-ink disabled:opacity-50"
-              aria-label="Очистить"
-              title="Очистить переписку"
-            >
-              <Trash2 className="h-[16px] w-[16px]" />
-            </button>
-          )}
+          <button
+            type="button"
+            onClick={createNewSession}
+            disabled={loading || creatingSession}
+            className="grid h-9 w-9 shrink-0 place-items-center rounded-full text-apple-faint transition-colors hover:bg-apple-bg-soft hover:text-apple-ink disabled:opacity-50"
+            aria-label="Новый чат"
+            title="Новый чат"
+          >
+            <MessageSquarePlus className="h-[18px] w-[18px]" />
+          </button>
+          <button
+            type="button"
+            onClick={() => setDrawerOpen(true)}
+            disabled={loading}
+            className="grid h-9 w-9 shrink-0 place-items-center rounded-full text-apple-faint transition-colors hover:bg-apple-bg-soft hover:text-apple-ink disabled:opacity-50"
+            aria-label="История чатов"
+            title="История чатов"
+          >
+            <History className="h-[18px] w-[18px]" />
+          </button>
         </div>
         <div className="mt-3">
           <MeTabs active="chat" />
         </div>
       </header>
+
+      <ChatSessionsDrawer
+        open={drawerOpen}
+        onClose={() => setDrawerOpen(false)}
+        kind="me"
+        assistantId={null}
+        currentSessionId={sessionId}
+        onSelect={(id) => loadSession(id)}
+        onNew={createNewSession}
+      />
 
       <div className="flex-1 space-y-3 pb-4">
         {messages.length === 0 && (

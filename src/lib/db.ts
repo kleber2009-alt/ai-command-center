@@ -59,6 +59,29 @@ CREATE TABLE IF NOT EXISTS me_chunks (
   created_at TEXT NOT NULL DEFAULT (strftime('%Y-%m-%dT%H:%M:%fZ', 'now'))
 );
 CREATE INDEX IF NOT EXISTS me_chunks_document_idx ON me_chunks (document_id);
+
+-- Chat history. One row per persisted conversation, with a kind (the /me
+-- second brain vs. one of the specialized /assistants) and the assistant
+-- slug when kind = 'assistant'.
+CREATE TABLE IF NOT EXISTS chat_sessions (
+  id TEXT PRIMARY KEY,
+  kind TEXT NOT NULL CHECK (kind IN ('me', 'assistant')),
+  assistant_id TEXT,
+  title TEXT NOT NULL DEFAULT '',
+  created_at TEXT NOT NULL DEFAULT (strftime('%Y-%m-%dT%H:%M:%fZ', 'now')),
+  updated_at TEXT NOT NULL DEFAULT (strftime('%Y-%m-%dT%H:%M:%fZ', 'now'))
+);
+CREATE INDEX IF NOT EXISTS chat_sessions_lookup_idx
+  ON chat_sessions (kind, assistant_id, updated_at DESC);
+
+CREATE TABLE IF NOT EXISTS chat_messages (
+  id INTEGER PRIMARY KEY AUTOINCREMENT,
+  session_id TEXT NOT NULL REFERENCES chat_sessions(id) ON DELETE CASCADE,
+  role TEXT NOT NULL CHECK (role IN ('user', 'assistant')),
+  content TEXT NOT NULL,
+  created_at TEXT NOT NULL DEFAULT (strftime('%Y-%m-%dT%H:%M:%fZ', 'now'))
+);
+CREATE INDEX IF NOT EXISTS chat_messages_session_idx ON chat_messages (session_id, id);
 `
 
 const VEC_SCHEMA = `

@@ -2,16 +2,18 @@ import { NextRequest, NextResponse } from 'next/server'
 import { getAssistant } from '@/data/assistants'
 import { streamAnthropic } from '@/lib/anthropic-stream'
 import { requireTelegramAuth } from '@/lib/telegram-auth'
+import { appendTurn, getSession } from '@/lib/chats-db'
 
 export const maxDuration = 60
 
 type Msg = { role: 'user' | 'assistant'; content: string }
-type Body = { assistantId: string; messages: Msg[] }
+type Body = { assistantId: string; messages: Msg[]; sessionId?: string }
 
 export async function POST(req: NextRequest) {
   const gate = requireTelegramAuth(req)
   if (gate) return gate
-  const { assistantId, messages } = (await req.json()) as Body
+  const body = (await req.json()) as Body
+  const { assistantId, messages, sessionId } = body
 
   if (!assistantId || !Array.isArray(messages) || messages.length === 0) {
     return NextResponse.json({ error: 'Нужны поля assistantId и messages[]' }, { status: 400 })
@@ -32,10 +34,26 @@ export async function POST(req: NextRequest) {
     return NextResponse.json({ error: 'Первое сообщение должно быть от пользователя' }, { status: 400 })
   }
 
-  return streamAnthropic({
-    apiKey: process.env.ANTHROPIC_API_KEY,
-    model: 'claude-sonnet-4-6',
-    system: assistant.systemPrompt,
-    messages: cleaned,
-  })
+  const session = sessionId ? getSession(sessionId) : null
+  const validSession =
+    session && session.kind === 'assistant' && session.assistant_id === assistantId ? session : null
+
+  return streamAnthropic(
+    {
+      apiKey: process.env.ANTHROPIC_API_KEY,
+      model: 'claude-sonnet-4-6',
+      system: assistant.systemPrompt,
+      messages: cleaned,
+    },
+    validSession ? { sessionId: validSession.id } : undefined,
+    async (fullText) => {
+      if (!validSession) return
+      const lastUser = cleaned[cleaned.length - 1].content
+      appendTurn({
+        sessionId: validSession.id,
+        userMessage: lastUser,
+        assistantMessage: fullText,
+      })
+    },
+  )
 }

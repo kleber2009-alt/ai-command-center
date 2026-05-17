@@ -3,11 +3,12 @@ import { embed } from '@/lib/embeddings'
 import { loadProfile, profileToContext, searchChunks, type MeChunkMatch } from '@/lib/me-db'
 import { streamAnthropic } from '@/lib/anthropic-stream'
 import { requireTelegramAuth } from '@/lib/telegram-auth'
+import { appendTurn, getSession } from '@/lib/chats-db'
 
 export const maxDuration = 60
 
 type Msg = { role: 'user' | 'assistant'; content: string }
-type Body = { messages: Msg[]; topK?: number }
+type Body = { messages: Msg[]; topK?: number; sessionId?: string }
 
 const SYSTEM_INSTRUCTIONS = `Ты — личный «второй мозг» пользователя. Ты знаешь о нём всё, что приведено ниже в блоке ## Профиль и в найденных фрагментах ## Контекст.
 
@@ -68,6 +69,10 @@ export async function POST(req: NextRequest) {
   else systemParts.push('## Контекст\n(релевантных фрагментов не найдено — используй только профиль и общие знания)')
   const system = systemParts.join('\n\n')
 
+  // Only persist when the client supplied a valid session id of kind='me'.
+  const session = body.sessionId ? getSession(body.sessionId) : null
+  const validSession = session && session.kind === 'me' ? session : null
+
   return streamAnthropic(
     {
       apiKey: process.env.ANTHROPIC_API_KEY,
@@ -75,6 +80,14 @@ export async function POST(req: NextRequest) {
       system,
       messages: messages.map((m) => ({ role: m.role, content: m.content.slice(0, 50000) })),
     },
-    { citations },
+    { citations, sessionId: validSession?.id ?? null },
+    async (fullText) => {
+      if (!validSession) return
+      appendTurn({
+        sessionId: validSession.id,
+        userMessage: lastUser,
+        assistantMessage: fullText,
+      })
+    },
   )
 }

@@ -2,12 +2,13 @@
 import { useEffect, useRef, useState } from 'react'
 import Link from 'next/link'
 import {
-  ArrowLeft, BookOpen, Copy, Filter, Flame, LayoutGrid, Loader2, Magnet,
+  ArrowLeft, BookOpen, Copy, Filter, Flame, History, LayoutGrid, Loader2, Magnet, MessageSquarePlus,
   MessagesSquare, Package, Send, Sparkles, Target, TriangleAlert, Trash2, Check,
 } from 'lucide-react'
 import { getTelegram, isInTelegram } from '@/lib/telegram'
 import { readNdjson } from '@/lib/stream-client'
 import { apiFetch } from '@/lib/api-client'
+import ChatSessionsDrawer from '@/components/ChatSessionsDrawer'
 
 const ICONS: Record<string, any> = {
   Target, MessagesSquare, Send, Flame, Package, Filter, BookOpen, Magnet, LayoutGrid, Sparkles,
@@ -24,8 +25,8 @@ type Props = {
   helpText: string
 }
 
-function storageKey(id: string) {
-  return `assistant-chat:${id}`
+function sessionKey(id: string) {
+  return `assistant-chat:${id}:session`
 }
 
 export default function AssistantChat({ id, name, description, icon, buttonText, helpText }: Props) {
@@ -35,24 +36,66 @@ export default function AssistantChat({ id, name, description, icon, buttonText,
   const [loading, setLoading] = useState(false)
   const [error, setError] = useState<string | null>(null)
   const [copiedIdx, setCopiedIdx] = useState<number | null>(null)
+  const [sessionId, setSessionId] = useState<string | null>(null)
+  const [drawerOpen, setDrawerOpen] = useState(false)
+  const [creatingSession, setCreatingSession] = useState(false)
   const bottomRef = useRef<HTMLDivElement | null>(null)
   const inputRef = useRef<HTMLTextAreaElement | null>(null)
 
   useEffect(() => {
-    try {
-      const raw = localStorage.getItem(storageKey(id))
-      if (raw) {
-        const parsed = JSON.parse(raw) as Msg[]
-        if (Array.isArray(parsed)) setMessages(parsed)
+    const stored = (() => {
+      try {
+        return localStorage.getItem(sessionKey(id))
+      } catch {
+        return null
       }
-    } catch {}
+    })()
+    if (stored) {
+      loadSession(stored).catch(() => createNewSession())
+    } else {
+      createNewSession()
+    }
+    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [id])
 
-  useEffect(() => {
+  async function createNewSession() {
+    setCreatingSession(true)
     try {
-      localStorage.setItem(storageKey(id), JSON.stringify(messages))
-    } catch {}
-  }, [id, messages])
+      const res = await apiFetch('/api/me/chats', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ kind: 'assistant', assistantId: id }),
+      })
+      const data = await res.json()
+      if (!res.ok) throw new Error(data?.error || `Ошибка ${res.status}`)
+      const sid: string = data.session.id
+      setSessionId(sid)
+      setMessages([])
+      setError(null)
+      try { localStorage.setItem(sessionKey(id), sid) } catch {}
+    } catch (e: any) {
+      setError(e?.message || 'Не удалось создать сессию')
+    } finally {
+      setCreatingSession(false)
+    }
+  }
+
+  async function loadSession(sid: string) {
+    const res = await apiFetch(`/api/me/chats/${sid}`)
+    if (!res.ok) {
+      try { localStorage.removeItem(sessionKey(id)) } catch {}
+      throw new Error('Сессия не найдена')
+    }
+    const data = await res.json()
+    if (data.session?.assistant_id !== id) {
+      try { localStorage.removeItem(sessionKey(id)) } catch {}
+      throw new Error('Сессия другого ассистента')
+    }
+    setSessionId(data.session.id)
+    setMessages((data.messages ?? []).map((m: any) => ({ role: m.role, content: m.content })))
+    setError(null)
+    try { localStorage.setItem(sessionKey(id), data.session.id) } catch {}
+  }
 
   useEffect(() => {
     bottomRef.current?.scrollIntoView({ behavior: 'smooth', block: 'end' })
@@ -79,7 +122,7 @@ export default function AssistantChat({ id, name, description, icon, buttonText,
       const res = await apiFetch('/api/assistants/chat', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ assistantId: id, messages: next }),
+        body: JSON.stringify({ assistantId: id, messages: next, sessionId }),
       })
       if (!res.ok) {
         const data = await res.json().catch(() => ({}))
@@ -124,13 +167,6 @@ export default function AssistantChat({ id, name, description, icon, buttonText,
     setMessages((m) => [...m, { role: 'assistant', content: helpText }])
   }
 
-  function clearChat() {
-    if (loading) return
-    if (!confirm('Очистить переписку?')) return
-    setMessages([])
-    setError(null)
-  }
-
   async function copyMessage(text: string, idx: number) {
     try {
       await navigator.clipboard.writeText(text)
@@ -164,20 +200,38 @@ export default function AssistantChat({ id, name, description, icon, buttonText,
             <h1 className="truncate text-[15px] font-semibold text-apple-ink sm:text-base">{name}</h1>
             <p className="truncate text-[12px] text-apple-faint sm:text-[13px]">{description}</p>
           </div>
-          {messages.length > 0 && (
-            <button
-              type="button"
-              onClick={clearChat}
-              disabled={loading}
-              className="grid h-9 w-9 shrink-0 place-items-center rounded-full text-apple-faint transition-colors hover:bg-apple-bg-soft hover:text-apple-ink disabled:opacity-50"
-              aria-label="Очистить"
-              title="Очистить переписку"
-            >
-              <Trash2 className="h-[16px] w-[16px]" />
-            </button>
-          )}
+          <button
+            type="button"
+            onClick={createNewSession}
+            disabled={loading || creatingSession}
+            className="grid h-9 w-9 shrink-0 place-items-center rounded-full text-apple-faint transition-colors hover:bg-apple-bg-soft hover:text-apple-ink disabled:opacity-50"
+            aria-label="Новый чат"
+            title="Новый чат"
+          >
+            <MessageSquarePlus className="h-[18px] w-[18px]" />
+          </button>
+          <button
+            type="button"
+            onClick={() => setDrawerOpen(true)}
+            disabled={loading}
+            className="grid h-9 w-9 shrink-0 place-items-center rounded-full text-apple-faint transition-colors hover:bg-apple-bg-soft hover:text-apple-ink disabled:opacity-50"
+            aria-label="История чатов"
+            title="История чатов"
+          >
+            <History className="h-[18px] w-[18px]" />
+          </button>
         </div>
       </header>
+
+      <ChatSessionsDrawer
+        open={drawerOpen}
+        onClose={() => setDrawerOpen(false)}
+        kind="assistant"
+        assistantId={id}
+        currentSessionId={sessionId}
+        onSelect={(sid) => loadSession(sid)}
+        onNew={createNewSession}
+      />
 
       <div className="flex-1 space-y-3 pb-4">
         {messages.length === 0 && (
