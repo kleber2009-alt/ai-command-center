@@ -1,4 +1,5 @@
 import { NextRequest, NextResponse } from 'next/server'
+import { ipFromHeaders, rateLimit } from '@/lib/rate-limit'
 import { getServerSupabase } from '@/lib/transcripts-db'
 
 export const maxDuration = 60
@@ -19,6 +20,14 @@ ${text.slice(0, 30000)}
 """`
 
 export async function POST(req: NextRequest) {
+  const limit = rateLimit(`translate:${ipFromHeaders(req.headers)}`, 20, 60_000)
+  if (!limit.ok) {
+    return NextResponse.json(
+      { error: 'rate_limited', retryAfter: limit.retryAfter },
+      { status: 429, headers: { 'Retry-After': String(limit.retryAfter) } },
+    )
+  }
+
   const { id, transcript, targetLang } = (await req.json()) as Body
 
   if (!targetLang || !['ru', 'en'].includes(targetLang)) {

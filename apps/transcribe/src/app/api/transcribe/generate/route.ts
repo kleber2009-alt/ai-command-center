@@ -1,4 +1,5 @@
 import { NextRequest, NextResponse } from 'next/server'
+import { ipFromHeaders, rateLimit } from '@/lib/rate-limit'
 import { getServerSupabase } from '@/lib/transcripts-db'
 
 export const maxDuration = 60
@@ -186,6 +187,14 @@ function validate(type: GenType, content: any): GenContent {
 }
 
 export async function POST(req: NextRequest) {
+  const limit = rateLimit(`generate:${ipFromHeaders(req.headers)}`, 20, 60_000)
+  if (!limit.ok) {
+    return NextResponse.json(
+      { error: 'rate_limited', retryAfter: limit.retryAfter },
+      { status: 429, headers: { 'Retry-After': String(limit.retryAfter) } },
+    )
+  }
+
   const { id, transcript, type } = (await req.json()) as Body
 
   if (!type || !VALID_TYPES.includes(type)) {
