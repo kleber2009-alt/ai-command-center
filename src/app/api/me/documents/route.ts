@@ -1,7 +1,7 @@
 import { NextRequest, NextResponse } from 'next/server'
 import { chunkText } from '@/lib/chunking'
 import { embedBatch } from '@/lib/embeddings'
-import { createDocumentWithEmbeddings, listDocuments } from '@/lib/me-db'
+import { createDocumentWithEmbeddings, libraryStats, listDocuments } from '@/lib/me-db'
 import { requireTelegramAuth } from '@/lib/telegram-auth'
 
 export const maxDuration = 120
@@ -41,7 +41,11 @@ export async function GET(req: NextRequest) {
   const gate = requireTelegramAuth(req)
   if (gate) return gate
   try {
-    return NextResponse.json({ items: listDocuments(200), configured: true })
+    return NextResponse.json({
+      items: listDocuments(200),
+      stats: libraryStats(),
+      configured: true,
+    })
   } catch (e: any) {
     return NextResponse.json({ error: e?.message || 'Ошибка чтения базы' }, { status: 500 })
   }

@@ -145,13 +145,21 @@ export type TranscriptListItem = {
   source: string | null
   language: string | null
   duration: number | null
+  in_brain: 0 | 1
 }
 
 export function listTranscripts(limit = 20): TranscriptListItem[] {
   return getDb()
     .prepare(
-      `SELECT id, created_at, url, title, source, language, duration
-       FROM transcripts ORDER BY created_at DESC LIMIT ?`,
+      `SELECT t.id, t.created_at, t.url, t.title, t.source, t.language, t.duration,
+              EXISTS (
+                SELECT 1 FROM me_documents d
+                WHERE d.source_type = 'transcript'
+                  AND json_extract(d.source_meta, '$.transcript_id') = t.id
+              ) AS in_brain
+       FROM transcripts t
+       ORDER BY t.created_at DESC
+       LIMIT ?`,
     )
     .all(limit) as TranscriptListItem[]
 }

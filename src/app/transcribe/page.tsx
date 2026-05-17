@@ -51,6 +51,7 @@ type HistoryItem = {
   source: string | null
   language: string | null
   duration: number | null
+  in_brain: 0 | 1
 }
 
 function formatTime(sec: number) {
@@ -224,6 +225,7 @@ export default function TranscribePage() {
   const [historySelection, setHistorySelection] = useState<Set<string>>(new Set())
   const [batchImporting, setBatchImporting] = useState(false)
   const [batchSummary, setBatchSummary] = useState<string | null>(null)
+  const [historyQuery, setHistoryQuery] = useState('')
 
   const [inTg, setInTg] = useState(false)
   const submitRef = useRef<() => void>(() => {})
@@ -912,8 +914,31 @@ export default function TranscribePage() {
               {batchSummary}
             </div>
           )}
+          <div className="border-b border-apple-line bg-white px-5 py-2">
+            <input
+              type="text"
+              value={historyQuery}
+              onChange={e => setHistoryQuery(e.target.value)}
+              placeholder="Поиск по истории…"
+              className="w-full rounded-full border border-apple-line bg-apple-bg-soft px-3 py-1.5 text-[12px] text-apple-ink placeholder:text-apple-faint outline-none transition-all focus:border-apple-line-strong focus:bg-white"
+            />
+          </div>
           <div className="max-h-[60vh] divide-y divide-apple-line overflow-y-auto">
-            {history.map(item => {
+            {(() => {
+              const q = historyQuery.trim().toLowerCase()
+              const filtered = q
+                ? history.filter(it =>
+                    (it.title || '').toLowerCase().includes(q) || it.url.toLowerCase().includes(q),
+                  )
+                : history
+              if (filtered.length === 0) {
+                return (
+                  <div className="p-6 text-center text-[13px] text-apple-faint">
+                    Ничего не нашлось по запросу.
+                  </div>
+                )
+              }
+              return filtered.map(item => {
               const selected = historySelection.has(item.id)
               return (
                 <div key={item.id} className="group flex items-stretch">
@@ -942,7 +967,18 @@ export default function TranscribePage() {
                       )}
                     </div>
                     <div className="min-w-0 flex-1">
-                      <div className="truncate text-[14px] text-apple-ink">{item.title || item.url}</div>
+                      <div className="flex items-center gap-1.5">
+                        <div className="truncate text-[14px] text-apple-ink">{item.title || item.url}</div>
+                        {item.in_brain ? (
+                          <span
+                            className="inline-flex shrink-0 items-center gap-1 rounded-full bg-emerald-50 px-1.5 py-0.5 text-[10px] font-medium text-emerald-700"
+                            title="Уже в Базе мозга"
+                          >
+                            <Brain className="h-2.5 w-2.5" />
+                            в базе
+                          </span>
+                        ) : null}
+                      </div>
                       <div className="mt-0.5 flex flex-wrap items-center gap-1.5 text-[12px] text-apple-faint">
                         <span>{timeAgo(item.created_at)}</span>
                         {item.duration && <span>· {formatTime(item.duration)}</span>}
@@ -961,7 +997,8 @@ export default function TranscribePage() {
                   </button>
                 </div>
               )
-            })}
+            })
+            })()}
           </div>
         </div>
       )}

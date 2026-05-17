@@ -34,8 +34,17 @@ function bytesToReadable(n: number) {
   return (n / 1024 / 1024).toFixed(1) + ' МБ'
 }
 
+type Stats = {
+  documents: number
+  chunks: number
+  characters: number
+  last_added_at: string | null
+  by_source: { paste: number; file: number; transcript: number }
+}
+
 export default function MeLibrary() {
   const [items, setItems] = useState<Doc[]>([])
+  const [stats, setStats] = useState<Stats | null>(null)
   const [loading, setLoading] = useState(true)
   const [configured, setConfigured] = useState(true)
   const [error, setError] = useState<string | null>(null)
@@ -56,6 +65,7 @@ export default function MeLibrary() {
       const data = await res.json()
       if (!res.ok) throw new Error(data?.error || `Ошибка ${res.status}`)
       setItems(data.items ?? [])
+      setStats(data.stats ?? null)
       setConfigured(Boolean(data.configured))
     } catch (e: any) {
       setError(e?.message || 'Не удалось загрузить базу')
@@ -150,6 +160,26 @@ export default function MeLibrary() {
           <div>
             База недоступна. Проверь, что переменная <code className="rounded bg-white/60 px-1">DB_PATH</code> указывает на доступный путь, а
             <code className="rounded bg-white/60 px-1">OPENAI_API_KEY</code> задан в <code className="rounded bg-white/60 px-1">.env</code>.
+          </div>
+        </div>
+      )}
+
+      {/* Stats */}
+      {stats && stats.documents > 0 && (
+        <div className="grid grid-cols-3 gap-2">
+          <div className="rounded-apple-lg border border-apple-line bg-white p-3 text-center shadow-apple-sm">
+            <div className="text-[20px] font-semibold leading-tight text-apple-ink">{stats.documents}</div>
+            <div className="text-[11px] text-apple-faint">документов</div>
+          </div>
+          <div className="rounded-apple-lg border border-apple-line bg-white p-3 text-center shadow-apple-sm">
+            <div className="text-[20px] font-semibold leading-tight text-apple-ink">{stats.chunks}</div>
+            <div className="text-[11px] text-apple-faint">фрагментов</div>
+          </div>
+          <div className="rounded-apple-lg border border-apple-line bg-white p-3 text-center shadow-apple-sm">
+            <div className="text-[20px] font-semibold leading-tight text-apple-ink">
+              {stats.characters > 1000 ? `${Math.round(stats.characters / 1000)}k` : stats.characters}
+            </div>
+            <div className="text-[11px] text-apple-faint">символов</div>
           </div>
         </div>
       )}

@@ -129,6 +129,41 @@ export function profileToContext(p: MeProfile): string {
   return parts.join('\n\n')
 }
 
+export type LibraryStats = {
+  documents: number
+  chunks: number
+  characters: number
+  last_added_at: string | null
+  by_source: { paste: number; file: number; transcript: number }
+}
+
+export function libraryStats(): LibraryStats {
+  const db = getDb()
+  const agg = db
+    .prepare(
+      `SELECT COUNT(*) AS documents,
+              COALESCE(SUM(chunk_count), 0) AS chunks,
+              COALESCE(SUM(char_count), 0) AS characters,
+              MAX(created_at) AS last_added_at
+       FROM me_documents`,
+    )
+    .get() as { documents: number | bigint; chunks: number | bigint; characters: number | bigint; last_added_at: string | null }
+  const rows = db
+    .prepare(
+      `SELECT source_type, COUNT(*) AS cnt FROM me_documents GROUP BY source_type`,
+    )
+    .all() as Array<{ source_type: 'paste' | 'file' | 'transcript'; cnt: number | bigint }>
+  const by_source = { paste: 0, file: 0, transcript: 0 }
+  for (const r of rows) by_source[r.source_type] = Number(r.cnt)
+  return {
+    documents: Number(agg.documents),
+    chunks: Number(agg.chunks),
+    characters: Number(agg.characters),
+    last_added_at: agg.last_added_at,
+    by_source,
+  }
+}
+
 export function listDocuments(limit = 200): MeDocumentRow[] {
   const rows = getDb()
     .prepare(
