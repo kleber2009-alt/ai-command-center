@@ -77,7 +77,12 @@ SQL Editor:
 - `002_generations.sql` — `generations jsonb` column for caching
   carousel / reels / telegram-post outputs.
 - `003_tasks.sql` — `tasks` table for the project board at `/admin`.
-- `003_me.sql` — `me_profile` / `me_notes` tables for the `/me` page.
+- `003_me.sql` — `me_profile` / `me_documents` / `me_chunks` tables for the
+  `/me` page (personal RAG library — see "/me" section below). Note the
+  `003_` prefix collision with `003_tasks.sql`: tools that auto-apply by
+  lexicographic sort will pick one over the other ambiguously. Order
+  doesn't actually matter here (no cross-references), but apply both
+  manually if you're seeding fresh.
 - `004_tasks_project.sql` — adds `project text` column to `tasks` so the
   `/admin` board can split tasks per monorepo project
   (`transcribe` | `ytdlp` | `ai-office` | `general`, default `general`).
@@ -94,8 +99,8 @@ saves/history/caching just no-op.
 Next.js 14 App Router + React 18 + TypeScript + Tailwind (all inside
 `apps/transcribe/`). UI strings are Russian; comments/identifiers stay
 English. Path alias `@/* → apps/transcribe/src/*`
-(`apps/transcribe/tsconfig.json`). Dark mode is forced at
-`<html className="dark">`.
+(`apps/transcribe/tsconfig.json`). Light theme — `<html lang="ru">` +
+`bg-white` body with Apple-style `apple-*` color tokens (`tailwind.config`).
 
 **Routing**: `apps/transcribe/src/app/page.tsx` redirects `/` → `/transcribe`. The
 transcribe page has its own layout (`apps/transcribe/src/app/transcribe/layout.tsx`)
@@ -106,6 +111,31 @@ sidebar. Everything is one page.
 (`apps/transcribe/src/app/admin/layout.tsx`, max-w-7xl) — kanban project board.
 Currently NO auth — anyone with the URL can read/write tasks.
 Track "Закрыть /admin от посторонних" task before public launch.
+
+`/me` (`apps/transcribe/src/app/me/`) — owner's personal RAG library.
+Subpages: `/me/library` (upload + browse personal documents) and
+`/me/profile` (edit profile metadata). Documents are uploaded to
+`me_documents`, chunked via `src/lib/chunking.ts` (which strips NUL
+bytes left over from PDF extraction), embedded via OpenAI's
+`text-embedding-3-small`, and stored in `me_chunks` as pgvector vectors.
+`/api/me/chat` does vector-similarity retrieval (`match_me_chunks`)
+against the chunks, then streams a Claude `claude-sonnet-4-6` reply
+that quotes from them. Same `getServerSupabase()` no-op pattern — if
+Supabase isn't configured the page degrades gracefully.
+
+`/assistants` (`apps/transcribe/src/app/assistants/`) — catalog of
+system-prompt-only personas defined in `src/data/assistants.ts` (8+
+hard-coded entries). `/assistants/[id]` is a chat against one of them.
+`/api/assistants/chat` streams Claude `claude-sonnet-4-6` with the
+chosen persona's system prompt. No persistence — each conversation is
+purely in-memory in the React component.
+
+**Auth posture across these routes**: currently **none** for `/admin`,
+`/me`, or `/assistants`. The `transcribe` and Mini-App-specific routes
+have rate-limiting + optional Telegram `initData` HMAC validation via
+`src/lib/api-guard.ts` (see "Security primitives" below), but `/me`
+and `/assistants` data is openly readable/writable. Lock down before
+sharing the deploy URL with anyone.
 
 **The flow** (`apps/transcribe/src/app/transcribe/page.tsx`):
 1. Mount → calls `loadHistory()` and `setInTg(isInTelegram())`.
@@ -141,7 +171,7 @@ Track "Закрыть /admin от посторонних" task before public lau
   Content shape varies (slides array for carousel; hook/body/cta object
   for reels; `{ text }` for tg-post). Cached in `transcripts.generations`
   jsonb keyed by type. Prompts live inline in `buildPrompt()`.
-- `GET /api/transcribe/history` — last 20 rows. Returns
+- `GET /api/transcribe/history` — last 30 rows. Returns
   `{ items, configured: boolean }`.
 - `GET|DELETE /api/transcribe/history/[id]` — one row.
 - `GET /api/tasks?project=transcribe` — list tasks for `/admin` board.
@@ -151,6 +181,43 @@ Track "Закрыть /admin от посторонних" task before public lau
   priority?, stage?, project? }`. `project` defaults to `'general'`.
 - `PATCH /api/tasks/[id]` — update fields (including `project`).
   `DELETE /api/tasks/[id]` removes.
+
+**`/me` routes** (personal RAG library; Supabase-backed):
+- `GET|PUT /api/me/profile` — owner profile metadata (single-row table).
+- `GET|POST /api/me/documents` — list / create personal document. POST
+  body accepts text or uploaded file (PDF parsed via `pdf-parse`).
+  Content is chunked + embedded inline before being persisted.
+- `GET|DELETE /api/me/documents/[id]` — fetch / remove one document
+  (cascades to its `me_chunks`).
+- `POST /api/me/chat` — body `{ message, history? }`. Retrieves
+  top-k chunks via cosine similarity, streams a `claude-sonnet-4-6`
+  reply via SSE (`src/lib/anthropic-stream.ts`).
+
+**`/assistants` routes**:
+- `POST /api/assistants/chat` — body `{ assistantId, message, history? }`.
+  Loads the persona from `src/data/assistants.ts`, streams
+  `claude-sonnet-4-6` with that system prompt.
+
+**Security primitives** (`src/lib/`):
+- `rate-limit.ts` — in-memory sliding-window limiter, keyed per
+  `(route, IP)`. Counters reset on process restart.
+- `telegram-auth.ts` — `verifyInitData()` implements the HMAC-SHA256
+  algorithm from `core.telegram.org/bots/webapps`. Returns the parsed
+  user on success, `null` on bad signature / stale `auth_date`.
+- `api-guard.ts` — `guardRequest()` combines both. The four expensive
+  transcribe routes (`/api/transcribe`, `/summarize`, `/translate`,
+  `/generate`) call it at the top. Behavior depends on env:
+  - `TELEGRAM_BOT_TOKEN` unset → guard passes through (no HMAC secret
+    to verify against; rate-limit still applies).
+  - Bot token set, `x-telegram-init-data` header present → verify;
+    reject with 401 on bad signature.
+  - Bot token set, header absent, `TELEGRAM_REQUIRE_INIT_DATA=true` →
+    reject with 401.
+  - Bot token set, header absent, require flag off → pass-through.
+- `telegram.ts → apiFetch(input, init)` — client-side fetch wrapper
+  that auto-attaches `x-telegram-init-data` when the page is opened
+  inside Telegram. Not yet wired into all `/api/*` call sites in the
+  React components — that's a route-by-route migration.
 
 ## Telegram Mini App
 
@@ -253,4 +320,10 @@ Pipeline (`apps/tg-agent/src/bot.ts`):
 - Icons come from `lucide-react`. No emojis in UI; they are user-facing
   decoration only and we don't have any in the current app.
 - `next.config.js` is empty — no custom image domains, headers, or rewrites.
-- Production model is `claude-haiku-4-5-20251001` across all routes.
+- Production models:
+  - **Transcribe content gen** (`/api/transcribe/{summarize,translate,generate}`)
+    and **tg-agent** (classifier + responder) → `claude-haiku-4-5-20251001`.
+    Fast + cheap; appropriate for high-volume short turns.
+  - **`/api/me/chat`** and **`/api/assistants/chat`** → `claude-sonnet-4-6`.
+    These streamed conversational endpoints opt up to Sonnet 4.6 for better
+    reasoning and context-management on multi-turn dialog.
