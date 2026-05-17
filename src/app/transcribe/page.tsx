@@ -220,6 +220,7 @@ export default function TranscribePage() {
 
   const [generations, setGenerations] = useState<Generations>({})
   const [genLoading, setGenLoading] = useState<GenType | null>(null)
+  const [genStream, setGenStream] = useState<Partial<Record<GenType, string>>>({})
 
   const [history, setHistory] = useState<HistoryItem[]>([])
   const [historyConfigured, setHistoryConfigured] = useState(true)
@@ -530,20 +531,45 @@ export default function TranscribePage() {
     if (!result) return
     setGenLoading(type)
     setGenerations(prev => ({ ...prev, [type]: undefined }))
+    setGenStream(prev => ({ ...prev, [type]: '' }))
+    setError(null)
     try {
       const res = await apiFetch('/api/transcribe/generate', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({ id: result.id, transcript: result.transcript, type }),
       })
-      const data = await res.json()
       if (!res.ok) {
-        setError(data.error || 'Не удалось сгенерировать контент')
-      } else {
-        setGenerations(prev => ({ ...prev, [type]: data.content }))
+        const data = await res.json().catch(() => ({}))
+        throw new Error(data?.error || `Ошибка ${res.status}`)
+      }
+      let acc = ''
+      let finalContent: any = null
+      let parseError: string | null = null
+      let streamError: string | null = null
+      await readNdjson(res, (e) => {
+        if (e.type === 'delta') {
+          acc += e.text
+          setGenStream(prev => ({ ...prev, [type]: acc }))
+        } else if (e.type === 'meta' && (e as any).content) {
+          finalContent = (e as any).content
+        } else if (e.type === 'meta' && (e as any).parseError) {
+          parseError = (e as any).parseError as string
+        } else if (e.type === 'error') {
+          streamError = e.error
+        }
+      })
+      if (streamError) throw new Error(streamError)
+      if (parseError) throw new Error(`Не удалось разобрать ответ модели: ${parseError}`)
+      if (finalContent) {
+        setGenerations(prev => ({ ...prev, [type]: finalContent }))
+        setGenStream(prev => ({ ...prev, [type]: undefined }))
+      } else if (!acc.trim()) {
+        throw new Error('Пустой ответ от модели')
       }
     } catch (err: any) {
       setError(err?.message || 'Сетевая ошибка')
+      setGenStream(prev => ({ ...prev, [type]: undefined }))
     } finally {
       setGenLoading(null)
     }
@@ -825,6 +851,34 @@ export default function TranscribePage() {
               ))}
             </div>
           </div>
+
+          {/* Streaming preview — shows while a generation is in flight, before the structured card lands */}
+          {(['carousel', 'reels-new', 'reels-remix', 'tg-post'] as const).map((t) => {
+            const md = genStream[t]
+            if (!md || generations[t]) return null
+            const label =
+              t === 'carousel' ? 'Карусель' :
+              t === 'reels-new' ? 'Рилс — новый' :
+              t === 'reels-remix' ? 'Рилс — ремикс' :
+              'Пост в Telegram'
+            return (
+              <div key={`stream-${t}`} className="rounded-apple-lg border border-apple-line bg-white p-5 shadow-apple-sm">
+                <div className="mb-3 flex items-center gap-2">
+                  <Loader2 className="h-4 w-4 animate-spin text-apple-blue" />
+                  <h3 className="text-[13px] font-semibold text-apple-ink">{label} · генерируется</h3>
+                </div>
+                {md ? (
+                  <MarkdownMessage content={md} className="text-[14px] leading-relaxed text-apple-ink" />
+                ) : (
+                  <span className="flex items-center gap-1 py-1">
+                    <span className="h-1.5 w-1.5 animate-pulse rounded-full bg-apple-faint" style={{ animationDelay: '0ms' }} />
+                    <span className="h-1.5 w-1.5 animate-pulse rounded-full bg-apple-faint" style={{ animationDelay: '150ms' }} />
+                    <span className="h-1.5 w-1.5 animate-pulse rounded-full bg-apple-faint" style={{ animationDelay: '300ms' }} />
+                  </span>
+                )}
+              </div>
+            )
+          })}
 
           {/* Carousel */}
           {generations.carousel && (

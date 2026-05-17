@@ -1,5 +1,6 @@
 import { NextRequest, NextResponse } from 'next/server'
 import { getTranscript, mergeTranscriptGenerations } from '@/lib/transcripts-db'
+import { streamAnthropic } from '@/lib/anthropic-stream'
 import { requireTelegramAuth } from '@/lib/telegram-auth'
 
 export const maxDuration = 60
@@ -26,87 +27,84 @@ type GenContent = CarouselContent | ReelsContent | TgPostContent
 
 const VALID_TYPES: GenType[] = ['carousel', 'reels-new', 'reels-remix', 'tg-post']
 
+// Markdown-first prompts so the stream looks readable while it's running.
+// At the end the server parses the markdown back into the legacy structured
+// shape the UI expects.
 function buildPrompt(type: GenType, transcript: string): string {
   const text = transcript.slice(0, 30000)
 
   if (type === 'carousel') {
     return `Ты — топовый копирайтер, специализирующийся на залипательных каруселях для Instagram и LinkedIn. Твои карусели имеют средний engagement в 3-5 раз выше среднего.
 
-Из транскрипта ниже сделай карусель из 8-10 слайдов на русском. Каждый слайд — отдельная мысль. Карусель должна заставить дочитать до конца.
-
-Структура:
-- Слайд 1 (HOOK): 5-8 слов, сильное обещание или провокационный вопрос. Цель — остановить пролистывание.
-- Слайды 2-9 (CONTENT): каждый = одна ключевая идея из транскрипта. Заголовок 3-7 слов + раскрытие 2-4 коротких предложения.
-- Последний слайд (CTA): призыв к действию — сохранить, поделиться, написать в комментарий.
+Из транскрипта ниже сделай карусель из 8-10 слайдов на русском.
 
 Правила:
-- Без воды и клише ("в современном мире", "как известно")
+- Без воды и клише
 - Конкретика: цифры, имена, примеры из транскрипта
 - Активный залог, разговорный тон
-- Без эмодзи и markdown
+- Слайд 1 = HOOK (5-8 слов), последний = CTA
+- Контентные слайды: заголовок 3-7 слов + раскрытие 2-4 коротких предложения
 
 Транскрипт:
 """
 ${text}
 """
 
-Ответ ТОЛЬКО валидным JSON, без markdown-обёртки:
-{ "slides": [{ "n": 1, "title": "...", "body": "..." }, ...] }`
+Формат вывода — markdown:
+
+## Слайд 1 — Заголовок слайда
+Тело слайда (несколько предложений).
+
+## Слайд 2 — Заголовок второго
+Тело.
+
+… (до 8-10 слайдов)`
   }
 
-  if (type === 'reels-new') {
-    return `Ты — сценарист коротких видео для Reels/TikTok с фокусом на удержание зрителя до конца.
-
-Из транскрипта сделай свежий сценарий короткого видео (45-60 секунд) на русском. Видео должно цеплять с первой секунды.
-
-Структура:
-1. HOOK (0-3 сек): первая фраза заставляет остановиться. Паттерны: провокация / неожиданная статистика / прямой вопрос про боль зрителя / контр-интуитивное утверждение.
-2. PROMISE (3-7 сек): чётко сказать что зритель получит.
-3. BODY (7-50 сек): 3-4 ключевых пункта из транскрипта, по 8-12 сек. После каждого — мини-тизер ("но это ещё не всё...").
-4. CTA (50-60 сек): призыв.
-
-Дополнительно:
-- TEXT_ON_SCREEN: 4-6 коротких подписей (≤4 слова), для смотрящих без звука.
-- CAPTION: 1-3 предложения под пост.
-- HASHTAGS: 5-7 русско/англо релевантных.
+  if (type === 'reels-new' || type === 'reels-remix') {
+    const intro =
+      type === 'reels-new'
+        ? `Ты — сценарист коротких видео для Reels/TikTok с фокусом на удержание зрителя до конца. Сделай свежий сценарий на 45-60 секунд по транскрипту.`
+        : `Ты — сценарист коротких видео. Сделай НОВЫЙ сценарий на ту же тему что в транскрипте, но с другим заходом — чтобы не выглядел как репост. Поменяй хук, метафоры, порядок аргументов, тональность.`
+    return `${intro}
 
 Правила:
 - Разговорный тон, как другу
-- Никаких "сегодня я расскажу"
 - Каждое предложение ≤15 слов
+- Никаких "сегодня я расскажу"
 
 Транскрипт:
 """
 ${text}
 """
 
-Ответ ТОЛЬКО валидным JSON:
-{ "hook": "...", "promise": "...", "body": [{ "time": "7-15s", "text": "..." }, ...], "cta": "...", "text_on_screen": ["...", ...], "caption": "...", "hashtags": ["#...", ...] }`
-  }
+Формат — markdown. Соблюдай эти разделы и заголовки ровно так:
 
-  if (type === 'reels-remix') {
-    return `Ты — сценарист коротких видео. Тебе нужно сделать НОВЫЙ сценарий на ту же тему что в транскрипте, но с другим заходом — чтобы видео не выглядело как репост.
+## HOOK · 0-3s
+Первая фраза.
 
-Сохрани:
-- Главную идею и ключевые факты из транскрипта
-- Целевую аудиторию
+## PROMISE · 3-7s
+Что зритель получит.
 
-Поменяй:
-- HOOK: другой паттерн зацепки чем в исходнике
-- Метафоры, примеры, формулировки
-- Порядок аргументов
-- Тональность (если сухо — добавь иронии; если эмоционально — сделай аналитичнее)
-- Угол подачи: с того же тезиса заходи с противоположной стороны
+## BODY
+- [7-20s] Первый пункт
+- [20-35s] Второй пункт
+- [35-50s] Третий пункт
 
-Структура: HOOK (0-3 сек) → PROMISE (3-7 сек) → BODY (7-50 сек, 3-4 пункта) → CTA (50-60 сек) + TEXT_ON_SCREEN + CAPTION + HASHTAGS.
+## CTA · 50-60s
+Призыв.
 
-Транскрипт:
-"""
-${text}
-"""
+## TEXT_ON_SCREEN
+- Подпись 1
+- Подпись 2
+- Подпись 3
+- Подпись 4
 
-Ответ ТОЛЬКО валидным JSON:
-{ "hook": "...", "promise": "...", "body": [{ "time": "...", "text": "..." }, ...], "cta": "...", "text_on_screen": ["..."], "caption": "...", "hashtags": ["#..."] }`
+## CAPTION
+1-3 предложения под пост.
+
+## HASHTAGS
+#tag1 #tag2 #tag3 #tag4 #tag5`
   }
 
   // tg-post
@@ -122,68 +120,88 @@ ${text}
 - ВОПРОС: открытый, провоцирует написать в комментарии.
 
 Правила:
-- Эмодзи 1-2 на пост максимум, как буллеты
+- Эмодзи 1-2 на пост максимум
 - Никаких "ставь лайк", "подписывайся"
-- Никакого markdown (** *)
+- Никакого markdown (без ** и *)
 - Тон уверенный, как живой человек
-- "ты" к читателю где уместно
 
 Транскрипт:
 """
 ${text}
 """
 
-Ответ ТОЛЬКО валидным JSON:
-{ "text": "...полный текст поста, с переносами строк через \\n..." }`
+Выведи ТОЛЬКО текст поста, без префиксов, без обёрток.`
 }
 
-function extractJsonObject(text: string): any {
-  const fenceStripped = text.replace(/```(?:json)?\s*/gi, '').replace(/```/g, '').trim()
-  const start = fenceStripped.indexOf('{')
-  const end = fenceStripped.lastIndexOf('}')
-  if (start === -1 || end === -1 || end <= start) {
-    throw new Error('No JSON object found in model response')
+// ---- Markdown parsers ----
+
+function parseCarousel(md: string): CarouselContent {
+  const slides: Array<{ n: number; title: string; body: string }> = []
+  // Match ## Слайд N — Title (or "##  Слайд 1: title" etc.)
+  const re = /##\s*Слайд\s*(\d+)\s*[—\-:.]+\s*(.+?)\n([\s\S]*?)(?=\n##\s|$)/gi
+  let m: RegExpExecArray | null
+  while ((m = re.exec(md)) !== null) {
+    slides.push({
+      n: Number(m[1]) || slides.length + 1,
+      title: m[2].trim(),
+      body: m[3].trim(),
+    })
   }
-  return JSON.parse(fenceStripped.slice(start, end + 1))
+  if (slides.length === 0) throw new Error('Карусель пустая')
+  return { slides }
 }
 
-function validate(type: GenType, content: any): GenContent {
-  if (type === 'carousel') {
-    if (!Array.isArray(content?.slides) || content.slides.length === 0) {
-      throw new Error('Карусель пустая или невалидная')
-    }
-    return {
-      slides: content.slides.map((s: any, i: number) => ({
-        n: typeof s.n === 'number' ? s.n : i + 1,
-        title: String(s.title ?? ''),
-        body: String(s.body ?? ''),
-      })),
-    }
+function parseReels(md: string): ReelsContent {
+  const sec = (name: string) => {
+    const m = md.match(new RegExp(`##\\s*${name}[\\s\\S]*?\\n([\\s\\S]*?)(?=\\n##\\s|$)`, 'i'))
+    return m ? m[1].trim() : ''
   }
-  if (type === 'reels-new' || type === 'reels-remix') {
-    if (!content?.hook || !Array.isArray(content?.body)) {
-      throw new Error('Сценарий рилса невалидный')
-    }
-    return {
-      hook: String(content.hook),
-      promise: String(content.promise ?? ''),
-      body: content.body.map((b: any) => ({
-        time: String(b.time ?? ''),
-        text: String(b.text ?? ''),
-      })),
-      cta: String(content.cta ?? ''),
-      text_on_screen: Array.isArray(content.text_on_screen)
-        ? content.text_on_screen.map((s: any) => String(s))
-        : [],
-      caption: String(content.caption ?? ''),
-      hashtags: Array.isArray(content.hashtags) ? content.hashtags.map((s: any) => String(s)) : [],
-    }
+  const hook = sec('HOOK')
+  const promise = sec('PROMISE')
+  const bodyText = sec('BODY')
+  const cta = sec('CTA')
+  const tosText = sec('TEXT[_\\s]*ON[_\\s]*SCREEN')
+  const caption = sec('CAPTION')
+  const hashtagsText = sec('HASHTAGS')
+
+  // Parse "- [7-20s] Текст" pattern
+  const body: Array<{ time: string; text: string }> = []
+  for (const line of bodyText.split('\n')) {
+    const lm = line.match(/^\s*[-*•]\s*\[?\s*([0-9].*?)\s*\]?\s+(.+)$/)
+    if (lm) body.push({ time: lm[1].trim(), text: lm[2].trim() })
   }
-  // tg-post
-  if (!content?.text || typeof content.text !== 'string') {
-    throw new Error('Пост Telegram пустой')
+  if (body.length === 0 && bodyText) body.push({ time: '0-60s', text: bodyText })
+
+  const text_on_screen: string[] = []
+  for (const line of tosText.split('\n')) {
+    const lm = line.match(/^\s*[-*•]\s+(.+)$/)
+    if (lm) text_on_screen.push(lm[1].trim())
   }
-  return { text: content.text }
+
+  const hashtags = (hashtagsText.match(/#[^\s#]+/g) || []).map((s) => s.trim())
+
+  if (!hook && body.length === 0) throw new Error('Сценарий рилса пуст')
+  return { hook, promise, body, cta, text_on_screen, caption, hashtags }
+}
+
+function parseTgPost(md: string): TgPostContent {
+  const trimmed = md.trim()
+  if (!trimmed) throw new Error('Пост Telegram пустой')
+  return { text: trimmed }
+}
+
+function parseContent(type: GenType, md: string): GenContent {
+  if (type === 'carousel') return parseCarousel(md)
+  if (type === 'reels-new' || type === 'reels-remix') return parseReels(md)
+  return parseTgPost(md)
+}
+
+function ndjsonResponse(events: Array<Record<string, any>>): Response {
+  const enc = new TextEncoder()
+  const body = events.map((e) => JSON.stringify(e) + '\n').join('')
+  return new Response(enc.encode(body), {
+    headers: { 'Content-Type': 'application/x-ndjson; charset=utf-8' },
+  })
 }
 
 export async function POST(req: NextRequest) {
@@ -197,7 +215,6 @@ export async function POST(req: NextRequest) {
       { status: 400 },
     )
   }
-
   if (!process.env.ANTHROPIC_API_KEY) {
     return NextResponse.json({ error: 'ANTHROPIC_API_KEY не настроен на сервере' }, { status: 500 })
   }
@@ -205,12 +222,16 @@ export async function POST(req: NextRequest) {
   let text = transcript
   if (id) {
     const row = getTranscript(id)
-    if (!row) {
-      return NextResponse.json({ error: 'Не найден транскрипт' }, { status: 404 })
-    }
+    if (!row) return NextResponse.json({ error: 'Не найден транскрипт' }, { status: 404 })
     const cached = row.generations?.[type]
     if (cached) {
-      return NextResponse.json({ type, content: cached, cached: true })
+      // Replay cached structured content as a single meta + done so the client
+      // can use the same NDJSON reader path. We don't replay markdown here —
+      // the structured content is what the UI actually renders post-stream.
+      return ndjsonResponse([
+        { type: 'meta', cached: true, content: cached },
+        { type: 'done' },
+      ])
     }
     text = row.transcript
   }
@@ -221,56 +242,24 @@ export async function POST(req: NextRequest) {
 
   const prompt = buildPrompt(type, text)
 
-  try {
-    const res = await fetch('https://api.anthropic.com/v1/messages', {
-      method: 'POST',
-      headers: {
-        'Content-Type': 'application/json',
-        'x-api-key': process.env.ANTHROPIC_API_KEY,
-        'anthropic-version': '2023-06-01',
-      },
-      body: JSON.stringify({
-        model: 'claude-haiku-4-5-20251001',
-        max_tokens: 4096,
-        messages: [{ role: 'user', content: prompt }],
-      }),
-    })
-
-    if (!res.ok) {
-      const errText = await res.text()
-      return NextResponse.json(
-        { error: `Anthropic (${res.status}): ${errText.slice(0, 300)}` },
-        { status: res.status },
-      )
-    }
-
-    const data = await res.json()
-    const raw = data.content?.[0]?.text || ''
-    if (!raw) {
-      return NextResponse.json({ error: 'Пустой ответ от Anthropic' }, { status: 500 })
-    }
-
-    let parsed: any
-    try {
-      parsed = extractJsonObject(raw)
-    } catch (e: any) {
-      console.warn(`[/api/transcribe/generate ${type}] parse failed: ${e.message}. Raw:`, raw.slice(0, 300))
-      return NextResponse.json({ error: `Не удалось распарсить ответ модели: ${e.message}` }, { status: 500 })
-    }
-
-    let validated: GenContent
-    try {
-      validated = validate(type, parsed)
-    } catch (e: any) {
-      return NextResponse.json({ error: e.message }, { status: 500 })
-    }
-
-    if (id) {
-      mergeTranscriptGenerations(id, type, validated)
-    }
-
-    return NextResponse.json({ type, content: validated, cached: false })
-  } catch (e: any) {
-    return NextResponse.json({ error: e?.message || 'Ошибка генерации' }, { status: 500 })
-  }
+  return streamAnthropic(
+    {
+      apiKey: process.env.ANTHROPIC_API_KEY,
+      model: 'claude-haiku-4-5-20251001',
+      system: '',
+      messages: [{ role: 'user', content: prompt }],
+      maxTokens: 4096,
+    },
+    undefined,
+    async (fullText) => {
+      try {
+        const content = parseContent(type, fullText)
+        if (id) mergeTranscriptGenerations(id, type, content)
+        return { content }
+      } catch (e: any) {
+        console.warn(`[/api/transcribe/generate ${type}] parse failed:`, e?.message)
+        return { parseError: e?.message || 'parse error' }
+      }
+    },
+  )
 }
