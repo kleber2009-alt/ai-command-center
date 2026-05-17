@@ -1,5 +1,6 @@
 import { NextRequest, NextResponse } from 'next/server'
 import { fetchYoutubeCaptions, getYoutubeVideoId, YoutubeCaptionsError } from '@/lib/youtube-captions'
+import { ipFromHeaders, rateLimit } from '@/lib/rate-limit'
 import { getServerSupabase, makeTitle, Paragraph } from '@/lib/transcripts-db'
 import {
   extractDirectMediaUrl,
@@ -225,6 +226,15 @@ async function dispatch(url: string, language: 'auto' | 'ru' | 'en'): Promise<Re
 }
 
 export async function POST(req: NextRequest) {
+  // Heaviest route — Deepgram + optionally yt-dlp. Tighter cap.
+  const limit = rateLimit(`transcribe:${ipFromHeaders(req.headers)}`, 10, 60_000)
+  if (!limit.ok) {
+    return NextResponse.json(
+      { error: 'rate_limited', retryAfter: limit.retryAfter },
+      { status: 429, headers: { 'Retry-After': String(limit.retryAfter) } },
+    )
+  }
+
   const { url, language = 'ru' } = (await req.json()) as Body
 
   if (!url || typeof url !== 'string' || !/^https?:\/\//i.test(url)) {
