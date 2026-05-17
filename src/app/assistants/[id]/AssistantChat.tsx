@@ -2,7 +2,7 @@
 import { useEffect, useRef, useState } from 'react'
 import Link from 'next/link'
 import {
-  ArrowLeft, BookmarkPlus, BookOpen, Copy, Filter, Flame, History, LayoutGrid, Loader2, Magnet, MessageSquarePlus,
+  ArrowLeft, BookmarkPlus, BookOpen, Brain, Copy, Filter, Flame, History, LayoutGrid, Loader2, Magnet, MessageSquarePlus,
   MessagesSquare, Mic, Package, RefreshCw, Send, Sparkles, Square, Target, TriangleAlert, Trash2, Check,
 } from 'lucide-react'
 import { getTelegram, isInTelegram } from '@/lib/telegram'
@@ -16,7 +16,15 @@ const ICONS: Record<string, any> = {
   Target, MessagesSquare, Send, Flame, Package, Filter, BookOpen, Magnet, LayoutGrid, Sparkles,
 }
 
-type Msg = { role: 'user' | 'assistant'; content: string; followups?: string[] }
+type Citation = {
+  document_id: number
+  document_title: string
+  chunk_index: number
+  content?: string
+  similarity: number
+}
+
+type Msg = { role: 'user' | 'assistant'; content: string; followups?: string[]; citations?: Citation[] }
 
 type Props = {
   id: string
@@ -52,6 +60,22 @@ export default function AssistantChat({ id, name, description, icon, buttonText,
 
   const [savingToBrain, setSavingToBrain] = useState(false)
   const [savedToBrain, setSavedToBrain] = useState(false)
+  const [useBrainContext, setUseBrainContext] = useState(false)
+
+  useEffect(() => {
+    try {
+      const v = localStorage.getItem(`assistant-context:${id}`)
+      if (v === '1') setUseBrainContext(true)
+    } catch {}
+  }, [id])
+
+  function toggleBrainContext() {
+    setUseBrainContext((v) => {
+      const next = !v
+      try { localStorage.setItem(`assistant-context:${id}`, next ? '1' : '0') } catch {}
+      return next
+    })
+  }
 
   async function saveChatToLibrary() {
     if (savingToBrain || messages.length === 0) return
@@ -165,22 +189,31 @@ export default function AssistantChat({ id, name, description, icon, buttonText,
       const res = await apiFetch('/api/assistants/chat', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ assistantId: id, messages: baseHistory, sessionId, regenerate: isRegen || undefined }),
+        body: JSON.stringify({
+          assistantId: id,
+          messages: baseHistory,
+          sessionId,
+          regenerate: isRegen || undefined,
+          useBrainContext: useBrainContext || undefined,
+        }),
       })
       if (!res.ok) {
         const data = await res.json().catch(() => ({}))
         throw new Error(data?.error || `Ошибка ${res.status}`)
       }
       let acc = ''
+      let citations: Citation[] = []
       let streamError: string | null = null
       await readNdjson(res, (e) => {
-        if (e.type === 'delta') {
+        if (e.type === 'meta' && Array.isArray((e as any).citations)) {
+          citations = (e as any).citations
+        } else if (e.type === 'delta') {
           acc += e.text
           setMessages((m) => {
             const copy = m.slice()
             const last = copy[copy.length - 1]
             if (last && last.role === 'assistant') {
-              copy[copy.length - 1] = { ...last, content: acc }
+              copy[copy.length - 1] = { ...last, content: acc, citations }
             }
             return copy
           })
@@ -264,6 +297,24 @@ export default function AssistantChat({ id, name, description, icon, buttonText,
             <h1 className="truncate text-[15px] font-semibold text-apple-ink sm:text-base">{name}</h1>
             <p className="truncate text-[12px] text-apple-faint sm:text-[13px]">{description}</p>
           </div>
+          <button
+            type="button"
+            onClick={toggleBrainContext}
+            disabled={loading}
+            className={`grid h-9 w-9 shrink-0 place-items-center rounded-full transition-colors disabled:opacity-50 ${
+              useBrainContext
+                ? 'bg-apple-bg-soft text-apple-blue'
+                : 'text-apple-faint hover:bg-apple-bg-soft hover:text-apple-ink'
+            }`}
+            aria-label="Использовать мой мозг"
+            title={
+              useBrainContext
+                ? 'Использует профиль и базу второго мозга — нажми, чтобы выключить'
+                : 'Подмешать фрагменты из моей базы (RAG)'
+            }
+          >
+            <Brain className="h-[18px] w-[18px]" />
+          </button>
           {messages.length > 0 && (
             <button
               type="button"
@@ -392,6 +443,20 @@ export default function AssistantChat({ id, name, description, icon, buttonText,
                 </button>
               )}
             </div>
+            {m.role === 'assistant' && m.citations && m.citations.length > 0 && (
+              <div className="mt-2 flex flex-wrap gap-1.5">
+                {m.citations.map((c, ci) => (
+                  <a
+                    key={ci}
+                    href={`/me/library/${c.document_id}`}
+                    className="rounded-full bg-apple-bg-soft px-2 py-0.5 text-[11px] text-apple-muted transition-colors hover:bg-white hover:text-apple-ink hover:shadow-apple-sm"
+                    title={`Открыть документ · sim ${(c.similarity * 100).toFixed(0)}%`}
+                  >
+                    [{c.document_title}]
+                  </a>
+                ))}
+              </div>
+            )}
             {m.role === 'assistant' && m.followups && m.followups.length > 0 && (
               <div className="mt-2 flex flex-wrap gap-1.5">
                 {m.followups.map((q, qi) => (
