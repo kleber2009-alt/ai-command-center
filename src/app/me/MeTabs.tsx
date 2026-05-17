@@ -1,8 +1,9 @@
 import Link from 'next/link'
 
-export default function MeTabs({ active }: { active: 'chat' | 'profile' | 'library' }) {
+export default function MeTabs({ active }: { active: 'chat' | 'profile' | 'library' | 'search' }) {
   const tabs = [
     { id: 'chat', href: '/me', label: 'Чат' },
+    { id: 'search', href: '/me/search', label: 'Поиск' },
     { id: 'profile', href: '/me/profile', label: 'Профиль' },
     { id: 'library', href: '/me/library', label: 'База' },
   ] as const
