@@ -394,8 +394,17 @@ export function replaceDocumentText(input: {
   return row ? { ...row, source_meta: safeParseObject(row.source_meta) } : null
 }
 
-export function searchChunks(queryEmbedding: number[], k = 8): MeChunkMatch[] {
+export function searchChunks(
+  queryEmbedding: number[],
+  k = 8,
+  docIds: number[] | null = null,
+): MeChunkMatch[] {
   const buf = embeddingToBuffer(queryEmbedding)
+  // When the chat session is scoped to specific documents, over-fetch
+  // from the vec index (vec0 can't filter by external columns) and
+  // then drop hits outside the allow-list.
+  const limited = docIds && docIds.length > 0
+  const fetchK = limited ? Math.max(k * 6, 30) : k
   const rows = getDb()
     .prepare(
       `SELECT
@@ -408,7 +417,7 @@ export function searchChunks(queryEmbedding: number[], k = 8): MeChunkMatch[] {
        WHERE vec.embedding MATCH ? AND k = ?
        ORDER BY vec.distance`,
     )
-    .all(buf, k) as Array<{
+    .all(buf, fetchK) as Array<{
     id: number
     document_id: number
     chunk_index: number
@@ -416,7 +425,8 @@ export function searchChunks(queryEmbedding: number[], k = 8): MeChunkMatch[] {
     document_title: string
     distance: number
   }>
-  return rows.map((r) => ({
+  const filtered = limited ? rows.filter((r) => docIds!.includes(r.document_id)) : rows
+  return filtered.slice(0, k).map((r) => ({
     id: r.id,
     document_id: r.document_id,
     document_title: r.document_title,

@@ -1,8 +1,9 @@
 'use client'
 import { useEffect, useRef, useState } from 'react'
 import Link from 'next/link'
+import { useRouter } from 'next/navigation'
 import {
-  ArrowLeft, ChevronRight, FileAudio, FileText, FileType, Loader2, Pin, Plus, Trash2, TriangleAlert, Upload,
+  ArrowLeft, Brain, CheckSquare, ChevronRight, FileAudio, FileText, FileType, Loader2, Pin, Plus, Square as SquareIcon, Trash2, TriangleAlert, Upload, X,
 } from 'lucide-react'
 import MeTabs from '../MeTabs'
 import { apiFetch } from '@/lib/api-client'
@@ -56,7 +57,49 @@ export default function MeLibrary() {
   const [file, setFile] = useState<File | null>(null)
   const [adding, setAdding] = useState(false)
   const [filter, setFilter] = useState<'all' | 'paste' | 'file' | 'transcript'>('all')
+  const [selecting, setSelecting] = useState(false)
+  const [selectedIds, setSelectedIds] = useState<Set<string>>(new Set())
+  const [askingMulti, setAskingMulti] = useState(false)
   const fileInput = useRef<HTMLInputElement | null>(null)
+  const router = useRouter()
+
+  function toggleSelected(id: string) {
+    setSelectedIds((prev) => {
+      const next = new Set(prev)
+      if (next.has(id)) next.delete(id)
+      else next.add(id)
+      return next
+    })
+  }
+
+  function exitSelectMode() {
+    setSelecting(false)
+    setSelectedIds(new Set())
+  }
+
+  async function askMultiDoc() {
+    if (askingMulti || selectedIds.size === 0) return
+    setAskingMulti(true)
+    setError(null)
+    try {
+      const docIds = Array.from(selectedIds).map((s) => Number(s)).filter((n) => Number.isInteger(n))
+      const res = await apiFetch('/api/me/chats', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ kind: 'me', docIds }),
+      })
+      const data = await res.json()
+      if (!res.ok) throw new Error(data?.error || `Ошибка ${res.status}`)
+      const sid: string = data.session.id
+      // Persist as the current /me session and navigate.
+      try { localStorage.setItem('me-chat:session-id', sid) } catch {}
+      router.push('/me')
+    } catch (e: any) {
+      setError(e?.message || 'Не удалось открыть чат')
+    } finally {
+      setAskingMulti(false)
+    }
+  }
 
   async function refresh() {
     setLoading(true)
@@ -315,27 +358,78 @@ export default function MeLibrary() {
             В базе: {items.length} {items.length === 1 ? 'документ' : items.length < 5 && items.length > 0 ? 'документа' : 'документов'}
           </h2>
           {items.length > 0 && (
-            <div className="inline-flex rounded-full bg-apple-bg-soft p-0.5">
-              {([
-                ['all', 'Все'],
-                ['paste', 'Текст'],
-                ['file', 'Файлы'],
-                ['transcript', 'Транскрипты'],
-              ] as const).map(([k, label]) => (
+            <div className="flex items-center gap-2">
+              <div className="inline-flex rounded-full bg-apple-bg-soft p-0.5">
+                {([
+                  ['all', 'Все'],
+                  ['paste', 'Текст'],
+                  ['file', 'Файлы'],
+                  ['transcript', 'Транскрипты'],
+                ] as const).map(([k, label]) => (
+                  <button
+                    key={k}
+                    type="button"
+                    onClick={() => setFilter(k)}
+                    className={`rounded-full px-3 py-1 text-[12px] font-medium transition-all ${
+                      filter === k ? 'bg-white text-apple-ink shadow-apple-sm' : 'text-apple-muted hover:text-apple-ink'
+                    }`}
+                  >
+                    {label}
+                  </button>
+                ))}
+              </div>
+              {!selecting ? (
                 <button
-                  key={k}
                   type="button"
-                  onClick={() => setFilter(k)}
-                  className={`rounded-full px-3 py-1 text-[12px] font-medium transition-all ${
-                    filter === k ? 'bg-white text-apple-ink shadow-apple-sm' : 'text-apple-muted hover:text-apple-ink'
-                  }`}
+                  onClick={() => setSelecting(true)}
+                  className="inline-flex items-center gap-1.5 rounded-full border border-apple-line bg-white px-3 py-1 text-[12px] font-medium text-apple-ink shadow-apple-sm hover:bg-apple-bg-soft"
+                  title="Выбрать документы и задать вопрос только по ним"
                 >
-                  {label}
+                  <CheckSquare className="h-3.5 w-3.5" />
+                  Выбрать
                 </button>
-              ))}
+              ) : (
+                <button
+                  type="button"
+                  onClick={exitSelectMode}
+                  className="grid h-7 w-7 place-items-center rounded-full text-apple-faint hover:bg-apple-bg-soft hover:text-apple-ink"
+                  title="Выйти из режима выбора"
+                  aria-label="Выйти из режима выбора"
+                >
+                  <X className="h-3.5 w-3.5" />
+                </button>
+              )}
             </div>
           )}
         </div>
+
+        {selecting && (
+          <div className="mb-3 flex items-center justify-between gap-2 rounded-apple-lg border border-apple-line bg-apple-bg-elev p-3 shadow-apple-sm">
+            <span className="text-[12px] text-apple-muted">
+              {selectedIds.size === 0
+                ? 'Отметь документы, чтобы задать вопрос только по ним'
+                : `Выбрано: ${selectedIds.size}`}
+            </span>
+            <button
+              type="button"
+              onClick={askMultiDoc}
+              disabled={askingMulti || selectedIds.size === 0}
+              className="inline-flex items-center gap-1.5 rounded-full bg-apple-blue px-3 py-1.5 text-[12px] font-medium text-white transition-colors hover:bg-apple-blue-hover disabled:cursor-not-allowed disabled:bg-apple-line-strong"
+            >
+              {askingMulti ? (
+                <>
+                  <Loader2 className="h-3.5 w-3.5 animate-spin" />
+                  Открываем…
+                </>
+              ) : (
+                <>
+                  <Brain className="h-3.5 w-3.5" />
+                  Спросить про {selectedIds.size}
+                </>
+              )}
+            </button>
+          </div>
+        )}
         {(() => {
           const visible = filter === 'all' ? items : items.filter((d) => d.source_type === filter)
           if (loading) {
@@ -366,9 +460,29 @@ export default function MeLibrary() {
                 d.source_type === 'paste' ? FileText : d.source_type === 'transcript' ? FileAudio : FileType
               return (
                 <li key={d.id} className={i > 0 ? 'border-t border-apple-line' : ''}>
-                  <div className="group flex items-stretch">
+                  <div className={`group flex items-stretch ${selecting && selectedIds.has(d.id) ? 'bg-apple-bg-soft' : ''}`}>
+                    {selecting && (
+                      <button
+                        type="button"
+                        onClick={() => toggleSelected(d.id)}
+                        className="flex shrink-0 items-center pl-4 pr-1 text-apple-muted hover:text-apple-ink"
+                        aria-label={selectedIds.has(d.id) ? 'Снять выбор' : 'Выбрать'}
+                      >
+                        {selectedIds.has(d.id) ? (
+                          <CheckSquare className="h-4 w-4 text-apple-blue" />
+                        ) : (
+                          <SquareIcon className="h-4 w-4" />
+                        )}
+                      </button>
+                    )}
                     <Link
                       href={`/me/library/${d.id}`}
+                      onClick={(e) => {
+                        if (selecting) {
+                          e.preventDefault()
+                          toggleSelected(d.id)
+                        }
+                      }}
                       className="flex flex-1 items-start gap-3 px-4 py-3.5 transition-colors hover:bg-apple-bg-soft sm:px-5"
                     >
                       <div className="mt-0.5 grid h-9 w-9 shrink-0 place-items-center rounded-full bg-apple-bg-soft text-apple-muted group-hover:bg-white group-hover:shadow-apple-sm">

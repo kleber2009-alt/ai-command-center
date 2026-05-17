@@ -9,8 +9,38 @@ export type ChatSessionRow = {
   assistant_id: string | null
   title: string
   pinned: 0 | 1
+  /** Restrict RAG retrieval to these document ids only. null = whole library. */
+  doc_ids: number[] | null
   created_at: string
   updated_at: string
+}
+
+function parseDocIds(raw: unknown): number[] | null {
+  if (raw == null) return null
+  if (typeof raw === 'string') {
+    try {
+      const arr = JSON.parse(raw)
+      if (!Array.isArray(arr)) return null
+      const ids = arr.filter((x) => Number.isInteger(x)).map(Number)
+      return ids.length > 0 ? ids : null
+    } catch {
+      return null
+    }
+  }
+  return null
+}
+
+function hydrateSession(raw: any): ChatSessionRow {
+  return {
+    id: raw.id,
+    kind: raw.kind,
+    assistant_id: raw.assistant_id,
+    title: raw.title,
+    pinned: raw.pinned,
+    doc_ids: parseDocIds(raw.doc_ids),
+    created_at: raw.created_at,
+    updated_at: raw.updated_at,
+  }
 }
 
 export type ChatSessionListItem = ChatSessionRow & {
@@ -30,22 +60,35 @@ function nowIso(): string {
   return new Date().toISOString()
 }
 
-export function createSession(kind: ChatKind, assistantId: string | null): ChatSessionRow {
+export function createSession(
+  kind: ChatKind,
+  assistantId: string | null,
+  docIds: number[] | null = null,
+): ChatSessionRow {
   const id = randomUUID()
   const now = nowIso()
+  const docIdsJson = docIds && docIds.length > 0 ? JSON.stringify(docIds) : null
   getDb()
     .prepare(
-      `INSERT INTO chat_sessions (id, kind, assistant_id, title, created_at, updated_at)
-       VALUES (?, ?, ?, '', ?, ?)`,
+      `INSERT INTO chat_sessions (id, kind, assistant_id, title, doc_ids, created_at, updated_at)
+       VALUES (?, ?, ?, '', ?, ?, ?)`,
     )
-    .run(id, kind, assistantId, now, now)
-  return { id, kind, assistant_id: assistantId, title: '', pinned: 0, created_at: now, updated_at: now }
+    .run(id, kind, assistantId, docIdsJson, now, now)
+  return {
+    id,
+    kind,
+    assistant_id: assistantId,
+    title: '',
+    pinned: 0,
+    doc_ids: docIds && docIds.length > 0 ? docIds : null,
+    created_at: now,
+    updated_at: now,
+  }
 }
 
 export function getSession(id: string): ChatSessionRow | null {
-  return (
-    (getDb().prepare(`SELECT * FROM chat_sessions WHERE id = ?`).get(id) as ChatSessionRow | undefined) ?? null
-  )
+  const raw = getDb().prepare(`SELECT * FROM chat_sessions WHERE id = ?`).get(id) as any
+  return raw ? hydrateSession(raw) : null
 }
 
 export function listSessions(kind: ChatKind, assistantId: string | null, limit = 30): ChatSessionListItem[] {
@@ -72,9 +115,9 @@ export function listSessions(kind: ChatKind, assistantId: string | null, limit =
            ORDER BY s.pinned DESC, s.updated_at DESC
            LIMIT ?`,
         )
-        .all(kind, assistantId, limit)) as Array<ChatSessionListItem & { message_count: number | bigint }>
+        .all(kind, assistantId, limit)) as Array<any>
 
-  return rows.map((r) => ({ ...r, message_count: Number(r.message_count) }))
+  return rows.map((r) => ({ ...hydrateSession(r), message_count: Number(r.message_count), last_message: r.last_message }))
 }
 
 export function listMessages(sessionId: string): ChatMessageRow[] {

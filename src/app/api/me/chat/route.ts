@@ -43,6 +43,11 @@ export async function POST(req: NextRequest) {
   const profile = loadProfile()
   const profileBlock = profileToContext(profile)
 
+  // Resolve session early — we may need its doc_ids to scope RAG.
+  const session = body.sessionId ? getSession(body.sessionId) : null
+  const validSession = session && session.kind === 'me' ? session : null
+  const restrictDocIds: number[] | null = validSession?.doc_ids ?? null
+
   const lastUser = messages[messages.length - 1].content
   let contextBlock = ''
   let citations: Array<{
@@ -56,7 +61,7 @@ export async function POST(req: NextRequest) {
   if (process.env.OPENAI_API_KEY) {
     try {
       const queryVec = await embed(lastUser)
-      const matches: MeChunkMatch[] = searchChunks(queryVec, topK).filter(
+      const matches: MeChunkMatch[] = searchChunks(queryVec, topK, restrictDocIds).filter(
         (m) => m.similarity > 0.2,
       )
       contextBlock = matches
@@ -79,13 +84,14 @@ export async function POST(req: NextRequest) {
 
   const systemParts: string[] = [SYSTEM_INSTRUCTIONS]
   if (profileBlock) systemParts.push('## Профиль\n' + profileBlock)
+  if (restrictDocIds) {
+    systemParts.push(
+      `## Ограничение контекста\nПользователь явно ограничил выборку этими документами (ids: ${restrictDocIds.join(', ')}). Используй только их.`,
+    )
+  }
   if (contextBlock) systemParts.push('## Контекст (релевантные фрагменты из базы)\n' + contextBlock)
   else systemParts.push('## Контекст\n(релевантных фрагментов не найдено — используй только профиль и общие знания)')
   const system = systemParts.join('\n\n')
-
-  // Only persist when the client supplied a valid session id of kind='me'.
-  const session = body.sessionId ? getSession(body.sessionId) : null
-  const validSession = session && session.kind === 'me' ? session : null
 
   return streamAnthropic(
     {

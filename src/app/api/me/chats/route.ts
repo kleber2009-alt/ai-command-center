@@ -25,7 +25,11 @@ export async function GET(req: NextRequest) {
 export async function POST(req: NextRequest) {
   const gate = requireTelegramAuth(req)
   if (gate) return gate
-  const body = (await req.json().catch(() => ({}))) as { kind?: string; assistantId?: string }
+  const body = (await req.json().catch(() => ({}))) as {
+    kind?: string
+    assistantId?: string
+    docIds?: number[]
+  }
   const kind = parseKind(body.kind ?? null)
   if (!kind) return NextResponse.json({ error: 'kind должен быть "me" или "assistant"' }, { status: 400 })
 
@@ -40,6 +44,11 @@ export async function POST(req: NextRequest) {
     assistantId = body.assistantId
   }
 
-  const session = createSession(kind, assistantId)
+  const docIds =
+    kind === 'me' && Array.isArray(body.docIds)
+      ? body.docIds.filter((n) => Number.isInteger(n))
+      : null
+
+  const session = createSession(kind, assistantId, docIds)
   return NextResponse.json({ session })
 }

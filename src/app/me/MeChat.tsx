@@ -34,6 +34,7 @@ export default function MeChat() {
   const [expandedSources, setExpandedSources] = useState<Set<number>>(new Set())
   const [editingIdx, setEditingIdx] = useState<number | null>(null)
   const [editingValue, setEditingValue] = useState('')
+  const [sessionDocIds, setSessionDocIds] = useState<number[] | null>(null)
   const bottomRef = useRef<HTMLDivElement | null>(null)
   const inputRef = useRef<HTMLTextAreaElement | null>(null)
 
@@ -84,6 +85,7 @@ export default function MeChat() {
       if (!res.ok) throw new Error(data?.error || `Ошибка ${res.status}`)
       const id: string = data.session.id
       setSessionId(id)
+      setSessionDocIds(null)
       setMessages([])
       setError(null)
       try { localStorage.setItem(SESSION_KEY, id) } catch {}
@@ -102,6 +104,7 @@ export default function MeChat() {
     }
     const data = await res.json()
     setSessionId(data.session.id)
+    setSessionDocIds(Array.isArray(data.session?.doc_ids) ? data.session.doc_ids : null)
     setMessages((data.messages ?? []).map((m: any) => ({ role: m.role, content: m.content })))
     setError(null)
     try { localStorage.setItem(SESSION_KEY, data.session.id) } catch {}
@@ -356,6 +359,17 @@ export default function MeChat() {
       />
 
       <div className="flex-1 space-y-3 pb-4">
+        {sessionDocIds && sessionDocIds.length > 0 && (
+          <div className="flex items-start gap-2 rounded-apple-lg border border-apple-blue/30 bg-apple-blue/5 p-3 text-[13px] text-apple-ink">
+            <Brain className="mt-0.5 h-4 w-4 shrink-0 text-apple-blue" />
+            <div className="flex-1">
+              <div className="font-medium">Контекст ограничен</div>
+              <div className="mt-0.5 text-[12px] text-apple-muted">
+                Отвечаю только по {sessionDocIds.length} {sessionDocIds.length === 1 ? 'выбранному документу' : 'выбранным документам'} из базы.
+              </div>
+            </div>
+          </div>
+        )}
         {messages.length === 0 && (
           <>
             <div className="rounded-apple-lg border border-apple-line bg-apple-bg-elev p-5 shadow-apple-sm">
