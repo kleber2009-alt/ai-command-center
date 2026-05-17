@@ -81,6 +81,12 @@ for local dev and in Vercel/Railway project envs for prod:
   Mini-App-only operation. Clients send the header automatically via
   `apiFetch()` (`apps/transcribe/src/lib/telegram.ts`), which is wired into
   every client `fetch('/api/*')` call site in transcribe.
+- `OWNER_TELEGRAM_ID` (optional) — numeric Telegram user id of the owner.
+  Required for `ownerOnly: true` routes (currently `/api/tasks*`, backing
+  the `/admin` kanban board): the verified initData user must match this id
+  or the request gets 403. Fails closed when unset — owner-only routes
+  return 403 until both `TELEGRAM_BOT_TOKEN` and this id are configured.
+  Get your id by DMing [@userinfobot](https://t.me/userinfobot).
 
 ## Supabase migrations
 
@@ -122,8 +128,11 @@ sidebar. Everything is one page.
 
 `/admin` is a separate route group with its own wider layout
 (`apps/transcribe/src/app/admin/layout.tsx`, max-w-7xl) — kanban project board.
-Currently NO auth — anyone with the URL can read/write tasks.
-Track "Закрыть /admin от посторонних" task before public launch.
+API surface (`/api/tasks` + `/api/tasks/[id]`) is **owner-only**: requests
+must carry a valid Telegram initData whose `user.id` matches
+`OWNER_TELEGRAM_ID`, otherwise the route returns 403. The page UI itself is
+not gated server-side — a non-owner who navigates to `/admin` sees the
+empty kanban shell, but every CRUD call returns 403 and no data loads.
 
 `/me` (`apps/transcribe/src/app/me/`) — owner's personal RAG library.
 Subpages: `/me/library` (upload + browse personal documents) and
@@ -143,12 +152,14 @@ hard-coded entries). `/assistants/[id]` is a chat against one of them.
 chosen persona's system prompt. No persistence — each conversation is
 purely in-memory in the React component.
 
-**Auth posture across these routes**: currently **none** for `/admin`,
-`/me`, or `/assistants`. The `transcribe` and Mini-App-specific routes
-have rate-limiting + optional Telegram `initData` HMAC validation via
-`src/lib/api-guard.ts` (see "Security primitives" below), but `/me`
-and `/assistants` data is openly readable/writable. Lock down before
-sharing the deploy URL with anyone.
+**Auth posture across these routes**: every `/api/*` route in transcribe
+passes through `guardRequest` (`src/lib/api-guard.ts`) — rate-limit + optional
+Telegram `initData` HMAC validation. `/api/tasks*` is additionally owner-only
+(see `/admin` above). `/api/me/*` and `/api/assistants/*` are not owner-gated
+in code yet: with `TELEGRAM_REQUIRE_INIT_DATA=true` they're at least
+restricted to anyone with a valid Telegram session, but if you share the
+Mini-App link more broadly than yourself, add `ownerOnly: true` to those
+routes too.
 
 **The flow** (`apps/transcribe/src/app/transcribe/page.tsx`):
 1. Mount → calls `loadHistory()` and `setInTg(isInTelegram())`.

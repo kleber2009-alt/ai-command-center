@@ -16,6 +16,12 @@ export interface GuardOptions {
   // present but absence is allowed. Defaults to env-driven —
   // TELEGRAM_REQUIRE_INIT_DATA=true → require.
   requireInitData?: boolean
+  // If true, the verified Telegram user.id must match
+  // OWNER_TELEGRAM_ID. Implies requireInitData=true regardless
+  // of the global flag. Fails closed when bot token or owner id
+  // are not configured — non-owner endpoints stay reachable, but
+  // owner-only ones return 403 until the deployment is set up.
+  ownerOnly?: boolean
 }
 
 export type GuardResult =
@@ -48,19 +54,29 @@ export function guardRequest(req: NextRequest, options: GuardOptions): GuardResu
   // 2. initData. We only verify when the bot token is configured —
   //    otherwise the HMAC algorithm has no secret and validation
   //    can't work. In that case we pass through (no header → no
-  //    verification, header → ignored).
+  //    verification, header → ignored). Exception: ownerOnly
+  //    routes require a configured bot token; without it they
+  //    return 403, because we have no way to check who is calling.
   const botToken = process.env.TELEGRAM_BOT_TOKEN
   const headerInitData = req.headers.get(INIT_DATA_HEADER)
   const requireInitData =
-    options.requireInitData ?? process.env.TELEGRAM_REQUIRE_INIT_DATA === 'true'
+    options.ownerOnly === true ||
+    (options.requireInitData ?? process.env.TELEGRAM_REQUIRE_INIT_DATA === 'true')
 
   if (!botToken) {
+    if (options.ownerOnly) {
+      return {
+        ok: false,
+        response: NextResponse.json({ error: 'forbidden' }, { status: 403 }),
+      }
+    }
     // Auth disabled at the deployment level — pass-through.
     return { ok: true }
   }
 
+  let verified: VerifiedInitData | null = null
   if (headerInitData) {
-    const verified = verifyInitData(headerInitData, botToken)
+    verified = verifyInitData(headerInitData, botToken)
     if (!verified) {
       return {
         ok: false,
@@ -70,10 +86,7 @@ export function guardRequest(req: NextRequest, options: GuardOptions): GuardResu
         ),
       }
     }
-    return { ok: true, telegram: verified }
-  }
-
-  if (requireInitData) {
+  } else if (requireInitData) {
     return {
       ok: false,
       response: NextResponse.json(
@@ -83,5 +96,19 @@ export function guardRequest(req: NextRequest, options: GuardOptions): GuardResu
     }
   }
 
-  return { ok: true }
+  // 3. ownerOnly gate. At this point a valid `verified` is in hand
+  //    (we've already rejected missing/invalid headers above).
+  if (options.ownerOnly) {
+    const ownerIdRaw = process.env.OWNER_TELEGRAM_ID
+    const ownerId = ownerIdRaw ? parseInt(ownerIdRaw, 10) : NaN
+    const userId = verified?.user?.id
+    if (!Number.isFinite(ownerId) || !userId || userId !== ownerId) {
+      return {
+        ok: false,
+        response: NextResponse.json({ error: 'forbidden' }, { status: 403 }),
+      }
+    }
+  }
+
+  return { ok: true, telegram: verified ?? undefined }
 }

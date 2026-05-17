@@ -15,6 +15,7 @@ type CreateBody = {
 export async function GET(req: NextRequest) {
   const guard = guardRequest(req, {
     rateLimit: { key: 'tasks-list', max: 60, windowMs: 60_000 },
+    ownerOnly: true,
   })
   if (!guard.ok) return guard.response
 
@@ -40,6 +41,7 @@ export async function GET(req: NextRequest) {
 export async function POST(req: NextRequest) {
   const guard = guardRequest(req, {
     rateLimit: { key: 'tasks-create', max: 30, windowMs: 60_000 },
+    ownerOnly: true,
   })
   if (!guard.ok) return guard.response
 
