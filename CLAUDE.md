@@ -154,12 +154,19 @@ purely in-memory in the React component.
 
 **Auth posture across these routes**: every `/api/*` route in transcribe
 passes through `guardRequest` (`src/lib/api-guard.ts`) — rate-limit + optional
-Telegram `initData` HMAC validation. `/api/tasks*` is additionally owner-only
-(see `/admin` above). `/api/me/*` and `/api/assistants/*` are not owner-gated
-in code yet: with `TELEGRAM_REQUIRE_INIT_DATA=true` they're at least
-restricted to anyone with a valid Telegram session, but if you share the
-Mini-App link more broadly than yourself, add `ownerOnly: true` to those
-routes too.
+Telegram `initData` HMAC validation. Owner-only (`ownerOnly: true`) — only
+the user matching `OWNER_TELEGRAM_ID` passes:
+- `/api/tasks` + `/api/tasks/[id]` (backs the `/admin` kanban)
+- `/api/me/*` (profile, documents, chat — personal RAG library)
+- `/api/transcribe/history` + `/api/transcribe/history/[id]` (your URL history)
+
+Open to any verified Telegram user (HMAC only, no owner check):
+- `/api/transcribe`, `/api/transcribe/{summarize,translate,generate}` — the
+  core transcription flow. Add `ownerOnly: true` here too if you don't want
+  to share the deploy URL with other Telegram users.
+- `/api/assistants/chat` — the system-prompt-only persona chats. Same
+  consideration — open by default so they're usable if you share the Mini
+  App with someone.
 
 **The flow** (`apps/transcribe/src/app/transcribe/page.tsx`):
 1. Mount → calls `loadHistory()` and `setInTg(isInTelegram())`.

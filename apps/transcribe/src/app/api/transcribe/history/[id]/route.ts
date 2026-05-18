@@ -5,6 +5,7 @@ import { getServerSupabase } from '@/lib/transcripts-db'
 export async function GET(req: NextRequest, { params }: { params: { id: string } }) {
   const guard = guardRequest(req, {
     rateLimit: { key: 'history-item', max: 60, windowMs: 60_000 },
+    ownerOnly: true,
   })
   if (!guard.ok) return guard.response
 
@@ -22,6 +23,7 @@ export async function GET(req: NextRequest, { params }: { params: { id: string }
 export async function DELETE(req: NextRequest, { params }: { params: { id: string } }) {
   const guard = guardRequest(req, {
     rateLimit: { key: 'history-item', max: 60, windowMs: 60_000 },
+    ownerOnly: true,
   })
   if (!guard.ok) return guard.response
 
