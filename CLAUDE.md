@@ -66,10 +66,14 @@ for local dev and in Vercel/Railway project envs for prod:
 - `YTDLP_SERVICE_URL` (optional) — base URL of the companion yt-dlp
   microservice in `apps/ytdlp/` (deploy on Railway). When set,
   `/api/transcribe` falls back to yt-dlp + Deepgram for YouTube when our
-  captions parser is IP-blocked, and uses yt-dlp + Deepgram for Instagram
-  Reels / TikTok / X.
+  captions parser is IP-blocked, and uses yt-dlp + Deepgram for TikTok / X
+  (and as Instagram backup when `APIFY_API_TOKEN` is unset or Apify fails).
 - `YTDLP_SERVICE_API_KEY` (optional) — if the yt-dlp service is started with
   this env var, the main app must send `Authorization: Bearer <key>`.
+- `APIFY_API_TOKEN` (optional) — when set, Instagram URLs go through the
+  `apify/instagram-scraper` actor instead of yt-dlp. Keeps our Instagram
+  account and server IP out of any direct request to instagram.com. Without
+  this token, Instagram falls back to yt-dlp + cookies via Railway.
 - `OPENAI_API_KEY` — required by `/api/me/documents` (POST) and `/api/me/chat`
   for `text-embedding-3-small`. Without it the `/me` library can't ingest
   new documents or do retrieval; the page falls back to a no-RAG mode.
@@ -185,15 +189,21 @@ Open to any verified Telegram user (HMAC only, no owner check):
   - **YouTube** → our captions parser (`src/lib/youtube-captions.ts`). On
     any failure (no subs / IP block / wrong language) and when
     `YTDLP_SERVICE_URL` is set, falls back to **yt-dlp + Deepgram**.
-  - **Social URLs** (Instagram, TikTok, X, Vimeo, SoundCloud — see
+  - **Instagram** (see `isInstagramUrl()` in `src/lib/apify-client.ts`) →
+    `apify/instagram-scraper` actor + Deepgram when `APIFY_API_TOKEN` is
+    set. Falls back to yt-dlp + Deepgram if Apify fails (or isn't
+    configured). Apify path avoids putting our IG account or server IP
+    in front of instagram.com.
+  - **Other social URLs** (TikTok, X, Vimeo, SoundCloud, Facebook — see
     `isSocialMediaUrl()` in `src/lib/ytdlp-client.ts`) → always **yt-dlp +
     Deepgram**. Without `YTDLP_SERVICE_URL` returns 503.
   - **Anything else** → Deepgram `nova-2` directly, URL passed by reference.
   Returns `{ transcript, paragraphs: [{text,start,end}], duration,
-  detectedLanguage, source: 'youtube'|'deepgram'|'ytdlp+deepgram', id }`.
+  detectedLanguage, source: 'youtube'|'deepgram'|'ytdlp+deepgram'|'apify+deepgram', id }`.
   **Known issue**: YouTube actively rate-limits datacenter IPs (Vercel
-  included) — that's why the yt-dlp fallback exists. For Instagram and most
-  YouTube on Railway, cookies are required (see `apps/ytdlp/README.md`).
+  included) — that's why the yt-dlp fallback exists. For YouTube via
+  Railway, cookies are required (see `apps/ytdlp/README.md`). Instagram
+  cookies are no longer needed when `APIFY_API_TOKEN` is set.
 - `POST /api/transcribe/summarize` — body `{ id?, transcript? }`. Returns
   `{ summary, bullets, cached }`. Caches on the row.
 - `POST /api/transcribe/translate` — body `{ id?, transcript?,
