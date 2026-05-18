@@ -1,6 +1,7 @@
 import type { Metadata, Viewport } from 'next'
 import Script from 'next/script'
 import TelegramInit from '@/components/TelegramInit'
+import NavDrawer from '@/components/NavDrawer'
 import './globals.css'
 
 export const metadata: Metadata = {
@@ -25,6 +26,7 @@ export default function RootLayout({ children }: { children: React.ReactNode }) 
       </head>
       <body className="min-h-screen bg-white text-apple-ink antialiased">
         <TelegramInit />
+        <NavDrawer />
         {children}
       </body>
     </html>
