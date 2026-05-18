@@ -227,6 +227,29 @@ docker compose logs api > /tmp/api-logs-$(date +%Y%m%d).log
 
 ---
 
+## 10a. Passwordless sudo для Caddy-ops
+
+Чтобы редактировать `/etc/caddy/Caddyfile` и перезагружать Caddy без ввода
+пароля (нужно для удалённых ассистентов), на хосте однократно запусти:
+
+```bash
+sudo TARGET_USER=aisales bash apps/ai-sales/03-server-scripts/sudoers-caddy.sh
+```
+
+Скрипт идемпотентен, валидирует через `visudo -c` и кладёт правило в
+`/etc/sudoers.d/caddy-ops`. NOPASSWD выдаётся только на:
+
+- `cp` бэкап `/etc/caddy/Caddyfile` и подмену из `/tmp/Caddyfile.new`
+- `tee /etc/caddy/Caddyfile` (запись нового конфига)
+- `caddy validate --config /etc/caddy/Caddyfile`
+- `systemctl {reload,restart,status,start,stop} caddy`
+- если Caddy в Docker: `docker exec ai-sales-caddy caddy reload …`
+
+Всё остальное по-прежнему запрашивает пароль. Откатить — `sudo rm
+/etc/sudoers.d/caddy-ops`.
+
+---
+
 ## 11. Smoke-тест перед production
 
 После каждого деплоя:
