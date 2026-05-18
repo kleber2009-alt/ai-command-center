@@ -1,24 +1,30 @@
 name: deploy-ai-sales
 
-# Auto-deploy ai-sales (FastAPI + Caddy) to the Hetzner host on push to
-# main, or on manual workflow_dispatch from any branch.
+# Auto-deploy ai-sales (FastAPI · aisales-api-v2 container on Hetzner)
+# on push to main, or on manual workflow_dispatch from any branch.
 #
-# Required GitHub secrets (Settings → Secrets and variables → Actions):
-#   HETZNER_SSH_KEY     · private SSH key matching ~/.ssh/authorized_keys
-#                         on the server for the deploy user. ed25519
-#                         recommended. Generate locally:
-#                         ssh-keygen -t ed25519 -f ~/.ssh/aisales_deploy -N ''
-#                         then put the .pub into the server's
-#                         authorized_keys and the private key into this
-#                         secret.
+# Architecture as wired today (May 2026):
+#   · aisales-api-v2 runs as an orphan container (not under any compose
+#     stack), image aisales-api:v0.2, listening 127.0.0.1:8001 → 8000
+#   · /app inside the container is a read-only bind mount of the git
+#     checkout at /home/aisales/ai-command-center/apps/ai-sales/code
+#   · therefore: `git pull && docker restart aisales-api-v2` ships any
+#     Python-source change without an image rebuild
+#   · requirements.txt / Dockerfile changes still need a rebuild — out
+#     of scope for this workflow; do that manually for now
 #
-# Optional repository variables (Settings → Secrets and variables →
-# Actions → Variables tab) — sensible defaults if unset:
+# Required GitHub secrets:
+#   HETZNER_SSH_KEY     · private SSH key (ed25519). The matching public
+#                         key must be in ~/.ssh/authorized_keys for the
+#                         deploy user on the Hetzner host.
+#
+# Optional repository variables (sensible defaults if unset):
 #   HETZNER_HOST        · default 46.62.215.11
 #   HETZNER_USER        · default aisales
 #   HETZNER_SSH_PORT    · default 22
-#   HETZNER_REPO_PATH   · default /home/aisales/ai-sales-system
-#                         (must be a git checkout — workflow uses git pull)
+#   HETZNER_REPO_PATH   · default /home/aisales/ai-command-center
+#   HETZNER_API_CONTAINER · default aisales-api-v2
+#   HETZNER_API_PORT    · default 8001 (host-side port for healthcheck)
 
 on:
   push:
@@ -67,7 +73,7 @@ jobs:
           port: ${{ vars.HETZNER_SSH_PORT || 22 }}
           key: ${{ secrets.HETZNER_SSH_KEY }}
           script_stop: true
-          envs: TARGET_REF,REPO_PATH,RESTART_ONLY
+          envs: TARGET_REF,REPO_PATH,RESTART_ONLY,API_CONTAINER,API_PORT
           script: |
             set -euo pipefail
 
@@ -85,27 +91,28 @@ jobs:
               echo "── restart_only=true, skipping git pull ──"
             fi
 
-            cd code
-            echo "── restarting api container ──"
-            docker compose restart api
+            echo "── restarting $API_CONTAINER ──"
+            docker restart "$API_CONTAINER"
 
-            echo "── waiting for /health (up to 30s) ──"
+            echo "── waiting for /health on :$API_PORT (up to 30s) ──"
             for i in $(seq 1 15); do
-              if curl -fsS http://localhost:8000/health > /dev/null; then
+              if curl -fsS "http://localhost:$API_PORT/health" > /dev/null; then
                 echo "✓ healthy after ${i}x2s"
-                curl -fsS http://localhost:8000/
+                curl -fsS "http://localhost:$API_PORT/"
                 exit 0
               fi
               sleep 2
             done
 
-            echo "✗ /health did not respond within 30s"
-            docker compose logs --tail=50 api
+            echo "✗ /health on :$API_PORT did not respond within 30s"
+            docker logs --tail=50 "$API_CONTAINER"
             exit 1
         env:
           TARGET_REF: ${{ steps.ref.outputs.value }}
-          REPO_PATH: ${{ vars.HETZNER_REPO_PATH || '/home/aisales/ai-sales-system' }}
+          REPO_PATH: ${{ vars.HETZNER_REPO_PATH || '/home/aisales/ai-command-center' }}
           RESTART_ONLY: ${{ github.event.inputs.restart_only || 'false' }}
+          API_CONTAINER: ${{ vars.HETZNER_API_CONTAINER || 'aisales-api-v2' }}
+          API_PORT: ${{ vars.HETZNER_API_PORT || '8001' }}
 
       - name: Public-facing smoke test
         run: |
