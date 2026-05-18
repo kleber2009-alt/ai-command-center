@@ -8,10 +8,11 @@ export default function Contacts() {
 
   return (
     <section id="contacts" className="py-16 sm:py-24 border-t border-white/10">
-      <h2 className="font-serif text-3xl sm:text-4xl text-white">Связаться</h2>
+      <h2 className="font-serif text-3xl sm:text-4xl text-white">
+        Или напишите напрямую
+      </h2>
       <p className="mt-3 text-white/60 max-w-xl">
-        Напишите нам в удобный мессенджер — ответим в течение часа в рабочее время.
-        Первая консультация бесплатно.
+        Если удобнее в мессенджере — ответим в течение часа в рабочее время.
       </p>
 
       <div className="mt-10 grid gap-4 sm:grid-cols-2 max-w-2xl">
