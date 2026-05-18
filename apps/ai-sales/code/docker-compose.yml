@@ -130,8 +130,44 @@ services:
       - ../agent-prompts:/app/../agent-prompts:ro
       - ../voice-input:/app/../voice-input:rw
 
+  # ============ Caddy (static portal + dashboard + TLS) ============
+  # Serves the static portal/dashboard from ../ (mounted at /srv) and
+  # reverse-proxies /api/* and /webhooks/* to the api container.
+  # Set DOMAIN in .env to a real hostname for auto-HTTPS; defaults to
+  # HTTP-only on :80 for local dev.
+  caddy:
+    image: caddy:2-alpine
+    container_name: aisales-caddy
+    restart: unless-stopped
+    depends_on:
+      - api
+    environment:
+      DOMAIN: ${DOMAIN::80}
+    ports:
+      - "80:80"
+      - "443:443"
+      - "443:443/udp"
+    volumes:
+      - ./Caddyfile:/etc/caddy/Caddyfile:ro
+      # Static sources — read-only, explicitly enumerated so
+      # private dirs (code/, agent-prompts/, voice-input/, scripts/,
+      # 02-stage-instructions/, 03-server-scripts/, 04-database/,
+      # content-bank/, funnel-scripts/, notion-templates/,
+      # objections/) are NOT exposed.
+      - ../01-portal:/srv/01-portal:ro
+      - ../05-docs:/srv/05-docs:ro
+      - ../06-dashboard-prototype:/srv/06-dashboard-prototype:ro
+      - ../carousels:/srv/carousels:ro
+      - ../reels:/srv/reels:ro
+      - ../assets:/srv/assets:ro
+      - ../index.html:/srv/index.html:ro
+      - aisales_caddy_data:/data
+      - aisales_caddy_config:/config
+
 volumes:
   aisales_pg_data:
   aisales_redis_data:
   aisales_qdrant_data:
   aisales_minio_data:
+  aisales_caddy_data:
+  aisales_caddy_config:
