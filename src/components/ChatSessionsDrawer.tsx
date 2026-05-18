@@ -199,7 +199,7 @@ export default function ChatSessionsDrawer({
               onNew()
               onClose()
             }}
-            className="inline-flex w-full items-center justify-center gap-2 rounded-full bg-apple-blue px-3 py-2 text-[13px] font-medium text-white transition-colors hover:bg-apple-blue-hover"
+            className="inline-flex w-full items-center justify-center gap-2 rounded-full bg-apple-blue px-3 py-2 text-[13px] font-medium text-apple-bg transition-colors hover:bg-apple-blue-hover"
           >
             <MessageSquarePlus className="h-4 w-4" />
             Новый чат
@@ -290,7 +290,7 @@ export default function ChatSessionsDrawer({
                           <button
                             type="button"
                             onClick={() => commitRename(s.id)}
-                            className="grid h-8 w-8 shrink-0 place-items-center rounded-full bg-apple-blue text-white hover:bg-apple-blue-hover"
+                            className="grid h-8 w-8 shrink-0 place-items-center rounded-full bg-apple-blue text-apple-bg hover:bg-apple-blue-hover"
                             aria-label="Сохранить"
                           >
                             <Check className="h-3.5 w-3.5" />

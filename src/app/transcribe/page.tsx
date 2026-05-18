@@ -604,7 +604,7 @@ export default function TranscribePage() {
       </div>
 
       {/* Form */}
-      <form onSubmit={submit} className="space-y-4 rounded-apple-lg border border-apple-line bg-apple-bg-elev p-5 shadow-apple-sm">
+      <form onSubmit={submit} className="glow-card relative space-y-4 p-5 sm:p-6">
         <div>
           <label className="mb-2 block text-[12px] font-medium text-apple-muted">
             URL медиафайла
@@ -649,7 +649,7 @@ export default function TranscribePage() {
             <button
               type="submit"
               disabled={loading || !url.trim()}
-              className="inline-flex items-center gap-2 rounded-full bg-apple-blue px-5 py-2.5 text-[14px] font-medium text-white transition-colors hover:bg-apple-blue-hover active:bg-apple-blue-pressed disabled:cursor-not-allowed disabled:bg-apple-line-strong"
+              className="btn-amber inline-flex items-center gap-2"
             >
               {loading ? (
                 <>
@@ -674,11 +674,11 @@ export default function TranscribePage() {
 
       {/* Error */}
       {error && (
-        <div className="flex items-start gap-2.5 rounded-apple-lg border border-red-200 bg-red-50 p-4">
-          <TriangleAlert className="mt-0.5 h-4 w-4 flex-shrink-0 text-red-600" />
+        <div className="flex items-start gap-2.5 rounded-apple-lg border border-red-500/30 bg-red-500/10 p-4">
+          <TriangleAlert className="mt-0.5 h-4 w-4 flex-shrink-0 text-red-400" />
           <div>
-            <div className="mb-0.5 text-[12px] font-medium text-red-700">Ошибка</div>
-            <p className="break-words text-[14px] text-red-700">{error}</p>
+            <div className="mb-0.5 text-[12px] font-medium text-red-300">Ошибка</div>
+            <p className="break-words text-[14px] text-red-200">{error}</p>
           </div>
         </div>
       )}
@@ -687,7 +687,7 @@ export default function TranscribePage() {
       {result && (
         <div className="space-y-5">
           {/* Transcript card */}
-          <div className="overflow-hidden rounded-apple-lg border border-apple-line bg-apple-bg-elev shadow-apple-sm">
+          <div className="glow-card relative overflow-hidden">
             <div className="flex flex-wrap items-center justify-between gap-2 border-b border-apple-line px-5 py-3">
               <div className="flex flex-wrap items-center gap-2.5">
                 <h3 className="text-[13px] font-semibold text-apple-ink">Транскрипт</h3>
@@ -923,7 +923,7 @@ export default function TranscribePage() {
 
       {/* History */}
       {historyConfigured && history.length > 0 && (
-        <div id="history" className="overflow-hidden rounded-apple-lg border border-apple-line bg-apple-bg-elev shadow-apple-sm scroll-mt-20">
+        <div id="history" className="glow-card relative overflow-hidden scroll-mt-20">
           <div className="flex flex-wrap items-center gap-2 border-b border-apple-line px-5 py-3">
             <History className="h-4 w-4 text-apple-muted" />
             <h3 className="text-[13px] font-semibold text-apple-ink">История</h3>
@@ -944,7 +944,7 @@ export default function TranscribePage() {
                   type="button"
                   onClick={batchImportToBrain}
                   disabled={batchImporting}
-                  className="inline-flex items-center gap-1.5 rounded-full bg-apple-blue px-3 py-1.5 text-[12px] font-medium text-white transition-colors hover:bg-apple-blue-hover disabled:cursor-not-allowed disabled:bg-apple-line-strong"
+                  className="inline-flex items-center gap-1.5 rounded-full bg-apple-blue px-3 py-1.5 text-[12px] font-medium text-apple-bg transition-colors hover:bg-apple-blue-hover disabled:cursor-not-allowed disabled:bg-apple-line-strong"
                 >
                   {batchImporting ? (
                     <>

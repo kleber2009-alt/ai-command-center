@@ -421,7 +421,7 @@ export default function AssistantChat({ id, name, description, icon, buttonText,
                 <button
                   type="button"
                   onClick={showHelp}
-                  className="mt-4 inline-flex items-center gap-2 rounded-full bg-apple-blue px-4 py-2 text-[13px] font-medium text-white transition-colors hover:bg-apple-blue-hover active:bg-apple-blue-pressed sm:text-sm"
+                  className="mt-4 inline-flex items-center gap-2 rounded-full bg-apple-blue px-4 py-2 text-[13px] font-medium text-apple-bg transition-colors hover:bg-apple-blue-hover active:bg-apple-blue-pressed sm:text-sm"
                 >
                   <Sparkles className="h-4 w-4" />
                   {buttonText}
@@ -499,7 +499,7 @@ export default function AssistantChat({ id, name, description, icon, buttonText,
                       setEditingIdx(null)
                       send(v, { editAtIndex: i })
                     }}
-                    className="inline-flex items-center gap-1.5 rounded-full bg-apple-blue px-3 py-1.5 text-[12px] font-medium text-white hover:bg-apple-blue-hover"
+                    className="inline-flex items-center gap-1.5 rounded-full bg-apple-blue px-3 py-1.5 text-[12px] font-medium text-apple-bg hover:bg-apple-blue-hover"
                   >
                     <Send className="h-3.5 w-3.5" />
                     Переотправить
@@ -510,7 +510,7 @@ export default function AssistantChat({ id, name, description, icon, buttonText,
             <div
               className={
                 m.role === 'user'
-                  ? 'group relative rounded-[20px] rounded-br-md bg-apple-blue px-3.5 py-2.5 text-[15px] leading-snug text-white shadow-apple-sm'
+                  ? 'group relative rounded-[20px] rounded-br-md bg-apple-blue px-3.5 py-2.5 text-[15px] leading-snug text-apple-bg shadow-apple-sm'
                   : 'group relative rounded-[20px] rounded-bl-md border border-apple-line bg-apple-bg-elev px-3.5 py-2.5 text-[15px] leading-snug text-apple-ink shadow-apple-sm'
               }
             >
@@ -655,7 +655,7 @@ export default function AssistantChat({ id, name, description, icon, buttonText,
           <button
             type="submit"
             disabled={loading || !input.trim() || voice.state !== 'idle'}
-            className="grid h-10 w-10 shrink-0 place-items-center rounded-full bg-apple-blue text-white transition-colors hover:bg-apple-blue-hover active:bg-apple-blue-pressed disabled:cursor-not-allowed disabled:bg-apple-line-strong"
+            className="grid h-10 w-10 shrink-0 place-items-center rounded-full bg-apple-blue text-apple-bg transition-colors hover:bg-apple-blue-hover active:bg-apple-blue-pressed disabled:cursor-not-allowed disabled:bg-apple-line-strong"
             aria-label="Отправить"
           >
             {loading ? <Loader2 className="h-4 w-4 animate-spin" /> : <Send className="h-4 w-4" />}
