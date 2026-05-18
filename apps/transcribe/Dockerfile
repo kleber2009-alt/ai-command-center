@@ -11,11 +11,14 @@ WORKDIR /repo
 COPY package.json package-lock.json ./
 COPY apps/transcribe/package.json apps/transcribe/package.json
 COPY apps/tg-agent/package.json apps/tg-agent/package.json
-RUN npm ci --workspace=apps/transcribe --include-workspace-root --ignore-scripts
+RUN npm ci --workspace=apps/transcribe --include-workspace-root --ignore-scripts \
+ && mkdir -p apps/transcribe/node_modules
 
 FROM node:20-alpine AS builder
 WORKDIR /repo
 COPY --from=deps /repo/node_modules ./node_modules
+# workspace-local node_modules only exist when npm can't hoist; copy the dir
+# (possibly empty) so the build can still resolve everything from root node_modules
 COPY --from=deps /repo/apps/transcribe/node_modules ./apps/transcribe/node_modules
 COPY package.json package-lock.json ./
 COPY apps/transcribe/ apps/transcribe/
