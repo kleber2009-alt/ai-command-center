@@ -21,6 +21,7 @@ const SYSTEM_INSTRUCTIONS = `Ты — личный «второй мозг» п�
 export async function POST(req: NextRequest) {
   const guard = guardRequest(req, {
     rateLimit: { key: 'me-chat', max: 20, windowMs: 60_000 },
+    ownerOnly: true,
   })
   if (!guard.ok) return guard.response
 

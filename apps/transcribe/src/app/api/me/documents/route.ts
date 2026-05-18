@@ -40,6 +40,7 @@ async function extractFileText(file: File): Promise<string> {
 export async function GET(req: NextRequest) {
   const guard = guardRequest(req, {
     rateLimit: { key: 'docs-list', max: 60, windowMs: 60_000 },
+    ownerOnly: true,
   })
   if (!guard.ok) return guard.response
 
@@ -58,6 +59,7 @@ export async function POST(req: NextRequest) {
   // PDF parsing + OpenAI embeddings — tighter limit on creation.
   const guard = guardRequest(req, {
     rateLimit: { key: 'docs-create', max: 10, windowMs: 60_000 },
+    ownerOnly: true,
   })
   if (!guard.ok) return guard.response
 

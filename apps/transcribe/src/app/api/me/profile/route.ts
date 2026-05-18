@@ -5,6 +5,7 @@ import { loadProfile, saveProfile, getServerSupabase, EMPTY_PROFILE } from '@/li
 export async function GET(req: NextRequest) {
   const guard = guardRequest(req, {
     rateLimit: { key: 'profile', max: 60, windowMs: 60_000 },
+    ownerOnly: true,
   })
   if (!guard.ok) return guard.response
 
@@ -19,6 +20,7 @@ export async function GET(req: NextRequest) {
 export async function PUT(req: NextRequest) {
   const guard = guardRequest(req, {
     rateLimit: { key: 'profile', max: 60, windowMs: 60_000 },
+    ownerOnly: true,
   })
   if (!guard.ok) return guard.response
 
