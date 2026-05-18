@@ -1,0 +1,56 @@
+# transcribe app on a single Hetzner box, with Caddy in front for
+# automatic HTTPS via nip.io / Let's Encrypt.
+#
+# Usage:
+#   cd apps/transcribe
+#   cp .env.example .env  # fill ANTHROPIC_API_KEY, DEEPGRAM_API_KEY, …
+#   docker compose up -d --build
+#
+# Caddy listens on 80/443 and proxies EVERYTHING (incl. /_next/static/*)
+# to the Next.js container on port 3000. That fixes the missing-CSS
+# class of bug where a hand-rolled nginx config only forwards /api/* and
+# drops /_next/static/* on the floor.
+
+services:
+  transcribe:
+    build:
+      context: ../..
+      dockerfile: apps/transcribe/Dockerfile
+    image: transcribe:local
+    container_name: transcribe
+    restart: unless-stopped
+    env_file: .env
+    environment:
+      NODE_ENV: production
+      PORT: "3000"
+      HOSTNAME: "0.0.0.0"
+    expose:
+      - "3000"
+    healthcheck:
+      test: ["CMD", "node", "-e", "fetch('http://127.0.0.1:3000/').then(r=>process.exit(r.status<500?0:1)).catch(()=>process.exit(1))"]
+      interval: 30s
+      timeout: 5s
+      retries: 3
+      start_period: 15s
+
+  caddy:
+    image: caddy:2-alpine
+    container_name: transcribe-caddy
+    restart: unless-stopped
+    depends_on:
+      - transcribe
+    ports:
+      - "80:80"
+      - "443:443"
+    volumes:
+      - ./Caddyfile:/etc/caddy/Caddyfile:ro
+      - caddy-data:/data
+      - caddy-config:/config
+    environment:
+      SITE_HOST: ${SITE_HOST:-:80}
+
+volumes:
+  caddy-data:
+    name: transcribe-caddy-data
+  caddy-config:
+    name: transcribe-caddy-config

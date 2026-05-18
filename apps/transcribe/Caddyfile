@@ -1,0 +1,21 @@
+# Caddy config for the transcribe app.
+#
+# {$SITE_HOST} is read from the compose env. Set it to a real domain
+# (e.g. transcribe.example.com) and Caddy will provision Let's Encrypt
+# automatically. Default ":80" runs plain HTTP on every Host header,
+# which is what you want when accessing via the raw IP / nip.io alias.
+
+{$SITE_HOST} {
+	encode zstd gzip
+
+	# Proxy EVERYTHING to next start. Critical: this includes
+	# /_next/static/* (the Tailwind CSS bundle, the JS chunks, fonts,
+	# images). A reverse-proxy config that only forwards /api/* will
+	# render the page completely unstyled.
+	reverse_proxy transcribe:3000 {
+		header_up Host {host}
+		header_up X-Real-IP {remote_host}
+		header_up X-Forwarded-For {remote_host}
+		header_up X-Forwarded-Proto {scheme}
+	}
+}
