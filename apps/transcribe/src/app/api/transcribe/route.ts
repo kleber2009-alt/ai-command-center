@@ -8,6 +8,12 @@ import {
   isYtdlpServiceConfigured,
   YtdlpServiceError,
 } from '@/lib/ytdlp-client'
+import {
+  ApifyServiceError,
+  extractInstagramMediaUrl,
+  isApifyConfigured,
+  isInstagramUrl,
+} from '@/lib/apify-client'
 
 export const maxDuration = 60
 
@@ -17,7 +23,7 @@ type Ok = {
   paragraphs: Paragraph[]
   duration: number | null
   detectedLanguage: string | null
-  source: 'youtube' | 'deepgram' | 'ytdlp+deepgram'
+  source: 'youtube' | 'deepgram' | 'ytdlp+deepgram' | 'apify+deepgram'
 }
 type Err = { error: string; status: number }
 type Result = Ok | Err
@@ -109,6 +115,28 @@ async function fetchViaYtdlpThenDeepgram(
       return { error: e.message, status: e.status }
     }
     return { error: e?.message || 'Ошибка yt-dlp', status: 500 }
+  }
+}
+
+async function fetchViaApifyThenDeepgram(
+  url: string,
+  language: 'auto' | 'ru' | 'en',
+): Promise<Result> {
+  try {
+    const { url: directUrl, duration: apifyDuration } = await extractInstagramMediaUrl(url)
+    const deepgramResult = await fetchDeepgram(directUrl, language)
+    if ('error' in deepgramResult) return deepgramResult
+    // Prefer Apify's duration (from IG metadata) over Deepgram's when present.
+    return {
+      ...deepgramResult,
+      duration: apifyDuration ?? deepgramResult.duration,
+      source: 'apify+deepgram',
+    }
+  } catch (e: any) {
+    if (e instanceof ApifyServiceError) {
+      return { error: e.message, status: e.status }
+    }
+    return { error: e?.message || 'Ошибка Apify', status: 500 }
   }
 }
 
@@ -212,10 +240,34 @@ async function dispatch(url: string, language: 'auto' | 'ru' | 'en'): Promise<Re
     return captionsResult
   }
 
+  // Instagram is routed through Apify when configured — keeps our IG
+  // account and server IP out of any direct request to instagram.com.
+  // Falls back to yt-dlp + cookies if Apify isn't set up.
+  if (isInstagramUrl(url)) {
+    if (isApifyConfigured()) {
+      const apifyResult = await fetchViaApifyThenDeepgram(url, language)
+      if (!('error' in apifyResult)) return apifyResult
+      // On Apify failure, try yt-dlp as backup if available — keeps the
+      // existing cookies-based path as a safety net during the migration.
+      if (isYtdlpServiceConfigured()) {
+        const ytdlpResult = await fetchViaYtdlpThenDeepgram(url, language)
+        if (!('error' in ytdlpResult)) return ytdlpResult
+      }
+      return apifyResult
+    }
+    if (isYtdlpServiceConfigured()) {
+      return await fetchViaYtdlpThenDeepgram(url, language)
+    }
+    return {
+      error: 'Для Instagram нужен Apify (APIFY_API_TOKEN) или yt-dlp сервис (YTDLP_SERVICE_URL).',
+      status: 503,
+    }
+  }
+
   if (isSocialMediaUrl(url)) {
     if (!isYtdlpServiceConfigured()) {
       return {
-        error: 'Для Instagram / TikTok / X нужен yt-dlp сервис. Настройте YTDLP_SERVICE_URL.',
+        error: 'Для TikTok / X нужен yt-dlp сервис. Настройте YTDLP_SERVICE_URL.',
         status: 503,
       }
     }

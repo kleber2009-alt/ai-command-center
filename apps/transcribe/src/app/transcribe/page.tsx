@@ -9,7 +9,7 @@ import {
 import { apiFetch, getTelegram, isInTelegram } from '@/lib/telegram'
 
 type Paragraph = { text: string; start: number; end: number }
-type Source = 'youtube' | 'deepgram' | 'ytdlp+deepgram'
+type Source = 'youtube' | 'deepgram' | 'ytdlp+deepgram' | 'apify+deepgram'
 type Result = {
   id: string | null
   transcript: string
@@ -629,6 +629,10 @@ export default function TranscribePage() {
                   ) : result.source === 'ytdlp+deepgram' ? (
                     <span className="inline-flex items-center gap-1 rounded-md bg-apple-bg-soft px-1.5 py-0.5 text-apple-muted">
                       <FileAudio className="h-3 w-3" /> yt-dlp + Deepgram
+                    </span>
+                  ) : result.source === 'apify+deepgram' ? (
+                    <span className="inline-flex items-center gap-1 rounded-md bg-apple-bg-soft px-1.5 py-0.5 text-apple-muted">
+                      <FileAudio className="h-3 w-3" /> Apify + Deepgram
                     </span>
                   ) : (
                     <span className="inline-flex items-center gap-1 rounded-md bg-apple-bg-soft px-1.5 py-0.5 text-apple-muted">
