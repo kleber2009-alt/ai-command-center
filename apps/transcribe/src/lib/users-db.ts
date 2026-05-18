@@ -1,4 +1,4 @@
-import { getServerSupabase } from './transcripts-db'
+import { getDb } from './db'
 
 export type UserTier = 'free' | 'pro' | 'team'
 
@@ -23,50 +23,44 @@ export async function getOrCreateUser(tg: {
   username?: string
   first_name?: string
 }): Promise<AppUser | null> {
-  const db = getServerSupabase()
+  const db = getDb()
   if (!db) return null
-
-  const { data, error } = await db
-    .from('users')
-    .upsert(
-      {
-        telegram_id: tg.id,
-        username: tg.username ?? null,
-        first_name: tg.first_name ?? null,
-        updated_at: new Date().toISOString(),
-      },
-      { onConflict: 'telegram_id' },
-    )
-    .select()
-    .single()
-
-  if (error) {
-    console.warn('[users-db] getOrCreateUser failed:', error.message)
+  try {
+    const [row] = await db`
+      INSERT INTO users (telegram_id, username, first_name, updated_at)
+      VALUES (${tg.id}, ${tg.username ?? null}, ${tg.first_name ?? null}, NOW())
+      ON CONFLICT (telegram_id) DO UPDATE
+        SET username   = EXCLUDED.username,
+            first_name = EXCLUDED.first_name,
+            updated_at = NOW()
+      RETURNING *
+    `
+    return row as AppUser
+  } catch (e: any) {
+    console.warn('[users-db] getOrCreateUser failed:', e?.message)
     return null
   }
-  return data as AppUser
 }
 
 export async function getQuota(userId: string, tier: UserTier): Promise<QuotaInfo | null> {
-  const db = getServerSupabase()
+  const db = getDb()
   if (!db) return null
-
-  const { data, error } = await db.rpc('ensure_quota', { p_user_id: userId, p_tier: tier })
-  if (error) {
-    console.warn('[users-db] getQuota failed:', error.message)
+  try {
+    const [row] = await db`SELECT * FROM ensure_quota(${userId}::uuid, ${tier}::text)`
+    return row as QuotaInfo
+  } catch (e: any) {
+    console.warn('[users-db] getQuota failed:', e?.message)
     return null
   }
-  const row = data as { minutes_used: number; minutes_limit: number; resets_at: string }
-  return row
 }
 
 export async function deductMinutes(userId: string, minutes: number): Promise<void> {
-  const db = getServerSupabase()
+  const db = getDb()
   if (!db) return
-
-  const { error } = await db.rpc('add_minutes_used', { p_user_id: userId, p_minutes: minutes })
-  if (error) {
-    console.warn('[users-db] deductMinutes failed:', error.message)
+  try {
+    await db`SELECT add_minutes_used(${userId}::uuid, ${minutes}::numeric)`
+  } catch (e: any) {
+    console.warn('[users-db] deductMinutes failed:', e?.message)
   }
 }
 
@@ -78,29 +72,26 @@ export async function updateUserStripe(
     subscription_tier?: UserTier
   },
 ): Promise<void> {
-  const db = getServerSupabase()
+  const db = getDb()
   if (!db) return
-
-  const { error } = await db
-    .from('users')
-    .update({ ...updates, updated_at: new Date().toISOString() })
-    .eq('id', userId)
-
-  if (error) {
-    console.warn('[users-db] updateUserStripe failed:', error.message)
+  try {
+    const vals: Record<string, unknown> = { updated_at: new Date() }
+    if (updates.stripe_customer_id !== undefined) vals.stripe_customer_id = updates.stripe_customer_id
+    if (updates.stripe_subscription_id !== undefined) vals.stripe_subscription_id = updates.stripe_subscription_id
+    if (updates.subscription_tier !== undefined) vals.subscription_tier = updates.subscription_tier
+    await db`UPDATE users SET ${db(vals)} WHERE id = ${userId}::uuid`
+  } catch (e: any) {
+    console.warn('[users-db] updateUserStripe failed:', e?.message)
   }
 }
 
 export async function getUserByStripeCustomer(customerId: string): Promise<AppUser | null> {
-  const db = getServerSupabase()
+  const db = getDb()
   if (!db) return null
-
-  const { data, error } = await db
-    .from('users')
-    .select()
-    .eq('stripe_customer_id', customerId)
-    .single()
-
-  if (error) return null
-  return data as AppUser
+  try {
+    const [row] = await db`SELECT * FROM users WHERE stripe_customer_id = ${customerId}`
+    return (row as AppUser) ?? null
+  } catch {
+    return null
+  }
 }

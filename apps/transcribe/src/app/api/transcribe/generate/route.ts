@@ -1,6 +1,6 @@
 import { NextRequest, NextResponse } from 'next/server'
 import { guardRequest } from '@/lib/api-guard'
-import { getServerSupabase } from '@/lib/transcripts-db'
+import { dbGetTranscript, dbMergeGenerations } from '@/lib/transcripts-db'
 
 export const maxDuration = 60
 
@@ -207,22 +207,16 @@ export async function POST(req: NextRequest) {
   }
 
   let text = transcript
-  const supabase = getServerSupabase()
-
-  if (id && supabase) {
-    const { data, error } = await supabase
-      .from('transcripts')
-      .select('transcript, generations')
-      .eq('id', id)
-      .single()
-    if (error) {
-      return NextResponse.json({ error: `Не найден транскрипт: ${error.message}` }, { status: 404 })
+  if (id) {
+    const row = await dbGetTranscript(id)
+    if (!row) {
+      return NextResponse.json({ error: 'Транскрипт не найден' }, { status: 404 })
     }
-    const cached = data.generations?.[type]
+    const cached = row.generations?.[type as keyof typeof row.generations]
     if (cached) {
       return NextResponse.json({ type, content: cached, cached: true })
     }
-    text = data.transcript
+    text = row.transcript
   }
 
   if (!text || text.trim().length === 0) {
@@ -275,14 +269,8 @@ export async function POST(req: NextRequest) {
       return NextResponse.json({ error: e.message }, { status: 500 })
     }
 
-    if (id && supabase) {
-      const { data: row } = await supabase
-        .from('transcripts')
-        .select('generations')
-        .eq('id', id)
-        .single()
-      const merged = { ...(row?.generations ?? {}), [type]: validated }
-      await supabase.from('transcripts').update({ generations: merged }).eq('id', id)
+    if (id) {
+      await dbMergeGenerations(id, type, validated)
     }
 
     return NextResponse.json({ type, content: validated, cached: false })

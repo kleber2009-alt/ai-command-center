@@ -1,6 +1,6 @@
 import { NextRequest, NextResponse } from 'next/server'
 import { guardRequest } from '@/lib/api-guard'
-import { getServerSupabase } from '@/lib/transcripts-db'
+import { dbGetTranscript, dbSaveSummary } from '@/lib/transcripts-db'
 
 export const maxDuration = 60
 
@@ -32,20 +32,15 @@ export async function POST(req: NextRequest) {
   }
 
   let text = transcript
-  const supabase = getServerSupabase()
-  if (id && supabase) {
-    const { data, error } = await supabase
-      .from('transcripts')
-      .select('transcript, summary, bullets')
-      .eq('id', id)
-      .single()
-    if (error) {
-      return NextResponse.json({ error: `Не найден транскрипт: ${error.message}` }, { status: 404 })
+  if (id) {
+    const row = await dbGetTranscript(id)
+    if (!row) {
+      return NextResponse.json({ error: 'Транскрипт не найден' }, { status: 404 })
     }
-    if (data.summary && data.bullets) {
-      return NextResponse.json({ summary: data.summary, bullets: data.bullets, cached: true })
+    if (row.summary && row.bullets) {
+      return NextResponse.json({ summary: row.summary, bullets: row.bullets, cached: true })
     }
-    text = data.transcript
+    text = row.transcript
   }
 
   if (!text || text.trim().length === 0) {
@@ -80,11 +75,8 @@ export async function POST(req: NextRequest) {
     const cleaned = raw.replace(/```json?|```/g, '').trim()
     const parsed = JSON.parse(cleaned) as { summary: string; bullets: string[] }
 
-    if (id && supabase) {
-      await supabase
-        .from('transcripts')
-        .update({ summary: parsed.summary, bullets: parsed.bullets })
-        .eq('id', id)
+    if (id) {
+      await dbSaveSummary(id, parsed.summary, parsed.bullets)
     }
 
     return NextResponse.json({ summary: parsed.summary, bullets: parsed.bullets, cached: false })
