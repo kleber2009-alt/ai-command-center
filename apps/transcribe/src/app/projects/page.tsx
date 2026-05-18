@@ -5,22 +5,26 @@ type Project = {
   name: string
   description: string
   icon: typeof Building2
-  href?: string
+  href: string
+  external?: boolean
 }
 
 const projects: Project[] = [
   {
     id: 'ai-office',
     name: 'ИИ-офис',
-    description: 'Командный центр: ассистенты, второй мозг, доска задач — всё в одном месте.',
+    description: 'Командный центр: лендинг, кейсы, дашборд-демо и витрина агентов на ai-growth-office.ru.',
     icon: Building2,
-    href: '/assistants',
+    href: 'https://ai-growth-office.ru',
+    external: true,
   },
   {
     id: 'ai-sales',
     name: 'Отдел продаж',
-    description: 'Мульти-агентная система продаж в Instagram и Telegram с клонированным голосом и общей базой знаний.',
+    description: 'Мульти-агентная система продаж в Instagram и Telegram: портал, Pulse-дашборд, прототип воронки.',
     icon: ShoppingBag,
+    href: 'https://soft-longma-b5d4f0.netlify.app',
+    external: true,
   },
   {
     id: 'transcribe',
@@ -46,23 +50,24 @@ export default function ProjectsPage() {
       <ul className="overflow-hidden rounded-apple-lg border border-apple-line bg-white shadow-apple-sm">
         {projects.map((p, i) => {
           const Icon = p.icon
-          const content = (
-            <div className="group flex items-center gap-4 px-4 py-4 transition-colors hover:bg-apple-bg-soft sm:px-5">
-              <div className="grid h-10 w-10 shrink-0 place-items-center rounded-full bg-apple-bg-soft text-apple-ink transition-colors group-hover:bg-white group-hover:shadow-apple-sm">
-                <Icon className="h-[18px] w-[18px]" />
-              </div>
-              <div className="min-w-0 flex-1">
-                <h2 className="truncate text-[15px] font-medium text-apple-ink sm:text-base">{p.name}</h2>
-                <p className="mt-0.5 line-clamp-2 text-[13px] leading-snug text-apple-muted sm:text-sm">
-                  {p.description}
-                </p>
-              </div>
-              {p.href && <ChevronRight className="h-4 w-4 shrink-0 text-apple-faint group-hover:text-apple-muted" />}
-            </div>
-          )
           return (
             <li key={p.id} className={i > 0 ? 'border-t border-apple-line' : ''}>
-              {p.href ? <a href={p.href}>{content}</a> : content}
+              <a
+                href={p.href}
+                {...(p.external ? { target: '_blank', rel: 'noopener noreferrer' } : {})}
+                className="group flex items-center gap-4 px-4 py-4 transition-colors hover:bg-apple-bg-soft sm:px-5"
+              >
+                <div className="grid h-10 w-10 shrink-0 place-items-center rounded-full bg-apple-bg-soft text-apple-ink transition-colors group-hover:bg-white group-hover:shadow-apple-sm">
+                  <Icon className="h-[18px] w-[18px]" />
+                </div>
+                <div className="min-w-0 flex-1">
+                  <h2 className="truncate text-[15px] font-medium text-apple-ink sm:text-base">{p.name}</h2>
+                  <p className="mt-0.5 line-clamp-2 text-[13px] leading-snug text-apple-muted sm:text-sm">
+                    {p.description}
+                  </p>
+                </div>
+                <ChevronRight className="h-4 w-4 shrink-0 text-apple-faint group-hover:text-apple-muted" />
+              </a>
             </li>
           )
         })}
