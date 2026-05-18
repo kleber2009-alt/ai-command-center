@@ -14,7 +14,7 @@ support services and a legacy static site kept for reference.
 │   ├── transcribe/   # Next.js 14 app + Telegram Mini App (the flagship)
 │   ├── tg-agent/     # Node.js Telegram group AI agent (Railway, long-polling)
 │   ├── ytdlp/        # FastAPI + yt-dlp companion microservice (Railway)
-│   ├── ai-sales/     # Multi-agent IG+TG sales system (FastAPI on Hetzner + Netlify portal)
+│   ├── ai-sales/     # Multi-agent IG+TG sales system (FastAPI + Caddy on Hetzner)
 │   └── ai-office/    # legacy static "AI Business Command Center" site
 ├── packages/         # reserved for shared code (empty)
 ├── supabase/         # SQL migrations shared across apps
@@ -354,19 +354,30 @@ TG-manager, Analyst, ROP/head-of-sales). The owner's voice is cloned via
 ElevenLabs PVC and all agents read a shared RAG knowledge base.
 
 The codebase is **a snapshot/backup**, not a node workspace — root
-`package.json` does not proxy commands here. Two deployable pieces:
+`package.json` does not proxy commands here. Everything ships from one
+Hetzner CPX31 via a single `docker-compose.yml` (in `apps/ai-sales/code/`)
+with **6 services**: postgres, redis, qdrant, minio, api (FastAPI +
+LangGraph), and **caddy** (reverse-proxy + static portal + auto-HTTPS).
 
-- **Static portal + dashboard prototype** (root + `01-portal/` +
-  `06-dashboard-prototype/`) deploys to **Netlify** via `netlify.toml`.
-  Pure HTML, no build step. Configured redirects: `/dashboard`,
-  `/pulse`, `/pipeline`, `/conv`, `/project`, `/agents`, `/portal`,
-  `/roadmap` → corresponding HTML files.
+- **Static portal + dashboard prototype** (`01-portal/` +
+  `06-dashboard-prototype/` + `05-docs/` + `carousels/` + `reels/` +
+  `assets/` + `index.html`) is served by Caddy from `/srv`. The Caddyfile
+  (`apps/ai-sales/code/Caddyfile`) explicitly enumerates which dirs get
+  mounted into the container, so private dirs (`code/`, `agent-prompts/`,
+  `voice-input/`, `04-database/`, `scripts/`, `03-server-scripts/`,
+  `02-stage-instructions/`, `content-bank/`, `funnel-scripts/`,
+  `notion-templates/`, `objections/`) never leave the host. Configured
+  redirects: `/dashboard`, `/pulse`, `/pipeline`, `/conv`,
+  `/conversation`, `/project`, `/agents`, `/portal`, `/roadmap` →
+  corresponding HTML files. Set `DOMAIN=your-hostname.com` in `.env` to
+  enable Let's Encrypt; otherwise Caddy runs HTTP-only on `:80` for
+  local dev.
 - **FastAPI backend** in `apps/ai-sales/code/` — Python 3.12 +
-  LangGraph + Anthropic SDK + Qdrant + Postgres + Redis + MinIO.
-  Deploys to **Hetzner CPX31** via the bundled `docker-compose.yml`
-  (5 services: postgres, redis, qdrant, minio, api). `AISALES_MOCK=1`
-  runs the agents without real API keys for local dev. See
-  `apps/ai-sales/code/DEPLOY.md` for the server walkthrough.
+  LangGraph + Anthropic SDK + Qdrant + Postgres + Redis + MinIO. Caddy
+  reverse-proxies `/api/*` (with prefix-strip) and `/webhooks/*` to the
+  `api` container on port 8000. `AISALES_MOCK=1` runs the agents
+  without real API keys for local dev. See `apps/ai-sales/code/DEPLOY.md`
+  for the server walkthrough.
 
 SQL schema in `apps/ai-sales/04-database/` (8 tables: clients,
 conversations, messages, etc.) is auto-loaded into Postgres on first

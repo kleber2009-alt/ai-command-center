@@ -11,3 +11,4 @@ npm-debug.log*
 .turbo
 next-env.d.ts
 tsconfig.tsbuildinfo
+.claude/settings.local.json
