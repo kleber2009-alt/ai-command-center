@@ -1,0 +1,25 @@
+name: Transcribe Typecheck
+
+on:
+  pull_request:
+    paths:
+      - 'apps/transcribe/**'
+      - 'package.json'
+      - 'package-lock.json'
+      - '.github/workflows/typecheck.yml'
+
+jobs:
+  typecheck:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v5
+        with:
+          node-version: '20'
+          cache: 'npm'
+      - name: Install dependencies
+        run: npm ci
+      - name: Run transcribe typecheck
+        run: npm run typecheck:transcribe
+      - name: Run transcribe smoke tests
+        run: npm run test:transcribe

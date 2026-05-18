@@ -4,7 +4,7 @@ import Link from 'next/link'
 import {
   AudioLines, Loader2, Copy, Check, TriangleAlert, Link as LinkIcon,
   Download, FileText, Sparkles, Languages, History, Trash2, ChevronRight, Youtube, FileAudio,
-  LayoutGrid, Video, Shuffle, Send, Bot, Brain,
+  LayoutGrid, Video, Shuffle, Send, Bot, Brain, Zap,
 } from 'lucide-react'
 import { apiFetch, getTelegram, isInTelegram } from '@/lib/telegram'
 
@@ -211,6 +211,63 @@ function timeAgo(iso: string): string {
   return `${d} дн назад`
 }
 
+type QuotaData = { minutes_used: number; minutes_limit: number; resets_at: string }
+
+function QuotaBar({
+  quota,
+  tier,
+  onUpgrade,
+  upgrading,
+}: {
+  quota: QuotaData
+  tier: string
+  onUpgrade: () => void
+  upgrading: boolean
+}) {
+  const unlimited = quota.minutes_limit === -1
+  const pct = unlimited ? 0 : Math.min(100, (quota.minutes_used / quota.minutes_limit) * 100)
+  const used = Math.round(quota.minutes_used * 10) / 10
+  const resetsDate = quota.resets_at
+    ? new Intl.DateTimeFormat('ru', { day: 'numeric', month: 'short' }).format(new Date(quota.resets_at))
+    : ''
+  const barColor = pct >= 100 ? '#ef4444' : pct >= 80 ? '#f97316' : '#007aff'
+
+  return (
+    <div className="flex items-center gap-3 rounded-apple-lg border border-apple-line bg-white px-4 py-3 shadow-apple-sm">
+      <div className="min-w-0 flex-1">
+        <div className="mb-1.5 flex items-center justify-between gap-2">
+          <span className="text-[12px] font-medium text-apple-muted">
+            {unlimited ? `${used} мин · безлимит` : `${used} / ${quota.minutes_limit} мин`}
+          </span>
+          <div className="flex items-center gap-2">
+            {resetsDate && !unlimited && (
+              <span className="text-[11px] text-apple-faint">сброс {resetsDate}</span>
+            )}
+            <span className="rounded-full bg-apple-bg-soft px-2 py-0.5 text-[11px] font-medium capitalize text-apple-muted">
+              {tier}
+            </span>
+          </div>
+        </div>
+        {!unlimited && (
+          <div className="h-1 overflow-hidden rounded-full bg-apple-bg-soft">
+            <div className="h-full rounded-full transition-all" style={{ width: `${pct}%`, backgroundColor: barColor }} />
+          </div>
+        )}
+      </div>
+      {tier === 'free' && (
+        <button
+          onClick={onUpgrade}
+          disabled={upgrading}
+          className="inline-flex items-center gap-1.5 rounded-full bg-apple-blue px-3.5 py-1.5 text-[12px] font-medium text-white transition-colors hover:bg-apple-blue-hover disabled:opacity-50"
+        >
+          {upgrading ? <Loader2 className="h-3 w-3 animate-spin" /> : <Zap className="h-3 w-3" />}
+          Pro
+        </button>
+      )}
+    </div>
+  )
+}
+
 export default function TranscribePage() {
   const [url, setUrl] = useState('')
   const [language, setLanguage] = useState<'auto' | 'ru' | 'en'>('ru')
@@ -235,6 +292,11 @@ export default function TranscribePage() {
   const [inTg, setInTg] = useState(false)
   const submitRef = useRef<() => void>(() => {})
 
+  const [quotaStatus, setQuotaStatus] = useState<{ tier: string; quota: QuotaData } | null>(null)
+  const [checkoutUpgrading, setCheckoutUpgrading] = useState(false)
+  const [checkoutNotice, setCheckoutNotice] = useState<'success' | 'cancel' | null>(null)
+  const [quotaExceeded, setQuotaExceeded] = useState(false)
+
   async function loadHistory() {
     try {
       const res = await apiFetch('/api/transcribe/history')
@@ -244,9 +306,48 @@ export default function TranscribePage() {
     } catch {}
   }
 
+  async function loadQuota() {
+    try {
+      const res = await apiFetch('/api/billing/status')
+      if (!res.ok) return
+      const data = await res.json()
+      setQuotaStatus(data)
+    } catch {}
+  }
+
+  async function handleUpgrade() {
+    setCheckoutUpgrading(true)
+    try {
+      const origin = window.location.origin
+      const res = await apiFetch('/api/billing/checkout', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          tier: 'pro',
+          successUrl: `${origin}/transcribe?checkout=success`,
+          cancelUrl: `${origin}/transcribe?checkout=cancel`,
+        }),
+      })
+      const data = await res.json()
+      if (data.url) window.location.href = data.url
+      else setCheckoutUpgrading(false)
+    } catch {
+      setCheckoutUpgrading(false)
+    }
+  }
+
   useEffect(() => {
     loadHistory()
+    loadQuota()
     setInTg(isInTelegram())
+
+    const params = new URLSearchParams(window.location.search)
+    const checkout = params.get('checkout')
+    if (checkout === 'success' || checkout === 'cancel') {
+      setCheckoutNotice(checkout as 'success' | 'cancel')
+      window.history.replaceState({}, '', '/transcribe')
+      if (checkout === 'success') loadQuota()
+    }
   }, [])
 
   // Sync Telegram MainButton with form state
@@ -282,6 +383,7 @@ export default function TranscribePage() {
     tg?.HapticFeedback.impactOccurred('light')
     setError(null)
     setResult(null)
+    setQuotaExceeded(false)
     resetSecondary()
     setLoading(true)
     try {
@@ -292,11 +394,17 @@ export default function TranscribePage() {
       })
       const data = await res.json()
       if (!res.ok) {
-        setError(data.error || 'Не удалось получить транскрипт')
+        if (res.status === 402 && data.error === 'quota_exceeded') {
+          setQuotaExceeded(true)
+          await loadQuota()
+        } else {
+          setError(data.error || 'Не удалось получить транскрипт')
+        }
         tg?.HapticFeedback.notificationOccurred('error')
       } else {
         setResult(data)
         loadHistory()
+        loadQuota()
         tg?.HapticFeedback.notificationOccurred('success')
       }
     } catch (err: any) {
@@ -601,6 +709,56 @@ export default function TranscribePage() {
           </p>
         )}
       </form>
+
+      {/* Checkout success / cancel notice */}
+      {checkoutNotice === 'success' && (
+        <div className="flex items-center gap-2.5 rounded-apple-lg border border-emerald-200 bg-emerald-50 px-4 py-3">
+          <Check className="h-4 w-4 flex-shrink-0 text-emerald-600" />
+          <p className="text-[14px] text-emerald-700">Подписка активирована. Спасибо!</p>
+          <button onClick={() => setCheckoutNotice(null)} className="ml-auto text-[12px] text-emerald-600 hover:underline">
+            ✕
+          </button>
+        </div>
+      )}
+      {checkoutNotice === 'cancel' && (
+        <div className="flex items-center gap-2.5 rounded-apple-lg border border-apple-line bg-apple-bg-soft px-4 py-3">
+          <p className="text-[14px] text-apple-muted">Оплата отменена — ничего не списано.</p>
+          <button onClick={() => setCheckoutNotice(null)} className="ml-auto text-[12px] text-apple-faint hover:underline">
+            ✕
+          </button>
+        </div>
+      )}
+
+      {/* Quota widget */}
+      {quotaStatus && (
+        <QuotaBar
+          quota={quotaStatus.quota}
+          tier={quotaStatus.tier}
+          onUpgrade={handleUpgrade}
+          upgrading={checkoutUpgrading}
+        />
+      )}
+
+      {/* Quota exceeded banner */}
+      {quotaExceeded && (
+        <div className="flex items-start gap-3 rounded-apple-lg border border-orange-200 bg-orange-50 p-4">
+          <Zap className="mt-0.5 h-4 w-4 flex-shrink-0 text-orange-500" />
+          <div className="flex-1">
+            <div className="mb-0.5 text-[12px] font-medium text-orange-700">Лимит исчерпан</div>
+            <p className="text-[14px] text-orange-700">
+              Бесплатный лимит {quotaStatus?.quota.minutes_limit ?? 60} мин/мес исчерпан. Pro — 600 мин/мес.
+            </p>
+          </div>
+          <button
+            onClick={handleUpgrade}
+            disabled={checkoutUpgrading}
+            className="inline-flex flex-shrink-0 items-center gap-1.5 rounded-full bg-orange-500 px-3.5 py-1.5 text-[12px] font-medium text-white transition-colors hover:bg-orange-600 disabled:opacity-50"
+          >
+            {checkoutUpgrading ? <Loader2 className="h-3 w-3 animate-spin" /> : <Zap className="h-3 w-3" />}
+            Upgrade
+          </button>
+        </div>
+      )}
 
       {/* Error */}
       {error && (

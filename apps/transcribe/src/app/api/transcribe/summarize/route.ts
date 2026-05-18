@@ -21,6 +21,7 @@ ${text.slice(0, 30000)}
 export async function POST(req: NextRequest) {
   const guard = guardRequest(req, {
     rateLimit: { key: 'summarize', max: 20, windowMs: 60_000 },
+    ownerOnly: true,
   })
   if (!guard.ok) return guard.response
 

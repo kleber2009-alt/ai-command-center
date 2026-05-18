@@ -2,11 +2,15 @@
 // Combines the in-memory rate limiter and optional Telegram initData
 // HMAC validation. Routes call guardRequest(req, opts) at the top
 // and bail with `result.response` if it's a deny.
+//
+// guardWithUser() is the async extension that additionally resolves
+// the Telegram user to an app user row and loads their quota.
 
 import { NextRequest, NextResponse } from 'next/server'
 
 import { ipFromHeaders, rateLimit } from './rate-limit'
 import { verifyInitData, type VerifiedInitData } from './telegram-auth'
+import { getOrCreateUser, getQuota, type AppUser, type QuotaInfo, type UserTier } from './users-db'
 
 export interface GuardOptions {
   // Per-IP rate limit. Pass `null` to disable.
@@ -35,6 +39,12 @@ export type GuardResult =
 const INIT_DATA_HEADER = 'x-telegram-init-data'
 
 export function guardRequest(req: NextRequest, options: GuardOptions): GuardResult {
+  // Dev escape hatch: set DEV_BYPASS_AUTH=true in .env to disable all auth
+  // checks. Never enable in production.
+  if (process.env.DEV_BYPASS_AUTH === 'true') {
+    return { ok: true }
+  }
+
   // 1. Rate limit (skips if options.rateLimit is null).
   if (options.rateLimit) {
     const { key, max, windowMs } = options.rateLimit
@@ -111,4 +121,67 @@ export function guardRequest(req: NextRequest, options: GuardOptions): GuardResu
   }
 
   return { ok: true, telegram: verified ?? undefined }
+}
+
+// ---------------------------------------------------------------------------
+// guardWithUser — async guard that resolves Telegram identity to an app user
+// and loads the current quota. Use for endpoints that need billing/quotas.
+// ---------------------------------------------------------------------------
+
+export type GuardWithUserResult =
+  | { ok: true; telegram: VerifiedInitData; user: AppUser; quota: QuotaInfo }
+  | { ok: false; response: NextResponse }
+
+export async function guardWithUser(
+  req: NextRequest,
+  options: { rateLimit: GuardOptions['rateLimit'] },
+): Promise<GuardWithUserResult> {
+  // Dev bypass — skip DB entirely; quota is unlimited in dev mode
+  if (process.env.DEV_BYPASS_AUTH === 'true') {
+    const devUser: AppUser = {
+      id: 'dev',
+      telegram_id: 0,
+      username: 'dev',
+      first_name: 'Dev',
+      subscription_tier: 'pro',
+      stripe_customer_id: null,
+      stripe_subscription_id: null,
+    }
+    const devQuota: QuotaInfo = { minutes_used: 0, minutes_limit: -1, resets_at: '' }
+    const devTelegram: VerifiedInitData = { user: { id: 0, first_name: 'Dev' }, auth_date: 0 }
+    return { ok: true, telegram: devTelegram, user: devUser, quota: devQuota }
+  }
+
+  const base = guardRequest(req, { ...options, requireInitData: true })
+  if (!base.ok) return base
+
+  const tgUser = base.telegram?.user
+  if (!tgUser?.id) {
+    return {
+      ok: false,
+      response: NextResponse.json({ error: 'telegram_user_required' }, { status: 401 }),
+    }
+  }
+
+  const user = await getOrCreateUser({
+    id: tgUser.id,
+    username: tgUser.username,
+    first_name: tgUser.first_name,
+  })
+  if (!user) {
+    return {
+      ok: false,
+      response: NextResponse.json({ error: 'user_init_failed' }, { status: 500 }),
+    }
+  }
+
+  const quota = await getQuota(user.id, user.subscription_tier as UserTier)
+  if (!quota) {
+    return {
+      ok: false,
+      response: NextResponse.json({ error: 'quota_load_failed' }, { status: 500 }),
+    }
+  }
+
+  return { ok: true, telegram: base.telegram!, user, quota }
 }
