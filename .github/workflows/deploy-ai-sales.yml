@@ -1,0 +1,117 @@
+name: deploy-ai-sales
+
+# Auto-deploy ai-sales (FastAPI + Caddy) to the Hetzner host on push to
+# main, or on manual workflow_dispatch from any branch.
+#
+# Required GitHub secrets (Settings → Secrets and variables → Actions):
+#   HETZNER_SSH_KEY     · private SSH key matching ~/.ssh/authorized_keys
+#                         on the server for the deploy user. ed25519
+#                         recommended. Generate locally:
+#                         ssh-keygen -t ed25519 -f ~/.ssh/aisales_deploy -N ''
+#                         then put the .pub into the server's
+#                         authorized_keys and the private key into this
+#                         secret.
+#
+# Optional repository variables (Settings → Secrets and variables →
+# Actions → Variables tab) — sensible defaults if unset:
+#   HETZNER_HOST        · default 46.62.215.11
+#   HETZNER_USER        · default aisales
+#   HETZNER_SSH_PORT    · default 22
+#   HETZNER_REPO_PATH   · default /home/aisales/ai-sales-system
+#                         (must be a git checkout — workflow uses git pull)
+
+on:
+  push:
+    branches: [main]
+    paths:
+      - 'apps/ai-sales/code/**'
+      - 'apps/ai-sales/agent-prompts/**'
+      - 'apps/ai-sales/04-database/**'
+      - '.github/workflows/deploy-ai-sales.yml'
+  workflow_dispatch:
+    inputs:
+      ref:
+        description: 'Branch or commit to deploy (defaults to main)'
+        required: false
+        default: 'main'
+      restart_only:
+        description: 'Skip git pull, just restart api container'
+        required: false
+        type: boolean
+        default: false
+
+concurrency:
+  group: deploy-ai-sales
+  cancel-in-progress: false
+
+jobs:
+  deploy:
+    runs-on: ubuntu-latest
+    timeout-minutes: 5
+
+    steps:
+      - name: Resolve target ref
+        id: ref
+        run: |
+          if [[ "${{ github.event_name }}" == "workflow_dispatch" ]]; then
+            echo "value=${{ github.event.inputs.ref || 'main' }}" >> "$GITHUB_OUTPUT"
+          else
+            echo "value=${{ github.ref_name }}" >> "$GITHUB_OUTPUT"
+          fi
+
+      - name: Deploy over SSH
+        uses: appleboy/ssh-action@v1.0.3
+        with:
+          host: ${{ vars.HETZNER_HOST || '46.62.215.11' }}
+          username: ${{ vars.HETZNER_USER || 'aisales' }}
+          port: ${{ vars.HETZNER_SSH_PORT || 22 }}
+          key: ${{ secrets.HETZNER_SSH_KEY }}
+          script_stop: true
+          envs: TARGET_REF,REPO_PATH,RESTART_ONLY
+          script: |
+            set -euo pipefail
+
+            cd "$REPO_PATH"
+
+            if [[ "$RESTART_ONLY" != "true" ]]; then
+              echo "── fetching origin ──"
+              git fetch --prune origin
+              echo "── checking out $TARGET_REF ──"
+              git checkout "$TARGET_REF"
+              echo "── pulling fast-forward ──"
+              git pull --ff-only origin "$TARGET_REF"
+              echo "── HEAD now at: $(git rev-parse --short HEAD) — $(git log -1 --pretty=%s) ──"
+            else
+              echo "── restart_only=true, skipping git pull ──"
+            fi
+
+            cd code
+            echo "── restarting api container ──"
+            docker compose restart api
+
+            echo "── waiting for /health (up to 30s) ──"
+            for i in $(seq 1 15); do
+              if curl -fsS http://localhost:8000/health > /dev/null; then
+                echo "✓ healthy after ${i}x2s"
+                curl -fsS http://localhost:8000/
+                exit 0
+              fi
+              sleep 2
+            done
+
+            echo "✗ /health did not respond within 30s"
+            docker compose logs --tail=50 api
+            exit 1
+        env:
+          TARGET_REF: ${{ steps.ref.outputs.value }}
+          REPO_PATH: ${{ vars.HETZNER_REPO_PATH || '/home/aisales/ai-sales-system' }}
+          RESTART_ONLY: ${{ github.event.inputs.restart_only || 'false' }}
+
+      - name: Public-facing smoke test
+        run: |
+          set -euo pipefail
+          echo "── api root ──"
+          curl -fsS https://api.46-62-215-11.nip.io/ | tee /tmp/root.json
+          echo
+          echo "── api /health ──"
+          curl -fsS https://api.46-62-215-11.nip.io/health

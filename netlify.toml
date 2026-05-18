@@ -1,0 +1,9 @@
+# ═══ Monorepo entry for Netlify ═══════════════════════════════════
+# The ai-office static site moved to apps/ai-office/ when the repo
+# was restructured as a monorepo (commit 3a18a9f). Point Netlify at
+# the new base; the real config lives in apps/ai-office/netlify.toml
+# (publish dir, functions, redirects, headers).
+# ═══════════════════════════════════════════════════════════════════
+
+[build]
+  base = "apps/ai-office"

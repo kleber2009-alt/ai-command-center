@@ -24,6 +24,7 @@ import json
 import logging
 import os
 import random
+import shutil
 from datetime import datetime
 from pathlib import Path
 from typing import Any
@@ -49,13 +50,28 @@ ILYA_CHAT_ID = int(os.getenv("ILYA_TG_CHAT_ID", "0") or 0)
 RESPONSE_DELAY_MIN_S = float(os.getenv("RESPONSE_DELAY_MIN_S", "30"))
 RESPONSE_DELAY_MAX_S = float(os.getenv("RESPONSE_DELAY_MAX_S", "120"))
 
-# ============ Owner-only режимы (через /tmp флаги) ============
+# ============ Owner-only режимы ============
+# Флаги лежат в /voice-input (persistent volume), не в /tmp —
+# чтобы перезапуск контейнера не сбрасывал режим молча.
 
 VOICE_INPUT_DIR = Path(os.getenv("VOICE_INPUT_DIR", "/voice-input"))
 VOICE_AUDIO_DIR = VOICE_INPUT_DIR / "audio"
 VOICE_TRANSCRIPTS_DIR = VOICE_INPUT_DIR / "transcripts"
-TEACHING_FLAG = Path("/tmp/aisales-teaching-mode")
-VOICE_FORCE_FLAG = Path("/tmp/aisales-voice-force")
+TEACHING_FLAG = VOICE_INPUT_DIR / ".teaching-mode"
+VOICE_FORCE_FLAG = VOICE_INPUT_DIR / ".voice-force"
+
+# Migrate legacy /tmp flags on first import (one-shot, idempotent).
+for _legacy, _new in [
+    (Path("/tmp/aisales-teaching-mode"), TEACHING_FLAG),
+    (Path("/tmp/aisales-voice-force"), VOICE_FORCE_FLAG),
+]:
+    if _legacy.exists() and not _new.exists():
+        try:
+            _new.parent.mkdir(parents=True, exist_ok=True)
+            _new.touch()
+            _legacy.unlink(missing_ok=True)
+        except Exception:
+            pass
 
 
 def _is_owner(chat_id: int) -> bool:
@@ -168,20 +184,24 @@ async def _handle_owner_command(chat_id: int, text: str) -> bool:
     return False  # не команда
 
 
-async def _save_voice_sample(parsed: dict, audio_path: Path) -> None:
+async def _save_voice_sample(parsed: dict, audio_path: Path) -> str | None:
     """Сохранить голосовое в копилку + транскрибировать."""
     if not audio_path or not audio_path.exists():
-        return
+        log.warning("teaching · save skipped — audio_path missing: %r", audio_path)
+        return None
 
-    # Перенос в постоянное место с осмысленным именем
     timestamp = datetime.utcnow().strftime("%Y%m%d-%H%M%S")
     dst = VOICE_AUDIO_DIR / f"sample-{timestamp}{audio_path.suffix}"
-    audio_path.rename(dst)
+    VOICE_AUDIO_DIR.mkdir(parents=True, exist_ok=True)
+    # shutil.move handles cross-device moves (tmpfs /tmp → bind-mounted
+    # /voice-input). Path.rename() would raise EXDEV here and crash the
+    # background task silently — user would see no reply and no save.
+    shutil.move(str(audio_path), str(dst))
     log.info("teaching · saved voice sample %s", dst.name)
 
-    # Транскрибируем
     try:
         transcript = await media.voice_to_text(dst)
+        VOICE_TRANSCRIPTS_DIR.mkdir(parents=True, exist_ok=True)
         transcript_path = VOICE_TRANSCRIPTS_DIR / f"sample-{timestamp}.txt"
         transcript_path.write_text(transcript, encoding="utf-8")
         log.info("teaching · transcribed (%d chars) → %s", len(transcript), transcript_path.name)
@@ -264,20 +284,34 @@ async def handle_update(payload: dict) -> dict:
         # Сохраняем voice/circle как образцы
         if parsed["media_type"] in ("voice", "circle"):
             file_id = parsed.get("voice_file_id") or parsed.get("video_note_file_id")
-            if file_id:
+            if not file_id:
+                await tg.send_text(chat_id, "⚠ Не нашёл file_id в сообщении — TG прислал media без него")
+                return {"status": "teaching_voice_no_file_id"}
+            try:
                 tmp_path = await tg.download_file(file_id, Path("/tmp"))
+            except Exception as e:
+                log.exception("teaching · download failed")
+                await tg.send_text(chat_id, f"⚠ Не смог скачать файл из TG: `{type(e).__name__}: {e}`\n(возможно, файл >20 MB — Bot API не даёт скачать)")
+                return {"status": "teaching_voice_download_failed"}
+            if not tmp_path:
+                await tg.send_text(chat_id, "⚠ TG вернул пустой путь для файла (file_path missing)")
+                return {"status": "teaching_voice_no_path"}
+            try:
                 transcript = await _save_voice_sample(parsed, tmp_path)
-                count = _voice_count()
-                preview = (transcript[:140] + "...") if transcript and len(transcript) > 140 else (transcript or "[не транскрибировано]")
-                await tg.send_text(chat_id, (
-                    f"✓ Voice sample #{count} сохранён\n\n"
-                    f"_{preview}_\n\n"
-                    + ("🤖 Прогоняю voice\\_analyzer..." if count > 0 and count % 5 == 0 else "")
-                ))
-                # Авто-запуск analyzer каждые 5
-                if count > 0 and count % 5 == 0:
-                    asyncio.create_task(_run_voice_analyzer(chat_id))
-                return {"status": "teaching_voice_saved", "count": count}
+            except Exception as e:
+                log.exception("teaching · save failed")
+                await tg.send_text(chat_id, f"⚠ Ошибка при сохранении: `{type(e).__name__}: {e}`")
+                return {"status": "teaching_voice_save_failed"}
+            count = _voice_count()
+            preview = (transcript[:140] + "...") if transcript and len(transcript) > 140 else (transcript or "[не транскрибировано]")
+            await tg.send_text(chat_id, (
+                f"✓ Voice sample #{count} сохранён\n\n"
+                f"_{preview}_\n\n"
+                + ("🤖 Прогоняю voice\\_analyzer..." if count > 0 and count % 5 == 0 else "")
+            ))
+            if count > 0 and count % 5 == 0:
+                asyncio.create_task(_run_voice_analyzer(chat_id))
+            return {"status": "teaching_voice_saved", "count": count}
 
         # Текстовые сообщения в teaching mode — сохраняем как пример переписки
         if parsed["media_type"] == "text" and not parsed["text"].startswith("/"):
