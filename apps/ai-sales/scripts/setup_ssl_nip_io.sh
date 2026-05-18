@@ -18,12 +18,17 @@ set -euo pipefail
 
 IP=$(curl -s https://api.ipify.org)
 IP_DASH="${IP//./-}"
-DOMAIN="${IP_DASH}.nip.io"
+DOMAIN_DASH="${IP_DASH}.nip.io"
+DOMAIN_DOT="${IP}.nip.io"
+# Backwards-compat: keep $DOMAIN as the dashed form (it's used below in echos).
+DOMAIN="$DOMAIN_DASH"
 
 echo "════════════════════════════════════════════════════════"
 echo "SSL setup via nip.io"
 echo "  IP:      $IP"
-echo "  Domain:  api.${DOMAIN}"
+echo "  Hosts:   api.${DOMAIN_DASH}"
+echo "           ${DOMAIN_DASH}"
+echo "           ${DOMAIN_DOT}"
 echo "════════════════════════════════════════════════════════"
 echo ""
 
@@ -56,8 +61,13 @@ echo ""
 echo "→ Создаём Caddyfile..."
 sudo tee /etc/caddy/Caddyfile > /dev/null <<EOF
 # AI Sales · auto SSL через Let's Encrypt + nip.io
+#
+# Serve the same backend on all three nip.io variants of this IP so that
+# any reasonable URL guess (apex/dashed/dotted, with or without "api.")
+# works. nip.io is on the Public Suffix List, so each FQDN is treated as
+# its own registered domain by Let's Encrypt — no shared rate limit.
 
-api.${DOMAIN} {
+api.${DOMAIN_DASH}, ${DOMAIN_DASH}, ${DOMAIN_DOT} {
     reverse_proxy 127.0.0.1:8001
 
     # Логи
@@ -89,28 +99,41 @@ echo "→ Проверяем статус..."
 sudo systemctl status caddy --no-pager | head -10
 
 echo ""
-echo "→ Проверяем HTTPS endpoint..."
+echo "→ Проверяем HTTPS endpoints..."
 sleep 5  # дать Caddy время получить сертификат от Let's Encrypt
-HTTPS_TEST=$(curl -sk "https://api.${DOMAIN}/health" || echo "FAIL")
-echo "Response: $HTTPS_TEST"
 
-if [[ "$HTTPS_TEST" == *"healthy"* ]]; then
-    echo ""
-    echo "════════════════════════════════════════════════════════"
-    echo "✓ HTTPS РАБОТАЕТ"
-    echo "════════════════════════════════════════════════════════"
-    echo ""
-    echo "Endpoints:"
-    echo "  https://api.${DOMAIN}/health"
-    echo "  https://api.${DOMAIN}/docs"
-    echo "  https://api.${DOMAIN}/webhooks/telegram"
-    echo ""
-    echo "Используй webhook URL в TG bot setup:"
-    echo "  bash setup_tg_webhook.sh \$BOT_TOKEN https://api.${DOMAIN}/webhooks/telegram"
-else
-    echo ""
-    echo "⚠ HTTPS пока не отвечает (возможно сертификат ещё получается)"
-    echo "Подожди 30 секунд и попробуй: curl https://api.${DOMAIN}/health"
-    echo ""
-    echo "Если не работает — посмотри логи: sudo journalctl -u caddy -n 50"
-fi
+probe() {
+    local host="$1"
+    local body
+    body=$(curl -sk --max-time 10 "https://${host}/health" || echo "FAIL")
+    if [[ "$body" == *"healthy"* ]]; then
+        echo "  ✓ https://${host}/health"
+    else
+        echo "  ⚠ https://${host}/health → $body"
+    fi
+}
+
+probe "api.${DOMAIN_DASH}"
+probe "${DOMAIN_DASH}"
+probe "${DOMAIN_DOT}"
+
+echo ""
+echo "════════════════════════════════════════════════════════"
+echo "Setup complete. Canonical API URL:"
+echo "  https://api.${DOMAIN_DASH}"
+echo "════════════════════════════════════════════════════════"
+echo ""
+echo "Endpoints:"
+echo "  https://api.${DOMAIN_DASH}/health"
+echo "  https://api.${DOMAIN_DASH}/docs"
+echo "  https://api.${DOMAIN_DASH}/webhooks/telegram"
+echo ""
+echo "Aliases (same backend, separate certs):"
+echo "  https://${DOMAIN_DASH}/"
+echo "  https://${DOMAIN_DOT}/"
+echo ""
+echo "Используй webhook URL в TG bot setup:"
+echo "  bash setup_tg_webhook.sh \$BOT_TOKEN https://api.${DOMAIN_DASH}/webhooks/telegram"
+echo ""
+echo "Если какой-то endpoint не отвечает — сертификат ещё получается."
+echo "Подожди 30 секунд и проверь снова. Логи: sudo journalctl -u caddy -n 50"
