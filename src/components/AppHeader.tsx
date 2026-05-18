@@ -64,7 +64,7 @@ export default function AppHeader() {
 
   return (
     <>
-      <header className="sticky top-0 z-30 border-b border-apple-line bg-white/85 backdrop-blur-md">
+      <header className="sticky top-0 z-30 border-b border-apple-line bg-apple-bg/80 backdrop-blur-md">
         <div className="mx-auto flex h-12 max-w-2xl items-center justify-between px-4 sm:px-6">
           <h1 className="text-[15px] font-semibold tracking-tight text-apple-ink">{title}</h1>
           <button
@@ -87,7 +87,7 @@ export default function AppHeader() {
       />
 
       <aside
-        className={`fixed right-0 top-0 z-50 h-full w-[86%] max-w-xs bg-white shadow-2xl transition-transform duration-200 ease-out ${
+        className={`fixed right-0 top-0 z-50 h-full w-[86%] max-w-xs bg-apple-bg-elev shadow-2xl transition-transform duration-200 ease-out ${
           open ? 'translate-x-0' : 'translate-x-full'
         }`}
         role="dialog"

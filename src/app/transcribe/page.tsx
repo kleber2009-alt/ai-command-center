@@ -114,7 +114,7 @@ function ReelsCard({
   const Icon = variant === 'new' ? Video : Shuffle
   const title = variant === 'new' ? 'Рилс — новый сценарий' : 'Рилс — ремикс'
   return (
-    <div className="overflow-hidden rounded-apple-lg border border-apple-line bg-white shadow-apple-sm">
+    <div className="overflow-hidden rounded-apple-lg border border-apple-line bg-apple-bg-elev shadow-apple-sm">
       <div className="flex items-center justify-between gap-2 border-b border-apple-line px-5 py-3">
         <div className="flex items-center gap-2">
           <Icon className="h-4 w-4 text-apple-muted" />
@@ -184,7 +184,7 @@ function SoftButton({
       type="button"
       onClick={onClick}
       disabled={disabled}
-      className="inline-flex items-center gap-1.5 rounded-full border border-apple-line bg-white px-3 py-1.5 text-[12px] font-medium text-apple-ink shadow-apple-sm transition-colors hover:bg-apple-bg-soft disabled:cursor-not-allowed disabled:opacity-50"
+      className="inline-flex items-center gap-1.5 rounded-full border border-apple-line bg-apple-bg-elev px-3 py-1.5 text-[12px] font-medium text-apple-ink shadow-apple-sm transition-colors hover:bg-apple-bg-soft disabled:cursor-not-allowed disabled:opacity-50"
     >
       {icon}
       {children}
@@ -604,7 +604,7 @@ export default function TranscribePage() {
       </div>
 
       {/* Form */}
-      <form onSubmit={submit} className="space-y-4 rounded-apple-lg border border-apple-line bg-white p-5 shadow-apple-sm">
+      <form onSubmit={submit} className="space-y-4 rounded-apple-lg border border-apple-line bg-apple-bg-elev p-5 shadow-apple-sm">
         <div>
           <label className="mb-2 block text-[12px] font-medium text-apple-muted">
             URL медиафайла
@@ -617,7 +617,7 @@ export default function TranscribePage() {
               onChange={e => setUrl(e.target.value)}
               required
               placeholder="https://youtube.com/... · https://instagram.com/reel/... · mp3/mp4"
-              className="w-full rounded-xl border border-apple-line bg-apple-bg-soft py-2.5 pl-10 pr-3 text-[14px] text-apple-ink placeholder:text-apple-faint outline-none transition-all focus:border-apple-line-strong focus:bg-white focus:shadow-apple-sm"
+              className="w-full rounded-xl border border-apple-line bg-apple-bg-soft py-2.5 pl-10 pr-3 text-[14px] text-apple-ink placeholder:text-apple-faint outline-none transition-all focus:border-apple-line-strong focus:bg-apple-bg-elev focus:shadow-apple-sm"
             />
           </div>
           <p className="mt-2 text-[12px] text-apple-faint">
@@ -636,7 +636,7 @@ export default function TranscribePage() {
                   onClick={() => setLanguage(lang)}
                   className={`rounded-full px-3.5 py-1.5 text-[13px] font-medium transition-all ${
                     language === lang
-                      ? 'bg-white text-apple-ink shadow-apple-sm'
+                      ? 'bg-apple-bg-elev text-apple-ink shadow-apple-sm'
                       : 'text-apple-muted hover:text-apple-ink'
                   }`}
                 >
@@ -687,7 +687,7 @@ export default function TranscribePage() {
       {result && (
         <div className="space-y-5">
           {/* Transcript card */}
-          <div className="overflow-hidden rounded-apple-lg border border-apple-line bg-white shadow-apple-sm">
+          <div className="overflow-hidden rounded-apple-lg border border-apple-line bg-apple-bg-elev shadow-apple-sm">
             <div className="flex flex-wrap items-center justify-between gap-2 border-b border-apple-line px-5 py-3">
               <div className="flex flex-wrap items-center gap-2.5">
                 <h3 className="text-[13px] font-semibold text-apple-ink">Транскрипт</h3>
@@ -753,7 +753,7 @@ export default function TranscribePage() {
             <button
               onClick={generateSummary}
               disabled={summaryLoading}
-              className="inline-flex items-center gap-2 rounded-full border border-apple-line bg-white px-4 py-2 text-[14px] font-medium text-apple-ink shadow-apple-sm transition-colors hover:bg-apple-bg-soft disabled:opacity-50"
+              className="inline-flex items-center gap-2 rounded-full border border-apple-line bg-apple-bg-elev px-4 py-2 text-[14px] font-medium text-apple-ink shadow-apple-sm transition-colors hover:bg-apple-bg-soft disabled:opacity-50"
             >
               {summaryLoading ? <Loader2 className="h-4 w-4 animate-spin" /> : <Sparkles className="h-4 w-4 text-apple-blue" />}
               Сгенерировать саммари
@@ -761,7 +761,7 @@ export default function TranscribePage() {
             <button
               onClick={() => translateTo(otherLang)}
               disabled={translationLoading}
-              className="inline-flex items-center gap-2 rounded-full border border-apple-line bg-white px-4 py-2 text-[14px] font-medium text-apple-ink shadow-apple-sm transition-colors hover:bg-apple-bg-soft disabled:opacity-50"
+              className="inline-flex items-center gap-2 rounded-full border border-apple-line bg-apple-bg-elev px-4 py-2 text-[14px] font-medium text-apple-ink shadow-apple-sm transition-colors hover:bg-apple-bg-soft disabled:opacity-50"
             >
               {translationLoading ? <Loader2 className="h-4 w-4 animate-spin" /> : <Languages className="h-4 w-4 text-apple-blue" />}
               Перевести на {otherLang === 'ru' ? 'русский' : 'английский'}
@@ -770,7 +770,7 @@ export default function TranscribePage() {
 
           {/* Summary */}
           {summary && (
-            <div className="rounded-apple-lg border border-apple-line bg-white p-5 shadow-apple-sm">
+            <div className="rounded-apple-lg border border-apple-line bg-apple-bg-elev p-5 shadow-apple-sm">
               <div className="mb-3 flex items-center gap-2">
                 <Sparkles className="h-4 w-4 text-apple-blue" />
                 <h3 className="text-[13px] font-semibold text-apple-ink">Саммари</h3>
@@ -789,7 +789,7 @@ export default function TranscribePage() {
 
           {/* Translation */}
           {translation && (
-            <div className="overflow-hidden rounded-apple-lg border border-apple-line bg-white shadow-apple-sm">
+            <div className="overflow-hidden rounded-apple-lg border border-apple-line bg-apple-bg-elev shadow-apple-sm">
               <div className="flex items-center justify-between border-b border-apple-line px-5 py-3">
                 <div className="flex items-center gap-2">
                   <Languages className="h-4 w-4 text-apple-blue" />
@@ -823,7 +823,7 @@ export default function TranscribePage() {
                   key={t}
                   onClick={() => generate(t)}
                   disabled={genLoading === t}
-                  className="inline-flex items-center gap-2 rounded-full border border-apple-line bg-white px-4 py-2 text-[14px] font-medium text-apple-ink shadow-apple-sm transition-colors hover:bg-apple-bg-soft disabled:opacity-50"
+                  className="inline-flex items-center gap-2 rounded-full border border-apple-line bg-apple-bg-elev px-4 py-2 text-[14px] font-medium text-apple-ink shadow-apple-sm transition-colors hover:bg-apple-bg-soft disabled:opacity-50"
                 >
                   {genLoading === t ? <Loader2 className="h-4 w-4 animate-spin" /> : <Ico className="h-4 w-4 text-apple-blue" />}
                   {label}
@@ -842,7 +842,7 @@ export default function TranscribePage() {
               t === 'reels-remix' ? 'Рилс — ремикс' :
               'Пост в Telegram'
             return (
-              <div key={`stream-${t}`} className="rounded-apple-lg border border-apple-line bg-white p-5 shadow-apple-sm">
+              <div key={`stream-${t}`} className="rounded-apple-lg border border-apple-line bg-apple-bg-elev p-5 shadow-apple-sm">
                 <div className="mb-3 flex items-center gap-2">
                   <Loader2 className="h-4 w-4 animate-spin text-apple-blue" />
                   <h3 className="text-[13px] font-semibold text-apple-ink">{label} · генерируется</h3>
@@ -862,7 +862,7 @@ export default function TranscribePage() {
 
           {/* Carousel */}
           {generations.carousel && (
-            <div className="overflow-hidden rounded-apple-lg border border-apple-line bg-white shadow-apple-sm">
+            <div className="overflow-hidden rounded-apple-lg border border-apple-line bg-apple-bg-elev shadow-apple-sm">
               <div className="flex items-center justify-between border-b border-apple-line px-5 py-3">
                 <div className="flex items-center gap-2">
                   <LayoutGrid className="h-4 w-4 text-apple-blue" />
@@ -901,7 +901,7 @@ export default function TranscribePage() {
 
           {/* Telegram post */}
           {generations['tg-post'] && (
-            <div className="overflow-hidden rounded-apple-lg border border-apple-line bg-white shadow-apple-sm">
+            <div className="overflow-hidden rounded-apple-lg border border-apple-line bg-apple-bg-elev shadow-apple-sm">
               <div className="flex items-center justify-between border-b border-apple-line px-5 py-3">
                 <div className="flex items-center gap-2">
                   <Send className="h-4 w-4 text-apple-blue" />
@@ -923,7 +923,7 @@ export default function TranscribePage() {
 
       {/* History */}
       {historyConfigured && history.length > 0 && (
-        <div id="history" className="overflow-hidden rounded-apple-lg border border-apple-line bg-white shadow-apple-sm scroll-mt-20">
+        <div id="history" className="overflow-hidden rounded-apple-lg border border-apple-line bg-apple-bg-elev shadow-apple-sm scroll-mt-20">
           <div className="flex flex-wrap items-center gap-2 border-b border-apple-line px-5 py-3">
             <History className="h-4 w-4 text-apple-muted" />
             <h3 className="text-[13px] font-semibold text-apple-ink">История</h3>
@@ -966,13 +966,13 @@ export default function TranscribePage() {
               {batchSummary}
             </div>
           )}
-          <div className="border-b border-apple-line bg-white px-5 py-2">
+          <div className="border-b border-apple-line bg-apple-bg-elev px-5 py-2">
             <input
               type="text"
               value={historyQuery}
               onChange={e => setHistoryQuery(e.target.value)}
               placeholder="Поиск по истории…"
-              className="w-full rounded-full border border-apple-line bg-apple-bg-soft px-3 py-1.5 text-[12px] text-apple-ink placeholder:text-apple-faint outline-none transition-all focus:border-apple-line-strong focus:bg-white"
+              className="w-full rounded-full border border-apple-line bg-apple-bg-soft px-3 py-1.5 text-[12px] text-apple-ink placeholder:text-apple-faint outline-none transition-all focus:border-apple-line-strong focus:bg-apple-bg-elev"
             />
           </div>
           <div className="max-h-[60vh] divide-y divide-apple-line overflow-y-auto">

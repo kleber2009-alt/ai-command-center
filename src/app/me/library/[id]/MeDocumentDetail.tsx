@@ -144,7 +144,7 @@ export default function MeDocumentDetail({ id }: { id: string }) {
         </div>
       ) : doc ? (
         <>
-          <section className="rounded-apple-lg border border-apple-line bg-white p-5 shadow-apple-sm">
+          <section className="rounded-apple-lg border border-apple-line bg-apple-bg-elev p-5 shadow-apple-sm">
             <div className="flex items-start gap-3">
               <div className="mt-0.5 grid h-10 w-10 shrink-0 place-items-center rounded-full bg-apple-bg-soft text-apple-muted">
                 <Icon className="h-[18px] w-[18px]" />
@@ -154,7 +154,7 @@ export default function MeDocumentDetail({ id }: { id: string }) {
                   type="text"
                   value={title}
                   onChange={(e) => setTitle(e.target.value)}
-                  className="w-full rounded-lg border border-transparent bg-transparent text-[20px] font-semibold leading-tight text-apple-ink outline-none transition-colors hover:bg-apple-bg-soft focus:border-apple-line focus:bg-white"
+                  className="w-full rounded-lg border border-transparent bg-transparent text-[20px] font-semibold leading-tight text-apple-ink outline-none transition-colors hover:bg-apple-bg-soft focus:border-apple-line focus:bg-apple-bg-elev"
                 />
                 <div className="mt-1.5 flex flex-wrap items-center gap-1.5 text-[12px] text-apple-faint">
                   <span>{timeAgo(doc.created_at)}</span>
@@ -191,7 +191,7 @@ export default function MeDocumentDetail({ id }: { id: string }) {
           </section>
 
           {doc.source_type === 'transcript' && doc.source_meta && (
-            <section className="rounded-apple-lg border border-apple-line bg-white p-4 shadow-apple-sm">
+            <section className="rounded-apple-lg border border-apple-line bg-apple-bg-elev p-4 shadow-apple-sm">
               <div className="mb-2 text-[12px] font-medium text-apple-muted">Источник: транскрипт</div>
               <div className="space-y-1 text-[13px] text-apple-ink">
                 {doc.source_meta.url && (
@@ -219,7 +219,7 @@ export default function MeDocumentDetail({ id }: { id: string }) {
             </section>
           )}
 
-          <section className="rounded-apple-lg border border-apple-line bg-white p-5 shadow-apple-sm">
+          <section className="rounded-apple-lg border border-apple-line bg-apple-bg-elev p-5 shadow-apple-sm">
             <label className="mb-2 block text-[13px] font-semibold text-apple-ink">Оригинальный текст</label>
             <p className="mb-2.5 text-[12px] text-apple-faint">
               Если изменишь текст — после сохранения документ будет переразбит на фрагменты и заново заэмбеддится в OpenAI. Это может занять несколько секунд.
@@ -229,7 +229,7 @@ export default function MeDocumentDetail({ id }: { id: string }) {
               onChange={(e) => setText(e.target.value)}
               rows={24}
               spellCheck={false}
-              className="w-full rounded-xl border border-apple-line bg-apple-bg-soft p-3 text-[14px] leading-relaxed text-apple-ink placeholder:text-apple-faint outline-none transition-all focus:border-apple-line-strong focus:bg-white focus:shadow-apple-sm"
+              className="w-full rounded-xl border border-apple-line bg-apple-bg-soft p-3 text-[14px] leading-relaxed text-apple-ink placeholder:text-apple-faint outline-none transition-all focus:border-apple-line-strong focus:bg-apple-bg-elev focus:shadow-apple-sm"
             />
           </section>
 
@@ -240,7 +240,7 @@ export default function MeDocumentDetail({ id }: { id: string }) {
             </div>
           )}
 
-          <div className="sticky bottom-0 -mx-4 border-t border-apple-line bg-white/85 px-4 py-3 backdrop-blur-xl backdrop-saturate-150 sm:-mx-6 sm:px-6">
+          <div className="sticky bottom-0 -mx-4 border-t border-apple-line bg-apple-bg-elev/85 px-4 py-3 backdrop-blur-xl backdrop-saturate-150 sm:-mx-6 sm:px-6">
             <div className="flex items-center justify-end gap-2">
               {saved === 'title' && (
                 <span className="text-[12px] text-apple-muted">Название обновлено</span>

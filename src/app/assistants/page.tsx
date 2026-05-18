@@ -21,7 +21,7 @@ export default function AssistantsPage() {
         </p>
       </header>
 
-      <ul className="overflow-hidden rounded-apple-lg border border-apple-line bg-white shadow-apple-sm">
+      <ul className="overflow-hidden rounded-apple-lg border border-apple-line bg-apple-bg-elev shadow-apple-sm">
         {assistants.map((a, i) => {
           const Icon = ICONS[a.icon] ?? Sparkles
           return (
@@ -30,7 +30,7 @@ export default function AssistantsPage() {
                 href={`/assistants/${a.id}`}
                 className="group flex items-center gap-4 px-4 py-4 transition-colors hover:bg-apple-bg-soft sm:px-5"
               >
-                <div className="grid h-10 w-10 shrink-0 place-items-center rounded-full bg-apple-bg-soft text-apple-ink transition-colors group-hover:bg-white group-hover:shadow-apple-sm">
+                <div className="grid h-10 w-10 shrink-0 place-items-center rounded-full bg-apple-bg-soft text-apple-ink transition-colors group-hover:bg-apple-bg-elev group-hover:shadow-apple-sm">
                   <Icon className="h-[18px] w-[18px]" />
                 </div>
                 <div className="min-w-0 flex-1">

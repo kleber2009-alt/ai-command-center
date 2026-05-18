@@ -137,7 +137,7 @@ export default function MaterialsPage() {
               className={`inline-flex items-center gap-1.5 rounded-full border px-3 py-1.5 text-[13px] font-medium transition-colors ${
                 active
                   ? 'border-apple-ink bg-apple-ink text-white'
-                  : 'border-apple-line bg-white text-apple-muted hover:bg-apple-bg-soft hover:text-apple-ink'
+                  : 'border-apple-line bg-apple-bg-elev text-apple-muted hover:bg-apple-bg-soft hover:text-apple-ink'
               }`}
             >
               {t === 'all' ? <Filter className="h-3.5 w-3.5" /> : null}
@@ -168,7 +168,7 @@ export default function MaterialsPage() {
           </p>
           <Link
             href="/transcribe"
-            className="mt-3 inline-flex items-center gap-1.5 rounded-full border border-apple-line bg-white px-3.5 py-1.5 text-[13px] font-medium text-apple-ink shadow-apple-sm hover:bg-apple-bg-soft"
+            className="mt-3 inline-flex items-center gap-1.5 rounded-full border border-apple-line bg-apple-bg-elev px-3.5 py-1.5 text-[13px] font-medium text-apple-ink shadow-apple-sm hover:bg-apple-bg-soft"
           >
             Перейти к транскрибации
           </Link>
@@ -183,7 +183,7 @@ export default function MaterialsPage() {
             return (
               <li
                 key={m.transcript_id}
-                className="overflow-hidden rounded-apple-lg border border-apple-line bg-white shadow-apple-sm"
+                className="overflow-hidden rounded-apple-lg border border-apple-line bg-apple-bg-elev shadow-apple-sm"
               >
                 <div className="space-y-3 p-4 sm:p-5">
                   <div className="flex items-start justify-between gap-3">
@@ -250,7 +250,7 @@ export default function MaterialsPage() {
                         <button
                           type="button"
                           onClick={() => copyMaterial(m, currentExpanded)}
-                          className="inline-flex items-center gap-1.5 rounded-full border border-apple-line bg-white px-2.5 py-1 text-[12px] font-medium text-apple-ink shadow-apple-sm hover:bg-white"
+                          className="inline-flex items-center gap-1.5 rounded-full border border-apple-line bg-apple-bg-elev px-2.5 py-1 text-[12px] font-medium text-apple-ink shadow-apple-sm hover:bg-apple-bg-elev"
                         >
                           {copiedKey === `${m.transcript_id}:${currentExpanded}` ? (
                             <>
