@@ -1,13 +1,13 @@
 import { NextRequest, NextResponse } from 'next/server'
 import { embed } from '@/lib/embeddings'
 import { searchChunks } from '@/lib/me-db'
-import { requireTelegramAuth } from '@/lib/telegram-auth'
+import { authenticate } from '@/lib/telegram-auth'
 
 type Body = { query?: string; topK?: number }
 
 export async function POST(req: NextRequest) {
-  const gate = requireTelegramAuth(req)
-  if (gate) return gate
+  const auth = authenticate(req)
+  if ('error' in auth) return auth.error
 
   const body = (await req.json().catch(() => ({}))) as Body
   const query = typeof body.query === 'string' ? body.query.trim() : ''
@@ -20,7 +20,7 @@ export async function POST(req: NextRequest) {
 
   try {
     const vec = await embed(query)
-    const matches = searchChunks(vec, topK).filter((m) => m.similarity > 0.18)
+    const matches = searchChunks(auth.user_id, vec, topK).filter((m) => m.similarity > 0.18)
     return NextResponse.json({ matches })
   } catch (e: any) {
     return NextResponse.json({ error: e?.message || 'Ошибка поиска' }, { status: 500 })

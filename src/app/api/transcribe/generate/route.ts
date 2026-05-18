@@ -1,7 +1,7 @@
 import { NextRequest, NextResponse } from 'next/server'
 import { getTranscript, mergeTranscriptGenerations } from '@/lib/transcripts-db'
 import { streamAnthropic } from '@/lib/anthropic-stream'
-import { requireTelegramAuth } from '@/lib/telegram-auth'
+import { authenticate } from '@/lib/telegram-auth'
 
 export const maxDuration = 60
 
@@ -205,8 +205,8 @@ function ndjsonResponse(events: Array<Record<string, any>>): Response {
 }
 
 export async function POST(req: NextRequest) {
-  const gate = requireTelegramAuth(req)
-  if (gate) return gate
+  const auth = authenticate(req)
+  if ('error' in auth) return auth.error
   const { id, transcript, type } = (await req.json()) as Body
 
   if (!type || !VALID_TYPES.includes(type)) {
@@ -221,7 +221,7 @@ export async function POST(req: NextRequest) {
 
   let text = transcript
   if (id) {
-    const row = getTranscript(id)
+    const row = getTranscript(id, auth.user_id)
     if (!row) return NextResponse.json({ error: 'Не найден транскрипт' }, { status: 404 })
     const cached = row.generations?.[type]
     if (cached) {
@@ -254,7 +254,7 @@ export async function POST(req: NextRequest) {
     async (fullText) => {
       try {
         const content = parseContent(type, fullText)
-        if (id) mergeTranscriptGenerations(id, type, content)
+        if (id) mergeTranscriptGenerations(id, auth.user_id, type, content)
         return { content }
       } catch (e: any) {
         console.warn(`[/api/transcribe/generate ${type}] parse failed:`, e?.message)

@@ -3,15 +3,15 @@ import { chunkText } from '@/lib/chunking'
 import { embedBatch } from '@/lib/embeddings'
 import { createDocumentWithEmbeddings } from '@/lib/me-db'
 import { getTranscript } from '@/lib/transcripts-db'
-import { requireTelegramAuth } from '@/lib/telegram-auth'
+import { authenticate } from '@/lib/telegram-auth'
 
 export const maxDuration = 300
 
 type Body = { ids?: string[] }
 
 export async function POST(req: NextRequest) {
-  const gate = requireTelegramAuth(req)
-  if (gate) return gate
+  const auth = authenticate(req)
+  if ('error' in auth) return auth.error
 
   if (!process.env.OPENAI_API_KEY) {
     return NextResponse.json({ error: 'OPENAI_API_KEY не настроен' }, { status: 500 })
@@ -31,7 +31,7 @@ export async function POST(req: NextRequest) {
 
   for (const transcriptId of ids) {
     try {
-      const row = getTranscript(transcriptId)
+      const row = getTranscript(transcriptId, auth.user_id)
       if (!row) {
         errors.push({ transcript_id: transcriptId, error: 'Транскрипт не найден' })
         continue
@@ -59,6 +59,7 @@ export async function POST(req: NextRequest) {
         text.slice(0, 60).replace(/\s+/g, ' ').trim() + (text.length > 60 ? '…' : '')
 
       const doc = createDocumentWithEmbeddings({
+        user_id: auth.user_id,
         title,
         source_type: 'transcript',
         source_meta: {

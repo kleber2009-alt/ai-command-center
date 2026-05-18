@@ -1,7 +1,7 @@
 import { NextRequest, NextResponse } from 'next/server'
 import { getTranscript, updateTranscriptSummary } from '@/lib/transcripts-db'
 import { streamAnthropic } from '@/lib/anthropic-stream'
-import { requireTelegramAuth } from '@/lib/telegram-auth'
+import { authenticate } from '@/lib/telegram-auth'
 
 export const maxDuration = 60
 
@@ -44,8 +44,8 @@ function ndjsonResponse(events: Array<Record<string, any>>): Response {
 }
 
 export async function POST(req: NextRequest) {
-  const gate = requireTelegramAuth(req)
-  if (gate) return gate
+  const auth = authenticate(req)
+  if ('error' in auth) return auth.error
   const { id, transcript } = (await req.json()) as Body
 
   if (!process.env.ANTHROPIC_API_KEY) {
@@ -54,7 +54,7 @@ export async function POST(req: NextRequest) {
 
   let text = transcript
   if (id) {
-    const row = getTranscript(id)
+    const row = getTranscript(id, auth.user_id)
     if (!row) return NextResponse.json({ error: 'Не найден транскрипт' }, { status: 404 })
     if (row.summary && row.bullets) {
       // Replay cached saved summary as a single delta + done.
@@ -84,7 +84,7 @@ export async function POST(req: NextRequest) {
     async (fullText) => {
       if (!id) return
       const { summary, bullets } = parseSummary(fullText)
-      if (summary || bullets.length > 0) updateTranscriptSummary(id, summary, bullets)
+      if (summary || bullets.length > 0) updateTranscriptSummary(id, auth.user_id, summary, bullets)
     },
   )
 }

@@ -88,13 +88,13 @@ function safeParseProjects(s: string | null | undefined): ProjectCard[] {
   }
 }
 
-export function loadProfile(): MeProfile {
+export function loadProfile(user_id: string): MeProfile {
   const row = getDb()
     .prepare(
       `SELECT bio, projects, projects_list, academy, social, voice, custom, updated_at
-       FROM me_profile WHERE id = 'singleton'`,
+       FROM me_profile WHERE user_id = ?`,
     )
-    .get() as
+    .get(user_id) as
     | {
         bio: string
         projects: string
@@ -120,14 +120,14 @@ export function loadProfile(): MeProfile {
   }
 }
 
-export function saveProfile(p: Partial<MeProfile>): MeProfile {
+export function saveProfile(user_id: string, p: Partial<MeProfile>): MeProfile {
   const now = new Date().toISOString()
   const projectsList = Array.isArray(p.projects_list) ? p.projects_list : []
   getDb()
     .prepare(
-      `INSERT INTO me_profile (id, bio, projects, projects_list, academy, social, voice, custom, updated_at)
-       VALUES ('singleton', ?, ?, ?, ?, ?, ?, ?, ?)
-       ON CONFLICT(id) DO UPDATE SET
+      `INSERT INTO me_profile (user_id, bio, projects, projects_list, academy, social, voice, custom, updated_at)
+       VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?)
+       ON CONFLICT(user_id) DO UPDATE SET
          bio = excluded.bio,
          projects = excluded.projects,
          projects_list = excluded.projects_list,
@@ -138,6 +138,7 @@ export function saveProfile(p: Partial<MeProfile>): MeProfile {
          updated_at = excluded.updated_at`,
     )
     .run(
+      user_id,
       p.bio ?? '',
       p.projects ?? '',
       JSON.stringify(projectsList),
@@ -147,7 +148,7 @@ export function saveProfile(p: Partial<MeProfile>): MeProfile {
       JSON.stringify(p.custom ?? {}),
       now,
     )
-  return loadProfile()
+  return loadProfile(user_id)
 }
 
 export function profileToContext(p: MeProfile): string {
@@ -198,7 +199,7 @@ export type LibraryStats = {
   by_source: { paste: number; file: number; transcript: number }
 }
 
-export function libraryStats(): LibraryStats {
+export function libraryStats(user_id: string): LibraryStats {
   const db = getDb()
   const agg = db
     .prepare(
@@ -206,14 +207,15 @@ export function libraryStats(): LibraryStats {
               COALESCE(SUM(chunk_count), 0) AS chunks,
               COALESCE(SUM(char_count), 0) AS characters,
               MAX(created_at) AS last_added_at
-       FROM me_documents`,
+       FROM me_documents
+       WHERE user_id = ?`,
     )
-    .get() as { documents: number | bigint; chunks: number | bigint; characters: number | bigint; last_added_at: string | null }
+    .get(user_id) as { documents: number | bigint; chunks: number | bigint; characters: number | bigint; last_added_at: string | null }
   const rows = db
     .prepare(
-      `SELECT source_type, COUNT(*) AS cnt FROM me_documents GROUP BY source_type`,
+      `SELECT source_type, COUNT(*) AS cnt FROM me_documents WHERE user_id = ? GROUP BY source_type`,
     )
-    .all() as Array<{ source_type: 'paste' | 'file' | 'transcript'; cnt: number | bigint }>
+    .all(user_id) as Array<{ source_type: 'paste' | 'file' | 'transcript'; cnt: number | bigint }>
   const by_source = { paste: 0, file: 0, transcript: 0 }
   for (const r of rows) by_source[r.source_type] = Number(r.cnt)
   return {
@@ -225,61 +227,68 @@ export function libraryStats(): LibraryStats {
   }
 }
 
-export function listDocuments(limit = 200): MeDocumentRow[] {
+export function listDocuments(user_id: string, limit = 200): MeDocumentRow[] {
   const rows = getDb()
     .prepare(
       `SELECT id, created_at, title, source_type, source_meta, char_count, chunk_count, pinned
        FROM me_documents
+       WHERE user_id = ?
        ORDER BY pinned DESC, created_at DESC
        LIMIT ?`,
     )
-    .all(limit) as Array<
+    .all(user_id, limit) as Array<
     Omit<MeDocumentRow, 'source_meta'> & { source_meta: string }
   >
   return rows.map((r) => ({ ...r, source_meta: safeParseObject(r.source_meta) }))
 }
 
-export function getDocument(id: number): MeDocumentFullRow | null {
+export function getDocument(id: number, user_id: string): MeDocumentFullRow | null {
   const row = getDb()
     .prepare(
       `SELECT id, created_at, title, source_type, source_meta, original_text, char_count, chunk_count, pinned
-       FROM me_documents WHERE id = ?`,
+       FROM me_documents WHERE id = ? AND user_id = ?`,
     )
-    .get(id) as
+    .get(id, user_id) as
     | (Omit<MeDocumentFullRow, 'source_meta'> & { source_meta: string })
     | undefined
   if (!row) return null
   return { ...row, source_meta: safeParseObject(row.source_meta) }
 }
 
-export function setDocumentPinned(id: number, pinned: boolean): MeDocumentRow | null {
+export function setDocumentPinned(id: number, user_id: string, pinned: boolean): MeDocumentRow | null {
   const db = getDb()
-  const info = db.prepare(`UPDATE me_documents SET pinned = ? WHERE id = ?`).run(pinned ? 1 : 0, id)
+  const info = db
+    .prepare(`UPDATE me_documents SET pinned = ? WHERE id = ? AND user_id = ?`)
+    .run(pinned ? 1 : 0, id, user_id)
   if (info.changes === 0) return null
   const row = db
     .prepare(
       `SELECT id, created_at, title, source_type, source_meta, char_count, chunk_count, pinned
-       FROM me_documents WHERE id = ?`,
+       FROM me_documents WHERE id = ? AND user_id = ?`,
     )
-    .get(id) as (Omit<MeDocumentRow, 'source_meta'> & { source_meta: string }) | undefined
+    .get(id, user_id) as (Omit<MeDocumentRow, 'source_meta'> & { source_meta: string }) | undefined
   return row ? { ...row, source_meta: safeParseObject(row.source_meta) } : null
 }
 
-export function deleteDocument(id: number): boolean {
+export function deleteDocument(id: number, user_id: string): boolean {
   const db = getDb()
-  const tx = db.transaction((docId: number) => {
+  const tx = db.transaction(() => {
+    // Verify ownership before touching anything.
+    const own = db.prepare(`SELECT id FROM me_documents WHERE id = ? AND user_id = ?`).get(id, user_id)
+    if (!own) return false
     const chunkIds = db
       .prepare(`SELECT id FROM me_chunks WHERE document_id = ?`)
-      .all(docId) as Array<{ id: number }>
+      .all(id) as Array<{ id: number }>
     const delVec = db.prepare(`DELETE FROM vec_me_chunks WHERE rowid = ?`)
     for (const { id: cid } of chunkIds) delVec.run(cid)
-    const info = db.prepare(`DELETE FROM me_documents WHERE id = ?`).run(docId)
+    const info = db.prepare(`DELETE FROM me_documents WHERE id = ? AND user_id = ?`).run(id, user_id)
     return info.changes > 0
   })
-  return tx(id)
+  return tx()
 }
 
 export function createDocumentWithEmbeddings(input: {
+  user_id: string
   title: string
   source_type: 'paste' | 'file' | 'transcript'
   source_meta: Record<string, any>
@@ -294,10 +303,11 @@ export function createDocumentWithEmbeddings(input: {
   const tx = db.transaction(() => {
     const docInfo = db
       .prepare(
-        `INSERT INTO me_documents (title, source_type, source_meta, original_text, char_count, chunk_count)
-         VALUES (?, ?, ?, ?, ?, ?)`,
+        `INSERT INTO me_documents (user_id, title, source_type, source_meta, original_text, char_count, chunk_count)
+         VALUES (?, ?, ?, ?, ?, ?, ?)`,
       )
       .run(
+        input.user_id,
         input.title,
         input.source_type,
         JSON.stringify(input.source_meta ?? {}),
@@ -328,22 +338,25 @@ export function createDocumentWithEmbeddings(input: {
   return { ...row, source_meta: safeParseObject(row.source_meta) }
 }
 
-export function updateDocumentTitle(id: number, title: string): MeDocumentRow | null {
+export function updateDocumentTitle(id: number, user_id: string, title: string): MeDocumentRow | null {
   const db = getDb()
-  const info = db.prepare(`UPDATE me_documents SET title = ? WHERE id = ?`).run(title, id)
+  const info = db
+    .prepare(`UPDATE me_documents SET title = ? WHERE id = ? AND user_id = ?`)
+    .run(title, id, user_id)
   if (info.changes === 0) return null
   const row = db
     .prepare(
       `SELECT id, created_at, title, source_type, source_meta, char_count, chunk_count, pinned
-       FROM me_documents WHERE id = ?`,
+       FROM me_documents WHERE id = ? AND user_id = ?`,
     )
-    .get(id) as (Omit<MeDocumentRow, 'source_meta'> & { source_meta: string }) | undefined
+    .get(id, user_id) as (Omit<MeDocumentRow, 'source_meta'> & { source_meta: string }) | undefined
   return row ? { ...row, source_meta: safeParseObject(row.source_meta) } : null
 }
 
 /** Atomically replace the document text + all its chunks/embeddings. */
 export function replaceDocumentText(input: {
   id: number
+  user_id: string
   title?: string
   text: string
   chunks: string[]
@@ -354,7 +367,9 @@ export function replaceDocumentText(input: {
   }
   const db = getDb()
   const tx = db.transaction(() => {
-    const exists = db.prepare(`SELECT id FROM me_documents WHERE id = ?`).get(input.id)
+    const exists = db
+      .prepare(`SELECT id FROM me_documents WHERE id = ? AND user_id = ?`)
+      .get(input.id, input.user_id)
     if (!exists) return false
 
     const oldChunks = db
@@ -370,8 +385,15 @@ export function replaceDocumentText(input: {
            original_text = ?,
            char_count = ?,
            chunk_count = ?
-       WHERE id = ?`,
-    ).run(input.title ?? null, input.text, input.text.length, input.chunks.length, input.id)
+       WHERE id = ? AND user_id = ?`,
+    ).run(
+      input.title ?? null,
+      input.text,
+      input.text.length,
+      input.chunks.length,
+      input.id,
+      input.user_id,
+    )
 
     const insChunk = db.prepare(
       `INSERT INTO me_chunks (document_id, chunk_index, content) VALUES (?, ?, ?)`,
@@ -388,13 +410,14 @@ export function replaceDocumentText(input: {
   const row = db
     .prepare(
       `SELECT id, created_at, title, source_type, source_meta, char_count, chunk_count, pinned
-       FROM me_documents WHERE id = ?`,
+       FROM me_documents WHERE id = ? AND user_id = ?`,
     )
-    .get(input.id) as (Omit<MeDocumentRow, 'source_meta'> & { source_meta: string }) | undefined
+    .get(input.id, input.user_id) as (Omit<MeDocumentRow, 'source_meta'> & { source_meta: string }) | undefined
   return row ? { ...row, source_meta: safeParseObject(row.source_meta) } : null
 }
 
 export function searchChunks(
+  user_id: string,
   queryEmbedding: number[],
   k = 8,
   docIds: number[] | null = null,
@@ -402,14 +425,16 @@ export function searchChunks(
   const buf = embeddingToBuffer(queryEmbedding)
   // When the chat session is scoped to specific documents, over-fetch
   // from the vec index (vec0 can't filter by external columns) and
-  // then drop hits outside the allow-list.
+  // then drop hits outside the allow-list — also enforces user_id via
+  // the JOIN'd me_documents.user_id filter.
   const limited = docIds && docIds.length > 0
-  const fetchK = limited ? Math.max(k * 6, 30) : k
+  const fetchK = limited ? Math.max(k * 6, 30) : Math.max(k * 4, 20)
   const rows = getDb()
     .prepare(
       `SELECT
          c.id, c.document_id, c.chunk_index, c.content,
          d.title AS document_title,
+         d.user_id AS document_user_id,
          vec.distance
        FROM vec_me_chunks AS vec
        JOIN me_chunks AS c ON c.id = vec.rowid
@@ -423,9 +448,11 @@ export function searchChunks(
     chunk_index: number
     content: string
     document_title: string
+    document_user_id: string
     distance: number
   }>
-  const filtered = limited ? rows.filter((r) => docIds!.includes(r.document_id)) : rows
+  const tenantScoped = rows.filter((r) => r.document_user_id === user_id)
+  const filtered = limited ? tenantScoped.filter((r) => docIds!.includes(r.document_id)) : tenantScoped
   return filtered.slice(0, k).map((r) => ({
     id: r.id,
     document_id: r.document_id,

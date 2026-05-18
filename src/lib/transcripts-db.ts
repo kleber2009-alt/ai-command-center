@@ -99,6 +99,7 @@ export function isDbConfigured(): boolean {
 }
 
 export function insertTranscript(input: {
+  user_id: string
   url: string
   title: string
   source: string
@@ -110,10 +111,11 @@ export function insertTranscript(input: {
   const id = randomUUID()
   const db = getDb()
   db.prepare(
-    `INSERT INTO transcripts (id, url, title, source, language, duration, transcript, paragraphs)
-     VALUES (?, ?, ?, ?, ?, ?, ?, ?)`,
+    `INSERT INTO transcripts (id, user_id, url, title, source, language, duration, transcript, paragraphs)
+     VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?)`,
   ).run(
     id,
+    input.user_id,
     input.url,
     input.title,
     input.source,
@@ -125,15 +127,17 @@ export function insertTranscript(input: {
   return id
 }
 
-export function getTranscript(id: string): TranscriptRow | null {
-  const row = getDb().prepare(`SELECT * FROM transcripts WHERE id = ?`).get(id) as
-    | RawTranscriptRow
-    | undefined
+export function getTranscript(id: string, user_id: string): TranscriptRow | null {
+  const row = getDb()
+    .prepare(`SELECT * FROM transcripts WHERE id = ? AND user_id = ?`)
+    .get(id, user_id) as RawTranscriptRow | undefined
   return row ? hydrate(row) : null
 }
 
-export function deleteTranscript(id: string): boolean {
-  const info = getDb().prepare(`DELETE FROM transcripts WHERE id = ?`).run(id)
+export function deleteTranscript(id: string, user_id: string): boolean {
+  const info = getDb()
+    .prepare(`DELETE FROM transcripts WHERE id = ? AND user_id = ?`)
+    .run(id, user_id)
   return info.changes > 0
 }
 
@@ -148,20 +152,22 @@ export type TranscriptListItem = {
   in_brain: 0 | 1
 }
 
-export function listTranscripts(limit = 20): TranscriptListItem[] {
+export function listTranscripts(user_id: string, limit = 20): TranscriptListItem[] {
   return getDb()
     .prepare(
       `SELECT t.id, t.created_at, t.url, t.title, t.source, t.language, t.duration,
               EXISTS (
                 SELECT 1 FROM me_documents d
                 WHERE d.source_type = 'transcript'
+                  AND d.user_id = t.user_id
                   AND json_extract(d.source_meta, '$.transcript_id') = t.id
               ) AS in_brain
        FROM transcripts t
+       WHERE t.user_id = ?
        ORDER BY t.created_at DESC
        LIMIT ?`,
     )
-    .all(limit) as TranscriptListItem[]
+    .all(user_id, limit) as TranscriptListItem[]
 }
 
 export type MaterialItem = {
@@ -174,16 +180,17 @@ export type MaterialItem = {
   generations: Generations
 }
 
-export function listMaterials(limit = 100): MaterialItem[] {
+export function listMaterials(user_id: string, limit = 100): MaterialItem[] {
   const rows = getDb()
     .prepare(
       `SELECT id, created_at, url, title, source, generations
        FROM transcripts
-       WHERE generations IS NOT NULL AND generations != '{}' AND generations != 'null'
+       WHERE user_id = ?
+         AND generations IS NOT NULL AND generations != '{}' AND generations != 'null'
        ORDER BY created_at DESC
        LIMIT ?`,
     )
-    .all(limit) as Array<{
+    .all(user_id, limit) as Array<{
     id: string
     created_at: string
     url: string
@@ -210,25 +217,44 @@ export function listMaterials(limit = 100): MaterialItem[] {
     .filter((m) => m.types.length > 0)
 }
 
-export function updateTranscriptSummary(id: string, summary: string, bullets: string[]): void {
+export function updateTranscriptSummary(
+  id: string,
+  user_id: string,
+  summary: string,
+  bullets: string[],
+): void {
   getDb()
-    .prepare(`UPDATE transcripts SET summary = ?, bullets = ? WHERE id = ?`)
-    .run(summary, JSON.stringify(bullets), id)
+    .prepare(`UPDATE transcripts SET summary = ?, bullets = ? WHERE id = ? AND user_id = ?`)
+    .run(summary, JSON.stringify(bullets), id, user_id)
 }
 
-export function updateTranscriptTranslation(id: string, lang: string, text: string): void {
+export function updateTranscriptTranslation(
+  id: string,
+  user_id: string,
+  lang: string,
+  text: string,
+): void {
   getDb()
-    .prepare(`UPDATE transcripts SET translation = ? WHERE id = ?`)
-    .run(JSON.stringify({ lang, text }), id)
+    .prepare(`UPDATE transcripts SET translation = ? WHERE id = ? AND user_id = ?`)
+    .run(JSON.stringify({ lang, text }), id, user_id)
 }
 
-export function mergeTranscriptGenerations(id: string, key: string, content: any): void {
+export function mergeTranscriptGenerations(
+  id: string,
+  user_id: string,
+  key: string,
+  content: any,
+): void {
   const db = getDb()
-  const row = db.prepare(`SELECT generations FROM transcripts WHERE id = ?`).get(id) as
-    | { generations: string | null }
-    | undefined
+  const row = db
+    .prepare(`SELECT generations FROM transcripts WHERE id = ? AND user_id = ?`)
+    .get(id, user_id) as { generations: string | null } | undefined
   if (!row) return
   const current = parseJson<Record<string, any>>(row.generations) ?? {}
   current[key] = content
-  db.prepare(`UPDATE transcripts SET generations = ? WHERE id = ?`).run(JSON.stringify(current), id)
+  db.prepare(`UPDATE transcripts SET generations = ? WHERE id = ? AND user_id = ?`).run(
+    JSON.stringify(current),
+    id,
+    user_id,
+  )
 }

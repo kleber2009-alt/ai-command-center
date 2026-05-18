@@ -2,7 +2,7 @@ import { NextRequest, NextResponse } from 'next/server'
 import { chunkText } from '@/lib/chunking'
 import { embedBatch } from '@/lib/embeddings'
 import { createDocumentWithEmbeddings, libraryStats, listDocuments } from '@/lib/me-db'
-import { requireTelegramAuth } from '@/lib/telegram-auth'
+import { authenticate } from '@/lib/telegram-auth'
 
 export const maxDuration = 120
 
@@ -38,12 +38,12 @@ async function extractFileText(file: File): Promise<string> {
 }
 
 export async function GET(req: NextRequest) {
-  const gate = requireTelegramAuth(req)
-  if (gate) return gate
+  const auth = authenticate(req)
+  if ('error' in auth) return auth.error
   try {
     return NextResponse.json({
-      items: listDocuments(200),
-      stats: libraryStats(),
+      items: listDocuments(auth.user_id, 200),
+      stats: libraryStats(auth.user_id),
       configured: true,
     })
   } catch (e: any) {
@@ -52,8 +52,8 @@ export async function GET(req: NextRequest) {
 }
 
 export async function POST(req: NextRequest) {
-  const gate = requireTelegramAuth(req)
-  if (gate) return gate
+  const auth = authenticate(req)
+  if ('error' in auth) return auth.error
   if (!process.env.OPENAI_API_KEY) {
     return NextResponse.json({ error: 'OPENAI_API_KEY не настроен' }, { status: 500 })
   }
@@ -102,6 +102,7 @@ export async function POST(req: NextRequest) {
 
   try {
     const doc = createDocumentWithEmbeddings({
+      user_id: auth.user_id,
       title,
       source_type,
       source_meta,

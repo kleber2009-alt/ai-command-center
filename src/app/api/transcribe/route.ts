@@ -7,7 +7,7 @@ import {
   isYtdlpServiceConfigured,
   YtdlpServiceError,
 } from '@/lib/ytdlp-client'
-import { requireTelegramAuth } from '@/lib/telegram-auth'
+import { authenticate } from '@/lib/telegram-auth'
 
 export const maxDuration = 60
 
@@ -167,9 +167,10 @@ async function fetchDeepgram(url: string, language: 'auto' | 'ru' | 'en'): Promi
   }
 }
 
-function saveTranscript(url: string, result: Ok): string | null {
+function saveTranscript(user_id: string, url: string, result: Ok): string | null {
   try {
     return insertTranscript({
+      user_id,
       url,
       title: makeTitle(result.transcript, url),
       source: result.source,
@@ -215,8 +216,8 @@ async function dispatch(url: string, language: 'auto' | 'ru' | 'en'): Promise<Re
 }
 
 export async function POST(req: NextRequest) {
-  const gate = requireTelegramAuth(req)
-  if (gate) return gate
+  const auth = authenticate(req)
+  if ('error' in auth) return auth.error
   const { url, language = 'ru' } = (await req.json()) as Body
 
   if (!url || typeof url !== 'string' || !/^https?:\/\//i.test(url)) {
@@ -233,7 +234,7 @@ export async function POST(req: NextRequest) {
       return NextResponse.json({ error: result.error }, { status: result.status })
     }
 
-    const id = saveTranscript(url, result)
+    const id = saveTranscript(auth.user_id, url, result)
     return NextResponse.json({ ...result, id })
   } catch (e: any) {
     return NextResponse.json({ error: e?.message || 'Ошибка транскрибации' }, { status: 500 })

@@ -5,6 +5,7 @@ export type ChatKind = 'me' | 'assistant'
 
 export type ChatSessionRow = {
   id: string
+  user_id: string
   kind: ChatKind
   assistant_id: string | null
   title: string
@@ -33,6 +34,7 @@ function parseDocIds(raw: unknown): number[] | null {
 function hydrateSession(raw: any): ChatSessionRow {
   return {
     id: raw.id,
+    user_id: raw.user_id,
     kind: raw.kind,
     assistant_id: raw.assistant_id,
     title: raw.title,
@@ -61,6 +63,7 @@ function nowIso(): string {
 }
 
 export function createSession(
+  user_id: string,
   kind: ChatKind,
   assistantId: string | null,
   docIds: number[] | null = null,
@@ -70,12 +73,13 @@ export function createSession(
   const docIdsJson = docIds && docIds.length > 0 ? JSON.stringify(docIds) : null
   getDb()
     .prepare(
-      `INSERT INTO chat_sessions (id, kind, assistant_id, title, doc_ids, created_at, updated_at)
-       VALUES (?, ?, ?, '', ?, ?, ?)`,
+      `INSERT INTO chat_sessions (id, user_id, kind, assistant_id, title, doc_ids, created_at, updated_at)
+       VALUES (?, ?, ?, ?, '', ?, ?, ?)`,
     )
-    .run(id, kind, assistantId, docIdsJson, now, now)
+    .run(id, user_id, kind, assistantId, docIdsJson, now, now)
   return {
     id,
+    user_id,
     kind,
     assistant_id: assistantId,
     title: '',
@@ -86,12 +90,19 @@ export function createSession(
   }
 }
 
-export function getSession(id: string): ChatSessionRow | null {
-  const raw = getDb().prepare(`SELECT * FROM chat_sessions WHERE id = ?`).get(id) as any
+export function getSession(id: string, user_id: string): ChatSessionRow | null {
+  const raw = getDb()
+    .prepare(`SELECT * FROM chat_sessions WHERE id = ? AND user_id = ?`)
+    .get(id, user_id) as any
   return raw ? hydrateSession(raw) : null
 }
 
-export function listSessions(kind: ChatKind, assistantId: string | null, limit = 30): ChatSessionListItem[] {
+export function listSessions(
+  user_id: string,
+  kind: ChatKind,
+  assistantId: string | null,
+  limit = 30,
+): ChatSessionListItem[] {
   const db = getDb()
   const rows = (assistantId === null
     ? db
@@ -100,48 +111,57 @@ export function listSessions(kind: ChatKind, assistantId: string | null, limit =
                   (SELECT COUNT(*) FROM chat_messages m WHERE m.session_id = s.id) AS message_count,
                   (SELECT content FROM chat_messages m WHERE m.session_id = s.id ORDER BY m.id DESC LIMIT 1) AS last_message
            FROM chat_sessions s
-           WHERE s.kind = ? AND s.assistant_id IS NULL
+           WHERE s.user_id = ? AND s.kind = ? AND s.assistant_id IS NULL
            ORDER BY s.pinned DESC, s.updated_at DESC
            LIMIT ?`,
         )
-        .all(kind, limit)
+        .all(user_id, kind, limit)
     : db
         .prepare(
           `SELECT s.*,
                   (SELECT COUNT(*) FROM chat_messages m WHERE m.session_id = s.id) AS message_count,
                   (SELECT content FROM chat_messages m WHERE m.session_id = s.id ORDER BY m.id DESC LIMIT 1) AS last_message
            FROM chat_sessions s
-           WHERE s.kind = ? AND s.assistant_id = ?
+           WHERE s.user_id = ? AND s.kind = ? AND s.assistant_id = ?
            ORDER BY s.pinned DESC, s.updated_at DESC
            LIMIT ?`,
         )
-        .all(kind, assistantId, limit)) as Array<any>
+        .all(user_id, kind, assistantId, limit)) as Array<any>
 
   return rows.map((r) => ({ ...hydrateSession(r), message_count: Number(r.message_count), last_message: r.last_message }))
 }
 
-export function listMessages(sessionId: string): ChatMessageRow[] {
+export function listMessages(sessionId: string, user_id: string): ChatMessageRow[] {
   return getDb()
-    .prepare(`SELECT * FROM chat_messages WHERE session_id = ? ORDER BY id ASC`)
-    .all(sessionId) as ChatMessageRow[]
+    .prepare(
+      `SELECT m.*
+       FROM chat_messages m
+       JOIN chat_sessions s ON s.id = m.session_id
+       WHERE m.session_id = ? AND s.user_id = ?
+       ORDER BY m.id ASC`,
+    )
+    .all(sessionId, user_id) as ChatMessageRow[]
 }
 
-export function deleteSession(id: string): boolean {
-  const info = getDb().prepare(`DELETE FROM chat_sessions WHERE id = ?`).run(id)
+export function deleteSession(id: string, user_id: string): boolean {
+  const info = getDb()
+    .prepare(`DELETE FROM chat_sessions WHERE id = ? AND user_id = ?`)
+    .run(id, user_id)
   return info.changes > 0
 }
 
 /** Append a turn (user + assistant) and bump the session's updated_at + title. */
 export function appendTurn(input: {
   sessionId: string
+  user_id: string
   userMessage: string
   assistantMessage: string
 }): void {
   const db = getDb()
   const tx = db.transaction(() => {
-    const session = db.prepare(`SELECT id, title FROM chat_sessions WHERE id = ?`).get(input.sessionId) as
-      | { id: string; title: string }
-      | undefined
+    const session = db
+      .prepare(`SELECT id, title FROM chat_sessions WHERE id = ? AND user_id = ?`)
+      .get(input.sessionId, input.user_id) as { id: string; title: string } | undefined
     if (!session) return
     const ins = db.prepare(`INSERT INTO chat_messages (session_id, role, content) VALUES (?, ?, ?)`)
     ins.run(input.sessionId, 'user', input.userMessage)
@@ -163,10 +183,10 @@ export function appendTurn(input: {
   tx()
 }
 
-export function renameSession(id: string, title: string): boolean {
+export function renameSession(id: string, user_id: string, title: string): boolean {
   const info = getDb()
-    .prepare(`UPDATE chat_sessions SET title = ?, updated_at = ? WHERE id = ?`)
-    .run(title, nowIso(), id)
+    .prepare(`UPDATE chat_sessions SET title = ?, updated_at = ? WHERE id = ? AND user_id = ?`)
+    .run(title, nowIso(), id, user_id)
   return info.changes > 0
 }
 
@@ -186,6 +206,7 @@ export type ChatSearchHit = {
  * to a 240-char window centred on the first occurrence.
  */
 export function searchMessages(
+  user_id: string,
   kind: ChatKind,
   assistantId: string | null,
   query: string,
@@ -202,24 +223,24 @@ export function searchMessages(
                   s.updated_at AS session_updated_at, m.role, m.content
            FROM chat_messages m
            JOIN chat_sessions s ON s.id = m.session_id
-           WHERE s.kind = ? AND s.assistant_id IS NULL
+           WHERE s.user_id = ? AND s.kind = ? AND s.assistant_id IS NULL
              AND m.content LIKE ? ESCAPE '\\'
            ORDER BY m.id DESC
            LIMIT ?`,
         )
-        .all(kind, like, limit)
+        .all(user_id, kind, like, limit)
     : db
         .prepare(
           `SELECT m.session_id, s.kind, s.assistant_id, s.title AS session_title,
                   s.updated_at AS session_updated_at, m.role, m.content
            FROM chat_messages m
            JOIN chat_sessions s ON s.id = m.session_id
-           WHERE s.kind = ? AND s.assistant_id = ?
+           WHERE s.user_id = ? AND s.kind = ? AND s.assistant_id = ?
              AND m.content LIKE ? ESCAPE '\\'
            ORDER BY m.id DESC
            LIMIT ?`,
         )
-        .all(kind, assistantId, like, limit)) as ChatSearchHit[]
+        .all(user_id, kind, assistantId, like, limit)) as ChatSearchHit[]
 
   const lowerQ = q.toLowerCase()
   return rows.map((r) => {
@@ -237,9 +258,14 @@ export function searchMessages(
  * (ordered by id ASC). Used by the edit-message flow to drop a tail
  * before re-firing the chat.
  */
-export function truncateSession(sessionId: string, keepCount: number): void {
+export function truncateSession(sessionId: string, user_id: string, keepCount: number): void {
   if (keepCount < 0) return
   const db = getDb()
+  // Verify ownership; otherwise no-op.
+  const own = db
+    .prepare(`SELECT id FROM chat_sessions WHERE id = ? AND user_id = ?`)
+    .get(sessionId, user_id)
+  if (!own) return
   db.prepare(
     `DELETE FROM chat_messages
      WHERE session_id = ?
@@ -252,9 +278,14 @@ export function truncateSession(sessionId: string, keepCount: number): void {
   ).run(sessionId, sessionId, keepCount)
   db.prepare(`UPDATE chat_sessions SET updated_at = ? WHERE id = ?`).run(nowIso(), sessionId)
 }
-export function replaceLastAssistant(sessionId: string, content: string): boolean {
+
+export function replaceLastAssistant(sessionId: string, user_id: string, content: string): boolean {
   const db = getDb()
   const tx = db.transaction(() => {
+    const own = db
+      .prepare(`SELECT id FROM chat_sessions WHERE id = ? AND user_id = ?`)
+      .get(sessionId, user_id)
+    if (!own) return false
     const last = db
       .prepare(
         `SELECT id FROM chat_messages
@@ -270,9 +301,9 @@ export function replaceLastAssistant(sessionId: string, content: string): boolea
   return tx()
 }
 
-export function setSessionPinned(id: string, pinned: boolean): boolean {
+export function setSessionPinned(id: string, user_id: string, pinned: boolean): boolean {
   const info = getDb()
-    .prepare(`UPDATE chat_sessions SET pinned = ? WHERE id = ?`)
-    .run(pinned ? 1 : 0, id)
+    .prepare(`UPDATE chat_sessions SET pinned = ? WHERE id = ? AND user_id = ?`)
+    .run(pinned ? 1 : 0, id, user_id)
   return info.changes > 0
 }

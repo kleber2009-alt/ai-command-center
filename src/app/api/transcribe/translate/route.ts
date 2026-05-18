@@ -1,7 +1,7 @@
 import { NextRequest, NextResponse } from 'next/server'
 import { getTranscript, updateTranscriptTranslation } from '@/lib/transcripts-db'
 import { streamAnthropic } from '@/lib/anthropic-stream'
-import { requireTelegramAuth } from '@/lib/telegram-auth'
+import { authenticate } from '@/lib/telegram-auth'
 
 export const maxDuration = 60
 
@@ -21,8 +21,8 @@ ${text.slice(0, 30000)}
 """`
 
 export async function POST(req: NextRequest) {
-  const gate = requireTelegramAuth(req)
-  if (gate) return gate
+  const auth = authenticate(req)
+  if ('error' in auth) return auth.error
   const { id, transcript, targetLang } = (await req.json()) as Body
 
   if (!targetLang || !['ru', 'en'].includes(targetLang)) {
@@ -35,7 +35,7 @@ export async function POST(req: NextRequest) {
 
   let text = transcript
   if (id) {
-    const row = getTranscript(id)
+    const row = getTranscript(id, auth.user_id)
     if (!row) {
       return NextResponse.json({ error: 'Не найден транскрипт' }, { status: 404 })
     }
@@ -69,7 +69,7 @@ export async function POST(req: NextRequest) {
     },
     { lang: targetLang, cached: false },
     async (fullText) => {
-      if (id) updateTranscriptTranslation(id, targetLang, fullText.trim())
+      if (id) updateTranscriptTranslation(id, auth.user_id, targetLang, fullText.trim())
     },
   )
 }

@@ -1,20 +1,20 @@
 import { NextRequest, NextResponse } from 'next/server'
 import { loadProfile, saveProfile } from '@/lib/me-db'
-import { requireTelegramAuth } from '@/lib/telegram-auth'
+import { authenticate } from '@/lib/telegram-auth'
 
 export async function GET(req: NextRequest) {
-  const gate = requireTelegramAuth(req)
-  if (gate) return gate
+  const auth = authenticate(req)
+  if ('error' in auth) return auth.error
   try {
-    return NextResponse.json({ profile: loadProfile(), configured: true })
+    return NextResponse.json({ profile: loadProfile(auth.user_id), configured: true })
   } catch (e: any) {
     return NextResponse.json({ error: e?.message || 'Ошибка чтения профиля' }, { status: 500 })
   }
 }
 
 export async function PUT(req: NextRequest) {
-  const gate = requireTelegramAuth(req)
-  if (gate) return gate
+  const auth = authenticate(req)
+  if ('error' in auth) return auth.error
   try {
     const body = (await req.json()) as Record<string, any>
     const projectsList = Array.isArray(body.projects_list)
@@ -28,7 +28,7 @@ export async function PUT(req: NextRequest) {
             metrics: String(p.metrics ?? ''),
           }))
       : []
-    const updated = saveProfile({
+    const updated = saveProfile(auth.user_id, {
       bio: String(body.bio ?? ''),
       projects: String(body.projects ?? ''),
       projects_list: projectsList,

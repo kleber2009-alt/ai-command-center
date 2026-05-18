@@ -59,20 +59,59 @@ export function verifyTelegramInitData(initData: string, botToken: string): Tele
   return { ok: true, user }
 }
 
-/** Convenience guard for API routes. Returns null on success or a Response on failure. */
 import { NextRequest, NextResponse } from 'next/server'
 
+/**
+ * Returns null on success or a 401 Response on failure. Kept for
+ * backwards compatibility; new code should use authenticate() which
+ * also returns the resolved user_id.
+ */
 export function requireTelegramAuth(req: NextRequest): Response | null {
-  const botToken = process.env.TELEGRAM_BOT_TOKEN
-  // When no bot token is configured the gate is disabled (open access, suitable for local dev).
-  if (!botToken) return null
+  const a = authenticate(req)
+  return 'error' in a ? a.error : null
+}
 
-  const auth = req.headers.get('authorization') || ''
-  const initData = auth.startsWith('tma ') ? auth.slice(4) : ''
-  const result = verifyTelegramInitData(initData, botToken)
-  if (result.ok) return null
-  return NextResponse.json(
-    { error: `Доступ только из Telegram (${result.reason})` },
-    { status: 401 },
-  )
+export type Authenticated = { user_id: string; via: 'telegram' | 'header' | 'default' }
+export type AuthResult = Authenticated | { error: Response }
+
+/**
+ * Resolve the caller's user_id from one of three sources, in order:
+ *
+ * 1. `X-Auth-User` header — set by a trusted reverse-proxy after it
+ *    enforced basic-auth (we trust upstream headers because Next.js
+ *    binds to 127.0.0.1 in production and only the proxy can reach it).
+ *    Yields `auth:<sanitised-name>`.
+ * 2. Verified Telegram `Authorization: tma <initData>` — yields
+ *    `tg:<telegram-user-id>`. Required when `TELEGRAM_BOT_TOKEN` is set
+ *    and no proxy header is present.
+ * 3. Fully open mode (no bot token, no header) — yields `default`. Used
+ *    only in local dev / single-tenant deploys.
+ *
+ * The user_id is the multi-tenant key for every content table; rows
+ * created under one source are isolated from rows under another.
+ */
+export function authenticate(req: NextRequest): AuthResult {
+  const headerUser = req.headers.get('x-auth-user')?.trim()
+  if (headerUser) {
+    const sanitised = headerUser.toLowerCase().replace(/[^a-z0-9_-]/g, '').slice(0, 40)
+    if (sanitised) return { user_id: `auth:${sanitised}`, via: 'header' }
+  }
+
+  const botToken = process.env.TELEGRAM_BOT_TOKEN
+  if (botToken) {
+    const auth = req.headers.get('authorization') || ''
+    const initData = auth.startsWith('tma ') ? auth.slice(4) : ''
+    const result = verifyTelegramInitData(initData, botToken)
+    if (result.ok && result.user?.id) {
+      return { user_id: `tg:${result.user.id}`, via: 'telegram' }
+    }
+    return {
+      error: NextResponse.json(
+        { error: `Доступ только из Telegram (${result.ok ? 'no user in initData' : result.reason})` },
+        { status: 401 },
+      ),
+    }
+  }
+
+  return { user_id: 'default', via: 'default' }
 }

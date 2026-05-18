@@ -1,7 +1,7 @@
 import { NextRequest, NextResponse } from 'next/server'
 import { getAssistant } from '@/data/assistants'
 import { streamAnthropic } from '@/lib/anthropic-stream'
-import { requireTelegramAuth } from '@/lib/telegram-auth'
+import { authenticate } from '@/lib/telegram-auth'
 import { appendTurn, getSession, replaceLastAssistant, truncateSession } from '@/lib/chats-db'
 import { loadProfile, profileToContext, searchChunks } from '@/lib/me-db'
 import { embed } from '@/lib/embeddings'
@@ -21,8 +21,8 @@ type Body = {
 }
 
 export async function POST(req: NextRequest) {
-  const gate = requireTelegramAuth(req)
-  if (gate) return gate
+  const auth = authenticate(req)
+  if ('error' in auth) return auth.error
   const body = (await req.json()) as Body
   const { assistantId, messages, sessionId, regenerate } = body
 
@@ -45,14 +45,14 @@ export async function POST(req: NextRequest) {
     return NextResponse.json({ error: 'Первое сообщение должно быть от пользователя' }, { status: 400 })
   }
 
-  const session = sessionId ? getSession(sessionId) : null
+  const session = sessionId ? getSession(sessionId, auth.user_id) : null
   const validSession =
     session && session.kind === 'assistant' && session.assistant_id === assistantId ? session : null
 
   // Always layer the user profile on top of the assistant's base prompt:
   // it's cheap, doesn't need extra API calls, and dramatically improves
   // personalisation. Library retrieval (RAG) is opt-in via useBrainContext.
-  const profile = loadProfile()
+  const profile = loadProfile(auth.user_id)
   const profileBlock = profileToContext(profile)
 
   let contextBlock = ''
@@ -69,7 +69,7 @@ export async function POST(req: NextRequest) {
     try {
       const lastUser = cleaned[cleaned.length - 1].content
       const queryVec = await embed(lastUser)
-      const matches = searchChunks(queryVec, 6).filter((m) => m.similarity > 0.2)
+      const matches = searchChunks(auth.user_id, queryVec, 6).filter((m) => m.similarity > 0.2)
       contextBlock = matches
         .map(
           (m, i) =>
@@ -112,15 +112,16 @@ export async function POST(req: NextRequest) {
     async (fullText) => {
       if (!validSession) return
       if (regenerate) {
-        replaceLastAssistant(validSession.id, fullText)
+        replaceLastAssistant(validSession.id, auth.user_id, fullText)
         return
       }
       if (typeof body.truncateToCount === 'number') {
-        truncateSession(validSession.id, body.truncateToCount)
+        truncateSession(validSession.id, auth.user_id, body.truncateToCount)
       }
       const lastUser = cleaned[cleaned.length - 1].content
       appendTurn({
         sessionId: validSession.id,
+        user_id: auth.user_id,
         userMessage: lastUser,
         assistantMessage: fullText,
       })

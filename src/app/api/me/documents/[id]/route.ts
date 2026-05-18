@@ -8,27 +8,27 @@ import {
   setDocumentPinned,
   updateDocumentTitle,
 } from '@/lib/me-db'
-import { requireTelegramAuth } from '@/lib/telegram-auth'
+import { authenticate } from '@/lib/telegram-auth'
 
 export const maxDuration = 120
 
 export async function GET(req: NextRequest, { params }: { params: { id: string } }) {
-  const gate = requireTelegramAuth(req)
-  if (gate) return gate
+  const auth = authenticate(req)
+  if ('error' in auth) return auth.error
   const id = Number(params.id)
   if (!Number.isInteger(id)) return NextResponse.json({ error: 'Невалидный id' }, { status: 400 })
-  const doc = getDocument(id)
+  const doc = getDocument(id, auth.user_id)
   if (!doc) return NextResponse.json({ error: 'Не найдено' }, { status: 404 })
   return NextResponse.json({ document: doc })
 }
 
 export async function PUT(req: NextRequest, { params }: { params: { id: string } }) {
-  const gate = requireTelegramAuth(req)
-  if (gate) return gate
+  const auth = authenticate(req)
+  if ('error' in auth) return auth.error
   const id = Number(params.id)
   if (!Number.isInteger(id)) return NextResponse.json({ error: 'Невалидный id' }, { status: 400 })
 
-  const existing = getDocument(id)
+  const existing = getDocument(id, auth.user_id)
   if (!existing) return NextResponse.json({ error: 'Не найдено' }, { status: 404 })
 
   const body = (await req.json().catch(() => ({}))) as {
@@ -42,7 +42,7 @@ export async function PUT(req: NextRequest, { params }: { params: { id: string }
 
   // Pin-only update: cheap, no re-embed, no title change.
   if (pinned !== undefined && title === undefined && text === undefined) {
-    const updated = setDocumentPinned(id, pinned)
+    const updated = setDocumentPinned(id, auth.user_id, pinned)
     if (!updated) return NextResponse.json({ error: 'Не удалось обновить' }, { status: 500 })
     return NextResponse.json({ document: updated, reembedded: false })
   }
@@ -51,18 +51,18 @@ export async function PUT(req: NextRequest, { params }: { params: { id: string }
   if (text === undefined || text === existing.original_text) {
     if (title === undefined || title === existing.title) {
       if (pinned !== undefined && pinned !== Boolean(existing.pinned)) {
-        const updated = setDocumentPinned(id, pinned)
+        const updated = setDocumentPinned(id, auth.user_id, pinned)
         if (!updated) return NextResponse.json({ error: 'Не удалось обновить' }, { status: 500 })
         return NextResponse.json({ document: updated, reembedded: false })
       }
       return NextResponse.json({ document: existing, reembedded: false })
     }
-    const updated = updateDocumentTitle(id, title)
+    const updated = updateDocumentTitle(id, auth.user_id, title)
     if (!updated) return NextResponse.json({ error: 'Не удалось обновить' }, { status: 500 })
     if (pinned !== undefined && pinned !== Boolean(existing.pinned)) {
-      setDocumentPinned(id, pinned)
+      setDocumentPinned(id, auth.user_id, pinned)
     }
-    const final = getDocument(id)
+    const final = getDocument(id, auth.user_id)
     return NextResponse.json({ document: final, reembedded: false })
   }
 
@@ -89,17 +89,17 @@ export async function PUT(req: NextRequest, { params }: { params: { id: string }
     return NextResponse.json({ error: e?.message || 'Ошибка эмбеддинга' }, { status: 500 })
   }
 
-  const updated = replaceDocumentText({ id, title, text: cleaned, chunks, embeddings })
+  const updated = replaceDocumentText({ id, user_id: auth.user_id, title, text: cleaned, chunks, embeddings })
   if (!updated) return NextResponse.json({ error: 'Не удалось обновить документ' }, { status: 500 })
   return NextResponse.json({ document: updated, reembedded: true })
 }
 
 export async function DELETE(req: NextRequest, { params }: { params: { id: string } }) {
-  const gate = requireTelegramAuth(req)
-  if (gate) return gate
+  const auth = authenticate(req)
+  if ('error' in auth) return auth.error
   const id = Number(params.id)
   if (!Number.isInteger(id)) return NextResponse.json({ error: 'Невалидный id' }, { status: 400 })
-  const ok = deleteDocument(id)
+  const ok = deleteDocument(id, auth.user_id)
   if (!ok) return NextResponse.json({ error: 'Не найдено' }, { status: 404 })
   return NextResponse.json({ ok: true })
 }

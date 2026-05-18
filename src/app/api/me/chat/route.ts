@@ -2,7 +2,7 @@ import { NextRequest, NextResponse } from 'next/server'
 import { embed } from '@/lib/embeddings'
 import { loadProfile, profileToContext, searchChunks, type MeChunkMatch } from '@/lib/me-db'
 import { streamAnthropic } from '@/lib/anthropic-stream'
-import { requireTelegramAuth } from '@/lib/telegram-auth'
+import { authenticate } from '@/lib/telegram-auth'
 import { appendTurn, getSession, replaceLastAssistant, truncateSession } from '@/lib/chats-db'
 
 export const maxDuration = 60
@@ -27,8 +27,8 @@ const SYSTEM_INSTRUCTIONS = `Ты — личный «второй мозг» п�
 - Соблюдай голос и стиль пользователя, если он описан в блоке "Голос и стиль".`
 
 export async function POST(req: NextRequest) {
-  const gate = requireTelegramAuth(req)
-  if (gate) return gate
+  const auth = authenticate(req)
+  if ('error' in auth) return auth.error
   const body = (await req.json()) as Body
   const messages = Array.isArray(body.messages) ? body.messages : []
   const topK = Math.max(1, Math.min(20, body.topK ?? 8))
@@ -40,11 +40,11 @@ export async function POST(req: NextRequest) {
     return NextResponse.json({ error: 'ANTHROPIC_API_KEY не настроен' }, { status: 500 })
   }
 
-  const profile = loadProfile()
+  const profile = loadProfile(auth.user_id)
   const profileBlock = profileToContext(profile)
 
   // Resolve session early — we may need its doc_ids to scope RAG.
-  const session = body.sessionId ? getSession(body.sessionId) : null
+  const session = body.sessionId ? getSession(body.sessionId, auth.user_id) : null
   const validSession = session && session.kind === 'me' ? session : null
   const restrictDocIds: number[] | null = validSession?.doc_ids ?? null
 
@@ -61,7 +61,7 @@ export async function POST(req: NextRequest) {
   if (process.env.OPENAI_API_KEY) {
     try {
       const queryVec = await embed(lastUser)
-      const matches: MeChunkMatch[] = searchChunks(queryVec, topK, restrictDocIds).filter(
+      const matches: MeChunkMatch[] = searchChunks(auth.user_id, queryVec, topK, restrictDocIds).filter(
         (m) => m.similarity > 0.2,
       )
       contextBlock = matches
@@ -104,14 +104,15 @@ export async function POST(req: NextRequest) {
     async (fullText) => {
       if (!validSession) return
       if (body.regenerate) {
-        replaceLastAssistant(validSession.id, fullText)
+        replaceLastAssistant(validSession.id, auth.user_id, fullText)
         return
       }
       if (typeof body.truncateToCount === 'number') {
-        truncateSession(validSession.id, body.truncateToCount)
+        truncateSession(validSession.id, auth.user_id, body.truncateToCount)
       }
       appendTurn({
         sessionId: validSession.id,
+        user_id: auth.user_id,
         userMessage: lastUser,
         assistantMessage: fullText,
       })
