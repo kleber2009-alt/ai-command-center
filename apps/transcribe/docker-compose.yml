@@ -1,0 +1,40 @@
+# transcribe · standalone deployment on Hetzner
+#
+# Run from this directory:
+#   cp .env.example .env   # then edit values
+#   docker compose up -d --build
+#
+# Logs:  docker compose logs -f transcribe
+# Stop:  docker compose down
+#
+# Without a domain configured the app is reachable directly on the
+# host's port 8080 (HTTP). Telegram Mini Apps require HTTPS in
+# production — add Caddy or another reverse-proxy with TLS before
+# you point BotFather at this deploy.
+
+services:
+  transcribe:
+    build:
+      context: ../..
+      dockerfile: apps/transcribe/Dockerfile
+    container_name: transcribe
+    restart: unless-stopped
+    ports:
+      - "8080:3000"
+    environment:
+      # Required
+      ANTHROPIC_API_KEY: ${ANTHROPIC_API_KEY:-}
+      DEEPGRAM_API_KEY: ${DEEPGRAM_API_KEY:-}
+      OPENAI_API_KEY: ${OPENAI_API_KEY:-}
+      # Supabase (DB stays managed for Phase 1)
+      NEXT_PUBLIC_SUPABASE_URL: ${NEXT_PUBLIC_SUPABASE_URL:-}
+      NEXT_PUBLIC_SUPABASE_ANON_KEY: ${NEXT_PUBLIC_SUPABASE_ANON_KEY:-}
+      SUPABASE_SERVICE_KEY: ${SUPABASE_SERVICE_KEY:-}
+      # Telegram Mini App
+      TELEGRAM_BOT_TOKEN: ${TELEGRAM_BOT_TOKEN:-}
+      TELEGRAM_REQUIRE_INIT_DATA: ${TELEGRAM_REQUIRE_INIT_DATA:-}
+      OWNER_TELEGRAM_ID: ${OWNER_TELEGRAM_ID:-}
+      # External extractors
+      APIFY_API_TOKEN: ${APIFY_API_TOKEN:-}
+      YTDLP_SERVICE_URL: ${YTDLP_SERVICE_URL:-}
+      YTDLP_SERVICE_API_KEY: ${YTDLP_SERVICE_API_KEY:-}
