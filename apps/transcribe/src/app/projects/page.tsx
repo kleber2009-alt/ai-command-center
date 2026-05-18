@@ -13,9 +13,9 @@ const projects: Project[] = [
   {
     id: 'ai-office',
     name: 'ИИ-офис',
-    description: 'Командный центр: лендинг, кейсы, дашборд-демо и витрина агентов на ai-growth-office.ru.',
+    description: 'Командный центр: лендинг, кейсы, дашборд-демо и витрина AI-агентов для роста бизнеса.',
     icon: Building2,
-    href: 'https://ai-growth-office.ru',
+    href: 'https://spiffy-selkie-ec834f.netlify.app',
     external: true,
   },
   {
