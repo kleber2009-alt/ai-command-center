@@ -27,12 +27,16 @@ export async function POST(req: NextRequest) {
     return NextResponse.json({ error: 'ANTHROPIC_API_KEY не настроен' }, { status: 500 })
   }
 
-  const cleaned = messages
+  const filtered = messages
     .filter((m) => m && (m.role === 'user' || m.role === 'assistant') && typeof m.content === 'string')
     .map((m) => ({ role: m.role, content: m.content.slice(0, 50000) }))
 
-  if (cleaned.length === 0 || cleaned[0].role !== 'user') {
-    return NextResponse.json({ error: 'Первое сообщение должно быть от пользователя' }, { status: 400 })
+  // Drop leading assistant messages (e.g. help text injected client-side before first user turn)
+  const firstUser = filtered.findIndex((m) => m.role === 'user')
+  const cleaned = firstUser >= 0 ? filtered.slice(firstUser) : []
+
+  if (cleaned.length === 0) {
+    return NextResponse.json({ error: 'Нет сообщений от пользователя' }, { status: 400 })
   }
 
   return streamAnthropic({
