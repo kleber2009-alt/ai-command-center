@@ -1,6 +1,6 @@
 import Link from 'next/link'
 import {
-  BookOpen, Brain, ChevronRight, Filter, Flame, LayoutGrid, Magnet,
+  BookOpen, ChevronRight, Filter, Flame, LayoutGrid, Magnet,
   MessagesSquare, Package, Send, Sparkles, Target,
 } from 'lucide-react'
 import { assistants } from '@/data/assistants'
@@ -13,23 +13,13 @@ export default function AssistantsPage() {
   return (
     <div className="space-y-6">
       <header className="space-y-3">
-        <div className="flex items-start justify-between gap-3">
-          <div>
-            <h1 className="text-[28px] font-semibold leading-tight tracking-tight text-apple-ink sm:text-[34px]">
-              ИИ-ассистенты
-            </h1>
-            <p className="mt-1 text-[15px] text-apple-muted sm:text-base">
-              Выбери ассистента — у каждого свой промпт и своя задача.
-            </p>
-          </div>
-          <Link
-            href="/me"
-            className="inline-flex items-center gap-1.5 rounded-full border border-apple-line bg-white px-3 py-1.5 text-[13px] font-medium text-apple-ink shadow-apple-sm transition-colors hover:bg-apple-bg-soft"
-            title="Второй мозг"
-          >
-            <Brain className="h-4 w-4" />
-            Я
-          </Link>
+        <div>
+          <h1 className="text-[28px] font-semibold leading-tight tracking-tight text-apple-ink sm:text-[34px]">
+            ИИ-ассистенты
+          </h1>
+          <p className="mt-1 text-[15px] text-apple-muted sm:text-base">
+            Выбери ассистента — у каждого свой промпт и своя задача.
+          </p>
         </div>
       </header>
 

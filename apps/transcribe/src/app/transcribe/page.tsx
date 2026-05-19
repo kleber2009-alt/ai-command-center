@@ -1,10 +1,9 @@
 'use client'
 import { useEffect, useRef, useState } from 'react'
-import Link from 'next/link'
 import {
   AudioLines, Loader2, Copy, Check, TriangleAlert, Link as LinkIcon,
   Download, FileText, Sparkles, Languages, History, Trash2, ChevronRight, Youtube, FileAudio,
-  LayoutGrid, Video, Shuffle, Send, Bot, Brain, Zap,
+  LayoutGrid, Video, Shuffle, Send, Brain, Zap,
 } from 'lucide-react'
 import { apiFetch, getTelegram, isInTelegram } from '@/lib/telegram'
 
@@ -612,33 +611,13 @@ export default function TranscribePage() {
 
   return (
     <div className="animate-slide-in space-y-6">
-      <div className="flex items-start justify-between gap-3">
-        <div>
-          <h1 className="text-[28px] font-semibold leading-tight tracking-tight text-apple-ink sm:text-[34px]">
-            Транскрибация
-          </h1>
-          <p className="mt-1 text-[15px] text-apple-muted sm:text-base">
-            YouTube или прямая ссылка → текст, саммари, перевод
-          </p>
-        </div>
-        <div className="flex items-center gap-1.5">
-          <Link
-            href="/me"
-            className="inline-flex items-center gap-1.5 rounded-full border border-apple-line bg-white px-3 py-1.5 text-[13px] font-medium text-apple-ink shadow-apple-sm transition-colors hover:bg-apple-bg-soft"
-            title="Второй мозг"
-          >
-            <Brain className="h-4 w-4" />
-            Я
-          </Link>
-          <Link
-            href="/assistants"
-            className="inline-flex items-center gap-1.5 rounded-full border border-apple-line bg-white px-3 py-1.5 text-[13px] font-medium text-apple-ink shadow-apple-sm transition-colors hover:bg-apple-bg-soft"
-            title="ИИ-ассистенты"
-          >
-            <Bot className="h-4 w-4" />
-            Ассистенты
-          </Link>
-        </div>
+      <div>
+        <h1 className="text-[28px] font-semibold leading-tight tracking-tight text-apple-ink sm:text-[34px]">
+          Транскрибация
+        </h1>
+        <p className="mt-1 text-[15px] text-apple-muted sm:text-base">
+          YouTube или прямая ссылка → текст, саммари, перевод
+        </p>
       </div>
 
       {/* Form */}
