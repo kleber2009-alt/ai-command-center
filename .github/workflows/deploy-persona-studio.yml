@@ -1,0 +1,234 @@
+name: deploy-persona-studio
+
+# Deploy Persona Studio (Next.js 15) to Hetzner.
+# Builds the Docker image on the server (same pattern as deploy-ai-sales),
+# runs prisma migrate, restarts the container.
+#
+# Containers:
+#   persona-studio        port 3003 → app
+#   persona-studio-worker (BullMQ queues)
+# Caddy: persona-app.46-62-215-11.nip.io → localhost:3003
+#
+# ─── Required GitHub secrets ───────────────────────────────────────
+#   HETZNER_SSH_KEY             ed25519 private key
+#   PERSONA_NEXTAUTH_SECRET     32-byte random  (openssl rand -base64 32)
+#   PERSONA_GOOGLE_CLIENT_SECRET
+#   PERSONA_R2_SECRET_ACCESS_KEY
+#   PERSONA_GEMINI_API_KEY
+#
+# ─── Required GitHub repository variables ──────────────────────────
+#   PERSONA_DATABASE_URL        postgresql://persona:PASSWORD@localhost:5432/persona_studio
+#   PERSONA_NEXTAUTH_URL        http://persona-app.46-62-215-11.nip.io
+#   PERSONA_GOOGLE_CLIENT_ID
+#   PERSONA_R2_ACCOUNT_ID
+#   PERSONA_R2_ACCESS_KEY_ID
+#   PERSONA_R2_BUCKET
+#   PERSONA_R2_PUBLIC_BASE_URL
+#   PERSONA_REDIS_URL           redis://localhost:6379  (or Upstash URL)
+#
+# Optional repo variables (defaults shown):
+#   HETZNER_HOST                46.62.215.11
+#   HETZNER_USER                root
+#   HETZNER_SSH_PORT            22
+#   HETZNER_REPO_PATH           /root/ai-command-center
+
+on:
+  push:
+    branches: [main]
+    paths:
+      - 'apps/persona-studio/**'
+      - '.github/workflows/deploy-persona-studio.yml'
+  workflow_dispatch:
+    inputs:
+      ref:
+        description: 'Branch or commit to deploy (default: main)'
+        required: false
+        default: 'main'
+      migrate_only:
+        description: 'Run prisma migrate only, skip image rebuild'
+        type: boolean
+        default: false
+
+concurrency:
+  group: deploy-persona-studio
+  cancel-in-progress: false
+
+jobs:
+  deploy:
+    runs-on: ubuntu-latest
+    timeout-minutes: 25
+
+    steps:
+      - name: Resolve ref
+        id: ref
+        run: |
+          if [[ "${{ github.event_name }}" == "workflow_dispatch" ]]; then
+            echo "value=${{ github.event.inputs.ref || 'main' }}" >> "$GITHUB_OUTPUT"
+          else
+            echo "value=${{ github.ref_name }}" >> "$GITHUB_OUTPUT"
+          fi
+
+      - name: Deploy over SSH
+        uses: appleboy/ssh-action@v1.0.3
+        with:
+          host:     ${{ vars.HETZNER_HOST     || '46.62.215.11' }}
+          username: ${{ vars.HETZNER_USER     || 'root' }}
+          port:     ${{ vars.HETZNER_SSH_PORT || 22 }}
+          key:      ${{ secrets.HETZNER_SSH_KEY }}
+          script_stop: true
+          envs: |
+            TARGET_REF,REPO_PATH,MIGRATE_ONLY,
+            DATABASE_URL,NEXTAUTH_URL,NEXTAUTH_SECRET,
+            GOOGLE_CLIENT_ID,GOOGLE_CLIENT_SECRET,
+            GEMINI_API_KEY,
+            R2_ACCOUNT_ID,R2_ACCESS_KEY_ID,R2_SECRET_ACCESS_KEY,
+            R2_BUCKET,R2_PUBLIC_BASE_URL,
+            REDIS_URL
+          script: |
+            set -euo pipefail
+
+            # ── 1. pull latest code ──────────────────────────────────
+            cd "$REPO_PATH"
+            git fetch --prune origin
+            git checkout "$TARGET_REF"
+            git pull --ff-only origin "$TARGET_REF"
+            echo "── HEAD: $(git rev-parse --short HEAD) — $(git log -1 --pretty=%s) ──"
+
+            # ── 2. write env file (root-readable only) ───────────────
+            ENV_FILE=/etc/persona-studio.env
+            cat > "$ENV_FILE" <<ENV
+            DATABASE_URL=$DATABASE_URL
+            NEXTAUTH_URL=$NEXTAUTH_URL
+            NEXTAUTH_SECRET=$NEXTAUTH_SECRET
+            GOOGLE_CLIENT_ID=$GOOGLE_CLIENT_ID
+            GOOGLE_CLIENT_SECRET=$GOOGLE_CLIENT_SECRET
+            GEMINI_API_KEY=$GEMINI_API_KEY
+            R2_ACCOUNT_ID=$R2_ACCOUNT_ID
+            R2_ACCESS_KEY_ID=$R2_ACCESS_KEY_ID
+            R2_SECRET_ACCESS_KEY=$R2_SECRET_ACCESS_KEY
+            R2_BUCKET=$R2_BUCKET
+            R2_PUBLIC_BASE_URL=$R2_PUBLIC_BASE_URL
+            REDIS_URL=$REDIS_URL
+            NODE_ENV=production
+            ENV
+            chmod 600 "$ENV_FILE"
+
+            if [[ "$MIGRATE_ONLY" == "true" ]]; then
+              echo "── migrate_only=true, skipping image rebuild ──"
+            else
+              # ── 3. build app image ─────────────────────────────────
+              echo "── building persona-studio image ──"
+              docker build \
+                -f apps/persona-studio/Dockerfile \
+                -t persona-studio:latest \
+                --label "git_sha=$(git rev-parse --short HEAD)" \
+                .
+
+              # ── 4. build worker image ──────────────────────────────
+              echo "── building persona-studio-worker image ──"
+              docker build \
+                -f apps/persona-studio/Dockerfile.worker \
+                -t persona-studio-worker:latest \
+                .
+            fi
+
+            # ── 5. run prisma migrate deploy ─────────────────────────
+            echo "── running prisma migrate deploy ──"
+            docker run --rm \
+              --env-file "$ENV_FILE" \
+              --network host \
+              persona-studio:latest \
+              sh -c "cd apps/persona-studio && npx prisma migrate deploy"
+
+            if [[ "$MIGRATE_ONLY" == "true" ]]; then
+              echo "✓ migrations done, skipping container restart"
+              exit 0
+            fi
+
+            # ── 6. restart app container ─────────────────────────────
+            echo "── restarting persona-studio ──"
+            docker stop  persona-studio        2>/dev/null || true
+            docker rm    persona-studio        2>/dev/null || true
+            docker run -d \
+              --name persona-studio \
+              --restart unless-stopped \
+              --env-file "$ENV_FILE" \
+              --network host \
+              -p 127.0.0.1:3003:3000 \
+              persona-studio:latest
+
+            # ── 7. restart worker container ──────────────────────────
+            echo "── restarting persona-studio-worker ──"
+            docker stop  persona-studio-worker 2>/dev/null || true
+            docker rm    persona-studio-worker 2>/dev/null || true
+            docker run -d \
+              --name persona-studio-worker \
+              --restart unless-stopped \
+              --env-file "$ENV_FILE" \
+              --network host \
+              persona-studio-worker:latest
+
+            # ── 8. wire Caddy if not already there ───────────────────
+            CADDYFILE=/etc/caddy/Caddyfile
+            if ! grep -q "persona-app\.46-62-215-11\.nip\.io" "$CADDYFILE"; then
+              cat >> "$CADDYFILE" <<'CADDY'
+
+# ─── Persona Studio app ─────────────────────────────────────────────
+persona-app.46-62-215-11.nip.io {
+    reverse_proxy localhost:3003
+    encode zstd gzip
+    header { X-Content-Type-Options nosniff; -Server }
+}
+CADDY
+              caddy reload --config "$CADDYFILE" --adapter caddyfile
+              echo "── Caddy reloaded ──"
+            fi
+
+            # ── 9. health-check (up to 60 s) ─────────────────────────
+            echo "── waiting for persona-studio to become healthy ──"
+            for i in $(seq 1 20); do
+              if curl -fsS http://localhost:3003/ > /dev/null 2>&1; then
+                echo "✓ healthy after ${i}×3s"
+                exit 0
+              fi
+              sleep 3
+            done
+            echo "✗ persona-studio did not respond within 60s"
+            docker logs --tail=80 persona-studio
+            exit 1
+        env:
+          TARGET_REF:    ${{ steps.ref.outputs.value }}
+          REPO_PATH:     ${{ vars.HETZNER_REPO_PATH || '/root/ai-command-center' }}
+          MIGRATE_ONLY:  ${{ inputs.migrate_only || 'false' }}
+          DATABASE_URL:           ${{ vars.PERSONA_DATABASE_URL }}
+          NEXTAUTH_URL:           ${{ vars.PERSONA_NEXTAUTH_URL }}
+          NEXTAUTH_SECRET:        ${{ secrets.PERSONA_NEXTAUTH_SECRET }}
+          GOOGLE_CLIENT_ID:       ${{ vars.PERSONA_GOOGLE_CLIENT_ID }}
+          GOOGLE_CLIENT_SECRET:   ${{ secrets.PERSONA_GOOGLE_CLIENT_SECRET }}
+          GEMINI_API_KEY:         ${{ secrets.PERSONA_GEMINI_API_KEY }}
+          R2_ACCOUNT_ID:          ${{ vars.PERSONA_R2_ACCOUNT_ID }}
+          R2_ACCESS_KEY_ID:       ${{ vars.PERSONA_R2_ACCESS_KEY_ID }}
+          R2_SECRET_ACCESS_KEY:   ${{ secrets.PERSONA_R2_SECRET_ACCESS_KEY }}
+          R2_BUCKET:              ${{ vars.PERSONA_R2_BUCKET }}
+          R2_PUBLIC_BASE_URL:     ${{ vars.PERSONA_R2_PUBLIC_BASE_URL }}
+          REDIS_URL:              ${{ vars.PERSONA_REDIS_URL || 'redis://localhost:6379' }}
+
+  smoke-test:
+    runs-on: ubuntu-latest
+    needs: [deploy]
+    timeout-minutes: 3
+    if: ${{ !inputs.migrate_only }}
+
+    steps:
+      - name: HTTP smoke test
+        run: |
+          set -euo pipefail
+          for url in \
+            "http://persona.46-62-215-11.nip.io/" \
+            "http://persona-app.46-62-215-11.nip.io/"; do
+            STATUS=$(curl -o /dev/null -sw "%{http_code}" \
+              "$url" --max-time 15 || echo "000")
+            echo "GET $url → HTTP $STATUS"
+            [ "$STATUS" = "200" ] || { echo "✗ unexpected $STATUS"; exit 1; }
+          done
+          echo "✓ both endpoints live"
