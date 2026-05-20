@@ -1,0 +1,42 @@
+# Worker image for BullMQ avatar + cover queues.
+# Same code base as the app — just a different CMD.
+# Build context: repo root (same as the main Dockerfile).
+#
+# docker build -f apps/persona-studio/Dockerfile.worker \
+#   -t persona-studio-worker:latest .
+
+FROM node:20-slim AS deps
+WORKDIR /build
+
+RUN apt-get update && apt-get install -y --no-install-recommends \
+    openssl ca-certificates \
+  && rm -rf /var/lib/apt/lists/*
+
+COPY package.json package-lock.json ./
+COPY apps/persona-studio/package.json ./apps/persona-studio/package.json
+COPY apps/tg-agent/package.json       ./apps/tg-agent/package.json
+COPY apps/transcribe/package.json     ./apps/transcribe/package.json
+
+RUN npm ci --workspace=apps/persona-studio --include-workspace-root \
+      --no-audit --no-fund
+
+COPY apps/persona-studio/prisma ./apps/persona-studio/prisma
+RUN cd apps/persona-studio && npx prisma generate
+
+COPY apps/persona-studio/src ./apps/persona-studio/src
+COPY apps/persona-studio/tsconfig.json ./apps/persona-studio/tsconfig.json
+
+FROM deps AS runtime
+WORKDIR /build
+
+RUN addgroup --system --gid 1001 worker \
+ && adduser  --system --uid 1001 worker -G worker
+USER worker
+
+ENV NODE_ENV=production
+
+# Start both workers in the same container via parallel tsx
+CMD ["sh", "-c", \
+  "npx tsx apps/persona-studio/src/workers/avatar-worker.ts & \
+   npx tsx apps/persona-studio/src/workers/cover-worker.ts & \
+   wait"]
