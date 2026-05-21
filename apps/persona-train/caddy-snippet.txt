@@ -1,0 +1,23 @@
+# ═══════════════════════════════════════════════════════════════════
+# persona-train.46-62-215-11.nip.io
+# ───────────────────────────────────────────────────────────────────
+# Drop into /etc/caddy/Caddyfile on prod and `systemctl reload caddy`.
+# Before reload: touch the access log file and chown caddy:caddy or
+# reload will fail permission denied (see CLAUDE.md feedback memory).
+# ═══════════════════════════════════════════════════════════════════
+
+persona-train.46-62-215-11.nip.io {
+    reverse_proxy localhost:3030
+
+    # Serve voice/video notes from container volume via nginx-style alias.
+    # Volumes live in Docker, so easier path: let Next.js serve via its
+    # own /voice-notes/* route, OR mount the volume into Caddy. For MVP,
+    # let Next.js serve. No extra config needed here.
+
+    log {
+        output file /var/log/caddy/persona-train.log
+        format json
+    }
+
+    encode gzip zstd
+}

@@ -1,97 +1,130 @@
 # Persona Studio
 
-AI Avatar Content Studio — MVP.
+AI Avatar Content Studio — 1 фото → 10 AI-аватаров → HeyGen-видео или виральная обложка карусели.
 
-Upload one photo → get 10 cinematic AI avatars → pick one → turn it into a viral
-Instagram carousel cover. HeyGen talking-head is wired into the architecture but
-disabled in this MVP.
+Next.js 15 App Router + TS + Tailwind + Prisma (Postgres) + BullMQ (Redis) + S3-compatible storage + Gemini Image API (Nano Banana 2).
 
-## Stack
+## Архитектура
 
-- Next.js 15 (App Router), React 18, TypeScript
-- Tailwind CSS
-- Prisma ORM → PostgreSQL
-- NextAuth (Google + Email magic link)
-- BullMQ + Redis (image generation queue)
-- Cloudflare R2 (S3 SDK) for image storage
-- Gemini Image API (`gemini-3.1-flash-image-preview`, aka Nano Banana 2)
-
-## Development
-
-```bash
-# from monorepo root
-npm install
-npm run dev -w apps/persona-studio
+```
+persona-studio/
+├── prisma/schema.prisma         # User / Upload / AvatarGeneration / Avatar / Cover / Video / TokenTransaction
+├── src/
+│   ├── app/
+│   │   ├── (app)/               # auth-required routes
+│   │   │   ├── dashboard/
+│   │   │   ├── generate/        # upload → enqueue avatar batch
+│   │   │   ├── avatars/         # grid + select + live poll
+│   │   │   ├── covers/          # list + /new (cover-form preview live)
+│   │   │   └── billing/         # token balance + dev-stub packs
+│   │   ├── (auth)/sign-in/      # magic-link form (Auth.js v5)
+│   │   └── api/                 # upload, generate-avatars, avatars/:id/select,
+│   │                            # generate-cover, covers, billing/balance,
+│   │                            # billing/buy-tokens (dev stub)
+│   ├── lib/
+│   │   ├── auth.ts              # NextAuth v5 + Nodemailer + Google
+│   │   ├── prisma.ts
+│   │   ├── storage.ts           # S3 client (MinIO / R2 / S3)
+│   │   ├── gemini.ts            # Gemini Image API wrapper
+│   │   ├── tokens.ts            # charge / refund / credit (atomic tx)
+│   │   ├── queue.ts             # BullMQ queues (avatar + cover)
+│   │   ├── styles.ts            # 10 avatar styles + prompt fragments
+│   │   └── prompts.ts           # avatar + cover prompt builders
+│   ├── workers/
+│   │   ├── index.ts             # entrypoint (npm run worker)
+│   │   ├── avatar-generation.worker.ts
+│   │   └── cover-generation.worker.ts
+│   └── components/
+│       ├── nav.tsx
+│       ├── upload-zone.tsx      # client — drop / upload / enqueue
+│       ├── avatar-grid.tsx      # client — poll status, select
+│       ├── cover-form.tsx       # client — live preview
+│       └── billing-actions.tsx  # client — dev token packs
 ```
 
-Defaults to `http://localhost:3001`. Without `GEMINI_API_KEY` the image
-backend returns a 1×1 placeholder PNG so the full pipeline still runs
-end-to-end.
+## Локальный запуск
 
-### Required env
+### 0. Зависимости
 
-Copy `.env.example` to `.env.local` and fill in:
+Нужны:
+- Node 20+
+- Запущенный Postgres (можно использовать тот же `aisales-postgres`)
+- Запущенный Redis (можно использовать тот же `aisales-redis`)
+- Запущенный S3-совместимый storage (можно использовать тот же `aisales-minio`)
+- Локальный SMTP для magic-link — `mailpit` уже крутится в `ai-hub` compose (:8025 web, :1025 SMTP)
 
-- `DATABASE_URL` — PostgreSQL connection string
-- `NEXTAUTH_URL`, `NEXTAUTH_SECRET`
-- `GOOGLE_CLIENT_ID` / `GOOGLE_CLIENT_SECRET` (for Google sign-in)
-- `GEMINI_API_KEY` (image generation; falls back to stub if missing)
-- `R2_ACCOUNT_ID`, `R2_ACCESS_KEY_ID`, `R2_SECRET_ACCESS_KEY`, `R2_BUCKET`,
-  `R2_PUBLIC_BASE_URL`
-- `REDIS_URL`
+### 1. Создать БД
 
-### Database
-
+В `aisales-postgres`:
 ```bash
-npm run prisma:generate -w apps/persona-studio
-npm run prisma:migrate  -w apps/persona-studio -- --name init
+docker exec aisales-postgres createdb -U aisales persona_studio
 ```
 
-### Workers
-
-In production, run the BullMQ workers as separate processes:
+### 2. Установить deps и сгенерить prisma client
 
 ```bash
-npm run worker:avatar -w apps/persona-studio
-npm run worker:cover  -w apps/persona-studio
+cd persona-studio
+cp .env.example .env
+# отредактировать .env: DATABASE_URL, S3_*, GEMINI_API_KEY, AUTH_SECRET (openssl rand -base64 32)
+pnpm install                # или npm i
+pnpm db:push                # создаст таблицы
 ```
 
-## Routes
+### 3. Создать S3 bucket
 
-| Path               | Purpose                                  |
-| ------------------ | ---------------------------------------- |
-| `/`                | Landing page                             |
-| `/generate`        | Upload + start avatar batch              |
-| `/avatars`         | Gallery of generated avatars             |
-| `/covers`          | Carousel cover editor + history          |
-| `/dashboard`       | Account summary                          |
-| `/billing`         | Token packs + ledger                     |
-| `/admin`           | Admin (email allow-list via `ADMIN_EMAILS`) |
+В MinIO:
+```bash
+docker exec aisales-minio mc mb local/persona-studio-media
+docker exec aisales-minio mc anonymous set download local/persona-studio-media
+```
 
-## API
+### 4. Запустить два процесса
 
-| Method | Path                       | Purpose                              |
-| ------ | -------------------------- | ------------------------------------ |
-| POST   | `/api/upload`              | Upload source photo to R2            |
-| POST   | `/api/generate-avatars`    | Enqueue avatar batch (10 styles)     |
-| GET    | `/api/avatars`             | List avatars (optional `generationId`) |
-| POST   | `/api/select-avatar`       | Mark avatar as primary               |
-| POST   | `/api/generate-cover`      | Enqueue carousel cover               |
-| GET    | `/api/generations/[id]`    | Poll generation status               |
-| GET    | `/api/me`                  | Current user + token balance         |
+В одной вкладке — web:
+```bash
+pnpm dev          # localhost:3020
+```
 
-## Token economics
+В другой — worker:
+```bash
+pnpm worker       # tsx watch src/workers/index.ts
+```
 
-| Action            | Cost (tokens) | Env override                |
-| ----------------- | ------------- | --------------------------- |
-| Sign-up grant     | 10            | `TOKENS_FREE_BALANCE`       |
-| 10-avatar batch   | 10            | `TOKENS_AVATAR_GENERATION`  |
-| Carousel cover    | 3             | `TOKENS_COVER_GENERATION`   |
+### 5. Войти
 
-Failed generations refund their cost automatically.
+Открыть `http://localhost:3020`, ввести email → откроется mailpit (`http://localhost:8025`) с magic-link.
 
-## Out of MVP scope
+## Прод-деплой (план)
 
-HeyGen video, AI reels, voice, content planner, marketplace, team accounts,
-mobile app, LoRA training, in-app AI assistant. Architecture (queue, storage,
-generation table) is shaped so these slot in without rework.
+1. БД `persona_studio` в `aisales-postgres` (тот же container).
+2. Bucket `persona-studio-media` в `aisales-minio` (или Cloudflare R2 — поменять `S3_*` env).
+3. Compose-проект `persona-studio` рядом с `ai-hub` (`docker-compose.yml` + `Dockerfile`).
+4. Два контейнера: `persona-studio-web` (:3020) + `persona-studio-worker` (no port).
+5. Caddy:
+   - `persona.46-62-215-11.nip.io` → статика лендинга (`persona-studio-landing/`).
+   - `persona-app.46-62-215-11.nip.io` → `persona-studio-web:3020`.
+
+## Token costs (env-driven)
+
+```
+COST_AVATAR_GENERATION=10
+COST_COVER_GENERATION=3
+COST_HEYGEN_VIDEO=30
+SIGNUP_BONUS_TOKENS=10
+```
+
+Возврат — автоматический:
+- `failed` batch → полный возврат
+- `partial` batch (часть аватаров провалилась) → пропорциональный возврат
+- `failed` cover → полный возврат
+
+## TODO до GA
+
+- [ ] HeyGen-видео pipeline (`VideoGeneration` модель уже есть, нужны worker + API + UI).
+- [ ] Stripe checkout вместо dev-stub в `billing/buy-tokens`.
+- [ ] Face-detect / single-person check перед enqueue avatar batch (сейчас — только MIME/size).
+- [ ] Moderation layer (consent + NSFW + чужие лица).
+- [ ] Admin panel (`/admin` — users / generations / costs / refund).
+- [ ] Лимиты на free-плане (1 batch).
+- [ ] Watermark на free-плане.
+- [ ] E2E тесты (Playwright).

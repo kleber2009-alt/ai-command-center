@@ -1,90 +1,98 @@
-import { NextResponse } from "next/server";
-import { z } from "zod";
-import { prisma } from "@/lib/db";
-import { requireUser } from "@/lib/session";
-import { getQueue, QUEUES } from "@/lib/queue";
-import {
-  InsufficientTokensError,
-  TOKEN_COST,
-  spendTokens,
-} from "@/lib/tokens";
+import { NextRequest, NextResponse } from 'next/server';
+import { z } from 'zod';
+import { getCurrentUser } from '@/lib/auth';
+import { prisma } from '@/lib/prisma';
+import { chargeTokens, refundTokens, COSTS, InsufficientTokensError } from '@/lib/tokens';
+import { coverQueue } from '@/lib/queue';
+
+export const runtime = 'nodejs';
 
 const Body = z.object({
   avatarId: z.string().min(1),
-  title: z.string().trim().min(1).max(140),
-  subtitle: z.string().trim().max(200).default(""),
-  cta: z.string().trim().max(80).default(""),
+  title: z.string().min(1).max(200),
+  subtitle: z.string().max(200).optional().nullable(),
+  cta: z.string().max(80).optional().nullable(),
+  niche: z.string().max(120).optional().nullable(),
+  style: z.string().max(40).optional().default('ai-visionary'),
+  aspect: z.enum(['4:5', '1:1', '9:16']).optional().default('4:5'),
 });
 
-export async function POST(req: Request) {
-  let user;
-  try {
-    user = await requireUser();
-  } catch (r) {
-    return r as Response;
-  }
+export async function POST(req: NextRequest) {
+  const user = await getCurrentUser();
+  if (!user) return NextResponse.json({ error: 'UNAUTHORIZED' }, { status: 401 });
 
   const parsed = Body.safeParse(await req.json().catch(() => ({})));
   if (!parsed.success) {
-    return NextResponse.json(
-      { error: "invalid body", issues: parsed.error.issues },
-      { status: 400 }
-    );
-  }
-  const { avatarId, title, subtitle, cta } = parsed.data;
-
-  const avatar = await prisma.avatar.findFirst({
-    where: { id: avatarId, userId: user.id },
-  });
-  if (!avatar) {
-    return NextResponse.json({ error: "avatar not found" }, { status: 404 });
+    return NextResponse.json({ error: 'bad_body', issues: parsed.error.issues }, { status: 400 });
   }
 
-  const cost = TOKEN_COST.cover;
+  const { avatarId, title, subtitle, cta, niche, style, aspect } = parsed.data;
 
-  const generation = await prisma.generation.create({
-    data: {
-      userId: user.id,
-      kind: "COVER",
-      tokensSpent: cost,
-      meta: { avatarId, title, subtitle, cta },
-    },
-  });
+  const avatar = await prisma.avatar.findFirst({ where: { id: avatarId, userId: user.id } });
+  if (!avatar) return NextResponse.json({ error: 'avatar_not_found' }, { status: 404 });
+  if (avatar.status !== 'done' || !avatar.imageUrl) {
+    return NextResponse.json({ error: 'avatar_not_ready' }, { status: 409 });
+  }
 
   try {
-    await spendTokens(user.id, cost, "Cover generation", generation.id);
+    await chargeTokens({
+      userId: user.id,
+      amount: COSTS.coverGeneration,
+      reason: 'cover-generation',
+    });
   } catch (e) {
-    await prisma.generation.delete({ where: { id: generation.id } });
     if (e instanceof InsufficientTokensError) {
       return NextResponse.json(
-        { error: "insufficient tokens", required: e.required, balance: e.balance },
-        { status: 402 }
+        { error: 'insufficient_tokens', have: e.have, need: e.need },
+        { status: 402 },
       );
     }
     throw e;
   }
 
-  const job = await getQueue(QUEUES.COVER).add(
-    "cover",
-    {
-      generationId: generation.id,
+  const cover = await prisma.cover.create({
+    data: {
       userId: user.id,
       avatarId,
       title,
-      subtitle,
-      cta,
+      subtitle: subtitle ?? null,
+      cta: cta ?? null,
+      niche: niche ?? null,
+      style,
+      aspect,
+      status: 'pending',
+      tokensCost: COSTS.coverGeneration,
     },
-    { removeOnComplete: 100, removeOnFail: 50, attempts: 2 }
-  );
-
-  await prisma.generation.update({
-    where: { id: generation.id },
-    data: { jobId: job.id ?? null },
   });
 
-  return NextResponse.json({
-    generationId: generation.id,
-    jobId: job.id,
-    status: "QUEUED",
-  });
+  try {
+    await coverQueue().add('generate', { coverId: cover.id, userId: user.id }, { jobId: cover.id });
+  } catch {
+    await refundTokens({
+      userId: user.id,
+      amount: COSTS.coverGeneration,
+      reason: 'cover-generation:enqueue-failed',
+      refId: cover.id,
+    });
+    await prisma.cover.update({
+      where: { id: cover.id },
+      data: { status: 'failed', errorMsg: 'enqueue_failed' },
+    });
+    return NextResponse.json({ error: 'enqueue_failed' }, { status: 500 });
+  }
+
+  return NextResponse.json({ id: cover.id, status: cover.status });
+}
+
+export async function GET(req: NextRequest) {
+  const user = await getCurrentUser();
+  if (!user) return NextResponse.json({ error: 'UNAUTHORIZED' }, { status: 401 });
+
+  const id = req.nextUrl.searchParams.get('id');
+  if (!id) return NextResponse.json({ error: 'id_required' }, { status: 400 });
+
+  const cover = await prisma.cover.findFirst({ where: { id, userId: user.id } });
+  if (!cover) return NextResponse.json({ error: 'not_found' }, { status: 404 });
+
+  return NextResponse.json(cover);
 }

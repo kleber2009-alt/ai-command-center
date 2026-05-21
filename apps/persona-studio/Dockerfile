@@ -1,77 +1,54 @@
-# Multi-stage build for Persona Studio (Next.js 15 standalone)
-# Build context must be the repo root so prisma generate can see
-# apps/persona-studio/prisma/schema.prisma.
-#
-# Build:
-#   docker build -f apps/persona-studio/Dockerfile \
-#     -t persona-studio:latest .
-#
-# Run:
-#   docker run -p 3003:3000 \
-#     --env-file apps/persona-studio/.env \
-#     persona-studio:latest
+# syntax=docker/dockerfile:1.6
+ARG NODE_VERSION=20-alpine
 
-# ─── Stage 1: deps ────────────────────────────────────────────────
-FROM node:20-slim AS deps
-WORKDIR /build
-
-RUN apt-get update && apt-get install -y --no-install-recommends \
-    openssl ca-certificates \
-  && rm -rf /var/lib/apt/lists/*
-
-COPY package.json package-lock.json ./
-COPY apps/persona-studio/package.json ./apps/persona-studio/package.json
-COPY apps/tg-agent/package.json       ./apps/tg-agent/package.json
-COPY apps/transcribe/package.json     ./apps/transcribe/package.json
-
-RUN npm ci --workspace=apps/persona-studio --include-workspace-root \
-      --no-audit --no-fund
-
-COPY apps/persona-studio/prisma ./apps/persona-studio/prisma
-RUN cd apps/persona-studio && npx prisma generate
-
-
-# ─── Stage 2: build ───────────────────────────────────────────────
-FROM deps AS builder
-WORKDIR /build
-
-COPY apps/persona-studio ./apps/persona-studio
-
-RUN cd apps/persona-studio && npx next build
-
-
-# ─── Stage 3: runtime ─────────────────────────────────────────────
-FROM node:20-slim AS runtime
-
-RUN apt-get update && apt-get install -y --no-install-recommends \
-    openssl ca-certificates \
-  && rm -rf /var/lib/apt/lists/*
-
-RUN addgroup --system --gid 1001 nodejs \
- && adduser  --system --uid 1001 nextjs
-
+# ── deps ────────────────────────────────────
+FROM node:${NODE_VERSION} AS deps
+RUN apk add --no-cache libc6-compat openssl
 WORKDIR /app
+COPY package.json package-lock.json* pnpm-lock.yaml* yarn.lock* ./
+COPY prisma ./prisma
+RUN \
+  if [ -f pnpm-lock.yaml ]; then corepack enable && corepack prepare pnpm@latest --activate && pnpm i --frozen-lockfile; \
+  elif [ -f package-lock.json ]; then npm ci; \
+  elif [ -f yarn.lock ]; then yarn --frozen-lockfile; \
+  else npm i; fi
 
-# Copy standalone output and static assets
-COPY --from=builder --chown=nextjs:nodejs \
-  /build/apps/persona-studio/.next/standalone ./
-COPY --from=builder --chown=nextjs:nodejs \
-  /build/apps/persona-studio/.next/static \
-  ./apps/persona-studio/.next/static
-COPY --from=builder --chown=nextjs:nodejs \
-  /build/apps/persona-studio/public \
-  ./apps/persona-studio/public
+# ── builder ─────────────────────────────────
+FROM node:${NODE_VERSION} AS builder
+RUN apk add --no-cache libc6-compat openssl
+WORKDIR /app
+COPY --from=deps /app/node_modules ./node_modules
+COPY . .
+ENV NEXT_TELEMETRY_DISABLED=1
+RUN npx prisma generate
+RUN npm run build
 
-# Prisma client is embedded in standalone; engine binaries still needed
-COPY --from=builder --chown=nextjs:nodejs \
-  /build/node_modules/.prisma ./node_modules/.prisma
-
+# ── runner: web ─────────────────────────────
+FROM node:${NODE_VERSION} AS web
+WORKDIR /app
+RUN apk add --no-cache libc6-compat openssl
+ENV NODE_ENV=production
+ENV NEXT_TELEMETRY_DISABLED=1
+ENV PORT=3020
+RUN addgroup --system --gid 1001 nodejs && adduser --system --uid 1001 nextjs
+COPY --from=builder /app/public ./public
+COPY --from=builder /app/.next/standalone ./
+COPY --from=builder /app/.next/static ./.next/static
+COPY --from=builder /app/prisma ./prisma
+COPY --from=builder /app/node_modules/.prisma ./node_modules/.prisma
+COPY --from=builder /app/node_modules/@prisma ./node_modules/@prisma
 USER nextjs
-EXPOSE 3000
-ENV NODE_ENV=production \
-    PORT=3000 \
-    HOSTNAME=0.0.0.0
+EXPOSE 3020
+CMD ["node", "server.js"]
 
-# standalone entry point lives at apps/persona-studio/server.js inside
-# the copied tree
-CMD ["node", "apps/persona-studio/server.js"]
+# ── runner: worker ──────────────────────────
+FROM node:${NODE_VERSION} AS worker
+WORKDIR /app
+RUN apk add --no-cache libc6-compat openssl
+ENV NODE_ENV=production
+COPY --from=builder /app/node_modules ./node_modules
+COPY --from=builder /app/src ./src
+COPY --from=builder /app/prisma ./prisma
+COPY --from=builder /app/tsconfig.json ./tsconfig.json
+COPY --from=builder /app/package.json ./package.json
+CMD ["npx", "tsx", "src/workers/index.ts"]

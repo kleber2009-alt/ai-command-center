@@ -1,35 +1,24 @@
-import { NextResponse } from "next/server";
-import { prisma } from "@/lib/db";
-import { requireUser } from "@/lib/session";
+import { NextRequest, NextResponse } from 'next/server';
+import { getCurrentUser } from '@/lib/auth';
+import { prisma } from '@/lib/prisma';
 
-export async function GET(req: Request) {
-  let user;
-  try {
-    user = await requireUser();
-  } catch (r) {
-    return r as Response;
-  }
+export const runtime = 'nodejs';
 
-  const url = new URL(req.url);
-  const generationId = url.searchParams.get("generationId");
+export async function GET(req: NextRequest) {
+  const user = await getCurrentUser();
+  if (!user) return NextResponse.json({ error: 'UNAUTHORIZED' }, { status: 401 });
 
-  const where = generationId
-    ? { userId: user.id, generationId }
-    : { userId: user.id };
+  const generationId = req.nextUrl.searchParams.get('generationId');
+  const limit = Math.min(Number(req.nextUrl.searchParams.get('limit') ?? 50), 200);
 
-  const [avatars, generation] = await Promise.all([
-    prisma.avatar.findMany({
-      where,
-      orderBy: { createdAt: "desc" },
-      take: 100,
-    }),
-    generationId
-      ? prisma.generation.findFirst({
-          where: { id: generationId, userId: user.id },
-          select: { id: true, status: true, errorMessage: true },
-        })
-      : Promise.resolve(null),
-  ]);
+  const avatars = await prisma.avatar.findMany({
+    where: {
+      userId: user.id,
+      ...(generationId ? { generationId } : {}),
+    },
+    orderBy: { createdAt: 'desc' },
+    take: limit,
+  });
 
-  return NextResponse.json({ avatars, generation });
+  return NextResponse.json({ avatars });
 }
