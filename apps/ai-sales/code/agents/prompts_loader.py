@@ -28,26 +28,17 @@ def load_prompt(agent: Literal["ig", "tg", "analyst", "rop"]) -> str:
 def check_placeholders(prompt: str) -> list[str]:
     """Найти незаполненные плейсхолдеры в промпте.
 
-    Ловит:
-    - [ПЛЕЙСХОЛДЕР]  — всё в квадратных скобках с большой буквы / underscore
-    - [N лет], [N₽]  — с цифрой
-    - ⚠ TODO маркеры
+    Ловит только ⚠ TODO маркеры — всё остальное (скобки в примерах
+    и code-фенсах) считается документацией, а не незаполненным полем.
     """
     import re
     placeholders = set()
 
-    # [TEXT_TEXT] или [Текст с дефисом] или [N лет] — общий паттерн квадратных скобок
-    for m in re.findall(r"\[([^\]]+)\]", prompt):
-        # Отсекаем технические шаблоны: ссылки [text](url), CSS, JSON
-        if any(c in m for c in ["(", ")", "{", "}", "/", '"', ":"]):
-            continue
-        # Отсекаем переменные программного вида в нижнем регистре
-        if m.islower() and "_" in m:
-            continue
-        placeholders.add(m.strip())
+    # Убираем содержимое code-фенсов (``` ... ```) — там примеры, не шаблоны
+    cleaned = re.sub(r"```[^`]*```", "", prompt, flags=re.DOTALL)
 
-    # ⚠ TODO маркеры
-    todos = re.findall(r"⚠\s*TODO[^.\n]*", prompt)
+    # ⚠ TODO маркеры — единственный признак незаполненного плейсхолдера
+    todos = re.findall(r"⚠\s*TODO[^.\n]*", cleaned)
     for t in todos:
         placeholders.add(t.strip()[:60])
 

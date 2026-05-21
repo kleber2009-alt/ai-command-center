@@ -41,6 +41,11 @@ class AgentState(TypedDict, total=False):
     incoming_media_type: Optional[Literal["text", "voice", "image", "video"]]
     raw_payload: dict  # оригинальный webhook payload
 
+    # --- tenant config (мультитенант) ---
+    tenant_id: Optional[str]          # UUID из bot_tenants
+    tenant_extra_prompt: Optional[str] # доп. системный промт клиента
+    tenant_kb_collection: Optional[str] # Qdrant-коллекция клиента
+
     # --- enriched by classifier ---
     segment: Segment
     icp_match: int  # 0-100
@@ -67,6 +72,11 @@ class AgentState(TypedDict, total=False):
     action_reason: Optional[str]
     # Параметры под media-генерацию
     media_duration_target_s: Optional[int]  # для voice/circle
+
+    # --- conversation memory ---
+    conversation_history: list  # [{direction, author, content}] из DB
+    db_client_id: Optional[str]
+    db_conversation_id: Optional[str]
 
     # --- meta ---
     model_used: str
@@ -97,6 +107,7 @@ def init_state(
         needs_escalation=False,
         response_text="",
         errors=[],
+        conversation_history=[],
         tokens_used=0,
         latency_ms=0,
         cost_usd=0.0,

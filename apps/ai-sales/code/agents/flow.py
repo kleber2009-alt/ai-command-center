@@ -92,6 +92,8 @@ def run_flow(
     channel: str,
     message: str,
     raw_payload: dict | None = None,
+    tenant_config: dict | None = None,
+    conversation_context: dict | None = None,
 ) -> AgentState:
     """Пройти полный путь сообщения через DAG."""
     state = init_state(
@@ -100,6 +102,10 @@ def run_flow(
         incoming_message=message,
         raw_payload=raw_payload,
     )
+    if tenant_config:
+        state['tenant_id'] = tenant_config.get('id')
+        state['tenant_extra_prompt'] = tenant_config.get('system_prompt') or ''
+        state['tenant_kb_collection'] = tenant_config.get('kb_collection') or ''
     graph = build_graph()
 
     if HAS_LANGGRAPH:

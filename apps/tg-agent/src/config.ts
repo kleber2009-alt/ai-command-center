@@ -117,6 +117,14 @@ export interface Config {
   backupIntervalHours: number;
   healthFailureThreshold: number;
   healthAlertCooldownMinutes: number;
+  stripeWebhookSecret: string | undefined;
+  stripeBasicPriceId: string | undefined;
+  stripeProPriceId: string | undefined;
+  stripeEnterprisePriceId: string | undefined;
+  digestModel: string;
+  digestDailyHourUtc: number;
+  digestWindowHours: number;
+  digestEnabled: boolean;
 }
 
 export function loadConfig(): Config {
@@ -165,5 +173,23 @@ export function loadConfig(): Config {
       optional('HEALTH_ALERT_COOLDOWN_MINUTES'),
       60,
     ),
+    stripeWebhookSecret: optional('STRIPE_WEBHOOK_SECRET'),
+    stripeBasicPriceId: optional('STRIPE_BASIC_PRICE_ID'),
+    stripeProPriceId: optional('STRIPE_PRO_PRICE_ID'),
+    stripeEnterprisePriceId: optional('STRIPE_ENTERPRISE_PRICE_ID'),
+    digestModel:
+      optional('DIGEST_MODEL') ?? optional('INSIGHTS_MODEL') ?? 'claude-sonnet-4-6',
+    digestDailyHourUtc: parseHourOfDay(
+      'DIGEST_DAILY_HOUR_UTC',
+      optional('DIGEST_DAILY_HOUR_UTC'),
+      6,
+    ),
+    digestWindowHours: parseWindowHours(
+      'DIGEST_WINDOW_HOURS',
+      optional('DIGEST_WINDOW_HOURS'),
+      24,
+    ),
+    digestEnabled:
+      (optional('DIGEST_ENABLED') ?? 'true').toLowerCase() !== 'false',
   };
 }

@@ -78,13 +78,43 @@ CREATE INDEX IF NOT EXISTS tg_drafts_edit_prompt_idx
 CREATE INDEX IF NOT EXISTS tg_drafts_owner_dm_idx
   ON tg_drafts (owner_dm_message_id);
 
--- Per-chat daily digests. The generator reads tg_messages over a
--- rolling window, asks Claude Sonnet to surface what the owner might
--- be missing, and stores both the structured payload (JSON) and a
--- ready-to-send markdown summary. tg_chat_context holds the latest
--- per-chat snapshot plus the owner's project_context for the chat.
--- This is intentionally separate from tg_insight_reports, which
--- belongs to the KB-suggestion analyzer in db/insights.ts.
+CREATE TABLE IF NOT EXISTS tg_deals (
+  id         INTEGER PRIMARY KEY AUTOINCREMENT,
+  chat_id    INTEGER NOT NULL,
+  user_id    INTEGER NOT NULL,
+  stage      TEXT NOT NULL DEFAULT 'lead',
+  notes      TEXT NOT NULL DEFAULT '',
+  amount     REAL,
+  created_at TEXT NOT NULL DEFAULT (strftime('%Y-%m-%dT%H:%M:%fZ', 'now')),
+  updated_at TEXT NOT NULL DEFAULT (strftime('%Y-%m-%dT%H:%M:%fZ', 'now'))
+);
+CREATE UNIQUE INDEX IF NOT EXISTS tg_deals_user_uniq ON tg_deals (chat_id, user_id);
+CREATE INDEX IF NOT EXISTS tg_deals_stage_idx ON tg_deals (stage);
+CREATE INDEX IF NOT EXISTS tg_deals_updated_idx ON tg_deals (updated_at DESC);
+
+CREATE TABLE IF NOT EXISTS tg_subscriptions (
+  id                       INTEGER PRIMARY KEY AUTOINCREMENT,
+  stripe_customer_id       TEXT NOT NULL,
+  stripe_subscription_id   TEXT NOT NULL UNIQUE,
+  stripe_session_id        TEXT,
+  plan                     TEXT NOT NULL DEFAULT 'basic',
+  status                   TEXT NOT NULL DEFAULT 'trialing',
+  customer_email           TEXT NOT NULL DEFAULT '',
+  customer_name            TEXT,
+  trial_end                TEXT,
+  current_period_end       TEXT,
+  cancel_at                TEXT,
+  created_at               TEXT NOT NULL DEFAULT (strftime('%Y-%m-%dT%H:%M:%fZ', 'now')),
+  updated_at               TEXT NOT NULL DEFAULT (strftime('%Y-%m-%dT%H:%M:%fZ', 'now'))
+);
+CREATE INDEX IF NOT EXISTS tg_subscriptions_status_idx ON tg_subscriptions (status);
+CREATE INDEX IF NOT EXISTS tg_subscriptions_email_idx ON tg_subscriptions (customer_email);
+
+-- Per-chat daily digests for the owner DM. Distinct from
+-- tg_insight_reports (KB-suggestion analyzer): this table holds the
+-- structured payload + rendered markdown for the digest scheduler
+-- and the /pulse, /digest commands. tg_chat_context stores the
+-- latest gist + per-chat project_context the owner sets via /context.
 CREATE TABLE IF NOT EXISTS tg_digests (
   id              INTEGER PRIMARY KEY AUTOINCREMENT,
   chat_id         INTEGER NOT NULL,
@@ -110,11 +140,11 @@ CREATE TABLE IF NOT EXISTS tg_chat_context (
 );
 `;
 
-// One-shot, idempotent migrations for older SQLite files where
-// tg_chat_context already exists in an older shape (more columns,
-// e.g. topics/sentiment/tasks). better-sqlite3 throws on ADD COLUMN
-// when the column already exists, so we introspect PRAGMA table_info
-// first. tg_digests is brand new; nothing to migrate there.
+// Idempotent migrations for older SQLite files where tg_chat_context
+// already exists in a richer shape (topics/sentiment/tasks columns).
+// better-sqlite3 throws on ADD COLUMN when the column already exists,
+// so we introspect PRAGMA table_info first. tg_digests is brand new;
+// nothing to migrate there.
 export function ensureSchemaUpgrades(db: {
   prepare: (sql: string) => { all: () => Array<{ name: string }> };
   exec: (sql: string) => void;
