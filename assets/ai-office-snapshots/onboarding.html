@@ -1,0 +1,718 @@
+<!DOCTYPE html>
+<html lang="ru">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width,initial-scale=1">
+<title>Брифинг · AI Growth Office</title>
+<meta name="description" content="Расскажи о своём бизнесе за 5 минут — AI подберёт команду из 169 специалистов под твои задачи.">
+<meta name="robots" content="noindex">
+<link rel="icon" type="image/svg+xml" href="data:image/svg+xml,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 32 32'><rect width='32' height='32' rx='6' fill='%23080808'/><text y='24' x='5' font-size='20'>📋</text></svg>">
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<style>
+@import url('https://fonts.googleapis.com/css2?family=JetBrains+Mono:wght@400;700&family=Inter:wght@400;500;600;700;800&display=swap');
+*{box-sizing:border-box;margin:0;padding:0}
+:root{
+  --bg:#0a0c14;--card:#13162a;--card2:#181b30;--border:rgba(255,255,255,.08);
+  --text:#e8e4f0;--muted:#7a82a0;--dim:rgba(255,255,255,.4);
+  --accent:#c8f060;--a2:#60c8f0;--a3:#f06090;--font:'JetBrains Mono',monospace;--ui:'Inter',sans-serif;
+}
+html,body{background:var(--bg);color:var(--text);font-family:var(--ui);min-height:100vh;line-height:1.55}
+body{padding:32px 24px 80px;background:radial-gradient(ellipse at top,#1a2a4a 0%,#0a0c14 60%);display:flex;align-items:flex-start;justify-content:center}
+
+.wrap{width:100%;max-width:640px;margin:0 auto}
+
+/* HEADER */
+.header{text-align:center;margin-bottom:32px}
+.header .tag{display:inline-block;font-family:var(--font);font-size:9px;text-transform:uppercase;letter-spacing:2px;color:var(--accent);padding:5px 11px;border-radius:6px;background:rgba(200,240,96,.08);border:1px solid rgba(200,240,96,.2);margin-bottom:14px}
+.header h1{font-size:30px;font-weight:800;letter-spacing:-.5px;line-height:1.15;margin-bottom:8px}
+.header h1 .grad{background:linear-gradient(90deg,#c8f060,#60c8f0);-webkit-background-clip:text;-webkit-text-fill-color:transparent}
+.header p{color:var(--muted);font-size:13px;max-width:480px;margin:0 auto}
+
+/* PROGRESS */
+.prog{background:var(--card);border:1px solid var(--border);border-radius:14px;padding:14px 18px;margin-bottom:18px;display:flex;align-items:center;gap:14px}
+.prog-info{flex:1;min-width:0}
+.prog-step{font-family:var(--font);font-size:9px;color:var(--accent);text-transform:uppercase;letter-spacing:1.5px;font-weight:700;margin-bottom:6px}
+.prog-bar{height:5px;background:rgba(255,255,255,.06);border-radius:3px;overflow:hidden}
+.prog-fill{height:100%;background:linear-gradient(90deg,#c8f060,#60c8f0);border-radius:3px;transition:width .4s cubic-bezier(.2,.8,.4,1)}
+.prog-pct{font-size:13px;font-weight:800;color:var(--accent);min-width:42px;text-align:right;font-family:var(--font)}
+
+/* CARD */
+.card{background:var(--card);border:1.5px solid var(--border);border-radius:18px;padding:32px;margin-bottom:18px;animation:fadeIn .3s ease}
+@keyframes fadeIn{from{opacity:0;transform:translateY(8px)}to{opacity:1;transform:none}}
+
+.q-tit{font-size:22px;font-weight:800;letter-spacing:-.3px;line-height:1.25;margin-bottom:8px;color:var(--text)}
+.q-sub{font-size:13px;color:var(--muted);margin-bottom:22px;line-height:1.6}
+
+/* INPUTS */
+.inp,.txt{width:100%;background:var(--card2);border:1.5px solid var(--border);border-radius:11px;padding:13px 16px;color:var(--text);font:500 14px/1.45 var(--ui);outline:none;transition:border-color .15s}
+.inp:focus,.txt:focus{border-color:rgba(200,240,96,.4)}
+.inp::placeholder,.txt::placeholder{color:var(--dim)}
+.txt{resize:vertical;min-height:90px;font-family:var(--ui)}
+.row{display:grid;grid-template-columns:1fr 1fr;gap:10px;margin-top:10px}
+@media(max-width:560px){.row{grid-template-columns:1fr}}
+
+.label{display:block;font-size:11px;font-weight:700;text-transform:uppercase;letter-spacing:.8px;color:var(--muted);margin:14px 0 6px}
+
+/* VOICE RECORDER */
+.voice-rec{margin-top:14px;background:var(--card2);border:1.5px solid var(--border);border-radius:14px;padding:18px;display:flex;flex-direction:column;gap:12px}
+.rec-btn{background:linear-gradient(90deg,#c8f060,#60c8f0);color:#080808;border:none;border-radius:11px;padding:14px;font:800 14px/1 var(--ui);letter-spacing:.4px;cursor:pointer;transition:transform .15s,box-shadow .15s}
+.rec-btn:hover{transform:translateY(-1px);box-shadow:0 6px 20px rgba(96,200,240,.25)}
+.rec-meta{display:flex;justify-content:space-between;align-items:center;gap:12px;font-size:12px}
+.rec-timer{font-family:var(--font);font-weight:700;color:var(--accent);font-size:14px;flex-shrink:0}
+.rec-status{color:var(--muted);line-height:1.5}
+.voice-rec audio{width:100%;max-width:100%}
+.rec-up{background:var(--accent);color:#080808;border:none;border-radius:10px;padding:11px;font:800 12px/1 var(--ui);letter-spacing:.4px;cursor:pointer}
+.rec-up:hover{background:#dafd80}
+.rec-up:disabled{opacity:.6;cursor:wait}
+.rec-skip{font-size:11px;color:var(--dim);text-align:center}
+
+/* RADIO/CHECKBOX CARDS */
+.choices{display:flex;flex-direction:column;gap:7px;margin-top:10px}
+.choices.grid2{display:grid;grid-template-columns:1fr 1fr;gap:7px}
+@media(max-width:560px){.choices.grid2{grid-template-columns:1fr}}
+.choice{display:flex;align-items:center;gap:11px;padding:13px 14px;background:var(--card2);border:1.5px solid var(--border);border-radius:11px;cursor:pointer;transition:all .15s;font-size:13.5px;color:var(--text);user-select:none}
+.choice:hover{border-color:rgba(255,255,255,.18);background:rgba(255,255,255,.03)}
+.choice.sel{border-color:var(--accent);background:rgba(200,240,96,.06)}
+.choice .mk{width:18px;height:18px;border-radius:50%;border:2px solid var(--border);flex-shrink:0;position:relative;transition:all .15s}
+.choice.sel .mk{border-color:var(--accent);background:var(--accent)}
+.choice.sel .mk::after{content:'';position:absolute;left:50%;top:50%;transform:translate(-50%,-50%);width:7px;height:7px;border-radius:50%;background:#080808}
+.choice.cb .mk{border-radius:5px}
+.choice.cb.sel .mk::after{width:11px;height:7px;background:none;border:2px solid #080808;border-top:none;border-right:none;border-radius:0;transform:translate(-50%,-65%) rotate(-45deg);left:50%;top:50%}
+.choice .em{font-size:18px;flex-shrink:0}
+.choice .info{flex:1;min-width:0}
+.choice .info b{display:block;font-size:13.5px;font-weight:700;margin-bottom:2px}
+.choice .info span{display:block;font-size:11.5px;color:var(--muted);line-height:1.4}
+
+/* NAV */
+.nav{display:flex;gap:10px;margin-top:18px}
+.btn{flex:1;border-radius:12px;padding:14px;font:800 12.5px/1 var(--ui);letter-spacing:.4px;cursor:pointer;transition:all .15s;border:1.5px solid;text-align:center;text-decoration:none;display:flex;align-items:center;justify-content:center;gap:6px}
+.btn-prev{background:var(--card);color:var(--muted);border-color:var(--border)}
+.btn-prev:hover{color:var(--text);border-color:rgba(255,255,255,.18)}
+.btn-prev:disabled{opacity:.4;cursor:not-allowed}
+.btn-next{background:linear-gradient(90deg,#c8f060,#60c8f0);color:#080808;border-color:transparent;box-shadow:0 4px 14px rgba(200,240,96,.25);flex:2}
+.btn-next:hover{transform:translateY(-1px);box-shadow:0 6px 20px rgba(200,240,96,.4)}
+.btn-next:disabled{opacity:.5;cursor:not-allowed;transform:none}
+
+.hint{margin-top:8px;font-size:11px;color:var(--dim);font-style:italic}
+.err{color:var(--a3);font-size:11.5px;margin-top:6px}
+
+/* FOOTER */
+.legal{text-align:center;margin-top:20px;font-size:11px;color:var(--muted)}
+.legal a{color:var(--muted);text-decoration:none;border-bottom:1px solid transparent;transition:all .15s;margin:0 6px}
+.legal a:hover{color:var(--accent);border-color:var(--accent)}
+.save-note{font-size:10px;color:var(--dim);text-align:center;margin-top:8px;font-family:var(--font);letter-spacing:.5px}
+</style>
+<!-- ═══ PWA ═══ -->
+<link rel="manifest" href="/manifest.json">
+<meta name="theme-color" content="#0a0c14">
+<meta name="apple-mobile-web-app-capable" content="yes">
+<meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
+<meta name="apple-mobile-web-app-title" content="AI Office">
+<link rel="apple-touch-icon" href="/icon-192.png">
+</head>
+<body data-user="Илья Палий" data-email="ilia.info.paliy@gmail.com">
+
+<div class="wrap">
+
+  <div class="header">
+    <div class="tag">📋 Брифинг · 5 минут</div>
+    <h1>Расскажи о бизнесе — <br>AI подберёт <span class="grad">команду</span></h1>
+    <p>10 вопросов. По ответам AI выберет из 169 агентов тех, кто нужен под твою задачу.</p>
+  </div>
+
+  <div class="prog">
+    <div class="prog-info">
+      <div class="prog-step" id="progStep">Шаг 1 / 11</div>
+      <div class="prog-bar"><div class="prog-fill" id="progFill" style="width:10%"></div></div>
+    </div>
+    <div class="prog-pct" id="progPct">10%</div>
+  </div>
+
+  <div class="card" id="card">
+    <!-- Заполняется JS -->
+  </div>
+
+  <div class="nav">
+    <button class="btn btn-prev" id="btnPrev" onclick="prev()">← Назад</button>
+    <button class="btn btn-next" id="btnNext" onclick="next()">Далее →</button>
+  </div>
+
+  <div class="save-note">💾 Ответы сохраняются автоматически</div>
+
+  <div class="legal">
+    Нажимая «Подобрать команду», ты соглашаешься с <a href="privacy.html">Политикой</a> и <a href="terms.html">Условиями</a>
+  </div>
+
+</div>
+
+<script>
+const STEPS = [
+  // 1. Знакомство
+  {
+    id: 'contact',
+    tit: 'Как с тобой связаться?',
+    sub: 'Имя нужно чтобы AI обращался лично. Email и Telegram — чтобы прислать отчёты и не потерять прогресс.',
+    fields: [
+      { key: 'name',  type: 'text',     label: 'Имя',           ph: 'Илья',                       required: true },
+      { key: 'email', type: 'email',    label: 'Email',         ph: 'you@example.com',            required: true },
+      { key: 'tg',    type: 'text',     label: 'Telegram',      ph: '@username · опционально',    required: false },
+    ]
+  },
+  // 2. Тип бизнеса
+  {
+    id: 'type',
+    tit: 'Какой формат бизнеса?',
+    sub: 'Это поможет AI выбрать релевантных агентов под твою модель работы.',
+    field: { key: 'type', type: 'radio', required: true, options: [
+      { v: 'expert',       em: '🎓', t: 'Эксперт-одиночка',         d: 'Психолог · коуч · нутрициолог · эзотерик' },
+      { v: 'school',       em: '🏫', t: 'Онлайн-школа / продюсер',  d: 'Курсы · программы · мастермайнды · клубы' },
+      { v: 'agency',       em: '💼', t: 'Маркетинг-агентство',      d: 'SMM · продюсер · фрилансер с клиентами' },
+      { v: 'service',      em: '🛠', t: 'Услуги офлайн',            d: 'Студии · салоны · ателье · мастерская' },
+      { v: 'ecom',         em: '🛒', t: 'E-commerce / товарка',     d: 'Магазин · бренд · производство' },
+      { v: 'startup',      em: '🚀', t: 'Tech-стартап',             d: 'SaaS · приложение · marketplace' },
+      { v: 'other',        em: '✨', t: 'Что-то ещё',               d: 'Опишешь на следующем шаге' },
+    ]}
+  },
+  // 3. Ниша + продукт
+  {
+    id: 'niche',
+    tit: 'Ниша и продукт',
+    sub: 'Конкретнее = AI лучше подберёт агентов. «Психолог по тревожности у мам» лучше чем «психолог».',
+    fields: [
+      { key: 'niche',   type: 'text',     label: 'Ниша / тема',       ph: 'Например: онлайн-школа женских психологических практик', required: true },
+      { key: 'product', type: 'textarea', label: 'Главный продукт',   ph: 'Что продаёшь? Курс на 3 месяца за 30 000 ₽ · клуб 5000 ₽/мес · диагностика 12 000 ₽ · и т.д.', required: true },
+    ]
+  },
+  // 4. Цель на 90 дней
+  {
+    id: 'goal90',
+    tit: 'Цель на ближайшие 90 дней',
+    sub: 'Конкретная цель с цифрами и сроком. Это станет фокусом для всех агентов.',
+    field: { key: 'goal90', type: 'textarea', required: true, ph: 'Например: запустить новый курс и сделать выручку 500 тыс. ₽ к 15 августа. Или: вырасти с 80к подписчиков до 150к через Reels.' }
+  },
+  // 5. Долгосрочное видение
+  {
+    id: 'goal1y',
+    tit: 'Куда хочешь прийти через год?',
+    sub: 'Видение длинной дистанции. Помогает AI понять приоритеты и не уводить в краткосрочную мелочь.',
+    field: { key: 'goal1y', type: 'textarea', required: false, ph: 'Например: выручка 5 млн ₽/мес, команда 5 человек, IT-продукт для своей ниши.' }
+  },
+  // 6. ЦА
+  {
+    id: 'audience',
+    tit: 'Кто твоя ЦА?',
+    sub: 'Опиши идеального клиента: возраст, пол, доход, боли, желания. Чем детальнее — тем точнее агенты подберут контент и оффер.',
+    field: { key: 'audience', type: 'textarea', required: true, ph: 'Например: женщины 28–42 года, в декрете или после развода, доход 50–150к, ищут стабильность и баланс. Боль: тревога, потеря себя. Покупают через сторис и live.' }
+  },
+  // 7. Каналы
+  {
+    id: 'channels',
+    tit: 'Где сейчас продвигаешься?',
+    sub: 'Где уже есть присутствие. AI выберет агентов под эти каналы (и предложит новые).',
+    field: { key: 'channels', type: 'multi', required: true, options: [
+      { v: 'instagram', em: '📷', t: 'Instagram',      d: 'Reels, сторис, посты' },
+      { v: 'telegram',  em: '✈️', t: 'Telegram',       d: 'Канал, бот, чаты' },
+      { v: 'tiktok',    em: '🎵', t: 'TikTok',         d: 'Короткие видео' },
+      { v: 'youtube',   em: '📹', t: 'YouTube',        d: 'Длинные видео или Shorts' },
+      { v: 'vk',        em: '🇷🇺', t: 'VK',             d: 'Сообщество, статьи' },
+      { v: 'paid',      em: '📢', t: 'Платный трафик', d: 'Meta Ads / VK Ads / Yandex Direct' },
+      { v: 'email',     em: '✉️', t: 'Email-рассылка',  d: 'Sendpulse / Unisender' },
+      { v: 'site',      em: '🌐', t: 'Сайт + SEO',     d: 'Лендинг или блог' },
+      { v: 'partners',  em: '🤝', t: 'Партнёры',        d: 'Коллаборации, реферальные' },
+      { v: 'none',      em: '❓', t: 'Пока никак',      d: 'Стартую с нуля' },
+    ]}
+  },
+  // 8. Доход
+  {
+    id: 'revenue',
+    tit: 'Финансовая картина',
+    sub: 'Текущий доход = база. Желаемый = вектор. Это влияет на выбор: фокус на росте или оптимизации.',
+    fields: [
+      { key: 'rev_now',    type: 'radio', label: 'Текущий месячный доход', required: true, options: [
+        { v: '0-50',    t: 'До 50 тыс. ₽',         em: '🌱' },
+        { v: '50-200',  t: '50–200 тыс. ₽',        em: '🍃' },
+        { v: '200-500', t: '200–500 тыс. ₽',       em: '🌿' },
+        { v: '500-2m',  t: '500 тыс. – 2 млн ₽',   em: '🌳' },
+        { v: '2m+',     t: 'Более 2 млн ₽',        em: '🏝️' },
+      ]},
+      { key: 'rev_goal',   type: 'radio', label: 'Желаемый доход через год', required: false, options: [
+        { v: '100',  t: '100 тыс. ₽',  em: '🎯' },
+        { v: '500',  t: '500 тыс. ₽',  em: '🎯' },
+        { v: '1m',   t: '1 млн ₽',     em: '🎯' },
+        { v: '3m',   t: '3 млн ₽',     em: '🎯' },
+        { v: '10m+', t: '10 млн+ ₽',   em: '🎯' },
+      ]},
+    ]
+  },
+  // 9. Команда + затык
+  {
+    id: 'team_pain',
+    tit: 'Команда и главный затык',
+    sub: 'AI выберет агентов под нехватку рук и под твою боль.',
+    fields: [
+      { key: 'team', type: 'radio', label: 'Размер команды', required: true, options: [
+        { v: 'solo',   t: 'Один · соло',                em: '🧑' },
+        { v: 'one',    t: '+ 1 помощник',                em: '👥' },
+        { v: 'small',  t: 'Команда 2–5 человек',         em: '👨‍👩‍👧' },
+        { v: 'medium', t: 'Команда 6–20 человек',        em: '👥👥' },
+      ]},
+      { key: 'pain', type: 'radio', label: 'Главная боль / что тормозит', required: true, options: [
+        { v: 'content',  t: 'Не успеваю делать контент',                 em: '📝' },
+        { v: 'reach',    t: 'Слабые охваты, не растёт аудитория',         em: '📉' },
+        { v: 'sales',    t: 'Подписчики есть, но не продаётся',           em: '💸' },
+        { v: 'funnel',   t: 'Нет понятной воронки и прогрева',            em: '🔀' },
+        { v: 'analytics',t: 'Делаю много, но непонятно что работает',     em: '📊' },
+        { v: 'product',  t: 'Продукт не упакован, не понимаю как его продавать', em: '📦' },
+        { v: 'brand',    t: 'Размытый бренд, не отличаюсь от других',      em: '🎨' },
+        { v: 'tech',     t: 'Не хватает технической базы / инструментов',  em: '⚙️' },
+      ]},
+    ]
+  },
+  // 10. Приоритеты + бюджет
+  {
+    id: 'priorities',
+    tit: 'Что усилить в первую очередь',
+    sub: 'Выбери всё что важно (можно несколько). Это финальный фильтр для AI при выборе агентов.',
+    fields: [
+      { key: 'focus', type: 'multi', label: 'Что усилить', required: true, options: [
+        { v: 'content', em: '🎬', t: 'Контент-фабрика',  d: 'Reels, посты, карусели' },
+        { v: 'sales',   em: '💬', t: 'Продажи',           d: 'Скрипты, прогрев, дожимы' },
+        { v: 'funnel',  em: '🔀', t: 'Воронки',           d: 'Customer journey, лид-магниты' },
+        { v: 'paid',    em: '📢', t: 'Платный трафик',    d: 'Ads, креативы, CPA' },
+        { v: 'seo',     em: '🔍', t: 'SEO и органика',    d: 'Поисковая выдача, контент' },
+        { v: 'data',    em: '📊', t: 'Аналитика и KPI',   d: 'Метрики, конверсии, ROMI' },
+        { v: 'product', em: '📦', t: 'Продуктовая упаковка',d: 'Офферы, тарифы, лестница' },
+        { v: 'brand',   em: '🎨', t: 'Бренд и стиль',     d: 'Tone of voice, эстетика' },
+        { v: 'tech',    em: '💻', t: 'Tech / автоматизация', d: 'Сайт, боты, интеграции' },
+        { v: 'support', em: '🛟', t: 'Поддержка клиентов', d: 'Чаты, тикеты, FAQ' },
+      ]},
+      { key: 'budget', type: 'radio', label: 'Бюджет на AI-инструменты в месяц', required: false, options: [
+        { v: 'free',   t: 'Бесплатно для начала',          em: '🌱' },
+        { v: 'cheap',  t: 'До 2 000 ₽',                    em: '💸' },
+        { v: 'mid',    t: '2 000–5 000 ₽',                 em: '💰' },
+        { v: 'pro',    t: '5 000–25 000 ₽',                em: '💎' },
+        { v: 'ent',    t: 'Более 25 000 ₽',                em: '👑' },
+      ]},
+    ]
+  },
+  // 11. Voice clone (Day-0 момент истины — Аня озвучит твои Reels твоим голосом)
+  {
+    id: 'voice',
+    tit: 'Запиши свой голос — 30–60 секунд',
+    sub: 'Аня (контент-агент) будет озвучивать твои Reels-сценарии твоим голосом. Прочитай любой свой пост, расскажи про продукт или просто познакомься. Шаг можно пропустить — тогда озвучка будет дефолтной.',
+    field: { key: 'voice_id', type: 'voice', required: false }
+  },
+];
+
+const TOTAL = STEPS.length;
+let current = 0;
+let data = {};
+
+// Load saved data
+try { data = JSON.parse(localStorage.getItem('aio_brief') || '{}'); } catch { data = {}; }
+
+function save() {
+  data.updatedAt = Date.now();
+  localStorage.setItem('aio_brief', JSON.stringify(data));
+}
+
+function renderStep() {
+  const step = STEPS[current];
+  const fields = step.fields || [step.field];
+  let html = `<div class="q-tit">${step.tit}</div><div class="q-sub">${step.sub}</div>`;
+
+  fields.forEach(f => {
+    if (!f) return;
+    if (f.label) html += `<div class="label">${f.label}${f.required?' *':''}</div>`;
+
+    const val = data[f.key];
+
+    if (f.type === 'text' || f.type === 'email') {
+      html += `<input class="inp" type="${f.type}" id="f_${f.key}" placeholder="${f.ph||''}" value="${escapeHTML(val||'')}">`;
+    }
+    else if (f.type === 'textarea') {
+      html += `<textarea class="txt" id="f_${f.key}" placeholder="${f.ph||''}">${escapeHTML(val||'')}</textarea>`;
+    }
+    else if (f.type === 'voice') {
+      const savedId = data.voice_id;
+      html += `<div class="voice-rec" data-key="${f.key}">
+        <button type="button" class="rec-btn" id="recBtn">${savedId ? '✅ Голос записан · перезаписать' : '🎙 Начать запись'}</button>
+        <div class="rec-meta">
+          <span class="rec-timer" id="recTimer">0:00</span>
+          <span class="rec-status" id="recStatus">${savedId ? 'Можно идти дальше — Аня уже использует этот голос.' : 'Минимум 30 секунд естественной речи. Без музыки и шумов.'}</span>
+        </div>
+        <audio id="recPlayback" controls hidden></audio>
+        <button type="button" class="rec-up" id="recUpload" hidden>Отправить запись →</button>
+        <div class="rec-skip">Шаг можно пропустить — будем озвучивать дефолтным голосом, пока не запишешь.</div>
+      </div>`;
+    }
+    else if (f.type === 'radio' || f.type === 'multi') {
+      const isMulti = f.type === 'multi';
+      const cur = isMulti ? (Array.isArray(val)?val:[]) : val;
+      const cls = (isMulti ? 'cb ' : '') + 'choices' + (f.options.length>4 ? ' grid2' : '');
+      html += `<div class="${cls}" data-key="${f.key}" data-multi="${isMulti?1:0}">`;
+      f.options.forEach(o => {
+        const sel = isMulti ? cur.includes(o.v) : cur === o.v;
+        html += `<div class="choice${isMulti?' cb':''}${sel?' sel':''}" data-val="${o.v}">
+          <div class="mk"></div>
+          ${o.em?`<div class="em">${o.em}</div>`:''}
+          <div class="info">
+            <b>${o.t}</b>
+            ${o.d?`<span>${o.d}</span>`:''}
+          </div>
+        </div>`;
+      });
+      html += '</div>';
+    }
+  });
+
+  document.getElementById('card').innerHTML = html;
+
+  // Wire up choice clicks
+  document.querySelectorAll('.choices').forEach(box => {
+    const key = box.dataset.key;
+    const isMulti = box.dataset.multi === '1';
+    box.querySelectorAll('.choice').forEach(c => {
+      c.onclick = () => {
+        const v = c.dataset.val;
+        if (isMulti) {
+          let arr = Array.isArray(data[key]) ? data[key] : [];
+          if (arr.includes(v)) arr = arr.filter(x => x !== v);
+          else arr = [...arr, v];
+          data[key] = arr;
+          save();
+          renderStep();
+        } else {
+          data[key] = v;
+          save();
+          // Auto-advance for single radio with single field
+          if (fields.length === 1 && fields[0].type === 'radio') {
+            setTimeout(() => next(), 200);
+          } else {
+            renderStep();
+          }
+        }
+      };
+    });
+  });
+
+  // Wire up text inputs — handle ALL input methods (typing, autofill, paste)
+  fields.forEach(f => {
+    if (f.type === 'text' || f.type === 'email' || f.type === 'textarea') {
+      const el = document.getElementById('f_'+f.key);
+      if (el) {
+        const sync = () => { data[f.key] = el.value; save(); };
+        // Cover all paths: typing, paste, autofill, programmatic change
+        el.addEventListener('input',  sync);
+        el.addEventListener('change', sync);
+        el.addEventListener('blur',   sync);
+        // Periodic poll for first 2 sec — catches stubborn autofill
+        let polls = 0;
+        const interval = setInterval(() => {
+          if (el.value !== (data[f.key]||'')) sync();
+          if (++polls > 20) clearInterval(interval);
+        }, 100);
+        if (current === 0 && f.key === 'name' && !val) setTimeout(() => el.focus(), 100);
+      }
+    }
+  });
+
+  // Voice recorder wire-up (only when current step has type=voice)
+  fields.forEach(f => {
+    if (f && f.type === 'voice') wireVoiceRecorder();
+  });
+
+  // Progress
+  const pct = Math.round(((current+1)/TOTAL)*100);
+  document.getElementById('progStep').textContent = `Шаг ${current+1} / ${TOTAL}`;
+  document.getElementById('progFill').style.width = pct + '%';
+  document.getElementById('progPct').textContent = pct + '%';
+
+  // Buttons
+  document.getElementById('btnPrev').disabled = current === 0;
+  document.getElementById('btnNext').textContent = current === TOTAL - 1 ? 'Подобрать команду →' : 'Далее →';
+}
+
+function syncDOM() {
+  // Принудительно подтягиваем текущие значения из всех инпутов в data
+  // (защита от автофилла, который не триггерит input-событие)
+  const step = STEPS[current];
+  const fields = step.fields || [step.field];
+  fields.forEach(f => {
+    if (!f) return;
+    if (f.type === 'text' || f.type === 'email' || f.type === 'textarea') {
+      const el = document.getElementById('f_'+f.key);
+      if (el && el.value) data[f.key] = el.value;
+    }
+  });
+  save();
+}
+
+function validate() {
+  syncDOM(); // Подхватить значения, которые могли вставиться автофиллом
+  const step = STEPS[current];
+  const fields = step.fields || [step.field];
+  for (const f of fields) {
+    if (!f || !f.required) continue;
+    const v = data[f.key];
+    const labelText = f.label || (f.type === 'email' ? 'Email' : f.type === 'text' ? 'Поле' : 'Ответ');
+    if (f.type === 'multi') {
+      if (!Array.isArray(v) || v.length === 0) return `Выбери хотя бы один вариант`;
+    } else if (!v || (typeof v === 'string' && !v.trim())) {
+      return `Заполни поле «${labelText}»`;
+    }
+    if (f.type === 'email' && !/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(String(v).trim())) {
+      return 'Введи корректный email (например, name@example.com)';
+    }
+  }
+  return null;
+}
+
+function next() {
+  const err = validate();
+  if (err) {
+    showError(err);
+    return;
+  }
+  if (current === TOTAL - 1) {
+    // Final step → go to recommend
+    data.completedAt = Date.now();
+    save();
+    // Also send to Supabase (saveLead pattern)
+    try { sendToBackend(); } catch {}
+    location.href = 'recommend.html';
+    return;
+  }
+  current++;
+  renderStep();
+  window.scrollTo({top:0, behavior:'smooth'});
+}
+
+function prev() {
+  if (current > 0) {
+    syncDOM(); // сохранить введённое перед уходом
+    current--;
+    renderStep();
+    window.scrollTo({top:0, behavior:'smooth'});
+  }
+}
+
+function showError(msg) {
+  // Remove old error if any
+  const old = document.querySelector('.err');
+  if (old) old.remove();
+  // Create new error pinned to bottom of card with shake animation
+  const err = document.createElement('div');
+  err.className = 'err';
+  err.style.cssText = 'background:rgba(240,96,144,.1);border:1px solid rgba(240,96,144,.35);border-radius:10px;padding:11px 14px;margin-top:14px;font-size:12.5px;color:#f06090;font-weight:600;animation:shake .35s';
+  err.textContent = '⚠ ' + msg;
+  document.getElementById('card').appendChild(err);
+  // Scroll error into view
+  setTimeout(() => err.scrollIntoView({behavior:'smooth',block:'center'}), 50);
+  setTimeout(() => { if (err && err.parentNode) err.remove(); }, 5000);
+  // Add shake keyframe if not present
+  if (!document.getElementById('shake-kf')) {
+    const s = document.createElement('style');
+    s.id = 'shake-kf';
+    s.textContent = '@keyframes shake{0%,100%{transform:translateX(0)}25%{transform:translateX(-4px)}75%{transform:translateX(4px)}}';
+    document.head.appendChild(s);
+  }
+}
+
+async function sendToBackend() {
+  // Always post to our own Postgres-backed /api/leads (single source of truth).
+  // Fire-and-forget; failures don't block redirect.
+  try {
+    fetch('/api/leads', {
+      method: 'POST',
+      headers: {'Content-Type': 'application/json'},
+      body: JSON.stringify({
+        niche: data.niche || '',
+        to_improve: data.focus || [],
+        current_revenue: data.rev_now || '',
+        goal: data.goal90 || '',
+        main_problem: data.pain || '',
+        name: data.name || '',
+        email: data.email || '',
+        telegram: data.tg || '',
+        source: 'aio_onboarding_v2',
+        ref_data: {
+          type: data.type, audience: data.audience, channels: data.channels,
+          team: data.team, budget: data.budget, voice_id: data.voice_id || null,
+          goal1y: data.goal1y, product: data.product, rev_goal: data.rev_goal,
+        }
+      })
+    }).catch(e => console.warn('Lead /api/leads fail:', e.message));
+  } catch {}
+
+  // Legacy: Supabase + Telegram via window.submitLead (from index.html) — оставлено
+  // на переходный период; убрать когда лиды стабильно идут в /api/leads.
+  if (typeof submitLead === 'function') {
+    submitLead({
+      niche: data.niche || '',
+      toImprove: data.focus || [],
+      revenue: data.rev_now || '',
+      goal: data.goal90 || '',
+      problem: data.pain || '',
+      email: data.email || '',
+      name: data.name || '',
+      tg: data.tg || '',
+    });
+  } else {
+    // Inline Supabase send (works on this page too)
+    const SUPABASE_URL = 'https://cslvbnladhfjrdbtnwkm.supabase.co';
+    const SUPABASE_ANON = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6ImNzbHZibmxhZGhmanJkYnRud2ttIiwicm9sZSI6ImFub24iLCJpYXQiOjE3Nzg1ODk2NzYsImV4cCI6MjA5NDE2NTY3Nn0.0VjY3ihxWMjDRBoWpPQiAAKEYRveKKbUHzt4969kATk';
+    try {
+      await fetch(SUPABASE_URL+'/rest/v1/leads', {
+        method:'POST',
+        headers:{'Content-Type':'application/json','apikey':SUPABASE_ANON,'Authorization':'Bearer '+SUPABASE_ANON,'Prefer':'return=minimal'},
+        body: JSON.stringify({
+          niche: data.niche, to_improve: data.focus||[], current_revenue: data.rev_now,
+          goal: data.goal90, main_problem: data.pain, email: data.email,
+          source: 'aio_onboarding_v2'
+        })
+      });
+    } catch(e) { console.warn('Lead save fail:', e.message); }
+  }
+}
+
+function escapeHTML(s) { return (s||'').replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;').replace(/"/g,'&quot;'); }
+
+// ─── Voice recorder ────────────────────────────────────────────────
+// Записывает 30-90 сек через MediaRecorder, загружает в /worker/voice/clone
+// (ElevenLabs Instant Voice Cloning), сохраняет voice_id в data.voice_id.
+let _recState = null; // {recorder, chunks, startedAt, timerId, stream}
+function wireVoiceRecorder() {
+  const btn = document.getElementById('recBtn');
+  const timer = document.getElementById('recTimer');
+  const status = document.getElementById('recStatus');
+  const playback = document.getElementById('recPlayback');
+  const upload = document.getElementById('recUpload');
+  if (!btn) return;
+
+  const setStatus = (t, color) => {
+    status.textContent = t;
+    status.style.color = color || '';
+  };
+
+  btn.onclick = async () => {
+    if (_recState && _recState.recorder?.state === 'recording') {
+      // Stop recording
+      _recState.recorder.stop();
+      _recState.stream.getTracks().forEach(t => t.stop());
+      clearInterval(_recState.timerId);
+      const secs = Math.floor((Date.now() - _recState.startedAt) / 1000);
+      if (secs < 5) {
+        setStatus(`Запись ${secs}с слишком короткая — попробуй ещё раз`, '#f06090');
+        btn.textContent = '🎙 Начать запись';
+        _recState = null;
+        return;
+      }
+      btn.textContent = '🎙 Записать заново';
+      setStatus(`Запись ${secs}с готова — послушай и отправь`, '#c8f060');
+      return;
+    }
+    // Start recording
+    try {
+      const stream = await navigator.mediaDevices.getUserMedia({ audio: { echoCancellation: true, noiseSuppression: true } });
+      const mime = MediaRecorder.isTypeSupported('audio/webm;codecs=opus') ? 'audio/webm;codecs=opus' :
+                   MediaRecorder.isTypeSupported('audio/mp4') ? 'audio/mp4' : '';
+      const recorder = mime ? new MediaRecorder(stream, { mimeType: mime }) : new MediaRecorder(stream);
+      const chunks = [];
+      recorder.ondataavailable = e => { if (e.data?.size > 0) chunks.push(e.data); };
+      recorder.onstop = () => {
+        const blob = new Blob(chunks, { type: recorder.mimeType || 'audio/webm' });
+        playback.src = URL.createObjectURL(blob);
+        playback.hidden = false;
+        upload.hidden = false;
+        upload.dataset.mime = blob.type;
+        upload.onclick = () => uploadVoice(blob, upload, btn, setStatus);
+      };
+      recorder.start();
+      _recState = { recorder, chunks, startedAt: Date.now(), stream };
+      btn.textContent = '⏹ Остановить';
+      playback.hidden = true;
+      upload.hidden = true;
+      setStatus('Идёт запись… говори естественно', '#60c8f0');
+      _recState.timerId = setInterval(() => {
+        const s = Math.floor((Date.now() - _recState.startedAt) / 1000);
+        const m = Math.floor(s / 60);
+        timer.textContent = `${m}:${String(s % 60).padStart(2, '0')}`;
+        if (s >= 90) btn.click(); // auto-stop at 90s
+      }, 500);
+    } catch (e) {
+      setStatus('Нет доступа к микрофону: ' + (e.message || e), '#f06090');
+    }
+  };
+}
+
+async function uploadVoice(blob, btn, recBtn, setStatus) {
+  btn.disabled = true; btn.textContent = 'Загружаю…';
+  setStatus('Загружаю в студию голосового клонирования…', '#60c8f0');
+  try {
+    const b64 = await blobToBase64(blob);
+    const body = {
+      audio_b64: b64,
+      audio_mime: blob.type || 'audio/webm',
+      email: data.email || null,
+      name: data.name || 'AI Growth Office user',
+    };
+    const res = await fetch('/worker/voice/clone', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify(body),
+    });
+    const out = await res.json().catch(() => ({}));
+    if (!res.ok || !out.voice_id) {
+      setStatus('Не удалось склонировать: ' + (out.error || res.status), '#f06090');
+      btn.disabled = false; btn.textContent = 'Повторить';
+      return;
+    }
+    data.voice_id = out.voice_id;
+    save();
+    btn.hidden = true;
+    recBtn.textContent = '✅ Голос записан · перезаписать';
+    setStatus('Готово — Аня будет говорить твоим голосом ✨', '#c8f060');
+  } catch (e) {
+    setStatus('Сбой при загрузке: ' + (e.message || e), '#f06090');
+    btn.disabled = false; btn.textContent = 'Повторить';
+  }
+}
+
+function blobToBase64(blob) {
+  return new Promise((resolve, reject) => {
+    const r = new FileReader();
+    r.onloadend = () => resolve(String(r.result).split(',')[1] || '');
+    r.onerror = reject;
+    r.readAsDataURL(blob);
+  });
+}
+
+// Keyboard navigation
+document.addEventListener('keydown', e => {
+  if (e.key === 'Enter' && e.metaKey) next();
+  if (e.key === 'Escape') prev();
+});
+
+renderStep();
+</script>
+
+<script src="api-fallback.js" defer></script>
+<script src="state.js"></script>
+<script src="mock-backend.js"></script>
+<script src="config.js"></script>
+<script src="analytics.js" defer></script>
+<script src="sidebar.js" defer></script>
+<script src="alisa-widget.js" defer></script>
+<script src="cookies.js" defer></script>
+<script>
+// PWA service worker registration
+if ('serviceWorker' in navigator && location.protocol === 'https:') {
+  window.addEventListener('load', () => {
+    navigator.serviceWorker.register('/sw.js').catch(e => console.warn('SW reg failed:', e.message));
+  });
+}
+</script>
+</body>
+</html>
