@@ -8,6 +8,7 @@ export type AppUser = {
   username: string | null
   first_name: string | null
   subscription_tier: UserTier
+  subscription_expires_at?: string | null
   stripe_customer_id: string | null
   stripe_subscription_id: string | null
 }
