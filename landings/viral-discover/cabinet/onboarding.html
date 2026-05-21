@@ -1,0 +1,757 @@
+<!DOCTYPE html>
+<html lang="ru">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<meta name="theme-color" content="#0A0A0F">
+<meta name="color-scheme" content="dark only">
+<title>Настройка · Залётный</title>
+<meta name="description" content="3 шага по минуте — описать нишу, выбрать конкурентов, поставить хэштеги. Дальше парсер работает сам каждое утро в 08:00 МСК.">
+<style>
+*,*::before,*::after{margin:0;padding:0;box-sizing:border-box}
+html{background:#0A0A0F;scroll-behavior:smooth}
+html,body{min-height:100vh;-webkit-font-smoothing:antialiased;text-rendering:optimizeLegibility}
+body{
+  background:#0A0A0F;color:#f5f0e8;
+  font-family:-apple-system,BlinkMacSystemFont,'SF Pro Text','Helvetica Neue',Arial,sans-serif;
+  font-size:15px;line-height:1.55;
+}
+a{color:inherit;text-decoration:none}
+button{font:inherit;background:none;border:0;color:inherit;cursor:pointer}
+input,textarea,select{font:inherit;color:inherit;background:none;border:0;outline:0}
+::selection{background:rgba(94,92,230,.42);color:#fff}
+
+:root{
+  --bg:#0A0A0F;
+  --surface:#111118;
+  --surface-2:#161620;
+  --surface-3:#1c1c28;
+  --border:#1f1f28;
+  --border-2:#2a2a38;
+  --border-3:#3a3a48;
+  --text:#f5f0e8;
+  --text-dim:#a8a3b0;
+  --text-mute:#6a6570;
+  --text-faint:#3a3a48;
+  --accent:#5E5CE6;
+  --accent-hi:#7B79F0;
+  --accent-dim:#3a3880;
+  --accent-soft:rgba(94,92,230,.10);
+  --accent-cyan:#60c8f0;
+  --accent-lime:#a8e060;
+  --accent-pink:#f06090;
+  --accent-amber:#f0c060;
+  --serif:Georgia,'Times New Roman','Charter',serif;
+  --mono:'SF Mono','JetBrains Mono','Menlo','Consolas',monospace;
+}
+
+.label{font-family:var(--mono);font-size:10px;text-transform:uppercase;letter-spacing:.16em;color:var(--text-dim);font-weight:700}
+.mono{font-family:var(--mono)}
+.serif{font-family:var(--serif)}
+.italic{font-style:italic}
+.dim{color:var(--text-dim)}
+.mute{color:var(--text-mute)}
+.acc{color:var(--accent)}
+.acc-lime{color:var(--accent-lime)}
+.hidden{display:none !important}
+
+/* ─── Top nav ─────────────────────────────────────────────────── */
+.nav{
+  position:sticky;top:0;z-index:50;
+  background:rgba(10,10,15,.86);
+  border-bottom:1px solid var(--border);
+  backdrop-filter:blur(12px);-webkit-backdrop-filter:blur(12px);
+}
+.nav-inner{
+  display:flex;align-items:center;gap:24px;
+  padding:14px 24px;max-width:1480px;margin:0 auto;
+}
+.brand{display:flex;align-items:baseline;gap:8px}
+.brand .dot{width:7px;height:7px;background:var(--accent);border-radius:50%;display:inline-block;transform:translateY(-1px)}
+.brand .name{font-family:var(--serif);font-size:18px;letter-spacing:-.01em}
+.brand .sub{font-family:var(--mono);font-size:10px;letter-spacing:.18em;color:var(--text-mute);text-transform:uppercase;font-weight:700;margin-left:6px}
+.nav-right{margin-left:auto;display:flex;align-items:center;gap:18px}
+.nav-right .help{font-size:13px;color:var(--text-dim)}
+.nav-right .help:hover{color:var(--text)}
+.nav-right .exit{
+  font-family:var(--mono);font-size:10px;letter-spacing:.14em;text-transform:uppercase;
+  padding:6px 12px;border:1px solid var(--border-2);color:var(--text-dim);font-weight:700;
+}
+.nav-right .exit:hover{border-color:var(--accent-pink);color:var(--accent-pink)}
+
+/* ─── Shell ───────────────────────────────────────────────────── */
+.shell{max-width:1080px;margin:0 auto;padding:56px 24px 80px}
+
+/* ─── Hero ────────────────────────────────────────────────────── */
+.hero-block{
+  text-align:left;padding-bottom:28px;border-bottom:1px solid var(--border);margin-bottom:36px;
+}
+.hero-block .eyebrow{
+  display:inline-flex;align-items:center;gap:10px;
+  padding:5px 11px;border:1px solid var(--border-2);margin-bottom:24px;
+}
+.hero-block .eyebrow .t{
+  font-family:var(--mono);font-size:10.5px;font-weight:700;
+  letter-spacing:.14em;text-transform:uppercase;color:var(--text-dim);
+}
+.hero-block .eyebrow .pulse{
+  width:6px;height:6px;background:var(--accent-lime);border-radius:50%;
+  box-shadow:0 0 0 0 var(--accent-lime);animation:pulse 2s infinite;
+}
+@keyframes pulse{
+  0%{box-shadow:0 0 0 0 rgba(168,224,96,.5)}
+  70%{box-shadow:0 0 0 8px rgba(168,224,96,0)}
+  100%{box-shadow:0 0 0 0 rgba(168,224,96,0)}
+}
+.hero-block h1{
+  font-family:var(--serif);font-size:clamp(34px,4.4vw,52px);
+  line-height:1.05;letter-spacing:-.02em;font-weight:400;margin-bottom:18px;
+  max-width:780px;
+}
+.hero-block h1 em{font-style:italic;color:var(--text-dim)}
+.hero-block .sub{color:var(--text-dim);font-size:16px;max-width:620px;line-height:1.6}
+
+/* ─── Progress ────────────────────────────────────────────────── */
+.progress{
+  display:grid;grid-template-columns:repeat(4,1fr);gap:1px;background:var(--border);
+  border:1px solid var(--border);margin-bottom:32px;
+}
+.pstep{
+  background:var(--bg);padding:18px 18px;
+  display:flex;flex-direction:column;gap:6px;cursor:default;position:relative;
+}
+.pstep .num{font-family:var(--serif);font-size:28px;color:var(--text-faint);font-style:italic;line-height:1}
+.pstep .ttl{
+  font-family:var(--mono);font-size:10px;letter-spacing:.16em;text-transform:uppercase;
+  color:var(--text-mute);font-weight:700;
+}
+.pstep.done .num{color:var(--accent-lime)}
+.pstep.done .ttl{color:var(--text)}
+.pstep.active .num{color:var(--accent)}
+.pstep.active .ttl{color:var(--text)}
+.pstep.active::after{
+  content:'';position:absolute;bottom:0;left:0;right:0;height:2px;background:var(--accent);
+}
+
+/* ─── Step body ───────────────────────────────────────────────── */
+.step-body{
+  background:var(--surface);border:1px solid var(--border);
+}
+.step-head{
+  padding:24px 32px;border-bottom:1px solid var(--border);background:var(--surface-2);
+}
+.step-head .lbl{
+  font-family:var(--mono);font-size:11px;letter-spacing:.16em;text-transform:uppercase;
+  color:var(--accent);font-weight:700;margin-bottom:6px;
+}
+.step-head h2{font-family:var(--serif);font-size:30px;letter-spacing:-.01em;font-weight:400;line-height:1.2}
+.step-head h2 em{font-style:italic;color:var(--text-dim)}
+.step-head .desc{color:var(--text-dim);margin-top:10px;font-size:14.5px;max-width:680px;line-height:1.6}
+
+.step-form{padding:28px 32px 32px;display:grid;grid-template-columns:1.4fr 1fr;gap:48px}
+@media (max-width:900px){.step-form{grid-template-columns:1fr;gap:32px}}
+
+.fld{display:flex;flex-direction:column;gap:8px}
+.fld label{font-family:var(--mono);font-size:10px;font-weight:700;letter-spacing:.16em;text-transform:uppercase;color:var(--text-mute)}
+.fld input[type=text],.fld textarea{
+  padding:14px 16px;border:1px solid var(--border-2);background:var(--bg);
+  font-family:var(--mono);font-size:14px;color:var(--text);
+  transition:border-color .12s;
+}
+.fld input:focus,.fld textarea:focus{border-color:var(--accent-dim)}
+.fld textarea{font-family:-apple-system,sans-serif;font-size:15px;line-height:1.55;resize:vertical;min-height:120px}
+.fld .hint{font-family:var(--mono);font-size:11px;color:var(--text-mute);letter-spacing:.04em;line-height:1.6}
+.fld .err{font-family:var(--mono);font-size:11px;color:var(--accent-pink);letter-spacing:.04em;font-weight:700}
+
+.examples{
+  border-left:2px solid var(--accent-dim);padding-left:18px;
+}
+.examples .ttl{
+  font-family:var(--mono);font-size:10px;letter-spacing:.16em;text-transform:uppercase;
+  color:var(--text-dim);font-weight:700;margin-bottom:14px;
+}
+.examples li{
+  list-style:none;padding:10px 0;border-top:1px solid var(--border);
+  font-family:var(--serif);font-style:italic;font-size:14px;color:var(--text-dim);line-height:1.45;cursor:pointer;transition:color .12s;
+}
+.examples li:hover{color:var(--text)}
+.examples li:first-child{border-top:0}
+.examples li::before{
+  content:'›';margin-right:10px;color:var(--accent);font-style:normal;font-family:var(--mono);font-weight:700;
+}
+
+/* ─── Actions ─────────────────────────────────────────────────── */
+.actions{
+  padding:22px 32px;border-top:1px solid var(--border);background:var(--surface-2);
+  display:flex;align-items:center;gap:14px;flex-wrap:wrap;
+}
+.actions .meta{
+  font-family:var(--mono);font-size:11px;letter-spacing:.06em;color:var(--text-mute);font-weight:700;margin-right:auto;
+}
+.btn{
+  display:inline-flex;align-items:center;gap:10px;padding:12px 22px;
+  font-family:var(--mono);font-size:11px;font-weight:700;letter-spacing:.14em;text-transform:uppercase;
+  border:1px solid transparent;transition:all .15s;
+}
+.btn.primary{background:var(--accent);color:#fff}
+.btn.primary:hover{background:var(--accent-hi);transform:translateY(-1px)}
+.btn.primary:disabled{background:var(--surface-3);color:var(--text-mute);transform:none;cursor:not-allowed}
+.btn.ghost{border-color:var(--border-2);color:var(--text-dim)}
+.btn.ghost:hover{border-color:var(--accent-dim);color:var(--accent)}
+.btn .arr{font-family:var(--serif);font-size:14px;font-style:italic;transform:translateY(-1px)}
+
+/* ─── Tags input (for competitors/hashtags) ───────────────────── */
+.tags-input-wrap{
+  display:flex;flex-wrap:wrap;gap:6px;
+  padding:12px;border:1px solid var(--border-2);background:var(--bg);min-height:64px;align-items:flex-start;
+}
+.tags-input-wrap.focus{border-color:var(--accent-dim)}
+.chip{
+  display:inline-flex;align-items:center;gap:8px;
+  font-family:var(--mono);font-size:12px;font-weight:600;letter-spacing:.02em;
+  padding:6px 10px;background:var(--surface-2);border:1px solid var(--border-2);color:var(--text);
+}
+.chip .x{color:var(--text-faint);cursor:pointer;transition:color .12s;font-size:14px;line-height:1}
+.chip .x:hover{color:var(--accent-pink)}
+.chip.acc{border-color:var(--accent-dim);color:var(--accent);background:var(--accent-soft)}
+.tags-input-wrap input{
+  flex:1;min-width:160px;padding:4px 6px;font-family:var(--mono);font-size:13px;
+}
+
+/* ─── Step 4: confirm ─────────────────────────────────────────── */
+.confirm-grid{display:grid;grid-template-columns:1fr 1fr;gap:1px;background:var(--border);border:1px solid var(--border)}
+@media (max-width:760px){.confirm-grid{grid-template-columns:1fr}}
+.confirm-cell{background:var(--bg);padding:22px 24px}
+.confirm-cell .k{font-family:var(--mono);font-size:10px;letter-spacing:.16em;text-transform:uppercase;color:var(--text-mute);font-weight:700;margin-bottom:8px;display:flex;align-items:center;gap:10px}
+.confirm-cell .k .edit{
+  margin-left:auto;font-family:var(--mono);font-size:10px;color:var(--text-dim);
+  padding:2px 8px;border:1px solid var(--border-2);text-transform:none;letter-spacing:.06em;
+}
+.confirm-cell .k .edit:hover{border-color:var(--accent-dim);color:var(--accent)}
+.confirm-cell .v{font-size:14.5px;color:var(--text);line-height:1.5}
+.confirm-cell .chips{display:flex;flex-wrap:wrap;gap:6px;margin-top:6px}
+
+.confirm-final{
+  margin-top:28px;padding:28px 32px;
+  background:var(--surface);border:1px solid var(--accent-dim);
+  display:flex;align-items:center;gap:24px;
+}
+.confirm-final .ic{
+  font-family:var(--serif);font-style:italic;font-size:38px;color:var(--accent);min-width:50px;
+}
+.confirm-final .txt{flex:1}
+.confirm-final h3{font-family:var(--serif);font-size:24px;line-height:1.2;letter-spacing:-.005em;font-weight:400;margin-bottom:6px}
+.confirm-final h3 em{font-style:italic;color:var(--text-dim)}
+.confirm-final p{color:var(--text-dim);font-size:13.5px;line-height:1.55}
+.confirm-final .go{
+  background:var(--accent);color:#fff;padding:14px 26px;
+  font-family:var(--mono);font-size:12px;font-weight:700;letter-spacing:.14em;text-transform:uppercase;
+}
+.confirm-final .go:hover{background:var(--accent-hi)}
+@media (max-width:680px){
+  .confirm-final{flex-direction:column;align-items:flex-start;gap:18px}
+  .confirm-final .ic{font-size:28px}
+}
+
+/* ─── Done state ──────────────────────────────────────────────── */
+.done-card{
+  margin-top:28px;padding:48px 36px;text-align:center;
+  background:radial-gradient(circle at 50% 30%,rgba(94,92,230,.10),transparent 60%);
+  border:1px solid var(--border);
+}
+.done-card .check{
+  width:48px;height:48px;border-radius:50%;border:1px solid var(--accent);
+  display:inline-flex;align-items:center;justify-content:center;
+  font-family:var(--serif);font-style:italic;font-size:24px;color:var(--accent);margin-bottom:18px;
+}
+.done-card h2{font-family:var(--serif);font-size:36px;letter-spacing:-.01em;font-weight:400;line-height:1.1;margin-bottom:14px}
+.done-card h2 em{font-style:italic;color:var(--text-dim)}
+.done-card p{color:var(--text-dim);max-width:520px;margin:0 auto 26px;line-height:1.6}
+.done-card .actions-row{display:inline-flex;gap:12px;flex-wrap:wrap;justify-content:center}
+
+/* ─── Mobile ──────────────────────────────────────────────────── */
+@media (max-width:560px){
+  .step-head{padding:20px 22px}
+  .step-form{padding:22px}
+  .actions{padding:18px 22px}
+  .hero-block h1{font-size:30px}
+  .progress{grid-template-columns:1fr 1fr}
+}
+</style>
+</head>
+<body>
+
+<header class="nav">
+  <div class="nav-inner">
+    <div class="brand">
+      <span class="dot"></span>
+      <span class="name">Залётный</span>
+      <span class="sub">/ настройка</span>
+    </div>
+    <div class="nav-right">
+      <a class="help" href="/" target="_self">Что это?</a>
+      <a class="exit" href="/">Выйти</a>
+    </div>
+  </div>
+</header>
+
+<main class="shell">
+
+  <!-- ─── HERO ────────────────────────────────────────── -->
+  <div class="hero-block">
+    <div class="eyebrow">
+      <span class="pulse"></span>
+      <span class="t">3 шага · ~90 секунд</span>
+    </div>
+    <h1>
+      Расскажи о своей нише — <em>дальше парсер работает сам</em>.
+    </h1>
+    <p class="sub">
+      Опиши нишу, добавь 3–5 конкурентов и пару хэштегов. После этого каждое утро в 08:00 МСК ты получаешь топ-10 залетевших постов с оценкой 1–10 от Claude.
+    </p>
+  </div>
+
+  <!-- ─── PROGRESS ────────────────────────────────────── -->
+  <div class="progress" id="progress">
+    <div class="pstep active" data-step="1">
+      <div class="num">01</div>
+      <div class="ttl">Ниша</div>
+    </div>
+    <div class="pstep" data-step="2">
+      <div class="num">02</div>
+      <div class="ttl">Конкуренты</div>
+    </div>
+    <div class="pstep" data-step="3">
+      <div class="num">03</div>
+      <div class="ttl">Хэштеги</div>
+    </div>
+    <div class="pstep" data-step="4">
+      <div class="num">04</div>
+      <div class="ttl">Запуск</div>
+    </div>
+  </div>
+
+  <!-- ─── STEP 1: NICHE ───────────────────────────────── -->
+  <section class="step-body" id="step-1">
+    <div class="step-head">
+      <div class="lbl">Шаг 01 из 03 · ниша</div>
+      <h2>Опиши свою нишу <em>одной строкой</em>.</h2>
+      <p class="desc">
+        От этого зависят оценки 1–10, которые Claude будет ставить каждому посту. Чем конкретнее ICP — тем точнее оценки. Без контекста модель ставит наугад.
+      </p>
+    </div>
+    <div class="step-form">
+      <div>
+        <div class="fld">
+          <label for="niche">кто ты и для кого работаешь</label>
+          <textarea id="niche" placeholder="коуч по продажам B2B для собственников малого бизнеса с выручкой 1–10М ₽"></textarea>
+          <span class="hint" id="nicheHint">8–600 символов · сейчас 0</span>
+        </div>
+      </div>
+      <div class="examples">
+        <div class="ttl">Примеры — кликни чтобы вставить</div>
+        <ul>
+          <li>коуч по продажам B2B для собственников малого бизнеса с выручкой 1–10М ₽</li>
+          <li>нутрициолог для женщин 30–45 в декрете, фокус на восстановление гормонов</li>
+          <li>таргетолог для онлайн-школ из ниши обучения английскому</li>
+          <li>психолог-EMDR для предпринимателей 35+ с тревожным расстройством</li>
+        </ul>
+      </div>
+    </div>
+    <div class="actions">
+      <span class="meta">шаг 01 / 03</span>
+      <button class="btn ghost" disabled>← назад</button>
+      <button class="btn primary" id="next1" disabled>Дальше <span class="arr">→</span></button>
+    </div>
+  </section>
+
+  <!-- ─── STEP 2: COMPETITORS ─────────────────────────── -->
+  <section class="step-body hidden" id="step-2">
+    <div class="step-head">
+      <div class="lbl">Шаг 02 из 03 · конкуренты</div>
+      <h2>Кого читать каждое утро <em>— 3–5 аккаунтов</em>.</h2>
+      <p class="desc">
+        Конкуренты, эксперты, ролевые модели. Главное чтобы они активно постили. Можно вставить сразу несколько через пробел или с новой строки. Лимит — 25, но 5–8 оптимально.
+      </p>
+    </div>
+    <div class="step-form">
+      <div>
+        <div class="fld">
+          <label for="cmpInput">аккаунты — instagram handles</label>
+          <div class="tags-input-wrap" id="cmpWrap">
+            <input type="text" id="cmpInput" placeholder="@expert_one @coach_marina @guru_alex">
+          </div>
+          <span class="hint" id="cmpHint">— ни одного не добавлено</span>
+        </div>
+      </div>
+      <div class="examples">
+        <div class="ttl">Если не знаешь с чего начать</div>
+        <ul>
+          <li>Поищи в Instagram по своему ключевому слову + сортировка по «топ»</li>
+          <li>Зайди в подписки 1–2 авторов и возьми 3–4 похожих оттуда</li>
+          <li>Спроси у ChatGPT «топ-10 instagram аккаунтов по теме X на русском»</li>
+          <li>Прибавляй позже через <span class="mono acc">/add @handle</span> — это не финал</li>
+        </ul>
+      </div>
+    </div>
+    <div class="actions">
+      <span class="meta">шаг 02 / 03</span>
+      <button class="btn ghost" data-back="1">← назад</button>
+      <button class="btn primary" id="next2" disabled>Дальше <span class="arr">→</span></button>
+    </div>
+  </section>
+
+  <!-- ─── STEP 3: HASHTAGS ────────────────────────────── -->
+  <section class="step-body hidden" id="step-3">
+    <div class="step-head">
+      <div class="lbl">Шаг 03 из 03 · хэштеги</div>
+      <h2>Теперь 1–3 хэштега <em>— или пропусти</em>.</h2>
+      <p class="desc">
+        Хэштеги ловят посты <b>вне</b> списка конкурентов — это +30–50% к ширине выборки. Хороши 1–3 целевых тега. Можешь смело пропускать — кабинет работает и без них.
+      </p>
+    </div>
+    <div class="step-form">
+      <div>
+        <div class="fld">
+          <label for="tagInput">хэштеги</label>
+          <div class="tags-input-wrap" id="tagWrap">
+            <input type="text" id="tagInput" placeholder="#salescoaching #b2bsales #продажи">
+          </div>
+          <span class="hint" id="tagHint">— ни одного не добавлено · можно пропустить</span>
+        </div>
+      </div>
+      <div class="examples">
+        <div class="ttl">Подсказки</div>
+        <ul>
+          <li>Бери хэштеги с 10K–500K постов — слишком популярные шумные, слишком маленькие пустые</li>
+          <li>Можно мешать английские и русские в одной нише</li>
+          <li>Кириллицу хэштег поддерживает — <span class="mono">#продажи</span> работает</li>
+          <li>Лимит — 10. Меньше = чище выдача</li>
+        </ul>
+      </div>
+    </div>
+    <div class="actions">
+      <span class="meta">шаг 03 / 03</span>
+      <button class="btn ghost" data-back="2">← назад</button>
+      <button class="btn ghost" id="skip3">Пропустить</button>
+      <button class="btn primary" id="next3">Дальше <span class="arr">→</span></button>
+    </div>
+  </section>
+
+  <!-- ─── STEP 4: CONFIRM ────────────────────────────── -->
+  <section class="step-body hidden" id="step-4">
+    <div class="step-head">
+      <div class="lbl">Готово · проверь и запускай</div>
+      <h2>Перед первым запуском <em>— ещё раз посмотри</em>.</h2>
+      <p class="desc">
+        Любую строку можно поменять кликом на «изменить». После «Запустить» — парсер скрейпит источники прямо сейчас, оценивает топ-10 через Claude и приносит результат в этот кабинет за 1–3 минуты.
+      </p>
+    </div>
+
+    <div style="padding:28px 32px 32px">
+
+      <div class="confirm-grid">
+
+        <div class="confirm-cell" style="grid-column:1/-1">
+          <div class="k">Ниша <button class="edit" data-back="1">изменить</button></div>
+          <div class="v" id="cf-niche">—</div>
+        </div>
+
+        <div class="confirm-cell">
+          <div class="k">Конкуренты <span class="dim" id="cf-cmp-cnt">(0)</span> <button class="edit" data-back="2">изменить</button></div>
+          <div class="chips" id="cf-cmp">—</div>
+        </div>
+
+        <div class="confirm-cell">
+          <div class="k">Хэштеги <span class="dim" id="cf-tag-cnt">(0)</span> <button class="edit" data-back="3">изменить</button></div>
+          <div class="chips" id="cf-tag">— пусто (это нормально)</div>
+        </div>
+
+        <div class="confirm-cell">
+          <div class="k">Расписание</div>
+          <div class="v">Каждое утро в <b>08:00 МСК</b>. Первая выдача — <b>прямо сейчас</b>, через 1–3 минуты.</div>
+        </div>
+
+        <div class="confirm-cell">
+          <div class="k">Доставка</div>
+          <div class="v">В этом кабинете + в Telegram (<span class="mono acc">@parser_instaa_bot</span>). Можно отключить любой канал в настройках.</div>
+        </div>
+
+      </div>
+
+      <div class="confirm-final">
+        <div class="ic">↻</div>
+        <div class="txt">
+          <h3>Запустить парсер сейчас <em>— и забыть про скролл</em>.</h3>
+          <p>Дальше всё на автопилоте. Поменять что-то — в любой момент через настройки или прямо в Telegram-боте.</p>
+        </div>
+        <button class="go" id="runFinal">✓ Запустить</button>
+      </div>
+
+    </div>
+
+    <div class="actions">
+      <span class="meta">финал</span>
+      <button class="btn ghost" data-back="3">← назад</button>
+    </div>
+  </section>
+
+  <!-- ─── DONE ───────────────────────────────────────── -->
+  <section class="step-body hidden" id="step-done">
+    <div class="done-card">
+      <div class="check">✓</div>
+      <h2>Готово. <em>Скрейплю прямо сейчас.</em></h2>
+      <p>
+        Результат прилетит в кабинет за 1–3 минуты. Дальше — каждое утро в <b style="color:var(--text)">08:00 МСК</b>. Можно закрыть эту вкладку.
+      </p>
+      <div class="actions-row">
+        <a class="btn primary" href="./index.html">Открыть кабинет <span class="arr">→</span></a>
+        <a class="btn ghost" href="https://t.me/parser_instaa_bot" target="_blank">Подключить TG ↗</a>
+      </div>
+    </div>
+  </section>
+
+</main>
+
+<script>
+(function(){
+  const state = {
+    step: 1,
+    niche: '',
+    competitors: [],
+    hashtags: [],
+  };
+
+  const steps = [1,2,3,4];
+  const stepEls = Object.fromEntries(steps.map(n => [n, document.getElementById('step-' + n)]));
+  const doneEl = document.getElementById('step-done');
+  const progress = document.querySelectorAll('#progress .pstep');
+
+  function render(){
+    steps.forEach(n => stepEls[n].classList.toggle('hidden', state.step !== n));
+    doneEl.classList.toggle('hidden', state.step !== 5);
+    progress.forEach(el => {
+      const n = parseInt(el.dataset.step, 10);
+      el.classList.toggle('done', n < state.step);
+      el.classList.toggle('active', n === state.step);
+    });
+  }
+
+  function go(n){
+    if (n === 4) populateConfirm();
+    state.step = n;
+    render();
+    window.scrollTo({top: 0, behavior: 'smooth'});
+  }
+
+  // Back buttons
+  document.querySelectorAll('[data-back]').forEach(b => {
+    b.addEventListener('click', () => go(parseInt(b.dataset.back, 10)));
+  });
+
+  // ── Step 1: niche ──
+  const niche = document.getElementById('niche');
+  const nicheHint = document.getElementById('nicheHint');
+  const next1 = document.getElementById('next1');
+
+  function updateNicheState(){
+    const v = niche.value.trim();
+    state.niche = v;
+    nicheHint.textContent = `8–600 символов · сейчас ${v.length}`;
+    nicheHint.classList.remove('err');
+    next1.disabled = v.length < 8 || v.length > 600;
+  }
+  niche.addEventListener('input', updateNicheState);
+
+  document.querySelectorAll('#step-1 .examples li').forEach(li => {
+    li.addEventListener('click', () => {
+      niche.value = li.textContent.trim();
+      updateNicheState();
+      niche.focus();
+    });
+  });
+  next1.addEventListener('click', () => go(2));
+
+  // ── Step 2: competitors ──
+  const cmpInput = document.getElementById('cmpInput');
+  const cmpWrap  = document.getElementById('cmpWrap');
+  const cmpHint  = document.getElementById('cmpHint');
+  const next2    = document.getElementById('next2');
+
+  function renderCmp(){
+    Array.from(cmpWrap.querySelectorAll('.chip')).forEach(c => c.remove());
+    state.competitors.forEach(h => {
+      const chip = document.createElement('span');
+      chip.className = 'chip';
+      chip.innerHTML = h + ' <span class="x">×</span>';
+      chip.querySelector('.x').addEventListener('click', () => {
+        state.competitors = state.competitors.filter(x => x !== h);
+        renderCmp();
+      });
+      cmpWrap.insertBefore(chip, cmpInput);
+    });
+    cmpHint.innerHTML = state.competitors.length
+      ? `${state.competitors.length} аккаунт${plural(state.competitors.length,'','а','ов')} добавлено`
+      : '— ни одного не добавлено';
+    next2.disabled = state.competitors.length === 0;
+  }
+
+  function parseAccounts(text){
+    const out = [];
+    const re = /@?([A-Za-z0-9._]{2,30})/g;
+    let m;
+    while ((m = re.exec(text)) !== null) {
+      const v = m[1];
+      if (!v || /^\d+$/.test(v)) continue;
+      const tagged = '@' + v;
+      if (!out.includes(tagged) && !state.competitors.includes(tagged)) out.push(tagged);
+    }
+    return out;
+  }
+
+  function commitCmp(){
+    const newOnes = parseAccounts(cmpInput.value);
+    state.competitors = state.competitors.concat(newOnes).slice(0, 25);
+    cmpInput.value = '';
+    renderCmp();
+  }
+
+  cmpInput.addEventListener('keydown', e => {
+    if (e.key === 'Enter' || e.key === ',' || e.key === ' ') {
+      if (e.key === 'Enter' || (e.key === ',' && cmpInput.value.trim())) {
+        e.preventDefault(); commitCmp();
+      }
+    }
+    if (e.key === 'Backspace' && !cmpInput.value && state.competitors.length) {
+      state.competitors.pop(); renderCmp();
+    }
+  });
+  cmpInput.addEventListener('blur', commitCmp);
+  cmpInput.addEventListener('focus', () => cmpWrap.classList.add('focus'));
+  cmpInput.addEventListener('blur', () => cmpWrap.classList.remove('focus'));
+  next2.addEventListener('click', () => { commitCmp(); go(3); });
+
+  // ── Step 3: hashtags ──
+  const tagInput = document.getElementById('tagInput');
+  const tagWrap  = document.getElementById('tagWrap');
+  const tagHint  = document.getElementById('tagHint');
+  const next3    = document.getElementById('next3');
+  const skip3    = document.getElementById('skip3');
+
+  function renderTags(){
+    Array.from(tagWrap.querySelectorAll('.chip')).forEach(c => c.remove());
+    state.hashtags.forEach(h => {
+      const chip = document.createElement('span');
+      chip.className = 'chip acc';
+      chip.innerHTML = '#' + h + ' <span class="x">×</span>';
+      chip.querySelector('.x').addEventListener('click', () => {
+        state.hashtags = state.hashtags.filter(x => x !== h);
+        renderTags();
+      });
+      tagWrap.insertBefore(chip, tagInput);
+    });
+    tagHint.innerHTML = state.hashtags.length
+      ? `${state.hashtags.length} тег${plural(state.hashtags.length,'','а','ов')} добавлено`
+      : '— ни одного не добавлено · можно пропустить';
+  }
+
+  function parseTags(text){
+    const out = [];
+    const re = /#?([A-Za-zА-Яа-я0-9_]{2,40})/g;
+    let m;
+    while ((m = re.exec(text)) !== null) {
+      const v = m[1].toLowerCase();
+      if (!out.includes(v) && !state.hashtags.includes(v)) out.push(v);
+    }
+    return out;
+  }
+
+  function commitTags(){
+    const newOnes = parseTags(tagInput.value);
+    state.hashtags = state.hashtags.concat(newOnes).slice(0, 10);
+    tagInput.value = '';
+    renderTags();
+  }
+
+  tagInput.addEventListener('keydown', e => {
+    if (e.key === 'Enter' || (e.key === ',' && tagInput.value.trim())) {
+      e.preventDefault(); commitTags();
+    }
+    if (e.key === 'Backspace' && !tagInput.value && state.hashtags.length) {
+      state.hashtags.pop(); renderTags();
+    }
+  });
+  tagInput.addEventListener('blur', commitTags);
+  tagInput.addEventListener('focus', () => tagWrap.classList.add('focus'));
+  tagInput.addEventListener('blur', () => tagWrap.classList.remove('focus'));
+  next3.addEventListener('click', () => { commitTags(); go(4); });
+  skip3.addEventListener('click', () => { state.hashtags = []; renderTags(); go(4); });
+
+  // ── Step 4: confirm ──
+  function populateConfirm(){
+    document.getElementById('cf-niche').textContent = state.niche || '—';
+    const cfCmp = document.getElementById('cf-cmp');
+    cfCmp.innerHTML = '';
+    if (state.competitors.length) {
+      state.competitors.forEach(h => {
+        const c = document.createElement('span');
+        c.className = 'chip'; c.textContent = h;
+        cfCmp.appendChild(c);
+      });
+    } else cfCmp.textContent = '— пусто';
+    document.getElementById('cf-cmp-cnt').textContent = `(${state.competitors.length})`;
+
+    const cfTag = document.getElementById('cf-tag');
+    cfTag.innerHTML = '';
+    if (state.hashtags.length) {
+      state.hashtags.forEach(h => {
+        const c = document.createElement('span');
+        c.className = 'chip acc'; c.textContent = '#' + h;
+        cfTag.appendChild(c);
+      });
+    } else cfTag.textContent = '— пусто (это нормально)';
+    document.getElementById('cf-tag-cnt').textContent = `(${state.hashtags.length})`;
+  }
+
+  document.getElementById('runFinal').addEventListener('click', () => {
+    // Persist wizard state into the cabinet's local store so a standalone visitor
+    // can land in /cabinet/ with a fully-seeded config and a freshly minted first run.
+    try {
+      const cfg = {
+        enabled: true,
+        niche_description: state.niche,
+        competitors: state.competitors,
+        hashtags: state.hashtags,
+        reels_count: 5,
+        carousels_count: 5,
+        posted_within_days: 7,
+        min_plays: 0, min_likes: 0, min_comments: 0,
+        bot: 'parser',
+        configured_at: new Date().toISOString(),
+      };
+      localStorage.setItem('parser_cabinet_cfg', JSON.stringify(cfg));
+      // Force-regenerate a first run so the cabinet's Today tab is alive.
+      localStorage.removeItem('parser_cabinet_runs');
+      localStorage.removeItem('parser_cabinet_candidates');
+      localStorage.setItem('parser_cabinet_first_run_pending', '1');
+    } catch (_) {}
+    state.step = 5;
+    render();
+  });
+
+  // ── Helpers ──
+  function plural(n, one, few, many){
+    const m10 = n % 10, m100 = n % 100;
+    if (m10 === 1 && m100 !== 11) return one;
+    if (m10 >= 2 && m10 <= 4 && (m100 < 10 || m100 >= 20)) return few;
+    return many;
+  }
+
+  // Init
+  updateNicheState();
+  render();
+})();
+</script>
+
+</body>
+</html>

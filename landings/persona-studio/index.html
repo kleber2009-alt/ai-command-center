@@ -1,0 +1,1821 @@
+<!DOCTYPE html>
+<html lang="ru">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<meta name="theme-color" content="#030305">
+<meta name="color-scheme" content="dark only">
+<title>Persona Studio — AI Identity Operating System</title>
+<meta name="description" content="Future Fashion Lab для твоего лица. Одно фото — 10 кинематографичных аватаров, HeyGen V-видео и premium-обложки. Создай свою цифровую личность.">
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Anton&family=Inter:wght@400;500;600;700&family=JetBrains+Mono:wght@400;500;700&display=swap" rel="stylesheet">
+<style>
+  /* ─── reset ─────────────────────────────────── */
+  *, *::before, *::after { margin:0; padding:0; box-sizing:border-box; }
+  html { scroll-behavior:smooth; }
+  html, body {
+    background:#030305;
+    color:#F4F4F5;
+    min-height:100vh;
+    overflow-x:hidden;
+  }
+  body {
+    font-family:'Inter','Manrope',-apple-system,BlinkMacSystemFont,'Segoe UI',sans-serif;
+    font-size:15px;
+    line-height:1.55;
+    -webkit-font-smoothing:antialiased;
+    text-rendering:optimizeLegibility;
+    letter-spacing:-0.005em;
+  }
+
+  /* ─── tokens ────────────────────────────────── */
+  :root {
+    --bg-main:        #030305;
+    --bg-panel:       #08080D;
+    --bg-card:        #0D0D14;
+    --bg-card-hi:     #11111A;
+    --border:         rgba(255,255,255,0.08);
+    --border-hi:      rgba(255,255,255,0.16);
+    --border-purple:  rgba(155,92,255,0.45);
+
+    --text-main:      #F4F4F5;
+    --text-soft:      #C9C9D1;
+    --text-muted:     #8B8B94;
+    --text-faint:     #4D4D55;
+
+    --purple:         #9B5CFF;
+    --purple-soft:    #B584FF;
+    --cyan:           #00D8FF;
+    --pink:           #FF3DAE;
+    --lime:           #C8FF3D;
+    --success:        #35FF8A;
+    --warning:        #FFB020;
+    --danger:         #FF4D6D;
+
+    --font-display:   'Anton','Bebas Neue','Impact','Helvetica Neue Condensed',sans-serif;
+    --font-ui:        'Inter','Manrope',-apple-system,sans-serif;
+    --font-mono:      'JetBrains Mono','SF Mono','IBM Plex Mono','Menlo',monospace;
+  }
+
+  /* ─── background fx ─────────────────────────── */
+  .bg-fx {
+    position:fixed; inset:0; z-index:0; pointer-events:none;
+    background:
+      radial-gradient(circle at 70% 18%, rgba(155,92,255,0.14), transparent 38%),
+      radial-gradient(circle at 92% 55%, rgba(0,216,255,0.07), transparent 30%),
+      radial-gradient(circle at 8% 80%, rgba(255,61,174,0.06), transparent 32%),
+      #030305;
+  }
+  .bg-grid {
+    position:fixed; inset:0; z-index:0; pointer-events:none;
+    background-image:
+      linear-gradient(rgba(255,255,255,0.018) 1px, transparent 1px),
+      linear-gradient(90deg, rgba(255,255,255,0.018) 1px, transparent 1px);
+    background-size:64px 64px;
+    mask-image: radial-gradient(circle at 50% 30%, #000 30%, transparent 80%);
+    -webkit-mask-image: radial-gradient(circle at 50% 30%, #000 30%, transparent 80%);
+  }
+  .bg-noise {
+    position:fixed; inset:0; z-index:0; pointer-events:none; opacity:0.035;
+    background-image:url("data:image/svg+xml,%3Csvg viewBox='0 0 200 200' xmlns='http://www.w3.org/2000/svg'%3E%3Cfilter id='n'%3E%3CfeTurbulence type='fractalNoise' baseFrequency='0.9' numOctaves='3'/%3E%3C/filter%3E%3Crect width='100%25' height='100%25' filter='url(%23n)'/%3E%3C/svg%3E");
+  }
+
+  /* ─── layout ────────────────────────────────── */
+  .shell {
+    position:relative; z-index:2;
+    max-width:1480px;
+    margin:0 auto;
+    padding:0 32px;
+  }
+  @media (max-width:760px){
+    .shell { padding:0 18px; }
+  }
+
+  /* ─── topbar ────────────────────────────────── */
+  .topbar {
+    position:sticky; top:0; z-index:50;
+    background:rgba(3,3,5,0.78);
+    backdrop-filter:blur(14px);
+    -webkit-backdrop-filter:blur(14px);
+    border-bottom:1px solid var(--border);
+  }
+  .top-row {
+    display:flex; align-items:center; justify-content:space-between;
+    padding:14px 0;
+  }
+  .brand {
+    display:flex; align-items:center; gap:12px;
+    cursor:default;
+  }
+  .brand-mark {
+    width:28px; height:28px;
+    border:1px solid var(--border-hi);
+    background:linear-gradient(135deg, rgba(155,92,255,0.4), rgba(0,216,255,0.15));
+    display:grid; place-items:center;
+    font-family:var(--font-display);
+    font-size:18px; color:#fff;
+    box-shadow:inset 0 0 18px rgba(155,92,255,0.35);
+  }
+  .brand-name {
+    font-family:var(--font-display);
+    font-size:18px;
+    letter-spacing:0.03em;
+    line-height:0.95;
+    text-transform:uppercase;
+  }
+  .brand-name .sub {
+    display:block;
+    font-family:var(--font-mono);
+    font-size:9px;
+    color:var(--text-muted);
+    letter-spacing:0.24em;
+    margin-top:2px;
+    font-weight:500;
+    text-transform:uppercase;
+  }
+  .top-nav {
+    display:flex; align-items:center; gap:32px;
+    font-family:var(--font-mono);
+    font-size:11px;
+    letter-spacing:0.16em;
+    text-transform:uppercase;
+  }
+  .top-nav a {
+    color:var(--text-muted);
+    text-decoration:none;
+    transition:color .15s;
+    display:inline-flex; align-items:center; gap:6px;
+  }
+  .top-nav a::before {
+    content:''; width:4px; height:4px; background:var(--text-faint); border-radius:50%;
+    transition:background .15s, box-shadow .15s;
+  }
+  .top-nav a:hover { color:var(--text-main); }
+  .top-nav a:hover::before { background:var(--purple); box-shadow:0 0 8px var(--purple); }
+
+  .top-meta {
+    font-family:var(--font-mono);
+    font-size:10px;
+    color:var(--text-muted);
+    letter-spacing:0.18em;
+    text-transform:uppercase;
+    display:flex; align-items:center; gap:8px;
+  }
+  .top-meta .dot {
+    width:6px; height:6px; background:var(--success); border-radius:50%;
+    box-shadow:0 0 8px var(--success);
+    animation:pulse 2.4s ease-in-out infinite;
+  }
+  @keyframes pulse {
+    0%,100% { opacity:1; }
+    50% { opacity:0.4; }
+  }
+
+  .top-cta {
+    display:inline-flex; align-items:center; gap:8px;
+    background:var(--purple);
+    color:#0a0014;
+    font-family:var(--font-mono);
+    font-size:11px;
+    font-weight:700;
+    letter-spacing:0.16em;
+    text-transform:uppercase;
+    padding:10px 16px;
+    border:1px solid var(--purple);
+    text-decoration:none;
+    transition:transform .15s, background .15s, box-shadow .15s;
+  }
+  .top-cta:hover {
+    background:var(--purple-soft);
+    transform:translateY(-1px);
+    box-shadow:0 0 24px rgba(155,92,255,0.5);
+  }
+  .top-cta::after { content:'↗'; font-family:var(--font-ui); }
+
+  @media (max-width:920px){
+    .top-nav { display:none; }
+    .top-meta { display:none; }
+  }
+
+  /* ─── section header ────────────────────────── */
+  .sec-head {
+    display:flex; align-items:baseline; gap:14px;
+    padding:96px 0 28px;
+  }
+  .sec-num {
+    font-family:var(--font-mono);
+    font-size:10px;
+    color:var(--purple);
+    letter-spacing:0.22em;
+    font-weight:700;
+  }
+  .sec-title {
+    font-family:var(--font-mono);
+    font-size:11px;
+    color:var(--text-soft);
+    letter-spacing:0.18em;
+    text-transform:uppercase;
+    font-weight:500;
+  }
+  .sec-spacer {
+    flex:1;
+    border-bottom:1px dashed var(--border);
+    transform:translateY(-3px);
+  }
+  .sec-meta {
+    font-family:var(--font-mono);
+    font-size:10px;
+    color:var(--text-muted);
+    letter-spacing:0.16em;
+    text-transform:uppercase;
+  }
+  @media (max-width:760px){
+    .sec-head { padding:64px 0 20px; flex-wrap:wrap; }
+  }
+
+  /* ─── hero ──────────────────────────────────── */
+  .hero { padding:72px 0 56px; position:relative; }
+  .hero-meta {
+    display:flex; align-items:center; gap:14px; flex-wrap:wrap;
+    margin-bottom:48px;
+  }
+  .pill {
+    display:inline-flex; align-items:center; gap:8px;
+    border:1px solid var(--border);
+    background:rgba(255,255,255,0.02);
+    padding:6px 12px;
+    font-family:var(--font-mono);
+    font-size:10px;
+    letter-spacing:0.18em;
+    text-transform:uppercase;
+    color:var(--text-soft);
+  }
+  .pill::before {
+    content:''; width:6px; height:6px; background:var(--purple); border-radius:50%;
+    box-shadow:0 0 8px var(--purple);
+  }
+  .pill.ghost::before { display:none; }
+
+  .hero-h1 {
+    font-family:var(--font-display);
+    font-weight:400;
+    font-size:clamp(56px, 9vw, 132px);
+    line-height:0.9;
+    letter-spacing:-0.035em;
+    text-transform:uppercase;
+    color:var(--text-main);
+    margin-bottom:32px;
+  }
+  .hero-h1 .row { display:block; }
+  .hero-h1 .purple { color:var(--purple); }
+  .hero-h1 .cursor {
+    display:inline-block;
+    width:0.55em; height:0.85em;
+    background:var(--purple);
+    margin-left:0.05em;
+    transform:translateY(0.08em);
+    animation:blink 1s steps(1) infinite;
+    box-shadow:0 0 18px var(--purple);
+  }
+  @keyframes blink { 50% { opacity:0; } }
+
+  .hero-grid {
+    display:grid;
+    grid-template-columns: 1.4fr 1fr;
+    gap:48px;
+    align-items:end;
+    margin-bottom:64px;
+  }
+  .hero-sub {
+    font-size:19px;
+    line-height:1.5;
+    color:var(--text-soft);
+    max-width:620px;
+    margin-bottom:32px;
+  }
+  .hero-sub .hl { color:var(--text-main); }
+  .hero-sub .purple { color:var(--purple-soft); }
+
+  .hero-actions {
+    display:flex; gap:14px; flex-wrap:wrap;
+  }
+  .btn {
+    display:inline-flex; align-items:center; gap:10px;
+    padding:14px 22px;
+    font-family:var(--font-mono);
+    font-size:12px;
+    font-weight:700;
+    letter-spacing:0.14em;
+    text-transform:uppercase;
+    text-decoration:none;
+    transition:all .18s;
+    border:1px solid transparent;
+    cursor:pointer;
+  }
+  .btn-primary {
+    background:var(--purple);
+    color:#0a0014;
+    border-color:var(--purple);
+    box-shadow:0 0 0 0 rgba(155,92,255,0);
+  }
+  .btn-primary:hover {
+    background:var(--purple-soft);
+    transform:translateY(-2px);
+    box-shadow:0 8px 32px rgba(155,92,255,0.4);
+  }
+  .btn-primary .arrow { font-family:var(--font-ui); font-size:14px; }
+  .btn-ghost {
+    background:transparent;
+    color:var(--text-main);
+    border-color:var(--border-hi);
+  }
+  .btn-ghost:hover {
+    background:rgba(255,255,255,0.04);
+    border-color:var(--purple);
+    color:var(--purple-soft);
+  }
+
+  .hero-side {
+    display:grid;
+    grid-template-columns:1fr 1fr;
+    gap:2px;
+    border:1px solid var(--border);
+    background:var(--border);
+  }
+  .hero-stat {
+    background:var(--bg-card);
+    padding:20px 18px;
+  }
+  .hero-stat .k {
+    font-family:var(--font-mono);
+    font-size:9px;
+    color:var(--text-muted);
+    letter-spacing:0.18em;
+    text-transform:uppercase;
+    margin-bottom:10px;
+  }
+  .hero-stat .v {
+    font-family:var(--font-display);
+    font-size:36px;
+    line-height:1;
+    letter-spacing:-0.02em;
+    color:var(--text-main);
+    margin-bottom:6px;
+  }
+  .hero-stat .v .small {
+    font-family:var(--font-mono);
+    font-size:12px;
+    color:var(--text-muted);
+    letter-spacing:0.08em;
+    text-transform:uppercase;
+    margin-left:6px;
+  }
+  .hero-stat .v.cyan { color:var(--cyan); text-shadow:0 0 24px rgba(0,216,255,0.4); }
+  .hero-stat .note {
+    font-family:var(--font-mono);
+    font-size:10px;
+    color:var(--text-muted);
+    letter-spacing:0.04em;
+  }
+
+  @media (max-width:920px){
+    .hero-grid { grid-template-columns:1fr; gap:32px; }
+  }
+  @media (max-width:520px){
+    .hero-side { grid-template-columns:1fr; }
+  }
+
+  /* ─── CTA dual cards ────────────────────────── */
+  .cta-dual {
+    display:grid;
+    grid-template-columns:1fr 1fr;
+    gap:16px;
+    margin-bottom:56px;
+  }
+  .cta-card {
+    position:relative;
+    background:rgba(255,255,255,0.022);
+    border:1px solid var(--border);
+    padding:32px 28px;
+    cursor:pointer;
+    transition:all .25s;
+    text-decoration:none;
+    color:inherit;
+    overflow:hidden;
+    box-shadow:inset 0 0 60px rgba(155,92,255,0.04);
+  }
+  .cta-card::before {
+    content:''; position:absolute; inset:0;
+    background:radial-gradient(circle at 80% 20%, rgba(155,92,255,0.08), transparent 60%);
+    opacity:0; transition:opacity .3s;
+    pointer-events:none;
+  }
+  .cta-card:hover {
+    transform:translateY(-3px);
+    border-color:var(--border-purple);
+    box-shadow:0 0 48px rgba(155,92,255,0.18), inset 0 0 60px rgba(155,92,255,0.06);
+  }
+  .cta-card:hover::before { opacity:1; }
+  .cta-card .tag {
+    font-family:var(--font-mono);
+    font-size:10px;
+    color:var(--purple);
+    letter-spacing:0.22em;
+    font-weight:700;
+    margin-bottom:18px;
+    display:inline-block;
+  }
+  .cta-card h3 {
+    font-family:var(--font-display);
+    font-size:42px;
+    line-height:0.96;
+    letter-spacing:-0.025em;
+    text-transform:uppercase;
+    color:var(--text-main);
+    margin-bottom:14px;
+  }
+  .cta-card p {
+    color:var(--text-soft);
+    font-size:14px;
+    line-height:1.5;
+    margin-bottom:24px;
+    max-width:340px;
+  }
+  .cta-card .meta {
+    font-family:var(--font-mono);
+    font-size:10px;
+    color:var(--text-muted);
+    letter-spacing:0.14em;
+    text-transform:uppercase;
+    display:flex; align-items:center; gap:8px;
+  }
+  .cta-card .arrow-big {
+    position:absolute; top:24px; right:24px;
+    font-family:var(--font-mono);
+    font-size:22px;
+    color:var(--text-faint);
+    transition:color .25s, transform .25s;
+  }
+  .cta-card:hover .arrow-big { color:var(--purple); transform:translate(4px,-4px); }
+
+  @media (max-width:760px){
+    .cta-dual { grid-template-columns:1fr; }
+    .cta-card h3 { font-size:32px; }
+  }
+
+  /* ─── metric bar ────────────────────────────── */
+  .metric-bar {
+    display:grid;
+    grid-template-columns:repeat(4, 1fr);
+    gap:1px;
+    background:var(--border);
+    border:1px solid var(--border);
+    margin-bottom:24px;
+  }
+  .metric-bar .cell {
+    background:var(--bg-panel);
+    padding:18px 22px;
+    display:flex; flex-direction:column; gap:6px;
+  }
+  .metric-bar .k {
+    font-family:var(--font-mono);
+    font-size:9px;
+    color:var(--text-muted);
+    letter-spacing:0.2em;
+    text-transform:uppercase;
+  }
+  .metric-bar .v {
+    font-family:var(--font-display);
+    font-size:32px;
+    line-height:1;
+    color:var(--purple);
+    letter-spacing:-0.02em;
+  }
+  .metric-bar .v small {
+    font-family:var(--font-mono);
+    font-size:11px;
+    color:var(--text-muted);
+    margin-left:4px;
+    letter-spacing:0.06em;
+  }
+  @media (max-width:760px){
+    .metric-bar { grid-template-columns:1fr 1fr; }
+  }
+
+  /* ─── avatar tiles ──────────────────────────── */
+  .tiles {
+    display:grid;
+    grid-template-columns:repeat(5, 1fr);
+    gap:2px;
+    background:var(--border);
+    border:1px solid var(--border);
+  }
+  .tile {
+    aspect-ratio: 3/4;
+    background:var(--bg-card);
+    position:relative;
+    overflow:hidden;
+    cursor:pointer;
+    transition:all .3s;
+  }
+  .tile::before {
+    content:''; position:absolute; inset:0;
+    pointer-events:none;
+    opacity:0.6;
+  }
+  .tile.t1::before { background:radial-gradient(circle at 50% 40%, rgba(155,92,255,0.45), transparent 65%); }
+  .tile.t2::before { background:radial-gradient(circle at 50% 40%, rgba(255,176,32,0.35), transparent 65%); }
+  .tile.t3::before { background:radial-gradient(circle at 50% 40%, rgba(0,216,255,0.35), transparent 65%); }
+  .tile.t4::before { background:radial-gradient(circle at 50% 40%, rgba(245,240,232,0.18), transparent 65%); }
+  .tile.t5::before { background:radial-gradient(circle at 50% 40%, rgba(0,216,255,0.5), transparent 65%); }
+  .tile.t6::before { background:radial-gradient(circle at 50% 40%, rgba(255,61,174,0.5), transparent 65%); }
+  .tile.t7::before { background:radial-gradient(circle at 50% 40%, rgba(255,255,255,0.15), transparent 65%); }
+  .tile.t8::before { background:radial-gradient(circle at 50% 40%, rgba(255,176,32,0.28), transparent 65%); }
+  .tile.t9::before { background:radial-gradient(circle at 50% 40%, rgba(200,255,61,0.4), transparent 65%); }
+  .tile.t10::before { background:radial-gradient(circle at 50% 40%, rgba(255,255,255,0.06), transparent 65%); }
+
+  .tile .num {
+    position:absolute; top:12px; left:14px;
+    font-family:var(--font-mono);
+    font-size:10px;
+    color:var(--text-soft);
+    letter-spacing:0.16em;
+    z-index:2;
+  }
+  .tile .corner {
+    position:absolute; top:12px; right:14px;
+    font-family:var(--font-mono);
+    font-size:9px;
+    color:var(--text-muted);
+    letter-spacing:0.18em;
+    text-transform:uppercase;
+    z-index:2;
+  }
+  .tile .silhouette {
+    position:absolute; inset:0;
+    display:grid; place-items:center;
+    opacity:0.7;
+  }
+  .tile .silhouette svg {
+    width:60%; height:60%;
+  }
+  .tile .silhouette .head {
+    fill:none; stroke:rgba(255,255,255,0.42); stroke-width:1;
+  }
+  .tile .silhouette .body {
+    fill:none; stroke:rgba(255,255,255,0.42); stroke-width:1;
+  }
+  .tile .meta {
+    position:absolute; bottom:0; left:0; right:0;
+    padding:12px 14px;
+    background:linear-gradient(180deg, transparent, rgba(0,0,0,0.5));
+    z-index:2;
+  }
+  .tile .name {
+    font-family:var(--font-mono);
+    font-size:11px;
+    color:var(--text-main);
+    font-weight:700;
+    letter-spacing:0.04em;
+    margin-bottom:2px;
+  }
+  .tile .style-label {
+    font-family:var(--font-mono);
+    font-size:9px;
+    color:var(--text-muted);
+    letter-spacing:0.14em;
+    text-transform:uppercase;
+  }
+  .tile:hover {
+    transform:translateY(-2px);
+    z-index:3;
+  }
+  .tile:hover::before { opacity:1; }
+  .tile:hover .silhouette .head,
+  .tile:hover .silhouette .body { stroke:rgba(255,255,255,0.7); }
+
+  .tile.placeholder {
+    background:repeating-linear-gradient(45deg, transparent, transparent 8px, rgba(155,92,255,0.04) 8px, rgba(155,92,255,0.04) 9px), var(--bg-card);
+    border:1px dashed var(--border-purple);
+    display:flex; flex-direction:column; justify-content:center; align-items:center;
+    text-align:center;
+    padding:24px;
+  }
+  .tile.placeholder::before { display:none; }
+  .tile.placeholder .corner { color:var(--purple); }
+  .tile.placeholder .corner::after {
+    content:''; display:inline-block; width:6px; height:6px;
+    background:var(--purple); border-radius:50%;
+    margin-left:6px; transform:translateY(-1px);
+    box-shadow:0 0 8px var(--purple);
+    animation:pulse 1.4s ease-in-out infinite;
+  }
+  .tile.placeholder .ph-title {
+    font-family:var(--font-display);
+    font-size:24px;
+    line-height:1;
+    letter-spacing:-0.02em;
+    text-transform:uppercase;
+    color:var(--text-main);
+    margin-bottom:8px;
+  }
+  .tile.placeholder .ph-sub {
+    font-family:var(--font-mono);
+    font-size:10px;
+    color:var(--purple);
+    letter-spacing:0.16em;
+    text-transform:uppercase;
+  }
+  @media (max-width:760px){
+    .tiles { grid-template-columns:repeat(2,1fr); }
+  }
+
+  /* ─── steps ─────────────────────────────────── */
+  .steps {
+    display:grid;
+    grid-template-columns:repeat(3,1fr);
+    gap:2px;
+    background:var(--border);
+    border:1px solid var(--border);
+  }
+  .step {
+    background:var(--bg-card);
+    padding:28px 26px;
+    position:relative;
+    transition:background .2s;
+  }
+  .step:hover { background:var(--bg-card-hi); }
+  .step-num {
+    font-family:var(--font-mono);
+    font-size:10px;
+    color:var(--purple);
+    letter-spacing:0.22em;
+    font-weight:700;
+    margin-bottom:20px;
+  }
+  .step-title {
+    font-family:var(--font-display);
+    font-size:32px;
+    line-height:1;
+    letter-spacing:-0.025em;
+    text-transform:uppercase;
+    color:var(--text-main);
+    margin-bottom:14px;
+  }
+  .step-body {
+    color:var(--text-soft);
+    font-size:14px;
+    line-height:1.5;
+    margin-bottom:20px;
+  }
+  .step-tags {
+    display:flex; flex-wrap:wrap; gap:6px;
+  }
+  .chip {
+    font-family:var(--font-mono);
+    font-size:9px;
+    padding:4px 9px;
+    letter-spacing:0.14em;
+    text-transform:uppercase;
+    font-weight:600;
+    color:var(--text-soft);
+    background:rgba(255,255,255,0.04);
+    border:1px solid var(--border);
+  }
+  .chip.purple { color:var(--purple); border-color:var(--border-purple); background:rgba(155,92,255,0.06); }
+  .chip.cyan { color:var(--cyan); border-color:rgba(0,216,255,0.32); background:rgba(0,216,255,0.06); }
+  .chip.pink { color:var(--pink); border-color:rgba(255,61,174,0.32); background:rgba(255,61,174,0.06); }
+  .chip.lime { color:var(--lime); border-color:rgba(200,255,61,0.32); background:rgba(200,255,61,0.06); }
+
+  @media (max-width:920px){
+    .steps { grid-template-columns:1fr; }
+  }
+
+  /* ─── styles list ───────────────────────────── */
+  .styles-grid {
+    display:grid; gap:1px;
+    background:var(--border);
+    border:1px solid var(--border);
+  }
+  .style-row {
+    background:var(--bg-card);
+    display:grid;
+    grid-template-columns: 60px 1fr 200px 80px;
+    align-items:center;
+    padding:18px 24px;
+    gap:24px;
+    transition:background .2s, padding-left .2s;
+    cursor:pointer;
+  }
+  .style-row:hover {
+    background:var(--bg-card-hi);
+    padding-left:32px;
+  }
+  .sr-num {
+    font-family:var(--font-display);
+    font-size:28px;
+    color:var(--text-faint);
+    line-height:1;
+    letter-spacing:-0.02em;
+    transition:color .2s;
+  }
+  .style-row:hover .sr-num { color:var(--purple); }
+  .sr-name {
+    font-family:var(--font-display);
+    font-size:22px;
+    text-transform:uppercase;
+    letter-spacing:-0.015em;
+    line-height:1;
+    color:var(--text-main);
+    margin-bottom:6px;
+  }
+  .sr-desc {
+    font-family:var(--font-mono);
+    font-size:11px;
+    color:var(--text-muted);
+    letter-spacing:0.06em;
+  }
+  .sr-tags {
+    font-family:var(--font-mono);
+    font-size:10px;
+    color:var(--text-muted);
+    letter-spacing:0.16em;
+    text-transform:uppercase;
+    text-align:right;
+  }
+  .sr-swatch {
+    width:48px; height:48px;
+    border:1px solid var(--border-hi);
+    justify-self:end;
+  }
+  .style-row.t1 .sr-swatch { background:radial-gradient(circle at 50% 50%, #6b3aff 0%, #1a0a2e 100%); }
+  .style-row.t2 .sr-swatch { background:radial-gradient(circle at 50% 50%, #ffb020 0%, #2a1a08 100%); }
+  .style-row.t3 .sr-swatch { background:radial-gradient(circle at 50% 50%, #00d8ff 0%, #082230 100%); }
+  .style-row.t4 .sr-swatch { background:radial-gradient(circle at 50% 50%, #f5f0e8 0%, #1a1a1a 100%); }
+  .style-row.t5 .sr-swatch { background:radial-gradient(circle at 50% 50%, #00d8ff 0%, #0d0d14 100%); }
+  .style-row.t6 .sr-swatch { background:radial-gradient(circle at 50% 50%, #ff3dae 0%, #2a0820 100%); }
+  .style-row.t7 .sr-swatch { background:radial-gradient(circle at 50% 50%, #ffffff 0%, #0a0a0a 100%); }
+  .style-row.t8 .sr-swatch { background:radial-gradient(circle at 50% 50%, #ffb020 0%, #050505 100%); }
+  .style-row.t9 .sr-swatch { background:radial-gradient(circle at 50% 50%, #c8ff3d 0%, #0a1a00 100%); }
+  .style-row.t10 .sr-swatch { background:radial-gradient(circle at 50% 50%, #ffffff 0%, #c0c0c8 100%); }
+
+  @media (max-width:760px){
+    .style-row { grid-template-columns: 40px 1fr 48px; }
+    .sr-tags { display:none; }
+  }
+
+  /* ─── outputs ───────────────────────────────── */
+  .outputs {
+    display:grid;
+    grid-template-columns:1fr 1fr;
+    gap:2px;
+    background:var(--border);
+    border:1px solid var(--border);
+  }
+  .output {
+    background:var(--bg-card);
+    padding:36px 32px;
+  }
+  .o-tag {
+    font-family:var(--font-mono);
+    font-size:10px;
+    color:var(--purple);
+    letter-spacing:0.22em;
+    font-weight:700;
+    margin-bottom:18px;
+  }
+  .o-title {
+    font-family:var(--font-display);
+    font-size:42px;
+    line-height:0.98;
+    letter-spacing:-0.025em;
+    text-transform:uppercase;
+    color:var(--text-main);
+    margin-bottom:16px;
+  }
+  .o-sub {
+    color:var(--text-soft);
+    font-size:14px;
+    line-height:1.5;
+    margin-bottom:28px;
+  }
+  .o-preview {
+    background:var(--bg-main);
+    border:1px solid var(--border);
+    padding:24px;
+    margin-bottom:22px;
+    position:relative;
+    min-height:200px;
+    display:flex; flex-direction:column; justify-content:space-between;
+    gap:16px;
+  }
+  .pv-label {
+    position:absolute; top:10px; left:14px;
+    font-family:var(--font-mono);
+    font-size:9px;
+    color:var(--text-muted);
+    letter-spacing:0.18em;
+    text-transform:uppercase;
+  }
+  .pv-content {
+    font-family:var(--font-ui);
+    font-size:18px;
+    line-height:1.4;
+    color:var(--text-main);
+    padding-top:18px;
+  }
+  .pv-content.headline {
+    font-family:var(--font-display);
+    font-size:30px;
+    line-height:1;
+    letter-spacing:-0.02em;
+    text-transform:uppercase;
+  }
+  .pv-content .accent { color:var(--purple-soft); }
+  .pv-bar {
+    height:2px;
+    background:linear-gradient(90deg, var(--purple) 30%, var(--border) 30%);
+    width:100%;
+  }
+  .pv-time {
+    font-family:var(--font-mono);
+    font-size:10px;
+    color:var(--text-soft);
+    letter-spacing:0.1em;
+    display:flex; justify-content:space-between;
+  }
+  .pv-time .right { color:var(--text-muted); }
+  .pv-cta {
+    font-family:var(--font-mono);
+    font-size:11px;
+    color:var(--purple);
+    letter-spacing:0.16em;
+    text-transform:uppercase;
+  }
+  .o-list {
+    list-style:none;
+    display:flex; flex-direction:column; gap:8px;
+  }
+  .o-list li {
+    font-size:14px;
+    color:var(--text-soft);
+    padding-left:18px;
+    position:relative;
+  }
+  .o-list li::before {
+    content:'+';
+    position:absolute; left:0; top:0;
+    font-family:var(--font-mono);
+    font-size:13px;
+    color:var(--purple);
+    font-weight:700;
+  }
+  @media (max-width:920px){
+    .outputs { grid-template-columns:1fr; }
+    .o-title { font-size:32px; }
+  }
+
+  /* ─── cases ─────────────────────────────────── */
+  .cases {
+    display:grid;
+    grid-template-columns:repeat(4, 1fr);
+    gap:2px;
+    background:var(--border);
+    border:1px solid var(--border);
+  }
+  .case {
+    background:var(--bg-card);
+    padding:24px 22px;
+    transition:background .2s;
+    cursor:default;
+  }
+  .case:hover { background:var(--bg-card-hi); }
+  .case .ch {
+    font-family:var(--font-mono);
+    font-size:10px;
+    color:var(--purple);
+    letter-spacing:0.22em;
+    font-weight:700;
+    margin-bottom:14px;
+  }
+  .case .ct {
+    font-family:var(--font-display);
+    font-size:22px;
+    line-height:1.05;
+    letter-spacing:-0.018em;
+    text-transform:uppercase;
+    color:var(--text-main);
+    margin-bottom:12px;
+  }
+  .case .cs {
+    font-size:13px;
+    color:var(--text-soft);
+    line-height:1.5;
+    margin-bottom:18px;
+  }
+  .case .cfoot {
+    font-family:var(--font-mono);
+    font-size:10px;
+    color:var(--text-muted);
+    letter-spacing:0.14em;
+    text-transform:uppercase;
+    padding-top:12px;
+    border-top:1px solid var(--border);
+  }
+  @media (max-width:920px){
+    .cases { grid-template-columns:1fr 1fr; }
+  }
+  @media (max-width:520px){
+    .cases { grid-template-columns:1fr; }
+  }
+
+  /* ─── pricing ───────────────────────────────── */
+  .pricing {
+    display:grid; gap:1px;
+    background:var(--border);
+    border:1px solid var(--border);
+  }
+  .price-row {
+    background:var(--bg-card);
+    display:grid;
+    grid-template-columns: 200px 180px 1fr 200px;
+    align-items:center;
+    padding:24px 28px;
+    gap:24px;
+    transition:background .2s;
+  }
+  .price-row:hover { background:var(--bg-card-hi); }
+  .price-row.featured {
+    background:linear-gradient(90deg, rgba(155,92,255,0.06), rgba(155,92,255,0.01));
+    border-left:2px solid var(--purple);
+    padding-left:26px;
+  }
+  .pr-name .n {
+    font-family:var(--font-display);
+    font-size:28px;
+    line-height:1;
+    letter-spacing:-0.02em;
+    text-transform:uppercase;
+    color:var(--text-main);
+    margin-bottom:6px;
+  }
+  .pr-name .badge {
+    display:inline-block;
+    font-family:var(--font-mono);
+    font-size:9px;
+    color:var(--text-muted);
+    letter-spacing:0.16em;
+    text-transform:uppercase;
+    padding:2px 7px;
+    border:1px solid var(--border);
+  }
+  .pr-name .badge.hot {
+    color:var(--purple);
+    border-color:var(--border-purple);
+    background:rgba(155,92,255,0.06);
+  }
+  .pr-price {
+    font-family:var(--font-display);
+    font-size:36px;
+    line-height:1;
+    letter-spacing:-0.02em;
+    color:var(--purple);
+  }
+  .pr-price .small {
+    font-family:var(--font-mono);
+    font-size:11px;
+    color:var(--text-muted);
+    letter-spacing:0.08em;
+    margin-left:6px;
+    text-transform:uppercase;
+  }
+  .pr-feats {
+    font-family:var(--font-mono);
+    font-size:11px;
+    color:var(--text-soft);
+    letter-spacing:0.04em;
+    line-height:1.7;
+  }
+  .pr-feats .sep {
+    color:var(--text-faint);
+    margin:0 6px;
+  }
+  .pr-action {
+    font-family:var(--font-mono);
+    font-size:11px;
+    text-transform:uppercase;
+    letter-spacing:0.16em;
+    font-weight:700;
+    color:var(--text-main);
+    padding:11px 16px;
+    border:1px solid var(--border-hi);
+    text-decoration:none;
+    transition:all .15s;
+    text-align:center;
+    justify-self:end;
+    min-width:160px;
+  }
+  .pr-action:hover {
+    border-color:var(--purple);
+    background:rgba(155,92,255,0.06);
+    color:var(--purple-soft);
+  }
+  .price-row.featured .pr-action {
+    background:var(--purple);
+    color:#0a0014;
+    border-color:var(--purple);
+  }
+  .price-row.featured .pr-action:hover {
+    background:var(--purple-soft);
+    box-shadow:0 0 24px rgba(155,92,255,0.4);
+  }
+  @media (max-width:1100px){
+    .price-row { grid-template-columns:1fr 1fr; gap:18px; }
+    .pr-feats { grid-column:1/-1; }
+    .pr-action { grid-column:1/-1; justify-self:stretch; }
+  }
+  @media (max-width:520px){
+    .price-row { grid-template-columns:1fr; }
+  }
+
+  /* ─── faq ───────────────────────────────────── */
+  .faq {
+    display:grid; gap:1px;
+    background:var(--border);
+    border:1px solid var(--border);
+  }
+  .faq details {
+    background:var(--bg-card);
+    transition:background .2s;
+  }
+  .faq details[open] { background:var(--bg-card-hi); }
+  .faq summary {
+    list-style:none;
+    cursor:pointer;
+    padding:20px 24px;
+    display:flex; align-items:center; justify-content:space-between;
+    gap:24px;
+    font-family:var(--font-ui);
+    font-size:15px;
+    font-weight:500;
+    color:var(--text-main);
+    transition:color .15s;
+  }
+  .faq summary::-webkit-details-marker { display:none; }
+  .faq summary::after {
+    content:'+';
+    font-family:var(--font-mono);
+    font-size:18px;
+    color:var(--purple);
+    transition:transform .25s;
+  }
+  .faq details[open] summary::after { content:'−'; }
+  .faq summary:hover { color:var(--purple-soft); }
+  .faq-body {
+    padding:0 24px 22px;
+    color:var(--text-soft);
+    font-size:14px;
+    line-height:1.6;
+    max-width:780px;
+  }
+
+  /* ─── final cta ─────────────────────────────── */
+  .cta-block {
+    margin:32px 0 100px;
+    border:1px solid var(--border);
+    background:
+      radial-gradient(circle at 18% 30%, rgba(155,92,255,0.16), transparent 50%),
+      radial-gradient(circle at 88% 70%, rgba(0,216,255,0.08), transparent 45%),
+      var(--bg-panel);
+    padding:56px 48px;
+    display:grid;
+    grid-template-columns:1.5fr 1fr;
+    gap:48px;
+    align-items:end;
+    position:relative;
+    overflow:hidden;
+  }
+  .cta-block::before {
+    content:''; position:absolute; inset:0;
+    background-image:
+      linear-gradient(rgba(255,255,255,0.025) 1px, transparent 1px),
+      linear-gradient(90deg, rgba(255,255,255,0.025) 1px, transparent 1px);
+    background-size:48px 48px;
+    mask-image:radial-gradient(circle at 30% 50%, #000, transparent 70%);
+    -webkit-mask-image:radial-gradient(circle at 30% 50%, #000, transparent 70%);
+    pointer-events:none;
+  }
+  .cta-block > * { position:relative; z-index:2; }
+  .cta-meta {
+    font-family:var(--font-mono);
+    font-size:11px;
+    color:var(--purple);
+    letter-spacing:0.22em;
+    font-weight:700;
+    text-transform:uppercase;
+    margin-bottom:24px;
+  }
+  .cta-title {
+    font-family:var(--font-display);
+    font-size:clamp(40px, 5.4vw, 78px);
+    line-height:0.92;
+    letter-spacing:-0.03em;
+    text-transform:uppercase;
+    color:var(--text-main);
+    margin-bottom:24px;
+  }
+  .cta-title .purple { color:var(--purple); }
+  .cta-sub {
+    color:var(--text-soft);
+    font-size:16px;
+    line-height:1.55;
+    margin-bottom:32px;
+    max-width:520px;
+  }
+  .cta-side {
+    border-left:1px solid var(--border);
+    padding-left:36px;
+    display:flex; flex-direction:column; gap:12px;
+  }
+  .cta-side .row {
+    display:flex; justify-content:space-between; align-items:baseline;
+    padding:8px 0;
+    border-bottom:1px dashed var(--border);
+    font-family:var(--font-mono);
+    font-size:11px;
+    letter-spacing:0.06em;
+  }
+  .cta-side .row .k { color:var(--text-muted); text-transform:uppercase; letter-spacing:0.16em; font-size:10px; }
+  .cta-side .row .v { color:var(--text-main); font-weight:700; }
+  .cta-side .row .v.purple { color:var(--purple); }
+  @media (max-width:920px){
+    .cta-block { grid-template-columns:1fr; padding:40px 28px; }
+    .cta-side { border-left:none; border-top:1px solid var(--border); padding:24px 0 0; }
+  }
+
+  /* ─── footer ────────────────────────────────── */
+  footer {
+    position:relative; z-index:2;
+    border-top:1px solid var(--border);
+    padding:48px 0 32px;
+    background:var(--bg-panel);
+  }
+  .foot-row {
+    display:grid;
+    grid-template-columns:2fr 1fr 1fr 1fr;
+    gap:48px;
+    margin-bottom:36px;
+  }
+  .foot-brand .bn {
+    font-family:var(--font-display);
+    font-size:22px;
+    line-height:1;
+    text-transform:uppercase;
+    letter-spacing:0.02em;
+    margin-bottom:12px;
+  }
+  .foot-brand .bs {
+    color:var(--text-soft);
+    font-size:13px;
+    line-height:1.5;
+    margin-bottom:14px;
+    max-width:440px;
+  }
+  .foot-brand .label {
+    font-family:var(--font-mono);
+    font-size:10px;
+    color:var(--text-muted);
+    letter-spacing:0.18em;
+    text-transform:uppercase;
+  }
+  .foot-col h5 {
+    font-family:var(--font-mono);
+    font-size:10px;
+    color:var(--text-muted);
+    letter-spacing:0.22em;
+    text-transform:uppercase;
+    margin-bottom:14px;
+    font-weight:700;
+  }
+  .foot-col a {
+    display:block;
+    color:var(--text-soft);
+    font-size:13px;
+    text-decoration:none;
+    padding:5px 0;
+    transition:color .15s;
+  }
+  .foot-col a:hover { color:var(--purple-soft); }
+  .foot-bottom {
+    display:flex; justify-content:space-between; align-items:center;
+    padding-top:24px;
+    border-top:1px solid var(--border);
+    font-family:var(--font-mono);
+    font-size:10px;
+    color:var(--text-muted);
+    letter-spacing:0.14em;
+    text-transform:uppercase;
+  }
+  .foot-bottom .purple { color:var(--purple); }
+  @media (max-width:920px){
+    .foot-row { grid-template-columns:1fr 1fr; gap:32px; }
+  }
+  @media (max-width:520px){
+    .foot-row { grid-template-columns:1fr; }
+  }
+
+  /* ─── rise-in animation ─────────────────────── */
+  .rise { opacity:0; transform:translateY(14px); animation:rise .7s cubic-bezier(.2,.7,.2,1) forwards; }
+  .rise.d1 { animation-delay:.06s; }
+  .rise.d2 { animation-delay:.14s; }
+  .rise.d3 { animation-delay:.22s; }
+  .rise.d4 { animation-delay:.3s; }
+  .rise.d5 { animation-delay:.38s; }
+  @keyframes rise { to { opacity:1; transform:none; } }
+
+  /* scanline accent (subtle, for hero) */
+  .scanline {
+    position:absolute; left:0; right:0;
+    height:1px;
+    background:linear-gradient(90deg, transparent, var(--purple), transparent);
+    opacity:0.5;
+    animation:scan 7s ease-in-out infinite;
+  }
+  @keyframes scan {
+    0% { top:18%; opacity:0; }
+    50% { opacity:0.6; }
+    100% { top:78%; opacity:0; }
+  }
+</style>
+</head>
+<body>
+
+<div class="bg-fx"></div>
+<div class="bg-grid"></div>
+<div class="bg-noise"></div>
+
+<!-- ─── TOPBAR ──────────────────────────────────── -->
+<header class="topbar">
+  <div class="shell top-row">
+    <div class="brand">
+      <div class="brand-mark">P</div>
+      <div class="brand-name">
+        Persona Studio
+        <span class="sub">// v0.1 · identity os</span>
+      </div>
+    </div>
+
+    <nav class="top-nav">
+      <a href="#how">How</a>
+      <a href="#styles">Styles</a>
+      <a href="#outputs">Outputs</a>
+      <a href="#pricing">Pricing</a>
+      <a href="#faq">FAQ</a>
+    </nav>
+
+    <div style="display:flex; align-items:center; gap:18px;">
+      <span class="top-meta"><span class="dot"></span> live · beta</span>
+      <a href="#cta" class="top-cta">Создать аватара</a>
+    </div>
+  </div>
+</header>
+
+<main class="shell">
+
+  <!-- ─── HERO ─────────────────────────────────── -->
+  <section class="hero">
+    <div class="scanline"></div>
+
+    <div class="hero-meta rise">
+      <span class="pill">// Persona Studio · est. 2026</span>
+      <span class="pill ghost"><span style="color:var(--text-faint)">stack:</span>&nbsp;Nano Banana 2 · HeyGen V · Gemini 3.1</span>
+    </div>
+
+    <h1 class="hero-h1 rise d1">
+      <span class="row">Создай свою</span>
+      <span class="row"><span class="purple">цифровую</span> личность<span class="cursor"></span></span>
+    </h1>
+
+    <div class="hero-grid">
+      <div>
+        <p class="hero-sub rise d2">
+          Загрузи одно фото — получи <span class="hl">10 AI-аватаров</span> в кинематографичных стилях.
+          Дальше — превращай их в говорящие <span class="purple">HeyGen V-видео</span> или виральные обложки карусели.
+          За 2 минуты, из браузера, без съёмки и монтажа.
+        </p>
+        <div class="hero-actions rise d3">
+          <a href="#cta" class="btn btn-primary">
+            Загрузить фото
+            <span class="arrow">↗</span>
+          </a>
+          <a href="#outputs" class="btn btn-ghost">Смотреть примеры</a>
+        </div>
+      </div>
+
+      <div class="hero-side rise d4">
+        <div class="hero-stat">
+          <div class="k">Avatars / upload</div>
+          <div class="v">10<span class="small">/ 1 фото</span></div>
+          <div class="note">Каждый — свой режиссёрский стиль</div>
+        </div>
+        <div class="hero-stat">
+          <div class="k">Time to first cover</div>
+          <div class="v">~2:00<span class="small">мин</span></div>
+          <div class="note">upload → generate → export</div>
+        </div>
+        <div class="hero-stat">
+          <div class="k">HeyGen V languages</div>
+          <div class="v">40+<span class="small">голосов</span></div>
+          <div class="note">RU / EN / ES / DE / IT / FR …</div>
+        </div>
+        <div class="hero-stat">
+          <div class="k">Face identity</div>
+          <div class="v cyan">preserved</div>
+          <div class="note">через все 10 стилей</div>
+        </div>
+      </div>
+    </div>
+
+    <!-- DUAL CTA CARDS -->
+    <div class="cta-dual rise d4">
+      <a href="#cta" class="cta-card">
+        <span class="arrow-big">↗</span>
+        <span class="tag">/A · Upload Photo</span>
+        <h3>Загрузи<br/>фото</h3>
+        <p>Одна фотография, лицо в фокусе. JPG · PNG · WEBP · до 20 MB. 20 секунд — и старт.</p>
+        <div class="meta">jpg · png · webp · mp4</div>
+      </a>
+      <a href="#styles" class="cta-card">
+        <span class="arrow-big">↗</span>
+        <span class="tag">/B · Pick Style</span>
+        <h3>Выбери<br/>стиль</h3>
+        <p>10 режиссёрских направлений, от Luxury Founder до AI Visionary. Все в одном проходе.</p>
+        <div class="meta">10 styles ready · cinematic</div>
+      </a>
+    </div>
+
+    <!-- METRIC BAR -->
+    <div class="metric-bar rise d5">
+      <div class="cell">
+        <div class="k">Styles available</div>
+        <div class="v">10</div>
+      </div>
+      <div class="cell">
+        <div class="k">Avg generation</div>
+        <div class="v">60<small>sec</small></div>
+      </div>
+      <div class="cell">
+        <div class="k">Languages</div>
+        <div class="v">40<small>+</small></div>
+      </div>
+      <div class="cell">
+        <div class="k">Output formats</div>
+        <div class="v">PNG<small>· MP4</small></div>
+      </div>
+    </div>
+
+    <!-- AVATAR TILE GRID -->
+    <div class="tiles rise d5">
+      <div class="tile t1">
+        <span class="num">/01</span><span class="corner">style</span>
+        <div class="silhouette"><svg viewBox="0 0 100 130"><circle class="head" cx="50" cy="45" r="22"/><path class="body" d="M10 130 C 10 90, 30 75, 50 75 C 70 75, 90 90, 90 130 Z"/></svg></div>
+        <div class="meta"><div class="name">Luxury Founder</div><div class="style-label">deep / editorial</div></div>
+      </div>
+      <div class="tile t2">
+        <span class="num">/02</span><span class="corner">style</span>
+        <div class="silhouette"><svg viewBox="0 0 100 130"><circle class="head" cx="50" cy="45" r="22"/><path class="body" d="M10 130 C 10 90, 30 75, 50 75 C 70 75, 90 90, 90 130 Z"/></svg></div>
+        <div class="meta"><div class="name">Podcast Studio</div><div class="style-label">warm / ambient</div></div>
+      </div>
+      <div class="tile t3">
+        <span class="num">/03</span><span class="corner">style</span>
+        <div class="silhouette"><svg viewBox="0 0 100 130"><circle class="head" cx="50" cy="45" r="22"/><path class="body" d="M10 130 C 10 90, 30 75, 50 75 C 70 75, 90 90, 90 130 Z"/></svg></div>
+        <div class="meta"><div class="name">Cinematic</div><div class="style-label">teal / film grain</div></div>
+      </div>
+      <div class="tile t4">
+        <span class="num">/04</span><span class="corner">style</span>
+        <div class="silhouette"><svg viewBox="0 0 100 130"><circle class="head" cx="50" cy="45" r="22"/><path class="body" d="M10 130 C 10 90, 30 75, 50 75 C 70 75, 90 90, 90 130 Z"/></svg></div>
+        <div class="meta"><div class="name">IG Educator</div><div class="style-label">soft / clean</div></div>
+      </div>
+      <div class="tile t5">
+        <span class="num">/05</span><span class="corner">style</span>
+        <div class="silhouette"><svg viewBox="0 0 100 130"><circle class="head" cx="50" cy="45" r="22"/><path class="body" d="M10 130 C 10 90, 30 75, 50 75 C 70 75, 90 90, 90 130 Z"/></svg></div>
+        <div class="meta"><div class="name">Tech Founder</div><div class="style-label">electric / clean</div></div>
+      </div>
+      <div class="tile t6">
+        <span class="num">/06</span><span class="corner">style</span>
+        <div class="silhouette"><svg viewBox="0 0 100 130"><circle class="head" cx="50" cy="45" r="22"/><path class="body" d="M10 130 C 10 90, 30 75, 50 75 C 70 75, 90 90, 90 130 Z"/></svg></div>
+        <div class="meta"><div class="name">Viral Reels</div><div class="style-label">magenta / pop</div></div>
+      </div>
+      <div class="tile t7">
+        <span class="num">/07</span><span class="corner">style</span>
+        <div class="silhouette"><svg viewBox="0 0 100 130"><circle class="head" cx="50" cy="45" r="22"/><path class="body" d="M10 130 C 10 90, 30 75, 50 75 C 70 75, 90 90, 90 130 Z"/></svg></div>
+        <div class="meta"><div class="name">Editorial</div><div class="style-label">mono / vogue</div></div>
+      </div>
+      <div class="tile t8">
+        <span class="num">/08</span><span class="corner">style</span>
+        <div class="silhouette"><svg viewBox="0 0 100 130"><circle class="head" cx="50" cy="45" r="22"/><path class="body" d="M10 130 C 10 90, 30 75, 50 75 C 70 75, 90 90, 90 130 Z"/></svg></div>
+        <div class="meta"><div class="name">Dark Premium</div><div class="style-label">noir / gold</div></div>
+      </div>
+      <div class="tile t9">
+        <span class="num">/09</span><span class="corner">style</span>
+        <div class="silhouette"><svg viewBox="0 0 100 130"><circle class="head" cx="50" cy="45" r="22"/><path class="body" d="M10 130 C 10 90, 30 75, 50 75 C 70 75, 90 90, 90 130 Z"/></svg></div>
+        <div class="meta"><div class="name">AI Visionary</div><div class="style-label">neon / sci-fi</div></div>
+      </div>
+      <div class="tile placeholder t10">
+        <span class="num">/10</span>
+        <span class="corner">your face</span>
+        <div class="ph-title">Твой<br/>аватар</div>
+        <div class="ph-sub">upload to begin →</div>
+      </div>
+    </div>
+  </section>
+
+
+  <!-- ─── /01 · HOW IT WORKS ───────────────────── -->
+  <section id="how">
+    <div class="sec-head">
+      <span class="sec-num">/01</span>
+      <span class="sec-title">// process</span>
+      <span class="sec-spacer"></span>
+      <span class="sec-meta">3 шага · 2 минуты</span>
+    </div>
+
+    <div class="steps">
+      <div class="step">
+        <div class="step-num">/A · UPLOAD</div>
+        <h3 class="step-title">Одно фото —<br/>и хватит.</h3>
+        <p class="step-body">JPG, PNG или короткое видео. Лицо в фокусе, нейтральный фон. Никаких сложных съёмок. 20 секунд — и можно идти дальше.</p>
+        <div class="step-tags">
+          <span class="chip">JPG · PNG · MP4</span>
+          <span class="chip">до 20 MB</span>
+          <span class="chip">512 × 512+</span>
+          <span class="chip purple">Face in focus</span>
+        </div>
+      </div>
+
+      <div class="step">
+        <div class="step-num">/B · GENERATE</div>
+        <h3 class="step-title">10 аватаров —<br/>за раз.</h3>
+        <p class="step-body">Nano Banana 2 строит 10 кинематографичных портретов в разных режиссёрских стилях. Лицо сохраняется — стиль меняется.</p>
+        <div class="step-tags">
+          <span class="chip cyan">Nano Banana 2</span>
+          <span class="chip cyan">Gemini Image API</span>
+          <span class="chip">Identity preserved</span>
+          <span class="chip">~60 sec</span>
+        </div>
+      </div>
+
+      <div class="step">
+        <div class="step-num">/C · EXPORT</div>
+        <h3 class="step-title">Видео или<br/>обложка.</h3>
+        <p class="step-body">Выбираешь любимый аватар — собираешь HeyGen V-видео (говорящий аватар) или обложку карусели с текстом. PNG / MP4 — готово к публикации.</p>
+        <div class="step-tags">
+          <span class="chip pink">HeyGen V</span>
+          <span class="chip pink">Carousel Cover</span>
+          <span class="chip">PNG · MP4</span>
+          <span class="chip lime">Ready to post</span>
+        </div>
+      </div>
+    </div>
+  </section>
+
+
+  <!-- ─── /02 · STYLES ─────────────────────────── -->
+  <section id="styles">
+    <div class="sec-head">
+      <span class="sec-num">/02</span>
+      <span class="sec-title">// director styles</span>
+      <span class="sec-spacer"></span>
+      <span class="sec-meta">10 / per upload</span>
+    </div>
+
+    <div class="styles-grid">
+      <div class="style-row t1">
+        <div class="sr-num">01</div>
+        <div><div class="sr-name">Luxury Founder</div><div class="sr-desc">Кабинет / тёплый свет / премиум-портрет</div></div>
+        <div class="sr-tags">editorial / dark</div>
+        <div class="sr-swatch"></div>
+      </div>
+      <div class="style-row t2">
+        <div class="sr-num">02</div>
+        <div><div class="sr-name">Podcast Studio</div><div class="sr-desc">Микрофон в фокусе / янтарные блики</div></div>
+        <div class="sr-tags">warm / ambient</div>
+        <div class="sr-swatch"></div>
+      </div>
+      <div class="style-row t3">
+        <div class="sr-num">03</div>
+        <div><div class="sr-name">Cinematic Creator</div><div class="sr-desc">Film grain / teal & orange / широкий объектив</div></div>
+        <div class="sr-tags">cinematic</div>
+        <div class="sr-swatch"></div>
+      </div>
+      <div class="style-row t4">
+        <div class="sr-num">04</div>
+        <div><div class="sr-name">Instagram Educator</div><div class="sr-desc">Чистый фон / мягкий свет / ready for Reels</div></div>
+        <div class="sr-tags">soft / clean</div>
+        <div class="sr-swatch"></div>
+      </div>
+      <div class="style-row t5">
+        <div class="sr-num">05</div>
+        <div><div class="sr-name">Tech Entrepreneur</div><div class="sr-desc">LED-фон / cyan accent / Y Combinator vibes</div></div>
+        <div class="sr-tags">electric</div>
+        <div class="sr-swatch"></div>
+      </div>
+      <div class="style-row t6">
+        <div class="sr-num">06</div>
+        <div><div class="sr-name">Viral Reels Cover</div><div class="sr-desc">Magenta pop / hi-contrast / hook-готовый кадр</div></div>
+        <div class="sr-tags">magenta / pop</div>
+        <div class="sr-swatch"></div>
+      </div>
+      <div class="style-row t7">
+        <div class="sr-num">07</div>
+        <div><div class="sr-name">Editorial Fashion</div><div class="sr-desc">Vogue / monochrome / редакторский разворот</div></div>
+        <div class="sr-tags">mono / vogue</div>
+        <div class="sr-swatch"></div>
+      </div>
+      <div class="style-row t8">
+        <div class="sr-num">08</div>
+        <div><div class="sr-name">Dark Premium</div><div class="sr-desc">Noir / золотой тон / chiaroscuro</div></div>
+        <div class="sr-tags">noir / gold</div>
+        <div class="sr-swatch"></div>
+      </div>
+      <div class="style-row t9">
+        <div class="sr-num">09</div>
+        <div><div class="sr-name">AI Visionary</div><div class="sr-desc">Lime-neon / futurist studio / sci-fi cover</div></div>
+        <div class="sr-tags">neon / futurist</div>
+        <div class="sr-swatch"></div>
+      </div>
+      <div class="style-row t10">
+        <div class="sr-num">10</div>
+        <div><div class="sr-name">Minimal Apple</div><div class="sr-desc">White studio / soft shadow / product keynote</div></div>
+        <div class="sr-tags">minimal</div>
+        <div class="sr-swatch"></div>
+      </div>
+    </div>
+  </section>
+
+
+  <!-- ─── /03 · OUTPUTS ────────────────────────── -->
+  <section id="outputs">
+    <div class="sec-head">
+      <span class="sec-num">/03</span>
+      <span class="sec-title">// outputs from one avatar</span>
+      <span class="sec-spacer"></span>
+      <span class="sec-meta">2 направления</span>
+    </div>
+
+    <div class="outputs">
+      <div class="output">
+        <div class="o-tag">/A · Talking Avatar</div>
+        <h3 class="o-title">HeyGen V-видео<br/>с твоим лицом.</h3>
+        <p class="o-sub">Выбираешь аватар, вводишь текст, выбираешь язык, голос, формат и фон — получаешь готовое видео. С субтитрами, заставкой и нужным аспектом.</p>
+
+        <div class="o-preview">
+          <span class="pv-label">// heygen · render preview</span>
+          <div class="pv-content">«Привет, я Илья. Сегодня — о том, как нейросети заменяют съёмочную команду.»</div>
+          <div class="pv-bar"></div>
+          <div class="pv-time"><span>00:08 / 00:32 · rendering ▸</span><span class="right">9:16 · ru-RU · subs:on</span></div>
+        </div>
+
+        <ul class="o-list">
+          <li>40+ языков и голосов HeyGen V</li>
+          <li>Форматы: 9:16 Reels · 1:1 посты · 16:9 YouTube</li>
+          <li>Субтитры одной галочкой</li>
+          <li>Длительность 15–180 сек / шот</li>
+        </ul>
+      </div>
+
+      <div class="output">
+        <div class="o-tag">/B · Carousel Cover</div>
+        <h3 class="o-title">Виральная обложка —<br/>с лицом и заголовком.</h3>
+        <p class="o-sub">Аватар на обложке, крупный заголовок, подзаголовок, CTA — собирается за один промпт. Premium-композиция 4:5, готовая к публикации.</p>
+
+        <div class="o-preview">
+          <span class="pv-label">// cover · 4:5 preview</span>
+          <div class="pv-content headline">Я создал себе<br/>AI-аватара<br/><span class="accent">и он делает контент за меня.</span></div>
+          <div class="pv-cta">Swipe left →</div>
+          <div class="pv-time" style="border-top:1px dashed var(--border); padding-top:8px;"><span>4:5 · ru · ai-visionary</span><span class="right">cover · slide 01/10</span></div>
+        </div>
+
+        <ul class="o-list">
+          <li>1 промпт = обложка + до 10 слайдов</li>
+          <li>Контроль: Headline · Subtitle · CTA · niche</li>
+          <li>Текст без опечаток — Nano Banana 2</li>
+          <li>Экспорт PNG · IG / LinkedIn / Telegram</li>
+        </ul>
+      </div>
+    </div>
+  </section>
+
+
+  <!-- ─── /04 · USE CASES ──────────────────────── -->
+  <section>
+    <div class="sec-head">
+      <span class="sec-num">/04</span>
+      <span class="sec-title">// channels</span>
+      <span class="sec-spacer"></span>
+      <span class="sec-meta">4 канала</span>
+    </div>
+
+    <div class="cases">
+      <div class="case">
+        <div class="ch">/ Instagram</div>
+        <div class="ct">Reels и Stories с твоим лицом — без съёмок.</div>
+        <div class="cs">Обложки каруселей, hero-кадр для Reels, story-серии в едином стиле. Контент-план на месяц — из одной фотосессии.</div>
+        <div class="cfoot">9:16 · 4:5 · 1:1</div>
+      </div>
+      <div class="case">
+        <div class="ch">/ Telegram</div>
+        <div class="ct">Канал и личный бренд — visual identity.</div>
+        <div class="cs">Аватарка канала, обложки постов, гиф-приветствие через HeyGen V. Один кадр — десятки готовых ассетов.</div>
+        <div class="cfoot">PNG · MP4 · 1:1</div>
+      </div>
+      <div class="case">
+        <div class="ch">/ LinkedIn</div>
+        <div class="ct">Founder photo, посты и cover-видео.</div>
+        <div class="cs">Профессиональный портрет в Luxury Founder или Tech Entrepreneur, говорящий аватар для thought-leadership и keynote-обложек.</div>
+        <div class="cfoot">1:1 · 16:9</div>
+      </div>
+      <div class="case">
+        <div class="ch">/ Podcast</div>
+        <div class="ct">Обложки эпизодов и тизер-видео.</div>
+        <div class="cs">Podcast Studio-аватар как hero обложки, HeyGen V-видео под анонс эпизода в любом языке для дистрибуции на чужую аудиторию.</div>
+        <div class="cfoot">1:1 · 16:9 · multi-lang</div>
+      </div>
+    </div>
+  </section>
+
+
+  <!-- ─── /05 · PRICING ────────────────────────── -->
+  <section id="pricing">
+    <div class="sec-head">
+      <span class="sec-num">/05</span>
+      <span class="sec-title">// pay as you generate</span>
+      <span class="sec-spacer"></span>
+      <span class="sec-meta">4 plans · token wallet</span>
+    </div>
+
+    <div class="pricing">
+      <div class="price-row">
+        <div class="pr-name">
+          <div class="n">Free</div>
+          <div class="badge">first try</div>
+        </div>
+        <div class="pr-price">$0<span class="small">/ forever</span></div>
+        <div class="pr-feats">
+          1 генерация · 10 аватаров<span class="sep">·</span>watermark<span class="sep">·</span>low-res<span class="sep">·</span>1 cover
+        </div>
+        <a href="#cta" class="pr-action">Попробовать →</a>
+      </div>
+
+      <div class="price-row">
+        <div class="pr-name">
+          <div class="n">Starter</div>
+          <div class="badge">single creator</div>
+        </div>
+        <div class="pr-price">$19<span class="small">/ месяц</span></div>
+        <div class="pr-feats">
+          100 токенов / мес<span class="sep">·</span>10 аватаров<span class="sep">·</span>30 covers<span class="sep">·</span>HD export<span class="sep">·</span>no watermark
+        </div>
+        <a href="#cta" class="pr-action">Выбрать Starter</a>
+      </div>
+
+      <div class="price-row featured">
+        <div class="pr-name">
+          <div class="n">Pro</div>
+          <div class="badge hot">recommended</div>
+        </div>
+        <div class="pr-price">$49<span class="small">/ месяц</span></div>
+        <div class="pr-feats">
+          400 токенов / мес<span class="sep">·</span>HeyGen V видео<span class="sep">·</span>~100 covers<span class="sep">·</span>Premium templates<span class="sep">·</span>Priority queue
+        </div>
+        <a href="#cta" class="pr-action">Выбрать Pro</a>
+      </div>
+
+      <div class="price-row">
+        <div class="pr-name">
+          <div class="n">Agency</div>
+          <div class="badge">teams & brands</div>
+        </div>
+        <div class="pr-price">$99<span class="small">/ seat / мес</span></div>
+        <div class="pr-feats">
+          Бренд-киты<span class="sep">·</span>Командные аккаунты<span class="sep">·</span>White-label<span class="sep">·</span>API access<span class="sep">·</span>Поддержка
+        </div>
+        <a href="#cta" class="pr-action">Talk to sales</a>
+      </div>
+    </div>
+  </section>
+
+
+  <!-- ─── /06 · FAQ ────────────────────────────── -->
+  <section id="faq">
+    <div class="sec-head">
+      <span class="sec-num">/06</span>
+      <span class="sec-title">// faq</span>
+      <span class="sec-spacer"></span>
+      <span class="sec-meta">8 / 8</span>
+    </div>
+
+    <div class="faq">
+      <details open>
+        <summary>Сколько фото нужно загрузить?</summary>
+        <div class="faq-body">Достаточно одного. Это главное преимущество Nano Banana 2 — она сохраняет facial identity из одного референса. Если хочешь больше точности — загрузи короткое видео, мы извлечём 3–5 лучших кадров автоматически.</div>
+      </details>
+      <details>
+        <summary>Лицо узнаваемо во всех 10 стилях?</summary>
+        <div class="faq-body">Да. Идентичность сохраняется через все режиссёрские стили — меняется свет, фон, одежда, атмосфера, но не черты лица. Если в каком-то стиле похожесть просела — пересоздаём бесплатно.</div>
+      </details>
+      <details>
+        <summary>Что я могу сделать с готовым аватаром?</summary>
+        <div class="faq-body">Два направления — HeyGen V-видео и обложка карусели. Видео: вбиваешь текст, выбираешь язык, голос и формат, получаешь говорящий аватар. Обложка: вбиваешь заголовок, подзаголовок и CTA — premium-композиция для IG / LinkedIn / Telegram.</div>
+      </details>
+      <details>
+        <summary>Что такое токены?</summary>
+        <div class="faq-body">Единая валюта внутри Persona Studio. Генерация 10 аватаров — 10 токенов. Обложка карусели — 3 токена. HeyGen V-видео — 20–50 токенов в зависимости от длительности. На Free — 10 токенов на пробу. Если генерация провалилась — токены возвращаются автоматически.</div>
+      </details>
+      <details>
+        <summary>Можно ли использовать в коммерческих целях?</summary>
+        <div class="faq-body">Да. Все сгенерированные ассеты — твои, без обязательного указания авторства. На тарифах Starter / Pro / Agency водяной знак убирается, экспорт в HD. White-label-экспорт — на Agency.</div>
+      </details>
+      <details>
+        <summary>А что с лицом другого человека?</summary>
+        <div class="faq-body">Нет. Persona Studio — для собственного лица или лица человека, давшего согласие на обработку. Мы проверяем согласие на загрузке. Чужие лица без подтверждённого consent — модерация блокирует, токены возвращаются.</div>
+      </details>
+      <details>
+        <summary>Сколько занимает одна генерация?</summary>
+        <div class="faq-body">10 аватаров — 60–90 секунд. Обложка карусели — 30–45 секунд. HeyGen V-видео на 30 секунд — около 2–3 минут. На Pro / Agency — priority queue, время сокращается в 2 раза.</div>
+      </details>
+      <details>
+        <summary>Что с моими фотографиями?</summary>
+        <div class="faq-body">Оригинальные загрузки хранятся в приватном bucket с signed URLs, доступ — только у тебя. Удаление — в один клик из личного кабинета, вместе со всеми сгенерированными аватарами. Никогда не используем твоё лицо для обучения моделей.</div>
+      </details>
+    </div>
+  </section>
+
+
+  <!-- ─── /07 · FINAL CTA ──────────────────────── -->
+  <section id="cta">
+    <div class="cta-block">
+      <div>
+        <div class="cta-meta">/07 · ready to ship</div>
+        <h2 class="cta-title">Загрузи фото —<br/>через <span class="purple">2 минуты</span><br/>у тебя 10 аватаров.</h2>
+        <p class="cta-sub">Бесплатный первый прогон. Без карты. Без обязательств. Если зашло — оставайся, если нет — ушёл без последствий.</p>
+        <div class="hero-actions">
+          <a href="#" class="btn btn-primary">Создать AI-аватара<span class="arrow">↗</span></a>
+          <a href="#styles" class="btn btn-ghost">Посмотреть стили</a>
+        </div>
+      </div>
+
+      <div class="cta-side">
+        <div class="row"><span class="k">Загрузка</span><span class="v">1 фото · 20 сек</span></div>
+        <div class="row"><span class="k">Генерация</span><span class="v">10 аватаров · ~60 сек</span></div>
+        <div class="row"><span class="k">Экспорт</span><span class="v">PNG · MP4</span></div>
+        <div class="row"><span class="k">Платёж</span><span class="v">Не нужен на Free</span></div>
+        <div class="row"><span class="k">Result</span><span class="v purple">Ready to post ▸</span></div>
+      </div>
+    </div>
+  </section>
+
+</main>
+
+
+<!-- ─── FOOTER ──────────────────────────────────── -->
+<footer>
+  <div class="shell">
+    <div class="foot-row">
+      <div class="foot-brand">
+        <div class="bn">Persona Studio</div>
+        <div class="bs">Future Fashion Lab для твоего лица. AI Identity Operating System: от одной фотографии — до десятков ассетов в едином режиссёрском стиле.</div>
+        <div class="label">Stack: Nano Banana 2 · HeyGen V · Gemini 3.1</div>
+      </div>
+      <div class="foot-col">
+        <h5>Product</h5>
+        <a href="#how">Как работает</a>
+        <a href="#styles">Стили</a>
+        <a href="#outputs">Что получаешь</a>
+        <a href="#pricing">Тарифы</a>
+      </div>
+      <div class="foot-col">
+        <h5>Resources</h5>
+        <a href="#faq">FAQ</a>
+        <a href="#">Гайд по промптам</a>
+        <a href="#">Changelog</a>
+        <a href="#">Status</a>
+      </div>
+      <div class="foot-col">
+        <h5>Legal</h5>
+        <a href="#">Privacy</a>
+        <a href="#">Terms</a>
+        <a href="#">Face consent</a>
+        <a href="#">Contact</a>
+      </div>
+    </div>
+    <div class="foot-bottom">
+      <span>© 2026 Persona Studio · AI Identity Operating System</span>
+      <span class="purple">v0.1 · beta</span>
+    </div>
+  </div>
+</footer>
+
+</body>
+</html>
