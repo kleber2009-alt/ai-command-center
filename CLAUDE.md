@@ -28,21 +28,30 @@ env vars, and routes, see `CLAUDE.md` / `README.md` inside each `apps/<app>/`.
 
 ## Product → path map
 
-| Product | Code path | Landing | Prod URL | Container(s) |
-|---|---|---|---|---|
-| Transcribe | `apps/transcribe` | `landings/transcribe` | `transcribe.46-62-215-11.nip.io` · `tma.46-62-215-11.nip.io` (TMA) | `infra-transcribe-1` |
-| TG agent | `apps/tg-agent` | `landings/tg-agent` | — (TG groups, admin :8080) | `tg-agent` |
-| yt-dlp | `apps/ytdlp` | — | internal :8000 | `infra-ytdlp-1` |
-| AI Sales | `apps/ai-sales` | `landings/aisales`, `landings/aisales-system` | `dashboard.46-62-215-11.nip.io` | `aisales-api-v2`, `aisales-command-center`, `aisales-postgres`, `aisales-redis`, `aisales-qdrant`, `aisales-minio` |
-| AI Growth Office | `apps/ai-office` | — (own static) | `ai-office.46-62-215-11.nip.io` | `infra-ai-office-1` |
-| AI Hub | `apps/ai-hub` | `landings/ai-hub` | `aihub.46-62-215-11.nip.io` (landing) · `aihub-app.46-62-215-11.nip.io` (app) | `ai-hub-web`, `ai-hub-worker`, `mailpit` |
-| Persona Studio | `apps/persona-studio` | `landings/persona-studio` | (deploy via `deploy-persona-studio.yml` / `deploy-persona-landing.yml`) | (TBD) |
-| Persona Train | `apps/persona-train` | — | WIP | (TBD) |
-| Office Worker | `apps/infra-worker` | — | webhooks :3000 | `infra-aisales-worker-1` |
-| Voice Circle Bot | `apps/voice-circle-bot` | — | — | (manual) |
-| Viral Clone (pipeline) | inside `apps/infra-worker` (handler `viral_clone`) | `landings/viral-clone` | trigger: `POST /worker/viral-clone/dispatch` | `infra-aisales-worker-1` |
-| Viral Discover | inside `apps/infra-worker` (handler `viral_discover`) | `landings/viral-discover` | cron `05:00 daily` | `infra-aisales-worker-1` |
-| **Парсер** (Parser bot) | `apps/infra-worker/lib/parser_bot.js` + handler `viral_discover` | `landings/viral-discover/cabinet/` | `parser.46-62-215-11.nip.io` (cabinet) + TG bot | `infra-aisales-worker-1` |
+**Source of truth for product status** — Command Center dashboard:
+`https://command-center.46-62-215-11.nip.io/dashboard` (API: `/api/projects` and `/api/projects/<slug>`).
+
+| # | Product (slug) | Status | Milestones | Code path | Landing | Prod URL | Container(s) |
+|---|---|---|---|---|---|---|---|
+| 1 | 🏢 **AI Growth Office** (`ai-office`) | production | 10/13 | `apps/ai-office` | (own static) | `ai-office.46-62-215-11.nip.io`, `ai-growth-office.ru` | `infra-ai-office-1` |
+| 2 | 🎙️ **Транскрибация** (`transcribe`) | production | 10/12 | `apps/transcribe` | `landings/transcribe` | `transcribe.46-62-215-11.nip.io`, `tma.46-62-215-11.nip.io` | `infra-transcribe-1` |
+| 3 | 🎬 **Reels Cloner** (`viral-clone`) | production | 8/10 | `apps/infra-worker/handlers/viral_clone.js` | `landings/viral-clone` | TG `/clone` в `@your_transscribe_bot` | `infra-aisales-worker-1` |
+| 4 | 🎨 **AI Creative Hub** (`ai-hub`) | dev | 6/10 | `apps/ai-hub` | `landings/ai-hub` | `aihub.46-62-215-11.nip.io`, `aihub-app.46-62-215-11.nip.io`, TMA `@aicex_one_bot` | `ai-hub-web`, `ai-hub-worker`, `mailpit` |
+| 5 | 🎤 **AI Voice Bot** (`voice-bot`) | production | 6/7 | `apps/ai-office/voice-bot/` (TBD: relocate) | (внутри ai-office) | `@aio_voice_bot`, `ai-growth-office.ru/persona-train` | (in `infra-ai-office-1` или отдельный) |
+| 6 | 📱 **AI Office Mini App** (`mini-app`) | dev | 4/6 | inside `apps/ai-office` (`/mini-app/`) | — | `ai-growth-office.ru/mini-app/`, `@AI_Growth_Office_Bot/app` | `infra-ai-office-1` |
+| 7 | 💼 **AI Sales System** (`ai-sales`) | production | 4/8 | `apps/ai-sales` | `landings/aisales`, `landings/aisales-system` | `aisales.46-62-215-11.nip.io`, `dashboard.46-62-215-11.nip.io` | `aisales-api-v2`, `aisales-command-center`, postgres/redis/qdrant/minio |
+| 8 | 💬 **tg-agent** (`tg-agent`) | production | 5/7 | `apps/tg-agent` | `landings/tg-agent` | `tg-agent.46-62-215-11.nip.io`, `tg.46-62-215-11.nip.io` (admin), `@newnewnnn_bot` | `tg-agent` |
+| 9 | 🪞 **Persona Studio** (`persona-studio`) | dev | 2/7 | `apps/persona-studio` | `landings/persona-studio` | `dashboard.../landings/persona-studio/`, deploy via workflows | (TBD) |
+| 10 | 📡 **Залётный / Viral Discover** (`viral-discover`) | production | **6/6 ✅** | `apps/infra-worker/handlers/viral_discover.js` + `lib/parser_bot.js` | `landings/viral-discover/cabinet/` | `dashboard.../landings/viral-discover/`, `parser.46-62-215-11.nip.io`, `@parser_instaa_bot` | `infra-aisales-worker-1` |
+
+### Infrastructure-only apps (not in Command Center)
+
+| Code path | Что | Prod |
+|---|---|---|
+| `apps/ytdlp` | FastAPI yt-dlp companion (URL → media) | `infra-ytdlp-1` |
+| `apps/infra-worker` | Office Worker, 9 cron handlers (`daily_briefing`, `weekly_recap`, `monthly_calendar`, `welcome_sequence`, `welcome_voice`, `subscription_expiry_check`, `viral_clone`, `viral_clone_sweep`, `viral_discover`) | `infra-aisales-worker-1` |
+| `apps/persona-train` | Forked voice-training stack (own domain) — **в Command Center НЕТ**, отдельная инициатива Ильи | `persona-train.46-62-215-11.nip.io`, `@ilia_pali0_bot`, `persona-train-web :3030` |
+| `apps/voice-circle-bot` | Python TG-bot prototype для видео-кружков — **в Command Center НЕТ**, не задеплоен | — |
 
 ## When Claude is asked to change something
 
