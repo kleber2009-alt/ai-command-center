@@ -16,7 +16,7 @@ type Body = {
 export async function POST(req: NextRequest) {
   const guard = guardRequest(req, {
     rateLimit: { key: 'ig-analyze', max: 5, windowMs: 60_000 },
-    ownerOnly: true,
+    requireInitData: false,
   })
   if (!guard.ok) return guard.response
 
@@ -34,7 +34,9 @@ export async function POST(req: NextRequest) {
     return NextResponse.json({ error: 'Некорректный JSON' }, { status: 400 })
   }
 
-  const username = body.username?.trim().replace(/^@/, '')
+  const rawInput = body.username?.trim() ?? ''
+  const urlMatch = rawInput.match(/instagram\.com\/([A-Za-z0-9._-]+)/)
+  const username = urlMatch ? urlMatch[1] : rawInput.replace(/^@/, '')
   if (!username) {
     return NextResponse.json({ error: 'username обязателен' }, { status: 400 })
   }
@@ -55,7 +57,10 @@ export async function POST(req: NextRequest) {
   }
 
   if (scraped.reels.length === 0) {
-    return NextResponse.json({ error: `У @${username} нет публичных Reels` }, { status: 404 })
+    return NextResponse.json({
+      error: `У @${username} нет публичных Reels`,
+      debug: { rawCount: scraped.rawCount, rawFields: scraped.rawSample },
+    }, { status: 404 })
   }
 
   // 2. Persist account

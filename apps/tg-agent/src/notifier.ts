@@ -17,6 +17,8 @@ const HEADERS: Partial<Record<Action, string>> = {
   DRAFT_FOR_OWNER: '[DRAFT] Черновик — подтвердите отправку',
 };
 
+const PAYMENT_HEADER = '💰 ПЛАТЁЖ ПОЛУЧЕН';
+
 export interface NotifyContext {
   chatId: number;
   chatTitle: string | undefined;
@@ -130,7 +132,9 @@ function commonHeader(ctx: NotifyContext): string[] {
 }
 
 function formatInfoNotification(ctx: NotifyContext): string {
-  const header = HEADERS[ctx.action] ?? '[NOTIFY]';
+  const header = ctx.classification.class === 'PAYMENT_RECEIVED'
+    ? PAYMENT_HEADER
+    : HEADERS[ctx.action] ?? '[NOTIFY]';
   const lines = [header, '', ...commonHeader(ctx), '', 'Сообщение:', quote(ctx.text)];
   if (ctx.reply) {
     lines.push('', 'Ответ бота:', quote(ctx.reply));

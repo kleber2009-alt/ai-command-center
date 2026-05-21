@@ -246,3 +246,90 @@ def check_setup() -> dict:
         "mock_mode": MOCK_MODE,
         "api_base": API_BASE if BOT_TOKEN else None,
     }
+
+
+# ============ TgBot — per-tenant client ============
+
+class TgBot:
+    """
+    Stateless per-token Telegram Bot API client.
+    Same interface as module-level functions but uses an explicit token.
+    Используется для мультитенантных ботов.
+    """
+
+    def __init__(self, token: str):
+        self.token = token
+        self._api = f"https://api.telegram.org/bot{token}"
+        self._file = f"https://api.telegram.org/file/bot{token}"
+
+    async def _post(self, method: str, json: dict | None = None) -> dict:
+        import httpx
+        url = f"{self._api}/{method}"
+        async with httpx.AsyncClient(timeout=30) as c:
+            r = await c.post(url, json=json or {})
+            try:
+                data = r.json()
+            except Exception:
+                data = {"ok": False, "status_code": r.status_code, "text": r.text[:200]}
+            if not data.get("ok"):
+                log.warning("TgBot %s · %s failed: %s", self.token[-8:], method, data)
+            return data
+
+    async def _multipart(self, method: str, chat_id: int, file_field: str, file_path: "Path", extra: dict | None = None) -> dict:
+        import httpx
+        url = f"{self._api}/{method}"
+        files = {file_field: (file_path.name, file_path.read_bytes())}
+        data = {"chat_id": str(chat_id)}
+        for k, v in (extra or {}).items():
+            if v is not None:
+                data[k] = str(v)
+        async with httpx.AsyncClient(timeout=120) as c:
+            r = await c.post(url, files=files, data=data)
+            try:
+                return r.json()
+            except Exception:
+                return {"ok": False, "text": r.text[:200]}
+
+    async def send_text(self, chat_id: int, text: str, parse_mode: str | None = "Markdown", disable_preview: bool = True) -> dict:
+        payload: dict = {"chat_id": chat_id, "text": text, "disable_web_page_preview": disable_preview}
+        if parse_mode:
+            payload["parse_mode"] = parse_mode
+        return await self._post("sendMessage", json=payload)
+
+    async def send_voice(self, chat_id: int, voice_path: "Path", duration: int | None = None) -> dict:
+        return await self._multipart("sendVoice", chat_id, "voice", voice_path, {"duration": duration})
+
+    async def send_video_note(self, chat_id: int, video_path: "Path", duration: int | None = None) -> dict:
+        return await self._multipart("sendVideoNote", chat_id, "video_note", video_path, {"duration": duration, "length": "360"})
+
+    async def send_chat_action(self, chat_id: int, action: str) -> dict:
+        return await self._post("sendChatAction", json={"chat_id": chat_id, "action": action})
+
+    async def download_file(self, file_id: str, dst_dir: "Path") -> "Path | None":
+        r = await self._post("getFile", json={"file_id": file_id})
+        if not r.get("ok"):
+            return None
+        file_path = r["result"]["file_path"]
+        import httpx
+        url = f"{self._file}/{file_path}"
+        suffix = Path(file_path).suffix or ".bin"
+        dst = dst_dir / f"tg-{file_id}{suffix}"
+        async with httpx.AsyncClient(timeout=60) as c:
+            resp = await c.get(url)
+            resp.raise_for_status()
+            dst.write_bytes(resp.content)
+        return dst
+
+    async def set_webhook(self, url: str, secret: str | None = None) -> dict:
+        payload: dict = {"url": url, "max_connections": 40, "allowed_updates": ["message", "edited_message"]}
+        if secret:
+            payload["secret_token"] = secret
+        return await self._post("setWebhook", json=payload)
+
+    async def send_typing_burst(self, chat_id: int, total_s: float) -> None:
+        import asyncio
+        elapsed = 0.0
+        while elapsed < total_s:
+            await self.send_chat_action(chat_id, "typing")
+            await asyncio.sleep(min(4.5, total_s - elapsed))
+            elapsed += 4.5

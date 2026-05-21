@@ -14,6 +14,7 @@ export interface ChatService {
   touch(chatId: number, title: string | undefined): ChatState;
   listAll(): Array<ChatRowAggregated>;
   setAutoReply(chatId: number, value: boolean): ChatState | null;
+  listGroups(): Array<{ chat_id: number; title: string | null }>;
 }
 
 export interface ChatRowAggregated {
@@ -64,6 +65,9 @@ export function createChatService(db: Db): ChatService {
     ORDER BY c.updated_at DESC
   `);
 
+  const listGroupsStmt = db.prepare(
+    `SELECT chat_id, title FROM tg_chats ORDER BY updated_at DESC`
+  );
   const setAutoReplyStmt = db.prepare(`
     UPDATE tg_chats
     SET auto_reply = ?, updated_at = ?
@@ -100,6 +104,9 @@ export function createChatService(db: Db): ChatService {
         title: row.title ?? undefined,
         autoReply: Boolean(row.auto_reply),
       };
+    },
+    listGroups(): Array<{ chat_id: number; title: string | null }> {
+      return listGroupsStmt.all() as Array<{ chat_id: number; title: string | null }>;
     },
   };
 }

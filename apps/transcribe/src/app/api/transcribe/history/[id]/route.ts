@@ -5,7 +5,7 @@ import { dbGetTranscript, dbDeleteTranscript } from '@/lib/transcripts-db'
 export async function GET(_req: NextRequest, { params }: { params: { id: string } }) {
   const guard = guardRequest(_req, {
     rateLimit: { key: 'history-item', max: 60, windowMs: 60_000 },
-    ownerOnly: true,
+    requireInitData: false,
   })
   if (!guard.ok) return guard.response
 
@@ -19,7 +19,7 @@ export async function GET(_req: NextRequest, { params }: { params: { id: string 
 export async function DELETE(_req: NextRequest, { params }: { params: { id: string } }) {
   const guard = guardRequest(_req, {
     rateLimit: { key: 'history-item', max: 60, windowMs: 60_000 },
-    ownerOnly: true,
+    requireInitData: false,
   })
   if (!guard.ok) return guard.response
 

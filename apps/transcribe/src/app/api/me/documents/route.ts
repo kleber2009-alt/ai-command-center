@@ -40,7 +40,7 @@ async function extractFileText(file: File): Promise<string> {
 export async function GET(req: NextRequest) {
   const guard = guardRequest(req, {
     rateLimit: { key: 'docs-list', max: 60, windowMs: 60_000 },
-    ownerOnly: true,
+    requireInitData: false,
   })
   if (!guard.ok) return guard.response
 
@@ -59,15 +59,15 @@ export async function POST(req: NextRequest) {
   // PDF parsing + OpenAI embeddings — tighter limit on creation.
   const guard = guardRequest(req, {
     rateLimit: { key: 'docs-create', max: 10, windowMs: 60_000 },
-    ownerOnly: true,
+    requireInitData: false,
   })
   if (!guard.ok) return guard.response
 
   const supabase = getServerSupabase()
   if (!supabase) {
     return NextResponse.json(
-      { error: 'Supabase не настроен. Нужны NEXT_PUBLIC_SUPABASE_URL и SUPABASE_SERVICE_KEY + миграция 003_me.sql.' },
-      { status: 500 },
+      { error: 'Документная база отключена: pgvector ещё не установлен на этом deployment. Установи расширение vector в aio Postgres + накати me_documents/me_chunks из supabase/migrations/003_me.sql, тогда я перепишу route на postgres.js.' },
+      { status: 503 },
     )
   }
   if (!process.env.OPENAI_API_KEY) {

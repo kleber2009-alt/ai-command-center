@@ -3,7 +3,7 @@ import { useEffect, useRef, useState } from 'react'
 import {
   AudioLines, Loader2, Copy, Check, TriangleAlert, Link as LinkIcon,
   Download, FileText, Sparkles, Languages, History, Trash2, ChevronRight, Youtube, FileAudio,
-  LayoutGrid, Video, Shuffle, Send, Brain, Zap,
+  LayoutGrid, Video, Shuffle, Send, Brain, Zap, Image,
 } from 'lucide-react'
 import { apiFetch, getTelegram, isInTelegram } from '@/lib/telegram'
 
@@ -21,6 +21,7 @@ type Summary = { summary: string; bullets: string[] }
 type Translation = { text: string; lang: 'ru' | 'en' }
 
 type CarouselContent = { slides: Array<{ n: number; title: string; body: string }> }
+type CarouselImageContent = { slides: Array<{ n: number; title: string; body: string; imageUrl: string | null }> }
 type ReelsContent = {
   hook: string
   promise: string
@@ -32,15 +33,16 @@ type ReelsContent = {
 }
 type TgPostContent = { text: string }
 
-type GenType = 'carousel' | 'reels-new' | 'reels-remix' | 'tg-post'
+type GenType = 'carousel' | 'reels-new' | 'reels-remix' | 'tg-post' | 'carousel-image'
 type Generations = {
   carousel?: CarouselContent
+  'carousel-image'?: CarouselImageContent
   'reels-new'?: ReelsContent
   'reels-remix'?: ReelsContent
   'tg-post'?: TgPostContent
 }
 
-type Artifact = 'summary' | 'translation' | 'carousel' | 'reels-new' | 'reels-remix' | 'tg-post'
+type Artifact = 'summary' | 'translation' | 'carousel' | 'carousel-image' | 'reels-new' | 'reels-remix' | 'tg-post'
 
 type HistoryItem = {
   id: string
@@ -54,12 +56,13 @@ type HistoryItem = {
 }
 
 const ARTIFACT_LABELS: Record<Artifact, { label: string; color: string }> = {
-  summary:       { label: 'саммари',    color: 'bg-violet-500/10 text-violet-300 border-violet-500/20' },
-  translation:   { label: 'перевод',    color: 'bg-emerald-500/10 text-emerald-300 border-emerald-500/20' },
-  carousel:      { label: 'карусель',   color: 'bg-cyan-500/10 text-cyan-300 border-cyan-500/20' },
-  'reels-new':   { label: 'рилс',       color: 'bg-fuchsia-500/10 text-fuchsia-300 border-fuchsia-500/20' },
-  'reels-remix': { label: 'рилс-ремикс', color: 'bg-pink-500/10 text-pink-300 border-pink-500/20' },
-  'tg-post':     { label: 'TG-пост',    color: 'bg-sky-500/10 text-sky-300 border-sky-500/20' },
+  summary:          { label: 'саммари',         color: 'bg-violet-500/10 text-violet-300 border-violet-500/20' },
+  translation:      { label: 'перевод',          color: 'bg-emerald-500/10 text-emerald-300 border-emerald-500/20' },
+  carousel:         { label: 'карусель',         color: 'bg-cyan-500/10 text-cyan-300 border-cyan-500/20' },
+  'carousel-image': { label: 'карусель+фото',    color: 'bg-indigo-500/10 text-indigo-300 border-indigo-500/20' },
+  'reels-new':      { label: 'рилс',             color: 'bg-fuchsia-500/10 text-fuchsia-300 border-fuchsia-500/20' },
+  'reels-remix':    { label: 'рилс-ремикс',      color: 'bg-pink-500/10 text-pink-300 border-pink-500/20' },
+  'tg-post':        { label: 'TG-пост',          color: 'bg-sky-500/10 text-sky-300 border-sky-500/20' },
 }
 
 function formatTime(sec: number) {
@@ -284,6 +287,7 @@ export default function TranscribePage() {
 
   const [generations, setGenerations] = useState<Generations>({})
   const [genLoading, setGenLoading] = useState<GenType | null>(null)
+  const [tgResend, setTgResend] = useState<'idle' | 'sending' | 'sent' | 'error'>('idle')
 
   const [history, setHistory] = useState<HistoryItem[]>([])
   const [historyConfigured, setHistoryConfigured] = useState(true)
@@ -592,6 +596,29 @@ export default function TranscribePage() {
     }
   }
 
+  async function resendCarouselToTelegram() {
+    if (!result?.id) return
+    setTgResend('sending')
+    try {
+      const res = await apiFetch('/api/transcribe/send-carousel', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ id: result.id }),
+      })
+      const data = await res.json().catch(() => ({}))
+      if (res.ok && data.sent > 0) {
+        setTgResend('sent')
+        setTimeout(() => setTgResend('idle'), 3000)
+      } else {
+        setTgResend('error')
+        setTimeout(() => setTgResend('idle'), 4000)
+      }
+    } catch {
+      setTgResend('error')
+      setTimeout(() => setTgResend('idle'), 4000)
+    }
+  }
+
   function copyText(text: string) {
     navigator.clipboard.writeText(text)
   }
@@ -886,6 +913,7 @@ export default function TranscribePage() {
             <div className="flex flex-wrap gap-2">
               {([
                 ['carousel', 'Карусель', LayoutGrid] as const,
+                ['carousel-image', 'Карусель с фото', Image] as const,
                 ['reels-new', 'Рилс новый', Video] as const,
                 ['reels-remix', 'Рилс ремикс', Shuffle] as const,
                 ['tg-post', 'Пост в Telegram', Send] as const,
@@ -926,6 +954,61 @@ export default function TranscribePage() {
                     <div className="absolute right-3 top-2 font-mono text-[11px] text-apple-faint">#{slide.n}</div>
                     <div className="mb-2 pr-8 text-[15px] font-semibold text-apple-ink">{slide.title}</div>
                     <div className="whitespace-pre-wrap text-[13px] leading-relaxed text-apple-muted">{slide.body}</div>
+                  </div>
+                ))}
+              </div>
+            </div>
+          )}
+
+          {/* Carousel with images */}
+          {generations['carousel-image'] && (
+            <div className="overflow-hidden rounded-apple-lg border border-apple-line bg-white shadow-apple-sm">
+              <div className="flex items-center justify-between border-b border-apple-line px-5 py-3">
+                <div className="flex items-center gap-2">
+                  <Image className="h-4 w-4 text-apple-blue" />
+                  <h3 className="text-[13px] font-semibold text-apple-ink">
+                    Карусель с фото · {generations['carousel-image'].slides.length} слайдов
+                  </h3>
+                </div>
+                {inTg && (
+                  <button
+                    type="button"
+                    onClick={resendCarouselToTelegram}
+                    disabled={tgResend === 'sending'}
+                    className="flex items-center gap-1.5 rounded-md border border-apple-line bg-apple-bg-elev px-3 py-1.5 text-[12px] font-medium text-apple-ink transition hover:bg-apple-bg-soft disabled:cursor-not-allowed disabled:opacity-60"
+                  >
+                    <Send className="h-3.5 w-3.5" />
+                    {tgResend === 'sending'
+                      ? 'Отправляю…'
+                      : tgResend === 'sent'
+                      ? 'Отправлено ✓'
+                      : tgResend === 'error'
+                      ? 'Ошибка — повторить'
+                      : 'Отправить в Telegram'}
+                  </button>
+                )}
+              </div>
+              <div className="grid max-h-[80vh] grid-cols-1 gap-4 overflow-y-auto p-5 sm:grid-cols-2">
+                {generations['carousel-image'].slides.map(slide => (
+                  <div key={slide.n} className="overflow-hidden rounded-xl border border-apple-line bg-apple-bg-elev">
+                    {slide.imageUrl ? (
+                      <img
+                        src={slide.imageUrl}
+                        alt={slide.title}
+                        className="h-48 w-full object-cover"
+                      />
+                    ) : (
+                      <div className="flex h-48 items-center justify-center bg-apple-bg-soft">
+                        <span className="text-[12px] text-apple-faint">Изображение не сгенерировано</span>
+                      </div>
+                    )}
+                    <div className="p-4">
+                      <div className="relative">
+                        <div className="absolute right-0 top-0 font-mono text-[11px] text-apple-faint">#{slide.n}</div>
+                        <div className="mb-1.5 pr-8 text-[14px] font-semibold text-apple-ink">{slide.title}</div>
+                        <div className="whitespace-pre-wrap text-[12px] leading-relaxed text-apple-muted">{slide.body}</div>
+                      </div>
+                    </div>
                   </div>
                 ))}
               </div>

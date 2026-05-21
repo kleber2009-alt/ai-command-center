@@ -57,6 +57,24 @@ function parseHours(raw: string | undefined, fallback: number): number {
   return n;
 }
 
+function parseHourOfDay(name: string, raw: string | undefined, fallback: number): number {
+  if (!raw) return fallback;
+  const n = Number(raw);
+  if (!Number.isInteger(n) || n < 0 || n > 23) {
+    throw new Error(`${name} must be an integer 0..23, got: ${raw}`);
+  }
+  return n;
+}
+
+function parseWindowHours(name: string, raw: string | undefined, fallback: number): number {
+  if (!raw) return fallback;
+  const n = Number(raw);
+  if (!Number.isFinite(n) || n < 1 || n > 168) {
+    throw new Error(`${name} must be in [1, 168] hours, got: ${raw}`);
+  }
+  return n;
+}
+
 function parsePositiveInt(name: string, raw: string | undefined, fallback: number): number {
   if (!raw) return fallback;
   const n = Number(raw);
@@ -92,6 +110,14 @@ export interface Config {
   backupIntervalHours: number;
   healthFailureThreshold: number;
   healthAlertCooldownMinutes: number;
+  stripeWebhookSecret: string | undefined;
+  stripeBasicPriceId: string | undefined;
+  stripeProPriceId: string | undefined;
+  stripeEnterprisePriceId: string | undefined;
+  digestModel: string;
+  digestDailyHourUtc: number;
+  digestWindowHours: number;
+  digestEnabled: boolean;
 }
 
 export function loadConfig(): Config {
@@ -127,5 +153,23 @@ export function loadConfig(): Config {
       optional('HEALTH_ALERT_COOLDOWN_MINUTES'),
       60,
     ),
+    stripeWebhookSecret: optional('STRIPE_WEBHOOK_SECRET'),
+    stripeBasicPriceId: optional('STRIPE_BASIC_PRICE_ID'),
+    stripeProPriceId: optional('STRIPE_PRO_PRICE_ID'),
+    stripeEnterprisePriceId: optional('STRIPE_ENTERPRISE_PRICE_ID'),
+    digestModel:
+      optional('DIGEST_MODEL') ?? optional('INSIGHTS_MODEL') ?? 'claude-sonnet-4-6',
+    digestDailyHourUtc: parseHourOfDay(
+      'DIGEST_DAILY_HOUR_UTC',
+      optional('DIGEST_DAILY_HOUR_UTC'),
+      6,
+    ),
+    digestWindowHours: parseWindowHours(
+      'DIGEST_WINDOW_HOURS',
+      optional('DIGEST_WINDOW_HOURS'),
+      24,
+    ),
+    digestEnabled:
+      (optional('DIGEST_ENABLED') ?? 'true').toLowerCase() !== 'false',
   };
 }

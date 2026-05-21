@@ -1,4 +1,5 @@
-import { readFileSync } from 'node:fs';
+import { createHmac, timingSafeEqual } from 'node:crypto';
+import { copyFileSync, existsSync, readdirSync, readFileSync, writeFileSync } from 'node:fs';
 import { dirname, join } from 'node:path';
 import { fileURLToPath } from 'node:url';
 
@@ -7,12 +8,16 @@ import { getCookie } from 'hono/cookie';
 import { Hono, type Context as HonoContext } from 'hono';
 import { basicAuth } from 'hono/basic-auth';
 
+import type { BillingService, SubPlan, SubStatus } from '../db/billing.js';
 import type { ChatService } from '../db/chats.js';
+import type { DealService, DealStage } from '../db/deals.js';
 import type { DraftService, DraftStatus } from '../db/drafts.js';
 import type { LeadService } from '../db/leads.js';
 import type { MessageStore } from '../db/messages.js';
 import type { StatsService } from '../db/stats.js';
 import type { HealthMonitor } from '../health.js';
+import type { KbManager } from '../kb-manager.js';
+import type { PromptConfig } from '../prompt-config.js';
 import type { Logger } from '../logger.js';
 import {
   buildClearCookie,
@@ -55,6 +60,16 @@ export interface AdminDeps {
   // from each request's Host + X-Forwarded-Proto, which works behind
   // Caddy / Cloudflare Tunnel out of the box.
   publicUrl: string | undefined;
+  kbManager: KbManager | undefined;
+  dealService: DealService | undefined;
+  billingService: BillingService | undefined;
+  stripeWebhookSecret: string | undefined;
+  stripeBasicPriceId: string | undefined;
+  stripeProPriceId: string | undefined;
+  stripeEnterprisePriceId: string | undefined;
+  sendOwnerMessage: ((text: string) => Promise<void>) | undefined;
+  promptConfig: PromptConfig | undefined;
+  dataDir: string;
 }
 
 export interface AdminHandle {
@@ -270,6 +285,206 @@ function wireApi(app: Hono, deps: AdminDeps): void {
   );
 
   app.get('/api/health', (c) => c.json({ items: deps.health.snapshot() }));
+
+  // ── KB routes ────────────────────────────────────────────────────────────
+  if (deps.kbManager) {
+    const km = deps.kbManager;
+    app.get('/api/kb', (c) => c.json({ content: km.getContent(), source: km.getSource() }));
+    app.post('/api/kb', async (c) => {
+      const { content } = await c.req.json<{ content?: string }>();
+      if (typeof content !== 'string') return c.json({ error: 'content required' }, 400);
+      km.save(content);
+      km.reload();
+      return c.json({ ok: true });
+    });
+  }
+
+  // ── Prompt config routes ─────────────────────────────────────────────────
+  app.get('/api/prompts', (c) => {
+    if (!deps.promptConfig) return c.json({ tone: '', strategies: {}, classifierExtra: '' });
+    return c.json(deps.promptConfig.getAll());
+  });
+  app.patch('/api/prompts', async (c) => {
+    if (!deps.promptConfig) return c.json({ error: 'not configured' }, 503);
+    const body = await c.req.json<{ tone?: string; strategies?: Record<string,string>; classifierExtra?: string }>();
+    deps.promptConfig.save(body);
+    return c.json({ ok: true });
+  });
+
+  // ── Projects / daily reports ─────────────────────────────────────────────
+  app.get('/api/projects', (c) => {
+    const dir = join(deps.dataDir, 'projects');
+    if (!existsSync(dir)) return c.json({ projects: [] });
+    const entries = readdirSync(dir, { withFileTypes: true })
+      .filter(e => e.isDirectory())
+      .map(e => ({ name: e.name, title: e.name.replace(/-/g, ' ') }));
+    return c.json({ projects: entries });
+  });
+  app.get('/api/projects/:name/archive', (c) => {
+    const archDir = join(deps.dataDir, 'projects', c.req.param('name'), 'archive');
+    if (!existsSync(archDir)) return c.json({ files: [] });
+    const files = readdirSync(archDir).filter(f => f.endsWith('.md'));
+    return c.json({ files });
+  });
+  app.get('/api/projects/:name/archive/:file', (c) => {
+    const p = join(deps.dataDir, 'projects', c.req.param('name'), 'archive', c.req.param('file'));
+    if (!existsSync(p)) return c.json({ error: 'not found' }, 404);
+    return c.json({ content: readFileSync(p, 'utf8') });
+  });
+  app.get('/api/projects/:name/:file', (c) => {
+    const p = join(deps.dataDir, 'projects', c.req.param('name'), c.req.param('file'));
+    if (!existsSync(p)) return c.json({ error: 'not found' }, 404);
+    return c.json({ content: readFileSync(p, 'utf8') });
+  });
+
+  // ── Pipeline (CRM deals) routes ───────────────────────────────────────────
+  if (deps.dealService) {
+    const ds = deps.dealService;
+    app.get('/api/deals', (c) => c.json(ds.listAll()));
+    app.post('/api/deals', async (c) => {
+      const b = await c.req.json<{ chatId?: number; userId?: number; notes?: string }>();
+      if (!b.chatId || !b.userId) return c.json({ error: 'chatId and userId required' }, 400);
+      const deal = ds.create(b.chatId, b.userId);
+      return c.json(deal, 201);
+    });
+    app.patch('/api/deals/:id/stage', async (c) => {
+      const id = Number(c.req.param('id'));
+      const { stage } = await c.req.json<{ stage?: string }>();
+      if (!stage) return c.json({ error: 'stage required' }, 400);
+      const updated = ds.updateStage(id, stage as DealStage);
+      if (!updated) return c.json({ error: 'not found' }, 404);
+      return c.json(updated);
+    });
+    app.patch('/api/deals/:id/notes', async (c) => {
+      const id = Number(c.req.param('id'));
+      const { notes } = await c.req.json<{ notes?: string }>();
+      if (notes === undefined) return c.json({ error: 'notes required' }, 400);
+      const updated = ds.updateNotes(id, notes);
+      if (!updated) return c.json({ error: 'not found' }, 404);
+      return c.json(updated);
+    });
+    app.patch('/api/deals/:id/amount', async (c) => {
+      const id = Number(c.req.param('id'));
+      const { amount } = await c.req.json<{ amount?: number | null }>();
+      const updated = ds.updateAmount(id, amount ?? null);
+      if (!updated) return c.json({ error: 'not found' }, 404);
+      return c.json(updated);
+    });
+    app.delete('/api/deals/:id', (c) => {
+      const id = Number(c.req.param('id'));
+      ds.remove(id);
+      return c.json({ ok: true });
+    });
+    app.get('/api/deals/contacts', (c) => c.json(ds.listContacts()));
+  }
+
+  // ── Demo mode routes ──────────────────────────────────────────────────────
+  app.get('/api/demo/status', (c) =>
+    c.json({ active: Boolean((globalThis as Record<string, unknown>).__demoActive) })
+  );
+  app.post('/api/demo/start', async (c) => {
+    (globalThis as Record<string, unknown>).__demoActive = true;
+    deps.logger.info('demo mode started');
+    return c.json({ ok: true });
+  });
+  // alias used by ui.html
+  app.post('/api/demo/activate', async (c) => {
+    (globalThis as Record<string, unknown>).__demoActive = true;
+    deps.logger.info('demo mode activated');
+    return c.json({ ok: true });
+  });
+  app.post('/api/demo/stop', async (c) => {
+    (globalThis as Record<string, unknown>).__demoActive = false;
+    deps.logger.info('demo mode stopped');
+    return c.json({ ok: true });
+  });
+
+  // ── Billing (subscription) routes ─────────────────────────────────────────
+  if (deps.billingService) {
+    const bs = deps.billingService;
+    app.get('/api/billing/config', (c) => c.json({ configured: Boolean(deps.stripeWebhookSecret) }));
+    app.get('/api/billing/subscriptions', (c) => c.json(bs.listAll()));
+    app.get('/api/billing/stats', (c) => c.json(bs.stats()));
+    // plan updates via Stripe webhook
+  }
+
+  // Stripe webhook (no auth middleware — raw body needed)
+  app.post('/api/stripe/webhook', async (c) => {
+    if (!deps.billingService) return c.json({ error: 'billing not configured' }, 503);
+    const secret = deps.stripeWebhookSecret;
+    const raw = await c.req.text();
+    const sig = c.req.header('stripe-signature') ?? '';
+    if (secret) {
+      const parts: Record<string, string> = {};
+      for (const part of sig.split(',')) {
+        const [k, v] = part.split('=');
+        if (k && v) parts[k] = v;
+      }
+      const ts = parts['t'];
+      const v1 = parts['v1'];
+      if (!ts || !v1) return c.json({ error: 'bad sig' }, 400);
+      const expected = createHmac('sha256', secret).update(`${ts}.${raw}`).digest('hex');
+      const expectedBuf = Buffer.from(expected, 'hex');
+      const actualBuf = Buffer.from(v1, 'hex');
+      if (expectedBuf.length !== actualBuf.length || !timingSafeEqual(expectedBuf, actualBuf)) {
+        return c.json({ error: 'sig mismatch' }, 400);
+      }
+    }
+    let evt: { type: string; data?: { object?: Record<string, unknown> } };
+    try { evt = JSON.parse(raw); } catch { return c.json({ error: 'bad json' }, 400); }
+
+    const planFor = (pid: string | undefined): SubPlan => {
+      if (pid === deps.stripeBasicPriceId) return 'basic';
+      if (pid === deps.stripeProPriceId) return 'pro';
+      if (pid === deps.stripeEnterprisePriceId) return 'enterprise';
+      return 'basic';
+    };
+    const toIso = (v: number | null | undefined) =>
+      v ? new Date(v * 1000).toISOString() : undefined;
+
+    const obj = evt.data?.object ?? {};
+    const subId = String(obj['id'] ?? '');
+    const custId = String(obj['customer'] ?? '');
+    const email = String(obj['customer_email'] ?? (obj['customer_details'] as Record<string,unknown>)?.['email'] ?? '');
+    const items = (obj['items'] as Record<string, unknown> | undefined);
+    const priceObj = ((items?.['data'] as unknown[] | undefined) ?? [])[0] as Record<string,unknown> | undefined;
+    const priceId = String((priceObj?.['price'] as Record<string,unknown> | undefined)?.['id'] ?? '');
+
+    if (evt.type === 'customer.subscription.created' || evt.type === 'customer.subscription.updated') {
+      deps.billingService!.upsertBySubId({
+        stripe_subscription_id: subId,
+        stripe_customer_id: custId,
+        plan: planFor(priceId),
+        status: String(obj['status'] ?? 'active') as SubStatus,
+        customer_email: email,
+        trial_end: toIso(obj['trial_end'] as number | null),
+        current_period_end: toIso(obj['current_period_end'] as number | null),
+        cancel_at: toIso(obj['cancel_at'] as number | null),
+      });
+    } else if (evt.type === 'customer.subscription.deleted') {
+      deps.billingService!.upsertBySubId({
+        stripe_subscription_id: subId,
+        stripe_customer_id: custId,
+        status: 'canceled',
+        customer_email: email,
+      });
+    } else if (evt.type === 'checkout.session.completed') {
+      const sessionSubId = String(obj['subscription'] ?? '');
+      if (sessionSubId) {
+        deps.billingService!.upsertBySubId({
+          stripe_subscription_id: sessionSubId,
+          stripe_customer_id: custId,
+          customer_email: email,
+          status: 'active',
+          plan: planFor(priceId),
+        });
+      }
+      if (deps.sendOwnerMessage) {
+        await deps.sendOwnerMessage(`💳 Новая оплата!\nEmail: ${email}\nSub: ${sessionSubId || subId}`);
+      }
+    }
+    return c.json({ received: true });
+  });
 }
 
 function clampDays(raw: string | undefined, fallback: number, max: number): number {

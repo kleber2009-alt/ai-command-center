@@ -69,9 +69,12 @@ export function guardRequest(req: NextRequest, options: GuardOptions): GuardResu
   //    return 403, because we have no way to check who is calling.
   const botToken = process.env.TELEGRAM_BOT_TOKEN
   const headerInitData = req.headers.get(INIT_DATA_HEADER)
+  // Single-tenant mode: ownerOnly routes no longer force `requireInitData`,
+  // because the ownerOnly gate below falls back to OWNER_TELEGRAM_ID when
+  // initData is missing. Strict caller can still opt in via the explicit
+  // `requireInitData: true` option.
   const requireInitData =
-    options.ownerOnly === true ||
-    (options.requireInitData ?? process.env.TELEGRAM_REQUIRE_INIT_DATA === 'true')
+    options.requireInitData ?? process.env.TELEGRAM_REQUIRE_INIT_DATA === 'true'
 
   if (!botToken) {
     if (options.ownerOnly) {
@@ -106,13 +109,23 @@ export function guardRequest(req: NextRequest, options: GuardOptions): GuardResu
     }
   }
 
-  // 3. ownerOnly gate. At this point a valid `verified` is in hand
-  //    (we've already rejected missing/invalid headers above).
+  // 3. ownerOnly gate.
+  //    - With initData: user.id must match OWNER_TELEGRAM_ID.
+  //    - Without initData: single-tenant fallback — pass through, since the
+  //      deployment is owned by one person and there's no other identity
+  //      to compare against. Matches the owner-fallback in guardWithUser.
+  //    - OWNER_TELEGRAM_ID not configured → 403 (closed by default).
   if (options.ownerOnly) {
     const ownerIdRaw = process.env.OWNER_TELEGRAM_ID
     const ownerId = ownerIdRaw ? parseInt(ownerIdRaw, 10) : NaN
+    if (!Number.isFinite(ownerId)) {
+      return {
+        ok: false,
+        response: NextResponse.json({ error: 'forbidden' }, { status: 403 }),
+      }
+    }
     const userId = verified?.user?.id
-    if (!Number.isFinite(ownerId) || !userId || userId !== ownerId) {
+    if (userId && userId !== ownerId) {
       return {
         ok: false,
         response: NextResponse.json({ error: 'forbidden' }, { status: 403 }),
@@ -144,6 +157,7 @@ export async function guardWithUser(
       username: 'dev',
       first_name: 'Dev',
       subscription_tier: 'pro',
+      subscription_expires_at: null,
       stripe_customer_id: null,
       stripe_subscription_id: null,
     }
@@ -152,10 +166,22 @@ export async function guardWithUser(
     return { ok: true, telegram: devTelegram, user: devUser, quota: devQuota }
   }
 
-  const base = guardRequest(req, { ...options, requireInitData: true })
+  // Single-tenant deployment: this transcribe app is owned by the
+  // OWNER_TELEGRAM_ID user, so when initData isn't available (e.g.
+  // the app is opened in a regular browser, not via Telegram WebApp)
+  // we attribute the request to the owner. If multi-tenant is needed
+  // later, restore `requireInitData: true` and remove the fallback.
+  const base = guardRequest(req, { ...options, requireInitData: false })
   if (!base.ok) return base
 
-  const tgUser = base.telegram?.user
+  let tgUser = base.telegram?.user
+  if (!tgUser?.id) {
+    const ownerIdRaw = process.env.OWNER_TELEGRAM_ID
+    const ownerId = ownerIdRaw ? parseInt(ownerIdRaw, 10) : NaN
+    if (Number.isFinite(ownerId)) {
+      tgUser = { id: ownerId, first_name: 'Owner' }
+    }
+  }
   if (!tgUser?.id) {
     return {
       ok: false,

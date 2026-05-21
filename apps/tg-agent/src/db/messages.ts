@@ -18,6 +18,7 @@ export interface MessageRow {
 export interface MessageStore {
   log(record: MessageLogRecord): void;
   listForChat(chatId: number, limit: number): MessageRow[];
+  listForInsights(chatIds: number[], days: number, limit: number): Array<Pick<MessageRow, 'text' | 'class'>>;
 }
 
 export function createMessageStore(db: Db): MessageStore {
@@ -54,6 +55,13 @@ export function createMessageStore(db: Db): MessageStore {
 
     listForChat(chatId, limit): MessageRow[] {
       return listStmt.all(chatId, limit) as MessageRow[];
+    },
+
+    listForInsights(chatIds: number[], days: number, limit: number): Array<Pick<MessageRow, 'text' | 'class'>> {
+      if (chatIds.length === 0) return [];
+      const ph = chatIds.map(() => '?').join(',');
+      const q = db.prepare(`SELECT text, class FROM tg_messages WHERE chat_id IN (${ph}) AND created_at >= datetime('now', ?) ORDER BY created_at DESC LIMIT ?`);
+      return q.all(...chatIds, `-${days} days`, limit) as Array<Pick<MessageRow, 'text' | 'class'>>;
     },
   };
 }

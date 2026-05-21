@@ -41,10 +41,32 @@ export interface CreateBotResult {
   attachNotifier(notifier: Notifier): void;
 }
 
+// Regex fast-path: detect payment notifications without a Claude API call.
+const PAYMENT_REGEXPS = [
+  /поступил платеж/i,
+  /поступила оплата/i,
+  /payment received/i,
+] as const;
+function isPaymentText(text: string): boolean {
+  return PAYMENT_REGEXPS.some((re) => re.test(text));
+}
+
 export function createBot(deps: BotDeps): CreateBotResult {
   const { bot, config, logger, classifier, responder, chats, leads, messages, drafts, health } =
     deps;
   let notifier: Notifier | null = null;
+
+  // Register chat immediately when bot is added to a group.
+  bot.on('my_chat_member', (ctx) => {
+    const status = ctx.myChatMember.new_chat_member.status;
+    if ((status === 'member' || status === 'administrator') &&
+        (ctx.chat.type === 'group' || ctx.chat.type === 'supergroup')) {
+      const chatId = ctx.chat.id;
+      const chatTitle = 'title' in ctx.chat ? ctx.chat.title : undefined;
+      chats.touch(chatId, chatTitle);
+      logger.info('chat registered via my_chat_member', { chatId, chatTitle, status });
+    }
+  });
 
   bot.on('message:text', async (ctx) => {
     const chatType = ctx.chat.type;
@@ -93,18 +115,28 @@ export function createBot(deps: BotDeps): CreateBotResult {
       const chatState = chats.touch(chatId, chatTitle);
       let classification;
       let classifierCacheRead = 0;
-      try {
-        const result = await classifier.classifyWithStats(text);
-        classification = result.classification;
-        classifierCacheRead = result.cacheReadInputTokens;
-        health.recordSuccess('classifier');
-      } catch (err) {
-        health.recordFailure('classifier', err);
-        throw err;
+      if (isPaymentText(text)) {
+        // Fast-path: payment detected — skip Claude call, always urgent.
+        classification = {
+          class: 'PAYMENT_RECEIVED' as const,
+          confidence: 0.99,
+          reasoning: 'платёжное уведомление от платёжной системы',
+        };
+      } else {
+        try {
+          const result = await classifier.classifyWithStats(text);
+          classification = result.classification;
+          classifierCacheRead = result.cacheReadInputTokens;
+          health.recordSuccess('classifier');
+        } catch (err) {
+          health.recordFailure('classifier', err);
+          throw err;
+        }
       }
       const decision = decide(classification, config.confidenceThreshold);
 
-      const lead = incoming.userId !== undefined
+      // Skip CRM status update for owner's own messages — owner is not a lead.
+      const lead = incoming.userId !== undefined && incoming.userId !== config.ownerTelegramId
         ? leads.touchAndClassify(
             {
               chatId,
@@ -211,7 +243,8 @@ export function createBot(deps: BotDeps): CreateBotResult {
         response: reply,
       });
 
-      if (chatState.autoReply && notifier && lead) {
+      const isPayment = classification.class === 'PAYMENT_RECEIVED';
+      if (notifier && (isPayment || (chatState.autoReply && lead))) {
         await notifier.notifyOwner({
           chatId,
           chatTitle,
@@ -224,8 +257,8 @@ export function createBot(deps: BotDeps): CreateBotResult {
           action: decision.action,
           reply,
           draftText,
-          leadStatus: lead.status,
-          leadStatusChanged: lead.changed,
+          leadStatus: lead?.status ?? 'cold',
+          leadStatusChanged: lead?.changed ?? false,
         });
       }
     } catch (err) {

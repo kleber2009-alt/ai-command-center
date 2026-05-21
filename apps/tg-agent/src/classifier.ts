@@ -1,6 +1,7 @@
 import Anthropic from '@anthropic-ai/sdk';
 
 import { CLASSIFIER_SYSTEM_PROMPT } from './prompts.js';
+import type { PromptConfig } from './prompt-config.js';
 import type { Classification, MessageClass } from './types.js';
 import { MESSAGE_CLASSES } from './types.js';
 
@@ -35,6 +36,7 @@ const classifyTool: Anthropic.Tool = {
 export interface ClassifierOptions {
   apiKey: string;
   model: string;
+  promptConfig?: PromptConfig;
 }
 
 export interface ClassificationResult {
@@ -51,7 +53,7 @@ export interface Classifier {
   classifyWithStats(text: string): Promise<ClassificationResult>;
 }
 
-export function createClassifier({ apiKey, model }: ClassifierOptions): Classifier {
+export function createClassifier({ apiKey, model, promptConfig }: ClassifierOptions): Classifier {
   const client = new Anthropic({ apiKey });
 
   async function call(text: string): Promise<ClassificationResult> {
@@ -65,7 +67,10 @@ export function createClassifier({ apiKey, model }: ClassifierOptions): Classifi
       system: [
         {
           type: 'text',
-          text: CLASSIFIER_SYSTEM_PROMPT,
+          text: (() => {
+            const extra = promptConfig?.getClassifierExtra();
+            return extra ? `${CLASSIFIER_SYSTEM_PROMPT}\n\n${extra}` : CLASSIFIER_SYSTEM_PROMPT;
+          })(),
           cache_control: { type: 'ephemeral' },
         },
       ],

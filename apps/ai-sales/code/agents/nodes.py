@@ -307,21 +307,81 @@ def rag_node(state: AgentState) -> AgentState:
         state["rag_chunks"] = mock_chunks.get(stage, [])
         state["rag_used"] = bool(state["rag_chunks"])
     else:
-        # Qdrant ещё не заполнен — возвращаем пустой результат, не падаем
-        # Когда подключим Voyage-3 + Qdrant, заменим на реальный поиск:
-        # from qdrant_client import QdrantClient
-        # from voyageai import Client as VoyageClient
-        # query_embedding = voyage.embed(state["incoming_message"])
-        # results = qdrant.search(collection_name="aisales", query_vector=query_embedding, limit=5)
-        state["rag_chunks"] = []
-        state["rag_used"] = False
-        log.info("rag · Qdrant/Voyage не подключены, чанков нет")
+        query = state.get("incoming_message", "")
+        try:
+            from openai import OpenAI
+            from qdrant_client import QdrantClient
+
+            _openai = OpenAI(api_key=os.getenv("OPENAI_API_KEY", ""))
+            _qdrant = QdrantClient(
+                url=os.getenv("QDRANT_URL", "http://aisales-qdrant:6333"),
+                api_key=os.getenv("QDRANT_API_KEY", ""),
+            )
+
+            emb_resp = _openai.embeddings.create(model="text-embedding-3-small", input=[query])
+            q_vec = emb_resp.data[0].embedding
+
+            hits = _qdrant.search(
+                collection_name="aisales_kb",
+                query_vector=q_vec,
+                limit=4,
+                score_threshold=0.20,
+            )
+            state["rag_chunks"] = [
+                {
+                    "collection": "aisales_kb",
+                    "content": h.payload.get("text", ""),
+                    "title": h.payload.get("title", ""),
+                    "similarity": round(h.score, 3),
+                }
+                for h in hits
+            ]
+            state["rag_used"] = bool(state["rag_chunks"])
+            log.info("rag · %d чанков (top score=%.2f)", len(hits), hits[0].score if hits else 0)
+        except Exception as e:
+            log.warning("rag · ошибка поиска: %s", e)
+            state["rag_chunks"] = []
+            state["rag_used"] = False
+
+    # Если у тенанта есть своя KB — ищем и мержим
+    tenant_kb_col = state.get("tenant_kb_collection")
+    if tenant_kb_col:
+        try:
+            from services.tenant_kb import search_tenant_kb
+            query = state.get("incoming_message", "")
+            if not hasattr(rag_node, "_openai_cache"):
+                from openai import OpenAI
+                rag_node._openai_cache = OpenAI(api_key=os.getenv("OPENAI_API_KEY", ""))
+            emb = rag_node._openai_cache.embeddings.create(model="text-embedding-3-small", input=[query])
+            tenant_hits = search_tenant_kb(state.get("tenant_id", tenant_kb_col), emb.data[0].embedding)
+            if tenant_hits:
+                state["rag_chunks"] = tenant_hits + state.get("rag_chunks", [])
+                state["rag_used"] = True
+                log.info("rag · +%d tenant чанков", len(tenant_hits))
+        except Exception as e:
+            log.warning("rag · tenant search failed: %s", e)
 
     state["latency_ms"] = state.get("latency_ms", 0) + int((time.time() - start) * 1000)
     return state
 
 
 # ============ NODE 4: GENERATE ============
+
+def _build_messages(history: list[dict], current_user_block: str) -> list[dict]:
+    """Convert DB history to Anthropic multi-turn messages format."""
+    msgs = []
+    for h in history:
+        direction = h.get("direction", "")
+        content = h.get("content") or ""
+        if not content:
+            continue
+        if direction == "in":
+            msgs.append({"role": "user", "content": content})
+        elif direction == "out":
+            msgs.append({"role": "assistant", "content": content})
+    msgs.append({"role": "user", "content": current_user_block})
+    return msgs
+
 
 def generate_node(state: AgentState) -> AgentState:
     """
@@ -387,6 +447,9 @@ def _generate_real(state: AgentState) -> None:
     client = Anthropic()
     channel = state.get("channel", "ig")
     system_prompt = _load_system_prompt(channel)
+    tenant_extra = state.get("tenant_extra_prompt") or ""
+    if tenant_extra:
+        system_prompt = tenant_extra + "\n\n---\n\n" + system_prompt
 
     # Контекст клиента для модели
     rag_chunks = state.get("rag_chunks", [])
@@ -415,7 +478,9 @@ def _generate_real(state: AgentState) -> None:
 # ИНСТРУКЦИЯ
 Ответь как менеджер согласно правилам в твоём системном промпте.
 Один ответ — одна мысль, без полотен. Не используй emoji за исключением случаев которые разрешены в стиле.
-Не пиши «здравствуйте» — используй «привет». На «ты» по умолчанию.
+На «ты» по умолчанию.
+ВАЖНО: если выше присутствует история диалога (предыдущие сообщения) — НЕ начинай ответ с приветствия («Привет», «Здравствуй» и т.п.). Приветствуй только если это буквально первое сообщение клиента и истории нет.
+Если клиент явно говорит "хочу купить" / "давай куплю" / "покупаю" — не задавай больше квалифицирующих вопросов. Сразу переходи к close: покажи конкретные варианты и CTA.
 """
 
     # Параметры запроса. thinking/output_config — если SDK поддерживает.
@@ -430,7 +495,7 @@ def _generate_real(state: AgentState) -> None:
                 "cache_control": {"type": "ephemeral", "ttl": "1h"},
             }
         ],
-        "messages": [{"role": "user", "content": user_block}],
+        "messages": _build_messages(state.get("conversation_history", []), user_block),
     }
     if os.getenv("AISALES_USE_THINKING", "1") == "1":
         call_kwargs["thinking"] = {"type": "adaptive"}

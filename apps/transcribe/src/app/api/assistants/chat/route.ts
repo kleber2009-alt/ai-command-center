@@ -11,6 +11,7 @@ type Body = { assistantId: string; messages: Msg[] }
 export async function POST(req: NextRequest) {
   const guard = guardRequest(req, {
     rateLimit: { key: 'assistants-chat', max: 20, windowMs: 60_000 },
+    requireInitData: false,
   })
   if (!guard.ok) return guard.response
 

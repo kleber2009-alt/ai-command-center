@@ -4,7 +4,7 @@ import { dirname, isAbsolute, resolve } from 'node:path';
 import Database, { type Database as DatabaseT } from 'better-sqlite3';
 
 import type { Logger } from '../logger.js';
-import { SCHEMA } from './schema.js';
+import { ensureSchemaUpgrades, SCHEMA } from './schema.js';
 
 export type Db = DatabaseT;
 
@@ -31,6 +31,7 @@ export function openDb({ path, logger }: DbOptions): Db {
   db.pragma('busy_timeout = 5000');
 
   db.exec(SCHEMA);
+  ensureSchemaUpgrades(db);
 
   logger.info('sqlite opened', { path: absolute });
   return db;

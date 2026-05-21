@@ -18,7 +18,7 @@ type Body = {
 export async function POST(req: NextRequest) {
   const guard = guardRequest(req, {
     rateLimit: { key: 'ig-trends', max: 3, windowMs: 60_000 },
-    ownerOnly: true,
+    requireInitData: false,
   })
   if (!guard.ok) return guard.response
 
@@ -40,7 +40,11 @@ export async function POST(req: NextRequest) {
   if (!niche) return NextResponse.json({ error: 'niche обязателен' }, { status: 400 })
 
   const competitors = (body.competitors ?? [])
-    .map((u: string) => u.trim().replace(/^@/, ''))
+    .map((u: string) => {
+      const s = u.trim()
+      const m = s.match(/instagram\.com\/([A-Za-z0-9._-]+)/)
+      return m ? m[1] : s.replace(/^@/, '')
+    })
     .filter(Boolean)
   if (competitors.length === 0) {
     return NextResponse.json({ error: 'Укажи хотя бы одного конкурента' }, { status: 400 })

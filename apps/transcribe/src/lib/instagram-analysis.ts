@@ -65,8 +65,24 @@ export type TrendAnalysisResult = {
 function extractJson(text: string): unknown {
   const stripped = text.replace(/```(?:json)?\s*/gi, '').replace(/```/g, '').trim()
   const start = stripped.indexOf('{')
-  const end = stripped.lastIndexOf('}')
-  if (start === -1 || end <= start) throw new Error('No JSON object in model response')
+  if (start === -1) throw new Error('No JSON object in model response')
+
+  // Find matching closing brace via depth tracking (handles truncated JSON better)
+  let depth = 0
+  let end = -1
+  let inStr = false
+  let escape = false
+  for (let i = start; i < stripped.length; i++) {
+    const ch = stripped[i]
+    if (escape) { escape = false; continue }
+    if (ch === '\\' && inStr) { escape = true; continue }
+    if (ch === '"') { inStr = !inStr; continue }
+    if (inStr) continue
+    if (ch === '{') depth++
+    else if (ch === '}') { depth--; if (depth === 0) { end = i; break } }
+  }
+
+  if (end === -1) throw new Error('Unterminated JSON object in model response')
   return JSON.parse(stripped.slice(start, end + 1))
 }
 
@@ -157,7 +173,7 @@ ${reelsList}
   ]
 }`
 
-  const raw = await claudeHaiku(prompt, 5000)
+  const raw = await claudeHaiku(prompt, 8000)
   const parsed = extractJson(raw) as AccountAnalysisResult
 
   // Attach avg_stats (computed server-side, not by LLM)
@@ -221,6 +237,6 @@ ${topAudios || '—'}
   ]
 }`
 
-  const raw = await claudeHaiku(prompt, 5000)
+  const raw = await claudeHaiku(prompt, 8000)
   return extractJson(raw) as TrendAnalysisResult
 }

@@ -18,6 +18,7 @@ AI Sales · FastAPI entry point.
 """
 from __future__ import annotations
 
+import json
 import logging
 import os
 import time
@@ -25,7 +26,7 @@ from contextlib import asynccontextmanager
 from typing import AsyncGenerator
 
 try:
-    from fastapi import FastAPI, Request
+    from fastapi import BackgroundTasks, FastAPI, Request
     from fastapi.middleware.cors import CORSMiddleware
     from fastapi.responses import JSONResponse
     HAS_FASTAPI = True
@@ -207,6 +208,72 @@ try:
     log.info("✓ Agents API loaded")
 except ImportError as e:
     log.warning("Agents API not loaded: %s", e)
+
+try:
+    from webhooks.telegram_tenant import router as tenant_router
+    if tenant_router:
+        app.include_router(tenant_router)
+        log.info("✓ Tenant webhook router loaded (/webhooks/tenant/{tenant_id})")
+except ImportError as e:
+    log.warning("Tenant router not loaded: %s", e)
+
+
+# ============ Voice training webhook (second bot) ============
+
+_VOICE_AUDIO_DIR_VW = __import__("pathlib").Path(os.getenv("VOICE_INPUT_DIR", "/voice-input")) / "audio"
+
+
+async def _save_voice_webhook_file(file_id: str, is_video_note: bool) -> None:
+    import time as _time
+    import httpx
+
+    voice_token = os.getenv("VOICE_BOT_TOKEN") or os.getenv("TG_BOT_TOKEN", "")
+    if not voice_token:
+        log.warning("voice_webhook · no bot token configured")
+        return
+
+    base = f"https://api.telegram.org/bot{voice_token}"
+    async with httpx.AsyncClient(timeout=30) as client:
+        r = await client.post(f"{base}/getFile", json={"file_id": file_id})
+        data = r.json()
+        if not data.get("ok"):
+            log.warning("voice_webhook · getFile failed: %s", data)
+            return
+        file_path = data["result"]["file_path"]
+
+        dl_url = f"https://api.telegram.org/file/bot{voice_token}/{file_path}"
+        dl = await client.get(dl_url)
+        if dl.status_code != 200:
+            log.warning("voice_webhook · download failed: %d", dl.status_code)
+            return
+
+        _VOICE_AUDIO_DIR_VW.mkdir(parents=True, exist_ok=True)
+        suffix = ".mp4" if is_video_note else ".oga"
+        dst = _VOICE_AUDIO_DIR_VW / f"sample-{int(_time.time() * 1000)}{suffix}"
+        dst.write_bytes(dl.content)
+
+    count = sum(1 for f in _VOICE_AUDIO_DIR_VW.glob("*") if f.is_file())
+    log.info("voice_webhook · saved %s · total samples: %d", dst.name, count)
+
+
+@app.post("/api/tg-voice-webhook", include_in_schema=False)
+async def voice_training_webhook(request: Request, background: BackgroundTasks):
+    body = await request.body()
+    try:
+        payload = json.loads(body)
+    except json.JSONDecodeError:
+        return {"ok": False}
+    msg = payload.get("message") or payload.get("edited_message") or {}
+    voice = msg.get("voice") or msg.get("audio")
+    video_note = msg.get("video_note")
+    file_obj = voice or video_note
+    if not file_obj:
+        return {"ok": True}
+    file_id = file_obj.get("file_id", "")
+    if not file_id:
+        return {"ok": True}
+    background.add_task(_save_voice_webhook_file, file_id, bool(video_note))
+    return {"ok": True}
 
 
 # ============ Exception handler ============

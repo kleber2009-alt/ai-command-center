@@ -77,4 +77,88 @@ CREATE INDEX IF NOT EXISTS tg_drafts_edit_prompt_idx
   ON tg_drafts (edit_prompt_message_id);
 CREATE INDEX IF NOT EXISTS tg_drafts_owner_dm_idx
   ON tg_drafts (owner_dm_message_id);
+
+CREATE TABLE IF NOT EXISTS tg_deals (
+  id         INTEGER PRIMARY KEY AUTOINCREMENT,
+  chat_id    INTEGER NOT NULL,
+  user_id    INTEGER NOT NULL,
+  stage      TEXT NOT NULL DEFAULT 'lead',
+  notes      TEXT NOT NULL DEFAULT '',
+  amount     REAL,
+  created_at TEXT NOT NULL DEFAULT (strftime('%Y-%m-%dT%H:%M:%fZ', 'now')),
+  updated_at TEXT NOT NULL DEFAULT (strftime('%Y-%m-%dT%H:%M:%fZ', 'now'))
+);
+CREATE UNIQUE INDEX IF NOT EXISTS tg_deals_user_uniq ON tg_deals (chat_id, user_id);
+CREATE INDEX IF NOT EXISTS tg_deals_stage_idx ON tg_deals (stage);
+CREATE INDEX IF NOT EXISTS tg_deals_updated_idx ON tg_deals (updated_at DESC);
+
+CREATE TABLE IF NOT EXISTS tg_subscriptions (
+  id                       INTEGER PRIMARY KEY AUTOINCREMENT,
+  stripe_customer_id       TEXT NOT NULL,
+  stripe_subscription_id   TEXT NOT NULL UNIQUE,
+  stripe_session_id        TEXT,
+  plan                     TEXT NOT NULL DEFAULT 'basic',
+  status                   TEXT NOT NULL DEFAULT 'trialing',
+  customer_email           TEXT NOT NULL DEFAULT '',
+  customer_name            TEXT,
+  trial_end                TEXT,
+  current_period_end       TEXT,
+  cancel_at                TEXT,
+  created_at               TEXT NOT NULL DEFAULT (strftime('%Y-%m-%dT%H:%M:%fZ', 'now')),
+  updated_at               TEXT NOT NULL DEFAULT (strftime('%Y-%m-%dT%H:%M:%fZ', 'now'))
+);
+CREATE INDEX IF NOT EXISTS tg_subscriptions_status_idx ON tg_subscriptions (status);
+CREATE INDEX IF NOT EXISTS tg_subscriptions_email_idx ON tg_subscriptions (customer_email);
+
+-- Per-chat daily digests for the owner DM. Distinct from
+-- tg_insight_reports (KB-suggestion analyzer): this table holds the
+-- structured payload + rendered markdown for the digest scheduler
+-- and the /pulse, /digest commands. tg_chat_context stores the
+-- latest gist + per-chat project_context the owner sets via /context.
+CREATE TABLE IF NOT EXISTS tg_digests (
+  id              INTEGER PRIMARY KEY AUTOINCREMENT,
+  chat_id         INTEGER NOT NULL,
+  chat_title      TEXT,
+  window_hours    INTEGER NOT NULL DEFAULT 24,
+  generated_at    TEXT NOT NULL DEFAULT (strftime('%Y-%m-%dT%H:%M:%fZ', 'now')),
+  messages_count  INTEGER NOT NULL DEFAULT 0,
+  payload_json    TEXT NOT NULL DEFAULT '{}',
+  summary_md      TEXT NOT NULL DEFAULT '',
+  delivered_at    TEXT
+);
+
+CREATE INDEX IF NOT EXISTS tg_digests_chat_idx
+  ON tg_digests (chat_id, generated_at DESC);
+
+CREATE TABLE IF NOT EXISTS tg_chat_context (
+  chat_id              INTEGER PRIMARY KEY,
+  summary              TEXT NOT NULL DEFAULT '',
+  custom_instructions  TEXT NOT NULL DEFAULT '',
+  context_updated_at   TEXT,
+  created_at           TEXT NOT NULL DEFAULT (strftime('%Y-%m-%dT%H:%M:%fZ', 'now')),
+  updated_at           TEXT NOT NULL DEFAULT (strftime('%Y-%m-%dT%H:%M:%fZ', 'now'))
+);
 `;
+
+// Idempotent migrations for older SQLite files where tg_chat_context
+// already exists in a richer shape (topics/sentiment/tasks columns).
+// better-sqlite3 throws on ADD COLUMN when the column already exists,
+// so we introspect PRAGMA table_info first. tg_digests is brand new;
+// nothing to migrate there.
+export function ensureSchemaUpgrades(db: {
+  prepare: (sql: string) => { all: () => Array<{ name: string }> };
+  exec: (sql: string) => void;
+}): void {
+  const addIfMissing = (table: string, column: string, ddl: string): void => {
+    const cols = db.prepare(`PRAGMA table_info(${table})`).all() as Array<{ name: string }>;
+    if (cols.some((c) => c.name === column)) return;
+    db.exec(`ALTER TABLE ${table} ADD COLUMN ${column} ${ddl}`);
+  };
+
+  addIfMissing(
+    'tg_chat_context',
+    'custom_instructions',
+    "TEXT NOT NULL DEFAULT ''",
+  );
+  addIfMissing('tg_chat_context', 'context_updated_at', 'TEXT');
+}

@@ -9,6 +9,7 @@ export const MESSAGE_CLASSES = [
   'SUPPORT_REQUEST',
   'OWNER_REQUEST',
   'SPAM',
+  'PAYMENT_RECEIVED',
 ] as const;
 
 export type MessageClass = (typeof MESSAGE_CLASSES)[number];
