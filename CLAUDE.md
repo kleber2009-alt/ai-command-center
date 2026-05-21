@@ -42,6 +42,7 @@ env vars, and routes, see `CLAUDE.md` / `README.md` inside each `apps/<app>/`.
 | Voice Circle Bot | `apps/voice-circle-bot` | — | — | (manual) |
 | Viral Clone (pipeline) | inside `apps/infra-worker` (handler `viral_clone`) | `landings/viral-clone` | trigger: `POST /worker/viral-clone/dispatch` | `infra-aisales-worker-1` |
 | Viral Discover | inside `apps/infra-worker` (handler `viral_discover`) | `landings/viral-discover` | cron `05:00 daily` | `infra-aisales-worker-1` |
+| **Парсер** (Parser bot) | `apps/infra-worker/lib/parser_bot.js` + handler `viral_discover` | `landings/viral-discover/cabinet/` | `parser.46-62-215-11.nip.io` (cabinet) + TG bot | `infra-aisales-worker-1` |
 
 ## When Claude is asked to change something
 

@@ -34,6 +34,17 @@ schedule_rules (cron-templates)
 - `POST /worker/tg-webhook` — callback queries от Office bot (`d:used:<id>` / `d:nope:<id>`).
 - `POST /worker/viral-clone/dispatch` — внешний триггер `/clone` (header `x-dispatch-secret`).
 
+## Парсер (Parser bot) — отдельный продукт внутри этого приложения
+
+- **Код**: `lib/parser_bot.js` — Telegram-бот для парсинга трендов
+- **Cabinet (UI)**: `landings/viral-discover/cabinet/` в корне репо
+- **Prod URL**: `https://parser.46-62-215-11.nip.io` (cabinet)
+- **Cron**: handler `handlers/viral_discover.js` (05:00 ежедневно — поиск трендовых рилсов конкурентов через Apify)
+- **Scoring**: `lib/scoring.js` — рейтинг "зайдёт ли это в блоге 1–10" от Claude
+- **Связанные `lib/`**: `apify.js`, `scoring.js`, `tg.js`, `webhook.js`
+
+При правках "Парсера" — это всё внутри `apps/infra-worker/`, не отдельное приложение.
+
 ## Source-of-truth
 
 - **Canonical**: `apps/infra-worker/` в этом репо.
