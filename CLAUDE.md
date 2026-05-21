@@ -159,12 +159,19 @@ not covered by `aux_backup`. Full restore runbook: `docs/backup-restore.md`.
   env).
 - `.env*.local` and `.env` files never commit.
 
-## Detailed sub-docs (TODO — extract from this file later)
+## Detailed sub-docs
 
-- `apps/transcribe/CLAUDE.md` — flow, API routes, `/me` RAG, `/admin`, security, Telegram Mini App
-- `apps/tg-agent/CLAUDE.md` — pipeline, classifier, decision engine, responder, CRM, admin panel
-- `apps/ai-sales/CLAUDE.md` — agents, Caddy mounts, FastAPI + LangGraph
-- `apps/ai-hub/CLAUDE.md` — wallet functions, providers, BullMQ, Auth.js
-- `apps/persona-studio/CLAUDE.md` — avatar / cover workers, BullMQ, Gemini
+When the task is scoped to a single app, read its `CLAUDE.md` first:
 
-Until those exist, treat the per-app `README.md` / `DEPLOY.md` as authoritative.
+- [`apps/transcribe/CLAUDE.md`](apps/transcribe/CLAUDE.md) — flow, API routes, `/me` RAG, `/admin`, security, Telegram Mini App
+- [`apps/tg-agent/CLAUDE.md`](apps/tg-agent/CLAUDE.md) — pipeline, classifier, decision engine, responder, CRM, admin panel
+- [`apps/ai-sales/CLAUDE.md`](apps/ai-sales/CLAUDE.md) — 4 agents, Caddy mounts, FastAPI + LangGraph + seed-fixture invariant
+- [`apps/ai-hub/CLAUDE.md`](apps/ai-hub/CLAUDE.md) — wallet `SECURITY DEFINER` functions, providers, BullMQ, Auth.js
+- [`apps/persona-studio/CLAUDE.md`](apps/persona-studio/CLAUDE.md) — avatar / cover workers, BullMQ, Gemini, route groups
+- [`apps/persona-train/CLAUDE.md`](apps/persona-train/CLAUDE.md) — voice clone (ElevenLabs IVC) + avatar samples, shared `voices` table
+- [`apps/infra-worker/CLAUDE.md`](apps/infra-worker/CLAUDE.md) — 9 cron handlers, `FOR UPDATE SKIP LOCKED`, docker build flags
+- [`apps/ai-office/CLAUDE.md`](apps/ai-office/CLAUDE.md) — legacy marketing + persona-train voice endpoints (Netlify Functions)
+- [`apps/ytdlp/CLAUDE.md`](apps/ytdlp/CLAUDE.md) — `POST /extract` companion service
+- [`apps/voice-circle-bot/CLAUDE.md`](apps/voice-circle-bot/CLAUDE.md) — prototype, not in prod
+
+Per-app `README.md` / `DEPLOY.md` / `ROADMAP.md` remain authoritative for deep architecture and deploy steps. Each `apps/<app>/CLAUDE.md` is the orientation layer.
