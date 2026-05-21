@@ -12,3 +12,5 @@ npm-debug.log*
 next-env.d.ts
 tsconfig.tsbuildinfo
 .claude/settings.local.json
+apps/ai-sales-v2/env/
+apps/*/env/*.env
