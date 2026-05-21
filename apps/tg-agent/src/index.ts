@@ -8,13 +8,20 @@ import { loadConfig } from './config.js';
 import { createChatService } from './db/chats.js';
 import { createDraftService } from './db/drafts.js';
 import { openDb } from './db/index.js';
+import { createDigestStore } from './db/digests.js';
 import { createLeadService } from './db/leads.js';
 import { createMessageStore } from './db/messages.js';
 import { createStatsService } from './db/stats.js';
 import { createHealthMonitor } from './health.js';
+import {
+  createDigestGenerator,
+  startDigestScheduler,
+  type DigestSchedulerHandle,
+} from './digest.js';
 import { loadKnowledgeBase } from './knowledge/index.js';
 import { createLogger } from './logger.js';
 import { createNotifier } from './notifier.js';
+import { registerOwnerCommands } from './owner_commands.js';
 import { createResponder } from './responder.js';
 
 async function main(): Promise<void> {
@@ -39,11 +46,36 @@ async function main(): Promise<void> {
   const messages = createMessageStore(db);
   const drafts = createDraftService(db);
   const stats = createStatsService(db);
+  const digestStore = createDigestStore(db);
 
   // Grammy bot lives separately from the createBot() wrapper so that
   // health + notifier can hold a reference before message handlers
   // are registered.
   const bot = new Bot(config.telegramBotToken);
+
+  // Owner commands MUST register before createBot()'s generic
+  // message:text handler so /pulse, /chats, /digest, /context win
+  // over the catch-all owner-DM branch. Replies to draft edit
+  // prompts (non-command DMs) still flow through to bot.ts.
+  const digestGenerator = createDigestGenerator({
+    apiKey: config.anthropicApiKey,
+    model: config.digestModel,
+  });
+  if (config.digestEnabled && config.ownerTelegramId !== undefined) {
+    registerOwnerCommands({
+      bot,
+      ownerTelegramId: config.ownerTelegramId,
+      chats,
+      store: digestStore,
+      generator: digestGenerator,
+      windowHours: config.digestWindowHours,
+      logger,
+    });
+  } else if (!config.digestEnabled) {
+    logger.info('digest disabled (DIGEST_ENABLED=false)');
+  } else {
+    logger.warn('digest disabled — OWNER_TELEGRAM_ID is not set');
+  }
 
   const health = createHealthMonitor({
     bot,
@@ -121,10 +153,25 @@ async function main(): Promise<void> {
     );
   }
 
+  let digest: DigestSchedulerHandle | null = null;
+  if (config.digestEnabled && config.ownerTelegramId !== undefined) {
+    digest = startDigestScheduler({
+      bot,
+      ownerTelegramId: config.ownerTelegramId,
+      chats,
+      store: digestStore,
+      generator: digestGenerator,
+      logger,
+      dailyHourUtc: config.digestDailyHourUtc,
+      windowHours: config.digestWindowHours,
+    });
+  }
+
   const shutdown = async (signal: string) => {
     logger.info('shutdown requested', { signal });
     try {
       backup?.stop();
+      digest?.stop();
       await bot.stop();
       if (admin) await admin.close();
     } finally {

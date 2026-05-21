@@ -1,15 +1,19 @@
 import { NextRequest, NextResponse } from 'next/server'
 import { guardRequest } from '@/lib/api-guard'
-import { getServerSupabase } from '@/lib/transcripts-db'
+import { sendCarouselMediaGroup } from '@/lib/telegram-bot'
+import { dbGetTranscript, dbMergeGenerations } from '@/lib/transcripts-db'
 
-export const maxDuration = 60
+export const maxDuration = 120
 
-type GenType = 'carousel' | 'reels-new' | 'reels-remix' | 'tg-post'
+type GenType = 'carousel' | 'reels-new' | 'reels-remix' | 'tg-post' | 'carousel-image'
 
 type Body = { id?: string; transcript?: string; type: GenType }
 
 type CarouselContent = {
   slides: Array<{ n: number; title: string; body: string }>
+}
+type CarouselImageContent = {
+  slides: Array<{ n: number; title: string; body: string; imageUrl: string | null }>
 }
 type ReelsContent = {
   hook: string
@@ -22,9 +26,9 @@ type ReelsContent = {
 }
 type TgPostContent = { text: string }
 
-type GenContent = CarouselContent | ReelsContent | TgPostContent
+type GenContent = CarouselContent | CarouselImageContent | ReelsContent | TgPostContent
 
-const VALID_TYPES: GenType[] = ['carousel', 'reels-new', 'reels-remix', 'tg-post']
+const VALID_TYPES: GenType[] = ['carousel', 'reels-new', 'reels-remix', 'tg-post', 'carousel-image']
 
 function buildPrompt(type: GenType, transcript: string): string {
   const text = transcript.slice(0, 30000)
@@ -137,6 +141,73 @@ ${text}
 { "text": "...полный текст поста, с переносами строк через \\n..." }`
 }
 
+// ─── Kie.ai image generation ──────────────────────────────────────────────────
+
+const KIE_CREATE = 'https://api.kie.ai/api/v1/jobs/createTask'
+const KIE_STATUS = 'https://api.kie.ai/api/v1/jobs/recordInfo'
+
+async function submitKieTask(prompt: string, apiKey: string): Promise<string | null> {
+  try {
+    const res = await fetch(KIE_CREATE, {
+      method: 'POST',
+      headers: { Authorization: `Bearer ${apiKey}`, 'Content-Type': 'application/json' },
+      body: JSON.stringify({
+        model: 'gpt-image-2-text-to-image',
+        input: { prompt, aspect_ratio: '4:3' },
+      }),
+    })
+    if (!res.ok) return null
+    const data = await res.json()
+    return data.data?.taskId ?? null
+  } catch {
+    return null
+  }
+}
+
+async function pollKieTask(taskId: string, apiKey: string): Promise<string | null> {
+  try {
+    const res = await fetch(`${KIE_STATUS}?taskId=${encodeURIComponent(taskId)}`, {
+      headers: { Authorization: `Bearer ${apiKey}` },
+    })
+    if (!res.ok) return null
+    const data = await res.json()
+    const state: string = data.data?.state ?? ''
+    if (state === 'success') {
+      const result = JSON.parse(data.data.resultJson ?? '{}')
+      return result.resultUrls?.[0] ?? null
+    }
+    if (state === 'fail') return null
+    return undefined as any // still pending
+  } catch {
+    return null
+  }
+}
+
+async function generateKieImages(prompts: string[], apiKey: string): Promise<(string | null)[]> {
+  const taskIds = await Promise.all(prompts.map(p => submitKieTask(p, apiKey)))
+
+  const results: (string | null)[] = new Array(prompts.length).fill(null)
+  const pending = new Set(taskIds.map((id, i) => (id ? i : -1)).filter(i => i >= 0))
+
+  const deadline = Date.now() + 90_000
+  while (pending.size > 0 && Date.now() < deadline) {
+    await new Promise(r => setTimeout(r, 4000))
+    await Promise.all(
+      Array.from(pending).map(async i => {
+        const taskId = taskIds[i]
+        if (!taskId) { pending.delete(i); return }
+        const url = await pollKieTask(taskId, apiKey)
+        if (url === undefined) return // still pending
+        results[i] = url ?? null
+        pending.delete(i)
+      }),
+    )
+  }
+  return results
+}
+
+// ─────────────────────────────────────────────────────────────────────────────
+
 function extractJsonObject(text: string): any {
   const fenceStripped = text.replace(/```(?:json)?\s*/gi, '').replace(/```/g, '').trim()
   const start = fenceStripped.indexOf('{')
@@ -189,8 +260,12 @@ function validate(type: GenType, content: any): GenContent {
 export async function POST(req: NextRequest) {
   const guard = guardRequest(req, {
     rateLimit: { key: 'generate', max: 20, windowMs: 60_000 },
+    requireInitData: false,
   })
   if (!guard.ok) return guard.response
+
+  const tgChatId = guard.telegram?.user?.id ?? null
+  const botToken = process.env.TELEGRAM_BOT_TOKEN
 
   const { id, transcript, type } = (await req.json()) as Body
 
@@ -206,28 +281,90 @@ export async function POST(req: NextRequest) {
   }
 
   let text = transcript
-  const supabase = getServerSupabase()
-
-  if (id && supabase) {
-    const { data, error } = await supabase
-      .from('transcripts')
-      .select('transcript, generations')
-      .eq('id', id)
-      .single()
-    if (error) {
-      return NextResponse.json({ error: `Не найден транскрипт: ${error.message}` }, { status: 404 })
+  if (id) {
+    const row = await dbGetTranscript(id)
+    if (!row) {
+      return NextResponse.json({ error: 'Транскрипт не найден' }, { status: 404 })
     }
-    const cached = data.generations?.[type]
+    const cached = row.generations?.[type as keyof typeof row.generations]
     if (cached) {
       return NextResponse.json({ type, content: cached, cached: true })
     }
-    text = data.transcript
+    text = row.transcript
   }
 
   if (!text || text.trim().length === 0) {
     return NextResponse.json({ error: 'Пустой транскрипт' }, { status: 400 })
   }
 
+  // ── carousel-image: Claude text → kie.ai images ──────────────────────────
+  if (type === 'carousel-image') {
+    if (!process.env.KIE_AI_API_KEY) {
+      return NextResponse.json({ error: 'KIE_AI_API_KEY не настроен на сервере' }, { status: 500 })
+    }
+    try {
+      const res = await fetch('https://api.anthropic.com/v1/messages', {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+          'x-api-key': process.env.ANTHROPIC_API_KEY,
+          'anthropic-version': '2023-06-01',
+        },
+        body: JSON.stringify({
+          model: 'claude-haiku-4-5-20251001',
+          max_tokens: 4096,
+          messages: [{ role: 'user', content: buildPrompt('carousel', text) }],
+        }),
+      })
+      if (!res.ok) {
+        const errText = await res.text()
+        return NextResponse.json({ error: `Anthropic (${res.status}): ${errText.slice(0, 300)}` }, { status: res.status })
+      }
+      const data = await res.json()
+      const raw = data.content?.[0]?.text || ''
+      if (!raw) return NextResponse.json({ error: 'Пустой ответ от Anthropic' }, { status: 500 })
+
+      let slides: Array<{ n: number; title: string; body: string }>
+      try {
+        const parsed = extractJsonObject(raw)
+        const validated = validate('carousel', parsed) as CarouselContent
+        slides = validated.slides
+      } catch (e: any) {
+        return NextResponse.json({ error: `Не удалось распарсить слайды: ${e.message}` }, { status: 500 })
+      }
+
+      const imagePrompts = slides.map(
+        s => `Instagram carousel slide. ${s.title}. ${s.body}. Minimalist professional visual, no text overlay, clean composition.`,
+      )
+      const imageUrls = await generateKieImages(imagePrompts, process.env.KIE_AI_API_KEY)
+
+      const content: CarouselImageContent = {
+        slides: slides.map((s, i) => ({ ...s, imageUrl: imageUrls[i] ?? null })),
+      }
+
+      if (id) await dbMergeGenerations(id, type, content)
+
+      // Auto-deliver to the user's Telegram chat. Fire-and-forget so we
+      // don't block the API response on Telegram latency. Reachable only
+      // when the request came through a verified Mini App session AND
+      // the bot token is configured — otherwise the artifact stays in
+      // the Mini App UI and the user can resend via the manual endpoint.
+      let tgDelivery: { sent: number; skipped: number; error?: string } | null = null
+      if (tgChatId && botToken) {
+        try {
+          tgDelivery = await sendCarouselMediaGroup(tgChatId, content.slides, botToken)
+        } catch (e: any) {
+          tgDelivery = { sent: 0, skipped: content.slides.length, error: e?.message || 'tg_send_failed' }
+        }
+      }
+
+      return NextResponse.json({ type, content, cached: false, tgDelivery })
+    } catch (e: any) {
+      return NextResponse.json({ error: e?.message || 'Ошибка генерации карусели с картинками' }, { status: 500 })
+    }
+  }
+
+  // ── standard text-only generation ────────────────────────────────────────
   const prompt = buildPrompt(type, text)
 
   try {
@@ -274,14 +411,8 @@ export async function POST(req: NextRequest) {
       return NextResponse.json({ error: e.message }, { status: 500 })
     }
 
-    if (id && supabase) {
-      const { data: row } = await supabase
-        .from('transcripts')
-        .select('generations')
-        .eq('id', id)
-        .single()
-      const merged = { ...(row?.generations ?? {}), [type]: validated }
-      await supabase.from('transcripts').update({ generations: merged }).eq('id', id)
+    if (id) {
+      await dbMergeGenerations(id, type, validated)
     }
 
     return NextResponse.json({ type, content: validated, cached: false })

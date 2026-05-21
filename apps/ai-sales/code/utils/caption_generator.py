@@ -23,7 +23,7 @@ OUT_DIR = ROOT / "content-bank" / "generated-captions"
 ContentType = Literal["carousel", "reel", "post", "story"]
 Segment = Literal["A", "B", "C", "all"]
 
-MODEL = "claude-sonnet-4-6-20260101"
+MODEL = "claude-sonnet-4-6"
 PRICE_INPUT = 3.0
 PRICE_OUTPUT = 15.0
 

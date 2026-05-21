@@ -1,9 +1,40 @@
+# dependencies
 node_modules
-.next
+.pnp
+.pnp.js
+
+# next
+.next/
+out/
+build/
+.turbo/
+
+# env
 .env
-.env.local
-.env.*.local
+.env*.local
+.env.production
+
+# logs
+npm-debug.log*
+yarn-debug.log*
+yarn-error.log*
+pnpm-debug.log*
+*.log
+
+# misc
+.DS_Store
+*.pem
+.idea/
+.vscode/
+
+# typescript
 *.tsbuildinfo
 next-env.d.ts
-.vercel
-.DS_Store
+
+# prisma
+prisma/dev.db
+prisma/dev.db-journal
+
+# local data
+.uploads/
+.tmp/

@@ -1,6 +1,6 @@
 import { NextRequest, NextResponse } from 'next/server'
 import { guardRequest } from '@/lib/api-guard'
-import { getServerSupabase } from '@/lib/transcripts-db'
+import { dbGetTranscript, dbSaveTranslation } from '@/lib/transcripts-db'
 
 export const maxDuration = 60
 
@@ -22,6 +22,7 @@ ${text.slice(0, 30000)}
 export async function POST(req: NextRequest) {
   const guard = guardRequest(req, {
     rateLimit: { key: 'translate', max: 20, windowMs: 60_000 },
+    requireInitData: false,
   })
   if (!guard.ok) return guard.response
 
@@ -36,20 +37,15 @@ export async function POST(req: NextRequest) {
   }
 
   let text = transcript
-  const supabase = getServerSupabase()
-  if (id && supabase) {
-    const { data, error } = await supabase
-      .from('transcripts')
-      .select('transcript, translation')
-      .eq('id', id)
-      .single()
-    if (error) {
-      return NextResponse.json({ error: `Не найден транскрипт: ${error.message}` }, { status: 404 })
+  if (id) {
+    const row = await dbGetTranscript(id)
+    if (!row) {
+      return NextResponse.json({ error: 'Транскрипт не найден' }, { status: 404 })
     }
-    if (data.translation && data.translation.lang === targetLang) {
-      return NextResponse.json({ translation: data.translation.text, lang: targetLang, cached: true })
+    if (row.translation && row.translation.lang === targetLang) {
+      return NextResponse.json({ translation: row.translation.text, lang: targetLang, cached: true })
     }
-    text = data.transcript
+    text = row.transcript
   }
 
   if (!text || text.trim().length === 0) {
@@ -82,11 +78,8 @@ export async function POST(req: NextRequest) {
     const data = await res.json()
     const translation: string = (data.content?.[0]?.text || '').trim()
 
-    if (id && supabase) {
-      await supabase
-        .from('transcripts')
-        .update({ translation: { lang: targetLang, text: translation } })
-        .eq('id', id)
+    if (id) {
+      await dbSaveTranslation(id, { lang: targetLang, text: translation })
     }
 
     return NextResponse.json({ translation, lang: targetLang, cached: false })

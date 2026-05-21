@@ -1,24 +1,16 @@
-import "./globals.css";
-import type { Metadata } from "next";
-import { TopBar } from "@/components/top-bar";
+import type { Metadata } from 'next';
+import './globals.css';
 
 export const metadata: Metadata = {
-  title: "Persona Studio — AI content from your face in 2 minutes",
+  title: 'Persona Studio — AI-контент из твоего лица',
   description:
-    "Upload one photo. Get 10 AI avatars. Turn them into viral covers and talking-head videos. Built on Nano Banana 2 and HeyGen.",
+    'Одно фото — 10 AI-аватаров, HeyGen-видео и виральные обложки карусели за 2 минуты.',
 };
 
-export default function RootLayout({
-  children,
-}: {
-  children: React.ReactNode;
-}) {
+export default function RootLayout({ children }: { children: React.ReactNode }) {
   return (
-    <html lang="en">
-      <body className="min-h-screen bg-ink-950 text-ink-200 font-sans">
-        <TopBar />
-        <main>{children}</main>
-      </body>
+    <html lang="ru">
+      <body>{children}</body>
     </html>
   );
 }

@@ -1,0 +1,389 @@
+// HeyGen client — talking-photo flow на Avatar V (model_version='v5').
+//
+// Flow (validated 2026-05-21):
+//   1) uploadAsset(buf, mime) → image_key
+//      POST https://upload.heygen.com/v1/asset
+//        X-Api-Key, Content-Type: image/jpeg|png
+//        body: raw binary
+//      → { code: 100, data: { id, image_key, url } }   (code=100 == success у HeyGen)
+//
+//   2) createTalkingPhoto(image_key) → look_id (= talking_photo_id)
+//      GET https://api.heygen.com/v1/talking_photo.create   (yes, GET with JSON body — HeyGen quirk)
+//      → { code: 100, data: { id, look_id, is_valid, status } }
+//      asset.id из шага 1 ≠ talking_photo_id; нужен этот промежуточный шаг
+//      чтобы зарегистрировать загруженное фото как Photo Avatar V3 look.
+//
+//   3) createVideo({ talking_photo_id, voice_id, script, aspect }) → video_id
+//      POST https://api.heygen.com/v2/video/generate
+//      character.type = "talking_photo", talking_photo_id = look_id from step 2
+//
+//   4) pollVideo(video_id) → { state, video_url? }
+//      GET https://api.heygen.com/v1/video_status.get?video_id=...
+//      states: pending | waiting | processing | completed | failed
+
+import { request as httpsRequest } from 'node:https';
+
+const HEYGEN_KEY_ENV = 'HEYGEN_API_KEY';
+const HEYGEN_BASE = process.env.HEYGEN_API_BASE || 'https://api.heygen.com';
+const HEYGEN_UPLOAD = process.env.HEYGEN_UPLOAD_BASE || 'https://upload.heygen.com';
+
+const SUBMIT_TIMEOUT_MS = 60_000;
+const STATUS_TIMEOUT_MS = 15_000;
+const POLL_INTERVAL_MS = 8_000;
+const POLL_MAX_ATTEMPTS = 75;   // ~10 минут
+
+export class HeygenError extends Error {
+  constructor(public code: string, message: string) {
+    super(message);
+    this.name = 'HeygenError';
+  }
+}
+
+function keyOrThrow(): string {
+  const k = process.env[HEYGEN_KEY_ENV];
+  if (!k) throw new HeygenError('MISSING_KEY', `${HEYGEN_KEY_ENV} is not set`);
+  return k;
+}
+
+type AssetUploadResp = {
+  code?: number;
+  data?: { id?: string; url?: string; image_key?: string };
+  msg?: string | null;
+  message?: string | null;
+};
+
+/**
+ * Step 1: Upload binary image → returns asset id + image_key.
+ * Note: asset.id ≠ talking_photo_id; нужен ещё createTalkingPhoto() ниже.
+ */
+export async function uploadAsset(opts: {
+  bytes: Buffer;
+  mime: string;
+}): Promise<{ id: string; url: string; imageKey: string }> {
+  const key = keyOrThrow();
+  const res = await fetch(`${HEYGEN_UPLOAD}/v1/asset`, {
+    method: 'POST',
+    headers: {
+      'X-Api-Key': key,
+      'Content-Type': opts.mime || 'image/jpeg',
+    },
+    body: new Uint8Array(opts.bytes),
+    signal: AbortSignal.timeout(SUBMIT_TIMEOUT_MS),
+  });
+  const text = await res.text();
+  if (!res.ok) throw new HeygenError(`UPLOAD_HTTP_${res.status}`, text.slice(0, 400));
+
+  let parsed: AssetUploadResp;
+  try { parsed = JSON.parse(text) as AssetUploadResp; }
+  catch { throw new HeygenError('UPLOAD_NON_JSON', text.slice(0, 300)); }
+
+  if (parsed.code !== 100 || !parsed.data?.id || !parsed.data?.image_key) {
+    throw new HeygenError(`UPLOAD_${parsed.code ?? 'NO_CODE'}`, parsed.msg || parsed.message || text.slice(0, 300));
+  }
+  return {
+    id: parsed.data.id,
+    url: parsed.data.url ?? '',
+    imageKey: parsed.data.image_key,
+  };
+}
+
+type TalkingPhotoCreateResp = {
+  code?: number;
+  data?: {
+    id?: string;
+    look_id?: string;
+    image_url?: string;
+    is_valid?: boolean;
+    status?: string;
+  };
+  msg?: string | null;
+  message?: string | null;
+};
+
+/**
+ * Internal: HeyGen `.create` endpoints expect GET with JSON body, which Node's
+ * undici-based fetch refuses ("Request with GET/HEAD method cannot have body").
+ * Bypass via raw https.request().
+ */
+function heygenGetWithBody<T>(urlString: string, body: object, timeoutMs: number): Promise<T> {
+  const url = new URL(urlString);
+  const key = keyOrThrow();
+  const payload = JSON.stringify(body);
+  return new Promise((resolve, reject) => {
+    const req = httpsRequest(
+      {
+        method: 'GET',
+        hostname: url.hostname,
+        port: url.port || 443,
+        path: url.pathname + (url.search || ''),
+        headers: {
+          'X-Api-Key': key,
+          'Content-Type': 'application/json',
+          'Content-Length': Buffer.byteLength(payload),
+        },
+        timeout: timeoutMs,
+      },
+      (res) => {
+        const chunks: Buffer[] = [];
+        res.on('data', (c: Buffer) => chunks.push(c));
+        res.on('end', () => {
+          const text = Buffer.concat(chunks).toString('utf8');
+          if (!res.statusCode || res.statusCode >= 400) {
+            reject(new HeygenError(`HTTP_${res.statusCode}`, text.slice(0, 400)));
+            return;
+          }
+          try {
+            resolve(JSON.parse(text) as T);
+          } catch {
+            reject(new HeygenError('NON_JSON', text.slice(0, 300)));
+          }
+        });
+        res.on('error', (err: Error) => reject(new HeygenError('RES_ERR', err.message)));
+      },
+    );
+    req.on('error', (err: Error) => reject(new HeygenError('REQ_ERR', err.message)));
+    req.on('timeout', () => { req.destroy(new Error('timeout')); });
+    req.write(payload);
+    req.end();
+  });
+}
+
+/**
+ * Step 2: Register uploaded asset as Photo Avatar look → returns talking_photo_id.
+ * Uses HeyGen's unusual GET-with-body convention.
+ */
+export async function createTalkingPhoto(imageKey: string): Promise<{ talkingPhotoId: string; imageUrl: string }> {
+  const parsed = await heygenGetWithBody<TalkingPhotoCreateResp>(
+    `${HEYGEN_BASE}/v1/talking_photo.create`,
+    { storage_key: imageKey },
+    SUBMIT_TIMEOUT_MS,
+  );
+  if (parsed.code !== 100 || !parsed.data?.id) {
+    throw new HeygenError(`TP_CREATE_${parsed.code ?? 'NO_CODE'}`, parsed.msg || parsed.message || JSON.stringify(parsed).slice(0, 300));
+  }
+  return {
+    talkingPhotoId: parsed.data.look_id ?? parsed.data.id,
+    imageUrl: parsed.data.image_url ?? '',
+  };
+}
+
+/**
+ * Step 2b: Poll HeyGen until a freshly-created talking photo is processed.
+ *
+ * `talking_photo.create` returns immediately with status='pending' and
+ * image_width=0. If we hand the talking_photo_id to /v2/video/generate at this
+ * point, HeyGen rejects with "missing image dimensions". We must wait for
+ * `GET /v2/photo_avatar/{id}` to report status='completed' first (~10–30s
+ * empirically; capped at 90s to fail loud on truly stuck uploads).
+ */
+async function waitForTalkingPhotoReady(talkingPhotoId: string): Promise<void> {
+  const key = keyOrThrow();
+  const deadline = Date.now() + 90_000;
+  const intervalMs = 3_000;
+  while (Date.now() < deadline) {
+    const res = await fetch(`${HEYGEN_BASE}/v2/photo_avatar/${encodeURIComponent(talkingPhotoId)}`, {
+      headers: { 'X-Api-Key': key },
+      signal: AbortSignal.timeout(STATUS_TIMEOUT_MS),
+    });
+    if (res.ok) {
+      const json = await res.json() as { data?: { status?: string } };
+      const status = json.data?.status;
+      if (status === 'completed') return;
+      if (status === 'failed') {
+        throw new HeygenError('TP_READY_FAILED', `talking_photo ${talkingPhotoId} reported failed`);
+      }
+    }
+    await new Promise((r) => setTimeout(r, intervalMs));
+  }
+  throw new HeygenError('TP_READY_TIMEOUT', `talking_photo ${talkingPhotoId} not ready after 90s`);
+}
+
+/**
+ * Convenience: upload bytes + register as talking photo + wait until processed.
+ * Returns the talking_photo_id ready to use in /v2/video/generate.
+ */
+export async function uploadTalkingPhoto(opts: {
+  bytes: Buffer;
+  mime: string;
+}): Promise<{ id: string; imageUrl: string }> {
+  const asset = await uploadAsset(opts);
+  const tp = await createTalkingPhoto(asset.imageKey);
+  await waitForTalkingPhotoReady(tp.talkingPhotoId);
+  return { id: tp.talkingPhotoId, imageUrl: tp.imageUrl || asset.url };
+}
+
+export type Aspect = '9:16' | '1:1' | '16:9';
+export type HeygenModelVersion = 'V' | 'IV';
+
+function dimensionFor(aspect: Aspect): { width: number; height: number } {
+  switch (aspect) {
+    case '1:1':  return { width: 1080, height: 1080 };
+    case '16:9': return { width: 1920, height: 1080 };
+    case '9:16':
+    default:     return { width: 1080, height: 1920 };
+  }
+}
+
+// HeyGen exposes the avatar generation via the talking_photo's `model_version`
+// (Avatar V vs Avatar IV). "V" is the current default; "IV" remains for users
+// who want the older look. Mapped to HeyGen's stringly-typed param.
+function modelVersionParam(v: HeygenModelVersion | undefined): string {
+  return v === 'IV' ? 'v4' : 'v5';
+}
+
+// Avatar IV motion engine — more expressive facial motion и более естественные
+// движения головы по сравнению со старым "Unlimited" engine. Включается
+// отдельным флагом `use_avatar_iv_model: true` в character payload,
+// независимо от model_version (model_version отвечает за look, а этот флаг —
+// за motion engine). Дефолт ON; можно отключить через opts.expressiveMotion=false.
+// Источник: https://docs.heygen.com/changelog/avatar-iv-support-now-available-in-create-avatar-video-api
+const USE_AVATAR_IV_MOTION_DEFAULT = true;
+
+export type CreateVideoOpts = {
+  talkingPhotoId: string;
+  voiceId: string;
+  script: string;
+  aspect?: Aspect;
+  background?: string;    // hex like "#000000"; default — black
+  version?: HeygenModelVersion;  // default — 'V'
+  expressiveMotion?: boolean;    // Avatar IV motion engine; default — true
+  testMode?: boolean;
+};
+
+type VideoGenerateResp = {
+  data?: { video_id?: string };
+  error?: { message?: string; detail?: string } | null;
+  message?: string | null;
+};
+
+/** Create a new talking_photo video → returns HeyGen video_id. */
+export async function createVideo(opts: CreateVideoOpts): Promise<string> {
+  const key = keyOrThrow();
+  if (!opts.script || opts.script.trim().length < 5) {
+    throw new HeygenError('BAD_SCRIPT', 'script too short');
+  }
+  if (!opts.talkingPhotoId) throw new HeygenError('MISSING_PHOTO_ID', 'talkingPhotoId required');
+  if (!opts.voiceId)        throw new HeygenError('MISSING_VOICE_ID', 'voiceId required');
+
+  const body = {
+    video_inputs: [
+      {
+        character: {
+          type: 'talking_photo',
+          talking_photo_id: opts.talkingPhotoId,
+          model_version: modelVersionParam(opts.version),
+          use_avatar_iv_model: opts.expressiveMotion ?? USE_AVATAR_IV_MOTION_DEFAULT,
+        },
+        voice: {
+          type: 'text',
+          voice_id: opts.voiceId,
+          input_text: opts.script.slice(0, 1500),
+        },
+        background: { type: 'color', value: opts.background ?? '#000000' },
+      },
+    ],
+    dimension: dimensionFor(opts.aspect ?? '9:16'),
+    test: opts.testMode ?? false,
+  };
+
+  const res = await fetch(`${HEYGEN_BASE}/v2/video/generate`, {
+    method: 'POST',
+    headers: {
+      'X-Api-Key': key,
+      'Content-Type': 'application/json',
+    },
+    body: JSON.stringify(body),
+    signal: AbortSignal.timeout(SUBMIT_TIMEOUT_MS),
+  });
+  const text = await res.text();
+  if (!res.ok) throw new HeygenError(`SUBMIT_HTTP_${res.status}`, text.slice(0, 400));
+
+  let parsed: VideoGenerateResp;
+  try { parsed = JSON.parse(text) as VideoGenerateResp; }
+  catch { throw new HeygenError('SUBMIT_NON_JSON', text.slice(0, 300)); }
+
+  const id = parsed.data?.video_id;
+  if (!id) throw new HeygenError('SUBMIT_NO_VIDEO_ID', text.slice(0, 300));
+  return id;
+}
+
+type VideoStatusResp = {
+  data?: {
+    status?: 'pending' | 'waiting' | 'processing' | 'completed' | 'failed' | string;
+    video_url?: string | null;
+    thumbnail_url?: string | null;
+    error?: { message?: string; detail?: string } | null;
+    duration?: number | null;
+  };
+};
+
+export type HeygenVideoStatus =
+  | { state: 'pending' | 'waiting' | 'processing'; videoId: string }
+  | { state: 'completed'; videoId: string; videoUrl: string; thumbnailUrl: string | null; duration: number | null }
+  | { state: 'failed'; videoId: string; errorMessage: string };
+
+export async function getVideoStatus(videoId: string): Promise<HeygenVideoStatus> {
+  const key = keyOrThrow();
+  const res = await fetch(
+    `${HEYGEN_BASE}/v1/video_status.get?video_id=${encodeURIComponent(videoId)}`,
+    {
+      headers: { 'X-Api-Key': key },
+      signal: AbortSignal.timeout(STATUS_TIMEOUT_MS),
+    },
+  );
+  const text = await res.text();
+  if (!res.ok) throw new HeygenError(`STATUS_HTTP_${res.status}`, text.slice(0, 400));
+
+  let parsed: VideoStatusResp;
+  try { parsed = JSON.parse(text) as VideoStatusResp; }
+  catch { throw new HeygenError('STATUS_NON_JSON', text.slice(0, 300)); }
+
+  const d = parsed.data ?? {};
+  const state = d.status ?? 'pending';
+
+  if (state === 'completed') {
+    if (!d.video_url) throw new HeygenError('NO_URL', 'completed but no video_url');
+    return {
+      state: 'completed',
+      videoId,
+      videoUrl: d.video_url,
+      thumbnailUrl: d.thumbnail_url ?? null,
+      duration: d.duration ?? null,
+    };
+  }
+  if (state === 'failed') {
+    return {
+      state: 'failed',
+      videoId,
+      errorMessage: d.error?.detail || d.error?.message || 'heygen returned failed',
+    };
+  }
+  return { state: (state as 'pending' | 'waiting' | 'processing') ?? 'pending', videoId };
+}
+
+export async function waitForVideo(videoId: string): Promise<HeygenVideoStatus> {
+  for (let i = 0; i < POLL_MAX_ATTEMPTS; i++) {
+    const s = await getVideoStatus(videoId);
+    if (s.state === 'completed' || s.state === 'failed') return s;
+    await new Promise((r) => setTimeout(r, POLL_INTERVAL_MS));
+  }
+  throw new HeygenError('TIMEOUT', `video ${videoId} did not finish in ${POLL_MAX_ATTEMPTS * POLL_INTERVAL_MS}ms`);
+}
+
+export async function downloadBytes(url: string): Promise<{ bytes: Buffer; mime: string }> {
+  const res = await fetch(url, { signal: AbortSignal.timeout(180_000) });
+  if (!res.ok) throw new HeygenError(`DL_HTTP_${res.status}`, `download failed: ${url}`);
+  const mime = res.headers.get('content-type') ?? 'video/mp4';
+  const ab = await res.arrayBuffer();
+  return { bytes: Buffer.from(ab), mime };
+}
+
+// ── Voices (статическая курация для MVP) ─────────────────────
+// HeyGen возвращает >1000 голосов через /v2/voices, но для MVP UI
+// проще предложить 4 проверенных дефолта на ru/en. Расширим позже.
+//
+// Get voices via API: GET https://api.heygen.com/v2/voices
+//                     X-Api-Key
+// Returns: { data: { voices: [{ voice_id, language, gender, name, preview_audio }, ...] } }
+
+export { VOICE_PRESETS, voiceById, type VoicePreset } from './heygen-voices';

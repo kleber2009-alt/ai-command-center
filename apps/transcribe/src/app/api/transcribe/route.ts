@@ -1,7 +1,8 @@
 import { NextRequest, NextResponse } from 'next/server'
 import { fetchYoutubeCaptions, getYoutubeVideoId, YoutubeCaptionsError } from '@/lib/youtube-captions'
-import { guardRequest } from '@/lib/api-guard'
-import { getServerSupabase, makeTitle, Paragraph } from '@/lib/transcripts-db'
+import { guardWithUser } from '@/lib/api-guard'
+import { deductMinutes } from '@/lib/users-db'
+import { makeTitle, Paragraph, dbSaveTranscript } from '@/lib/transcripts-db'
 import {
   extractDirectMediaUrl,
   isSocialMediaUrl,
@@ -195,32 +196,17 @@ async function fetchDeepgram(url: string, language: 'auto' | 'ru' | 'en'): Promi
   }
 }
 
-async function saveTranscript(url: string, result: Ok): Promise<string | null> {
-  const supabase = getServerSupabase()
-  if (!supabase) return null
-  try {
-    const { data, error } = await supabase
-      .from('transcripts')
-      .insert({
-        url,
-        title: makeTitle(result.transcript, url),
-        source: result.source,
-        language: result.detectedLanguage,
-        duration: result.duration,
-        transcript: result.transcript,
-        paragraphs: result.paragraphs,
-      })
-      .select('id')
-      .single()
-    if (error) {
-      console.warn('saveTranscript failed:', error.message)
-      return null
-    }
-    return data.id as string
-  } catch (e: any) {
-    console.warn('saveTranscript exception:', e?.message)
-    return null
-  }
+async function saveTranscript(url: string, result: Ok, userId: string | null): Promise<string | null> {
+  return dbSaveTranscript({
+    url,
+    title: makeTitle(result.transcript, url),
+    source: result.source,
+    language: result.detectedLanguage,
+    duration: result.duration,
+    transcript: result.transcript,
+    paragraphs: result.paragraphs,
+    user_id: userId,
+  })
 }
 
 async function dispatch(url: string, language: 'auto' | 'ru' | 'en'): Promise<Result> {
@@ -278,13 +264,25 @@ async function dispatch(url: string, language: 'auto' | 'ru' | 'en'): Promise<Re
 }
 
 export async function POST(req: NextRequest) {
-  // Heaviest route — Deepgram + optionally yt-dlp. Tighter cap.
-  // initData verification (if TELEGRAM_BOT_TOKEN is set) layered
-  // on top by guardRequest.
-  const guard = guardRequest(req, {
+  const guard = await guardWithUser(req, {
     rateLimit: { key: 'transcribe', max: 10, windowMs: 60_000 },
   })
   if (!guard.ok) return guard.response
+
+  const { user, quota } = guard
+
+  // Quota gate: -1 means unlimited (team tier)
+  if (quota.minutes_limit !== -1 && quota.minutes_used >= quota.minutes_limit) {
+    return NextResponse.json(
+      {
+        error: 'quota_exceeded',
+        minutes_used: quota.minutes_used,
+        minutes_limit: quota.minutes_limit,
+        resets_at: quota.resets_at,
+      },
+      { status: 402 },
+    )
+  }
 
   const { url, language = 'ru' } = (await req.json()) as Body
 
@@ -302,7 +300,13 @@ export async function POST(req: NextRequest) {
       return NextResponse.json({ error: result.error }, { status: result.status })
     }
 
-    const id = await saveTranscript(url, result)
+    const id = await saveTranscript(url, result, user.id === 'dev' ? null : user.id)
+
+    // Deduct actual duration from quota (fire-and-forget)
+    if (result.duration && user.id !== 'dev') {
+      deductMinutes(user.id, result.duration / 60).catch(() => {})
+    }
+
     return NextResponse.json({ ...result, id })
   } catch (e: any) {
     return NextResponse.json({ error: e?.message || 'Ошибка транскрибации' }, { status: 500 })

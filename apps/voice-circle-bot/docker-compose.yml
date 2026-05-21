@@ -1,0 +1,7 @@
+services:
+  voice-circle-bot:
+    build: .
+    image: voice-circle-bot:local
+    container_name: voice-circle-bot
+    restart: unless-stopped
+    env_file: .env

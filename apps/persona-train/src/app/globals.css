@@ -1,0 +1,26 @@
+@tailwind base;
+@tailwind components;
+@tailwind utilities;
+
+:root {
+  --bg: #080808;
+  --s1: #111118;
+  --s2: #181820;
+  --border: rgba(255, 255, 255, 0.08);
+  --text: #e8e4f0;
+  --muted: #6b6880;
+  --accent: #c8f060;
+  --cyan: #60c8f0;
+  --pink: #f06090;
+  --red: #f04060;
+  --green: #60f090;
+}
+
+html, body {
+  background: var(--bg);
+  color: var(--text);
+  font-family: 'JetBrains Mono', 'SF Mono', Menlo, monospace;
+  -webkit-font-smoothing: antialiased;
+}
+
+* { box-sizing: border-box; }

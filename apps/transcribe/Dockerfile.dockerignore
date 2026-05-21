@@ -1,0 +1,20 @@
+**/node_modules
+**/.next
+**/.git
+**/.env
+**/.env.*
+!**/.env.example
+**/*.log
+**/.DS_Store
+**/dist
+**/build
+
+# Exclude unrelated apps (build context is the repo root)
+apps/ai-office/
+apps/ai-sales/
+apps/ytdlp/
+
+# Other repo cruft
+docs/
+.github/
+.claude/

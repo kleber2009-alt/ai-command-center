@@ -1,7 +1,13 @@
+// Personal "second brain" chat. Uses the singleton profile from
+// the local Postgres + (optionally) RAG over the document library.
+// RAG via pgvector is not enabled yet on this deployment, so the
+// retrieval block stays empty — the model answers from the profile
+// and the conversation alone. When pgvector lands, fill in the
+// retrieval branch and rebuild.
+
 import { NextRequest, NextResponse } from 'next/server'
 import { guardRequest } from '@/lib/api-guard'
-import { embed } from '@/lib/embeddings'
-import { getServerSupabase, loadProfile, profileToContext } from '@/lib/me-db'
+import { loadProfile, profileToContext } from '@/lib/me-db'
 import { streamAnthropic } from '@/lib/anthropic-stream'
 
 export const maxDuration = 60
@@ -21,13 +27,12 @@ const SYSTEM_INSTRUCTIONS = `Ты — личный «второй мозг» п�
 export async function POST(req: NextRequest) {
   const guard = guardRequest(req, {
     rateLimit: { key: 'me-chat', max: 20, windowMs: 60_000 },
-    ownerOnly: true,
+    requireInitData: false,
   })
   if (!guard.ok) return guard.response
 
   const body = (await req.json()) as Body
   const messages = Array.isArray(body.messages) ? body.messages : []
-  const topK = Math.max(1, Math.min(20, body.topK ?? 8))
 
   if (messages.length === 0 || messages[messages.length - 1].role !== 'user') {
     return NextResponse.json({ error: 'Последнее сообщение должно быть от пользователя' }, { status: 400 })
@@ -35,52 +40,13 @@ export async function POST(req: NextRequest) {
   if (!process.env.ANTHROPIC_API_KEY) {
     return NextResponse.json({ error: 'ANTHROPIC_API_KEY не настроен' }, { status: 500 })
   }
-  const supabase = getServerSupabase()
-  if (!supabase) {
-    return NextResponse.json(
-      { error: 'Supabase не настроен. Нужны NEXT_PUBLIC_SUPABASE_URL и SUPABASE_SERVICE_KEY + миграция 003_me.sql.' },
-      { status: 500 },
-    )
-  }
 
   const profile = await loadProfile()
   const profileBlock = profileToContext(profile)
 
-  const lastUser = messages[messages.length - 1].content
-  let contextBlock = ''
-  let citations: Array<{ document_id: string; document_title: string; chunk_index: number; similarity: number }> = []
-
-  if (process.env.OPENAI_API_KEY) {
-    try {
-      const queryVec = await embed(lastUser)
-      const { data: matches, error } = await supabase.rpc('match_me_chunks', {
-        query_embedding: queryVec as any,
-        match_count: topK,
-      })
-      if (!error && Array.isArray(matches)) {
-        const filtered = matches.filter((m: any) => (m.similarity ?? 0) > 0.2)
-        contextBlock = filtered
-          .map(
-            (m: any, i: number) =>
-              `### Фрагмент ${i + 1} — [${m.document_title}] (sim ${(m.similarity * 100).toFixed(0)}%)\n${m.content}`,
-          )
-          .join('\n\n---\n\n')
-        citations = filtered.map((m: any) => ({
-          document_id: m.document_id,
-          document_title: m.document_title,
-          chunk_index: m.chunk_index,
-          similarity: m.similarity,
-        }))
-      }
-    } catch (e: any) {
-      console.warn('[me/chat] retrieval failed:', e?.message)
-    }
-  }
-
   const systemParts: string[] = [SYSTEM_INSTRUCTIONS]
   if (profileBlock) systemParts.push('## Профиль\n' + profileBlock)
-  if (contextBlock) systemParts.push('## Контекст (релевантные фрагменты из базы)\n' + contextBlock)
-  else systemParts.push('## Контекст\n(релевантных фрагментов не найдено — используй только профиль и общие знания)')
+  systemParts.push('## Контекст\n(RAG-поиск по документам пока не подключён — отвечай по профилю и диалогу)')
   const system = systemParts.join('\n\n')
 
   return streamAnthropic(
@@ -90,6 +56,6 @@ export async function POST(req: NextRequest) {
       system,
       messages: messages.map((m) => ({ role: m.role, content: m.content.slice(0, 50000) })),
     },
-    { citations },
+    { citations: [] },
   )
 }

@@ -1,29 +1,31 @@
-import type { Config } from "tailwindcss";
+import type { Config } from 'tailwindcss';
 
 const config: Config = {
-  content: ["./src/**/*.{ts,tsx}"],
+  content: ['./src/**/*.{ts,tsx,js,jsx,html}'],
   theme: {
     extend: {
       colors: {
-        ink: {
-          950: "#06070a",
-          900: "#0a0d14",
-          800: "#11151f",
-          700: "#1a1f2e",
-          500: "#5b6478",
-          200: "#e5e7eb",
-        },
-        accent: {
-          DEFAULT: "#a78bfa",
-          glow: "#c4b5fd",
-        },
+        bg: '#080808',
+        surface: '#0f0f0f',
+        'surface-2': '#141414',
+        'surface-3': '#181818',
+        border: '#1a1a1a',
+        'border-2': '#2a2a2a',
+        text: '#f5f0e8',
+        'text-dim': '#b8b3a8',
+        'text-mute': '#5a5550',
+        'text-faint': '#3a3a3a',
+        lime: '#c8f060',
+        cyan: '#60c8f0',
+        pink: '#f06090',
+        warm: '#f0c860',
       },
       fontFamily: {
-        sans: ["ui-sans-serif", "system-ui", "-apple-system", "Segoe UI", "Inter", "sans-serif"],
-        display: ["ui-sans-serif", "system-ui", "Inter", "sans-serif"],
+        serif: ['Georgia', 'Times New Roman', 'serif'],
+        mono: ['SF Mono', 'JetBrains Mono', 'Menlo', 'monospace'],
       },
-      boxShadow: {
-        glow: "0 0 60px -20px rgba(167,139,250,0.4)",
+      letterSpacing: {
+        widest: '0.22em',
       },
     },
   },

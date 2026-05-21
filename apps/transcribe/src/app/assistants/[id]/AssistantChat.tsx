@@ -74,11 +74,15 @@ export default function AssistantChat({ id, name, description, icon, buttonText,
     setLoading(true)
     if (isInTelegram()) getTelegram()?.HapticFeedback?.impactOccurred?.('light')
 
+    // Strip leading assistant messages (help text) — API requires user-first history
+    const firstUser = next.findIndex((m) => m.role === 'user')
+    const toSend = firstUser >= 0 ? next.slice(firstUser) : next
+
     try {
       const res = await apiFetch('/api/assistants/chat', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ assistantId: id, messages: next }),
+        body: JSON.stringify({ assistantId: id, messages: toSend }),
       })
       if (!res.ok) {
         const data = await res.json().catch(() => ({}))

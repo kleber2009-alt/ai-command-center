@@ -1,0 +1,103 @@
+name: deploy-persona-landing
+
+# Deploy Persona Studio static landing to Hetzner.
+# Served by Caddy at persona.46-62-215-11.nip.io
+#
+# Required GitHub secrets:
+#   HETZNER_SSH_KEY   · private SSH key (ed25519)
+#
+# Optional repository variables (defaults if unset):
+#   HETZNER_HOST      · default 46.62.215.11
+#   HETZNER_USER      · default root
+#   HETZNER_SSH_PORT  · default 22
+
+on:
+  push:
+    branches: [main]
+    paths:
+      - 'persona-studio-landing/**'
+      - '.github/workflows/deploy-persona-landing.yml'
+  workflow_dispatch:
+    inputs:
+      ref:
+        description: 'Branch to deploy (defaults to main)'
+        required: false
+        default: 'main'
+
+concurrency:
+  group: deploy-persona-landing
+  cancel-in-progress: false
+
+jobs:
+  deploy:
+    runs-on: ubuntu-latest
+    timeout-minutes: 5
+
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+        with:
+          ref: ${{ github.event.inputs.ref || github.ref_name }}
+
+      - name: Copy landing to Hetzner + reload Caddy
+        uses: appleboy/ssh-action@v1.0.3
+        with:
+          host:     ${{ vars.HETZNER_HOST     || '46.62.215.11' }}
+          username: ${{ vars.HETZNER_USER     || 'root' }}
+          port:     ${{ vars.HETZNER_SSH_PORT || 22 }}
+          key:      ${{ secrets.HETZNER_SSH_KEY }}
+          script_stop: true
+          script: |
+            set -euo pipefail
+
+            DEST=/var/www/persona-studio-landing
+            REPO=/root/aisales-app-v2
+
+            # Ensure repo clone exists on server
+            if [ ! -d "$REPO/.git" ]; then
+              git clone https://github.com/kleber2009-alt/aisales-app-v2.git "$REPO"
+            fi
+
+            cd "$REPO"
+            git fetch --prune origin
+            git checkout ${{ github.event.inputs.ref || github.ref_name }}
+            git pull --ff-only origin ${{ github.event.inputs.ref || github.ref_name }}
+
+            echo "── syncing landing to $DEST ──"
+            mkdir -p "$DEST"
+            rsync -av --delete "$REPO/persona-studio-landing/" "$DEST/"
+
+            echo "── ensuring Caddy block exists ──"
+            CADDYFILE=/etc/caddy/Caddyfile
+            if ! grep -q "persona\.46-62-215-11\.nip\.io" "$CADDYFILE"; then
+              cat >> "$CADDYFILE" <<'CADDY'
+
+# ─── Persona Studio landing ────────────────────────────────────────
+persona.46-62-215-11.nip.io {
+    root * /var/www/persona-studio-landing
+    file_server
+    encode zstd gzip
+    header {
+        Cache-Control "public, max-age=3600"
+        X-Content-Type-Options nosniff
+        -Server
+    }
+}
+CADDY
+              echo "── Caddy block appended ──"
+            else
+              echo "── Caddy block already present ──"
+            fi
+
+            echo "── reloading Caddy ──"
+            caddy reload --config "$CADDYFILE" --adapter caddyfile
+            echo "✓ landing deployed"
+
+      - name: Smoke test
+        run: |
+          set -euo pipefail
+          STATUS=$(curl -o /dev/null -sw "%{http_code}" \
+            http://persona.46-62-215-11.nip.io/ --max-time 10 || echo "000")
+          echo "HTTP $STATUS"
+          [ "$STATUS" = "200" ] && echo "✓ landing is up" || \
+            { echo "✗ unexpected status $STATUS"; exit 1; }

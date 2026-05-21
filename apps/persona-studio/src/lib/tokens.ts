@@ -1,85 +1,106 @@
-import { prisma } from "./db";
-
-export const TOKEN_COST = {
-  avatarBatch: Number(process.env.TOKENS_AVATAR_GENERATION || 10),
-  cover: Number(process.env.TOKENS_COVER_GENERATION || 3),
-};
+import { prisma } from './prisma';
 
 export class InsufficientTokensError extends Error {
-  constructor(public required: number, public balance: number) {
-    super(`Need ${required} tokens, have ${balance}`);
-    this.name = "InsufficientTokensError";
+  constructor(public have: number, public need: number) {
+    super(`Insufficient tokens: have ${have}, need ${need}`);
+    this.name = 'InsufficientTokensError';
   }
 }
 
-/** Atomically debit tokens. Throws InsufficientTokensError if balance is too low. */
-export async function spendTokens(
-  userId: string,
-  amount: number,
-  note: string,
-  ref?: string
-) {
-  if (amount <= 0) throw new Error("amount must be > 0");
+/**
+ * Atomic reservation: списывает amount у пользователя и пишет транзакцию.
+ * Бросает InsufficientTokensError если баланс мал.
+ */
+export async function chargeTokens(opts: {
+  userId: string;
+  amount: number;
+  reason: string;
+  refId?: string;
+}) {
+  if (opts.amount <= 0) return;
 
   return prisma.$transaction(async (tx) => {
     const user = await tx.user.findUnique({
-      where: { id: userId },
+      where: { id: opts.userId },
       select: { tokenBalance: true },
     });
-    if (!user) throw new Error("user not found");
-    if (user.tokenBalance < amount) {
-      throw new InsufficientTokensError(amount, user.tokenBalance);
+    if (!user) throw new Error('USER_NOT_FOUND');
+    if (user.tokenBalance < opts.amount) {
+      throw new InsufficientTokensError(user.tokenBalance, opts.amount);
     }
     await tx.user.update({
-      where: { id: userId },
-      data: { tokenBalance: { decrement: amount } },
+      where: { id: opts.userId },
+      data: { tokenBalance: { decrement: opts.amount } },
     });
-    await tx.tokenLedger.create({
-      data: { userId, kind: "SPEND", amount: -amount, note, ref },
+    await tx.tokenTransaction.create({
+      data: {
+        userId: opts.userId,
+        amount: -opts.amount,
+        type: 'charge',
+        reason: opts.reason,
+        refId: opts.refId,
+      },
     });
   });
 }
 
-export async function refundTokens(
-  userId: string,
-  amount: number,
-  note: string,
-  ref?: string
-) {
-  if (amount <= 0) return;
+/**
+ * Возврат токенов (при failed generation).
+ */
+export async function refundTokens(opts: {
+  userId: string;
+  amount: number;
+  reason: string;
+  refId?: string;
+}) {
+  if (opts.amount <= 0) return;
   await prisma.$transaction(async (tx) => {
     await tx.user.update({
-      where: { id: userId },
-      data: { tokenBalance: { increment: amount } },
+      where: { id: opts.userId },
+      data: { tokenBalance: { increment: opts.amount } },
     });
-    await tx.tokenLedger.create({
-      data: { userId, kind: "REFUND", amount, note, ref },
+    await tx.tokenTransaction.create({
+      data: {
+        userId: opts.userId,
+        amount: opts.amount,
+        type: 'refund',
+        reason: opts.reason,
+        refId: opts.refId,
+      },
     });
   });
 }
 
-export async function grantTokens(
-  userId: string,
-  amount: number,
-  note: string,
-  kind: "GRANT" | "PURCHASE" | "ADJUSTMENT" = "PURCHASE"
-) {
-  if (amount === 0) return;
+/**
+ * Ручное / покупное начисление.
+ */
+export async function creditTokens(opts: {
+  userId: string;
+  amount: number;
+  type: 'purchase' | 'manual' | 'signup_bonus';
+  reason: string;
+  refId?: string;
+}) {
+  if (opts.amount <= 0) return;
   await prisma.$transaction(async (tx) => {
     await tx.user.update({
-      where: { id: userId },
-      data: { tokenBalance: { increment: amount } },
+      where: { id: opts.userId },
+      data: { tokenBalance: { increment: opts.amount } },
     });
-    await tx.tokenLedger.create({
-      data: { userId, kind, amount, note },
+    await tx.tokenTransaction.create({
+      data: {
+        userId: opts.userId,
+        amount: opts.amount,
+        type: opts.type,
+        reason: opts.reason,
+        refId: opts.refId,
+      },
     });
   });
 }
 
-export async function balance(userId: string) {
-  const u = await prisma.user.findUnique({
-    where: { id: userId },
-    select: { tokenBalance: true },
-  });
-  return u?.tokenBalance ?? 0;
-}
+export const COSTS = {
+  avatarGeneration: Number(process.env.COST_AVATAR_GENERATION ?? 10),
+  coverGeneration: Number(process.env.COST_COVER_GENERATION ?? 3),
+  heygenVideo: Number(process.env.COST_HEYGEN_VIDEO ?? 30),
+};
