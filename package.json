@@ -26,6 +26,6 @@
     "persona:worker:cover": "npm run worker:cover -w apps/persona-studio"
   },
   "devDependencies": {
-    "vitest": "^1.5.5"
+    "vitest": "^4.1.7"
   }
 }
