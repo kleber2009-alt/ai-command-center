@@ -5,7 +5,7 @@ import { getAnalysisReport, getTrendReport, listAllReports } from '@/lib/instagr
 export async function GET(req: NextRequest, { params }: { params: { id: string } }) {
   const guard = guardRequest(req, {
     rateLimit: { key: 'ig-reports', max: 30, windowMs: 60_000 },
-    ownerOnly: true,
+    requireInitData: false,
   })
   if (!guard.ok) return guard.response
 

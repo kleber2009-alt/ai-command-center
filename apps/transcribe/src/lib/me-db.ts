@@ -1,4 +1,5 @@
 import { getServerSupabase } from './transcripts-db'
+import { getDb } from './db'
 
 export type MeProfile = {
   bio: string
@@ -41,51 +42,62 @@ export type MeChunkMatch = {
 
 export { getServerSupabase }
 
-export async function loadProfile(): Promise<MeProfile> {
-  const supabase = getServerSupabase()
-  if (!supabase) return EMPTY_PROFILE
-  const { data } = await supabase.from('me_profile').select('*').eq('id', 'singleton').single()
-  if (!data) return EMPTY_PROFILE
+// Singleton me-profile row keyed by id='singleton' (single-tenant app).
+// Backed by the `me_profile` table in the local `aio` Postgres instance.
+
+const SINGLETON = 'singleton'
+
+function rowToProfile(row: any): MeProfile {
   return {
-    bio: data.bio ?? '',
-    projects: data.projects ?? '',
-    academy: data.academy ?? '',
-    social: data.social ?? '',
-    voice: data.voice ?? '',
-    custom: data.custom ?? {},
-    updated_at: data.updated_at ?? new Date(0).toISOString(),
+    bio: row.bio ?? '',
+    projects: row.projects ?? '',
+    academy: row.academy ?? '',
+    social: row.social ?? '',
+    voice: row.voice ?? '',
+    custom: row.custom ?? {},
+    updated_at:
+      typeof row.updated_at === 'string'
+        ? row.updated_at
+        : new Date(row.updated_at ?? 0).toISOString(),
+  }
+}
+
+export async function loadProfile(): Promise<MeProfile> {
+  const db = getDb()
+  if (!db) return EMPTY_PROFILE
+  try {
+    const [row] = await db`SELECT * FROM me_profile WHERE id = ${SINGLETON}`
+    return row ? rowToProfile(row) : EMPTY_PROFILE
+  } catch (e: any) {
+    console.warn('[me-db] loadProfile failed:', e?.message)
+    return EMPTY_PROFILE
   }
 }
 
 export async function saveProfile(p: Partial<MeProfile>): Promise<MeProfile | null> {
-  const supabase = getServerSupabase()
-  if (!supabase) return null
-  const { data } = await supabase
-    .from('me_profile')
-    .upsert(
-      {
-        id: 'singleton',
-        bio: p.bio,
-        projects: p.projects,
-        academy: p.academy,
-        social: p.social,
-        voice: p.voice,
-        custom: p.custom,
-        updated_at: new Date().toISOString(),
-      },
-      { onConflict: 'id' },
-    )
-    .select()
-    .single()
-  if (!data) return null
-  return {
-    bio: data.bio ?? '',
-    projects: data.projects ?? '',
-    academy: data.academy ?? '',
-    social: data.social ?? '',
-    voice: data.voice ?? '',
-    custom: data.custom ?? {},
-    updated_at: data.updated_at ?? new Date().toISOString(),
+  const db = getDb()
+  if (!db) return null
+  try {
+    const [row] = await db`
+      INSERT INTO me_profile (id, bio, projects, academy, social, voice, custom, updated_at)
+      VALUES (
+        ${SINGLETON}, ${p.bio ?? ''}, ${p.projects ?? ''}, ${p.academy ?? ''},
+        ${p.social ?? ''}, ${p.voice ?? ''}, ${db.json(p.custom ?? {})}, NOW()
+      )
+      ON CONFLICT (id) DO UPDATE SET
+        bio        = EXCLUDED.bio,
+        projects   = EXCLUDED.projects,
+        academy    = EXCLUDED.academy,
+        social     = EXCLUDED.social,
+        voice      = EXCLUDED.voice,
+        custom     = EXCLUDED.custom,
+        updated_at = NOW()
+      RETURNING *
+    `
+    return row ? rowToProfile(row) : null
+  } catch (e: any) {
+    console.warn('[me-db] saveProfile failed:', e?.message)
+    return null
   }
 }
 

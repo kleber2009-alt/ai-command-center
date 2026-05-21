@@ -1,6 +1,6 @@
 import { NextRequest, NextResponse } from 'next/server'
 import { guardRequest } from '@/lib/api-guard'
-import { getServerSupabase } from '@/lib/transcripts-db'
+import { getDb } from '@/lib/db'
 import type { TaskStatus, TaskPriority, TaskProject } from '@/lib/tasks-db'
 
 type PatchBody = Partial<{
@@ -16,17 +16,14 @@ type PatchBody = Partial<{
 export async function PATCH(req: NextRequest, { params }: { params: { id: string } }) {
   const guard = guardRequest(req, {
     rateLimit: { key: 'tasks-mod', max: 30, windowMs: 60_000 },
-    ownerOnly: true,
+    requireInitData: false,
   })
   if (!guard.ok) return guard.response
 
-  const supabase = getServerSupabase()
-  if (!supabase) {
-    return NextResponse.json({ error: 'Supabase не настроен' }, { status: 503 })
-  }
-  const body = (await req.json()) as PatchBody
+  const db = getDb()
+  if (!db) return NextResponse.json({ error: 'db_unavailable' }, { status: 503 })
 
-  // Whitelist allowed fields
+  const body = (await req.json()) as PatchBody
   const update: Record<string, unknown> = {}
   if (typeof body.title === 'string') update.title = body.title
   if (body.description === null || typeof body.description === 'string') update.description = body.description
@@ -40,32 +37,32 @@ export async function PATCH(req: NextRequest, { params }: { params: { id: string
     return NextResponse.json({ error: 'Нечего обновлять' }, { status: 400 })
   }
 
-  const { data, error } = await supabase
-    .from('tasks')
-    .update(update)
-    .eq('id', params.id)
-    .select('*')
-    .single()
-  if (error) {
-    return NextResponse.json({ error: error.message }, { status: 500 })
+  try {
+    const [row] = await db`
+      UPDATE tasks SET ${db(update)} WHERE id = ${params.id}::uuid
+      RETURNING *
+    `
+    if (!row) return NextResponse.json({ error: 'not_found' }, { status: 404 })
+    return NextResponse.json(row)
+  } catch (e: any) {
+    return NextResponse.json({ error: e?.message ?? 'db_error' }, { status: 500 })
   }
-  return NextResponse.json(data)
 }
 
 export async function DELETE(req: NextRequest, { params }: { params: { id: string } }) {
   const guard = guardRequest(req, {
     rateLimit: { key: 'tasks-mod', max: 30, windowMs: 60_000 },
-    ownerOnly: true,
+    requireInitData: false,
   })
   if (!guard.ok) return guard.response
 
-  const supabase = getServerSupabase()
-  if (!supabase) {
-    return NextResponse.json({ error: 'Supabase не настроен' }, { status: 503 })
+  const db = getDb()
+  if (!db) return NextResponse.json({ error: 'db_unavailable' }, { status: 503 })
+
+  try {
+    await db`DELETE FROM tasks WHERE id = ${params.id}::uuid`
+    return NextResponse.json({ ok: true })
+  } catch (e: any) {
+    return NextResponse.json({ error: e?.message ?? 'db_error' }, { status: 500 })
   }
-  const { error } = await supabase.from('tasks').delete().eq('id', params.id)
-  if (error) {
-    return NextResponse.json({ error: error.message }, { status: 500 })
-  }
-  return NextResponse.json({ ok: true })
 }

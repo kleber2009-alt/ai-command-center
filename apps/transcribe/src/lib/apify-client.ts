@@ -193,58 +193,65 @@ function normalizeReel(raw: any): ApifyReelItem | null {
     commentsCount: raw.commentsCount ?? raw.commentCount ?? null,
     videoViewCount: raw.videoViewCount ?? raw.viewsCount ?? raw.playCount ?? null,
     musicInfo: raw.musicInfo ?? raw.audioTracks?.[0] ?? null,
-    ownerUsername: raw.ownerUsername ?? raw.owner?.username ?? null,
-    ownerFullName: raw.ownerFullName ?? raw.owner?.fullName ?? null,
-    ownerBio: raw.ownerBio ?? raw.owner?.biography ?? null,
-    ownerFollowersCount: raw.ownerFollowersCount ?? raw.owner?.followersCount ?? null,
-    ownerFollowingCount: raw.ownerFollowingCount ?? raw.owner?.followingCount ?? null,
-    ownerPostsCount: raw.ownerPostsCount ?? raw.owner?.postsCount ?? null,
-    ownerProfilePicUrl: raw.ownerProfilePicUrl ?? raw.owner?.profilePicUrl ?? null,
-    ownerIsVerified: raw.ownerIsVerified ?? raw.owner?.verified ?? null,
+    // Apify returns owner fields both as flat (ownerUsername) and profile-page flat (username)
+    ownerUsername: raw.ownerUsername ?? raw.username ?? raw.owner?.username ?? null,
+    ownerFullName: raw.ownerFullName ?? raw.fullName ?? raw.owner?.fullName ?? null,
+    ownerBio: raw.ownerBio ?? raw.biography ?? raw.owner?.biography ?? null,
+    ownerFollowersCount: raw.ownerFollowersCount ?? raw.followersCount ?? raw.owner?.followersCount ?? null,
+    ownerFollowingCount: raw.ownerFollowingCount ?? raw.followsCount ?? raw.owner?.followingCount ?? null,
+    ownerPostsCount: raw.ownerPostsCount ?? raw.postsCount ?? raw.owner?.postsCount ?? null,
+    ownerProfilePicUrl: raw.ownerProfilePicUrl ?? raw.profilePicUrl ?? raw.owner?.profilePicUrl ?? null,
+    ownerIsVerified: raw.ownerIsVerified ?? raw.verified ?? raw.owner?.verified ?? null,
   }
 }
 
 export async function scrapeInstagramAccount(
   username: string,
   limit = 30,
-): Promise<{ account: ApifyAccountInfo; reels: ApifyReelItem[] }> {
+): Promise<{ account: ApifyAccountInfo; reels: ApifyReelItem[]; rawCount: number; rawSample: string }> {
   const items = await apifyPost({
-    usernames: [username],
+    directUrls: [`https://www.instagram.com/${username}/`],
     resultsType: 'posts',
     resultsLimit: limit,
     addParentData: true,
   }, 180_000)
 
+  const rawCount = items.length
+  const rawSample = rawCount > 0
+    ? JSON.stringify(Object.keys((items[0] as any) ?? {})).slice(0, 200)
+    : '[]'
+
   const reels: ApifyReelItem[] = []
   let account: ApifyAccountInfo = { username }
 
   for (const raw of items as any[]) {
-    // Extract account info from first item that has owner data
-    if (!account.fullName && (raw.ownerUsername || raw.owner?.username)) {
+    // Extract account info from first item — Apify flattens profile fields into each post
+    if (!account.fullName && (raw.username || raw.ownerUsername)) {
       account = {
-        username: raw.ownerUsername ?? raw.owner?.username ?? username,
-        fullName: raw.ownerFullName ?? raw.owner?.fullName ?? null,
-        bio: raw.ownerBio ?? raw.owner?.biography ?? null,
-        followersCount: raw.ownerFollowersCount ?? raw.owner?.followersCount ?? null,
-        followingCount: raw.ownerFollowingCount ?? raw.owner?.followingCount ?? null,
-        postsCount: raw.ownerPostsCount ?? raw.owner?.postsCount ?? null,
-        profilePicUrl: raw.ownerProfilePicUrl ?? raw.owner?.profilePicUrl ?? null,
-        isVerified: raw.ownerIsVerified ?? raw.owner?.verified ?? null,
+        username: raw.username ?? raw.ownerUsername ?? username,
+        fullName: raw.fullName ?? raw.ownerFullName ?? null,
+        bio: raw.biography ?? raw.ownerBio ?? null,
+        followersCount: raw.followersCount ?? raw.ownerFollowersCount ?? null,
+        followingCount: raw.followsCount ?? raw.ownerFollowingCount ?? null,
+        postsCount: raw.postsCount ?? raw.ownerPostsCount ?? null,
+        profilePicUrl: raw.profilePicUrl ?? raw.ownerProfilePicUrl ?? null,
+        isVerified: raw.verified ?? raw.ownerIsVerified ?? null,
       }
     }
     const reel = normalizeReel(raw)
     if (reel) reels.push(reel)
   }
 
-  return { account, reels }
+  return { account, reels, rawCount, rawSample }
 }
 
 export async function scrapeInstagramAccounts(
   usernames: string[],
   limitPerAccount = 20,
 ): Promise<ApifyReelItem[]> {
+  const directUrls = usernames.map((u) => `https://www.instagram.com/${u}/`)
   const items = await apifyPost({
-    usernames,
+    directUrls,
     resultsType: 'posts',
     resultsLimit: limitPerAccount,
     addParentData: true,

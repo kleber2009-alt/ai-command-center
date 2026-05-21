@@ -66,6 +66,20 @@ export type TrendReport = {
   created_at: string
 }
 
+// ─── Helpers ──────────────────────────────────────────────────────────────────
+
+// postgres library returns bigint/numeric columns as strings; coerce back to JS numbers
+function coerceReel(row: any): InstagramReel {
+  return {
+    ...row,
+    views_count: Number(row.views_count),
+    likes_count: Number(row.likes_count),
+    comments_count: Number(row.comments_count),
+    viral_score: Number(row.viral_score),
+    duration: row.duration != null ? Number(row.duration) : null,
+  }
+}
+
 // ─── Accounts ─────────────────────────────────────────────────────────────────
 
 export async function upsertAccount(data: {
@@ -153,7 +167,7 @@ export async function upsertReel(data: {
       updated_at     = now()
     RETURNING *
   `
-  return (rows[0] as InstagramReel) ?? null
+  return rows[0] ? coerceReel(rows[0]) : null
 }
 
 export async function updateReelTranscript(shortcode: string, transcript: string): Promise<void> {
@@ -173,7 +187,7 @@ export async function getReelsByAccount(accountId: string, limit = 50): Promise<
     ORDER BY viral_score DESC, views_count DESC
     LIMIT ${limit}
   `
-  return rows as unknown as InstagramReel[]
+  return (rows as any[]).map(coerceReel)
 }
 
 export async function getTopReels(accountIds: string[], limit = 50): Promise<InstagramReel[]> {
@@ -185,7 +199,7 @@ export async function getTopReels(accountIds: string[], limit = 50): Promise<Ins
     ORDER BY viral_score DESC
     LIMIT ${limit}
   `
-  return rows as unknown as InstagramReel[]
+  return (rows as any[]).map(coerceReel)
 }
 
 // ─── Analysis Reports ─────────────────────────────────────────────────────────

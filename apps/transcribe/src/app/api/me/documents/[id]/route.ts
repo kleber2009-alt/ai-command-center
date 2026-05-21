@@ -5,7 +5,7 @@ import { getServerSupabase } from '@/lib/me-db'
 export async function GET(req: NextRequest, { params }: { params: { id: string } }) {
   const guard = guardRequest(req, {
     rateLimit: { key: 'docs-item', max: 60, windowMs: 60_000 },
-    ownerOnly: true,
+    requireInitData: false,
   })
   if (!guard.ok) return guard.response
 
@@ -23,7 +23,7 @@ export async function GET(req: NextRequest, { params }: { params: { id: string }
 export async function DELETE(req: NextRequest, { params }: { params: { id: string } }) {
   const guard = guardRequest(req, {
     rateLimit: { key: 'docs-item', max: 60, windowMs: 60_000 },
-    ownerOnly: true,
+    requireInitData: false,
   })
   if (!guard.ok) return guard.response
 

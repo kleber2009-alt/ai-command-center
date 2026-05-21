@@ -4,6 +4,7 @@ import { getDb } from './db'
 export type Paragraph = { text: string; start: number; end: number }
 
 export type CarouselSlide = { n: number; title: string; body: string }
+export type CarouselImageSlide = { n: number; title: string; body: string; imageUrl: string | null }
 export type ReelsScript = {
   hook: string
   promise: string
@@ -17,6 +18,7 @@ export type TgPost = { text: string }
 
 export type Generations = {
   carousel?: { slides: CarouselSlide[] }
+  'carousel-image'?: { slides: CarouselImageSlide[] }
   'reels-new'?: ReelsScript
   'reels-remix'?: ReelsScript
   'tg-post'?: TgPost

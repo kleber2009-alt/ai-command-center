@@ -52,7 +52,7 @@ TRANSCRIPTS_DIR = ROOT / "voice-input" / "transcripts"
 ANALYSIS_DIR = ROOT / "voice-input" / "analysis"
 
 # Модель: Sonnet 4.6 хватает для извлечения структуры (дешевле Opus, быстрее)
-MODEL = "claude-sonnet-4-6-20260101"
+MODEL = "claude-sonnet-4-6"
 
 # Цены (USD за 1М токенов)
 PRICE_INPUT = 3.0

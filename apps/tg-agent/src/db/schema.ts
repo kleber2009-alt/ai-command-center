@@ -77,4 +77,58 @@ CREATE INDEX IF NOT EXISTS tg_drafts_edit_prompt_idx
   ON tg_drafts (edit_prompt_message_id);
 CREATE INDEX IF NOT EXISTS tg_drafts_owner_dm_idx
   ON tg_drafts (owner_dm_message_id);
+
+-- Per-chat daily digests. The generator reads tg_messages over a
+-- rolling window, asks Claude Sonnet to surface what the owner might
+-- be missing, and stores both the structured payload (JSON) and a
+-- ready-to-send markdown summary. tg_chat_context holds the latest
+-- per-chat snapshot plus the owner's project_context for the chat.
+-- This is intentionally separate from tg_insight_reports, which
+-- belongs to the KB-suggestion analyzer in db/insights.ts.
+CREATE TABLE IF NOT EXISTS tg_digests (
+  id              INTEGER PRIMARY KEY AUTOINCREMENT,
+  chat_id         INTEGER NOT NULL,
+  chat_title      TEXT,
+  window_hours    INTEGER NOT NULL DEFAULT 24,
+  generated_at    TEXT NOT NULL DEFAULT (strftime('%Y-%m-%dT%H:%M:%fZ', 'now')),
+  messages_count  INTEGER NOT NULL DEFAULT 0,
+  payload_json    TEXT NOT NULL DEFAULT '{}',
+  summary_md      TEXT NOT NULL DEFAULT '',
+  delivered_at    TEXT
+);
+
+CREATE INDEX IF NOT EXISTS tg_digests_chat_idx
+  ON tg_digests (chat_id, generated_at DESC);
+
+CREATE TABLE IF NOT EXISTS tg_chat_context (
+  chat_id              INTEGER PRIMARY KEY,
+  summary              TEXT NOT NULL DEFAULT '',
+  custom_instructions  TEXT NOT NULL DEFAULT '',
+  context_updated_at   TEXT,
+  created_at           TEXT NOT NULL DEFAULT (strftime('%Y-%m-%dT%H:%M:%fZ', 'now')),
+  updated_at           TEXT NOT NULL DEFAULT (strftime('%Y-%m-%dT%H:%M:%fZ', 'now'))
+);
 `;
+
+// One-shot, idempotent migrations for older SQLite files where
+// tg_chat_context already exists in an older shape (more columns,
+// e.g. topics/sentiment/tasks). better-sqlite3 throws on ADD COLUMN
+// when the column already exists, so we introspect PRAGMA table_info
+// first. tg_digests is brand new; nothing to migrate there.
+export function ensureSchemaUpgrades(db: {
+  prepare: (sql: string) => { all: () => Array<{ name: string }> };
+  exec: (sql: string) => void;
+}): void {
+  const addIfMissing = (table: string, column: string, ddl: string): void => {
+    const cols = db.prepare(`PRAGMA table_info(${table})`).all() as Array<{ name: string }>;
+    if (cols.some((c) => c.name === column)) return;
+    db.exec(`ALTER TABLE ${table} ADD COLUMN ${column} ${ddl}`);
+  };
+
+  addIfMissing(
+    'tg_chat_context',
+    'custom_instructions',
+    "TEXT NOT NULL DEFAULT ''",
+  );
+  addIfMissing('tg_chat_context', 'context_updated_at', 'TEXT');
+}
