@@ -1,0 +1,203 @@
+// Persona Studio — MVP schema
+// PostgreSQL via Prisma. Wire DATABASE_URL in .env.
+
+generator client {
+  provider = "prisma-client-js"
+}
+
+datasource db {
+  provider = "postgresql"
+  url      = env("DATABASE_URL")
+}
+
+// ───────────────────────────────────────────────────────────
+// Auth (NextAuth schema)
+// ───────────────────────────────────────────────────────────
+
+model Account {
+  id                String  @id @default(cuid())
+  userId            String
+  type              String
+  provider          String
+  providerAccountId String
+  refresh_token     String? @db.Text
+  access_token      String? @db.Text
+  expires_at        Int?
+  token_type        String?
+  scope             String?
+  id_token          String? @db.Text
+  session_state     String?
+
+  user User @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@unique([provider, providerAccountId])
+}
+
+model Session {
+  id           String   @id @default(cuid())
+  sessionToken String   @unique
+  userId       String
+  expires      DateTime
+  user         User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+}
+
+model VerificationToken {
+  identifier String
+  token      String   @unique
+  expires    DateTime
+
+  @@unique([identifier, token])
+}
+
+// ───────────────────────────────────────────────────────────
+// Domain
+// ───────────────────────────────────────────────────────────
+
+model User {
+  id            String    @id @default(cuid())
+  email         String    @unique
+  emailVerified DateTime?
+  name          String?
+  image         String?
+
+  tokenBalance Int @default(10)
+
+  accounts Account[]
+  sessions Session[]
+
+  uploads     Upload[]
+  generations Generation[]
+  avatars     Avatar[]
+  covers      Cover[]
+  ledger      TokenLedger[]
+
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+}
+
+model Upload {
+  id     String @id @default(cuid())
+  userId String
+  user   User   @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  key       String // R2 object key
+  url       String // public URL
+  mimeType  String
+  bytes     Int
+  width     Int?
+  height    Int?
+
+  createdAt DateTime @default(now())
+
+  generations Generation[]
+  avatars     Avatar[]
+
+  @@index([userId])
+}
+
+enum GenerationKind {
+  AVATAR_BATCH
+  COVER
+}
+
+enum GenerationStatus {
+  QUEUED
+  RUNNING
+  SUCCEEDED
+  FAILED
+}
+
+model Generation {
+  id     String @id @default(cuid())
+  userId String
+  user   User   @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  kind   GenerationKind
+  status GenerationStatus @default(QUEUED)
+
+  uploadId String?
+  upload   Upload? @relation(fields: [uploadId], references: [id])
+
+  jobId        String? // BullMQ job id
+  tokensSpent  Int     @default(0)
+  errorMessage String?
+  meta         Json?
+
+  avatars Avatar[]
+  covers  Cover[]
+
+  createdAt   DateTime  @default(now())
+  finishedAt  DateTime?
+
+  @@index([userId, kind, status])
+}
+
+model Avatar {
+  id     String @id @default(cuid())
+  userId String
+  user   User   @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  generationId String
+  generation   Generation @relation(fields: [generationId], references: [id], onDelete: Cascade)
+
+  uploadId String?
+  upload   Upload? @relation(fields: [uploadId], references: [id])
+
+  imageUrl String
+  imageKey String
+  style    String
+  selected Boolean @default(false)
+
+  covers Cover[]
+
+  createdAt DateTime @default(now())
+
+  @@index([userId, selected])
+  @@index([generationId])
+}
+
+model Cover {
+  id     String @id @default(cuid())
+  userId String
+  user   User   @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  avatarId String
+  avatar   Avatar @relation(fields: [avatarId], references: [id], onDelete: Cascade)
+
+  generationId String?
+  generation   Generation? @relation(fields: [generationId], references: [id])
+
+  imageUrl String
+  imageKey String
+
+  title    String
+  subtitle String
+  cta      String
+
+  createdAt DateTime @default(now())
+
+  @@index([userId])
+}
+
+enum LedgerKind {
+  GRANT
+  PURCHASE
+  SPEND
+  REFUND
+  ADJUSTMENT
+}
+
+model TokenLedger {
+  id     String @id @default(cuid())
+  userId String
+  user   User   @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  kind   LedgerKind
+  amount Int // positive credit, negative debit
+  note   String?
+  ref    String? // free-form ref (generationId, stripe sessionId, etc.)
+
+  createdAt DateTime @default(now())
+
+  @@index([userId, createdAt])
+}

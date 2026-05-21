@@ -181,34 +181,34 @@
 
     <div class="hero-main">
       <div class="label">PROJECT STATUS</div>
-      <h1>Прогресс <span class="accent">2 / 8</span> этапов завершены, 3 в работе</h1>
-      <div class="desc">Инфраструктура поднята. 5 прототипов дашборда + 3 карусели + 2 Reels-сценария. LangGraph-скелет агента работает в mock-режиме. Расширенная SQL-схема под аналитику. Netlify-redirects настроены. Дальше нужно: наполнение базы знаний голосом Ильи.</div>
-      <div class="progress-bar"><div class="progress-fill" style="width:50%;"></div></div>
+      <h1>Прогресс <span class="accent">2 / 8</span> этапов завершены, 5 в работе</h1>
+      <div class="desc">TG-бот @ilia_pali0_bot живой в проде: pipeline Sonnet 4.6 (classify) → Opus 4.7 (generate), prompt caching −90%, ~$0.025 за turn. HTTPS через Caddy + Let's Encrypt на nip.io. 5 прототипов дашборда + 3 карусели + 2 Reels. Teaching mode (/teach on) собирает голосовые от Ильи. Дальше: наполнение БЗ + ElevenLabs PVC + IG-канал.</div>
+      <div class="progress-bar"><div class="progress-fill" style="width:53%;"></div></div>
       <div class="progress-meta">
-        <span><span class="done">50%</span> · 4 ИЗ 8</span>
-        <span>ETA · 6 НЕДЕЛЬ</span>
+        <span><span class="done">53%</span> · 4.3 ИЗ 8</span>
+        <span>ETA · 5 НЕДЕЛЬ</span>
       </div>
     </div>
 
     <div class="hero-stat">
       <div class="num">01</div>
-      <div class="lbl">Этапов<br/>выполнено</div>
-      <div class="val lime">2<span class="sfx">/8</span></div>
-      <div class="sub">+ 0.5 в работе · stage 04 +30%</div>
+      <div class="lbl">Этапов<br/>в работе</div>
+      <div class="val lime">5<span class="sfx">/8</span></div>
+      <div class="sub">stage 05 + 07 активированы</div>
     </div>
 
     <div class="hero-stat">
       <div class="num">02</div>
-      <div class="lbl">Прототипов<br/>дашборда</div>
-      <div class="val cyan">5<span class="sfx">/5</span></div>
-      <div class="sub">+ AGENTS DRILL-DOWN</div>
+      <div class="lbl">TG-бот<br/>в проде</div>
+      <div class="val cyan">●</div>
+      <div class="sub">@ilia_pali0_bot · $0.025/turn</div>
     </div>
 
     <div class="hero-stat">
       <div class="num">03</div>
       <div class="lbl">Блокеров<br/>сейчас</div>
       <div class="val">0</div>
-      <div class="sub">SSL отложен явно</div>
+      <div class="sub">ждём голосовые от Ильи</div>
     </div>
 
   </div>
@@ -216,7 +216,7 @@
   <!-- ============ STAGE TIMELINE ============ -->
   <div class="sec-head">
     <span class="sec-num">/01</span>
-    <span class="sec-title">8 этапов · текущая нумерация</span>
+    <span class="sec-title">8 этапов · 2 done · 5 active · 1 wait</span>
     <span class="sec-spacer"></span>
   </div>
 
@@ -251,21 +251,20 @@
         <div class="stage-title-row">
           <div class="stage-title">Инфраструктура</div>
           <span class="stage-status done">✓ Done</span>
-          <span class="label" style="color:#5a5550;">— 2.5 SSL отложен</span>
         </div>
-        <div class="stage-desc">VPS (Hetzner CPX31, Ubuntu 24.04), Docker-стек из 4 сервисов, схема БД с 8 таблицами, FastAPI backend с JWT и Swagger.</div>
-        <div class="stage-deliverable">deliverable: <b>aisales-api на порту 8000 + 4 БД работают</b></div>
+        <div class="stage-desc">VPS (Hetzner CPX31, Ubuntu 24.04), Docker-стек из 5 сервисов (api, postgres, redis, qdrant, minio + caddy), схема БД 8 таблиц, FastAPI с JWT и Swagger, HTTPS через Caddy + Let's Encrypt на api.46-62-215-11.nip.io.</div>
+        <div class="stage-deliverable">deliverable: <b>aisales-api на :443 + 5 контейнеров + auto-HTTPS</b></div>
       </div>
       <div class="stage-tasks">
         <div class="t"><span class="mark">▣</span><span class="txt">2.1 VPS Hetzner CPX31</span></div>
-        <div class="t"><span class="mark">▣</span><span class="txt">2.2 Docker · 4 сервиса</span></div>
+        <div class="t"><span class="mark">▣</span><span class="txt">2.2 Docker · 5 сервисов</span></div>
         <div class="t"><span class="mark">▣</span><span class="txt">2.3 Postgres · 8 таблиц</span></div>
         <div class="t"><span class="mark">▣</span><span class="txt">2.4 FastAPI + JWT</span></div>
-        <div class="t"><span class="mark todo">◇</span><span class="txt dim">2.5 SSL (отложен)</span></div>
+        <div class="t"><span class="mark">▣</span><span class="txt">2.5 HTTPS · Caddy + LE (nip.io)</span></div>
       </div>
       <div class="stage-progress-col">
-        <div class="stage-progress-num done">80<span style="font-size:14px;color:#5a5550;">%</span></div>
-        <div class="stage-mini-bar"><div class="stage-mini-fill" style="width:80%;"></div></div>
+        <div class="stage-progress-num done">100<span style="font-size:14px;color:#5a5550;">%</span></div>
+        <div class="stage-mini-bar"><div class="stage-mini-fill" style="width:100%;"></div></div>
         <div class="stage-eta">май 2026</div>
       </div>
     </div>
@@ -320,75 +319,82 @@
       </div>
     </div>
 
-    <div class="stage-card wait">
+    <div class="stage-card active">
       <div class="stage-num-col">05</div>
       <div class="stage-main">
         <div class="stage-title-row">
           <div class="stage-title">Каналы · IG + TG</div>
-          <span class="stage-status wait">⏳ Wait</span>
+          <span class="stage-status active">● Active</span>
+          <span class="label" style="color:#c8f060;">— TG live · IG отложен</span>
         </div>
-        <div class="stage-desc">Подключение Instagram Graph API и Telegram Bot API (aiogram). Webhooks → очередь → агент → ответ.</div>
-        <div class="stage-deliverable">deliverable: <b>2 агента отвечают в IG и TG</b></div>
+        <div class="stage-desc">Telegram-канал в проде: @ilia_pali0_bot отвечает реальным Claude через webhook на FastAPI. LangGraph flow работает, Redis-очереди подключены. Instagram отложен — Meta App Review без приоритета, фокус на наполнение TG-канала.</div>
+        <div class="stage-deliverable">deliverable: <b>TG-агент в проде (IG позже)</b></div>
       </div>
       <div class="stage-tasks">
-        <div class="t"><span class="mark todo">◇</span><span class="txt dim">Instagram Graph API · бизнес-аккаунт</span></div>
-        <div class="t"><span class="mark todo">◇</span><span class="txt dim">Telegram Bot · aiogram</span></div>
-        <div class="t"><span class="mark todo">◇</span><span class="txt dim">LangGraph flow: вход → агент → выход</span></div>
-        <div class="t"><span class="mark todo">◇</span><span class="txt dim">Очереди через Redis</span></div>
+        <div class="t"><span class="mark">▣</span><span class="txt">Telegram Bot · webhook + handler</span></div>
+        <div class="t"><span class="mark">▣</span><span class="txt">LangGraph flow: вход → агент → выход</span></div>
+        <div class="t"><span class="mark">▣</span><span class="txt">Очереди через Redis</span></div>
+        <div class="t"><span class="mark todo">◇</span><span class="txt dim">Instagram Graph API (отложено)</span></div>
+        <div class="t"><span class="mark todo">◇</span><span class="txt dim">IG webhook + App Review (отложено)</span></div>
       </div>
       <div class="stage-progress-col">
-        <div class="stage-progress-num wait">0<span style="font-size:14px;color:#5a5550;">%</span></div>
-        <div class="stage-mini-bar"></div>
-        <div class="stage-eta">~3 нед</div>
+        <div class="stage-progress-num active">75<span style="font-size:14px;color:#5a5550;">%</span></div>
+        <div class="stage-mini-bar"><div class="stage-mini-fill active" style="width:75%;"></div></div>
+        <div class="stage-eta">TG done</div>
       </div>
     </div>
 
-    <div class="stage-card wait">
+    <div class="stage-card active">
       <div class="stage-num-col">06</div>
       <div class="stage-main">
         <div class="stage-title-row">
           <div class="stage-title">Голос · ElevenLabs PVC</div>
-          <span class="stage-status wait">⏳ Wait</span>
+          <span class="stage-status active">● Active</span>
+          <span class="label" style="color:#c8f060;">— /teach on собирает</span>
         </div>
-        <div class="stage-desc">PVC-клонирование голоса владельца (30+ мин аудио), генерация аудио-ответов для IG и TG, кружочки через Wav2Lip.</div>
+        <div class="stage-desc">Teaching mode подключён в TG-боте: `/teach on` пишет голосовые от Ильи в voice-input/audio/, voice_analyzer готов к запуску. Скелет wav2lip-сервиса в коде. Нужны 30+ мин чистого аудио → PVC в ElevenLabs (24ч на обучение).</div>
         <div class="stage-deliverable">deliverable: <b>агенты говорят голосом владельца</b></div>
       </div>
       <div class="stage-tasks">
-        <div class="t"><span class="mark todo">◇</span><span class="txt dim">Собрать 30+ мин аудио (doc-02)</span></div>
+        <div class="t"><span class="mark">▣</span><span class="txt">Teaching mode (/teach on) в TG</span></div>
+        <div class="t"><span class="mark">▣</span><span class="txt">voice_analyzer + Whisper</span></div>
+        <div class="t"><span class="mark doing">▶</span><span class="txt doing">Сбор 30+ мин аудио от Ильи</span></div>
         <div class="t"><span class="mark todo">◇</span><span class="txt dim">Создать PVC в ElevenLabs</span></div>
         <div class="t"><span class="mark todo">◇</span><span class="txt dim">Wav2Lip для кружочков TG</span></div>
       </div>
       <div class="stage-progress-col">
-        <div class="stage-progress-num wait">0<span style="font-size:14px;color:#5a5550;">%</span></div>
-        <div class="stage-mini-bar"></div>
+        <div class="stage-progress-num active">25<span style="font-size:14px;color:#5a5550;">%</span></div>
+        <div class="stage-mini-bar"><div class="stage-mini-fill active" style="width:25%;"></div></div>
         <div class="stage-eta">~2 нед</div>
       </div>
     </div>
 
-    <div class="stage-card wait">
+    <div class="stage-card active">
       <div class="stage-num-col">07</div>
       <div class="stage-main">
         <div class="stage-title-row">
           <div class="stage-title">Запуск агентов</div>
-          <span class="stage-status wait">⏳ Wait</span>
-          <span class="label" style="color:#c8f060;">— драфты промптов готовы</span>
+          <span class="stage-status active">● Active</span>
+          <span class="label" style="color:#c8f060;">— TG-агент в проде</span>
         </div>
-        <div class="stage-desc">Активация всех 4 агентов (IG-Менеджер, TG-Менеджер, Аналитик, РОП). Драфты промптов написаны (см. /agent-prompts/), требуют наполнения голосом владельца.</div>
+        <div class="stage-desc">TG-Менеджер живой: Sonnet 4.6 classify → Opus 4.7 generate, prompt caching −90%, ~$0.025 за turn. Остальные 3 агента (IG, Analyst, РОП) — драфты промптов есть, ждут [PLACEHOLDER] под голос Ильи.</div>
         <div class="stage-deliverable">deliverable: <b>4 агента работают с реальными клиентами</b></div>
       </div>
       <div class="stage-tasks">
-        <div class="t"><span class="mark">▣</span><span class="txt">Драфт промпта IG-Менеджера</span></div>
-        <div class="t"><span class="mark">▣</span><span class="txt">Драфт промпта TG-Менеджера</span></div>
-        <div class="t"><span class="mark">▣</span><span class="txt">Драфт промпта Аналитика</span></div>
-        <div class="t"><span class="mark">▣</span><span class="txt">Драфт промпта РОПа</span></div>
+        <div class="t"><span class="mark">▣</span><span class="txt">Драфты 4 промптов (IG/TG/Analyst/РОП)</span></div>
         <div class="t"><span class="mark">▣</span><span class="txt">Скрипты воронки 7 этапов</span></div>
         <div class="t"><span class="mark">▣</span><span class="txt">Библиотека возражений (20)</span></div>
-        <div class="t"><span class="mark todo">◇</span><span class="txt dim">Заполнение [PLACEHOLDER] голосом</span></div>
-        <div class="t"><span class="mark todo">◇</span><span class="txt dim">Канареечный запуск 10% трафика</span></div>
+        <div class="t"><span class="mark">▣</span><span class="txt">Pipeline classify (Sonnet) → generate (Opus)</span></div>
+        <div class="t"><span class="mark">▣</span><span class="txt">Prompt caching −90%</span></div>
+        <div class="t"><span class="mark">▣</span><span class="txt">TG-Менеджер боевой</span></div>
+        <div class="t"><span class="mark doing">▶</span><span class="txt doing">Заполнение [PLACEHOLDER] голосом</span></div>
+        <div class="t"><span class="mark todo">◇</span><span class="txt dim">Активация Analyst (Sonnet, скоринг 0-100)</span></div>
+        <div class="t"><span class="mark todo">◇</span><span class="txt dim">Активация РОПа (Opus, дайджесты)</span></div>
+        <div class="t"><span class="mark todo">◇</span><span class="txt dim">Канареечный запуск IG 10% трафика</span></div>
       </div>
       <div class="stage-progress-col">
-        <div class="stage-progress-num active">25<span style="font-size:14px;color:#5a5550;">%</span></div>
-        <div class="stage-mini-bar"><div class="stage-mini-fill active" style="width:25%;"></div></div>
+        <div class="stage-progress-num active">60<span style="font-size:14px;color:#5a5550;">%</span></div>
+        <div class="stage-mini-bar"><div class="stage-mini-fill active" style="width:60%;"></div></div>
         <div class="stage-eta">~2 нед</div>
       </div>
     </div>
@@ -429,8 +435,32 @@
 
     <div class="col">
       <div class="col-head">
-        <span class="label">Done · ночь 15→16</span>
-        <span class="col-count lime">15</span>
+        <span class="label">Done · ночь 16→17</span>
+        <span class="col-count lime">21</span>
+      </div>
+      <div class="task">
+        <div class="task-title">TG-Менеджер боевой · @ilia_pali0_bot отвечает реальным Claude</div>
+        <div class="task-meta"><span class="stage-ref">→ stage 05/07</span><span class="tag p3">DONE</span><span>claude</span></div>
+      </div>
+      <div class="task">
+        <div class="task-title">SSL/HTTPS · Caddy + Let's Encrypt на nip.io</div>
+        <div class="task-meta"><span class="stage-ref">→ stage 02</span><span class="tag p3">DONE</span><span>claude</span></div>
+      </div>
+      <div class="task">
+        <div class="task-title">Pipeline Sonnet 4.6 classify → Opus 4.7 generate</div>
+        <div class="task-meta"><span class="stage-ref">→ stage 07</span><span class="tag p3">DONE</span><span>claude</span></div>
+      </div>
+      <div class="task">
+        <div class="task-title">Prompt caching · −90% на повторных вызовах</div>
+        <div class="task-meta"><span class="stage-ref">→ stage 07</span><span class="tag p3">DONE</span><span>claude</span></div>
+      </div>
+      <div class="task">
+        <div class="task-title">Teaching mode · /teach on пишет голосовые от Ильи</div>
+        <div class="task-meta"><span class="stage-ref">→ stage 06</span><span class="tag p3">DONE</span><span>claude</span></div>
+      </div>
+      <div class="task">
+        <div class="task-title">Переезд с Netlify на Caddy/Hetzner для статики</div>
+        <div class="task-meta"><span class="stage-ref">→ infra</span><span class="tag p3">DONE</span><span>claude</span></div>
       </div>
       <div class="task">
         <div class="task-title">Prototype: Conversation · Pipeline · Agents (3 экрана)</div>
@@ -524,7 +554,7 @@
     <div class="col">
       <div class="col-head">
         <span class="label">Backlog</span>
-        <span class="col-count gray">6</span>
+        <span class="col-count gray">5</span>
       </div>
       <div class="task">
         <div class="task-title">Pipeline (список клиентов с фильтрами)</div>
@@ -548,7 +578,7 @@
         </div>
       </div>
       <div class="task">
-        <div class="task-title">Кастомный домен вместо soft-longma-b5d4f0</div>
+        <div class="task-title">Купить реальный домен вместо nip.io для боевой работы</div>
         <div class="task-meta">
           <span class="stage-ref">→ infra</span>
           <span class="tag p3">P3</span>
@@ -558,13 +588,6 @@
         <div class="task-title">Решить: basic-auth на инструкции или оставить публично</div>
         <div class="task-meta">
           <span class="stage-ref">→ infra</span>
-          <span class="tag p3">P3</span>
-        </div>
-      </div>
-      <div class="task">
-        <div class="task-title">SSL для сервера (был отложен в 2.5)</div>
-        <div class="task-meta">
-          <span class="stage-ref">→ stage 02</span>
           <span class="tag p3">P3</span>
         </div>
       </div>
@@ -584,34 +607,30 @@
     <div class="panel">
       <h3>Текущая <span class="accent">инфраструктура</span></h3>
       <div class="panel-row"><span class="k">Server</span><span class="v">Hetzner CPX31 · Ubuntu 24.04</span></div>
-      <div class="panel-row"><span class="k">FastAPI</span><span class="v lime">● port 8000</span></div>
+      <div class="panel-row"><span class="k">FastAPI</span><span class="v lime">● api.46-62-215-11.nip.io</span></div>
       <div class="panel-row"><span class="k">PostgreSQL 16</span><span class="v lime">● 8 таблиц</span></div>
       <div class="panel-row"><span class="k">Redis 7</span><span class="v lime">● online</span></div>
       <div class="panel-row"><span class="k">Qdrant</span><span class="v lime">● online</span></div>
       <div class="panel-row"><span class="k">MinIO</span><span class="v lime">● bucket aisales-media</span></div>
+      <div class="panel-row"><span class="k">Caddy</span><span class="v lime">● auto-HTTPS (Let's Encrypt)</span></div>
       <div class="panel-row"><span class="k">Backups</span><span class="v">cron 03:00 · gzip · 30д</span></div>
-      <div class="panel-row"><span class="k">SSL</span><span class="v pink">⚠ отложен (stage 2.5)</span></div>
-      <div class="panel-row"><span class="k">Netlify</span><span class="v cyan">● soft-longma-b5d4f0</span></div>
+      <div class="panel-row"><span class="k">TG Bot</span><span class="v lime">● @ilia_pali0_bot live</span></div>
     </div>
 
     <div class="panel">
       <h3>Риски и <span class="accent">внимание</span></h3>
       <div class="panel-list">
-        <div class="item warn">
-          <span class="dot">●</span>
-          <div class="body">SSL не настроен — API доступен только через SSH-туннель. До запуска IG/TG webhooks обязательно закрыть</div>
-        </div>
         <div class="item info">
           <span class="dot">●</span>
-          <div class="body">Сервер в Германии (Hetzner) — для 152-ФЗ при работе с РФ-клиентами понадобится дублирующий VPS в РФ или прокси</div>
-        </div>
-        <div class="item info">
-          <span class="dot">●</span>
-          <div class="body">База знаний — узкое горлышко. Без интервью и контента RAG будет отвечать generic. Это основная задача недели</div>
+          <div class="body">База знаний — главное узкое горлышко. Без интервью и контента в Notion+Qdrant RAG будет отвечать generic. Это задача недели</div>
         </div>
         <div class="item warn">
           <span class="dot">●</span>
-          <div class="body">Голос (ElevenLabs PVC) требует 30+ мин чистого аудио — нужно записать заранее, не на последней неделе</div>
+          <div class="body">Голос (ElevenLabs PVC) требует 30+ мин чистого аудио. Teaching mode пишет голосовые в TG, но без записи в студии PVC будет шумным</div>
+        </div>
+        <div class="item info">
+          <span class="dot">●</span>
+          <div class="body">Сервер в Германии (Hetzner) — для 152-ФЗ при работе с РФ-клиентами понадобится дублирующий VPS в РФ или прокси (этап 08)</div>
         </div>
       </div>
     </div>

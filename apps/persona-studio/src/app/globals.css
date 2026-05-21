@@ -1,0 +1,26 @@
+@tailwind base;
+@tailwind components;
+@tailwind utilities;
+
+:root {
+  color-scheme: dark;
+}
+
+html,
+body {
+  background: #06070a;
+  color: #e5e7eb;
+  -webkit-font-smoothing: antialiased;
+}
+
+.gradient-text {
+  background: linear-gradient(120deg, #c4b5fd 0%, #f0abfc 50%, #fbcfe8 100%);
+  -webkit-background-clip: text;
+  background-clip: text;
+  color: transparent;
+}
+
+.glow-ring {
+  box-shadow: 0 0 0 1px rgba(167, 139, 250, 0.25),
+    0 30px 80px -20px rgba(167, 139, 250, 0.35);
+}

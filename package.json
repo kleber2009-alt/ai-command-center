@@ -4,7 +4,8 @@
   "private": true,
   "workspaces": [
     "apps/transcribe",
-    "apps/tg-agent"
+    "apps/tg-agent",
+    "apps/persona-studio"
   ],
   "scripts": {
     "dev": "npm run dev -w apps/transcribe",
@@ -16,10 +17,15 @@
     "tg-agent:dev": "npm run dev -w apps/tg-agent",
     "tg-agent:build": "npm run build -w apps/tg-agent",
     "tg-agent:start": "npm run start -w apps/tg-agent",
-    "tg-agent:typecheck": "npm run typecheck -w apps/tg-agent"
+    "tg-agent:typecheck": "npm run typecheck -w apps/tg-agent",
+    "persona:dev": "npm run dev -w apps/persona-studio",
+    "persona:build": "npm run build -w apps/persona-studio",
+    "persona:start": "npm run start -w apps/persona-studio",
+    "persona:typecheck": "npm run typecheck -w apps/persona-studio",
+    "persona:worker:avatar": "npm run worker:avatar -w apps/persona-studio",
+    "persona:worker:cover": "npm run worker:cover -w apps/persona-studio"
   },
   "devDependencies": {
     "vitest": "^1.5.5"
   }
 }
-
