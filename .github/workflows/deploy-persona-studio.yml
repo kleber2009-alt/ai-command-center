@@ -76,6 +76,13 @@ jobs:
             fi
             cd "$MONOREPO_PATH"
             git fetch --prune origin
+            # If someone touched files on the server, stash them under a labelled
+            # entry so the checkout/pull doesn't abort. Recovery is `git stash list`.
+            if [[ -n "$(git status --porcelain)" ]]; then
+              STASH_LABEL="auto-deploy-stash $(date -u +%Y%m%dT%H%M%SZ) by GH Actions"
+              echo "── ⚠ local changes detected, stashing: $STASH_LABEL ──"
+              git stash push --include-untracked -m "$STASH_LABEL" || true
+            fi
             git checkout "$TARGET_REF"
             git pull --ff-only origin "$TARGET_REF"
             echo "── HEAD: $(git rev-parse --short HEAD) — $(git log -1 --pretty=%s) ──"
