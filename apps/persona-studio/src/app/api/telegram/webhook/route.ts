@@ -1,0 +1,122 @@
+// Telegram bot webhook — handles pre_checkout_query and successful_payment
+// for Telegram Stars billing.
+//
+// Webhook setup (one-time):
+//   curl -X POST "https://api.telegram.org/bot$TELEGRAM_BOT_TOKEN/setWebhook" \
+//     -d "url=https://persona-app.46-62-215-11.nip.io/api/telegram/webhook" \
+//     -d "secret_token=$TELEGRAM_WEBHOOK_SECRET" \
+//     -d "allowed_updates=[\"pre_checkout_query\",\"message\"]"
+//
+// We verify the secret in the `x-telegram-bot-api-secret-token` header.
+
+import { NextRequest, NextResponse } from 'next/server';
+import { prisma } from '@/lib/prisma';
+import { creditTokens } from '@/lib/tokens';
+
+export const runtime = 'nodejs';
+
+const BOT_API = 'https://api.telegram.org';
+
+async function answerPreCheckout(queryId: string, ok: boolean, error?: string) {
+  const token = process.env.TELEGRAM_BOT_TOKEN;
+  if (!token) return;
+  await fetch(`${BOT_API}/bot${token}/answerPreCheckoutQuery`, {
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify({
+      pre_checkout_query_id: queryId,
+      ok,
+      ...(ok ? {} : { error_message: error ?? 'Sorry, payment cannot be processed.' }),
+    }),
+    signal: AbortSignal.timeout(10_000),
+  }).catch(() => undefined);
+}
+
+type Update = {
+  update_id: number;
+  pre_checkout_query?: {
+    id: string;
+    from: { id: number };
+    currency: string;
+    total_amount: number;
+    invoice_payload: string;
+  };
+  message?: {
+    chat: { id: number };
+    from?: { id: number };
+    successful_payment?: {
+      currency: string;
+      total_amount: number;
+      invoice_payload: string;
+      telegram_payment_charge_id: string;
+      provider_payment_charge_id?: string;
+    };
+  };
+};
+
+export async function POST(req: NextRequest) {
+  // Verify webhook secret (set in setWebhook). If TELEGRAM_WEBHOOK_SECRET is
+  // not configured, accept all (dev). In prod, set it.
+  const expectedSecret = process.env.TELEGRAM_WEBHOOK_SECRET;
+  if (expectedSecret) {
+    const got = req.headers.get('x-telegram-bot-api-secret-token');
+    if (got !== expectedSecret) {
+      return NextResponse.json({ error: 'bad_secret' }, { status: 401 });
+    }
+  }
+
+  let update: Update;
+  try {
+    update = await req.json();
+  } catch {
+    return NextResponse.json({ error: 'bad_json' }, { status: 400 });
+  }
+
+  // pre_checkout_query — must answer within 10 seconds with ok=true to
+  // allow Telegram to complete the payment.
+  if (update.pre_checkout_query) {
+    const q = update.pre_checkout_query;
+    const row = await prisma.cryptoInvoice.findUnique({ where: { id: q.invoice_payload } });
+    if (!row || row.status !== 'active') {
+      await answerPreCheckout(q.id, false, 'Invoice not found or already paid');
+      return NextResponse.json({ ok: true });
+    }
+    if (q.currency !== 'XTR' || q.total_amount !== Number(row.amount)) {
+      await answerPreCheckout(q.id, false, 'Amount mismatch');
+      return NextResponse.json({ ok: true });
+    }
+    await answerPreCheckout(q.id, true);
+    return NextResponse.json({ ok: true });
+  }
+
+  // successful_payment — credit tokens. Idempotent via active→paid flip.
+  if (update.message?.successful_payment) {
+    const sp = update.message.successful_payment;
+    const row = await prisma.cryptoInvoice.findUnique({ where: { id: sp.invoice_payload } });
+    if (!row) {
+      return NextResponse.json({ ok: true, note: 'unknown_payload' });
+    }
+    const flipped = await prisma.cryptoInvoice.updateMany({
+      where: { id: row.id, status: 'active' },
+      data: {
+        status: 'paid',
+        paidAt: new Date(),
+        // Keep TG charge id in invoiceId for traceability (was a placeholder before)
+        invoiceId: `stars:${sp.telegram_payment_charge_id}`,
+      },
+    });
+    if (flipped.count === 0) {
+      return NextResponse.json({ ok: true, note: 'already_paid_race' });
+    }
+    await creditTokens({
+      userId: row.userId,
+      amount: row.tokens,
+      type: 'purchase',
+      reason: `stars:${row.pack}:${sp.telegram_payment_charge_id}`,
+      refId: row.id,
+    });
+    return NextResponse.json({ ok: true, credited: row.tokens });
+  }
+
+  return NextResponse.json({ ok: true });
+}
