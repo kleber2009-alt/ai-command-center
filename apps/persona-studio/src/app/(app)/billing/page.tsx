@@ -35,7 +35,8 @@ export default async function BillingPage() {
             <ul className="grid gap-1.5 font-serif text-[15px] text-text-dim">
               <li className="flex justify-between"><span>10 avatars batch</span><span className="mono text-text">-10</span></li>
               <li className="flex justify-between"><span>Carousel cover</span><span className="mono text-text">-3</span></li>
-              <li className="flex justify-between"><span>HeyGen video (phase 2)</span><span className="mono text-text-mute">-30</span></li>
+              <li className="flex justify-between"><span>Talking video</span><span className="mono text-text">-30</span></li>
+              <li className="flex justify-between"><span>Voice training</span><span className="mono text-text-mute">free*</span></li>
             </ul>
           </div>
         </div>
@@ -46,12 +47,9 @@ export default async function BillingPage() {
           <span className="sec-num">/01</span>
           <span className="sec-title">Купить токены</span>
           <span className="flex-1 border-b border-border translate-y-[-3px]" />
-          <span className="mono text-[10px] tracking-widest uppercase text-text-mute">dev stub</span>
+          <span className="mono text-[10px] tracking-widest uppercase text-text-mute">CryptoBot · USDT</span>
         </div>
         <BillingActions />
-        <p className="mono text-[10px] tracking-widest uppercase text-text-mute mt-3">
-          На MVP кнопки начисляют токены мгновенно. Stripe-checkout — в следующей итерации.
-        </p>
       </section>
 
       <section>

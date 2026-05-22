@@ -59,24 +59,23 @@ export async function POST(req: NextRequest) {
     return NextResponse.json({ ok: false, note: 'not_paid_on_api' }, { status: 409 });
   }
 
-  await prisma.$transaction(async (tx) => {
-    const updated = await tx.cryptoInvoice.updateMany({
-      where: { invoiceId, status: 'active' },
-      data: { status: 'paid', paidAt: new Date(remote.paid_at ?? Date.now()) },
-    });
-    if (updated.count === 0) return;                // race: уже обработано параллельным запросом
+  // Two-step idempotent flip:
+  //   1) updateMany WHERE status='active' — выигрывает один параллельный запрос.
+  //   2) если выиграли — credit через свой собственный $transaction.
+  const flipped = await prisma.cryptoInvoice.updateMany({
+    where: { invoiceId, status: 'active' },
+    data: { status: 'paid', paidAt: new Date(remote.paid_at ?? Date.now()) },
+  });
+  if (flipped.count === 0) {
+    return NextResponse.json({ ok: true, note: 'already_paid_race' });
+  }
 
-    // creditTokens обновит баланс и запишет TokenTransaction
-    await creditTokens(
-      {
-        userId: row.userId,
-        amount: row.tokens,
-        type: 'purchase',
-        reason: `cryptobot:${row.pack}:${invoiceId}`,
-        refId: row.id,
-      },
-      tx,
-    );
+  await creditTokens({
+    userId: row.userId,
+    amount: row.tokens,
+    type: 'purchase',
+    reason: `cryptobot:${row.pack}:${invoiceId}`,
+    refId: row.id,
   });
 
   return NextResponse.json({ ok: true, credited: row.tokens });
