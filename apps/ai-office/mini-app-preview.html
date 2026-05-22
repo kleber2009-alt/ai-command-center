@@ -1,0 +1,264 @@
+<!doctype html>
+<html lang="ru">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1">
+<title>Mini App Preview · AI Growth Office</title>
+<meta name="robots" content="noindex">
+
+<link rel="manifest" href="/manifest.json">
+<meta name="theme-color" content="#0a0c14">
+<link rel="apple-touch-icon" href="/icon-192.png">
+
+<style>
+:root{
+  --bg:#0a0c14;--panel:rgba(255,255,255,.04);--border:rgba(255,255,255,.08);
+  --text:#e9eef7;--muted:#9aa3b2;--dim:#7c8a99;
+  --accent:#c8f060;--a2:#60c8f0;
+  --ui:-apple-system,BlinkMacSystemFont,'Inter','Segoe UI',sans-serif;
+  --mono:'JetBrains Mono',monospace;
+}
+*{box-sizing:border-box;margin:0;padding:0}
+html,body{background:var(--bg);color:var(--text);font-family:var(--ui);min-height:100vh}
+body{background:radial-gradient(circle at 80% 0%,rgba(96,200,240,.05),transparent 55%),radial-gradient(circle at 0% 90%,rgba(200,240,96,.04),transparent 55%),var(--bg)}
+
+.wrap{max-width:1280px;margin:0 auto;padding:36px 24px 80px}
+.crumbs{font-size:11px;color:var(--muted);margin-bottom:18px;letter-spacing:.4px}
+.crumbs a{color:var(--muted);text-decoration:none;border-bottom:1px dotted rgba(255,255,255,.15)}
+.crumbs a:hover{color:var(--accent)}
+
+.hero{text-align:center;margin-bottom:36px}
+.hero .tag{display:inline-flex;align-items:center;gap:7px;font-size:10px;font-weight:700;color:var(--a2);background:rgba(96,200,240,.08);border:1px solid rgba(96,200,240,.25);padding:6px 14px;border-radius:99px;letter-spacing:1.5px;text-transform:uppercase;margin-bottom:18px}
+.hero h1{font-size:clamp(32px,5vw,46px);font-weight:800;letter-spacing:-.5px;line-height:1.1;margin-bottom:12px}
+.hero h1 .g{background:linear-gradient(90deg,#c8f060,#60c8f0);-webkit-background-clip:text;-webkit-text-fill-color:transparent}
+.hero p{font-size:15px;color:var(--muted);max-width:620px;margin:0 auto;line-height:1.6}
+
+.layout{display:grid;grid-template-columns:auto 1fr;gap:34px;margin-top:30px;align-items:start}
+@media(max-width:900px){.layout{grid-template-columns:1fr}}
+
+/* Phone mockup */
+.phone-wrap{position:sticky;top:24px;display:flex;flex-direction:column;align-items:center;gap:18px}
+.phone{
+  width:340px;height:720px;background:#1a1d2c;border-radius:46px;
+  padding:14px;box-shadow:0 30px 80px rgba(0,0,0,.5),0 0 0 8px #0a0c14,0 0 0 9px rgba(255,255,255,.06);
+  position:relative;
+}
+.phone::before{
+  content:'';position:absolute;top:18px;left:50%;transform:translateX(-50%);
+  width:90px;height:24px;background:#0a0c14;border-radius:99px;z-index:10;
+}
+.phone iframe{width:100%;height:100%;border:0;border-radius:32px;background:#18222d;display:block}
+
+.phone-ctrl{display:flex;gap:6px;flex-wrap:wrap;justify-content:center;max-width:340px}
+.phone-ctrl button{
+  padding:7px 12px;background:var(--panel);border:1px solid var(--border);color:var(--text);
+  border-radius:8px;font:700 11px/1 var(--ui);cursor:pointer;font-family:var(--mono);
+  letter-spacing:.3px;transition:all .15s;
+}
+.phone-ctrl button:hover{background:rgba(255,255,255,.08);border-color:rgba(255,255,255,.18)}
+.phone-ctrl button.act{background:rgba(200,240,96,.12);color:var(--accent);border-color:rgba(200,240,96,.3)}
+
+/* Info side */
+.info-side{padding-top:6px}
+.info-block{background:var(--panel);border:1px solid var(--border);border-radius:14px;padding:22px;margin-bottom:14px}
+.info-block h2{font-size:18px;font-weight:800;margin-bottom:12px;letter-spacing:-.2px;display:flex;align-items:center;gap:8px}
+.info-block h2 .em{font-size:20px}
+.info-block p{font-size:13.5px;color:rgba(233,238,247,.85);line-height:1.65;margin-bottom:10px}
+.info-block ol, .info-block ul{margin:10px 0 10px 22px}
+.info-block li{font-size:13.5px;line-height:1.7;color:rgba(233,238,247,.85);margin-bottom:5px}
+.info-block li b{color:var(--text);font-weight:700}
+.info-block code{background:rgba(255,255,255,.05);padding:2px 7px;border-radius:5px;font:600 12px/1 var(--mono);color:var(--accent);border:1px solid rgba(255,255,255,.06)}
+.info-block .num{display:inline-block;width:24px;height:24px;background:linear-gradient(135deg,#c8f060,#60c8f0);color:#080808;border-radius:50%;text-align:center;line-height:24px;font-weight:900;font-size:12px;margin-right:8px;font-family:var(--mono)}
+
+.screens-list{display:grid;grid-template-columns:repeat(auto-fit,minmax(140px,1fr));gap:8px;margin-top:14px}
+.screens-list .sc{padding:12px 14px;background:rgba(0,0,0,.25);border:1px solid var(--border);border-radius:10px;cursor:pointer;text-align:center;transition:border-color .15s}
+.screens-list .sc:hover{border-color:rgba(200,240,96,.25)}
+.screens-list .sc .em{font-size:22px;margin-bottom:6px;display:block;line-height:1}
+.screens-list .sc .nm{font-size:11px;font-weight:700}
+.screens-list .sc .desc{font-size:10px;color:var(--muted);margin-top:3px;line-height:1.35}
+
+.callout{background:linear-gradient(135deg,rgba(96,200,240,.06),rgba(200,240,96,.04));border:1px solid rgba(96,200,240,.22);border-left:3px solid var(--a2);border-radius:11px;padding:14px 18px;margin:12px 0;font-size:13px;line-height:1.65}
+.callout b{color:var(--text);font-weight:700}
+.callout.warn{border-color:rgba(240,180,41,.25);border-left-color:#f0b429;background:linear-gradient(135deg,rgba(240,180,41,.06),rgba(240,96,200,.04))}
+
+pre{background:rgba(0,0,0,.4);border:1px solid var(--border);border-radius:10px;padding:14px 16px;font:600 12px/1.6 var(--mono);overflow-x:auto;color:var(--accent);margin:10px 0}
+pre code{background:none;border:0;padding:0;color:inherit}
+</style>
+</head>
+<body data-user="Илья Палий" data-email="ilia.info.paliy@gmail.com">
+
+<div class="wrap">
+
+<div class="crumbs">
+  <a href="/index.html">Главная</a> · <a href="/navigation.html">Навигация</a> · Mini App Preview
+</div>
+
+<div class="hero">
+  <div class="tag">📱 TELEGRAM MINI APP · PREVIEW</div>
+  <h1>Как выглядит <span class="g">Mini App</span> в Telegram</h1>
+  <p>Отдельный flow для пользователей в Telegram — не копия сайта, а сжатый customer path из 5 экранов. Открой справа в макете телефона.</p>
+</div>
+
+<div class="layout">
+
+  <!-- Phone mockup -->
+  <div class="phone-wrap">
+    <div class="phone">
+      <iframe src="/mini-app/" id="miniIframe" title="Mini App preview"></iframe>
+    </div>
+    <div class="phone-ctrl">
+      <button class="act" onclick="setScreen('welcome',event)">1·welcome</button>
+      <button onclick="setScreen('brief',event)">2·brief</button>
+      <button onclick="setScreen('team',event)">3·team</button>
+      <button onclick="setScreen('office',event)">4·office</button>
+      <button onclick="setScreen('chat',event)">5·chat</button>
+      <button onclick="reload()" title="Сбросить">↻ reset</button>
+    </div>
+  </div>
+
+  <!-- Info -->
+  <div class="info-side">
+
+    <div class="info-block">
+      <h2><span class="em">🎯</span>Зачем отдельный Mini App?</h2>
+      <p>Сайт = витрина для холодного трафика (47 страниц, SEO, разные сегменты). Mini App = личный кабинет в кармане для тех, кто уже подписан на бот.</p>
+      <p><b>Главные отличия:</b></p>
+      <ul>
+        <li><b>Только 5 экранов</b> вместо 47 — фокус на одной задаче</li>
+        <li><b>Telegram-native UX</b> — BackButton, MainButton, HapticFeedback</li>
+        <li><b>Авто-идентификация</b> — имя/ID из Telegram, без логина</li>
+        <li><b>Темы Telegram</b> — light/dark адаптивно</li>
+        <li><b>Single page</b> — открывается мгновенно, без перезагрузок</li>
+      </ul>
+    </div>
+
+    <div class="info-block">
+      <h2><span class="em">🗺</span>5 экранов customer path</h2>
+      <div class="screens-list">
+        <div class="sc" onclick="setScreen('welcome')"><span class="em">👋</span><div class="nm">Welcome</div><div class="desc">Привет + старт</div></div>
+        <div class="sc" onclick="setScreen('brief')"><span class="em">📋</span><div class="nm">Brief</div><div class="desc">5 шагов, 3 мин</div></div>
+        <div class="sc" onclick="setScreen('team')"><span class="em">🤖</span><div class="nm">Team</div><div class="desc">Подобранные агенты</div></div>
+        <div class="sc" onclick="setScreen('office')"><span class="em">🏢</span><div class="nm">Office</div><div class="desc">Мини-кабинет</div></div>
+        <div class="sc" onclick="setScreen('chat')"><span class="em">💬</span><div class="nm">Chat</div><div class="desc">Чат с агентом</div></div>
+      </div>
+    </div>
+
+    <div class="info-block">
+      <h2><span class="em">🤖</span>Как настроить через @BotFather</h2>
+
+      <p><span class="num">1</span><b>Создать бота</b></p>
+      <p>Открой <a href="https://t.me/BotFather" target="_blank" style="color:var(--a2)">@BotFather</a> → <code>/newbot</code> → имя <code>AI Growth Office</code> → username <code>aio_growth_bot</code></p>
+
+      <p><span class="num">2</span><b>Привязать Mini App</b></p>
+      <p>В @BotFather → <code>/newapp</code> → выбрать бота → название <code>AI Office</code> → URL: <code>https://ai-growth-office.ru/mini-app/</code></p>
+
+      <p><span class="num">3</span><b>Назначить кнопку меню</b></p>
+      <p><code>/setmenubutton</code> → выбрать бота → текст «🏢 Открыть AI Office» → URL такой же</p>
+
+      <p><span class="num">4</span><b>Команды бота</b></p>
+      <pre><code>/setcommands → выбрать бота:
+
+start - Открыть AI Office
+brief - Пройти бриф заново
+team - Моя команда
+help - Помощь</code></pre>
+
+      <div class="callout">
+        <b>Готово.</b> Теперь пользователь в Telegram открывает бота → кнопка «🏢 Открыть AI Office» внизу → Mini App запускается.
+      </div>
+    </div>
+
+    <div class="info-block">
+      <h2><span class="em">📊</span>Что внутри (технически)</h2>
+      <ul>
+        <li><b>Single-file SPA</b> — `mini-app/index.html` (~30 КБ)</li>
+        <li><b>Hash-router</b> — навигация без перезагрузок (`#welcome`, `#brief`, `#office`)</li>
+        <li><b>localStorage state</b> — данные брифа/команды/чатов сохраняются между сессиями</li>
+        <li><b>Telegram WebApp SDK</b> — авто-загружается с <code>telegram.org/js/telegram-web-app.js</code></li>
+        <li><b>Anthropic API</b> — через `/api/chat` (Netlify Function, единая с сайтом)</li>
+        <li><b>Theme variables</b> — `var(--tg-theme-bg-color)` etc. — следуют за Telegram</li>
+        <li><b>HapticFeedback</b> — лёгкая вибрация на действиях (iOS+Android)</li>
+        <li><b>MainButton / BackButton</b> — нативные кнопки Telegram, не свои</li>
+      </ul>
+    </div>
+
+    <div class="info-block">
+      <h2><span class="em">🚀</span>Customer path · подробно</h2>
+
+      <p><b>Шаг 1 · Welcome</b> (5 сек)<br>
+      Видит привет с именем из Telegram + 3 perks + кнопка «Поехали»</p>
+
+      <p><b>Шаг 2 · Brief</b> (≈3 минуты)<br>
+      5 коротких вопросов (вместо 10 на сайте): тип бизнеса → ниша → главная цель → доход → главный затык. Прогресс-бар сверху. После заполнения шага кнопка автоматически активируется.</p>
+
+      <p><b>Шаг 3 · Loading + Team</b> (10 сек + 30 сек)<br>
+      Анимация «AI собирает» с 4 тиками. Затем экран с подобранными агентами: must-have + recommended. Toggle для каждого. Можно убрать ненужных.</p>
+
+      <p><b>Шаг 4 · Office</b><br>
+      Главный экран: приветствие, цель, 3 KPI (агенты / запуски / сэкономлено), список агентов с последним сообщением, быстрые задачи под цель. Bottom-nav (Офис / Бриф / Команда / Настройки).</p>
+
+      <p><b>Шаг 5 · Chat</b><br>
+      Тапнул агента → открылся чат. iMessage-стиль (user справа синим, agent слева серым). Streaming-ответы. История сохраняется. BackButton (нативный TG) возвращает в офис.</p>
+    </div>
+
+    <div class="info-block">
+      <h2><span class="em">⚡</span>Что работает уже сейчас</h2>
+      <ul>
+        <li>✅ Все 5 экранов · переходы · hash-router</li>
+        <li>✅ Сохранение state в localStorage (брифа, команды, чатов)</li>
+        <li>✅ Telegram WebApp API (theme/MainButton/BackButton/Haptic)</li>
+        <li>✅ Подбор команды по логике «цель → агенты»</li>
+        <li>✅ Streaming-чат с агентами через /api/chat</li>
+        <li>✅ Fallback на «friend» если не в Telegram (для preview)</li>
+      </ul>
+      <div class="callout warn">
+        <b>Что добавить позже:</b> Telegram Payments (для оплаты Pro), уведомления через бот при готовности задач, экспорт чатов в личку, deep-link на конкретного агента (<code>?agent=sofia</code>).
+      </div>
+    </div>
+
+    <div class="info-block">
+      <h2><span class="em">🔗</span>Прямые ссылки</h2>
+      <ul>
+        <li><a href="/mini-app/" target="_blank" style="color:var(--a2)">/mini-app/</a> — open Mini App (full-screen)</li>
+        <li><a href="/mini-app/#welcome" target="_blank" style="color:var(--a2)">/mini-app/#welcome</a> — экран 1</li>
+        <li><a href="/mini-app/#brief" target="_blank" style="color:var(--a2)">/mini-app/#brief</a> — экран 2</li>
+        <li><a href="/mini-app/#team" target="_blank" style="color:var(--a2)">/mini-app/#team</a> — экран 3</li>
+        <li><a href="/mini-app/#office" target="_blank" style="color:var(--a2)">/mini-app/#office</a> — экран 4</li>
+      </ul>
+    </div>
+
+  </div>
+</div>
+
+</div>
+
+<script src="state.js"></script>
+<script src="mock-backend.js"></script>
+<script src="config.js"></script>
+<script src="analytics.js" defer></script>
+<script src="api-fallback.js"></script>
+<script src="sidebar.js" defer></script>
+<script src="alisa-widget.js" defer></script>
+<script>
+const iframe = document.getElementById('miniIframe');
+
+function setScreen(name, event) {
+  iframe.src = '/mini-app/#' + name;
+  if (event) {
+    document.querySelectorAll('.phone-ctrl button').forEach(b => b.classList.remove('act'));
+    event.target.classList.add('act');
+  }
+  if (window.AIOAnalytics) window.AIOAnalytics.track('miniapp_preview', { screen: name });
+}
+
+function reload() {
+  iframe.src = '/mini-app/?reset=' + Date.now();
+  setTimeout(() => iframe.src = '/mini-app/', 100);
+}
+
+if ('serviceWorker' in navigator && location.protocol === 'https:') {
+  navigator.serviceWorker.register('/sw.js').catch(()=>{});
+}
+</script>
+</body>
+</html>

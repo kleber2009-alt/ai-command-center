@@ -1,0 +1,31 @@
+services:
+  persona-train-web:
+    build:
+      context: .
+      target: web
+    image: persona-train-web:latest
+    container_name: persona-train-web
+    restart: unless-stopped
+    env_file: .env
+    environment:
+      NODE_ENV: production
+    ports:
+      - "3030:3030"
+    volumes:
+      - persona-train-voice-notes:/data/voice-notes
+      - persona-train-video-notes:/data/video-notes
+    networks:
+      - infra
+      - aisales
+
+volumes:
+  persona-train-voice-notes:
+  persona-train-video-notes:
+
+networks:
+  infra:
+    name: infra_internal
+    external: true
+  aisales:
+    name: aisales_aisales-net
+    external: true

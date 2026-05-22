@@ -1,172 +1,187 @@
 # CLAUDE.md
 
-This file provides guidance to Claude Code (claude.ai/code) when working with code in this repository.
+Navigation index for the consolidated monorepo. For app-specific architecture,
+env vars, and routes, see `CLAUDE.md` / `README.md` inside each `apps/<app>/`.
 
-## What this app is
+## Repo layout
 
-A single-purpose web app and Telegram Mini App with three surfaces:
+```
+/
+├── apps/                   # all production applications
+│   ├── transcribe/         # Next.js + Telegram Mini App — flagship transcription
+│   ├── tg-agent/           # Node TG group agent (classifier + responder)
+│   ├── ytdlp/              # FastAPI + yt-dlp companion microservice
+│   ├── ai-sales/           # Multi-agent IG+TG sales (FastAPI + LangGraph + Caddy)
+│   ├── ai-office/          # AI Growth Office static site
+│   ├── ai-hub/             # SaaS aggregator of NN tools + token wallet
+│   ├── persona-studio/     # Avatar / cover generation (Gemini + workers)
+│   ├── persona-train/      # WIP — persona training
+│   ├── infra-worker/       # cron+queue Office Worker (9 handlers)
+│   └── voice-circle-bot/   # Python TG bot for video circles
+├── landings/               # static landing pages (one folder per product)
+├── supabase/               # SQL migrations shared across apps
+├── scripts/                # backup + deploy shell scripts
+├── docs/                   # cross-product docs (TELEGRAM_MINI_APP, backup-restore)
+├── assets/                 # landing assets (snapshots, demo.js)
+└── .github/workflows/      # CI deploy workflows
+```
 
-- **/transcribe** — paste a video / audio link → transcript + summary / translation / carousel / Reels / Telegram-post generation.
-- **/assistants** — a list of 9 specialized AI assistants, each with its own system prompt and chat window.
-- **/me** — personal "second brain": structured profile + RAG-backed chat over a private library of pasted text and uploaded files.
+## Product → path map
 
-The repo previously hosted an "AI Business Command Center" dashboard with
-agent simulators. All of that was stripped — only the surfaces above remain.
+**Source of truth for product status** — Command Center dashboard:
+`https://command-center.46-62-215-11.nip.io/dashboard` (API: `/api/projects` and `/api/projects/<slug>`).
 
-## Hosting
+| # | Product (slug) | Status | Milestones | Code path | Landing | Prod URL | Container(s) |
+|---|---|---|---|---|---|---|---|
+| 1 | 🏢 **AI Growth Office** (`ai-office`) | production | 10/13 | `apps/ai-office` | (own static) | `ai-office.46-62-215-11.nip.io`, `ai-growth-office.ru` | `infra-ai-office-1` |
+| 2 | 🎙️ **Транскрибация** (`transcribe`) | production | 10/12 | `apps/transcribe` | `landings/transcribe` | `transcribe.46-62-215-11.nip.io`, `tma.46-62-215-11.nip.io` | `infra-transcribe-1` |
+| 3 | 🎬 **Reels Cloner** (`viral-clone`) | production | 8/10 | `apps/infra-worker/handlers/viral_clone.js` | `landings/viral-clone` | TG `/clone` в `@your_transscribe_bot` | `infra-aisales-worker-1` |
+| 4 | 🎨 **AI Creative Hub** (`ai-hub`) | dev | 6/10 | `apps/ai-hub` | `landings/ai-hub` | `aihub.46-62-215-11.nip.io`, `aihub-app.46-62-215-11.nip.io`, TMA `@aicex_one_bot` | `ai-hub-web`, `ai-hub-worker`, `mailpit` |
+| 5 | 🎤 **AI Voice Bot** (`voice-bot`) | production | 6/7 | `apps/ai-office/voice-bot/` (TBD: relocate) | (внутри ai-office) | `@aio_voice_bot`, `ai-growth-office.ru/persona-train` | (in `infra-ai-office-1` или отдельный) |
+| 6 | 📱 **AI Office Mini App** (`mini-app`) | dev | 4/6 | inside `apps/ai-office` (`/mini-app/`) | — | `ai-growth-office.ru/mini-app/`, `@AI_Growth_Office_Bot/app` | `infra-ai-office-1` |
+| 7 | 💼 **AI Sales System** (`ai-sales`) | production | 4/8 | `apps/ai-sales` | `landings/aisales`, `landings/aisales-system` | `aisales.46-62-215-11.nip.io`, `dashboard.46-62-215-11.nip.io` | `aisales-api-v2`, `aisales-command-center`, postgres/redis/qdrant/minio |
+| 8 | 💬 **tg-agent** (`tg-agent`) | production | 5/7 | `apps/tg-agent` | `landings/tg-agent` | `tg-agent.46-62-215-11.nip.io`, `tg.46-62-215-11.nip.io` (admin), `@newnewnnn_bot` | `tg-agent` |
+| 9 | 🪞 **Persona Studio** (`persona-studio`) | dev | 2/7 | `apps/persona-studio` | `landings/persona-studio` | `dashboard.../landings/persona-studio/`, deploy via workflows | (TBD) |
+| 10 | 📡 **Залётный / Viral Discover** (`viral-discover`) | production | **6/6 ✅** | `apps/infra-worker/handlers/viral_discover.js` + `lib/parser_bot.js` | `landings/viral-discover/cabinet/` | `dashboard.../landings/viral-discover/`, `parser.46-62-215-11.nip.io`, `@parser_instaa_bot` | `infra-aisales-worker-1` |
 
-**Self-hosted via Docker Compose.** There is no Vercel / Supabase / managed
-DB. Run `docker compose up -d --build` on your VPS (or anywhere with Docker).
-Three containers: the Next.js app, the yt-dlp Python service, and Caddy as
-reverse proxy + automatic TLS. See `docker-compose.yml`, `Dockerfile`,
-`Caddyfile`, `.env.example`.
+### Infrastructure-only apps (not in Command Center)
 
-The database is **SQLite + sqlite-vec** in `./data/app.db`. The schema is
-embedded in `src/lib/db.ts` and auto-created on first start. Back up the DB
-with `cp` or `rsync` from the `./data` volume.
+| Code path | Что | Prod |
+|---|---|---|
+| `apps/ytdlp` | FastAPI yt-dlp companion (URL → media) | `infra-ytdlp-1` |
+| `apps/infra-worker` | Office Worker, 9 cron handlers (`daily_briefing`, `weekly_recap`, `monthly_calendar`, `welcome_sequence`, `welcome_voice`, `subscription_expiry_check`, `viral_clone`, `viral_clone_sweep`, `viral_discover`) | `infra-aisales-worker-1` |
+| `apps/persona-train` | Forked voice-training stack (own domain) — **в Command Center НЕТ**, отдельная инициатива Ильи | `persona-train.46-62-215-11.nip.io`, `@ilia_pali0_bot`, `persona-train-web :3030` |
+| `apps/voice-circle-bot` | Python TG-bot prototype для видео-кружков — **в Command Center НЕТ**, не задеплоен | — |
+
+## When Claude is asked to change something
+
+- "fix / add / refactor in **transcribe**" → only touch `apps/transcribe/**`
+- "feature in **ai-hub**" → only touch `apps/ai-hub/**`
+- "**landing** for X" → only touch `landings/X/**`
+- "deploy workflow for X" → `.github/workflows/`
+- Prod backup / restore questions → `docs/backup-restore.md`
+- Shared types / utils have **no** central package yet — copy or factor into
+  the consumer's `lib/`.
 
 ## Commands
 
-Local dev (the Next.js process talks directly to a SQLite file at
-`$DB_PATH` or `./data/app.db`):
+Root `package.json` proxies into the node workspaces (`transcribe`, `tg-agent`,
+`persona-studio`):
 
 ```bash
-npm run dev      # Next.js dev server (default :3000)
-npm run build    # production build
-npm start        # serve the production build
-npm run lint     # next lint
+npm run dev                            # transcribe dev :3000
+npm run build && npm start             # transcribe prod build
+npm run lint
+npm run tg-agent:{dev,build,start,typecheck}
+npm run persona:{dev,build,start,typecheck}
+npm run persona:worker:{avatar,cover}
 ```
 
-Docker (full stack, the way production runs):
+For ai-hub / infra-worker / persona-train / voice-circle-bot / ai-sales —
+`cd apps/<app>` and use its own scripts (Docker / Python / standalone).
 
+## Prod infrastructure
+
+- Single Hetzner box, IP `46.62.215.11`, Caddy + nip.io.
+- Source of truth for domains: `/etc/caddy/Caddyfile` on prod.
+- **5 docker-compose projects** (label `com.docker.compose.project`):
+
+| Project | Compose file (on prod) | Containers |
+|---|---|---|
+| `infra` | `/root/ai-command-center/infra/docker-compose.yml` (+ `docker-compose.override.yml`) | `infra-transcribe-1`, `infra-ytdlp-1`, `infra-ai-office-1`, `infra-postgres-1`, `infra-aisales-worker-1` |
+| `aisales` | `/root/ai-command-center/apps/ai-sales/docker-compose.yml` | `aisales-command-center`, `aisales-postgres`, `aisales-redis`, `aisales-qdrant`, `aisales-minio` |
+| `aisales-v2` | `/home/aisales/aisales-v2-compose/docker-compose.yml` | `aisales-api-v2` |
+| `tg-agent` | `/root/ai-command-center/apps/tg-agent/docker-compose.yml` | `tg-agent` |
+| `ai-hub` | `/home/aisales/ai-hub/source/docker-compose.yml` | `ai-hub-web`, `ai-hub-worker`, `mailpit` |
+
+> **Note**: after this monorepo consolidation, the prod paths for `ai-hub`
+> and `aisales-v2` should be retargeted at `/root/ai-command-center/apps/ai-hub`
+> and `/root/ai-command-center/apps/ai-sales-v2`. Until that's done, treat
+> those prod paths as the source of truth.
+
+## Databases
+
+Two independent Postgres instances:
+
+- **`aisales-postgres`** — databases:
+  - `aisales` (AI Sales System + AI Growth Office + Office Worker)
+  - `ai_hub` (AI Hub)
+- **`infra-postgres-1`** — database `aio` (Transcribe).
+
+Users on `aisales` DB:
+- `claude_ro` — read-only, local socket (no password through `docker exec`).
+- `aisales` — superuser, RW. **Any write requires explicit user approval.**
+
+Common commands:
 ```bash
-docker compose up -d --build         # build + start app, ytdlp, caddy
-docker compose logs -f app           # tail Next.js logs
-docker compose down                  # stop everything (data volume persists)
+ssh prod 'docker exec aisales-postgres psql -U claude_ro -d aisales -c "<SELECT>"'
+ssh prod 'docker exec aisales-postgres psql -U claude_ro -d ai_hub  -c "<SELECT>"'
+ssh prod 'docker exec infra-postgres-1  psql -U aio       -d aio    -c "<SELECT>"'
 ```
 
-No test runner is configured.
+## Production work modes
 
-## Environment variables
+**Diagnostic** (`посмотри почему X не работает`): investigate → hypothesis
+→ proposed diff/command (do NOT execute) → wait for approval → apply +
+verify → if broken, revert from `.bak` and report.
 
-Set in `.env` next to `docker-compose.yml` (production) or `.env.local` (local
-dev). All routes degrade gracefully when keys are missing.
+**Autonomous** (`посмотри, исправь, скажи когда готово`): skip the
+proposed-diff/approval step. Backup configs before any edit
+(`cp config.yml config.yml.bak.$(date +%Y%m%d_%H%M%S)`, keep ≥7 days).
+Each action explicit in the reply. Two failed attempts → stop, report.
 
-- `ANTHROPIC_API_KEY` — used by every chat / summarize / translate / generate route.
-- `OPENAI_API_KEY` — required for the `/me` library: embedding documents via
-  `text-embedding-3-small` (1536d). Without it, `/me/library` can't ingest
-  new docs and `/me/chat` falls back to profile-only context.
-- `DEEPGRAM_API_KEY` — used by `/api/transcribe` for any non-YouTube URL.
-- `DB_PATH` — SQLite file path. Defaults to `./data/app.db`. In the Docker
-  image it's set to `/app/data/app.db` (volume-mounted from `./data`).
-- `YTDLP_SERVICE_URL` — base URL of the companion yt-dlp service. In
-  docker-compose this is wired to `http://ytdlp:8000` automatically.
-- `YTDLP_SERVICE_API_KEY` — bearer token shared between the app and the
-  yt-dlp service.
-- `DOMAIN` — Caddy serves on this domain. Real domain for prod (auto
-  Let's Encrypt); `localhost` for local Docker testing.
-- `TELEGRAM_BOT_TOKEN` — when set, every `/api/*` route requires a valid
-  Telegram Mini App `initData` in `Authorization: tma <initData>`. The
-  browser client (`src/lib/api-client.ts`) attaches it automatically when
-  the page is opened inside Telegram. Leave empty to keep the API open.
+## Always require explicit user approval
 
-## Architecture
+- Any write to `aisales` DB (INSERT/UPDATE/DELETE/DROP/TRUNCATE/ALTER/migrations).
+- `docker stop|rm|restart|kill`.
+- Any action that changes prod state (pushing to remote, force-push, deploys
+  that aren't routine).
 
-Next.js 14 App Router + React 18 + TypeScript + Tailwind. UI strings are
-Russian; comments / identifiers stay English. Path alias `@/* → src/*`
-(`tsconfig.json`). Light Apple-style theme: white surfaces, system font,
-`#0071e3` accent.
+## Backups (TL;DR)
 
-**Routing**:
+Two pipelines, both run as `aisales` user, both write to MinIO (30-day lifecycle)
+plus a 7-day local copy.
 
-- `/` redirects to `/transcribe`.
-- `/transcribe` — transcription + content generation.
-- `/assistants` and `/assistants/[id]` — 9 specialized assistants.
-- `/me`, `/me/profile`, `/me/library` — second brain.
+| Pipeline | What | Destination | When | Script |
+|---|---|---|---|---|
+| `pg_backup` | `pg_dump --format=custom` of `aisales` | MinIO `aisales-postgres-backups` | 03:17 UTC | `/home/aisales/scripts/pg_backup.sh` |
+| `aux_backup` | `aio` db dump + SQLite (`tg-agent`, `transcribe`) + voice_notes volume | MinIO `aisales-aux-backups` | 03:40 UTC | `scripts/aux_backup.sh` (in this repo) |
 
-**Data layer** (`src/lib/db.ts`):
+Open gaps: `pg_backup` coverage of `ai_hub` db, and MinIO `ai-hub-media` bucket
+not covered by `aux_backup`. Full restore runbook: `docs/backup-restore.md`.
 
-- Process-wide `better-sqlite3` connection with `journal_mode=WAL`,
-  `foreign_keys=ON`. Schema is auto-applied on first import.
-- Vector search via `sqlite-vec`: `vec_me_chunks` virtual table keyed by
-  `me_chunks.id`. Cosine distance returned, similarity = `1 - distance`.
-- Embeddings stored as `Float32Array` blobs.
+## Production models
 
-**Tables**:
-
-- `transcripts` — every successful `/api/transcribe` run, with JSON columns
-  for paragraphs / bullets / translation / generations.
-- `me_profile` — single-row (id='singleton') structured profile.
-- `me_documents` — library entries with `original_text` + metadata.
-- `me_chunks` — chunks of documents; embeddings referenced by id from
-  `vec_me_chunks`.
-
-**Streaming chat**:
-
-- Both `/api/me/chat` and `/api/assistants/chat` return NDJSON streams via
-  `streamAnthropic()` in `src/lib/anthropic-stream.ts`. The client reads
-  them with `readNdjson()` from `src/lib/stream-client.ts`.
-- The `/me/chat` stream's first event carries retrieved citations.
-
-**API routes**:
-
-- `POST /api/transcribe` — body `{ url, language }`. Routes by URL type:
-  YouTube → captions (with yt-dlp+Deepgram fallback), social URLs → yt-dlp
-  + Deepgram, anything else → Deepgram directly.
-- `POST /api/transcribe/summarize` / `translate` / `generate` — cache
-  results in the transcript row.
-- `GET /api/transcribe/history`, `GET|DELETE /api/transcribe/history/[id]`.
-- `GET|PUT /api/me/profile`.
-- `GET|POST /api/me/documents` — `POST` accepts JSON `{title, text}` or
-  multipart with a file (.txt / .md / .csv / .json / .pdf / .docx).
-- `GET|PUT|DELETE /api/me/documents/[id]` — `PUT` accepts `{title?, text?}`;
-  when `text` changes the document is re-chunked and re-embedded.
-- `POST /api/me/chat` — RAG; streams NDJSON with `meta` citations event.
-- `POST /api/assistants/chat` — streams NDJSON.
-
-**Auth gate** (`src/lib/telegram-auth.ts` + `src/lib/api-client.ts`):
-- When `TELEGRAM_BOT_TOKEN` is set, every API route validates the
-  `Authorization: tma <initData>` header against the bot token using HMAC
-  SHA-256 per Telegram's spec. Empty token → gate is bypassed.
-- Client-side, `apiFetch()` wraps the global `fetch` and injects the
-  header automatically when `window.Telegram.WebApp.initData` is present.
-
-## Telegram Mini App
-
-The app loads `telegram-web-app.js` in `src/app/layout.tsx`. On mount,
-`src/components/TelegramInit.tsx` calls `tg.ready()` + `tg.expand()` and
-mirrors `themeParams` to CSS variables on `<html>`. The transcribe page:
-
-- Detects Telegram on mount via `isInTelegram()` (`initData` non-empty).
-- Hides its in-page submit button and binds `Telegram.WebApp.MainButton` to
-  the same submit handler.
-- Fires `HapticFeedback` on submit start, success, and error.
-
-Outside Telegram everything still works — the SDK calls are guarded by
-`getTelegram()` returning `null`.
-
-See `docs/TELEGRAM_MINI_APP.md` for BotFather setup steps. Server-side
-verification of `initData` against `TELEGRAM_BOT_TOKEN` is not yet
-implemented — every API route is open.
-
-## yt-dlp companion service
-
-`services/ytdlp/` — FastAPI + yt-dlp Docker service. Exposes
-`POST /extract { url }` → `{ url, title, duration, ext, extractor }`,
-where `url` is a signed direct media URL Deepgram can ingest. Auth via
-`Authorization: Bearer $YTDLP_SERVICE_API_KEY`. Cookies for Instagram /
-YouTube can be provided as base64 in `INSTAGRAM_COOKIES_B64` /
-`COOKIES_B64` — see `services/ytdlp/README.md`. Wired into the same Docker
-network in `docker-compose.yml`, so the app reaches it at
-`http://ytdlp:8000`.
+| Use | Model |
+|---|---|
+| `transcribe` content gen (`/api/transcribe/{summarize,translate,generate}`) | `claude-haiku-4-5-20251001` |
+| `tg-agent` classifier + responder | `claude-haiku-4-5-20251001` |
+| `/api/me/chat`, `/api/assistants/chat` (transcribe) | `claude-sonnet-4-6` |
+| `ai-hub`, `persona-studio`, `ai-sales` | per provider config in each app |
 
 ## Conventions
 
-- Client-only React components must start with `'use client'`. Route
-  handlers and `src/lib/*` do not.
-- Icons come from `lucide-react`. No emojis in UI.
-- `next.config.js` has `output: 'standalone'` (for Docker) and marks
-  `better-sqlite3`, `sqlite-vec`, `pdf-parse`, `mammoth` as external so
-  webpack doesn't try to bundle their native bits.
-- Production models: `claude-haiku-4-5-20251001` for the transcribe
-  generators, `claude-sonnet-4-6` for the chat endpoints.
+- Client-only React components start with `'use client'`.
+- UI strings in Russian, code identifiers / comments in English.
+- Icons: `lucide-react`. No emojis in UI.
+- Apps under workspaces (`transcribe`, `tg-agent`, `persona-studio`) share
+  root `node_modules`. Others are standalone (own `package.json`, Dockerfile,
+  env).
+- `.env*.local` and `.env` files never commit.
+
+## Detailed sub-docs
+
+When the task is scoped to a single app, read its `CLAUDE.md` first:
+
+- [`apps/transcribe/CLAUDE.md`](apps/transcribe/CLAUDE.md) — flow, API routes, `/me` RAG, `/admin`, security, Telegram Mini App
+- [`apps/tg-agent/CLAUDE.md`](apps/tg-agent/CLAUDE.md) — pipeline, classifier, decision engine, responder, CRM, admin panel
+- [`apps/ai-sales/CLAUDE.md`](apps/ai-sales/CLAUDE.md) — 4 agents, Caddy mounts, FastAPI + LangGraph + seed-fixture invariant
+- [`apps/ai-hub/CLAUDE.md`](apps/ai-hub/CLAUDE.md) — wallet `SECURITY DEFINER` functions, providers, BullMQ, Auth.js
+- [`apps/persona-studio/CLAUDE.md`](apps/persona-studio/CLAUDE.md) — avatar / cover workers, BullMQ, Gemini, route groups
+- [`apps/persona-train/CLAUDE.md`](apps/persona-train/CLAUDE.md) — voice clone (ElevenLabs IVC) + avatar samples, shared `voices` table
+- [`apps/infra-worker/CLAUDE.md`](apps/infra-worker/CLAUDE.md) — 9 cron handlers, `FOR UPDATE SKIP LOCKED`, docker build flags
+- [`apps/ai-office/CLAUDE.md`](apps/ai-office/CLAUDE.md) — legacy marketing + persona-train voice endpoints (Netlify Functions)
+- [`apps/ytdlp/CLAUDE.md`](apps/ytdlp/CLAUDE.md) — `POST /extract` companion service
+- [`apps/voice-circle-bot/CLAUDE.md`](apps/voice-circle-bot/CLAUDE.md) — prototype, not in prod
+
+Per-app `README.md` / `DEPLOY.md` / `ROADMAP.md` remain authoritative for deep architecture and deploy steps. Each `apps/<app>/CLAUDE.md` is the orientation layer.

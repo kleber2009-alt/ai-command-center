@@ -1,0 +1,195 @@
+generator client {
+  provider = "prisma-client-js"
+}
+
+datasource db {
+  provider = "postgresql"
+  url      = env("DATABASE_URL")
+}
+
+// ── Auth.js v5 / NextAuth core ──────────────────
+model User {
+  id            String    @id @default(cuid())
+  email         String    @unique
+  emailVerified DateTime?
+  name          String?
+  image         String?
+  tokenBalance  Int       @default(0)
+  plan          String    @default("free") // free | starter | pro | agency
+  role          String    @default("user") // user | admin
+  createdAt     DateTime  @default(now())
+  updatedAt     DateTime  @updatedAt
+
+  accounts            Account[]
+  sessions            Session[]
+  uploads             Upload[]
+  avatarGenerations   AvatarGeneration[]
+  avatars             Avatar[]
+  covers              Cover[]
+  videoGenerations    VideoGeneration[]
+  tokenTransactions   TokenTransaction[]
+}
+
+model Account {
+  id                String  @id @default(cuid())
+  userId            String
+  type              String
+  provider          String
+  providerAccountId String
+  refresh_token     String? @db.Text
+  access_token      String? @db.Text
+  expires_at        Int?
+  token_type        String?
+  scope             String?
+  id_token          String? @db.Text
+  session_state     String?
+
+  user User @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@unique([provider, providerAccountId])
+}
+
+model Session {
+  id           String   @id @default(cuid())
+  sessionToken String   @unique
+  userId       String
+  expires      DateTime
+  user         User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+}
+
+model VerificationToken {
+  identifier String
+  token      String   @unique
+  expires    DateTime
+
+  @@unique([identifier, token])
+}
+
+// ── Domain ──────────────────────────────────────
+
+// Каждая загрузка пользователя — оригинал фото/видео
+model Upload {
+  id        String   @id @default(cuid())
+  userId    String
+  user      User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+  fileUrl   String                                 // S3 key или signed URL
+  fileType  String                                 // image/jpeg, video/mp4, ...
+  bytes     Int
+  width     Int?
+  height    Int?
+  status    String   @default("ready")             // uploading | ready | rejected
+  reason    String?                                // если rejected
+  createdAt DateTime @default(now())
+
+  avatarGenerations AvatarGeneration[]
+
+  @@index([userId, createdAt])
+}
+
+// Batch — 1 запрос на «создай 10 аватаров»
+model AvatarGeneration {
+  id          String   @id @default(cuid())
+  userId      String
+  user        User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+  uploadId    String
+  upload      Upload   @relation(fields: [uploadId], references: [id], onDelete: Cascade)
+  status      String   @default("pending")       // pending | processing | completed | failed | partial
+  tokensCost  Int      @default(10)
+  jobId       String?                            // BullMQ job id
+  errorMsg    String?
+  startedAt   DateTime?
+  completedAt DateTime?
+  createdAt   DateTime @default(now())
+
+  avatars Avatar[]
+
+  @@index([userId, createdAt])
+  @@index([status])
+}
+
+// Каждый из 10 итоговых аватаров
+model Avatar {
+  id             String   @id @default(cuid())
+  userId         String
+  user           User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+  generationId   String
+  generation     AvatarGeneration @relation(fields: [generationId], references: [id], onDelete: Cascade)
+  imageUrl       String                                 // S3 key
+  imageThumbUrl  String?
+  style          String                                 // "luxury-founder" | ...
+  styleLabel     String                                 // "Luxury Founder"
+  status         String   @default("pending")           // pending | done | failed
+  promptUsed     String?  @db.Text
+  selected       Boolean  @default(false)
+  errorMsg       String?
+  createdAt      DateTime @default(now())
+
+  videos VideoGeneration[]
+  covers Cover[]
+
+  @@index([userId, createdAt])
+  @@index([generationId, style])
+}
+
+// HeyGen-видео из выбранного аватара (phase 2)
+model VideoGeneration {
+  id          String   @id @default(cuid())
+  userId      String
+  user        User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+  avatarId    String
+  avatar      Avatar   @relation(fields: [avatarId], references: [id], onDelete: Cascade)
+  script      String   @db.Text
+  language    String   @default("ru")
+  voiceId     String?
+  aspect      String   @default("9:16")              // 9:16 | 1:1 | 16:9
+  background  String?
+  subtitles   Boolean  @default(true)
+  heygenVersion String @default("V")                 // V (Avatar V, default) | IV (Avatar IV)
+  status      String   @default("pending")           // pending | processing | completed | failed
+  heygenJobId String?
+  videoUrl    String?
+  tokensCost  Int      @default(30)
+  errorMsg    String?
+  createdAt   DateTime @default(now())
+  completedAt DateTime?
+
+  @@index([userId, createdAt])
+}
+
+// Обложка карусели из выбранного аватара
+model Cover {
+  id         String   @id @default(cuid())
+  userId     String
+  user       User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+  avatarId   String
+  avatar     Avatar   @relation(fields: [avatarId], references: [id], onDelete: Cascade)
+  title      String
+  subtitle   String?
+  cta        String?
+  niche      String?
+  style      String   @default("ai-visionary")
+  aspect     String   @default("4:5")                // 4:5 | 1:1 | 9:16
+  imageUrl   String?
+  status     String   @default("pending")            // pending | processing | completed | failed
+  promptUsed String?  @db.Text
+  tokensCost Int      @default(3)
+  errorMsg   String?
+  createdAt  DateTime @default(now())
+  completedAt DateTime?
+
+  @@index([userId, createdAt])
+}
+
+// Аудит всех начислений / списаний токенов
+model TokenTransaction {
+  id        String   @id @default(cuid())
+  userId    String
+  user      User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+  amount    Int                                       // + начисление, − списание
+  type      String                                    // signup_bonus | purchase | charge | refund | manual
+  reason    String                                    // "avatar-generation:xxx" | "cover:yyy" | ...
+  refId     String?                                   // id связанного объекта
+  createdAt DateTime @default(now())
+
+  @@index([userId, createdAt])
+}

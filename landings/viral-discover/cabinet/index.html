@@ -1,0 +1,1697 @@
+<!DOCTYPE html>
+<html lang="ru">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<meta name="theme-color" content="#0A0A0F">
+<meta name="color-scheme" content="dark only">
+<title>Кабинет · Залётный</title>
+<meta name="description" content="Кабинет парсера контента. Ниша, источники, выдача, кандидаты в конкуренты.">
+<style>
+/* ─── Reset / tokens ─────────────────────────────────────────── */
+*,*::before,*::after{margin:0;padding:0;box-sizing:border-box}
+html{background:#0A0A0F;scroll-behavior:smooth}
+html,body{min-height:100vh;-webkit-font-smoothing:antialiased;text-rendering:optimizeLegibility}
+body{
+  background:#0A0A0F;color:#f5f0e8;
+  font-family:-apple-system,BlinkMacSystemFont,'SF Pro Text','Helvetica Neue',Arial,sans-serif;
+  font-size:14px;line-height:1.5;
+}
+a{color:inherit;text-decoration:none}
+button{font:inherit;background:none;border:0;color:inherit;cursor:pointer}
+input,textarea,select{font:inherit;color:inherit;background:none;border:0;outline:0}
+img{display:block;max-width:100%}
+::selection{background:rgba(94,92,230,.42);color:#fff}
+
+:root{
+  --bg:#0A0A0F;
+  --bg2:#0e0e14;
+  --surface:#111118;
+  --surface-2:#161620;
+  --surface-3:#1c1c28;
+  --border:#1f1f28;
+  --border-2:#2a2a38;
+  --border-3:#3a3a48;
+
+  --text:#f5f0e8;
+  --text-dim:#a8a3b0;
+  --text-mute:#6a6570;
+  --text-faint:#3a3a48;
+
+  --accent:#5E5CE6;
+  --accent-hi:#7B79F0;
+  --accent-dim:#3a3880;
+  --accent-soft:rgba(94,92,230,.10);
+  --accent-cyan:#60c8f0;
+  --accent-lime:#a8e060;
+  --accent-pink:#f06090;
+  --accent-amber:#f0c060;
+
+  --serif:Georgia,'Times New Roman','Charter',serif;
+  --mono:'SF Mono','JetBrains Mono','Menlo','Consolas',monospace;
+
+  --sb-w:228px;
+}
+
+/* ─── Utility ────────────────────────────────────────────────── */
+.label{font-family:var(--mono);font-size:10px;text-transform:uppercase;letter-spacing:.16em;color:var(--text-dim);font-weight:700}
+.mono{font-family:var(--mono)}
+.serif{font-family:var(--serif)}
+.italic{font-style:italic}
+.dim{color:var(--text-dim)}
+.mute{color:var(--text-mute)}
+.faint{color:var(--text-faint)}
+.acc{color:var(--accent)}
+.acc-cyan{color:var(--accent-cyan)}
+.acc-lime{color:var(--accent-lime)}
+.acc-pink{color:var(--accent-pink)}
+.acc-amber{color:var(--accent-amber)}
+.hidden{display:none !important}
+
+/* ─── Layout shell ───────────────────────────────────────────── */
+.app{
+  display:grid;grid-template-columns:var(--sb-w) 1fr;
+  min-height:100vh;
+}
+@media (max-width:880px){.app{grid-template-columns:1fr}}
+
+/* ─── Sidebar ────────────────────────────────────────────────── */
+.sb{
+  position:sticky;top:0;height:100vh;
+  border-right:1px solid var(--border);
+  background:var(--bg);
+  display:flex;flex-direction:column;
+}
+@media (max-width:880px){.sb{position:static;height:auto;border-right:0;border-bottom:1px solid var(--border)}}
+
+.sb-brand{
+  padding:18px 20px 14px;display:flex;align-items:baseline;gap:8px;
+  border-bottom:1px solid var(--border);
+}
+.sb-brand .dot{width:7px;height:7px;background:var(--accent);border-radius:50%;display:inline-block;transform:translateY(-1px)}
+.sb-brand .name{font-family:var(--serif);font-size:18px;letter-spacing:-.01em}
+.sb-brand .sub{font-family:var(--mono);font-size:9px;letter-spacing:.18em;color:var(--text-mute);text-transform:uppercase;font-weight:700;margin-left:6px}
+
+.sb-user{
+  padding:14px 20px 16px;border-bottom:1px solid var(--border);
+  display:flex;align-items:center;gap:10px;
+}
+.sb-user .av{
+  width:32px;height:32px;border-radius:50%;
+  background:linear-gradient(135deg,var(--accent-hi),var(--accent));
+  display:flex;align-items:center;justify-content:center;
+  font-family:var(--serif);font-style:italic;font-size:14px;color:#fff;
+}
+.sb-user .who{display:flex;flex-direction:column;gap:2px;min-width:0}
+.sb-user .nm{font-size:13px;color:var(--text);white-space:nowrap;overflow:hidden;text-overflow:ellipsis;max-width:130px}
+.sb-user .st{font-family:var(--mono);font-size:9px;letter-spacing:.14em;text-transform:uppercase;color:var(--accent-lime);font-weight:700;display:flex;align-items:center;gap:6px}
+.sb-user .st.paused{color:var(--accent-amber)}
+.sb-user .st .dot{width:5px;height:5px;border-radius:50%;background:currentColor}
+
+.sb-nav{padding:14px 0;flex:1;overflow-y:auto;display:flex;flex-direction:column}
+.sb-section{
+  font-family:var(--mono);font-size:9px;letter-spacing:.18em;text-transform:uppercase;
+  color:var(--text-faint);font-weight:700;
+  padding:14px 20px 6px;
+}
+.sb-link{
+  display:flex;align-items:center;gap:10px;
+  padding:9px 20px;font-size:13px;color:var(--text-dim);
+  border-left:2px solid transparent;
+  transition:all .12s;cursor:pointer;
+}
+.sb-link:hover{color:var(--text);background:var(--surface)}
+.sb-link.active{color:var(--text);border-left-color:var(--accent);background:linear-gradient(90deg,var(--accent-soft),transparent 70%)}
+.sb-link .ic{font-family:var(--mono);font-size:11px;color:var(--text-mute);min-width:18px;font-weight:700}
+.sb-link.active .ic{color:var(--accent)}
+.sb-link .bd{
+  margin-left:auto;font-family:var(--mono);font-size:9px;letter-spacing:.1em;font-weight:700;
+  padding:2px 6px;background:var(--accent);color:#fff;border-radius:2px;
+}
+.sb-link .bd.dim{background:var(--surface-3);color:var(--text-dim)}
+
+.sb-foot{
+  border-top:1px solid var(--border);padding:14px 20px;
+  font-family:var(--mono);font-size:10px;color:var(--text-mute);letter-spacing:.06em;
+  display:flex;flex-direction:column;gap:6px;
+}
+.sb-foot a{color:var(--text-dim)}
+.sb-foot a:hover{color:var(--text)}
+.sb-foot .row{display:flex;align-items:center;gap:8px}
+.sb-foot .pulse{width:5px;height:5px;background:var(--accent-lime);border-radius:50%;
+  box-shadow:0 0 0 0 var(--accent-lime);animation:pulse 2s infinite}
+@keyframes pulse{
+  0%{box-shadow:0 0 0 0 rgba(168,224,96,.5)}
+  70%{box-shadow:0 0 0 8px rgba(168,224,96,0)}
+  100%{box-shadow:0 0 0 0 rgba(168,224,96,0)}
+}
+
+/* ─── Main column ────────────────────────────────────────────── */
+.main{min-width:0;display:flex;flex-direction:column}
+
+.topbar{
+  position:sticky;top:0;z-index:30;
+  display:flex;align-items:center;gap:14px;
+  padding:14px 28px;border-bottom:1px solid var(--border);
+  background:rgba(10,10,15,.86);
+  backdrop-filter:blur(12px);-webkit-backdrop-filter:blur(12px);
+}
+.topbar .crumb{font-family:var(--mono);font-size:10px;letter-spacing:.18em;color:var(--text-mute);text-transform:uppercase;font-weight:700}
+.topbar h1{font-family:var(--serif);font-size:22px;font-weight:400;letter-spacing:-.01em}
+.topbar h1 em{font-style:italic;color:var(--text-dim)}
+.topbar .grow{flex:1}
+.topbar .runbtn{
+  display:inline-flex;align-items:center;gap:8px;
+  padding:9px 16px;background:var(--accent);color:#fff;
+  font-family:var(--mono);font-size:11px;font-weight:700;letter-spacing:.12em;text-transform:uppercase;
+  transition:all .15s;
+}
+.topbar .runbtn:hover{background:var(--accent-hi);transform:translateY(-1px)}
+.topbar .runbtn .arr{font-family:var(--serif);font-size:13px;font-style:italic}
+.topbar .ghostbtn{
+  display:inline-flex;align-items:center;gap:8px;padding:9px 14px;
+  border:1px solid var(--border-2);color:var(--text-dim);
+  font-family:var(--mono);font-size:11px;font-weight:700;letter-spacing:.12em;text-transform:uppercase;
+  transition:all .15s;
+}
+.topbar .ghostbtn:hover{border-color:var(--accent-dim);color:var(--accent)}
+
+.content{padding:0 28px 80px;max-width:1480px}
+@media (max-width:600px){
+  .topbar{padding:12px 16px}
+  .content{padding:0 16px 60px}
+}
+
+/* ─── Section heading ────────────────────────────────────────── */
+.sec{padding:36px 0 0}
+.sec-head{display:flex;align-items:baseline;gap:14px;margin-bottom:22px}
+.sec-num{font-family:var(--mono);font-size:11px;color:var(--accent);letter-spacing:.18em;font-weight:700}
+.sec-title{font-family:var(--serif);font-size:15px;font-style:italic;color:var(--text-dim)}
+.sec-spacer{flex:1;border-bottom:1px solid var(--border);transform:translateY(-3px)}
+.sec-action{
+  font-family:var(--mono);font-size:10px;letter-spacing:.14em;text-transform:uppercase;color:var(--text-dim);font-weight:700;
+  padding:6px 10px;border:1px solid var(--border-2);transition:all .12s;cursor:pointer;
+}
+.sec-action:hover{border-color:var(--accent-dim);color:var(--accent)}
+
+/* ─── Status strip ───────────────────────────────────────────── */
+.status-strip{
+  display:grid;grid-template-columns:repeat(4,1fr);gap:1px;
+  margin-top:18px;background:var(--border);border:1px solid var(--border);
+}
+@media (max-width:900px){.status-strip{grid-template-columns:1fr 1fr}}
+.strip-cell{background:var(--bg);padding:18px 20px;display:flex;flex-direction:column;gap:8px}
+.strip-cell .k{font-family:var(--mono);font-size:9px;letter-spacing:.16em;text-transform:uppercase;color:var(--text-mute);font-weight:700}
+.strip-cell .v{font-family:var(--serif);font-size:26px;line-height:1;letter-spacing:-.01em}
+.strip-cell .v .u{font-size:14px;color:var(--text-dim);margin-left:6px;font-style:italic}
+.strip-cell .v.small{font-size:14px;font-family:-apple-system,BlinkMacSystemFont,'SF Pro Text',sans-serif;line-height:1.3;color:var(--text);letter-spacing:0}
+.strip-cell .d{font-size:11px;color:var(--text-mute);line-height:1.4}
+.strip-cell .delta{font-family:var(--mono);font-size:10px;letter-spacing:.1em;color:var(--accent-lime);font-weight:700}
+.strip-cell .delta.dn{color:var(--accent-pink)}
+
+/* ─── Run result feed ────────────────────────────────────────── */
+.run-wrap{display:grid;grid-template-columns:1.6fr 1fr;gap:24px;margin-top:24px}
+@media (max-width:1100px){.run-wrap{grid-template-columns:1fr}}
+
+.run-card{
+  background:var(--surface);border:1px solid var(--border);
+  display:flex;flex-direction:column;
+}
+.run-head{
+  padding:16px 20px;border-bottom:1px solid var(--border);
+  display:flex;align-items:center;gap:14px;background:var(--surface-2);
+}
+.run-head .icn{
+  width:28px;height:28px;border-radius:50%;
+  background:linear-gradient(135deg,var(--accent-hi),var(--accent));
+  display:flex;align-items:center;justify-content:center;
+  font-family:var(--serif);font-style:italic;font-size:13px;color:#fff;
+}
+.run-head .ttl{font-family:var(--serif);font-size:16px}
+.run-head .ttl small{display:block;color:var(--text-mute);font-family:var(--mono);font-size:10px;letter-spacing:.14em;text-transform:uppercase;font-weight:700;margin-top:2px}
+.run-head .right{margin-left:auto;font-family:var(--mono);font-size:10px;color:var(--text-mute);letter-spacing:.1em}
+
+.run-block-title{
+  font-family:var(--mono);font-size:10px;font-weight:700;letter-spacing:.16em;text-transform:uppercase;
+  color:var(--text);padding:20px 20px 8px;display:flex;align-items:center;gap:10px;
+}
+.run-block-title .ic{font-size:12px}
+.run-block-title .count{margin-left:auto;color:var(--text-mute);font-weight:700}
+
+.post{
+  display:grid;grid-template-columns:auto 1fr auto;column-gap:14px;row-gap:6px;
+  padding:14px 20px;border-top:1px solid var(--border);
+  align-items:start;
+}
+.post:hover{background:var(--surface-2)}
+.post .n{font-family:var(--mono);font-size:12px;color:var(--text-mute);font-weight:700;padding-top:2px;min-width:18px}
+.post .top-row{display:flex;align-items:baseline;gap:10px;flex-wrap:wrap}
+.post .score{font-family:var(--serif);font-size:18px;font-weight:700;letter-spacing:-.01em}
+.post .score.s9,.post .score.s10{color:var(--accent-lime)}
+.post .score.s8{color:var(--accent-lime)}
+.post .score.s7{color:var(--accent-cyan)}
+.post .score.s6{color:var(--accent-amber)}
+.post .score.s5{color:var(--accent-amber)}
+.post .score.s4,.post .score.s3,.post .score.s2,.post .score.s1{color:var(--accent-pink)}
+.post .author{font-size:13px;color:var(--text)}
+.post .author small{color:var(--text-mute);font-family:var(--mono);font-size:10px;margin-left:6px;letter-spacing:.06em}
+.post .metrics{font-family:var(--mono);font-size:10.5px;color:var(--text-mute);letter-spacing:.02em;grid-column:2}
+.post .metrics span{margin-right:10px;white-space:nowrap}
+.post .why{font-style:italic;color:var(--text-dim);font-size:13px;line-height:1.45;grid-column:2;margin-top:2px}
+.post .acts{grid-row:1/4;display:flex;flex-direction:column;gap:4px;align-items:flex-end;justify-content:center}
+.post .acts a, .post .acts button{
+  font-family:var(--mono);font-size:10px;font-weight:700;letter-spacing:.12em;text-transform:uppercase;
+  color:var(--text-mute);padding:5px 9px;border:1px solid var(--border-2);
+  transition:all .12s;white-space:nowrap;
+}
+.post .acts a:hover, .post .acts button:hover{border-color:var(--accent-dim);color:var(--accent)}
+.post .acts .open{color:var(--accent);border-color:var(--accent-dim)}
+.post .acts .open:hover{background:var(--accent);color:#fff}
+
+.feedback{padding:18px 20px;border-top:1px solid var(--border);display:flex;gap:8px;flex-wrap:wrap;align-items:center}
+.feedback .lbl{font-family:var(--mono);font-size:10px;letter-spacing:.14em;text-transform:uppercase;color:var(--text-mute);font-weight:700;margin-right:6px}
+.feedback button{
+  padding:7px 11px;border:1px solid var(--border-2);
+  font-family:var(--mono);font-size:11px;font-weight:700;letter-spacing:.1em;text-transform:uppercase;
+  color:var(--text-dim);transition:all .12s;
+}
+.feedback button.used:hover{border-color:#3a5a1a;color:var(--accent-lime);background:rgba(168,224,96,.06)}
+.feedback button.nope:hover{border-color:#5a1a2a;color:var(--accent-pink);background:rgba(240,96,144,.06)}
+
+/* ─── Side panels (run sidebar) ──────────────────────────────── */
+.side-stack{display:flex;flex-direction:column;gap:1px;background:var(--border);border:1px solid var(--border)}
+.side-card{background:var(--bg);padding:18px 20px}
+.side-card .ttl{font-family:var(--mono);font-size:10px;letter-spacing:.16em;text-transform:uppercase;color:var(--text-dim);font-weight:700;margin-bottom:12px;display:flex;align-items:center;gap:8px}
+.side-card .ttl .ic{color:var(--accent)}
+.side-card .summary-body{
+  font-family:var(--serif);font-style:italic;font-size:14px;line-height:1.55;color:var(--text-dim);
+  padding-left:12px;border-left:2px solid var(--accent-dim);
+}
+.side-card .summary-body b{color:var(--text);font-style:normal;font-weight:500}
+
+.kv{display:grid;grid-template-columns:auto 1fr;gap:6px 14px;font-size:13px}
+.kv dt{font-family:var(--mono);font-size:10px;letter-spacing:.12em;text-transform:uppercase;color:var(--text-mute);font-weight:700;padding-top:3px}
+.kv dd{color:var(--text)}
+.kv dd small{color:var(--text-mute);display:block;font-size:11px;margin-top:1px}
+
+.tag-row{display:flex;flex-wrap:wrap;gap:6px;margin-top:8px}
+.tag{
+  font-family:var(--mono);font-size:10.5px;font-weight:600;letter-spacing:.04em;
+  padding:4px 9px;background:var(--surface-2);border:1px solid var(--border-2);color:var(--text-dim);
+}
+.tag.acc{border-color:var(--accent-dim);color:var(--accent)}
+.tag.lime{border-color:#3a5a1a;color:var(--accent-lime);background:rgba(168,224,96,.05)}
+.tag .x{margin-left:6px;color:var(--text-faint);cursor:pointer;transition:color .12s}
+.tag .x:hover{color:var(--accent-pink)}
+
+/* ─── History list ───────────────────────────────────────────── */
+.hist{display:grid;gap:1px;background:var(--border);border:1px solid var(--border);margin-top:18px}
+.hist-row{
+  background:var(--bg);padding:14px 20px;
+  display:grid;grid-template-columns:auto 1fr auto auto auto;
+  column-gap:16px;align-items:center;cursor:pointer;transition:background .12s;
+}
+.hist-row:hover{background:var(--surface)}
+.hist-row .d{font-family:var(--mono);font-size:11px;color:var(--text-dim);letter-spacing:.06em;font-weight:700;min-width:120px}
+.hist-row .ttl{font-size:13px;color:var(--text)}
+.hist-row .ttl small{color:var(--text-mute);display:block;font-size:11px;font-family:var(--mono);letter-spacing:.04em;margin-top:1px}
+.hist-row .scored{font-family:var(--mono);font-size:11px;color:var(--text-mute);letter-spacing:.06em;font-weight:700}
+.hist-row .scored b{color:var(--accent-lime)}
+.hist-row .top{font-family:var(--serif);font-size:16px;color:var(--text);font-style:italic}
+.hist-row .top small{color:var(--text-mute);font-family:var(--mono);font-style:normal;font-size:10px;letter-spacing:.1em;margin-left:4px;text-transform:uppercase;font-weight:700}
+.hist-row .chev{font-family:var(--serif);font-size:16px;color:var(--text-faint);font-style:italic;transition:transform .12s,color .12s}
+.hist-row:hover .chev{color:var(--accent);transform:translateX(3px)}
+@media (max-width:900px){
+  .hist-row{grid-template-columns:1fr auto;row-gap:6px}
+  .hist-row .d{grid-column:1/-1}
+  .hist-row .scored,.hist-row .top{grid-column:1/-1}
+}
+
+/* ─── Sources (chips + input) ────────────────────────────────── */
+.src-wrap{display:grid;grid-template-columns:1.4fr 1fr;gap:24px;margin-top:18px}
+@media (max-width:1000px){.src-wrap{grid-template-columns:1fr}}
+
+.src-card{background:var(--surface);border:1px solid var(--border)}
+.src-head{
+  padding:16px 20px;border-bottom:1px solid var(--border);background:var(--surface-2);
+  display:flex;align-items:center;gap:14px;
+}
+.src-head .ttl{font-family:var(--serif);font-size:16px}
+.src-head .ttl small{display:block;color:var(--text-mute);font-family:var(--mono);font-size:10px;letter-spacing:.14em;text-transform:uppercase;font-weight:700;margin-top:3px}
+.src-head .badge{
+  margin-left:auto;font-family:var(--mono);font-size:10px;letter-spacing:.12em;text-transform:uppercase;font-weight:700;
+  padding:4px 9px;background:var(--bg);border:1px solid var(--border-2);color:var(--text-dim);
+}
+
+.src-body{padding:18px 20px}
+.src-body .ent{
+  display:flex;align-items:center;gap:10px;padding:10px 12px;border:1px solid var(--border);
+  background:var(--bg);margin-bottom:6px;
+}
+.src-body .ent:hover{border-color:var(--border-3)}
+.src-body .ent .h{font-family:var(--mono);font-size:13px;color:var(--text);letter-spacing:.02em;font-weight:600}
+.src-body .ent .meta{font-family:var(--mono);font-size:10px;color:var(--text-mute);letter-spacing:.06em;margin-left:auto}
+.src-body .ent .rm{
+  font-family:var(--mono);font-size:11px;color:var(--text-mute);
+  padding:4px 8px;border:1px solid transparent;transition:all .12s;
+}
+.src-body .ent .rm:hover{color:var(--accent-pink);border-color:#5a1a2a}
+
+.add-row{
+  display:flex;gap:8px;align-items:stretch;margin-top:14px;
+  border:1px solid var(--border-2);background:var(--bg);
+}
+.add-row input{
+  flex:1;padding:11px 14px;font-family:var(--mono);font-size:12.5px;color:var(--text);
+  border:0;
+}
+.add-row input::placeholder{color:var(--text-faint)}
+.add-row button{
+  padding:0 18px;background:var(--accent);color:#fff;
+  font-family:var(--mono);font-size:11px;font-weight:700;letter-spacing:.12em;text-transform:uppercase;
+}
+.add-row button:hover{background:var(--accent-hi)}
+.add-hint{margin-top:8px;font-family:var(--mono);font-size:10.5px;color:var(--text-mute);letter-spacing:.04em;line-height:1.5}
+
+/* ─── Candidates ─────────────────────────────────────────────── */
+.cand-list{display:grid;gap:1px;background:var(--border);border:1px solid var(--border);margin-top:18px}
+.cand-row{
+  background:var(--bg);padding:14px 20px;
+  display:grid;grid-template-columns:1fr auto;column-gap:14px;align-items:center;
+}
+.cand-row .left{display:flex;flex-direction:column;gap:4px;min-width:0}
+.cand-row .h{font-family:var(--mono);font-size:13px;color:var(--text);font-weight:700;display:flex;align-items:center;gap:10px}
+.cand-row .h .why{font-family:-apple-system,sans-serif;font-style:italic;color:var(--text-mute);font-weight:400;font-size:11.5px;letter-spacing:0}
+.cand-row .meta{font-family:var(--mono);font-size:10.5px;color:var(--text-mute);letter-spacing:.04em}
+.cand-row .acts{display:flex;gap:6px}
+.cand-row .acts button{
+  padding:8px 12px;border:1px solid var(--border-2);
+  font-family:var(--mono);font-size:10.5px;font-weight:700;letter-spacing:.12em;text-transform:uppercase;color:var(--text-dim);
+  transition:all .12s;
+}
+.cand-row .acts .add:hover{border-color:#3a5a1a;color:var(--accent-lime);background:rgba(168,224,96,.06)}
+.cand-row .acts .skip:hover{border-color:var(--border-3);color:var(--text)}
+
+/* ─── Settings form ──────────────────────────────────────────── */
+.set-grid{display:grid;grid-template-columns:1fr 1fr;gap:1px;background:var(--border);border:1px solid var(--border);margin-top:18px}
+@media (max-width:900px){.set-grid{grid-template-columns:1fr}}
+.set-cell{background:var(--bg);padding:24px 24px;display:flex;flex-direction:column;gap:14px}
+.set-cell h3{font-family:var(--serif);font-size:18px;font-weight:400;letter-spacing:-.005em}
+.set-cell h3 em{font-style:italic;color:var(--text-dim)}
+.set-cell .desc{font-size:13px;color:var(--text-dim);line-height:1.5}
+
+.fld{display:flex;flex-direction:column;gap:6px}
+.fld label{font-family:var(--mono);font-size:10px;font-weight:700;letter-spacing:.14em;text-transform:uppercase;color:var(--text-mute)}
+.fld input[type=text],.fld input[type=number],.fld select,.fld textarea{
+  padding:11px 13px;border:1px solid var(--border-2);background:var(--bg);
+  font-family:var(--mono);font-size:13px;color:var(--text);
+  transition:border-color .12s;
+}
+.fld input:focus,.fld select:focus,.fld textarea:focus{border-color:var(--accent-dim)}
+.fld textarea{font-family:-apple-system,sans-serif;font-size:14px;line-height:1.5;resize:vertical;min-height:80px}
+.fld .hint{font-family:var(--mono);font-size:10.5px;color:var(--text-mute);letter-spacing:.04em;line-height:1.5}
+
+.fld-row{display:grid;grid-template-columns:repeat(3,1fr);gap:10px}
+@media (max-width:540px){.fld-row{grid-template-columns:1fr}}
+
+.set-cell .row-bot{display:flex;gap:10px;align-items:center;margin-top:8px;flex-wrap:wrap}
+.set-cell .save{
+  padding:10px 18px;background:var(--accent);color:#fff;
+  font-family:var(--mono);font-size:11px;font-weight:700;letter-spacing:.12em;text-transform:uppercase;
+}
+.set-cell .save:hover{background:var(--accent-hi)}
+.set-cell .reset{
+  padding:10px 14px;border:1px solid var(--border-2);
+  font-family:var(--mono);font-size:11px;font-weight:700;letter-spacing:.12em;text-transform:uppercase;color:var(--text-mute);
+}
+.set-cell .reset:hover{border-color:var(--accent-pink);color:var(--accent-pink)}
+.set-cell .danger{
+  padding:10px 14px;border:1px solid #5a1a2a;
+  font-family:var(--mono);font-size:11px;font-weight:700;letter-spacing:.12em;text-transform:uppercase;color:var(--accent-pink);
+}
+.set-cell .danger:hover{background:rgba(240,96,144,.06)}
+.set-cell .saved-tag{font-family:var(--mono);font-size:10.5px;letter-spacing:.12em;text-transform:uppercase;color:var(--accent-lime);font-weight:700}
+
+/* Toggle switch */
+.toggle{display:flex;align-items:center;gap:14px;padding:14px 16px;border:1px solid var(--border);background:var(--bg)}
+.toggle .lbl{display:flex;flex-direction:column;gap:3px}
+.toggle .lbl .t{font-family:var(--serif);font-size:15px}
+.toggle .lbl .d{font-size:12px;color:var(--text-mute)}
+.toggle .sw{
+  margin-left:auto;width:44px;height:24px;border-radius:24px;
+  background:var(--surface-3);border:1px solid var(--border-2);position:relative;cursor:pointer;transition:all .15s;
+}
+.toggle .sw::after{
+  content:'';position:absolute;top:2px;left:2px;width:18px;height:18px;border-radius:50%;
+  background:var(--text-mute);transition:all .15s;
+}
+.toggle.on .sw{background:rgba(94,92,230,.20);border-color:var(--accent)}
+.toggle.on .sw::after{left:22px;background:var(--accent)}
+
+/* ─── Schedule peek ──────────────────────────────────────────── */
+.next-run{
+  display:flex;align-items:center;gap:14px;padding:14px 20px;
+  border:1px solid var(--border);background:var(--surface);
+  margin-top:16px;
+}
+.next-run .ic{
+  width:38px;height:38px;border:1px solid var(--border-2);
+  display:flex;align-items:center;justify-content:center;
+  font-family:var(--serif);font-style:italic;font-size:18px;color:var(--accent);
+}
+.next-run .txt{display:flex;flex-direction:column;gap:2px;flex:1}
+.next-run .txt b{font-family:var(--serif);font-size:14px;font-weight:400}
+.next-run .txt small{font-family:var(--mono);font-size:10.5px;color:var(--text-mute);letter-spacing:.04em}
+.next-run .pulse{width:6px;height:6px;border-radius:50%;background:var(--accent-lime);
+  box-shadow:0 0 0 0 var(--accent-lime);animation:pulse 2s infinite}
+
+/* ─── Empty state ─────────────────────────────────────────── */
+.empty{
+  padding:36px 24px;text-align:center;
+  border:1px dashed var(--border-2);background:var(--surface);
+  margin-top:18px;
+}
+.empty h3{font-family:var(--serif);font-size:20px;font-weight:400;margin-bottom:8px}
+.empty p{font-size:13px;color:var(--text-dim);max-width:380px;margin:0 auto 14px}
+.empty .btn{
+  display:inline-flex;align-items:center;gap:8px;padding:10px 18px;background:var(--accent);color:#fff;
+  font-family:var(--mono);font-size:11px;font-weight:700;letter-spacing:.12em;text-transform:uppercase;
+}
+
+/* Tab visibility toggle */
+.page{display:none}
+.page.active{display:block}
+
+</style>
+</head>
+<body>
+
+<div class="app">
+
+  <!-- ─── SIDEBAR ─────────────────────────────────────────── -->
+  <aside class="sb">
+    <div class="sb-brand">
+      <span class="dot"></span>
+      <span class="name">Залётный</span>
+      <span class="sub">v1</span>
+    </div>
+
+    <div class="sb-user">
+      <div class="av" id="sbUserAv">·</div>
+      <div class="who">
+        <div class="nm" id="sbUserName">…</div>
+        <div class="st" id="sbUserStatus"><span class="dot"></span> Загрузка</div>
+      </div>
+    </div>
+
+    <nav class="sb-nav">
+      <div class="sb-section">Кабинет</div>
+      <a class="sb-link active" data-tab="today">
+        <span class="ic">01</span>
+        <span>Сегодня</span>
+        <span class="bd" id="sbBadgeToday">·</span>
+      </a>
+      <a class="sb-link" data-tab="history">
+        <span class="ic">02</span>
+        <span>История</span>
+        <span class="bd dim" id="sbBadgeHistory">·</span>
+      </a>
+      <a class="sb-link" data-tab="sources">
+        <span class="ic">03</span>
+        <span>Источники</span>
+      </a>
+      <a class="sb-link" data-tab="candidates">
+        <span class="ic">04</span>
+        <span>Кандидаты</span>
+        <span class="bd" id="sbBadgeCandidates">·</span>
+      </a>
+      <a class="sb-link" data-tab="settings">
+        <span class="ic">05</span>
+        <span>Настройки</span>
+      </a>
+
+      <div class="sb-section" style="margin-top:18px">Прочее</div>
+      <a class="sb-link" href="/" target="_self">
+        <span class="ic">↗</span>
+        <span>Лендинг</span>
+      </a>
+      <a class="sb-link" href="https://t.me/parser_instaa_bot" target="_blank">
+        <span class="ic">tg</span>
+        <span>Бот в Telegram</span>
+      </a>
+    </nav>
+
+    <div class="sb-foot">
+      <div class="row"><span class="pulse"></span><span>Cron live · 08:00 МСК</span></div>
+      <a href="#" id="logoutLink">Выйти</a>
+    </div>
+  </aside>
+
+  <!-- ─── MAIN ───────────────────────────────────────────── -->
+  <main class="main">
+
+    <!-- ─── TOPBAR ───────────────────────────────────── -->
+    <header class="topbar">
+      <span class="crumb">/ Кабинет /</span>
+      <h1 id="pageTitle">Сегодня <em>· выдача за 21 мая</em></h1>
+      <span class="grow"></span>
+      <button class="ghostbtn" onclick="document.location.hash='#settings';switchTab('settings')">
+        ⚙ Настройки
+      </button>
+      <button class="runbtn" id="runNowBtn">
+        Запустить сейчас <span class="arr">↻</span>
+      </button>
+    </header>
+
+    <div class="content">
+
+      <!-- ═══ TAB: СЕГОДНЯ ═══════════════════════════════ -->
+      <div class="page active" id="page-today">
+
+        <!-- Status strip -->
+        <section class="sec">
+          <div class="sec-head">
+            <span class="sec-num">/01</span>
+            <span class="sec-title">сводка за сегодня</span>
+            <span class="sec-spacer"></span>
+            <span class="sec-action">21 мая · 08:00 МСК</span>
+          </div>
+
+          <div class="status-strip" id="stripToday">
+            <div class="strip-cell"><div class="k">Просканировано</div><div class="v">…</div><div class="d">&nbsp;</div></div>
+            <div class="strip-cell"><div class="k">Топ результат</div><div class="v">…</div><div class="d">&nbsp;</div></div>
+            <div class="strip-cell"><div class="k">Источники</div><div class="v">…</div><div class="d">&nbsp;</div></div>
+            <div class="strip-cell"><div class="k">След. выдача</div><div class="v small">…</div><div class="d">&nbsp;</div></div>
+          </div>
+        </section>
+
+        <!-- Run results -->
+        <section class="sec">
+          <div class="sec-head">
+            <span class="sec-num">/02</span>
+            <span class="sec-title">залетевшие посты с оценкой</span>
+            <span class="sec-spacer"></span>
+          </div>
+
+          <div class="run-wrap" id="todayRunWrap">
+            <div class="run-card" id="todayRunCard">
+              <div class="run-head">
+                <div class="icn">А</div>
+                <div class="ttl">Аня <small>контент-стратег · ai growth office</small></div>
+                <div class="right" id="todayRunHeadDate">…</div>
+              </div>
+              <div id="todayRunBody"><p class="dim" style="padding:20px">Загрузка…</p></div>
+            </div>
+            <div class="side-stack" id="todaySideStack"></div>
+          </div>
+        </section>
+
+      </div>
+
+      <!-- ═══ TAB: ИСТОРИЯ ═══════════════════════════════ -->
+      <div class="page" id="page-history">
+
+        <section class="sec">
+          <div class="sec-head">
+            <span class="sec-num">/02</span>
+            <span class="sec-title">последние 28 выдач</span>
+            <span class="sec-spacer"></span>
+            <span class="sec-action">фильтр: все</span>
+          </div>
+
+          <div class="status-strip" id="stripHistory">
+            <div class="strip-cell"><div class="k">всего выдач</div><div class="v">…</div><div class="d">&nbsp;</div></div>
+            <div class="strip-cell"><div class="k">средн. топ</div><div class="v">…</div><div class="d">&nbsp;</div></div>
+            <div class="strip-cell"><div class="k">использовано</div><div class="v">…</div><div class="d">&nbsp;</div></div>
+            <div class="strip-cell"><div class="k">скрейпнуто всего</div><div class="v">…</div><div class="d">&nbsp;</div></div>
+          </div>
+
+          <div class="hist" id="histList">
+            <p class="dim" style="padding:20px">Загрузка истории…</p>
+          </div>
+        </section>
+
+      </div>
+
+      <!-- ═══ TAB: ИСТОЧНИКИ ═════════════════════════════ -->
+      <div class="page" id="page-sources">
+
+        <section class="sec">
+          <div class="sec-head">
+            <span class="sec-num">/03</span>
+            <span class="sec-title">конкуренты и хэштеги в работе</span>
+            <span class="sec-spacer"></span>
+          </div>
+
+          <div class="src-wrap">
+
+            <!-- Accounts -->
+            <div class="src-card">
+              <div class="src-head">
+                <div class="ttl">Конкуренты <small>аккаунты, которые парсим ежедневно</small></div>
+                <span class="badge" id="accBadge">…</span>
+              </div>
+              <div class="src-body">
+                <div id="accList"><p class="dim" style="padding:8px 0">Загрузка…</p></div>
+                <div class="add-row">
+                  <input type="text" id="accInput" placeholder="@new_account — добавить ещё">
+                  <button id="accAddBtn">+ добавить</button>
+                </div>
+                <div class="add-hint">
+                  Можно вставить сразу несколько через пробел или с новой строки. Лимит — 25 аккаунтов. Оптимум — 5–8 в активной нише.
+                </div>
+              </div>
+            </div>
+
+            <!-- Hashtags -->
+            <div class="src-card">
+              <div class="src-head">
+                <div class="ttl">Хэштеги <small>широкие источники по теме</small></div>
+                <span class="badge" id="hashBadge">…</span>
+              </div>
+              <div class="src-body">
+                <div id="hashList"><p class="dim" style="padding:8px 0">Загрузка…</p></div>
+                <div class="add-row">
+                  <input type="text" id="hashInput" placeholder="#hashtag — добавить ещё">
+                  <button id="hashAddBtn">+ добавить</button>
+                </div>
+                <div class="add-hint">
+                  Хэштеги ловят посты вне списка конкурентов — это +30–50% к ширине выборки. Идеально 1–3 целевых тега.
+                </div>
+              </div>
+            </div>
+
+          </div>
+
+        </section>
+
+      </div>
+
+      <!-- ═══ TAB: КАНДИДАТЫ ═════════════════════════════ -->
+      <div class="page" id="page-candidates">
+
+        <section class="sec">
+          <div class="sec-head">
+            <span class="sec-num">/04</span>
+            <span class="sec-title">claude нашёл новых конкурентов</span>
+            <span class="sec-spacer"></span>
+            <span class="sec-action">обновлено сегодня</span>
+          </div>
+
+          <p class="dim" style="margin-top:18px;max-width:680px;line-height:1.6;font-size:14px">
+            Каждый день, после анализа выдачи, Claude предлагает <b style="color:var(--text)">новых конкурентов</b> — авторов, чьи посты попадаются в хэштегах твоей ниши, но которых ты ещё не отслеживаешь.
+            Жми <span class="mono">✅</span> чтобы добавить — учтётся в следующей выдаче. <span class="mono">✕</span> — больше не предлагать.
+          </p>
+
+          <div class="cand-list" id="candList">
+            <p class="dim" style="padding:20px">Загрузка…</p>
+          </div>
+
+        </section>
+
+      </div>
+
+      <!-- ═══ TAB: НАСТРОЙКИ ═════════════════════════════ -->
+      <div class="page" id="page-settings">
+
+        <section class="sec">
+          <div class="sec-head">
+            <span class="sec-num">/05</span>
+            <span class="sec-title">конфигурация парсера</span>
+            <span class="sec-spacer"></span>
+          </div>
+
+          <!-- Pause toggle -->
+          <div class="toggle on" id="pauseToggle">
+            <div class="lbl">
+              <span class="t">Ежедневная выдача</span>
+              <span class="d">Когда выключено — cron в 08:00 МСК пропускает запуск. Можно дёргать вручную через «Запустить сейчас».</span>
+            </div>
+            <div class="sw"></div>
+          </div>
+
+          <div class="set-grid">
+
+            <!-- Niche -->
+            <div class="set-cell" style="grid-column:1/-1">
+              <h3>Ниша <em>— контекст для оценок Claude</em></h3>
+              <p class="desc">Опиши одной строкой кто ты и для кого работаешь. Этот текст уходит в промпт каждой оценки — без него Claude будет ставить наугад.</p>
+              <div class="fld">
+                <label for="niche">описание ниши</label>
+                <textarea id="niche" placeholder="коуч по продажам B2B для собственников малого бизнеса"></textarea>
+                <span class="hint">8–600 символов · сейчас 0</span>
+              </div>
+              <div class="row-bot">
+                <button class="save" data-save="niche">Сохранить</button>
+                <span class="saved-tag hidden">✓ сохранено</span>
+              </div>
+            </div>
+
+            <!-- Thresholds -->
+            <div class="set-cell">
+              <h3>Пороги виральности</h3>
+              <p class="desc">Минимальные метрики, ниже которых пост не считается «жирным». Лайки = proxy для репостов (Instagram перестал отдавать share count публично).</p>
+              <div class="fld-row">
+                <div class="fld"><label>мин. просмотров</label><input type="number" id="minPlays" value="0"></div>
+                <div class="fld"><label>мин. лайков</label><input type="number" id="minLikes" value="0"></div>
+                <div class="fld"><label>мин. комментариев</label><input type="number" id="minComments" value="0"></div>
+              </div>
+              <p class="hint">Выключить фильтр полностью — поставить все три в 0.</p>
+              <div class="row-bot">
+                <button class="save" data-save="thresholds">Сохранить</button>
+              </div>
+            </div>
+
+            <!-- Output -->
+            <div class="set-cell">
+              <h3>Выдача</h3>
+              <p class="desc">Сколько постов показывать в каждой утренней сводке.</p>
+              <div class="fld-row">
+                <div class="fld"><label>рилсов</label><input type="number" id="reelsCount" value="5"></div>
+                <div class="fld"><label>каруселей</label><input type="number" id="carouselsCount" value="5"></div>
+                <div class="fld"><label>окно (дней)</label><input type="number" id="postedWithinDays" value="7"></div>
+              </div>
+              <p class="hint">Окно — за сколько последних дней парсер берёт посты. Меньше = свежее, но меньше выбор.</p>
+              <div class="row-bot">
+                <button class="save" data-save="output">Сохранить</button>
+              </div>
+            </div>
+
+            <!-- Locale -->
+            <div class="set-cell">
+              <h3>Язык и доставка</h3>
+              <p class="desc">Язык оценок и куда слать сообщения.</p>
+              <div class="fld">
+                <label>язык анализа</label>
+                <select>
+                  <option>русский</option>
+                  <option>english</option>
+                  <option>español</option>
+                </select>
+              </div>
+              <div class="fld">
+                <label>telegram chat id</label>
+                <input type="text" value="1280515130">
+                <span class="hint">Указан автоматически по /start. Можно поменять.</span>
+              </div>
+              <div class="fld">
+                <label>время доставки (МСК)</label>
+                <select>
+                  <option>06:00</option>
+                  <option>07:00</option>
+                  <option selected>08:00</option>
+                  <option>09:00</option>
+                  <option>10:00</option>
+                </select>
+              </div>
+              <div class="row-bot">
+                <button class="save">Сохранить</button>
+              </div>
+            </div>
+
+            <!-- Reset -->
+            <div class="set-cell">
+              <h3>Сброс <em>— осторожно</em></h3>
+              <p class="desc">Полный сброс кабинета — удалить нишу, источники, историю. Придётся пройти онбординг заново. История запусков останется в БД (не удаляется).</p>
+              <div class="row-bot">
+                <button class="danger">Сбросить всё</button>
+                <button class="reset">Только источники</button>
+              </div>
+            </div>
+
+          </div>
+
+          <div class="next-run">
+            <div class="ic">⌛</div>
+            <div class="txt">
+              <b>Следующий запуск — 22 мая в 08:00 МСК.</b>
+              <small>осталось 15ч 32м · cron: 0 5 * * *  UTC</small>
+            </div>
+            <div class="pulse"></div>
+          </div>
+
+        </section>
+
+      </div>
+
+    </div>
+  </main>
+</div>
+
+<script>
+(function(){
+  'use strict';
+
+  // ─── tiny helpers ────────────────────────────────────────────
+  const $  = (sel, root) => (root || document).querySelector(sel);
+  const $$ = (sel, root) => Array.from((root || document).querySelectorAll(sel));
+  const esc = (s) => String(s == null ? '' : s).replace(/[&<>"]/g, (c) => ({ '&':'&amp;', '<':'&lt;', '>':'&gt;', '"':'&quot;' }[c]));
+  const fmtCount = (n) => {
+    n = Number(n) || 0;
+    if (n >= 1_000_000) return (n / 1_000_000).toFixed(1).replace(/\.0$/, '') + 'M';
+    if (n >= 1_000)     return (n / 1_000).toFixed(1).replace(/\.0$/, '') + 'K';
+    return String(n);
+  };
+  const fmtAgo = (iso) => {
+    if (!iso) return '—';
+    const d = new Date(iso);
+    if (isNaN(d)) return '—';
+    const diff = Date.now() - d.getTime();
+    const h = Math.floor(diff / 3_600_000);
+    if (h < 1)   return Math.max(0, Math.floor(diff / 60_000)) + 'м назад';
+    if (h < 48)  return h + 'ч назад';
+    return Math.floor(h / 24) + 'д назад';
+  };
+  const MONTHS = ['ЯНВ','ФЕВ','МАР','АПР','МАЯ','ИЮН','ИЮЛ','АВГ','СЕН','ОКТ','НОЯ','ДЕК'];
+  const WD = ['ВС','ПН','ВТ','СР','ЧТ','ПТ','СБ'];
+  const fmtRunDate = (iso) => {
+    const d = new Date(iso || Date.now());
+    return `${d.getDate()} ${MONTHS[d.getMonth()]} · ${String(d.getHours()).padStart(2,'0')}:${String(d.getMinutes()).padStart(2,'0')}`;
+  };
+  const fmtHistDate = (iso) => {
+    const d = new Date(iso || Date.now());
+    return `${d.getDate()} ${MONTHS[d.getMonth()]} · ${WD[d.getDay()]}`;
+  };
+  const scoreClass = (s) => 's' + Math.min(9, Math.max(0, Math.round(Number(s) || 0)));
+
+  // Standalone/demo mode: when no auth token is present in URL and no backend is reachable,
+  // we serve the entire cabinet from localStorage so the website is a complete, browsable
+  // product on its own (matches the @parser_instaa_bot wizard → menu flow end-to-end).
+  let LOCAL = false;
+
+  const api = async (path, opts = {}) => {
+    const res = await fetch(path, {
+      credentials: 'include',
+      headers: opts.body ? { 'Content-Type': 'application/json' } : undefined,
+      ...opts,
+    });
+    if (res.status === 401) {
+      showAuthGate();
+      throw new Error('unauthorized');
+    }
+    return res;
+  };
+  const apiJson = async (path, opts) => {
+    if (LOCAL) return LocalAdapter.handle(path, opts);
+    const res = await api(path, opts);
+    return await res.json();
+  };
+
+  // ─── LocalAdapter: mirrors /cabinet/api/* shape, persists in localStorage ──
+  const LocalAdapter = (function(){
+    const K_CFG   = 'parser_cabinet_cfg';
+    const K_RUNS  = 'parser_cabinet_runs';
+    const K_CAND  = 'parser_cabinet_candidates';
+    const K_PEND  = 'parser_cabinet_first_run_pending';
+    const K_ME    = 'parser_cabinet_me';
+
+    const read = (k, d) => { try { const s = localStorage.getItem(k); return s ? JSON.parse(s) : d; } catch(_) { return d; } };
+    const write = (k, v) => { try { localStorage.setItem(k, JSON.stringify(v)); } catch(_) {} };
+
+    function defaultCfg(){
+      return {
+        enabled: true,
+        niche_description: 'эксперт по продажам B2B для собственников малого бизнеса',
+        competitors: ['@maxtreysi', '@directoreels', '@liza.tkachyk', '@kossolapov_igor'],
+        hashtags: ['смм', 'нейросети', 'gpt'],
+        reels_count: 5, carousels_count: 5, posted_within_days: 7,
+        min_plays: 0, min_likes: 0, min_comments: 0,
+        bot: 'parser',
+      };
+    }
+    function getCfg(){
+      let cfg = read(K_CFG, null);
+      if (!cfg) { cfg = defaultCfg(); write(K_CFG, cfg); }
+      return cfg;
+    }
+    function getMe(){
+      let me = read(K_ME, null);
+      if (!me) {
+        me = { id: 'demo-' + Math.random().toString(36).slice(2,10), name: 'demo · web' };
+        write(K_ME, me);
+      }
+      return me;
+    }
+
+    // ── Mock content generators ──
+    const REEL_HOOKS = [
+      ['Конфронтационный хук «никто не хочет это слышать» бьёт прямо в нашу ICP.', 9],
+      ['Чек-лист «3 признака что ты делаешь не так» — твой формат, аудитория сохраняет.', 8],
+      ['Личная история про провал → урок. Эмоция + цифры — твоя тема.', 8],
+      ['Сильный хук, но аудитория ближе к молодёжи — не совсем твоя.', 6],
+      ['Тренд «сделал X — получил Y» залетает, можно адаптировать под нишу.', 7],
+      ['Reaction-видео на инфоповод — короткий цикл, нужно делать сейчас.', 7],
+      ['POV-формат от первого лица — высокий retention, заходит у экспертов.', 8],
+      ['Spotlight на ошибку клиента + разбор. Бесплатный контент в воронку.', 9],
+    ];
+    const CAR_HOOKS = [
+      ['Статичные слайды с цифрами вместо advice — сохраняют в 4× чаще.', 9],
+      ['Формат «5 ошибок» в твоей нише до сих пор работает.', 7],
+      ['Карусель-фреймворк с одной мыслью на слайд — высокий save rate.', 8],
+      ['Слайды-цитаты — низкий CTR на тебе, но хороший shareability.', 6],
+      ['Сравнение «до/после» в твоей теме — узкая аудитория, но конвертит.', 7],
+      ['Чек-лист в 7-8 слайдов — оптимальная глубина под Instagram.', 8],
+      ['Слайды с провокацией на первом → объяснение дальше. Залётный формат.', 9],
+    ];
+    const SUMMARIES = [
+      'Доминирует короткий конфронтационный хук «никто не хочет…» в рилсах и статичная карусель с цифрами вместо текстового advice. Подумай о двух постах на эту неделю в этом духе.',
+      'Сегодня вижу рост POV-формата и «3 признака» чек-листов. Карусели с цифрами держат save rate, рилсы — короче 20 сек.',
+      'Аудитория голосует за личные истории и фреймворки. Хук с конкретной цифрой работает лучше абстрактных обещаний.',
+      'Залетают reaction-видео на свежие инфоповоды + карусели «5 ошибок». Окно актуальности — 36-48ч, успеть быстро.',
+    ];
+    const CANDIDATE_POOL = [
+      {handle: '@sales_with_anna',    reason: 'Пересекается по нише и попадается в твоих хэштегах #смм 3 раза за неделю.'},
+      {handle: '@b2b_with_oleg',      reason: 'Стабильно залетает в #продажиB2B, средняя оценка 8.2 за последние посты.'},
+      {handle: '@coachingforpro',     reason: 'Похожая ICP (собственники малого бизнеса), 2 рилса с >100k за неделю.'},
+      {handle: '@growthtalks',        reason: 'Формат «3 ошибки + решение» совпадает с твоим, регулярно мелькает рядом.'},
+      {handle: '@prodazhi.olga',      reason: 'В русскоязычном B2B-сегменте, средний engagement 6%, выше твоего сектора.'},
+      {handle: '@neyro.smm',          reason: 'Хэштег #нейросети — её аудитория пересекается с твоей на 40%.'},
+    ];
+
+    function pick(arr){ return arr[Math.floor(Math.random()*arr.length)]; }
+    function fakeNum(min, max){ return Math.floor(min + Math.random() * (max - min)); }
+    function hoursAgo(h){ return new Date(Date.now() - h*3600*1000).toISOString(); }
+
+    function makePost(cfg, isCarousel, idx, ranAtMs){
+      const sources = (cfg.competitors || []).concat((cfg.hashtags || []).map(h => '#' + h));
+      const author = pick(sources.length ? sources : ['@expert_one','@coach_marina','@guru_alex']);
+      const pool = isCarousel ? CAR_HOOKS : REEL_HOOKS;
+      const [reason, scoreBase] = pool[idx % pool.length];
+      const score = Math.max(1, Math.min(10, scoreBase + (Math.random() < 0.3 ? -1 : 0)));
+      const tHours = fakeNum(2, 48);
+      const slug = Math.random().toString(36).slice(2, 13);
+      const post = {
+        author,
+        url: 'https://www.instagram.com/p/' + slug + '/',
+        claude_score: score,
+        claude_reason: reason,
+        taken_at: new Date((ranAtMs || Date.now()) - tHours*3600*1000).toISOString(),
+        likes: fakeNum(1500, 12000),
+        comments: fakeNum(40, 600),
+      };
+      if (isCarousel) post.slides = fakeNum(5, 12);
+      else post.plays = fakeNum(40_000, 350_000);
+      return post;
+    }
+
+    function synthRun(cfg, when){
+      const ranAt = (when || new Date());
+      const ranAtMs = ranAt.getTime();
+      const reelN = Math.max(1, Math.min(5, cfg.reels_count || 5));
+      const carN  = Math.max(0, Math.min(5, cfg.carousels_count || 5));
+      const reels = Array.from({length: reelN}, (_, i) => makePost(cfg, false, i, ranAtMs))
+                         .sort((a,b) => b.claude_score - a.claude_score);
+      const carousels = Array.from({length: carN}, (_, i) => makePost(cfg, true, i, ranAtMs))
+                         .sort((a,b) => b.claude_score - a.claude_score);
+      const sourceN = (cfg.competitors || []).length + (cfg.hashtags || []).length || 4;
+      const topR = reels.length ? Math.max(...reels.map(p => p.claude_score)) : null;
+      const topC = carousels.length ? Math.max(...carousels.map(p => p.claude_score)) : null;
+      return {
+        id: 'run-' + ranAtMs,
+        deliverable_id: 'dlv-' + ranAtMs,
+        ran_at: ranAt.toISOString(),
+        posts_scanned: fakeNum(60, 180),
+        sources_count: sourceN,
+        last_error: null,
+        used_kind: null,
+        used_at: null,
+        reels_count: reels.length,
+        carousels_count: carousels.length,
+        reels_top: topR,
+        carousels_top: topC,
+        claude_summary: pick(SUMMARIES),
+        reels, carousels,
+      };
+    }
+
+    function seedHistory(cfg){
+      const out = [];
+      for (let i = 1; i <= 14; i++) {
+        const d = new Date(); d.setDate(d.getDate() - i); d.setHours(8, 5, 0, 0);
+        const run = synthRun(cfg, d);
+        if (i > 1 && Math.random() < 0.45) {
+          run.used_kind = Math.random() < 0.7 ? 'used' : 'not_useful';
+          if (run.used_kind === 'used') run.used_at = new Date(d.getTime() + 3600*1000).toISOString();
+        }
+        out.push(run);
+      }
+      return out;
+    }
+    function seedCandidates(){
+      // Pick 3 random candidates with ids
+      const shuffled = CANDIDATE_POOL.slice().sort(() => Math.random() - 0.5);
+      return shuffled.slice(0, 3).map((c, i) => ({
+        id: 'cnd-' + i + '-' + Math.random().toString(36).slice(2, 8),
+        handle: c.handle, reason: c.reason,
+        first_seen_in_hashtag: '#' + (getCfg().hashtags?.[0] || 'смм'),
+        post_count_in_window: fakeNum(3, 9),
+        avg_score: (6 + Math.random() * 3).toFixed(1),
+      }));
+    }
+
+    function getRuns(){
+      let runs = read(K_RUNS, null);
+      if (runs === null) { runs = seedHistory(getCfg()); write(K_RUNS, runs); }
+      if (localStorage.getItem(K_PEND) === '1') {
+        const r = synthRun(getCfg(), new Date());
+        runs.unshift(r);
+        write(K_RUNS, runs);
+        try { localStorage.removeItem(K_PEND); } catch(_) {}
+      }
+      return runs;
+    }
+    function getCandidates(){
+      let c = read(K_CAND, null);
+      if (c === null) { c = seedCandidates(); write(K_CAND, c); }
+      return c;
+    }
+
+    // ── Router: maps URL+method onto local data ──
+    async function handle(path, opts){
+      opts = opts || {};
+      const method = (opts.method || 'GET').toUpperCase();
+      const body = opts.body ? JSON.parse(opts.body) : null;
+      // Add a slight delay so the UI doesn't feel synchronous and shows loading states briefly.
+      await new Promise(r => setTimeout(r, 60));
+
+      // GET endpoints
+      if (path === '/cabinet/api/me')             return getMe();
+      if (path === '/cabinet/api/config')         return getCfg();
+      if (path.startsWith('/cabinet/api/runs?'))  return { runs: getRuns().slice(0, 28) };
+      if (path === '/cabinet/api/runs/latest')    return { run: getRuns()[0] || null };
+      if (path === '/cabinet/api/candidates')     return { candidates: getCandidates() };
+
+      // Mutations
+      if (path === '/cabinet/api/config' && method === 'PUT') {
+        const cfg = Object.assign(getCfg(), body || {});
+        write(K_CFG, cfg);
+        return cfg;
+      }
+      if (path === '/cabinet/api/pause' && method === 'POST') {
+        const cfg = getCfg(); cfg.enabled = false; write(K_CFG, cfg); return { ok: true, enabled: false };
+      }
+      if (path === '/cabinet/api/resume' && method === 'POST') {
+        const cfg = getCfg(); cfg.enabled = true; write(K_CFG, cfg); return { ok: true, enabled: true };
+      }
+      if (path === '/cabinet/api/run-now' && method === 'POST') {
+        const runs = getRuns();
+        const r = synthRun(getCfg(), new Date());
+        runs.unshift(r);
+        write(K_RUNS, runs.slice(0, 60));
+        return { ok: true, run_id: r.id };
+      }
+      if (path === '/cabinet/api/feedback' && method === 'POST') {
+        const runs = getRuns();
+        const r = runs.find(x => x.deliverable_id === body.deliverable_id);
+        if (r) {
+          r.used_kind = body.kind;
+          if (body.kind === 'used') r.used_at = new Date().toISOString();
+          write(K_RUNS, runs);
+        }
+        return { ok: true };
+      }
+      const candMatch = path.match(/^\/cabinet\/api\/candidates\/([^/]+)\/(accept|reject)$/);
+      if (candMatch && method === 'POST') {
+        const [, id, action] = candMatch;
+        let cands = getCandidates();
+        const target = cands.find(c => c.id === id);
+        cands = cands.filter(c => c.id !== id);
+        write(K_CAND, cands);
+        if (action === 'accept' && target) {
+          const cfg = getCfg();
+          if (!(cfg.competitors || []).includes(target.handle)) {
+            cfg.competitors = (cfg.competitors || []).concat([target.handle]);
+            write(K_CFG, cfg);
+          }
+        }
+        return { ok: true };
+      }
+      if (path === '/cabinet/auth/logout' && method === 'POST') return { ok: true };
+
+      console.warn('LocalAdapter: unhandled', method, path);
+      return {};
+    }
+
+    return { handle, _internal: { synthRun, seedHistory, seedCandidates, getCfg } };
+  })();
+
+  // ─── Auth gate ───────────────────────────────────────────────
+  function showAuthGate(msg) {
+    let gate = $('#authGate');
+    if (gate) return;
+    gate = document.createElement('div');
+    gate.id = 'authGate';
+    gate.style.cssText = 'position:fixed;inset:0;z-index:999;background:rgba(10,10,15,.96);display:flex;align-items:center;justify-content:center;padding:24px';
+    gate.innerHTML = `
+      <div style="max-width:420px;text-align:center">
+        <div style="font-family:Georgia,serif;font-size:28px;margin-bottom:16px;color:#f5f0e8">Кабинет Залётного</div>
+        <p style="color:#a8a3b0;font-size:14px;line-height:1.55;margin-bottom:24px">
+          ${esc(msg || 'Вход только через бот. Открой Telegram, напиши /menu боту и нажми «🖥 Открыть кабинет».')}
+        </p>
+        <a href="https://t.me/parser_instaa_bot?start=cabinet" target="_blank"
+           style="display:inline-flex;align-items:center;gap:8px;padding:12px 22px;background:#5E5CE6;color:#fff;font-family:'SF Mono',monospace;font-size:12px;font-weight:700;letter-spacing:.14em;text-transform:uppercase;border-radius:2px">
+          → Открыть бот в Telegram
+        </a>
+      </div>`;
+    document.body.appendChild(gate);
+  }
+
+  // ─── State ───────────────────────────────────────────────────
+  let me = null;
+  let cfg = null;
+  let runs = [];
+  let latestRun = null;
+  let cands = [];
+
+  // ─── Sidebar/header rendering ────────────────────────────────
+  function renderHeader() {
+    if (!me) return;
+    const initial = (me.name || me.id || '?').slice(0, 1).toUpperCase();
+    $('#sbUserAv').textContent  = initial;
+    $('#sbUserName').textContent = me.name || ('user · ' + (me.id || '').slice(0, 8));
+    const enabled = cfg ? (cfg.enabled !== false) : true;
+    $('#sbUserStatus').innerHTML = `<span class="dot"></span> ${enabled ? 'Активен' : 'На паузе'}`;
+    $('#sbBadgeHistory').textContent   = runs.length || '0';
+    $('#sbBadgeCandidates').textContent = cands.length || '0';
+    $('#sbBadgeToday').textContent     = latestRun ? ((latestRun.reels?.length || 0) + (latestRun.carousels?.length || 0)) : '·';
+  }
+
+  // ─── Today: status strip + run posts + side stack ────────────
+  function nextRunCountdown() {
+    // cron: 0 5 * * * UTC = 08:00 MSK = 05:00 UTC. Next from now.
+    const now = new Date();
+    const next = new Date(now);
+    next.setUTCHours(5, 0, 0, 0);
+    if (next <= now) next.setUTCDate(next.getUTCDate() + 1);
+    const ms = next - now;
+    const h = Math.floor(ms / 3_600_000);
+    const m = Math.floor((ms % 3_600_000) / 60_000);
+    return { date: next, label: `${h}ч ${m}м` };
+  }
+
+  function renderToday() {
+    const strip = $('#stripToday');
+    const sourcesText = `${cfg?.competitors?.length || 0} акк + ${cfg?.hashtags?.length || 0} тег`;
+
+    if (!latestRun) {
+      strip.innerHTML = `
+        <div class="strip-cell"><div class="k">Запусков</div><div class="v">0</div><div class="d">ещё не было</div></div>
+        <div class="strip-cell"><div class="k">Источники</div><div class="v">${esc(sourcesText)}</div><div class="d">${cfg?.enabled === false ? 'на паузе' : 'готов к работе'}</div></div>
+        <div class="strip-cell"><div class="k">Кандидаты</div><div class="v">${cands.length}</div><div class="d">новых от Claude</div></div>
+        <div class="strip-cell"><div class="k">Cron</div><div class="v small">08:00 МСК</div><div class="d">завтра</div></div>
+      `;
+      $('#todayRunBody').innerHTML = `
+        <div class="empty" style="margin:24px">
+          <h3>Ещё ни одной выдачи</h3>
+          <p>Запусти первый раз — кнопка «Запустить сейчас» вверху. Парсер скрейпит твои источники, оценивает посты через Claude и присылает топ-10 сюда.</p>
+        </div>`;
+      $('#todayRunHeadDate').textContent = '—';
+      $('#todaySideStack').innerHTML = '';
+      return;
+    }
+
+    const reels     = latestRun.reels || [];
+    const carousels = latestRun.carousels || [];
+    const topScore  = Math.max(0, ...reels.concat(carousels).map((p) => Number(p.claude_score) || 0));
+
+    strip.innerHTML = `
+      <div class="strip-cell"><div class="k">Просканировано</div><div class="v">${esc(latestRun.posts_scanned || 0)} <span class="u">постов</span></div><div class="d">${esc(fmtAgo(latestRun.ran_at))}</div></div>
+      <div class="strip-cell"><div class="k">Топ результат</div><div class="v"><span class="acc-lime">${topScore || '—'}</span>/10</div><div class="d">по Claude-оценке</div></div>
+      <div class="strip-cell"><div class="k">Источники</div><div class="v">${esc(sourcesText)}</div><div class="d">${latestRun.last_error ? 'были ошибки' : 'без ошибок'}</div></div>
+      <div class="strip-cell"><div class="k">След. выдача</div><div class="v small">завтра<br><span class="dim">08:00 МСК</span></div><div class="delta">in ${esc(nextRunCountdown().label)}</div></div>
+    `;
+
+    $('#todayRunHeadDate').textContent = fmtRunDate(latestRun.ran_at);
+
+    const renderBlock = (title, ic, posts, isCarousel) => {
+      if (!posts.length) return '';
+      const items = posts.map((p, i) => {
+        const cls = scoreClass(p.claude_score);
+        const score = p.claude_score != null ? p.claude_score : '—';
+        const author = p.author || p.username || p.ownerUsername || '—';
+        const url = p.url || '#';
+        const metrics = isCarousel
+          ? [p.likes != null  ? `${fmtCount(p.likes)}❤`    : null,
+             p.comments != null ? `${fmtCount(p.comments)}💬` : null,
+             p.taken_at ? fmtAgo(p.taken_at) : null,
+             p.slides ? `${p.slides} слайдов` : null].filter(Boolean)
+          : [p.plays != null  ? `${fmtCount(p.plays)} просмотров` : null,
+             p.likes != null  ? `${fmtCount(p.likes)}❤`    : null,
+             p.comments != null ? `${fmtCount(p.comments)}💬` : null,
+             p.taken_at ? fmtAgo(p.taken_at) : null].filter(Boolean);
+        return `
+          <div class="post">
+            <div class="n">${i + 1}</div>
+            <div class="top-row">
+              <span class="score ${cls}">${esc(score)}/10</span>
+              <span class="author">${esc(author.startsWith('@') ? author : '@' + author)} <small>· instagram</small></span>
+            </div>
+            <div class="acts">
+              <a class="open" href="${esc(url)}" target="_blank" rel="noopener">смотреть ↗</a>
+            </div>
+            ${metrics.length ? `<div class="metrics">${metrics.map((m) => `<span>${esc(m)}</span>`).join('')}</div>` : ''}
+            ${p.claude_reason ? `<div class="why">${esc(p.claude_reason)}</div>` : ''}
+          </div>`;
+      }).join('');
+      return `
+        <div class="run-block-title">
+          <span class="ic">${ic}</span>
+          <span>${title} — топ ${posts.length}</span>
+          <span class="count">${posts.length}</span>
+        </div>
+        ${items}`;
+    };
+
+    const usedKind = latestRun.used_kind;
+    const feedbackHtml = usedKind
+      ? `<div class="feedback"><span class="lbl" style="color:var(--accent-lime)">${usedKind === 'used' ? '✓ Помечена как использованная' : '✕ Отмечена как непригодная'}</span></div>`
+      : `<div class="feedback" data-deliv-id="${esc(latestRun.deliverable_id || '')}">
+          <span class="lbl">Сегодняшняя выдача</span>
+          <button class="used" data-fb="used">✓ Использовал</button>
+          <button class="nope" data-fb="not_useful">✕ Не пригодилось</button>
+        </div>`;
+
+    $('#todayRunBody').innerHTML = renderBlock('Рилсы', '🎬', reels, false)
+      + renderBlock('Карусели', '🖼', carousels, true)
+      + feedbackHtml;
+
+    // ── Side stack ──
+    const sideCards = [];
+    if (latestRun.claude_summary) {
+      sideCards.push(`
+        <div class="side-card">
+          <div class="ttl"><span class="ic">✍</span> Резюме от Ани</div>
+          <div class="summary-body">${esc(latestRun.claude_summary)}</div>
+        </div>`);
+    }
+    sideCards.push(`
+      <div class="side-card">
+        <div class="ttl"><span class="ic">◇</span> Метаданные запуска</div>
+        <dl class="kv">
+          <dt>ID</dt><dd class="mono">${esc(String(latestRun.id || '').slice(0, 8))}</dd>
+          <dt>дата</dt><dd>${esc(fmtRunDate(latestRun.ran_at))}</dd>
+          <dt>cron</dt><dd>0 5 * * * <small>UTC · daily</small></dd>
+          <dt>скрейп</dt><dd>Apify (instagram-scraper)</dd>
+          <dt>оценка</dt><dd>Claude Sonnet 4.6</dd>
+        </dl>
+      </div>`);
+    const accs = (cfg?.competitors || []).map((c) => `<span class="tag">${esc(c)}</span>`).join('');
+    const hsh  = (cfg?.hashtags || []).map((h) => `<span class="tag acc">#${esc(h)}</span>`).join('');
+    sideCards.push(`
+      <div class="side-card">
+        <div class="ttl"><span class="ic">⚓</span> Источники в этом запуске</div>
+        ${accs ? `<div class="tag-row">${accs}</div>` : ''}
+        ${hsh  ? `<div class="tag-row">${hsh}</div>` : ''}
+      </div>`);
+    $('#todaySideStack').innerHTML = sideCards.join('');
+  }
+
+  // ─── History ─────────────────────────────────────────────────
+  function renderHistory() {
+    const strip = $('#stripHistory');
+    const total = runs.length;
+    const used  = runs.filter((r) => r.used_at).length;
+    const allScores = runs.flatMap((r) => [r.reels_top, r.carousels_top]).filter((s) => s != null);
+    const avgTop = allScores.length ? (allScores.reduce((a, b) => a + Number(b), 0) / allScores.length).toFixed(1) : '—';
+    const totalScanned = runs.reduce((s, r) => s + (r.posts_scanned || 0), 0);
+    const oldest = runs[runs.length - 1];
+    strip.innerHTML = `
+      <div class="strip-cell"><div class="k">всего выдач</div><div class="v">${total}</div><div class="d">${oldest ? 'с ' + fmtHistDate(oldest.ran_at).split(' · ')[0] : '—'}</div></div>
+      <div class="strip-cell"><div class="k">средн. топ</div><div class="v"><span class="acc-lime">${avgTop}</span>/10</div><div class="d">по лучшим в каждой</div></div>
+      <div class="strip-cell"><div class="k">использовано</div><div class="v">${used} <span class="u">из ${total}</span></div><div class="d">${total ? 'хит-rate ' + Math.round(used / total * 100) + '%' : '—'}</div></div>
+      <div class="strip-cell"><div class="k">скрейпнуто всего</div><div class="v">${fmtCount(totalScanned)} <span class="u">постов</span></div><div class="d">в среднем ${total ? Math.round(totalScanned / total) : 0} / день</div></div>
+    `;
+    const list = $('#histList');
+    if (!total) {
+      list.innerHTML = '<p class="dim" style="padding:20px">Истории пока нет. Запусти первый раз.</p>';
+      return;
+    }
+    list.innerHTML = runs.map((r) => {
+      const top = Math.max(Number(r.reels_top) || 0, Number(r.carousels_top) || 0);
+      const used = r.used_at ? '· использовано ✅' : '';
+      return `
+        <div class="hist-row" data-run-id="${esc(r.id)}">
+          <div class="d">${esc(fmtHistDate(r.ran_at))}</div>
+          <div class="ttl">Запуск ${esc(String(r.id).slice(0,8))}<small>${esc(r.posts_scanned || 0)} постов ${used}</small></div>
+          <div class="scored">${esc(r.posts_scanned || 0)} → ${esc((r.reels_count || 0) + (r.carousels_count || 0))} <b>· top ${top || '—'}</b></div>
+          <div class="top"><em>${r.last_error ? 'ошибка' : '—'}</em></div>
+          <div class="chev">›</div>
+        </div>`;
+    }).join('');
+  }
+
+  // ─── Sources ─────────────────────────────────────────────────
+  function renderSources() {
+    const accs = cfg?.competitors || [];
+    const hsh  = cfg?.hashtags || [];
+    $('#accBadge').textContent  = `${accs.length} / 25 лимит`;
+    $('#hashBadge').textContent = `${hsh.length} / 10 лимит`;
+    $('#accList').innerHTML = accs.length
+      ? accs.map((c) => `
+          <div class="ent" data-h="${esc(c)}" data-type="competitor">
+            <span class="h">${esc(c)}</span>
+            <span class="meta">в работе</span>
+            <button class="rm">убрать</button>
+          </div>`).join('')
+      : '<p class="dim" style="padding:8px 0">Пока пусто. Добавь свой первый аккаунт ниже.</p>';
+    $('#hashList').innerHTML = hsh.length
+      ? hsh.map((h) => `
+          <div class="ent" data-h="${esc(h)}" data-type="hashtag">
+            <span class="h">#${esc(h)}</span>
+            <span class="meta">в работе</span>
+            <button class="rm">убрать</button>
+          </div>`).join('')
+      : '<p class="dim" style="padding:8px 0">Тегов пока нет. Они расширяют выборку.</p>';
+  }
+
+  // ─── Candidates ──────────────────────────────────────────────
+  function renderCandidates() {
+    const list = $('#candList');
+    if (!cands.length) {
+      list.innerHTML = '<p class="dim" style="padding:20px">Пока нет новых кандидатов. Они появятся после нескольких запусков.</p>';
+      return;
+    }
+    list.innerHTML = cands.map((c) => `
+      <div class="cand-row" data-id="${esc(c.id)}">
+        <div class="left">
+          <div class="h">${esc(c.handle)}
+            ${c.found_via ? `<span class="why">— обнаружен через <span class="mono acc">${esc(c.found_via)}</span></span>` : ''}
+          </div>
+          <div class="meta">${c.posts_seen || 0} раз в выдачах · best score ${c.best_score ?? '—'}</div>
+        </div>
+        <div class="acts">
+          <button class="add" data-act="accept">✓ добавить</button>
+          <button class="skip" data-act="reject">✕</button>
+        </div>
+      </div>`).join('');
+  }
+
+  // ─── Settings ────────────────────────────────────────────────
+  function renderSettings() {
+    if (!cfg) return;
+    const toggle = $('#pauseToggle');
+    toggle.classList.toggle('on', cfg.enabled !== false);
+    const niche = $('#niche');
+    niche.value = cfg.niche_description || '';
+    const hint = niche.nextElementSibling;
+    if (hint && hint.classList.contains('hint')) {
+      hint.textContent = `8–600 символов · сейчас ${niche.value.length}`;
+    }
+    $('#minPlays').value         = cfg.min_plays ?? 0;
+    $('#minLikes').value         = cfg.min_likes ?? 0;
+    $('#minComments').value      = cfg.min_comments ?? 0;
+    $('#reelsCount').value       = cfg.reels_count ?? 5;
+    $('#carouselsCount').value   = cfg.carousels_count ?? 5;
+    $('#postedWithinDays').value = cfg.posted_within_days ?? 7;
+  }
+
+  // ─── Data loaders ────────────────────────────────────────────
+  async function loadAll() {
+    const [meRes, cfgRes, runsRes, latestRes, candsRes] = await Promise.all([
+      apiJson('/cabinet/api/me'),
+      apiJson('/cabinet/api/config'),
+      apiJson('/cabinet/api/runs?limit=28'),
+      apiJson('/cabinet/api/runs/latest'),
+      apiJson('/cabinet/api/candidates'),
+    ]);
+    me = meRes;
+    cfg = cfgRes;
+    runs = runsRes.runs || [];
+    latestRun = latestRes.run || null;
+    cands = candsRes.candidates || [];
+    renderHeader();
+    renderToday();
+    renderHistory();
+    renderSources();
+    renderCandidates();
+    renderSettings();
+  }
+
+  // ─── Demo banner (shown in local mode) ───────────────────────
+  function mountDemoBanner(){
+    if (document.getElementById('demoBanner')) return;
+    const el = document.createElement('div');
+    el.id = 'demoBanner';
+    el.style.cssText = 'position:sticky;top:0;z-index:60;background:rgba(94,92,230,.08);border-bottom:1px solid var(--accent-dim);color:var(--text-dim);font-size:12px;font-family:var(--mono);letter-spacing:.04em;padding:8px 14px;display:flex;align-items:center;gap:14px;flex-wrap:wrap';
+    el.innerHTML = `
+      <span style="display:inline-flex;align-items:center;gap:8px">
+        <span style="width:7px;height:7px;border-radius:50%;background:var(--accent-lime);display:inline-block;box-shadow:0 0 0 4px rgba(168,224,96,.12)"></span>
+        <b style="color:var(--text);font-weight:700">demo mode</b>
+        <span class="dim">— данные хранятся в этом браузере. Подключи Telegram, чтобы парсер реально кронил каждое утро.</span>
+      </span>
+      <span style="margin-left:auto;display:flex;gap:8px">
+        <a href="https://t.me/parser_instaa_bot?start=cabinet" target="_blank" rel="noopener"
+           style="padding:4px 10px;border:1px solid var(--accent-dim);color:var(--accent);text-transform:uppercase;font-weight:700;font-size:10px;letter-spacing:.14em">→ подключить telegram</a>
+        <button id="demoReset"
+           style="padding:4px 10px;border:1px solid var(--border-2);color:var(--text-mute);text-transform:uppercase;font-weight:700;font-size:10px;letter-spacing:.14em;background:none;cursor:pointer">сбросить демо</button>
+      </span>`;
+    document.body.prepend(el);
+    document.getElementById('demoReset')?.addEventListener('click', () => {
+      ['parser_cabinet_cfg','parser_cabinet_runs','parser_cabinet_candidates','parser_cabinet_first_run_pending','parser_cabinet_me']
+        .forEach(k => { try { localStorage.removeItem(k); } catch(_){} });
+      location.reload();
+    });
+  }
+
+  // ─── Auth: exchange link token, then load ────────────────────
+  async function bootstrap() {
+    const url = new URL(location.href);
+    const t = url.searchParams.get('t');
+    const forceDemo = url.searchParams.has('demo');
+
+    // Real-auth path only when an exchange token is present and demo isn't forced.
+    if (t && !forceDemo) {
+      try {
+        const res = await fetch('/cabinet/auth/exchange', {
+          method: 'POST',
+          credentials: 'include',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({ t }),
+        });
+        url.searchParams.delete('t');
+        history.replaceState(null, '', url.pathname + (url.searchParams.toString() ? '?' + url.searchParams : '') + url.hash);
+        if (res.ok) {
+          try { await loadAll(); return; } catch (e) {
+            if (String(e?.message) !== 'unauthorized') console.error(e);
+          }
+        }
+      } catch (_) { /* fall through to demo */ }
+    }
+
+    // Default standalone path: drive the cabinet entirely from localStorage.
+    LOCAL = true;
+    mountDemoBanner();
+    try {
+      await loadAll();
+    } catch (e) {
+      console.error(e);
+    }
+  }
+
+  // ─── Tabs ────────────────────────────────────────────────────
+  const links = document.querySelectorAll('.sb-link[data-tab]');
+  const pages = document.querySelectorAll('.page');
+  const titleEl = $('#pageTitle');
+  const titles = {
+    today:      'Сегодня <em>· последняя выдача</em>',
+    history:    'История <em>· все запуски</em>',
+    sources:    'Источники <em>· что парсим</em>',
+    candidates: 'Кандидаты <em>· новые конкуренты</em>',
+    settings:   'Настройки <em>· конфиг парсера</em>',
+  };
+  window.switchTab = function(tab){
+    links.forEach(l => l.classList.toggle('active', l.dataset.tab === tab));
+    pages.forEach(p => p.classList.toggle('active', p.id === 'page-' + tab));
+    if (titles[tab]) titleEl.innerHTML = titles[tab];
+    if (history.replaceState) history.replaceState(null, '', '#' + tab);
+    window.scrollTo({ top: 0, behavior: 'instant' });
+  };
+  links.forEach(l => {
+    if (!l.dataset.tab) return;
+    l.addEventListener('click', e => { e.preventDefault(); switchTab(l.dataset.tab); });
+  });
+  const initial = (location.hash || '#today').slice(1);
+  if (titles[initial]) switchTab(initial);
+
+  // ─── Pause toggle ────────────────────────────────────────────
+  $('#pauseToggle')?.addEventListener('click', async () => {
+    const wasOn = $('#pauseToggle').classList.contains('on');
+    const next = !wasOn;
+    $('#pauseToggle').classList.toggle('on', next);
+    try {
+      await apiJson(next ? '/cabinet/api/resume' : '/cabinet/api/pause', { method: 'POST' });
+      if (cfg) cfg.enabled = next;
+      renderHeader();
+    } catch (_) { $('#pauseToggle').classList.toggle('on', wasOn); }
+  });
+
+  // ─── Run now button ──────────────────────────────────────────
+  $('#runNowBtn')?.addEventListener('click', async () => {
+    const btn = $('#runNowBtn');
+    const orig = btn.innerHTML;
+    btn.disabled = true;
+    btn.innerHTML = 'Ставлю в очередь… <span class="arr">⌛</span>';
+    try {
+      const r = await apiJson('/cabinet/api/run-now', { method: 'POST' });
+      btn.innerHTML = r.ok ? 'В очереди ✓ <span class="arr">⌛</span>' : 'Не удалось ✕';
+      setTimeout(() => { btn.disabled = false; btn.innerHTML = orig; }, 3000);
+    } catch (e) {
+      btn.innerHTML = 'Ошибка ✕';
+      setTimeout(() => { btn.disabled = false; btn.innerHTML = orig; }, 2400);
+    }
+  });
+
+  // ─── Logout ──────────────────────────────────────────────────
+  $('#logoutLink')?.addEventListener('click', async (e) => {
+    e.preventDefault();
+    try { await apiJson('/cabinet/auth/logout', { method: 'POST' }); } catch (_) {}
+    if (LOCAL) {
+      ['parser_cabinet_cfg','parser_cabinet_runs','parser_cabinet_candidates','parser_cabinet_first_run_pending','parser_cabinet_me']
+        .forEach(k => { try { localStorage.removeItem(k); } catch(_){} });
+      location.href = '../index.html';
+      return;
+    }
+    showAuthGate('Вышли. Зайди через бота заново.');
+  });
+
+  // ─── Niche char counter ──────────────────────────────────────
+  $('#niche')?.addEventListener('input', () => {
+    const n = $('#niche');
+    const hint = n.nextElementSibling;
+    if (hint && hint.classList.contains('hint')) {
+      hint.textContent = `8–600 символов · сейчас ${n.value.length}`;
+    }
+  });
+
+  // ─── Save handlers ───────────────────────────────────────────
+  async function patchConfig(body, btn) {
+    try {
+      const res = await apiJson('/cabinet/api/config', { method: 'PUT', body: JSON.stringify(body) });
+      if (cfg) Object.assign(cfg, body);
+      flashSaved(btn);
+      renderHeader();
+    } catch (_) {}
+  }
+  function flashSaved(btn) {
+    if (!btn) return;
+    const cell = btn.closest('.row-bot');
+    if (!cell) return;
+    let tag = cell.querySelector('.saved-tag');
+    if (!tag) {
+      tag = document.createElement('span');
+      tag.className = 'saved-tag';
+      tag.textContent = '✓ сохранено';
+      cell.appendChild(tag);
+    } else {
+      tag.classList.remove('hidden');
+    }
+    setTimeout(() => { tag?.classList.add('hidden'); }, 1600);
+  }
+  document.addEventListener('click', (e) => {
+    const saveBtn = e.target.closest('.set-cell .save');
+    if (saveBtn) {
+      const kind = saveBtn.dataset.save;
+      if (kind === 'niche') {
+        return patchConfig({ niche_description: $('#niche').value.trim() }, saveBtn);
+      }
+      if (kind === 'thresholds') {
+        return patchConfig({
+          min_plays:    parseInt($('#minPlays').value || '0', 10),
+          min_likes:    parseInt($('#minLikes').value || '0', 10),
+          min_comments: parseInt($('#minComments').value || '0', 10),
+        }, saveBtn);
+      }
+      if (kind === 'output') {
+        return patchConfig({
+          reels_count:        parseInt($('#reelsCount').value || '5', 10),
+          carousels_count:    parseInt($('#carouselsCount').value || '5', 10),
+          posted_within_days: parseInt($('#postedWithinDays').value || '7', 10),
+        }, saveBtn);
+      }
+    }
+
+    // Remove source row
+    const rmBtn = e.target.closest('.ent .rm');
+    if (rmBtn) {
+      const ent = rmBtn.closest('.ent');
+      const handle = ent.dataset.h;
+      const type = ent.dataset.type;
+      ent.style.opacity = 0.3;
+      const newAccs = (cfg.competitors || []).filter((c) => c !== handle);
+      const newHsh  = (cfg.hashtags    || []).filter((h) => h !== handle);
+      const body = type === 'competitor' ? { competitors: newAccs } : { hashtags: newHsh };
+      patchConfig(body, null).then(() => {
+        cfg.competitors = newAccs;
+        cfg.hashtags    = newHsh;
+        renderSources();
+      });
+      return;
+    }
+
+    // Feedback (used / not_useful)
+    const fbBtn = e.target.closest('.feedback button[data-fb]');
+    if (fbBtn) {
+      const wrap = fbBtn.parentElement;
+      const id = wrap.dataset.delivId;
+      const kind = fbBtn.dataset.fb;
+      if (!id) return;
+      apiJson('/cabinet/api/feedback', {
+        method: 'POST',
+        body: JSON.stringify({ deliverable_id: id, kind }),
+      }).then(() => {
+        wrap.innerHTML = `<span class="lbl" style="color:var(--accent-lime)">${kind === 'used' ? '✓ Записала — учту в следующей выдаче' : '👍 Учла как непригодное'}</span>`;
+      });
+      return;
+    }
+
+    // Candidates accept/reject
+    const candBtn = e.target.closest('.cand-row .acts button[data-act]');
+    if (candBtn) {
+      const row = candBtn.closest('.cand-row');
+      const id = row.dataset.id;
+      const action = candBtn.dataset.act;
+      row.style.opacity = 0.3;
+      row.style.pointerEvents = 'none';
+      apiJson(`/cabinet/api/candidates/${encodeURIComponent(id)}/${action}`, { method: 'POST' })
+        .then(() => {
+          cands = cands.filter((c) => c.id !== id);
+          renderHeader();
+        });
+      return;
+    }
+  });
+
+  // ─── Add accounts / hashtags ─────────────────────────────────
+  $('#accAddBtn')?.addEventListener('click', () => {
+    const v = ($('#accInput').value || '').trim();
+    if (!v) return;
+    const arr = v.split(/[\s,]+/).filter(Boolean);
+    const existing = cfg?.competitors || [];
+    const merged = Array.from(new Set([...existing, ...arr.map((s) => '@' + s.replace(/^@/, ''))]));
+    patchConfig({ competitors: merged }, null).then(() => {
+      cfg.competitors = merged;
+      $('#accInput').value = '';
+      renderSources();
+      renderHeader();
+    });
+  });
+  $('#hashAddBtn')?.addEventListener('click', () => {
+    const v = ($('#hashInput').value || '').trim();
+    if (!v) return;
+    const arr = v.split(/[\s,]+/).filter(Boolean).map((s) => s.replace(/^#/, '').toLowerCase());
+    const existing = cfg?.hashtags || [];
+    const merged = Array.from(new Set([...existing, ...arr]));
+    patchConfig({ hashtags: merged }, null).then(() => {
+      cfg.hashtags = merged;
+      $('#hashInput').value = '';
+      renderSources();
+      renderHeader();
+    });
+  });
+
+  bootstrap();
+})();
+</script>
+
+</body>
+</html>

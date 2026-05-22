@@ -1,0 +1,61 @@
+# AI Sales · Caddyfile
+# Serves static portal/dashboard from /srv (mounted from ../) and
+# reverse-proxies /api/* to the FastAPI container.
+#
+# DOMAIN env (set in code/.env):
+#   · real hostname (e.g. aisales.example.com) → Caddy auto-issues
+#     Let's Encrypt certs and listens on :80 + :443
+#   · ":80"                                    → HTTP-only, no cert
+#     (good for local docker compose up)
+
+{$DOMAIN::80} {
+	encode gzip zstd
+
+	# ── API reverse-proxy ──
+	# Strips the /api prefix before forwarding, so FastAPI routes that
+	# don't have an /api prefix (e.g. /clients, /agents) still match.
+	# If your FastAPI routers already include /api, change to:
+	#   handle /api/* { reverse_proxy api:8000 }
+	handle_path /api/* {
+		reverse_proxy api:8000
+	}
+
+	# Webhooks land directly on FastAPI (Instagram, Telegram callers
+	# don't want a path-rewrite). Adjust paths as you wire endpoints.
+	handle /webhooks/* {
+		reverse_proxy api:8000
+	}
+
+	# ── Short URL aliases ──
+	redir /dashboard /06-dashboard-prototype/pulse.html 301
+	redir /pulse /06-dashboard-prototype/pulse.html 301
+	redir /pipeline /06-dashboard-prototype/pipeline.html 301
+	redir /conv /06-dashboard-prototype/conversation.html 301
+	redir /conversation /06-dashboard-prototype/conversation.html 301
+	redir /project /06-dashboard-prototype/project.html 301
+	redir /agents /06-dashboard-prototype/agents.html 301
+	redir /portal /01-portal/ai-sales-portal.html 301
+	redir /roadmap /05-docs/00-roadmap.html 301
+
+	# ── Security + cache headers ──
+	header {
+		X-Frame-Options "DENY"
+		X-Content-Type-Options "nosniff"
+		Referrer-Policy "strict-origin-when-cross-origin"
+		Permissions-Policy "geolocation=(), microphone=(), camera=(), payment=()"
+		Strict-Transport-Security "max-age=63072000; includeSubDomains; preload"
+		-Server
+	}
+
+	@html path *.html
+	header @html Cache-Control "public, max-age=0, must-revalidate"
+
+	@assets path *.css *.js *.png *.jpg *.jpeg *.svg *.woff2 *.ico
+	header @assets Cache-Control "public, max-age=86400"
+
+	# ── Static files ──
+	root * /srv
+	file_server {
+		hide .env* .git* Dockerfile docker-compose.yml *.md TODO* AUTONOMOUS_LOG* MIGRATION*
+	}
+}

@@ -1,0 +1,1129 @@
+<!DOCTYPE html>
+<html lang="ru">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<meta name="theme-color" content="#F5F5F7">
+<title>Roadmap · AI Creative Hub</title>
+<meta name="description" content="Полная дорожная карта проекта AI Creative Hub. Все этапы, задачи, статусы.">
+<style>
+*,*::before,*::after{margin:0;padding:0;box-sizing:border-box}
+html{scroll-behavior:smooth;scroll-padding-top:60px}
+html,body{background:#F5F5F7;color:#1D1D1F;min-height:100vh;-webkit-font-smoothing:antialiased;text-rendering:optimizeLegibility}
+body{font-family:-apple-system,BlinkMacSystemFont,'SF Pro Text','Helvetica Neue',Arial,sans-serif;font-size:16px;line-height:1.5}
+a{color:inherit;text-decoration:none}
+::selection{background:rgba(124,92,255,.2)}
+
+:root{
+  --bg:#F5F5F7; --surface:#FFFFFF; --surface-2:#F2F2F2;
+  --sep:rgba(0,0,0,.08); --sep-2:rgba(0,0,0,.12);
+  --t1:#1D1D1F; --t2:#6E6E73; --t3:#AEAEB2;
+  --accent:#7C5CFF; --accent-hover:#8A6EFF; --accent-soft:rgba(124,92,255,.08);
+  --green:#1D8348; --orange:#C46221; --red:#C53030;
+  --font:-apple-system,BlinkMacSystemFont,'SF Pro Display','SF Pro Text','Helvetica Neue',Arial,sans-serif;
+  --mono:'SF Mono',ui-monospace,'Cascadia Mono',Menlo,monospace;
+}
+
+/* Topbar */
+.topbar{
+  position:sticky;top:0;z-index:100;
+  display:flex;align-items:center;justify-content:space-between;
+  padding:0 24px;height:52px;
+  background:rgba(245,245,247,.85);
+  backdrop-filter:blur(20px) saturate(180%);
+  -webkit-backdrop-filter:blur(20px) saturate(180%);
+  border-bottom:1px solid var(--sep);
+}
+.logo{
+  font-family:var(--font);font-size:16px;font-weight:600;
+  letter-spacing:-.2px;color:var(--t1);
+  display:flex;align-items:center;gap:8px;
+}
+.logo-dot{width:9px;height:9px;border-radius:50%;background:linear-gradient(135deg,#7C5CFF,#E0457B)}
+.topnav{display:flex;align-items:center;gap:24px}
+.topnav a{font-size:13px;color:var(--t2);transition:color .15s}
+.topnav a:hover{color:var(--t1)}
+.topnav a.active{color:var(--t1);font-weight:500}
+
+/* Shell */
+.shell{max-width:1080px;margin:0 auto;padding:48px 24px 80px}
+
+/* Hero */
+.hero{margin-bottom:48px}
+.eyebrow{font-family:var(--mono);font-size:11px;font-weight:600;letter-spacing:.12em;text-transform:uppercase;color:var(--accent);margin-bottom:12px}
+.h1{font-family:var(--font);font-size:clamp(36px,5vw,52px);font-weight:700;letter-spacing:-.03em;color:var(--t1);margin-bottom:14px;line-height:1.05}
+.lead{font-size:18px;color:var(--t2);max-width:62ch;line-height:1.5}
+
+/* Progress bar */
+.progress-wrap{
+  margin-top:32px;background:var(--surface);
+  border:1px solid var(--sep);border-radius:14px;
+  padding:18px 22px;
+}
+.progress-meta{
+  display:flex;justify-content:space-between;align-items:baseline;
+  margin-bottom:10px;font-size:13px;color:var(--t2);
+}
+.progress-meta b{font-family:var(--mono);color:var(--t1);font-size:13px}
+.progress-bar{
+  height:6px;background:var(--surface-2);border-radius:6px;overflow:hidden;
+}
+.progress-fill{
+  height:100%;background:linear-gradient(90deg,#7C5CFF,#28C840);
+  border-radius:6px;
+}
+
+/* Legend */
+.legend{
+  display:flex;gap:16px;flex-wrap:wrap;
+  margin:32px 0 16px;font-size:13px;color:var(--t2);
+}
+.lg{display:inline-flex;align-items:center;gap:6px;padding:5px 10px;background:var(--surface);border:1px solid var(--sep);border-radius:980px}
+.lg .dot{width:8px;height:8px;border-radius:50%}
+.lg.done .dot{background:var(--green)}
+.lg.wip .dot{background:var(--orange);animation:lg-pulse 1.5s ease-in-out infinite}
+.lg.next .dot{background:var(--accent)}
+.lg.todo .dot{background:var(--t3)}
+.lg.blocked .dot{background:var(--red)}
+@keyframes lg-pulse{0%,100%{opacity:1}50%{opacity:.4}}
+
+/* Stages */
+.stage{
+  background:var(--surface);border:1px solid var(--sep);
+  border-radius:18px;
+  margin-bottom:18px;overflow:hidden;
+  scroll-margin-top:60px;
+}
+.stage-hd{
+  display:grid;grid-template-columns:96px 1fr auto;
+  gap:16px;align-items:center;
+  padding:20px 26px;
+  border-bottom:1px solid var(--sep);
+  background:var(--surface-2);
+}
+.stage-num{
+  font-family:var(--mono);font-size:11px;font-weight:700;
+  letter-spacing:.1em;text-transform:uppercase;
+  color:var(--t3);
+}
+.stage-title{font-family:var(--font);font-size:22px;font-weight:700;letter-spacing:-.02em;color:var(--t1)}
+.stage-sub{font-size:13px;color:var(--t2);margin-top:2px}
+.stage-status{
+  display:inline-flex;align-items:center;gap:6px;
+  font-family:var(--mono);font-size:11px;font-weight:700;
+  letter-spacing:.08em;text-transform:uppercase;
+  padding:6px 12px;border-radius:980px;white-space:nowrap;
+}
+.stage-status.done{background:rgba(29,131,72,.12);color:var(--green)}
+.stage-status.wip{background:rgba(255,140,66,.12);color:var(--orange)}
+.stage-status.next{background:rgba(124,92,255,.1);color:var(--accent)}
+.stage-status.todo{background:rgba(0,0,0,.05);color:var(--t3)}
+.stage-status.blocked{background:rgba(197,48,48,.12);color:var(--red)}
+.stage-status .dot{width:7px;height:7px;border-radius:50%}
+.stage-status.done .dot{background:var(--green)}
+.stage-status.wip .dot{background:var(--orange);animation:lg-pulse 1.5s ease-in-out infinite}
+.stage-status.next .dot{background:var(--accent)}
+.stage-status.todo .dot{background:var(--t3)}
+.stage-status.blocked .dot{background:var(--red)}
+
+/* Task list */
+.tasks{padding:18px 26px 22px}
+.task-group{margin-top:14px}
+.task-group:first-child{margin-top:0}
+.task-group-name{
+  font-family:var(--mono);font-size:10px;color:var(--t3);
+  letter-spacing:.1em;text-transform:uppercase;font-weight:600;
+  margin-bottom:10px;
+}
+.task{
+  display:grid;grid-template-columns:22px 1fr auto;gap:12px;
+  padding:9px 12px;
+  border-radius:8px;font-size:14.5px;color:var(--t1);
+  transition:background .15s;
+}
+.task:hover{background:var(--surface-2)}
+.task-icon{
+  display:flex;align-items:center;justify-content:center;
+  width:22px;height:22px;border-radius:50%;flex-shrink:0;
+  font-family:var(--mono);font-size:12px;font-weight:700;
+}
+.task-icon.done{background:rgba(29,131,72,.15);color:var(--green)}
+.task-icon.wip{background:rgba(255,140,66,.15);color:var(--orange)}
+.task-icon.next{background:rgba(124,92,255,.15);color:var(--accent)}
+.task-icon.todo{background:rgba(0,0,0,.05);color:var(--t3)}
+.task-icon.blocked{background:rgba(197,48,48,.15);color:var(--red)}
+.task-text{line-height:1.45}
+.task-text code{font-family:var(--mono);font-size:12px;background:var(--accent-soft);color:var(--accent);padding:1px 5px;border-radius:4px}
+.task-text b{font-weight:600}
+.task-note{font-size:12px;color:var(--t3);font-family:var(--mono);white-space:nowrap;align-self:center}
+
+/* TOC anchor list */
+.toc{
+  background:var(--surface);border:1px solid var(--sep);
+  border-radius:14px;padding:18px 22px;margin-bottom:32px;
+}
+.toc-title{font-family:var(--mono);font-size:11px;font-weight:600;letter-spacing:.1em;text-transform:uppercase;color:var(--t3);margin-bottom:12px}
+.toc-list{display:grid;grid-template-columns:repeat(auto-fit,minmax(260px,1fr));gap:6px 12px}
+.toc-list a{
+  display:flex;align-items:center;gap:8px;
+  padding:6px 10px;border-radius:8px;
+  font-size:13px;color:var(--t1);
+  transition:background .15s;
+}
+.toc-list a:hover{background:var(--surface-2)}
+.toc-list a .toc-status{
+  width:7px;height:7px;border-radius:50%;flex-shrink:0;
+}
+.toc-list a .toc-status.done{background:var(--green)}
+.toc-list a .toc-status.wip{background:var(--orange)}
+.toc-list a .toc-status.next{background:var(--accent)}
+.toc-list a .toc-status.todo{background:var(--t3)}
+
+/* ============ Стадия 2 (collapsible) ============ */
+.s2-wrap{margin:32px 0}
+.s2-toggle{
+  width:100%;
+  display:grid;grid-template-columns:auto 1fr auto;
+  gap:18px;align-items:center;
+  background:linear-gradient(135deg,#7C5CFF 0%,#E0457B 100%);
+  color:#fff;border:none;border-radius:18px;
+  padding:24px 28px;cursor:pointer;text-align:left;
+  font-family:var(--font);
+  box-shadow:0 8px 32px rgba(124,92,255,.25);
+  transition:transform .2s ease, box-shadow .2s ease;
+}
+.s2-toggle:hover{transform:translateY(-1px);box-shadow:0 12px 40px rgba(124,92,255,.35)}
+.s2-badge{
+  font-family:var(--mono);font-size:11px;font-weight:700;
+  letter-spacing:.12em;text-transform:uppercase;
+  background:rgba(255,255,255,.18);
+  padding:6px 12px;border-radius:980px;
+  backdrop-filter:blur(8px);
+  border:1px solid rgba(255,255,255,.25);
+  white-space:nowrap;
+}
+.s2-title{font-size:24px;font-weight:700;letter-spacing:-.02em;line-height:1.2;margin-bottom:4px}
+.s2-subtitle{font-size:14px;color:rgba(255,255,255,.85);line-height:1.4}
+.s2-chevron{
+  font-size:24px;line-height:1;
+  transition:transform .3s ease;
+  display:inline-block;
+}
+.s2-wrap.open .s2-chevron{transform:rotate(180deg)}
+
+.s2-content{
+  display:none;
+  padding:32px 0 0;
+  animation:s2-fade .4s ease;
+}
+.s2-wrap.open .s2-content{display:block}
+@keyframes s2-fade{from{opacity:0;transform:translateY(-8px)}to{opacity:1;transform:translateY(0)}}
+
+.s2-intro{
+  background:var(--surface);border:1px solid var(--sep);
+  border-left:4px solid var(--accent);
+  border-radius:14px;padding:22px 26px;margin-bottom:24px;
+  font-size:16px;line-height:1.55;color:var(--t1);
+}
+.s2-intro b{color:var(--t1)}
+.s2-intro em{font-style:normal;background:var(--accent-soft);color:var(--accent);padding:2px 7px;border-radius:6px;font-weight:500}
+
+/* Стадия 2 — отдельные карточки в визуально другой стиле */
+.s2-item{
+  background:var(--surface);border:1px solid var(--sep);
+  border-radius:16px;padding:24px 28px;
+  margin-bottom:14px;
+  display:grid;grid-template-columns:48px 1fr;gap:18px;
+}
+.s2-item-num{
+  width:48px;height:48px;border-radius:12px;
+  background:var(--accent-soft);color:var(--accent);
+  display:flex;align-items:center;justify-content:center;
+  font-family:var(--mono);font-size:14px;font-weight:700;
+  letter-spacing:-.02em;
+  align-self:start;
+}
+.s2-item-name{
+  font-family:var(--font);font-size:20px;font-weight:700;
+  letter-spacing:-.02em;color:var(--t1);margin-bottom:6px;
+}
+.s2-item-goal{
+  font-family:var(--mono);font-size:11px;color:var(--accent);
+  font-weight:600;letter-spacing:.08em;text-transform:uppercase;
+  margin-bottom:14px;
+}
+.s2-item-body{font-size:14.5px;color:var(--t2);line-height:1.55}
+.s2-item-body p{margin-bottom:10px}
+.s2-item-body p:last-child{margin-bottom:0}
+.s2-item-body b{color:var(--t1);font-weight:600}
+.s2-item-body ul{margin:8px 0 12px;padding:0;list-style:none}
+.s2-item-body ul li{
+  padding:4px 0 4px 18px;position:relative;line-height:1.45;
+}
+.s2-item-body ul li::before{
+  content:'';position:absolute;left:4px;top:13px;
+  width:6px;height:6px;border-radius:50%;background:var(--accent);
+}
+.s2-item-body ol{margin:8px 0;padding-left:22px;counter-reset:s2-ol}
+.s2-item-body ol li{padding:3px 0;line-height:1.45}
+.s2-item-body code{
+  font-family:var(--mono);font-size:12.5px;
+  background:var(--accent-soft);color:var(--accent);
+  padding:1px 6px;border-radius:5px;
+}
+.s2-tier{
+  display:grid;grid-template-columns:120px 1fr;gap:14px;
+  padding:8px 0;border-top:1px solid var(--sep);font-size:14px;
+}
+.s2-tier:first-child{border-top:0}
+.s2-tier b{font-family:var(--mono);font-size:11px;color:var(--accent);letter-spacing:.06em;text-transform:uppercase;font-weight:700;padding-top:2px}
+.s2-example{
+  background:var(--surface-2);border-radius:10px;
+  padding:14px 16px;margin:12px 0;
+  font-size:13.5px;color:var(--t1);line-height:1.55;
+}
+.s2-example b{display:block;font-family:var(--mono);font-size:11px;color:var(--t3);letter-spacing:.08em;text-transform:uppercase;margin-bottom:6px;font-weight:700}
+
+/* Финальный recap */
+.s2-final{
+  background:linear-gradient(135deg,#1D1D1F 0%,#3a3a3f 100%);
+  color:#fff;border-radius:18px;padding:32px 36px;
+  margin-top:24px;
+  position:relative;overflow:hidden;
+}
+.s2-final::before{
+  content:'';position:absolute;top:-40%;right:-15%;width:60%;height:160%;
+  background:radial-gradient(circle,rgba(124,92,255,.4),transparent 60%);
+  filter:blur(50px);
+}
+.s2-final > *{position:relative}
+.s2-final-eyebrow{font-family:var(--mono);font-size:11px;font-weight:600;letter-spacing:.12em;text-transform:uppercase;color:rgba(255,255,255,.5);margin-bottom:10px}
+.s2-final-title{font-size:26px;font-weight:700;letter-spacing:-.02em;margin-bottom:18px;line-height:1.15}
+.s2-final-list{display:flex;flex-direction:column;gap:14px;margin-top:18px}
+.s2-final-step{
+  display:grid;grid-template-columns:36px 1fr;gap:14px;
+  background:rgba(255,255,255,.06);
+  border:1px solid rgba(255,255,255,.1);
+  border-radius:12px;padding:14px 16px;
+}
+.s2-final-n{
+  width:36px;height:36px;border-radius:50%;
+  background:linear-gradient(135deg,#7C5CFF,#E0457B);
+  color:#fff;display:flex;align-items:center;justify-content:center;
+  font-family:var(--font);font-weight:700;font-size:16px;
+}
+.s2-final-text{font-size:15px;color:rgba(255,255,255,.92);line-height:1.45;align-self:center}
+
+@media(max-width:720px){
+  .s2-toggle{grid-template-columns:1fr;gap:8px;text-align:left}
+  .s2-badge,.s2-chevron{justify-self:start}
+  .s2-item{grid-template-columns:1fr;gap:14px}
+  .s2-item-num{width:auto;height:auto;padding:6px 12px;border-radius:8px;justify-self:start}
+}
+
+/* Requirements callout */
+.requirements{
+  background:linear-gradient(135deg,#1D1D1F,#3a3a3f);
+  color:#fff;border-radius:18px;padding:32px 36px;margin:48px 0;
+}
+.req-eyebrow{font-family:var(--mono);font-size:11px;font-weight:600;letter-spacing:.12em;text-transform:uppercase;color:rgba(255,255,255,.5);margin-bottom:12px}
+.req-title{font-size:24px;font-weight:700;letter-spacing:-.02em;margin-bottom:20px}
+.req-list{display:grid;grid-template-columns:repeat(2,1fr);gap:14px 28px}
+@media(max-width:720px){.req-list{grid-template-columns:1fr}}
+.req-item{display:flex;gap:12px;align-items:flex-start}
+.req-check{
+  width:22px;height:22px;border-radius:50%;
+  background:rgba(40,200,64,.18);color:#28C840;
+  display:flex;align-items:center;justify-content:center;
+  font-size:13px;font-weight:700;flex-shrink:0;
+}
+.req-text{font-size:14px;line-height:1.45;color:rgba(255,255,255,.85)}
+.req-text code{font-family:var(--mono);font-size:12px;background:rgba(255,255,255,.1);color:rgba(255,255,255,.95);padding:1px 5px;border-radius:4px}
+
+/* Footer */
+.foot{
+  border-top:1px solid var(--sep);
+  padding:32px 0;font-size:13px;color:var(--t2);
+  display:flex;justify-content:space-between;align-items:center;flex-wrap:wrap;gap:14px;
+  margin-top:48px;
+}
+.foot-meta{font-family:var(--mono);font-size:11px;color:var(--t3);letter-spacing:.04em}
+
+/* Updated stamp */
+.updated{
+  display:inline-flex;align-items:center;gap:6px;
+  background:rgba(40,200,64,.1);color:#1D8348;
+  padding:5px 11px;border-radius:980px;
+  font-family:var(--mono);font-size:11px;font-weight:600;letter-spacing:.04em;
+  margin-bottom:18px;
+}
+.updated::before{content:'';width:6px;height:6px;border-radius:50%;background:#1D8348;animation:lg-pulse 1.5s ease-in-out infinite}
+</style>
+</head>
+<body>
+
+<header class="topbar">
+  <a href="/" class="logo"><span class="logo-dot"></span>AI Creative Hub</a>
+  <nav class="topnav">
+    <a href="/">← Лендинг</a>
+    <a href="#" class="active">Roadmap</a>
+  </nav>
+</header>
+
+<main class="shell">
+
+  <div class="hero">
+    <div class="updated">Updated 2026-05-19</div>
+    <div class="eyebrow">Project · Live progress</div>
+    <h1 class="h1">Roadmap проекта</h1>
+    <p class="lead">
+      Полная дорожная карта AI Creative Hub: <b>Стадия 1</b> — 10 этапов MVP-сборки, <b>Стадия 2</b> — 13 этапов превращения в SaaS.
+      Канон — <code style="font-family:var(--mono);font-size:14px;color:var(--accent);background:var(--accent-soft);padding:2px 6px;border-radius:4px">ai-hub/ROADMAP.md</code> в репо.
+    </p>
+    <div style="margin-top:18px;padding:16px 20px;background:var(--accent-soft);border:1px solid rgba(124,92,255,.2);border-radius:12px;display:flex;align-items:center;gap:14px;flex-wrap:wrap">
+      <span style="font-size:22px">📘</span>
+      <div style="flex:1;min-width:220px">
+        <div style="font-size:13px;font-weight:600;color:var(--t1);margin-bottom:2px">Deep architecture research</div>
+        <div style="font-size:13px;color:var(--t2);line-height:1.4">Провайдерская стратегия, ledger-first wallet, pricing engine, fallback chains, security/GDPR, бюджет на 6 месяцев.</div>
+      </div>
+      <code style="font-family:var(--mono);font-size:12px;background:rgba(0,0,0,.04);color:var(--accent);padding:6px 10px;border-radius:6px;white-space:nowrap">ai-hub/docs/architecture-research.md</code>
+    </div>
+
+    <div class="progress-wrap">
+      <div class="progress-meta">
+        <span>Прогресс</span>
+        <span><b>9</b> / 10 этапов · <b>~85%</b> задач</span>
+      </div>
+      <div class="progress-bar"><div class="progress-fill" style="width:85%"></div></div>
+    </div>
+
+    <div class="legend">
+      <span class="lg done"><span class="dot"></span>Done — готово в коде, протестировано</span>
+      <span class="lg wip"><span class="dot"></span>In progress — активная работа</span>
+      <span class="lg next"><span class="dot"></span>Next — спека готова, в очереди</span>
+      <span class="lg todo"><span class="dot"></span>Backlog — запланировано</span>
+      <span class="lg blocked"><span class="dot"></span>Blocked — внешняя зависимость</span>
+    </div>
+  </div>
+
+  <!-- TOC -->
+  <div class="toc">
+    <div class="toc-title">Этапы — навигация</div>
+    <div class="toc-list">
+      <a href="#s1"><span class="toc-status done"></span>Этап 1 · Foundation</a>
+      <a href="#s2"><span class="toc-status done"></span>Этап 2 · Личный кабинет</a>
+      <a href="#s3"><span class="toc-status done"></span>Этап 3 · Token Wallet</a>
+      <a href="#s4"><span class="toc-status done"></span>Этап 4 · Provider Router</a>
+      <a href="#s5"><span class="toc-status done"></span>Этап 5 · Первые tools</a>
+      <a href="#s6"><span class="toc-status done"></span>Этап 6 · Video tools</a>
+      <a href="#s7"><span class="toc-status wip"></span>Этап 7 · Payments</a>
+      <a href="#s8"><span class="toc-status done"></span>Этап 8 · Error handling</a>
+      <a href="#s9"><span class="toc-status done"></span>Этап 9 · Admin panel</a>
+      <a href="#s10"><span class="toc-status wip"></span>Этап 10 · Production deploy</a>
+      <a href="#s11"><span class="toc-status todo"></span>Beyond MVP · backlog</a>
+      <a href="#s2-wrap" onclick="document.getElementById('s2-wrap').classList.add('open')"><span class="toc-status next"></span>Стадия 2 · post-MVP (раскрывается)</a>
+      <a href="#requirements"><span class="toc-status done"></span>Важные требования</a>
+      <a href="#research"><span class="toc-status next"></span>Deep research · architecture</a>
+    </div>
+  </div>
+
+  <!-- STAGE 1 -->
+  <section class="stage" id="s1">
+    <div class="stage-hd">
+      <div class="stage-num">Этап 1</div>
+      <div>
+        <div class="stage-title">Foundation · структура БД и типы</div>
+        <div class="stage-sub">Postgres + Drizzle ORM + Auth.js + MinIO + BullMQ + миграции</div>
+      </div>
+      <span class="stage-status done"><span class="dot"></span>Done</span>
+    </div>
+    <div class="tasks">
+      <div class="task-group">
+        <div class="task-group-name">Структура БД</div>
+        <div class="task"><span class="task-icon done">✓</span><span class="task-text"><b>3 миграции</b> применены на проде: <code>0000_init.sql</code> + <code>0001_wallet_functions.sql</code> + <code>0002_onboarding_bonus.sql</code></span></div>
+        <div class="task"><span class="task-icon done">✓</span><span class="task-text">Таблица <code>users</code> (Auth.js — id, email, name, role)</span></div>
+        <div class="task"><span class="task-icon done">✓</span><span class="task-text">Таблица <code>token_wallets</code> (available + reserved + total_purchased + total_spent)</span></div>
+        <div class="task"><span class="task-icon done">✓</span><span class="task-text">Таблица <code>token_transactions</code> (append-only ledger для аудита)</span></div>
+        <div class="task"><span class="task-icon done">✓</span><span class="task-text">Таблица <code>ai_tools</code> (каталог инструментов)</span></div>
+        <div class="task"><span class="task-icon done">✓</span><span class="task-text">Таблица <code>ai_jobs</code> (история запусков с idempotency_key)</span></div>
+        <div class="task"><span class="task-icon done">✓</span><span class="task-text">Таблица <code>media_assets</code> (S3-ключи MinIO + метаданные)</span></div>
+        <div class="task"><span class="task-icon done">✓</span><span class="task-text">Таблица <code>payments</code> + <code>payment_packages</code> + <code>promo_codes</code> + <code>promo_redemptions</code></span></div>
+        <div class="task"><span class="task-icon done">✓</span><span class="task-text">Auth.js служебные: <code>accounts</code> + <code>sessions</code> + <code>verification_tokens</code></span></div>
+      </div>
+      <div class="task-group">
+        <div class="task-group-name">SQL-функции</div>
+        <div class="task"><span class="task-icon done">✓</span><span class="task-text">4 атомарных wallet-функции (SECURITY DEFINER): <code>wallet_reserve</code> · <code>wallet_charge</code> · <code>wallet_refund</code> · <code>wallet_credit</code></span></div>
+        <div class="task"><span class="task-icon done">✓</span><span class="task-text">Триггер <code>on_user_created</code> — auto-create wallet + welcome bonus 100 токенов</span></div>
+        <div class="task"><span class="task-icon done">✓</span><span class="task-text">Триггеры <code>updated_at</code> на token_wallets / ai_tools / ai_jobs</span></div>
+      </div>
+      <div class="task-group">
+        <div class="task-group-name">Типы (вместо Supabase types)</div>
+        <div class="task"><span class="task-icon done">✓</span><span class="task-text">Drizzle schema в <code>src/lib/db/schema.ts</code> — single source of truth</span></div>
+        <div class="task"><span class="task-icon done">✓</span><span class="task-text">13 row-типов + 6 insert-типов (<code>User</code>, <code>AiTool</code>, <code>AiJob</code>, <code>Payment</code>, <code>NewAiJob</code>, ...)</span></div>
+        <div class="task"><span class="task-icon done">✓</span><span class="task-text">6 string-union enum-типов (<code>JobStatus</code>, <code>ProviderId</code>, <code>ToolCategory</code>, ...)</span></div>
+        <div class="task"><span class="task-icon done">✓</span><span class="task-text">Aggregate <code>Database</code> interface — аналог Supabase Database</span></div>
+      </div>
+      <div class="task-group">
+        <div class="task-group-name">Seed</div>
+        <div class="task"><span class="task-icon done">✓</span><span class="task-text">13 AI-инструментов в <code>drizzle/seed/tools.sql</code> (image, video, face, content)</span></div>
+        <div class="task"><span class="task-icon done">✓</span><span class="task-text">4 token-пакета: Starter / Creator / Pro / Studio</span></div>
+      </div>
+    </div>
+  </section>
+
+  <!-- STAGE 2 -->
+  <section class="stage" id="s2">
+    <div class="stage-hd">
+      <div class="stage-num">Этап 2</div>
+      <div>
+        <div class="stage-title">Личный кабинет</div>
+        <div class="stage-sub">Dashboard, баланс, история, каталог</div>
+      </div>
+      <span class="stage-status done"><span class="dot"></span>Done</span>
+    </div>
+    <div class="tasks">
+      <div class="task"><span class="task-icon done">✓</span><span class="task-text">Реализован <b>личный кабинет</b> — <code>/dashboard</code> (server component, protected middleware'ом)</span></div>
+      <div class="task"><span class="task-icon done">✓</span><span class="task-text">Показан <b>баланс токенов</b> — в Header (badge с available + reserved) + полная страница <code>/wallet</code> (4 metric cards)</span></div>
+      <div class="task"><span class="task-icon done">✓</span><span class="task-text">Показана <b>история генераций</b> — <code>/history</code> (50 свежих jobs с status-бэйджами, error_message)</span></div>
+      <div class="task"><span class="task-icon done">✓</span><span class="task-text">Показан <b>каталог AI-инструментов</b> — <code>/tools</code> (13 моделей по 6 категориям: image, video, face, audio, content, analysis)</span></div>
+      <div class="task"><span class="task-icon done">✓</span><span class="task-text">Дополнительно: <code>/gallery</code> — grid всех генераций пользователя с presigned URLs из MinIO</span></div>
+      <div class="task"><span class="task-icon done">✓</span><span class="task-text">Дополнительно: страница инструмента <code>/tools/[slug]</code> с дженерик-runner'ом — форма рендерится из <code>input_schema</code> JSON-схемы</span></div>
+      <div class="task"><span class="task-icon todo">○</span><span class="task-text">Mobile polish — backlog</span></div>
+      <div class="task"><span class="task-icon todo">○</span><span class="task-text">Onboarding flow для новых юзеров — backlog</span></div>
+    </div>
+  </section>
+
+  <!-- STAGE 3 -->
+  <section class="stage" id="s3">
+    <div class="stage-hd">
+      <div class="stage-num">Этап 3</div>
+      <div>
+        <div class="stage-title">Token Wallet</div>
+        <div class="stage-sub">Reserve → Charge / Refund · race-free · идемпотентно</div>
+      </div>
+      <span class="stage-status done"><span class="dot"></span>Done</span>
+    </div>
+    <div class="tasks">
+      <div class="task"><span class="task-icon done">✓</span><span class="task-text"><b>Перед запуском задачи проверяем баланс</b> → <code>wallet_reserve()</code> бросает <code>INSUFFICIENT_FUNDS</code> (P0001) если available &lt; cost</span><span class="task-note">→ 402</span></div>
+      <div class="task"><span class="task-icon done">✓</span><span class="task-text"><b>Резервируем токены</b> → atomic <code>UPDATE token_wallets SET available -= N, reserved += N WHERE available &gt;= N RETURNING</code></span><span class="task-note">race-free</span></div>
+      <div class="task"><span class="task-icon done">✓</span><span class="task-text"><b>При успехе списываем</b> → <code>wallet_charge()</code> в webhook handler'е + worker'е. Partial charge поддержан (refund разницы)</span></div>
+      <div class="task"><span class="task-icon done">✓</span><span class="task-text"><b>При ошибке возвращаем</b> → <code>wallet_refund()</code> в catch блоке worker'а + watchdog подбирает stuck jobs &gt;15min</span></div>
+      <div class="task"><span class="task-icon done">✓</span><span class="task-text">Welcome bonus 100 токенов автоматически при INSERT в <code>users</code> (триггер <code>on_user_created</code>)</span></div>
+      <div class="task"><span class="task-icon done">✓</span><span class="task-text">Append-only ledger <code>token_transactions</code> — все 7 типов (purchase, spend, refund, bonus, reserve, release, adjustment) с balance_after для аудита</span></div>
+      <div class="task"><span class="task-icon done">✓</span><span class="task-text">Идемпотентность: webhook повторно не списывает (проверка <code>job.status</code> уже finalized)</span></div>
+      <div class="task"><span class="task-icon todo">○</span><span class="task-text">Promo code redemption endpoint + UI — таблицы готовы, эндпоинта нет</span></div>
+    </div>
+  </section>
+
+  <!-- STAGE 4 -->
+  <section class="stage" id="s4">
+    <div class="stage-hd">
+      <div class="stage-num">Этап 4</div>
+      <div>
+        <div class="stage-title">AI Provider Router</div>
+        <div class="stage-sub">Универсальный интерфейс ProviderAdapter · router-map</div>
+      </div>
+      <span class="stage-status done"><span class="dot"></span>Done</span>
+    </div>
+    <div class="tasks">
+      <div class="task"><span class="task-icon done">✓</span><span class="task-text"><b>Реализован Router</b> — <code>src/lib/providers/router.ts</code>, статический map <code>ProviderId → ProviderAdapter</code></span></div>
+      <div class="task"><span class="task-icon done">✓</span><span class="task-text"><b>Универсальный интерфейс</b> <code>ProviderAdapter</code> (src/lib/providers/types.ts):</span></div>
+      <div class="task" style="padding-left:34px"><span class="task-icon done">✓</span><span class="task-text"><code>submit(args)</code> — async-вариант <code>runJob(input)</code>. Принимает model + input + webhookUrl + jobId, возвращает <code>{status, providerJobId}</code></span></div>
+      <div class="task" style="padding-left:34px"><span class="task-icon done">✓</span><span class="task-text"><code>getStatus(providerJobId)</code> — polling-fallback, идентичен спецификации <code>getJobStatus(jobId)</code></span></div>
+      <div class="task" style="padding-left:34px"><span class="task-icon done">✓</span><span class="task-text"><code>parseWebhook(headers, body, secret)</code> — async-вариант <code>getResult(jobId)</code>. Верифицирует подпись, возвращает завершённый результат</span></div>
+      <div class="task" style="padding-left:34px"><span class="task-icon done">✓</span><span class="task-text"><code>cancel(providerJobId)</code> — optional, поддержан где провайдер позволяет</span></div>
+      <div class="task"><span class="task-icon done">✓</span><span class="task-text">Per-provider webhook-секреты: <code>FAL_WEBHOOK_SECRET</code> · <code>REPLICATE_WEBHOOK_SECRET</code> и т.д. (<code>src/lib/providers/secrets.ts</code>)</span></div>
+      <div class="task"><span class="task-icon done">✓</span><span class="task-text">Адаптеры: <b>fal.ai</b> (HMAC SHA-256) + <b>Replicate</b> (Standard Webhooks svix). kling/runware/modelslab/internal — стабы</span></div>
+      <div class="task"><span class="task-icon todo">○</span><span class="task-text">Fallback-цепочки: provider A падает → провайдер B. Backlog</span></div>
+      <div class="task"><span class="task-icon todo">○</span><span class="task-text">A/B-тестирование: одна задача на двух провайдерах для сравнения качества. Backlog</span></div>
+      <div class="task"><span class="task-icon todo">○</span><span class="task-text">Cost-based routing: автоматический выбор cheapest provider. Backlog</span></div>
+    </div>
+  </section>
+
+  <!-- STAGE 5 -->
+  <section class="stage" id="s5">
+    <div class="stage-hd">
+      <div class="stage-num">Этап 5</div>
+      <div>
+        <div class="stage-title">Первые инструменты · 7 моделей</div>
+        <div class="stage-sub">text-to-image · upscale · background remover · face swap</div>
+      </div>
+      <span class="stage-status done"><span class="dot"></span>Done</span>
+    </div>
+    <div class="tasks">
+      <div class="task"><span class="task-icon done">✓</span><span class="task-text"><b>text-to-image</b> через fal.ai → <code>fal-ai/flux/dev</code> · 5 токенов</span></div>
+      <div class="task"><span class="task-icon done">✓</span><span class="task-text"><b>image upscale</b> через Replicate → <code>nightmareai/real-esrgan</code> · 3 токена</span></div>
+      <div class="task"><span class="task-icon done">✓</span><span class="task-text"><b>background remover</b> через fal.ai → <code>fal-ai/birefnet/v2</code> · 2 токена</span></div>
+      <div class="task"><span class="task-icon done">✓</span><span class="task-text"><b>face swap</b> через Replicate → <code>cdingram/face-swap</code> · 10 токенов</span></div>
+      <div class="task"><span class="task-icon done">✓</span><span class="task-text">Бонус: <b>image-edit</b> через fal.ai → <code>fal-ai/flux-pro/kontext</code> · 8 токенов</span></div>
+      <div class="task"><span class="task-icon done">✓</span><span class="task-text">Бонус: <b>Nano Banana</b> (Google Gemini 2.5 Flash Image) — text→image и edit · 10/12 токенов</span></div>
+      <div class="task"><span class="task-icon done">✓</span><span class="task-text">Бонус: <b>Clarity Upscaler</b> (Pro tier) · 8 токенов</span></div>
+      <div class="task"><span class="task-icon done">✓</span><span class="task-text">Media ingest в MinIO: <code>ingestJobMedia()</code> обходит JSON output, скачивает медиа-URLs, кладёт в bucket, инсертит media_assets row</span></div>
+      <div class="task"><span class="task-icon done">✓</span><span class="task-text">Presigned URLs (TTL 1h) для отдачи юзеру — независимы от TTL провайдера</span></div>
+    </div>
+  </section>
+
+  <!-- STAGE 6 -->
+  <section class="stage" id="s6">
+    <div class="stage-hd">
+      <div class="stage-num">Этап 6</div>
+      <div>
+        <div class="stage-title">Video tools · Kling 1.6 + 2.1 Master</div>
+        <div class="stage-sub">image-to-video · text-to-video · video upscale</div>
+      </div>
+      <span class="stage-status done"><span class="dot"></span>Done</span>
+    </div>
+    <div class="tasks">
+      <div class="task"><span class="task-icon done">✓</span><span class="task-text"><b>image-to-video</b> через fal.ai → <code>fal-ai/kling-video/v1.6/standard/image-to-video</code> · 80 токенов</span></div>
+      <div class="task"><span class="task-icon done">✓</span><span class="task-text"><b>text-to-video</b> через fal.ai → <code>fal-ai/kling-video/v1.6/standard/text-to-video</code> · 100 токенов</span></div>
+      <div class="task"><span class="task-icon done">✓</span><span class="task-text">Pro-тир: <b>image-to-video Pro</b> Kling 2.1 Master · 220 токенов (кинематографическое качество)</span></div>
+      <div class="task"><span class="task-icon done">✓</span><span class="task-text">Pro-тир: <b>text-to-video Pro</b> Kling 2.1 Master · 250 токенов</span></div>
+      <div class="task"><span class="task-icon wip">⏳</span><span class="task-text"><b>video upscale</b> — в работе, через <code>fal-ai/topaz/upscale/video</code></span></div>
+      <div class="task"><span class="task-icon done">✓</span><span class="task-text">Решение: <b>не пилим отдельный Kling JWT-адаптер</b> — fal уже проксирует Kling 1.6/2.1, тот же webhook-flow что у image-моделей</span></div>
+      <div class="task"><span class="task-icon todo">○</span><span class="task-text">Progress bar для долгих задач (&gt;30sec) — backlog</span></div>
+    </div>
+  </section>
+
+  <!-- STAGE 7 -->
+  <section class="stage" id="s7">
+    <div class="stage-hd">
+      <div class="stage-num">Этап 7</div>
+      <div>
+        <div class="stage-title">Payments · Stripe + Telegram Stars</div>
+        <div class="stage-sub">Покупка токенов · webhook · начисление · история</div>
+      </div>
+      <span class="stage-status wip"><span class="dot"></span>In progress</span>
+    </div>
+    <div class="tasks">
+      <div class="task"><span class="task-icon done">✓</span><span class="task-text"><b>Покупка токенов</b> → Server Action <code>buyPackage(slug)</code> создаёт Stripe Checkout session (price_data, без manual Stripe products)</span></div>
+      <div class="task"><span class="task-icon done">✓</span><span class="task-text"><b>Webhook оплаты</b> → <code>/api/webhooks/stripe</code>, верифицирует подпись через <code>stripe.webhooks.constructEvent</code></span></div>
+      <div class="task"><span class="task-icon done">✓</span><span class="task-text"><b>Начисление токенов</b> → на <code>checkout.session.completed</code> зовём <code>wallet_credit(type='purchase')</code></span></div>
+      <div class="task"><span class="task-icon done">✓</span><span class="task-text"><b>История платежей</b> → <code>/wallet</code> (token_transactions) + <code>/admin/payments</code> (registry)</span></div>
+      <div class="task"><span class="task-icon done">✓</span><span class="task-text">4 пакета в БД: Starter ($9.90) / Creator ($29.90) / Pro ($69.90) / Studio ($199)</span></div>
+      <div class="task"><span class="task-icon done">✓</span><span class="task-text">Welcome bonus 100 токенов при регистрации (триггер)</span></div>
+      <div class="task"><span class="task-icon next">→</span><span class="task-text">Идемпотентность по Stripe event_id (защита от двойного credit на ретрае webhook'а) — следующее</span></div>
+      <div class="task"><span class="task-icon todo">○</span><span class="task-text">Промокоды + redemptions UI — таблицы готовы, эндпоинта нет</span></div>
+      <div class="task"><span class="task-icon blocked">!</span><span class="task-text">RU-платежи — Stripe не для физлиц РФ. Дублируем на Telegram Stars (паттерн из <code>tma.46-62-215-11.nip.io</code>)</span></div>
+    </div>
+  </section>
+
+  <!-- STAGE 8 -->
+  <section class="stage" id="s8">
+    <div class="stage-hd">
+      <div class="stage-num">Этап 8</div>
+      <div>
+        <div class="stage-title">Обработка ошибок + observability</div>
+        <div class="stage-sub">Watchdog · timeout · refund · health · rate-limit</div>
+      </div>
+      <span class="stage-status done"><span class="dot"></span>Done</span>
+    </div>
+    <div class="tasks">
+      <div class="task"><span class="task-icon done">✓</span><span class="task-text"><b>Недостаточно токенов</b> → 402 в <code>/api/tools/[slug]/run</code> с подсказкой «нужно N токенов»</span></div>
+      <div class="task"><span class="task-icon done">✓</span><span class="task-text"><b>API provider error</b> → worker catch блок: <code>wallet_refund</code> + <code>status='refunded'</code> + <code>error_code</code></span></div>
+      <div class="task"><span class="task-icon done">✓</span><span class="task-text"><b>Timeout</b> → watchdog (15 min default) подбирает jobs в queued/processing и рефандит автоматически</span></div>
+      <div class="task"><span class="task-icon done">✓</span><span class="task-text"><b>Failed generation</b> → webhook handler ставит <code>status='refunded'</code> с error от провайдера</span></div>
+      <div class="task"><span class="task-icon done">✓</span><span class="task-text"><b>Refund tokens</b> → <code>wallet_refund()</code> атомарно возвращает reserved → available + пишет ledger row</span></div>
+      <div class="task"><span class="task-icon done">✓</span><span class="task-text">Rate-limit: <b>5 параллельных jobs на юзера</b> (env <code>MAX_CONCURRENT_JOBS_PER_USER</code>) → 429 с понятной ошибкой</span></div>
+      <div class="task"><span class="task-icon done">✓</span><span class="task-text">Healthcheck <code>/api/health</code> — ping DB + Redis, JSON с таймингами, 200/503. Используется в Docker HEALTHCHECK</span></div>
+      <div class="task"><span class="task-icon done">✓</span><span class="task-text">Structured JSON logger (stdout/stderr) — <code>child(scope)</code>, <code>LOG_LEVEL</code> env</span></div>
+      <div class="task"><span class="task-icon todo">○</span><span class="task-text">BullMQ retries намеренно skip — дубли provider submit опасны (двойное списание у провайдера). Watchdog покрывает stuck-кейс</span></div>
+      <div class="task"><span class="task-icon todo">○</span><span class="task-text">Sentry — backlog, по желанию подключается через child(scope) в logger.ts</span></div>
+      <div class="task"><span class="task-icon todo">○</span><span class="task-text">Email-уведомления о длинных видео — backlog</span></div>
+    </div>
+  </section>
+
+  <!-- STAGE 9 -->
+  <section class="stage" id="s9">
+    <div class="stage-hd">
+      <div class="stage-num">Этап 9</div>
+      <div>
+        <div class="stage-title">Admin panel · 5 табов</div>
+        <div class="stage-sub">Overview · Users · Jobs · Tools · Payments</div>
+      </div>
+      <span class="stage-status done"><span class="dot"></span>Done</span>
+    </div>
+    <div class="tasks">
+      <div class="task"><span class="task-icon done">✓</span><span class="task-text"><b>Список пользователей</b> → <code>/admin/users</code> — таблица 100 свежих с wallet'ом и jobs count, inline grant ±N tokens</span></div>
+      <div class="task"><span class="task-icon done">✓</span><span class="task-text"><b>Список задач</b> → <code>/admin/jobs</code> — фильтры по статусу, manual refund button с confirm</span></div>
+      <div class="task"><span class="task-icon done">✓</span><span class="task-text"><b>Список транзакций</b> → <code>/admin/payments</code> (платежи) + per-user в <code>/wallet</code> (token_transactions)</span></div>
+      <div class="task"><span class="task-icon done">✓</span><span class="task-text"><b>Настройка стоимости инструментов</b> → <code>/admin/tools</code> · inline tokenCost-edit, изменения мгновенно</span></div>
+      <div class="task"><span class="task-icon done">✓</span><span class="task-text"><b>Включение/отключение инструментов</b> → status select (active / beta / disabled) на <code>/admin/tools</code></span></div>
+      <div class="task"><span class="task-icon done">✓</span><span class="task-text">Overview tab: метрики платформы (users + 24h jobs + GMV) — live queries</span></div>
+      <div class="task"><span class="task-icon done">✓</span><span class="task-text">Role guard: middleware + <code>requireAdminPage()</code> / <code>requireAdminApi()</code></span></div>
+      <div class="task"><span class="task-icon done">✓</span><span class="task-text">Admin-таб в Header виден только для <code>role='admin'</code></span></div>
+      <div class="task"><span class="task-icon done">✓</span><span class="task-text">API: <code>/api/admin/jobs/:id/refund</code> · <code>/api/admin/tools/:id</code> · <code>/api/admin/users/:id/grant-tokens</code></span></div>
+      <div class="task"><span class="task-icon done">✓</span><span class="task-text">Аудит: все мутации админа пишутся в <code>token_transactions.metadata</code> с <code>by: admin@email</code></span></div>
+      <div class="task"><span class="task-icon todo">○</span><span class="task-text">Provider P&amp;L по моделям (аггрегация <code>provider_cost_usd</code> vs <code>charged_tokens</code>) — backlog</span></div>
+    </div>
+  </section>
+
+  <!-- STAGE 10 -->
+  <section class="stage" id="s10">
+    <div class="stage-hd">
+      <div class="stage-num">Этап 10</div>
+      <div>
+        <div class="stage-title">Production deploy</div>
+        <div class="stage-sub">Dockerfile · compose · prod БД и bucket · Caddy</div>
+      </div>
+      <span class="stage-status wip"><span class="dot"></span>In progress</span>
+    </div>
+    <div class="tasks">
+      <div class="task"><span class="task-icon done">✓</span><span class="task-text">Dockerfile (multi-stage: deps → builder → web target / worker target)</span></div>
+      <div class="task"><span class="task-icon done">✓</span><span class="task-text">Next.js <code>output: "standalone"</code> для слим runtime image (~200MB)</span></div>
+      <div class="task"><span class="task-icon done">✓</span><span class="task-text">docker-compose.yml (web + worker, external network <code>aisales_aisales-net</code>)</span></div>
+      <div class="task"><span class="task-icon done">✓</span><span class="task-text">БД <code>ai_hub</code> создана в <code>aisales-postgres</code> на проде, 13 таблиц + триггеры</span></div>
+      <div class="task"><span class="task-icon done">✓</span><span class="task-text">13 tools + 4 packages засидены в проде</span></div>
+      <div class="task"><span class="task-icon done">✓</span><span class="task-text">MinIO bucket <code>ai-hub-media</code> создан</span></div>
+      <div class="task"><span class="task-icon done">✓</span><span class="task-text">Backup конфигов: <code>pg_backup.sh.bak.20260519_093701</code>, <code>backup.env.bak.…</code></span></div>
+      <div class="task"><span class="task-icon wip">⏳</span><span class="task-text"><code>pg_backup.sh</code> патч под PG_DBS список — PATCH в DEPLOY.md, юзер применяет вручную (auto-classifier заблокировал авто-правку критичного backup-скрипта)</span></div>
+      <div class="task"><span class="task-icon wip">⏳</span><span class="task-text">Caddy блок <code>aihub-app.46-62-215-11.nip.io</code> → готовый блок в DEPLOY.md</span></div>
+      <div class="task"><span class="task-icon blocked">!</span><span class="task-text">Env keys от пользователя: <code>FAL_KEY</code>, <code>REPLICATE_API_TOKEN</code>, <code>STRIPE_SECRET_KEY</code>, <code>SMTP_URL</code></span></div>
+      <div class="task"><span class="task-icon blocked">!</span><span class="task-text">Финальный build + deploy на проде — блокируется env keys выше</span></div>
+    </div>
+  </section>
+
+  <!-- STAGE 11 BEYOND -->
+  <section class="stage" id="s11">
+    <div class="stage-hd">
+      <div class="stage-num">Beyond MVP</div>
+      <div>
+        <div class="stage-title">Backlog</div>
+        <div class="stage-sub">Что добавим после запуска</div>
+      </div>
+      <span class="stage-status todo"><span class="dot"></span>Backlog</span>
+    </div>
+    <div class="tasks">
+      <div class="task"><span class="task-icon todo">○</span><span class="task-text">Promo codes UI + redeem endpoint (таблицы готовы)</span></div>
+      <div class="task"><span class="task-icon todo">○</span><span class="task-text">RU-платежи через <b>Telegram Stars</b> (паттерн из transcribe в <code>tma.46-62-215-11.nip.io</code>)</span></div>
+      <div class="task"><span class="task-icon todo">○</span><span class="task-text">MinIO bucket backup: расширить <code>aux_backup.sh</code> через <code>mc mirror</code> или bucket replication</span></div>
+      <div class="task"><span class="task-icon todo">○</span><span class="task-text">Sentry / error tracking (через child(scope) в logger.ts)</span></div>
+      <div class="task"><span class="task-icon todo">○</span><span class="task-text">Email-уведомления о длинных задачах (видео &gt;1 min)</span></div>
+      <div class="task"><span class="task-icon todo">○</span><span class="task-text">Onboarding flow для новых юзеров (демо-генерация на welcome bonus)</span></div>
+      <div class="task"><span class="task-icon todo">○</span><span class="task-text">Mobile polish (медиа-grid в галерее, форма runner'а на iOS)</span></div>
+      <div class="task"><span class="task-icon todo">○</span><span class="task-text">Direct Kling JWT-адаптер (если fal upcharges станут существенными)</span></div>
+      <div class="task"><span class="task-icon todo">○</span><span class="task-text">Provider fallback-цепочки (fal падает → Replicate)</span></div>
+      <div class="task"><span class="task-icon todo">○</span><span class="task-text">A/B-тестирование качества (одна задача на двух провайдерах)</span></div>
+      <div class="task"><span class="task-icon todo">○</span><span class="task-text">Cost-based routing — автоматический выбор cheapest provider</span></div>
+      <div class="task"><span class="task-icon todo">○</span><span class="task-text">Reels script generator (Claude Sonnet 4.6 integration)</span></div>
+      <div class="task"><span class="task-icon todo">○</span><span class="task-text">Provider P&amp;L в admin (margin per model)</span></div>
+      <div class="task"><span class="task-icon todo">○</span><span class="task-text">/admin/transactions — отдельный таб для админа со всеми token_transactions (включая reserve/spend/refund)</span></div>
+    </div>
+  </section>
+
+  <!-- STAGE 2 — collapsible (post-MVP / SaaS-зрелость) -->
+  <div class="s2-wrap" id="s2-wrap">
+    <button class="s2-toggle" onclick="document.getElementById('s2-wrap').classList.toggle('open')">
+      <span class="s2-badge">Phase 2 · post-MVP</span>
+      <span>
+        <span class="s2-title">Стадия 2 · превращаем MVP в SaaS</span>
+        <span class="s2-subtitle">Pricing, retention, viral loop, AI Marketing Agent — то, что превращает агрегатор в продукт</span>
+      </span>
+      <span class="s2-chevron">⌄</span>
+    </button>
+
+    <div class="s2-content">
+
+      <div class="s2-intro">
+        Илья, следующие этапы — уже не «собрать MVP», а превратить его в <em>рабочий SaaS-продукт</em>, который можно продавать, масштабировать и контролировать по экономике.
+      </div>
+
+      <!-- 10. QA -->
+      <article class="s2-item">
+        <div class="s2-item-num">10</div>
+        <div>
+          <div class="s2-item-name">QA / тестирование всей системы</div>
+          <div class="s2-item-goal">Главная цель: убрать баги до первых пользователей</div>
+          <div class="s2-item-body">
+            <p>Проверить:</p>
+            <ul>
+              <li>регистрация / вход</li>
+              <li>покупка токенов</li>
+              <li>списание токенов</li>
+              <li>возврат токенов при ошибке</li>
+              <li>генерации через каждый AI-инструмент</li>
+              <li>загрузка файлов</li>
+              <li>история задач</li>
+              <li>ошибки API</li>
+              <li>лимиты</li>
+              <li>работа очередей</li>
+              <li>админка</li>
+            </ul>
+          </div>
+        </div>
+      </article>
+
+      <!-- 11. Pricing -->
+      <article class="s2-item">
+        <div class="s2-item-num">11</div>
+        <div>
+          <div class="s2-item-name">Pricing и unit-экономика</div>
+          <div class="s2-item-goal">Себестоимость каждого инструмента → маржа → цена в токенах</div>
+          <div class="s2-item-body">
+            <p>Для каждого AI-инструмента посчитать:</p>
+            <ul>
+              <li>стоимость API</li>
+              <li>стоимость хранения</li>
+              <li>комиссия платёжки</li>
+              <li>желаемая маржа</li>
+              <li>цена в токенах</li>
+            </ul>
+            <div class="s2-example">
+              <b>Пример · Kling video</b>
+              себестоимость <code>$0.35</code> → продаём за <code>$1.2–1.5</code> в токенах → маржа <b>60–75%</b>
+            </div>
+          </div>
+        </div>
+      </article>
+
+      <!-- 12. Тарифные пакеты -->
+      <article class="s2-item">
+        <div class="s2-item-num">12</div>
+        <div>
+          <div class="s2-item-name">Тарифные пакеты</div>
+          <div class="s2-item-goal">Продавать не «токены», а результат</div>
+          <div class="s2-item-body">
+            <div class="s2-tier"><b>Starter</b><span>для теста</span></div>
+            <div class="s2-tier"><b>Creator</b><span>основной массовый тариф</span></div>
+            <div class="s2-tier"><b>Pro</b><span>для активных креаторов</span></div>
+            <div class="s2-tier"><b>Agency</b><span>для команд и продакшенов</span></div>
+            <div class="s2-example">
+              <b>Важно — как продавать</b>
+              «100 Reels-креативов» · «50 AI-видео» · «200 фото для контента» · «30 рекламных концепций» — а не абстрактные «10 000 токенов».
+            </div>
+          </div>
+        </div>
+      </article>
+
+      <!-- 13. Onboarding -->
+      <article class="s2-item">
+        <div class="s2-item-num">13</div>
+        <div>
+          <div class="s2-item-name">Onboarding</div>
+          <div class="s2-item-goal">После регистрации юзер сразу понимает что делать</div>
+          <div class="s2-item-body">
+            <ul>
+              <li>стартовые бесплатные токены</li>
+              <li>короткий tutorial</li>
+              <li>блок «начни отсюда»</li>
+              <li>3–5 готовых сценариев использования</li>
+              <li>шаблоны промптов</li>
+              <li>примеры результатов</li>
+            </ul>
+            <p style="color:var(--t3);font-style:italic;margin-top:8px">Иначе люди зайдут, увидят много кнопок и выйдут.</p>
+          </div>
+        </div>
+      </article>
+
+      <!-- 14. Creator Templates -->
+      <article class="s2-item">
+        <div class="s2-item-num">14</div>
+        <div>
+          <div class="s2-item-name">Creator Templates</div>
+          <div class="s2-item-goal">Готовые сценарии поверх моделей — вот что можно продавать</div>
+          <div class="s2-item-body">
+            <p>Не просто «text-to-image», а:</p>
+            <ul>
+              <li>Reels Hook Generator</li>
+              <li>Luxury Product Video</li>
+              <li>AI Avatar Intro</li>
+              <li>Face Swap для рекламы</li>
+              <li>Before / After креатив</li>
+              <li>Instagram Visual Pack</li>
+              <li>UGC Ad Generator</li>
+              <li>Product Photo Upscale</li>
+              <li>Talking Avatar Script</li>
+              <li>Viral Reel Concept</li>
+            </ul>
+          </div>
+        </div>
+      </article>
+
+      <!-- 15. Preset System -->
+      <article class="s2-item">
+        <div class="s2-item-num">15</div>
+        <div>
+          <div class="s2-item-name">Preset System</div>
+          <div class="s2-item-goal">Юзер выбирает стиль, платформа подставляет промпт</div>
+          <div class="s2-item-body">
+            <p>Стили:</p>
+            <ul>
+              <li>luxury editorial</li>
+              <li>cinematic</li>
+              <li>UGC ad</li>
+              <li>fashion campaign</li>
+              <li>podcast clips</li>
+              <li>Instagram expert style</li>
+              <li>viral TikTok style</li>
+            </ul>
+            <p style="margin-top:6px">→ результат получается предсказуемее.</p>
+          </div>
+        </div>
+      </article>
+
+      <!-- 16. Project Workspace -->
+      <article class="s2-item">
+        <div class="s2-item-num">16</div>
+        <div>
+          <div class="s2-item-name">Project Workspace</div>
+          <div class="s2-item-goal">Юзер работает не «по одному файлу», а внутри проектов</div>
+          <div class="s2-item-body">
+            <ul>
+              <li>проекты</li>
+              <li>папки</li>
+              <li>бренды</li>
+              <li>сохранённые стили</li>
+              <li>история генераций внутри проекта</li>
+              <li>повторить генерацию</li>
+              <li>remix результата</li>
+              <li>скачать пакет файлов</li>
+            </ul>
+          </div>
+        </div>
+      </article>
+
+      <!-- 17. Brand Kit -->
+      <article class="s2-item">
+        <div class="s2-item-num">17</div>
+        <div>
+          <div class="s2-item-name">Brand Kit</div>
+          <div class="s2-item-goal">Очень сильная функция для B2B и креаторов</div>
+          <div class="s2-item-body">
+            <p>Пользователь загружает:</p>
+            <ul>
+              <li>логотип</li>
+              <li>цвета</li>
+              <li>шрифты</li>
+              <li>описание бренда</li>
+              <li>tone of voice</li>
+              <li>референсы</li>
+              <li>лицо / аватар</li>
+              <li>продукты</li>
+            </ul>
+            <p style="margin-top:6px">→ все генерации адаптируются под его бренд.</p>
+          </div>
+        </div>
+      </article>
+
+      <!-- 18. Admin Analytics -->
+      <article class="s2-item">
+        <div class="s2-item-num">18</div>
+        <div>
+          <div class="s2-item-name">Admin Analytics</div>
+          <div class="s2-item-goal">Видеть не «пользователей», а деньги</div>
+          <div class="s2-item-body">
+            <ul>
+              <li>revenue</li>
+              <li>MRR</li>
+              <li>ARPU</li>
+              <li>CAC</li>
+              <li>LTV</li>
+              <li>маржа по каждому инструменту</li>
+              <li>самый дорогой API</li>
+              <li>самый прибыльный инструмент</li>
+              <li>failed jobs rate</li>
+              <li>refund rate</li>
+              <li>активные пользователи</li>
+              <li>retention</li>
+              <li>conversion to payment</li>
+            </ul>
+          </div>
+        </div>
+      </article>
+
+      <!-- 19. Beta Launch -->
+      <article class="s2-item">
+        <div class="s2-item-num">19</div>
+        <div>
+          <div class="s2-item-name">Beta Launch</div>
+          <div class="s2-item-goal">Запускать через закрытую бету, не публично</div>
+          <div class="s2-item-body">
+            <ol>
+              <li>взять 30–50 лояльных пользователей</li>
+              <li>дать бесплатные токены</li>
+              <li>собрать обратную связь</li>
+              <li>понять, какие инструменты реально используют</li>
+              <li>убрать лишнее</li>
+              <li>усилить самые востребованные функции</li>
+            </ol>
+          </div>
+        </div>
+      </article>
+
+      <!-- 20. Лендинг и оффер -->
+      <article class="s2-item">
+        <div class="s2-item-num">20</div>
+        <div>
+          <div class="s2-item-name">Лендинг и оффер</div>
+          <div class="s2-item-goal">Единый AI-кабинет без 20 разных подписок</div>
+          <div class="s2-item-body">
+            <p><b>Позиционирование:</b> Единый AI-кабинет для создания Reels, рекламы, видео, фото и креативов без 20 разных подписок.</p>
+            <p style="margin-top:10px"><b>Главные блоки:</b></p>
+            <ul>
+              <li>боль: слишком много AI-сервисов</li>
+              <li>решение: один кабинет</li>
+              <li>что внутри</li>
+              <li>примеры генераций</li>
+              <li>кому подходит</li>
+              <li>тарифы</li>
+              <li>кейсы</li>
+              <li>CTA: получить стартовые токены</li>
+            </ul>
+          </div>
+        </div>
+      </article>
+
+      <!-- 21. Viral Loop -->
+      <article class="s2-item">
+        <div class="s2-item-num">21</div>
+        <div>
+          <div class="s2-item-name">Viral Loop</div>
+          <div class="s2-item-goal">Механика роста</div>
+          <div class="s2-item-body">
+            <ul>
+              <li>водяной знак на бесплатных генерациях</li>
+              <li>«создано в AI Creative Hub»</li>
+              <li>реферальные токены</li>
+              <li>бонус за приглашение друга</li>
+              <li>публичная галерея лучших работ</li>
+              <li>шаблоны, которыми можно делиться</li>
+            </ul>
+          </div>
+        </div>
+      </article>
+
+      <!-- 22. AI Marketing Agent -->
+      <article class="s2-item">
+        <div class="s2-item-num">22</div>
+        <div>
+          <div class="s2-item-name">Следующий большой модуль · AI Marketing Agent</div>
+          <div class="s2-item-goal">После MVP — не новые модели, а агент</div>
+          <div class="s2-item-body">
+            <p>Должен:</p>
+            <ul>
+              <li>анализировать Instagram</li>
+              <li>находить слабые места</li>
+              <li>предлагать контент-стратегию</li>
+              <li>генерировать Reels</li>
+              <li>создавать креативы</li>
+              <li>делать контент-план</li>
+              <li>давать рекомендации по росту</li>
+            </ul>
+            <p style="margin-top:8px;color:var(--accent);font-weight:500">Вот это станет твоим отличием от обычного агрегатора.</p>
+          </div>
+        </div>
+      </article>
+
+      <!-- Final 3-step recap -->
+      <div class="s2-final">
+        <div class="s2-final-eyebrow">Главный следующий шаг</div>
+        <div class="s2-final-title">Сейчас тебе нужно не ещё 20 функций, а 3 вещи</div>
+        <div class="s2-final-list">
+          <div class="s2-final-step">
+            <div class="s2-final-n">1</div>
+            <div class="s2-final-text">довести MVP до стабильности</div>
+          </div>
+          <div class="s2-final-step">
+            <div class="s2-final-n">2</div>
+            <div class="s2-final-text">упаковать 8–12 сценариев использования для креаторов</div>
+          </div>
+          <div class="s2-final-step">
+            <div class="s2-final-n">3</div>
+            <div class="s2-final-text">запустить закрытую бету на свою аудиторию</div>
+          </div>
+        </div>
+        <p style="margin-top:18px;font-size:14px;color:rgba(255,255,255,.7);line-height:1.5">
+          После этого будет понятно, что масштабировать.
+        </p>
+      </div>
+
+    </div>
+  </div>
+
+  <!-- IMPORTANT REQUIREMENTS -->
+  <section class="requirements" id="requirements">
+    <div class="req-eyebrow">Важные требования · все выполнены</div>
+    <div class="req-title">Архитектурные инварианты</div>
+    <div class="req-list">
+      <div class="req-item">
+        <div class="req-check">✓</div>
+        <div class="req-text">Все API keys только в <code>.env</code> — никогда в коде, никогда не отдаются на frontend</div>
+      </div>
+      <div class="req-item">
+        <div class="req-check">✓</div>
+        <div class="req-text">Не вызываем внешние AI API с frontend — только из Route Handlers и worker'а</div>
+      </div>
+      <div class="req-item">
+        <div class="req-check">✓</div>
+        <div class="req-text">Все задачи проводятся через backend (<code>/api/tools/[slug]/run</code> → BullMQ → worker)</div>
+      </div>
+      <div class="req-item">
+        <div class="req-check">✓</div>
+        <div class="req-text">Для долгих задач используется очередь — BullMQ на Redis, отдельный worker-контейнер</div>
+      </div>
+      <div class="req-item">
+        <div class="req-check">✓</div>
+        <div class="req-text">Все результаты сохраняются в Storage — MinIO bucket <code>ai-hub-media</code>, presigned URLs</div>
+      </div>
+      <div class="req-item">
+        <div class="req-check">✓</div>
+        <div class="req-text">Не ломаем текущий функционал — <code>ai-hub/</code> изолирован от <code>pages/</code>, <code>infra-worker/</code>, других сервисов в монорепо</div>
+      </div>
+      <div class="req-item">
+        <div class="req-check">✓</div>
+        <div class="req-text">Все новые функции вынесены в модуль <code>/ai-hub</code> — свой Postgres-проект <code>ai_hub</code>, свой compose, свой поддомен</div>
+      </div>
+    </div>
+  </section>
+
+  <!-- DEEP RESEARCH REFERENCE -->
+  <section class="stage" id="research" style="margin-top:32px">
+    <div class="stage-hd">
+      <div class="stage-num">Reference</div>
+      <div>
+        <div class="stage-title">Deep architecture research</div>
+        <div class="stage-sub">Источник архитектурных решений · mapping в реализацию</div>
+      </div>
+      <span class="stage-status next"><span class="dot"></span>Reference</span>
+    </div>
+    <div class="tasks">
+      <p style="font-size:14px;color:var(--t2);line-height:1.55;margin-bottom:14px">
+        Глубокое research-исследование (~700 строк) загружено в проект как <code style="font-family:var(--mono);font-size:12px;background:var(--accent-soft);color:var(--accent);padding:1px 5px;border-radius:4px">ai-hub/docs/architecture-research.md</code>.
+        Охватывает провайдерскую стратегию, ledger-first wallet, pricing engine, fallback chains, security/GDPR, 6-month budget и подробный mapping research → текущая реализация.
+      </p>
+      <div class="task-group">
+        <div class="task-group-name">Что внутри</div>
+        <div class="task"><span class="task-icon done">✓</span><span class="task-text"><b>Executive summary</b> + рекомендуемая архитектура (что строить самому, что брать с рынка)</span></div>
+        <div class="task"><span class="task-icon done">✓</span><span class="task-text"><b>Провайдерская матрица</b>: fal / Replicate / Kling / Runware / ModelsLab — что брать первым и почему</span></div>
+        <div class="task"><span class="task-icon done">✓</span><span class="task-text"><b>Целевая схема платформы</b> (Mermaid) + 5 архитектурных принципов (async-first, ledger-first, provider-neutral, cost-aware, private-by-default)</span></div>
+        <div class="task"><span class="task-icon done">✓</span><span class="task-text"><b>ER-схема БД</b> с расширениями (workspaces, job_attempts, provider_models) + критичные индексы</span></div>
+        <div class="task"><span class="task-icon done">✓</span><span class="task-text"><b>Формула pricing + конкретные примеры</b> токенизации (Nano Banana, Kling 720p, upscale) с multiplier 1.52</span></div>
+        <div class="task"><span class="task-icon done">✓</span><span class="task-text"><b>API-контракт</b>: 13 endpoints + расширенный ProviderAdapter (quote / submit / poll / parseWebhook / cancel)</span></div>
+        <div class="task"><span class="task-icon done">✓</span><span class="task-text"><b>Адаптеры для Replicate и Kling</b> с реальными API-вызовами (~250 строк TS)</span></div>
+        <div class="task"><span class="task-icon done">✓</span><span class="task-text"><b>Router policy + scoring</b> формула</span></div>
+        <div class="task"><span class="task-icon done">✓</span><span class="task-text"><b>Security / Webhook hardening / Payment provider map / GDPR / AI Act / Observability / CI-CD</b></span></div>
+        <div class="task"><span class="task-icon done">✓</span><span class="task-text"><b>MVP план</b>: P0/P1/P2 + 14 этапов с оценкой 246-384ч (6-10 недель) + 3-sprint порядок</span></div>
+        <div class="task"><span class="task-icon done">✓</span><span class="task-text"><b>Тест-план</b> (Unit / DB / Integration / E2E / Chaos / Security / Financial / Load) + критерии готовности</span></div>
+        <div class="task"><span class="task-icon done">✓</span><span class="task-text"><b>Бюджет</b>: месячный API-budget (~$2.8-3.3k/мес) + 6-month operational ($5.6k-37.8k)</span></div>
+      </div>
+      <div class="task-group">
+        <div class="task-group-name">Главные gaps research → наша реализация</div>
+        <div class="task"><span class="task-icon todo">○</span><span class="task-text"><code>quote()</code> API для динамической оценки цены до резерва</span></div>
+        <div class="task"><span class="task-icon todo">○</span><span class="task-text">Таблица <code>job_attempts</code> для retry/fallback lineage</span></div>
+        <div class="task"><span class="task-icon todo">○</span><span class="task-text">Provider health scoring + fallback chains (router сейчас static)</span></div>
+        <div class="task"><span class="task-icon todo">○</span><span class="task-text">Two-plane wallet: разделить money и tokens (FX/margin tracking)</span></div>
+        <div class="task"><span class="task-icon todo">○</span><span class="task-text">Sentry + OpenTelemetry (Stage 2 observability)</span></div>
+        <div class="task"><span class="task-icon todo">○</span><span class="task-text">GDPR + AI Act Article 50 (применяется с 2026-08-02) compliance — consent flow для face-swap, DPA inventory</span></div>
+        <div class="task"><span class="task-icon todo">○</span><span class="task-text">Provider P&amp;L analytics — есть <code>provider_cost_usd</code>, нет агрегаций по марже</span></div>
+      </div>
+    </div>
+  </section>
+
+  <footer class="foot">
+    <div>AI Creative Hub · Roadmap</div>
+    <div class="foot-meta">canon · ai-hub/ROADMAP.md · updated 2026-05-19</div>
+  </footer>
+
+</main>
+
+</body>
+</html>

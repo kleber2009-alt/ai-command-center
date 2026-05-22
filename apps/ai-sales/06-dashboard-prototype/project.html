@@ -1,0 +1,666 @@
+<!DOCTYPE html>
+<html lang="ru">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<meta name="theme-color" content="#080808">
+<meta name="color-scheme" content="dark only">
+<title>AI Sales · Project Dashboard</title>
+<style>
+  *, *::before, *::after { margin:0; padding:0; box-sizing:border-box; }
+  html, body { background:#080808; color:#f5f0e8; min-height:100vh; }
+  body { font-family:Georgia,'Times New Roman',serif; font-size:15px; line-height:1.5; overflow-x:hidden; }
+
+  .label { font-family:'SF Mono','JetBrains Mono','Menlo',monospace; font-size:10px; text-transform:uppercase; letter-spacing:0.14em; color:#b8b3a8; font-weight:700; }
+  .mono { font-family:'SF Mono','JetBrains Mono','Menlo',monospace; }
+
+  /* === TOPBAR === */
+  .topbar { position:sticky; top:0; z-index:50; display:flex; align-items:center; justify-content:space-between; padding:14px 24px; background:#080808; border-bottom:1px solid #2a2a2a; gap:18px; flex-wrap:wrap; }
+  .topbar-left { display:flex; align-items:center; gap:18px; min-width:0; }
+  .topbar-title { font-family:Georgia,serif; font-size:18px; line-height:1; white-space:nowrap; }
+  .topbar-title .accent { color:#c8f060; font-style:italic; }
+  .topbar-nav { display:flex; gap:2px; }
+  .nav-link { background:transparent; border:1px solid #2a2a2a; color:#b8b3a8; padding:7px 14px; font-family:'SF Mono',monospace; font-size:10px; text-transform:uppercase; letter-spacing:0.14em; cursor:pointer; font-weight:700; text-decoration:none; }
+  .nav-link.active { background:#c8f060; color:#080808; border-color:#c8f060; }
+  .nav-link:hover:not(.active) { border-color:#c8f060; color:#f5f0e8; }
+  .topbar-right { display:flex; gap:18px; align-items:center; color:#b8b3a8; font-family:'SF Mono',monospace; font-size:11px; }
+
+  .shell { max-width:1480px; margin:0 auto; padding:18px 24px 80px; display:grid; gap:2px; }
+
+  /* === SECTION HEADERS === */
+  .sec-head { display:flex; align-items:baseline; gap:14px; padding:18px 2px 10px; }
+  .sec-num { font-family:'SF Mono',monospace; font-size:10px; font-weight:700; color:#c8f060; letter-spacing:0.18em; }
+  .sec-title { font-family:Georgia,serif; font-size:14px; font-style:italic; color:#b8b3a8; }
+  .sec-spacer { flex:1; border-bottom:1px solid #1a1a1a; transform:translateY(-2px); }
+
+  /* === HERO / OVERALL === */
+  .hero { display:grid; grid-template-columns:1.4fr 1fr 1fr 1fr; gap:2px; }
+  @media (max-width:900px) { .hero { grid-template-columns:1fr 1fr; } }
+  .hero-main { background:#0f0f0f; border:1px solid #1a1a1a; padding:24px 28px; display:flex; flex-direction:column; gap:18px; }
+  .hero-main h1 { font-family:Georgia,serif; font-size:32px; font-weight:normal; line-height:1.15; letter-spacing:-0.01em; }
+  .hero-main h1 .accent { color:#c8f060; font-style:italic; }
+  .hero-main .desc { color:#b8b3a8; font-size:14px; line-height:1.55; }
+  .progress-bar { height:8px; background:#1a1a1a; position:relative; overflow:hidden; }
+  .progress-fill { height:100%; background:linear-gradient(90deg, #c8f060 0%, #c8f060 100%); position:relative; }
+  .progress-meta { display:flex; justify-content:space-between; font-family:'SF Mono',monospace; font-size:10px; letter-spacing:0.12em; color:#b8b3a8; font-weight:700; text-transform:uppercase; }
+  .progress-meta .done { color:#c8f060; }
+
+  .hero-stat { background:#0f0f0f; border:1px solid #1a1a1a; padding:18px 20px 16px; display:flex; flex-direction:column; gap:6px; min-height:140px; }
+  .hero-stat .num { font-family:'SF Mono',monospace; font-size:10px; color:#3a3a3a; font-weight:700; letter-spacing:0.18em; }
+  .hero-stat .lbl { font-family:'SF Mono',monospace; font-size:10px; text-transform:uppercase; letter-spacing:0.14em; color:#b8b3a8; font-weight:700; line-height:1.3; }
+  .hero-stat .val { font-family:Georgia,serif; font-size:52px; line-height:1; margin-top:auto; letter-spacing:-0.02em; }
+  .hero-stat .val.lime { color:#c8f060; }
+  .hero-stat .val.cyan { color:#60c8f0; }
+  .hero-stat .val.pink { color:#f06090; }
+  .hero-stat .val .sfx { font-size:22px; color:#5a5550; }
+  .hero-stat .sub { font-family:'SF Mono',monospace; font-size:10px; color:#b8b3a8; letter-spacing:0.08em; }
+
+  /* === STAGE TIMELINE === */
+  .stages { display:grid; grid-template-columns:1fr; gap:2px; }
+  .stage-card { background:#0f0f0f; border:1px solid #1a1a1a; padding:18px 22px; display:grid; grid-template-columns:60px 1fr 280px 100px; gap:18px; align-items:start; cursor:pointer; transition:border-color 0.15s; }
+  @media (max-width:900px) { .stage-card { grid-template-columns:50px 1fr; gap:14px; } .stage-card .stage-tasks, .stage-card .stage-progress-col { grid-column:1 / -1; padding-top:8px; } }
+  .stage-card:hover { border-color:#3a3a3a; }
+  .stage-card.done { border-left:3px solid #c8f060; }
+  .stage-card.active { border-left:3px solid #60c8f0; background:#0d1216; }
+  .stage-card.wait { border-left:3px solid #2a2a2a; opacity:0.78; }
+  .stage-card.wait:hover { opacity:1; }
+
+  .stage-num-col { font-family:'SF Mono',monospace; font-size:36px; font-weight:700; color:#3a3a3a; letter-spacing:0.02em; line-height:1; padding-top:4px; }
+  .stage-card.done .stage-num-col { color:#c8f060; }
+  .stage-card.active .stage-num-col { color:#60c8f0; }
+
+  .stage-main { min-width:0; }
+  .stage-title-row { display:flex; align-items:baseline; gap:12px; flex-wrap:wrap; }
+  .stage-title { font-family:Georgia,serif; font-size:22px; line-height:1.2; }
+  .stage-status { font-family:'SF Mono',monospace; font-size:9px; padding:2px 8px; font-weight:700; letter-spacing:0.12em; text-transform:uppercase; }
+  .stage-status.done { background:#2a3a14; color:#c8f060; }
+  .stage-status.active { background:#0f2a3a; color:#60c8f0; }
+  .stage-status.wait { background:#1a1a1a; color:#b8b3a8; border:1px solid #2a2a2a; }
+  .stage-desc { font-size:13.5px; color:#b8b3a8; line-height:1.5; margin-top:8px; }
+  .stage-deliverable { margin-top:10px; font-family:'SF Mono',monospace; font-size:10px; color:#5a5550; letter-spacing:0.06em; }
+  .stage-deliverable b { color:#c8f060; font-weight:700; }
+
+  .stage-tasks { font-family:'SF Mono',monospace; font-size:11px; color:#b8b3a8; line-height:1.7; }
+  .stage-tasks .t { display:flex; gap:8px; align-items:baseline; padding:2px 0; }
+  .stage-tasks .mark { color:#c8f060; flex-shrink:0; width:14px; font-weight:700; }
+  .stage-tasks .mark.todo { color:#3a3a3a; }
+  .stage-tasks .mark.doing { color:#60c8f0; }
+  .stage-tasks .txt { color:#f5f0e8; }
+  .stage-tasks .txt.dim { color:#5a5550; }
+  .stage-tasks .txt.doing { color:#60c8f0; }
+
+  .stage-progress-col { display:flex; flex-direction:column; align-items:flex-end; gap:8px; }
+  .stage-progress-num { font-family:Georgia,serif; font-size:32px; line-height:1; }
+  .stage-progress-num.done { color:#c8f060; }
+  .stage-progress-num.active { color:#60c8f0; }
+  .stage-progress-num.wait { color:#3a3a3a; }
+  .stage-mini-bar { width:80px; height:4px; background:#1a1a1a; position:relative; }
+  .stage-mini-fill { height:100%; background:#c8f060; }
+  .stage-mini-fill.active { background:#60c8f0; }
+  .stage-eta { font-family:'SF Mono',monospace; font-size:9px; color:#5a5550; letter-spacing:0.1em; }
+
+  /* === BACKLOG / TASKS === */
+  .columns { display:grid; grid-template-columns:1fr 1fr 1fr; gap:2px; }
+  @media (max-width:900px) { .columns { grid-template-columns:1fr; } }
+  .col { background:#0f0f0f; border:1px solid #1a1a1a; padding:0; min-height:260px; }
+  .col-head { display:flex; justify-content:space-between; align-items:center; padding:14px 18px; border-bottom:1px solid #1a1a1a; }
+  .col-count { font-family:'SF Mono',monospace; font-size:10px; padding:2px 7px; font-weight:700; letter-spacing:0.1em; }
+  .col-count.cyan { background:#0f2a3a; color:#60c8f0; }
+  .col-count.lime { background:#2a3a14; color:#c8f060; }
+  .col-count.gray { background:#1a1a1a; color:#b8b3a8; border:1px solid #2a2a2a; }
+
+  .task { padding:13px 18px; border-bottom:1px solid #131313; cursor:pointer; }
+  .task:last-child { border-bottom:none; }
+  .task:hover { background:#141414; }
+  .task-title { font-size:14px; line-height:1.4; color:#f5f0e8; }
+  .task-meta { display:flex; gap:10px; margin-top:6px; font-family:'SF Mono',monospace; font-size:10px; color:#5a5550; letter-spacing:0.06em; }
+  .task-meta .tag { padding:1px 6px; font-weight:700; }
+  .task-meta .tag.p1 { background:#28121b; color:#f06090; }
+  .task-meta .tag.p2 { background:#0f1f28; color:#60c8f0; }
+  .task-meta .tag.p3 { background:#1a1a1a; color:#b8b3a8; border:1px solid #2a2a2a; }
+  .task-meta .stage-ref { color:#c8f060; }
+
+  /* === SIDEBAR INFO === */
+  .grid-info { display:grid; grid-template-columns:1.4fr 1fr; gap:2px; }
+  @media (max-width:900px) { .grid-info { grid-template-columns:1fr; } }
+
+  .panel { background:#0f0f0f; border:1px solid #1a1a1a; padding:20px 22px; }
+  .panel h3 { font-family:Georgia,serif; font-size:18px; font-weight:normal; margin-bottom:14px; }
+  .panel h3 .accent { color:#c8f060; font-style:italic; }
+  .panel-row { display:flex; justify-content:space-between; padding:9px 0; border-bottom:1px solid #1a1a1a; align-items:baseline; font-size:13.5px; gap:12px; }
+  .panel-row:last-child { border-bottom:none; }
+  .panel-row .k { font-family:'SF Mono',monospace; font-size:10px; text-transform:uppercase; letter-spacing:0.1em; color:#b8b3a8; font-weight:700; flex-shrink:0; }
+  .panel-row .v { color:#f5f0e8; text-align:right; }
+  .panel-row .v.lime { color:#c8f060; font-family:'SF Mono',monospace; font-size:12px; font-weight:700; }
+  .panel-row .v.cyan { color:#60c8f0; font-family:'SF Mono',monospace; font-size:12px; font-weight:700; }
+  .panel-row .v.pink { color:#f06090; font-family:'SF Mono',monospace; font-size:12px; font-weight:700; }
+
+  .panel-list { font-family:'SF Mono',monospace; font-size:11px; line-height:1.8; color:#b8b3a8; }
+  .panel-list .item { display:flex; gap:10px; padding:5px 0; }
+  .panel-list .item .dot { color:#c8f060; flex-shrink:0; }
+  .panel-list .item.warn .dot { color:#f06090; }
+  .panel-list .item.info .dot { color:#60c8f0; }
+  .panel-list .item .body { color:#f5f0e8; }
+
+  .foot { padding:32px 0 0; text-align:center; color:#5a5550; font-family:'SF Mono',monospace; font-size:10px; letter-spacing:0.15em; text-transform:uppercase; }
+  .foot a { color:#c8f060; text-decoration:none; }
+</style>
+</head>
+<body>
+
+<header class="topbar">
+  <div class="topbar-left">
+    <div class="topbar-title">AI Sales <span class="accent">Project</span></div>
+    <nav class="topbar-nav">
+      <a class="nav-link" href="/01-portal/ai-sales-portal.html">Портал</a>
+      <a class="nav-link" href="/06-dashboard-prototype/pulse.html">Pulse</a>
+      <a class="nav-link" href="/06-dashboard-prototype/pipeline.html">Pipeline</a>
+      <a class="nav-link" href="/06-dashboard-prototype/conversation.html">Conv</a>
+      <a class="nav-link active" href="#">Project</a>
+      <a class="nav-link" href="/06-dashboard-prototype/agents.html">Agents</a>
+      <a class="nav-link" href="/carousels/index.html">Carousels</a>
+      <a class="nav-link" href="/reels/index.html">Reels</a>
+    </nav>
+  </div>
+  <div class="topbar-right">
+    <span>обновлено · 15 МАЯ 2026</span>
+    <span style="color:#c8f060;">● ON TRACK</span>
+  </div>
+</header>
+
+<main class="shell">
+
+  <!-- ============ HERO / OVERVIEW ============ -->
+  <div class="sec-head">
+    <span class="sec-num">/00</span>
+    <span class="sec-title">Общая картина</span>
+    <span class="sec-spacer"></span>
+  </div>
+
+  <div class="hero">
+
+    <div class="hero-main">
+      <div class="label">PROJECT STATUS</div>
+      <h1>Прогресс <span class="accent">2 / 8</span> этапов завершены, 5 в работе</h1>
+      <div class="desc">TG-бот @ilia_pali0_bot живой в проде: pipeline Sonnet 4.6 (classify) → Opus 4.7 (generate), prompt caching −90%, ~$0.025 за turn. HTTPS через Caddy + Let's Encrypt на nip.io. 5 прототипов дашборда + 3 карусели + 2 Reels. Teaching mode (/teach on) собирает голосовые от Ильи. Дальше: наполнение БЗ + ElevenLabs PVC + IG-канал.</div>
+      <div class="progress-bar"><div class="progress-fill" style="width:53%;"></div></div>
+      <div class="progress-meta">
+        <span><span class="done">53%</span> · 4.3 ИЗ 8</span>
+        <span>ETA · 5 НЕДЕЛЬ</span>
+      </div>
+    </div>
+
+    <div class="hero-stat">
+      <div class="num">01</div>
+      <div class="lbl">Этапов<br/>в работе</div>
+      <div class="val lime">5<span class="sfx">/8</span></div>
+      <div class="sub">stage 05 + 07 активированы</div>
+    </div>
+
+    <div class="hero-stat">
+      <div class="num">02</div>
+      <div class="lbl">TG-бот<br/>в проде</div>
+      <div class="val cyan">●</div>
+      <div class="sub">@ilia_pali0_bot · $0.025/turn</div>
+    </div>
+
+    <div class="hero-stat">
+      <div class="num">03</div>
+      <div class="lbl">Блокеров<br/>сейчас</div>
+      <div class="val">0</div>
+      <div class="sub">ждём голосовые от Ильи</div>
+    </div>
+
+  </div>
+
+  <!-- ============ STAGE TIMELINE ============ -->
+  <div class="sec-head">
+    <span class="sec-num">/01</span>
+    <span class="sec-title">8 этапов · 2 done · 5 active · 1 wait</span>
+    <span class="sec-spacer"></span>
+  </div>
+
+  <div class="stages">
+
+    <div class="stage-card done">
+      <div class="stage-num-col">01</div>
+      <div class="stage-main">
+        <div class="stage-title-row">
+          <div class="stage-title">Фундамент</div>
+          <span class="stage-status done">✓ Done</span>
+        </div>
+        <div class="stage-desc">Конституция проекта, ICP, голос бренда, юридический пакет, архитектура базы знаний — 6 базовых документов в портале.</div>
+        <div class="stage-deliverable">deliverable: <b>портал с 6 документами + 4 HTML-инструкции</b></div>
+      </div>
+      <div class="stage-tasks">
+        <div class="t"><span class="mark">▣</span><span class="txt">Конституция (doc-01)</span></div>
+        <div class="t"><span class="mark">▣</span><span class="txt">Голос бренда (doc-02)</span></div>
+        <div class="t"><span class="mark">▣</span><span class="txt">Юр-пакет (doc-03)</span></div>
+        <div class="t"><span class="mark">▣</span><span class="txt">Архитектура БЗ (doc-04)</span></div>
+      </div>
+      <div class="stage-progress-col">
+        <div class="stage-progress-num done">100<span style="font-size:14px;color:#5a5550;">%</span></div>
+        <div class="stage-mini-bar"><div class="stage-mini-fill" style="width:100%;"></div></div>
+        <div class="stage-eta">апрель 2026</div>
+      </div>
+    </div>
+
+    <div class="stage-card done">
+      <div class="stage-num-col">02</div>
+      <div class="stage-main">
+        <div class="stage-title-row">
+          <div class="stage-title">Инфраструктура</div>
+          <span class="stage-status done">✓ Done</span>
+        </div>
+        <div class="stage-desc">VPS (Hetzner CPX31, Ubuntu 24.04), Docker-стек из 5 сервисов (api, postgres, redis, qdrant, minio + caddy), схема БД 8 таблиц, FastAPI с JWT и Swagger, HTTPS через Caddy + Let's Encrypt на api.46-62-215-11.nip.io.</div>
+        <div class="stage-deliverable">deliverable: <b>aisales-api на :443 + 5 контейнеров + auto-HTTPS</b></div>
+      </div>
+      <div class="stage-tasks">
+        <div class="t"><span class="mark">▣</span><span class="txt">2.1 VPS Hetzner CPX31</span></div>
+        <div class="t"><span class="mark">▣</span><span class="txt">2.2 Docker · 5 сервисов</span></div>
+        <div class="t"><span class="mark">▣</span><span class="txt">2.3 Postgres · 8 таблиц</span></div>
+        <div class="t"><span class="mark">▣</span><span class="txt">2.4 FastAPI + JWT</span></div>
+        <div class="t"><span class="mark">▣</span><span class="txt">2.5 HTTPS · Caddy + LE (nip.io)</span></div>
+      </div>
+      <div class="stage-progress-col">
+        <div class="stage-progress-num done">100<span style="font-size:14px;color:#5a5550;">%</span></div>
+        <div class="stage-mini-bar"><div class="stage-mini-fill" style="width:100%;"></div></div>
+        <div class="stage-eta">май 2026</div>
+      </div>
+    </div>
+
+    <div class="stage-card active">
+      <div class="stage-num-col">03</div>
+      <div class="stage-main">
+        <div class="stage-title-row">
+          <div class="stage-title">База знаний</div>
+          <span class="stage-status active">● Active</span>
+        </div>
+        <div class="stage-desc">5 коллекций в Notion созданы. Следующий шаг — наполнение реальным содержанием через интервью + загрузка в Qdrant с эмбеддингами Voyage-3.</div>
+        <div class="stage-deliverable">deliverable: <b>работающий RAG с 5 коллекциями</b></div>
+      </div>
+      <div class="stage-tasks">
+        <div class="t"><span class="mark">▣</span><span class="txt">3.1 Структура коллекций в Notion</span></div>
+        <div class="t"><span class="mark doing">▶</span><span class="txt doing">3.2 Наполнение MVP (интервью)</span></div>
+        <div class="t"><span class="mark todo">◇</span><span class="txt dim">3.3 Подключить Voyage-3 эмбеддинги</span></div>
+        <div class="t"><span class="mark todo">◇</span><span class="txt dim">3.4 Загрузка в Qdrant + индексация</span></div>
+        <div class="t"><span class="mark todo">◇</span><span class="txt dim">3.5 RAG-запросы из FastAPI</span></div>
+      </div>
+      <div class="stage-progress-col">
+        <div class="stage-progress-num active">20<span style="font-size:14px;color:#5a5550;">%</span></div>
+        <div class="stage-mini-bar"><div class="stage-mini-fill active" style="width:20%;"></div></div>
+        <div class="stage-eta">~2 нед</div>
+      </div>
+    </div>
+
+    <div class="stage-card active">
+      <div class="stage-num-col">04</div>
+      <div class="stage-main">
+        <div class="stage-title-row">
+          <div class="stage-title">Дашборд (Next.js)</div>
+          <span class="stage-status active">● Active</span>
+        </div>
+        <div class="stage-desc">Production-фронт на Next.js + Tailwind + shadcn/ui. Все 4 прототипа в HTML готовы как design reference. Следующий — портирование в Next.js.</div>
+        <div class="stage-deliverable">deliverable: <b>Next.js приложение с 4 экранами</b></div>
+      </div>
+      <div class="stage-tasks">
+        <div class="t"><span class="mark">▣</span><span class="txt">Pulse прототип HTML</span></div>
+        <div class="t"><span class="mark">▣</span><span class="txt">Pipeline прототип HTML</span></div>
+        <div class="t"><span class="mark">▣</span><span class="txt">Conversation прототип HTML</span></div>
+        <div class="t"><span class="mark">▣</span><span class="txt">Project прототип HTML</span></div>
+        <div class="t"><span class="mark todo">◇</span><span class="txt dim">Карточки агентов</span></div>
+        <div class="t"><span class="mark todo">◇</span><span class="txt dim">Next.js портирование</span></div>
+        <div class="t"><span class="mark todo">◇</span><span class="txt dim">Мобильный режим</span></div>
+      </div>
+      <div class="stage-progress-col">
+        <div class="stage-progress-num active">35<span style="font-size:14px;color:#5a5550;">%</span></div>
+        <div class="stage-mini-bar"><div class="stage-mini-fill active" style="width:35%;"></div></div>
+        <div class="stage-eta">~2 нед</div>
+      </div>
+    </div>
+
+    <div class="stage-card active">
+      <div class="stage-num-col">05</div>
+      <div class="stage-main">
+        <div class="stage-title-row">
+          <div class="stage-title">Каналы · IG + TG</div>
+          <span class="stage-status active">● Active</span>
+          <span class="label" style="color:#c8f060;">— TG live · IG отложен</span>
+        </div>
+        <div class="stage-desc">Telegram-канал в проде: @ilia_pali0_bot отвечает реальным Claude через webhook на FastAPI. LangGraph flow работает, Redis-очереди подключены. Instagram отложен — Meta App Review без приоритета, фокус на наполнение TG-канала.</div>
+        <div class="stage-deliverable">deliverable: <b>TG-агент в проде (IG позже)</b></div>
+      </div>
+      <div class="stage-tasks">
+        <div class="t"><span class="mark">▣</span><span class="txt">Telegram Bot · webhook + handler</span></div>
+        <div class="t"><span class="mark">▣</span><span class="txt">LangGraph flow: вход → агент → выход</span></div>
+        <div class="t"><span class="mark">▣</span><span class="txt">Очереди через Redis</span></div>
+        <div class="t"><span class="mark todo">◇</span><span class="txt dim">Instagram Graph API (отложено)</span></div>
+        <div class="t"><span class="mark todo">◇</span><span class="txt dim">IG webhook + App Review (отложено)</span></div>
+      </div>
+      <div class="stage-progress-col">
+        <div class="stage-progress-num active">75<span style="font-size:14px;color:#5a5550;">%</span></div>
+        <div class="stage-mini-bar"><div class="stage-mini-fill active" style="width:75%;"></div></div>
+        <div class="stage-eta">TG done</div>
+      </div>
+    </div>
+
+    <div class="stage-card active">
+      <div class="stage-num-col">06</div>
+      <div class="stage-main">
+        <div class="stage-title-row">
+          <div class="stage-title">Голос · ElevenLabs PVC</div>
+          <span class="stage-status active">● Active</span>
+          <span class="label" style="color:#c8f060;">— /teach on собирает</span>
+        </div>
+        <div class="stage-desc">Teaching mode подключён в TG-боте: `/teach on` пишет голосовые от Ильи в voice-input/audio/, voice_analyzer готов к запуску. Скелет wav2lip-сервиса в коде. Нужны 30+ мин чистого аудио → PVC в ElevenLabs (24ч на обучение).</div>
+        <div class="stage-deliverable">deliverable: <b>агенты говорят голосом владельца</b></div>
+      </div>
+      <div class="stage-tasks">
+        <div class="t"><span class="mark">▣</span><span class="txt">Teaching mode (/teach on) в TG</span></div>
+        <div class="t"><span class="mark">▣</span><span class="txt">voice_analyzer + Whisper</span></div>
+        <div class="t"><span class="mark doing">▶</span><span class="txt doing">Сбор 30+ мин аудио от Ильи</span></div>
+        <div class="t"><span class="mark todo">◇</span><span class="txt dim">Создать PVC в ElevenLabs</span></div>
+        <div class="t"><span class="mark todo">◇</span><span class="txt dim">Wav2Lip для кружочков TG</span></div>
+      </div>
+      <div class="stage-progress-col">
+        <div class="stage-progress-num active">25<span style="font-size:14px;color:#5a5550;">%</span></div>
+        <div class="stage-mini-bar"><div class="stage-mini-fill active" style="width:25%;"></div></div>
+        <div class="stage-eta">~2 нед</div>
+      </div>
+    </div>
+
+    <div class="stage-card active">
+      <div class="stage-num-col">07</div>
+      <div class="stage-main">
+        <div class="stage-title-row">
+          <div class="stage-title">Запуск агентов</div>
+          <span class="stage-status active">● Active</span>
+          <span class="label" style="color:#c8f060;">— TG-агент в проде</span>
+        </div>
+        <div class="stage-desc">TG-Менеджер живой: Sonnet 4.6 classify → Opus 4.7 generate, prompt caching −90%, ~$0.025 за turn. Остальные 3 агента (IG, Analyst, РОП) — драфты промптов есть, ждут [PLACEHOLDER] под голос Ильи.</div>
+        <div class="stage-deliverable">deliverable: <b>4 агента работают с реальными клиентами</b></div>
+      </div>
+      <div class="stage-tasks">
+        <div class="t"><span class="mark">▣</span><span class="txt">Драфты 4 промптов (IG/TG/Analyst/РОП)</span></div>
+        <div class="t"><span class="mark">▣</span><span class="txt">Скрипты воронки 7 этапов</span></div>
+        <div class="t"><span class="mark">▣</span><span class="txt">Библиотека возражений (20)</span></div>
+        <div class="t"><span class="mark">▣</span><span class="txt">Pipeline classify (Sonnet) → generate (Opus)</span></div>
+        <div class="t"><span class="mark">▣</span><span class="txt">Prompt caching −90%</span></div>
+        <div class="t"><span class="mark">▣</span><span class="txt">TG-Менеджер боевой</span></div>
+        <div class="t"><span class="mark doing">▶</span><span class="txt doing">Заполнение [PLACEHOLDER] голосом</span></div>
+        <div class="t"><span class="mark todo">◇</span><span class="txt dim">Активация Analyst (Sonnet, скоринг 0-100)</span></div>
+        <div class="t"><span class="mark todo">◇</span><span class="txt dim">Активация РОПа (Opus, дайджесты)</span></div>
+        <div class="t"><span class="mark todo">◇</span><span class="txt dim">Канареечный запуск IG 10% трафика</span></div>
+      </div>
+      <div class="stage-progress-col">
+        <div class="stage-progress-num active">60<span style="font-size:14px;color:#5a5550;">%</span></div>
+        <div class="stage-mini-bar"><div class="stage-mini-fill active" style="width:60%;"></div></div>
+        <div class="stage-eta">~2 нед</div>
+      </div>
+    </div>
+
+    <div class="stage-card wait">
+      <div class="stage-num-col">08</div>
+      <div class="stage-main">
+        <div class="stage-title-row">
+          <div class="stage-title">Юридический запуск</div>
+          <span class="stage-status wait">⏳ Wait</span>
+        </div>
+        <div class="stage-desc">Согласие на обработку ПДн (152-ФЗ), GDPR-режим для ЕС, дисклеймеры «общается AI», правила эскалаций.</div>
+        <div class="stage-deliverable">deliverable: <b>система соответствует 152-ФЗ + AI Act</b></div>
+      </div>
+      <div class="stage-tasks">
+        <div class="t"><span class="mark todo">◇</span><span class="txt dim">Согласие ПДн в первом сообщении</span></div>
+        <div class="t"><span class="mark todo">◇</span><span class="txt dim">Дисклеймер «вы общаетесь с AI»</span></div>
+        <div class="t"><span class="mark todo">◇</span><span class="txt dim">Эскалация по чувствительным темам</span></div>
+        <div class="t"><span class="mark todo">◇</span><span class="txt dim">Логи + право удаления данных</span></div>
+      </div>
+      <div class="stage-progress-col">
+        <div class="stage-progress-num wait">0<span style="font-size:14px;color:#5a5550;">%</span></div>
+        <div class="stage-mini-bar"></div>
+        <div class="stage-eta">~1 нед</div>
+      </div>
+    </div>
+
+  </div>
+
+  <!-- ============ TASK BOARD ============ -->
+  <div class="sec-head">
+    <span class="sec-num">/02</span>
+    <span class="sec-title">Доска задач</span>
+    <span class="sec-spacer"></span>
+  </div>
+
+  <div class="columns">
+
+    <div class="col">
+      <div class="col-head">
+        <span class="label">Done · ночь 16→17</span>
+        <span class="col-count lime">21</span>
+      </div>
+      <div class="task">
+        <div class="task-title">TG-Менеджер боевой · @ilia_pali0_bot отвечает реальным Claude</div>
+        <div class="task-meta"><span class="stage-ref">→ stage 05/07</span><span class="tag p3">DONE</span><span>claude</span></div>
+      </div>
+      <div class="task">
+        <div class="task-title">SSL/HTTPS · Caddy + Let's Encrypt на nip.io</div>
+        <div class="task-meta"><span class="stage-ref">→ stage 02</span><span class="tag p3">DONE</span><span>claude</span></div>
+      </div>
+      <div class="task">
+        <div class="task-title">Pipeline Sonnet 4.6 classify → Opus 4.7 generate</div>
+        <div class="task-meta"><span class="stage-ref">→ stage 07</span><span class="tag p3">DONE</span><span>claude</span></div>
+      </div>
+      <div class="task">
+        <div class="task-title">Prompt caching · −90% на повторных вызовах</div>
+        <div class="task-meta"><span class="stage-ref">→ stage 07</span><span class="tag p3">DONE</span><span>claude</span></div>
+      </div>
+      <div class="task">
+        <div class="task-title">Teaching mode · /teach on пишет голосовые от Ильи</div>
+        <div class="task-meta"><span class="stage-ref">→ stage 06</span><span class="tag p3">DONE</span><span>claude</span></div>
+      </div>
+      <div class="task">
+        <div class="task-title">Переезд с Netlify на Caddy/Hetzner для статики</div>
+        <div class="task-meta"><span class="stage-ref">→ infra</span><span class="tag p3">DONE</span><span>claude</span></div>
+      </div>
+      <div class="task">
+        <div class="task-title">Prototype: Conversation · Pipeline · Agents (3 экрана)</div>
+        <div class="task-meta"><span class="stage-ref">→ stage 04</span><span class="tag p3">DONE</span><span>claude</span></div>
+      </div>
+      <div class="task">
+        <div class="task-title">LangGraph flow + nodes (mock-tested)</div>
+        <div class="task-meta"><span class="stage-ref">→ stage 05/07</span><span class="tag p3">DONE</span><span>claude</span></div>
+      </div>
+      <div class="task">
+        <div class="task-title">Webhook handlers IG + TG (FastAPI routes)</div>
+        <div class="task-meta"><span class="stage-ref">→ stage 05</span><span class="tag p3">DONE</span><span>claude</span></div>
+      </div>
+      <div class="task">
+        <div class="task-title">Whisper → SRT генератор (для Submagic/Captions)</div>
+        <div class="task-meta"><span class="stage-ref">→ контент</span><span class="tag p3">DONE</span><span>claude</span></div>
+      </div>
+      <div class="task">
+        <div class="task-title">Prompts loader + placeholder validator</div>
+        <div class="task-meta"><span class="stage-ref">→ stage 07</span><span class="tag p3">DONE</span><span>claude</span></div>
+      </div>
+      <div class="task">
+        <div class="task-title">SQL migration 003 · analytics + escalations + gaps</div>
+        <div class="task-meta"><span class="stage-ref">→ stage 02</span><span class="tag p3">DONE</span><span>claude</span></div>
+      </div>
+      <div class="task">
+        <div class="task-title">netlify.toml · security headers + redirects</div>
+        <div class="task-meta"><span class="stage-ref">→ infra</span><span class="tag p3">DONE</span><span>claude</span></div>
+      </div>
+      <div class="task">
+        <div class="task-title">Драфты 4 промптов (IG/TG/Analyst/РОП)</div>
+        <div class="task-meta"><span class="stage-ref">→ stage 07</span><span class="tag p3">DONE</span><span>claude</span></div>
+      </div>
+      <div class="task">
+        <div class="task-title">Funnel scripts · 7 этапов</div>
+        <div class="task-meta"><span class="stage-ref">→ stage 07</span><span class="tag p3">DONE</span><span>claude</span></div>
+      </div>
+      <div class="task">
+        <div class="task-title">Library of 20 objections</div>
+        <div class="task-meta"><span class="stage-ref">→ stage 03</span><span class="tag p3">DONE</span><span>claude</span></div>
+      </div>
+      <div class="task">
+        <div class="task-title">Notion templates · 5 коллекций</div>
+        <div class="task-meta"><span class="stage-ref">→ stage 03</span><span class="tag p3">DONE</span><span>claude</span></div>
+      </div>
+      <div class="task">
+        <div class="task-title">Skill: pro-web-design (~/.claude/skills/)</div>
+        <div class="task-meta"><span class="stage-ref">→ мета</span><span class="tag p3">DONE</span><span>claude</span></div>
+      </div>
+      <div class="task">
+        <div class="task-title">Карусели · 3 HTML-драфта (3/3)</div>
+        <div class="task-meta"><span class="stage-ref">→ контент</span><span class="tag p3">DONE</span><span>claude</span></div>
+      </div>
+      <div class="task">
+        <div class="task-title">Reels · 2 сценария + landing</div>
+        <div class="task-meta"><span class="stage-ref">→ контент</span><span class="tag p3">DONE</span><span>claude</span></div>
+      </div>
+      <div class="task">
+        <div class="task-title">Landing pages для карусели/reels с превью</div>
+        <div class="task-meta"><span class="stage-ref">→ контент</span><span class="tag p3">DONE</span><span>claude</span></div>
+      </div>
+    </div>
+
+    <div class="col">
+      <div class="col-head">
+        <span class="label">Next up · требуют Илью</span>
+        <span class="col-count cyan">5</span>
+      </div>
+      <div class="task">
+        <div class="task-title">Наполнение базы знаний MVP-контентом (интервью с Ильёй)</div>
+        <div class="task-meta"><span class="stage-ref">→ stage 03</span><span class="tag p1">P1</span><span>илья</span></div>
+      </div>
+      <div class="task">
+        <div class="task-title">Заполнить [PLACEHOLDER] в драфтах промптов своим голосом</div>
+        <div class="task-meta"><span class="stage-ref">→ stage 07</span><span class="tag p1">P1</span><span>илья</span></div>
+      </div>
+      <div class="task">
+        <div class="task-title">Скопировать шаблоны из notion-templates/ в Notion</div>
+        <div class="task-meta"><span class="stage-ref">→ stage 03</span><span class="tag p2">P2</span><span>илья</span></div>
+      </div>
+      <div class="task">
+        <div class="task-title">Voyage-3 эмбеддинги + загрузка в Qdrant</div>
+        <div class="task-meta"><span class="stage-ref">→ stage 03</span><span class="tag p2">P2</span><span></span></div>
+      </div>
+      <div class="task">
+        <div class="task-title">Запись 30+ мин аудио для ElevenLabs PVC</div>
+        <div class="task-meta"><span class="stage-ref">→ stage 06</span><span class="tag p2">P2</span><span>илья</span></div>
+      </div>
+    </div>
+
+    <div class="col">
+      <div class="col-head">
+        <span class="label">Backlog</span>
+        <span class="col-count gray">5</span>
+      </div>
+      <div class="task">
+        <div class="task-title">Pipeline (список клиентов с фильтрами)</div>
+        <div class="task-meta">
+          <span class="stage-ref">→ stage 04</span>
+          <span class="tag p3">P3</span>
+        </div>
+      </div>
+      <div class="task">
+        <div class="task-title">Карточки агентов с drill-down метриками</div>
+        <div class="task-meta">
+          <span class="stage-ref">→ stage 04</span>
+          <span class="tag p3">P3</span>
+        </div>
+      </div>
+      <div class="task">
+        <div class="task-title">Mobile-режим дашборда («РОП в дороге»)</div>
+        <div class="task-meta">
+          <span class="stage-ref">→ stage 04</span>
+          <span class="tag p3">P3</span>
+        </div>
+      </div>
+      <div class="task">
+        <div class="task-title">Купить реальный домен вместо nip.io для боевой работы</div>
+        <div class="task-meta">
+          <span class="stage-ref">→ infra</span>
+          <span class="tag p3">P3</span>
+        </div>
+      </div>
+      <div class="task">
+        <div class="task-title">Решить: basic-auth на инструкции или оставить публично</div>
+        <div class="task-meta">
+          <span class="stage-ref">→ infra</span>
+          <span class="tag p3">P3</span>
+        </div>
+      </div>
+    </div>
+
+  </div>
+
+  <!-- ============ INFRA + RISKS ============ -->
+  <div class="sec-head">
+    <span class="sec-num">/03</span>
+    <span class="sec-title">Инфраструктура и риски</span>
+    <span class="sec-spacer"></span>
+  </div>
+
+  <div class="grid-info">
+
+    <div class="panel">
+      <h3>Текущая <span class="accent">инфраструктура</span></h3>
+      <div class="panel-row"><span class="k">Server</span><span class="v">Hetzner CPX31 · Ubuntu 24.04</span></div>
+      <div class="panel-row"><span class="k">FastAPI</span><span class="v lime">● api.46-62-215-11.nip.io</span></div>
+      <div class="panel-row"><span class="k">PostgreSQL 16</span><span class="v lime">● 8 таблиц</span></div>
+      <div class="panel-row"><span class="k">Redis 7</span><span class="v lime">● online</span></div>
+      <div class="panel-row"><span class="k">Qdrant</span><span class="v lime">● online</span></div>
+      <div class="panel-row"><span class="k">MinIO</span><span class="v lime">● bucket aisales-media</span></div>
+      <div class="panel-row"><span class="k">Caddy</span><span class="v lime">● auto-HTTPS (Let's Encrypt)</span></div>
+      <div class="panel-row"><span class="k">Backups</span><span class="v">cron 03:00 · gzip · 30д</span></div>
+      <div class="panel-row"><span class="k">TG Bot</span><span class="v lime">● @ilia_pali0_bot live</span></div>
+    </div>
+
+    <div class="panel">
+      <h3>Риски и <span class="accent">внимание</span></h3>
+      <div class="panel-list">
+        <div class="item info">
+          <span class="dot">●</span>
+          <div class="body">База знаний — главное узкое горлышко. Без интервью и контента в Notion+Qdrant RAG будет отвечать generic. Это задача недели</div>
+        </div>
+        <div class="item warn">
+          <span class="dot">●</span>
+          <div class="body">Голос (ElevenLabs PVC) требует 30+ мин чистого аудио. Teaching mode пишет голосовые в TG, но без записи в студии PVC будет шумным</div>
+        </div>
+        <div class="item info">
+          <span class="dot">●</span>
+          <div class="body">Сервер в Германии (Hetzner) — для 152-ФЗ при работе с РФ-клиентами понадобится дублирующий VPS в РФ или прокси (этап 08)</div>
+        </div>
+      </div>
+    </div>
+
+  </div>
+
+  <div class="foot">
+    AI Sales System · Project Dashboard v0.1 · <a href="/01-portal/ai-sales-portal.html">портал</a> · <a href="/06-dashboard-prototype/pulse.html">pulse</a>
+  </div>
+
+</main>
+
+<script>
+  // stage card hover-friendly clicks (future: scroll to detail or open modal)
+  document.querySelectorAll('.stage-card').forEach(c => {
+    c.addEventListener('click', () => {
+      const num = c.querySelector('.stage-num-col')?.textContent;
+      console.log('[project] open stage detail:', num);
+    });
+  });
+
+  // task clicks → future modal
+  document.querySelectorAll('.task').forEach(t => {
+    t.addEventListener('click', () => {
+      const title = t.querySelector('.task-title')?.textContent;
+      console.log('[project] open task:', title);
+    });
+  });
+</script>
+
+<script src="/assets/sidebar.js" defer></script>
+</body>
+</html>

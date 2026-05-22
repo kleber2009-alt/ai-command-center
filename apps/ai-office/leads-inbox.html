@@ -1,0 +1,504 @@
+<!doctype html>
+<html lang="ru">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1">
+<title>Leads Inbox · все формы в одном месте · AI Growth Office</title>
+<meta name="description" content="Админ-инбокс: все собранные данные с сайта — бриф клиента, партнёрские заявки, подписки на видео, чаты с Алисой, аналитика.">
+<meta name="robots" content="noindex">
+<link rel="canonical" href="https://ai-growth-office.ru/leads-inbox.html">
+
+<link rel="manifest" href="/manifest.json">
+<meta name="theme-color" content="#0a0c14">
+<meta name="apple-mobile-web-app-capable" content="yes">
+<link rel="apple-touch-icon" href="/icon-192.png">
+
+<style>
+:root{
+  --bg:#0a0c14;--panel:rgba(255,255,255,.04);--panel2:rgba(255,255,255,.025);--border:rgba(255,255,255,.08);
+  --text:#e9eef7;--muted:#9aa3b2;--dim:#7c8a99;
+  --accent:#c8f060;--a2:#60c8f0;--a3:#f060c8;
+  --green:#34d058;--gold:#f0b429;--red:#f04060;
+  --ui:-apple-system,BlinkMacSystemFont,'Inter','Segoe UI',sans-serif;
+  --mono:'JetBrains Mono','SF Mono',monospace;
+}
+*{box-sizing:border-box;margin:0;padding:0}
+html,body{background:var(--bg);color:var(--text);font-family:var(--ui);min-height:100vh}
+body{background:radial-gradient(circle at 80% 0%,rgba(96,200,240,.05),transparent 55%),var(--bg)}
+
+.wrap{max-width:1280px;margin:0 auto;padding:32px 24px 80px}
+.crumbs{font-size:11px;color:var(--muted);margin-bottom:18px;letter-spacing:.4px}
+.crumbs a{color:var(--muted);text-decoration:none;border-bottom:1px dotted rgba(255,255,255,.15)}
+.crumbs a:hover{color:var(--accent)}
+
+.demo-banner{display:flex;justify-content:space-between;align-items:center;padding:11px 18px;background:linear-gradient(90deg,rgba(96,200,240,.10),rgba(200,240,96,.07));border:1px solid rgba(96,200,240,.28);border-radius:12px;margin-bottom:24px;flex-wrap:wrap;gap:10px;font-size:12.5px}
+.demo-banner b{color:var(--a2);font-family:var(--mono);font-size:10.5px;letter-spacing:1px;text-transform:uppercase;background:rgba(96,200,240,.15);padding:3px 9px;border-radius:6px;border:1px solid rgba(96,200,240,.3)}
+
+.head{display:flex;justify-content:space-between;align-items:center;margin-bottom:26px;flex-wrap:wrap;gap:14px}
+.head h1{font-size:28px;font-weight:800;letter-spacing:-.4px;line-height:1.15}
+.head h1 .em{margin-right:8px}
+.head .sub{font-size:13px;color:var(--muted);margin-top:4px}
+
+.acts{display:flex;gap:8px;flex-wrap:wrap}
+.acts button, .acts a{
+  padding:9px 14px;background:var(--panel);border:1px solid var(--border);
+  color:var(--text);border-radius:9px;font:700 12px/1 var(--ui);cursor:pointer;
+  text-decoration:none;display:inline-flex;align-items:center;gap:6px;transition:all .15s;
+}
+.acts button:hover, .acts a:hover{background:rgba(255,255,255,.07);border-color:rgba(255,255,255,.18)}
+.acts .pri{background:linear-gradient(135deg,#c8f060,#60c8f0);color:#080808;border:0;font-weight:800;box-shadow:0 4px 12px rgba(200,240,96,.25)}
+.acts .pri:hover{transform:translateY(-1px)}
+.acts .danger{background:rgba(240,64,96,.1);border-color:rgba(240,64,96,.3);color:var(--red)}
+.acts .danger:hover{background:rgba(240,64,96,.18)}
+
+/* KPI summary */
+.kpi-row{display:grid;grid-template-columns:repeat(auto-fit,minmax(150px,1fr));gap:12px;margin-bottom:26px}
+.kpi{background:var(--panel);border:1px solid var(--border);border-radius:11px;padding:14px 16px}
+.kpi .lab{font-size:10px;color:var(--muted);text-transform:uppercase;letter-spacing:.6px;font-weight:700;margin-bottom:6px;display:flex;align-items:center;gap:5px}
+.kpi .v{font-size:24px;font-weight:900;font-variant-numeric:tabular-nums;line-height:1}
+.kpi .v.zero{color:var(--dim)}
+.kpi .v.has{background:linear-gradient(135deg,var(--accent),var(--a2));-webkit-background-clip:text;-webkit-text-fill-color:transparent}
+.kpi .sub{font-size:10.5px;color:var(--muted);margin-top:4px;font-family:var(--mono);font-weight:600}
+
+/* Tabs */
+.tabs{display:flex;gap:4px;margin-bottom:18px;border-bottom:1px solid var(--border);overflow-x:auto;scrollbar-width:none}
+.tabs::-webkit-scrollbar{display:none}
+.tab{background:transparent;border:0;color:var(--muted);padding:11px 16px;font:700 12.5px/1 var(--ui);letter-spacing:.3px;cursor:pointer;border-bottom:2px solid transparent;margin-bottom:-1px;white-space:nowrap;transition:all .15s;display:inline-flex;align-items:center;gap:7px}
+.tab:hover{color:var(--text)}
+.tab.act{color:var(--accent);border-bottom-color:var(--accent)}
+.tab .count{background:rgba(255,255,255,.08);color:var(--muted);font-size:10px;padding:2px 7px;border-radius:99px;font-family:var(--mono);font-weight:700}
+.tab.act .count{background:rgba(200,240,96,.18);color:var(--accent)}
+
+/* Panes */
+.pane{display:none}
+.pane.act{display:block}
+
+.empty{padding:50px 20px;text-align:center;color:var(--muted);background:var(--panel);border:1px dashed var(--border);border-radius:14px}
+.empty .em{font-size:38px;margin-bottom:10px;opacity:.55}
+
+/* Brief view */
+.brief-card{background:var(--panel);border:1px solid var(--border);border-radius:14px;padding:24px;margin-bottom:14px}
+.brief-card h3{font-size:16px;font-weight:800;margin-bottom:14px}
+.brief-fields{display:grid;grid-template-columns:repeat(auto-fit,minmax(220px,1fr));gap:12px}
+.b-field{padding:12px 14px;background:rgba(0,0,0,.25);border:1px solid var(--border);border-radius:10px}
+.b-field .lab{font-size:10px;color:var(--muted);text-transform:uppercase;letter-spacing:.5px;font-weight:700;margin-bottom:5px}
+.b-field .val{font-size:13px;font-weight:600;color:var(--text);line-height:1.4;word-break:break-word}
+.b-field .val:empty::before{content:'—';color:var(--dim)}
+
+/* Lead row */
+.lead{background:var(--panel);border:1px solid var(--border);border-radius:12px;padding:16px 18px;margin-bottom:10px;transition:border-color .15s}
+.lead:hover{border-color:rgba(96,200,240,.25)}
+.lead .top{display:flex;justify-content:space-between;align-items:flex-start;gap:12px;margin-bottom:8px;flex-wrap:wrap}
+.lead .nm{font-size:14px;font-weight:800;letter-spacing:-.1px}
+.lead .badge{font-size:9.5px;font-weight:800;color:#080808;padding:3px 8px;border-radius:6px;letter-spacing:.5px;text-transform:uppercase;font-family:var(--mono)}
+.lead .badge.infl{background:linear-gradient(135deg,#f060c8,#c040a0);color:#fff}
+.lead .badge.agency{background:linear-gradient(135deg,#60c8f0,#a060f0);color:#fff}
+.lead .badge.free{background:linear-gradient(135deg,#34d058,#c8f060)}
+.lead .badge.other{background:rgba(255,255,255,.1);color:var(--muted);font-weight:700}
+.lead .when{font-size:10.5px;color:var(--dim);font-family:var(--mono);font-weight:700;letter-spacing:.4px;white-space:nowrap}
+.lead .fields{display:grid;grid-template-columns:repeat(auto-fit,minmax(180px,1fr));gap:8px 14px;font-size:12px}
+.lead .fields .l{color:var(--muted);font-weight:600}
+.lead .fields .v{color:var(--text);font-weight:700;word-break:break-word}
+.lead .fields .v.tg, .lead .fields .v.email{font-family:var(--mono);color:var(--a2)}
+.lead .extra{margin-top:10px;padding-top:10px;border-top:1px solid var(--border);font-size:11.5px;color:var(--muted);line-height:1.55}
+.lead .ref{display:inline-flex;align-items:center;gap:4px;background:rgba(240,180,41,.08);border:1px solid rgba(240,180,41,.2);color:var(--gold);padding:2px 7px;border-radius:5px;font-family:var(--mono);font-size:10px;font-weight:700;margin-right:6px}
+
+/* Event row */
+.evt{display:grid;grid-template-columns:80px 200px 1fr 80px;gap:12px;padding:9px 14px;border-bottom:1px solid var(--border);font-size:12px;align-items:center}
+.evt:hover{background:rgba(255,255,255,.02)}
+.evt .typ{font-family:var(--mono);font-weight:800;color:var(--a2);font-size:11px;padding:3px 8px;background:rgba(96,200,240,.08);border-radius:5px;border:1px solid rgba(96,200,240,.15);text-align:center}
+.evt .typ.cta{color:var(--accent);background:rgba(200,240,96,.08);border-color:rgba(200,240,96,.2)}
+.evt .typ.form{color:var(--gold);background:rgba(240,180,41,.08);border-color:rgba(240,180,41,.2)}
+.evt .typ.err{color:var(--red);background:rgba(240,64,96,.08);border-color:rgba(240,64,96,.2)}
+.evt .url{font-family:var(--mono);color:var(--muted);font-size:11px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+.evt .props{font-family:var(--mono);font-size:10.5px;color:var(--dim);overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+.evt .tm{font-family:var(--mono);color:var(--dim);font-size:10.5px;text-align:right;letter-spacing:.4px}
+@media(max-width:760px){.evt{grid-template-columns:1fr;gap:4px}}
+
+/* Stats */
+.stats-grid{display:grid;grid-template-columns:repeat(auto-fit,minmax(220px,1fr));gap:12px;margin-bottom:18px}
+.stat-card{background:var(--panel);border:1px solid var(--border);border-radius:12px;padding:16px}
+.stat-card .hd{font-size:11.5px;color:var(--accent);text-transform:uppercase;letter-spacing:.6px;font-weight:800;margin-bottom:10px;display:flex;align-items:center;gap:7px;font-family:var(--mono)}
+.stat-card .row{display:flex;justify-content:space-between;padding:5px 0;font-size:12.5px;border-bottom:1px solid rgba(255,255,255,.03)}
+.stat-card .row:last-child{border:0}
+.stat-card .row b{color:var(--text);font-weight:700;font-variant-numeric:tabular-nums;font-family:var(--mono)}
+
+/* Referral box */
+.ref-box{background:linear-gradient(135deg,rgba(240,180,41,.06),rgba(200,240,96,.04));border:1px solid rgba(240,180,41,.2);border-radius:14px;padding:18px 22px;margin-bottom:18px}
+.ref-box .hd{font-size:11px;color:var(--gold);font-weight:800;letter-spacing:.5px;text-transform:uppercase;margin-bottom:10px;font-family:var(--mono);display:flex;align-items:center;gap:7px}
+.ref-box .grid{display:grid;grid-template-columns:repeat(auto-fit,minmax(160px,1fr));gap:10px;font-size:12px}
+.ref-box .it .l{color:var(--muted);font-size:10.5px;text-transform:uppercase;letter-spacing:.4px;font-weight:700;margin-bottom:3px;font-family:var(--mono)}
+.ref-box .it .v{color:var(--text);font-weight:700;word-break:break-all}
+.ref-box .it .v.empty{color:var(--dim);font-style:italic}
+
+/* Chat preview */
+.chat-block{background:var(--panel);border:1px solid var(--border);border-radius:14px;padding:18px;margin-bottom:12px}
+.chat-block .meta{font-size:11px;color:var(--muted);margin-bottom:10px;font-family:var(--mono);display:flex;justify-content:space-between}
+.chat-msgs{display:flex;flex-direction:column;gap:6px;max-height:280px;overflow-y:auto;padding-right:6px}
+.chat-msg{font-size:12px;line-height:1.5;padding:7px 11px;border-radius:9px;max-width:88%;white-space:pre-wrap;word-break:break-word}
+.chat-msg.user{background:rgba(96,200,240,.12);align-self:flex-end;color:var(--text)}
+.chat-msg.assistant{background:rgba(255,255,255,.04);align-self:flex-start;color:var(--text)}
+</style>
+</head>
+<body data-user="Илья Палий" data-email="ilia.info.paliy@gmail.com">
+
+<div class="wrap">
+
+<div class="crumbs">
+  <a href="index.html">Главная</a> · Leads Inbox (admin)
+</div>
+
+<div class="demo-banner">
+  <span><b>Admin</b> Это служебная страница. Все данные хранятся <b style="background:rgba(255,255,255,.06);color:var(--accent);border-color:transparent">локально</b> в твоём браузере. Когда подключим Supabase — будут синхронизироваться.</span>
+  <a href="dev-tools.html" style="font-size:12px;color:var(--accent);text-decoration:none;font-weight:700;background:rgba(200,240,96,.08);padding:7px 13px;border-radius:8px;border:1px solid rgba(200,240,96,.25)">🛠 Dev Tools →</a>
+</div>
+
+<div class="head">
+  <div>
+    <h1><span class="em">📬</span>Leads Inbox</h1>
+    <div class="sub">Все заявки, чаты, события — в одном месте</div>
+  </div>
+  <div class="acts">
+    <button onclick="refresh()">↻ Обновить</button>
+    <button class="pri" onclick="exportJSON()">📤 Экспорт JSON</button>
+  </div>
+</div>
+
+<!-- KPI -->
+<div class="kpi-row" id="kpiRow"></div>
+
+<!-- Referral attribution -->
+<div id="refBlock"></div>
+
+<!-- Tabs -->
+<div class="tabs" id="tabs">
+  <button class="tab act" data-tab="brief">📋 Бриф клиента <span class="count" id="cBrief">0</span></button>
+  <button class="tab" data-tab="partners">🤝 Партнёрские заявки <span class="count" id="cPart">0</span></button>
+  <button class="tab" data-tab="leadmag">📄 Лиды PDF <span class="count" id="cLead">0</span></button>
+  <button class="tab" data-tab="video">📺 Подписки на видео <span class="count" id="cVid">0</span></button>
+  <button class="tab" data-tab="alisa">💬 Чаты с Алисой <span class="count" id="cChat">0</span></button>
+  <button class="tab" data-tab="runs">⚡ Запуски агентов <span class="count" id="cRun">0</span></button>
+  <button class="tab" data-tab="analytics">📊 События <span class="count" id="cEvt">0</span></button>
+  <button class="tab" data-tab="storage">🗄 Storage <span class="count" id="cKey">0</span></button>
+</div>
+
+<!-- ── BRIEF ── -->
+<div class="pane act" data-pane="brief" id="paneBrief"></div>
+
+<!-- ── PARTNERS ── -->
+<div class="pane" data-pane="partners" id="panePart"></div>
+
+<!-- ── LEAD MAGNET ── -->
+<div class="pane" data-pane="leadmag" id="paneLead"></div>
+
+<!-- ── VIDEO ── -->
+<div class="pane" data-pane="video" id="paneVid"></div>
+
+<!-- ── ALISA CHATS ── -->
+<div class="pane" data-pane="alisa" id="paneChat"></div>
+
+<!-- ── AGENT RUNS ── -->
+<div class="pane" data-pane="runs" id="paneRun"></div>
+
+<!-- ── ANALYTICS ── -->
+<div class="pane" data-pane="analytics" id="paneEvt"></div>
+
+<!-- ── STORAGE INSPECTOR ── -->
+<div class="pane" data-pane="storage" id="paneStg"></div>
+
+</div>
+
+<script src="state.js"></script>
+<script src="mock-backend.js"></script>
+<script src="config.js"></script>
+<script src="analytics.js"></script>
+<script src="api-fallback.js"></script>
+<script src="sidebar.js" defer></script>
+<script src="alisa-widget.js" defer></script>
+<script>
+const $ = (s) => document.querySelector(s);
+const fmtDate = (ts) => {
+  if (!ts) return '—';
+  const d = new Date(typeof ts === 'number' ? ts : ts);
+  if (isNaN(d.getTime())) return String(ts);
+  return d.toLocaleString('ru-RU', { day:'2-digit', month:'2-digit', year:'2-digit', hour:'2-digit', minute:'2-digit' });
+};
+const esc = (s) => String(s == null ? '' : s).replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;');
+const partnerLabel = (t) => ({influencer:'INFL',agency:'AGENCY',freelancer:'FRLNS',other:'OTHER'}[t] || (t||'?').toUpperCase());
+const partnerClass = (t) => ({influencer:'infl',agency:'agency',freelancer:'free',other:'other'}[t] || 'other');
+
+function render() {
+  const S = window.AIOState;
+  const brief = S.get(S.KEYS.BRIEF, null);
+  const partners = S.get(S.KEYS.PARTNER_APPS, []) || [];
+  const leadMag = S.get(S.KEYS.LEAD_MAGNET, null);
+  const videoSubs = S.get(S.KEYS.VIDEO_LEADS, []) || [];
+  const alisa = S.get(S.KEYS.ALISA_CHAT, []) || [];
+  const runs = S.get(S.KEYS.RUNS, []) || [];
+  const evts = S.get(S.KEYS.ANALYTICS, []) || [];
+  const ref = S.getReferral();
+
+  // ── KPI ──
+  const totalLeads = (brief ? 1 : 0) + partners.length + (leadMag ? 1 : 0) + videoSubs.length;
+  $('#kpiRow').innerHTML = `
+    <div class="kpi"><div class="lab">📋 Бриф</div><div class="v ${brief?'has':'zero'}">${brief?'✓':'—'}</div><div class="sub">${brief && brief.contact ? esc(brief.contact).slice(0,30) : 'нет данных'}</div></div>
+    <div class="kpi"><div class="lab">🤝 Партнёры</div><div class="v ${partners.length?'has':'zero'}">${partners.length}</div><div class="sub">заявок всего</div></div>
+    <div class="kpi"><div class="lab">📄 PDF-лиды</div><div class="v ${leadMag?'has':'zero'}">${leadMag?'1':'0'}</div><div class="sub">${leadMag ? 'захвачен' : 'не было'}</div></div>
+    <div class="kpi"><div class="lab">📺 Видео</div><div class="v ${videoSubs.length?'has':'zero'}">${videoSubs.length}</div><div class="sub">подписок</div></div>
+    <div class="kpi"><div class="lab">💬 Алиса</div><div class="v ${alisa.length?'has':'zero'}">${alisa.length}</div><div class="sub">сообщений</div></div>
+    <div class="kpi"><div class="lab">⚡ Запуски</div><div class="v ${runs.length?'has':'zero'}">${runs.length}</div><div class="sub">агентских задач</div></div>
+    <div class="kpi"><div class="lab">📊 Events</div><div class="v ${evts.length?'has':'zero'}">${evts.length}</div><div class="sub">всего</div></div>
+    <div class="kpi"><div class="lab">🎯 Всего лидов</div><div class="v ${totalLeads?'has':'zero'}">${totalLeads}</div><div class="sub">по всем формам</div></div>
+  `;
+
+  // counts on tabs
+  $('#cBrief').textContent = brief ? '1' : '0';
+  $('#cPart').textContent = partners.length;
+  $('#cLead').textContent = leadMag ? '1' : '0';
+  $('#cVid').textContent = videoSubs.length;
+  $('#cChat').textContent = alisa.length;
+  $('#cRun').textContent = runs.length;
+  $('#cEvt').textContent = evts.length;
+  $('#cKey').textContent = S.stats().count;
+
+  // ── Referral attribution box ──
+  if (ref) {
+    $('#refBlock').innerHTML = `
+      <div class="ref-box">
+        <div class="hd">🎯 Первое касание · attribution</div>
+        <div class="grid">
+          <div class="it"><div class="l">Referral (ref=)</div><div class="v ${ref.ref?'':'empty'}">${esc(ref.ref) || 'не передан'}</div></div>
+          <div class="it"><div class="l">UTM source</div><div class="v ${ref.utm_source?'':'empty'}">${esc(ref.utm_source) || '—'}</div></div>
+          <div class="it"><div class="l">UTM medium</div><div class="v ${ref.utm_medium?'':'empty'}">${esc(ref.utm_medium) || '—'}</div></div>
+          <div class="it"><div class="l">UTM campaign</div><div class="v ${ref.utm_campaign?'':'empty'}">${esc(ref.utm_campaign) || '—'}</div></div>
+          <div class="it"><div class="l">Landing</div><div class="v">${esc(ref.landing_page) || '/'}</div></div>
+          <div class="it"><div class="l">Referrer</div><div class="v ${ref.referrer?'':'empty'}">${esc(ref.referrer ? new URL(ref.referrer).hostname : '') || 'direct'}</div></div>
+          <div class="it"><div class="l">Захвачено</div><div class="v">${fmtDate(ref.captured_at)}</div></div>
+        </div>
+      </div>`;
+  } else {
+    $('#refBlock').innerHTML = '';
+  }
+
+  // ── BRIEF ──
+  if (brief) {
+    const fields = [
+      {l:'Контакт',k:'contact'},{l:'Тип',k:'type'},{l:'Ниша',k:'niche'},{l:'Продукт',k:'product'},
+      {l:'Цель / 90 дней',k:'goal90'},{l:'Цель / 1 год',k:'goal1y'},{l:'Аудитория',k:'audience'},
+      {l:'Каналы',k:'channels'},{l:'Выручка сейчас',k:'rev_now'},{l:'Выручка цель',k:'rev_goal'},
+      {l:'Команда',k:'team'},{l:'Боль',k:'pain'},{l:'Фокус',k:'focus'},{l:'Бюджет',k:'budget'},
+      {l:'Email',k:'email'},{l:'Telegram',k:'telegram'},
+    ];
+    $('#paneBrief').innerHTML = `
+      <div class="brief-card">
+        <h3>📋 Бриф клиента</h3>
+        <div class="brief-fields">
+          ${fields.map(f => `<div class="b-field"><div class="lab">${f.l}</div><div class="val">${esc(brief[f.k] || '')}</div></div>`).join('')}
+        </div>
+      </div>`;
+  } else {
+    $('#paneBrief').innerHTML = `<div class="empty"><div class="em">📋</div>Бриф пока не заполнен. <a href="onboarding.html" style="color:var(--accent);font-weight:700">Заполнить тестовый →</a></div>`;
+  }
+
+  // ── PARTNERS ──
+  if (partners.length) {
+    $('#panePart').innerHTML = partners.slice().reverse().map(p => `
+      <div class="lead">
+        <div class="top">
+          <div>
+            <div class="nm">${esc(p.name)} <span class="badge ${partnerClass(p.type)}">${partnerLabel(p.type)}</span></div>
+          </div>
+          <div class="when">${fmtDate(p.at)}</div>
+        </div>
+        <div class="fields">
+          <div><span class="l">Email:</span> <span class="v email">${esc(p.email)}</span></div>
+          <div><span class="l">Telegram:</span> <span class="v tg">${esc(p.tg)}</span></div>
+          <div><span class="l">Ниша:</span> <span class="v">${esc(p.niche)}</span></div>
+          ${p._ref ? `<div><span class="ref">⇣ ref:${esc(p._ref)}</span></div>` : ''}
+        </div>
+        ${p.aud ? `<div class="extra"><b>Аудитория:</b> ${esc(p.aud)}</div>` : ''}
+        ${p.plan ? `<div class="extra"><b>План:</b> ${esc(p.plan)}</div>` : ''}
+      </div>`).join('');
+  } else {
+    $('#panePart').innerHTML = `<div class="empty"><div class="em">🤝</div>Партнёрских заявок пока нет. <a href="partners.html" style="color:var(--accent);font-weight:700">Открыть форму →</a></div>`;
+  }
+
+  // ── LEAD MAGNET ──
+  if (leadMag) {
+    $('#paneLead').innerHTML = `
+      <div class="lead">
+        <div class="top">
+          <div class="nm">${esc(leadMag.email || leadMag.name || 'Аноним')}</div>
+          <div class="when">${fmtDate(leadMag.at || leadMag.timestamp)}</div>
+        </div>
+        <div class="fields">
+          ${leadMag.email ? `<div><span class="l">Email:</span> <span class="v email">${esc(leadMag.email)}</span></div>` : ''}
+          ${leadMag.tg ? `<div><span class="l">Telegram:</span> <span class="v tg">${esc(leadMag.tg)}</span></div>` : ''}
+          ${leadMag._ref ? `<div><span class="ref">⇣ ref:${esc(leadMag._ref)}</span></div>` : ''}
+        </div>
+      </div>`;
+  } else {
+    $('#paneLead').innerHTML = `<div class="empty"><div class="em">📄</div>Никто пока не скачивал PDF. <a href="lead-magnet-gate.html" style="color:var(--accent);font-weight:700">Открыть форму →</a></div>`;
+  }
+
+  // ── VIDEO ──
+  if (videoSubs.length) {
+    // videoSubs может быть массивом email-строк (старый формат) или объектов
+    $('#paneVid').innerHTML = videoSubs.slice().reverse().map(s => {
+      if (typeof s === 'string') {
+        return `<div class="lead"><div class="top"><div class="nm">${esc(s)}</div></div></div>`;
+      }
+      return `
+      <div class="lead">
+        <div class="top">
+          <div class="nm">${esc(s.email || 'аноним')}</div>
+          <div class="when">${fmtDate(s.at || s.timestamp)}</div>
+        </div>
+        ${s._ref ? `<div class="fields"><div><span class="ref">⇣ ref:${esc(s._ref)}</span></div></div>` : ''}
+      </div>`;
+    }).join('');
+  } else {
+    $('#paneVid').innerHTML = `<div class="empty"><div class="em">📺</div>Никто пока не подписался на видео. <a href="demo.html" style="color:var(--accent);font-weight:700">Открыть страницу →</a></div>`;
+  }
+
+  // ── ALISA CHATS ──
+  if (alisa.length) {
+    $('#paneChat').innerHTML = `
+      <div class="chat-block">
+        <div class="meta">
+          <span>💬 ${alisa.length} сообщений · последнее ${fmtDate(alisa[alisa.length-1].ts || Date.now())}</span>
+          <button onclick="if(confirm('Очистить чат?')){window.AIOState.delete(window.AIOState.KEYS.ALISA_CHAT);render()}" style="background:transparent;border:0;color:var(--red);cursor:pointer;font-size:11px;font-weight:700">Очистить</button>
+        </div>
+        <div class="chat-msgs">
+          ${alisa.map(m => `<div class="chat-msg ${m.role==='user'?'user':'assistant'}">${esc(m.content)}</div>`).join('')}
+        </div>
+      </div>`;
+  } else {
+    $('#paneChat').innerHTML = `<div class="empty"><div class="em">💬</div>Чатов с Алисой пока не было. Нажми 💬 в правом нижнем углу →</div>`;
+  }
+
+  // ── RUNS ──
+  if (runs.length) {
+    $('#paneRun').innerHTML = runs.slice().reverse().slice(0,30).map(r => `
+      <div class="lead">
+        <div class="top">
+          <div class="nm">${esc(r.agent || r.task || 'запуск')}</div>
+          <div class="when">${fmtDate(r.at || r.ts)}</div>
+        </div>
+        ${r.prompt ? `<div class="extra"><b>Промпт:</b> ${esc((r.prompt||'').slice(0,200))}${(r.prompt||'').length>200?'…':''}</div>` : ''}
+        ${r.result ? `<div class="extra"><b>Результат:</b> ${esc((r.result||'').slice(0,260))}${(r.result||'').length>260?'…':''}</div>` : ''}
+      </div>`).join('');
+  } else {
+    $('#paneRun').innerHTML = `<div class="empty"><div class="em">⚡</div>Запусков агентов пока не было. <a href="dashboard.html" style="color:var(--accent);font-weight:700">Открыть кабинет →</a></div>`;
+  }
+
+  // ── ANALYTICS EVENTS ──
+  if (evts.length) {
+    const recent = evts.slice().reverse().slice(0, 200);
+    // stats
+    const byEvent = {};
+    evts.forEach(e => byEvent[e.event] = (byEvent[e.event]||0)+1);
+    const byPage = {};
+    evts.forEach(e => byPage[e.url||'/'] = (byPage[e.url||'/']||0)+1);
+    const sortedEv = Object.entries(byEvent).sort((a,b)=>b[1]-a[1]).slice(0,10);
+    const sortedPg = Object.entries(byPage).sort((a,b)=>b[1]-a[1]).slice(0,10);
+
+    $('#paneEvt').innerHTML = `
+      <div class="stats-grid">
+        <div class="stat-card">
+          <div class="hd">📊 По типу события</div>
+          ${sortedEv.map(([k,v])=>`<div class="row"><span>${esc(k)}</span><b>${v}</b></div>`).join('')}
+        </div>
+        <div class="stat-card">
+          <div class="hd">🌐 По страницам</div>
+          ${sortedPg.map(([k,v])=>`<div class="row"><span>${esc(k)}</span><b>${v}</b></div>`).join('')}
+        </div>
+      </div>
+      <div style="background:var(--panel);border:1px solid var(--border);border-radius:14px;overflow:hidden">
+        <div style="padding:14px 18px;border-bottom:1px solid var(--border);font-size:13px;font-weight:800">Последние ${recent.length} событий</div>
+        ${recent.map(ev => {
+          const typClass = ev.event.startsWith('cta_')?'cta':ev.event.startsWith('form_error')?'err':ev.event.startsWith('form_')?'form':'';
+          return `<div class="evt">
+            <span class="typ ${typClass}">${esc(ev.event)}</span>
+            <span class="url">${esc(ev.url)}</span>
+            <span class="props">${esc(JSON.stringify(ev.props||{}).slice(0,120))}</span>
+            <span class="tm">${fmtDate(ev.ts)}</span>
+          </div>`;
+        }).join('')}
+      </div>`;
+  } else {
+    $('#paneEvt').innerHTML = `<div class="empty"><div class="em">📊</div>Событий пока нет. Они появятся по мере использования сайта.</div>`;
+  }
+
+  // ── STORAGE ──
+  const stats = S.stats();
+  let storageRows = '';
+  Object.entries(stats.breakdown).sort((a,b) => b[1]-a[1]).forEach(([k,size]) => {
+    const val = S.get(k);
+    const valKind = Array.isArray(val) ? `массив (${val.length})` : (typeof val === 'object' && val !== null) ? `объект (${Object.keys(val).length} полей)` : String(val).slice(0,60);
+    storageRows += `<div class="row" style="padding:9px 12px;border-bottom:1px solid var(--border);display:grid;grid-template-columns:240px 1fr 80px;gap:12px;font-size:12px;align-items:center">
+      <span style="font-family:var(--mono);font-weight:700;color:var(--accent)">${esc(k)}</span>
+      <span style="color:var(--muted);overflow:hidden;text-overflow:ellipsis;white-space:nowrap">${esc(valKind)}</span>
+      <span style="text-align:right;color:var(--gold);font-family:var(--mono);font-size:11px">${(size/1024).toFixed(1)} KB</span>
+    </div>`;
+  });
+  $('#paneStg').innerHTML = `
+    <div class="stats-grid">
+      <div class="stat-card">
+        <div class="hd">📦 Storage Stats</div>
+        <div class="row"><span>Ключей</span><b>${stats.count}</b></div>
+        <div class="row"><span>Всего</span><b>${stats.totalKB} KB</b></div>
+        <div class="row"><span>Лимит браузера</span><b>~5-10 MB</b></div>
+        <div class="row"><span>Заполнено</span><b>${(stats.totalBytes/(5*1024*1024)*100).toFixed(2)}%</b></div>
+      </div>
+      <div class="stat-card">
+        <div class="hd">🔍 Session</div>
+        <div class="row"><span>Session ID</span><b style="font-size:10px">${esc(S.getSessionId())}</b></div>
+        <div class="row"><span>State version</span><b>${S.version}</b></div>
+      </div>
+    </div>
+    <div style="background:var(--panel);border:1px solid var(--border);border-radius:14px;overflow:hidden">
+      <div style="padding:14px 18px;border-bottom:1px solid var(--border);font-size:13px;font-weight:800;display:flex;justify-content:space-between;align-items:center">
+        <span>Все aio_* ключи</span>
+        <button onclick="if(confirm('ВСЁ удалить — точно? Все брифы, чаты, история будут стёрты.')){window.AIOState.clear();render();}" style="background:rgba(240,64,96,.1);border:1px solid rgba(240,64,96,.3);color:var(--red);padding:7px 12px;border-radius:7px;font:700 11px/1 var(--ui);cursor:pointer">🗑 Очистить всё</button>
+      </div>
+      ${storageRows || '<div class="empty"><div class="em">🗄</div>Ничего не сохранено</div>'}
+    </div>`;
+}
+
+// Tabs
+document.getElementById('tabs').addEventListener('click', e => {
+  if (!e.target.classList.contains('tab')) return;
+  document.querySelectorAll('.tab').forEach(t=>t.classList.remove('act'));
+  document.querySelectorAll('.pane').forEach(p=>p.classList.remove('act'));
+  e.target.classList.add('act');
+  document.querySelector(`[data-pane="${e.target.dataset.tab}"]`).classList.add('act');
+});
+
+function refresh() { render(); window.AIOAnalytics.track('inbox_refresh'); }
+
+function exportJSON() {
+  const data = window.AIOState.exportAll();
+  const blob = new Blob([JSON.stringify(data, null, 2)], { type:'application/json' });
+  const a = document.createElement('a');
+  a.href = URL.createObjectURL(blob);
+  a.download = `ai-office-state-${new Date().toISOString().slice(0,10)}.json`;
+  a.click();
+  URL.revokeObjectURL(a.href);
+  window.AIOAnalytics.track('inbox_export');
+}
+
+render();
+
+// Auto-refresh когда меняется state (cross-tab)
+['BRIEF','PARTNER_APPS','LEAD_MAGNET','VIDEO_LEADS','ALISA_CHAT','RUNS','ANALYTICS'].forEach(k => {
+  window.AIOState.subscribe(window.AIOState.KEYS[k], () => render());
+});
+
+// PWA
+if ('serviceWorker' in navigator && location.protocol === 'https:') {
+  navigator.serviceWorker.register('/sw.js').catch(()=>{});
+}
+</script>
+</body>
+</html>

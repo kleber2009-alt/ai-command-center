@@ -1,0 +1,183 @@
+<!DOCTYPE html>
+<html lang="ru">
+<head>
+<meta charset="UTF-8">
+<title>Карусель 01 — Pain/Solution · 10 слайдов</title>
+<style>
+  *, *::before, *::after { margin:0; padding:0; box-sizing:border-box; }
+  body { background:#080808; padding:24px 0; display:flex; flex-direction:column; align-items:center; gap:24px; font-family:Georgia, serif; }
+  .slide { width:1080px; height:1350px; background:#080808; color:#f5f0e8; padding:80px 70px; position:relative; display:flex; flex-direction:column; border:1px solid #1a1a1a; overflow:hidden; }
+  .slide-num { position:absolute; top:40px; right:60px; font-family:'SF Mono',monospace; font-size:14px; color:#3a3a3a; letter-spacing:0.18em; font-weight:700; }
+  .slide-num .of { color:#5a5550; }
+  .brand { position:absolute; bottom:40px; left:60px; font-family:'SF Mono',monospace; font-size:13px; color:#5a5550; letter-spacing:0.18em; font-weight:700; text-transform:uppercase; }
+  .brand .a { color:#c8f060; }
+  .swipe { position:absolute; bottom:40px; right:60px; font-family:'SF Mono',monospace; font-size:13px; color:#c8f060; letter-spacing:0.18em; font-weight:700; text-transform:uppercase; }
+  .label { font-family:'SF Mono',monospace; font-size:14px; text-transform:uppercase; letter-spacing:0.16em; color:#b8b3a8; font-weight:700; margin-bottom:24px; }
+  .h-hook { font-family:Georgia, serif; font-size:128px; line-height:0.95; letter-spacing:-0.03em; font-weight:normal; }
+  .h-hook .a { color:#c8f060; font-style:italic; }
+  .h-1 { font-family:Georgia, serif; font-size:88px; line-height:1.05; letter-spacing:-0.02em; font-weight:normal; margin-bottom:40px; }
+  .h-2 { font-family:Georgia, serif; font-size:64px; line-height:1.1; letter-spacing:-0.02em; font-weight:normal; }
+  .h-2 .a { color:#c8f060; font-style:italic; }
+  .body-text { font-family:Georgia, serif; font-size:32px; line-height:1.4; color:#d8d2c6; }
+  .body-text strong { color:#f5f0e8; font-weight:700; }
+  .num-big { font-family:Georgia, serif; font-size:240px; line-height:1; letter-spacing:-0.04em; color:#c8f060; font-style:italic; margin:30px 0; }
+  .pull-quote { font-family:Georgia, serif; font-size:48px; line-height:1.25; font-style:italic; color:#d8d2c6; border-left:6px solid #c8f060; padding-left:36px; margin:auto 0; }
+  .step-num { font-family:'SF Mono',monospace; font-size:18px; color:#c8f060; letter-spacing:0.2em; font-weight:700; margin-bottom:18px; }
+  .center { flex:1; display:flex; flex-direction:column; justify-content:center; }
+  .top { margin-top:60px; }
+  .bottom { margin-top:auto; }
+  .divider { width:60px; height:3px; background:#c8f060; margin:30px 0; }
+  .cta-circle { width:280px; height:280px; border:3px solid #c8f060; border-radius:50%; display:flex; align-items:center; justify-content:center; flex-direction:column; margin:auto; }
+  .cta-circle .arr { font-size:80px; color:#c8f060; line-height:1; }
+  .cta-circle .txt { font-family:'SF Mono',monospace; font-size:14px; color:#c8f060; letter-spacing:0.2em; margin-top:14px; font-weight:700; }
+
+  @media print { body { background:white; padding:0; } .slide { page-break-after:always; border:none; } }
+</style>
+</head>
+<body>
+
+<!-- SLIDE 1 — HOOK -->
+<div class="slide">
+  <div class="slide-num">01 <span class="of">/ 10</span></div>
+  <div class="center">
+    <div class="label">Для маркетологов и SMM-агентств</div>
+    <div class="h-hook">3 часа<br/>в день.<br/><span class="a">впустую.</span></div>
+    <div class="body-text" style="margin-top:60px;">Столько времени съедает ручной<br/>постинг у среднего агентства.</div>
+  </div>
+  <div class="brand"><span class="a">●</span> AI SALES · @username</div>
+  <div class="swipe">SWIPE →</div>
+</div>
+
+<!-- SLIDE 2 — NAME PAIN -->
+<div class="slide">
+  <div class="slide-num">02 <span class="of">/ 10</span></div>
+  <div class="center">
+    <div class="step-num">/ 01 — БОЛЬ</div>
+    <div class="h-1">Ты собираешь контент-план,<br/>верстаешь в Canva,<br/>пишешь тексты,<br/>планируешь публикации.</div>
+    <div class="body-text">Для <strong>одного</strong> клиента.<br/>А клиентов — 8.</div>
+    <div class="divider"></div>
+    <div class="body-text">Каждый день одно и то же.</div>
+  </div>
+  <div class="brand"><span class="a">●</span> AI SALES</div>
+  <div class="swipe">→</div>
+</div>
+
+<!-- SLIDE 3 — AMPLIFY PAIN -->
+<div class="slide">
+  <div class="slide-num">03 <span class="of">/ 10</span></div>
+  <div class="center">
+    <div class="step-num">/ 02 — ПОЧЕМУ ПЛОХО</div>
+    <div class="h-2">И самое <span class="a">обидное:</span></div>
+    <div class="num-big">73%</div>
+    <div class="body-text">этой работы — <strong>повторяющиеся</strong> действия,<br/>которые ты делаешь руками,<br/>хотя уже знаешь результат.</div>
+  </div>
+  <div class="brand"><span class="a">●</span> AI SALES</div>
+  <div class="swipe">→</div>
+</div>
+
+<!-- SLIDE 4 — FAILED ATTEMPT -->
+<div class="slide">
+  <div class="slide-num">04 <span class="of">/ 10</span></div>
+  <div class="center">
+    <div class="step-num">/ 03 — ЧТО НЕ РАБОТАЕТ</div>
+    <div class="h-2">Ты пробовал/пробовала:</div>
+    <div class="body-text" style="margin-top:50px; font-size:38px; line-height:1.6;">
+      ✕ нанять SMM-щика<br/>
+      ✕ Buffer / Later / Hootsuite<br/>
+      ✕ написать своих джунов<br/>
+      ✕ ChatGPT для текстов
+    </div>
+  </div>
+  <div class="brand"><span class="a">●</span> AI SALES</div>
+  <div class="swipe">→</div>
+</div>
+
+<!-- SLIDE 5 — WHY IT DOESN'T WORK -->
+<div class="slide">
+  <div class="slide-num">05 <span class="of">/ 10</span></div>
+  <div class="center">
+    <div class="step-num">/ 04 — ПОЧЕМУ</div>
+    <div class="h-1">Каждое из них<br/>решает <span style="color:#c8f060; font-style:italic;">часть</span>.</div>
+    <div class="body-text">SMM-щик пишет тексты — но не знает<br/>стратегию каждого клиента.<br/><br/>Buffer публикует — но не пишет.<br/><br/>ChatGPT генерит — но без памяти<br/>о твоих брендах.</div>
+  </div>
+  <div class="brand"><span class="a">●</span> AI SALES</div>
+  <div class="swipe">→</div>
+</div>
+
+<!-- SLIDE 6 — REAL CAUSE -->
+<div class="slide">
+  <div class="slide-num">06 <span class="of">/ 10</span></div>
+  <div class="center">
+    <div class="step-num">/ 05 — НАСТОЯЩАЯ ПРИЧИНА</div>
+    <div class="h-1">Проблема не<br/>в инструментах.</div>
+    <div class="h-2">Проблема в <span class="a">системе</span>,<br/>которая их связывает.</div>
+    <div class="body-text" style="margin-top:40px;">А её обычно нет.</div>
+  </div>
+  <div class="brand"><span class="a">●</span> AI SALES</div>
+  <div class="swipe">→</div>
+</div>
+
+<!-- SLIDE 7 — SOLUTION HINT -->
+<div class="slide">
+  <div class="slide-num">07 <span class="of">/ 10</span></div>
+  <div class="center">
+    <div class="step-num">/ 06 — РЕШЕНИЕ</div>
+    <div class="h-1">Нужен <span style="color:#c8f060; font-style:italic;">один слой</span>,<br/>который:</div>
+    <div class="body-text" style="font-size:38px; line-height:1.6;">
+      → знает каждого твоего клиента<br/>
+      → пишет в его стиле<br/>
+      → планирует контент-план<br/>
+      → постит вовремя<br/>
+      → обучается на твоих правках
+    </div>
+  </div>
+  <div class="brand"><span class="a">●</span> AI SALES</div>
+  <div class="swipe">→</div>
+</div>
+
+<!-- SLIDE 8 — REVEAL -->
+<div class="slide">
+  <div class="slide-num">08 <span class="of">/ 10</span></div>
+  <div class="center">
+    <div class="step-num">/ 07 — ЭТО</div>
+    <div class="h-hook"><span class="a">Автопилот</span><br/>SMM.</div>
+    <div class="body-text" style="margin-top:60px;">Не «AI-помощник».<br/>Не «планировщик».<br/><br/><strong>Полноценная замена</strong><br/>SMM-отдела на 10 клиентов.</div>
+  </div>
+  <div class="brand"><span class="a">●</span> AI SALES</div>
+  <div class="swipe">→</div>
+</div>
+
+<!-- SLIDE 9 — RESULT / PROOF -->
+<div class="slide">
+  <div class="slide-num">09 <span class="of">/ 10</span></div>
+  <div class="center">
+    <div class="step-num">/ 08 — ЧТО ПОЛУЧАЕШЬ</div>
+    <div class="pull-quote">
+      «За 3 недели вернул себе<br/>
+      18 часов в неделю.<br/>
+      <br/>
+      Освободившееся время —<br/>
+      на привлечение новых клиентов.»
+    </div>
+    <div class="body-text" style="margin-top:50px; font-size:24px; color:#b8b3a8;">— клиент агентства, май 2026</div>
+  </div>
+  <div class="brand"><span class="a">●</span> AI SALES</div>
+  <div class="swipe">→</div>
+</div>
+
+<!-- SLIDE 10 — CTA -->
+<div class="slide">
+  <div class="slide-num">10 <span class="of">/ 10</span></div>
+  <div class="center">
+    <div class="h-1" style="text-align:center;">Хочешь<br/>попробовать?</div>
+    <div class="cta-circle">
+      <div class="arr">↗</div>
+      <div class="txt">В DIRECT</div>
+    </div>
+    <div class="body-text" style="text-align:center; margin-top:40px;">Напиши <strong>«SMM»</strong> в директ —<br/>пришлю детали и кейсы<br/>в течение часа.</div>
+  </div>
+  <div class="brand"><span class="a">●</span> AI SALES · @username</div>
+</div>
+
+</body>
+</html>

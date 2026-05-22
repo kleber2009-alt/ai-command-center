@@ -1,0 +1,462 @@
+<!DOCTYPE html>
+<html lang="ru">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Конституция проекта — AI Sales System</title>
+<style>
+  * { margin: 0; padding: 0; box-sizing: border-box; }
+  :root {
+    --bg: #080808;
+    --text: #f5f0e8;
+    --lime: #c8f060;
+    --cyan: #60c8f0;
+    --pink: #f06090;
+    --muted: rgba(245, 240, 232, 0.5);
+    --dim: rgba(245, 240, 232, 0.3);
+    --border: rgba(245, 240, 232, 0.1);
+    --card: #0f0f0f;
+  }
+  body {
+    background: var(--bg);
+    color: var(--text);
+    font-family: Georgia, serif;
+    line-height: 1.65;
+    padding: 48px 24px 96px;
+  }
+  .container { max-width: 880px; margin: 0 auto; }
+  .label { font-family: 'JetBrains Mono', monospace; font-size: 10px; text-transform: uppercase; letter-spacing: 0.15em; color: var(--muted); }
+  
+  .doc-header { border-bottom: 1px solid var(--border); padding-bottom: 32px; margin-bottom: 48px; }
+  .doc-header .doc-num {
+    font-family: Georgia, serif; font-style: italic; font-size: 96px;
+    color: transparent; -webkit-text-stroke: 1px var(--lime); line-height: 0.9;
+  }
+  .doc-header h1 {
+    font-family: Georgia, serif; font-size: 52px; font-weight: normal;
+    letter-spacing: -0.02em; line-height: 1.05; margin: 8px 0 16px;
+  }
+  .doc-header h1 .accent { color: var(--lime); font-style: italic; }
+  .doc-header .doc-sub { font-size: 18px; color: var(--muted); }
+  
+  .toc { background: var(--card); padding: 24px 28px; margin-bottom: 48px; }
+  .toc-title { margin-bottom: 16px; }
+  .toc ol { list-style: none; counter-reset: t; }
+  .toc li {
+    counter-increment: t; padding: 8px 0;
+    border-bottom: 1px dotted rgba(245,240,232,0.05);
+    display: flex; justify-content: space-between; align-items: baseline;
+  }
+  .toc li:last-child { border: none; }
+  .toc li::before {
+    content: counter(t, decimal-leading-zero);
+    font-family: 'JetBrains Mono', monospace; font-size: 11px; color: var(--lime); margin-right: 16px;
+  }
+  .toc a { color: var(--text); text-decoration: none; flex: 1; font-size: 15px; }
+  .toc a:hover { color: var(--lime); }
+  .toc .pg { font-family: 'JetBrains Mono', monospace; font-size: 10px; color: var(--dim); }
+  
+  section { margin-bottom: 56px; scroll-margin-top: 24px; }
+  section .sec-num {
+    font-family: Georgia, serif; font-style: italic; font-size: 64px;
+    color: transparent; -webkit-text-stroke: 1px var(--cyan); line-height: 1;
+  }
+  section h2 {
+    font-family: Georgia, serif; font-size: 32px; font-weight: normal;
+    margin: 8px 0 8px; line-height: 1.15;
+  }
+  section .sec-sub {
+    font-family: 'JetBrains Mono', monospace; font-size: 10px; text-transform: uppercase;
+    letter-spacing: 0.15em; color: var(--lime); margin-bottom: 24px;
+  }
+  
+  h3 {
+    font-family: 'JetBrains Mono', monospace; font-size: 11px; text-transform: uppercase;
+    letter-spacing: 0.15em; color: var(--text); margin: 32px 0 12px;
+    padding-bottom: 8px; border-bottom: 1px solid var(--border);
+  }
+  
+  p { margin-bottom: 16px; font-size: 16px; }
+  .lead { font-size: 18px; color: var(--text); margin-bottom: 24px; font-style: italic; }
+  
+  .fillable {
+    background: rgba(245, 240, 232, 0.03); border-left: 2px solid var(--lime);
+    padding: 16px 20px; margin: 12px 0; font-family: 'JetBrains Mono', monospace;
+    font-size: 13px; color: var(--muted); font-style: italic;
+  }
+  .fillable::before { content: '✎ '; color: var(--lime); font-style: normal; }
+  
+  .note {
+    background: rgba(96, 200, 240, 0.04); border-left: 2px solid var(--cyan);
+    padding: 16px 20px; margin: 16px 0; font-size: 14px;
+  }
+  .warn {
+    background: rgba(240, 96, 144, 0.04); border-left: 2px solid var(--pink);
+    padding: 16px 20px; margin: 16px 0; font-size: 14px;
+  }
+  
+  ul, ol { margin: 12px 0 16px 24px; }
+  li { margin-bottom: 8px; font-size: 15px; }
+  
+  table { width: 100%; border-collapse: collapse; margin: 16px 0; font-size: 14px; }
+  th { font-family: 'JetBrains Mono', monospace; font-size: 10px; text-transform: uppercase;
+       letter-spacing: 0.1em; color: var(--muted); text-align: left; padding: 12px 8px;
+       border-bottom: 1px solid var(--border); }
+  td { padding: 12px 8px; border-bottom: 1px dotted rgba(245,240,232,0.05); vertical-align: top; }
+  
+  .footer { margin-top: 80px; padding-top: 32px; border-top: 1px solid var(--border);
+            display: flex; justify-content: space-between; font-family: 'JetBrains Mono', monospace;
+            font-size: 10px; text-transform: uppercase; letter-spacing: 0.15em; color: var(--muted); }
+  
+  @media (max-width: 640px) {
+    body { padding: 24px 16px 48px; }
+    .doc-header h1 { font-size: 36px; }
+    .doc-header .doc-num { font-size: 64px; }
+    section h2 { font-size: 24px; }
+  }
+</style>
+</head>
+<body>
+<div class="container">
+
+<header class="doc-header">
+  <div class="doc-num">00</div>
+  <div class="label">Project Constitution / v0.1</div>
+  <h1>AI Sales <span class="accent">System</span><br>Конституция проекта</h1>
+  <p class="doc-sub">Главный документ-источник. Любые решения по агентам, скриптам и базе знаний сверяются с этим документом.</p>
+</header>
+
+<nav class="toc">
+  <div class="toc-title label">Содержание</div>
+  <ol>
+    <li><a href="#s1">Цель и метрики проекта</a><span class="pg">01</span></li>
+    <li><a href="#s2">Продукт и позиционирование</a><span class="pg">02</span></li>
+    <li><a href="#s3">ICP и сегменты аудитории</a><span class="pg">03</span></li>
+    <li><a href="#s4">Воронка продаж</a><span class="pg">04</span></li>
+    <li><a href="#s5">Команда агентов и роли</a><span class="pg">05</span></li>
+    <li><a href="#s6">Тон голоса и стиль общения</a><span class="pg">06</span></li>
+    <li><a href="#s7">Сценарии диалогов</a><span class="pg">07</span></li>
+    <li><a href="#s8">Триггеры эскалации</a><span class="pg">08</span></li>
+    <li><a href="#s9">Запрещённое (red lines)</a><span class="pg">09</span></li>
+    <li><a href="#s10">Этика и прозрачность</a><span class="pg">10</span></li>
+  </ol>
+</nav>
+
+<section id="s1">
+  <div class="sec-num">01</div>
+  <div class="sec-sub">Section One</div>
+  <h2>Цель и метрики проекта</h2>
+  <p class="lead">Зачем мы это делаем и как поймём, что получилось.</p>
+  
+  <h3>Главная цель</h3>
+  <p>Построить мульти-агентную систему, которая берёт на себя 70–90% входящих коммуникаций в Instagram и Telegram, сохраняя качество личного общения Ильи и не теряя продажи.</p>
+  
+  <h3>Бизнес-цели (заполнить)</h3>
+  <div class="fillable">Текущее количество входящих в день: ___</div>
+  <div class="fillable">Текущая конверсия в продажу: ___ %</div>
+  <div class="fillable">Целевая конверсия после внедрения: ___ %</div>
+  <div class="fillable">Целевой рост выручки за 6 месяцев: ___ %</div>
+  <div class="fillable">Сколько часов в неделю Илья сейчас тратит на переписки: ___</div>
+  <div class="fillable">Сколько часов хочется освободить: ___</div>
+  
+  <h3>Ключевые метрики (KPI)</h3>
+  <table>
+    <tr><th>Метрика</th><th>Что измеряет</th><th>Целевое значение</th></tr>
+    <tr><td>% автономных ответов</td><td>сообщений без эскалации</td><td>≥ 80%</td></tr>
+    <tr><td>Скорость первого ответа</td><td>от входящего до ответа</td><td>≤ 2 мин</td></tr>
+    <tr><td>Conversion to qualified</td><td>лидов прошедших квалификацию</td><td>≥ 50%</td></tr>
+    <tr><td>Conversion to sale</td><td>от квалифицированного к оплате</td><td>≥ 15%</td></tr>
+    <tr><td>Качество диалога (скоринг)</td><td>оценка аналитика</td><td>≥ 75/100</td></tr>
+    <tr><td>Жалобы клиентов</td><td>на тон/качество ответов</td><td>&lt; 1%</td></tr>
+  </table>
+</section>
+
+<section id="s2">
+  <div class="sec-num">02</div>
+  <div class="sec-sub">Section Two</div>
+  <h2>Продукт и позиционирование</h2>
+  <p class="lead">Что мы продаём через эту систему.</p>
+  
+  <h3>Стартовый продукт (заполнить)</h3>
+  <div class="fillable">Название: ___</div>
+  <div class="fillable">Что это (одной фразой): ___</div>
+  <div class="fillable">Главное обещание клиенту: ___</div>
+  <div class="fillable">Состав: модули / уроки / бонусы / поддержка ___</div>
+  <div class="fillable">Длительность: ___</div>
+  <div class="fillable">Формат: онлайн-курс / комьюнити / ментор / гибрид ___</div>
+  
+  <h3>Тарифы и цены</h3>
+  <table>
+    <tr><th>Тариф</th><th>Цена</th><th>Что входит</th><th>Для кого</th></tr>
+    <tr><td>___</td><td>___</td><td>___</td><td>___</td></tr>
+    <tr><td>___</td><td>___</td><td>___</td><td>___</td></tr>
+    <tr><td>___</td><td>___</td><td>___</td><td>___</td></tr>
+  </table>
+  
+  <h3>Уникальное торговое предложение</h3>
+  <div class="fillable">Почему именно этот продукт, именно сейчас, именно у Ильи: ___</div>
+  
+  <h3>Социальные доказательства</h3>
+  <ul>
+    <li>Количество выпускников: <span style="color:var(--lime)">_____</span></li>
+    <li>Лучшие кейсы (3–5 для запоминания агентами): <span style="color:var(--lime)">_____</span></li>
+    <li>Знаковые отзывы для цитирования: <span style="color:var(--lime)">_____</span></li>
+  </ul>
+</section>
+
+<section id="s3">
+  <div class="sec-num">03</div>
+  <div class="sec-sub">Section Three</div>
+  <h2>ICP и сегменты аудитории</h2>
+  <p class="lead">Кто наш клиент. Без сегментации агенты будут говорить со всеми одинаково — и это провал.</p>
+  
+  <div class="note">По данным предыдущего исследования (524 ответа): уже выявлено 3 основных сегмента в нейросетевом направлении. Подтянем эту сегментацию и адаптируем под выбранный продукт.</div>
+  
+  <h3>Сегмент А — заполнить</h3>
+  <div class="fillable">Название сегмента: ___</div>
+  <div class="fillable">Возраст, пол, география: ___</div>
+  <div class="fillable">Профессия / занятость: ___</div>
+  <div class="fillable">Уровень дохода: ___</div>
+  <div class="fillable">Главная боль: ___</div>
+  <div class="fillable">Страхи (3–5): ___</div>
+  <div class="fillable">Желания (3–5): ___</div>
+  <div class="fillable">Возражения (топ-5): ___</div>
+  <div class="fillable">Триггеры покупки: ___</div>
+  <div class="fillable">Как распознать сегмент в переписке (маркеры): ___</div>
+  
+  <h3>Сегмент Б — заполнить</h3>
+  <div class="fillable">(аналогично)</div>
+  
+  <h3>Сегмент В — заполнить</h3>
+  <div class="fillable">(аналогично)</div>
+  
+  <h3>Кому не продаём (anti-ICP)</h3>
+  <ul>
+    <li>Профессиональные халявщики (только бесплатное)</li>
+    <li>Конкуренты и шпионы</li>
+    <li>Те, кому нужен 1-на-1 коучинг (продукт массовый)</li>
+    <li>Дополнить: <span style="color:var(--lime)">_____</span></li>
+  </ul>
+</section>
+
+<section id="s4">
+  <div class="sec-num">04</div>
+  <div class="sec-sub">Section Four</div>
+  <h2>Воронка продаж</h2>
+  <p class="lead">Путь от первого сообщения до оплаты. Каждый этап — это конкретное действие агента и критерии перехода дальше.</p>
+  
+  <table>
+    <tr><th>Этап</th><th>Цель</th><th>Действие агента</th><th>Критерий перехода</th></tr>
+    <tr><td>1. Hello</td><td>Установить контакт</td><td>Тёплый ответ, выяснение источника прихода</td><td>Клиент ответил, контакт принят</td></tr>
+    <tr><td>2. Discovery</td><td>Квалификация</td><td>3–5 вопросов: что хочет, где сейчас, бюджет</td><td>Понят сегмент и потребность</td></tr>
+    <tr><td>3. Pitch</td><td>Презентация</td><td>Релевантный сегменту оффер + кейс</td><td>Запросил подробности или цену</td></tr>
+    <tr><td>4. Objections</td><td>Снятие сомнений</td><td>Работа с возражениями из базы</td><td>Возражения закрыты</td></tr>
+    <tr><td>5. Close</td><td>Призыв к оплате</td><td>Прямое предложение + ссылка на оплату</td><td>Перешёл по ссылке / отказался</td></tr>
+    <tr><td>6. Follow-up</td><td>Дожим</td><td>Серия сообщений по таймингу</td><td>Оплатил / горячий отказ</td></tr>
+    <tr><td>7. Closed lost</td><td>Сохранить контакт</td><td>Положить в долгосрочную базу</td><td>Архив с тегом причины</td></tr>
+  </table>
+  
+  <div class="warn">Каждый переход между этапами фиксируется в CRM и видим в дашборде. Это ключ к аналитике.</div>
+</section>
+
+<section id="s5">
+  <div class="sec-num">05</div>
+  <div class="sec-sub">Section Five</div>
+  <h2>Команда агентов и роли</h2>
+  
+  <h3>IG-Агент / Manager</h3>
+  <ul>
+    <li>Канал: Instagram Direct</li>
+    <li>Модальности: текст + аудио</li>
+    <li>Зона ответственности: входящие в директе, ведение до этапа Close</li>
+    <li>Лимиты: не отправляет более X сообщений в минуту, имитирует человеческие паузы</li>
+  </ul>
+  
+  <h3>TG-Агент / Manager</h3>
+  <ul>
+    <li>Канал: Telegram</li>
+    <li>Модальности: текст + аудио + видео-кружочки</li>
+    <li>Зона ответственности: входящие в TG + дожим лидов из IG</li>
+  </ul>
+  
+  <h3>Аналитик / QA</h3>
+  <ul>
+    <li>Читает все переписки раз в N часов</li>
+    <li>Скоринг 0–100 по чек-листу</li>
+    <li>Рекомендации агентам по конкретным фразам</li>
+    <li>Эскалация некачественных диалогов РОПу</li>
+  </ul>
+  
+  <h3>РОП / Head of Sales</h3>
+  <ul>
+    <li>Постановка задач агентам</li>
+    <li>Утренний/вечерний дайджест Илье</li>
+    <li>Алерты по горячим лидам и блокерам</li>
+    <li>Декомпозиция плана продаж</li>
+  </ul>
+</section>
+
+<section id="s6">
+  <div class="sec-num">06</div>
+  <div class="sec-sub">Section Six</div>
+  <h2>Тон голоса и стиль общения</h2>
+  <p class="lead">Это самый недооценённый раздел. Без него агент звучит как чат-бот.</p>
+  
+  <h3>Голос Ильи — характеристики</h3>
+  <div class="fillable">5 прилагательных, описывающих как ты пишешь: ___</div>
+  <div class="fillable">Используешь ли мат / сленг / приёмы — какие именно: ___</div>
+  <div class="fillable">Любимые слова-маркеры (свои фишки): ___</div>
+  <div class="fillable">Запрещённые для тебя слова: ___</div>
+  <div class="fillable">Эмодзи — какие используешь, какие нет: ___</div>
+  <div class="fillable">Обращение к клиенту: ты / Ты / вы / по имени: ___</div>
+  
+  <h3>Длина сообщений</h3>
+  <ul>
+    <li>Большинство ответов: 1–3 коротких сообщения подряд (как реальная переписка, не «полотно»)</li>
+    <li>Аудио: 15–45 секунд, не дольше минуты</li>
+    <li>Кружочек: 20–40 секунд</li>
+  </ul>
+  
+  <h3>Что делать обязательно</h3>
+  <ul>
+    <li>Использовать имя клиента естественно (1–2 раза за диалог, не чаще)</li>
+    <li>Ссылаться на конкретные слова клиента из переписки</li>
+    <li>Признавать сомнения, не отрицать их</li>
+    <li>Задавать 1 вопрос за раз, не три подряд</li>
+  </ul>
+  
+  <h3>Что нельзя</h3>
+  <ul>
+    <li>Шаблонные формулировки («благодарим за обращение», «уточняю информацию»)</li>
+    <li>Капс кроме акцентных слов</li>
+    <li>Псевдо-психологические манипуляции («ты этого достоин»)</li>
+    <li>Обесценивание возражений</li>
+  </ul>
+</section>
+
+<section id="s7">
+  <div class="sec-num">07</div>
+  <div class="sec-sub">Section Seven</div>
+  <h2>Сценарии диалогов</h2>
+  <p class="lead">Базовые скелеты, по которым работают агенты. Конкретные скрипты — в отдельном документе базы знаний.</p>
+  
+  <h3>Сценарий 1 — холодный входящий</h3>
+  <ol>
+    <li>Тёплое приветствие + узнаём источник</li>
+    <li>2–3 вопроса для квалификации (без впаривания)</li>
+    <li>Если в сегменте — переход к презентации</li>
+    <li>Если не в сегменте — мягкое закрытие, в базу</li>
+  </ol>
+  
+  <h3>Сценарий 2 — теплый лид (был на эфире / читал блог)</h3>
+  <ol>
+    <li>Признание контекста: «видел, что был на эфире»</li>
+    <li>Сразу вопрос про задачу/цель</li>
+    <li>Презентация под цель</li>
+  </ol>
+  
+  <h3>Сценарий 3 — горячий лид (спросил цену сам)</h3>
+  <ol>
+    <li>Не сразу цена — 1 уточняющий вопрос (под какой тариф)</li>
+    <li>Цена + что входит + кейс</li>
+    <li>Прямой призыв</li>
+  </ol>
+  
+  <h3>Сценарий 4 — работа с возражением</h3>
+  <ol>
+    <li>Согласиться с правом на возражение</li>
+    <li>Уточнить, что именно за ним стоит</li>
+    <li>Ответ из банка возражений + конкретика</li>
+    <li>Возврат к вопросу о покупке</li>
+  </ol>
+  
+  <h3>Сценарий 5 — дожим</h3>
+  <ol>
+    <li>День 1 (через 4 часа): мягкое напоминание</li>
+    <li>День 2: ценностное сообщение (кейс / инсайт)</li>
+    <li>День 4: дедлайн / ограничение</li>
+    <li>День 7: последний касание</li>
+    <li>День 14: «вернёмся через месяц»</li>
+  </ol>
+</section>
+
+<section id="s8">
+  <div class="sec-num">08</div>
+  <div class="sec-sub">Section Eight</div>
+  <h2>Триггеры эскалации</h2>
+  <p class="lead">Когда агент обязан молчать и звать Илью (или РОПа).</p>
+  
+  <h3>Жёсткие триггеры — стоп немедленно</h3>
+  <ul>
+    <li>Угрозы / агрессия / упоминание полиции, юристов, Роспотребнадзора</li>
+    <li>Упоминание возврата, чарджбэка, жалобы</li>
+    <li>Сообщения о смерти, болезни, тяжёлой жизненной ситуации клиента</li>
+    <li>Прямой вопрос: «ты человек или ИИ?» — честный ответ + переключение на Илью</li>
+    <li>Запрос личной встречи / звонка</li>
+    <li>Журналисты, конкуренты, инфлюенсеры (по списку)</li>
+  </ul>
+  
+  <h3>Мягкие триггеры — отметить и продолжить</h3>
+  <ul>
+    <li>Сумма сделки выше X — финальное согласование с Ильёй</li>
+    <li>Клиент 3+ раза задаёт один и тот же вопрос — баг агента, эскалация</li>
+    <li>Молчание клиента более 7 дней — РОП решает дожимать или архивировать</li>
+    <li>Запрос нестандартных условий (рассрочка, скидка) — РОП</li>
+  </ul>
+  
+  <div class="warn">При срабатывании жёсткого триггера агент пишет только: «Хочу подключить к разговору лично Илью, чтобы ответить максимально точно. Он напишет в течение N часов».</div>
+</section>
+
+<section id="s9">
+  <div class="sec-num">09</div>
+  <div class="sec-sub">Section Nine</div>
+  <h2>Запрещённое</h2>
+  <p class="lead">Red lines. Нарушение = бан фичи / откат к ручному режиму.</p>
+  
+  <ul>
+    <li>Не выдавать себя за человека при прямом вопросе</li>
+    <li>Не обещать конкретных финансовых результатов («заработаешь 500к за месяц»)</li>
+    <li>Не давать медицинских, юридических, налоговых советов</li>
+    <li>Не обсуждать политику, религию, личную жизнь</li>
+    <li>Не критиковать конкурентов поимённо</li>
+    <li>Не использовать манипулятивные FOMO-приёмы вне согласованных скриптов</li>
+    <li>Не давать персональные данные других клиентов</li>
+    <li>Не отправлять более 5 сообщений подряд без ответа клиента</li>
+  </ul>
+</section>
+
+<section id="s10">
+  <div class="sec-num">10</div>
+  <div class="sec-sub">Section Ten</div>
+  <h2>Этика и прозрачность</h2>
+  
+  <h3>Принцип</h3>
+  <p>Мы не выдаём ИИ за Илью. Мы позиционируем систему как «ИИ-ассистент Ильи» — обученный его стилю и контентом. Это страховка от репутационного риска и юридический щит.</p>
+  
+  <h3>Где это фиксируется</h3>
+  <ul>
+    <li>В описании аккаунта Instagram (bio)</li>
+    <li>В закреплённом сообщении в Telegram-канале</li>
+    <li>В оферте на сайте</li>
+    <li>В первом приветственном сообщении нового диалога</li>
+  </ul>
+  
+  <h3>Текст дисклеймера (черновой)</h3>
+  <div class="note" style="font-style: italic;">«Привет! С тобой общается ИИ-ассистент Ильи, обученный на его материалах и стиле. На критичных моментах подключается лично Илья. Если хочешь сразу к нему — просто напиши "Илья"».</div>
+  
+  <h3>Право клиента</h3>
+  <ul>
+    <li>В любой момент попросить «передай человеку» → агент молчит, РОП подключает Илью</li>
+    <li>Запросить удаление переписки → исполняем по 152-ФЗ</li>
+    <li>Знать, как используются его данные → даём ссылку на политику</li>
+  </ul>
+</section>
+
+<div class="footer">
+  <div>AI Sales System / Project Constitution v0.1</div>
+  <div>Document 001 of 9</div>
+</div>
+
+</div>
+</body>
+</html>

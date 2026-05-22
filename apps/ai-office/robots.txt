@@ -1,0 +1,23 @@
+User-agent: *
+Allow: /
+
+# Запрет на индексацию приватных API-эндпоинтов
+Disallow: /api/
+Disallow: /.netlify/
+
+# Запрет служебных/админ-страниц (noindex)
+Disallow: /leads-inbox.html
+Disallow: /leads-inbox
+Disallow: /leads
+Disallow: /dev-tools.html
+Disallow: /dev-tools
+Disallow: /dev
+Disallow: /admin
+Disallow: /404.html
+Disallow: /whats-new.html
+Disallow: /whats-new
+Disallow: /demo-dialogue.html
+Disallow: /dashboard-demo.html
+Disallow: /partner-dashboard.html
+
+Sitemap: https://ai-growth-office.ru/sitemap.xml

@@ -1,0 +1,31 @@
+services:
+  web:
+    image: persona-studio-web
+    container_name: persona-studio-web
+    build:
+      context: .
+      target: web
+    restart: unless-stopped
+    env_file: .env
+    networks:
+      - aisales
+    ports:
+      - "3020:3020"
+    depends_on:
+      - worker
+
+  worker:
+    image: persona-studio-worker
+    container_name: persona-studio-worker
+    build:
+      context: .
+      target: worker
+    restart: unless-stopped
+    env_file: .env
+    networks:
+      - aisales
+
+networks:
+  aisales:
+    external: true
+    name: aisales_default

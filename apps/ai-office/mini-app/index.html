@@ -1,0 +1,961 @@
+<!doctype html>
+<html lang="ru">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1,maximum-scale=1,viewport-fit=cover">
+<title>AI Growth Office</title>
+<meta name="description" content="AI-команда из 169 агентов в Telegram. Подбор за 3 минуты.">
+<meta name="robots" content="noindex">
+
+<!-- Telegram WebApp SDK -->
+<script src="https://telegram.org/js/telegram-web-app.js"></script>
+
+<style>
+/* ═══ THEME · следует за Telegram ═══ */
+:root {
+  /* Дефолтная тёмная палитра (если Telegram не передал theme) */
+  --tg-bg:         var(--tg-theme-bg-color, #18222d);
+  --tg-text:       var(--tg-theme-text-color, #f5f5f5);
+  --tg-hint:       var(--tg-theme-hint-color, #7a8da0);
+  --tg-link:       var(--tg-theme-link-color, #6ab3f3);
+  --tg-button:     var(--tg-theme-button-color, #50a8eb);
+  --tg-button-tx:  var(--tg-theme-button-text-color, #fff);
+  --tg-secondary:  var(--tg-theme-secondary-bg-color, #232e3c);
+  --tg-section:    var(--tg-theme-section-bg-color, #1b2632);
+  --tg-section-hd: var(--tg-theme-section-header-text-color, #6ab3f3);
+  --tg-destructive:var(--tg-theme-destructive-text-color, #ec3942);
+
+  /* Наш брендинг — overlay на TG */
+  --accent: #c8f060;
+  --accent-2: #60c8f0;
+  --green: #34d058;
+  --gold: #f0b429;
+
+  --safe-top: env(safe-area-inset-top, 0);
+  --safe-bot: env(safe-area-inset-bottom, 0);
+}
+
+* { box-sizing: border-box; margin: 0; padding: 0; -webkit-tap-highlight-color: transparent }
+html, body { background: var(--tg-bg); color: var(--tg-text); min-height: 100vh; overflow-x: hidden }
+body {
+  font-family: -apple-system, BlinkMacSystemFont, 'SF Pro Text', 'Inter', system-ui, sans-serif;
+  font-size: 15px; line-height: 1.5;
+  padding: var(--safe-top) 0 var(--safe-bot);
+}
+
+/* ═══ HEADER · sticky · только на нужных экранах ═══ */
+.app-head {
+  position: sticky; top: 0; z-index: 50;
+  background: var(--tg-bg); padding: 12px 16px;
+  border-bottom: 1px solid rgba(255,255,255,.05);
+  display: flex; align-items: center; gap: 12px;
+}
+.app-head .av {
+  width: 36px; height: 36px; border-radius: 50%;
+  background: linear-gradient(135deg, var(--accent), var(--accent-2));
+  color: #080808; display: flex; align-items: center; justify-content: center;
+  font-weight: 800; font-size: 16px; flex-shrink: 0;
+}
+.app-head .titles { flex: 1; min-width: 0 }
+.app-head .nm { font-size: 15px; font-weight: 700; line-height: 1.2 }
+.app-head .st { font-size: 11.5px; color: var(--green); margin-top: 2px; display: flex; align-items: center; gap: 5px }
+.app-head .st::before { content:''; width:6px;height:6px;background:var(--green);border-radius:50%;animation:dot 2s infinite }
+@keyframes dot { 0%,100%{box-shadow:0 0 0 0 rgba(52,208,88,.5)} 50%{box-shadow:0 0 0 5px rgba(52,208,88,0)} }
+
+/* ═══ SCREENS ═══ */
+.screen { display: none; min-height: calc(100vh - var(--safe-top) - var(--safe-bot)); padding-bottom: 80px }
+.screen.active { display: block; animation: fadeIn .25s ease-out }
+@keyframes fadeIn { from{opacity:0;transform:translateY(8px)} to{opacity:1;transform:none} }
+
+/* ═══ WELCOME · экран 1 ═══ */
+.welcome { padding: 40px 24px 24px; text-align: center }
+.welcome .hero-em { font-size: 84px; line-height: 1; margin-bottom: 20px; animation: float 3s ease-in-out infinite }
+@keyframes float { 0%,100%{transform:translateY(0)} 50%{transform:translateY(-6px)} }
+.welcome .hi { font-size: 24px; font-weight: 800; letter-spacing: -.3px; margin-bottom: 8px }
+.welcome .hi .nm { background: linear-gradient(90deg, var(--accent), var(--accent-2)); -webkit-background-clip: text; -webkit-text-fill-color: transparent }
+.welcome .desc { font-size: 15px; color: var(--tg-hint); line-height: 1.55; max-width: 320px; margin: 0 auto 32px }
+
+.welcome .perks { display: flex; flex-direction: column; gap: 12px; margin: 0 auto 24px; max-width: 340px; text-align: left }
+.welcome .perk { display: flex; align-items: center; gap: 12px; padding: 14px 16px; background: var(--tg-secondary); border-radius: 14px }
+.welcome .perk .em { font-size: 22px; flex-shrink: 0 }
+.welcome .perk .tx { font-size: 13.5px; line-height: 1.4 }
+.welcome .perk .tx b { font-weight: 700; display: block; margin-bottom: 2px }
+.welcome .perk .tx span { color: var(--tg-hint); font-size: 12px }
+
+/* ═══ BRIEF · экран 2 ═══ */
+.brief { padding: 16px }
+.brief .progress { display: flex; gap: 4px; margin-bottom: 22px }
+.brief .progress .dot { flex: 1; height: 3px; background: var(--tg-secondary); border-radius: 99px; transition: background .3s }
+.brief .progress .dot.done { background: var(--accent) }
+.brief .progress .dot.cur { background: var(--accent-2) }
+.brief .step-num { font-size: 11px; color: var(--tg-hint); font-weight: 700; letter-spacing: .5px; text-transform: uppercase; margin-bottom: 6px }
+.brief .q { font-size: 22px; font-weight: 800; letter-spacing: -.3px; line-height: 1.2; margin-bottom: 8px }
+.brief .helper { font-size: 13px; color: var(--tg-hint); margin-bottom: 22px }
+
+.chips { display: flex; flex-direction: column; gap: 8px }
+.chip {
+  padding: 16px 18px; background: var(--tg-secondary); border-radius: 14px;
+  font-size: 15px; font-weight: 600; cursor: pointer;
+  border: 2px solid transparent; transition: all .15s;
+  display: flex; align-items: center; gap: 12px;
+}
+.chip:active { transform: scale(.98) }
+.chip.selected { border-color: var(--accent); background: rgba(200,240,96,.08) }
+.chip .em { font-size: 20px; flex-shrink: 0 }
+.chip .check {
+  margin-left: auto; width: 22px; height: 22px; border-radius: 50%;
+  border: 2px solid var(--tg-hint); display: flex; align-items: center; justify-content: center;
+  flex-shrink: 0; font-size: 12px; font-weight: 900; color: #080808;
+  transition: all .15s; opacity: 0;
+}
+.chip.selected .check { background: var(--accent); border-color: var(--accent); opacity: 1 }
+
+input.txt {
+  width: 100%; padding: 16px 18px; background: var(--tg-secondary); border: 2px solid transparent;
+  border-radius: 14px; color: var(--tg-text); font-size: 15px; outline: none;
+  transition: border-color .15s; -webkit-appearance: none;
+}
+input.txt:focus { border-color: var(--accent) }
+input.txt::placeholder { color: var(--tg-hint) }
+
+/* ═══ LOADING · экран 3a ═══ */
+.loading { padding: 60px 24px; text-align: center }
+.loading .spinner {
+  width: 56px; height: 56px; border: 3px solid var(--tg-secondary);
+  border-top-color: var(--accent); border-radius: 50%;
+  animation: spin 1s linear infinite; margin: 0 auto 20px;
+}
+@keyframes spin { to { transform: rotate(360deg) } }
+.loading .ttl { font-size: 18px; font-weight: 700; margin-bottom: 6px }
+.loading .sub { font-size: 13px; color: var(--tg-hint) }
+.loading .ticks { margin-top: 28px; display: flex; flex-direction: column; gap: 10px; max-width: 280px; margin-left: auto; margin-right: auto; text-align: left }
+.loading .tick { display: flex; align-items: center; gap: 10px; font-size: 13px; color: var(--tg-hint); opacity: 0; transition: opacity .3s }
+.loading .tick.on { opacity: 1; color: var(--tg-text) }
+.loading .tick::before { content: '✓'; color: var(--green); font-weight: 900; font-size: 14px; width: 18px; flex-shrink: 0 }
+
+/* ═══ TEAM · экран 3b ═══ */
+.team { padding: 16px }
+.team h2 { font-size: 22px; font-weight: 800; letter-spacing: -.3px; margin-bottom: 6px }
+.team .lede { font-size: 13.5px; color: var(--tg-hint); margin-bottom: 18px }
+.group-title { font-size: 10.5px; font-weight: 800; color: var(--tg-section-hd); letter-spacing: .8px; text-transform: uppercase; margin: 16px 0 8px; padding: 0 4px }
+.agent {
+  display: flex; align-items: center; gap: 12px; padding: 12px 14px;
+  background: var(--tg-secondary); border-radius: 14px; margin-bottom: 8px;
+  border: 2px solid transparent; transition: border-color .15s;
+}
+.agent.must { border-color: rgba(200,240,96,.3) }
+.agent .em { font-size: 28px; flex-shrink: 0 }
+.agent .info { flex: 1; min-width: 0 }
+.agent .nm { font-size: 14.5px; font-weight: 700 }
+.agent .role { font-size: 11.5px; color: var(--tg-hint); margin-top: 1px }
+.agent .toggle {
+  width: 44px; height: 26px; background: rgba(255,255,255,.1); border-radius: 99px;
+  position: relative; cursor: pointer; transition: background .15s; flex-shrink: 0;
+}
+.agent .toggle.on { background: var(--accent) }
+.agent .toggle::after {
+  content: ''; position: absolute; top: 3px; left: 3px;
+  width: 20px; height: 20px; background: #fff; border-radius: 50%;
+  transition: transform .2s cubic-bezier(.4,.0,.2,1);
+}
+.agent .toggle.on::after { transform: translateX(18px) }
+
+/* ═══ OFFICE · экран 4 (dashboard) ═══ */
+.office { padding: 16px }
+.office .greet { font-size: 22px; font-weight: 800; letter-spacing: -.3px; margin-bottom: 4px }
+.office .goal { font-size: 13.5px; color: var(--tg-hint); margin-bottom: 18px }
+.office .stats {
+  display: grid; grid-template-columns: repeat(3, 1fr); gap: 8px; margin-bottom: 22px;
+  background: var(--tg-secondary); border-radius: 14px; padding: 14px;
+}
+.office .stats .stat { text-align: center }
+.office .stats .v { font-size: 18px; font-weight: 900; background: linear-gradient(135deg, var(--accent), var(--accent-2)); -webkit-background-clip: text; -webkit-text-fill-color: transparent; line-height: 1 }
+.office .stats .l { font-size: 9.5px; color: var(--tg-hint); margin-top: 4px; letter-spacing: .4px; text-transform: uppercase; font-weight: 700 }
+
+.section-h { font-size: 14px; font-weight: 800; margin: 14px 0 10px; display: flex; align-items: center; justify-content: space-between }
+.section-h .more { font-size: 12px; color: var(--tg-link); font-weight: 600 }
+
+.agent-card {
+  display: flex; align-items: center; gap: 12px; padding: 14px;
+  background: var(--tg-secondary); border-radius: 14px; margin-bottom: 8px;
+  cursor: pointer; transition: transform .12s;
+}
+.agent-card:active { transform: scale(.985) }
+.agent-card .em { font-size: 30px; flex-shrink: 0; width: 44px; text-align: center }
+.agent-card .info { flex: 1; min-width: 0 }
+.agent-card .nm { font-size: 15px; font-weight: 700 }
+.agent-card .role { font-size: 12px; color: var(--tg-hint); margin-top: 2px }
+.agent-card .stat { font-size: 10.5px; color: var(--tg-hint); margin-top: 3px; font-family: monospace }
+.agent-card .arrow { color: var(--tg-hint); font-size: 18px; margin-left: 8px }
+
+/* ═══ CHAT · экран 5 ═══ */
+.chat { display: flex; flex-direction: column; min-height: calc(100vh - var(--safe-top) - var(--safe-bot)); padding-bottom: 0 }
+.chat-body {
+  flex: 1; overflow-y: auto; padding: 14px 16px 20px;
+  display: flex; flex-direction: column; gap: 10px;
+}
+.msg { max-width: 84%; padding: 10px 14px; border-radius: 16px; font-size: 14.5px; line-height: 1.45; white-space: pre-wrap; word-break: break-word; animation: fadeUp .25s }
+@keyframes fadeUp { from{opacity:0;transform:translateY(6px)} to{opacity:1;transform:none} }
+.msg.user { background: var(--tg-button); color: var(--tg-button-tx); align-self: flex-end; border-bottom-right-radius: 6px }
+.msg.bot { background: var(--tg-secondary); align-self: flex-start; border-bottom-left-radius: 6px }
+.msg .typing { display: inline-flex; gap: 3px }
+.msg .typing span { width: 6px; height: 6px; border-radius: 50%; background: var(--tg-hint); animation: blink 1.2s infinite }
+.msg .typing span:nth-child(2) { animation-delay: .15s }
+.msg .typing span:nth-child(3) { animation-delay: .3s }
+@keyframes blink { 0%,60%,100%{opacity:.3} 30%{opacity:1} }
+
+.chat-input {
+  position: sticky; bottom: 0; background: var(--tg-bg);
+  border-top: 1px solid rgba(255,255,255,.06);
+  padding: 10px 12px calc(10px + var(--safe-bot)); display: flex; gap: 8px;
+}
+.chat-input textarea {
+  flex: 1; background: var(--tg-secondary); border: 0; padding: 12px 14px;
+  border-radius: 18px; color: var(--tg-text); font-size: 14.5px; font-family: inherit;
+  resize: none; outline: none; min-height: 42px; max-height: 100px; line-height: 1.35;
+}
+.chat-input button {
+  background: var(--tg-button); color: var(--tg-button-tx); border: 0;
+  width: 42px; height: 42px; border-radius: 50%; cursor: pointer;
+  display: flex; align-items: center; justify-content: center; font-size: 18px;
+  flex-shrink: 0; transition: transform .1s;
+}
+.chat-input button:active { transform: scale(.9) }
+.chat-input button:disabled { opacity: .4 }
+
+/* ═══ BOTTOM NAV (на dashboard) ═══ */
+.bottom-nav {
+  position: fixed; bottom: 0; left: 0; right: 0; z-index: 90;
+  background: var(--tg-bg); border-top: 1px solid rgba(255,255,255,.06);
+  padding: 6px 0 calc(4px + var(--safe-bot));
+  display: none; justify-content: space-around;
+}
+.bottom-nav.show { display: flex }
+.bottom-nav a {
+  flex: 1; text-align: center; padding: 8px 4px; text-decoration: none; color: var(--tg-hint);
+  font-size: 10px; font-weight: 600; letter-spacing: .2px; transition: color .15s;
+}
+.bottom-nav a .em { display: block; font-size: 20px; margin-bottom: 2px; line-height: 1 }
+.bottom-nav a.active { color: var(--accent) }
+
+/* ═══ PRIMARY CTA (fallback если нет TG MainButton) ═══ */
+.cta-bottom {
+  position: fixed; bottom: calc(16px + var(--safe-bot)); left: 16px; right: 16px;
+  z-index: 80; padding: 14px; background: var(--tg-button); color: var(--tg-button-tx);
+  border: 0; border-radius: 14px; font-size: 15px; font-weight: 800;
+  cursor: pointer; box-shadow: 0 8px 24px rgba(0,0,0,.3);
+  display: none;
+}
+.cta-bottom.show { display: block }
+.cta-bottom:disabled { opacity: .5 }
+
+/* ═══ COMMON ═══ */
+.empty { padding: 60px 24px; text-align: center; color: var(--tg-hint) }
+.empty .em { font-size: 48px; opacity: .5; margin-bottom: 12px }
+</style>
+</head>
+<body>
+
+<!-- ════════ HEADER (показывается на dashboard и chat) ════════ -->
+<div class="app-head" id="appHead" style="display:none">
+  <div class="av" id="headAv">А</div>
+  <div class="titles">
+    <div class="nm" id="headNm">AI Growth Office</div>
+    <div class="st" id="headSt">онлайн</div>
+  </div>
+</div>
+
+<!-- ════════ SCREEN 1: WELCOME ════════ -->
+<section class="screen active" id="screen-welcome" data-screen="welcome">
+  <div class="welcome">
+    <div class="hero-em">🏢</div>
+    <h1 class="hi">Привет, <span class="nm" id="welcomeName">друг</span> 👋</h1>
+    <p class="desc">Я <b>Алиса</b>, помогу собрать твою AI-команду за <b>3 минуты</b>. 169 агентов под маркетинг, продажи, контент, аналитику.</p>
+
+    <div class="perks">
+      <div class="perk">
+        <span class="em">⚡</span>
+        <div class="tx"><b>5 простых вопросов</b><span>Тип бизнеса, ниша, цель, доход, боль</span></div>
+      </div>
+      <div class="perk">
+        <span class="em">🤖</span>
+        <div class="tx"><b>AI подберёт команду</b><span>4-7 агентов под твою задачу</span></div>
+      </div>
+      <div class="perk">
+        <span class="em">💬</span>
+        <div class="tx"><b>Сразу в работу</b><span>Чаты, контент, скрипты — в кабинете</span></div>
+      </div>
+    </div>
+  </div>
+  <button class="cta-bottom show" id="welcomeStart">Поехали →</button>
+</section>
+
+<!-- ════════ SCREEN 2: BRIEF (5 шагов) ════════ -->
+<section class="screen" id="screen-brief" data-screen="brief">
+  <div class="brief">
+    <div class="progress" id="briefProgress">
+      <div class="dot cur"></div><div class="dot"></div><div class="dot"></div><div class="dot"></div><div class="dot"></div>
+    </div>
+    <div id="briefStepContent"></div>
+  </div>
+  <button class="cta-bottom show" id="briefNext" disabled>Дальше →</button>
+</section>
+
+<!-- ════════ SCREEN 3a: LOADING (AI собирает) ════════ -->
+<section class="screen" id="screen-loading" data-screen="loading">
+  <div class="loading">
+    <div class="spinner"></div>
+    <div class="ttl">AI собирает команду…</div>
+    <div class="sub">Анализирую твой бриф и подбираю агентов</div>
+    <div class="ticks" id="loadingTicks">
+      <div class="tick" data-i="0">Изучаю профиль бизнеса</div>
+      <div class="tick" data-i="1">Подбираю Must-have агентов</div>
+      <div class="tick" data-i="2">Добавляю опциональных</div>
+      <div class="tick" data-i="3">Готовлю кабинет</div>
+    </div>
+  </div>
+</section>
+
+<!-- ════════ SCREEN 3b: TEAM (рекомендации) ════════ -->
+<section class="screen" id="screen-team" data-screen="team">
+  <div class="team">
+    <h2>Твоя команда готова</h2>
+    <p class="lede">AI подобрал <b id="teamCount">5</b> агентов под твою цель. Можешь отключить ненужных.</p>
+
+    <div class="group-title">Must-have · обязательные</div>
+    <div id="teamMust"></div>
+
+    <div class="group-title">Recommended · усилят рост</div>
+    <div id="teamRec"></div>
+  </div>
+  <button class="cta-bottom show" id="teamConfirm">Открыть мой офис →</button>
+</section>
+
+<!-- ════════ SCREEN 4: OFFICE (dashboard) ════════ -->
+<section class="screen" id="screen-office" data-screen="office">
+  <div class="office">
+    <div class="greet">Твой <span style="background:linear-gradient(90deg,var(--accent),var(--accent-2));-webkit-background-clip:text;-webkit-text-fill-color:transparent">AI-офис</span></div>
+    <div class="goal" id="officeGoal">Цель: +30 клиентов за 90 дней</div>
+
+    <div class="stats">
+      <div class="stat"><div class="v" id="statAgents">5</div><div class="l">Агентов</div></div>
+      <div class="stat"><div class="v" id="statRuns">0</div><div class="l">Запусков</div></div>
+      <div class="stat"><div class="v" id="statSaved">~0ч</div><div class="l">Сэкономлено</div></div>
+    </div>
+
+    <div class="section-h">Команда <a class="more" href="javascript:void(0)" onclick="router.go('team')">Изменить →</a></div>
+    <div id="officeAgents"></div>
+
+    <div class="section-h">Быстрые задачи</div>
+    <div id="officeQuickTasks"></div>
+  </div>
+</section>
+
+<!-- ════════ SCREEN 5: CHAT с агентом ════════ -->
+<section class="screen" id="screen-chat" data-screen="chat">
+  <div class="chat">
+    <div class="chat-body" id="chatBody"></div>
+    <div class="chat-input">
+      <textarea id="chatInput" placeholder="Спроси что угодно…" rows="1"></textarea>
+      <button id="chatSend" disabled>↑</button>
+    </div>
+  </div>
+</section>
+
+<!-- ════════ BOTTOM NAV (только на office) ════════ -->
+<nav class="bottom-nav" id="bottomNav">
+  <a href="javascript:void(0)" data-nav="office" class="active"><span class="em">🏢</span>Офис</a>
+  <a href="javascript:void(0)" data-nav="brief"><span class="em">📋</span>Бриф</a>
+  <a href="javascript:void(0)" data-nav="team"><span class="em">🤖</span>Команда</a>
+  <a href="javascript:void(0)" data-nav="settings"><span class="em">⚙️</span>Настройки</a>
+</nav>
+
+<script>
+/* ═══════════════════════════════════════════════════════════════
+   Telegram Mini App · AI Growth Office
+   ═══════════════════════════════════════════════════════════════ */
+
+// ─── 1. Telegram WebApp init ───
+const tg = window.Telegram?.WebApp;
+const tgUser = tg?.initDataUnsafe?.user || null;
+
+if (tg) {
+  tg.ready();
+  tg.expand();
+  tg.enableClosingConfirmation();
+  // Header color sync
+  try { tg.setHeaderColor('bg_color'); } catch {}
+}
+
+// ─── 2. STATE (localStorage-backed, простая модель) ───
+const STORE_KEY = 'aio_miniapp_state';
+const state = (() => {
+  try { return JSON.parse(localStorage.getItem(STORE_KEY) || 'null') || {}; }
+  catch { return {}; }
+})();
+function save() { try { localStorage.setItem(STORE_KEY, JSON.stringify(state)); } catch {} }
+
+// ─── 3. AGENTS catalog (упрощённый под mini-app) ───
+const ALL_AGENTS = [
+  { id:'sofia',   em:'✍️', nm:'Sofia',    role:'Контент-маркетолог' },
+  { id:'hunter',  em:'🎯', nm:'Хантер',   role:'Мастер хуков · Reels' },
+  { id:'analyt',  em:'📊', nm:'Аналитик', role:'Метрики и отчёты' },
+  { id:'alisa',   em:'💬', nm:'Алиса',    role:'Sales · скрипты Direct' },
+  { id:'nika',    em:'🎨', nm:'Ника',     role:'Креатив и баннеры' },
+  { id:'echo',    em:'🔄', nm:'Echo',     role:'Прогрев и воронки' },
+  { id:'selene',  em:'💎', nm:'Selene',   role:'Премиум-сегмент' },
+  { id:'trends',  em:'📡', nm:'Тренды',   role:'Мониторинг ниши' },
+];
+
+// ─── 4. BRIEF schema (5 шагов) ───
+const BRIEF_STEPS = [
+  {
+    key: 'type', q: 'Что у тебя за бизнес?',
+    help: 'Это поможет AI подобрать правильных агентов',
+    type: 'chips',
+    options: [
+      { v:'expert',    em:'🧑‍🏫', l:'Эксперт / самозанятый' },
+      { v:'school',    em:'🎓', l:'Онлайн-школа / инфобиз' },
+      { v:'agency',    em:'🏢', l:'Агентство / студия' },
+      { v:'tech',      em:'💻', l:'Tech-стартап' },
+      { v:'other',     em:'✨', l:'Другое' },
+    ]
+  },
+  {
+    key: 'niche', q: 'Какая ниша?',
+    help: 'Например: психология, обучение английскому, SMM для b2b',
+    type: 'text',
+    placeholder: 'Психология, кодинг, fashion…',
+  },
+  {
+    key: 'goal', q: 'Главная цель на 3 месяца?',
+    help: 'Что хочешь получить от AI-команды',
+    type: 'chips',
+    options: [
+      { v:'clients',   em:'👥', l:'Больше клиентов' },
+      { v:'content',   em:'📝', l:'Регулярный контент' },
+      { v:'funnel',    em:'🔀', l:'Воронка и продажи' },
+      { v:'analytics', em:'📊', l:'Аналитика и инсайты' },
+      { v:'all',       em:'🌟', l:'Всё сразу' },
+    ]
+  },
+  {
+    key: 'revenue', q: 'Текущий доход / мес?',
+    help: 'Без точности — диапазон. Поможет с тарифом',
+    type: 'chips',
+    options: [
+      { v:'<200K',    em:'🌱', l:'До 200 000 ₽' },
+      { v:'200-500K', em:'🌿', l:'200 — 500 000 ₽' },
+      { v:'500K-2M',  em:'🌳', l:'500 000 — 2 млн ₽' },
+      { v:'2-10M',    em:'🏔', l:'2 — 10 млн ₽' },
+      { v:'10M+',     em:'⛰', l:'Больше 10 млн ₽' },
+    ]
+  },
+  {
+    key: 'pain', q: 'Главный затык сейчас?',
+    help: 'Что отнимает время или не двигается',
+    type: 'text',
+    placeholder: 'Нет системы контента, не умею продавать…',
+  },
+];
+
+// ─── 5. ROUTER (hash-based) ───
+const ROUTES = ['welcome', 'brief', 'loading', 'team', 'office', 'chat', 'settings'];
+const router = {
+  go(name, params = {}) {
+    if (!ROUTES.includes(name)) name = 'welcome';
+    // Hide all
+    document.querySelectorAll('.screen').forEach(s => s.classList.remove('active'));
+    const target = document.getElementById('screen-' + name);
+    if (target) target.classList.add('active');
+
+    // Header visibility
+    const head = document.getElementById('appHead');
+    const showHead = (name === 'office' || name === 'chat' || name === 'team' || name === 'settings');
+    head.style.display = showHead ? 'flex' : 'none';
+
+    // Bottom nav
+    document.getElementById('bottomNav').classList.toggle('show', name === 'office' || name === 'settings');
+
+    // BackButton (Telegram native)
+    if (tg) {
+      if (name === 'welcome' || name === 'office') tg.BackButton.hide();
+      else { tg.BackButton.show(); tg.BackButton.onClick(() => router.back()); }
+    }
+
+    // Hash sync
+    if (location.hash.slice(1) !== name) {
+      history.pushState({ name }, '', '#' + name);
+    }
+
+    state._currentScreen = name;
+    save();
+
+    // Screen-specific init
+    onScreenEnter(name, params);
+  },
+
+  back() {
+    const cur = state._currentScreen || 'welcome';
+    if (cur === 'chat') router.go('office');
+    else if (cur === 'team') router.go('office');
+    else if (cur === 'settings') router.go('office');
+    else if (cur === 'brief') router.go('welcome');
+    else if (cur === 'loading') router.go('brief');
+    else router.go('welcome');
+  }
+};
+
+function onScreenEnter(name, params) {
+  if (name === 'welcome') renderWelcome();
+  if (name === 'brief')   renderBrief();
+  if (name === 'loading') startLoading();
+  if (name === 'team')    renderTeam();
+  if (name === 'office')  renderOffice();
+  if (name === 'chat')    renderChat(params.agentId);
+  if (name === 'settings')renderSettings();
+}
+
+window.addEventListener('popstate', e => {
+  const name = (e.state && e.state.name) || location.hash.slice(1) || 'welcome';
+  router.go(name);
+});
+
+// ─── 6. WELCOME screen ───
+function renderWelcome() {
+  const name = tgUser?.first_name || state.userName || 'друг';
+  document.getElementById('welcomeName').textContent = name;
+  state.userName = name;
+  state.userId = tgUser?.id || state.userId || ('local_' + Date.now());
+  save();
+}
+document.getElementById('welcomeStart').onclick = () => {
+  haptic('medium');
+  state.briefStep = 0;
+  state.brief = state.brief || {};
+  save();
+  router.go('brief');
+};
+
+// ─── 7. BRIEF (5 шагов) ───
+function renderBrief() {
+  const step = state.briefStep || 0;
+  const s = BRIEF_STEPS[step];
+  if (!s) return router.go('loading');
+
+  // Progress
+  const dots = document.querySelectorAll('#briefProgress .dot');
+  dots.forEach((d, i) => {
+    d.classList.toggle('done', i < step);
+    d.classList.toggle('cur', i === step);
+  });
+
+  const root = document.getElementById('briefStepContent');
+  let html = `<div class="step-num">Шаг ${step + 1} из ${BRIEF_STEPS.length}</div>
+              <h1 class="q">${s.q}</h1>
+              <p class="helper">${s.help}</p>`;
+
+  if (s.type === 'chips') {
+    html += '<div class="chips">';
+    s.options.forEach(o => {
+      const sel = state.brief[s.key] === o.v ? 'selected' : '';
+      html += `<div class="chip ${sel}" data-v="${o.v}">
+        <span class="em">${o.em}</span>
+        <span>${o.l}</span>
+        <span class="check">✓</span>
+      </div>`;
+    });
+    html += '</div>';
+  } else if (s.type === 'text') {
+    html += `<input type="text" class="txt" id="briefTxt" placeholder="${s.placeholder}" value="${escapeHtml(state.brief[s.key] || '')}">`;
+  }
+
+  root.innerHTML = html;
+
+  // Interactivity
+  if (s.type === 'chips') {
+    root.querySelectorAll('.chip').forEach(c => {
+      c.onclick = () => {
+        haptic('light');
+        root.querySelectorAll('.chip').forEach(x => x.classList.remove('selected'));
+        c.classList.add('selected');
+        state.brief[s.key] = c.dataset.v;
+        save();
+        updateBriefBtn();
+      };
+    });
+  } else if (s.type === 'text') {
+    const inp = document.getElementById('briefTxt');
+    inp.oninput = () => { state.brief[s.key] = inp.value; save(); updateBriefBtn(); };
+    setTimeout(() => inp.focus(), 100);
+  }
+
+  updateBriefBtn();
+}
+
+function updateBriefBtn() {
+  const step = state.briefStep || 0;
+  const s = BRIEF_STEPS[step];
+  const val = state.brief[s.key];
+  const filled = (s.type === 'text') ? (val && val.trim().length >= 2) : !!val;
+  const btn = document.getElementById('briefNext');
+  btn.disabled = !filled;
+  btn.textContent = (step === BRIEF_STEPS.length - 1) ? 'Подобрать команду →' : 'Дальше →';
+  // Sync с Telegram MainButton, если есть
+  if (tg) {
+    if (filled) {
+      tg.MainButton.setText(btn.textContent);
+      tg.MainButton.color = '#c8f060';
+      tg.MainButton.textColor = '#080808';
+      tg.MainButton.show();
+      tg.MainButton.onClick(briefNext);
+    } else {
+      tg.MainButton.hide();
+    }
+  }
+}
+
+function briefNext() {
+  haptic('medium');
+  const step = state.briefStep || 0;
+  if (step < BRIEF_STEPS.length - 1) {
+    state.briefStep = step + 1;
+    save();
+    renderBrief();
+  } else {
+    state.briefStep = 0;
+    save();
+    if (tg) tg.MainButton.hide();
+    router.go('loading');
+  }
+}
+document.getElementById('briefNext').onclick = briefNext;
+
+// ─── 8. LOADING (анимация + AI-подбор) ───
+function startLoading() {
+  if (tg) tg.MainButton.hide();
+  const ticks = document.querySelectorAll('#loadingTicks .tick');
+  ticks.forEach(t => t.classList.remove('on'));
+  let i = 0;
+  const iv = setInterval(() => {
+    if (i < ticks.length) ticks[i].classList.add('on');
+    i++;
+    if (i > ticks.length) { clearInterval(iv); buildTeamFromBrief(); router.go('team'); }
+  }, 700);
+}
+
+function buildTeamFromBrief() {
+  const b = state.brief || {};
+  // Простая логика подбора по цели
+  let must = [], rec = [];
+  const goal = b.goal;
+  if (goal === 'content' || goal === 'all') { must.push('sofia', 'hunter'); rec.push('nika'); }
+  if (goal === 'clients' || goal === 'all') { must.push('alisa'); rec.push('echo'); }
+  if (goal === 'funnel' || goal === 'all') { must.push('echo'); rec.push('selene'); }
+  if (goal === 'analytics' || goal === 'all') { must.push('analyt'); rec.push('trends'); }
+  // Дефолт если не выбрано
+  if (must.length === 0) { must = ['sofia', 'alisa', 'analyt']; rec = ['hunter', 'nika']; }
+  // Уникальные
+  must = [...new Set(must)];
+  rec = [...new Set(rec.filter(r => !must.includes(r)))];
+
+  state.team = { must, rec, active: [...must, ...rec.slice(0, 2)] };
+  save();
+}
+
+// ─── 9. TEAM (рекомендации) ───
+function renderTeam() {
+  if (tg) tg.MainButton.hide();
+  const t = state.team || { must: [], rec: [], active: [] };
+  const must = document.getElementById('teamMust');
+  const rec = document.getElementById('teamRec');
+  document.getElementById('teamCount').textContent = t.active.length;
+
+  function html(ids, isMust) {
+    return ids.map(id => {
+      const a = ALL_AGENTS.find(x => x.id === id);
+      if (!a) return '';
+      const on = t.active.includes(id);
+      return `<div class="agent ${isMust ? 'must' : ''}">
+        <span class="em">${a.em}</span>
+        <div class="info"><div class="nm">${a.nm}</div><div class="role">${a.role}</div></div>
+        <div class="toggle ${on?'on':''}" data-id="${id}"></div>
+      </div>`;
+    }).join('');
+  }
+  must.innerHTML = html(t.must, true);
+  rec.innerHTML  = html(t.rec,  false);
+
+  document.querySelectorAll('.agent .toggle').forEach(tog => {
+    tog.onclick = () => {
+      haptic('light');
+      const id = tog.dataset.id;
+      tog.classList.toggle('on');
+      if (tog.classList.contains('on')) {
+        if (!t.active.includes(id)) t.active.push(id);
+      } else {
+        t.active = t.active.filter(x => x !== id);
+      }
+      state.team = t;
+      save();
+      document.getElementById('teamCount').textContent = t.active.length;
+    };
+  });
+
+  if (tg) {
+    tg.MainButton.setText('Открыть мой офис →');
+    tg.MainButton.color = '#c8f060';
+    tg.MainButton.textColor = '#080808';
+    tg.MainButton.show();
+    tg.MainButton.onClick(() => router.go('office'));
+  }
+}
+document.getElementById('teamConfirm').onclick = () => {
+  haptic('medium');
+  router.go('office');
+};
+
+// ─── 10. OFFICE (dashboard) ───
+function renderOffice() {
+  if (tg) tg.MainButton.hide();
+  document.getElementById('appHead').style.display = 'flex';
+  document.getElementById('headAv').textContent = (state.userName||'A').charAt(0).toUpperCase();
+  document.getElementById('headNm').textContent = 'Привет, ' + (state.userName || 'друг');
+  const b = state.brief || {};
+  const goalMap = {
+    clients: '+ новых клиентов', content: 'Регулярный контент',
+    funnel: 'Воронка и продажи', analytics: 'Аналитика и инсайты', all: 'Комплексный рост',
+  };
+  document.getElementById('officeGoal').textContent = '🎯 ' + (goalMap[b.goal] || 'Рост бизнеса') + (b.niche ? ' · ' + b.niche : '');
+
+  const team = state.team || { active: [] };
+  const runs = (state.runs || []).length;
+  document.getElementById('statAgents').textContent = team.active.length;
+  document.getElementById('statRuns').textContent = runs;
+  document.getElementById('statSaved').textContent = '~' + (runs * 2) + 'ч';
+
+  // Active agents list
+  const agentsEl = document.getElementById('officeAgents');
+  agentsEl.innerHTML = team.active.slice(0, 6).map(id => {
+    const a = ALL_AGENTS.find(x => x.id === id);
+    if (!a) return '';
+    const lastMsg = ((state.chats||{})[id] || []).slice(-1)[0];
+    const stat = lastMsg ? 'Последнее: ' + (lastMsg.content||'').slice(0, 30) + '…' : 'Готов к работе';
+    return `<div class="agent-card" data-id="${id}">
+      <span class="em">${a.em}</span>
+      <div class="info">
+        <div class="nm">${a.nm}</div>
+        <div class="role">${a.role}</div>
+        <div class="stat">${stat}</div>
+      </div>
+      <span class="arrow">›</span>
+    </div>`;
+  }).join('') || '<div class="empty"><div class="em">🤖</div>Команда пуста. <a href="javascript:void(0)" onclick="router.go(\'team\')" style="color:var(--tg-link)">Подобрать →</a></div>';
+
+  agentsEl.querySelectorAll('.agent-card').forEach(c => {
+    c.onclick = () => { haptic('light'); router.go('chat', { agentId: c.dataset.id }); };
+  });
+
+  // Quick tasks
+  document.getElementById('officeQuickTasks').innerHTML = [
+    { em:'📝', t:'Контент-план на неделю', a:'sofia' },
+    { em:'🎯', t:'10 хуков для Reels', a:'hunter' },
+    { em:'💬', t:'Скрипт для Direct', a:'alisa' },
+    { em:'📊', t:'Отчёт за неделю', a:'analyt' },
+  ].filter(q => team.active.includes(q.a)).map(q => {
+    const a = ALL_AGENTS.find(x => x.id === q.a);
+    return `<div class="agent-card" data-id="${q.a}" data-task="${q.t}">
+      <span class="em">${q.em}</span>
+      <div class="info"><div class="nm">${q.t}</div><div class="role">→ ${a?.nm}</div></div>
+      <span class="arrow">›</span>
+    </div>`;
+  }).join('');
+  document.querySelectorAll('#officeQuickTasks .agent-card').forEach(c => {
+    c.onclick = () => {
+      haptic('light');
+      router.go('chat', { agentId: c.dataset.id, prefill: c.dataset.task });
+    };
+  });
+}
+
+// ─── 11. CHAT (с агентом) ───
+let currentAgent = null;
+function renderChat(agentId) {
+  if (tg) tg.MainButton.hide();
+  const a = ALL_AGENTS.find(x => x.id === agentId);
+  if (!a) { router.go('office'); return; }
+  currentAgent = a;
+
+  document.getElementById('headAv').textContent = a.em;
+  document.getElementById('headAv').style.background = 'linear-gradient(135deg,#60c8f0,#a060f0)';
+  document.getElementById('headNm').textContent = a.nm + ' · ' + a.role;
+
+  const body = document.getElementById('chatBody');
+  const msgs = ((state.chats || {})[agentId] || []);
+  if (msgs.length === 0) {
+    msgs.push({ role:'assistant', content: `Привет! Я ${a.nm}, ${a.role.toLowerCase()}. Чем помочь?`, ts: Date.now() });
+    state.chats = state.chats || {};
+    state.chats[agentId] = msgs;
+    save();
+  }
+  body.innerHTML = msgs.map(m => `<div class="msg ${m.role==='user'?'user':'bot'}">${escapeHtml(m.content)}</div>`).join('');
+  body.scrollTop = body.scrollHeight;
+
+  // Check prefill (from quick task)
+  const params = new URLSearchParams(location.search);
+  // (prefill handled via parameter pass — simplified here)
+
+  const input = document.getElementById('chatInput');
+  const btn = document.getElementById('chatSend');
+  input.value = '';
+  btn.disabled = true;
+  input.oninput = () => { btn.disabled = !input.value.trim() || busyChat; autoResize(input); };
+  input.onkeydown = e => {
+    if (e.key === 'Enter' && !e.shiftKey) { e.preventDefault(); btn.click(); }
+  };
+  btn.onclick = () => sendChat();
+  setTimeout(() => input.focus(), 200);
+}
+
+let busyChat = false;
+async function sendChat() {
+  if (busyChat) return;
+  const input = document.getElementById('chatInput');
+  const text = input.value.trim();
+  if (!text || !currentAgent) return;
+  busyChat = true;
+  haptic('light');
+
+  const body = document.getElementById('chatBody');
+  const aId = currentAgent.id;
+  state.chats = state.chats || {};
+  state.chats[aId] = state.chats[aId] || [];
+
+  // User message
+  state.chats[aId].push({ role:'user', content: text, ts: Date.now() });
+  body.innerHTML += `<div class="msg user">${escapeHtml(text)}</div>`;
+  input.value = ''; autoResize(input);
+  document.getElementById('chatSend').disabled = true;
+  body.scrollTop = body.scrollHeight;
+  save();
+
+  // Typing indicator
+  const tDiv = document.createElement('div');
+  tDiv.className = 'msg bot';
+  tDiv.innerHTML = '<span class="typing"><span></span><span></span><span></span></span>';
+  body.appendChild(tDiv);
+  body.scrollTop = body.scrollHeight;
+
+  // Call /api/chat (через config.js или прямой)
+  const systemPrompt = `Ты — ${currentAgent.nm}, ${currentAgent.role.toLowerCase()} в AI-команде. Отвечай коротко, дружелюбно, на «ты», по делу. Если возможно — давай конкретику.`;
+  const briefContext = (state.brief && Object.keys(state.brief).length)
+    ? `\n\nКлиент: ${JSON.stringify(state.brief)}` : '';
+
+  let full = '';
+  let streamBubble = null;
+  try {
+    const res = await fetch('/api/chat', {
+      method: 'POST',
+      headers: { 'Content-Type':'application/json' },
+      body: JSON.stringify({
+        model: 'claude-sonnet-4-5',
+        max_tokens: 500,
+        stream: true,
+        system: systemPrompt + briefContext,
+        messages: state.chats[aId].slice(-12).map(m => ({ role: m.role, content: m.content })),
+      }),
+    });
+    if (!res.ok || !res.body) throw new Error('API ' + res.status);
+    const reader = res.body.getReader();
+    const dec = new TextDecoder();
+    let buf = '';
+    while (true) {
+      const { done, value } = await reader.read();
+      if (done) break;
+      buf += dec.decode(value, { stream: true });
+      const lines = buf.split('\n');
+      buf = lines.pop() || '';
+      for (const line of lines) {
+        const t = line.trim();
+        if (!t.startsWith('data:')) continue;
+        const data = t.slice(5).trim();
+        if (data === '[DONE]') continue;
+        try {
+          const j = JSON.parse(data);
+          const delta = j.delta?.text;
+          if (delta) {
+            full += delta;
+            if (!streamBubble) { tDiv.remove(); streamBubble = document.createElement('div'); streamBubble.className = 'msg bot'; body.appendChild(streamBubble); }
+            streamBubble.textContent = full;
+            body.scrollTop = body.scrollHeight;
+          }
+        } catch {}
+      }
+    }
+    if (!streamBubble) tDiv.textContent = full || '...';
+  } catch (e) {
+    tDiv.textContent = '⚠ Не удалось связаться с AI. Попробуй ещё раз.';
+  }
+
+  if (full) {
+    state.chats[aId].push({ role:'assistant', content: full, ts: Date.now() });
+    state.runs = state.runs || [];
+    state.runs.push({ agent: aId, at: Date.now() });
+    save();
+  }
+  busyChat = false;
+  document.getElementById('chatSend').disabled = !input.value.trim();
+}
+
+function autoResize(el) {
+  el.style.height = 'auto';
+  el.style.height = Math.min(el.scrollHeight, 100) + 'px';
+}
+
+// ─── 12. SETTINGS (placeholder) ───
+function renderSettings() {
+  document.getElementById('headNm').textContent = 'Настройки';
+  // Минимальный экран — пока просто кнопка сбросить
+  const o = document.getElementById('screen-office');
+  // На самом деле для простоты сейчас покажем диалог
+  if (confirm('Сбросить все данные mini-app?')) {
+    localStorage.removeItem(STORE_KEY);
+    location.hash = '';
+    location.reload();
+  } else {
+    router.go('office');
+  }
+}
+
+// ─── 13. Bottom nav ───
+document.querySelectorAll('#bottomNav a').forEach(a => {
+  a.onclick = () => {
+    haptic('light');
+    document.querySelectorAll('#bottomNav a').forEach(x => x.classList.remove('active'));
+    a.classList.add('active');
+    router.go(a.dataset.nav);
+  };
+});
+
+// ─── 14. Helpers ───
+function escapeHtml(s) { return String(s==null?'':s).replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;'); }
+function haptic(type) {
+  if (tg && tg.HapticFeedback) {
+    try { tg.HapticFeedback.impactOccurred(type); } catch {}
+  }
+}
+
+// ─── 15. INITIAL ROUTE ───
+const initialHash = location.hash.slice(1);
+if (initialHash && ROUTES.includes(initialHash)) router.go(initialHash);
+else if (state.team && state.team.active && state.team.active.length) router.go('office'); // returning user
+else router.go('welcome');
+
+// Console marker
+console.log('%c🏢 AI Growth Office · Mini App loaded',
+  'background:linear-gradient(135deg,#c8f060,#60c8f0);color:#080808;padding:3px 9px;border-radius:4px;font-weight:700');
+if (tg) console.log('  Telegram WebApp v' + tg.version + ' · user:', tgUser?.first_name || 'anonymous');
+else console.log('  ⚠ Running outside Telegram (preview mode)');
+</script>
+</body>
+</html>

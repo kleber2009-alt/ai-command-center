@@ -1,0 +1,382 @@
+<!DOCTYPE html>
+<html lang="ru">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<meta name="theme-color" content="#080808">
+<meta name="color-scheme" content="dark only">
+<title>AI Sales · Reels</title>
+<style>
+  *, *::before, *::after { margin:0; padding:0; box-sizing:border-box; }
+  html, body { background:#080808; color:#f5f0e8; min-height:100vh; }
+  body { font-family:Georgia, 'Times New Roman', serif; font-size:15px; line-height:1.5; overflow-x:hidden; }
+  .label { font-family:'SF Mono','JetBrains Mono','Menlo',monospace; font-size:10px; text-transform:uppercase; letter-spacing:0.14em; color:#b8b3a8; font-weight:700; }
+  .mono { font-family:'SF Mono','JetBrains Mono','Menlo',monospace; }
+
+  .topbar { position:sticky; top:0; z-index:50; display:flex; align-items:center; justify-content:space-between; padding:14px 24px; background:#080808; border-bottom:1px solid #2a2a2a; gap:18px; flex-wrap:wrap; }
+  .topbar-left { display:flex; align-items:center; gap:18px; min-width:0; }
+  .topbar-title { font-family:Georgia,serif; font-size:18px; line-height:1; white-space:nowrap; }
+  .topbar-title .accent { color:#c8f060; font-style:italic; }
+  .topbar-nav { display:flex; gap:2px; }
+  .nav-link { background:transparent; border:1px solid #2a2a2a; color:#b8b3a8; padding:7px 14px; font-family:'SF Mono',monospace; font-size:10px; text-transform:uppercase; letter-spacing:0.14em; font-weight:700; text-decoration:none; }
+  .nav-link.active { background:#c8f060; color:#080808; border-color:#c8f060; }
+  .nav-link:hover:not(.active) { border-color:#c8f060; color:#f5f0e8; }
+  .topbar-meta { font-family:'SF Mono',monospace; font-size:11px; color:#b8b3a8; letter-spacing:0.12em; }
+  .topbar-meta .v { color:#c8f060; }
+
+  .shell { max-width:1480px; margin:0 auto; padding:18px 24px 80px; display:grid; gap:2px; }
+  .sec-head { display:flex; align-items:baseline; gap:14px; padding:18px 2px 10px; }
+  .sec-num { font-family:'SF Mono',monospace; font-size:10px; color:#c8f060; letter-spacing:0.18em; font-weight:700; }
+  .sec-title { font-family:Georgia,serif; font-size:14px; font-style:italic; color:#b8b3a8; }
+  .sec-spacer { flex:1; border-bottom:1px solid #1a1a1a; transform:translateY(-2px); }
+
+  /* HERO */
+  .hero { display:grid; grid-template-columns:2fr 1fr 1fr; gap:2px; }
+  @media (max-width:900px) { .hero { grid-template-columns:1fr; } }
+  .hero-main { background:#0f0f0f; border:1px solid #1a1a1a; padding:32px 36px; }
+  .hero-main h1 { font-family:Georgia,serif; font-size:48px; font-weight:normal; line-height:1.05; letter-spacing:-0.02em; margin:14px 0 18px; }
+  .hero-main h1 .accent { color:#c8f060; font-style:italic; }
+  .hero-main p { color:#b8b3a8; font-size:15px; line-height:1.6; max-width:580px; }
+  .hero-stat { background:#0f0f0f; border:1px solid #1a1a1a; padding:22px 24px 20px; display:flex; flex-direction:column; gap:8px; }
+  .hero-stat .num { font-family:'SF Mono',monospace; font-size:10px; color:#3a3a3a; letter-spacing:0.18em; font-weight:700; }
+  .hero-stat .lbl { font-family:'SF Mono',monospace; font-size:10px; color:#b8b3a8; letter-spacing:0.14em; font-weight:700; text-transform:uppercase; line-height:1.3; }
+  .hero-stat .val { font-family:Georgia,serif; font-size:48px; line-height:1; letter-spacing:-0.02em; margin-top:auto; }
+  .hero-stat .val.lime { color:#c8f060; }
+  .hero-stat .val.cyan { color:#60c8f0; }
+  .hero-stat .val .sfx { font-size:18px; color:#5a5550; }
+  .hero-stat .sub { font-family:'SF Mono',monospace; font-size:10px; color:#5a5550; letter-spacing:0.08em; }
+
+  /* REELS GRID */
+  .grid { display:grid; grid-template-columns:repeat(2, 1fr); gap:2px; }
+  @media (max-width:900px) { .grid { grid-template-columns:1fr; } }
+  .card { background:#0f0f0f; border:1px solid #1a1a1a; }
+  .card:hover { border-color:#3a3a3a; }
+  .card-preview { background:#080808; padding:0; aspect-ratio:1080/680; position:relative; overflow:hidden; border-bottom:1px solid #1a1a1a; display:flex; }
+  /* phone-mockup frame */
+  .phone { background:#0a0a0a; border:2px solid #1a1a1a; flex-shrink:0; margin:18px 0 0 28px; width:200px; aspect-ratio:9/16; padding:16px 14px; display:flex; flex-direction:column; justify-content:space-between; position:relative; }
+  .phone.alt { background:linear-gradient(180deg, #1a2a0d, #080808); border-color:#2a3a14; }
+  .phone .timecode { font-family:'SF Mono',monospace; font-size:9px; color:#c8f060; letter-spacing:0.15em; font-weight:700; }
+  .phone .hook-text { font-family:Georgia,serif; font-size:20px; line-height:1.05; color:#f5f0e8; }
+  .phone .hook-text .a { color:#c8f060; font-style:italic; }
+  .phone .meta { display:flex; justify-content:space-between; font-family:'SF Mono',monospace; font-size:7px; color:#5a5550; letter-spacing:0.1em; }
+
+  .frame-strip { flex:1; display:flex; flex-direction:column; padding:18px 28px 18px 24px; gap:2px; justify-content:flex-start; }
+  .frame-strip .strip-label { font-family:'SF Mono',monospace; font-size:10px; color:#b8b3a8; letter-spacing:0.14em; font-weight:700; text-transform:uppercase; margin-bottom:8px; }
+  .frame-strip .mini-frame { background:#141414; border:1px solid #1a1a1a; padding:8px 10px; display:grid; grid-template-columns:50px 1fr; gap:8px; align-items:baseline; }
+  .frame-strip .mini-frame .t { font-family:'SF Mono',monospace; font-size:9px; color:#c8f060; letter-spacing:0.12em; font-weight:700; }
+  .frame-strip .mini-frame .e { font-family:Georgia,serif; font-size:11px; line-height:1.3; color:#d8d2c6; }
+  .frame-strip .mini-frame .e .a { color:#c8f060; font-style:italic; }
+  .frame-strip .mini-frame.hook { border-color:#c8f060; }
+  .frame-strip .mini-frame.cta { border-color:#60c8f0; }
+  .frame-strip .mini-frame.cta .t { color:#60c8f0; }
+
+  .card-info { padding:20px 24px 22px; display:flex; flex-direction:column; gap:14px; }
+  .card-title { font-family:Georgia,serif; font-size:24px; line-height:1.2; }
+  .card-title .accent { color:#c8f060; font-style:italic; }
+  .card-desc { color:#b8b3a8; font-size:14px; line-height:1.5; }
+  .card-meta { display:grid; grid-template-columns:repeat(4, 1fr); gap:2px; padding-top:10px; border-top:1px solid #1a1a1a; }
+  .card-meta .m { background:#141414; padding:10px 12px; }
+  .card-meta .m .k { font-family:'SF Mono',monospace; font-size:9px; color:#5a5550; letter-spacing:0.12em; font-weight:700; text-transform:uppercase; }
+  .card-meta .m .v { font-family:'SF Mono',monospace; font-size:12px; color:#f5f0e8; margin-top:3px; font-weight:700; }
+  .card-meta .m .v.lime { color:#c8f060; }
+  .card-actions { display:flex; gap:2px; margin-top:auto; padding-top:14px; }
+  .btn { flex:1; padding:12px; background:transparent; color:#f5f0e8; border:1px solid #2a2a2a; font-family:'SF Mono',monospace; font-size:11px; font-weight:700; letter-spacing:0.14em; text-transform:uppercase; text-align:center; text-decoration:none; cursor:pointer; }
+  .btn:hover { border-color:#c8f060; color:#c8f060; }
+  .btn.primary { background:#c8f060; color:#080808; border-color:#c8f060; }
+  .btn.primary:hover { background:#d8ff70; color:#080808; }
+
+  /* PRINCIPLES */
+  .principles { display:grid; grid-template-columns:repeat(4, 1fr); gap:2px; }
+  @media (max-width:900px) { .principles { grid-template-columns:repeat(2, 1fr); } }
+  .principle { background:#0f0f0f; border:1px solid #1a1a1a; padding:22px 22px 24px; min-height:200px; display:flex; flex-direction:column; gap:10px; }
+  .principle .pnum { font-family:Georgia,serif; font-size:52px; line-height:1; color:#c8f060; font-style:italic; letter-spacing:-0.04em; }
+  .principle .ptitle { font-family:Georgia,serif; font-size:20px; line-height:1.15; }
+  .principle .pdesc { color:#b8b3a8; font-size:13px; line-height:1.5; margin-top:auto; }
+
+  /* HOOK BANK */
+  .hook-bank { background:#0f0f0f; border:1px solid #1a1a1a; padding:22px 26px; }
+  .hook-bank h3 { font-family:Georgia,serif; font-size:20px; margin-bottom:16px; }
+  .hook-bank h3 .accent { color:#c8f060; font-style:italic; }
+  .hook-cols { display:grid; grid-template-columns:1fr 1fr; gap:24px; }
+  @media (max-width:760px) { .hook-cols { grid-template-columns:1fr; } }
+  .hook-col h4 { font-family:'SF Mono',monospace; font-size:11px; letter-spacing:0.14em; font-weight:700; text-transform:uppercase; margin-bottom:14px; padding-bottom:8px; border-bottom:1px solid #1a1a1a; }
+  .hook-col.good h4 { color:#c8f060; }
+  .hook-col.bad h4 { color:#f06090; }
+  .hook-col ul { list-style:none; padding:0; }
+  .hook-col li { padding:8px 0; border-bottom:1px solid #131313; font-size:13.5px; line-height:1.5; color:#d8d2c6; display:flex; gap:8px; }
+  .hook-col li::before { content:'✓'; color:#c8f060; flex-shrink:0; font-family:'SF Mono',monospace; font-weight:700; }
+  .hook-col.bad li::before { content:'✕'; color:#f06090; }
+  .hook-col li:last-child { border-bottom:none; }
+
+  /* PROCESS */
+  .process { background:#0f0f0f; border:1px solid #1a1a1a; padding:22px 26px; }
+  .process h3 { font-family:Georgia,serif; font-size:20px; margin-bottom:16px; }
+  .process h3 .accent { color:#c8f060; font-style:italic; }
+  .process-flow { display:grid; grid-template-columns:repeat(8, 1fr); gap:2px; }
+  @media (max-width:900px) { .process-flow { grid-template-columns:repeat(4, 1fr); } }
+  @media (max-width:560px) { .process-flow { grid-template-columns:repeat(2, 1fr); } }
+  .step { background:#141414; padding:14px 14px 12px; min-height:110px; display:flex; flex-direction:column; gap:6px; }
+  .step .step-num { font-family:'SF Mono',monospace; font-size:10px; color:#5a5550; letter-spacing:0.15em; font-weight:700; }
+  .step .step-name { font-family:'SF Mono',monospace; font-size:10px; color:#c8f060; letter-spacing:0.12em; font-weight:700; text-transform:uppercase; }
+  .step .step-desc { font-family:Georgia,serif; font-size:12px; color:#d8d2c6; line-height:1.35; margin-top:auto; }
+  .step.done { background:#161e0d; }
+
+  .foot { padding:32px 0 0; text-align:center; color:#5a5550; font-family:'SF Mono',monospace; font-size:10px; letter-spacing:0.15em; text-transform:uppercase; }
+  .foot a { color:#c8f060; text-decoration:none; }
+</style>
+</head>
+<body>
+
+<header class="topbar">
+  <div class="topbar-left">
+    <div class="topbar-title">AI Sales <span class="accent">Reels</span></div>
+    <nav class="topbar-nav">
+      <a class="nav-link" href="/01-portal/ai-sales-portal.html">Портал</a>
+      <a class="nav-link" href="/06-dashboard-prototype/pulse.html">Pulse</a>
+      <a class="nav-link" href="/06-dashboard-prototype/pipeline.html">Pipeline</a>
+      <a class="nav-link" href="/06-dashboard-prototype/conversation.html">Conv</a>
+      <a class="nav-link" href="/06-dashboard-prototype/project.html">Project</a>
+      <a class="nav-link" href="/06-dashboard-prototype/agents.html">Agents</a>
+      <a class="nav-link" href="/carousels/index.html">Carousels</a>
+      <a class="nav-link active" href="#">Reels</a>
+    </nav>
+  </div>
+  <div class="topbar-meta"><span>обновлено</span> <span class="v">15 МАЯ 2026</span></div>
+</header>
+
+<main class="shell">
+
+  <!-- HERO -->
+  <div class="sec-head">
+    <span class="sec-num">/00</span>
+    <span class="sec-title">Reels production system</span>
+    <span class="sec-spacer"></span>
+  </div>
+
+  <div class="hero">
+    <div class="hero-main">
+      <span class="label">Видео-машина · Reels / TikTok / Shorts</span>
+      <h1>Reels <span class="accent">от идеи до публикации</span></h1>
+      <p>Сценарии с раскадровкой, таймингом и монтажными заметками. Каждый файл — это полноценный план съёмки и монтажа. Когда подключим ElevenLabs PVC и Wav2Lip, эти сценарии будут отрабатываться полу-автоматически.</p>
+    </div>
+    <div class="hero-stat">
+      <span class="num">01</span>
+      <span class="lbl">Сценариев<br/>готово</span>
+      <div class="val lime">2</div>
+      <span class="sub">с раскадровкой</span>
+    </div>
+    <div class="hero-stat">
+      <span class="num">02</span>
+      <span class="lbl">Средняя<br/>длина</span>
+      <div class="val cyan">67<span class="sfx">s</span></div>
+      <span class="sub">в зоне retention</span>
+    </div>
+  </div>
+
+  <!-- REEL CARDS -->
+  <div class="sec-head">
+    <span class="sec-num">/01</span>
+    <span class="sec-title">2 готовых сценария</span>
+    <span class="sec-spacer"></span>
+  </div>
+
+  <div class="grid">
+
+    <!-- REEL 1 -->
+    <div class="card">
+      <div class="card-preview">
+        <div class="phone alt">
+          <div class="timecode">00:00 / 01:00</div>
+          <div class="hook-text">Я уволил<br/>4 продажников.<br/><br/><span class="a">И вырос<br/>на 30%.</span></div>
+          <div class="meta"><span>● REC</span><span>HOOK</span></div>
+        </div>
+        <div class="frame-strip">
+          <div class="strip-label">5 кадров · 60 секунд</div>
+          <div class="mini-frame hook"><span class="t">00:00</span><span class="e">«4 продажников. <span class="a">+30%</span>»</span></div>
+          <div class="mini-frame"><span class="t">00:03</span><span class="e">Tease: 3 вещи понял</span></div>
+          <div class="mini-frame"><span class="t">00:15</span><span class="e">01 — 120к/мес × 4</span></div>
+          <div class="mini-frame"><span class="t">00:30</span><span class="e">02-03 — спит, забывает</span></div>
+          <div class="mini-frame cta"><span class="t">00:50</span><span class="e">CTA: <span class="a">«AI»</span> в директ</span></div>
+        </div>
+      </div>
+      <div class="card-info">
+        <div class="card-title">01 · «Уволил <span class="accent">4 продажников</span>»</div>
+        <div class="card-desc">Hook-revelation формат. Провокация на старте → разворот через 3 инсайта → CTA. Talking head + B-roll. Целевой CTR в директ — 5%+.</div>
+        <div class="card-meta">
+          <div class="m"><div class="k">Тип</div><div class="v">Hook Reveal</div></div>
+          <div class="m"><div class="k">Длина</div><div class="v lime">60s</div></div>
+          <div class="m"><div class="k">Формат</div><div class="v">Talking + B-roll</div></div>
+          <div class="m"><div class="k">Цель</div><div class="v">300+ DM</div></div>
+        </div>
+        <div class="card-actions">
+          <a class="btn primary" href="/reels/reel-01-hook-revelation.html" target="_blank">↗ Открыть сценарий</a>
+          <a class="btn" href="#timeline-1">📋 Тайминг</a>
+        </div>
+      </div>
+    </div>
+
+    <!-- REEL 2 -->
+    <div class="card">
+      <div class="card-preview">
+        <div class="phone">
+          <div class="timecode">00:00 / 01:15</div>
+          <div class="hook-text">90% твоих<br/>первых<br/>сообщений<br/>в директ —<br/><span class="a">мусор.</span></div>
+          <div class="meta"><span>● REC</span><span>HOOK</span></div>
+        </div>
+        <div class="frame-strip">
+          <div class="strip-label">6 кадров · 75 секунд</div>
+          <div class="mini-frame hook"><span class="t">00:00</span><span class="e">«90% мусор»</span></div>
+          <div class="mini-frame"><span class="t">00:05</span><span class="e">Tease: 3 правила</span></div>
+          <div class="mini-frame"><span class="t">00:15</span><span class="e">01 — не «привет, меня»</span></div>
+          <div class="mini-frame"><span class="t">00:35</span><span class="e">02 — один вопрос</span></div>
+          <div class="mini-frame"><span class="t">00:50</span><span class="e">03 — без CTA в первом</span></div>
+          <div class="mini-frame cta"><span class="t">01:05</span><span class="e">CTA: <span class="a">«директ»</span> в DM</span></div>
+        </div>
+      </div>
+      <div class="card-info">
+        <div class="card-title">02 · «Как написать <span class="accent">первое сообщение</span>»</div>
+        <div class="card-desc">Tutorial формат — мини-обучение из 3 правил с примерами. Screen recording IG-директа как основной B-roll. Цель — сохранения 5%+.</div>
+        <div class="card-meta">
+          <div class="m"><div class="k">Тип</div><div class="v">Tutorial</div></div>
+          <div class="m"><div class="k">Длина</div><div class="v lime">75s</div></div>
+          <div class="m"><div class="k">Формат</div><div class="v">Screen rec + V/O</div></div>
+          <div class="m"><div class="k">Цель</div><div class="v">сохранения</div></div>
+        </div>
+        <div class="card-actions">
+          <a class="btn primary" href="/reels/reel-02-tutorial.html" target="_blank">↗ Открыть сценарий</a>
+          <a class="btn" href="#timeline-2">📋 Тайминг</a>
+        </div>
+      </div>
+    </div>
+
+  </div>
+
+  <!-- PRINCIPLES -->
+  <div class="sec-head">
+    <span class="sec-num">/02</span>
+    <span class="sec-title">4 принципа хороших Reels</span>
+    <span class="sec-spacer"></span>
+  </div>
+
+  <div class="principles">
+    <div class="principle">
+      <div class="pnum">01</div>
+      <div class="ptitle">Hook в 3 секунды</div>
+      <div class="pdesc">Первые 3 секунды решают всё. Без сильного hook'a остальные 57 секунд никто не увидит. Цифра + контраст + личность.</div>
+    </div>
+    <div class="principle">
+      <div class="pnum">02</div>
+      <div class="ptitle">Смена кадра каждые 3–5s</div>
+      <div class="pdesc">Один статичный план = скролл. B-roll, цифры на экране, переключение крупного/среднего — удержание.</div>
+    </div>
+    <div class="principle">
+      <div class="pnum">03</div>
+      <div class="ptitle">Субтитры всегда</div>
+      <div class="pdesc">85% смотрят без звука. Без субтитров — теряешь 85% retention. Стиль: моноширинный, белый на тёмной обводке.</div>
+    </div>
+    <div class="principle">
+      <div class="pnum">04</div>
+      <div class="ptitle">Не больше 90s</div>
+      <div class="pdesc">Жёсткое правило. После 90 секунд completion rate падает катастрофически. Лучше короткое и плотное, чем длинное.</div>
+    </div>
+  </div>
+
+  <!-- HOOK BANK -->
+  <div class="sec-head">
+    <span class="sec-num">/03</span>
+    <span class="sec-title">Hook-bank — что работает, что нет</span>
+    <span class="sec-spacer"></span>
+  </div>
+
+  <div class="hook-bank">
+    <h3>Первые <span class="accent">3 секунды</span> — банк</h3>
+    <div class="hook-cols">
+      <div class="hook-col good">
+        <h4>↗ Работает</h4>
+        <ul>
+          <li>«Я уволил 4 продажников. И вырос на 30%»</li>
+          <li>«Если ты делаешь X — ты теряешь деньги»</li>
+          <li>«Все говорят X. На самом деле — Y»</li>
+          <li>«3 года назад я был банкрот»</li>
+          <li>«Почему 80% агентств умирают на 2-м году?»</li>
+          <li>«Я нашёл способ, который никто не использует»</li>
+          <li>«Если у тебя есть [X] — досмотри до конца»</li>
+        </ul>
+      </div>
+      <div class="hook-col bad">
+        <h4>✕ Не работает</h4>
+        <ul>
+          <li>«Привет, меня зовут N…»</li>
+          <li>«Сегодня поговорим о…»</li>
+          <li>«Ребят, я тут подумал…»</li>
+          <li>«Подпишись на меня, если…»</li>
+          <li>«А вы знали что…»</li>
+          <li>«Давайте разберём важную тему»</li>
+          <li>«Это очень полезное видео»</li>
+        </ul>
+      </div>
+    </div>
+  </div>
+
+  <!-- PROCESS -->
+  <div class="sec-head">
+    <span class="sec-num">/04</span>
+    <span class="sec-title">Связка по Reels · полный pipeline</span>
+    <span class="sec-spacer"></span>
+  </div>
+
+  <div class="process">
+    <h3>Идея → <span class="accent">опубликованный Reel</span></h3>
+    <div class="process-flow">
+      <div class="step done">
+        <div class="step-num">01</div>
+        <div class="step-name">Idea</div>
+        <div class="step-desc">Тема из контент-памяти / трендов / тредов клиентов</div>
+      </div>
+      <div class="step">
+        <div class="step-num">02</div>
+        <div class="step-name">Script</div>
+        <div class="step-desc">AI пишет по шаблону Hook/Tutorial/Case</div>
+      </div>
+      <div class="step done">
+        <div class="step-num">03</div>
+        <div class="step-name">Storyboard</div>
+        <div class="step-desc">HTML-раскадровка с таймингом</div>
+      </div>
+      <div class="step">
+        <div class="step-num">04</div>
+        <div class="step-name">Voice</div>
+        <div class="step-desc">ElevenLabs PVC — голос Ильи</div>
+      </div>
+      <div class="step">
+        <div class="step-num">05</div>
+        <div class="step-name">Footage</div>
+        <div class="step-desc">Talking head (запись) + B-roll (AI / stock)</div>
+      </div>
+      <div class="step">
+        <div class="step-num">06</div>
+        <div class="step-name">Edit</div>
+        <div class="step-desc">Монтаж по таймингу, subtitle, музыка</div>
+      </div>
+      <div class="step">
+        <div class="step-num">07</div>
+        <div class="step-name">A/B hook</div>
+        <div class="step-desc">3 варианта первых 3 секунд</div>
+      </div>
+      <div class="step">
+        <div class="step-num">08</div>
+        <div class="step-name">Publish</div>
+        <div class="step-desc">IG Reels API + кросс-постинг в TG</div>
+      </div>
+    </div>
+  </div>
+
+  <div class="foot">
+    AI Sales · Reels system v0.1 · <a href="/01-portal/ai-sales-portal.html">портал</a> · <a href="/06-dashboard-prototype/project.html">project</a> · <a href="/carousels/index.html">→ carousels</a>
+  </div>
+
+</main>
+
+<script src="/assets/sidebar.js" defer></script>
+</body>
+</html>
