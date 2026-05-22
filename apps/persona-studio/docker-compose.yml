@@ -1,3 +1,5 @@
+name: persona-studio
+
 services:
   web:
     image: persona-studio-web
@@ -8,7 +10,7 @@ services:
     restart: unless-stopped
     env_file: .env
     networks:
-      - aisales
+      - aisales-net
     ports:
       - "3020:3020"
     depends_on:
@@ -23,9 +25,9 @@ services:
     restart: unless-stopped
     env_file: .env
     networks:
-      - aisales
+      - aisales-net
 
 networks:
-  aisales:
+  aisales-net:
     external: true
-    name: aisales_default
+    name: aisales_aisales-net

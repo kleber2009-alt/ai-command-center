@@ -21,6 +21,13 @@ COPY --from=deps /app/node_modules ./node_modules
 COPY . .
 ENV NEXT_TELEMETRY_DISABLED=1
 RUN npx prisma generate
+# Build-time env stubs — Next.js "Collecting page data" импортирует server-модули,
+# которые через env.ts (Zod fail-fast) требуют ENV. Реальные значения приходят
+# в runtime через env_file: .env (см. docker-compose.yml).
+ENV DATABASE_URL=postgresql://build:build@localhost:5432/build \
+    S3_ENDPOINT=http://build.local \
+    S3_ACCESS_KEY=build S3_SECRET_KEY=build \
+    KIE_API_KEY=build HEYGEN_API_KEY=build ELEVENLABS_API_KEY=build
 RUN npm run build
 
 # ── runner: web ─────────────────────────────
