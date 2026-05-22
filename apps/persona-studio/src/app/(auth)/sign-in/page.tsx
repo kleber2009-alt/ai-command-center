@@ -1,6 +1,10 @@
 import { signIn } from '@/lib/auth';
 
 export const metadata = { title: 'Sign in — Persona Studio' };
+// Force per-request rendering so the page reflects current runtime env
+// (AUTH_GOOGLE_ID, EMAIL_SERVER_HOST) — otherwise Next.js statically
+// pre-renders at build time and bakes in whatever providers existed then.
+export const dynamic = 'force-dynamic';
 
 function hasGoogle(): boolean {
   return Boolean(process.env.AUTH_GOOGLE_ID && process.env.AUTH_GOOGLE_SECRET);
