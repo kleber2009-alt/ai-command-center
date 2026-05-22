@@ -41,6 +41,7 @@ except ImportError:
 from agents import run_flow
 from services import ig_client as ig
 from services import media, wav2lip, storage
+from db.inbox_dao import persist_ig_inbound
 
 log = logging.getLogger("aisales.ig.webhook")
 
@@ -52,6 +53,11 @@ ILYA_TG_CHAT_ID = int(os.getenv("ILYA_TG_CHAT_ID", "0") or 0)
 
 RESPONSE_DELAY_MIN_S = float(os.getenv("RESPONSE_DELAY_MIN_S", "30"))
 RESPONSE_DELAY_MAX_S = float(os.getenv("RESPONSE_DELAY_MAX_S", "120"))
+
+# Observer-only: persist incoming, skip auto-reply. Daily digest job is owned
+# by infra-worker (handlers/daily_dm_digest.js). Flip to "0" once the IG-manager
+# prompt is filled in and we want the agent to actually respond.
+OBSERVE_ONLY = os.getenv("AISALES_OBSERVE_ONLY", "1") == "1"
 
 
 # ============ Signature verification ============
@@ -138,6 +144,13 @@ async def handle_messaging_event(event: dict) -> dict:
     elif parsed["media_type"] == "video":
         # Можно тоже транскрибировать аудиодорожку
         transcribed_text = f"[Клиент прислал видео] {parsed.get('text', '')}"
+
+    # Persist inbound to Postgres for daily digest / RAG.
+    await persist_ig_inbound(parsed, transcribed_text)
+
+    if OBSERVE_ONLY:
+        log.info("ig · OBSERVE_ONLY · saved, no auto-reply")
+        return {"status": "observed"}
 
     # Агентский flow
     result = run_flow(
