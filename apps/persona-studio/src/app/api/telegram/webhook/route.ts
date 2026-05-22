@@ -42,8 +42,10 @@ type Update = {
     invoice_payload: string;
   };
   message?: {
+    message_id: number;
     chat: { id: number };
-    from?: { id: number };
+    from?: { id: number; first_name?: string };
+    text?: string;
     successful_payment?: {
       currency: string;
       total_amount: number;
@@ -53,6 +55,25 @@ type Update = {
     };
   };
 };
+
+const TMA_URL = 'https://persona-app.46-62-215-11.nip.io/tma';
+
+async function sendMessage(chatId: number, text: string, opts?: { withTmaButton?: boolean }) {
+  const token = process.env.TELEGRAM_BOT_TOKEN;
+  if (!token) return;
+  const body: Record<string, unknown> = { chat_id: chatId, text, parse_mode: 'HTML' };
+  if (opts?.withTmaButton) {
+    body.reply_markup = {
+      inline_keyboard: [[{ text: '🎨 Открыть Persona Studio', web_app: { url: TMA_URL } }]],
+    };
+  }
+  await fetch(`${BOT_API}/bot${token}/sendMessage`, {
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify(body),
+    signal: AbortSignal.timeout(10_000),
+  }).catch(() => undefined);
+}
 
 export async function POST(req: NextRequest) {
   // Verify webhook secret (set in setWebhook). If TELEGRAM_WEBHOOK_SECRET is
@@ -86,6 +107,37 @@ export async function POST(req: NextRequest) {
       return NextResponse.json({ ok: true });
     }
     await answerPreCheckout(q.id, true);
+    return NextResponse.json({ ok: true });
+  }
+
+  // /start (and /app, /help) — welcome message with TMA button.
+  if (update.message?.text && !update.message.successful_payment) {
+    const text = update.message.text.trim();
+    const chatId = update.message.chat.id;
+    const name = update.message.from?.first_name ?? 'друг';
+    if (text === '/start' || text.startsWith('/start ')) {
+      await sendMessage(
+        chatId,
+        `Привет, ${name}!\n\n` +
+        `<b>Persona Studio</b> — AI Identity Operating System.\n` +
+        `1 фото → 10 AI-аватаров → говорящие видео, обложки, клон голоса.\n\n` +
+        `Тебе уже зачислено <b>10 токенов</b> в подарок — этого хватит на первый батч из 10 аватаров.\n\n` +
+        `Открой Mini App кнопкой ниже 👇`,
+        { withTmaButton: true },
+      );
+    } else if (text === '/app') {
+      await sendMessage(chatId, 'Запускаю Mini App 👇', { withTmaButton: true });
+    } else if (text === '/help') {
+      await sendMessage(
+        chatId,
+        `<b>Команды:</b>\n` +
+        `/start — приветствие + Mini App\n` +
+        `/app — открыть Mini App\n` +
+        `/help — эта подсказка\n\n` +
+        `Поддержка: @ilia_pali0`,
+        { withTmaButton: true },
+      );
+    }
     return NextResponse.json({ ok: true });
   }
 
