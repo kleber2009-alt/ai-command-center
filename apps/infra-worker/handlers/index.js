@@ -11,6 +11,7 @@ import { handle as monthlyCalendar } from './monthly_calendar.js';
 import { handle as viralClone } from './viral_clone.js';
 import { handle as viralCloneSweep } from './viral_clone_sweep.js';
 import { handle as viralDiscover } from './viral_discover.js';
+import { handle as dailyDmDigest } from './daily_dm_digest.js';
 
 const REGISTRY = {
   daily_briefing: dailyBriefing,
@@ -22,6 +23,7 @@ const REGISTRY = {
   viral_clone: viralClone,
   viral_clone_sweep: viralCloneSweep,
   viral_discover: viralDiscover,
+  daily_dm_digest: dailyDmDigest,
 };
 
 export function getHandler(kind) {
