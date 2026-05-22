@@ -8,6 +8,12 @@ export type AvatarStyle = {
    * чтобы модель меняла окружение, а не лицо. См. buildAvatarPrompt в prompts.ts.
    */
   promptStyle: string;
+  /**
+   * Если true — пропустить блок COMPOSITION REQUIREMENTS (half-body, hands, micro-pose).
+   * Нужен для стилей, где композиция стиля сама диктует rigid frontal pose
+   * (editorial-fashion, instagram-educator с centered composition).
+   */
+  allowRigidPose?: boolean;
 };
 
 export const AVATAR_STYLES: AvatarStyle[] = [
@@ -49,6 +55,7 @@ export const AVATAR_STYLES: AvatarStyle[] = [
       'against a minimal bright off-white or pastel studio background, ' +
       'soft natural daylight, approachable friendly expression, ' +
       'centered composition with negative space for headline overlay, Reels-ready cover composition.',
+    allowRigidPose: true,
   },
   {
     slug: 'tech-entrepreneur',
@@ -76,6 +83,7 @@ export const AVATAR_STYLES: AvatarStyle[] = [
       'wearing a designer high-fashion outfit (sharp black or monochrome silhouette), ' +
       'in a monochrome Vogue-style editorial setting, dramatic studio key light with deep shadows, ' +
       'minimal seamless background, confident editorial pose, fashion magazine spread aesthetic.',
+    allowRigidPose: true,
   },
   {
     slug: 'dark-premium',
