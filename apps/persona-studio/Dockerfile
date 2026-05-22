@@ -9,7 +9,7 @@ COPY package.json package-lock.json* pnpm-lock.yaml* yarn.lock* ./
 COPY prisma ./prisma
 RUN \
   if [ -f pnpm-lock.yaml ]; then corepack enable && corepack prepare pnpm@latest --activate && pnpm i --frozen-lockfile; \
-  elif [ -f package-lock.json ]; then npm ci; \
+  elif [ -f package-lock.json ]; then npm ci --legacy-peer-deps; \
   elif [ -f yarn.lock ]; then yarn --frozen-lockfile; \
   else npm i; fi
 

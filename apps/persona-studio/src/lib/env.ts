@@ -70,10 +70,19 @@ let _env: Env | null = null;
 
 /**
  * Lazy-parse при первом обращении. Throws ZodError если env не валидна —
- * это нормально для startup-fail.
+ * это нормально для startup-fail в runtime.
+ *
+ * SKIP во время `next build` (NEXT_PHASE=phase-production-build) — на билде
+ * Next.js делает collect-page-data без runtime ENV (env_file у docker-compose
+ * подключается только на старте контейнера). Без skip билд падает на любом
+ * роуте который транзитивно импортирует env. Паттерн из T3 stack.
  */
 function loadEnv(): Env {
   if (_env) return _env;
+  if (process.env.NEXT_PHASE === 'phase-production-build') {
+    _env = process.env as unknown as Env;
+    return _env;
+  }
   const parsed = envSchema.safeParse(process.env);
   if (!parsed.success) {
     const issues = parsed.error.issues
