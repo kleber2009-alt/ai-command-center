@@ -127,6 +127,38 @@
   .top-cta:hover { background: #d8ff70; transform: translateY(-1px); }
   .top-cta::after { content: '↗'; font-family: Georgia, serif; font-size: 14px; transform: translateY(-1px); }
 
+  .top-login {
+    display: inline-flex;
+    align-items: center;
+    gap: 8px;
+    background: transparent;
+    color: var(--text);
+    font-family: 'SF Mono', monospace;
+    font-size: 11px;
+    font-weight: 700;
+    letter-spacing: 0.16em;
+    text-transform: uppercase;
+    padding: 9px 13px;
+    border: 1px solid rgba(255,255,255,0.18);
+    text-decoration: none;
+    transition: background .15s, transform .15s, border-color .15s, color .15s;
+  }
+  .top-login::before {
+    content: ''; width: 6px; height: 6px;
+    background: var(--lime); border-radius: 50%;
+    box-shadow: 0 0 8px var(--lime);
+  }
+  .top-login:hover {
+    border-color: var(--lime);
+    background: rgba(213,255,84,0.06);
+    transform: translateY(-1px);
+  }
+  .top-actions { display: inline-flex; align-items: center; gap: 12px; }
+
+  @media (max-width: 520px) {
+    .top-login { display: none; }
+  }
+
   @media (max-width: 760px) {
     .top-nav { display: none; }
   }
@@ -1089,7 +1121,10 @@
       <a href="#pricing">Тарифы</a>
       <a href="#faq">FAQ</a>
     </nav>
-    <a href="#cta" class="top-cta">Создать аватара</a>
+    <div class="top-actions">
+      <a href="https://persona-app.46-62-215-11.nip.io/dashboard" class="top-login">Войти</a>
+      <a href="#cta" class="top-cta">Создать аватара</a>
+    </div>
   </div>
 </div>
 
