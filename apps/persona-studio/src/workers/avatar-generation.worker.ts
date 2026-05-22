@@ -37,16 +37,23 @@ export function startAvatarWorker() {
       // в kie rate-limit.
       const results: Array<'done' | 'failed'> = [];
 
-      async function runOne(avatarId: string, styleSlug: string, label: string) {
-        const style = styleBySlug(styleSlug);
-        if (!style) {
-          await prisma.avatar.update({
-            where: { id: avatarId },
-            data: { status: 'failed', errorMsg: 'unknown_style' },
-          });
-          return 'failed' as const;
+      async function runOne(avatarId: string, styleSlug: string, label: string, preBuilt: string | null) {
+        // Если API уже собрал полный identity-preserving prompt (niche/custom режим), используем его.
+        // Иначе — fallback на каталог AVATAR_STYLES (legacy default mode).
+        let prompt: string;
+        if (preBuilt && preBuilt.length > 0) {
+          prompt = preBuilt;
+        } else {
+          const style = styleBySlug(styleSlug);
+          if (!style) {
+            await prisma.avatar.update({
+              where: { id: avatarId },
+              data: { status: 'failed', errorMsg: 'unknown_style' },
+            });
+            return 'failed' as const;
+          }
+          prompt = buildAvatarPrompt(style);
         }
-        const prompt = buildAvatarPrompt(style);
         try {
           const out =
             AVATAR_ENGINE === 'nano-banana'
@@ -95,7 +102,7 @@ export function startAvatarWorker() {
       for (let i = 0; i < generation.avatars.length; i += PER_STYLE_PARALLEL) {
         const batch = generation.avatars.slice(i, i + PER_STYLE_PARALLEL);
         const batchResults = await Promise.all(
-          batch.map((a) => runOne(a.id, a.style, a.styleLabel)),
+          batch.map((a) => runOne(a.id, a.style, a.styleLabel, a.promptUsed)),
         );
         results.push(...batchResults);
       }

@@ -4,13 +4,73 @@ import { getCurrentUserOrApiKey } from '@/lib/auth';
 import { prisma } from '@/lib/prisma';
 import { chargeTokens, refundTokens, COSTS, InsufficientTokensError } from '@/lib/tokens';
 import { avatarQueue } from '@/lib/queue';
-import { AVATAR_STYLES } from '@/lib/styles';
+import { AVATAR_STYLES, type AvatarStyle } from '@/lib/styles';
+import { nicheBySlug } from '@/lib/niches';
+import { buildAvatarPrompt } from '@/lib/prompts';
 
 export const runtime = 'nodejs';
 
+const SLOTS = 10;
+
 const Body = z.object({
   uploadId: z.string().min(1),
+  mode: z.enum(['default', 'niche', 'custom']).optional(),
+  nicheSlug: z.string().min(1).optional(),
+  customPrompts: z.array(z.string().min(4).max(1200)).min(1).max(SLOTS).optional(),
 });
+
+type AvatarSlot = {
+  style: string;      // slug
+  styleLabel: string;
+  promptUsed: string; // полностью собранный identity-preserving prompt
+};
+
+function defaultSlots(): AvatarSlot[] {
+  return AVATAR_STYLES.map((s) => ({
+    style: s.slug,
+    styleLabel: s.label,
+    promptUsed: buildAvatarPrompt(s),
+  }));
+}
+
+function nicheSlots(nicheSlug: string): AvatarSlot[] | null {
+  const niche = nicheBySlug(nicheSlug);
+  if (!niche) return null;
+  return niche.prompts.slice(0, SLOTS).map((p) => {
+    const style: AvatarStyle = {
+      slug: `${niche.slug}/${p.slug}`,
+      label: p.label,
+      description: p.description,
+      promptStyle: p.promptStyle,
+      allowRigidPose: p.allowRigidPose,
+    };
+    return {
+      style: style.slug,
+      styleLabel: p.label,
+      promptUsed: buildAvatarPrompt(style),
+    };
+  });
+}
+
+function customSlots(prompts: string[]): AvatarSlot[] {
+  // Цикличное заполнение SLOTS, чтобы движок генерил полноценный батч.
+  const out: AvatarSlot[] = [];
+  for (let i = 0; i < SLOTS; i++) {
+    const raw = prompts[i % prompts.length].trim();
+    const style: AvatarStyle = {
+      slug: `custom/${i + 1}`,
+      label: `Custom ${i + 1}`,
+      description: raw.slice(0, 80),
+      promptStyle: raw,
+    };
+    out.push({
+      style: style.slug,
+      styleLabel: style.label,
+      promptUsed: buildAvatarPrompt(style),
+    });
+  }
+  return out;
+}
 
 export async function POST(req: NextRequest) {
   const ctx = await getCurrentUserOrApiKey(req);
@@ -28,11 +88,30 @@ export async function POST(req: NextRequest) {
     return NextResponse.json({ error: 'upload_not_ready', status: upload.status }, { status: 409 });
   }
 
+  const mode = parsed.data.mode ?? 'default';
+  let slots: AvatarSlot[];
+  if (mode === 'niche') {
+    if (!parsed.data.nicheSlug) {
+      return NextResponse.json({ error: 'niche_slug_required' }, { status: 400 });
+    }
+    const built = nicheSlots(parsed.data.nicheSlug);
+    if (!built) return NextResponse.json({ error: 'unknown_niche' }, { status: 400 });
+    slots = built;
+  } else if (mode === 'custom') {
+    const prompts = (parsed.data.customPrompts ?? []).map((p) => p.trim()).filter(Boolean);
+    if (prompts.length === 0) {
+      return NextResponse.json({ error: 'custom_prompts_required' }, { status: 400 });
+    }
+    slots = customSlots(prompts);
+  } else {
+    slots = defaultSlots();
+  }
+
   try {
     await chargeTokens({
       userId: user.id,
       amount: COSTS.avatarGeneration,
-      reason: 'avatar-generation',
+      reason: `avatar-generation:${mode}`,
     });
   } catch (e) {
     if (e instanceof InsufficientTokensError) {
@@ -51,12 +130,13 @@ export async function POST(req: NextRequest) {
       status: 'pending',
       tokensCost: COSTS.avatarGeneration,
       avatars: {
-        create: AVATAR_STYLES.map((s) => ({
+        create: slots.map((s) => ({
           userId: user.id,
           imageUrl: '',
-          style: s.slug,
-          styleLabel: s.label,
+          style: s.style,
+          styleLabel: s.styleLabel,
           status: 'pending',
+          promptUsed: s.promptUsed,
         })),
       },
     },
@@ -92,6 +172,7 @@ export async function POST(req: NextRequest) {
     status: generation.status,
     avatarsPending: generation.avatars.length,
     tokensCharged: COSTS.avatarGeneration,
+    mode,
   });
 }
 

@@ -70,6 +70,7 @@ export function startCoverWorker() {
             promptUsed: prompt,
             status: 'completed',
             completedAt: new Date(),
+            errorMsg: null,
           },
         });
         console.log(`[cover-worker] ${coverId} done (flux taskId=${out.taskId})`);

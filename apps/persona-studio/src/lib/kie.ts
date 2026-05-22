@@ -353,25 +353,46 @@ export async function waitForFluxKontext(taskId: string): Promise<FluxStatus> {
  * (kie сервер сам скачивает) — для local dev перезаливай в R2/MinIO или используй
  * existing public URL из media.46-62-215-11.nip.io.
  */
+function isTransientFluxFail(failCode: string, failMsg: string): boolean {
+  // kie/Flux иногда отдаёт generic 500 — обычно лечится повторной попыткой.
+  if (/^5\d\d$/.test(failCode)) return true;
+  if (/internal error/i.test(failMsg)) return true;
+  if (/timeout|temporar|try again/i.test(failMsg)) return true;
+  return false;
+}
+
 export async function generateImageWithFlux(opts: {
   prompt: string;
   inputImageUrl: string;
   aspectRatio?: FluxAspect;
   outputFormat?: 'jpeg' | 'png';
 }): Promise<{ bytes: Buffer; mime: string; taskId: string }> {
-  const taskId = await submitFluxKontext({
-    prompt: opts.prompt,
-    inputImageUrl: opts.inputImageUrl,
-    aspectRatio: opts.aspectRatio ?? '3:4',
-    outputFormat: opts.outputFormat ?? 'jpeg',
-  });
-  const result = await waitForFluxKontext(taskId);
-  if (result.state !== 'success') {
-    const fail = result as { failCode: string; failMsg: string };
-    throw new KieError(fail.failCode, fail.failMsg);
+  const MAX_ATTEMPTS = 2;
+  let lastFail: { failCode: string; failMsg: string } | null = null;
+  let lastTaskId = '';
+  for (let attempt = 1; attempt <= MAX_ATTEMPTS; attempt++) {
+    const taskId = await submitFluxKontext({
+      prompt: opts.prompt,
+      inputImageUrl: opts.inputImageUrl,
+      aspectRatio: opts.aspectRatio ?? '3:4',
+      outputFormat: opts.outputFormat ?? 'jpeg',
+    });
+    lastTaskId = taskId;
+    const result = await waitForFluxKontext(taskId);
+    if (result.state === 'success') {
+      const { bytes, mime } = await downloadImage(result.resultUrl);
+      return { bytes, mime, taskId };
+    }
+    if (result.state !== 'failed') {
+      // waitForFluxKontext throws TIMEOUT before returning 'processing', but be safe.
+      throw new KieError('TIMEOUT', `flux task ${taskId} still ${result.state}`);
+    }
+    lastFail = { failCode: result.failCode, failMsg: result.failMsg };
+    if (!isTransientFluxFail(result.failCode, result.failMsg) || attempt === MAX_ATTEMPTS) break;
+    await new Promise((r) => setTimeout(r, 4_000 * attempt));
   }
-  const { bytes, mime } = await downloadImage(result.resultUrl);
-  return { bytes, mime, taskId };
+  const fail = lastFail ?? { failCode: 'UNKNOWN', failMsg: 'flux failed' };
+  throw new KieError(fail.failCode, `${fail.failMsg} (taskId=${lastTaskId})`);
 }
 
 /**

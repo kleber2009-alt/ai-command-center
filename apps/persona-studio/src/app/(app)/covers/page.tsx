@@ -2,6 +2,7 @@ import Link from 'next/link';
 import { getCurrentUser } from '@/lib/auth';
 import { prisma } from '@/lib/prisma';
 import { formatDate } from '@/lib/utils';
+import { RetryCoverButton } from './retry-button';
 
 export const dynamic = 'force-dynamic';
 export const metadata = { title: 'Covers — Persona Studio' };
@@ -60,6 +61,14 @@ export default async function CoversPage({ searchParams }: { searchParams: Promi
                 {c.subtitle && <div className="font-serif italic text-[13px] text-pink mt-1">{c.subtitle}</div>}
                 {c.cta && <div className="mono text-[9px] tracking-widest uppercase text-pink font-bold mt-3">{c.cta}</div>}
                 <div className="mono text-[9px] tracking-widest text-text-mute mt-3">{formatDate(c.createdAt)}</div>
+                {c.status === 'failed' && (
+                  <div className="mt-3 grid gap-2">
+                    {c.errorMsg && (
+                      <div className="mono text-[9px] leading-snug text-pink/80 break-words">{c.errorMsg}</div>
+                    )}
+                    <RetryCoverButton id={c.id} />
+                  </div>
+                )}
               </div>
             </article>
           ))}

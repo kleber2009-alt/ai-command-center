@@ -43,7 +43,17 @@ function describeFailure(f: UploadFailure): string {
 
 const MAX_PHOTOS = 10;
 
-export function UploadZone({ initialUploads }: { initialUploads?: UploadItem[] }) {
+export function UploadZone({
+  initialUploads,
+  extraBody,
+  generateLabel,
+  costHint,
+}: {
+  initialUploads?: UploadItem[];
+  extraBody?: Record<string, unknown>;
+  generateLabel?: string;
+  costHint?: string;
+}) {
   const router = useRouter();
   const inputRef = useRef<HTMLInputElement | null>(null);
   const [uploads, setUploads] = useState<UploadItem[]>(initialUploads ?? []);
@@ -123,7 +133,7 @@ export function UploadZone({ initialUploads }: { initialUploads?: UploadItem[] }
       const res = await fetch('/api/generate-avatars', {
         method: 'POST',
         headers: { 'content-type': 'application/json' },
-        body: JSON.stringify({ uploadId: primaryId }),
+        body: JSON.stringify({ uploadId: primaryId, ...(extraBody ?? {}) }),
       });
       const json = (await res.json()) as GenResp | { error: string; have?: number; need?: number };
       if (!res.ok || 'error' in json) {
@@ -142,7 +152,7 @@ export function UploadZone({ initialUploads }: { initialUploads?: UploadItem[] }
       setError(String(e));
       setBusy(null);
     }
-  }, [router, primaryId]);
+  }, [router, primaryId, extraBody]);
 
   return (
     <div className="grid gap-6">
@@ -253,10 +263,10 @@ export function UploadZone({ initialUploads }: { initialUploads?: UploadItem[] }
           disabled={!primaryId || busy === 'generating'}
           onClick={handleGenerate}
         >
-          {busy === 'generating' ? 'Generating 10 avatars…' : 'Generate 10 Avatars →'}
+          {busy === 'generating' ? 'Generating 10 avatars…' : (generateLabel ?? 'Generate 10 Avatars →')}
         </button>
         <span className="mono text-[10px] tracking-widest uppercase text-text-mute">
-          Спишется 10 токенов · ~3-5 мин на Flux Kontext Pro
+          {costHint ?? 'Спишется 10 токенов · ~3-5 мин на Flux Kontext Pro'}
         </span>
         {error && (
           <span className="mono text-[11px] tracking-wider text-pink">/ERROR — {error}</span>
