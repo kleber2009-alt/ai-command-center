@@ -1,12 +1,13 @@
 'use client'
 import Link from 'next/link'
 import { usePathname } from 'next/navigation'
-import { LayoutGrid, Zap, Wallet, Bot } from 'lucide-react'
+import { LayoutGrid, Zap, Wallet, Bot, Package } from 'lucide-react'
 
 const nav = [
   { href: '/dashboard', icon: LayoutGrid, label: 'Проекты' },
   { href: '/balances',  icon: Wallet,     label: 'Балансы' },
   { href: '/bots',      icon: Bot,        label: 'Боты' },
+  { href: '/modules',   icon: Package,    label: 'Готовые модули' },
 ]
 
 export default function DashboardLayout({ children }: { children: React.ReactNode }) {

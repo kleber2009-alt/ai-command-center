@@ -1,12 +1,13 @@
-import { NextResponse } from 'next/server';
-import { getCurrentUser } from '@/lib/auth';
+import { NextRequest, NextResponse } from 'next/server';
+import { getCurrentUserOrApiKey } from '@/lib/auth';
 import { prisma } from '@/lib/prisma';
 
 export const runtime = 'nodejs';
 
-export async function GET() {
-  const user = await getCurrentUser();
-  if (!user) return NextResponse.json({ error: 'UNAUTHORIZED' }, { status: 401 });
+export async function GET(req: NextRequest) {
+  const ctx = await getCurrentUserOrApiKey(req);
+  if (!ctx) return NextResponse.json({ error: 'UNAUTHORIZED' }, { status: 401 });
+  const user = ctx.user;
 
   const fresh = await prisma.user.findUnique({
     where: { id: user.id },

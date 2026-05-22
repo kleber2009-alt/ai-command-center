@@ -14,3 +14,5 @@ tsconfig.tsbuildinfo
 .claude/settings.local.json
 apps/ai-sales-v2/env/
 apps/*/env/*.env
+apps/persona-studio/sdk/dist/
+apps/persona-studio/sdk/node_modules/

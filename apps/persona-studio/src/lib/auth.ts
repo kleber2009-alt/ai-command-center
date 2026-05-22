@@ -83,6 +83,37 @@ export async function requireUser() {
   return user;
 }
 
+/**
+ * Принимает или NextAuth-сессию (cookie), или Bearer-токен в Authorization-заголовке.
+ * Используется во всех публичных API-эндпоинтах, чтобы один и тот же URL работал
+ * и для UI-пользователя, и для внешнего интегратора через SDK.
+ *
+ * Header формат: `Authorization: Bearer ps_<plaintext>`
+ *
+ * Возвращает { user, viaApiKey } или null если auth не прошла.
+ * Если ключ найден — фоновое обновление lastUsedAt (без await).
+ */
+export async function getCurrentUserOrApiKey(req: { headers: Headers }) {
+  const authz = req.headers.get('authorization') ?? '';
+  const match = /^Bearer\s+(ps_[A-Za-z0-9_-]{16,})$/.exec(authz);
+  if (match) {
+    const plaintext = match[1];
+    const { createHash } = await import('node:crypto');
+    const hashedKey = createHash('sha256').update(plaintext).digest('hex');
+    const key = await prisma.apiKey.findUnique({
+      where: { hashedKey },
+      include: { user: true },
+    });
+    if (!key || key.revokedAt) return null;
+    // fire-and-forget — не блокируем запрос
+    void prisma.apiKey.update({ where: { id: key.id }, data: { lastUsedAt: new Date() } }).catch(() => {});
+    return { user: key.user, viaApiKey: true as const, scopes: key.scopes.split(',') };
+  }
+  const user = await getCurrentUser();
+  if (!user) return null;
+  return { user, viaApiKey: false as const, scopes: ['read', 'write'] };
+}
+
 export async function getCurrentAdmin() {
   const user = await getCurrentUser();
   if (!user || user.role !== 'admin') return null;

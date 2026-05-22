@@ -14,6 +14,7 @@ const ITEMS: Array<{ href: string; label: string; key: string }> = [
   { href: '/videos', label: 'Videos', key: 'videos' },
   { href: '/covers', label: 'Covers', key: 'covers' },
   { href: '/billing', label: 'Billing', key: 'billing' },
+  { href: '/settings/keys', label: 'API keys', key: 'keys' },
 ];
 
 export function TopNav({ email, balance, isAdmin }: Props) {

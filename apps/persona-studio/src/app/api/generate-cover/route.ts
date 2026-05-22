@@ -1,6 +1,6 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { z } from 'zod';
-import { getCurrentUser } from '@/lib/auth';
+import { getCurrentUserOrApiKey } from '@/lib/auth';
 import { prisma } from '@/lib/prisma';
 import { chargeTokens, refundTokens, COSTS, InsufficientTokensError } from '@/lib/tokens';
 import { coverQueue } from '@/lib/queue';
@@ -18,8 +18,9 @@ const Body = z.object({
 });
 
 export async function POST(req: NextRequest) {
-  const user = await getCurrentUser();
-  if (!user) return NextResponse.json({ error: 'UNAUTHORIZED' }, { status: 401 });
+  const ctx = await getCurrentUserOrApiKey(req);
+  if (!ctx) return NextResponse.json({ error: 'UNAUTHORIZED' }, { status: 401 });
+  const user = ctx.user;
 
   const parsed = Body.safeParse(await req.json().catch(() => ({})));
   if (!parsed.success) {
@@ -85,8 +86,9 @@ export async function POST(req: NextRequest) {
 }
 
 export async function GET(req: NextRequest) {
-  const user = await getCurrentUser();
-  if (!user) return NextResponse.json({ error: 'UNAUTHORIZED' }, { status: 401 });
+  const ctx = await getCurrentUserOrApiKey(req);
+  if (!ctx) return NextResponse.json({ error: 'UNAUTHORIZED' }, { status: 401 });
+  const user = ctx.user;
 
   const id = req.nextUrl.searchParams.get('id');
   if (!id) return NextResponse.json({ error: 'id_required' }, { status: 400 });

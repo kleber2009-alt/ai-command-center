@@ -1,0 +1,27 @@
+{
+  "name": "@persona-studio/sdk",
+  "version": "0.1.0",
+  "description": "TypeScript SDK для Persona Studio — AI-аватары, обложки, talking-photo видео.",
+  "main": "dist/index.js",
+  "types": "dist/index.d.ts",
+  "files": ["dist", "README.md"],
+  "scripts": {
+    "build": "tsc",
+    "typecheck": "tsc --noEmit"
+  },
+  "type": "commonjs",
+  "engines": {
+    "node": ">=18"
+  },
+  "devDependencies": {
+    "typescript": "^5.4.0"
+  },
+  "keywords": [
+    "persona-studio",
+    "ai-avatar",
+    "heygen",
+    "talking-photo",
+    "sdk"
+  ],
+  "license": "UNLICENSED"
+}

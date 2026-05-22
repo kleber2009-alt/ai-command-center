@@ -1,6 +1,6 @@
 import { NextRequest, NextResponse } from 'next/server';
 import sharp from 'sharp';
-import { getCurrentUser } from '@/lib/auth';
+import { getCurrentUserOrApiKey } from '@/lib/auth';
 import { prisma } from '@/lib/prisma';
 import { extFromMime, keyFor, uploadBuffer } from '@/lib/storage';
 
@@ -46,8 +46,9 @@ async function storeOne(file: File, userId: string) {
 }
 
 export async function POST(req: NextRequest) {
-  const user = await getCurrentUser();
-  if (!user) return NextResponse.json({ error: 'UNAUTHORIZED' }, { status: 401 });
+  const ctx = await getCurrentUserOrApiKey(req);
+  if (!ctx) return NextResponse.json({ error: 'UNAUTHORIZED' }, { status: 401 });
+  const user = ctx.user;
 
   const form = await req.formData();
 
@@ -102,9 +103,10 @@ export async function POST(req: NextRequest) {
   return NextResponse.json({ uploads, errors: errors.length > 0 ? errors : undefined });
 }
 
-export async function GET() {
-  const user = await getCurrentUser();
-  if (!user) return NextResponse.json({ error: 'UNAUTHORIZED' }, { status: 401 });
+export async function GET(req: NextRequest) {
+  const ctx = await getCurrentUserOrApiKey(req);
+  if (!ctx) return NextResponse.json({ error: 'UNAUTHORIZED' }, { status: 401 });
+  const user = ctx.user;
 
   const uploads = await prisma.upload.findMany({
     where: { userId: user.id, status: 'ready' },

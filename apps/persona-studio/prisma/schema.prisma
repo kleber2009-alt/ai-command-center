@@ -28,6 +28,27 @@ model User {
   covers              Cover[]
   videoGenerations    VideoGeneration[]
   tokenTransactions   TokenTransaction[]
+  apiKeys             ApiKey[]
+}
+
+// API key для интеграции Persona Studio в сторонние проекты.
+// Хранится только SHA-256 хеш ключа — plaintext возвращается клиенту ровно
+// один раз при создании. Префикс (первые 8 символов) сохраняется для UI,
+// чтобы пользователь мог отличить свои ключи без расшифровки.
+model ApiKey {
+  id          String    @id @default(cuid())
+  userId      String
+  user        User      @relation(fields: [userId], references: [id], onDelete: Cascade)
+  name        String                                    // human label
+  prefix      String                                    // first 8 chars of plaintext, e.g. "ps_a1b2"
+  hashedKey   String    @unique                         // sha256(plaintext)
+  scopes      String    @default("read,write")          // CSV: read | write
+  lastUsedAt  DateTime?
+  revokedAt   DateTime?
+  createdAt   DateTime  @default(now())
+
+  @@index([userId, createdAt])
+  @@index([hashedKey])
 }
 
 model Account {
