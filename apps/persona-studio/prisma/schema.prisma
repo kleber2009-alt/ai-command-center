@@ -29,6 +29,7 @@ model User {
   videoGenerations    VideoGeneration[]
   tokenTransactions   TokenTransaction[]
   apiKeys             ApiKey[]
+  cryptoInvoices      CryptoInvoice[]
 }
 
 // API key для интеграции Persona Studio в сторонние проекты.
@@ -218,4 +219,24 @@ model TokenTransaction {
   createdAt DateTime @default(now())
 
   @@index([userId, createdAt])
+}
+
+// Инвойсы CryptoBot (@CryptoBot Telegram). Создаются перед редиректом в bot_invoice_url,
+// мармаются paid вебхуком после оплаты, токены зачисляются идемпотентно (по invoiceId).
+model CryptoInvoice {
+  id          String   @id @default(cuid())
+  userId      String
+  user        User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+  invoiceId   String   @unique                       // id из CryptoBot
+  pack        String                                  // "starter" | "pro" | "agency"
+  tokens      Int                                     // сколько токенов начислить при оплате
+  asset       String                                  // "USDT" | "TON" | "BTC" | ...
+  amount      String                                  // строка чтоб не терять точность ("9.50")
+  status      String   @default("active")             // active | paid | expired | failed
+  payUrl      String                                  // bot_invoice_url
+  createdAt   DateTime @default(now())
+  paidAt      DateTime?
+
+  @@index([userId, createdAt])
+  @@index([invoiceId])
 }

@@ -2,13 +2,14 @@ import Link from 'next/link';
 import { getCurrentUser } from '@/lib/auth';
 import { prisma } from '@/lib/prisma';
 import { formatDate } from '@/lib/utils';
+import { COSTS } from '@/lib/tokens';
 
 export const dynamic = 'force-dynamic';
 
 export default async function DashboardPage() {
   const user = (await getCurrentUser())!;
 
-  const [generations, avatarsCount, coversCount, recentAvatars, recentCovers] = await Promise.all([
+  const [generations, avatarsCount, coversCount, videosCount, recentAvatars, recentCovers] = await Promise.all([
     prisma.avatarGeneration.findMany({
       where: { userId: user.id },
       orderBy: { createdAt: 'desc' },
@@ -16,6 +17,7 @@ export default async function DashboardPage() {
     }),
     prisma.avatar.count({ where: { userId: user.id, status: 'done' } }),
     prisma.cover.count({ where: { userId: user.id, status: 'completed' } }),
+    prisma.videoGeneration.count({ where: { userId: user.id, status: 'completed' } }),
     prisma.avatar.findMany({
       where: { userId: user.id, status: 'done' },
       orderBy: { createdAt: 'desc' },
@@ -28,6 +30,9 @@ export default async function DashboardPage() {
     }),
   ]);
 
+  const isNewUser = generations.length === 0;
+  const lowBalance = user.tokenBalance < COSTS.avatarGeneration;
+
   return (
     <div className="grid gap-8">
       <section>
@@ -38,38 +43,72 @@ export default async function DashboardPage() {
           <span className="mono text-[10px] tracking-widest uppercase text-text-mute">{user.email}</span>
         </div>
 
+        {isNewUser && (
+          <div className="border border-lime/40 bg-[#0a1305] p-6 mb-6">
+            <div className="mono text-[10px] tracking-widest uppercase text-lime mb-2">/ welcome</div>
+            <h2 className="font-serif text-[28px] leading-tight mb-2">
+              Привет 👋 Тебе зачислено <span className="text-lime">{user.tokenBalance} токенов</span> в подарок.
+            </h2>
+            <p className="font-serif italic text-[15px] text-text-dim max-w-[60ch]">
+              Этого хватит на один батч из 10 AI-аватаров. Загрузи селфи — через ~60 секунд получишь 10 портретов в разных стилях, готовых к публикации.
+            </p>
+            <div className="mt-5 flex flex-wrap gap-3">
+              <Link href="/generate" className="btn-primary">Загрузить фото →</Link>
+              <Link href="/voice" className="btn-ghost">Сначала обучить голос →</Link>
+            </div>
+          </div>
+        )}
+
+        {lowBalance && !isNewUser && (
+          <div className="border border-pink/40 bg-[#1a0510] p-5 mb-6 flex flex-wrap items-center justify-between gap-3">
+            <div>
+              <div className="mono text-[10px] tracking-widest uppercase text-pink mb-1">/ low-balance</div>
+              <p className="font-serif italic text-[15px]">
+                Осталось <span className="text-pink">{user.tokenBalance} токенов</span>. На следующий батч нужно {COSTS.avatarGeneration}.
+              </p>
+            </div>
+            <Link href="/billing" className="btn-primary">Пополнить →</Link>
+          </div>
+        )}
+
         <div className="grid grid-cols-2 md:grid-cols-4 gap-[2px] bg-border border border-border">
-          <Stat k="Token balance" v={user.tokenBalance} accent="lime" sub={`plan: ${user.plan}`} />
+          <Stat k="Token balance" v={user.tokenBalance} accent={lowBalance ? 'pink' : 'lime'} sub={`plan: ${user.plan}`} />
           <Stat k="Avatars ready" v={avatarsCount} sub="готовых портретов" />
-          <Stat k="Covers" v={coversCount} sub="обложек карусели" />
-          <Stat k="Generations" v={generations.length} sub="всего батчей" />
+          <Stat k="Covers" v={coversCount} sub="обложек" />
+          <Stat k="Videos" v={videosCount} accent="cyan" sub="говорящих видео" />
         </div>
 
-        <div className="mt-8 grid md:grid-cols-2 gap-[2px] bg-border border border-border">
-          <Link
+        <div className="mt-8 grid md:grid-cols-2 lg:grid-cols-4 gap-[2px] bg-border border border-border">
+          <ActionCard
             href="/generate"
-            className="bg-surface hover:bg-surface-2 transition-colors p-6 flex items-end justify-between min-h-[140px]"
-          >
-            <div>
-              <div className="sec-num mb-2">/A · upload</div>
-              <div className="font-serif italic text-[26px] leading-tight">
-                Загрузить новое фото →
-              </div>
-            </div>
-            <span className="mono text-[10px] tracking-widest text-lime">10 tokens / batch</span>
-          </Link>
-          <Link
-            href="/avatars"
-            className="bg-surface hover:bg-surface-2 transition-colors p-6 flex items-end justify-between min-h-[140px]"
-          >
-            <div>
-              <div className="sec-num mb-2">/B · pick</div>
-              <div className="font-serif italic text-[26px] leading-tight">
-                Выбрать аватара для обложки →
-              </div>
-            </div>
-            <span className="mono text-[10px] tracking-widest text-cyan">{avatarsCount} ready</span>
-          </Link>
+            num="/A · upload"
+            title="Загрузить фото"
+            sub={`-${COSTS.avatarGeneration} токенов / батч`}
+            tone="lime"
+          />
+          <ActionCard
+            href={avatarsCount > 0 ? '/videos/new' : '/avatars'}
+            num="/B · talk"
+            title={avatarsCount > 0 ? 'Создать видео' : 'Сначала выбрать аватара'}
+            sub={`-${COSTS.heygenVideo} / video`}
+            tone="cyan"
+            disabled={avatarsCount === 0}
+          />
+          <ActionCard
+            href={avatarsCount > 0 ? '/covers/new' : '/avatars'}
+            num="/C · publish"
+            title={avatarsCount > 0 ? 'Сделать обложку' : 'Сначала выбрать аватара'}
+            sub={`-${COSTS.coverGeneration} / cover`}
+            tone="pink"
+            disabled={avatarsCount === 0}
+          />
+          <ActionCard
+            href="/voice"
+            num="/D · voice"
+            title="Обучить свой голос"
+            sub="через Persona Train"
+            tone="warm"
+          />
         </div>
       </section>
 
@@ -159,5 +198,36 @@ function Stat({ k, v, sub, accent }: { k: string; v: number | string; sub?: stri
       </div>
       {sub && <div className="mono text-[10px] tracking-wider text-text-mute mt-2">{sub}</div>}
     </div>
+  );
+}
+
+function ActionCard({
+  href,
+  num,
+  title,
+  sub,
+  tone,
+  disabled,
+}: {
+  href: string;
+  num: string;
+  title: string;
+  sub: string;
+  tone: 'lime' | 'cyan' | 'pink' | 'warm';
+  disabled?: boolean;
+}) {
+  const subColor =
+    tone === 'lime' ? 'text-lime' : tone === 'cyan' ? 'text-cyan' : tone === 'pink' ? 'text-pink' : 'text-warm';
+  return (
+    <Link
+      href={href}
+      className={`bg-surface ${disabled ? 'opacity-60' : 'hover:bg-surface-2'} transition-colors p-5 flex flex-col justify-between min-h-[150px]`}
+    >
+      <div className="sec-num mb-2">{num}</div>
+      <div>
+        <div className="font-serif italic text-[20px] leading-tight">{title} →</div>
+        <span className={`mono text-[10px] tracking-widest mt-2 inline-block ${subColor}`}>{sub}</span>
+      </div>
+    </Link>
   );
 }
