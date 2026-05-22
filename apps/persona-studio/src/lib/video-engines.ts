@@ -38,6 +38,8 @@ export type EngineConfig = {
   supportedAspects: readonly EngineAspect[];
   /** Только для heygen-*: какой model_version отправлять в /v2/video/generate. */
   heygenVersion?: 'V' | 'IV';
+  /** Виден в UI и принимается API. false = «зашит в коде, но выключен». */
+  enabled: boolean;
 };
 
 // Cost defaults — env-driven. Process.env читается в Node и при build на Next:
@@ -55,6 +57,7 @@ export const VIDEO_ENGINES: Record<VideoEngine, EngineConfig> = {
     voiceProvider: 'heygen',
     supportedAspects: ['9:16', '1:1', '16:9'],
     heygenVersion: 'V',
+    enabled: true,
   },
   'heygen-v4': {
     label: 'HeyGen IV — Legacy',
@@ -65,6 +68,7 @@ export const VIDEO_ENGINES: Record<VideoEngine, EngineConfig> = {
     voiceProvider: 'heygen',
     supportedAspects: ['9:16', '1:1', '16:9'],
     heygenVersion: 'IV',
+    enabled: false,
   },
   'omnihuman-1.5': {
     label: 'OmniHuman 1.5 — Lifelike',
@@ -74,6 +78,7 @@ export const VIDEO_ENGINES: Record<VideoEngine, EngineConfig> = {
     inputMode: 'script',
     voiceProvider: 'elevenlabs',
     supportedAspects: ['9:16', '1:1', '16:9'],
+    enabled: false,
   },
 };
 
@@ -85,4 +90,10 @@ export function isVideoEngine(s: string): s is VideoEngine {
   return s in VIDEO_ENGINES;
 }
 
-export const VIDEO_ENGINE_LIST: readonly VideoEngine[] = Object.keys(VIDEO_ENGINES) as VideoEngine[];
+export function isEnabledEngine(s: string): s is VideoEngine {
+  return isVideoEngine(s) && VIDEO_ENGINES[s].enabled;
+}
+
+export const VIDEO_ENGINE_LIST: readonly VideoEngine[] = (Object.keys(VIDEO_ENGINES) as VideoEngine[]).filter(
+  (slug) => VIDEO_ENGINES[slug].enabled,
+);

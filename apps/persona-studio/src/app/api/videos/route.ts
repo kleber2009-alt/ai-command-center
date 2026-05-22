@@ -4,7 +4,7 @@ import { getCurrentUser } from '@/lib/auth';
 import { prisma } from '@/lib/prisma';
 import { chargeTokens, refundTokens, InsufficientTokensError } from '@/lib/tokens';
 import { queueForName } from '@/lib/queue';
-import { engineConfig, isVideoEngine, type VideoEngine } from '@/lib/video-engines';
+import { engineConfig, isEnabledEngine, type VideoEngine } from '@/lib/video-engines';
 
 export const runtime = 'nodejs';
 
@@ -21,7 +21,7 @@ const Body = z
     subtitles: z.boolean().optional().default(true),
     heygenVersion: z.enum(['V', 'IV']).optional(),
   })
-  .refine((d) => isVideoEngine(d.engine), { message: 'unknown_engine', path: ['engine'] });
+  .refine((d) => isEnabledEngine(d.engine), { message: 'engine_disabled', path: ['engine'] });
 
 export async function POST(req: NextRequest) {
   const user = await getCurrentUser();
