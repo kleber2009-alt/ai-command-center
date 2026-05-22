@@ -1,0 +1,67 @@
+<!DOCTYPE html>
+<html lang="ru" class="dark">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>tg-agent · вход</title>
+  <script src="https://cdn.tailwindcss.com"></script>
+</head>
+<body class="bg-slate-950 text-slate-200 min-h-screen flex items-center justify-center px-4">
+  <div class="w-full max-w-sm rounded-2xl border border-slate-800 bg-slate-900/60 p-6 shadow-xl">
+    <div class="mb-5 flex items-center gap-2">
+      <span class="text-indigo-400">●</span>
+      <h1 class="text-base font-semibold text-slate-100">tg-agent</h1>
+    </div>
+
+    <p class="text-sm text-slate-400">
+      Бот пришлёт вам в личку Telegram одноразовую ссылку для входа.
+      Ссылка действительна 10 минут.
+    </p>
+
+    <button id="request"
+      class="mt-4 inline-flex w-full items-center justify-center gap-2 rounded-lg bg-indigo-500 px-4 py-2.5 text-sm font-medium text-white transition hover:bg-indigo-600 disabled:opacity-50">
+      Запросить ссылку в Telegram
+    </button>
+
+    <div id="msg" class="mt-3 hidden rounded-md border px-3 py-2 text-xs"></div>
+
+    <p class="mt-6 text-[11px] text-slate-600">
+      Ссылка работает только если вы зарегистрированы как OWNER_TELEGRAM_ID.
+      Если бот вам не пишет — отправьте ему /start в личку и попробуйте ещё раз.
+    </p>
+  </div>
+
+  <script>
+    const btn = document.getElementById('request');
+    const msg = document.getElementById('msg');
+
+    function show(kind, text) {
+      msg.textContent = text;
+      msg.className = 'mt-3 rounded-md border px-3 py-2 text-xs ' + (
+        kind === 'ok' ? 'border-emerald-500/30 bg-emerald-500/5 text-emerald-300'
+                      : 'border-rose-500/30 bg-rose-500/5 text-rose-300'
+      );
+    }
+
+    btn.addEventListener('click', async () => {
+      btn.disabled = true;
+      msg.classList.add('hidden');
+      try {
+        const res = await fetch('/login/request', { method: 'POST' });
+        const data = await res.json().catch(() => ({}));
+        if (res.ok) {
+          show('ok', 'Ссылка отправлена. Откройте Telegram.');
+        } else if (res.status === 429) {
+          show('err', data.error || 'Слишком часто. Подождите 30 секунд.');
+        } else {
+          show('err', data.error || 'Не получилось. Проверьте логи бота.');
+        }
+      } catch (e) {
+        show('err', 'Сетевая ошибка.');
+      } finally {
+        setTimeout(() => { btn.disabled = false; }, 5000);
+      }
+    });
+  </script>
+</body>
+</html>
