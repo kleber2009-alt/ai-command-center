@@ -193,6 +193,34 @@
   }
   .top-cta::after { content:'↗'; font-family:var(--font-ui); }
 
+  .top-dash {
+    display:inline-flex; align-items:center; gap:8px;
+    background:transparent;
+    color:var(--text-main);
+    font-family:var(--font-mono);
+    font-size:11px;
+    font-weight:700;
+    letter-spacing:0.16em;
+    text-transform:uppercase;
+    padding:10px 14px;
+    border:1px solid var(--border-hi);
+    text-decoration:none;
+    transition:transform .15s, background .15s, border-color .15s, color .15s;
+  }
+  .top-dash::before {
+    content:''; width:6px; height:6px; background:var(--success); border-radius:50%;
+    box-shadow:0 0 8px var(--success);
+  }
+  .top-dash:hover {
+    border-color:var(--purple);
+    background:rgba(155,92,255,0.06);
+    color:var(--purple-soft);
+    transform:translateY(-1px);
+  }
+  @media (max-width:520px){
+    .top-dash { display:none; }
+  }
+
   @media (max-width:920px){
     .top-nav { display:none; }
     .top-meta { display:none; }
@@ -1274,8 +1302,9 @@
       <a href="#faq">FAQ</a>
     </nav>
 
-    <div style="display:flex; align-items:center; gap:18px;">
+    <div style="display:flex; align-items:center; gap:14px;">
       <span class="top-meta"><span class="dot"></span> live · beta</span>
+      <a href="https://persona-app.46-62-215-11.nip.io/dashboard" class="top-dash">Дашборд</a>
       <a href="#cta" class="top-cta">Создать аватара</a>
     </div>
   </div>
@@ -1305,10 +1334,11 @@
           За 2 минуты, из браузера, без съёмки и монтажа.
         </p>
         <div class="hero-actions rise d3">
-          <a href="#cta" class="btn btn-primary">
-            Загрузить фото
+          <a href="https://persona-app.46-62-215-11.nip.io/dashboard" class="btn btn-primary">
+            Открыть дашборд
             <span class="arrow">↗</span>
           </a>
+          <a href="#cta" class="btn btn-ghost">Загрузить фото</a>
           <a href="#outputs" class="btn btn-ghost">Смотреть примеры</a>
         </div>
       </div>
