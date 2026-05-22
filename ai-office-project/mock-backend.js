@@ -17,7 +17,7 @@
    Что эмулируется:
    · POST https://*.supabase.co/rest/v1/*       → insert/select/update в state
    · POST https://api.yookassa.ru/v3/payments   → выдача fake payment URL
-   · POST https://api.telegram.org/bot*/sendMessage → лог в console
+   · POST https://api.telegram.org/bot{token}/sendMessage → лог в console
    · POST https://api.resend.com/emails         → лог в console
    · GET  /api/mock-status                       → статус mock-mode
 

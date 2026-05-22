@@ -1,10 +1,12 @@
 'use client'
 import Link from 'next/link'
 import { usePathname } from 'next/navigation'
-import { LayoutGrid, Zap } from 'lucide-react'
+import { LayoutGrid, Zap, Wallet, Bot } from 'lucide-react'
 
 const nav = [
   { href: '/dashboard', icon: LayoutGrid, label: 'Проекты' },
+  { href: '/balances',  icon: Wallet,     label: 'Балансы' },
+  { href: '/bots',      icon: Bot,        label: 'Боты' },
 ]
 
 export default function DashboardLayout({ children }: { children: React.ReactNode }) {
@@ -25,7 +27,9 @@ export default function DashboardLayout({ children }: { children: React.ReactNod
         </div>
         <nav className="flex-1 px-2 py-4 space-y-0.5 overflow-y-auto">
           {nav.map(({ href, icon: Icon, label }) => {
-            const active = path === href || (href === '/dashboard' && path.startsWith('/projects'))
+            const active =
+              path === href ||
+              (href === '/dashboard' && path.startsWith('/projects'))
             return (
               <Link key={href} href={href}
                 className={`flex items-center gap-3 px-3 py-2 rounded-lg text-sm transition-all ${

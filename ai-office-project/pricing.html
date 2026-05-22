@@ -168,7 +168,7 @@ body{padding:48px 24px 80px;background:radial-gradient(ellipse at top,#1a2a4a 0%
       <span class="period">/ месяц</span>
     </div>
     <div class="plan-yearly">Навсегда бесплатно</div>
-    <button class="plan-cta" onclick="signupPlan('free')">Начать бесплатно →</button>
+    <button class="plan-cta" onclick="signupPlan('free', this)">Начать бесплатно →</button>
     <div class="plan-feat-hd">Что входит</div>
     <ul class="plan-list">
       <li><b>3 запуска</b> сценариев / месяц</li>
@@ -189,7 +189,7 @@ body{padding:48px 24px 80px;background:radial-gradient(ellipse at top,#1a2a4a 0%
       <span class="period">/ месяц</span>
     </div>
     <div class="plan-yearly" data-month-text="" data-year-text="Годовой: 19900 ₽ (экономия 3980 ₽)"></div>
-    <button class="plan-cta" onclick="signupPlan('pro')">Запустить Pro →</button>
+    <button class="plan-cta" onclick="signupPlan('pro', this)">Запустить Pro →</button>
     <div class="plan-feat-hd">Всё что нужно</div>
     <ul class="plan-list">
       <li><b>∞ запусков</b> сценариев</li>
@@ -211,7 +211,7 @@ body{padding:48px 24px 80px;background:radial-gradient(ellipse at top,#1a2a4a 0%
       <span class="period">/ месяц</span>
     </div>
     <div class="plan-yearly" data-month-text="" data-year-text="Годовой: 49900 ₽ (экономия 9980 ₽)"></div>
-    <button class="plan-cta" onclick="signupPlan('team')">Подключить команду →</button>
+    <button class="plan-cta" onclick="signupPlan('team', this)">Подключить команду →</button>
     <div class="plan-feat-hd">Всё из Pro плюс</div>
     <ul class="plan-list">
       <li><b>5 мест</b> в команде</li>
@@ -357,11 +357,13 @@ body{padding:48px 24px 80px;background:radial-gradient(ellipse at top,#1a2a4a 0%
 
 <script>
 // Тоггл месяц/год
+let currentPeriod = 'month';
 const buttons=document.querySelectorAll('#periodToggle button');
 buttons.forEach(b=>b.onclick=()=>{
   buttons.forEach(x=>x.classList.remove('active'));
   b.classList.add('active');
   const period=b.dataset.period;
+  currentPeriod = period;
   document.querySelectorAll('.plan-price .amount').forEach(el=>{
     const month=parseInt(el.dataset.month);
     const year=parseInt(el.dataset.year);
@@ -381,15 +383,138 @@ buttons.forEach(b=>b.onclick=()=>{
 });
 
 // CTA actions
-function signupPlan(plan){
-  if(plan==='free'){
-    location.href='pipeline.html';
-  }else{
-    alert('Оплата '+plan.toUpperCase()+' будет доступна после подключения YooKassa.\n\nПока пиши в Telegram @AI_Growth_Office_Bot — оформим вручную и подключим доступ за 5 минут.');
+// 'pro' → plan_prices.pro (100⭐/1990₽). 'team' → plan_prices.team (250⭐/4990₽,
+// migration 017, 2026-05-20). 'enterprise' goes to contactSales (no DB slug —
+// custom pricing). 'architect' (750⭐/14900₽) exists in plan_prices for future
+// CTAs but no landing button maps to it yet.
+const BILLING_ENDPOINT = '/worker/billing/invoice';
+
+async function signupPlan(plan, btn){
+  if(plan === 'free'){
+    location.href = 'pipeline.html';
+    return;
+  }
+  // Yearly toggle → add `_year` suffix (matches plan_prices slugs)
+  const planSlug = currentPeriod === 'year' ? plan + '_year' : plan;
+  const orig = btn ? btn.textContent : '';
+  if(btn){ btn.disabled = true; btn.textContent = 'Готовлю счёт...'; }
+  try{
+    const res = await fetch(BILLING_ENDPOINT, {
+      method: 'POST',
+      headers: {'Content-Type': 'application/json'},
+      body: JSON.stringify({plan: planSlug})
+    });
+    const data = await res.json().catch(() => ({}));
+    if(!res.ok || !data.ok || !data.invoice_link){
+      const msg = (data && data.error) ? data.error : ('HTTP ' + res.status);
+      alert(
+        'Этот тариф пока подключаем вручную.\n\n' +
+        'Напиши в Telegram @AI_Growth_Office_Bot — оформим оплату за 5 минут и откроем доступ.\n\n' +
+        '[' + msg + ']'
+      );
+      return;
+    }
+    // Open invoice in Telegram (new tab on desktop; deep-link on mobile),
+    // show waiting overlay that polls /worker/billing/status until paid.
+    window.open(data.invoice_link, '_blank');
+    showInvoiceOverlay({
+      paymentId: data.payment_id,
+      planLabel: (data.plan && data.plan.display_name) || planSlug,
+      invoiceLink: data.invoice_link,
+    });
+  }catch(e){
+    alert('Не получилось создать счёт: ' + (e && e.message ? e.message : e) +
+          '\n\nПиши @AI_Growth_Office_Bot — оформим вручную.');
+  }finally{
+    if(btn){ btn.disabled = false; if(orig) btn.textContent = orig; }
   }
 }
 function contactSales(){
   window.open('https://t.me/AI_Growth_Office_Bot','_blank');
+}
+
+// ─── Post-invoice waiting overlay + status polling ────────────────
+function showInvoiceOverlay({paymentId, planLabel, invoiceLink}){
+  let overlay = document.getElementById('invOverlay');
+  if(overlay) overlay.remove();
+  overlay = document.createElement('div');
+  overlay.id = 'invOverlay';
+  overlay.innerHTML = `
+    <style>
+      #invOverlay{position:fixed;inset:0;background:rgba(8,8,12,.92);backdrop-filter:blur(8px);z-index:9999;display:flex;align-items:center;justify-content:center;padding:24px;animation:fadeIn .25s ease-out}
+      @keyframes fadeIn{from{opacity:0}to{opacity:1}}
+      #invOverlay .card{background:#13162a;border:1px solid rgba(200,240,96,.25);border-radius:18px;padding:28px;max-width:440px;width:100%;text-align:center;color:#e8e4f0;font-family:'Inter',sans-serif}
+      #invOverlay h3{font-size:20px;font-weight:800;margin-bottom:10px;letter-spacing:-.3px}
+      #invOverlay p{font-size:14px;color:#9aa0b8;line-height:1.55;margin-bottom:16px}
+      #invOverlay .plan{font-family:'JetBrains Mono',monospace;font-size:11px;color:#c8f060;background:rgba(200,240,96,.08);padding:5px 11px;border-radius:6px;display:inline-block;margin-bottom:14px}
+      #invOverlay .spin{display:inline-block;width:18px;height:18px;border:2px solid rgba(200,240,96,.2);border-top-color:#c8f060;border-radius:50%;animation:sp .8s linear infinite;margin-right:8px;vertical-align:middle}
+      @keyframes sp{to{transform:rotate(360deg)}}
+      #invOverlay .check{font-size:48px;color:#2ecc40;margin-bottom:10px;display:block}
+      #invOverlay .row{display:flex;gap:8px;justify-content:center;flex-wrap:wrap;margin-top:16px}
+      #invOverlay button{background:linear-gradient(90deg,#c8f060,#60c8f0);color:#080808;border:none;border-radius:11px;padding:11px 22px;font:700 12px/1 'Inter',sans-serif;letter-spacing:.4px;cursor:pointer;transition:transform .15s}
+      #invOverlay button:hover{transform:translateY(-1px)}
+      #invOverlay button.sec{background:transparent;border:1px solid rgba(255,255,255,.15);color:#e8e4f0}
+      #invOverlay button.sec:hover{border-color:rgba(200,240,96,.4);color:#c8f060}
+      #invOverlay .timer{font-family:'JetBrains Mono',monospace;font-size:10px;color:#7a82a0;margin-top:14px}
+    </style>
+    <div class="card" id="invCard"></div>`;
+  document.body.appendChild(overlay);
+
+  const card = overlay.querySelector('#invCard');
+  let pollCount = 0;
+  let pollTimer = null;
+  let elapsed = 0;
+  let elapsedTimer = null;
+
+  const renderWaiting = () => {
+    card.innerHTML = `
+      <div class="plan">${planLabel}</div>
+      <h3><span class="spin"></span>Ждём подтверждения оплаты</h3>
+      <p>Telegram открыт — оплати счёт там и возвращайся сюда. Эта страница сама обновится, когда платёж придёт.</p>
+      <div class="row">
+        <button onclick="window.open('${invoiceLink}','_blank')">Открыть счёт снова</button>
+        <button class="sec" onclick="document.getElementById('invOverlay').remove()">Закрыть</button>
+      </div>
+      <div class="timer">Ждём… <span id="invElapsed">0с</span></div>`;
+  };
+  const renderPaid = () => {
+    if(pollTimer) clearTimeout(pollTimer);
+    if(elapsedTimer) clearInterval(elapsedTimer);
+    card.innerHTML = `
+      <span class="check">✓</span>
+      <h3>Оплата принята</h3>
+      <p>Алиса (начальник офиса) представится в Telegram через несколько секунд и расскажет, что команда уже подготовила для тебя.</p>
+      <div class="row">
+        <button onclick="window.open('https://t.me/AI_Growth_Office_Bot','_blank')">Открыть бот</button>
+        <button class="sec" onclick="document.getElementById('invOverlay').remove()">Готово</button>
+      </div>`;
+  };
+
+  renderWaiting();
+  elapsedTimer = setInterval(() => {
+    elapsed++;
+    const el = document.getElementById('invElapsed');
+    if(el) el.textContent = elapsed + 'с';
+  }, 1000);
+
+  const poll = async () => {
+    pollCount++;
+    try {
+      const r = await fetch('/worker/billing/status?payment_id=' + encodeURIComponent(paymentId));
+      const d = await r.json().catch(() => ({}));
+      if(d.ok && d.status === 'paid'){
+        renderPaid();
+        return;
+      }
+    } catch {}
+    if(pollCount < 120){ // ~10 min cap (5 sec × 120)
+      pollTimer = setTimeout(poll, 5000);
+    } else {
+      const t = document.querySelector('#invOverlay .timer');
+      if(t) t.textContent = 'Превышено время ожидания. Если оплата прошла — открой Telegram, бот напишет сам.';
+    }
+  };
+  pollTimer = setTimeout(poll, 4000);
 }
 </script>
 <script src="api-fallback.js"></script>

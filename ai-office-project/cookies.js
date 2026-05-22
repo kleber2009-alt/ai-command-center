@@ -7,7 +7,9 @@
    · Подключение: <script src="cookies.js" defer></script>
    · Использование:
        window.addEventListener('aio-cookies-changed', e => {
-         if (e.detail.analytics) { /* запустить GA4 / Метрику */ }
+         if (e.detail.analytics) {
+           // запустить GA4 / Метрику
+         }
        });
    ═══════════════════════════════════════════════════════════════════ */
 (function () {

@@ -23,7 +23,7 @@ export default function RootLayout({ children }: { children: React.ReactNode }) 
       <head>
         <Script src="https://telegram.org/js/telegram-web-app.js" strategy="beforeInteractive" />
       </head>
-      <body className="min-h-screen bg-white text-apple-ink antialiased">
+      <body className="min-h-screen bg-apple-bg text-apple-ink antialiased">
         <TelegramInit />
         {children}
       </body>

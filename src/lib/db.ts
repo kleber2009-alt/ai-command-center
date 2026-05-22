@@ -27,7 +27,6 @@ CREATE TABLE IF NOT EXISTS transcripts (
   translation TEXT,
   generations TEXT
 );
-CREATE INDEX IF NOT EXISTS transcripts_user_created_idx ON transcripts (user_id, created_at DESC);
 
 -- Personal profile, keyed by user_id. Pre-migration deployments held a
 -- single 'singleton' row; the column migration below rebuilds the table.
@@ -54,7 +53,6 @@ CREATE TABLE IF NOT EXISTS me_documents (
   char_count INTEGER NOT NULL DEFAULT 0,
   chunk_count INTEGER NOT NULL DEFAULT 0
 );
-CREATE INDEX IF NOT EXISTS me_documents_user_created_idx ON me_documents (user_id, created_at DESC);
 
 -- Chunk text + metadata; embeddings live in the vec virtual table below, keyed by chunk id.
 -- user_id is derived from the parent document via JOIN; no separate column.
@@ -79,8 +77,6 @@ CREATE TABLE IF NOT EXISTS chat_sessions (
   created_at TEXT NOT NULL DEFAULT (strftime('%Y-%m-%dT%H:%M:%fZ', 'now')),
   updated_at TEXT NOT NULL DEFAULT (strftime('%Y-%m-%dT%H:%M:%fZ', 'now'))
 );
-CREATE INDEX IF NOT EXISTS chat_sessions_user_lookup_idx
-  ON chat_sessions (user_id, kind, assistant_id, updated_at DESC);
 
 CREATE TABLE IF NOT EXISTS chat_messages (
   id INTEGER PRIMARY KEY AUTOINCREMENT,

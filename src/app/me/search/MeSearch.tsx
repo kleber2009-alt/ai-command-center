@@ -103,13 +103,13 @@ export default function MeSearch() {
             value={query}
             onChange={(e) => setQuery(e.target.value)}
             placeholder="Что найти в моих материалах?"
-            className="w-full rounded-full border border-apple-line bg-apple-bg-soft py-2.5 pl-10 pr-3 text-[15px] text-apple-ink placeholder:text-apple-faint outline-none transition-all focus:border-apple-line-strong focus:bg-white focus:shadow-apple-sm"
+            className="w-full rounded-full border border-apple-line bg-apple-bg-soft py-2.5 pl-10 pr-3 text-[15px] text-apple-ink placeholder:text-apple-faint outline-none transition-all focus:border-apple-line-strong focus:bg-apple-bg-elev focus:shadow-apple-sm"
           />
         </div>
         <button
           type="submit"
           disabled={loading || !query.trim()}
-          className="inline-flex items-center gap-2 rounded-full bg-apple-blue px-5 py-2.5 text-[14px] font-medium text-white transition-colors hover:bg-apple-blue-hover active:bg-apple-blue-pressed disabled:cursor-not-allowed disabled:bg-apple-line-strong"
+          className="inline-flex items-center gap-2 rounded-full bg-apple-blue px-5 py-2.5 text-[14px] font-medium text-apple-bg transition-colors hover:bg-apple-blue-hover active:bg-apple-blue-pressed disabled:cursor-not-allowed disabled:bg-apple-line-strong"
         >
           {loading ? <Loader2 className="h-4 w-4 animate-spin" /> : <Search className="h-4 w-4" />}
           Найти
@@ -139,7 +139,7 @@ export default function MeSearch() {
               <li key={m.id}>
                 <Link
                   href={`/me/library/${m.document_id}`}
-                  className="block rounded-apple-lg border border-apple-line bg-white p-4 shadow-apple-sm transition-colors hover:bg-apple-bg-soft sm:p-5"
+                  className="block rounded-apple-lg border border-apple-line bg-apple-bg-elev p-4 shadow-apple-sm transition-colors hover:bg-apple-bg-soft sm:p-5"
                 >
                   <div className="mb-2 flex items-center justify-between gap-2">
                     <h3 className="truncate text-[14px] font-semibold text-apple-ink">

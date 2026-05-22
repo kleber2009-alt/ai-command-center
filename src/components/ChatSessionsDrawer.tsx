@@ -179,7 +179,7 @@ export default function ChatSessionsDrawer({
         tabIndex={-1}
         aria-label="Закрыть"
       />
-      <aside className="flex h-full w-[min(360px,90vw)] flex-col border-l border-apple-line bg-white shadow-apple-lg">
+      <aside className="flex h-full w-[min(360px,90vw)] flex-col border-l border-apple-line bg-apple-bg-elev shadow-apple-lg">
         <header className="flex items-center justify-between border-b border-apple-line px-4 py-3">
           <h2 className="text-[15px] font-semibold text-apple-ink">История чатов</h2>
           <button
@@ -199,7 +199,7 @@ export default function ChatSessionsDrawer({
               onNew()
               onClose()
             }}
-            className="inline-flex w-full items-center justify-center gap-2 rounded-full bg-apple-blue px-3 py-2 text-[13px] font-medium text-white transition-colors hover:bg-apple-blue-hover"
+            className="inline-flex w-full items-center justify-center gap-2 rounded-full bg-apple-blue px-3 py-2 text-[13px] font-medium text-apple-bg transition-colors hover:bg-apple-blue-hover"
           >
             <MessageSquarePlus className="h-4 w-4" />
             Новый чат
@@ -214,7 +214,7 @@ export default function ChatSessionsDrawer({
               value={searchValue}
               onChange={(e) => setSearchValue(e.target.value)}
               placeholder="Поиск по чатам…"
-              className="w-full rounded-full border border-apple-line bg-apple-bg-soft py-1.5 pl-9 pr-3 text-[12px] text-apple-ink placeholder:text-apple-faint outline-none transition-all focus:border-apple-line-strong focus:bg-white"
+              className="w-full rounded-full border border-apple-line bg-apple-bg-soft py-1.5 pl-9 pr-3 text-[12px] text-apple-ink placeholder:text-apple-faint outline-none transition-all focus:border-apple-line-strong focus:bg-apple-bg-elev"
             />
           </div>
         </div>
@@ -285,12 +285,12 @@ export default function ChatSessionsDrawer({
                               }
                             }}
                             autoFocus
-                            className="flex-1 rounded-lg border border-apple-line bg-white px-2 py-1 text-[13px] text-apple-ink outline-none focus:border-apple-line-strong focus:shadow-apple-sm"
+                            className="flex-1 rounded-lg border border-apple-line bg-apple-bg-elev px-2 py-1 text-[13px] text-apple-ink outline-none focus:border-apple-line-strong focus:shadow-apple-sm"
                           />
                           <button
                             type="button"
                             onClick={() => commitRename(s.id)}
-                            className="grid h-8 w-8 shrink-0 place-items-center rounded-full bg-apple-blue text-white hover:bg-apple-blue-hover"
+                            className="grid h-8 w-8 shrink-0 place-items-center rounded-full bg-apple-blue text-apple-bg hover:bg-apple-blue-hover"
                             aria-label="Сохранить"
                           >
                             <Check className="h-3.5 w-3.5" />

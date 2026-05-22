@@ -219,12 +219,16 @@ export default function AssistantChat({ id, name, description, icon, buttonText,
 
     try {
       const truncateToCount = isEdit ? opts.editAtIndex! : undefined
+      // Strip leading assistant messages: Claude API requires messages[0].role === 'user'.
+      // showHelp() may prepend a local assistant message that should not reach the API.
+      const firstUserIdx = baseHistory.findIndex((m) => m.role === 'user')
+      const apiMessages = firstUserIdx >= 0 ? baseHistory.slice(firstUserIdx) : baseHistory
       const res = await apiFetch('/api/assistants/chat', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({
           assistantId: id,
-          messages: baseHistory,
+          messages: apiMessages,
           sessionId,
           regenerate: isRegen || undefined,
           useBrainContext: useBrainContext || undefined,
@@ -315,7 +319,7 @@ export default function AssistantChat({ id, name, description, icon, buttonText,
 
   return (
     <div className="flex min-h-[calc(100vh-2rem)] flex-col">
-      <header className="sticky top-0 z-10 -mx-4 -mt-5 mb-4 border-b border-apple-line bg-white/85 px-4 py-3 backdrop-blur-xl backdrop-saturate-150 sm:-mx-6 sm:-mt-8 sm:px-6">
+      <header className="sticky top-0 z-10 -mx-4 -mt-5 mb-4 border-b border-apple-line bg-apple-bg-elev/85 px-4 py-3 backdrop-blur-xl backdrop-saturate-150 sm:-mx-6 sm:-mt-8 sm:px-6">
         <div className="flex items-center gap-3">
           <Link
             href="/assistants"
@@ -421,7 +425,7 @@ export default function AssistantChat({ id, name, description, icon, buttonText,
                 <button
                   type="button"
                   onClick={showHelp}
-                  className="mt-4 inline-flex items-center gap-2 rounded-full bg-apple-blue px-4 py-2 text-[13px] font-medium text-white transition-colors hover:bg-apple-blue-hover active:bg-apple-blue-pressed sm:text-sm"
+                  className="mt-4 inline-flex items-center gap-2 rounded-full bg-apple-blue px-4 py-2 text-[13px] font-medium text-apple-bg transition-colors hover:bg-apple-blue-hover active:bg-apple-blue-pressed sm:text-sm"
                 >
                   <Sparkles className="h-4 w-4" />
                   {buttonText}
@@ -432,7 +436,7 @@ export default function AssistantChat({ id, name, description, icon, buttonText,
               </p>
             </div>
             {starters && starters.length > 0 && (
-              <div className="rounded-apple-lg border border-apple-line bg-white p-3 shadow-apple-sm">
+              <div className="rounded-apple-lg border border-apple-line bg-apple-bg-elev p-3 shadow-apple-sm">
                 <p className="mb-2 px-1 text-[12px] font-medium text-apple-muted">С чего начать</p>
                 <div className="flex flex-wrap gap-2">
                   {starters.map((s) => (
@@ -443,7 +447,7 @@ export default function AssistantChat({ id, name, description, icon, buttonText,
                         setInput(s)
                         inputRef.current?.focus()
                       }}
-                      className="rounded-full border border-apple-line bg-white px-3 py-1.5 text-[13px] text-apple-ink shadow-apple-sm transition-colors hover:bg-apple-bg-soft"
+                      className="rounded-full border border-apple-line bg-apple-bg-elev px-3 py-1.5 text-[13px] text-apple-ink shadow-apple-sm transition-colors hover:bg-apple-bg-soft"
                     >
                       {s}
                     </button>
@@ -461,7 +465,7 @@ export default function AssistantChat({ id, name, description, icon, buttonText,
           >
             <div className={m.role === 'user' ? 'max-w-[88%]' : 'max-w-[92%]'}>
             {m.role === 'user' && editingIdx === i ? (
-              <div className="rounded-[20px] rounded-br-md border border-apple-blue bg-white p-2 shadow-apple-sm">
+              <div className="rounded-[20px] rounded-br-md border border-apple-blue bg-apple-bg-elev p-2 shadow-apple-sm">
                 <textarea
                   value={editingValue}
                   onChange={(e) => setEditingValue(e.target.value)}
@@ -479,7 +483,7 @@ export default function AssistantChat({ id, name, description, icon, buttonText,
                   }}
                   rows={3}
                   autoFocus
-                  className="w-full resize-none rounded-lg bg-white p-2 text-[15px] leading-relaxed text-apple-ink outline-none"
+                  className="w-full resize-none rounded-lg bg-apple-bg-elev p-2 text-[15px] leading-relaxed text-apple-ink outline-none"
                 />
                 <div className="mt-1 flex items-center justify-end gap-1.5">
                   <button
@@ -499,7 +503,7 @@ export default function AssistantChat({ id, name, description, icon, buttonText,
                       setEditingIdx(null)
                       send(v, { editAtIndex: i })
                     }}
-                    className="inline-flex items-center gap-1.5 rounded-full bg-apple-blue px-3 py-1.5 text-[12px] font-medium text-white hover:bg-apple-blue-hover"
+                    className="inline-flex items-center gap-1.5 rounded-full bg-apple-blue px-3 py-1.5 text-[12px] font-medium text-apple-bg hover:bg-apple-blue-hover"
                   >
                     <Send className="h-3.5 w-3.5" />
                     Переотправить
@@ -510,8 +514,8 @@ export default function AssistantChat({ id, name, description, icon, buttonText,
             <div
               className={
                 m.role === 'user'
-                  ? 'group relative rounded-[20px] rounded-br-md bg-apple-blue px-3.5 py-2.5 text-[15px] leading-snug text-white shadow-apple-sm'
-                  : 'group relative rounded-[20px] rounded-bl-md border border-apple-line bg-white px-3.5 py-2.5 text-[15px] leading-snug text-apple-ink shadow-apple-sm'
+                  ? 'group relative rounded-[20px] rounded-br-md bg-apple-blue px-3.5 py-2.5 text-[15px] leading-snug text-apple-bg shadow-apple-sm'
+                  : 'group relative rounded-[20px] rounded-bl-md border border-apple-line bg-apple-bg-elev px-3.5 py-2.5 text-[15px] leading-snug text-apple-ink shadow-apple-sm'
               }
             >
               {m.role === 'assistant' && m.content === '' ? (
@@ -532,7 +536,7 @@ export default function AssistantChat({ id, name, description, icon, buttonText,
                     setEditingValue(m.content)
                     setEditingIdx(i)
                   }}
-                  className="absolute -bottom-2 -left-2 grid h-7 w-7 place-items-center rounded-full border border-apple-line bg-white text-apple-muted opacity-0 shadow-apple-sm transition group-hover:opacity-100"
+                  className="absolute -bottom-2 -left-2 grid h-7 w-7 place-items-center rounded-full border border-apple-line bg-apple-bg-elev text-apple-muted opacity-0 shadow-apple-sm transition group-hover:opacity-100"
                   aria-label="Редактировать"
                   title="Редактировать (Esc — отмена, ⌘/Ctrl+Enter — отправить)"
                 >
@@ -543,7 +547,7 @@ export default function AssistantChat({ id, name, description, icon, buttonText,
                 <button
                   type="button"
                   onClick={() => copyMessage(m.content, i)}
-                  className="absolute -bottom-2 -right-2 grid h-7 w-7 place-items-center rounded-full border border-apple-line bg-white text-apple-muted opacity-0 shadow-apple-sm transition group-hover:opacity-100"
+                  className="absolute -bottom-2 -right-2 grid h-7 w-7 place-items-center rounded-full border border-apple-line bg-apple-bg-elev text-apple-muted opacity-0 shadow-apple-sm transition group-hover:opacity-100"
                   aria-label="Скопировать"
                 >
                   {copiedIdx === i ? <Check className="h-3.5 w-3.5 text-emerald-500" /> : <Copy className="h-3.5 w-3.5" />}
@@ -557,7 +561,7 @@ export default function AssistantChat({ id, name, description, icon, buttonText,
                   <a
                     key={ci}
                     href={`/me/library/${c.document_id}`}
-                    className="rounded-full bg-apple-bg-soft px-2 py-0.5 text-[11px] text-apple-muted transition-colors hover:bg-white hover:text-apple-ink hover:shadow-apple-sm"
+                    className="rounded-full bg-apple-bg-soft px-2 py-0.5 text-[11px] text-apple-muted transition-colors hover:bg-apple-bg-elev hover:text-apple-ink hover:shadow-apple-sm"
                     title={`Открыть документ · sim ${(c.similarity * 100).toFixed(0)}%`}
                   >
                     [{c.document_title}]
@@ -575,7 +579,7 @@ export default function AssistantChat({ id, name, description, icon, buttonText,
                       setInput(q)
                       inputRef.current?.focus()
                     }}
-                    className="rounded-full border border-apple-line bg-white px-3 py-1.5 text-[12.5px] text-apple-ink shadow-apple-sm transition-colors hover:bg-apple-bg-soft"
+                    className="rounded-full border border-apple-line bg-apple-bg-elev px-3 py-1.5 text-[12.5px] text-apple-ink shadow-apple-sm transition-colors hover:bg-apple-bg-soft"
                   >
                     {q}
                   </button>
@@ -612,7 +616,7 @@ export default function AssistantChat({ id, name, description, icon, buttonText,
         <div ref={bottomRef} />
       </div>
 
-      <div className="sticky bottom-0 -mx-4 mt-auto border-t border-apple-line bg-white/85 px-4 py-3 backdrop-blur-xl backdrop-saturate-150 sm:-mx-6 sm:px-6">
+      <div className="sticky bottom-0 -mx-4 mt-auto border-t border-apple-line bg-apple-bg-elev/85 px-4 py-3 backdrop-blur-xl backdrop-saturate-150 sm:-mx-6 sm:px-6">
         <form
           onSubmit={(e) => {
             e.preventDefault()
@@ -628,7 +632,7 @@ export default function AssistantChat({ id, name, description, icon, buttonText,
             placeholder={voice.state === 'recording' ? 'Слушаю…' : 'Опиши задачу…'}
             rows={1}
             disabled={loading || voice.state !== 'idle'}
-            className="max-h-[200px] min-h-[40px] flex-1 resize-none rounded-[20px] border border-apple-line bg-apple-bg-soft px-3.5 py-2 text-[15px] text-apple-ink placeholder:text-apple-faint outline-none transition-all focus:border-apple-line-strong focus:bg-white focus:shadow-apple-sm disabled:opacity-60"
+            className="max-h-[200px] min-h-[40px] flex-1 resize-none rounded-[20px] border border-apple-line bg-apple-bg-soft px-3.5 py-2 text-[15px] text-apple-ink placeholder:text-apple-faint outline-none transition-all focus:border-apple-line-strong focus:bg-apple-bg-elev focus:shadow-apple-sm disabled:opacity-60"
           />
           {voice.supported && (
             <button
@@ -638,7 +642,7 @@ export default function AssistantChat({ id, name, description, icon, buttonText,
               className={`grid h-10 w-10 shrink-0 place-items-center rounded-full transition-colors disabled:cursor-not-allowed disabled:bg-apple-line-strong ${
                 voice.state === 'recording'
                   ? 'bg-red-500 text-white animate-pulse hover:bg-red-600'
-                  : 'border border-apple-line bg-white text-apple-ink hover:bg-apple-bg-soft'
+                  : 'border border-apple-line bg-apple-bg-elev text-apple-ink hover:bg-apple-bg-soft'
               }`}
               aria-label={voice.state === 'recording' ? 'Остановить запись' : 'Голосовой ввод'}
               title={voice.state === 'recording' ? 'Остановить запись' : 'Голосовой ввод'}
@@ -655,7 +659,7 @@ export default function AssistantChat({ id, name, description, icon, buttonText,
           <button
             type="submit"
             disabled={loading || !input.trim() || voice.state !== 'idle'}
-            className="grid h-10 w-10 shrink-0 place-items-center rounded-full bg-apple-blue text-white transition-colors hover:bg-apple-blue-hover active:bg-apple-blue-pressed disabled:cursor-not-allowed disabled:bg-apple-line-strong"
+            className="grid h-10 w-10 shrink-0 place-items-center rounded-full bg-apple-blue text-apple-bg transition-colors hover:bg-apple-blue-hover active:bg-apple-blue-pressed disabled:cursor-not-allowed disabled:bg-apple-line-strong"
             aria-label="Отправить"
           >
             {loading ? <Loader2 className="h-4 w-4 animate-spin" /> : <Send className="h-4 w-4" />}

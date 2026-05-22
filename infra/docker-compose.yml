@@ -62,25 +62,42 @@ services:
 
   transcribe:
     build:
-      context: ..
-      dockerfile: infra/services/transcribe/Dockerfile
+      context: /home/aisales/ai-command-center
+      dockerfile: apps/transcribe/Dockerfile
     restart: unless-stopped
     environment:
       NODE_ENV: production
       PORT: 3000
       HOSTNAME: 0.0.0.0
-      DB_PATH: /app/data/app.db
       ANTHROPIC_API_KEY: ${ANTHROPIC_API_KEY}
       OPENAI_API_KEY: ${OPENAI_API_KEY:-}
       DEEPGRAM_API_KEY: ${DEEPGRAM_API_KEY:-}
       TELEGRAM_BOT_TOKEN: ${TELEGRAM_BOT_TOKEN:-}
+      TELEGRAM_REQUIRE_INIT_DATA: ${TELEGRAM_REQUIRE_INIT_DATA:-true}
+      OWNER_TELEGRAM_ID: ${OWNER_TELEGRAM_ID:-}
       YTDLP_SERVICE_URL: ${YTDLP_SERVICE_URL:-http://ytdlp:8080}
       YTDLP_SERVICE_API_KEY: ${YTDLP_SERVICE_API_KEY:-}
+      APIFY_API_TOKEN: ${APIFY_API_TOKEN:-}
+      KIE_AI_API_KEY: ${KIE_AI_API_KEY:-}
+      DATABASE_URL: postgres://${POSTGRES_USER}:${POSTGRES_PASSWORD}@postgres:5432/${POSTGRES_DB}
+      NEXT_PUBLIC_SUPABASE_URL: ${TRANSCRIBE_SUPABASE_URL}
+      SUPABASE_SERVICE_KEY: ${TRANSCRIBE_SUPABASE_SERVICE_KEY}
+      STRIPE_SECRET_KEY: ${STRIPE_SECRET_KEY:-}
+      STRIPE_WEBHOOK_SECRET: ${STRIPE_WEBHOOK_SECRET:-}
+      STRIPE_PRICE_PRO: ${STRIPE_PRICE_PRO:-}
+      STRIPE_PRICE_TEAM: ${STRIPE_PRICE_TEAM:-}
+      NEXT_PUBLIC_APP_URL: ${TRANSCRIBE_APP_URL:-https://transcribe.46-62-215-11.nip.io}
+      TELEGRAM_WEBHOOK_SECRET: ${TELEGRAM_WEBHOOK_SECRET:-}
+      STARS_PRICE_PRO: ${STARS_PRICE_PRO:-750}
+      PRO_SUBSCRIPTION_DAYS: ${PRO_SUBSCRIPTION_DAYS:-30}
+      TMA_URL: ${TMA_URL:-https://tma.46-62-215-11.nip.io/}
+      VIRAL_CLONE_DISPATCH_SECRET: ${VIRAL_CLONE_DISPATCH_SECRET:-}
+      VIRAL_CLONE_DISPATCH_URL: ${VIRAL_CLONE_DISPATCH_URL:-https://ai-office.46-62-215-11.nip.io/worker/viral-clone/dispatch}
     ports:
       - '127.0.0.1:3002:3000'
-    volumes:
-      - transcribe_data:/app/data
     depends_on:
+      postgres:
+        condition: service_healthy
       ytdlp:
         condition: service_started
     networks: [internal]
@@ -123,6 +140,49 @@ services:
       - transcribe
     networks: [internal]
 
+  # ─────────────────────────────────────────────────────────────────
+  # aisales-worker — scheduler for the AI Growth Office
+  # Polls scheduled_jobs (Postgres SKIP LOCKED), runs handlers,
+  # ships deliverables to the office TG bot. See infra-worker/ in
+  # the aisales-app-v2 repo for canonical source.
+  # ─────────────────────────────────────────────────────────────────
+  aisales-worker:
+    image: infra-aisales-worker:hotpatch-20260520
+    build:
+      context: ./services/aisales-worker
+      dockerfile: Dockerfile
+    restart: unless-stopped
+    environment:
+      NODE_ENV: production
+      # Worker points at aisales-postgres (different compose project),
+      # reachable via the external aisales_aisales-net network below.
+      DATABASE_URL: ${AISALES_DB_URL}
+      ANTHROPIC_API_KEY: ${ANTHROPIC_API_KEY}
+      TG_OFFICE_BOT_TOKEN: ${TG_OFFICE_BOT_TOKEN:-}
+      TG_OFFICE_WEBHOOK_SECRET: ${TG_OFFICE_WEBHOOK_SECRET:-}
+      TG_PARSER_BOT_TOKEN: ${TG_PARSER_BOT_TOKEN:-}
+      TG_PARSER_WEBHOOK_SECRET: ${TG_PARSER_WEBHOOK_SECRET:-}
+      HTTP_PORT: 3000
+      POLL_INTERVAL_MS: 15000
+      RULE_TICK_INTERVAL_MS: 60000
+      MAX_ATTEMPTS: 3
+      # viral_clone pipeline
+      OPENAI_API_KEY: ${OPENAI_API_KEY:-}
+      HEYGEN_API_KEY: ${HEYGEN_API_KEY:-}
+      HEYGEN_DEFAULT_AVATAR_ID: ${HEYGEN_DEFAULT_AVATAR_ID:-}
+      HEYGEN_DEFAULT_VOICE_ID: ${HEYGEN_DEFAULT_VOICE_ID:-}
+      SUBMAGIC_API_KEY: ${SUBMAGIC_API_KEY:-}
+      APIFY_TOKEN: ${APIFY_TOKEN:-}
+      TG_TRANSCRIBE_BOT_TOKEN: ${TG_TRANSCRIBE_BOT_TOKEN:-}
+      VIRAL_CLONE_DISPATCH_SECRET: ${VIRAL_CLONE_DISPATCH_SECRET:-}
+      # voice welcome (ElevenLabs)
+      ELEVENLABS_API_KEY: ${ELEVENLABS_API_KEY:-}
+      ELEVENLABS_VOICE_ID_ANYA: ${ELEVENLABS_VOICE_ID_ANYA:-}
+    ports:
+      # Webhook reachable from Caddy on host (127.0.0.1:3004 → :3000 inside)
+      - '127.0.0.1:3004:3000'
+    networks: [internal, aisales-net]
+
 volumes:
   postgres_data:
   voice_notes:
@@ -131,5 +191,9 @@ volumes:
   caddy_config:
 
 networks:
+  # External: aisales compose project's network, so worker can reach aisales-postgres
+  aisales-net:
+    external: true
+    name: aisales_aisales-net
   internal:
     driver: bridge

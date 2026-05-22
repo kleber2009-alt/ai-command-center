@@ -54,6 +54,19 @@ body{padding:32px 24px 80px;background:radial-gradient(ellipse at top,#1a2a4a 0%
 
 .label{display:block;font-size:11px;font-weight:700;text-transform:uppercase;letter-spacing:.8px;color:var(--muted);margin:14px 0 6px}
 
+/* VOICE RECORDER */
+.voice-rec{margin-top:14px;background:var(--card2);border:1.5px solid var(--border);border-radius:14px;padding:18px;display:flex;flex-direction:column;gap:12px}
+.rec-btn{background:linear-gradient(90deg,#c8f060,#60c8f0);color:#080808;border:none;border-radius:11px;padding:14px;font:800 14px/1 var(--ui);letter-spacing:.4px;cursor:pointer;transition:transform .15s,box-shadow .15s}
+.rec-btn:hover{transform:translateY(-1px);box-shadow:0 6px 20px rgba(96,200,240,.25)}
+.rec-meta{display:flex;justify-content:space-between;align-items:center;gap:12px;font-size:12px}
+.rec-timer{font-family:var(--font);font-weight:700;color:var(--accent);font-size:14px;flex-shrink:0}
+.rec-status{color:var(--muted);line-height:1.5}
+.voice-rec audio{width:100%;max-width:100%}
+.rec-up{background:var(--accent);color:#080808;border:none;border-radius:10px;padding:11px;font:800 12px/1 var(--ui);letter-spacing:.4px;cursor:pointer}
+.rec-up:hover{background:#dafd80}
+.rec-up:disabled{opacity:.6;cursor:wait}
+.rec-skip{font-size:11px;color:var(--dim);text-align:center}
+
 /* RADIO/CHECKBOX CARDS */
 .choices{display:flex;flex-direction:column;gap:7px;margin-top:10px}
 .choices.grid2{display:grid;grid-template-columns:1fr 1fr;gap:7px}
@@ -110,7 +123,7 @@ body{padding:32px 24px 80px;background:radial-gradient(ellipse at top,#1a2a4a 0%
 
   <div class="prog">
     <div class="prog-info">
-      <div class="prog-step" id="progStep">Шаг 1 / 10</div>
+      <div class="prog-step" id="progStep">Шаг 1 / 11</div>
       <div class="prog-bar"><div class="prog-fill" id="progFill" style="width:10%"></div></div>
     </div>
     <div class="prog-pct" id="progPct">10%</div>
@@ -283,6 +296,13 @@ const STEPS = [
       ]},
     ]
   },
+  // 11. Voice clone (Day-0 момент истины — Аня озвучит твои Reels твоим голосом)
+  {
+    id: 'voice',
+    tit: 'Запиши свой голос — 30–60 секунд',
+    sub: 'Аня (контент-агент) будет озвучивать твои Reels-сценарии твоим голосом. Прочитай любой свой пост, расскажи про продукт или просто познакомься. Шаг можно пропустить — тогда озвучка будет дефолтной.',
+    field: { key: 'voice_id', type: 'voice', required: false }
+  },
 ];
 
 const TOTAL = STEPS.length;
@@ -313,6 +333,19 @@ function renderStep() {
     }
     else if (f.type === 'textarea') {
       html += `<textarea class="txt" id="f_${f.key}" placeholder="${f.ph||''}">${escapeHTML(val||'')}</textarea>`;
+    }
+    else if (f.type === 'voice') {
+      const savedId = data.voice_id;
+      html += `<div class="voice-rec" data-key="${f.key}">
+        <button type="button" class="rec-btn" id="recBtn">${savedId ? '✅ Голос записан · перезаписать' : '🎙 Начать запись'}</button>
+        <div class="rec-meta">
+          <span class="rec-timer" id="recTimer">0:00</span>
+          <span class="rec-status" id="recStatus">${savedId ? 'Можно идти дальше — Аня уже использует этот голос.' : 'Минимум 30 секунд естественной речи. Без музыки и шумов.'}</span>
+        </div>
+        <audio id="recPlayback" controls hidden></audio>
+        <button type="button" class="rec-up" id="recUpload" hidden>Отправить запись →</button>
+        <div class="rec-skip">Шаг можно пропустить — будем озвучивать дефолтным голосом, пока не запишешь.</div>
+      </div>`;
     }
     else if (f.type === 'radio' || f.type === 'multi') {
       const isMulti = f.type === 'multi';
@@ -383,6 +416,11 @@ function renderStep() {
         if (current === 0 && f.key === 'name' && !val) setTimeout(() => el.focus(), 100);
       }
     }
+  });
+
+  // Voice recorder wire-up (only when current step has type=voice)
+  fields.forEach(f => {
+    if (f && f.type === 'voice') wireVoiceRecorder();
   });
 
   // Progress
@@ -483,7 +521,33 @@ function showError(msg) {
 }
 
 async function sendToBackend() {
-  // Send to Supabase + Telegram if available (from index.html setup)
+  // Always post to our own Postgres-backed /api/leads (single source of truth).
+  // Fire-and-forget; failures don't block redirect.
+  try {
+    fetch('/api/leads', {
+      method: 'POST',
+      headers: {'Content-Type': 'application/json'},
+      body: JSON.stringify({
+        niche: data.niche || '',
+        to_improve: data.focus || [],
+        current_revenue: data.rev_now || '',
+        goal: data.goal90 || '',
+        main_problem: data.pain || '',
+        name: data.name || '',
+        email: data.email || '',
+        telegram: data.tg || '',
+        source: 'aio_onboarding_v2',
+        ref_data: {
+          type: data.type, audience: data.audience, channels: data.channels,
+          team: data.team, budget: data.budget, voice_id: data.voice_id || null,
+          goal1y: data.goal1y, product: data.product, rev_goal: data.rev_goal,
+        }
+      })
+    }).catch(e => console.warn('Lead /api/leads fail:', e.message));
+  } catch {}
+
+  // Legacy: Supabase + Telegram via window.submitLead (from index.html) — оставлено
+  // на переходный период; убрать когда лиды стабильно идут в /api/leads.
   if (typeof submitLead === 'function') {
     submitLead({
       niche: data.niche || '',
@@ -514,6 +578,116 @@ async function sendToBackend() {
 }
 
 function escapeHTML(s) { return (s||'').replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;').replace(/"/g,'&quot;'); }
+
+// ─── Voice recorder ────────────────────────────────────────────────
+// Записывает 30-90 сек через MediaRecorder, загружает в /worker/voice/clone
+// (ElevenLabs Instant Voice Cloning), сохраняет voice_id в data.voice_id.
+let _recState = null; // {recorder, chunks, startedAt, timerId, stream}
+function wireVoiceRecorder() {
+  const btn = document.getElementById('recBtn');
+  const timer = document.getElementById('recTimer');
+  const status = document.getElementById('recStatus');
+  const playback = document.getElementById('recPlayback');
+  const upload = document.getElementById('recUpload');
+  if (!btn) return;
+
+  const setStatus = (t, color) => {
+    status.textContent = t;
+    status.style.color = color || '';
+  };
+
+  btn.onclick = async () => {
+    if (_recState && _recState.recorder?.state === 'recording') {
+      // Stop recording
+      _recState.recorder.stop();
+      _recState.stream.getTracks().forEach(t => t.stop());
+      clearInterval(_recState.timerId);
+      const secs = Math.floor((Date.now() - _recState.startedAt) / 1000);
+      if (secs < 5) {
+        setStatus(`Запись ${secs}с слишком короткая — попробуй ещё раз`, '#f06090');
+        btn.textContent = '🎙 Начать запись';
+        _recState = null;
+        return;
+      }
+      btn.textContent = '🎙 Записать заново';
+      setStatus(`Запись ${secs}с готова — послушай и отправь`, '#c8f060');
+      return;
+    }
+    // Start recording
+    try {
+      const stream = await navigator.mediaDevices.getUserMedia({ audio: { echoCancellation: true, noiseSuppression: true } });
+      const mime = MediaRecorder.isTypeSupported('audio/webm;codecs=opus') ? 'audio/webm;codecs=opus' :
+                   MediaRecorder.isTypeSupported('audio/mp4') ? 'audio/mp4' : '';
+      const recorder = mime ? new MediaRecorder(stream, { mimeType: mime }) : new MediaRecorder(stream);
+      const chunks = [];
+      recorder.ondataavailable = e => { if (e.data?.size > 0) chunks.push(e.data); };
+      recorder.onstop = () => {
+        const blob = new Blob(chunks, { type: recorder.mimeType || 'audio/webm' });
+        playback.src = URL.createObjectURL(blob);
+        playback.hidden = false;
+        upload.hidden = false;
+        upload.dataset.mime = blob.type;
+        upload.onclick = () => uploadVoice(blob, upload, btn, setStatus);
+      };
+      recorder.start();
+      _recState = { recorder, chunks, startedAt: Date.now(), stream };
+      btn.textContent = '⏹ Остановить';
+      playback.hidden = true;
+      upload.hidden = true;
+      setStatus('Идёт запись… говори естественно', '#60c8f0');
+      _recState.timerId = setInterval(() => {
+        const s = Math.floor((Date.now() - _recState.startedAt) / 1000);
+        const m = Math.floor(s / 60);
+        timer.textContent = `${m}:${String(s % 60).padStart(2, '0')}`;
+        if (s >= 90) btn.click(); // auto-stop at 90s
+      }, 500);
+    } catch (e) {
+      setStatus('Нет доступа к микрофону: ' + (e.message || e), '#f06090');
+    }
+  };
+}
+
+async function uploadVoice(blob, btn, recBtn, setStatus) {
+  btn.disabled = true; btn.textContent = 'Загружаю…';
+  setStatus('Загружаю в студию голосового клонирования…', '#60c8f0');
+  try {
+    const b64 = await blobToBase64(blob);
+    const body = {
+      audio_b64: b64,
+      audio_mime: blob.type || 'audio/webm',
+      email: data.email || null,
+      name: data.name || 'AI Growth Office user',
+    };
+    const res = await fetch('/worker/voice/clone', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify(body),
+    });
+    const out = await res.json().catch(() => ({}));
+    if (!res.ok || !out.voice_id) {
+      setStatus('Не удалось склонировать: ' + (out.error || res.status), '#f06090');
+      btn.disabled = false; btn.textContent = 'Повторить';
+      return;
+    }
+    data.voice_id = out.voice_id;
+    save();
+    btn.hidden = true;
+    recBtn.textContent = '✅ Голос записан · перезаписать';
+    setStatus('Готово — Аня будет говорить твоим голосом ✨', '#c8f060');
+  } catch (e) {
+    setStatus('Сбой при загрузке: ' + (e.message || e), '#f06090');
+    btn.disabled = false; btn.textContent = 'Повторить';
+  }
+}
+
+function blobToBase64(blob) {
+  return new Promise((resolve, reject) => {
+    const r = new FileReader();
+    r.onloadend = () => resolve(String(r.result).split(',')[1] || '');
+    r.onerror = reject;
+    r.readAsDataURL(blob);
+  });
+}
 
 // Keyboard navigation
 document.addEventListener('keydown', e => {

@@ -1,0 +1,1813 @@
+<!DOCTYPE html>
+<html lang="ru">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<meta name="theme-color" content="#080808">
+<meta name="color-scheme" content="dark only">
+<title>Persona Studio — AI-контент из твоего лица за 2 минуты</title>
+<meta name="description" content="Загрузи одно фото — получи 10 AI-аватаров, говорящие HeyGen-видео и виральные обложки карусели. Фабрика контента вокруг твоего лица.">
+<style>
+  *, *::before, *::after { margin:0; padding:0; box-sizing:border-box; }
+  html { scroll-behavior:smooth; }
+  html, body { background:#080808; color:#f5f0e8; min-height:100vh; }
+  body {
+    font-family: Georgia, 'Times New Roman', serif;
+    font-size: 15px;
+    line-height: 1.5;
+    -webkit-font-smoothing: antialiased;
+    text-rendering: optimizeLegibility;
+    overflow-x: hidden;
+  }
+
+  /* ── tokens ─────────────────────────────────── */
+  :root {
+    --bg:        #080808;
+    --surface:   #0f0f0f;
+    --surface-2: #141414;
+    --surface-3: #181818;
+    --border:    #1a1a1a;
+    --border-2:  #2a2a2a;
+    --text:      #f5f0e8;
+    --text-dim:  #b8b3a8;
+    --text-mute: #5a5550;
+    --text-faint:#3a3a3a;
+    --lime:      #c8f060;
+    --cyan:      #60c8f0;
+    --pink:      #f06090;
+    --warm:      #f0c860;
+  }
+
+  /* ── utility ────────────────────────────────── */
+  .mono { font-family: 'SF Mono','JetBrains Mono','Menlo',monospace; }
+  .label {
+    font-family: 'SF Mono','JetBrains Mono','Menlo',monospace;
+    font-size: 10px;
+    text-transform: uppercase;
+    letter-spacing: 0.14em;
+    color: var(--text-dim);
+    font-weight: 700;
+  }
+  .it { font-style: italic; }
+  .dim { color: var(--text-dim); }
+  .mute { color: var(--text-mute); }
+  .lime { color: var(--lime); }
+  .cyan { color: var(--cyan); }
+  .pink { color: var(--pink); }
+  .warm { color: var(--warm); }
+  a { color: inherit; text-decoration: none; }
+
+  /* ── shell ──────────────────────────────────── */
+  .shell {
+    max-width: 1480px;
+    margin: 0 auto;
+    padding: 0 24px;
+  }
+
+  /* ── topbar ─────────────────────────────────── */
+  .top {
+    position: sticky;
+    top: 0;
+    z-index: 50;
+    background: rgba(8,8,8,0.88);
+    backdrop-filter: blur(8px);
+    -webkit-backdrop-filter: blur(8px);
+    border-bottom: 1px solid var(--border);
+  }
+  .top-row {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    padding: 14px 0;
+  }
+  .brand {
+    display: flex;
+    align-items: baseline;
+    gap: 10px;
+    font-family: 'SF Mono', monospace;
+    font-size: 12px;
+    letter-spacing: 0.22em;
+    font-weight: 700;
+    text-transform: uppercase;
+  }
+  .brand-dot {
+    width: 7px; height: 7px;
+    background: var(--lime);
+    border-radius: 50%;
+    display: inline-block;
+    transform: translateY(-1px);
+  }
+  .brand-sub { color: var(--text-dim); font-weight: 500; letter-spacing: 0.18em; }
+  .top-nav {
+    display: flex;
+    align-items: center;
+    gap: 28px;
+    font-family: 'SF Mono', monospace;
+    font-size: 11px;
+    letter-spacing: 0.16em;
+    text-transform: uppercase;
+  }
+  .top-nav a { color: var(--text-dim); transition: color .15s; }
+  .top-nav a:hover { color: var(--text); }
+  .top-cta {
+    display: inline-flex;
+    align-items: center;
+    gap: 8px;
+    background: var(--lime);
+    color: #0a1a00;
+    font-family: 'SF Mono', monospace;
+    font-size: 11px;
+    font-weight: 700;
+    letter-spacing: 0.16em;
+    text-transform: uppercase;
+    padding: 9px 14px;
+    border: 1px solid var(--lime);
+    transition: background .15s, transform .15s;
+  }
+  .top-cta:hover { background: #d8ff70; transform: translateY(-1px); }
+  .top-cta::after { content: '↗'; font-family: Georgia, serif; font-size: 14px; transform: translateY(-1px); }
+
+  @media (max-width: 760px) {
+    .top-nav { display: none; }
+  }
+
+  /* ── section headers ────────────────────────── */
+  .sec-head {
+    display: flex;
+    align-items: baseline;
+    gap: 14px;
+    padding: 80px 0 24px;
+  }
+  .sec-head.tight { padding-top: 56px; }
+  .sec-num {
+    font-family: 'SF Mono', monospace;
+    font-size: 10px;
+    color: var(--lime);
+    letter-spacing: 0.22em;
+    font-weight: 700;
+  }
+  .sec-title {
+    font-family: Georgia, serif;
+    font-size: 14px;
+    font-style: italic;
+    color: var(--text-dim);
+  }
+  .sec-spacer {
+    flex: 1;
+    border-bottom: 1px solid var(--border);
+    transform: translateY(-3px);
+  }
+  .sec-meta {
+    font-family: 'SF Mono', monospace;
+    font-size: 10px;
+    color: var(--text-mute);
+    letter-spacing: 0.16em;
+    text-transform: uppercase;
+  }
+
+  /* ── hero ───────────────────────────────────── */
+  .hero {
+    padding: 56px 0 24px;
+    position: relative;
+  }
+  .hero-meta {
+    display: flex;
+    align-items: center;
+    gap: 18px;
+    margin-bottom: 36px;
+  }
+  .hero-meta .pill {
+    display: inline-flex;
+    align-items: center;
+    gap: 8px;
+    border: 1px solid var(--border-2);
+    padding: 5px 11px;
+    font-family: 'SF Mono', monospace;
+    font-size: 10px;
+    letter-spacing: 0.18em;
+    text-transform: uppercase;
+    color: var(--text-dim);
+  }
+  .hero-meta .pill::before {
+    content: '';
+    width: 6px; height: 6px;
+    background: var(--lime);
+    border-radius: 50%;
+    box-shadow: 0 0 6px var(--lime);
+  }
+  .hero-h1 {
+    font-family: Georgia, serif;
+    font-weight: 400;
+    font-size: clamp(48px, 8vw, 116px);
+    line-height: 0.96;
+    letter-spacing: -0.025em;
+    color: var(--text);
+    max-width: 14ch;
+  }
+  .hero-h1 .it {
+    color: var(--warm);
+    font-style: italic;
+  }
+  .hero-h1 .stack { display: block; }
+  .hero-grid {
+    display: grid;
+    grid-template-columns: 1.1fr 1fr;
+    gap: 56px;
+    align-items: end;
+    padding: 36px 0 56px;
+  }
+  .hero-sub {
+    font-family: Georgia, serif;
+    font-size: 19px;
+    line-height: 1.55;
+    color: var(--text-dim);
+    max-width: 44ch;
+  }
+  .hero-sub .lime { color: var(--lime); font-style: italic; }
+  .hero-actions {
+    display: flex;
+    align-items: center;
+    gap: 16px;
+    margin-top: 28px;
+  }
+  .btn-primary {
+    display: inline-flex;
+    align-items: center;
+    gap: 12px;
+    background: var(--lime);
+    color: #0a1a00;
+    font-family: 'SF Mono', monospace;
+    font-size: 12px;
+    font-weight: 700;
+    letter-spacing: 0.16em;
+    text-transform: uppercase;
+    padding: 16px 22px;
+    border: 1px solid var(--lime);
+    transition: background .15s, transform .15s;
+    cursor: pointer;
+  }
+  .btn-primary:hover { background: #d8ff70; transform: translateY(-1px); }
+  .btn-primary .arrow { font-family: Georgia, serif; font-size: 16px; font-style: italic; transform: translateY(-1px); }
+  .btn-ghost {
+    display: inline-flex;
+    align-items: center;
+    gap: 10px;
+    background: transparent;
+    color: var(--text);
+    font-family: 'SF Mono', monospace;
+    font-size: 12px;
+    letter-spacing: 0.16em;
+    text-transform: uppercase;
+    padding: 16px 18px;
+    border: 1px solid var(--border-2);
+    transition: border-color .15s, color .15s;
+    cursor: pointer;
+  }
+  .btn-ghost:hover { border-color: var(--text-dim); }
+  .btn-ghost::after { content: '→'; font-family: Georgia, serif; font-size: 14px; }
+
+  .hero-side {
+    display: grid;
+    grid-template-columns: 1fr 1fr;
+    gap: 2px;
+    background: var(--border);
+    border: 1px solid var(--border);
+  }
+  .hero-stat {
+    background: var(--bg);
+    padding: 22px 20px;
+  }
+  .hero-stat .k {
+    font-family: 'SF Mono', monospace;
+    font-size: 10px;
+    color: var(--text-mute);
+    letter-spacing: 0.16em;
+    text-transform: uppercase;
+    margin-bottom: 10px;
+  }
+  .hero-stat .v {
+    font-family: Georgia, serif;
+    font-size: 42px;
+    line-height: 1;
+    color: var(--text);
+  }
+  .hero-stat .v .small { font-size: 18px; color: var(--text-dim); }
+  .hero-stat .note {
+    margin-top: 8px;
+    font-family: 'SF Mono', monospace;
+    font-size: 10px;
+    color: var(--text-dim);
+    letter-spacing: 0.06em;
+  }
+
+  /* ── avatar tile grid ───────────────────────── */
+  .tiles {
+    display: grid;
+    grid-template-columns: repeat(5, 1fr);
+    gap: 2px;
+    background: var(--border);
+    border: 1px solid var(--border);
+  }
+  .tile {
+    position: relative;
+    aspect-ratio: 4 / 5;
+    overflow: hidden;
+    background: var(--surface);
+    padding: 16px 14px;
+    display: flex;
+    flex-direction: column;
+    justify-content: space-between;
+    transition: transform .25s, filter .25s;
+  }
+  .tile:hover { filter: brightness(1.08); }
+  .tile .num {
+    font-family: 'SF Mono', monospace;
+    font-size: 10px;
+    letter-spacing: 0.22em;
+    color: var(--text-faint);
+    font-weight: 700;
+    align-self: flex-start;
+  }
+  .tile .silhouette {
+    position: absolute;
+    inset: 0;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    pointer-events: none;
+    opacity: 0.95;
+  }
+  .tile .silhouette svg { width: 70%; height: 70%; }
+  .tile .meta { position: relative; z-index: 2; }
+  .tile .meta .name {
+    font-family: Georgia, serif;
+    font-style: italic;
+    font-size: 17px;
+    color: var(--text);
+    line-height: 1.1;
+    letter-spacing: -0.01em;
+  }
+  .tile .meta .style-label {
+    font-family: 'SF Mono', monospace;
+    font-size: 9px;
+    letter-spacing: 0.22em;
+    text-transform: uppercase;
+    color: var(--text-mute);
+    margin-top: 6px;
+    font-weight: 700;
+  }
+  .tile .corner {
+    position: absolute;
+    top: 14px;
+    right: 14px;
+    font-family: 'SF Mono', monospace;
+    font-size: 9px;
+    letter-spacing: 0.18em;
+    color: var(--text-faint);
+    text-transform: uppercase;
+    font-weight: 700;
+    z-index: 2;
+  }
+
+  /* tile color themes — each style has its own palette */
+  .tile.t1  { background: linear-gradient(155deg, #1d0e12 0%, #0a0608 100%); }
+  .tile.t1 .meta .name { color: #e6a880; }
+  .tile.t2  { background: linear-gradient(155deg, #1c1208 0%, #0a0805 100%); }
+  .tile.t2 .meta .name { color: #f0a860; }
+  .tile.t3  { background: linear-gradient(155deg, #0a1c22 0%, #050c10 100%); }
+  .tile.t3 .meta .name { color: #80c8d8; }
+  .tile.t4  { background: linear-gradient(155deg, #221218 0%, #100608 100%); }
+  .tile.t4 .meta .name { color: #f0a0b8; }
+  .tile.t5  { background: linear-gradient(155deg, #0a1428 0%, #050a14 100%); }
+  .tile.t5 .meta .name { color: #80a8e0; }
+  .tile.t6  { background: linear-gradient(155deg, #2a0a20 0%, #14050f 100%); }
+  .tile.t6 .meta .name { color: #f060a0; }
+  .tile.t7  { background: linear-gradient(155deg, #1a1a1a 0%, #0a0a0a 100%); }
+  .tile.t7 .meta .name { color: #d8d4cc; }
+  .tile.t8  { background: linear-gradient(155deg, #0d0d0d 0%, #050505 100%); }
+  .tile.t8 .meta .name { color: var(--warm); }
+  .tile.t9  { background: linear-gradient(155deg, #122810 0%, #061008 100%); }
+  .tile.t9 .meta .name { color: var(--lime); }
+  .tile.t10 { background: linear-gradient(155deg, #1c1c1c 0%, #0e0e0e 100%); }
+  .tile.t10 .meta .name { color: #ece6da; }
+
+  .tile .silhouette circle.head { fill: rgba(255,255,255,0.06); }
+  .tile .silhouette path.body { fill: rgba(255,255,255,0.05); }
+  .tile.t8 .silhouette circle.head { fill: rgba(240,200,96,0.08); }
+  .tile.t9 .silhouette circle.head { fill: rgba(200,240,96,0.10); }
+
+  .tile.placeholder {
+    background: repeating-linear-gradient(
+      135deg,
+      var(--bg) 0px, var(--bg) 14px,
+      var(--surface) 14px, var(--surface) 15px
+    );
+    cursor: pointer;
+  }
+  .tile.placeholder .ph-text {
+    position: relative;
+    z-index: 2;
+    align-self: center;
+    margin-top: auto;
+    margin-bottom: auto;
+    text-align: center;
+    width: 100%;
+  }
+  .tile.placeholder .ph-text .it {
+    font-family: Georgia, serif;
+    font-style: italic;
+    font-size: 19px;
+    color: var(--text);
+    line-height: 1.2;
+  }
+  .tile.placeholder .ph-text .l {
+    font-family: 'SF Mono', monospace;
+    font-size: 10px;
+    letter-spacing: 0.22em;
+    text-transform: uppercase;
+    color: var(--lime);
+    margin-top: 10px;
+    font-weight: 700;
+  }
+
+  @media (max-width: 1100px) {
+    .tiles { grid-template-columns: repeat(4, 1fr); }
+  }
+  @media (max-width: 820px) {
+    .hero-grid { grid-template-columns: 1fr; gap: 28px; padding: 24px 0 40px; }
+    .tiles { grid-template-columns: repeat(2, 1fr); }
+    .hero-actions { flex-wrap: wrap; }
+  }
+
+  /* ── how it works ───────────────────────────── */
+  .steps {
+    display: grid;
+    grid-template-columns: repeat(3, 1fr);
+    gap: 2px;
+    background: var(--border);
+    border: 1px solid var(--border);
+  }
+  .step {
+    background: var(--surface);
+    padding: 32px 28px 36px;
+    position: relative;
+    display: flex;
+    flex-direction: column;
+    min-height: 320px;
+  }
+  .step .step-num {
+    font-family: 'SF Mono', monospace;
+    font-size: 11px;
+    color: var(--lime);
+    letter-spacing: 0.22em;
+    font-weight: 700;
+    margin-bottom: 18px;
+  }
+  .step .step-title {
+    font-family: Georgia, serif;
+    font-style: italic;
+    font-size: 32px;
+    line-height: 1.05;
+    color: var(--text);
+    margin-bottom: 16px;
+    letter-spacing: -0.01em;
+  }
+  .step .step-body {
+    font-family: Georgia, serif;
+    font-size: 15px;
+    line-height: 1.55;
+    color: var(--text-dim);
+    margin-bottom: 24px;
+    max-width: 36ch;
+  }
+  .step .step-tags {
+    margin-top: auto;
+    display: flex;
+    flex-wrap: wrap;
+    gap: 6px;
+  }
+  .chip {
+    font-family: 'SF Mono', monospace;
+    font-size: 9px;
+    padding: 4px 9px;
+    letter-spacing: 0.14em;
+    font-weight: 700;
+    text-transform: uppercase;
+    background: var(--surface-2);
+    color: var(--text-dim);
+    border: 1px solid var(--border-2);
+  }
+  .chip.lime { background: #1b2a0c; color: var(--lime); border-color: #2a3a14; }
+  .chip.cyan { background: #0c1d28; color: var(--cyan); border-color: #14283a; }
+  .chip.pink { background: #28121b; color: var(--pink); border-color: #3a1822; }
+
+  @media (max-width: 900px) {
+    .steps { grid-template-columns: 1fr; }
+  }
+
+  /* ── styles section ─────────────────────────── */
+  .styles-grid {
+    display: grid;
+    grid-template-columns: repeat(2, 1fr);
+    gap: 2px;
+    background: var(--border);
+    border: 1px solid var(--border);
+  }
+  .style-row {
+    background: var(--surface);
+    padding: 22px 24px;
+    display: grid;
+    grid-template-columns: 56px 1fr auto;
+    gap: 18px;
+    align-items: center;
+    transition: background .15s;
+  }
+  .style-row:hover { background: var(--surface-2); }
+  .style-row .sr-num {
+    font-family: 'SF Mono', monospace;
+    font-size: 22px;
+    color: var(--text-faint);
+    font-weight: 700;
+    letter-spacing: 0.04em;
+  }
+  .style-row .sr-name {
+    font-family: Georgia, serif;
+    font-style: italic;
+    font-size: 22px;
+    color: var(--text);
+    letter-spacing: -0.01em;
+    line-height: 1.1;
+  }
+  .style-row .sr-desc {
+    font-family: 'SF Mono', monospace;
+    font-size: 10px;
+    color: var(--text-mute);
+    letter-spacing: 0.12em;
+    text-transform: uppercase;
+    margin-top: 4px;
+  }
+  .style-row .sr-swatch {
+    width: 36px; height: 44px;
+    border: 1px solid var(--border-2);
+    background: linear-gradient(160deg, var(--surface-3), var(--bg));
+  }
+  .style-row.t1 .sr-swatch { background: linear-gradient(160deg, #3d1e22, #1a0c10); }
+  .style-row.t2 .sr-swatch { background: linear-gradient(160deg, #3a2410, #18100a); }
+  .style-row.t3 .sr-swatch { background: linear-gradient(160deg, #143844, #08161c); }
+  .style-row.t4 .sr-swatch { background: linear-gradient(160deg, #441e2a, #1c0c14); }
+  .style-row.t5 .sr-swatch { background: linear-gradient(160deg, #102348, #060d1a); }
+  .style-row.t6 .sr-swatch { background: linear-gradient(160deg, #4a1338, #1e0612); }
+  .style-row.t7 .sr-swatch { background: linear-gradient(160deg, #2a2a2a, #0e0e0e); }
+  .style-row.t8 .sr-swatch { background: linear-gradient(160deg, #1a1a18, #050504); border-color: #2a2620; }
+  .style-row.t9 .sr-swatch { background: linear-gradient(160deg, #1f3c12, #08160a); }
+  .style-row.t10 .sr-swatch { background: linear-gradient(160deg, #d4cfc4, #6a6660); border-color: #443f38; }
+
+  @media (max-width: 760px) {
+    .styles-grid { grid-template-columns: 1fr; }
+    .style-row { padding: 18px 18px; grid-template-columns: 38px 1fr auto; gap: 14px; }
+    .style-row .sr-name { font-size: 18px; }
+  }
+
+  /* ── outputs section (video + cover) ────────── */
+  .outputs {
+    display: grid;
+    grid-template-columns: 1fr 1fr;
+    gap: 2px;
+    background: var(--border);
+    border: 1px solid var(--border);
+  }
+  .output {
+    background: var(--surface);
+    padding: 32px 30px 36px;
+    display: flex;
+    flex-direction: column;
+  }
+  .output .o-tag {
+    font-family: 'SF Mono', monospace;
+    font-size: 10px;
+    letter-spacing: 0.22em;
+    text-transform: uppercase;
+    font-weight: 700;
+    margin-bottom: 14px;
+  }
+  .output.heygen .o-tag { color: var(--cyan); }
+  .output.cover .o-tag { color: var(--pink); }
+  .output .o-title {
+    font-family: Georgia, serif;
+    font-style: italic;
+    font-size: 38px;
+    line-height: 1.05;
+    color: var(--text);
+    margin-bottom: 14px;
+    letter-spacing: -0.015em;
+  }
+  .output .o-sub {
+    font-family: Georgia, serif;
+    font-size: 16px;
+    line-height: 1.55;
+    color: var(--text-dim);
+    margin-bottom: 24px;
+    max-width: 42ch;
+  }
+  .output .o-preview {
+    background: var(--surface-2);
+    border: 1px solid var(--border-2);
+    padding: 22px 22px;
+    margin-bottom: 22px;
+    min-height: 240px;
+    position: relative;
+    overflow: hidden;
+  }
+  .output.heygen .o-preview {
+    background: linear-gradient(170deg, #0a1820 0%, #051018 60%, #04080d 100%);
+  }
+  .output.cover .o-preview {
+    background: linear-gradient(170deg, #2a0a20 0%, #14050f 100%);
+  }
+  .o-preview .pv-label {
+    position: absolute;
+    top: 16px;
+    left: 18px;
+    font-family: 'SF Mono', monospace;
+    font-size: 10px;
+    color: var(--text-mute);
+    letter-spacing: 0.16em;
+    text-transform: uppercase;
+  }
+  .o-preview .pv-meta {
+    position: absolute;
+    bottom: 16px;
+    right: 18px;
+    font-family: 'SF Mono', monospace;
+    font-size: 9px;
+    color: var(--text-mute);
+    letter-spacing: 0.16em;
+    text-transform: uppercase;
+  }
+  .o-preview .pv-content {
+    margin-top: 38px;
+    font-family: Georgia, serif;
+  }
+  .output.heygen .pv-content {
+    color: #c8e4f0;
+    font-style: italic;
+    font-size: 22px;
+    line-height: 1.35;
+    max-width: 24ch;
+  }
+  .output.heygen .pv-bar {
+    position: absolute;
+    bottom: 50px;
+    left: 18px; right: 18px;
+    height: 2px;
+    background: rgba(96,200,240,0.16);
+  }
+  .output.heygen .pv-bar::after {
+    content: '';
+    position: absolute;
+    inset: 0 60% 0 0;
+    background: var(--cyan);
+  }
+  .output.heygen .pv-time {
+    position: absolute;
+    bottom: 30px;
+    left: 18px;
+    font-family: 'SF Mono', monospace;
+    font-size: 9px;
+    color: var(--cyan);
+    letter-spacing: 0.14em;
+  }
+  .output.cover .pv-content {
+    color: var(--text);
+    font-family: Georgia, serif;
+    font-weight: 400;
+    font-size: 28px;
+    line-height: 1.05;
+    letter-spacing: -0.01em;
+    text-transform: uppercase;
+  }
+  .output.cover .pv-content .accent { color: var(--pink); font-style: italic; text-transform: none; display: block; margin-top: 4px; }
+  .output.cover .pv-cta {
+    position: absolute;
+    bottom: 30px;
+    left: 18px;
+    font-family: 'SF Mono', monospace;
+    font-size: 10px;
+    color: var(--pink);
+    letter-spacing: 0.22em;
+    text-transform: uppercase;
+    font-weight: 700;
+  }
+
+  .output ul.o-list {
+    list-style: none;
+    margin-top: auto;
+    border-top: 1px solid var(--border);
+    padding-top: 16px;
+  }
+  .output ul.o-list li {
+    display: flex;
+    align-items: baseline;
+    gap: 10px;
+    padding: 6px 0;
+    font-family: Georgia, serif;
+    font-size: 14px;
+    color: var(--text-dim);
+  }
+  .output ul.o-list li::before {
+    content: '+';
+    font-family: 'SF Mono', monospace;
+    font-size: 11px;
+    color: var(--lime);
+    font-weight: 700;
+    transform: translateY(-1px);
+  }
+
+  @media (max-width: 900px) {
+    .outputs { grid-template-columns: 1fr; }
+  }
+
+  /* ── use cases ──────────────────────────────── */
+  .cases {
+    display: grid;
+    grid-template-columns: repeat(4, 1fr);
+    gap: 2px;
+    background: var(--border);
+    border: 1px solid var(--border);
+  }
+  .case {
+    background: var(--surface);
+    padding: 24px 22px 28px;
+    display: flex;
+    flex-direction: column;
+    min-height: 220px;
+  }
+  .case .ch {
+    font-family: 'SF Mono', monospace;
+    font-size: 10px;
+    letter-spacing: 0.22em;
+    text-transform: uppercase;
+    font-weight: 700;
+    color: var(--cyan);
+    margin-bottom: 14px;
+  }
+  .case .ct {
+    font-family: Georgia, serif;
+    font-style: italic;
+    font-size: 22px;
+    line-height: 1.15;
+    color: var(--text);
+    margin-bottom: 12px;
+    letter-spacing: -0.005em;
+  }
+  .case .cs {
+    font-family: Georgia, serif;
+    font-size: 14px;
+    line-height: 1.5;
+    color: var(--text-dim);
+  }
+  .case .cfoot {
+    margin-top: auto;
+    padding-top: 18px;
+    border-top: 1px solid var(--border);
+    font-family: 'SF Mono', monospace;
+    font-size: 9px;
+    letter-spacing: 0.16em;
+    text-transform: uppercase;
+    color: var(--text-mute);
+  }
+
+  @media (max-width: 980px) {
+    .cases { grid-template-columns: repeat(2, 1fr); }
+  }
+  @media (max-width: 540px) {
+    .cases { grid-template-columns: 1fr; }
+  }
+
+  /* ── pricing ────────────────────────────────── */
+  .pricing {
+    border: 1px solid var(--border);
+  }
+  .price-row {
+    display: grid;
+    grid-template-columns: 1fr 1.2fr 1.4fr auto;
+    align-items: center;
+    gap: 22px;
+    padding: 28px 26px;
+    background: var(--surface);
+    border-bottom: 1px solid var(--border);
+  }
+  .price-row:last-child { border-bottom: none; }
+  .price-row.featured {
+    background: linear-gradient(170deg, #0e1605 0%, var(--surface) 80%);
+    border-left: 2px solid var(--lime);
+    padding-left: 24px;
+  }
+  .price-row .pr-name {
+    display: flex;
+    flex-direction: column;
+    gap: 6px;
+  }
+  .price-row .pr-name .n {
+    font-family: Georgia, serif;
+    font-style: italic;
+    font-size: 24px;
+    color: var(--text);
+    letter-spacing: -0.005em;
+  }
+  .price-row .pr-name .badge {
+    font-family: 'SF Mono', monospace;
+    font-size: 9px;
+    letter-spacing: 0.22em;
+    text-transform: uppercase;
+    color: var(--lime);
+    font-weight: 700;
+  }
+  .price-row .pr-price {
+    font-family: Georgia, serif;
+    font-size: 36px;
+    color: var(--text);
+    line-height: 1;
+    letter-spacing: -0.01em;
+  }
+  .price-row .pr-price .small {
+    font-family: 'SF Mono', monospace;
+    font-size: 11px;
+    color: var(--text-dim);
+    letter-spacing: 0.1em;
+    text-transform: uppercase;
+    margin-left: 4px;
+  }
+  .price-row .pr-free .pr-price {
+    color: var(--text-dim);
+  }
+  .price-row .pr-feats {
+    font-family: 'SF Mono', monospace;
+    font-size: 11px;
+    letter-spacing: 0.06em;
+    color: var(--text-dim);
+    line-height: 1.7;
+  }
+  .price-row .pr-feats span { white-space: nowrap; }
+  .price-row .pr-feats .sep { color: var(--text-faint); margin: 0 8px; }
+  .price-row .pr-action {
+    display: inline-flex;
+    align-items: center;
+    gap: 8px;
+    border: 1px solid var(--border-2);
+    background: var(--surface);
+    padding: 12px 18px;
+    font-family: 'SF Mono', monospace;
+    font-size: 11px;
+    letter-spacing: 0.16em;
+    text-transform: uppercase;
+    color: var(--text);
+    transition: border-color .15s, background .15s;
+    cursor: pointer;
+  }
+  .price-row .pr-action:hover { border-color: var(--text-dim); }
+  .price-row.featured .pr-action {
+    background: var(--lime);
+    color: #0a1a00;
+    border-color: var(--lime);
+    font-weight: 700;
+  }
+  .price-row.featured .pr-action:hover { background: #d8ff70; }
+
+  @media (max-width: 980px) {
+    .price-row { grid-template-columns: 1fr 1fr; gap: 18px; padding: 22px 20px; }
+    .price-row .pr-feats { grid-column: span 2; }
+    .price-row .pr-action { grid-column: span 2; justify-self: start; }
+  }
+
+  /* ── FAQ ────────────────────────────────────── */
+  .faq {
+    border: 1px solid var(--border);
+  }
+  .faq details {
+    background: var(--surface);
+    border-bottom: 1px solid var(--border);
+    cursor: pointer;
+  }
+  .faq details:last-child { border-bottom: none; }
+  .faq summary {
+    list-style: none;
+    padding: 22px 26px;
+    display: flex;
+    align-items: baseline;
+    justify-content: space-between;
+    gap: 24px;
+    font-family: Georgia, serif;
+    font-style: italic;
+    font-size: 20px;
+    color: var(--text);
+    letter-spacing: -0.005em;
+  }
+  .faq summary::-webkit-details-marker { display: none; }
+  .faq summary::after {
+    content: '+';
+    font-family: 'SF Mono', monospace;
+    font-size: 22px;
+    color: var(--lime);
+    font-weight: 400;
+    transition: transform .2s;
+    transform-origin: center;
+  }
+  .faq details[open] summary::after { content: '−'; }
+  .faq .faq-body {
+    padding: 0 26px 26px;
+    max-width: 70ch;
+    font-family: Georgia, serif;
+    font-size: 15px;
+    line-height: 1.6;
+    color: var(--text-dim);
+  }
+
+  /* ── final CTA ──────────────────────────────── */
+  .cta-block {
+    margin-top: 80px;
+    border: 1px solid var(--border);
+    background:
+      radial-gradient(ellipse at top right, rgba(200,240,96,0.06) 0%, transparent 60%),
+      linear-gradient(180deg, #0a0e06 0%, var(--surface) 60%);
+    padding: 72px 56px 76px;
+    display: grid;
+    grid-template-columns: 1.4fr 1fr;
+    gap: 56px;
+    align-items: center;
+  }
+  .cta-block .cta-meta {
+    font-family: 'SF Mono', monospace;
+    font-size: 10px;
+    letter-spacing: 0.22em;
+    text-transform: uppercase;
+    color: var(--lime);
+    font-weight: 700;
+    margin-bottom: 18px;
+  }
+  .cta-block .cta-title {
+    font-family: Georgia, serif;
+    font-size: clamp(40px, 5.5vw, 72px);
+    line-height: 1.0;
+    color: var(--text);
+    letter-spacing: -0.02em;
+    margin-bottom: 18px;
+  }
+  .cta-block .cta-title .it { color: var(--warm); font-style: italic; }
+  .cta-block .cta-sub {
+    font-family: Georgia, serif;
+    font-size: 17px;
+    line-height: 1.55;
+    color: var(--text-dim);
+    max-width: 44ch;
+    margin-bottom: 28px;
+  }
+  .cta-block .cta-side {
+    display: grid;
+    gap: 2px;
+    background: var(--border-2);
+    border: 1px solid var(--border-2);
+  }
+  .cta-side .row {
+    display: flex;
+    justify-content: space-between;
+    background: var(--surface);
+    padding: 14px 18px;
+    font-family: 'SF Mono', monospace;
+    font-size: 11px;
+    letter-spacing: 0.06em;
+  }
+  .cta-side .row .k { color: var(--text-dim); text-transform: uppercase; letter-spacing: 0.18em; }
+  .cta-side .row .v { color: var(--text); }
+  .cta-side .row .v.lime { color: var(--lime); }
+
+  @media (max-width: 900px) {
+    .cta-block { grid-template-columns: 1fr; padding: 48px 28px; gap: 32px; }
+  }
+
+  /* ── footer ─────────────────────────────────── */
+  footer {
+    margin-top: 80px;
+    border-top: 1px solid var(--border);
+    padding: 32px 0 64px;
+  }
+  .foot-row {
+    display: grid;
+    grid-template-columns: 1.4fr repeat(3, 1fr);
+    gap: 32px;
+  }
+  .foot-brand {
+    display: flex;
+    flex-direction: column;
+    gap: 14px;
+  }
+  .foot-brand .bn {
+    font-family: 'SF Mono', monospace;
+    font-size: 12px;
+    letter-spacing: 0.22em;
+    font-weight: 700;
+    text-transform: uppercase;
+  }
+  .foot-brand .bs {
+    font-family: Georgia, serif;
+    font-style: italic;
+    font-size: 14px;
+    color: var(--text-dim);
+    max-width: 30ch;
+  }
+  .foot-col h5 {
+    font-family: 'SF Mono', monospace;
+    font-size: 10px;
+    letter-spacing: 0.22em;
+    text-transform: uppercase;
+    color: var(--text-mute);
+    margin-bottom: 14px;
+    font-weight: 700;
+  }
+  .foot-col a {
+    display: block;
+    font-family: 'SF Mono', monospace;
+    font-size: 11px;
+    color: var(--text-dim);
+    padding: 4px 0;
+    letter-spacing: 0.05em;
+    transition: color .12s;
+  }
+  .foot-col a:hover { color: var(--text); }
+  .foot-bottom {
+    margin-top: 32px;
+    padding-top: 18px;
+    border-top: 1px solid var(--border);
+    display: flex;
+    justify-content: space-between;
+    align-items: baseline;
+    font-family: 'SF Mono', monospace;
+    font-size: 10px;
+    color: var(--text-mute);
+    letter-spacing: 0.18em;
+    text-transform: uppercase;
+  }
+
+  @media (max-width: 760px) {
+    .foot-row { grid-template-columns: 1fr 1fr; }
+    .foot-brand { grid-column: span 2; }
+  }
+
+  /* ── micro-animations ───────────────────────── */
+  @keyframes rise {
+    from { opacity: 0; transform: translateY(8px); }
+    to   { opacity: 1; transform: translateY(0); }
+  }
+  .rise { animation: rise .55s ease-out both; }
+  .rise.d1 { animation-delay: .05s; }
+  .rise.d2 { animation-delay: .12s; }
+  .rise.d3 { animation-delay: .20s; }
+  .rise.d4 { animation-delay: .28s; }
+  .rise.d5 { animation-delay: .36s; }
+
+  @keyframes blink {
+    0%, 100% { opacity: 1; }
+    50% { opacity: 0.4; }
+  }
+  .blink { animation: blink 1.6s ease-in-out infinite; }
+</style>
+</head>
+<body>
+
+<!-- ── TOP ────────────────────────────────────── -->
+<div class="top">
+  <div class="shell top-row">
+    <a href="#" class="brand">
+      <span class="brand-dot"></span>
+      <span>Persona Studio</span>
+      <span class="brand-sub">v0.1 · beta</span>
+    </a>
+    <nav class="top-nav">
+      <a href="#how">Как работает</a>
+      <a href="#styles">Стили</a>
+      <a href="#outputs">Что получаешь</a>
+      <a href="#pricing">Тарифы</a>
+      <a href="#faq">FAQ</a>
+    </nav>
+    <a href="#cta" class="top-cta">Создать аватара</a>
+  </div>
+</div>
+
+<main class="shell">
+
+  <!-- ── HERO ─────────────────────────────────── -->
+  <section class="hero">
+    <div class="hero-meta rise">
+      <span class="pill">Persona Studio &nbsp;/&nbsp;&nbsp;Established 2026</span>
+      <span class="label">Nano Banana 2 · HeyGen · Gemini 3.1</span>
+    </div>
+
+    <h1 class="hero-h1 rise d1">
+      <span class="stack">Фабрика контента</span>
+      <span class="stack it">из твоего лица.</span>
+    </h1>
+
+    <div class="hero-grid">
+      <div>
+        <p class="hero-sub rise d2">
+          Загрузи одно фото — получи <span class="lime">10 AI-аватаров</span> в кинематографичных стилях.
+          Дальше — превращай их в говорящие HeyGen-видео или виральные обложки карусели. За 2 минуты,
+          из браузера, без съёмки и монтажа.
+        </p>
+        <div class="hero-actions rise d3">
+          <a href="#cta" class="btn-primary">
+            Загрузить фото
+            <span class="arrow">↗</span>
+          </a>
+          <a href="#outputs" class="btn-ghost">Смотреть примеры</a>
+        </div>
+      </div>
+
+      <div class="hero-side rise d4">
+        <div class="hero-stat">
+          <div class="k">Avatars per upload</div>
+          <div class="v">10<span class="small"> / 1 фото</span></div>
+          <div class="note">Каждый — отдельный режиссёрский стиль</div>
+        </div>
+        <div class="hero-stat">
+          <div class="k">Avg time to first cover</div>
+          <div class="v">≈ 2:00<span class="small"> мин</span></div>
+          <div class="note">Upload → generate → export PNG</div>
+        </div>
+        <div class="hero-stat">
+          <div class="k">Languages for HeyGen</div>
+          <div class="v">40+<span class="small"> голосов</span></div>
+          <div class="note">RU / EN / ES / DE / IT / FR …</div>
+        </div>
+        <div class="hero-stat">
+          <div class="k">Face identity</div>
+          <div class="v cyan">preserved</div>
+          <div class="note">Узнаваемость через все 10 стилей</div>
+        </div>
+      </div>
+    </div>
+
+    <!-- 10-tile avatar grid (placeholder style) -->
+    <div class="tiles rise d5">
+      <!-- shared silhouette SVG used in tiles -->
+      <!-- 1 -->
+      <div class="tile t1">
+        <span class="num">/01</span>
+        <span class="corner">Style</span>
+        <div class="silhouette">
+          <svg viewBox="0 0 100 130" preserveAspectRatio="xMidYMid meet">
+            <circle class="head" cx="50" cy="45" r="22"/>
+            <path class="body" d="M10 130 C 10 90, 30 75, 50 75 C 70 75, 90 90, 90 130 Z"/>
+          </svg>
+        </div>
+        <div class="meta">
+          <div class="name">Luxury Founder</div>
+          <div class="style-label">deep / editorial</div>
+        </div>
+      </div>
+      <!-- 2 -->
+      <div class="tile t2">
+        <span class="num">/02</span>
+        <span class="corner">Style</span>
+        <div class="silhouette">
+          <svg viewBox="0 0 100 130" preserveAspectRatio="xMidYMid meet">
+            <circle class="head" cx="50" cy="45" r="22"/>
+            <path class="body" d="M10 130 C 10 90, 30 75, 50 75 C 70 75, 90 90, 90 130 Z"/>
+          </svg>
+        </div>
+        <div class="meta">
+          <div class="name">Podcast Studio</div>
+          <div class="style-label">warm / ambient</div>
+        </div>
+      </div>
+      <!-- 3 -->
+      <div class="tile t3">
+        <span class="num">/03</span>
+        <span class="corner">Style</span>
+        <div class="silhouette">
+          <svg viewBox="0 0 100 130" preserveAspectRatio="xMidYMid meet">
+            <circle class="head" cx="50" cy="45" r="22"/>
+            <path class="body" d="M10 130 C 10 90, 30 75, 50 75 C 70 75, 90 90, 90 130 Z"/>
+          </svg>
+        </div>
+        <div class="meta">
+          <div class="name">Cinematic Creator</div>
+          <div class="style-label">teal / film grain</div>
+        </div>
+      </div>
+      <!-- 4 -->
+      <div class="tile t4">
+        <span class="num">/04</span>
+        <span class="corner">Style</span>
+        <div class="silhouette">
+          <svg viewBox="0 0 100 130" preserveAspectRatio="xMidYMid meet">
+            <circle class="head" cx="50" cy="45" r="22"/>
+            <path class="body" d="M10 130 C 10 90, 30 75, 50 75 C 70 75, 90 90, 90 130 Z"/>
+          </svg>
+        </div>
+        <div class="meta">
+          <div class="name">Instagram Educator</div>
+          <div class="style-label">soft / approachable</div>
+        </div>
+      </div>
+      <!-- 5 -->
+      <div class="tile t5">
+        <span class="num">/05</span>
+        <span class="corner">Style</span>
+        <div class="silhouette">
+          <svg viewBox="0 0 100 130" preserveAspectRatio="xMidYMid meet">
+            <circle class="head" cx="50" cy="45" r="22"/>
+            <path class="body" d="M10 130 C 10 90, 30 75, 50 75 C 70 75, 90 90, 90 130 Z"/>
+          </svg>
+        </div>
+        <div class="meta">
+          <div class="name">Tech Entrepreneur</div>
+          <div class="style-label">electric / clean</div>
+        </div>
+      </div>
+      <!-- 6 -->
+      <div class="tile t6">
+        <span class="num">/06</span>
+        <span class="corner">Style</span>
+        <div class="silhouette">
+          <svg viewBox="0 0 100 130" preserveAspectRatio="xMidYMid meet">
+            <circle class="head" cx="50" cy="45" r="22"/>
+            <path class="body" d="M10 130 C 10 90, 30 75, 50 75 C 70 75, 90 90, 90 130 Z"/>
+          </svg>
+        </div>
+        <div class="meta">
+          <div class="name">Viral Reels Cover</div>
+          <div class="style-label">magenta / pop</div>
+        </div>
+      </div>
+      <!-- 7 -->
+      <div class="tile t7">
+        <span class="num">/07</span>
+        <span class="corner">Style</span>
+        <div class="silhouette">
+          <svg viewBox="0 0 100 130" preserveAspectRatio="xMidYMid meet">
+            <circle class="head" cx="50" cy="45" r="22"/>
+            <path class="body" d="M10 130 C 10 90, 30 75, 50 75 C 70 75, 90 90, 90 130 Z"/>
+          </svg>
+        </div>
+        <div class="meta">
+          <div class="name">Editorial Fashion</div>
+          <div class="style-label">mono / vogue</div>
+        </div>
+      </div>
+      <!-- 8 -->
+      <div class="tile t8">
+        <span class="num">/08</span>
+        <span class="corner">Style</span>
+        <div class="silhouette">
+          <svg viewBox="0 0 100 130" preserveAspectRatio="xMidYMid meet">
+            <circle class="head" cx="50" cy="45" r="22"/>
+            <path class="body" d="M10 130 C 10 90, 30 75, 50 75 C 70 75, 90 90, 90 130 Z"/>
+          </svg>
+        </div>
+        <div class="meta">
+          <div class="name">Dark Premium</div>
+          <div class="style-label">noir / golden trim</div>
+        </div>
+      </div>
+      <!-- 9 -->
+      <div class="tile t9">
+        <span class="num">/09</span>
+        <span class="corner">Style</span>
+        <div class="silhouette">
+          <svg viewBox="0 0 100 130" preserveAspectRatio="xMidYMid meet">
+            <circle class="head" cx="50" cy="45" r="22"/>
+            <path class="body" d="M10 130 C 10 90, 30 75, 50 75 C 70 75, 90 90, 90 130 Z"/>
+          </svg>
+        </div>
+        <div class="meta">
+          <div class="name">AI Visionary</div>
+          <div class="style-label">neon / futurist</div>
+        </div>
+      </div>
+      <!-- 10 / placeholder = your upload -->
+      <div class="tile placeholder t10">
+        <span class="num">/10</span>
+        <span class="corner lime blink">Your face</span>
+        <div class="ph-text">
+          <div class="it">Загрузи фото —<br/>11-й аватар твой</div>
+          <div class="l">Upload to begin →</div>
+        </div>
+      </div>
+    </div>
+  </section>
+
+
+  <!-- ── /01 — HOW IT WORKS ───────────────────── -->
+  <section id="how">
+    <div class="sec-head">
+      <span class="sec-num">/01</span>
+      <span class="sec-title">Как это работает</span>
+      <span class="sec-spacer"></span>
+      <span class="sec-meta">3 шага · 2 минуты</span>
+    </div>
+
+    <div class="steps">
+      <div class="step">
+        <div class="step-num">/A · UPLOAD</div>
+        <h3 class="step-title">Одно фото — и хватит.</h3>
+        <p class="step-body">
+          JPG, PNG или короткое видео. Лицо в фокусе, нейтральный фон.
+          Никаких сложных съёмок. 20 секунд — и можно идти дальше.
+        </p>
+        <div class="step-tags">
+          <span class="chip">JPG · PNG · MP4</span>
+          <span class="chip">до 20 MB</span>
+          <span class="chip">512 × 512+</span>
+          <span class="chip lime">Лицо в фокусе</span>
+        </div>
+      </div>
+
+      <div class="step">
+        <div class="step-num">/B · GENERATE</div>
+        <h3 class="step-title">10 аватаров — за раз.</h3>
+        <p class="step-body">
+          Nano Banana 2 строит 10 кинематографичных портретов в разных
+          режиссёрских стилях. Лицо сохраняется — стиль меняется.
+        </p>
+        <div class="step-tags">
+          <span class="chip cyan">Nano Banana 2</span>
+          <span class="chip cyan">Gemini Image API</span>
+          <span class="chip">Face identity preserved</span>
+          <span class="chip">~60 sec</span>
+        </div>
+      </div>
+
+      <div class="step">
+        <div class="step-num">/C · EXPORT</div>
+        <h3 class="step-title">Видео или обложка — на выбор.</h3>
+        <p class="step-body">
+          Выбираешь любимый аватар — и собираешь либо HeyGen-видео
+          (говорящий аватар), либо обложку карусели с текстом. PNG / MP4 —
+          готово к публикации.
+        </p>
+        <div class="step-tags">
+          <span class="chip pink">HeyGen Video</span>
+          <span class="chip pink">Carousel Cover</span>
+          <span class="chip">PNG · MP4</span>
+          <span class="chip lime">Ready to post</span>
+        </div>
+      </div>
+    </div>
+  </section>
+
+
+  <!-- ── /02 — STYLES ─────────────────────────── -->
+  <section id="styles">
+    <div class="sec-head">
+      <span class="sec-num">/02</span>
+      <span class="sec-title">Десять режиссёрских стилей</span>
+      <span class="sec-spacer"></span>
+      <span class="sec-meta">10 / per upload</span>
+    </div>
+
+    <div class="styles-grid">
+      <div class="style-row t1">
+        <div class="sr-num">01</div>
+        <div>
+          <div class="sr-name">Luxury Founder</div>
+          <div class="sr-desc">Кабинет / тёплый свет / премиум-портрет</div>
+        </div>
+        <div class="sr-swatch"></div>
+      </div>
+      <div class="style-row t2">
+        <div class="sr-num">02</div>
+        <div>
+          <div class="sr-name">Podcast Studio</div>
+          <div class="sr-desc">Микрофон в фокусе / янтарные блики / контент-режиссура</div>
+        </div>
+        <div class="sr-swatch"></div>
+      </div>
+      <div class="style-row t3">
+        <div class="sr-num">03</div>
+        <div>
+          <div class="sr-name">Cinematic Creator</div>
+          <div class="sr-desc">Film grain / teal &amp; orange / широкий объектив</div>
+        </div>
+        <div class="sr-swatch"></div>
+      </div>
+      <div class="style-row t4">
+        <div class="sr-num">04</div>
+        <div>
+          <div class="sr-name">Instagram Educator</div>
+          <div class="sr-desc">Чистый фон / мягкий свет / готов под Reels-cover</div>
+        </div>
+        <div class="sr-swatch"></div>
+      </div>
+      <div class="style-row t5">
+        <div class="sr-num">05</div>
+        <div>
+          <div class="sr-name">Tech Entrepreneur</div>
+          <div class="sr-desc">LED-фон / cyan accent / Y Combinator vibes</div>
+        </div>
+        <div class="sr-swatch"></div>
+      </div>
+      <div class="style-row t6">
+        <div class="sr-num">06</div>
+        <div>
+          <div class="sr-name">Viral Reels Cover</div>
+          <div class="sr-desc">Magenta pop / hi-contrast / hook-готовый кадр</div>
+        </div>
+        <div class="sr-swatch"></div>
+      </div>
+      <div class="style-row t7">
+        <div class="sr-num">07</div>
+        <div>
+          <div class="sr-name">Editorial Fashion</div>
+          <div class="sr-desc">Vogue / monochrome / редакторский разворот</div>
+        </div>
+        <div class="sr-swatch"></div>
+      </div>
+      <div class="style-row t8">
+        <div class="sr-num">08</div>
+        <div>
+          <div class="sr-name">Dark Premium</div>
+          <div class="sr-desc">Noir / золотой тон / chiaroscuro</div>
+        </div>
+        <div class="sr-swatch"></div>
+      </div>
+      <div class="style-row t9">
+        <div class="sr-num">09</div>
+        <div>
+          <div class="sr-name">AI Visionary</div>
+          <div class="sr-desc">Lime-neon / futurist studio / sci-fi cover</div>
+        </div>
+        <div class="sr-swatch"></div>
+      </div>
+      <div class="style-row t10">
+        <div class="sr-num">10</div>
+        <div>
+          <div class="sr-name">Minimal Apple Style</div>
+          <div class="sr-desc">White studio / soft shadow / product-keynote</div>
+        </div>
+        <div class="sr-swatch"></div>
+      </div>
+    </div>
+  </section>
+
+
+  <!-- ── /03 — WHAT YOU GET ───────────────────── -->
+  <section id="outputs">
+    <div class="sec-head">
+      <span class="sec-num">/03</span>
+      <span class="sec-title">Что собирается из аватара</span>
+      <span class="sec-spacer"></span>
+      <span class="sec-meta">2 направления</span>
+    </div>
+
+    <div class="outputs">
+      <!-- HEYGEN VIDEO -->
+      <div class="output heygen">
+        <div class="o-tag">/ A · Talking Avatar</div>
+        <h3 class="o-title">HeyGen-видео<br/>с твоим лицом.</h3>
+        <p class="o-sub">
+          Выбираешь аватар, вводишь текст, выбираешь язык, голос, формат и фон —
+          получаешь готовое видео. С субтитрами, фирменной заставкой и нужным аспектом.
+        </p>
+
+        <div class="o-preview">
+          <span class="pv-label">/ HeyGen · render preview</span>
+          <div class="pv-content">
+            «Привет, я Илья. Сегодня — о&nbsp;том, как нейросети заменяют съёмочную команду.»
+          </div>
+          <div class="pv-bar"></div>
+          <div class="pv-time">00:08 / 00:32 · rendering ▸</div>
+          <span class="pv-meta">9:16 · ru-RU · subs:on</span>
+        </div>
+
+        <ul class="o-list">
+          <li>Выбор языка и голоса — 40+ языков HeyGen</li>
+          <li>Форматы: 9:16 для Reels, 1:1 для постов, 16:9 для YouTube</li>
+          <li>Субтитры включаются одной галочкой</li>
+          <li>Длительность: 15–180 сек / шот</li>
+        </ul>
+      </div>
+
+      <!-- CAROUSEL COVER -->
+      <div class="output cover">
+        <div class="o-tag">/ B · Carousel Cover</div>
+        <h3 class="o-title">Виральная обложка карусели —<br/>с лицом и заголовком.</h3>
+        <p class="o-sub">
+          Аватар на обложке, крупный заголовок, подзаголовок, CTA — собирается за один промпт.
+          Premium-композиция в формате 4:5, готовая к публикации в Instagram и LinkedIn.
+        </p>
+
+        <div class="o-preview">
+          <span class="pv-label">/ Cover · 4:5 preview</span>
+          <div class="pv-content">
+            Я СОЗДАЛ СЕБЕ<br/>AI-АВАТАРА<br/>
+            <span class="accent">и он делает контент за меня.</span>
+          </div>
+          <div class="pv-cta">Swipe left →</div>
+          <span class="pv-meta">4:5 · ru · ai-visionary</span>
+        </div>
+
+        <ul class="o-list">
+          <li>Один промпт — обложка + до 10 слайдов в стилистике</li>
+          <li>Контролируешь Headline, Subtitle, CTA, нишу, стиль</li>
+          <li>Текст рендерится без опечаток — Nano Banana 2</li>
+          <li>Экспорт PNG, готов под Instagram / LinkedIn / Telegram</li>
+        </ul>
+      </div>
+    </div>
+  </section>
+
+
+  <!-- ── /04 — USE CASES ──────────────────────── -->
+  <section>
+    <div class="sec-head">
+      <span class="sec-num">/04</span>
+      <span class="sec-title">Где использовать</span>
+      <span class="sec-spacer"></span>
+      <span class="sec-meta">4 канала</span>
+    </div>
+
+    <div class="cases">
+      <div class="case">
+        <div class="ch">/ Instagram</div>
+        <div class="ct">Reels и Stories с твоим лицом — без съёмок.</div>
+        <div class="cs">
+          Обложки каруселей, hero-кадр для Reels, story-серии в едином режиссёрском стиле.
+          Контент-план на месяц — из одной фотосессии.
+        </div>
+        <div class="cfoot">9:16 · 4:5 · 1:1</div>
+      </div>
+      <div class="case">
+        <div class="ch">/ Telegram</div>
+        <div class="ct">Канал и личный бренд — с visual identity.</div>
+        <div class="cs">
+          Аватарка канала, обложки постов, гиф-приветствие через HeyGen.
+          Один загруженный кадр — десятки готовых ассетов.
+        </div>
+        <div class="cfoot">PNG · MP4 · 1:1</div>
+      </div>
+      <div class="case">
+        <div class="ch">/ LinkedIn</div>
+        <div class="ct">Founder photo, посты и cover-видео.</div>
+        <div class="cs">
+          Профессиональный портрет в Luxury Founder или Tech Entrepreneur,
+          говорящий аватар для thought-leadership постов и keynote-обложек.
+        </div>
+        <div class="cfoot">1:1 · 16:9</div>
+      </div>
+      <div class="case">
+        <div class="ch">/ Podcast</div>
+        <div class="ct">Обложки эпизодов и тизер-видео.</div>
+        <div class="cs">
+          Podcast Studio-аватар как hero обложки, HeyGen-видео под анонс эпизода
+          в любом языке для дистрибуции на чужую аудиторию.
+        </div>
+        <div class="cfoot">1:1 · 16:9 · multi-lang</div>
+      </div>
+    </div>
+  </section>
+
+
+  <!-- ── /05 — PRICING ────────────────────────── -->
+  <section id="pricing">
+    <div class="sec-head">
+      <span class="sec-num">/05</span>
+      <span class="sec-title">Тарифы</span>
+      <span class="sec-spacer"></span>
+      <span class="sec-meta">Pay as you generate</span>
+    </div>
+
+    <div class="pricing">
+
+      <div class="price-row pr-free">
+        <div class="pr-name">
+          <div class="n">Free</div>
+          <div class="badge dim">first try</div>
+        </div>
+        <div class="pr-price">
+          $0<span class="small">/ forever</span>
+        </div>
+        <div class="pr-feats">
+          <span>1 генерация · 10 аватаров</span><span class="sep">·</span>
+          <span>watermark</span><span class="sep">·</span>
+          <span>low-res</span><span class="sep">·</span>
+          <span>1 cover</span>
+        </div>
+        <a href="#cta" class="pr-action">Попробовать →</a>
+      </div>
+
+      <div class="price-row">
+        <div class="pr-name">
+          <div class="n">Starter</div>
+          <div class="badge dim">single creator</div>
+        </div>
+        <div class="pr-price">
+          $19<span class="small">/ месяц</span>
+        </div>
+        <div class="pr-feats">
+          <span>100 токенов / мес</span><span class="sep">·</span>
+          <span>10 аватаров</span><span class="sep">·</span>
+          <span>30 covers</span><span class="sep">·</span>
+          <span>HD export</span><span class="sep">·</span>
+          <span>no watermark</span>
+        </div>
+        <a href="#cta" class="pr-action">Выбрать Starter</a>
+      </div>
+
+      <div class="price-row featured">
+        <div class="pr-name">
+          <div class="n">Pro</div>
+          <div class="badge">recommended</div>
+        </div>
+        <div class="pr-price">
+          $49<span class="small">/ месяц</span>
+        </div>
+        <div class="pr-feats">
+          <span>400 токенов / мес</span><span class="sep">·</span>
+          <span>HeyGen видео</span><span class="sep">·</span>
+          <span>~100 covers</span><span class="sep">·</span>
+          <span>Premium templates</span><span class="sep">·</span>
+          <span>Priority queue</span>
+        </div>
+        <a href="#cta" class="pr-action">Выбрать Pro</a>
+      </div>
+
+      <div class="price-row">
+        <div class="pr-name">
+          <div class="n">Agency</div>
+          <div class="badge dim">teams &amp; brands</div>
+        </div>
+        <div class="pr-price">
+          $99<span class="small">/ месяц / seat</span>
+        </div>
+        <div class="pr-feats">
+          <span>Бренд-киты</span><span class="sep">·</span>
+          <span>Командные аккаунты</span><span class="sep">·</span>
+          <span>White-label экспорт</span><span class="sep">·</span>
+          <span>API access</span><span class="sep">·</span>
+          <span>Поддержка</span>
+        </div>
+        <a href="#cta" class="pr-action">Talk to sales</a>
+      </div>
+
+    </div>
+  </section>
+
+
+  <!-- ── /06 — FAQ ────────────────────────────── -->
+  <section id="faq">
+    <div class="sec-head">
+      <span class="sec-num">/06</span>
+      <span class="sec-title">Частые вопросы</span>
+      <span class="sec-spacer"></span>
+      <span class="sec-meta">8 / 8</span>
+    </div>
+
+    <div class="faq">
+      <details open>
+        <summary>Сколько фото нужно загрузить?</summary>
+        <div class="faq-body">
+          Достаточно одного. Это главное преимущество Nano Banana 2 — она сохраняет facial identity
+          из одного референса. Если хочешь больше точности — можешь загрузить короткое видео,
+          и мы извлечём 3–5 лучших кадров автоматически.
+        </div>
+      </details>
+
+      <details>
+        <summary>Лицо узнаваемо во всех 10 стилях?</summary>
+        <div class="faq-body">
+          Да. Идентичность сохраняется через все режиссёрские стили — меняется свет, фон, одежда,
+          атмосфера, но не черты лица. Если в каком-то стиле похожесть просела — пересоздаём бесплатно.
+        </div>
+      </details>
+
+      <details>
+        <summary>Что я могу сделать с готовым аватаром?</summary>
+        <div class="faq-body">
+          Два направления — HeyGen-видео и обложка карусели. Видео: вбиваешь текст, выбираешь язык,
+          голос и формат, получаешь говорящий аватар. Обложка: вбиваешь заголовок, подзаголовок и CTA —
+          получаешь premium-композицию для Instagram / LinkedIn / Telegram.
+        </div>
+      </details>
+
+      <details>
+        <summary>Что такое токены?</summary>
+        <div class="faq-body">
+          Единая валюта внутри Persona Studio. Генерация 10 аватаров — 10 токенов. Обложка карусели — 3 токена.
+          HeyGen-видео — 20–50 токенов в зависимости от длительности. На Free вы получаете 10 токенов на пробу.
+          Если генерация провалилась — токены возвращаются автоматически.
+        </div>
+      </details>
+
+      <details>
+        <summary>Можно ли использовать в коммерческих целях?</summary>
+        <div class="faq-body">
+          Да. Все сгенерированные ассеты — твои, без обязательного указания авторства. На тарифах
+          Starter / Pro / Agency водяной знак убирается, экспорт идёт в HD. White-label-экспорт — на Agency.
+        </div>
+      </details>
+
+      <details>
+        <summary>А что с лицом другого человека?</summary>
+        <div class="faq-body">
+          Нет. Persona Studio — для собственного лица или лица человека, давшего согласие на обработку.
+          Мы проверяем согласие на загрузке. Чужие лица без подтверждённого consent — модерация блокирует,
+          токены возвращаются.
+        </div>
+      </details>
+
+      <details>
+        <summary>Сколько занимает одна генерация?</summary>
+        <div class="faq-body">
+          10 аватаров — 60–90 секунд. Обложка карусели — 30–45 секунд. HeyGen-видео на 30 секунд —
+          около 2–3 минут. На Pro / Agency — priority queue, время сокращается в 2 раза.
+        </div>
+      </details>
+
+      <details>
+        <summary>Что с моими фотографиями?</summary>
+        <div class="faq-body">
+          Оригинальные загрузки хранятся в приватном bucket с signed URLs, доступ — только у тебя.
+          Удаление — в один клик из личного кабинета, вместе со всеми сгенерированными аватарами.
+          Никогда не используем твоё лицо для обучения моделей.
+        </div>
+      </details>
+    </div>
+  </section>
+
+
+  <!-- ── /07 — FINAL CTA ──────────────────────── -->
+  <section id="cta">
+    <div class="cta-block">
+      <div>
+        <div class="cta-meta">/ 07 · Начни сейчас</div>
+        <h2 class="cta-title">
+          Загрузи фото —<br/>
+          <span class="it">через 2 минуты у тебя 10 аватаров.</span>
+        </h2>
+        <p class="cta-sub">
+          Бесплатный первый прогон. Без карты. Без обязательств. Если зашло — оставайся,
+          если нет — ушёл без последствий.
+        </p>
+        <div class="hero-actions">
+          <a href="#" class="btn-primary">
+            Создать AI-аватара
+            <span class="arrow">↗</span>
+          </a>
+          <a href="#styles" class="btn-ghost">Посмотреть стили</a>
+        </div>
+      </div>
+
+      <div class="cta-side">
+        <div class="row"><span class="k">Загрузка</span><span class="v">1 фото · 20 сек</span></div>
+        <div class="row"><span class="k">Генерация</span><span class="v">10 аватаров · ~60 сек</span></div>
+        <div class="row"><span class="k">Экспорт</span><span class="v">PNG · MP4</span></div>
+        <div class="row"><span class="k">Платёж</span><span class="v">Не нужен на Free</span></div>
+        <div class="row"><span class="k">Result</span><span class="v lime">Готов к публикации ▸</span></div>
+      </div>
+    </div>
+  </section>
+
+</main>
+
+
+<!-- ── FOOTER ───────────────────────────────────── -->
+<footer>
+  <div class="shell">
+    <div class="foot-row">
+      <div class="foot-brand">
+        <div class="bn"><span class="brand-dot"></span> &nbsp;Persona Studio</div>
+        <div class="bs">AI-контент из твоего лица. От одной фотографии — до десятков ассетов в едином режиссёрском стиле.</div>
+        <div class="label">Made with Nano Banana 2 · HeyGen · Gemini 3.1</div>
+      </div>
+      <div class="foot-col">
+        <h5>Product</h5>
+        <a href="#how">Как работает</a>
+        <a href="#styles">Стили</a>
+        <a href="#outputs">Что получаешь</a>
+        <a href="#pricing">Тарифы</a>
+      </div>
+      <div class="foot-col">
+        <h5>Resources</h5>
+        <a href="#faq">FAQ</a>
+        <a href="#">Гайд по промптам</a>
+        <a href="#">Changelog</a>
+        <a href="#">Status</a>
+      </div>
+      <div class="foot-col">
+        <h5>Legal</h5>
+        <a href="#">Privacy</a>
+        <a href="#">Terms</a>
+        <a href="#">Face consent</a>
+        <a href="#">Contact</a>
+      </div>
+    </div>
+    <div class="foot-bottom">
+      <span>© 2026 Persona Studio · ai-content out of your face</span>
+      <span class="lime">v0.1 · beta</span>
+    </div>
+  </div>
+</footer>
+
+</body>
+</html>

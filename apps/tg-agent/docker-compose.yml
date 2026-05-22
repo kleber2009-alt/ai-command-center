@@ -1,0 +1,40 @@
+# tg-agent on a single Hetzner box.
+#
+# Usage:
+#   cd apps/tg-agent
+#   cp .env.example .env  # fill TELEGRAM_BOT_TOKEN, ANTHROPIC_API_KEY,
+#                         # ADMIN_PASSWORD, OWNER_TELEGRAM_ID, etc.
+#   docker compose up -d --build
+#
+# The SQLite file lives in a named volume so it survives image
+# rebuilds. The admin UI is exposed on port 8080. For HTTPS, put
+# Caddy / nginx / Cloudflare Tunnel in front — see README.
+
+services:
+  tg-agent:
+    build:
+      # Dockerfile expects the monorepo root as context so it can
+      # see apps/tg-agent/. Compose is invoked from apps/tg-agent/,
+      # so context "../.." points back to the repo root.
+      context: ../..
+      dockerfile: apps/tg-agent/Dockerfile
+    image: tg-agent:local
+    container_name: tg-agent
+    restart: unless-stopped
+    env_file: .env
+    environment:
+      DATABASE_PATH: /app/data/tg-agent.db
+    volumes:
+      - tg-agent-data:/app/data
+    ports:
+      - "127.0.0.1:${ADMIN_PORT:-8080}:8080"
+    healthcheck:
+      test: ["CMD", "node", "-e", "fetch('http://127.0.0.1:8080/healthz').then(r=>process.exit(r.ok?0:1)).catch(()=>process.exit(1))"]
+      interval: 30s
+      timeout: 5s
+      retries: 3
+      start_period: 10s
+
+volumes:
+  tg-agent-data:
+    name: tg-agent-data

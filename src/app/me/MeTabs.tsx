@@ -14,7 +14,7 @@ export default function MeTabs({ active }: { active: 'chat' | 'profile' | 'libra
           key={t.id}
           href={t.href}
           className={`rounded-full px-3.5 py-1.5 text-[13px] font-medium transition-all ${
-            active === t.id ? 'bg-white text-apple-ink shadow-apple-sm' : 'text-apple-muted hover:text-apple-ink'
+            active === t.id ? 'bg-apple-bg-elev text-apple-ink shadow-apple-sm' : 'text-apple-muted hover:text-apple-ink'
           }`}
         >
           {t.label}

@@ -1,0 +1,195 @@
+# ═══════════════════════════════════════════════════════════════════
+# infra/docker-compose.yml — full self-hosted stack
+# ───────────────────────────────────────────────────────────────────
+# Run from this directory:
+#   cp .env.example .env && $EDITOR .env
+#   docker compose up -d --build
+#
+# Services:
+#   postgres   — DB for ai-office (leads, voices, bot users)
+#   ai-office  — Fastify backend for ai-office-project (/api/*)
+#   transcribe — Next.js for /transcribe, /assistants, /me (SQLite + sqlite-vec)
+#   ytdlp      — yt-dlp microservice (YouTube/IG/TikTok fallback)
+#   caddy      — reverse proxy with auto-TLS (Let's Encrypt; profile: standalone)
+# ═══════════════════════════════════════════════════════════════════
+
+services:
+  postgres:
+    image: postgres:16-alpine
+    restart: unless-stopped
+    environment:
+      POSTGRES_DB: ${POSTGRES_DB}
+      POSTGRES_USER: ${POSTGRES_USER}
+      POSTGRES_PASSWORD: ${POSTGRES_PASSWORD}
+    volumes:
+      - postgres_data:/var/lib/postgresql/data
+      - ./db/init:/docker-entrypoint-initdb.d:ro
+    healthcheck:
+      test: ['CMD-SHELL', 'pg_isready -U ${POSTGRES_USER} -d ${POSTGRES_DB}']
+      interval: 10s
+      timeout: 5s
+      retries: 5
+      start_period: 30s
+    networks: [internal]
+
+  ai-office:
+    build:
+      context: ..
+      dockerfile: infra/services/ai-office/Dockerfile
+    restart: unless-stopped
+    environment:
+      NODE_ENV: production
+      PORT: 3000
+      DATABASE_URL: postgres://${POSTGRES_USER}:${POSTGRES_PASSWORD}@postgres:5432/${POSTGRES_DB}
+      PUBLIC_BASE_URL: ${PUBLIC_BASE_URL}
+      VOICE_NOTES_DIR: /data/voice-notes
+      ANTHROPIC_API_KEY: ${ANTHROPIC_API_KEY}
+      ELEVENLABS_API_KEY: ${ELEVENLABS_API_KEY}
+      TG_BOT_TOKEN: ${TG_BOT_TOKEN}
+      TG_CHAT_ID: ${TG_CHAT_ID}
+      TG_VOICE_BOT_TOKEN: ${TG_VOICE_BOT_TOKEN}
+      TG_WEBHOOK_SECRET: ${TG_WEBHOOK_SECRET}
+    ports:
+      # Published на 127.0.0.1 чтобы хостовый reverse-proxy (Caddy/nginx)
+      # мог проксировать сюда. Не доступно снаружи без прокси.
+      - '127.0.0.1:3001:3000'
+    volumes:
+      - voice_notes:/data/voice-notes
+    depends_on:
+      postgres:
+        condition: service_healthy
+    networks: [internal]
+
+  transcribe:
+    build:
+      context: /home/aisales/ai-command-center
+      dockerfile: apps/transcribe/Dockerfile
+    restart: unless-stopped
+    environment:
+      NODE_ENV: production
+      PORT: 3000
+      HOSTNAME: 0.0.0.0
+      ANTHROPIC_API_KEY: ${ANTHROPIC_API_KEY}
+      OPENAI_API_KEY: ${OPENAI_API_KEY:-}
+      DEEPGRAM_API_KEY: ${DEEPGRAM_API_KEY:-}
+      TELEGRAM_BOT_TOKEN: ${TELEGRAM_BOT_TOKEN:-}
+      TELEGRAM_REQUIRE_INIT_DATA: ${TELEGRAM_REQUIRE_INIT_DATA:-true}
+      OWNER_TELEGRAM_ID: ${OWNER_TELEGRAM_ID:-}
+      YTDLP_SERVICE_URL: ${YTDLP_SERVICE_URL:-http://ytdlp:8080}
+      YTDLP_SERVICE_API_KEY: ${YTDLP_SERVICE_API_KEY:-}
+      APIFY_API_TOKEN: ${APIFY_API_TOKEN:-}
+      KIE_AI_API_KEY: ${KIE_AI_API_KEY:-}
+      DATABASE_URL: postgres://${POSTGRES_USER}:${POSTGRES_PASSWORD}@postgres:5432/${POSTGRES_DB}
+      NEXT_PUBLIC_SUPABASE_URL: ${TRANSCRIBE_SUPABASE_URL}
+      SUPABASE_SERVICE_KEY: ${TRANSCRIBE_SUPABASE_SERVICE_KEY}
+      STRIPE_SECRET_KEY: ${STRIPE_SECRET_KEY:-}
+      STRIPE_WEBHOOK_SECRET: ${STRIPE_WEBHOOK_SECRET:-}
+      STRIPE_PRICE_PRO: ${STRIPE_PRICE_PRO:-}
+      STRIPE_PRICE_TEAM: ${STRIPE_PRICE_TEAM:-}
+      NEXT_PUBLIC_APP_URL: ${TRANSCRIBE_APP_URL:-https://transcribe.46-62-215-11.nip.io}
+      TELEGRAM_WEBHOOK_SECRET: ${TELEGRAM_WEBHOOK_SECRET:-}
+      STARS_PRICE_PRO: ${STARS_PRICE_PRO:-750}
+      PRO_SUBSCRIPTION_DAYS: ${PRO_SUBSCRIPTION_DAYS:-30}
+      TMA_URL: ${TMA_URL:-https://tma.46-62-215-11.nip.io/}
+    ports:
+      - '127.0.0.1:3002:3000'
+    depends_on:
+      postgres:
+        condition: service_healthy
+      ytdlp:
+        condition: service_started
+    networks: [internal]
+
+  ytdlp:
+    build:
+      context: ../services/ytdlp
+      dockerfile: Dockerfile
+    restart: unless-stopped
+    environment:
+      YTDLP_SERVICE_API_KEY: ${YTDLP_SERVICE_API_KEY:-}
+      INSTAGRAM_COOKIES_B64: ${INSTAGRAM_COOKIES_B64:-}
+      COOKIES_B64: ${COOKIES_B64:-}
+    networks: [internal]
+
+  # ─── Caddy (optional, only for standalone mode) ───
+  # Use this if you DON'T have a host reverse-proxy.
+  #   docker compose --profile standalone up -d
+  # If you already run nginx/Caddy on the host, skip this — instead add
+  # the snippet from infra/snippets/host-caddy.example.caddy to your
+  # host config (it reverse-proxies 127.0.0.1:3001 + :3002 → here).
+  caddy:
+    image: caddy:2-alpine
+    profiles: [standalone]
+    restart: unless-stopped
+    ports:
+      - '80:80'
+      - '443:443'
+      - '443:443/udp'
+    environment:
+      PUBLIC_HOST: ${PUBLIC_HOST}
+      ACME_EMAIL: ${ACME_EMAIL}
+    volumes:
+      - ./Caddyfile:/etc/caddy/Caddyfile:ro
+      - voice_notes:/srv/voice-notes:ro
+      - caddy_data:/data
+      - caddy_config:/config
+    depends_on:
+      - ai-office
+      - transcribe
+    networks: [internal]
+
+  # ─────────────────────────────────────────────────────────────────
+  # aisales-worker — scheduler for the AI Growth Office
+  # Polls scheduled_jobs (Postgres SKIP LOCKED), runs handlers,
+  # ships deliverables to the office TG bot. See infra-worker/ in
+  # the aisales-app-v2 repo for canonical source.
+  # ─────────────────────────────────────────────────────────────────
+  aisales-worker:
+    image: infra-aisales-worker:hotpatch-20260520
+    build:
+      context: ./services/aisales-worker
+      dockerfile: Dockerfile
+    restart: unless-stopped
+    environment:
+      NODE_ENV: production
+      # Worker points at aisales-postgres (different compose project),
+      # reachable via the external aisales_aisales-net network below.
+      DATABASE_URL: ${AISALES_DB_URL}
+      ANTHROPIC_API_KEY: ${ANTHROPIC_API_KEY}
+      TG_OFFICE_BOT_TOKEN: ${TG_OFFICE_BOT_TOKEN:-}
+      TG_OFFICE_WEBHOOK_SECRET: ${TG_OFFICE_WEBHOOK_SECRET:-}
+      HTTP_PORT: 3000
+      POLL_INTERVAL_MS: 15000
+      RULE_TICK_INTERVAL_MS: 60000
+      MAX_ATTEMPTS: 3
+      # viral_clone pipeline
+      OPENAI_API_KEY: ${OPENAI_API_KEY:-}
+      HEYGEN_API_KEY: ${HEYGEN_API_KEY:-}
+      HEYGEN_DEFAULT_AVATAR_ID: ${HEYGEN_DEFAULT_AVATAR_ID:-}
+      HEYGEN_DEFAULT_VOICE_ID: ${HEYGEN_DEFAULT_VOICE_ID:-}
+      SUBMAGIC_API_KEY: ${SUBMAGIC_API_KEY:-}
+      APIFY_TOKEN: ${APIFY_TOKEN:-}
+      TG_TRANSCRIBE_BOT_TOKEN: ${TG_TRANSCRIBE_BOT_TOKEN:-}
+      VIRAL_CLONE_DISPATCH_SECRET: ${VIRAL_CLONE_DISPATCH_SECRET:-}
+      # voice welcome (ElevenLabs)
+      ELEVENLABS_API_KEY: ${ELEVENLABS_API_KEY:-}
+      ELEVENLABS_VOICE_ID_ANYA: ${ELEVENLABS_VOICE_ID_ANYA:-}
+    ports:
+      # Webhook reachable from Caddy on host (127.0.0.1:3004 → :3000 inside)
+      - '127.0.0.1:3004:3000'
+    networks: [internal, aisales-net]
+
+volumes:
+  postgres_data:
+  voice_notes:
+  transcribe_data:
+  caddy_data:
+  caddy_config:
+
+networks:
+  # External: aisales compose project's network, so worker can reach aisales-postgres
+  aisales-net:
+    external: true
+    name: aisales_aisales-net
+  internal:
+    driver: bridge

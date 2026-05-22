@@ -148,6 +148,13 @@ services:
     image: aisales-command-center:latest
     container_name: aisales-command-center
     restart: unless-stopped
+    # env_file: подтягиваем ключи провайдеров из соседних compose-проектов,
+    # чтобы /api/balances мог опрашивать HeyGen, Apify, ElevenLabs, kie.ai,
+    # Stripe, OpenAI, fal, Replicate, Telegram. .env основного aisales-проекта
+    # читается автоматически (он рядом с этим compose).
+    env_file:
+      - ../../infra/.env                       # HEYGEN/SUBMAGIC/ELEVENLABS/APIFY/KIE_AI/OPENAI/STRIPE/TELEGRAM
+      - /home/aisales/ai-hub/source/.env       # FAL_KEY / REPLICATE_API_TOKEN
     environment:
       NODE_ENV: production
       DATABASE_URL: postgresql://${POSTGRES_USER}:${POSTGRES_PASSWORD_URLENC:-${POSTGRES_PASSWORD}}@aisales-postgres:5432/${POSTGRES_DB}

@@ -3,16 +3,18 @@
 @tailwind utilities;
 
 :root {
-  --apple-blue: #0071e3;
-  --apple-blue-hover: #0077ed;
-  --apple-blue-pressed: #006edb;
-  --bg: #ffffff;
-  --bg-elev: #fbfbfd;
-  --text: #1d1d1f;
-  --text-muted: #6e6e73;
-  --text-faint: #86868b;
-  --border: rgba(0, 0, 0, 0.08);
-  --border-strong: rgba(0, 0, 0, 0.14);
+  --apple-blue: #fbbf24;
+  --apple-blue-hover: #f59e0b;
+  --apple-blue-pressed: #d97706;
+  --bg: #0a0a0a;
+  --bg-elev: #141414;
+  --bg-soft: #1c1c1c;
+  --text: #fafafa;
+  --text-muted: #a1a1aa;
+  --text-faint: #71717a;
+  --border: rgba(251, 191, 36, 0.16);
+  --border-strong: rgba(251, 191, 36, 0.32);
+  color-scheme: dark;
 }
 
 html, body {
@@ -29,15 +31,80 @@ html, body {
 
 * { box-sizing: border-box; }
 
-/* Apple-style soft scrollbar */
 ::-webkit-scrollbar { width: 10px; height: 10px; }
-::-webkit-scrollbar-thumb { background: rgba(0,0,0,0.18); border-radius: 8px; border: 2px solid transparent; background-clip: padding-box; }
-::-webkit-scrollbar-thumb:hover { background: rgba(0,0,0,0.28); background-clip: padding-box; border: 2px solid transparent; }
+::-webkit-scrollbar-thumb {
+  background: rgba(251, 191, 36, 0.18);
+  border-radius: 8px;
+  border: 2px solid transparent;
+  background-clip: padding-box;
+}
+::-webkit-scrollbar-thumb:hover {
+  background: rgba(251, 191, 36, 0.32);
+  background-clip: padding-box;
+  border: 2px solid transparent;
+}
 ::-webkit-scrollbar-track { background: transparent; }
 
-/* Subtle focus ring (Apple-like) */
 :focus-visible {
   outline: 2px solid var(--apple-blue);
   outline-offset: 2px;
   border-radius: 6px;
 }
+
+/* Selection highlight in amber. */
+::selection {
+  background: rgba(251, 191, 36, 0.3);
+  color: #fff;
+}
+
+/* Glow-card: dark surface with amber gradient hairline + soft halo.
+   Used for hero blocks and feature cards on the landing. */
+.glow-card {
+  position: relative;
+  background: linear-gradient(180deg, #141414 0%, #0f0f0f 100%);
+  border: 1px solid rgba(251, 191, 36, 0.18);
+  border-radius: 24px;
+  box-shadow: 0 0 0 1px rgba(251, 191, 36, 0.06),
+              0 24px 64px -16px rgba(251, 191, 36, 0.12),
+              0 4px 16px -4px rgba(0, 0, 0, 0.6);
+}
+
+.glow-card::before {
+  content: '';
+  position: absolute;
+  inset: 0;
+  border-radius: inherit;
+  padding: 1px;
+  background: linear-gradient(135deg,
+    rgba(251, 191, 36, 0.5) 0%,
+    rgba(251, 191, 36, 0.05) 25%,
+    rgba(251, 191, 36, 0.05) 75%,
+    rgba(251, 191, 36, 0.4) 100%);
+  -webkit-mask: linear-gradient(#fff 0 0) content-box, linear-gradient(#fff 0 0);
+  -webkit-mask-composite: xor;
+          mask-composite: exclude;
+  pointer-events: none;
+}
+
+/* Solid amber button — primary CTA on landing + main app forms. */
+.btn-amber {
+  background: linear-gradient(180deg, #fbbf24 0%, #f59e0b 100%);
+  color: #0a0a0a;
+  font-weight: 600;
+  border-radius: 12px;
+  padding: 10px 18px;
+  box-shadow: 0 4px 16px -4px rgba(251, 191, 36, 0.5),
+              inset 0 1px 0 rgba(255, 255, 255, 0.2);
+  transition: transform 0.1s ease, box-shadow 0.15s ease;
+}
+.btn-amber:hover:not(:disabled) {
+  box-shadow: 0 6px 24px -4px rgba(251, 191, 36, 0.6),
+              inset 0 1px 0 rgba(255, 255, 255, 0.25);
+  transform: translateY(-1px);
+}
+.btn-amber:active:not(:disabled) {
+  transform: translateY(0);
+  box-shadow: 0 2px 8px -2px rgba(251, 191, 36, 0.4),
+              inset 0 1px 0 rgba(255, 255, 255, 0.1);
+}
+.btn-amber:disabled { opacity: 0.5; cursor: not-allowed; }

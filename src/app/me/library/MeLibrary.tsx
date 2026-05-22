@@ -230,8 +230,8 @@ export default function MeLibrary() {
         <div className="flex items-start gap-2 rounded-apple-lg border border-amber-200 bg-amber-50 p-4 text-[13px] text-amber-800">
           <TriangleAlert className="mt-0.5 h-4 w-4 shrink-0" />
           <div>
-            База недоступна. Проверь, что переменная <code className="rounded bg-white/60 px-1">DB_PATH</code> указывает на доступный путь, а
-            <code className="rounded bg-white/60 px-1">OPENAI_API_KEY</code> задан в <code className="rounded bg-white/60 px-1">.env</code>.
+            База недоступна. Проверь, что переменная <code className="rounded bg-apple-bg-elev/60 px-1">DB_PATH</code> указывает на доступный путь, а
+            <code className="rounded bg-apple-bg-elev/60 px-1">OPENAI_API_KEY</code> задан в <code className="rounded bg-apple-bg-elev/60 px-1">.env</code>.
           </div>
         </div>
       )}
@@ -239,15 +239,15 @@ export default function MeLibrary() {
       {/* Stats */}
       {stats && stats.documents > 0 && (
         <div className="grid grid-cols-3 gap-2">
-          <div className="rounded-apple-lg border border-apple-line bg-white p-3 text-center shadow-apple-sm">
+          <div className="rounded-apple-lg border border-apple-line bg-apple-bg-elev p-3 text-center shadow-apple-sm">
             <div className="text-[20px] font-semibold leading-tight text-apple-ink">{stats.documents}</div>
             <div className="text-[11px] text-apple-faint">документов</div>
           </div>
-          <div className="rounded-apple-lg border border-apple-line bg-white p-3 text-center shadow-apple-sm">
+          <div className="rounded-apple-lg border border-apple-line bg-apple-bg-elev p-3 text-center shadow-apple-sm">
             <div className="text-[20px] font-semibold leading-tight text-apple-ink">{stats.chunks}</div>
             <div className="text-[11px] text-apple-faint">фрагментов</div>
           </div>
-          <div className="rounded-apple-lg border border-apple-line bg-white p-3 text-center shadow-apple-sm">
+          <div className="rounded-apple-lg border border-apple-line bg-apple-bg-elev p-3 text-center shadow-apple-sm">
             <div className="text-[20px] font-semibold leading-tight text-apple-ink">
               {stats.characters > 1000 ? `${Math.round(stats.characters / 1000)}k` : stats.characters}
             </div>
@@ -257,13 +257,13 @@ export default function MeLibrary() {
       )}
 
       {/* Add panel */}
-      <div className="rounded-apple-lg border border-apple-line bg-white p-5 shadow-apple-sm">
+      <div className="rounded-apple-lg border border-apple-line bg-apple-bg-elev p-5 shadow-apple-sm">
         <div className="mb-4 inline-flex rounded-full bg-apple-bg-soft p-0.5">
           <button
             type="button"
             onClick={() => setMode('paste')}
             className={`rounded-full px-3.5 py-1.5 text-[13px] font-medium transition-all ${
-              mode === 'paste' ? 'bg-white text-apple-ink shadow-apple-sm' : 'text-apple-muted hover:text-apple-ink'
+              mode === 'paste' ? 'bg-apple-bg-elev text-apple-ink shadow-apple-sm' : 'text-apple-muted hover:text-apple-ink'
             }`}
           >
             Вставить текст
@@ -272,7 +272,7 @@ export default function MeLibrary() {
             type="button"
             onClick={() => setMode('file')}
             className={`rounded-full px-3.5 py-1.5 text-[13px] font-medium transition-all ${
-              mode === 'file' ? 'bg-white text-apple-ink shadow-apple-sm' : 'text-apple-muted hover:text-apple-ink'
+              mode === 'file' ? 'bg-apple-bg-elev text-apple-ink shadow-apple-sm' : 'text-apple-muted hover:text-apple-ink'
             }`}
           >
             Загрузить файл
@@ -285,7 +285,7 @@ export default function MeLibrary() {
             value={title}
             onChange={(e) => setTitle(e.target.value)}
             placeholder="Название (необязательно — возьмётся из текста или имени файла)"
-            className="w-full rounded-xl border border-apple-line bg-apple-bg-soft px-3.5 py-2 text-[14px] text-apple-ink placeholder:text-apple-faint outline-none transition-all focus:border-apple-line-strong focus:bg-white focus:shadow-apple-sm"
+            className="w-full rounded-xl border border-apple-line bg-apple-bg-soft px-3.5 py-2 text-[14px] text-apple-ink placeholder:text-apple-faint outline-none transition-all focus:border-apple-line-strong focus:bg-apple-bg-elev focus:shadow-apple-sm"
           />
 
           {mode === 'paste' ? (
@@ -295,7 +295,7 @@ export default function MeLibrary() {
                 onChange={(e) => setText(e.target.value)}
                 placeholder="Сюда вставь текст: пост, конспект, главу из академии…"
                 rows={8}
-                className="w-full rounded-xl border border-apple-line bg-apple-bg-soft p-3 text-[14px] leading-relaxed text-apple-ink placeholder:text-apple-faint outline-none transition-all focus:border-apple-line-strong focus:bg-white focus:shadow-apple-sm"
+                className="w-full rounded-xl border border-apple-line bg-apple-bg-soft p-3 text-[14px] leading-relaxed text-apple-ink placeholder:text-apple-faint outline-none transition-all focus:border-apple-line-strong focus:bg-apple-bg-elev focus:shadow-apple-sm"
               />
               <div className="flex items-center justify-between">
                 <p className="text-[12px] text-apple-faint">{text.length} симв.</p>
@@ -303,7 +303,7 @@ export default function MeLibrary() {
                   type="button"
                   onClick={addPaste}
                   disabled={adding || !text.trim() || !configured}
-                  className="inline-flex items-center gap-2 rounded-full bg-apple-blue px-4 py-2 text-[13px] font-medium text-white transition-colors hover:bg-apple-blue-hover disabled:cursor-not-allowed disabled:bg-apple-line-strong"
+                  className="inline-flex items-center gap-2 rounded-full bg-apple-blue px-4 py-2 text-[13px] font-medium text-apple-bg transition-colors hover:bg-apple-blue-hover disabled:cursor-not-allowed disabled:bg-apple-line-strong"
                 >
                   {adding ? <Loader2 className="h-4 w-4 animate-spin" /> : <Plus className="h-4 w-4" />}
                   Добавить в базу
@@ -312,7 +312,7 @@ export default function MeLibrary() {
             </>
           ) : (
             <>
-              <label className="flex cursor-pointer flex-col items-center justify-center gap-2 rounded-xl border border-dashed border-apple-line bg-apple-bg-soft p-6 transition-colors hover:bg-white">
+              <label className="flex cursor-pointer flex-col items-center justify-center gap-2 rounded-xl border border-dashed border-apple-line bg-apple-bg-soft p-6 transition-colors hover:bg-apple-bg-elev">
                 <Upload className="h-5 w-5 text-apple-muted" />
                 <span className="text-[14px] font-medium text-apple-ink">
                   {file ? file.name : 'Выбрать файл'}
@@ -333,7 +333,7 @@ export default function MeLibrary() {
                   type="button"
                   onClick={addFile}
                   disabled={adding || !file || !configured}
-                  className="inline-flex items-center gap-2 rounded-full bg-apple-blue px-4 py-2 text-[13px] font-medium text-white transition-colors hover:bg-apple-blue-hover disabled:cursor-not-allowed disabled:bg-apple-line-strong"
+                  className="inline-flex items-center gap-2 rounded-full bg-apple-blue px-4 py-2 text-[13px] font-medium text-apple-bg transition-colors hover:bg-apple-blue-hover disabled:cursor-not-allowed disabled:bg-apple-line-strong"
                 >
                   {adding ? <Loader2 className="h-4 w-4 animate-spin" /> : <Upload className="h-4 w-4" />}
                   Загрузить и обработать
@@ -371,7 +371,7 @@ export default function MeLibrary() {
                     type="button"
                     onClick={() => setFilter(k)}
                     className={`rounded-full px-3 py-1 text-[12px] font-medium transition-all ${
-                      filter === k ? 'bg-white text-apple-ink shadow-apple-sm' : 'text-apple-muted hover:text-apple-ink'
+                      filter === k ? 'bg-apple-bg-elev text-apple-ink shadow-apple-sm' : 'text-apple-muted hover:text-apple-ink'
                     }`}
                   >
                     {label}
@@ -382,7 +382,7 @@ export default function MeLibrary() {
                 <button
                   type="button"
                   onClick={() => setSelecting(true)}
-                  className="inline-flex items-center gap-1.5 rounded-full border border-apple-line bg-white px-3 py-1 text-[12px] font-medium text-apple-ink shadow-apple-sm hover:bg-apple-bg-soft"
+                  className="inline-flex items-center gap-1.5 rounded-full border border-apple-line bg-apple-bg-elev px-3 py-1 text-[12px] font-medium text-apple-ink shadow-apple-sm hover:bg-apple-bg-soft"
                   title="Выбрать документы и задать вопрос только по ним"
                 >
                   <CheckSquare className="h-3.5 w-3.5" />
@@ -414,7 +414,7 @@ export default function MeLibrary() {
               type="button"
               onClick={askMultiDoc}
               disabled={askingMulti || selectedIds.size === 0}
-              className="inline-flex items-center gap-1.5 rounded-full bg-apple-blue px-3 py-1.5 text-[12px] font-medium text-white transition-colors hover:bg-apple-blue-hover disabled:cursor-not-allowed disabled:bg-apple-line-strong"
+              className="inline-flex items-center gap-1.5 rounded-full bg-apple-blue px-3 py-1.5 text-[12px] font-medium text-apple-bg transition-colors hover:bg-apple-blue-hover disabled:cursor-not-allowed disabled:bg-apple-line-strong"
             >
               {askingMulti ? (
                 <>
@@ -454,7 +454,7 @@ export default function MeLibrary() {
             )
           }
           return (
-          <ul className="overflow-hidden rounded-apple-lg border border-apple-line bg-white shadow-apple-sm">
+          <ul className="overflow-hidden rounded-apple-lg border border-apple-line bg-apple-bg-elev shadow-apple-sm">
             {visible.map((d, i) => {
               const Icon =
                 d.source_type === 'paste' ? FileText : d.source_type === 'transcript' ? FileAudio : FileType
@@ -485,7 +485,7 @@ export default function MeLibrary() {
                       }}
                       className="flex flex-1 items-start gap-3 px-4 py-3.5 transition-colors hover:bg-apple-bg-soft sm:px-5"
                     >
-                      <div className="mt-0.5 grid h-9 w-9 shrink-0 place-items-center rounded-full bg-apple-bg-soft text-apple-muted group-hover:bg-white group-hover:shadow-apple-sm">
+                      <div className="mt-0.5 grid h-9 w-9 shrink-0 place-items-center rounded-full bg-apple-bg-soft text-apple-muted group-hover:bg-apple-bg-elev group-hover:shadow-apple-sm">
                         <Icon className="h-[16px] w-[16px]" />
                       </div>
                       <div className="min-w-0 flex-1">

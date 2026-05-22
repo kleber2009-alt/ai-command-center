@@ -154,8 +154,8 @@ export default function MeProfileForm() {
         <div className="flex items-start gap-2 rounded-apple-lg border border-amber-200 bg-amber-50 p-4 text-[13px] text-amber-800">
           <TriangleAlert className="mt-0.5 h-4 w-4 shrink-0" />
           <div>
-            Локальная база недоступна. Проверь переменную <code className="rounded bg-white/60 px-1">DB_PATH</code> и
-            что папка <code className="rounded bg-white/60 px-1">./data</code> доступна на запись.
+            Локальная база недоступна. Проверь переменную <code className="rounded bg-apple-bg-elev/60 px-1">DB_PATH</code> и
+            что папка <code className="rounded bg-apple-bg-elev/60 px-1">./data</code> доступна на запись.
           </div>
         </div>
       )}
@@ -175,7 +175,7 @@ export default function MeProfileForm() {
       ) : (
         <div className="space-y-4">
           {/* О себе */}
-          <section className="rounded-apple-lg border border-apple-line bg-white p-5 shadow-apple-sm">
+          <section className="rounded-apple-lg border border-apple-line bg-apple-bg-elev p-5 shadow-apple-sm">
             <label className="mb-1 block text-[13px] font-semibold text-apple-ink">{FIELDS[0].label}</label>
             <p className="mb-2.5 text-[12px] text-apple-faint">{FIELDS[0].hint}</p>
             <textarea
@@ -183,13 +183,13 @@ export default function MeProfileForm() {
               onChange={(e) => setProfile((p) => ({ ...p, bio: e.target.value }))}
               placeholder={FIELDS[0].placeholder}
               rows={5}
-              className="w-full rounded-xl border border-apple-line bg-apple-bg-soft p-3 text-[14px] leading-relaxed text-apple-ink placeholder:text-apple-faint outline-none transition-all focus:border-apple-line-strong focus:bg-white focus:shadow-apple-sm"
+              className="w-full rounded-xl border border-apple-line bg-apple-bg-soft p-3 text-[14px] leading-relaxed text-apple-ink placeholder:text-apple-faint outline-none transition-all focus:border-apple-line-strong focus:bg-apple-bg-elev focus:shadow-apple-sm"
             />
             <p className="mt-1.5 text-right text-[11px] text-apple-faint">{profile.bio.length} симв.</p>
           </section>
 
           {/* Проекты — карточки */}
-          <section className="rounded-apple-lg border border-apple-line bg-white p-5 shadow-apple-sm">
+          <section className="rounded-apple-lg border border-apple-line bg-apple-bg-elev p-5 shadow-apple-sm">
             <div className="mb-1 flex items-center justify-between gap-2">
               <label className="text-[13px] font-semibold text-apple-ink">Проекты</label>
               <button
@@ -203,7 +203,7 @@ export default function MeProfileForm() {
                     ],
                   }))
                 }
-                className="inline-flex items-center gap-1.5 rounded-full border border-apple-line bg-white px-3 py-1 text-[12px] font-medium text-apple-ink shadow-apple-sm hover:bg-apple-bg-soft"
+                className="inline-flex items-center gap-1.5 rounded-full border border-apple-line bg-apple-bg-elev px-3 py-1 text-[12px] font-medium text-apple-ink shadow-apple-sm hover:bg-apple-bg-soft"
               >
                 <Plus className="h-3.5 w-3.5" />
                 Добавить проект
@@ -231,7 +231,7 @@ export default function MeProfileForm() {
                           }))
                         }
                         placeholder="Название проекта"
-                        className="flex-1 rounded-lg border border-apple-line bg-white px-3 py-1.5 text-[14px] font-medium text-apple-ink outline-none focus:border-apple-line-strong focus:shadow-apple-sm"
+                        className="flex-1 rounded-lg border border-apple-line bg-apple-bg-elev px-3 py-1.5 text-[14px] font-medium text-apple-ink outline-none focus:border-apple-line-strong focus:shadow-apple-sm"
                       />
                       <button
                         type="button"
@@ -259,7 +259,7 @@ export default function MeProfileForm() {
                           }))
                         }
                         placeholder="Стадия (запуск, рост, поддержка…)"
-                        className="rounded-lg border border-apple-line bg-white px-3 py-1.5 text-[13px] text-apple-ink outline-none focus:border-apple-line-strong focus:shadow-apple-sm"
+                        className="rounded-lg border border-apple-line bg-apple-bg-elev px-3 py-1.5 text-[13px] text-apple-ink outline-none focus:border-apple-line-strong focus:shadow-apple-sm"
                       />
                       <input
                         type="text"
@@ -271,7 +271,7 @@ export default function MeProfileForm() {
                           }))
                         }
                         placeholder="Метрики (MRR, охваты, conv…)"
-                        className="rounded-lg border border-apple-line bg-white px-3 py-1.5 text-[13px] text-apple-ink outline-none focus:border-apple-line-strong focus:shadow-apple-sm"
+                        className="rounded-lg border border-apple-line bg-apple-bg-elev px-3 py-1.5 text-[13px] text-apple-ink outline-none focus:border-apple-line-strong focus:shadow-apple-sm"
                       />
                     </div>
                     <textarea
@@ -284,7 +284,7 @@ export default function MeProfileForm() {
                       }
                       placeholder="Что это, для кого, на каком этапе, ключевые гипотезы и цели…"
                       rows={3}
-                      className="mt-2 w-full rounded-lg border border-apple-line bg-white p-3 text-[13px] leading-relaxed text-apple-ink placeholder:text-apple-faint outline-none focus:border-apple-line-strong focus:shadow-apple-sm"
+                      className="mt-2 w-full rounded-lg border border-apple-line bg-apple-bg-elev p-3 text-[13px] leading-relaxed text-apple-ink placeholder:text-apple-faint outline-none focus:border-apple-line-strong focus:shadow-apple-sm"
                     />
                   </li>
                 ))}
@@ -294,7 +294,7 @@ export default function MeProfileForm() {
 
           {/* Остальные поля */}
           {FIELDS.slice(1).map((f) => (
-            <section key={f.key} className="rounded-apple-lg border border-apple-line bg-white p-5 shadow-apple-sm">
+            <section key={f.key} className="rounded-apple-lg border border-apple-line bg-apple-bg-elev p-5 shadow-apple-sm">
               <label className="mb-1 block text-[13px] font-semibold text-apple-ink">{f.label}</label>
               <p className="mb-2.5 text-[12px] text-apple-faint">{f.hint}</p>
               <textarea
@@ -302,7 +302,7 @@ export default function MeProfileForm() {
                 onChange={(e) => setProfile((p) => ({ ...p, [f.key]: e.target.value }))}
                 placeholder={f.placeholder}
                 rows={5}
-                className="w-full rounded-xl border border-apple-line bg-apple-bg-soft p-3 text-[14px] leading-relaxed text-apple-ink placeholder:text-apple-faint outline-none transition-all focus:border-apple-line-strong focus:bg-white focus:shadow-apple-sm"
+                className="w-full rounded-xl border border-apple-line bg-apple-bg-soft p-3 text-[14px] leading-relaxed text-apple-ink placeholder:text-apple-faint outline-none transition-all focus:border-apple-line-strong focus:bg-apple-bg-elev focus:shadow-apple-sm"
               />
               <p className="mt-1.5 text-right text-[11px] text-apple-faint">{profile[f.key].length} симв.</p>
             </section>
@@ -310,12 +310,12 @@ export default function MeProfileForm() {
         </div>
       )}
 
-      <div className="sticky bottom-0 -mx-4 border-t border-apple-line bg-white/85 px-4 py-3 backdrop-blur-xl backdrop-saturate-150 sm:-mx-6 sm:px-6">
+      <div className="sticky bottom-0 -mx-4 border-t border-apple-line bg-apple-bg-elev/85 px-4 py-3 backdrop-blur-xl backdrop-saturate-150 sm:-mx-6 sm:px-6">
         <button
           type="button"
           onClick={save}
           disabled={saving || loading || !configured}
-          className="inline-flex w-full items-center justify-center gap-2 rounded-full bg-apple-blue px-5 py-2.5 text-[14px] font-medium text-white transition-colors hover:bg-apple-blue-hover active:bg-apple-blue-pressed disabled:cursor-not-allowed disabled:bg-apple-line-strong sm:w-auto"
+          className="inline-flex w-full items-center justify-center gap-2 rounded-full bg-apple-blue px-5 py-2.5 text-[14px] font-medium text-apple-bg transition-colors hover:bg-apple-blue-hover active:bg-apple-blue-pressed disabled:cursor-not-allowed disabled:bg-apple-line-strong sm:w-auto"
         >
           {saved ? (
             <>
