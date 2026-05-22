@@ -1,0 +1,114 @@
+name: deploy-transcribe
+
+# Deploy apps/transcribe (Next.js 14) to Hetzner.
+# Prod container `infra-transcribe-1` is part of the `infra` docker-compose
+# project at /root/ai-command-center/infra/docker-compose.yml.
+#
+# Caddy: transcribe.46-62-215-11.nip.io, tma.46-62-215-11.nip.io → :3000.
+#
+# ─── Required GitHub secrets ───────────────────────────────────────
+#   HETZNER_SSH_KEY
+#   TRANSCRIBE_ANTHROPIC_API_KEY
+#   TRANSCRIBE_DEEPGRAM_API_KEY
+#   TRANSCRIBE_OPENAI_API_KEY
+#   TRANSCRIBE_SUPABASE_SERVICE_KEY
+#   TRANSCRIBE_TELEGRAM_BOT_TOKEN
+#   TRANSCRIBE_APIFY_API_TOKEN          (optional, set "" if unused)
+#   TRANSCRIBE_YTDLP_SERVICE_API_KEY    (optional)
+#
+# ─── Required GitHub repository variables ──────────────────────────
+#   TRANSCRIBE_SUPABASE_URL
+#   TRANSCRIBE_SUPABASE_ANON_KEY
+#   TRANSCRIBE_OWNER_TELEGRAM_ID
+#   TRANSCRIBE_YTDLP_SERVICE_URL        (optional, e.g. http://infra-ytdlp-1:8080)
+
+on:
+  push:
+    branches: [main]
+    paths:
+      - 'apps/transcribe/**'
+      - '.github/workflows/deploy-transcribe.yml'
+      - '.github/actions/deploy-ssh/**'
+  workflow_dispatch:
+    inputs:
+      ref:
+        description: 'Branch or commit to deploy'
+        required: false
+        default: 'main'
+
+concurrency:
+  group: deploy-transcribe
+  cancel-in-progress: false
+
+jobs:
+  deploy:
+    runs-on: ubuntu-latest
+    timeout-minutes: 20
+
+    steps:
+      - uses: actions/checkout@v4
+
+      - id: ref
+        run: |
+          if [ "${{ github.event_name }}" = "workflow_dispatch" ]; then
+            echo "value=${{ github.event.inputs.ref || 'main' }}" >> "$GITHUB_OUTPUT"
+          else
+            echo "value=${{ github.ref_name }}" >> "$GITHUB_OUTPUT"
+          fi
+
+      - uses: ./.github/actions/deploy-ssh
+        with:
+          app_name: transcribe
+          ref:      ${{ steps.ref.outputs.value }}
+          ssh_key:  ${{ secrets.HETZNER_SSH_KEY }}
+          env_file: |
+            ANTHROPIC_API_KEY=${{ secrets.TRANSCRIBE_ANTHROPIC_API_KEY }}
+            DEEPGRAM_API_KEY=${{ secrets.TRANSCRIBE_DEEPGRAM_API_KEY }}
+            OPENAI_API_KEY=${{ secrets.TRANSCRIBE_OPENAI_API_KEY }}
+            NEXT_PUBLIC_SUPABASE_URL=${{ vars.TRANSCRIBE_SUPABASE_URL }}
+            NEXT_PUBLIC_SUPABASE_ANON_KEY=${{ vars.TRANSCRIBE_SUPABASE_ANON_KEY }}
+            SUPABASE_SERVICE_KEY=${{ secrets.TRANSCRIBE_SUPABASE_SERVICE_KEY }}
+            TELEGRAM_BOT_TOKEN=${{ secrets.TRANSCRIBE_TELEGRAM_BOT_TOKEN }}
+            OWNER_TELEGRAM_ID=${{ vars.TRANSCRIBE_OWNER_TELEGRAM_ID }}
+            APIFY_API_TOKEN=${{ secrets.TRANSCRIBE_APIFY_API_TOKEN }}
+            YTDLP_SERVICE_URL=${{ vars.TRANSCRIBE_YTDLP_SERVICE_URL }}
+            YTDLP_SERVICE_API_KEY=${{ secrets.TRANSCRIBE_YTDLP_SERVICE_API_KEY }}
+            NODE_ENV=production
+          script: |
+            COMPOSE=/root/ai-command-center/infra/docker-compose.yml
+
+            echo "── building transcribe image ──"
+            docker compose -f "$COMPOSE" build transcribe
+
+            echo "── recreating infra-transcribe-1 ──"
+            docker compose -f "$COMPOSE" --env-file /etc/transcribe.env \
+              up -d --force-recreate transcribe
+
+            echo "── health-check ──"
+            for i in $(seq 1 20); do
+              if curl -fsS http://localhost:3000/ >/dev/null 2>&1; then
+                echo "✓ healthy after ${i}×3s"; exit 0
+              fi
+              sleep 3
+            done
+            echo "✗ transcribe did not respond within 60s"
+            docker logs --tail=80 infra-transcribe-1 || true
+            exit 1
+
+  smoke-test:
+    runs-on: ubuntu-latest
+    needs: [deploy]
+    timeout-minutes: 3
+    steps:
+      - name: HTTP smoke
+        run: |
+          set -euo pipefail
+          for url in \
+            "https://transcribe.46-62-215-11.nip.io/" \
+            "https://tma.46-62-215-11.nip.io/transcribe"; do
+            STATUS=$(curl -o /dev/null -sw "%{http_code}" "$url" --max-time 15 || echo "000")
+            echo "GET $url → HTTP $STATUS"
+            [ "$STATUS" = "200" ] || [ "$STATUS" = "307" ] || [ "$STATUS" = "308" ] \
+              || { echo "✗ unexpected $STATUS"; exit 1; }
+          done
+          echo "✓ endpoints live"

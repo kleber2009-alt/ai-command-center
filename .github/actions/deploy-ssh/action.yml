@@ -1,0 +1,82 @@
+name: deploy-ssh
+description: >-
+  Reusable SSH step for monorepo deploys to Hetzner.
+  Connects to the prod box, pulls the requested git ref into HETZNER_REPO_PATH,
+  optionally writes an env-file to /etc/<app_name>.env (0600 root),
+  and runs the caller-supplied shell script.
+
+inputs:
+  app_name:
+    description: 'Slug used for /etc/<app_name>.env and concurrency'
+    required: true
+  ref:
+    description: 'Git ref to deploy (branch or commit)'
+    required: true
+  ssh_key:
+    description: 'Private SSH key (HETZNER_SSH_KEY)'
+    required: true
+  host:
+    description: 'Override HETZNER_HOST'
+    required: false
+    default: '46.62.215.11'
+  user:
+    description: 'Override HETZNER_USER'
+    required: false
+    default: 'root'
+  port:
+    description: 'Override HETZNER_SSH_PORT'
+    required: false
+    default: '22'
+  repo_path:
+    description: 'Path to the monorepo on the server'
+    required: false
+    default: '/root/ai-command-center'
+  env_file:
+    description: 'Body of /etc/<app_name>.env. Empty string skips writing.'
+    required: false
+    default: ''
+  envs:
+    description: 'Comma-separated env-var names to whitelist into the SSH session (in addition to TARGET_REF, REPO_PATH, APP_NAME, ENV_BODY).'
+    required: false
+    default: ''
+  script:
+    description: 'Bash to run on the server after git pull / env-file write.'
+    required: true
+
+runs:
+  using: composite
+  steps:
+    - name: SSH deploy
+      uses: appleboy/ssh-action@v1.0.3
+      env:
+        TARGET_REF: ${{ inputs.ref }}
+        REPO_PATH:  ${{ inputs.repo_path }}
+        APP_NAME:   ${{ inputs.app_name }}
+        ENV_BODY:   ${{ inputs.env_file }}
+      with:
+        host:     ${{ inputs.host }}
+        username: ${{ inputs.user }}
+        port:     ${{ inputs.port }}
+        key:      ${{ inputs.ssh_key }}
+        script_stop: true
+        envs: TARGET_REF,REPO_PATH,APP_NAME,ENV_BODY,${{ inputs.envs }}
+        script: |
+          set -euo pipefail
+
+          # ── 1. pull latest code ───────────────────────────────────
+          cd "$REPO_PATH"
+          git fetch --prune origin
+          git checkout "$TARGET_REF"
+          git pull --ff-only origin "$TARGET_REF"
+          echo "── $APP_NAME @ $(git rev-parse --short HEAD) — $(git log -1 --pretty=%s) ──"
+
+          # ── 2. write env-file (root-only) if provided ─────────────
+          if [ -n "${ENV_BODY:-}" ]; then
+            ENV_FILE="/etc/${APP_NAME}.env"
+            printf '%s\n' "$ENV_BODY" > "$ENV_FILE"
+            chmod 600 "$ENV_FILE"
+            echo "── wrote $ENV_FILE ($(wc -l < "$ENV_FILE") lines) ──"
+          fi
+
+          # ── 3. caller-supplied script ─────────────────────────────
+          ${{ inputs.script }}

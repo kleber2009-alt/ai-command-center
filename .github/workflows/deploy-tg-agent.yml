@@ -1,0 +1,98 @@
+name: deploy-tg-agent
+
+# Deploy apps/tg-agent (Node 20 + SQLite Telegram group agent) to Hetzner.
+# Prod container `tg-agent` from /root/ai-command-center/apps/tg-agent/docker-compose.yml.
+#
+# Caddy: tg-agent.46-62-215-11.nip.io, tg.46-62-215-11.nip.io → :8080 (admin).
+#
+# ─── Required GitHub secrets ───────────────────────────────────────
+#   HETZNER_SSH_KEY
+#   TG_AGENT_TELEGRAM_BOT_TOKEN
+#   TG_AGENT_ANTHROPIC_API_KEY
+#   TG_AGENT_ADMIN_PASSWORD
+#   TG_AGENT_ADMIN_SESSION_SECRET
+#
+# ─── Required GitHub repository variables ──────────────────────────
+#   TG_AGENT_OWNER_TELEGRAM_ID
+#   TG_AGENT_ALLOWED_CHAT_IDS         (comma-separated)
+#   TG_AGENT_ADMIN_USERNAME
+#   TG_AGENT_ADMIN_PUBLIC_URL         (https://tg.46-62-215-11.nip.io)
+#   TG_AGENT_CLASSIFIER_MODEL         (claude-haiku-4-5-20251001)
+#   TG_AGENT_RESPONDER_MODEL          (claude-haiku-4-5-20251001)
+#   TG_AGENT_IGNORED_USER_IDS         (optional, comma-separated)
+
+on:
+  push:
+    branches: [main]
+    paths:
+      - 'apps/tg-agent/**'
+      - '.github/workflows/deploy-tg-agent.yml'
+      - '.github/actions/deploy-ssh/**'
+  workflow_dispatch:
+    inputs:
+      ref:
+        required: false
+        default: 'main'
+
+concurrency:
+  group: deploy-tg-agent
+  cancel-in-progress: false
+
+jobs:
+  deploy:
+    runs-on: ubuntu-latest
+    timeout-minutes: 15
+
+    steps:
+      - uses: actions/checkout@v4
+
+      - id: ref
+        run: |
+          if [ "${{ github.event_name }}" = "workflow_dispatch" ]; then
+            echo "value=${{ github.event.inputs.ref || 'main' }}" >> "$GITHUB_OUTPUT"
+          else
+            echo "value=${{ github.ref_name }}" >> "$GITHUB_OUTPUT"
+          fi
+
+      - uses: ./.github/actions/deploy-ssh
+        with:
+          app_name: tg-agent
+          ref:      ${{ steps.ref.outputs.value }}
+          ssh_key:  ${{ secrets.HETZNER_SSH_KEY }}
+          env_file: |
+            TELEGRAM_BOT_TOKEN=${{ secrets.TG_AGENT_TELEGRAM_BOT_TOKEN }}
+            ANTHROPIC_API_KEY=${{ secrets.TG_AGENT_ANTHROPIC_API_KEY }}
+            OWNER_TELEGRAM_ID=${{ vars.TG_AGENT_OWNER_TELEGRAM_ID }}
+            ALLOWED_CHAT_IDS=${{ vars.TG_AGENT_ALLOWED_CHAT_IDS }}
+            IGNORED_USER_IDS=${{ vars.TG_AGENT_IGNORED_USER_IDS }}
+            CLASSIFIER_MODEL=${{ vars.TG_AGENT_CLASSIFIER_MODEL }}
+            RESPONDER_MODEL=${{ vars.TG_AGENT_RESPONDER_MODEL }}
+            ADMIN_USERNAME=${{ vars.TG_AGENT_ADMIN_USERNAME }}
+            ADMIN_PASSWORD=${{ secrets.TG_AGENT_ADMIN_PASSWORD }}
+            ADMIN_SESSION_SECRET=${{ secrets.TG_AGENT_ADMIN_SESSION_SECRET }}
+            ADMIN_PUBLIC_URL=${{ vars.TG_AGENT_ADMIN_PUBLIC_URL }}
+            ADMIN_PORT=8080
+            DATABASE_PATH=/data/tg-agent.sqlite
+            LOG_LEVEL=info
+            NODE_ENV=production
+          script: |
+            COMPOSE=/root/ai-command-center/apps/tg-agent/docker-compose.yml
+
+            echo "── building tg-agent ──"
+            docker compose -f "$COMPOSE" build
+
+            echo "── restarting tg-agent ──"
+            docker compose -f "$COMPOSE" --env-file /etc/tg-agent.env \
+              up -d --force-recreate
+
+            echo "── health-check ──"
+            for i in $(seq 1 20); do
+              if curl -fsS http://localhost:8080/healthz >/dev/null 2>&1 \
+                 || curl -fsS http://localhost:8080/ >/dev/null 2>&1; then
+                echo "✓ healthy after ${i}×3s"; exit 0
+              fi
+              sleep 3
+            done
+            echo "✗ tg-agent did not respond within 60s"
+            docker logs --tail=80 tg-agent || true
+            exit 1
