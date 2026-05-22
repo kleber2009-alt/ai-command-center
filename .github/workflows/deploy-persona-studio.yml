@@ -171,15 +171,15 @@ jobs:
             # ── 8. wire Caddy if not already there ───────────────────
             CADDYFILE=/etc/caddy/Caddyfile
             if ! grep -q "persona-app\.46-62-215-11\.nip\.io" "$CADDYFILE"; then
-              cat >> "$CADDYFILE" <<'CADDY'
-
-# ─── Persona Studio app ─────────────────────────────────────────────
-persona-app.46-62-215-11.nip.io {
-    reverse_proxy localhost:3003
-    encode zstd gzip
-    header { X-Content-Type-Options nosniff; -Server }
-}
-CADDY
+              {
+                printf '\n'
+                printf '# ─── Persona Studio app ─────────────────────────────────────────────\n'
+                printf 'persona-app.46-62-215-11.nip.io {\n'
+                printf '    reverse_proxy localhost:3003\n'
+                printf '    encode zstd gzip\n'
+                printf '    header { X-Content-Type-Options nosniff; -Server }\n'
+                printf '}\n'
+              } >> "$CADDYFILE"
               caddy reload --config "$CADDYFILE" --adapter caddyfile
               echo "── Caddy reloaded ──"
             fi
@@ -199,7 +199,7 @@ CADDY
         env:
           TARGET_REF:    ${{ steps.ref.outputs.value }}
           REPO_PATH:     ${{ vars.HETZNER_REPO_PATH || '/root/ai-command-center' }}
-          MIGRATE_ONLY:  ${{ inputs.migrate_only || 'false' }}
+          MIGRATE_ONLY:  ${{ github.event.inputs.migrate_only || 'false' }}
           DATABASE_URL:           ${{ vars.PERSONA_DATABASE_URL }}
           NEXTAUTH_URL:           ${{ vars.PERSONA_NEXTAUTH_URL }}
           NEXTAUTH_SECRET:        ${{ secrets.PERSONA_NEXTAUTH_SECRET }}
@@ -217,7 +217,7 @@ CADDY
     runs-on: ubuntu-latest
     needs: [deploy]
     timeout-minutes: 3
-    if: ${{ !inputs.migrate_only }}
+    if: ${{ github.event.inputs.migrate_only != 'true' }}
 
     steps:
       - name: HTTP smoke test
