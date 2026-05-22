@@ -35,6 +35,7 @@ export function startHeygenWorker() {
       if (row.userId !== userId) throw new Error('user_mismatch');
       if (!row.avatar.imageUrl) throw new Error('avatar_no_image');
       if (!row.voiceId) throw new Error('voice_missing');
+      if (!row.script || row.script.trim().length < 5) throw new Error('script_missing');
 
       await prisma.videoGeneration.update({
         where: { id: videoId },

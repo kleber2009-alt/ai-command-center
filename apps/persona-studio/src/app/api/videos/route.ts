@@ -2,21 +2,26 @@ import { NextRequest, NextResponse } from 'next/server';
 import { z } from 'zod';
 import { getCurrentUser } from '@/lib/auth';
 import { prisma } from '@/lib/prisma';
-import { chargeTokens, refundTokens, COSTS, InsufficientTokensError } from '@/lib/tokens';
-import { videoQueue } from '@/lib/queue';
+import { chargeTokens, refundTokens, InsufficientTokensError } from '@/lib/tokens';
+import { queueForName } from '@/lib/queue';
+import { engineConfig, isVideoEngine, type VideoEngine } from '@/lib/video-engines';
 
 export const runtime = 'nodejs';
 
-const Body = z.object({
-  avatarId: z.string().min(1),
-  script: z.string().min(5).max(1500),
-  voiceId: z.string().min(1),
-  language: z.string().max(8).optional(),
-  aspect: z.enum(['9:16', '1:1', '16:9']).optional().default('9:16'),
-  background: z.string().max(32).optional(),
-  subtitles: z.boolean().optional().default(true),
-  heygenVersion: z.enum(['V', 'IV']).optional().default('V'),
-});
+const Body = z
+  .object({
+    avatarId: z.string().min(1),
+    engine: z.string().default('heygen-v5'),
+    script: z.string().min(5).max(1500).optional(),
+    voiceId: z.string().min(1).optional(),
+    audioUrl: z.string().url().optional(),
+    language: z.string().max(8).optional(),
+    aspect: z.enum(['9:16', '1:1', '16:9']).optional().default('9:16'),
+    background: z.string().max(32).optional(),
+    subtitles: z.boolean().optional().default(true),
+    heygenVersion: z.enum(['V', 'IV']).optional(),
+  })
+  .refine((d) => isVideoEngine(d.engine), { message: 'unknown_engine', path: ['engine'] });
 
 export async function POST(req: NextRequest) {
   const user = await getCurrentUser();
@@ -26,9 +31,35 @@ export async function POST(req: NextRequest) {
   if (!parsed.success) {
     return NextResponse.json({ error: 'bad_body', issues: parsed.error.issues }, { status: 400 });
   }
-  const { avatarId, script, voiceId, language, aspect, background, subtitles, heygenVersion } = parsed.data;
+  const data = parsed.data;
+  const engine = data.engine as VideoEngine;
+  const cfg = engineConfig(engine);
 
-  const avatar = await prisma.avatar.findFirst({ where: { id: avatarId, userId: user.id } });
+  // Engine-specific input validation
+  if (cfg.inputMode === 'script') {
+    const hasOverride = !!data.audioUrl;
+    if (!hasOverride) {
+      if (!data.script || data.script.trim().length < 5) {
+        return NextResponse.json({ error: 'script_required' }, { status: 400 });
+      }
+      if (!data.voiceId) {
+        return NextResponse.json({ error: 'voice_required' }, { status: 400 });
+      }
+    }
+  } else if (cfg.inputMode === 'audio') {
+    if (!data.audioUrl) {
+      return NextResponse.json({ error: 'audio_url_required' }, { status: 400 });
+    }
+  }
+
+  if (!cfg.supportedAspects.includes(data.aspect)) {
+    return NextResponse.json(
+      { error: 'aspect_unsupported', supported: cfg.supportedAspects },
+      { status: 400 },
+    );
+  }
+
+  const avatar = await prisma.avatar.findFirst({ where: { id: data.avatarId, userId: user.id } });
   if (!avatar) return NextResponse.json({ error: 'avatar_not_found' }, { status: 404 });
   if (avatar.status !== 'done' || !avatar.imageUrl) {
     return NextResponse.json({ error: 'avatar_not_ready' }, { status: 409 });
@@ -37,8 +68,8 @@ export async function POST(req: NextRequest) {
   try {
     await chargeTokens({
       userId: user.id,
-      amount: COSTS.heygenVideo,
-      reason: 'heygen-video',
+      amount: cfg.cost,
+      reason: `video:${engine}`,
     });
   } catch (e) {
     if (e instanceof InsufficientTokensError) {
@@ -53,26 +84,32 @@ export async function POST(req: NextRequest) {
   const video = await prisma.videoGeneration.create({
     data: {
       userId: user.id,
-      avatarId,
-      script,
-      voiceId,
-      language: language ?? 'ru',
-      aspect,
-      background: background ?? '#000000',
-      subtitles,
-      heygenVersion,
+      avatarId: data.avatarId,
+      engine,
+      script: data.script ?? null,
+      audioUrl: data.audioUrl ?? null,
+      voiceId: data.voiceId ?? null,
+      language: data.language ?? 'ru',
+      aspect: data.aspect,
+      background: data.background ?? '#000000',
+      subtitles: data.subtitles,
+      heygenVersion: data.heygenVersion ?? cfg.heygenVersion ?? 'V',
       status: 'pending',
-      tokensCost: COSTS.heygenVideo,
+      tokensCost: cfg.cost,
     },
   });
 
   try {
-    await videoQueue().add('generate', { videoId: video.id, userId: user.id }, { jobId: video.id });
+    await queueForName(cfg.queueName).add(
+      'generate',
+      { videoId: video.id, userId: user.id },
+      { jobId: video.id },
+    );
   } catch {
     await refundTokens({
       userId: user.id,
-      amount: COSTS.heygenVideo,
-      reason: 'heygen-video:enqueue-failed',
+      amount: cfg.cost,
+      reason: `video:${engine}:enqueue-failed`,
       refId: video.id,
     });
     await prisma.videoGeneration.update({
@@ -82,7 +119,7 @@ export async function POST(req: NextRequest) {
     return NextResponse.json({ error: 'enqueue_failed' }, { status: 500 });
   }
 
-  return NextResponse.json({ id: video.id, status: video.status });
+  return NextResponse.json({ id: video.id, status: video.status, engine });
 }
 
 export async function GET(req: NextRequest) {

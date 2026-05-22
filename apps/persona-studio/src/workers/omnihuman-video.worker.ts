@@ -11,12 +11,26 @@ import {
 import { synthesize, ElevenlabsError } from '@/lib/elevenlabs';
 import { keyFor, uploadBuffer } from '@/lib/storage';
 import { refundTokens } from '@/lib/tokens';
+import { env } from '@/lib/env';
 
-const MAX_TTS_CHARS = Number(process.env.OMNIHUMAN_MAX_TTS_CHARS ?? 400);
+function logEvent(event: string, data: Record<string, unknown> = {}) {
+  console.log(JSON.stringify({ event, ts: new Date().toISOString(), ...data }));
+}
 
 function toOmniAspect(s: string | null | undefined): OmniAspect {
   if (s === '9:16' || s === '1:1' || s === '16:9') return s;
   return 'auto';
+}
+
+function errCode(e: unknown): string {
+  if (e instanceof OmnihumanError) return e.code;
+  if (e instanceof ElevenlabsError) return e.code;
+  return 'UNKNOWN';
+}
+
+function errMsg(e: unknown): string {
+  if (e instanceof Error) return e.message;
+  return String(e);
 }
 
 export function startOmnihumanWorker() {
@@ -24,6 +38,7 @@ export function startOmnihumanWorker() {
     QUEUE_NAMES.omnihumanVideo,
     async (job) => {
       const { videoId, userId } = job.data;
+      const startMs = Date.now();
 
       const row = await prisma.videoGeneration.findUnique({
         where: { id: videoId },
@@ -42,13 +57,21 @@ export function startOmnihumanWorker() {
         data: { status: 'processing' },
       });
 
-      try {
-        // Step 1: ensure we have a public audio URL. If audioUrl already set
-        // (advanced override), use it as-is. Otherwise synthesize via ElevenLabs.
-        let audioUrl = row.audioUrl;
-        if (!audioUrl) {
-          const text = row.script!.slice(0, MAX_TTS_CHARS);
-          console.log(`[omnihuman-worker] ${videoId} synthesizing TTS (eleven, voice=${row.voiceId}, ${text.length} chars)…`);
+      logEvent('video_generation_started', {
+        videoGenId: videoId,
+        userId,
+        engine: 'omnihuman-1.5',
+        charsCount: row.script?.length ?? null,
+        hasAudioOverride: !!row.audioUrl,
+      });
+
+      // ── Stage 1: TTS (skip if audioUrl override already set) ──
+      let audioUrl = row.audioUrl;
+      let ttsMs: number | null = null;
+      if (!audioUrl) {
+        const ttsStart = Date.now();
+        try {
+          const text = row.script!.slice(0, env.OMNIHUMAN_MAX_TTS_CHARS);
           const tts = await synthesize({
             text,
             voiceId: row.voiceId!,
@@ -64,31 +87,56 @@ export function startOmnihumanWorker() {
             where: { id: videoId },
             data: { audioUrl },
           });
-          console.log(`[omnihuman-worker] ${videoId} audio uploaded → ${audioUrl.slice(0, 80)}…`);
+          ttsMs = Date.now() - ttsStart;
+          logEvent('video_tts_done', { videoGenId: videoId, ttsMs, charsCount: text.length });
+        } catch (e) {
+          const code = errCode(e);
+          const msg = errMsg(e);
+          await refundTokens({
+            userId,
+            amount: row.tokensCost,
+            reason: 'omnihuman-video:tts-failed',
+            refId: videoId,
+          });
+          await prisma.videoGeneration.update({
+            where: { id: videoId },
+            data: {
+              status: 'failed',
+              errorMsg: `TTS_${code}: ${msg}`.slice(0, 500),
+            },
+          });
+          logEvent('video_generation_failed', {
+            videoGenId: videoId,
+            userId,
+            engine: 'omnihuman-1.5',
+            errorStage: 'tts',
+            errorCode: code,
+          });
+          throw e;
         }
+      }
 
-        // Step 2: submit to OmniHuman with image + audio URLs.
-        console.log(`[omnihuman-worker] ${videoId} submitting omnihuman (image=${row.avatar.imageUrl.slice(0, 60)}…, audio=${audioUrl.slice(0, 60)}…)`);
+      // ── Stage 2: OmniHuman submit + poll + download ──
+      const videoStart = Date.now();
+      try {
         const taskId = await submitOmnihuman({
           imageUrl: row.avatar.imageUrl,
           audioUrl,
           aspectRatio: toOmniAspect(row.aspect),
         });
-        console.log(`[omnihuman-worker] ${videoId} task=${taskId}`);
 
         await prisma.videoGeneration.update({
           where: { id: videoId },
           data: { engineJobId: taskId },
         });
+        logEvent('omnihuman_submitted', { videoGenId: videoId, taskId });
 
-        const result = await waitForOmnihuman(taskId);
-        if (result.state !== 'success') {
-          const fail = result as { failCode: string; failMsg: string };
-          throw new OmnihumanError(fail.failCode, fail.failMsg);
-        }
+        const videoCdnUrl = await waitForOmnihuman({
+          taskId,
+          maxMs: env.OMNIHUMAN_MAX_POLL_MS,
+        });
 
-        console.log(`[omnihuman-worker] ${videoId} downloading mp4 from ${result.videoUrl.slice(0, 80)}…`);
-        const dl = await downloadVideo(result.videoUrl);
+        const dl = await downloadVideo(videoCdnUrl);
         const key = keyFor('video', userId, 'mp4');
         const stableUrl = await uploadBuffer({
           key,
@@ -105,26 +153,41 @@ export function startOmnihumanWorker() {
             completedAt: new Date(),
           },
         });
-        console.log(`[omnihuman-worker] ${videoId} done (${dl.bytes.length} bytes)`);
-        return { ok: true, bytes: dl.bytes.length };
-      } catch (e) {
-        const msg =
-          e instanceof OmnihumanError
-            ? `${e.code}: ${e.message}`
-            : e instanceof ElevenlabsError
-              ? `TTS_${e.code}: ${e.message}`
-              : e instanceof Error
-                ? e.message
-                : String(e);
-        await prisma.videoGeneration.update({
-          where: { id: videoId },
-          data: { status: 'failed', errorMsg: msg.slice(0, 500) },
+
+        const videoMs = Date.now() - videoStart;
+        const totalMs = Date.now() - startMs;
+        logEvent('video_generation_completed', {
+          videoGenId: videoId,
+          userId,
+          engine: 'omnihuman-1.5',
+          ttsMs,
+          videoMs,
+          totalMs,
+          bytes: dl.bytes.length,
         });
+        return { ok: true, bytes: dl.bytes.length, ttsMs, videoMs, totalMs };
+      } catch (e) {
+        const code = errCode(e);
+        const msg = errMsg(e);
         await refundTokens({
           userId,
           amount: row.tokensCost,
-          reason: 'omnihuman-video:failed',
+          reason: 'omnihuman-video:engine-failed',
           refId: videoId,
+        });
+        await prisma.videoGeneration.update({
+          where: { id: videoId },
+          data: {
+            status: 'failed',
+            errorMsg: `OMNIHUMAN_${code}: ${msg}`.slice(0, 500),
+          },
+        });
+        logEvent('video_generation_failed', {
+          videoGenId: videoId,
+          userId,
+          engine: 'omnihuman-1.5',
+          errorStage: 'engine',
+          errorCode: code,
         });
         throw e;
       }

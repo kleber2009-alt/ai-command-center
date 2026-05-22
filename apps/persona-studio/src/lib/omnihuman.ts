@@ -20,26 +20,18 @@
 // Model slug на kie может отличаться от провайдера к провайдеру; держим
 // в env (KIE_OMNIHUMAN_MODEL) с дефолтом 'bytedance-omnihuman-1.5'.
 
-const KIE_BASE = process.env.KIE_BASE_URL ?? 'https://api.kie.ai/api/v1';
-const OMNI_MODEL = process.env.KIE_OMNIHUMAN_MODEL ?? 'bytedance-omnihuman-1.5';
+import { env } from './env';
 
 const SUBMIT_TIMEOUT_MS = 30_000;
 const STATUS_TIMEOUT_MS = 15_000;
 const DOWNLOAD_TIMEOUT_MS = 180_000;
 const POLL_INTERVAL_MS = 5_000;
-const POLL_MAX_ATTEMPTS = 180;     // ~15 минут — OmniHuman медленнее картинок
 
 export class OmnihumanError extends Error {
   constructor(public code: string, message: string) {
     super(message);
     this.name = 'OmnihumanError';
   }
-}
-
-function keyOrThrow(): string {
-  const k = process.env.KIE_API_KEY;
-  if (!k) throw new OmnihumanError('MISSING_KEY', 'KIE_API_KEY is not set');
-  return k;
 }
 
 export type OmniAspect = 'auto' | '1:1' | '16:9' | '9:16';
@@ -73,8 +65,6 @@ type KieRecordResp = {
 };
 
 export async function submitOmnihuman(opts: OmniSubmitOpts): Promise<string> {
-  const key = keyOrThrow();
-
   const input: Record<string, unknown> = {
     image_url: opts.imageUrl,
     audio_url: opts.audioUrl,
@@ -83,14 +73,14 @@ export async function submitOmnihuman(opts: OmniSubmitOpts): Promise<string> {
   if (opts.prompt) input.prompt = opts.prompt;
 
   const body = {
-    model: opts.model ?? OMNI_MODEL,
+    model: opts.model ?? env.KIE_OMNIHUMAN_MODEL,
     input,
   };
 
-  const res = await fetch(`${KIE_BASE}/playground/createTask`, {
+  const res = await fetch(`${env.KIE_BASE_URL}/playground/createTask`, {
     method: 'POST',
     headers: {
-      Authorization: `Bearer ${key}`,
+      Authorization: `Bearer ${env.KIE_API_KEY}`,
       'Content-Type': 'application/json',
     },
     body: JSON.stringify(body),
@@ -115,11 +105,10 @@ export type OmniStatus =
   | { state: 'failed'; taskId: string; failCode: string; failMsg: string };
 
 export async function getOmnihumanStatus(taskId: string): Promise<OmniStatus> {
-  const key = keyOrThrow();
   const res = await fetch(
-    `${KIE_BASE}/playground/recordInfo?taskId=${encodeURIComponent(taskId)}`,
+    `${env.KIE_BASE_URL}/playground/recordInfo?taskId=${encodeURIComponent(taskId)}`,
     {
-      headers: { Authorization: `Bearer ${key}` },
+      headers: { Authorization: `Bearer ${env.KIE_API_KEY}` },
       signal: AbortSignal.timeout(STATUS_TIMEOUT_MS),
     },
   );
@@ -179,15 +168,26 @@ export async function getOmnihumanStatus(taskId: string): Promise<OmniStatus> {
   return { state: d.state, taskId };
 }
 
-export async function waitForOmnihuman(taskId: string): Promise<OmniStatus> {
-  for (let i = 0; i < POLL_MAX_ATTEMPTS; i++) {
-    const s = await getOmnihumanStatus(taskId);
-    if (s.state === 'success' || s.state === 'failed') return s;
+/**
+ * Poll until task completes (success → returns videoUrl) or fails (throws).
+ * Deadline — env.OMNIHUMAN_MAX_POLL_MS by default; override via opts.maxMs.
+ */
+export async function waitForOmnihuman(opts: {
+  taskId: string;
+  maxMs?: number;
+}): Promise<string> {
+  const deadline = Date.now() + (opts.maxMs ?? env.OMNIHUMAN_MAX_POLL_MS);
+  while (Date.now() < deadline) {
+    const s = await getOmnihumanStatus(opts.taskId);
+    if (s.state === 'success') return s.videoUrl;
+    if (s.state === 'failed') {
+      throw new OmnihumanError(s.failCode, s.failMsg);
+    }
     await new Promise((r) => setTimeout(r, POLL_INTERVAL_MS));
   }
   throw new OmnihumanError(
     'TIMEOUT',
-    `task ${taskId} did not finish within ${POLL_MAX_ATTEMPTS * POLL_INTERVAL_MS}ms`,
+    `task ${opts.taskId} did not finish within ${opts.maxMs ?? env.OMNIHUMAN_MAX_POLL_MS}ms`,
   );
 }
 
