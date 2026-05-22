@@ -6,9 +6,8 @@ import { ToolRunner } from "./ToolRunner";
 
 export const dynamic = "force-dynamic";
 
-export default async function ToolPage({ params }: { params: Promise<{ slug: string }> }) {
-  const { slug } = await params;
-  const [tool] = await db.select().from(aiTools).where(eq(aiTools.slug, slug)).limit(1);
+export default async function ToolPage({ params }: { params: { slug: string } }) {
+  const [tool] = await db.select().from(aiTools).where(eq(aiTools.slug, params.slug)).limit(1);
   if (!tool || tool.status === "disabled") notFound();
 
   return (

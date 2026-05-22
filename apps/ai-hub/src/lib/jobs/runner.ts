@@ -11,7 +11,6 @@ import { getAdapter } from "@/lib/providers/router";
 import { charge, refund } from "@/lib/wallet";
 import { ingestJobMedia } from "@/lib/jobs/ingest";
 import { startWatchdog } from "@/lib/jobs/watchdog";
-import { startPoller } from "@/lib/jobs/poller";
 import { child } from "@/lib/logger";
 import type { ProviderId } from "@/lib/db/schema";
 import { QUEUE_NAME, type AIJobPayload } from "./queue";
@@ -70,19 +69,17 @@ const worker = new Worker<AIJobPayload>(QUEUE_NAME, async (job) => {
       description: `Auto-refund: ${message}` });
     throw err;
   }
-}, { connection, concurrency: 8, lockDuration: 5 * 60_000 });   // 5m — research jobs (apify+claude) can take ~90s
+}, { connection, concurrency: 8 });
 
 worker.on("ready",     () => log.info("worker ready"));
 worker.on("failed",    (j, err) => log.error("job failed", { jobId: j?.id, error: err?.message }));
 worker.on("completed", (j) => log.info("job completed", { jobId: j.id }));
 
 const watchdogTimer = startWatchdog();
-const pollerTimer = startPoller();
 
 process.on("SIGTERM", async () => {
   log.info("SIGTERM received, shutting down");
   clearInterval(watchdogTimer);
-  clearInterval(pollerTimer);
   await worker.close();
   process.exit(0);
 });

@@ -3,9 +3,12 @@ import { useEffect, useRef, useState } from 'react'
 import {
   AudioLines, Loader2, Copy, Check, TriangleAlert, Link as LinkIcon,
   Download, FileText, Sparkles, Languages, History, Trash2, ChevronRight, Youtube, FileAudio,
-  LayoutGrid, Video, Shuffle, Send, Brain, Zap, Image,
+  LayoutGrid, Video, Shuffle, Send, Bot, Brain, ExternalLink,
 } from 'lucide-react'
-import { apiFetch, getTelegram, isInTelegram } from '@/lib/telegram'
+import { getTelegram, isInTelegram } from '@/lib/telegram'
+import { apiFetch } from '@/lib/api-client'
+import MarkdownMessage from '@/components/MarkdownMessage'
+import { readNdjson } from '@/lib/stream-client'
 
 type Paragraph = { text: string; start: number; end: number }
 type Source = 'youtube' | 'deepgram' | 'ytdlp+deepgram' | 'apify+deepgram'
@@ -17,7 +20,7 @@ type Result = {
   detectedLanguage: string | null
   source: Source
 }
-type Summary = { summary: string; bullets: string[] }
+type Summary = { markdown: string }
 type Translation = { text: string; lang: 'ru' | 'en' }
 
 type CarouselContent = { slides: Array<{ n: number; title: string; body: string }> }
@@ -52,17 +55,7 @@ type HistoryItem = {
   source: string | null
   language: string | null
   duration: number | null
-  artifacts: Artifact[]
-}
-
-const ARTIFACT_LABELS: Record<Artifact, { label: string; color: string }> = {
-  summary:          { label: 'саммари',         color: 'bg-violet-500/10 text-violet-300 border-violet-500/20' },
-  translation:      { label: 'перевод',          color: 'bg-emerald-500/10 text-emerald-300 border-emerald-500/20' },
-  carousel:         { label: 'карусель',         color: 'bg-cyan-500/10 text-cyan-300 border-cyan-500/20' },
-  'carousel-image': { label: 'карусель+фото',    color: 'bg-indigo-500/10 text-indigo-300 border-indigo-500/20' },
-  'reels-new':      { label: 'рилс',             color: 'bg-fuchsia-500/10 text-fuchsia-300 border-fuchsia-500/20' },
-  'reels-remix':    { label: 'рилс-ремикс',      color: 'bg-pink-500/10 text-pink-300 border-pink-500/20' },
-  'tg-post':        { label: 'TG-пост',          color: 'bg-sky-500/10 text-sky-300 border-sky-500/20' },
+  in_brain: 0 | 1
 }
 
 function formatTime(sec: number) {
@@ -124,7 +117,7 @@ function ReelsCard({
   const Icon = variant === 'new' ? Video : Shuffle
   const title = variant === 'new' ? 'Рилс — новый сценарий' : 'Рилс — ремикс'
   return (
-    <div className="overflow-hidden rounded-apple-lg border border-apple-line bg-white shadow-apple-sm">
+    <div className="overflow-hidden rounded-apple-lg border border-apple-line bg-apple-bg-elev shadow-apple-sm">
       <div className="flex items-center justify-between gap-2 border-b border-apple-line px-5 py-3">
         <div className="flex items-center gap-2">
           <Icon className="h-4 w-4 text-apple-muted" />
@@ -194,7 +187,7 @@ function SoftButton({
       type="button"
       onClick={onClick}
       disabled={disabled}
-      className="inline-flex items-center gap-1.5 rounded-full border border-apple-line bg-white px-3 py-1.5 text-[12px] font-medium text-apple-ink shadow-apple-sm transition-colors hover:bg-apple-bg-soft disabled:cursor-not-allowed disabled:opacity-50"
+      className="inline-flex items-center gap-1.5 rounded-full border border-apple-line bg-apple-bg-elev px-3 py-1.5 text-[12px] font-medium text-apple-ink shadow-apple-sm transition-colors hover:bg-apple-bg-soft disabled:cursor-not-allowed disabled:opacity-50"
     >
       {icon}
       {children}
@@ -287,10 +280,14 @@ export default function TranscribePage() {
 
   const [generations, setGenerations] = useState<Generations>({})
   const [genLoading, setGenLoading] = useState<GenType | null>(null)
-  const [tgResend, setTgResend] = useState<'idle' | 'sending' | 'sent' | 'error'>('idle')
+  const [genStream, setGenStream] = useState<Partial<Record<GenType, string>>>({})
 
   const [history, setHistory] = useState<HistoryItem[]>([])
   const [historyConfigured, setHistoryConfigured] = useState(true)
+  const [historySelection, setHistorySelection] = useState<Set<string>>(new Set())
+  const [batchImporting, setBatchImporting] = useState(false)
+  const [batchSummary, setBatchSummary] = useState<string | null>(null)
+  const [historyQuery, setHistoryQuery] = useState('')
 
   const [inTg, setInTg] = useState(false)
   const submitRef = useRef<() => void>(() => {})
@@ -442,8 +439,12 @@ export default function TranscribePage() {
           detectedLanguage: data.language,
           source: data.source,
         })
-        if (data.summary && data.bullets) {
-          setSummary({ summary: data.summary, bullets: data.bullets })
+        if (data.summary || (data.bullets && data.bullets.length > 0)) {
+          const bulletsMd = (data.bullets ?? []).map((b: string) => `- ${b}`).join('\n')
+          const md =
+            (data.summary ? `## Саммари\n${data.summary}` : '') +
+            (bulletsMd ? (data.summary ? '\n\n' : '') + `## Тезисы\n${bulletsMd}` : '')
+          setSummary({ markdown: md })
         }
         if (data.translation) {
           setTranslation({ text: data.translation.text, lang: data.translation.lang })
@@ -471,6 +472,47 @@ export default function TranscribePage() {
         resetSecondary()
       }
     } catch {}
+  }
+
+  function toggleHistorySelection(id: string) {
+    setHistorySelection(prev => {
+      const next = new Set(prev)
+      if (next.has(id)) next.delete(id)
+      else next.add(id)
+      return next
+    })
+    setBatchSummary(null)
+  }
+
+  function clearHistorySelection() {
+    setHistorySelection(new Set())
+    setBatchSummary(null)
+  }
+
+  async function batchImportToBrain() {
+    if (batchImporting || historySelection.size === 0) return
+    setBatchImporting(true)
+    setBatchSummary(null)
+    setError(null)
+    try {
+      const ids = Array.from(historySelection)
+      const res = await apiFetch('/api/me/documents/import-transcripts', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ ids }),
+      })
+      const data = await res.json()
+      if (!res.ok) throw new Error(data?.error || `Ошибка ${res.status}`)
+      const s = data.summary || { imported: 0, failed: 0, total: ids.length }
+      const parts = [`Добавлено в Базу: ${s.imported} из ${s.total}`]
+      if (s.failed > 0) parts.push(`не смог: ${s.failed}`)
+      setBatchSummary(parts.join(' · '))
+      setHistorySelection(new Set())
+    } catch (e: any) {
+      setError(e?.message || 'Не удалось импортировать')
+    } finally {
+      setBatchImporting(false)
+    }
   }
 
   async function importToBrain() {
@@ -527,22 +569,34 @@ export default function TranscribePage() {
   async function generateSummary() {
     if (!result) return
     setSummaryLoading(true)
-    setSummary(null)
+    setSummary({ markdown: '' })
+    setError(null)
     try {
       const res = await apiFetch('/api/transcribe/summarize', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({ id: result.id, transcript: result.transcript }),
       })
-      const data = await res.json()
       if (!res.ok) {
-        setError(data.error || 'Не удалось сгенерировать саммари')
-      } else {
-        setSummary({ summary: data.summary, bullets: data.bullets })
-        loadHistory()
+        const data = await res.json().catch(() => ({}))
+        throw new Error(data?.error || `Ошибка ${res.status}`)
       }
+      let acc = ''
+      let streamError: string | null = null
+      await readNdjson(res, (e) => {
+        if (e.type === 'delta') {
+          acc += e.text
+          setSummary({ markdown: acc })
+        } else if (e.type === 'error') {
+          streamError = e.error
+        }
+      })
+      if (streamError) throw new Error(streamError)
+      if (!acc.trim()) throw new Error('Пустой ответ от модели')
+      setSummary({ markdown: acc })
     } catch (err: any) {
       setError(err?.message || 'Сетевая ошибка')
+      setSummary(null)
     } finally {
       setSummaryLoading(false)
     }
@@ -551,22 +605,34 @@ export default function TranscribePage() {
   async function translateTo(targetLang: 'ru' | 'en') {
     if (!result) return
     setTranslationLoading(true)
-    setTranslation(null)
+    setTranslation({ text: '', lang: targetLang })
+    setError(null)
     try {
       const res = await apiFetch('/api/transcribe/translate', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({ id: result.id, transcript: result.transcript, targetLang }),
       })
-      const data = await res.json()
       if (!res.ok) {
-        setError(data.error || 'Не удалось перевести')
-      } else {
-        setTranslation({ text: data.translation, lang: data.lang })
-        loadHistory()
+        const data = await res.json().catch(() => ({}))
+        throw new Error(data?.error || `Ошибка ${res.status}`)
       }
+      let acc = ''
+      let streamError: string | null = null
+      await readNdjson(res, (e) => {
+        if (e.type === 'delta') {
+          acc += e.text
+          setTranslation({ text: acc, lang: targetLang })
+        } else if (e.type === 'error') {
+          streamError = e.error
+        }
+      })
+      if (streamError) throw new Error(streamError)
+      if (!acc.trim()) throw new Error('Пустой ответ от модели')
+      setTranslation({ text: acc, lang: targetLang })
     } catch (err: any) {
       setError(err?.message || 'Сетевая ошибка')
+      setTranslation(null)
     } finally {
       setTranslationLoading(false)
     }
@@ -576,21 +642,45 @@ export default function TranscribePage() {
     if (!result) return
     setGenLoading(type)
     setGenerations(prev => ({ ...prev, [type]: undefined }))
+    setGenStream(prev => ({ ...prev, [type]: '' }))
+    setError(null)
     try {
       const res = await apiFetch('/api/transcribe/generate', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({ id: result.id, transcript: result.transcript, type }),
       })
-      const data = await res.json()
       if (!res.ok) {
-        setError(data.error || 'Не удалось сгенерировать контент')
-      } else {
-        setGenerations(prev => ({ ...prev, [type]: data.content }))
-        loadHistory()
+        const data = await res.json().catch(() => ({}))
+        throw new Error(data?.error || `Ошибка ${res.status}`)
+      }
+      let acc = ''
+      let finalContent: any = null
+      let parseError: string | null = null
+      let streamError: string | null = null
+      await readNdjson(res, (e) => {
+        if (e.type === 'delta') {
+          acc += e.text
+          setGenStream(prev => ({ ...prev, [type]: acc }))
+        } else if (e.type === 'meta' && (e as any).content) {
+          finalContent = (e as any).content
+        } else if (e.type === 'meta' && (e as any).parseError) {
+          parseError = (e as any).parseError as string
+        } else if (e.type === 'error') {
+          streamError = e.error
+        }
+      })
+      if (streamError) throw new Error(streamError)
+      if (parseError) throw new Error(`Не удалось разобрать ответ модели: ${parseError}`)
+      if (finalContent) {
+        setGenerations(prev => ({ ...prev, [type]: finalContent }))
+        setGenStream(prev => ({ ...prev, [type]: undefined }))
+      } else if (!acc.trim()) {
+        throw new Error('Пустой ответ от модели')
       }
     } catch (err: any) {
       setError(err?.message || 'Сетевая ошибка')
+      setGenStream(prev => ({ ...prev, [type]: undefined }))
     } finally {
       setGenLoading(null)
     }
@@ -648,7 +738,7 @@ export default function TranscribePage() {
       </div>
 
       {/* Form */}
-      <form onSubmit={submit} className="space-y-4 rounded-apple-lg border border-apple-line bg-white p-5 shadow-apple-sm">
+      <form onSubmit={submit} className="glow-card relative space-y-4 p-5 sm:p-6">
         <div>
           <label className="mb-2 block text-[12px] font-medium text-apple-muted">
             URL медиафайла
@@ -661,7 +751,7 @@ export default function TranscribePage() {
               onChange={e => setUrl(e.target.value)}
               required
               placeholder="https://youtube.com/... · https://instagram.com/reel/... · mp3/mp4"
-              className="w-full rounded-xl border border-apple-line bg-apple-bg-soft py-2.5 pl-10 pr-3 text-[14px] text-apple-ink placeholder:text-apple-faint outline-none transition-all focus:border-apple-line-strong focus:bg-white focus:shadow-apple-sm"
+              className="w-full rounded-xl border border-apple-line bg-apple-bg-soft py-2.5 pl-10 pr-3 text-[14px] text-apple-ink placeholder:text-apple-faint outline-none transition-all focus:border-apple-line-strong focus:bg-apple-bg-elev focus:shadow-apple-sm"
             />
           </div>
           <p className="mt-2 text-[12px] text-apple-faint">
@@ -680,7 +770,7 @@ export default function TranscribePage() {
                   onClick={() => setLanguage(lang)}
                   className={`rounded-full px-3.5 py-1.5 text-[13px] font-medium transition-all ${
                     language === lang
-                      ? 'bg-white text-apple-ink shadow-apple-sm'
+                      ? 'bg-apple-bg-elev text-apple-ink shadow-apple-sm'
                       : 'text-apple-muted hover:text-apple-ink'
                   }`}
                 >
@@ -693,7 +783,7 @@ export default function TranscribePage() {
             <button
               type="submit"
               disabled={loading || !url.trim()}
-              className="inline-flex items-center gap-2 rounded-full bg-apple-blue px-5 py-2.5 text-[14px] font-medium text-white transition-colors hover:bg-apple-blue-hover active:bg-apple-blue-pressed disabled:cursor-not-allowed disabled:bg-apple-line-strong"
+              className="btn-amber inline-flex items-center gap-2"
             >
               {loading ? (
                 <>
@@ -768,11 +858,11 @@ export default function TranscribePage() {
 
       {/* Error */}
       {error && (
-        <div className="flex items-start gap-2.5 rounded-apple-lg border border-red-200 bg-red-50 p-4">
-          <TriangleAlert className="mt-0.5 h-4 w-4 flex-shrink-0 text-red-600" />
+        <div className="flex items-start gap-2.5 rounded-apple-lg border border-red-500/30 bg-red-500/10 p-4">
+          <TriangleAlert className="mt-0.5 h-4 w-4 flex-shrink-0 text-red-400" />
           <div>
-            <div className="mb-0.5 text-[12px] font-medium text-red-700">Ошибка</div>
-            <p className="break-words text-[14px] text-red-700">{error}</p>
+            <div className="mb-0.5 text-[12px] font-medium text-red-300">Ошибка</div>
+            <p className="break-words text-[14px] text-red-200">{error}</p>
           </div>
         </div>
       )}
@@ -781,7 +871,7 @@ export default function TranscribePage() {
       {result && (
         <div className="space-y-5">
           {/* Transcript card */}
-          <div className="overflow-hidden rounded-apple-lg border border-apple-line bg-white shadow-apple-sm">
+          <div className="glow-card relative overflow-hidden">
             <div className="flex flex-wrap items-center justify-between gap-2 border-b border-apple-line px-5 py-3">
               <div className="flex flex-wrap items-center gap-2.5">
                 <h3 className="text-[13px] font-semibold text-apple-ink">Транскрипт</h3>
@@ -851,7 +941,7 @@ export default function TranscribePage() {
             <button
               onClick={generateSummary}
               disabled={summaryLoading}
-              className="inline-flex items-center gap-2 rounded-full border border-apple-line bg-white px-4 py-2 text-[14px] font-medium text-apple-ink shadow-apple-sm transition-colors hover:bg-apple-bg-soft disabled:opacity-50"
+              className="inline-flex items-center gap-2 rounded-full border border-apple-line bg-apple-bg-elev px-4 py-2 text-[14px] font-medium text-apple-ink shadow-apple-sm transition-colors hover:bg-apple-bg-soft disabled:opacity-50"
             >
               {summaryLoading ? <Loader2 className="h-4 w-4 animate-spin" /> : <Sparkles className="h-4 w-4 text-apple-blue" />}
               Сгенерировать саммари
@@ -859,7 +949,7 @@ export default function TranscribePage() {
             <button
               onClick={() => translateTo(otherLang)}
               disabled={translationLoading}
-              className="inline-flex items-center gap-2 rounded-full border border-apple-line bg-white px-4 py-2 text-[14px] font-medium text-apple-ink shadow-apple-sm transition-colors hover:bg-apple-bg-soft disabled:opacity-50"
+              className="inline-flex items-center gap-2 rounded-full border border-apple-line bg-apple-bg-elev px-4 py-2 text-[14px] font-medium text-apple-ink shadow-apple-sm transition-colors hover:bg-apple-bg-soft disabled:opacity-50"
             >
               {translationLoading ? <Loader2 className="h-4 w-4 animate-spin" /> : <Languages className="h-4 w-4 text-apple-blue" />}
               Перевести на {otherLang === 'ru' ? 'русский' : 'английский'}
@@ -868,26 +958,26 @@ export default function TranscribePage() {
 
           {/* Summary */}
           {summary && (
-            <div className="rounded-apple-lg border border-apple-line bg-white p-5 shadow-apple-sm">
+            <div className="rounded-apple-lg border border-apple-line bg-apple-bg-elev p-5 shadow-apple-sm">
               <div className="mb-3 flex items-center gap-2">
                 <Sparkles className="h-4 w-4 text-apple-blue" />
                 <h3 className="text-[13px] font-semibold text-apple-ink">Саммари</h3>
               </div>
-              <p className="mb-3 text-[15px] leading-relaxed text-apple-ink">{summary.summary}</p>
-              <ul className="space-y-1.5">
-                {summary.bullets.map((b, i) => (
-                  <li key={i} className="flex gap-2 text-[14px] text-apple-ink">
-                    <span className="flex-shrink-0 text-apple-blue">•</span>
-                    <span>{b}</span>
-                  </li>
-                ))}
-              </ul>
+              {summary.markdown ? (
+                <MarkdownMessage content={summary.markdown} className="text-[15px] leading-relaxed text-apple-ink" />
+              ) : (
+                <span className="flex items-center gap-1 py-1">
+                  <span className="h-1.5 w-1.5 animate-pulse rounded-full bg-apple-faint" style={{ animationDelay: '0ms' }} />
+                  <span className="h-1.5 w-1.5 animate-pulse rounded-full bg-apple-faint" style={{ animationDelay: '150ms' }} />
+                  <span className="h-1.5 w-1.5 animate-pulse rounded-full bg-apple-faint" style={{ animationDelay: '300ms' }} />
+                </span>
+              )}
             </div>
           )}
 
           {/* Translation */}
           {translation && (
-            <div className="overflow-hidden rounded-apple-lg border border-apple-line bg-white shadow-apple-sm">
+            <div className="overflow-hidden rounded-apple-lg border border-apple-line bg-apple-bg-elev shadow-apple-sm">
               <div className="flex items-center justify-between border-b border-apple-line px-5 py-3">
                 <div className="flex items-center gap-2">
                   <Languages className="h-4 w-4 text-apple-blue" />
@@ -922,7 +1012,7 @@ export default function TranscribePage() {
                   key={t}
                   onClick={() => generate(t)}
                   disabled={genLoading === t}
-                  className="inline-flex items-center gap-2 rounded-full border border-apple-line bg-white px-4 py-2 text-[14px] font-medium text-apple-ink shadow-apple-sm transition-colors hover:bg-apple-bg-soft disabled:opacity-50"
+                  className="inline-flex items-center gap-2 rounded-full border border-apple-line bg-apple-bg-elev px-4 py-2 text-[14px] font-medium text-apple-ink shadow-apple-sm transition-colors hover:bg-apple-bg-soft disabled:opacity-50"
                 >
                   {genLoading === t ? <Loader2 className="h-4 w-4 animate-spin" /> : <Ico className="h-4 w-4 text-apple-blue" />}
                   {label}
@@ -931,9 +1021,37 @@ export default function TranscribePage() {
             </div>
           </div>
 
+          {/* Streaming preview — shows while a generation is in flight, before the structured card lands */}
+          {(['carousel', 'reels-new', 'reels-remix', 'tg-post'] as const).map((t) => {
+            const md = genStream[t]
+            if (!md || generations[t]) return null
+            const label =
+              t === 'carousel' ? 'Карусель' :
+              t === 'reels-new' ? 'Рилс — новый' :
+              t === 'reels-remix' ? 'Рилс — ремикс' :
+              'Пост в Telegram'
+            return (
+              <div key={`stream-${t}`} className="rounded-apple-lg border border-apple-line bg-apple-bg-elev p-5 shadow-apple-sm">
+                <div className="mb-3 flex items-center gap-2">
+                  <Loader2 className="h-4 w-4 animate-spin text-apple-blue" />
+                  <h3 className="text-[13px] font-semibold text-apple-ink">{label} · генерируется</h3>
+                </div>
+                {md ? (
+                  <MarkdownMessage content={md} className="text-[14px] leading-relaxed text-apple-ink" />
+                ) : (
+                  <span className="flex items-center gap-1 py-1">
+                    <span className="h-1.5 w-1.5 animate-pulse rounded-full bg-apple-faint" style={{ animationDelay: '0ms' }} />
+                    <span className="h-1.5 w-1.5 animate-pulse rounded-full bg-apple-faint" style={{ animationDelay: '150ms' }} />
+                    <span className="h-1.5 w-1.5 animate-pulse rounded-full bg-apple-faint" style={{ animationDelay: '300ms' }} />
+                  </span>
+                )}
+              </div>
+            )
+          })}
+
           {/* Carousel */}
           {generations.carousel && (
-            <div className="overflow-hidden rounded-apple-lg border border-apple-line bg-white shadow-apple-sm">
+            <div className="overflow-hidden rounded-apple-lg border border-apple-line bg-apple-bg-elev shadow-apple-sm">
               <div className="flex items-center justify-between border-b border-apple-line px-5 py-3">
                 <div className="flex items-center gap-2">
                   <LayoutGrid className="h-4 w-4 text-apple-blue" />
@@ -941,12 +1059,23 @@ export default function TranscribePage() {
                     Карусель · {generations.carousel.slides.length} слайдов
                   </h3>
                 </div>
-                <SoftButton
-                  onClick={() => copyText(formatCarouselForCopy(generations.carousel!))}
-                  icon={<Copy className="h-3.5 w-3.5" />}
-                >
-                  Копировать всё
-                </SoftButton>
+                <div className="flex items-center gap-2">
+                  <SoftButton
+                    onClick={() => {
+                      localStorage.setItem('carousel_slides', JSON.stringify(generations.carousel!))
+                      window.open('/carousel', '_blank')
+                    }}
+                    icon={<ExternalLink className="h-3.5 w-3.5 text-apple-blue" />}
+                  >
+                    Дизайнер
+                  </SoftButton>
+                  <SoftButton
+                    onClick={() => copyText(formatCarouselForCopy(generations.carousel!))}
+                    icon={<Copy className="h-3.5 w-3.5" />}
+                  >
+                    Копировать
+                  </SoftButton>
+                </div>
               </div>
               <div className="grid max-h-[60vh] grid-cols-1 gap-3 overflow-y-auto p-5 md:grid-cols-2">
                 {generations.carousel.slides.map(slide => (
@@ -1027,7 +1156,7 @@ export default function TranscribePage() {
 
           {/* Telegram post */}
           {generations['tg-post'] && (
-            <div className="overflow-hidden rounded-apple-lg border border-apple-line bg-white shadow-apple-sm">
+            <div className="overflow-hidden rounded-apple-lg border border-apple-line bg-apple-bg-elev shadow-apple-sm">
               <div className="flex items-center justify-between border-b border-apple-line px-5 py-3">
                 <div className="flex items-center gap-2">
                   <Send className="h-4 w-4 text-apple-blue" />
@@ -1049,63 +1178,141 @@ export default function TranscribePage() {
 
       {/* History */}
       {historyConfigured && history.length > 0 && (
-        <div className="overflow-hidden rounded-apple-lg border border-apple-line bg-white shadow-apple-sm">
-          <div className="flex items-center gap-2 border-b border-apple-line px-5 py-3">
+        <div id="history" className="glow-card relative overflow-hidden scroll-mt-20">
+          <div className="flex flex-wrap items-center gap-2 border-b border-apple-line px-5 py-3">
             <History className="h-4 w-4 text-apple-muted" />
             <h3 className="text-[13px] font-semibold text-apple-ink">История</h3>
             <span className="text-[12px] text-apple-faint">({history.length})</span>
+            {historySelection.size > 0 && (
+              <>
+                <span className="ml-auto text-[12px] text-apple-muted">
+                  выбрано: {historySelection.size}
+                </span>
+                <button
+                  type="button"
+                  onClick={clearHistorySelection}
+                  className="rounded-full px-2.5 py-1 text-[12px] text-apple-muted hover:bg-apple-bg-soft hover:text-apple-ink"
+                >
+                  Сбросить
+                </button>
+                <button
+                  type="button"
+                  onClick={batchImportToBrain}
+                  disabled={batchImporting}
+                  className="inline-flex items-center gap-1.5 rounded-full bg-apple-blue px-3 py-1.5 text-[12px] font-medium text-apple-bg transition-colors hover:bg-apple-blue-hover disabled:cursor-not-allowed disabled:bg-apple-line-strong"
+                >
+                  {batchImporting ? (
+                    <>
+                      <Loader2 className="h-3.5 w-3.5 animate-spin" />
+                      Эмбеддим…
+                    </>
+                  ) : (
+                    <>
+                      <Brain className="h-3.5 w-3.5" />
+                      В мой мозг ({historySelection.size})
+                    </>
+                  )}
+                </button>
+              </>
+            )}
+          </div>
+          {batchSummary && (
+            <div className="border-b border-apple-line bg-apple-bg-elev px-5 py-2 text-[12px] text-apple-muted">
+              {batchSummary}
+            </div>
+          )}
+          <div className="border-b border-apple-line bg-apple-bg-elev px-5 py-2">
+            <input
+              type="text"
+              value={historyQuery}
+              onChange={e => setHistoryQuery(e.target.value)}
+              placeholder="Поиск по истории…"
+              className="w-full rounded-full border border-apple-line bg-apple-bg-soft px-3 py-1.5 text-[12px] text-apple-ink placeholder:text-apple-faint outline-none transition-all focus:border-apple-line-strong focus:bg-apple-bg-elev"
+            />
           </div>
           <div className="max-h-[60vh] divide-y divide-apple-line overflow-y-auto">
-            {history.map(item => (
-              <button
-                key={item.id}
-                onClick={() => loadFromHistory(item.id)}
-                className="group flex w-full items-start gap-3 px-5 py-3 text-left transition-colors hover:bg-apple-bg-soft"
-              >
-                <div className="mt-1 flex-shrink-0 text-apple-muted">
-                  {item.source === 'youtube' ? (
-                    <Youtube className="h-4 w-4" />
-                  ) : (
-                    <FileAudio className="h-4 w-4" />
-                  )}
-                </div>
-                <div className="min-w-0 flex-1">
-                  <div className="truncate text-[14px] text-apple-ink">{item.title || item.url}</div>
-                  <div className="mt-0.5 flex flex-wrap items-center gap-1.5 text-[12px] text-apple-faint">
-                    <span>{timeAgo(item.created_at)}</span>
-                    {item.duration && <span>· {formatTime(item.duration)}</span>}
-                    {item.language && <span>· {item.language}</span>}
+            {(() => {
+              const q = historyQuery.trim().toLowerCase()
+              const filtered = q
+                ? history.filter(it =>
+                    (it.title || '').toLowerCase().includes(q) || it.url.toLowerCase().includes(q),
+                  )
+                : history
+              if (filtered.length === 0) {
+                return (
+                  <div className="p-6 text-center text-[13px] text-apple-faint">
+                    Ничего не нашлось по запросу.
                   </div>
-                  {item.artifacts && item.artifacts.length > 0 && (
-                    <div className="mt-1.5 flex flex-wrap gap-1">
-                      {item.artifacts.map(a => (
-                        <span
-                          key={a}
-                          className={`text-[9px] uppercase tracking-wider font-medium px-1.5 py-0.5 rounded border ${ARTIFACT_LABELS[a].color}`}
-                        >
-                          {ARTIFACT_LABELS[a].label}
-                        </span>
-                      ))}
+                )
+              }
+              return filtered.map(item => {
+              const selected = historySelection.has(item.id)
+              return (
+                <div key={item.id} className="group flex items-stretch">
+                  <label
+                    className="flex shrink-0 cursor-pointer items-center pl-5 pr-2"
+                    title="Отметить для импорта в Базу"
+                  >
+                    <input
+                      type="checkbox"
+                      checked={selected}
+                      onChange={() => toggleHistorySelection(item.id)}
+                      className="h-4 w-4 cursor-pointer accent-apple-blue"
+                      onClick={e => e.stopPropagation()}
+                    />
+                  </label>
+                  <button
+                    type="button"
+                    onClick={() => loadFromHistory(item.id)}
+                    className="flex flex-1 items-start gap-3 py-3 pr-2 text-left transition-colors hover:bg-apple-bg-soft"
+                  >
+                    <div className="mt-1 flex-shrink-0 text-apple-muted">
+                      {item.source === 'youtube' ? (
+                        <Youtube className="h-4 w-4" />
+                      ) : (
+                        <FileAudio className="h-4 w-4" />
+                      )}
                     </div>
-                  )}
+                    <div className="min-w-0 flex-1">
+                      <div className="flex items-center gap-1.5">
+                        <div className="truncate text-[14px] text-apple-ink">{item.title || item.url}</div>
+                        {item.in_brain ? (
+                          <span
+                            className="inline-flex shrink-0 items-center gap-1 rounded-full bg-emerald-50 px-1.5 py-0.5 text-[10px] font-medium text-emerald-700"
+                            title="Уже в Базе мозга"
+                          >
+                            <Brain className="h-2.5 w-2.5" />
+                            в базе
+                          </span>
+                        ) : null}
+                      </div>
+                      <div className="mt-0.5 flex flex-wrap items-center gap-1.5 text-[12px] text-apple-faint">
+                        <span>{timeAgo(item.created_at)}</span>
+                        {item.duration && <span>· {formatTime(item.duration)}</span>}
+                        {item.language && <span>· {item.language}</span>}
+                      </div>
+                    </div>
+                    <ChevronRight className="mt-1.5 h-3.5 w-3.5 flex-shrink-0 text-apple-faint" />
+                  </button>
+                  <button
+                    type="button"
+                    onClick={e => deleteHistoryItem(item.id, e)}
+                    className="my-auto mr-3 rounded-full p-1.5 text-apple-faint opacity-0 transition-all hover:bg-red-50 hover:text-red-500 group-hover:opacity-100"
+                    title="Удалить"
+                  >
+                    <Trash2 className="h-3.5 w-3.5" />
+                  </button>
                 </div>
-                <button
-                  onClick={e => deleteHistoryItem(item.id, e)}
-                  className="flex-shrink-0 rounded-full p-1.5 text-apple-faint opacity-0 transition-all hover:bg-red-50 hover:text-red-500 group-hover:opacity-100"
-                  title="Удалить"
-                >
-                  <Trash2 className="h-3.5 w-3.5" />
-                </button>
-                <ChevronRight className="mt-1.5 h-3.5 w-3.5 flex-shrink-0 text-apple-faint" />
-              </button>
-            ))}
+              )
+            })
+            })()}
           </div>
         </div>
       )}
 
       {!historyConfigured && (
         <p className="px-1 text-[12px] text-apple-faint">
-          История транскриптов выключена — добавьте <code className="rounded bg-apple-bg-soft px-1 py-0.5 text-apple-muted">NEXT_PUBLIC_SUPABASE_URL</code> и <code className="rounded bg-apple-bg-soft px-1 py-0.5 text-apple-muted">SUPABASE_SERVICE_KEY</code>, а также выполните миграцию <code className="rounded bg-apple-bg-soft px-1 py-0.5 text-apple-muted">supabase/migrations/001_transcripts.sql</code>.
+          История транскриптов недоступна — проверь, что <code className="rounded bg-apple-bg-soft px-1 py-0.5 text-apple-muted">DB_PATH</code> указывает на доступный файл и папка <code className="rounded bg-apple-bg-soft px-1 py-0.5 text-apple-muted">./data</code> писабельна.
         </p>
       )}
     </div>

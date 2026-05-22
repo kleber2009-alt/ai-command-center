@@ -34,16 +34,10 @@ export default async function AdminOverviewPage() {
 
   return (
     <div className="space-y-8">
-      <div>
-        <div className="text-[11px] font-mono uppercase tracking-[0.25em] text-muted mb-3">
-          <span className="inline-block w-1.5 h-1.5 rounded-full bg-accent shadow-[0_0_8px_rgba(123,97,255,0.8)] mr-2 align-middle" />
-          Admin · overview
-        </div>
-        <h1 className="font-display text-3xl md:text-4xl font-semibold tracking-tight">Platform pulse</h1>
-      </div>
+      <h1 className="text-3xl font-semibold">Admin overview</h1>
 
       <section>
-        <h2 className="text-[10px] font-mono uppercase tracking-[0.2em] text-muted mb-3">Users · Wallets</h2>
+        <h2 className="text-sm font-mono uppercase tracking-wider text-muted mb-3">Users · Wallets</h2>
         <div className="grid grid-cols-2 md:grid-cols-4 gap-3">
           <Card label="Users" value={Number(usersTotal[0]?.n ?? 0)} />
           <Card label="Tokens available" value={Number(w?.available ?? 0)} />
@@ -53,7 +47,7 @@ export default async function AdminOverviewPage() {
       </section>
 
       <section>
-        <h2 className="text-[10px] font-mono uppercase tracking-[0.2em] text-muted mb-3">Last 24h</h2>
+        <h2 className="text-sm font-mono uppercase tracking-wider text-muted mb-3">Last 24h</h2>
         <div className="grid grid-cols-2 md:grid-cols-4 gap-3">
           <Card label="Jobs total" value={Number(jobs24h[0]?.n ?? 0)} />
           <Card label="Jobs failed/refunded" value={Number(jobsFailed24h[0]?.n ?? 0)} muted />
@@ -63,7 +57,7 @@ export default async function AdminOverviewPage() {
       </section>
 
       <section>
-        <h2 className="text-[10px] font-mono uppercase tracking-[0.2em] text-muted mb-3">Revenue</h2>
+        <h2 className="text-sm font-mono uppercase tracking-wider text-muted mb-3">Revenue</h2>
         <div className="grid grid-cols-2 md:grid-cols-3 gap-3">
           <Card label="Payments succeeded" value={Number(p?.n ?? 0)} />
           <Card
@@ -82,11 +76,9 @@ function Card({ label, value, accent, muted }: {
   accent?: boolean; muted?: boolean;
 }) {
   return (
-    <div className="glass p-5">
-      <div className="text-[10px] font-mono uppercase tracking-[0.2em] text-muted">{label}</div>
-      <div className={`font-display text-2xl md:text-3xl font-semibold tabular-nums mt-2 ${
-        accent ? "bg-accent-grad bg-clip-text text-transparent" : muted ? "text-muted" : ""
-      }`}>
+    <div className="panel p-5">
+      <div className="text-xs text-muted">{label}</div>
+      <div className={`text-2xl font-semibold mt-2 ${accent ? "text-accent" : muted ? "text-muted" : ""}`}>
         {typeof value === "number" ? value.toLocaleString() : value}
       </div>
     </div>

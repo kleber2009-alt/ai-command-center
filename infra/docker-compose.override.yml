@@ -1,0 +1,9 @@
+# Override для AI-Office worker'а. image-pin синхронизирован с базой
+# (hotpatch-20260521-1 — failPipeline теперь шлёт ошибки через transcribe-бот,
+# чтобы вся выдача viral_clone'а была в @your_transscribe_bot).
+# env-vars пробрасываются через /root/ai-command-center/infra/.env
+# (см. environment: блок базового compose).
+
+services:
+  aisales-worker:
+    image: infra-aisales-worker:hotpatch-20260522-1

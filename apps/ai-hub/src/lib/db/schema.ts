@@ -15,8 +15,6 @@ export const users = pgTable("users", {
   name:          text("name"),
   image:         text("image"),
   role:          text("role").$type<"user" | "admin">().notNull().default("user"),
-  niche:         text("niche"),
-  onboardingCompletedAt: timestamp("onboarding_completed_at"),
   createdAt:     timestamp("created_at").notNull().defaultNow(),
 });
 
@@ -165,8 +163,6 @@ export const mediaAssets = pgTable("media_assets", {
   durationMs:   integer("duration_ms"),
   metadata:     jsonb("metadata").$type<Record<string, unknown>>().notNull().default({}),
   isFavorite:   boolean("is_favorite").notNull().default(false),
-  isFeatured:   boolean("is_featured").notNull().default(false),
-  featuredAt:   timestamp("featured_at"),
   createdAt:    timestamp("created_at").notNull().defaultNow(),
 }, (t) => ({
   userCreatedIdx: index("media_user_created_idx").on(t.userId, t.createdAt.desc()),
@@ -174,7 +170,7 @@ export const mediaAssets = pgTable("media_assets", {
 }));
 
 // ====== Payments ========================================================
-export const paymentProviders = ["stripe", "paddle", "yookassa", "cloudpayments", "telegram_stars", "manual"] as const;
+export const paymentProviders = ["stripe", "paddle", "yookassa", "cloudpayments", "manual"] as const;
 export const paymentStatuses = ["pending", "succeeded", "failed", "refunded", "cancelled"] as const;
 
 export const paymentPackages = pgTable("payment_packages", {
@@ -185,7 +181,6 @@ export const paymentPackages = pgTable("payment_packages", {
   bonusTokens:   integer("bonus_tokens").notNull().default(0),
   priceCents:    integer("price_cents").notNull(),
   currency:      text("currency").notNull().default("USD"),
-  starsPrice:    integer("stars_price"),               // Telegram Stars (XTR) — null = pack не доступен за Stars
   stripePriceId: text("stripe_price_id"),
   isActive:      boolean("is_active").notNull().default(true),
   sortOrder:     integer("sort_order").notNull().default(100),
@@ -250,30 +245,6 @@ export const promoRedemptions = pgTable("promo_redemptions", {
 // Drizzle-equivalent of Supabase's generated database.types.ts. Use these
 // instead of building ad-hoc shapes — they stay in sync with the schema
 // automatically and are import-safe in both server and client code.
-
-// ====== Multi-agent v1 ===================================================
-export const agentRuns = pgTable("agent_runs", {
-  id:           uuid("id").primaryKey().default(sql`gen_random_uuid()`),
-  userId:       text("user_id").notNull().references(() => users.id, { onDelete: "cascade" }),
-  jobId:        uuid("job_id").references(() => aiJobs.id, { onDelete: "set null" }),
-  agentType:    text("agent_type").notNull(),
-  status:       text("status").$type<"pending" | "running" | "completed" | "failed">().notNull().default("pending"),
-  input:        jsonb("input").$type<Record<string, unknown>>().notNull().default({}),
-  output:       jsonb("output").$type<Record<string, unknown> | null>(),
-  errorMessage: text("error_message"),
-  createdAt:    timestamp("created_at").notNull().defaultNow(),
-  completedAt:  timestamp("completed_at"),
-});
-
-export const agentEvents = pgTable("agent_events", {
-  id:        uuid("id").primaryKey().default(sql`gen_random_uuid()`),
-  seq:       bigint("seq", { mode: "number" }).notNull(),
-  runId:     uuid("run_id").notNull().references(() => agentRuns.id, { onDelete: "cascade" }),
-  phase:     text("phase").notNull(),
-  eventType: text("event_type").notNull(),
-  payload:   jsonb("payload").$type<Record<string, unknown>>().notNull().default({}),
-  createdAt: timestamp("created_at").notNull().defaultNow(),
-});
 
 export type User = typeof users.$inferSelect;
 export type NewUser = typeof users.$inferInsert;

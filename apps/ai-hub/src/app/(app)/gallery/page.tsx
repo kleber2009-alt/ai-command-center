@@ -16,15 +16,14 @@ interface SearchParams {
   fav?: string;
 }
 
-export default async function GalleryPage({ searchParams }: { searchParams: Promise<SearchParams> }) {
-  const sp = await searchParams;
+export default async function GalleryPage({ searchParams }: { searchParams: SearchParams }) {
   const session = await auth();
   const user = session?.user as { id?: string } | undefined;
   if (!user?.id) return null;
 
   // Build conditions: own assets, optional tool filter, optional favorites filter.
   const conditions = [eq(mediaAssets.userId, user.id)];
-  if (sp.fav === "1") conditions.push(eq(mediaAssets.isFavorite, true));
+  if (searchParams.fav === "1") conditions.push(eq(mediaAssets.isFavorite, true));
 
   // Join media → jobs → tools для tool slug + prompt
   // Drizzle relation joins не настроены, поэтому делаем raw join через query API.
@@ -50,8 +49,8 @@ export default async function GalleryPage({ searchParams }: { searchParams: Prom
     .limit(80);
 
   let rows = rowsRaw;
-  if (sp.tool) {
-    rows = rows.filter((r) => r.tool_slug === sp.tool);
+  if (searchParams.tool) {
+    rows = rows.filter((r) => r.tool_slug === searchParams.tool);
   }
 
   // Pre-signed URLs (TTL 1h) для каждой картинки/видео
@@ -89,41 +88,35 @@ export default async function GalleryPage({ searchParams }: { searchParams: Prom
 
   return (
     <div className="space-y-6">
-      <header>
-        <div className="text-[11px] font-mono uppercase tracking-[0.25em] text-muted mb-3">
-          <span className="inline-block w-1.5 h-1.5 rounded-full bg-accent shadow-[0_0_8px_rgba(123,97,255,0.8)] mr-2 align-middle" />
-          Gallery
+      <div className="flex items-baseline justify-between gap-4 flex-wrap">
+        <h1 className="text-3xl font-semibold">Галерея</h1>
+        <div className="text-sm text-muted font-mono">
+          {totalCount} {searchParams.tool ? `· ${searchParams.tool}` : ""}{searchParams.fav === "1" ? " · ★" : ""}
         </div>
-        <div className="flex items-baseline justify-between gap-4 flex-wrap">
-          <h1 className="font-display text-3xl md:text-4xl font-semibold tracking-tight">Галерея</h1>
-          <div className="text-xs font-mono text-muted">
-            {totalCount} {sp.tool ? `· ${sp.tool}` : ""}{sp.fav === "1" ? " · ★" : ""}
-          </div>
-        </div>
-      </header>
+      </div>
 
       {/* Filter chips */}
       <div className="flex flex-wrap gap-2 text-xs font-mono">
-        <a href={chipHref({ fav: sp.fav })}
-           className={`px-3 py-1.5 rounded-md ${!sp.tool ? "bg-accent/20 text-accent" : "bg-panel text-muted hover:text-text"}`}>
+        <a href={chipHref({ fav: searchParams.fav })}
+           className={`px-3 py-1.5 rounded-md ${!searchParams.tool ? "bg-accent/20 text-accent" : "bg-panel text-muted hover:text-text"}`}>
           all
         </a>
         {toolsRows.map((t) => (
-          <a key={t.slug} href={chipHref({ tool: t.slug, fav: sp.fav })}
-             className={`px-3 py-1.5 rounded-md ${sp.tool === t.slug ? "bg-accent/20 text-accent" : "bg-panel text-muted hover:text-text"}`}>
+          <a key={t.slug} href={chipHref({ tool: t.slug, fav: searchParams.fav })}
+             className={`px-3 py-1.5 rounded-md ${searchParams.tool === t.slug ? "bg-accent/20 text-accent" : "bg-panel text-muted hover:text-text"}`}>
             {t.slug} <span className="opacity-60">· {t.n}</span>
           </a>
         ))}
         <span className="flex-1" />
-        <a href={chipHref({ tool: sp.tool, fav: sp.fav === "1" ? undefined : "1" })}
-           className={`px-3 py-1.5 rounded-md ${sp.fav === "1" ? "bg-accent/20 text-accent" : "bg-panel text-muted hover:text-text"}`}>
-          {sp.fav === "1" ? "★ favorites" : "☆ favorites"} {favCount > 0 && <span className="opacity-60">· {favCount}</span>}
+        <a href={chipHref({ tool: searchParams.tool, fav: searchParams.fav === "1" ? undefined : "1" })}
+           className={`px-3 py-1.5 rounded-md ${searchParams.fav === "1" ? "bg-accent/20 text-accent" : "bg-panel text-muted hover:text-text"}`}>
+          {searchParams.fav === "1" ? "★ favorites" : "☆ favorites"} {favCount > 0 && <span className="opacity-60">· {favCount}</span>}
         </a>
       </div>
 
       {/* Grid */}
       {items.length === 0 ? (
-        <div className="glass p-8 text-muted text-sm">
+        <div className="panel p-8 text-muted text-sm">
           Пока ничего не сгенерировано. Начни с <a href="/tools" className="text-accent">каталога</a> или открой{" "}
           <a href="/play/nano-banana-2" className="text-accent">Nano Banana 2 →</a>
         </div>

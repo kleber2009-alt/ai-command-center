@@ -1,0 +1,93 @@
+# ═══════════════════════════════════════════════════════════════════
+# Caddyfile — reverse proxy + auto-TLS for the self-hosted stack
+# ───────────────────────────────────────────────────────────────────
+# Routes on a single domain:
+#   /voice-notes/*       → static files from /srv/voice-notes (Caddy)
+#   /transcribe*         → transcribe (Next.js) container
+#   /api/transcribe*     → transcribe container (Next.js API routes)
+#   /api/*               → ai-office (Fastify) container
+#   /                    → static HTML from /srv/ai-office (Caddy)
+#
+# Substitution: {$PUBLIC_HOST} comes from infra/.env
+# ═══════════════════════════════════════════════════════════════════
+
+{
+	# Global options
+	email {$ACME_EMAIL}
+	# Uncomment for staging certs during initial setup:
+	# acme_ca https://acme-staging-v02.api.letsencrypt.org/directory
+}
+
+{$PUBLIC_HOST} {
+	encode zstd gzip
+
+	# ── Voice notes (generated audio) ──
+	handle /voice-notes/* {
+		root * /srv
+		header Cache-Control "public, max-age=31536000, immutable"
+		file_server
+	}
+
+	# ── Transcribe Next.js — /transcribe, /assistants, /me, /materials and their API routes ──
+	@nextjs path \
+		/transcribe /transcribe/* \
+		/assistants /assistants/* \
+		/me /me/* \
+		/materials /materials/* \
+		/api/transcribe /api/transcribe/* \
+		/api/assistants /api/assistants/* \
+		/api/me /api/me/* \
+		/api/voice /api/voice/*
+	handle @nextjs {
+		reverse_proxy transcribe:3000 {
+			header_up X-Forwarded-Host {host}
+			header_up X-Forwarded-Proto {scheme}
+		}
+	}
+
+	# ── ai-office backend (Fastify) ──
+	handle /api/* {
+		reverse_proxy ai-office:3000 {
+			header_up X-Forwarded-Host {host}
+			header_up X-Forwarded-Proto {scheme}
+		}
+	}
+
+	# ── Static HTML (ai-office-project) ──
+	handle {
+		root * /srv/ai-office
+		try_files {path} {path}.html {path}/index.html /404.html
+		file_server
+
+		# Security headers
+		header X-Content-Type-Options "nosniff"
+		header X-Frame-Options "SAMEORIGIN"
+		header Referrer-Policy "strict-origin-when-cross-origin"
+		header Permissions-Policy "camera=(), microphone=(self), geolocation=()"
+		header Strict-Transport-Security "max-age=31536000; includeSubDomains"
+
+		# Cache policy
+		@static path *.png *.jpg *.svg *.webp *.ico
+		header @static Cache-Control "public, max-age=31536000, immutable"
+
+		@scripts path *.js *.css
+		header @scripts Cache-Control "public, max-age=3600, must-revalidate"
+
+		@html path *.html /
+		header @html Cache-Control "public, max-age=0, must-revalidate"
+
+		@noindex path /persona-train* /dev-tools* /leads-inbox* /admin*
+		header @noindex X-Robots-Tag "noindex, nofollow"
+	}
+
+	log {
+		output stdout
+		format console
+	}
+}
+
+# ── HTTP → HTTPS redirect (Caddy does this automatically when
+#    a domain is configured, but explicit here for clarity) ──
+http://{$PUBLIC_HOST} {
+	redir https://{$PUBLIC_HOST}{uri} permanent
+}

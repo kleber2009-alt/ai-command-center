@@ -13,14 +13,13 @@ import { child } from "@/lib/logger";
 const log = child("admin.refund");
 export const dynamic = "force-dynamic";
 
-export async function POST(req: Request, { params }: { params: Promise<{ id: string }> }) {
-  const { id } = await params;
+export async function POST(req: Request, { params }: { params: { id: string } }) {
   const { user, response } = await requireAdminApi();
   if (!user) return response!;
 
   const { amount, reason } = (await req.json().catch(() => ({}))) as { amount?: number; reason?: string };
 
-  const [job] = await db.select().from(aiJobs).where(eq(aiJobs.id, id)).limit(1);
+  const [job] = await db.select().from(aiJobs).where(eq(aiJobs.id, params.id)).limit(1);
   if (!job) return NextResponse.json({ error: "job_not_found" }, { status: 404 });
   if (job.status === "refunded") return NextResponse.json({ ok: true, already: true });
 

@@ -19,11 +19,10 @@ const TYPE_FILTERS = ["all","purchase","spend","refund","bonus","reserve","relea
 export default async function AdminTransactionsPage({
   searchParams,
 }: {
-  searchParams: Promise<{ type?: string; user?: string }>;
+  searchParams: { type?: string; user?: string };
 }) {
-  const sp = await searchParams;
-  const type = sp.type;
-  const userFilter = sp.user;
+  const type = searchParams.type;
+  const userFilter = searchParams.user;
 
   const where = sql`where 1=1`
     .append(type && type !== "all" ? sql` and t.type = ${type}` : sql``)
@@ -41,7 +40,7 @@ export default async function AdminTransactionsPage({
 
   return (
     <div className="space-y-6">
-      <h1 className="font-display text-3xl md:text-4xl font-semibold tracking-tight">Transactions</h1>
+      <h1 className="text-3xl font-semibold">Transactions</h1>
       <p className="text-muted text-sm">
         Полный append-only ledger всех движений токенов. 200 свежих записей.
       </p>
@@ -72,7 +71,7 @@ export default async function AdminTransactionsPage({
         <button type="submit" className="btn-ghost px-4">Search</button>
       </form>
 
-      <div className="glass overflow-x-auto">
+      <div className="panel overflow-x-auto">
         <table className="w-full text-sm">
           <thead className="text-xs text-muted">
             <tr className="border-b border-border">

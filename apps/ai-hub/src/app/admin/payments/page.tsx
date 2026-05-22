@@ -23,8 +23,8 @@ export default async function AdminPaymentsPage() {
 
   return (
     <div className="space-y-6">
-      <h1 className="font-display text-3xl md:text-4xl font-semibold tracking-tight">Payments</h1>
-      <div className="glass overflow-x-auto">
+      <h1 className="text-3xl font-semibold">Payments</h1>
+      <div className="panel overflow-x-auto">
         <table className="w-full text-sm">
           <thead className="text-xs text-muted">
             <tr className="border-b border-border">

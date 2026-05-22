@@ -10,12 +10,12 @@ export default async function AdminToolsPage() {
 
   return (
     <div className="space-y-6">
-      <h1 className="font-display text-3xl md:text-4xl font-semibold tracking-tight">Tools</h1>
+      <h1 className="text-3xl font-semibold">Tools</h1>
       <p className="text-muted text-sm">
         Управление каталогом без правки seed-SQL. Изменения применяются мгновенно (revalidate=60 на /tools).
       </p>
 
-      <div className="glass overflow-x-auto">
+      <div className="panel overflow-x-auto">
         <table className="w-full text-sm">
           <thead className="text-xs text-muted">
             <tr className="border-b border-border">

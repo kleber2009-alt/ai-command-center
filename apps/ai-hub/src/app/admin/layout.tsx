@@ -1,8 +1,6 @@
 import Link from "next/link";
 import { requireAdminPage } from "@/lib/admin-guard";
-import { Sidebar } from "@/components/Sidebar";
-import { Topbar } from "@/components/Topbar";
-import { MobileBottomNav } from "@/components/MobileBottomNav";
+import { Header } from "@/components/Header";
 
 export const dynamic = "force-dynamic";
 
@@ -13,32 +11,24 @@ const TABS = [
   { href: "/admin/transactions", label: "Transactions" },
   { href: "/admin/tools",        label: "Tools" },
   { href: "/admin/payments",     label: "Payments" },
-  { href: "/admin/showcase",     label: "Showcase" },
 ];
 
 export default async function AdminLayout({ children }: { children: React.ReactNode }) {
   await requireAdminPage();
   return (
-    <div className="flex min-h-screen">
-      <Sidebar isAdmin />
-      <div className="flex-1 min-w-0 flex flex-col">
-        <Topbar />
-        <div className="border-b border-border bg-bg/40 backdrop-blur-2xl">
-          <div className="px-6 md:px-8 py-3 flex items-center gap-4">
-            <span className="text-[10px] font-mono uppercase tracking-[0.2em] text-accent">Admin</span>
-            <nav className="flex gap-1 text-sm">
-              {TABS.map((t) => (
-                <Link key={t.href} href={t.href}
-                      className="px-3 py-1.5 rounded-lg text-muted hover:text-text hover:bg-white/5 transition">
-                  {t.label}
-                </Link>
-              ))}
-            </nav>
-          </div>
+    <div className="min-h-screen">
+      <Header />
+      <div className="border-b border-border">
+        <div className="max-w-6xl mx-auto px-6 py-3 flex items-center gap-4">
+          <span className="text-xs font-mono uppercase tracking-wider text-accent">Admin</span>
+          <nav className="flex gap-4 text-sm">
+            {TABS.map((t) => (
+              <Link key={t.href} href={t.href} className="text-muted hover:text-text">{t.label}</Link>
+            ))}
+          </nav>
         </div>
-        <main className="flex-1 px-6 md:px-8 py-6 pb-24 md:pb-6 max-w-[1400px] w-full">{children}</main>
       </div>
-      <MobileBottomNav />
+      <div className="max-w-6xl mx-auto px-6 py-8">{children}</div>
     </div>
   );
 }

@@ -12,8 +12,7 @@ import { child } from "@/lib/logger";
 const log = child("admin.grant");
 export const dynamic = "force-dynamic";
 
-export async function POST(req: Request, { params }: { params: Promise<{ id: string }> }) {
-  const { id } = await params;
+export async function POST(req: Request, { params }: { params: { id: string } }) {
   const { user, response } = await requireAdminApi();
   if (!user) return response!;
 
@@ -22,19 +21,19 @@ export async function POST(req: Request, { params }: { params: Promise<{ id: str
     return NextResponse.json({ error: "invalid_amount" }, { status: 400 });
   }
 
-  const [target] = await db.select({ id: users.id }).from(users).where(eq(users.id, id)).limit(1);
+  const [target] = await db.select({ id: users.id }).from(users).where(eq(users.id, params.id)).limit(1);
   if (!target) return NextResponse.json({ error: "user_not_found" }, { status: 404 });
 
   const description = `Admin grant by ${user.email}: ${reason ?? "no reason"}`;
 
   if (amount! > 0) {
-    await credit({ userId: id, amount: amount!, type: "adjustment", description });
+    await credit({ userId: params.id, amount: amount!, type: "adjustment", description });
   } else {
     // Negative grant: debit available, write audit row. Block if insufficient.
     const updated = await db.execute<{ available: number }>(sql`
       update token_wallets
         set available = available + ${amount}::bigint
-        where user_id = ${id}
+        where user_id = ${params.id}
           and available + ${amount}::bigint >= 0
         returning available
     `);
@@ -42,13 +41,13 @@ export async function POST(req: Request, { params }: { params: Promise<{ id: str
     if (!row) return NextResponse.json({ error: "insufficient_funds" }, { status: 400 });
 
     await db.insert(tokenTransactions).values({
-      userId: id, type: "adjustment", amount: Math.abs(amount!),
+      userId: params.id, type: "adjustment", amount: Math.abs(amount!),
       balanceAfter: row.available,
       description,
       metadata: { sign: "debit" },
     });
   }
 
-  log.warn("admin grant", { userId: id, amount, by: user.email, reason });
+  log.warn("admin grant", { userId: params.id, amount, by: user.email, reason });
   return NextResponse.json({ ok: true });
 }

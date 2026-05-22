@@ -21,7 +21,6 @@ interface PlaygroundProps {
   provider: string;
   model: string;
   inputSchema: Record<string, unknown>;
-  initialPrompt?: string;
 }
 
 interface UploadedFile {
@@ -51,7 +50,7 @@ interface JobView {
 
 const MAX_FILES = 14;
 
-export function Playground({ slug, name, description, tokenCost, provider, model, inputSchema, initialPrompt = "" }: PlaygroundProps) {
+export function Playground({ slug, name, description, tokenCost, provider, model, inputSchema }: PlaygroundProps) {
   const schema = (inputSchema ?? {}) as {
     properties?: Record<string, { type?: string; enum?: unknown[]; default?: unknown; maxItems?: number }>;
     required?: string[];
@@ -60,7 +59,7 @@ export function Playground({ slug, name, description, tokenCost, provider, model
   const required = new Set(schema.required ?? []);
 
   // Form state
-  const [prompt, setPrompt] = useState(initialPrompt);
+  const [prompt, setPrompt] = useState("");
   const [files, setFiles] = useState<UploadedFile[]>([]);
   const [aspectRatio, setAspectRatio] = useState<string>(String(props.aspect_ratio?.default ?? "Auto"));
   const [resolution, setResolution] = useState<string>(String(props.resolution?.default ?? "1K"));
@@ -193,24 +192,18 @@ export function Playground({ slug, name, description, tokenCost, provider, model
 
   // ===== Render =====
   return (
-    <div className="max-w-[1600px] mx-auto px-6 md:px-8 py-6 md:py-8">
-      <div className="mb-6">
-        <div className="text-[11px] font-mono uppercase tracking-[0.25em] text-muted mb-2">
-          <span className="inline-block w-1.5 h-1.5 rounded-full bg-accent shadow-[0_0_8px_rgba(123,97,255,0.8)] mr-2 align-middle" />
-          Playground · {slug}
-        </div>
-        <div className="flex items-baseline gap-3 flex-wrap">
-          <h1 className="font-display text-3xl md:text-4xl font-semibold tracking-tight">{name}</h1>
-          <span className="text-xs font-mono uppercase tracking-wider text-muted">{provider} · {model}</span>
-        </div>
-        {description && <p className="text-muted text-sm mt-3 max-w-3xl leading-relaxed">{description}</p>}
+    <div className="max-w-[1600px] mx-auto px-6 py-6">
+      <div className="mb-5 flex items-baseline gap-3">
+        <h1 className="text-2xl font-semibold tracking-tight">{name}</h1>
+        <span className="text-xs font-mono uppercase tracking-wider text-muted">{provider} · {model}</span>
       </div>
+      {description && <p className="text-muted text-sm mb-6 max-w-3xl">{description}</p>}
 
       <div className="grid grid-cols-1 lg:grid-cols-2 gap-5">
         {/* ============ INPUT pane ============ */}
-        <section className="glass overflow-hidden">
+        <section className="panel overflow-hidden">
           <header className="flex items-center justify-between px-6 py-4 border-b border-border">
-            <h2 className="font-display text-lg font-semibold tracking-tight">Input</h2>
+            <h2 className="text-lg font-semibold">Input</h2>
             <Tabs value={inputMode} onChange={(v) => setInputMode(v as "form" | "json")} options={[
               { value: "form", label: "Form" },
               { value: "json", label: "JSON" },
@@ -322,9 +315,9 @@ export function Playground({ slug, name, description, tokenCost, provider, model
         </section>
 
         {/* ============ OUTPUT pane ============ */}
-        <section className="glass overflow-hidden">
+        <section className="panel overflow-hidden">
           <header className="flex items-center justify-between px-6 py-4 border-b border-border">
-            <h2 className="font-display text-lg font-semibold tracking-tight">Output</h2>
+            <h2 className="text-lg font-semibold">Output</h2>
             <Tabs value={outputMode} onChange={(v) => setOutputMode(v as "preview" | "json")} options={[
               { value: "preview", label: "Preview" },
               { value: "json", label: "JSON" },
@@ -356,34 +349,13 @@ export function Playground({ slug, name, description, tokenCost, provider, model
                     ))}
                   </div>
                 ) : submitting ? (
-                  <div className="relative aspect-video rounded-xl overflow-hidden border border-border bg-bg/40">
-                    {/* flowing accent gradient — "AI thinking" */}
-                    <div className="absolute inset-0 opacity-60"
-                         style={{
-                           background: "conic-gradient(from 0deg, rgba(123,97,255,0.4), rgba(255,107,159,0.2), rgba(94,234,212,0.3), rgba(123,97,255,0.4))",
-                           animation: "spin 4s linear infinite",
-                         }} />
-                    <div className="absolute inset-[2px] rounded-[10px] bg-bg/85 backdrop-blur-xl" />
-                    {/* shimmer band */}
-                    <div className="absolute inset-0 shimmer rounded-xl opacity-50" />
-                    {/* pulse dot + status */}
-                    <div className="absolute inset-0 flex flex-col items-center justify-center gap-3">
-                      <div className="relative w-12 h-12">
-                        <div className="absolute inset-0 rounded-full bg-accent/30 animate-ping" />
-                        <div className="absolute inset-2 rounded-full bg-accent-grad shadow-glow-lg animate-pulse-ai" />
-                      </div>
-                      <div className="text-sm font-mono uppercase tracking-[0.2em] text-text/90">
-                        {job?.status === "processing" ? "generating" : "queued"}
-                      </div>
-                      <div className="text-[10px] font-mono text-muted">
-                        ~30s · provider {provider}
-                      </div>
-                    </div>
+                  <div className="aspect-video rounded-xl bg-bg/40 border border-border flex flex-col items-center justify-center text-muted gap-3">
+                    <div className="w-8 h-8 border-2 border-accent border-t-transparent rounded-full animate-spin" />
+                    <span className="text-sm">{job?.status === "processing" ? "Generating…" : "Queued…"}</span>
                   </div>
                 ) : (
-                  <div className="aspect-video rounded-xl bg-bg/40 border border-dashed border-border flex flex-col items-center justify-center gap-3">
-                    <div className="text-3xl opacity-40">✨</div>
-                    <div className="text-sm text-muted">Запусти инструмент — результат появится здесь.</div>
+                  <div className="aspect-video rounded-xl bg-bg/40 border border-dashed border-border flex items-center justify-center text-muted text-sm">
+                    Запусти инструмент — результат появится здесь.
                   </div>
                 )}
 

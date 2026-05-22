@@ -36,16 +36,12 @@ function LoginForm() {
 
   return (
     <main className="min-h-screen grid place-items-center px-6">
-      <div className="glass p-8 w-full max-w-md">
-        <div className="text-[11px] font-mono uppercase tracking-[0.25em] text-muted mb-3">
-          <span className="inline-block w-1.5 h-1.5 rounded-full bg-accent shadow-[0_0_8px_rgba(123,97,255,0.8)] mr-2 align-middle" />
-          Sign in
-        </div>
-        <h1 className="font-display text-2xl md:text-3xl font-semibold tracking-tight">Вход в AI Creative Hub</h1>
-        <p className="text-muted mt-2 text-sm">Введите email — пришлём magic-link.</p>
+      <div className="panel p-8 w-full max-w-md">
+        <h1 className="text-2xl font-semibold">Вход в AI Creative Hub</h1>
+        <p className="text-muted mt-2">Введите email — пришлём magic-link.</p>
 
         {checkEmail ? (
-          <div className="mt-6 glass p-4 text-sm">
+          <div className="mt-6 panel p-4 text-sm">
             Ссылка отправлена. Проверьте почту.
           </div>
         ) : (

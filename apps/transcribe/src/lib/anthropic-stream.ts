@@ -21,6 +21,15 @@ type AnthropicCallParams = {
   maxTokens?: number
 }
 
+/**
+ * onComplete may return additional meta to emit just before `done`.
+ * Useful for endpoints that stream raw text but want to send a final
+ * structured payload (e.g. parsed-from-markdown JSON) without a second
+ * round-trip from the client.
+ */
+type OnCompleteResult = void | Record<string, any>
+type OnCompleteFn = (fullText: string) => OnCompleteResult | Promise<OnCompleteResult>
+
 async function* parseAnthropicSse(body: ReadableStream<Uint8Array>): AsyncGenerator<string> {
   const reader = body.getReader()
   const decoder = new TextDecoder()
@@ -53,6 +62,7 @@ async function* parseAnthropicSse(body: ReadableStream<Uint8Array>): AsyncGenera
 export async function streamAnthropic(
   params: AnthropicCallParams,
   meta?: Record<string, any>,
+  onComplete?: OnCompleteFn,
 ): Promise<Response> {
   const upstream = await fetch('https://api.anthropic.com/v1/messages', {
     method: 'POST',
@@ -86,10 +96,22 @@ export async function streamAnthropic(
   const stream = new ReadableStream<Uint8Array>({
     async start(controller) {
       const send = (e: WireEvent) => controller.enqueue(encoder.encode(JSON.stringify(e) + '\n'))
+      let accumulated = ''
       try {
         if (meta) send({ type: 'meta', ...meta })
         for await (const text of parseAnthropicSse(upstream.body!)) {
+          accumulated += text
           send({ type: 'delta', text })
+        }
+        if (onComplete) {
+          try {
+            const extraMeta = await onComplete(accumulated)
+            if (extraMeta && typeof extraMeta === 'object') {
+              send({ type: 'meta', ...extraMeta })
+            }
+          } catch (e: any) {
+            console.warn('[streamAnthropic.onComplete] failed:', e?.message)
+          }
         }
         send({ type: 'done' })
       } catch (e: any) {

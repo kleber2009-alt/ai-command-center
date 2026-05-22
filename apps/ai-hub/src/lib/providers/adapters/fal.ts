@@ -6,35 +6,7 @@
 // X-Fal-Webhook-Signature header against PROVIDER_WEBHOOK_SECRET.
 
 import { ProviderError, type ProviderAdapter, type ProviderResult, type SubmitArgs } from "../types";
-import { createHash, createPublicKey, verify as cryptoVerify } from "node:crypto";
-
-// fal signs webhooks with Ed25519. Public keys come from their JWKS endpoint;
-// cache for 24h per their guidance. Each JWK has `x` = base64url-encoded
-// 32-byte raw Ed25519 public key. Node's crypto.verify needs an SPKI DER, so
-// we prepend the fixed Ed25519 SPKI header.
-const FAL_JWKS_URL = "https://rest.fal.ai/.well-known/jwks.json";
-const FAL_JWKS_TTL_MS = 24 * 3600 * 1000;
-const ED25519_SPKI_PREFIX = Buffer.from("302a300506032b6570032100", "hex");
-const WEBHOOK_TS_TOLERANCE_SEC = 300;
-
-let falJwksCache: { keys: ReturnType<typeof createPublicKey>[]; expires: number } | null = null;
-
-async function falPublicKeys(): Promise<ReturnType<typeof createPublicKey>[]> {
-  const now = Date.now();
-  if (falJwksCache && falJwksCache.expires > now) return falJwksCache.keys;
-  const res = await fetch(FAL_JWKS_URL, { signal: AbortSignal.timeout(10_000) });
-  if (!res.ok) throw new Error(`fal JWKS fetch failed: HTTP ${res.status}`);
-  const doc = await res.json() as { keys?: Array<{ x?: string; kty?: string; crv?: string }> };
-  const keys = (doc.keys ?? [])
-    .filter(k => k.kty === "OKP" && k.crv === "Ed25519" && typeof k.x === "string")
-    .map(k => createPublicKey({
-      key: Buffer.concat([ED25519_SPKI_PREFIX, Buffer.from(k.x!, "base64url")]),
-      format: "der", type: "spki",
-    }));
-  if (keys.length === 0) throw new Error("fal JWKS returned no Ed25519 keys");
-  falJwksCache = { keys, expires: now + FAL_JWKS_TTL_MS };
-  return keys;
-}
+import { createHmac, timingSafeEqual } from "node:crypto";
 
 const FAL_BASE = "https://queue.fal.run";
 
@@ -84,17 +56,13 @@ export const falAdapter: ProviderAdapter = {
     };
   },
 
-  async getStatus(providerJobId: string, opts?: { model?: string }): Promise<ProviderResult> {
+  async getStatus(providerJobId: string): Promise<ProviderResult> {
     const key = process.env.FAL_KEY;
     if (!key) throw new ProviderError("fal", "MISSING_KEY", "FAL_KEY env not set");
 
-    // fal queue is per-application. Path is /{appName}/requests/{id}/status, where
-    // appName is the first two segments of the model id (e.g. model
-    // "fal-ai/kling-video/v2.1/master/image-to-video" → app "fal-ai/kling-video").
-    const app = opts?.model?.split("/").slice(0, 2).join("/");
-    if (!app) throw new ProviderError("fal", "MISSING_MODEL", "fal.getStatus requires model in opts");
-
-    const res = await fetch(`${FAL_BASE}/${app}/requests/${providerJobId}/status`, {
+    // Status endpoint per fal docs. Model prefix is required; we keep it in providerJobId
+    // by storing "model/request_id" — but for simplicity here, callers must pass full id.
+    const res = await fetch(`${FAL_BASE}/requests/${providerJobId}/status`, {
       headers: { "Authorization": `Key ${key}` },
       signal: AbortSignal.timeout(STATUS_TIMEOUT_MS),
     });
@@ -102,7 +70,7 @@ export const falAdapter: ProviderAdapter = {
     const data = await res.json() as { status: string; logs?: unknown };
 
     if (data.status === "COMPLETED") {
-      const out = await fetch(`${FAL_BASE}/${app}/requests/${providerJobId}`, {
+      const out = await fetch(`${FAL_BASE}/requests/${providerJobId}`, {
         headers: { "Authorization": `Key ${key}` },
         signal: AbortSignal.timeout(STATUS_TIMEOUT_MS),
       });
@@ -114,46 +82,14 @@ export const falAdapter: ProviderAdapter = {
     return { status: "failed", providerJobId, error: { code: data.status, message: String(data.status) } };
   },
 
-  // fal verification scheme (per https://fal.ai/docs/model-endpoints/webhooks):
-  //   1. Headers x-fal-webhook-{request-id, user-id, timestamp, signature}.
-  //   2. Timestamp must be within ±300s of now.
-  //   3. message = `${request_id}\n${user_id}\n${timestamp}\n${sha256_hex(body)}`
-  //   4. Verify Ed25519 signature (hex-decoded) against any key from JWKS.
-  // The `secret` parameter is ignored — fal uses asymmetric crypto, no shared secret.
-  async parseWebhook(headers, body, _secret) {
-    const reqId = headers["x-fal-webhook-request-id"];
-    const userId = headers["x-fal-webhook-user-id"];
-    const tsHeader = headers["x-fal-webhook-timestamp"];
-    const sigHex = headers["x-fal-webhook-signature"];
-    if (!reqId || !userId || !tsHeader || !sigHex
-        || typeof reqId !== "string" || typeof userId !== "string"
-        || typeof tsHeader !== "string" || typeof sigHex !== "string") {
-      return null;
-    }
-
-    const ts = Number(tsHeader);
-    if (!Number.isFinite(ts)) return null;
-    if (Math.abs(Math.floor(Date.now() / 1000) - ts) > WEBHOOK_TS_TOLERANCE_SEC) return null;
+  async parseWebhook(headers, body, secret) {
+    const sig = headers["x-fal-webhook-signature"] || headers["X-Fal-Webhook-Signature"];
+    if (!sig || typeof sig !== "string") return null;
 
     const raw = typeof body === "string" ? body : JSON.stringify(body);
-    const bodyHash = createHash("sha256").update(raw).digest("hex");
-    const message = Buffer.from(`${reqId}\n${userId}\n${ts}\n${bodyHash}`);
-
-    let sigBytes: Buffer;
-    try { sigBytes = Buffer.from(sigHex, "hex"); }
-    catch { return null; }
-    if (sigBytes.length !== 64) return null;
-
-    let verified = false;
-    try {
-      const keys = await falPublicKeys();
-      for (const key of keys) {
-        if (cryptoVerify(null, message, key, sigBytes)) { verified = true; break; }
-      }
-    } catch {
-      return null;
-    }
-    if (!verified) return null;
+    const expected = createHmac("sha256", secret).update(raw).digest("hex");
+    if (expected.length !== sig.length) return null;
+    if (!timingSafeEqual(Buffer.from(expected), Buffer.from(sig))) return null;
 
     const parsed = (typeof body === "string" ? JSON.parse(body) : body) as {
       request_id: string;
@@ -162,6 +98,7 @@ export const falAdapter: ProviderAdapter = {
       error?: string;
     };
 
+    // jobId travels via query param on webhook URL; framework should extract it.
     return {
       providerJobId: parsed.request_id,
       jobId: null,                            // route handler reads from query, not body

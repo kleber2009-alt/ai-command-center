@@ -1,36 +1,44 @@
 import { NextRequest, NextResponse } from 'next/server'
-import { guardRequest } from '@/lib/api-guard'
 import { loadProfile, saveProfile } from '@/lib/me-db'
+import { authenticate } from '@/lib/telegram-auth'
 
 export async function GET(req: NextRequest) {
-  const guard = guardRequest(req, {
-    rateLimit: { key: 'profile', max: 60, windowMs: 60_000 },
-    requireInitData: false,
-  })
-  if (!guard.ok) return guard.response
-
-  const profile = await loadProfile()
-  return NextResponse.json({ profile, configured: true })
+  const auth = authenticate(req)
+  if ('error' in auth) return auth.error
+  try {
+    return NextResponse.json({ profile: loadProfile(auth.user_id), configured: true })
+  } catch (e: any) {
+    return NextResponse.json({ error: e?.message || 'Ошибка чтения профиля' }, { status: 500 })
+  }
 }
 
 export async function PUT(req: NextRequest) {
-  const guard = guardRequest(req, {
-    rateLimit: { key: 'profile', max: 60, windowMs: 60_000 },
-    requireInitData: false,
-  })
-  if (!guard.ok) return guard.response
-
-  const body = (await req.json()) as Record<string, any>
-  const updated = await saveProfile({
-    bio: String(body.bio ?? ''),
-    projects: String(body.projects ?? ''),
-    academy: String(body.academy ?? ''),
-    social: String(body.social ?? ''),
-    voice: String(body.voice ?? ''),
-    custom: body.custom && typeof body.custom === 'object' ? body.custom : {},
-  })
-  if (!updated) {
-    return NextResponse.json({ error: 'Не удалось сохранить профиль' }, { status: 500 })
+  const auth = authenticate(req)
+  if ('error' in auth) return auth.error
+  try {
+    const body = (await req.json()) as Record<string, any>
+    const projectsList = Array.isArray(body.projects_list)
+      ? body.projects_list
+          .filter((p: any) => p && typeof p === 'object')
+          .map((p: any) => ({
+            id: typeof p.id === 'string' && p.id ? p.id : String(Math.random()).slice(2),
+            name: String(p.name ?? ''),
+            description: String(p.description ?? ''),
+            stage: String(p.stage ?? ''),
+            metrics: String(p.metrics ?? ''),
+          }))
+      : []
+    const updated = saveProfile(auth.user_id, {
+      bio: String(body.bio ?? ''),
+      projects: String(body.projects ?? ''),
+      projects_list: projectsList,
+      academy: String(body.academy ?? ''),
+      social: String(body.social ?? ''),
+      voice: String(body.voice ?? ''),
+      custom: body.custom && typeof body.custom === 'object' ? body.custom : {},
+    })
+    return NextResponse.json({ profile: updated })
+  } catch (e: any) {
+    return NextResponse.json({ error: e?.message || 'Не удалось сохранить профиль' }, { status: 500 })
   }
-  return NextResponse.json({ profile: updated })
 }

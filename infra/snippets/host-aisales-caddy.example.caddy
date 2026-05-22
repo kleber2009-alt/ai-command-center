@@ -1,0 +1,32 @@
+# ═══════════════════════════════════════════════════════════════════
+# Добавь это в infra/Caddyfile между блоками `@nextjs` и `handle /api/*`
+# чтобы Caddy роутил aisales-эндпоинты на правильные контейнеры.
+#
+# ВАЖНО: aisales компоуз сидит на отдельной сети aisales_aisales-net.
+# Caddy из infra-compose не видит контейнеры в aisales-net по имени.
+# Поэтому проксируем на 127.0.0.1:8001 (v2) или :8000 (v1) — порты
+# опубликованы в bind 127.0.0.1.
+#
+# Альтернатива: соединить сети через `docker network connect
+# infra_internal aisales-api-v2`, тогда можно `reverse_proxy aisales-api-v2:8000`.
+# ═══════════════════════════════════════════════════════════════════
+
+@aisales path /aisales /aisales/* /api/aisales /api/aisales/*
+handle @aisales {
+    uri strip_prefix /aisales
+    uri strip_prefix /api/aisales
+    # 127.0.0.1:8001 — порт, на который aisales-api-v2 опубликован хосту.
+    # Caddy в docker-сети, поэтому используем host.docker.internal или
+    # IP хоста (Hetzner: 172.17.0.1 для дефолтного docker bridge).
+    reverse_proxy 172.17.0.1:8001 {
+        header_up X-Forwarded-Host {host}
+        header_up X-Forwarded-Proto {scheme}
+    }
+}
+
+# Для v1 (если нужен):
+# @aisales-v1 path /aisales/v1 /aisales/v1/*
+# handle @aisales-v1 {
+#     uri strip_prefix /aisales/v1
+#     reverse_proxy 172.17.0.1:8000
+# }

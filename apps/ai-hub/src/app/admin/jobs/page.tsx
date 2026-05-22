@@ -14,10 +14,9 @@ interface JobRow {
 export default async function AdminJobsPage({
   searchParams,
 }: {
-  searchParams: Promise<{ status?: string }>;
+  searchParams: { status?: string };
 }) {
-  const sp = await searchParams;
-  const status = sp.status;
+  const status = searchParams.status;
   const where = status ? sql`where j.status = ${status}` : sql``;
 
   const rows = await db.execute<JobRow>(sql`
@@ -35,7 +34,7 @@ export default async function AdminJobsPage({
 
   return (
     <div className="space-y-6">
-      <h1 className="font-display text-3xl md:text-4xl font-semibold tracking-tight">Jobs</h1>
+      <h1 className="text-3xl font-semibold">Jobs</h1>
 
       <div className="flex gap-2 text-xs font-mono">
         {filters.map((f) => {
@@ -50,7 +49,7 @@ export default async function AdminJobsPage({
         })}
       </div>
 
-      <div className="glass overflow-x-auto">
+      <div className="panel overflow-x-auto">
         <table className="w-full text-sm">
           <thead className="text-xs text-muted">
             <tr className="border-b border-border">

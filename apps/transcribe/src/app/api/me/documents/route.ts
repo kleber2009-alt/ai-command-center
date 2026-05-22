@@ -2,7 +2,8 @@ import { NextRequest, NextResponse } from 'next/server'
 import { guardRequest } from '@/lib/api-guard'
 import { chunkText } from '@/lib/chunking'
 import { embedBatch } from '@/lib/embeddings'
-import { getServerSupabase } from '@/lib/me-db'
+import { createDocumentWithEmbeddings, libraryStats, listDocuments } from '@/lib/me-db'
+import { authenticate } from '@/lib/telegram-auth'
 
 export const maxDuration = 120
 
@@ -38,38 +39,22 @@ async function extractFileText(file: File): Promise<string> {
 }
 
 export async function GET(req: NextRequest) {
-  const guard = guardRequest(req, {
-    rateLimit: { key: 'docs-list', max: 60, windowMs: 60_000 },
-    requireInitData: false,
-  })
-  if (!guard.ok) return guard.response
-
-  const supabase = getServerSupabase()
-  if (!supabase) return NextResponse.json({ items: [], configured: false })
-  const { data, error } = await supabase
-    .from('me_documents')
-    .select('id, created_at, title, source_type, source_meta, char_count, chunk_count')
-    .order('created_at', { ascending: false })
-    .limit(200)
-  if (error) return NextResponse.json({ error: error.message }, { status: 500 })
-  return NextResponse.json({ items: data ?? [], configured: true })
+  const auth = authenticate(req)
+  if ('error' in auth) return auth.error
+  try {
+    return NextResponse.json({
+      items: listDocuments(auth.user_id, 200),
+      stats: libraryStats(auth.user_id),
+      configured: true,
+    })
+  } catch (e: any) {
+    return NextResponse.json({ error: e?.message || 'Ошибка чтения базы' }, { status: 500 })
+  }
 }
 
 export async function POST(req: NextRequest) {
-  // PDF parsing + OpenAI embeddings — tighter limit on creation.
-  const guard = guardRequest(req, {
-    rateLimit: { key: 'docs-create', max: 10, windowMs: 60_000 },
-    requireInitData: false,
-  })
-  if (!guard.ok) return guard.response
-
-  const supabase = getServerSupabase()
-  if (!supabase) {
-    return NextResponse.json(
-      { error: 'Документная база отключена: pgvector ещё не установлен на этом deployment. Установи расширение vector в aio Postgres + накати me_documents/me_chunks из supabase/migrations/003_me.sql, тогда я перепишу route на postgres.js.' },
-      { status: 503 },
-    )
-  }
+  const auth = authenticate(req)
+  if ('error' in auth) return auth.error
   if (!process.env.OPENAI_API_KEY) {
     return NextResponse.json({ error: 'OPENAI_API_KEY не настроен' }, { status: 500 })
   }
@@ -116,35 +101,18 @@ export async function POST(req: NextRequest) {
     return NextResponse.json({ error: e?.message || 'Ошибка эмбеддинга' }, { status: 500 })
   }
 
-  const { data: doc, error: docErr } = await supabase
-    .from('me_documents')
-    .insert({
+  try {
+    const doc = createDocumentWithEmbeddings({
+      user_id: auth.user_id,
       title,
       source_type,
       source_meta,
       original_text: text,
-      char_count: text.length,
-      chunk_count: chunks.length,
+      chunks,
+      embeddings,
     })
-    .select('id, created_at, title, source_type, source_meta, char_count, chunk_count')
-    .single()
-
-  if (docErr || !doc) {
-    return NextResponse.json({ error: docErr?.message || 'Ошибка вставки документа' }, { status: 500 })
+    return NextResponse.json({ document: doc })
+  } catch (e: any) {
+    return NextResponse.json({ error: e?.message || 'Ошибка сохранения документа' }, { status: 500 })
   }
-
-  const rows = chunks.map((c, i) => ({
-    document_id: doc.id,
-    chunk_index: i,
-    content: c,
-    embedding: embeddings[i] as any,
-  }))
-
-  const { error: chunkErr } = await supabase.from('me_chunks').insert(rows)
-  if (chunkErr) {
-    await supabase.from('me_documents').delete().eq('id', doc.id)
-    return NextResponse.json({ error: `Ошибка вставки чанков: ${chunkErr.message}` }, { status: 500 })
-  }
-
-  return NextResponse.json({ document: doc })
 }

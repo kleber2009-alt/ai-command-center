@@ -7,13 +7,12 @@ import { presignGet } from "@/lib/storage";
 
 export const dynamic = "force-dynamic";
 
-export async function GET(_req: Request, { params }: { params: Promise<{ id: string }> }) {
-  const { id } = await params;
+export async function GET(_req: Request, { params }: { params: { id: string } }) {
   const { user, response } = await requireUser();
   if (!user) return response!;
 
   const [job] = await db.select().from(aiJobs)
-    .where(and(eq(aiJobs.id, id), eq(aiJobs.userId, user.id))).limit(1);
+    .where(and(eq(aiJobs.id, params.id), eq(aiJobs.userId, user.id))).limit(1);
 
   if (!job) return NextResponse.json({ error: "not_found" }, { status: 404 });
 

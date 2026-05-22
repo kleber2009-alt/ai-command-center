@@ -17,6 +17,7 @@ export default function AssistantPage({ params }: { params: { id: string } }) {
       icon={assistant.icon}
       buttonText={assistant.buttonText}
       helpText={assistant.helpText}
+      starters={assistant.starters}
     />
   )
 }

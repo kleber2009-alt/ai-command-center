@@ -12,8 +12,7 @@ import { child } from "@/lib/logger";
 const log = child("admin.tool");
 export const dynamic = "force-dynamic";
 
-export async function PATCH(req: Request, { params }: { params: Promise<{ id: string }> }) {
-  const { id } = await params;
+export async function PATCH(req: Request, { params }: { params: { id: string } }) {
   const { user, response } = await requireAdminApi();
   if (!user) return response!;
 
@@ -35,7 +34,7 @@ export async function PATCH(req: Request, { params }: { params: Promise<{ id: st
   }
 
   const [updated] = await db.update(aiTools).set(patch)
-    .where(eq(aiTools.id, id)).returning();
+    .where(eq(aiTools.id, params.id)).returning();
 
   if (!updated) return NextResponse.json({ error: "tool_not_found" }, { status: 404 });
 

@@ -19,8 +19,7 @@ import { checkRateLimit } from "@/lib/jobs/rate-limit";
 
 export const dynamic = "force-dynamic";
 
-export async function POST(req: Request, { params }: { params: Promise<{ slug: string }> }) {
-  const { slug } = await params;
+export async function POST(req: Request, { params }: { params: { slug: string } }) {
   const { user, response } = await requireUser();
   if (!user) return response!;
 
@@ -31,7 +30,7 @@ export async function POST(req: Request, { params }: { params: Promise<{ slug: s
   const [tool] = await db.select({
     id: aiTools.id, slug: aiTools.slug, provider: aiTools.provider,
     model: aiTools.model, tokenCost: aiTools.tokenCost, status: aiTools.status,
-  }).from(aiTools).where(eq(aiTools.slug, slug)).limit(1);
+  }).from(aiTools).where(eq(aiTools.slug, params.slug)).limit(1);
 
   if (!tool || tool.status === "disabled") {
     return NextResponse.json({ error: "tool_not_found" }, { status: 404 });

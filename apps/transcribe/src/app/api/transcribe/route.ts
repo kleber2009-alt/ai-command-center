@@ -1,20 +1,13 @@
 import { NextRequest, NextResponse } from 'next/server'
 import { fetchYoutubeCaptions, getYoutubeVideoId, YoutubeCaptionsError } from '@/lib/youtube-captions'
-import { guardWithUser } from '@/lib/api-guard'
-import { deductMinutes } from '@/lib/users-db'
-import { makeTitle, Paragraph, dbSaveTranscript } from '@/lib/transcripts-db'
+import { insertTranscript, makeTitle, Paragraph } from '@/lib/transcripts-db'
 import {
   extractDirectMediaUrl,
   isSocialMediaUrl,
   isYtdlpServiceConfigured,
   YtdlpServiceError,
 } from '@/lib/ytdlp-client'
-import {
-  ApifyServiceError,
-  extractInstagramMediaUrl,
-  isApifyConfigured,
-  isInstagramUrl,
-} from '@/lib/apify-client'
+import { authenticate } from '@/lib/telegram-auth'
 
 export const maxDuration = 60
 
@@ -196,17 +189,22 @@ async function fetchDeepgram(url: string, language: 'auto' | 'ru' | 'en'): Promi
   }
 }
 
-async function saveTranscript(url: string, result: Ok, userId: string | null): Promise<string | null> {
-  return dbSaveTranscript({
-    url,
-    title: makeTitle(result.transcript, url),
-    source: result.source,
-    language: result.detectedLanguage,
-    duration: result.duration,
-    transcript: result.transcript,
-    paragraphs: result.paragraphs,
-    user_id: userId,
-  })
+function saveTranscript(user_id: string, url: string, result: Ok): string | null {
+  try {
+    return insertTranscript({
+      user_id,
+      url,
+      title: makeTitle(result.transcript, url),
+      source: result.source,
+      language: result.detectedLanguage,
+      duration: result.duration,
+      transcript: result.transcript,
+      paragraphs: result.paragraphs,
+    })
+  } catch (e: any) {
+    console.warn('saveTranscript exception:', e?.message)
+    return null
+  }
 }
 
 async function dispatch(url: string, language: 'auto' | 'ru' | 'en'): Promise<Result> {
@@ -264,26 +262,8 @@ async function dispatch(url: string, language: 'auto' | 'ru' | 'en'): Promise<Re
 }
 
 export async function POST(req: NextRequest) {
-  const guard = await guardWithUser(req, {
-    rateLimit: { key: 'transcribe', max: 10, windowMs: 60_000 },
-  })
-  if (!guard.ok) return guard.response
-
-  const { user, quota } = guard
-
-  // Quota gate: -1 means unlimited (team tier)
-  if (quota.minutes_limit !== -1 && quota.minutes_used >= quota.minutes_limit) {
-    return NextResponse.json(
-      {
-        error: 'quota_exceeded',
-        minutes_used: quota.minutes_used,
-        minutes_limit: quota.minutes_limit,
-        resets_at: quota.resets_at,
-      },
-      { status: 402 },
-    )
-  }
-
+  const auth = authenticate(req)
+  if ('error' in auth) return auth.error
   const { url, language = 'ru' } = (await req.json()) as Body
 
   if (!url || typeof url !== 'string' || !/^https?:\/\//i.test(url)) {
@@ -300,13 +280,7 @@ export async function POST(req: NextRequest) {
       return NextResponse.json({ error: result.error }, { status: result.status })
     }
 
-    const id = await saveTranscript(url, result, user.id === 'dev' ? null : user.id)
-
-    // Deduct actual duration from quota (fire-and-forget)
-    if (result.duration && user.id !== 'dev') {
-      deductMinutes(user.id, result.duration / 60).catch(() => {})
-    }
-
+    const id = saveTranscript(auth.user_id, url, result)
     return NextResponse.json({ ...result, id })
   } catch (e: any) {
     return NextResponse.json({ error: e?.message || 'Ошибка транскрибации' }, { status: 500 })

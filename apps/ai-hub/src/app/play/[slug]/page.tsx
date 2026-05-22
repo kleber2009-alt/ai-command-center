@@ -6,15 +6,8 @@ import { Playground } from "./Playground";
 
 export const dynamic = "force-dynamic";
 
-export default async function PlayPage({
-  params,
-  searchParams,
-}: {
-  params: Promise<{ slug: string }>;
-  searchParams: Promise<{ prompt?: string }>;
-}) {
-  const [{ slug }, sp] = await Promise.all([params, searchParams]);
-  const [tool] = await db.select().from(aiTools).where(eq(aiTools.slug, slug)).limit(1);
+export default async function PlayPage({ params }: { params: { slug: string } }) {
+  const [tool] = await db.select().from(aiTools).where(eq(aiTools.slug, params.slug)).limit(1);
   if (!tool || tool.status === "disabled") notFound();
 
   return (
@@ -26,7 +19,6 @@ export default async function PlayPage({
       provider={tool.provider}
       model={tool.model}
       inputSchema={tool.inputSchema as Record<string, unknown>}
-      initialPrompt={sp.prompt ?? ""}
     />
   );
 }

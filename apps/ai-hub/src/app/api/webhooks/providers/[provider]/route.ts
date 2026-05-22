@@ -19,9 +19,8 @@ import type { ProviderId } from "@/lib/db/schema";
 const log = child("webhook.provider");
 export const dynamic = "force-dynamic";
 
-export async function POST(req: Request, { params }: { params: Promise<{ provider: string }> }) {
-  const { provider: providerSlug } = await params;
-  const provider = providerSlug as ProviderId;
+export async function POST(req: Request, { params }: { params: { provider: string } }) {
+  const provider = params.provider as ProviderId;
   const secret = providerWebhookSecret(provider);
   if (!secret) return NextResponse.json({ error: "webhook_secret_missing", provider }, { status: 500 });
 

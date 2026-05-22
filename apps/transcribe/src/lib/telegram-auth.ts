@@ -1,102 +1,117 @@
-// HMAC-SHA256 verification of Telegram.WebApp.initData. Algorithm
-// from https://core.telegram.org/bots/webapps#validating-data-received-via-the-mini-app
-//
-// 1. Pull `hash` out of the urlencoded initData string.
-// 2. Build data_check_string: every remaining `key=value` pair
-//    joined with \n, sorted by key.
-// 3. secret_key = HMAC-SHA256(key="WebAppData", msg=bot_token)
-// 4. expected_hash = hex(HMAC-SHA256(key=secret_key, msg=data_check_string))
-// 5. timing-safe-compare expected_hash to the `hash` from step 1
-//
-// If anything fails (missing fields, bad hash, stale auth_date)
-// the function returns null. Caller decides whether to allow or
-// reject — by default, only routes opting in via api-guard care.
+// HMAC verification of a Telegram Mini App `initData` payload.
+// Reference: https://core.telegram.org/bots/webapps#validating-data-received-via-the-mini-app
 
-import crypto from 'node:crypto'
+import { createHash, createHmac, timingSafeEqual } from 'crypto'
 
-export interface VerifiedInitData {
-  user?: {
-    id: number
-    first_name?: string
-    last_name?: string
-    username?: string
-    language_code?: string
-  }
-  auth_date: number
-  query_id?: string
+export type TelegramUser = {
+  id: number
+  username?: string
+  first_name?: string
+  last_name?: string
 }
 
-const DEFAULT_MAX_AGE_SECONDS = 24 * 60 * 60
+export type TelegramAuthResult =
+  | { ok: true; user: TelegramUser | null }
+  | { ok: false; reason: string }
 
-export function verifyInitData(
-  initData: string | null | undefined,
-  botToken: string | null | undefined,
-  maxAgeSeconds: number = DEFAULT_MAX_AGE_SECONDS,
-): VerifiedInitData | null {
-  if (!initData || !botToken) return null
+/**
+ * Verify a raw Telegram Mini App initData string against the bot token.
+ * Returns the parsed Telegram user when valid, or an error reason.
+ */
+export function verifyTelegramInitData(initData: string, botToken: string): TelegramAuthResult {
+  if (!initData) return { ok: false, reason: 'empty initData' }
+  if (!botToken) return { ok: false, reason: 'TELEGRAM_BOT_TOKEN not set' }
 
   const params = new URLSearchParams(initData)
-  const givenHash = params.get('hash')
-  if (!givenHash) return null
-
+  const hash = params.get('hash')
+  if (!hash) return { ok: false, reason: 'no hash in initData' }
   params.delete('hash')
 
-  // Telegram requires sorted-by-key joined by \n. URLSearchParams
-  // preserves insertion order, so we read entries and sort.
   const dataCheckString = Array.from(params.entries())
     .map(([k, v]) => `${k}=${v}`)
     .sort()
     .join('\n')
 
-  const secretKey = crypto.createHmac('sha256', 'WebAppData').update(botToken).digest()
-  const expectedHashHex = crypto
-    .createHmac('sha256', secretKey)
-    .update(dataCheckString)
-    .digest('hex')
+  // Telegram uses HMAC_SHA256 with key = HMAC_SHA256("WebAppData", botToken).
+  const secret = createHmac('sha256', 'WebAppData').update(botToken).digest()
+  const expected = createHmac('sha256', secret).update(dataCheckString).digest('hex')
 
-  // timing-safe compare — both sides must be the same length and Buffer-shape.
-  let expected: Buffer
-  let actual: Buffer
-  try {
-    expected = Buffer.from(expectedHashHex, 'hex')
-    actual = Buffer.from(givenHash, 'hex')
-  } catch {
-    return null
+  if (
+    expected.length !== hash.length ||
+    !timingSafeEqual(Buffer.from(expected, 'hex'), Buffer.from(hash, 'hex'))
+  ) {
+    return { ok: false, reason: 'hash mismatch' }
   }
-  if (expected.length !== actual.length) return null
-  if (!crypto.timingSafeEqual(expected, actual)) return null
 
-  // Optional staleness check. Telegram includes auth_date as a
-  // unix timestamp; we reject anything older than maxAgeSeconds.
-  const authDateRaw = params.get('auth_date')
-  const authDate = authDateRaw ? parseInt(authDateRaw, 10) : 0
-  if (!authDate || !Number.isFinite(authDate)) return null
-  const nowSec = Math.floor(Date.now() / 1000)
-  if (nowSec - authDate > maxAgeSeconds) return null
+  // Reject stale payloads (older than 24h).
+  const authDate = Number(params.get('auth_date') || 0)
+  if (authDate && Date.now() / 1000 - authDate > 86400) {
+    return { ok: false, reason: 'initData expired' }
+  }
 
-  // Parse user blob. It's a JSON string inside the urlencoded form.
-  let user: VerifiedInitData['user']
-  const userStr = params.get('user')
-  if (userStr) {
-    try {
-      const parsed = JSON.parse(userStr)
-      if (parsed && typeof parsed.id === 'number') {
-        user = {
-          id: parsed.id,
-          first_name: parsed.first_name,
-          last_name: parsed.last_name,
-          username: parsed.username,
-          language_code: parsed.language_code,
-        }
-      }
-    } catch {
-      // Bad user JSON — still accept the initData, just without user.
+  let user: TelegramUser | null = null
+  try {
+    const rawUser = params.get('user')
+    if (rawUser) user = JSON.parse(rawUser) as TelegramUser
+  } catch {
+    // ignore parse errors; verified payload without user is still valid for service auth
+  }
+  return { ok: true, user }
+}
+
+import { NextRequest, NextResponse } from 'next/server'
+
+/**
+ * Returns null on success or a 401 Response on failure. Kept for
+ * backwards compatibility; new code should use authenticate() which
+ * also returns the resolved user_id.
+ */
+export function requireTelegramAuth(req: NextRequest): Response | null {
+  const a = authenticate(req)
+  return 'error' in a ? a.error : null
+}
+
+export type Authenticated = { user_id: string; via: 'telegram' | 'header' | 'default' }
+export type AuthResult = Authenticated | { error: Response }
+
+/**
+ * Resolve the caller's user_id from one of three sources, in order:
+ *
+ * 1. `X-Auth-User` header — set by a trusted reverse-proxy after it
+ *    enforced basic-auth (we trust upstream headers because Next.js
+ *    binds to 127.0.0.1 in production and only the proxy can reach it).
+ *    Yields `auth:<sanitised-name>`.
+ * 2. Verified Telegram `Authorization: tma <initData>` — yields
+ *    `tg:<telegram-user-id>`. Required when `TELEGRAM_BOT_TOKEN` is set
+ *    and no proxy header is present.
+ * 3. Fully open mode (no bot token, no header) — yields `default`. Used
+ *    only in local dev / single-tenant deploys.
+ *
+ * The user_id is the multi-tenant key for every content table; rows
+ * created under one source are isolated from rows under another.
+ */
+export function authenticate(req: NextRequest): AuthResult {
+  const headerUser = req.headers.get('x-auth-user')?.trim()
+  if (headerUser) {
+    const sanitised = headerUser.toLowerCase().replace(/[^a-z0-9_-]/g, '').slice(0, 40)
+    if (sanitised) return { user_id: `auth:${sanitised}`, via: 'header' }
+  }
+
+  const botToken = process.env.TELEGRAM_BOT_TOKEN
+  if (botToken) {
+    const auth = req.headers.get('authorization') || ''
+    const initData = auth.startsWith('tma ') ? auth.slice(4) : ''
+    const result = verifyTelegramInitData(initData, botToken)
+    if (result.ok && result.user?.id) {
+      return { user_id: `tg:${result.user.id}`, via: 'telegram' }
+    }
+    return {
+      error: NextResponse.json(
+        { error: `Доступ только из Telegram (${result.ok ? 'no user in initData' : result.reason})` },
+        { status: 401 },
+      ),
     }
   }
 
-  return {
-    user,
-    auth_date: authDate,
-    query_id: params.get('query_id') || undefined,
-  }
+  return { user_id: 'default', via: 'default' }
 }

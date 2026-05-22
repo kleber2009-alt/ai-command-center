@@ -3,35 +3,17 @@
 // X-Telegram-Bot-Api-Secret-Token).
 
 import { NextResponse } from "next/server";
-import { and, desc, eq } from "drizzle-orm";
+import { desc, eq } from "drizzle-orm";
 import { db } from "@/lib/db";
-import { users, tokenWallets, aiJobs, aiTools, payments } from "@/lib/db/schema";
+import { users, tokenWallets, aiJobs, aiTools } from "@/lib/db/schema";
 import { sendMessage, webAppButton } from "@/lib/telegram/api";
 import { telegramEmail } from "@/lib/telegram/validate";
-import { answerPreCheckoutQuery, verifyPayload } from "@/lib/telegram/stars";
-import { credit } from "@/lib/wallet";
 import { child } from "@/lib/logger";
 
 const log = child("telegram.webhook");
 export const dynamic = "force-dynamic";
 
 const WEBAPP_URL = process.env.TELEGRAM_WEBAPP_URL ?? "https://aihub-app.46-62-215-11.nip.io/tma";
-
-interface TgSuccessfulPayment {
-  currency: string;
-  total_amount: number;
-  invoice_payload: string;
-  telegram_payment_charge_id: string;
-  provider_payment_charge_id: string;
-}
-
-interface TgPreCheckoutQuery {
-  id: string;
-  from: { id: number; username?: string };
-  currency: string;
-  total_amount: number;
-  invoice_payload: string;
-}
 
 interface TgUpdate {
   update_id: number;
@@ -40,9 +22,7 @@ interface TgUpdate {
     from: { id: number; first_name?: string; username?: string };
     chat: { id: number };
     text?: string;
-    successful_payment?: TgSuccessfulPayment;
   };
-  pre_checkout_query?: TgPreCheckoutQuery;
 }
 
 export async function POST(req: Request) {
@@ -57,83 +37,6 @@ export async function POST(req: Request) {
   }
 
   const update = (await req.json().catch(() => ({}))) as TgUpdate;
-
-  // ============== Telegram Stars ==============
-  // pre_checkout_query — Telegram asks "ok to charge?" — must answer within 10s.
-  if (update.pre_checkout_query) {
-    const q = update.pre_checkout_query;
-    const paymentId = verifyPayload(q.invoice_payload);
-    try {
-      if (!paymentId) {
-        await answerPreCheckoutQuery({ query_id: q.id, ok: false, error_message: "Invalid invoice. Try again." });
-        return NextResponse.json({ ok: true });
-      }
-      const [row] = await db.select({ id: payments.id, status: payments.status, stars: payments.amountCents })
-        .from(payments).where(eq(payments.id, paymentId)).limit(1);
-      if (!row || row.status !== "pending") {
-        await answerPreCheckoutQuery({ query_id: q.id, ok: false, error_message: "Payment expired. Please retry." });
-        return NextResponse.json({ ok: true });
-      }
-      if (q.currency !== "XTR" || Number(row.stars) !== q.total_amount) {
-        await answerPreCheckoutQuery({ query_id: q.id, ok: false, error_message: "Price mismatch." });
-        return NextResponse.json({ ok: true });
-      }
-      await answerPreCheckoutQuery({ query_id: q.id, ok: true });
-    } catch (err) {
-      log.error("pre_checkout_query failed", { error: err instanceof Error ? err.message : String(err), payment_id: paymentId });
-    }
-    return NextResponse.json({ ok: true });
-  }
-
-  // successful_payment — credit the wallet and mark payment row succeeded.
-  if (update.message?.successful_payment) {
-    const sp = update.message.successful_payment;
-    const paymentId = verifyPayload(sp.invoice_payload);
-    if (!paymentId) {
-      log.warn("successful_payment with invalid payload", { charge: sp.telegram_payment_charge_id });
-      return NextResponse.json({ ok: true });
-    }
-    try {
-      const [row] = await db.select().from(payments).where(eq(payments.id, paymentId)).limit(1);
-      if (!row) {
-        log.warn("successful_payment for unknown payment_id", { paymentId });
-        return NextResponse.json({ ok: true });
-      }
-      if (row.status === "succeeded") {
-        // Idempotency: Telegram retries — already credited.
-        return NextResponse.json({ ok: true });
-      }
-      await credit({
-        userId: row.userId,
-        amount: row.tokensToAdd,
-        type: "purchase",
-        paymentId: row.id,
-        description: `Telegram Stars · ${sp.total_amount}⭐ · ${row.tokensToAdd} tokens`,
-      });
-      await db.update(payments).set({
-        status: "succeeded",
-        providerPaymentId: sp.telegram_payment_charge_id,
-        completedAt: new Date(),
-        metadata: { ...(row.metadata as Record<string, unknown> ?? {}),
-          telegram_charge: sp.telegram_payment_charge_id,
-          provider_charge: sp.provider_payment_charge_id },
-      }).where(eq(payments.id, row.id));
-
-      // DM the buyer.
-      try {
-        await sendMessage({
-          chat_id: update.message.chat.id,
-          text: `Оплата прошла ✓\n\n+${row.tokensToAdd.toLocaleString()} токенов на баланс. Спасибо!`,
-        });
-      } catch { /* user-facing notification is best-effort */ }
-
-      log.info("stars payment credited", { paymentId, tokens: row.tokensToAdd, charge: sp.telegram_payment_charge_id });
-    } catch (err) {
-      log.error("successful_payment processing failed", { error: err instanceof Error ? err.message : String(err), paymentId });
-    }
-    return NextResponse.json({ ok: true });
-  }
-
   const msg = update.message;
   if (!msg?.text) return NextResponse.json({ ok: true, ignored: true });
 
