@@ -17,6 +17,8 @@ model User {
   tokenBalance  Int       @default(0)
   plan          String    @default("free") // free | starter | pro | agency
   role          String    @default("user") // user | admin
+  telegramId    String?   @unique           // numeric TG user id (string for forward-compat), set if logged in via Mini App
+  telegramHandle String?                     // @username at time of TMA login
   createdAt     DateTime  @default(now())
   updatedAt     DateTime  @updatedAt
 

@@ -3,6 +3,14 @@
 import { useEffect, useRef, useState } from 'react';
 import { useRouter } from 'next/navigation';
 
+const TRIAL = {
+  id: 'trial' as const,
+  label: 'Trial',
+  tokens: 43,
+  usdt: '1.00',
+  desc: 'Одна полная связка: аватары + говорящее видео + обложка',
+};
+
 const PACKS = [
   { id: 'starter', label: 'Starter', tokens: 100, usdt: '9.00', desc: '~10 батчей аватаров или 33 обложки' },
   { id: 'pro', label: 'Pro', tokens: 400, usdt: '29.00', desc: '~13 видео + батчи аватаров', featured: true },
@@ -18,7 +26,7 @@ type CreateResp = {
   amount: string;
 };
 
-export function BillingActions() {
+export function BillingActions({ trialUsed }: { trialUsed?: boolean }) {
   const router = useRouter();
   const [busy, setBusy] = useState<string | null>(null);
   const [error, setError] = useState<string | null>(null);
@@ -47,7 +55,7 @@ export function BillingActions() {
     };
   }, [activeInvoice, router]);
 
-  const buy = async (pack: (typeof PACKS)[number]['id']) => {
+  const buy = async (pack: 'trial' | (typeof PACKS)[number]['id']) => {
     setBusy(pack);
     setError(null);
     try {
@@ -56,7 +64,16 @@ export function BillingActions() {
         headers: { 'content-type': 'application/json' },
         body: JSON.stringify({ pack }),
       });
-      const j = (await res.json().catch(() => ({}))) as Partial<CreateResp> & { error?: string; detail?: string };
+      const j = (await res.json().catch(() => ({}))) as Partial<CreateResp> & { error?: string; detail?: string; status?: string };
+      if (res.status === 409 && j.error === 'trial_already_used') {
+        if (j.status === 'paid') {
+          setError('Trial уже активирован. Дальше — Starter и выше.');
+        } else if (j.payUrl) {
+          window.open(j.payUrl, '_blank', 'noopener,noreferrer');
+          setError('У тебя уже есть открытый trial-инвойс — оплати его (открыли в новой вкладке) или подожди час до истечения.');
+        }
+        return;
+      }
       if (!res.ok || !j.payUrl) {
         setError(j.detail ?? j.error ?? `http_${res.status}`);
         return;
@@ -73,7 +90,29 @@ export function BillingActions() {
 
   return (
     <div className="grid gap-4">
-      <div className="grid md:grid-cols-3 gap-[2px] bg-border border border-border">
+      {/* Trial card — only shown if user hasn't used it yet */}
+      {!trialUsed && (
+        <div className="border-2 border-warm bg-[#1a0f05] p-5 flex flex-wrap items-center justify-between gap-4">
+          <div className="grid gap-1">
+            <div className="mono text-[10px] tracking-widest uppercase text-warm">/ TRIAL · one-time</div>
+            <div className="font-serif italic text-[24px] leading-tight">
+              {TRIAL.usdt} USDT <span className="text-text-mute mono text-[12px]">/ ~95₽</span>
+            </div>
+            <div className="font-serif italic text-[13px] text-text-dim">
+              +{TRIAL.tokens} токенов = {TRIAL.desc.toLowerCase()}.
+            </div>
+          </div>
+          <button
+            onClick={() => buy('trial')}
+            disabled={busy !== null}
+            className="btn-primary whitespace-nowrap"
+          >
+            {busy === 'trial' ? 'Создаём…' : 'Попробовать за 1$ →'}
+          </button>
+        </div>
+      )}
+
+      <div className="grid sm:grid-cols-2 lg:grid-cols-3 gap-[2px] bg-border border border-border">
         {PACKS.map((p) => (
           <div
             key={p.id}

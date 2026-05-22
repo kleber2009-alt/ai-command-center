@@ -9,11 +9,18 @@ export const metadata = { title: 'Billing — Persona Studio' };
 export default async function BillingPage() {
   const user = (await getCurrentUser())!;
 
-  const recent = await prisma.tokenTransaction.findMany({
-    where: { userId: user.id },
-    orderBy: { createdAt: 'desc' },
-    take: 30,
-  });
+  const [recent, trialInvoice] = await Promise.all([
+    prisma.tokenTransaction.findMany({
+      where: { userId: user.id },
+      orderBy: { createdAt: 'desc' },
+      take: 30,
+    }),
+    prisma.cryptoInvoice.findFirst({
+      where: { userId: user.id, pack: 'trial', status: { in: ['paid', 'active'] } },
+      select: { status: true },
+    }),
+  ]);
+  const trialUsed = Boolean(trialInvoice);
 
   return (
     <div className="grid gap-8">
@@ -49,7 +56,7 @@ export default async function BillingPage() {
           <span className="flex-1 border-b border-border translate-y-[-3px]" />
           <span className="mono text-[10px] tracking-widest uppercase text-text-mute">CryptoBot · USDT</span>
         </div>
-        <BillingActions />
+        <BillingActions trialUsed={trialUsed} />
       </section>
 
       <section>

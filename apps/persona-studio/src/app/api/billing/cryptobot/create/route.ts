@@ -7,7 +7,7 @@ import { createInvoice, PACKS, type PackSlug } from '@/lib/cryptobot';
 export const runtime = 'nodejs';
 
 const Body = z.object({
-  pack: z.enum(['starter', 'pro', 'agency']),
+  pack: z.enum(['trial', 'starter', 'pro', 'agency']),
 });
 
 export async function POST(req: NextRequest) {
@@ -20,6 +20,19 @@ export async function POST(req: NextRequest) {
   }
   const pack = parsed.data.pack as PackSlug;
   const cfg = PACKS[pack];
+
+  // Trial pack — only one per user (paid OR active outstanding).
+  if (pack === 'trial') {
+    const existing = await prisma.cryptoInvoice.findFirst({
+      where: { userId: user.id, pack: 'trial', status: { in: ['paid', 'active'] } },
+    });
+    if (existing) {
+      return NextResponse.json(
+        { error: 'trial_already_used', status: existing.status, payUrl: existing.status === 'active' ? existing.payUrl : undefined },
+        { status: 409 },
+      );
+    }
+  }
 
   try {
     const invoice = await createInvoice({
