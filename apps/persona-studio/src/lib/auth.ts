@@ -29,6 +29,11 @@ if (process.env.AUTH_GOOGLE_ID && process.env.AUTH_GOOGLE_SECRET) {
     Google({
       clientId: process.env.AUTH_GOOGLE_ID,
       clientSecret: process.env.AUTH_GOOGLE_SECRET,
+      // Google verifies email before issuing tokens, so it's safe to auto-link
+      // an existing User by email. Without this, a user who first signed in
+      // via magic-link (or any other provider sharing email) gets
+      // OAuthAccountNotLinked when trying Google later.
+      allowDangerousEmailAccountLinking: true,
     }),
   );
 }
