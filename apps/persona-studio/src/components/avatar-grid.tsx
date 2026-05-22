@@ -107,6 +107,17 @@ export function AvatarGrid({ generationId }: { generationId: string }) {
             <span className="mono text-[9px] tracking-widest uppercase text-text-faint">
               /{(i + 1).toString().padStart(2, '0')}
             </span>
+            {a.status === 'done' && (
+              <a
+                href={`/api/avatars/${a.id}/download`}
+                download
+                onClick={(e) => e.stopPropagation()}
+                className="absolute top-2 right-2 z-[5] mono text-[10px] tracking-widest uppercase bg-[rgba(8,8,8,0.7)] hover:bg-lime hover:text-bg text-text-dim px-2 py-1 leading-none"
+                title="Скачать аватар"
+              >
+                ↓
+              </a>
+            )}
             <div className="relative z-[2] bg-[rgba(8,8,8,0.6)] p-2 -m-1">
               <div className="font-serif italic text-[15px] leading-tight">{a.styleLabel}</div>
               <div className="mono text-[8px] tracking-widest uppercase text-text-dim mt-1">

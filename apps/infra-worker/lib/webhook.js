@@ -20,6 +20,47 @@ import { registerCabinet } from './cabinet.js';
 const TG_TRANSCRIBE_BOT_TOKEN = process.env.TG_TRANSCRIBE_BOT_TOKEN || '';
 const VIRAL_CLONE_DISPATCH_SECRET = process.env.VIRAL_CLONE_DISPATCH_SECRET || '';
 
+// Owner-pinning для /clone: если dispatch приходит от этого TG-id, в pipeline
+// проставляется фиксированный HeyGen voice_id (text-path, без ElevenLabs).
+// Owner-у тренировать голос не нужно — он уже сидит в HeyGen-овской библиотеке.
+const OWNER_TELEGRAM_ID = Number(process.env.OWNER_TELEGRAM_ID || 0);
+const OWNER_HEYGEN_VOICE_ID = process.env.OWNER_HEYGEN_VOICE_ID || '93d1ab8db88b479ca452e31897389118';
+
+// Скачивает аудио-файл из Telegram (voice / audio). Отличается от
+// downloadTgFile тем, что для voice-сообщений TG отдаёт OGG/Opus, а для
+// audio — mp3/m4a; content-type сохраняем по расширению `file_path`.
+async function downloadTgAudio(fileId) {
+  if (!TG_TRANSCRIBE_BOT_TOKEN) return { ok: false, error: 'TG_TRANSCRIBE_BOT_TOKEN not set' };
+  let infoRes;
+  try {
+    infoRes = await fetch(`https://api.telegram.org/bot${TG_TRANSCRIBE_BOT_TOKEN}/getFile?file_id=${encodeURIComponent(fileId)}`);
+  } catch (e) {
+    return { ok: false, error: `getFile fetch: ${e.message}` };
+  }
+  const info = await infoRes.json().catch(() => ({}));
+  if (!info?.ok) return { ok: false, error: `getFile: ${info?.description || 'unknown'}` };
+  const path = info.result?.file_path;
+  if (!path) return { ok: false, error: 'getFile: no file_path' };
+
+  let fileRes;
+  try {
+    fileRes = await fetch(`https://api.telegram.org/file/bot${TG_TRANSCRIBE_BOT_TOKEN}/${path}`);
+  } catch (e) {
+    return { ok: false, error: `audio download fetch: ${e.message}` };
+  }
+  if (!fileRes.ok) return { ok: false, error: `audio download ${fileRes.status}` };
+  const ab = await fileRes.arrayBuffer();
+  const buffer = Buffer.from(ab);
+  const ext = (path.split('.').pop() || '').toLowerCase();
+  const contentType =
+    ext === 'mp3' ? 'audio/mpeg' :
+    ext === 'm4a' ? 'audio/mp4' :
+    ext === 'wav' ? 'audio/wav' :
+    ext === 'ogg' || ext === 'oga' ? 'audio/ogg' :
+    'audio/ogg'; // TG voice-сообщения по умолчанию OGG/Opus
+  return { ok: true, buffer, contentType };
+}
+
 // Скачивает Telegram-файл по file_id, отдаёт {buffer, contentType}.
 // Бот шлёт только file_id, чтобы не таскать байты по HTTP туда-сюда.
 async function downloadTgFile(fileId) {
@@ -162,12 +203,44 @@ export function registerWebhook(fastify) {
       }
     }
 
+    // Voice routing (фиксируем в момент dispatch, чтобы видео конкретного
+    // pipeline'а не «уплывало» если юзер позже переобучил голос):
+    //   1) бот явно прислал `voice_id` (юзер выбрал в меню) → используем
+    //   2) owner_id → HeyGen voice (text-path, fast)
+    //   3) последний обученный voice клиента (legacy fallback для случая
+    //      когда бот не прислал voice_id — например, старая версия клиента)
+    //   4) ничего → submit упадёт в HEYGEN_DEFAULT_VOICE_ID
+    const userTgId = body.user_telegram_id ? Number(body.user_telegram_id) : null;
+    const explicitVoiceId = typeof body.voice_id === 'string' && body.voice_id.trim()
+      ? body.voice_id.trim()
+      : null;
+    let heygenVoiceId = null;
+    let elevenVoiceId = null;
+    if (explicitVoiceId) {
+      // Бот уже знает choice — используем как есть. Это нормальный путь
+      // после деплоя нового voice-picker'а.
+      elevenVoiceId = explicitVoiceId;
+    } else if (userTgId && OWNER_TELEGRAM_ID && userTgId === OWNER_TELEGRAM_ID) {
+      heygenVoiceId = OWNER_HEYGEN_VOICE_ID;
+    } else if (userTgId) {
+      const voiceRow = await queryOne(
+        `SELECT eleven_voice_id
+           FROM clone_user_voices
+          WHERE telegram_user_id = $1 AND status = 'ready'
+          ORDER BY created_at DESC
+          LIMIT 1`,
+        [userTgId],
+      );
+      if (voiceRow?.eleven_voice_id) elevenVoiceId = voiceRow.eleven_voice_id;
+    }
+
     const pipeline = await queryOne(
       `INSERT INTO viral_pipelines
-         (user_id, tg_chat_id, competitor_account, source_url, stage, heygen_talking_photo_id, clone_photo_id)
-       VALUES ($1, $2, $3, $4, 'init', $5, $6)
+         (user_id, tg_chat_id, competitor_account, source_url, stage,
+          heygen_talking_photo_id, clone_photo_id, heygen_voice_id, eleven_voice_id)
+       VALUES ($1, $2, $3, $4, 'init', $5, $6, $7, $8)
        RETURNING id`,
-      [userId, chatId, competitor, sourceUrl, talkingPhotoId, clonePhotoId],
+      [userId, chatId, competitor, sourceUrl, talkingPhotoId, clonePhotoId, heygenVoiceId, elevenVoiceId],
     );
     await query(
       `INSERT INTO scheduled_jobs (kind, scheduled_at, status, payload)
@@ -231,6 +304,81 @@ export function registerWebhook(fastify) {
       [tg, name, up.talkingPhotoId, fileId, up.url || null],
     );
     return { ok: true, photo_id: row.id, name: row.name };
+  });
+
+  // ── /worker/clone/voice — обучение голоса клиента ────────────────
+  // POST {tg_user_id, file_id, name?} — transcribe-бот шлёт сюда после
+  // того, как юзер прислал voice/audio. Воркер качает с TG, отправляет
+  // в ElevenLabs IVC, сохраняет voice_id в clone_user_voices.
+  // Защита — общий VIRAL_CLONE_DISPATCH_SECRET (тот же, что у dispatch).
+  fastify.post('/worker/clone/voice', async (request, reply) => {
+    if (!VIRAL_CLONE_DISPATCH_SECRET) return reply.code(503).send({ ok: false, error: 'dispatch_disabled' });
+    if (request.headers['x-dispatch-secret'] !== VIRAL_CLONE_DISPATCH_SECRET) {
+      return reply.code(401).send({ ok: false, error: 'bad_secret' });
+    }
+    const body = request.body || {};
+    const tg = Number(body.tg_user_id);
+    const fileId = typeof body.file_id === 'string' ? body.file_id.trim() : '';
+    const name = typeof body.name === 'string'
+      ? body.name.trim().slice(0, 80)
+      : `Голос · ${new Date().toISOString().slice(0, 10)}`;
+    if (!Number.isFinite(tg) || !fileId) {
+      return reply.code(400).send({ ok: false, error: 'tg_user_id + file_id required' });
+    }
+
+    const dl = await downloadTgAudio(fileId);
+    if (!dl.ok) return reply.code(502).send({ ok: false, error: `tg download: ${dl.error}` });
+
+    // ElevenLabs IVC хочет минимум ~30 сек; TG voice 1 мин ≈ 200–500KB OGG/Opus.
+    if (dl.buffer.length < 30 * 1024) {
+      return reply.code(400).send({
+        ok: false,
+        error: `audio too short (${dl.buffer.length} bytes). Нужен сэмпл от 30 секунд.`,
+      });
+    }
+
+    const cloneRes = await cloneVoice({
+      audioBuffer: dl.buffer,
+      audioMime: dl.contentType,
+      name,
+    });
+    if (!cloneRes.ok) {
+      return reply.code(cloneRes.status || 502).send(cloneRes);
+    }
+
+    const row = await queryOne(
+      `INSERT INTO clone_user_voices
+         (telegram_user_id, name, eleven_voice_id, source_file_id, sample_bytes)
+       VALUES ($1, $2, $3, $4, $5)
+       RETURNING id, name, eleven_voice_id`,
+      [tg, name, cloneRes.voice_id, fileId, dl.buffer.length],
+    );
+
+    return reply.send({
+      ok: true,
+      voice_id: cloneRes.voice_id,
+      voice_row_id: row.id,
+      name: row.name,
+    });
+  });
+
+  // ── /worker/clone/voices?tg=<telegram_user_id> ───────────────────
+  fastify.get('/worker/clone/voices', async (request, reply) => {
+    if (!VIRAL_CLONE_DISPATCH_SECRET) return reply.code(503).send({ ok: false, error: 'dispatch_disabled' });
+    if (request.headers['x-dispatch-secret'] !== VIRAL_CLONE_DISPATCH_SECRET) {
+      return reply.code(401).send({ ok: false, error: 'bad_secret' });
+    }
+    const tg = Number(request.query?.tg);
+    if (!Number.isFinite(tg)) return reply.code(400).send({ ok: false, error: 'tg required' });
+    const rows = await query(
+      `SELECT id, name, eleven_voice_id, created_at
+         FROM clone_user_voices
+        WHERE telegram_user_id = $1 AND status = 'ready'
+        ORDER BY created_at DESC
+        LIMIT 10`,
+      [tg],
+    );
+    return { ok: true, voices: rows };
   });
 
   // Public billing endpoints — used by landing/dashboard

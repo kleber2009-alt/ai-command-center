@@ -8,7 +8,7 @@ export type AppUser = {
   username: string | null
   first_name: string | null
   subscription_tier: UserTier
-  subscription_expires_at?: string | null
+  subscription_expires_at: string | null
   stripe_customer_id: string | null
   stripe_subscription_id: string | null
 }
@@ -17,6 +17,27 @@ export type QuotaInfo = {
   minutes_used: number
   minutes_limit: number  // -1 means unlimited
   resets_at: string
+}
+
+// Downgrade Pro/Team users whose subscription_expires_at < now.
+// Mutates the row in DB and the in-memory user object.
+async function downgradeIfExpired(db: ReturnType<typeof getDb>, user: AppUser): Promise<AppUser> {
+  if (!db) return user
+  if (user.subscription_tier === 'free') return user
+  if (!user.subscription_expires_at) return user
+  if (new Date(user.subscription_expires_at) >= new Date()) return user
+
+  try {
+    await db`
+      UPDATE users
+         SET subscription_tier = 'free', updated_at = NOW()
+       WHERE id = ${user.id}::uuid
+    `
+    user.subscription_tier = 'free'
+  } catch (e: any) {
+    console.warn('[users-db] downgradeIfExpired failed:', e?.message)
+  }
+  return user
 }
 
 export async function getOrCreateUser(tg: {
@@ -36,9 +57,22 @@ export async function getOrCreateUser(tg: {
             updated_at = NOW()
       RETURNING *
     `
-    return row as AppUser
+    return await downgradeIfExpired(db, row as AppUser)
   } catch (e: any) {
     console.warn('[users-db] getOrCreateUser failed:', e?.message)
+    return null
+  }
+}
+
+export async function getUserByTelegramId(telegramId: number): Promise<AppUser | null> {
+  const db = getDb()
+  if (!db) return null
+  try {
+    const [row] = await db`SELECT * FROM users WHERE telegram_id = ${telegramId}`
+    if (!row) return null
+    return await downgradeIfExpired(db, row as AppUser)
+  } catch (e: any) {
+    console.warn('[users-db] getUserByTelegramId failed:', e?.message)
     return null
   }
 }
@@ -49,8 +83,6 @@ export async function getQuota(userId: string, tier: UserTier): Promise<QuotaInf
   try {
     const [row] = await db`SELECT * FROM ensure_quota(${userId}::uuid, ${tier}::text)`
     if (!row) return null
-    // numeric(10,2) comes back as a string from postgres.js — coerce to Number
-    // so callers can do real numeric comparisons (used >= limit).
     return {
       minutes_used: Number((row as any).minutes_used),
       minutes_limit: Number((row as any).minutes_limit),
@@ -104,6 +136,50 @@ export async function getUserByStripeCustomer(customerId: string): Promise<AppUs
   }
 }
 
+// Telegram Stars billing
+// -----------------------
+
+// Extends the user's Pro subscription by `days` from MAX(now, current_expiry).
+// Returns the new expiry timestamp (ISO string).
+export async function grantProDays(userId: string, days: number): Promise<string | null> {
+  const db = getDb()
+  if (!db) return null
+  try {
+    const [row] = await db`SELECT grant_pro_days(${userId}::uuid, ${days}::int) AS new_expires`
+    return (row as any)?.new_expires?.toISOString?.() ?? (row as any)?.new_expires ?? null
+  } catch (e: any) {
+    console.error('[users-db] grantProDays failed:', e?.message)
+    return null
+  }
+}
+
+export async function recordStarsPayment(p: {
+  userId: string
+  telegramPaymentChargeId: string
+  providerPaymentChargeId?: string | null
+  starsAmount: number
+  tier: UserTier
+  daysGranted: number
+  payload?: unknown
+}): Promise<void> {
+  const db = getDb()
+  if (!db) return
+  try {
+    await db`
+      INSERT INTO stars_payments (
+        user_id, telegram_payment_charge_id, provider_payment_charge_id,
+        stars_amount, tier, days_granted, payload
+      ) VALUES (
+        ${p.userId}::uuid, ${p.telegramPaymentChargeId}, ${p.providerPaymentChargeId ?? null},
+        ${p.starsAmount}, ${p.tier}, ${p.daysGranted}, ${p.payload ? JSON.stringify(p.payload) : null}::jsonb
+      )
+      ON CONFLICT (telegram_payment_charge_id) DO NOTHING
+    `
+  } catch (e: any) {
+    console.error('[users-db] recordStarsPayment failed:', e?.message)
+  }
+}
+
 // --- Admin / owner-only operations ----------------------------------------
 
 export type AdminUserRow = {
@@ -131,13 +207,11 @@ export async function adminListUsers(): Promise<AdminUserRow[]> {
       ORDER BY u.created_at DESC
     `) as AdminUserRow[]
   } catch (e: any) {
-    console.warn('[users-db] adminListUsers failed:', e?.message)
+    console.warn("[users-db] adminListUsers failed:", e?.message)
     return []
   }
 }
 
-// Adds `delta` minutes to the user's quota limit. Delta can be negative.
-// Returns the new limit, or null if the user has no quota row yet.
 export async function adminAddMinutes(userId: string, delta: number): Promise<number | null> {
   const db = getDb()
   if (!db) return null
@@ -150,17 +224,15 @@ export async function adminAddMinutes(userId: string, delta: number): Promise<nu
     `
     return row ? Number(row.minutes_limit) : null
   } catch (e: any) {
-    console.warn('[users-db] adminAddMinutes failed:', e?.message)
+    console.warn("[users-db] adminAddMinutes failed:", e?.message)
     return null
   }
 }
 
-// Creates a user by telegram_id if missing, ensures a quota row exists,
-// and adds `delta` minutes to the limit. Returns the resulting limit.
 export async function adminGrantMinutesByTelegramId(
   telegramId: number,
   delta: number,
-  tier: UserTier = 'pro',
+  tier: UserTier = "pro",
 ): Promise<{ userId: string; minutesLimit: number } | null> {
   const db = getDb()
   if (!db) return null
@@ -173,7 +245,6 @@ export async function adminGrantMinutesByTelegramId(
     `
     if (!u) return null
     const userId = u.id as string
-    // ensure_quota uses the tier defaults; we still bump the limit afterwards.
     await db`SELECT ensure_quota(${userId}::uuid, ${tier}::text)`
     const [q] = await db`
       UPDATE user_quotas
@@ -183,7 +254,79 @@ export async function adminGrantMinutesByTelegramId(
     `
     return { userId, minutesLimit: q ? Number(q.minutes_limit) : 0 }
   } catch (e: any) {
-    console.warn('[users-db] adminGrantMinutesByTelegramId failed:', e?.message)
+    console.warn("[users-db] adminGrantMinutesByTelegramId failed:", e?.message)
     return null
+  }
+}
+
+// ─── clone-flow draft state ────────────────────────────────────────
+// Хранит «между сообщениями» состояние /clone-сценария: ждём ли мы
+// фото от юзера, имя для только что отправленного фото, и какой
+// source_url/competitor нужно запустить когда фото будет готово.
+
+export type CloneDraft = {
+  telegram_user_id: number
+  chat_id: number
+  source_url: string | null
+  competitor_account: string | null
+  state:
+    | 'awaiting_photo_choice'
+    | 'awaiting_photo'
+    | 'awaiting_name'
+    | 'awaiting_voice_choice'              // фото выбрано, ждём выбор голоса
+    | 'awaiting_voice_audio'               // standalone /voice — обучение без /clone
+    | 'awaiting_voice_audio_for_clone'     // /clone → «Новый голос» — обучаем и сразу диспатчим
+  photo_id: number | null
+  pending_file_id: string | null
+  voice_id: string | null                  // ElevenLabs eleven_voice_id; null = HeyGen default
+}
+
+export async function upsertCloneDraft(d: CloneDraft): Promise<void> {
+  const db = getDb()
+  if (!db) return
+  try {
+    await db`
+      INSERT INTO clone_drafts
+        (telegram_user_id, chat_id, source_url, competitor_account, state, photo_id, pending_file_id, voice_id, updated_at)
+      VALUES
+        (${d.telegram_user_id}, ${d.chat_id}, ${d.source_url}, ${d.competitor_account}, ${d.state}, ${d.photo_id}, ${d.pending_file_id}, ${d.voice_id}, NOW())
+      ON CONFLICT (telegram_user_id) DO UPDATE SET
+        chat_id            = EXCLUDED.chat_id,
+        source_url         = EXCLUDED.source_url,
+        competitor_account = EXCLUDED.competitor_account,
+        state              = EXCLUDED.state,
+        photo_id           = EXCLUDED.photo_id,
+        pending_file_id    = EXCLUDED.pending_file_id,
+        voice_id           = EXCLUDED.voice_id,
+        updated_at         = NOW()
+    `
+  } catch (e: any) {
+    console.warn("[users-db] upsertCloneDraft failed:", e?.message)
+  }
+}
+
+export async function getCloneDraft(telegramUserId: number): Promise<CloneDraft | null> {
+  const db = getDb()
+  if (!db) return null
+  try {
+    const [row] = await db`
+      SELECT telegram_user_id, chat_id, source_url, competitor_account, state, photo_id, pending_file_id, voice_id
+      FROM clone_drafts
+      WHERE telegram_user_id = ${telegramUserId}
+    `
+    return (row as CloneDraft | undefined) ?? null
+  } catch (e: any) {
+    console.warn("[users-db] getCloneDraft failed:", e?.message)
+    return null
+  }
+}
+
+export async function clearCloneDraft(telegramUserId: number): Promise<void> {
+  const db = getDb()
+  if (!db) return
+  try {
+    await db`DELETE FROM clone_drafts WHERE telegram_user_id = ${telegramUserId}`
+  } catch (e: any) {
+    console.warn("[users-db] clearCloneDraft failed:", e?.message)
   }
 }

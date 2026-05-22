@@ -95,10 +95,16 @@ export async function getRemainingQuota() {
 }
 
 // ── Шаг 1: загрузка бинарника как asset ─────────────────────────
+// Принимает изображения (image/jpeg|png) или аудио (audio/mpeg).
+// HeyGen различает asset_type по Content-Type.
 export async function uploadAsset(buf, contentType) {
   if (!HEYGEN_KEY) return { ok: false, error: 'HEYGEN_API_KEY missing' };
   if (!buf || !buf.length) return { ok: false, error: 'empty buffer' };
-  const ct = (contentType === 'image/png') ? 'image/png' : 'image/jpeg';
+  const ct =
+    contentType === 'image/png' ? 'image/png' :
+    contentType === 'audio/mpeg' || contentType === 'audio/mp3' ? 'audio/mpeg' :
+    contentType === 'audio/wav' ? 'audio/wav' :
+    'image/jpeg';
 
   let res;
   try {
@@ -118,15 +124,30 @@ export async function uploadAsset(buf, contentType) {
   try { parsed = JSON.parse(text); } catch (_) {
     return { ok: false, error: `heygen asset non-json: ${text.slice(0, 300)}` };
   }
-  if (parsed?.code !== 100 || !parsed?.data?.id || !parsed?.data?.image_key) {
+  if (parsed?.code !== 100 || !parsed?.data?.id) {
     return { ok: false, error: `heygen asset code ${parsed?.code}: ${parsed?.msg || parsed?.message || text.slice(0, 300)}` };
+  }
+  // image_key — нужен только для изображений (talking_photo.create step 2).
+  // Аудио-asset'ы возвращают `id` без image_key — этого достаточно для
+  // voice.type='audio'.
+  const needsImageKey = ct.startsWith('image/');
+  if (needsImageKey && !parsed.data.image_key) {
+    return { ok: false, error: `heygen asset: image_key missing in response: ${text.slice(0, 200)}` };
   }
   return {
     ok: true,
     id: parsed.data.id,
     url: parsed.data.url || '',
-    imageKey: parsed.data.image_key,
+    imageKey: parsed.data.image_key || null,
   };
+}
+
+// ── Хелпер: загрузить mp3 как HeyGen asset, вернуть asset_id для
+//          submitVideo({audioAssetId, ...}).
+export async function uploadAudioAsset(buf, contentType = 'audio/mpeg') {
+  const a = await uploadAsset(buf, contentType);
+  if (!a.ok) return a;
+  return { ok: true, audioAssetId: a.id, url: a.url };
 }
 
 // HeyGen .create-эндпоинты ждут GET с JSON-body — undici fetch так не умеет
@@ -251,10 +272,18 @@ export async function uploadTalkingPhoto(buf, contentType) {
 /**
  * POST /v2/video/generate — Avatar V (model_version='v5'), только talking_photo.
  *
+ * Поддерживает два варианта голоса:
+ *   • TTS на стороне HeyGen — передай `voiceId` + `script`. Используется
+ *     для owner (свой HeyGen voice) и для клиентов без обученного голоса.
+ *   • Внешнее аудио (ElevenLabs IVC через нас) — передай `audioAssetId`.
+ *     HeyGen лип-синкает к нашему mp3, обходит свой voice provider quota.
+ *
  * @param {object} p
- * @param {string} p.script — текст для озвучки
+ * @param {string} p.script — текст. Обязателен и для text-path (это TTS-вход),
+ *                           и для audio-path (логирование/отладка).
  * @param {string} p.talkingPhotoId — обязательно, talking_photo_id из uploadTalkingPhoto()
- * @param {string} [p.voiceId]
+ * @param {string} [p.voiceId] — HeyGen voice (text-path)
+ * @param {string} [p.audioAssetId] — HeyGen audio asset_id (audio-path); если задан, voiceId игнорируется
  * @param {'portrait'|'landscape'|'square'} [p.aspect] — default portrait (для рилсов)
  */
 export async function submitVideo(p) {
@@ -264,8 +293,14 @@ export async function submitVideo(p) {
     return { ok: false, error: 'talkingPhotoId required — Avatar V работает только по фото юзера' };
   }
 
-  const voiceId = p.voiceId || DEFAULT_VOICE_ID;
-  if (!voiceId) return { ok: false, error: 'voiceId missing (set HEYGEN_DEFAULT_VOICE_ID or pass per-pipeline)' };
+  let voicePayload;
+  if (p.audioAssetId) {
+    voicePayload = { type: 'audio', audio_asset_id: p.audioAssetId };
+  } else {
+    const voiceId = p.voiceId || DEFAULT_VOICE_ID;
+    if (!voiceId) return { ok: false, error: 'voiceId missing (set HEYGEN_DEFAULT_VOICE_ID or pass per-pipeline)' };
+    voicePayload = { type: 'text', voice_id: voiceId, input_text: p.script.slice(0, 1500) };
+  }
 
   const aspect = p.aspect || 'portrait';
   const dimension = aspect === 'landscape'
@@ -283,7 +318,7 @@ export async function submitVideo(p) {
           model_version: 'v5',                       // Avatar V (latest look model)
           use_avatar_iv_model: USE_AVATAR_IV_MOTION, // Avatar IV motion engine (more expressive)
         },
-        voice:     { type: 'text', voice_id: voiceId, input_text: p.script.slice(0, 1500) },
+        voice:     voicePayload,
         background:{ type: 'color', value: '#000000' },
       },
     ],

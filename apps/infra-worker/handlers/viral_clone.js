@@ -28,6 +28,7 @@ import { downloadVideo, downloadDirect } from '../lib/ytdlp.js';
 import { transcribeFile, isWhisperConfigured } from '../lib/whisper.js';
 import * as heygen from '../lib/heygen.js';
 import * as submagic from '../lib/submagic.js';
+import { renderMp3 } from '../lib/voice.js';
 
 const POLL_INTERVAL_SEC = parseInt(process.env.VIRAL_POLL_INTERVAL_SEC || '30', 10);
 const MAX_POLL_ATTEMPTS = parseInt(process.env.VIRAL_MAX_POLL_ATTEMPTS || '40', 10); // 40 × 30s = 20 min
@@ -309,11 +310,28 @@ async function stepHeygenSubmit(p) {
     );
   }
 
+  // Voice routing:
+  //   • eleven_voice_id задан (клиент с обученным голосом) →
+  //     ElevenLabs TTS(script) → mp3 → HeyGen asset → voice.type='audio'.
+  //     Обходит HeyGen voice provider quota (тот самый «Voice provider
+  //     quota exceeded», который ловили на shared default voice).
+  //   • иначе (owner или клиент без голоса) → HeyGen TTS, voice.type='text'.
+  let audioAssetId = null;
+  if (p.eleven_voice_id) {
+    const tts = await renderMp3(p.rewritten_script, p.eleven_voice_id);
+    if (!tts.ok) return failPipeline(p, `elevenlabs tts: ${tts.error}`);
+
+    const up = await heygen.uploadAudioAsset(tts.buffer, 'audio/mpeg');
+    if (!up.ok) return failPipeline(p, `heygen audio upload: ${up.error}`);
+    audioAssetId = up.audioAssetId;
+  }
+
   const r = await heygen.submitVideo({
     script: p.rewritten_script,
     talkingPhotoId: p.heygen_talking_photo_id, // фото юзера из /clone (clone_user_photos)
-    voiceId: p.heygen_voice_id,
-    aspect: 'portrait',              // рилсы 9:16
+    voiceId: p.heygen_voice_id,                // только text-path (если audioAssetId не задан)
+    audioAssetId,                              // audio-path: HeyGen лип-синкает к нашему mp3
+    aspect: 'portrait',                        // рилсы 9:16
   });
   if (!r.ok) return failPipeline(p, `heygen submit: ${r.error}`);
 
@@ -361,15 +379,27 @@ async function stepHeygenPoll(p) {
 
   if (s.status === 'failed') {
     const msg = s.errorMessage || 'no detail';
-    if (/insufficient.*credit|insufficient_credit/i.test(msg)) {
+    const isInsufficientCredit = /insufficient.*credit|insufficient_credit/i.test(msg);
+    // Voice provider quota — это лимит ElevenLabs-пула, к которому ходит
+    // HeyGen для text-to-speech на дефолтном voice_id. Не наша квота
+    // (HeyGen api credits в порядке), но фейл биллинг-класса. Чинится
+    // переключением юзера на свой обученный голос (`/voice` flow).
+    const isVoiceQuota = /voice\s*provider\s*quota|voice\s*quota\s*exceeded/i.test(msg);
+
+    if (isInsufficientCredit || isVoiceQuota) {
+      const kind = isVoiceQuota ? 'Voice provider quota' : 'Insufficient credit';
+      const tip = isVoiceQuota
+        ? 'клиенту нужен свой голос (/voice) либо ждать сброса лимита у HeyGen.'
+        : 'Top up: https://app.heygen.com/settings/subscriptions';
       await notifyAdminBilling(
         'HeyGen',
-        `pipeline <code>${p.id}</code> упал на poll: <code>${escapeHtml(msg)}</code>. ` +
-          `Top up: https://app.heygen.com/settings/subscriptions`,
+        `pipeline <code>${p.id}</code> упал на poll (${kind}): <code>${escapeHtml(msg)}</code>. ${tip}`,
       );
       return failPipeline(
         p,
-        `HeyGen billing: ${msg}. Пополни баланс на app.heygen.com и /clone заново.`,
+        isVoiceQuota
+          ? `HeyGen voice quota исчерпана у провайдера. Обучи свой голос командой /voice — клон будет говорить им и обойдёт этот лимит.`
+          : `HeyGen billing: ${msg}. Пополни баланс на app.heygen.com и /clone заново.`,
       );
     }
     return failPipeline(p, `heygen failed: ${msg}`);

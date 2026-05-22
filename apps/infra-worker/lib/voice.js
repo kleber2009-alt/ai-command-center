@@ -87,6 +87,49 @@ export async function cloneVoice({ audioBuffer, audioMime = 'audio/webm', name, 
 }
 
 /**
+ * Render text to mp3 via ElevenLabs (for HeyGen audio-source path).
+ * HeyGen /v2/video/generate с voice.type='audio' принимает asset_id
+ * с mp3-аудио — выдаём mp3_44100_128.
+ *
+ * @param {string} text
+ * @param {string} voiceId
+ * @returns {Promise<{ok:true, buffer:Buffer, mimeType:string} | {ok:false, error:string}>}
+ */
+export async function renderMp3(text, voiceId) {
+  if (!ELEVENLABS_KEY) return { ok: false, error: 'ELEVENLABS_API_KEY missing' };
+  if (!voiceId) return { ok: false, error: 'voice_id missing' };
+  if (!text || text.trim().length < 2) return { ok: false, error: 'text empty' };
+
+  const url = `https://api.elevenlabs.io/v1/text-to-speech/${encodeURIComponent(voiceId)}?output_format=mp3_44100_128`;
+  let res;
+  try {
+    res = await fetch(url, {
+      method: 'POST',
+      headers: {
+        'xi-api-key': ELEVENLABS_KEY,
+        'Content-Type': 'application/json',
+        Accept: 'audio/mpeg',
+      },
+      body: JSON.stringify({
+        text: text.slice(0, 2500),
+        model_id: 'eleven_multilingual_v2',
+        voice_settings: { stability: 0.45, similarity_boost: 0.75, style: 0.3, use_speaker_boost: true },
+      }),
+      signal: AbortSignal.timeout(60_000),
+    });
+  } catch (e) {
+    return { ok: false, error: `elevenlabs mp3 fetch: ${e.message}` };
+  }
+
+  if (!res.ok) {
+    const body = await res.text();
+    return { ok: false, error: `elevenlabs ${res.status}: ${body.slice(0, 300)}` };
+  }
+  const arr = await res.arrayBuffer();
+  return { ok: true, buffer: Buffer.from(arr), mimeType: 'audio/mpeg' };
+}
+
+/**
  * Send an OGG/Opus voice message to Telegram.
  * @param {number|string} chatId
  * @param {Buffer} audioBuffer
