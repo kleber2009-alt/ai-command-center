@@ -176,11 +176,17 @@ async function handleCommand(msg: TgMessage) {
   }
 
   // Не команда и не команда выше — возможно это название для только что
-  // загруженного фото (state=awaiting_name в clone-draft).
+  // загруженного фото (state=awaiting_name в clone-draft), либо ссылка/handle
+  // после тапа кнопки «Клон рилса» (state=awaiting_clone_url).
   if (msg.from) {
     const draft = await getCloneDraft(msg.from.id)
     if (draft?.state === 'awaiting_name' && draft.pending_file_id) {
       await applyPhotoName(msg, draft.pending_file_id, text)
+      return
+    }
+    if (draft?.state === 'awaiting_clone_url') {
+      const synthetic: TgMessage = { ...msg, text: `/clone ${text}` }
+      await handleClone(synthetic)
       return
     }
   }
@@ -234,9 +240,10 @@ const FEATURES: Record<FeatureKey, { label: string; appPath?: string; render: ()
     render: () =>
       '🎥 <b>Клон рилса</b>\n\n' +
       'Берёшь чужой залетевший рилс — получаешь свой ремейк с твоим аватаром и стилем за 3–7 минут.\n\n' +
-      '<b>Как пользоваться (прямо здесь в чате):</b>\n' +
-      '<code>/clone https://www.instagram.com/reel/XXXX/</code>\n' +
-      '<code>/clone @конкурент</code> — сам найду самый залетевший рилс за 30 дней\n\n' +
+      '<b>Как пользоваться:</b>\n' +
+      'Просто пришли мне следующим сообщением:\n' +
+      '• ссылку на рилс — <code>https://www.instagram.com/reel/XXXX/</code>\n' +
+      '• или <code>@конкурент</code> — сам найду самый залетевший рилс за 30 дней\n\n' +
       '🎙 Чтобы клон говорил <b>твоим</b> голосом — сначала запусти ' +
       '<code>/voice</code> и пришли 1-минутный сэмпл (обучение ~30 сек).\n\n' +
       '<i>Pipeline: research → download → transcribe → rewrite → HeyGen → Submagic (Hormozi 2 + B-rolls) → готовый mp4 сюда.</i>',
@@ -329,6 +336,20 @@ async function handleCallback(cb: TgCallbackQuery) {
   if (data.startsWith('feat:')) {
     const key = data.slice('feat:'.length) as FeatureKey
     if (key in FEATURES) {
+      // Кнопка «Клон рилса» — вооружаем awaiting_clone_url, чтобы юзеру
+      // достаточно было прислать ссылку без префикса /clone.
+      if (key === 'clone' && cb.from) {
+        await upsertCloneDraft({
+          telegram_user_id: cb.from.id,
+          chat_id: chatId,
+          source_url: null,
+          competitor_account: null,
+          state: 'awaiting_clone_url',
+          photo_id: null,
+          pending_file_id: null,
+          voice_id: null,
+        })
+      }
       await editMessageText(chatId, messageId, FEATURES[key].render(), {
         parse_mode: 'HTML',
         reply_markup: featureDetailKeyboard(key),

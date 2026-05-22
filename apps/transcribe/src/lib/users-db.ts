@@ -276,6 +276,7 @@ export type CloneDraft = {
     | 'awaiting_voice_choice'              // фото выбрано, ждём выбор голоса
     | 'awaiting_voice_audio'               // standalone /voice — обучение без /clone
     | 'awaiting_voice_audio_for_clone'     // /clone → «Новый голос» — обучаем и сразу диспатчим
+    | 'awaiting_clone_url'                 // юзер тапнул кнопку «Клон рилса», ждём URL/@handle без /clone
   photo_id: number | null
   pending_file_id: string | null
   voice_id: string | null                  // ElevenLabs eleven_voice_id; null = HeyGen default
