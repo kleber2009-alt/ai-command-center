@@ -183,6 +183,27 @@ services:
       - '127.0.0.1:3004:3000'
     networks: [internal, aisales-net]
 
+  # ─────────────────────────────────────────────────────────────────
+  # open-gen-ai — open-source generative-AI studio (Next.js 15)
+  # Image + video + lipsync studios. Proxies the actual model calls
+  # to api.muapi.ai via middleware.js — no server-side API key needed
+  # (each user supplies their own Muapi key, stored in browser
+  # localStorage by the ApiKeyModal). Pure stateless renderer.
+  # ─────────────────────────────────────────────────────────────────
+  open-gen-ai:
+    build:
+      context: ../apps/open-gen-ai
+      dockerfile: Dockerfile
+    restart: unless-stopped
+    environment:
+      NODE_ENV: production
+      PORT: 3000
+      HOSTNAME: 0.0.0.0
+    ports:
+      # Host Caddy proxies open-gen-ai.46-62-215-11.nip.io → 127.0.0.1:3008
+      - '127.0.0.1:3008:3000'
+    networks: [internal]
+
 volumes:
   postgres_data:
   voice_notes:

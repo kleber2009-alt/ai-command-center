@@ -1,0 +1,31 @@
+# ═══════════════════════════════════════════════════════════════════
+# Caddy snippet · Open Generative AI studio
+# ═══════════════════════════════════════════════════════════════════
+# Добавь в /etc/caddy/Caddyfile отдельным site-блоком.
+#
+# Перед этим:
+#   cd /root/ai-command-center/infra
+#   docker compose up -d --build open-gen-ai
+# (поднимет контейнер на 127.0.0.1:3008 → :3000 внутри)
+#
+# После reload caddy:
+#   https://open-gen-ai.46-62-215-11.nip.io/
+#   На фронте откроется ApiKeyModal — юзер вводит свой Muapi API key,
+#   ключ хранится только в его browser localStorage. Серверная сторона
+#   не имеет доступа к ключу: middleware.js просто рерайтит /api/v1/*
+#   на api.muapi.ai, прокидывая x-api-key из клиента.
+# ───────────────────────────────────────────────────────────────────
+
+open-gen-ai.46-62-215-11.nip.io {
+	encode zstd gzip
+
+	reverse_proxy 127.0.0.1:3008 {
+		header_up X-Forwarded-Host {host}
+		header_up X-Forwarded-Proto {scheme}
+	}
+
+	log {
+		output file /var/log/caddy/open-gen-ai.log
+		format console
+	}
+}
