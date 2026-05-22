@@ -31,6 +31,7 @@ export const QUEUE_NAMES = {
   avatarGeneration: 'avatar-generation',
   coverGeneration: 'cover-generation',
   heygenVideo: 'heygen-video',
+  omnihumanVideo: 'omnihuman-video',
 } as const;
 
 export type AvatarGenerationJob = {
@@ -43,14 +44,19 @@ export type CoverGenerationJob = {
   userId: string;
 };
 
-export type HeygenVideoJob = {
+/** Unified video job — воркер сам читает engine из VideoGeneration row. */
+export type VideoJob = {
   videoId: string;
   userId: string;
 };
 
+// Backward-compat alias.
+export type HeygenVideoJob = VideoJob;
+
 let _avatarQueue: Queue<AvatarGenerationJob> | null = null;
 let _coverQueue: Queue<CoverGenerationJob> | null = null;
-let _videoQueue: Queue<HeygenVideoJob> | null = null;
+let _heygenQueue: Queue<VideoJob> | null = null;
+let _omnihumanQueue: Queue<VideoJob> | null = null;
 
 export function avatarQueue() {
   if (!_avatarQueue) {
@@ -66,9 +72,25 @@ export function coverQueue() {
   return _coverQueue;
 }
 
-export function videoQueue() {
-  if (!_videoQueue) {
-    _videoQueue = new Queue<HeygenVideoJob>(QUEUE_NAMES.heygenVideo, options());
+export function heygenQueue() {
+  if (!_heygenQueue) {
+    _heygenQueue = new Queue<VideoJob>(QUEUE_NAMES.heygenVideo, options());
   }
-  return _videoQueue;
+  return _heygenQueue;
 }
+
+export function omnihumanQueue() {
+  if (!_omnihumanQueue) {
+    _omnihumanQueue = new Queue<VideoJob>(QUEUE_NAMES.omnihumanVideo, options());
+  }
+  return _omnihumanQueue;
+}
+
+/** Engine-aware dispatcher — pass the queueName from EngineConfig. */
+export function queueForName(name: string): Queue<VideoJob> {
+  if (name === QUEUE_NAMES.omnihumanVideo) return omnihumanQueue();
+  return heygenQueue();
+}
+
+// Legacy alias — старый код звал videoQueue().
+export const videoQueue = heygenQueue;

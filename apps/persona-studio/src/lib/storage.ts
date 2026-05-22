@@ -20,7 +20,7 @@ export const s3 = new S3Client({
 
 export const BUCKET = bucket;
 
-export type UploadKind = 'original' | 'avatar' | 'cover' | 'video';
+export type UploadKind = 'original' | 'avatar' | 'cover' | 'video' | 'audio';
 
 export function keyFor(kind: UploadKind, userId: string, ext: string) {
   const safeExt = ext.replace(/^\./, '').toLowerCase().slice(0, 8);

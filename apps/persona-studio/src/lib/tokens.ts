@@ -99,8 +99,11 @@ export async function creditTokens(opts: {
   });
 }
 
+import { env } from './env';
+
 export const COSTS = {
-  avatarGeneration: Number(process.env.COST_AVATAR_GENERATION ?? 10),
-  coverGeneration: Number(process.env.COST_COVER_GENERATION ?? 3),
-  heygenVideo: Number(process.env.COST_HEYGEN_VIDEO ?? 30),
+  avatarGeneration: env.COST_AVATAR_GENERATION,
+  coverGeneration: env.COST_COVER_GENERATION,
+  heygenVideo: env.COST_HEYGEN_VIDEO,
+  omnihumanVideo: env.COST_OMNIHUMAN_VIDEO,
 };

@@ -131,22 +131,27 @@ model Avatar {
   @@index([generationId, style])
 }
 
-// HeyGen-видео из выбранного аватара (phase 2)
+// Видео из выбранного аватара. Движок — `engine` (heygen-v5 | heygen-v4 |
+// omnihuman-1.5). Маршрутизация очереди и валидация полей — в
+// src/lib/video-engines.ts.
 model VideoGeneration {
   id          String   @id @default(cuid())
   userId      String
   user        User     @relation(fields: [userId], references: [id], onDelete: Cascade)
   avatarId    String
   avatar      Avatar   @relation(fields: [avatarId], references: [id], onDelete: Cascade)
-  script      String   @db.Text
+  engine      String   @default("heygen-v5")         // VideoEngine slug
+  script      String?  @db.Text                      // для engine.inputMode='script'
+  audioUrl    String?                                // synthesized mp3 (OmniHuman) или advanced override
   language    String   @default("ru")
   voiceId     String?
   aspect      String   @default("9:16")              // 9:16 | 1:1 | 16:9
   background  String?
   subtitles   Boolean  @default(true)
-  heygenVersion String @default("V")                 // V (Avatar V, default) | IV (Avatar IV)
+  heygenVersion String @default("V")                 // legacy: V | IV (зеркалит engine.heygenVersion)
   status      String   @default("pending")           // pending | processing | completed | failed
-  heygenJobId String?
+  engineJobId String?                                // generic remote job id (kie/omnihuman)
+  heygenJobId String?                                // legacy HeyGen video_id
   videoUrl    String?
   tokensCost  Int      @default(30)
   errorMsg    String?
