@@ -1,0 +1,121 @@
+name: deploy-ai-hub
+
+# Deploy apps/ai-hub (Next.js + BullMQ worker) to Hetzner.
+# Containers: ai-hub-web (:3010), ai-hub-worker, mailpit (dev only).
+#
+# IMPORTANT: prod compose currently lives at /home/aisales/ai-hub/source/.
+# After consolidation it must point at /root/ai-command-center/apps/ai-hub/.
+# Until that migration is done, set vars.AI_HUB_COMPOSE_PATH to the actual file.
+#
+# ─── Required GitHub secrets ───────────────────────────────────────
+#   HETZNER_SSH_KEY
+#   AI_HUB_DATABASE_URL                 (postgres://…@aisales-postgres:5432/ai_hub)
+#   AI_HUB_REDIS_URL                    (redis://aisales-redis:6379/1)
+#   AI_HUB_AUTH_SECRET                  (openssl rand -base64 32)
+#   AI_HUB_SMTP_URL
+#   AI_HUB_S3_ENDPOINT
+#   AI_HUB_S3_ACCESS_KEY
+#   AI_HUB_S3_SECRET_KEY
+#   AI_HUB_STRIPE_SECRET_KEY
+#   AI_HUB_STRIPE_WEBHOOK_SECRET
+#   AI_HUB_FAL_KEY
+#   AI_HUB_REPLICATE_API_TOKEN
+#   AI_HUB_KIE_API_KEY
+#   AI_HUB_TELEGRAM_BOT_TOKEN
+#
+# ─── Required GitHub repository variables ──────────────────────────
+#   AI_HUB_NEXTAUTH_URL                 (https://aihub-app.46-62-215-11.nip.io)
+#   AI_HUB_S3_BUCKET                    (ai-hub-media)
+#   AI_HUB_COMPOSE_PATH                 (e.g. /home/aisales/ai-hub/source/docker-compose.yml)
+
+on:
+  push:
+    branches: [main]
+    paths:
+      - 'apps/ai-hub/**'
+      - '.github/workflows/deploy-ai-hub.yml'
+      - '.github/actions/deploy-ssh/**'
+  workflow_dispatch:
+    inputs:
+      ref:
+        required: false
+        default: 'main'
+
+concurrency:
+  group: deploy-ai-hub
+  cancel-in-progress: false
+
+jobs:
+  deploy:
+    runs-on: ubuntu-latest
+    timeout-minutes: 25
+
+    steps:
+      - uses: actions/checkout@v4
+
+      - id: ref
+        run: |
+          if [ "${{ github.event_name }}" = "workflow_dispatch" ]; then
+            echo "value=${{ github.event.inputs.ref || 'main' }}" >> "$GITHUB_OUTPUT"
+          else
+            echo "value=${{ github.ref_name }}" >> "$GITHUB_OUTPUT"
+          fi
+
+      - uses: ./.github/actions/deploy-ssh
+        with:
+          app_name: ai-hub
+          ref:      ${{ steps.ref.outputs.value }}
+          ssh_key:  ${{ secrets.HETZNER_SSH_KEY }}
+          envs:     'COMPOSE_PATH'
+          env_file: |
+            DATABASE_URL=${{ secrets.AI_HUB_DATABASE_URL }}
+            REDIS_URL=${{ secrets.AI_HUB_REDIS_URL }}
+            AUTH_SECRET=${{ secrets.AI_HUB_AUTH_SECRET }}
+            NEXTAUTH_URL=${{ vars.AI_HUB_NEXTAUTH_URL }}
+            SMTP_URL=${{ secrets.AI_HUB_SMTP_URL }}
+            S3_ENDPOINT=${{ secrets.AI_HUB_S3_ENDPOINT }}
+            S3_ACCESS_KEY=${{ secrets.AI_HUB_S3_ACCESS_KEY }}
+            S3_SECRET_KEY=${{ secrets.AI_HUB_S3_SECRET_KEY }}
+            S3_BUCKET=${{ vars.AI_HUB_S3_BUCKET }}
+            STRIPE_SECRET_KEY=${{ secrets.AI_HUB_STRIPE_SECRET_KEY }}
+            STRIPE_WEBHOOK_SECRET=${{ secrets.AI_HUB_STRIPE_WEBHOOK_SECRET }}
+            FAL_KEY=${{ secrets.AI_HUB_FAL_KEY }}
+            REPLICATE_API_TOKEN=${{ secrets.AI_HUB_REPLICATE_API_TOKEN }}
+            KIE_API_KEY=${{ secrets.AI_HUB_KIE_API_KEY }}
+            TELEGRAM_BOT_TOKEN=${{ secrets.AI_HUB_TELEGRAM_BOT_TOKEN }}
+            NODE_ENV=production
+          script: |
+            COMPOSE="${COMPOSE_PATH:-/root/ai-command-center/apps/ai-hub/docker-compose.yml}"
+            echo "── using compose at $COMPOSE ──"
+
+            # bring in the freshly-pulled monorepo source (only when prod compose
+            # path is still the legacy /home/aisales/ai-hub/source location).
+            if [ "$COMPOSE" != /root/ai-command-center/apps/ai-hub/docker-compose.yml ]; then
+              SRC_DIR=$(dirname "$COMPOSE")
+              rsync -a --delete \
+                /root/ai-command-center/apps/ai-hub/ "$SRC_DIR/"
+            fi
+
+            echo "── building ai-hub-web + ai-hub-worker ──"
+            docker compose -f "$COMPOSE" build ai-hub-web ai-hub-worker
+
+            echo "── prisma migrate deploy ──"
+            docker compose -f "$COMPOSE" --env-file /etc/ai-hub.env \
+              run --rm ai-hub-web npx prisma migrate deploy || true
+
+            echo "── recreating ai-hub-web + ai-hub-worker ──"
+            docker compose -f "$COMPOSE" --env-file /etc/ai-hub.env \
+              up -d --force-recreate ai-hub-web ai-hub-worker
+
+            echo "── health-check ──"
+            for i in $(seq 1 25); do
+              if curl -fsS http://localhost:3010/ >/dev/null 2>&1; then
+                echo "✓ healthy after ${i}×3s"; exit 0
+              fi
+              sleep 3
+            done
+            echo "✗ ai-hub-web did not respond within 75s"
+            docker logs --tail=80 ai-hub-web || true
+            exit 1
+        env:
+          COMPOSE_PATH: ${{ vars.AI_HUB_COMPOSE_PATH }}

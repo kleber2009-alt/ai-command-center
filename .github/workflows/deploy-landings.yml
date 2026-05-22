@@ -1,0 +1,71 @@
+name: deploy-landings
+
+# Sync static landing pages to Hetzner (served by Caddy from /var/www/landings/<name>).
+# Triggered when files under landings/<name>/ change.
+# Each landing is an independent directory; Caddyfile maps it to a domain or sub-path.
+
+on:
+  push:
+    branches: [main]
+    paths:
+      - 'landings/**'
+      - '.github/workflows/deploy-landings.yml'
+  workflow_dispatch:
+    inputs:
+      landing:
+        description: 'Specific landing slug (empty = all)'
+        required: false
+        default: ''
+
+concurrency:
+  group: deploy-landings
+  cancel-in-progress: false
+
+jobs:
+  deploy:
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Detect changed landings
+        id: changed
+        run: |
+          set -euo pipefail
+          if [ -n "${{ github.event.inputs.landing }}" ]; then
+            echo "list=${{ github.event.inputs.landing }}" >> "$GITHUB_OUTPUT"
+            exit 0
+          fi
+          CHANGED=$(git diff --name-only ${{ github.event.before }} ${{ github.sha }} -- landings/ \
+            | awk -F/ '{ print $2 }' | sort -u | grep -v '^$' || true)
+          if [ -z "$CHANGED" ]; then
+            CHANGED=$(ls landings/ | tr '\n' ' ')
+          fi
+          echo "list=$CHANGED" >> "$GITHUB_OUTPUT"
+          echo "── will sync: $CHANGED ──"
+
+      - name: Install SSH key
+        run: |
+          mkdir -p ~/.ssh
+          echo "${{ secrets.HETZNER_SSH_KEY }}" > ~/.ssh/id_ed25519
+          chmod 600 ~/.ssh/id_ed25519
+          ssh-keyscan -p 22 -H 46.62.215.11 >> ~/.ssh/known_hosts 2>/dev/null
+
+      - name: Rsync landings
+        run: |
+          set -euo pipefail
+          for L in ${{ steps.changed.outputs.list }}; do
+            [ -d "landings/$L" ] || { echo "skip $L (no dir)"; continue; }
+            echo "── syncing landings/$L → /var/www/landings/$L ──"
+            ssh -p 22 root@46.62.215.11 "mkdir -p /var/www/landings/$L"
+            rsync -avz --delete \
+              -e 'ssh -p 22' \
+              "landings/$L/" \
+              "root@46.62.215.11:/var/www/landings/$L/"
+          done
+
+      - name: Reload Caddy
+        run: |
+          ssh -p 22 root@46.62.215.11 \
+            'caddy reload --config /etc/caddy/Caddyfile --adapter caddyfile || true'

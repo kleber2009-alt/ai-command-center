@@ -1,0 +1,94 @@
+name: deploy-persona-train
+
+# Deploy apps/persona-train (Next.js 15 — voice clone + avatar training).
+# Prod container `persona-train-web` (port 3030) lives in
+# /root/ai-command-center/apps/persona-train/docker-compose.yml.
+# Caddy: persona-train.46-62-215-11.nip.io → :3030.
+#
+# ─── Required GitHub secrets ───────────────────────────────────────
+#   HETZNER_SSH_KEY
+#   PERSONA_TRAIN_DATABASE_URL          (postgres://aio:…@infra-postgres-1:5432/aio)
+#   PERSONA_TRAIN_ELEVENLABS_API_KEY
+#   PERSONA_TRAIN_HEYGEN_API_KEY
+#   PERSONA_TRAIN_TELEGRAM_BOT_TOKEN
+#   PERSONA_TRAIN_AUTH_SECRET           (openssl rand -base64 32)
+#   PERSONA_TRAIN_S3_SECRET_KEY
+#
+# ─── Required GitHub repository variables ──────────────────────────
+#   PERSONA_TRAIN_NEXTAUTH_URL          (https://persona-train.46-62-215-11.nip.io)
+#   PERSONA_TRAIN_OWNER_TELEGRAM_ID
+#   PERSONA_TRAIN_S3_ENDPOINT
+#   PERSONA_TRAIN_S3_ACCESS_KEY
+#   PERSONA_TRAIN_S3_BUCKET
+
+on:
+  push:
+    branches: [main]
+    paths:
+      - 'apps/persona-train/**'
+      - '.github/workflows/deploy-persona-train.yml'
+      - '.github/actions/deploy-ssh/**'
+  workflow_dispatch:
+    inputs:
+      ref:
+        required: false
+        default: 'main'
+
+concurrency:
+  group: deploy-persona-train
+  cancel-in-progress: false
+
+jobs:
+  deploy:
+    runs-on: ubuntu-latest
+    timeout-minutes: 20
+
+    steps:
+      - uses: actions/checkout@v4
+
+      - id: ref
+        run: |
+          if [ "${{ github.event_name }}" = "workflow_dispatch" ]; then
+            echo "value=${{ github.event.inputs.ref || 'main' }}" >> "$GITHUB_OUTPUT"
+          else
+            echo "value=${{ github.ref_name }}" >> "$GITHUB_OUTPUT"
+          fi
+
+      - uses: ./.github/actions/deploy-ssh
+        with:
+          app_name: persona-train
+          ref:      ${{ steps.ref.outputs.value }}
+          ssh_key:  ${{ secrets.HETZNER_SSH_KEY }}
+          env_file: |
+            DATABASE_URL=${{ secrets.PERSONA_TRAIN_DATABASE_URL }}
+            ELEVENLABS_API_KEY=${{ secrets.PERSONA_TRAIN_ELEVENLABS_API_KEY }}
+            HEYGEN_API_KEY=${{ secrets.PERSONA_TRAIN_HEYGEN_API_KEY }}
+            TELEGRAM_BOT_TOKEN=${{ secrets.PERSONA_TRAIN_TELEGRAM_BOT_TOKEN }}
+            OWNER_TELEGRAM_ID=${{ vars.PERSONA_TRAIN_OWNER_TELEGRAM_ID }}
+            AUTH_SECRET=${{ secrets.PERSONA_TRAIN_AUTH_SECRET }}
+            NEXTAUTH_URL=${{ vars.PERSONA_TRAIN_NEXTAUTH_URL }}
+            S3_ENDPOINT=${{ vars.PERSONA_TRAIN_S3_ENDPOINT }}
+            S3_ACCESS_KEY=${{ vars.PERSONA_TRAIN_S3_ACCESS_KEY }}
+            S3_SECRET_KEY=${{ secrets.PERSONA_TRAIN_S3_SECRET_KEY }}
+            S3_BUCKET=${{ vars.PERSONA_TRAIN_S3_BUCKET }}
+            NODE_ENV=production
+          script: |
+            COMPOSE=/root/ai-command-center/apps/persona-train/docker-compose.yml
+
+            echo "── building persona-train-web ──"
+            docker compose -f "$COMPOSE" build
+
+            echo "── restarting persona-train-web ──"
+            docker compose -f "$COMPOSE" --env-file /etc/persona-train.env \
+              up -d --force-recreate
+
+            echo "── health-check ──"
+            for i in $(seq 1 20); do
+              if curl -fsS http://localhost:3030/ >/dev/null 2>&1; then
+                echo "✓ healthy after ${i}×3s"; exit 0
+              fi
+              sleep 3
+            done
+            echo "✗ persona-train did not respond within 60s"
+            docker logs --tail=80 persona-train-web || true
+            exit 1

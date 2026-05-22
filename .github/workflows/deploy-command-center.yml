@@ -1,0 +1,105 @@
+name: deploy-command-center
+
+# Deploy apps/command-center (Next.js 14 — internal dashboard) to Hetzner.
+# No docker-compose yet — uses raw `docker run`. Port 3004 (3003 is persona-studio).
+# Caddy mapping: command-center.46-62-215-11.nip.io → localhost:3004.
+#
+# ─── Required GitHub secrets ───────────────────────────────────────
+#   HETZNER_SSH_KEY
+#   COMMAND_CENTER_DATABASE_URL         (postgres://aisales:…@aisales-postgres:5432/aisales)
+#   COMMAND_CENTER_AUTH_SECRET          (openssl rand -base64 32)
+#   COMMAND_CENTER_ADMIN_PASSWORD
+#
+# ─── Required GitHub repository variables ──────────────────────────
+#   COMMAND_CENTER_PUBLIC_URL           (https://command-center.46-62-215-11.nip.io)
+
+on:
+  push:
+    branches: [main]
+    paths:
+      - 'apps/command-center/**'
+      - '.github/workflows/deploy-command-center.yml'
+      - '.github/actions/deploy-ssh/**'
+  workflow_dispatch:
+    inputs:
+      ref:
+        required: false
+        default: 'main'
+
+concurrency:
+  group: deploy-command-center
+  cancel-in-progress: false
+
+jobs:
+  deploy:
+    runs-on: ubuntu-latest
+    timeout-minutes: 15
+
+    steps:
+      - uses: actions/checkout@v4
+
+      - id: ref
+        run: |
+          if [ "${{ github.event_name }}" = "workflow_dispatch" ]; then
+            echo "value=${{ github.event.inputs.ref || 'main' }}" >> "$GITHUB_OUTPUT"
+          else
+            echo "value=${{ github.ref_name }}" >> "$GITHUB_OUTPUT"
+          fi
+
+      - uses: ./.github/actions/deploy-ssh
+        with:
+          app_name: command-center
+          ref:      ${{ steps.ref.outputs.value }}
+          ssh_key:  ${{ secrets.HETZNER_SSH_KEY }}
+          env_file: |
+            DATABASE_URL=${{ secrets.COMMAND_CENTER_DATABASE_URL }}
+            AUTH_SECRET=${{ secrets.COMMAND_CENTER_AUTH_SECRET }}
+            ADMIN_PASSWORD=${{ secrets.COMMAND_CENTER_ADMIN_PASSWORD }}
+            PUBLIC_URL=${{ vars.COMMAND_CENTER_PUBLIC_URL }}
+            NODE_ENV=production
+          script: |
+            cd /root/ai-command-center
+
+            echo "── building command-center image ──"
+            docker build \
+              -f apps/command-center/Dockerfile \
+              -t command-center:latest \
+              --label "git_sha=$(git rev-parse --short HEAD)" \
+              .
+
+            echo "── restarting command-center container ──"
+            docker stop command-center 2>/dev/null || true
+            docker rm   command-center 2>/dev/null || true
+            docker run -d \
+              --name command-center \
+              --restart unless-stopped \
+              --env-file /etc/command-center.env \
+              --network host \
+              -p 127.0.0.1:3004:3000 \
+              command-center:latest
+
+            echo "── ensure Caddy mapping ──"
+            CADDYFILE=/etc/caddy/Caddyfile
+            if ! grep -q "command-center\.46-62-215-11\.nip\.io" "$CADDYFILE"; then
+              cat >> "$CADDYFILE" <<'CADDY'
+
+# ─── Command Center dashboard ───────────────────────────────────────
+command-center.46-62-215-11.nip.io {
+    reverse_proxy localhost:3004
+    encode zstd gzip
+    header { X-Content-Type-Options nosniff; -Server }
+}
+CADDY
+              caddy reload --config "$CADDYFILE" --adapter caddyfile
+            fi
+
+            echo "── health-check ──"
+            for i in $(seq 1 20); do
+              if curl -fsS http://localhost:3004/ >/dev/null 2>&1; then
+                echo "✓ healthy after ${i}×3s"; exit 0
+              fi
+              sleep 3
+            done
+            echo "✗ command-center did not respond within 60s"
+            docker logs --tail=80 command-center || true
+            exit 1

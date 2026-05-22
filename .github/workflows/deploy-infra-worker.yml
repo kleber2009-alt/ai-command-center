@@ -1,0 +1,88 @@
+name: deploy-infra-worker
+
+# Deploy apps/infra-worker (9 cron handlers, Node 20 + yt-dlp + ffmpeg).
+# Prod container `infra-aisales-worker-1` lives in the `infra` docker-compose project.
+# No external HTTP — health-check uses a docker exec ping into the process.
+#
+# ─── Required GitHub secrets ───────────────────────────────────────
+#   HETZNER_SSH_KEY
+#   WORKER_ANTHROPIC_API_KEY
+#   WORKER_ELEVENLABS_API_KEY
+#   WORKER_HEYGEN_API_KEY
+#   WORKER_APIFY_API_TOKEN
+#   WORKER_TELEGRAM_BOT_TOKEN
+#   WORKER_DATABASE_URL                 (postgresql://aisales:…@aisales-postgres:5432/aisales)
+#
+# ─── Required GitHub repository variables ──────────────────────────
+#   WORKER_OWNER_TELEGRAM_ID
+#   WORKER_LOG_LEVEL                    (info)
+
+on:
+  push:
+    branches: [main]
+    paths:
+      - 'apps/infra-worker/**'
+      - '.github/workflows/deploy-infra-worker.yml'
+      - '.github/actions/deploy-ssh/**'
+  workflow_dispatch:
+    inputs:
+      ref:
+        required: false
+        default: 'main'
+
+concurrency:
+  group: deploy-infra-worker
+  cancel-in-progress: false
+
+jobs:
+  deploy:
+    runs-on: ubuntu-latest
+    timeout-minutes: 20
+
+    steps:
+      - uses: actions/checkout@v4
+
+      - id: ref
+        run: |
+          if [ "${{ github.event_name }}" = "workflow_dispatch" ]; then
+            echo "value=${{ github.event.inputs.ref || 'main' }}" >> "$GITHUB_OUTPUT"
+          else
+            echo "value=${{ github.ref_name }}" >> "$GITHUB_OUTPUT"
+          fi
+
+      - uses: ./.github/actions/deploy-ssh
+        with:
+          app_name: infra-worker
+          ref:      ${{ steps.ref.outputs.value }}
+          ssh_key:  ${{ secrets.HETZNER_SSH_KEY }}
+          env_file: |
+            DATABASE_URL=${{ secrets.WORKER_DATABASE_URL }}
+            ANTHROPIC_API_KEY=${{ secrets.WORKER_ANTHROPIC_API_KEY }}
+            ELEVENLABS_API_KEY=${{ secrets.WORKER_ELEVENLABS_API_KEY }}
+            HEYGEN_API_KEY=${{ secrets.WORKER_HEYGEN_API_KEY }}
+            APIFY_API_TOKEN=${{ secrets.WORKER_APIFY_API_TOKEN }}
+            TELEGRAM_BOT_TOKEN=${{ secrets.WORKER_TELEGRAM_BOT_TOKEN }}
+            OWNER_TELEGRAM_ID=${{ vars.WORKER_OWNER_TELEGRAM_ID }}
+            LOG_LEVEL=${{ vars.WORKER_LOG_LEVEL }}
+            NODE_ENV=production
+          script: |
+            COMPOSE=/root/ai-command-center/infra/docker-compose.yml
+
+            echo "── building infra-worker ──"
+            docker compose -f "$COMPOSE" build aisales-worker
+
+            echo "── recreating infra-aisales-worker-1 ──"
+            docker compose -f "$COMPOSE" --env-file /etc/infra-worker.env \
+              up -d --force-recreate aisales-worker
+
+            echo "── health-check: process must stay up 15s ──"
+            sleep 15
+            if docker inspect -f '{{.State.Running}}' infra-aisales-worker-1 \
+              | grep -q true; then
+              echo "✓ infra-aisales-worker-1 is running"
+              docker logs --tail=20 infra-aisales-worker-1
+              exit 0
+            fi
+            echo "✗ worker exited within 15s"
+            docker logs --tail=80 infra-aisales-worker-1 || true
+            exit 1
