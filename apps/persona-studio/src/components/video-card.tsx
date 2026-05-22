@@ -6,11 +6,14 @@ import { formatDate } from '@/lib/utils';
 type Video = {
   id: string;
   status: 'pending' | 'processing' | 'completed' | 'failed' | string;
-  script: string;
+  engine: string;
+  script: string | null;
+  audioUrl: string | null;
   language: string | null;
   aspect: string;
   background: string | null;
   videoUrl: string | null;
+  engineJobId: string | null;
   heygenJobId: string | null;
   errorMsg: string | null;
   createdAt: string;
@@ -100,8 +103,10 @@ export function VideoCard({ initial, autopoll }: { initial: Video; autopoll: boo
                 <>
                   <div className="mono text-cyan text-[11px] tracking-widest uppercase animate-pulse">/{v.status}</div>
                   <div className="font-serif italic text-[14px] text-text mt-2">Рендерим… ~2–4 мин</div>
-                  {v.heygenJobId && (
-                    <div className="mono text-[9px] tracking-widest text-text-mute mt-1">heygen={v.heygenJobId.slice(0, 8)}</div>
+                  {(v.engineJobId || v.heygenJobId) && (
+                    <div className="mono text-[9px] tracking-widest text-text-mute mt-1">
+                      {v.engine} · {(v.engineJobId ?? v.heygenJobId)!.slice(0, 8)}
+                    </div>
                   )}
                 </>
               )}
@@ -111,7 +116,11 @@ export function VideoCard({ initial, autopoll }: { initial: Video; autopoll: boo
       </div>
 
       <div className="font-serif italic text-[14px] text-text-dim leading-snug">
-        «{v.script.length > 140 ? v.script.slice(0, 140) + '…' : v.script}»
+        {v.script
+          ? `«${v.script.length > 140 ? v.script.slice(0, 140) + '…' : v.script}»`
+          : v.audioUrl
+            ? `🎵 ${v.audioUrl.slice(v.audioUrl.lastIndexOf('/') + 1)}`
+            : '—'}
       </div>
       <div className="flex items-center justify-between mono text-[9px] tracking-widest text-text-mute">
         <span>{v.avatar?.styleLabel ?? '—'}</span>

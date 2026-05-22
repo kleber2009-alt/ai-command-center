@@ -1,8 +1,17 @@
 'use client';
 
-import { useState } from 'react';
+import { useMemo, useState } from 'react';
 import { useRouter } from 'next/navigation';
-import { VOICE_PRESETS } from '@/lib/heygen-voices';
+import { VOICE_PRESETS as HEYGEN_VOICES } from '@/lib/heygen-voices';
+import { ELEVENLABS_VOICE_PRESETS } from '@/lib/elevenlabs-voices';
+import {
+  VIDEO_ENGINES,
+  VIDEO_ENGINE_LIST,
+  engineConfig,
+  type VideoEngine,
+  type EngineAspect,
+  type VoiceProvider,
+} from '@/lib/video-engines';
 
 type Avatar = {
   id: string;
@@ -11,15 +20,13 @@ type Avatar = {
   imageUrl: string;
 };
 
-// Скрипт-«эталон» под talking-photo HeyGen, заточенный под максимальную
-// реалистичность лип-синка:
-//   • ~25 сек — модель успевает выйти за первые «рваные» 2 секунды разгона
-//   • короткие предложения и явные паузы (точка, тире, многоточие) →
-//     естественные breath-pauses в lipsync
-//   • один риторический вопрос — даёт вариативность мимики
-//     (поднятие бровей, наклон головы)
-//   • первое лицо, разговорный регистр — модель обучена именно на нём
-//   • никаких длинных слов-скороговорок и аббревиатур
+type VoiceOption = { voice_id: string; label: string; language: string };
+
+const VOICE_CATALOGS: Record<VoiceProvider, VoiceOption[]> = {
+  heygen: HEYGEN_VOICES,
+  elevenlabs: ELEVENLABS_VOICE_PRESETS,
+};
+
 const DEFAULT_SCRIPT =
   'Привет. Это говорит мой цифровой двойник — мой AI-аватар.\n\n' +
   'Я записал пятнадцать минут своего голоса и загрузил одну фотографию — и теперь модель говорит за меня моим же голосом.\n\n' +
@@ -28,18 +35,20 @@ const DEFAULT_SCRIPT =
 
 export function VideoForm({ avatars, initialAvatarId }: { avatars: Avatar[]; initialAvatarId?: string }) {
   const router = useRouter();
+  const [engine, setEngine] = useState<VideoEngine>('heygen-v5');
   const [avatarId, setAvatarId] = useState<string>(initialAvatarId ?? avatars[0]?.id ?? '');
   const [script, setScript] = useState(DEFAULT_SCRIPT);
-  const [voiceId, setVoiceId] = useState<string>(VOICE_PRESETS[0]?.voice_id ?? '');
-  const [aspect, setAspect] = useState<'9:16' | '1:1' | '16:9'>('9:16');
+  const [voiceId, setVoiceId] = useState<string>(HEYGEN_VOICES[0]?.voice_id ?? '');
+  const [aspect, setAspect] = useState<EngineAspect>('9:16');
   const [background, setBackground] = useState<string>('#0a0a0a');
   const [subtitles, setSubtitles] = useState(true);
-  const [heygenVersion, setHeygenVersion] = useState<'V' | 'IV'>('V');
   const [busy, setBusy] = useState(false);
   const [error, setError] = useState<string | null>(null);
 
+  const cfg = useMemo(() => engineConfig(engine), [engine]);
+  const voiceCatalog = VOICE_CATALOGS[cfg.voiceProvider];
   const selected = avatars.find((a) => a.id === avatarId);
-  const voice = VOICE_PRESETS.find((v) => v.voice_id === voiceId);
+  const voice = voiceCatalog.find((v) => v.voice_id === voiceId) ?? voiceCatalog[0];
 
   const submit = async (e: React.FormEvent) => {
     e.preventDefault();
@@ -51,22 +60,29 @@ export function VideoForm({ avatars, initialAvatarId }: { avatars: Avatar[]; ini
       setError('Скрипт слишком короткий (минимум 5 символов)');
       return;
     }
+    if (!voiceId) {
+      setError('Выбери голос');
+      return;
+    }
     setError(null);
     setBusy(true);
     try {
+      const body: Record<string, unknown> = {
+        avatarId,
+        engine,
+        script,
+        voiceId,
+        aspect,
+        background,
+        subtitles,
+        language: voice?.language ?? 'ru',
+      };
+      if (cfg.heygenVersion) body.heygenVersion = cfg.heygenVersion;
+
       const res = await fetch('/api/videos', {
         method: 'POST',
         headers: { 'content-type': 'application/json' },
-        body: JSON.stringify({
-          avatarId,
-          script,
-          voiceId,
-          language: voice?.language ?? 'ru',
-          aspect,
-          background,
-          subtitles,
-          heygenVersion,
-        }),
+        body: JSON.stringify(body),
       });
       const json = (await res.json()) as { id: string } | { error: string; have?: number; need?: number };
       if (!res.ok || 'error' in json) {
@@ -90,6 +106,29 @@ export function VideoForm({ avatars, initialAvatarId }: { avatars: Avatar[]; ini
   return (
     <form onSubmit={submit} className="grid lg:grid-cols-[1fr_360px] gap-6">
       <div className="grid gap-5">
+        <Field label="Engine" hint={cfg.description}>
+          <select
+            className="input"
+            value={engine}
+            onChange={(e) => {
+              const next = e.target.value as VideoEngine;
+              setEngine(next);
+              const nextCfg = VIDEO_ENGINES[next];
+              if (!nextCfg.supportedAspects.includes(aspect)) setAspect(nextCfg.supportedAspects[0]);
+              if (nextCfg.voiceProvider !== cfg.voiceProvider) {
+                const nextCatalog = VOICE_CATALOGS[nextCfg.voiceProvider];
+                setVoiceId(nextCatalog[0]?.voice_id ?? '');
+              }
+            }}
+          >
+            {VIDEO_ENGINE_LIST.map((slug) => (
+              <option key={slug} value={slug}>
+                {VIDEO_ENGINES[slug].label} · {VIDEO_ENGINES[slug].cost} tok
+              </option>
+            ))}
+          </select>
+        </Field>
+
         <Field label="Avatar" hint="Лицо, которое будет говорить">
           <select className="input" value={avatarId} onChange={(e) => setAvatarId(e.target.value)}>
             {avatars.length === 0 && <option value="">Нет готовых аватаров</option>}
@@ -105,7 +144,7 @@ export function VideoForm({ avatars, initialAvatarId }: { avatars: Avatar[]; ini
           label="Script"
           hint={
             `Текст, который произнесёт аватар · ${script.length}/1500 · ` +
-            `шаблон оптимизирован под HeyGen lipsync (~25 сек, естественные паузы, риторический вопрос для вариативности мимики)`
+            `шаблон оптимизирован под lipsync (~25 сек, естественные паузы, риторический вопрос для вариативности мимики)`
           }
         >
           <div className="grid gap-2">
@@ -128,74 +167,72 @@ export function VideoForm({ avatars, initialAvatarId }: { avatars: Avatar[]; ini
           </div>
         </Field>
 
-        <div className="grid grid-cols-2 gap-3">
-          <Field label="Voice" hint="Голос HeyGen + язык">
-            <select className="input" value={voiceId} onChange={(e) => setVoiceId(e.target.value)}>
-              {VOICE_PRESETS.map((v) => (
-                <option key={v.voice_id} value={v.voice_id}>
-                  {v.label}
-                </option>
-              ))}
-            </select>
-          </Field>
-          <Field label="Aspect">
-            <select className="input" value={aspect} onChange={(e) => setAspect(e.target.value as '9:16' | '1:1' | '16:9')}>
-              <option value="9:16">9:16 — Reels / TikTok / Shorts</option>
-              <option value="1:1">1:1 — Instagram square</option>
-              <option value="16:9">16:9 — YouTube / Web</option>
-            </select>
-          </Field>
-        </div>
-
-        <Field label="HeyGen model" hint="Версия модели HeyGen · V — новейшая, фотореалистичная мимика">
-          <select
-            className="input"
-            value={heygenVersion}
-            onChange={(e) => setHeygenVersion(e.target.value as 'V' | 'IV')}
-          >
-            <option value="V">HeyGen V — Avatar V (recommended · default)</option>
-            <option value="IV">HeyGen IV — Avatar IV (legacy)</option>
+        <Field
+          label="Voice"
+          hint={cfg.voiceProvider === 'heygen' ? 'Голос HeyGen + язык' : 'ElevenLabs · мультиязык (ru/en)'}
+        >
+          <select className="input" value={voiceId} onChange={(e) => setVoiceId(e.target.value)}>
+            {voiceCatalog.map((v) => (
+              <option key={v.voice_id} value={v.voice_id}>
+                {v.label}
+              </option>
+            ))}
           </select>
         </Field>
 
-        <div className="grid grid-cols-2 gap-3">
-          <Field label="Background" hint="HEX-цвет фона">
-            <input
-              type="text"
-              className="input mono"
-              value={background}
-              maxLength={9}
-              onChange={(e) => setBackground(e.target.value)}
-              placeholder="#0a0a0a"
-            />
-          </Field>
-          <Field label="Subtitles" hint="Включить субтитры">
-            <label className="flex items-center gap-3 input cursor-pointer">
+        <Field label="Aspect">
+          <select
+            className="input"
+            value={aspect}
+            onChange={(e) => setAspect(e.target.value as EngineAspect)}
+          >
+            {cfg.supportedAspects.map((a) => (
+              <option key={a} value={a}>
+                {a === '9:16' ? '9:16 — Reels / TikTok / Shorts' : a === '1:1' ? '1:1 — Instagram square' : '16:9 — YouTube / Web'}
+              </option>
+            ))}
+          </select>
+        </Field>
+
+        {cfg.voiceProvider === 'heygen' && (
+          <div className="grid grid-cols-2 gap-3">
+            <Field label="Background" hint="HEX-цвет фона (только HeyGen)">
               <input
-                type="checkbox"
-                checked={subtitles}
-                onChange={(e) => setSubtitles(e.target.checked)}
-                className="accent-lime w-4 h-4"
+                type="text"
+                className="input mono"
+                value={background}
+                maxLength={9}
+                onChange={(e) => setBackground(e.target.value)}
+                placeholder="#0a0a0a"
               />
-              <span className="mono text-xs tracking-widest uppercase">
-                {subtitles ? 'on' : 'off'} <span className="text-text-mute">· (currently rendered server-side)</span>
-              </span>
-            </label>
-          </Field>
-        </div>
+            </Field>
+            <Field label="Subtitles" hint="Включить субтитры (только HeyGen)">
+              <label className="flex items-center gap-3 input cursor-pointer">
+                <input
+                  type="checkbox"
+                  checked={subtitles}
+                  onChange={(e) => setSubtitles(e.target.checked)}
+                  className="accent-lime w-4 h-4"
+                />
+                <span className="mono text-xs tracking-widest uppercase">
+                  {subtitles ? 'on' : 'off'}
+                </span>
+              </label>
+            </Field>
+          </div>
+        )}
 
         <div className="flex flex-wrap items-center gap-4 pt-2">
           <button type="submit" className="btn-primary" disabled={busy}>
-            {busy ? 'Submitting…' : 'Generate video · 30 tokens →'}
+            {busy ? 'Submitting…' : `Generate video · ${cfg.cost} tokens →`}
           </button>
           <span className="mono text-[10px] tracking-widest uppercase text-text-mute">
-            HeyGen · talking photo · ~2-4 мин рендер
+            {cfg.label} · voice: {cfg.voiceProvider}
           </span>
           {error && <span className="mono text-[11px] text-pink tracking-wider">/ERROR — {error}</span>}
         </div>
       </div>
 
-      {/* preview */}
       <aside className="bg-surface border border-border p-5">
         <div className="mono text-[10px] tracking-widest uppercase text-cyan mb-3">/ preview · {aspect}</div>
         <div
@@ -221,13 +258,15 @@ export function VideoForm({ avatars, initialAvatarId }: { avatars: Avatar[]; ini
           </div>
         </div>
         <div className="mt-3 grid gap-1.5 mono text-[10px] tracking-wider text-text-dim">
+          <div className="flex justify-between"><span className="text-text-mute uppercase">engine</span><span>{cfg.label}</span></div>
           <div className="flex justify-between"><span className="text-text-mute uppercase">voice</span><span>{voice?.label}</span></div>
           <div className="flex justify-between"><span className="text-text-mute uppercase">aspect</span><span>{aspect}</span></div>
-          <div className="flex justify-between"><span className="text-text-mute uppercase">bg</span><span>{background}</span></div>
-          <div className="flex justify-between"><span className="text-text-mute uppercase">model</span><span>HeyGen {heygenVersion}</span></div>
+          {cfg.voiceProvider === 'heygen' && (
+            <div className="flex justify-between"><span className="text-text-mute uppercase">bg</span><span>{background}</span></div>
+          )}
         </div>
         <p className="mono text-[10px] tracking-widest uppercase text-text-mute mt-3">
-          Это набросок. Финальное видео рендерит HeyGen {heygenVersion}.
+          {cfg.description}
         </p>
       </aside>
     </form>
