@@ -1,0 +1,75 @@
+name: deploy-ytdlp
+
+# Deploy apps/ytdlp (FastAPI + yt-dlp companion service) to Hetzner.
+# Prod container `infra-ytdlp-1` is part of the `infra` docker-compose project.
+#
+# ─── Required GitHub secrets ───────────────────────────────────────
+#   HETZNER_SSH_KEY
+#   YTDLP_SERVICE_API_KEY               (Bearer token clients must send)
+#   YTDLP_COOKIES_B64                   (optional, base64 of cookies.txt)
+#   YTDLP_INSTAGRAM_COOKIES_B64         (optional)
+
+on:
+  push:
+    branches: [main]
+    paths:
+      - 'apps/ytdlp/**'
+      - '.github/workflows/deploy-ytdlp.yml'
+      - '.github/actions/deploy-ssh/**'
+  workflow_dispatch:
+    inputs:
+      ref:
+        required: false
+        default: 'main'
+
+concurrency:
+  group: deploy-ytdlp
+  cancel-in-progress: false
+
+jobs:
+  deploy:
+    runs-on: ubuntu-latest
+    timeout-minutes: 15
+
+    steps:
+      - uses: actions/checkout@v4
+
+      - id: ref
+        run: |
+          if [ "${{ github.event_name }}" = "workflow_dispatch" ]; then
+            echo "value=${{ github.event.inputs.ref || 'main' }}" >> "$GITHUB_OUTPUT"
+          else
+            echo "value=${{ github.ref_name }}" >> "$GITHUB_OUTPUT"
+          fi
+
+      - uses: ./.github/actions/deploy-ssh
+        with:
+          app_name: ytdlp
+          ref:      ${{ steps.ref.outputs.value }}
+          ssh_key:  ${{ secrets.HETZNER_SSH_KEY }}
+          env_file: |
+            YTDLP_SERVICE_API_KEY=${{ secrets.YTDLP_SERVICE_API_KEY }}
+            COOKIES_B64=${{ secrets.YTDLP_COOKIES_B64 }}
+            INSTAGRAM_COOKIES_B64=${{ secrets.YTDLP_INSTAGRAM_COOKIES_B64 }}
+            PORT=8080
+          script: |
+            COMPOSE=/root/ai-command-center/infra/docker-compose.yml
+
+            echo "── building ytdlp image ──"
+            docker compose -f "$COMPOSE" build ytdlp
+
+            echo "── recreating infra-ytdlp-1 ──"
+            docker compose -f "$COMPOSE" --env-file /etc/ytdlp.env \
+              up -d --force-recreate ytdlp
+
+            echo "── health-check ──"
+            for i in $(seq 1 20); do
+              if curl -fsS http://localhost:8080/healthz >/dev/null 2>&1 \
+                 || curl -fsS http://localhost:8080/docs >/dev/null 2>&1; then
+                echo "✓ healthy after ${i}×3s"; exit 0
+              fi
+              sleep 3
+            done
+            echo "✗ ytdlp did not respond within 60s"
+            docker logs --tail=80 infra-ytdlp-1 || true
+            exit 1
