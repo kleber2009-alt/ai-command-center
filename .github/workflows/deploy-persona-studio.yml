@@ -76,12 +76,15 @@ jobs:
             fi
             cd "$MONOREPO_PATH"
             git fetch --prune origin
-            # If someone touched files on the server, stash them under a labelled
-            # entry so the checkout/pull doesn't abort. Recovery is `git stash list`.
-            if [[ -n "$(git status --porcelain)" ]]; then
+            # If someone touched tracked files on the server, stash them under a
+            # labelled entry so checkout/pull doesn't abort. Recovery: `git stash list`.
+            # We deliberately do NOT pass --include-untracked: the server has
+            # root-owned *.bak directories that aisales cannot delete, which
+            # causes stash to silently fail and leave the tracked diff in place.
+            if [[ -n "$(git diff --name-only)" || -n "$(git diff --cached --name-only)" ]]; then
               STASH_LABEL="auto-deploy-stash $(date -u +%Y%m%dT%H%M%SZ) by GH Actions"
-              echo "── ⚠ local changes detected, stashing: $STASH_LABEL ──"
-              git stash push --include-untracked -m "$STASH_LABEL" || true
+              echo "── ⚠ local tracked changes detected, stashing: $STASH_LABEL ──"
+              git stash push -m "$STASH_LABEL"
             fi
             git checkout "$TARGET_REF"
             git pull --ff-only origin "$TARGET_REF"
