@@ -128,13 +128,11 @@ export function VideoCard({ initial, autopoll }: { initial: Video; autopoll: boo
       </div>
       {v.status === 'completed' && v.videoUrl && (
         <a
-          href={v.videoUrl}
+          href={`/api/videos/${v.id}/download`}
           download
           className="btn-ghost justify-center"
-          target="_blank"
-          rel="noreferrer"
         >
-          Скачать MP4
+          Скачать MP4 ↓
         </a>
       )}
     </article>

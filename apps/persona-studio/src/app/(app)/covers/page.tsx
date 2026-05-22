@@ -56,6 +56,16 @@ export default async function CoversPage({ searchParams }: { searchParams: Promi
                 <span className="mono text-[9px] tracking-widest uppercase text-pink font-bold">/{c.status}</span>
                 <span className="mono text-[9px] tracking-widest uppercase text-text-mute">{c.aspect}</span>
               </div>
+              {c.status === 'completed' && c.imageUrl && (
+                <a
+                  href={`/api/covers/${c.id}/download`}
+                  download
+                  className="absolute top-3 right-3 z-[5] mono text-[10px] tracking-widest uppercase bg-[rgba(8,8,8,0.7)] hover:bg-lime hover:text-bg text-text-dim px-2 py-1 leading-none"
+                  title="Скачать обложку"
+                >
+                  ↓
+                </a>
+              )}
               <div>
                 <div className="font-serif text-[18px] uppercase leading-tight tracking-tight">{c.title}</div>
                 {c.subtitle && <div className="font-serif italic text-[13px] text-pink mt-1">{c.subtitle}</div>}
