@@ -114,28 +114,21 @@ jobs:
             fi
 
             # ── 4. restart containers ────────────────────────────────
+            # docker compose up -d sometimes returns non-zero under appleboy
+            # ssh-action even when all containers start (likely stop-grace
+            # warning). Tolerate the exit code; health check at step 6 is the
+            # real verdict.
             echo "── docker compose up -d --force-recreate ──"
-            docker compose up -d --force-recreate
+            docker compose up -d --force-recreate || echo "── ⚠ up -d returned non-zero, continuing to verify ──"
 
             # ── 5. prisma migrations ─────────────────────────────────
             # persona-studio uses `prisma db push` (declarative schema), not
-            # versioned migrations — there's no prisma/migrations/ directory.
-            # Schema changes are applied manually via `npm run db:push` from
-            # a workstation. Skip the migrate step.
-            if [[ -d "$SOURCE_PATH/prisma/migrations" ]]; then
-              echo "── running prisma migrate deploy ──"
-              for i in $(seq 1 10); do
-                if docker compose exec -T web sh -c "ls /app/node_modules/.prisma >/dev/null 2>&1"; then
-                  break
-                fi
-                echo "  web not ready for migrate, sleep 2s (try $i/10)"
-                sleep 2
-              done
-              docker compose exec -T web npx -y prisma@5.22.0 migrate deploy \
-                || echo "── ⚠ prisma migrate failed; continuing ──"
-            else
-              echo "── no prisma/migrations dir (declarative schema), skipping ──"
-            fi
+            # versioned migrations — there's no prisma/migrations/ directory,
+            # so the migrate step is a no-op. Schema changes are applied
+            # manually via `npm run db:push` from a workstation.
+            test -d "$SOURCE_PATH/prisma/migrations" \
+              && (docker compose exec -T web npx -y prisma@5.22.0 migrate deploy || echo "── ⚠ prisma migrate failed; continuing ──") \
+              || echo "── no prisma/migrations dir (declarative schema), skipping ──"
 
             # ── 6. health-check (up to 60 s) ─────────────────────────
             echo "── waiting for persona-studio-web → $HEALTH_URL ──"
