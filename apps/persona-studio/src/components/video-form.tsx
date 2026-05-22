@@ -1,6 +1,6 @@
 'use client';
 
-import { useMemo, useState } from 'react';
+import { useEffect, useMemo, useState } from 'react';
 import { useRouter } from 'next/navigation';
 import { VOICE_PRESETS as HEYGEN_VOICES } from '@/lib/heygen-voices';
 import { ELEVENLABS_VOICE_PRESETS } from '@/lib/elevenlabs-voices';
@@ -33,22 +33,39 @@ const DEFAULT_SCRIPT =
   'Знаешь, что меня поразило больше всего? То, что я наконец перестал бояться камеры. Достаточно одной хорошей фотографии — и я снова в эфире.\n\n' +
   'Это не магия. Это новый способ работать.';
 
+const CUSTOM_VOICE_LS_KEY = 'persona-studio:customVoiceId';
+
 export function VideoForm({ avatars, initialAvatarId }: { avatars: Avatar[]; initialAvatarId?: string }) {
   const router = useRouter();
   const [engine, setEngine] = useState<VideoEngine>('heygen-v5');
   const [avatarId, setAvatarId] = useState<string>(initialAvatarId ?? avatars[0]?.id ?? '');
   const [script, setScript] = useState(DEFAULT_SCRIPT);
   const [voiceId, setVoiceId] = useState<string>(HEYGEN_VOICES[0]?.voice_id ?? '');
+  const [customVoiceId, setCustomVoiceId] = useState<string>('');
   const [aspect, setAspect] = useState<EngineAspect>('9:16');
   const [background, setBackground] = useState<string>('#0a0a0a');
   const [subtitles, setSubtitles] = useState(true);
   const [busy, setBusy] = useState(false);
   const [error, setError] = useState<string | null>(null);
 
+  // Подхватываем сохранённый custom voice_id из localStorage при монтировании.
+  useEffect(() => {
+    try {
+      const saved = window.localStorage.getItem(CUSTOM_VOICE_LS_KEY);
+      if (saved) setCustomVoiceId(saved);
+    } catch {
+      // ignore
+    }
+  }, []);
+
   const cfg = useMemo(() => engineConfig(engine), [engine]);
   const voiceCatalog = VOICE_CATALOGS[cfg.voiceProvider];
   const selected = avatars.find((a) => a.id === avatarId);
-  const voice = voiceCatalog.find((v) => v.voice_id === voiceId) ?? voiceCatalog[0];
+  const customActive = cfg.voiceProvider === 'elevenlabs' && customVoiceId.trim().length > 0;
+  const effectiveVoiceId = customActive ? customVoiceId.trim() : voiceId;
+  const voice = customActive
+    ? { voice_id: customVoiceId.trim(), label: 'Custom (IVC)', language: 'ru' }
+    : voiceCatalog.find((v) => v.voice_id === voiceId) ?? voiceCatalog[0];
 
   const submit = async (e: React.FormEvent) => {
     e.preventDefault();
@@ -60,18 +77,22 @@ export function VideoForm({ avatars, initialAvatarId }: { avatars: Avatar[]; ini
       setError('Скрипт слишком короткий (минимум 5 символов)');
       return;
     }
-    if (!voiceId) {
+    if (!effectiveVoiceId) {
       setError('Выбери голос');
       return;
     }
     setError(null);
     setBusy(true);
+    // Save the custom voice_id for next visit.
+    if (customActive) {
+      try { window.localStorage.setItem(CUSTOM_VOICE_LS_KEY, customVoiceId.trim()); } catch { /* ignore */ }
+    }
     try {
       const body: Record<string, unknown> = {
         avatarId,
         engine,
         script,
-        voiceId,
+        voiceId: effectiveVoiceId,
         aspect,
         background,
         subtitles,
@@ -169,9 +190,20 @@ export function VideoForm({ avatars, initialAvatarId }: { avatars: Avatar[]; ini
 
         <Field
           label="Voice"
-          hint={cfg.voiceProvider === 'heygen' ? 'Голос HeyGen + язык' : 'ElevenLabs · мультиязык (ru/en)'}
+          hint={
+            customActive
+              ? '↓ используется Custom voice (IVC) — preset из dropdown игнорируется'
+              : cfg.voiceProvider === 'heygen'
+                ? 'Голос HeyGen + язык'
+                : 'ElevenLabs · мультиязык (ru/en)'
+          }
         >
-          <select className="input" value={voiceId} onChange={(e) => setVoiceId(e.target.value)}>
+          <select
+            className="input"
+            value={voiceId}
+            onChange={(e) => setVoiceId(e.target.value)}
+            disabled={customActive}
+          >
             {voiceCatalog.map((v) => (
               <option key={v.voice_id} value={v.voice_id}>
                 {v.label}
@@ -179,6 +211,43 @@ export function VideoForm({ avatars, initialAvatarId }: { avatars: Avatar[]; ini
             ))}
           </select>
         </Field>
+
+        {cfg.voiceProvider === 'elevenlabs' && (
+          <Field
+            label="Custom voice (IVC)"
+            hint={
+              <>
+                Свой обученный голос из <a href="https://persona-train.46-62-215-11.nip.io/cabinet" target="_blank" rel="noopener noreferrer" className="text-cyan hover:underline">Persona Train</a>.
+                Вставь сюда <code className="mono text-cyan">voice_id</code> — он перебьёт preset выше. Сохраняется локально.
+              </>
+            }
+          >
+            <div className="flex gap-2">
+              <input
+                type="text"
+                className="input mono flex-1"
+                value={customVoiceId}
+                onChange={(e) => setCustomVoiceId(e.target.value)}
+                placeholder="elv_xxxxxxxxxxxxxxxxxxxxxxxxx"
+                spellCheck={false}
+                autoComplete="off"
+              />
+              {customVoiceId && (
+                <button
+                  type="button"
+                  className="btn-ghost"
+                  onClick={() => {
+                    setCustomVoiceId('');
+                    try { window.localStorage.removeItem(CUSTOM_VOICE_LS_KEY); } catch { /* ignore */ }
+                  }}
+                  title="Сбросить и вернуться к preset"
+                >
+                  reset
+                </button>
+              )}
+            </div>
+          </Field>
+        )}
 
         <Field label="Aspect">
           <select
@@ -259,7 +328,12 @@ export function VideoForm({ avatars, initialAvatarId }: { avatars: Avatar[]; ini
         </div>
         <div className="mt-3 grid gap-1.5 mono text-[10px] tracking-wider text-text-dim">
           <div className="flex justify-between"><span className="text-text-mute uppercase">engine</span><span>{cfg.label}</span></div>
-          <div className="flex justify-between"><span className="text-text-mute uppercase">voice</span><span>{voice?.label}</span></div>
+          <div className="flex justify-between">
+            <span className="text-text-mute uppercase">voice</span>
+            <span className={customActive ? 'text-lime' : ''}>
+              {voice?.label}{customActive ? ` · ${customVoiceId.slice(0, 8)}…` : ''}
+            </span>
+          </div>
           <div className="flex justify-between"><span className="text-text-mute uppercase">aspect</span><span>{aspect}</span></div>
           {cfg.voiceProvider === 'heygen' && (
             <div className="flex justify-between"><span className="text-text-mute uppercase">bg</span><span>{background}</span></div>
@@ -273,7 +347,7 @@ export function VideoForm({ avatars, initialAvatarId }: { avatars: Avatar[]; ini
   );
 }
 
-function Field({ label, hint, children }: { label: string; hint?: string; children: React.ReactNode }) {
+function Field({ label, hint, children }: { label: string; hint?: React.ReactNode; children: React.ReactNode }) {
   return (
     <label className="grid gap-1">
       <span className="label">{label}</span>

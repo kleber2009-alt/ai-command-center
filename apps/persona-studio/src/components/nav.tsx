@@ -11,6 +11,7 @@ const ITEMS: Array<{ href: string; label: string; key: string }> = [
   { href: '/dashboard', label: 'Dashboard', key: 'dashboard' },
   { href: '/generate', label: 'Generate', key: 'generate' },
   { href: '/avatars', label: 'Avatars', key: 'avatars' },
+  { href: '/voice', label: 'Voice', key: 'voice' },
   { href: '/videos', label: 'Videos', key: 'videos' },
   { href: '/covers', label: 'Covers', key: 'covers' },
   { href: '/billing', label: 'Billing', key: 'billing' },
