@@ -81,15 +81,15 @@ jobs:
             echo "── ensure Caddy mapping ──"
             CADDYFILE=/etc/caddy/Caddyfile
             if ! grep -q "command-center\.46-62-215-11\.nip\.io" "$CADDYFILE"; then
-              cat >> "$CADDYFILE" <<'CADDY'
-
-# ─── Command Center dashboard ───────────────────────────────────────
-command-center.46-62-215-11.nip.io {
-    reverse_proxy localhost:3004
-    encode zstd gzip
-    header { X-Content-Type-Options nosniff; -Server }
-}
-CADDY
+              {
+                echo ""
+                echo "# ─── Command Center dashboard ───────────────────────────────────────"
+                echo "command-center.46-62-215-11.nip.io {"
+                echo "    reverse_proxy localhost:3004"
+                echo "    encode zstd gzip"
+                echo "    header { X-Content-Type-Options nosniff; -Server }"
+                echo "}"
+              } >> "$CADDYFILE"
               caddy reload --config "$CADDYFILE" --adapter caddyfile
             fi
 
