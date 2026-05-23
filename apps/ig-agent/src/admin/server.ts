@@ -32,6 +32,7 @@ import type { ConversationService } from '../db/conversations.js';
 import type { MessageStore } from '../db/messages.js';
 import type { RecommendationStore } from '../db/recommendations.js';
 import type { PromptStore } from '../db/prompts.js';
+import type { SettingsService } from '../db/settings.js';
 import type { Notifier } from '../notifier.js';
 import type { Pipeline } from '../pipeline.js';
 import type { Analyst } from '../analyst.js';
@@ -121,6 +122,7 @@ export interface AdminDeps {
   messages: MessageStore;
   recommendations: RecommendationStore;
   prompts: PromptStore;
+  settings: SettingsService;
   pipeline: Pipeline;
   analyst: Analyst;
   sendPulse: SendPulseClient;

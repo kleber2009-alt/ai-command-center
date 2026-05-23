@@ -74,7 +74,7 @@ export async function POST(req: NextRequest) {
     try {
       const lastUser = cleaned[cleaned.length - 1].content
       const queryVec = await embed(lastUser)
-      const matches = searchChunks(auth.user_id, queryVec, 6).filter((m) => m.similarity > 0.2)
+      const matches = (await searchChunks(auth.user_id, queryVec, 6)).filter((m) => m.similarity > 0.2)
       contextBlock = matches
         .map(
           (m, i) =>

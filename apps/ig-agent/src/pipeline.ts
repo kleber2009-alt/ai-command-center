@@ -10,6 +10,7 @@
 import type { ContactService } from './db/contacts.js';
 import type { ConversationService } from './db/conversations.js';
 import type { MessageStore } from './db/messages.js';
+import type { SettingsService } from './db/settings.js';
 import type { ParsedIncomingMessage } from './webhook.js';
 import type { Responder } from './responder.js';
 import type { Analyst } from './analyst.js';
@@ -21,6 +22,7 @@ export interface PipelineDeps {
   contacts: ContactService;
   conversations: ConversationService;
   messages: MessageStore;
+  settings: SettingsService;
   responder: Responder;
   analyst: Analyst;
   sendPulse: SendPulseClient;
@@ -139,6 +141,16 @@ export function createPipeline(deps: PipelineDeps): Pipeline {
       }
 
       // 3. Decide whether the AI should respond.
+      // Global master switch — when off, agent silently analyzes only.
+      // Read fresh from DB each time so a flip in the admin UI takes
+      // effect on the very next webhook without restarting anything.
+      const autoReplyOn = await deps.settings.getBool('auto_reply_enabled', true);
+      if (!autoReplyOn) {
+        deps.logger.info('auto-reply globally disabled, skip AI reply (analyst still runs)', {
+          contactId: contact.id,
+        });
+        return;
+      }
       if (deps.ignoredContactIds.has(event.sendpulseContactId)) {
         deps.logger.info('contact in ignore list, skip AI reply', {
           sendpulseContactId: event.sendpulseContactId,
