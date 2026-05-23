@@ -156,16 +156,16 @@ export function createPipeline(deps: PipelineDeps): Pipeline {
         ).catch(() => {});
       }
 
-      // 2b. Kick off the analyst regardless of whether the AI will
-      // reply — even ignored contacts and human-handled conversations
-      // benefit from intent/sentiment tagging + recommendation surfacing.
-      if (event.text) {
-        scheduleAnalysis({
-          contactId: contact.id,
-          incomingMessageId: incoming.id,
-          incomingText: event.text,
-        });
-      }
+      // 2b. Kick off the analyst on every persisted event — even ignored
+      // contacts, human-handled conversations, media-only DMs, story
+      // replies, reactions, and subscribe pings. The analyst tags intent
+      // / sentiment and writes ai_recommendations regardless of whether
+      // the AI will reply, so the owner gets full coverage in /pulse.
+      scheduleAnalysis({
+        contactId: contact.id,
+        incomingMessageId: incoming.id,
+        incomingText: event.text ?? `[${event.mediaType ?? 'event'}]`,
+      });
 
       // 3. Decide whether the AI should respond.
       // Global master switch — when off, agent silently analyzes only.
