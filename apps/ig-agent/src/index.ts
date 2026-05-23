@@ -7,6 +7,7 @@ import { createConversationService } from './db/conversations.js';
 import { createMessageStore } from './db/messages.js';
 import { createRecommendationStore } from './db/recommendations.js';
 import { createPromptStore } from './db/prompts.js';
+import { createSettingsService } from './db/settings.js';
 import { createSendPulseClient } from './sendpulse/client.js';
 import { createResponder } from './responder.js';
 import { createAnalyst } from './analyst.js';
@@ -30,6 +31,7 @@ async function main(): Promise<void> {
   const messages = createMessageStore(pool);
   const recommendations = createRecommendationStore(pool);
   const prompts = createPromptStore(pool);
+  const settings = createSettingsService(pool);
 
   const sendPulse = createSendPulseClient({
     clientId: config.sendPulseClientId,
@@ -63,6 +65,7 @@ async function main(): Promise<void> {
     contacts,
     conversations,
     messages,
+    settings,
     responder,
     analyst,
     sendPulse,
@@ -79,6 +82,7 @@ async function main(): Promise<void> {
     messages,
     recommendations,
     prompts,
+    settings,
     pipeline,
     analyst,
     sendPulse,
