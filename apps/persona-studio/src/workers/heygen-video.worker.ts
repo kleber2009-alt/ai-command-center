@@ -3,7 +3,7 @@ import { prisma } from '@/lib/prisma';
 import { connection, QUEUE_NAMES, type HeygenVideoJob } from '@/lib/queue';
 import {
   uploadTalkingPhoto,
-  createVideo,
+  createVideoForVersion,
   waitForVideo,
   downloadBytes,
   HeygenError,
@@ -57,15 +57,17 @@ export function startHeygenWorker() {
           const talkingPhotoId = asset.id;
           console.log(`[heygen-worker] ${videoId} talking_photo_id=${talkingPhotoId}`);
 
-          // 2) Create video task on HeyGen
-          heygenVideoId = await createVideo({
+          // 2) Create video task on HeyGen — dispatch by version.
+          // Avatar V и Avatar IV — это два разных движка HeyGen с непересекающимися
+          // флагами; см. heygen.ts для деталей. motionPrompt уходит только в IV.
+          const version: HeygenModelVersion = (row.heygenVersion as HeygenModelVersion) ?? 'V';
+          heygenVideoId = await createVideoForVersion(version, {
             talkingPhotoId,
             voiceId: row.voiceId,
             script: row.script,
             aspect: (row.aspect as Aspect) ?? '9:16',
             quality: (row.quality as Quality) ?? '2k',
             background: row.background ?? '#000000',
-            version: (row.heygenVersion as HeygenModelVersion) ?? 'V',
             motionPrompt: row.motionPrompt ?? undefined,
           });
           console.log(`[heygen-worker] ${videoId} heygen_video_id=${heygenVideoId}`);
