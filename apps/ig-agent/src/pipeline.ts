@@ -10,6 +10,7 @@
 import type { ContactService } from './db/contacts.js';
 import type { ConversationService } from './db/conversations.js';
 import type { MessageStore } from './db/messages.js';
+import { indexIgMessage } from './memory/index.js';
 import type { SettingsService } from './db/settings.js';
 import type { ParsedIncomingMessage } from './webhook.js';
 import type { Responder } from './responder.js';
@@ -29,6 +30,9 @@ export interface PipelineDeps {
   notifier: Notifier;
   logger: Logger;
   ignoredContactIds: Set<string>;
+  // Owner's Telegram numeric id — copied onto every Qdrant payload
+  // so cross-app search can scope to "Ilia's brain".
+  ownerTelegramId?: number;
   // How many prior messages to feed the LLM as context. Higher = better
   // continuity, more tokens. 20 is a reasonable starting point.
   historyWindow?: number;
@@ -129,6 +133,32 @@ export function createPipeline(deps: PipelineDeps): Pipeline {
       });
       await deps.contacts.touchLastMessage(contact.id);
 
+      // Fire-and-forget into the shared aicex-memory collection so
+      // the tg-agent admin / /memory / responder RAG can see this
+      // Instagram DM alongside Telegram chats and transcripts.
+      if (event.text && event.text.trim().length > 1) {
+        indexIgMessage(
+          {
+            naturalKey: incoming.id,
+            direction: 'incoming',
+            text: event.text,
+            ownerTelegramId: deps.ownerTelegramId ?? null,
+            contactId: contact.id,
+            igUsername: contact.ig_username ?? null,
+            contactName: [contact.first_name, contact.last_name]
+              .filter(Boolean)
+              .join(' ')
+              .trim() || null,
+            intent: null,
+            createdAt:
+              incoming.created_at instanceof Date
+                ? incoming.created_at.toISOString()
+                : String(incoming.created_at),
+          },
+          deps.logger,
+        ).catch(() => {});
+      }
+
       // 2b. Kick off the analyst regardless of whether the AI will
       // reply — even ignored contacts and human-handled conversations
       // benefit from intent/sentiment tagging + recommendation surfacing.
@@ -213,7 +243,7 @@ export function createPipeline(deps: PipelineDeps): Pipeline {
         return;
       }
 
-      await deps.messages.insert({
+      const outgoing = await deps.messages.insert({
         contactId: contact.id,
         direction: 'outgoing',
         source: 'ai_agent',
@@ -223,6 +253,29 @@ export function createPipeline(deps: PipelineDeps): Pipeline {
         aiTokensUsed: result.tokensUsed,
         sendpulseMessageId,
       });
+
+      // Mirror outgoing AI replies into the brain too — useful for
+      // self-RAG and lets the owner see "what the bot said back".
+      indexIgMessage(
+        {
+          naturalKey: outgoing.id,
+          direction: 'outgoing',
+          text: result.text,
+          ownerTelegramId: deps.ownerTelegramId ?? null,
+          contactId: contact.id,
+          igUsername: contact.ig_username ?? null,
+          contactName: [contact.first_name, contact.last_name]
+            .filter(Boolean)
+            .join(' ')
+            .trim() || null,
+          intent: null,
+          createdAt:
+            outgoing.created_at instanceof Date
+              ? outgoing.created_at.toISOString()
+              : String(outgoing.created_at),
+        },
+        deps.logger,
+      ).catch(() => {});
 
       deps.logger.info('replied', {
         contactId: contact.id,
