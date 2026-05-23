@@ -72,6 +72,7 @@ async function main(): Promise<void> {
     notifier,
     logger,
     ignoredContactIds: config.ignoredContactIds,
+    ownerTelegramId: config.ownerTelegramId,
   });
 
   const admin = startAdminServer({

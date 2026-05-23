@@ -150,10 +150,7 @@ export function createPipeline(deps: PipelineDeps): Pipeline {
               .join(' ')
               .trim() || null,
             intent: null,
-            createdAt:
-              incoming.created_at instanceof Date
-                ? incoming.created_at.toISOString()
-                : String(incoming.created_at),
+            createdAt: incoming.created_at,
           },
           deps.logger,
         ).catch(() => {});
@@ -269,10 +266,7 @@ export function createPipeline(deps: PipelineDeps): Pipeline {
             .join(' ')
             .trim() || null,
           intent: null,
-          createdAt:
-            outgoing.created_at instanceof Date
-              ? outgoing.created_at.toISOString()
-              : String(outgoing.created_at),
+          createdAt: outgoing.created_at,
         },
         deps.logger,
       ).catch(() => {});

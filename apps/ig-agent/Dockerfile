@@ -18,6 +18,9 @@ RUN npm install --omit=dev --no-audit --no-fund \
   && rm -rf /root/.npm
 
 COPY --from=build /app/dist ./dist
+# Standalone scripts (backfill-memory etc.) — runnable via
+# `docker exec ig-agent node /app/scripts/<name>.mjs`.
+COPY --from=build /app/scripts ./scripts
 
 EXPOSE 8081
 
