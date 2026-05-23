@@ -242,10 +242,8 @@
 
 <header class="topbar">
   <div class="topbar-title">AI Sales <span class="accent">Inbox</span></div>
-  <div class="topbar-meta">
-    <span class="pink">● 3 эскалации</span> ·
-    <span class="v">7 задач от РОПа</span> ·
-    14 уведомлений
+  <div class="topbar-meta" id="topbarRight">
+    <!-- IG.mountAutoReplyToggle injects the global auto-reply switch here. -->
   </div>
 </header>
 
@@ -350,6 +348,7 @@
 <script>
 (function () {
   var IG = window.IG;
+  if (IG.mountAutoReplyToggle) IG.mountAutoReplyToggle(document.getElementById('topbarRight'));
   var list = document.getElementById('inboxList');
   var search = document.querySelector('.inbox-search');
   var allContacts = [];

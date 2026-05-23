@@ -379,6 +379,14 @@ button{font:inherit;color:inherit;background:none;border:0;cursor:pointer}
 <script>
 (function(){const el=document.getElementById('clock');if(!el)return;const M=['янв','фев','мар','апр','мая','июн','июл','авг','сен','окт','ноя','дек'];function t(){const d=new Date();el.textContent=d.getDate()+' '+M[d.getMonth()]+' · '+String(d.getHours()).padStart(2,'0')+':'+String(d.getMinutes()).padStart(2,'0')}t();setInterval(t,30000)})();
 
+/* ── Mount global auto-reply toggle into the topbar ────────────── */
+(function () {
+  var slot = document.querySelector('.bar__right');
+  if (slot && window.IG && IG.mountAutoReplyToggle) {
+    IG.mountAutoReplyToggle(slot);
+  }
+})();
+
 /* ── Live data: contact + messages + recommendations ─ */
 (function () {
   var IG = window.IG;

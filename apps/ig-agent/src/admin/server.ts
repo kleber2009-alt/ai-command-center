@@ -110,7 +110,80 @@ window.IG = (function () {
   function getParam(name) {
     return new URLSearchParams(location.search).get(name);
   }
-  return { api: api, fmtTime: fmtTime, fmtDay: fmtDay, nameOf: nameOf, statusBadge: statusBadge, escapeHtml: escapeHtml, getParam: getParam };
+
+  // Mounts the global auto-reply toggle button into a container.
+  // The button reflects /api/settings.auto_reply_enabled and flips it on
+  // click. Other pages just call IG.mountAutoReplyToggle(containerEl).
+  function mountAutoReplyToggle(container) {
+    if (!container) return;
+    var btn = document.createElement('button');
+    btn.type = 'button';
+    btn.id = 'btnAutoReplyToggle';
+    btn.style.cssText =
+      'display:inline-flex;align-items:center;gap:6px;font-family:monospace;font-size:10px;' +
+      'letter-spacing:.1em;padding:5px 10px;border-radius:4px;cursor:pointer;font-weight:700;' +
+      'background:transparent;color:#8a8378;border:1px solid #262626;';
+    btn.textContent = '… autoreply';
+    container.appendChild(btn);
+
+    var current = null;
+    function render() {
+      if (current === null) {
+        btn.textContent = '…';
+        return;
+      }
+      if (current) {
+        btn.textContent = '🟢 AUTO-REPLY: ON';
+        btn.style.color = '#9fd368';
+        btn.style.borderColor = 'rgba(159,211,104,.35)';
+        btn.style.background = 'rgba(159,211,104,.06)';
+        btn.title = 'AI отвечает автоматически. Клик чтобы выключить — останется только анализ.';
+      } else {
+        btn.textContent = '⏸ AUTO-REPLY: OFF';
+        btn.style.color = '#FFC56F';
+        btn.style.borderColor = 'rgba(240,192,96,.4)';
+        btn.style.background = 'rgba(240,192,96,.08)';
+        btn.title = 'Агент только анализирует диалоги. AI-ответы не уходят. Клик чтобы включить.';
+      }
+    }
+
+    async function load() {
+      try {
+        var data = await api('/api/settings');
+        var s = (data && data.settings) || {};
+        current = s.auto_reply_enabled === 'true' || s.auto_reply_enabled === undefined;
+        render();
+      } catch (e) {
+        btn.textContent = '⚠ ' + (e.message || 'err');
+      }
+    }
+
+    btn.addEventListener('click', async function () {
+      if (current === null) return;
+      var next = !current;
+      btn.disabled = true;
+      try {
+        await api('/api/settings', {
+          method: 'POST',
+          body: JSON.stringify({ auto_reply_enabled: next }),
+        });
+        current = next;
+        render();
+      } catch (e) {
+        alert(e.message);
+      } finally {
+        btn.disabled = false;
+      }
+    });
+
+    load();
+  }
+
+  return {
+    api: api, fmtTime: fmtTime, fmtDay: fmtDay, nameOf: nameOf,
+    statusBadge: statusBadge, escapeHtml: escapeHtml, getParam: getParam,
+    mountAutoReplyToggle: mountAutoReplyToggle,
+  };
 })();
 `;
 
@@ -457,6 +530,32 @@ export function startAdminServer(deps: AdminDeps): AdminHandle {
     const id = c.req.param('id');
     await deps.prompts.activate(id);
     return c.json({ ok: true });
+  });
+
+  // Global system settings — small k/v store. Only whitelisted keys can
+  // be mutated through the UI; everything else is read-only on this API.
+  const WRITABLE_SETTINGS = new Set(['auto_reply_enabled']);
+
+  app.get('/api/settings', async (c) => {
+    const all = await deps.settings.all();
+    return c.json({ settings: all });
+  });
+
+  app.post('/api/settings', async (c) => {
+    const body = (await c.req.json().catch(() => ({}))) as Record<string, unknown>;
+    const updates: Record<string, string> = {};
+    for (const k of Object.keys(body)) {
+      if (!WRITABLE_SETTINGS.has(k)) continue;
+      const v = body[k];
+      if (typeof v === 'boolean') updates[k] = v ? 'true' : 'false';
+      else if (typeof v === 'string') updates[k] = v;
+    }
+    for (const [k, v] of Object.entries(updates)) {
+      await deps.settings.set(k, v);
+    }
+    const all = await deps.settings.all();
+    logger.info('settings updated', { keys: Object.keys(updates) });
+    return c.json({ ok: true, settings: all });
   });
 
   // ---- Boot ------------------------------------------------------------
