@@ -2,430 +2,82 @@
 <html lang="ru">
 <head>
 <meta charset="UTF-8">
-<meta name="viewport" content="width=device-width, initial-scale=1.0">
-<meta name="theme-color" content="#080808">
-<meta name="color-scheme" content="dark only">
-<title>AI Sales · Knowledge Base</title>
+<meta name="viewport" content="width=device-width,initial-scale=1">
+<title>ig-agent · KB</title>
 <style>
-  *, *::before, *::after { margin:0; padding:0; box-sizing:border-box; }
-  html, body { background:#080808; color:#f5f0e8; min-height:100vh; }
-  body { font-family:Georgia, 'Times New Roman', serif; font-size:15px; line-height:1.5; overflow-x:hidden; }
-  .label { font-family:'SF Mono','JetBrains Mono','Menlo',monospace; font-size:10px; text-transform:uppercase; letter-spacing:0.14em; color:#b8b3a8; font-weight:700; }
-  .mono { font-family:'SF Mono','JetBrains Mono','Menlo',monospace; }
+  *,*::before,*::after{margin:0;padding:0;box-sizing:border-box}
+  html,body{background:#080808;color:#f5f0e8;min-height:100vh}
+  body{font-family:Georgia,serif;font-size:15px;line-height:1.5;overflow-x:hidden}
+  a{color:inherit;text-decoration:none}
 
-  .topbar { position:sticky; top:0; z-index:50; display:flex; align-items:center; justify-content:space-between; padding:14px 24px; background:#080808; border-bottom:1px solid #2a2a2a; gap:18px; flex-wrap:wrap; }
-  .topbar-title { font-family:Georgia,serif; font-size:18px; line-height:1; }
-  .topbar-title .accent { color:#c8f060; font-style:italic; }
-  .topbar-meta { font-family:'SF Mono',monospace; font-size:11px; color:#b8b3a8; letter-spacing:0.12em; }
-  .topbar-meta .v { color:#c8f060; }
+  .topbar{position:sticky;top:0;z-index:50;display:flex;align-items:center;padding:14px 24px;background:#080808;border-bottom:1px solid #2a2a2a;gap:18px;flex-wrap:wrap}
+  .topbar-title{font-family:Georgia,serif;font-size:18px;line-height:1;white-space:nowrap}
+  .topbar-title .accent{color:#c8f060;font-style:italic}
 
-  .shell { max-width:1480px; margin:0 auto; padding:18px 24px 80px; display:grid; gap:2px; }
-  .sec-head { display:flex; align-items:baseline; gap:14px; padding:18px 2px 10px; }
-  .sec-num { font-family:'SF Mono',monospace; font-size:10px; color:#c8f060; letter-spacing:0.18em; font-weight:700; }
-  .sec-title { font-family:Georgia,serif; font-size:14px; font-style:italic; color:#b8b3a8; }
-  .sec-spacer { flex:1; border-bottom:1px solid #1a1a1a; transform:translateY(-2px); }
+  .shell{max-width:980px;margin:0 auto;padding:36px 24px 80px;display:flex;flex-direction:column;gap:24px}
 
-  /* HERO STATS */
-  .stats { display:grid; grid-template-columns:repeat(4, 1fr); gap:2px; }
-  @media (max-width:900px) { .stats { grid-template-columns:repeat(2, 1fr); } }
-  .stat { background:#0f0f0f; border:1px solid #1a1a1a; padding:18px 18px 16px; display:flex; flex-direction:column; gap:6px; min-height:130px; }
-  .stat .num { font-family:'SF Mono',monospace; font-size:10px; color:#3a3a3a; letter-spacing:0.18em; font-weight:700; }
-  .stat .lbl { font-family:'SF Mono',monospace; font-size:10px; color:#b8b3a8; letter-spacing:0.14em; font-weight:700; text-transform:uppercase; line-height:1.3; }
-  .stat .val { font-family:Georgia,serif; font-size:44px; line-height:1; letter-spacing:-0.02em; margin-top:auto; }
-  .stat .val.lime { color:#c8f060; }
-  .stat .val.cyan { color:#60c8f0; }
-  .stat .val.pink { color:#f06090; }
-  .stat .val .sfx { font-size:18px; color:#5a5550; }
-  .stat .sub { font-family:'SF Mono',monospace; font-size:10px; color:#5a5550; letter-spacing:0.08em; }
+  .panel{background:#0f0f0f;border:1px solid #1a1a1a;padding:28px 32px}
+  .panel h2{font-family:Georgia,serif;font-size:24px;font-weight:normal;margin-bottom:14px}
+  .panel h2 .accent{color:#c8f060;font-style:italic}
+  .panel h3{font-family:'SF Mono',monospace;font-size:10px;letter-spacing:.14em;text-transform:uppercase;color:#b8b3a8;margin:18px 0 8px;font-weight:700}
+  .panel p{font-size:14px;line-height:1.65;color:#c8c4ba}
+  .panel ul{margin:8px 0 0 22px;font-size:14px;line-height:1.7;color:#c8c4ba}
+  .panel a{color:#c8f060}
+  .panel a:hover{text-decoration:underline}
 
-  /* COLLECTIONS GRID */
-  .collections { display:grid; grid-template-columns:repeat(5, 1fr); gap:2px; }
-  @media (max-width:1100px) { .collections { grid-template-columns:repeat(2, 1fr); } }
-  @media (max-width:560px) { .collections { grid-template-columns:1fr; } }
-  .coll { background:#0f0f0f; border:1px solid #1a1a1a; padding:20px 20px 18px; display:flex; flex-direction:column; gap:10px; min-height:240px; cursor:pointer; transition:border-color 0.15s; text-decoration:none; color:inherit; }
-  .coll:hover { border-color:#3a3a3a; }
-  .coll.active { border-color:#c8f060; }
-  .coll-icon { font-size:32px; line-height:1; }
-  .coll-name { font-family:Georgia,serif; font-size:18px; line-height:1.2; }
-  .coll-meta { font-family:'SF Mono',monospace; font-size:10px; color:#5a5550; letter-spacing:0.1em; text-transform:uppercase; font-weight:700; line-height:1.6; }
-  .coll-count { font-family:Georgia,serif; font-size:38px; line-height:1; color:#c8f060; letter-spacing:-0.02em; margin-top:auto; }
-  .coll-count.cyan { color:#60c8f0; }
-  .coll-count.pink { color:#f06090; }
-  .coll-count .sfx { font-size:14px; color:#5a5550; }
-  .coll-bar { height:3px; background:#1a1a1a; position:relative; margin-top:4px; }
-  .coll-bar .fill { height:100%; background:#c8f060; }
-  .coll-bar .fill.cyan { background:#60c8f0; }
-  .coll-bar .fill.pink { background:#f06090; }
-
-  /* DETAIL VIEW */
-  .detail { display:grid; grid-template-columns:1.5fr 1fr; gap:2px; }
-  @media (max-width:1000px) { .detail { grid-template-columns:1fr; } }
-  .panel { background:#0f0f0f; border:1px solid #1a1a1a; padding:22px 24px; }
-  .panel h3 { font-family:Georgia,serif; font-size:20px; font-weight:normal; margin-bottom:14px; }
-  .panel h3 .accent { color:#c8f060; font-style:italic; }
-  .panel h4 { font-family:'SF Mono',monospace; font-size:10px; text-transform:uppercase; letter-spacing:0.14em; color:#5a5550; margin:16px 0 10px; font-weight:700; }
-
-  /* ENTRY LIST */
-  .entry { padding:14px 0; border-bottom:1px solid #1a1a1a; display:grid; grid-template-columns:auto 1fr auto; gap:14px; align-items:start; cursor:pointer; }
-  .entry:hover { background:#141414; margin:0 -24px; padding-left:24px; padding-right:24px; }
-  .entry-tag { font-family:'SF Mono',monospace; font-size:9px; padding:3px 7px; font-weight:700; letter-spacing:0.12em; text-transform:uppercase; align-self:start; }
-  .entry-tag.bio { background:#0f1f28; color:#60c8f0; }
-  .entry-tag.tov { background:#2a1828; color:#d878a0; }
-  .entry-tag.val { background:#1a2a14; color:#a8d050; }
-  .entry-tag.red { background:#2a1414; color:#f06090; }
-  .entry-tag.sample { background:#2a2014; color:#f0a060; }
-  .entry-tag.fav { background:#28121b; color:#f06090; }
-  .entry-tag.ban { background:#1a1a1a; color:#b8b3a8; border:1px solid #2a2a2a; }
-  .entry-body .ent-title { font-family:Georgia,serif; font-size:16px; line-height:1.3; }
-  .entry-body .ent-when { font-family:'SF Mono',monospace; font-size:10px; color:#5a5550; margin-top:4px; letter-spacing:0.08em; }
-  .entry-prio { font-family:'SF Mono',monospace; font-size:9px; padding:2px 6px; font-weight:700; letter-spacing:0.1em; flex-shrink:0; }
-  .entry-prio.crit { background:#28121b; color:#f06090; }
-  .entry-prio.imp { background:#2a2014; color:#f0a060; }
-  .entry-prio.base { background:#0f2a3a; color:#60c8f0; }
-
-  /* RAG STATS */
-  .rag-row { display:flex; justify-content:space-between; padding:8px 0; border-bottom:1px solid #1a1a1a; font-size:13.5px; gap:12px; align-items:baseline; }
-  .rag-row:last-child { border-bottom:none; }
-  .rag-row .k { font-family:'SF Mono',monospace; font-size:10px; text-transform:uppercase; letter-spacing:0.1em; color:#b8b3a8; font-weight:700; }
-  .rag-row .v { font-family:'SF Mono',monospace; font-size:13px; color:#f5f0e8; font-weight:700; }
-  .rag-row .v.lime { color:#c8f060; }
-  .rag-row .v.cyan { color:#60c8f0; }
-  .rag-row .v.pink { color:#f06090; }
-
-  /* GAPS */
-  .gap { display:grid; grid-template-columns:auto 1fr auto; gap:12px; padding:10px 0; border-bottom:1px solid #1a1a1a; align-items:start; }
-  .gap:last-child { border-bottom:none; }
-  .gap-count { font-family:'SF Mono',monospace; font-size:11px; padding:3px 8px; font-weight:700; letter-spacing:0.1em; align-self:start; }
-  .gap-count.crit { background:#28121b; color:#f06090; }
-  .gap-count.med { background:#2a2014; color:#f0a060; }
-  .gap-count.low { background:#1a1a1a; color:#b8b3a8; border:1px solid #2a2a2a; }
-  .gap-body .gap-topic { font-size:14px; line-height:1.4; color:#f5f0e8; }
-  .gap-body .gap-where { font-family:'SF Mono',monospace; font-size:10px; color:#5a5550; margin-top:3px; letter-spacing:0.08em; text-transform:uppercase; }
-  .gap-action { font-family:'SF Mono',monospace; font-size:10px; padding:5px 10px; background:transparent; border:1px solid #2a2a2a; color:#c8f060; cursor:pointer; letter-spacing:0.12em; font-weight:700; text-transform:uppercase; }
-  .gap-action:hover { border-color:#c8f060; background:#0d1216; }
-
-  /* SOURCE SYNC */
-  .sync-card { background:#0d1216; border:1px solid #1a2a14; border-left:3px solid #60c8f0; padding:14px 18px; margin-bottom:14px; }
-  .sync-card .sync-h { font-family:'SF Mono',monospace; font-size:11px; color:#60c8f0; letter-spacing:0.14em; font-weight:700; text-transform:uppercase; margin-bottom:6px; }
-  .sync-card .sync-body { font-size:13.5px; line-height:1.5; color:#d8d2c6; }
-  .sync-card .sync-body strong { color:#f5f0e8; }
-  .sync-card .sync-meta { font-family:'SF Mono',monospace; font-size:10px; color:#5a5550; margin-top:6px; letter-spacing:0.06em; }
-
-  /* CTA BAR */
-  .cta-bar { background:#0f0f0f; border:1px solid #1a1a1a; border-left:3px solid #c8f060; padding:20px 24px; display:flex; justify-content:space-between; align-items:center; gap:18px; flex-wrap:wrap; }
-  .cta-bar .ttl { font-family:Georgia,serif; font-size:18px; line-height:1.3; }
-  .cta-bar .ttl .accent { color:#c8f060; font-style:italic; }
-  .cta-bar .sub { font-family:'SF Mono',monospace; font-size:10px; color:#b8b3a8; letter-spacing:0.1em; margin-top:4px; text-transform:uppercase; }
-  .cta-bar button { padding:11px 22px; background:#c8f060; color:#080808; border:none; font-family:'SF Mono',monospace; font-size:11px; font-weight:700; letter-spacing:0.14em; text-transform:uppercase; cursor:pointer; }
-  .cta-bar button:hover { background:#d8ff70; }
+  .cta-row{display:flex;gap:8px;margin-top:18px;flex-wrap:wrap}
+  .cta{display:inline-flex;align-items:center;gap:6px;padding:10px 18px;font-family:'SF Mono',monospace;font-size:11px;letter-spacing:.14em;text-transform:uppercase;font-weight:700;color:#080808;background:#c8f060;border:1px solid #c8f060;border-radius:4px}
+  .cta.ghost{background:transparent;color:#b8b3a8;border-color:#2a2a2a}
+  .cta:hover{filter:brightness(1.1)}
+  .cta.ghost:hover{color:#f5f0e8;border-color:#c8f060}
 </style>
 </head>
 <body>
 
 <header class="topbar">
-  <div class="topbar-title">AI Sales <span class="accent">Knowledge Base</span></div>
-  <div class="topbar-meta"><span>5 коллекций · </span><span class="v">23 записи · 22% наполнено</span></div>
+  <div class="topbar-title">ig-agent <span class="accent">Knowledge Base</span></div>
+  <nav id="igNav" style="flex:1;justify-content:center"></nav>
+  <div id="topbarRight" style="display:flex;align-items:center;gap:12px"></div>
 </header>
-<div style="background:#3a1a00;border:1px solid #f59e0b;color:#FFC56F;padding:10px 18px;font-family:monospace;font-size:11px;letter-spacing:.1em;text-align:center">⚠ v0.1 PLACEHOLDER · данные на этой странице — демо из прототипа ai-sales, не из БД ig-agent</div>
-
 
 <main class="shell">
 
-  <!-- HERO STATS -->
-  <div class="sec-head">
-    <span class="sec-num">/01</span>
-    <span class="sec-title">Состояние базы знаний</span>
-    <span class="sec-spacer"></span>
-  </div>
+  <div class="panel">
+    <h2>База знаний <span class="accent">в разработке</span></h2>
+    <p>
+      Сейчас «знания» агента — это <b>system_prompt</b> активной версии в <a href="/agents">Agents</a>.
+      Responder при каждом ответе подгружает только этот текст; внешних документов / RAG / vector-store не подключено.
+    </p>
 
-  <div class="stats">
-    <div class="stat">
-      <div class="num">01</div>
-      <div class="lbl">Записей<br/>всего</div>
-      <div class="val">23<span class="sfx">/106</span></div>
-      <div class="sub">22% · MVP при 50+</div>
+    <h3>Что появится здесь позже</h3>
+    <ul>
+      <li>Markdown-документы которые загружаются как контекст в responder (примеры успешных диалогов, FAQ, прайс)</li>
+      <li>Эмбеддинги через Qdrant — semantic retrieval по запросу клиента, выдача топ-3 релевантных фрагментов в промпт</li>
+      <li>Учёт «вопросов без ответа» — analyst пометит сообщения с intent=knowledge_gap, чтобы было видно что добавить в KB</li>
+      <li>Версии KB по аналогии с prompt_versions — A/B знаний для разных сегментов аудитории</li>
+    </ul>
+
+    <h3>Сейчас редактируется</h3>
+    <p>
+      Поведение бота правится через <b>active prompt</b> в <a href="/agents">Agents</a> — там можно создать новую версию,
+      залить в неё нужный текст и активировать. Изменения подхватываются на следующее же входящее сообщение без рестарта.
+    </p>
+
+    <div class="cta-row">
+      <a class="cta" href="/agents">→ Открыть Agents</a>
+      <a class="cta ghost" href="/">← Вернуться в Inbox</a>
     </div>
-    <div class="stat">
-      <div class="num">02</div>
-      <div class="lbl">Готовых<br/>(не draft)</div>
-      <div class="val lime">11</div>
-      <div class="sub">для production</div>
-    </div>
-    <div class="stat">
-      <div class="num">03</div>
-      <div class="lbl">RAG-вызовов<br/>сегодня</div>
-      <div class="val cyan">487</div>
-      <div class="sub">avg латентность 220ms</div>
-    </div>
-    <div class="stat">
-      <div class="num">04</div>
-      <div class="lbl">Knowledge<br/>gaps</div>
-      <div class="val pink">14</div>
-      <div class="sub">требуют заполнения</div>
-    </div>
-  </div>
-
-  <!-- VOICE INPUT CTA -->
-  <div class="sec-head">
-    <span class="sec-num">/02</span>
-    <span class="sec-title">Следующий шаг</span>
-    <span class="sec-spacer"></span>
-  </div>
-
-  <div class="cta-bar">
-    <div>
-      <div class="ttl">🎙️ Загрузить <span class="accent">подкасты</span> для извлечения голоса</div>
-      <div class="sub">1-2 эпизода в voice-input/audio/ · ~30 минут работы · разблокирует stage 3.2-3.5</div>
-    </div>
-    <button onclick="alert('Открой voice-input/README.md за инструкцией');">↗ Открыть инструкцию</button>
-  </div>
-
-  <!-- COLLECTIONS -->
-  <div class="sec-head">
-    <span class="sec-num">/03</span>
-    <span class="sec-title">5 коллекций · клик чтобы открыть</span>
-    <span class="sec-spacer"></span>
-  </div>
-
-  <div class="collections">
-
-    <a class="coll active" data-coll="voice">
-      <div class="coll-icon">🎭</div>
-      <div class="coll-name">Голос и тон</div>
-      <div class="coll-meta">7 категорий<br/>biography · tone · values<br/>red lines · samples</div>
-      <div class="coll-count">8<span class="sfx">/15</span></div>
-      <div class="coll-bar"><div class="fill" style="width:53%;"></div></div>
-    </a>
-
-    <a class="coll" data-coll="products">
-      <div class="coll-icon">🛒</div>
-      <div class="coll-name">Продукты</div>
-      <div class="coll-meta">по 1 на каждый<br/>продукт + кейсы<br/>и FAQ</div>
-      <div class="coll-count cyan">3<span class="sfx">/8</span></div>
-      <div class="coll-bar"><div class="fill cyan" style="width:38%;"></div></div>
-    </a>
-
-    <a class="coll" data-coll="segments">
-      <div class="coll-icon">🎯</div>
-      <div class="coll-name">Сегменты</div>
-      <div class="coll-meta">архетипы клиентов<br/>боли · язык<br/>скоринг-маркеры</div>
-      <div class="coll-count cyan">2<span class="sfx">/5</span></div>
-      <div class="coll-bar"><div class="fill cyan" style="width:40%;"></div></div>
-    </a>
-
-    <a class="coll" data-coll="objections">
-      <div class="coll-icon">🛡️</div>
-      <div class="coll-name">Возражения</div>
-      <div class="coll-meta">20+ возражений<br/>с ответами<br/>и антипаттернами</div>
-      <div class="coll-count pink">8<span class="sfx">/25</span></div>
-      <div class="coll-bar"><div class="fill pink" style="width:32%;"></div></div>
-    </a>
-
-    <a class="coll" data-coll="content">
-      <div class="coll-icon">📚</div>
-      <div class="coll-name">Контент-память</div>
-      <div class="coll-meta">посты · Reels<br/>эфиры · кейсы<br/>с транскриптами</div>
-      <div class="coll-count">2<span class="sfx">/30+</span></div>
-      <div class="coll-bar"><div class="fill" style="width:7%;"></div></div>
-    </a>
-
-  </div>
-
-  <!-- DETAIL: VOICE COLLECTION -->
-  <div class="sec-head">
-    <span class="sec-num">/04</span>
-    <span class="sec-title">🎭 Голос и тон · содержимое</span>
-    <span class="sec-spacer"></span>
-  </div>
-
-  <div class="detail">
-
-    <div class="panel">
-      <h3>8 записей · <span class="accent">draft &amp; published</span></h3>
-
-      <div class="entry">
-        <span class="entry-tag bio">Биография</span>
-        <div class="entry-body">
-          <div class="ent-title">Кто я и чем занимаюсь</div>
-          <div class="ent-when">обновлено: 15 мая · v1.0 · в production</div>
-        </div>
-        <span class="entry-prio crit">КРИТ</span>
-      </div>
-
-      <div class="entry">
-        <span class="entry-tag tov">Tone of voice</span>
-        <div class="entry-body">
-          <div class="ent-title">Базовый тон общения</div>
-          <div class="ent-when">обновлено: 15 мая · v1.0 · в production</div>
-        </div>
-        <span class="entry-prio crit">КРИТ</span>
-      </div>
-
-      <div class="entry">
-        <span class="entry-tag tov">Tone of voice</span>
-        <div class="entry-body">
-          <div class="ent-title">Когда говорю «нет»</div>
-          <div class="ent-when">обновлено: 15 мая · v1.0</div>
-        </div>
-        <span class="entry-prio imp">ВАЖНО</span>
-      </div>
-
-      <div class="entry">
-        <span class="entry-tag tov">Tone of voice</span>
-        <div class="entry-body">
-          <div class="ent-title">Когда обсуждаем деньги</div>
-          <div class="ent-when">обновлено: 14 мая · v1.0</div>
-        </div>
-        <span class="entry-prio imp">ВАЖНО</span>
-      </div>
-
-      <div class="entry">
-        <span class="entry-tag val">Ценности</span>
-        <div class="entry-body">
-          <div class="ent-title">Честность важнее продажи</div>
-          <div class="ent-when">обновлено: 15 мая · v1.0</div>
-        </div>
-        <span class="entry-prio crit">КРИТ</span>
-      </div>
-
-      <div class="entry">
-        <span class="entry-tag red">Красные линии</span>
-        <div class="entry-body">
-          <div class="ent-title">Не давлю на клиента</div>
-          <div class="ent-when">обновлено: 15 мая · v1.0</div>
-        </div>
-        <span class="entry-prio crit">КРИТ</span>
-      </div>
-
-      <div class="entry">
-        <span class="entry-tag red">Красные линии</span>
-        <div class="entry-body">
-          <div class="ent-title">Не обещаю того, что не сделаю</div>
-          <div class="ent-when">обновлено: 14 мая · v1.0</div>
-        </div>
-        <span class="entry-prio crit">КРИТ</span>
-      </div>
-
-      <div class="entry">
-        <span class="entry-tag ban">Запретные слова</span>
-        <div class="entry-body">
-          <div class="ent-title">Слова и обороты которые НЕ употребляю</div>
-          <div class="ent-when">обновлено: 15 мая · v1.0</div>
-        </div>
-        <span class="entry-prio crit">КРИТ</span>
-      </div>
-
-      <h4>Что не хватает для MVP</h4>
-      <div class="entry">
-        <span class="entry-tag sample">Образцы</span>
-        <div class="entry-body">
-          <div class="ent-title" style="color:#5a5550;">5 реальных переписок (требуется)</div>
-          <div class="ent-when">блокирует stage 7 запуск</div>
-        </div>
-        <span class="entry-prio crit">P1</span>
-      </div>
-      <div class="entry">
-        <span class="entry-tag fav">Любимые фразы</span>
-        <div class="entry-body">
-          <div class="ent-title" style="color:#5a5550;">10-15 фраз/оборотов (требуется)</div>
-          <div class="ent-when">извлечётся из подкастов автоматически</div>
-        </div>
-        <span class="entry-prio imp">P2</span>
-      </div>
-
-    </div>
-
-    <!-- RIGHT: STATS + ACTIONS -->
-    <div>
-
-      <div class="panel" style="margin-bottom:2px;">
-        <h3>RAG <span class="accent">статистика</span></h3>
-        <div class="rag-row"><span class="k">Вызовов сегодня</span><span class="v cyan">487</span></div>
-        <div class="rag-row"><span class="k">Hit rate</span><span class="v lime">83%</span></div>
-        <div class="rag-row"><span class="k">Avg similarity</span><span class="v">0.78</span></div>
-        <div class="rag-row"><span class="k">Avg latency</span><span class="v">220ms</span></div>
-        <div class="rag-row"><span class="k">Топ-чанк</span><span class="v" style="font-size:11px;">Базовый тон</span></div>
-        <div class="rag-row"><span class="k">Misses сегодня</span><span class="v pink">81 (17%)</span></div>
-      </div>
-
-      <div class="panel" style="margin-bottom:2px;">
-        <h3>Knowledge <span class="accent">gaps</span></h3>
-        <p style="color:#b8b3a8; font-size:13px; margin-bottom:14px;">Темы где RAG не нашёл уверенного ответа. Топ-источник идей.</p>
-
-        <div class="gap">
-          <span class="gap-count crit">×7</span>
-          <div class="gap-body">
-            <div class="gap-topic">Гарантия возврата для пакета «Премиум»</div>
-            <div class="gap-where">→ Продукты</div>
-          </div>
-          <button class="gap-action">✎ Создать</button>
-        </div>
-
-        <div class="gap">
-          <span class="gap-count med">×4</span>
-          <div class="gap-body">
-            <div class="gap-topic">Кейсы в нише «онлайн-школы»</div>
-            <div class="gap-where">→ Контент + Продукты</div>
-          </div>
-          <button class="gap-action">✎ Создать</button>
-        </div>
-
-        <div class="gap">
-          <span class="gap-count med">×3</span>
-          <div class="gap-body">
-            <div class="gap-topic">Политика по скидке &gt;15%</div>
-            <div class="gap-where">→ Голос / Красные линии</div>
-          </div>
-          <button class="gap-action">✎ Создать</button>
-        </div>
-
-        <div class="gap">
-          <span class="gap-count low">×2</span>
-          <div class="gap-body">
-            <div class="gap-topic">Условия для агентств &gt; 20 клиентов</div>
-            <div class="gap-where">→ Сегменты</div>
-          </div>
-          <button class="gap-action">✎ Создать</button>
-        </div>
-
-      </div>
-
-      <div class="panel">
-        <h3>Источники <span class="accent">синка</span></h3>
-        <div class="sync-card">
-          <div class="sync-h">📡 NOTION · LIVE</div>
-          <div class="sync-body"><strong>3604924397e18173ad41fb2904d24590</strong><br/>5 баз данных подключено<br/>Последний sync: <strong>3 мин назад</strong></div>
-          <div class="sync-meta">23 записи · 14 новых за сутки</div>
-        </div>
-        <div class="sync-card" style="border-left-color:#c8f060;">
-          <div class="sync-h" style="color:#c8f060;">🎙️ ПОДКАСТЫ · WAITING</div>
-          <div class="sync-body">voice-input/audio/<br/>0 файлов загружено</div>
-          <div class="sync-meta">→ извлечёт voice + values + examples</div>
-        </div>
-        <div class="sync-card" style="border-left-color:#5a5550;">
-          <div class="sync-h" style="color:#5a5550;">🔌 QDRANT · OFFLINE</div>
-          <div class="sync-body">Voyage-3 не подключён<br/>RAG в mock-режиме</div>
-          <div class="sync-meta">требует VOYAGE_API_KEY</div>
-        </div>
-      </div>
-
-    </div>
-
   </div>
 
 </main>
 
-<script src="/assets/sidebar.js" defer></script>
+<script src="/assets/ig-admin.js"></script>
 <script>
-  document.querySelectorAll('.coll').forEach(c => {
-    c.addEventListener('click', e => {
-      e.preventDefault();
-      document.querySelectorAll('.coll').forEach(x => x.classList.remove('active'));
-      c.classList.add('active');
-      console.log('[kb] switch to collection:', c.dataset.coll);
-    });
-  });
+(function () {
+  var IG = window.IG;
+  if (IG.mountNav) IG.mountNav(document.getElementById('igNav'), 'kb');
+  if (IG.mountAutoReplyToggle) IG.mountAutoReplyToggle(document.getElementById('topbarRight'));
+})();
 </script>
-
 </body>
 </html>
