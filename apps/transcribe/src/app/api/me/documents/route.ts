@@ -2,6 +2,7 @@ import { NextRequest, NextResponse } from 'next/server'
 import { guardRequest } from '@/lib/api-guard'
 import { chunkText } from '@/lib/chunking'
 import { embedBatch } from '@/lib/embeddings'
+import { indexTranscribeRow } from '@/lib/memory'
 import { createDocumentWithEmbeddings, libraryStats, listDocuments } from '@/lib/me-db'
 import { authenticate } from '@/lib/telegram-auth'
 
@@ -42,11 +43,11 @@ export async function GET(req: NextRequest) {
   const auth = authenticate(req)
   if ('error' in auth) return auth.error
   try {
-    return NextResponse.json({
-      items: listDocuments(auth.user_id, 200),
-      stats: libraryStats(auth.user_id),
-      configured: true,
-    })
+    const [items, stats] = await Promise.all([
+      listDocuments(auth.user_id, 200),
+      libraryStats(auth.user_id),
+    ])
+    return NextResponse.json({ items, stats, configured: true })
   } catch (e: any) {
     return NextResponse.json({ error: e?.message || 'Ошибка чтения базы' }, { status: 500 })
   }
@@ -102,7 +103,7 @@ export async function POST(req: NextRequest) {
   }
 
   try {
-    const doc = createDocumentWithEmbeddings({
+    const doc = await createDocumentWithEmbeddings({
       user_id: auth.user_id,
       title,
       source_type,
@@ -111,6 +112,26 @@ export async function POST(req: NextRequest) {
       chunks,
       embeddings,
     })
+
+    // Mirror the document into the shared "aicex-memory" Qdrant
+    // collection so the cross-app brain (tg-agent /memory, admin UI)
+    // can surface /me library content alongside chats and
+    // transcripts. Fire-and-forget — never blocks the API.
+    if (doc) {
+      const tgId = auth.user_id.startsWith('tg:')
+        ? Number(auth.user_id.slice(3)) || null
+        : null
+      indexTranscribeRow({
+        naturalKey: doc.id,
+        kind: 'document',
+        text,
+        ownerTelegramId: tgId,
+        title: doc.title,
+        url: null,
+        createdAt: doc.created_at,
+      }).catch(() => {})
+    }
+
     return NextResponse.json({ document: doc })
   } catch (e: any) {
     return NextResponse.json({ error: e?.message || 'Ошибка сохранения документа' }, { status: 500 })

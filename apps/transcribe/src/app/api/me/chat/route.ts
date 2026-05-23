@@ -67,9 +67,9 @@ export async function POST(req: NextRequest) {
   if (process.env.OPENAI_API_KEY) {
     try {
       const queryVec = await embed(lastUser)
-      const matches: MeChunkMatch[] = searchChunks(auth.user_id, queryVec, topK, restrictDocIds).filter(
-        (m) => m.similarity > 0.2,
-      )
+      const matches: MeChunkMatch[] = (
+        await searchChunks(auth.user_id, queryVec, topK, restrictDocIds)
+      ).filter((m) => m.similarity > 0.2)
       contextBlock = matches
         .map(
           (m, i) =>

@@ -1,6 +1,6 @@
 import { NextRequest, NextResponse } from 'next/server'
 import { fetchYoutubeCaptions, getYoutubeVideoId, YoutubeCaptionsError } from '@/lib/youtube-captions'
-import { insertTranscript, makeTitle, Paragraph } from '@/lib/transcripts-db'
+import { dbSaveTranscript, makeTitle, Paragraph } from '@/lib/transcripts-db'
 import {
   extractDirectMediaUrl,
   isSocialMediaUrl,
@@ -190,9 +190,9 @@ async function fetchDeepgram(url: string, language: 'auto' | 'ru' | 'en'): Promi
   }
 }
 
-function saveTranscript(user_id: string, url: string, result: Ok): string | null {
+async function saveTranscript(user_id: string, url: string, result: Ok): Promise<string | null> {
   try {
-    return insertTranscript({
+    return await dbSaveTranscript({
       user_id,
       url,
       title: makeTitle(result.transcript, url),
@@ -281,7 +281,7 @@ export async function POST(req: NextRequest) {
       return NextResponse.json({ error: result.error }, { status: result.status })
     }
 
-    const id = saveTranscript(auth.user_id, url, result)
+    const id = await saveTranscript(auth.user_id, url, result)
 
     // Fire-and-forget index into the shared "aicex-memory" Qdrant
     // collection. `auth.user_id` is "tg:<telegram_id>" — extract the
