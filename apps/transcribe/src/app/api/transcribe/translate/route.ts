@@ -1,5 +1,5 @@
 import { NextRequest, NextResponse } from 'next/server'
-import { getTranscript, updateTranscriptTranslation } from '@/lib/transcripts-db'
+import { dbGetTranscript, dbSaveTranslation } from '@/lib/transcripts-db'
 import { streamAnthropic } from '@/lib/anthropic-stream'
 import { authenticate } from '@/lib/telegram-auth'
 
@@ -35,7 +35,7 @@ export async function POST(req: NextRequest) {
 
   let text = transcript
   if (id) {
-    const row = getTranscript(id, auth.user_id)
+    const row = await dbGetTranscript(id)
     if (!row) {
       return NextResponse.json({ error: 'Не найден транскрипт' }, { status: 404 })
     }
@@ -69,7 +69,7 @@ export async function POST(req: NextRequest) {
     },
     { lang: targetLang, cached: false },
     async (fullText) => {
-      if (id) updateTranscriptTranslation(id, auth.user_id, targetLang, fullText.trim())
+      if (id) await dbSaveTranslation(id, { lang: targetLang, text: fullText.trim() })
     },
   )
 }

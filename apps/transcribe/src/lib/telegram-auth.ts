@@ -59,6 +59,16 @@ export function verifyTelegramInitData(initData: string, botToken: string): Tele
   return { ok: true, user }
 }
 
+// Compat aliases for code that still references the legacy names.
+// Returns the parsed user-object on success, null on failure — matches
+// what api-guard.ts expects.
+export type VerifiedInitData = { user: TelegramUser; auth_date: number }
+export function verifyInitData(initData: string, botToken: string): VerifiedInitData | null {
+  const r = verifyTelegramInitData(initData, botToken)
+  if (!r.ok || !r.user) return null
+  return { user: r.user, auth_date: 0 }
+}
+
 import { NextRequest, NextResponse } from 'next/server'
 
 /**

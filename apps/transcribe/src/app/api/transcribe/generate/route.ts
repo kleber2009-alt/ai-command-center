@@ -1,5 +1,5 @@
 import { NextRequest, NextResponse } from 'next/server'
-import { getTranscript, mergeTranscriptGenerations } from '@/lib/transcripts-db'
+import { dbGetTranscript, dbMergeGenerations } from '@/lib/transcripts-db'
 import { streamAnthropic } from '@/lib/anthropic-stream'
 import { authenticate } from '@/lib/telegram-auth'
 
@@ -224,7 +224,7 @@ export async function POST(req: NextRequest) {
 
   let text = transcript
   if (id) {
-    const row = getTranscript(id, auth.user_id)
+    const row = await dbGetTranscript(id)
     if (!row) return NextResponse.json({ error: 'Не найден транскрипт' }, { status: 404 })
     const cached = row.generations?.[type]
     if (cached) {
@@ -325,7 +325,7 @@ export async function POST(req: NextRequest) {
     async (fullText) => {
       try {
         const content = parseContent(type, fullText)
-        if (id) mergeTranscriptGenerations(id, auth.user_id, type, content)
+        if (id) await dbMergeGenerations(id, type, content)
         return { content }
       } catch (e: any) {
         console.warn(`[/api/transcribe/generate ${type}] parse failed:`, e?.message)
