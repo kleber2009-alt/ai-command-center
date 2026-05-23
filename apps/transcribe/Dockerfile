@@ -44,6 +44,11 @@ RUN addgroup --system --gid 1001 nodejs \
 COPY --from=builder --chown=nextjs:nodejs /repo/apps/transcribe/.next/standalone ./
 COPY --from=builder --chown=nextjs:nodejs /repo/apps/transcribe/.next/static ./apps/transcribe/.next/static
 COPY --from=builder --chown=nextjs:nodejs /repo/apps/transcribe/public ./apps/transcribe/public
+# Standalone scripts (backfill-memory etc.) — runnable via `docker exec
+# infra-transcribe-1 node /app/apps/transcribe/scripts/<name>.mjs`.
+# Next.js standalone build puts source under apps/transcribe/, so the
+# scripts dir lives at the same depth.
+COPY --from=builder --chown=nextjs:nodejs /repo/apps/transcribe/scripts ./apps/transcribe/scripts
 
 USER nextjs
 EXPOSE 3000

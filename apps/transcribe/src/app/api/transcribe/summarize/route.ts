@@ -2,6 +2,7 @@ import { NextRequest, NextResponse } from 'next/server'
 import { getTranscript, updateTranscriptSummary } from '@/lib/transcripts-db'
 import { streamAnthropic } from '@/lib/anthropic-stream'
 import { authenticate } from '@/lib/telegram-auth'
+import { indexTranscribeRow } from '@/lib/memory'
 
 export const maxDuration = 60
 
@@ -84,7 +85,28 @@ export async function POST(req: NextRequest) {
     async (fullText) => {
       if (!id) return
       const { summary, bullets } = parseSummary(fullText)
-      if (summary || bullets.length > 0) updateTranscriptSummary(id, auth.user_id, summary, bullets)
+      if (summary || bullets.length > 0) {
+        updateTranscriptSummary(id, auth.user_id, summary, bullets)
+        // Index the summary as a separate point — short, condensed
+        // text scores higher for top-of-the-funnel queries than the
+        // raw transcript. Key is `<id>-summary` so it lives alongside
+        // the transcript point without overwriting it.
+        const tgId = auth.user_id.startsWith('tg:')
+          ? Number(auth.user_id.slice(3)) || null
+          : null
+        const indexText = bullets.length > 0
+          ? `${summary}\n\n${bullets.map((b) => `• ${b}`).join('\n')}`
+          : summary
+        indexTranscribeRow({
+          naturalKey: `${id}-summary`,
+          kind: 'summary',
+          text: indexText,
+          ownerTelegramId: tgId,
+          title: null,
+          url: null,
+          createdAt: new Date().toISOString(),
+        }).catch(() => {})
+      }
     },
   )
 }

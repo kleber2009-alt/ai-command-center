@@ -8,6 +8,7 @@ import {
   YtdlpServiceError,
 } from '@/lib/ytdlp-client'
 import { authenticate } from '@/lib/telegram-auth'
+import { indexTranscribeRow } from '@/lib/memory'
 
 export const maxDuration = 60
 
@@ -281,6 +282,28 @@ export async function POST(req: NextRequest) {
     }
 
     const id = saveTranscript(auth.user_id, url, result)
+
+    // Fire-and-forget index into the shared "aicex-memory" Qdrant
+    // collection. `auth.user_id` is "tg:<telegram_id>" — extract the
+    // numeric id so cross-app search can scope to the brain's owner.
+    if (id) {
+      const tgId = auth.user_id.startsWith('tg:')
+        ? Number(auth.user_id.slice(3)) || null
+        : null
+      const title = makeTitle(result.transcript, url)
+      indexTranscribeRow({
+        naturalKey: id,
+        kind: 'transcript',
+        text: result.transcript,
+        ownerTelegramId: tgId,
+        title,
+        url,
+        createdAt: new Date().toISOString(),
+      }).catch(() => {
+        // memory module logs its own errors
+      })
+    }
+
     return NextResponse.json({ ...result, id })
   } catch (e: any) {
     return NextResponse.json({ error: e?.message || 'Ошибка транскрибации' }, { status: 500 })

@@ -93,6 +93,13 @@ services:
       TMA_URL: ${TMA_URL:-https://tma.46-62-215-11.nip.io/}
       VIRAL_CLONE_DISPATCH_SECRET: ${VIRAL_CLONE_DISPATCH_SECRET:-}
       VIRAL_CLONE_DISPATCH_URL: ${VIRAL_CLONE_DISPATCH_URL:-https://ai-office.46-62-215-11.nip.io/worker/viral-clone/dispatch}
+      # Shared "aicex-memory" Qdrant collection (Phase 3 of the
+      # second-brain rollout). aisales-qdrant is on the aisales-net
+      # docker network attached below.
+      QDRANT_URL: ${QDRANT_URL:-http://aisales-qdrant:6333}
+      QDRANT_COLLECTION: ${QDRANT_COLLECTION:-aicex-memory}
+      QDRANT_API_KEY: ${QDRANT_API_KEY:-}
+      MEMORY_ENABLED: ${MEMORY_ENABLED:-true}
     ports:
       - '127.0.0.1:3002:3000'
     depends_on:
@@ -100,7 +107,11 @@ services:
         condition: service_healthy
       ytdlp:
         condition: service_started
-    networks: [internal]
+    # internal: postgres + ytdlp neighbours.
+    # aisales-net: reach aisales-qdrant for the shared semantic-memory
+    # collection (Phase 3 — transcribe pushes transcripts + summaries
+    # into the same Qdrant collection as tg-agent).
+    networks: [internal, aisales-net]
 
   ytdlp:
     build:
