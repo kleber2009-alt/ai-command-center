@@ -21,6 +21,7 @@ import type { KbManager } from '../kb-manager.js';
 import type { MemoryService } from '../memory/service.js';
 import type { PromptConfig } from '../prompt-config.js';
 import type { Logger } from '../logger.js';
+import { createIgProxy, type IgProxy } from './ig_proxy.js';
 import {
   buildClearCookie,
   buildSessionCookie,
@@ -74,6 +75,12 @@ export interface AdminDeps {
   dataDir: string;
   digestStore: DigestStore | undefined;
   memory: MemoryService | undefined;
+  // Federated ig-agent (Instagram DM CRM). Internal docker DNS
+  // address: http://ig-agent:8081 — the «📱 Instagram» tab calls
+  // through the proxy below.
+  igAgentUrl: string | undefined;
+  igAgentUsername: string | undefined;
+  igAgentPassword: string | undefined;
 }
 
 export interface AdminHandle {
