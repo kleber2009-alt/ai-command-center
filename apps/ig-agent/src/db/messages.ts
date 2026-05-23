@@ -43,6 +43,7 @@ export interface MessageStore {
   insert(input: InsertMessageInput): Promise<Message>;
   listForContact(contactId: string, limit?: number): Promise<Message[]>;
   recentForContact(contactId: string, limit: number): Promise<Message[]>;
+  updateAnalysis(id: string, intent: string | null, sentiment: string | null): Promise<void>;
 }
 
 export function createMessageStore(pool: DbPool): MessageStore {
@@ -98,6 +99,14 @@ export function createMessageStore(pool: DbPool): MessageStore {
         [contactId, limit],
       );
       return rows.reverse();
+    },
+
+    async updateAnalysis(id, intent, sentiment) {
+      await query(
+        pool,
+        'UPDATE messages SET intent = COALESCE($2, intent), sentiment = COALESCE($3, sentiment) WHERE id = $1',
+        [id, intent, sentiment],
+      );
     },
   };
 }

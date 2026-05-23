@@ -403,23 +403,86 @@
 
   </div>
 
+  <!-- PROMPT VERSIONS (live) -->
+  <div class="sec-head">
+    <span class="sec-num">/99</span>
+    <span class="sec-title">Промпт-версии · responder system prompt</span>
+    <span class="sec-spacer"></span>
+  </div>
+  <div id="promptList" style="display:flex;flex-direction:column;gap:8px;padding:0 2px 24px">
+    <div style="opacity:.5">…загружаю</div>
+  </div>
+
   <div class="foot">
-    AI Sales · Agents v0.1 · клик на табы выше переключает агентов (заглушка) · <a href="/06-dashboard-prototype/project.html">project</a>
+    ig-agent · admin v0.1 · промпт активируется атомарно, ответы подхватывают новую версию без рестарта
   </div>
 
 </main>
 
+<script src="/assets/ig-admin.js"></script>
 <script>
-  // tab clicks
-  document.querySelectorAll('.agent-tab').forEach(t => {
-    t.addEventListener('click', () => {
-      document.querySelectorAll('.agent-tab').forEach(x => x.classList.remove('active'));
+(function () {
+  var IG = window.IG;
+  var list = document.getElementById('promptList');
+
+  // Agent-tab toggle is purely visual — backing data exists only for the
+  // responder slot right now. Other tabs stay decorative.
+  document.querySelectorAll('.agent-tab').forEach(function (t) {
+    t.addEventListener('click', function () {
+      document.querySelectorAll('.agent-tab').forEach(function (x) { x.classList.remove('active'); });
       t.classList.add('active');
-      console.log('[agents] switch to:', t.dataset.agent);
     });
   });
-</script>
 
-<script src="/assets/sidebar.js" defer></script>
+  function render(prompts) {
+    if (!prompts.length) {
+      list.innerHTML = '<div style="opacity:.5">Промптов нет. Дефолтный сидится при первой миграции.</div>';
+      return;
+    }
+    list.innerHTML = prompts.map(function (p) {
+      var border = p.active ? '#c8f060' : '#2a2a2a';
+      var btn = p.active
+        ? '<span style="color:#c8f060;font-family:monospace;font-size:11px;letter-spacing:.1em">● ACTIVE</span>'
+        : '<button data-id="' + IG.escapeHtml(p.id) + '" class="activate-btn" style="background:transparent;border:1px solid #c8f060;color:#c8f060;padding:6px 12px;font-family:monospace;font-size:10px;letter-spacing:.14em;cursor:pointer;font-weight:700">АКТИВИРОВАТЬ</button>';
+      return (
+        '<div style="border:1px solid ' + border + ';padding:14px 16px;background:#0a0a0a">' +
+          '<div style="display:flex;justify-content:space-between;align-items:center;gap:12px">' +
+            '<div>' +
+              '<div style="font-family:monospace;font-size:12px;color:#c8f060">' + IG.escapeHtml(p.version) + (p.segment ? ' · segment=' + IG.escapeHtml(p.segment) : '') + '</div>' +
+              '<div style="font-family:monospace;font-size:10px;color:#b8b3a8;letter-spacing:.1em">' + IG.escapeHtml(IG.fmtDay(p.created_at) + ' · ' + IG.fmtTime(p.created_at)) + '</div>' +
+            '</div>' +
+            '<div>' + btn + '</div>' +
+          '</div>' +
+          '<div style="margin-top:10px;font-size:13px;line-height:1.55;color:#f5f0e8;white-space:pre-wrap;max-height:140px;overflow:auto">' + IG.escapeHtml(p.system_prompt) + '</div>' +
+        '</div>'
+      );
+    }).join('');
+    list.querySelectorAll('.activate-btn').forEach(function (btn) {
+      btn.addEventListener('click', async function () {
+        btn.disabled = true;
+        btn.textContent = '…';
+        try {
+          await IG.api('/api/prompts/' + encodeURIComponent(btn.dataset.id) + '/activate', { method: 'POST', body: '{}' });
+          await load();
+        } catch (e) {
+          alert(e.message);
+          btn.disabled = false;
+          btn.textContent = 'АКТИВИРОВАТЬ';
+        }
+      });
+    });
+  }
+
+  async function load() {
+    try {
+      var data = await IG.api('/api/prompts');
+      render(data.prompts || []);
+    } catch (e) {
+      list.innerHTML = '<div style="color:#f06090">Ошибка: ' + IG.escapeHtml(e.message) + '</div>';
+    }
+  }
+  load();
+})();
+</script>
 </body>
 </html>

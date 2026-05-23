@@ -1,17 +1,18 @@
 // Orchestrator: webhook event → persist contact + incoming msg →
-// (when AI is handling) classify-ish + responder + SendPulse send →
-// persist outgoing msg → owner notification when relevant.
+// (when AI is handling) responder + SendPulse send → persist outgoing msg
+// → analyst (fire-and-forget) → owner notification when relevant.
 //
 // v0.1 skips the dedicated classifier/decision engine — every inbound
 // goes through the responder unless the contact is ignored or the
-// conversation has been manually taken over by a human. Classifier +
-// analyst slot in here when ported from tg-agent.
+// conversation has been manually taken over by a human. The analyst
+// runs in the background and writes ai_recommendations rows.
 
 import type { ContactService } from './db/contacts.js';
 import type { ConversationService } from './db/conversations.js';
 import type { MessageStore } from './db/messages.js';
 import type { ParsedIncomingMessage } from './webhook.js';
 import type { Responder } from './responder.js';
+import type { Analyst } from './analyst.js';
 import type { SendPulseClient } from './sendpulse/client.js';
 import type { Notifier } from './notifier.js';
 import type { Logger } from './logger.js';
@@ -21,6 +22,7 @@ export interface PipelineDeps {
   conversations: ConversationService;
   messages: MessageStore;
   responder: Responder;
+  analyst: Analyst;
   sendPulse: SendPulseClient;
   notifier: Notifier;
   logger: Logger;
@@ -28,6 +30,9 @@ export interface PipelineDeps {
   // How many prior messages to feed the LLM as context. Higher = better
   // continuity, more tokens. 20 is a reasonable starting point.
   historyWindow?: number;
+  // Smaller window for the analyst — it needs context but not a full
+  // transcript replay. 10 is a sensible default.
+  analystHistoryWindow?: number;
 }
 
 export interface Pipeline {
@@ -36,6 +41,44 @@ export interface Pipeline {
 
 export function createPipeline(deps: PipelineDeps): Pipeline {
   const historyWindow = deps.historyWindow ?? 20;
+  const analystHistoryWindow = deps.analystHistoryWindow ?? 10;
+
+  // Fire-and-forget analyst runner. Wraps the analyst call so callers
+  // never have to remember the .catch() — analyst failures must never
+  // surface to the webhook caller.
+  function scheduleAnalysis(args: {
+    contactId: string;
+    incomingMessageId: string;
+    incomingText: string;
+  }): void {
+    void (async () => {
+      try {
+        // Re-read the contact / conversation right before analyzing so
+        // we use the latest state (e.g. lead_status that another path
+        // may have just updated).
+        const contact = await deps.contacts.byId(args.contactId);
+        if (!contact) return;
+        const conversations = await deps.conversations.byContact(args.contactId);
+        const active = conversations.find((c) => c.status === 'active') ?? null;
+        const history = await deps.messages.recentForContact(
+          args.contactId,
+          analystHistoryWindow,
+        );
+        await deps.analyst.analyze({
+          contact,
+          conversation: active,
+          history,
+          incomingMessageId: args.incomingMessageId,
+          incomingText: args.incomingText,
+        });
+      } catch (err) {
+        deps.logger.warn('analyst failed', {
+          err: err instanceof Error ? err.message : String(err),
+          contactId: args.contactId,
+        });
+      }
+    })();
+  }
 
   return {
     async handle(event) {
@@ -72,7 +115,7 @@ export function createPipeline(deps: PipelineDeps): Pipeline {
       const conversation = await deps.conversations.ensureActive(contact.id);
 
       // 2. Persist the incoming message + bump contact's last-seen.
-      await deps.messages.insert({
+      const incoming = await deps.messages.insert({
         contactId: contact.id,
         direction: 'incoming',
         source: 'user',
@@ -83,6 +126,17 @@ export function createPipeline(deps: PipelineDeps): Pipeline {
         rawPayload: event.rawEvent,
       });
       await deps.contacts.touchLastMessage(contact.id);
+
+      // 2b. Kick off the analyst regardless of whether the AI will
+      // reply — even ignored contacts and human-handled conversations
+      // benefit from intent/sentiment tagging + recommendation surfacing.
+      if (event.text) {
+        scheduleAnalysis({
+          contactId: contact.id,
+          incomingMessageId: incoming.id,
+          incomingText: event.text,
+        });
+      }
 
       // 3. Decide whether the AI should respond.
       if (deps.ignoredContactIds.has(event.sendpulseContactId)) {

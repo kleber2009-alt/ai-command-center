@@ -294,45 +294,20 @@
   <section class="auth-side">
     <div class="auth-card">
 
-      <a class="auth-back" href="/01-portal/ai-sales-portal.html">← к порталу</a>
+      <h2>ig-agent <span class="accent">админка</span></h2>
+      <p class="sub">Magic-link авторизация через Telegram-бота владельца</p>
 
-      <h2>Вход в <span class="accent">систему</span></h2>
-      <p class="sub">Дашборд для владельца · 4 агента · полная аналитика</p>
-
-      <form id="loginForm" onsubmit="event.preventDefault(); window.location.href='/06-dashboard-prototype/pulse.html';">
-
-        <div class="form-group">
-          <label for="email">Email</label>
-          <input id="email" type="email" placeholder="ilya@aisales.system" autocomplete="email" />
-        </div>
-
-        <div class="form-group">
-          <label for="password">Пароль</label>
-          <input id="password" type="password" placeholder="••••••••" autocomplete="current-password" />
-        </div>
-
-        <div class="form-row">
-          <label><input type="checkbox" checked /> Запомнить меня</label>
-          <a class="forgot" href="#">Забыл пароль?</a>
-        </div>
-
-        <button type="submit" class="btn-primary">→ ВОЙТИ В PULSE</button>
-
-        <div class="status-strip">SLA: agents online · 4/4 · last deploy 16.05.26</div>
-
-        <div class="divider">
-          <span class="line"></span>
-          <span class="text">или через</span>
-          <span class="line"></span>
-        </div>
-
-        <button type="button" class="btn-sso">⚡ Google Workspace</button>
-        <button type="button" class="btn-sso">📱 Telegram Login</button>
-
+      <form id="loginForm">
+        <p style="color:#b8b3a8;font-size:13px;line-height:1.55;margin:18px 0">
+          Нажми кнопку — бот отправит одноразовую ссылку в личку OWNER_TELEGRAM_ID.
+          Ссылка живёт 10 минут, сессия после клика — 7 дней.
+        </p>
+        <button type="submit" class="btn-primary">📩 Отправить ссылку в Telegram</button>
+        <div id="loginStatus" class="status-strip" style="min-height:18px"></div>
       </form>
 
       <div class="auth-foot">
-        Первый раз здесь? <a href="/06-dashboard-prototype/onboarding.html">Настроить систему →</a>
+        Webhook URL для SendPulse: <code style="color:#c8f060;font-family:monospace;font-size:11px;display:block;margin-top:4px;word-break:break-all">{ADMIN_PUBLIC_URL}/webhook/sendpulse?token=&lt;SENDPULSE_WEBHOOK_TOKEN&gt;</code>
       </div>
 
     </div>
@@ -340,5 +315,23 @@
 
 </div>
 
+<script src="/assets/ig-admin.js"></script>
+<script>
+(function () {
+  var form = document.getElementById('loginForm');
+  var status = document.getElementById('loginStatus');
+  if (!form) return;
+  form.addEventListener('submit', async function (e) {
+    e.preventDefault();
+    status.textContent = '…отправляю';
+    try {
+      await window.IG.api('/api/request-link', { method: 'POST', body: '{}' });
+      status.innerHTML = '<span style="color:#c8f060">✓ Ссылка отправлена в Telegram</span>';
+    } catch (err) {
+      status.innerHTML = '<span style="color:#f06090">✗ ' + (err.message || 'ошибка') + '</span>';
+    }
+  });
+})();
+</script>
 </body>
 </html>

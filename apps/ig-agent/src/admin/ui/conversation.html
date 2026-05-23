@@ -166,61 +166,7 @@
 <div class="shell-conv">
 
   <!-- ─── Left: client info ──────────────────────────── -->
-  <aside class="side cl-pane">
-    <div class="cl-head">
-      <span class="av av-g4 av--xl">АВ</span>
-      <div>
-        <div class="t-lg fw6">Анна В.</div>
-        <div class="t-sm muted">@anna_voronina · TG</div>
-      </div>
-      <div class="row gap-2"><span class="badge badge--purple">A · VIP</span><span class="badge badge--red badge--pulse"><span class="dot"></span>горячий</span></div>
-    </div>
-
-    <div>
-      <div class="section-h">AI-сводка <span class="badge badge--blue" style="float:right">обновлена 2 мин</span></div>
-      <p class="t-sm" style="color:var(--text-mid);line-height:1.55">
-        Анна — фаундер маникюрной студии в&nbsp;Москве (3 точки, ~12 мастеров). Ищет систему которая ответит DM-ам пока она ведёт операционку. Бюджет: до&nbsp;30к/мес. Сравнивает с&nbsp;Чек-листом, считает дорого — нужен якорь не&nbsp;против ChatGPT, а&nbsp;против найма SMM-щика.
-      </p>
-    </div>
-
-    <div>
-      <div class="section-h">Контакт</div>
-      <div class="cl-field"><span>Канал</span><span class="badge badge--tg">TG</span></div>
-      <div class="cl-field"><span>Источник</span><span>IG&nbsp;reel @nailpro · 17 мая</span></div>
-      <div class="cl-field"><span>Гео</span><span>Москва</span></div>
-      <div class="cl-field"><span>Username</span><span class="mono c-blue">@anna_voronina</span></div>
-    </div>
-
-    <div>
-      <div class="section-h">Сегмент</div>
-      <div class="cl-field"><span>ICP match</span><span class="badge badge--green">92%</span></div>
-      <div class="cl-field"><span>Сегмент</span><span class="badge badge--purple">A · enterprise-RU</span></div>
-      <div class="cl-field"><span>Чек ожид.</span><span class="mono c-green">₽28к / мес</span></div>
-      <div class="cl-field"><span>Триггер</span><span>«хочу записать клиентов через бота»</span></div>
-    </div>
-
-    <div>
-      <div class="section-h">Активность</div>
-      <div class="cl-field"><span>Первый контакт</span><span class="mono">17 мая · 14:32</span></div>
-      <div class="cl-field"><span>Сообщений</span><span class="mono">23</span></div>
-      <div class="cl-field"><span>Этап</span><span class="badge badge--red">Objections</span></div>
-      <div class="cl-field"><span>Прогресс</span><span><span class="mono c-yellow">78% к&nbsp;Close</span></span></div>
-    </div>
-
-    <div>
-      <div class="section-h">Follow-up</div>
-      <div class="fu">
-        <div class="fu__head">📅 Запланировано</div>
-        <div class="t-sm mid">Voice-сообщение «история клиента похожей студии» если&nbsp;не&nbsp;ответит за&nbsp;6&nbsp;ч</div>
-        <div class="fu__time mt-2">через 5 ч 42 мин · 20 мая 12:07</div>
-      </div>
-    </div>
-
-    <div style="margin-top:auto" class="col gap-2">
-      <button class="btn btn--secondary" style="width:100%">📅 Перенести встречу</button>
-      <button class="btn btn--ghost" style="width:100%">🚫 Передать в&nbsp;Lost</button>
-    </div>
-  </aside>
+  <aside class="side cl-pane" id="contactPane"><div style="opacity:.5">…загружаю</div></aside>
 
   <!-- ─── Center: chat ───────────────────────────────── -->
   <main class="conv-pane">
@@ -228,73 +174,23 @@
       <div class="row gap-3">
         <a href="pipeline.html" class="t-sm muted">← Pipeline</a>
         <span class="muted">/</span>
-        <span class="t-md c-blue">@anna_voronina</span>
+        <span class="t-md c-blue" id="convHeaderName">…</span>
         <span class="badge badge--red badge--pulse"><span class="dot"></span>нужен Илья</span>
       </div>
       <div class="row gap-2">
-        <button class="btn btn--ghost">⏸ Pause AI</button>
+        <button class="btn btn--ghost" id="btnTakeover">⏸ Pause AI</button>
         <button class="btn btn--secondary">📎</button>
         <button class="btn btn--secondary">⋮</button>
       </div>
     </div>
 
-    <div class="conv-feed">
-
-      <div class="conv-msg-day">17 мая · 14:32</div>
-
-      <div class="msg msg--in">
-        Привет! Увидела ваш Reel про автоматизацию. Я&nbsp;веду маникюрную студию (3&nbsp;точки), сижу в&nbsp;DM по&nbsp;вечерам — это&nbsp;ад.<br>
-        Расскажете что у&nbsp;вас?
-        <span class="msg__time">14:32</span>
-      </div>
-
-      <div class="msg msg--ai">
-        Привет, Анна! Хорошая боль — у&nbsp;нас как раз про это.<br>
-        Мы делаем систему которая отвечает в&nbsp;IG-DM и&nbsp;TG-чатах за&nbsp;вас 87% времени.<br>
-        Расскажите чуть подробнее: сколько у&nbsp;вас входящих в&nbsp;неделю и&nbsp;чего хочется&nbsp;— записи, продажи курсов, или просто разгрузить личку?
-        <span class="msg__time">🤖 Greeting · 14:34</span>
-      </div>
-
-      <div class="msg msg--in">
-        Записи в основном. 30-50 в неделю. Хочу чтобы клиент сам выбрал время и&nbsp;мастера, без меня.
-        <span class="msg__time">14:41</span>
-      </div>
-
-      <div class="msg msg--ai">
-        Понял. Это базовая история — у&nbsp;нас есть готовый «бронь маникюрной услуги»-флоу: AI задаёт 3 вопроса, подбирает мастера по&nbsp;услугам и&nbsp;окну, шлёт счёт и&nbsp;ставит в&nbsp;Google Calendar.<br>
-        Покажу демо в&nbsp;TG?
-        <span class="msg__time">🤖 Discovery · 14:43</span>
-      </div>
-
-      <div class="conv-msg-day">18 мая · 09:18</div>
-
-      <div class="msg msg--in">
-        Покажите. И&nbsp;цены сразу.
-        <span class="msg__time">09:18</span>
-      </div>
-
-      <div class="msg msg--ai">
-        Конечно. Вот ваш демо-бот: <span class="mono c-blue">t.me/aisales_anna_demo</span><br><br>
-        Цены: <b>Pro</b> — 29к/мес (бронирование + IG-DM + TG, до 500 диалогов/день, 1 локация). <b>Salon</b> — 49к/мес (до 5 точек, voice-дожимы, Google Calendar sync, мульти-мастер). Setup-free.
-        <span class="msg__time">🤖 Pitch · 09:21</span>
-      </div>
-
-      <div class="conv-msg-day">20 мая · 06:21</div>
-
-      <div class="msg msg--in">
-        А почему так дорого по&nbsp;сравнению с&nbsp;курсами Чек-листа? Они&nbsp;делают то&nbsp;же за&nbsp;7к.
-        <span class="msg__time">06:21</span>
-      </div>
-
-      <span class="badge badge--red badge--pulse" style="align-self:center;margin:6px 0"><span class="dot"></span>AI остановился · нужен ты</span>
-
-    </div>
+    <div class="conv-feed" id="convFeed"><div style="opacity:.5;align-self:center">…загружаю</div></div>
 
     <div class="conv-input">
       <div class="conv-input__bar">
-        <textarea placeholder="Напиши ответ или попроси AI…">[Готовый драфт от AI ниже — отредактируй или вставь]</textarea>
+        <textarea id="replyText" placeholder="Напиши ответ или попроси AI…"></textarea>
         <button class="btn btn--ghost btn--icon" title="прикрепить">📎</button>
-        <button class="btn btn--primary">Отправить ↵</button>
+        <button class="btn btn--primary" id="btnSendReply">Отправить ↵</button>
       </div>
       <div class="conv-input__hints">
         <button class="chip">⚡ AI: ответить</button>
@@ -550,8 +446,196 @@
   <a href="settings.html"><span>⚙</span>Profile</a>
 </nav>
 
+<script src="/assets/ig-admin.js"></script>
 <script>
 (function(){const el=document.getElementById('clock');if(!el)return;const M=['янв','фев','мар','апр','мая','июн','июл','авг','сен','окт','ноя','дек'];function t(){const d=new Date();el.textContent=d.getDate()+' '+M[d.getMonth()]+' · '+String(d.getHours()).padStart(2,'0')+':'+String(d.getMinutes()).padStart(2,'0')}t();setInterval(t,30000)})();
+
+/* ── Live data: contact + messages + recommendations ─ */
+(function () {
+  var IG = window.IG;
+  var id = IG.getParam('id');
+  if (!id) {
+    document.getElementById('contactPane').innerHTML = '<div style="color:#f06090">?id= не указан. Перейди из <a href="/" style="color:#c8f060">Inbox</a>.</div>';
+    return;
+  }
+
+  var feed = document.getElementById('convFeed');
+  var pane = document.getElementById('contactPane');
+  var nameEl = document.getElementById('convHeaderName');
+  var takeoverBtn = document.getElementById('btnTakeover');
+  var textarea = document.getElementById('replyText');
+  var sendBtn = document.getElementById('btnSendReply');
+
+  var contactState = null;
+  var conversationState = null;
+
+  function fmtMsgTime(iso) {
+    return IG.fmtTime(iso);
+  }
+
+  function renderContact(contact, conversations) {
+    contactState = contact;
+    conversationState = (conversations || []).find(function (c) { return c.status === 'active'; }) || null;
+    var name = IG.escapeHtml(IG.nameOf(contact));
+    nameEl.textContent = name;
+    var aiHandled = conversationState ? conversationState.ai_handled : true;
+    takeoverBtn.textContent = aiHandled ? '⏸ Pause AI' : '▶ Resume AI';
+    takeoverBtn.dataset.handled = aiHandled ? '1' : '0';
+    var qual = contact.qualification ? '<span class="badge badge--purple">' + IG.escapeHtml(contact.qualification) + '</span>' : '';
+    pane.innerHTML = (
+      '<div class="cl-head">' +
+        '<span class="av av-g4 av--xl">' + IG.escapeHtml((contact.first_name || name || '?').slice(0, 1).toUpperCase()) + '</span>' +
+        '<div><div class="t-lg fw6">' + name + '</div><div class="t-sm muted">IG · ' + IG.escapeHtml(contact.sendpulse_contact_id) + '</div></div>' +
+        '<div class="row gap-2">' + IG.statusBadge(contact.lead_status) + qual + '</div>' +
+      '</div>' +
+      '<div><div class="section-h">Контакт</div>' +
+        '<div class="cl-field"><span>Username</span><span class="mono c-blue">' + (contact.ig_username ? '@' + IG.escapeHtml(contact.ig_username) : '—') + '</span></div>' +
+        '<div class="cl-field"><span>Имя</span><span>' + IG.escapeHtml(((contact.first_name || '') + ' ' + (contact.last_name || '')).trim() || '—') + '</span></div>' +
+        '<div class="cl-field"><span>IG user id</span><span class="mono">' + IG.escapeHtml(contact.ig_user_id || '—') + '</span></div>' +
+        '<div class="cl-field"><span>Lead status</span><span>' + IG.statusBadge(contact.lead_status) + '</span></div>' +
+      '</div>' +
+      '<div><div class="section-h">Активность</div>' +
+        '<div class="cl-field"><span>Первый контакт</span><span class="mono">' + IG.escapeHtml(IG.fmtDay(contact.first_seen_at) + ' · ' + IG.fmtTime(contact.first_seen_at)) + '</span></div>' +
+        '<div class="cl-field"><span>Последнее</span><span class="mono">' + IG.escapeHtml(IG.fmtDay(contact.last_message_at) + ' · ' + IG.fmtTime(contact.last_message_at)) + '</span></div>' +
+        '<div class="cl-field"><span>AI</span><span>' + (aiHandled ? '<span class="badge badge--green">on</span>' : '<span class="badge badge--red">paused</span>') + '</span></div>' +
+      '</div>'
+    );
+  }
+
+  function renderMessages(messages) {
+    if (!messages.length) {
+      feed.innerHTML = '<div style="opacity:.5;align-self:center">Сообщений пока нет</div>';
+      return;
+    }
+    var lastDay = null;
+    var html = messages.map(function (m) {
+      var parts = [];
+      var day = IG.fmtDay(m.created_at);
+      if (day !== lastDay) {
+        parts.push('<div class="conv-msg-day">' + IG.escapeHtml(day) + '</div>');
+        lastDay = day;
+      }
+      var klass = m.direction === 'incoming' ? 'msg msg--in' : 'msg msg--ai';
+      if (m.source === 'manual') klass = 'msg msg--ai';
+      var tag = m.source === 'ai_agent' ? '🤖 ' : (m.source === 'manual' ? '✋ ' : '');
+      parts.push(
+        '<div class="' + klass + '">' +
+          IG.escapeHtml(m.text || '[media]') +
+          '<span class="msg__time">' + tag + IG.escapeHtml(fmtMsgTime(m.created_at)) + '</span>' +
+        '</div>'
+      );
+      return parts.join('');
+    }).join('');
+    feed.innerHTML = html;
+    feed.scrollTop = feed.scrollHeight;
+  }
+
+  function renderRecommendations(recs) {
+    var panel = document.querySelector('.tabs__panel[data-panel="analysis"]');
+    if (!panel) return;
+    // Clean previous live render before re-injecting (handles polls + re-analyze).
+    var prev = panel.querySelector('[data-live-recs]');
+    if (prev) prev.remove();
+
+    var box = document.createElement('div');
+    box.setAttribute('data-live-recs', '1');
+    box.className = 'col gap-2';
+    box.style.marginTop = '12px';
+
+    var header =
+      '<div class="section-h" style="display:flex;justify-content:space-between;align-items:center;gap:8px">' +
+        '<span>AI-рекомендации (' + (recs ? recs.length : 0) + ')</span>' +
+        '<button id="btnReanalyze" style="background:transparent;border:1px solid #c8f060;color:#c8f060;padding:4px 10px;font-family:monospace;font-size:10px;letter-spacing:.14em;cursor:pointer;font-weight:700">🔄 RE-ANALYZE</button>' +
+      '</div>';
+
+    var body = (recs && recs.length)
+      ? recs.slice(0, 6).map(function (r) {
+          var color = r.priority === 'high' ? '#f06090' : (r.priority === 'low' ? '#666' : '#c8f060');
+          return (
+            '<div class="ai-rec" style="border-left:2px solid ' + color + ';padding:8px 10px">' +
+              '<div class="ai-rec__h"><span class="mono" style="color:' + color + ';font-size:10px;letter-spacing:.1em">' + IG.escapeHtml((r.type || 'rec').toUpperCase()) + '</span></div>' +
+              '<div class="ai-rec__text">' + IG.escapeHtml(r.content) + '</div>' +
+            '</div>'
+          );
+        }).join('')
+      : '<div style="opacity:.5;font-size:13px">Пока пусто. Аналитик пишет после нового incoming.</div>';
+
+    box.innerHTML = header + body;
+    panel.insertBefore(box, panel.firstChild);
+
+    var btn = box.querySelector('#btnReanalyze');
+    if (btn) btn.addEventListener('click', async function () {
+      btn.disabled = true;
+      btn.textContent = '…ANALYZING';
+      try {
+        await IG.api('/api/contacts/' + encodeURIComponent(id) + '/analyze', { method: 'POST', body: '{}' });
+        await loadAll();
+      } catch (e) {
+        alert(e.message);
+        btn.disabled = false;
+        btn.textContent = '🔄 RE-ANALYZE';
+      }
+    });
+  }
+
+  async function loadAll() {
+    try {
+      var detail = await IG.api('/api/contacts/' + encodeURIComponent(id));
+      renderContact(detail.contact, detail.conversations);
+      var msgs = await IG.api('/api/contacts/' + encodeURIComponent(id) + '/messages?limit=400');
+      renderMessages(msgs.messages || []);
+      try {
+        var recs = await IG.api('/api/contacts/' + encodeURIComponent(id) + '/recommendations');
+        renderRecommendations(recs.recommendations || []);
+      } catch (_) { /* recommendations are optional */ }
+    } catch (e) {
+      feed.innerHTML = '<div style="color:#f06090">Ошибка: ' + IG.escapeHtml(e.message) + '</div>';
+    }
+  }
+
+  takeoverBtn.addEventListener('click', async function () {
+    var currentlyHandled = takeoverBtn.dataset.handled === '1';
+    takeoverBtn.disabled = true;
+    try {
+      await IG.api('/api/contacts/' + encodeURIComponent(id) + '/takeover', {
+        method: 'POST',
+        body: JSON.stringify({ ai_handled: !currentlyHandled }),
+      });
+      await loadAll();
+    } catch (e) {
+      alert('Не получилось: ' + e.message);
+    } finally {
+      takeoverBtn.disabled = false;
+    }
+  });
+
+  async function send() {
+    var text = (textarea.value || '').trim();
+    if (!text) return;
+    sendBtn.disabled = true;
+    sendBtn.textContent = '…отправляю';
+    try {
+      await IG.api('/api/contacts/' + encodeURIComponent(id) + '/reply', {
+        method: 'POST',
+        body: JSON.stringify({ text: text }),
+      });
+      textarea.value = '';
+      await loadAll();
+    } catch (e) {
+      alert('Ошибка отправки: ' + e.message);
+    } finally {
+      sendBtn.disabled = false;
+      sendBtn.textContent = 'Отправить ↵';
+    }
+  }
+  sendBtn.addEventListener('click', send);
+  textarea.addEventListener('keydown', function (e) {
+    if (e.key === 'Enter' && (e.metaKey || e.ctrlKey)) { e.preventDefault(); send(); }
+  });
+
+  loadAll();
+  setInterval(loadAll, 20000);
+})();
 
 /* ── Right pane: tab switching ─────────────────────── */
 (function(){

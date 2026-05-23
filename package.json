@@ -5,13 +5,19 @@
   "workspaces": [
     "apps/transcribe",
     "apps/tg-agent",
+    "apps/ig-agent",
     "apps/persona-studio"
   ],
   "scripts": {
     "dev": "next dev",
     "build": "next build",
     "start": "next start",
-    "lint": "next lint"
+    "lint": "next lint",
+    "ig-agent:dev": "npm -w @app/ig-agent run dev",
+    "ig-agent:build": "npm -w @app/ig-agent run build",
+    "ig-agent:start": "npm -w @app/ig-agent run start",
+    "ig-agent:typecheck": "npm -w @app/ig-agent run typecheck",
+    "ig-agent:migrate": "npm -w @app/ig-agent run migrate"
   },
   "dependencies": {
     "better-sqlite3": "^12.10.0",

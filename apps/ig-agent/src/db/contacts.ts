@@ -35,6 +35,7 @@ export interface ContactService {
   byId(id: string): Promise<Contact | undefined>;
   list(opts?: { status?: LeadStatus; limit?: number }): Promise<Contact[]>;
   setLeadStatus(id: string, status: LeadStatus): Promise<void>;
+  setQualification(id: string, qualification: string | null): Promise<void>;
   touchLastMessage(id: string): Promise<void>;
 }
 
@@ -106,6 +107,10 @@ export function createContactService(pool: DbPool): ContactService {
 
     async setLeadStatus(id, status) {
       await query(pool, 'UPDATE contacts SET lead_status = $1 WHERE id = $2', [status, id]);
+    },
+
+    async setQualification(id, qualification) {
+      await query(pool, 'UPDATE contacts SET qualification = $1 WHERE id = $2', [qualification, id]);
     },
 
     async touchLastMessage(id) {
