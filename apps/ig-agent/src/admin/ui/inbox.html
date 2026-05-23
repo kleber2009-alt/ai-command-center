@@ -2,348 +2,116 @@
 <html lang="ru">
 <head>
 <meta charset="UTF-8">
-<meta name="viewport" content="width=device-width, initial-scale=1.0">
-<meta name="theme-color" content="#080808">
-<meta name="color-scheme" content="dark only">
-<title>AI Sales · Inbox</title>
+<meta name="viewport" content="width=device-width,initial-scale=1">
+<title>ig-agent · Inbox</title>
+<link rel="stylesheet" href="/assets/ig-admin.css">
 <style>
-  *, *::before, *::after { margin:0; padding:0; box-sizing:border-box; }
-  html, body { background:#080808; color:#f5f0e8; min-height:100vh; }
-  body { font-family:Georgia, serif; font-size:15px; line-height:1.5; overflow-x:hidden; }
-  .label { font-family:'SF Mono',monospace; font-size:10px; text-transform:uppercase; letter-spacing:0.14em; color:#b8b3a8; font-weight:700; }
-  .mono { font-family:'SF Mono',monospace; }
+.shell-inbox{display:grid;grid-template-columns:260px 1fr 380px;min-height:calc(100vh - 48px)}
+.shell-inbox > *{min-width:0}
+@media (max-width:1200px){.shell-inbox{grid-template-columns:240px 1fr}.inbox-preview{display:none}}
+@media (max-width:800px){.shell-inbox{grid-template-columns:1fr}.inbox-filters{display:none}}
 
-  .topbar { position:sticky; top:0; z-index:50; display:flex; align-items:center; justify-content:space-between; padding:14px 24px; background:#080808; border-bottom:1px solid #2a2a2a; gap:18px; }
-  .topbar-title { font-family:Georgia,serif; font-size:18px; }
-  .topbar-title .accent { color:#c8f060; font-style:italic; }
-  .topbar-meta { font-family:'SF Mono',monospace; font-size:11px; color:#b8b3a8; letter-spacing:0.12em; }
-  .topbar-meta .v { color:#c8f060; }
-  .topbar-meta .pink { color:#f06090; }
+/* LEFT pane */
+.inbox-filters{padding:18px 16px;background:var(--bg-surface);border-right:1px solid var(--border-soft);overflow-y:auto;display:flex;flex-direction:column;gap:18px}
 
-  .shell { max-width:1480px; margin:0 auto; padding:18px 24px 80px; display:grid; gap:2px; grid-template-columns:280px 1fr; }
-  @media (max-width:900px) { .shell { grid-template-columns:1fr; } }
-  .sec-head { display:flex; align-items:baseline; gap:14px; padding:18px 2px 10px; grid-column:1/-1; }
-  .sec-num { font-family:'SF Mono',monospace; font-size:10px; color:#c8f060; letter-spacing:0.18em; font-weight:700; }
-  .sec-title { font-family:Georgia,serif; font-size:14px; font-style:italic; color:#b8b3a8; }
-  .sec-spacer { flex:1; border-bottom:1px solid #1a1a1a; transform:translateY(-2px); }
+/* CENTER pane */
+.inbox-list{background:var(--bg-main);overflow-y:auto;display:flex;flex-direction:column}
+.inbox-list-head{display:flex;justify-content:space-between;align-items:center;padding:14px 20px;border-bottom:1px solid var(--border-soft);background:var(--bg-surface);position:sticky;top:0;z-index:5;gap:12px}
+.inbox-list-head .title{font-family:Georgia,serif;font-size:18px}
+.inbox-list-head .title .accent{color:var(--green);font-style:italic}
+.inbox-list-head .meta{font-family:var(--font-mono);font-size:11px;color:var(--text-muted);letter-spacing:.08em;white-space:nowrap}
+.inbox-list-head .meta .n{color:var(--green);font-weight:700}
 
-  /* LEFT — FILTERS */
-  .filters {
-    background:#0a0a0a;
-    border:1px solid #1a1a1a;
-    padding:18px 0;
-    height:min-content;
-  }
-  .filter-cat {
-    border-bottom:1px solid #1a1a1a;
-    padding:14px 22px 16px;
-  }
-  .filter-cat:last-child { border-bottom:none; }
-  .filter-cat h4 {
-    font-family:'SF Mono',monospace; font-size:10px;
-    text-transform:uppercase; letter-spacing:0.14em;
-    color:#5a5550; font-weight:700;
-    margin-bottom:10px;
-  }
-  .filter-item {
-    display:flex; justify-content:space-between; align-items:center;
-    padding:7px 0;
-    cursor:pointer;
-    font-family:'SF Mono',monospace; font-size:11px;
-    color:#b8b3a8;
-    letter-spacing:0.06em;
-    text-transform:uppercase;
-    font-weight:700;
-  }
-  .filter-item:hover { color:#f5f0e8; }
-  .filter-item.active { color:#c8f060; }
-  .filter-item .count {
-    background:#141414;
-    padding:2px 7px;
-    font-size:10px;
-    color:#b8b3a8;
-  }
-  .filter-item.active .count {
-    background:#2a3a14;
-    color:#c8f060;
-  }
-  .filter-item.urgent .count {
-    background:#28121b;
-    color:#f06090;
-    animation:pulse 2s infinite;
-  }
-  @keyframes pulse { 0%,100% { opacity:1; } 50% { opacity:0.6; } }
+.day-sep{align-self:center;font-family:var(--font-mono);font-size:10px;letter-spacing:.14em;text-transform:uppercase;color:var(--text-muted);padding:14px 0 8px;margin:0 auto;width:fit-content}
+.day-sep .v{color:var(--green);font-weight:700}
 
-  /* RIGHT — INBOX LIST */
-  .inbox-main {
-    background:#0a0a0a;
-    border:1px solid #1a1a1a;
-  }
-  .inbox-controls {
-    padding:14px 22px;
-    border-bottom:1px solid #1a1a1a;
-    display:flex; justify-content:space-between; align-items:center;
-    flex-wrap:wrap; gap:12px;
-  }
-  .inbox-search {
-    background:#141414;
-    border:1px solid #2a2a2a;
-    color:#f5f0e8;
-    padding:8px 14px;
-    font-family:'SF Mono',monospace; font-size:11px;
-    min-width:220px;
-    outline:none;
-  }
-  .inbox-search:focus { border-color:#c8f060; }
-  .inbox-search::placeholder { color:#5a5550; }
-  .inbox-actions { display:flex; gap:4px; }
-  .ic-btn {
-    font-family:'SF Mono',monospace; font-size:10px;
-    padding:7px 12px;
-    background:transparent;
-    border:1px solid #2a2a2a;
-    color:#b8b3a8;
-    cursor:pointer;
-    letter-spacing:0.12em;
-    font-weight:700;
-    text-transform:uppercase;
-  }
-  .ic-btn:hover { border-color:#c8f060; color:#c8f060; }
+.inbox-cards{display:flex;flex-direction:column;padding:6px 20px 20px;gap:6px;flex:1}
 
-  /* ITEM */
-  .item {
-    display:grid;
-    grid-template-columns:auto 1fr auto;
-    gap:14px;
-    padding:16px 22px;
-    border-bottom:1px solid #131313;
-    align-items:center;
-    cursor:pointer;
-    transition:background 0.1s;
-    position:relative;
-  }
-  .item:hover { background:#0f0f0f; }
-  .item.unread::before {
-    content:'';
-    position:absolute;
-    left:0; top:0; bottom:0;
-    width:3px;
-  }
-  .item.unread.escalation::before { background:#f06090; }
-  .item.unread.task::before { background:#c8f060; }
-  .item.unread.alert::before { background:#f0a060; }
-  .item.unread.payment::before { background:#60c8f0; }
+.icard{display:grid;grid-template-columns:44px 1fr auto;gap:14px;align-items:center;padding:12px 14px;border-radius:var(--r-md);background:var(--bg-card);border:1px solid var(--border-soft);cursor:pointer;transition:border-color .12s ease}
+.icard:hover{border-color:var(--border-mid)}
+.icard.is-active{border-color:var(--green-edge);background:rgba(159,211,104,.04)}
+.icard.is-unread{border-left:3px solid var(--green)}
+.icard__body{display:flex;flex-direction:column;gap:4px;min-width:0}
+.icard__top{display:flex;align-items:center;gap:8px;flex-wrap:wrap}
+.icard__name{font-family:Georgia,serif;font-size:14.5px;color:var(--text-main);white-space:nowrap;overflow:hidden;text-overflow:ellipsis;max-width:200px}
+.icard__handle{font-family:var(--font-mono);font-size:11px;color:var(--text-muted)}
+.icard__preview{font-size:13px;color:var(--text-mid);overflow:hidden;text-overflow:ellipsis;white-space:nowrap;line-height:1.4}
+.icard__meta{display:flex;flex-direction:column;align-items:flex-end;gap:6px;font-family:var(--font-mono);font-size:11px;color:var(--text-muted);white-space:nowrap}
 
-  .item-icon {
-    width:36px; height:36px;
-    background:#141414;
-    border:1px solid #2a2a2a;
-    display:flex; align-items:center; justify-content:center;
-    font-family:'SF Mono',monospace; font-size:14px;
-    font-weight:700;
-    flex-shrink:0;
-  }
-  .item-icon.escalation { color:#f06090; border-color:#28121b; background:#1a0d10; }
-  .item-icon.task { color:#c8f060; border-color:#1a2a14; background:#0d120a; }
-  .item-icon.alert { color:#f0a060; border-color:#2a2014; background:#161410; }
-  .item-icon.payment { color:#60c8f0; border-color:#0f1f28; background:#0a1218; }
-  .item-icon.digest { color:#b8b3a8; }
+/* RIGHT pane (preview) */
+.inbox-preview{border-left:1px solid var(--border-soft);background:var(--bg-surface);padding:18px;overflow-y:auto;display:flex;flex-direction:column;gap:18px}
+.inbox-preview__empty{display:flex;flex-direction:column;align-items:center;justify-content:center;gap:8px;color:var(--text-muted);text-align:center;padding:48px 14px;flex:1}
+.inbox-preview__empty .icon{font-size:32px;opacity:.6}
+.inbox-preview__empty .h{font-family:Georgia,serif;font-size:16px;color:var(--text-mid)}
+.inbox-preview__empty .s{font-size:12.5px;line-height:1.5}
 
-  .item-body {
-    min-width:0;
-  }
-  .item-head {
-    display:flex; gap:10px; align-items:baseline;
-    margin-bottom:4px;
-    flex-wrap:wrap;
-  }
-  .item-from {
-    font-family:'SF Mono',monospace; font-size:10px;
-    color:#5a5550;
-    letter-spacing:0.1em;
-    text-transform:uppercase;
-    font-weight:700;
-  }
-  .item-from .who { color:#b8b3a8; }
-  .item-tag {
-    font-family:'SF Mono',monospace; font-size:9px;
-    padding:2px 7px;
-    font-weight:700;
-    letter-spacing:0.12em;
-    text-transform:uppercase;
-  }
-  .item-tag.urgent { background:#28121b; color:#f06090; }
-  .item-tag.p1 { background:#2a2014; color:#f0a060; }
-  .item-tag.p2 { background:#0f1f28; color:#60c8f0; }
-  .item-tag.p3 { background:#1a1a1a; color:#b8b3a8; }
+.preview-head{display:flex;flex-direction:column;align-items:center;text-align:center;gap:10px;padding-bottom:18px;border-bottom:1px solid var(--border-soft)}
+.preview-head .nm{font-family:Georgia,serif;font-size:17px}
+.preview-head .hh{font-family:var(--font-mono);font-size:11.5px;color:var(--text-muted)}
 
-  .item-title {
-    font-family:Georgia, serif; font-size:15.5px;
-    line-height:1.35;
-    color:#f5f0e8;
-  }
-  .item.read .item-title {
-    color:#b8b3a8;
-  }
-  .item-preview {
-    font-family:'SF Mono',monospace; font-size:11px;
-    color:#5a5550;
-    line-height:1.5;
-    margin-top:4px;
-    overflow:hidden;
-    text-overflow:ellipsis;
-    white-space:nowrap;
-  }
-
-  .item-meta {
-    text-align:right;
-    flex-shrink:0;
-  }
-  .item-when {
-    font-family:'SF Mono',monospace; font-size:10px;
-    color:#5a5550;
-    letter-spacing:0.06em;
-    text-transform:uppercase;
-    font-weight:700;
-  }
-  .item.unread .item-when { color:#c8f060; }
-  .item-quick-action {
-    margin-top:5px;
-    font-family:'SF Mono',monospace; font-size:9px;
-    padding:3px 9px;
-    background:transparent;
-    border:1px solid #2a2a2a;
-    color:#b8b3a8;
-    cursor:pointer;
-    letter-spacing:0.12em;
-    font-weight:700;
-    text-transform:uppercase;
-  }
-  .item-quick-action:hover { border-color:#c8f060; color:#c8f060; }
-  .item-quick-action.warn:hover { border-color:#f06090; color:#f06090; }
-
-  /* DAY SEPARATOR */
-  .day-sep {
-    padding:14px 22px 8px;
-    font-family:'SF Mono',monospace; font-size:10px;
-    color:#5a5550;
-    letter-spacing:0.18em;
-    text-transform:uppercase;
-    font-weight:700;
-    background:#0a0a0a;
-    border-bottom:1px solid #1a1a1a;
-  }
-  .day-sep .v {
-    color:#b8b3a8;
-  }
+.msg-feed{display:flex;flex-direction:column;gap:6px;max-height:280px;overflow:auto}
+.rec-card{padding:10px 12px;border-radius:var(--r-sm);background:var(--bg-card);border-left:2px solid var(--green);font-size:12.5px;line-height:1.55;color:var(--text-mid)}
+.rec-card.high{border-left-color:var(--red)}.rec-card.low{border-left-color:#666}
+.rec-card .type{font-family:var(--font-mono);font-size:9.5px;letter-spacing:.12em;color:var(--green);font-weight:700;display:block;margin-bottom:4px}
+.rec-card.high .type{color:var(--red)}.rec-card.low .type{color:#666}
 </style>
 </head>
 <body>
 
-<header class="topbar">
-  <div class="topbar-title">ig-agent <span class="accent">Inbox</span></div>
-  <nav id="igNav" style="flex:1;justify-content:center"></nav>
-  <div class="topbar-meta" id="topbarRight">
-    <!-- IG.mountAutoReplyToggle injects the global auto-reply switch here. -->
-  </div>
+<header class="bar">
+  <a class="bar__brand" href="/"><span class="bar__brand-mark">IG</span>agent</a>
+  <nav id="igNav"></nav>
+  <div class="bar__right" id="topbarRight"></div>
 </header>
 
-<main class="shell">
+<div class="shell-inbox">
 
-  <div class="sec-head">
-    <span class="sec-num">/01</span>
-    <span class="sec-title">Центр уведомлений · всё в одном месте</span>
-    <span class="sec-spacer"></span>
-  </div>
+  <aside class="inbox-filters">
+    <div>
+      <div class="section-h">Поиск</div>
+      <input id="inboxSearch" class="search-input" placeholder="имя, @username" />
+    </div>
 
-  <!-- LEFT: FILTERS -->
-  <aside class="filters">
-
-    <div class="filter-cat">
-      <h4>По типу</h4>
-      <div class="filter-item active">
-        <span>Все</span><span class="count">24</span>
-      </div>
-      <div class="filter-item urgent">
-        <span>⚠ Эскалации</span><span class="count">3</span>
-      </div>
-      <div class="filter-item">
-        <span>✓ Задачи РОП</span><span class="count">7</span>
-      </div>
-      <div class="filter-item">
-        <span>⚡ Алерты системы</span><span class="count">2</span>
-      </div>
-      <div class="filter-item">
-        <span>💳 Оплаты</span><span class="count">4</span>
-      </div>
-      <div class="filter-item">
-        <span>📊 Дайджесты</span><span class="count">2</span>
-      </div>
-      <div class="filter-item">
-        <span>🎯 Канал событий</span><span class="count">6</span>
+    <div>
+      <div class="section-h">Статус лида</div>
+      <div class="col gap-2" id="statusChips">
+        <button class="chip is-on chip--block" data-status="">ALL <span class="n" id="cntAll">·</span></button>
+        <button class="chip chip--block"           data-status="new">NEW <span class="n" id="cntNew">·</span></button>
+        <button class="chip chip--block chip--warm" data-status="warm">WARM <span class="n" id="cntWarm">·</span></button>
+        <button class="chip chip--block chip--hot"  data-status="hot">HOT <span class="n" id="cntHot">·</span></button>
+        <button class="chip chip--block chip--customer" data-status="customer">CUSTOMER <span class="n" id="cntCust">·</span></button>
+        <button class="chip chip--block"           data-status="lost">LOST <span class="n" id="cntLost">·</span></button>
       </div>
     </div>
 
-    <div class="filter-cat">
-      <h4>Статус</h4>
-      <div class="filter-item">
-        <span>● Непрочитано</span><span class="count">11</span>
-      </div>
-      <div class="filter-item">
-        <span>○ Прочитано</span><span class="count">13</span>
-      </div>
-      <div class="filter-item">
-        <span>★ Помечено</span><span class="count">3</span>
-      </div>
-      <div class="filter-item">
-        <span>✓ Закрыто сегодня</span><span class="count">8</span>
+    <div>
+      <div class="section-h">Что показывает inbox</div>
+      <div class="t-sm muted" style="line-height:1.6">
+        Все входящие IG-DM, отсортированные по времени последнего сообщения. Жёлтая полоса слева — непрочитанные.
+        Клик — preview справа · двойной клик / кнопка → открыть диалог.
       </div>
     </div>
-
-    <div class="filter-cat">
-      <h4>Приоритет</h4>
-      <div class="filter-item">
-        <span style="color:#f06090;">P1 · критично</span><span class="count">4</span>
-      </div>
-      <div class="filter-item">
-        <span style="color:#f0a060;">P2 · важно</span><span class="count">9</span>
-      </div>
-      <div class="filter-item">
-        <span style="color:#60c8f0;">P3 · нормально</span><span class="count">11</span>
-      </div>
-    </div>
-
-    <div class="filter-cat">
-      <h4>Канал источника</h4>
-      <div class="filter-item">
-        <span>📷 Instagram</span><span class="count">8</span>
-      </div>
-      <div class="filter-item">
-        <span>✈ Telegram</span><span class="count">7</span>
-      </div>
-      <div class="filter-item">
-        <span>⚙ Система</span><span class="count">9</span>
-      </div>
-    </div>
-
   </aside>
 
-  <!-- RIGHT: INBOX LIST -->
-  <section class="inbox-main">
-
-    <div class="inbox-controls">
-      <input class="inbox-search" placeholder="🔍  поиск по уведомлениям" />
-      <div class="inbox-actions">
-        <button class="ic-btn">✓ Все прочитано</button>
-        <button class="ic-btn">📋 Архив</button>
-      </div>
+  <main class="inbox-list">
+    <div class="inbox-list-head">
+      <div class="title">Inbox · <span class="accent">все диалоги</span></div>
+      <div class="meta">показано <span class="n" id="visibleCount">…</span> из <span class="n" id="totalCount">…</span></div>
     </div>
+    <div class="inbox-cards" id="inboxList">
+      <div style="opacity:.5;padding:14px">…загружаю</div>
+    </div>
+  </main>
 
-    <div id="inboxList" data-loading="true"><div class="day-sep" style="opacity:.5">…загружаю</div></div>
+  <aside class="inbox-preview" id="inboxPreview">
+    <div class="inbox-preview__empty">
+      <div class="icon">💬</div>
+      <div class="h">Выбери диалог</div>
+      <div class="s">Откроется preview: последние сообщения, AI-рекомендации и&nbsp;кнопка перейти в&nbsp;окно диалога.</div>
+    </div>
+  </aside>
 
-  </section>
-
-</main>
+</div>
 
 <script src="/assets/ig-admin.js"></script>
 <script>
@@ -351,92 +119,193 @@
   var IG = window.IG;
   if (IG.mountNav) IG.mountNav(document.getElementById('igNav'), 'inbox');
   if (IG.mountAutoReplyToggle) IG.mountAutoReplyToggle(document.getElementById('topbarRight'));
-  var list = document.getElementById('inboxList');
-  var search = document.querySelector('.inbox-search');
-  var allContacts = [];
-  var statusFilter = null;
 
-  function render() {
-    if (!list) return;
-    var q = (search && search.value || '').trim().toLowerCase();
-    var rows = allContacts.filter(function (c) {
-      if (statusFilter && c.lead_status !== statusFilter) return false;
-      if (!q) return true;
-      var hay = ((c.ig_username || '') + ' ' + (c.first_name || '') + ' ' + (c.last_name || '')).toLowerCase();
-      return hay.indexOf(q) >= 0;
+  var listEl    = document.getElementById('inboxList');
+  var previewEl = document.getElementById('inboxPreview');
+  var searchEl  = document.getElementById('inboxSearch');
+  var chipsEl   = document.getElementById('statusChips');
+
+  var allContacts = [];
+  var statusFilter = '';
+  var selectedId = null;
+  var readSet = new Set(JSON.parse(localStorage.getItem('ig_inbox_read') || '[]'));
+  function persistRead() {
+    localStorage.setItem('ig_inbox_read', JSON.stringify(Array.from(readSet)));
+  }
+
+  function initials(name) {
+    if (!name) return '?';
+    return (name.match(/\b\w/g) || ['?']).join('').slice(0, 2).toUpperCase();
+  }
+  function relTime(iso) {
+    if (!iso) return '';
+    var diff = Math.floor((Date.now() - new Date(iso).getTime()) / 1000);
+    if (diff < 60) return 'сейчас';
+    if (diff < 3600) return Math.floor(diff / 60) + ' мин';
+    if (diff < 86400) return Math.floor(diff / 3600) + ' ч';
+    if (diff < 604800) return Math.floor(diff / 86400) + ' д';
+    return IG.fmtDay(iso);
+  }
+  function badgeFor(status) {
+    var map = { new: 'NEW', warm: 'WARM', hot: 'HOT', customer: 'CUSTOMER', lost: 'LOST' };
+    return '<span class="badge badge--' + (status || 'new') + '">' + IG.escapeHtml(map[status] || (status || 'NEW').toUpperCase()) + '</span>';
+  }
+
+  function updateCounts(contacts) {
+    var cnt = { new: 0, warm: 0, hot: 0, customer: 0, lost: 0 };
+    contacts.forEach(function (c) { cnt[c.lead_status || 'new'] = (cnt[c.lead_status || 'new'] || 0) + 1; });
+    document.getElementById('cntAll').textContent  = contacts.length;
+    document.getElementById('cntNew').textContent  = cnt.new;
+    document.getElementById('cntWarm').textContent = cnt.warm;
+    document.getElementById('cntHot').textContent  = cnt.hot;
+    document.getElementById('cntCust').textContent = cnt.customer;
+    document.getElementById('cntLost').textContent = cnt.lost;
+    document.getElementById('totalCount').textContent = contacts.length;
+  }
+
+  function applyFilters() {
+    var q = (searchEl.value || '').trim().toLowerCase();
+    var rows = allContacts.slice();
+    if (statusFilter) rows = rows.filter(function (c) { return (c.lead_status || 'new') === statusFilter; });
+    if (q) rows = rows.filter(function (c) {
+      return ((c.ig_username || '') + ' ' + (c.first_name || '') + ' ' + (c.last_name || '') + ' ' + c.sendpulse_contact_id).toLowerCase().indexOf(q) >= 0;
     });
+    // Sort by most recent activity.
+    rows.sort(function (a, b) { return (b.last_message_at || b.created_at || '').localeCompare(a.last_message_at || a.created_at || ''); });
+    return rows;
+  }
+
+  function renderList() {
+    var rows = applyFilters();
+    document.getElementById('visibleCount').textContent = rows.length;
     if (!rows.length) {
-      list.innerHTML = '<div class="day-sep" style="opacity:.5">Пусто</div>';
+      listEl.innerHTML = '<div style="opacity:.5;padding:14px">Пусто. Жди новых сообщений в IG-DM.</div>';
       return;
     }
-    var byDay = {};
-    var dayOrder = [];
+    var lastDay = null;
+    var html = '';
     rows.forEach(function (c) {
       var iso = c.last_message_at || c.created_at;
       var day = IG.fmtDay(iso);
-      if (!byDay[day]) { byDay[day] = []; dayOrder.push(day); }
-      byDay[day].push(c);
-    });
-    var html = dayOrder.map(function (day) {
-      var items = byDay[day].map(function (c) {
-        var name = IG.escapeHtml(IG.nameOf(c));
-        var when = IG.fmtTime(c.last_message_at || c.created_at);
-        var badge = IG.statusBadge(c.lead_status);
-        var preview = IG.escapeHtml(((c.first_name || '') + ' ' + (c.last_name || '')).trim()) || (c.qualification ? 'qual ' + c.qualification : 'IG DM');
-        return (
-          '<div class="item unread" data-id="' + IG.escapeHtml(c.id) + '" style="cursor:pointer">' +
-            '<div class="item-icon">💬</div>' +
-            '<div class="item-body">' +
-              '<div class="item-head">' +
-                '<span class="item-from">' + name + '</span>' +
-                badge +
-              '</div>' +
-              '<div class="item-title">' + name + '</div>' +
-              '<div class="item-preview">' + preview + '</div>' +
+      if (day !== lastDay) {
+        html += '<div class="day-sep"><span class="v">' + IG.escapeHtml(day) + '</span></div>';
+        lastDay = day;
+      }
+      var fullNm = IG.escapeHtml(((c.first_name || '') + ' ' + (c.last_name || '')).trim()) || IG.escapeHtml(IG.nameOf(c));
+      var handle = c.ig_username ? '@' + IG.escapeHtml(c.ig_username) : IG.escapeHtml(c.sendpulse_contact_id).slice(0, 12);
+      var status = c.lead_status || 'new';
+      var avClass = 'av av--md ' + (status === 'new' ? 'av-g4' : 'av-' + status);
+      var active = c.id === selectedId ? ' is-active' : '';
+      var unread = (!readSet.has(c.id) && iso > (localStorage.getItem('ig_inbox_seen_' + c.id) || '')) ? ' is-unread' : '';
+      var preview = c.qualification ? 'qual ' + IG.escapeHtml(c.qualification) : '';
+      html += (
+        '<div class="icard' + active + unread + '" data-id="' + IG.escapeHtml(c.id) + '">' +
+          '<div class="' + avClass + '">' + IG.escapeHtml(initials(fullNm)) + '</div>' +
+          '<div class="icard__body">' +
+            '<div class="icard__top">' +
+              '<span class="icard__name">' + fullNm + '</span>' +
+              '<span class="icard__handle">' + handle + '</span>' +
+              badgeFor(status) +
             '</div>' +
-            '<div class="item-meta"><div class="item-when">' + IG.escapeHtml(when) + '</div></div>' +
-          '</div>'
-        );
-      }).join('');
-      return '<div class="day-sep">' + IG.escapeHtml(day) + '</div>' + items;
-    }).join('');
-    list.innerHTML = html;
-    list.querySelectorAll('.item').forEach(function (el) {
+            (preview ? '<div class="icard__preview">' + preview + '</div>' : '') +
+          '</div>' +
+          '<div class="icard__meta">' + IG.escapeHtml(relTime(iso)) + '</div>' +
+        '</div>'
+      );
+    });
+    listEl.innerHTML = html;
+    listEl.querySelectorAll('.icard').forEach(function (el) {
       el.addEventListener('click', function () {
-        location.href = '/conversation?id=' + encodeURIComponent(el.dataset.id);
+        readSet.add(el.dataset.id); persistRead();
+        el.classList.remove('is-unread');
+        select(el.dataset.id);
       });
+      el.addEventListener('dblclick', function () { location.href = '/conversation?id=' + encodeURIComponent(el.dataset.id); });
     });
   }
 
-  async function load() {
+  async function loadList() {
     try {
-      var data = await IG.api('/api/contacts?limit=200');
+      var data = await IG.api('/api/contacts?limit=500');
       allContacts = data.contacts || [];
-      render();
+      updateCounts(allContacts);
+      renderList();
     } catch (e) {
-      list.innerHTML = '<div class="day-sep" style="color:#f06090">Ошибка: ' + IG.escapeHtml(e.message) + '</div>';
+      listEl.innerHTML = '<div style="color:#f06090;padding:14px">Ошибка: ' + IG.escapeHtml(e.message) + '</div>';
     }
   }
 
-  // Map sidebar filter chips to lead_status. Filters that don't correspond
-  // to a status (priority, channel, etc.) just reset to "all".
-  var STATUS_MAP = { 'все': null, 'all': null, 'new': 'new', 'warm': 'warm', 'hot': 'hot', 'customer': 'customer', 'lost': 'lost' };
-  document.querySelectorAll('.filter-item').forEach(function (f) {
-    f.addEventListener('click', function () {
-      var cat = f.closest('.filter-cat');
-      if (cat) cat.querySelectorAll('.filter-item').forEach(function (x) { x.classList.remove('active'); });
-      f.classList.add('active');
-      var key = (f.textContent || '').trim().toLowerCase().split(/\s+/)[0];
-      statusFilter = STATUS_MAP[key] !== undefined ? STATUS_MAP[key] : null;
-      render();
+  function renderPreview(contact, messages, recs) {
+    var fullName = ((contact.first_name || '') + ' ' + (contact.last_name || '')).trim() || IG.nameOf(contact);
+    var status = contact.lead_status || 'new';
+    var avClass = 'av av--xl ' + (status === 'new' ? 'av-g4' : 'av-' + status);
+
+    var msgsHtml = (messages || []).slice(-4).map(function (m) {
+      var cls = 'msg msg--' + (m.direction === 'incoming' ? 'in' : (m.source === 'manual' ? 'manual' : 'ai'));
+      var tag = m.direction === 'incoming' ? 'USER' : (m.source === 'manual' ? 'OWNER' : 'AI');
+      var snippet = m.text ? (m.text.length > 160 ? m.text.slice(0, 157) + '…' : m.text) : '[media]';
+      return '<div class="' + cls + '">' + IG.escapeHtml(snippet) + '<span class="msg__t">' + tag + ' · ' + IG.escapeHtml(IG.fmtTime(m.created_at)) + '</span></div>';
+    }).join('') || '<div class="t-sm muted">Сообщений пока нет.</div>';
+
+    var recsHtml = (recs || []).slice(0, 2).map(function (r) {
+      var cls = 'rec-card ' + (r.priority || 'normal');
+      return '<div class="' + cls + '"><span class="type">' + IG.escapeHtml((r.type || 'rec').toUpperCase()) + '</span>' + IG.escapeHtml(r.content) + '</div>';
+    }).join('') || '<div class="t-sm muted">Аналитик ещё не оставлял рекомендаций.</div>';
+
+    previewEl.innerHTML = (
+      '<div class="preview-head">' +
+        '<span class="' + avClass + '">' + IG.escapeHtml(initials(fullName)) + '</span>' +
+        '<div><div class="nm">' + IG.escapeHtml(fullName) + '</div><div class="hh">' + IG.escapeHtml(contact.ig_username ? '@' + contact.ig_username : contact.sendpulse_contact_id) + '</div></div>' +
+        '<div>' + badgeFor(status) + (contact.qualification ? ' <span class="badge badge--ghost">' + IG.escapeHtml(contact.qualification) + '</span>' : '') + '</div>' +
+      '</div>' +
+      '<div>' +
+        '<div class="section-h">Контакт</div>' +
+        '<div class="cl-field"><span>Username</span><span class="mono c-blue">' + (contact.ig_username ? '@' + IG.escapeHtml(contact.ig_username) : '—') + '</span></div>' +
+        '<div class="cl-field"><span>Первый контакт</span><span class="mono">' + IG.escapeHtml(IG.fmtDay(contact.first_seen_at) + ' · ' + IG.fmtTime(contact.first_seen_at)) + '</span></div>' +
+        '<div class="cl-field"><span>Последнее</span><span class="mono">' + IG.escapeHtml(IG.fmtDay(contact.last_message_at) + ' · ' + IG.fmtTime(contact.last_message_at)) + '</span></div>' +
+      '</div>' +
+      '<div>' +
+        '<div class="section-h">Лента (последние 4)</div>' +
+        '<div class="msg-feed">' + msgsHtml + '</div>' +
+      '</div>' +
+      '<div>' +
+        '<div class="section-h">AI-рекомендации</div>' +
+        recsHtml +
+      '</div>' +
+      '<div class="col gap-2" style="margin-top:auto">' +
+        '<a class="btn btn--primary btn--block" href="/conversation?id=' + encodeURIComponent(contact.id) + '">→ Открыть диалог</a>' +
+      '</div>'
+    );
+  }
+
+  async function select(id) {
+    selectedId = id;
+    renderList();
+    localStorage.setItem('ig_inbox_seen_' + id, new Date().toISOString());
+    try {
+      var detail = await IG.api('/api/contacts/' + encodeURIComponent(id));
+      var msgs   = await IG.api('/api/contacts/' + encodeURIComponent(id) + '/messages?limit=20');
+      var recs   = { recommendations: [] };
+      try { recs = await IG.api('/api/contacts/' + encodeURIComponent(id) + '/recommendations'); } catch (_) {}
+      renderPreview(detail.contact, msgs.messages || [], recs.recommendations || []);
+    } catch (e) {
+      previewEl.innerHTML = '<div class="inbox-preview__empty"><div class="icon">⚠</div><div class="h">Не получилось</div><div class="s">' + IG.escapeHtml(e.message) + '</div></div>';
+    }
+  }
+
+  chipsEl.querySelectorAll('.chip').forEach(function (b) {
+    b.addEventListener('click', function () {
+      chipsEl.querySelectorAll('.chip').forEach(function (x) { x.classList.remove('is-on'); });
+      b.classList.add('is-on');
+      statusFilter = b.dataset.status || '';
+      renderList();
     });
   });
-  if (search) search.addEventListener('input', render);
+  searchEl.addEventListener('input', renderList);
 
-  load();
-  setInterval(load, 30000);
+  loadList();
+  setInterval(loadList, 25000);
 })();
 </script>
-
 </body>
 </html>

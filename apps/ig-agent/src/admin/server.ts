@@ -56,6 +56,200 @@ const PAGES = [
   'settings',
 ] as const;
 
+// Shared CSS module — design tokens + primitives reused across every admin
+// page. Lifted from the conversation prototype's visual language and made
+// the single source of truth so all pages stay coherent.
+const IG_ADMIN_CSS = `
+/* === DESIGN TOKENS ======================================================= */
+:root{
+  --bg-main:#0a0a0a; --bg-surface:#101010; --bg-card:#161616; --bg-card-2:#1f1f1f;
+  --border-soft:#262626; --border-mid:#333;
+  --text-main:#f5f0e8; --text-mid:#c8c4ba; --text-muted:#8a8378; --text-mute:#665f55;
+  --green:#9fd368; --yellow:#f0c060; --red:#f06090; --blue:#60a8f0; --purple:#a88af0;
+  --green-edge:rgba(159,211,104,.35); --yellow-edge:rgba(240,192,96,.35);
+  --red-edge:rgba(240,96,144,.35); --blue-edge:rgba(96,168,240,.35);
+  --r-sm:6px; --r-md:10px; --r-lg:14px;
+  --font-mono:'SF Mono','JetBrains Mono','Menlo',monospace;
+}
+*,*::before,*::after{margin:0;padding:0;box-sizing:border-box}
+html,body{background:var(--bg-main);color:var(--text-main);min-height:100vh}
+body{font-family:Georgia,'Times New Roman',serif;font-size:14px;line-height:1.5;overflow-x:hidden}
+a{color:inherit;text-decoration:none}
+button{font:inherit;color:inherit;background:none;border:0;cursor:pointer}
+::-webkit-scrollbar{width:8px;height:8px}
+::-webkit-scrollbar-thumb{background:#2a2a2a;border-radius:4px}
+::-webkit-scrollbar-thumb:hover{background:#3a3a3a}
+::-webkit-scrollbar-track{background:transparent}
+
+/* === TYPOGRAPHY ========================================================== */
+.mono{font-family:var(--font-mono)}
+.muted{color:var(--text-muted)}
+.t-sm{font-size:12.5px}.t-md{font-size:14px}.t-lg{font-size:17px}.t-xl{font-size:22px}
+.fw6{font-weight:600}.fw7{font-weight:700}
+.c-green{color:var(--green)}.c-yellow{color:var(--yellow)}.c-red{color:var(--red)}.c-blue{color:var(--blue)}.c-purple{color:var(--purple)}
+.section-h{font-family:var(--font-mono);font-size:10px;letter-spacing:.14em;text-transform:uppercase;color:var(--text-muted);font-weight:700;margin-bottom:8px}
+
+/* === LAYOUT HELPERS ====================================================== */
+.row{display:flex;align-items:center}
+.col{display:flex;flex-direction:column}
+.gap-2{gap:8px}.gap-3{gap:12px}.gap-4{gap:16px}
+.mt-2{margin-top:8px}.mt-3{margin-top:12px}.mt-4{margin-top:16px}
+.mb-2{margin-bottom:8px}.mb-3{margin-bottom:12px}
+.row--between{display:flex;justify-content:space-between;align-items:center;gap:12px}
+
+/* === BAR (topbar) ======================================================== */
+.bar{
+  position:sticky;top:0;z-index:50;display:flex;align-items:center;gap:18px;
+  padding:10px 18px;background:var(--bg-main);border-bottom:1px solid var(--border-soft);
+}
+.bar__brand{display:flex;align-items:baseline;gap:6px;font-family:Georgia,serif;font-size:16px;white-space:nowrap}
+.bar__brand-mark{font-family:var(--font-mono);font-size:10px;color:#080808;background:var(--green);padding:2px 5px;border-radius:3px;letter-spacing:.06em}
+.bar__brand span:last-child{color:var(--green);font-style:italic}
+.bar__right{margin-left:auto;display:flex;align-items:center;gap:12px}
+.bar__clock{font-family:var(--font-mono);font-size:11px;color:var(--text-muted);letter-spacing:.08em}
+
+/* === SHELL containers ==================================================== */
+.shell{max-width:1480px;margin:0 auto;padding:24px;display:flex;flex-direction:column;gap:20px}
+.shell--narrow{max-width:980px}
+
+/* === SECTION HEADER ====================================================== */
+.sec-head{display:flex;align-items:baseline;gap:14px;padding:8px 2px 6px}
+.sec-num{font-family:var(--font-mono);font-size:10px;color:var(--green);letter-spacing:.18em;font-weight:700}
+.sec-title{font-family:Georgia,serif;font-size:14px;font-style:italic;color:var(--text-muted)}
+.sec-spacer{flex:1;border-bottom:1px solid var(--border-soft);transform:translateY(-2px)}
+
+/* === CARDS ============================================================== */
+.card{padding:16px 18px;border-radius:var(--r-md);background:var(--bg-card);border:1px solid var(--border-soft);display:flex;flex-direction:column;gap:8px}
+.card--surface{background:var(--bg-surface)}
+.card--alert{background:linear-gradient(180deg,rgba(240,192,96,.06),var(--bg-card));border-color:var(--yellow-edge)}
+.card--rec{background:linear-gradient(180deg,rgba(96,168,240,.05),var(--bg-card));border-color:var(--blue-edge)}
+.panel{background:var(--bg-card);border:1px solid var(--border-soft);padding:22px 26px;border-radius:var(--r-md)}
+
+/* === BADGES ============================================================= */
+.badge{
+  display:inline-flex;align-items:center;gap:5px;font-family:var(--font-mono);font-size:9.5px;letter-spacing:.1em;
+  text-transform:uppercase;font-weight:700;padding:3px 7px;border-radius:4px;border:1px solid var(--border-mid);color:var(--text-mid);
+  white-space:nowrap;
+}
+.badge--green,.badge--customer{color:var(--blue);border-color:var(--blue-edge);background:rgba(96,168,240,.06)}
+.badge--yellow,.badge--warm{color:var(--yellow);border-color:var(--yellow-edge);background:rgba(240,192,96,.06)}
+.badge--red,.badge--hot{color:var(--red);border-color:var(--red-edge);background:rgba(240,96,144,.06)}
+.badge--blue{color:var(--blue);border-color:var(--blue-edge);background:rgba(96,168,240,.06)}
+.badge--purple{color:var(--purple);border-color:rgba(168,138,240,.35);background:rgba(168,138,240,.06)}
+.badge--lime{color:var(--green);border-color:var(--green-edge);background:rgba(159,211,104,.06)}
+.badge--new,.badge--ghost{color:var(--text-muted);border-color:var(--border-soft)}
+.badge--lost{color:#666;border-color:#333}
+.badge--pulse .dot,.badge--pulse{animation:pulse 1.8s infinite}
+.badge--ok{color:var(--green);border-color:var(--green-edge);background:rgba(159,211,104,.06)}
+.badge--warn{color:var(--yellow);border-color:var(--yellow-edge);background:rgba(240,192,96,.08)}
+.badge--err{color:var(--red);border-color:var(--red-edge);background:rgba(240,96,144,.06)}
+@keyframes pulse{0%,100%{opacity:1}50%{opacity:.55}}
+
+/* === BUTTONS ============================================================ */
+.btn{
+  display:inline-flex;align-items:center;justify-content:center;gap:6px;
+  height:34px;padding:0 14px;border-radius:6px;font-size:12.5px;font-weight:600;
+  border:1px solid var(--border-mid);background:var(--bg-card);color:var(--text-main);transition:all .12s ease;font-family:inherit;
+}
+.btn:hover{border-color:var(--green-edge);color:var(--green)}
+.btn--primary{background:var(--green);color:#080808;border-color:var(--green)}
+.btn--primary:hover{background:#b3df87;border-color:#b3df87;color:#080808}
+.btn--secondary{background:var(--bg-card);color:var(--text-main)}
+.btn--ghost{background:transparent;border-color:var(--border-soft);color:var(--text-mid)}
+.btn--ghost:hover{color:var(--text-main);border-color:var(--border-mid)}
+.btn--icon{width:34px;padding:0}
+.btn--block{width:100%}
+.btn--sm{height:28px;padding:0 10px;font-size:11.5px}
+.btn:disabled{opacity:.55;cursor:not-allowed}
+
+/* === CHIPS (filters) ===================================================== */
+.chip{
+  display:inline-flex;align-items:center;justify-content:space-between;gap:8px;
+  font-family:var(--font-mono);font-size:11px;letter-spacing:.08em;text-transform:uppercase;font-weight:700;
+  padding:8px 12px;border-radius:var(--r-sm);border:1px solid var(--border-soft);background:var(--bg-card);
+  color:var(--text-mid);cursor:pointer;transition:all .12s ease;
+}
+.chip:hover{color:var(--text-main);border-color:var(--border-mid)}
+.chip.is-on{background:rgba(159,211,104,.08);color:var(--green);border-color:var(--green-edge)}
+.chip .n{font-size:11px;color:var(--text-mute);font-weight:600}
+.chip.is-on .n{color:var(--green)}
+.chip--block{width:100%}
+.chip--warm.is-on{background:rgba(240,192,96,.08);color:var(--yellow);border-color:var(--yellow-edge)}
+.chip--warm.is-on .n{color:var(--yellow)}
+.chip--hot.is-on{background:rgba(240,96,144,.08);color:var(--red);border-color:var(--red-edge)}
+.chip--hot.is-on .n{color:var(--red)}
+.chip--customer.is-on{background:rgba(96,168,240,.08);color:var(--blue);border-color:var(--blue-edge)}
+.chip--customer.is-on .n{color:var(--blue)}
+
+/* === SEARCH INPUT ======================================================== */
+.search-input,.input{
+  width:100%;background:var(--bg-card);border:1px solid var(--border-soft);color:var(--text-main);
+  padding:10px 12px;font-family:var(--font-mono);font-size:12px;border-radius:var(--r-sm);
+}
+.search-input:focus,.input:focus{outline:none;border-color:var(--blue-edge)}
+.search-input::placeholder,.input::placeholder{color:var(--text-mute)}
+
+/* === AVATARS ============================================================ */
+.av{
+  display:inline-flex;align-items:center;justify-content:center;background:var(--bg-card-2);color:var(--text-main);
+  font-family:var(--font-mono);font-weight:700;border-radius:50%;
+}
+.av--sm{width:32px;height:32px;font-size:12px}
+.av--md{width:44px;height:44px;font-size:15px}
+.av--xl{width:64px;height:64px;font-size:22px}
+.av-g4{background:linear-gradient(135deg,#5a4b8e,#3a6f9e);color:#fff}
+.av-warm{background:linear-gradient(135deg,#7a5a2e,#a8843e);color:#fff}
+.av-hot{background:linear-gradient(135deg,#7a2e5a,#a83e7a);color:#fff}
+.av-customer{background:linear-gradient(135deg,#2e5a7a,#3e7aa8);color:#fff}
+.av-lost{background:#2a2a2a;color:#666}
+
+/* === MESSAGE BUBBLES ===================================================== */
+.msg{
+  max-width:72%;padding:10px 14px;border-radius:12px;font-size:14px;line-height:1.55;
+  color:var(--text-main);background:var(--bg-card);border:1px solid var(--border-soft);
+}
+.msg__t{display:block;font-family:var(--font-mono);font-size:10px;color:var(--text-muted);letter-spacing:.06em;margin-top:6px}
+.msg--in{align-self:flex-start}
+.msg--ai{align-self:flex-end;background:rgba(96,168,240,.07);border-color:var(--blue-edge)}
+.msg--manual{align-self:flex-end;background:rgba(240,192,96,.07);border-color:var(--yellow-edge)}
+
+/* === KEY-VALUE row (cl-field) ============================================ */
+.cl-field{display:flex;justify-content:space-between;font-size:12.5px;padding:5px 0;gap:12px}
+.cl-field span:first-child{color:var(--text-muted)}
+.cl-field span:last-child{color:var(--text-main);text-align:right;word-break:break-word}
+
+/* === STATS TILE (for dashboards) ======================================== */
+.tile{background:var(--bg-card);border:1px solid var(--border-soft);padding:16px 18px;display:flex;flex-direction:column;gap:6px;border-radius:var(--r-md);min-height:120px}
+.tile .num{font-family:var(--font-mono);font-size:10px;color:#3a3a3a;letter-spacing:.18em;font-weight:700}
+.tile .lbl{font-family:var(--font-mono);font-size:10px;color:var(--text-mid);letter-spacing:.14em;font-weight:700;text-transform:uppercase;line-height:1.3}
+.tile .val{font-family:Georgia,serif;font-size:36px;line-height:1;letter-spacing:-.02em;margin-top:auto;color:var(--text-main)}
+.tile .val.lime{color:var(--green)}.tile .val.cyan{color:var(--blue)}.tile .val.pink{color:var(--red)}.tile .val.yellow{color:var(--yellow)}
+.tile .sub{font-family:var(--font-mono);font-size:11px;color:var(--text-muted)}
+.tile-grid{display:grid;grid-template-columns:repeat(4,1fr);gap:8px}
+@media (max-width:900px){.tile-grid{grid-template-columns:repeat(2,1fr)}}
+
+/* === STATUS STAT (for pulse breakdown) =================================== */
+.stat{background:var(--bg-card);border:1px solid var(--border-soft);padding:16px;display:flex;flex-direction:column;gap:6px;border-radius:var(--r-md);cursor:pointer;transition:border-color .12s ease}
+.stat:hover{border-color:var(--border-mid)}
+.stat .v{font-family:Georgia,serif;font-size:28px;line-height:1}
+.stat .l{font-family:var(--font-mono);font-size:10px;letter-spacing:.14em;text-transform:uppercase;font-weight:700}
+.stat-grid{display:grid;grid-template-columns:repeat(5,1fr);gap:8px}
+@media (max-width:700px){.stat-grid{grid-template-columns:repeat(2,1fr)}}
+
+/* === LOGIN AUX (only used by login.html) ================================ */
+.auth-shell{min-height:100vh;display:flex;align-items:center;justify-content:center;padding:24px}
+.auth-card{
+  background:var(--bg-card);border:1px solid var(--border-soft);border-radius:var(--r-lg);
+  padding:36px;max-width:440px;width:100%;display:flex;flex-direction:column;gap:18px;
+}
+.auth-card h2{font-family:Georgia,serif;font-size:24px;font-weight:normal}
+.auth-card h2 .accent{color:var(--green);font-style:italic}
+.auth-card .sub{color:var(--text-muted);font-size:13.5px;line-height:1.55}
+.auth-card .foot{font-family:var(--font-mono);font-size:11px;color:var(--text-muted);line-height:1.6;border-top:1px solid var(--border-soft);padding-top:16px}
+.auth-card code{color:var(--green);font-family:var(--font-mono);font-size:10.5px;word-break:break-all;display:block;margin-top:6px}
+.status-strip{font-family:var(--font-mono);font-size:11px;color:var(--text-muted);min-height:18px;padding:6px 0;text-align:center}
+`;
+
 // Shared browser-side client. Inlined as a string so we don't need a
 // bundler and so it can be served via /assets/ig-admin.js.
 const IG_ADMIN_JS = `
