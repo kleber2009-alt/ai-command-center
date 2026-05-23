@@ -6,4 +6,4 @@
 
 services:
   aisales-worker:
-    image: infra-aisales-worker:hotpatch-20260522-1
+    image: infra-aisales-worker:hotpatch-20260522-2
