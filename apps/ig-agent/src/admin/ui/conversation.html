@@ -264,22 +264,10 @@ button{font:inherit;color:inherit;background:none;border:0;cursor:pointer}
 <body>
 
 <header class="bar">
-  <a class="bar__brand" href="/pulse"><span class="bar__brand-mark">AI</span>Sales <span>OS</span></a>
-  <nav class="bar__nav">
-    <a href="/pulse" class="bar__link">Pulse</a>
-    <a href="/pipeline" class="bar__link">Pipeline</a>
-    <a href="/" class="bar__link">Inbox</a>
-    <a href="/" class="bar__link">Journey</a>
-    <a href="/conversation" class="bar__link bar__link--active">Conversations</a>
-    <a href="/agents" class="bar__link">Agents</a>
-    <a href="/" class="bar__link">Research</a>
-    <a href="/reports" class="bar__link">Reports</a>
-    <a href="/settings" class="bar__link">Settings</a>
-  </nav>
+  <a class="bar__brand" href="/"><span class="bar__brand-mark">IG</span>agent</a>
+  <nav id="igNav"></nav>
   <div class="bar__right">
-    <span class="bar__pill"><span style="width:5px;height:5px;border-radius:50%;background:currentColor;box-shadow:0 0 6px currentColor"></span>Авто 87%</span>
-    <span class="bar__clock" id="clock">20 мая · 06:25</span>
-    <input class="bar__search" type="search" placeholder="⌘K">
+    <span class="bar__clock" id="clock">…</span>
   </div>
 </header>
 
@@ -379,12 +367,12 @@ button{font:inherit;color:inherit;background:none;border:0;cursor:pointer}
 <script>
 (function(){const el=document.getElementById('clock');if(!el)return;const M=['янв','фев','мар','апр','мая','июн','июл','авг','сен','окт','ноя','дек'];function t(){const d=new Date();el.textContent=d.getDate()+' '+M[d.getMonth()]+' · '+String(d.getHours()).padStart(2,'0')+':'+String(d.getMinutes()).padStart(2,'0')}t();setInterval(t,30000)})();
 
-/* ── Mount global auto-reply toggle into the topbar ────────────── */
+/* ── Mount unified nav + global auto-reply toggle into topbar ──── */
 (function () {
+  if (!window.IG) return;
+  if (IG.mountNav) IG.mountNav(document.getElementById('igNav'), 'conversation');
   var slot = document.querySelector('.bar__right');
-  if (slot && window.IG && IG.mountAutoReplyToggle) {
-    IG.mountAutoReplyToggle(slot);
-  }
+  if (slot && IG.mountAutoReplyToggle) IG.mountAutoReplyToggle(slot);
 })();
 
 /* ── Live data: contact + messages + recommendations ─ */
