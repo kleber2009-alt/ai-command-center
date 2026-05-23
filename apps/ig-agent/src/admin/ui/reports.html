@@ -2,616 +2,166 @@
 <html lang="ru">
 <head>
 <meta charset="UTF-8">
-<meta name="viewport" content="width=device-width, initial-scale=1.0">
-<meta name="theme-color" content="#080808">
-<meta name="color-scheme" content="dark only">
-<title>AI Sales · Reports</title>
+<meta name="viewport" content="width=device-width,initial-scale=1">
+<title>ig-agent · Reports</title>
 <style>
-  *, *::before, *::after { margin:0; padding:0; box-sizing:border-box; }
-  html, body { background:#080808; color:#f5f0e8; min-height:100vh; }
-  body { font-family:Georgia, serif; font-size:15px; line-height:1.5; overflow-x:hidden; }
-  .label { font-family:'SF Mono',monospace; font-size:10px; text-transform:uppercase; letter-spacing:0.14em; color:#b8b3a8; font-weight:700; }
-  .mono { font-family:'SF Mono',monospace; }
+  *,*::before,*::after{margin:0;padding:0;box-sizing:border-box}
+  html,body{background:#080808;color:#f5f0e8;min-height:100vh}
+  body{font-family:Georgia,serif;font-size:15px;line-height:1.5;overflow-x:hidden}
+  a{color:inherit;text-decoration:none}
+  .mono{font-family:'SF Mono','JetBrains Mono','Menlo',monospace}
 
-  .topbar { position:sticky; top:0; z-index:50; display:flex; align-items:center; justify-content:space-between; padding:14px 24px; background:#080808; border-bottom:1px solid #2a2a2a; gap:18px; flex-wrap:wrap; }
-  .topbar-title { font-family:Georgia,serif; font-size:18px; }
-  .topbar-title .accent { color:#c8f060; font-style:italic; }
+  .topbar{position:sticky;top:0;z-index:50;display:flex;align-items:center;padding:14px 24px;background:#080808;border-bottom:1px solid #2a2a2a;gap:18px;flex-wrap:wrap}
+  .topbar-title{font-family:Georgia,serif;font-size:18px;line-height:1;white-space:nowrap}
+  .topbar-title .accent{color:#c8f060;font-style:italic}
 
-  /* PERIOD SELECTOR */
-  .period-select { display:flex; gap:2px; }
-  .period-btn {
-    font-family:'SF Mono',monospace; font-size:10px;
-    padding:7px 12px;
-    background:transparent;
-    border:1px solid #2a2a2a;
-    color:#b8b3a8;
-    cursor:pointer;
-    letter-spacing:0.14em;
-    font-weight:700;
-    text-transform:uppercase;
-  }
-  .period-btn.active { background:#c8f060; color:#080808; border-color:#c8f060; }
-  .period-btn:hover:not(.active) { border-color:#c8f060; color:#f5f0e8; }
-  .topbar-meta { font-family:'SF Mono',monospace; font-size:11px; color:#b8b3a8; letter-spacing:0.12em; }
-  .topbar-meta .v { color:#c8f060; }
+  .shell{max-width:1280px;margin:0 auto;padding:18px 24px 80px;display:flex;flex-direction:column;gap:24px}
+  .sec-head{display:flex;align-items:baseline;gap:14px;padding:18px 2px 10px}
+  .sec-num{font-family:'SF Mono',monospace;font-size:10px;color:#c8f060;letter-spacing:.18em;font-weight:700}
+  .sec-title{font-family:Georgia,serif;font-size:14px;font-style:italic;color:#b8b3a8}
+  .sec-spacer{flex:1;border-bottom:1px solid #1a1a1a;transform:translateY(-2px)}
 
-  .shell { max-width:1480px; margin:0 auto; padding:18px 24px 80px; display:grid; gap:2px; }
-  .sec-head { display:flex; align-items:baseline; gap:14px; padding:18px 2px 10px; }
-  .sec-num { font-family:'SF Mono',monospace; font-size:10px; color:#c8f060; letter-spacing:0.18em; font-weight:700; }
-  .sec-title { font-family:Georgia,serif; font-size:14px; font-style:italic; color:#b8b3a8; }
-  .sec-spacer { flex:1; border-bottom:1px solid #1a1a1a; transform:translateY(-2px); }
+  .grid2{display:grid;grid-template-columns:1fr 1fr;gap:2px}
+  @media (max-width:800px){.grid2{grid-template-columns:1fr}}
+  .panel{background:#0f0f0f;border:1px solid #1a1a1a;padding:22px 26px}
+  .panel h3{font-family:Georgia,serif;font-size:20px;font-weight:normal;margin-bottom:14px}
+  .panel h3 .accent{color:#c8f060;font-style:italic}
 
-  /* HERO KPI */
-  .kpi { display:grid; grid-template-columns:repeat(4, 1fr); gap:2px; }
-  @media (max-width:900px) { .kpi { grid-template-columns:repeat(2, 1fr); } }
-  .kpi-card { background:#0f0f0f; border:1px solid #1a1a1a; padding:22px 24px 20px; display:flex; flex-direction:column; gap:8px; min-height:160px; }
-  .kpi-card .lbl { font-family:'SF Mono',monospace; font-size:10px; color:#b8b3a8; letter-spacing:0.14em; font-weight:700; text-transform:uppercase; line-height:1.3; }
-  .kpi-card .val { font-family:Georgia, serif; font-size:54px; line-height:1; letter-spacing:-0.02em; margin-top:auto; }
-  .kpi-card .val.lime { color:#c8f060; }
-  .kpi-card .val.cyan { color:#60c8f0; }
-  .kpi-card .val .sfx { font-size:20px; color:#5a5550; }
-  .kpi-card .delta {
-    font-family:'SF Mono',monospace; font-size:11px;
-    letter-spacing:0.06em; font-weight:700;
-  }
-  .kpi-card .delta.up { color:#c8f060; }
-  .kpi-card .delta.down { color:#f06090; }
-  .kpi-card .delta.flat { color:#b8b3a8; }
+  .kv{display:grid;grid-template-columns:1fr auto;row-gap:6px;column-gap:14px;font-size:14px}
+  .kv .k{color:#b8b3a8;font-family:'SF Mono',monospace;font-size:11px;letter-spacing:.1em;text-transform:uppercase}
+  .kv .v{font-family:Georgia,serif;font-size:18px;color:#f5f0e8;text-align:right}
+  .kv .v.lime{color:#c8f060}.kv .v.cyan{color:#60a8f0}.kv .v.pink{color:#f06090}.kv .v.yellow{color:#f0c060}
 
-  /* CHARTS GRID */
-  .charts { display:grid; grid-template-columns:1.4fr 1fr; gap:2px; }
-  @media (max-width:1000px) { .charts { grid-template-columns:1fr; } }
-
-  .chart-panel { background:#0f0f0f; border:1px solid #1a1a1a; padding:22px 24px; }
-  .chart-panel h3 { font-family:Georgia, serif; font-size:20px; font-weight:normal; margin-bottom:6px; }
-  .chart-panel h3 .a { color:#c8f060; font-style:italic; }
-  .chart-panel .sub-label { font-family:'SF Mono',monospace; font-size:10px; color:#5a5550; letter-spacing:0.1em; text-transform:uppercase; font-weight:700; margin-bottom:18px; }
-
-  /* LINE CHART (SVG) */
-  .line-chart { width:100%; height:240px; }
-  .line-chart .grid-line { stroke:#1a1a1a; stroke-width:1; }
-  .line-chart .axis-label { font-family:'SF Mono',monospace; font-size:9px; fill:#5a5550; letter-spacing:0.1em; font-weight:700; }
-  .line-chart .data-line { stroke:#c8f060; stroke-width:2; fill:none; }
-  .line-chart .data-area { fill:#c8f060; opacity:0.08; }
-  .line-chart .data-line.cyan { stroke:#60c8f0; }
-  .line-chart .data-area.cyan { fill:#60c8f0; }
-  .line-chart .data-dot { fill:#c8f060; }
-  .line-chart .data-dot.cyan { fill:#60c8f0; }
-
-  /* STACKED BARS */
-  .bar-chart { width:100%; padding:14px 0 0; }
-  .bar-row { display:grid; grid-template-columns:60px 1fr 60px; gap:12px; align-items:center; padding:6px 0; }
-  .bar-row .day { font-family:'SF Mono',monospace; font-size:10px; color:#5a5550; letter-spacing:0.1em; font-weight:700; text-transform:uppercase; }
-  .bar-row .bar { height:14px; background:#141414; position:relative; display:flex; }
-  .bar-row .bar .seg-A { background:#c8f060; }
-  .bar-row .bar .seg-B { background:#60c8f0; }
-  .bar-row .bar .seg-C { background:#3a3a3a; }
-  .bar-row .total { font-family:'SF Mono',monospace; font-size:11px; color:#f5f0e8; font-weight:700; text-align:right; letter-spacing:0.06em; }
-  .bar-legend { display:flex; gap:18px; margin-top:14px; padding-top:14px; border-top:1px solid #1a1a1a; }
-  .bar-legend .leg { display:flex; gap:8px; align-items:center; font-family:'SF Mono',monospace; font-size:10px; color:#b8b3a8; letter-spacing:0.12em; text-transform:uppercase; font-weight:700; }
-  .bar-legend .leg::before { content:''; width:12px; height:12px; display:block; }
-  .bar-legend .leg.a::before { background:#c8f060; }
-  .bar-legend .leg.b::before { background:#60c8f0; }
-  .bar-legend .leg.c::before { background:#3a3a3a; }
-
-  /* FUNNEL */
-  .funnel-chart { padding:14px 0; }
-  .funnel-row {
-    display:grid; grid-template-columns:120px 1fr 80px;
-    gap:14px; align-items:center;
-    padding:10px 0; border-bottom:1px solid #1a1a1a;
-  }
-  .funnel-row:last-child { border-bottom:none; }
-  .funnel-row .stage-name {
-    font-family:Georgia, serif; font-size:14px;
-  }
-  .funnel-row .stage-name .num {
-    font-family:'SF Mono',monospace; font-size:10px;
-    color:#5a5550; margin-right:8px;
-    letter-spacing:0.1em; font-weight:700;
-  }
-  .funnel-bar { height:24px; background:#141414; position:relative; }
-  .funnel-bar .fill { height:100%; background:#c8f060; transition:width 0.5s; }
-  .funnel-bar .fill.cyan { background:#60c8f0; }
-  .funnel-bar .fill.pink { background:#f06090; }
-  .funnel-bar .label-in-bar {
-    position:absolute; right:10px; top:50%;
-    transform:translateY(-50%);
-    font-family:'SF Mono',monospace; font-size:11px;
-    color:#080808; font-weight:700; letter-spacing:0.05em;
-  }
-  .funnel-row .conv {
-    font-family:'SF Mono',monospace; font-size:11px;
-    color:#c8f060; font-weight:700;
-    letter-spacing:0.05em; text-align:right;
-  }
-  .funnel-row .conv.warn { color:#f0a060; }
-  .funnel-row .conv.bad { color:#f06090; }
-
-  /* TWO-COL */
-  .two-col { display:grid; grid-template-columns:1fr 1fr; gap:2px; }
-  @media (max-width:900px) { .two-col { grid-template-columns:1fr; } }
-
-  /* TABLE */
-  .data-table { width:100%; }
-  .data-row {
-    display:grid; grid-template-columns:1fr auto auto auto;
-    gap:14px; padding:12px 0; border-bottom:1px solid #1a1a1a;
-    align-items:center; font-size:13.5px;
-  }
-  .data-row.head {
-    font-family:'SF Mono',monospace; font-size:10px;
-    color:#5a5550; letter-spacing:0.14em;
-    text-transform:uppercase; font-weight:700;
-    padding-bottom:10px;
-  }
-  .data-row .name { font-family:Georgia, serif; }
-  .data-row .num { font-family:'SF Mono',monospace; color:#f5f0e8; font-weight:700; }
-  .data-row .delta { font-family:'SF Mono',monospace; font-size:11px; font-weight:700; }
-  .data-row .delta.up { color:#c8f060; }
-  .data-row .delta.down { color:#f06090; }
-  .data-row .bar-mini {
-    width:60px; height:6px; background:#1a1a1a; display:inline-block;
-  }
-  .data-row .bar-mini .fill { height:100%; background:#c8f060; }
-  .data-row .bar-mini .fill.cyan { background:#60c8f0; }
-  .data-row .bar-mini .fill.pink { background:#f06090; }
-
-  /* INSIGHTS */
-  .insight {
-    background:#0d1216; border:1px solid #1a1a1a;
-    border-left:3px solid #60c8f0;
-    padding:16px 20px;
-    margin-bottom:8px;
-  }
-  .insight.win { border-left-color:#c8f060; background:#0d1208; }
-  .insight.warn { border-left-color:#f0a060; background:#161410; }
-  .insight.bad { border-left-color:#f06090; background:#1a0d10; }
-  .insight .head {
-    font-family:'SF Mono',monospace; font-size:10px;
-    letter-spacing:0.14em; font-weight:700; text-transform:uppercase;
-    margin-bottom:6px;
-    color:#60c8f0;
-  }
-  .insight.win .head { color:#c8f060; }
-  .insight.warn .head { color:#f0a060; }
-  .insight.bad .head { color:#f06090; }
-  .insight .body {
-    font-family:Georgia, serif; font-size:14.5px;
-    line-height:1.5; color:#f5f0e8;
-  }
-  .insight .body strong { color:#fff; }
-  .insight .meta {
-    font-family:'SF Mono',monospace; font-size:10px;
-    color:#5a5550; margin-top:8px; letter-spacing:0.06em;
-  }
-
-  /* EXPORT BAR */
-  .export-bar {
-    display:flex; justify-content:space-between; align-items:center;
-    padding:16px 24px;
-    background:#0f0f0f; border:1px solid #1a1a1a;
-    gap:14px;
-  }
-  .export-bar .info {
-    font-family:'SF Mono',monospace; font-size:10px;
-    color:#b8b3a8; letter-spacing:0.12em;
-    text-transform:uppercase; font-weight:700;
-  }
-  .export-bar .info .v { color:#c8f060; }
-  .export-bar .btns { display:flex; gap:4px; }
-  .export-bar button {
-    font-family:'SF Mono',monospace; font-size:10px;
-    padding:8px 14px;
-    background:transparent;
-    border:1px solid #2a2a2a;
-    color:#b8b3a8;
-    cursor:pointer;
-    letter-spacing:0.14em;
-    font-weight:700;
-    text-transform:uppercase;
-  }
-  .export-bar button:hover { border-color:#c8f060; color:#c8f060; }
+  .status-row{display:flex;justify-content:space-between;padding:8px 0;border-bottom:1px solid #1a1a1a;font-size:14px;align-items:baseline}
+  .status-row:last-child{border-bottom:0}
+  .status-row .l{font-family:'SF Mono',monospace;font-size:11px;letter-spacing:.1em;text-transform:uppercase}
+  .status-row .v{font-family:Georgia,serif;font-size:20px}
+  .status-row .pct{font-family:'SF Mono',monospace;font-size:11px;color:#5a5550;margin-left:8px}
 </style>
 </head>
 <body>
 
 <header class="topbar">
-  <div class="topbar-title">AI Sales <span class="accent">Reports</span></div>
-  <div class="period-select">
-    <button class="period-btn">7д</button>
-    <button class="period-btn active">30д</button>
-    <button class="period-btn">90д</button>
-    <button class="period-btn">всё время</button>
-    <button class="period-btn">⌄ custom</button>
-  </div>
-  <div class="topbar-meta"><span>16 апр – 15 мая · </span><span class="v">сравнение с пред. периодом</span></div>
+  <div class="topbar-title">ig-agent <span class="accent">Reports</span></div>
+  <nav id="igNav" style="flex:1;justify-content:center"></nav>
+  <div id="topbarRight" style="display:flex;align-items:center;gap:12px"></div>
 </header>
-<div style="background:#3a1a00;border:1px solid #f59e0b;color:#FFC56F;padding:10px 18px;font-family:monospace;font-size:11px;letter-spacing:.1em;text-align:center">⚠ v0.1 PLACEHOLDER · данные на этой странице — демо из прототипа ai-sales, не из БД ig-agent</div>
-
 
 <main class="shell">
 
-  <!-- HERO KPIs -->
   <div class="sec-head">
     <span class="sec-num">/01</span>
-    <span class="sec-title">Ключевые показатели за период</span>
+    <span class="sec-title">Объём диалогов · последние 7 дней vs 24ч</span>
     <span class="sec-spacer"></span>
   </div>
 
-  <div class="kpi">
-    <div class="kpi-card">
-      <span class="lbl">Выручка<br/>за период</span>
-      <div class="val lime">4.82<span class="sfx">М ₽</span></div>
-      <span class="delta up">▲ +47% · vs предыдущие 30д</span>
+  <div class="grid2">
+    <div class="panel">
+      <h3>Сообщения · <span class="accent">всего</span></h3>
+      <div class="kv">
+        <div class="k">Всего сообщений</div>           <div class="v lime" id="rTotal">…</div>
+        <div class="k">Входящих</div>                  <div class="v" id="rIn">…</div>
+        <div class="k">Исходящих (AI + manual)</div>   <div class="v" id="rOut">…</div>
+        <div class="k">За 24 часа</div>                <div class="v cyan" id="r24">…</div>
+        <div class="k">За 7 дней</div>                 <div class="v" id="r7">…</div>
+      </div>
     </div>
-    <div class="kpi-card">
-      <span class="lbl">Сделок<br/>закрыто</span>
-      <div class="val">86</div>
-      <span class="delta up">▲ +18 vs пред.</span>
-    </div>
-    <div class="kpi-card">
-      <span class="lbl">Средний<br/>чек</span>
-      <div class="val cyan">56<span class="sfx">к ₽</span></div>
-      <span class="delta up">▲ +24% · растёт качество лидов</span>
-    </div>
-    <div class="kpi-card">
-      <span class="lbl">Cost / paid<br/>(LLM + tools)</span>
-      <div class="val">312<span class="sfx">₽</span></div>
-      <span class="delta down">▼ -8% · оптимизация промптов</span>
+
+    <div class="panel">
+      <h3>AI <span class="accent">расход токенов</span></h3>
+      <div class="kv">
+        <div class="k">Токены за 24ч</div>             <div class="v yellow" id="rT24">…</div>
+        <div class="k">Токены за 7 дней</div>          <div class="v" id="rT7">…</div>
+        <div class="k">Среднее на сообщение (7d)</div> <div class="v" id="rTavg">…</div>
+        <div class="k">AI-рекомендаций всего</div>     <div class="v pink" id="rRecs">…</div>
+        <div class="k">Активный промпт</div>           <div class="v" id="rPrompt">—</div>
+      </div>
     </div>
   </div>
 
-  <!-- REVENUE TREND -->
   <div class="sec-head">
     <span class="sec-num">/02</span>
-    <span class="sec-title">Выручка и конверсии · по дням</span>
+    <span class="sec-title">CRM-воронка · распределение контактов</span>
     <span class="sec-spacer"></span>
   </div>
 
-  <div class="charts">
-
-    <div class="chart-panel">
-      <h3>Выручка <span class="a">по дням</span></h3>
-      <div class="sub-label">30 дней · тысячи рублей</div>
-      <svg class="line-chart" viewBox="0 0 800 240" preserveAspectRatio="none">
-        <!-- Grid -->
-        <line class="grid-line" x1="0" y1="60" x2="800" y2="60"/>
-        <line class="grid-line" x1="0" y1="120" x2="800" y2="120"/>
-        <line class="grid-line" x1="0" y1="180" x2="800" y2="180"/>
-        <!-- Area -->
-        <path class="data-area" d="M0,200 L27,180 L53,170 L80,155 L107,148 L133,160 L160,140 L187,135 L213,128 L240,110 L267,118 L293,105 L320,98 L347,90 L373,88 L400,75 L427,82 L453,68 L480,72 L507,55 L533,58 L560,48 L587,40 L613,52 L640,42 L667,35 L693,38 L720,28 L747,32 L773,22 L800,18 L800,240 L0,240 Z"/>
-        <!-- Line -->
-        <path class="data-line" d="M0,200 L27,180 L53,170 L80,155 L107,148 L133,160 L160,140 L187,135 L213,128 L240,110 L267,118 L293,105 L320,98 L347,90 L373,88 L400,75 L427,82 L453,68 L480,72 L507,55 L533,58 L560,48 L587,40 L613,52 L640,42 L667,35 L693,38 L720,28 L747,32 L773,22 L800,18"/>
-        <!-- Dots -->
-        <circle class="data-dot" cx="800" cy="18" r="4"/>
-        <!-- Axis labels -->
-        <text class="axis-label" x="0" y="235">16 АПР</text>
-        <text class="axis-label" x="395" y="235">30 АПР</text>
-        <text class="axis-label" x="755" y="235">15 МАЯ</text>
-        <text class="axis-label" x="775" y="20">284к</text>
-      </svg>
+  <div class="panel">
+    <div id="funnel">
+      <div class="status-row" style="opacity:.5">…загружаю</div>
     </div>
-
-    <div class="chart-panel">
-      <h3>Автономия <span class="a">% без перехвата</span></h3>
-      <div class="sub-label">30 дней · растёт</div>
-      <svg class="line-chart" viewBox="0 0 800 240" preserveAspectRatio="none">
-        <line class="grid-line" x1="0" y1="60" x2="800" y2="60"/>
-        <line class="grid-line" x1="0" y1="120" x2="800" y2="120"/>
-        <line class="grid-line" x1="0" y1="180" x2="800" y2="180"/>
-        <path class="data-area cyan" d="M0,180 L40,170 L80,165 L120,150 L160,148 L200,140 L240,135 L280,128 L320,118 L360,110 L400,105 L440,98 L480,90 L520,85 L560,80 L600,75 L640,70 L680,62 L720,55 L760,42 L800,38 L800,240 L0,240 Z"/>
-        <path class="data-line cyan" d="M0,180 L40,170 L80,165 L120,150 L160,148 L200,140 L240,135 L280,128 L320,118 L360,110 L400,105 L440,98 L480,90 L520,85 L560,80 L600,75 L640,70 L680,62 L720,55 L760,42 L800,38"/>
-        <circle class="data-dot cyan" cx="800" cy="38" r="4"/>
-        <text class="axis-label" x="0" y="235">62%</text>
-        <text class="axis-label" x="775" y="30">87%</text>
-      </svg>
-    </div>
-
   </div>
 
-  <!-- FUNNEL -->
   <div class="sec-head">
     <span class="sec-num">/03</span>
-    <span class="sec-title">Воронка · 30 дней</span>
+    <span class="sec-title">Конверсия (планируется)</span>
     <span class="sec-spacer"></span>
   </div>
 
-  <div class="chart-panel">
-    <h3>Конверсии <span class="a">по этапам</span></h3>
-    <div class="sub-label">от первого касания до won</div>
-
-    <div class="funnel-chart">
-      <div class="funnel-row">
-        <div class="stage-name"><span class="num">01</span>Hello</div>
-        <div class="funnel-bar"><div class="fill" style="width:100%;"><span class="label-in-bar">1 247</span></div></div>
-        <div class="conv">100%</div>
-      </div>
-      <div class="funnel-row">
-        <div class="stage-name"><span class="num">02</span>Discovery</div>
-        <div class="funnel-bar"><div class="fill" style="width:62%;"><span class="label-in-bar">773</span></div></div>
-        <div class="conv">62%</div>
-      </div>
-      <div class="funnel-row">
-        <div class="stage-name"><span class="num">03</span>Pitch</div>
-        <div class="funnel-bar"><div class="fill cyan" style="width:34%;"><span class="label-in-bar">425</span></div></div>
-        <div class="conv warn">55%</div>
-      </div>
-      <div class="funnel-row">
-        <div class="stage-name"><span class="num">04</span>Objections</div>
-        <div class="funnel-bar"><div class="fill cyan" style="width:17%;"><span class="label-in-bar">212</span></div></div>
-        <div class="conv">50%</div>
-      </div>
-      <div class="funnel-row">
-        <div class="stage-name"><span class="num">05</span>Close</div>
-        <div class="funnel-bar"><div class="fill" style="width:11%;"><span class="label-in-bar">133</span></div></div>
-        <div class="conv">63%</div>
-      </div>
-      <div class="funnel-row">
-        <div class="stage-name"><span class="num">06</span>Followup</div>
-        <div class="funnel-bar"><div class="fill cyan" style="width:6%;"><span class="label-in-bar">75</span></div></div>
-        <div class="conv">56%</div>
-      </div>
-      <div class="funnel-row">
-        <div class="stage-name"><span class="num">07</span>WON</div>
-        <div class="funnel-bar"><div class="fill" style="width:7%;"><span class="label-in-bar">86</span></div></div>
-        <div class="conv">∑ 6.9%</div>
-      </div>
-    </div>
-  </div>
-
-  <!-- NEW LEADS BY DAY/SEGMENT -->
-  <div class="sec-head">
-    <span class="sec-num">/04</span>
-    <span class="sec-title">Новые лиды · по сегментам</span>
-    <span class="sec-spacer"></span>
-  </div>
-
-  <div class="chart-panel">
-    <h3>Лиды <span class="a">за неделю</span> · по дням и сегментам</h3>
-    <div class="sub-label">A · B · C сегменты</div>
-
-    <div class="bar-chart">
-      <div class="bar-row">
-        <span class="day">9 май пн</span>
-        <div class="bar">
-          <div class="seg-A" style="width:18%;"></div>
-          <div class="seg-B" style="width:38%;"></div>
-          <div class="seg-C" style="width:24%;"></div>
-        </div>
-        <span class="total">62</span>
-      </div>
-      <div class="bar-row">
-        <span class="day">10 май вт</span>
-        <div class="bar">
-          <div class="seg-A" style="width:22%;"></div>
-          <div class="seg-B" style="width:42%;"></div>
-          <div class="seg-C" style="width:18%;"></div>
-        </div>
-        <span class="total">68</span>
-      </div>
-      <div class="bar-row">
-        <span class="day">11 май ср</span>
-        <div class="bar">
-          <div class="seg-A" style="width:24%;"></div>
-          <div class="seg-B" style="width:40%;"></div>
-          <div class="seg-C" style="width:16%;"></div>
-        </div>
-        <span class="total">71</span>
-      </div>
-      <div class="bar-row">
-        <span class="day">12 май чт</span>
-        <div class="bar">
-          <div class="seg-A" style="width:20%;"></div>
-          <div class="seg-B" style="width:35%;"></div>
-          <div class="seg-C" style="width:22%;"></div>
-        </div>
-        <span class="total">59</span>
-      </div>
-      <div class="bar-row">
-        <span class="day">13 май пт</span>
-        <div class="bar">
-          <div class="seg-A" style="width:28%;"></div>
-          <div class="seg-B" style="width:45%;"></div>
-          <div class="seg-C" style="width:15%;"></div>
-        </div>
-        <span class="total">82</span>
-      </div>
-      <div class="bar-row">
-        <span class="day">14 май сб</span>
-        <div class="bar">
-          <div class="seg-A" style="width:14%;"></div>
-          <div class="seg-B" style="width:30%;"></div>
-          <div class="seg-C" style="width:18%;"></div>
-        </div>
-        <span class="total">38</span>
-      </div>
-      <div class="bar-row">
-        <span class="day">15 май вс</span>
-        <div class="bar">
-          <div class="seg-A" style="width:16%;"></div>
-          <div class="seg-B" style="width:28%;"></div>
-          <div class="seg-C" style="width:20%;"></div>
-        </div>
-        <span class="total">41</span>
-      </div>
-    </div>
-
-    <div class="bar-legend">
-      <span class="leg a">A · горячий</span>
-      <span class="leg b">B · тёплый</span>
-      <span class="leg c">C · холодный</span>
-    </div>
-  </div>
-
-  <!-- TOP TABLES -->
-  <div class="sec-head">
-    <span class="sec-num">/05</span>
-    <span class="sec-title">Топы по периоду</span>
-    <span class="sec-spacer"></span>
-  </div>
-
-  <div class="two-col">
-
-    <div class="chart-panel">
-      <h3>Топ источники <span class="a">по конверсии</span></h3>
-      <div class="data-table">
-        <div class="data-row head">
-          <span>Источник</span><span>Лидов</span><span>Won</span><span>Δ</span>
-        </div>
-        <div class="data-row">
-          <span class="name">Reels «5 ошибок»</span>
-          <span class="num">142</span>
-          <span class="num" style="color:#c8f060;">22 <span style="color:#5a5550;">15%</span></span>
-          <span class="delta up">▲ +6%</span>
-        </div>
-        <div class="data-row">
-          <span class="name">Carousel «3 часа впустую»</span>
-          <span class="num">98</span>
-          <span class="num" style="color:#c8f060;">14 <span style="color:#5a5550;">14%</span></span>
-          <span class="delta up">▲ +3%</span>
-        </div>
-        <div class="data-row">
-          <span class="name">Рекомендации</span>
-          <span class="num">63</span>
-          <span class="num" style="color:#c8f060;">19 <span style="color:#5a5550;">30%</span></span>
-          <span class="delta up">▲ +12%</span>
-        </div>
-        <div class="data-row">
-          <span class="name">Reels «уволил продажников»</span>
-          <span class="num">187</span>
-          <span class="num" style="color:#c8f060;">12 <span style="color:#5a5550;">6%</span></span>
-          <span class="delta down">▼ -2%</span>
-        </div>
-        <div class="data-row">
-          <span class="name">Подписчики >6 мес</span>
-          <span class="num">54</span>
-          <span class="num" style="color:#c8f060;">9 <span style="color:#5a5550;">17%</span></span>
-          <span class="delta flat">━ 0</span>
-        </div>
-      </div>
-    </div>
-
-    <div class="chart-panel">
-      <h3>Топ knowledge gaps <span class="a">за период</span></h3>
-      <div class="data-table">
-        <div class="data-row head">
-          <span>Тема</span><span>Hits</span><span>Влияние</span><span>Статус</span>
-        </div>
-        <div class="data-row">
-          <span class="name">Гарантия возврата Премиум</span>
-          <span class="num">42</span>
-          <span><span class="bar-mini"><span class="fill pink" style="width:100%;display:block;"></span></span></span>
-          <span class="delta down">★ open</span>
-        </div>
-        <div class="data-row">
-          <span class="name">Скидка >15% политика</span>
-          <span class="num">28</span>
-          <span><span class="bar-mini"><span class="fill" style="width:70%;display:block;background:#f0a060;"></span></span></span>
-          <span class="delta up">✓ filled</span>
-        </div>
-        <div class="data-row">
-          <span class="name">Кейсы онлайн-школ</span>
-          <span class="num">21</span>
-          <span><span class="bar-mini"><span class="fill" style="width:55%;display:block;background:#f0a060;"></span></span></span>
-          <span class="delta down">★ open</span>
-        </div>
-        <div class="data-row">
-          <span class="name">SLA технической поддержки</span>
-          <span class="num">17</span>
-          <span><span class="bar-mini"><span class="fill cyan" style="width:42%;display:block;"></span></span></span>
-          <span class="delta flat">— wip</span>
-        </div>
-        <div class="data-row">
-          <span class="name">Условия для команд >20 чел</span>
-          <span class="num">9</span>
-          <span><span class="bar-mini"><span class="fill" style="width:24%;display:block;background:#5a5550;"></span></span></span>
-          <span class="delta down">★ open</span>
-        </div>
-      </div>
-    </div>
-
-  </div>
-
-  <!-- INSIGHTS -->
-  <div class="sec-head">
-    <span class="sec-num">/06</span>
-    <span class="sec-title">Инсайты · что заметил Аналитик</span>
-    <span class="sec-spacer"></span>
-  </div>
-
-  <div>
-    <div class="insight win">
-      <div class="head">↗ ВЫИГРЫШ · РОСТ КОНВЕРСИИ</div>
-      <div class="body">
-        Конверсия Reels «5 ошибок» в Won — <strong>15%</strong>. Это в 2.5× выше среднего по другим Reels.
-        <strong>Гипотеза:</strong> формат N-mistakes даёт высокий save-rate, а далее тёплый лид легче закрывается.
-        Рекомендация: ещё 2 Reels в этом формате в ближайшую неделю.
-      </div>
-      <div class="meta">CONFIDENCE 87% · ВЛИЯНИЕ: +18 сделок/мес если повторить успех</div>
-    </div>
-
-    <div class="insight warn">
-      <div class="head">⚠ ВНИМАНИЕ · ВОРОНКА</div>
-      <div class="body">
-        Конверсия Discovery → Pitch упала с <strong>62% до 55%</strong> за неделю.
-        <strong>Корень:</strong> 8 диалогов где IG-Менеджер 3+ раза переспрашивал контекст. Voice consistency на этих диалогах 71-78%.
-        Рекомендация: обновить промпт IG-Менеджера + добавить ICP-маркеры из последних 50 диалогов в БЗ.
-      </div>
-      <div class="meta">CONFIDENCE 73% · ВЛИЯНИЕ: -6 сделок/мес если не исправить</div>
-    </div>
-
-    <div class="insight">
-      <div class="head">→ НАБЛЮДЕНИЕ · СЕГМЕНТЫ</div>
-      <div class="body">
-        Сегмент A даёт 30% won при 22% лидов. Сегмент B — 8% won при 41% лидов.
-        <strong>Гипотеза:</strong> на B-сегменте теряется время — много discovery, мало close.
-        Рекомендация: ускорить переход B → pitch (сократить discovery с 7-10 сообщений до 4-5).
-      </div>
-      <div class="meta">CONFIDENCE 64% · ВЛИЯНИЕ: освободит ~3 часа агенту/день</div>
-    </div>
-
-    <div class="insight bad">
-      <div class="head">✕ РИСК · KNOWLEDGE GAP</div>
-      <div class="body">
-        Тема «гарантия возврата для Премиум» — <strong>42 hits за месяц</strong>, не закрыта в БЗ.
-        Из этих 42 — 19 ушли в lost (45%). Самый ценный gap для срочного заполнения.
-      </div>
-      <div class="meta">CONFIDENCE 92% · ВЛИЯНИЕ: ~9 сделок/мес теряем</div>
-    </div>
-  </div>
-
-  <!-- EXPORT -->
-  <div class="sec-head">
-    <span class="sec-num">/07</span>
-    <span class="sec-title">Экспорт и шеринг</span>
-    <span class="sec-spacer"></span>
-  </div>
-
-  <div class="export-bar">
-    <div class="info">
-      ОТЧЁТ · 16 АПР – 15 МАЯ 2026 · <span class="v">обновлён сейчас</span> · автообновление каждые 10 мин
-    </div>
-    <div class="btns">
-      <button>📋 КОПИЯ ССЫЛКИ</button>
-      <button>📄 PDF</button>
-      <button>📊 CSV</button>
-      <button>📧 EMAIL</button>
-      <button>📅 РАСПИСАНИЕ</button>
-    </div>
+  <div class="panel">
+    <p style="color:#b8b3a8;font-size:13.5px;line-height:1.6">
+      Когда диалоги начнут закрываться с outcome=sale или outcome=no_sale — здесь появится
+      conversion rate, средний чек и LTV по сегментам. Пока conversations.outcome не
+      проставляется автоматически (нужен trigger на intent=ready_to_buy или ручной mark в
+      conversation-окне). На pipeline.html уже видно текущий lead_status каждого контакта.
+    </p>
   </div>
 
 </main>
 
-<script src="/assets/sidebar.js" defer></script>
+<script src="/assets/ig-admin.js"></script>
 <script>
-  document.querySelectorAll('.period-btn').forEach(b => {
-    b.addEventListener('click', () => {
-      document.querySelectorAll('.period-btn').forEach(x => x.classList.remove('active'));
-      b.classList.add('active');
-    });
-  });
-</script>
+(function () {
+  var IG = window.IG;
+  if (IG.mountNav) IG.mountNav(document.getElementById('igNav'), 'reports');
+  if (IG.mountAutoReplyToggle) IG.mountAutoReplyToggle(document.getElementById('topbarRight'));
 
+  function fmtNum(n) {
+    if (n == null || isNaN(n)) return '0';
+    if (n >= 1000) return (n / 1000).toFixed(1) + 'k';
+    return String(n);
+  }
+
+  async function load() {
+    try {
+      var s = await IG.api('/api/stats');
+      document.getElementById('rTotal').textContent = s.messages.total;
+      document.getElementById('rIn').textContent    = s.messages.incoming;
+      document.getElementById('rOut').textContent   = s.messages.outgoing;
+      document.getElementById('r24').textContent    = s.messages.last_24h;
+      document.getElementById('r7').textContent     = s.messages.last_7d;
+      document.getElementById('rT24').textContent   = fmtNum(s.messages.tokens_24h);
+      document.getElementById('rT7').textContent    = fmtNum(s.messages.tokens_7d);
+      var avg = s.messages.last_7d > 0 ? Math.round(s.messages.tokens_7d / s.messages.last_7d) : 0;
+      document.getElementById('rTavg').textContent  = avg + ' tok';
+      document.getElementById('rRecs').textContent  = s.recommendations.total;
+      document.getElementById('rPrompt').textContent = s.prompts.active || '—';
+
+      // Funnel breakdown with % of total.
+      var bs = s.contacts.by_status || {};
+      var total = s.contacts.total || 1;
+      var order = [
+        ['new', 'NEW', '#b8b3a8'],
+        ['warm', 'WARM', '#f0c060'],
+        ['hot', 'HOT', '#f06090'],
+        ['customer', 'CUSTOMER', '#60a8f0'],
+        ['lost', 'LOST', '#666'],
+      ];
+      document.getElementById('funnel').innerHTML = order.map(function (o) {
+        var n = bs[o[0]] || 0;
+        var pct = Math.round((n / total) * 100);
+        return '<div class="status-row">' +
+          '<span class="l" style="color:' + o[2] + '">' + o[1] + '</span>' +
+          '<span><span class="v" style="color:' + o[2] + '">' + n + '</span>' +
+          '<span class="pct">· ' + pct + '%</span></span>' +
+        '</div>';
+      }).join('');
+    } catch (e) {
+      console.warn('reports stats failed', e);
+    }
+  }
+  load();
+  setInterval(load, 30000);
+})();
+</script>
 </body>
 </html>

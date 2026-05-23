@@ -2,549 +2,195 @@
 <html lang="ru">
 <head>
 <meta charset="UTF-8">
-<meta name="viewport" content="width=device-width, initial-scale=1.0">
-<meta name="theme-color" content="#080808">
-<meta name="color-scheme" content="dark only">
-<title>AI Sales · Pulse</title>
+<meta name="viewport" content="width=device-width,initial-scale=1">
+<title>ig-agent · Pulse</title>
 <style>
-  *, *::before, *::after { margin:0; padding:0; box-sizing:border-box; }
-  html, body { background:#080808; color:#f5f0e8; min-height:100vh; }
-  body { font-family:Georgia,'Times New Roman',serif; font-size:15px; line-height:1.5; overflow-x:hidden; }
+  *,*::before,*::after{margin:0;padding:0;box-sizing:border-box}
+  html,body{background:#080808;color:#f5f0e8;min-height:100vh}
+  body{font-family:Georgia,serif;font-size:15px;line-height:1.5;overflow-x:hidden}
+  a{color:inherit;text-decoration:none}
+  .mono{font-family:'SF Mono','JetBrains Mono','Menlo',monospace}
 
-  /* === TYPOGRAPHY === */
-  .label { font-family:'SF Mono','JetBrains Mono','Menlo',monospace; font-size:10px; text-transform:uppercase; letter-spacing:0.14em; color:#b8b3a8; font-weight:700; }
-  .mono { font-family:'SF Mono','JetBrains Mono','Menlo',monospace; }
-  .accent-lime { color:#c8f060; }
-  .accent-cyan { color:#60c8f0; }
-  .accent-pink { color:#f06090; }
+  .topbar{position:sticky;top:0;z-index:50;display:flex;align-items:center;padding:14px 24px;background:#080808;border-bottom:1px solid #2a2a2a;gap:18px;flex-wrap:wrap}
+  .topbar-title{font-family:Georgia,serif;font-size:18px;line-height:1;white-space:nowrap}
+  .topbar-title .accent{color:#c8f060;font-style:italic}
 
-  /* === LAYOUT === */
-  .topbar { position:sticky; top:0; z-index:50; display:flex; align-items:center; justify-content:space-between; padding:14px 24px; background:#080808; border-bottom:1px solid #2a2a2a; gap:18px; }
-  .topbar-left { display:flex; align-items:center; gap:18px; min-width:0; }
-  .topbar-title { font-family:Georgia,serif; font-size:18px; line-height:1; white-space:nowrap; }
-  .topbar-title .accent { color:#c8f060; font-style:italic; }
-  .topbar-meta { display:flex; align-items:center; gap:16px; color:#b8b3a8; }
-  .topbar-meta .dot { width:6px; height:6px; background:#c8f060; border-radius:50%; display:inline-block; margin-right:7px; vertical-align:1px; animation:pulse 2s infinite; }
-  @keyframes pulse { 0%,100% { opacity:1; } 50% { opacity:0.35; } }
-  .topbar-tabs { display:flex; gap:2px; }
-  .topbar-tab { background:transparent; border:1px solid #2a2a2a; color:#b8b3a8; padding:7px 14px; font-family:'SF Mono',monospace; font-size:10px; text-transform:uppercase; letter-spacing:0.14em; cursor:pointer; font-weight:700; }
-  .topbar-tab.active { background:#c8f060; color:#080808; border-color:#c8f060; }
-  .topbar-tab:hover:not(.active) { border-color:#c8f060; color:#f5f0e8; }
-  .topbar-search { background:#1a1a1a; border:1px solid #2a2a2a; color:#f5f0e8; padding:8px 12px; font-family:'SF Mono',monospace; font-size:11px; min-width:200px; }
-  .topbar-search::placeholder { color:#5a5550; }
+  .shell{max-width:1480px;margin:0 auto;padding:18px 24px 80px;display:flex;flex-direction:column;gap:24px}
 
-  .shell { max-width:1480px; margin:0 auto; padding:18px 24px 80px; display:grid; grid-template-columns:1fr; gap:2px; }
+  .sec-head{display:flex;align-items:baseline;gap:14px;padding:18px 2px 10px}
+  .sec-num{font-family:'SF Mono',monospace;font-size:10px;color:#c8f060;letter-spacing:.18em;font-weight:700}
+  .sec-title{font-family:Georgia,serif;font-size:14px;font-style:italic;color:#b8b3a8}
+  .sec-spacer{flex:1;border-bottom:1px solid #1a1a1a;transform:translateY(-2px)}
 
-  /* === SECTION HEADERS === */
-  .sec-head { display:flex; align-items:baseline; gap:14px; padding:14px 2px 10px; }
-  .sec-num { font-family:'SF Mono',monospace; font-size:10px; font-weight:700; color:#c8f060; letter-spacing:0.18em; }
-  .sec-title { font-family:Georgia,serif; font-size:14px; font-style:italic; color:#b8b3a8; }
-  .sec-spacer { flex:1; border-bottom:1px solid #1a1a1a; transform:translateY(-2px); }
+  .cards{display:grid;grid-template-columns:repeat(4,1fr);gap:2px}
+  @media (max-width:900px){.cards{grid-template-columns:repeat(2,1fr)}}
+  .card{background:#0f0f0f;border:1px solid #1a1a1a;padding:18px;display:flex;flex-direction:column;gap:6px;min-height:130px}
+  .card .num{font-family:'SF Mono',monospace;font-size:10px;color:#3a3a3a;letter-spacing:.18em;font-weight:700}
+  .card .lbl{font-family:'SF Mono',monospace;font-size:10px;color:#b8b3a8;letter-spacing:.14em;font-weight:700;text-transform:uppercase;line-height:1.3}
+  .card .val{font-family:Georgia,serif;font-size:44px;line-height:1;letter-spacing:-.02em;margin-top:auto}
+  .card .val.lime{color:#c8f060}
+  .card .val.cyan{color:#60a8f0}
+  .card .val.pink{color:#f06090}
+  .card .val.yellow{color:#f0c060}
+  .card .sub{font-family:'SF Mono',monospace;font-size:11px;color:#b8b3a8}
 
-  /* === METRICS ROW === */
-  .grid-top { display:grid; grid-template-columns:repeat(6, 1fr) 1fr; gap:2px; }
-  @media (max-width:1100px) { .grid-top { grid-template-columns:repeat(3, 1fr); } }
-  @media (max-width:640px) { .grid-top { grid-template-columns:repeat(2, 1fr); } }
-
-  .metric { background:#0f0f0f; border:1px solid #1a1a1a; padding:18px 16px 16px; display:flex; flex-direction:column; gap:6px; min-height:138px; position:relative; }
-  .metric-num { font-family:'SF Mono',monospace; font-size:10px; color:#3a3a3a; font-weight:700; letter-spacing:0.18em; }
-  .metric-label { font-family:'SF Mono',monospace; font-size:10px; text-transform:uppercase; letter-spacing:0.14em; color:#b8b3a8; font-weight:700; line-height:1.3; }
-  .metric-value { font-family:Georgia,serif; font-size:48px; line-height:1; color:#f5f0e8; margin-top:auto; letter-spacing:-0.02em; }
-  .metric-value.lime { color:#c8f060; }
-  .metric-value.cyan { color:#60c8f0; }
-  .metric-delta { font-family:'SF Mono',monospace; font-size:11px; font-weight:700; letter-spacing:0.05em; }
-  .metric-delta.up { color:#c8f060; }
-  .metric-delta.down { color:#f06090; }
-  .metric-delta.flat { color:#b8b3a8; }
-  .metric-suffix { font-size:24px; color:#5a5550; font-family:Georgia,serif; }
-
-  /* === ALERTS PANEL === */
-  .alerts { background:#0f0f0f; border:1px solid #1a1a1a; padding:14px 14px 8px; grid-column:span 1; display:flex; flex-direction:column; gap:8px; min-height:138px; }
-  @media (max-width:1100px) { .alerts { grid-column:span 3; } }
-  .alerts-head { display:flex; align-items:center; justify-content:space-between; padding-bottom:6px; border-bottom:1px solid #1a1a1a; }
-  .alerts-head .label { color:#f06090; }
-  .alerts-count { font-family:'SF Mono',monospace; font-size:10px; background:#28121b; color:#f06090; padding:2px 7px; font-weight:700; letter-spacing:0.1em; }
-  .alert { display:flex; gap:10px; padding:7px 0; border-bottom:1px solid #181818; align-items:flex-start; cursor:pointer; }
-  .alert:last-child { border-bottom:none; }
-  .alert:hover { background:#141414; margin:0 -14px; padding:7px 14px; }
-  .alert-time { font-family:'SF Mono',monospace; font-size:10px; color:#b8b3a8; flex-shrink:0; padding-top:1px; min-width:36px; }
-  .alert-body { flex:1; font-size:12.5px; line-height:1.35; color:#f5f0e8; }
-  .alert-body .who { color:#60c8f0; font-family:'SF Mono',monospace; font-size:11px; }
-  .alert-tag { display:inline-block; font-family:'SF Mono',monospace; font-size:9px; padding:1px 5px; margin-right:6px; font-weight:700; letter-spacing:0.08em; }
-  .alert-tag.esc { background:#28121b; color:#f06090; }
-  .alert-tag.hot { background:#3a2814; color:#f0a060; }
-  .alert-tag.sys { background:#1a1a1a; color:#b8b3a8; border:1px solid #2a2a2a; }
-
-  /* === FUNNEL === */
-  .funnel { background:#0f0f0f; border:1px solid #1a1a1a; padding:22px 22px 18px; }
-  .funnel-stages { display:grid; grid-template-columns:repeat(7, 1fr); gap:2px; }
-  @media (max-width:900px) { .funnel-stages { grid-template-columns:repeat(4, 1fr); } }
-  @media (max-width:560px) { .funnel-stages { grid-template-columns:repeat(2, 1fr); } }
-  .stage { background:#141414; border:1px solid #1a1a1a; padding:14px 12px 12px; cursor:pointer; transition:all 0.15s; position:relative; min-height:120px; display:flex; flex-direction:column; gap:6px; }
-  .stage:hover { border-color:#c8f060; background:#181a12; }
-  .stage-num { font-family:'SF Mono',monospace; font-size:10px; color:#5a5550; letter-spacing:0.15em; font-weight:700; }
-  .stage-name { font-family:'SF Mono',monospace; font-size:10px; text-transform:uppercase; letter-spacing:0.12em; color:#b8b3a8; font-weight:700; line-height:1.3; }
-  .stage-count { font-family:Georgia,serif; font-size:34px; line-height:1; color:#f5f0e8; margin-top:auto; letter-spacing:-0.02em; }
-  .stage-conv { font-family:'SF Mono',monospace; font-size:10px; color:#5a5550; }
-  .stage-conv .arr { color:#c8f060; }
-  .stage.won { background:#161e0d; border-color:#2a3a14; }
-  .stage.won .stage-count { color:#c8f060; }
-  .stage.lost .stage-count { color:#5a5550; }
-
-  /* === BOTTOM GRID === */
-  .grid-bottom { display:grid; grid-template-columns:1.4fr 1fr; gap:2px; }
-  @media (max-width:900px) { .grid-bottom { grid-template-columns:1fr; } }
-
-  /* === ACTIVITY FEED === */
-  .feed { background:#0f0f0f; border:1px solid #1a1a1a; padding:0; }
-  .feed-head { display:flex; align-items:center; justify-content:space-between; padding:14px 18px; border-bottom:1px solid #1a1a1a; }
-  .feed-head .live { display:flex; align-items:center; gap:7px; color:#c8f060; }
-  .feed-head .live .dot { width:6px; height:6px; background:#c8f060; border-radius:50%; animation:pulse 2s infinite; }
-  .feed-body { font-family:'SF Mono',monospace; font-size:12px; line-height:1.55; max-height:420px; overflow-y:auto; }
-  .feed-row { display:grid; grid-template-columns:60px 36px 130px 1fr 90px; gap:10px; padding:8px 18px; border-bottom:1px solid #131313; align-items:baseline; }
-  .feed-row:hover { background:#141414; }
-  .feed-row .t { color:#5a5550; font-size:11px; }
-  .feed-row .ch { font-size:10px; padding:1px 5px; text-align:center; font-weight:700; letter-spacing:0.08em; }
-  .feed-row .ch.ig { background:#28121b; color:#f06090; }
-  .feed-row .ch.tg { background:#0f1f28; color:#60c8f0; }
-  .feed-row .who { color:#f5f0e8; }
-  .feed-row .act { color:#c5bfb3; }
-  .feed-row .act .ev { color:#c8f060; font-weight:700; }
-  .feed-row .act .ev.warn { color:#f06090; }
-  .feed-row .act .ev.cyan { color:#60c8f0; }
-  .feed-row .author { color:#5a5550; text-align:right; font-size:10px; letter-spacing:0.08em; }
-  .feed-row .author.user { color:#f5f0e8; }
-
-  /* === AGENTS PANEL === */
-  .agents { background:#0f0f0f; border:1px solid #1a1a1a; }
-  .agents-head { padding:14px 18px; border-bottom:1px solid #1a1a1a; display:flex; justify-content:space-between; align-items:center; }
-  .agent { padding:16px 18px; border-bottom:1px solid #131313; display:grid; grid-template-columns:auto 1fr auto; gap:12px; align-items:center; cursor:pointer; }
-  .agent:last-child { border-bottom:none; }
-  .agent:hover { background:#141414; }
-  .agent-status { width:8px; height:8px; border-radius:50%; flex-shrink:0; }
-  .agent-status.on { background:#c8f060; box-shadow:0 0 0 3px rgba(200,240,96,0.12); }
-  .agent-status.idle { background:#5a5550; }
-  .agent-status.warn { background:#f06090; animation:pulse 2s infinite; }
-  .agent-name { font-family:Georgia,serif; font-size:16px; }
-  .agent-meta { font-family:'SF Mono',monospace; font-size:10px; color:#b8b3a8; margin-top:2px; letter-spacing:0.08em; }
-  .agent-load { text-align:right; }
-  .agent-load .val { font-family:Georgia,serif; font-size:22px; color:#f5f0e8; line-height:1; }
-  .agent-load .val.cyan { color:#60c8f0; }
-  .agent-load .val.lime { color:#c8f060; }
-  .agent-load .lbl { font-family:'SF Mono',monospace; font-size:9px; color:#5a5550; letter-spacing:0.1em; margin-top:3px; }
-
-  /* === FOOTER === */
-  .foot { padding:24px 0 0; text-align:center; color:#5a5550; font-family:'SF Mono',monospace; font-size:10px; letter-spacing:0.15em; text-transform:uppercase; }
-  .foot a { color:#c8f060; text-decoration:none; }
-
-  /* === scrollbar === */
-  .feed-body::-webkit-scrollbar { width:6px; }
-  .feed-body::-webkit-scrollbar-track { background:#0a0a0a; }
-  .feed-body::-webkit-scrollbar-thumb { background:#2a2a2a; }
+  .breakdown{display:grid;grid-template-columns:repeat(5,1fr);gap:2px}
+  @media (max-width:700px){.breakdown{grid-template-columns:repeat(2,1fr)}}
+  .stat{background:#0f0f0f;border:1px solid #1a1a1a;padding:18px;display:flex;flex-direction:column;gap:6px;cursor:pointer}
+  .stat:hover{border-color:#c8f060}
+  .stat .v{font-family:Georgia,serif;font-size:32px;line-height:1}
+  .stat .l{font-family:'SF Mono',monospace;font-size:10px;letter-spacing:.14em;text-transform:uppercase;font-weight:700}
+  .stat.new .v{color:#b8b3a8}.stat.new .l{color:#b8b3a8}
+  .stat.warm .v{color:#f0c060}.stat.warm .l{color:#f0c060}
+  .stat.hot .v{color:#f06090}.stat.hot .l{color:#f06090}
+  .stat.customer .v{color:#60a8f0}.stat.customer .l{color:#60a8f0}
+  .stat.lost .v{color:#666}.stat.lost .l{color:#666}
 </style>
 </head>
 <body>
 
 <header class="topbar">
-  <div class="topbar-left">
-    <div class="topbar-title">AI Sales <span class="accent">Pulse</span></div>
-    <nav class="topbar-tabs" style="margin-right:14px; flex-wrap:wrap;">
-      <a class="topbar-tab" href="/" style="text-decoration:none;">Портал</a>
-      <a class="topbar-tab active" href="#" style="text-decoration:none;">Pulse</a>
-      <a class="topbar-tab" href="/pipeline" style="text-decoration:none;">Pipeline</a>
-      <a class="topbar-tab" href="/conversation" style="text-decoration:none;">Conv</a>
-      <a class="topbar-tab" href="/" style="text-decoration:none;">Project</a>
-      <a class="topbar-tab" href="/agents" style="text-decoration:none;">Agents</a>
-      <a class="topbar-tab" href="/" style="text-decoration:none;">Carousels</a>
-      <a class="topbar-tab" href="/" style="text-decoration:none;">Reels</a>
-    </nav>
-    <div class="topbar-tabs">
-      <button class="topbar-tab active">Live</button>
-      <button class="topbar-tab">Today</button>
-      <button class="topbar-tab">Week</button>
-    </div>
-  </div>
-  <div class="topbar-meta mono label" style="font-size:11px;">
-    <span><span class="dot"></span>АВТОНОМНО 87%</span>
-    <span>14 МАЯ · 21:04</span>
-  </div>
-  <input class="topbar-search mono" placeholder="⌘K  поиск клиента, команды..." />
+  <div class="topbar-title">ig-agent <span class="accent">Pulse</span></div>
+  <nav id="igNav" style="flex:1;justify-content:center"></nav>
+  <div id="topbarRight" style="display:flex;align-items:center;gap:12px"></div>
 </header>
-<div style="background:#3a1a00;border:1px solid #f59e0b;color:#FFC56F;padding:10px 18px;font-family:monospace;font-size:11px;letter-spacing:.1em;text-align:center">⚠ v0.1 PLACEHOLDER · данные на этой странице — демо из прототипа ai-sales, не из БД ig-agent</div>
-
 
 <main class="shell">
 
-  <!-- ============ METRICS ============ -->
   <div class="sec-head">
     <span class="sec-num">/01</span>
-    <span class="sec-title">Метрики дня</span>
+    <span class="sec-title">Сегодня · последние 24 часа</span>
     <span class="sec-spacer"></span>
   </div>
 
-  <div class="grid-top">
-
-    <div class="metric">
-      <div class="metric-num">01</div>
-      <div class="metric-label">Новые<br/>лиды</div>
-      <div class="metric-value">47</div>
-      <div class="metric-delta up">▲ +12 ОТ ВЧЕРА</div>
+  <div class="cards">
+    <div class="card">
+      <div class="num">01</div>
+      <div class="lbl">Сообщений<br/>за 24ч</div>
+      <div class="val lime" id="m24">…</div>
+      <div class="sub" id="m24sub">…</div>
     </div>
-
-    <div class="metric">
-      <div class="metric-num">02</div>
-      <div class="metric-label">В работе</div>
-      <div class="metric-value cyan">128</div>
-      <div class="metric-delta flat">━ ± 0</div>
+    <div class="card">
+      <div class="num">02</div>
+      <div class="lbl">Контактов<br/>всего</div>
+      <div class="val cyan" id="cTotal">…</div>
+      <div class="sub" id="cSub">…</div>
     </div>
-
-    <div class="metric">
-      <div class="metric-num">03</div>
-      <div class="metric-label">Горячие<br/>(сегмент A)</div>
-      <div class="metric-value lime">14</div>
-      <div class="metric-delta up">▲ +3</div>
+    <div class="card">
+      <div class="num">03</div>
+      <div class="lbl">AI токены<br/>за 24ч</div>
+      <div class="val yellow" id="t24">…</div>
+      <div class="sub" id="t24sub">…</div>
     </div>
-
-    <div class="metric">
-      <div class="metric-num">04</div>
-      <div class="metric-label">Оплат<br/>сегодня</div>
-      <div class="metric-value">6</div>
-      <div class="metric-delta up">▲ +2</div>
+    <div class="card">
+      <div class="num">04</div>
+      <div class="lbl">AI<br/>рекомендации</div>
+      <div class="val pink" id="recs">…</div>
+      <div class="sub">всего написано аналитиком</div>
     </div>
-
-    <div class="metric">
-      <div class="metric-num">05</div>
-      <div class="metric-label">Сумма<br/>оплат</div>
-      <div class="metric-value">284<span class="metric-suffix">К</span></div>
-      <div class="metric-delta up">▲ +47%</div>
-    </div>
-
-    <div class="metric">
-      <div class="metric-num">06</div>
-      <div class="metric-label">Автономно<br/>(без Ильи)</div>
-      <div class="metric-value lime">87<span class="metric-suffix">%</span></div>
-      <div class="metric-delta up">▲ +4%</div>
-    </div>
-
-    <div class="alerts">
-      <div class="alerts-head">
-        <span class="label">Alerts</span>
-        <span class="alerts-count">3 active</span>
-      </div>
-      <div class="alert">
-        <div class="alert-time">2 мин</div>
-        <div class="alert-body">
-          <span class="alert-tag esc">esc</span>
-          <span class="who">@anna_volkova</span> — упомянула давление, требует Илью
-        </div>
-      </div>
-      <div class="alert">
-        <div class="alert-time">31 мин</div>
-        <div class="alert-body">
-          <span class="alert-tag hot">hot</span>
-          <span class="who">@marina_v</span> в pitch без ответа &gt; 30 мин
-        </div>
-      </div>
-      <div class="alert">
-        <div class="alert-time">04:12</div>
-        <div class="alert-body">
-          <span class="alert-tag sys">sys</span>
-          Qdrant: 1 запрос &gt; 800 мс (RAG деградация?)
-        </div>
-      </div>
-    </div>
-
   </div>
 
-  <!-- ============ FUNNEL ============ -->
   <div class="sec-head">
     <span class="sec-num">/02</span>
-    <span class="sec-title">Воронка · 7 этапов</span>
+    <span class="sec-title">Лиды по статусам · клик ведёт в Pipeline</span>
     <span class="sec-spacer"></span>
   </div>
 
-  <div class="funnel">
-    <div class="funnel-stages">
-
-      <div class="stage">
-        <div class="stage-num">01</div>
-        <div class="stage-name">Hello</div>
-        <div class="stage-count">47</div>
-        <div class="stage-conv">→ <span class="arr">62%</span></div>
-      </div>
-
-      <div class="stage">
-        <div class="stage-num">02</div>
-        <div class="stage-name">Discovery</div>
-        <div class="stage-count">29</div>
-        <div class="stage-conv">→ <span class="arr">55%</span></div>
-      </div>
-
-      <div class="stage">
-        <div class="stage-num">03</div>
-        <div class="stage-name">Pitch</div>
-        <div class="stage-count">16</div>
-        <div class="stage-conv">→ <span class="arr">50%</span></div>
-      </div>
-
-      <div class="stage">
-        <div class="stage-num">04</div>
-        <div class="stage-name">Objections</div>
-        <div class="stage-count">8</div>
-        <div class="stage-conv">→ <span class="arr">63%</span></div>
-      </div>
-
-      <div class="stage">
-        <div class="stage-num">05</div>
-        <div class="stage-name">Close</div>
-        <div class="stage-count">5</div>
-        <div class="stage-conv">→ <span class="arr">80%</span></div>
-      </div>
-
-      <div class="stage">
-        <div class="stage-num">06</div>
-        <div class="stage-name">Followup</div>
-        <div class="stage-count">3</div>
-        <div class="stage-conv">→ —</div>
-      </div>
-
-      <div class="stage won">
-        <div class="stage-num">07</div>
-        <div class="stage-name">Won / Lost</div>
-        <div class="stage-count">6<span style="font-size:14px;color:#5a5550;"> / 4</span></div>
-        <div class="stage-conv">cr: <span class="arr">12.8%</span></div>
-      </div>
-
-    </div>
+  <div class="breakdown">
+    <a href="/pipeline" class="stat new">
+      <div class="l">NEW</div>
+      <div class="v" id="sNew">…</div>
+    </a>
+    <a href="/pipeline" class="stat warm">
+      <div class="l">WARM</div>
+      <div class="v" id="sWarm">…</div>
+    </a>
+    <a href="/pipeline" class="stat hot">
+      <div class="l">HOT</div>
+      <div class="v" id="sHot">…</div>
+    </a>
+    <a href="/pipeline" class="stat customer">
+      <div class="l">CUSTOMER</div>
+      <div class="v" id="sCustomer">…</div>
+    </a>
+    <a href="/pipeline" class="stat lost">
+      <div class="l">LOST</div>
+      <div class="v" id="sLost">…</div>
+    </a>
   </div>
 
-  <!-- ============ FEED + AGENTS ============ -->
   <div class="sec-head">
     <span class="sec-num">/03</span>
-    <span class="sec-title">Live · что происходит сейчас</span>
+    <span class="sec-title">Состояние агента</span>
     <span class="sec-spacer"></span>
   </div>
 
-  <div class="grid-bottom">
-
-    <div class="feed">
-      <div class="feed-head">
-        <span class="live label"><span class="dot"></span>LIVE FEED</span>
-        <span class="label" style="color:#5a5550;">последние 50</span>
-      </div>
-      <div class="feed-body">
-
-        <div class="feed-row">
-          <span class="t">21:04</span>
-          <span class="ch ig">IG</span>
-          <span class="who">@anna_volkova</span>
-          <span class="act"><span class="ev warn">ESCALATION</span> — «вы меня обманули»</span>
-          <span class="author">agent</span>
-        </div>
-
-        <div class="feed-row">
-          <span class="t">21:03</span>
-          <span class="ch tg">TG</span>
-          <span class="who">@dmitry88</span>
-          <span class="act"><span class="ev">payment 45 000 ₽</span> → closed_won</span>
-          <span class="author">agent</span>
-        </div>
-
-        <div class="feed-row">
-          <span class="t">21:02</span>
-          <span class="ch ig">IG</span>
-          <span class="who">@marina_v</span>
-          <span class="act">discovery → <span class="ev cyan">pitch</span></span>
-          <span class="author">agent</span>
-        </div>
-
-        <div class="feed-row">
-          <span class="t">20:58</span>
-          <span class="ch tg">TG</span>
-          <span class="who">@sergey_t</span>
-          <span class="act">отправил <span class="ev cyan">кружочек</span> 14с</span>
-          <span class="author">agent</span>
-        </div>
-
-        <div class="feed-row">
-          <span class="t">20:55</span>
-          <span class="ch ig">IG</span>
-          <span class="who">@kate_b</span>
-          <span class="act">scoring обновлён <span class="ev">62 → 78</span> (segment B → A)</span>
-          <span class="author">analyst</span>
-        </div>
-
-        <div class="feed-row">
-          <span class="t">20:51</span>
-          <span class="ch tg">TG</span>
-          <span class="who">@olga_design</span>
-          <span class="act">hello → <span class="ev cyan">discovery</span></span>
-          <span class="author">agent</span>
-        </div>
-
-        <div class="feed-row">
-          <span class="t">20:49</span>
-          <span class="ch ig">IG</span>
-          <span class="who">@vlad_marketing</span>
-          <span class="act">objections — «дорого» <span class="ev">handled</span></span>
-          <span class="author">agent</span>
-        </div>
-
-        <div class="feed-row">
-          <span class="t">20:44</span>
-          <span class="ch tg">TG</span>
-          <span class="who">@nina_pro</span>
-          <span class="act">перехват — Илья отвечает</span>
-          <span class="author user">илья</span>
-        </div>
-
-        <div class="feed-row">
-          <span class="t">20:42</span>
-          <span class="ch ig">IG</span>
-          <span class="who">@anton_dev</span>
-          <span class="act">close → <span class="ev">followup</span> · повторный контакт через 3д</span>
-          <span class="author">agent</span>
-        </div>
-
-        <div class="feed-row">
-          <span class="t">20:38</span>
-          <span class="ch tg">TG</span>
-          <span class="who">@maxx</span>
-          <span class="act">RAG miss: «гарантия возврата» → шаблон</span>
-          <span class="author">analyst</span>
-        </div>
-
-        <div class="feed-row">
-          <span class="t">20:34</span>
-          <span class="ch ig">IG</span>
-          <span class="who">@_lera_</span>
-          <span class="act"><span class="ev">payment 89 000 ₽</span> → closed_won</span>
-          <span class="author">agent</span>
-        </div>
-
-        <div class="feed-row">
-          <span class="t">20:29</span>
-          <span class="ch tg">TG</span>
-          <span class="who">@pavel_arch</span>
-          <span class="act">pitch — отправил презентацию (PDF, 12 стр)</span>
-          <span class="author">agent</span>
-        </div>
-
-        <div class="feed-row">
-          <span class="t">20:24</span>
-          <span class="ch ig">IG</span>
-          <span class="who">@inga_studio</span>
-          <span class="act">новый лид · ICP match <span class="ev">94%</span></span>
-          <span class="author">analyst</span>
-        </div>
-
-      </div>
+  <div class="cards">
+    <div class="card">
+      <div class="num">05</div>
+      <div class="lbl">Auto-reply<br/>master switch</div>
+      <div class="val lime" id="arState" style="font-size:24px;margin-top:14px">…</div>
+      <div class="sub" id="arSub">тумблер в правом верхнем углу</div>
     </div>
-
-    <div class="agents">
-      <div class="agents-head">
-        <span class="label">Агенты · 4 / 4 онлайн</span>
-        <span class="label accent-lime">● стабильно</span>
-      </div>
-
-      <div class="agent">
-        <div class="agent-status on"></div>
-        <div>
-          <div class="agent-name">IG-Менеджер</div>
-          <div class="agent-meta">claude-opus-4.7 · avg 1.2s</div>
-        </div>
-        <div class="agent-load">
-          <div class="val lime">23</div>
-          <div class="lbl">DIALOGS</div>
-        </div>
-      </div>
-
-      <div class="agent">
-        <div class="agent-status on"></div>
-        <div>
-          <div class="agent-name">TG-Менеджер</div>
-          <div class="agent-meta">claude-opus-4.7 · avg 1.4s</div>
-        </div>
-        <div class="agent-load">
-          <div class="val cyan">17</div>
-          <div class="lbl">DIALOGS</div>
-        </div>
-      </div>
-
-      <div class="agent">
-        <div class="agent-status on"></div>
-        <div>
-          <div class="agent-name">Аналитик</div>
-          <div class="agent-meta">claude-sonnet-4.6 · scoring</div>
-        </div>
-        <div class="agent-load">
-          <div class="val">128</div>
-          <div class="lbl">SCORED 24Ч</div>
-        </div>
-      </div>
-
-      <div class="agent">
-        <div class="agent-status idle"></div>
-        <div>
-          <div class="agent-name">РОП</div>
-          <div class="agent-meta">claude-opus-4.7 · digest 21:00</div>
-        </div>
-        <div class="agent-load">
-          <div class="val">2</div>
-          <div class="lbl">TASKS QUEUED</div>
-        </div>
-      </div>
-
+    <div class="card">
+      <div class="num">06</div>
+      <div class="lbl">Responder<br/>модель</div>
+      <div class="val" style="font-size:18px;margin-top:14px;color:#c8f060" id="mResp">…</div>
+      <div class="sub">используется при автоответе</div>
     </div>
-
-  </div>
-
-  <div class="foot">
-    AI Sales System · Pulse v0.1 · <a href="/">← портал</a>
+    <div class="card">
+      <div class="num">07</div>
+      <div class="lbl">Analyst<br/>модель</div>
+      <div class="val" style="font-size:18px;margin-top:14px;color:#60a8f0" id="mAnalyst">…</div>
+      <div class="sub">пишет ai_recommendations</div>
+    </div>
+    <div class="card">
+      <div class="num">08</div>
+      <div class="lbl">Active<br/>промпт</div>
+      <div class="val" style="font-size:18px;margin-top:14px;color:#f0c060" id="pActive">…</div>
+      <div class="sub"><a href="/agents" style="color:#c8f060">→ управление в Agents</a></div>
+    </div>
   </div>
 
 </main>
 
+<script src="/assets/ig-admin.js"></script>
 <script>
-  // tabs
-  document.querySelectorAll('.topbar-tab').forEach(t => {
-    t.addEventListener('click', () => {
-      document.querySelectorAll('.topbar-tab').forEach(x => x.classList.remove('active'));
-      t.classList.add('active');
-    });
-  });
+(function () {
+  var IG = window.IG;
+  if (IG.mountNav) IG.mountNav(document.getElementById('igNav'), 'pulse');
+  if (IG.mountAutoReplyToggle) IG.mountAutoReplyToggle(document.getElementById('topbarRight'));
 
-  // live clock
-  function updateClock() {
-    const d = new Date();
-    const pad = n => String(n).padStart(2,'0');
-    const months = ['ЯНВ','ФЕВ','МАР','АПР','МАЯ','ИЮН','ИЮЛ','АВГ','СЕН','ОКТ','НОЯ','ДЕК'];
-    const el = document.querySelector('.topbar-meta');
-    if (el) {
-      const spans = el.querySelectorAll('span');
-      if (spans[1]) spans[1].textContent = `${d.getDate()} ${months[d.getMonth()]} · ${pad(d.getHours())}:${pad(d.getMinutes())}`;
+  async function load() {
+    try {
+      var s = await IG.api('/api/stats');
+      document.getElementById('m24').textContent = s.messages.last_24h;
+      document.getElementById('m24sub').textContent = 'входящих ' + s.messages.incoming + ' · исходящих ' + s.messages.outgoing;
+      document.getElementById('cTotal').textContent = s.contacts.total;
+      var bs = s.contacts.by_status || {};
+      document.getElementById('cSub').textContent = '7d сообщений: ' + s.messages.last_7d;
+      document.getElementById('t24').textContent = s.messages.tokens_24h;
+      document.getElementById('t24sub').textContent = '7d: ' + s.messages.tokens_7d;
+      document.getElementById('recs').textContent = s.recommendations.total;
+      document.getElementById('sNew').textContent      = bs.new      || 0;
+      document.getElementById('sWarm').textContent     = bs.warm     || 0;
+      document.getElementById('sHot').textContent      = bs.hot      || 0;
+      document.getElementById('sCustomer').textContent = bs.customer || 0;
+      document.getElementById('sLost').textContent     = bs.lost     || 0;
+      var on = s.settings && s.settings.auto_reply_enabled !== 'false';
+      document.getElementById('arState').textContent = on ? '🟢 ON' : '⏸ OFF';
+      document.getElementById('arState').style.color = on ? '#c8f060' : '#FFC56F';
+      document.getElementById('arSub').textContent = on ? 'AI отвечает автоматически' : 'тихий режим · только анализ';
+      document.getElementById('mResp').textContent = s.models.responder;
+      document.getElementById('mAnalyst').textContent = s.models.analyst;
+      document.getElementById('pActive').textContent = s.prompts.active || '—';
+    } catch (e) {
+      console.warn('stats failed', e);
     }
   }
-  updateClock();
-  setInterval(updateClock, 30000);
-
-  // funnel click → would filter Pipeline (placeholder)
-  document.querySelectorAll('.stage').forEach(s => {
-    s.addEventListener('click', () => {
-      const name = s.querySelector('.stage-name').textContent;
-      console.log('[pulse] open Pipeline filtered by stage:', name);
-    });
-  });
-
-  // ⌘K shortcut focuses search
-  document.addEventListener('keydown', e => {
-    if ((e.metaKey || e.ctrlKey) && e.key === 'k') {
-      e.preventDefault();
-      document.querySelector('.topbar-search').focus();
-    }
-  });
+  load();
+  setInterval(load, 20000);
+})();
 </script>
-
-<script src="/assets/sidebar.js" defer></script>
 </body>
 </html>
