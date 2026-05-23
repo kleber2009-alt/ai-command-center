@@ -2049,12 +2049,15 @@
       const sourceIcon = (s, k) => {
         if (s === 'transcribe') return k === 'summary' ? '📝' : k === 'document' ? '📄' : '🎙';
         if (s === 'tg-agent') return '💬';
+        if (s === 'ig-agent') return '📱';
         return '·';
       };
       results.innerHTML = items.map((h) => {
         const where = h.source === 'transcribe'
           ? (h.title || '(без названия)')
-          : (h.chat_title || ('chat ' + h.chat_id));
+          : h.source === 'ig-agent'
+            ? (h.title || (h.username ? '@' + h.username : 'Instagram DM'))
+            : (h.chat_title || ('chat ' + h.chat_id));
         const who = h.username ? '@' + h.username : (h.user_id ? 'user ' + h.user_id : '');
         const when = h.created_at ? new Date(h.created_at).toLocaleString('ru-RU') : '';
         const score = (h.score * 100).toFixed(0) + '%';
@@ -2065,6 +2068,9 @@
         const link = h.url
           ? ` <a href="${escapeHtml(h.url)}" target="_blank" class="text-indigo-400 hover:text-indigo-300 underline">→ источник</a>`
           : '';
+        const inboxLink = h.source === 'ig-agent' && h.username
+          ? ` <button type="button" data-ig-open="${escapeHtml(h.username)}" class="text-indigo-400 hover:text-indigo-300 underline">↪ в кабинет</button>`
+          : '';
         return `
           <div class="rounded-xl border border-slate-700 bg-slate-900 p-4">
             <div class="flex flex-wrap items-center gap-x-3 gap-y-1 text-xs text-slate-400 mb-2">
@@ -2074,11 +2080,19 @@
               <span class="text-slate-300">${escapeHtml(where)}</span>
               ${who ? `<span class="text-slate-500">·</span><span>${escapeHtml(who)}</span>` : ''}
               ${when ? `<span class="text-slate-500">·</span><span>${escapeHtml(when)}</span>` : ''}
-              ${cls}${link}
+              ${cls}${link}${inboxLink}
             </div>
             <div class="text-sm text-slate-200 whitespace-pre-wrap leading-relaxed">${escapeHtml(h.text)}</div>
           </div>`;
       }).join('');
+      results.querySelectorAll('button[data-ig-open]').forEach((btn) => {
+        btn.addEventListener('click', () => openInstagramByUsername(btn.getAttribute('data-ig-open')));
+      });
+    }
+
+    function openInstagramByUsername(username) {
+      igState.pendingUsername = username;
+      switchView('instagram');
     }
     // Wire form (one-time on first interaction).
     document.addEventListener('submit', (e) => {
@@ -2095,7 +2109,7 @@
     });
 
     // ─── INSTAGRAM view ──────────────────────────────────────────────────────
-    const igState = { contacts: [], selectedContactId: null, messages: [], stats: null };
+    const igState = { contacts: [], selectedContactId: null, messages: [], stats: null, pendingUsername: null };
 
     const IG_STATUS_COLOR = {
       new: 'bg-slate-700/40 text-slate-300',
@@ -2118,6 +2132,12 @@
         igState.stats = statsRes;
         renderInstagramContacts();
         renderInstagramStats();
+        if (igState.pendingUsername) {
+          const want = igState.pendingUsername.toLowerCase();
+          igState.pendingUsername = null;
+          const match = igState.contacts.find((c) => (c.ig_username || '').toLowerCase() === want);
+          if (match) { selectInstagramContact(match.id); return; }
+        }
         if (!igState.selectedContactId && igState.contacts.length) {
           selectInstagramContact(igState.contacts[0].id);
         }
