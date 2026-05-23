@@ -1,0 +1,638 @@
+<!DOCTYPE html>
+<html lang="ru">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover">
+<title>AI Growth Office — Interactive Office Embed</title>
+<meta name="robots" content="noindex,nofollow">
+<style>
+  :root{
+    --bg:transparent;
+    --s1:#0c0f1e;
+    --s2:#10131f;
+    --border:rgba(255,255,255,.08);
+    --muted:#9aa3b2;
+    --text:#e9eef7;
+    --accent:#c8f060;
+    --a2:#60c8f0;
+    --ready:#2ecc40;
+    --thinking:#f0b429;
+    --working:#3a8fff;
+    --checking:#b44fff;
+    --font:'JetBrains Mono',ui-monospace,Menlo,monospace;
+  }
+  *{box-sizing:border-box}
+  html,body{margin:0;padding:0;background:var(--bg);color:var(--text);font-family:var(--font);-webkit-font-smoothing:antialiased}
+  body{overflow-x:hidden}
+
+  /* OFFICE CANVAS SECTION */
+  #office-section{padding:20px 16px;max-width:760px;margin:0 auto}
+  .office-wrap{
+    position:relative;background:var(--s1);border:1px solid var(--border);
+    border-radius:16px;overflow:hidden;
+  }
+  #gc{display:block;width:100%;image-rendering:pixelated;image-rendering:crisp-edges;cursor:pointer}
+  .office-top-bar{
+    display:flex;align-items:center;gap:8px;padding:10px 14px;
+    border-bottom:1px solid var(--border);background:rgba(8,8,16,.6);
+    position:absolute;top:0;left:0;right:0;z-index:30;backdrop-filter:blur(8px);
+  }
+  .traffic{display:flex;gap:5px}
+  .dot{width:10px;height:10px;border-radius:50%}
+  .office-title-bar{font-size:9px;color:var(--muted);letter-spacing:1px;margin-left:4px}
+  .office-actions{margin-left:auto;display:flex;gap:6px}
+  .btn-sm{
+    padding:5px 11px;border-radius:10px;font-size:8.5px;font-weight:700;
+    font-family:var(--font);cursor:pointer;letter-spacing:.5px;border:none;transition:all .15s;
+  }
+  .btn-sm-accent{background:var(--accent);color:#080808}
+  .btn-sm-accent:hover{background:#aed040}
+  .btn-sm-accent:disabled{opacity:.4;cursor:not-allowed}
+  .btn-sm-outline{border:1px solid rgba(96,200,240,.35);color:var(--a2);background:none}
+  .btn-sm-outline:hover{background:rgba(96,200,240,.08)}
+
+  /* Chain bar */
+  .chain-bar{
+    margin:10px 14px 0;background:rgba(8,10,16,.95);
+    border:1px solid rgba(96,200,240,.25);border-radius:10px;padding:9px 12px;
+    display:none;
+  }
+  .chain-bar.show{display:block}
+  .chain-label{font-size:7px;text-transform:uppercase;letter-spacing:1.5px;color:var(--a2);margin-bottom:7px;font-weight:700}
+  .ch-steps{display:flex;align-items:center;gap:3px;flex-wrap:wrap}
+  .cs{font-size:7.5px;padding:2px 7px;border-radius:4px;border:1px solid rgba(255,255,255,.12);color:rgba(255,255,255,.35);transition:all .3s;white-space:nowrap}
+  .cs.active{border-color:var(--a2);color:var(--a2);background:rgba(96,200,240,.1)}
+  .cs.done{border-color:var(--accent);color:var(--accent);background:rgba(200,240,96,.08)}
+  .cs-arr{color:rgba(255,255,255,.2);font-size:10px}
+
+  /* Dashboard */
+  .dashboard{
+    margin:10px 14px;background:var(--s1);border:1px solid rgba(200,240,96,.3);
+    border-radius:12px;padding:14px;display:none;
+  }
+  .dashboard.show{display:block}
+  .dash-title{font-size:8px;text-transform:uppercase;letter-spacing:1.5px;color:var(--accent);margin-bottom:10px;font-weight:700}
+  .dash-grid{display:grid;grid-template-columns:repeat(4,1fr);gap:6px;margin-bottom:12px}
+  .dash-card{background:rgba(255,255,255,.04);border-radius:8px;padding:8px 10px}
+  .dash-num{font-size:20px;font-weight:700;color:var(--accent);line-height:1}
+  .dash-lbl{font-size:7px;text-transform:uppercase;letter-spacing:.8px;color:rgba(255,255,255,.35);margin-top:2px}
+  .dash-cta{
+    width:100%;display:inline-block;text-align:center;text-decoration:none;
+    background:var(--accent);color:#080808;border:none;padding:10px;border-radius:10px;
+    font-size:9px;font-weight:800;cursor:pointer;font-family:var(--font);letter-spacing:.4px;
+  }
+  .dash-cta:hover{background:#aed040}
+
+  /* Tabs */
+  .tab-bar{
+    display:flex;align-items:center;gap:4px;padding:8px 12px;
+    background:rgba(8,10,16,.95);border-top:1px solid var(--border);
+    position:absolute;bottom:0;left:0;right:0;z-index:30;
+  }
+  .tab{
+    padding:4px 10px;border-radius:12px;font-size:8.5px;font-weight:700;
+    cursor:pointer;color:rgba(255,255,255,.45);border:none;background:none;
+    font-family:var(--font);letter-spacing:.4px;transition:all .15s;
+  }
+  .tab:hover{background:rgba(255,255,255,.08);color:#fff}
+
+  /* Panel */
+  #panel{
+    position:absolute;right:10px;top:48px;background:rgba(8,10,16,.92);
+    border:1px solid rgba(200,240,96,.2);border-radius:10px;padding:10px 12px;
+    width:130px;z-index:25;font-size:8px;
+  }
+  .pt{color:var(--accent);font-weight:700;letter-spacing:1px;margin-bottom:7px;font-size:7px;text-transform:uppercase}
+  .pr{display:flex;justify-content:space-between;margin-bottom:3px;color:rgba(255,255,255,.5);align-items:center}
+  .pd{width:7px;height:7px;border-radius:50%;margin-right:4px;display:inline-block;flex-shrink:0}
+
+  /* Agent modal */
+  #amodal{
+    position:absolute;z-index:50;background:rgba(8,10,16,.97);
+    border:1.5px solid rgba(200,240,96,.35);border-radius:12px;padding:14px 16px;
+    width:178px;display:none;
+  }
+  .am-name{color:var(--accent);font-weight:700;font-size:13px;margin-bottom:2px}
+  .am-role{color:rgba(255,255,255,.4);font-size:7.5px;text-transform:uppercase;letter-spacing:.8px;margin-bottom:8px}
+  .am-tasks{font-size:8.5px;color:rgba(255,255,255,.65);line-height:1.7;margin-bottom:10px}
+  .am-close{position:absolute;top:8px;right:9px;background:none;border:none;color:rgba(255,255,255,.35);cursor:pointer;font-size:13px;font-family:var(--font)}
+  .am-btn{display:block;width:100%;text-align:center;text-decoration:none;background:var(--accent);color:#080808;border:none;padding:6px 0;border-radius:10px;font-size:8.5px;font-weight:700;cursor:pointer;font-family:var(--font)}
+  .am-btn:hover{background:#aed040}
+
+  /* Mobile */
+  @media(max-width:600px){
+    #office-section{padding:0}
+    .office-wrap{border-radius:14px}
+    #gc{display:block!important;width:100%!important;touch-action:none}
+    #panel{display:none!important}
+    .office-title-bar{display:none}
+    #amodal{
+      position:fixed!important;
+      left:10px!important;right:10px!important;
+      bottom:72px!important;top:auto!important;
+      width:auto!important;
+      border-radius:14px;
+      max-height:52vh;overflow-y:auto;
+    }
+    .office-top-bar{padding:8px 12px}
+    .office-actions .btn-sm-outline{display:none}
+    #runBtn{font-size:9px;padding:6px 12px}
+    .tab-bar{
+      gap:4px;padding:8px 10px;
+      overflow-x:auto;-webkit-overflow-scrolling:touch;
+      flex-wrap:nowrap;scrollbar-width:none;
+    }
+    .tab-bar::-webkit-scrollbar{display:none}
+    .tab{font-size:9px;padding:6px 10px;flex-shrink:0;
+      background:rgba(255,255,255,.05);border-radius:10px;white-space:nowrap}
+    .tab-bar>.btn-sm-outline{flex-shrink:0;font-size:8px;margin-left:auto}
+    .chain-bar{margin:0;border-radius:0;border-left:none;border-right:none}
+    .dashboard{margin:8px 12px;border-radius:10px}
+    .dash-grid{grid-template-columns:1fr 1fr}
+  }
+
+  /* Touch hint */
+  #touch-hint{
+    display:none;position:absolute;bottom:52px;left:50%;
+    transform:translateX(-50%);font-size:8px;color:rgba(255,255,255,.4);
+    font-family:var(--font);letter-spacing:1px;white-space:nowrap;
+    pointer-events:none;animation:fadeHint 4s forwards;z-index:25;
+  }
+  @keyframes fadeHint{0%{opacity:0}10%{opacity:1}80%{opacity:1}100%{opacity:0}}
+  @media(max-width:600px){#touch-hint{display:block}}
+</style>
+</head>
+<body>
+
+<div id="office-section">
+  <div class="office-wrap" id="officeWrap">
+    <!-- top bar -->
+    <div class="office-top-bar">
+      <div class="traffic">
+        <div class="dot" style="background:#ff5f57"></div>
+        <div class="dot" style="background:#febc2e"></div>
+        <div class="dot" style="background:#28c840"></div>
+      </div>
+      <div class="office-title-bar">AI Growth Office · Live</div>
+      <div class="office-actions">
+        <button class="btn-sm btn-sm-accent" id="runBtn" onclick="startScenario()">▶ Запустить</button>
+        <a class="btn-sm btn-sm-outline" id="ctaTopBtn" href="#" target="_top">◈ Подключить</a>
+      </div>
+    </div>
+
+    <!-- Canvas -->
+    <canvas id="gc" width="700" height="516" style="margin-top:40px"></canvas>
+
+    <!-- Status panel -->
+    <div id="panel">
+      <div class="pt">◉ Онлайн</div>
+      <div class="pr"><span><span class="pd" style="background:var(--ready)"></span>Готов</span><span id="c0">0</span></div>
+      <div class="pr"><span><span class="pd" style="background:var(--thinking)"></span>Думает</span><span id="c1">0</span></div>
+      <div class="pr"><span><span class="pd" style="background:var(--working)"></span>Работает</span><span id="c2">0</span></div>
+      <div class="pr"><span><span class="pd" style="background:var(--checking)"></span>Проверяет</span><span id="c3">0</span></div>
+    </div>
+
+    <!-- Agent modal -->
+    <div id="amodal">
+      <button class="am-close" onclick="closeAM()">✕</button>
+      <div class="am-name" id="am-nm"></div>
+      <div class="am-role" id="am-rl"></div>
+      <div class="am-tasks" id="am-tk"></div>
+      <a class="am-btn" id="am-btn" href="#" target="_top">Подключить такого ↗</a>
+    </div>
+
+    <!-- Mobile touch hint -->
+    <div id="touch-hint">☝ Свайп для навигации · Тап на агента</div>
+
+    <!-- Chain bar -->
+    <div class="chain-bar" id="chainBar" style="margin-top:0">
+      <div class="chain-label">⟶ Передача задачи</div>
+      <div class="ch-steps" id="chainSteps"></div>
+    </div>
+
+    <!-- Dashboard -->
+    <div class="dashboard" id="dashboard">
+      <div class="dash-title">✓ AI-офис подготовил план роста</div>
+      <div class="dash-grid">
+        <div class="dash-card"><div class="dash-num">10</div><div class="dash-lbl">Идей</div></div>
+        <div class="dash-card"><div class="dash-num">5</div><div class="dash-lbl">Хуков</div></div>
+        <div class="dash-card"><div class="dash-num">3</div><div class="dash-lbl">Гипотезы</div></div>
+        <div class="dash-card"><div class="dash-num" style="color:var(--a2)">1</div><div class="dash-lbl">План</div></div>
+      </div>
+      <a class="dash-cta" id="ctaDashBtn" href="#" target="_top">Подключить AI-команду продаж ↗</a>
+    </div>
+
+    <!-- Tab bar -->
+    <div class="tab-bar">
+      <button class="tab" onclick="camTo(0,0,1)">Весь офис</button>
+      <button class="tab" onclick="camTo(0,0,1.7)">Веранда</button>
+      <button class="tab" onclick="camTo(-170,-155,1.6)">Хаб</button>
+      <button class="tab" onclick="camTo(-330,-330,1.55)">CEO</button>
+      <a class="btn-sm btn-sm-outline" id="ctaTabBtn" href="#" target="_top" style="margin-left:auto;font-size:8px;text-decoration:none">🏢 Подключить ↗</a>
+    </div>
+  </div>
+</div>
+
+<script>
+/* Resolve CTA target from ?cta= query.
+   - If value starts with '#', resolve against parent (same-origin iframe).
+   - Otherwise treat as absolute URL.
+   Fallback: ai-office onboarding. */
+(function(){
+  const qs = new URLSearchParams(location.search);
+  let cta = qs.get('cta') || 'https://ai-office.46-62-215-11.nip.io/onboarding.html';
+  if(cta.startsWith('#')){
+    try{
+      const top = window.top.location;
+      cta = top.origin + top.pathname + top.search + cta;
+    }catch(e){
+      try{ cta = (document.referrer || 'https://ai-office.46-62-215-11.nip.io/').split('#')[0] + cta; }
+      catch(e2){}
+    }
+  }
+  function go(e){
+    e && e.preventDefault();
+    try{ window.top.location.href = cta; }
+    catch(_){ window.location.href = cta; }
+  }
+  ['ctaTopBtn','ctaDashBtn','ctaTabBtn'].forEach(id=>{
+    const el=document.getElementById(id);
+    if(!el) return;
+    el.href = cta;
+    el.addEventListener('click', go);
+  });
+  window.__CTA_HREF__ = cta;
+  window.__CTA_GO__ = go;
+})();
+
+/* Stub analytics — embed has no GA/YM */
+function track(){ /* no-op */ }
+</script>
+
+<script>
+/* ════════════════════════════════════════════════════
+   DATA
+════════════════════════════════════════════════════ */
+const AGENTS=[
+  {id:'ceo',    nm:'Макс',     role:'CEO Agent',           dept:'Управление', emoji:'👔',body:'#2c3e50',head:'#f5cba7',hair:'#1a1a1a',legs:'#1a252f',shirt:'rgba(200,240,96,.3)', x:558,y:32, st:'ready',   bub:null,  tasks:['Ставит стратегические приоритеты','Контролирует финансовый результат','Собирает отчёты от агентов']},
+  {id:'str',    nm:'София',    role:'AI-стратег',           dept:'Стратегия',  emoji:'🧠',body:'#8e44ad',head:'#fad7a0',hair:'#6c3483',legs:'#6c3483',shirt:'rgba(255,255,255,.2)', x:58, y:52, st:'thinking', bub:'Думает…', tasks:['Анализ ниши и конкурентов','Сегментация ЦА','Поиск точек роста']},
+  {id:'cnt',    nm:'Марк',     role:'Контент-продюсер',    dept:'Контент',    emoji:'🎬',body:'#2471a3',head:'#f0b27a',hair:'#c0392b',legs:'#1a5276',shirt:'rgba(255,255,255,.15)',x:248,y:248,st:'ready',   bub:null,  tasks:['Генерация идей для Reels','Написание каруселей','Создание сценариев']},
+  {id:'hook',   nm:'Хантер',   role:'Мастер хуков',         dept:'Контент',    emoji:'🎯',body:'#e67e22',head:'#fad7a0',hair:'#784212',legs:'#a04000',shirt:'rgba(255,255,255,.2)', x:318,y:38, st:'working',  bub:null,  tasks:['Первые 3 сек Reels','Заголовки карусели','A/B тест хуков']},
+  {id:'sales',  nm:'Алиса',    role:'AI-продажник',         dept:'Продажи',    emoji:'💬',body:'#c0392b',head:'#fdebd0',hair:'#e74c3c',legs:'#922b21',shirt:'rgba(255,200,200,.3)', x:538,y:98, st:'ready',   bub:null,  tasks:['Скрипты продаж в Direct','Тексты прогрева','Дожимные сообщения']},
+  {id:'funnel', nm:'Лео',      role:'Архитектор воронок',  dept:'Продажи',    emoji:'🔀',body:'#16a085',head:'#f5cba7',hair:'#0e6655',legs:'#0b5345',shirt:'rgba(200,255,240,.2)', x:172,y:258,st:'thinking', bub:'Думает…', tasks:['Проектирование воронки','Автоворонки','Оптимизация конверсий']},
+  {id:'anlyt',  nm:'Ника',     role:'AI-аналитик',          dept:'Аналитика',  emoji:'📊',body:'#f39c12',head:'#fdebd0',hair:'#d68910',legs:'#b7770d',shirt:'rgba(255,240,180,.3)', x:338,y:258,st:'checking', bub:null,  tasks:['Анализ охватов и ER','Подсчёт конверсий','Расчёт ROMI']},
+  {id:'prod',   nm:'Оскар',    role:'Продуктовый архитектор',dept:'Продукт',  emoji:'📦',body:'#27ae60',head:'#f9e4b7',hair:'#145a32',legs:'#1e8449',shirt:'rgba(180,255,200,.2)', x:388,y:42, st:'ready',   bub:null,  tasks:['Упаковка тарифов','Создание офферов','Программа курса']},
+  {id:'qa',     nm:'Вера',     role:'QA-контроль',           dept:'QA',         emoji:'✅',body:'#9b59b6',head:'#fad7a0',hair:'#6c3483',legs:'#76448a',shirt:'rgba(220,180,255,.2)', x:198,y:425,st:'thinking', bub:'Думает…', tasks:['Проверка текстов','Аудит офферов','Финальная вычитка']},
+  {id:'trnd',   nm:'Трендбот', role:'Трендвотчер',           dept:'Тренды',     emoji:'📡',body:'#1abc9c',head:'#d5f5e3',hair:'#117864',legs:'#148f77',shirt:'rgba(180,255,240,.2)', x:88, y:265,st:'working',  bub:'🔥 Тренд!', tasks:['Мониторинг трендов','Анализ конкурентов','Вирусные форматы']},
+];
+
+const SC={ready:'#2ecc40',thinking:'#f0b429',working:'#3a8fff',checking:'#b44fff',done:'#27ae60'};
+const SL={ready:'ГОТОВ',thinking:'ДУМАЕТ',working:'РАБОТАЕТ',checking:'ПРОВЕРЯЕТ',done:'ГОТОВО'};
+
+/* ════════ CANVAS ENGINE ════════ */
+let W = Math.min(700, window.innerWidth);
+let H = window.innerWidth <= 600 ? Math.round(W * 0.82) : 516;
+const c = document.getElementById('gc');
+c.width  = W;
+c.height = H;
+c.style.width  = W + 'px';
+c.style.height = H + 'px';
+
+window.addEventListener('resize', () => {
+  W = Math.min(700, window.innerWidth);
+  H = window.innerWidth <= 600 ? Math.round(W * 0.82) : 516;
+  c.width  = W;
+  c.height = H;
+  c.style.width  = W + 'px';
+  c.style.height = H + 'px';
+});
+const ctx=c.getContext('2d');
+let cam={x:0,y:0,s:1,tx:0,ty:0,ts:1};
+const sheets={};
+
+function camTo(tx,ty,ts){cam.tx=tx;cam.ty=ty;cam.ts=ts;}
+function updCam(){cam.x+=(cam.tx-cam.x)*.1;cam.y+=(cam.ty-cam.y)*.1;cam.s+=(cam.ts-cam.s)*.1;}
+
+/* Spritesheet generator */
+const LEG_PHASE=[0,1,2,3,4,3,2,1,0];
+function makeSheet(a){
+  const oc=document.createElement('canvas');oc.width=576;oc.height=256;
+  const ox=oc.getContext('2d');
+  for(let row=0;row<4;row++){
+    for(let f=0;f<9;f++){
+      const cx=f*64+32,cy=row*64;
+      const ph=LEG_PHASE[f];
+      const lo=Math.sin(ph/4*Math.PI)*5,ao=Math.sin(ph/4*Math.PI)*4,bob=ph===4?1.5:0;
+      ox.save();ox.globalAlpha=.18;ox.fillStyle='#000';ox.beginPath();ox.ellipse(cx,cy+61,9,2.5,0,0,Math.PI*2);ox.fill();ox.restore();
+      ox.fillStyle=a.legs;
+      ox.save();ox.translate(cx-5,cy+42+bob);ox.rotate(lo*.05);ox.beginPath();ox.roundRect(-3,0,7,12,[2]);ox.fill();ox.restore();
+      ox.save();ox.translate(cx+4,cy+42+bob);ox.rotate(-lo*.05);ox.beginPath();ox.roundRect(-3,0,7,12,[2]);ox.fill();ox.restore();
+      ox.fillStyle='#1a1212';
+      ox.save();ox.translate(cx-5,cy+53+bob);ox.rotate(lo*.05);ox.beginPath();ox.roundRect(-4,0,10,4,[2]);ox.fill();ox.restore();
+      ox.save();ox.translate(cx+4,cy+53+bob);ox.rotate(-lo*.05);ox.beginPath();ox.roundRect(-4,0,10,4,[2]);ox.fill();ox.restore();
+      ox.fillStyle=a.body;ox.beginPath();ox.roundRect(cx-9,cy+26+bob,18,18,[3]);ox.fill();
+      ox.fillStyle=a.shirt||'rgba(255,255,255,.2)';ox.beginPath();ox.roundRect(cx-3,cy+26+bob,6,6,[1]);ox.fill();
+      ox.fillStyle='rgba(0,0,0,.1)';ox.beginPath();ox.roundRect(cx+3,cy+26+bob,6,18,[0,3,3,0]);ox.fill();
+      ox.fillStyle=a.body;
+      ox.save();ox.translate(cx-11,cy+28+bob);ox.rotate(-ao*.06);ox.beginPath();ox.roundRect(-3,0,7,12,[3]);ox.fill();ox.restore();
+      ox.save();ox.translate(cx+8,cy+28+bob);ox.rotate(ao*.06);ox.beginPath();ox.roundRect(-3,0,7,12,[3]);ox.fill();ox.restore();
+      ox.fillStyle=a.head;
+      ox.save();ox.translate(cx-11,cy+28+bob);ox.rotate(-ao*.06);ox.beginPath();ox.arc(-1,13,3.5,0,Math.PI*2);ox.fill();ox.restore();
+      ox.save();ox.translate(cx+8,cy+28+bob);ox.rotate(ao*.06);ox.beginPath();ox.arc(0,13,3.5,0,Math.PI*2);ox.fill();ox.restore();
+      ox.fillStyle=a.head;ox.fillRect(cx-3,cy+22+bob,6,6);
+      ox.fillStyle=a.head;ox.beginPath();ox.roundRect(cx-10,cy+6+bob,20,18,[5]);ox.fill();
+      ox.fillStyle='rgba(0,0,0,.06)';ox.beginPath();ox.roundRect(cx+2,cy+6+bob,8,18,[0,5,5,0]);ox.fill();
+      ox.fillStyle=a.hair;ox.beginPath();ox.roundRect(cx-10,cy+6+bob,20,8,[5,5,1,1]);ox.fill();
+      if(row===1)ox.fillRect(cx+9,cy+8+bob,3,6);
+      if(row===3)ox.fillRect(cx-12,cy+8+bob,3,6);
+      if(row===2){
+        ox.fillStyle='#fff';ox.beginPath();ox.arc(cx-4,cy+17+bob,2.2,0,Math.PI*2);ox.fill();
+        ox.beginPath();ox.arc(cx+4,cy+17+bob,2.2,0,Math.PI*2);ox.fill();
+        ox.fillStyle='#1a1a2e';ox.beginPath();ox.arc(cx-3.3,cy+17.5+bob,1.2,0,Math.PI*2);ox.fill();
+        ox.beginPath();ox.arc(cx+4.7,cy+17.5+bob,1.2,0,Math.PI*2);ox.fill();
+        ox.strokeStyle='rgba(0,0,0,.3)';ox.lineWidth=1.2;ox.beginPath();ox.arc(cx,cy+21+bob,3,.2,Math.PI-.2);ox.stroke();
+      }else if(row!==0){
+        const ex=row===3?cx+2:cx-2;
+        ox.fillStyle='#fff';ox.beginPath();ox.arc(ex,cy+17+bob,2,0,Math.PI*2);ox.fill();
+        ox.fillStyle='#1a1a2e';ox.beginPath();ox.arc(ex+(row===3?.5:-.5),cy+17.5+bob,1.1,0,Math.PI*2);ox.fill();
+      }
+    }
+  }
+  return oc;
+}
+AGENTS.forEach(a=>{sheets[a.id]=makeSheet(a);});
+
+/* Draw helpers */
+function R(x,y,w,h,col,r=0){ctx.fillStyle=col;if(r){ctx.beginPath();ctx.roundRect(x,y,w,h,[r]);ctx.fill();}else ctx.fillRect(x,y,w,h);}
+function C(x,y,r,col){ctx.fillStyle=col;ctx.beginPath();ctx.arc(x,y,r,0,Math.PI*2);ctx.fill();}
+function T(s,x,y,col,sz=7,al='center'){ctx.fillStyle=col;ctx.font=`bold ${sz}px monospace`;ctx.textAlign=al;ctx.fillText(s,x,y);}
+
+/* Scene */
+const P={grass:'#3a8a18',grass2:'#4aa828',fw:'#d4a96a',fwood:'#c8a060',ftile:'#c0c8b4',fconf:'#8fa898',fdark:'#9aa080',wd:'#7a6448',dt:'#c8a868',dl:'#a08040',mon:'#1a1a2e',ms:'#2a3a6e',sb:'#d4b070',bR:'#8B0000',bB:'#00448B',bG:'#2d6e10',bO:'#804000',bP:'#6B0080',pl:'#3a9820',pd:'#2d7810',pl2:'#4ab830',pot:'#6a4020',pb:'#5a3010',tc:'#6a9080',tcl:'#7aA090',cc:'#4a7868',cl:'#3a6050',tD:'#246010',tL:'#3a8a18',tT:'#5a3010'};
+
+function desk(x,y,w=58,h=28){R(x,y+5,w,h,P.dt,2);R(x,y+5,w,4,P.sb,2);R(x+3,y+h+5,8,7,P.dl,1);R(x+w-11,y+h+5,8,7,P.dl,1);R(x+7,y+8,w-14,h-10,P.mon,2);R(x+9,y+10,w-18,h-14,P.ms,1);R(x+11,y+12,13,3,'#4a6aae');}
+function sofa(x,y,w=80,col='#c8a060'){R(x,y+12,w,28,col,4);R(x,y+12,w,7,P.sb,3);R(x,y+8,13,32,P.sb,4);R(x+w-13,y+8,13,32,P.sb,4);}
+function plant(x,y,big=false){const s=big?1.3:1;C(x,y-10*s,10*s,P.pl);C(x-7*s,y-6*s,7*s,P.pd);C(x+7*s,y-7*s,7*s,P.pl2);R(x-2,y,4,12*s,P.pot,1);R(x-6,y+12*s,12,4*s,P.pb,1);}
+function bshelf(x,y,w=80,h=36){R(x,y,w,h,P.dl,2);const bw=Math.floor(w/5);[P.bR,P.bB,P.bG,P.bO,P.bP].forEach((c,i)=>R(x+2+i*bw,y+2,bw-2,h-4,c,1));}
+function ctable(x,y,w=120,h=58){R(x,y+7,w,h,P.tc,4);R(x,y+7,w,7,P.tcl,3);}
+function chair(x,y,flip=false){if(flip){R(x,y+7,20,8,P.cc,3);R(x+3,y,3,7,P.cl,1);R(x+14,y,3,7,P.cl,1);}else{R(x,y,20,8,P.cc,3);R(x+3,y+8,3,7,P.cl,1);R(x+14,y+8,3,7,P.cl,1);}}
+function wboard(x,y){R(x,y,70,46,'#f0f0f0',3);R(x+2,y+2,66,38,'#fff',2);ctx.strokeStyle='#2244cc';ctx.lineWidth=2;ctx.beginPath();ctx.moveTo(x+10,y+18);ctx.lineTo(x+50,y+10);ctx.stroke();ctx.strokeStyle='#cc2222';ctx.beginPath();ctx.moveTo(x+10,y+26);ctx.lineTo(x+42,y+20);ctx.stroke();}
+function rtable(x,y,rx=26,ry=18){ctx.fillStyle=P.dt;ctx.beginPath();ctx.ellipse(x,y,rx,ry,0,0,Math.PI*2);ctx.fill();ctx.fillStyle='#d8c098';ctx.beginPath();ctx.ellipse(x,y-3,rx-4,ry-4,0,0,Math.PI*2);ctx.fill();}
+function bbag(x,y,col){ctx.fillStyle=col;ctx.beginPath();ctx.ellipse(x,y+7,13,9,0,0,Math.PI*2);ctx.fill();ctx.fillStyle=col==='#e8c850'?'#f0d860':'#f09050';ctx.beginPath();ctx.ellipse(x,y,9,6,0,0,Math.PI*2);ctx.fill();}
+function tree(x,y){R(x-3,y+27,6,8,P.tT,1);ctx.fillStyle=P.tD;ctx.beginPath();ctx.moveTo(x,y);ctx.lineTo(x+16,y+28);ctx.lineTo(x-16,y+28);ctx.closePath();ctx.fill();ctx.fillStyle=P.tL;ctx.beginPath();ctx.moveTo(x,y+7);ctx.lineTo(x+14,y+33);ctx.lineTo(x-14,y+33);ctx.closePath();ctx.fill();}
+function room(x,y,w,h,fc,lbl,wc){R(x,y,w,h,fc);R(x,y,w,11,wc);ctx.save();ctx.globalAlpha=.05;for(let i=0;i<w;i+=28){ctx.strokeStyle='#000';ctx.lineWidth=1;ctx.beginPath();ctx.moveTo(x+i,y+11);ctx.lineTo(x+i,y+h);ctx.stroke();}ctx.restore();ctx.fillStyle='rgba(0,0,0,.38)';ctx.font='bold 7px monospace';ctx.textAlign='left';ctx.fillText(lbl.toUpperCase(),x+8,y+8);}
+
+function drawScene(){
+  R(0,0,W,H,P.grass);
+  ctx.save();ctx.globalAlpha=.1;for(let i=0;i<W;i+=20)for(let j=0;j<H;j+=20)if((i+j)%40===0)R(i,j,20,20,P.grass2);ctx.restore();
+  [[10,4],[34,-4],[W-28,4],[W-52,-3],[4,314],[W-30,310],[4,470],[W-28,468]].forEach(([x,y])=>tree(x,y));
+  room(0,0,210,195,P.fw,'Веранда','#8b6040');
+  room(210,0,290,195,P.fwood,'Рабочая зона','#8b6040');
+  room(500,0,200,195,P.ftile,'Lounge','#607050');
+  room(0,195,150,185,P.fdark,'Архив','#506040');
+  room(150,195,350,185,P.fw,'Хаб агентов','#8b6040');
+  room(500,195,200,185,P.fconf,'Meeting Room','#406050');
+  room(0,380,350,136,P.fwood,'Опен-спейс','#8b6040');
+  room(350,380,350,136,P.fconf,'CEO · Переговорная','#406050');
+  [[208,0,4,195],[498,0,4,380],[0,193,700,4],[148,195,4,185],[0,378,700,4],[348,380,4,136]].forEach(([x,y,w,h])=>R(x,y,w,h,P.wd));
+  plant(26,52,true);sofa(32,92);bbag(148,82,'#e8c850');bbag(182,92,'#e88040');rtable(78,165,22,12);plant(192,38);
+  for(let i=0;i<4;i++)desk(218+i*68,32);for(let i=0;i<2;i++)desk(218+i*68,130);plant(464,148);
+  sofa(508,42,90,'#9ab898');rtable(600,112,30,18);bshelf(508,148,80,36);plant(668,128,true);
+  bshelf(8,218,50,80);bshelf(78,218,60,50);
+  bshelf(158,213,200,34);desk(368,213,50,26);desk(426,213,50,26);
+  ctable(178,295,150,62);for(let i=0;i<3;i++){chair(192+i*46,282);chair(192+i*46,358,true);}plant(456,334);
+  wboard(504,213);ctable(512,290,160,58);for(let i=0;i<3;i++){chair(520+i*44,278);chair(520+i*44,354,true);}plant(658,344);
+  for(let col=0;col<3;col++)for(let row=0;row<2;row++)desk(10+col*118,392+row*56);plant(302,400,true);
+  wboard(356,396);ctable(436,390,228,80);for(let i=0;i<4;i++){chair(444+i*52,378);chair(444+i*52,478,true);}plant(648,438,true);
+}
+
+const WALK=[1,2,3,4,5,6,7,8];
+function drawAgent(a,now){
+  const sh=sheets[a.id];if(!sh)return;
+  const bob=a.moving?0:Math.sin(now/800+a.x*.05)*1.2;
+  const frame=a.moving?WALK[Math.floor(now/110)%WALK.length]:0;
+  const DW=34,DH=51;
+  ctx.save();ctx.globalAlpha=.18;ctx.fillStyle='#000';ctx.beginPath();ctx.ellipse(a.x+1,a.y+DH+2+bob,10,3,0,0,Math.PI*2);ctx.fill();ctx.restore();
+  ctx.save();ctx.imageSmoothingEnabled=false;ctx.drawImage(sh,frame*64,a.dir*64,64,64,a.x-DW/2,a.y+bob,DW,DH);ctx.restore();
+  ctx.font='bold 6px monospace';const lbl=SL[a.st];const tw=ctx.measureText(lbl).width+9;
+  R(a.x-tw/2,a.y-8,tw,10,SC[a.st],4);T(lbl,a.x,a.y,'#fff',6);
+  ctx.font='bold 7px monospace';const nw=ctx.measureText(a.nm).width+9;
+  R(a.x-nw/2,a.y+DH+4+bob,nw,10,'rgba(255,255,255,.93)',3);T(a.nm,a.x,a.y+DH+12+bob,'#111',7);
+  if(a.bub){
+    ctx.font='bold 8px monospace';const bw=ctx.measureText(a.bub).width+13;
+    const bx=a.x-bw/2,by=a.y-24;
+    R(bx,by,bw,14,'#fff',5);ctx.strokeStyle='#333';ctx.lineWidth=1.5;ctx.beginPath();ctx.roundRect(bx,by,bw,14,[5]);ctx.stroke();
+    ctx.fillStyle='#fff';ctx.beginPath();ctx.moveTo(a.x-4,by+14);ctx.lineTo(a.x+4,by+14);ctx.lineTo(a.x,by+19);ctx.closePath();ctx.fill();
+    T(a.bub,a.x,by+10,'#111',8);
+  }
+}
+
+/* Movement */
+const SPEED=1.5;
+const IDLE={
+  ceo:[{x:558,y:32},{x:575,y:48},{x:558,y:32},{x:542,y:24}],
+  str:[{x:58,y:52},{x:85,y:75},{x:58,y:52}],
+  cnt:[{x:248,y:248},{x:285,y:232},{x:312,y:252},{x:248,y:248}],
+  hook:[{x:318,y:38},{x:352,y:52},{x:318,y:38}],
+  sales:[{x:538,y:98},{x:558,y:75},{x:538,y:98}],
+  funnel:[{x:172,y:258},{x:205,y:242},{x:172,y:258}],
+  anlyt:[{x:338,y:258},{x:365,y:242},{x:338,y:258}],
+  prod:[{x:388,y:42},{x:422,y:58},{x:388,y:42}],
+  qa:[{x:198,y:425},{x:225,y:410},{x:198,y:425}],
+  trnd:[{x:88,y:265},{x:115,y:250},{x:88,y:265}],
+};
+const iiidx={};AGENTS.forEach(a=>iiidx[a.id]=0);
+let lastIdle=0,scenarioRunning=false;
+
+function dirTo(ax,ay,tx,ty){const dx=tx-ax,dy=ty-ay;if(Math.abs(dx)>Math.abs(dy))return dx>0?3:1;return dy>0?2:0;}
+
+function tickIdle(now){
+  if(now-lastIdle<2400)return;lastIdle=now;if(scenarioRunning)return;
+  const a=AGENTS[Math.floor(Math.random()*AGENTS.length)];if(a.dest)return;
+  const r=IDLE[a.id];if(!r)return;
+  iiidx[a.id]=(iiidx[a.id]+1)%r.length;
+  a.dest={x:r[iiidx[a.id]].x,y:r[iiidx[a.id]].y};
+}
+
+function updAgents(){
+  AGENTS.forEach(a=>{
+    if(!a.dest){a.moving=false;return;}
+    const dx=a.dest.x-a.x,dy=a.dest.y-a.y,dist=Math.sqrt(dx*dx+dy*dy);
+    a.moving=true;a.dir=dirTo(a.x,a.y,a.dest.x,a.dest.y);
+    if(dist<SPEED+.5){a.x=a.dest.x;a.y=a.dest.y;a.dest=null;a.moving=false;if(a._cb){a._cb();a._cb=null;}}
+    else{a.x+=dx/dist*SPEED;a.y+=dy/dist*SPEED;}
+  });
+}
+
+/* Scenario */
+const CHAIN_NM=['София','Марк','Хантер','Алиса','Ника','Макс'];
+const STEPS=[
+  {f:'str', t:'cnt',  fp:{x:248,y:240},bF:'Передаю анализ!',   bT:'Получил задачу!'},
+  {f:'cnt', t:'hook', fp:{x:318,y:35}, bF:'Иду к Хантеру…',    bT:'Усиливаю хуки!'},
+  {f:'hook',t:'sales',fp:{x:538,y:95}, bF:'Несу хуки!',         bT:'Пишу скрипты!'},
+  {f:'sales',t:'anlyt',fp:{x:338,y:252},bF:'Скрипты готовы!',  bT:'Считаю ROMI!'},
+  {f:'anlyt',t:'ceo', fp:{x:558,y:28}, bF:'Отчёт готов! ✅',   bT:'Формирую план!'},
+];
+let chainDone=-1;
+
+function updChain(done){
+  chainDone=done;
+  document.getElementById('chainSteps').innerHTML=CHAIN_NM.map((n,i)=>
+    `<span class="cs${i<=done?' done':i===done+1?' active':''}">${n}</span>${i<CHAIN_NM.length-1?'<span class="cs-arr">→</span>':''}`
+  ).join('');
+}
+
+function setSt(id,st,bub=null){const a=AGENTS.find(x=>x.id===id);if(a){a.st=st;a.bub=bub;}updPanel();}
+
+function startScenario(){
+  if(scenarioRunning)return;
+  scenarioRunning=true;
+  track('scenario_start');
+  document.getElementById('runBtn').disabled=true;
+  document.getElementById('chainBar').classList.add('show');
+  document.getElementById('dashboard').classList.remove('show');
+  chainDone=-1;
+  AGENTS.forEach(a=>{a.st='ready';a.bub=null;a.dest=null;a.moving=false;a.dir=2;});
+  setSt('str','working','Анализирую нишу…');updChain(-1);
+  let step=0;
+  function doStep(){
+    if(step>=STEPS.length){
+      setTimeout(()=>{
+        setSt('ceo','done','✅ План на 7 дней!');updChain(STEPS.length-1);
+        setTimeout(()=>{
+          document.getElementById('dashboard').classList.add('show');
+          scenarioRunning=false;
+          document.getElementById('runBtn').disabled=false;
+        },1500);
+      },400);return;
+    }
+    const s=STEPS[step];
+    const fA=AGENTS.find(x=>x.id===s.f);
+    const tA=AGENTS.find(x=>x.id===s.t);
+    fA.bub=s.bF;fA.st='working';updPanel();
+    fA._cb=()=>{fA.st='done';fA.bub=null;tA.bub=s.bT;tA.st='working';updChain(step);step++;setTimeout(doStep,900);};
+    fA.dest={x:s.fp.x,y:s.fp.y};
+  }
+  doStep();
+}
+
+/* Panel */
+function updPanel(){
+  const cnt={ready:0,thinking:0,working:0,checking:0};
+  AGENTS.forEach(a=>{if(cnt[a.st]!==undefined)cnt[a.st]++;});
+  document.getElementById('c0').textContent=cnt.ready;
+  document.getElementById('c1').textContent=cnt.thinking;
+  document.getElementById('c2').textContent=cnt.working;
+  document.getElementById('c3').textContent=cnt.checking;
+}
+
+/* Idle status cycle */
+let lastSt=0;
+function tickSt(now){
+  if(now-lastSt<4500)return;lastSt=now;if(scenarioRunning)return;
+  const a=AGENTS[Math.floor(Math.random()*AGENTS.length)];
+  const opts=['ready','ready','thinking','working','checking'];
+  const ns=opts[Math.floor(Math.random()*opts.length)];
+  a.st=ns;a.bub={thinking:'Думает…',working:'Работает…'}[ns]||null;
+  updPanel();
+}
+
+/* Click */
+c.addEventListener('click',e=>{
+  const cr=c.getBoundingClientRect();
+  const scale=W/cr.width;
+  const mx=(e.clientX-cr.left)*scale/cam.s-cam.x/cam.s;
+  const my=(e.clientY-cr.top)*scale/cam.s-cam.y/cam.s;
+  const hit=AGENTS.find(a=>mx>a.x-18&&mx<a.x+18&&my>a.y-6&&my<a.y+54);
+  if(hit)showAM(hit,e.clientX,e.clientY);else closeAM();
+});
+
+function showAM(a,cx,cy){
+  track('agent_click',{agent_id:a.id});
+  const m=document.getElementById('amodal');
+  const mob=window.innerWidth<=600;
+  if(mob){
+    m.style.cssText='display:block;position:fixed;left:10px;right:10px;bottom:72px;top:auto;width:auto;border-radius:14px;z-index:50;background:rgba(8,10,16,.97);border:1.5px solid rgba(200,240,96,.35);padding:14px 16px;max-height:52vh;overflow-y:auto;box-shadow:0 24px 64px rgba(0,0,0,.7)';
+  } else {
+    m.style.cssText=`display:block;position:absolute;left:${Math.min(cx+10,window.innerWidth-200)}px;top:${Math.max(cy-150,5)}px;width:178px`;
+  }
+  document.getElementById('am-nm').textContent=a.nm;
+  document.getElementById('am-rl').textContent=a.role;
+  document.getElementById('am-tk').innerHTML=a.tasks.map(t=>`› ${t}<br>`).join('');
+  const btn=document.getElementById('am-btn');
+  btn.href=window.__CTA_HREF__||'#';
+  btn.onclick=window.__CTA_GO__||null;
+}
+function closeAM(){document.getElementById('amodal').style.display='none';}
+
+/* Main loop */
+function loop(now){
+  ctx.save();ctx.clearRect(0,0,W,H);updCam();
+  ctx.translate(cam.x,cam.y);ctx.scale(cam.s,cam.s);
+  drawScene();tickIdle(now);tickSt(now);updAgents();updPanel();
+  [...AGENTS].sort((a,b)=>a.y-b.y).forEach(a=>drawAgent(a,now));
+  ctx.restore();requestAnimationFrame(loop);
+}
+
+let loopStarted=false;
+const _genSheets=()=>{ AGENTS.forEach(a=>{if(!sheets[a.id])sheets[a.id]=makeSheet(a);}); };
+if('requestIdleCallback' in window) requestIdleCallback(_genSheets,{timeout:2000});
+else setTimeout(_genSheets,200);
+
+const _offObs=new IntersectionObserver(entries=>{
+  if(entries[0].isIntersecting && !loopStarted){
+    loopStarted=true;
+    AGENTS.forEach(a=>{if(!sheets[a.id])sheets[a.id]=makeSheet(a);});
+    requestAnimationFrame(loop);
+    _offObs.disconnect();
+  }
+},{rootMargin:'300px'});
+const _offEl=document.getElementById('office-section');
+if(_offEl) _offObs.observe(_offEl);
+else { loopStarted=true; requestAnimationFrame(loop); }
+
+/* Mobile zoom + touch */
+const isMobile = window.innerWidth <= 600;
+if(isMobile){
+  cam.s = 0.52; cam.ts = 0.52;
+  cam.x = 0; cam.tx = 0;
+  cam.y = 0; cam.ty = 0;
+}
+
+let _ts = {x:0, y:0, moved:false};
+c.addEventListener('touchstart', e=>{
+  _ts.x = e.touches[0].clientX;
+  _ts.y = e.touches[0].clientY;
+  _ts.moved = false;
+},{passive:true});
+c.addEventListener('touchmove', e=>{
+  if(Math.abs(e.touches[0].clientX-_ts.x)>8||Math.abs(e.touches[0].clientY-_ts.y)>8)
+    _ts.moved=true;
+},{passive:true});
+c.addEventListener('touchend', e=>{
+  if(_ts.moved) return;
+  e.preventDefault();
+  const t=e.changedTouches[0];
+  const cr=c.getBoundingClientRect();
+  const scale=W/cr.width;
+  const mx=(t.clientX-cr.left)*scale/cam.s-cam.x/cam.s;
+  const my=(t.clientY-cr.top)*scale/cam.s-cam.y/cam.s;
+  const hit=AGENTS.find(a=>mx>a.x-24&&mx<a.x+24&&my>a.y-10&&my<a.y+60);
+  if(hit){
+    const modalX = isMobile ? window.innerWidth/2 : t.clientX;
+    const modalY = isMobile ? window.innerHeight-20 : t.clientY;
+    showAM(hit, modalX, modalY);
+    const hint=document.getElementById('touch-hint');
+    if(hint) hint.style.opacity='0';
+  } else {
+    closeAM();
+  }
+},{passive:false});
+
+if(isMobile){
+  setTimeout(()=>{ if(!scenarioRunning) startScenario(); }, 2500);
+}
+</script>
+
+</body>
+</html>
