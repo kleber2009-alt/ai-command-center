@@ -111,6 +111,42 @@ window.IG = (function () {
     return new URLSearchParams(location.search).get(name);
   }
 
+  // Mounts a unified primary navigation into a container. Used by every
+  // page so cross-navigation works the same everywhere. The first call
+  // also injects the .ig-nav stylesheet.
+  var navStylesInjected = false;
+  function injectNavStyles() {
+    if (navStylesInjected) return;
+    navStylesInjected = true;
+    var s = document.createElement('style');
+    s.textContent = '' +
+      '.ig-nav{display:flex;gap:2px;flex-wrap:wrap;align-items:center}' +
+      '.ig-nav__link{font-family:"SF Mono",monospace;font-size:10px;letter-spacing:.14em;' +
+      'text-transform:uppercase;font-weight:700;padding:6px 10px;color:#b8b3a8;background:transparent;' +
+      'border:1px solid #2a2a2a;border-radius:4px;text-decoration:none;transition:all .12s ease}' +
+      '.ig-nav__link:hover{color:#f5f0e8;border-color:#c8f060}' +
+      '.ig-nav__link.is-active{background:#c8f060;color:#080808;border-color:#c8f060}';
+    document.head.appendChild(s);
+  }
+  function mountNav(container, current) {
+    if (!container) return;
+    injectNavStyles();
+    var items = [
+      { slug: 'inbox',     label: 'Inbox',     href: '/' },
+      { slug: 'pipeline',  label: 'Pipeline',  href: '/pipeline' },
+      { slug: 'pulse',     label: 'Pulse',     href: '/pulse' },
+      { slug: 'agents',    label: 'Agents',    href: '/agents' },
+      { slug: 'reports',   label: 'Reports',   href: '/reports' },
+      { slug: 'kb',        label: 'KB',        href: '/kb' },
+      { slug: 'settings',  label: 'Settings',  href: '/settings' },
+    ];
+    container.classList.add('ig-nav');
+    container.innerHTML = items.map(function (it) {
+      var active = it.slug === current ? ' is-active' : '';
+      return '<a class="ig-nav__link' + active + '" href="' + it.href + '">' + it.label + '</a>';
+    }).join('');
+  }
+
   // Mounts the global auto-reply toggle button into a container.
   // The button reflects /api/settings.auto_reply_enabled and flips it on
   // click. Other pages just call IG.mountAutoReplyToggle(containerEl).
@@ -183,6 +219,7 @@ window.IG = (function () {
     api: api, fmtTime: fmtTime, fmtDay: fmtDay, nameOf: nameOf,
     statusBadge: statusBadge, escapeHtml: escapeHtml, getParam: getParam,
     mountAutoReplyToggle: mountAutoReplyToggle,
+    mountNav: mountNav,
   };
 })();
 `;
@@ -519,6 +556,38 @@ export function startAdminServer(deps: AdminDeps): AdminHandle {
       });
       return c.json({ error: 'analyze failed' }, 502);
     }
+  });
+
+  // Aggregate dashboard counters. One round-trip for all pulse / reports
+  // / agents tiles — cheaper than 6 separate calls from the SPA.
+  app.get('/api/stats', async (c) => {
+    const [contacts, messageStats, recCount, prompts, settings] = await Promise.all([
+      deps.contacts.list({ limit: 1000 }),
+      deps.messages.stats(),
+      deps.recommendations.count(),
+      deps.prompts.list(),
+      deps.settings.all(),
+    ]);
+    const byStatus: Record<string, number> = { new: 0, warm: 0, hot: 0, customer: 0, lost: 0 };
+    for (const ct of contacts) {
+      const k = ct.lead_status || 'new';
+      byStatus[k] = (byStatus[k] ?? 0) + 1;
+    }
+    return c.json({
+      contacts: { total: contacts.length, by_status: byStatus },
+      messages: messageStats,
+      recommendations: { total: recCount },
+      prompts: {
+        total: prompts.length,
+        active: prompts.find((p) => p.active)?.version ?? null,
+      },
+      settings,
+      models: {
+        responder: config.responderModel,
+        analyst: config.analystModel,
+        classifier: config.classifierModel,
+      },
+    });
   });
 
   app.get('/api/prompts', async (c) => {

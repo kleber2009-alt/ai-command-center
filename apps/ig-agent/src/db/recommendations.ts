@@ -26,6 +26,7 @@ export interface RecommendationStore {
   insert(input: RecommendationInput): Promise<AiRecommendation>;
   forContact(contactId: string, limit?: number): Promise<AiRecommendation[]>;
   markApplied(id: string): Promise<void>;
+  count(): Promise<number>;
 }
 
 export function createRecommendationStore(pool: DbPool): RecommendationStore {
@@ -59,6 +60,11 @@ export function createRecommendationStore(pool: DbPool): RecommendationStore {
 
     async markApplied(id) {
       await query(pool, 'UPDATE ai_recommendations SET applied = true WHERE id = $1', [id]);
+    },
+
+    async count() {
+      const rows = await query<{ n: string }>(pool, 'SELECT COUNT(*)::text AS n FROM ai_recommendations');
+      return Number(rows[0]?.n ?? 0);
     },
   };
 }

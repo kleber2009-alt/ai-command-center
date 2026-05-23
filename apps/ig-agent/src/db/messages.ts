@@ -39,11 +39,22 @@ export interface InsertMessageInput {
   rawPayload?: unknown;
 }
 
+export interface MessageStats {
+  total: number;
+  incoming: number;
+  outgoing: number;
+  last_24h: number;
+  last_7d: number;
+  tokens_24h: number;
+  tokens_7d: number;
+}
+
 export interface MessageStore {
   insert(input: InsertMessageInput): Promise<Message>;
   listForContact(contactId: string, limit?: number): Promise<Message[]>;
   recentForContact(contactId: string, limit: number): Promise<Message[]>;
   updateAnalysis(id: string, intent: string | null, sentiment: string | null): Promise<void>;
+  stats(): Promise<MessageStats>;
 }
 
 export function createMessageStore(pool: DbPool): MessageStore {
@@ -107,6 +118,42 @@ export function createMessageStore(pool: DbPool): MessageStore {
         'UPDATE messages SET intent = COALESCE($2, intent), sentiment = COALESCE($3, sentiment) WHERE id = $1',
         [id, intent, sentiment],
       );
+    },
+
+    async stats() {
+      const rows = await query<{
+        total: string;
+        incoming: string;
+        outgoing: string;
+        last_24h: string;
+        last_7d: string;
+        tokens_24h: string | null;
+        tokens_7d: string | null;
+      }>(
+        pool,
+        `SELECT
+           COUNT(*)::text AS total,
+           COUNT(*) FILTER (WHERE direction = 'incoming')::text AS incoming,
+           COUNT(*) FILTER (WHERE direction = 'outgoing')::text AS outgoing,
+           COUNT(*) FILTER (WHERE created_at >= NOW() - INTERVAL '1 day')::text AS last_24h,
+           COUNT(*) FILTER (WHERE created_at >= NOW() - INTERVAL '7 days')::text AS last_7d,
+           COALESCE(SUM(ai_tokens_used) FILTER (WHERE created_at >= NOW() - INTERVAL '1 day'), 0)::text AS tokens_24h,
+           COALESCE(SUM(ai_tokens_used) FILTER (WHERE created_at >= NOW() - INTERVAL '7 days'), 0)::text AS tokens_7d
+         FROM messages`,
+      );
+      const r = rows[0] ?? {
+        total: '0', incoming: '0', outgoing: '0',
+        last_24h: '0', last_7d: '0', tokens_24h: '0', tokens_7d: '0',
+      };
+      return {
+        total: Number(r.total),
+        incoming: Number(r.incoming),
+        outgoing: Number(r.outgoing),
+        last_24h: Number(r.last_24h),
+        last_7d: Number(r.last_7d),
+        tokens_24h: Number(r.tokens_24h ?? 0),
+        tokens_7d: Number(r.tokens_7d ?? 0),
+      };
     },
   };
 }
