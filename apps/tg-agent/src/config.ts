@@ -121,6 +121,12 @@ export interface Config {
   reportEnabled: boolean;
   reportHourUtc: number;
   reportRunOnStart: boolean;
+  memoryEnabled: boolean;
+  openaiApiKey: string | undefined;
+  embeddingModel: string;
+  qdrantUrl: string;
+  qdrantCollection: string;
+  qdrantApiKey: string | undefined;
 }
 
 export function loadConfig(): Config {
@@ -179,5 +185,12 @@ export function loadConfig(): Config {
     reportHourUtc: parseHourOfDay('REPORT_HOUR_UTC', optional('REPORT_HOUR_UTC'), 6),
     reportRunOnStart:
       (optional('REPORT_RUN_ON_START') ?? 'false').toLowerCase() === 'true',
+    memoryEnabled:
+      (optional('MEMORY_ENABLED') ?? 'true').toLowerCase() !== 'false',
+    openaiApiKey: optional('OPENAI_API_KEY'),
+    embeddingModel: optional('EMBEDDING_MODEL') ?? 'text-embedding-3-small',
+    qdrantUrl: optional('QDRANT_URL') ?? 'http://aisales-qdrant:6333',
+    qdrantCollection: optional('QDRANT_COLLECTION') ?? 'tg-memory',
+    qdrantApiKey: optional('QDRANT_API_KEY'),
   };
 }

@@ -34,7 +34,19 @@ services:
       timeout: 5s
       retries: 3
       start_period: 10s
+    # Attach to the aisales-* shared network so the bot can reach
+    # aisales-qdrant for the embeddings memory. Default network stays
+    # so the admin UI port mapping continues to work.
+    networks:
+      - default
+      - aisales
 
 volumes:
   tg-agent-data:
     name: tg-agent-data
+
+networks:
+  default:
+  aisales:
+    name: aisales_aisales-net
+    external: true
