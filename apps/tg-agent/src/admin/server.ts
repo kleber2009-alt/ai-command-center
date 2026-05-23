@@ -320,6 +320,15 @@ function wireApi(app: Hono, deps: AdminDeps): void {
       .map(e => ({ name: e.name, title: e.name.replace(/-/g, ' ') }));
     return c.json({ projects: entries });
   });
+  app.get('/api/projects/summary', (c) => {
+    const dir = join(deps.dataDir, 'projects');
+    if (!existsSync(dir)) return c.json({ projects: [] });
+    const items = readdirSync(dir, { withFileTypes: true })
+      .filter(e => e.isDirectory())
+      .map(e => parseProjectSummary(join(dir, e.name), e.name));
+    items.sort((a, b) => (b.messagesToday - a.messagesToday) || (b.totalMessages - a.totalMessages));
+    return c.json({ projects: items });
+  });
   app.get('/api/projects/:name/archive', (c) => {
     const archDir = join(deps.dataDir, 'projects', c.req.param('name'), 'archive');
     if (!existsSync(archDir)) return c.json({ files: [] });
@@ -516,4 +525,59 @@ function loginErrorPage(message: string): string {
 
 function escapeHtml(s: string): string {
   return s.replace(/[&<>"']/g, (c) => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' })[c]!);
+}
+
+type ProjectSummary = {
+  name: string;
+  title: string;
+  updatedAt: string | null;
+  totalMessages: number;
+  messagesToday: number;
+  classes: Array<{ label: string; count: number }>;
+  deals: number;
+};
+
+function parseProjectSummary(dir: string, name: string): ProjectSummary {
+  const summary: ProjectSummary = {
+    name,
+    title: name.replace(/-/g, ' '),
+    updatedAt: null,
+    totalMessages: 0,
+    messagesToday: 0,
+    classes: [],
+    deals: 0,
+  };
+  const file = join(dir, '1-диалоги.md');
+  if (!existsSync(file)) return summary;
+  const lines = readFileSync(file, 'utf8').split(/\r?\n/);
+
+  const titleMatch = lines[0]?.match(/^#\s*\d+\.\s*[^·]+·\s*(.+?)\s*$/);
+  if (titleMatch?.[1]) summary.title = titleMatch[1];
+
+  // Pass 1: scalar fields anywhere in the doc.
+  let inAllTimeTable = false;
+  for (let i = 0; i < lines.length; i++) {
+    const line = lines[i]!;
+    if (summary.updatedAt == null) {
+      const m = line.match(/^>\s*Обновлено:\s*(\d{4}-\d{2}-\d{2})/);
+      if (m) summary.updatedAt = m[1]!;
+    }
+    const total = line.match(/^##\s*Всего сообщений:\s*(\d+)/);
+    if (total) summary.totalMessages = Number(total[1]);
+    const today = line.match(/Сегодня:\s*\*\*\+?(\d+)\*\*/);
+    if (today) summary.messagesToday = Number(today[1]);
+    const deals = line.match(/^##\s*Сделки в CRM:\s*(\d+)/);
+    if (deals) summary.deals = Number(deals[1]);
+
+    // Class table lives under "## Разбивка по классу (всё время)" and ends
+    // at the next "##" heading.
+    if (/^##\s*Разбивка по классу/i.test(line)) { inAllTimeTable = true; continue; }
+    if (inAllTimeTable && /^##\s/.test(line)) { inAllTimeTable = false; continue; }
+    if (inAllTimeTable) {
+      const row = line.match(/^\|\s*([A-Z_]+)\s*\|\s*(\d+)\s*\|/);
+      if (row) summary.classes.push({ label: row[1]!, count: Number(row[2]) });
+    }
+  }
+  summary.classes.sort((a, b) => b.count - a.count);
+  return summary;
 }

@@ -45,6 +45,7 @@
 
       <div class="px-2 py-1 mt-2 text-[10px] font-semibold uppercase tracking-wider text-slate-600">Прочее</div>
       <button data-view="prompts"   class="view-btn view-btn-idle   flex items-center gap-2.5 w-full rounded-lg px-3 py-2 text-sm">🧠 Промпты</button>
+      <button data-view="report"    class="view-btn view-btn-idle   flex items-center gap-2.5 w-full rounded-lg px-3 py-2 text-sm">📈 Отчёт</button>
       <button data-view="projects"  class="view-btn view-btn-idle   flex items-center gap-2.5 w-full rounded-lg px-3 py-2 text-sm">📁 Проекты</button>
       <button data-view="roadmap"   class="view-btn view-btn-idle   flex items-center gap-2.5 w-full rounded-lg px-3 py-2 text-sm">🗺 Роудмап</button>
     </div>
@@ -1130,6 +1131,22 @@
       </div>
     </section><!-- /view-prompts -->
 
+    <!-- ─── VIEW: report (per-chat daily dashboard) ─────────────────── -->
+    <section id="view-report" class="hidden flex-1 p-6 overflow-y-auto">
+      <div class="max-w-6xl mx-auto">
+        <div class="flex items-baseline justify-between gap-4 mb-5">
+          <div>
+            <h2 class="text-xl font-bold text-slate-100">Ежедневный отчёт</h2>
+            <p class="text-sm text-slate-500 mt-0.5">По одной карточке на чат. Сортировка — по активности за сегодня. Клик → детали в «Проектах».</p>
+          </div>
+          <div id="reportUpdatedAt" class="text-xs text-slate-500"></div>
+        </div>
+        <div id="reportGrid" class="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4">
+          <div class="text-sm text-slate-500">Загрузка…</div>
+        </div>
+      </div>
+    </section>
+
     <!-- ─── VIEW: projects ───────────────────────────────────────────── -->
     <section id="view-projects" class="hidden flex-1 flex gap-4 p-6 min-h-0 overflow-hidden">
       <!-- left: project list -->
@@ -1240,7 +1257,7 @@
     }
 
     // ─── view routing ─────────────────────────────────────────────────────────
-    const ALL_VIEWS = ['chats','drafts','analytics','pipeline','demo','billing','kb','prompts','projects','roadmap'];
+    const ALL_VIEWS = ['chats','drafts','analytics','pipeline','demo','billing','kb','prompts','report','projects','roadmap'];
 
     function switchView(view) {
       state.view = view;
@@ -1264,6 +1281,7 @@
         else if (state.view === 'billing')   { await loadBilling(); }
         else if (state.view === 'kb')        { await loadKb(); }
         else if (state.view === 'prompts')   { await loadPrompts(); }
+        else if (state.view === 'report')    { await loadDailyReports(); }
         else if (state.view === 'projects')  { await loadProjects(); }
         else if (state.view === 'roadmap')   { rmInitCheckboxes(); }
         $('status').textContent = '· обновлено ' + new Date().toLocaleTimeString('ru-RU');
@@ -1653,8 +1671,57 @@
       setTimeout(() => { $('promptSaveStatus').textContent = ''; }, 2000);
     }
 
+    // ─── REPORT view (per-chat daily summary dashboard) ──────────────────────
+    async function loadDailyReports() {
+      const grid = $('reportGrid');
+      const data = await fetchJson('/api/projects/summary');
+      const projects = data.projects || [];
+      const latest = projects.reduce((acc, p) => (p.updatedAt && (!acc || p.updatedAt > acc) ? p.updatedAt : acc), null);
+      $('reportUpdatedAt').textContent = latest ? 'Последнее обновление: ' + latest : '';
+      if (projects.length === 0) {
+        grid.innerHTML = '<div class="text-sm text-slate-500">Пока нет отчётов. Бот сгенерирует их при первом запуске планировщика.</div>';
+        return;
+      }
+      grid.innerHTML = '';
+      for (const p of projects) {
+        const card = document.createElement('button');
+        card.type = 'button';
+        card.className = 'text-left rounded-xl border border-slate-700 bg-slate-900/40 p-4 hover:border-indigo-500/60 hover:bg-slate-900/70 transition-colors flex flex-col gap-3 min-h-44';
+        card.onclick = () => openProjectFromReport(p.name);
+
+        const topClasses = (p.classes || []).slice(0, 3);
+        const classRows = topClasses.length
+          ? topClasses.map(c => '<div class="flex justify-between text-xs"><span class="' + (CLASS_COLOR[c.label] || 'text-slate-400') + ' font-mono">' + escapeHtml(c.label) + '</span><span class="text-slate-500 tabular-nums">' + c.count + '</span></div>').join('')
+          : '<div class="text-xs text-slate-600">— нет классов —</div>';
+
+        const todayBadge = p.messagesToday > 0
+          ? '<span class="rounded-md bg-emerald-500/15 text-emerald-300 px-2 py-0.5 text-xs font-semibold">+' + p.messagesToday + ' сегодня</span>'
+          : '<span class="rounded-md bg-slate-700/40 text-slate-500 px-2 py-0.5 text-xs">0 сегодня</span>';
+
+        card.innerHTML =
+          '<div class="flex items-start justify-between gap-2">' +
+            '<div class="text-sm font-semibold text-slate-100 leading-tight">' + escapeHtml(p.title) + '</div>' +
+            (p.deals > 0 ? '<span class="shrink-0 rounded-md bg-indigo-500/15 text-indigo-300 px-2 py-0.5 text-xs">🤝 ' + p.deals + '</span>' : '') +
+          '</div>' +
+          '<div class="flex items-baseline gap-2">' +
+            '<div class="text-3xl font-bold text-slate-100 tabular-nums">' + p.totalMessages + '</div>' +
+            '<div class="text-xs text-slate-500">всего</div>' +
+            '<div class="ml-auto">' + todayBadge + '</div>' +
+          '</div>' +
+          '<div class="space-y-1 border-t border-slate-800 pt-2">' + classRows + '</div>' +
+          '<div class="mt-auto text-[10px] text-slate-600">' + (p.updatedAt ? 'обн. ' + p.updatedAt : 'нет данных') + ' · кликни → детали</div>';
+        grid.appendChild(card);
+      }
+    }
+
+    function openProjectFromReport(name) {
+      pendingProjectSelection = name;
+      switchView('projects');
+    }
+
     // ─── PROJECTS view ────────────────────────────────────────────────────────
     let currentProject = null;
+    let pendingProjectSelection = null;
 
     async function loadProjects() {
       const data = await fetchJson('/api/projects');
@@ -1664,15 +1731,19 @@
         list.innerHTML = '<div class="text-xs text-slate-500">Нет проектов</div>';
         return;
       }
+      let target = null;
       for (const p of data.projects) {
         const btn = document.createElement('button');
         btn.textContent = p.title;
         btn.title = p.name;
+        btn.dataset.name = p.name;
         btn.className = 'text-left px-3 py-2 rounded-lg text-sm text-slate-300 hover:bg-slate-700 transition-colors truncate w-full';
         btn.onclick = () => selectProject(p.name, p.title, btn);
         list.appendChild(btn);
+        if (pendingProjectSelection && p.name === pendingProjectSelection) target = btn;
       }
-      list.querySelector('button')?.click();
+      pendingProjectSelection = null;
+      (target || list.querySelector('button'))?.click();
     }
 
     function selectProject(name, title, btn) {
