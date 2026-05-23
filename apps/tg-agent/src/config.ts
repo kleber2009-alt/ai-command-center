@@ -118,6 +118,9 @@ export interface Config {
   digestDailyHourUtc: number;
   digestWindowHours: number;
   digestEnabled: boolean;
+  reportEnabled: boolean;
+  reportHourUtc: number;
+  reportRunOnStart: boolean;
 }
 
 export function loadConfig(): Config {
@@ -171,5 +174,10 @@ export function loadConfig(): Config {
     ),
     digestEnabled:
       (optional('DIGEST_ENABLED') ?? 'true').toLowerCase() !== 'false',
+    reportEnabled:
+      (optional('REPORT_ENABLED') ?? 'true').toLowerCase() !== 'false',
+    reportHourUtc: parseHourOfDay('REPORT_HOUR_UTC', optional('REPORT_HOUR_UTC'), 6),
+    reportRunOnStart:
+      (optional('REPORT_RUN_ON_START') ?? 'false').toLowerCase() === 'true',
   };
 }

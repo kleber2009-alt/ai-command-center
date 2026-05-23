@@ -27,6 +27,7 @@ import { loadKnowledgeBase } from './knowledge/index.js';
 import { createLogger } from './logger.js';
 import { createNotifier } from './notifier.js';
 import { registerOwnerCommands } from './owner_commands.js';
+import { startReportScheduler, type ReporterHandle } from './reporter.js';
 import { createResponder } from './responder.js';
 
 async function main(): Promise<void> {
@@ -175,10 +176,32 @@ async function main(): Promise<void> {
     );
   }
 
-  // Legacy reporter.ts (markdown tables, class-bucket dump) is
-  // intentionally not started. The digest scheduler replaces it
-  // with an AI summary delivered as the daily DM. The file is kept
-  // for rollback — just re-import + start it here if needed.
+  // Reporter writes the per-chat markdown files that back the
+  // "Проекты" tab in admin. Distinct from the digest scheduler
+  // (which is an AI summary DM'd to the owner): reporter is plain
+  // SQL → markdown, no LLM calls.
+  let reporter: ReporterHandle | null = null;
+  if (config.reportEnabled) {
+    reporter = startReportScheduler({
+      db,
+      chats,
+      leads,
+      deals: dealService,
+      dataDir: dirname(resolve(config.databasePath)),
+      logger,
+      reportHourUtc: config.reportHourUtc,
+    });
+    if (config.reportRunOnStart) {
+      reporter.runOnce().catch((err) => {
+        logger.error('reporter: run-on-start failed', {
+          error: err instanceof Error ? err.message : String(err),
+        });
+      });
+    }
+  } else {
+    logger.info('reporter disabled (REPORT_ENABLED=false)');
+  }
+
   let digest: DigestSchedulerHandle | null = null;
   if (config.digestEnabled && config.ownerTelegramId !== undefined) {
     digest = startDigestScheduler({
@@ -198,6 +221,7 @@ async function main(): Promise<void> {
     try {
       backup?.stop();
       digest?.stop();
+      reporter?.stop();
       await bot.stop();
       if (admin) await admin.close();
     } finally {
