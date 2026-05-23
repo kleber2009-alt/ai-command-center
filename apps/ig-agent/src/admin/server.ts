@@ -333,6 +333,7 @@ window.IG = (function () {
       { slug: 'pipeline',  label: 'Pipeline',  href: '/pipeline' },
       { slug: 'pulse',     label: 'Pulse',     href: '/pulse' },
       { slug: 'agents',    label: 'Agents',    href: '/agents' },
+      { slug: 'daily',     label: 'Сводки 24ч', href: '/daily' },
       { slug: 'reports',   label: 'Reports',   href: '/reports' },
       { slug: 'kb',        label: 'KB',        href: '/kb' },
       { slug: 'settings',  label: 'Settings',  href: '/settings' },
@@ -434,6 +435,8 @@ export interface AdminDeps {
   analyst: Analyst;
   sendPulse: SendPulseClient;
   notifier: Notifier;
+  digests: DigestStore;
+  digestScheduler: DigestSchedulerHandle;
 }
 
 export interface AdminHandle {
@@ -840,6 +843,46 @@ export function startAdminServer(deps: AdminDeps): AdminHandle {
     const all = await deps.settings.all();
     logger.info('settings updated', { keys: Object.keys(updates) });
     return c.json({ ok: true, settings: all });
+  });
+
+  // ---- Daily digests ---------------------------------------------------
+
+  // List latest digest per contact, newest first. Default 100 cards —
+  // enough for any single morning's traffic.
+  app.get('/api/digests', async (c) => {
+    const limit = Math.min(Math.max(Number(c.req.query('limit') ?? 100), 1), 500);
+    const rows = await deps.digests.latestPerContact(limit);
+    return c.json({ digests: rows });
+  });
+
+  // Full history (last N) for one contact — feeds the "history" tab
+  // on the per-contact digest detail view.
+  app.get('/api/digests/contact/:id', async (c) => {
+    const id = c.req.param('id');
+    const limit = Math.min(Math.max(Number(c.req.query('limit') ?? 30), 1), 200);
+    const rows = await deps.digests.historyForContact(id, limit);
+    return c.json({ digests: rows });
+  });
+
+  app.get('/api/digests/:id', async (c) => {
+    const id = c.req.param('id');
+    const row = await deps.digests.byId(id);
+    if (!row) return c.json({ error: 'not found' }, 404);
+    return c.json({ digest: row });
+  });
+
+  // Manual trigger — useful for "preview the morning briefing now" and
+  // for the very first day after deploy when the cron hasn't fired yet.
+  // Runs in the background so the HTTP request returns promptly even if
+  // the sweep takes 30+s; client polls /api/digests for results.
+  app.post('/api/digests/run-now', async (c) => {
+    logger.info('digest: manual sweep requested via admin');
+    void deps.digestScheduler.runOnce().catch((err) => {
+      logger.error('digest: manual sweep failed', {
+        error: err instanceof Error ? err.message : String(err),
+      });
+    });
+    return c.json({ ok: true, status: 'started' });
   });
 
   // ---- Boot ------------------------------------------------------------

@@ -1,0 +1,205 @@
+<!DOCTYPE html>
+<html lang="ru">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width,initial-scale=1">
+<title>ig-agent · Сводки 24ч</title>
+<link rel="stylesheet" href="/assets/ig-admin.css">
+<style>
+.dg-head{display:flex;align-items:flex-end;gap:14px;justify-content:space-between;flex-wrap:wrap;margin-bottom:10px}
+.dg-head h1{font-family:Georgia,serif;font-size:22px;font-weight:normal}
+.dg-head h1 .accent{color:var(--green);font-style:italic}
+.dg-head .sub{font-family:var(--font-mono);font-size:11px;color:var(--text-muted);letter-spacing:.08em;margin-top:4px}
+
+.dg-list{display:flex;flex-direction:column;gap:14px}
+
+.dg-card{
+  background:var(--bg-card);border:1px solid var(--border-soft);border-radius:var(--r-md);
+  padding:18px 20px;display:flex;flex-direction:column;gap:10px;
+}
+.dg-card__head{display:flex;align-items:baseline;justify-content:space-between;gap:12px;flex-wrap:wrap}
+.dg-card__title{font-family:Georgia,serif;font-size:17px;color:var(--text-main)}
+.dg-card__title .who{color:var(--green);font-style:italic}
+.dg-card__meta{font-family:var(--font-mono);font-size:10.5px;letter-spacing:.08em;color:var(--text-muted)}
+.dg-card__gist{font-size:14px;line-height:1.6;color:var(--text-mid)}
+.dg-card__sections{display:flex;flex-direction:column;gap:8px}
+.dg-section{font-size:13px;line-height:1.55}
+.dg-section__h{font-family:var(--font-mono);font-size:10.5px;letter-spacing:.12em;text-transform:uppercase;font-weight:700;color:var(--text-muted);margin-bottom:4px}
+.dg-section__items{list-style:none;padding-left:0;display:flex;flex-direction:column;gap:3px}
+.dg-section__items li{padding-left:14px;position:relative;color:var(--text-mid)}
+.dg-section__items li::before{content:'•';position:absolute;left:2px;color:var(--text-muted)}
+.dg-section--blind .dg-section__h{color:var(--yellow)}
+.dg-section--blind li::before{color:var(--yellow)}
+.dg-section--follow .dg-section__h{color:var(--red)}
+.dg-section--follow li::before{color:var(--red)}
+
+.dg-empty{padding:48px 24px;text-align:center;color:var(--text-muted);font-size:13.5px;line-height:1.6}
+.dg-empty .em{color:var(--green);font-style:italic}
+
+.dg-actions{display:flex;align-items:center;gap:10px;flex-wrap:wrap}
+.dg-status{font-family:var(--font-mono);font-size:11px;color:var(--text-muted);min-height:16px}
+</style>
+</head>
+<body>
+
+<header class="bar">
+  <a class="bar__brand" href="/"><span class="bar__brand-mark">IG</span>agent</a>
+  <nav id="igNav"></nav>
+  <div class="bar__right" id="topbarRight"></div>
+</header>
+
+<main class="shell shell--narrow">
+
+  <div class="dg-head">
+    <div>
+      <h1>Сводки <span class="accent">24ч</span></h1>
+      <div class="sub">Утренняя AI-сводка по каждому активному диалогу — ежедневно в 10:00 Asia/Jakarta (03:00 UTC).</div>
+    </div>
+    <div class="dg-actions">
+      <button id="btnRun" class="btn btn--secondary btn--sm">▶ Сгенерировать сейчас</button>
+      <button id="btnReload" class="btn btn--ghost btn--sm">↻ Обновить</button>
+    </div>
+  </div>
+
+  <div id="status" class="dg-status"></div>
+
+  <div id="list" class="dg-list">
+    <div class="dg-empty">Загрузка…</div>
+  </div>
+
+</main>
+
+<script src="/assets/ig-admin.js"></script>
+<script>
+(function () {
+  var IG = window.IG;
+  if (IG.mountNav) IG.mountNav(document.getElementById('igNav'), 'daily');
+  if (IG.mountAutoReplyToggle) IG.mountAutoReplyToggle(document.getElementById('topbarRight'));
+
+  var listEl = document.getElementById('list');
+  var statusEl = document.getElementById('status');
+
+  function setStatus(text, color) {
+    statusEl.textContent = text || '';
+    statusEl.style.color = color || 'var(--text-muted)';
+  }
+
+  function fmtDate(iso) {
+    if (!iso) return '';
+    try {
+      var d = new Date(iso);
+      var dd = String(d.getDate()).padStart(2, '0');
+      var mm = String(d.getMonth() + 1).padStart(2, '0');
+      var hh = String(d.getHours()).padStart(2, '0');
+      var mi = String(d.getMinutes()).padStart(2, '0');
+      return dd + '.' + mm + ' ' + hh + ':' + mi;
+    } catch (e) {
+      return iso;
+    }
+  }
+
+  function contactLabel(c) {
+    if (!c) return '—';
+    if (c.ig_username) return '@' + c.ig_username;
+    var fn = ((c.first_name || '') + ' ' + (c.last_name || '')).trim();
+    if (fn) return fn;
+    return 'id ' + (c.id || '').slice(0, 8);
+  }
+
+  function section(title, items, modifier) {
+    if (!items || !items.length) return '';
+    var mod = modifier ? ' dg-section--' + modifier : '';
+    var lis = items.map(function (it) {
+      return '<li>' + IG.escapeHtml(it) + '</li>';
+    }).join('');
+    return '<div class="dg-section' + mod + '">' +
+      '<div class="dg-section__h">' + IG.escapeHtml(title) + '</div>' +
+      '<ul class="dg-section__items">' + lis + '</ul>' +
+      '</div>';
+  }
+
+  function renderCard(d) {
+    var p = d.payload_json || {};
+    var c = d.contact || {};
+    var who = contactLabel(c);
+    var statusBadge = c.lead_status ? IG.statusBadge(c.lead_status) : '';
+    var meta = fmtDate(d.generated_at) + ' · ' + d.messages_count + ' сообщений · окно ' + d.window_hours + 'ч';
+    var sections =
+      section('📌 О чём говорили', p.topics) +
+      section('❓ Открытые вопросы', p.open_questions) +
+      section('✅ Решения и договорённости', p.decisions) +
+      section('👀 Кому стоит ответить лично', p.follow_ups, 'follow') +
+      section('🔗 Полезные ссылки', p.links) +
+      section('⚠️ Что легко пропустить', p.blind_spots, 'blind');
+
+    return '<article class="dg-card">' +
+      '<header class="dg-card__head">' +
+        '<div class="dg-card__title">🧠 Сводка по <span class="who">«' + IG.escapeHtml(who) + '»</span> ' + statusBadge + '</div>' +
+        '<div class="dg-card__meta">' + IG.escapeHtml(meta) + '</div>' +
+      '</header>' +
+      (p.gist ? '<div class="dg-card__gist">' + IG.escapeHtml(p.gist) + '</div>' : '') +
+      (sections ? '<div class="dg-card__sections">' + sections + '</div>' : '') +
+      '</article>';
+  }
+
+  function renderEmpty() {
+    listEl.innerHTML =
+      '<div class="dg-empty">' +
+        'Сводок пока нет. Они появляются <span class="em">каждое утро в 10:00 Asia/Jakarta</span> по каждому диалогу с активностью за последние 24 часа.<br><br>' +
+        'Нажми <strong>«▶ Сгенерировать сейчас»</strong> чтобы запустить сводку немедленно.' +
+      '</div>';
+  }
+
+  async function load() {
+    setStatus('Загрузка…');
+    try {
+      var data = await IG.api('/api/digests?limit=100');
+      var rows = (data && data.digests) || [];
+      if (rows.length === 0) {
+        renderEmpty();
+        setStatus('Пока ничего · обновлено ' + fmtDate(new Date().toISOString()));
+        return;
+      }
+      listEl.innerHTML = rows.map(renderCard).join('');
+      setStatus(rows.length + ' ' + (rows.length === 1 ? 'сводка' : rows.length < 5 ? 'сводки' : 'сводок') + ' · обновлено ' + fmtDate(new Date().toISOString()));
+    } catch (e) {
+      listEl.innerHTML = '<div class="dg-empty" style="color:var(--red)">Не удалось загрузить: ' + IG.escapeHtml(e.message) + '</div>';
+      setStatus('Ошибка загрузки', 'var(--red)');
+    }
+  }
+
+  document.getElementById('btnReload').addEventListener('click', load);
+
+  document.getElementById('btnRun').addEventListener('click', async function () {
+    var btn = this;
+    btn.disabled = true;
+    var prev = btn.textContent;
+    btn.textContent = '⏳ Запускаю…';
+    setStatus('Запускаю утреннюю сводку. Это может занять до минуты на диалог.');
+    try {
+      await IG.api('/api/digests/run-now', { method: 'POST', body: '{}' });
+      setStatus('Сводка запущена в фоне. Обновляю список каждые 5 сек…', 'var(--green)');
+      // Soft poll for 60s — long enough that 5–10 contacts have time
+      // to come through but bounded so the page doesn't hammer the API.
+      var ticks = 0;
+      var iv = setInterval(async function () {
+        ticks += 1;
+        await load();
+        if (ticks >= 12) {
+          clearInterval(iv);
+          setStatus('Готово · последнее обновление ' + fmtDate(new Date().toISOString()));
+        }
+      }, 5000);
+    } catch (e) {
+      setStatus('Не удалось запустить: ' + e.message, 'var(--red)');
+    } finally {
+      btn.disabled = false;
+      btn.textContent = prev;
+    }
+  });
+
+  load();
+})();
+</script>
+</body>
+</html>

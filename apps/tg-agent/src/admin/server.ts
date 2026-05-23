@@ -649,6 +649,23 @@ function wireApi(app: Hono, deps: AdminDeps): void {
       const r = await ig.post(`/api/contacts/${encodeURIComponent(id)}/reply`, body);
       return c.json(r.body as Record<string, unknown>, r.status as 200);
     });
+
+    // Daily Instagram digests. Renders in the «📊 Сводки 24ч»
+    // sub-section of the Instagram tab. The digest sweep itself runs
+    // inside ig-agent on its own scheduler; here we just proxy.
+    app.get('/api/instagram/digests', (c) => {
+      const limit = c.req.query('limit') ?? '100';
+      return pass(c, `/api/digests?limit=${encodeURIComponent(limit)}`);
+    });
+    app.get('/api/instagram/digests/contact/:id', (c) => {
+      const id = c.req.param('id');
+      const limit = c.req.query('limit') ?? '30';
+      return pass(c, `/api/digests/contact/${encodeURIComponent(id)}?limit=${encodeURIComponent(limit)}`);
+    });
+    app.post('/api/instagram/digests/run-now', async (c) => {
+      const r = await ig.post('/api/digests/run-now', {});
+      return c.json(r.body as Record<string, unknown>, r.status as 200);
+    });
   }
 }
 
