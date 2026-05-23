@@ -2,169 +2,77 @@
 <html lang="ru">
 <head>
 <meta charset="UTF-8">
-<meta name="viewport" content="width=device-width, initial-scale=1.0">
-<meta name="theme-color" content="#080808">
-<meta name="color-scheme" content="dark only">
-<title>AI Sales · Agents</title>
+<meta name="viewport" content="width=device-width,initial-scale=1">
+<title>ig-agent · Agents</title>
+<link rel="stylesheet" href="/assets/ig-admin.css">
 <style>
-  *, *::before, *::after { margin:0; padding:0; box-sizing:border-box; }
-  html, body { background:#080808; color:#f5f0e8; min-height:100vh; }
-  body { font-family:Georgia, 'Times New Roman', serif; font-size:15px; line-height:1.5; overflow-x:hidden; }
-  .label { font-family:'SF Mono','JetBrains Mono','Menlo',monospace; font-size:10px; text-transform:uppercase; letter-spacing:0.14em; color:#b8b3a8; font-weight:700; }
-  .mono { font-family:'SF Mono','JetBrains Mono','Menlo',monospace; }
+.agents-grid{display:grid;grid-template-columns:1fr 1fr;gap:8px}
+@media (max-width:900px){.agents-grid{grid-template-columns:1fr}}
 
-  .topbar { position:sticky; top:0; z-index:50; display:flex; align-items:center; justify-content:space-between; padding:14px 24px; background:#080808; border-bottom:1px solid #2a2a2a; gap:18px; flex-wrap:wrap; }
-  .topbar-left { display:flex; align-items:center; gap:18px; min-width:0; }
-  .topbar-title { font-family:Georgia,serif; font-size:18px; line-height:1; white-space:nowrap; }
-  .topbar-title .accent { color:#c8f060; font-style:italic; }
-  .topbar-nav { display:flex; gap:2px; flex-wrap:wrap; }
-  .nav-link { background:transparent; border:1px solid #2a2a2a; color:#b8b3a8; padding:7px 14px; font-family:'SF Mono',monospace; font-size:10px; text-transform:uppercase; letter-spacing:0.14em; font-weight:700; text-decoration:none; }
-  .nav-link.active { background:#c8f060; color:#080808; border-color:#c8f060; }
-  .nav-link:hover:not(.active) { border-color:#c8f060; color:#f5f0e8; }
-  .topbar-meta { font-family:'SF Mono',monospace; font-size:11px; color:#b8b3a8; letter-spacing:0.12em; }
-  .topbar-meta .v { color:#c8f060; }
+.agent-card{padding:18px 22px;border-radius:var(--r-md);background:var(--bg-card);border:1px solid var(--border-soft);display:flex;flex-direction:column;gap:10px;min-height:160px}
+.agent-card.responder{border-left:3px solid var(--green)}
+.agent-card.analyst{border-left:3px solid var(--blue)}
+.agent-card .head{display:flex;justify-content:space-between;align-items:center;gap:8px}
+.agent-card .name{font-family:Georgia,serif;font-size:20px}
+.agent-card .model{font-family:var(--font-mono);font-size:11px;color:var(--text-muted);letter-spacing:.06em}
+.agent-card .count-row{display:flex;justify-content:space-between;align-items:baseline;margin-top:auto}
+.agent-card .count{font-family:Georgia,serif;font-size:34px;line-height:1}
+.agent-card .units{font-family:var(--font-mono);font-size:10px;color:var(--text-muted);letter-spacing:.1em;text-align:right;line-height:1.4}
 
-  .shell { max-width:1480px; margin:0 auto; padding:18px 24px 80px; display:grid; gap:2px; }
-  .sec-head { display:flex; align-items:baseline; gap:14px; padding:18px 2px 10px; }
-  .sec-num { font-family:'SF Mono',monospace; font-size:10px; color:#c8f060; letter-spacing:0.18em; font-weight:700; }
-  .sec-title { font-family:Georgia,serif; font-size:14px; font-style:italic; color:#b8b3a8; }
-  .sec-spacer { flex:1; border-bottom:1px solid #1a1a1a; transform:translateY(-2px); }
-
-  /* AGENT TABS */
-  .agent-tabs { display:grid; grid-template-columns:repeat(4, 1fr); gap:2px; }
-  @media (max-width:900px) { .agent-tabs { grid-template-columns:repeat(2, 1fr); } }
-  .agent-tab { background:#0f0f0f; border:1px solid #1a1a1a; padding:18px 22px; cursor:pointer; display:flex; flex-direction:column; gap:8px; min-height:124px; transition:border-color 0.15s; text-align:left; font-family:inherit; color:inherit; }
-  .agent-tab:hover { border-color:#3a3a3a; }
-  .agent-tab.active { border-color:#c8f060; background:#0d1216; }
-  .agent-tab.active.cyan { border-color:#60c8f0; }
-  .agent-tab.active.pink { border-color:#f06090; }
-  .at-status { display:flex; align-items:center; gap:8px; }
-  .at-status .dot { width:8px; height:8px; border-radius:50%; background:#c8f060; box-shadow:0 0 0 3px rgba(200,240,96,0.12); }
-  .at-status.idle .dot { background:#5a5550; box-shadow:none; }
-  .at-status .lbl { font-family:'SF Mono',monospace; font-size:9px; color:#c8f060; letter-spacing:0.14em; font-weight:700; text-transform:uppercase; }
-  .at-status.idle .lbl { color:#5a5550; }
-  .at-name { font-family:Georgia,serif; font-size:22px; line-height:1.2; }
-  .at-model { font-family:'SF Mono',monospace; font-size:10px; color:#5a5550; letter-spacing:0.08em; }
-  .at-load { display:flex; gap:14px; align-items:baseline; margin-top:auto; }
-  .at-load .val { font-family:Georgia,serif; font-size:32px; line-height:1; }
-  .at-load .val.lime { color:#c8f060; }
-  .at-load .val.cyan { color:#60c8f0; }
-  .at-load .val.pink { color:#f06090; }
-  .at-load .units { font-family:'SF Mono',monospace; font-size:10px; color:#b8b3a8; letter-spacing:0.1em; }
-
-  /* DETAIL CARD */
-  .detail { display:grid; grid-template-columns:1.4fr 1fr; gap:2px; }
-  @media (max-width:1000px) { .detail { grid-template-columns:1fr; } }
-
-  .panel { background:#0f0f0f; border:1px solid #1a1a1a; padding:22px 26px; }
-  .panel h3 { font-family:Georgia,serif; font-size:20px; font-weight:normal; margin-bottom:14px; }
-  .panel h3 .accent { color:#c8f060; font-style:italic; }
-  .panel h4 { font-family:'SF Mono',monospace; font-size:10px; text-transform:uppercase; letter-spacing:0.14em; color:#5a5550; margin:14px 0 10px; font-weight:700; }
-
-  /* HERO METRIC GRID */
-  .metric-grid { display:grid; grid-template-columns:repeat(4, 1fr); gap:2px; }
-  @media (max-width:900px) { .metric-grid { grid-template-columns:repeat(2, 1fr); } }
-  .metric { background:#0f0f0f; border:1px solid #1a1a1a; padding:18px 18px 16px; display:flex; flex-direction:column; gap:6px; min-height:130px; }
-  .metric .num { font-family:'SF Mono',monospace; font-size:10px; color:#3a3a3a; letter-spacing:0.18em; font-weight:700; }
-  .metric .lbl { font-family:'SF Mono',monospace; font-size:10px; color:#b8b3a8; letter-spacing:0.14em; font-weight:700; text-transform:uppercase; line-height:1.3; }
-  .metric .val { font-family:Georgia,serif; font-size:44px; line-height:1; letter-spacing:-0.02em; margin-top:auto; }
-  .metric .val.lime { color:#c8f060; }
-  .metric .val.cyan { color:#60c8f0; }
-  .metric .val.pink { color:#f06090; }
-  .metric .val .sfx { font-size:18px; color:#5a5550; }
-  .metric .delta { font-family:'SF Mono',monospace; font-size:10px; }
-  .metric .delta.up { color:#c8f060; }
-  .metric .delta.down { color:#f06090; }
-  .metric .delta.flat { color:#b8b3a8; }
-
-  /* CHART */
-  .chart { padding:0 20px 20px; }
-  .chart-bars { display:flex; align-items:flex-end; height:120px; gap:4px; padding-top:20px; }
-  .chart-bars .b { flex:1; background:#c8f060; min-height:4px; position:relative; }
-  .chart-bars .b.cyan { background:#60c8f0; }
-  .chart-bars .b.pink { background:#f06090; }
-  .chart-bars .b:hover::after { content:attr(data-val); position:absolute; top:-22px; left:50%; transform:translateX(-50%); font-family:'SF Mono',monospace; font-size:10px; color:#f5f0e8; background:#1a1a1a; padding:2px 6px; white-space:nowrap; }
-  .chart-axis { display:flex; justify-content:space-between; padding-top:8px; font-family:'SF Mono',monospace; font-size:9px; color:#5a5550; letter-spacing:0.1em; }
-
-  /* ACTION LOG */
-  .log { font-family:'SF Mono',monospace; font-size:11px; max-height:340px; overflow-y:auto; }
-  .log-row { display:grid; grid-template-columns:48px 50px 1fr 60px; gap:8px; padding:8px 0; border-bottom:1px solid #131313; align-items:baseline; }
-  .log-row .t { color:#5a5550; font-size:10px; }
-  .log-row .ch { font-size:9px; padding:1px 5px; font-weight:700; letter-spacing:0.08em; text-align:center; }
-  .log-row .ch.ig { background:#28121b; color:#f06090; }
-  .log-row .ch.tg { background:#0f1f28; color:#60c8f0; }
-  .log-row .ch.sys { background:#1a1a1a; color:#b8b3a8; }
-  .log-row .ev { color:#f5f0e8; line-height:1.4; }
-  .log-row .ev .stage { color:#c8f060; font-weight:700; }
-  .log-row .ev .stage.warn { color:#f06090; }
-  .log-row .lat { color:#5a5550; text-align:right; font-size:10px; }
-  .log-row .lat.slow { color:#f06090; }
-
-  /* KNOWLEDGE GAPS */
-  .gaps { list-style:none; }
-  .gap-row { display:flex; gap:12px; padding:10px 0; border-bottom:1px solid #1a1a1a; font-size:13.5px; line-height:1.5; align-items:flex-start; }
-  .gap-row:last-child { border-bottom:none; }
-  .gap-count { font-family:'SF Mono',monospace; font-size:11px; padding:2px 7px; background:#28121b; color:#f06090; font-weight:700; letter-spacing:0.1em; flex-shrink:0; }
-  .gap-count.med { background:#3a2814; color:#f0a060; }
-  .gap-count.low { background:#1a1a1a; color:#b8b3a8; border:1px solid #2a2a2a; }
-  .gap-body { color:#f5f0e8; }
-  .gap-body .sub { color:#5a5550; font-family:'SF Mono',monospace; font-size:10px; margin-top:4px; letter-spacing:0.06em; }
-
-  /* CONFIG */
-  .cfg-row { display:grid; grid-template-columns:1fr 1fr; gap:14px; padding:10px 0; border-bottom:1px solid #1a1a1a; align-items:baseline; }
-  .cfg-row:last-child { border-bottom:none; }
-  .cfg-row .k { font-family:'SF Mono',monospace; font-size:10px; color:#b8b3a8; letter-spacing:0.1em; text-transform:uppercase; font-weight:700; }
-  .cfg-row .v { font-family:'SF Mono',monospace; font-size:12px; color:#f5f0e8; text-align:right; }
-  .cfg-row .v.lime { color:#c8f060; }
-
-  /* CONTROLS */
-  .controls { display:flex; gap:2px; }
-  .ctrl-btn { flex:1; padding:11px; background:transparent; color:#f5f0e8; border:1px solid #2a2a2a; font-family:'SF Mono',monospace; font-size:11px; font-weight:700; letter-spacing:0.14em; text-transform:uppercase; cursor:pointer; text-align:center; }
-  .ctrl-btn:hover { border-color:#c8f060; color:#c8f060; }
-  .ctrl-btn.warn:hover { border-color:#f06090; color:#f06090; }
-
-  /* VOICE CONSISTENCY */
-  .voice-bar { background:#1a1a1a; height:8px; position:relative; margin:10px 0 6px; }
-  .voice-fill { height:100%; background:linear-gradient(90deg, #f06090 0%, #f0a060 40%, #c8f060 70%); }
-  .voice-meta { display:flex; justify-content:space-between; font-family:'SF Mono',monospace; font-size:10px; color:#5a5550; letter-spacing:0.1em; }
-
-  .foot { padding:32px 0 0; text-align:center; color:#5a5550; font-family:'SF Mono',monospace; font-size:10px; letter-spacing:0.15em; text-transform:uppercase; }
-  .foot a { color:#c8f060; text-decoration:none; }
+.prompt-card{background:var(--bg-card);border:1px solid var(--border-soft);border-radius:var(--r-md);padding:14px 16px;display:flex;flex-direction:column;gap:10px}
+.prompt-card.is-active{border-color:var(--green-edge);background:linear-gradient(180deg,rgba(159,211,104,.04),var(--bg-card))}
+.prompt-card .head{display:flex;justify-content:space-between;align-items:center;gap:12px}
+.prompt-card .version{font-family:var(--font-mono);font-size:12px;color:var(--green);font-weight:700;letter-spacing:.06em}
+.prompt-card .stamp{font-family:var(--font-mono);font-size:10px;color:var(--text-muted);letter-spacing:.1em}
+.prompt-card .body{font-size:13.5px;line-height:1.55;color:var(--text-mid);max-height:160px;overflow:auto;white-space:pre-wrap;background:var(--bg-main);padding:10px 12px;border-radius:var(--r-sm)}
 </style>
 </head>
 <body>
 
-<header class="topbar">
-  <div class="topbar-left">
-    <div class="topbar-title">ig-agent <span class="accent">Agents</span></div>
-    <nav id="igNav"></nav>
-  </div>
-  <div id="topbarRight" style="display:flex;align-items:center;gap:12px"></div>
+<header class="bar">
+  <a class="bar__brand" href="/"><span class="bar__brand-mark">IG</span>agent</a>
+  <nav id="igNav"></nav>
+  <div class="bar__right" id="topbarRight"></div>
 </header>
 
 <main class="shell">
 
-  <!-- AGENT CARDS (live, from /api/stats) -->
   <div class="sec-head">
     <span class="sec-num">/01</span>
-    <span class="sec-title">Активные агенты · runtime config</span>
+    <span class="sec-title">Активные агенты · runtime</span>
     <span class="sec-spacer"></span>
   </div>
 
-  <div class="agent-tabs" id="agentCards">
-    <button class="agent-tab active" data-agent="responder">
-      <div class="at-status"><span class="dot"></span><span class="lbl" id="responderStatus">● ON</span></div>
-      <div class="at-name">Responder</div>
-      <div class="at-model" id="responderModel">claude-haiku-4-5-…</div>
-      <div class="at-load"><span class="val lime" id="responderCount">…</span><span class="units">исходящих<br/>в БД</span></div>
-    </button>
+  <div class="agents-grid">
+    <div class="agent-card responder">
+      <div class="head">
+        <div>
+          <div class="name">Responder</div>
+          <div class="model" id="responderModel">…</div>
+        </div>
+        <span class="badge badge--lime" id="responderStatus">● ON</span>
+      </div>
+      <p class="t-sm muted" style="line-height:1.55">Отвечает в IG-DM на каждое входящее когда auto-reply ON. Берёт active prompt из таблицы.</p>
+      <div class="count-row">
+        <span class="count c-green" id="responderCount">…</span>
+        <span class="units">исходящих<br/>в БД</span>
+      </div>
+    </div>
 
-    <button class="agent-tab cyan" data-agent="analyst">
-      <div class="at-status"><span class="dot"></span><span class="lbl">● ON</span></div>
-      <div class="at-name">Analyst</div>
-      <div class="at-model" id="analystModel">claude-sonnet-4-6</div>
-      <div class="at-load"><span class="val cyan" id="analystCount">…</span><span class="units">рекомендаций<br/>всего</span></div>
-    </button>
+    <div class="agent-card analyst">
+      <div class="head">
+        <div>
+          <div class="name">Analyst</div>
+          <div class="model" id="analystModel">…</div>
+        </div>
+        <span class="badge badge--blue">● ON</span>
+      </div>
+      <p class="t-sm muted" style="line-height:1.55">Запускается на каждое входящее независимо от auto-reply. Пишет intent / sentiment / 1–4 рекомендации.</p>
+      <div class="count-row">
+        <span class="count c-blue" id="analystCount">…</span>
+        <span class="units">рекомендаций<br/>всего</span>
+      </div>
+    </div>
   </div>
 
   <div class="sec-head">
@@ -173,46 +81,46 @@
     <span class="sec-spacer"></span>
   </div>
 
-  <div class="metric-grid">
-    <div class="metric">
+  <div class="tile-grid">
+    <div class="tile">
       <div class="num">01</div>
       <div class="lbl">Сообщений<br/>за 24ч</div>
       <div class="val lime" id="m24">…</div>
-      <div class="delta flat" id="m7">7d: …</div>
+      <div class="sub" id="m7">7d: …</div>
     </div>
-    <div class="metric">
+    <div class="tile">
       <div class="num">02</div>
       <div class="lbl">Входящих<br/>всего</div>
       <div class="val cyan" id="mIn">…</div>
-      <div class="delta flat" id="mInOut">…</div>
+      <div class="sub" id="mInOut">…</div>
     </div>
-    <div class="metric">
+    <div class="tile">
       <div class="num">03</div>
       <div class="lbl">Токены<br/>за 24ч</div>
-      <div class="val" id="t24">…</div>
-      <div class="delta flat" id="t7">7d: …</div>
+      <div class="val yellow" id="t24">…</div>
+      <div class="sub" id="t7">7d: …</div>
     </div>
-    <div class="metric">
+    <div class="tile">
       <div class="num">04</div>
       <div class="lbl">Контакты<br/>всего</div>
       <div class="val pink" id="cTotal">…</div>
-      <div class="delta flat" id="cBreakdown">…</div>
+      <div class="sub" id="cBreakdown">…</div>
     </div>
   </div>
 
-  <!-- PROMPT VERSIONS (live) -->
   <div class="sec-head">
-    <span class="sec-num">/99</span>
+    <span class="sec-num">/03</span>
     <span class="sec-title">Промпт-версии · responder system prompt</span>
     <span class="sec-spacer"></span>
   </div>
-  <div id="promptList" style="display:flex;flex-direction:column;gap:8px;padding:0 2px 24px">
+
+  <div id="promptList" style="display:flex;flex-direction:column;gap:8px">
     <div style="opacity:.5">…загружаю</div>
   </div>
 
-  <div class="foot">
-    ig-agent · admin v0.1 · промпт активируется атомарно, ответы подхватывают новую версию без рестарта
-  </div>
+  <p class="t-sm muted" style="margin-top:8px;line-height:1.6">
+    Активация атомарная — снимает прежнюю активную версию и проставляет выбранную. Responder подхватывает новую без рестарта на следующее входящее.
+  </p>
 
 </main>
 
@@ -223,8 +131,9 @@
   if (IG.mountNav) IG.mountNav(document.getElementById('igNav'), 'agents');
   if (IG.mountAutoReplyToggle) IG.mountAutoReplyToggle(document.getElementById('topbarRight'));
 
-  // Hydrate the agent cards + 24h metrics from /api/stats.
-  (async function hydrateStats() {
+  var list = document.getElementById('promptList');
+
+  async function hydrateStats() {
     try {
       var s = await IG.api('/api/stats');
       document.getElementById('responderModel').textContent = s.models.responder;
@@ -233,6 +142,7 @@
       document.getElementById('analystCount').textContent   = s.recommendations.total;
       var on = s.settings && s.settings.auto_reply_enabled !== 'false';
       document.getElementById('responderStatus').textContent = on ? '● ON' : '⏸ OFF';
+      document.getElementById('responderStatus').className = 'badge ' + (on ? 'badge--lime' : 'badge--warn');
 
       document.getElementById('m24').textContent  = s.messages.last_24h;
       document.getElementById('m7').textContent   = '7d: ' + s.messages.last_7d;
@@ -244,42 +154,29 @@
       var bs = s.contacts.by_status || {};
       document.getElementById('cBreakdown').textContent =
         'new ' + (bs.new||0) + ' · warm ' + (bs.warm||0) + ' · hot ' + (bs.hot||0);
-    } catch (e) {
-      console.warn('stats hydration failed', e);
-    }
-  })();
+    } catch (e) { console.warn('stats hydration failed', e); }
+  }
 
-  var list = document.getElementById('promptList');
-
-  // Agent-tab toggle is purely visual — backing data exists only for the
-  // responder slot right now. Other tabs stay decorative.
-  document.querySelectorAll('.agent-tab').forEach(function (t) {
-    t.addEventListener('click', function () {
-      document.querySelectorAll('.agent-tab').forEach(function (x) { x.classList.remove('active'); });
-      t.classList.add('active');
-    });
-  });
-
-  function render(prompts) {
+  function renderPrompts(prompts) {
     if (!prompts.length) {
-      list.innerHTML = '<div style="opacity:.5">Промптов нет. Дефолтный сидится при первой миграции.</div>';
+      list.innerHTML = '<div style="opacity:.5">Промптов нет. Дефолтный сидится первой миграцией.</div>';
       return;
     }
     list.innerHTML = prompts.map(function (p) {
-      var border = p.active ? '#c8f060' : '#2a2a2a';
+      var activeCls = p.active ? ' is-active' : '';
       var btn = p.active
-        ? '<span style="color:#c8f060;font-family:monospace;font-size:11px;letter-spacing:.1em">● ACTIVE</span>'
-        : '<button data-id="' + IG.escapeHtml(p.id) + '" class="activate-btn" style="background:transparent;border:1px solid #c8f060;color:#c8f060;padding:6px 12px;font-family:monospace;font-size:10px;letter-spacing:.14em;cursor:pointer;font-weight:700">АКТИВИРОВАТЬ</button>';
+        ? '<span class="badge badge--lime">● ACTIVE</span>'
+        : '<button data-id="' + IG.escapeHtml(p.id) + '" class="btn btn--sm activate-btn">Активировать</button>';
       return (
-        '<div style="border:1px solid ' + border + ';padding:14px 16px;background:#0a0a0a">' +
-          '<div style="display:flex;justify-content:space-between;align-items:center;gap:12px">' +
+        '<div class="prompt-card' + activeCls + '">' +
+          '<div class="head">' +
             '<div>' +
-              '<div style="font-family:monospace;font-size:12px;color:#c8f060">' + IG.escapeHtml(p.version) + (p.segment ? ' · segment=' + IG.escapeHtml(p.segment) : '') + '</div>' +
-              '<div style="font-family:monospace;font-size:10px;color:#b8b3a8;letter-spacing:.1em">' + IG.escapeHtml(IG.fmtDay(p.created_at) + ' · ' + IG.fmtTime(p.created_at)) + '</div>' +
+              '<div class="version">' + IG.escapeHtml(p.version) + (p.segment ? ' · segment=' + IG.escapeHtml(p.segment) : '') + '</div>' +
+              '<div class="stamp">' + IG.escapeHtml(IG.fmtDay(p.created_at) + ' · ' + IG.fmtTime(p.created_at)) + '</div>' +
             '</div>' +
             '<div>' + btn + '</div>' +
           '</div>' +
-          '<div style="margin-top:10px;font-size:13px;line-height:1.55;color:#f5f0e8;white-space:pre-wrap;max-height:140px;overflow:auto">' + IG.escapeHtml(p.system_prompt) + '</div>' +
+          '<div class="body">' + IG.escapeHtml(p.system_prompt) + '</div>' +
         '</div>'
       );
     }).join('');
@@ -289,25 +186,27 @@
         btn.textContent = '…';
         try {
           await IG.api('/api/prompts/' + encodeURIComponent(btn.dataset.id) + '/activate', { method: 'POST', body: '{}' });
-          await load();
+          await loadPrompts();
         } catch (e) {
           alert(e.message);
           btn.disabled = false;
-          btn.textContent = 'АКТИВИРОВАТЬ';
+          btn.textContent = 'Активировать';
         }
       });
     });
   }
 
-  async function load() {
+  async function loadPrompts() {
     try {
       var data = await IG.api('/api/prompts');
-      render(data.prompts || []);
+      renderPrompts(data.prompts || []);
     } catch (e) {
       list.innerHTML = '<div style="color:#f06090">Ошибка: ' + IG.escapeHtml(e.message) + '</div>';
     }
   }
-  load();
+
+  hydrateStats();
+  loadPrompts();
 })();
 </script>
 </body>

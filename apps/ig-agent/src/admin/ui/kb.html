@@ -4,45 +4,32 @@
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width,initial-scale=1">
 <title>ig-agent · KB</title>
+<link rel="stylesheet" href="/assets/ig-admin.css">
 <style>
-  *,*::before,*::after{margin:0;padding:0;box-sizing:border-box}
-  html,body{background:#080808;color:#f5f0e8;min-height:100vh}
-  body{font-family:Georgia,serif;font-size:15px;line-height:1.5;overflow-x:hidden}
-  a{color:inherit;text-decoration:none}
-
-  .topbar{position:sticky;top:0;z-index:50;display:flex;align-items:center;padding:14px 24px;background:#080808;border-bottom:1px solid #2a2a2a;gap:18px;flex-wrap:wrap}
-  .topbar-title{font-family:Georgia,serif;font-size:18px;line-height:1;white-space:nowrap}
-  .topbar-title .accent{color:#c8f060;font-style:italic}
-
-  .shell{max-width:980px;margin:0 auto;padding:36px 24px 80px;display:flex;flex-direction:column;gap:24px}
-
-  .panel{background:#0f0f0f;border:1px solid #1a1a1a;padding:28px 32px}
-  .panel h2{font-family:Georgia,serif;font-size:24px;font-weight:normal;margin-bottom:14px}
-  .panel h2 .accent{color:#c8f060;font-style:italic}
-  .panel h3{font-family:'SF Mono',monospace;font-size:10px;letter-spacing:.14em;text-transform:uppercase;color:#b8b3a8;margin:18px 0 8px;font-weight:700}
-  .panel p{font-size:14px;line-height:1.65;color:#c8c4ba}
-  .panel ul{margin:8px 0 0 22px;font-size:14px;line-height:1.7;color:#c8c4ba}
-  .panel a{color:#c8f060}
-  .panel a:hover{text-decoration:underline}
-
-  .cta-row{display:flex;gap:8px;margin-top:18px;flex-wrap:wrap}
-  .cta{display:inline-flex;align-items:center;gap:6px;padding:10px 18px;font-family:'SF Mono',monospace;font-size:11px;letter-spacing:.14em;text-transform:uppercase;font-weight:700;color:#080808;background:#c8f060;border:1px solid #c8f060;border-radius:4px}
-  .cta.ghost{background:transparent;color:#b8b3a8;border-color:#2a2a2a}
-  .cta:hover{filter:brightness(1.1)}
-  .cta.ghost:hover{color:#f5f0e8;border-color:#c8f060}
+.kb-shell{max-width:880px;margin:0 auto;padding:48px 24px 80px;display:flex;flex-direction:column;gap:20px}
+.kb-hero{background:var(--bg-card);border:1px solid var(--border-soft);border-radius:var(--r-md);padding:32px 36px}
+.kb-hero h2{font-family:Georgia,serif;font-size:26px;font-weight:normal;margin-bottom:14px}
+.kb-hero h2 .accent{color:var(--green);font-style:italic}
+.kb-hero p{font-size:14px;line-height:1.65;color:var(--text-mid)}
+.kb-hero ul{margin:8px 0 0 22px;font-size:14px;line-height:1.75;color:var(--text-mid)}
+.kb-hero ul li{padding:2px 0}
+.kb-hero a{color:var(--green)}
+.kb-hero a:hover{text-decoration:underline}
+.kb-hero h3{font-family:var(--font-mono);font-size:10px;letter-spacing:.14em;text-transform:uppercase;color:var(--text-muted);margin:22px 0 10px;font-weight:700}
+.cta-row{display:flex;gap:8px;margin-top:22px;flex-wrap:wrap}
 </style>
 </head>
 <body>
 
-<header class="topbar">
-  <div class="topbar-title">ig-agent <span class="accent">Knowledge Base</span></div>
-  <nav id="igNav" style="flex:1;justify-content:center"></nav>
-  <div id="topbarRight" style="display:flex;align-items:center;gap:12px"></div>
+<header class="bar">
+  <a class="bar__brand" href="/"><span class="bar__brand-mark">IG</span>agent</a>
+  <nav id="igNav"></nav>
+  <div class="bar__right" id="topbarRight"></div>
 </header>
 
-<main class="shell">
+<main class="kb-shell">
 
-  <div class="panel">
+  <div class="kb-hero">
     <h2>База знаний <span class="accent">в разработке</span></h2>
     <p>
       Сейчас «знания» агента — это <b>system_prompt</b> активной версии в <a href="/agents">Agents</a>.
@@ -60,12 +47,12 @@
     <h3>Сейчас редактируется</h3>
     <p>
       Поведение бота правится через <b>active prompt</b> в <a href="/agents">Agents</a> — там можно создать новую версию,
-      залить в неё нужный текст и активировать. Изменения подхватываются на следующее же входящее сообщение без рестарта.
+      залить в неё нужный текст и активировать. Изменения подхватываются на следующее же входящее без рестарта.
     </p>
 
     <div class="cta-row">
-      <a class="cta" href="/agents">→ Открыть Agents</a>
-      <a class="cta ghost" href="/">← Вернуться в Inbox</a>
+      <a class="btn btn--primary" href="/agents">→ Открыть Agents</a>
+      <a class="btn btn--ghost" href="/">← Вернуться в Inbox</a>
     </div>
   </div>
 
