@@ -95,7 +95,7 @@ export function AvatarGrid({ generationId }: { generationId: string }) {
         {gen.avatars.map((a, i) => (
           <div
             key={a.id}
-            className={`relative bg-surface aspect-[4/5] overflow-hidden flex flex-col justify-between p-3 transition-all ${
+            className={`relative bg-surface aspect-[4/5] overflow-hidden transition-all ${
               a.selected ? 'outline outline-2 outline-lime outline-offset-[-2px]' : ''
             }`}
             style={
@@ -104,7 +104,8 @@ export function AvatarGrid({ generationId }: { generationId: string }) {
                 : undefined
             }
           >
-            <span className="mono text-[9px] tracking-widest uppercase text-text-faint">
+            {/* Top-left: index. Top-right reserved for download. */}
+            <span className="absolute top-2 left-2 z-[3] mono text-[9px] tracking-widest uppercase text-text-faint bg-[rgba(8,8,8,0.55)] px-1.5 py-0.5">
               /{(i + 1).toString().padStart(2, '0')}
             </span>
             {a.status === 'done' && (
@@ -112,31 +113,41 @@ export function AvatarGrid({ generationId }: { generationId: string }) {
                 href={`/api/avatars/${a.id}/download`}
                 download
                 onClick={(e) => e.stopPropagation()}
-                className="absolute top-2 right-2 z-[5] mono text-[10px] tracking-widest uppercase bg-[rgba(8,8,8,0.7)] hover:bg-lime hover:text-bg text-text-dim px-2 py-1 leading-none"
+                className="absolute top-2 right-2 z-[5] mono text-[11px] tracking-widest uppercase bg-[rgba(8,8,8,0.7)] hover:bg-lime hover:text-bg text-text-dim px-2 py-1 leading-none"
                 title="Скачать аватар"
+                aria-label="Скачать"
               >
                 ↓
               </a>
             )}
-            <div className="relative z-[2] bg-[rgba(8,8,8,0.6)] p-2 -m-1">
-              <div className="font-serif italic text-[15px] leading-tight">{a.styleLabel}</div>
+
+            {/* Bottom caption — full-width gradient strip so text is always legible */}
+            <div className="absolute inset-x-0 bottom-0 z-[2] px-3 pt-6 pb-2 bg-gradient-to-t from-[rgba(8,8,8,0.92)] via-[rgba(8,8,8,0.6)] to-transparent">
+              <div className="font-serif italic text-[14px] sm:text-[15px] leading-tight line-clamp-2">{a.styleLabel}</div>
               <div className="mono text-[8px] tracking-widest uppercase text-text-dim mt-1">
                 {a.status === 'pending' && '/queued…'}
-                {a.status === 'done' && '/ready'}
+                {a.status === 'done' && (a.selected ? '/selected' : '/ready · tap to choose')}
                 {a.status === 'failed' && '/failed'}
               </div>
             </div>
+
+            {/* Tap target — works on touch (no hover required). Selected gets a visible badge. */}
             {a.status === 'done' && (
               <button
                 onClick={() => onSelect(a.id)}
                 disabled={selecting === a.id}
-                className="absolute inset-0 w-full h-full opacity-0 hover:opacity-100 bg-[rgba(8,8,8,0.78)] flex items-center justify-center transition-opacity"
+                aria-label={a.selected ? 'Выбранный аватар' : 'Выбрать этот аватар'}
+                className="absolute inset-0 w-full h-full bg-transparent active:bg-[rgba(8,8,8,0.55)] md:hover:bg-[rgba(8,8,8,0.55)] transition-colors flex items-center justify-center"
               >
-                <span className="btn-primary">{a.selected ? 'Selected ✓' : 'Choose →'}</span>
+                {a.selected && (
+                  <span className="mono text-[10px] tracking-widest uppercase bg-lime text-bg px-3 py-1.5 font-bold">
+                    ✓ Selected
+                  </span>
+                )}
               </button>
             )}
             {a.status === 'pending' && (
-              <div className="absolute inset-0 flex items-center justify-center">
+              <div className="absolute inset-0 flex items-center justify-center pointer-events-none">
                 <span className="mono text-[10px] tracking-widest text-cyan animate-pulse">/RENDER</span>
               </div>
             )}

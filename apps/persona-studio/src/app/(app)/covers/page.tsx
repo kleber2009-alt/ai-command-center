@@ -52,24 +52,25 @@ export default async function CoversPage({ searchParams }: { searchParams: Promi
                   : { background: 'linear-gradient(170deg, #2a0a20 0%, #14050f 100%)' }
               }
             >
-              <div className="flex items-baseline justify-between">
-                <span className="mono text-[9px] tracking-widest uppercase text-pink font-bold">/{c.status}</span>
-                <span className="mono text-[9px] tracking-widest uppercase text-text-mute">{c.aspect}</span>
+              <div className="flex items-baseline justify-between gap-2 pr-9">
+                <span className="mono text-[9px] tracking-widest uppercase text-pink font-bold truncate">/{c.status}</span>
+                <span className="mono text-[9px] tracking-widest uppercase text-text-mute shrink-0">{c.aspect}</span>
               </div>
               {c.status === 'completed' && c.imageUrl && (
                 <a
                   href={`/api/covers/${c.id}/download`}
                   download
-                  className="absolute top-3 right-3 z-[5] mono text-[10px] tracking-widest uppercase bg-[rgba(8,8,8,0.7)] hover:bg-lime hover:text-bg text-text-dim px-2 py-1 leading-none"
+                  className="absolute top-3 right-3 z-[5] mono text-[11px] tracking-widest uppercase bg-[rgba(8,8,8,0.7)] hover:bg-lime hover:text-bg text-text-dim w-7 h-7 flex items-center justify-center leading-none"
                   title="Скачать обложку"
+                  aria-label="Скачать обложку"
                 >
                   ↓
                 </a>
               )}
               <div>
-                <div className="font-serif text-[18px] uppercase leading-tight tracking-tight">{c.title}</div>
-                {c.subtitle && <div className="font-serif italic text-[13px] text-pink mt-1">{c.subtitle}</div>}
-                {c.cta && <div className="mono text-[9px] tracking-widest uppercase text-pink font-bold mt-3">{c.cta}</div>}
+                <div className="font-serif text-[16px] sm:text-[18px] uppercase leading-tight tracking-tight break-words">{c.title}</div>
+                {c.subtitle && <div className="font-serif italic text-[12px] sm:text-[13px] text-pink mt-1 break-words">{c.subtitle}</div>}
+                {c.cta && <div className="mono text-[9px] tracking-widest uppercase text-pink font-bold mt-3 break-words">{c.cta}</div>}
                 <div className="mono text-[9px] tracking-widest text-text-mute mt-3">{formatDate(c.createdAt)}</div>
                 {c.status === 'failed' && (
                   <div className="mt-3 grid gap-2">

@@ -29,10 +29,10 @@ export default async function GeneratePage() {
           <span className="sec-title">Generate avatars</span>
           <span className="flex-1 border-b border-border translate-y-[-3px]" />
         </div>
-        <h1 className="font-serif text-[56px] leading-[1.0] tracking-[-0.02em] max-w-[18ch]">
+        <h1 className="font-serif text-[32px] sm:text-[44px] md:text-[56px] leading-[1.05] tracking-[-0.02em] max-w-[18ch]">
           До 10 фото — <span className="italic text-warm">десять аватаров.</span>
         </h1>
-        <p className="font-serif text-[17px] text-text-dim mt-4 max-w-[60ch]">
+        <p className="font-serif text-[15px] sm:text-[17px] text-text-dim mt-4 max-w-[60ch]">
           Загрузи до 10 фото, выбери лучшее как primary. Дальше — три режима: дефолтные 10 стилей,
           20 ниш с готовыми пакетами по 10 промптов, или свой текст. Лицо сохраняется 1:1.
         </p>
