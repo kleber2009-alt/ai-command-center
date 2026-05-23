@@ -125,11 +125,14 @@ export default async function DashboardPage() {
         ) : (
           <div className="border border-border">
             {generations.map((g) => (
-              <div key={g.id} className="grid grid-cols-[1fr_auto_auto_auto] gap-4 items-center px-5 py-3 border-b border-border last:border-b-0 bg-surface">
-                <span className="font-serif italic text-[16px]">batch {g.id.slice(0, 6)}</span>
-                <span className="mono text-[10px] tracking-widest uppercase text-text-dim">{g.status}</span>
-                <span className="mono text-[10px] tracking-widest text-text-mute">-{g.tokensCost}t</span>
-                <span className="mono text-[10px] tracking-widest text-text-mute">{formatDate(g.createdAt)}</span>
+              <div
+                key={g.id}
+                className="grid grid-cols-[1fr_auto] sm:grid-cols-[1fr_auto_auto_auto] gap-x-3 gap-y-1 sm:gap-4 items-baseline sm:items-center px-4 sm:px-5 py-3 border-b border-border last:border-b-0 bg-surface"
+              >
+                <span className="font-serif italic text-[15px] sm:text-[16px] min-w-0 truncate">batch {g.id.slice(0, 6)}</span>
+                <span className="mono text-[10px] tracking-widest uppercase text-text-dim whitespace-nowrap">{g.status}</span>
+                <span className="mono text-[9px] sm:text-[10px] tracking-widest text-text-mute">-{g.tokensCost}t</span>
+                <span className="mono text-[9px] sm:text-[10px] tracking-widest text-text-mute whitespace-nowrap justify-self-end col-span-2 sm:col-auto">{formatDate(g.createdAt)}</span>
               </div>
             ))}
           </div>

@@ -43,7 +43,7 @@ export default async function VideosPage({ searchParams }: { searchParams: Promi
             </Link>
           )}
         </div>
-        <h1 className="font-serif text-[44px] leading-tight max-w-[22ch]">
+        <h1 className="font-serif text-[28px] sm:text-[36px] md:text-[44px] leading-tight max-w-[22ch]">
           Все говорящие <span className="italic text-warm">видео.</span>
         </h1>
       </header>

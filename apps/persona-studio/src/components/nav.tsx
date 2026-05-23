@@ -27,11 +27,15 @@ export function TopNav({ email, balance, isAdmin }: Props) {
 
   return (
     <header className="sticky top-0 z-40 bg-[rgba(8,8,8,0.88)] backdrop-blur border-b border-border">
-      <div className="max-w-[1480px] mx-auto px-4 sm:px-6 flex items-center justify-between gap-3 py-3.5">
-        <div className="flex items-baseline gap-3 min-w-0">
-          <Link href="/dashboard" className="flex items-baseline gap-2.5 mono text-[12px] tracking-widest font-bold uppercase whitespace-nowrap">
-            <span className="inline-block w-[7px] h-[7px] rounded-full bg-lime translate-y-[-1px]" />
-            Persona Studio
+      <div className="max-w-[1480px] mx-auto px-3 sm:px-6 flex items-center justify-between gap-2 sm:gap-3 py-3 sm:py-3.5">
+        <div className="flex items-baseline gap-3 min-w-0 shrink">
+          <Link
+            href="/dashboard"
+            className="flex items-baseline gap-2 sm:gap-2.5 mono text-[10px] sm:text-[12px] tracking-widest font-bold uppercase whitespace-nowrap"
+          >
+            <span className="inline-block w-[7px] h-[7px] rounded-full bg-lime translate-y-[-1px] shrink-0" />
+            <span className="hidden sm:inline">Persona Studio</span>
+            <span className="sm:hidden">PS</span>
           </Link>
           <span className="hidden sm:inline mono text-[10px] tracking-[0.18em] text-text-mute">v0.1</span>
         </div>
@@ -49,11 +53,11 @@ export function TopNav({ email, balance, isAdmin }: Props) {
           )}
         </nav>
 
-        <div className="flex items-center gap-3">
+        <div className="flex items-center gap-2 sm:gap-3 shrink-0">
           {/* Token balance — visible on every screen */}
           <div className="flex flex-col items-end leading-tight">
-            <span className="mono text-[9px] tracking-[0.22em] text-text-mute uppercase">tokens</span>
-            <span className="font-serif text-[18px] sm:text-[20px] text-lime">{balance}</span>
+            <span className="mono text-[8px] sm:text-[9px] tracking-[0.18em] sm:tracking-[0.22em] text-text-mute uppercase">tokens</span>
+            <span className="font-serif text-[16px] sm:text-[20px] text-lime">{balance}</span>
           </div>
 
           {/* Desktop sign-out */}

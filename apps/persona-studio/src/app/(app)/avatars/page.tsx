@@ -55,7 +55,7 @@ export default async function AvatarsPage({ searchParams }: { searchParams: Prom
             new batch →
           </Link>
         </div>
-        <h1 className="font-serif text-[44px] leading-tight max-w-[18ch]">
+        <h1 className="font-serif text-[28px] sm:text-[36px] md:text-[44px] leading-tight max-w-[18ch]">
           Все батчи аватаров.
         </h1>
       </header>
@@ -74,20 +74,20 @@ export default async function AvatarsPage({ searchParams }: { searchParams: Prom
             <Link
               key={g.id}
               href={`/avatars?generationId=${g.id}`}
-              className="border border-border bg-surface hover:bg-surface-2 transition-colors px-5 py-4 grid grid-cols-[1fr_auto] gap-4 items-center"
+              className="border border-border bg-surface hover:bg-surface-2 transition-colors px-4 sm:px-5 py-4 grid grid-cols-[1fr_auto] gap-3 sm:gap-4 items-center"
             >
-              <div className="grid gap-2">
-                <div className="flex items-baseline gap-3">
+              <div className="grid gap-2 min-w-0">
+                <div className="flex flex-wrap items-baseline gap-x-3 gap-y-1">
                   <span className="mono text-[10px] tracking-widest uppercase text-lime">/{g.status}</span>
-                  <span className="font-serif italic text-[18px]">batch {g.id.slice(0, 6)}</span>
-                  <span className="mono text-[10px] tracking-widest text-text-mute">{formatDate(g.createdAt)}</span>
+                  <span className="font-serif italic text-[16px] sm:text-[18px]">batch {g.id.slice(0, 6)}</span>
+                  <span className="mono text-[9px] sm:text-[10px] tracking-widest text-text-mute">{formatDate(g.createdAt)}</span>
                 </div>
                 {g.avatars.length > 0 && (
-                  <div className="flex gap-1">
+                  <div className="flex gap-1 overflow-hidden">
                     {g.avatars.map((a) => (
                       <div
                         key={a.id}
-                        className="w-12 h-14 bg-surface-2 border border-border"
+                        className="w-10 h-12 sm:w-12 sm:h-14 bg-surface-2 border border-border shrink-0"
                         style={
                           a.imageUrl
                             ? { backgroundImage: `url(${a.imageUrl})`, backgroundSize: 'cover', backgroundPosition: 'center' }
@@ -98,8 +98,8 @@ export default async function AvatarsPage({ searchParams }: { searchParams: Prom
                   </div>
                 )}
               </div>
-              <span className="mono text-[10px] tracking-widest uppercase text-text-mute">
-                {g._count.avatars} / 10 done →
+              <span className="mono text-[10px] tracking-widest uppercase text-text-mute whitespace-nowrap text-right">
+                {g._count.avatars}/10 →
               </span>
             </Link>
           ))}

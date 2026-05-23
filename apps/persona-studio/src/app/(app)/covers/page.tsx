@@ -28,7 +28,7 @@ export default async function CoversPage({ searchParams }: { searchParams: Promi
             new cover →
           </Link>
         </div>
-        <h1 className="font-serif text-[44px] leading-tight">Все обложки карусели.</h1>
+        <h1 className="font-serif text-[28px] sm:text-[36px] md:text-[44px] leading-tight">Все обложки карусели.</h1>
       </header>
 
       {covers.length === 0 ? (

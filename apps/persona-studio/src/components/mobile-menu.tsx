@@ -77,7 +77,7 @@ export function MobileMenu({
 
             <nav className="grid gap-1 mono text-[12px] tracking-[0.16em] uppercase">
               {items.map((it) => {
-                const active = pathname === it.href || pathname.startsWith(`${it.href}/`);
+                const active = !!pathname && (pathname === it.href || pathname.startsWith(`${it.href}/`));
                 return (
                   <Link
                     key={it.key}
@@ -96,7 +96,7 @@ export function MobileMenu({
                 <Link
                   href="/admin"
                   className={`py-3 px-3 border-l-2 transition-colors ${
-                    pathname.startsWith('/admin')
+                    pathname?.startsWith('/admin')
                       ? 'border-pink text-text bg-surface'
                       : 'border-transparent text-pink hover:bg-surface'
                   }`}
