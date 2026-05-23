@@ -49,8 +49,8 @@ const COST_OMNIHUMAN = Number(process.env.COST_OMNIHUMAN_VIDEO ?? 50);
 
 export const VIDEO_ENGINES: Record<VideoEngine, EngineConfig> = {
   'heygen-v5': {
-    label: 'HeyGen V — Studio',
-    description: 'Talking photo, фотореалистичная мимика, ~2–4 мин рендер.',
+    label: 'Avatar V — Studio',
+    description: 'Фотореалистичная мимика (model_version=v5). Без motion prompt.',
     cost: COST_HEYGEN,
     queueName: 'heygen-video',
     inputMode: 'script',
@@ -60,15 +60,15 @@ export const VIDEO_ENGINES: Record<VideoEngine, EngineConfig> = {
     enabled: true,
   },
   'heygen-v4': {
-    label: 'HeyGen IV — Legacy',
-    description: 'Старая модель Avatar IV.',
+    label: 'Avatar IV — Expressive',
+    description: 'Экспрессивный движок (use_avatar_iv_model). Принимает motion prompt.',
     cost: COST_HEYGEN,
     queueName: 'heygen-video',
     inputMode: 'script',
     voiceProvider: 'heygen',
     supportedAspects: ['9:16', '1:1', '16:9'],
     heygenVersion: 'IV',
-    enabled: false,
+    enabled: true,
   },
   'omnihuman-1.5': {
     label: 'OmniHuman 1.5 — Lifelike',

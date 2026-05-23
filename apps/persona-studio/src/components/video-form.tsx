@@ -104,8 +104,10 @@ export function VideoForm({ avatars, initialAvatarId }: { avatars: Avatar[]; ini
         language: voice?.language ?? 'ru',
       };
       if (cfg.heygenVersion) body.heygenVersion = cfg.heygenVersion;
+      // motion_prompt принимает только Avatar IV; для Avatar V HeyGen его игнорирует
+      // (а у нас он переклассифицировал бы видео в IV), поэтому отправляем строго для IV.
       const trimmedMotion = motionPrompt.trim();
-      if (cfg.voiceProvider === 'heygen' && trimmedMotion.length > 0) {
+      if (cfg.heygenVersion === 'IV' && trimmedMotion.length > 0) {
         body.motionPrompt = trimmedMotion;
       }
 
@@ -313,7 +315,7 @@ export function VideoForm({ avatars, initialAvatarId }: { avatars: Avatar[]; ini
           </div>
         )}
 
-        {cfg.voiceProvider === 'heygen' && (
+        {cfg.heygenVersion === 'IV' && (
           <div className="border border-border">
             <button
               type="button"
