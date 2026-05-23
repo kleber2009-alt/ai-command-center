@@ -40,7 +40,7 @@ services:
     environment:
       NODE_ENV: production
       PORT: 3000
-      DATABASE_URL: postgres://${POSTGRES_USER}:${POSTGRES_PASSWORD}@postgres:5432/${POSTGRES_DB}
+      DATABASE_URL: ${AI_OFFICE_DATABASE_URL:-postgres://${POSTGRES_USER}:${POSTGRES_PASSWORD}@infra-postgres-1:5432/${POSTGRES_DB}}
       PUBLIC_BASE_URL: ${PUBLIC_BASE_URL}
       VOICE_NOTES_DIR: /data/voice-notes
       ANTHROPIC_API_KEY: ${ANTHROPIC_API_KEY}
@@ -79,7 +79,10 @@ services:
       YTDLP_SERVICE_API_KEY: ${YTDLP_SERVICE_API_KEY:-}
       APIFY_API_TOKEN: ${APIFY_API_TOKEN:-}
       KIE_AI_API_KEY: ${KIE_AI_API_KEY:-}
-      DATABASE_URL: postgres://${POSTGRES_USER}:${POSTGRES_PASSWORD}@postgres:5432/${POSTGRES_DB}
+      # Use full container name (not "postgres" alias) because
+      # transcribe is also on aisales-net where that name collides
+      # with aisales-postgres. Env-file can override directly.
+      DATABASE_URL: ${DATABASE_URL:-postgres://${POSTGRES_USER}:${POSTGRES_PASSWORD}@infra-postgres-1:5432/${POSTGRES_DB}}
       NEXT_PUBLIC_SUPABASE_URL: ${TRANSCRIBE_SUPABASE_URL}
       SUPABASE_SERVICE_KEY: ${TRANSCRIBE_SUPABASE_SERVICE_KEY}
       STRIPE_SECRET_KEY: ${STRIPE_SECRET_KEY:-}
