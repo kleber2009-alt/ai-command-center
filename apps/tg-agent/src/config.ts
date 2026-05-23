@@ -127,6 +127,9 @@ export interface Config {
   qdrantUrl: string;
   qdrantCollection: string;
   qdrantApiKey: string | undefined;
+  igAgentUrl: string | undefined;
+  igAgentUsername: string | undefined;
+  igAgentPassword: string | undefined;
 }
 
 export function loadConfig(): Config {
@@ -192,5 +195,8 @@ export function loadConfig(): Config {
     qdrantUrl: optional('QDRANT_URL') ?? 'http://aisales-qdrant:6333',
     qdrantCollection: optional('QDRANT_COLLECTION') ?? 'aicex-memory',
     qdrantApiKey: optional('QDRANT_API_KEY'),
+    igAgentUrl: optional('IG_AGENT_URL') ?? 'http://ig-agent:8081',
+    igAgentUsername: optional('IG_AGENT_USERNAME'),
+    igAgentPassword: optional('IG_AGENT_PASSWORD'),
   };
 }

@@ -189,6 +189,9 @@ async function main(): Promise<void> {
       dataDir: dirname(resolve(config.databasePath)),
       digestStore,
       memory,
+      igAgentUrl: config.igAgentUrl,
+      igAgentUsername: config.igAgentUsername,
+      igAgentPassword: config.igAgentPassword,
       sendMagicLink: sessionAuthReady
         ? async (telegramId, url) => {
             await bot.api.sendMessage(

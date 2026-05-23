@@ -46,6 +46,7 @@
       <div class="px-2 py-1 mt-2 text-[10px] font-semibold uppercase tracking-wider text-slate-600">Прочее</div>
       <button data-view="prompts"   class="view-btn view-btn-idle   flex items-center gap-2.5 w-full rounded-lg px-3 py-2 text-sm">🧠 Промпты</button>
       <button data-view="memory"    class="view-btn view-btn-idle   flex items-center gap-2.5 w-full rounded-lg px-3 py-2 text-sm">🧬 Память</button>
+      <button data-view="instagram" class="view-btn view-btn-idle   flex items-center gap-2.5 w-full rounded-lg px-3 py-2 text-sm">📱 Instagram</button>
       <button data-view="report"    class="view-btn view-btn-idle   flex items-center gap-2.5 w-full rounded-lg px-3 py-2 text-sm">📈 Отчёт</button>
       <button data-view="projects"  class="view-btn view-btn-idle   flex items-center gap-2.5 w-full rounded-lg px-3 py-2 text-sm">📁 Проекты</button>
       <button data-view="roadmap"   class="view-btn view-btn-idle   flex items-center gap-2.5 w-full rounded-lg px-3 py-2 text-sm">🗺 Роудмап</button>
@@ -1314,7 +1315,7 @@
     }
 
     // ─── view routing ─────────────────────────────────────────────────────────
-    const ALL_VIEWS = ['chats','drafts','analytics','pipeline','demo','billing','kb','prompts','memory','report','projects','roadmap'];
+    const ALL_VIEWS = ['chats','drafts','analytics','pipeline','demo','billing','kb','prompts','memory','instagram','report','projects','roadmap'];
 
     function switchView(view) {
       state.view = view;

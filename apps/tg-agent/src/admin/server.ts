@@ -593,6 +593,63 @@ function wireApi(app: Hono, deps: AdminDeps): void {
       }
     });
   }
+
+  // ── Instagram (ig-agent federation) ───────────────────────────────────────
+  // The «📱 Instagram» tab in admin UI calls these proxy endpoints
+  // which forward to ig-agent's own /api over the internal docker
+  // network. Keeping the proxy thin: no aggregation, just URL +
+  // header rewrites. All Instagram data stays in ig-agent's Postgres
+  // (db `ig_agent`); we don't mirror it here. Memory search results
+  // from /api/memory/search still surface Instagram DMs because
+  // ig-agent now also pushes into the shared aicex-memory.
+  if (deps.igAgentUrl) {
+    const ig: IgProxy = createIgProxy({
+      url: deps.igAgentUrl,
+      username: deps.igAgentUsername,
+      password: deps.igAgentPassword,
+      logger: deps.logger,
+    });
+
+    const pass = async (
+      c: HonoContext,
+      path: string,
+    ): Promise<Response> => {
+      const r = await ig.get(path);
+      return c.json(r.body as Record<string, unknown>, r.status as 200);
+    };
+
+    app.get('/api/instagram/health', async (c) => {
+      const r = await ig.get('/healthz');
+      return c.json({ ok: r.status === 200, status: r.status });
+    });
+    app.get('/api/instagram/stats', (c) => pass(c, '/api/stats'));
+    app.get('/api/instagram/contacts', (c) => {
+      const status = c.req.query('status');
+      const limit = c.req.query('limit') ?? '100';
+      const params = new URLSearchParams({ limit });
+      if (status) params.set('status', status);
+      return pass(c, `/api/contacts?${params.toString()}`);
+    });
+    app.get('/api/instagram/contacts/:id', (c) => {
+      const id = c.req.param('id');
+      return pass(c, `/api/contacts/${encodeURIComponent(id)}`);
+    });
+    app.get('/api/instagram/contacts/:id/messages', (c) => {
+      const id = c.req.param('id');
+      const limit = c.req.query('limit') ?? '200';
+      return pass(c, `/api/contacts/${encodeURIComponent(id)}/messages?limit=${limit}`);
+    });
+    app.get('/api/instagram/contacts/:id/recommendations', (c) => {
+      const id = c.req.param('id');
+      return pass(c, `/api/contacts/${encodeURIComponent(id)}/recommendations`);
+    });
+    app.post('/api/instagram/contacts/:id/reply', async (c) => {
+      const id = c.req.param('id');
+      const body = await c.req.json().catch(() => ({}));
+      const r = await ig.post(`/api/contacts/${encodeURIComponent(id)}/reply`, body);
+      return c.json(r.body as Record<string, unknown>, r.status as 200);
+    });
+  }
 }
 
 function clampDays(raw: string | undefined, fallback: number, max: number): number {
