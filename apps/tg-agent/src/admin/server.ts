@@ -519,6 +519,57 @@ function wireApi(app: Hono, deps: AdminDeps): void {
     }
     return c.json({ received: true });
   });
+
+  // ── Memory (semantic search over all messages) ────────────────────────────
+  if (deps.memory) {
+    const mem = deps.memory;
+    app.get('/api/memory/info', async (c) => {
+      try {
+        const info = await mem.info();
+        return c.json({ ...info, enabled: mem.enabled });
+      } catch (err) {
+        return c.json(
+          { enabled: mem.enabled, error: err instanceof Error ? err.message : String(err) },
+          mem.enabled ? 503 : 200,
+        );
+      }
+    });
+    app.post('/api/memory/search', async (c) => {
+      if (!mem.enabled) return c.json({ items: [], note: 'memory disabled' });
+      let body: { query?: unknown; limit?: unknown; chatId?: unknown };
+      try {
+        body = await c.req.json();
+      } catch {
+        return c.json({ error: 'invalid json' }, 400);
+      }
+      const query = typeof body.query === 'string' ? body.query.trim() : '';
+      if (query.length === 0) return c.json({ error: 'query required' }, 400);
+      const limit = typeof body.limit === 'number' ? Math.min(Math.max(body.limit, 1), 50) : 10;
+      const chatId = typeof body.chatId === 'number' ? body.chatId : undefined;
+      try {
+        const hits = await mem.search(query, { limit, chatId });
+        return c.json({
+          items: hits.map((h) => ({
+            id: h.id,
+            score: h.score,
+            chat_id: h.payload.chat_id,
+            chat_title: h.payload.chat_title,
+            user_id: h.payload.user_id,
+            username: h.payload.username,
+            class: h.payload.class,
+            text: h.payload.text,
+            created_at: h.payload.created_at,
+          })),
+        });
+      } catch (err) {
+        deps.logger.error('memory: search failed', {
+          query: query.slice(0, 80),
+          error: err instanceof Error ? err.message : String(err),
+        });
+        return c.json({ error: 'search failed' }, 503);
+      }
+    });
+  }
 }
 
 function clampDays(raw: string | undefined, fallback: number, max: number): number {
