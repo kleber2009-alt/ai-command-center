@@ -281,6 +281,64 @@ h2 .accent{
 .funnel-note h3{font-size:20px;font-weight:600;letter-spacing:-.015em;margin-bottom:12px;color:var(--t1)}
 .funnel-note p{font-size:14px;color:var(--t2);line-height:1.6;margin-bottom:14px}
 .funnel-note ul{list-style:none;display:flex;flex-direction:column;gap:8px}
+
+/* Animated stage on the right — DM-style preview that swaps per step */
+.funnel-stage{
+  position:relative;border-radius:18px;overflow:hidden;
+  background:linear-gradient(180deg,#0c0f1e 0%,#0a0c14 100%);
+  border:1px solid var(--sep);
+  box-shadow:0 24px 60px rgba(0,0,0,.45);
+}
+.funnel-stage__chrome{
+  display:flex;align-items:center;gap:10px;
+  padding:12px 16px;background:rgba(255,255,255,.03);
+  border-bottom:1px solid var(--sep);
+}
+.funnel-stage__url{
+  font-family:'JetBrains Mono','SF Mono',ui-monospace,monospace;
+  font-size:11.5px;color:var(--t3);letter-spacing:.3px;margin-left:6px;
+  transition:color .25s ease;
+}
+.funnel-stage__body{position:relative;min-height:320px}
+.fs-frame{
+  position:absolute;inset:0;padding:22px 24px;
+  display:flex;flex-direction:column;gap:14px;
+  opacity:0;transform:translateY(10px);
+  transition:opacity .35s ease,transform .35s ease;
+  pointer-events:none;
+}
+.fs-frame--active{opacity:1;transform:none;pointer-events:auto}
+.fs-eyebrow{
+  font-family:'JetBrains Mono','SF Mono',ui-monospace,monospace;
+  font-size:10px;text-transform:uppercase;letter-spacing:1.4px;
+  color:var(--accent2);font-weight:700;
+}
+.fs-msg{display:flex;gap:10px;align-items:flex-start}
+.fs-msg--cli{flex-direction:row-reverse}
+.fs-msg__av{
+  width:34px;height:34px;border-radius:50%;flex-shrink:0;
+  display:flex;align-items:center;justify-content:center;
+  font-size:11px;font-weight:800;color:#fff;letter-spacing:.4px;
+}
+.fs-msg__av--ai{background:linear-gradient(135deg,#5e5ce6,#26a5e4)}
+.fs-msg__av--cli{background:linear-gradient(135deg,#FF7AAF,#FF5C8D)}
+.fs-msg__bd{
+  background:rgba(255,255,255,.05);
+  border-radius:14px;border-bottom-left-radius:4px;
+  padding:10px 14px;font-size:13.5px;line-height:1.5;color:var(--t1);
+  max-width:84%;
+}
+.fs-msg--cli .fs-msg__bd{
+  background:rgba(94,92,230,.12);
+  border-bottom-left-radius:14px;border-bottom-right-radius:4px;
+}
+.fs-amount{color:var(--green);font-weight:700;white-space:nowrap}
+.fs-foot{
+  margin-top:auto;display:flex;align-items:center;gap:10px;flex-wrap:wrap;
+  font-size:11.5px;color:var(--t3);font-family:'JetBrains Mono','SF Mono',ui-monospace,monospace;
+  padding-top:10px;border-top:1px dashed var(--sep);
+}
+.fs-foot__time{margin-left:auto}
 .funnel-note li{font-size:13.5px;color:var(--t1);display:flex;gap:10px;align-items:flex-start}
 .funnel-note li::before{content:"→";color:var(--accent2);font-weight:600;flex-shrink:0}
 
@@ -653,17 +711,109 @@ footer{padding:48px 24px 64px;border-top:1px solid var(--sep);margin-top:80px}
         <div class="funnel-step funnel-step--won"><div class="funnel-step__num">✓</div><div class="funnel-step__title">Won / Lost</div><span class="funnel-step__hint">closed</span></div>
       </div>
 
-      <div class="funnel-note">
-        <h3>AI делает 87% работы по&nbsp;каждому этапу</h3>
-        <p>На каждом шаге AI выбирает реплику из&nbsp;тысячи вариантов под конкретного клиента: его сегмент, канал, прошлые сообщения, время суток, ICP-match.</p>
-        <ul>
-          <li>Сам пишет первое сообщение по&nbsp;шаблону под IG/TG</li>
-          <li>Сам квалифицирует через 3–5 вопросов</li>
-          <li>Сам предлагает оффер с&nbsp;правильным чеком под сегмент</li>
-          <li>Сам снимает 80% типовых возражений</li>
-          <li>Сам шлёт follow-up через 1д / 3д / 7д если молчит</li>
-          <li>Тебя&nbsp;— только на&nbsp;«не типовое» и&nbsp;на&nbsp;закрытие</li>
-        </ul>
+      <div class="funnel-stage" id="funnelStage">
+        <div class="funnel-stage__chrome">
+          <span class="preview__dot preview__dot--r"></span>
+          <span class="preview__dot preview__dot--y"></span>
+          <span class="preview__dot preview__dot--g"></span>
+          <span class="funnel-stage__url" id="funnelStageUrl">@maria_k · DM</span>
+        </div>
+        <div class="funnel-stage__body">
+
+          <div class="fs-frame fs-frame--active" data-step="0">
+            <div class="fs-eyebrow">› AI пишет первым</div>
+            <div class="fs-msg">
+              <div class="fs-msg__av fs-msg__av--ai">AI</div>
+              <div class="fs-msg__bd">Мария, привет! Увидела вопрос про курс — пишу первой, чтобы не&nbsp;потерять тебя в&nbsp;ленте&nbsp;👋</div>
+            </div>
+            <div class="fs-foot">
+              <span class="badge badge--ig">IG</span>
+              <span>AI · ICP-match 92%</span>
+              <span class="fs-foot__time">+12с</span>
+            </div>
+          </div>
+
+          <div class="fs-frame" data-step="1">
+            <div class="fs-eyebrow">› Уточняет боль</div>
+            <div class="fs-msg fs-msg--cli">
+              <div class="fs-msg__av fs-msg__av--cli">МК</div>
+              <div class="fs-msg__bd">Хочу систему, всё держу в&nbsp;голове</div>
+            </div>
+            <div class="fs-msg">
+              <div class="fs-msg__av fs-msg__av--ai">AI</div>
+              <div class="fs-msg__bd">Систему собираем за&nbsp;4 модуля + 1&nbsp;разбор 1:1. Цель&nbsp;— +500K к&nbsp;концу 90 дней. Тебе важнее опыт или результат?</div>
+            </div>
+            <div class="fs-foot">
+              <span class="badge badge--purple">Discovery</span>
+              <span>3 из&nbsp;5 вопросов</span>
+            </div>
+          </div>
+
+          <div class="fs-frame" data-step="2">
+            <div class="fs-eyebrow">› Подбирает оффер</div>
+            <div class="fs-msg">
+              <div class="fs-msg__av fs-msg__av--ai">AI</div>
+              <div class="fs-msg__bd">Под твою задачу тариф <b>«Система»</b>: 4 модуля + 1:1 + поддержка 3&nbsp;мес. <span class="fs-amount">24&nbsp;900&nbsp;₽</span></div>
+            </div>
+            <div class="fs-foot">
+              <span class="badge badge--purple">Pitch</span>
+              <span>сегмент: эксперт · 500K</span>
+            </div>
+          </div>
+
+          <div class="fs-frame" data-step="3">
+            <div class="fs-eyebrow">› Снимает возражение</div>
+            <div class="fs-msg fs-msg--cli">
+              <div class="fs-msg__av fs-msg__av--cli">МК</div>
+              <div class="fs-msg__bd">Дорого</div>
+            </div>
+            <div class="fs-msg">
+              <div class="fs-msg__av fs-msg__av--ai">AI</div>
+              <div class="fs-msg__bd">Разобью на&nbsp;3 платежа по&nbsp;<span class="fs-amount">8&nbsp;300&nbsp;₽</span> — старт сегодня, без переплаты. Удобно так?</div>
+            </div>
+            <div class="fs-foot">
+              <span class="badge badge--orange">Objections</span>
+              <span>80% типовых&nbsp;— автомат</span>
+            </div>
+          </div>
+
+          <div class="fs-frame" data-step="4">
+            <div class="fs-eyebrow">› Шлёт счёт</div>
+            <div class="fs-msg">
+              <div class="fs-msg__av fs-msg__av--ai">AI</div>
+              <div class="fs-msg__bd">Счёт <span class="fs-amount">8&nbsp;300&nbsp;₽</span> отправила в&nbsp;Telegram → <u>t.me/pay/…</u>. Жду подтверждения.</div>
+            </div>
+            <div class="fs-foot">
+              <span class="badge badge--green"><span class="pulse"></span>Close</span>
+              <span>⏳ ожидает оплату</span>
+            </div>
+          </div>
+
+          <div class="fs-frame" data-step="5">
+            <div class="fs-eyebrow">› Дожимает молчание</div>
+            <div class="fs-msg">
+              <div class="fs-msg__av fs-msg__av--ai">AI</div>
+              <div class="fs-msg__bd">Мария, остались вопросы по&nbsp;программе? Могу прислать скрин счёта&nbsp;— оплатить можно и&nbsp;с&nbsp;карты, и&nbsp;через СБП.</div>
+            </div>
+            <div class="fs-foot">
+              <span class="badge badge--purple">Followup</span>
+              <span>+3д · авто-нудж</span>
+            </div>
+          </div>
+
+          <div class="fs-frame" data-step="6">
+            <div class="fs-eyebrow">› Закрытие</div>
+            <div class="fs-msg">
+              <div class="fs-msg__av fs-msg__av--ai">AI</div>
+              <div class="fs-msg__bd">✓ Оплата получена. Доступ к&nbsp;курсу в&nbsp;ЛК, стартуем в&nbsp;понедельник&nbsp;🎉</div>
+            </div>
+            <div class="fs-foot">
+              <span class="badge badge--green">Won</span>
+              <span class="fs-amount">MRR&nbsp;+24&nbsp;900&nbsp;₽</span>
+            </div>
+          </div>
+
+        </div>
       </div>
     </div>
   </div>
@@ -826,12 +976,25 @@ footer{padding:48px 24px 64px;border-top:1px solid var(--sep);margin-top:80px}
 </footer>
 
 <script>
-/* ── Funnel animation: cycle highlight through Hello → … → Won/Lost ── */
+/* ── Funnel animation: cycle highlight + DM-style preview per step ── */
 (function(){
-  const root  = document.getElementById('funnel');
+  const root   = document.getElementById('funnel');
   if(!root) return;
-  const steps = root.querySelectorAll('.funnel-step');
+  const steps  = root.querySelectorAll('.funnel-step');
+  const frames = root.querySelectorAll('.fs-frame');
+  const urlEl  = document.getElementById('funnelStageUrl');
   if(!steps.length) return;
+
+  // URL-bar caption per step, matches the chat context shown in each frame.
+  const URLS = [
+    '@maria_k · Hello',
+    '@maria_k · Discovery',
+    '@maria_k · Pitch',
+    '@maria_k · Objections',
+    '@maria_k · Close',
+    '@maria_k · Followup +3д',
+    '@maria_k · Won'
+  ];
 
   let i = 0, timer = null, running = false;
 
@@ -840,10 +1003,13 @@ footer{padding:48px 24px 64px;border-top:1px solid var(--sep);margin-top:80px}
       el.classList.toggle('funnel-step--active', idx === i);
       el.classList.toggle('funnel-step--done',  idx <  i);
     });
+    frames.forEach((el, idx) => {
+      el.classList.toggle('fs-frame--active', idx === i);
+    });
+    if(urlEl && URLS[i]) urlEl.textContent = URLS[i];
   }
   function nextDelay(){
-    // Pause longer on the final "Won/Lost" frame, then loop.
-    return i === steps.length - 1 ? 2400 : 1300;
+    return i === steps.length - 1 ? 2600 : 1500;
   }
   function tick(){
     i = (i + 1) % steps.length;
@@ -854,7 +1020,7 @@ footer{padding:48px 24px 64px;border-top:1px solid var(--sep);margin-top:80px}
     if(running) return;
     running = true;
     paint();
-    timer = setTimeout(tick, 900);
+    timer = setTimeout(tick, 1000);
   }
   function stop(){
     running = false;
