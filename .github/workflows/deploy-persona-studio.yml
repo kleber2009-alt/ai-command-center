@@ -103,10 +103,18 @@ jobs:
               "$MONOREPO_PATH/apps/persona-studio/" "$SOURCE_PATH/"
             echo "── code synced → $SOURCE_PATH ──"
 
+            # DEBUG: trace exactly which line aborts under appleboy/ssh-action.
+            # Symptoms: after rsync, script silently exits 1 before printing the
+            # next step's echo. Manual SSH-as-aisales with identical env passes.
+            echo "── DBG: about to cd ──"
+            set -x
             cd "$SOURCE_PATH"
+            echo "── DBG: cd ok pwd=$(pwd) ──"
+            echo "── DBG: SKIP_BUILD='${SKIP_BUILD:-UNSET}' ──"
+            set +x
 
             # ── 3. build images ──────────────────────────────────────
-            if [[ "$SKIP_BUILD" != "true" ]]; then
+            if [ "${SKIP_BUILD:-false}" != "true" ]; then
               echo "── docker compose build ──"
               docker compose build
             else
