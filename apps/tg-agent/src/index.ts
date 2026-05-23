@@ -19,6 +19,7 @@ import {
   startDigestScheduler,
   type DigestSchedulerHandle,
 } from './digest.js';
+import { startDupScheduler, type DupSchedulerHandle } from './dup_detector.js';
 import { createKbManager } from './kb-manager.js';
 import { createPromptConfig } from './prompt-config.js';
 import { dirname, resolve } from 'node:path';
@@ -118,6 +119,7 @@ async function main(): Promise<void> {
       windowHours: config.digestWindowHours,
       logger,
       memory,
+      db,
     });
   } else if (!config.digestEnabled) {
     logger.info('digest disabled (DIGEST_ENABLED=false)');
@@ -256,12 +258,30 @@ async function main(): Promise<void> {
     });
   }
 
+  // Duplicate-question detector. Runs every 24h, only if memory is
+  // available and the owner has a DM open with the bot.
+  let dupHandle: DupSchedulerHandle | null = null;
+  if (memory.enabled && config.ownerTelegramId !== undefined) {
+    dupHandle = startDupScheduler({
+      db,
+      memory,
+      chats,
+      logger,
+      bot,
+      ownerTelegramId: config.ownerTelegramId,
+      intervalHours: 24,
+    });
+  } else {
+    logger.info('dup-detector disabled (memory off or no OWNER_TELEGRAM_ID)');
+  }
+
   const shutdown = async (signal: string) => {
     logger.info('shutdown requested', { signal });
     try {
       backup?.stop();
       digest?.stop();
       reporter?.stop();
+      dupHandle?.stop();
       await bot.stop();
       if (admin) await admin.close();
     } finally {

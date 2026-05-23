@@ -3,6 +3,15 @@ import type { Bot, Context, Filter } from 'grammy';
 import type { ChatService } from './db/chats.js';
 import type { DigestStore } from './db/digests.js';
 import { buildAndDeliverDigest, type DigestGenerator, splitForTelegram } from './digest.js';
+import {
+  clusterHash,
+  findDuplicates,
+  recordAlert,
+  renderClusterMarkdown,
+  wasSentRecently,
+  type DupSchedulerHandle,
+} from './dup_detector.js';
+import type { Db } from './db/index.js';
 import type { Logger } from './logger.js';
 import type { MemoryService } from './memory/service.js';
 
@@ -15,6 +24,8 @@ export interface OwnerCommandsDeps {
   windowHours: number;
   logger: Logger;
   memory: MemoryService;
+  db: Db;
+  dupHandle?: DupSchedulerHandle;
 }
 
 // Help blurb shown for /help. Kept terse — the owner already knows
@@ -32,6 +43,9 @@ const HELP_TEXT = [
   '/memory <запрос> [--chat=X --source=Y --since=7d --limit=N] — семантический поиск.',
   '  По всем источникам (tg-agent + transcribe). Фильтры опциональны.',
   '  Пример: /memory возражения по цене --chat=AICEX --since=7d',
+  '/duplicates [дней=7] — найти повторяющиеся вопросы от разных людей.',
+  '  Бот ищет кластеры близких по смыслу сообщений (sim ≥ 0.75) с ≥ 2 разными авторами.',
+  '  Авто-сводка приходит раз в сутки сама — команда для ручного запроса.',
   '/help — это сообщение.',
 ].join('\n');
 
@@ -40,7 +54,7 @@ const HELP_TEXT = [
 // achieve that by registering on the same Bot instance from index.ts
 // before createBot() is called — see index.ts ordering.
 export function registerOwnerCommands(deps: OwnerCommandsDeps): void {
-  const { bot, ownerTelegramId, chats, store, generator, windowHours, logger, memory } = deps;
+  const { bot, ownerTelegramId, chats, store, generator, windowHours, logger, memory, db } = deps;
 
   const isOwnerDm = (ctx: Context): boolean =>
     ctx.chat?.type === 'private' && ctx.from?.id === ownerTelegramId;
@@ -278,6 +292,55 @@ export function registerOwnerCommands(deps: OwnerCommandsDeps): void {
         error: err instanceof Error ? err.message : String(err),
       });
       await ctx.reply('Ошибка поиска. Проверь логи и Qdrant.');
+    }
+  });
+
+  bot.command('duplicates', async (ctx) => {
+    if (!isOwnerDm(ctx)) return;
+    if (!memory.enabled) {
+      await ctx.reply('Память отключена — детектор дубликатов не запустится.');
+      return;
+    }
+    const arg = ctx.match?.toString().trim() ?? '';
+    const days = arg ? Number(arg) : 7;
+    if (!Number.isFinite(days) || days < 1 || days > 90) {
+      await ctx.reply('Использование: /duplicates [дней=7]\nДиапазон 1..90.');
+      return;
+    }
+    await ctx.reply(`🔍 Ищу дубликаты вопросов за ${days} дней…`);
+    try {
+      const clusters = await findDuplicates(
+        { db, memory, chats, logger },
+        { daysBack: days, minUsers: 2, minSimilarity: 0.75 },
+      );
+      if (clusters.length === 0) {
+        await ctx.reply(`За ${days} дн дубликатов не нашёл (порог: 2+ уникальных автора, sim ≥ 0.75).`);
+        return;
+      }
+      // For on-demand /duplicates we surface ALL clusters (don't
+      // apply the 7-day cooldown that the scheduler uses), but
+      // still record them so the scheduler skips duplicates next
+      // run.
+      let sent = 0;
+      for (const cluster of clusters) {
+        const md = renderClusterMarkdown(cluster);
+        for (const chunk of splitForTelegram(md)) {
+          await ctx.reply(chunk, {
+            parse_mode: 'HTML',
+            link_preview_options: { is_disabled: true },
+          });
+        }
+        const hash = clusterHash(cluster);
+        if (!wasSentRecently(db, hash, 7)) recordAlert(db, cluster);
+        sent++;
+        if (sent >= 10) break;
+      }
+      await ctx.reply(`Готово. Кластеров: ${clusters.length}, показано: ${sent}.`);
+    } catch (err) {
+      logger.error('/duplicates failed', {
+        error: err instanceof Error ? err.message : String(err),
+      });
+      await ctx.reply('Ошибка детектора. Проверь логи.');
     }
   });
 
