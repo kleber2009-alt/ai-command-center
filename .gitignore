@@ -16,3 +16,6 @@ apps/ai-sales-v2/env/
 apps/*/env/*.env
 apps/persona-studio/sdk/dist/
 apps/persona-studio/sdk/node_modules/
+
+# transcribe local dev SQLite (the prod DB is Postgres; these are stale local files)
+apps/transcribe/data/
