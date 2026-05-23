@@ -53,6 +53,8 @@ export interface MemorySearchOptions {
   source?: string;
   // Restrict to "Ilia's brain" by matching owner_telegram_id.
   ownerTelegramId?: number;
+  // ISO timestamp lower bound (created_at >= sinceIso).
+  sinceIso?: string;
   minScore?: number;
 }
 
@@ -160,6 +162,9 @@ export function createMemoryService(opts: MemoryServiceOptions): MemoryService {
       }
       if (options?.ownerTelegramId != null) {
         must.push({ key: 'owner_telegram_id', match: { value: options.ownerTelegramId } });
+      }
+      if (options?.sinceIso) {
+        must.push({ key: 'created_at', range: { gte: options.sinceIso } });
       }
       const filter: QdrantFilter | undefined = must.length > 0 ? { must } : undefined;
       const hits = await qdrant.search(vector, limit, filter);

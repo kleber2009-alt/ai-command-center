@@ -29,8 +29,9 @@ const HELP_TEXT = [
   '/digest <chat_id> 12 — то же, с явным окном в часах.',
   '/context <chat_id> <текст> — задать project_context для чата: что важно владельцу',
   '  (продукты, ICP, на что обращать внимание). Используется в каждой сводке.',
-  '/memory <запрос> — семантический поиск по всем сообщениям из всех чатов.',
-  '  Возвращает топ-5 релевантных снипетов с автором, чатом и similarity-score.',
+  '/memory <запрос> [--chat=X --source=Y --since=7d --limit=N] — семантический поиск.',
+  '  По всем источникам (tg-agent + transcribe). Фильтры опциональны.',
+  '  Пример: /memory возражения по цене --chat=AICEX --since=7d',
   '/help — это сообщение.',
 ].join('\n');
 
@@ -194,9 +195,21 @@ export function registerOwnerCommands(deps: OwnerCommandsDeps): void {
 
   bot.command('memory', async (ctx) => {
     if (!isOwnerDm(ctx)) return;
-    const query = ctx.match?.toString().trim() ?? '';
-    if (!query) {
-      await ctx.reply('Использование: /memory <запрос>\nПример: /memory жалобы на бот');
+    const raw = ctx.match?.toString().trim() ?? '';
+    if (!raw) {
+      await ctx.reply(
+        [
+          'Использование: /memory <запрос> [фильтры]',
+          '',
+          'Фильтры:',
+          '  --chat=<подстрока>   — только из чата (по части названия)',
+          '  --source=<src>       — tg-agent | transcribe',
+          '  --since=<dur>        — 24h | 7d | 30d | 12h30m',
+          '  --limit=<N>          — до 50',
+          '',
+          'Пример: /memory возражения по цене --chat=AICEX --since=7d',
+        ].join('\n'),
+      );
       return;
     }
     if (!memory.enabled) {
@@ -205,10 +218,34 @@ export function registerOwnerCommands(deps: OwnerCommandsDeps): void {
       );
       return;
     }
+    const parsed = parseMemoryArgs(raw);
+    if (!parsed.query) {
+      await ctx.reply('Пустой запрос. Пример: /memory возражения --since=7d');
+      return;
+    }
+    // Resolve --chat=<substring> to chat_id by matching against
+    // tg_chats titles. Multiple matches → first by updated_at desc.
+    let chatId: number | undefined;
+    if (parsed.chat) {
+      const needle = parsed.chat.toLowerCase();
+      const found = chats
+        .listAll()
+        .find((c) => (c.title ?? '').toLowerCase().includes(needle));
+      if (!found) {
+        await ctx.reply(`Чата с "${parsed.chat}" в названии не нашёл.`);
+        return;
+      }
+      chatId = found.chat_id;
+    }
     try {
-      const hits = await memory.search(query, { limit: 5 });
+      const hits = await memory.search(parsed.query, {
+        limit: parsed.limit ?? 5,
+        chatId,
+        source: parsed.source,
+        sinceIso: parsed.sinceIso,
+      });
       if (hits.length === 0) {
-        await ctx.reply(`По запросу "${query}" ничего не нашёл.`);
+        await ctx.reply(`По запросу "${parsed.query}" ничего не нашёл.`);
         return;
       }
       const body = hits
@@ -270,6 +307,61 @@ function truncate(s: string, max: number): string {
 
 function escapeHtml(s: string): string {
   return s.replace(/[&<>]/g, (c) => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;' }[c] as string));
+}
+
+// Parses `<free-form query> [--flag=value ...]`. Flags are stripped
+// out of the query so the embedding only sees the actual semantic
+// part. Unknown flags pass through silently.
+interface MemoryArgs {
+  query: string;
+  chat?: string;
+  source?: string;
+  sinceIso?: string;
+  limit?: number;
+}
+export function parseMemoryArgs(raw: string): MemoryArgs {
+  const out: MemoryArgs = { query: '' };
+  const tokens = raw.split(/\s+/).filter(Boolean);
+  const queryTokens: string[] = [];
+  for (const tok of tokens) {
+    const m = tok.match(/^--(chat|source|since|limit)=(.+)$/);
+    if (!m) {
+      queryTokens.push(tok);
+      continue;
+    }
+    const key = m[1]!;
+    const value = m[2]!;
+    if (key === 'chat') out.chat = value;
+    else if (key === 'source') {
+      if (value === 'tg-agent' || value === 'transcribe') out.source = value;
+    } else if (key === 'since') {
+      const ms = parseDuration(value);
+      if (ms !== null) out.sinceIso = new Date(Date.now() - ms).toISOString();
+    } else if (key === 'limit') {
+      const n = Number(value);
+      if (Number.isInteger(n) && n > 0 && n <= 50) out.limit = n;
+    }
+  }
+  out.query = queryTokens.join(' ').trim();
+  return out;
+}
+
+// Accepts "30m", "12h", "7d", "12h30m", "1d4h30m". Returns ms or null.
+export function parseDuration(input: string): number | null {
+  const re = /(\d+)\s*(d|h|m)/gi;
+  let total = 0;
+  let matched = false;
+  let m: RegExpExecArray | null;
+  while ((m = re.exec(input)) !== null) {
+    matched = true;
+    const n = Number(m[1]);
+    if (!Number.isFinite(n) || n <= 0) return null;
+    const unit = m[2]!.toLowerCase();
+    if (unit === 'd') total += n * 86_400_000;
+    else if (unit === 'h') total += n * 3_600_000;
+    else if (unit === 'm') total += n * 60_000;
+  }
+  return matched ? total : null;
 }
 
 function sourceIconFor(source: string | null | undefined, kind: string | null | undefined): string {

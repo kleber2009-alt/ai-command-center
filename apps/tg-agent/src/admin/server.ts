@@ -536,7 +536,13 @@ function wireApi(app: Hono, deps: AdminDeps): void {
     });
     app.post('/api/memory/search', async (c) => {
       if (!mem.enabled) return c.json({ items: [], note: 'memory disabled' });
-      let body: { query?: unknown; limit?: unknown; chatId?: unknown; source?: unknown };
+      let body: {
+        query?: unknown;
+        limit?: unknown;
+        chatId?: unknown;
+        source?: unknown;
+        sinceDays?: unknown;
+      };
       try {
         body = await c.req.json();
       } catch {
@@ -549,8 +555,11 @@ function wireApi(app: Hono, deps: AdminDeps): void {
       const source = typeof body.source === 'string' && body.source.length > 0
         ? body.source
         : undefined;
+      const sinceIso = typeof body.sinceDays === 'number' && body.sinceDays > 0
+        ? new Date(Date.now() - body.sinceDays * 86_400_000).toISOString()
+        : undefined;
       try {
-        const hits = await mem.search(query, { limit, chatId, source });
+        const hits = await mem.search(query, { limit, chatId, source, sinceIso });
         return c.json({
           items: hits.map((h) => ({
             id: h.id,

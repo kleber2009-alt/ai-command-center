@@ -1216,6 +1216,14 @@
           <option value="tg-agent">💬 Чаты</option>
           <option value="transcribe">🎙 Транскрипты</option>
         </select>
+        <select id="memorySince"
+          class="rounded-lg bg-slate-800 border border-slate-700 px-2 py-2 text-sm text-slate-100">
+          <option value="">за всё время</option>
+          <option value="1">за сутки</option>
+          <option value="7">за неделю</option>
+          <option value="30">за месяц</option>
+          <option value="90">за квартал</option>
+        </select>
         <button type="submit"
           class="rounded-lg bg-indigo-600 hover:bg-indigo-500 px-4 py-2 text-sm font-medium text-white">Найти</button>
       </form>
@@ -1969,12 +1977,14 @@
       const results = $('memoryResults');
       results.innerHTML = '<div class="text-sm text-slate-500">Ищу…</div>';
       const source = $('memorySource').value || undefined;
+      const sinceDaysRaw = $('memorySince').value;
+      const sinceDays = sinceDaysRaw ? Number(sinceDaysRaw) : undefined;
       try {
         const res = await fetch('/api/memory/search', {
           method: 'POST',
           headers: { 'content-type': 'application/json' },
           credentials: 'same-origin',
-          body: JSON.stringify({ query, limit: 20, source }),
+          body: JSON.stringify({ query, limit: 20, source, sinceDays }),
         });
         if (!res.ok) {
           const body = await res.text();
