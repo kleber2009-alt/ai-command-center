@@ -17,9 +17,11 @@ const Body = z
     audioUrl: z.string().url().optional(),
     language: z.string().max(8).optional(),
     aspect: z.enum(['9:16', '1:1', '16:9']).optional().default('9:16'),
+    quality: z.enum(['1080p', '2k']).optional().default('2k'),
     background: z.string().max(32).optional(),
     subtitles: z.boolean().optional().default(true),
     heygenVersion: z.enum(['V', 'IV']).optional(),
+    motionPrompt: z.string().max(2000).optional(),
   })
   .refine((d) => isEnabledEngine(d.engine), { message: 'engine_disabled', path: ['engine'] });
 
@@ -92,9 +94,11 @@ export async function POST(req: NextRequest) {
       voiceId: data.voiceId ?? null,
       language: data.language ?? 'ru',
       aspect: data.aspect,
+      quality: data.quality,
       background: data.background ?? '#000000',
       subtitles: data.subtitles,
       heygenVersion: data.heygenVersion ?? cfg.heygenVersion ?? 'V',
+      motionPrompt: data.motionPrompt ?? null,
       status: 'pending',
       tokensCost: cfg.cost,
     },

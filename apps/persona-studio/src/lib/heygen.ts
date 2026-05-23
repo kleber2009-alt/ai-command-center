@@ -214,8 +214,22 @@ export async function uploadTalkingPhoto(opts: {
 
 export type Aspect = '9:16' | '1:1' | '16:9';
 export type HeygenModelVersion = 'V' | 'IV';
+export type Quality = '1080p' | '2k';
 
-function dimensionFor(aspect: Aspect): { width: number; height: number } {
+// 1080p = FullHD; 2K = QHD (1440p short side). HeyGen принимает произвольные
+// размеры; для согласованности с YouTube/Reels-стандартами держим:
+//   9:16  → 1080×1920  / 1440×2560
+//   1:1   → 1080×1080  / 2048×2048
+//   16:9  → 1920×1080  / 2560×1440
+function dimensionFor(aspect: Aspect, quality: Quality = '2k'): { width: number; height: number } {
+  if (quality === '2k') {
+    switch (aspect) {
+      case '1:1':  return { width: 2048, height: 2048 };
+      case '16:9': return { width: 2560, height: 1440 };
+      case '9:16':
+      default:     return { width: 1440, height: 2560 };
+    }
+  }
   switch (aspect) {
     case '1:1':  return { width: 1080, height: 1080 };
     case '16:9': return { width: 1920, height: 1080 };
@@ -239,14 +253,22 @@ function modelVersionParam(v: HeygenModelVersion | undefined): string {
 // Источник: https://docs.heygen.com/changelog/avatar-iv-support-now-available-in-create-avatar-video-api
 const USE_AVATAR_IV_MOTION_DEFAULT = true;
 
+// Motion prompt по умолчанию — максимально «живая» подача для talking photo.
+// Передаётся в character.motion_prompt при включённом Avatar IV motion engine.
+// Константа живёт в client-safe файле heygen-motion.ts, чтобы её мог импортить UI.
+export { MAX_REALISM_MOTION_PROMPT } from './heygen-motion';
+import { MAX_REALISM_MOTION_PROMPT } from './heygen-motion';
+
 export type CreateVideoOpts = {
   talkingPhotoId: string;
   voiceId: string;
   script: string;
   aspect?: Aspect;
-  background?: string;    // hex like "#000000"; default — black
+  quality?: Quality;             // 1080p (FullHD) | 2k (QHD); default — '2k'
+  background?: string;           // hex like "#000000"; default — black
   version?: HeygenModelVersion;  // default — 'V'
   expressiveMotion?: boolean;    // Avatar IV motion engine; default — true
+  motionPrompt?: string;         // override default; '' to disable
   testMode?: boolean;
 };
 
@@ -265,15 +287,25 @@ export async function createVideo(opts: CreateVideoOpts): Promise<string> {
   if (!opts.talkingPhotoId) throw new HeygenError('MISSING_PHOTO_ID', 'talkingPhotoId required');
   if (!opts.voiceId)        throw new HeygenError('MISSING_VOICE_ID', 'voiceId required');
 
+  const expressiveMotion = opts.expressiveMotion ?? USE_AVATAR_IV_MOTION_DEFAULT;
+  const motionPrompt = opts.motionPrompt ?? MAX_REALISM_MOTION_PROMPT;
+
+  const character: Record<string, unknown> = {
+    type: 'talking_photo',
+    talking_photo_id: opts.talkingPhotoId,
+    model_version: modelVersionParam(opts.version),
+    use_avatar_iv_model: expressiveMotion,
+  };
+  // motion_prompt принимается HeyGen только когда активен Avatar IV motion engine.
+  // Пустая строка трактуется как «не передавать», чтобы юзер мог отключить prompt.
+  if (expressiveMotion && motionPrompt.trim().length > 0) {
+    character.motion_prompt = motionPrompt.slice(0, 2000);
+  }
+
   const body = {
     video_inputs: [
       {
-        character: {
-          type: 'talking_photo',
-          talking_photo_id: opts.talkingPhotoId,
-          model_version: modelVersionParam(opts.version),
-          use_avatar_iv_model: opts.expressiveMotion ?? USE_AVATAR_IV_MOTION_DEFAULT,
-        },
+        character,
         voice: {
           type: 'text',
           voice_id: opts.voiceId,
@@ -282,7 +314,7 @@ export async function createVideo(opts: CreateVideoOpts): Promise<string> {
         background: { type: 'color', value: opts.background ?? '#000000' },
       },
     ],
-    dimension: dimensionFor(opts.aspect ?? '9:16'),
+    dimension: dimensionFor(opts.aspect ?? '9:16', opts.quality ?? '2k'),
     test: opts.testMode ?? false,
   };
 

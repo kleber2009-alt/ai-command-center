@@ -9,6 +9,7 @@ import {
   HeygenError,
   type Aspect,
   type HeygenModelVersion,
+  type Quality,
 } from '@/lib/heygen';
 import { keyFor, uploadBuffer } from '@/lib/storage';
 import { refundTokens } from '@/lib/tokens';
@@ -43,28 +44,39 @@ export function startHeygenWorker() {
       });
 
       try {
-        // 1) Upload avatar image to HeyGen → talking_photo_id
-        console.log(`[heygen-worker] ${videoId} uploading avatar to heygen…`);
-        const ref = await fetchBytes(row.avatar.imageUrl);
-        const asset = await uploadTalkingPhoto({ bytes: ref.bytes, mime: ref.mime });
-        const talkingPhotoId = asset.id;
-        console.log(`[heygen-worker] ${videoId} talking_photo_id=${talkingPhotoId}`);
+        // На BullMQ-ретрае не запускаем новую генерацию в HeyGen, если уже
+        // есть heygenJobId — продолжаем poll по существующему video_id.
+        // Иначе одна VideoGeneration порождает до `attempts` HeyGen-видео.
+        let heygenVideoId = row.heygenJobId;
 
-        // 2) Create video task on HeyGen
-        const heygenVideoId = await createVideo({
-          talkingPhotoId,
-          voiceId: row.voiceId,
-          script: row.script,
-          aspect: (row.aspect as Aspect) ?? '9:16',
-          background: row.background ?? '#000000',
-          version: (row.heygenVersion as HeygenModelVersion) ?? 'V',
-        });
-        console.log(`[heygen-worker] ${videoId} heygen_video_id=${heygenVideoId}`);
+        if (!heygenVideoId) {
+          // 1) Upload avatar image to HeyGen → talking_photo_id
+          console.log(`[heygen-worker] ${videoId} uploading avatar to heygen…`);
+          const ref = await fetchBytes(row.avatar.imageUrl);
+          const asset = await uploadTalkingPhoto({ bytes: ref.bytes, mime: ref.mime });
+          const talkingPhotoId = asset.id;
+          console.log(`[heygen-worker] ${videoId} talking_photo_id=${talkingPhotoId}`);
 
-        await prisma.videoGeneration.update({
-          where: { id: videoId },
-          data: { heygenJobId: heygenVideoId },
-        });
+          // 2) Create video task on HeyGen
+          heygenVideoId = await createVideo({
+            talkingPhotoId,
+            voiceId: row.voiceId,
+            script: row.script,
+            aspect: (row.aspect as Aspect) ?? '9:16',
+            quality: (row.quality as Quality) ?? '2k',
+            background: row.background ?? '#000000',
+            version: (row.heygenVersion as HeygenModelVersion) ?? 'V',
+            motionPrompt: row.motionPrompt ?? undefined,
+          });
+          console.log(`[heygen-worker] ${videoId} heygen_video_id=${heygenVideoId}`);
+
+          await prisma.videoGeneration.update({
+            where: { id: videoId },
+            data: { heygenJobId: heygenVideoId },
+          });
+        } else {
+          console.log(`[heygen-worker] ${videoId} resuming existing heygen_video_id=${heygenVideoId}`);
+        }
 
         // 3) Poll until completed or failed (10 min max)
         const result = await waitForVideo(heygenVideoId);
@@ -98,16 +110,26 @@ export function startHeygenWorker() {
         return { ok: true, bytes: dl.bytes.length };
       } catch (e) {
         const msg = e instanceof HeygenError ? `${e.code}: ${e.message}` : (e instanceof Error ? e.message : String(e));
-        await prisma.videoGeneration.update({
-          where: { id: videoId },
-          data: { status: 'failed', errorMsg: msg.slice(0, 500) },
-        });
-        await refundTokens({
-          userId,
-          amount: row.tokensCost,
-          reason: 'heygen-video:failed',
-          refId: videoId,
-        });
+        const maxAttempts = job.opts.attempts ?? 1;
+        const isFinal = job.attemptsMade + 1 >= maxAttempts;
+        if (isFinal) {
+          await prisma.videoGeneration.update({
+            where: { id: videoId },
+            data: { status: 'failed', errorMsg: msg.slice(0, 500) },
+          });
+          await refundTokens({
+            userId,
+            amount: row.tokensCost,
+            reason: 'heygen-video:failed',
+            refId: videoId,
+          });
+        } else {
+          // оставляем status=processing; следующий attempt продолжит poll по heygenJobId
+          await prisma.videoGeneration.update({
+            where: { id: videoId },
+            data: { errorMsg: msg.slice(0, 500) },
+          });
+        }
         throw e;
       }
     },

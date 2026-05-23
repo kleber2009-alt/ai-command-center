@@ -170,9 +170,11 @@ model VideoGeneration {
   language    String   @default("ru")
   voiceId     String?
   aspect      String   @default("9:16")              // 9:16 | 1:1 | 16:9
+  quality     String   @default("2k")                 // 1080p | 2k
   background  String?
   subtitles   Boolean  @default(true)
   heygenVersion String @default("V")                 // legacy: V | IV (зеркалит engine.heygenVersion)
+  motionPrompt  String? @db.Text                      // null → MAX_REALISM_MOTION_PROMPT
   status      String   @default("pending")           // pending | processing | completed | failed
   engineJobId String?                                // generic remote job id (kie/omnihuman)
   heygenJobId String?                                // legacy HeyGen video_id

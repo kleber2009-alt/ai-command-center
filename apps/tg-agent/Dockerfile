@@ -37,6 +37,8 @@ RUN npm install --omit=dev --no-audit --no-fund \
   && rm -rf /var/lib/apt/lists/* /root/.npm
 
 COPY --from=build /app/dist ./dist
+# Standalone scripts (backfill etc.) — runnable via `docker exec ...`.
+COPY --from=build /app/scripts ./scripts
 
 # SQLite file lives here. Bind a docker volume to keep it.
 RUN mkdir -p /app/data

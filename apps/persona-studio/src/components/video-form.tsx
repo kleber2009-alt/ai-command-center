@@ -4,6 +4,7 @@ import { useEffect, useMemo, useState } from 'react';
 import { useRouter } from 'next/navigation';
 import { VOICE_PRESETS as HEYGEN_VOICES } from '@/lib/heygen-voices';
 import { ELEVENLABS_VOICE_PRESETS } from '@/lib/elevenlabs-voices';
+import { MAX_REALISM_MOTION_PROMPT } from '@/lib/heygen-motion';
 import {
   VIDEO_ENGINES,
   VIDEO_ENGINE_LIST,
@@ -43,8 +44,11 @@ export function VideoForm({ avatars, initialAvatarId }: { avatars: Avatar[]; ini
   const [voiceId, setVoiceId] = useState<string>(HEYGEN_VOICES[0]?.voice_id ?? '');
   const [customVoiceId, setCustomVoiceId] = useState<string>('');
   const [aspect, setAspect] = useState<EngineAspect>('9:16');
+  const [quality, setQuality] = useState<'1080p' | '2k'>('2k');
   const [background, setBackground] = useState<string>('#0a0a0a');
   const [subtitles, setSubtitles] = useState(true);
+  const [motionPrompt, setMotionPrompt] = useState<string>('');
+  const [motionAdvancedOpen, setMotionAdvancedOpen] = useState(false);
   const [busy, setBusy] = useState(false);
   const [error, setError] = useState<string | null>(null);
 
@@ -94,11 +98,16 @@ export function VideoForm({ avatars, initialAvatarId }: { avatars: Avatar[]; ini
         script,
         voiceId: effectiveVoiceId,
         aspect,
+        quality,
         background,
         subtitles,
         language: voice?.language ?? 'ru',
       };
       if (cfg.heygenVersion) body.heygenVersion = cfg.heygenVersion;
+      const trimmedMotion = motionPrompt.trim();
+      if (cfg.voiceProvider === 'heygen' && trimmedMotion.length > 0) {
+        body.motionPrompt = trimmedMotion;
+      }
 
       const res = await fetch('/api/videos', {
         method: 'POST',
@@ -249,19 +258,32 @@ export function VideoForm({ avatars, initialAvatarId }: { avatars: Avatar[]; ini
           </Field>
         )}
 
-        <Field label="Aspect">
-          <select
-            className="input"
-            value={aspect}
-            onChange={(e) => setAspect(e.target.value as EngineAspect)}
-          >
-            {cfg.supportedAspects.map((a) => (
-              <option key={a} value={a}>
-                {a === '9:16' ? '9:16 — Reels / TikTok / Shorts' : a === '1:1' ? '1:1 — Instagram square' : '16:9 — YouTube / Web'}
-              </option>
-            ))}
-          </select>
-        </Field>
+        <div className="grid grid-cols-2 gap-3">
+          <Field label="Aspect">
+            <select
+              className="input"
+              value={aspect}
+              onChange={(e) => setAspect(e.target.value as EngineAspect)}
+            >
+              {cfg.supportedAspects.map((a) => (
+                <option key={a} value={a}>
+                  {a === '9:16' ? '9:16 — Reels / TikTok / Shorts' : a === '1:1' ? '1:1 — Instagram square' : '16:9 — YouTube / Web'}
+                </option>
+              ))}
+            </select>
+          </Field>
+          <Field label="Quality" hint="Разрешение рендера (только HeyGen)">
+            <select
+              className="input"
+              value={quality}
+              onChange={(e) => setQuality(e.target.value as '1080p' | '2k')}
+              disabled={cfg.voiceProvider !== 'heygen'}
+            >
+              <option value="2k">2K (QHD) — макс. реализм</option>
+              <option value="1080p">1080p (FullHD) — быстрее</option>
+            </select>
+          </Field>
+        </div>
 
         {cfg.voiceProvider === 'heygen' && (
           <div className="grid grid-cols-2 gap-3">
@@ -288,6 +310,53 @@ export function VideoForm({ avatars, initialAvatarId }: { avatars: Avatar[]; ini
                 </span>
               </label>
             </Field>
+          </div>
+        )}
+
+        {cfg.voiceProvider === 'heygen' && (
+          <div className="border border-border">
+            <button
+              type="button"
+              onClick={() => setMotionAdvancedOpen((v) => !v)}
+              className="w-full flex items-center justify-between px-4 py-3 mono text-[10px] tracking-widest uppercase text-text-mute hover:text-cyan"
+            >
+              <span>/ advanced · motion prompt {motionPrompt.trim() ? '· custom' : '· default'}</span>
+              <span>{motionAdvancedOpen ? '−' : '+'}</span>
+            </button>
+            {motionAdvancedOpen && (
+              <div className="px-4 pb-4 space-y-2">
+                <p className="mono text-[10px] tracking-wider text-text-dim">
+                  Описание движения для Avatar IV motion engine (English).
+                  Пусто = использовать дефолт max-realism.
+                </p>
+                <textarea
+                  className="input mono text-[11px] leading-snug w-full min-h-[140px]"
+                  value={motionPrompt}
+                  onChange={(e) => setMotionPrompt(e.target.value.slice(0, 2000))}
+                  placeholder={MAX_REALISM_MOTION_PROMPT}
+                  maxLength={2000}
+                />
+                <div className="flex items-center justify-between mono text-[10px] tracking-widest uppercase">
+                  <button
+                    type="button"
+                    onClick={() => setMotionPrompt(MAX_REALISM_MOTION_PROMPT)}
+                    className="text-cyan hover:underline"
+                  >
+                    insert default
+                  </button>
+                  {motionPrompt && (
+                    <button
+                      type="button"
+                      onClick={() => setMotionPrompt('')}
+                      className="text-pink hover:underline"
+                    >
+                      reset
+                    </button>
+                  )}
+                  <span className="text-text-mute">{motionPrompt.length}/2000</span>
+                </div>
+              </div>
+            )}
           </div>
         )}
 
@@ -336,7 +405,10 @@ export function VideoForm({ avatars, initialAvatarId }: { avatars: Avatar[]; ini
           </div>
           <div className="flex justify-between"><span className="text-text-mute uppercase">aspect</span><span>{aspect}</span></div>
           {cfg.voiceProvider === 'heygen' && (
-            <div className="flex justify-between"><span className="text-text-mute uppercase">bg</span><span>{background}</span></div>
+            <>
+              <div className="flex justify-between"><span className="text-text-mute uppercase">quality</span><span>{quality === '2k' ? '2K · QHD' : '1080p · FullHD'}</span></div>
+              <div className="flex justify-between"><span className="text-text-mute uppercase">bg</span><span>{background}</span></div>
+            </>
           )}
         </div>
         <p className="mono text-[10px] tracking-widest uppercase text-text-mute mt-3">
