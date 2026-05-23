@@ -244,17 +244,19 @@ function dimensionFor(aspect: Aspect, quality: Quality = '2k'): { width: number;
 export { MAX_REALISM_MOTION_PROMPT } from './heygen-motion';
 import { MAX_REALISM_MOTION_PROMPT } from './heygen-motion';
 
-// ── Avatar V vs Avatar IV ────────────────────────────────────────────────
-// HeyGen различает два независимых движка генерации видео из talking_photo:
+// ── Avatar engines для talking_photo ─────────────────────────────────────
+// HeyGen на 2026-05 даёт ровно ДВА движка для character.type='talking_photo':
 //
-//   Avatar V  — model_version='v5'. Чистая фотореалистичная мимика,
-//               НЕ принимает use_avatar_iv_model и motion_prompt.
-//   Avatar IV — use_avatar_iv_model=true. Альтернативный движок с более
-//               экспрессивными движениями, принимает motion_prompt.
+//   Avatar III — default (без флагов). Старый движок, слабая мимика.
+//   Avatar IV  — use_avatar_iv_model=true. Latest HD-движок, motion_prompt.
 //
-// Раньше мы пытались скомбинировать оба (model_version='v5' + use_avatar_iv_model=true),
-// но HeyGen в этом случае помечал результат как Avatar IV и игнорировал v5-look.
-// Поэтому две независимых функции — никаких пересекающихся флагов.
+// «Avatar V» (Studio Avatar V5, релиз май 2026) — ОТДЕЛЬНАЯ модель, требует
+// 15-секундное reference-видео (не фото). К talking_photo она НЕ применима;
+// см. https://www.heygen.com/research/avatar-v-model — "single reference video".
+// Поэтому раньше мы зря слали `model_version: 'v5'` — HeyGen этот ключ
+// игнорировал и молча отдавал Avatar III. Сейчас обе наши функции
+// (createVideoAvatarV / createVideoAvatarIV) роутят в Avatar IV — реально
+// последний и лучший движок, доступный для photo-аватаров.
 // Источник: https://docs.heygen.com/changelog/avatar-iv-support-now-available-in-create-avatar-video-api
 
 export type CreateVideoBaseOpts = {
@@ -327,16 +329,18 @@ async function submitVideo(opts: CreateVideoBaseOpts, character: Record<string, 
 }
 
 /**
- * Avatar V — photorealistic talking photo (model_version='v5').
- * Без use_avatar_iv_model и без motion_prompt — иначе HeyGen переклассифицирует
- * результат как Avatar IV.
+ * Avatar V slot — для talking_photo Avatar V API не существует (требует
+ * reference-video). Раньше мы слали model_version='v5' и HeyGen молча
+ * деградировал до Avatar III. Сейчас этот слот роутит в Avatar IV — реально
+ * latest HD-движок, доступный для photo-аватаров. motion_prompt не шлём,
+ * чтобы поведение оставалось «studio realism», как и было задумано.
  */
 export async function createVideoAvatarV(opts: CreateVideoAvatarVOpts): Promise<string> {
   validateBase(opts);
   const character: Record<string, unknown> = {
     type: 'talking_photo',
     talking_photo_id: opts.talkingPhotoId,
-    model_version: 'v5',
+    use_avatar_iv_model: true,
   };
   return submitVideo(opts, character);
 }
