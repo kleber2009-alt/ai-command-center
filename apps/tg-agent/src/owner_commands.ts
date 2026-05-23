@@ -265,7 +265,7 @@ export function registerOwnerCommands(deps: OwnerCommandsDeps): void {
           return `${i + 1}. <b>${score}%</b> ${sourceIcon} ${meta} · <i>${escapeHtml(when)}</i>\n${escapeHtml(text)}`;
         })
         .join('\n\n');
-      const message = `🧬 Память по "${escapeHtml(query)}":\n\n${body}`;
+      const message = `🧬 Память по "${escapeHtml(parsed.query)}":\n\n${body}`;
       for (const chunk of splitForTelegram(message)) {
         await ctx.reply(chunk, {
           parse_mode: 'HTML',
@@ -274,7 +274,7 @@ export function registerOwnerCommands(deps: OwnerCommandsDeps): void {
       }
     } catch (err) {
       logger.error('memory: /memory command failed', {
-        query: query.slice(0, 80),
+        query: parsed.query.slice(0, 80),
         error: err instanceof Error ? err.message : String(err),
       });
       await ctx.reply('Ошибка поиска. Проверь логи и Qdrant.');
