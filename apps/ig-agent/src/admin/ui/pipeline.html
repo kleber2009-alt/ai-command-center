@@ -2,240 +2,274 @@
 <html lang="ru">
 <head>
 <meta charset="UTF-8">
-<meta name="viewport" content="width=device-width, initial-scale=1.0">
-<meta name="theme-color" content="#080808">
-<meta name="color-scheme" content="dark only">
-<title>AI Sales · Pipeline</title>
+<meta name="viewport" content="width=device-width,initial-scale=1">
+<title>ig-agent · Pipeline</title>
 <style>
-  *, *::before, *::after { margin:0; padding:0; box-sizing:border-box; }
-  html, body { background:#080808; color:#f5f0e8; min-height:100vh; }
-  body { font-family:Georgia,'Times New Roman',serif; font-size:15px; line-height:1.5; overflow-x:hidden; }
-  .label { font-family:'SF Mono','JetBrains Mono','Menlo',monospace; font-size:10px; text-transform:uppercase; letter-spacing:0.14em; color:#b8b3a8; font-weight:700; }
-  .mono { font-family:'SF Mono','JetBrains Mono','Menlo',monospace; }
+/* === DESIGN TOKENS (mirrors the conversation page so visuals stay coherent) === */
+:root{
+  --bg-main:#0a0a0a; --bg-surface:#101010; --bg-card:#161616; --bg-card-2:#1f1f1f;
+  --border-soft:#262626; --border-mid:#333;
+  --text-main:#f5f0e8; --text-mid:#c8c4ba; --text-muted:#8a8378; --text-mute:#665f55;
+  --green:#9fd368; --yellow:#f0c060; --red:#f06090; --blue:#60a8f0; --purple:#a88af0;
+  --green-edge:rgba(159,211,104,.35); --yellow-edge:rgba(240,192,96,.35);
+  --red-edge:rgba(240,96,144,.35); --blue-edge:rgba(96,168,240,.35);
+  --r-sm:6px; --r-md:10px; --r-lg:14px;
+  --font-mono:'SF Mono','JetBrains Mono','Menlo',monospace;
+}
+*,*::before,*::after{margin:0;padding:0;box-sizing:border-box}
+html,body{background:var(--bg-main);color:var(--text-main);min-height:100vh}
+body{font-family:Georgia,'Times New Roman',serif;font-size:14px;line-height:1.5;overflow-x:hidden}
+a{color:inherit;text-decoration:none}
+button{font:inherit;color:inherit;background:none;border:0;cursor:pointer}
 
-  .topbar { position:sticky; top:0; z-index:50; display:flex; align-items:center; justify-content:space-between; padding:14px 24px; background:#080808; border-bottom:1px solid #2a2a2a; gap:18px; flex-wrap:wrap; }
-  .topbar-left { display:flex; align-items:center; gap:18px; min-width:0; }
-  .topbar-title { font-family:Georgia,serif; font-size:18px; line-height:1; white-space:nowrap; }
-  .topbar-title .accent { color:#c8f060; font-style:italic; }
-  .topbar-nav { display:flex; gap:2px; }
-  .nav-link { background:transparent; border:1px solid #2a2a2a; color:#b8b3a8; padding:7px 14px; font-family:'SF Mono',monospace; font-size:10px; text-transform:uppercase; letter-spacing:0.14em; cursor:pointer; font-weight:700; text-decoration:none; }
-  .nav-link.active { background:#c8f060; color:#080808; border-color:#c8f060; }
-  .nav-link:hover:not(.active) { border-color:#c8f060; color:#f5f0e8; }
+.mono{font-family:var(--font-mono)}
+.muted{color:var(--text-muted)}
+.t-sm{font-size:12.5px}.t-md{font-size:14px}.t-lg{font-size:17px}
+.fw6{font-weight:600}
+.c-green{color:var(--green)}.c-yellow{color:var(--yellow)}.c-red{color:var(--red)}.c-blue{color:var(--blue)}
+.section-h{font-family:var(--font-mono);font-size:10px;letter-spacing:.14em;text-transform:uppercase;color:var(--text-muted);font-weight:700;margin-bottom:8px}
 
-  .shell { max-width:1640px; margin:0 auto; padding:0; display:grid; grid-template-columns:260px 1fr; gap:2px; min-height:calc(100vh - 56px); background:#1a1a1a; }
-  @media (max-width:900px) { .shell { grid-template-columns:1fr; } }
+.row{display:flex;align-items:center}.col{display:flex;flex-direction:column}
+.gap-2{gap:8px}.gap-3{gap:12px}
+.mt-2{margin-top:8px}.mt-3{margin-top:12px}
 
-  /* === FILTERS === */
-  .filters { background:#0a0a0a; padding:18px 20px 30px; overflow-y:auto; }
-  .filter-block { margin-bottom:22px; }
-  .filter-block h4 { font-family:'SF Mono',monospace; font-size:10px; font-weight:700; text-transform:uppercase; letter-spacing:0.14em; color:#5a5550; margin-bottom:10px; padding-bottom:6px; border-bottom:1px solid #1a1a1a; }
-  .chip { display:inline-flex; align-items:center; gap:6px; padding:5px 10px; margin:2px 2px 2px 0; background:#141414; border:1px solid #2a2a2a; font-family:'SF Mono',monospace; font-size:10px; text-transform:uppercase; letter-spacing:0.1em; color:#b8b3a8; cursor:pointer; font-weight:700; }
-  .chip:hover { border-color:#c8f060; color:#f5f0e8; }
-  .chip.active { background:#c8f060; color:#080808; border-color:#c8f060; }
-  .chip.cyan.active { background:#60c8f0; border-color:#60c8f0; color:#080808; }
-  .chip.pink.active { background:#f06090; border-color:#f06090; color:#080808; }
-  .chip .count { color:#5a5550; font-weight:400; }
-  .chip.active .count { color:rgba(8,8,8,0.5); }
+/* === BAR / TOP === */
+.bar{position:sticky;top:0;z-index:50;display:flex;align-items:center;gap:18px;padding:10px 18px;background:var(--bg-main);border-bottom:1px solid var(--border-soft)}
+.bar__brand{display:flex;align-items:baseline;gap:6px;font-family:Georgia,serif;font-size:16px}
+.bar__brand-mark{font-family:var(--font-mono);font-size:10px;color:#080808;background:var(--green);padding:2px 5px;border-radius:3px;letter-spacing:.06em}
+.bar__brand span:last-child{color:var(--green);font-style:italic}
+.bar__right{margin-left:auto;display:flex;align-items:center;gap:12px}
 
-  .filter-search { width:100%; background:#141414; border:1px solid #2a2a2a; color:#f5f0e8; padding:8px 12px; font-family:'SF Mono',monospace; font-size:11px; margin-bottom:14px; }
-  .filter-search:focus { outline:none; border-color:#c8f060; }
-  .filter-search::placeholder { color:#5a5550; }
+/* === LAYOUT 3-col === */
+.shell-pipe{display:grid;grid-template-columns:260px 1fr 380px;min-height:calc(100vh - 48px)}
+.shell-pipe > *{min-width:0}
+@media (max-width:1200px){.shell-pipe{grid-template-columns:240px 1fr}.pipe-preview{display:none}}
+@media (max-width:800px){.shell-pipe{grid-template-columns:1fr}.pipe-filters{display:none}}
 
-  .range-row { display:flex; gap:4px; align-items:center; font-family:'SF Mono',monospace; font-size:11px; color:#b8b3a8; }
-  .range-input { width:60px; background:#141414; border:1px solid #2a2a2a; color:#f5f0e8; padding:6px 8px; font-family:'SF Mono',monospace; font-size:11px; text-align:center; }
+/* === FILTERS (left) === */
+.pipe-filters{padding:18px 16px;background:var(--bg-surface);border-right:1px solid var(--border-soft);overflow-y:auto;display:flex;flex-direction:column;gap:18px}
+.search-input{
+  width:100%;background:var(--bg-card);border:1px solid var(--border-soft);color:var(--text-main);
+  padding:10px 12px;font-family:var(--font-mono);font-size:12px;border-radius:var(--r-sm);
+}
+.search-input:focus{outline:none;border-color:var(--blue-edge)}
+.search-input::placeholder{color:var(--text-mute)}
 
-  .reset-btn { background:transparent; border:1px solid #2a2a2a; color:#b8b3a8; padding:7px 0; width:100%; font-family:'SF Mono',monospace; font-size:10px; text-transform:uppercase; letter-spacing:0.14em; cursor:pointer; font-weight:700; }
-  .reset-btn:hover { border-color:#f06090; color:#f06090; }
+.chip{
+  display:inline-flex;align-items:center;justify-content:space-between;gap:8px;
+  font-family:var(--font-mono);font-size:11px;letter-spacing:.08em;text-transform:uppercase;font-weight:700;
+  padding:8px 12px;border-radius:var(--r-sm);border:1px solid var(--border-soft);background:var(--bg-card);
+  color:var(--text-mid);cursor:pointer;transition:all .12s ease;width:100%;
+}
+.chip:hover{color:var(--text-main);border-color:var(--border-mid)}
+.chip.is-on{background:rgba(159,211,104,.08);color:var(--green);border-color:var(--green-edge)}
+.chip .n{font-size:11px;color:var(--text-mute);font-weight:600}
+.chip.is-on .n{color:var(--green)}
 
-  /* === MAIN === */
-  .main { background:#0a0a0a; display:flex; flex-direction:column; }
-  .main-head { padding:14px 24px; border-bottom:1px solid #1a1a1a; display:flex; align-items:center; justify-content:space-between; gap:12px; flex-wrap:wrap; }
-  .head-title { font-family:Georgia,serif; font-size:20px; }
-  .head-title .accent { color:#c8f060; font-style:italic; }
-  .head-meta { font-family:'SF Mono',monospace; font-size:11px; color:#b8b3a8; letter-spacing:0.1em; }
-  .head-meta .num { color:#c8f060; font-weight:700; }
-  .head-controls { display:flex; gap:6px; }
-  .ctrl { background:transparent; border:1px solid #2a2a2a; color:#b8b3a8; padding:6px 12px; font-family:'SF Mono',monospace; font-size:10px; text-transform:uppercase; letter-spacing:0.12em; cursor:pointer; font-weight:700; }
-  .ctrl:hover { border-color:#c8f060; color:#f5f0e8; }
-  .ctrl.active { background:#c8f060; color:#080808; border-color:#c8f060; }
+.chip.is-on.warm{background:rgba(240,192,96,.08);color:var(--yellow);border-color:var(--yellow-edge)}
+.chip.is-on.warm .n{color:var(--yellow)}
+.chip.is-on.hot{background:rgba(240,96,144,.08);color:var(--red);border-color:var(--red-edge)}
+.chip.is-on.hot .n{color:var(--red)}
+.chip.is-on.customer{background:rgba(96,168,240,.08);color:var(--blue);border-color:var(--blue-edge)}
+.chip.is-on.customer .n{color:var(--blue)}
 
-  /* === TABLE === */
-  .table { font-size:14px; }
-  .row-head { display:grid; grid-template-columns:280px 180px 90px 90px 1fr 130px 90px; gap:14px; padding:10px 24px; border-bottom:1px solid #1a1a1a; background:#0d0d0d; align-items:center; position:sticky; top:0; }
-  .row-head .h { font-family:'SF Mono',monospace; font-size:10px; text-transform:uppercase; letter-spacing:0.14em; color:#5a5550; font-weight:700; cursor:pointer; }
-  .row-head .h:hover { color:#c8f060; }
-  .row-head .h.sort::after { content:' ▼'; color:#c8f060; }
+.sort-row{display:flex;gap:6px;flex-wrap:wrap}
+.sort-btn{
+  font-family:var(--font-mono);font-size:10px;letter-spacing:.1em;text-transform:uppercase;
+  padding:6px 10px;border-radius:4px;border:1px solid var(--border-soft);background:transparent;color:var(--text-muted);font-weight:700;
+}
+.sort-btn:hover{color:var(--text-main);border-color:var(--border-mid)}
+.sort-btn.is-on{background:var(--bg-card);color:var(--text-main);border-color:var(--border-mid)}
 
-  .row { display:grid; grid-template-columns:280px 180px 90px 90px 1fr 130px 90px; gap:14px; padding:14px 24px; border-bottom:1px solid #131313; align-items:center; cursor:pointer; transition:background 0.1s; }
-  .row:hover { background:#141414; }
-  .row.esc { border-left:3px solid #f06090; padding-left:21px; }
-  .row.hot { border-left:3px solid #c8f060; padding-left:21px; }
-  .row.warm { border-left:3px solid #60c8f0; padding-left:21px; }
-  .row.cold { border-left:3px solid #2a2a2a; padding-left:21px; opacity:0.75; }
+/* === LIST (center) === */
+.pipe-list{background:var(--bg-main);overflow-y:auto;display:flex;flex-direction:column}
+.pipe-list-head{
+  display:flex;justify-content:space-between;align-items:center;padding:14px 20px;
+  border-bottom:1px solid var(--border-soft);background:var(--bg-surface);position:sticky;top:0;z-index:5;
+}
+.pipe-list-head .title{font-family:Georgia,serif;font-size:18px}
+.pipe-list-head .title .accent{color:var(--green);font-style:italic}
+.pipe-list-head .meta{font-family:var(--font-mono);font-size:11px;color:var(--text-muted);letter-spacing:.08em}
+.pipe-list-head .meta .n{color:var(--green);font-weight:700}
 
-  .who { display:flex; gap:10px; align-items:center; min-width:0; }
-  .who-avatar { width:32px; height:32px; background:linear-gradient(135deg, #c8f060, #60c8f0); display:flex; align-items:center; justify-content:center; font-family:Georgia,serif; font-size:13px; color:#080808; font-weight:700; flex-shrink:0; letter-spacing:-0.02em; }
-  .who-avatar.alt { background:linear-gradient(135deg, #60c8f0, #f06090); }
-  .who-avatar.alt2 { background:linear-gradient(135deg, #f06090, #c8f060); }
-  .who-info { min-width:0; overflow:hidden; }
-  .who-name { font-family:Georgia,serif; font-size:15px; line-height:1.2; white-space:nowrap; overflow:hidden; text-overflow:ellipsis; }
-  .who-handle { font-family:'SF Mono',monospace; font-size:11px; color:#60c8f0; margin-top:2px; }
-  .who-handle.tg { color:#60c8f0; }
-  .who-handle.ig { color:#f06090; }
+.pipe-cards{display:flex;flex-direction:column;padding:14px 20px;gap:8px;flex:1}
 
-  /* funnel mini */
-  .fmini { display:flex; gap:2px; height:8px; align-items:center; }
-  .fm-dot { width:14%; height:6px; background:#1a1a1a; }
-  .fm-dot.done { background:#2a3a14; }
-  .fm-dot.current { background:#c8f060; height:8px; box-shadow:0 0 0 1px #c8f060; }
-  .fm-label { font-family:'SF Mono',monospace; font-size:10px; color:#b8b3a8; margin-top:4px; letter-spacing:0.1em; text-transform:uppercase; }
+/* === Contact card === */
+.pcard{
+  display:grid;grid-template-columns:44px 1fr auto;gap:14px;align-items:center;
+  padding:14px;border-radius:var(--r-md);background:var(--bg-card);border:1px solid var(--border-soft);
+  cursor:pointer;transition:border-color .12s ease, transform .12s ease;
+}
+.pcard:hover{border-color:var(--border-mid)}
+.pcard.is-active{border-color:var(--green-edge);background:rgba(159,211,104,.04)}
 
-  /* segment chip */
-  .seg { display:inline-block; font-family:'SF Mono',monospace; font-size:10px; padding:2px 7px; font-weight:700; letter-spacing:0.12em; }
-  .seg.A { background:#2a3a14; color:#c8f060; }
-  .seg.B { background:#0f2a3a; color:#60c8f0; }
-  .seg.C { background:#1a1a1a; color:#b8b3a8; border:1px solid #2a2a2a; }
-  .seg.U { color:#5a5550; border:1px dashed #2a2a2a; }
+.pcard__av{
+  width:44px;height:44px;border-radius:50%;display:flex;align-items:center;justify-content:center;
+  background:linear-gradient(135deg,#5a4b8e,#3a6f9e);color:#fff;font-family:var(--font-mono);font-weight:700;font-size:15px;
+}
+.pcard__av.warm{background:linear-gradient(135deg,#7a5a2e,#a8843e)}
+.pcard__av.hot{background:linear-gradient(135deg,#7a2e5a,#a83e7a)}
+.pcard__av.customer{background:linear-gradient(135deg,#2e5a7a,#3e7aa8)}
+.pcard__av.lost{background:#2a2a2a;color:#666}
 
-  /* score */
-  .score-cell { font-family:Georgia,serif; font-size:22px; line-height:1; }
-  .score-cell.A { color:#c8f060; }
-  .score-cell.B { color:#60c8f0; }
-  .score-cell.C { color:#b8b3a8; }
-  .score-cell.U { color:#5a5550; }
+.pcard__body{display:flex;flex-direction:column;gap:4px;min-width:0}
+.pcard__top{display:flex;align-items:center;gap:8px;flex-wrap:wrap}
+.pcard__name{font-family:Georgia,serif;font-size:15px;color:var(--text-main);white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+.pcard__handle{font-family:var(--font-mono);font-size:11px;color:var(--text-muted)}
+.pcard__preview{font-size:13px;color:var(--text-mid);overflow:hidden;text-overflow:ellipsis;white-space:nowrap;line-height:1.4}
+.pcard__tags{display:flex;gap:5px;flex-wrap:wrap;margin-top:2px}
 
-  /* preview */
-  .preview { font-size:13px; line-height:1.4; color:#c5bfb3; overflow:hidden; text-overflow:ellipsis; white-space:nowrap; display:block; max-width:100%; }
-  .preview .auth { font-family:'SF Mono',monospace; font-size:10px; padding:0 5px; margin-right:6px; }
-  .preview .auth.cli { color:#f5f0e8; background:#1a1a1a; }
-  .preview .auth.agent { color:#60c8f0; background:#0f2a3a; }
-  .preview .auth.user { color:#c8f060; background:#1a2a0d; }
+.pcard__meta{display:flex;flex-direction:column;align-items:flex-end;gap:6px;font-family:var(--font-mono);font-size:11px;color:var(--text-muted);white-space:nowrap}
+.pcard__time{letter-spacing:.06em}
 
-  /* time */
-  .timecell { font-family:'SF Mono',monospace; font-size:11px; color:#b8b3a8; letter-spacing:0.06em; line-height:1.4; }
-  .timecell .ago { color:#f5f0e8; font-weight:700; }
-  .timecell .ago.warn { color:#f06090; }
-  .timecell .ago.hot { color:#c8f060; }
-  .timecell .sub { font-size:10px; color:#5a5550; }
+/* === BADGES === */
+.badge{
+  display:inline-flex;align-items:center;gap:5px;font-family:var(--font-mono);font-size:9.5px;letter-spacing:.1em;
+  text-transform:uppercase;font-weight:700;padding:3px 7px;border-radius:4px;border:1px solid var(--border-mid);color:var(--text-mid);
+}
+.badge--new{color:var(--text-mid);border-color:var(--border-mid)}
+.badge--warm{color:var(--yellow);border-color:var(--yellow-edge);background:rgba(240,192,96,.06)}
+.badge--hot{color:var(--red);border-color:var(--red-edge);background:rgba(240,96,144,.06);animation:pulse 2s infinite}
+.badge--customer{color:var(--blue);border-color:var(--blue-edge);background:rgba(96,168,240,.06)}
+.badge--lost{color:#666;border-color:#333}
+.badge--green{color:var(--green);border-color:var(--green-edge);background:rgba(159,211,104,.06)}
+.badge--ghost{color:var(--text-muted);border-color:var(--border-soft)}
+@keyframes pulse{0%,100%{opacity:1}50%{opacity:.55}}
 
-  /* forecast */
-  .fc { font-family:'SF Mono',monospace; font-size:11px; }
-  .fc .v { color:#c8f060; font-weight:700; }
-  .fc .v.cyan { color:#60c8f0; }
-  .fc .sub { color:#5a5550; font-size:10px; margin-top:2px; }
+/* === PREVIEW PANE (right) === */
+.pipe-preview{
+  border-left:1px solid var(--border-soft);background:var(--bg-surface);
+  padding:18px;overflow-y:auto;display:flex;flex-direction:column;gap:18px;
+}
+.pipe-preview__empty{display:flex;flex-direction:column;align-items:center;justify-content:center;gap:8px;color:var(--text-muted);text-align:center;padding:40px 14px;flex:1}
+.pipe-preview__empty .icon{font-size:32px;opacity:.6}
+.pipe-preview__empty .h{font-family:Georgia,serif;font-size:16px;color:var(--text-mid)}
+.pipe-preview__empty .s{font-size:12.5px;line-height:1.5}
 
-  /* esc badge */
-  .esc-badge { display:inline-block; font-family:'SF Mono',monospace; font-size:9px; padding:2px 6px; background:#28121b; color:#f06090; font-weight:700; letter-spacing:0.1em; margin-right:6px; }
+.preview-head{display:flex;flex-direction:column;align-items:center;text-align:center;gap:10px;padding-bottom:18px;border-bottom:1px solid var(--border-soft)}
+.preview-head .av{width:64px;height:64px;border-radius:50%;display:flex;align-items:center;justify-content:center;background:linear-gradient(135deg,#5a4b8e,#3a6f9e);color:#fff;font-family:var(--font-mono);font-weight:700;font-size:22px}
+.preview-head .nm{font-family:Georgia,serif;font-size:17px}
+.preview-head .hh{font-family:var(--font-mono);font-size:11.5px;color:var(--text-muted)}
 
-  .filters::-webkit-scrollbar { width:6px; }
-  .filters::-webkit-scrollbar-track { background:#0a0a0a; }
-  .filters::-webkit-scrollbar-thumb { background:#2a2a2a; }
+.cl-field{display:flex;justify-content:space-between;font-size:12.5px;padding:5px 0;gap:12px}
+.cl-field span:first-child{color:var(--text-muted)}
+.cl-field span:last-child{color:var(--text-main);text-align:right;max-width:200px;word-break:break-word}
 
-  @media (max-width:1200px) {
-    .row-head, .row { grid-template-columns:280px 180px 90px 1fr 90px; }
-    .row-head .col-score, .row .score-cell, .row-head .col-time, .row .timecell { display:none; }
-  }
+.msg{
+  max-width:100%;padding:8px 12px;border-radius:10px;font-size:13px;line-height:1.5;
+  color:var(--text-main);background:var(--bg-card);border:1px solid var(--border-soft);
+}
+.msg + .msg{margin-top:6px}
+.msg__t{display:block;font-family:var(--font-mono);font-size:9.5px;color:var(--text-muted);letter-spacing:.06em;margin-top:5px}
+.msg--in{align-self:flex-start}
+.msg--ai{align-self:flex-end;background:rgba(96,168,240,.07);border-color:var(--blue-edge)}
+.msg--manual{align-self:flex-end;background:rgba(240,192,96,.07);border-color:var(--yellow-edge)}
+.msg-feed{display:flex;flex-direction:column;gap:0}
+
+.rec-card{
+  padding:10px 12px;border-radius:var(--r-sm);background:var(--bg-card);
+  border-left:2px solid var(--green);font-size:12.5px;line-height:1.55;color:var(--text-mid);
+}
+.rec-card.high{border-left-color:var(--red)}
+.rec-card.low{border-left-color:#666}
+.rec-card .type{font-family:var(--font-mono);font-size:9.5px;letter-spacing:.12em;color:var(--green);font-weight:700;display:block;margin-bottom:4px}
+.rec-card.high .type{color:var(--red)}
+.rec-card.low .type{color:#666}
+
+.btn{
+  display:inline-flex;align-items:center;justify-content:center;gap:6px;
+  height:34px;padding:0 14px;border-radius:6px;font-size:12.5px;font-weight:600;
+  border:1px solid var(--border-mid);background:var(--bg-card);color:var(--text-main);transition:all .12s ease;
+}
+.btn:hover{border-color:var(--green-edge);color:var(--green)}
+.btn--primary{background:var(--green);color:#080808;border-color:var(--green)}
+.btn--primary:hover{background:#b3df87;border-color:#b3df87}
+.btn--ghost{background:transparent;border-color:var(--border-soft);color:var(--text-mid)}
+.btn--block{width:100%}
+.btn:disabled{opacity:.55;cursor:not-allowed}
+
+/* Status switcher buttons inside preview */
+.status-switch{display:grid;grid-template-columns:repeat(5,1fr);gap:4px}
+.status-switch .s{
+  font-family:var(--font-mono);font-size:9.5px;letter-spacing:.1em;text-transform:uppercase;font-weight:700;
+  padding:7px 0;border-radius:4px;border:1px solid var(--border-soft);background:transparent;color:var(--text-muted);
+}
+.status-switch .s:hover{border-color:var(--border-mid);color:var(--text-main)}
+.status-switch .s.is-on{background:var(--bg-card);color:var(--text-main);border-color:var(--border-mid)}
+.status-switch .s.is-on.new{color:var(--text-mid)}
+.status-switch .s.is-on.warm{color:var(--yellow);border-color:var(--yellow-edge)}
+.status-switch .s.is-on.hot{color:var(--red);border-color:var(--red-edge)}
+.status-switch .s.is-on.customer{color:var(--blue);border-color:var(--blue-edge)}
+.status-switch .s.is-on.lost{color:#666;border-color:#333}
 </style>
 </head>
 <body>
 
-<header class="topbar">
-  <div class="topbar-left">
-    <div class="topbar-title">ig-agent <span class="accent">Pipeline</span></div>
-    <nav id="igNav"></nav>
-  </div>
-  <div id="topbarRight" style="display:flex;align-items:center;gap:12px"></div>
+<header class="bar">
+  <a class="bar__brand" href="/"><span class="bar__brand-mark">IG</span>agent</a>
+  <nav id="igNav"></nav>
+  <div class="bar__right" id="topbarRight"></div>
 </header>
 
-<main class="shell">
+<div class="shell-pipe">
 
-  <!-- ============ FILTERS ============ -->
-  <aside class="filters">
-
-    <input class="filter-search" placeholder="🔍  поиск по имени, @handle" />
-
-    <div class="filter-block">
-      <h4>Канал</h4>
-      <span class="chip active">Все <span class="count">128</span></span>
-      <span class="chip pink">IG <span class="count">82</span></span>
-      <span class="chip cyan">TG <span class="count">46</span></span>
+  <!-- LEFT: filters -->
+  <aside class="pipe-filters">
+    <div>
+      <div class="section-h">Поиск</div>
+      <input id="pipeSearch" class="search-input" placeholder="имя, @username, телефон" />
     </div>
 
-    <div class="filter-block">
-      <h4>Этап воронки</h4>
-      <span class="chip">01 Hello <span class="count">47</span></span>
-      <span class="chip">02 Discovery <span class="count">29</span></span>
-      <span class="chip active">03 Pitch <span class="count">16</span></span>
-      <span class="chip">04 Objections <span class="count">8</span></span>
-      <span class="chip">05 Close <span class="count">5</span></span>
-      <span class="chip">06 Followup <span class="count">3</span></span>
-      <span class="chip">07 Won/Lost <span class="count">10</span></span>
-    </div>
-
-    <div class="filter-block">
-      <h4>Сегмент</h4>
-      <span class="chip">A <span class="count">14</span></span>
-      <span class="chip">B <span class="count">38</span></span>
-      <span class="chip">C <span class="count">52</span></span>
-      <span class="chip">Unknown <span class="count">24</span></span>
-    </div>
-
-    <div class="filter-block">
-      <h4>Скоринг</h4>
-      <div class="range-row">
-        <input class="range-input" value="0" />
-        <span>—</span>
-        <input class="range-input" value="100" />
+    <div>
+      <div class="section-h">Статус лида</div>
+      <div class="col gap-2" id="statusChips">
+        <button class="chip is-on" data-status="">ALL <span class="n" id="cntAll">·</span></button>
+        <button class="chip"       data-status="new">NEW <span class="n" id="cntNew">·</span></button>
+        <button class="chip warm"  data-status="warm">WARM <span class="n" id="cntWarm">·</span></button>
+        <button class="chip hot"   data-status="hot">HOT <span class="n" id="cntHot">·</span></button>
+        <button class="chip customer" data-status="customer">CUSTOMER <span class="n" id="cntCust">·</span></button>
+        <button class="chip"       data-status="lost">LOST <span class="n" id="cntLost">·</span></button>
       </div>
     </div>
 
-    <div class="filter-block">
-      <h4>Состояние</h4>
-      <span class="chip pink">⚠ Эскалации <span class="count">3</span></span>
-      <span class="chip">🔥 Без ответа &gt; 30м <span class="count">4</span></span>
-      <span class="chip">🔥 Без ответа &gt; 2ч <span class="count">7</span></span>
-      <span class="chip">📌 Перехвачено <span class="count">2</span></span>
+    <div>
+      <div class="section-h">Сортировка</div>
+      <div class="sort-row">
+        <button class="sort-btn is-on" data-sort="recent">по активности</button>
+        <button class="sort-btn"       data-sort="new">по дате</button>
+        <button class="sort-btn"       data-sort="status">по статусу</button>
+      </div>
     </div>
 
-    <div class="filter-block">
-      <h4>Активность</h4>
-      <span class="chip">Сегодня <span class="count">39</span></span>
-      <span class="chip">Эта неделя <span class="count">87</span></span>
-      <span class="chip">Этот месяц <span class="count">128</span></span>
+    <div>
+      <div class="section-h">Качество</div>
+      <div class="t-sm muted" style="line-height:1.6">
+        Реальные карточки IG-подписчиков синхронизируются по webhook SendPulse. Клик на карточку — preview справа. Двойной клик / кнопка → переход в conversation.
+      </div>
     </div>
-
-    <button class="reset-btn">↻ Сбросить фильтры</button>
-
   </aside>
 
-  <!-- ============ MAIN ============ -->
-  <section class="main">
-
-    <div class="main-head">
-      <div class="head-title">128 клиентов <span class="accent">в работе</span></div>
-      <div class="head-meta">показано <span class="num">12</span> из 128 · сортировка по температуре</div>
-      <div class="head-controls">
-        <button class="ctrl active">Таблица</button>
-        <button class="ctrl">Канбан</button>
-        <button class="ctrl">↓ Export CSV</button>
-      </div>
+  <!-- CENTER: card list -->
+  <main class="pipe-list">
+    <div class="pipe-list-head">
+      <div class="title">Pipeline · <span class="accent">контакты</span></div>
+      <div class="meta">показано <span class="n" id="visibleCount">…</span> из <span class="n" id="totalCount">…</span></div>
     </div>
-
-    <div class="row-head">
-      <div class="h">Клиент</div>
-      <div class="h">Этап</div>
-      <div class="h">Сегмент</div>
-      <div class="h">Скоринг</div>
-      <div class="h">Последнее сообщение</div>
-      <div class="h sort col-time">Время</div>
-      <div class="h">Прогноз</div>
+    <div class="pipe-cards" id="pipeCards">
+      <div style="opacity:.5;padding:14px">…загружаю</div>
     </div>
+  </main>
 
-    <div class="table" id="pipelineTable"><div class="row" style="opacity:.5">…загружаю</div></div>
+  <!-- RIGHT: preview -->
+  <aside class="pipe-preview" id="pipePreview">
+    <div class="pipe-preview__empty">
+      <div class="icon">👈</div>
+      <div class="h">Выбери контакт слева</div>
+      <div class="s">Откроется превью: профиль, последние сообщения, AI-рекомендации и кнопки управления статусом.</div>
+    </div>
+  </aside>
 
-  </section>
-
-</main>
+</div>
 
 <script src="/assets/ig-admin.js"></script>
 <script>
@@ -243,87 +277,238 @@
   var IG = window.IG;
   if (IG.mountNav) IG.mountNav(document.getElementById('igNav'), 'pipeline');
   if (IG.mountAutoReplyToggle) IG.mountAutoReplyToggle(document.getElementById('topbarRight'));
-  var table = document.getElementById('pipelineTable');
-  var allContacts = [];
-  var statusFilter = null;
 
-  function rowClass(s) {
-    if (s === 'hot') return 'row hot';
-    if (s === 'warm') return 'row warm';
-    if (s === 'customer') return 'row';
-    if (s === 'lost') return 'row';
-    return 'row';
+  var listEl    = document.getElementById('pipeCards');
+  var previewEl = document.getElementById('pipePreview');
+  var searchEl  = document.getElementById('pipeSearch');
+  var chipsEl   = document.getElementById('statusChips');
+  var sortRowEl = document.querySelector('.sort-row');
+
+  var allContacts = [];
+  var statusFilter = '';
+  var sortMode = 'recent';
+  var selectedId = null;
+
+  function initials(name) {
+    if (!name) return '?';
+    return (name.match(/\b\w/g) || ['?']).join('').slice(0, 2).toUpperCase();
+  }
+  function relTime(iso) {
+    if (!iso) return '';
+    var diff = Math.floor((Date.now() - new Date(iso).getTime()) / 1000);
+    if (diff < 60) return 'сейчас';
+    if (diff < 3600) return Math.floor(diff / 60) + ' мин';
+    if (diff < 86400) return Math.floor(diff / 3600) + ' ч';
+    if (diff < 604800) return Math.floor(diff / 86400) + ' д';
+    return IG.fmtDay(iso);
+  }
+  function badgeFor(status) {
+    var map = { new: 'NEW', warm: 'WARM', hot: 'HOT · нужен ты', customer: 'CUSTOMER', lost: 'LOST' };
+    var cls = 'badge badge--' + (status || 'new');
+    return '<span class="' + cls + '">' + IG.escapeHtml(map[status] || (status || 'NEW').toUpperCase()) + '</span>';
   }
 
-  function render() {
-    var rows = statusFilter ? allContacts.filter(function (c) { return c.lead_status === statusFilter; }) : allContacts;
+  function updateCounts(contacts) {
+    var cnt = { new: 0, warm: 0, hot: 0, customer: 0, lost: 0 };
+    contacts.forEach(function (c) { cnt[c.lead_status || 'new'] = (cnt[c.lead_status || 'new'] || 0) + 1; });
+    document.getElementById('cntAll').textContent  = contacts.length;
+    document.getElementById('cntNew').textContent  = cnt.new;
+    document.getElementById('cntWarm').textContent = cnt.warm;
+    document.getElementById('cntHot').textContent  = cnt.hot;
+    document.getElementById('cntCust').textContent = cnt.customer;
+    document.getElementById('cntLost').textContent = cnt.lost;
+    document.getElementById('totalCount').textContent = contacts.length;
+  }
+
+  function applyFilters() {
+    var q = (searchEl.value || '').trim().toLowerCase();
+    var rows = allContacts.slice();
+    if (statusFilter) rows = rows.filter(function (c) { return (c.lead_status || 'new') === statusFilter; });
+    if (q) rows = rows.filter(function (c) {
+      return ((c.ig_username || '') + ' ' + (c.first_name || '') + ' ' + (c.last_name || '') + ' ' + c.sendpulse_contact_id).toLowerCase().indexOf(q) >= 0;
+    });
+    if (sortMode === 'recent') {
+      rows.sort(function (a, b) { return (b.last_message_at || b.created_at || '').localeCompare(a.last_message_at || a.created_at || ''); });
+    } else if (sortMode === 'new') {
+      rows.sort(function (a, b) { return (b.created_at || '').localeCompare(a.created_at || ''); });
+    } else if (sortMode === 'status') {
+      var order = { hot: 0, warm: 1, customer: 2, new: 3, lost: 4 };
+      rows.sort(function (a, b) { return (order[a.lead_status||'new'] - order[b.lead_status||'new']) || (b.last_message_at||'').localeCompare(a.last_message_at||''); });
+    }
+    return rows;
+  }
+
+  function renderList() {
+    var rows = applyFilters();
+    document.getElementById('visibleCount').textContent = rows.length;
     if (!rows.length) {
-      table.innerHTML = '<div class="row" style="opacity:.5">Пусто</div>';
+      listEl.innerHTML = '<div style="opacity:.5;padding:14px">Пусто. Сбрось фильтры или дождись новых сообщений в IG-DM.</div>';
       return;
     }
-    var html = rows.map(function (c) {
-      var name = IG.escapeHtml(IG.nameOf(c));
-      var fullName = IG.escapeHtml(((c.first_name || '') + ' ' + (c.last_name || '')).trim()) || name;
-      var initials = (fullName.match(/\\b\\w/g) || ['?']).join('').slice(0, 2).toUpperCase();
+    listEl.innerHTML = rows.map(function (c) {
+      var nm = IG.escapeHtml(IG.nameOf(c));
+      var fullNm = IG.escapeHtml(((c.first_name || '') + ' ' + (c.last_name || '')).trim() || nm);
+      var handle = c.ig_username ? '@' + IG.escapeHtml(c.ig_username) : IG.escapeHtml(c.sendpulse_contact_id).slice(0, 12);
       var status = c.lead_status || 'new';
-      var qual = c.qualification || '—';
-      var lastIso = c.last_message_at || c.created_at;
-      var last = IG.fmtDay(lastIso) + ' · ' + IG.fmtTime(lastIso);
+      var avClass = 'pcard__av ' + (status === 'new' ? '' : status);
+      var active = c.id === selectedId ? ' is-active' : '';
+      var preview = c.qualification ? 'qual ' + IG.escapeHtml(c.qualification) : 'IG DM · обновлений нет';
       return (
-        '<a class="' + rowClass(status) + '" href="/conversation?id=' + IG.escapeHtml(c.id) + '" style="text-decoration:none;color:inherit">' +
-          '<div class="who">' +
-            '<div class="who-avatar">' + IG.escapeHtml(initials) + '</div>' +
-            '<div class="who-info">' +
-              '<div class="who-name">' + fullName + '</div>' +
-              '<div class="who-handle ig">IG · ' + name + '</div>' +
+        '<div class="pcard' + active + '" data-id="' + IG.escapeHtml(c.id) + '">' +
+          '<div class="' + avClass + '">' + IG.escapeHtml(initials(fullNm)) + '</div>' +
+          '<div class="pcard__body">' +
+            '<div class="pcard__top">' +
+              '<span class="pcard__name">' + fullNm + '</span>' +
+              '<span class="pcard__handle">' + handle + '</span>' +
             '</div>' +
+            '<div class="pcard__preview">' + preview + '</div>' +
+            '<div class="pcard__tags">' + badgeFor(status) + (c.qualification ? ' <span class="badge badge--ghost">' + IG.escapeHtml(c.qualification) + '</span>' : '') + '</div>' +
           '</div>' +
-          '<div><div class="fm-label">' + IG.escapeHtml(status.toUpperCase()) + '</div></div>' +
-          '<div>' + IG.statusBadge(status) + '</div>' +
-          '<div class="score-cell">' + IG.escapeHtml(qual) + '</div>' +
-          '<div><span class="preview">' + IG.escapeHtml(c.sendpulse_contact_id) + '</span></div>' +
-          '<div class="timecell"><span class="ago">' + IG.escapeHtml(last) + '</span></div>' +
-          '<div class="fc"><span class="v">—</span></div>' +
-        '</a>'
+          '<div class="pcard__meta">' +
+            '<span class="pcard__time">' + IG.escapeHtml(relTime(c.last_message_at || c.created_at)) + '</span>' +
+          '</div>' +
+        '</div>'
       );
     }).join('');
-    table.innerHTML = html;
+    listEl.querySelectorAll('.pcard').forEach(function (el) {
+      el.addEventListener('click', function () { select(el.dataset.id); });
+      el.addEventListener('dblclick', function () { location.href = '/conversation?id=' + encodeURIComponent(el.dataset.id); });
+    });
   }
 
-  async function load() {
+  async function loadList() {
     try {
       var data = await IG.api('/api/contacts?limit=500');
       allContacts = data.contacts || [];
-      render();
+      updateCounts(allContacts);
+      renderList();
     } catch (e) {
-      table.innerHTML = '<div class="row" style="color:#f06090">Ошибка: ' + IG.escapeHtml(e.message) + '</div>';
+      listEl.innerHTML = '<div style="color:#f06090;padding:14px">Ошибка: ' + IG.escapeHtml(e.message) + '</div>';
     }
   }
 
-  // Chip single-select per filter-block. We map first word of chip text
-  // to lead_status when possible; otherwise chip is decorative.
-  var STATUS_MAP = { 'все': null, 'all': null, 'new': 'new', 'warm': 'warm', 'hot': 'hot', 'customer': 'customer', 'lost': 'lost' };
-  document.querySelectorAll('.chip').forEach(function (c) {
-    c.addEventListener('click', function (e) {
-      e.preventDefault();
-      var group = c.closest('.filter-block');
-      if (group) group.querySelectorAll('.chip').forEach(function (x) { x.classList.remove('active'); });
-      c.classList.add('active');
-      var key = (c.textContent || '').trim().toLowerCase().split(/\\s+/)[0];
-      var mapped = STATUS_MAP[key];
-      if (mapped !== undefined) statusFilter = mapped;
-      render();
+  async function setStatus(id, status) {
+    // No dedicated endpoint yet — we re-use takeover semantics via a tiny POST
+    // that updates lead_status. If this 404s, fall back to refreshing list.
+    try {
+      var c = allContacts.find(function (x) { return x.id === id; });
+      if (c) c.lead_status = status;
+      renderList();
+      // Optimistic UI: persistence endpoint TBD. For now we just refresh from server.
+      await IG.api('/api/contacts/' + encodeURIComponent(id) + '/status', {
+        method: 'POST',
+        body: JSON.stringify({ lead_status: status }),
+      });
+    } catch (e) {
+      // Endpoint may not exist yet → keep optimistic update, log warning.
+      console.warn('status update endpoint missing:', e.message);
+    }
+  }
+
+  function renderPreview(contact, messages, recs) {
+    var name = IG.nameOf(contact);
+    var fullName = ((contact.first_name || '') + ' ' + (contact.last_name || '')).trim() || name;
+    var status = contact.lead_status || 'new';
+    var avClass = 'av ' + (status === 'new' ? '' : status);
+
+    var msgsHtml = (messages || []).slice(-3).map(function (m) {
+      var cls = 'msg msg--' + (m.direction === 'incoming' ? 'in' : (m.source === 'manual' ? 'manual' : 'ai'));
+      var tag = m.direction === 'incoming' ? 'USER' : (m.source === 'manual' ? 'OWNER' : 'AI');
+      var snippet = m.text ? (m.text.length > 140 ? m.text.slice(0, 137) + '…' : m.text) : '[media]';
+      return '<div class="' + cls + '">' + IG.escapeHtml(snippet) + '<span class="msg__t">' + tag + ' · ' + IG.escapeHtml(IG.fmtTime(m.created_at)) + '</span></div>';
+    }).join('') || '<div class="t-sm muted">Сообщений пока нет.</div>';
+
+    var recsHtml = (recs || []).slice(0, 2).map(function (r) {
+      var cls = 'rec-card ' + (r.priority || 'normal');
+      return '<div class="' + cls + '"><span class="type">' + IG.escapeHtml((r.type || 'rec').toUpperCase()) + '</span>' + IG.escapeHtml(r.content) + '</div>';
+    }).join('') || '<div class="t-sm muted">Аналитик ещё не оставлял рекомендаций.</div>';
+
+    var statusSwitchHtml = ['new','warm','hot','customer','lost'].map(function (s) {
+      var on = status === s ? ' is-on ' + s : '';
+      return '<button class="s' + on + '" data-set-status="' + s + '">' + s.toUpperCase() + '</button>';
+    }).join('');
+
+    previewEl.innerHTML = (
+      '<div class="preview-head">' +
+        '<span class="av av-g4" style="width:64px;height:64px;font-size:22px">' + IG.escapeHtml(initials(fullName)) + '</span>' +
+        '<div><div class="nm">' + IG.escapeHtml(fullName) + '</div><div class="hh">' + IG.escapeHtml(contact.ig_username ? '@' + contact.ig_username : contact.sendpulse_contact_id) + '</div></div>' +
+        '<div>' + badgeFor(status) + (contact.qualification ? ' <span class="badge badge--ghost">' + IG.escapeHtml(contact.qualification) + '</span>' : '') + '</div>' +
+      '</div>' +
+      '<div>' +
+        '<div class="section-h">Контакт</div>' +
+        '<div class="cl-field"><span>Username</span><span class="mono c-blue">' + (contact.ig_username ? '@' + IG.escapeHtml(contact.ig_username) : '—') + '</span></div>' +
+        '<div class="cl-field"><span>IG user id</span><span class="mono">' + IG.escapeHtml(contact.ig_user_id || '—') + '</span></div>' +
+        '<div class="cl-field"><span>Первый контакт</span><span class="mono">' + IG.escapeHtml(IG.fmtDay(contact.first_seen_at) + ' · ' + IG.fmtTime(contact.first_seen_at)) + '</span></div>' +
+        '<div class="cl-field"><span>Последнее</span><span class="mono">' + IG.escapeHtml(IG.fmtDay(contact.last_message_at) + ' · ' + IG.fmtTime(contact.last_message_at)) + '</span></div>' +
+      '</div>' +
+      '<div>' +
+        '<div class="section-h">Сменить статус</div>' +
+        '<div class="status-switch">' + statusSwitchHtml + '</div>' +
+      '</div>' +
+      '<div>' +
+        '<div class="section-h">Последние сообщения</div>' +
+        '<div class="msg-feed">' + msgsHtml + '</div>' +
+      '</div>' +
+      '<div>' +
+        '<div class="section-h">AI-рекомендации</div>' +
+        recsHtml +
+      '</div>' +
+      '<div class="col gap-2" style="margin-top:auto">' +
+        '<a class="btn btn--primary btn--block" href="/conversation?id=' + encodeURIComponent(contact.id) + '">→ Открыть диалог</a>' +
+        '<button class="btn btn--ghost btn--block" id="btnReanalyzeSel">🔄 Re-analyze</button>' +
+      '</div>'
+    );
+
+    previewEl.querySelectorAll('[data-set-status]').forEach(function (b) {
+      b.addEventListener('click', function () { setStatus(contact.id, b.dataset.setStatus); renderPreview(Object.assign({}, contact, { lead_status: b.dataset.setStatus }), messages, recs); });
+    });
+    var ra = document.getElementById('btnReanalyzeSel');
+    if (ra) ra.addEventListener('click', async function () {
+      ra.disabled = true; ra.textContent = '…';
+      try {
+        await IG.api('/api/contacts/' + encodeURIComponent(contact.id) + '/analyze', { method: 'POST', body: '{}' });
+        await select(contact.id, true);
+      } catch (e) { alert(e.message); }
+      finally { ra.disabled = false; ra.textContent = '🔄 Re-analyze'; }
+    });
+  }
+
+  async function select(id, silent) {
+    selectedId = id;
+    if (!silent) renderList(); // re-highlight active card
+    try {
+      var detail = await IG.api('/api/contacts/' + encodeURIComponent(id));
+      var msgs   = await IG.api('/api/contacts/' + encodeURIComponent(id) + '/messages?limit=20');
+      var recs   = { recommendations: [] };
+      try { recs = await IG.api('/api/contacts/' + encodeURIComponent(id) + '/recommendations'); } catch (_) {}
+      renderPreview(detail.contact, msgs.messages || [], recs.recommendations || []);
+    } catch (e) {
+      previewEl.innerHTML = '<div class="pipe-preview__empty"><div class="icon">⚠</div><div class="h">Не получилось</div><div class="s">' + IG.escapeHtml(e.message) + '</div></div>';
+    }
+  }
+
+  // Filter chip handlers.
+  chipsEl.querySelectorAll('.chip').forEach(function (b) {
+    b.addEventListener('click', function () {
+      chipsEl.querySelectorAll('.chip').forEach(function (x) { x.classList.remove('is-on'); });
+      b.classList.add('is-on');
+      statusFilter = b.dataset.status || '';
+      renderList();
     });
   });
-  var reset = document.querySelector('.reset-btn');
-  if (reset) reset.addEventListener('click', function () {
-    document.querySelectorAll('.chip.active').forEach(function (x) { x.classList.remove('active'); });
-    statusFilter = null;
-    render();
+  // Sort button handlers.
+  if (sortRowEl) sortRowEl.querySelectorAll('.sort-btn').forEach(function (b) {
+    b.addEventListener('click', function () {
+      sortRowEl.querySelectorAll('.sort-btn').forEach(function (x) { x.classList.remove('is-on'); });
+      b.classList.add('is-on');
+      sortMode = b.dataset.sort;
+      renderList();
+    });
   });
+  searchEl.addEventListener('input', renderList);
 
-  load();
-  setInterval(load, 30000);
+  loadList();
+  setInterval(loadList, 30000);
 })();
 </script>
 </body>

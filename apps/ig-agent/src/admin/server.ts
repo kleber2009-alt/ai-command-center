@@ -487,6 +487,21 @@ export function startAdminServer(deps: AdminDeps): AdminHandle {
     return c.json({ recommendations: rows });
   });
 
+  app.post('/api/contacts/:id/status', async (c) => {
+    const id = c.req.param('id');
+    const body = (await c.req.json().catch(() => ({}))) as { lead_status?: unknown };
+    const v = body.lead_status;
+    if (
+      v !== 'new' && v !== 'warm' && v !== 'hot' && v !== 'customer' && v !== 'lost'
+    ) {
+      return c.json({ error: 'lead_status must be one of new|warm|hot|customer|lost' }, 400);
+    }
+    const contact = await deps.contacts.byId(id);
+    if (!contact) return c.json({ error: 'not found' }, 404);
+    await deps.contacts.setLeadStatus(id, v);
+    return c.json({ ok: true, lead_status: v });
+  });
+
   app.post('/api/contacts/:id/takeover', async (c) => {
     const id = c.req.param('id');
     let body: { ai_handled?: boolean } = {};
