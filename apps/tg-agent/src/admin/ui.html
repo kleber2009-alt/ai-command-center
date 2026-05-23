@@ -45,6 +45,7 @@
 
       <div class="px-2 py-1 mt-2 text-[10px] font-semibold uppercase tracking-wider text-slate-600">Прочее</div>
       <button data-view="prompts"   class="view-btn view-btn-idle   flex items-center gap-2.5 w-full rounded-lg px-3 py-2 text-sm">🧠 Промпты</button>
+      <button data-view="memory"    class="view-btn view-btn-idle   flex items-center gap-2.5 w-full rounded-lg px-3 py-2 text-sm">🧬 Память</button>
       <button data-view="report"    class="view-btn view-btn-idle   flex items-center gap-2.5 w-full rounded-lg px-3 py-2 text-sm">📈 Отчёт</button>
       <button data-view="projects"  class="view-btn view-btn-idle   flex items-center gap-2.5 w-full rounded-lg px-3 py-2 text-sm">📁 Проекты</button>
       <button data-view="roadmap"   class="view-btn view-btn-idle   flex items-center gap-2.5 w-full rounded-lg px-3 py-2 text-sm">🗺 Роудмап</button>
@@ -1197,6 +1198,25 @@
     </section><!-- /view-projects -->
 
 
+    <!-- ─── VIEW: memory ─────────────────────────────────────────────── -->
+    <section id="view-memory" class="hidden flex-1 flex flex-col gap-4 p-6 min-h-0 overflow-hidden">
+      <div class="flex items-center gap-3">
+        <h2 class="text-base font-semibold text-slate-100">🧬 Семантическая память</h2>
+        <span id="memoryInfo" class="text-xs text-slate-500"></span>
+      </div>
+      <div class="text-xs text-slate-400 max-w-3xl">
+        Поиск по эмбеддингам сообщений из всех чатов. Спрашивай по смыслу — «о чём говорили про оплату», «кто писал про возражения», «жалобы на бот» — найдёт даже если слова не совпадают.
+      </div>
+      <form id="memoryForm" class="flex gap-2">
+        <input id="memoryQuery" type="text" placeholder="запрос…"
+          class="flex-1 rounded-lg bg-slate-800 border border-slate-700 px-3 py-2 text-sm text-slate-100 placeholder-slate-500 focus:outline-none focus:border-indigo-500" />
+        <button type="submit"
+          class="rounded-lg bg-indigo-600 hover:bg-indigo-500 px-4 py-2 text-sm font-medium text-white">Найти</button>
+      </form>
+      <div id="memoryResults" class="flex-1 overflow-y-auto flex flex-col gap-2"></div>
+    </section><!-- /view-memory -->
+
+
   </div><!-- /main area -->
 
   <script>
@@ -1280,7 +1300,7 @@
     }
 
     // ─── view routing ─────────────────────────────────────────────────────────
-    const ALL_VIEWS = ['chats','drafts','analytics','pipeline','demo','billing','kb','prompts','report','projects','roadmap'];
+    const ALL_VIEWS = ['chats','drafts','analytics','pipeline','demo','billing','kb','prompts','memory','report','projects','roadmap'];
 
     function switchView(view) {
       state.view = view;
@@ -1304,6 +1324,7 @@
         else if (state.view === 'billing')   { await loadBilling(); }
         else if (state.view === 'kb')        { await loadKb(); }
         else if (state.view === 'prompts')   { await loadPrompts(); }
+        else if (state.view === 'memory')    { await loadMemoryInfo(); }
         else if (state.view === 'report')    { await loadDailyReports(); }
         else if (state.view === 'projects')  { await loadProjects(); }
         else if (state.view === 'roadmap')   { rmInitCheckboxes(); }
@@ -1918,6 +1939,84 @@
       const data = await fetchJson('/api/projects/' + encodeURIComponent(currentProject) + '/' + encodeURIComponent(file));
       $('projectText').textContent = data.content || '(пусто)';
     }
+
+    // ─── MEMORY view ─────────────────────────────────────────────────────────
+    async function loadMemoryInfo() {
+      const info = $('memoryInfo');
+      info.textContent = '· загрузка…';
+      try {
+        const data = await fetchJson('/api/memory/info');
+        if (data.enabled === false) {
+          info.textContent = '· отключено (нет OPENAI_API_KEY или MEMORY_ENABLED=false)';
+          return;
+        }
+        if (data.error) {
+          info.textContent = '· ошибка: ' + data.error;
+          return;
+        }
+        info.textContent = `· ${data.pointsCount} сообщений в индексе · ${data.model} · ${data.vectorSize}d`;
+      } catch (e) {
+        info.textContent = '· ошибка: ' + e.message;
+      }
+    }
+    async function runMemorySearch(query) {
+      const results = $('memoryResults');
+      results.innerHTML = '<div class="text-sm text-slate-500">Ищу…</div>';
+      try {
+        const res = await fetch('/api/memory/search', {
+          method: 'POST',
+          headers: { 'content-type': 'application/json' },
+          credentials: 'same-origin',
+          body: JSON.stringify({ query, limit: 20 }),
+        });
+        if (!res.ok) {
+          const body = await res.text();
+          results.innerHTML = `<div class="text-sm text-rose-400">Ошибка ${res.status}: ${escapeHtml(body).slice(0,200)}</div>`;
+          return;
+        }
+        const data = await res.json();
+        renderMemoryResults(data.items || []);
+      } catch (e) {
+        results.innerHTML = `<div class="text-sm text-rose-400">${escapeHtml(e.message)}</div>`;
+      }
+    }
+    function renderMemoryResults(items) {
+      const results = $('memoryResults');
+      if (items.length === 0) {
+        results.innerHTML = '<div class="text-sm text-slate-500">Ничего не нашёл.</div>';
+        return;
+      }
+      results.innerHTML = items.map((h) => {
+        const who = h.username ? '@' + h.username : (h.user_id ? 'user ' + h.user_id : 'unknown');
+        const chat = h.chat_title || ('chat ' + h.chat_id);
+        const when = h.created_at ? new Date(h.created_at).toLocaleString('ru-RU') : '';
+        const score = (h.score * 100).toFixed(0) + '%';
+        const cls = h.class
+          ? `<span class="text-[10px] uppercase tracking-wide text-indigo-300 ml-2">${escapeHtml(h.class)}</span>`
+          : '';
+        return `
+          <div class="rounded-xl border border-slate-700 bg-slate-900 p-4">
+            <div class="flex flex-wrap items-center gap-x-3 gap-y-1 text-xs text-slate-400 mb-2">
+              <span class="font-medium text-emerald-400">${score}</span>
+              <span class="text-slate-500">·</span>
+              <span class="text-slate-300">${escapeHtml(chat)}</span>
+              <span class="text-slate-500">·</span>
+              <span>${escapeHtml(who)}</span>
+              ${when ? `<span class="text-slate-500">·</span><span>${escapeHtml(when)}</span>` : ''}
+              ${cls}
+            </div>
+            <div class="text-sm text-slate-200 whitespace-pre-wrap leading-relaxed">${escapeHtml(h.text)}</div>
+          </div>`;
+      }).join('');
+    }
+    // Wire form (one-time on first interaction).
+    document.addEventListener('submit', (e) => {
+      if (e.target && e.target.id === 'memoryForm') {
+        e.preventDefault();
+        const q = $('memoryQuery').value.trim();
+        if (q) runMemorySearch(q);
+      }
+    });
 
   </script>
 </body>
