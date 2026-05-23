@@ -190,11 +190,15 @@ export function createPipeline(deps: PipelineDeps): Pipeline {
         });
         return;
       }
-      if (!event.text) {
-        // Media-only messages without text aren't worth a Claude round-trip
-        // in v0.1. Alert the owner so they can step in.
+      if (!event.hasUserText) {
+        // Media, stickers, reactions, story replies, subscribe pings —
+        // anything without user-authored text. We've persisted the row +
+        // queued the analyst; the AI doesn't try to respond. Ping the
+        // owner so they can step in if it's worth a manual reply.
+        const who = contact.ig_username ?? contact.sendpulse_contact_id;
+        const tag = event.text ?? `[${event.eventTitle ?? 'event'}]`;
         await deps.notifier.send(
-          `📷 ${contact.ig_username ?? contact.sendpulse_contact_id} прислал(а) медиа без текста — открой кабинет.`,
+          `📷 ${who} → ${tag} — открой кабинет.`,
           { silent: true },
         );
         return;
@@ -205,7 +209,7 @@ export function createPipeline(deps: PipelineDeps): Pipeline {
       let result;
       try {
         result = await deps.responder.reply({
-          userText: event.text,
+          userText: event.text!,
           // Exclude the just-inserted incoming message — the responder
           // gets it via userText, not history, to avoid duplication.
           history: history.slice(0, -1),
