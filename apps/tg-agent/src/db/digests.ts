@@ -70,6 +70,9 @@ export interface DigestStore {
   }): DigestRow;
   markDelivered(id: number): void;
   latestForChat(chatId: number): DigestRow | null;
+  latestPerChat(): DigestRow[];
+  historyForChat(chatId: number, limit: number): DigestRow[];
+  getById(id: number): DigestRow | null;
   getContext(chatId: number): ChatContextRow | null;
   upsertContextSummary(chatId: number, summary: string): void;
   setCustomInstructions(chatId: number, instructions: string): void;
@@ -113,6 +116,35 @@ export function createDigestStore(db: Db): DigestStore {
     WHERE chat_id = ?
     ORDER BY generated_at DESC
     LIMIT 1
+  `);
+
+  // Latest digest for every chat, one row per chat, newest first.
+  const latestPerChatStmt = db.prepare(`
+    SELECT d.id, d.chat_id, d.chat_title, d.window_hours, d.generated_at,
+           d.messages_count, d.payload_json, d.summary_md, d.delivered_at
+    FROM tg_digests d
+    JOIN (
+      SELECT chat_id, MAX(generated_at) AS max_at
+      FROM tg_digests
+      GROUP BY chat_id
+    ) m ON m.chat_id = d.chat_id AND m.max_at = d.generated_at
+    ORDER BY d.generated_at DESC
+  `);
+
+  const historyStmt = db.prepare(`
+    SELECT id, chat_id, chat_title, window_hours, generated_at,
+           messages_count, payload_json, summary_md, delivered_at
+    FROM tg_digests
+    WHERE chat_id = ?
+    ORDER BY generated_at DESC
+    LIMIT ?
+  `);
+
+  const byIdStmt = db.prepare(`
+    SELECT id, chat_id, chat_title, window_hours, generated_at,
+           messages_count, payload_json, summary_md, delivered_at
+    FROM tg_digests
+    WHERE id = ?
   `);
 
   const getContextStmt = db.prepare(`
@@ -159,6 +191,16 @@ export function createDigestStore(db: Db): DigestStore {
     },
     latestForChat(chatId): DigestRow | null {
       const row = latestStmt.get(chatId) as DigestRow | undefined;
+      return row ?? null;
+    },
+    latestPerChat(): DigestRow[] {
+      return latestPerChatStmt.all() as DigestRow[];
+    },
+    historyForChat(chatId, limit): DigestRow[] {
+      return historyStmt.all(chatId, limit) as DigestRow[];
+    },
+    getById(id): DigestRow | null {
+      const row = byIdStmt.get(id) as DigestRow | undefined;
       return row ?? null;
     },
     getContext(chatId): ChatContextRow | null {

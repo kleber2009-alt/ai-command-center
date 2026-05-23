@@ -147,6 +147,7 @@ async function main(): Promise<void> {
         : undefined,
       promptConfig,
       dataDir: dirname(resolve(config.databasePath)),
+      digestStore,
       sendMagicLink: sessionAuthReady
         ? async (telegramId, url) => {
             await bot.api.sendMessage(

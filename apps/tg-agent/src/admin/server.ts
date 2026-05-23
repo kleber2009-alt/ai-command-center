@@ -11,6 +11,7 @@ import { basicAuth } from 'hono/basic-auth';
 import type { BillingService, SubPlan, SubStatus } from '../db/billing.js';
 import type { ChatService } from '../db/chats.js';
 import type { DealService, DealStage } from '../db/deals.js';
+import type { DigestStore, DigestPayload, DigestRow } from '../db/digests.js';
 import type { DraftService, DraftStatus } from '../db/drafts.js';
 import type { LeadService } from '../db/leads.js';
 import type { MessageStore } from '../db/messages.js';
@@ -70,6 +71,7 @@ export interface AdminDeps {
   sendOwnerMessage: ((text: string) => Promise<void>) | undefined;
   promptConfig: PromptConfig | undefined;
   dataDir: string;
+  digestStore: DigestStore | undefined;
 }
 
 export interface AdminHandle {
@@ -346,6 +348,27 @@ function wireApi(app: Hono, deps: AdminDeps): void {
     return c.json({ content: readFileSync(p, 'utf8') });
   });
 
+  // ── Digests (AI-generated daily summaries) ───────────────────────────────
+  if (deps.digestStore) {
+    const ds = deps.digestStore;
+    app.get('/api/digests', (c) => {
+      return c.json({ items: ds.latestPerChat().map(serializeDigest) });
+    });
+    app.get('/api/digests/:chatId/history', (c) => {
+      const chatId = Number(c.req.param('chatId'));
+      if (!Number.isFinite(chatId)) return c.json({ error: 'invalid chat_id' }, 400);
+      const limit = Math.min(Math.max(Number(c.req.query('limit') ?? 30), 1), 200);
+      return c.json({ items: ds.historyForChat(chatId, limit).map(serializeDigest) });
+    });
+    app.get('/api/digests/by-id/:id', (c) => {
+      const id = Number(c.req.param('id'));
+      if (!Number.isFinite(id)) return c.json({ error: 'invalid id' }, 400);
+      const row = ds.getById(id);
+      if (!row) return c.json({ error: 'not found' }, 404);
+      return c.json(serializeDigest(row));
+    });
+  }
+
   // ── Pipeline (CRM deals) routes ───────────────────────────────────────────
   if (deps.dealService) {
     const ds = deps.dealService;
@@ -525,6 +548,34 @@ function loginErrorPage(message: string): string {
 
 function escapeHtml(s: string): string {
   return s.replace(/[&<>"']/g, (c) => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' })[c]!);
+}
+
+type SerializedDigest = {
+  id: number;
+  chat_id: number;
+  chat_title: string | null;
+  window_hours: number;
+  generated_at: string;
+  messages_count: number;
+  summary_md: string;
+  delivered_at: string | null;
+  payload: DigestPayload | null;
+};
+
+function serializeDigest(row: DigestRow): SerializedDigest {
+  let payload: DigestPayload | null = null;
+  try { payload = JSON.parse(row.payload_json) as DigestPayload; } catch { payload = null; }
+  return {
+    id: row.id,
+    chat_id: row.chat_id,
+    chat_title: row.chat_title,
+    window_hours: row.window_hours,
+    generated_at: row.generated_at,
+    messages_count: row.messages_count,
+    summary_md: row.summary_md,
+    delivered_at: row.delivered_at,
+    payload,
+  };
 }
 
 type ProjectSummary = {
