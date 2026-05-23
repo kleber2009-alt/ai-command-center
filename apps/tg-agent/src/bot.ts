@@ -9,6 +9,7 @@ import type { MessageStore } from './db/messages.js';
 import { decide } from './decision.js';
 import type { HealthMonitor } from './health.js';
 import type { Logger } from './logger.js';
+import type { MemoryService } from './memory/service.js';
 import {
   DRAFT_CALLBACK_PATTERN,
   renderResolutionFooter,
@@ -28,6 +29,7 @@ export interface BotDeps {
   messages: MessageStore;
   drafts: DraftService;
   health: HealthMonitor;
+  memory: MemoryService;
 }
 
 const ACTIONS_THAT_REPLY: ReadonlySet<Action> = new Set([
@@ -52,7 +54,7 @@ function isPaymentText(text: string): boolean {
 }
 
 export function createBot(deps: BotDeps): CreateBotResult {
-  const { bot, config, logger, classifier, responder, chats, leads, messages, drafts, health } =
+  const { bot, config, logger, classifier, responder, chats, leads, messages, drafts, health, memory } =
     deps;
   let notifier: Notifier | null = null;
 
@@ -231,7 +233,7 @@ export function createBot(deps: BotDeps): CreateBotResult {
         logger.info('reply suppressed: auto_reply is OFF for this chat', baseLog);
       }
 
-      messages.log({
+      const messageRowId = messages.log({
         chatId,
         userId: incoming.userId,
         telegramMessageId: incoming.messageId,
@@ -242,6 +244,33 @@ export function createBot(deps: BotDeps): CreateBotResult {
         reasoning: classification.reasoning,
         response: reply,
       });
+
+      // Memory index — fire-and-forget. Slow embedding API or
+      // unreachable Qdrant must not block the bot's reply path or
+      // notifier. Failures are logged inside the noop wrapper /
+      // service itself.
+      if (memory.enabled && text.trim().length > 0) {
+        memory
+          .indexMessage({
+            id: messageRowId,
+            text,
+            payload: {
+              chat_id: chatId,
+              chat_title: chatTitle ?? null,
+              user_id: incoming.userId ?? null,
+              username: incoming.username ?? null,
+              class: classification.class,
+              text,
+              created_at: new Date().toISOString(),
+            },
+          })
+          .catch((err) => {
+            logger.warn('memory: indexMessage failed', {
+              ...baseLog,
+              error: err instanceof Error ? err.message : String(err),
+            });
+          });
+      }
 
       const isPayment = classification.class === 'PAYMENT_RECEIVED';
       if (notifier && (isPayment || (chatState.autoReply && lead))) {

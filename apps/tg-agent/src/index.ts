@@ -25,6 +25,9 @@ import { dirname, resolve } from 'node:path';
 import { createHealthMonitor } from './health.js';
 import { loadKnowledgeBase } from './knowledge/index.js';
 import { createLogger } from './logger.js';
+import { createEmbeddingClient } from './memory/embeddings.js';
+import { createQdrantClient } from './memory/qdrant.js';
+import { createMemoryService, createNoopMemoryService, type MemoryService } from './memory/service.js';
 import { createNotifier } from './notifier.js';
 import { registerOwnerCommands } from './owner_commands.js';
 import { startReportScheduler, type ReporterHandle } from './reporter.js';
@@ -59,6 +62,39 @@ async function main(): Promise<void> {
   const billingService = createBillingService(db);
   const kbManager = createKbManager(dirname(resolve(config.databasePath)));
   const digestStore = createDigestStore(db);
+
+  // Memory: OpenAI embeddings of every tg_message into Qdrant.
+  // Falls back to a noop service when MEMORY_ENABLED=false or the
+  // OpenAI key is missing — the rest of the bot is unaffected.
+  let memory: MemoryService;
+  if (!config.memoryEnabled) {
+    memory = createNoopMemoryService(logger, 'MEMORY_ENABLED=false');
+  } else if (!config.openaiApiKey) {
+    memory = createNoopMemoryService(logger, 'OPENAI_API_KEY not set');
+  } else {
+    memory = createMemoryService({
+      embeddings: createEmbeddingClient({
+        apiKey: config.openaiApiKey,
+        model: config.embeddingModel,
+      }),
+      qdrant: createQdrantClient({
+        url: config.qdrantUrl,
+        collection: config.qdrantCollection,
+        apiKey: config.qdrantApiKey,
+      }),
+      logger,
+    });
+    // Fire ensureCollection in the background — never block startup
+    // on Qdrant being slow / unreachable. The bot pipeline indexes
+    // fire-and-forget anyway, so a delayed init just means the first
+    // few messages might miss the index. /api/memory/search awaits
+    // ready() itself.
+    memory.ready().catch((err) => {
+      logger.error('memory: ensureCollection failed', {
+        error: err instanceof Error ? err.message : String(err),
+      });
+    });
+  }
 
   // Grammy bot lives separately from the createBot() wrapper so that
   // health + notifier can hold a reference before message handlers
@@ -107,6 +143,7 @@ async function main(): Promise<void> {
     messages,
     drafts,
     health,
+    memory,
   });
 
   const notifier = createNotifier({

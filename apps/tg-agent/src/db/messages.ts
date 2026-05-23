@@ -16,7 +16,9 @@ export interface MessageRow {
 }
 
 export interface MessageStore {
-  log(record: MessageLogRecord): void;
+  // Returns the auto-incremented `id` of the inserted row so callers
+  // (e.g. memory indexer) can pin it as a stable point ID.
+  log(record: MessageLogRecord): number;
   listForChat(chatId: number, limit: number): MessageRow[];
   listForInsights(chatIds: number[], days: number, limit: number): Array<Pick<MessageRow, 'text' | 'class'>>;
 }
@@ -39,8 +41,8 @@ export function createMessageStore(db: Db): MessageStore {
   `);
 
   return {
-    log(record): void {
-      insertStmt.run(
+    log(record): number {
+      const r = insertStmt.run(
         record.chatId,
         record.userId ?? null,
         record.telegramMessageId,
@@ -51,6 +53,7 @@ export function createMessageStore(db: Db): MessageStore {
         record.reasoning,
         record.response,
       );
+      return Number(r.lastInsertRowid);
     },
 
     listForChat(chatId, limit): MessageRow[] {

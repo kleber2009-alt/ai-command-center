@@ -18,6 +18,7 @@ import type { MessageStore } from '../db/messages.js';
 import type { StatsService } from '../db/stats.js';
 import type { HealthMonitor } from '../health.js';
 import type { KbManager } from '../kb-manager.js';
+import type { MemoryService } from '../memory/service.js';
 import type { PromptConfig } from '../prompt-config.js';
 import type { Logger } from '../logger.js';
 import {
@@ -72,6 +73,7 @@ export interface AdminDeps {
   promptConfig: PromptConfig | undefined;
   dataDir: string;
   digestStore: DigestStore | undefined;
+  memory: MemoryService | undefined;
 }
 
 export interface AdminHandle {
