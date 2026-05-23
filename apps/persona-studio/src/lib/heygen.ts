@@ -244,20 +244,26 @@ function dimensionFor(aspect: Aspect, quality: Quality = '2k'): { width: number;
 export { MAX_REALISM_MOTION_PROMPT } from './heygen-motion';
 import { MAX_REALISM_MOTION_PROMPT } from './heygen-motion';
 
-// ── Avatar engines для talking_photo ─────────────────────────────────────
-// HeyGen на 2026-05 даёт ровно ДВА движка для character.type='talking_photo':
+// ── Avatar engines: V (v3 API) vs IV (v2 API) ────────────────────────────
+// HeyGen на 2026-05 даёт три движка для photo-input, но API у них РАЗНЫЙ:
 //
-//   Avatar III — default (без флагов). Старый движок, слабая мимика.
-//   Avatar IV  — use_avatar_iv_model=true. Latest HD-движок, motion_prompt.
+//   Avatar III — legacy default в v2 без флагов. Старый движок, слабая мимика.
+//   Avatar IV  — v2 /v2/video/generate с use_avatar_iv_model=true.
+//                Принимает motion_prompt. Hi-Def talking-photo.
+//   Avatar V   — ТОЛЬКО v3 /v3/videos с engine.type='avatar_v'.
+//                Cross-reference-driven animation, latest model.
+//                НЕ принимает motion_prompt (rejected API-side); HeyGen строит
+//                движение сам по референсу. Quality: 720p/1080p/4k (нет 2k).
 //
-// «Avatar V» (Studio Avatar V5, релиз май 2026) — ОТДЕЛЬНАЯ модель, требует
-// 15-секундное reference-видео (не фото). К talking_photo она НЕ применима;
-// см. https://www.heygen.com/research/avatar-v-model — "single reference video".
-// Поэтому раньше мы зря слали `model_version: 'v5'` — HeyGen этот ключ
-// игнорировал и молча отдавал Avatar III. Сейчас обе наши функции
-// (createVideoAvatarV / createVideoAvatarIV) роутят в Avatar IV — реально
-// последний и лучший движок, доступный для photo-аватаров.
-// Источник: https://docs.heygen.com/changelog/avatar-iv-support-now-available-in-create-avatar-video-api
+// Раньше мы слали `model_version: 'v5'` в v2 — HeyGen этот ключ игнорировал,
+// поэтому при выборе «Avatar V» юзер получал Avatar III. Теперь createVideoAvatarV
+// идёт по v3 цепочке (asset → photo_avatar → video → poll), и UI-слот реально
+// рендерится через Avatar V.
+//
+// Источники:
+//   https://developers.heygen.com/models.md  ("Avatar V (v3, opt-in)")
+//   https://developers.heygen.com/reference/create-video.md
+//   https://docs.heygen.com/changelog/avatar-iv-support-now-available-in-create-avatar-video-api
 
 export type CreateVideoBaseOpts = {
   talkingPhotoId: string;
@@ -329,20 +335,16 @@ async function submitVideo(opts: CreateVideoBaseOpts, character: Record<string, 
 }
 
 /**
- * Avatar V slot — для talking_photo Avatar V API не существует (требует
- * reference-video). Раньше мы слали model_version='v5' и HeyGen молча
- * деградировал до Avatar III. Сейчас этот слот роутит в Avatar IV — реально
- * latest HD-движок, доступный для photo-аватаров. motion_prompt не шлём,
- * чтобы поведение оставалось «studio realism», как и было задумано.
+ * Avatar V — DEPRECATED stub. Реальный Avatar V живёт на v3 endpoint и идёт
+ * по совершенно другой цепочке (uploadAssetV3 → createPhotoAvatarV3 →
+ * createVideoV3AvatarV → waitForVideoV3). Эта функция оставлена только для
+ * того, чтобы не сломать импорты — воркер для version='V' использует v3 flow.
  */
-export async function createVideoAvatarV(opts: CreateVideoAvatarVOpts): Promise<string> {
-  validateBase(opts);
-  const character: Record<string, unknown> = {
-    type: 'talking_photo',
-    talking_photo_id: opts.talkingPhotoId,
-    use_avatar_iv_model: true,
-  };
-  return submitVideo(opts, character);
+export async function createVideoAvatarV(_opts: CreateVideoAvatarVOpts): Promise<string> {
+  throw new HeygenError(
+    'AVATAR_V_USE_V3',
+    'Avatar V доступен только через v3 API — используй createVideoV3AvatarV',
+  );
 }
 
 /**
@@ -456,3 +458,217 @@ export async function downloadBytes(url: string): Promise<{ bytes: Buffer; mime:
 // Returns: { data: { voices: [{ voice_id, language, gender, name, preview_audio }, ...] } }
 
 export { VOICE_PRESETS, voiceById, type VoicePreset } from './heygen-voices';
+
+// ════════════════════════════════════════════════════════════════════════
+// v3 API — Avatar V flow
+// ════════════════════════════════════════════════════════════════════════
+//
+// Flow:
+//   1) POST /v3/assets        (raw bytes)            → asset_id
+//   2) POST /v3/avatars       ({type:photo, file:{asset_id}}) → avatar_id
+//   3) POST /v3/videos        ({type:avatar, avatar_id, engine:{type:'avatar_v'}, ...}) → video_id
+//   4) GET  /v3/videos/{id}                                  → status, video_url
+//
+// API contract: https://developers.heygen.com/reference/create-video.md
+//
+
+const HEYGEN_V3 = `${HEYGEN_BASE}/v3`;
+
+export type V3Resolution = '720p' | '1080p' | '4k';
+export type V3AspectRatio = '9:16' | '1:1' | '16:9' | '4:5' | '5:4' | 'auto';
+
+/** Маппинг нашего UI quality → v3 resolution (v3 не знает «2k», берём 4k). */
+export function v3ResolutionFromQuality(q: Quality | undefined): V3Resolution {
+  return q === '2k' ? '4k' : '1080p';
+}
+
+type V3AssetResp = {
+  code?: number;
+  data?: { id?: string; asset_id?: string; url?: string };
+  message?: string | null;
+  msg?: string | null;
+};
+
+/** v3 Step 1: upload image bytes → asset_id. */
+export async function uploadAssetV3(opts: { bytes: Buffer; mime: string }): Promise<string> {
+  const key = keyOrThrow();
+  const res = await fetch(`${HEYGEN_V3}/assets`, {
+    method: 'POST',
+    headers: { 'X-Api-Key': key, 'Content-Type': opts.mime || 'image/jpeg' },
+    body: new Uint8Array(opts.bytes),
+    signal: AbortSignal.timeout(SUBMIT_TIMEOUT_MS),
+  });
+  const text = await res.text();
+  if (!res.ok) throw new HeygenError(`V3_ASSET_HTTP_${res.status}`, text.slice(0, 400));
+  let parsed: V3AssetResp;
+  try { parsed = JSON.parse(text) as V3AssetResp; }
+  catch { throw new HeygenError('V3_ASSET_NON_JSON', text.slice(0, 300)); }
+  const id = parsed.data?.id ?? parsed.data?.asset_id;
+  if (!id) throw new HeygenError('V3_ASSET_NO_ID', text.slice(0, 300));
+  return id;
+}
+
+type V3AvatarResp = {
+  code?: number;
+  data?: { avatar_item?: { id?: string; supported_api_engines?: string[] } };
+  message?: string | null;
+};
+
+/** v3 Step 2: создать photo-аватар из uploaded asset → avatar_id. */
+export async function createPhotoAvatarV3(opts: { assetId: string; name?: string }): Promise<{
+  avatarId: string;
+  supportedEngines: string[];
+}> {
+  const key = keyOrThrow();
+  const body = {
+    type: 'photo' as const,
+    name: opts.name ?? `pers-${Date.now()}`,
+    file: { type: 'asset_id' as const, asset_id: opts.assetId },
+  };
+  const res = await fetch(`${HEYGEN_V3}/avatars`, {
+    method: 'POST',
+    headers: { 'X-Api-Key': key, 'Content-Type': 'application/json' },
+    body: JSON.stringify(body),
+    signal: AbortSignal.timeout(SUBMIT_TIMEOUT_MS),
+  });
+  const text = await res.text();
+  if (!res.ok) throw new HeygenError(`V3_AVATAR_HTTP_${res.status}`, text.slice(0, 400));
+  let parsed: V3AvatarResp;
+  try { parsed = JSON.parse(text) as V3AvatarResp; }
+  catch { throw new HeygenError('V3_AVATAR_NON_JSON', text.slice(0, 300)); }
+  const id = parsed.data?.avatar_item?.id;
+  if (!id) throw new HeygenError('V3_AVATAR_NO_ID', text.slice(0, 300));
+  return {
+    avatarId: id,
+    supportedEngines: parsed.data?.avatar_item?.supported_api_engines ?? [],
+  };
+}
+
+export type CreateVideoV3AvatarVOpts = {
+  avatarId: string;            // из createPhotoAvatarV3
+  voiceId: string;
+  script: string;
+  aspect?: Aspect;
+  quality?: Quality;           // мапим в V3Resolution
+  background?: string;         // hex, v3 принимает background object — добавим если HeyGen откажет
+};
+
+type V3CreateVideoResp = {
+  code?: number;
+  data?: { video_id?: string };
+  message?: string | null;
+};
+
+/**
+ * v3 Step 3: создать видео с engine.type='avatar_v'.
+ *
+ * Avatar V не принимает motion_prompt — HeyGen строит движение по
+ * cross-reference сам. См. "Avatar IV only; rejected when engine.type='avatar_v'"
+ * в /reference/create-video.md.
+ */
+export async function createVideoV3AvatarV(opts: CreateVideoV3AvatarVOpts): Promise<string> {
+  if (!opts.script || opts.script.trim().length < 5) {
+    throw new HeygenError('BAD_SCRIPT', 'script too short');
+  }
+  if (!opts.avatarId) throw new HeygenError('MISSING_AVATAR_ID', 'avatarId required');
+  if (!opts.voiceId)  throw new HeygenError('MISSING_VOICE_ID', 'voiceId required');
+
+  const aspect = opts.aspect ?? '9:16';
+  const resolution = v3ResolutionFromQuality(opts.quality ?? '2k');
+
+  const body: Record<string, unknown> = {
+    type: 'avatar',
+    avatar_id: opts.avatarId,
+    script: opts.script.slice(0, 1500),
+    voice_id: opts.voiceId,
+    resolution,
+    aspect_ratio: aspect as V3AspectRatio,
+    engine: { type: 'avatar_v' },
+  };
+
+  const key = keyOrThrow();
+  const res = await fetch(`${HEYGEN_V3}/videos`, {
+    method: 'POST',
+    headers: { 'X-Api-Key': key, 'Content-Type': 'application/json' },
+    body: JSON.stringify(body),
+    signal: AbortSignal.timeout(SUBMIT_TIMEOUT_MS),
+  });
+  const text = await res.text();
+  if (!res.ok) throw new HeygenError(`V3_VIDEO_HTTP_${res.status}`, text.slice(0, 400));
+  let parsed: V3CreateVideoResp;
+  try { parsed = JSON.parse(text) as V3CreateVideoResp; }
+  catch { throw new HeygenError('V3_VIDEO_NON_JSON', text.slice(0, 300)); }
+  const id = parsed.data?.video_id;
+  if (!id) throw new HeygenError('V3_VIDEO_NO_ID', text.slice(0, 300));
+  return id;
+}
+
+type V3VideoStatusResp = {
+  code?: number;
+  data?: {
+    status?: string;
+    video_url?: string | null;
+    thumbnail_url?: string | null;
+    duration?: number | null;
+    error?: { message?: string; detail?: string } | null;
+  };
+  message?: string | null;
+};
+
+/** v3 Step 4a: GET /v3/videos/{id} status. */
+export async function getVideoStatusV3(videoId: string): Promise<HeygenVideoStatus> {
+  const key = keyOrThrow();
+  const res = await fetch(`${HEYGEN_V3}/videos/${encodeURIComponent(videoId)}`, {
+    headers: { 'X-Api-Key': key },
+    signal: AbortSignal.timeout(STATUS_TIMEOUT_MS),
+  });
+  const text = await res.text();
+  if (!res.ok) throw new HeygenError(`V3_STATUS_HTTP_${res.status}`, text.slice(0, 400));
+  let parsed: V3VideoStatusResp;
+  try { parsed = JSON.parse(text) as V3VideoStatusResp; }
+  catch { throw new HeygenError('V3_STATUS_NON_JSON', text.slice(0, 300)); }
+  const d = parsed.data ?? {};
+  const state = (d.status ?? 'pending').toLowerCase();
+  if (state === 'completed' || state === 'success') {
+    if (!d.video_url) throw new HeygenError('V3_NO_URL', 'completed but no video_url');
+    return {
+      state: 'completed',
+      videoId,
+      videoUrl: d.video_url,
+      thumbnailUrl: d.thumbnail_url ?? null,
+      duration: d.duration ?? null,
+    };
+  }
+  if (state === 'failed' || state === 'error') {
+    return {
+      state: 'failed',
+      videoId,
+      errorMessage: d.error?.detail || d.error?.message || 'v3 video failed',
+    };
+  }
+  // pending | waiting | processing
+  const norm = state === 'processing' || state === 'pending' || state === 'waiting'
+    ? (state as 'pending' | 'waiting' | 'processing')
+    : 'processing';
+  return { state: norm, videoId };
+}
+
+/** v3 Step 4b: poll until completed/failed. */
+export async function waitForVideoV3(videoId: string): Promise<HeygenVideoStatus> {
+  for (let i = 0; i < POLL_MAX_ATTEMPTS; i++) {
+    const s = await getVideoStatusV3(videoId);
+    if (s.state === 'completed' || s.state === 'failed') return s;
+    await new Promise((r) => setTimeout(r, POLL_INTERVAL_MS));
+  }
+  throw new HeygenError('V3_TIMEOUT', `v3 video ${videoId} did not finish in ${POLL_MAX_ATTEMPTS * POLL_INTERVAL_MS}ms`);
+}
+
+/** Convenience: байты → asset_id → avatar_id за один вызов. */
+export async function uploadPhotoAvatarV3(opts: {
+  bytes: Buffer;
+  mime: string;
+  name?: string;
+}): Promise<{ avatarId: string; supportedEngines: string[] }> {
+  const assetId = await uploadAssetV3({ bytes: opts.bytes, mime: opts.mime });
+  return createPhotoAvatarV3({ assetId, name: opts.name });
+}

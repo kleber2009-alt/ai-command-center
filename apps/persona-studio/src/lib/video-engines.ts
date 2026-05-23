@@ -48,13 +48,13 @@ const COST_HEYGEN = Number(process.env.COST_HEYGEN_VIDEO ?? 30);
 const COST_OMNIHUMAN = Number(process.env.COST_OMNIHUMAN_VIDEO ?? 50);
 
 export const VIDEO_ENGINES: Record<VideoEngine, EngineConfig> = {
-  // Avatar V Studio (HeyGen, май 2026) требует 15-сек reference-видео — для
-  // photo-аватаров недоступен. Этот слот теперь роутит в Avatar IV (use_avatar_iv_model),
-  // реально latest HD-движок для talking_photo. motion_prompt не отправляется,
-  // поведение остаётся «studio realism», что и ожидал юзер от Avatar V.
+  // Avatar V — настоящий v3 движок (engine.type='avatar_v'). Самая свежая
+  // модель HeyGen с cross-reference-driven animation. motion_prompt НЕ
+  // принимается API — движение строится автоматически по референсу.
+  // Quality: 1080p или 4k (наш слот «2k» мапится в 4k).
   'heygen-v5': {
-    label: 'Avatar V — Studio HD',
-    description: 'Latest HD-движок HeyGen для talking-photo (use_avatar_iv_model). Studio-realism без motion-prompt вмешательств.',
+    label: 'Avatar V — Studio (v3)',
+    description: 'Latest HeyGen движок Avatar V (v3 API). Cross-reference-driven animation, без motion-prompt. Resolution 1080p или 4k.',
     cost: COST_HEYGEN,
     queueName: 'heygen-video',
     inputMode: 'script',
@@ -63,10 +63,10 @@ export const VIDEO_ENGINES: Record<VideoEngine, EngineConfig> = {
     heygenVersion: 'V',
     enabled: true,
   },
-  // Тот же latest-движок, но с motion_prompt — для экспрессивных видео.
+  // Avatar IV — v2 движок с use_avatar_iv_model. Принимает motion_prompt.
   'heygen-v4': {
-    label: 'Avatar IV — Expressive',
-    description: 'Тот же latest HD-движок, плюс motion prompt для более экспрессивной мимики.',
+    label: 'Avatar IV — Expressive (v2)',
+    description: 'Предыдущий HD-движок (v2 use_avatar_iv_model). Принимает motion prompt для управляемой экспрессии.',
     cost: COST_HEYGEN,
     queueName: 'heygen-video',
     inputMode: 'script',

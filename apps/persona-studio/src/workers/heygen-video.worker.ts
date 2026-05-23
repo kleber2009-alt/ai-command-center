@@ -3,10 +3,13 @@ import { prisma } from '@/lib/prisma';
 import { connection, QUEUE_NAMES, type HeygenVideoJob } from '@/lib/queue';
 import {
   uploadTalkingPhoto,
-  createVideoForVersion,
+  createVideoAvatarIV,
   waitForVideo,
   downloadBytes,
   HeygenError,
+  uploadPhotoAvatarV3,
+  createVideoV3AvatarV,
+  waitForVideoV3,
   type Aspect,
   type HeygenModelVersion,
   type Quality,
@@ -49,28 +52,50 @@ export function startHeygenWorker() {
         // Иначе одна VideoGeneration порождает до `attempts` HeyGen-видео.
         let heygenVideoId = row.heygenJobId;
 
-        if (!heygenVideoId) {
-          // 1) Upload avatar image to HeyGen → talking_photo_id
-          console.log(`[heygen-worker] ${videoId} uploading avatar to heygen…`);
-          const ref = await fetchBytes(row.avatar.imageUrl);
-          const asset = await uploadTalkingPhoto({ bytes: ref.bytes, mime: ref.mime });
-          const talkingPhotoId = asset.id;
-          console.log(`[heygen-worker] ${videoId} talking_photo_id=${talkingPhotoId}`);
+        // Avatar V живёт на v3 endpoint, Avatar IV — на v2 (с use_avatar_iv_model).
+        // Два полностью разных upload-и-create flow; см. heygen.ts.
+        const version: HeygenModelVersion = (row.heygenVersion as HeygenModelVersion) ?? 'V';
 
-          // 2) Create video task on HeyGen — dispatch by version.
-          // Avatar V и Avatar IV — это два разных движка HeyGen с непересекающимися
-          // флагами; см. heygen.ts для деталей. motionPrompt уходит только в IV.
-          const version: HeygenModelVersion = (row.heygenVersion as HeygenModelVersion) ?? 'V';
-          heygenVideoId = await createVideoForVersion(version, {
-            talkingPhotoId,
-            voiceId: row.voiceId,
-            script: row.script,
-            aspect: (row.aspect as Aspect) ?? '9:16',
-            quality: (row.quality as Quality) ?? '2k',
-            background: row.background ?? '#000000',
-            motionPrompt: row.motionPrompt ?? undefined,
-          });
-          console.log(`[heygen-worker] ${videoId} heygen_video_id=${heygenVideoId}`);
+        if (!heygenVideoId) {
+          const ref = await fetchBytes(row.avatar.imageUrl);
+
+          if (version === 'V') {
+            // 1) v3: upload bytes → asset → photo avatar
+            console.log(`[heygen-worker] ${videoId} (V) uploading photo to v3…`);
+            const v3 = await uploadPhotoAvatarV3({
+              bytes: ref.bytes,
+              mime: ref.mime,
+              name: `pers-${userId}-${row.avatarId}`,
+            });
+            console.log(`[heygen-worker] ${videoId} v3 avatar_id=${v3.avatarId} engines=${v3.supportedEngines.join(',')}`);
+
+            // 2) v3: create video with engine.type='avatar_v'
+            heygenVideoId = await createVideoV3AvatarV({
+              avatarId: v3.avatarId,
+              voiceId: row.voiceId,
+              script: row.script,
+              aspect: (row.aspect as Aspect) ?? '9:16',
+              quality: (row.quality as Quality) ?? '2k',
+              background: row.background ?? undefined,
+            });
+            console.log(`[heygen-worker] ${videoId} v3 video_id=${heygenVideoId}`);
+          } else {
+            // Avatar IV — legacy v2 talking_photo flow
+            console.log(`[heygen-worker] ${videoId} (IV) uploading talking_photo…`);
+            const asset = await uploadTalkingPhoto({ bytes: ref.bytes, mime: ref.mime });
+            console.log(`[heygen-worker] ${videoId} talking_photo_id=${asset.id}`);
+
+            heygenVideoId = await createVideoAvatarIV({
+              talkingPhotoId: asset.id,
+              voiceId: row.voiceId,
+              script: row.script,
+              aspect: (row.aspect as Aspect) ?? '9:16',
+              quality: (row.quality as Quality) ?? '2k',
+              background: row.background ?? '#000000',
+              motionPrompt: row.motionPrompt ?? undefined,
+            });
+            console.log(`[heygen-worker] ${videoId} heygen_video_id=${heygenVideoId}`);
+          }
 
           await prisma.videoGeneration.update({
             where: { id: videoId },
@@ -80,8 +105,10 @@ export function startHeygenWorker() {
           console.log(`[heygen-worker] ${videoId} resuming existing heygen_video_id=${heygenVideoId}`);
         }
 
-        // 3) Poll until completed or failed (10 min max)
-        const result = await waitForVideo(heygenVideoId);
+        // 3) Poll until completed or failed (10 min max) — v3 uses /v3/videos/{id}.
+        const result = version === 'V'
+          ? await waitForVideoV3(heygenVideoId)
+          : await waitForVideo(heygenVideoId);
 
         if (result.state !== 'completed') {
           const failMsg = result.state === 'failed' ? result.errorMessage : `unexpected state ${result.state}`;
