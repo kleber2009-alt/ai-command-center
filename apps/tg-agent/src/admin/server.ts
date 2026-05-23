@@ -536,7 +536,7 @@ function wireApi(app: Hono, deps: AdminDeps): void {
     });
     app.post('/api/memory/search', async (c) => {
       if (!mem.enabled) return c.json({ items: [], note: 'memory disabled' });
-      let body: { query?: unknown; limit?: unknown; chatId?: unknown };
+      let body: { query?: unknown; limit?: unknown; chatId?: unknown; source?: unknown };
       try {
         body = await c.req.json();
       } catch {
@@ -546,17 +546,24 @@ function wireApi(app: Hono, deps: AdminDeps): void {
       if (query.length === 0) return c.json({ error: 'query required' }, 400);
       const limit = typeof body.limit === 'number' ? Math.min(Math.max(body.limit, 1), 50) : 10;
       const chatId = typeof body.chatId === 'number' ? body.chatId : undefined;
+      const source = typeof body.source === 'string' && body.source.length > 0
+        ? body.source
+        : undefined;
       try {
-        const hits = await mem.search(query, { limit, chatId });
+        const hits = await mem.search(query, { limit, chatId, source });
         return c.json({
           items: hits.map((h) => ({
             id: h.id,
             score: h.score,
+            source: h.payload.source,
+            kind: h.payload.kind,
             chat_id: h.payload.chat_id,
             chat_title: h.payload.chat_title,
             user_id: h.payload.user_id,
             username: h.payload.username,
             class: h.payload.class,
+            title: h.payload.title,
+            url: h.payload.url,
             text: h.payload.text,
             created_at: h.payload.created_at,
           })),

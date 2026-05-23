@@ -1210,6 +1210,12 @@
       <form id="memoryForm" class="flex gap-2">
         <input id="memoryQuery" type="text" placeholder="запрос…"
           class="flex-1 rounded-lg bg-slate-800 border border-slate-700 px-3 py-2 text-sm text-slate-100 placeholder-slate-500 focus:outline-none focus:border-indigo-500" />
+        <select id="memorySource"
+          class="rounded-lg bg-slate-800 border border-slate-700 px-2 py-2 text-sm text-slate-100">
+          <option value="">все источники</option>
+          <option value="tg-agent">💬 Чаты</option>
+          <option value="transcribe">🎙 Транскрипты</option>
+        </select>
         <button type="submit"
           class="rounded-lg bg-indigo-600 hover:bg-indigo-500 px-4 py-2 text-sm font-medium text-white">Найти</button>
       </form>
@@ -1962,12 +1968,13 @@
     async function runMemorySearch(query) {
       const results = $('memoryResults');
       results.innerHTML = '<div class="text-sm text-slate-500">Ищу…</div>';
+      const source = $('memorySource').value || undefined;
       try {
         const res = await fetch('/api/memory/search', {
           method: 'POST',
           headers: { 'content-type': 'application/json' },
           credentials: 'same-origin',
-          body: JSON.stringify({ query, limit: 20 }),
+          body: JSON.stringify({ query, limit: 20, source }),
         });
         if (!res.ok) {
           const body = await res.text();
@@ -1986,24 +1993,35 @@
         results.innerHTML = '<div class="text-sm text-slate-500">Ничего не нашёл.</div>';
         return;
       }
+      const sourceIcon = (s, k) => {
+        if (s === 'transcribe') return k === 'summary' ? '📝' : k === 'document' ? '📄' : '🎙';
+        if (s === 'tg-agent') return '💬';
+        return '·';
+      };
       results.innerHTML = items.map((h) => {
-        const who = h.username ? '@' + h.username : (h.user_id ? 'user ' + h.user_id : 'unknown');
-        const chat = h.chat_title || ('chat ' + h.chat_id);
+        const where = h.source === 'transcribe'
+          ? (h.title || '(без названия)')
+          : (h.chat_title || ('chat ' + h.chat_id));
+        const who = h.username ? '@' + h.username : (h.user_id ? 'user ' + h.user_id : '');
         const when = h.created_at ? new Date(h.created_at).toLocaleString('ru-RU') : '';
         const score = (h.score * 100).toFixed(0) + '%';
+        const icon = sourceIcon(h.source, h.kind);
         const cls = h.class
           ? `<span class="text-[10px] uppercase tracking-wide text-indigo-300 ml-2">${escapeHtml(h.class)}</span>`
+          : '';
+        const link = h.url
+          ? ` <a href="${escapeHtml(h.url)}" target="_blank" class="text-indigo-400 hover:text-indigo-300 underline">→ источник</a>`
           : '';
         return `
           <div class="rounded-xl border border-slate-700 bg-slate-900 p-4">
             <div class="flex flex-wrap items-center gap-x-3 gap-y-1 text-xs text-slate-400 mb-2">
               <span class="font-medium text-emerald-400">${score}</span>
               <span class="text-slate-500">·</span>
-              <span class="text-slate-300">${escapeHtml(chat)}</span>
-              <span class="text-slate-500">·</span>
-              <span>${escapeHtml(who)}</span>
+              <span class="text-base">${icon}</span>
+              <span class="text-slate-300">${escapeHtml(where)}</span>
+              ${who ? `<span class="text-slate-500">·</span><span>${escapeHtml(who)}</span>` : ''}
               ${when ? `<span class="text-slate-500">·</span><span>${escapeHtml(when)}</span>` : ''}
-              ${cls}
+              ${cls}${link}
             </div>
             <div class="text-sm text-slate-200 whitespace-pre-wrap leading-relaxed">${escapeHtml(h.text)}</div>
           </div>`;

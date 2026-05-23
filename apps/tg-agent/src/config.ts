@@ -190,7 +190,7 @@ export function loadConfig(): Config {
     openaiApiKey: optional('OPENAI_API_KEY'),
     embeddingModel: optional('EMBEDDING_MODEL') ?? 'text-embedding-3-small',
     qdrantUrl: optional('QDRANT_URL') ?? 'http://aisales-qdrant:6333',
-    qdrantCollection: optional('QDRANT_COLLECTION') ?? 'tg-memory',
+    qdrantCollection: optional('QDRANT_COLLECTION') ?? 'aicex-memory',
     qdrantApiKey: optional('QDRANT_API_KEY'),
   };
 }

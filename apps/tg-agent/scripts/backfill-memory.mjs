@@ -21,7 +21,7 @@ import Database from 'better-sqlite3';
 
 import { createEmbeddingClient } from '../dist/memory/embeddings.js';
 import { createQdrantClient } from '../dist/memory/qdrant.js';
-import { createMemoryService } from '../dist/memory/service.js';
+import { createMemoryService, pointIdFor } from '../dist/memory/service.js';
 
 function fail(msg) {
   console.error(`backfill: ${msg}`);
@@ -33,8 +33,11 @@ if (!apiKey) fail('OPENAI_API_KEY is not set');
 
 const dbPath = resolve(process.env.DATABASE_PATH ?? './data/tg-agent.db');
 const qdrantUrl = process.env.QDRANT_URL ?? 'http://aisales-qdrant:6333';
-const collection = process.env.QDRANT_COLLECTION ?? 'tg-memory';
+const collection = process.env.QDRANT_COLLECTION ?? 'aicex-memory';
 const model = process.env.EMBEDDING_MODEL ?? 'text-embedding-3-small';
+const ownerTelegramId = process.env.OWNER_TELEGRAM_ID
+  ? Number(process.env.OWNER_TELEGRAM_ID)
+  : null;
 
 console.log(JSON.stringify({
   ts: new Date().toISOString(),
@@ -90,14 +93,19 @@ const memory = createMemoryService({
 });
 
 const items = rows.map((r) => ({
-  id: Number(r.id),
+  id: pointIdFor('tg-agent', String(r.id)),
   text: r.text,
   payload: {
+    source: 'tg-agent',
+    kind: 'message',
+    owner_telegram_id: ownerTelegramId,
     chat_id: r.chat_id,
     chat_title: r.chat_title ?? null,
     user_id: r.user_id ?? null,
     username: r.username ?? null,
     class: r.class ?? null,
+    title: null,
+    url: null,
     text: r.text,
     created_at: r.created_at,
   },

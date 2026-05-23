@@ -11,6 +11,8 @@
 // embedding a one-character probe, so a model swap that changes the
 // dimension automatically picks the right collection shape.
 
+import { createHash } from 'node:crypto';
+
 import type { Logger } from '../logger.js';
 import type { EmbeddingClient } from './embeddings.js';
 import type {
@@ -20,8 +22,26 @@ import type {
   QdrantSearchHit,
 } from './qdrant.js';
 
+// Deterministic UUID v5 derived from (source, naturalKey). Lets every
+// source app pick its own native key (tg-agent: tg_messages.id as
+// string; transcribe: transcript UUID; etc.) without ID collisions
+// across sources in the shared Qdrant collection. Re-running an
+// indexer with the same key idempotently re-embeds the same point.
+export function pointIdFor(source: string, naturalKey: string): string {
+  const hash = createHash('sha1').update(`${source}:${naturalKey}`).digest('hex');
+  // Force the v5 / RFC-4122 layout: version nibble = 5, variant = 10xx.
+  const a = hash.slice(0, 8);
+  const b = hash.slice(8, 12);
+  const c = '5' + hash.slice(13, 16);
+  const v = (parseInt(hash.slice(16, 18), 16) & 0x3f) | 0x80;
+  const d = v.toString(16).padStart(2, '0') + hash.slice(18, 20);
+  const e = hash.slice(20, 32);
+  return `${a}-${b}-${c}-${d}-${e}`;
+}
+
 export interface MemoryItem {
-  id: number;
+  // UUID, typically built via pointIdFor(source, naturalKey).
+  id: string;
   text: string;
   payload: QdrantPayload;
 }
@@ -29,6 +49,10 @@ export interface MemoryItem {
 export interface MemorySearchOptions {
   limit?: number;
   chatId?: number;
+  // Restrict to a single source ('tg-agent', 'transcribe', …).
+  source?: string;
+  // Restrict to "Ilia's brain" by matching owner_telegram_id.
+  ownerTelegramId?: number;
   minScore?: number;
 }
 
@@ -127,10 +151,17 @@ export function createMemoryService(opts: MemoryServiceOptions): MemoryService {
       await this.ready();
       const limit = options?.limit ?? 10;
       const vector = await embeddings.embed(query);
-      const filter: QdrantFilter | undefined =
-        options?.chatId != null
-          ? { must: [{ key: 'chat_id', match: { value: options.chatId } }] }
-          : undefined;
+      const must: NonNullable<QdrantFilter['must']> = [];
+      if (options?.chatId != null) {
+        must.push({ key: 'chat_id', match: { value: options.chatId } });
+      }
+      if (options?.source) {
+        must.push({ key: 'source', match: { value: options.source } });
+      }
+      if (options?.ownerTelegramId != null) {
+        must.push({ key: 'owner_telegram_id', match: { value: options.ownerTelegramId } });
+      }
+      const filter: QdrantFilter | undefined = must.length > 0 ? { must } : undefined;
       const hits = await qdrant.search(vector, limit, filter);
       const minScore = options?.minScore ?? 0;
       return hits.filter((h) => h.score >= minScore);

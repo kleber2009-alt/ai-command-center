@@ -214,12 +214,18 @@ export function registerOwnerCommands(deps: OwnerCommandsDeps): void {
       const body = hits
         .map((h, i) => {
           const when = h.payload.created_at?.slice(0, 16).replace('T', ' ') ?? '?';
-          const who = h.payload.username ? '@' + h.payload.username : `user${h.payload.user_id ?? '?'}`;
-          const chat = h.payload.chat_title ?? `chat ${h.payload.chat_id}`;
-          const cls = h.payload.class ? ` · ${h.payload.class}` : '';
           const score = (h.score * 100).toFixed(0);
+          const sourceIcon = sourceIconFor(h.payload.source, h.payload.kind);
+          const where = h.payload.source === 'transcribe'
+            ? (h.payload.title ?? '(без названия)')
+            : (h.payload.chat_title ?? `chat ${h.payload.chat_id ?? '?'}`);
+          const who = h.payload.username
+            ? '@' + h.payload.username
+            : (h.payload.user_id ? `user${h.payload.user_id}` : '');
+          const cls = h.payload.class ? ` · ${h.payload.class}` : '';
+          const meta = [escapeHtml(where), who && escapeHtml(who), escapeHtml(cls)].filter(Boolean).join(' · ');
           const text = h.payload.text.slice(0, 350);
-          return `${i + 1}. <b>${score}%</b> · ${escapeHtml(chat)} · ${escapeHtml(who)}${escapeHtml(cls)} · <i>${escapeHtml(when)}</i>\n${escapeHtml(text)}`;
+          return `${i + 1}. <b>${score}%</b> ${sourceIcon} ${meta} · <i>${escapeHtml(when)}</i>\n${escapeHtml(text)}`;
         })
         .join('\n\n');
       const message = `🧬 Память по "${escapeHtml(query)}":\n\n${body}`;
@@ -264,6 +270,16 @@ function truncate(s: string, max: number): string {
 
 function escapeHtml(s: string): string {
   return s.replace(/[&<>]/g, (c) => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;' }[c] as string));
+}
+
+function sourceIconFor(source: string | null | undefined, kind: string | null | undefined): string {
+  if (source === 'transcribe') {
+    if (kind === 'summary') return '📝';
+    if (kind === 'document') return '📄';
+    return '🎙';
+  }
+  if (source === 'tg-agent') return '💬';
+  return '·';
 }
 
 // Exported helper so tests can sanity-check the type narrowing.

@@ -1,24 +1,49 @@
 // Thin Qdrant REST client. We only need ensureCollection / upsert /
 // search — not worth pulling in @qdrant/js-client-rest for that.
+//
+// Schema is multi-source so the same collection backs tg-agent
+// messages, transcribe transcripts/summaries, and any future source:
+//   source — short slug of the origin app ('tg-agent', 'transcribe', …)
+//   kind   — what the row is ('message', 'transcript', 'summary',
+//            'document', …). UI surfaces icons by source+kind.
+//   owner_telegram_id — Ilia's tg id, copied onto every row so the
+//            search endpoint can scope to "his" brain even though the
+//            embedding lives in a shared collection.
+//   chat_id / chat_title / user_id / username — tg-agent fields
+//            (nullable for non-tg sources).
+//   title / url — transcribe / document fields (nullable for
+//            tg-agent). title backs the result-card heading;
+//            url lets the UI deep-link back to the original asset.
+//   class — tg-agent classifier label (nullable elsewhere).
+//   text  — the embedded text, stored on the payload so search
+//            results are self-contained.
 
 export interface QdrantPayload {
-  chat_id: number;
+  source: string;
+  kind: string;
+  owner_telegram_id: number | null;
+  chat_id: number | null;
   chat_title: string | null;
   user_id: number | null;
   username: string | null;
   class: string | null;
+  title: string | null;
+  url: string | null;
   text: string;
   created_at: string;
 }
 
+// Point IDs are UUIDs so different sources can share the collection
+// without integer-key collisions. Helper `pointIdFor(source, key)`
+// (in service.ts) yields deterministic UUID v5s.
 export interface QdrantPoint {
-  id: number;
+  id: string;
   vector: number[];
   payload: QdrantPayload;
 }
 
 export interface QdrantSearchHit {
-  id: number;
+  id: string;
   score: number;
   payload: QdrantPayload;
 }
@@ -93,7 +118,7 @@ export function createQdrantClient(opts: QdrantClientOptions): QdrantClient {
 
     async search(vector, limit, filter): Promise<QdrantSearchHit[]> {
       type SearchResp = {
-        result: Array<{ id: number; score: number; payload: QdrantPayload }>;
+        result: Array<{ id: string; score: number; payload: QdrantPayload }>;
       };
       const body: Record<string, unknown> = {
         vector,
@@ -102,7 +127,7 @@ export function createQdrantClient(opts: QdrantClientOptions): QdrantClient {
       };
       if (filter) body.filter = filter;
       const res = await req<SearchResp>('POST', `/collections/${coll}/points/search`, body);
-      return res.result.map((r) => ({ id: r.id, score: r.score, payload: r.payload }));
+      return res.result.map((r) => ({ id: String(r.id), score: r.score, payload: r.payload }));
     },
 
     async collectionInfo(): Promise<{ pointsCount: number; vectorSize: number | null } | null> {

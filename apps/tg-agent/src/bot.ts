@@ -9,7 +9,7 @@ import type { MessageStore } from './db/messages.js';
 import { decide } from './decision.js';
 import type { HealthMonitor } from './health.js';
 import type { Logger } from './logger.js';
-import type { MemoryService } from './memory/service.js';
+import { pointIdFor, type MemoryService } from './memory/service.js';
 import {
   DRAFT_CALLBACK_PATTERN,
   renderResolutionFooter,
@@ -295,14 +295,19 @@ export function createBot(deps: BotDeps): CreateBotResult {
       if (memory.enabled && text.trim().length > 0) {
         memory
           .indexMessage({
-            id: messageRowId,
+            id: pointIdFor('tg-agent', String(messageRowId)),
             text,
             payload: {
+              source: 'tg-agent',
+              kind: 'message',
+              owner_telegram_id: config.ownerTelegramId ?? null,
               chat_id: chatId,
               chat_title: chatTitle ?? null,
               user_id: incoming.userId ?? null,
               username: incoming.username ?? null,
               class: classification.class,
+              title: null,
+              url: null,
               text,
               created_at: new Date().toISOString(),
             },
