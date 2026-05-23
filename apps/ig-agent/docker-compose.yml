@@ -1,0 +1,42 @@
+# ig-agent on the same Hetzner box as tg-agent / aisales.
+#
+# Deps on prod:
+#   - aisales-postgres (project aisales) — must already be running
+#   - aisales_aisales-net external network
+#
+# Usage:
+#   cd apps/ig-agent
+#   cp .env.example .env  # fill SENDPULSE_*, ANTHROPIC_API_KEY, OWNER_TELEGRAM_ID,
+#                         # TELEGRAM_BOT_TOKEN (reused for owner DMs), ADMIN_SESSION_SECRET
+#   docker compose up -d --build
+#
+# Admin lives on port 8081 to avoid colliding with tg-agent:8080.
+
+services:
+  ig-agent:
+    build:
+      context: ../..
+      dockerfile: apps/ig-agent/Dockerfile
+    image: ig-agent:local
+    container_name: ig-agent
+    restart: unless-stopped
+    env_file: .env
+    environment:
+      DATABASE_URL: postgres://aisales:${POSTGRES_PASSWORD}@aisales-postgres:5432/ig_agent
+    ports:
+      - "${ADMIN_PORT:-8081}:8081"
+    healthcheck:
+      test: ["CMD", "node", "-e", "fetch('http://127.0.0.1:8081/healthz').then(r=>process.exit(r.ok?0:1)).catch(()=>process.exit(1))"]
+      interval: 30s
+      timeout: 5s
+      retries: 3
+      start_period: 15s
+    networks:
+      - default
+      - aisales
+
+networks:
+  default:
+  aisales:
+    name: aisales_aisales-net
+    external: true
