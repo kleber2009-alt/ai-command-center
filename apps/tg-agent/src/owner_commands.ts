@@ -4,6 +4,7 @@ import type { ChatService } from './db/chats.js';
 import type { DigestStore } from './db/digests.js';
 import { buildAndDeliverDigest, type DigestGenerator, splitForTelegram } from './digest.js';
 import type { Logger } from './logger.js';
+import type { MemoryService } from './memory/service.js';
 
 export interface OwnerCommandsDeps {
   bot: Bot;
@@ -13,6 +14,7 @@ export interface OwnerCommandsDeps {
   generator: DigestGenerator;
   windowHours: number;
   logger: Logger;
+  memory: MemoryService;
 }
 
 // Help blurb shown for /help. Kept terse — the owner already knows
@@ -27,6 +29,8 @@ const HELP_TEXT = [
   '/digest <chat_id> 12 — то же, с явным окном в часах.',
   '/context <chat_id> <текст> — задать project_context для чата: что важно владельцу',
   '  (продукты, ICP, на что обращать внимание). Используется в каждой сводке.',
+  '/memory <запрос> — семантический поиск по всем сообщениям из всех чатов.',
+  '  Возвращает топ-5 релевантных снипетов с автором, чатом и similarity-score.',
   '/help — это сообщение.',
 ].join('\n');
 
@@ -35,7 +39,7 @@ const HELP_TEXT = [
 // achieve that by registering on the same Bot instance from index.ts
 // before createBot() is called — see index.ts ordering.
 export function registerOwnerCommands(deps: OwnerCommandsDeps): void {
-  const { bot, ownerTelegramId, chats, store, generator, windowHours, logger } = deps;
+  const { bot, ownerTelegramId, chats, store, generator, windowHours, logger, memory } = deps;
 
   const isOwnerDm = (ctx: Context): boolean =>
     ctx.chat?.type === 'private' && ctx.from?.id === ownerTelegramId;
@@ -188,6 +192,52 @@ export function registerOwnerCommands(deps: OwnerCommandsDeps): void {
     );
   });
 
+  bot.command('memory', async (ctx) => {
+    if (!isOwnerDm(ctx)) return;
+    const query = ctx.match?.toString().trim() ?? '';
+    if (!query) {
+      await ctx.reply('Использование: /memory <запрос>\nПример: /memory жалобы на бот');
+      return;
+    }
+    if (!memory.enabled) {
+      await ctx.reply(
+        'Память отключена. Поставь OPENAI_API_KEY в .env (и MEMORY_ENABLED=true) и перезапусти бота.',
+      );
+      return;
+    }
+    try {
+      const hits = await memory.search(query, { limit: 5 });
+      if (hits.length === 0) {
+        await ctx.reply(`По запросу "${query}" ничего не нашёл.`);
+        return;
+      }
+      const body = hits
+        .map((h, i) => {
+          const when = h.payload.created_at?.slice(0, 16).replace('T', ' ') ?? '?';
+          const who = h.payload.username ? '@' + h.payload.username : `user${h.payload.user_id ?? '?'}`;
+          const chat = h.payload.chat_title ?? `chat ${h.payload.chat_id}`;
+          const cls = h.payload.class ? ` · ${h.payload.class}` : '';
+          const score = (h.score * 100).toFixed(0);
+          const text = h.payload.text.slice(0, 350);
+          return `${i + 1}. <b>${score}%</b> · ${escapeHtml(chat)} · ${escapeHtml(who)}${escapeHtml(cls)} · <i>${escapeHtml(when)}</i>\n${escapeHtml(text)}`;
+        })
+        .join('\n\n');
+      const message = `🧬 Память по "${escapeHtml(query)}":\n\n${body}`;
+      for (const chunk of splitForTelegram(message)) {
+        await ctx.reply(chunk, {
+          parse_mode: 'HTML',
+          link_preview_options: { is_disabled: true },
+        });
+      }
+    } catch (err) {
+      logger.error('memory: /memory command failed', {
+        query: query.slice(0, 80),
+        error: err instanceof Error ? err.message : String(err),
+      });
+      await ctx.reply('Ошибка поиска. Проверь логи и Qdrant.');
+    }
+  });
+
   // Hint for first-time DMs from the owner. Doesn't override the
   // generic /start that the user sends to unblock the bot's outgoing
   // DMs — we just append our own help line after acknowledging.
@@ -210,6 +260,10 @@ function parseWindowArg(raw: string | undefined, fallback: number): number | nul
 function truncate(s: string, max: number): string {
   if (s.length <= max) return s;
   return `${s.slice(0, max - 1)}…`;
+}
+
+function escapeHtml(s: string): string {
+  return s.replace(/[&<>]/g, (c) => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;' }[c] as string));
 }
 
 // Exported helper so tests can sanity-check the type narrowing.

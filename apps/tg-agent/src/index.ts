@@ -117,6 +117,7 @@ async function main(): Promise<void> {
       generator: digestGenerator,
       windowHours: config.digestWindowHours,
       logger,
+      memory,
     });
   } else if (!config.digestEnabled) {
     logger.info('digest disabled (DIGEST_ENABLED=false)');
