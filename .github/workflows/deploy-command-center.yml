@@ -1,8 +1,9 @@
 name: deploy-command-center
 
 # Deploy apps/command-center (Next.js 14 — internal dashboard) to Hetzner.
-# No docker-compose yet — uses raw `docker run`. Port 3004 (3003 is persona-studio).
-# Caddy mapping: command-center.46-62-215-11.nip.io → localhost:3004.
+# No docker-compose yet — uses raw `docker run`. Host port 3005 → container 3003.
+# Caddy mapping: command-center.46-62-215-11.nip.io → localhost:3005.
+# Attached to docker network `aisales_aisales-net` to reach `aisales-postgres`.
 #
 # ─── Required GitHub secrets ───────────────────────────────────────
 #   HETZNER_SSH_KEY
@@ -74,28 +75,40 @@ jobs:
               --name command-center \
               --restart unless-stopped \
               --env-file /etc/command-center.env \
-              --network host \
-              -p 127.0.0.1:3004:3000 \
+              --network aisales_aisales-net \
+              -p 127.0.0.1:3005:3003 \
               command-center:latest
 
-            echo "── ensure Caddy mapping ──"
+            echo "── ensure Caddy mapping (idempotent: always points to :3005) ──"
             CADDYFILE=/etc/caddy/Caddyfile
-            if ! grep -q "command-center\.46-62-215-11\.nip\.io" "$CADDYFILE"; then
-              {
-                echo ""
-                echo "# ─── Command Center dashboard ───────────────────────────────────────"
-                echo "command-center.46-62-215-11.nip.io {"
-                echo "    reverse_proxy localhost:3004"
-                echo "    encode zstd gzip"
-                echo "    header { X-Content-Type-Options nosniff; -Server }"
-                echo "}"
-              } >> "$CADDYFILE"
-              caddy reload --config "$CADDYFILE" --adapter caddyfile
-            fi
+            cp "$CADDYFILE" "${CADDYFILE}.bak.$(date +%Y%m%d_%H%M%S)"
+            python3 - "$CADDYFILE" <<'PY'
+            import re, sys
+            p = sys.argv[1]
+            src = open(p).read()
+            block = (
+                "command-center.46-62-215-11.nip.io {\n"
+                "\treverse_proxy 127.0.0.1:3005\n"
+                "\tencode zstd gzip\n"
+                "\theader { X-Content-Type-Options nosniff; -Server }\n"
+                "\tlog {\n"
+                "\t\toutput file /var/log/caddy/command-center.log\n"
+                "\t\tformat console\n"
+                "\t}\n"
+                "}"
+            )
+            pat = re.compile(r"command-center\.46-62-215-11\.nip\.io\s*\{[^{}]*(?:\{[^{}]*\}[^{}]*)*\}", re.S)
+            if pat.search(src):
+                src = pat.sub(block, src, count=1)
+            else:
+                src = src.rstrip() + "\n\n# ─── Command Center dashboard ───\n" + block + "\n"
+            open(p, "w").write(src)
+            PY
+            caddy reload --config "$CADDYFILE" --adapter caddyfile
 
             echo "── health-check ──"
             for i in $(seq 1 20); do
-              if curl -fsS http://localhost:3004/ >/dev/null 2>&1; then
+              if curl -fsS http://localhost:3005/ >/dev/null 2>&1; then
                 echo "✓ healthy after ${i}×3s"; exit 0
               fi
               sleep 3
