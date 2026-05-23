@@ -1,5 +1,5 @@
 import { NextRequest, NextResponse } from 'next/server'
-import { getTranscript, updateTranscriptSummary } from '@/lib/transcripts-db'
+import { dbGetTranscript, dbSaveSummary } from '@/lib/transcripts-db'
 import { streamAnthropic } from '@/lib/anthropic-stream'
 import { authenticate } from '@/lib/telegram-auth'
 import { indexTranscribeRow } from '@/lib/memory'
@@ -55,7 +55,7 @@ export async function POST(req: NextRequest) {
 
   let text = transcript
   if (id) {
-    const row = getTranscript(id, auth.user_id)
+    const row = await dbGetTranscript(id)
     if (!row) return NextResponse.json({ error: 'Не найден транскрипт' }, { status: 404 })
     if (row.summary && row.bullets) {
       // Replay cached saved summary as a single delta + done.
@@ -86,7 +86,7 @@ export async function POST(req: NextRequest) {
       if (!id) return
       const { summary, bullets } = parseSummary(fullText)
       if (summary || bullets.length > 0) {
-        updateTranscriptSummary(id, auth.user_id, summary, bullets)
+        await dbSaveSummary(id, summary, bullets)
         // Index the summary as a separate point — short, condensed
         // text scores higher for top-of-the-funnel queries than the
         // raw transcript. Key is `<id>-summary` so it lives alongside
