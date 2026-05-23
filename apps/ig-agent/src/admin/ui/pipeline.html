@@ -141,18 +141,10 @@
 
 <header class="topbar">
   <div class="topbar-left">
-    <div class="topbar-title">AI Sales <span class="accent">Pipeline</span></div>
-    <nav class="topbar-nav">
-      <a class="nav-link" href="/">Портал</a>
-      <a class="nav-link" href="/pulse">Pulse</a>
-      <a class="nav-link active" href="#">Pipeline</a>
-      <a class="nav-link" href="/conversation">Conv</a>
-      <a class="nav-link" href="/">Project</a>
-      <a class="nav-link" href="/agents">Agents</a>
-      <a class="nav-link" href="/">Carousels</a>
-      <a class="nav-link" href="/">Reels</a>
-    </nav>
+    <div class="topbar-title">ig-agent <span class="accent">Pipeline</span></div>
+    <nav id="igNav"></nav>
   </div>
+  <div id="topbarRight" style="display:flex;align-items:center;gap:12px"></div>
 </header>
 
 <main class="shell">
@@ -249,6 +241,8 @@
 <script>
 (function () {
   var IG = window.IG;
+  if (IG.mountNav) IG.mountNav(document.getElementById('igNav'), 'pipeline');
+  if (IG.mountAutoReplyToggle) IG.mountAutoReplyToggle(document.getElementById('topbarRight'));
   var table = document.getElementById('pipelineTable');
   var allContacts = [];
   var statusFilter = null;
