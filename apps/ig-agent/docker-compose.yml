@@ -20,9 +20,10 @@ services:
     image: ig-agent:local
     container_name: ig-agent
     restart: unless-stopped
+    # All env (incl. DATABASE_URL with url-encoded password) comes from .env.
+    # Don't override DATABASE_URL here — naive ${POSTGRES_PASSWORD} interpolation
+    # breaks pg-connection-string when the password contains URL-reserved chars.
     env_file: .env
-    environment:
-      DATABASE_URL: postgres://aisales:${POSTGRES_PASSWORD}@aisales-postgres:5432/ig_agent
     ports:
       - "${ADMIN_PORT:-8081}:8081"
     healthcheck:
