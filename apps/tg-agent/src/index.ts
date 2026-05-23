@@ -6,18 +6,23 @@ import { createBot } from './bot.js';
 import { createClassifier } from './classifier.js';
 import { loadConfig } from './config.js';
 import { createChatService } from './db/chats.js';
+import { createDigestStore } from './db/digests.js';
 import { createDraftService } from './db/drafts.js';
 import { openDb } from './db/index.js';
-import { createDigestStore } from './db/digests.js';
 import { createLeadService } from './db/leads.js';
 import { createMessageStore } from './db/messages.js';
 import { createStatsService } from './db/stats.js';
-import { createHealthMonitor } from './health.js';
+import { createBillingService } from './db/billing.js';
+import { createDealService } from './db/deals.js';
 import {
   createDigestGenerator,
   startDigestScheduler,
   type DigestSchedulerHandle,
 } from './digest.js';
+import { createKbManager } from './kb-manager.js';
+import { createPromptConfig } from './prompt-config.js';
+import { dirname, resolve } from 'node:path';
+import { createHealthMonitor } from './health.js';
 import { loadKnowledgeBase } from './knowledge/index.js';
 import { createLogger } from './logger.js';
 import { createNotifier } from './notifier.js';
@@ -27,14 +32,17 @@ import { createResponder } from './responder.js';
 async function main(): Promise<void> {
   const config = loadConfig();
   const logger = createLogger(config.logLevel);
+  const promptConfig = createPromptConfig(dirname(resolve(config.databasePath)));
 
   const classifier = createClassifier({
     apiKey: config.anthropicApiKey,
     model: config.classifierModel,
+    promptConfig,
   });
   const responder = createResponder({
     apiKey: config.anthropicApiKey,
     model: config.responderModel,
+    promptConfig,
   });
 
   const kb = loadKnowledgeBase();
@@ -46,6 +54,9 @@ async function main(): Promise<void> {
   const messages = createMessageStore(db);
   const drafts = createDraftService(db);
   const stats = createStatsService(db);
+  const dealService = createDealService(db);
+  const billingService = createBillingService(db);
+  const kbManager = createKbManager(dirname(resolve(config.databasePath)));
   const digestStore = createDigestStore(db);
 
   // Grammy bot lives separately from the createBot() wrapper so that
@@ -53,10 +64,9 @@ async function main(): Promise<void> {
   // are registered.
   const bot = new Bot(config.telegramBotToken);
 
-  // Owner commands MUST register before createBot()'s generic
-  // message:text handler so /pulse, /chats, /digest, /context win
-  // over the catch-all owner-DM branch. Replies to draft edit
-  // prompts (non-command DMs) still flow through to bot.ts.
+  // Owner DM commands MUST register BEFORE createBot() so /pulse,
+  // /chats, /digest, /context win over the generic owner-DM branch
+  // in bot.ts. Force-reply'd edit-prompt replies still flow through.
   const digestGenerator = createDigestGenerator({
     apiKey: config.anthropicApiKey,
     model: config.digestModel,
@@ -124,6 +134,18 @@ async function main(): Promise<void> {
       sessionSecret: sessionAuthReady ? config.adminSessionSecret : undefined,
       ownerTelegramId: config.ownerTelegramId,
       publicUrl: config.adminPublicUrl,
+      kbManager,
+      dealService,
+      billingService,
+      stripeWebhookSecret: config.stripeWebhookSecret,
+      stripeBasicPriceId: config.stripeBasicPriceId,
+      stripeProPriceId: config.stripeProPriceId,
+      stripeEnterprisePriceId: config.stripeEnterprisePriceId,
+      sendOwnerMessage: config.ownerTelegramId
+        ? async (text: string) => { await bot.api.sendMessage(config.ownerTelegramId!, text); }
+        : undefined,
+      promptConfig,
+      dataDir: dirname(resolve(config.databasePath)),
       sendMagicLink: sessionAuthReady
         ? async (telegramId, url) => {
             await bot.api.sendMessage(
@@ -153,6 +175,10 @@ async function main(): Promise<void> {
     );
   }
 
+  // Legacy reporter.ts (markdown tables, class-bucket dump) is
+  // intentionally not started. The digest scheduler replaces it
+  // with an AI summary delivered as the daily DM. The file is kept
+  // for rollback — just re-import + start it here if needed.
   let digest: DigestSchedulerHandle | null = null;
   if (config.digestEnabled && config.ownerTelegramId !== undefined) {
     digest = startDigestScheduler({

@@ -3,44 +3,77 @@
 <head>
   <meta charset="UTF-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-  <title>tg-agent</title>
+  <title>aisales · кабинет</title>
   <script src="https://cdn.tailwindcss.com"></script>
   <style>
     body { font-family: ui-sans-serif, system-ui, -apple-system, "Segoe UI", sans-serif; }
-    .scrollbar::-webkit-scrollbar { width: 8px; height: 8px; }
-    .scrollbar::-webkit-scrollbar-thumb { background: rgb(51 65 85); border-radius: 4px; }
+    .scrollbar::-webkit-scrollbar { width: 6px; height: 6px; }
+    .scrollbar::-webkit-scrollbar-thumb { background: rgb(51 65 85); border-radius: 3px; }
     .scrollbar::-webkit-scrollbar-track { background: transparent; }
+    .view-btn { transition: background .1s, color .1s; }
+    .view-btn-active { background: rgb(30 41 59); color: rgb(241 245 249); }
+    .view-btn-idle   { color: rgb(148 163 184); }
+    .view-btn-idle:hover { color: rgb(226 232 240); background: rgba(30,41,59,.5); }
   </style>
 </head>
-<body class="bg-slate-950 text-slate-200 min-h-screen">
-  <div class="mx-auto max-w-7xl px-4 py-6 sm:px-6 sm:py-8">
-    <header class="flex items-center justify-between">
-      <div class="flex items-center gap-3">
-        <span class="text-indigo-400">●</span>
-        <h1 class="text-lg font-semibold text-slate-100">tg-agent</h1>
-        <nav class="ml-4 flex gap-1 rounded-lg border border-slate-800 bg-slate-900/60 p-1 text-sm">
-          <button data-view="chats"     class="view-btn rounded-md bg-slate-800 px-3 py-1 text-slate-100">Чаты</button>
-          <button data-view="drafts"    class="view-btn rounded-md px-3 py-1 text-slate-400 hover:text-slate-200">Черновики</button>
-          <button data-view="analytics" class="view-btn rounded-md px-3 py-1 text-slate-400 hover:text-slate-200">Аналитика</button>
-        </nav>
-        <span id="status" class="text-xs text-slate-500"></span>
-      </div>
-      <div class="flex items-center gap-2">
-        <button id="refresh"
-          class="flex items-center gap-2 rounded-md border border-slate-700 bg-slate-800/60 px-3 py-1.5 text-sm text-slate-300 hover:bg-slate-700/60">
-          ↻ Обновить
-        </button>
-        <a id="logout" href="/logout"
-          class="rounded-md border border-slate-700 bg-slate-800/60 px-3 py-1.5 text-sm text-slate-400 hover:bg-slate-700/60 hover:text-slate-200">
-          Выйти
-        </a>
-      </div>
+<body class="bg-slate-950 text-slate-200 min-h-screen flex">
+
+  <!-- ═══ SIDEBAR ═══ -->
+  <nav class="fixed inset-y-0 left-0 z-20 flex w-52 flex-col border-r border-slate-800 bg-slate-900/70 backdrop-blur">
+    <!-- Logo -->
+    <a href="https://aisales.46-62-215-11.nip.io" target="_blank"
+       class="flex items-center gap-2 px-4 py-5 border-b border-slate-800 hover:opacity-80 transition-opacity">
+      <span class="text-indigo-400 text-lg">●</span>
+      <span class="text-base font-bold text-slate-100 tracking-tight">aisales</span>
+      <span class="ml-auto text-[10px] text-slate-600">↗</span>
+    </a>
+
+    <!-- Nav items -->
+    <div class="flex-1 overflow-y-auto py-3 px-2 space-y-0.5">
+      <div class="px-2 py-1 text-[10px] font-semibold uppercase tracking-wider text-slate-600">CRM</div>
+      <button data-view="chats"     class="view-btn view-btn-active flex items-center gap-2.5 w-full rounded-lg px-3 py-2 text-sm">💬 Чаты</button>
+      <button data-view="drafts"    class="view-btn view-btn-idle   flex items-center gap-2.5 w-full rounded-lg px-3 py-2 text-sm">✏️ Черновики</button>
+      <button data-view="pipeline"  class="view-btn view-btn-idle   flex items-center gap-2.5 w-full rounded-lg px-3 py-2 text-sm">🎯 Пайплайн</button>
+
+      <div class="px-2 py-1 mt-2 text-[10px] font-semibold uppercase tracking-wider text-slate-600">Продажи</div>
+      <button data-view="demo"      class="view-btn view-btn-idle   flex items-center gap-2.5 w-full rounded-lg px-3 py-2 text-sm">🎬 Demo</button>
+      <button data-view="billing"   class="view-btn view-btn-idle   flex items-center gap-2.5 w-full rounded-lg px-3 py-2 text-sm">💳 Биллинг</button>
+
+      <div class="px-2 py-1 mt-2 text-[10px] font-semibold uppercase tracking-wider text-slate-600">Настройки</div>
+      <button data-view="kb"        class="view-btn view-btn-idle   flex items-center gap-2.5 w-full rounded-lg px-3 py-2 text-sm">📚 База знаний</button>
+      <button data-view="analytics" class="view-btn view-btn-idle   flex items-center gap-2.5 w-full rounded-lg px-3 py-2 text-sm">📊 Аналитика</button>
+
+      <div class="px-2 py-1 mt-2 text-[10px] font-semibold uppercase tracking-wider text-slate-600">Прочее</div>
+      <button data-view="prompts"   class="view-btn view-btn-idle   flex items-center gap-2.5 w-full rounded-lg px-3 py-2 text-sm">🧠 Промпты</button>
+      <button data-view="projects"  class="view-btn view-btn-idle   flex items-center gap-2.5 w-full rounded-lg px-3 py-2 text-sm">📁 Проекты</button>
+      <button data-view="roadmap"   class="view-btn view-btn-idle   flex items-center gap-2.5 w-full rounded-lg px-3 py-2 text-sm">🗺 Роудмап</button>
+    </div>
+
+    <!-- Bottom -->
+    <div class="border-t border-slate-800 p-3">
+      <a href="/logout"
+         class="flex items-center gap-2 w-full rounded-lg px-3 py-2 text-sm text-slate-500 hover:text-slate-300 hover:bg-slate-800/50 transition-colors">
+        ← Выйти
+      </a>
+    </div>
+  </nav>
+
+  <!-- ═══ MAIN AREA ═══ -->
+  <div class="ml-52 flex-1 flex flex-col min-h-screen">
+
+    <!-- Topbar -->
+    <header class="sticky top-0 z-10 flex items-center justify-between border-b border-slate-800 bg-slate-950/80 backdrop-blur px-6 py-3">
+      <span id="status" class="text-xs text-slate-500"></span>
+      <button id="refresh"
+        class="flex items-center gap-1.5 rounded-md border border-slate-700 bg-slate-800/60 px-3 py-1.5 text-sm text-slate-300 hover:bg-slate-700/60">
+        ↻ Обновить
+      </button>
     </header>
 
-    <div id="error" class="mt-4 hidden rounded-md border border-rose-500/30 bg-rose-500/5 p-3 text-sm text-rose-300"></div>
+    <div id="error" class="mx-6 mt-4 hidden rounded-md border border-rose-500/30 bg-rose-500/5 p-3 text-sm text-rose-300"></div>
 
-    <!-- VIEW: chats -->
-    <section id="view-chats" class="mt-6 grid grid-cols-1 gap-6 lg:grid-cols-[360px_1fr]">
+    <!-- ─── VIEW: chats ─────────────────────────────────────────────── -->
+    <section id="view-chats" class="flex-1 p-6 grid grid-cols-1 gap-6 lg:grid-cols-[360px_1fr]">
       <aside>
         <ul id="chatList" class="space-y-2"></ul>
         <div id="chatEmpty" class="hidden rounded-lg border border-slate-800 bg-slate-900/40 p-6 text-sm text-slate-500">
@@ -48,9 +81,7 @@
         </div>
       </aside>
       <div id="detail" class="min-h-[400px] rounded-lg border border-slate-800 bg-slate-900/40">
-        <div id="detailEmpty" class="flex h-full items-center justify-center p-12 text-sm text-slate-500">
-          Выберите чат слева
-        </div>
+        <div id="detailEmpty" class="flex h-full items-center justify-center p-12 text-sm text-slate-500">Выберите чат слева</div>
         <div id="detailBody" class="hidden p-4 sm:p-6">
           <div class="flex flex-wrap items-baseline justify-between gap-3 border-b border-slate-800 pb-4">
             <div>
@@ -72,8 +103,8 @@
       </div>
     </section>
 
-    <!-- VIEW: drafts -->
-    <section id="view-drafts" class="mt-6 hidden">
+    <!-- ─── VIEW: drafts ────────────────────────────────────────────── -->
+    <section id="view-drafts" class="hidden flex-1 p-6">
       <div class="flex flex-wrap items-center justify-between gap-3 border-b border-slate-800 pb-3">
         <div class="text-base font-semibold text-slate-100">Черновики ответов</div>
         <div class="flex flex-wrap gap-1 rounded-lg border border-slate-800 bg-slate-900/60 p-1 text-sm">
@@ -87,10 +118,9 @@
       <ul id="draftsList" class="mt-4 space-y-3"></ul>
     </section>
 
-    <!-- VIEW: analytics -->
-    <section id="view-analytics" class="mt-6 hidden space-y-6">
+    <!-- ─── VIEW: analytics ─────────────────────────────────────────── -->
+    <section id="view-analytics" class="hidden flex-1 p-6 space-y-6">
       <div id="statCards" class="grid grid-cols-2 gap-3 sm:grid-cols-4"></div>
-
       <div class="grid grid-cols-1 gap-6 lg:grid-cols-2">
         <div class="rounded-lg border border-slate-800 bg-slate-900/40 p-4">
           <div class="mb-3 text-sm font-medium text-slate-200">Сообщения по дням <span class="text-slate-500">(30 д)</span></div>
@@ -102,7 +132,6 @@
           <div id="chartLeadFunnel" class="space-y-1.5"></div>
         </div>
       </div>
-
       <div class="grid grid-cols-1 gap-6 lg:grid-cols-2">
         <div class="rounded-lg border border-slate-800 bg-slate-900/40 p-4">
           <div class="mb-3 text-sm font-medium text-slate-200">Классы сообщений <span class="text-slate-500">(7 д)</span></div>
@@ -115,13 +144,1023 @@
       </div>
     </section>
 
-    <footer class="mt-8 text-xs text-slate-600">
-      SQLite · Hono · Tailwind via CDN
-    </footer>
-  </div>
+    <!-- ─── VIEW: pipeline ──────────────────────────────────────────── -->
+    <section id="view-pipeline" class="hidden flex-1 p-6">
+      <div id="pipelineModal" class="hidden fixed inset-0 z-50 flex items-center justify-center bg-black/60 backdrop-blur-sm">
+        <div class="bg-slate-900 border border-slate-700 rounded-xl p-6 w-full max-w-sm mx-4 space-y-4">
+          <div class="text-sm font-semibold text-slate-200">Добавить сделку</div>
+          <input id="pipelineSearch" type="text" placeholder="Поиск по имени или @username…"
+            oninput="filterContacts()"
+            class="w-full rounded-lg border border-slate-700 bg-slate-800/60 px-3 py-2 text-sm text-slate-200 placeholder-slate-500 focus:border-indigo-500 focus:outline-none">
+          <div id="contactsList" class="max-h-64 overflow-y-auto space-y-1 text-sm"></div>
+          <div class="flex justify-end"><button onclick="closePipelineModal()" class="text-xs text-slate-500 hover:text-slate-300 px-3 py-1.5">отмена</button></div>
+        </div>
+      </div>
+      <div class="flex items-center justify-between mb-4">
+        <div>
+          <h2 class="text-xl font-bold text-slate-100">Пайплайн сделок</h2>
+          <p class="text-sm text-slate-500 mt-0.5">Канбан-воронка от первого контакта до оплаты</p>
+        </div>
+        <button onclick="showPipelineModal()" class="rounded-lg bg-indigo-600 px-4 py-2 text-sm font-medium text-white hover:bg-indigo-500">+ Добавить</button>
+      </div>
+      <div class="flex gap-3 overflow-x-auto pb-4" id="pipelineBoard" style="min-height:60vh"></div>
+      <div id="dealDetail" class="hidden fixed right-0 top-0 h-full w-80 bg-slate-900 border-l border-slate-700 z-40 flex flex-col shadow-2xl overflow-y-auto">
+        <div class="flex items-center justify-between p-4 border-b border-slate-700">
+          <div class="text-sm font-semibold text-slate-200" id="dealDetailName">—</div>
+          <button onclick="closeDealDetail()" class="text-slate-500 hover:text-slate-300 text-lg">×</button>
+        </div>
+        <div class="p-4 space-y-4 flex-1">
+          <div class="text-xs text-slate-500" id="dealDetailMeta"></div>
+          <div><div class="text-xs font-semibold text-slate-400 mb-2">Этап</div><div class="flex flex-wrap gap-2" id="dealStageButtons"></div></div>
+          <div>
+            <div class="text-xs font-semibold text-slate-400 mb-1">Сумма сделки (USD)</div>
+            <input id="dealAmountInput" type="number" min="0" placeholder="0"
+              class="w-full rounded-lg border border-slate-700 bg-slate-800/60 px-3 py-2 text-sm text-slate-200 focus:border-indigo-500 focus:outline-none"
+              onblur="saveDealAmount()">
+          </div>
+          <div>
+            <div class="text-xs font-semibold text-slate-400 mb-1">Заметки</div>
+            <textarea id="dealNotesInput" rows="5" placeholder="Контекст, следующий шаг…"
+              class="w-full rounded-lg border border-slate-700 bg-slate-800/60 px-3 py-2 text-sm text-slate-200 focus:border-indigo-500 focus:outline-none resize-none"
+              onblur="saveDealNotes()"></textarea>
+          </div>
+        </div>
+        <div class="p-4 border-t border-slate-700">
+          <button onclick="deleteDeal()" class="w-full rounded-lg border border-red-900/50 bg-red-950/30 px-3 py-2 text-xs text-red-400 hover:bg-red-950/60">Удалить сделку</button>
+        </div>
+      </div>
+    </section>
+
+    <!-- ─── VIEW: demo ──────────────────────────────────────────────── -->
+    <section id="view-demo" class="hidden flex-1 p-6">
+      <div class="max-w-5xl mx-auto space-y-6">
+        <div class="flex items-start justify-between gap-4 flex-wrap">
+          <div>
+            <h2 class="text-xl font-bold text-slate-100">Demo-окружение</h2>
+            <p class="text-sm text-slate-500 mt-1">Переключите бота на demo KB перед показом клиенту.</p>
+          </div>
+          <div class="flex items-center gap-3">
+            <div id="demoStatusBadge" class="rounded-full px-3 py-1.5 text-xs font-semibold border hidden"></div>
+            <button onclick="activateDemo()" id="btnActivateDemo" class="rounded-lg bg-indigo-600 px-4 py-2 text-sm font-medium text-white hover:bg-indigo-500">▶ Активировать demo</button>
+            <button onclick="restoreDemo()" id="btnRestoreDemo" class="hidden rounded-lg border border-slate-600 px-4 py-2 text-sm font-medium text-slate-300 hover:border-slate-400">↺ Восстановить прод KB</button>
+          </div>
+        </div>
+        <div class="grid grid-cols-1 lg:grid-cols-2 gap-6">
+          <div class="space-y-3">
+            <div class="flex items-center justify-between">
+              <div class="text-sm font-semibold text-slate-200">Demo KB</div>
+              <button onclick="saveDemoKb()" class="rounded-md bg-slate-700 px-3 py-1.5 text-xs text-slate-200 hover:bg-slate-600">Сохранить</button>
+            </div>
+            <textarea id="demoKbEditor" rows="28"
+              class="w-full rounded-lg border border-slate-700 bg-slate-900/60 px-3 py-3 text-sm text-slate-300 font-mono placeholder-slate-600 focus:border-indigo-500 focus:outline-none resize-none"
+              placeholder="Загрузка…"></textarea>
+            <div id="demoKbSaveStatus" class="text-xs text-slate-600 h-4"></div>
+          </div>
+          <div class="space-y-4">
+            <div class="rounded-xl border border-slate-700 bg-slate-900/40 p-4 space-y-3">
+              <div class="text-sm font-semibold text-slate-200">📋 Чеклист перед demo-звонком</div>
+              <div class="space-y-2 text-sm">
+                <label class="flex items-start gap-2.5 cursor-pointer"><input type="checkbox" class="demo-check mt-0.5 h-4 w-4 accent-indigo-500 shrink-0"><span class="text-slate-400">Активировал demo KB</span></label>
+                <label class="flex items-start gap-2.5 cursor-pointer"><input type="checkbox" class="demo-check mt-0.5 h-4 w-4 accent-indigo-500 shrink-0"><span class="text-slate-400">Проверил ответ бота на тестовый вопрос</span></label>
+                <label class="flex items-start gap-2.5 cursor-pointer"><input type="checkbox" class="demo-check mt-0.5 h-4 w-4 accent-indigo-500 shrink-0"><span class="text-slate-400">Добавил клиента в demo-группу Telegram</span></label>
+                <label class="flex items-start gap-2.5 cursor-pointer"><input type="checkbox" class="demo-check mt-0.5 h-4 w-4 accent-indigo-500 shrink-0"><span class="text-slate-400">Открыл дашборд для показа аналитики</span></label>
+              </div>
+            </div>
+            <div class="rounded-xl border border-slate-700 bg-slate-900/40 overflow-hidden">
+              <div class="p-4 border-b border-slate-800"><div class="text-sm font-semibold text-slate-200">🎙 Скрипт demo-звонка · 5 шагов ~20 мин</div></div>
+              <div class="divide-y divide-slate-800">
+                <div class="p-3"><div class="flex gap-3"><span class="shrink-0 w-5 h-5 rounded-full bg-indigo-900/60 border border-indigo-700 flex items-center justify-center text-xs text-indigo-300 font-bold">1</span><div><div class="text-sm font-medium text-slate-200">Боль (2 мин)</div><div class="text-xs text-slate-500">«Сколько сообщений в день? Сколько времени на однотипные ответы?»</div></div></div></div>
+                <div class="p-3"><div class="flex gap-3"><span class="shrink-0 w-5 h-5 rounded-full bg-indigo-900/60 border border-indigo-700 flex items-center justify-center text-xs text-indigo-300 font-bold">2</span><div><div class="text-sm font-medium text-slate-200">Живой чат (8 мин)</div><div class="text-xs text-slate-500 mb-1">Три вопроса: простой, сложный, возражение.</div><div class="space-y-1"><div class="bg-slate-800 px-2 py-1 rounded text-xs font-mono text-slate-300">«Сколько стоит курс?»</div><div class="bg-slate-800 px-2 py-1 rounded text-xs font-mono text-slate-300">«Есть рассрочка?»</div><div class="bg-slate-800 px-2 py-1 rounded text-xs font-mono text-slate-300">«Кажется дорого»</div></div></div></div></div>
+                <div class="p-3"><div class="flex gap-3"><span class="shrink-0 w-5 h-5 rounded-full bg-indigo-900/60 border border-indigo-700 flex items-center justify-center text-xs text-indigo-300 font-bold">3</span><div><div class="text-sm font-medium text-slate-200">Дашборд (4 мин)</div><div class="text-xs text-slate-500">CRM-панель: лиды, статусы, история диалогов.</div></div></div></div>
+                <div class="p-3"><div class="flex gap-3"><span class="shrink-0 w-5 h-5 rounded-full bg-indigo-900/60 border border-indigo-700 flex items-center justify-center text-xs text-indigo-300 font-bold">4</span><div><div class="text-sm font-medium text-slate-200">ROI (3 мин)</div><div class="text-xs text-slate-500">2ч/день = 40ч/мес ≈ 40 000₽. Бот ≈ 13 000₽/мес.</div></div></div></div>
+                <div class="p-3"><div class="flex gap-3"><span class="shrink-0 w-5 h-5 rounded-full bg-emerald-900/60 border border-emerald-700 flex items-center justify-center text-xs text-emerald-300 font-bold">5</span><div><div class="text-sm font-medium text-slate-200">Закрытие (3 мин)</div><div class="text-xs text-slate-500">«14 дней бесплатно?» → лендинг + созвон по онбордингу.</div></div></div></div>
+              </div>
+            </div>
+          </div>
+        </div>
+      </div>
+    </section>
+
+    <!-- ─── VIEW: billing ───────────────────────────────────────────── -->
+    <section id="view-billing" class="hidden flex-1 p-6">
+      <div class="max-w-5xl mx-auto space-y-6">
+        <div><h2 class="text-xl font-bold text-slate-100">Биллинг</h2><p class="text-sm text-slate-500 mt-1">Stripe-подписки, MRR, статусы клиентов</p></div>
+        <div id="billingSetupBanner" class="hidden rounded-xl border border-amber-700/40 bg-amber-900/10 p-4">
+          <div class="flex gap-3"><span class="text-amber-400 text-lg">⚙️</span><div>
+            <div class="text-sm font-semibold text-amber-300">Stripe не настроен</div>
+            <p class="text-xs text-slate-400 mt-1">Добавьте в <code class="bg-slate-800 px-1 rounded">/tmp/tg-agent2.env</code> и перезапустите:</p>
+          </div></div>
+          <div class="mt-3 rounded-lg bg-slate-900 border border-slate-700 p-3 font-mono text-xs text-slate-300 space-y-1">
+            <div>STRIPE_WEBHOOK_SECRET=whsec_...</div><div>STRIPE_BASIC_PRICE_ID=price_...</div>
+            <div>STRIPE_PRO_PRICE_ID=price_...</div><div>STRIPE_ENTERPRISE_PRICE_ID=price_...</div>
+          </div>
+          <div class="mt-2 text-xs text-slate-500">Webhook: <span class="text-indigo-400 font-mono">https://tg.46-62-215-11.nip.io/api/billing/webhook</span></div>
+        </div>
+        <div class="grid grid-cols-2 sm:grid-cols-4 gap-3">
+          <div class="rounded-xl border border-slate-700 bg-slate-900/40 p-4 text-center"><div class="text-2xl font-bold text-emerald-400" id="billingMrr">—</div><div class="text-xs text-slate-500 mt-1">MRR</div></div>
+          <div class="rounded-xl border border-slate-700 bg-slate-900/40 p-4 text-center"><div class="text-2xl font-bold text-slate-100" id="billingActive">—</div><div class="text-xs text-slate-500 mt-1">Активных</div></div>
+          <div class="rounded-xl border border-slate-700 bg-slate-900/40 p-4 text-center"><div class="text-2xl font-bold text-indigo-400" id="billingTrialing">—</div><div class="text-xs text-slate-500 mt-1">На триале</div></div>
+          <div class="rounded-xl border border-slate-700 bg-slate-900/40 p-4 text-center"><div class="text-2xl font-bold text-red-400" id="billingPastDue">—</div><div class="text-xs text-slate-500 mt-1">Просрочено</div></div>
+        </div>
+        <div class="rounded-xl border border-slate-700 bg-slate-900/40 overflow-hidden">
+          <div class="flex items-center justify-between px-4 py-3 border-b border-slate-800">
+            <div class="text-sm font-semibold text-slate-200">Подписки</div>
+            <button onclick="loadBilling()" class="text-xs text-slate-500 hover:text-slate-300">↻</button>
+          </div>
+          <div id="billingTable" class="divide-y divide-slate-800 min-h-16"><div class="p-6 text-center text-sm text-slate-600">Загрузка…</div></div>
+        </div>
+      </div>
+    </section>
+
+    <!-- ─── VIEW: kb ─────────────────────────────────────────────────── -->
+    <section id="view-kb" class="hidden flex-1 p-6">
+      <div class="max-w-4xl mx-auto space-y-4">
+        <div class="flex items-center justify-between">
+          <div>
+            <h2 class="text-xl font-bold text-slate-100">База знаний</h2>
+            <p class="text-xs text-slate-500 mt-1" id="kbSource">Загрузка…</p>
+          </div>
+          <button onclick="saveKb()" class="rounded-lg bg-indigo-600 px-4 py-2 text-sm font-medium text-white hover:bg-indigo-500">Сохранить KB</button>
+        </div>
+        <div class="rounded-xl border border-slate-700 bg-slate-900/40 p-4">
+          <p class="text-xs text-slate-500 mb-3">
+            Это основная база знаний бота — он отвечает на основе этого документа.
+            Формат: Markdown. Изменения вступают в силу мгновенно (бот перечитывает при каждом сообщении).
+          </p>
+          <textarea id="kbEditor" rows="36"
+            class="w-full rounded-lg border border-slate-700 bg-slate-950/60 px-3 py-3 text-sm text-slate-300 font-mono placeholder-slate-600 focus:border-indigo-500 focus:outline-none resize-none"
+            placeholder="Загрузка базы знаний…"></textarea>
+          <div class="flex items-center justify-between mt-3">
+            <div id="kbStatus" class="text-xs text-slate-600 h-4"></div>
+            <button onclick="saveKb()" class="rounded-md bg-slate-700 px-3 py-1.5 text-xs text-slate-200 hover:bg-slate-600">Сохранить</button>
+          </div>
+        </div>
+      </div>
+    </section>
+
+    <!-- ─── VIEW: roadmap ───────────────────────────────────────────── -->
+    <section id="view-roadmap" class="hidden mt-6">
+      <div class="max-w-4xl mx-auto space-y-8">
+
+        <!-- Header -->
+        <div class="flex items-start justify-between gap-4 flex-wrap">
+          <div>
+            <h2 class="text-2xl font-bold text-slate-100">Роудмап проекта</h2>
+            <p class="text-sm text-slate-500 mt-1">AI-продавец в Telegram · путь от MVP до стратегического выхода</p>
+          </div>
+          <div class="flex items-center gap-6">
+            <div class="text-right">
+              <div class="text-xs text-slate-500 mb-1">Общий прогресс</div>
+              <div class="flex items-center gap-2">
+                <div class="w-32 h-2 rounded-full bg-slate-800">
+                  <div id="rmTotalBar" class="h-2 rounded-full bg-indigo-500 transition-all" style="width:0%"></div>
+                </div>
+                <span id="rmTotalPct" class="text-sm font-bold text-indigo-400">0%</span>
+              </div>
+            </div>
+          </div>
+        </div>
+
+        <!-- ═══════ PHASE 0: MVP DONE ═══════ -->
+        <div class="rounded-xl border border-emerald-500/40 bg-emerald-500/5 p-5">
+          <div class="flex items-start gap-4">
+            <div class="shrink-0 w-10 h-10 rounded-full bg-emerald-500/20 border border-emerald-500/40 flex items-center justify-center text-lg">✅</div>
+            <div class="flex-1">
+              <div class="flex items-center gap-3 flex-wrap">
+                <div class="font-bold text-emerald-300 text-lg">Этап 0 — MVP в Production</div>
+                <span class="rounded-full bg-emerald-900/50 border border-emerald-500/30 px-3 py-0.5 text-xs text-emerald-300">Завершён · Май 2026</span>
+              </div>
+              <div class="text-sm text-slate-400 mt-2 leading-relaxed">
+                Рабочий AI-продавец в Telegram: отвечает в группах и личных диалогах, ведёт CRM-базу лидов, умеет анализировать инсайты, хранит контекст по каждому чату, резервирует данные в MinIO.
+              </div>
+              <div class="mt-3 grid grid-cols-2 gap-x-8 gap-y-1 text-sm">
+                <div class="flex items-center gap-2 text-emerald-400"><span>✓</span><span>Telegram-бот (grammY) — группы и DM</span></div>
+                <div class="flex items-center gap-2 text-emerald-400"><span>✓</span><span>Классификатор + ответчик (Claude Haiku)</span></div>
+                <div class="flex items-center gap-2 text-emerald-400"><span>✓</span><span>CRM: лиды, статусы, история диалогов</span></div>
+                <div class="flex items-center gap-2 text-emerald-400"><span>✓</span><span>Инсайты из пассивных чатов (Claude Sonnet)</span></div>
+                <div class="flex items-center gap-2 text-emerald-400"><span>✓</span><span>Папки чатов — контекст, задачи, инструкции</span></div>
+                <div class="flex items-center gap-2 text-emerald-400"><span>✓</span><span>Кастомные промпты и база знаний</span></div>
+                <div class="flex items-center gap-2 text-emerald-400"><span>✓</span><span>Дашборд администратора (этот UI)</span></div>
+                <div class="flex items-center gap-2 text-emerald-400"><span>✓</span><span>Автобэкап БД + SQLite в MinIO</span></div>
+                <div class="flex items-center gap-2 text-emerald-400"><span>✓</span><span>Privacy Mode → бот читает все сообщения групп</span></div>
+                <div class="flex items-center gap-2 text-emerald-400"><span>✓</span><span>UI настройки промптов: тон, стратегии, доп. правила классификатора</span></div>
+                <div class="flex items-center gap-2 text-emerald-400"><span>✓</span><span>Ежедневные отчёты по проектам (📁 Проекты) + авто-сводка в TG</span></div>
+              </div>
+            </div>
+          </div>
+        </div>
+
+
+        <!-- ═══════ PHASE 0.5: IN PROGRESS ═══════ -->
+        <div class="rm-phase rounded-xl border border-sky-500/40 bg-sky-500/5 overflow-hidden" data-phase="p05">
+          <div class="rm-phase-header flex items-center gap-4 p-5 cursor-pointer select-none hover:bg-slate-800/30 transition-colors" onclick="rmToggle('p05')">
+            <div class="shrink-0 w-10 h-10 rounded-full bg-sky-500/20 border border-sky-500/40 flex items-center justify-center text-lg">🔧</div>
+            <div class="flex-1 min-w-0">
+              <div class="flex items-center gap-3 flex-wrap">
+                <div class="font-bold text-sky-200 text-base">Этап 0.5 — Обучение агента</div>
+                <span class="rounded-full bg-sky-900/50 border border-sky-500/30 px-3 py-0.5 text-xs text-sky-300">⚡ В работе · Май 2026</span>
+              </div>
+              <div class="text-sm text-slate-500 mt-0.5">Настроить бота под свой бизнес, проверить качество, запустить первые автоматические продажи</div>
+              <div class="flex items-center gap-2 mt-2">
+                <div class="w-48 h-1.5 rounded-full bg-slate-800">
+                  <div id="rm-bar-p05" class="h-1.5 rounded-full bg-sky-500 transition-all" style="width:0%"></div>
+                </div>
+                <span id="rm-pct-p05" class="text-xs text-slate-500">0 / 0</span>
+              </div>
+            </div>
+            <div id="rm-chev-p05" class="text-slate-600 text-sm shrink-0 transition-transform">▼</div>
+          </div>
+          <div id="rm-body-p05" class="hidden border-t border-slate-800">
+            <div class="p-5 grid grid-cols-1 md:grid-cols-2 gap-6">
+
+              <div class="space-y-4">
+                <div class="rm-group">
+                  <div class="text-xs font-semibold text-sky-400 uppercase tracking-wider mb-2">📚 База знаний и промпты</div>
+                  <div class="space-y-2">
+                    <label class="rm-task flex items-start gap-2.5 cursor-pointer group">
+                      <input type="checkbox" class="rm-cb mt-0.5 h-4 w-4 accent-sky-500 shrink-0" data-id="p05_kb">
+                      <div>
+                        <div class="rm-label text-sm text-slate-300 group-hover:text-white transition-colors">Заполнить KB: продукты, цены, FAQ</div>
+                        <div class="text-xs text-slate-600 mt-0.5">Курс, клуб, консультации — описание, цены (12 990 / 14 990), условия, как записаться</div>
+                      </div>
+                    </label>
+                    <label class="rm-task flex items-start gap-2.5 cursor-pointer group">
+                      <input type="checkbox" class="rm-cb mt-0.5 h-4 w-4 accent-sky-500 shrink-0" data-id="p05_prompts">
+                      <div>
+                        <div class="rm-label text-sm text-slate-300 group-hover:text-white transition-colors">Настроить промпты под бизнес-специфику</div>
+                        <div class="text-xs text-slate-600 mt-0.5">Тон голоса Ильи, стратегии по классам (PRICE_REQUEST → цена + ссылка), доп. правила классификатора</div>
+                      </div>
+                    </label>
+                    <label class="rm-task flex items-start gap-2.5 cursor-pointer group">
+                      <input type="checkbox" class="rm-cb mt-0.5 h-4 w-4 accent-sky-500 shrink-0" data-id="p05_quality">
+                      <div>
+                        <div class="rm-label text-sm text-slate-300 group-hover:text-white transition-colors">Проверить качество: 20 тестовых сообщений</div>
+                        <div class="text-xs text-slate-600 mt-0.5">Написать типовые вопросы из чата → проверить классификацию и черновики → скорректировать KB/промпты</div>
+                      </div>
+                    </label>
+                  </div>
+                </div>
+
+                <div class="rm-group">
+                  <div class="text-xs font-semibold text-sky-400 uppercase tracking-wider mb-2">🎙 Голос и первое впечатление</div>
+                  <div class="space-y-2">
+                    <label class="rm-task flex items-start gap-2.5 cursor-pointer group">
+                      <input type="checkbox" class="rm-cb mt-0.5 h-4 w-4 accent-sky-500 shrink-0" data-id="p05_elevenlabs">
+                      <div>
+                        <div class="rm-label text-sm text-slate-300 group-hover:text-white transition-colors">ElevenLabs: голосовое приветствие +23 мин</div>
+                        <div class="text-xs text-slate-600 mt-0.5">Добавить ELEVENLABS_API_KEY + ELEVENLABS_VOICE_ID_ANYA в .env → бот приветствует нового участника голосом Ани</div>
+                      </div>
+                    </label>
+                    <label class="rm-task flex items-start gap-2.5 cursor-pointer group">
+                      <input type="checkbox" class="rm-cb mt-0.5 h-4 w-4 accent-sky-500 shrink-0" data-id="p05_viral">
+                      <div>
+                        <div class="rm-label text-sm text-slate-300 group-hover:text-white transition-colors">Viral-clone pipeline: /clone → Reels в голосе клиента</div>
+                        <div class="text-xs text-slate-600 mt-0.5">Добавить OPENAI_API_KEY + HEYGEN ключи, переключить compose на образ :viral-clone. Команда: /clone &lt;url&gt;</div>
+                      </div>
+                    </label>
+                  </div>
+                </div>
+              </div>
+
+              <div class="space-y-4">
+                <div class="rm-group">
+                  <div class="text-xs font-semibold text-sky-400 uppercase tracking-wider mb-2">📊 Аналитика и WFDS</div>
+                  <div class="space-y-2">
+                    <label class="rm-task flex items-start gap-2.5 cursor-pointer group">
+                      <input type="checkbox" class="rm-cb mt-0.5 h-4 w-4 accent-sky-500 shrink-0" data-id="p05_wfds">
+                      <div>
+                        <div class="rm-label text-sm text-slate-300 group-hover:text-white transition-colors">Таблица deliverables + WFDS-метрика</div>
+                        <div class="text-xs text-slate-600 mt-0.5">Кнопки «✅ Использовал / ❌ Не пригодилось» на каждый артефакт бота. WFDS ≥ 7/нед → renew, &lt; 3 две недели → риск оттока</div>
+                      </div>
+                    </label>
+                    <label class="rm-task flex items-start gap-2.5 cursor-pointer group">
+                      <input type="checkbox" class="rm-cb mt-0.5 h-4 w-4 accent-sky-500 shrink-0" data-id="p05_memory">
+                      <div>
+                        <div class="rm-label text-sm text-slate-300 group-hover:text-white transition-colors">Persistent memory per-клиент</div>
+                        <div class="text-xs text-slate-600 mt-0.5">Бот помнит историю каждого участника между сессиями — иллюзия командного сотрудника, а не ChatGPT</div>
+                      </div>
+                    </label>
+                    <label class="rm-task flex items-start gap-2.5 cursor-pointer group">
+                      <input type="checkbox" class="rm-cb mt-0.5 h-4 w-4 accent-sky-500 shrink-0" data-id="p05_deal">
+                      <div>
+                        <div class="rm-label text-sm text-slate-300 group-hover:text-white transition-colors">Первый лид, закрытый ботом без участия Ильи</div>
+                        <div class="text-xs text-slate-600 mt-0.5">Участник написал вопрос → бот ответил → участник оплатил. Зафиксировать как кейс</div>
+                      </div>
+                    </label>
+                  </div>
+                </div>
+
+                <div class="rounded-lg border border-sky-500/20 bg-sky-950/30 p-3">
+                  <div class="text-xs font-semibold text-sky-400 mb-1">🎯 Критерии готовности к Этапу 1</div>
+                  <div class="text-xs text-slate-400 space-y-0.5">
+                    <div>· KB заполнена и проверена на 20 вопросах</div>
+                    <div>· Промпты настроены: 0 промахов на тестовых сообщениях</div>
+                    <div>· ≥ 1 лид закрыт ботом самостоятельно</div>
+                    <div>· Голосовое приветствие работает (ElevenLabs)</div>
+                    <div>· Отчёты по проектам обновляются ежедневно ✅</div>
+                  </div>
+                </div>
+              </div>
+
+            </div>
+          </div>
+        </div>
+
+        <!-- ═══════ PHASE 1: FIRST CLIENT ═══════ -->
+        <div class="rm-phase rounded-xl border border-indigo-500/30 bg-slate-900/60 overflow-hidden" data-phase="p1">
+          <div class="rm-phase-header flex items-center gap-4 p-5 cursor-pointer select-none hover:bg-slate-800/30 transition-colors" onclick="rmToggle('p1')">
+            <div class="shrink-0 w-10 h-10 rounded-full bg-indigo-500/20 border border-indigo-500/40 flex items-center justify-center text-lg">🎯</div>
+            <div class="flex-1 min-w-0">
+              <div class="flex items-center gap-3 flex-wrap">
+                <div class="font-bold text-slate-100 text-base">Этап 1 — Первый платящий клиент</div>
+                <span class="rounded-full bg-indigo-900/40 border border-indigo-500/30 px-3 py-0.5 text-xs text-indigo-300">1–2 месяца</span>
+              </div>
+              <div class="text-sm text-slate-500 mt-0.5">Упаковать продукт для других, настроить оплату, закрыть первую внешнюю сделку</div>
+              <div class="flex items-center gap-2 mt-2">
+                <div class="w-48 h-1.5 rounded-full bg-slate-800">
+                  <div id="rm-bar-p1" class="h-1.5 rounded-full bg-indigo-500 transition-all" style="width:0%"></div>
+                </div>
+                <span id="rm-pct-p1" class="text-xs text-slate-500">0 / 0</span>
+              </div>
+            </div>
+            <div id="rm-chev-p1" class="text-slate-600 text-sm shrink-0 transition-transform">▼</div>
+          </div>
+          <div id="rm-body-p1" class="hidden border-t border-slate-800">
+            <div class="p-5 grid grid-cols-1 md:grid-cols-2 gap-6">
+
+              <div class="space-y-4">
+                <div class="rm-group">
+                  <div class="text-xs font-semibold text-indigo-400 uppercase tracking-wider mb-2">📦 Упаковка продукта</div>
+                  <div class="space-y-2">
+                    <label class="rm-task flex items-start gap-2.5 cursor-pointer group">
+                      <input type="checkbox" class="rm-cb mt-0.5 h-4 w-4 accent-indigo-500 shrink-0" data-id="p1_lp">
+                      <div>
+                        <div class="rm-label text-sm text-slate-300 group-hover:text-white transition-colors">Лендинг с оффером и видео-демо</div>
+                        <div class="text-xs text-slate-600 mt-0.5">Боль → решение → кейс → тариф → CTA. Видео 2–3 мин с экраном бота в работе</div>
+                      </div>
+                    </label>
+                    <label class="rm-task flex items-start gap-2.5 cursor-pointer group">
+                      <input type="checkbox" class="rm-cb mt-0.5 h-4 w-4 accent-indigo-500 shrink-0" data-id="p1_pricing">
+                      <div>
+                        <div class="rm-label text-sm text-slate-300 group-hover:text-white transition-colors">Страница тарифов с чёткими лимитами</div>
+                        <div class="text-xs text-slate-600 mt-0.5">Basic $49/мес (1 чат), Pro $149 (10 чатов + аналитика), Enterprise $499 (неограничено + поддержка)</div>
+                      </div>
+                    </label>
+                    <label class="rm-task flex items-start gap-2.5 cursor-pointer group">
+                      <input type="checkbox" class="rm-cb mt-0.5 h-4 w-4 accent-indigo-500 shrink-0" data-id="p1_onboard">
+                      <div>
+                        <div class="rm-label text-sm text-slate-300 group-hover:text-white transition-colors">Онбординг нового клиента за 30 минут</div>
+                        <div class="text-xs text-slate-600 mt-0.5">Чеклист + видео: создать бота, добавить в чат, залить KB, проверить ответы</div>
+                      </div>
+                    </label>
+                    <label class="rm-task flex items-start gap-2.5 cursor-pointer group">
+                      <input type="checkbox" class="rm-cb mt-0.5 h-4 w-4 accent-indigo-500 shrink-0" data-id="p1_kbtmpl">
+                      <div>
+                        <div class="rm-label text-sm text-slate-300 group-hover:text-white transition-colors">Шаблоны базы знаний под 5 ниш</div>
+                        <div class="text-xs text-slate-600 mt-0.5">Онлайн-обучение, B2B продажи, e-commerce, услуги, коучинг — готово к заливке</div>
+                      </div>
+                    </label>
+                    <label class="rm-task flex items-start gap-2.5 cursor-pointer group">
+                      <input type="checkbox" class="rm-cb mt-0.5 h-4 w-4 accent-indigo-500 shrink-0" data-id="p1_demo">
+                      <div>
+                        <div class="rm-label text-sm text-slate-300 group-hover:text-white transition-colors">Demo-окружение для показа клиентам</div>
+                        <div class="text-xs text-slate-600 mt-0.5">Отдельный бот с тестовыми данными, ссылка на тест-группу, скрипт demo-звонка</div>
+                      </div>
+                    </label>
+                  </div>
+                </div>
+
+                <div class="rm-group">
+                  <div class="text-xs font-semibold text-indigo-400 uppercase tracking-wider mb-2">📄 Документы и поддержка</div>
+                  <div class="space-y-2">
+                    <label class="rm-task flex items-start gap-2.5 cursor-pointer group">
+                      <input type="checkbox" class="rm-cb mt-0.5 h-4 w-4 accent-indigo-500 shrink-0" data-id="p1_oferta">
+                      <div>
+                        <div class="rm-label text-sm text-slate-300 group-hover:text-white transition-colors">Договор оферты и политика конфиденциальности</div>
+                        <div class="text-xs text-slate-600 mt-0.5">Юридически чистый договор на обработку данных Telegram-чатов</div>
+                      </div>
+                    </label>
+                    <label class="rm-task flex items-start gap-2.5 cursor-pointer group">
+                      <input type="checkbox" class="rm-cb mt-0.5 h-4 w-4 accent-indigo-500 shrink-0" data-id="p1_sla">
+                      <div>
+                        <div class="rm-label text-sm text-slate-300 group-hover:text-white transition-colors">SLA: 99% uptime, время ответа поддержки</div>
+                        <div class="text-xs text-slate-600 mt-0.5">Поддержка через Telegram, критические баги — 4ч, стандартные — 24ч</div>
+                      </div>
+                    </label>
+                    <label class="rm-task flex items-start gap-2.5 cursor-pointer group">
+                      <input type="checkbox" class="rm-cb mt-0.5 h-4 w-4 accent-indigo-500 shrink-0" data-id="p1_case">
+                      <div>
+                        <div class="rm-label text-sm text-slate-300 group-hover:text-white transition-colors">Кейс-стади на собственном боте с цифрами</div>
+                        <div class="text-xs text-slate-600 mt-0.5">«Как бот обработал X сообщений, сэкономил Y часов, конвертировал Z лидов»</div>
+                      </div>
+                    </label>
+                  </div>
+                </div>
+              </div>
+
+              <div class="space-y-4">
+                <div class="rm-group">
+                  <div class="text-xs font-semibold text-indigo-400 uppercase tracking-wider mb-2">💳 Монетизация</div>
+                  <div class="space-y-2">
+                    <label class="rm-task flex items-start gap-2.5 cursor-pointer group">
+                      <input type="checkbox" class="rm-cb mt-0.5 h-4 w-4 accent-indigo-500 shrink-0" data-id="p1_pay">
+                      <div>
+                        <div class="rm-label text-sm text-slate-300 group-hover:text-white transition-colors">Платёжная система (ЮKassa или Stripe)</div>
+                        <div class="text-xs text-slate-600 mt-0.5">Страница оплаты → webhook активации подписки → автоинвойс на email</div>
+                      </div>
+                    </label>
+                    <label class="rm-task flex items-start gap-2.5 cursor-pointer group">
+                      <input type="checkbox" class="rm-cb mt-0.5 h-4 w-4 accent-indigo-500 shrink-0" data-id="p1_trial">
+                      <div>
+                        <div class="rm-label text-sm text-slate-300 group-hover:text-white transition-colors">Trial 14 дней без карты</div>
+                        <div class="text-xs text-slate-600 mt-0.5">Напоминание на 7-й и 12-й день. Конвертация в платный — автоматически</div>
+                      </div>
+                    </label>
+                    <label class="rm-task flex items-start gap-2.5 cursor-pointer group">
+                      <input type="checkbox" class="rm-cb mt-0.5 h-4 w-4 accent-indigo-500 shrink-0" data-id="p1_billing">
+                      <div>
+                        <div class="rm-label text-sm text-slate-300 group-hover:text-white transition-colors">Биллинговый цикл и grace period</div>
+                        <div class="text-xs text-slate-600 mt-0.5">Напоминание за 3 дня до списания. Grace period 3 дня при просрочке</div>
+                      </div>
+                    </label>
+                  </div>
+                </div>
+
+                <div class="rm-group">
+                  <div class="text-xs font-semibold text-indigo-400 uppercase tracking-wider mb-2">🤝 Первые продажи</div>
+                  <div class="space-y-2">
+                    <label class="rm-task flex items-start gap-2.5 cursor-pointer group">
+                      <input type="checkbox" class="rm-cb mt-0.5 h-4 w-4 accent-indigo-500 shrink-0" data-id="p1_outreach">
+                      <div>
+                        <div class="rm-label text-sm text-slate-300 group-hover:text-white transition-colors">Прямой аутрич: 50 потенциальных клиентов</div>
+                        <div class="text-xs text-slate-600 mt-0.5">Из личного нетворка: предприниматели с Telegram-чатами на 100+ человек</div>
+                      </div>
+                    </label>
+                    <label class="rm-task flex items-start gap-2.5 cursor-pointer group">
+                      <input type="checkbox" class="rm-cb mt-0.5 h-4 w-4 accent-indigo-500 shrink-0" data-id="p1_pitch">
+                      <div>
+                        <div class="rm-label text-sm text-slate-300 group-hover:text-white transition-colors">Питч-дек на 10 слайдов + скрипт demo-звонка</div>
+                        <div class="text-xs text-slate-600 mt-0.5">Боль → решение → демо → кейс → ROI → тарифы → следующий шаг</div>
+                      </div>
+                    </label>
+                    <label class="rm-task flex items-start gap-2.5 cursor-pointer group">
+                      <input type="checkbox" class="rm-cb mt-0.5 h-4 w-4 accent-indigo-500 shrink-0" data-id="p1_close">
+                      <div>
+                        <div class="rm-label text-sm text-slate-300 group-hover:text-white transition-colors">Закрыть первую сделку — первая оплата</div>
+                        <div class="text-xs text-slate-600 mt-0.5">Не важно на каком тарифе. Важно получить деньги и первый реальный фидбек</div>
+                      </div>
+                    </label>
+                  </div>
+                </div>
+
+                <div class="rounded-lg border border-indigo-500/20 bg-indigo-950/30 p-3">
+                  <div class="text-xs font-semibold text-indigo-400 mb-1">🎯 Целевые метрики</div>
+                  <div class="text-xs text-slate-400 space-y-0.5">
+                    <div>· MRR > 0 ₽ (первая оплата от внешнего клиента)</div>
+                    <div>· 1+ платящий клиент на подписке (не ты сам)</div>
+                    <div>· NPS первого клиента > 8/10</div>
+                    <div>· Онбординг нового клиента < 30 минут</div>
+                    <div>· Кейс с цифрами: X сообщений → Y лидов → Z продаж</div>
+                  </div>
+                </div>
+              </div>
+
+            </div>
+          </div>
+        </div>
+
+        <!-- ═══════ PHASE 2: 100 CLIENTS ═══════ -->
+        <div class="rm-phase rounded-xl border border-violet-500/30 bg-slate-900/60 overflow-hidden" data-phase="p2">
+          <div class="rm-phase-header flex items-center gap-4 p-5 cursor-pointer select-none hover:bg-slate-800/30 transition-colors" onclick="rmToggle('p2')">
+            <div class="shrink-0 w-10 h-10 rounded-full bg-violet-500/20 border border-violet-500/40 flex items-center justify-center text-lg">🚀</div>
+            <div class="flex-1 min-w-0">
+              <div class="flex items-center gap-3 flex-wrap">
+                <div class="font-bold text-slate-100 text-base">Этап 2 — 100 платящих клиентов</div>
+                <span class="rounded-full bg-violet-900/40 border border-violet-500/30 px-3 py-0.5 text-xs text-violet-300">3–6 месяцев</span>
+              </div>
+              <div class="text-sm text-slate-500 mt-0.5">Повторяемые продажи, self-serve онбординг, снять нагрузку с основателя</div>
+              <div class="flex items-center gap-2 mt-2">
+                <div class="w-48 h-1.5 rounded-full bg-slate-800">
+                  <div id="rm-bar-p2" class="h-1.5 rounded-full bg-violet-500 transition-all" style="width:0%"></div>
+                </div>
+                <span id="rm-pct-p2" class="text-xs text-slate-500">0 / 0</span>
+              </div>
+            </div>
+            <div id="rm-chev-p2" class="text-slate-600 text-sm shrink-0 transition-transform">▼</div>
+          </div>
+          <div id="rm-body-p2" class="hidden border-t border-slate-800">
+            <div class="p-5 grid grid-cols-1 md:grid-cols-2 gap-6">
+
+              <div class="space-y-4">
+                <div class="rm-group">
+                  <div class="text-xs font-semibold text-violet-400 uppercase tracking-wider mb-2">🏗 Масштабируемая архитектура</div>
+                  <div class="space-y-2">
+                    <label class="rm-task flex items-start gap-2.5 cursor-pointer group">
+                      <input type="checkbox" class="rm-cb mt-0.5 h-4 w-4 accent-violet-500 shrink-0" data-id="p2_mt">
+                      <div>
+                        <div class="rm-label text-sm text-slate-300 group-hover:text-white transition-colors">Мультитенантность: один деплой, конфиг per-клиент</div>
+                        <div class="text-xs text-slate-600 mt-0.5">Изолированные SQLite per-клиент или schema per-tenant в PostgreSQL</div>
+                      </div>
+                    </label>
+                    <label class="rm-task flex items-start gap-2.5 cursor-pointer group">
+                      <input type="checkbox" class="rm-cb mt-0.5 h-4 w-4 accent-violet-500 shrink-0" data-id="p2_deploy">
+                      <div>
+                        <div class="rm-label text-sm text-slate-300 group-hover:text-white transition-colors">Автодеплой нового клиента за &lt; 5 минут</div>
+                        <div class="text-xs text-slate-600 mt-0.5">Скрипт: token → env → docker run → DNS → уведомление клиенту</div>
+                      </div>
+                    </label>
+                    <label class="rm-task flex items-start gap-2.5 cursor-pointer group">
+                      <input type="checkbox" class="rm-cb mt-0.5 h-4 w-4 accent-violet-500 shrink-0" data-id="p2_mon">
+                      <div>
+                        <div class="rm-label text-sm text-slate-300 group-hover:text-white transition-colors">Централизованный мониторинг всех ботов</div>
+                        <div class="text-xs text-slate-600 mt-0.5">Grafana/UptimeRobot: uptime, ошибки, очередь сообщений — алерт при падении</div>
+                      </div>
+                    </label>
+                    <label class="rm-task flex items-start gap-2.5 cursor-pointer group">
+                      <input type="checkbox" class="rm-cb mt-0.5 h-4 w-4 accent-violet-500 shrink-0" data-id="p2_cicd">
+                      <div>
+                        <div class="rm-label text-sm text-slate-300 group-hover:text-white transition-colors">CI/CD: GitHub Actions → автообновление клиентов</div>
+                        <div class="text-xs text-slate-600 mt-0.5">Ноль даунтайма при деплое новой версии на всех инстансах</div>
+                      </div>
+                    </label>
+                  </div>
+                </div>
+
+                <div class="rm-group">
+                  <div class="text-xs font-semibold text-violet-400 uppercase tracking-wider mb-2">🤖 Self-serve онбординг</div>
+                  <div class="space-y-2">
+                    <label class="rm-task flex items-start gap-2.5 cursor-pointer group">
+                      <input type="checkbox" class="rm-cb mt-0.5 h-4 w-4 accent-violet-500 shrink-0" data-id="p2_selfserve">
+                      <div>
+                        <div class="rm-label text-sm text-slate-300 group-hover:text-white transition-colors">Web-форма регистрации: без участия основателя</div>
+                        <div class="text-xs text-slate-600 mt-0.5">Клиент сам вводит токен бота → мастер настройки → автодеплой за 5 шагов</div>
+                      </div>
+                    </label>
+                    <label class="rm-task flex items-start gap-2.5 cursor-pointer group">
+                      <input type="checkbox" class="rm-cb mt-0.5 h-4 w-4 accent-violet-500 shrink-0" data-id="p2_cabinet">
+                      <div>
+                        <div class="rm-label text-sm text-slate-300 group-hover:text-white transition-colors">Клиентский кабинет (белый лейбл)</div>
+                        <div class="text-xs text-slate-600 mt-0.5">Аналитика, управление KB, история биллинга — доступно клиенту</div>
+                      </div>
+                    </label>
+                    <label class="rm-task flex items-start gap-2.5 cursor-pointer group">
+                      <input type="checkbox" class="rm-cb mt-0.5 h-4 w-4 accent-violet-500 shrink-0" data-id="p2_mkpl">
+                      <div>
+                        <div class="rm-label text-sm text-slate-300 group-hover:text-white transition-colors">Маркетплейс готовых баз знаний (10+ ниш)</div>
+                        <div class="text-xs text-slate-600 mt-0.5">Один клик — и бот уже знает всё про коучинг / e-commerce / B2B SaaS</div>
+                      </div>
+                    </label>
+                  </div>
+                </div>
+              </div>
+
+              <div class="space-y-4">
+                <div class="rm-group">
+                  <div class="text-xs font-semibold text-violet-400 uppercase tracking-wider mb-2">📣 Рост и маркетинг</div>
+                  <div class="space-y-2">
+                    <label class="rm-task flex items-start gap-2.5 cursor-pointer group">
+                      <input type="checkbox" class="rm-cb mt-0.5 h-4 w-4 accent-violet-500 shrink-0" data-id="p2_ref">
+                      <div>
+                        <div class="rm-label text-sm text-slate-300 group-hover:text-white transition-colors">Реферальная программа с авторасчётом</div>
+                        <div class="text-xs text-slate-600 mt-0.5">Уникальная ссылка → 20% скидка на 3 мес приглашающему и приглашённому</div>
+                      </div>
+                    </label>
+                    <label class="rm-task flex items-start gap-2.5 cursor-pointer group">
+                      <input type="checkbox" class="rm-cb mt-0.5 h-4 w-4 accent-violet-500 shrink-0" data-id="p2_partner">
+                      <div>
+                        <div class="rm-label text-sm text-slate-300 group-hover:text-white transition-colors">Партнёрская сеть: 5–10 агентств-реселлеров</div>
+                        <div class="text-xs text-slate-600 mt-0.5">30% комиссии навсегда, личный кабинет партнёра, обучение продажам</div>
+                      </div>
+                    </label>
+                    <label class="rm-task flex items-start gap-2.5 cursor-pointer group">
+                      <input type="checkbox" class="rm-cb mt-0.5 h-4 w-4 accent-violet-500 shrink-0" data-id="p2_content">
+                      <div>
+                        <div class="rm-label text-sm text-slate-300 group-hover:text-white transition-colors">Telegram-канал: 3 поста/нед + кейсы клиентов</div>
+                        <div class="text-xs text-slate-600 mt-0.5">«Бот клиента X обработал 800 сообщений и закрыл 12 сделок за месяц»</div>
+                      </div>
+                    </label>
+                    <label class="rm-task flex items-start gap-2.5 cursor-pointer group">
+                      <input type="checkbox" class="rm-cb mt-0.5 h-4 w-4 accent-violet-500 shrink-0" data-id="p2_wa">
+                      <div>
+                        <div class="rm-label text-sm text-slate-300 group-hover:text-white transition-colors">Интеграция WhatsApp Business API</div>
+                        <div class="text-xs text-slate-600 mt-0.5">Второй канал, удваивает TAM. Те же KB и промпты, другой транспорт</div>
+                      </div>
+                    </label>
+                  </div>
+                </div>
+
+                <div class="rm-group">
+                  <div class="text-xs font-semibold text-violet-400 uppercase tracking-wider mb-2">📊 Операции</div>
+                  <div class="space-y-2">
+                    <label class="rm-task flex items-start gap-2.5 cursor-pointer group">
+                      <input type="checkbox" class="rm-cb mt-0.5 h-4 w-4 accent-violet-500 shrink-0" data-id="p2_support">
+                      <div>
+                        <div class="rm-label text-sm text-slate-300 group-hover:text-white transition-colors">Команда поддержки: 1 человек + Helpdesk-бот</div>
+                        <div class="text-xs text-slate-600 mt-0.5">FAQ-бот отвечает на 80% вопросов автоматически, передаёт остальное человеку</div>
+                      </div>
+                    </label>
+                    <label class="rm-task flex items-start gap-2.5 cursor-pointer group">
+                      <input type="checkbox" class="rm-cb mt-0.5 h-4 w-4 accent-violet-500 shrink-0" data-id="p2_metrics">
+                      <div>
+                        <div class="rm-label text-sm text-slate-300 group-hover:text-white transition-colors">Дашборд бизнес-метрик: MRR, Churn, CAC, LTV</div>
+                        <div class="text-xs text-slate-600 mt-0.5">Еженедельный отчёт в Telegram. NPS-опрос автоматически на 14-й день</div>
+                      </div>
+                    </label>
+                  </div>
+                </div>
+
+                <div class="rounded-lg border border-violet-500/20 bg-violet-950/30 p-3">
+                  <div class="text-xs font-semibold text-violet-400 mb-1">🎯 Целевые метрики</div>
+                  <div class="text-xs text-slate-400 space-y-0.5">
+                    <div>· MRR > $5 000</div>
+                    <div>· 100 активных клиентов на подписке</div>
+                    <div>· Churn &lt; 5% в месяц</div>
+                    <div>· Онбординг без основателя — 100%</div>
+                  </div>
+                </div>
+              </div>
+
+            </div>
+          </div>
+        </div>
+
+        <!-- ═══════ PHASE 3: 1000 CLIENTS ═══════ -->
+        <div class="rm-phase rounded-xl border border-amber-500/30 bg-slate-900/60 overflow-hidden" data-phase="p3">
+          <div class="rm-phase-header flex items-center gap-4 p-5 cursor-pointer select-none hover:bg-slate-800/30 transition-colors" onclick="rmToggle('p3')">
+            <div class="shrink-0 w-10 h-10 rounded-full bg-amber-500/20 border border-amber-500/40 flex items-center justify-center text-lg">📈</div>
+            <div class="flex-1 min-w-0">
+              <div class="flex items-center gap-3 flex-wrap">
+                <div class="font-bold text-slate-100 text-base">Этап 3 — 1 000 клиентов</div>
+                <span class="rounded-full bg-amber-900/40 border border-amber-500/30 px-3 py-0.5 text-xs text-amber-300">6–18 месяцев</span>
+              </div>
+              <div class="text-sm text-slate-500 mt-0.5">Product-market fit подтверждён. Платформа, интеграции, enterprise</div>
+              <div class="flex items-center gap-2 mt-2">
+                <div class="w-48 h-1.5 rounded-full bg-slate-800">
+                  <div id="rm-bar-p3" class="h-1.5 rounded-full bg-amber-500 transition-all" style="width:0%"></div>
+                </div>
+                <span id="rm-pct-p3" class="text-xs text-slate-500">0 / 0</span>
+              </div>
+            </div>
+            <div id="rm-chev-p3" class="text-slate-600 text-sm shrink-0 transition-transform">▼</div>
+          </div>
+          <div id="rm-body-p3" class="hidden border-t border-slate-800">
+            <div class="p-5 grid grid-cols-1 md:grid-cols-2 gap-6">
+
+              <div class="space-y-4">
+                <div class="rm-group">
+                  <div class="text-xs font-semibold text-amber-400 uppercase tracking-wider mb-2">🔌 Платформа и API</div>
+                  <div class="space-y-2">
+                    <label class="rm-task flex items-start gap-2.5 cursor-pointer group">
+                      <input type="checkbox" class="rm-cb mt-0.5 h-4 w-4 accent-amber-500 shrink-0" data-id="p3_api">
+                      <div>
+                        <div class="rm-label text-sm text-slate-300 group-hover:text-white transition-colors">REST API + webhooks для интеграций</div>
+                        <div class="text-xs text-slate-600 mt-0.5">Открытый API: новые лиды, сообщения, статусы — в любую внешнюю систему</div>
+                      </div>
+                    </label>
+                    <label class="rm-task flex items-start gap-2.5 cursor-pointer group">
+                      <input type="checkbox" class="rm-cb mt-0.5 h-4 w-4 accent-amber-500 shrink-0" data-id="p3_crm">
+                      <div>
+                        <div class="rm-label text-sm text-slate-300 group-hover:text-white transition-colors">CRM-интеграции: AmoCRM, Bitrix24, HubSpot</div>
+                        <div class="text-xs text-slate-600 mt-0.5">Лид из Telegram → сделка в CRM автоматически. Двусторонняя синхронизация</div>
+                      </div>
+                    </label>
+                    <label class="rm-task flex items-start gap-2.5 cursor-pointer group">
+                      <input type="checkbox" class="rm-cb mt-0.5 h-4 w-4 accent-amber-500 shrink-0" data-id="p3_channels">
+                      <div>
+                        <div class="rm-label text-sm text-slate-300 group-hover:text-white transition-colors">Дополнительные каналы: Instagram, web-чат</div>
+                        <div class="text-xs text-slate-600 mt-0.5">Один AI — несколько каналов. Удваивает TAM без переработки продукта</div>
+                      </div>
+                    </label>
+                    <label class="rm-task flex items-start gap-2.5 cursor-pointer group">
+                      <input type="checkbox" class="rm-cb mt-0.5 h-4 w-4 accent-amber-500 shrink-0" data-id="p3_voice">
+                      <div>
+                        <div class="rm-label text-sm text-slate-300 group-hover:text-white transition-colors">Голосовые сообщения: Whisper → текст → ответ</div>
+                        <div class="text-xs text-slate-600 mt-0.5">Транскрибация + ответ. Уже есть сервис Transcribe — интеграция готова</div>
+                      </div>
+                    </label>
+                  </div>
+                </div>
+
+                <div class="rm-group">
+                  <div class="text-xs font-semibold text-amber-400 uppercase tracking-wider mb-2">🧠 Умный продукт</div>
+                  <div class="space-y-2">
+                    <label class="rm-task flex items-start gap-2.5 cursor-pointer group">
+                      <input type="checkbox" class="rm-cb mt-0.5 h-4 w-4 accent-amber-500 shrink-0" data-id="p3_autokb">
+                      <div>
+                        <div class="rm-label text-sm text-slate-300 group-hover:text-white transition-colors">AI-автоулучшение KB по частым вопросам</div>
+                        <div class="text-xs text-slate-600 mt-0.5">«100 человек спросили про Х — добавить ответ в базу знаний?» → 1 клик</div>
+                      </div>
+                    </label>
+                    <label class="rm-task flex items-start gap-2.5 cursor-pointer group">
+                      <input type="checkbox" class="rm-cb mt-0.5 h-4 w-4 accent-amber-500 shrink-0" data-id="p3_ab">
+                      <div>
+                        <div class="rm-label text-sm text-slate-300 group-hover:text-white transition-colors">A/B тестирование промптов с аналитикой</div>
+                        <div class="text-xs text-slate-600 mt-0.5">Версия A vs B — замеряем конверсию, автоматически переключаем на лучший</div>
+                      </div>
+                    </label>
+                    <label class="rm-task flex items-start gap-2.5 cursor-pointer group">
+                      <input type="checkbox" class="rm-cb mt-0.5 h-4 w-4 accent-amber-500 shrink-0" data-id="p3_team">
+                      <div>
+                        <div class="rm-label text-sm text-slate-300 group-hover:text-white transition-colors">Командный аккаунт: операторы + ручной перехват</div>
+                        <div class="text-xs text-slate-600 mt-0.5">Несколько операторов, роли admin/operator. Перехват диалога у бота одним кликом</div>
+                      </div>
+                    </label>
+                  </div>
+                </div>
+              </div>
+
+              <div class="space-y-4">
+                <div class="rm-group">
+                  <div class="text-xs font-semibold text-amber-400 uppercase tracking-wider mb-2">🌍 Масштаб</div>
+                  <div class="space-y-2">
+                    <label class="rm-task flex items-start gap-2.5 cursor-pointer group">
+                      <input type="checkbox" class="rm-cb mt-0.5 h-4 w-4 accent-amber-500 shrink-0" data-id="p3_k8s">
+                      <div>
+                        <div class="rm-label text-sm text-slate-300 group-hover:text-white transition-colors">Kubernetes + горизонтальное масштабирование</div>
+                        <div class="text-xs text-slate-600 mt-0.5">Автоскейлинг при пиках нагрузки, мульти-регион для Enterprise</div>
+                      </div>
+                    </label>
+                    <label class="rm-task flex items-start gap-2.5 cursor-pointer group">
+                      <input type="checkbox" class="rm-cb mt-0.5 h-4 w-4 accent-amber-500 shrink-0" data-id="p3_seo">
+                      <div>
+                        <div class="rm-label text-sm text-slate-300 group-hover:text-white transition-colors">SEO-лендинги под 20+ ниш</div>
+                        <div class="text-xs text-slate-600 mt-0.5">«AI-бот для онлайн-школ», «для риелторов», «для интернет-магазинов» и т.д.</div>
+                      </div>
+                    </label>
+                    <label class="rm-task flex items-start gap-2.5 cursor-pointer group">
+                      <input type="checkbox" class="rm-cb mt-0.5 h-4 w-4 accent-amber-500 shrink-0" data-id="p3_perf">
+                      <div>
+                        <div class="rm-label text-sm text-slate-300 group-hover:text-white transition-colors">Performance-маркетинг: Директ, Telegram Ads</div>
+                        <div class="text-xs text-slate-600 mt-0.5">Платный трафик на лендинг при CAC &lt; $300. Аффилиат для блогеров</div>
+                      </div>
+                    </label>
+                  </div>
+                </div>
+
+                <div class="rm-group">
+                  <div class="text-xs font-semibold text-amber-400 uppercase tracking-wider mb-2">🏢 Enterprise</div>
+                  <div class="space-y-2">
+                    <label class="rm-task flex items-start gap-2.5 cursor-pointer group">
+                      <input type="checkbox" class="rm-cb mt-0.5 h-4 w-4 accent-amber-500 shrink-0" data-id="p3_sso">
+                      <div>
+                        <div class="rm-label text-sm text-slate-300 group-hover:text-white transition-colors">SSO (Google Workspace, Microsoft Azure AD)</div>
+                        <div class="text-xs text-slate-600 mt-0.5">Обязательное требование для корпоративных сделок от $500/мес</div>
+                      </div>
+                    </label>
+                    <label class="rm-task flex items-start gap-2.5 cursor-pointer group">
+                      <input type="checkbox" class="rm-cb mt-0.5 h-4 w-4 accent-amber-500 shrink-0" data-id="p3_audit">
+                      <div>
+                        <div class="rm-label text-sm text-slate-300 group-hover:text-white transition-colors">Аудит-лог, compliance, security audit</div>
+                        <div class="text-xs text-slate-600 mt-0.5">Логи всех действий, GDPR/152-ФЗ, penetration test от внешней компании</div>
+                      </div>
+                    </label>
+                  </div>
+                </div>
+
+                <div class="rounded-lg border border-amber-500/20 bg-amber-950/30 p-3">
+                  <div class="text-xs font-semibold text-amber-400 mb-1">🎯 Целевые метрики</div>
+                  <div class="text-xs text-slate-400 space-y-0.5">
+                    <div>· MRR > $50 000</div>
+                    <div>· 1 000 активных клиентов</div>
+                    <div>· Churn &lt; 2% в месяц</div>
+                    <div>· NPS > 50</div>
+                    <div>· NRR (удержание выручки) > 110%</div>
+                  </div>
+                </div>
+              </div>
+
+            </div>
+          </div>
+        </div>
+
+        <!-- ═══════ PHASE 4: EXIT ═══════ -->
+        <div class="rm-phase rounded-xl border border-emerald-500/30 bg-slate-900/60 overflow-hidden" data-phase="p4">
+          <div class="rm-phase-header flex items-center gap-4 p-5 cursor-pointer select-none hover:bg-slate-800/30 transition-colors" onclick="rmToggle('p4')">
+            <div class="shrink-0 w-10 h-10 rounded-full bg-emerald-500/20 border border-emerald-500/40 flex items-center justify-center text-lg">💰</div>
+            <div class="flex-1 min-w-0">
+              <div class="flex items-center gap-3 flex-wrap">
+                <div class="font-bold text-slate-100 text-base">Этап 4 — Продажа проекта / Exit</div>
+                <span class="rounded-full bg-emerald-900/40 border border-emerald-500/30 px-3 py-0.5 text-xs text-emerald-300">18–36 месяцев</span>
+              </div>
+              <div class="text-sm text-slate-500 mt-0.5">ARR > $600K → оценка $5–20M. Стратегический покупатель или раунд</div>
+              <div class="flex items-center gap-2 mt-2">
+                <div class="w-48 h-1.5 rounded-full bg-slate-800">
+                  <div id="rm-bar-p4" class="h-1.5 rounded-full bg-emerald-500 transition-all" style="width:0%"></div>
+                </div>
+                <span id="rm-pct-p4" class="text-xs text-slate-500">0 / 0</span>
+              </div>
+            </div>
+            <div id="rm-chev-p4" class="text-slate-600 text-sm shrink-0 transition-transform">▼</div>
+          </div>
+          <div id="rm-body-p4" class="hidden border-t border-slate-800">
+            <div class="p-5 grid grid-cols-1 md:grid-cols-2 gap-6">
+
+              <div class="space-y-4">
+                <div class="rm-group">
+                  <div class="text-xs font-semibold text-emerald-400 uppercase tracking-wider mb-2">📐 Финансовые метрики для сделки</div>
+                  <div class="space-y-2">
+                    <label class="rm-task flex items-start gap-2.5 cursor-pointer group">
+                      <input type="checkbox" class="rm-cb mt-0.5 h-4 w-4 accent-emerald-500 shrink-0" data-id="p4_arr">
+                      <div>
+                        <div class="rm-label text-sm text-slate-300 group-hover:text-white transition-colors">ARR > $600K устойчиво 6+ месяцев</div>
+                        <div class="text-xs text-slate-600 mt-0.5">При x10 ARR оценка = $6M. При x15 ARR = $9M. Цель диапазон $5–20M</div>
+                      </div>
+                    </label>
+                    <label class="rm-task flex items-start gap-2.5 cursor-pointer group">
+                      <input type="checkbox" class="rm-cb mt-0.5 h-4 w-4 accent-emerald-500 shrink-0" data-id="p4_margin">
+                      <div>
+                        <div class="rm-label text-sm text-slate-300 group-hover:text-white transition-colors">Gross Margin > 75%, EBITDA margin > 20%</div>
+                        <div class="text-xs text-slate-600 mt-0.5">Главная стоимость — API OpenAI/Anthropic. Оптимизация промптов = маржа</div>
+                      </div>
+                    </label>
+                    <label class="rm-task flex items-start gap-2.5 cursor-pointer group">
+                      <input type="checkbox" class="rm-cb mt-0.5 h-4 w-4 accent-emerald-500 shrink-0" data-id="p4_churn">
+                      <div>
+                        <div class="rm-label text-sm text-slate-300 group-hover:text-white transition-colors">Churn &lt; 1.5%/мес, NRR > 110%</div>
+                        <div class="text-xs text-slate-600 mt-0.5">Низкий чёрн = высокая оценка. NRR > 100% = экспансия внутри базы</div>
+                      </div>
+                    </label>
+                    <label class="rm-task flex items-start gap-2.5 cursor-pointer group">
+                      <input type="checkbox" class="rm-cb mt-0.5 h-4 w-4 accent-emerald-500 shrink-0" data-id="p4_ltvcac">
+                      <div>
+                        <div class="rm-label text-sm text-slate-300 group-hover:text-white transition-colors">LTV/CAC > 3x задокументировано по когортам</div>
+                        <div class="text-xs text-slate-600 mt-0.5">Когортный анализ за 18+ месяцев — главное для due diligence инвестора</div>
+                      </div>
+                    </label>
+                  </div>
+                </div>
+
+                <div class="rm-group">
+                  <div class="text-xs font-semibold text-emerald-400 uppercase tracking-wider mb-2">⚖️ Юридическая подготовка</div>
+                  <div class="space-y-2">
+                    <label class="rm-task flex items-start gap-2.5 cursor-pointer group">
+                      <input type="checkbox" class="rm-cb mt-0.5 h-4 w-4 accent-emerald-500 shrink-0" data-id="p4_ip">
+                      <div>
+                        <div class="rm-label text-sm text-slate-300 group-hover:text-white transition-colors">Весь IP и торговые марки на юрлице</div>
+                        <div class="text-xs text-slate-600 mt-0.5">Код, домены, торговые марки — всё оформлено на ООО. Чистый cap table</div>
+                      </div>
+                    </label>
+                    <label class="rm-task flex items-start gap-2.5 cursor-pointer group">
+                      <input type="checkbox" class="rm-cb mt-0.5 h-4 w-4 accent-emerald-500 shrink-0" data-id="p4_contracts">
+                      <div>
+                        <div class="rm-label text-sm text-slate-300 group-hover:text-white transition-colors">Стандартные клиентские договоры: оферта + DPA</div>
+                        <div class="text-xs text-slate-600 mt-0.5">Data Processing Agreement для GDPR/152-ФЗ — снимает риски для покупателя</div>
+                      </div>
+                    </label>
+                    <label class="rm-task flex items-start gap-2.5 cursor-pointer group">
+                      <input type="checkbox" class="rm-cb mt-0.5 h-4 w-4 accent-emerald-500 shrink-0" data-id="p4_finaudit">
+                      <div>
+                        <div class="rm-label text-sm text-slate-300 group-hover:text-white transition-colors">Финансовый аудит 2 лет, МСФО/РСБУ</div>
+                        <div class="text-xs text-slate-600 mt-0.5">Аудированная отчётность = более высокий мультипликатор оценки</div>
+                      </div>
+                    </label>
+                  </div>
+                </div>
+              </div>
+
+              <div class="space-y-4">
+                <div class="rm-group">
+                  <div class="text-xs font-semibold text-emerald-400 uppercase tracking-wider mb-2">🤝 Стратегия выхода</div>
+                  <div class="space-y-2">
+                    <label class="rm-task flex items-start gap-2.5 cursor-pointer group">
+                      <input type="checkbox" class="rm-cb mt-0.5 h-4 w-4 accent-emerald-500 shrink-0" data-id="p4_buyers">
+                      <div>
+                        <div class="rm-label text-sm text-slate-300 group-hover:text-white transition-colors">Шорт-лист стратегических покупателей</div>
+                        <div class="text-xs text-slate-600 mt-0.5">AmoCRM, Bitrix24, Сбер AI, VK Tech, Mail Group — выход в их экосистему</div>
+                      </div>
+                    </label>
+                    <label class="rm-task flex items-start gap-2.5 cursor-pointer group">
+                      <input type="checkbox" class="rm-cb mt-0.5 h-4 w-4 accent-emerald-500 shrink-0" data-id="p4_broker">
+                      <div>
+                        <div class="rm-label text-sm text-slate-300 group-hover:text-white transition-colors">M&amp;A брокер или инвестиционный банк</div>
+                        <div class="text-xs text-slate-600 mt-0.5">Финансовые советники увеличивают финальную цену на 20–40%</div>
+                      </div>
+                    </label>
+                    <label class="rm-task flex items-start gap-2.5 cursor-pointer group">
+                      <input type="checkbox" class="rm-cb mt-0.5 h-4 w-4 accent-emerald-500 shrink-0" data-id="p4_dataroom">
+                      <div>
+                        <div class="rm-label text-sm text-slate-300 group-hover:text-white transition-colors">Data room готов за 2 недели по запросу</div>
+                        <div class="text-xs text-slate-600 mt-0.5">Финмодель, техдок, клиентские метрики, кодовая база, юрдоки — всё в порядке</div>
+                      </div>
+                    </label>
+                    <label class="rm-task flex items-start gap-2.5 cursor-pointer group">
+                      <input type="checkbox" class="rm-cb mt-0.5 h-4 w-4 accent-emerald-500 shrink-0" data-id="p4_pr">
+                      <div>
+                        <div class="rm-label text-sm text-slate-300 group-hover:text-white transition-colors">PR: Forbes, VC.ru, TechCrunch, конференции</div>
+                        <div class="text-xs text-slate-600 mt-0.5">Видимость повышает оценку и привлекает покупателей без брокера</div>
+                      </div>
+                    </label>
+                  </div>
+                </div>
+
+                <div class="rm-group">
+                  <div class="text-xs font-semibold text-emerald-400 uppercase tracking-wider mb-2">🔧 Техническая готовность</div>
+                  <div class="space-y-2">
+                    <label class="rm-task flex items-start gap-2.5 cursor-pointer group">
+                      <input type="checkbox" class="rm-cb mt-0.5 h-4 w-4 accent-emerald-500 shrink-0" data-id="p4_tests">
+                      <div>
+                        <div class="rm-label text-sm text-slate-300 group-hover:text-white transition-colors">Тест-покрытие > 70%, документация кода</div>
+                        <div class="text-xs text-slate-600 mt-0.5">Технический due diligence — чистый код снижает риски и повышает оценку</div>
+                      </div>
+                    </label>
+                    <label class="rm-task flex items-start gap-2.5 cursor-pointer group">
+                      <input type="checkbox" class="rm-cb mt-0.5 h-4 w-4 accent-emerald-500 shrink-0" data-id="p4_runbook">
+                      <div>
+                        <div class="rm-label text-sm text-slate-300 group-hover:text-white transition-colors">Runbook передачи: новый владелец запускает за 1 день</div>
+                        <div class="text-xs text-slate-600 mt-0.5">Документация деплоя, мониторинга, поддержки — без зависимости от основателя</div>
+                      </div>
+                    </label>
+                  </div>
+                </div>
+
+                <div class="rounded-lg border border-emerald-500/20 bg-emerald-950/30 p-3">
+                  <div class="text-xs font-semibold text-emerald-400 mb-1">💰 Ориентиры сделки</div>
+                  <div class="text-xs text-slate-400 space-y-0.5">
+                    <div>· Оценка: x8–x15 ARR = $5M–$20M</div>
+                    <div>· Стратег платит больше финансового инвестора</div>
+                    <div>· Earnout 1–2 года = доп. $1–3M при росте</div>
+                    <div>· Лучшее время — после 2 лет роста MRR</div>
+                  </div>
+                </div>
+              </div>
+
+            </div>
+          </div>
+        </div>
+
+      </div><!-- /max-w -->
+    </section><!-- /view-roadmap -->
+
+
+    <!-- ─── VIEW: prompts ──────────────────────────────────────────── -->
+    <section id="view-prompts" class="hidden flex-1 p-6 space-y-6 max-w-3xl">
+      <div class="text-lg font-semibold text-slate-100">🧠 Промпты классификатора и ответчика</div>
+      <p class="text-sm text-slate-400">Изменения применяются к следующему сообщению без перезапуска бота. Пустые поля = используется встроенный дефолт.</p>
+
+      <div class="rounded-xl border border-slate-700 bg-slate-800/50 p-5 space-y-4">
+        <div class="text-sm font-semibold text-slate-200">Дополнение к промпту классификатора</div>
+        <p class="text-xs text-slate-500">Добавляется в конец системного промпта классификатора. Здесь можно уточнить специфику твоего бизнеса, исключения, примеры.</p>
+        <textarea id="promptClassifierExtra" rows="5"
+          class="w-full rounded-lg border border-slate-600 bg-slate-900 px-3 py-2 text-sm text-slate-200 placeholder-slate-600 focus:outline-none focus:border-indigo-500"
+          placeholder="Например: Если упоминается «корпоратив» или «команда» — это PRODUCT_INTEREST, даже без явного интереса к курсу."></textarea>
+      </div>
+
+      <div class="rounded-xl border border-slate-700 bg-slate-800/50 p-5 space-y-4">
+        <div class="text-sm font-semibold text-slate-200">Тон ответов (tone of voice)</div>
+        <p class="text-xs text-slate-500">Заменяет дефолтный блок стиля. Опиши как должен говорить ассистент.</p>
+        <textarea id="promptTone" rows="10"
+          class="w-full rounded-lg border border-slate-600 bg-slate-900 px-3 py-2 text-sm text-slate-200 placeholder-slate-600 focus:outline-none focus:border-indigo-500"
+          placeholder="Стиль:
+- живой, уверенный..."></textarea>
+      </div>
+
+      <div class="rounded-xl border border-slate-700 bg-slate-800/50 p-5 space-y-4">
+        <div class="text-sm font-semibold text-slate-200">Стратегии по классам (JSON)</div>
+        <p class="text-xs text-slate-500">Переопределяет инструкции для конкретных классов сообщений. Ключи: QUESTION, PRODUCT_INTEREST, PRICE_REQUEST, OBJECTION, BUYING_INTENT, SUPPORT_REQUEST.</p>
+        <textarea id="promptStrategies" rows="12"
+          class="w-full rounded-lg border border-slate-600 bg-slate-900 px-3 py-2 font-mono text-sm text-slate-200 placeholder-slate-600 focus:outline-none focus:border-indigo-500"
+          placeholder='{"PRICE_REQUEST": "Назови цену и дай ссылку на оплату."}' spellcheck="false"></textarea>
+        <div id="promptStrategiesError" class="text-xs text-red-400 hidden">Невалидный JSON</div>
+      </div>
+
+      <div class="flex items-center gap-3">
+        <button onclick="savePrompts()" class="rounded-lg bg-indigo-600 px-5 py-2 text-sm font-medium text-white hover:bg-indigo-500">Сохранить</button>
+        <button onclick="resetPrompts()" class="rounded-lg border border-slate-600 px-5 py-2 text-sm font-medium text-slate-300 hover:border-slate-400">Сбросить к дефолту</button>
+        <span id="promptSaveStatus" class="text-xs text-slate-500 h-4"></span>
+      </div>
+    </section><!-- /view-prompts -->
+
+    <!-- ─── VIEW: projects ───────────────────────────────────────────── -->
+    <section id="view-projects" class="hidden flex-1 flex gap-4 p-6 min-h-0 overflow-hidden">
+      <!-- left: project list -->
+      <div class="w-56 shrink-0 flex flex-col gap-2">
+        <div class="text-xs font-semibold text-slate-500 uppercase tracking-wide mb-1">Проекты</div>
+        <div id="projectsList" class="flex flex-col gap-1 overflow-y-auto"></div>
+      </div>
+      <!-- right: report viewer -->
+      <div class="flex-1 flex flex-col min-w-0">
+        <div id="projectTitle" class="text-sm font-semibold text-slate-300 mb-3 hidden"></div>
+        <div id="projectTabs" class="hidden flex gap-1 mb-4 flex-wrap">
+          <button onclick="loadReport('1-диалоги.md')"         class="proj-tab px-3 py-1.5 rounded-lg text-xs font-medium bg-slate-700 text-slate-300 hover:bg-slate-600">📊 Диалоги</button>
+          <button onclick="loadReport('2-участники.md')"       class="proj-tab px-3 py-1.5 rounded-lg text-xs font-medium bg-slate-700 text-slate-300 hover:bg-slate-600">👥 Участники</button>
+          <button onclick="loadReport('3-срочные-вопросы.md')" class="proj-tab px-3 py-1.5 rounded-lg text-xs font-medium bg-slate-700 text-slate-300 hover:bg-slate-600">⚠️ Срочные</button>
+          <button onclick="loadReport('4-рекомендации.md')"    class="proj-tab px-3 py-1.5 rounded-lg text-xs font-medium bg-slate-700 text-slate-300 hover:bg-slate-600">💡 Рекомендации</button>
+          <button onclick="loadReport('5-проблемы.md')"        class="proj-tab px-3 py-1.5 rounded-lg text-xs font-medium bg-slate-700 text-slate-300 hover:bg-slate-600">🔴 Проблемы</button>
+          <button onclick="loadReport('archive')"               class="proj-tab px-3 py-1.5 rounded-lg text-xs font-medium bg-slate-700 text-slate-300 hover:bg-slate-600">📅 Архив</button>
+        </div>
+        <div id="projectEmpty" class="text-slate-500 text-sm mt-8">← Выберите проект</div>
+        <div id="projectContent" class="hidden flex-1 overflow-y-auto rounded-xl border border-slate-700 bg-slate-900 p-5">
+          <pre id="projectText" class="text-sm text-slate-300 whitespace-pre-wrap font-mono leading-relaxed"></pre>
+        </div>
+        <div id="archiveList" class="hidden flex-col gap-2"></div>
+      </div>
+    </section><!-- /view-projects -->
+
+
+  </div><!-- /main area -->
 
   <script>
-    // ─── shared palettes ────────────────────────────────────────
+    // ─── shared palettes ──────────────────────────────────────────────────────
     const STATUS_LABEL = {
       new: 'Новый', cold: 'Холодный', warm: 'Тёплый', hot: 'Горячий',
       buyer: 'Купил', support: 'Поддержка', negative: 'Негатив',
@@ -136,54 +1175,35 @@
       negative: 'bg-rose-500/15 text-rose-300',
     };
     const STATUS_BAR = {
-      new: 'bg-slate-600',     cold: 'bg-sky-500',
-      warm: 'bg-amber-500',    hot: 'bg-orange-500',
-      buyer: 'bg-emerald-500', support: 'bg-indigo-500',
-      negative: 'bg-rose-500',
+      new: 'bg-slate-600', cold: 'bg-sky-500', warm: 'bg-amber-500', hot: 'bg-orange-500',
+      buyer: 'bg-emerald-500', support: 'bg-indigo-500', negative: 'bg-rose-500',
     };
     const CLASS_COLOR = {
-      GENERAL_CHAT: 'text-slate-400',
-      QUESTION: 'text-sky-300',
-      PRODUCT_INTEREST: 'text-amber-300',
-      PRICE_REQUEST: 'text-orange-300',
-      OBJECTION: 'text-rose-300',
-      BUYING_INTENT: 'text-emerald-300',
-      NEGATIVE: 'text-rose-400',
-      SUPPORT_REQUEST: 'text-indigo-300',
-      OWNER_REQUEST: 'text-fuchsia-300',
-      SPAM: 'text-slate-500',
+      GENERAL_CHAT: 'text-slate-400', QUESTION: 'text-sky-300', PRODUCT_INTEREST: 'text-amber-300',
+      PRICE_REQUEST: 'text-orange-300', OBJECTION: 'text-rose-300', BUYING_INTENT: 'text-emerald-300',
+      NEGATIVE: 'text-rose-400', SUPPORT_REQUEST: 'text-indigo-300', OWNER_REQUEST: 'text-fuchsia-300', SPAM: 'text-slate-500',
     };
     const ACTION_COLOR = {
-      IGNORE: 'bg-slate-700/40 text-slate-400',
-      REPLY: 'bg-sky-500/15 text-sky-300',
-      REPLY_SOFT: 'bg-cyan-500/15 text-cyan-300',
-      REPLY_AND_NOTIFY: 'bg-orange-500/20 text-orange-300',
-      NOTIFY_ONLY: 'bg-amber-500/15 text-amber-300',
-      DRAFT_FOR_OWNER: 'bg-violet-500/15 text-violet-300',
+      IGNORE: 'bg-slate-700/40 text-slate-400', REPLY: 'bg-sky-500/15 text-sky-300',
+      REPLY_SOFT: 'bg-cyan-500/15 text-cyan-300', REPLY_AND_NOTIFY: 'bg-orange-500/20 text-orange-300',
+      NOTIFY_ONLY: 'bg-amber-500/15 text-amber-300', DRAFT_FOR_OWNER: 'bg-violet-500/15 text-violet-300',
     };
     const DRAFT_STATUS_COLOR = {
-      pending: 'bg-amber-500/15 text-amber-300',
-      editing: 'bg-violet-500/15 text-violet-300',
-      sent: 'bg-emerald-500/15 text-emerald-300',
-      deleted: 'bg-slate-700/40 text-slate-400',
+      pending: 'bg-amber-500/15 text-amber-300', editing: 'bg-violet-500/15 text-violet-300',
+      sent: 'bg-emerald-500/15 text-emerald-300', deleted: 'bg-slate-700/40 text-slate-400',
     };
-    const DRAFT_STATUS_LABEL = {
-      pending: 'Ждёт', editing: 'Редактируется', sent: 'Отправлено', deleted: 'Удалено',
-    };
+    const DRAFT_STATUS_LABEL = { pending: 'Ждёт', editing: 'Редактируется', sent: 'Отправлено', deleted: 'Удалено' };
 
-    // ─── state ─────────────────────────────────────────────────
+    // ─── state ────────────────────────────────────────────────────────────────
     const state = {
       view: 'chats',
-      // chats
       chats: [], selectedId: null, tab: 'messages', messages: [], users: [],
-      // drafts
       draftFilter: 'all', drafts: [],
-      // analytics
       analytics: null,
     };
 
     const $ = (id) => document.getElementById(id);
-    const escapeHtml = (s) => String(s ?? '').replace(/[&<>"']/g, (c) => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' }[c]));
+    const escapeHtml = (s) => String(s ?? '').replace(/[&<>"']/g, (c) => ({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]));
 
     function formatRelative(iso) {
       const t = new Date(iso).getTime();
@@ -200,24 +1220,18 @@
       const handle = u.username ? '@' + u.username : null;
       const name = [u.first_name, u.last_name].filter(Boolean).join(' ').trim() || null;
       if (handle && name) return handle + ' (' + name + ')';
-      if (handle) return handle;
-      if (name) return name;
-      return 'user ' + u.user_id;
+      return handle || name || 'user ' + u.user_id;
     }
 
     function showError(msg) {
       const el = $('error');
       if (!msg) { el.classList.add('hidden'); return; }
-      el.textContent = msg;
-      el.classList.remove('hidden');
+      el.textContent = msg; el.classList.remove('hidden');
     }
 
     async function fetchJson(url, options) {
       const res = await fetch(url, { cache: 'no-store', credentials: 'same-origin', ...(options || {}) });
-      if (res.status === 401) {
-        location.href = '/login';
-        throw new Error('unauthenticated');
-      }
+      if (res.status === 401) { location.href = '/login'; throw new Error('unauthenticated'); }
       const text = await res.text();
       let data = null;
       try { data = text ? JSON.parse(text) : null; } catch (_) {}
@@ -225,15 +1239,15 @@
       return data;
     }
 
-    // ─── view routing ──────────────────────────────────────────
+    // ─── view routing ─────────────────────────────────────────────────────────
+    const ALL_VIEWS = ['chats','drafts','analytics','pipeline','demo','billing','kb','prompts','projects','roadmap'];
+
     function switchView(view) {
       state.view = view;
-      ['chats', 'drafts', 'analytics'].forEach((v) => {
-        $('view-' + v).classList.toggle('hidden', v !== view);
-      });
+      ALL_VIEWS.forEach((v) => { const el = $('view-' + v); if (el) el.classList.toggle('hidden', v !== view); });
       document.querySelectorAll('.view-btn').forEach((b) => {
         const active = b.getAttribute('data-view') === view;
-        b.className = 'view-btn rounded-md px-3 py-1 ' + (active ? 'bg-slate-800 text-slate-100' : 'text-slate-400 hover:text-slate-200');
+        b.className = 'view-btn flex items-center gap-2.5 w-full rounded-lg px-3 py-2 text-sm ' + (active ? 'view-btn-active' : 'view-btn-idle');
       });
       refresh();
     }
@@ -242,22 +1256,21 @@
       showError(null);
       $('status').textContent = '· загрузка…';
       try {
-        if (state.view === 'chats') {
-          await loadChats();
-          if (state.selectedId) await loadDetail(state.selectedId);
-        } else if (state.view === 'drafts') {
-          await loadDrafts();
-        } else if (state.view === 'analytics') {
-          await loadAnalytics();
-        }
+        if      (state.view === 'chats')     { await loadChats(); if (state.selectedId) await loadDetail(state.selectedId); }
+        else if (state.view === 'drafts')    { await loadDrafts(); }
+        else if (state.view === 'analytics') { await loadAnalytics(); }
+        else if (state.view === 'pipeline')  { await loadPipeline(); }
+        else if (state.view === 'demo')      { await loadDemo(); }
+        else if (state.view === 'billing')   { await loadBilling(); }
+        else if (state.view === 'kb')        { await loadKb(); }
+        else if (state.view === 'prompts')   { await loadPrompts(); }
+        else if (state.view === 'projects')  { await loadProjects(); }
+        else if (state.view === 'roadmap')   { rmInitCheckboxes(); }
         $('status').textContent = '· обновлено ' + new Date().toLocaleTimeString('ru-RU');
-      } catch (e) {
-        showError(e.message);
-        $('status').textContent = '';
-      }
+      } catch (e) { showError(e.message); $('status').textContent = ''; }
     }
 
-    // ─── CHATS view ────────────────────────────────────────────
+    // ─── CHATS view ───────────────────────────────────────────────────────────
     async function loadChats() {
       const data = await fetchJson('/api/chats');
       state.chats = data.items || [];
@@ -266,170 +1279,100 @@
     }
 
     async function loadDetail(chatId) {
-      $('detailEmpty').classList.add('hidden');
-      $('detailBody').classList.remove('hidden');
-      const [m, u] = await Promise.all([
-        fetchJson('/api/chats/' + chatId + '/messages?limit=50'),
-        fetchJson('/api/chats/' + chatId + '/users'),
-      ]);
-      state.messages = m.items || [];
-      state.users = u.items || [];
+      $('detailEmpty').classList.add('hidden'); $('detailBody').classList.remove('hidden');
+      const [m, u] = await Promise.all([fetchJson('/api/chats/'+chatId+'/messages?limit=50'), fetchJson('/api/chats/'+chatId+'/users')]);
+      state.messages = m.items || []; state.users = u.items || [];
       renderDetail();
     }
 
-    function selectChat(chatId) {
-      state.selectedId = chatId;
-      renderChats();
-      loadDetail(chatId).catch((e) => showError(e.message));
-    }
+    function selectChat(chatId) { state.selectedId = chatId; renderChats(); loadDetail(chatId).catch((e) => showError(e.message)); }
 
     async function toggleAutoReply(chat, ev) {
       ev.stopPropagation();
       try {
-        const data = await fetchJson('/api/chats/' + chat.chat_id, {
-          method: 'PATCH',
-          headers: { 'Content-Type': 'application/json' },
-          body: JSON.stringify({ auto_reply: !chat.auto_reply }),
-        });
+        const data = await fetchJson('/api/chats/'+chat.chat_id, { method:'PATCH', headers:{'Content-Type':'application/json'}, body: JSON.stringify({auto_reply:!chat.auto_reply}) });
         chat.auto_reply = data.auto_reply ? 1 : 0;
         renderChats();
         if (state.selectedId === chat.chat_id) renderDetail();
-      } catch (e) {
-        showError(e.message);
-      }
+      } catch (e) { showError(e.message); }
     }
 
     function renderChats() {
       const list = $('chatList');
-      if (state.chats.length === 0) {
-        list.innerHTML = '';
-        $('chatEmpty').classList.remove('hidden');
-        return;
-      }
+      if (!state.chats.length) { list.innerHTML=''; $('chatEmpty').classList.remove('hidden'); return; }
       $('chatEmpty').classList.add('hidden');
-
       list.innerHTML = state.chats.map((chat) => {
-        const selected = chat.chat_id === state.selectedId;
-        const title = escapeHtml(chat.title || ('Чат ' + chat.chat_id));
+        const sel = chat.chat_id === state.selectedId;
+        const title = escapeHtml(chat.title || ('Чат '+chat.chat_id));
         const last = chat.last_message_at ? formatRelative(chat.last_message_at) : '';
-        const hot = chat.hot_leads || 0;
         const on = !!chat.auto_reply;
-        return `
-          <li>
-            <button data-chat-id="${chat.chat_id}"
-              class="chat-btn group w-full rounded-lg border px-4 py-3 text-left transition ${
-                selected ? 'border-indigo-500/40 bg-indigo-500/5' : 'border-slate-800 bg-slate-900/40 hover:border-slate-700 hover:bg-slate-900/60'
-              }">
-              <div class="flex items-start justify-between gap-3">
-                <div class="min-w-0 flex-1">
-                  <div class="truncate text-sm font-medium text-slate-100">${title}</div>
-                  <div class="mt-1 truncate text-xs text-slate-500">id ${chat.chat_id}</div>
-                </div>
-                <span data-toggle="${chat.chat_id}"
-                  title="${on ? 'Авто-ответы ВКЛ' : 'Авто-ответы ВЫКЛ'}"
-                  class="toggle relative inline-flex h-5 w-9 shrink-0 cursor-pointer items-center rounded-full transition ${
-                    on ? 'bg-indigo-500' : 'bg-slate-700'
-                  }">
-                  <span class="inline-block h-4 w-4 transform rounded-full bg-white transition ${
-                    on ? 'translate-x-4' : 'translate-x-0.5'
-                  }"></span>
-                </span>
-              </div>
-              <div class="mt-3 flex flex-wrap items-center gap-3 text-xs text-slate-400">
-                <span>💬 ${chat.total_messages || 0}</span>
-                <span class="${hot > 0 ? 'text-orange-300' : ''}">🔥 ${hot}</span>
-                ${last ? `<span class="ml-auto text-slate-500">${last}</span>` : ''}
-              </div>
-            </button>
-          </li>`;
+        return `<li><button data-chat-id="${chat.chat_id}"
+          class="chat-btn group w-full rounded-lg border px-4 py-3 text-left transition ${sel ? 'border-indigo-500/40 bg-indigo-500/5' : 'border-slate-800 bg-slate-900/40 hover:border-slate-700 hover:bg-slate-900/60'}">
+          <div class="flex items-start justify-between gap-3">
+            <div class="min-w-0 flex-1"><div class="truncate text-sm font-medium text-slate-100">${title}</div><div class="mt-1 truncate text-xs text-slate-500">id ${chat.chat_id}</div></div>
+            <span data-toggle="${chat.chat_id}" title="${on ? 'ВКЛ' : 'ВЫКЛ'}" class="toggle relative inline-flex h-5 w-9 shrink-0 cursor-pointer items-center rounded-full transition ${on ? 'bg-indigo-500' : 'bg-slate-700'}">
+              <span class="inline-block h-4 w-4 transform rounded-full bg-white transition ${on ? 'translate-x-4' : 'translate-x-0.5'}"></span>
+            </span>
+          </div>
+          <div class="mt-3 flex flex-wrap items-center gap-3 text-xs text-slate-400">
+            <span>💬 ${chat.total_messages||0}</span>
+            <span class="${chat.hot_leads>0?'text-orange-300':''}">🔥 ${chat.hot_leads||0}</span>
+            ${last ? `<span class="ml-auto text-slate-500">${last}</span>` : ''}
+          </div>
+        </button></li>`;
       }).join('');
-
-      list.querySelectorAll('.chat-btn').forEach((btn) => {
-        const id = Number(btn.getAttribute('data-chat-id'));
-        btn.addEventListener('click', () => selectChat(id));
-      });
-      list.querySelectorAll('.toggle').forEach((el) => {
-        const id = Number(el.getAttribute('data-toggle'));
-        const chat = state.chats.find((c) => c.chat_id === id);
-        if (chat) el.addEventListener('click', (ev) => toggleAutoReply(chat, ev));
-      });
+      list.querySelectorAll('.chat-btn').forEach((btn) => { const id=Number(btn.getAttribute('data-chat-id')); btn.addEventListener('click',()=>selectChat(id)); });
+      list.querySelectorAll('.toggle').forEach((el) => { const id=Number(el.getAttribute('data-toggle')); const chat=state.chats.find(c=>c.chat_id===id); if(chat) el.addEventListener('click',(ev)=>toggleAutoReply(chat,ev)); });
     }
 
     function renderDetail() {
-      const chat = state.chats.find((c) => c.chat_id === state.selectedId);
-      if (!chat) {
-        $('detailBody').classList.add('hidden');
-        $('detailEmpty').classList.remove('hidden');
-        return;
-      }
-      $('chatTitle').textContent = chat.title || ('Чат ' + chat.chat_id);
-      $('chatMeta').textContent = 'id ' + chat.chat_id + ' · авто-ответы ' + (chat.auto_reply ? 'ВКЛ' : 'ВЫКЛ');
-      document.querySelector('[data-count="messages"]').textContent = '(' + state.messages.length + ')';
-      document.querySelector('[data-count="users"]').textContent = '(' + state.users.length + ')';
-
-      const tabMessages = $('tabMessages');
-      const tabUsers = $('tabUsers');
-      if (state.tab === 'messages') {
-        tabMessages.classList.remove('hidden');
-        tabUsers.classList.add('hidden');
-        tabMessages.innerHTML = renderMessages();
-      } else {
-        tabMessages.classList.add('hidden');
-        tabUsers.classList.remove('hidden');
-        tabUsers.innerHTML = renderUsers();
-      }
-
+      const chat = state.chats.find(c=>c.chat_id===state.selectedId);
+      if (!chat) { $('detailBody').classList.add('hidden'); $('detailEmpty').classList.remove('hidden'); return; }
+      $('chatTitle').textContent = chat.title||('Чат '+chat.chat_id);
+      $('chatMeta').textContent = 'id '+chat.chat_id+' · авто-ответы '+(chat.auto_reply?'ВКЛ':'ВЫКЛ');
+      document.querySelector('[data-count="messages"]').textContent = '('+state.messages.length+')';
+      document.querySelector('[data-count="users"]').textContent = '('+state.users.length+')';
+      const tm=$('tabMessages'); const tu=$('tabUsers');
+      if (state.tab==='messages') { tm.classList.remove('hidden'); tu.classList.add('hidden'); tm.innerHTML=renderMessages(); }
+      else { tm.classList.add('hidden'); tu.classList.remove('hidden'); tu.innerHTML=renderUsers(); }
       document.querySelectorAll('.tab-btn').forEach((btn) => {
-        const active = btn.getAttribute('data-tab') === state.tab;
-        btn.className = 'tab-btn flex items-center gap-1.5 rounded-md px-3 py-1.5 ' + (
-          active ? 'bg-slate-800 text-slate-100' : 'text-slate-400 hover:text-slate-200'
-        );
+        const active = btn.getAttribute('data-tab')===state.tab;
+        btn.className='tab-btn flex items-center gap-1.5 rounded-md px-3 py-1.5 '+(active?'bg-slate-800 text-slate-100':'text-slate-400 hover:text-slate-200');
       });
     }
 
     function renderMessages() {
-      if (state.messages.length === 0) return '<div class="text-sm text-slate-500">Сообщений пока нет.</div>';
-      const userById = new Map(state.users.map((u) => [u.user_id, u]));
-      return '<ul class="space-y-3">' + state.messages.map((m) => {
-        const u = m.user_id != null ? userById.get(m.user_id) : null;
-        const author = u ? formatUser(u) : (m.user_id != null ? 'id ' + m.user_id : 'unknown');
-        const cls = m.class || '';
-        const action = m.action || '';
-        return `
-          <li class="rounded-lg border border-slate-800 bg-slate-900/40 p-3 text-sm">
-            <div class="flex flex-wrap items-center gap-2 text-xs">
-              <span class="text-slate-300">${escapeHtml(author)}</span>
-              <span class="text-slate-600">·</span>
-              <span class="text-slate-500">${formatRelative(m.created_at)}</span>
-              ${cls ? `<span class="text-slate-600">·</span><span class="${CLASS_COLOR[cls] || 'text-slate-400'}">${cls}${m.confidence != null ? ' <span class="text-slate-500">' + Number(m.confidence).toFixed(2) + '</span>' : ''}</span>` : ''}
-              ${action ? `<span class="rounded px-1.5 py-0.5 text-[10px] font-medium ${ACTION_COLOR[action] || 'bg-slate-700/40 text-slate-300'}">${action}</span>` : ''}
-            </div>
-            <div class="mt-2 whitespace-pre-wrap text-slate-200">${escapeHtml(m.text)}</div>
-            ${m.response ? `<div class="mt-3 rounded-md border-l-2 border-indigo-500/40 bg-indigo-500/5 px-3 py-2"><div class="text-xs text-indigo-300">→ Ответ бота</div><div class="mt-1 whitespace-pre-wrap text-sm text-slate-200">${escapeHtml(m.response)}</div></div>` : ''}
-            ${m.reasoning ? `<div class="mt-2 text-xs italic text-slate-500">${escapeHtml(m.reasoning)}</div>` : ''}
-          </li>`;
-      }).join('') + '</ul>';
+      if (!state.messages.length) return '<div class="text-sm text-slate-500">Сообщений пока нет.</div>';
+      const userById = new Map(state.users.map(u=>[u.user_id,u]));
+      return '<ul class="space-y-3">'+state.messages.map((m) => {
+        const u = m.user_id!=null ? userById.get(m.user_id) : null;
+        const author = u ? formatUser(u) : (m.user_id!=null?'id '+m.user_id:'unknown');
+        return `<li class="rounded-lg border border-slate-800 bg-slate-900/40 p-3 text-sm">
+          <div class="flex flex-wrap items-center gap-2 text-xs">
+            <span class="text-slate-300">${escapeHtml(author)}</span>
+            <span class="text-slate-600">·</span><span class="text-slate-500">${formatRelative(m.created_at)}</span>
+            ${m.class?`<span class="text-slate-600">·</span><span class="${CLASS_COLOR[m.class]||'text-slate-400'}">${m.class}</span>`:''}
+            ${m.action?`<span class="rounded px-1.5 py-0.5 text-[10px] font-medium ${ACTION_COLOR[m.action]||'bg-slate-700/40 text-slate-300'}">${m.action}</span>`:''}
+          </div>
+          <div class="mt-2 whitespace-pre-wrap text-slate-200">${escapeHtml(m.text)}</div>
+          ${m.response?`<div class="mt-3 rounded-md border-l-2 border-indigo-500/40 bg-indigo-500/5 px-3 py-2"><div class="text-xs text-indigo-300">→ Ответ бота</div><div class="mt-1 whitespace-pre-wrap text-sm text-slate-200">${escapeHtml(m.response)}</div></div>`:''}
+          ${m.reasoning?`<div class="mt-2 text-xs italic text-slate-500">${escapeHtml(m.reasoning)}</div>`:''}
+        </li>`;
+      }).join('')+'</ul>';
     }
 
     function renderUsers() {
-      if (state.users.length === 0) return '<div class="text-sm text-slate-500">Пользователей пока нет.</div>';
-      return '<ul class="divide-y divide-slate-800 rounded-lg border border-slate-800">' + state.users.map((u) => `
+      if (!state.users.length) return '<div class="text-sm text-slate-500">Пользователей пока нет.</div>';
+      return '<ul class="divide-y divide-slate-800 rounded-lg border border-slate-800">'+state.users.map(u=>`
         <li class="flex flex-wrap items-center justify-between gap-3 px-4 py-3 text-sm">
-          <div class="min-w-0 flex-1">
-            <div class="truncate text-slate-100">${escapeHtml(formatUser(u))}</div>
-            <div class="truncate text-xs text-slate-500">был ${formatRelative(u.last_seen_at)} · id ${u.user_id}</div>
-          </div>
-          <span class="shrink-0 rounded-full px-2 py-0.5 text-xs ${STATUS_COLOR[u.status] || 'bg-slate-700/40 text-slate-300'}">
-            ${STATUS_LABEL[u.status] || u.status}
-          </span>
-        </li>`).join('') + '</ul>';
+          <div class="min-w-0 flex-1"><div class="truncate text-slate-100">${escapeHtml(formatUser(u))}</div><div class="truncate text-xs text-slate-500">был ${formatRelative(u.last_seen_at)} · id ${u.user_id}</div></div>
+          <span class="shrink-0 rounded-full px-2 py-0.5 text-xs ${STATUS_COLOR[u.status]||'bg-slate-700/40 text-slate-300'}">${STATUS_LABEL[u.status]||u.status}</span>
+        </li>`).join('')+'</ul>';
     }
 
-    // ─── DRAFTS view ───────────────────────────────────────────
+    // ─── DRAFTS view ──────────────────────────────────────────────────────────
     async function loadDrafts() {
-      const url = state.draftFilter === 'all'
-        ? '/api/drafts?limit=100'
-        : '/api/drafts?limit=100&status=' + state.draftFilter;
+      const url = state.draftFilter==='all' ? '/api/drafts?limit=100' : '/api/drafts?limit=100&status='+state.draftFilter;
       const data = await fetchJson(url);
       state.drafts = data.items || [];
       renderDrafts();
@@ -437,142 +1380,354 @@
 
     function renderDrafts() {
       document.querySelectorAll('.draft-filter').forEach((b) => {
-        const active = b.getAttribute('data-draft-filter') === state.draftFilter;
-        b.className = 'draft-filter rounded-md px-3 py-1 ' + (active ? 'bg-slate-800 text-slate-100' : 'text-slate-400 hover:text-slate-200');
+        const active = b.getAttribute('data-draft-filter')===state.draftFilter;
+        b.className='draft-filter rounded-md px-3 py-1 '+(active?'bg-slate-800 text-slate-100':'text-slate-400 hover:text-slate-200');
       });
-
-      const list = $('draftsList');
-      if (state.drafts.length === 0) {
-        list.innerHTML = '<li class="rounded-lg border border-slate-800 bg-slate-900/40 p-6 text-sm text-slate-500">Черновиков нет.</li>';
-        return;
-      }
-
-      list.innerHTML = state.drafts.map((d) => `
+      const list=$('draftsList');
+      if (!state.drafts.length) { list.innerHTML='<li class="rounded-lg border border-slate-800 bg-slate-900/40 p-6 text-sm text-slate-500">Черновиков нет.</li>'; return; }
+      list.innerHTML = state.drafts.map(d=>`
         <li class="rounded-lg border border-slate-800 bg-slate-900/40 p-4 text-sm">
           <div class="flex flex-wrap items-center gap-2 text-xs">
-            <span class="rounded px-1.5 py-0.5 text-[10px] font-medium ${DRAFT_STATUS_COLOR[d.status] || ''}">${DRAFT_STATUS_LABEL[d.status] || d.status}</span>
+            <span class="rounded px-1.5 py-0.5 text-[10px] font-medium ${DRAFT_STATUS_COLOR[d.status]||''}">${DRAFT_STATUS_LABEL[d.status]||d.status}</span>
             <span class="text-slate-500">${formatRelative(d.created_at)}</span>
-            <span class="text-slate-600">·</span>
-            <span class="text-slate-500">чат ${d.chat_id}</span>
-            ${d.message_class ? `<span class="text-slate-600">·</span><span class="${CLASS_COLOR[d.message_class] || 'text-slate-400'}">${d.message_class}</span>` : ''}
+            <span class="text-slate-600">·</span><span class="text-slate-500">чат ${d.chat_id}</span>
+            ${d.message_class?`<span class="text-slate-600">·</span><span class="${CLASS_COLOR[d.message_class]||'text-slate-400'}">${d.message_class}</span>`:''}
           </div>
           <div class="mt-3 rounded-md border-l-2 border-violet-500/40 bg-violet-500/5 px-3 py-2">
             <div class="text-xs text-violet-300">Черновик</div>
             <div class="mt-1 whitespace-pre-wrap text-slate-200">${escapeHtml(d.draft_text)}</div>
           </div>
-          ${d.sent_reply_text && d.sent_reply_text !== d.draft_text ? `
-            <div class="mt-2 rounded-md border-l-2 border-emerald-500/40 bg-emerald-500/5 px-3 py-2">
-              <div class="text-xs text-emerald-300">Отправлено в чат (изменено)</div>
-              <div class="mt-1 whitespace-pre-wrap text-slate-200">${escapeHtml(d.sent_reply_text)}</div>
-            </div>` : ''}
+          ${d.sent_reply_text&&d.sent_reply_text!==d.draft_text?`<div class="mt-2 rounded-md border-l-2 border-emerald-500/40 bg-emerald-500/5 px-3 py-2"><div class="text-xs text-emerald-300">Отправлено (изменено)</div><div class="mt-1 whitespace-pre-wrap text-slate-200">${escapeHtml(d.sent_reply_text)}</div></div>`:''}
         </li>`).join('');
     }
 
-    // ─── ANALYTICS view ────────────────────────────────────────
+    // ─── ANALYTICS view ───────────────────────────────────────────────────────
     async function loadAnalytics() {
-      const [overview, byDay, classes, actions, leads] = await Promise.all([
-        fetchJson('/api/stats/overview'),
-        fetchJson('/api/stats/messages-by-day?days=30'),
-        fetchJson('/api/stats/classes?days=7'),
-        fetchJson('/api/stats/actions?days=7'),
-        fetchJson('/api/stats/leads'),
+      const [overview,byDay,classes,actions,leads] = await Promise.all([
+        fetchJson('/api/stats/overview'), fetchJson('/api/stats/messages-by-day?days=30'),
+        fetchJson('/api/stats/classes?days=7'), fetchJson('/api/stats/actions?days=7'), fetchJson('/api/stats/leads'),
       ]);
-      state.analytics = { overview, byDay: byDay.items, classes: classes.items, actions: actions.items, leads: leads.items };
+      state.analytics = { overview, byDay:byDay.items, classes:classes.items, actions:actions.items, leads:leads.items };
       renderAnalytics();
     }
 
     function renderAnalytics() {
-      const a = state.analytics;
-      if (!a) return;
-
-      // Overview cards
+      const a=state.analytics; if(!a) return;
       const cards = [
-        { label: 'Чатов',         value: a.overview.total_chats,    sub: '' },
-        { label: 'Пользователей', value: a.overview.total_users,    sub: '' },
-        { label: 'Сообщений / 24ч', value: a.overview.messages_24h, sub: a.overview.messages_7d + ' за 7д' },
-        { label: 'Лидов hot+buyer', value: a.overview.hot_leads + a.overview.buyers, sub: a.overview.hot_leads + ' hot · ' + a.overview.buyers + ' buyer' },
-        { label: 'Черновики: ждут', value: a.overview.drafts_pending, sub: a.overview.drafts_editing + ' редактируется' },
-        { label: 'Черновики: отправлены', value: a.overview.drafts_sent, sub: a.overview.drafts_deleted + ' удалены' },
+        {label:'Чатов',value:a.overview.total_chats,sub:''},
+        {label:'Пользователей',value:a.overview.total_users,sub:''},
+        {label:'Сообщений / 24ч',value:a.overview.messages_24h,sub:a.overview.messages_7d+' за 7д'},
+        {label:'Лидов hot+buyer',value:a.overview.hot_leads+a.overview.buyers,sub:a.overview.hot_leads+' hot · '+a.overview.buyers+' buyer'},
+        {label:'Черновики: ждут',value:a.overview.drafts_pending,sub:a.overview.drafts_editing+' редактируется'},
+        {label:'Черновики: отправлены',value:a.overview.drafts_sent,sub:a.overview.drafts_deleted+' удалены'},
       ];
-      $('statCards').innerHTML = cards.map((c) => `
-        <div class="rounded-lg border border-slate-800 bg-slate-900/40 p-3">
-          <div class="text-xs text-slate-500">${c.label}</div>
-          <div class="mt-1 text-2xl font-semibold text-slate-100">${c.value}</div>
-          ${c.sub ? `<div class="mt-0.5 text-[11px] text-slate-500">${c.sub}</div>` : ''}
-        </div>`).join('');
-
-      // Messages by day — vertical bar chart
-      const max = Math.max(1, ...a.byDay.map((b) => b.count));
-      $('chartMessagesByDay').innerHTML = a.byDay.map((b) => {
-        const h = Math.max(2, Math.round((b.count / max) * 100));
-        return `<div title="${b.date}: ${b.count}" class="flex-1 rounded-sm bg-indigo-500/60 hover:bg-indigo-400 transition" style="height:${h}%"></div>`;
-      }).join('');
-      const first = a.byDay[0];
-      const last = a.byDay[a.byDay.length - 1];
-      $('chartMessagesByDayLegend').innerHTML = `<span>${first ? first.date : ''}</span><span>${last ? last.date : ''}</span>`;
-
-      // Lead funnel — horizontal bars in fixed order
-      const leadMax = Math.max(1, ...a.leads.map((l) => l.count));
-      $('chartLeadFunnel').innerHTML = a.leads.map((l) => {
-        const w = Math.round((l.count / leadMax) * 100);
-        return `
-          <div class="flex items-center gap-2 text-xs">
-            <div class="w-20 shrink-0 text-slate-400">${STATUS_LABEL[l.status] || l.status}</div>
-            <div class="relative h-5 flex-1 overflow-hidden rounded bg-slate-800">
-              <div class="h-full ${STATUS_BAR[l.status] || 'bg-slate-500'}" style="width:${w}%"></div>
-            </div>
-            <div class="w-12 shrink-0 text-right text-slate-300">${l.count}</div>
-          </div>`;
-      }).join('');
-
-      // Class distribution
-      const clMax = Math.max(1, ...a.classes.map((c) => c.count));
-      $('chartClasses').innerHTML = a.classes.length === 0
-        ? '<div class="text-sm text-slate-500">Нет данных</div>'
-        : a.classes.map((c) => {
-            const w = Math.round((c.count / clMax) * 100);
-            return `
-              <div class="flex items-center gap-2 text-xs">
-                <div class="w-32 shrink-0 ${CLASS_COLOR[c.class] || 'text-slate-400'}">${c.class}</div>
-                <div class="relative h-5 flex-1 overflow-hidden rounded bg-slate-800">
-                  <div class="h-full bg-indigo-500/60" style="width:${w}%"></div>
-                </div>
-                <div class="w-10 shrink-0 text-right text-slate-300">${c.count}</div>
-              </div>`;
-          }).join('');
-
-      // Action distribution
-      const acMax = Math.max(1, ...a.actions.map((c) => c.count));
-      $('chartActions').innerHTML = a.actions.length === 0
-        ? '<div class="text-sm text-slate-500">Нет данных</div>'
-        : a.actions.map((c) => {
-            const w = Math.round((c.count / acMax) * 100);
-            return `
-              <div class="flex items-center gap-2 text-xs">
-                <div class="w-36 shrink-0">
-                  <span class="rounded px-1.5 py-0.5 text-[10px] font-medium ${ACTION_COLOR[c.action] || 'bg-slate-700/40 text-slate-300'}">${c.action}</span>
-                </div>
-                <div class="relative h-5 flex-1 overflow-hidden rounded bg-slate-800">
-                  <div class="h-full bg-indigo-500/60" style="width:${w}%"></div>
-                </div>
-                <div class="w-10 shrink-0 text-right text-slate-300">${c.count}</div>
-              </div>`;
-          }).join('');
+      $('statCards').innerHTML=cards.map(c=>`<div class="rounded-lg border border-slate-800 bg-slate-900/40 p-3"><div class="text-xs text-slate-500">${c.label}</div><div class="mt-1 text-2xl font-semibold text-slate-100">${c.value}</div>${c.sub?`<div class="mt-0.5 text-[11px] text-slate-500">${c.sub}</div>`:''}</div>`).join('');
+      const max=Math.max(1,...a.byDay.map(b=>b.count));
+      $('chartMessagesByDay').innerHTML=a.byDay.map(b=>`<div title="${b.date}: ${b.count}" class="flex-1 rounded-sm bg-indigo-500/60 hover:bg-indigo-400 transition" style="height:${Math.max(2,Math.round(b.count/max*100))}%"></div>`).join('');
+      const first=a.byDay[0]; const last=a.byDay[a.byDay.length-1];
+      $('chartMessagesByDayLegend').innerHTML=`<span>${first?first.date:''}</span><span>${last?last.date:''}</span>`;
+      const lmax=Math.max(1,...a.leads.map(l=>l.count));
+      $('chartLeadFunnel').innerHTML=a.leads.map(l=>`<div class="flex items-center gap-2 text-xs"><div class="w-20 shrink-0 text-slate-400">${STATUS_LABEL[l.status]||l.status}</div><div class="relative h-5 flex-1 overflow-hidden rounded bg-slate-800"><div class="h-full ${STATUS_BAR[l.status]||'bg-slate-500'}" style="width:${Math.round(l.count/lmax*100)}%"></div></div><div class="w-12 shrink-0 text-right text-slate-300">${l.count}</div></div>`).join('');
+      const clmax=Math.max(1,...a.classes.map(c=>c.count));
+      $('chartClasses').innerHTML=a.classes.length===0?'<div class="text-sm text-slate-500">Нет данных</div>':a.classes.map(c=>`<div class="flex items-center gap-2 text-xs"><div class="w-32 shrink-0 ${CLASS_COLOR[c.class]||'text-slate-400'}">${c.class}</div><div class="relative h-5 flex-1 overflow-hidden rounded bg-slate-800"><div class="h-full bg-indigo-500/60" style="width:${Math.round(c.count/clmax*100)}%"></div></div><div class="w-10 shrink-0 text-right text-slate-300">${c.count}</div></div>`).join('');
+      const acmax=Math.max(1,...a.actions.map(c=>c.count));
+      $('chartActions').innerHTML=a.actions.length===0?'<div class="text-sm text-slate-500">Нет данных</div>':a.actions.map(c=>`<div class="flex items-center gap-2 text-xs"><div class="w-36 shrink-0"><span class="rounded px-1.5 py-0.5 text-[10px] font-medium ${ACTION_COLOR[c.action]||'bg-slate-700/40 text-slate-300'}">${c.action}</span></div><div class="relative h-5 flex-1 overflow-hidden rounded bg-slate-800"><div class="h-full bg-indigo-500/60" style="width:${Math.round(c.count/acmax*100)}%"></div></div><div class="w-10 shrink-0 text-right text-slate-300">${c.count}</div></div>`).join('');
     }
 
-    // ─── wiring ────────────────────────────────────────────────
+    // ─── PIPELINE view ────────────────────────────────────────────────────────
+    const DEAL_STAGES = [
+      {id:'lead',  label:'Лид',    accent:'bg-slate-700/50 text-slate-300 border-slate-600'},
+      {id:'demo',  label:'Демо',   accent:'bg-blue-900/40 text-blue-300 border-blue-800'},
+      {id:'offer', label:'Оффер',  accent:'bg-amber-900/40 text-amber-300 border-amber-800'},
+      {id:'client',label:'Клиент', accent:'bg-emerald-900/40 text-emerald-300 border-emerald-800'},
+      {id:'lost',  label:'Закрыт', accent:'bg-red-900/30 text-red-400 border-red-900'},
+    ];
+    let pipelineDeals=[], pipelineContacts=[], selectedDealId=null;
+
+    async function loadPipeline() { const data=await fetchJson('/api/pipeline'); pipelineDeals=data.items||[]; renderPipelineBoard(); }
+
+    function dealDisplayName(d) {
+      if (d.first_name||d.last_name) return [d.first_name,d.last_name].filter(Boolean).join(' ');
+      if (d.username) return '@'+d.username;
+      return 'User '+d.user_id;
+    }
+    function dealAgo(iso) {
+      if (!iso) return ''; const diff=Date.now()-new Date(iso).getTime(); const m=Math.floor(diff/60000);
+      if (m<60) return m+' мин'; const h=Math.floor(m/60); if (h<24) return h+'ч'; return Math.floor(h/24)+'д';
+    }
+
+    function renderPipelineBoard() {
+      const board=$('pipelineBoard'); if(!board) return;
+      const grouped={}; DEAL_STAGES.forEach(s=>{grouped[s.id]=[];}); pipelineDeals.forEach(d=>{if(grouped[d.stage])grouped[d.stage].push(d);});
+      board.innerHTML=DEAL_STAGES.map(stage=>{
+        const deals=grouped[stage.id]; const total=deals.reduce((s,d)=>s+(d.amount||0),0);
+        const cards=deals.map(d=>{const sel=d.id===selectedDealId;
+          return `<div class="deal-card rounded-lg border ${sel?'border-indigo-500 bg-indigo-900/20':'border-slate-700 bg-slate-800/40'} p-3 cursor-pointer hover:border-slate-500 transition-colors" onclick="selectDeal(${d.id})">
+            <div class="text-sm font-medium text-slate-200 truncate">${dealDisplayName(d)}</div>
+            ${d.chat_title?'<div class="text-xs text-slate-600 mt-0.5 truncate">'+d.chat_title+'</div>':''}
+            <div class="flex items-center justify-between mt-2">
+              ${d.amount?'<span class="text-xs text-emerald-400 font-medium">$'+d.amount.toLocaleString()+'</span>':'<span></span>'}
+              <span class="text-xs text-slate-600">${dealAgo(d.last_seen_at)}</span>
+            </div>
+            ${d.notes?'<div class="text-xs text-slate-600 mt-1.5 line-clamp-2">'+d.notes+'</div>':''}
+          </div>`;
+        }).join('');
+        return `<div class="pipeline-col flex-shrink-0 w-56 flex flex-col gap-2" data-stage="${stage.id}">
+          <div class="flex items-center justify-between px-1 mb-1">
+            <span class="text-xs font-semibold text-slate-300">${stage.label}</span>
+            <div class="flex items-center gap-2">${total>0?'<span class="text-xs text-emerald-400">$'+total.toLocaleString()+'</span>':''}<span class="rounded-full bg-slate-800 px-2 py-0.5 text-xs text-slate-500">${deals.length}</span></div>
+          </div>
+          <div class="flex flex-col gap-2 min-h-16">${cards||'<div class="rounded-lg border border-dashed border-slate-800 p-3 text-center text-xs text-slate-700">пусто</div>'}</div>
+        </div>`;
+      }).join('');
+    }
+
+    function selectDeal(id) {
+      selectedDealId=id; renderPipelineBoard();
+      const deal=pipelineDeals.find(d=>d.id===id); if(!deal) return;
+      $('dealDetail').classList.remove('hidden');
+      $('dealDetailName').textContent=dealDisplayName(deal);
+      $('dealDetailMeta').textContent=(deal.chat_title||'')+(deal.last_seen_at?' · '+dealAgo(deal.last_seen_at):'');
+      $('dealStageButtons').innerHTML=DEAL_STAGES.map(st=>{
+        const active=deal.stage===st.id;
+        return `<button onclick="setDealStage(${id},'${st.id}')" class="rounded-full border px-3 py-1 text-xs font-medium transition-colors ${active?st.accent:'border-slate-700 text-slate-500 hover:text-slate-300'}">${st.label}</button>`;
+      }).join('');
+      $('dealAmountInput').value=deal.amount||''; $('dealNotesInput').value=deal.notes||'';
+    }
+    function closeDealDetail() { $('dealDetail').classList.add('hidden'); selectedDealId=null; renderPipelineBoard(); }
+    async function setDealStage(id,stage) { await fetchJson('/api/pipeline/'+id+'/stage',{method:'PATCH',headers:{'Content-Type':'application/json'},body:JSON.stringify({stage})}); await loadPipeline(); selectDeal(id); }
+    async function saveDealNotes() { if(!selectedDealId) return; const notes=$('dealNotesInput').value; await fetchJson('/api/pipeline/'+selectedDealId+'/notes',{method:'PATCH',headers:{'Content-Type':'application/json'},body:JSON.stringify({notes})}); const idx=pipelineDeals.findIndex(d=>d.id===selectedDealId); if(idx>=0) pipelineDeals[idx].notes=notes; renderPipelineBoard(); }
+    async function saveDealAmount() { if(!selectedDealId) return; const amount=parseFloat($('dealAmountInput').value)||null; await fetchJson('/api/pipeline/'+selectedDealId+'/amount',{method:'PATCH',headers:{'Content-Type':'application/json'},body:JSON.stringify({amount})}); const idx=pipelineDeals.findIndex(d=>d.id===selectedDealId); if(idx>=0) pipelineDeals[idx].amount=amount; renderPipelineBoard(); }
+    async function deleteDeal() { if(!selectedDealId||!confirm('Удалить?')) return; await fetchJson('/api/pipeline/'+selectedDealId,{method:'DELETE'}); closeDealDetail(); await loadPipeline(); }
+    async function showPipelineModal() { const data=await fetchJson('/api/pipeline/contacts'); pipelineContacts=data.items||[]; renderContacts(pipelineContacts); $('pipelineSearch').value=''; $('pipelineModal').classList.remove('hidden'); }
+    function closePipelineModal() { $('pipelineModal').classList.add('hidden'); }
+    function filterContacts() { const q=$('pipelineSearch').value.toLowerCase(); renderContacts(pipelineContacts.filter(c=>[c.first_name,c.last_name,c.username,c.chat_title].filter(Boolean).join(' ').toLowerCase().includes(q))); }
+    function renderContacts(list) {
+      $('contactsList').innerHTML=list.slice(0,50).map(c=>{
+        const name=[c.first_name,c.last_name].filter(Boolean).join(' ')||(c.username?'@'+c.username:'User '+c.user_id);
+        const hd=c.has_deal===1;
+        return `<button onclick="addDeal(${c.chat_id},${c.user_id})" ${hd?'disabled':''} class="w-full text-left rounded-lg px-3 py-2 ${hd?'opacity-40 cursor-not-allowed':'hover:bg-slate-800/60 cursor-pointer'}"><div class="text-sm text-slate-200">${name}${hd?' <span class="text-xs text-slate-600">(в пайплайне)</span>':''}</div>${c.chat_title?'<div class="text-xs text-slate-500">'+c.chat_title+'</div>':''}</button>`;
+      }).join('')||'<div class="text-xs text-slate-600 py-2 text-center">Нет контактов</div>';
+    }
+    async function addDeal(chatId,userId) { closePipelineModal(); await fetchJson('/api/pipeline',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({chatId,userId})}); await loadPipeline(); }
+
+    // ─── DEMO view ────────────────────────────────────────────────────────────
+    async function loadDemo() {
+      const kbData=await fetchJson('/api/demo/kb'); const ta=$('demoKbEditor'); if(ta) ta.value=kbData.content||'';
+      await refreshDemoStatus();
+    }
+    async function refreshDemoStatus() {
+      try {
+        const st=await fetchJson('/api/demo/status'); const badge=$('demoStatusBadge'); const btnAct=$('btnActivateDemo'); const btnRes=$('btnRestoreDemo');
+        if(!badge) return; badge.classList.remove('hidden');
+        if(st.active) { badge.className='rounded-full px-3 py-1.5 text-xs font-semibold border bg-amber-900/40 text-amber-300 border-amber-700'; badge.textContent='⚡ Demo активен'; if(btnAct) btnAct.classList.add('hidden'); if(btnRes) btnRes.classList.remove('hidden'); }
+        else { badge.className='rounded-full px-3 py-1.5 text-xs font-semibold border bg-emerald-900/30 text-emerald-400 border-emerald-800'; badge.textContent='✓ Прод KB'; if(btnAct) btnAct.classList.remove('hidden'); if(btnRes) btnRes.classList.add('hidden'); }
+      } catch(e) { /* ignore */ }
+    }
+    async function saveDemoKb() { const content=$('demoKbEditor').value; const st=$('demoKbSaveStatus'); try { await fetchJson('/api/demo/kb',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({content})}); if(st){st.textContent='✓ Сохранено';setTimeout(()=>{if(st)st.textContent='';},2000);} } catch(e){if(st)st.textContent='✗'+e.message;} }
+    async function activateDemo() { await saveDemoKb(); try { await fetchJson('/api/demo/activate',{method:'POST'}); await refreshDemoStatus(); } catch(e){alert('Ошибка: '+e.message);} }
+    async function restoreDemo() { if(!confirm('Восстановить production KB?')) return; try { await fetchJson('/api/demo/restore',{method:'POST'}); await refreshDemoStatus(); } catch(e){alert('Ошибка: '+e.message);} }
+
+    // ─── BILLING view ─────────────────────────────────────────────────────────
+    const PLAN_LABEL={basic:'Basic',pro:'Pro',enterprise:'Enterprise'};
+    const SUB_STATUS_COLOR={trialing:'bg-indigo-900/40 text-indigo-300',active:'bg-emerald-900/40 text-emerald-300',past_due:'bg-amber-900/40 text-amber-300',canceled:'bg-slate-800 text-slate-500',unpaid:'bg-red-900/40 text-red-300'};
+    const SUB_STATUS_LABEL={trialing:'Триал',active:'Активен',past_due:'Просрочен',canceled:'Отменён',unpaid:'Не оплачен'};
+    async function loadBilling() {
+      try { const cfg=await fetchJson('/api/billing/config'); const banner=$('billingSetupBanner'); if(banner) banner.classList.toggle('hidden',cfg.configured); } catch(e){}
+      try { const st=await fetchJson('/api/billing/stats'); const mrr=$('billingMrr');if(mrr)mrr.textContent='$'+(st.mrr||0).toLocaleString(); const act=$('billingActive');if(act)act.textContent=st.active??0; const tri=$('billingTrialing');if(tri)tri.textContent=st.trialing??0; const pd=$('billingPastDue');if(pd)pd.textContent=st.past_due??0; } catch(e){}
+      try {
+        const data=await fetchJson('/api/billing/subscriptions'); const subs=data.items||[]; const tbl=$('billingTable'); if(!tbl) return;
+        if(!subs.length){tbl.innerHTML='<div class="p-6 text-center text-sm text-slate-600">Нет подписок</div>';return;}
+        tbl.innerHTML=subs.map(sub=>{const sc=SUB_STATUS_COLOR[sub.status]||'bg-slate-800 text-slate-400';const sl=SUB_STATUS_LABEL[sub.status]||sub.status;const pl=PLAN_LABEL[sub.plan]||sub.plan;const pe=sub.current_period_end?new Date(sub.current_period_end).toLocaleDateString('ru-RU'):'—';const te=sub.trial_end?new Date(sub.trial_end).toLocaleDateString('ru-RU'):null;return`<div class="flex items-center gap-4 px-4 py-3 hover:bg-slate-800/30 transition-colors"><div class="flex-1 min-w-0"><div class="text-sm font-medium text-slate-200 truncate">${sub.customer_email||sub.stripe_customer_id}</div>${sub.customer_name?'<div class="text-xs text-slate-500">'+sub.customer_name+'</div>':''}</div><div class="text-xs text-slate-400">${pl}</div><div class="text-xs text-slate-500">${te?'триал до '+te:'до '+pe}</div><span class="rounded-full px-2.5 py-0.5 text-xs font-medium ${sc}">${sl}</span></div>`;}).join('');
+      } catch(e){ const tbl=$('billingTable'); if(tbl) tbl.innerHTML='<div class="p-4 text-xs text-red-400">Ошибка: '+e.message+'</div>'; }
+    }
+
+    // ─── KB view ──────────────────────────────────────────────────────────────
+    async function loadKb() {
+      try {
+        const data = await fetchJson('/api/kb');
+        const ta = $('kbEditor'); if (ta) ta.value = data.content || '';
+        const src = $('kbSource'); if (src) src.textContent = data.source === 'custom' ? 'Кастомная KB (из /app/data/)' : 'Встроенная KB (из образа)';
+      } catch(e) { const src=$('kbSource'); if(src) src.textContent='Ошибка загрузки: '+e.message; }
+    }
+    async function saveKb() {
+      const content = $('kbEditor').value; const st = $('kbStatus');
+      try {
+        await fetchJson('/api/kb', { method:'POST', headers:{'Content-Type':'application/json'}, body:JSON.stringify({content}) });
+        if (st) { st.textContent='✓ Сохранено'; setTimeout(()=>{if(st)st.textContent='';}, 2000); }
+        const src=$('kbSource'); if(src) src.textContent='Кастомная KB (из /app/data/)';
+      } catch(e) { if(st) st.textContent='✗ '+e.message; }
+    }
+
+    // ─── ROADMAP view ─────────────────────────────────────────────────────────
+    function rmToggle(phase) {
+      const body = $('rm-body-' + phase); const chev = $('rm-chev-' + phase);
+      if (!body) return;
+      const open = !body.classList.contains('hidden');
+      body.classList.toggle('hidden', open);
+      if (chev) chev.style.transform = open ? '' : 'rotate(180deg)';
+    }
+
+    function rmUpdateProgress() {
+      const phases = ['p05', 'p1', 'p2', 'p3', 'p4'];
+      let totalDone = 0, totalAll = 0;
+      phases.forEach(ph => {
+        const cbs = document.querySelectorAll(`.rm-cb[data-id^="${ph}_"]`);
+        const done = [...cbs].filter(c => c.checked).length;
+        const all = cbs.length;
+        totalDone += done; totalAll += all;
+        const bar = $('rm-bar-' + ph); const pct = $('rm-pct-' + ph);
+        if (bar) bar.style.width = (all ? Math.round(done/all*100) : 0) + '%';
+        if (pct) pct.textContent = done + ' / ' + all;
+      });
+      const tb = $('rmTotalBar'); const tp = $('rmTotalPct');
+      if (tb) tb.style.width = (totalAll ? Math.round(totalDone/totalAll*100) : 0) + '%';
+      if (tp) tp.textContent = (totalAll ? Math.round(totalDone/totalAll*100) : 0) + '%';
+    }
+
+    function rmInitCheckboxes() {
+      const saved = JSON.parse(localStorage.getItem('rm_checks') || '{}');
+      document.querySelectorAll('.rm-cb').forEach(cb => {
+        if (saved[cb.dataset.id]) cb.checked = true;
+        cb.addEventListener('change', () => {
+          const s2 = JSON.parse(localStorage.getItem('rm_checks') || '{}');
+          s2[cb.dataset.id] = cb.checked;
+          localStorage.setItem('rm_checks', JSON.stringify(s2));
+          rmUpdateProgress();
+        });
+      });
+      rmUpdateProgress();
+    }
+
+    // ─── wiring ───────────────────────────────────────────────────────────────
     document.querySelectorAll('.view-btn').forEach((btn) => {
       btn.addEventListener('click', () => switchView(btn.getAttribute('data-view')));
     });
     document.querySelectorAll('.tab-btn').forEach((btn) => {
-      btn.addEventListener('click', () => { state.tab = btn.getAttribute('data-tab'); renderDetail(); });
+      btn.addEventListener('click', () => { state.tab=btn.getAttribute('data-tab'); renderDetail(); });
     });
     document.querySelectorAll('.draft-filter').forEach((btn) => {
-      btn.addEventListener('click', () => { state.draftFilter = btn.getAttribute('data-draft-filter'); loadDrafts().catch((e) => showError(e.message)); });
+      btn.addEventListener('click', () => { state.draftFilter=btn.getAttribute('data-draft-filter'); loadDrafts().catch(e=>showError(e.message)); });
     });
     $('refresh').addEventListener('click', refresh);
 
     refresh();
+    // ─── PROMPTS view ─────────────────────────────────────────────────────────
+    async function loadPrompts() {
+      const data = await fetchJson('/api/prompts');
+      $('promptClassifierExtra').value = data.classifierExtra || '';
+      $('promptTone').value = data.tone || '';
+      $('promptStrategies').value = data.strategies && Object.keys(data.strategies).length
+        ? JSON.stringify(data.strategies, null, 2)
+        : '';
+    }
+
+    async function savePrompts() {
+      const strategiesRaw = $('promptStrategies').value.trim();
+      let strategies = undefined;
+      if (strategiesRaw) {
+        try {
+          strategies = JSON.parse(strategiesRaw);
+          $('promptStrategiesError').classList.add('hidden');
+        } catch {
+          $('promptStrategiesError').classList.remove('hidden');
+          return;
+        }
+      }
+      const body = {};
+      const tone = $('promptTone').value.trim();
+      const extra = $('promptClassifierExtra').value.trim();
+      if (tone) body.tone = tone;
+      if (extra) body.classifierExtra = extra;
+      if (strategies) body.strategies = strategies;
+      await fetchJson('/api/prompts', { method: 'PATCH', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify(body) });
+      $('promptSaveStatus').textContent = 'Сохранено ✓';
+      setTimeout(() => { $('promptSaveStatus').textContent = ''; }, 2000);
+    }
+
+    async function resetPrompts() {
+      if (!confirm('Сбросить все промпты к дефолту?')) return;
+      await fetchJson('/api/prompts', { method: 'PATCH', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({}) });
+      await loadPrompts();
+      $('promptSaveStatus').textContent = 'Сброшено ✓';
+      setTimeout(() => { $('promptSaveStatus').textContent = ''; }, 2000);
+    }
+
+    // ─── PROJECTS view ────────────────────────────────────────────────────────
+    let currentProject = null;
+
+    async function loadProjects() {
+      const data = await fetchJson('/api/projects');
+      const list = $('projectsList');
+      list.innerHTML = '';
+      if (!data.projects || data.projects.length === 0) {
+        list.innerHTML = '<div class="text-xs text-slate-500">Нет проектов</div>';
+        return;
+      }
+      for (const p of data.projects) {
+        const btn = document.createElement('button');
+        btn.textContent = p.title;
+        btn.title = p.name;
+        btn.className = 'text-left px-3 py-2 rounded-lg text-sm text-slate-300 hover:bg-slate-700 transition-colors truncate w-full';
+        btn.onclick = () => selectProject(p.name, p.title, btn);
+        list.appendChild(btn);
+      }
+      list.querySelector('button')?.click();
+    }
+
+    function selectProject(name, title, btn) {
+      currentProject = name;
+      document.querySelectorAll('#projectsList button').forEach(b => {
+        b.className = 'text-left px-3 py-2 rounded-lg text-sm transition-colors truncate w-full ' +
+          (b === btn ? 'bg-slate-700 text-slate-100' : 'text-slate-300 hover:bg-slate-700');
+      });
+      $('projectTitle').textContent = title;
+      $('projectTitle').classList.remove('hidden');
+      $('projectTabs').classList.remove('hidden');
+      $('projectEmpty').classList.add('hidden');
+      loadReport('1-диалоги.md');
+    }
+
+    async function loadReport(file) {
+      if (!currentProject) return;
+      document.querySelectorAll('.proj-tab').forEach(t => {
+        const active = (t.getAttribute('onclick') || '').includes("'" + file + "'");
+        t.className = 'proj-tab px-3 py-1.5 rounded-lg text-xs font-medium transition-colors ' +
+          (active ? 'bg-indigo-600 text-white' : 'bg-slate-700 text-slate-300 hover:bg-slate-600');
+      });
+
+      if (file === 'archive') {
+        const data = await fetchJson('/api/projects/' + encodeURIComponent(currentProject) + '/archive');
+        $('projectContent').classList.add('hidden');
+        const archDiv = $('archiveList');
+        archDiv.style.display = 'flex';
+        archDiv.classList.remove('hidden');
+        archDiv.innerHTML = '';
+        if (!data.files || data.files.length === 0) {
+          archDiv.innerHTML = '<div class="text-sm text-slate-500">Нет архивных снапшотов</div>';
+          return;
+        }
+        for (const f of data.files.sort().reverse()) {
+          const btn = document.createElement('button');
+          btn.textContent = '📄 ' + f;
+          btn.className = 'text-left px-3 py-2 rounded-lg text-sm text-slate-300 hover:bg-slate-700 border border-slate-700 mb-1';
+          btn.onclick = async () => {
+            const d = await fetchJson('/api/projects/' + encodeURIComponent(currentProject) + '/archive/' + encodeURIComponent(f));
+            $('archiveList').style.display = 'none';
+            $('projectContent').classList.remove('hidden');
+            $('projectText').textContent = d.content || '';
+          };
+          archDiv.appendChild(btn);
+        }
+        return;
+      }
+
+      $('archiveList').style.display = 'none';
+      $('projectContent').classList.remove('hidden');
+      const data = await fetchJson('/api/projects/' + encodeURIComponent(currentProject) + '/' + encodeURIComponent(file));
+      $('projectText').textContent = data.content || '(пусто)';
+    }
+
   </script>
 </body>
 </html>

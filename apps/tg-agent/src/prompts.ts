@@ -17,6 +17,7 @@ export const CLASSIFIER_SYSTEM_PROMPT = `Ты — классификатор с�
 - SUPPORT_REQUEST — просьба помочь с уже купленным продуктом / доступом / техникой.
 - OWNER_REQUEST — прямое обращение к Илье лично (упоминание по имени, @, просьба ответить лично).
 - SPAM — реклама, флуд, нерелевантные ссылки, бессмыслица.
+- PAYMENT_RECEIVED — уведомление о поступившем платеже: GetCourse, Тинькофф, Stripe, Telegram Stars. Ключевые фразы: «Поступил платеж», «Поступила оплата», «payment received», сумма в рублях или другой валюте.
 
 Правила:
 - Один класс на сообщение. Выбирай тот, что лучше всего описывает намерение.
@@ -78,10 +79,10 @@ export const RESPONDER_STRATEGIES: Record<string, string> = {
 // token minimum the cache silently won't activate, but the structure
 // is correct for when it does.
 
-export function buildResponderSystemPrompt(knowledgeBase: string): string {
+export function buildResponderSystemPrompt(knowledgeBase: string, tone?: string): string {
   return `Ты — AI-ассистент Ильи Палии в Telegram-чате.
 
-${RESPONDER_TONE}
+${tone ?? RESPONDER_TONE}
 
 База знаний (используй ТОЛЬКО эту информацию для фактов о продуктах, ценах и условиях):
 
@@ -99,9 +100,11 @@ export function buildResponderUserMessage(args: {
   messageClass: string;
   text: string;
   authorDisplay: string | undefined;
+  strategies?: Record<string, string>;
 }): string {
+  const strategies = args.strategies ?? RESPONDER_STRATEGIES;
   const strategy =
-    RESPONDER_STRATEGIES[args.messageClass] ??
+    strategies[args.messageClass] ??
     'Ответь кратко и по делу, опираясь на базу знаний.';
 
   const author = args.authorDisplay ? `от ${args.authorDisplay}` : 'из чата';

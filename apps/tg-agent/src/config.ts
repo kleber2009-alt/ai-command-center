@@ -101,13 +101,6 @@ export interface Config {
   logLevel: LogLevel;
   classifierModel: string;
   responderModel: string;
-  digestModel: string;
-  // 0..23 — UTC hour for the daily digest sweep. 6 = 09:00 MSK.
-  digestDailyHourUtc: number;
-  // Rolling window (hours) for each daily digest.
-  digestWindowHours: number;
-  // Enable/disable both the scheduler and the on-demand commands.
-  digestEnabled: boolean;
   databasePath: string;
   adminPort: number;
   adminUsername: string;
@@ -117,6 +110,14 @@ export interface Config {
   backupIntervalHours: number;
   healthFailureThreshold: number;
   healthAlertCooldownMinutes: number;
+  stripeWebhookSecret: string | undefined;
+  stripeBasicPriceId: string | undefined;
+  stripeProPriceId: string | undefined;
+  stripeEnterprisePriceId: string | undefined;
+  digestModel: string;
+  digestDailyHourUtc: number;
+  digestWindowHours: number;
+  digestEnabled: boolean;
 }
 
 export function loadConfig(): Config {
@@ -135,19 +136,6 @@ export function loadConfig(): Config {
     logLevel: parseLogLevel(optional('LOG_LEVEL')),
     classifierModel: optional('CLASSIFIER_MODEL') ?? 'claude-haiku-4-5-20251001',
     responderModel: optional('RESPONDER_MODEL') ?? 'claude-haiku-4-5-20251001',
-    digestModel:
-      optional('DIGEST_MODEL') ?? optional('INSIGHTS_MODEL') ?? 'claude-sonnet-4-6',
-    digestDailyHourUtc: parseHourOfDay(
-      'DIGEST_DAILY_HOUR_UTC',
-      optional('DIGEST_DAILY_HOUR_UTC'),
-      6,
-    ),
-    digestWindowHours: parseWindowHours(
-      'DIGEST_WINDOW_HOURS',
-      optional('DIGEST_WINDOW_HOURS'),
-      24,
-    ),
-    digestEnabled: (optional('DIGEST_ENABLED') ?? 'true').toLowerCase() !== 'false',
     databasePath: optional('DATABASE_PATH') ?? './data/tg-agent.db',
     adminPort: parsePort(optional('ADMIN_PORT'), 8080),
     adminUsername: optional('ADMIN_USERNAME') ?? 'admin',
@@ -165,5 +153,23 @@ export function loadConfig(): Config {
       optional('HEALTH_ALERT_COOLDOWN_MINUTES'),
       60,
     ),
+    stripeWebhookSecret: optional('STRIPE_WEBHOOK_SECRET'),
+    stripeBasicPriceId: optional('STRIPE_BASIC_PRICE_ID'),
+    stripeProPriceId: optional('STRIPE_PRO_PRICE_ID'),
+    stripeEnterprisePriceId: optional('STRIPE_ENTERPRISE_PRICE_ID'),
+    digestModel:
+      optional('DIGEST_MODEL') ?? optional('INSIGHTS_MODEL') ?? 'claude-sonnet-4-6',
+    digestDailyHourUtc: parseHourOfDay(
+      'DIGEST_DAILY_HOUR_UTC',
+      optional('DIGEST_DAILY_HOUR_UTC'),
+      6,
+    ),
+    digestWindowHours: parseWindowHours(
+      'DIGEST_WINDOW_HOURS',
+      optional('DIGEST_WINDOW_HOURS'),
+      24,
+    ),
+    digestEnabled:
+      (optional('DIGEST_ENABLED') ?? 'true').toLowerCase() !== 'false',
   };
 }

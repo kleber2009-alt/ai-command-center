@@ -1,6 +1,7 @@
 import Anthropic from '@anthropic-ai/sdk';
 
 import { loadKnowledgeBase } from './knowledge/index.js';
+import type { PromptConfig } from './prompt-config.js';
 import {
   buildResponderSystemPrompt,
   buildResponderUserMessage,
@@ -10,6 +11,7 @@ import type { MessageClass } from './types.js';
 export interface ResponderOptions {
   apiKey: string;
   model: string;
+  promptConfig?: PromptConfig;
 }
 
 export interface RespondInput {
@@ -33,12 +35,12 @@ export interface Responder {
 
 const MAX_REPLY_TOKENS = 350;
 
-export function createResponder({ apiKey, model }: ResponderOptions): Responder {
+export function createResponder({ apiKey, model, promptConfig }: ResponderOptions): Responder {
   const client = new Anthropic({ apiKey });
 
   async function call(input: RespondInput): Promise<ResponderResult> {
     const kb = loadKnowledgeBase();
-    const systemText = buildResponderSystemPrompt(kb.raw);
+    const systemText = buildResponderSystemPrompt(kb.raw, promptConfig?.getTone());
 
     const response = await client.messages.create({
       model,
@@ -64,6 +66,7 @@ export function createResponder({ apiKey, model }: ResponderOptions): Responder 
             messageClass: input.messageClass,
             text: input.text,
             authorDisplay: input.authorDisplay,
+            strategies: promptConfig?.getStrategies(),
           }),
         },
       ],

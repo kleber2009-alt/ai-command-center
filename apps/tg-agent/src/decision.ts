@@ -11,7 +11,13 @@ const BASE_ACTIONS: Record<MessageClass, Action> = {
   SUPPORT_REQUEST: 'REPLY',
   OWNER_REQUEST: 'NOTIFY_ONLY',
   SPAM: 'IGNORE',
+  PAYMENT_RECEIVED: 'NOTIFY_ONLY',
 };
+
+// Payment notifications bypass the confidence gate — always alert immediately.
+function isPaymentClass(cls: string): boolean {
+  return cls === 'PAYMENT_RECEIVED';
+}
 
 // Classes where silence is the safest default — never gate them behind
 // "draft for owner". A low-confidence GENERAL_CHAT just means we stay quiet.
@@ -26,6 +32,14 @@ export function decide(
   confidenceThreshold: number,
 ): Decision {
   const baseAction = BASE_ACTIONS[classification.class];
+
+  if (isPaymentClass(classification.class)) {
+    return {
+      classification,
+      action: 'NOTIFY_ONLY',
+      rationale: 'payment notification → immediate owner alert',
+    };
+  }
 
   if (
     classification.confidence < confidenceThreshold &&
