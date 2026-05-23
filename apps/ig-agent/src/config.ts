@@ -127,5 +127,13 @@ export function loadConfig(): Config {
     logLevel: parseLogLevel(process.env.LOG_LEVEL),
     confidenceThreshold: parseThreshold(process.env.CONFIDENCE_THRESHOLD),
     ignoredContactIds: parseIds(process.env.IGNORED_CONTACT_IDS),
+
+    // Daily digest. Default 03 UTC = 10:00 Asia/Jakarta. Default window 24h.
+    digestModel:
+      optional('DIGEST_MODEL') ??
+      optional('ANALYST_MODEL') ??
+      'claude-sonnet-4-6',
+    digestDailyHourUtc: parseHourUtc(process.env.DIGEST_DAILY_HOUR_UTC, 3),
+    digestWindowHours: parsePositiveInt(process.env.DIGEST_WINDOW_HOURS, 24),
   };
 }

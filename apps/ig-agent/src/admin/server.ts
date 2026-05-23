@@ -33,10 +33,12 @@ import type { MessageStore } from '../db/messages.js';
 import type { RecommendationStore } from '../db/recommendations.js';
 import type { PromptStore } from '../db/prompts.js';
 import type { SettingsService } from '../db/settings.js';
+import type { DigestStore } from '../db/digests.js';
 import type { Notifier } from '../notifier.js';
 import type { Pipeline } from '../pipeline.js';
 import type { Analyst } from '../analyst.js';
 import type { SendPulseClient } from '../sendpulse/client.js';
+import type { DigestSchedulerHandle } from '../scheduler.js';
 import { parseWebhookBody } from '../webhook.js';
 
 const here = dirname(fileURLToPath(import.meta.url));
@@ -52,6 +54,7 @@ const PAGES = [
   'pulse',
   'agents',
   'reports',
+  'daily',
   'kb',
   'settings',
 ] as const;

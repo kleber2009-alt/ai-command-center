@@ -26,105 +26,113 @@ const Body = z
   .refine((d) => isEnabledEngine(d.engine), { message: 'engine_disabled', path: ['engine'] });
 
 export async function POST(req: NextRequest) {
-  const ctx = await getCurrentUserOrApiKey(req);
-  if (!ctx) return NextResponse.json({ error: 'UNAUTHORIZED' }, { status: 401 });
-  const user = ctx.user;
-
-  const parsed = Body.safeParse(await req.json().catch(() => ({})));
-  if (!parsed.success) {
-    return NextResponse.json({ error: 'bad_body', issues: parsed.error.issues }, { status: 400 });
-  }
-  const data = parsed.data;
-  const engine = data.engine as VideoEngine;
-  const cfg = engineConfig(engine);
-
-  // Engine-specific input validation
-  if (cfg.inputMode === 'script') {
-    const hasOverride = !!data.audioUrl;
-    if (!hasOverride) {
-      if (!data.script || data.script.trim().length < 5) {
-        return NextResponse.json({ error: 'script_required' }, { status: 400 });
-      }
-      if (!data.voiceId) {
-        return NextResponse.json({ error: 'voice_required' }, { status: 400 });
-      }
-    }
-  } else if (cfg.inputMode === 'audio') {
-    if (!data.audioUrl) {
-      return NextResponse.json({ error: 'audio_url_required' }, { status: 400 });
-    }
-  }
-
-  if (!cfg.supportedAspects.includes(data.aspect)) {
-    return NextResponse.json(
-      { error: 'aspect_unsupported', supported: cfg.supportedAspects },
-      { status: 400 },
-    );
-  }
-
-  const avatar = await prisma.avatar.findFirst({ where: { id: data.avatarId, userId: user.id } });
-  if (!avatar) return NextResponse.json({ error: 'avatar_not_found' }, { status: 404 });
-  if (avatar.status !== 'done' || !avatar.imageUrl) {
-    return NextResponse.json({ error: 'avatar_not_ready' }, { status: 409 });
-  }
-
   try {
-    await chargeTokens({
-      userId: user.id,
-      amount: cfg.cost,
-      reason: `video:${engine}`,
-    });
-  } catch (e) {
-    if (e instanceof InsufficientTokensError) {
+    const ctx = await getCurrentUserOrApiKey(req);
+    if (!ctx) return NextResponse.json({ error: 'UNAUTHORIZED' }, { status: 401 });
+    const user = ctx.user;
+
+    const parsed = Body.safeParse(await req.json().catch(() => ({})));
+    if (!parsed.success) {
+      return NextResponse.json({ error: 'bad_body', issues: parsed.error.issues }, { status: 400 });
+    }
+    const data = parsed.data;
+    const engine = data.engine as VideoEngine;
+    const cfg = engineConfig(engine);
+
+    // Engine-specific input validation
+    if (cfg.inputMode === 'script') {
+      const hasOverride = !!data.audioUrl;
+      if (!hasOverride) {
+        if (!data.script || data.script.trim().length < 5) {
+          return NextResponse.json({ error: 'script_required' }, { status: 400 });
+        }
+        if (!data.voiceId) {
+          return NextResponse.json({ error: 'voice_required' }, { status: 400 });
+        }
+      }
+    } else if (cfg.inputMode === 'audio') {
+      if (!data.audioUrl) {
+        return NextResponse.json({ error: 'audio_url_required' }, { status: 400 });
+      }
+    }
+
+    if (!cfg.supportedAspects.includes(data.aspect)) {
       return NextResponse.json(
-        { error: 'insufficient_tokens', have: e.have, need: e.need },
-        { status: 402 },
+        { error: 'aspect_unsupported', supported: cfg.supportedAspects },
+        { status: 400 },
       );
     }
-    throw e;
-  }
 
-  const video = await prisma.videoGeneration.create({
-    data: {
-      userId: user.id,
-      avatarId: data.avatarId,
-      engine,
-      script: data.script ?? null,
-      audioUrl: data.audioUrl ?? null,
-      voiceId: data.voiceId ?? null,
-      language: data.language ?? 'ru',
-      aspect: data.aspect,
-      quality: data.quality,
-      background: data.background ?? '#000000',
-      subtitles: data.subtitles,
-      heygenVersion: data.heygenVersion ?? cfg.heygenVersion ?? 'V',
-      motionPrompt: data.motionPrompt ?? null,
-      status: 'pending',
-      tokensCost: cfg.cost,
-    },
-  });
+    const avatar = await prisma.avatar.findFirst({ where: { id: data.avatarId, userId: user.id } });
+    if (!avatar) return NextResponse.json({ error: 'avatar_not_found' }, { status: 404 });
+    if (avatar.status !== 'done' || !avatar.imageUrl) {
+      return NextResponse.json({ error: 'avatar_not_ready', status: avatar.status }, { status: 409 });
+    }
 
-  try {
-    await queueForName(cfg.queueName).add(
-      'generate',
-      { videoId: video.id, userId: user.id },
-      { jobId: video.id },
-    );
-  } catch {
-    await refundTokens({
-      userId: user.id,
-      amount: cfg.cost,
-      reason: `video:${engine}:enqueue-failed`,
-      refId: video.id,
+    try {
+      await chargeTokens({
+        userId: user.id,
+        amount: cfg.cost,
+        reason: `video:${engine}`,
+      });
+    } catch (e) {
+      if (e instanceof InsufficientTokensError) {
+        return NextResponse.json(
+          { error: 'insufficient_tokens', have: e.have, need: e.need },
+          { status: 402 },
+        );
+      }
+      throw e;
+    }
+
+    const video = await prisma.videoGeneration.create({
+      data: {
+        userId: user.id,
+        avatarId: data.avatarId,
+        engine,
+        script: data.script ?? null,
+        audioUrl: data.audioUrl ?? null,
+        voiceId: data.voiceId ?? null,
+        language: data.language ?? 'ru',
+        aspect: data.aspect,
+        quality: data.quality,
+        background: data.background ?? '#000000',
+        subtitles: data.subtitles,
+        heygenVersion: data.heygenVersion ?? cfg.heygenVersion ?? 'V',
+        motionPrompt: data.motionPrompt ?? null,
+        status: 'pending',
+        tokensCost: cfg.cost,
+      },
     });
-    await prisma.videoGeneration.update({
-      where: { id: video.id },
-      data: { status: 'failed', errorMsg: 'enqueue_failed' },
-    });
-    return NextResponse.json({ error: 'enqueue_failed' }, { status: 500 });
-  }
 
-  return NextResponse.json({ id: video.id, status: video.status, engine });
+    try {
+      await queueForName(cfg.queueName).add(
+        'generate',
+        { videoId: video.id, userId: user.id },
+        { jobId: video.id },
+      );
+    } catch (e) {
+      console.error('[api/videos] enqueue failed', e);
+      await refundTokens({
+        userId: user.id,
+        amount: cfg.cost,
+        reason: `video:${engine}:enqueue-failed`,
+        refId: video.id,
+      });
+      await prisma.videoGeneration.update({
+        where: { id: video.id },
+        data: { status: 'failed', errorMsg: 'enqueue_failed' },
+      });
+      return NextResponse.json({ error: 'enqueue_failed' }, { status: 500 });
+    }
+
+    return NextResponse.json({ id: video.id, status: video.status, engine });
+  } catch (e) {
+    // Гарантируем JSON-ответ при любом исключении, чтобы клиент не падал на res.json().
+    console.error('[api/videos] unhandled error', e);
+    const message = e instanceof Error ? e.message : String(e);
+    return NextResponse.json({ error: 'internal_error', message }, { status: 500 });
+  }
 }
 
 export async function GET(req: NextRequest) {

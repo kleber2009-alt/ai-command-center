@@ -39,7 +39,14 @@ const CUSTOM_VOICE_LS_KEY = 'persona-studio:customVoiceId';
 export function VideoForm({ avatars, initialAvatarId }: { avatars: Avatar[]; initialAvatarId?: string }) {
   const router = useRouter();
   const [engine, setEngine] = useState<VideoEngine>('heygen-v5');
-  const [avatarId, setAvatarId] = useState<string>(initialAvatarId ?? avatars[0]?.id ?? '');
+  // Если URL-параметр avatarId не соответствует ни одному из готовых аватаров
+  // (удалён, ещё генерится, или принадлежит другому юзеру) — fallback на первый
+  // доступный, чтобы не сабмитить заведомо невалидный id.
+  const resolvedInitial =
+    initialAvatarId && avatars.some((a) => a.id === initialAvatarId)
+      ? initialAvatarId
+      : (avatars[0]?.id ?? '');
+  const [avatarId, setAvatarId] = useState<string>(resolvedInitial);
   const [script, setScript] = useState(DEFAULT_SCRIPT);
   const [voiceId, setVoiceId] = useState<string>(HEYGEN_VOICES[0]?.voice_id ?? '');
   const [customVoiceId, setCustomVoiceId] = useState<string>('');
@@ -111,26 +118,58 @@ export function VideoForm({ avatars, initialAvatarId }: { avatars: Avatar[]; ini
         body.motionPrompt = trimmedMotion;
       }
 
-      const res = await fetch('/api/videos', {
-        method: 'POST',
-        headers: { 'content-type': 'application/json' },
-        body: JSON.stringify(body),
-      });
-      const json = (await res.json()) as { id: string } | { error: string; have?: number; need?: number };
-      if (!res.ok || 'error' in json) {
+      let res: Response;
+      try {
+        res = await fetch('/api/videos', {
+          method: 'POST',
+          headers: { 'content-type': 'application/json' },
+          body: JSON.stringify(body),
+        });
+      } catch (netErr) {
+        setError(`network: ${netErr instanceof Error ? netErr.message : String(netErr)}`);
+        setBusy(false);
+        return;
+      }
+
+      // Защищаемся от пустого/HTML-ответа: читаем text, потом пробуем JSON.
+      const raw = await res.text();
+      let json: { id?: string; error?: string; message?: string; have?: number; need?: number; status?: string } | null = null;
+      if (raw) {
+        try { json = JSON.parse(raw); } catch { json = null; }
+      }
+
+      if (!res.ok || !json || json.error) {
+        const code = json?.error;
         const msg =
-          'error' in json
-            ? json.error === 'insufficient_tokens'
-              ? `Недостаточно токенов: ${json.have}/${json.need}`
-              : json.error
-            : `failed_${res.status}`;
+          code === 'insufficient_tokens'
+            ? `Недостаточно токенов: ${json?.have}/${json?.need}`
+            : code === 'avatar_not_found'
+              ? 'Аватар не найден — выбери другого из списка'
+              : code === 'avatar_not_ready'
+                ? `Аватар ещё не готов (status: ${json?.status ?? 'unknown'})`
+                : code === 'script_required'
+                  ? 'Скрипт обязателен (минимум 5 символов)'
+                  : code === 'voice_required'
+                    ? 'Выбери голос'
+                    : code === 'UNAUTHORIZED'
+                      ? 'Сессия истекла — перезайди в аккаунт'
+                      : code === 'internal_error'
+                        ? `Сервер: ${json?.message ?? 'internal_error'}`
+                        : code
+                          ? code
+                          : `HTTP ${res.status}${raw ? `: ${raw.slice(0, 200)}` : ''}`;
         setError(msg);
+        setBusy(false);
+        return;
+      }
+      if (!json.id) {
+        setError('Сервер вернул пустой ответ без id видео');
         setBusy(false);
         return;
       }
       router.push(`/videos?focus=${json.id}`);
     } catch (e) {
-      setError(String(e));
+      setError(e instanceof Error ? e.message : String(e));
       setBusy(false);
     }
   };

@@ -14,6 +14,9 @@ import { createAnalyst } from './analyst.js';
 import { createNotifier } from './notifier.js';
 import { createPipeline } from './pipeline.js';
 import { startAdminServer } from './admin/server.js';
+import { createDigestStore } from './db/digests.js';
+import { createDigestGenerator } from './digest.js';
+import { startDigestScheduler } from './scheduler.js';
 
 async function main(): Promise<void> {
   const config = loadConfig();
@@ -32,6 +35,7 @@ async function main(): Promise<void> {
   const recommendations = createRecommendationStore(pool);
   const prompts = createPromptStore(pool);
   const settings = createSettingsService(pool);
+  const digests = createDigestStore(pool);
 
   const sendPulse = createSendPulseClient({
     clientId: config.sendPulseClientId,
@@ -75,6 +79,20 @@ async function main(): Promise<void> {
     ownerTelegramId: config.ownerTelegramId,
   });
 
+  const digestGenerator = createDigestGenerator({
+    apiKey: config.anthropicApiKey,
+    model: config.digestModel,
+  });
+
+  const digestScheduler = startDigestScheduler({
+    store: digests,
+    generator: digestGenerator,
+    notifier,
+    logger,
+    dailyHourUtc: config.digestDailyHourUtc,
+    windowHours: config.digestWindowHours,
+  });
+
   const admin = startAdminServer({
     config,
     logger,
@@ -88,6 +106,8 @@ async function main(): Promise<void> {
     analyst,
     sendPulse,
     notifier,
+    digests,
+    digestScheduler,
   });
 
   // Best-effort startup ping so the owner knows the bot is up and where
@@ -99,6 +119,11 @@ async function main(): Promise<void> {
 
   const shutdown = async (sig: string) => {
     logger.info('shutdown signal', { sig });
+    try {
+      digestScheduler.stop();
+    } catch (err) {
+      logger.warn('digest scheduler stop failed', { err: err instanceof Error ? err.message : String(err) });
+    }
     try {
       await admin.close();
     } catch (err) {
