@@ -62,7 +62,7 @@ services:
 
   transcribe:
     build:
-      context: /home/aisales/ai-command-center
+      context: /root/ai-command-center
       dockerfile: apps/transcribe/Dockerfile
     restart: unless-stopped
     environment:
