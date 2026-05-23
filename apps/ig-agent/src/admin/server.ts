@@ -302,6 +302,9 @@ export function startAdminServer(deps: AdminDeps): AdminHandle {
   app.get('/assets/ig-admin.js', (c) => c.body(IG_ADMIN_JS, 200, {
     'content-type': 'application/javascript; charset=utf-8',
   }));
+  app.get('/assets/ig-admin.css', (c) => c.body(IG_ADMIN_CSS, 200, {
+    'content-type': 'text/css; charset=utf-8',
+  }));
 
   app.post('/webhook/sendpulse', async (c) => {
     const token = c.req.query('token');
