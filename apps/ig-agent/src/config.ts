@@ -40,6 +40,24 @@ function parseLogLevel(raw: string | undefined): LogLevel {
   throw new Error(`Invalid LOG_LEVEL: ${raw}`);
 }
 
+function parseHourUtc(raw: string | undefined, fallback: number): number {
+  if (!raw) return fallback;
+  const n = Number(raw);
+  if (!Number.isInteger(n) || n < 0 || n > 23) {
+    throw new Error(`DIGEST_DAILY_HOUR_UTC must be 0..23, got: ${raw}`);
+  }
+  return n;
+}
+
+function parsePositiveInt(raw: string | undefined, fallback: number): number {
+  if (!raw) return fallback;
+  const n = Number(raw);
+  if (!Number.isInteger(n) || n < 1) {
+    throw new Error(`Expected positive integer, got: ${raw}`);
+  }
+  return n;
+}
+
 export interface Config {
   // SendPulse
   sendPulseClientId: string;
@@ -71,6 +89,11 @@ export interface Config {
   logLevel: LogLevel;
   confidenceThreshold: number;
   ignoredContactIds: Set<string>;
+
+  // Daily digest scheduler
+  digestModel: string;
+  digestDailyHourUtc: number;
+  digestWindowHours: number;
 }
 
 export function loadConfig(): Config {
