@@ -238,38 +238,39 @@ function dimensionFor(aspect: Aspect, quality: Quality = '2k'): { width: number;
   }
 }
 
-// HeyGen exposes the avatar generation via the talking_photo's `model_version`
-// (Avatar V vs Avatar IV). "V" is the current default; "IV" remains for users
-// who want the older look. Mapped to HeyGen's stringly-typed param.
-function modelVersionParam(v: HeygenModelVersion | undefined): string {
-  return v === 'IV' ? 'v4' : 'v5';
-}
-
-// Avatar IV motion engine — more expressive facial motion и более естественные
-// движения головы по сравнению со старым "Unlimited" engine. Включается
-// отдельным флагом `use_avatar_iv_model: true` в character payload,
-// независимо от model_version (model_version отвечает за look, а этот флаг —
-// за motion engine). Дефолт ON; можно отключить через opts.expressiveMotion=false.
-// Источник: https://docs.heygen.com/changelog/avatar-iv-support-now-available-in-create-avatar-video-api
-const USE_AVATAR_IV_MOTION_DEFAULT = true;
-
 // Motion prompt по умолчанию — максимально «живая» подача для talking photo.
-// Передаётся в character.motion_prompt при включённом Avatar IV motion engine.
+// Передаётся в character.motion_prompt только в Avatar IV (V его не принимает).
 // Константа живёт в client-safe файле heygen-motion.ts, чтобы её мог импортить UI.
 export { MAX_REALISM_MOTION_PROMPT } from './heygen-motion';
 import { MAX_REALISM_MOTION_PROMPT } from './heygen-motion';
 
-export type CreateVideoOpts = {
+// ── Avatar V vs Avatar IV ────────────────────────────────────────────────
+// HeyGen различает два независимых движка генерации видео из talking_photo:
+//
+//   Avatar V  — model_version='v5'. Чистая фотореалистичная мимика,
+//               НЕ принимает use_avatar_iv_model и motion_prompt.
+//   Avatar IV — use_avatar_iv_model=true. Альтернативный движок с более
+//               экспрессивными движениями, принимает motion_prompt.
+//
+// Раньше мы пытались скомбинировать оба (model_version='v5' + use_avatar_iv_model=true),
+// но HeyGen в этом случае помечал результат как Avatar IV и игнорировал v5-look.
+// Поэтому две независимых функции — никаких пересекающихся флагов.
+// Источник: https://docs.heygen.com/changelog/avatar-iv-support-now-available-in-create-avatar-video-api
+
+export type CreateVideoBaseOpts = {
   talkingPhotoId: string;
   voiceId: string;
   script: string;
   aspect?: Aspect;
-  quality?: Quality;             // 1080p (FullHD) | 2k (QHD); default — '2k'
-  background?: string;           // hex like "#000000"; default — black
-  version?: HeygenModelVersion;  // default — 'V'
-  expressiveMotion?: boolean;    // Avatar IV motion engine; default — true
-  motionPrompt?: string;         // override default; '' to disable
+  quality?: Quality;          // 1080p (FullHD) | 2k (QHD); default — '2k'
+  background?: string;        // hex like "#000000"; default — black
   testMode?: boolean;
+};
+
+export type CreateVideoAvatarVOpts = CreateVideoBaseOpts;
+
+export type CreateVideoAvatarIVOpts = CreateVideoBaseOpts & {
+  motionPrompt?: string;      // English; '' to disable; default — MAX_REALISM_MOTION_PROMPT
 };
 
 type VideoGenerateResp = {
@@ -278,30 +279,16 @@ type VideoGenerateResp = {
   message?: string | null;
 };
 
-/** Create a new talking_photo video → returns HeyGen video_id. */
-export async function createVideo(opts: CreateVideoOpts): Promise<string> {
-  const key = keyOrThrow();
+function validateBase(opts: CreateVideoBaseOpts): void {
   if (!opts.script || opts.script.trim().length < 5) {
     throw new HeygenError('BAD_SCRIPT', 'script too short');
   }
   if (!opts.talkingPhotoId) throw new HeygenError('MISSING_PHOTO_ID', 'talkingPhotoId required');
   if (!opts.voiceId)        throw new HeygenError('MISSING_VOICE_ID', 'voiceId required');
+}
 
-  const expressiveMotion = opts.expressiveMotion ?? USE_AVATAR_IV_MOTION_DEFAULT;
-  const motionPrompt = opts.motionPrompt ?? MAX_REALISM_MOTION_PROMPT;
-
-  const character: Record<string, unknown> = {
-    type: 'talking_photo',
-    talking_photo_id: opts.talkingPhotoId,
-    model_version: modelVersionParam(opts.version),
-    use_avatar_iv_model: expressiveMotion,
-  };
-  // motion_prompt принимается HeyGen только когда активен Avatar IV motion engine.
-  // Пустая строка трактуется как «не передавать», чтобы юзер мог отключить prompt.
-  if (expressiveMotion && motionPrompt.trim().length > 0) {
-    character.motion_prompt = motionPrompt.slice(0, 2000);
-  }
-
+async function submitVideo(opts: CreateVideoBaseOpts, character: Record<string, unknown>): Promise<string> {
+  const key = keyOrThrow();
   const body = {
     video_inputs: [
       {
@@ -337,6 +324,52 @@ export async function createVideo(opts: CreateVideoOpts): Promise<string> {
   const id = parsed.data?.video_id;
   if (!id) throw new HeygenError('SUBMIT_NO_VIDEO_ID', text.slice(0, 300));
   return id;
+}
+
+/**
+ * Avatar V — photorealistic talking photo (model_version='v5').
+ * Без use_avatar_iv_model и без motion_prompt — иначе HeyGen переклассифицирует
+ * результат как Avatar IV.
+ */
+export async function createVideoAvatarV(opts: CreateVideoAvatarVOpts): Promise<string> {
+  validateBase(opts);
+  const character: Record<string, unknown> = {
+    type: 'talking_photo',
+    talking_photo_id: opts.talkingPhotoId,
+    model_version: 'v5',
+  };
+  return submitVideo(opts, character);
+}
+
+/**
+ * Avatar IV — expressive motion engine (use_avatar_iv_model=true).
+ * Принимает motion_prompt; model_version не передаётся (этот флаг полностью
+ * переопределяет движок).
+ */
+export async function createVideoAvatarIV(opts: CreateVideoAvatarIVOpts): Promise<string> {
+  validateBase(opts);
+  const motionPrompt = opts.motionPrompt ?? MAX_REALISM_MOTION_PROMPT;
+  const character: Record<string, unknown> = {
+    type: 'talking_photo',
+    talking_photo_id: opts.talkingPhotoId,
+    use_avatar_iv_model: true,
+  };
+  if (motionPrompt.trim().length > 0) {
+    character.motion_prompt = motionPrompt.slice(0, 2000);
+  }
+  return submitVideo(opts, character);
+}
+
+/**
+ * Dispatch helper — выбирает функцию по версии.
+ * Удобно для воркера, где версия приходит из БД.
+ */
+export function createVideoForVersion(
+  version: HeygenModelVersion,
+  opts: CreateVideoAvatarIVOpts,
+): Promise<string> {
+  if (version === 'IV') return createVideoAvatarIV(opts);
+  return createVideoAvatarV(opts);
 }
 
 type VideoStatusResp = {
