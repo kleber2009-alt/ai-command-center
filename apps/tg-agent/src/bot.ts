@@ -177,6 +177,48 @@ export function createBot(deps: BotDeps): CreateBotResult {
           ctx.from?.first_name ??
           (incoming.userId !== undefined ? `user${incoming.userId}` : undefined);
 
+        // RAG: pull top-5 semantically related past messages from
+        // the same chat as additional context for the responder.
+        // Same-chat filter keeps replies coherent (cross-chat memory
+        // is exposed via the /memory DM command instead). Strict
+        // timeout + try/catch so embeddings outage never blocks the
+        // bot's reply pipeline.
+        let memoryContext: string | undefined;
+        if (memory.enabled) {
+          try {
+            const hits = await Promise.race([
+              memory.search(text, { limit: 5, chatId, minScore: 0.3 }),
+              new Promise<never>((_, reject) =>
+                setTimeout(() => reject(new Error('memory: search timeout')), 2500),
+              ),
+            ]);
+            // Drop the just-indexed self-match (same id won't appear
+            // yet because indexing is fire-and-forget after this
+            // generate, but defensively filter by score and length).
+            const useful = hits.filter((h) => h.payload.text.trim().length > 5);
+            if (useful.length > 0) {
+              memoryContext = useful
+                .map((h, i) => {
+                  const when = h.payload.created_at?.slice(0, 10) ?? '?';
+                  const who = h.payload.username ? '@' + h.payload.username : 'участник';
+                  const cls = h.payload.class ? ` [${h.payload.class}]` : '';
+                  return `${i + 1}. [${when}] ${who}${cls}: ${h.payload.text.slice(0, 240)}`;
+                })
+                .join('\n');
+              logger.info('memory: rag context attached', {
+                ...baseLog,
+                snippets: useful.length,
+                topScore: useful[0]?.score,
+              });
+            }
+          } catch (err) {
+            logger.warn('memory: rag search failed', {
+              ...baseLog,
+              error: err instanceof Error ? err.message : String(err),
+            });
+          }
+        }
+
         let generated: string | null = null;
         let responderCacheRead = 0;
         try {
@@ -184,6 +226,7 @@ export function createBot(deps: BotDeps): CreateBotResult {
             messageClass: classification.class,
             text,
             authorDisplay,
+            memoryContext,
           });
           generated = result.text;
           responderCacheRead = result.cacheReadInputTokens;

@@ -94,13 +94,15 @@ ${knowledgeBase}
 }
 
 // Builds the per-call user turn that carries the volatile context:
-// class, strategy hint, author handle, and the original message text.
-// Lives outside the cache breakpoint by design.
+// class, strategy hint, author handle, the original message text,
+// and (optionally) the most relevant past messages retrieved from
+// semantic memory. Lives outside the cache breakpoint by design.
 export function buildResponderUserMessage(args: {
   messageClass: string;
   text: string;
   authorDisplay: string | undefined;
   strategies?: Record<string, string>;
+  memoryContext?: string;
 }): string {
   const strategies = args.strategies ?? RESPONDER_STRATEGIES;
   const strategy =
@@ -109,9 +111,13 @@ export function buildResponderUserMessage(args: {
 
   const author = args.authorDisplay ? `от ${args.authorDisplay}` : 'из чата';
 
+  const memoryBlock = args.memoryContext && args.memoryContext.trim().length > 0
+    ? `\nРелевантный контекст из прошлых сообщений (для справки, не цитируй дословно без необходимости):\n\n${args.memoryContext}\n`
+    : '';
+
   return `Класс входящего сообщения: ${args.messageClass}
 Стратегия ответа: ${strategy}
-
+${memoryBlock}
 Сообщение ${author}:
 
 """

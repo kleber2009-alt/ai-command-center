@@ -18,6 +18,10 @@ export interface RespondInput {
   messageClass: MessageClass;
   text: string;
   authorDisplay?: string;
+  // Pre-formatted RAG snippets injected into the user turn. Each
+  // snippet is a few lines; the responder is told to use them for
+  // context, not to cite verbatim.
+  memoryContext?: string;
 }
 
 export interface ResponderResult {
@@ -67,6 +71,7 @@ export function createResponder({ apiKey, model, promptConfig }: ResponderOption
             text: input.text,
             authorDisplay: input.authorDisplay,
             strategies: promptConfig?.getStrategies(),
+            memoryContext: input.memoryContext,
           }),
         },
       ],

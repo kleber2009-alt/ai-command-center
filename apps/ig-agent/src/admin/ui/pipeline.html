@@ -1,0 +1,540 @@
+<!DOCTYPE html>
+<html lang="ru">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<meta name="theme-color" content="#080808">
+<meta name="color-scheme" content="dark only">
+<title>AI Sales · Pipeline</title>
+<style>
+  *, *::before, *::after { margin:0; padding:0; box-sizing:border-box; }
+  html, body { background:#080808; color:#f5f0e8; min-height:100vh; }
+  body { font-family:Georgia,'Times New Roman',serif; font-size:15px; line-height:1.5; overflow-x:hidden; }
+  .label { font-family:'SF Mono','JetBrains Mono','Menlo',monospace; font-size:10px; text-transform:uppercase; letter-spacing:0.14em; color:#b8b3a8; font-weight:700; }
+  .mono { font-family:'SF Mono','JetBrains Mono','Menlo',monospace; }
+
+  .topbar { position:sticky; top:0; z-index:50; display:flex; align-items:center; justify-content:space-between; padding:14px 24px; background:#080808; border-bottom:1px solid #2a2a2a; gap:18px; flex-wrap:wrap; }
+  .topbar-left { display:flex; align-items:center; gap:18px; min-width:0; }
+  .topbar-title { font-family:Georgia,serif; font-size:18px; line-height:1; white-space:nowrap; }
+  .topbar-title .accent { color:#c8f060; font-style:italic; }
+  .topbar-nav { display:flex; gap:2px; }
+  .nav-link { background:transparent; border:1px solid #2a2a2a; color:#b8b3a8; padding:7px 14px; font-family:'SF Mono',monospace; font-size:10px; text-transform:uppercase; letter-spacing:0.14em; cursor:pointer; font-weight:700; text-decoration:none; }
+  .nav-link.active { background:#c8f060; color:#080808; border-color:#c8f060; }
+  .nav-link:hover:not(.active) { border-color:#c8f060; color:#f5f0e8; }
+
+  .shell { max-width:1640px; margin:0 auto; padding:0; display:grid; grid-template-columns:260px 1fr; gap:2px; min-height:calc(100vh - 56px); background:#1a1a1a; }
+  @media (max-width:900px) { .shell { grid-template-columns:1fr; } }
+
+  /* === FILTERS === */
+  .filters { background:#0a0a0a; padding:18px 20px 30px; overflow-y:auto; }
+  .filter-block { margin-bottom:22px; }
+  .filter-block h4 { font-family:'SF Mono',monospace; font-size:10px; font-weight:700; text-transform:uppercase; letter-spacing:0.14em; color:#5a5550; margin-bottom:10px; padding-bottom:6px; border-bottom:1px solid #1a1a1a; }
+  .chip { display:inline-flex; align-items:center; gap:6px; padding:5px 10px; margin:2px 2px 2px 0; background:#141414; border:1px solid #2a2a2a; font-family:'SF Mono',monospace; font-size:10px; text-transform:uppercase; letter-spacing:0.1em; color:#b8b3a8; cursor:pointer; font-weight:700; }
+  .chip:hover { border-color:#c8f060; color:#f5f0e8; }
+  .chip.active { background:#c8f060; color:#080808; border-color:#c8f060; }
+  .chip.cyan.active { background:#60c8f0; border-color:#60c8f0; color:#080808; }
+  .chip.pink.active { background:#f06090; border-color:#f06090; color:#080808; }
+  .chip .count { color:#5a5550; font-weight:400; }
+  .chip.active .count { color:rgba(8,8,8,0.5); }
+
+  .filter-search { width:100%; background:#141414; border:1px solid #2a2a2a; color:#f5f0e8; padding:8px 12px; font-family:'SF Mono',monospace; font-size:11px; margin-bottom:14px; }
+  .filter-search:focus { outline:none; border-color:#c8f060; }
+  .filter-search::placeholder { color:#5a5550; }
+
+  .range-row { display:flex; gap:4px; align-items:center; font-family:'SF Mono',monospace; font-size:11px; color:#b8b3a8; }
+  .range-input { width:60px; background:#141414; border:1px solid #2a2a2a; color:#f5f0e8; padding:6px 8px; font-family:'SF Mono',monospace; font-size:11px; text-align:center; }
+
+  .reset-btn { background:transparent; border:1px solid #2a2a2a; color:#b8b3a8; padding:7px 0; width:100%; font-family:'SF Mono',monospace; font-size:10px; text-transform:uppercase; letter-spacing:0.14em; cursor:pointer; font-weight:700; }
+  .reset-btn:hover { border-color:#f06090; color:#f06090; }
+
+  /* === MAIN === */
+  .main { background:#0a0a0a; display:flex; flex-direction:column; }
+  .main-head { padding:14px 24px; border-bottom:1px solid #1a1a1a; display:flex; align-items:center; justify-content:space-between; gap:12px; flex-wrap:wrap; }
+  .head-title { font-family:Georgia,serif; font-size:20px; }
+  .head-title .accent { color:#c8f060; font-style:italic; }
+  .head-meta { font-family:'SF Mono',monospace; font-size:11px; color:#b8b3a8; letter-spacing:0.1em; }
+  .head-meta .num { color:#c8f060; font-weight:700; }
+  .head-controls { display:flex; gap:6px; }
+  .ctrl { background:transparent; border:1px solid #2a2a2a; color:#b8b3a8; padding:6px 12px; font-family:'SF Mono',monospace; font-size:10px; text-transform:uppercase; letter-spacing:0.12em; cursor:pointer; font-weight:700; }
+  .ctrl:hover { border-color:#c8f060; color:#f5f0e8; }
+  .ctrl.active { background:#c8f060; color:#080808; border-color:#c8f060; }
+
+  /* === TABLE === */
+  .table { font-size:14px; }
+  .row-head { display:grid; grid-template-columns:280px 180px 90px 90px 1fr 130px 90px; gap:14px; padding:10px 24px; border-bottom:1px solid #1a1a1a; background:#0d0d0d; align-items:center; position:sticky; top:0; }
+  .row-head .h { font-family:'SF Mono',monospace; font-size:10px; text-transform:uppercase; letter-spacing:0.14em; color:#5a5550; font-weight:700; cursor:pointer; }
+  .row-head .h:hover { color:#c8f060; }
+  .row-head .h.sort::after { content:' ▼'; color:#c8f060; }
+
+  .row { display:grid; grid-template-columns:280px 180px 90px 90px 1fr 130px 90px; gap:14px; padding:14px 24px; border-bottom:1px solid #131313; align-items:center; cursor:pointer; transition:background 0.1s; }
+  .row:hover { background:#141414; }
+  .row.esc { border-left:3px solid #f06090; padding-left:21px; }
+  .row.hot { border-left:3px solid #c8f060; padding-left:21px; }
+  .row.warm { border-left:3px solid #60c8f0; padding-left:21px; }
+  .row.cold { border-left:3px solid #2a2a2a; padding-left:21px; opacity:0.75; }
+
+  .who { display:flex; gap:10px; align-items:center; min-width:0; }
+  .who-avatar { width:32px; height:32px; background:linear-gradient(135deg, #c8f060, #60c8f0); display:flex; align-items:center; justify-content:center; font-family:Georgia,serif; font-size:13px; color:#080808; font-weight:700; flex-shrink:0; letter-spacing:-0.02em; }
+  .who-avatar.alt { background:linear-gradient(135deg, #60c8f0, #f06090); }
+  .who-avatar.alt2 { background:linear-gradient(135deg, #f06090, #c8f060); }
+  .who-info { min-width:0; overflow:hidden; }
+  .who-name { font-family:Georgia,serif; font-size:15px; line-height:1.2; white-space:nowrap; overflow:hidden; text-overflow:ellipsis; }
+  .who-handle { font-family:'SF Mono',monospace; font-size:11px; color:#60c8f0; margin-top:2px; }
+  .who-handle.tg { color:#60c8f0; }
+  .who-handle.ig { color:#f06090; }
+
+  /* funnel mini */
+  .fmini { display:flex; gap:2px; height:8px; align-items:center; }
+  .fm-dot { width:14%; height:6px; background:#1a1a1a; }
+  .fm-dot.done { background:#2a3a14; }
+  .fm-dot.current { background:#c8f060; height:8px; box-shadow:0 0 0 1px #c8f060; }
+  .fm-label { font-family:'SF Mono',monospace; font-size:10px; color:#b8b3a8; margin-top:4px; letter-spacing:0.1em; text-transform:uppercase; }
+
+  /* segment chip */
+  .seg { display:inline-block; font-family:'SF Mono',monospace; font-size:10px; padding:2px 7px; font-weight:700; letter-spacing:0.12em; }
+  .seg.A { background:#2a3a14; color:#c8f060; }
+  .seg.B { background:#0f2a3a; color:#60c8f0; }
+  .seg.C { background:#1a1a1a; color:#b8b3a8; border:1px solid #2a2a2a; }
+  .seg.U { color:#5a5550; border:1px dashed #2a2a2a; }
+
+  /* score */
+  .score-cell { font-family:Georgia,serif; font-size:22px; line-height:1; }
+  .score-cell.A { color:#c8f060; }
+  .score-cell.B { color:#60c8f0; }
+  .score-cell.C { color:#b8b3a8; }
+  .score-cell.U { color:#5a5550; }
+
+  /* preview */
+  .preview { font-size:13px; line-height:1.4; color:#c5bfb3; overflow:hidden; text-overflow:ellipsis; white-space:nowrap; display:block; max-width:100%; }
+  .preview .auth { font-family:'SF Mono',monospace; font-size:10px; padding:0 5px; margin-right:6px; }
+  .preview .auth.cli { color:#f5f0e8; background:#1a1a1a; }
+  .preview .auth.agent { color:#60c8f0; background:#0f2a3a; }
+  .preview .auth.user { color:#c8f060; background:#1a2a0d; }
+
+  /* time */
+  .timecell { font-family:'SF Mono',monospace; font-size:11px; color:#b8b3a8; letter-spacing:0.06em; line-height:1.4; }
+  .timecell .ago { color:#f5f0e8; font-weight:700; }
+  .timecell .ago.warn { color:#f06090; }
+  .timecell .ago.hot { color:#c8f060; }
+  .timecell .sub { font-size:10px; color:#5a5550; }
+
+  /* forecast */
+  .fc { font-family:'SF Mono',monospace; font-size:11px; }
+  .fc .v { color:#c8f060; font-weight:700; }
+  .fc .v.cyan { color:#60c8f0; }
+  .fc .sub { color:#5a5550; font-size:10px; margin-top:2px; }
+
+  /* esc badge */
+  .esc-badge { display:inline-block; font-family:'SF Mono',monospace; font-size:9px; padding:2px 6px; background:#28121b; color:#f06090; font-weight:700; letter-spacing:0.1em; margin-right:6px; }
+
+  .filters::-webkit-scrollbar { width:6px; }
+  .filters::-webkit-scrollbar-track { background:#0a0a0a; }
+  .filters::-webkit-scrollbar-thumb { background:#2a2a2a; }
+
+  @media (max-width:1200px) {
+    .row-head, .row { grid-template-columns:280px 180px 90px 1fr 90px; }
+    .row-head .col-score, .row .score-cell, .row-head .col-time, .row .timecell { display:none; }
+  }
+</style>
+</head>
+<body>
+
+<header class="topbar">
+  <div class="topbar-left">
+    <div class="topbar-title">AI Sales <span class="accent">Pipeline</span></div>
+    <nav class="topbar-nav">
+      <a class="nav-link" href="/01-portal/ai-sales-portal.html">Портал</a>
+      <a class="nav-link" href="/06-dashboard-prototype/pulse.html">Pulse</a>
+      <a class="nav-link active" href="#">Pipeline</a>
+      <a class="nav-link" href="/06-dashboard-prototype/conversation.html">Conv</a>
+      <a class="nav-link" href="/06-dashboard-prototype/project.html">Project</a>
+      <a class="nav-link" href="/06-dashboard-prototype/agents.html">Agents</a>
+      <a class="nav-link" href="/carousels/index.html">Carousels</a>
+      <a class="nav-link" href="/reels/index.html">Reels</a>
+    </nav>
+  </div>
+</header>
+
+<main class="shell">
+
+  <!-- ============ FILTERS ============ -->
+  <aside class="filters">
+
+    <input class="filter-search" placeholder="🔍  поиск по имени, @handle" />
+
+    <div class="filter-block">
+      <h4>Канал</h4>
+      <span class="chip active">Все <span class="count">128</span></span>
+      <span class="chip pink">IG <span class="count">82</span></span>
+      <span class="chip cyan">TG <span class="count">46</span></span>
+    </div>
+
+    <div class="filter-block">
+      <h4>Этап воронки</h4>
+      <span class="chip">01 Hello <span class="count">47</span></span>
+      <span class="chip">02 Discovery <span class="count">29</span></span>
+      <span class="chip active">03 Pitch <span class="count">16</span></span>
+      <span class="chip">04 Objections <span class="count">8</span></span>
+      <span class="chip">05 Close <span class="count">5</span></span>
+      <span class="chip">06 Followup <span class="count">3</span></span>
+      <span class="chip">07 Won/Lost <span class="count">10</span></span>
+    </div>
+
+    <div class="filter-block">
+      <h4>Сегмент</h4>
+      <span class="chip">A <span class="count">14</span></span>
+      <span class="chip">B <span class="count">38</span></span>
+      <span class="chip">C <span class="count">52</span></span>
+      <span class="chip">Unknown <span class="count">24</span></span>
+    </div>
+
+    <div class="filter-block">
+      <h4>Скоринг</h4>
+      <div class="range-row">
+        <input class="range-input" value="0" />
+        <span>—</span>
+        <input class="range-input" value="100" />
+      </div>
+    </div>
+
+    <div class="filter-block">
+      <h4>Состояние</h4>
+      <span class="chip pink">⚠ Эскалации <span class="count">3</span></span>
+      <span class="chip">🔥 Без ответа &gt; 30м <span class="count">4</span></span>
+      <span class="chip">🔥 Без ответа &gt; 2ч <span class="count">7</span></span>
+      <span class="chip">📌 Перехвачено <span class="count">2</span></span>
+    </div>
+
+    <div class="filter-block">
+      <h4>Активность</h4>
+      <span class="chip">Сегодня <span class="count">39</span></span>
+      <span class="chip">Эта неделя <span class="count">87</span></span>
+      <span class="chip">Этот месяц <span class="count">128</span></span>
+    </div>
+
+    <button class="reset-btn">↻ Сбросить фильтры</button>
+
+  </aside>
+
+  <!-- ============ MAIN ============ -->
+  <section class="main">
+
+    <div class="main-head">
+      <div class="head-title">128 клиентов <span class="accent">в работе</span></div>
+      <div class="head-meta">показано <span class="num">12</span> из 128 · сортировка по температуре</div>
+      <div class="head-controls">
+        <button class="ctrl active">Таблица</button>
+        <button class="ctrl">Канбан</button>
+        <button class="ctrl">↓ Export CSV</button>
+      </div>
+    </div>
+
+    <div class="row-head">
+      <div class="h">Клиент</div>
+      <div class="h">Этап</div>
+      <div class="h">Сегмент</div>
+      <div class="h">Скоринг</div>
+      <div class="h">Последнее сообщение</div>
+      <div class="h sort col-time">Время</div>
+      <div class="h">Прогноз</div>
+    </div>
+
+    <div class="table">
+
+      <a class="row esc" href="/06-dashboard-prototype/conversation.html" style="text-decoration:none; color:inherit;">
+        <div class="who">
+          <div class="who-avatar alt">AV</div>
+          <div class="who-info">
+            <div class="who-name"><span class="esc-badge">esc</span>Анна Волкова</div>
+            <div class="who-handle ig">IG · @anna_volkova</div>
+          </div>
+        </div>
+        <div>
+          <div class="fmini">
+            <div class="fm-dot done"></div><div class="fm-dot done"></div><div class="fm-dot done"></div>
+            <div class="fm-dot current"></div><div class="fm-dot"></div><div class="fm-dot"></div><div class="fm-dot"></div>
+          </div>
+          <div class="fm-label">04 Objections</div>
+        </div>
+        <div><span class="seg A">A</span></div>
+        <div class="score-cell A">82</div>
+        <div><span class="preview"><span class="auth cli">КЛИЕНТ</span>«вы меня обманули, я ждала ответ 4 часа...»</span></div>
+        <div class="timecell"><span class="ago warn">2 мин</span><br/><span class="sub">21:02</span></div>
+        <div class="fc"><span class="v">96%</span><div class="sub">требует Илью</div></div>
+      </a>
+
+      <a class="row hot" href="/06-dashboard-prototype/conversation.html" style="text-decoration:none; color:inherit;">
+        <div class="who">
+          <div class="who-avatar">MV</div>
+          <div class="who-info">
+            <div class="who-name">Марина Веселова</div>
+            <div class="who-handle ig">IG · @marina_v</div>
+          </div>
+        </div>
+        <div>
+          <div class="fmini">
+            <div class="fm-dot done"></div><div class="fm-dot done"></div><div class="fm-dot current"></div>
+            <div class="fm-dot"></div><div class="fm-dot"></div><div class="fm-dot"></div><div class="fm-dot"></div>
+          </div>
+          <div class="fm-label">03 Pitch</div>
+        </div>
+        <div><span class="seg A">A</span></div>
+        <div class="score-cell A">78</div>
+        <div><span class="preview"><span class="auth cli">КЛИЕНТ</span>«окей, смотрю...»</span></div>
+        <div class="timecell"><span class="ago hot">сейчас</span><br/><span class="sub">21:02</span></div>
+        <div class="fc"><span class="v">73%</span><div class="sub">close ~24ч</div></div>
+      </a>
+
+      <a class="row hot" href="/06-dashboard-prototype/conversation.html" style="text-decoration:none; color:inherit;">
+        <div class="who">
+          <div class="who-avatar alt2">KB</div>
+          <div class="who-info">
+            <div class="who-name">Катя Берестова</div>
+            <div class="who-handle ig">IG · @kate_b</div>
+          </div>
+        </div>
+        <div>
+          <div class="fmini">
+            <div class="fm-dot done"></div><div class="fm-dot done"></div><div class="fm-dot current"></div>
+            <div class="fm-dot"></div><div class="fm-dot"></div><div class="fm-dot"></div><div class="fm-dot"></div>
+          </div>
+          <div class="fm-label">03 Pitch</div>
+        </div>
+        <div><span class="seg A">A</span></div>
+        <div class="score-cell A">78</div>
+        <div><span class="preview"><span class="auth agent">AGENT</span>«отправил кейс с похожим клиентом...»</span></div>
+        <div class="timecell"><span class="ago">9 мин</span><br/><span class="sub">20:55</span></div>
+        <div class="fc"><span class="v cyan">62%</span><div class="sub">close ~2д</div></div>
+      </a>
+
+      <a class="row warm" href="/06-dashboard-prototype/conversation.html" style="text-decoration:none; color:inherit;">
+        <div class="who">
+          <div class="who-avatar">DM</div>
+          <div class="who-info">
+            <div class="who-name">Дмитрий Мельников</div>
+            <div class="who-handle tg">TG · @dmitry88</div>
+          </div>
+        </div>
+        <div>
+          <div class="fmini">
+            <div class="fm-dot done"></div><div class="fm-dot done"></div><div class="fm-dot done"></div>
+            <div class="fm-dot done"></div><div class="fm-dot current"></div><div class="fm-dot"></div><div class="fm-dot"></div>
+          </div>
+          <div class="fm-label">05 Close · WON</div>
+        </div>
+        <div><span class="seg A">A</span></div>
+        <div class="score-cell A">91</div>
+        <div><span class="preview"><span class="auth cli">КЛИЕНТ</span>«оплатил, жду документы»</span></div>
+        <div class="timecell"><span class="ago">11 мин</span><br/><span class="sub">21:03</span></div>
+        <div class="fc"><span class="v">45 000 ₽</span><div class="sub">✓ paid</div></div>
+      </a>
+
+      <a class="row warm" href="/06-dashboard-prototype/conversation.html" style="text-decoration:none; color:inherit;">
+        <div class="who">
+          <div class="who-avatar alt">SR</div>
+          <div class="who-info">
+            <div class="who-name">Сергей Рябов</div>
+            <div class="who-handle tg">TG · @sergey_t</div>
+          </div>
+        </div>
+        <div>
+          <div class="fmini">
+            <div class="fm-dot done"></div><div class="fm-dot done"></div><div class="fm-dot current"></div>
+            <div class="fm-dot"></div><div class="fm-dot"></div><div class="fm-dot"></div><div class="fm-dot"></div>
+          </div>
+          <div class="fm-label">03 Pitch</div>
+        </div>
+        <div><span class="seg B">B</span></div>
+        <div class="score-cell B">64</div>
+        <div><span class="preview"><span class="auth agent">AGENT</span>отправил кружочек 0:14</span></div>
+        <div class="timecell"><span class="ago">15 мин</span><br/><span class="sub">20:58</span></div>
+        <div class="fc"><span class="v cyan">54%</span><div class="sub">close ~3д</div></div>
+      </a>
+
+      <a class="row warm" href="/06-dashboard-prototype/conversation.html" style="text-decoration:none; color:inherit;">
+        <div class="who">
+          <div class="who-avatar alt2">OD</div>
+          <div class="who-info">
+            <div class="who-name">Ольга Дроздова</div>
+            <div class="who-handle tg">TG · @olga_design</div>
+          </div>
+        </div>
+        <div>
+          <div class="fmini">
+            <div class="fm-dot done"></div><div class="fm-dot current"></div><div class="fm-dot"></div>
+            <div class="fm-dot"></div><div class="fm-dot"></div><div class="fm-dot"></div><div class="fm-dot"></div>
+          </div>
+          <div class="fm-label">02 Discovery</div>
+        </div>
+        <div><span class="seg B">B</span></div>
+        <div class="score-cell B">58</div>
+        <div><span class="preview"><span class="auth agent">AGENT</span>«а что именно нужно автоматизировать?»</span></div>
+        <div class="timecell"><span class="ago">22 мин</span><br/><span class="sub">20:51</span></div>
+        <div class="fc"><span class="v cyan">38%</span><div class="sub">close ~5д</div></div>
+      </a>
+
+      <a class="row warm" href="/06-dashboard-prototype/conversation.html" style="text-decoration:none; color:inherit;">
+        <div class="who">
+          <div class="who-avatar">VM</div>
+          <div class="who-info">
+            <div class="who-name">Влад Маркетингов</div>
+            <div class="who-handle ig">IG · @vlad_marketing</div>
+          </div>
+        </div>
+        <div>
+          <div class="fmini">
+            <div class="fm-dot done"></div><div class="fm-dot done"></div><div class="fm-dot done"></div>
+            <div class="fm-dot current"></div><div class="fm-dot"></div><div class="fm-dot"></div><div class="fm-dot"></div>
+          </div>
+          <div class="fm-label">04 Objections</div>
+        </div>
+        <div><span class="seg B">B</span></div>
+        <div class="score-cell B">61</div>
+        <div><span class="preview"><span class="auth agent">AGENT</span>обработка «дорого» через ROI-расчёт</span></div>
+        <div class="timecell"><span class="ago">25 мин</span><br/><span class="sub">20:49</span></div>
+        <div class="fc"><span class="v cyan">42%</span><div class="sub">close ~4д</div></div>
+      </a>
+
+      <a class="row warm" href="/06-dashboard-prototype/conversation.html" style="text-decoration:none; color:inherit;">
+        <div class="who">
+          <div class="who-avatar alt">NP</div>
+          <div class="who-info">
+            <div class="who-name">Нина Прокопенко</div>
+            <div class="who-handle tg">TG · @nina_pro</div>
+          </div>
+        </div>
+        <div>
+          <div class="fmini">
+            <div class="fm-dot done"></div><div class="fm-dot done"></div><div class="fm-dot done"></div>
+            <div class="fm-dot done"></div><div class="fm-dot current"></div><div class="fm-dot"></div><div class="fm-dot"></div>
+          </div>
+          <div class="fm-label">05 Close</div>
+        </div>
+        <div><span class="seg A">A</span></div>
+        <div class="score-cell A">85</div>
+        <div><span class="preview"><span class="auth user">ИЛЬЯ</span>«давай созвонимся в среду»</span></div>
+        <div class="timecell"><span class="ago">30 мин</span><br/><span class="sub">20:44</span></div>
+        <div class="fc"><span class="v">68%</span><div class="sub">120 000 ₽ · est</div></div>
+      </a>
+
+      <a class="row cold" href="/06-dashboard-prototype/conversation.html" style="text-decoration:none; color:inherit;">
+        <div class="who">
+          <div class="who-avatar alt2">AD</div>
+          <div class="who-info">
+            <div class="who-name">Антон Дев</div>
+            <div class="who-handle ig">IG · @anton_dev</div>
+          </div>
+        </div>
+        <div>
+          <div class="fmini">
+            <div class="fm-dot done"></div><div class="fm-dot done"></div><div class="fm-dot done"></div>
+            <div class="fm-dot done"></div><div class="fm-dot done"></div><div class="fm-dot current"></div><div class="fm-dot"></div>
+          </div>
+          <div class="fm-label">06 Followup</div>
+        </div>
+        <div><span class="seg C">C</span></div>
+        <div class="score-cell C">42</div>
+        <div><span class="preview"><span class="auth agent">AGENT</span>«вернусь через 3 дня · напомнить о пакете»</span></div>
+        <div class="timecell"><span class="ago">22 мин</span><br/><span class="sub">20:42</span></div>
+        <div class="fc"><span class="v cyan">24%</span><div class="sub">close ~7д</div></div>
+      </a>
+
+      <a class="row cold" href="/06-dashboard-prototype/conversation.html" style="text-decoration:none; color:inherit;">
+        <div class="who">
+          <div class="who-avatar">MX</div>
+          <div class="who-info">
+            <div class="who-name">Максим Колесников</div>
+            <div class="who-handle tg">TG · @maxx</div>
+          </div>
+        </div>
+        <div>
+          <div class="fmini">
+            <div class="fm-dot done"></div><div class="fm-dot current"></div><div class="fm-dot"></div>
+            <div class="fm-dot"></div><div class="fm-dot"></div><div class="fm-dot"></div><div class="fm-dot"></div>
+          </div>
+          <div class="fm-label">02 Discovery</div>
+        </div>
+        <div><span class="seg C">C</span></div>
+        <div class="score-cell C">38</div>
+        <div><span class="preview"><span class="auth agent">AGENT</span>RAG miss · использован шаблон</span></div>
+        <div class="timecell"><span class="ago">26 мин</span><br/><span class="sub">20:38</span></div>
+        <div class="fc"><span class="v cyan">18%</span><div class="sub">close ~10д</div></div>
+      </a>
+
+      <a class="row warm" href="/06-dashboard-prototype/conversation.html" style="text-decoration:none; color:inherit;">
+        <div class="who">
+          <div class="who-avatar alt">LR</div>
+          <div class="who-info">
+            <div class="who-name">Лера Романова</div>
+            <div class="who-handle ig">IG · @_lera_</div>
+          </div>
+        </div>
+        <div>
+          <div class="fmini">
+            <div class="fm-dot done"></div><div class="fm-dot done"></div><div class="fm-dot done"></div>
+            <div class="fm-dot done"></div><div class="fm-dot done"></div><div class="fm-dot done"></div><div class="fm-dot current"></div>
+          </div>
+          <div class="fm-label">07 WON</div>
+        </div>
+        <div><span class="seg A">A</span></div>
+        <div class="score-cell A">94</div>
+        <div><span class="preview"><span class="auth cli">КЛИЕНТ</span>«перевела 89к, спасибо!»</span></div>
+        <div class="timecell"><span class="ago">30 мин</span><br/><span class="sub">20:34</span></div>
+        <div class="fc"><span class="v">89 000 ₽</span><div class="sub">✓ paid</div></div>
+      </a>
+
+      <a class="row warm" href="/06-dashboard-prototype/conversation.html" style="text-decoration:none; color:inherit;">
+        <div class="who">
+          <div class="who-avatar alt2">PA</div>
+          <div class="who-info">
+            <div class="who-name">Павел Архитектов</div>
+            <div class="who-handle tg">TG · @pavel_arch</div>
+          </div>
+        </div>
+        <div>
+          <div class="fmini">
+            <div class="fm-dot done"></div><div class="fm-dot done"></div><div class="fm-dot current"></div>
+            <div class="fm-dot"></div><div class="fm-dot"></div><div class="fm-dot"></div><div class="fm-dot"></div>
+          </div>
+          <div class="fm-label">03 Pitch</div>
+        </div>
+        <div><span class="seg B">B</span></div>
+        <div class="score-cell B">67</div>
+        <div><span class="preview"><span class="auth agent">AGENT</span>отправил презентацию PDF · 12 стр</span></div>
+        <div class="timecell"><span class="ago">35 мин</span><br/><span class="sub">20:29</span></div>
+        <div class="fc"><span class="v cyan">48%</span><div class="sub">close ~3д</div></div>
+      </a>
+
+    </div>
+
+  </section>
+
+</main>
+
+<script>
+  // chip toggle
+  document.querySelectorAll('.chip').forEach(c => {
+    c.addEventListener('click', e => {
+      e.preventDefault();
+      // single-select per group
+      const group = c.closest('.filter-block');
+      if (group) group.querySelectorAll('.chip').forEach(x => x.classList.remove('active'));
+      c.classList.add('active');
+    });
+  });
+  // reset
+  document.querySelector('.reset-btn').addEventListener('click', () => {
+    document.querySelectorAll('.chip.active').forEach(x => x.classList.remove('active'));
+    document.querySelectorAll('.filter-block .chip').forEach(g => {
+      // make first chip per group active
+    });
+    document.querySelectorAll('.filter-block').forEach(b => {
+      const first = b.querySelector('.chip');
+      if (first) first.classList.add('active');
+    });
+  });
+</script>
+
+<script src="/assets/sidebar.js" defer></script>
+</body>
+</html>

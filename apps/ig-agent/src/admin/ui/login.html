@@ -1,0 +1,344 @@
+<!DOCTYPE html>
+<html lang="ru">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<meta name="theme-color" content="#080808">
+<meta name="color-scheme" content="dark only">
+<title>AI Sales · Войти</title>
+<style>
+  *, *::before, *::after { margin:0; padding:0; box-sizing:border-box; }
+  html, body { background:#080808; color:#f5f0e8; min-height:100vh; }
+  body { font-family:Georgia, 'Times New Roman', serif; font-size:15px; line-height:1.5; overflow-x:hidden; }
+  .label { font-family:'SF Mono',monospace; font-size:10px; text-transform:uppercase; letter-spacing:0.14em; color:#b8b3a8; font-weight:700; }
+  .mono { font-family:'SF Mono',monospace; }
+
+  .shell { min-height:100vh; display:grid; grid-template-columns:1fr 1fr; }
+  @media (max-width:900px) { .shell { grid-template-columns:1fr; } }
+
+  /* LEFT — branding panel */
+  .brand-side {
+    background:#080808;
+    border-right:1px solid #1a1a1a;
+    padding:60px 70px;
+    display:flex;
+    flex-direction:column;
+    position:relative;
+    overflow:hidden;
+  }
+  @media (max-width:900px) { .brand-side { display:none; } }
+
+  .brand-head { display:flex; align-items:center; gap:18px; }
+  .brand-mark {
+    width:48px; height:48px;
+    border:2px solid #c8f060;
+    display:flex; align-items:center; justify-content:center;
+    font-family:'SF Mono',monospace; font-size:18px; font-weight:700;
+    color:#c8f060;
+  }
+  .brand-name {
+    font-family:Georgia, serif; font-size:22px;
+  }
+  .brand-name .accent { color:#c8f060; font-style:italic; }
+  .brand-sub {
+    font-family:'SF Mono',monospace; font-size:10px;
+    color:#5a5550; letter-spacing:0.18em;
+    text-transform:uppercase; font-weight:700;
+    margin-top:8px;
+  }
+
+  .brand-pitch {
+    margin-top:auto;
+    margin-bottom:60px;
+  }
+  .brand-pitch .pre {
+    font-family:'SF Mono',monospace; font-size:10px;
+    color:#c8f060; letter-spacing:0.18em;
+    text-transform:uppercase; font-weight:700;
+    margin-bottom:18px;
+  }
+  .brand-pitch h1 {
+    font-family:Georgia, serif;
+    font-size:56px;
+    font-weight:normal;
+    line-height:1.05;
+    letter-spacing:-0.02em;
+    max-width:520px;
+  }
+  .brand-pitch h1 .accent {
+    color:#c8f060; font-style:italic;
+  }
+  .brand-pitch .desc {
+    margin-top:22px;
+    font-family:Georgia, serif;
+    font-size:17px;
+    color:#b8b3a8;
+    line-height:1.55;
+    max-width:480px;
+    font-style:italic;
+  }
+
+  .brand-stats {
+    display:grid;
+    grid-template-columns:repeat(3, 1fr);
+    gap:2px;
+    margin-top:auto;
+  }
+  .bstat { background:#0f0f0f; border:1px solid #1a1a1a; padding:18px 20px; }
+  .bstat .lbl {
+    font-family:'SF Mono',monospace; font-size:10px;
+    color:#b8b3a8; letter-spacing:0.14em;
+    text-transform:uppercase; font-weight:700;
+    line-height:1.3;
+  }
+  .bstat .val {
+    font-family:Georgia, serif; font-size:36px;
+    color:#c8f060; line-height:1; letter-spacing:-0.02em;
+    margin-top:8px;
+  }
+  .bstat .val .sfx { font-size:14px; color:#5a5550; }
+  .bstat.cyan .val { color:#60c8f0; }
+
+  .brand-foot {
+    margin-top:30px;
+    font-family:'SF Mono',monospace; font-size:10px;
+    color:#5a5550; letter-spacing:0.14em;
+    text-transform:uppercase; font-weight:700;
+  }
+
+  /* RIGHT — auth form */
+  .auth-side {
+    background:#0a0a0a;
+    padding:60px 70px;
+    display:flex;
+    flex-direction:column;
+    justify-content:center;
+  }
+  @media (max-width:900px) { .auth-side { padding:40px 24px; min-height:100vh; } }
+
+  .auth-card {
+    width:100%;
+    max-width:380px;
+    margin:auto;
+  }
+
+  .auth-back {
+    font-family:'SF Mono',monospace; font-size:10px;
+    color:#5a5550; letter-spacing:0.14em;
+    text-transform:uppercase; font-weight:700;
+    margin-bottom:24px;
+    text-decoration:none;
+  }
+  .auth-back:hover { color:#c8f060; }
+
+  .auth-card h2 {
+    font-family:Georgia, serif; font-size:34px;
+    font-weight:normal; line-height:1.1;
+    letter-spacing:-0.02em;
+    margin-bottom:8px;
+  }
+  .auth-card h2 .accent {
+    color:#c8f060; font-style:italic;
+  }
+  .auth-card .sub {
+    font-family:Georgia, serif; font-size:15px;
+    color:#b8b3a8; font-style:italic;
+    margin-bottom:36px;
+  }
+
+  .form-group {
+    margin-bottom:18px;
+  }
+  .form-group label {
+    display:block;
+    font-family:'SF Mono',monospace; font-size:10px;
+    color:#b8b3a8; letter-spacing:0.14em;
+    text-transform:uppercase; font-weight:700;
+    margin-bottom:8px;
+  }
+  .form-group input {
+    width:100%;
+    background:#141414;
+    border:1px solid #2a2a2a;
+    color:#f5f0e8;
+    padding:14px 18px;
+    font-family:Georgia, serif;
+    font-size:16px;
+    outline:none;
+    transition:border-color 0.15s;
+  }
+  .form-group input:focus { border-color:#c8f060; }
+  .form-group input::placeholder { color:#5a5550; }
+
+  .form-row {
+    display:flex; justify-content:space-between; align-items:center;
+    margin-top:-6px; margin-bottom:24px;
+  }
+  .form-row label {
+    display:flex; align-items:center; gap:8px;
+    font-family:'SF Mono',monospace; font-size:11px;
+    color:#b8b3a8; letter-spacing:0.08em;
+    cursor:pointer;
+  }
+  .form-row label input { accent-color:#c8f060; }
+  .form-row .forgot {
+    font-family:'SF Mono',monospace; font-size:11px;
+    color:#c8f060; letter-spacing:0.08em;
+    text-decoration:none; font-weight:700;
+  }
+  .form-row .forgot:hover { text-decoration:underline; }
+
+  .btn-primary {
+    width:100%; padding:16px;
+    background:#c8f060; color:#080808;
+    border:none;
+    font-family:'SF Mono',monospace; font-size:12px;
+    font-weight:700; letter-spacing:0.18em;
+    text-transform:uppercase;
+    cursor:pointer;
+    transition:background 0.15s;
+  }
+  .btn-primary:hover { background:#d8ff70; }
+
+  .divider {
+    display:flex; align-items:center; gap:12px;
+    margin:28px 0;
+  }
+  .divider .line { flex:1; height:1px; background:#1a1a1a; }
+  .divider .text {
+    font-family:'SF Mono',monospace; font-size:10px;
+    color:#5a5550; letter-spacing:0.18em;
+    text-transform:uppercase; font-weight:700;
+  }
+
+  .btn-sso {
+    width:100%; padding:13px;
+    background:transparent; color:#f5f0e8;
+    border:1px solid #2a2a2a;
+    font-family:'SF Mono',monospace; font-size:11px;
+    font-weight:700; letter-spacing:0.14em;
+    text-transform:uppercase;
+    cursor:pointer;
+    display:flex; align-items:center; justify-content:center; gap:10px;
+    margin-bottom:2px;
+  }
+  .btn-sso:hover { border-color:#c8f060; color:#c8f060; }
+
+  .auth-foot {
+    text-align:center;
+    margin-top:32px;
+    font-family:'SF Mono',monospace; font-size:11px;
+    color:#5a5550; letter-spacing:0.08em;
+  }
+  .auth-foot a { color:#c8f060; text-decoration:none; }
+  .auth-foot a:hover { text-decoration:underline; }
+
+  .status-strip {
+    margin-top:14px;
+    background:#0d1216;
+    border:1px solid #1a1a1a;
+    border-left:3px solid #60c8f0;
+    padding:10px 14px;
+    font-family:'SF Mono',monospace; font-size:10px;
+    color:#60c8f0; letter-spacing:0.1em;
+    display:flex; gap:10px; align-items:center;
+  }
+  .status-strip::before {
+    content:'';
+    width:6px; height:6px; border-radius:50%;
+    background:#60c8f0;
+    animation:pulse 2s infinite;
+  }
+  @keyframes pulse { 0%,100% { opacity:1; } 50% { opacity:0.4; } }
+</style>
+</head>
+<body>
+
+<div class="shell">
+
+  <!-- LEFT — branding -->
+  <aside class="brand-side">
+    <div class="brand-head">
+      <div class="brand-mark">⚡</div>
+      <div>
+        <div class="brand-name">AI Sales <span class="accent">System</span></div>
+        <div class="brand-sub">v0.1 · multi-agent</div>
+      </div>
+    </div>
+
+    <div class="brand-pitch">
+      <div class="pre">/ Operational command center</div>
+      <h1>Команда из <span class="accent">4 агентов.</span><br/>Один владелец.<br/>Никакого Burnout.</h1>
+      <p class="desc">IG-Менеджер · TG-Менеджер · Аналитик · РОП — работают с твоими клиентами 24/7 в твоём голосе.</p>
+    </div>
+
+    <div class="brand-stats">
+      <div class="bstat">
+        <div class="lbl">Автономно<br/>сегодня</div>
+        <div class="val">87<span class="sfx">%</span></div>
+      </div>
+      <div class="bstat cyan">
+        <div class="lbl">Лидов<br/>в работе</div>
+        <div class="val">128</div>
+      </div>
+      <div class="bstat">
+        <div class="lbl">Оплат<br/>за сутки</div>
+        <div class="val">284<span class="sfx">к</span></div>
+      </div>
+    </div>
+
+    <div class="brand-foot">AISALES.SYS · 2026 · ALL SYSTEMS NOMINAL</div>
+  </aside>
+
+  <!-- RIGHT — auth -->
+  <section class="auth-side">
+    <div class="auth-card">
+
+      <a class="auth-back" href="/01-portal/ai-sales-portal.html">← к порталу</a>
+
+      <h2>Вход в <span class="accent">систему</span></h2>
+      <p class="sub">Дашборд для владельца · 4 агента · полная аналитика</p>
+
+      <form id="loginForm" onsubmit="event.preventDefault(); window.location.href='/06-dashboard-prototype/pulse.html';">
+
+        <div class="form-group">
+          <label for="email">Email</label>
+          <input id="email" type="email" placeholder="ilya@aisales.system" autocomplete="email" />
+        </div>
+
+        <div class="form-group">
+          <label for="password">Пароль</label>
+          <input id="password" type="password" placeholder="••••••••" autocomplete="current-password" />
+        </div>
+
+        <div class="form-row">
+          <label><input type="checkbox" checked /> Запомнить меня</label>
+          <a class="forgot" href="#">Забыл пароль?</a>
+        </div>
+
+        <button type="submit" class="btn-primary">→ ВОЙТИ В PULSE</button>
+
+        <div class="status-strip">SLA: agents online · 4/4 · last deploy 16.05.26</div>
+
+        <div class="divider">
+          <span class="line"></span>
+          <span class="text">или через</span>
+          <span class="line"></span>
+        </div>
+
+        <button type="button" class="btn-sso">⚡ Google Workspace</button>
+        <button type="button" class="btn-sso">📱 Telegram Login</button>
+
+      </form>
+
+      <div class="auth-foot">
+        Первый раз здесь? <a href="/06-dashboard-prototype/onboarding.html">Настроить систему →</a>
+      </div>
+
+    </div>
+  </section>
+
+</div>
+
+</body>
+</html>

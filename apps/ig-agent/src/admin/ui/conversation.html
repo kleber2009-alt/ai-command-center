@@ -1,0 +1,651 @@
+<!DOCTYPE html>
+<html lang="ru">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width,initial-scale=1">
+<meta name="theme-color" content="#050505">
+<title>Conversation · AI Sales OS</title>
+<link rel="stylesheet" href="os.css">
+<style>
+.shell-conv{display:grid;grid-template-columns:300px 1fr 340px;min-height:calc(100vh - 48px)}
+.cl-head{display:flex;flex-direction:column;align-items:center;text-align:center;gap:10px;padding-bottom:18px;border-bottom:1px solid var(--border-soft)}
+.cl-field{display:flex;justify-content:space-between;font-size:12.5px;padding:5px 0}
+.cl-field span:first-child{color:var(--text-muted)}
+.cl-field span:last-child{color:var(--text-main);text-align:right;max-width:170px}
+.fu{
+  padding:12px;border-radius:var(--r-md);
+  background:linear-gradient(180deg,rgba(245,158,11,.06),var(--bg-card));
+  border:1px solid var(--yellow-edge);
+}
+.fu__head{font-size:12.5px;color:#FFC56F;font-weight:500;margin-bottom:6px}
+.fu__time{font-size:11.5px;color:var(--text-mid);font-family:var(--font-mono)}
+
+.conv-pane{display:flex;flex-direction:column;background:var(--bg-main);min-height:calc(100vh - 48px);min-width:0}
+.conv-head{padding:14px 20px;border-bottom:1px solid var(--border-soft);display:flex;justify-content:space-between;align-items:center;background:var(--bg-surface)}
+.conv-feed{flex:1;overflow:auto;padding:24px 20px;display:flex;flex-direction:column;gap:10px}
+.conv-msg-day{align-self:center;font-size:11px;color:var(--text-muted);padding:4px 10px;border-radius:999px;background:var(--bg-card);font-variant-numeric:tabular-nums;margin:8px 0}
+.conv-input{
+  padding:14px 20px;border-top:1px solid var(--border-soft);background:var(--bg-surface);
+  display:flex;flex-direction:column;gap:10px;
+}
+.conv-input__bar{display:flex;gap:8px;align-items:center}
+.conv-input textarea{
+  flex:1;min-height:42px;max-height:120px;padding:11px 14px;border-radius:8px;
+  background:var(--bg-card);border:1px solid var(--border-soft);
+  color:var(--text-main);font-size:13.5px;resize:none;
+}
+.conv-input textarea:focus{outline:none;border-color:var(--blue-edge)}
+.conv-input__hints{display:flex;gap:6px;flex-wrap:wrap;font-size:11.5px}
+
+.ai-pane{border-left:1px solid var(--border-soft);background:var(--bg-surface);padding:16px;overflow:auto;display:flex;flex-direction:column;gap:14px}
+
+/* ── Tabs ─────────────────────────────────────────── */
+.ai-pane .tabs{
+  position:sticky;top:-16px;z-index:5;
+  display:flex;gap:4px;padding:8px 0 10px;margin:-8px -2px 0;
+  background:linear-gradient(180deg,var(--bg-surface) 75%,transparent);
+  overflow-x:auto;scrollbar-width:none;
+  border-bottom:1px solid var(--border-soft);
+}
+.ai-pane .tabs::-webkit-scrollbar{display:none}
+.tabs__btn{
+  flex:0 0 auto;
+  font-size:12px;font-weight:600;line-height:1;letter-spacing:.01em;
+  padding:8px 12px;border-radius:8px;
+  color:var(--text-muted);background:transparent;border:1px solid transparent;
+  cursor:pointer;white-space:nowrap;transition:all .15s ease;
+}
+.tabs__btn:hover{color:var(--text-main);background:var(--bg-card)}
+.tabs__btn.is-on{
+  color:#7BC0FF;background:rgba(22,139,255,.10);
+  border-color:var(--blue-edge);
+}
+
+/* ── Panels ───────────────────────────────────────── */
+.tabs__panel{display:none;flex-direction:column;gap:14px}
+.tabs__panel.is-on{display:flex}
+
+.gauge{padding:14px;border-radius:var(--r-md);background:var(--bg-card);border:1px solid var(--border-soft)}
+.gauge__row{display:flex;justify-content:space-between;align-items:center;margin-bottom:6px;font-size:12px}
+.gauge__bar{height:5px;border-radius:3px;background:var(--bg-card-2);overflow:hidden}
+.gauge__bar > div{height:100%;border-radius:3px}
+
+.ai-rec{
+  padding:14px;border-radius:var(--r-md);
+  background:linear-gradient(180deg,rgba(22,139,255,.06),var(--bg-card));
+  border:1px solid var(--blue-edge);
+}
+.ai-rec__h{display:flex;justify-content:space-between;align-items:center;margin-bottom:10px;font-size:12px;gap:8px;flex-wrap:wrap}
+.ai-rec__text{font-size:13.5px;color:var(--text-main);line-height:1.55}
+.ai-rec__cta{display:grid;grid-template-columns:1fr 1fr;gap:6px;margin-top:12px}
+.ai-rec__cta .btn{height:30px;font-size:11.5px;padding:0 10px;white-space:nowrap}
+.ai-rec__cta .btn--span2{grid-column:span 2}
+
+/* ── Extended timeline ────────────────────────────── */
+.tl-list{display:flex;flex-direction:column;gap:0}
+.tl-item{
+  display:grid;grid-template-columns:60px 1fr;gap:10px;
+  padding:9px 0;border-bottom:1px dashed var(--border-soft);
+  font-size:12.5px;align-items:flex-start;
+}
+.tl-item:last-child{border-bottom:0}
+.tl-item .tl-t{font-family:var(--font-mono);font-size:11.5px;color:var(--text-muted)}
+.tl-item .tl-ev{color:var(--text-main);line-height:1.5}
+.tl-item .tl-ev .stage{font-family:var(--font-mono);font-size:11px;padding:1px 6px;border-radius:5px;background:var(--bg-card-2);color:var(--text-mid);margin-left:4px}
+
+/* ── Scripts ──────────────────────────────────────── */
+.script-card{
+  padding:12px;border-radius:var(--r-md);background:var(--bg-card);
+  border:1px solid var(--border-soft);display:flex;flex-direction:column;gap:8px;
+}
+.script-card__h{display:flex;justify-content:space-between;align-items:center;gap:8px;font-size:12px}
+.script-card__t{font-size:13px;color:var(--text-main);line-height:1.5}
+.script-card__cta{display:flex;gap:6px}
+.script-card__cta .btn{height:26px;font-size:11.5px;padding:0 10px}
+
+/* ── Offer ────────────────────────────────────────── */
+.offer-card{
+  padding:14px;border-radius:var(--r-md);background:var(--bg-card);
+  border:1px solid var(--border-soft);position:relative;
+}
+.offer-card.is-rec{border-color:var(--blue-edge);background:linear-gradient(180deg,rgba(22,139,255,.07),var(--bg-card))}
+.offer-card__h{display:flex;justify-content:space-between;align-items:baseline;gap:10px;margin-bottom:6px}
+.offer-card__name{font-weight:700;color:var(--text-main);font-size:14px}
+.offer-card__price{font-family:var(--font-mono);font-size:14px;color:#7BC0FF;font-weight:700;white-space:nowrap}
+.offer-card__lbl{font-size:11.5px;color:var(--text-mid);line-height:1.55}
+.offer-card__rec{
+  position:absolute;top:-8px;right:10px;
+  font-size:9.5px;letter-spacing:.1em;text-transform:uppercase;font-weight:700;
+  padding:3px 8px;border-radius:999px;background:rgba(22,139,255,.16);color:#7BC0FF;border:1px solid var(--blue-edge);
+}
+
+/* ── Risk panel ───────────────────────────────────── */
+.risk-big{
+  padding:16px;border-radius:var(--r-md);
+  background:linear-gradient(180deg,rgba(245,158,11,.08),var(--bg-card));
+  border:1px solid var(--yellow-edge);
+  display:flex;align-items:center;justify-content:space-between;gap:12px;
+}
+.risk-big__num{font-family:var(--font-mono);font-size:34px;font-weight:800;color:#FFC56F;line-height:1}
+.risk-big__lbl{font-size:11.5px;color:var(--text-mid);max-width:180px;line-height:1.45}
+.risk-list{display:flex;flex-direction:column;gap:0}
+.risk-list .r-item{
+  display:flex;align-items:flex-start;gap:10px;padding:9px 0;
+  border-bottom:1px dashed var(--border-soft);font-size:12.5px;
+}
+.risk-list .r-item:last-child{border-bottom:0}
+.risk-list .r-icon{flex-shrink:0;color:#FFC56F;width:16px;text-align:center;line-height:1.45}
+.risk-list .r-tx{color:var(--text-main);line-height:1.55}
+.risk-list .r-tx em{color:var(--text-muted);font-style:normal;font-size:11.5px;display:block;margin-top:2px}
+
+@media (max-width:1100px){.shell-conv{grid-template-columns:1fr}.cl-pane,.ai-pane{display:none}}
+</style>
+</head>
+<body>
+
+<header class="bar">
+  <a class="bar__brand" href="pulse.html"><span class="bar__brand-mark">AI</span>Sales <span>OS</span></a>
+  <nav class="bar__nav">
+    <a href="pulse.html" class="bar__link">Pulse</a>
+    <a href="pipeline.html" class="bar__link">Pipeline</a>
+    <a href="inbox.html" class="bar__link">Inbox</a>
+    <a href="journey.html" class="bar__link">Journey</a>
+    <a href="conversation.html" class="bar__link bar__link--active">Conversations</a>
+    <a href="agents.html" class="bar__link">Agents</a>
+    <a href="research.html" class="bar__link">Research</a>
+    <a href="reports.html" class="bar__link">Reports</a>
+    <a href="settings.html" class="bar__link">Settings</a>
+  </nav>
+  <div class="bar__right">
+    <span class="bar__pill"><span style="width:5px;height:5px;border-radius:50%;background:currentColor;box-shadow:0 0 6px currentColor"></span>Авто 87%</span>
+    <span class="bar__clock" id="clock">20 мая · 06:25</span>
+    <input class="bar__search" type="search" placeholder="⌘K">
+  </div>
+</header>
+
+<div class="shell-conv">
+
+  <!-- ─── Left: client info ──────────────────────────── -->
+  <aside class="side cl-pane">
+    <div class="cl-head">
+      <span class="av av-g4 av--xl">АВ</span>
+      <div>
+        <div class="t-lg fw6">Анна В.</div>
+        <div class="t-sm muted">@anna_voronina · TG</div>
+      </div>
+      <div class="row gap-2"><span class="badge badge--purple">A · VIP</span><span class="badge badge--red badge--pulse"><span class="dot"></span>горячий</span></div>
+    </div>
+
+    <div>
+      <div class="section-h">AI-сводка <span class="badge badge--blue" style="float:right">обновлена 2 мин</span></div>
+      <p class="t-sm" style="color:var(--text-mid);line-height:1.55">
+        Анна — фаундер маникюрной студии в&nbsp;Москве (3 точки, ~12 мастеров). Ищет систему которая ответит DM-ам пока она ведёт операционку. Бюджет: до&nbsp;30к/мес. Сравнивает с&nbsp;Чек-листом, считает дорого — нужен якорь не&nbsp;против ChatGPT, а&nbsp;против найма SMM-щика.
+      </p>
+    </div>
+
+    <div>
+      <div class="section-h">Контакт</div>
+      <div class="cl-field"><span>Канал</span><span class="badge badge--tg">TG</span></div>
+      <div class="cl-field"><span>Источник</span><span>IG&nbsp;reel @nailpro · 17 мая</span></div>
+      <div class="cl-field"><span>Гео</span><span>Москва</span></div>
+      <div class="cl-field"><span>Username</span><span class="mono c-blue">@anna_voronina</span></div>
+    </div>
+
+    <div>
+      <div class="section-h">Сегмент</div>
+      <div class="cl-field"><span>ICP match</span><span class="badge badge--green">92%</span></div>
+      <div class="cl-field"><span>Сегмент</span><span class="badge badge--purple">A · enterprise-RU</span></div>
+      <div class="cl-field"><span>Чек ожид.</span><span class="mono c-green">₽28к / мес</span></div>
+      <div class="cl-field"><span>Триггер</span><span>«хочу записать клиентов через бота»</span></div>
+    </div>
+
+    <div>
+      <div class="section-h">Активность</div>
+      <div class="cl-field"><span>Первый контакт</span><span class="mono">17 мая · 14:32</span></div>
+      <div class="cl-field"><span>Сообщений</span><span class="mono">23</span></div>
+      <div class="cl-field"><span>Этап</span><span class="badge badge--red">Objections</span></div>
+      <div class="cl-field"><span>Прогресс</span><span><span class="mono c-yellow">78% к&nbsp;Close</span></span></div>
+    </div>
+
+    <div>
+      <div class="section-h">Follow-up</div>
+      <div class="fu">
+        <div class="fu__head">📅 Запланировано</div>
+        <div class="t-sm mid">Voice-сообщение «история клиента похожей студии» если&nbsp;не&nbsp;ответит за&nbsp;6&nbsp;ч</div>
+        <div class="fu__time mt-2">через 5 ч 42 мин · 20 мая 12:07</div>
+      </div>
+    </div>
+
+    <div style="margin-top:auto" class="col gap-2">
+      <button class="btn btn--secondary" style="width:100%">📅 Перенести встречу</button>
+      <button class="btn btn--ghost" style="width:100%">🚫 Передать в&nbsp;Lost</button>
+    </div>
+  </aside>
+
+  <!-- ─── Center: chat ───────────────────────────────── -->
+  <main class="conv-pane">
+    <div class="conv-head">
+      <div class="row gap-3">
+        <a href="pipeline.html" class="t-sm muted">← Pipeline</a>
+        <span class="muted">/</span>
+        <span class="t-md c-blue">@anna_voronina</span>
+        <span class="badge badge--red badge--pulse"><span class="dot"></span>нужен Илья</span>
+      </div>
+      <div class="row gap-2">
+        <button class="btn btn--ghost">⏸ Pause AI</button>
+        <button class="btn btn--secondary">📎</button>
+        <button class="btn btn--secondary">⋮</button>
+      </div>
+    </div>
+
+    <div class="conv-feed">
+
+      <div class="conv-msg-day">17 мая · 14:32</div>
+
+      <div class="msg msg--in">
+        Привет! Увидела ваш Reel про автоматизацию. Я&nbsp;веду маникюрную студию (3&nbsp;точки), сижу в&nbsp;DM по&nbsp;вечерам — это&nbsp;ад.<br>
+        Расскажете что у&nbsp;вас?
+        <span class="msg__time">14:32</span>
+      </div>
+
+      <div class="msg msg--ai">
+        Привет, Анна! Хорошая боль — у&nbsp;нас как раз про это.<br>
+        Мы делаем систему которая отвечает в&nbsp;IG-DM и&nbsp;TG-чатах за&nbsp;вас 87% времени.<br>
+        Расскажите чуть подробнее: сколько у&nbsp;вас входящих в&nbsp;неделю и&nbsp;чего хочется&nbsp;— записи, продажи курсов, или просто разгрузить личку?
+        <span class="msg__time">🤖 Greeting · 14:34</span>
+      </div>
+
+      <div class="msg msg--in">
+        Записи в основном. 30-50 в неделю. Хочу чтобы клиент сам выбрал время и&nbsp;мастера, без меня.
+        <span class="msg__time">14:41</span>
+      </div>
+
+      <div class="msg msg--ai">
+        Понял. Это базовая история — у&nbsp;нас есть готовый «бронь маникюрной услуги»-флоу: AI задаёт 3 вопроса, подбирает мастера по&nbsp;услугам и&nbsp;окну, шлёт счёт и&nbsp;ставит в&nbsp;Google Calendar.<br>
+        Покажу демо в&nbsp;TG?
+        <span class="msg__time">🤖 Discovery · 14:43</span>
+      </div>
+
+      <div class="conv-msg-day">18 мая · 09:18</div>
+
+      <div class="msg msg--in">
+        Покажите. И&nbsp;цены сразу.
+        <span class="msg__time">09:18</span>
+      </div>
+
+      <div class="msg msg--ai">
+        Конечно. Вот ваш демо-бот: <span class="mono c-blue">t.me/aisales_anna_demo</span><br><br>
+        Цены: <b>Pro</b> — 29к/мес (бронирование + IG-DM + TG, до 500 диалогов/день, 1 локация). <b>Salon</b> — 49к/мес (до 5 точек, voice-дожимы, Google Calendar sync, мульти-мастер). Setup-free.
+        <span class="msg__time">🤖 Pitch · 09:21</span>
+      </div>
+
+      <div class="conv-msg-day">20 мая · 06:21</div>
+
+      <div class="msg msg--in">
+        А почему так дорого по&nbsp;сравнению с&nbsp;курсами Чек-листа? Они&nbsp;делают то&nbsp;же за&nbsp;7к.
+        <span class="msg__time">06:21</span>
+      </div>
+
+      <span class="badge badge--red badge--pulse" style="align-self:center;margin:6px 0"><span class="dot"></span>AI остановился · нужен ты</span>
+
+    </div>
+
+    <div class="conv-input">
+      <div class="conv-input__bar">
+        <textarea placeholder="Напиши ответ или попроси AI…">[Готовый драфт от AI ниже — отредактируй или вставь]</textarea>
+        <button class="btn btn--ghost btn--icon" title="прикрепить">📎</button>
+        <button class="btn btn--primary">Отправить ↵</button>
+      </div>
+      <div class="conv-input__hints">
+        <button class="chip">⚡ AI: ответить</button>
+        <button class="chip">📞 Voice-ответ</button>
+        <button class="chip">📋 Скрипт под Objection</button>
+        <button class="chip">✋ Передать AI обратно</button>
+      </div>
+    </div>
+
+  </main>
+
+  <!-- ─── Right: AI analysis ─────────────────────────── -->
+  <aside class="ai-pane">
+
+    <div class="tabs" role="tablist">
+      <button class="tabs__btn is-on" data-tab="analysis" role="tab" aria-selected="true">AI-анализ</button>
+      <button class="tabs__btn" data-tab="timeline" role="tab" aria-selected="false">Timeline</button>
+      <button class="tabs__btn" data-tab="scripts" role="tab" aria-selected="false">Скрипты</button>
+      <button class="tabs__btn" data-tab="offer" role="tab" aria-selected="false">Оффер</button>
+      <button class="tabs__btn" data-tab="risks" role="tab" aria-selected="false">Риски</button>
+    </div>
+
+    <!-- ─── Panel: AI-анализ ─────────────────────────── -->
+    <div class="tabs__panel is-on" data-panel="analysis" role="tabpanel">
+
+      <div class="card">
+        <div class="section-h">Что видит AI</div>
+
+        <div class="col gap-3 mt-2">
+          <div class="cl-field"><span>Боль</span><span class="t-sm" style="text-align:right">DM-ы по&nbsp;вечерам</span></div>
+          <div class="cl-field"><span>Мотивация</span><span class="t-sm" style="text-align:right">освободить вечера</span></div>
+          <div class="cl-field"><span>Возражение</span><span class="t-sm" style="text-align:right">сравнение с&nbsp;Чек-листом</span></div>
+        </div>
+
+        <div class="gauge mt-3" style="padding:10px">
+          <div class="gauge__row"><span class="muted">Уровень доверия</span><span class="mono c-green">76%</span></div>
+          <div class="gauge__bar"><div style="width:76%;background:var(--green)"></div></div>
+        </div>
+        <div class="gauge mt-2" style="padding:10px">
+          <div class="gauge__row"><span class="muted">Готовность к&nbsp;покупке</span><span class="mono c-yellow">62%</span></div>
+          <div class="gauge__bar"><div style="width:62%;background:var(--yellow)"></div></div>
+        </div>
+        <div class="gauge mt-2" style="padding:10px">
+          <div class="gauge__row"><span class="muted">Вероятность оплаты (7д)</span><span class="mono c-green">78%</span></div>
+          <div class="gauge__bar"><div style="width:78%;background:var(--green)"></div></div>
+        </div>
+      </div>
+
+      <div class="ai-rec">
+        <div class="ai-rec__h">
+          <span style="color:#7BC0FF;font-weight:600">⚡ Next best reply</span>
+          <span class="badge badge--blue">AI · gpt-pitch-v3</span>
+        </div>
+        <div class="ai-rec__text">
+          «Хороший вопрос. Чек-лист&nbsp;— это&nbsp;курс <i>«как настроить»</i>. Мы&nbsp;же делаем за&nbsp;вас. Если посчитать: 1 SMM-щик на&nbsp;ваши 3 точки&nbsp;— минимум&nbsp;₽45к/мес, не&nbsp;считая ошибок и&nbsp;отпусков. Pro у&nbsp;нас&nbsp;— 29к и&nbsp;работает 24/7 без зарплаты. Курс не&nbsp;решит вашу проблему&nbsp;— решит её&nbsp;система. Хотите 7 дней тест?»
+        </div>
+        <div class="ai-rec__cta">
+          <button class="btn btn--primary btn--span2" data-action="insert">📋 Вставить в&nbsp;поле</button>
+          <button class="btn btn--secondary" data-action="send">✉ Отправить</button>
+          <button class="btn btn--secondary" data-action="rewrite">↻ Улучшить</button>
+          <button class="btn btn--secondary" data-action="softer">💧 Мягче</button>
+          <button class="btn btn--secondary" data-action="harder">🔥 Жёстче</button>
+          <button class="btn btn--ghost btn--span2" style="color:#FFC56F" data-action="escalate">📞 Позвать Илью</button>
+        </div>
+      </div>
+
+      <div class="card" style="padding:14px">
+        <div class="section-h" style="margin-bottom:10px">Ключевые точки</div>
+        <div class="col gap-2 t-sm">
+          <div class="row gap-2"><span class="mono c-green">17.05</span><span>↳ зашла из&nbsp;IG-reel</span></div>
+          <div class="row gap-2"><span class="mono c-blue">17.05</span><span>↳ Discovery: 3 точки, 12 мастеров</span></div>
+          <div class="row gap-2"><span class="mono c-yellow">18.05</span><span>↳ Pitch: тарифы Pro/Salon</span></div>
+          <div class="row gap-2"><span class="mono c-red">20.05</span><span>↳ Objection: цена</span></div>
+        </div>
+      </div>
+
+      <div class="card card--alert is-warn" style="padding:14px">
+        <div class="row--between mb-2"><div class="t-md fw6 c-yellow">⚠ Риск</div><span class="badge badge--yellow">23%</span></div>
+        <div class="t-sm mid">Может уйти к&nbsp;Чек-листу если ответить дольше&nbsp;1ч. Recommended TTL ответа: 15&nbsp;мин.</div>
+      </div>
+
+    </div>
+
+    <!-- ─── Panel: Timeline ──────────────────────────── -->
+    <div class="tabs__panel" data-panel="timeline" role="tabpanel">
+      <div class="card" style="padding:14px">
+        <div class="section-h" style="margin-bottom:10px">Полная хронология</div>
+        <div class="tl-list">
+          <div class="tl-item"><span class="tl-t c-green">17.05<br>14:32</span><span class="tl-ev">Первое сообщение · IG <span class="stage">hello</span></span></div>
+          <div class="tl-item"><span class="tl-t c-blue">17.05<br>14:34</span><span class="tl-ev">AI greeting · переход <span class="stage">hello → discovery</span></span></div>
+          <div class="tl-item"><span class="tl-t">17.05<br>14:41</span><span class="tl-ev">Уточнила: «30–50 записей/нед, хочу автозапись» <span class="stage">discovery</span></span></div>
+          <div class="tl-item"><span class="tl-t c-yellow">18.05<br>09:21</span><span class="tl-ev">AI Pitch · тарифы Pro/Salon <span class="stage">pitch</span></span></div>
+          <div class="tl-item"><span class="tl-t muted">18.05 – 20.05</span><span class="tl-ev">Тишина 56 ч · auto-followup отправлен в&nbsp;06:00 20.05</span></div>
+          <div class="tl-item"><span class="tl-t c-red">20.05<br>06:21</span><span class="tl-ev">Возражение: «дорого vs Чек-лист» <span class="stage">objections</span></span></div>
+          <div class="tl-item"><span class="tl-t">20.05<br>06:25</span><span class="tl-ev">AI остановлен · нужен Илья</span></div>
+        </div>
+      </div>
+
+      <div class="card" style="padding:14px">
+        <div class="section-h" style="margin-bottom:10px">Метрики этапов</div>
+        <div class="cl-field"><span>Hello → Discovery</span><span class="mono">2 мин</span></div>
+        <div class="cl-field"><span>Discovery → Pitch</span><span class="mono">18 ч 40 мин</span></div>
+        <div class="cl-field"><span>Pitch → Objection</span><span class="mono">1д 21ч</span></div>
+        <div class="cl-field"><span>В этапе сейчас</span><span class="mono c-yellow">12 мин</span></div>
+        <div class="cl-field"><span>Прогноз close</span><span class="mono c-green">~24 ч · 73%</span></div>
+      </div>
+    </div>
+
+    <!-- ─── Panel: Скрипты ───────────────────────────── -->
+    <div class="tabs__panel" data-panel="scripts" role="tabpanel">
+      <div class="script-card">
+        <div class="script-card__h"><span class="badge badge--red">Objection · цена</span><span class="muted mono">v3 · 87% win</span></div>
+        <div class="script-card__t">«SMM-щик на ваши 3 точки&nbsp;— это&nbsp;минимум&nbsp;₽45к/мес. Мы&nbsp;— ₽29к и&nbsp;24/7. Курс расскажет КАК, мы&nbsp;— сделаем ЗА вас. 7 дней теста?»</div>
+        <div class="script-card__cta">
+          <button class="btn btn--primary" data-action="insert">Вставить</button>
+          <button class="btn btn--secondary">Preview</button>
+        </div>
+      </div>
+
+      <div class="script-card">
+        <div class="script-card__h"><span class="badge badge--red">Objection · «дорого»</span><span class="muted mono">v2 · 71% win</span></div>
+        <div class="script-card__t">«Один потерянный клиент = ₽4–6к. Окупаемость&nbsp;— 5–6 записей в&nbsp;месяц. Сколько вы&nbsp;сейчас теряете на&nbsp;«не&nbsp;ответила вовремя»?»</div>
+        <div class="script-card__cta">
+          <button class="btn btn--primary" data-action="insert">Вставить</button>
+          <button class="btn btn--secondary">Preview</button>
+        </div>
+      </div>
+
+      <div class="script-card">
+        <div class="script-card__h"><span class="badge badge--yellow">Pitch · alt-anchor</span><span class="muted mono">v1 · 58% win</span></div>
+        <div class="script-card__t">«Давайте честно&nbsp;— Pro 29к окупается с&nbsp;6 записей. Если за&nbsp;7 дней теста не&nbsp;закроем 6 — деньги возвращаем. Стартуем?»</div>
+        <div class="script-card__cta">
+          <button class="btn btn--primary" data-action="insert">Вставить</button>
+          <button class="btn btn--secondary">Preview</button>
+        </div>
+      </div>
+
+      <div class="script-card">
+        <div class="script-card__h"><span class="badge badge--green">Close · soft-CTA</span><span class="muted mono">v4 · 64% win</span></div>
+        <div class="script-card__t">«Скину ссылку на&nbsp;тест-бот — потыкайте 10&nbsp;мин и&nbsp;скажете честно: похоже на&nbsp;то&nbsp;что&nbsp;вам нужно?»</div>
+        <div class="script-card__cta">
+          <button class="btn btn--primary" data-action="insert">Вставить</button>
+          <button class="btn btn--secondary">Preview</button>
+        </div>
+      </div>
+
+      <div class="script-card">
+        <div class="script-card__h"><span class="badge badge--purple">Voice · персональный</span><span class="muted mono">ElevenLabs</span></div>
+        <div class="script-card__t">«История клиента похожей студии: 4 точки, было 28 записей в&nbsp;неделю → стало 71. 90 сек, голосом Ильи.»</div>
+        <div class="script-card__cta">
+          <button class="btn btn--primary" data-action="voice">🎤 Сгенерировать</button>
+          <button class="btn btn--secondary">Текст</button>
+        </div>
+      </div>
+    </div>
+
+    <!-- ─── Panel: Оффер ─────────────────────────────── -->
+    <div class="tabs__panel" data-panel="offer" role="tabpanel">
+      <div class="card" style="padding:14px">
+        <div class="section-h" style="margin-bottom:10px">Текущий оффер</div>
+        <div class="cl-field"><span>Сегмент</span><span class="badge badge--purple">A · enterprise-RU</span></div>
+        <div class="cl-field"><span>Чек ожид.</span><span class="mono c-green">₽28к / мес</span></div>
+        <div class="cl-field"><span>Триггер</span><span class="t-sm">3 точки, 12 мастеров</span></div>
+      </div>
+
+      <div class="offer-card is-rec">
+        <span class="offer-card__rec">★ Рекомендуем</span>
+        <div class="offer-card__h">
+          <span class="offer-card__name">Pro</span>
+          <span class="offer-card__price">₽29к / мес</span>
+        </div>
+        <div class="offer-card__lbl">До 500 диалогов/день · IG-DM + TG · 1 локация · бронирование + календарь.</div>
+        <div class="row gap-2 mt-2">
+          <button class="btn btn--primary" data-action="offer-pick">Выбрать оффер</button>
+          <button class="btn btn--secondary">Скопировать</button>
+        </div>
+      </div>
+
+      <div class="offer-card">
+        <div class="offer-card__h">
+          <span class="offer-card__name">Salon</span>
+          <span class="offer-card__price">₽49к / мес</span>
+        </div>
+        <div class="offer-card__lbl">До 5 точек · voice-дожимы · Google Calendar sync · мульти-мастер.</div>
+        <div class="row gap-2 mt-2">
+          <button class="btn btn--secondary" data-action="offer-pick">Выбрать</button>
+        </div>
+      </div>
+
+      <div class="offer-card">
+        <div class="offer-card__h">
+          <span class="offer-card__name">Studio (entry)</span>
+          <span class="offer-card__price">₽14к / мес</span>
+        </div>
+        <div class="offer-card__lbl">До 100 диалогов/день · только IG-DM · 1 локация. Подходит если&nbsp;Pro дорого&nbsp;— подстраховочный якорь.</div>
+        <div class="row gap-2 mt-2">
+          <button class="btn btn--secondary" data-action="offer-pick">Выбрать</button>
+        </div>
+      </div>
+
+      <div class="card" style="padding:14px">
+        <div class="section-h" style="margin-bottom:10px">Бонусы и&nbsp;промо</div>
+        <div class="cl-field"><span>🎁 Промо-код</span><span class="mono c-blue">ANNA-7DAY</span></div>
+        <div class="cl-field"><span>Срок</span><span class="t-sm">7 дней теста · бесплатно</span></div>
+        <div class="cl-field"><span>Рассрочка</span><span class="t-sm">3×&nbsp;₽9.7к (внутренняя)</span></div>
+        <button class="btn btn--secondary mt-2" style="width:100%">📨 Отправить промо-код</button>
+      </div>
+    </div>
+
+    <!-- ─── Panel: Риски ─────────────────────────────── -->
+    <div class="tabs__panel" data-panel="risks" role="tabpanel">
+      <div class="risk-big">
+        <div>
+          <div class="risk-big__num">23%</div>
+          <div class="t-sm muted mt-2">Риск ухода к&nbsp;конкуренту</div>
+        </div>
+        <div class="risk-big__lbl">Может уйти к&nbsp;Чек-листу если&nbsp;ответ&nbsp;> 1ч.<br><b class="c-yellow">TTL ответа: 15 мин</b></div>
+      </div>
+
+      <div class="card" style="padding:14px">
+        <div class="section-h" style="margin-bottom:10px">Факторы риска</div>
+        <div class="risk-list">
+          <div class="r-item"><span class="r-icon">⏱</span><span class="r-tx">Молчание 12 мин после возражения<em>норма &lt; 15 мин, иначе вероятность ухода&nbsp;×2</em></span></div>
+          <div class="r-item"><span class="r-icon">⚔</span><span class="r-tx">Прямое сравнение с&nbsp;Чек-листом<em>конкурент с&nbsp;ценой&nbsp;₽7к — нужен якорь не&nbsp;против них, а&nbsp;против найма SMM-щика</em></span></div>
+          <div class="r-item"><span class="r-icon">💸</span><span class="r-tx">Ценовое возражение не&nbsp;закрыто<em>2 попытки snippet'ов · следующий — voice-сообщение от&nbsp;Ильи</em></span></div>
+          <div class="r-item"><span class="r-icon">📅</span><span class="r-tx">Источник IG-reel — холодный канал<em>конверсия в&nbsp;close с&nbsp;этой связки 18% (медиана: 27%)</em></span></div>
+        </div>
+      </div>
+
+      <div class="card" style="padding:14px">
+        <div class="section-h" style="margin-bottom:10px">Рекомендации</div>
+        <div class="t-sm" style="color:var(--text-mid);line-height:1.6">
+          → Ответить в&nbsp;<b class="c-yellow">15 мин</b> snippet'ом «SMM-щик vs Pro»<br>
+          → Через 6ч молчания — voice-сообщение от&nbsp;Ильи<br>
+          → Если не&nbsp;ответит до&nbsp;22 мая 12:00 — эскалация в&nbsp;Lost
+        </div>
+        <div class="row gap-2 mt-3">
+          <button class="btn btn--primary" data-action="apply-rec">Применить план</button>
+          <button class="btn btn--ghost" style="color:#FFC56F" data-action="escalate">📞 Илья</button>
+        </div>
+      </div>
+    </div>
+
+  </aside>
+
+</div>
+
+<nav class="mob-tab">
+  <a href="pulse.html"><span>📊</span>Pulse</a>
+  <a href="inbox.html"><span>💬</span>Inbox</a>
+  <a href="pipeline.html"><span>🧮</span>Pipeline</a>
+  <a href="agents.html"><span>🤖</span>Agents</a>
+  <a href="settings.html"><span>⚙</span>Profile</a>
+</nav>
+
+<script>
+(function(){const el=document.getElementById('clock');if(!el)return;const M=['янв','фев','мар','апр','мая','июн','июл','авг','сен','окт','ноя','дек'];function t(){const d=new Date();el.textContent=d.getDate()+' '+M[d.getMonth()]+' · '+String(d.getHours()).padStart(2,'0')+':'+String(d.getMinutes()).padStart(2,'0')}t();setInterval(t,30000)})();
+
+/* ── Right pane: tab switching ─────────────────────── */
+(function(){
+  const pane    = document.querySelector('.ai-pane');
+  if(!pane) return;
+  const tabs    = pane.querySelectorAll('.tabs__btn');
+  const panels  = pane.querySelectorAll('.tabs__panel');
+  if(!tabs.length) return;
+
+  function activate(key){
+    tabs.forEach(t => {
+      const on = t.dataset.tab === key;
+      t.classList.toggle('is-on', on);
+      t.setAttribute('aria-selected', on ? 'true' : 'false');
+    });
+    panels.forEach(p => p.classList.toggle('is-on', p.dataset.panel === key));
+    // Remember last opened tab in URL hash for deep-link / refresh.
+    if(history.replaceState){
+      const u = new URL(location.href); u.hash = 'tab=' + key;
+      history.replaceState(null, '', u);
+    }
+  }
+
+  tabs.forEach(t => t.addEventListener('click', () => activate(t.dataset.tab)));
+
+  // Open from hash on load (#tab=offer etc.)
+  const m = location.hash.match(/tab=([a-z]+)/i);
+  if(m) activate(m[1]);
+})();
+
+/* ── Right pane: action buttons ────────────────────── */
+(function(){
+  const textarea = document.querySelector('.conv-input textarea');
+
+  function flash(btn, text){
+    if(!btn) return;
+    const original = btn.innerHTML;
+    btn.innerHTML = text;
+    btn.disabled = true;
+    setTimeout(() => { btn.innerHTML = original; btn.disabled = false; }, 1200);
+  }
+
+  function pickReply(scope){
+    const text = scope?.querySelector('.ai-rec__text, .script-card__t')?.innerText?.trim();
+    return text || '';
+  }
+
+  document.querySelectorAll('[data-action]').forEach(btn => {
+    btn.addEventListener('click', e => {
+      const action = btn.dataset.action;
+      const card   = btn.closest('.ai-rec, .script-card, .offer-card');
+
+      switch(action){
+        case 'insert': {
+          const t = pickReply(card);
+          if(textarea && t){
+            textarea.value = t;
+            textarea.focus();
+            textarea.scrollIntoView({behavior:'smooth', block:'center'});
+            flash(btn, '✓ Вставлено');
+          }
+          break;
+        }
+        case 'send':
+          flash(btn, '✓ Отправлено');
+          break;
+        case 'rewrite':
+          flash(btn, '↻ Генерирую…');
+          break;
+        case 'softer':
+          flash(btn, '💧 Смягчаю…');
+          break;
+        case 'harder':
+          flash(btn, '🔥 Усиливаю…');
+          break;
+        case 'voice':
+          flash(btn, '🎤 В&nbsp;очереди');
+          break;
+        case 'escalate':
+          flash(btn, '📞 Илья уведомлён');
+          break;
+        case 'offer-pick': {
+          document.querySelectorAll('.offer-card').forEach(c => c.classList.remove('is-rec'));
+          card?.classList.add('is-rec');
+          flash(btn, '✓ Выбрано');
+          break;
+        }
+        case 'apply-rec':
+          flash(btn, '✓ План применён');
+          break;
+      }
+    });
+  });
+})();
+</script>
+</body>
+</html>
