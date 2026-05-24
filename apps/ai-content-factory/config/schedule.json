@@ -1,8 +1,0 @@
-{
-  "comment": "Cron expressions in TZ from .env (default Europe/Moscow). ENV overrides win.",
-  "carousel": "0 8 * * *",
-  "reels": "0 14 * * *",
-  "weeklyInsights": "0 10 * * 0",
-  "heartbeat": "0 23 * * *",
-  "gitBackup": "0 3 * * *"
-}

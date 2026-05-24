@@ -1,0 +1,40 @@
+{
+  "diary": {
+    "label": "ДНЕВНИК АРХИТЕКТОРА",
+    "accent": "#60c8f0",
+    "handle": "@ILIA · CLAUDE PATH",
+    "formula": "Личный путь к Claude Certified. Каждый эпизод — день из подготовки.",
+    "promptFile": "data/prompts/carousel-diary.md",
+    "examplesFile": "data/prompts/examples/diary.md",
+    "musicMood": "tech"
+  },
+  "routine": {
+    "label": "TODO: routine label",
+    "accent": "#000000",
+    "handle": "TODO",
+    "formula": "TODO: формула рубрики",
+    "promptFile": "data/prompts/carousel-routine.md",
+    "examplesFile": "data/prompts/examples/routine.md",
+    "musicMood": "TODO"
+  },
+  "hood": {
+    "label": "НЕЙРОНОВОСТИ",
+    "categoryTag": "Нейросети | ИИ | Маркетинг",
+    "accent": "#2563EB",
+    "coverBg": "#E6157B",
+    "handle": "@ilia.paliy",
+    "formula": "Новость или тренд ИИ-индустрии как хук → разбор рабочей связки нейросетей → лид-магнит по кодовому слову в комментариях.",
+    "promptFile": "data/prompts/carousel-hood.md",
+    "examplesFile": "data/prompts/examples/hood.md",
+    "musicMood": "atmospheric"
+  },
+  "money": {
+    "label": "TODO: money label",
+    "accent": "#000000",
+    "handle": "TODO",
+    "formula": "TODO: формула рубрики",
+    "promptFile": "data/prompts/carousel-money.md",
+    "examplesFile": "data/prompts/examples/money.md",
+    "musicMood": "TODO"
+  }
+}

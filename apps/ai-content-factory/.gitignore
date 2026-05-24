@@ -1,17 +1,26 @@
 node_modules/
+dist/
+*.log
+
+# Secrets
 .env
 .env.local
 config/.env
-data/output/
-data/logs/
-data/analytics/posts.json
-data/analytics/weekly-reports/*.json
-!data/analytics/posts.json.example
-data/assets/footage/**/*.mp4
-data/assets/footage/**/*.mov
-data/assets/b-roll/**/*.mp4
-data/assets/audio/**/*.mp3
-data/assets/audio/**/*.m4a
-*.log
-.DS_Store
-.pm2/
+
+# Generated content & runtime data: keep the directory skeleton, ignore contents.
+# (backed up via cron per DEPLOYMENT.md, not tracked in the main tree)
+data/logs/*
+!data/logs/.gitkeep
+data/output/*
+!data/output/.gitkeep
+data/assets/footage/*
+!data/assets/footage/.gitkeep
+data/assets/b-roll/*
+!data/assets/b-roll/.gitkeep
+data/assets/audio/*
+!data/assets/audio/.gitkeep
+
+# Knowledge base: the SQLite DB is runtime data (backed up via cron, not tracked).
+# Keep the skeleton + the seed example; ignore the live database files.
+data/knowledge/*.db
+data/knowledge/*.db-*
