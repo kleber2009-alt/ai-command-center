@@ -271,9 +271,19 @@ async function dispatch(url: string, language: 'auto' | 'ru' | 'en'): Promise<Re
 export async function POST(req: NextRequest) {
   const auth = authenticate(req)
   if ('error' in auth) return auth.error
-  const { url, language = 'ru' } = (await req.json()) as Body
+  const { url: rawUrl, language = 'ru' } = (await req.json()) as Body
 
-  if (!url || typeof url !== 'string' || !/^https?:\/\//i.test(url)) {
+  if (!rawUrl || typeof rawUrl !== 'string') {
+    return NextResponse.json(
+      { error: 'Укажите ссылку (http/https) на YouTube-видео, Instagram-Reel или прямой медиафайл' },
+      { status: 400 },
+    )
+  }
+
+  const trimmed = rawUrl.trim()
+  const url = /^https?:\/\//i.test(trimmed) ? trimmed : `https://${trimmed.replace(/^\/+/, '')}`
+
+  if (!/^https?:\/\/[^/\s]+\.[^/\s]+/i.test(url)) {
     return NextResponse.json(
       { error: 'Укажите ссылку (http/https) на YouTube-видео, Instagram-Reel или прямой медиафайл' },
       { status: 400 },
