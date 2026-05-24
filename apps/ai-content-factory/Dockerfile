@@ -5,7 +5,7 @@
 #   2. build  — tsc → dist/
 #   3. runner — slim runtime with system chromium
 
-FROM node:20-bookworm-slim AS deps
+FROM --platform=linux/amd64 node:20-bookworm-slim AS deps
 WORKDIR /app
 
 # Build deps for better-sqlite3 + sqlite-vec native modules
@@ -13,17 +13,19 @@ RUN apt-get update && apt-get install -y --no-install-recommends \
       python3 make g++ \
     && rm -rf /var/lib/apt/lists/*
 
-# Skip Puppeteer's own Chromium — we install Debian's
+# Skip Puppeteer's own Chromium — we install Debian's at runtime
 ENV PUPPETEER_SKIP_DOWNLOAD=1
 COPY package.json package-lock.json* ./
-RUN npm ci --omit=optional
+# DO NOT use --omit=optional: sqlite-vec ships its native binary as an
+# optional, platform-specific package (sqlite-vec-linux-x64 here).
+RUN npm ci
 
 FROM deps AS build
 COPY tsconfig.json eslint.config.js ./
 COPY src ./src
 RUN npm run build
 
-FROM node:20-bookworm-slim AS runner
+FROM --platform=linux/amd64 node:20-bookworm-slim AS runner
 WORKDIR /app
 
 # Chromium for Puppeteer + fonts for HTML rendering
