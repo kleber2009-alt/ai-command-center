@@ -21,6 +21,7 @@ async function main(): Promise<void> {
       topic: { type: 'string' },
       episode: { type: 'string', default: '1' },
       fixture: { type: 'string' },
+      deliver: { type: 'boolean', default: false },
     },
   });
 
@@ -44,10 +45,12 @@ async function main(): Promise<void> {
     topic: values.topic ?? fixture?.topic ?? '',
     episode,
     fixture,
+    deliver: values.deliver,
   });
 
   log.info('Done', { outDir: result.outDir });
   for (const p of result.slidePaths) log.info(`  slide → ${p}`);
+  if (result.captionPath) log.info(`  caption → ${result.captionPath}`);
 }
 
 main().catch((err) => {
