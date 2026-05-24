@@ -67,9 +67,14 @@ backup_sqlite "/root/ai-command-center/apps/ai-content-factory/data/factory.db" 
 
 ## Phase 5 (cron scheduler) ещё не написан
 
-Текущий `src/index.ts` — просто heartbeat и проверка ENV. Контейнер останется
-живым, но крон-задач не запустит. Пока scheduler не готов, генерируй через
-`docker exec`:
+Текущий `src/index.ts` — просто heartbeat и выход (exit 0). Чтобы контейнер
+оставался жив для `docker exec`, в `docker-compose.yml` зашит `command:`
+вида `sh -c "node dist/index.js; tail -f /dev/null"` + `restart: "no"`.
+
+Когда `src/scheduler.ts` будет готов, удалить `command:` и сменить
+`restart: "no"` → `unless-stopped` (heartbeat будет частью scheduler'а).
+
+Пока scheduler не готов, генерируй через `docker exec`:
 
 ```bash
 docker exec -it infra-ai-content-factory-1 \

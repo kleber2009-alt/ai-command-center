@@ -6,5 +6,7 @@
 
 igcontent.46-62-215-11.nip.io {
 	encode zstd gzip
-	reverse_proxy localhost:3010
+	# Prod runs on host port 3017 (3010 is taken by ai-hub-web on this box).
+	# Update this if you change IG_CONTENT_HOST_PORT in apps/ig-content/.env.
+	reverse_proxy localhost:3017
 }

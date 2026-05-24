@@ -46,7 +46,7 @@ env vars, and routes, see `CLAUDE.md` / `README.md` inside each `apps/<app>/`.
 | 9 | 🪞 **Persona Studio** (`persona-studio`) | dev | 2/7 | `apps/persona-studio` | `landings/persona-studio` | `dashboard.../landings/persona-studio/`, deploy via workflows | (TBD) |
 | 10 | 📡 **Залётный / Viral Discover** (`viral-discover`) | production | **6/6 ✅** | `apps/infra-worker/handlers/viral_discover.js` + `lib/parser_bot.js` | `landings/viral-discover/cabinet/` | `dashboard.../landings/viral-discover/`, `parser.46-62-215-11.nip.io`, `@parser_instaa_bot` | `infra-aisales-worker-1` |
 | 11 | 🏭 **AI Content Factory** (`ai-content-factory`) | dev | 3/6 | `apps/ai-content-factory` | `landings/ai-content-factory` | TG-доставка через бота владельца | `infra-ai-content-factory-1` (после деплоя) |
-| 12 | 📸 **IG Serial Content** (`ig-content`) | ready-to-deploy | — | `apps/ig-content` | (web-app сам = сайт) | `igcontent.46-62-215-11.nip.io` (после деплоя) | `ig-content-web` (после деплоя) |
+| 12 | 📸 **IG Serial Content** (`ig-content`) | production | 6/8 | `apps/ig-content` | (web-app сам = сайт) | `https://igcontent.46-62-215-11.nip.io` | `ig-content` (host port 3017) |
 
 ### Infrastructure-only apps (not in Command Center)
 
@@ -98,6 +98,7 @@ For ai-hub / infra-worker / persona-train / voice-circle-bot / ai-sales —
 | `aisales-v2` | `/home/aisales/aisales-v2-compose/docker-compose.yml` | `aisales-api-v2` |
 | `tg-agent` | `/root/ai-command-center/apps/tg-agent/docker-compose.yml` | `tg-agent` |
 | `ai-hub` | `/home/aisales/ai-hub/source/docker-compose.yml` | `ai-hub-web`, `ai-hub-worker`, `mailpit` |
+| `ig-content` | `/root/ig-content-deploy/apps/ig-content/docker-compose.yml` (TBD retarget to `/root/ai-command-center/apps/ig-content/`) | `ig-content` (host port 3017) |
 
 > **Note**: after this monorepo consolidation, the prod paths for `ai-hub`
 > and `aisales-v2` should be retargeted at `/root/ai-command-center/apps/ai-hub`

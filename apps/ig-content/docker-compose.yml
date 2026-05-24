@@ -10,6 +10,10 @@
 # Compose auto-loads `.env` in this directory for ${VAR} substitution (used by
 # the build args below) AND injects it into the container via env_file. The app
 # listens on container port 3010; Caddy on the host reverse-proxies to it.
+#
+# Host port is overridable via IG_CONTENT_HOST_PORT (default 3010). On the
+# Hetzner box ai-hub-web already claims 3010, so prod runs on host port 3017
+# (set IG_CONTENT_HOST_PORT=3017 in .env). Caddy snippet must match.
 
 services:
   ig-content:
@@ -26,4 +30,4 @@ services:
     env_file:
       - .env
     ports:
-      - "3010:3010"
+      - "${IG_CONTENT_HOST_PORT:-3010}:3010"
