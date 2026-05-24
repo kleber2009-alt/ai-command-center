@@ -33,12 +33,12 @@ env vars, and routes, see `CLAUDE.md` / `README.md` inside each `apps/<app>/`.
 
 | # | Product (slug) | Status | Milestones | Code path | Landing | Prod URL | Container(s) |
 |---|---|---|---|---|---|---|---|
-| 1 | 🏢 **AI Growth Office** (`ai-office`) | production | 10/13 | `apps/ai-office` | (own static) | `ai-office.46-62-215-11.nip.io`, `ai-growth-office.ru` | `infra-ai-office-1` |
+| 1 | 🏢 **AI Growth Office** (`ai-office`) | production | 10/13 | `apps/ai-office` | (own static) | `ai-office.46-62-215-11.nip.io`, `ai-office.46-62-215-11.nip.io` | `infra-ai-office-1` |
 | 2 | 🎙️ **Транскрибация** (`transcribe`) | production | 10/12 | `apps/transcribe` | `landings/transcribe` | `transcribe.46-62-215-11.nip.io`, `tma.46-62-215-11.nip.io` | `infra-transcribe-1` |
 | 3 | 🎬 **Reels Cloner** (`viral-clone`) | production | 8/10 | `apps/infra-worker/handlers/viral_clone.js` | `landings/viral-clone` | TG `/clone` в `@your_transscribe_bot` | `infra-aisales-worker-1` |
 | 4 | 🎨 **AI Creative Hub** (`ai-hub`) | dev | 6/10 | `apps/ai-hub` | `landings/ai-hub` | `aihub.46-62-215-11.nip.io`, `aihub-app.46-62-215-11.nip.io`, TMA `@aicex_one_bot` | `ai-hub-web`, `ai-hub-worker`, `mailpit` |
-| 5 | 🎤 **AI Voice Bot** (`voice-bot`) | production | 6/7 | `apps/ai-office/voice-bot/` (TBD: relocate) | (внутри ai-office) | `@aio_voice_bot`, `ai-growth-office.ru/persona-train` | (in `infra-ai-office-1` или отдельный) |
-| 6 | 📱 **AI Office Mini App** (`mini-app`) | dev | 4/6 | inside `apps/ai-office` (`/mini-app/`) | — | `ai-growth-office.ru/mini-app/`, `@AI_Growth_Office_Bot/app` | `infra-ai-office-1` |
+| 5 | 🎤 **AI Voice Bot** (`voice-bot`) | production | 6/7 | `apps/ai-office/voice-bot/` (TBD: relocate) | (внутри ai-office) | `@aio_voice_bot`, `ai-office.46-62-215-11.nip.io/persona-train` | (in `infra-ai-office-1` или отдельный) |
+| 6 | 📱 **AI Office Mini App** (`mini-app`) | dev | 4/6 | inside `apps/ai-office` (`/mini-app/`) | — | `ai-office.46-62-215-11.nip.io/mini-app/`, `@AI_Growth_Office_Bot/app` | `infra-ai-office-1` |
 | 7 | 💼 **AI Sales System** (`ai-sales`) | production | 4/8 | `apps/ai-sales` | `landings/aisales`, `landings/aisales-system` | `aisales.46-62-215-11.nip.io`, `dashboard.46-62-215-11.nip.io` | `aisales-api-v2`, `aisales-command-center`, postgres/redis/qdrant/minio |
 | 8 | 💬 **tg-agent** (`tg-agent`) | production | 5/7 | `apps/tg-agent` | `landings/tg-agent` | `tg-agent.46-62-215-11.nip.io`, `tg.46-62-215-11.nip.io` (admin), `@newnewnnn_bot` | `tg-agent` |
 | 9 | 🪞 **Persona Studio** (`persona-studio`) | dev | 2/7 | `apps/persona-studio` | `landings/persona-studio` | `dashboard.../landings/persona-studio/`, deploy via workflows | (TBD) |

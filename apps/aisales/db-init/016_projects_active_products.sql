@@ -23,7 +23,7 @@ INSERT INTO projects (slug, name, emoji, tagline, status, description, technolog
  ARRAY['Next.js','Node.js','ElevenLabs','Telegram','Make.com','Supabase','Postgres'],
  '[
    {"label":"Лендинг (nip.io)","url":"https://ai-office.46-62-215-11.nip.io/","kind":"live"},
-   {"label":"Лендинг (ai-growth-office.ru)","url":"https://ai-growth-office.ru/","kind":"live"},
+   {"label":"Лендинг (ai-office.46-62-215-11.nip.io)","url":"https://ai-office.46-62-215-11.nip.io/","kind":"live"},
    {"label":"@AI_Growth_Office_Bot","url":"https://t.me/AI_Growth_Office_Bot","kind":"admin"},
    {"label":"WFDS dashboard","url":"https://ai-office.46-62-215-11.nip.io/worker/wfds","kind":"admin"}
  ]'::jsonb,
@@ -172,7 +172,7 @@ ON CONFLICT (slug) DO UPDATE SET
 -- ── Roadmap-этапы (только для новых проектов, у voice-bot/mini-app уже есть) ──
 
 INSERT INTO project_milestones (project_slug, ordinal, title, status, notes) VALUES
-('ai-office', 1, 'Лендинг ai-office.nip.io + ai-growth-office.ru',     'done',         NULL),
+('ai-office', 1, 'Лендинг ai-office.nip.io + ai-office.46-62-215-11.nip.io',     'done',         NULL),
 ('ai-office', 2, 'Quiz + AI-консультант Алиса',                         'done',         NULL),
 ('ai-office', 3, 'Stars billing + yearly + refund flow',                'done',         NULL),
 ('ai-office', 4, 'Office Worker: 9 handler-kinds + cron scheduler',     'done',         NULL),

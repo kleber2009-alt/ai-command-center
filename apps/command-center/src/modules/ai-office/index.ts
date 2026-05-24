@@ -20,7 +20,7 @@ const aiOffice: ModuleEntry = {
     { label: 'Embed-страница', path: 'landings/aisales-system/office-embed.html' },
   ],
   ui: [
-    { label: 'Public', path: 'ai-growth-office.ru' },
+    { label: 'Public', path: 'ai-office.46-62-215-11.nip.io' },
     { label: 'Self-host', path: 'ai-office.46-62-215-11.nip.io' },
   ],
   notes:

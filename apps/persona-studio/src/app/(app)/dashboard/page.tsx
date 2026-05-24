@@ -1,4 +1,5 @@
 import Link from 'next/link';
+import { redirect } from 'next/navigation';
 import { getCurrentUser } from '@/lib/auth';
 import { prisma } from '@/lib/prisma';
 import { formatDate } from '@/lib/utils';
@@ -7,7 +8,8 @@ import { COSTS } from '@/lib/tokens';
 export const dynamic = 'force-dynamic';
 
 export default async function DashboardPage() {
-  const user = (await getCurrentUser())!;
+  const user = await getCurrentUser();
+  if (!user) redirect('/sign-in');
 
   const [generations, avatarsCount, coversCount, videosCount, recentAvatars, recentCovers] = await Promise.all([
     prisma.avatarGeneration.findMany({

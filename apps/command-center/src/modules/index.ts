@@ -3,6 +3,7 @@ import type { ModuleEntry } from './_types'
 import aiHub from './ai-hub'
 import aiOffice from './ai-office'
 import aiSales from './ai-sales'
+import igAgent from './ig-agent'
 import miniApp from './mini-app'
 import personaStudio from './persona-studio'
 import personaTrain from './persona-train'
@@ -23,6 +24,7 @@ export const MODULES: ModuleEntry[] = [
   personaStudio,
   transcribe,
   tgAgent,
+  igAgent,
   aiOffice,
   aiSales,
   aiHub,

@@ -2,23 +2,23 @@
 -- AI Command Center · Migration 012 · Реальные URL и новые проекты
 -- ============================================================
 -- 1. Обновляет ссылки ai-office на реальный production-домен
---    ai-growth-office.ru (а не nip.io).
+--    ai-office.46-62-215-11.nip.io (а не nip.io).
 -- 2. Добавляет два отдельных проекта:
 --    · AI Voice Bot (@aio_voice_bot) — Telegram-бот для тренировки
 --      голосового клона
 --    · AI Office Mini App — Telegram Mini App для подбора AI-команды
 --
 -- Найдено grep'ом по коду в ai-office-project/: упоминания
--- ai-growth-office.ru, @AI_Growth_Office_Bot, @aio_voice_bot,
+-- ai-office.46-62-215-11.nip.io, @AI_Growth_Office_Bot, @aio_voice_bot,
 -- /mini-app/.
 
 UPDATE projects SET
-  tagline = 'Production-сайт ai-growth-office.ru: квиз, AI-консультант Алиса, лидген',
+  tagline = 'Production-сайт ai-office.46-62-215-11.nip.io: квиз, AI-консультант Алиса, лидген',
   links = '[
-    {"label":"ai-growth-office.ru (prod)","url":"https://ai-growth-office.ru/","kind":"live"},
-    {"label":"Quiz","url":"https://ai-growth-office.ru/#quiz-section","kind":"live"},
-    {"label":"FAQ","url":"https://ai-growth-office.ru/faq.html","kind":"live"},
-    {"label":"Pricing","url":"https://ai-growth-office.ru/pricing.html","kind":"live"},
+    {"label":"ai-office.46-62-215-11.nip.io (prod)","url":"https://ai-office.46-62-215-11.nip.io/","kind":"live"},
+    {"label":"Quiz","url":"https://ai-office.46-62-215-11.nip.io/#quiz-section","kind":"live"},
+    {"label":"FAQ","url":"https://ai-office.46-62-215-11.nip.io/faq.html","kind":"live"},
+    {"label":"Pricing","url":"https://ai-office.46-62-215-11.nip.io/pricing.html","kind":"live"},
     {"label":"AI-консультант","url":"https://t.me/AI_Growth_Office_Bot","kind":"admin"},
     {"label":"Hetzner backup","url":"https://46.62.215.11.nip.io/","kind":"other"},
     {"label":"Backend Fastify","url":"https://github.com/kleber2009-alt/ai-command-center/tree/feat/aisales-monorepo/infra/services/ai-office","kind":"repo"},
@@ -38,7 +38,7 @@ INSERT INTO projects (slug, name, emoji, tagline, status, description, technolog
  ARRAY['Telegram Bot API','Node.js','ElevenLabs','Fastify'],
  '[
    {"label":"Открыть в Telegram","url":"https://t.me/aio_voice_bot","kind":"live"},
-   {"label":"Onboarding страница","url":"https://ai-growth-office.ru/persona-train","kind":"live"},
+   {"label":"Onboarding страница","url":"https://ai-office.46-62-215-11.nip.io/persona-train","kind":"live"},
    {"label":"Docs (PHASE_5)","url":"https://github.com/kleber2009-alt/ai-command-center/blob/feat/aisales-monorepo/ai-office-project/docs/PHASE_5.md","kind":"docs"}
  ]'::jsonb,
  35)
@@ -62,12 +62,12 @@ INSERT INTO projects (slug, name, emoji, tagline, status, description, technolog
  '📱',
  'Telegram Mini App для AI Growth Office',
  'dev',
- 'Telegram Mini App обёртка для главного сайта AI Growth Office. Зарегистрирована в @BotFather (/newapp) на URL ai-growth-office.ru/mini-app/. Позволяет открывать квиз / pricing / dashboard прямо внутри Telegram без выхода в браузер.',
+ 'Telegram Mini App обёртка для главного сайта AI Growth Office. Зарегистрирована в @BotFather (/newapp) на URL ai-office.46-62-215-11.nip.io/mini-app/. Позволяет открывать квиз / pricing / dashboard прямо внутри Telegram без выхода в браузер.',
  ARRAY['Telegram Mini App','HTML','Telegram WebApp SDK'],
  '[
-   {"label":"Mini App URL","url":"https://ai-growth-office.ru/mini-app/","kind":"live"},
+   {"label":"Mini App URL","url":"https://ai-office.46-62-215-11.nip.io/mini-app/","kind":"live"},
    {"label":"Через бот","url":"https://t.me/AI_Growth_Office_Bot/app","kind":"live"},
-   {"label":"Лендинг (полная версия)","url":"https://ai-growth-office.ru/","kind":"other"}
+   {"label":"Лендинг (полная версия)","url":"https://ai-office.46-62-215-11.nip.io/","kind":"other"}
  ]'::jsonb,
  38)
 ON CONFLICT (slug) DO NOTHING;

@@ -81,7 +81,7 @@ if [[ $SKIP_PROMPTS -eq 0 ]]; then
   echo "═══════════════════════════════════════════════════════════════"
   echo
 
-  read -rp "Домен (например ai-growth-office.ru): " DOMAIN
+  read -rp "Домен (например ai-office.46-62-215-11.nip.io): " DOMAIN
   [[ -n "$DOMAIN" ]] || die "Домен обязателен"
 
   read -rp "Email для Let's Encrypt [admin@$DOMAIN]: " ACME_EMAIL

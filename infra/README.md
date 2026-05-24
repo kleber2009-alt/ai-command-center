@@ -61,7 +61,7 @@ adduser deploy && usermod -aG docker,sudo deploy
 
 ### 2. DNS
 
-Направь A-запись `ai-growth-office.ru` → IP сервера. Без DNS Caddy не выпустит TLS.
+Направь A-запись `ai-office.46-62-215-11.nip.io` → IP сервера. Без DNS Caddy не выпустит TLS.
 
 ### 3. Клонируй и настрой
 
@@ -78,9 +78,9 @@ nano .env                                   # заполнить все поля
 ### 4. Минимальные секреты в `infra/.env`
 
 ```bash
-PUBLIC_HOST=ai-growth-office.ru
-PUBLIC_BASE_URL=https://ai-growth-office.ru
-ACME_EMAIL=admin@ai-growth-office.ru
+PUBLIC_HOST=ai-office.46-62-215-11.nip.io
+PUBLIC_BASE_URL=https://ai-office.46-62-215-11.nip.io
+ACME_EMAIL=admin@ai-office.46-62-215-11.nip.io
 
 POSTGRES_DB=aio
 POSTGRES_USER=aio
@@ -108,9 +108,9 @@ docker compose logs -f caddy    # увидишь как Caddy получает T
 ```
 
 Через ~30 секунд:
-- `https://ai-growth-office.ru/` → главная (HTML из ai-office-project)
-- `https://ai-growth-office.ru/transcribe` → транскрибер Next.js
-- `https://ai-growth-office.ru/api/health` → `{ ok, db, elevenlabs, tg_voice_bot, public_base_url }`
+- `https://ai-office.46-62-215-11.nip.io/` → главная (HTML из ai-office-project)
+- `https://ai-office.46-62-215-11.nip.io/transcribe` → транскрибер Next.js
+- `https://ai-office.46-62-215-11.nip.io/api/health` → `{ ok, db, elevenlabs, tg_voice_bot, public_base_url }`
 
 ### 6. Установка Telegram webhook (один раз)
 
@@ -224,7 +224,7 @@ docker compose down -v
 
 ```bash
 # Эндпоинт здоровья бэкенда:
-curl https://ai-growth-office.ru/api/health
+curl https://ai-office.46-62-215-11.nip.io/api/health
 
 # Postgres из контейнера:
 docker compose exec postgres psql -U aio -c "select count(*) from voices"
@@ -239,7 +239,7 @@ docker compose exec ai-office du -sh /data/voice-notes
 ## Troubleshooting
 
 **Caddy не выпускает сертификат:**
-- Проверь что DNS A-запись указывает на сервер: `dig ai-growth-office.ru +short`
+- Проверь что DNS A-запись указывает на сервер: `dig ai-office.46-62-215-11.nip.io +short`
 - Открыты ли порты 80/443: `sudo ufw allow 80,443/tcp`
 - Логи: `docker compose logs caddy --tail=50`
 

@@ -1,4 +1,5 @@
 import Link from 'next/link';
+import { redirect } from 'next/navigation';
 import { getCurrentUser } from '@/lib/auth';
 import { prisma } from '@/lib/prisma';
 import { VideoCard } from '@/components/video-card';
@@ -7,7 +8,8 @@ export const dynamic = 'force-dynamic';
 export const metadata = { title: 'Videos — Persona Studio' };
 
 export default async function VideosPage({ searchParams }: { searchParams: Promise<{ focus?: string }> }) {
-  const user = (await getCurrentUser())!;
+  const user = await getCurrentUser();
+  if (!user) redirect('/sign-in');
   const { focus } = await searchParams;
 
   const [videos, selectedAvatar] = await Promise.all([
