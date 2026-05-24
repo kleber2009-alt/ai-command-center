@@ -9,7 +9,8 @@ export const dynamic = 'force-dynamic';
 export const metadata = { title: 'Avatars — Persona Studio' };
 
 export default async function AvatarsPage({ searchParams }: { searchParams: Promise<{ generationId?: string }> }) {
-  const user = (await getCurrentUser())!;
+  const user = await getCurrentUser();
+  if (!user) redirect('/sign-in');
   const { generationId } = await searchParams;
 
   if (generationId) {
