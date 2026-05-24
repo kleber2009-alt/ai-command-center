@@ -3,7 +3,8 @@
 
 import { readFile } from 'node:fs/promises';
 import { callClaude } from './claude.js';
-import { carouselSchema, type Carousel } from '../schemas/carousel.js';
+import { carouselSchema, SLIDE_CONTRACT, type Carousel } from '../schemas/carousel.js';
+import { loadPrompt } from '../lib/prompt.js';
 import type { RubricConfig } from '../lib/rubrics.js';
 import { fromAppRoot } from '../lib/paths.js';
 
@@ -25,9 +26,16 @@ export async function generateCarousel(opts: GenerateCarouselOptions): Promise<C
     }
   }
 
+  // Interpolate the template, then append the exact slide-field contract so the
+  // model emits schema-valid JSON.
+  const template = await loadPrompt(fromAppRoot(opts.rubric.promptFile), {
+    topic: opts.topic,
+    episode: opts.episode,
+  });
+  const prompt = `${template}\n\n## Контракт полей слайдов\n\n${SLIDE_CONTRACT}`;
+
   return callClaude<Carousel>({
-    promptFile: fromAppRoot(opts.rubric.promptFile),
-    variables: { topic: opts.topic, episode: opts.episode },
+    prompt,
     system,
     outputSchema: carouselSchema,
     model: 'opus',

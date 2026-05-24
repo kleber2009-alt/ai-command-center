@@ -9,6 +9,17 @@ import type { JSONSchemaType } from 'ajv';
 
 export type SlideType = 'cover' | 'quote' | 'list' | 'stat' | 'code' | 'cta';
 
+// Exact per-type field contract, injected into every generation prompt so the
+// model emits JSON the schema accepts (each slide type is strict:
+// additionalProperties:false). Keep in sync with the schema below.
+export const SLIDE_CONTRACT = `Каждый слайд — объект строго ОДНОГО из типов ниже. Используй ТОЛЬКО перечисленные поля, никаких других полей быть не должно. Поля с «?» — опциональные.
+- cover: { "type": "cover", "title": "строка", "subtitle"?: "строка", "label"?: "короткий кикер рубрики, напр. НЕЙРОНОВОСТИ — НЕ пиши сюда SWIPE LEFT, он добавляется автоматически" }
+- quote: { "type": "quote", "text": "строка", "author"?: "строка" }
+- list:  { "type": "list", "title"?: "строка", "items": ["строка", ...] }
+- stat:  { "type": "stat", "value": "строка", "caption": "строка" }
+- code:  { "type": "code", "code": "строка", "language"?: "строка", "caption"?: "строка" }
+- cta:   { "type": "cta", "headline": "строка", "action": "строка" }`;
+
 export interface CoverSlide {
   type: 'cover';
   title: string;

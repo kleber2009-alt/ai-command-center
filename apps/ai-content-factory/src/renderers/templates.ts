@@ -94,7 +94,10 @@ function css(accent: string): string {
 
 function coverBody(slide: Extract<Slide, { type: 'cover' }>, ctx: RenderContext): string {
   const bg = ctx.rubric.coverBg ?? '#101418';
-  const label = slide.label ? `<div class="label">${escapeHtml(slide.label)}</div>` : '';
+  // Kicker defaults to the rubric label; ignore a stray "SWIPE" the model may
+  // have put here (the renderer adds the swipe hint itself).
+  const rawLabel = slide.label && !/swipe/i.test(slide.label) ? slide.label : ctx.rubric.label;
+  const label = rawLabel ? `<div class="label">${escapeHtml(rawLabel)}</div>` : '';
   const subtitle = slide.subtitle
     ? `<div class="subtitle">${escapeHtml(slide.subtitle)}</div>`
     : '';
