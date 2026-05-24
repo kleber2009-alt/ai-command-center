@@ -1,4 +1,5 @@
 import Link from 'next/link';
+import { redirect } from 'next/navigation';
 import { getCurrentUser } from '@/lib/auth';
 import { prisma } from '@/lib/prisma';
 import { formatDate } from '@/lib/utils';
@@ -8,7 +9,8 @@ export const dynamic = 'force-dynamic';
 export const metadata = { title: 'Covers — Persona Studio' };
 
 export default async function CoversPage({ searchParams }: { searchParams: Promise<{ focus?: string }> }) {
-  const user = (await getCurrentUser())!;
+  const user = await getCurrentUser();
+  if (!user) redirect('/sign-in');
   const { focus } = await searchParams;
 
   const covers = await prisma.cover.findMany({
