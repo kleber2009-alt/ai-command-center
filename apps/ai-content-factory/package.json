@@ -17,6 +17,7 @@
     "format": "prettier --write \"src/**/*.ts\" \"tests/**/*.ts\"",
     "test": "node --import tsx --test tests/**/*.test.ts",
     "carousel": "tsx src/cli/carousel.ts",
+    "reels": "tsx src/cli/reels.ts",
     "ingest": "tsx src/cli/ingest.ts"
   },
   "dependencies": {

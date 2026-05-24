@@ -1,17 +1,21 @@
-// Cabinet: minimal HTTP API + static UI for manually driving the carousel
-// pipeline (rubric / topic / episode → render → deliver to Telegram).
+// Cabinet: minimal HTTP API + static UI for manually driving the content
+// pipelines (carousel + reels) and inspecting past runs.
 //
-//   GET  /                     → public/cabinet/index.html
-//   GET  /api/health           → liveness
-//   GET  /api/rubrics          → loaded rubric configs
-//   GET  /api/runs             → newest 30 output dirs (data/output/*)
-//   GET  /api/runs/:id         → carousel.json + caption.txt + slide list
-//   GET  /api/runs/:id/slide/:n → PNG bytes
-//   POST /api/generate         → kicks off a carousel pipeline (async job)
-//   GET  /api/jobs/:id         → poll job status
+//   GET  /                        → public/cabinet/index.html
+//   GET  /api/health              → liveness (open, used by Docker healthcheck)
+//   GET  /api/rubrics             → loaded rubric configs
+//   GET  /api/runs                → newest 30 output dirs (data/output/*)
+//   GET  /api/runs/:id            → carousel.json | reels.json + caption + media list
+//   GET  /api/runs/:id/slide/:n   → carousel PNG bytes
+//   GET  /api/runs/:id/video      → reels.mp4
+//   GET  /api/runs/:id/script     → reels-script.md (text)
+//   POST /api/generate            → kicks off a pipeline (async job),
+//                                   body: { format: "carousel"|"reels", rubric, topic, episode, deliver, rag }
+//   GET  /api/jobs/:id            → poll job status
 //
 // Auth: Basic Auth gated by CABINET_PASSWORD (and optional CABINET_USERNAME).
 // If CABINET_PASSWORD is unset the server boots open with a loud warning.
+
 import 'dotenv/config';
 import express, { type Request, type Response, type NextFunction } from 'express';
 import basicAuth from 'basic-auth';
@@ -20,16 +24,20 @@ import { resolve, join, dirname } from 'node:path';
 import { fileURLToPath } from 'node:url';
 import { randomUUID } from 'node:crypto';
 import { loadRubrics } from './lib/rubrics.js';
-import { outputPath, APP_ROOT } from './lib/paths.js';
+import { outputPath } from './lib/paths.js';
 import { runCarouselPipeline } from './pipelines/carousel.js';
+import { runReelsPipeline } from './pipelines/reels.js';
 import { log } from './lib/logger.js';
 
 const __dirname = dirname(fileURLToPath(import.meta.url));
 const PUBLIC_DIR = resolve(__dirname, '..', 'public');
 const PORT = Number(process.env.CABINET_PORT ?? 3018);
 
+type Format = 'carousel' | 'reels';
+
 interface Job {
   id: string;
+  format: Format;
   status: 'queued' | 'running' | 'done' | 'error';
   rubric: string;
   topic: string;
@@ -37,9 +45,9 @@ interface Job {
   deliver: boolean;
   startedAt: string;
   finishedAt?: string;
-  outDir?: string;
-  slidePaths?: string[];
-  captionPath?: string;
+  /** Output directory basename (matches /api/runs/:id). */
+  runId?: string;
+  mode?: 'fallback' | 'video';
   error?: string;
 }
 
@@ -63,7 +71,7 @@ function requireAuth(): express.RequestHandler {
   };
 }
 
-function listRuns(limit = 30): { id: string; mtime: string; sizeBytes: number }[] {
+function listRuns(limit = 30): { id: string; mtime: string; format: Format }[] {
   const root = outputPath();
   if (!existsSync(root)) return [];
   return readdirSync(root)
@@ -71,26 +79,65 @@ function listRuns(limit = 30): { id: string; mtime: string; sizeBytes: number }[
     .map((name) => {
       const full = join(root, name);
       const stat = statSync(full);
-      return { id: name, mtime: stat.mtime.toISOString(), sizeBytes: stat.size, _ts: stat.mtimeMs };
+      return {
+        id: name,
+        mtime: stat.mtime.toISOString(),
+        format: (name.startsWith('reels-') ? 'reels' : 'carousel') as Format,
+        _ts: stat.mtimeMs,
+      };
     })
     .sort((a, b) => b._ts - a._ts)
     .slice(0, limit)
     .map(({ _ts, ...rest }) => rest);
 }
 
-function readRun(id: string) {
+interface RunSummary {
+  id: string;
+  format: Format;
+  caption: string | null;
+  // carousel
+  slides?: string[];
+  carousel?: unknown;
+  // reels
+  reels?: unknown;
+  videoUrl?: string | null;
+  scriptUrl?: string | null;
+  mode?: 'fallback' | 'video';
+  missingTags?: string[];
+}
+
+function readRun(id: string): RunSummary | null {
   const dir = outputPath(id);
   if (!existsSync(dir) || !statSync(dir).isDirectory()) return null;
   const files = readdirSync(dir);
+  const caption = files.includes('caption.txt') ? readFileSync(join(dir, 'caption.txt'), 'utf8') : null;
+  const isReels = id.startsWith('reels-') || files.includes('reels.json');
+
+  if (isReels) {
+    const script = files.includes('reels.json')
+      ? JSON.parse(readFileSync(join(dir, 'reels.json'), 'utf8'))
+      : null;
+    const hasVideo = files.includes('reels.mp4');
+    const hasScript = files.includes('reels-script.md');
+    return {
+      id,
+      format: 'reels',
+      caption,
+      reels: script,
+      videoUrl: hasVideo ? `/api/runs/${encodeURIComponent(id)}/video` : null,
+      scriptUrl: hasScript ? `/api/runs/${encodeURIComponent(id)}/script` : null,
+      mode: hasVideo ? 'video' : 'fallback',
+    };
+  }
+
   const slides = files
     .filter((f) => /^slide-\d+\.png$/.test(f))
     .sort()
     .map((f) => `/api/runs/${encodeURIComponent(id)}/slide/${f}`);
-  const carouselJson = files.includes('carousel.json')
+  const carousel = files.includes('carousel.json')
     ? JSON.parse(readFileSync(join(dir, 'carousel.json'), 'utf8'))
     : null;
-  const caption = files.includes('caption.txt') ? readFileSync(join(dir, 'caption.txt'), 'utf8') : null;
-  return { id, slides, carousel: carouselJson, caption };
+  return { id, format: 'carousel', caption, slides, carousel };
 }
 
 const app = express();
@@ -147,8 +194,27 @@ app.get('/api/runs/:id/slide/:file', (req, res) => {
   res.sendFile(abs);
 });
 
+app.get('/api/runs/:id/video', (req, res) => {
+  const abs = outputPath(req.params.id, 'reels.mp4');
+  if (!existsSync(abs)) {
+    res.status(404).send('not found');
+    return;
+  }
+  res.sendFile(abs);
+});
+
+app.get('/api/runs/:id/script', (req, res) => {
+  const abs = outputPath(req.params.id, 'reels-script.md');
+  if (!existsSync(abs)) {
+    res.status(404).send('not found');
+    return;
+  }
+  res.type('text/plain; charset=utf-8').sendFile(abs);
+});
+
 app.post('/api/generate', (req, res) => {
-  const { rubric, topic, episode, deliver, rag } = req.body ?? {};
+  const { format, rubric, topic, episode, deliver, rag } = req.body ?? {};
+  const fmt: Format = format === 'reels' ? 'reels' : 'carousel';
   if (typeof rubric !== 'string' || typeof topic !== 'string' || !topic.trim()) {
     res.status(400).json({ error: 'rubric and topic are required strings' });
     return;
@@ -161,6 +227,7 @@ app.post('/api/generate', (req, res) => {
   const id = randomUUID();
   const job: Job = {
     id,
+    format: fmt,
     status: 'queued',
     rubric,
     topic: topic.trim(),
@@ -170,24 +237,29 @@ app.post('/api/generate', (req, res) => {
   };
   jobs.set(id, job);
 
-  // fire-and-forget — UI polls /api/jobs/:id
   (async (): Promise<void> => {
     job.status = 'running';
     try {
-      const result = await runCarouselPipeline({
-        slug: rubric,
-        topic: job.topic,
-        episode: ep,
-        deliver: job.deliver,
-        rag: rag !== false,
-      });
-      job.outDir = result.outDir.replace(APP_ROOT, '').replace(/^\//, '');
-      // resolve a stable run-id derived from the output dir name
-      const runId = result.outDir.split('/').pop() ?? '';
-      job.slidePaths = result.slidePaths.map(
-        (p) => `/api/runs/${encodeURIComponent(runId)}/slide/${p.split('/').pop()}`,
-      );
-      job.captionPath = result.captionPath ? `/api/runs/${encodeURIComponent(runId)}` : undefined;
+      if (fmt === 'carousel') {
+        const result = await runCarouselPipeline({
+          slug: rubric,
+          topic: job.topic,
+          episode: ep,
+          deliver: job.deliver,
+          rag: rag !== false,
+        });
+        job.runId = result.outDir.split('/').pop() ?? '';
+      } else {
+        const result = await runReelsPipeline({
+          slug: rubric,
+          topic: job.topic,
+          episode: ep,
+          deliver: job.deliver,
+          rag: rag !== false,
+        });
+        job.runId = result.outDir.split('/').pop() ?? '';
+        job.mode = result.mode;
+      }
       job.status = 'done';
     } catch (err) {
       job.status = 'error';
@@ -210,7 +282,6 @@ app.get('/api/jobs/:id', (req, res) => {
   res.json(job);
 });
 
-// Static UI
 app.use(express.static(PUBLIC_DIR, { extensions: ['html'], maxAge: '5m' }));
 app.get('/', (_req, res) => {
   res.sendFile(join(PUBLIC_DIR, 'cabinet', 'index.html'));

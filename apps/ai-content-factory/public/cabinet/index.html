@@ -133,7 +133,12 @@ button,input,select,textarea{font:inherit;color:inherit}
   <!-- ── left: form + runs ────────────────────────────────────────── -->
   <div>
     <div class="card" style="margin-bottom:16px">
-      <h2>Сгенерировать карусель</h2>
+      <h2>Сгенерировать</h2>
+
+      <div class="format-toggle" id="format-toggle" style="display:flex;background:var(--surface-2);border:1px solid var(--sep);border-radius:var(--r2);padding:3px;margin-bottom:14px">
+        <button type="button" class="seg active" data-fmt="carousel" style="flex:1;padding:7px;border:none;background:var(--surface);border-radius:6px;font-size:13px;font-weight:500;cursor:pointer;box-shadow:0 1px 2px rgba(0,0,0,.04)">Карусель</button>
+        <button type="button" class="seg" data-fmt="reels" style="flex:1;padding:7px;border:none;background:transparent;border-radius:6px;font-size:13px;font-weight:500;cursor:pointer;color:var(--t2)">Рилс</button>
+      </div>
 
       <div class="rubrics" id="rubrics-list">
         <div class="empty">Загружаю рубрики…</div>
@@ -189,7 +194,23 @@ button,input,select,textarea{font:inherit;color:inherit}
 
 <script>
 const API = '';
-const state = { rubric: null, rubrics: {}, currentRun: null, viewerTab: 'slides', activeJob: null };
+const state = { rubric: null, rubrics: {}, currentRun: null, currentRunData: null, viewerTab: 'slides', activeJob: null, format: 'carousel' };
+
+document.querySelectorAll('#format-toggle .seg').forEach((b) => {
+  b.onclick = () => {
+    state.format = b.dataset.fmt;
+    document.querySelectorAll('#format-toggle .seg').forEach((x) => {
+      const on = x === b;
+      x.classList.toggle('active', on);
+      x.style.background = on ? 'var(--surface)' : 'transparent';
+      x.style.color = on ? 'var(--t1)' : 'var(--t2)';
+      x.style.boxShadow = on ? '0 1px 2px rgba(0,0,0,.04)' : 'none';
+    });
+    document.getElementById('cost-hint').textContent = state.format === 'reels'
+      ? 'Один прогон ≈ $0.10–0.25 (Opus + Haiku). Без библиотеки клипов отдаётся только сценарий.'
+      : 'Один прогон ≈ $0.05–0.20 (Opus + Haiku). Занимает 20–40 с.';
+  };
+});
 
 async function api(path, opts) {
   const res = await fetch(API + path, opts);
@@ -250,8 +271,9 @@ async function loadRuns() {
       const div = document.createElement('div');
       div.className = 'run-item' + (state.currentRun === r.id ? ' active' : '');
       const t = new Date(r.mtime);
+      const badge = r.format === 'reels' ? '🎬' : '🖼';
       div.innerHTML = `
-        <div class="name">${escapeHtml(r.id)}</div>
+        <div class="name">${badge} ${escapeHtml(r.id)}</div>
         <div class="meta">${t.toLocaleString('ru-RU')}</div>
       `;
       div.onclick = () => openRun(r.id);
@@ -267,6 +289,14 @@ async function openRun(id) {
   });
   try {
     const data = await api('/api/runs/' + encodeURIComponent(id));
+    state.currentRunData = data;
+    // Adjust available tabs per format
+    const tabs = document.querySelectorAll('.tab');
+    if (data.format === 'reels') {
+      tabs[0].textContent = 'Видео / сценарий';
+    } else {
+      tabs[0].textContent = 'Слайды';
+    }
     renderViewer(data);
   } catch (e) {
     document.getElementById('viewer-body').innerHTML = '<div class="empty">Не удалось загрузить прогон</div>';
@@ -276,6 +306,20 @@ async function openRun(id) {
 function renderViewer(data) {
   const body = document.getElementById('viewer-body');
   if (state.viewerTab === 'slides') {
+    if (data.format === 'reels') {
+      if (data.videoUrl) {
+        body.innerHTML = `
+          <video controls playsinline style="width:100%;max-width:360px;border-radius:var(--r2);background:#000;display:block;margin:0 auto" src="${data.videoUrl}"></video>
+          ${data.scriptUrl ? `<div style="text-align:center;margin-top:10px"><a href="${data.scriptUrl}" target="_blank" class="btn ghost small" style="display:inline-flex">Скачать сценарий .md</a></div>` : ''}
+        `;
+      } else {
+        body.innerHTML = `
+          <div class="status-line">📝 Только сценарий — нет клипов в <code>data/assets/footage/</code>. Загрузи MP4 по тегам и пересгенери — пайплайн сам соберёт видео.</div>
+          ${data.scriptUrl ? `<div style="text-align:center;margin-top:14px"><a href="${data.scriptUrl}" target="_blank" class="btn">Открыть сценарий .md</a></div>` : '<div class="empty">Нет сценария</div>'}
+        `;
+      }
+      return;
+    }
     if (!data.slides || data.slides.length === 0) {
       body.innerHTML = '<div class="empty">Нет слайдов</div>';
       return;
@@ -292,8 +336,9 @@ function renderViewer(data) {
       ? '<div class="caption">' + escapeHtml(data.caption) + '</div>'
       : '<div class="empty">Подписи нет</div>';
   } else if (state.viewerTab === 'json') {
+    const obj = data.format === 'reels' ? data.reels : data.carousel;
     body.innerHTML = '<pre class="caption" style="font-family:ui-monospace,SF Mono,Menlo,monospace;font-size:11px">' +
-      escapeHtml(JSON.stringify(data.carousel, null, 2)) + '</pre>';
+      escapeHtml(JSON.stringify(obj, null, 2)) + '</pre>';
   }
 }
 
@@ -324,7 +369,7 @@ document.getElementById('btn-generate').onclick = async () => {
     const { jobId } = await api('/api/generate', {
       method: 'POST',
       headers: { 'content-type': 'application/json' },
-      body: JSON.stringify({ rubric: state.rubric, topic, episode, deliver, rag }),
+      body: JSON.stringify({ format: state.format, rubric: state.rubric, topic, episode, deliver, rag }),
     });
     state.activeJob = jobId;
     pollJob(jobId);
@@ -345,13 +390,12 @@ async function pollJob(id) {
       statusBox.innerHTML = '<div class="status-line running"><span class="spinner"></span>Генерация… ' + elapsed + 'с</div>';
       setTimeout(() => pollJob(id), 1500);
     } else if (job.status === 'done') {
-      statusBox.innerHTML = '<div class="status-line done">✓ Готово' + (job.deliver ? ' · отправлено в Telegram' : '') + '</div>';
+      const modeNote = job.format === 'reels' && job.mode === 'fallback' ? ' · сценарий-онли (нет клипов)' : '';
+      statusBox.innerHTML = '<div class="status-line done">✓ Готово' + (job.deliver ? ' · отправлено в Telegram' : '') + modeNote + '</div>';
       btn.disabled = false;
       btn.textContent = 'Сгенерировать';
       await loadRuns();
-      // open the new run
-      const runId = job.slidePaths?.[0]?.split('/').slice(-3)[0];
-      if (runId) openRun(decodeURIComponent(runId));
+      if (job.runId) openRun(job.runId);
     } else if (job.status === 'error') {
       statusBox.innerHTML = '<div class="status-line error">✗ ' + escapeHtml(job.error || 'Неизвестная ошибка') + '</div>';
       btn.disabled = false;

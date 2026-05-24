@@ -82,3 +82,70 @@ export async function deliverToTelegram(opts: DeliverOptions): Promise<void> {
 
   log.info('Delivered carousel to Telegram', { slides: slides.length, chatId });
 }
+
+// ── Reels delivery ───────────────────────────────────────────────────────────
+
+export interface DeliverReelsOptions {
+  mode: 'fallback' | 'video';
+  videoPath?: string;
+  scriptMdPath: string;
+  caption?: string;
+  missingTags?: string[];
+}
+
+export async function deliverReelsToTelegram(opts: DeliverReelsOptions): Promise<void> {
+  const { token, chatId } = getConfig();
+
+  if (opts.mode === 'video' && opts.videoPath) {
+    const form = new FormData();
+    form.append('chat_id', chatId);
+    const data = await readFile(opts.videoPath);
+    form.append(
+      'video',
+      new Blob([new Uint8Array(data)], { type: 'video/mp4' }),
+      basename(opts.videoPath),
+    );
+    if (opts.caption) form.append('caption', opts.caption.slice(0, 1024));
+    form.append('supports_streaming', 'true');
+    await callTelegram(token, 'sendVideo', form);
+    log.info('Delivered reels video to Telegram', { videoPath: opts.videoPath, chatId });
+    return;
+  }
+
+  // Fallback: deliver the Markdown script as a document + a banner explaining
+  // why we're not sending a video yet.
+  const banner =
+    `🎬 *РИЛС · только сценарий*\n\n` +
+    `Видео не собрано: библиотека клипов в \`data/assets/footage/\` пуста ` +
+    (opts.missingTags && opts.missingTags.length > 0
+      ? `для тегов: ${opts.missingTags.map((t) => `\`${t}\``).join(', ')}.`
+      : 'для всех нужных тегов.') +
+    `\n\nДоложи клипы — пайплайн сам соберёт MP4 в следующий раз.`;
+
+  await callTelegram(token, 'sendMessage', {
+    chat_id: chatId,
+    text: banner,
+    parse_mode: 'Markdown',
+    disable_web_page_preview: true,
+  });
+
+  const form = new FormData();
+  form.append('chat_id', chatId);
+  const data = await readFile(opts.scriptMdPath);
+  form.append(
+    'document',
+    new Blob([new Uint8Array(data)], { type: 'text/markdown' }),
+    basename(opts.scriptMdPath),
+  );
+  await callTelegram(token, 'sendDocument', form);
+
+  if (opts.caption) {
+    await callTelegram(token, 'sendMessage', {
+      chat_id: chatId,
+      text: opts.caption,
+      disable_web_page_preview: true,
+    });
+  }
+
+  log.info('Delivered reels script to Telegram', { mode: 'fallback', chatId });
+}

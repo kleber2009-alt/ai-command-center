@@ -28,9 +28,10 @@ RUN npm run build
 FROM --platform=linux/amd64 node:20-bookworm-slim AS runner
 WORKDIR /app
 
-# Chromium for Puppeteer + fonts for HTML rendering
+# Chromium for Puppeteer + fonts for HTML rendering + ffmpeg for reels video
 RUN apt-get update && apt-get install -y --no-install-recommends \
       chromium \
+      ffmpeg \
       fonts-liberation \
       fonts-dejavu-core \
       fonts-noto-color-emoji \
