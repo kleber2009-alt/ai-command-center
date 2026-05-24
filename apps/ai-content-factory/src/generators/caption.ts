@@ -11,6 +11,8 @@ const CAPTION_PROMPT = 'data/prompts/post-caption.md';
 export interface GenerateCaptionOptions {
   topic: string;
   format?: 'carousel' | 'reels';
+  /** RAG context block (top/low performers + learnings) to ground generation. */
+  ragContext?: string;
 }
 
 export async function generateCaption(opts: GenerateCaptionOptions): Promise<CaptionContent> {
@@ -18,7 +20,8 @@ export async function generateCaption(opts: GenerateCaptionOptions): Promise<Cap
     topic: opts.topic,
     format: opts.format ?? 'carousel',
   });
-  const prompt = `${template}\n\n${CAPTION_CONTRACT}`;
+  const rag = opts.ragContext ? `${opts.ragContext}\n\n` : '';
+  const prompt = `${template}\n\n${rag}${CAPTION_CONTRACT}`;
 
   return callClaude<CaptionContent>({
     prompt,

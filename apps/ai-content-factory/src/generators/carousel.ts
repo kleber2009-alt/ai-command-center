@@ -12,6 +12,8 @@ export interface GenerateCarouselOptions {
   rubric: RubricConfig;
   topic: string;
   episode: number;
+  /** RAG context block (top/low performers + learnings) to ground generation. */
+  ragContext?: string;
 }
 
 export async function generateCarousel(opts: GenerateCarouselOptions): Promise<Carousel> {
@@ -32,7 +34,8 @@ export async function generateCarousel(opts: GenerateCarouselOptions): Promise<C
     topic: opts.topic,
     episode: opts.episode,
   });
-  const prompt = `${template}\n\n## Контракт полей слайдов\n\n${SLIDE_CONTRACT}`;
+  const rag = opts.ragContext ? `${opts.ragContext}\n\n` : '';
+  const prompt = `${template}\n\n${rag}## Контракт полей слайдов\n\n${SLIDE_CONTRACT}`;
 
   return callClaude<Carousel>({
     prompt,

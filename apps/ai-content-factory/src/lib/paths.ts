@@ -14,6 +14,9 @@ export const dataPath = (...segments: string[]): string =>
 export const outputPath = (...segments: string[]): string =>
   resolve(APP_ROOT, 'data', 'output', ...segments);
 
+export const knowledgePath = (...segments: string[]): string =>
+  resolve(APP_ROOT, 'data', 'knowledge', ...segments);
+
 // Resolve a path stored in rubrics.json (relative to package root, e.g.
 // "data/prompts/carousel-hood.md") to an absolute path.
 export const fromAppRoot = (relative: string): string => resolve(APP_ROOT, relative);

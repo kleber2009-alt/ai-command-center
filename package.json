@@ -24,7 +24,9 @@
     "factory:start": "npm -w @app/ai-content-factory run start",
     "factory:typecheck": "npm -w @app/ai-content-factory run typecheck",
     "factory:test": "npm -w @app/ai-content-factory run test",
-    "factory:lint": "npm -w @app/ai-content-factory run lint"
+    "factory:lint": "npm -w @app/ai-content-factory run lint",
+    "factory:carousel": "npm -w @app/ai-content-factory run carousel --",
+    "factory:ingest": "npm -w @app/ai-content-factory run ingest --"
   },
   "dependencies": {
     "better-sqlite3": "^12.10.0",

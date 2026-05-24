@@ -22,6 +22,7 @@ async function main(): Promise<void> {
       episode: { type: 'string', default: '1' },
       fixture: { type: 'string' },
       deliver: { type: 'boolean', default: false },
+      'no-rag': { type: 'boolean', default: false },
     },
   });
 
@@ -46,6 +47,7 @@ async function main(): Promise<void> {
     episode,
     fixture,
     deliver: values.deliver,
+    rag: !values['no-rag'],
   });
 
   log.info('Done', { outDir: result.outDir });
