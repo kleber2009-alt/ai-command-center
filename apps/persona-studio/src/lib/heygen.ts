@@ -489,13 +489,24 @@ type V3AssetResp = {
   msg?: string | null;
 };
 
-/** v3 Step 1: upload image bytes → asset_id. */
-export async function uploadAssetV3(opts: { bytes: Buffer; mime: string }): Promise<string> {
+/**
+ * v3 Step 1: upload image → asset_id.
+ *
+ * /v3/assets принимает **multipart/form-data** с полем `file` (в отличие от
+ * v1 /v1/asset, который ел raw binary). Используем встроенный FormData/Blob
+ * Node 20+. НЕ ставим Content-Type вручную — undici сам сгенерирует с boundary.
+ */
+export async function uploadAssetV3(opts: { bytes: Buffer; mime: string; filename?: string }): Promise<string> {
   const key = keyOrThrow();
+  const form = new FormData();
+  const blob = new Blob([new Uint8Array(opts.bytes)], { type: opts.mime || 'image/jpeg' });
+  const ext = (opts.mime || '').includes('png') ? 'png' : 'jpg';
+  form.append('file', blob, opts.filename ?? `upload.${ext}`);
+
   const res = await fetch(`${HEYGEN_V3}/assets`, {
     method: 'POST',
-    headers: { 'X-Api-Key': key, 'Content-Type': opts.mime || 'image/jpeg' },
-    body: new Uint8Array(opts.bytes),
+    headers: { 'X-Api-Key': key },
+    body: form,
     signal: AbortSignal.timeout(SUBMIT_TIMEOUT_MS),
   });
   const text = await res.text();
@@ -669,6 +680,10 @@ export async function uploadPhotoAvatarV3(opts: {
   mime: string;
   name?: string;
 }): Promise<{ avatarId: string; supportedEngines: string[] }> {
-  const assetId = await uploadAssetV3({ bytes: opts.bytes, mime: opts.mime });
+  const assetId = await uploadAssetV3({
+    bytes: opts.bytes,
+    mime: opts.mime,
+    filename: opts.name ? `${opts.name}.${opts.mime?.includes('png') ? 'png' : 'jpg'}` : undefined,
+  });
   return createPhotoAvatarV3({ assetId, name: opts.name });
 }
