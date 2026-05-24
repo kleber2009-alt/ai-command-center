@@ -335,7 +335,7 @@ app.get('/api/footage', (_req, res) => {
 const upload = multer({
   storage: multer.diskStorage({
     destination: (req, _file, cb) => {
-      const tag = req.params.tag;
+      const tag = String((req.params as { tag?: string }).tag ?? '');
       if (!SAFE_TAG.test(tag)) return cb(new Error('bad tag'), '');
       const dir = join(FOOTAGE_ROOT, tag);
       mkdirSync(dir, { recursive: true });
@@ -343,7 +343,8 @@ const upload = multer({
     },
     filename: (_req, file, cb) => {
       // sanitise: ASCII-only stem, keep extension
-      const ext = (file.originalname.match(/\.(mp4|mov|m4v|webm)$/i) ?? ['', 'mp4'])[1].toLowerCase();
+      const m = file.originalname.match(/\.(mp4|mov|m4v|webm)$/i);
+      const ext = (m?.[1] ?? 'mp4').toLowerCase();
       const stem = basename(file.originalname, '.' + ext)
         .replace(/[^A-Za-z0-9._-]+/g, '_')
         .replace(/_+/g, '_')
@@ -360,23 +361,27 @@ const upload = multer({
 });
 
 app.post('/api/footage/:tag', upload.array('clips', 10), (req, res) => {
-  if (!SAFE_TAG.test(req.params.tag)) {
+  const tag = String((req.params as { tag?: string }).tag ?? '');
+  if (!SAFE_TAG.test(tag)) {
     res.status(400).json({ error: 'bad tag' });
     return;
   }
   const files = (req.files as Express.Multer.File[] | undefined) ?? [];
   res.json({
-    tag: req.params.tag,
+    tag,
     uploaded: files.map((f) => ({ file: f.filename, sizeBytes: f.size })),
   });
 });
 
 app.delete('/api/footage/:tag/:file', (req, res) => {
-  if (!SAFE_TAG.test(req.params.tag) || !SAFE_FILE.test(req.params.file)) {
+  const p = req.params as { tag?: string; file?: string };
+  const tag = String(p.tag ?? '');
+  const file = String(p.file ?? '');
+  if (!SAFE_TAG.test(tag) || !SAFE_FILE.test(file)) {
     res.status(400).json({ error: 'bad params' });
     return;
   }
-  const abs = join(FOOTAGE_ROOT, req.params.tag, req.params.file);
+  const abs = join(FOOTAGE_ROOT, tag, file);
   if (!existsSync(abs)) {
     res.status(404).json({ error: 'not found' });
     return;
@@ -390,11 +395,14 @@ app.delete('/api/footage/:tag/:file', (req, res) => {
 });
 
 app.get('/api/footage/:tag/:file', (req, res) => {
-  if (!SAFE_TAG.test(req.params.tag) || !SAFE_FILE.test(req.params.file)) {
+  const p = req.params as { tag?: string; file?: string };
+  const tag = String(p.tag ?? '');
+  const file = String(p.file ?? '');
+  if (!SAFE_TAG.test(tag) || !SAFE_FILE.test(file)) {
     res.status(400).send('bad params');
     return;
   }
-  const abs = join(FOOTAGE_ROOT, req.params.tag, req.params.file);
+  const abs = join(FOOTAGE_ROOT, tag, file);
   if (!existsSync(abs)) {
     res.status(404).send('not found');
     return;
