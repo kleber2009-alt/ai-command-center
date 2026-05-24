@@ -99,7 +99,7 @@ AI прочитает контекст и предложит план.
 | **Anthropic API** | env var на Netlify `ANTHROPIC_API_KEY` | нужен для `/api/chat` |
 | **GitHub** | репо проекта (если уже создан) | ⚠ если нет — создай |
 | **Netlify** | site, env vars, билд из репо | работает в Drop-режиме сейчас |
-| **Домен** | `ai-growth-office.ru` | не куплен |
+| **Домен** | `ai-office.46-62-215-11.nip.io` | не куплен |
 
 ---
 
@@ -169,7 +169,7 @@ ai-office-project/
 2. **Подключи Netlify к GitHub** (Drop не деплоит Functions)
 3. **Установи env vars:** `ANTHROPIC_API_KEY`, `TG_BOT_TOKEN`, `TG_CHAT_ID`
 4. **Создай RLS policy** в Supabase для `anon` INSERT в `leads` table
-5. **Купи домен** `ai-growth-office.ru`
+5. **Купи домен** `ai-office.46-62-215-11.nip.io`
 
 ---
 

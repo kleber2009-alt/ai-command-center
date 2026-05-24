@@ -20,4 +20,4 @@ Disallow: /demo-dialogue.html
 Disallow: /dashboard-demo.html
 Disallow: /partner-dashboard.html
 
-Sitemap: https://ai-growth-office.ru/sitemap.xml
+Sitemap: https://ai-office.46-62-215-11.nip.io/sitemap.xml
