@@ -5,13 +5,16 @@
 import { test } from 'node:test';
 import assert from 'node:assert/strict';
 import { readFileSync } from 'node:fs';
-import { resolve } from 'node:path';
+import { resolve, dirname } from 'node:path';
+import { fileURLToPath } from 'node:url';
+
+const here = dirname(fileURLToPath(import.meta.url));
 
 const SAFE_TAG = /^[a-z0-9][a-z0-9_-]{0,40}$/i;
 const SAFE_FILE = /^[A-Za-z0-9][A-Za-z0-9._-]{0,80}\.(mp4|mov|m4v|webm)$/i;
 
 test('footage-tags.json defines tags with required keys', () => {
-  const p = resolve(__dirname, '..', 'data', 'assets', 'footage-tags.json');
+  const p = resolve(here, '..', 'data', 'assets', 'footage-tags.json');
   const parsed = JSON.parse(readFileSync(p, 'utf8')) as { tags: { tag: string; label?: string; description?: string }[] };
   assert.ok(Array.isArray(parsed.tags));
   assert.ok(parsed.tags.length >= 4, 'at least 4 tags expected');
