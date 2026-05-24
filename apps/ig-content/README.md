@@ -10,7 +10,8 @@ record metrics, and get AI recommendations.
 - Supabase (PostgreSQL + Auth, row-level security)
 - Anthropic Claude API (5 content agents)
 - Recharts · TanStack Table
-- Deploy target: Vercel
+- Deploy: Docker on the Hetzner box + Caddy, Supabase Cloud for DB/Auth
+  (see `DEPLOY.md`). Also runs on Vercel unchanged.
 
 ## Quick start
 

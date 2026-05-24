@@ -59,3 +59,15 @@ POST                  /api/analytics/analyze                  (Analytics)
   ("Content generation failed. Please try again.").
 - Dev server runs on port **3010** to avoid clashing with `transcribe` (3000).
 - Not wired into the root `npm` workspaces — run `npm install` inside this dir.
+
+## Deploy
+
+Standalone Docker container + Caddy on Hetzner; Supabase Cloud for DB/Auth.
+Full runbook in `DEPLOY.md`. Artifacts: `Dockerfile` (build context = this
+dir, multi-stage standalone), `docker-compose.yml`, `deploy/Caddyfile.snippet`,
+`.env.production.example`. Public URL: `igcontent.46-62-215-11.nip.io` → host
+port 3010.
+
+Gotcha: `NEXT_PUBLIC_*` (Supabase URL + anon key) are inlined at **build**
+time and passed as compose build args; changing them requires
+`docker compose up -d --build`, not just a restart.

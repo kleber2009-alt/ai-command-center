@@ -1,0 +1,29 @@
+# ig-content · standalone deployment (Hetzner + Caddy)
+#
+# Run from this directory:
+#   cp .env.production.example .env   # then fill in real values
+#   docker compose up -d --build
+#
+# Logs:  docker compose logs -f ig-content
+# Stop:  docker compose down
+#
+# Compose auto-loads `.env` in this directory for ${VAR} substitution (used by
+# the build args below) AND injects it into the container via env_file. The app
+# listens on container port 3010; Caddy on the host reverse-proxies to it.
+
+services:
+  ig-content:
+    build:
+      context: .
+      dockerfile: Dockerfile
+      args:
+        # Inlined into the client bundle at build time.
+        NEXT_PUBLIC_SUPABASE_URL: ${NEXT_PUBLIC_SUPABASE_URL:-}
+        NEXT_PUBLIC_SUPABASE_ANON_KEY: ${NEXT_PUBLIC_SUPABASE_ANON_KEY:-}
+    image: ig-content:latest
+    container_name: ig-content
+    restart: unless-stopped
+    env_file:
+      - .env
+    ports:
+      - "3010:3010"
