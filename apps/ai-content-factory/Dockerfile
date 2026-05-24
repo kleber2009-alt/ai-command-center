@@ -48,9 +48,11 @@ COPY --from=build  /app/dist          ./dist
 COPY package.json ./
 COPY data ./data
 COPY config ./config
+COPY public ./public
 
 # Persisted between runs: outputs, logs, knowledge db
 RUN mkdir -p /app/data/output /app/data/logs /app/data/knowledge
 
+EXPOSE 3018
 ENTRYPOINT ["/usr/bin/tini", "--"]
 CMD ["node", "dist/index.js"]

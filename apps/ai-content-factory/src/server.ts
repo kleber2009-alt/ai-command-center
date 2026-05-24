@@ -95,8 +95,8 @@ function readRun(id: string) {
 
 const app = express();
 app.use(express.json({ limit: '1mb' }));
-app.use(requireAuth());
 
+// /api/health stays open (used by Docker healthcheck). Everything else is gated.
 app.get('/api/health', (_req, res) => {
   res.json({
     ok: true,
@@ -106,6 +106,8 @@ app.get('/api/health', (_req, res) => {
     jobs: { active: [...jobs.values()].filter((j) => j.status === 'running' || j.status === 'queued').length },
   });
 });
+
+app.use(requireAuth());
 
 app.get('/api/rubrics', (_req, res) => {
   const all = loadRubrics();

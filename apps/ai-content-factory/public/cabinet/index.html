@@ -1,0 +1,379 @@
+<!DOCTYPE html>
+<html lang="ru">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<meta name="theme-color" content="#F5F5F7">
+<title>Кабинет — AI Content Factory</title>
+<style>
+*,*::before,*::after{margin:0;padding:0;box-sizing:border-box}
+html,body{background:#F5F5F7;color:#1D1D1F;min-height:100vh;-webkit-font-smoothing:antialiased}
+body{font-family:-apple-system,BlinkMacSystemFont,'SF Pro Text','Helvetica Neue',Arial,sans-serif;font-size:15px;line-height:1.5}
+a{color:#0071E3;text-decoration:none}
+a:hover{text-decoration:underline}
+button,input,select,textarea{font:inherit;color:inherit}
+:root{
+  --bg:#F5F5F7;--surface:#FFFFFF;--surface-2:#FAFAFC;--sep:rgba(0,0,0,.08);
+  --t1:#1D1D1F;--t2:#6E6E73;--t3:#AEAEB2;
+  --blue:#0071E3;--blue-h:#0077ED;--green:#1D8348;--red:#C0392B;
+  --diary:#60c8f0;--routine:#84e0a3;--hood:#2563EB;--money:#d96be8;
+  --r1:8px;--r2:12px;--r3:16px;
+}
+.topbar{
+  position:sticky;top:0;z-index:100;
+  display:flex;align-items:center;justify-content:space-between;
+  padding:0 24px;height:52px;
+  background:rgba(245,245,247,.85);backdrop-filter:blur(20px) saturate(180%);
+  border-bottom:1px solid var(--sep);
+}
+.logo{font-size:15px;font-weight:600;letter-spacing:-.2px}
+.health{display:flex;gap:8px;font-size:12px;color:var(--t2)}
+.health span{display:inline-flex;align-items:center;gap:5px}
+.dot{width:7px;height:7px;border-radius:50%;background:var(--t3)}
+.dot.ok{background:var(--green)}
+.dot.bad{background:var(--red)}
+
+.layout{max-width:1200px;margin:0 auto;padding:24px;display:grid;grid-template-columns:380px 1fr;gap:24px}
+@media(max-width:900px){.layout{grid-template-columns:1fr}}
+
+.card{background:var(--surface);border:1px solid var(--sep);border-radius:var(--r3);padding:20px}
+.card h2{font-size:13px;font-weight:600;letter-spacing:.5px;text-transform:uppercase;color:var(--t2);margin-bottom:14px}
+.field{display:block;margin-bottom:14px}
+.field label{display:block;font-size:12px;font-weight:500;color:var(--t2);margin-bottom:6px;letter-spacing:.2px}
+.field input,.field select,.field textarea{
+  width:100%;padding:10px 12px;background:var(--surface-2);border:1px solid var(--sep);
+  border-radius:var(--r1);font-size:14px;transition:border-color .15s,background .15s;
+}
+.field input:focus,.field select:focus,.field textarea:focus{
+  outline:none;border-color:var(--blue);background:var(--surface);
+}
+.field textarea{resize:vertical;min-height:80px}
+.field.checkbox{display:flex;align-items:center;gap:8px}
+.field.checkbox label{margin:0;font-size:13px;color:var(--t1)}
+.field.checkbox input{width:auto}
+
+.rubrics{display:grid;grid-template-columns:1fr 1fr;gap:8px;margin-bottom:14px}
+.rubric{
+  padding:10px;border:1px solid var(--sep);border-radius:var(--r1);cursor:pointer;
+  background:var(--surface-2);transition:all .15s;display:flex;flex-direction:column;gap:4px;
+}
+.rubric:hover{border-color:var(--t3)}
+.rubric.active{border-color:var(--blue);background:var(--surface);box-shadow:0 0 0 3px rgba(0,113,227,.1)}
+.rubric.disabled{opacity:.45;cursor:not-allowed}
+.rubric .accent-bar{height:3px;border-radius:2px;margin-bottom:4px}
+.rubric .label{font-size:11px;font-weight:600;letter-spacing:.3px;text-transform:uppercase;color:var(--t1)}
+.rubric .handle{font-size:11px;color:var(--t2)}
+.rubric .stub{font-size:10px;color:var(--red);font-weight:500}
+
+.btn{
+  display:inline-flex;align-items:center;justify-content:center;gap:6px;
+  padding:11px 18px;border:none;border-radius:var(--r2);
+  background:var(--blue);color:#fff;font-size:14px;font-weight:500;cursor:pointer;
+  transition:background .15s,transform .05s;width:100%;
+}
+.btn:hover{background:var(--blue-h)}
+.btn:active{transform:scale(.98)}
+.btn:disabled{background:var(--t3);cursor:not-allowed}
+.btn.ghost{background:transparent;color:var(--blue);border:1px solid var(--sep)}
+.btn.ghost:hover{background:var(--surface-2)}
+.btn.small{padding:6px 12px;font-size:12px;width:auto}
+
+.tabs{display:flex;border-bottom:1px solid var(--sep);margin-bottom:16px;gap:4px}
+.tab{padding:8px 14px;font-size:13px;font-weight:500;color:var(--t2);cursor:pointer;border-bottom:2px solid transparent;margin-bottom:-1px}
+.tab.active{color:var(--t1);border-color:var(--blue)}
+
+.status-line{
+  padding:10px 12px;border-radius:var(--r1);font-size:13px;margin-bottom:14px;
+  background:var(--surface-2);border:1px solid var(--sep);color:var(--t2);
+}
+.status-line.running{background:#FFF8E1;border-color:#F0C419;color:#7E5800}
+.status-line.done{background:#E8F5E9;border-color:#34C759;color:var(--green)}
+.status-line.error{background:#FFEBEE;border-color:#FF3B30;color:var(--red)}
+.status-line .spinner{display:inline-block;width:10px;height:10px;border:2px solid var(--t3);border-top-color:var(--blue);border-radius:50%;animation:spin .8s linear infinite;margin-right:6px;vertical-align:-1px}
+@keyframes spin{to{transform:rotate(360deg)}}
+
+.slides-grid{display:grid;grid-template-columns:repeat(auto-fill,minmax(160px,1fr));gap:10px}
+.slide-item{aspect-ratio:4/5;border-radius:var(--r1);overflow:hidden;border:1px solid var(--sep);background:var(--surface-2);position:relative}
+.slide-item img{width:100%;height:100%;object-fit:cover;display:block}
+.slide-item .num{position:absolute;top:6px;left:6px;background:rgba(0,0,0,.6);color:#fff;font-size:10px;padding:2px 6px;border-radius:6px;font-weight:600}
+
+.caption{
+  background:var(--surface-2);border:1px solid var(--sep);border-radius:var(--r1);
+  padding:14px;font-size:13px;white-space:pre-wrap;line-height:1.55;margin-top:14px;
+  max-height:300px;overflow-y:auto;
+}
+
+.runs-list{display:flex;flex-direction:column;gap:6px;max-height:400px;overflow-y:auto;margin:-4px}
+.run-item{
+  padding:8px 10px;border-radius:var(--r1);cursor:pointer;font-size:12px;
+  display:flex;flex-direction:column;gap:2px;transition:background .15s;
+}
+.run-item:hover{background:var(--surface-2)}
+.run-item.active{background:var(--surface-2);border:1px solid var(--blue)}
+.run-item .name{font-weight:500;color:var(--t1);overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+.run-item .meta{color:var(--t3);font-size:11px}
+
+.empty{text-align:center;padding:40px 20px;color:var(--t3);font-size:13px}
+.hint{color:var(--t3);font-size:11px;margin-top:6px}
+</style>
+</head>
+<body>
+
+<div class="topbar">
+  <div class="logo">AI Content Factory · кабинет</div>
+  <div class="health" id="health">
+    <span><span class="dot" id="h-claude"></span> Claude</span>
+    <span><span class="dot" id="h-tg"></span> Telegram</span>
+    <span><span class="dot" id="h-rag"></span> RAG</span>
+  </div>
+</div>
+
+<div class="layout">
+
+  <!-- ── left: form + runs ────────────────────────────────────────── -->
+  <div>
+    <div class="card" style="margin-bottom:16px">
+      <h2>Сгенерировать карусель</h2>
+
+      <div class="rubrics" id="rubrics-list">
+        <div class="empty">Загружаю рубрики…</div>
+      </div>
+
+      <div class="field">
+        <label for="topic">Тема</label>
+        <textarea id="topic" placeholder="Например: Anthropic выпустил Claude 4.7 — что это значит для AI-агентов" rows="2"></textarea>
+      </div>
+
+      <div class="field">
+        <label for="episode">Эпизод</label>
+        <input id="episode" type="number" value="1" min="1" max="999">
+      </div>
+
+      <div class="field checkbox">
+        <input id="deliver" type="checkbox" checked>
+        <label for="deliver">Отправить в Telegram после генерации</label>
+      </div>
+
+      <div class="field checkbox">
+        <input id="rag" type="checkbox" checked>
+        <label for="rag">Использовать RAG (knowledge base)</label>
+      </div>
+
+      <button class="btn" id="btn-generate">Сгенерировать</button>
+      <div class="hint" id="cost-hint">Один прогон ≈ $0.05–0.20 (Opus + Haiku). Занимает 20–40 с.</div>
+
+      <div id="job-status"></div>
+    </div>
+
+    <div class="card">
+      <h2>Последние прогоны</h2>
+      <div class="runs-list" id="runs-list">
+        <div class="empty">Нет прогонов</div>
+      </div>
+    </div>
+  </div>
+
+  <!-- ── right: viewer ──────────────────────────────────────── -->
+  <div class="card" id="viewer">
+    <div class="tabs">
+      <div class="tab active" data-tab="slides">Слайды</div>
+      <div class="tab" data-tab="caption">Подпись</div>
+      <div class="tab" data-tab="json">JSON</div>
+    </div>
+    <div id="viewer-body">
+      <div class="empty">Выбери прогон слева, чтобы посмотреть результат</div>
+    </div>
+  </div>
+
+</div>
+
+<script>
+const API = '';
+const state = { rubric: null, rubrics: {}, currentRun: null, viewerTab: 'slides', activeJob: null };
+
+async function api(path, opts) {
+  const res = await fetch(API + path, opts);
+  if (!res.ok) throw new Error(`${path}: ${res.status} ${await res.text()}`);
+  return res.json();
+}
+
+async function loadHealth() {
+  try {
+    const h = await api('/api/health');
+    document.getElementById('h-claude').className = 'dot ' + (h.anthropic ? 'ok' : 'bad');
+    document.getElementById('h-tg').className = 'dot ' + (h.telegram ? 'ok' : 'bad');
+    document.getElementById('h-rag').className = 'dot ' + (h.voyage ? 'ok' : 'bad');
+  } catch (e) { console.error(e); }
+}
+
+async function loadRubrics() {
+  try {
+    const data = await api('/api/rubrics');
+    state.rubrics = data;
+    const container = document.getElementById('rubrics-list');
+    container.innerHTML = '';
+    Object.entries(data).forEach(([slug, r]) => {
+      const div = document.createElement('div');
+      div.className = 'rubric' + (r.ready ? '' : ' disabled');
+      div.dataset.slug = slug;
+      div.innerHTML = `
+        <div class="accent-bar" style="background:${r.accent}"></div>
+        <div class="label">${escapeHtml(r.label)}</div>
+        <div class="handle">${escapeHtml(r.handle)}</div>
+        ${r.ready ? '' : '<div class="stub">не настроена</div>'}
+      `;
+      if (r.ready) div.onclick = () => selectRubric(slug);
+      container.appendChild(div);
+    });
+    const first = Object.entries(data).find(([, r]) => r.ready);
+    if (first) selectRubric(first[0]);
+  } catch (e) { console.error(e); }
+}
+
+function selectRubric(slug) {
+  state.rubric = slug;
+  document.querySelectorAll('.rubric').forEach((el) => {
+    el.classList.toggle('active', el.dataset.slug === slug);
+  });
+}
+
+async function loadRuns() {
+  try {
+    const { runs } = await api('/api/runs');
+    const container = document.getElementById('runs-list');
+    if (runs.length === 0) {
+      container.innerHTML = '<div class="empty">Нет прогонов</div>';
+      return;
+    }
+    container.innerHTML = '';
+    runs.forEach((r) => {
+      const div = document.createElement('div');
+      div.className = 'run-item' + (state.currentRun === r.id ? ' active' : '');
+      const t = new Date(r.mtime);
+      div.innerHTML = `
+        <div class="name">${escapeHtml(r.id)}</div>
+        <div class="meta">${t.toLocaleString('ru-RU')}</div>
+      `;
+      div.onclick = () => openRun(r.id);
+      container.appendChild(div);
+    });
+  } catch (e) { console.error(e); }
+}
+
+async function openRun(id) {
+  state.currentRun = id;
+  document.querySelectorAll('.run-item').forEach((el) => {
+    el.classList.toggle('active', el.querySelector('.name').textContent === id);
+  });
+  try {
+    const data = await api('/api/runs/' + encodeURIComponent(id));
+    renderViewer(data);
+  } catch (e) {
+    document.getElementById('viewer-body').innerHTML = '<div class="empty">Не удалось загрузить прогон</div>';
+  }
+}
+
+function renderViewer(data) {
+  const body = document.getElementById('viewer-body');
+  if (state.viewerTab === 'slides') {
+    if (!data.slides || data.slides.length === 0) {
+      body.innerHTML = '<div class="empty">Нет слайдов</div>';
+      return;
+    }
+    body.innerHTML = '<div class="slides-grid">' +
+      data.slides.map((src, i) => `
+        <div class="slide-item">
+          <div class="num">${i + 1}</div>
+          <img src="${src}" alt="slide ${i + 1}" loading="lazy">
+        </div>
+      `).join('') + '</div>';
+  } else if (state.viewerTab === 'caption') {
+    body.innerHTML = data.caption
+      ? '<div class="caption">' + escapeHtml(data.caption) + '</div>'
+      : '<div class="empty">Подписи нет</div>';
+  } else if (state.viewerTab === 'json') {
+    body.innerHTML = '<pre class="caption" style="font-family:ui-monospace,SF Mono,Menlo,monospace;font-size:11px">' +
+      escapeHtml(JSON.stringify(data.carousel, null, 2)) + '</pre>';
+  }
+}
+
+document.querySelectorAll('.tab').forEach((tab) => {
+  tab.onclick = () => {
+    document.querySelectorAll('.tab').forEach((t) => t.classList.remove('active'));
+    tab.classList.add('active');
+    state.viewerTab = tab.dataset.tab;
+    if (state.currentRun) openRun(state.currentRun);
+  };
+});
+
+document.getElementById('btn-generate').onclick = async () => {
+  if (!state.rubric) return alert('Выбери рубрику');
+  const topic = document.getElementById('topic').value.trim();
+  const episode = Number(document.getElementById('episode').value);
+  const deliver = document.getElementById('deliver').checked;
+  const rag = document.getElementById('rag').checked;
+  if (!topic) return alert('Впиши тему');
+
+  const btn = document.getElementById('btn-generate');
+  btn.disabled = true;
+  btn.textContent = 'Запускаю…';
+  const statusBox = document.getElementById('job-status');
+  statusBox.innerHTML = '<div class="status-line running"><span class="spinner"></span>Стартую…</div>';
+
+  try {
+    const { jobId } = await api('/api/generate', {
+      method: 'POST',
+      headers: { 'content-type': 'application/json' },
+      body: JSON.stringify({ rubric: state.rubric, topic, episode, deliver, rag }),
+    });
+    state.activeJob = jobId;
+    pollJob(jobId);
+  } catch (e) {
+    statusBox.innerHTML = '<div class="status-line error">Ошибка: ' + escapeHtml(e.message) + '</div>';
+    btn.disabled = false;
+    btn.textContent = 'Сгенерировать';
+  }
+};
+
+async function pollJob(id) {
+  const statusBox = document.getElementById('job-status');
+  const btn = document.getElementById('btn-generate');
+  try {
+    const job = await api('/api/jobs/' + id);
+    if (job.status === 'running' || job.status === 'queued') {
+      const elapsed = Math.round((Date.now() - new Date(job.startedAt).getTime()) / 1000);
+      statusBox.innerHTML = '<div class="status-line running"><span class="spinner"></span>Генерация… ' + elapsed + 'с</div>';
+      setTimeout(() => pollJob(id), 1500);
+    } else if (job.status === 'done') {
+      statusBox.innerHTML = '<div class="status-line done">✓ Готово' + (job.deliver ? ' · отправлено в Telegram' : '') + '</div>';
+      btn.disabled = false;
+      btn.textContent = 'Сгенерировать';
+      await loadRuns();
+      // open the new run
+      const runId = job.slidePaths?.[0]?.split('/').slice(-3)[0];
+      if (runId) openRun(decodeURIComponent(runId));
+    } else if (job.status === 'error') {
+      statusBox.innerHTML = '<div class="status-line error">✗ ' + escapeHtml(job.error || 'Неизвестная ошибка') + '</div>';
+      btn.disabled = false;
+      btn.textContent = 'Сгенерировать';
+    }
+  } catch (e) {
+    statusBox.innerHTML = '<div class="status-line error">Polling failed: ' + escapeHtml(e.message) + '</div>';
+    btn.disabled = false;
+    btn.textContent = 'Сгенерировать';
+  }
+}
+
+function escapeHtml(s) {
+  return String(s).replace(/[&<>"']/g, (c) => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' }[c]));
+}
+
+loadHealth();
+loadRubrics();
+loadRuns();
+setInterval(loadHealth, 30000);
+setInterval(loadRuns, 15000);
+</script>
+
+</body>
+</html>
