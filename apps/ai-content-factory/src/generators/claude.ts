@@ -180,9 +180,24 @@ export async function callClaude<T>(opts: CallClaudeOptions): Promise<T | string
         return text;
       }
 
-      const parsed = extractJson(text);
+      let parsed: unknown;
+      try {
+        parsed = extractJson(text);
+      } catch (parseErr) {
+        log.warn('Claude response: JSON extraction failed', {
+          model,
+          attempt,
+          snippet: text.slice(0, 600),
+        });
+        throw parseErr;
+      }
       const validate = getValidator(opts.outputSchema);
       if (!validate(parsed)) {
+        log.warn('Claude response: schema validation failed', {
+          model,
+          attempt,
+          snippet: JSON.stringify(parsed).slice(0, 600),
+        });
         throw new Error(
           `Output failed schema validation: ${ajv.errorsText(validate.errors, { separator: '; ' })}`,
         );
