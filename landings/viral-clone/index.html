@@ -41,9 +41,12 @@
   .top-nav{display:none;gap:22px;margin-left:auto;font-family:'SF Mono',monospace;font-size:11px;letter-spacing:0.1em;text-transform:uppercase;color:var(--text-dim);font-weight:600}
   @media(min-width:880px){.top-nav{display:flex}}
   .top-nav a:hover{color:var(--text)}
-  .top-cta{margin-left:auto;padding:8px 14px;border:1px solid var(--lime);color:var(--lime);font-family:'SF Mono',monospace;font-size:11px;letter-spacing:0.12em;text-transform:uppercase;font-weight:700;transition:.15s}
+  .top-cta{padding:8px 14px;border:1px solid var(--lime);color:var(--lime);font-family:'SF Mono',monospace;font-size:11px;letter-spacing:0.12em;text-transform:uppercase;font-weight:700;transition:.15s}
   .top-cta:hover{background:var(--lime);color:#101801}
-  @media(min-width:880px){.top-cta{margin-left:0}}
+  .top-login{margin-left:auto;padding:8px 14px;border:1px solid var(--border-2);color:var(--text-dim);font-family:'SF Mono',monospace;font-size:11px;letter-spacing:0.12em;text-transform:uppercase;font-weight:700;transition:.15s}
+  .top-login:hover{border-color:var(--text);color:var(--text)}
+  .top-actions{margin-left:auto;display:flex;align-items:center;gap:10px}
+  .top-actions .top-login{margin-left:0}
 
   /* ── shell ── */
   .shell{max-width:1480px;margin:0 auto;padding:0 24px}
@@ -196,7 +199,10 @@
       <a href="#price">Цена</a>
       <a href="#faq">FAQ</a>
     </nav>
-    <a href="https://t.me/your_transscribe_bot" class="top-cta">Открыть в Telegram →</a>
+    <div class="top-actions">
+      <a href="/dashboard" class="top-login">Вход</a>
+      <a href="https://t.me/your_transscribe_bot" class="top-cta">Открыть в Telegram →</a>
+    </div>
   </div>
 </header>
 
