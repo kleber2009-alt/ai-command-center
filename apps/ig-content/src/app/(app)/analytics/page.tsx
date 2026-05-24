@@ -1,12 +1,14 @@
-import { TrendingUp, Hash, Lightbulb } from 'lucide-react'
+import { TrendingUp, Hash, Lightbulb, Brain } from 'lucide-react'
 import { createClient } from '@/lib/supabase/server'
 import { fetchMetrics, summarize } from '@/lib/analytics'
 import { StatCard } from '@/components/stat-card'
 import { ReachTimeline, ReachByType } from '@/components/metrics-chart'
 import { MetricsTable, type MetricTableRow } from '@/components/metrics-table'
 import { AiRecommendations } from '@/components/ai-recommendations'
+import { WeeklyLearningButton } from '@/components/weekly-learning'
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card'
 import { formatNumber } from '@/lib/utils'
+import type { AgentLearning } from '@/types/database'
 
 export const dynamic = 'force-dynamic'
 
@@ -14,6 +16,13 @@ export default async function AnalyticsPage() {
   const supabase = createClient()
   const rows = await fetchMetrics(supabase)
   const summary = summarize(rows)
+
+  const { data: learningRows } = await supabase
+    .from('agent_learnings')
+    .select('*')
+    .order('created_at', { ascending: false })
+    .limit(12)
+  const learnings = (learningRows as AgentLearning[]) ?? []
 
   const tableRows: MetricTableRow[] = rows.map((r) => ({
     topic: r.content_days?.topic ?? '—',
@@ -96,6 +105,39 @@ export default async function AnalyticsPage() {
         </CardHeader>
         <CardContent>
           <MetricsTable rows={tableRows} />
+        </CardContent>
+      </Card>
+
+      <Card>
+        <CardHeader className="flex flex-row items-center justify-between gap-4 space-y-0">
+          <CardTitle className="flex items-center gap-2 text-base">
+            <Brain className="h-4 w-4 text-primary" />
+            Память агента — выводы
+          </CardTitle>
+          <WeeklyLearningButton />
+        </CardHeader>
+        <CardContent>
+          {learnings.length === 0 ? (
+            <p className="text-sm text-muted-foreground">
+              Пока нет выводов. Добавьте метрики и оценки контента, затем нажмите
+              «Сделать выводы за неделю» — агент сформирует устойчивые инсайты и будет
+              опираться на них при следующих генерациях.
+            </p>
+          ) : (
+            <ul className="space-y-3">
+              {learnings.map((l) => (
+                <li key={l.id} className="flex items-start gap-3 text-sm">
+                  <span className="mt-0.5 shrink-0 rounded-full bg-primary/10 px-2 py-0.5 text-xs text-primary">
+                    {l.learning_type}
+                  </span>
+                  <span className="flex-1">{l.insight}</span>
+                  <span className="shrink-0 tabular-nums text-xs text-muted-foreground">
+                    {l.confidence}%
+                  </span>
+                </li>
+              ))}
+            </ul>
+          )}
         </CardContent>
       </Card>
 

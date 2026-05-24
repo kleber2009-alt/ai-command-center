@@ -1,6 +1,7 @@
 import { NextRequest, NextResponse } from 'next/server'
 import { requireUser, jsonError, GENERATION_ERROR } from '@/lib/api'
 import { runReelsWriter, runVisualDirector } from '@/lib/agents'
+import { retrieveContext } from '@/lib/knowledge'
 import type { Campaign } from '@/types/database'
 
 // Generates (or regenerates) the Reels script + visual brief for a day,
@@ -26,6 +27,8 @@ export async function POST(_req: NextRequest, { params }: { params: { id: string
 
   const topic = day.reels_idea || day.topic || campaign.topic || ''
 
+  const rag = await retrieveContext(supabase, user.id, topic, campaign as Campaign)
+
   let reels
   let brief
   try {
@@ -33,6 +36,7 @@ export async function POST(_req: NextRequest, { params }: { params: { id: string
       topic,
       campaign: campaign as Campaign,
       goal: campaign.goal ?? '',
+      ragContext: rag.text,
     })
     brief = await runVisualDirector({ contentType: 'Instagram Reels', topic })
   } catch (err) {
@@ -86,6 +90,17 @@ export async function POST(_req: NextRequest, { params }: { params: { id: string
     : await supabase.from('reels').insert(row).select('*').single()
 
   if (saveErr) return jsonError(saveErr.message, 500)
+
+  await supabase.from('generation_logs').insert({
+    user_id: user.id,
+    campaign_id: campaign.id,
+    content_day_id: day.id,
+    agent_type: 'reels_writer',
+    input_context: { topic, goal: campaign.goal ?? '' },
+    retrieved_examples: { best: rag.best, worst: rag.worst, learnings: rag.learnings, avoid: rag.avoidTags },
+    generated_output: reels,
+    final_status: 'generated',
+  })
 
   if (day.status === 'idea') {
     await supabase.from('content_days').update({ status: 'generated' }).eq('id', day.id)

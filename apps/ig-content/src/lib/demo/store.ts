@@ -28,6 +28,10 @@ interface Store {
   carousels: Row[]
   metrics: Row[]
   ai_outputs: Row[]
+  content_library: Row[]
+  feedback: Row[]
+  agent_learnings: Row[]
+  generation_logs: Row[]
 }
 
 function seed(): Store {
@@ -134,7 +138,53 @@ function seed(): Store {
     m('mt-6', 'cd-7', 'carousel', 38900, 2200, 188, 3120, 288, 540, 52, 6),
   ]
 
+  const lib = (id: string, type: string, source: string, topic: string, hook: string, score: number, cta: string): Row => ({
+    id,
+    user_id: DEMO_USER.id,
+    type,
+    source,
+    topic,
+    hook,
+    content: `Демо-материал базы знаний: ${topic}`,
+    cta,
+    format: type,
+    visual_style: 'премиальный tech, тёмный, янтарный акцент',
+    metrics: {},
+    performance_score: score,
+    content_day_id: null,
+    content_type: null,
+    created_at: now(),
+  })
+  const content_library: Row[] = [
+    lib('lib-1', 'reels', 'own', 'Я построил AI-офис из 5 агентов', '«5 агентов вместо отдела»', 9120, 'Пиши «офис» в директ'),
+    lib('lib-2', 'reels', 'own', 'AI-сценарист для Reels', '«Этот Reels написал не я»', 7640, 'Подпишись на эксперимент'),
+    lib('lib-3', 'carousel', 'own', 'Контент-план за один промпт', '«Один промпт — план на месяц»', 8980, 'Сохрани шаблон'),
+    lib('lib-4', 'carousel', 'own', 'Абстрактная мотивация про AI', '«Будущее уже здесь»', 1240, 'Подпишись'),
+    lib('lib-5', 'reference', 'competitor', 'Build-in-public: запуск SaaS', '«Я показываю выручку каждый день»', 0, '—'),
+    lib('lib-6', 'hook', 'reference', 'Сильные хуки 2026', '«Я совершил эту ошибку 3 года»', 0, '—'),
+  ]
+
+  const learning = (id: string, type: string, insight: string, conf: number): Row => ({
+    id,
+    user_id: DEMO_USER.id,
+    learning_type: type,
+    insight,
+    source_content_ids: [],
+    confidence: conf,
+    created_at: now(),
+  })
+  const agent_learnings: Row[] = [
+    learning('lrn-1', 'hook', 'Хуки с личным экспериментом («Этот Reels написал не я») удерживают лучше обучающих заголовков.', 86),
+    learning('lrn-2', 'topic', 'Темы Claude + автоматизация контента дают больше сохранений, чем общие AI-новости.', 78),
+    learning('lrn-3', 'format', 'Карусели с готовыми промптами на отдельном слайде получают больше всего репостов.', 81),
+    learning('lrn-4', 'cta', 'CTA «напиши CLAUDE в директ» даёт больше лидов, чем «подпишись».', 73),
+  ]
+
   return {
+    content_library,
+    feedback: [],
+    agent_learnings,
+    generation_logs: [],
     campaigns: [
       {
         id: campaignId,

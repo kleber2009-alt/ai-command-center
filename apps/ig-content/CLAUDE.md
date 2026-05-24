@@ -39,16 +39,43 @@ status tracking → metrics → AI analytics.
 GET/POST              /api/campaigns
 GET/PUT/DELETE        /api/campaigns/:id
 GET                   /api/campaigns/:id/days
-POST                  /api/campaigns/:id/generate-plan        (Strategist)
+POST                  /api/campaigns/:id/generate-plan        (Strategist + RAG)
 GET/PUT               /api/content-days/:id
-POST                  /api/content-days/:id/generate-reels    (Reels + Visual)
-POST                  /api/content-days/:id/generate-carousel (Carousel)
-POST                  /api/content-days/:id/metrics
+POST                  /api/content-days/:id/generate-reels    (Reels + Visual + RAG)
+POST                  /api/content-days/:id/generate-carousel (Carousel + RAG)
+POST                  /api/content-days/:id/metrics           (+ auto-ingest to library)
 GET/PUT               /api/reels/:id
 GET/PUT               /api/carousels/:id
 GET                   /api/analytics
 POST                  /api/analytics/analyze                  (Analytics)
+POST                  /api/feedback                           (1-5 rating + tags)
+GET/POST              /api/learnings                          (list / weekly summary)
+GET/POST              /api/library
+DELETE                /api/library/:id
 ```
+
+## Self-learning subsystem (migration 002)
+
+The agents improve via knowledge base + RAG + metrics + feedback + weekly
+learnings — no fine-tuning. Tables: `content_library` (pgvector embeddings),
+`feedback`, `agent_learnings`, `generation_logs`.
+
+- **Embeddings**: `src/lib/embeddings.ts` — OpenAI `text-embedding-3-small`
+  (1536 dims, matches the `vector()` column). Returns `null` (and the system
+  degrades gracefully) in demo mode, without `OPENAI_API_KEY`, or on error.
+- **Scoring**: `src/lib/scoring.ts` `performanceScore()` mirrors the SQL
+  `calc_performance_score()` — weights saves/shares/follows/leads above views.
+- **RAG**: `src/lib/knowledge.ts` `retrieveContext()` builds the generation
+  context (top-5 + bottom-3 similar via `match_content_library` RPC, brand
+  rules, learnings, negative-feedback tags). When embeddings are off it falls
+  back to performance-score ranking. Injected into the Strategist/Reels/Carousel
+  prompts via the `ragContext` arg in `src/lib/agents.ts`.
+- **Learning engine**: `src/lib/learnings.ts` `runWeeklyLearning()` condenses
+  recent metrics + feedback into `agent_learnings` (triggered from `/analytics`).
+- **Auto-grow**: posting metrics upserts the published unit into
+  `content_library` with its score + embedding (`ingestPublishedContent`).
+- **UI**: `/library` (knowledge base), feedback widget in the editors, agent
+  memory + weekly-learning button on `/analytics`.
 
 ## Gotchas
 

@@ -7,6 +7,7 @@ import { Button } from '@/components/ui/button'
 import { Input } from '@/components/ui/input'
 import { Textarea } from '@/components/ui/textarea'
 import { Label } from '@/components/ui/label'
+import { ContentFeedback } from '@/components/content-feedback'
 import type { Reel } from '@/types/database'
 
 type Draft = {
@@ -157,6 +158,8 @@ export function ReelsEditor({ dayId, reel }: { dayId: string; reel: Reel | null 
       </Field>
 
       {error && <p className="text-sm text-destructive">{error}</p>}
+
+      <ContentFeedback contentId={current.id} contentType="reels" />
     </div>
   )
 }

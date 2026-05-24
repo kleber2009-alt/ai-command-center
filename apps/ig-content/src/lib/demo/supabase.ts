@@ -34,6 +34,7 @@ class Query {
   private wantCount = false
   private headOnly = false
   private payload: Row | Row[] | null = null
+  private limitN: number | null = null
 
   constructor(table: string) {
     this.table = table
@@ -58,7 +59,16 @@ class Query {
     this.orderAsc = opts?.ascending !== false
     return this
   }
+  limit(n: number) {
+    this.limitN = n
+    return this
+  }
   insert(data: Row | Row[]) {
+    this.op = 'insert'
+    this.payload = data
+    return this
+  }
+  upsert(data: Row | Row[]) {
     this.op = 'insert'
     this.payload = data
     return this
@@ -126,6 +136,7 @@ class Query {
         return (av > bv ? 1 : -1) * (this.orderAsc ? 1 : -1)
       })
     }
+    if (this.limitN != null) out = out.slice(0, this.limitN)
     return attachJoins(out, this.cols)
   }
 
@@ -150,6 +161,10 @@ export function createDemoClient() {
   return {
     from(table: string) {
       return new Query(table)
+    },
+    // Vector search is disabled in demo; callers fall back to score-ranked select.
+    async rpc(_name: string, _params?: Record<string, unknown>) {
+      return { data: [], error: null }
     },
     auth: {
       async getUser() {

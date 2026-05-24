@@ -6,6 +6,7 @@ import {
   LayoutDashboard,
   Megaphone,
   BarChart3,
+  BookOpen,
   Sparkles,
   LogOut,
 } from 'lucide-react'
@@ -15,6 +16,7 @@ const NAV = [
   { href: '/dashboard', label: 'Дашборд', icon: LayoutDashboard },
   { href: '/campaigns', label: 'Кампании', icon: Megaphone },
   { href: '/analytics', label: 'Аналитика', icon: BarChart3 },
+  { href: '/library', label: 'База знаний', icon: BookOpen },
 ]
 
 export function AppSidebar({ email }: { email: string | null }) {

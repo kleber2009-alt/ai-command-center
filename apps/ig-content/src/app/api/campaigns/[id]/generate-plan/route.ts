@@ -1,6 +1,7 @@
 import { NextRequest, NextResponse } from 'next/server'
 import { requireUser, jsonError, GENERATION_ERROR } from '@/lib/api'
 import { runStrategist } from '@/lib/agents'
+import { retrieveContext } from '@/lib/knowledge'
 import type { Campaign } from '@/types/database'
 
 // Generates the full serial plan for a campaign and stores one content_days
@@ -18,9 +19,16 @@ export async function POST(_req: NextRequest, { params }: { params: { id: string
 
   if (campErr || !campaign) return jsonError('Campaign not found', 404)
 
+  const rag = await retrieveContext(
+    supabase,
+    user.id,
+    `${campaign.topic ?? ''} ${campaign.goal ?? ''}`.trim(),
+    campaign as Campaign,
+  )
+
   let plan
   try {
-    plan = await runStrategist(campaign as Campaign)
+    plan = await runStrategist(campaign as Campaign, rag.text)
   } catch (err) {
     console.error('strategist failed:', err)
     return jsonError(GENERATION_ERROR, 502)

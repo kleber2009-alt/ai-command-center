@@ -6,6 +6,7 @@ import type {
   VisualBriefOutput,
   AnalyticsOutput,
 } from '@/lib/agents'
+import type { DerivedLearning } from '@/lib/learnings'
 
 export function demoPlan(duration: number): PlanDay[] {
   const base = [
@@ -90,6 +91,16 @@ export function demoVisualBrief(topic: string): VisualBriefOutput {
       'cinematic dark studio, entrepreneur at a glowing dashboard, amber neon UI panels, high contrast, premium tech aesthetic, --ar 9:16',
     designer_brief: 'Сохранять единый стиль серии: тёмный фон, янтарный акцент, одинаковая сетка.',
   }
+}
+
+export function demoLearnings(): DerivedLearning[] {
+  return [
+    { learning_type: 'hook', insight: 'Хуки-результаты («Х за 9 секунд») удерживают лучше хуков-вопросов.', confidence: 80 },
+    { learning_type: 'topic', insight: 'Закулисье «build in public» даёт охват в 2.3× выше среднего.', confidence: 76 },
+    { learning_type: 'format', insight: 'Карусели с промптом на отдельном слайде получают больше всего сохранений.', confidence: 82 },
+    { learning_type: 'cta', insight: 'CTA с ключевым словом в директ конвертит в лиды лучше «подпишись».', confidence: 70 },
+    { learning_type: 'timing', insight: 'Reels, опубликованные в первой половине дня, набирают охват быстрее.', confidence: 58 },
+  ]
 }
 
 export function demoAnalytics(): AnalyticsOutput {

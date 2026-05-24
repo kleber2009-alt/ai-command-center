@@ -125,3 +125,82 @@ export interface AiOutput {
   response: unknown
   created_at: string
 }
+
+// --- Self-learning subsystem (migration 002) ---
+
+export type LibrarySource = 'own' | 'competitor' | 'reference'
+
+export type LibraryType =
+  | 'reels'
+  | 'carousel'
+  | 'post'
+  | 'story'
+  | 'dm'
+  | 'offer'
+  | 'case'
+  | 'review'
+  | 'prompt'
+  | 'reference'
+  | 'hook'
+
+export interface ContentLibraryItem {
+  id: string
+  user_id: string
+  type: LibraryType
+  source: LibrarySource
+  topic: string | null
+  hook: string | null
+  content: string | null
+  cta: string | null
+  format: string | null
+  visual_style: string | null
+  metrics: Record<string, number>
+  performance_score: number
+  content_day_id: string | null
+  content_type: string | null
+  created_at: string
+}
+
+export interface Feedback {
+  id: string
+  user_id: string
+  content_id: string | null
+  content_type: string | null
+  rating: number
+  feedback_tags: string[]
+  comment: string | null
+  created_at: string
+}
+
+export type LearningType =
+  | 'hook'
+  | 'topic'
+  | 'format'
+  | 'cta'
+  | 'style'
+  | 'timing'
+  | 'general'
+
+export interface AgentLearning {
+  id: string
+  user_id: string
+  learning_type: LearningType | string
+  insight: string
+  source_content_ids: string[]
+  confidence: number
+  created_at: string
+}
+
+export interface GenerationLog {
+  id: string
+  user_id: string
+  campaign_id: string | null
+  content_day_id: string | null
+  agent_type: string
+  input_context: unknown
+  retrieved_examples: unknown
+  generated_output: unknown
+  user_rating: number | null
+  final_status: string | null
+  created_at: string
+}

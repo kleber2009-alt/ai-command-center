@@ -12,9 +12,13 @@ Public URL: **https://igcontent.46-62-215-11.nip.io**
 
 1. Create a project at https://supabase.com → **New project**.
    Pick a region close to Hetzner (e.g. EU). Save the database password.
-2. **SQL Editor** → paste & run `supabase/migrations/001_init.sql` from this
-   repo. This creates all tables, the `auth.users → public.users` trigger and
-   the RLS policies.
+2. **SQL Editor** → run the migrations from this repo **in order**:
+   - `supabase/migrations/001_init.sql` — core tables, the
+     `auth.users → public.users` trigger and RLS policies.
+   - `supabase/migrations/002_self_learning.sql` — knowledge base
+     (`content_library` with pgvector), `feedback`, `agent_learnings`,
+     `generation_logs`, the `match_content_library` RPC and their RLS.
+     Enables the `vector` extension automatically.
 3. **Project Settings → API**, copy:
    - `Project URL` → `NEXT_PUBLIC_SUPABASE_URL`
    - `anon` `public` key → `NEXT_PUBLIC_SUPABASE_ANON_KEY`
@@ -43,8 +47,11 @@ cd apps/ig-content
 
 ```bash
 cp .env.production.example .env
-nano .env                       # paste the 3 Supabase values + ANTHROPIC_API_KEY
+nano .env                       # Supabase values + ANTHROPIC_API_KEY + OPENAI_API_KEY
 ```
+
+`OPENAI_API_KEY` powers knowledge-base embeddings (RAG). It's optional — without
+it, retrieval falls back to performance-score ranking — but recommended.
 
 `.env` is git-ignored and is read by docker-compose both for build-arg
 substitution (the `NEXT_PUBLIC_*` values) and for runtime injection.

@@ -80,7 +80,11 @@ function campaignContext(c: Campaign): string {
 // ---------------------------------------------------------------------------
 // 7.1 Content Strategist Agent
 // ---------------------------------------------------------------------------
-export async function runStrategist(c: Campaign): Promise<PlanDay[]> {
+function ragBlock(ragContext?: string): string {
+  return ragContext ? `\n\n${ragContext}\n` : ''
+}
+
+export async function runStrategist(c: Campaign, ragContext?: string): Promise<PlanDay[]> {
   if (isDemo()) return demoPlan(c.duration)
   const system =
     'You are an Instagram content strategist for an AI entrepreneur. ' +
@@ -103,7 +107,7 @@ ${c.offer ?? ''}
 
 Lead Magnet:
 ${c.lead_magnet ?? ''}
-
+${ragBlock(ragContext)}
 Generate a ${c.duration}-day content plan. The days must function as ONE story: each
 day continues the previous one and teases the next, with a recognizable, repeated CTA.
 
@@ -136,6 +140,7 @@ export async function runReelsWriter(args: {
   topic: string
   campaign: Campaign
   goal: string
+  ragContext?: string
 }): Promise<ReelsOutput> {
   if (isDemo()) return demoReels(args.topic)
   const system =
@@ -150,7 +155,7 @@ ${campaignContext(args.campaign)}
 
 Goal:
 ${args.goal}
-
+${ragBlock(args.ragContext)}
 Write a 45–60 second Instagram Reels script.
 Structure: 1) Hook in first 2 seconds 2) Problem 3) Demonstration 4) Insight 5) Value 6) CTA.
 
@@ -178,6 +183,7 @@ export async function runCarouselArchitect(args: {
   topic: string
   campaign: Campaign
   goal: string
+  ragContext?: string
 }): Promise<CarouselOutput> {
   if (isDemo()) return demoCarousel(args.topic)
   const system =
@@ -192,7 +198,7 @@ ${campaignContext(args.campaign)}
 
 Goal:
 ${args.goal}
-
+${ragBlock(args.ragContext)}
 Generate a carousel with 8–10 slides.
 Structure: 1) Hook cover 2) Pain amplification 3) Common mistake 4) New approach
 5) Framework 6) Example 7) Prompt or instruction 8) Conclusion 9) CTA.

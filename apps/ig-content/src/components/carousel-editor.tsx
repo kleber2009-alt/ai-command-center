@@ -7,6 +7,7 @@ import { Button } from '@/components/ui/button'
 import { Input } from '@/components/ui/input'
 import { Textarea } from '@/components/ui/textarea'
 import { Label } from '@/components/ui/label'
+import { ContentFeedback } from '@/components/content-feedback'
 import type { Carousel, CarouselSlide } from '@/types/database'
 
 export function CarouselEditor({ dayId, carousel }: { dayId: string; carousel: Carousel | null }) {
@@ -178,6 +179,8 @@ export function CarouselEditor({ dayId, carousel }: { dayId: string; carousel: C
       </div>
 
       {error && <p className="text-sm text-destructive">{error}</p>}
+
+      <ContentFeedback contentId={current.id} contentType="carousel" />
     </div>
   )
 }
