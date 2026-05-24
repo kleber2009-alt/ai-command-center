@@ -1,3 +1,4 @@
+import { redirect } from 'next/navigation';
 import { getCurrentUser } from '@/lib/auth';
 import { prisma } from '@/lib/prisma';
 import { ApiKeysManager } from '@/components/api-keys-manager';
@@ -6,7 +7,8 @@ export const dynamic = 'force-dynamic';
 export const metadata = { title: 'API keys — Persona Studio' };
 
 export default async function ApiKeysPage() {
-  const user = (await getCurrentUser())!;
+  const user = await getCurrentUser();
+  if (!user) redirect('/sign-in');
 
   const keys = await prisma.apiKey.findMany({
     where: { userId: user.id },

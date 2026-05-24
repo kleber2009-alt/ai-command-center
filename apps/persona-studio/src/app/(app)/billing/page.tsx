@@ -1,3 +1,4 @@
+import { redirect } from 'next/navigation';
 import { getCurrentUser } from '@/lib/auth';
 import { prisma } from '@/lib/prisma';
 import { formatDate } from '@/lib/utils';
@@ -7,7 +8,8 @@ export const dynamic = 'force-dynamic';
 export const metadata = { title: 'Billing — Persona Studio' };
 
 export default async function BillingPage() {
-  const user = (await getCurrentUser())!;
+  const user = await getCurrentUser();
+  if (!user) redirect('/sign-in');
 
   const [recent, trialInvoice] = await Promise.all([
     prisma.tokenTransaction.findMany({

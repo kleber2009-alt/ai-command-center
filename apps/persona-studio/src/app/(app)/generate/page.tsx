@@ -1,5 +1,6 @@
 import Link from 'next/link';
 import { GenerateStudio } from '@/components/generate-studio';
+import { redirect } from 'next/navigation';
 import { getCurrentUser } from '@/lib/auth';
 import { prisma } from '@/lib/prisma';
 
@@ -7,7 +8,8 @@ export const dynamic = 'force-dynamic';
 export const metadata = { title: 'Generate — Persona Studio' };
 
 export default async function GeneratePage() {
-  const user = (await getCurrentUser())!;
+  const user = await getCurrentUser();
+  if (!user) redirect('/sign-in');
   const uploads = await prisma.upload.findMany({
     where: { userId: user.id, status: 'ready' },
     orderBy: { createdAt: 'desc' },
