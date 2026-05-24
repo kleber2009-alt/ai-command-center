@@ -7,6 +7,12 @@ import {
   isYtdlpServiceConfigured,
   YtdlpServiceError,
 } from '@/lib/ytdlp-client'
+import {
+  ApifyServiceError,
+  extractInstagramMediaUrl,
+  isApifyConfigured,
+  isInstagramUrl,
+} from '@/lib/apify-client'
 import { authenticate } from '@/lib/telegram-auth'
 import { indexTranscribeRow } from '@/lib/memory'
 
