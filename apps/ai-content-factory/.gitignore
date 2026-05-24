@@ -1,0 +1,17 @@
+node_modules/
+.env
+.env.local
+config/.env
+data/output/
+data/logs/
+data/analytics/posts.json
+data/analytics/weekly-reports/*.json
+!data/analytics/posts.json.example
+data/assets/footage/**/*.mp4
+data/assets/footage/**/*.mov
+data/assets/b-roll/**/*.mp4
+data/assets/audio/**/*.mp3
+data/assets/audio/**/*.m4a
+*.log
+.DS_Store
+.pm2/
