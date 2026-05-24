@@ -1,0 +1,366 @@
+<!DOCTYPE html>
+<html lang="ru">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<meta name="theme-color" content="#F5F5F7">
+<title>AI Content Factory — фабрика сериального контента для Instagram</title>
+<meta name="description" content="2 единицы контента в день, 4 рубрики, генерация на Claude с RAG, рендер в Puppeteer, доставка в Telegram. Полностью автономно, human-in-the-loop на публикации.">
+<meta property="og:title" content="AI Content Factory">
+<meta property="og:description" content="Автономная фабрика сериального контента для Instagram на Claude.">
+<meta property="og:type" content="website">
+<style>
+*,*::before,*::after{margin:0;padding:0;box-sizing:border-box}
+html,body{background:#F5F5F7;color:#1D1D1F;min-height:100vh;-webkit-font-smoothing:antialiased;text-rendering:optimizeLegibility}
+body{font-family:-apple-system,BlinkMacSystemFont,'SF Pro Text','Helvetica Neue',Arial,sans-serif;font-size:17px;line-height:1.47059}
+a{color:inherit;text-decoration:none}
+::selection{background:rgba(0,113,227,.2);color:#1D1D1F}
+
+:root{
+  --bg:#F5F5F7;
+  --surface:#FFFFFF;
+  --surface-2:#F2F2F2;
+  --surface-3:#0B1220;
+  --sep:rgba(0,0,0,.08);
+  --sep-2:rgba(0,0,0,.12);
+  --t1:#1D1D1F;
+  --t2:#6E6E73;
+  --t3:#AEAEB2;
+  --blue:#0071E3;
+  --blue-hover:#0077ED;
+  --green:#1D8348;
+  --diary:#60c8f0;
+  --routine:#84e0a3;
+  --hood:#2563EB;
+  --money:#d96be8;
+  --r1:6px;
+  --r2:10px;
+  --r3:12px;
+  --r4:18px;
+  --r5:20px;
+  --font:-apple-system,BlinkMacSystemFont,'SF Pro Display','SF Pro Text','Helvetica Neue',Arial,sans-serif;
+  --mono:'SF Mono',ui-monospace,'Cascadia Mono',Menlo,monospace;
+}
+
+.topbar{
+  position:sticky;top:0;z-index:100;
+  display:flex;align-items:center;justify-content:space-between;
+  padding:0 24px;height:52px;
+  background:rgba(245,245,247,.85);
+  backdrop-filter:blur(20px) saturate(180%);
+  -webkit-backdrop-filter:blur(20px) saturate(180%);
+  border-bottom:1px solid var(--sep);
+}
+.logo{font-family:var(--font);font-size:17px;font-weight:600;letter-spacing:-.3px;color:var(--t1)}
+.topnav{display:flex;align-items:center;gap:28px}
+.topnav a{font-size:14px;font-weight:400;color:var(--t2);transition:color .15s}
+.topnav a:hover{color:var(--t1)}
+.topnav .btn-nav{background:var(--blue);color:#fff;padding:7px 16px;border-radius:980px;font-size:13px;font-weight:500;transition:background .15s}
+.topnav .btn-nav:hover{background:var(--blue-hover);color:#fff}
+@media(max-width:720px){.topnav>a:not(.btn-nav){display:none}}
+
+.btn{display:inline-flex;align-items:center;justify-content:center;gap:6px;font-family:var(--font);font-weight:500;border-radius:980px;transition:all .15s ease;cursor:pointer;border:none;white-space:nowrap;text-decoration:none}
+.btn-primary{background:var(--blue);color:#fff;padding:14px 28px;font-size:17px}
+.btn-primary:hover{background:var(--blue-hover)}
+.btn-secondary{background:rgba(0,0,0,.06);color:var(--t1);padding:14px 28px;font-size:17px;border:1px solid var(--sep-2)}
+.btn-secondary:hover{background:rgba(0,0,0,.09)}
+
+main{max-width:1200px;margin:0 auto;padding:0 24px}
+section{padding:96px 0;border-bottom:1px solid var(--sep)}
+section:last-of-type{border-bottom:none}
+h1,h2,h3,h4{font-family:var(--font);letter-spacing:-.02em;color:var(--t1)}
+h1{font-size:clamp(40px,6vw,72px);font-weight:600;line-height:1.05;letter-spacing:-.035em}
+h2{font-size:clamp(32px,4.5vw,56px);font-weight:600;line-height:1.08;letter-spacing:-.025em;margin-bottom:48px}
+h3{font-size:24px;font-weight:600;line-height:1.2;margin-bottom:12px}
+h4{font-size:17px;font-weight:600;line-height:1.4}
+p{color:var(--t1)}
+.muted{color:var(--t2)}
+.mono{font-family:var(--mono);font-size:14px;line-height:1.6}
+
+/* Hero */
+.hero{padding:120px 0 96px;text-align:center}
+.hero-eyebrow{font-size:14px;font-weight:500;color:var(--blue);letter-spacing:.04em;text-transform:uppercase;margin-bottom:20px}
+.hero h1{margin:0 auto 24px;max-width:14ch}
+.hero-sub{font-size:clamp(20px,2.2vw,24px);color:var(--t2);max-width:32ch;margin:0 auto 40px;line-height:1.35}
+.hero-cta{display:flex;gap:12px;justify-content:center;flex-wrap:wrap}
+.hero-meta{margin-top:48px;display:flex;gap:32px;justify-content:center;flex-wrap:wrap;color:var(--t2);font-size:14px}
+.hero-meta span{display:inline-flex;align-items:center;gap:6px}
+.hero-meta b{color:var(--t1);font-weight:600}
+
+/* Card grid */
+.grid{display:grid;gap:24px}
+.grid-3{grid-template-columns:repeat(3,1fr)}
+.grid-4{grid-template-columns:repeat(4,1fr)}
+.grid-2{grid-template-columns:repeat(2,1fr)}
+@media(max-width:880px){.grid-3,.grid-4,.grid-2{grid-template-columns:1fr}}
+
+.card{background:var(--surface);border-radius:var(--r4);padding:32px;border:1px solid var(--sep)}
+.card-num{font-family:var(--mono);font-size:13px;color:var(--t3);margin-bottom:16px}
+.card p{font-size:15px;color:var(--t2);line-height:1.55}
+
+/* Rubric cards (colored) */
+.rubric-card{background:var(--surface);border-radius:var(--r4);padding:0;overflow:hidden;border:1px solid var(--sep);display:flex;flex-direction:column}
+.rubric-head{padding:32px 32px 24px;color:#fff;position:relative}
+.rubric-head h3{color:#fff;margin-bottom:6px;font-size:22px}
+.rubric-head .label{font-family:var(--mono);font-size:11px;letter-spacing:.12em;text-transform:uppercase;opacity:.8;margin-bottom:18px;display:block}
+.rubric-head .handle{font-size:12px;opacity:.7;font-family:var(--mono)}
+.rubric-body{padding:24px 32px 32px;flex:1}
+.rubric-body p{font-size:14px;color:var(--t2);line-height:1.5}
+.rubric-diary .rubric-head{background:linear-gradient(135deg,#1a2942 0%,#0b1220 100%);border-bottom:3px solid var(--diary)}
+.rubric-routine .rubric-head{background:linear-gradient(135deg,#1e2a23 0%,#0f1714 100%);border-bottom:3px solid var(--routine)}
+.rubric-hood .rubric-head{background:linear-gradient(135deg,#1a3a8a 0%,#1d3b9c 100%);border-bottom:3px solid var(--hood)}
+.rubric-money .rubric-head{background:linear-gradient(135deg,#2a1a30 0%,#140b16 100%);border-bottom:3px solid var(--money)}
+
+/* Architecture / dark */
+.dark{background:var(--surface-3);color:#fff;border-radius:var(--r5);padding:64px 48px;margin:0 -24px}
+@media(min-width:1248px){.dark{margin:0}}
+.dark h2{color:#fff}
+.dark p{color:rgba(255,255,255,.7)}
+.flow{display:grid;grid-template-columns:repeat(5,1fr);gap:16px;margin-top:32px;align-items:stretch}
+@media(max-width:880px){.flow{grid-template-columns:1fr;gap:12px}}
+.flow-step{background:rgba(255,255,255,.05);border:1px solid rgba(255,255,255,.1);border-radius:var(--r3);padding:20px;display:flex;flex-direction:column;gap:8px}
+.flow-step .n{font-family:var(--mono);font-size:11px;color:var(--diary);letter-spacing:.1em}
+.flow-step h4{color:#fff;font-size:15px}
+.flow-step p{font-size:13px;color:rgba(255,255,255,.6);line-height:1.5}
+
+/* Stack */
+.stack-grid{display:grid;grid-template-columns:repeat(2,1fr);gap:0;border:1px solid var(--sep);border-radius:var(--r4);overflow:hidden;background:var(--surface)}
+.stack-row{display:contents}
+.stack-cell{padding:20px 24px;border-bottom:1px solid var(--sep);border-right:1px solid var(--sep)}
+.stack-cell:nth-child(2n){border-right:none}
+.stack-row:last-child .stack-cell{border-bottom:none}
+.stack-cell .layer{font-family:var(--mono);font-size:12px;color:var(--t3);letter-spacing:.08em;text-transform:uppercase;margin-bottom:6px}
+.stack-cell .tech{font-size:16px;font-weight:500;color:var(--t1);margin-bottom:6px}
+.stack-cell .why{font-size:13px;color:var(--t2);line-height:1.5}
+@media(max-width:720px){.stack-grid{grid-template-columns:1fr}.stack-cell{border-right:none}}
+
+/* Stats strip */
+.stats{display:grid;grid-template-columns:repeat(4,1fr);gap:48px;text-align:center;padding:48px 0}
+@media(max-width:720px){.stats{grid-template-columns:repeat(2,1fr);gap:32px}}
+.stat-value{font-size:48px;font-weight:600;letter-spacing:-.03em;line-height:1;margin-bottom:8px;font-family:var(--font)}
+.stat-label{font-size:13px;color:var(--t2);text-transform:uppercase;letter-spacing:.06em}
+
+/* FAQ */
+.faq{display:flex;flex-direction:column;gap:1px;background:var(--sep);border-radius:var(--r4);overflow:hidden;border:1px solid var(--sep)}
+.faq details{background:var(--surface);padding:24px 28px;cursor:pointer}
+.faq summary{font-size:17px;font-weight:500;color:var(--t1);list-style:none;display:flex;justify-content:space-between;align-items:center;gap:16px}
+.faq summary::-webkit-details-marker{display:none}
+.faq summary::after{content:'+';font-size:24px;color:var(--t3);font-weight:300;transition:transform .2s}
+.faq details[open] summary::after{transform:rotate(45deg)}
+.faq p{margin-top:16px;color:var(--t2);font-size:15px;line-height:1.6}
+
+/* CTA */
+.cta{text-align:center;padding:96px 0}
+.cta h2{margin-bottom:16px}
+.cta p{font-size:20px;color:var(--t2);max-width:40ch;margin:0 auto 40px}
+
+/* Code preview */
+.code-preview{background:#0b1220;color:#e8eef7;padding:24px 28px;border-radius:var(--r3);font-family:var(--mono);font-size:13px;line-height:1.6;overflow-x:auto;margin-top:32px}
+.code-preview .c{color:#6b7d99}
+.code-preview .k{color:#7dd3fc}
+.code-preview .s{color:#a5d6a7}
+.code-preview .n{color:#f0a35c}
+
+/* Footer */
+footer{padding:48px 24px;border-top:1px solid var(--sep);text-align:center;color:var(--t2);font-size:13px}
+footer a{color:var(--blue)}
+footer a:hover{text-decoration:underline}
+</style>
+</head>
+<body>
+
+<header class="topbar">
+  <a href="#" class="logo">AI Content Factory</a>
+  <nav class="topnav">
+    <a href="#how">Как работает</a>
+    <a href="#rubrics">Рубрики</a>
+    <a href="#stack">Стек</a>
+    <a href="#faq">FAQ</a>
+    <a href="https://github.com/kleber2009-alt/ai-command-center/tree/main/apps/ai-content-factory" class="btn-nav" target="_blank" rel="noopener">GitHub</a>
+  </nav>
+</header>
+
+<main>
+
+<section class="hero">
+  <div class="hero-eyebrow">для @ai_mastery · автоматизация на Claude</div>
+  <h1>Фабрика сериального контента для Instagram.</h1>
+  <p class="hero-sub">2 единицы контента в день. 4 параллельные рубрики. Сценарий, дизайн, монтаж и подпись — внутри. Готово к публикации в Telegram.</p>
+  <div class="hero-cta">
+    <a href="#how" class="btn btn-primary">Как это работает</a>
+    <a href="https://github.com/kleber2009-alt/ai-command-center/tree/main/apps/ai-content-factory" class="btn btn-secondary" target="_blank" rel="noopener">Открыть код</a>
+  </div>
+  <div class="hero-meta">
+    <span><b>2</b> поста в день</span>
+    <span><b>4</b> рубрики</span>
+    <span><b>$25–40</b> /месяц инфра</span>
+    <span><b>0</b> ручной работы до публикации</span>
+  </div>
+</section>
+
+<section id="how">
+  <h2>Что внутри</h2>
+  <div class="grid grid-3">
+    <div class="card">
+      <div class="card-num">01 / Генерация</div>
+      <h3>Claude Opus 4.7 + RAG</h3>
+      <p>Каждая идея вырастает в JSON-карусель по схеме. Контекст из knowledge base через Voyage AI embeddings + sqlite-vec — модель видит, что у этого автора уже сработало, а что — нет.</p>
+    </div>
+    <div class="card">
+      <div class="card-num">02 / Рендер</div>
+      <h3>Puppeteer → 10 PNG</h3>
+      <p>Каждый слайд — собственный визуальный код рубрики: акцентный цвет, шрифт, верхний тег и водяной знак. 1080×1350, готово под IG-формат.</p>
+    </div>
+    <div class="card">
+      <div class="card-num">03 / Доставка</div>
+      <h3>Telegram media group</h3>
+      <p>Готовый пост приходит в Telegram владельца: 10 слайдов медиагруппой + подпись + хэштеги. Публикация — одной кнопкой, под контролем человека.</p>
+    </div>
+  </div>
+</section>
+
+<section>
+  <h2>Поток одного поста</h2>
+  <div class="dark">
+    <div class="flow">
+      <div class="flow-step"><div class="n">01</div><h4>Идея</h4><p>Берётся из content-plan на 14 дней вперёд. План обновляется еженедельно.</p></div>
+      <div class="flow-step"><div class="n">02</div><h4>RAG-контекст</h4><p>Knowledge base отдаёт похожие удачные и неудачные посты этого автора.</p></div>
+      <div class="flow-step"><div class="n">03</div><h4>Claude</h4><p>Возвращает строгий JSON: 10 слайдов по схеме <span class="mono">carousel.v1</span>.</p></div>
+      <div class="flow-step"><div class="n">04</div><h4>Render + caption</h4><p>Puppeteer рендерит 10 PNG, Haiku пишет подпись + хэштеги.</p></div>
+      <div class="flow-step"><div class="n">05</div><h4>Telegram</h4><p>Медиагруппа + подпись приходят владельцу. Human-in-the-loop на публикации.</p></div>
+    </div>
+  </div>
+</section>
+
+<section id="rubrics">
+  <h2>4 рубрики, каждая со своим визуальным кодом</h2>
+  <div class="grid grid-4">
+    <div class="rubric-card rubric-diary">
+      <div class="rubric-head">
+        <span class="label">Дневник архитектора</span>
+        <h3>diary</h3>
+        <span class="handle">@ILIA · CLAUDE PATH</span>
+      </div>
+      <div class="rubric-body">
+        <p>Личный путь к Claude Certified. Каждый эпизод — день из подготовки, реальные ошибки, реальные открытия.</p>
+      </div>
+    </div>
+    <div class="rubric-card rubric-routine">
+      <div class="rubric-head">
+        <span class="label">Рутина архитектора</span>
+        <h3>routine</h3>
+        <span class="handle">@ILIA · DAILY OPS</span>
+      </div>
+      <div class="rubric-body">
+        <p>Чек-листы, шаблоны промптов, ритуалы недели. Один эпизод — одна повторяемая операция, которую можно скопировать.</p>
+      </div>
+    </div>
+    <div class="rubric-card rubric-hood">
+      <div class="rubric-head">
+        <span class="label">Нейроновости</span>
+        <h3>hood</h3>
+        <span class="handle">@ilia.paliy</span>
+      </div>
+      <div class="rubric-body">
+        <p>Свежая новость или инсайд ИИ-индустрии как хук → разбор рабочей связки нейросетей → лид-магнит по кодовому слову.</p>
+      </div>
+    </div>
+    <div class="rubric-card rubric-money">
+      <div class="rubric-head">
+        <span class="label">Деньги</span>
+        <h3>money</h3>
+        <span class="handle">@ILIA · MONEY</span>
+      </div>
+      <div class="rubric-body">
+        <p>Экономика автоматизации: сколько стоит, сколько экономит, как считать ROI. Только реальные цифры.</p>
+      </div>
+    </div>
+  </div>
+</section>
+
+<section id="stack">
+  <h2>Стек</h2>
+  <div class="stack-grid">
+    <div class="stack-row">
+      <div class="stack-cell"><div class="layer">AI · Generation</div><div class="tech">Claude Opus 4.7 + Haiku 4.5</div><div class="why">Opus для творческих карусели, Haiku для подписей и weekly-insights.</div></div>
+      <div class="stack-cell"><div class="layer">AI · Embeddings</div><div class="tech">Voyage AI · voyage-3.5</div><div class="why">Эмбеддинги для retrieval контекста из knowledge base.</div></div>
+    </div>
+    <div class="stack-row">
+      <div class="stack-cell"><div class="layer">Knowledge base</div><div class="tech">SQLite + sqlite-vec</div><div class="why">Локальное векторное хранилище: что зашло, что нет, какие выводы по эпизодам.</div></div>
+      <div class="stack-cell"><div class="layer">Schema · Validation</div><div class="tech">Ajv + JSON Schema</div><div class="why">Жёсткая валидация JSON-выходов Claude. Ретрай при невалидном.</div></div>
+    </div>
+    <div class="stack-row">
+      <div class="stack-cell"><div class="layer">Render</div><div class="tech">Puppeteer (headless Chromium)</div><div class="why">HTML-шаблоны слайдов → PNG 1080×1350. Полный контроль типографики.</div></div>
+      <div class="stack-cell"><div class="layer">Delivery</div><div class="tech">Telegram Bot API</div><div class="why">sendMediaGroup для карусели + caption. Human-in-the-loop на публикации.</div></div>
+    </div>
+    <div class="stack-row">
+      <div class="stack-cell"><div class="layer">Scheduler</div><div class="tech">node-cron + PM2</div><div class="why">Cron 08:00 carousel / 14:00 reels / Вс 10:00 weekly-insights. PM2 — авторестарт.</div></div>
+      <div class="stack-cell"><div class="layer">Runtime</div><div class="tech">Node.js 20 LTS · TypeScript</div><div class="why">Strict-режим, ESM, tsx для дев-режима. ESLint + Prettier.</div></div>
+    </div>
+  </div>
+
+  <div class="code-preview">
+<span class="c"># генерация карусели по теме</span>
+$ npm run carousel -- <span class="k">--rubric</span> hood <span class="k">--topic</span> <span class="s">"Чем Claude Skills отличаются от MCP"</span> <span class="k">--episode</span> <span class="n">7</span> <span class="k">--deliver</span>
+
+<span class="c">→ RAG context retrieved: 5 good, 2 bad, 8 learnings</span>
+<span class="c">→ Claude opus 4.7 → JSON valid (10 slides)</span>
+<span class="c">→ Puppeteer rendered slides 1..10 (1080×1350, 412 KB total)</span>
+<span class="c">→ Caption: 1×hook + 384 chars body + 12 hashtags</span>
+<span class="c">→ Telegram media group sent to @ai_mastery</span>
+  </div>
+</section>
+
+<section>
+  <div class="stats">
+    <div><div class="stat-value">60</div><div class="stat-label">постов в месяц</div></div>
+    <div><div class="stat-value">$25–40</div><div class="stat-label">инфраструктура</div></div>
+    <div><div class="stat-value">19</div><div class="stat-label">тестов на ядро</div></div>
+    <div><div class="stat-value">2</div><div class="stat-label">мин. от идеи до файлов</div></div>
+  </div>
+</section>
+
+<section id="faq">
+  <h2>FAQ</h2>
+  <div class="faq">
+    <details>
+      <summary>Почему публикация остаётся ручной?</summary>
+      <p>Это сознательное решение. Финальная проверка человеком — страховка от ошибок AI (фактическая ошибка, неудачный хук, чувствительный контекст). Когда система наберёт достаточно успешных эпизодов и доверия — переключатель на автопубликацию через Instagram Graph API уже заложен в архитектуру (Phase 7).</p>
+    </details>
+    <details>
+      <summary>Почему JSON-файлы, а не база?</summary>
+      <p>На старте — да, JSON-файлы в Git для контент-плана и идей: прозрачность, версионирование, простая миграция. Knowledge base уже на SQLite + sqlite-vec — для RAG нужны векторные индексы. Поверх 200 постов имеет смысл унифицировать всё в SQLite — это запланировано.</p>
+    </details>
+    <details>
+      <summary>Как добавить новую рубрику?</summary>
+      <p>Дописать запись в <span class="mono">data/rubrics.json</span> (label, accent-цвет, handle, формула), создать <span class="mono">data/prompts/carousel-{slug}.md</span> с роль/тон/структурой 10 слайдов, опционально добавить 3-5 примеров в <span class="mono">data/prompts/examples/{slug}.md</span>. Дальше — обычный <span class="mono">npm run carousel --rubric {slug}</span>.</p>
+    </details>
+    <details>
+      <summary>Что с рилс?</summary>
+      <p>Сценарий-генератор и схема <span class="mono">reels.v1</span> готовы — рилс приходит в Telegram как сценарий-текст + теги фрагментов. FFmpeg-монтаж включается, когда владелец нарежет библиотеку клипов по тегам (talking-head / screen-cast / b-roll). До этого момента — рабочий fallback на ручной монтаж по готовому сценарию.</p>
+    </details>
+    <details>
+      <summary>А если Claude сгенерирует мусор?</summary>
+      <p>JSON Schema-валидация через Ajv → ретрай с exponential backoff. Если 3 попытки подряд возвращают мусор — алерт в Telegram, элемент content-plan переводится в <span class="mono">status: "failed"</span>, владелец смотрит лог. Все вызовы Claude пишутся в <span class="mono">data/logs/claude-calls.jsonl</span>.</p>
+    </details>
+    <details>
+      <summary>Можно поднять под другой аккаунт?</summary>
+      <p>Да. Текущая модель — один аккаунт. Под второй аккаунт можно либо поднять второй инстанс с другим <span class="mono">.env</span> и <span class="mono">data/</span>, либо отрефакторить конфиг под мульти-аккаунт. На старте проще первый путь.</p>
+    </details>
+  </div>
+</section>
+
+<section class="cta">
+  <h2>Готов к запуску.</h2>
+  <p>Phase 1–3 + RAG ядро уже в проде монорепо <span class="mono">ai-command-center</span>. Phase 4 (FFmpeg для рилс) и Phase 5 (cron+heartbeat) — следующий шаг.</p>
+  <a href="https://github.com/kleber2009-alt/ai-command-center/tree/main/apps/ai-content-factory" class="btn btn-primary" target="_blank" rel="noopener">Открыть репозиторий</a>
+</section>
+
+</main>
+
+<footer>
+  AI Content Factory · часть монорепо <a href="https://github.com/kleber2009-alt/ai-command-center" target="_blank" rel="noopener">ai-command-center</a> · 2026
+</footer>
+
+</body>
+</html>

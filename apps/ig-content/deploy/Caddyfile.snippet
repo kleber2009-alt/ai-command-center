@@ -1,0 +1,10 @@
+# Append this block to /etc/caddy/Caddyfile on the server, then reload:
+#   caddy reload --config /etc/caddy/Caddyfile
+# (or: docker exec <caddy-container> caddy reload --config /etc/caddy/Caddyfile)
+#
+# Caddy obtains and renews TLS automatically for the nip.io host.
+
+igcontent.46-62-215-11.nip.io {
+	encode zstd gzip
+	reverse_proxy localhost:3010
+}
