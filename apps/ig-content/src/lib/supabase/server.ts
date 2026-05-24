@@ -1,11 +1,14 @@
 import { createServerClient, type CookieOptions } from '@supabase/ssr'
 import { cookies } from 'next/headers'
+import { isDemo } from '@/lib/demo/store'
+import { createDemoClient } from '@/lib/demo/supabase'
 
 type CookieToSet = { name: string; value: string; options?: CookieOptions }
 
 // Request-scoped Supabase client that reads/writes the session cookie.
 // Use inside Server Components, Route Handlers and Server Actions.
 export function createClient() {
+  if (isDemo()) return createDemoClient() as ReturnType<typeof createServerClient>
   const cookieStore = cookies()
 
   return createServerClient(

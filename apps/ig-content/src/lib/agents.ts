@@ -1,5 +1,13 @@
 import { complete, extractJson } from './anthropic'
 import type { Campaign } from '@/types/database'
+import { isDemo } from './demo/store'
+import {
+  demoPlan,
+  demoReels,
+  demoCarousel,
+  demoVisualBrief,
+  demoAnalytics,
+} from './demo/agents'
 
 // ---------------------------------------------------------------------------
 // Shared types for agent outputs
@@ -73,6 +81,7 @@ function campaignContext(c: Campaign): string {
 // 7.1 Content Strategist Agent
 // ---------------------------------------------------------------------------
 export async function runStrategist(c: Campaign): Promise<PlanDay[]> {
+  if (isDemo()) return demoPlan(c.duration)
   const system =
     'You are an Instagram content strategist for an AI entrepreneur. ' +
     'You design serial, story-driven campaigns that increase reach, engagement, ' +
@@ -128,6 +137,7 @@ export async function runReelsWriter(args: {
   campaign: Campaign
   goal: string
 }): Promise<ReelsOutput> {
+  if (isDemo()) return demoReels(args.topic)
   const system =
     'You are a viral Instagram Reels scriptwriter who maximizes retention and ' +
     'hook strength. You ALWAYS reply with valid JSON only — no prose.'
@@ -169,6 +179,7 @@ export async function runCarouselArchitect(args: {
   campaign: Campaign
   goal: string
 }): Promise<CarouselOutput> {
+  if (isDemo()) return demoCarousel(args.topic)
   const system =
     'You are an Instagram carousel strategist who creates save-worthy, ' +
     'engagement-optimized slide decks. You ALWAYS reply with valid JSON only — no prose.'
@@ -207,6 +218,7 @@ export async function runVisualDirector(args: {
   contentType: string
   topic: string
 }): Promise<VisualBriefOutput> {
+  if (isDemo()) return demoVisualBrief(args.topic)
   const system =
     'You are an art director for premium AI content. Brand style: premium tech, ' +
     'cinematic, futuristic, creator economy, high contrast, dark UI, modern dashboards. ' +
@@ -233,6 +245,7 @@ Return ONLY this JSON:
 // 7.5 Analytics Agent
 // ---------------------------------------------------------------------------
 export async function runAnalytics(metricsData: unknown): Promise<AnalyticsOutput> {
+  if (isDemo()) return demoAnalytics()
   const system =
     'You are an Instagram content analyst. You find what works and give concrete, ' +
     'actionable next steps. You ALWAYS reply with valid JSON only — no prose.'

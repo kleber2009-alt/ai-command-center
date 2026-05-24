@@ -1,5 +1,6 @@
 import { createServerClient, type CookieOptions } from '@supabase/ssr'
 import { NextResponse, type NextRequest } from 'next/server'
+import { isDemo } from '@/lib/demo/store'
 
 type CookieToSet = { name: string; value: string; options?: CookieOptions }
 
@@ -7,6 +8,9 @@ const PUBLIC_PATHS = ['/login', '/signup', '/auth']
 
 // Refreshes the auth session on every request and guards app routes.
 export async function updateSession(request: NextRequest) {
+  // In demo mode there is no real session — treat every request as authed.
+  if (isDemo()) return NextResponse.next({ request })
+
   let response = NextResponse.next({ request })
 
   const supabase = createServerClient(
