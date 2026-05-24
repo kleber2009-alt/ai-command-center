@@ -18,13 +18,15 @@
     "musicMood": "TODO"
   },
   "hood": {
-    "label": "TODO: hood label",
-    "accent": "#000000",
-    "handle": "TODO",
-    "formula": "TODO: формула рубрики",
+    "label": "НЕЙРОНОВОСТИ",
+    "categoryTag": "Нейросети | ИИ | Маркетинг",
+    "accent": "#2563EB",
+    "coverBg": "#E6157B",
+    "handle": "@ilia.paliy",
+    "formula": "Новость или тренд ИИ-индустрии как хук → разбор рабочей связки нейросетей → лид-магнит по кодовому слову в комментариях.",
     "promptFile": "data/prompts/carousel-hood.md",
     "examplesFile": "data/prompts/examples/hood.md",
-    "musicMood": "TODO"
+    "musicMood": "atmospheric"
   },
   "money": {
     "label": "TODO: money label",
