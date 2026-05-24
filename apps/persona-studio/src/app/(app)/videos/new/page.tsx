@@ -1,4 +1,5 @@
 import Link from 'next/link';
+import { redirect } from 'next/navigation';
 import { getCurrentUser } from '@/lib/auth';
 import { prisma } from '@/lib/prisma';
 import { VideoForm } from '@/components/video-form';
@@ -7,7 +8,8 @@ export const dynamic = 'force-dynamic';
 export const metadata = { title: 'New video — Persona Studio' };
 
 export default async function NewVideoPage({ searchParams }: { searchParams: Promise<{ avatarId?: string }> }) {
-  const user = (await getCurrentUser())!;
+  const user = await getCurrentUser();
+  if (!user) redirect('/sign-in');
   const { avatarId } = await searchParams;
 
   const avatars = await prisma.avatar.findMany({
