@@ -163,7 +163,7 @@ async function cmdStart(env, chatId, userId, username, args) {
   if (!parts.length) {
     return sendText(env.TG_TOKEN, chatId,
       '⚠ Привязка чата требует одноразовый токен.\n\n' +
-      'Создай голос на <a href="https://ai-growth-office.ru/persona-train">/persona-train</a>, ' +
+      'Создай голос на <a href="https://ai-office.46-62-215-11.nip.io/persona-train">/persona-train</a>, ' +
       'там после клонирования покажется код.\n\n' +
       'Затем сюда: <code>/start @твой_handle XXX-XXX</code>',
       { parse_mode: 'HTML', disable_web_page_preview: true });
@@ -179,7 +179,7 @@ async function cmdStart(env, chatId, userId, username, args) {
   if (!rawToken || rawToken.length < 5) {
     return sendText(env.TG_TOKEN, chatId,
       `⚠ Нужен одноразовый код.\n\n` +
-      `Получи его на <a href="https://ai-growth-office.ru/persona-train">/persona-train</a> ` +
+      `Получи его на <a href="https://ai-office.46-62-215-11.nip.io/persona-train">/persona-train</a> ` +
       `(после создания голоса для <code>${escapeHtml(ownerHandle)}</code>).`,
       { parse_mode: 'HTML', disable_web_page_preview: true });
   }
@@ -192,7 +192,7 @@ async function cmdStart(env, chatId, userId, username, args) {
   if (!voice) {
     return sendText(env.TG_TOKEN, chatId,
       `❌ Голос для <b>${escapeHtml(ownerHandle)}</b> не найден.\n\n` +
-      `Сначала создай его на <a href="https://ai-growth-office.ru/persona-train">/persona-train</a>.`,
+      `Сначала создай его на <a href="https://ai-office.46-62-215-11.nip.io/persona-train">/persona-train</a>.`,
       { parse_mode: 'HTML', disable_web_page_preview: true });
   }
 
@@ -204,7 +204,7 @@ async function cmdStart(env, chatId, userId, username, args) {
   if (!token) {
     return sendText(env.TG_TOKEN, chatId,
       `❌ Код неверный, использован или просрочен.\n\n` +
-      `Создай новый код на <a href="https://ai-growth-office.ru/persona-train">/persona-train</a> ` +
+      `Создай новый код на <a href="https://ai-office.46-62-215-11.nip.io/persona-train">/persona-train</a> ` +
       `(кнопка «Получить код привязки»).`,
       { parse_mode: 'HTML', disable_web_page_preview: true });
   }
@@ -478,7 +478,7 @@ const START_WELCOME = `
 Дальше пересылай кому угодно — Telegram-нативная пересылка работает идеально.
 
 <b>Как начать:</b>
-1. Создай клон голоса: https://ai-growth-office.ru/persona-train
+1. Создай клон голоса: https://ai-office.46-62-215-11.nip.io/persona-train
 2. Привяжи этот чат: <code>/start @твой_handle</code>
 3. Просто пиши сообщения сюда — я буду озвучивать.
 
@@ -498,7 +498,7 @@ const HELP_TEXT = `
 Максимум — 1500 символов на сообщение.
 
 <b>Где создать голос:</b>
-https://ai-growth-office.ru/persona-train
+https://ai-office.46-62-215-11.nip.io/persona-train
 `.trim();
 
 export const config = { path: '/api/tg-voice-webhook' };

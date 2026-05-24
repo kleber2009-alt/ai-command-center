@@ -12,7 +12,7 @@
 
 - **`HANDOFF.md`** — полный документ для переезда на новое устройство / возобновления работы
 - **Notion:** `📦 Handoff · Полный статус проекта · 16.05.2026` (поиск в твоём workspace)
-- **Live-сайт:** `https://spiffy-selkie-ec834f.netlify.app/` (после переезда — `https://ai-growth-office.ru`)
+- **Live-сайт:** `https://spiffy-selkie-ec834f.netlify.app/` (после переезда — `https://ai-office.46-62-215-11.nip.io`)
 
 ---
 
@@ -110,7 +110,7 @@ ai-office-project/
 
 См. `HANDOFF.md` — раздел «Следующие приоритеты».
 
-1. Купить домен `ai-growth-office.ru`
+1. Купить домен `ai-office.46-62-215-11.nip.io`
 2. Подключить Supabase Auth + БД
 3. Подключить YooKassa
 4. Создать Telegram-бот для уведомлений

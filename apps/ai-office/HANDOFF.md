@@ -118,7 +118,7 @@
 
 **Настройка через @BotFather:**
 1. `@BotFather` → `/newbot` → создать бота
-2. `/newapp` → выбрать бота → URL: `https://ai-growth-office.ru/mini-app/`
+2. `/newapp` → выбрать бота → URL: `https://ai-office.46-62-215-11.nip.io/mini-app/`
 3. `/setmenubutton` → выбрать бота → «🏢 Открыть AI Office»
 4. `/setcommands`:
    ```
@@ -134,7 +134,7 @@
 
 | Блокер | Что нужно от тебя |
 |---|---|
-| Домен `ai-growth-office.ru` | Купить + привязать к Netlify |
+| Домен `ai-office.46-62-215-11.nip.io` | Купить + привязать к Netlify |
 | Netlify env vars | Установить `ANTHROPIC_API_KEY`, `TG_BOT_TOKEN`, `TG_CHAT_ID` (см. выше) |
 | Supabase RLS policies | Настроить INSERT policy для `anon` на таблицу `leads` |
 | YooKassa платежи (РФ) | Открыть мерчант, прислать `shopId` + `secret` |
@@ -156,7 +156,7 @@
    - `TG_BOT_TOKEN` (новый, после revoke)
    - `TG_CHAT_ID` (твой ID)
 4. **Supabase RLS** — добавить INSERT policy для роли `anon` на таблицу `leads`
-5. **Купить домен** `ai-growth-office.ru` + привязать к Netlify
+5. **Купить домен** `ai-office.46-62-215-11.nip.io` + привязать к Netlify
 
 ### После этого — новый главный фокус:
 
@@ -171,7 +171,7 @@
 ## 🗺 Roadmap до 100% запуска
 
 ### **Фаза 1: Backend и платежи** (приоритет 🔥, 2-3 недели)
-- [ ] Купить домен `ai-growth-office.ru`, привязать к Netlify, выдать SSL
+- [ ] Купить домен `ai-office.46-62-215-11.nip.io`, привязать к Netlify, выдать SSL
 - [ ] Поднять Supabase, создать таблицы: `leads`, `briefs`, `runs`, `partner_apps`, `users`, `subscriptions`
 - [ ] Магическая ссылка (passwordless email-auth) через Supabase Auth
 - [ ] Обновить все формы: писать в Supabase, не только localStorage
