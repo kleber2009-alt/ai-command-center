@@ -17,6 +17,7 @@ env vars, and routes, see `CLAUDE.md` / `README.md` inside each `apps/<app>/`.
 │   ├── persona-studio/     # Avatar / cover generation (Gemini + workers)
 │   ├── persona-train/      # WIP — persona training
 │   ├── infra-worker/       # cron+queue Office Worker (9 handlers)
+│   ├── ai-content-factory/ # Autonomous IG content factory (Claude + Puppeteer + RAG)
 │   └── voice-circle-bot/   # Python TG bot for video circles
 ├── landings/               # static landing pages (one folder per product)
 ├── supabase/               # SQL migrations shared across apps
@@ -43,6 +44,7 @@ env vars, and routes, see `CLAUDE.md` / `README.md` inside each `apps/<app>/`.
 | 8 | 💬 **tg-agent** (`tg-agent`) | production | 5/7 | `apps/tg-agent` | `landings/tg-agent` | `tg-agent.46-62-215-11.nip.io`, `tg.46-62-215-11.nip.io` (admin), `@newnewnnn_bot` | `tg-agent` |
 | 9 | 🪞 **Persona Studio** (`persona-studio`) | dev | 2/7 | `apps/persona-studio` | `landings/persona-studio` | `dashboard.../landings/persona-studio/`, deploy via workflows | (TBD) |
 | 10 | 📡 **Залётный / Viral Discover** (`viral-discover`) | production | **6/6 ✅** | `apps/infra-worker/handlers/viral_discover.js` + `lib/parser_bot.js` | `landings/viral-discover/cabinet/` | `dashboard.../landings/viral-discover/`, `parser.46-62-215-11.nip.io`, `@parser_instaa_bot` | `infra-aisales-worker-1` |
+| 11 | 🏭 **AI Content Factory** (`ai-content-factory`) | dev | 3/6 | `apps/ai-content-factory` | `landings/ai-content-factory` (пусто) | TG-доставка через бота владельца | `infra-ai-content-factory-1` (после деплоя) |
 
 ### Infrastructure-only apps (not in Command Center)
 
@@ -182,6 +184,7 @@ When the task is scoped to a single app, read its `CLAUDE.md` first:
 - [`apps/infra-worker/CLAUDE.md`](apps/infra-worker/CLAUDE.md) — 9 cron handlers, `FOR UPDATE SKIP LOCKED`, docker build flags
 - [`apps/ai-office/CLAUDE.md`](apps/ai-office/CLAUDE.md) — legacy marketing + persona-train voice endpoints (Netlify Functions)
 - [`apps/ytdlp/CLAUDE.md`](apps/ytdlp/CLAUDE.md) — `POST /extract` companion service
+- [`apps/ai-content-factory/CLAUDE.md`](apps/ai-content-factory/CLAUDE.md) — TS/ESM, Claude + Voyage + sqlite-vec + Puppeteer carousel pipeline, Telegram delivery
 - [`apps/voice-circle-bot/CLAUDE.md`](apps/voice-circle-bot/CLAUDE.md) — prototype, not in prod
 
 Per-app `README.md` / `DEPLOY.md` / `ROADMAP.md` remain authoritative for deep architecture and deploy steps. Each `apps/<app>/CLAUDE.md` is the orientation layer.

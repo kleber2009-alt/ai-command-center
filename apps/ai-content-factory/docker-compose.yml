@@ -1,0 +1,33 @@
+# Standalone compose for ai-content-factory.
+#
+# To attach the container to the existing `infra` project (so it shows up next
+# to infra-transcribe-1, infra-ai-office-1 etc.), launch with:
+#
+#   docker compose -p infra -f apps/ai-content-factory/docker-compose.yml up -d
+#
+# That gives the container the canonical name `infra-ai-content-factory-1`.
+
+services:
+  ai-content-factory:
+    build:
+      context: .
+      dockerfile: Dockerfile
+    image: ai-content-factory:latest
+    container_name: ai-content-factory
+    restart: unless-stopped
+    env_file:
+      - .env
+    environment:
+      NODE_ENV: production
+      TZ: ${TZ:-Europe/Moscow}
+    volumes:
+      # Persisted artefacts — survive container rebuilds
+      - ./data/output:/app/data/output
+      - ./data/logs:/app/data/logs
+      - ./data/knowledge:/app/data/knowledge
+      - ./data/factory.db:/app/data/factory.db
+    healthcheck:
+      test: ["CMD", "node", "-e", "process.exit(0)"]
+      interval: 60s
+      timeout: 5s
+      retries: 3
