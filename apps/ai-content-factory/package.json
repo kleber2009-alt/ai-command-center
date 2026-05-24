@@ -1,0 +1,33 @@
+{
+  "name": "ai-content-factory",
+  "version": "1.0.0",
+  "private": true,
+  "description": "Autonomous Instagram content factory: 2 units/day (carousel + reels) by 4 rubrics, delivered to Telegram",
+  "type": "commonjs",
+  "main": "src/index.js",
+  "engines": {
+    "node": ">=20"
+  },
+  "scripts": {
+    "start": "node src/index.js",
+    "dev": "node --watch src/index.js",
+    "carousel": "node src/pipelines/carousel.js",
+    "reels": "node src/pipelines/reels.js",
+    "insights": "node src/pipelines/weekly-insights.js",
+    "test": "node --test tests/",
+    "smoke": "node tests/smoke.test.js",
+    "lint": "eslint src/ tests/"
+  },
+  "dependencies": {
+    "@anthropic-ai/sdk": "^0.39.0",
+    "ajv": "^8.17.1",
+    "dotenv": "^16.4.7",
+    "fluent-ffmpeg": "^2.1.3",
+    "node-cron": "^3.0.3",
+    "node-telegram-bot-api": "^0.66.0",
+    "puppeteer": "^23.10.0"
+  },
+  "devDependencies": {
+    "eslint": "^9.0.0"
+  }
+}
