@@ -19,12 +19,13 @@
 import 'dotenv/config';
 import express, { type Request, type Response, type NextFunction } from 'express';
 import basicAuth from 'basic-auth';
-import { existsSync, readFileSync, readdirSync, statSync } from 'node:fs';
-import { resolve, join, dirname } from 'node:path';
+import multer from 'multer';
+import { existsSync, readFileSync, readdirSync, statSync, mkdirSync, unlinkSync } from 'node:fs';
+import { resolve, join, dirname, basename } from 'node:path';
 import { fileURLToPath } from 'node:url';
 import { randomUUID } from 'node:crypto';
 import { loadRubrics } from './lib/rubrics.js';
-import { outputPath } from './lib/paths.js';
+import { outputPath, dataPath } from './lib/paths.js';
 import { runCarouselPipeline } from './pipelines/carousel.js';
 import { runReelsPipeline } from './pipelines/reels.js';
 import { log } from './lib/logger.js';
@@ -280,6 +281,125 @@ app.get('/api/jobs/:id', (req, res) => {
     return;
   }
   res.json(job);
+});
+
+// ── Footage library ─────────────────────────────────────────────────────────
+
+const FOOTAGE_ROOT = dataPath('assets', 'footage');
+const SAFE_TAG = /^[a-z0-9][a-z0-9_-]{0,40}$/i;
+const SAFE_FILE = /^[A-Za-z0-9][A-Za-z0-9._-]{0,80}\.(mp4|mov|m4v|webm)$/i;
+const MAX_UPLOAD_MB = 100;
+
+interface TagCatalogEntry {
+  tag: string;
+  label?: string;
+  description?: string;
+  expectedSeconds?: string;
+}
+
+function loadTagCatalog(): TagCatalogEntry[] {
+  const p = dataPath('assets', 'footage-tags.json');
+  if (!existsSync(p)) return [];
+  try {
+    const parsed = JSON.parse(readFileSync(p, 'utf8')) as { tags?: unknown[] };
+    if (!parsed.tags || !Array.isArray(parsed.tags)) return [];
+    return parsed.tags
+      .map((t) => (typeof t === 'string' ? { tag: t } : (t as TagCatalogEntry)))
+      .filter((t) => typeof t.tag === 'string' && SAFE_TAG.test(t.tag));
+  } catch {
+    return [];
+  }
+}
+
+function listClipsForTag(tag: string): { file: string; sizeBytes: number; mtime: string }[] {
+  const dir = join(FOOTAGE_ROOT, tag);
+  if (!existsSync(dir)) return [];
+  return readdirSync(dir)
+    .filter((f) => SAFE_FILE.test(f))
+    .map((f) => {
+      const s = statSync(join(dir, f));
+      return { file: f, sizeBytes: s.size, mtime: s.mtime.toISOString() };
+    });
+}
+
+app.get('/api/footage', (_req, res) => {
+  const catalog = loadTagCatalog();
+  const tags = catalog.map((entry) => ({
+    ...entry,
+    clips: listClipsForTag(entry.tag),
+  }));
+  res.json({ tags, maxUploadMb: MAX_UPLOAD_MB });
+});
+
+// Stream uploads straight into the target tag dir to avoid double-copy.
+const upload = multer({
+  storage: multer.diskStorage({
+    destination: (req, _file, cb) => {
+      const tag = req.params.tag;
+      if (!SAFE_TAG.test(tag)) return cb(new Error('bad tag'), '');
+      const dir = join(FOOTAGE_ROOT, tag);
+      mkdirSync(dir, { recursive: true });
+      cb(null, dir);
+    },
+    filename: (_req, file, cb) => {
+      // sanitise: ASCII-only stem, keep extension
+      const ext = (file.originalname.match(/\.(mp4|mov|m4v|webm)$/i) ?? ['', 'mp4'])[1].toLowerCase();
+      const stem = basename(file.originalname, '.' + ext)
+        .replace(/[^A-Za-z0-9._-]+/g, '_')
+        .replace(/_+/g, '_')
+        .slice(0, 60) || 'clip';
+      const name = `${Date.now()}-${stem}.${ext}`;
+      cb(null, name);
+    },
+  }),
+  limits: { fileSize: MAX_UPLOAD_MB * 1024 * 1024, files: 10 },
+  fileFilter: (_req, file, cb) => {
+    if (/\.(mp4|mov|m4v|webm)$/i.test(file.originalname)) cb(null, true);
+    else cb(new Error('only .mp4/.mov/.m4v/.webm allowed'));
+  },
+});
+
+app.post('/api/footage/:tag', upload.array('clips', 10), (req, res) => {
+  if (!SAFE_TAG.test(req.params.tag)) {
+    res.status(400).json({ error: 'bad tag' });
+    return;
+  }
+  const files = (req.files as Express.Multer.File[] | undefined) ?? [];
+  res.json({
+    tag: req.params.tag,
+    uploaded: files.map((f) => ({ file: f.filename, sizeBytes: f.size })),
+  });
+});
+
+app.delete('/api/footage/:tag/:file', (req, res) => {
+  if (!SAFE_TAG.test(req.params.tag) || !SAFE_FILE.test(req.params.file)) {
+    res.status(400).json({ error: 'bad params' });
+    return;
+  }
+  const abs = join(FOOTAGE_ROOT, req.params.tag, req.params.file);
+  if (!existsSync(abs)) {
+    res.status(404).json({ error: 'not found' });
+    return;
+  }
+  try {
+    unlinkSync(abs);
+    res.json({ ok: true });
+  } catch (err) {
+    res.status(500).json({ error: err instanceof Error ? err.message : String(err) });
+  }
+});
+
+app.get('/api/footage/:tag/:file', (req, res) => {
+  if (!SAFE_TAG.test(req.params.tag) || !SAFE_FILE.test(req.params.file)) {
+    res.status(400).send('bad params');
+    return;
+  }
+  const abs = join(FOOTAGE_ROOT, req.params.tag, req.params.file);
+  if (!existsSync(abs)) {
+    res.status(404).send('not found');
+    return;
+  }
+  res.sendFile(abs);
 });
 
 app.use(express.static(PUBLIC_DIR, { extensions: ['html'], maxAge: '5m' }));

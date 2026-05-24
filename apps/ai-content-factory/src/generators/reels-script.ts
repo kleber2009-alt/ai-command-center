@@ -25,8 +25,11 @@ const FALLBACK_FOOTAGE_TAGS = [
   'b-roll-laptop',
 ];
 
-/** Loads the available footage tags. Returns the fallback list when the
- * catalog file is missing — Claude still gets sensible tag choices. */
+/** Loads the available footage tags. Accepts three catalog shapes:
+ *   1. ["tag1","tag2",...]                       — plain array of strings
+ *   2. {"tags":["tag1","tag2",...]}              — wrapped strings
+ *   3. {"tags":[{"tag":"tag1","label":"...",...}]} — rich objects
+ * Returns the fallback list when the file is missing or malformed. */
 async function loadFootageTags(): Promise<string[]> {
   const catalog = dataPath('assets', 'footage-tags.json');
   if (!existsSync(catalog)) return FALLBACK_FOOTAGE_TAGS;
@@ -35,7 +38,11 @@ async function loadFootageTags(): Promise<string[]> {
     const parsed = JSON.parse(raw) as unknown;
     if (Array.isArray(parsed) && parsed.every((x) => typeof x === 'string')) return parsed as string[];
     if (parsed && typeof parsed === 'object' && Array.isArray((parsed as { tags?: unknown }).tags)) {
-      return (parsed as { tags: string[] }).tags;
+      const tags = (parsed as { tags: unknown[] }).tags;
+      if (tags.every((t) => typeof t === 'string')) return tags as string[];
+      if (tags.every((t) => t && typeof t === 'object' && typeof (t as { tag?: unknown }).tag === 'string')) {
+        return (tags as { tag: string }[]).map((t) => t.tag);
+      }
     }
   } catch {
     // fall through

@@ -1,0 +1,41 @@
+{
+  "comment": "Каталог тегов для подбора клипов в reels-pipeline. Claude использует только эти теги при генерации сценария; рендер случайно выбирает один из клипов в data/assets/footage/<tag>/. Ожидаемый формат: MP4/MOV, вертикальные ИЛИ widescreen (рендер сам обрежет до 1080×1920), длительность 4–15 с.",
+  "tags": [
+    {
+      "tag": "talking-head",
+      "label": "Говорящая голова",
+      "description": "Ты на камеру, средний план, лицо в фокусе. Используется для хука и реплик.",
+      "expectedSeconds": "4–8"
+    },
+    {
+      "tag": "screen-cast",
+      "label": "Скринкаст",
+      "description": "Запись экрана: интерфейс Claude / n8n / Make / Notion. Показ конкретного действия.",
+      "expectedSeconds": "5–10"
+    },
+    {
+      "tag": "b-roll-typing",
+      "label": "B-roll: руки на клавиатуре",
+      "description": "Крупный план рук на ноутбуке. Атмосферный кадр.",
+      "expectedSeconds": "3–6"
+    },
+    {
+      "tag": "b-roll-coffee",
+      "label": "B-roll: кофе/стол",
+      "description": "Кофе, чашка, рабочий стол. Lifestyle-кадр для пауз.",
+      "expectedSeconds": "3–6"
+    },
+    {
+      "tag": "b-roll-city",
+      "label": "B-roll: город",
+      "description": "Городские планы — машина, улица, окно. Для перебивок и атмосферы.",
+      "expectedSeconds": "3–6"
+    },
+    {
+      "tag": "b-roll-laptop",
+      "label": "B-roll: ноутбук",
+      "description": "Общий план ноутбука/рабочего места. Фон для текстовых вставок.",
+      "expectedSeconds": "3–6"
+    }
+  ]
+}

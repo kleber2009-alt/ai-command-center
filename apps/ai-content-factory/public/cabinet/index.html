@@ -121,14 +121,20 @@ button,input,select,textarea{font:inherit;color:inherit}
 
 <div class="topbar">
   <div class="logo">AI Content Factory · кабинет</div>
-  <div class="health" id="health">
-    <span><span class="dot" id="h-claude"></span> Claude</span>
-    <span><span class="dot" id="h-tg"></span> Telegram</span>
-    <span><span class="dot" id="h-rag"></span> RAG</span>
+  <div style="display:flex;align-items:center;gap:16px">
+    <div class="navtabs" id="navtabs">
+      <button class="navtab active" data-page="generator" style="background:none;border:none;font-size:14px;font-weight:500;color:#1D1D1F;cursor:pointer;padding:6px 10px;border-radius:6px">Генерация</button>
+      <button class="navtab" data-page="footage" style="background:none;border:none;font-size:14px;font-weight:500;color:#6E6E73;cursor:pointer;padding:6px 10px;border-radius:6px">Footage</button>
+    </div>
+    <div class="health" id="health">
+      <span><span class="dot" id="h-claude"></span> Claude</span>
+      <span><span class="dot" id="h-tg"></span> Telegram</span>
+      <span><span class="dot" id="h-rag"></span> RAG</span>
+    </div>
   </div>
 </div>
 
-<div class="layout">
+<div class="layout" id="page-generator">
 
   <!-- ── left: form + runs ────────────────────────────────────────── -->
   <div>
@@ -192,9 +198,63 @@ button,input,select,textarea{font:inherit;color:inherit}
 
 </div>
 
+<!-- ── Footage page ──────────────────────────────────────────────── -->
+<div class="layout" id="page-footage" style="display:none;grid-template-columns:1fr">
+  <div class="card">
+    <h2>Библиотека клипов</h2>
+    <p style="font-size:13px;color:var(--t2);margin-bottom:18px">
+      Drag&amp;drop файлы в зону нужного тега или жми «Выбрать». Поддержка <code>.mp4 .mov .m4v .webm</code> до 100 MB.
+      Когда у тега есть хотя бы один клип — пайплайн рилс собирает реальное видео; пустой тег → fallback-режим (только сценарий).
+    </p>
+    <div id="footage-grid" style="display:grid;grid-template-columns:repeat(auto-fill,minmax(320px,1fr));gap:14px">
+      <div class="empty">Загружаю каталог…</div>
+    </div>
+  </div>
+</div>
+
+<style>
+.tag-card{border:1px solid var(--sep);border-radius:var(--r2);padding:14px;background:var(--surface-2);transition:border-color .2s}
+.tag-card.drag{border-color:var(--blue);background:#EAF4FF}
+.tag-card h3{font-size:13px;font-weight:600;letter-spacing:.3px;text-transform:uppercase;color:var(--t1);margin-bottom:2px}
+.tag-card .tag-desc{font-size:12px;color:var(--t2);margin-bottom:10px;line-height:1.4}
+.tag-card .clip-count{font-size:11px;color:var(--t3);margin-bottom:10px}
+.tag-card .dropzone{
+  border:1.5px dashed var(--sep);border-radius:var(--r1);padding:18px 10px;text-align:center;
+  font-size:12px;color:var(--t2);cursor:pointer;margin-bottom:10px;
+  transition:all .15s;background:var(--surface);
+}
+.tag-card.drag .dropzone{border-color:var(--blue);color:var(--blue)}
+.tag-card .clips{display:flex;flex-direction:column;gap:6px}
+.tag-card .clip-row{
+  display:flex;justify-content:space-between;align-items:center;gap:8px;
+  padding:6px 10px;background:var(--surface);border:1px solid var(--sep);border-radius:6px;font-size:12px;
+}
+.tag-card .clip-row .name{flex:1;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;color:var(--t1);font-family:ui-monospace,SF Mono,monospace}
+.tag-card .clip-row .size{color:var(--t3);font-size:11px}
+.tag-card .clip-row button{background:none;border:none;color:var(--red);font-size:12px;cursor:pointer;padding:2px 6px;border-radius:4px}
+.tag-card .clip-row button:hover{background:rgba(192,57,43,.1)}
+.tag-card .uploading{font-size:11px;color:var(--blue);margin-top:6px;display:flex;align-items:center;gap:6px}
+</style>
+
 <script>
 const API = '';
-const state = { rubric: null, rubrics: {}, currentRun: null, currentRunData: null, viewerTab: 'slides', activeJob: null, format: 'carousel' };
+const state = { rubric: null, rubrics: {}, currentRun: null, currentRunData: null, viewerTab: 'slides', activeJob: null, format: 'carousel', page: 'generator' };
+
+// ── Page navigation ────────────────────────────────────────────────
+document.querySelectorAll('#navtabs .navtab').forEach((b) => {
+  b.onclick = () => {
+    state.page = b.dataset.page;
+    document.querySelectorAll('#navtabs .navtab').forEach((x) => {
+      const on = x === b;
+      x.classList.toggle('active', on);
+      x.style.color = on ? '#1D1D1F' : '#6E6E73';
+      x.style.background = on ? 'var(--surface-2)' : 'none';
+    });
+    document.getElementById('page-generator').style.display = state.page === 'generator' ? '' : 'none';
+    document.getElementById('page-footage').style.display = state.page === 'footage' ? 'grid' : 'none';
+    if (state.page === 'footage') loadFootage();
+  };
+});
 
 document.querySelectorAll('#format-toggle .seg').forEach((b) => {
   b.onclick = () => {
@@ -410,6 +470,101 @@ async function pollJob(id) {
 
 function escapeHtml(s) {
   return String(s).replace(/[&<>"']/g, (c) => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' }[c]));
+}
+
+// ── Footage library ────────────────────────────────────────────────
+async function loadFootage() {
+  const grid = document.getElementById('footage-grid');
+  try {
+    const { tags, maxUploadMb } = await api('/api/footage');
+    if (!tags || tags.length === 0) {
+      grid.innerHTML = '<div class="empty">Каталог тегов пуст. Положи <code>data/assets/footage-tags.json</code>.</div>';
+      return;
+    }
+    grid.innerHTML = '';
+    tags.forEach((entry) => {
+      const card = document.createElement('div');
+      card.className = 'tag-card';
+      card.dataset.tag = entry.tag;
+      card.innerHTML = `
+        <h3>${escapeHtml(entry.label || entry.tag)}</h3>
+        <div class="tag-desc"><code>${escapeHtml(entry.tag)}</code>${entry.expectedSeconds ? ' · ' + escapeHtml(entry.expectedSeconds) + ' c' : ''}</div>
+        <div class="tag-desc">${escapeHtml(entry.description || '')}</div>
+        <div class="clip-count">${entry.clips.length} клип${pluralRu(entry.clips.length, ['', 'а', 'ов'])} в библиотеке</div>
+        <label class="dropzone">
+          <strong>Перетащи сюда</strong> или нажми, чтобы выбрать (до ${maxUploadMb} MB)
+          <input type="file" accept=".mp4,.mov,.m4v,.webm" multiple style="display:none">
+        </label>
+        <div class="uploading" style="display:none"><span class="spinner"></span><span class="uploading-text">Загружаю…</span></div>
+        <div class="clips">
+          ${entry.clips.map((c) => `
+            <div class="clip-row" data-file="${escapeHtml(c.file)}">
+              <span class="name">${escapeHtml(c.file)}</span>
+              <span class="size">${formatSize(c.sizeBytes)}</span>
+              <button title="Удалить">✕</button>
+            </div>
+          `).join('') || '<div style="font-size:11px;color:var(--t3);text-align:center;padding:6px">Пока нет клипов</div>'}
+        </div>
+      `;
+      const dropzone = card.querySelector('.dropzone');
+      const input = card.querySelector('input[type=file]');
+      input.onchange = () => handleUpload(entry.tag, [...input.files], card);
+      dropzone.ondragover = (e) => { e.preventDefault(); card.classList.add('drag'); };
+      dropzone.ondragleave = () => card.classList.remove('drag');
+      dropzone.ondrop = (e) => {
+        e.preventDefault();
+        card.classList.remove('drag');
+        handleUpload(entry.tag, [...e.dataTransfer.files], card);
+      };
+      card.querySelectorAll('.clip-row button').forEach((btn) => {
+        btn.onclick = async () => {
+          const file = btn.parentElement.dataset.file;
+          if (!confirm('Удалить ' + file + '?')) return;
+          try {
+            await api('/api/footage/' + encodeURIComponent(entry.tag) + '/' + encodeURIComponent(file), { method: 'DELETE' });
+            loadFootage();
+          } catch (e) {
+            alert('Не удалось: ' + e.message);
+          }
+        };
+      });
+      grid.appendChild(card);
+    });
+  } catch (e) {
+    grid.innerHTML = '<div class="empty">Ошибка: ' + escapeHtml(e.message) + '</div>';
+  }
+}
+
+async function handleUpload(tag, files, card) {
+  const valid = files.filter((f) => /\.(mp4|mov|m4v|webm)$/i.test(f.name));
+  if (valid.length === 0) { alert('Поддерживаются только .mp4 .mov .m4v .webm'); return; }
+  const indicator = card.querySelector('.uploading');
+  const text = card.querySelector('.uploading-text');
+  indicator.style.display = 'flex';
+  text.textContent = `Загружаю ${valid.length} файл${pluralRu(valid.length, ['', 'а', 'ов'])}…`;
+  const form = new FormData();
+  for (const f of valid) form.append('clips', f);
+  try {
+    const res = await fetch('/api/footage/' + encodeURIComponent(tag), { method: 'POST', body: form });
+    if (!res.ok) throw new Error(`upload ${res.status}: ${await res.text()}`);
+    await loadFootage();
+  } catch (e) {
+    indicator.style.display = 'none';
+    alert('Не удалось загрузить: ' + e.message);
+  }
+}
+
+function pluralRu(n, [one, few, many]) {
+  const m10 = n % 10, m100 = n % 100;
+  if (m10 === 1 && m100 !== 11) return one;
+  if (m10 >= 2 && m10 <= 4 && (m100 < 10 || m100 >= 20)) return few;
+  return many;
+}
+
+function formatSize(bytes) {
+  if (bytes < 1024) return bytes + ' B';
+  if (bytes < 1024 * 1024) return (bytes / 1024).toFixed(0) + ' KB';
+  return (bytes / 1024 / 1024).toFixed(1) + ' MB';
 }
 
 loadHealth();

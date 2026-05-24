@@ -127,7 +127,9 @@ Return ONLY a JSON array of exactly ${c.duration} objects with this shape:
   }
 ]`
 
-  const raw = await complete(system, user, 8192)
+  // 30-day plan w/ 8 fields per day ≈ 8K tokens — the prior 8192 cap clipped
+  // mid-array at ~30K chars. 16384 gives comfortable headroom up to ~60 days.
+  const raw = await complete(system, user, 16384)
   const days = extractJson<PlanDay[]>(raw)
   if (!Array.isArray(days)) throw new Error('Strategist did not return an array')
   return days
@@ -213,7 +215,8 @@ Return ONLY this JSON:
   "hashtags": []
 }`
 
-  const raw = await complete(system, user, 4096)
+  // 10 slides with detailed bodies + design_prompt + hashtags can blow past 4K.
+  const raw = await complete(system, user, 8192)
   return extractJson<CarouselOutput>(raw)
 }
 
