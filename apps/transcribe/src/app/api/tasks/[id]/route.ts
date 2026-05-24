@@ -17,6 +17,7 @@ export async function PATCH(req: NextRequest, { params }: { params: { id: string
   const guard = guardRequest(req, {
     rateLimit: { key: 'tasks-mod', max: 30, windowMs: 60_000 },
     requireInitData: false,
+    ownerOnly: true,
   })
   if (!guard.ok) return guard.response
 
@@ -53,6 +54,7 @@ export async function DELETE(req: NextRequest, { params }: { params: { id: strin
   const guard = guardRequest(req, {
     rateLimit: { key: 'tasks-mod', max: 30, windowMs: 60_000 },
     requireInitData: false,
+    ownerOnly: true,
   })
   if (!guard.ok) return guard.response
 

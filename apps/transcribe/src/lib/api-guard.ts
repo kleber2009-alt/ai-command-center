@@ -110,10 +110,11 @@ export function guardRequest(req: NextRequest, options: GuardOptions): GuardResu
   }
 
   // 3. ownerOnly gate.
-  //    - With initData: user.id must match OWNER_TELEGRAM_ID.
-  //    - Without initData: single-tenant fallback — pass through, since the
-  //      deployment is owned by one person and there's no other identity
-  //      to compare against. Matches the owner-fallback in guardWithUser.
+  //    - With verified initData: user.id must match OWNER_TELEGRAM_ID.
+  //    - With trusted proxy header X-Auth-User (only set by Caddy after
+  //      basic-auth on the admin-facing subdomain): pass through.
+  //    - Otherwise: 403. Owner-only endpoints must NOT pass through
+  //      to anonymous callers on the public TMA subdomain.
   //    - OWNER_TELEGRAM_ID not configured → 403 (closed by default).
   if (options.ownerOnly) {
     const ownerIdRaw = process.env.OWNER_TELEGRAM_ID
@@ -125,7 +126,10 @@ export function guardRequest(req: NextRequest, options: GuardOptions): GuardResu
       }
     }
     const userId = verified?.user?.id
-    if (userId && userId !== ownerId) {
+    const proxyUser = req.headers.get('x-auth-user')?.trim()
+    const verifiedAsOwner = userId === ownerId
+    const verifiedAsProxy = Boolean(proxyUser)
+    if (!verifiedAsOwner && !verifiedAsProxy) {
       return {
         ok: false,
         response: NextResponse.json({ error: 'forbidden' }, { status: 403 }),

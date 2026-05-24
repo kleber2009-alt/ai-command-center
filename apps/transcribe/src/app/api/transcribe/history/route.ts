@@ -21,6 +21,7 @@ export async function GET(req: NextRequest) {
   const guard = guardRequest(req, {
     rateLimit: { key: 'history-list', max: 60, windowMs: 60_000 },
     requireInitData: false,
+    ownerOnly: true,
   })
   if (!guard.ok) return guard.response
 

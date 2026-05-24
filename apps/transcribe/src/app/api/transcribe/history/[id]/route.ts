@@ -6,6 +6,7 @@ export async function GET(_req: NextRequest, { params }: { params: { id: string 
   const guard = guardRequest(_req, {
     rateLimit: { key: 'history-item', max: 60, windowMs: 60_000 },
     requireInitData: false,
+    ownerOnly: true,
   })
   if (!guard.ok) return guard.response
 
@@ -20,6 +21,7 @@ export async function DELETE(_req: NextRequest, { params }: { params: { id: stri
   const guard = guardRequest(_req, {
     rateLimit: { key: 'history-item', max: 60, windowMs: 60_000 },
     requireInitData: false,
+    ownerOnly: true,
   })
   if (!guard.ok) return guard.response
 
