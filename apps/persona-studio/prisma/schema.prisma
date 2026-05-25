@@ -271,9 +271,10 @@ model ParserConfig {
   hashtags          String[]  @default([])              // ["salescoaching", "b2bsales"] (без #)
   postedWithinDays  Int       @default(7)
   perTargetLimit    Int       @default(25)
-  minPlays          Int       @default(0)
+  minPlays          Int       @default(100000)            // 100k views minimum
   minLikes          Int       @default(0)
-  minComments      Int       @default(0)
+  minComments      Int       @default(1000)                // 1k comments minimum
+  minShares         Int       @default(1000)               // 1k reposts/shares minimum (reshareCount от Apify)
   reelsCount        Int       @default(5)
   carouselsCount    Int       @default(5)
   enabled           Boolean   @default(true)

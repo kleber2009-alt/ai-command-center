@@ -16,7 +16,7 @@ import { rateWithClaude } from '@/lib/parser/claude';
 import type { ScoredPost } from '@/lib/parser/types';
 
 export const runtime = 'nodejs';
-export const maxDuration = 120;
+export const maxDuration = 180;
 
 export async function POST(req: NextRequest) {
   const ctx = await getCurrentUserOrApiKey(req);
@@ -53,30 +53,39 @@ export async function POST(req: NextRequest) {
     const errors: string[] = [];
     const allItems: ApifyItem[] = [];
 
-    // Скрейпим все источники последовательно — Apify run-sync дорогой,
-    // параллельный fire-and-forget может пробить rate-limit на actor.
-    for (const handle of cfg.competitors) {
-      const r = await scrapeAccountPosts(handle, opts);
-      if (r.ok) allItems.push(...r.items);
-      else errors.push(`@${handle}: ${r.error}`);
-    }
-    for (const tag of cfg.hashtags) {
-      const r = await scrapeHashtagPosts(tag, opts);
-      if (r.ok) allItems.push(...r.items);
-      else errors.push(`#${tag}: ${r.error}`);
+    // Параллельный fan-out по всем источникам. Раньше было sequential с
+    // комментом про rate-limit, но на N≥8 это 8×65s = 520s — клиент успевает
+    // получить «Unexpected end of JSON input» до того, как роут закончит.
+    // Apify free-plan позволяет до 25 параллельных runs одного actor'а,
+    // на платных — больше; для большинства юзеров 8-30 fan-out безопасен.
+    const tasks: Array<Promise<{ label: string; result: Awaited<ReturnType<typeof scrapeAccountPosts>> }>> = [
+      ...cfg.competitors.map((handle) =>
+        scrapeAccountPosts(handle, opts).then((result) => ({ label: `@${handle}`, result })),
+      ),
+      ...cfg.hashtags.map((tag) =>
+        scrapeHashtagPosts(tag, opts).then((result) => ({ label: `#${tag}`, result })),
+      ),
+    ];
+    const settled = await Promise.allSettled(tasks);
+    for (const s of settled) {
+      if (s.status === 'rejected') {
+        errors.push(`fetch: ${String(s.reason).slice(0, 200)}`);
+        continue;
+      }
+      const { label, result } = s.value;
+      if (result.ok) allItems.push(...result.items);
+      else errors.push(`${label}: ${result.error}`);
     }
 
     const cls = classify(allItems);
-    const passedReels = filterByThresholds(cls.reels, {
+    const thresholds = {
       minPlays: cfg.minPlays,
       minLikes: cfg.minLikes,
       minComments: cfg.minComments,
-    });
-    const passedCarousels = filterByThresholds(cls.carousels, {
-      minPlays: cfg.minPlays,
-      minLikes: cfg.minLikes,
-      minComments: cfg.minComments,
-    });
+      minShares: cfg.minShares,
+    };
+    const passedReels = filterByThresholds(cls.reels, thresholds);
+    const passedCarousels = filterByThresholds(cls.carousels, thresholds);
     const topReels = rankReels(passedReels, cfg.reelsCount);
     const topCarousels = rankCarousels(passedCarousels, cfg.carouselsCount);
 

@@ -15,6 +15,7 @@ export type ScoredPost = {
   plays: number;
   likes: number;
   comments: number;
+  shares: number;          // reshareCount / shareCount / sharesCount от Apify (0 если поле отсутствует)
   engagement: number;
   viewsPerHour: number;
   engPerHour: number;

@@ -45,6 +45,14 @@ function normalize(item: ApifyItem | null | undefined): ScoredPost | null {
   const plays = Number(item.videoPlayCount || item.videoViewCount || 0);
   const likes = Number(item.likesCount || 0);
   const comments = Number(item.commentsCount || 0);
+  // Apify не всегда отдаёт shares — пробуем несколько имён полей.
+  const shares = Number(
+    ((item as { reshareCount?: number }).reshareCount) ||
+      ((item as { resharesCount?: number }).resharesCount) ||
+      ((item as { shareCount?: number }).shareCount) ||
+      ((item as { sharesCount?: number }).sharesCount) ||
+      0,
+  );
   const engagement = likes + COMMENT_WEIGHT * comments;
 
   const productType = String(item.productType || '').toLowerCase();
@@ -99,6 +107,7 @@ function normalize(item: ApifyItem | null | undefined): ScoredPost | null {
     plays,
     likes,
     comments,
+    shares,
     engagement,
     viewsPerHour: plays / ageH,
     engPerHour: engagement / ageH,
@@ -182,18 +191,22 @@ export function rankCarousels(carousels: ScoredPost[], n: number): ScoredPost[] 
 }
 
 /**
- * Применить абсолютные пороги к постам ДО классификации. Carousels/images
- * пропускают plays-порог если plays === 0 (у них нет play_count).
+ * Применить абсолютные пороги к постам ДО классификации.
+ *
+ * Carousels/images пропускают plays-порог если plays === 0 (у них нет
+ * play_count). Аналогично, shares-порог не применяется к постам, у которых
+ * shares === 0 — Apify часто не отдаёт это поле, и иначе мы бы отрезали
+ * вообще всё.
  */
 export function filterByThresholds(
   posts: ScoredPost[],
-  thresholds: { minPlays: number; minLikes: number; minComments: number },
+  thresholds: { minPlays: number; minLikes: number; minComments: number; minShares: number },
 ): ScoredPost[] {
-  const { minPlays, minLikes, minComments } = thresholds;
-  if (!minPlays && !minLikes && !minComments) return posts;
+  const { minPlays, minLikes, minComments, minShares } = thresholds;
+  if (!minPlays && !minLikes && !minComments && !minShares) return posts;
   return posts.filter((p) => {
-    const hasPlays = p.plays > 0;
-    const playsOK = !hasPlays || p.plays >= minPlays;
-    return playsOK && p.likes >= minLikes && p.comments >= minComments;
+    const playsOK = p.plays === 0 || p.plays >= minPlays;
+    const sharesOK = p.shares === 0 || p.shares >= minShares;
+    return playsOK && p.likes >= minLikes && p.comments >= minComments && sharesOK;
   });
 }
