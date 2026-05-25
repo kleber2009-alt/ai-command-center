@@ -46,6 +46,24 @@ function pickClip(tag: string): string | null {
   return clips[Math.floor(Math.random() * clips.length)]!;
 }
 
+const CLIP_FILE_RE = /\.(mp4|mov|m4v|webm)$/i;
+const SAFE_TAG_PART = /^[a-z0-9][a-z0-9_-]{0,40}$/i;
+
+/** Resolve "tag/file" → absolute path inside data/assets/footage. Returns null
+ * if the reference is malformed or the file doesn't exist. */
+function resolveClipFile(ref: string): string | null {
+  if (typeof ref !== 'string' || !ref.includes('/')) return null;
+  const [tag, ...rest] = ref.split('/');
+  const file = rest.join('/');
+  if (!tag || !file) return null;
+  if (!SAFE_TAG_PART.test(tag)) return null;
+  if (!CLIP_FILE_RE.test(file)) return null;
+  // forbid path traversal segments
+  if (file.includes('..') || file.includes('/')) return null;
+  const abs = join(dataPath('assets', 'footage', tag), file);
+  return existsSync(abs) ? abs : null;
+}
+
 function pickMusic(musicMood: string | undefined): string | null {
   if (!musicMood) return null;
   const dir = dataPath('assets', 'audio', musicMood);
@@ -80,22 +98,26 @@ export async function renderReels(
   const scriptPath = join(outDir, 'reels-script.md');
   await writeFile(scriptPath, formatScript(script), 'utf8');
 
-  // Check which footage tags are available.
+  // Resolve each scene to a concrete clip. Prefer scene.clipFile (Claude
+  // picked it from the described library); fall back to a random clip in the
+  // scene.footageTag folder.
   const sceneClips: { sceneIdx: number; clip: string; duration: number }[] = [];
-  const missingTags = new Set<string>();
+  const missing: string[] = [];
   for (let i = 0; i < script.scenes.length; i++) {
     const scene = script.scenes[i]!;
-    const clip = pickClip(scene.footageTag);
-    if (clip) sceneClips.push({ sceneIdx: i, clip, duration: scene.duration });
-    else missingTags.add(scene.footageTag);
+    let clip: string | null = null;
+    if (scene.clipFile) clip = resolveClipFile(scene.clipFile);
+    if (!clip && scene.footageTag) clip = pickClip(scene.footageTag);
+    if (clip) {
+      sceneClips.push({ sceneIdx: i, clip, duration: scene.duration });
+    } else {
+      missing.push(scene.clipFile ?? scene.footageTag ?? `scene-${i + 1}`);
+    }
   }
 
-  if (missingTags.size > 0) {
-    log.warn('Reels: footage missing → fallback (script-only)', {
-      missing: [...missingTags],
-      outDir,
-    });
-    return { mode: 'fallback', scriptPath, missingTags: [...missingTags] };
+  if (missing.length > 0) {
+    log.warn('Reels: footage missing → fallback (script-only)', { missing, outDir });
+    return { mode: 'fallback', scriptPath, missingTags: missing };
   }
 
   // Full FFmpeg pipeline. Build a concat file and burn subtitles via drawtext.

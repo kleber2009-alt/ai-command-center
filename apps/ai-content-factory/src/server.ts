@@ -29,6 +29,8 @@ import { outputPath, dataPath } from './lib/paths.js';
 import { runCarouselPipeline } from './pipelines/carousel.js';
 import { runReelsPipeline } from './pipelines/reels.js';
 import { log } from './lib/logger.js';
+import { getAllClipMeta, deleteClipMeta, setClipMeta, type ClipMeta } from './lib/footage-meta.js';
+import { describeClip } from './generators/clip-describer.js';
 
 const __dirname = dirname(fileURLToPath(import.meta.url));
 const PUBLIC_DIR = resolve(__dirname, '..', 'public');
@@ -289,6 +291,7 @@ const FOOTAGE_ROOT = dataPath('assets', 'footage');
 const SAFE_TAG = /^[a-z0-9][a-z0-9_-]{0,40}$/i;
 const SAFE_FILE = /^[A-Za-z0-9][A-Za-z0-9._-]{0,80}\.(mp4|mov|m4v|webm)$/i;
 const MAX_UPLOAD_MB = 100;
+const MAX_FILES_PER_REQUEST = 30;
 
 interface TagCatalogEntry {
   tag: string;
@@ -311,14 +314,36 @@ function loadTagCatalog(): TagCatalogEntry[] {
   }
 }
 
-function listClipsForTag(tag: string): { file: string; sizeBytes: number; mtime: string }[] {
+interface ClipListItem {
+  file: string;
+  sizeBytes: number;
+  mtime: string;
+  description?: string;
+  autoTags?: string[];
+  durationSec?: number;
+  status: ClipMeta['status'];
+  error?: string;
+}
+
+function listClipsForTag(tag: string): ClipListItem[] {
   const dir = join(FOOTAGE_ROOT, tag);
   if (!existsSync(dir)) return [];
+  const meta = getAllClipMeta(tag);
   return readdirSync(dir)
     .filter((f) => SAFE_FILE.test(f))
     .map((f) => {
       const s = statSync(join(dir, f));
-      return { file: f, sizeBytes: s.size, mtime: s.mtime.toISOString() };
+      const m = meta[f];
+      return {
+        file: f,
+        sizeBytes: s.size,
+        mtime: s.mtime.toISOString(),
+        status: m?.status ?? 'pending',
+        description: m?.description,
+        autoTags: m?.autoTags,
+        durationSec: m?.durationSec,
+        error: m?.error,
+      };
     });
 }
 
@@ -353,20 +378,34 @@ const upload = multer({
       cb(null, name);
     },
   }),
-  limits: { fileSize: MAX_UPLOAD_MB * 1024 * 1024, files: 10 },
+  limits: { fileSize: MAX_UPLOAD_MB * 1024 * 1024, files: MAX_FILES_PER_REQUEST },
   fileFilter: (_req, file, cb) => {
     if (/\.(mp4|mov|m4v|webm)$/i.test(file.originalname)) cb(null, true);
     else cb(new Error('only .mp4/.mov/.m4v/.webm allowed'));
   },
 });
 
-app.post('/api/footage/:tag', upload.array('clips', 10), (req, res) => {
+app.post('/api/footage/:tag', upload.array('clips', MAX_FILES_PER_REQUEST), (req, res) => {
   const tag = String((req.params as { tag?: string }).tag ?? '');
   if (!SAFE_TAG.test(tag)) {
     res.status(400).json({ error: 'bad tag' });
     return;
   }
   const files = (req.files as Express.Multer.File[] | undefined) ?? [];
+
+  // Persist initial 'pending' status and kick off vision-describe per clip in
+  // the background. UI polls /api/footage to see status transition to ready.
+  for (const f of files) {
+    setClipMeta(tag, f.filename, { status: 'pending' });
+    (async () => {
+      try {
+        await describeClip(tag, f.filename);
+      } catch {
+        /* error already persisted in meta + logged */
+      }
+    })();
+  }
+
   res.json({
     tag,
     uploaded: files.map((f) => ({ file: f.filename, sizeBytes: f.size })),
@@ -388,6 +427,7 @@ app.delete('/api/footage/:tag/:file', (req, res) => {
   }
   try {
     unlinkSync(abs);
+    deleteClipMeta(tag, file);
     res.json({ ok: true });
   } catch (err) {
     res.status(500).json({ error: err instanceof Error ? err.message : String(err) });
