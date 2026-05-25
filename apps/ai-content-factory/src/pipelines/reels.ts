@@ -64,7 +64,13 @@ export async function runReelsPipeline(opts: ReelsPipelineOptions): Promise<Reel
   }
 
   const script =
-    opts.fixture ?? (await generateReelsScript({ rubric, topic: opts.topic, ragContext: ragText }));
+    opts.fixture ??
+    (await generateReelsScript({
+      rubric,
+      rubricSlug: opts.slug,
+      topic: opts.topic,
+      ragContext: ragText,
+    }));
 
   log.info('Reels script generated', {
     scenes: script.scenes.length,

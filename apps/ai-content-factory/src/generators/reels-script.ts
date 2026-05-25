@@ -147,16 +147,18 @@ export async function generateReelsScript(opts: GenerateReelsOptions): Promise<R
 
   const prompt = [template, '', rag, libraryBlock, '', '## Контракт вывода', REELS_CONTRACT].join('\n');
 
-  // Few-shot examples (rubric.examplesFile) are reused as the cached system
-  // prompt where available — same pattern as carousel generation.
-  let system: string | undefined;
+  // Training context (filtered for this rubric + reels format) + few-shot
+  // examples go into the cached system prompt — same pattern as carousel.
+  const trainingBlock = loadTrainingContext({ rubricSlug: opts.rubricSlug, format: 'reels' });
+  let fewShot: string | undefined;
   if (opts.rubric.examplesFile) {
     try {
-      system = await readFile(fromAppRoot(opts.rubric.examplesFile), 'utf8');
+      fewShot = await readFile(fromAppRoot(opts.rubric.examplesFile), 'utf8');
     } catch {
-      system = undefined;
+      fewShot = undefined;
     }
   }
+  const system = [trainingBlock, fewShot].filter(Boolean).join('\n\n---\n\n') || undefined;
 
   return callClaude<ReelsScript>({
     prompt,
