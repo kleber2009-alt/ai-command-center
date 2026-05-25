@@ -18,9 +18,10 @@ export function ParserSetup({ initial, onSaved, onCancel }: Props) {
   const [days, setDays] = useState(initial?.postedWithinDays ?? 7);
   const [reelsCount, setReelsCount] = useState(initial?.reelsCount ?? 5);
   const [carouselsCount, setCarouselsCount] = useState(initial?.carouselsCount ?? 5);
-  const [minPlays, setMinPlays] = useState(initial?.minPlays ?? 0);
+  const [minPlays, setMinPlays] = useState(initial?.minPlays ?? 100000);
   const [minLikes, setMinLikes] = useState(initial?.minLikes ?? 0);
-  const [minComments, setMinComments] = useState(initial?.minComments ?? 0);
+  const [minComments, setMinComments] = useState(initial?.minComments ?? 1000);
+  const [minShares, setMinShares] = useState(initial?.minShares ?? 1000);
   const [saving, setSaving] = useState(false);
   const [error, setError] = useState<string | null>(null);
 
@@ -45,6 +46,7 @@ export function ParserSetup({ initial, onSaved, onCancel }: Props) {
         minPlays: Number(minPlays),
         minLikes: Number(minLikes),
         minComments: Number(minComments),
+        minShares: Number(minShares),
       };
       const res = await fetch('/api/parser/config', {
         method: 'POST',
@@ -139,11 +141,15 @@ export function ParserSetup({ initial, onSaved, onCancel }: Props) {
           <NumberField label="Топ каруселей" value={carouselsCount} onChange={setCarouselsCount} min={1} max={20} />
         </div>
 
-        <div className="grid sm:grid-cols-3 gap-4">
-          <NumberField label="Мин. просмотров" value={minPlays} onChange={setMinPlays} min={0} />
+        <div className="grid sm:grid-cols-2 lg:grid-cols-4 gap-4">
+          <NumberField label="Мин. просмотров" value={minPlays} onChange={setMinPlays} min={0} step={10000} />
           <NumberField label="Мин. лайков" value={minLikes} onChange={setMinLikes} min={0} />
-          <NumberField label="Мин. комментариев" value={minComments} onChange={setMinComments} min={0} />
+          <NumberField label="Мин. комментариев" value={minComments} onChange={setMinComments} min={0} step={100} />
+          <NumberField label="Мин. репостов" value={minShares} onChange={setMinShares} min={0} step={100} />
         </div>
+        <p className="mono text-[9px] tracking-wider text-text-mute">
+          Дефолт: 100k просмотров / 1k комментариев / 1k репостов. Apify не у всех постов отдаёт счётчик репостов — посты без этого поля проходят фильтр.
+        </p>
       </details>
 
       {error && (
@@ -172,12 +178,14 @@ function NumberField({
   onChange,
   min,
   max,
+  step,
 }: {
   label: string;
   value: number;
   onChange: (n: number) => void;
   min?: number;
   max?: number;
+  step?: number;
 }) {
   return (
     <label className="grid gap-2">
@@ -188,6 +196,7 @@ function NumberField({
         onChange={(e) => onChange(Number(e.target.value))}
         min={min}
         max={max}
+        step={step}
         className="bg-bg border border-border px-3 py-2 mono text-[13px] focus:outline-none focus:border-lime/60"
       />
     </label>

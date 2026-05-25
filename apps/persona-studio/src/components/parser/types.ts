@@ -11,6 +11,7 @@ export type ParserConfigSerialized = {
   minPlays: number;
   minLikes: number;
   minComments: number;
+  minShares: number;
   reelsCount: number;
   carouselsCount: number;
   enabled: boolean;

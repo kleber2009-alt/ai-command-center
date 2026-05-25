@@ -32,9 +32,20 @@ export function ParserClient({ initialConfig, initialRun, initialItems }: Props)
     setError(null);
     try {
       const res = await fetch('/api/parser/run', { method: 'POST' });
-      const json = await res.json();
+      // Если роут пробил deadline и отдал пустое тело / HTML — res.json() ругается
+      // «Unexpected end of JSON input». Парсим текст вручную и даём осмысленный errror.
+      const raw = await res.text();
+      let json: Record<string, unknown> = {};
+      if (raw) {
+        try { json = JSON.parse(raw); } catch { /* не JSON */ }
+      }
       if (!res.ok) {
-        setError(json.message || json.error || `HTTP ${res.status}`);
+        const msg = (json.message as string) || (json.error as string) || raw.slice(0, 200) || `HTTP ${res.status}`;
+        setError(msg);
+        return;
+      }
+      if (!raw) {
+        setError('Сервер вернул пустой ответ — вероятно, истёк таймаут парсинга. Попробуй ещё раз или уменьши число источников.');
         return;
       }
       // /api/parser/run возвращает items + summary в run-объекте
