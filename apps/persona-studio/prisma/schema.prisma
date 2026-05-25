@@ -29,6 +29,7 @@ model User {
   avatars             Avatar[]
   covers              Cover[]
   videoGenerations    VideoGeneration[]
+  videoEdits          VideoEdit[]
   tokenTransactions   TokenTransaction[]
   apiKeys             ApiKey[]
   cryptoInvoices      CryptoInvoice[]
@@ -184,7 +185,32 @@ model VideoGeneration {
   createdAt   DateTime @default(now())
   completedAt DateTime?
 
+  edits VideoEdit[]
+
   @@index([userId, createdAt])
+}
+
+// Submagic-монтаж готового видео. Источник — VideoGeneration.videoUrl,
+// результат — отдельный mp4 с применённым шаблоном / субтитрами.
+model VideoEdit {
+  id                 String   @id @default(cuid())
+  userId             String
+  user               User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+  videoGenerationId  String
+  videoGeneration    VideoGeneration @relation(fields: [videoGenerationId], references: [id], onDelete: Cascade)
+  template           String                                 // hormozi | mrbeast | devin | iman-gadzhi | ali-abdaal | minimal
+  subtitlesEnabled   Boolean  @default(true)
+  subtitleLanguage   String   @default("ru")                // ISO-639-1 (ru | en | es | …)
+  submagicProjectId  String?                                // id проекта в Submagic
+  status             String   @default("pending")           // pending | processing | completed | failed
+  resultUrl          String?                                // финальный mp4 в нашем S3
+  tokensCost         Int      @default(15)
+  errorMsg           String?
+  createdAt          DateTime @default(now())
+  completedAt        DateTime?
+
+  @@index([userId, createdAt])
+  @@index([videoGenerationId])
 }
 
 // Обложка карусели из выбранного аватара

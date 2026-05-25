@@ -106,4 +106,5 @@ export const COSTS = {
   coverGeneration: env.COST_COVER_GENERATION,
   heygenVideo: env.COST_HEYGEN_VIDEO,
   omnihumanVideo: env.COST_OMNIHUMAN_VIDEO,
+  submagicEdit: env.COST_SUBMAGIC_EDIT,
 };

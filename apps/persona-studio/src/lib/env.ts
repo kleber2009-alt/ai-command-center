@@ -50,11 +50,18 @@ const envSchema = z.object({
   ELEVENLABS_MODEL: z.string().default('eleven_turbo_v2_5'),
   ELEVENLABS_TTS_TIMEOUT_MS: z.coerce.number().default(30_000),
 
+  // ── Submagic (editing / captions) ─────────────
+  SUBMAGIC_API_KEY: z.string().min(1).optional(),
+  SUBMAGIC_API_BASE: z.string().url().default('https://api.submagic.co/v1'),
+  SUBMAGIC_MAX_POLL_MS: z.coerce.number().default(900_000), // 15 минут
+  SUBMAGIC_POLL_INTERVAL_MS: z.coerce.number().default(8_000),
+
   // ── Costs (env-driven) ────────────────────────
   COST_AVATAR_GENERATION: z.coerce.number().default(10),
   COST_COVER_GENERATION: z.coerce.number().default(3),
   COST_HEYGEN_VIDEO: z.coerce.number().default(30),
   COST_OMNIHUMAN_VIDEO: z.coerce.number().default(50),
+  COST_SUBMAGIC_EDIT: z.coerce.number().default(15),
   SIGNUP_BONUS_TOKENS: z.coerce.number().default(10),
 
   // ── Auth ──────────────────────────────────────
