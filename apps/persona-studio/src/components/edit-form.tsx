@@ -1,8 +1,10 @@
 'use client';
 
-import { useMemo, useState } from 'react';
+import { useEffect, useMemo, useRef, useState } from 'react';
 import { useRouter } from 'next/navigation';
 import { STYLE_TEMPLATES, SUBTITLE_LANGUAGES, previewUrl } from '@/lib/edit-templates';
+import { Popover } from './popover';
+import { EditsStepper } from './edits-stepper';
 
 type SourceVideo = {
   id: string;
@@ -13,8 +15,9 @@ type SourceVideo = {
   script: string | null;
 };
 
-// Детерминированный градиент по имени шаблона — preview-плейсхолдер
-// (Submagic не отдаёт превьюшки через API).
+type StepKey = 'video' | 'style' | 'language' | 'options' | 'go';
+
+// Детерминированный градиент по имени шаблона (когда нет preview-jpg).
 function gradientFor(name: string): string {
   let h = 0;
   for (let i = 0; i < name.length; i++) h = (h * 31 + name.charCodeAt(i)) >>> 0;
@@ -43,20 +46,60 @@ export function EditForm({
   const [subtitlesEnabled, setSubtitlesEnabled] = useState(true);
   const [subtitleLanguage, setSubtitleLanguage] = useState('ru');
   const [brollsEnabled, setBrollsEnabled] = useState(false);
+  const [activeStep, setActiveStep] = useState<StepKey>('style'); // видео уже выбрано через URL → начинаем со стиля
   const [busy, setBusy] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const [styleQuery, setStyleQuery] = useState('');
 
+  // Какие popover-карточки открыты (одна одновременно).
+  const [openCard, setOpenCard] = useState<'video' | 'style' | 'language' | 'options' | null>(null);
+
+  // Anchor refs для popover-positioning.
+  const videoRef = useRef<HTMLButtonElement | null>(null);
+  const styleRef = useRef<HTMLButtonElement | null>(null);
+  const langRef = useRef<HTMLButtonElement | null>(null);
+  const optionsRef = useRef<HTMLButtonElement | null>(null);
+
   const selected = useMemo(() => videos.find((v) => v.id === videoId), [videos, videoId]);
   const preset = useMemo(() => STYLE_TEMPLATES.find((t) => t.name === template), [template]);
+  const lang = SUBTITLE_LANGUAGES.find((l) => l.code === subtitleLanguage);
 
-  const filtered = useMemo(() => {
+  const aspectClass =
+    selected?.aspect === '1:1' ? 'aspect-square' : selected?.aspect === '16:9' ? 'aspect-video' : 'aspect-[9/16]';
+
+  const filteredStyles = useMemo(() => {
     const q = styleQuery.trim().toLowerCase();
     if (!q) return STYLE_TEMPLATES;
     return STYLE_TEMPLATES.filter(
       (t) => t.name.toLowerCase().includes(q) || t.tags.some((tag) => tag.includes(q)),
     );
   }, [styleQuery]);
+
+  // Cmd/Ctrl+Enter — submit
+  useEffect(() => {
+    function onKey(e: KeyboardEvent) {
+      if ((e.metaKey || e.ctrlKey) && e.key === 'Enter') {
+        e.preventDefault();
+        if (!busy && videoId) submit();
+      }
+    }
+    window.addEventListener('keydown', onKey);
+    return () => window.removeEventListener('keydown', onKey);
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [busy, videoId, template, subtitlesEnabled, subtitleLanguage, brollsEnabled]);
+
+  const steps = [
+    { key: 'video', label: 'Видео', done: !!videoId },
+    { key: 'style', label: 'Стиль', done: !!template },
+    { key: 'language', label: 'Язык', done: !!subtitleLanguage },
+    { key: 'options', label: 'Опции', done: true },
+    { key: 'go', label: 'Готово', done: false },
+  ];
+
+  function openCardAndStep(card: 'video' | 'style' | 'language' | 'options', step: StepKey) {
+    setOpenCard(card);
+    setActiveStep(step);
+  }
 
   async function submit() {
     if (!videoId) {
@@ -97,219 +140,349 @@ export function EditForm({
   }
 
   return (
-    <div className="grid lg:grid-cols-[1fr_360px] gap-8 items-start">
-      <div className="grid gap-6">
-        {/* Источник */}
-        <section className="grid gap-3">
-          <div className="sec-num">/01 source video</div>
-          <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-3">
-            {videos.map((v) => {
-              const active = v.id === videoId;
-              return (
-                <button
-                  key={v.id}
-                  type="button"
-                  onClick={() => setVideoId(v.id)}
-                  className={`relative aspect-[9/16] border overflow-hidden text-left ${
-                    active ? 'border-lime ring-2 ring-lime' : 'border-border hover:border-border-2'
-                  }`}
-                >
-                  {v.videoUrl ? (
-                    <video
-                      src={v.videoUrl}
-                      muted
-                      playsInline
-                      preload="metadata"
-                      className="w-full h-full object-cover pointer-events-none"
-                      poster={v.avatar?.imageUrl ?? undefined}
-                    />
-                  ) : (
-                    <div
-                      className="absolute inset-0"
-                      style={{
-                        background: v.avatar?.imageUrl
-                          ? `linear-gradient(180deg, rgba(8,8,8,0) 0%, rgba(8,8,8,0.7) 100%), url(${v.avatar.imageUrl})`
-                          : 'linear-gradient(170deg, #0a1820 0%, #051018 100%)',
-                        backgroundSize: 'cover',
-                        backgroundPosition: 'center',
+    <div className="grid gap-4">
+      {/* Stepper */}
+      <EditsStepper steps={steps} activeKey={activeStep} onJump={(k) => setActiveStep(k as StepKey)} />
+
+      <div className="grid lg:grid-cols-[1fr_380px] gap-5 items-start">
+        {/* PREVIEW */}
+        <section className="relative">
+          <div className={`relative ${aspectClass} max-h-[calc(100vh-220px)] mx-auto bg-bg border border-border overflow-hidden`}>
+            {selected?.videoUrl ? (
+              <video
+                src={selected.videoUrl}
+                muted
+                loop
+                playsInline
+                autoPlay
+                preload="metadata"
+                poster={selected.avatar?.imageUrl ?? undefined}
+                className="w-full h-full object-cover"
+              />
+            ) : (
+              <div
+                className="absolute inset-0"
+                style={{
+                  background: selected?.avatar?.imageUrl
+                    ? `linear-gradient(180deg, rgba(8,8,8,0) 0%, rgba(8,8,8,0.7) 100%), url(${selected.avatar.imageUrl})`
+                    : 'linear-gradient(170deg, #0a1820 0%, #051018 100%)',
+                  backgroundSize: 'cover',
+                  backgroundPosition: 'center',
+                }}
+              />
+            )}
+            {/* Overlay summary */}
+            <div className="absolute top-2 left-2 right-2 flex items-start justify-between gap-2">
+              <span className="mono text-[9px] tracking-widest uppercase font-bold bg-bg/80 backdrop-blur px-2 py-1">
+                /preview · {selected?.aspect ?? '9:16'}
+              </span>
+              <span className="mono text-[9px] tracking-widest uppercase font-bold bg-bg/80 backdrop-blur px-2 py-1 text-lime">
+                {preset?.name ?? template}
+              </span>
+            </div>
+            <div className="absolute bottom-2 left-2 right-2 flex items-end justify-between gap-2 pointer-events-none">
+              <div className="flex flex-wrap gap-1.5">
+                {subtitlesEnabled && (
+                  <span className="mono text-[9px] tracking-widest uppercase bg-bg/80 backdrop-blur px-2 py-1">
+                    cc · {subtitleLanguage.toUpperCase()}
+                  </span>
+                )}
+                {brollsEnabled && (
+                  <span className="mono text-[9px] tracking-widest uppercase bg-lime/85 text-bg backdrop-blur px-2 py-1 font-bold">
+                    B-rolls
+                  </span>
+                )}
+              </div>
+              <span className="mono text-[9px] tracking-widest uppercase text-text-mute bg-bg/80 backdrop-blur px-2 py-1">
+                {selected?.avatar?.styleLabel ?? '—'}
+              </span>
+            </div>
+          </div>
+        </section>
+
+        {/* RIGHT COLUMN — карточки + CTA */}
+        <aside className="grid gap-2.5">
+          {/* CARD 1 — Видео */}
+          <div className="relative">
+            <button
+              ref={videoRef}
+              type="button"
+              onClick={() => {
+                openCardAndStep('video', 'video');
+                setOpenCard((c) => (c === 'video' ? null : 'video'));
+              }}
+              className={`w-full text-left border bg-surface px-3 py-2.5 hover:border-border-2 transition-colors ${
+                activeStep === 'video' ? 'border-lime' : 'border-border'
+              }`}
+            >
+              <div className="flex items-center justify-between gap-2">
+                <div className="grid gap-0.5 min-w-0">
+                  <span className="mono text-[9px] tracking-widest uppercase text-text-mute">01 · Видео</span>
+                  <span className="font-serif text-[14px] truncate">
+                    {selected?.avatar?.styleLabel ?? '—'} · {selected ? selected.id.slice(0, 6) : '—'}
+                  </span>
+                </div>
+                <span className="mono text-[10px] text-text-dim shrink-0">▾</span>
+              </div>
+            </button>
+            <Popover open={openCard === 'video'} onClose={() => setOpenCard(null)} anchorRef={videoRef} width={320}>
+              <div className="p-3 border-b border-border flex items-center justify-between">
+                <span className="mono text-[10px] tracking-widest uppercase">Видео · {videos.length}</span>
+                <button onClick={() => setOpenCard(null)} className="mono text-[14px] text-text-mute hover:text-text">×</button>
+              </div>
+              <div className="p-2 max-h-[320px] overflow-auto grid grid-cols-3 gap-1.5">
+                {videos.map((v) => {
+                  const active = v.id === videoId;
+                  return (
+                    <button
+                      key={v.id}
+                      type="button"
+                      onClick={() => {
+                        setVideoId(v.id);
+                        setOpenCard(null);
+                        setActiveStep('style');
                       }}
-                    />
-                  )}
-                  <div className="absolute bottom-0 left-0 right-0 p-2 bg-gradient-to-t from-black/80 to-transparent">
-                    <div className="mono text-[9px] tracking-widest text-text">{v.avatar?.styleLabel ?? '—'}</div>
-                    <div className="mono text-[8px] tracking-widest text-text-mute">{v.aspect} · {v.id.slice(0, 6)}</div>
-                  </div>
-                </button>
-              );
-            })}
+                      className={`relative aspect-square overflow-hidden border ${
+                        active ? 'border-lime ring-2 ring-lime' : 'border-border hover:border-border-2'
+                      }`}
+                    >
+                      {v.videoUrl ? (
+                        <video
+                          src={v.videoUrl}
+                          muted
+                          playsInline
+                          preload="metadata"
+                          className="w-full h-full object-cover pointer-events-none"
+                          poster={v.avatar?.imageUrl ?? undefined}
+                        />
+                      ) : (
+                        <div
+                          className="absolute inset-0"
+                          style={{
+                            background: v.avatar?.imageUrl
+                              ? `url(${v.avatar.imageUrl}) center/cover`
+                              : 'linear-gradient(170deg, #0a1820, #051018)',
+                          }}
+                        />
+                      )}
+                    </button>
+                  );
+                })}
+              </div>
+            </Popover>
           </div>
-        </section>
 
-        {/* Стиль / шаблон */}
-        <section className="grid gap-3">
-          <div className="flex items-baseline justify-between gap-3">
-            <div className="sec-num">/02 style · {STYLE_TEMPLATES.length} templates</div>
-            <input
-              type="search"
-              value={styleQuery}
-              onChange={(ev) => setStyleQuery(ev.target.value)}
-              placeholder="поиск по имени или тегу…"
-              className="bg-bg border border-border px-3 py-1.5 mono text-[11px] min-w-[220px]"
-            />
-          </div>
-          <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 gap-2">
-            {filtered.map((t) => {
-              const active = t.name === template;
-              return (
-                <button
-                  key={t.name}
-                  type="button"
-                  onClick={() => setTemplate(t.name)}
-                  className={`relative aspect-[4/5] border overflow-hidden text-left transition-all group ${
-                    active ? 'border-lime ring-2 ring-lime' : 'border-border hover:border-border-2'
-                  }`}
-                >
-                  {/* gradient — всегда; img поверх если файл есть */}
-                  <div className="absolute inset-0" style={{ background: gradientFor(t.name) }} />
-                  {/* eslint-disable-next-line @next/next/no-img-element */}
-                  <img
-                    src={previewUrl(t.name)}
-                    alt=""
-                    loading="lazy"
-                    onError={(ev) => {
-                      (ev.currentTarget as HTMLImageElement).style.display = 'none';
-                    }}
-                    className="absolute inset-0 w-full h-full object-cover"
-                  />
-                  <div className="absolute inset-0 bg-gradient-to-t from-black/85 via-transparent to-transparent" />
-                  <div className="absolute top-2 right-2">
-                    {active && (
-                      <span className="mono text-[8px] tracking-widest uppercase font-bold bg-lime text-bg px-1.5 py-0.5">
-                        ✓
-                      </span>
+          {/* CARD 2 — Стиль */}
+          <div className="relative">
+            <button
+              ref={styleRef}
+              type="button"
+              onClick={() => {
+                openCardAndStep('style', 'style');
+                setOpenCard((c) => (c === 'style' ? null : 'style'));
+              }}
+              className={`w-full text-left border bg-surface px-3 py-2.5 hover:border-border-2 transition-colors ${
+                activeStep === 'style' ? 'border-lime' : 'border-border'
+              }`}
+            >
+              <div className="flex items-center justify-between gap-2">
+                <div className="grid gap-0.5 min-w-0">
+                  <span className="mono text-[9px] tracking-widest uppercase text-text-mute">02 · Стиль</span>
+                  <span className="font-serif text-[14px] truncate">
+                    {preset?.name ?? template}
+                    {preset && (
+                      <span className="text-text-mute text-[12px]"> · {preset.tags.slice(0, 2).join(', ')}</span>
                     )}
+                  </span>
+                </div>
+                <span className="mono text-[10px] text-text-dim shrink-0">▾</span>
+              </div>
+            </button>
+            <Popover open={openCard === 'style'} onClose={() => setOpenCard(null)} anchorRef={styleRef} width={360}>
+              <div className="p-3 border-b border-border flex items-center gap-2">
+                <input
+                  type="search"
+                  value={styleQuery}
+                  onChange={(ev) => setStyleQuery(ev.target.value)}
+                  placeholder="имя или тег…"
+                  autoFocus
+                  className="flex-1 bg-bg border border-border px-2 py-1.5 mono text-[11px]"
+                />
+                <button onClick={() => setOpenCard(null)} className="mono text-[14px] text-text-mute hover:text-text">×</button>
+              </div>
+              <div className="p-2 max-h-[360px] overflow-auto grid grid-cols-3 gap-1.5">
+                {filteredStyles.map((t) => {
+                  const active = t.name === template;
+                  return (
+                    <button
+                      key={t.name}
+                      type="button"
+                      onClick={() => {
+                        setTemplate(t.name);
+                        setOpenCard(null);
+                        setActiveStep('language');
+                      }}
+                      className={`relative aspect-[4/5] overflow-hidden border text-left ${
+                        active ? 'border-lime ring-2 ring-lime' : 'border-border hover:border-border-2'
+                      }`}
+                    >
+                      <div className="absolute inset-0" style={{ background: gradientFor(t.name) }} />
+                      {/* eslint-disable-next-line @next/next/no-img-element */}
+                      <img
+                        src={previewUrl(t.name)}
+                        alt=""
+                        loading="lazy"
+                        onError={(ev) => ((ev.currentTarget as HTMLImageElement).style.display = 'none')}
+                        className="absolute inset-0 w-full h-full object-cover"
+                      />
+                      <div className="absolute inset-0 bg-gradient-to-t from-black/85 via-transparent to-transparent" />
+                      <div className="absolute inset-x-0 bottom-0 p-1.5">
+                        <div className="font-serif italic text-[12px] leading-tight">{t.name}</div>
+                        <div className="mono text-[7.5px] tracking-widest text-text-mute line-clamp-1">
+                          {t.tags.join(' · ')}
+                        </div>
+                      </div>
+                    </button>
+                  );
+                })}
+                {filteredStyles.length === 0 && (
+                  <div className="col-span-full p-6 text-center mono text-[11px] text-text-mute">
+                    Ничего не найдено
                   </div>
-                  <div className="absolute inset-x-0 bottom-0 p-2.5">
-                    <div className="font-serif italic text-[16px] leading-tight text-text">{t.name}</div>
-                    <div className="mono text-[8.5px] tracking-widest text-text-mute mt-1 line-clamp-2">
-                      {t.tags.join(' · ')}
-                    </div>
+                )}
+              </div>
+            </Popover>
+          </div>
+
+          {/* CARD 3 — Язык */}
+          <div className="relative">
+            <button
+              ref={langRef}
+              type="button"
+              onClick={() => {
+                openCardAndStep('language', 'language');
+                setOpenCard((c) => (c === 'language' ? null : 'language'));
+              }}
+              className={`w-full text-left border bg-surface px-3 py-2.5 hover:border-border-2 transition-colors ${
+                activeStep === 'language' ? 'border-lime' : 'border-border'
+              }`}
+            >
+              <div className="flex items-center justify-between gap-2">
+                <div className="grid gap-0.5 min-w-0">
+                  <span className="mono text-[9px] tracking-widest uppercase text-text-mute">03 · Язык субтитров</span>
+                  <span className="font-serif text-[14px] truncate">
+                    {lang?.label ?? subtitleLanguage}
+                    <span className="text-text-mute text-[12px]"> · {subtitleLanguage.toUpperCase()}</span>
+                  </span>
+                </div>
+                <span className="mono text-[10px] text-text-dim shrink-0">▾</span>
+              </div>
+            </button>
+            <Popover open={openCard === 'language'} onClose={() => setOpenCard(null)} anchorRef={langRef} width={220}>
+              <ul className="py-1 max-h-[280px] overflow-auto">
+                {SUBTITLE_LANGUAGES.map((l) => {
+                  const active = l.code === subtitleLanguage;
+                  return (
+                    <li key={l.code}>
+                      <button
+                        type="button"
+                        onClick={() => {
+                          setSubtitleLanguage(l.code);
+                          setOpenCard(null);
+                          setActiveStep('options');
+                        }}
+                        className={`w-full text-left px-3 py-2 mono text-[12px] flex items-center justify-between hover:bg-surface ${
+                          active ? 'text-lime' : 'text-text'
+                        }`}
+                      >
+                        <span>{l.label}</span>
+                        <span className="text-text-mute text-[10px] tracking-widest">{l.code.toUpperCase()}</span>
+                      </button>
+                    </li>
+                  );
+                })}
+              </ul>
+            </Popover>
+          </div>
+
+          {/* CARD 4 — Опции (subtitles + brolls) */}
+          <div className="relative">
+            <button
+              ref={optionsRef}
+              type="button"
+              onClick={() => {
+                openCardAndStep('options', 'options');
+                setOpenCard((c) => (c === 'options' ? null : 'options'));
+              }}
+              className={`w-full text-left border bg-surface px-3 py-2.5 hover:border-border-2 transition-colors ${
+                activeStep === 'options' ? 'border-lime' : 'border-border'
+              }`}
+            >
+              <div className="flex items-center justify-between gap-2">
+                <div className="grid gap-0.5 min-w-0">
+                  <span className="mono text-[9px] tracking-widest uppercase text-text-mute">04 · Опции</span>
+                  <span className="font-serif text-[14px] truncate">
+                    {subtitlesEnabled ? 'CC on' : 'CC off'} · {brollsEnabled ? <span className="text-lime">B-rolls on</span> : 'B-rolls off'}
+                  </span>
+                </div>
+                <span className="mono text-[10px] text-text-dim shrink-0">▾</span>
+              </div>
+            </button>
+            <Popover open={openCard === 'options'} onClose={() => setOpenCard(null)} anchorRef={optionsRef} width={300}>
+              <div className="p-3 grid gap-3">
+                <label className="flex items-start gap-3 cursor-pointer">
+                  <input
+                    type="checkbox"
+                    checked={subtitlesEnabled}
+                    onChange={(ev) => setSubtitlesEnabled(ev.target.checked)}
+                    className="w-4 h-4 mt-0.5"
+                  />
+                  <div className="grid gap-1 min-w-0">
+                    <span className="mono text-[11px] tracking-widest uppercase">Субтитры</span>
+                    <span className="font-serif italic text-[11.5px] text-text-dim">
+                      Submagic всегда накладывает captions в стиле шаблона.
+                    </span>
                   </div>
-                </button>
-              );
-            })}
-            {filtered.length === 0 && (
-              <div className="col-span-full border border-border-2 border-dashed p-6 text-center mono text-[11px] text-text-mute">
-                Ничего не нашлось по «{styleQuery}»
+                </label>
+                <label className="flex items-start gap-3 cursor-pointer border-t border-border pt-3">
+                  <input
+                    type="checkbox"
+                    checked={brollsEnabled}
+                    onChange={(ev) => setBrollsEnabled(ev.target.checked)}
+                    className="w-4 h-4 mt-0.5"
+                  />
+                  <div className="grid gap-1 min-w-0">
+                    <span className="mono text-[11px] tracking-widest uppercase">Magic B-rolls</span>
+                    <span className="font-serif italic text-[11.5px] text-text-dim">
+                      Авто-вставка релевантных сток-кадров. +1–2 мин рендера.
+                    </span>
+                  </div>
+                </label>
               </div>
-            )}
+            </Popover>
           </div>
-        </section>
 
-        {/* Опции монтажа */}
-        <section className="grid gap-3">
-          <div className="sec-num">/03 options</div>
-          <div className="grid gap-3 border border-border bg-surface p-4">
-            {/* Субтитры */}
-            <label className="flex items-start gap-3 cursor-pointer">
-              <input
-                type="checkbox"
-                checked={subtitlesEnabled}
-                onChange={(ev) => setSubtitlesEnabled(ev.target.checked)}
-                className="w-4 h-4 mt-0.5"
-              />
-              <div className="grid gap-1">
-                <span className="mono text-[12px] tracking-widest uppercase">Субтитры</span>
-                <span className="font-serif italic text-[12px] text-text-dim">
-                  Submagic всегда накладывает captions в стиле выбранного шаблона.
-                </span>
-              </div>
-            </label>
-
-            {subtitlesEnabled && (
-              <div className="grid gap-1.5 pl-7 max-w-[280px]">
-                <label className="mono text-[10px] tracking-widest uppercase text-text-mute">Язык</label>
-                <select
-                  value={subtitleLanguage}
-                  onChange={(ev) => setSubtitleLanguage(ev.target.value)}
-                  className="bg-bg border border-border px-3 py-2 mono text-[12px]"
-                >
-                  {SUBTITLE_LANGUAGES.map((l) => (
-                    <option key={l.code} value={l.code}>
-                      {l.label}
-                    </option>
-                  ))}
-                </select>
-              </div>
+          {/* FOOTER */}
+          <div className="grid gap-2 mt-1">
+            {error && (
+              <div className="mono text-[11px] text-pink border border-pink/60 bg-pink/10 px-3 py-2">{error}</div>
             )}
-
-            {/* B-rolls */}
-            <label className="flex items-start gap-3 cursor-pointer pt-2 border-t border-border">
-              <input
-                type="checkbox"
-                checked={brollsEnabled}
-                onChange={(ev) => setBrollsEnabled(ev.target.checked)}
-                className="w-4 h-4 mt-0.5"
-              />
-              <div className="grid gap-1">
-                <span className="mono text-[12px] tracking-widest uppercase">Magic B-rolls</span>
-                <span className="font-serif italic text-[12px] text-text-dim">
-                  Submagic подберёт релевантные сток-кадры под смысл реплик и врежет их между планами. Удлиняет рендер на 1–2 минуты.
-                </span>
-              </div>
-            </label>
+            <div className="flex items-center justify-between gap-3">
+              <span className="mono text-[10px] tracking-widest uppercase text-text-mute">
+                {cost} токенов · <kbd className="text-text-dim">⌘↵</kbd>
+              </span>
+              <button
+                type="button"
+                onClick={submit}
+                disabled={busy || !videoId}
+                className="btn-primary justify-center disabled:opacity-50 disabled:cursor-not-allowed"
+              >
+                {busy ? 'Запускаем…' : 'Запустить монтаж →'}
+              </button>
+            </div>
           </div>
-        </section>
+        </aside>
       </div>
-
-      {/* Sidebar */}
-      <aside className="border border-border bg-surface p-5 grid gap-4 lg:sticky lg:top-24">
-        <div className="grid gap-1">
-          <div className="sec-num">/summary</div>
-          <h2 className="font-serif italic text-[22px] leading-tight">Монтаж готов к запуску.</h2>
-        </div>
-
-        <dl className="grid gap-2 mono text-[11px] tracking-widest uppercase">
-          <div className="flex justify-between gap-3">
-            <dt className="text-text-mute">video</dt>
-            <dd className="text-text truncate">{selected ? selected.id.slice(0, 8) : '—'}</dd>
-          </div>
-          <div className="flex justify-between gap-3">
-            <dt className="text-text-mute">style</dt>
-            <dd className="text-text">{preset?.name ?? template}</dd>
-          </div>
-          <div className="flex justify-between gap-3">
-            <dt className="text-text-mute">subtitles</dt>
-            <dd className="text-text">{subtitlesEnabled ? `on · ${subtitleLanguage}` : 'off'}</dd>
-          </div>
-          <div className="flex justify-between gap-3">
-            <dt className="text-text-mute">b-rolls</dt>
-            <dd className={brollsEnabled ? 'text-lime' : 'text-text'}>{brollsEnabled ? 'on' : 'off'}</dd>
-          </div>
-          <div className="flex justify-between gap-3">
-            <dt className="text-text-mute">cost</dt>
-            <dd className="text-lime">{cost} токенов</dd>
-          </div>
-        </dl>
-
-        {error && (
-          <div className="mono text-[11px] text-pink border border-pink/60 bg-pink/10 px-3 py-2">
-            {error}
-          </div>
-        )}
-
-        <button
-          type="button"
-          onClick={submit}
-          disabled={busy || !videoId}
-          className="btn-primary justify-center disabled:opacity-50 disabled:cursor-not-allowed"
-        >
-          {busy ? 'Запускаем…' : 'Запустить монтаж →'}
-        </button>
-        <p className="mono text-[10px] tracking-widest text-text-mute">
-          Submagic рендерит обычно 3–8 минут. Готовое видео появится на /edits.
-        </p>
-      </aside>
     </div>
   );
 }

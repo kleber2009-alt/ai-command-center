@@ -21,22 +21,14 @@ export default async function NewEditPage({ searchParams }: { searchParams: Prom
   });
 
   return (
-    <div className="grid gap-8">
-      <header>
-        <div className="flex items-baseline gap-3 mb-4">
-          <span className="sec-num">/00</span>
-          <span className="sec-title">New edit · Submagic</span>
-          <span className="flex-1 border-b border-border translate-y-[-3px]" />
-          <Link href="/edits" className="mono text-[10px] tracking-widest uppercase text-text-mute hover:text-text">
-            ← all edits
-          </Link>
-        </div>
-        <h1 className="font-serif text-[36px] sm:text-[44px] leading-tight max-w-[24ch]">
-          Готовое видео — <span className="italic text-warm">в монтаж.</span>
-        </h1>
-        <p className="font-serif text-[16px] text-text-dim mt-3 max-w-[60ch]">
-          Шаблон в стиле известных авторов + автоматические субтитры. Submagic обычно рендерит за 3–8 минут. Списывается {COSTS.submagicEdit} токенов.
-        </p>
+    <div className="grid gap-4">
+      <header className="flex items-baseline gap-3">
+        <span className="sec-num">/00</span>
+        <span className="sec-title">New edit · Submagic</span>
+        <span className="flex-1 border-b border-border translate-y-[-3px]" />
+        <Link href="/edits" className="mono text-[10px] tracking-widest uppercase text-text-mute hover:text-text">
+          ← all edits
+        </Link>
       </header>
 
       {videos.length === 0 ? (

@@ -1,47 +1,40 @@
 {
-  "comment": "Каталог тегов для подбора клипов в reels-pipeline. Claude использует только эти теги при генерации сценария; рендер случайно выбирает один из клипов в data/assets/footage/<tag>/. Ожидаемый формат: MP4/MOV, вертикальные ИЛИ widescreen (рендер сам обрежет до 1080×1920), длительность 4–15 с.",
+  "comment": "30 слотов под shotlist: каждый — отдельная идея клипа. Пользователь грузит в нужный слот, агент описывает, в реалсе Claude выбирает по содержанию. Полная расшифровка задумок — data/assets/SHOTLIST.md. Привязка к группам кадра кодируется первыми буквами префикса (th=talking-head, sc=screen-cast, typ=typing, cof=coffee, cty=city, lap=laptop).",
   "tags": [
-    {
-      "tag": "library",
-      "label": "Общая библиотека",
-      "description": "Большая корзина: грузишь сюда до 30 клипов любого типа, агент сам опишет каждый (Claude Vision) и в рилсе выберет нужные по содержанию. Альтернатива — раскладывать по 6 ручным категориям ниже.",
-      "expectedSeconds": "любая"
-    },
-    {
-      "tag": "talking-head",
-      "label": "Говорящая голова",
-      "description": "Ты на камеру, средний план, лицо в фокусе. Используется для хука и реплик.",
-      "expectedSeconds": "4–8"
-    },
-    {
-      "tag": "screen-cast",
-      "label": "Скринкаст",
-      "description": "Запись экрана: интерфейс Claude / n8n / Make / Notion. Показ конкретного действия.",
-      "expectedSeconds": "5–10"
-    },
-    {
-      "tag": "b-roll-typing",
-      "label": "B-roll: руки на клавиатуре",
-      "description": "Крупный план рук на ноутбуке. Атмосферный кадр.",
-      "expectedSeconds": "3–6"
-    },
-    {
-      "tag": "b-roll-coffee",
-      "label": "B-roll: кофе/стол",
-      "description": "Кофе, чашка, рабочий стол. Lifestyle-кадр для пауз.",
-      "expectedSeconds": "3–6"
-    },
-    {
-      "tag": "b-roll-city",
-      "label": "B-roll: город",
-      "description": "Городские планы — машина, улица, окно. Для перебивок и атмосферы.",
-      "expectedSeconds": "3–6"
-    },
-    {
-      "tag": "b-roll-laptop",
-      "label": "B-roll: ноутбук",
-      "description": "Общий план ноутбука/рабочего места. Фон для текстовых вставок.",
-      "expectedSeconds": "3–6"
-    }
+    { "tag": "slot-01-th-hook-skills",        "label": "01 · Хук: Claude Skills demo",       "description": "Talking-head, средний план. Хук: «Покажу, как Claude собрал сценарий рилса за 2 минуты»", "expectedSeconds": "4–7" },
+    { "tag": "slot-02-th-cca-honest",         "label": "02 · Хук: $150 Claude Certified",    "description": "Talking-head, честный тон: «Я заплатил $150 за Claude Certified — стоит того или нет»",   "expectedSeconds": "5–8" },
+    { "tag": "slot-03-th-morning-coffee",     "label": "03 · Хук: Утро · кофе · Claude",     "description": "Talking-head в темпе: «Утро. Кофе. Claude. Один вопрос — три варианта связки»",       "expectedSeconds": "4–6" },
+    { "tag": "slot-04-th-freelancer-mistake", "label": "04 · Реплика: ошибка фрилансера",    "description": "Talking-head с лёгкой иронией: «Самая частая ошибка фрилансеров — спрашивают Claude как Google»", "expectedSeconds": "5–8" },
+    { "tag": "slot-05-th-1h-to-2min",         "label": "05 · Реплика: было/стало",           "description": "Talking-head с контрастом «час → 2 мин»: «Раньше писал сценарий час. Теперь — две минуты»", "expectedSeconds": "5–7" },
+    { "tag": "slot-06-th-saved-hour",         "label": "06 · Реплика: спасла час в день",    "description": "Talking-head живо: «Этот промпт сэкономил мне час в день. Покажу»",                     "expectedSeconds": "4–6" },
+    { "tag": "slot-07-th-no-skills-30pct",    "label": "07 · Тезис: без Skills минус 30%",   "description": "Talking-head с сильным утверждением: «Без Skills ты теряешь 30% мощности Claude»",       "expectedSeconds": "5–7" },
+    { "tag": "slot-08-th-subscribe-template", "label": "08 · CTA: подпишись · шаблон",       "description": "Talking-head, тёплый CTA: «Подпишись — выложу шаблон, который пишу всем клиентам»",     "expectedSeconds": "5–7" },
+    { "tag": "slot-09-th-wow-reaction",       "label": "09 · Реакция-залёт: wow Anthropic",  "description": "Talking-head с живой мимикой: «Что? Anthropic выкатил…» — короткий wow",                "expectedSeconds": "3–5" },
+    { "tag": "slot-10-th-tomorrow-n8n",       "label": "10 · Финал: завтра n8n + Claude",    "description": "Talking-head, заключение: «Делаю сериал об автоматизации. Завтра — про n8n»",          "expectedSeconds": "4–6" },
+
+    { "tag": "slot-11-sc-claude-console",     "label": "11 · Screen: Claude Console",        "description": "Скринкаст. Открываю prompt в Console, отправляю запрос, виден ответ",                  "expectedSeconds": "5–10" },
+    { "tag": "slot-12-sc-n8n-flow",           "label": "12 · Screen: n8n flow",              "description": "Скринкаст n8n: webhook → Claude node → Telegram. Мышь подсвечивает каждый узел",       "expectedSeconds": "5–10" },
+    { "tag": "slot-13-sc-notion-ai",          "label": "13 · Screen: Notion AI summarise",   "description": "Скринкаст Notion: выделяю текст, жму «AI: summarise», виден результат в callout",     "expectedSeconds": "5–8" },
+    { "tag": "slot-14-sc-make-com",           "label": "14 · Screen: Make scenario",         "description": "Скринкаст Make.com: сценарий из 4 модулей, Run Once, лог запуска",                    "expectedSeconds": "5–10" },
+    { "tag": "slot-15-sc-cursor-claude",      "label": "15 · Screen: Cursor inline AI",      "description": "Скринкаст Cursor: пишу запрос в инлайн-комментарий, IDE заменяет код",                "expectedSeconds": "6–10" },
+    { "tag": "slot-16-sc-workbench",          "label": "16 · Screen: Anthropic Workbench",   "description": "Скринкаст Workbench: slider temperature, side-by-side сравнение двух ответов",         "expectedSeconds": "5–8" },
+
+    { "tag": "slot-17-typ-macro-macbook",     "label": "17 · B-roll: macro руки · MacBook",  "description": "Macro: руки печатают на MacBook, вид сверху по диагонали",                            "expectedSeconds": "3–6" },
+    { "tag": "slot-18-typ-standing-desk",     "label": "18 · B-roll: standing desk",         "description": "Печатаешь стоя за standing desk, корпус в кадре до пояса",                            "expectedSeconds": "3–6" },
+    { "tag": "slot-19-typ-mech-keyboard",     "label": "19 · B-roll: RGB mechanical kb",     "description": "Mechanical keyboard с RGB-подсветкой, низкий угол",                                  "expectedSeconds": "3–6" },
+    { "tag": "slot-20-typ-ipad-magic",        "label": "20 · B-roll: iPad + magic kb",       "description": "Руки набирают на iPad с magic keyboard (другой контекст)",                           "expectedSeconds": "3–6" },
+    { "tag": "slot-21-typ-slowmo-enter",      "label": "21 · B-roll: slow-mo Enter",         "description": "Slow-mo (60fps): палец нажимает Enter, замедление",                                   "expectedSeconds": "3–5" },
+
+    { "tag": "slot-22-cof-pouring",           "label": "22 · B-roll: кофе наливается",       "description": "Кофе наливается в чашку — top-down или сбоку",                                       "expectedSeconds": "3–6" },
+    { "tag": "slot-23-cof-mug-notebook",      "label": "23 · B-roll: кружка + блокнот",      "description": "Чашка + ноутбук + блокнот на столе, мягкий утренний свет",                           "expectedSeconds": "3–6" },
+    { "tag": "slot-24-cof-latte-art",         "label": "24 · B-roll: латте-арт сверху",      "description": "Латте-арт top-down, медленный pan",                                                   "expectedSeconds": "3–6" },
+
+    { "tag": "slot-25-cty-morning-cars",      "label": "25 · B-roll: утренняя улица",        "description": "Утренняя улица, проезжают машины (статичный кадр)",                                  "expectedSeconds": "3–6" },
+    { "tag": "slot-26-cty-window-view",       "label": "26 · B-roll: вид из окна",           "description": "Вид из окна — высокое здание, стройка или город",                                    "expectedSeconds": "3–6" },
+    { "tag": "slot-27-cty-walk-laptop",       "label": "27 · B-roll: прогулка · ноут",       "description": "Прогулка с ноутбуком в руке, handheld (нарочито неровно)",                            "expectedSeconds": "3–6" },
+
+    { "tag": "slot-28-lap-cafe-table",        "label": "28 · B-roll: ноут в кафе",           "description": "Ноутбук на столе в кафе, кружка рядом, медленный zoom",                              "expectedSeconds": "3–6" },
+    { "tag": "slot-29-lap-dark-glow",         "label": "29 · B-roll: тёмная комната · код",  "description": "Тёмная комната, экран ноутбука с кодом подсвечивает лицо (лица не видно)",            "expectedSeconds": "3–6" },
+    { "tag": "slot-30-lap-topdown-desk",      "label": "30 · B-roll: top-down рабочий стол", "description": "Top-down: ноутбук + блокнот + ручка + кофе на деревянном столе",                     "expectedSeconds": "3–6" }
   ]
 }
