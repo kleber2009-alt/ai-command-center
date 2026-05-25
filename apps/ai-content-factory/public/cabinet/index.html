@@ -551,20 +551,17 @@ function buildTagCard(entry, maxUploadMb, opts = {}) {
 }
 
 async function loadFootage() {
-  const wrap = document.getElementById('footage-library-wrap');
   const grid = document.getElementById('footage-grid');
+  if (!grid) return;
   try {
     const { tags, maxUploadMb } = await api('/api/footage');
     if (!tags || tags.length === 0) {
-      wrap.innerHTML = '';
       grid.innerHTML = '<div class="empty">Каталог тегов пуст. Положи <code>data/assets/footage-tags.json</code>.</div>';
       return;
     }
-    wrap.innerHTML = '';
     grid.innerHTML = '';
     tags.forEach((entry) => {
-      const isLibrary = entry.tag === 'library';
-      const card = buildTagCard(entry, maxUploadMb, { library: isLibrary });
+      const card = buildTagCard(entry, maxUploadMb, {});
       const dropzone = card.querySelector('.dropzone');
       const input = card.querySelector('input[type=file]');
       input.onchange = () => handleUpload(entry.tag, [...input.files], card);
@@ -587,7 +584,7 @@ async function loadFootage() {
           }
         };
       });
-      (isLibrary ? wrap : grid).appendChild(card);
+      grid.appendChild(card);
     });
   } catch (e) {
     grid.innerHTML = '<div class="empty">Ошибка: ' + escapeHtml(e.message) + '</div>';
@@ -654,6 +651,7 @@ function formatSize(bytes) {
 
 async function loadScreens() {
   const grid = document.getElementById('screens-grid');
+  if (!grid) return;
   try {
     const { tags, maxUploadMb } = await api('/api/screens');
     if (!tags || tags.length === 0) {
