@@ -141,34 +141,67 @@ async function renderWithOpenAI(slide: Slide, ctx: SlideRenderContext): Promise<
   return Buffer.from(b64, 'base64');
 }
 
-/** gpt-image-2 is delivered via an OpenAI-compatible proxy (AIMLAPI by default,
- * override via GPT_IMAGE_2_ENDPOINT). Same request/response shape as OpenAI's
- * /v1/images/generations, just a different host + key. */
+/** gpt-image-2 is delivered through kie.ai's async-task Market API:
+ *   1. POST /api/v1/jobs/createTask           → { data: { taskId } }
+ *   2. GET  /api/v1/jobs/recordInfo?taskId=…  → poll until state === 'success'
+ *   3. download resultJson.resultUrls[0]      → PNG bytes
+ *
+ * Aspect: kie supports only enum ratios. Closest to Instagram 4:5 is 3:4
+ * (1080:1440 vs needed 1080:1350) — pipeline doesn't re-crop, so live with it. */
+interface KieCreateResponse { code: number; msg?: string; data?: { taskId?: string } }
+interface KieRecordResponse {
+  code: number; msg?: string;
+  data?: {
+    state?: 'waiting' | 'queuing' | 'processing' | 'success' | 'fail';
+    resultJson?: string | { resultUrls?: string[] };
+    failMsg?: string;
+  };
+}
+
 async function renderWithGptImage2(slide: Slide, ctx: SlideRenderContext): Promise<Buffer> {
-  const apiKey = process.env.GPT_IMAGE_2_API_KEY || process.env.AIMLAPI_API_KEY;
+  const apiKey = process.env.GPT_IMAGE_2_API_KEY || process.env.KIE_AI_API_KEY;
   if (!apiKey) throw new Error('GPT_IMAGE_2_API_KEY is not set (required for gpt-image-2 engine)');
-  const endpoint = process.env.GPT_IMAGE_2_ENDPOINT || 'https://api.aimlapi.com/v1/images/generations';
+  const base = (process.env.GPT_IMAGE_2_ENDPOINT || 'https://api.kie.ai').replace(/\/$/, '');
   const model = process.env.GPT_IMAGE_2_MODEL || 'gpt-image-2-text-to-image';
-  const size = process.env.GPT_IMAGE_2_SIZE || '1024x1536';
+  const aspect = process.env.GPT_IMAGE_2_ASPECT || '3:4';
+  const resolution = process.env.GPT_IMAGE_2_RESOLUTION || '1K';
+  const pollMs = Number(process.env.GPT_IMAGE_2_POLL_MS || 3000);
+  const maxPolls = Number(process.env.GPT_IMAGE_2_MAX_POLLS || 60);
+
   const prompt = buildSlidePrompt(slide, ctx);
 
-  const res = await fetch(endpoint, {
+  const createRes = await fetch(`${base}/api/v1/jobs/createTask`, {
     method: 'POST',
     headers: { authorization: `Bearer ${apiKey}`, 'content-type': 'application/json' },
-    body: JSON.stringify({ model, prompt, n: 1, size, response_format: 'b64_json' }),
+    body: JSON.stringify({ model, input: { prompt, aspect_ratio: aspect, resolution } }),
   });
-  if (!res.ok) throw new Error(`gpt-image-2 ${res.status}: ${(await res.text()).slice(0, 300)}`);
-  const json = (await res.json()) as OpenAIImageResponse;
-  const b64 = json.data?.[0]?.b64_json;
-  if (b64) return Buffer.from(b64, 'base64');
-  // Fallback: some proxies return { data: [{ url }] } only — fetch and convert.
-  const url = json.data?.[0]?.url;
-  if (url) {
-    const img = await fetch(url);
-    if (!img.ok) throw new Error(`gpt-image-2: download ${img.status} from ${url}`);
-    return Buffer.from(await img.arrayBuffer());
+  if (!createRes.ok) throw new Error(`gpt-image-2 createTask ${createRes.status}: ${(await createRes.text()).slice(0, 300)}`);
+  const createJson = (await createRes.json()) as KieCreateResponse;
+  const taskId = createJson.data?.taskId;
+  if (!taskId) throw new Error(`gpt-image-2: no taskId in createTask response: ${JSON.stringify(createJson).slice(0, 300)}`);
+
+  for (let i = 0; i < maxPolls; i++) {
+    await new Promise((r) => setTimeout(r, pollMs));
+    const pollRes = await fetch(`${base}/api/v1/jobs/recordInfo?taskId=${encodeURIComponent(taskId)}`, {
+      headers: { authorization: `Bearer ${apiKey}` },
+    });
+    if (!pollRes.ok) throw new Error(`gpt-image-2 poll ${pollRes.status}: ${(await pollRes.text()).slice(0, 300)}`);
+    const pollJson = (await pollRes.json()) as KieRecordResponse;
+    const state = pollJson.data?.state;
+    if (state === 'success') {
+      const raw = pollJson.data?.resultJson;
+      const parsed = typeof raw === 'string' ? (JSON.parse(raw) as { resultUrls?: string[] }) : raw;
+      const url = parsed?.resultUrls?.[0];
+      if (!url) throw new Error(`gpt-image-2: success but no resultUrls`);
+      const img = await fetch(url);
+      if (!img.ok) throw new Error(`gpt-image-2: download ${img.status} from ${url}`);
+      return Buffer.from(await img.arrayBuffer());
+    }
+    if (state === 'fail') {
+      throw new Error(`gpt-image-2 task failed: ${pollJson.data?.failMsg ?? 'unknown'}`);
+    }
   }
-  throw new Error(`gpt-image-2: ${json.error?.message ?? 'no image in response'}`);
+  throw new Error(`gpt-image-2 timeout after ${maxPolls * pollMs / 1000}s (taskId ${taskId})`);
 }
 
 /** Image-only engines return a PNG buffer. Puppeteer is handled separately in
