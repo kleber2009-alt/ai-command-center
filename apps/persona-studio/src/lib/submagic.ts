@@ -66,12 +66,17 @@ async function readError(res: Response): Promise<string> {
 }
 
 export async function createProject(input: CreateProjectInput): Promise<SubmagicProject> {
-  const body = {
+  // Submagic accepted fields (verified empirically): title, videoUrl,
+  // templateName, language, magicZooms, magicBrolls, magicBrollsPercentage,
+  // removeBadTakes, webhookUrl. NO `captions` field — subtitles always on.
+  // Unknown fields → 400 VALIDATION_ERROR.
+  // `subtitlesEnabled=false` сейчас не поддерживается Submagic API (флаг
+  // отсутствует) — игнорируем; subтитры всегда включены.
+  const body: Record<string, unknown> = {
     title: input.projectName ?? `persona-studio-${Date.now()}`,
     videoUrl: input.videoUrl,
     templateName: input.templateName,
     language: input.language,
-    captions: input.subtitlesEnabled,
     magicZooms: true,
     magicBrolls: false,
   };
