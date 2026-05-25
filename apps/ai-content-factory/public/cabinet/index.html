@@ -1176,6 +1176,81 @@ document.querySelectorAll('.bb-save').forEach((btn) => {
   };
 });
 
+async function loadPlan() {
+  const box = document.getElementById('plan-table');
+  if (!box) return;
+  try {
+    const { items } = await api('/api/plan');
+    if (!items || items.length === 0) {
+      box.innerHTML = '<div class="empty">План пустой. Запусти «Weekly insights», чтобы Claude его собрал.</div>';
+      return;
+    }
+    const today = new Date().toISOString().slice(0, 10);
+    const rows = items.map((it) => {
+      const isToday = it.date === today;
+      const statusColor = ({
+        planned: 'var(--t2)', generating: '#7E5800', delivered: 'var(--green)',
+        failed: 'var(--red)', pending_delivery: '#7E5800',
+      })[it.status] || 'var(--t3)';
+      const runLink = it.runId ? `<a href="#" data-run="${escapeHtml(it.runId)}" class="run-jump" style="font-size:11px">→ ${escapeHtml(it.runId)}</a>` : '';
+      const errCell = it.lastError ? `<div style="font-size:10px;color:var(--red);max-width:200px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap" title="${escapeHtml(it.lastError)}">${escapeHtml(it.lastError)}</div>` : '';
+      return `
+        <div style="display:grid;grid-template-columns:90px 70px 80px 1fr 90px 200px;gap:10px;padding:10px 12px;border-bottom:1px solid var(--sep);align-items:center;font-size:12px;background:${isToday ? 'rgba(0,113,227,0.04)' : 'transparent'}">
+          <div style="font-family:ui-monospace,SF Mono,Menlo,monospace;color:var(--t1);${isToday ? 'font-weight:600' : ''}">${escapeHtml(it.date)}</div>
+          <div>${it.type === 'reels' ? '🎬' : '🖼'} ${escapeHtml(it.type)}</div>
+          <div style="color:var(--t2)">${escapeHtml(it.rubric)}</div>
+          <div style="color:var(--t1)">${escapeHtml(it.topic)}${it.slideCount ? ` <span style="color:var(--t3)">· ${it.slideCount} сл.</span>` : ''}</div>
+          <div><span class="badge-status ${it.status}" style="color:${statusColor}">${escapeHtml(it.status)}</span></div>
+          <div>${runLink}${errCell}</div>
+        </div>
+      `;
+    });
+    const header = `
+      <div style="display:grid;grid-template-columns:90px 70px 80px 1fr 90px 200px;gap:10px;padding:10px 12px;background:var(--surface-2);border-bottom:1px solid var(--sep);font-size:10px;font-weight:600;letter-spacing:0.5px;text-transform:uppercase;color:var(--t2)">
+        <div>Дата</div><div>Тип</div><div>Рубрика</div><div>Тема</div><div>Статус</div><div>Run / ошибка</div>
+      </div>
+    `;
+    box.innerHTML = header + rows.join('');
+    box.querySelectorAll('.run-jump').forEach((a) => {
+      a.onclick = (e) => {
+        e.preventDefault();
+        document.querySelector('#navtabs .navtab[data-page="generator"]').click();
+        setTimeout(() => openRun(a.dataset.run), 100);
+      };
+    });
+  } catch (e) {
+    box.innerHTML = '<div class="empty">Ошибка: ' + escapeHtml(e.message) + '</div>';
+  }
+}
+
+function bindPlanTriggers() {
+  const triggers = [
+    { id: 'trigger-carousel', job: 'carousel', label: 'Карусель' },
+    { id: 'trigger-reels',    job: 'reels',    label: 'Рилс' },
+    { id: 'trigger-insights', job: 'insights', label: 'Weekly insights' },
+    { id: 'trigger-heartbeat',job: 'heartbeat',label: 'Heartbeat' },
+  ];
+  for (const t of triggers) {
+    const btn = document.getElementById(t.id);
+    if (!btn) continue;
+    btn.onclick = async () => {
+      const original = btn.textContent;
+      btn.disabled = true; btn.textContent = '…';
+      try {
+        const res = await fetch('/api/scheduler/trigger/' + t.job, { method: 'POST' });
+        if (!res.ok) throw new Error(`${res.status}`);
+        btn.textContent = '✓ запущено';
+        setTimeout(() => { btn.textContent = original; btn.disabled = false; loadPlan(); }, 4000);
+      } catch (e) {
+        btn.textContent = '✗ ошибка';
+        setTimeout(() => { btn.textContent = original; btn.disabled = false; }, 4000);
+        alert(`${t.label}: ${e.message}`);
+      }
+    };
+  }
+}
+bindPlanTriggers();
+
 loadHealth();
 loadRubrics();
 loadRuns();
@@ -1189,6 +1264,8 @@ setInterval(() => {
     if (state.trainingSubtab === 'references') loadReferences();
     else if (state.trainingSubtab === 'prompts') loadPrompts();
     // brandbook не пуллим — это inline-редактор, перетирать пользовательский ввод нельзя
+  } else if (state.page === 'plan') {
+    loadPlan();
   }
 }, 4000);
 </script>

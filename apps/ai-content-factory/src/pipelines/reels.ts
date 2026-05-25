@@ -1,8 +1,8 @@
 // Reels pipeline: rubric → Claude script JSON → optional FFmpeg render →
 // caption → Telegram delivery (script-only when footage is missing).
 
-import { mkdir, writeFile } from 'node:fs/promises';
-import { join } from 'node:path';
+import { mkdir, writeFile, copyFile } from 'node:fs/promises';
+import { extname, join } from 'node:path';
 import { getRubric } from '../lib/rubrics.js';
 import { outputPath } from '../lib/paths.js';
 import { generateReelsScript } from '../generators/reels-script.js';
@@ -26,6 +26,9 @@ export interface ReelsPipelineOptions {
   withCaption?: boolean;
   deliver?: boolean;
   rag?: boolean;
+  /** Опционально прикреплённое фото — копируется в outDir и отправляется
+   * в Telegram как обложка перед сценарием/видео. */
+  attachedPhoto?: string;
 }
 
 export interface ReelsPipelineResult {
@@ -102,6 +105,13 @@ export async function runReelsPipeline(opts: ReelsPipelineOptions): Promise<Reel
 
   const render = await renderReels(script, rubric, outDir);
 
+  let attachedPhotoPath: string | undefined;
+  if (opts.attachedPhoto) {
+    const ext = extname(opts.attachedPhoto).toLowerCase() || '.jpg';
+    attachedPhotoPath = join(outDir, `attached-photo${ext}`);
+    await copyFile(opts.attachedPhoto, attachedPhotoPath);
+  }
+
   if (generating) {
     try {
       logGeneration(getDb(), {
@@ -130,6 +140,7 @@ export async function runReelsPipeline(opts: ReelsPipelineOptions): Promise<Reel
       scriptMdPath: render.scriptPath,
       caption: captionText,
       missingTags: render.missingTags,
+      attachedPhoto: attachedPhotoPath,
     });
   }
 

@@ -91,6 +91,9 @@ export interface DeliverReelsOptions {
   scriptMdPath: string;
   caption?: string;
   missingTags?: string[];
+  /** Опционально прикреплённое пользователем фото — отправится первым,
+   * до видео/сценария. */
+  attachedPhoto?: string;
 }
 
 export async function deliverReelsToTelegram(opts: DeliverReelsOptions): Promise<void> {

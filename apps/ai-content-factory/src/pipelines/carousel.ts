@@ -2,8 +2,8 @@
 // PNG slides → manifest (and optional Telegram delivery), all written under
 // data/output/<slug>-ep<episode>-<timestamp>/.
 
-import { mkdir, writeFile } from 'node:fs/promises';
-import { join } from 'node:path';
+import { mkdir, writeFile, copyFile } from 'node:fs/promises';
+import { extname, join } from 'node:path';
 import { getRubric } from '../lib/rubrics.js';
 import { outputPath } from '../lib/paths.js';
 import { generateCarousel } from '../generators/carousel.js';
@@ -115,6 +115,16 @@ export async function runCarouselPipeline(
 
   const { slidePaths } = await renderCarousel(carousel, rubric, outDir, opts.engine ?? 'puppeteer');
 
+  // Прикреплённое пользователем фото — копируем в outDir и кладём ПЕРВЫМ
+  // в массив слайдов (станет cover'ом карусели и в Telegram-доставке).
+  let attachedPhotoPath: string | undefined;
+  if (opts.attachedPhoto) {
+    const ext = extname(opts.attachedPhoto).toLowerCase() || '.jpg';
+    attachedPhotoPath = join(outDir, `attached-photo${ext}`);
+    await copyFile(opts.attachedPhoto, attachedPhotoPath);
+  }
+  const deliveryMedia = attachedPhotoPath ? [attachedPhotoPath, ...slidePaths] : slidePaths;
+
   if (generating) {
     try {
       logGeneration(getDb(), {
@@ -131,7 +141,7 @@ export async function runCarouselPipeline(
   }
 
   if (opts.deliver) {
-    await deliverToTelegram({ slidePaths, caption: captionText });
+    await deliverToTelegram({ slidePaths: deliveryMedia, caption: captionText });
   }
 
   log.info('Carousel pipeline complete', {
