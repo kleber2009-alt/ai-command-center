@@ -31,6 +31,12 @@ services:
       TELEGRAM_CHAT_ID: ${TELEGRAM_CHAT_ID:-}
       MODEL_OPUS: ${MODEL_OPUS:-}
       MODEL_HAIKU: ${MODEL_HAIKU:-}
+      # Image engines (alternative carousel renderers)
+      GOOGLE_AI_API_KEY: ${GOOGLE_AI_API_KEY:-}
+      GEMINI_API_KEY: ${GEMINI_API_KEY:-}
+      GEMINI_IMAGE_MODEL: ${GEMINI_IMAGE_MODEL:-}
+      OPENAI_IMAGE_MODEL: ${OPENAI_IMAGE_MODEL:-}
+      OPENAI_IMAGE_SIZE: ${OPENAI_IMAGE_SIZE:-}
       # Cabinet (HTTP API + UI)
       CABINET_PORT: 3018
       CABINET_USERNAME: ${CABINET_USERNAME:-admin}

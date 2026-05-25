@@ -370,6 +370,10 @@ async function loadHealth() {
     document.getElementById('h-claude').className = 'dot ' + (h.anthropic ? 'ok' : 'bad');
     document.getElementById('h-tg').className = 'dot ' + (h.telegram ? 'ok' : 'bad');
     document.getElementById('h-rag').className = 'dot ' + (h.voyage ? 'ok' : 'bad');
+    if (h.engines) {
+      state.engines = h.engines;
+      syncEnginesAvailability();
+    }
   } catch (e) { console.error(e); }
 }
 
@@ -515,7 +519,7 @@ document.getElementById('btn-generate').onclick = async () => {
     const { jobId } = await api('/api/generate', {
       method: 'POST',
       headers: { 'content-type': 'application/json' },
-      body: JSON.stringify({ format: state.format, rubric: state.rubric, topic, episode, deliver, rag }),
+      body: JSON.stringify({ format: state.format, engine: state.engine, rubric: state.rubric, topic, episode, deliver, rag }),
     });
     state.activeJob = jobId;
     pollJob(jobId);
