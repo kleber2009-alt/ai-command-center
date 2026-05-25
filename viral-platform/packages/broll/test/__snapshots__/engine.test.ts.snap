@@ -1,0 +1,117 @@
+// Vitest Snapshot v1, https://vitest.dev/guide/snapshot.html
+
+exports[`planBroll — reference snapshots > matches the plan snapshot: educational 1`] = `
+{
+  "clipId": "ref-educational",
+  "inserts": [
+    {
+      "assetId": "s1",
+      "assetUrl": "https://x/s1.mp4",
+      "confidence": 1,
+      "endMs": 2500,
+      "overlayStyle": "fullscreen",
+      "query": "synapses firing macro",
+      "reason": "visual reinforces "synapses firing macro"",
+      "source": "pixabay",
+      "startMs": 0,
+      "thumbnailUrl": "https://example.com/1.jpg",
+    },
+  ],
+  "version": 1,
+}
+`;
+
+exports[`planBroll — reference snapshots > matches the plan snapshot: emotional 1`] = `
+{
+  "clipId": "ref-emotional",
+  "inserts": [],
+  "version": 1,
+}
+`;
+
+exports[`planBroll — reference snapshots > matches the plan snapshot: insight 1`] = `
+{
+  "clipId": "ref-insight",
+  "inserts": [
+    {
+      "assetId": "s1",
+      "assetUrl": "https://x/s1.mp4",
+      "confidence": 1,
+      "endMs": 2500,
+      "overlayStyle": "fullscreen",
+      "query": "synapses firing macro",
+      "reason": "visual reinforces "synapses firing macro"",
+      "source": "pixabay",
+      "startMs": 0,
+      "thumbnailUrl": "https://example.com/1.jpg",
+    },
+  ],
+  "version": 1,
+}
+`;
+
+exports[`planBroll — reference snapshots > matches the plan snapshot: interview 1`] = `
+{
+  "clipId": "ref-interview",
+  "inserts": [
+    {
+      "assetId": "rk1",
+      "assetUrl": "https://x/rk1.mp4",
+      "confidence": 1,
+      "endMs": 2000,
+      "overlayStyle": "fullscreen",
+      "query": "rocket launch metaphor",
+      "reason": "visual reinforces "rocket launch metaphor"",
+      "source": "pexels",
+      "startMs": 0,
+      "thumbnailUrl": "https://example.com/1.jpg",
+    },
+    {
+      "assetId": "oc1",
+      "assetUrl": "https://x/oc1.mp4",
+      "confidence": 1,
+      "endMs": 11530,
+      "overlayStyle": "fullscreen",
+      "query": "deep ocean current",
+      "reason": "visual reinforces "deep ocean current"",
+      "source": "pexels",
+      "startMs": 9030,
+      "thumbnailUrl": "https://example.com/1.jpg",
+    },
+  ],
+  "version": 1,
+}
+`;
+
+exports[`planBroll — reference snapshots > matches the plan snapshot: podcast 1`] = `
+{
+  "clipId": "ref-podcast",
+  "inserts": [
+    {
+      "assetId": "n1",
+      "assetUrl": "https://x/n1.mp4",
+      "confidence": 1,
+      "endMs": 2500,
+      "overlayStyle": "fullscreen",
+      "query": "glowing neural network",
+      "reason": "visual reinforces "glowing neural network"",
+      "source": "pexels",
+      "startMs": 0,
+      "thumbnailUrl": "https://example.com/1.jpg",
+    },
+    {
+      "assetId": "rk1",
+      "assetUrl": "https://x/rk1.mp4",
+      "confidence": 1,
+      "endMs": 10170,
+      "overlayStyle": "fullscreen",
+      "query": "rocket launch metaphor",
+      "reason": "visual reinforces "rocket launch metaphor"",
+      "source": "pexels",
+      "startMs": 8170,
+      "thumbnailUrl": "https://example.com/1.jpg",
+    },
+  ],
+  "version": 1,
+}
+`;

@@ -1,0 +1,32 @@
+{
+  "name": "viral-platform",
+  "version": "0.1.0",
+  "private": true,
+  "packageManager": "pnpm@10.33.0",
+  "engines": {
+    "node": ">=20"
+  },
+  "scripts": {
+    "dev": "docker compose up -d && turbo run dev",
+    "dev:web": "turbo run dev --filter=@vp/web",
+    "dev:workers": "turbo run dev --filter=./apps/worker-*",
+    "build": "turbo run build",
+    "lint": "biome check .",
+    "lint:fix": "biome check --write .",
+    "format": "biome format --write .",
+    "typecheck": "turbo run typecheck",
+    "test": "vitest run",
+    "test:broll": "vitest run --project broll",
+    "test:e2e": "playwright test",
+    "db:push": "pnpm --filter @vp/db push",
+    "db:generate": "pnpm --filter @vp/db generate",
+    "db:studio": "pnpm --filter @vp/db studio"
+  },
+  "devDependencies": {
+    "@biomejs/biome": "^1.9.4",
+    "@playwright/test": "^1.49.1",
+    "turbo": "^2.3.3",
+    "typescript": "^5.7.2",
+    "vitest": "^2.1.8"
+  }
+}

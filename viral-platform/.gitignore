@@ -1,0 +1,24 @@
+node_modules/
+.next/
+dist/
+.turbo/
+out/
+coverage/
+*.tsbuildinfo
+
+# env
+.env
+.env.local
+.env.*.local
+
+# python
+__pycache__/
+*.pyc
+.venv/
+venv/
+
+# misc
+.DS_Store
+*.log
+playwright-report/
+test-results/
