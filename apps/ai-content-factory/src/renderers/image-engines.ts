@@ -88,9 +88,9 @@ interface GeminiImageResponse {
 }
 
 async function renderWithGemini(slide: Slide, ctx: SlideRenderContext): Promise<Buffer> {
-  const apiKey = process.env.GOOGLE_AI_API_KEY ?? process.env.GEMINI_API_KEY;
+  const apiKey = process.env.GOOGLE_AI_API_KEY || process.env.GEMINI_API_KEY;
   if (!apiKey) throw new Error('GOOGLE_AI_API_KEY is not set (required for nano-banana engine)');
-  const model = process.env.GEMINI_IMAGE_MODEL ?? 'gemini-2.5-flash-image-preview';
+  const model = process.env.GEMINI_IMAGE_MODEL || 'gemini-2.5-flash-image-preview';
   const url = `https://generativelanguage.googleapis.com/v1beta/models/${model}:generateContent?key=${apiKey}`;
 
   const prompt = buildSlidePrompt(slide, ctx);
@@ -118,7 +118,7 @@ interface OpenAIImageResponse {
 async function renderWithOpenAI(slide: Slide, ctx: SlideRenderContext): Promise<Buffer> {
   const apiKey = process.env.OPENAI_API_KEY;
   if (!apiKey) throw new Error('OPENAI_API_KEY is not set (required for gpt-image engine)');
-  const model = process.env.OPENAI_IMAGE_MODEL ?? 'gpt-image-1';
+  const model = process.env.OPENAI_IMAGE_MODEL || 'gpt-image-1';
   const prompt = buildSlidePrompt(slide, ctx);
 
   const res = await fetch('https://api.openai.com/v1/images/generations', {
@@ -129,7 +129,7 @@ async function renderWithOpenAI(slide: Slide, ctx: SlideRenderContext): Promise<
       prompt,
       // 4:5 isn't always supported — 1024x1536 (2:3) is closest standard, will
       // be scaled to 1080×1350 by Puppeteer in the pipeline if needed.
-      size: process.env.OPENAI_IMAGE_SIZE ?? '1024x1536',
+      size: process.env.OPENAI_IMAGE_SIZE || '1024x1536',
       n: 1,
       response_format: 'b64_json',
     }),
@@ -145,11 +145,11 @@ async function renderWithOpenAI(slide: Slide, ctx: SlideRenderContext): Promise<
  * override via GPT_IMAGE_2_ENDPOINT). Same request/response shape as OpenAI's
  * /v1/images/generations, just a different host + key. */
 async function renderWithGptImage2(slide: Slide, ctx: SlideRenderContext): Promise<Buffer> {
-  const apiKey = process.env.GPT_IMAGE_2_API_KEY ?? process.env.AIMLAPI_API_KEY;
+  const apiKey = process.env.GPT_IMAGE_2_API_KEY || process.env.AIMLAPI_API_KEY;
   if (!apiKey) throw new Error('GPT_IMAGE_2_API_KEY is not set (required for gpt-image-2 engine)');
-  const endpoint = process.env.GPT_IMAGE_2_ENDPOINT ?? 'https://api.aimlapi.com/v1/images/generations';
-  const model = process.env.GPT_IMAGE_2_MODEL ?? 'gpt-image-2-text-to-image';
-  const size = process.env.GPT_IMAGE_2_SIZE ?? '1024x1536';
+  const endpoint = process.env.GPT_IMAGE_2_ENDPOINT || 'https://api.aimlapi.com/v1/images/generations';
+  const model = process.env.GPT_IMAGE_2_MODEL || 'gpt-image-2-text-to-image';
+  const size = process.env.GPT_IMAGE_2_SIZE || '1024x1536';
   const prompt = buildSlidePrompt(slide, ctx);
 
   const res = await fetch(endpoint, {
