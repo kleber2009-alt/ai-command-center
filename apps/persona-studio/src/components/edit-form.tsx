@@ -203,7 +203,7 @@ export function EditForm({
               ref={videoRef}
               type="button"
               onClick={() => {
-                openCardAndStep('video', 'video');
+                setActiveStep('video');
                 setOpenCard((c) => (c === 'video' ? null : 'video'));
               }}
               className={`w-full text-left border bg-surface px-3 py-2.5 hover:border-border-2 transition-colors ${
@@ -273,7 +273,7 @@ export function EditForm({
               ref={styleRef}
               type="button"
               onClick={() => {
-                openCardAndStep('style', 'style');
+                setActiveStep('style');
                 setOpenCard((c) => (c === 'style' ? null : 'style'));
               }}
               className={`w-full text-left border bg-surface px-3 py-2.5 hover:border-border-2 transition-colors ${
@@ -355,7 +355,7 @@ export function EditForm({
               ref={langRef}
               type="button"
               onClick={() => {
-                openCardAndStep('language', 'language');
+                setActiveStep('language');
                 setOpenCard((c) => (c === 'language' ? null : 'language'));
               }}
               className={`w-full text-left border bg-surface px-3 py-2.5 hover:border-border-2 transition-colors ${
@@ -406,7 +406,7 @@ export function EditForm({
               ref={optionsRef}
               type="button"
               onClick={() => {
-                openCardAndStep('options', 'options');
+                setActiveStep('options');
                 setOpenCard((c) => (c === 'options' ? null : 'options'));
               }}
               className={`w-full text-left border bg-surface px-3 py-2.5 hover:border-border-2 transition-colors ${
