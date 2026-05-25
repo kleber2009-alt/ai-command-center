@@ -893,7 +893,15 @@ app.put('/api/brandbook/:key', (req, res) => {
   res.json({ ok: true, ...readBrandbookEntry(key) });
 });
 
-app.use(express.static(PUBLIC_DIR, { extensions: ['html'], maxAge: '5m' }));
+// HTML без кеша (UI инлайн в index.html, кеш ломает свежие правки UI),
+// остальная статика — 5 минут.
+app.use(express.static(PUBLIC_DIR, {
+  extensions: ['html'],
+  maxAge: '5m',
+  setHeaders: (res, path) => {
+    if (path.endsWith('.html')) res.setHeader('Cache-Control', 'no-cache, no-store, must-revalidate');
+  },
+}));
 app.get('/', (_req, res) => {
   res.sendFile(join(PUBLIC_DIR, 'cabinet', 'index.html'));
 });
