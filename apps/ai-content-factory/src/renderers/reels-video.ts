@@ -155,17 +155,21 @@ export async function renderReels(
       merged,
     ]);
 
-    // Step 3: burn subtitles. We use one drawtext per subtitle line, timed by
-    // scene cumulative duration so labels appear in sync with each scene.
+    // Step 3: burn subtitles. JetBrains Mono Bold per ТЗ §3.2; one drawtext
+    // per scene, timed by cumulative duration. The font file ships in the
+    // image via apt (fonts-jetbrains-mono).
+    const SUB_FONT = '/usr/share/fonts/truetype/jetbrains-mono/JetBrainsMono-Bold.ttf';
     const drawtexts: string[] = [];
     let t = 0;
     for (let i = 0; i < script.scenes.length; i++) {
       const scene = script.scenes[i]!;
-      const text = (script.subtitles[i] ?? scene.text).replace(/[':,]/g, (c) => `\\${c}`);
+      // FFmpeg drawtext needs these characters escaped: \ ' : , [ ]
+      const text = (script.subtitles[i] ?? scene.text).replace(/[\\':,\[\]]/g, (c) => `\\${c}`);
       drawtexts.push(
-        `drawtext=text='${text}':fontcolor=white:fontsize=64:` +
-        `box=1:boxcolor=black@0.55:boxborderw=20:` +
-        `x=(w-text_w)/2:y=h-text_h-180:` +
+        `drawtext=fontfile='${SUB_FONT}':text='${text}':` +
+        `fontcolor=white:fontsize=58:line_spacing=14:` +
+        `box=1:boxcolor=black@0.6:boxborderw=22:` +
+        `x=(w-text_w)/2:y=h-text_h-200:` +
         `enable='between(t,${t},${t + scene.duration})'`,
       );
       t += scene.duration;
