@@ -323,6 +323,11 @@ model ParserItem {
   velocityScore    Float     @default(0)                  // 0..1, composite от scoring.ts
   fitScore          Int?                                   // 1..10 от Claude
   fitWhy            String?                                // 6-12 слов, почему такой score
+  // Уникализированный сценарий по структуре хук→боль→раскрытие→CTA, который
+  // подставится в VideoForm на /videos/new когда юзер жмёт «Создать видео».
+  // Генерится Claude по caption+niche, кэшируется здесь, чтобы повторный
+  // переход не делал лишний rewrite.
+  rewrittenScript   String?   @db.Text
   status            String    @default("new")              // new | used | dismissed
   videoGenerationId String?                                // если уже отправлен в работу
   createdAt         DateTime  @default(now())

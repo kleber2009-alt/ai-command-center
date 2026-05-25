@@ -49,6 +49,7 @@ export type ParserItemSerialized = {
   velocityScore: number;
   fitScore: number | null;
   fitWhy: string | null;
+  rewrittenScript: string | null;
   status: string;
   videoGenerationId: string | null;
   createdAt: string;

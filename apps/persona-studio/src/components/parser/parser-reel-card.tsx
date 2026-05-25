@@ -1,6 +1,6 @@
 'use client';
 
-import Link from 'next/link';
+import { useRouter } from 'next/navigation';
 import { useState } from 'react';
 import type { ParserItemSerialized } from './types';
 
@@ -29,7 +29,10 @@ const fitColor = (score: number | null) => {
 };
 
 export function ParserReelCard({ item, onUpdated, onRemoved }: Props) {
+  const router = useRouter();
   const [busy, setBusy] = useState(false);
+  const [rewriting, setRewriting] = useState(false);
+  const [error, setError] = useState<string | null>(null);
   const isUsed = item.status === 'used';
 
   async function dismiss() {
@@ -46,24 +49,34 @@ export function ParserReelCard({ item, onUpdated, onRemoved }: Props) {
     }
   }
 
-  async function markUsed() {
-    setBusy(true);
+  /**
+   * «Создать видео» = синхронный rewrite через Claude по структуре
+   * хук→боль→раскрытие→CTA → сохранение в БД → редирект на /videos/new,
+   * где VideoForm подхватит rewrittenScript как initialScript. Если уже
+   * есть кэш — endpoint вернёт его моментально.
+   */
+  async function rewriteAndGo() {
+    if (rewriting) return;
+    setRewriting(true);
+    setError(null);
     try {
-      const res = await fetch(`/api/parser/items?id=${item.id}`, {
-        method: 'PATCH',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ status: 'used' }),
+      const res = await fetch(`/api/parser/items/${item.id}/rewrite`, {
+        method: 'POST',
       });
-      if (res.ok) {
-        const json = await res.json();
-        onUpdated(json.item);
+      const json = await res.json();
+      if (!res.ok) {
+        setError(json.message || json.error || `HTTP ${res.status}`);
+        return;
       }
+      // Локально пометим как used, чтобы UI обновился без перезагрузки
+      onUpdated({ ...item, status: 'used', rewrittenScript: json.script });
+      router.push(`/videos/new?parserItemId=${item.id}`);
+    } catch (e) {
+      setError((e as Error).message || 'network error');
     } finally {
-      setBusy(false);
+      setRewriting(false);
     }
   }
-
-  const videoHref = `/videos/new?sourceUrl=${encodeURIComponent(item.url)}&parserItemId=${item.id}`;
 
   return (
     <article
@@ -139,15 +152,25 @@ export function ParserReelCard({ item, onUpdated, onRemoved }: Props) {
           </p>
         )}
 
+        {error && (
+          <div className="border border-pink/40 bg-pink/5 px-2 py-1 mono text-[10px] text-pink">
+            {error}
+          </div>
+        )}
+
         <div className="grid grid-cols-[1fr_auto] gap-2 mt-auto pt-2 border-t border-border">
-          <Link
-            href={videoHref}
-            onClick={markUsed}
+          <button
+            type="button"
+            onClick={rewriteAndGo}
+            disabled={rewriting || busy}
             className="btn-primary text-center"
-            aria-disabled={busy}
           >
-            Создать видео →
-          </Link>
+            {rewriting
+              ? 'Уникализирую сценарий…'
+              : item.rewrittenScript
+                ? 'К видео (готов сценарий) →'
+                : 'Создать видео →'}
+          </button>
           <a
             href={item.url}
             target="_blank"
@@ -162,7 +185,7 @@ export function ParserReelCard({ item, onUpdated, onRemoved }: Props) {
         <button
           type="button"
           onClick={dismiss}
-          disabled={busy}
+          disabled={busy || rewriting}
           className="mono text-[9px] tracking-widest uppercase text-text-mute hover:text-pink justify-self-start"
         >
           Скрыть из списка

@@ -36,7 +36,18 @@ const DEFAULT_SCRIPT =
 
 const CUSTOM_VOICE_LS_KEY = 'persona-studio:customVoiceId';
 
-export function VideoForm({ avatars, initialAvatarId }: { avatars: Avatar[]; initialAvatarId?: string }) {
+export function VideoForm({
+  avatars,
+  initialAvatarId,
+  initialScript,
+}: {
+  avatars: Avatar[];
+  initialAvatarId?: string;
+  // Если страница пришла из парсера с уже переписанным сценарием — подставляем
+  // его как стартовое значение textarea. Reset-кнопка всё равно возвращает к
+  // DEFAULT_SCRIPT, потому что initialScript — одноразовая «подача».
+  initialScript?: string;
+}) {
   const router = useRouter();
   const [engine, setEngine] = useState<VideoEngine>('heygen-v5');
   // Если URL-параметр avatarId не соответствует ни одному из готовых аватаров
@@ -47,7 +58,7 @@ export function VideoForm({ avatars, initialAvatarId }: { avatars: Avatar[]; ini
       ? initialAvatarId
       : (avatars[0]?.id ?? '');
   const [avatarId, setAvatarId] = useState<string>(resolvedInitial);
-  const [script, setScript] = useState(DEFAULT_SCRIPT);
+  const [script, setScript] = useState(initialScript?.trim() || DEFAULT_SCRIPT);
   const [voiceId, setVoiceId] = useState<string>(HEYGEN_VOICES[0]?.voice_id ?? '');
   const [customVoiceId, setCustomVoiceId] = useState<string>('');
   const [aspect, setAspect] = useState<EngineAspect>('9:16');
