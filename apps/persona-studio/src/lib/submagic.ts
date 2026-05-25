@@ -10,7 +10,8 @@
 //   waitForProject — поллинг до completed/failed
 //   downloadBytes  — скачивает готовый mp4 (для re-hosting в нашем MinIO)
 //
-// API-key передаётся через Authorization: Bearer header.
+// API-key передаётся через `x-api-key` header (не Bearer — это проверено
+// эмпирически: Bearer возвращает 401 UNAUTHORIZED, x-api-key — принимается).
 
 import { env } from './env';
 
@@ -50,7 +51,7 @@ function headers(extra: Record<string, string> = {}): Record<string, string> {
   return {
     'Content-Type': 'application/json',
     Accept: 'application/json',
-    Authorization: `Bearer ${apiKey()}`,
+    'x-api-key': apiKey(),
     ...extra,
   };
 }
