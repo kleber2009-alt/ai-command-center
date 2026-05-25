@@ -62,31 +62,6 @@ gen_png ref-28-layout-asymmetric  0xFFD700 "Asymmetric"
 gen_png ref-29-layout-grid        0xBDC3C7 "2x2 grid"
 gen_png ref-30-format-meme        0x4ECDC4 "Meme format"
 
-# ── Prompts: .md stubs with the slot description as starter ──────────────
-echo "Seeding 30 prompt stubs into $PROMPTS"
-# Parse description from prompts-tags.json — use Python for safe JSON-stripping
-python3 - <<'PY'
-import json, os, time
-catalog_path = '/app/data/assets/prompts-tags.json'
-with open(catalog_path) as f:
-    cat = json.load(f)
-ts = int(time.time() * 1000)
-for entry in cat.get('tags', []):
-    tag = entry['tag']
-    label = entry.get('label', tag)
-    desc = entry.get('description', '')
-    d = f'/app/data/assets/prompts/{tag}'
-    os.makedirs(d, exist_ok=True)
-    path = f'{d}/{ts}-placeholder.md'
-    body = (
-        f'# {label}\n\n'
-        f'> Заглушка. Сюда впишешь свой материал — Claude увидит его при генерации.\n\n'
-        f'## Задумка слота\n\n{desc}\n\n'
-        f'## Заполни:\n\n- (пример 1)\n- (пример 2)\n- (антипаттерн / стоп-лист)\n'
-    )
-    with open(path, 'w') as out:
-        out.write(body)
-    print(f'  prompt {tag} → {path}')
-PY
+#
 
 echo "Done. Restart so describeBacklog describes the references."
