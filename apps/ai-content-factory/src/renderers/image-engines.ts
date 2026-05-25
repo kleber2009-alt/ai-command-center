@@ -11,9 +11,14 @@
 import type { Slide } from '../schemas/carousel.js';
 import type { RubricConfig } from '../lib/rubrics.js';
 
-export type ImageEngine = 'puppeteer' | 'nano-banana' | 'gpt-image';
+export type ImageEngine = 'puppeteer' | 'nano-banana' | 'gpt-image' | 'gpt-image-2';
 
-export const VALID_ENGINES: readonly ImageEngine[] = ['puppeteer', 'nano-banana', 'gpt-image'];
+export const VALID_ENGINES: readonly ImageEngine[] = [
+  'puppeteer',
+  'nano-banana',
+  'gpt-image',
+  'gpt-image-2',
+];
 
 export function isImageEngine(value: unknown): value is ImageEngine {
   return typeof value === 'string' && (VALID_ENGINES as readonly string[]).includes(value);
