@@ -16,6 +16,7 @@ import { retrieveContext, type RagContext } from '../knowledge/retrieve.js';
 import { formatRagContext } from '../knowledge/context.js';
 import { logGeneration } from '../knowledge/store.js';
 import type { Carousel } from '../schemas/carousel.js';
+import type { ImageEngine } from '../renderers/image-engines.js';
 import { log } from '../lib/logger.js';
 
 export interface CarouselPipelineOptions {
@@ -30,6 +31,8 @@ export interface CarouselPipelineOptions {
   deliver?: boolean;
   /** Ground generation in the knowledge base (RAG). Defaults to true when generating. */
   rag?: boolean;
+  /** Which engine renders the slide PNGs. Default 'puppeteer'. */
+  engine?: ImageEngine;
 }
 
 export interface CarouselPipelineResult {
@@ -96,7 +99,7 @@ export async function runCarouselPipeline(
     await writeFile(captionPath, captionText, 'utf8');
   }
 
-  const { slidePaths } = await renderCarousel(carousel, rubric, outDir);
+  const { slidePaths } = await renderCarousel(carousel, rubric, outDir, opts.engine ?? 'puppeteer');
 
   if (generating) {
     try {

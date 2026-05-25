@@ -28,6 +28,7 @@ import { loadRubrics } from './lib/rubrics.js';
 import { outputPath, dataPath } from './lib/paths.js';
 import { runCarouselPipeline } from './pipelines/carousel.js';
 import { runReelsPipeline } from './pipelines/reels.js';
+import { isImageEngine, type ImageEngine } from './renderers/image-engines.js';
 import { log } from './lib/logger.js';
 import { getAllClipMeta, deleteClipMeta, setClipMeta, type ClipMeta } from './lib/footage-meta.js';
 import { getAllScreenMeta, deleteScreenMeta, setScreenMeta, type ScreenMeta } from './lib/screen-meta.js';
@@ -43,6 +44,7 @@ type Format = 'carousel' | 'reels';
 interface Job {
   id: string;
   format: Format;
+  engine?: ImageEngine;
   status: 'queued' | 'running' | 'done' | 'error';
   rubric: string;
   topic: string;
@@ -155,6 +157,11 @@ app.get('/api/health', (_req, res) => {
     anthropic: Boolean(process.env.ANTHROPIC_API_KEY),
     telegram: Boolean(process.env.TELEGRAM_BOT_TOKEN && process.env.TELEGRAM_CHAT_ID),
     voyage: Boolean(process.env.VOYAGE_API_KEY),
+    engines: {
+      puppeteer: true,
+      'nano-banana': Boolean(process.env.GOOGLE_AI_API_KEY ?? process.env.GEMINI_API_KEY),
+      'gpt-image': Boolean(process.env.OPENAI_API_KEY),
+    },
     jobs: { active: [...jobs.values()].filter((j) => j.status === 'running' || j.status === 'queued').length },
   });
 });
@@ -218,8 +225,9 @@ app.get('/api/runs/:id/script', (req, res) => {
 });
 
 app.post('/api/generate', (req, res) => {
-  const { format, rubric, topic, episode, deliver, rag } = req.body ?? {};
+  const { format, rubric, topic, episode, deliver, rag, engine } = req.body ?? {};
   const fmt: Format = format === 'reels' ? 'reels' : 'carousel';
+  const eng: ImageEngine = isImageEngine(engine) ? engine : 'puppeteer';
   if (typeof rubric !== 'string' || typeof topic !== 'string' || !topic.trim()) {
     res.status(400).json({ error: 'rubric and topic are required strings' });
     return;
@@ -233,6 +241,7 @@ app.post('/api/generate', (req, res) => {
   const job: Job = {
     id,
     format: fmt,
+    engine: fmt === 'carousel' ? eng : undefined,
     status: 'queued',
     rubric,
     topic: topic.trim(),
@@ -252,6 +261,7 @@ app.post('/api/generate', (req, res) => {
           episode: ep,
           deliver: job.deliver,
           rag: rag !== false,
+          engine: eng,
         });
         job.runId = result.outDir.split('/').pop() ?? '';
       } else {

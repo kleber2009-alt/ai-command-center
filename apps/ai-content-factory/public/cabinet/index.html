@@ -150,6 +150,16 @@ button,input,select,textarea{font:inherit;color:inherit}
         <button type="button" class="seg" data-fmt="reels" style="flex:1;padding:7px;border:none;background:transparent;border-radius:6px;font-size:13px;font-weight:500;cursor:pointer;color:var(--t2)">Рилс</button>
       </div>
 
+      <div class="field" id="engine-picker">
+        <label>Движок рендера</label>
+        <div id="engines-row" style="display:flex;gap:6px">
+          <button type="button" class="eng active" data-eng="puppeteer" style="flex:1;padding:8px 6px;border:1px solid var(--blue);background:var(--surface);border-radius:var(--r1);font-size:12px;cursor:pointer">Puppeteer<br><span style="font-size:10px;color:var(--t3)">HTML→PNG · $</span></button>
+          <button type="button" class="eng" data-eng="nano-banana" style="flex:1;padding:8px 6px;border:1px solid var(--sep);background:var(--surface-2);border-radius:var(--r1);font-size:12px;cursor:pointer">Nano Banana 2<br><span style="font-size:10px;color:var(--t3)">Gemini · $$</span></button>
+          <button type="button" class="eng" data-eng="gpt-image" style="flex:1;padding:8px 6px;border:1px solid var(--sep);background:var(--surface-2);border-radius:var(--r1);font-size:12px;cursor:pointer">GPT Image<br><span style="font-size:10px;color:var(--t3)">OpenAI · $$$</span></button>
+        </div>
+        <div class="hint" id="engine-hint" style="margin-top:6px">Puppeteer — стабильный, точные шрифты Inter/JetBrains. Nano Banana/GPT — генерируют слайды как картинки (быстрее меняешь стиль, но кириллица может «гулять»).</div>
+      </div>
+
       <div class="rubrics" id="rubrics-list">
         <div class="empty">Загружаю рубрики…</div>
       </div>
@@ -279,7 +289,30 @@ button,input,select,textarea{font:inherit;color:inherit}
 
 <script>
 const API = '';
-const state = { rubric: null, rubrics: {}, currentRun: null, currentRunData: null, viewerTab: 'slides', activeJob: null, format: 'carousel', page: 'generator', footageSubtab: 'clips' };
+const state = { rubric: null, rubrics: {}, currentRun: null, currentRunData: null, viewerTab: 'slides', activeJob: null, format: 'carousel', engine: 'puppeteer', page: 'generator', footageSubtab: 'clips', engines: { puppeteer: true, 'nano-banana': false, 'gpt-image': false } };
+
+// ── Engine picker (visible for carousel only) ───────────────────────
+document.querySelectorAll('#engines-row .eng').forEach((b) => {
+  b.onclick = () => {
+    const available = state.engines[b.dataset.eng];
+    if (!available) { alert('Этот движок не настроен — добавь ключ в .env (GOOGLE_AI_API_KEY или OPENAI_API_KEY)'); return; }
+    state.engine = b.dataset.eng;
+    document.querySelectorAll('#engines-row .eng').forEach((x) => {
+      const on = x === b;
+      x.classList.toggle('active', on);
+      x.style.border = on ? '1px solid var(--blue)' : '1px solid var(--sep)';
+      x.style.background = on ? 'var(--surface)' : 'var(--surface-2)';
+    });
+  };
+});
+
+function syncEnginesAvailability() {
+  document.querySelectorAll('#engines-row .eng').forEach((b) => {
+    const available = state.engines[b.dataset.eng];
+    b.style.opacity = available ? '1' : '.45';
+    b.title = available ? '' : 'Ключ не настроен — добавь в .env';
+  });
+}
 
 // ── Footage sub-tabs (Клипы / Скрины) ──────────────────────────────
 document.querySelectorAll('#footage-subtabs .tab').forEach((t) => {
@@ -318,9 +351,10 @@ document.querySelectorAll('#format-toggle .seg').forEach((b) => {
       x.style.color = on ? 'var(--t1)' : 'var(--t2)';
       x.style.boxShadow = on ? '0 1px 2px rgba(0,0,0,.04)' : 'none';
     });
+    document.getElementById('engine-picker').style.display = state.format === 'carousel' ? '' : 'none';
     document.getElementById('cost-hint').textContent = state.format === 'reels'
       ? 'Один прогон ≈ $0.10–0.25 (Opus + Haiku). Без библиотеки клипов отдаётся только сценарий.'
-      : 'Один прогон ≈ $0.05–0.20 (Opus + Haiku). Занимает 20–40 с.';
+      : 'Один прогон ≈ $0.05–0.20 (Puppeteer) или $0.40–1.70 (image-engine за 10 слайдов).';
   };
 });
 
