@@ -129,6 +129,7 @@ button,input,select,textarea{font:inherit;color:inherit}
     <div class="navtabs" id="navtabs">
       <button class="navtab active" data-page="generator" style="background:none;border:none;font-size:14px;font-weight:500;color:#1D1D1F;cursor:pointer;padding:6px 10px;border-radius:6px">Генерация</button>
       <button class="navtab" data-page="footage" style="background:none;border:none;font-size:14px;font-weight:500;color:#6E6E73;cursor:pointer;padding:6px 10px;border-radius:6px">Footage</button>
+      <button class="navtab" data-page="training" style="background:none;border:none;font-size:14px;font-weight:500;color:#6E6E73;cursor:pointer;padding:6px 10px;border-radius:6px">Обучение</button>
     </div>
     <div class="health" id="health">
       <span><span class="dot" id="h-claude"></span> Claude</span>
@@ -154,9 +155,9 @@ button,input,select,textarea{font:inherit;color:inherit}
         <label>Движок рендера</label>
         <div id="engines-row" style="display:grid;grid-template-columns:1fr 1fr;gap:6px">
           <button type="button" class="eng active" data-eng="puppeteer" style="padding:8px 6px;border:1px solid var(--blue);background:var(--surface);border-radius:var(--r1);font-size:12px;cursor:pointer">Puppeteer<br><span style="font-size:10px;color:var(--t3)">HTML→PNG · $</span></button>
-          <button type="button" class="eng" data-eng="nano-banana" style="padding:8px 6px;border:1px solid var(--sep);background:var(--surface-2);border-radius:var(--r1);font-size:12px;cursor:pointer">Nano Banana 2<br><span style="font-size:10px;color:var(--t3)">Gemini · $$</span></button>
+          <button type="button" class="eng" data-eng="nano-banana" style="padding:8px 6px;border:1px solid var(--sep);background:var(--surface-2);border-radius:var(--r1);font-size:12px;cursor:pointer">Nano Banana 2<br><span style="font-size:10px;color:var(--t3)">kie.ai · Gemini 2.5 · $$</span></button>
           <button type="button" class="eng" data-eng="gpt-image" style="padding:8px 6px;border:1px solid var(--sep);background:var(--surface-2);border-radius:var(--r1);font-size:12px;cursor:pointer">GPT Image<br><span style="font-size:10px;color:var(--t3)">OpenAI gpt-image-1 · $$$</span></button>
-          <button type="button" class="eng" data-eng="gpt-image-2" style="padding:8px 6px;border:1px solid var(--sep);background:var(--surface-2);border-radius:var(--r1);font-size:12px;cursor:pointer">GPT Image 2<br><span style="font-size:10px;color:var(--t3)">gpt-image-2 (proxy) · $$$</span></button>
+          <button type="button" class="eng" data-eng="gpt-image-2" style="padding:8px 6px;border:1px solid var(--sep);background:var(--surface-2);border-radius:var(--r1);font-size:12px;cursor:pointer">GPT Image 2<br><span style="font-size:10px;color:var(--t3)">kie.ai · gpt-image-2 · $$$</span></button>
         </div>
         <div class="hint" id="engine-hint" style="margin-top:6px">Puppeteer — стабильный, точные шрифты Inter/JetBrains. Nano Banana/GPT — генерируют слайды как картинки (быстрее меняешь стиль, но кириллица может «гулять»).</div>
       </div>
@@ -246,6 +247,39 @@ button,input,select,textarea{font:inherit;color:inherit}
   </div>
 </div>
 
+<!-- ── Training page (references + prompts libraries) ───────────── -->
+<div class="layout" id="page-training" style="display:none;grid-template-columns:1fr">
+  <div class="card">
+    <div class="tabs" id="training-subtabs" style="margin-bottom:14px">
+      <div class="tab active" data-subtab="references">Референсы (картинки)</div>
+      <div class="tab" data-subtab="prompts">Промпты (текст)</div>
+    </div>
+
+    <div id="subtab-references">
+      <h2>Референсы каруселей</h2>
+      <p style="font-size:13px;color:var(--t2);margin-bottom:18px">
+        До 30 эталонных каруселей. Грузишь скриншоты успешных постов — агент через Claude Vision описывает приём
+        (хук-формулу, тип слайда, стиль). При генерации твоих карусели Claude учитывает эту библиотеку как стилевой anchor.
+      </p>
+      <div id="references-grid" style="display:grid;grid-template-columns:repeat(auto-fill,minmax(320px,1fr));gap:14px">
+        <div class="empty">Загружаю каталог…</div>
+      </div>
+    </div>
+
+    <div id="subtab-prompts" style="display:none">
+      <h2>Промпты и брифы</h2>
+      <p style="font-size:13px;color:var(--t2);margin-bottom:18px">
+        До 30 текстовых файлов <code>.md / .txt</code> (до 2 MB каждый) — tone of voice, формулы хуков,
+        ЦА, рубрики, банк цитат. Каждый файл хранится отдельно в своём слоте,
+        excerpt автоматически берётся из первых 300 символов. Без Vision (текст и так читаем).
+      </p>
+      <div id="prompts-grid" style="display:grid;grid-template-columns:repeat(auto-fill,minmax(320px,1fr));gap:14px">
+        <div class="empty">Загружаю каталог…</div>
+      </div>
+    </div>
+  </div>
+</div>
+
 <style>
 .tag-card{border:1px solid var(--sep);border-radius:var(--r2);padding:14px;background:var(--surface-2);transition:border-color .2s}
 .tag-card.drag{border-color:var(--blue);background:#EAF4FF}
@@ -290,7 +324,18 @@ button,input,select,textarea{font:inherit;color:inherit}
 
 <script>
 const API = '';
-const state = { rubric: null, rubrics: {}, currentRun: null, currentRunData: null, viewerTab: 'slides', activeJob: null, format: 'carousel', engine: 'puppeteer', page: 'generator', footageSubtab: 'clips', engines: { puppeteer: true, 'nano-banana': false, 'gpt-image': false, 'gpt-image-2': false } };
+const state = { rubric: null, rubrics: {}, currentRun: null, currentRunData: null, viewerTab: 'slides', activeJob: null, format: 'carousel', engine: 'puppeteer', page: 'generator', footageSubtab: 'clips', trainingSubtab: 'references', engines: { puppeteer: true, 'nano-banana': false, 'gpt-image': false, 'gpt-image-2': false } };
+
+document.querySelectorAll('#training-subtabs .tab').forEach((t) => {
+  t.onclick = () => {
+    state.trainingSubtab = t.dataset.subtab;
+    document.querySelectorAll('#training-subtabs .tab').forEach((x) => x.classList.toggle('active', x === t));
+    document.getElementById('subtab-references').style.display = state.trainingSubtab === 'references' ? '' : 'none';
+    document.getElementById('subtab-prompts').style.display = state.trainingSubtab === 'prompts' ? '' : 'none';
+    if (state.trainingSubtab === 'references') loadReferences();
+    else loadPrompts();
+  };
+});
 
 // ── Engine picker (visible for carousel only) ───────────────────────
 document.querySelectorAll('#engines-row .eng').forEach((b) => {
@@ -338,7 +383,12 @@ document.querySelectorAll('#navtabs .navtab').forEach((b) => {
     });
     document.getElementById('page-generator').style.display = state.page === 'generator' ? '' : 'none';
     document.getElementById('page-footage').style.display = state.page === 'footage' ? 'grid' : 'none';
+    document.getElementById('page-training').style.display = state.page === 'training' ? 'grid' : 'none';
     if (state.page === 'footage') loadFootage();
+    if (state.page === 'training') {
+      if (state.trainingSubtab === 'references') loadReferences();
+      else loadPrompts();
+    }
   };
 });
 
@@ -789,15 +839,222 @@ async function handleScreenUpload(tag, files, card) {
   }
 }
 
+// ── References library (image, trained via Vision) ────────────────
+async function loadReferences() {
+  const grid = document.getElementById('references-grid');
+  if (!grid) return;
+  try {
+    const { tags, maxUploadMb } = await api('/api/references');
+    if (!tags || tags.length === 0) {
+      grid.innerHTML = '<div class="empty">Каталог пуст — добавь <code>data/assets/references-tags.json</code>.</div>';
+      return;
+    }
+    grid.innerHTML = '';
+    tags.forEach((entry) => {
+      const card = document.createElement('div');
+      card.className = 'tag-card';
+      card.dataset.tag = entry.tag;
+      card.innerHTML = `
+        <h3>${escapeHtml(entry.label || entry.tag)}</h3>
+        <div class="tag-desc"><code>${escapeHtml(entry.tag)}</code>${entry.expectedSize ? ' · ' + escapeHtml(entry.expectedSize) : ''}</div>
+        <div class="tag-desc">${escapeHtml(entry.description || '')}</div>
+        <div class="clip-count">${entry.clips.length} реф${pluralRu(entry.clips.length, ['', 'а', 'ов'])} в библиотеке</div>
+        <label class="dropzone">
+          <strong>Перетащи сюда</strong> или нажми, чтобы выбрать (до 30 файлов × ${maxUploadMb} MB)
+          <input type="file" accept=".png,.jpg,.jpeg,.webp" multiple style="display:none">
+        </label>
+        <div class="uploading" style="display:none"><span class="spinner"></span><span class="uploading-text">Загружаю…</span></div>
+        <div class="clips">
+          ${entry.clips.map((c) => renderRefCard(entry.tag, c)).join('') || '<div style="font-size:11px;color:var(--t3);text-align:center;padding:6px">Пока пусто</div>'}
+        </div>
+      `;
+      const dropzone = card.querySelector('.dropzone');
+      const input = card.querySelector('input[type=file]');
+      input.onchange = () => uploadImagesTo('/api/references/', entry.tag, [...input.files], card, loadReferences);
+      dropzone.ondragover = (e) => { e.preventDefault(); card.classList.add('drag'); };
+      dropzone.ondragleave = () => card.classList.remove('drag');
+      dropzone.ondrop = (e) => {
+        e.preventDefault(); card.classList.remove('drag');
+        uploadImagesTo('/api/references/', entry.tag, [...e.dataTransfer.files], card, loadReferences);
+      };
+      card.querySelectorAll('.clip-card button.del').forEach((btn) => {
+        btn.onclick = async () => {
+          const file = btn.closest('.clip-card').dataset.file;
+          if (!confirm('Удалить ' + file + '?')) return;
+          try {
+            await api('/api/references/' + encodeURIComponent(entry.tag) + '/' + encodeURIComponent(file), { method: 'DELETE' });
+            loadReferences();
+          } catch (e) { alert('Не удалось: ' + e.message); }
+        };
+      });
+      grid.appendChild(card);
+    });
+  } catch (e) {
+    grid.innerHTML = '<div class="empty">Ошибка: ' + escapeHtml(e.message) + '</div>';
+  }
+}
+
+function renderRefCard(tag, c) {
+  const status = c.status || 'pending';
+  const statusLabel = { pending: 'в очереди', describing: 'описываю…', ready: 'готов', failed: 'ошибка' }[status] || status;
+  const desc = c.description
+    ? `<div class="desc">${escapeHtml(c.description)}</div>`
+    : status === 'failed'
+      ? `<div class="desc pending">${escapeHtml(c.error || 'unknown')}</div>`
+      : `<div class="desc pending">${status === 'describing' ? 'агент описывает…' : 'описание появится после загрузки'}</div>`;
+  const tags = c.autoTags && c.autoTags.length > 0
+    ? `<div class="tags">${c.autoTags.map((t) => `<span>${escapeHtml(t)}</span>`).join('')}</div>` : '';
+  const thumb = `<img src="/api/references/${encodeURIComponent(tag)}/${encodeURIComponent(c.file)}" style="width:100%;max-height:160px;object-fit:cover;border-radius:6px;margin-bottom:4px;background:var(--surface-2)" loading="lazy">`;
+  return `
+    <div class="clip-card" data-file="${escapeHtml(c.file)}">
+      ${thumb}
+      <div class="top">
+        <span class="name" title="${escapeHtml(c.file)}">${escapeHtml(c.file)}</span>
+        <span class="badge-status ${status}">${statusLabel}</span>
+        <button class="del" title="Удалить">✕</button>
+      </div>
+      ${desc}
+      ${tags}
+      <div class="meta-row">${formatSize(c.sizeBytes)}</div>
+    </div>
+  `;
+}
+
+async function uploadImagesTo(prefix, tag, files, card, refresh) {
+  const valid = files.filter((f) => /\.(png|jpg|jpeg|webp)$/i.test(f.name));
+  if (valid.length === 0) { alert('Поддерживаются только .png .jpg .jpeg .webp'); return; }
+  const indicator = card.querySelector('.uploading');
+  const text = card.querySelector('.uploading-text');
+  indicator.style.display = 'flex';
+  text.textContent = `Загружаю ${valid.length}…`;
+  const form = new FormData();
+  for (const f of valid) form.append('clips', f);
+  try {
+    const res = await fetch(prefix + encodeURIComponent(tag), { method: 'POST', body: form });
+    if (!res.ok) throw new Error(`upload ${res.status}: ${await res.text()}`);
+    await refresh();
+  } catch (e) {
+    indicator.style.display = 'none';
+    alert('Не удалось: ' + e.message);
+  }
+}
+
+// ── Prompts library (text, no Vision — excerpt + inline editor) ────
+async function loadPrompts() {
+  const grid = document.getElementById('prompts-grid');
+  if (!grid) return;
+  try {
+    const { tags, maxUploadMb } = await api('/api/prompts');
+    if (!tags || tags.length === 0) {
+      grid.innerHTML = '<div class="empty">Каталог пуст — добавь <code>data/assets/prompts-tags.json</code>.</div>';
+      return;
+    }
+    grid.innerHTML = '';
+    tags.forEach((entry) => {
+      const card = document.createElement('div');
+      card.className = 'tag-card';
+      card.dataset.tag = entry.tag;
+      card.innerHTML = `
+        <h3>${escapeHtml(entry.label || entry.tag)}</h3>
+        <div class="tag-desc"><code>${escapeHtml(entry.tag)}</code></div>
+        <div class="tag-desc">${escapeHtml(entry.description || '')}</div>
+        <div class="clip-count">${entry.clips.length} файл${pluralRu(entry.clips.length, ['', 'а', 'ов'])} в библиотеке</div>
+        <label class="dropzone">
+          <strong>Перетащи .md / .txt</strong> или нажми, чтобы выбрать (до ${maxUploadMb} MB)
+          <input type="file" accept=".md,.txt,.markdown" multiple style="display:none">
+        </label>
+        <button type="button" class="btn ghost small" style="margin-top:6px;width:100%" data-inline>Написать текст вручную</button>
+        <div class="uploading" style="display:none"><span class="spinner"></span><span class="uploading-text">Загружаю…</span></div>
+        <div class="clips">
+          ${entry.clips.map((c) => renderPromptCard(entry.tag, c)).join('') || '<div style="font-size:11px;color:var(--t3);text-align:center;padding:6px">Пока пусто</div>'}
+        </div>
+      `;
+      const dropzone = card.querySelector('.dropzone');
+      const input = card.querySelector('input[type=file]');
+      input.onchange = () => uploadTextTo(entry.tag, [...input.files], card);
+      dropzone.ondragover = (e) => { e.preventDefault(); card.classList.add('drag'); };
+      dropzone.ondragleave = () => card.classList.remove('drag');
+      dropzone.ondrop = (e) => {
+        e.preventDefault(); card.classList.remove('drag');
+        uploadTextTo(entry.tag, [...e.dataTransfer.files], card);
+      };
+      card.querySelector('button[data-inline]').onclick = () => openInlineEditor(entry.tag);
+      card.querySelectorAll('.clip-card button.del').forEach((btn) => {
+        btn.onclick = async () => {
+          const file = btn.closest('.clip-card').dataset.file;
+          if (!confirm('Удалить ' + file + '?')) return;
+          try {
+            await api('/api/prompts/' + encodeURIComponent(entry.tag) + '/' + encodeURIComponent(file), { method: 'DELETE' });
+            loadPrompts();
+          } catch (e) { alert('Не удалось: ' + e.message); }
+        };
+      });
+      grid.appendChild(card);
+    });
+  } catch (e) {
+    grid.innerHTML = '<div class="empty">Ошибка: ' + escapeHtml(e.message) + '</div>';
+  }
+}
+
+function renderPromptCard(tag, c) {
+  const wc = c.wordCount ? `${c.wordCount} слов · ` : '';
+  return `
+    <div class="clip-card" data-file="${escapeHtml(c.file)}">
+      <div class="top">
+        <span class="name" title="${escapeHtml(c.file)}">${escapeHtml(c.file)}</span>
+        <span class="badge-status ready">готов</span>
+        <button class="del" title="Удалить">✕</button>
+      </div>
+      <div class="desc" style="white-space:pre-wrap;font-size:11px;max-height:120px;overflow:auto;font-family:ui-monospace,SF Mono,Menlo,monospace">${escapeHtml((c.excerpt || '').slice(0, 280))}${(c.excerpt || '').length > 280 ? '…' : ''}</div>
+      <div class="meta-row">${wc}${formatSize(c.sizeBytes)}</div>
+    </div>
+  `;
+}
+
+async function uploadTextTo(tag, files, card) {
+  const valid = files.filter((f) => /\.(md|txt|markdown)$/i.test(f.name));
+  if (valid.length === 0) { alert('Поддерживаются только .md .txt .markdown'); return; }
+  const indicator = card.querySelector('.uploading');
+  const text = card.querySelector('.uploading-text');
+  indicator.style.display = 'flex';
+  text.textContent = `Загружаю ${valid.length}…`;
+  const form = new FormData();
+  for (const f of valid) form.append('clips', f);
+  try {
+    const res = await fetch('/api/prompts/' + encodeURIComponent(tag), { method: 'POST', body: form });
+    if (!res.ok) throw new Error(`upload ${res.status}: ${await res.text()}`);
+    await loadPrompts();
+  } catch (e) {
+    indicator.style.display = 'none';
+    alert('Не удалось: ' + e.message);
+  }
+}
+
+function openInlineEditor(tag) {
+  const name = prompt('Короткое имя (без .md):', 'note-' + Date.now());
+  if (!name) return;
+  const text = window.prompt('Текст промпта (Markdown):', '');
+  if (!text || !text.trim()) return;
+  fetch('/api/prompts/' + encodeURIComponent(tag) + '/inline', {
+    method: 'POST',
+    headers: { 'content-type': 'application/json' },
+    body: JSON.stringify({ name, text }),
+  }).then((r) => r.ok ? loadPrompts() : r.text().then((t) => alert('Не удалось: ' + t)));
+}
+
 loadHealth();
 loadRubrics();
 loadRuns();
 setInterval(loadHealth, 30000);
 setInterval(loadRuns, 15000);
 setInterval(() => {
-  if (state.page !== 'footage') return;
-  if (state.footageSubtab === 'clips') loadFootage();
-  else loadScreens();
+  if (state.page === 'footage') {
+    if (state.footageSubtab === 'clips') loadFootage();
+    else loadScreens();
+  } else if (state.page === 'training') {
+    if (state.trainingSubtab === 'references') loadReferences();
+    else loadPrompts();
+  }
 }, 4000);
 </script>
 

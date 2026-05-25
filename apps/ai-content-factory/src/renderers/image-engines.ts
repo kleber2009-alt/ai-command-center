@@ -1,8 +1,9 @@
 // Pluggable engines for rendering a single carousel slide.
 //
 //   - 'puppeteer'   — current default: HTML/CSS template → Chromium screenshot
-//   - 'nano-banana' — Google Gemini Image (codename Nano Banana 2)
+//   - 'nano-banana' — Google Nano Banana 2 (Gemini 2.5 Flash Image) via kie.ai async API
 //   - 'gpt-image'   — OpenAI gpt-image-1 (or pinned via OPENAI_IMAGE_MODEL)
+//   - 'gpt-image-2' — OpenAI gpt-image-2 via kie.ai async API
 //
 // Image-gen engines do NOT use the HTML template; they get a structured prompt
 // derived from the slide payload + rubric (accent, handle, label). Both return
@@ -81,33 +82,83 @@ export function buildSlidePrompt(slide: Slide, ctx: SlideRenderContext): string 
   return lines.join('\n');
 }
 
-interface GeminiImageResponse {
-  candidates?: {
-    content?: { parts?: { inlineData?: { mimeType?: string; data?: string } }[] };
-  }[];
+/** Shared kie.ai async-task runner: createTask → poll recordInfo → download PNG.
+ * Both nano-banana (Gemini 2.5 Flash Image) and gpt-image-2 are exposed through
+ * the same Market API on kie.ai, only the model id and input shape differ. */
+interface KieCreateResponse { code: number; msg?: string; data?: { taskId?: string } }
+interface KieRecordResponse {
+  code: number; msg?: string;
+  data?: {
+    state?: 'waiting' | 'queuing' | 'processing' | 'success' | 'fail';
+    resultJson?: string | { resultUrls?: string[] };
+    failMsg?: string;
+  };
 }
 
-async function renderWithGemini(slide: Slide, ctx: SlideRenderContext): Promise<Buffer> {
-  const apiKey = process.env.GOOGLE_AI_API_KEY || process.env.GEMINI_API_KEY;
-  if (!apiKey) throw new Error('GOOGLE_AI_API_KEY is not set (required for nano-banana engine)');
-  const model = process.env.GEMINI_IMAGE_MODEL || 'gemini-2.5-flash-image-preview';
-  const url = `https://generativelanguage.googleapis.com/v1beta/models/${model}:generateContent?key=${apiKey}`;
+interface KieRunOptions {
+  label: string; // for error messages ("nano-banana" / "gpt-image-2")
+  apiKey: string;
+  base: string;
+  model: string;
+  input: Record<string, unknown>;
+  pollMs: number;
+  maxPolls: number;
+}
 
-  const prompt = buildSlidePrompt(slide, ctx);
-  const res = await fetch(url, {
+async function runKieTask(opts: KieRunOptions): Promise<Buffer> {
+  const { label, apiKey, base, model, input, pollMs, maxPolls } = opts;
+  const createRes = await fetch(`${base}/api/v1/jobs/createTask`, {
     method: 'POST',
-    headers: { 'content-type': 'application/json' },
-    body: JSON.stringify({
-      contents: [{ role: 'user', parts: [{ text: prompt }] }],
-      generationConfig: { responseModalities: ['IMAGE'] },
-    }),
+    headers: { authorization: `Bearer ${apiKey}`, 'content-type': 'application/json' },
+    body: JSON.stringify({ model, input }),
   });
-  if (!res.ok) throw new Error(`Gemini Image ${res.status}: ${(await res.text()).slice(0, 300)}`);
-  const json = (await res.json()) as GeminiImageResponse;
-  const part = json.candidates?.[0]?.content?.parts?.find((p) => p.inlineData?.data);
-  const b64 = part?.inlineData?.data;
-  if (!b64) throw new Error('Gemini Image: no inline image in response');
-  return Buffer.from(b64, 'base64');
+  if (!createRes.ok) throw new Error(`${label} createTask ${createRes.status}: ${(await createRes.text()).slice(0, 300)}`);
+  const createJson = (await createRes.json()) as KieCreateResponse;
+  const taskId = createJson.data?.taskId;
+  if (!taskId) throw new Error(`${label}: no taskId in createTask response: ${JSON.stringify(createJson).slice(0, 300)}`);
+
+  for (let i = 0; i < maxPolls; i++) {
+    await new Promise((r) => setTimeout(r, pollMs));
+    const pollRes = await fetch(`${base}/api/v1/jobs/recordInfo?taskId=${encodeURIComponent(taskId)}`, {
+      headers: { authorization: `Bearer ${apiKey}` },
+    });
+    if (!pollRes.ok) throw new Error(`${label} poll ${pollRes.status}: ${(await pollRes.text()).slice(0, 300)}`);
+    const pollJson = (await pollRes.json()) as KieRecordResponse;
+    const state = pollJson.data?.state;
+    if (state === 'success') {
+      const raw = pollJson.data?.resultJson;
+      const parsed = typeof raw === 'string' ? (JSON.parse(raw) as { resultUrls?: string[] }) : raw;
+      const url = parsed?.resultUrls?.[0];
+      if (!url) throw new Error(`${label}: success but no resultUrls`);
+      const img = await fetch(url);
+      if (!img.ok) throw new Error(`${label}: download ${img.status} from ${url}`);
+      return Buffer.from(await img.arrayBuffer());
+    }
+    if (state === 'fail') {
+      throw new Error(`${label} task failed: ${pollJson.data?.failMsg ?? 'unknown'}`);
+    }
+  }
+  throw new Error(`${label} timeout after ${maxPolls * pollMs / 1000}s (taskId ${taskId})`);
+}
+
+/** Nano Banana 2 = Google's image model (Gemini 2.5 Flash Image), reached via
+ * kie.ai's Market API rather than calling Google directly. Same async pattern
+ * as gpt-image-2; only the model id and ratio enum differ. */
+async function renderWithNanoBanana(slide: Slide, ctx: SlideRenderContext): Promise<Buffer> {
+  const apiKey = process.env.NANO_BANANA_API_KEY || process.env.KIE_AI_API_KEY || process.env.GPT_IMAGE_2_API_KEY;
+  if (!apiKey) throw new Error('NANO_BANANA_API_KEY (or KIE_AI_API_KEY) is not set (required for nano-banana engine)');
+  const base = (process.env.NANO_BANANA_ENDPOINT || 'https://api.kie.ai').replace(/\/$/, '');
+  const model = process.env.NANO_BANANA_MODEL || 'google/nano-banana-text-to-image';
+  const aspect = process.env.NANO_BANANA_ASPECT || '3:4';
+  const resolution = process.env.NANO_BANANA_RESOLUTION || '1K';
+  const pollMs = Number(process.env.NANO_BANANA_POLL_MS || 3000);
+  const maxPolls = Number(process.env.NANO_BANANA_MAX_POLLS || 60);
+
+  return runKieTask({
+    label: 'nano-banana',
+    apiKey, base, model, pollMs, maxPolls,
+    input: { prompt: buildSlidePrompt(slide, ctx), aspect_ratio: aspect, resolution },
+  });
 }
 
 interface OpenAIImageResponse {
@@ -141,23 +192,9 @@ async function renderWithOpenAI(slide: Slide, ctx: SlideRenderContext): Promise<
   return Buffer.from(b64, 'base64');
 }
 
-/** gpt-image-2 is delivered through kie.ai's async-task Market API:
- *   1. POST /api/v1/jobs/createTask           → { data: { taskId } }
- *   2. GET  /api/v1/jobs/recordInfo?taskId=…  → poll until state === 'success'
- *   3. download resultJson.resultUrls[0]      → PNG bytes
- *
- * Aspect: kie supports only enum ratios. Closest to Instagram 4:5 is 3:4
- * (1080:1440 vs needed 1080:1350) — pipeline doesn't re-crop, so live with it. */
-interface KieCreateResponse { code: number; msg?: string; data?: { taskId?: string } }
-interface KieRecordResponse {
-  code: number; msg?: string;
-  data?: {
-    state?: 'waiting' | 'queuing' | 'processing' | 'success' | 'fail';
-    resultJson?: string | { resultUrls?: string[] };
-    failMsg?: string;
-  };
-}
-
+/** gpt-image-2 via kie.ai. Aspect: kie supports only enum ratios; closest to
+ * Instagram 4:5 is 3:4 (1080:1440 vs needed 1080:1350) — pipeline doesn't
+ * re-crop, so live with it. */
 async function renderWithGptImage2(slide: Slide, ctx: SlideRenderContext): Promise<Buffer> {
   const apiKey = process.env.GPT_IMAGE_2_API_KEY || process.env.KIE_AI_API_KEY;
   if (!apiKey) throw new Error('GPT_IMAGE_2_API_KEY is not set (required for gpt-image-2 engine)');
@@ -168,40 +205,11 @@ async function renderWithGptImage2(slide: Slide, ctx: SlideRenderContext): Promi
   const pollMs = Number(process.env.GPT_IMAGE_2_POLL_MS || 3000);
   const maxPolls = Number(process.env.GPT_IMAGE_2_MAX_POLLS || 60);
 
-  const prompt = buildSlidePrompt(slide, ctx);
-
-  const createRes = await fetch(`${base}/api/v1/jobs/createTask`, {
-    method: 'POST',
-    headers: { authorization: `Bearer ${apiKey}`, 'content-type': 'application/json' },
-    body: JSON.stringify({ model, input: { prompt, aspect_ratio: aspect, resolution } }),
+  return runKieTask({
+    label: 'gpt-image-2',
+    apiKey, base, model, pollMs, maxPolls,
+    input: { prompt: buildSlidePrompt(slide, ctx), aspect_ratio: aspect, resolution },
   });
-  if (!createRes.ok) throw new Error(`gpt-image-2 createTask ${createRes.status}: ${(await createRes.text()).slice(0, 300)}`);
-  const createJson = (await createRes.json()) as KieCreateResponse;
-  const taskId = createJson.data?.taskId;
-  if (!taskId) throw new Error(`gpt-image-2: no taskId in createTask response: ${JSON.stringify(createJson).slice(0, 300)}`);
-
-  for (let i = 0; i < maxPolls; i++) {
-    await new Promise((r) => setTimeout(r, pollMs));
-    const pollRes = await fetch(`${base}/api/v1/jobs/recordInfo?taskId=${encodeURIComponent(taskId)}`, {
-      headers: { authorization: `Bearer ${apiKey}` },
-    });
-    if (!pollRes.ok) throw new Error(`gpt-image-2 poll ${pollRes.status}: ${(await pollRes.text()).slice(0, 300)}`);
-    const pollJson = (await pollRes.json()) as KieRecordResponse;
-    const state = pollJson.data?.state;
-    if (state === 'success') {
-      const raw = pollJson.data?.resultJson;
-      const parsed = typeof raw === 'string' ? (JSON.parse(raw) as { resultUrls?: string[] }) : raw;
-      const url = parsed?.resultUrls?.[0];
-      if (!url) throw new Error(`gpt-image-2: success but no resultUrls`);
-      const img = await fetch(url);
-      if (!img.ok) throw new Error(`gpt-image-2: download ${img.status} from ${url}`);
-      return Buffer.from(await img.arrayBuffer());
-    }
-    if (state === 'fail') {
-      throw new Error(`gpt-image-2 task failed: ${pollJson.data?.failMsg ?? 'unknown'}`);
-    }
-  }
-  throw new Error(`gpt-image-2 timeout after ${maxPolls * pollMs / 1000}s (taskId ${taskId})`);
 }
 
 /** Image-only engines return a PNG buffer. Puppeteer is handled separately in
@@ -211,7 +219,7 @@ export async function renderSlideImage(
   slide: Slide,
   ctx: SlideRenderContext,
 ): Promise<Buffer> {
-  if (engine === 'nano-banana') return renderWithGemini(slide, ctx);
+  if (engine === 'nano-banana') return renderWithNanoBanana(slide, ctx);
   if (engine === 'gpt-image') return renderWithOpenAI(slide, ctx);
   if (engine === 'gpt-image-2') return renderWithGptImage2(slide, ctx);
   throw new Error(`Unknown image engine: ${engine as string}`);

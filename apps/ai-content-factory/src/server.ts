@@ -20,7 +20,7 @@ import 'dotenv/config';
 import express, { type Request, type Response, type NextFunction } from 'express';
 import basicAuth from 'basic-auth';
 import multer from 'multer';
-import { existsSync, readFileSync, readdirSync, statSync, mkdirSync, unlinkSync } from 'node:fs';
+import { existsSync, readFileSync, readdirSync, statSync, mkdirSync, unlinkSync, writeFileSync } from 'node:fs';
 import { resolve, join, dirname, basename } from 'node:path';
 import { fileURLToPath } from 'node:url';
 import { randomUUID } from 'node:crypto';
@@ -35,6 +35,7 @@ import { getAllScreenMeta, deleteScreenMeta, setScreenMeta, type ScreenMeta } fr
 import { createMetaStore, type AssetMetaBase } from './lib/keyval-meta.js';
 import { describeClip } from './generators/clip-describer.js';
 import { describeScreen } from './generators/screen-describer.js';
+import { describeReference } from './generators/reference-describer.js';
 
 const __dirname = dirname(fileURLToPath(import.meta.url));
 const PUBLIC_DIR = resolve(__dirname, '..', 'public');
@@ -160,9 +161,9 @@ app.get('/api/health', (_req, res) => {
     voyage: Boolean(process.env.VOYAGE_API_KEY),
     engines: {
       puppeteer: true,
-      'nano-banana': Boolean(process.env.GOOGLE_AI_API_KEY ?? process.env.GEMINI_API_KEY),
+      'nano-banana': Boolean(process.env.NANO_BANANA_API_KEY || process.env.KIE_AI_API_KEY || process.env.GPT_IMAGE_2_API_KEY),
       'gpt-image': Boolean(process.env.OPENAI_API_KEY),
-      'gpt-image-2': Boolean(process.env.GPT_IMAGE_2_API_KEY ?? process.env.AIMLAPI_API_KEY),
+      'gpt-image-2': Boolean(process.env.GPT_IMAGE_2_API_KEY || process.env.KIE_AI_API_KEY),
     },
     jobs: { active: [...jobs.values()].filter((j) => j.status === 'running' || j.status === 'queued').length },
   });
@@ -605,6 +606,255 @@ app.get('/api/footage/:tag/:file', (req, res) => {
   res.sendFile(abs);
 });
 
+// ── References (image library — training set, parallel to screens) ─────────
+
+interface ReferenceMeta extends AssetMetaBase {
+  status: ScreenMeta['status'];
+  description?: string;
+  autoTags?: string[];
+}
+const referencesStore = createMetaStore<ReferenceMeta>('assets', 'references');
+const REFS_ROOT = referencesStore.root;
+
+function loadReferencesCatalog(): TagCatalogEntry[] {
+  const p = dataPath('assets', 'references-tags.json');
+  if (!existsSync(p)) return [];
+  try {
+    const parsed = JSON.parse(readFileSync(p, 'utf8')) as { tags?: unknown[] };
+    if (!parsed.tags || !Array.isArray(parsed.tags)) return [];
+    return parsed.tags
+      .map((t) => (typeof t === 'string' ? { tag: t } : (t as TagCatalogEntry)))
+      .filter((t) => typeof t.tag === 'string' && SAFE_TAG.test(t.tag));
+  } catch {
+    return [];
+  }
+}
+
+function listReferencesForTag(tag: string) {
+  const dir = join(REFS_ROOT, tag);
+  if (!existsSync(dir)) return [];
+  const meta = referencesStore.getAll(tag);
+  return readdirSync(dir)
+    .filter((f) => SAFE_IMG_FILE.test(f))
+    .map((f) => {
+      const s = statSync(join(dir, f));
+      const m = meta[f];
+      return {
+        file: f,
+        sizeBytes: s.size,
+        mtime: s.mtime.toISOString(),
+        status: m?.status ?? 'pending',
+        description: m?.description,
+        autoTags: m?.autoTags,
+        error: m?.error,
+      };
+    });
+}
+
+app.get('/api/references', (_req, res) => {
+  const catalog = loadReferencesCatalog();
+  const tags = catalog.map((e) => ({ ...e, clips: listReferencesForTag(e.tag) }));
+  res.json({ tags, maxUploadMb: MAX_IMG_MB });
+});
+
+const refsUpload = multer({
+  storage: multer.diskStorage({
+    destination: (req, _file, cb) => {
+      const tag = String((req.params as { tag?: string }).tag ?? '');
+      if (!SAFE_TAG.test(tag)) return cb(new Error('bad tag'), '');
+      const dir = join(REFS_ROOT, tag);
+      mkdirSync(dir, { recursive: true });
+      cb(null, dir);
+    },
+    filename: (_req, file, cb) => {
+      const m = file.originalname.match(/\.(png|jpg|jpeg|webp)$/i);
+      const ext = (m?.[1] ?? 'png').toLowerCase();
+      const stem = basename(file.originalname, '.' + ext)
+        .replace(/[^A-Za-z0-9._-]+/g, '_')
+        .replace(/_+/g, '_')
+        .slice(0, 60) || 'ref';
+      cb(null, `${Date.now()}-${stem}.${ext}`);
+    },
+  }),
+  limits: { fileSize: MAX_IMG_MB * 1024 * 1024, files: MAX_FILES_PER_REQUEST },
+  fileFilter: (_req, file, cb) => {
+    if (/\.(png|jpg|jpeg|webp)$/i.test(file.originalname)) cb(null, true);
+    else cb(new Error('only .png/.jpg/.jpeg/.webp allowed'));
+  },
+});
+
+app.post('/api/references/:tag', refsUpload.array('clips', MAX_FILES_PER_REQUEST), (req, res) => {
+  const tag = String((req.params as { tag?: string }).tag ?? '');
+  if (!SAFE_TAG.test(tag)) { res.status(400).json({ error: 'bad tag' }); return; }
+  const files = (req.files as Express.Multer.File[] | undefined) ?? [];
+  for (const f of files) {
+    referencesStore.set(tag, f.filename, { status: 'pending' });
+    (async () => {
+      try { await describeReference(tag, f.filename); }
+      catch { /* error persisted */ }
+    })();
+  }
+  res.json({ tag, uploaded: files.map((f) => ({ file: f.filename, sizeBytes: f.size })) });
+});
+
+app.delete('/api/references/:tag/:file', (req, res) => {
+  const p = req.params as { tag?: string; file?: string };
+  const tag = String(p.tag ?? '');
+  const file = String(p.file ?? '');
+  if (!SAFE_TAG.test(tag) || !SAFE_IMG_FILE.test(file)) { res.status(400).json({ error: 'bad params' }); return; }
+  const abs = join(REFS_ROOT, tag, file);
+  if (!existsSync(abs)) { res.status(404).json({ error: 'not found' }); return; }
+  unlinkSync(abs);
+  referencesStore.delete(tag, file);
+  res.json({ ok: true });
+});
+
+app.get('/api/references/:tag/:file', (req, res) => {
+  const p = req.params as { tag?: string; file?: string };
+  const tag = String(p.tag ?? '');
+  const file = String(p.file ?? '');
+  if (!SAFE_TAG.test(tag) || !SAFE_IMG_FILE.test(file)) { res.status(400).send('bad params'); return; }
+  const abs = join(REFS_ROOT, tag, file);
+  if (!existsSync(abs)) { res.status(404).send('not found'); return; }
+  res.sendFile(abs);
+});
+
+// ── Prompts (text library — training set, .md / .txt) ──────────────────────
+
+const SAFE_TEXT_FILE = /^[A-Za-z0-9][A-Za-z0-9._-]{0,80}\.(md|txt|markdown)$/i;
+const MAX_TEXT_MB = 2;
+
+interface PromptMeta extends AssetMetaBase {
+  status: 'ready';
+  excerpt?: string;
+  wordCount?: number;
+}
+const promptsStore = createMetaStore<PromptMeta>('assets', 'prompts');
+const PROMPTS_ROOT = promptsStore.root;
+
+function loadPromptsCatalog(): TagCatalogEntry[] {
+  const p = dataPath('assets', 'prompts-tags.json');
+  if (!existsSync(p)) return [];
+  try {
+    const parsed = JSON.parse(readFileSync(p, 'utf8')) as { tags?: unknown[] };
+    if (!parsed.tags || !Array.isArray(parsed.tags)) return [];
+    return parsed.tags
+      .map((t) => (typeof t === 'string' ? { tag: t } : (t as TagCatalogEntry)))
+      .filter((t) => typeof t.tag === 'string' && SAFE_TAG.test(t.tag));
+  } catch {
+    return [];
+  }
+}
+
+function refreshPromptMeta(tag: string, file: string): void {
+  const abs = join(PROMPTS_ROOT, tag, file);
+  if (!existsSync(abs)) return;
+  const text = readFileSync(abs, 'utf8');
+  const excerpt = text.slice(0, 300).trim();
+  const wordCount = text.split(/\s+/).filter(Boolean).length;
+  promptsStore.set(tag, file, { status: 'ready', excerpt, wordCount });
+}
+
+function listPromptsForTag(tag: string) {
+  const dir = join(PROMPTS_ROOT, tag);
+  if (!existsSync(dir)) return [];
+  const meta = promptsStore.getAll(tag);
+  return readdirSync(dir)
+    .filter((f) => SAFE_TEXT_FILE.test(f))
+    .map((f) => {
+      const s = statSync(join(dir, f));
+      const m = meta[f];
+      return {
+        file: f,
+        sizeBytes: s.size,
+        mtime: s.mtime.toISOString(),
+        status: m?.status ?? 'ready',
+        excerpt: m?.excerpt,
+        wordCount: m?.wordCount,
+      };
+    });
+}
+
+app.get('/api/prompts', (_req, res) => {
+  const catalog = loadPromptsCatalog();
+  const tags = catalog.map((e) => ({ ...e, clips: listPromptsForTag(e.tag) }));
+  res.json({ tags, maxUploadMb: MAX_TEXT_MB });
+});
+
+const promptsUpload = multer({
+  storage: multer.diskStorage({
+    destination: (req, _file, cb) => {
+      const tag = String((req.params as { tag?: string }).tag ?? '');
+      if (!SAFE_TAG.test(tag)) return cb(new Error('bad tag'), '');
+      const dir = join(PROMPTS_ROOT, tag);
+      mkdirSync(dir, { recursive: true });
+      cb(null, dir);
+    },
+    filename: (_req, file, cb) => {
+      const m = file.originalname.match(/\.(md|txt|markdown)$/i);
+      const ext = (m?.[1] ?? 'md').toLowerCase();
+      const stem = basename(file.originalname, '.' + ext)
+        .replace(/[^A-Za-z0-9._-]+/g, '_')
+        .replace(/_+/g, '_')
+        .slice(0, 60) || 'prompt';
+      cb(null, `${Date.now()}-${stem}.${ext === 'markdown' ? 'md' : ext}`);
+    },
+  }),
+  limits: { fileSize: MAX_TEXT_MB * 1024 * 1024, files: MAX_FILES_PER_REQUEST },
+  fileFilter: (_req, file, cb) => {
+    if (/\.(md|txt|markdown)$/i.test(file.originalname)) cb(null, true);
+    else cb(new Error('only .md/.txt/.markdown allowed'));
+  },
+});
+
+app.post('/api/prompts/:tag', promptsUpload.array('clips', MAX_FILES_PER_REQUEST), (req, res) => {
+  const tag = String((req.params as { tag?: string }).tag ?? '');
+  if (!SAFE_TAG.test(tag)) { res.status(400).json({ error: 'bad tag' }); return; }
+  const files = (req.files as Express.Multer.File[] | undefined) ?? [];
+  for (const f of files) refreshPromptMeta(tag, f.filename);
+  res.json({ tag, uploaded: files.map((f) => ({ file: f.filename, sizeBytes: f.size })) });
+});
+
+// Inline create — useful for users who don't want to upload a .md just type the
+// prompt in the cabinet textarea.
+app.post('/api/prompts/:tag/inline', (req, res) => {
+  const tag = String((req.params as { tag?: string }).tag ?? '');
+  if (!SAFE_TAG.test(tag)) { res.status(400).json({ error: 'bad tag' }); return; }
+  const body = (req.body ?? {}) as { name?: unknown; text?: unknown };
+  const rawName = typeof body.name === 'string' ? body.name : 'inline';
+  const text = typeof body.text === 'string' ? body.text : '';
+  if (!text.trim()) { res.status(400).json({ error: 'text is required' }); return; }
+  const stem = rawName.replace(/[^A-Za-z0-9._-]+/g, '_').replace(/_+/g, '_').slice(0, 60) || 'inline';
+  const file = `${Date.now()}-${stem}.md`;
+  const dir = join(PROMPTS_ROOT, tag);
+  mkdirSync(dir, { recursive: true });
+  writeFileSync(join(dir, file), text, 'utf8');
+  refreshPromptMeta(tag, file);
+  res.json({ tag, file });
+});
+
+app.delete('/api/prompts/:tag/:file', (req, res) => {
+  const p = req.params as { tag?: string; file?: string };
+  const tag = String(p.tag ?? '');
+  const file = String(p.file ?? '');
+  if (!SAFE_TAG.test(tag) || !SAFE_TEXT_FILE.test(file)) { res.status(400).json({ error: 'bad params' }); return; }
+  const abs = join(PROMPTS_ROOT, tag, file);
+  if (!existsSync(abs)) { res.status(404).json({ error: 'not found' }); return; }
+  unlinkSync(abs);
+  promptsStore.delete(tag, file);
+  res.json({ ok: true });
+});
+
+app.get('/api/prompts/:tag/:file', (req, res) => {
+  const p = req.params as { tag?: string; file?: string };
+  const tag = String(p.tag ?? '');
+  const file = String(p.file ?? '');
+  if (!SAFE_TAG.test(tag) || !SAFE_TEXT_FILE.test(file)) { res.status(400).send('bad params'); return; }
+  const abs = join(PROMPTS_ROOT, tag, file);
+  if (!existsSync(abs)) { res.status(404).send('not found'); return; }
+  res.type('text/plain; charset=utf-8').sendFile(abs);
+});
+
 app.use(express.static(PUBLIC_DIR, { extensions: ['html'], maxAge: '5m' }));
 app.get('/', (_req, res) => {
   res.sendFile(join(PUBLIC_DIR, 'cabinet', 'index.html'));
@@ -662,8 +912,41 @@ function describeBacklogOnStart(): void {
       }
     }
   }
-  if (queuedClips > 0 || queuedScreens > 0) {
-    log.info(`describeBacklog: queued ${queuedClips} clip(s) + ${queuedScreens} screen(s)`);
+  let queuedRefs = 0;
+  if (existsSync(REFS_ROOT)) {
+    const tagDirs = readdirSync(REFS_ROOT).filter((d) => {
+      try { return statSync(join(REFS_ROOT, d)).isDirectory() && SAFE_TAG.test(d); }
+      catch { return false; }
+    });
+    for (const tag of tagDirs) {
+      const meta = referencesStore.getAll(tag);
+      const files = readdirSync(join(REFS_ROOT, tag)).filter((f) => SAFE_IMG_FILE.test(f));
+      for (const file of files) {
+        const m = meta[file];
+        if (!m || m.status !== 'ready') {
+          queuedRefs++;
+          referencesStore.set(tag, file, { status: 'pending' });
+          (async () => {
+            try { await describeReference(tag, file); }
+            catch { /* persisted */ }
+          })();
+        }
+      }
+    }
+  }
+  // Prompts don't need vision — but make sure excerpt/wordCount is filled.
+  if (existsSync(PROMPTS_ROOT)) {
+    const tagDirs = readdirSync(PROMPTS_ROOT).filter((d) => {
+      try { return statSync(join(PROMPTS_ROOT, d)).isDirectory() && SAFE_TAG.test(d); }
+      catch { return false; }
+    });
+    for (const tag of tagDirs) {
+      const files = readdirSync(join(PROMPTS_ROOT, tag)).filter((f) => SAFE_TEXT_FILE.test(f));
+      for (const file of files) refreshPromptMeta(tag, file);
+    }
+  }
+  if (queuedClips > 0 || queuedScreens > 0 || queuedRefs > 0) {
+    log.info(`describeBacklog: queued ${queuedClips} clip(s) + ${queuedScreens} screen(s) + ${queuedRefs} reference(s)`);
   }
 }
 
