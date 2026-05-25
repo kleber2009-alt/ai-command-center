@@ -183,6 +183,19 @@ button,input,select,textarea{font:inherit;color:inherit}
         </div>
       </div>
 
+      <div class="field" id="photo-field">
+        <label>Фото (необязательно)</label>
+        <label id="photo-dropzone" style="display:block;border:1px dashed var(--sep);border-radius:var(--r1);padding:14px;text-align:center;cursor:pointer;background:var(--surface-2);color:var(--t2);font-size:12px;transition:all .15s">
+          <strong>Перетащи .png / .jpg / .webp</strong> или нажми, чтобы выбрать (до 25 MB)
+          <input id="photo-input" type="file" accept=".png,.jpg,.jpeg,.webp" style="display:none">
+        </label>
+        <div id="photo-preview" style="display:none;margin-top:8px;position:relative">
+          <img id="photo-preview-img" style="max-width:100%;max-height:160px;border-radius:var(--r1);border:1px solid var(--sep);display:block">
+          <button type="button" id="photo-remove" style="position:absolute;top:6px;right:6px;width:24px;height:24px;border:0;border-radius:50%;background:rgba(0,0,0,.6);color:#fff;cursor:pointer;font-size:14px;line-height:1">✕</button>
+          <div id="photo-status" style="font-size:11px;color:var(--t3);margin-top:4px"></div>
+        </div>
+      </div>
+
       <div class="field checkbox">
         <input id="deliver" type="checkbox" checked>
         <label for="deliver">Отправить в Telegram после генерации</label>
@@ -631,6 +644,65 @@ document.querySelectorAll('#viewer-tabs .tab').forEach((tab) => {
   if (slider && valEl) slider.oninput = () => { valEl.textContent = slider.value; };
 })();
 
+// ── Прикреплённое к прогону фото ──────────────────────────────────────
+state.photoId = null;
+(() => {
+  const dropzone = document.getElementById('photo-dropzone');
+  const input = document.getElementById('photo-input');
+  const preview = document.getElementById('photo-preview');
+  const previewImg = document.getElementById('photo-preview-img');
+  const removeBtn = document.getElementById('photo-remove');
+  const status = document.getElementById('photo-status');
+  if (!dropzone || !input || !preview || !previewImg || !removeBtn) return;
+
+  async function upload(file) {
+    if (!file || !/\.(png|jpg|jpeg|webp)$/i.test(file.name)) {
+      alert('Поддерживаются только .png / .jpg / .webp');
+      return;
+    }
+    if (file.size > 25 * 1024 * 1024) { alert('Максимум 25 MB'); return; }
+    status.textContent = 'Загружаю…'; status.style.color = 'var(--t3)';
+    dropzone.style.opacity = '.5';
+    const form = new FormData();
+    form.append('photo', file);
+    try {
+      const res = await fetch('/api/uploads/photo', { method: 'POST', body: form });
+      if (!res.ok) throw new Error(await res.text());
+      const data = await res.json();
+      state.photoId = data.id;
+      previewImg.src = data.url;
+      preview.style.display = '';
+      dropzone.style.display = 'none';
+      status.textContent = `Прикреплено · ${(data.sizeBytes / 1024).toFixed(0)} KB`;
+      status.style.color = 'var(--green)';
+    } catch (e) {
+      status.textContent = 'Ошибка: ' + (e.message || e); status.style.color = 'var(--red)';
+    } finally {
+      dropzone.style.opacity = '1';
+    }
+  }
+
+  input.onchange = (e) => upload(e.target.files[0]);
+  dropzone.ondragover = (e) => { e.preventDefault(); dropzone.style.borderColor = 'var(--blue)'; dropzone.style.background = '#EAF4FF'; };
+  dropzone.ondragleave = () => { dropzone.style.borderColor = 'var(--sep)'; dropzone.style.background = 'var(--surface-2)'; };
+  dropzone.ondrop = (e) => {
+    e.preventDefault();
+    dropzone.style.borderColor = 'var(--sep)'; dropzone.style.background = 'var(--surface-2)';
+    upload(e.dataTransfer.files[0]);
+  };
+
+  removeBtn.onclick = async () => {
+    if (state.photoId) {
+      try { await fetch('/api/uploads/photo/' + state.photoId, { method: 'DELETE' }); } catch {}
+    }
+    state.photoId = null;
+    input.value = '';
+    preview.style.display = 'none';
+    dropzone.style.display = 'block';
+    status.textContent = '';
+  };
+})();
+
 document.getElementById('btn-generate').onclick = async () => {
   if (!state.rubric) return alert('Выбери рубрику');
   const topic = document.getElementById('topic').value.trim();
@@ -649,7 +721,7 @@ document.getElementById('btn-generate').onclick = async () => {
     const { jobId } = await api('/api/generate', {
       method: 'POST',
       headers: { 'content-type': 'application/json' },
-      body: JSON.stringify({ format: state.format, engine: state.engine, rubric: state.rubric, topic, slideCount, deliver, rag }),
+      body: JSON.stringify({ format: state.format, engine: state.engine, rubric: state.rubric, topic, slideCount, photoId: state.photoId, deliver, rag }),
     });
     state.activeJob = jobId;
     pollJob(jobId);
