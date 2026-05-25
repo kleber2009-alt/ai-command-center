@@ -96,11 +96,6 @@ export function EditForm({
     { key: 'go', label: 'Готово', done: false },
   ];
 
-  function openCardAndStep(card: 'video' | 'style' | 'language' | 'options', step: StepKey) {
-    setOpenCard(card);
-    setActiveStep(step);
-  }
-
   async function submit() {
     if (!videoId) {
       setError('Выбери исходное видео.');

@@ -30,7 +30,9 @@ import { runCarouselPipeline } from './pipelines/carousel.js';
 import { runReelsPipeline } from './pipelines/reels.js';
 import { log } from './lib/logger.js';
 import { getAllClipMeta, deleteClipMeta, setClipMeta, type ClipMeta } from './lib/footage-meta.js';
+import { getAllScreenMeta, deleteScreenMeta, setScreenMeta, type ScreenMeta } from './lib/screen-meta.js';
 import { describeClip } from './generators/clip-describer.js';
+import { describeScreen } from './generators/screen-describer.js';
 
 const __dirname = dirname(fileURLToPath(import.meta.url));
 const PUBLIC_DIR = resolve(__dirname, '..', 'public');
@@ -434,6 +436,147 @@ app.delete('/api/footage/:tag/:file', (req, res) => {
   }
 });
 
+// ── Screens library (PNG / JPG / WebP) ─────────────────────────────────────
+
+const SCREENS_ROOT = dataPath('assets', 'screens');
+const SAFE_IMG_FILE = /^[A-Za-z0-9][A-Za-z0-9._-]{0,80}\.(png|jpg|jpeg|webp)$/i;
+const MAX_IMG_MB = 30;
+
+interface ScreenListItem {
+  file: string;
+  sizeBytes: number;
+  mtime: string;
+  description?: string;
+  autoTags?: string[];
+  status: ScreenMeta['status'];
+  error?: string;
+}
+
+function listScreensForTag(tag: string): ScreenListItem[] {
+  const dir = join(SCREENS_ROOT, tag);
+  if (!existsSync(dir)) return [];
+  const meta = getAllScreenMeta(tag);
+  return readdirSync(dir)
+    .filter((f) => SAFE_IMG_FILE.test(f))
+    .map((f) => {
+      const s = statSync(join(dir, f));
+      const m = meta[f];
+      return {
+        file: f,
+        sizeBytes: s.size,
+        mtime: s.mtime.toISOString(),
+        status: m?.status ?? 'pending',
+        description: m?.description,
+        autoTags: m?.autoTags,
+        error: m?.error,
+      };
+    });
+}
+
+function loadScreenCatalog(): TagCatalogEntry[] {
+  const p = dataPath('assets', 'screens-tags.json');
+  if (!existsSync(p)) return [];
+  try {
+    const parsed = JSON.parse(readFileSync(p, 'utf8')) as { tags?: unknown[] };
+    if (!parsed.tags || !Array.isArray(parsed.tags)) return [];
+    return parsed.tags
+      .map((t) => (typeof t === 'string' ? { tag: t } : (t as TagCatalogEntry)))
+      .filter((t) => typeof t.tag === 'string' && SAFE_TAG.test(t.tag));
+  } catch {
+    return [];
+  }
+}
+
+app.get('/api/screens', (_req, res) => {
+  const catalog = loadScreenCatalog();
+  const tags = catalog.map((entry) => ({
+    ...entry,
+    clips: listScreensForTag(entry.tag),
+  }));
+  res.json({ tags, maxUploadMb: MAX_IMG_MB });
+});
+
+const screenUpload = multer({
+  storage: multer.diskStorage({
+    destination: (req, _file, cb) => {
+      const tag = String((req.params as { tag?: string }).tag ?? '');
+      if (!SAFE_TAG.test(tag)) return cb(new Error('bad tag'), '');
+      const dir = join(SCREENS_ROOT, tag);
+      mkdirSync(dir, { recursive: true });
+      cb(null, dir);
+    },
+    filename: (_req, file, cb) => {
+      const m = file.originalname.match(/\.(png|jpg|jpeg|webp)$/i);
+      const ext = (m?.[1] ?? 'png').toLowerCase();
+      const stem = basename(file.originalname, '.' + ext)
+        .replace(/[^A-Za-z0-9._-]+/g, '_')
+        .replace(/_+/g, '_')
+        .slice(0, 60) || 'screen';
+      cb(null, `${Date.now()}-${stem}.${ext}`);
+    },
+  }),
+  limits: { fileSize: MAX_IMG_MB * 1024 * 1024, files: MAX_FILES_PER_REQUEST },
+  fileFilter: (_req, file, cb) => {
+    if (/\.(png|jpg|jpeg|webp)$/i.test(file.originalname)) cb(null, true);
+    else cb(new Error('only .png/.jpg/.jpeg/.webp allowed'));
+  },
+});
+
+app.post('/api/screens/:tag', screenUpload.array('clips', MAX_FILES_PER_REQUEST), (req, res) => {
+  const tag = String((req.params as { tag?: string }).tag ?? '');
+  if (!SAFE_TAG.test(tag)) {
+    res.status(400).json({ error: 'bad tag' });
+    return;
+  }
+  const files = (req.files as Express.Multer.File[] | undefined) ?? [];
+  for (const f of files) {
+    setScreenMeta(tag, f.filename, { status: 'pending' });
+    (async () => {
+      try { await describeScreen(tag, f.filename); }
+      catch { /* error persisted */ }
+    })();
+  }
+  res.json({ tag, uploaded: files.map((f) => ({ file: f.filename, sizeBytes: f.size })) });
+});
+
+app.delete('/api/screens/:tag/:file', (req, res) => {
+  const p = req.params as { tag?: string; file?: string };
+  const tag = String(p.tag ?? '');
+  const file = String(p.file ?? '');
+  if (!SAFE_TAG.test(tag) || !SAFE_IMG_FILE.test(file)) {
+    res.status(400).json({ error: 'bad params' });
+    return;
+  }
+  const abs = join(SCREENS_ROOT, tag, file);
+  if (!existsSync(abs)) {
+    res.status(404).json({ error: 'not found' });
+    return;
+  }
+  try {
+    unlinkSync(abs);
+    deleteScreenMeta(tag, file);
+    res.json({ ok: true });
+  } catch (err) {
+    res.status(500).json({ error: err instanceof Error ? err.message : String(err) });
+  }
+});
+
+app.get('/api/screens/:tag/:file', (req, res) => {
+  const p = req.params as { tag?: string; file?: string };
+  const tag = String(p.tag ?? '');
+  const file = String(p.file ?? '');
+  if (!SAFE_TAG.test(tag) || !SAFE_IMG_FILE.test(file)) {
+    res.status(400).send('bad params');
+    return;
+  }
+  const abs = join(SCREENS_ROOT, tag, file);
+  if (!existsSync(abs)) {
+    res.status(404).send('not found');
+    return;
+  }
+  res.sendFile(abs);
+});
+
 app.get('/api/footage/:tag/:file', (req, res) => {
   const p = req.params as { tag?: string; file?: string };
   const tag = String(p.tag ?? '');
@@ -455,38 +598,61 @@ app.get('/', (_req, res) => {
   res.sendFile(join(PUBLIC_DIR, 'cabinet', 'index.html'));
 });
 
-// On boot, scan the footage tree and re-describe any clip that's missing /
-// stuck — covers two cases: clips uploaded against an older image, and
-// describer crashes that left a clip pending.
+// On boot, scan both libraries (footage clips + screens) and re-describe
+// anything that isn't 'ready' — covers files uploaded against an older
+// image and crashed describer jobs.
 function describeBacklogOnStart(): void {
-  if (!existsSync(FOOTAGE_ROOT)) return;
   if (!process.env.ANTHROPIC_API_KEY) {
     log.warn('describeBacklog: ANTHROPIC_API_KEY missing, skipping');
     return;
   }
-  const tagDirs = readdirSync(FOOTAGE_ROOT).filter((d) => {
-    try { return statSync(join(FOOTAGE_ROOT, d)).isDirectory() && SAFE_TAG.test(d); }
-    catch { return false; }
-  });
-  let queued = 0;
-  for (const tag of tagDirs) {
-    const meta = getAllClipMeta(tag);
-    const files = readdirSync(join(FOOTAGE_ROOT, tag)).filter((f) => SAFE_FILE.test(f));
-    for (const file of files) {
-      const m = meta[file];
-      // re-describe everything that isn't 'ready' (covers pending, describing,
-      // failed, and never-touched files)
-      if (!m || m.status !== 'ready') {
-        queued++;
-        setClipMeta(tag, file, { status: 'pending' });
-        (async () => {
-          try { await describeClip(tag, file); }
-          catch { /* persisted in meta */ }
-        })();
+  let queuedClips = 0;
+  if (existsSync(FOOTAGE_ROOT)) {
+    const tagDirs = readdirSync(FOOTAGE_ROOT).filter((d) => {
+      try { return statSync(join(FOOTAGE_ROOT, d)).isDirectory() && SAFE_TAG.test(d); }
+      catch { return false; }
+    });
+    for (const tag of tagDirs) {
+      const meta = getAllClipMeta(tag);
+      const files = readdirSync(join(FOOTAGE_ROOT, tag)).filter((f) => SAFE_FILE.test(f));
+      for (const file of files) {
+        const m = meta[file];
+        if (!m || m.status !== 'ready') {
+          queuedClips++;
+          setClipMeta(tag, file, { status: 'pending' });
+          (async () => {
+            try { await describeClip(tag, file); }
+            catch { /* persisted */ }
+          })();
+        }
       }
     }
   }
-  if (queued > 0) log.info(`describeBacklog: queued ${queued} clip(s)`);
+  let queuedScreens = 0;
+  if (existsSync(SCREENS_ROOT)) {
+    const tagDirs = readdirSync(SCREENS_ROOT).filter((d) => {
+      try { return statSync(join(SCREENS_ROOT, d)).isDirectory() && SAFE_TAG.test(d); }
+      catch { return false; }
+    });
+    for (const tag of tagDirs) {
+      const meta = getAllScreenMeta(tag);
+      const files = readdirSync(join(SCREENS_ROOT, tag)).filter((f) => SAFE_IMG_FILE.test(f));
+      for (const file of files) {
+        const m = meta[file];
+        if (!m || m.status !== 'ready') {
+          queuedScreens++;
+          setScreenMeta(tag, file, { status: 'pending' });
+          (async () => {
+            try { await describeScreen(tag, file); }
+            catch { /* persisted */ }
+          })();
+        }
+      }
+    }
+  }
+  if (queuedClips > 0 || queuedScreens > 0) {
+    log.info(`describeBacklog: queued ${queuedClips} clip(s) + ${queuedScreens} screen(s)`);
+  }
 }
 
 app.listen(PORT, () => {

@@ -202,18 +202,35 @@ button,input,select,textarea{font:inherit;color:inherit}
 
 </div>
 
-<!-- ── Footage page ──────────────────────────────────────────────── -->
+<!-- ── Footage page (two sub-libraries: clips + screens) ────────── -->
 <div class="layout" id="page-footage" style="display:none;grid-template-columns:1fr">
   <div class="card">
-    <h2>Библиотека клипов</h2>
-    <p style="font-size:13px;color:var(--t2);margin-bottom:18px">
-      Drag&amp;drop до 30 файлов за раз в зону тега. Поддержка <code>.mp4 .mov .m4v .webm</code>, каждый до 100 MB.
-      После загрузки агент сам опишет каждый клип (Claude Vision) — описание появится через 5–15 с.
-      В рилсе агент выбирает конкретные клипы по содержанию.
-    </p>
-    <div id="footage-library-wrap" style="margin-bottom:18px"></div>
-    <div id="footage-grid" style="display:grid;grid-template-columns:repeat(auto-fill,minmax(320px,1fr));gap:14px">
-      <div class="empty">Загружаю каталог…</div>
+    <div class="tabs" id="footage-subtabs" style="margin-bottom:14px">
+      <div class="tab active" data-subtab="clips">Клипы (видео)</div>
+      <div class="tab" data-subtab="screens">Скрины (картинки)</div>
+    </div>
+
+    <div id="subtab-clips">
+      <h2>Библиотека клипов</h2>
+      <p style="font-size:13px;color:var(--t2);margin-bottom:18px">
+        Drag&amp;drop до 30 файлов за раз в зону слота. Поддержка <code>.mp4 .mov .m4v .webm</code>, каждый до 100 MB.
+        После загрузки агент сам опишет каждый клип (Claude Vision) — описание появится через 5–15 с.
+        В рилсе агент выбирает конкретные клипы по содержанию.
+      </p>
+      <div id="footage-grid" style="display:grid;grid-template-columns:repeat(auto-fill,minmax(320px,1fr));gap:14px">
+        <div class="empty">Загружаю каталог…</div>
+      </div>
+    </div>
+
+    <div id="subtab-screens" style="display:none">
+      <h2>Библиотека скринов</h2>
+      <p style="font-size:13px;color:var(--t2);margin-bottom:18px">
+        Drag&amp;drop статических изображений в зону слота. Поддержка <code>.png .jpg .jpeg .webp</code>, каждый до 30 MB.
+        Используются как обложки карусели, embed-скриншоты в слайды и фоны.
+      </p>
+      <div id="screens-grid" style="display:grid;grid-template-columns:repeat(auto-fill,minmax(320px,1fr));gap:14px">
+        <div class="empty">Загружаю каталог…</div>
+      </div>
     </div>
   </div>
 </div>
@@ -262,7 +279,18 @@ button,input,select,textarea{font:inherit;color:inherit}
 
 <script>
 const API = '';
-const state = { rubric: null, rubrics: {}, currentRun: null, currentRunData: null, viewerTab: 'slides', activeJob: null, format: 'carousel', page: 'generator' };
+const state = { rubric: null, rubrics: {}, currentRun: null, currentRunData: null, viewerTab: 'slides', activeJob: null, format: 'carousel', page: 'generator', footageSubtab: 'clips' };
+
+// ── Footage sub-tabs (Клипы / Скрины) ──────────────────────────────
+document.querySelectorAll('#footage-subtabs .tab').forEach((t) => {
+  t.onclick = () => {
+    state.footageSubtab = t.dataset.subtab;
+    document.querySelectorAll('#footage-subtabs .tab').forEach((x) => x.classList.toggle('active', x === t));
+    document.getElementById('subtab-clips').style.display = state.footageSubtab === 'clips' ? '' : 'none';
+    document.getElementById('subtab-screens').style.display = state.footageSubtab === 'screens' ? '' : 'none';
+    if (state.footageSubtab === 'screens') loadScreens();
+  };
+});
 
 // ── Page navigation ────────────────────────────────────────────────
 document.querySelectorAll('#navtabs .navtab').forEach((b) => {
@@ -624,12 +652,116 @@ function formatSize(bytes) {
   return (bytes / 1024 / 1024).toFixed(1) + ' MB';
 }
 
+async function loadScreens() {
+  const grid = document.getElementById('screens-grid');
+  try {
+    const { tags, maxUploadMb } = await api('/api/screens');
+    if (!tags || tags.length === 0) {
+      grid.innerHTML = '<div class="empty">Каталог пуст — добавь <code>data/assets/screens-tags.json</code>.</div>';
+      return;
+    }
+    grid.innerHTML = '';
+    tags.forEach((entry) => {
+      const card = document.createElement('div');
+      card.className = 'tag-card';
+      card.dataset.tag = entry.tag;
+      card.innerHTML = `
+        <h3>${escapeHtml(entry.label || entry.tag)}</h3>
+        <div class="tag-desc"><code>${escapeHtml(entry.tag)}</code>${entry.expectedSize ? ' · ' + escapeHtml(entry.expectedSize) : ''}</div>
+        <div class="tag-desc">${escapeHtml(entry.description || '')}</div>
+        <div class="clip-count">${entry.clips.length} картин${pluralRu(entry.clips.length, ['ка', 'ки', 'ок'])} в библиотеке</div>
+        <label class="dropzone">
+          <strong>Перетащи сюда</strong> или нажми, чтобы выбрать (до 30 файлов × ${maxUploadMb} MB)
+          <input type="file" accept=".png,.jpg,.jpeg,.webp" multiple style="display:none">
+        </label>
+        <div class="uploading" style="display:none"><span class="spinner"></span><span class="uploading-text">Загружаю…</span></div>
+        <div class="clips">
+          ${entry.clips.map((c) => renderScreenCard(entry.tag, c)).join('') || '<div style="font-size:11px;color:var(--t3);text-align:center;padding:6px">Пока нет картинок</div>'}
+        </div>
+      `;
+      const dropzone = card.querySelector('.dropzone');
+      const input = card.querySelector('input[type=file]');
+      input.onchange = () => handleScreenUpload(entry.tag, [...input.files], card);
+      dropzone.ondragover = (e) => { e.preventDefault(); card.classList.add('drag'); };
+      dropzone.ondragleave = () => card.classList.remove('drag');
+      dropzone.ondrop = (e) => {
+        e.preventDefault();
+        card.classList.remove('drag');
+        handleScreenUpload(entry.tag, [...e.dataTransfer.files], card);
+      };
+      card.querySelectorAll('.clip-card button.del').forEach((btn) => {
+        btn.onclick = async () => {
+          const file = btn.closest('.clip-card').dataset.file;
+          if (!confirm('Удалить ' + file + '?')) return;
+          try {
+            await api('/api/screens/' + encodeURIComponent(entry.tag) + '/' + encodeURIComponent(file), { method: 'DELETE' });
+            loadScreens();
+          } catch (e) { alert('Не удалось: ' + e.message); }
+        };
+      });
+      grid.appendChild(card);
+    });
+  } catch (e) {
+    grid.innerHTML = '<div class="empty">Ошибка: ' + escapeHtml(e.message) + '</div>';
+  }
+}
+
+function renderScreenCard(tag, c) {
+  const status = c.status || 'pending';
+  const statusLabel = { pending: 'в очереди', describing: 'описываю…', ready: 'готов', failed: 'ошибка' }[status] || status;
+  const desc = c.description
+    ? `<div class="desc">${escapeHtml(c.description)}</div>`
+    : status === 'failed'
+      ? `<div class="desc pending">не удалось описать: ${escapeHtml(c.error || 'unknown')}</div>`
+      : `<div class="desc pending">${status === 'describing' ? 'агент описывает кадр…' : 'описание появится после загрузки'}</div>`;
+  const tags = c.autoTags && c.autoTags.length > 0
+    ? `<div class="tags">${c.autoTags.map((t) => `<span>${escapeHtml(t)}</span>`).join('')}</div>`
+    : '';
+  const thumb = `<img src="/api/screens/${encodeURIComponent(tag)}/${encodeURIComponent(c.file)}" style="width:100%;max-height:160px;object-fit:cover;border-radius:6px;margin-bottom:4px;background:var(--surface-2)" loading="lazy">`;
+  return `
+    <div class="clip-card" data-file="${escapeHtml(c.file)}">
+      ${thumb}
+      <div class="top">
+        <span class="name" title="${escapeHtml(c.file)}">${escapeHtml(c.file)}</span>
+        <span class="badge-status ${status}">${statusLabel}</span>
+        <button class="del" title="Удалить">✕</button>
+      </div>
+      ${desc}
+      ${tags}
+      <div class="meta-row">${formatSize(c.sizeBytes)}</div>
+    </div>
+  `;
+}
+
+async function handleScreenUpload(tag, files, card) {
+  const valid = files.filter((f) => /\.(png|jpg|jpeg|webp)$/i.test(f.name));
+  if (valid.length === 0) { alert('Поддерживаются только .png .jpg .jpeg .webp'); return; }
+  const indicator = card.querySelector('.uploading');
+  const text = card.querySelector('.uploading-text');
+  indicator.style.display = 'flex';
+  text.textContent = `Загружаю ${valid.length} файл${pluralRu(valid.length, ['', 'а', 'ов'])}…`;
+  const form = new FormData();
+  for (const f of valid) form.append('clips', f);
+  try {
+    const res = await fetch('/api/screens/' + encodeURIComponent(tag), { method: 'POST', body: form });
+    if (!res.ok) throw new Error(`upload ${res.status}: ${await res.text()}`);
+    await loadScreens();
+  } catch (e) {
+    indicator.style.display = 'none';
+    alert('Не удалось загрузить: ' + e.message);
+  }
+}
+
 loadHealth();
 loadRubrics();
 loadRuns();
 setInterval(loadHealth, 30000);
 setInterval(loadRuns, 15000);
-setInterval(() => { if (state.page === 'footage') loadFootage(); }, 4000);
+setInterval(() => {
+  if (state.page !== 'footage') return;
+  if (state.footageSubtab === 'clips') loadFootage();
+  else loadScreens();
+}, 4000);
 </script>
 
 </body>
