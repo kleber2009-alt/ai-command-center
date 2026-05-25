@@ -148,8 +148,11 @@ async function renderWithNanoBanana(slide: Slide, ctx: SlideRenderContext): Prom
   const apiKey = process.env.NANO_BANANA_API_KEY || process.env.KIE_AI_API_KEY || process.env.GPT_IMAGE_2_API_KEY;
   if (!apiKey) throw new Error('NANO_BANANA_API_KEY (or KIE_AI_API_KEY) is not set (required for nano-banana engine)');
   const base = (process.env.NANO_BANANA_ENDPOINT || 'https://api.kie.ai').replace(/\/$/, '');
-  const model = process.env.NANO_BANANA_MODEL || 'google/nano-banana-text-to-image';
-  const aspect = process.env.NANO_BANANA_ASPECT || '3:4';
+  // kie.ai model id for Nano Banana 2 (Gemini 3.1 Flash Image, 4K-capable).
+  // Note: no `google/` prefix on v2; the old `google/nano-banana` is v1.
+  const model = process.env.NANO_BANANA_MODEL || 'nano-banana-2';
+  // v2 natively supports 4:5 — Instagram's carousel ratio, no re-crop needed.
+  const aspect = process.env.NANO_BANANA_ASPECT || '4:5';
   const resolution = process.env.NANO_BANANA_RESOLUTION || '1K';
   const pollMs = Number(process.env.NANO_BANANA_POLL_MS || 3000);
   const maxPolls = Number(process.env.NANO_BANANA_MAX_POLLS || 60);
@@ -157,7 +160,12 @@ async function renderWithNanoBanana(slide: Slide, ctx: SlideRenderContext): Prom
   return runKieTask({
     label: 'nano-banana',
     apiKey, base, model, pollMs, maxPolls,
-    input: { prompt: buildSlidePrompt(slide, ctx), aspect_ratio: aspect, resolution },
+    input: {
+      prompt: buildSlidePrompt(slide, ctx),
+      aspect_ratio: aspect,
+      resolution,
+      output_format: 'png',
+    },
   });
 }
 

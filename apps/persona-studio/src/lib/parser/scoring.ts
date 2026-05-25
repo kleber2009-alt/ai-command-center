@@ -191,22 +191,41 @@ export function rankCarousels(carousels: ScoredPost[], n: number): ScoredPost[] 
 }
 
 /**
- * Применить абсолютные пороги к постам ДО классификации.
- *
- * Carousels/images пропускают plays-порог если plays === 0 (у них нет
- * play_count). Аналогично, shares-порог не применяется к постам, у которых
- * shares === 0 — Apify часто не отдаёт это поле, и иначе мы бы отрезали
- * вообще всё.
+ * Пороги ДЛЯ РИЛСОВ. У рилсов есть plays — порог по нему обязателен.
+ * Shares-порог не применяется к постам с shares === 0 (Apify часто не
+ * отдаёт это поле).
  */
-export function filterByThresholds(
-  posts: ScoredPost[],
+export function filterReelsByThresholds(
+  reels: ScoredPost[],
   thresholds: { minPlays: number; minLikes: number; minComments: number; minShares: number },
 ): ScoredPost[] {
   const { minPlays, minLikes, minComments, minShares } = thresholds;
-  if (!minPlays && !minLikes && !minComments && !minShares) return posts;
-  return posts.filter((p) => {
+  if (!minPlays && !minLikes && !minComments && !minShares) return reels;
+  return reels.filter((p) => {
     const playsOK = p.plays === 0 || p.plays >= minPlays;
     const sharesOK = p.shares === 0 || p.shares >= minShares;
     return playsOK && p.likes >= minLikes && p.comments >= minComments && sharesOK;
   });
+}
+
+/**
+ * Пороги ДЛЯ КАРУСЕЛЕЙ. У каруселей нет plays и почти никогда нет shares —
+ * фильтр только по likes/comments. Дефолтные значения значительно мягче
+ * рилсовых, потому что у carousel engagement иначе устроен (читают молча).
+ */
+export function filterCarouselsByThresholds(
+  carousels: ScoredPost[],
+  thresholds: { minLikes: number; minComments: number },
+): ScoredPost[] {
+  const { minLikes, minComments } = thresholds;
+  if (!minLikes && !minComments) return carousels;
+  return carousels.filter((p) => p.likes >= minLikes && p.comments >= minComments);
+}
+
+/** @deprecated — оставлено для совместимости. Используй filterReelsByThresholds. */
+export function filterByThresholds(
+  posts: ScoredPost[],
+  thresholds: { minPlays: number; minLikes: number; minComments: number; minShares: number },
+): ScoredPost[] {
+  return filterReelsByThresholds(posts, thresholds);
 }

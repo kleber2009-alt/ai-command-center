@@ -22,6 +22,8 @@ export function ParserSetup({ initial, onSaved, onCancel }: Props) {
   const [minLikes, setMinLikes] = useState(initial?.minLikes ?? 0);
   const [minComments, setMinComments] = useState(initial?.minComments ?? 1000);
   const [minShares, setMinShares] = useState(initial?.minShares ?? 1000);
+  const [minCarouselLikes, setMinCarouselLikes] = useState(initial?.minCarouselLikes ?? 500);
+  const [minCarouselComments, setMinCarouselComments] = useState(initial?.minCarouselComments ?? 50);
   const [saving, setSaving] = useState(false);
   const [error, setError] = useState<string | null>(null);
 
@@ -47,6 +49,8 @@ export function ParserSetup({ initial, onSaved, onCancel }: Props) {
         minLikes: Number(minLikes),
         minComments: Number(minComments),
         minShares: Number(minShares),
+        minCarouselLikes: Number(minCarouselLikes),
+        minCarouselComments: Number(minCarouselComments),
       };
       const res = await fetch('/api/parser/config', {
         method: 'POST',
@@ -141,6 +145,7 @@ export function ParserSetup({ initial, onSaved, onCancel }: Props) {
           <NumberField label="Топ каруселей" value={carouselsCount} onChange={setCarouselsCount} min={1} max={20} />
         </div>
 
+        <div className="mono text-[9px] tracking-widest uppercase text-text-dim">Reels</div>
         <div className="grid sm:grid-cols-2 lg:grid-cols-4 gap-4">
           <NumberField label="Мин. просмотров" value={minPlays} onChange={setMinPlays} min={0} step={10000} />
           <NumberField label="Мин. лайков" value={minLikes} onChange={setMinLikes} min={0} />
@@ -148,7 +153,16 @@ export function ParserSetup({ initial, onSaved, onCancel }: Props) {
           <NumberField label="Мин. репостов" value={minShares} onChange={setMinShares} min={0} step={100} />
         </div>
         <p className="mono text-[9px] tracking-wider text-text-mute">
-          Дефолт: 100k просмотров / 1k комментариев / 1k репостов. Apify не у всех постов отдаёт счётчик репостов — посты без этого поля проходят фильтр.
+          Reels дефолт: 100k просмотров / 1k комментариев / 1k репостов. Apify не у всех постов отдаёт счётчик репостов — посты без этого поля проходят фильтр.
+        </p>
+
+        <div className="mono text-[9px] tracking-widest uppercase text-text-dim mt-2">Carousels</div>
+        <div className="grid sm:grid-cols-2 gap-4">
+          <NumberField label="Мин. лайков (карусели)" value={minCarouselLikes} onChange={setMinCarouselLikes} min={0} step={100} />
+          <NumberField label="Мин. комментариев (карусели)" value={minCarouselComments} onChange={setMinCarouselComments} min={0} step={10} />
+        </div>
+        <p className="mono text-[9px] tracking-wider text-text-mute">
+          Carousels дефолт: 500 лайков / 50 комментариев — заметно мягче чем у рилсов, потому что карусели читают молча и shares у них почти не отдаётся.
         </p>
       </details>
 

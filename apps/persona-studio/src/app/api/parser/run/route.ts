@@ -11,7 +11,13 @@ import { NextRequest, NextResponse } from 'next/server';
 import { getCurrentUserOrApiKey } from '@/lib/auth';
 import { prisma } from '@/lib/prisma';
 import { isApifyConfigured, scrapeAccountPosts, scrapeHashtagPosts, type ApifyItem } from '@/lib/parser/apify';
-import { classify, filterByThresholds, rankReels, rankCarousels } from '@/lib/parser/scoring';
+import {
+  classify,
+  filterReelsByThresholds,
+  filterCarouselsByThresholds,
+  rankReels,
+  rankCarousels,
+} from '@/lib/parser/scoring';
 import { rateWithClaude } from '@/lib/parser/claude';
 import type { ScoredPost } from '@/lib/parser/types';
 
@@ -78,14 +84,16 @@ export async function POST(req: NextRequest) {
     }
 
     const cls = classify(allItems);
-    const thresholds = {
+    const passedReels = filterReelsByThresholds(cls.reels, {
       minPlays: cfg.minPlays,
       minLikes: cfg.minLikes,
       minComments: cfg.minComments,
       minShares: cfg.minShares,
-    };
-    const passedReels = filterByThresholds(cls.reels, thresholds);
-    const passedCarousels = filterByThresholds(cls.carousels, thresholds);
+    });
+    const passedCarousels = filterCarouselsByThresholds(cls.carousels, {
+      minLikes: cfg.minCarouselLikes,
+      minComments: cfg.minCarouselComments,
+    });
     const topReels = rankReels(passedReels, cfg.reelsCount);
     const topCarousels = rankCarousels(passedCarousels, cfg.carouselsCount);
 
