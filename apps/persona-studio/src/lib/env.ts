@@ -50,6 +50,15 @@ const envSchema = z.object({
   ELEVENLABS_MODEL: z.string().default('eleven_turbo_v2_5'),
   ELEVENLABS_TTS_TIMEOUT_MS: z.coerce.number().default(30_000),
 
+  // ── Parser (Viral Discover) ───────────────────
+  APIFY_TOKEN: z.string().min(1).optional(),
+  APIFY_INSTAGRAM_ACTOR: z.string().default('apify~instagram-scraper'),
+  APIFY_LOOKBACK_DAYS: z.coerce.number().default(7),
+  APIFY_RESULTS_LIMIT: z.coerce.number().default(25),
+  APIFY_TIMEOUT_MS: z.coerce.number().default(60_000),
+  ANTHROPIC_API_KEY: z.string().min(1).optional(),
+  ANTHROPIC_PARSER_MODEL: z.string().default('claude-haiku-4-5-20251001'),
+
   // ── Submagic (editing / captions) ─────────────
   SUBMAGIC_API_KEY: z.string().min(1).optional(),
   SUBMAGIC_API_BASE: z.string().url().default('https://api.submagic.co/v1'),

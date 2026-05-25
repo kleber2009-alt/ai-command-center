@@ -13,6 +13,7 @@ const ITEMS: Array<{ href: string; label: string; key: string }> = [
   { href: '/generate', label: 'Generate', key: 'generate' },
   { href: '/avatars', label: 'Avatars', key: 'avatars' },
   { href: '/voice', label: 'Voice', key: 'voice' },
+  { href: '/parser', label: 'Parser', key: 'parser' },
   { href: '/videos', label: 'Videos', key: 'videos' },
   { href: '/edits', label: 'Montage', key: 'edits' },
   { href: '/covers', label: 'Covers', key: 'covers' },

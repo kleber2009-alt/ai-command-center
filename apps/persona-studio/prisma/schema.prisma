@@ -33,6 +33,9 @@ model User {
   tokenTransactions   TokenTransaction[]
   apiKeys             ApiKey[]
   cryptoInvoices      CryptoInvoice[]
+  parserConfig        ParserConfig?
+  parserRuns          ParserRun[]
+  parserItems         ParserItem[]
 }
 
 // API key для интеграции Persona Studio в сторонние проекты.
@@ -250,6 +253,81 @@ model TokenTransaction {
   createdAt DateTime @default(now())
 
   @@index([userId, createdAt])
+}
+
+// ── Parser (Viral Discover) ────────────────────
+// Парсер трендовых Instagram-постов конкурентов. Один конфиг на юзера:
+// ниша + список competitors + хэштеги + пороги. Каждый запуск создаёт
+// ParserRun, и для каждого отранжированного поста — ParserItem
+// (с fit-to-niche оценкой от Claude). Из ParserItem пользователь
+// одним кликом запускает «создать видео» (VideoGeneration) и далее
+// монтаж (VideoEdit) — единый пайплайн Парсер → Видео → Монтаж.
+model ParserConfig {
+  id                String    @id @default(cuid())
+  userId            String    @unique
+  user              User      @relation(fields: [userId], references: [id], onDelete: Cascade)
+  nicheDescription  String?   @db.Text                  // «коучинг продаж B2B, конфронтационный стиль»
+  competitors       String[]  @default([])              // ["expert_one", "expert_two"] (без @)
+  hashtags          String[]  @default([])              // ["salescoaching", "b2bsales"] (без #)
+  postedWithinDays  Int       @default(7)
+  perTargetLimit    Int       @default(25)
+  minPlays          Int       @default(0)
+  minLikes          Int       @default(0)
+  minComments      Int       @default(0)
+  reelsCount        Int       @default(5)
+  carouselsCount    Int       @default(5)
+  enabled           Boolean   @default(true)
+  createdAt         DateTime  @default(now())
+  updatedAt         DateTime  @updatedAt
+}
+
+// Каждый запуск парсера (ручной или плановый). Полные результаты живут
+// в ParserItem.
+model ParserRun {
+  id              String    @id @default(cuid())
+  userId          String
+  user            User      @relation(fields: [userId], references: [id], onDelete: Cascade)
+  status          String    @default("pending")        // pending | processing | completed | failed
+  postsScanned    Int       @default(0)
+  reelsFound      Int       @default(0)
+  carouselsFound  Int       @default(0)
+  claudeSummary   String?   @db.Text
+  errorMsg        String?
+  startedAt       DateTime  @default(now())
+  completedAt     DateTime?
+
+  items           ParserItem[]
+
+  @@index([userId, startedAt])
+}
+
+// Каждый отранжированный пост из результатов парсера.
+// status: new | used (отправлен в работу) | dismissed (пользователь скрыл)
+model ParserItem {
+  id                String    @id @default(cuid())
+  userId            String
+  user              User      @relation(fields: [userId], references: [id], onDelete: Cascade)
+  runId             String
+  run               ParserRun @relation(fields: [runId], references: [id], onDelete: Cascade)
+  url               String                                 // https://www.instagram.com/reel/<shortcode>/
+  shortcode         String?
+  kind              String                                 // reel | carousel
+  owner             String?                                // ownerUsername без @
+  thumbnailUrl      String?
+  caption           String?   @db.Text
+  plays             Int       @default(0)
+  likes             Int       @default(0)
+  comments          Int       @default(0)
+  ageHours          Float     @default(0)
+  velocityScore    Float     @default(0)                  // 0..1, composite от scoring.ts
+  fitScore          Int?                                   // 1..10 от Claude
+  fitWhy            String?                                // 6-12 слов, почему такой score
+  status            String    @default("new")              // new | used | dismissed
+  videoGenerationId String?                                // если уже отправлен в работу
+  createdAt         DateTime  @default(now())
+
+  @@index([userId, createdAt])
+  @@index([runId])
 }
 
 // Инвойсы CryptoBot (@CryptoBot Telegram). Создаются перед редиректом в bot_invoice_url,

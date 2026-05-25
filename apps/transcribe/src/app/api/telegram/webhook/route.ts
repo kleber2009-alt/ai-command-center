@@ -189,6 +189,13 @@ async function handleCommand(msg: TgMessage) {
       await handleClone(synthetic)
       return
     }
+    if (draft?.state === 'awaiting_photo_choice') {
+      await sendMessage(
+        msg.chat.id,
+        'Выбери фото из меню выше (или нажми «🆕 Новое фото» / «✕ Отмена»).',
+      )
+      return
+    }
   }
 }
 
@@ -997,15 +1004,26 @@ async function handleSuccessfulPayment(msg: TgMessage) {
   const days = Math.max(1, Number(payload?.days) || PRO_SUBSCRIPTION_DAYS)
   const tier: UserTier = payload?.tier === 'team' ? 'team' : 'pro'
 
-  await recordStarsPayment({
-    userId: user.id,
-    telegramPaymentChargeId: sp.telegram_payment_charge_id,
-    providerPaymentChargeId: sp.provider_payment_charge_id || null,
-    starsAmount: sp.total_amount,
-    tier,
-    daysGranted: days,
-    payload,
-  })
+  // Bookkeeping must not block service: пользователь УЖЕ заплатил Stars.
+  // Если запись в БД упала — логируем и всё равно выдаём Pro; восстановим
+  // запись потом по telegram_payment_charge_id.
+  try {
+    await recordStarsPayment({
+      userId: user.id,
+      telegramPaymentChargeId: sp.telegram_payment_charge_id,
+      providerPaymentChargeId: sp.provider_payment_charge_id || null,
+      starsAmount: sp.total_amount,
+      tier,
+      daysGranted: days,
+      payload,
+    })
+  } catch (e) {
+    console.error('[telegram/webhook] recordStarsPayment failed', {
+      userId: user.id,
+      charge: sp.telegram_payment_charge_id,
+      error: e,
+    })
+  }
 
   const newExpires = await grantProDays(user.id, days)
 
