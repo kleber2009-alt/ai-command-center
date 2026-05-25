@@ -32,9 +32,9 @@ export default async function NewEditPage({ searchParams }: { searchParams: Prom
       </header>
 
       {videos.length === 0 ? (
-        <div className="border border-border-2 border-dashed p-12 text-center bg-surface">
-          <div className="sec-num mb-3">/NO-VIDEOS</div>
-          <div className="font-serif italic text-[22px] mb-4">
+        <div className="border border-border-2 border-dashed p-8 text-center bg-surface">
+          <div className="sec-num mb-2">/NO-VIDEOS</div>
+          <div className="font-serif italic text-[20px] mb-3">
             Сначала нужно хотя бы одно готовое видео.
           </div>
           <Link href="/videos/new" className="btn-primary">Создать видео →</Link>

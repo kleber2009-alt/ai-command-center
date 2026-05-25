@@ -5,7 +5,7 @@ import { useEffect, useRef, type ReactNode } from 'react';
 type PopoverProps = {
   open: boolean;
   onClose: () => void;
-  anchorRef: React.RefObject<HTMLElement>;
+  anchorRef: React.RefObject<HTMLElement | null>;
   align?: 'left' | 'right';
   width?: number;
   children: ReactNode;
