@@ -856,6 +856,43 @@ app.get('/api/prompts/:tag/:file', (req, res) => {
   res.type('text/plain; charset=utf-8').sendFile(abs);
 });
 
+// ── Brandbook (HTML template + design description) ──────────────────
+// Two single-file assets the generator treats as priority context.
+// Stored in data/brandbook/ as plain text. PUT overwrites; GET reads.
+const BRANDBOOK_ROOT = dataPath('brandbook');
+const BRANDBOOK_FILES = { html: 'template.html', brandbook: 'brandbook.md' } as const;
+type BrandbookKey = keyof typeof BRANDBOOK_FILES;
+const MAX_BRANDBOOK_BYTES = 2 * 1024 * 1024;
+
+function readBrandbookEntry(key: BrandbookKey): { text: string; updatedAt: number | null; sizeBytes: number } {
+  const abs = join(BRANDBOOK_ROOT, BRANDBOOK_FILES[key]);
+  if (!existsSync(abs)) return { text: '', updatedAt: null, sizeBytes: 0 };
+  const s = statSync(abs);
+  return { text: readFileSync(abs, 'utf8'), updatedAt: s.mtimeMs, sizeBytes: s.size };
+}
+
+app.get('/api/brandbook', (_req, res) => {
+  mkdirSync(BRANDBOOK_ROOT, { recursive: true });
+  res.json({
+    html: readBrandbookEntry('html'),
+    brandbook: readBrandbookEntry('brandbook'),
+    maxBytes: MAX_BRANDBOOK_BYTES,
+  });
+});
+
+app.put('/api/brandbook/:key', (req, res) => {
+  const key = String((req.params as { key?: string }).key ?? '') as BrandbookKey;
+  if (!(key in BRANDBOOK_FILES)) { res.status(400).json({ error: 'bad key' }); return; }
+  const body = (req.body ?? {}) as { text?: unknown };
+  const text = typeof body.text === 'string' ? body.text : '';
+  if (Buffer.byteLength(text, 'utf8') > MAX_BRANDBOOK_BYTES) {
+    res.status(413).json({ error: 'too large', maxBytes: MAX_BRANDBOOK_BYTES }); return;
+  }
+  mkdirSync(BRANDBOOK_ROOT, { recursive: true });
+  writeFileSync(join(BRANDBOOK_ROOT, BRANDBOOK_FILES[key]), text, 'utf8');
+  res.json({ ok: true, ...readBrandbookEntry(key) });
+});
+
 app.use(express.static(PUBLIC_DIR, { extensions: ['html'], maxAge: '5m' }));
 app.get('/', (_req, res) => {
   res.sendFile(join(PUBLIC_DIR, 'cabinet', 'index.html'));
