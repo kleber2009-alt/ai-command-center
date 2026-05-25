@@ -893,8 +893,23 @@ app.put('/api/brandbook/:key', (req, res) => {
   res.json({ ok: true, ...readBrandbookEntry(key) });
 });
 
-// HTML без кеша (UI инлайн в index.html, кеш ломает свежие правки UI),
-// остальная статика — 5 минут.
+// Cabinet HTML — динамически отдаём с no-cache + уникальным build-маркером,
+// чтобы браузер гарантированно не показывал старую кэшированную копию UI.
+const CABINET_HTML_PATH = join(PUBLIC_DIR, 'cabinet', 'index.html');
+function serveCabinetHtml(_req: express.Request, res: express.Response): void {
+  if (!existsSync(CABINET_HTML_PATH)) { res.status(404).send('cabinet not found'); return; }
+  const html = readFileSync(CABINET_HTML_PATH, 'utf8');
+  const buildId = new Date().toISOString();
+  const marker = `<!-- build:${buildId} -->\n`;
+  res.setHeader('Cache-Control', 'no-cache, no-store, must-revalidate');
+  res.setHeader('Pragma', 'no-cache');
+  res.setHeader('Expires', '0');
+  res.type('text/html; charset=utf-8').send(marker + html);
+}
+app.get('/cabinet/', serveCabinetHtml);
+app.get('/cabinet/index.html', serveCabinetHtml);
+
+// Остальная статика (favicon, fonts, картинки) — 5 минут кеша.
 app.use(express.static(PUBLIC_DIR, {
   extensions: ['html'],
   maxAge: '5m',

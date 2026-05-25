@@ -36,6 +36,7 @@ model User {
   parserConfig        ParserConfig?
   parserRuns          ParserRun[]
   parserItems         ParserItem[]
+  carouselDrafts      CarouselDraft[]
 }
 
 // API key для интеграции Persona Studio в сторонние проекты.
@@ -154,6 +155,7 @@ model Avatar {
 
   videos VideoGeneration[]
   covers Cover[]
+  carouselDrafts CarouselDraft[]
 
   @@index([userId, createdAt])
   @@index([generationId, style])
@@ -339,8 +341,45 @@ model ParserItem {
   videoGenerationId String?                                // если уже отправлен в работу
   createdAt         DateTime  @default(now())
 
+  carouselDrafts    CarouselDraft[]
+
   @@index([userId, createdAt])
   @@index([runId])
+}
+
+// ── Carousel drafts ────────────────────────────
+// Многослайдовая Instagram-карусель, сгенерированная по тексту парсер-айтема
+// (или по произвольному caption). Текст каждого слайда уникализируется
+// Claude'ом, первый слайд — обложка с выбранным Avatar'ом. Реальный рендер
+// PNG'ов — отдельный шаг (Phase 2, Puppeteer/HTML-шаблон).
+//
+// slides — JSON-массив { title, body, accent? }. Не нормализуем в отдельную
+// таблицу, потому что редактирование происходит цельно (форма с N textarea).
+model CarouselDraft {
+  id              String   @id @default(cuid())
+  userId          String
+  user            User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+  // Источник: если из парсера — линк на ParserItem, иначе free-form caption.
+  parserItemId    String?
+  parserItem      ParserItem? @relation(fields: [parserItemId], references: [id], onDelete: SetNull)
+  // Аватар для первого (обложечного) слайда — выбирается из готовых Avatar.
+  coverAvatarId   String?
+  coverAvatar     Avatar?  @relation(fields: [coverAvatarId], references: [id], onDelete: SetNull)
+  slidesCount     Int      @default(6)
+  // [{ title: string, body: string, accent?: string }]
+  slides          Json
+  // draft | rendered | failed. Пока всегда draft — render отдельный pipeline.
+  status          String   @default("draft")
+  // S3 URLs финальных PNG'ов в порядке слайдов (заполняется в Phase 2 render).
+  imageUrls       String[] @default([])
+  tokensCost      Int      @default(0)
+  errorMsg        String?
+  createdAt       DateTime @default(now())
+  updatedAt       DateTime @updatedAt
+  completedAt     DateTime?
+
+  @@index([userId, createdAt])
+  @@index([parserItemId])
 }
 
 // Инвойсы CryptoBot (@CryptoBot Telegram). Создаются перед редиректом в bot_invoice_url,
