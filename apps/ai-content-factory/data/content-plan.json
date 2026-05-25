@@ -1,0 +1,19 @@
+{
+  "version": "2026-05-25-seed",
+  "items": [
+    { "id": "2026-05-25-carousel", "date": "2026-05-25", "time": "08:00", "type": "carousel", "rubric": "diary", "topic": "5 доменов экзамена Claude Certified Architect — обзор", "episode": 1, "slideCount": 7, "status": "planned", "rationale": "Стартовая точка серии diary — задаём ритм" },
+    { "id": "2026-05-25-reels",    "date": "2026-05-25", "time": "14:00", "type": "reels",    "rubric": "hood",  "topic": "Claude Skills: что это и почему 30% мощности теряется без них", "episode": 1, "status": "planned", "rationale": "Анонс месячной темы про Skills + MCP" },
+    { "id": "2026-05-26-carousel", "date": "2026-05-26", "time": "08:00", "type": "carousel", "rubric": "hood",  "topic": "Anthropic выкатил Skills — пошаговый старт за 5 минут", "episode": 2, "slideCount": 9, "status": "planned" },
+    { "id": "2026-05-26-reels",    "date": "2026-05-26", "time": "14:00", "type": "reels",    "rubric": "diary", "topic": "День 1 подготовки к CCA — что узнал про Foundations", "episode": 2, "status": "planned" },
+    { "id": "2026-05-27-carousel", "date": "2026-05-27", "time": "08:00", "type": "carousel", "rubric": "diary", "topic": "Как я учу Claude API без курсов — 4 источника", "episode": 3, "slideCount": 7, "status": "planned" },
+    { "id": "2026-05-27-reels",    "date": "2026-05-27", "time": "14:00", "type": "reels",    "rubric": "hood",  "topic": "n8n + Claude: связка webhook → разбор → Telegram за 3 узла", "episode": 3, "status": "planned" },
+    { "id": "2026-05-28-carousel", "date": "2026-05-28", "time": "08:00", "type": "carousel", "rubric": "hood",  "topic": "Skills против MCP — когда что использовать", "episode": 4, "slideCount": 8, "status": "planned" },
+    { "id": "2026-05-28-reels",    "date": "2026-05-28", "time": "14:00", "type": "reels",    "rubric": "diary", "topic": "Час → 2 минуты на сценарий рилса — показываю мой Skill", "episode": 4, "status": "planned" },
+    { "id": "2026-05-29-carousel", "date": "2026-05-29", "time": "08:00", "type": "carousel", "rubric": "diary", "topic": "5 ошибок промптов которые я сам делал — и как их избежать", "episode": 5, "slideCount": 7, "status": "planned" },
+    { "id": "2026-05-29-reels",    "date": "2026-05-29", "time": "14:00", "type": "reels",    "rubric": "hood",  "topic": "Recap недели: что нового у Anthropic и почему важно", "episode": 5, "status": "planned" },
+    { "id": "2026-06-01-carousel", "date": "2026-06-01", "time": "08:00", "type": "carousel", "rubric": "hood",  "topic": "Старт месяца про RAG в production — 5 правил", "episode": 6, "slideCount": 8, "status": "planned" },
+    { "id": "2026-06-01-reels",    "date": "2026-06-01", "time": "14:00", "type": "reels",    "rubric": "diary", "topic": "Анонс плана недели: RAG, sqlite-vec, Voyage", "episode": 6, "status": "planned" },
+    { "id": "2026-06-02-carousel", "date": "2026-06-02", "time": "08:00", "type": "carousel", "rubric": "diary", "topic": "Voyage AI vs OpenAI embeddings — сравнение на боевой задаче", "episode": 7, "slideCount": 7, "status": "planned" },
+    { "id": "2026-06-02-reels",    "date": "2026-06-02", "time": "14:00", "type": "reels",    "rubric": "hood",  "topic": "sqlite-vec за вечер — production RAG без Pinecone", "episode": 7, "status": "planned" }
+  ]
+}
