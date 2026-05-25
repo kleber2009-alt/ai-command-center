@@ -1,0 +1,66 @@
+import Link from 'next/link';
+import { redirect } from 'next/navigation';
+import { getCurrentUser } from '@/lib/auth';
+import { prisma } from '@/lib/prisma';
+import { EditForm } from '@/components/edit-form';
+import { COSTS } from '@/lib/tokens';
+
+export const dynamic = 'force-dynamic';
+export const metadata = { title: 'New edit — Persona Studio' };
+
+export default async function NewEditPage({ searchParams }: { searchParams: Promise<{ videoId?: string }> }) {
+  const user = await getCurrentUser();
+  if (!user) redirect('/sign-in');
+  const { videoId } = await searchParams;
+
+  const videos = await prisma.videoGeneration.findMany({
+    where: { userId: user.id, status: 'completed' },
+    orderBy: { createdAt: 'desc' },
+    include: { avatar: { select: { id: true, styleLabel: true, imageUrl: true } } },
+    take: 30,
+  });
+
+  return (
+    <div className="grid gap-8">
+      <header>
+        <div className="flex items-baseline gap-3 mb-4">
+          <span className="sec-num">/00</span>
+          <span className="sec-title">New edit · Submagic</span>
+          <span className="flex-1 border-b border-border translate-y-[-3px]" />
+          <Link href="/edits" className="mono text-[10px] tracking-widest uppercase text-text-mute hover:text-text">
+            ← all edits
+          </Link>
+        </div>
+        <h1 className="font-serif text-[36px] sm:text-[44px] leading-tight max-w-[24ch]">
+          Готовое видео — <span className="italic text-warm">в монтаж.</span>
+        </h1>
+        <p className="font-serif text-[16px] text-text-dim mt-3 max-w-[60ch]">
+          Шаблон в стиле известных авторов + автоматические субтитры. Submagic обычно рендерит за 3–8 минут. Списывается {COSTS.submagicEdit} токенов.
+        </p>
+      </header>
+
+      {videos.length === 0 ? (
+        <div className="border border-border-2 border-dashed p-12 text-center bg-surface">
+          <div className="sec-num mb-3">/NO-VIDEOS</div>
+          <div className="font-serif italic text-[22px] mb-4">
+            Сначала нужно хотя бы одно готовое видео.
+          </div>
+          <Link href="/videos/new" className="btn-primary">Создать видео →</Link>
+        </div>
+      ) : (
+        <EditForm
+          videos={videos.map((v) => ({
+            id: v.id,
+            videoUrl: v.videoUrl,
+            aspect: v.aspect,
+            createdAt: v.createdAt.toISOString(),
+            avatar: v.avatar,
+            script: v.script,
+          }))}
+          initialVideoId={videoId}
+          cost={COSTS.submagicEdit}
+        />
+      )}
+    </div>
+  );
+}

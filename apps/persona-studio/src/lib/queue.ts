@@ -32,6 +32,7 @@ export const QUEUE_NAMES = {
   coverGeneration: 'cover-generation',
   heygenVideo: 'heygen-video',
   omnihumanVideo: 'omnihuman-video',
+  submagicEdit: 'submagic-edit',
 } as const;
 
 export type AvatarGenerationJob = {
@@ -50,6 +51,11 @@ export type VideoJob = {
   userId: string;
 };
 
+export type EditJob = {
+  editId: string;
+  userId: string;
+};
+
 // Backward-compat alias.
 export type HeygenVideoJob = VideoJob;
 
@@ -57,6 +63,7 @@ let _avatarQueue: Queue<AvatarGenerationJob> | null = null;
 let _coverQueue: Queue<CoverGenerationJob> | null = null;
 let _heygenQueue: Queue<VideoJob> | null = null;
 let _omnihumanQueue: Queue<VideoJob> | null = null;
+let _editQueue: Queue<EditJob> | null = null;
 
 export function avatarQueue() {
   if (!_avatarQueue) {
@@ -84,6 +91,13 @@ export function omnihumanQueue() {
     _omnihumanQueue = new Queue<VideoJob>(QUEUE_NAMES.omnihumanVideo, options());
   }
   return _omnihumanQueue;
+}
+
+export function editQueue() {
+  if (!_editQueue) {
+    _editQueue = new Queue<EditJob>(QUEUE_NAMES.submagicEdit, options());
+  }
+  return _editQueue;
 }
 
 /** Engine-aware dispatcher — pass the queueName from EngineConfig. */

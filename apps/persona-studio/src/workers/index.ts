@@ -2,15 +2,17 @@ import { startAvatarWorker } from './avatar-generation.worker';
 import { startCoverWorker } from './cover-generation.worker';
 import { startHeygenWorker } from './heygen-video.worker';
 import { startOmnihumanWorker } from './omnihuman-video.worker';
+import { startSubmagicEditWorker } from './submagic-edit.worker';
 
 const workers = [
   startAvatarWorker(),
   startCoverWorker(),
   startHeygenWorker(),
   startOmnihumanWorker(),
+  startSubmagicEditWorker(),
 ];
 
-console.log('[persona-studio:worker] started avatar + cover + heygen + omnihuman workers');
+console.log('[persona-studio:worker] started avatar + cover + heygen + omnihuman + submagic-edit workers');
 
 async function shutdown(reason: string) {
   console.log(`[persona-studio:worker] shutting down (${reason})…`);

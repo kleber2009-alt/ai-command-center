@@ -127,13 +127,21 @@ export function VideoCard({ initial, autopoll }: { initial: Video; autopoll: boo
         <span>{formatDate(v.createdAt)}</span>
       </div>
       {v.status === 'completed' && v.videoUrl && (
-        <a
-          href={`/api/videos/${v.id}/download`}
-          download
-          className="btn-ghost justify-center"
-        >
-          Скачать MP4 ↓
-        </a>
+        <div className="grid grid-cols-2 gap-2">
+          <a
+            href={`/api/videos/${v.id}/download`}
+            download
+            className="btn-ghost justify-center"
+          >
+            Скачать ↓
+          </a>
+          <a
+            href={`/edits/new?videoId=${v.id}`}
+            className="btn-primary justify-center"
+          >
+            В монтаж →
+          </a>
+        </div>
       )}
     </article>
   );
