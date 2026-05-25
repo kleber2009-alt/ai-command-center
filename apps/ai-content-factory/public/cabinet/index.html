@@ -207,6 +207,7 @@ button,input,select,textarea{font:inherit;color:inherit}
       После загрузки агент сам опишет каждый клип (Claude Vision) — описание появится через 5–15 с.
       В рилсе агент выбирает конкретные клипы по содержанию.
     </p>
+    <div id="footage-library-wrap" style="margin-bottom:18px"></div>
     <div id="footage-grid" style="display:grid;grid-template-columns:repeat(auto-fill,minmax(320px,1fr));gap:14px">
       <div class="empty">Загружаю каталог…</div>
     </div>
@@ -492,33 +493,46 @@ function escapeHtml(s) {
 }
 
 // ── Footage library ────────────────────────────────────────────────
+function buildTagCard(entry, maxUploadMb, opts = {}) {
+  const isLibrary = !!opts.library;
+  const card = document.createElement('div');
+  card.className = 'tag-card';
+  card.dataset.tag = entry.tag;
+  const clipsLayout = isLibrary
+    ? `<div class="clips" style="display:grid;grid-template-columns:repeat(auto-fill,minmax(220px,1fr));gap:8px">`
+    : `<div class="clips">`;
+  card.innerHTML = `
+    <h3>${escapeHtml(entry.label || entry.tag)}${isLibrary ? ' · корзина на 30' : ''}</h3>
+    <div class="tag-desc"><code>${escapeHtml(entry.tag)}</code>${entry.expectedSeconds ? ' · ' + escapeHtml(entry.expectedSeconds) + ' c' : ''}</div>
+    <div class="tag-desc">${escapeHtml(entry.description || '')}</div>
+    <div class="clip-count">${entry.clips.length} клип${pluralRu(entry.clips.length, ['', 'а', 'ов'])} в библиотеке</div>
+    <label class="dropzone" style="${isLibrary ? 'padding:32px 12px;font-size:14px' : ''}">
+      <strong>Перетащи сюда</strong> или нажми, чтобы выбрать (до 30 файлов × ${maxUploadMb} MB)
+      <input type="file" accept=".mp4,.mov,.m4v,.webm" multiple style="display:none">
+    </label>
+    <div class="uploading" style="display:none"><span class="spinner"></span><span class="uploading-text">Загружаю…</span></div>
+    ${clipsLayout}
+      ${entry.clips.map((c) => renderClipCard(c)).join('') || '<div style="font-size:11px;color:var(--t3);text-align:center;padding:6px">Пока нет клипов</div>'}
+    </div>
+  `;
+  return card;
+}
+
 async function loadFootage() {
+  const wrap = document.getElementById('footage-library-wrap');
   const grid = document.getElementById('footage-grid');
   try {
     const { tags, maxUploadMb } = await api('/api/footage');
     if (!tags || tags.length === 0) {
+      wrap.innerHTML = '';
       grid.innerHTML = '<div class="empty">Каталог тегов пуст. Положи <code>data/assets/footage-tags.json</code>.</div>';
       return;
     }
+    wrap.innerHTML = '';
     grid.innerHTML = '';
     tags.forEach((entry) => {
-      const card = document.createElement('div');
-      card.className = 'tag-card';
-      card.dataset.tag = entry.tag;
-      card.innerHTML = `
-        <h3>${escapeHtml(entry.label || entry.tag)}</h3>
-        <div class="tag-desc"><code>${escapeHtml(entry.tag)}</code>${entry.expectedSeconds ? ' · ' + escapeHtml(entry.expectedSeconds) + ' c' : ''}</div>
-        <div class="tag-desc">${escapeHtml(entry.description || '')}</div>
-        <div class="clip-count">${entry.clips.length} клип${pluralRu(entry.clips.length, ['', 'а', 'ов'])} в библиотеке</div>
-        <label class="dropzone">
-          <strong>Перетащи сюда</strong> или нажми, чтобы выбрать (до 30 файлов × ${maxUploadMb} MB)
-          <input type="file" accept=".mp4,.mov,.m4v,.webm" multiple style="display:none">
-        </label>
-        <div class="uploading" style="display:none"><span class="spinner"></span><span class="uploading-text">Загружаю…</span></div>
-        <div class="clips">
-          ${entry.clips.map((c) => renderClipCard(c)).join('') || '<div style="font-size:11px;color:var(--t3);text-align:center;padding:6px">Пока нет клипов</div>'}
-        </div>
-      `;
+      const isLibrary = entry.tag === 'library';
+      const card = buildTagCard(entry, maxUploadMb, { library: isLibrary });
       const dropzone = card.querySelector('.dropzone');
       const input = card.querySelector('input[type=file]');
       input.onchange = () => handleUpload(entry.tag, [...input.files], card);
@@ -541,7 +555,7 @@ async function loadFootage() {
           }
         };
       });
-      grid.appendChild(card);
+      (isLibrary ? wrap : grid).appendChild(card);
     });
   } catch (e) {
     grid.innerHTML = '<div class="empty">Ошибка: ' + escapeHtml(e.message) + '</div>';

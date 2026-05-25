@@ -455,7 +455,42 @@ app.get('/', (_req, res) => {
   res.sendFile(join(PUBLIC_DIR, 'cabinet', 'index.html'));
 });
 
+// On boot, scan the footage tree and re-describe any clip that's missing /
+// stuck — covers two cases: clips uploaded against an older image, and
+// describer crashes that left a clip pending.
+function describeBacklogOnStart(): void {
+  if (!existsSync(FOOTAGE_ROOT)) return;
+  if (!process.env.ANTHROPIC_API_KEY) {
+    log.warn('describeBacklog: ANTHROPIC_API_KEY missing, skipping');
+    return;
+  }
+  const tagDirs = readdirSync(FOOTAGE_ROOT).filter((d) => {
+    try { return statSync(join(FOOTAGE_ROOT, d)).isDirectory() && SAFE_TAG.test(d); }
+    catch { return false; }
+  });
+  let queued = 0;
+  for (const tag of tagDirs) {
+    const meta = getAllClipMeta(tag);
+    const files = readdirSync(join(FOOTAGE_ROOT, tag)).filter((f) => SAFE_FILE.test(f));
+    for (const file of files) {
+      const m = meta[file];
+      // re-describe everything that isn't 'ready' (covers pending, describing,
+      // failed, and never-touched files)
+      if (!m || m.status !== 'ready') {
+        queued++;
+        setClipMeta(tag, file, { status: 'pending' });
+        (async () => {
+          try { await describeClip(tag, file); }
+          catch { /* persisted in meta */ }
+        })();
+      }
+    }
+  }
+  if (queued > 0) log.info(`describeBacklog: queued ${queued} clip(s)`);
+}
+
 app.listen(PORT, () => {
   log.info(`Cabinet listening on http://0.0.0.0:${PORT}`);
   if (!process.env.ANTHROPIC_API_KEY) log.warn('ANTHROPIC_API_KEY is not set — generation will fail');
+  describeBacklogOnStart();
 });
