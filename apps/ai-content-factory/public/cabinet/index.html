@@ -203,8 +203,9 @@ button,input,select,textarea{font:inherit;color:inherit}
   <div class="card">
     <h2>Библиотека клипов</h2>
     <p style="font-size:13px;color:var(--t2);margin-bottom:18px">
-      Drag&amp;drop файлы в зону нужного тега или жми «Выбрать». Поддержка <code>.mp4 .mov .m4v .webm</code> до 100 MB.
-      Когда у тега есть хотя бы один клип — пайплайн рилс собирает реальное видео; пустой тег → fallback-режим (только сценарий).
+      Drag&amp;drop до 30 файлов за раз в зону тега. Поддержка <code>.mp4 .mov .m4v .webm</code>, каждый до 100 MB.
+      После загрузки агент сам опишет каждый клип (Claude Vision) — описание появится через 5–15 с.
+      В рилсе агент выбирает конкретные клипы по содержанию.
     </p>
     <div id="footage-grid" style="display:grid;grid-template-columns:repeat(auto-fill,minmax(320px,1fr));gap:14px">
       <div class="empty">Загружаю каталог…</div>
@@ -230,9 +231,27 @@ button,input,select,textarea{font:inherit;color:inherit}
   padding:6px 10px;background:var(--surface);border:1px solid var(--sep);border-radius:6px;font-size:12px;
 }
 .tag-card .clip-row .name{flex:1;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;color:var(--t1);font-family:ui-monospace,SF Mono,monospace}
-.tag-card .clip-row .size{color:var(--t3);font-size:11px}
+.tag-card .clip-row .size{color:var(--t3);font-size:11px;white-space:nowrap}
 .tag-card .clip-row button{background:none;border:none;color:var(--red);font-size:12px;cursor:pointer;padding:2px 6px;border-radius:4px}
 .tag-card .clip-row button:hover{background:rgba(192,57,43,.1)}
+.clip-card{
+  display:flex;flex-direction:column;gap:6px;
+  padding:8px 10px;background:var(--surface);border:1px solid var(--sep);border-radius:6px;font-size:12px;
+}
+.clip-card .top{display:flex;justify-content:space-between;align-items:center;gap:8px}
+.clip-card .name{flex:1;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;color:var(--t1);font-family:ui-monospace,SF Mono,monospace;font-size:11px}
+.clip-card .meta-row{display:flex;gap:8px;align-items:center;color:var(--t3);font-size:11px}
+.clip-card .desc{font-size:12px;color:var(--t1);line-height:1.4}
+.clip-card .desc.pending{color:var(--t3);font-style:italic}
+.clip-card .tags{display:flex;flex-wrap:wrap;gap:4px}
+.clip-card .tags span{background:rgba(0,113,227,.08);color:var(--blue);font-size:10px;padding:1px 6px;border-radius:4px}
+.clip-card button.del{background:none;border:none;color:var(--red);font-size:12px;cursor:pointer;padding:2px 6px;border-radius:4px}
+.clip-card button.del:hover{background:rgba(192,57,43,.1)}
+.badge-status{font-size:10px;padding:1px 6px;border-radius:4px;text-transform:uppercase;letter-spacing:.3px;font-weight:600}
+.badge-status.describing{background:#FFF8E1;color:#7E5800}
+.badge-status.ready{background:#E8F5E9;color:var(--green)}
+.badge-status.failed{background:#FFEBEE;color:var(--red)}
+.badge-status.pending{background:var(--surface-2);color:var(--t3)}
 .tag-card .uploading{font-size:11px;color:var(--blue);margin-top:6px;display:flex;align-items:center;gap:6px}
 </style>
 
@@ -492,18 +511,12 @@ async function loadFootage() {
         <div class="tag-desc">${escapeHtml(entry.description || '')}</div>
         <div class="clip-count">${entry.clips.length} клип${pluralRu(entry.clips.length, ['', 'а', 'ов'])} в библиотеке</div>
         <label class="dropzone">
-          <strong>Перетащи сюда</strong> или нажми, чтобы выбрать (до ${maxUploadMb} MB)
+          <strong>Перетащи сюда</strong> или нажми, чтобы выбрать (до 30 файлов × ${maxUploadMb} MB)
           <input type="file" accept=".mp4,.mov,.m4v,.webm" multiple style="display:none">
         </label>
         <div class="uploading" style="display:none"><span class="spinner"></span><span class="uploading-text">Загружаю…</span></div>
         <div class="clips">
-          ${entry.clips.map((c) => `
-            <div class="clip-row" data-file="${escapeHtml(c.file)}">
-              <span class="name">${escapeHtml(c.file)}</span>
-              <span class="size">${formatSize(c.sizeBytes)}</span>
-              <button title="Удалить">✕</button>
-            </div>
-          `).join('') || '<div style="font-size:11px;color:var(--t3);text-align:center;padding:6px">Пока нет клипов</div>'}
+          ${entry.clips.map((c) => renderClipCard(c)).join('') || '<div style="font-size:11px;color:var(--t3);text-align:center;padding:6px">Пока нет клипов</div>'}
         </div>
       `;
       const dropzone = card.querySelector('.dropzone');
@@ -516,9 +529,9 @@ async function loadFootage() {
         card.classList.remove('drag');
         handleUpload(entry.tag, [...e.dataTransfer.files], card);
       };
-      card.querySelectorAll('.clip-row button').forEach((btn) => {
+      card.querySelectorAll('.clip-card button.del').forEach((btn) => {
         btn.onclick = async () => {
-          const file = btn.parentElement.dataset.file;
+          const file = btn.closest('.clip-card').dataset.file;
           if (!confirm('Удалить ' + file + '?')) return;
           try {
             await api('/api/footage/' + encodeURIComponent(entry.tag) + '/' + encodeURIComponent(file), { method: 'DELETE' });
@@ -533,6 +546,32 @@ async function loadFootage() {
   } catch (e) {
     grid.innerHTML = '<div class="empty">Ошибка: ' + escapeHtml(e.message) + '</div>';
   }
+}
+
+function renderClipCard(c) {
+  const status = c.status || 'pending';
+  const statusLabel = { pending: 'в очереди', describing: 'описываю…', ready: 'готов', failed: 'ошибка' }[status] || status;
+  const desc = c.description
+    ? `<div class="desc">${escapeHtml(c.description)}</div>`
+    : status === 'failed'
+      ? `<div class="desc pending">не удалось описать: ${escapeHtml(c.error || 'unknown')}</div>`
+      : `<div class="desc pending">${status === 'describing' ? 'агент описывает кадр…' : 'описание появится после загрузки'}</div>`;
+  const tags = c.autoTags && c.autoTags.length > 0
+    ? `<div class="tags">${c.autoTags.map((t) => `<span>${escapeHtml(t)}</span>`).join('')}</div>`
+    : '';
+  const dur = c.durationSec ? `${c.durationSec.toFixed(1)} с · ` : '';
+  return `
+    <div class="clip-card" data-file="${escapeHtml(c.file)}">
+      <div class="top">
+        <span class="name" title="${escapeHtml(c.file)}">${escapeHtml(c.file)}</span>
+        <span class="badge-status ${status}">${statusLabel}</span>
+        <button class="del" title="Удалить">✕</button>
+      </div>
+      ${desc}
+      ${tags}
+      <div class="meta-row">${dur}${formatSize(c.sizeBytes)}</div>
+    </div>
+  `;
 }
 
 async function handleUpload(tag, files, card) {
@@ -572,6 +611,7 @@ loadRubrics();
 loadRuns();
 setInterval(loadHealth, 30000);
 setInterval(loadRuns, 15000);
+setInterval(() => { if (state.page === 'footage') loadFootage(); }, 4000);
 </script>
 
 </body>

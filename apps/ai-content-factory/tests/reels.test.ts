@@ -47,3 +47,27 @@ test('formatScript includes hook, scenes, cta, and subtitles', () => {
   for (const s of sample.scenes) assert.ok(md.includes(s.text));
   for (const sub of sample.subtitles) assert.ok(md.includes(sub));
 });
+
+test('reels schema accepts scenes with clipFile instead of footageTag', () => {
+  const withClipFile: ReelsScript = {
+    ...sample,
+    scenes: [
+      { text: 'Сцена 1', duration: 4, clipFile: 'talking-head/1234-hook.mp4' },
+      { text: 'Сцена 2', duration: 5, clipFile: 'screen-cast/5678-demo.mp4' },
+      { text: 'Сцена 3', duration: 6, clipFile: 'b-roll-typing/9999-hands.mp4' },
+    ],
+  };
+  assert.equal(validate(withClipFile), true, JSON.stringify(validate.errors));
+});
+
+test('reels schema accepts a mix of clipFile and footageTag', () => {
+  const mixed: ReelsScript = {
+    ...sample,
+    scenes: [
+      { text: 'a', duration: 4, clipFile: 'talking-head/h.mp4' },
+      { text: 'b', duration: 4, footageTag: 'b-roll-coffee' },
+      { text: 'c', duration: 5, clipFile: 'screen-cast/d.mp4', footageTag: 'screen-cast' },
+    ],
+  };
+  assert.equal(validate(mixed), true, JSON.stringify(validate.errors));
+});
