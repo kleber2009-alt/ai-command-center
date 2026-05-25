@@ -45,6 +45,36 @@ interface ContextOpts {
   format?: 'carousel' | 'reels';
 }
 
+/** Canonical priority slots — generation MUST follow these. They come first in
+ * the system prompt so Claude treats them as the master visual / brand spec. */
+const PRIORITY_SLOTS = new Set([
+  'prompt-00-html-template',
+  'prompt-00-brandbook',
+]);
+
+function readSlotBody(slot: string): string | null {
+  const dir = join(PROMPTS_ROOT, slot);
+  if (!existsSync(dir)) return null;
+  const files = readdirSync(dir).filter((f) => TEXT_RE.test(f)).sort();
+  const parts: string[] = [];
+  for (const file of files) {
+    try {
+      const body = readFileSync(join(dir, file), 'utf8').trim();
+      if (body) parts.push(body);
+    } catch { /* skip */ }
+  }
+  return parts.length > 0 ? parts.join('\n\n') : null;
+}
+
+function loadPrioritySection(): string {
+  const blocks: string[] = [];
+  for (const slot of PRIORITY_SLOTS) {
+    const body = readSlotBody(slot);
+    if (body) blocks.push(`### ${slot}\n\n${body}`);
+  }
+  return blocks.join('\n\n---\n\n');
+}
+
 function loadPromptsBlock(opts: ContextOpts = {}): string {
   if (!existsSync(PROMPTS_ROOT)) return '';
   const slots = readdirSync(PROMPTS_ROOT)
@@ -52,20 +82,14 @@ function loadPromptsBlock(opts: ContextOpts = {}): string {
       try { return statSync(join(PROMPTS_ROOT, d)).isDirectory() && SAFE_TAG.test(d); }
       catch { return false; }
     })
+    .filter((slot) => !PRIORITY_SLOTS.has(slot)) // priority promoted out
     .filter((slot) => !isExcludedByRubric(slot, opts.rubricSlug))
     .filter((slot) => !isExcludedByFormat(slot, opts.format))
     .sort();
   const sections: string[] = [];
   for (const slot of slots) {
-    const dir = join(PROMPTS_ROOT, slot);
-    const files = readdirSync(dir).filter((f) => TEXT_RE.test(f)).sort();
-    for (const file of files) {
-      try {
-        const body = readFileSync(join(dir, file), 'utf8').trim();
-        if (!body) continue;
-        sections.push(`### ${slot}\n\n${body}`);
-      } catch { /* skip unreadable */ }
-    }
+    const body = readSlotBody(slot);
+    if (body) sections.push(`### ${slot}\n\n${body}`);
   }
   return sections.join('\n\n---\n\n');
 }
@@ -109,6 +133,7 @@ export function loadTrainingContext(opts: ContextOpts = {}): string {
   const key = cacheKey(opts);
   const hit = cached.get(key);
   if (hit && Date.now() - hit.ts < TTL_MS) return hit.value;
+  const priority = loadPrioritySection();
   const prompts = loadPromptsBlock(opts);
   const refs = loadReferencesBlock();
   const parts: string[] = [];
@@ -124,6 +149,15 @@ export function loadTrainingContext(opts: ContextOpts = {}): string {
       `> Filter active: rubric=${opts.rubricSlug ?? '*'}, format=${opts.format ?? '*'}. ` +
         'Other rubrics\' briefs are omitted to keep the prompt focused.',
     );
+  }
+  if (priority) {
+    parts.push('## ★ PRIORITY — следуй этому как канону');
+    parts.push(
+      'Эти два документа описывают визуальный язык канала и геометрию слайда. ' +
+        'При конфликте с любыми другими подсказками побеждают они. Не отступай ' +
+        'от палитры рубрики, отступов, размеров шрифтов и правил типографики.',
+    );
+    parts.push(priority);
   }
   if (refs) {
     parts.push('## Visual reference catalog (style anchors)');
