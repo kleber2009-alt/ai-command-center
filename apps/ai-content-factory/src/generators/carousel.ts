@@ -7,6 +7,7 @@ import { carouselSchema, SLIDE_CONTRACT, type Carousel } from '../schemas/carous
 import { loadPrompt } from '../lib/prompt.js';
 import type { RubricConfig } from '../lib/rubrics.js';
 import { fromAppRoot } from '../lib/paths.js';
+import { loadTrainingContext } from '../lib/training-context.js';
 
 export interface GenerateCarouselOptions {
   rubric: RubricConfig;
@@ -17,16 +18,19 @@ export interface GenerateCarouselOptions {
 }
 
 export async function generateCarousel(opts: GenerateCarouselOptions): Promise<Carousel> {
-  // Few-shot examples go in the cached system prompt (prompt caching), the task
-  // template in the user message.
-  let system: string | undefined;
+  // System prompt = training context (all prompts/*.md + reference descriptions)
+  // + few-shot examples from rubric. Both go into the cached system block so
+  // repeated runs hit cache_read pricing instead of full input billing.
+  const trainingBlock = loadTrainingContext();
+  let fewShot: string | undefined;
   if (opts.rubric.examplesFile) {
     try {
-      system = await readFile(fromAppRoot(opts.rubric.examplesFile), 'utf8');
+      fewShot = await readFile(fromAppRoot(opts.rubric.examplesFile), 'utf8');
     } catch {
-      system = undefined;
+      fewShot = undefined;
     }
   }
+  const system = [trainingBlock, fewShot].filter(Boolean).join('\n\n---\n\n') || undefined;
 
   // Interpolate the template, then append the exact slide-field contract so the
   // model emits schema-valid JSON.
