@@ -27,8 +27,11 @@ export function startSubmagicEditWorker() {
         throw new Error('source_video_not_ready');
       }
 
-      const preset = getTemplate(row.template);
-      if (!preset) throw new Error(`unknown_template:${row.template}`);
+      // `row.template` теперь хранит точное имя Submagic-шаблона (например
+      // "Hormozi 2"). Legacy-строки старых slug-форматов резолвим через
+      // getTemplate() для backward-compat.
+      const legacy = getTemplate(row.template);
+      const submagicTemplate = legacy?.submagicTemplate ?? row.template;
 
       await prisma.videoEdit.update({
         where: { id: editId },
@@ -40,9 +43,10 @@ export function startSubmagicEditWorker() {
         if (!projectId) {
           const project = await createProject({
             videoUrl: row.videoGeneration.videoUrl,
-            templateName: preset.submagicTemplate,
+            templateName: submagicTemplate,
             language: row.subtitleLanguage,
             subtitlesEnabled: row.subtitlesEnabled,
+            brollsEnabled: row.brollsEnabled,
             projectName: `persona-${userId.slice(0, 6)}-${row.id.slice(0, 6)}`,
           });
           projectId = project.id;
@@ -50,7 +54,7 @@ export function startSubmagicEditWorker() {
             where: { id: editId },
             data: { submagicProjectId: projectId },
           });
-          console.log(`[submagic-edit] ${editId} project=${projectId} template=${preset.submagicTemplate}`);
+          console.log(`[submagic-edit] ${editId} project=${projectId} template=${submagicTemplate} brolls=${row.brollsEnabled}`);
         } else {
           console.log(`[submagic-edit] ${editId} resuming project=${projectId}`);
         }

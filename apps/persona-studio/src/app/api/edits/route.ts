@@ -4,7 +4,7 @@ import { getCurrentUserOrApiKey } from '@/lib/auth';
 import { prisma } from '@/lib/prisma';
 import { chargeTokens, refundTokens, InsufficientTokensError, COSTS } from '@/lib/tokens';
 import { editQueue } from '@/lib/queue';
-import { EDIT_TEMPLATE_SLUGS, SUBTITLE_LANGUAGES } from '@/lib/edit-templates';
+import { STYLE_TEMPLATE_NAMES, SUBTITLE_LANGUAGES, isStyleTemplate } from '@/lib/edit-templates';
 
 export const runtime = 'nodejs';
 
@@ -12,9 +12,13 @@ const SUPPORTED_LANGS = SUBTITLE_LANGUAGES.map((l) => l.code) as [string, ...str
 
 const Body = z.object({
   videoGenerationId: z.string().min(1),
-  template: z.enum(EDIT_TEMPLATE_SLUGS as unknown as [string, ...string[]]),
+  // template = canonical Submagic name (e.g. "Hormozi 2", "Beast", "Devin").
+  template: z.string().min(1).refine(isStyleTemplate, {
+    message: `unknown_template (allowed: ${STYLE_TEMPLATE_NAMES.length} from /v1/templates)`,
+  }),
   subtitlesEnabled: z.boolean().optional().default(true),
   subtitleLanguage: z.enum(SUPPORTED_LANGS).optional().default('ru'),
+  brollsEnabled: z.boolean().optional().default(false),
 });
 
 export async function POST(req: NextRequest) {
@@ -61,6 +65,7 @@ export async function POST(req: NextRequest) {
         template: data.template,
         subtitlesEnabled: data.subtitlesEnabled,
         subtitleLanguage: data.subtitleLanguage,
+        brollsEnabled: data.brollsEnabled,
         status: 'pending',
         tokensCost: cost,
       },

@@ -79,7 +79,7 @@ export async function createProject(input: CreateProjectInput): Promise<Submagic
     templateName: input.templateName,
     language: input.language,
     magicZooms: true,
-    magicBrolls: false,
+    magicBrolls: input.brollsEnabled,
   };
 
   const res = await fetch(`${env.SUBMAGIC_API_BASE}/projects`, {
