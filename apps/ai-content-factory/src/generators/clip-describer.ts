@@ -20,6 +20,32 @@ import { log, recordClaudeCall } from '../lib/logger.js';
 
 const HAIKU = 'claude-haiku-4-5-20251001';
 
+// Anthropic Haiku is rate-limited per-org (Tier 1 ≈ 50 RPM). We cap concurrent
+// vision calls so a bulk upload / backlog scan doesn't 429 itself. Tune via
+// DESCRIBER_CONCURRENCY if the org moves up tiers.
+const CONCURRENCY = Number(process.env.DESCRIBER_CONCURRENCY ?? 4);
+
+class Semaphore {
+  private active = 0;
+  private waiting: (() => void)[] = [];
+  constructor(private readonly max: number) {}
+  async acquire(): Promise<void> {
+    if (this.active < this.max) {
+      this.active++;
+      return;
+    }
+    await new Promise<void>((resolve) => this.waiting.push(resolve));
+    this.active++;
+  }
+  release(): void {
+    this.active--;
+    const next = this.waiting.shift();
+    if (next) next();
+  }
+}
+
+const describeSemaphore = new Semaphore(CONCURRENCY);
+
 function run(cmd: string, args: string[]): Promise<string> {
   return new Promise((resolve, reject) => {
     const proc = spawn(cmd, args, { stdio: ['ignore', 'pipe', 'pipe'] });
@@ -117,6 +143,9 @@ export async function describeClip(tag: string, file: string): Promise<DescribeR
   const apiKey = process.env.ANTHROPIC_API_KEY;
   if (!apiKey) throw new Error('ANTHROPIC_API_KEY is not set');
 
+  // Acquire BEFORE flipping to 'describing' so the UI shows the queue position
+  // honestly — clips waiting on the semaphore stay 'pending'.
+  await describeSemaphore.acquire();
   const clipAbs = dataPath('assets', 'footage', tag, file);
   setClipMeta(tag, file, { status: 'describing' });
 
@@ -187,5 +216,6 @@ export async function describeClip(tag: string, file: string): Promise<DescribeR
     if (framePath) {
       try { await unlink(framePath); } catch { /* ignore */ }
     }
+    describeSemaphore.release();
   }
 }
