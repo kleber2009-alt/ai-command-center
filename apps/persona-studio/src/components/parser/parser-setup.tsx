@@ -19,11 +19,11 @@ export function ParserSetup({ initial, onSaved, onCancel }: Props) {
   const [reelsCount, setReelsCount] = useState(initial?.reelsCount ?? 5);
   const [carouselsCount, setCarouselsCount] = useState(initial?.carouselsCount ?? 5);
   const [minPlays, setMinPlays] = useState(initial?.minPlays ?? 100000);
-  const [minLikes, setMinLikes] = useState(initial?.minLikes ?? 0);
+  const [minLikes, setMinLikes] = useState(initial?.minLikes ?? 1000);
   const [minComments, setMinComments] = useState(initial?.minComments ?? 1000);
   const [minShares, setMinShares] = useState(initial?.minShares ?? 1000);
-  const [minCarouselLikes, setMinCarouselLikes] = useState(initial?.minCarouselLikes ?? 500);
-  const [minCarouselComments, setMinCarouselComments] = useState(initial?.minCarouselComments ?? 50);
+  const [minCarouselLikes, setMinCarouselLikes] = useState(initial?.minCarouselLikes ?? 1000);
+  const [minCarouselComments, setMinCarouselComments] = useState(initial?.minCarouselComments ?? 1000);
   const [saving, setSaving] = useState(false);
   const [error, setError] = useState<string | null>(null);
 

@@ -274,14 +274,14 @@ model ParserConfig {
   // Пороги для REELS. Apify не у всех постов отдаёт shares —
   // посты без этого поля проходят фильтр (см. scoring.ts).
   minPlays          Int       @default(100000)            // 100k views minimum
-  minLikes          Int       @default(0)
+  minLikes          Int       @default(1000)
   minComments      Int       @default(1000)                // 1k comments minimum
   minShares         Int       @default(1000)               // 1k reposts/shares minimum (reshareCount от Apify)
-  // Пороги для CAROUSELS. У каруселей нет plays и обычно нет shares — фильтр
-  // идёт только по likes/comments, и они значительно мягче, чем у рилсов.
-  // У типичной экспертной карусели 500–5000 лайков и 50–500 комментов.
-  minCarouselLikes    Int     @default(500)                // 500+ лайков = карусель прочитали
-  minCarouselComments Int     @default(50)                 // 50+ комментов = вовлекла обсуждение
+  // Пороги для CAROUSELS. У каруселей нет plays и обычно нет shares —
+  // фильтр только по likes/comments. По умолчанию те же значения, что для
+  // рилсов — пользователь решает мягче/жёстче через форму.
+  minCarouselLikes    Int     @default(1000)
+  minCarouselComments Int     @default(1000)
   reelsCount        Int       @default(5)
   carouselsCount    Int       @default(5)
   enabled           Boolean   @default(true)

@@ -23,6 +23,129 @@ function write(slot, body) {
   console.log(`  ${slot} ← ${body.split('\n').length} lines`);
 }
 
+write('prompt-00-html-template', `# HTML-шаблон одного слайда (1080×1350)
+
+## Назначение
+Эталон Puppeteer-рендера для каждого type слайда. Любой движок генерации (Claude → JSON, image-gen → визуал) должен принять этот HTML/CSS как референс и эмулировать его геометрию.
+
+## Шрифты (загружены в контейнер)
+- \`Inter\` — sans-serif (Regular / Medium / SemiBold / Bold / ExtraBold)
+- \`JetBrains Mono\` — monospace (Regular / Medium / Bold)
+
+## Цветовая логика
+- Фон: \`#FFFFFF\` (или \`rubric.coverBg\` для cover-slide)
+- Текст основной: \`#1D1D1F\`
+- Текст вторичный: \`#6E6E73\`
+- Accent: \`rubric.accent\` (#60c8f0 diary, #2563EB hood, #84e0a3 routine, #d96be8 money)
+
+## Геометрия
+- Slide: 1080×1350px, padding 80px по краям
+- Top-bar (handle + counter): 40px от края, font-size 26px bold
+- H1 на cover: 96px bold, line-height 0.98
+- Body title: 64px bold, line-height 1.1
+- List item: 42px regular, gap 28px между bullet и текстом
+- Stat value: 240px ExtraBold, accent-colour
+- Code block: моно 38px, dark background (#1E1E2E)
+
+## Базовый каркас HTML (упрощённо)
+
+\`\`\`html
+<div class="slide">
+  <div class="topbar">
+    <span class="handle">{rubric.handle}</span>
+    <span class="meta">
+      {rubric.categoryTag} <span class="counter">{index+1}/{total}</span>
+    </span>
+  </div>
+
+  <div class="content {slideType}">
+    <!-- variations per slide type — см. src/renderers/templates.ts -->
+  </div>
+</div>
+\`\`\`
+
+## Правила
+- Один visual hook на слайд
+- 70% воздуха, 30% контента
+- Без декоративных эмодзи / иконок
+- Картинки только если несут информацию
+
+## Источник правды
+\`apps/ai-content-factory/src/renderers/templates.ts\` — там \`renderSlideHtml(slide, ctx)\` который Puppeteer запекает. Любые изменения дизайна делаются ТАМ; этот файл — описательное превью для Claude.
+`);
+
+write('prompt-00-brandbook', `# Брендбук канала
+
+## Палитра рубрик
+
+| Рубрика | Accent | Hex | Использование |
+|---|---|---|---|
+| Дневник архитектора (diary) | голубой | #60c8f0 | пути к CCA, личный путь |
+| Нейроновости (hood) | ярко-синий | #2563EB | новости, разборы связок |
+| Cover hood (фон) | малиновый | #E6157B | заметная обложка |
+| Routine | мятный | #84e0a3 | операционная рутина |
+| Money | розово-фиолетовый | #d96be8 | цифры, экономика |
+
+## Нейтральная палитра
+- Фон базовый: #FFFFFF
+- Текст основной: #1D1D1F
+- Текст вторичный: #6E6E73
+- Третичный (мета): #AEAEB2
+- Сепаратор: rgba(0,0,0,0.08)
+- Surface light: #F5F5F7
+
+## Типографика
+- **Inter** — основной sans (заголовки + body)
+  - Размеры: 26 (top-bar) / 42 (list) / 64 (title) / 96 (cover h1) / 240 (stat value)
+  - Weight: Regular / SemiBold / Bold / ExtraBold по контексту
+- **JetBrains Mono** — моно (код, цифры, технические идентификаторы)
+
+## Принципы вёрстки
+1. Один visual hook на слайд — иначе разваливается фокус
+2. Цвет акцента ОДИН на карусель (rubric.accent + neutral)
+3. Padding 80px по краям — текст не прикасается к границе
+4. Контраст текста к фону ≥ 7:1 (WCAG AAA)
+5. Без теней / outline / glow на тексте
+
+## Cover-slide правила
+- Однотонный accent-фон (или rubric.coverBg)
+- H1 в Bold + Caps, line-height 0.98
+- Subtitle subtle, не дублирует H1
+- В нижней части мелким — "SWIPE LEFT" с arrow
+
+## Stat-slide правила
+- Цифра занимает 60-70% высоты
+- Подпись под цифрой regular weight, не теряется
+- Если цифра %, знак % того же размера что и число
+
+## List-slide правила
+- 3-5 пунктов на слайде максимум
+- Bullet point размером с текст, accent-colour
+- Каждый пункт ≤ 2 строк
+
+## Quote-slide правила
+- Italic шрифт
+- Текст центрирован
+- Подпись автора через "—" в строку ниже
+- Без кавычек " ", без украшений
+
+## Анти-паттерны
+- Многоцветные слайды (3+ accent)
+- Серифные шрифты вне quote
+- Тень / outline на тексте
+- Сложные градиенты на фоне
+- Декоративные иконки / эмодзи
+- Логотип на каждом слайде
+
+## Размер карусели
+- 1080×1350px (Instagram 4:5)
+- max 10 слайдов (Instagram cap)
+- Optimal 7-9 слайдов (доскроливание лучше)
+
+## Tone of voice
+См. prompt-01-tov-personal / prompt-02-tov-professional.
+`);
+
 write('prompt-01-tov-personal', `# Tone of voice — личный
 
 ## Принципы

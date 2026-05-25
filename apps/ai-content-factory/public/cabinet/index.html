@@ -269,9 +269,10 @@ button,input,select,textarea{font:inherit;color:inherit}
     <div id="subtab-prompts" style="display:none">
       <h2>Промпты и брифы</h2>
       <p style="font-size:13px;color:var(--t2);margin-bottom:18px">
-        До 30 текстовых файлов <code>.md / .txt</code> (до 2 MB каждый) — tone of voice, формулы хуков,
-        ЦА, рубрики, банк цитат. Каждый файл хранится отдельно в своём слоте,
-        excerpt автоматически берётся из первых 300 символов. Без Vision (текст и так читаем).
+        32 текстовых слота <code>.md / .txt / .html</code> (до 2 MB каждый). Первые два (★) — приоритетные:
+        HTML-шаблон карусели и Брендбук (цвета · шрифты · референсы) — на них генератор ориентируется
+        в первую очередь. Остальные: tone of voice, формулы хуков, ЦА, рубрики, банк цитат.
+        Каждый файл хранится отдельно в своём слоте, excerpt берётся из первых 300 символов.
       </p>
       <div id="prompts-grid" style="display:grid;grid-template-columns:repeat(auto-fill,minmax(320px,1fr));gap:14px">
         <div class="empty">Загружаю каталог…</div>
@@ -960,8 +961,8 @@ async function loadPrompts() {
         <div class="tag-desc">${escapeHtml(entry.description || '')}</div>
         <div class="clip-count">${entry.clips.length} файл${pluralRu(entry.clips.length, ['', 'а', 'ов'])} в библиотеке</div>
         <label class="dropzone">
-          <strong>Перетащи .md / .txt</strong> или нажми, чтобы выбрать (до ${maxUploadMb} MB)
-          <input type="file" accept=".md,.txt,.markdown" multiple style="display:none">
+          <strong>Перетащи .md / .txt / .html</strong> или нажми, чтобы выбрать (до ${maxUploadMb} MB)
+          <input type="file" accept=".md,.txt,.markdown,.html,.htm" multiple style="display:none">
         </label>
         <button type="button" class="btn ghost small" style="margin-top:6px;width:100%" data-inline>Написать текст вручную</button>
         <div class="uploading" style="display:none"><span class="spinner"></span><span class="uploading-text">Загружаю…</span></div>
@@ -1012,8 +1013,8 @@ function renderPromptCard(tag, c) {
 }
 
 async function uploadTextTo(tag, files, card) {
-  const valid = files.filter((f) => /\.(md|txt|markdown)$/i.test(f.name));
-  if (valid.length === 0) { alert('Поддерживаются только .md .txt .markdown'); return; }
+  const valid = files.filter((f) => /\.(md|txt|markdown|html|htm)$/i.test(f.name));
+  if (valid.length === 0) { alert('Поддерживаются только .md .txt .markdown .html'); return; }
   const indicator = card.querySelector('.uploading');
   const text = card.querySelector('.uploading-text');
   indicator.style.display = 'flex';
