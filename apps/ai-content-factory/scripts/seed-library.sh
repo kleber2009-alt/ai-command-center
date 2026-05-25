@@ -31,15 +31,15 @@ gen() {
 echo "Seeding 30 placeholder clips into $LIB"
 
 # 10 talking-head-ish
-gen 01 0x4A90E2 "Claude Skills demo"             6
-gen 02 0x9B59B6 "150 USD Claude Cert"            7
-gen 03 0x27AE60 "Morning coffee + Claude"        5
-gen 04 0xE67E22 "Common fluant mistake"          6
-gen 05 0x2C3E50 "From 1 hour to 2 minutes"       7
-gen 06 0x16A085 "Prompt that saved 1 hour"       6
-gen 07 0xC0392B "No Skills = lose 30 percent"    6
-gen 08 0xF39C12 "Subscribe for templates"        5
-gen 09 0x8E44AD "Wow Anthropic just released"    5
+gen 1  0x4A90E2 "Claude Skills demo"             6
+gen 2  0x9B59B6 "150 USD Claude Cert"            7
+gen 3  0x27AE60 "Morning coffee + Claude"        5
+gen 4  0xE67E22 "Common fluant mistake"          6
+gen 5  0x2C3E50 "From 1 hour to 2 minutes"       7
+gen 6  0x16A085 "Prompt that saved 1 hour"       6
+gen 7  0xC0392B "No Skills = lose 30 percent"    6
+gen 8  0xF39C12 "Subscribe for templates"        5
+gen 9  0x8E44AD "Wow Anthropic just released"    5
 gen 10 0x34495E "Tomorrow n8n + Claude"          6
 
 # 6 screen-cast-ish
