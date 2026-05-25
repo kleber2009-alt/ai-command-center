@@ -152,10 +152,11 @@ button,input,select,textarea{font:inherit;color:inherit}
 
       <div class="field" id="engine-picker">
         <label>Движок рендера</label>
-        <div id="engines-row" style="display:flex;gap:6px">
-          <button type="button" class="eng active" data-eng="puppeteer" style="flex:1;padding:8px 6px;border:1px solid var(--blue);background:var(--surface);border-radius:var(--r1);font-size:12px;cursor:pointer">Puppeteer<br><span style="font-size:10px;color:var(--t3)">HTML→PNG · $</span></button>
-          <button type="button" class="eng" data-eng="nano-banana" style="flex:1;padding:8px 6px;border:1px solid var(--sep);background:var(--surface-2);border-radius:var(--r1);font-size:12px;cursor:pointer">Nano Banana 2<br><span style="font-size:10px;color:var(--t3)">Gemini · $$</span></button>
-          <button type="button" class="eng" data-eng="gpt-image" style="flex:1;padding:8px 6px;border:1px solid var(--sep);background:var(--surface-2);border-radius:var(--r1);font-size:12px;cursor:pointer">GPT Image<br><span style="font-size:10px;color:var(--t3)">OpenAI · $$$</span></button>
+        <div id="engines-row" style="display:grid;grid-template-columns:1fr 1fr;gap:6px">
+          <button type="button" class="eng active" data-eng="puppeteer" style="padding:8px 6px;border:1px solid var(--blue);background:var(--surface);border-radius:var(--r1);font-size:12px;cursor:pointer">Puppeteer<br><span style="font-size:10px;color:var(--t3)">HTML→PNG · $</span></button>
+          <button type="button" class="eng" data-eng="nano-banana" style="padding:8px 6px;border:1px solid var(--sep);background:var(--surface-2);border-radius:var(--r1);font-size:12px;cursor:pointer">Nano Banana 2<br><span style="font-size:10px;color:var(--t3)">Gemini · $$</span></button>
+          <button type="button" class="eng" data-eng="gpt-image" style="padding:8px 6px;border:1px solid var(--sep);background:var(--surface-2);border-radius:var(--r1);font-size:12px;cursor:pointer">GPT Image<br><span style="font-size:10px;color:var(--t3)">OpenAI gpt-image-1 · $$$</span></button>
+          <button type="button" class="eng" data-eng="gpt-image-2" style="padding:8px 6px;border:1px solid var(--sep);background:var(--surface-2);border-radius:var(--r1);font-size:12px;cursor:pointer">GPT Image 2<br><span style="font-size:10px;color:var(--t3)">gpt-image-2 (proxy) · $$$</span></button>
         </div>
         <div class="hint" id="engine-hint" style="margin-top:6px">Puppeteer — стабильный, точные шрифты Inter/JetBrains. Nano Banana/GPT — генерируют слайды как картинки (быстрее меняешь стиль, но кириллица может «гулять»).</div>
       </div>
@@ -289,7 +290,7 @@ button,input,select,textarea{font:inherit;color:inherit}
 
 <script>
 const API = '';
-const state = { rubric: null, rubrics: {}, currentRun: null, currentRunData: null, viewerTab: 'slides', activeJob: null, format: 'carousel', engine: 'puppeteer', page: 'generator', footageSubtab: 'clips', engines: { puppeteer: true, 'nano-banana': false, 'gpt-image': false } };
+const state = { rubric: null, rubrics: {}, currentRun: null, currentRunData: null, viewerTab: 'slides', activeJob: null, format: 'carousel', engine: 'puppeteer', page: 'generator', footageSubtab: 'clips', engines: { puppeteer: true, 'nano-banana': false, 'gpt-image': false, 'gpt-image-2': false } };
 
 // ── Engine picker (visible for carousel only) ───────────────────────
 document.querySelectorAll('#engines-row .eng').forEach((b) => {

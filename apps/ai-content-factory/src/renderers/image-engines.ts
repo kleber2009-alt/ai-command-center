@@ -141,6 +141,36 @@ async function renderWithOpenAI(slide: Slide, ctx: SlideRenderContext): Promise<
   return Buffer.from(b64, 'base64');
 }
 
+/** gpt-image-2 is delivered via an OpenAI-compatible proxy (AIMLAPI by default,
+ * override via GPT_IMAGE_2_ENDPOINT). Same request/response shape as OpenAI's
+ * /v1/images/generations, just a different host + key. */
+async function renderWithGptImage2(slide: Slide, ctx: SlideRenderContext): Promise<Buffer> {
+  const apiKey = process.env.GPT_IMAGE_2_API_KEY ?? process.env.AIMLAPI_API_KEY;
+  if (!apiKey) throw new Error('GPT_IMAGE_2_API_KEY is not set (required for gpt-image-2 engine)');
+  const endpoint = process.env.GPT_IMAGE_2_ENDPOINT ?? 'https://api.aimlapi.com/v1/images/generations';
+  const model = process.env.GPT_IMAGE_2_MODEL ?? 'gpt-image-2-text-to-image';
+  const size = process.env.GPT_IMAGE_2_SIZE ?? '1024x1536';
+  const prompt = buildSlidePrompt(slide, ctx);
+
+  const res = await fetch(endpoint, {
+    method: 'POST',
+    headers: { authorization: `Bearer ${apiKey}`, 'content-type': 'application/json' },
+    body: JSON.stringify({ model, prompt, n: 1, size, response_format: 'b64_json' }),
+  });
+  if (!res.ok) throw new Error(`gpt-image-2 ${res.status}: ${(await res.text()).slice(0, 300)}`);
+  const json = (await res.json()) as OpenAIImageResponse;
+  const b64 = json.data?.[0]?.b64_json;
+  if (b64) return Buffer.from(b64, 'base64');
+  // Fallback: some proxies return { data: [{ url }] } only — fetch and convert.
+  const url = json.data?.[0]?.url;
+  if (url) {
+    const img = await fetch(url);
+    if (!img.ok) throw new Error(`gpt-image-2: download ${img.status} from ${url}`);
+    return Buffer.from(await img.arrayBuffer());
+  }
+  throw new Error(`gpt-image-2: ${json.error?.message ?? 'no image in response'}`);
+}
+
 /** Image-only engines return a PNG buffer. Puppeteer is handled separately in
  * carousel.ts because it batches all slides in one browser instance. */
 export async function renderSlideImage(
@@ -150,5 +180,6 @@ export async function renderSlideImage(
 ): Promise<Buffer> {
   if (engine === 'nano-banana') return renderWithGemini(slide, ctx);
   if (engine === 'gpt-image') return renderWithOpenAI(slide, ctx);
+  if (engine === 'gpt-image-2') return renderWithGptImage2(slide, ctx);
   throw new Error(`Unknown image engine: ${engine as string}`);
 }

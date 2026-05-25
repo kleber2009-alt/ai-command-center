@@ -161,6 +161,7 @@ app.get('/api/health', (_req, res) => {
       puppeteer: true,
       'nano-banana': Boolean(process.env.GOOGLE_AI_API_KEY ?? process.env.GEMINI_API_KEY),
       'gpt-image': Boolean(process.env.OPENAI_API_KEY),
+      'gpt-image-2': Boolean(process.env.GPT_IMAGE_2_API_KEY ?? process.env.AIMLAPI_API_KEY),
     },
     jobs: { active: [...jobs.values()].filter((j) => j.status === 'running' || j.status === 'queued').length },
   });
