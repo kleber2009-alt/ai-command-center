@@ -28,15 +28,33 @@ RUN npm run build
 FROM --platform=linux/amd64 node:20-bookworm-slim AS runner
 WORKDIR /app
 
-# Chromium for Puppeteer + fonts for HTML rendering + ffmpeg for reels video
+# Chromium for Puppeteer + fonts (Inter + JetBrains Mono for the carousel /
+# reels templates) + ffmpeg for reels video.
+#
+# Inter ships only in Debian Trixie+; Bookworm gets it via a pinned GitHub
+# release. We install once at build time so generation never depends on a
+# live network.
 RUN apt-get update && apt-get install -y --no-install-recommends \
       chromium \
       ffmpeg \
+      fonts-jetbrains-mono \
       fonts-liberation \
       fonts-dejavu-core \
       fonts-noto-color-emoji \
       ca-certificates \
       tini \
+      curl \
+      unzip \
+      fontconfig \
+    && mkdir -p /usr/share/fonts/inter /tmp/inter \
+    && curl -fsSL https://github.com/rsms/inter/releases/download/v4.0/Inter-4.0.zip -o /tmp/inter.zip \
+    && unzip -q /tmp/inter.zip -d /tmp/inter \
+    && find /tmp/inter -type f -name 'Inter-*.ttf' -exec cp {} /usr/share/fonts/inter/ \; \
+    && find /tmp/inter -type f -name 'InterVariable*.ttf' -exec cp {} /usr/share/fonts/inter/ \; \
+    && rm -rf /tmp/inter /tmp/inter.zip \
+    && fc-cache -f \
+    && apt-get remove --purge -y curl unzip \
+    && apt-get autoremove -y \
     && rm -rf /var/lib/apt/lists/*
 
 ENV PUPPETEER_SKIP_DOWNLOAD=1 \

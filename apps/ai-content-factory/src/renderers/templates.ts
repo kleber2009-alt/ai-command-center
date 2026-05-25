@@ -16,8 +16,10 @@ export interface RenderContext {
 export const SLIDE_WIDTH = 1080;
 export const SLIDE_HEIGHT = 1350;
 
-const SANS = `'Liberation Sans', 'DejaVu Sans', 'Noto Color Emoji', sans-serif`;
-const MONO = `'DejaVu Sans Mono', 'Liberation Mono', monospace`;
+// Inter (OFL) for body + headings, JetBrains Mono for code/numbers.
+// Both shipped via the Dockerfile so render is offline-safe.
+const SANS = `'Inter', 'Inter Variable', 'Liberation Sans', 'DejaVu Sans', 'Noto Color Emoji', sans-serif`;
+const MONO = `'JetBrains Mono', 'DejaVu Sans Mono', 'Liberation Mono', monospace`;
 
 function escapeHtml(value: string): string {
   return value
