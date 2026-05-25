@@ -65,7 +65,7 @@ export async function deliverToTelegram(opts: DeliverOptions): Promise<void> {
     const field = `photo-${i}`;
     fieldNames.push(field);
     const data = await readFile(slides[i]!);
-    form.append(field, new Blob([new Uint8Array(data)], { type: 'image/png' }), basename(slides[i]!));
+    form.append(field, new Blob([new Uint8Array(data)], { type: mimeFromExt(slides[i]!) }), basename(slides[i]!));
   }
   form.append('media', JSON.stringify(buildMediaGroup(fieldNames)));
 
