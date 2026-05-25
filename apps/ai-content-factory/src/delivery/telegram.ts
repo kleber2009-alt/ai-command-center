@@ -96,8 +96,28 @@ export interface DeliverReelsOptions {
   attachedPhoto?: string;
 }
 
+function mimeFromExt(path: string): string {
+  const ext = path.toLowerCase().split('.').pop() ?? '';
+  if (ext === 'png') return 'image/png';
+  if (ext === 'webp') return 'image/webp';
+  return 'image/jpeg';
+}
+
+async function sendPhotoFile(token: string, chatId: string, photoPath: string): Promise<void> {
+  const form = new FormData();
+  form.append('chat_id', chatId);
+  const data = await readFile(photoPath);
+  form.append('photo', new Blob([new Uint8Array(data)], { type: mimeFromExt(photoPath) }), basename(photoPath));
+  await callTelegram(token, 'sendPhoto', form);
+}
+
 export async function deliverReelsToTelegram(opts: DeliverReelsOptions): Promise<void> {
   const { token, chatId } = getConfig();
+
+  if (opts.attachedPhoto) {
+    try { await sendPhotoFile(token, chatId, opts.attachedPhoto); }
+    catch (err) { log.warn('Attached photo send failed', { error: err instanceof Error ? err.message : String(err) }); }
+  }
 
   if (opts.mode === 'video' && opts.videoPath) {
     const form = new FormData();
