@@ -32,6 +32,9 @@ export default async function VideosPage({ searchParams }: { searchParams: Promi
           <span className="sec-num">/00</span>
           <span className="sec-title">My talking-photo videos</span>
           <span className="flex-1 border-b border-border translate-y-[-3px]" />
+          <Link href="/edits" className="mono text-[10px] tracking-widest uppercase text-text-mute hover:text-text">
+            montage →
+          </Link>
           {selectedAvatar ? (
             <Link
               href={`/videos/new?avatarId=${selectedAvatar.id}`}

@@ -41,11 +41,11 @@ pnpm dev
 
 ## Worker dispatch
 
-Two queues:
+Queues (all started together via `pnpm worker` / `pnpm worker:prod` — they share the same Prisma client and queue config as the web process):
 - **avatar-generation** (`src/workers/avatar-generation.worker.ts`) — per upload, batch of N avatar styles, Gemini calls in parallel with concurrency cap.
 - **cover-generation** (`src/workers/cover-generation.worker.ts`) — single cover per request with live preview.
-
-Always start workers via `npm run persona:worker:*` — they share the same Prisma client and queue config as the web process.
+- **heygen-video** / **omnihuman-video** — video render.
+- **submagic-edit** (`src/workers/submagic-edit.worker.ts`) — отправляет готовое `VideoGeneration.videoUrl` в Submagic, ждёт рендер, заливает результат в MinIO в `VideoEdit.resultUrl`. Pipeline-шаг 4: Photo → Avatars → Video → **Montage**.
 
 ## Tokens — critical
 
@@ -53,11 +53,11 @@ Token balance changes go through `src/lib/tokens.ts` (`charge` / `refund` / `cre
 
 ## Schema highlights (`prisma/schema.prisma`)
 
-`User`, `Upload`, `AvatarGeneration`, `Avatar`, `Cover`, `Video`, `TokenTransaction`. Forward-only migrations via `prisma migrate`.
+`User`, `Upload`, `AvatarGeneration`, `Avatar`, `Cover`, `VideoGeneration`, `VideoEdit` (Submagic-монтаж готового видео), `TokenTransaction`. Forward-only migrations via `prisma migrate`.
 
 ## Env
 
-`.env.example` lists every key. Critical: `DATABASE_URL`, `REDIS_URL`, `S3_ENDPOINT`/`S3_BUCKET`/`S3_*`, `GEMINI_API_KEY`, `AUTH_SECRET` (`openssl rand -base64 32`).
+`.env.example` lists every key. Critical: `DATABASE_URL`, `REDIS_URL`, `S3_ENDPOINT`/`S3_BUCKET`/`S3_*`, `GEMINI_API_KEY`, `AUTH_SECRET` (`openssl rand -base64 32`). Optional: `SUBMAGIC_API_KEY` (без него `/edits` создание упадёт с `SUBMAGIC_NO_API_KEY`), `COST_SUBMAGIC_EDIT` (default 15).
 
 ## Deploy
 
