@@ -36,6 +36,10 @@ export interface CarouselPipelineOptions {
   rag?: boolean;
   /** Which engine renders the slide PNGs. Default 'puppeteer'. */
   engine?: ImageEngine;
+  /** Абсолютный путь к фото, прикреплённому пользователем к этому прогону.
+   * Будет скопировано в outDir как attached-photo.<ext> и приклеено первым
+   * в Telegram-доставке. */
+  attachedPhoto?: string;
 }
 
 export interface CarouselPipelineResult {

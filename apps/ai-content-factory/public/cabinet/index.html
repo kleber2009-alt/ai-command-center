@@ -133,6 +133,7 @@ button,input,select,textarea{font:inherit;color:inherit}
       <button class="navtab active" data-page="generator" style="background:none;border:none;font-size:14px;font-weight:500;color:#1D1D1F;cursor:pointer;padding:6px 10px;border-radius:6px">Генерация</button>
       <button class="navtab" data-page="footage" style="background:none;border:none;font-size:14px;font-weight:500;color:#6E6E73;cursor:pointer;padding:6px 10px;border-radius:6px">Footage</button>
       <button class="navtab" data-page="training" style="background:none;border:none;font-size:14px;font-weight:500;color:#6E6E73;cursor:pointer;padding:6px 10px;border-radius:6px">Обучение</button>
+      <button class="navtab" data-page="plan" style="background:none;border:none;font-size:14px;font-weight:500;color:#6E6E73;cursor:pointer;padding:6px 10px;border-radius:6px">План</button>
     </div>
     <div class="health" id="health">
       <span><span class="dot" id="h-claude"></span> Claude</span>
@@ -319,6 +320,29 @@ button,input,select,textarea{font:inherit;color:inherit}
   </div>
 </div>
 
+<!-- ── Plan page (content-plan + manual scheduler triggers) ──────── -->
+<div class="layout" id="page-plan" style="display:none;grid-template-columns:1fr">
+  <div class="card">
+    <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:14px;flex-wrap:wrap;gap:8px">
+      <h2 style="margin:0">Контент-план</h2>
+      <div style="display:flex;gap:6px">
+        <button class="btn small ghost" id="trigger-carousel">▶ Карусель сейчас</button>
+        <button class="btn small ghost" id="trigger-reels">▶ Рилс сейчас</button>
+        <button class="btn small ghost" id="trigger-insights">↻ Weekly insights</button>
+        <button class="btn small ghost" id="trigger-heartbeat">♥ Heartbeat в TG</button>
+      </div>
+    </div>
+    <p style="font-size:13px;color:var(--t2);margin-bottom:14px">
+      Окно: 3 дня назад + 14 вперёд. Источник правды — <code>data/content-plan.json</code>.
+      Cron расписание: карусель 08:00 · рилс 14:00 · weekly-insights вс 10:00 · heartbeat 23:00
+      (часовой пояс берётся из <code>TZ</code> env, по умолчанию Europe/Moscow).
+    </p>
+    <div id="plan-table" style="border:1px solid var(--sep);border-radius:var(--r1);overflow:hidden">
+      <div class="empty">Загружаю план…</div>
+    </div>
+  </div>
+</div>
+
 <style>
 .tag-card{border:1px solid var(--sep);border-radius:var(--r2);padding:14px;background:var(--surface-2);transition:border-color .2s}
 .tag-card.drag{border-color:var(--blue);background:#EAF4FF}
@@ -425,12 +449,15 @@ document.querySelectorAll('#navtabs .navtab').forEach((b) => {
     document.getElementById('page-generator').style.display = state.page === 'generator' ? '' : 'none';
     document.getElementById('page-footage').style.display = state.page === 'footage' ? 'grid' : 'none';
     document.getElementById('page-training').style.display = state.page === 'training' ? 'grid' : 'none';
+    const planEl = document.getElementById('page-plan');
+    if (planEl) planEl.style.display = state.page === 'plan' ? 'grid' : 'none';
     if (state.page === 'footage') loadFootage();
     if (state.page === 'training') {
       if (state.trainingSubtab === 'references') loadReferences();
       else if (state.trainingSubtab === 'prompts') loadPrompts();
       else loadBrandbook();
     }
+    if (state.page === 'plan') loadPlan();
   };
 });
 

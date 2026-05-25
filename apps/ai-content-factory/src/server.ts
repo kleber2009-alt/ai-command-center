@@ -230,8 +230,54 @@ app.get('/api/runs/:id/script', (req, res) => {
   res.type('text/plain; charset=utf-8').sendFile(abs);
 });
 
+// ── Per-generation photo upload ──────────────────────────────────────
+// Фото, прикреплённое к конкретному прогону: грузится отдельным запросом,
+// копируется в outDir прогона как attached-photo.<ext> и отправляется
+// первым медиа в Telegram-доставке.
+const UPLOADS_ROOT = dataPath('uploads');
+const SAFE_PHOTO_FILE = /^[a-z0-9-]{8,40}\.(png|jpg|jpeg|webp)$/i;
+const MAX_PHOTO_MB = 25;
+mkdirSync(UPLOADS_ROOT, { recursive: true });
+
+const photoUpload = multer({
+  storage: multer.diskStorage({
+    destination: (_req, _file, cb) => cb(null, UPLOADS_ROOT),
+    filename: (_req, file, cb) => {
+      const m = file.originalname.match(/\.(png|jpg|jpeg|webp)$/i);
+      const ext = (m?.[1] ?? 'jpg').toLowerCase();
+      cb(null, `${randomUUID()}.${ext === 'jpeg' ? 'jpg' : ext}`);
+    },
+  }),
+  limits: { fileSize: MAX_PHOTO_MB * 1024 * 1024, files: 1 },
+  fileFilter: (_req, file, cb) => {
+    cb(null, /\.(png|jpg|jpeg|webp)$/i.test(file.originalname));
+  },
+});
+
+app.post('/api/uploads/photo', photoUpload.single('photo'), (req, res) => {
+  const file = req.file as Express.Multer.File | undefined;
+  if (!file) { res.status(400).json({ error: 'no file' }); return; }
+  res.json({ id: file.filename, url: `/api/uploads/photo/${file.filename}`, sizeBytes: file.size });
+});
+
+app.get('/api/uploads/photo/:id', (req, res) => {
+  const id = String((req.params as { id?: string }).id ?? '');
+  if (!SAFE_PHOTO_FILE.test(id)) { res.status(400).send('bad id'); return; }
+  const abs = join(UPLOADS_ROOT, id);
+  if (!existsSync(abs)) { res.status(404).send('not found'); return; }
+  res.sendFile(abs);
+});
+
+app.delete('/api/uploads/photo/:id', (req, res) => {
+  const id = String((req.params as { id?: string }).id ?? '');
+  if (!SAFE_PHOTO_FILE.test(id)) { res.status(400).json({ error: 'bad id' }); return; }
+  const abs = join(UPLOADS_ROOT, id);
+  if (existsSync(abs)) unlinkSync(abs);
+  res.json({ ok: true });
+});
+
 app.post('/api/generate', (req, res) => {
-  const { format, rubric, topic, episode, slideCount, deliver, rag, engine } = req.body ?? {};
+  const { format, rubric, topic, episode, slideCount, photoId, deliver, rag, engine } = req.body ?? {};
   const fmt: Format = format === 'reels' ? 'reels' : 'carousel';
   const eng: ImageEngine = isImageEngine(engine) ? engine : 'puppeteer';
   if (typeof rubric !== 'string' || typeof topic !== 'string' || !topic.trim()) {
@@ -247,6 +293,12 @@ app.post('/api/generate', (req, res) => {
   }
   // slideCount опционален; для карусели 1..10, дефолт 10.
   const sc = Math.max(1, Math.min(10, Math.round(Number(slideCount ?? 10))));
+  // Опционально прикреплённое фото — путь к файлу в data/uploads.
+  let attachedPhoto: string | undefined;
+  if (typeof photoId === 'string' && SAFE_PHOTO_FILE.test(photoId)) {
+    const candidate = join(UPLOADS_ROOT, photoId);
+    if (existsSync(candidate)) attachedPhoto = candidate;
+  }
   const id = randomUUID();
   const job: Job = {
     id,
@@ -270,6 +322,7 @@ app.post('/api/generate', (req, res) => {
           topic: job.topic,
           episode: ep,
           slideCount: sc,
+          attachedPhoto,
           deliver: job.deliver,
           rag: rag !== false,
           engine: eng,
@@ -280,6 +333,7 @@ app.post('/api/generate', (req, res) => {
           slug: rubric,
           topic: job.topic,
           episode: ep,
+          attachedPhoto,
           deliver: job.deliver,
           rag: rag !== false,
         });
@@ -916,6 +970,50 @@ function serveCabinetHtml(_req: express.Request, res: express.Response): void {
 }
 app.get('/cabinet/', serveCabinetHtml);
 app.get('/cabinet/index.html', serveCabinetHtml);
+
+// ── Content plan + manual scheduler triggers ───────────────────────────────
+
+app.get('/api/plan', (_req, res) => {
+  const plan = readPlan();
+  res.json({ version: plan.version, items: planWindow() });
+});
+
+app.post('/api/plan', (req, res) => {
+  const body = (req.body ?? {}) as { items?: ContentPlanItem[]; version?: string };
+  if (!Array.isArray(body.items)) { res.status(400).json({ error: 'items[] required' }); return; }
+  const plan = replacePlan(body.items, body.version);
+  res.json({ version: plan.version, items: plan.items.length });
+});
+
+app.post('/api/plan/insights', async (_req, res) => {
+  try {
+    const { reportPath, proposal } = await runWeeklyInsights();
+    res.json({ reportPath, items: proposal.items.length, proposal });
+  } catch (err) {
+    res.status(500).json({ error: err instanceof Error ? err.message : String(err) });
+  }
+});
+
+app.post('/api/plan/apply', (req, res) => {
+  const body = (req.body ?? {}) as { proposal?: { items?: unknown[] } };
+  const items = body.proposal?.items;
+  if (!Array.isArray(items)) { res.status(400).json({ error: 'proposal.items[] required' }); return; }
+  const plan = replacePlan(applyProposalAsPlan({ items: items as never }));
+  res.json({ version: plan.version, items: plan.items.length });
+});
+
+app.post('/api/scheduler/trigger/:job', async (req, res) => {
+  const job = String((req.params as { job?: string }).job ?? '');
+  if (!(job in schedulerTriggers)) { res.status(400).json({ error: `unknown job: ${job}` }); return; }
+  // Fire-and-forget — scheduler triggers run their own pipeline (long-lived).
+  // Respond 202 so the UI doesn't hang.
+  (async () => {
+    try { await schedulerTriggers[job as keyof typeof schedulerTriggers](); }
+    catch (err) { log.error(`Manual trigger ${job} failed`, { error: err instanceof Error ? err.message : String(err) }); }
+  })();
+  res.status(202).json({ ok: true, job });
+});
+
 
 // Остальная статика (favicon, fonts, картинки) — 5 минут кеша.
 app.use(express.static(PUBLIC_DIR, {
