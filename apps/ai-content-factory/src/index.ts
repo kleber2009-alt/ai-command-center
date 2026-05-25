@@ -1,5 +1,8 @@
-// Entry point: starts the cabinet HTTP server (REST API + static UI).
-// The cron scheduler lands in Phase 5 (src/scheduler.ts) and will hook in here
-// alongside the server.
+// Entry point: starts the cabinet HTTP server + the cron scheduler. Both run
+// in the same Node process — the server stays alive, the scheduler hooks fire
+// on configured times (default crons in src/scheduler.ts).
 
 import './server.js';
+import { startScheduler } from './scheduler.js';
+
+startScheduler();

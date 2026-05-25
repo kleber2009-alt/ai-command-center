@@ -36,6 +36,9 @@ import { createMetaStore, type AssetMetaBase } from './lib/keyval-meta.js';
 import { describeClip } from './generators/clip-describer.js';
 import { describeScreen } from './generators/screen-describer.js';
 import { describeReference } from './generators/reference-describer.js';
+import { planWindow, readPlan, replacePlan, type ContentPlanItem } from './lib/content-plan.js';
+import { runWeeklyInsights, applyProposalAsPlan } from './pipelines/weekly-insights.js';
+import { triggers as schedulerTriggers } from './scheduler.js';
 
 const __dirname = dirname(fileURLToPath(import.meta.url));
 const PUBLIC_DIR = resolve(__dirname, '..', 'public');
