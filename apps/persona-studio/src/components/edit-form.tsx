@@ -2,7 +2,7 @@
 
 import { useMemo, useState } from 'react';
 import { useRouter } from 'next/navigation';
-import { EDIT_TEMPLATES, SUBTITLE_LANGUAGES, type EditTemplate } from '@/lib/edit-templates';
+import { STYLE_TEMPLATES, SUBTITLE_LANGUAGES } from '@/lib/edit-templates';
 
 type SourceVideo = {
   id: string;
@@ -12,6 +12,16 @@ type SourceVideo = {
   avatar: { id: string; styleLabel: string; imageUrl: string } | null;
   script: string | null;
 };
+
+// Детерминированный градиент по имени шаблона — preview-плейсхолдер
+// (Submagic не отдаёт превьюшки через API).
+function gradientFor(name: string): string {
+  let h = 0;
+  for (let i = 0; i < name.length; i++) h = (h * 31 + name.charCodeAt(i)) >>> 0;
+  const a = h % 360;
+  const b = (a + 50 + (h % 90)) % 360;
+  return `linear-gradient(150deg, hsl(${a} 55% 22%) 0%, hsl(${b} 60% 14%) 100%)`;
+}
 
 export function EditForm({
   videos,
@@ -29,14 +39,24 @@ export function EditForm({
       ? initialVideoId
       : (videos[0]?.id ?? '');
   const [videoId, setVideoId] = useState<string>(resolvedInitial);
-  const [template, setTemplate] = useState<EditTemplate>('hormozi');
+  const [template, setTemplate] = useState<string>('Hormozi 2');
   const [subtitlesEnabled, setSubtitlesEnabled] = useState(true);
   const [subtitleLanguage, setSubtitleLanguage] = useState('ru');
+  const [brollsEnabled, setBrollsEnabled] = useState(false);
   const [busy, setBusy] = useState(false);
   const [error, setError] = useState<string | null>(null);
+  const [styleQuery, setStyleQuery] = useState('');
 
   const selected = useMemo(() => videos.find((v) => v.id === videoId), [videos, videoId]);
-  const preset = useMemo(() => EDIT_TEMPLATES.find((t) => t.slug === template), [template]);
+  const preset = useMemo(() => STYLE_TEMPLATES.find((t) => t.name === template), [template]);
+
+  const filtered = useMemo(() => {
+    const q = styleQuery.trim().toLowerCase();
+    if (!q) return STYLE_TEMPLATES;
+    return STYLE_TEMPLATES.filter(
+      (t) => t.name.toLowerCase().includes(q) || t.tags.some((tag) => tag.includes(q)),
+    );
+  }, [styleQuery]);
 
   async function submit() {
     if (!videoId) {
@@ -54,6 +74,7 @@ export function EditForm({
           template,
           subtitlesEnabled,
           subtitleLanguage,
+          brollsEnabled,
         }),
       });
       const body = await res.json().catch(() => ({}));
@@ -124,57 +145,109 @@ export function EditForm({
           </div>
         </section>
 
-        {/* Шаблон */}
+        {/* Стиль / шаблон */}
         <section className="grid gap-3">
-          <div className="sec-num">/02 template</div>
-          <div className="grid grid-cols-1 sm:grid-cols-2 gap-2">
-            {EDIT_TEMPLATES.map((t) => {
-              const active = t.slug === template;
+          <div className="flex items-baseline justify-between gap-3">
+            <div className="sec-num">/02 style · {STYLE_TEMPLATES.length} templates</div>
+            <input
+              type="search"
+              value={styleQuery}
+              onChange={(ev) => setStyleQuery(ev.target.value)}
+              placeholder="поиск по имени или тегу…"
+              className="bg-bg border border-border px-3 py-1.5 mono text-[11px] min-w-[220px]"
+            />
+          </div>
+          <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 gap-2">
+            {filtered.map((t) => {
+              const active = t.name === template;
               return (
                 <button
-                  key={t.slug}
+                  key={t.name}
                   type="button"
-                  onClick={() => setTemplate(t.slug)}
-                  className={`border p-3 text-left transition-colors ${
-                    active ? 'border-lime bg-surface' : 'border-border hover:border-border-2 bg-bg'
+                  onClick={() => setTemplate(t.name)}
+                  className={`relative aspect-[4/5] border overflow-hidden text-left transition-all group ${
+                    active ? 'border-lime ring-2 ring-lime' : 'border-border hover:border-border-2'
                   }`}
                 >
-                  <div className="mono text-[11px] tracking-widest uppercase font-bold">{t.label}</div>
-                  <div className="font-serif italic text-[13px] text-text-dim mt-1 leading-snug">{t.description}</div>
+                  <div className="absolute inset-0" style={{ background: gradientFor(t.name) }} />
+                  <div className="absolute inset-0 bg-gradient-to-t from-black/85 via-transparent to-transparent" />
+                  <div className="absolute top-2 right-2">
+                    {active && (
+                      <span className="mono text-[8px] tracking-widest uppercase font-bold bg-lime text-bg px-1.5 py-0.5">
+                        ✓
+                      </span>
+                    )}
+                  </div>
+                  <div className="absolute inset-x-0 bottom-0 p-2.5">
+                    <div className="font-serif italic text-[16px] leading-tight text-text">{t.name}</div>
+                    <div className="mono text-[8.5px] tracking-widest text-text-mute mt-1 line-clamp-2">
+                      {t.tags.join(' · ')}
+                    </div>
+                  </div>
                 </button>
               );
             })}
+            {filtered.length === 0 && (
+              <div className="col-span-full border border-border-2 border-dashed p-6 text-center mono text-[11px] text-text-mute">
+                Ничего не нашлось по «{styleQuery}»
+              </div>
+            )}
           </div>
         </section>
 
-        {/* Субтитры */}
+        {/* Опции монтажа */}
         <section className="grid gap-3">
-          <div className="sec-num">/03 subtitles</div>
-          <label className="flex items-center gap-3 cursor-pointer">
-            <input
-              type="checkbox"
-              checked={subtitlesEnabled}
-              onChange={(ev) => setSubtitlesEnabled(ev.target.checked)}
-              className="w-4 h-4"
-            />
-            <span className="mono text-[12px] tracking-widest uppercase">Включить субтитры</span>
-          </label>
-          {subtitlesEnabled && (
-            <div className="grid gap-2 max-w-[280px]">
-              <label className="mono text-[10px] tracking-widest uppercase text-text-mute">Язык</label>
-              <select
-                value={subtitleLanguage}
-                onChange={(ev) => setSubtitleLanguage(ev.target.value)}
-                className="bg-bg border border-border px-3 py-2 mono text-[12px]"
-              >
-                {SUBTITLE_LANGUAGES.map((l) => (
-                  <option key={l.code} value={l.code}>
-                    {l.label}
-                  </option>
-                ))}
-              </select>
-            </div>
-          )}
+          <div className="sec-num">/03 options</div>
+          <div className="grid gap-3 border border-border bg-surface p-4">
+            {/* Субтитры */}
+            <label className="flex items-start gap-3 cursor-pointer">
+              <input
+                type="checkbox"
+                checked={subtitlesEnabled}
+                onChange={(ev) => setSubtitlesEnabled(ev.target.checked)}
+                className="w-4 h-4 mt-0.5"
+              />
+              <div className="grid gap-1">
+                <span className="mono text-[12px] tracking-widest uppercase">Субтитры</span>
+                <span className="font-serif italic text-[12px] text-text-dim">
+                  Submagic всегда накладывает captions в стиле выбранного шаблона.
+                </span>
+              </div>
+            </label>
+
+            {subtitlesEnabled && (
+              <div className="grid gap-1.5 pl-7 max-w-[280px]">
+                <label className="mono text-[10px] tracking-widest uppercase text-text-mute">Язык</label>
+                <select
+                  value={subtitleLanguage}
+                  onChange={(ev) => setSubtitleLanguage(ev.target.value)}
+                  className="bg-bg border border-border px-3 py-2 mono text-[12px]"
+                >
+                  {SUBTITLE_LANGUAGES.map((l) => (
+                    <option key={l.code} value={l.code}>
+                      {l.label}
+                    </option>
+                  ))}
+                </select>
+              </div>
+            )}
+
+            {/* B-rolls */}
+            <label className="flex items-start gap-3 cursor-pointer pt-2 border-t border-border">
+              <input
+                type="checkbox"
+                checked={brollsEnabled}
+                onChange={(ev) => setBrollsEnabled(ev.target.checked)}
+                className="w-4 h-4 mt-0.5"
+              />
+              <div className="grid gap-1">
+                <span className="mono text-[12px] tracking-widest uppercase">Magic B-rolls</span>
+                <span className="font-serif italic text-[12px] text-text-dim">
+                  Submagic подберёт релевантные сток-кадры под смысл реплик и врежет их между планами. Удлиняет рендер на 1–2 минуты.
+                </span>
+              </div>
+            </label>
+          </div>
         </section>
       </div>
 
@@ -191,12 +264,16 @@ export function EditForm({
             <dd className="text-text truncate">{selected ? selected.id.slice(0, 8) : '—'}</dd>
           </div>
           <div className="flex justify-between gap-3">
-            <dt className="text-text-mute">template</dt>
-            <dd className="text-text">{preset?.label ?? '—'}</dd>
+            <dt className="text-text-mute">style</dt>
+            <dd className="text-text">{preset?.name ?? template}</dd>
           </div>
           <div className="flex justify-between gap-3">
             <dt className="text-text-mute">subtitles</dt>
             <dd className="text-text">{subtitlesEnabled ? `on · ${subtitleLanguage}` : 'off'}</dd>
+          </div>
+          <div className="flex justify-between gap-3">
+            <dt className="text-text-mute">b-rolls</dt>
+            <dd className={brollsEnabled ? 'text-lime' : 'text-text'}>{brollsEnabled ? 'on' : 'off'}</dd>
           </div>
           <div className="flex justify-between gap-3">
             <dt className="text-text-mute">cost</dt>

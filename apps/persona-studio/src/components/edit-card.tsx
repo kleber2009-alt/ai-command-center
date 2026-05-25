@@ -2,7 +2,7 @@
 
 import { useEffect, useState } from 'react';
 import { formatDate } from '@/lib/utils';
-import { getTemplate } from '@/lib/edit-templates';
+import { findTemplate, getTemplate as legacyShim } from '@/lib/edit-templates';
 
 type Edit = {
   id: string;
@@ -10,6 +10,7 @@ type Edit = {
   template: string;
   subtitlesEnabled: boolean;
   subtitleLanguage: string;
+  brollsEnabled: boolean;
   resultUrl: string | null;
   submagicProjectId: string | null;
   errorMsg: string | null;
@@ -54,7 +55,13 @@ export function EditCard({ initial, autopoll }: { initial: Edit; autopoll: boole
 
   const aspect = e.videoGeneration?.aspect ?? '9:16';
   const aspectClass = aspect === '1:1' ? 'aspect-square' : aspect === '16:9' ? 'aspect-video' : 'aspect-[9/16]';
-  const preset = getTemplate(e.template);
+  // Сначала пробуем найти как canonical Submagic-имя; если запись старая
+  // (legacy slug типа "hormozi") — резолвим через legacy-shim в имя и
+  // подтягиваем теги по нему.
+  const directHit = findTemplate(e.template);
+  const legacy = !directHit ? legacyShim(e.template) : undefined;
+  const resolvedName = directHit?.name ?? legacy?.submagicTemplate ?? e.template;
+  const preset = directHit ?? (legacy ? findTemplate(legacy.submagicTemplate) : undefined);
 
   return (
     <article id={e.id} className="bg-surface border border-border p-4 grid gap-3">
@@ -69,7 +76,8 @@ export function EditCard({ initial, autopoll }: { initial: Edit; autopoll: boole
           /{e.status}
         </span>
         <span className="mono text-[10px] tracking-widest text-text-mute">
-          {(preset?.label ?? e.template).toUpperCase()} · {e.subtitleLanguage.toUpperCase()}
+          {resolvedName.toUpperCase()} · {e.subtitleLanguage.toUpperCase()}
+          {e.brollsEnabled && <span className="text-lime"> · B-ROLLS</span>}
         </span>
       </div>
 
@@ -122,10 +130,10 @@ export function EditCard({ initial, autopoll }: { initial: Edit; autopoll: boole
       </div>
 
       <div className="font-serif italic text-[14px] text-text-dim leading-snug">
-        {preset?.description ?? '—'}
+        {preset?.tags.join(' · ') ?? '—'}
       </div>
       <div className="flex items-center justify-between mono text-[9px] tracking-widest text-text-mute">
-        <span>{e.subtitlesEnabled ? 'субтитры on' : 'без субтитров'}</span>
+        <span>{e.subtitlesEnabled ? 'субтитры on' : 'без субтитров'}{e.brollsEnabled ? ' · b-rolls on' : ''}</span>
         <span>{formatDate(e.createdAt)}</span>
       </div>
       {e.status === 'completed' && e.resultUrl && (
