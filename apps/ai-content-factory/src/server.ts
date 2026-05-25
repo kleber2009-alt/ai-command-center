@@ -922,7 +922,11 @@ app.get('/api/prompts/:tag/:file', (req, res) => {
 // Two single-file assets the generator treats as priority context.
 // Stored in data/brandbook/ as plain text. PUT overwrites; GET reads.
 const BRANDBOOK_ROOT = dataPath('brandbook');
-const BRANDBOOK_FILES = { html: 'template.html', brandbook: 'brandbook.md' } as const;
+const BRANDBOOK_FILES = {
+  html: 'template.html',
+  brandbook: 'brandbook.md',
+  dataset: 'dataset.json',
+} as const;
 type BrandbookKey = keyof typeof BRANDBOOK_FILES;
 const MAX_BRANDBOOK_BYTES = 2 * 1024 * 1024;
 
@@ -938,6 +942,7 @@ app.get('/api/brandbook', (_req, res) => {
   res.json({
     html: readBrandbookEntry('html'),
     brandbook: readBrandbookEntry('brandbook'),
+    dataset: readBrandbookEntry('dataset'),
     maxBytes: MAX_BRANDBOOK_BYTES,
   });
 });
