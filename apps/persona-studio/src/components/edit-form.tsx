@@ -2,7 +2,7 @@
 
 import { useMemo, useState } from 'react';
 import { useRouter } from 'next/navigation';
-import { STYLE_TEMPLATES, SUBTITLE_LANGUAGES } from '@/lib/edit-templates';
+import { STYLE_TEMPLATES, SUBTITLE_LANGUAGES, previewUrl } from '@/lib/edit-templates';
 
 type SourceVideo = {
   id: string;
@@ -169,7 +169,18 @@ export function EditForm({
                     active ? 'border-lime ring-2 ring-lime' : 'border-border hover:border-border-2'
                   }`}
                 >
+                  {/* gradient — всегда; img поверх если файл есть */}
                   <div className="absolute inset-0" style={{ background: gradientFor(t.name) }} />
+                  {/* eslint-disable-next-line @next/next/no-img-element */}
+                  <img
+                    src={previewUrl(t.name)}
+                    alt=""
+                    loading="lazy"
+                    onError={(ev) => {
+                      (ev.currentTarget as HTMLImageElement).style.display = 'none';
+                    }}
+                    className="absolute inset-0 w-full h-full object-cover"
+                  />
                   <div className="absolute inset-0 bg-gradient-to-t from-black/85 via-transparent to-transparent" />
                   <div className="absolute top-2 right-2">
                     {active && (

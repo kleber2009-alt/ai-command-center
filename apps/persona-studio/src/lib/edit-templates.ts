@@ -87,6 +87,19 @@ export function isStyleTemplate(s: string): boolean {
   return STYLE_TEMPLATE_NAMES.includes(s);
 }
 
+// "Hormozi 2" -> "hormozi-2", "Kelly 2" -> "kelly-2", "seth" -> "seth".
+// Используется для имени файла превью в /public/template-previews/.
+export function templateSlug(name: string): string {
+  return name.toLowerCase().replace(/\s+/g, '-');
+}
+
+// URL preview-картинки. Файл может отсутствовать — UI fallback на gradient
+// через onError. Файлы кладём в apps/persona-studio/public/template-previews/
+// (см. README там).
+export function previewUrl(name: string): string {
+  return `/template-previews/${templateSlug(name)}.jpg`;
+}
+
 // ── Legacy slug shim ──────────────────────────────────────────
 // Раньше в DB лежали slug-строки (hormozi/mrbeast/devin/iman-gadzhi/
 // ali-abdaal/minimal). Старый worker мапил их через getTemplate(). Чтобы
