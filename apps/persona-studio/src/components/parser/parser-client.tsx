@@ -49,20 +49,22 @@ export function ParserClient({ initialConfig, initialRun, initialItems }: Props)
         return;
       }
       // /api/parser/run возвращает items + summary в run-объекте
-      setItems(json.items || []);
+      const items = (json.items as ParserItemSerialized[] | undefined) || [];
+      const errs = (json.errors as string[] | undefined) || [];
+      setItems(items);
       setRun({
-        id: json.runId,
+        id: (json.runId as string) || '',
         userId: config?.userId || '',
         status: 'completed',
-        postsScanned: json.postsScanned || 0,
-        reelsFound: json.reels || 0,
-        carouselsFound: json.carousels || 0,
-        claudeSummary: json.summary || null,
-        errorMsg: json.errors?.length ? json.errors.join(' | ') : null,
+        postsScanned: (json.postsScanned as number) || 0,
+        reelsFound: (json.reels as number) || 0,
+        carouselsFound: (json.carousels as number) || 0,
+        claudeSummary: (json.summary as string) || null,
+        errorMsg: errs.length ? errs.join(' | ') : null,
         startedAt: new Date().toISOString(),
         completedAt: new Date().toISOString(),
       });
-      if ((json.items || []).length === 0) {
+      if (items.length === 0) {
         setError(
           'Парсер отработал, но не нашёл ни одного подходящего поста. Понизь пороги или добавь источников.',
         );
