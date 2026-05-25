@@ -199,8 +199,9 @@ model VideoEdit {
   videoGenerationId  String
   videoGeneration    VideoGeneration @relation(fields: [videoGenerationId], references: [id], onDelete: Cascade)
   template           String                                 // hormozi | mrbeast | devin | iman-gadzhi | ali-abdaal | minimal
-  subtitlesEnabled   Boolean  @default(true)
+  subtitlesEnabled   Boolean  @default(true)                 // Submagic всегда включает субтитры; флаг — для UI
   subtitleLanguage   String   @default("ru")                // ISO-639-1 (ru | en | es | …)
+  brollsEnabled      Boolean  @default(false)                // Submagic magicBrolls — авто-вставка B-roll кадров
   submagicProjectId  String?                                // id проекта в Submagic
   status             String   @default("pending")           // pending | processing | completed | failed
   resultUrl          String?                                // финальный mp4 в нашем S3

@@ -26,7 +26,8 @@ type CreateProjectInput = {
   videoUrl: string;
   templateName: string;
   language: string;
-  subtitlesEnabled: boolean;
+  subtitlesEnabled: boolean;     // forwarded for telemetry only — Submagic forces subtitles on
+  brollsEnabled: boolean;        // mapped to Submagic `magicBrolls`
   projectName?: string;
 };
 
