@@ -1,0 +1,97 @@
+# Production stack for viral-platform on the Hetzner box. Isolated compose
+# project (own pgvector Postgres + Redis) so it never touches the shared
+# infra-postgres / aisales-postgres databases.
+#
+# All config (DATABASE_URL, REDIS_URL, POSTGRES_*, API keys) comes from
+# /etc/viral-platform.env, written by the deploy workflow. See DEPLOY.md.
+#
+#   docker compose -f docker-compose.prod.yml --env-file /etc/viral-platform.env up -d
+name: viral-platform
+
+x-worker: &worker
+  build:
+    context: .
+    dockerfile: Dockerfile.worker
+  image: viral-platform-worker:latest
+  env_file: /etc/viral-platform.env
+  restart: unless-stopped
+  depends_on:
+    vp-postgres:
+      condition: service_healthy
+    vp-redis:
+      condition: service_healthy
+
+services:
+  vp-postgres:
+    image: pgvector/pgvector:pg16
+    container_name: vp-postgres
+    env_file: /etc/viral-platform.env
+    volumes:
+      - vp_pg_data:/var/lib/postgresql/data
+      - ./packages/db/init:/docker-entrypoint-initdb.d:ro
+    healthcheck:
+      test: ['CMD-SHELL', 'pg_isready -U "$$POSTGRES_USER" -d "$$POSTGRES_DB"']
+      interval: 5s
+      timeout: 5s
+      retries: 20
+    restart: unless-stopped
+
+  vp-redis:
+    image: redis:7-alpine
+    container_name: vp-redis
+    volumes:
+      - vp_redis_data:/data
+    healthcheck:
+      test: ['CMD', 'redis-cli', 'ping']
+      interval: 5s
+      timeout: 5s
+      retries: 20
+    restart: unless-stopped
+
+  vp-web:
+    build:
+      context: .
+      dockerfile: Dockerfile.web
+      args:
+        NEXT_PUBLIC_CLERK_PUBLISHABLE_KEY: ${NEXT_PUBLIC_CLERK_PUBLISHABLE_KEY}
+        NEXT_PUBLIC_STRIPE_PUBLISHABLE_KEY: ${NEXT_PUBLIC_STRIPE_PUBLISHABLE_KEY}
+    image: viral-platform-web:latest
+    container_name: vp-web
+    env_file: /etc/viral-platform.env
+    ports:
+      - '3018:3000' # Caddy reverse-proxies here (see deploy/Caddyfile.snippet)
+    restart: unless-stopped
+    depends_on:
+      vp-postgres:
+        condition: service_healthy
+      vp-redis:
+        condition: service_healthy
+
+  vp-worker-transcribe:
+    <<: *worker
+    container_name: vp-worker-transcribe
+    command: ['pnpm', '--filter', '@vp/worker-transcribe', 'exec', 'tsx', 'src/index.ts']
+
+  vp-worker-detect:
+    <<: *worker
+    container_name: vp-worker-detect
+    command: ['pnpm', '--filter', '@vp/worker-detect', 'exec', 'tsx', 'src/index.ts']
+
+  vp-worker-broll:
+    <<: *worker
+    container_name: vp-worker-broll
+    command: ['pnpm', '--filter', '@vp/worker-broll', 'exec', 'tsx', 'src/index.ts']
+
+  vp-worker-library:
+    <<: *worker
+    container_name: vp-worker-library
+    command: ['pnpm', '--filter', '@vp/worker-library', 'exec', 'tsx', 'src/index.ts']
+
+  vp-worker-render:
+    <<: *worker
+    container_name: vp-worker-render
+    command: ['pnpm', '--filter', '@vp/worker-render', 'exec', 'tsx', 'src/index.ts']
+
+volumes:
+  vp_pg_data:
+  vp_redis_data:
