@@ -66,7 +66,7 @@ export function SlidesRail({
               <li key={i} className="bg-surface">
                 <div
                   className={`relative group cursor-pointer transition-colors ${
-                    active ? 'bg-lime/[0.04]' : 'hover:bg-surface-hover'
+                    active ? 'bg-lime/[0.04]' : 'hover:bg-surface-2'
                   }`}
                   onClick={() => onSelect(i)}
                 >
