@@ -175,8 +175,11 @@ button,input,select,textarea{font:inherit;color:inherit}
       </div>
 
       <div class="field">
-        <label for="episode">Эпизод</label>
-        <input id="episode" type="number" value="1" min="1" max="999">
+        <label for="slideCount">Количество слайдов · <span id="slideCount-val" style="font-weight:600;color:var(--blue)">10</span></label>
+        <input id="slideCount" type="range" min="1" max="10" value="10" step="1" style="width:100%;accent-color:var(--blue)">
+        <div style="display:flex;justify-content:space-between;font-size:11px;color:var(--t3);margin-top:2px">
+          <span>1</span><span>10</span>
+        </div>
       </div>
 
       <div class="field checkbox">
@@ -594,10 +597,17 @@ document.querySelectorAll('#viewer-tabs .tab').forEach((tab) => {
   };
 });
 
+// Live-обновление подписи у ползунка количества слайдов
+(() => {
+  const slider = document.getElementById('slideCount');
+  const valEl = document.getElementById('slideCount-val');
+  if (slider && valEl) slider.oninput = () => { valEl.textContent = slider.value; };
+})();
+
 document.getElementById('btn-generate').onclick = async () => {
   if (!state.rubric) return alert('Выбери рубрику');
   const topic = document.getElementById('topic').value.trim();
-  const episode = Number(document.getElementById('episode').value);
+  const slideCount = Number(document.getElementById('slideCount').value);
   const deliver = document.getElementById('deliver').checked;
   const rag = document.getElementById('rag').checked;
   if (!topic) return alert('Впиши тему');
@@ -612,7 +622,7 @@ document.getElementById('btn-generate').onclick = async () => {
     const { jobId } = await api('/api/generate', {
       method: 'POST',
       headers: { 'content-type': 'application/json' },
-      body: JSON.stringify({ format: state.format, engine: state.engine, rubric: state.rubric, topic, episode, deliver, rag }),
+      body: JSON.stringify({ format: state.format, engine: state.engine, rubric: state.rubric, topic, slideCount, deliver, rag }),
     });
     state.activeJob = jobId;
     pollJob(jobId);

@@ -23,6 +23,9 @@ export interface CarouselPipelineOptions {
   slug: string;
   topic: string;
   episode: number;
+  /** Exact number of slides Claude should produce (1..10). Default — let the
+   * rubric template decide. */
+  slideCount?: number;
   /** Skip Claude and render this pre-built carousel instead (testing / re-render). */
   fixture?: Carousel;
   /** Generate a caption. Defaults to true when generating, false for fixtures. */
@@ -79,6 +82,7 @@ export async function runCarouselPipeline(
       rubricSlug: opts.slug,
       topic: opts.topic,
       episode: opts.episode,
+      slideCount: opts.slideCount,
       ragContext: ragText,
     }));
 

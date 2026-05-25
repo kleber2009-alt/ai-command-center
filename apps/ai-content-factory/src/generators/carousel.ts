@@ -16,6 +16,9 @@ export interface GenerateCarouselOptions {
   rubricSlug?: string;
   topic: string;
   episode: number;
+  /** Exact number of slides to produce (1..10). When set, injects a hard
+   * constraint into the prompt so Claude doesn't over- or under-shoot. */
+  slideCount?: number;
   /** RAG context block (top/low performers + learnings) to ground generation. */
   ragContext?: string;
 }
@@ -42,7 +45,11 @@ export async function generateCarousel(opts: GenerateCarouselOptions): Promise<C
     episode: opts.episode,
   });
   const rag = opts.ragContext ? `${opts.ragContext}\n\n` : '';
-  const prompt = `${template}\n\n${rag}## Контракт полей слайдов\n\n${SLIDE_CONTRACT}`;
+  const slideCountBlock =
+    typeof opts.slideCount === 'number' && opts.slideCount > 0
+      ? `\n\n## ЖЁСТКОЕ ОГРАНИЧЕНИЕ\n\nМассив \`slides\` должен содержать РОВНО ${opts.slideCount} элемент(ов). Не больше и не меньше. Если структура рубрики требует больше — сократи; если меньше — расширь дополнительными слайдами типа list/quote/stat.`
+      : '';
+  const prompt = `${template}\n\n${rag}## Контракт полей слайдов\n\n${SLIDE_CONTRACT}${slideCountBlock}`;
 
   return callClaude<Carousel>({
     prompt,

@@ -228,18 +228,22 @@ app.get('/api/runs/:id/script', (req, res) => {
 });
 
 app.post('/api/generate', (req, res) => {
-  const { format, rubric, topic, episode, deliver, rag, engine } = req.body ?? {};
+  const { format, rubric, topic, episode, slideCount, deliver, rag, engine } = req.body ?? {};
   const fmt: Format = format === 'reels' ? 'reels' : 'carousel';
   const eng: ImageEngine = isImageEngine(engine) ? engine : 'puppeteer';
   if (typeof rubric !== 'string' || typeof topic !== 'string' || !topic.trim()) {
     res.status(400).json({ error: 'rubric and topic are required strings' });
     return;
   }
+  // episode остаётся в API для шаблонов промптов ({{episode}}), но из UI
+  // больше не приходит — дефолтим в 1.
   const ep = Number(episode ?? 1);
   if (!Number.isFinite(ep) || ep < 1) {
     res.status(400).json({ error: 'episode must be a positive number' });
     return;
   }
+  // slideCount опционален; для карусели 1..10, дефолт 10.
+  const sc = Math.max(1, Math.min(10, Math.round(Number(slideCount ?? 10))));
   const id = randomUUID();
   const job: Job = {
     id,
@@ -262,6 +266,7 @@ app.post('/api/generate', (req, res) => {
           slug: rubric,
           topic: job.topic,
           episode: ep,
+          slideCount: sc,
           deliver: job.deliver,
           rag: rag !== false,
           engine: eng,
