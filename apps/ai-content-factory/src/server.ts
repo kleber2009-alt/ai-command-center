@@ -721,7 +721,7 @@ app.get('/api/references/:tag/:file', (req, res) => {
 
 // ── Prompts (text library — training set, .md / .txt) ──────────────────────
 
-const SAFE_TEXT_FILE = /^[A-Za-z0-9][A-Za-z0-9._-]{0,80}\.(md|txt|markdown)$/i;
+const SAFE_TEXT_FILE = /^[A-Za-z0-9][A-Za-z0-9._-]{0,80}\.(md|txt|markdown|html|htm)$/i;
 const MAX_TEXT_MB = 2;
 
 interface PromptMeta extends AssetMetaBase {
@@ -791,13 +791,14 @@ const promptsUpload = multer({
       cb(null, dir);
     },
     filename: (_req, file, cb) => {
-      const m = file.originalname.match(/\.(md|txt|markdown)$/i);
+      const m = file.originalname.match(/\.(md|txt|markdown|html|htm)$/i);
       const ext = (m?.[1] ?? 'md').toLowerCase();
       const stem = basename(file.originalname, '.' + ext)
         .replace(/[^A-Za-z0-9._-]+/g, '_')
         .replace(/_+/g, '_')
         .slice(0, 60) || 'prompt';
-      cb(null, `${Date.now()}-${stem}.${ext === 'markdown' ? 'md' : ext}`);
+      const normExt = ext === 'markdown' ? 'md' : ext === 'htm' ? 'html' : ext;
+      cb(null, `${Date.now()}-${stem}.${normExt}`);
     },
   }),
   limits: { fileSize: MAX_TEXT_MB * 1024 * 1024, files: MAX_FILES_PER_REQUEST },
