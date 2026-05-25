@@ -1,0 +1,40 @@
+{
+  "comment": "30 слотов под библиотеку статических изображений: cover-карточки для карусели/рилса, UI-скриншоты для embed в слайды, портреты/фоны. Структура параллельна footage-tags.json (slot-XX-…), но extensions: .png/.jpg/.jpeg/.webp.",
+  "tags": [
+    { "tag": "screen-01-cover-skills",        "label": "01 · Cover: Claude Skills",          "description": "Обложка-карта для поста/рилса про Skills. Большой заголовок, accent-фон, минимум деталей.",       "expectedSize": "1080×1350 или 1080×1920" },
+    { "tag": "screen-02-cover-cca",           "label": "02 · Cover: $150 Claude Certified",  "description": "Обложка для истории про Claude Certified — крупная цифра $150 или эмблема сертификата.",         "expectedSize": "1080×1350" },
+    { "tag": "screen-03-cover-morning",       "label": "03 · Cover: Утро · кофе · Claude",   "description": "Обложка для рилса о ежедневной рутине с Claude — тёплые тона, кофе+ноутбук.",                  "expectedSize": "1080×1350" },
+    { "tag": "screen-04-cover-mistake",       "label": "04 · Cover: ошибка фрилансера",      "description": "Обложка с ироничным заголовком про ошибку — красный акцент, простая графика.",                  "expectedSize": "1080×1350" },
+    { "tag": "screen-05-cover-before-after",  "label": "05 · Cover: было / стало",           "description": "Обложка с контрастом «час → 2 мин» — диаграмма или сравнение.",                                "expectedSize": "1080×1350" },
+    { "tag": "screen-06-cover-saved-hour",    "label": "06 · Cover: спасла час в день",      "description": "Обложка для поста о промпте, экономящем час — циферблат или иконка времени.",                  "expectedSize": "1080×1350" },
+    { "tag": "screen-07-cover-skills-loss",   "label": "07 · Cover: минус 30% без Skills",   "description": "Обложка с тревожной цифрой -30% — графика потери.",                                            "expectedSize": "1080×1350" },
+    { "tag": "screen-08-cover-template",      "label": "08 · Cover: шаблон по коду",         "description": "Обложка для лид-магнита: «напиши код в комментах — шлю шаблон».",                              "expectedSize": "1080×1350" },
+    { "tag": "screen-09-cover-news",          "label": "09 · Cover: новость Anthropic",      "description": "Обложка для wow-новости. Лого Anthropic / фирменный градиент.",                               "expectedSize": "1080×1350" },
+    { "tag": "screen-10-cover-serial",        "label": "10 · Cover: завтра n8n",             "description": "Обложка анонса следующего эпизода — крупный «next: n8n».",                                     "expectedSize": "1080×1350" },
+
+    { "tag": "screen-11-ui-claude-console",   "label": "11 · UI: Claude Console",            "description": "Скриншот Anthropic Console: открытый prompt + ответ модели.",                                   "expectedSize": "≥1080 ширины" },
+    { "tag": "screen-12-ui-n8n",              "label": "12 · UI: n8n flow",                  "description": "Скриншот n8n-flow с тремя нодами (webhook → Claude → Telegram).",                              "expectedSize": "≥1080 ширины" },
+    { "tag": "screen-13-ui-notion",           "label": "13 · UI: Notion AI",                 "description": "Скриншот Notion: callout с summary от AI.",                                                   "expectedSize": "≥1080 ширины" },
+    { "tag": "screen-14-ui-make",             "label": "14 · UI: Make.com",                  "description": "Скриншот Make сценария — 4 модуля + лог запуска.",                                            "expectedSize": "≥1080 ширины" },
+    { "tag": "screen-15-ui-cursor",           "label": "15 · UI: Cursor inline AI",          "description": "Скриншот Cursor: inline-комментарий перетекает в код.",                                       "expectedSize": "≥1080 ширины" },
+    { "tag": "screen-16-ui-workbench",        "label": "16 · UI: Anthropic Workbench",       "description": "Скриншот Workbench: temperature slider + side-by-side.",                                      "expectedSize": "≥1080 ширины" },
+
+    { "tag": "screen-17-bg-typing",           "label": "17 · BG: руки на клавиатуре",        "description": "Стилизованный backdrop: руки печатают, эстетика macro.",                                      "expectedSize": "1080×1350" },
+    { "tag": "screen-18-bg-standing-desk",    "label": "18 · BG: standing desk",             "description": "Backdrop standing desk — стильное рабочее место.",                                            "expectedSize": "1080×1350" },
+    { "tag": "screen-19-bg-mech-kb",          "label": "19 · BG: RGB mechanical kb",         "description": "Backdrop с механической клавиатурой и RGB.",                                                 "expectedSize": "1080×1350" },
+    { "tag": "screen-20-bg-ipad",             "label": "20 · BG: iPad + magic kb",           "description": "Backdrop iPad — другой контекст работы.",                                                    "expectedSize": "1080×1350" },
+    { "tag": "screen-21-bg-enter-key",        "label": "21 · BG: Enter key крупно",          "description": "Backdrop крупная клавиша Enter — визуальная отсылка к «отправил промпт».",                   "expectedSize": "1080×1350" },
+
+    { "tag": "screen-22-photo-pouring",       "label": "22 · Фото: кофе наливается",         "description": "Фото-стопкадр налива кофе для lifestyle-вставки.",                                            "expectedSize": "1080×1350" },
+    { "tag": "screen-23-photo-mug",           "label": "23 · Фото: кружка + блокнот",        "description": "Фото утреннего стола: кружка, ноутбук, блокнот.",                                             "expectedSize": "1080×1350" },
+    { "tag": "screen-24-photo-latte",         "label": "24 · Фото: латте-арт",               "description": "Фото латте-арта top-down — стильная вставка.",                                                "expectedSize": "1080×1350" },
+
+    { "tag": "screen-25-photo-street",        "label": "25 · Фото: утренняя улица",          "description": "Фото улицы — машина, прохожие, рассвет.",                                                     "expectedSize": "1080×1350" },
+    { "tag": "screen-26-photo-window",        "label": "26 · Фото: вид из окна",             "description": "Фото панорамного вида — городской пейзаж.",                                                   "expectedSize": "1080×1350" },
+    { "tag": "screen-27-photo-walk",          "label": "27 · Фото: прогулка с ноутом",       "description": "Фото движения — handheld атмосфера.",                                                         "expectedSize": "1080×1350" },
+
+    { "tag": "screen-28-photo-cafe",          "label": "28 · Фото: ноут в кафе",             "description": "Фото ноутбука на столе в кафе — общая атмосфера.",                                            "expectedSize": "1080×1350" },
+    { "tag": "screen-29-photo-dark-glow",     "label": "29 · Фото: тёмная комната · код",    "description": "Фото тёмного кадра — экран ноута подсвечивает.",                                              "expectedSize": "1080×1350" },
+    { "tag": "screen-30-photo-topdown",       "label": "30 · Фото: top-down рабочий стол",   "description": "Фото top-down: блокнот, ноутбук, кофе, ручка.",                                               "expectedSize": "1080×1350" }
+  ]
+}
