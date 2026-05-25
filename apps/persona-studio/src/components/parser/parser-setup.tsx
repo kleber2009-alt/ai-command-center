@@ -153,7 +153,7 @@ export function ParserSetup({ initial, onSaved, onCancel }: Props) {
           <NumberField label="Мин. репостов" value={minShares} onChange={setMinShares} min={0} step={100} />
         </div>
         <p className="mono text-[9px] tracking-wider text-text-mute">
-          Reels дефолт: 100k просмотров / 1k комментариев / 1k репостов. Apify не у всех постов отдаёт счётчик репостов — посты без этого поля проходят фильтр.
+          Reels дефолт: 100k просмотров / 1k лайков / 1k комментариев / 1k репостов. Apify не у всех постов отдаёт счётчик репостов — посты без этого поля проходят фильтр.
         </p>
 
         <div className="mono text-[9px] tracking-widest uppercase text-text-dim mt-2">Carousels</div>
@@ -162,7 +162,7 @@ export function ParserSetup({ initial, onSaved, onCancel }: Props) {
           <NumberField label="Мин. комментариев (карусели)" value={minCarouselComments} onChange={setMinCarouselComments} min={0} step={10} />
         </div>
         <p className="mono text-[9px] tracking-wider text-text-mute">
-          Carousels дефолт: 500 лайков / 50 комментариев — заметно мягче чем у рилсов, потому что карусели читают молча и shares у них почти не отдаётся.
+          Carousels дефолт: 1k лайков / 1k комментариев — тот же бар что у рилсов. У каруселей нет plays и shares, поэтому фильтр идёт только по этим двум метрикам.
         </p>
       </details>
 
