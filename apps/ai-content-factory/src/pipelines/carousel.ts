@@ -74,7 +74,13 @@ export async function runCarouselPipeline(
 
   const carousel =
     opts.fixture ??
-    (await generateCarousel({ rubric, topic: opts.topic, episode: opts.episode, ragContext: ragText }));
+    (await generateCarousel({
+      rubric,
+      rubricSlug: opts.slug,
+      topic: opts.topic,
+      episode: opts.episode,
+      ragContext: ragText,
+    }));
 
   const withCaption = opts.withCaption ?? generating;
   let captionText: string | undefined;

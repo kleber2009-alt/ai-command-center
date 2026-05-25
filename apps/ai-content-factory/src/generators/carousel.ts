@@ -11,6 +11,9 @@ import { loadTrainingContext } from '../lib/training-context.js';
 
 export interface GenerateCarouselOptions {
   rubric: RubricConfig;
+  /** Rubric slug from the catalog (diary/hood/routine/money). Used to filter
+   * training-context so only the current rubric's brief is included. */
+  rubricSlug?: string;
   topic: string;
   episode: number;
   /** RAG context block (top/low performers + learnings) to ground generation. */
@@ -21,7 +24,7 @@ export async function generateCarousel(opts: GenerateCarouselOptions): Promise<C
   // System prompt = training context (all prompts/*.md + reference descriptions)
   // + few-shot examples from rubric. Both go into the cached system block so
   // repeated runs hit cache_read pricing instead of full input billing.
-  const trainingBlock = loadTrainingContext();
+  const trainingBlock = loadTrainingContext({ rubricSlug: opts.rubricSlug, format: 'carousel' });
   let fewShot: string | undefined;
   if (opts.rubric.examplesFile) {
     try {

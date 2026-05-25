@@ -21,13 +21,39 @@ interface RefMeta {
   status?: string;
 }
 
-function loadPromptsBlock(): string {
+/** Rubric-specific slots look like `prompt-08-rubric-diary` /
+ * `prompt-09-rubric-hood` etc. Only the slot matching the current rubric
+ * survives; others are dropped to keep the prompt small. Format-specific
+ * slots follow `prompt-NN-format-FORMAT` (carousel | reels). */
+function isExcludedByRubric(slot: string, rubricSlug?: string): boolean {
+  const m = slot.match(/^prompt-\d+-rubric-(.+)$/i);
+  if (!m) return false;
+  if (!rubricSlug) return false;
+  return m[1]!.toLowerCase() !== rubricSlug.toLowerCase();
+}
+
+function isExcludedByFormat(slot: string, format?: 'carousel' | 'reels'): boolean {
+  // prompt-23-caption-formula stays (it's universal).
+  // prompt-24-reels-script is reels-specific.
+  if (!format) return false;
+  if (format === 'carousel' && slot === 'prompt-24-reels-script') return true;
+  return false;
+}
+
+interface ContextOpts {
+  rubricSlug?: string;
+  format?: 'carousel' | 'reels';
+}
+
+function loadPromptsBlock(opts: ContextOpts = {}): string {
   if (!existsSync(PROMPTS_ROOT)) return '';
   const slots = readdirSync(PROMPTS_ROOT)
     .filter((d) => {
       try { return statSync(join(PROMPTS_ROOT, d)).isDirectory() && SAFE_TAG.test(d); }
       catch { return false; }
     })
+    .filter((slot) => !isExcludedByRubric(slot, opts.rubricSlug))
+    .filter((slot) => !isExcludedByFormat(slot, opts.format))
     .sort();
   const sections: string[] = [];
   for (const slot of slots) {
@@ -69,14 +95,21 @@ function loadReferencesBlock(): string {
   return lines.join('\n');
 }
 
-let cached: { value: string; ts: number } | null = null;
-const TTL_MS = 60_000; // re-read every minute — training data evolves between calls
+// Keyed per (rubricSlug, format) so cache doesn't trash itself across rubrics.
+const cached = new Map<string, { value: string; ts: number }>();
+const TTL_MS = 60_000;
 
-/** Returns one combined training block (prompts + reference descriptions).
- * In-memory cached for 60 s so a single carousel run doesn't hit disk 30 times. */
-export function loadTrainingContext(): string {
-  if (cached && Date.now() - cached.ts < TTL_MS) return cached.value;
-  const prompts = loadPromptsBlock();
+function cacheKey(opts: ContextOpts): string {
+  return `${opts.rubricSlug ?? ''}::${opts.format ?? ''}`;
+}
+
+/** Returns one combined training block, filtered for the current rubric/format.
+ * In-memory cached for 60 s per (rubricSlug, format) pair. */
+export function loadTrainingContext(opts: ContextOpts = {}): string {
+  const key = cacheKey(opts);
+  const hit = cached.get(key);
+  if (hit && Date.now() - hit.ts < TTL_MS) return hit.value;
+  const prompts = loadPromptsBlock(opts);
   const refs = loadReferencesBlock();
   const parts: string[] = [];
   parts.push('# Training context for content generation');
@@ -86,6 +119,12 @@ export function loadTrainingContext(): string {
       'style, voice, and visual decisions. Anything in this block overrides general ' +
       'common-knowledge defaults.',
   );
+  if (opts.rubricSlug || opts.format) {
+    parts.push(
+      `> Filter active: rubric=${opts.rubricSlug ?? '*'}, format=${opts.format ?? '*'}. ` +
+        'Other rubrics\' briefs are omitted to keep the prompt focused.',
+    );
+  }
   if (refs) {
     parts.push('## Visual reference catalog (style anchors)');
     parts.push('Each entry is a real slide example with the Vision-described technique:');
@@ -96,11 +135,11 @@ export function loadTrainingContext(): string {
     parts.push(prompts);
   }
   const value = parts.join('\n\n');
-  cached = { value, ts: Date.now() };
+  cached.set(key, { value, ts: Date.now() });
   return value;
 }
 
-/** Clear the cache (called from server when the user edits the library). */
+/** Clear all cached variants (called when the user edits the library). */
 export function resetTrainingContextCache(): void {
-  cached = null;
+  cached.clear();
 }

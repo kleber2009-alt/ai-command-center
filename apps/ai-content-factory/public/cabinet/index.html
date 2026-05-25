@@ -205,7 +205,7 @@ button,input,select,textarea{font:inherit;color:inherit}
 
   <!-- ── right: viewer ──────────────────────────────────────── -->
   <div class="card" id="viewer">
-    <div class="tabs">
+    <div class="tabs" id="viewer-tabs">
       <div class="tab active" data-tab="slides">Слайды</div>
       <div class="tab" data-tab="caption">Подпись</div>
       <div class="tab" data-tab="json">JSON</div>
@@ -531,7 +531,7 @@ async function openRun(id) {
     const data = await api('/api/runs/' + encodeURIComponent(id));
     state.currentRunData = data;
     // Adjust available tabs per format
-    const tabs = document.querySelectorAll('.tab');
+    const tabs = document.querySelectorAll('#viewer-tabs .tab');
     if (data.format === 'reels') {
       tabs[0].textContent = 'Видео / сценарий';
     } else {
@@ -582,9 +582,12 @@ function renderViewer(data) {
   }
 }
 
-document.querySelectorAll('.tab').forEach((tab) => {
+// Viewer-tabs only — раньше querySelectorAll('.tab') хватал ВСЕ tabs
+// на странице (training-subtabs, footage-subtabs) и перезатирал их
+// onclick'и, ломая переключение sub-tab'ов.
+document.querySelectorAll('#viewer-tabs .tab').forEach((tab) => {
   tab.onclick = () => {
-    document.querySelectorAll('.tab').forEach((t) => t.classList.remove('active'));
+    document.querySelectorAll('#viewer-tabs .tab').forEach((t) => t.classList.remove('active'));
     tab.classList.add('active');
     state.viewerTab = tab.dataset.tab;
     if (state.currentRun) openRun(state.currentRun);

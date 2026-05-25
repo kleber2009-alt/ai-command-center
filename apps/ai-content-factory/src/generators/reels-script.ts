@@ -16,9 +16,12 @@ import { reelsSchema, REELS_CONTRACT, type ReelsScript } from '../schemas/reels.
 import { loadPrompt } from '../lib/prompt.js';
 import type { RubricConfig } from '../lib/rubrics.js';
 import { fromAppRoot, dataPath } from '../lib/paths.js';
+import { loadTrainingContext } from '../lib/training-context.js';
 
 export interface GenerateReelsOptions {
   rubric: RubricConfig;
+  /** Rubric slug from the catalog — drives training-context filtering. */
+  rubricSlug?: string;
   topic: string;
   /** RAG context block to ground generation, same shape as for carousels. */
   ragContext?: string;

@@ -50,16 +50,32 @@ export function ParserReelCard({ item, onUpdated, onRemoved }: Props) {
   }
 
   /**
-   * «Создать видео» = синхронный rewrite через Claude по структуре
-   * хук→боль→раскрытие→CTA → сохранение в БД → редирект на /videos/new,
-   * где VideoForm подхватит rewrittenScript как initialScript. Если уже
-   * есть кэш — endpoint вернёт его моментально.
+   * Reels: «Создать видео» = синхронный rewrite через Claude по структуре
+   * хук→боль→раскрытие→CTA → /videos/new (VideoForm подхватывает скрипт).
+   * Carousel: «Создать карусель» = Claude разбивает caption на N слайдов
+   * → /carousels/new (CarouselEditor с текстами и avatar-селектором).
    */
   async function rewriteAndGo() {
     if (rewriting) return;
     setRewriting(true);
     setError(null);
     try {
+      if (item.kind === 'carousel') {
+        const res = await fetch('/api/carousels/draft', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({ parserItemId: item.id, slidesCount: 6 }),
+        });
+        const json = await res.json();
+        if (!res.ok) {
+          setError(json.message || json.error || `HTTP ${res.status}`);
+          return;
+        }
+        onUpdated({ ...item, status: 'used' });
+        router.push(`/carousels/new?draftId=${json.draftId}`);
+        return;
+      }
+      // kind === 'reel' — старый flow с переписыванием сценария
       const res = await fetch(`/api/parser/items/${item.id}/rewrite`, {
         method: 'POST',
       });
@@ -68,7 +84,6 @@ export function ParserReelCard({ item, onUpdated, onRemoved }: Props) {
         setError(json.message || json.error || `HTTP ${res.status}`);
         return;
       }
-      // Локально пометим как used, чтобы UI обновился без перезагрузки
       onUpdated({ ...item, status: 'used', rewrittenScript: json.script });
       router.push(`/videos/new?parserItemId=${item.id}`);
     } catch (e) {
@@ -77,6 +92,17 @@ export function ParserReelCard({ item, onUpdated, onRemoved }: Props) {
       setRewriting(false);
     }
   }
+
+  const isCarousel = item.kind === 'carousel';
+  const ctaLabel = rewriting
+    ? isCarousel
+      ? 'Уникализирую слайды…'
+      : 'Уникализирую сценарий…'
+    : isCarousel
+      ? 'Создать карусель →'
+      : item.rewrittenScript
+        ? 'К видео (готов сценарий) →'
+        : 'Создать видео →';
 
   return (
     <article
@@ -165,11 +191,7 @@ export function ParserReelCard({ item, onUpdated, onRemoved }: Props) {
             disabled={rewriting || busy}
             className="btn-primary text-center"
           >
-            {rewriting
-              ? 'Уникализирую сценарий…'
-              : item.rewrittenScript
-                ? 'К видео (готов сценарий) →'
-                : 'Создать видео →'}
+            {ctaLabel}
           </button>
           <a
             href={item.url}

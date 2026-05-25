@@ -22,13 +22,13 @@ type ChatResult =
   | { ok: true; text: string }
   | { ok: false; status: number; details: string };
 
-async function chat(system: string, user: string): Promise<ChatResult> {
+async function chat(system: string, user: string, maxTokens = MAX_CLAUDE_TOKENS): Promise<ChatResult> {
   const apiKey = env.ANTHROPIC_API_KEY;
   if (!apiKey) return { ok: false, status: 503, details: 'ANTHROPIC_API_KEY missing' };
 
   const body = JSON.stringify({
     model: env.ANTHROPIC_PARSER_MODEL,
-    max_tokens: MAX_CLAUDE_TOKENS,
+    max_tokens: maxTokens,
     system,
     messages: [{ role: 'user', content: user }],
   });
@@ -235,4 +235,104 @@ ${caption.slice(0, 1500)}
     return { ok: false, error: `claude returned too-short script (${cleaned.length} chars)` };
   }
   return { ok: true, script: cleaned };
+}
+
+export type SlideText = {
+  title: string;   // короткий заголовок-хук на слайде, 2–7 слов
+  body: string;    // основной текст, 12–40 слов
+  accent?: string; // опционально — цитата/цифра/CTA
+};
+
+/**
+ * Разбить caption «залетевшего» поста на N слайдов карусели по структуре:
+ *   slide 1: HOOK — обложка, провокационный заголовок
+ *   slides 2..N-1: BODY — раскрытие, каждый слайд = один концепт/буллет
+ *   slide N: CTA — призыв к действию
+ *
+ * Возвращает массив длины ровно slidesCount. Каждый слайд содержит title
+ * (заголовок) и body (текст). Уникализированно под нишу — НЕ цитата
+ * оригинала, а пересказ его сути голосом эксперта.
+ */
+export async function splitCaptionIntoSlides(args: {
+  niche: string;
+  userName: string;
+  caption: string;
+  fitWhy?: string | null;
+  slidesCount: number;
+}): Promise<{ ok: true; slides: SlideText[] } | { ok: false; error: string }> {
+  if (!isClaudeConfigured()) return { ok: false, error: 'ANTHROPIC_API_KEY missing' };
+  const caption = (args.caption || '').trim();
+  if (!caption) return { ok: false, error: 'empty caption' };
+  const n = Math.max(3, Math.min(20, args.slidesCount));
+
+  const system = `Ты — сценарист Instagram-каруселей для эксперта ${args.userName}.
+
+Ниша эксперта: ${args.niche || 'не указана'}
+
+Тебе показывают «залетевший» пост конкурента. Твоя задача — разбить его на ${n} слайдов карусели, НЕ цитируя оригинал дословно, а перепиcав суть голосом эксперта ${args.userName} под его нишу.
+
+Структура карусели на ${n} слайдов:
+- Слайд 1 = ОБЛОЖКА: провокационный хук-заголовок (2–7 слов в title) + подзаголовок (10–20 слов в body). Должен заставить листать дальше.
+- Слайды 2..${n - 1} = РАСКРЫТИЕ: каждый слайд раскрывает один концепт/инсайт/шаг. title = краткий заголовок (3–6 слов), body = развёрнутая мысль (15–40 слов).
+- Слайд ${n} = CTA: title — действие («Сохрани», «Поделись», «Напиши в комменты»), body — короткое объяснение почему стоит это сделать (10–25 слов).
+
+Верни СТРОГО JSON-массив длины ${n}, без markdown, без преамбулы:
+[
+  { "title": "...", "body": "..." },
+  { "title": "...", "body": "..." },
+  ...
+]
+
+ТРЕБОВАНИЯ:
+- Ровно ${n} объектов.
+- Каждый объект имеет поля title и body, оба непустые.
+- Русский язык, разговорный, без эмодзи и хэштегов.
+- Без markdown в title и body (никаких **жирно**, ## заголовков и т.п.).
+- title — короткий, body — развёрнутый.
+- Не повторяй один и тот же тезис на разных слайдах.`;
+
+  const userMsg = `Оригинальный пост конкурента:
+"""
+${caption.slice(0, 1500)}
+"""${args.fitWhy ? `\n\nКонтекст (зачем переписываем): ${args.fitWhy}` : ''}
+
+Верни JSON-массив из ${n} слайдов:`;
+
+  // ~200 input + ~250 output per slide на русском → даём запас 400/слайд + headroom.
+  const maxTokens = Math.min(8000, 800 + n * 400);
+  const res = await chat(system, userMsg, maxTokens);
+  if (!res.ok) {
+    return { ok: false, error: `claude ${res.status}: ${res.details.slice(0, 200)}` };
+  }
+  let parsed: unknown;
+  try {
+    const cleaned = res.text
+      .replace(/^```(?:json)?\s*/i, '')
+      .replace(/```\s*$/, '')
+      .trim();
+    parsed = JSON.parse(cleaned);
+  } catch (e) {
+    return { ok: false, error: `json parse: ${(e as Error).message}` };
+  }
+  if (!Array.isArray(parsed)) {
+    return { ok: false, error: 'claude returned non-array' };
+  }
+  const slides: SlideText[] = [];
+  for (const raw of parsed as Array<{ title?: unknown; body?: unknown; accent?: unknown }>) {
+    if (!raw || typeof raw !== 'object') continue;
+    const title = typeof raw.title === 'string' ? raw.title.trim().slice(0, 120) : '';
+    const body = typeof raw.body === 'string' ? raw.body.trim().slice(0, 500) : '';
+    if (!title || !body) continue;
+    const slide: SlideText = { title, body };
+    if (typeof raw.accent === 'string' && raw.accent.trim()) {
+      slide.accent = raw.accent.trim().slice(0, 120);
+    }
+    slides.push(slide);
+  }
+  if (slides.length < 3) {
+    return { ok: false, error: `claude returned only ${slides.length} valid slides` };
+  }
+  // Pad/truncate до ровно n — но не вынуждаем Claude'а если он вернул n-1.
+  // Лучше отдать что есть и юзер дополнит/удалит в редакторе.
+  return { ok: true, slides };
 }
