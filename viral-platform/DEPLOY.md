@@ -105,3 +105,7 @@ overlaying B-roll + burning captions (Remotion) — Stripe fulfilment, and the
 ## Webhooks to register after first deploy
 - Clerk → `https://viral.46-62-215-11.nip.io/api/webhooks/clerk` (set `CLERK_WEBHOOK_SECRET`).
 - Stripe → (once billing is wired) the Stripe webhook endpoint.
+
+## Backup & migration
+
+See [docs/BACKUP_RESTORE.md](docs/BACKUP_RESTORE.md) — what is state, `scripts/backup.sh` / `scripts/restore.sh`, and the full new-server migration runbook.
