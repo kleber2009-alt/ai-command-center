@@ -1,7 +1,7 @@
 import type { StockAsset } from '@vp/shared';
 import { describe, expect, it } from 'vitest';
 import { planBroll } from '../src/engine.js';
-import { buildWords, makeAsset, makeMockDeps, sentence } from './fixtures.js';
+import { buildWords, makeAsset, makeLibraryAsset, makeMockDeps, sentence } from './fixtures.js';
 
 const asset = (id: string, provider: 'pexels' | 'pixabay', description: string): StockAsset =>
   makeAsset({
@@ -145,7 +145,7 @@ describe('planBroll — integration', () => {
   });
 });
 
-// --- Snapshot suite: 5 reference transcripts across niches (§4.5) ---
+// --- Snapshot suite: 5 reference transcripts × 3 modes = 15 plans (§4.7) ---
 describe('planBroll — reference snapshots', () => {
   const sharedDeps = () =>
     makeMockDeps({
@@ -170,6 +170,14 @@ describe('planBroll — reference snapshots', () => {
         { match: 'ocean', vector: [0, 0, 0, 1, 0] },
         { match: 'synapses', vector: [0, 0, 0, 0, 1] },
       ],
+      // A library asset per concept so my_library / hybrid have material.
+      library: [
+        makeLibraryAsset('lib-neural', [1, 0, 0, 0, 0], { description: 'my neural network shot' }),
+        makeLibraryAsset('lib-mountain', [0, 1, 0, 0, 0], { description: 'my mountain shot' }),
+        makeLibraryAsset('lib-rocket', [0, 0, 1, 0, 0], { description: 'my rocket shot' }),
+        makeLibraryAsset('lib-ocean', [0, 0, 0, 1, 0], { description: 'my ocean shot' }),
+        makeLibraryAsset('lib-synapses', [0, 0, 0, 0, 1], { description: 'my synapses shot' }),
+      ],
     });
 
   const references: Record<string, string> = {
@@ -193,17 +201,22 @@ describe('planBroll — reference snapshots', () => {
       'A great algorithm is just a sharpened version of that instinct.',
   };
 
+  const modes = ['auto_stock', 'my_library', 'hybrid'] as const;
+
   for (const [name, text] of Object.entries(references)) {
-    it(`matches the plan snapshot: ${name}`, async () => {
-      const plan = await planBroll({
-        clip: { id: `ref-${name}`, startMs: 0, endMs: 90_000 },
-        words: sentence(text),
-        deps: sharedDeps(),
+    for (const mode of modes) {
+      it(`matches the plan snapshot: ${name} / ${mode}`, async () => {
+        const plan = await planBroll({
+          clip: { id: `ref-${name}`, startMs: 0, endMs: 90_000 },
+          words: sentence(text),
+          deps: sharedDeps(),
+          mode,
+        });
+        // Coverage never exceeds 40% of the clip (density invariant).
+        const covered = plan.inserts.reduce((s, i) => s + (i.endMs - i.startMs), 0);
+        expect(covered).toBeLessThanOrEqual(90_000 * 0.4);
+        expect(plan).toMatchSnapshot();
       });
-      // Coverage never exceeds 40% of the clip (density invariant).
-      const covered = plan.inserts.reduce((s, i) => s + (i.endMs - i.startMs), 0);
-      expect(covered).toBeLessThanOrEqual(90_000 * 0.4);
-      expect(plan).toMatchSnapshot();
-    });
+    }
   }
 });

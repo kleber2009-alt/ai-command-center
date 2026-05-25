@@ -1,6 +1,6 @@
 // Vitest Snapshot v1, https://vitest.dev/guide/snapshot.html
 
-exports[`planBroll — reference snapshots > matches the plan snapshot: educational 1`] = `
+exports[`planBroll — reference snapshots > matches the plan snapshot: educational / auto_stock 1`] = `
 {
   "clipId": "ref-educational",
   "inserts": [
@@ -9,6 +9,7 @@ exports[`planBroll — reference snapshots > matches the plan snapshot: educatio
       "assetUrl": "https://x/s1.mp4",
       "confidence": 1,
       "endMs": 2500,
+      "fromUserLibrary": false,
       "overlayStyle": "fullscreen",
       "query": "synapses firing macro",
       "reason": "visual reinforces "synapses firing macro"",
@@ -21,7 +22,52 @@ exports[`planBroll — reference snapshots > matches the plan snapshot: educatio
 }
 `;
 
-exports[`planBroll — reference snapshots > matches the plan snapshot: emotional 1`] = `
+exports[`planBroll — reference snapshots > matches the plan snapshot: educational / hybrid 1`] = `
+{
+  "clipId": "ref-educational",
+  "inserts": [
+    {
+      "assetId": "lib-synapses",
+      "assetUrl": "library/lib-synapses.mp4",
+      "confidence": 1,
+      "endMs": 2500,
+      "fromUserLibrary": true,
+      "overlayStyle": "fullscreen",
+      "query": "synapses firing macro",
+      "reason": "из вашей галереи: synapses firing macro",
+      "source": "user_library",
+      "startMs": 0,
+      "thumbnailUrl": "library/lib-synapses_thumb.jpg",
+    },
+  ],
+  "version": 1,
+}
+`;
+
+exports[`planBroll — reference snapshots > matches the plan snapshot: educational / my_library 1`] = `
+{
+  "clipId": "ref-educational",
+  "inserts": [
+    {
+      "assetId": "lib-synapses",
+      "assetUrl": "library/lib-synapses.mp4",
+      "confidence": 1,
+      "endMs": 2500,
+      "fromUserLibrary": true,
+      "lowConfidence": true,
+      "overlayStyle": "fullscreen",
+      "query": "synapses firing macro",
+      "reason": "из вашей галереи: synapses firing macro",
+      "source": "user_library",
+      "startMs": 0,
+      "thumbnailUrl": "library/lib-synapses_thumb.jpg",
+    },
+  ],
+  "version": 1,
+}
+`;
+
+exports[`planBroll — reference snapshots > matches the plan snapshot: emotional / auto_stock 1`] = `
 {
   "clipId": "ref-emotional",
   "inserts": [],
@@ -29,7 +75,23 @@ exports[`planBroll — reference snapshots > matches the plan snapshot: emotiona
 }
 `;
 
-exports[`planBroll — reference snapshots > matches the plan snapshot: insight 1`] = `
+exports[`planBroll — reference snapshots > matches the plan snapshot: emotional / hybrid 1`] = `
+{
+  "clipId": "ref-emotional",
+  "inserts": [],
+  "version": 1,
+}
+`;
+
+exports[`planBroll — reference snapshots > matches the plan snapshot: emotional / my_library 1`] = `
+{
+  "clipId": "ref-emotional",
+  "inserts": [],
+  "version": 1,
+}
+`;
+
+exports[`planBroll — reference snapshots > matches the plan snapshot: insight / auto_stock 1`] = `
 {
   "clipId": "ref-insight",
   "inserts": [
@@ -38,6 +100,7 @@ exports[`planBroll — reference snapshots > matches the plan snapshot: insight 
       "assetUrl": "https://x/s1.mp4",
       "confidence": 1,
       "endMs": 2500,
+      "fromUserLibrary": false,
       "overlayStyle": "fullscreen",
       "query": "synapses firing macro",
       "reason": "visual reinforces "synapses firing macro"",
@@ -50,7 +113,52 @@ exports[`planBroll — reference snapshots > matches the plan snapshot: insight 
 }
 `;
 
-exports[`planBroll — reference snapshots > matches the plan snapshot: interview 1`] = `
+exports[`planBroll — reference snapshots > matches the plan snapshot: insight / hybrid 1`] = `
+{
+  "clipId": "ref-insight",
+  "inserts": [
+    {
+      "assetId": "lib-synapses",
+      "assetUrl": "library/lib-synapses.mp4",
+      "confidence": 1,
+      "endMs": 2500,
+      "fromUserLibrary": true,
+      "overlayStyle": "fullscreen",
+      "query": "synapses firing macro",
+      "reason": "из вашей галереи: synapses firing macro",
+      "source": "user_library",
+      "startMs": 0,
+      "thumbnailUrl": "library/lib-synapses_thumb.jpg",
+    },
+  ],
+  "version": 1,
+}
+`;
+
+exports[`planBroll — reference snapshots > matches the plan snapshot: insight / my_library 1`] = `
+{
+  "clipId": "ref-insight",
+  "inserts": [
+    {
+      "assetId": "lib-synapses",
+      "assetUrl": "library/lib-synapses.mp4",
+      "confidence": 1,
+      "endMs": 2500,
+      "fromUserLibrary": true,
+      "lowConfidence": true,
+      "overlayStyle": "fullscreen",
+      "query": "synapses firing macro",
+      "reason": "из вашей галереи: synapses firing macro",
+      "source": "user_library",
+      "startMs": 0,
+      "thumbnailUrl": "library/lib-synapses_thumb.jpg",
+    },
+  ],
+  "version": 1,
+}
+`;
+
+exports[`planBroll — reference snapshots > matches the plan snapshot: interview / auto_stock 1`] = `
 {
   "clipId": "ref-interview",
   "inserts": [
@@ -59,6 +167,7 @@ exports[`planBroll — reference snapshots > matches the plan snapshot: intervie
       "assetUrl": "https://x/rk1.mp4",
       "confidence": 1,
       "endMs": 2000,
+      "fromUserLibrary": false,
       "overlayStyle": "fullscreen",
       "query": "rocket launch metaphor",
       "reason": "visual reinforces "rocket launch metaphor"",
@@ -71,6 +180,7 @@ exports[`planBroll — reference snapshots > matches the plan snapshot: intervie
       "assetUrl": "https://x/oc1.mp4",
       "confidence": 1,
       "endMs": 11530,
+      "fromUserLibrary": false,
       "overlayStyle": "fullscreen",
       "query": "deep ocean current",
       "reason": "visual reinforces "deep ocean current"",
@@ -83,7 +193,79 @@ exports[`planBroll — reference snapshots > matches the plan snapshot: intervie
 }
 `;
 
-exports[`planBroll — reference snapshots > matches the plan snapshot: podcast 1`] = `
+exports[`planBroll — reference snapshots > matches the plan snapshot: interview / hybrid 1`] = `
+{
+  "clipId": "ref-interview",
+  "inserts": [
+    {
+      "assetId": "lib-rocket",
+      "assetUrl": "library/lib-rocket.mp4",
+      "confidence": 1,
+      "endMs": 2000,
+      "fromUserLibrary": true,
+      "overlayStyle": "fullscreen",
+      "query": "rocket launch metaphor",
+      "reason": "из вашей галереи: rocket launch metaphor",
+      "source": "user_library",
+      "startMs": 0,
+      "thumbnailUrl": "library/lib-rocket_thumb.jpg",
+    },
+    {
+      "assetId": "lib-ocean",
+      "assetUrl": "library/lib-ocean.mp4",
+      "confidence": 1,
+      "endMs": 11530,
+      "fromUserLibrary": true,
+      "overlayStyle": "fullscreen",
+      "query": "deep ocean current",
+      "reason": "из вашей галереи: deep ocean current",
+      "source": "user_library",
+      "startMs": 9030,
+      "thumbnailUrl": "library/lib-ocean_thumb.jpg",
+    },
+  ],
+  "version": 1,
+}
+`;
+
+exports[`planBroll — reference snapshots > matches the plan snapshot: interview / my_library 1`] = `
+{
+  "clipId": "ref-interview",
+  "inserts": [
+    {
+      "assetId": "lib-rocket",
+      "assetUrl": "library/lib-rocket.mp4",
+      "confidence": 1,
+      "endMs": 2000,
+      "fromUserLibrary": true,
+      "lowConfidence": true,
+      "overlayStyle": "fullscreen",
+      "query": "rocket launch metaphor",
+      "reason": "из вашей галереи: rocket launch metaphor",
+      "source": "user_library",
+      "startMs": 0,
+      "thumbnailUrl": "library/lib-rocket_thumb.jpg",
+    },
+    {
+      "assetId": "lib-ocean",
+      "assetUrl": "library/lib-ocean.mp4",
+      "confidence": 1,
+      "endMs": 11530,
+      "fromUserLibrary": true,
+      "lowConfidence": true,
+      "overlayStyle": "fullscreen",
+      "query": "deep ocean current",
+      "reason": "из вашей галереи: deep ocean current",
+      "source": "user_library",
+      "startMs": 9030,
+      "thumbnailUrl": "library/lib-ocean_thumb.jpg",
+    },
+  ],
+  "version": 1,
+}
+`;
+
+exports[`planBroll — reference snapshots > matches the plan snapshot: podcast / auto_stock 1`] = `
 {
   "clipId": "ref-podcast",
   "inserts": [
@@ -92,6 +274,7 @@ exports[`planBroll — reference snapshots > matches the plan snapshot: podcast 
       "assetUrl": "https://x/n1.mp4",
       "confidence": 1,
       "endMs": 2500,
+      "fromUserLibrary": false,
       "overlayStyle": "fullscreen",
       "query": "glowing neural network",
       "reason": "visual reinforces "glowing neural network"",
@@ -104,12 +287,85 @@ exports[`planBroll — reference snapshots > matches the plan snapshot: podcast 
       "assetUrl": "https://x/rk1.mp4",
       "confidence": 1,
       "endMs": 10170,
+      "fromUserLibrary": false,
       "overlayStyle": "fullscreen",
       "query": "rocket launch metaphor",
       "reason": "visual reinforces "rocket launch metaphor"",
       "source": "pexels",
       "startMs": 8170,
       "thumbnailUrl": "https://example.com/1.jpg",
+    },
+  ],
+  "version": 1,
+}
+`;
+
+exports[`planBroll — reference snapshots > matches the plan snapshot: podcast / hybrid 1`] = `
+{
+  "clipId": "ref-podcast",
+  "inserts": [
+    {
+      "assetId": "lib-neural",
+      "assetUrl": "library/lib-neural.mp4",
+      "confidence": 1,
+      "endMs": 2500,
+      "fromUserLibrary": true,
+      "overlayStyle": "fullscreen",
+      "query": "glowing neural network",
+      "reason": "из вашей галереи: glowing neural network",
+      "source": "user_library",
+      "startMs": 0,
+      "thumbnailUrl": "library/lib-neural_thumb.jpg",
+    },
+    {
+      "assetId": "lib-rocket",
+      "assetUrl": "library/lib-rocket.mp4",
+      "confidence": 1,
+      "endMs": 10170,
+      "fromUserLibrary": true,
+      "overlayStyle": "fullscreen",
+      "query": "rocket launch metaphor",
+      "reason": "из вашей галереи: rocket launch metaphor",
+      "source": "user_library",
+      "startMs": 8170,
+      "thumbnailUrl": "library/lib-rocket_thumb.jpg",
+    },
+  ],
+  "version": 1,
+}
+`;
+
+exports[`planBroll — reference snapshots > matches the plan snapshot: podcast / my_library 1`] = `
+{
+  "clipId": "ref-podcast",
+  "inserts": [
+    {
+      "assetId": "lib-neural",
+      "assetUrl": "library/lib-neural.mp4",
+      "confidence": 1,
+      "endMs": 2500,
+      "fromUserLibrary": true,
+      "lowConfidence": true,
+      "overlayStyle": "fullscreen",
+      "query": "glowing neural network",
+      "reason": "из вашей галереи: glowing neural network",
+      "source": "user_library",
+      "startMs": 0,
+      "thumbnailUrl": "library/lib-neural_thumb.jpg",
+    },
+    {
+      "assetId": "lib-rocket",
+      "assetUrl": "library/lib-rocket.mp4",
+      "confidence": 1,
+      "endMs": 10170,
+      "fromUserLibrary": true,
+      "lowConfidence": true,
+      "overlayStyle": "fullscreen",
+      "query": "rocket launch metaphor",
+      "reason": "из вашей галереи: rocket launch metaphor",
+      "source": "user_library",
+      "startMs": 8170,
+      "thumbnailUrl": "library/lib-rocket_thumb.jpg",
     },
   ],
   "version": 1,

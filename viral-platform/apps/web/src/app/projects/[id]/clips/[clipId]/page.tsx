@@ -1,15 +1,16 @@
 'use client';
 
+import { BrollModeSelector } from '@/components/BrollModeSelector';
 import { trpc } from '@/lib/trpc';
-import type { BRollInsert, ExportFormat } from '@vp/shared';
+import type { BRollInsert, BrollMode, ExportFormat } from '@vp/shared';
 import { RefreshCw } from 'lucide-react';
 import Link from 'next/link';
 import { use, useState } from 'react';
 
 /**
- * Clip editor (§8.2). MVP shows the AI B-roll plan with per-insert manual
- * replacement and an export action. The Remotion player, timeline tracks, and
- * caption-preset picker layer on top of this data in week 4 (§11).
+ * Clip editor (§8.2). MVP shows the AI B-roll plan with the mode switcher,
+ * per-insert source badges, manual replacement, and an export action. The
+ * Remotion player, timeline tracks, and caption presets layer on top (§11).
  */
 export default function ClipEditorPage({
   params,
@@ -17,12 +18,17 @@ export default function ClipEditorPage({
   const { id, clipId } = use(params);
   const utils = trpc.useUtils();
   const clip = trpc.clips.get.useQuery({ clipId });
+  const project = trpc.projects.get.useQuery({ id });
+  const setMode = trpc.projects.setBrollMode.useMutation({
+    onSuccess: () => utils.projects.get.invalidate({ id }),
+  });
   const regenerate = trpc.clips.regenerateBroll.useMutation({
     onSuccess: () => utils.clips.get.invalidate({ clipId }),
   });
   const startRender = trpc.renders.start.useMutation();
   const [format, setFormat] = useState<ExportFormat>('9:16');
 
+  const mode: BrollMode = project.data?.project.brollMode ?? 'auto_stock';
   const inserts = (clip.data?.brollPlan?.inserts ?? []) as BRollInsert[];
 
   return (
@@ -62,15 +68,22 @@ export default function ClipEditorPage({
       </div>
 
       <section className="mt-8">
-        <div className="flex items-center justify-between">
+        <div className="flex flex-wrap items-center justify-between gap-4">
           <h2 className="text-lg font-semibold">B-Roll ({inserts.length})</h2>
-          <button
-            type="button"
-            onClick={() => regenerate.mutate({ clipId })}
-            className="flex items-center gap-2 text-sm text-muted hover:text-foreground"
-          >
-            <RefreshCw size={16} /> Regenerate
-          </button>
+          <div className="flex items-center gap-4">
+            <BrollModeSelector
+              value={mode}
+              disabled={setMode.isPending}
+              onChange={(m) => setMode.mutate({ projectId: id, brollMode: m })}
+            />
+            <button
+              type="button"
+              onClick={() => regenerate.mutate({ clipId })}
+              className="flex items-center gap-2 text-sm text-muted hover:text-foreground"
+            >
+              <RefreshCw size={16} /> Regenerate
+            </button>
+          </div>
         </div>
 
         <div className="mt-4 grid gap-4 sm:grid-cols-2 lg:grid-cols-3">
@@ -79,11 +92,16 @@ export default function ClipEditorPage({
               key={`${ins.assetId}-${i}`}
               className="overflow-hidden rounded-xl border border-border bg-card"
             >
-              <img
-                src={ins.thumbnailUrl}
-                alt={ins.query}
-                className="aspect-video w-full object-cover"
-              />
+              <div className="relative">
+                <img
+                  src={ins.thumbnailUrl}
+                  alt={ins.query}
+                  className="aspect-video w-full object-cover"
+                />
+                <span className="absolute left-2 top-2 rounded bg-black/70 px-2 py-0.5 text-xs">
+                  {ins.fromUserLibrary ? '📚 Library' : '🌐 Stock'}
+                </span>
+              </div>
               <div className="p-3">
                 <p className="font-medium">{ins.query}</p>
                 <p className="mt-1 text-xs text-muted">
@@ -91,6 +109,11 @@ export default function ClipEditorPage({
                   {ins.overlayStyle} · {Math.round(ins.confidence * 100)}%
                 </p>
                 <p className="mt-1 text-xs text-muted">{ins.reason}</p>
+                {ins.lowConfidence && (
+                  <p className="mt-2 rounded bg-yellow-500/10 px-2 py-1 text-xs text-yellow-300">
+                    Не нашли подходящий ассет в галерее — добавьте видео или замените вручную.
+                  </p>
+                )}
               </div>
             </article>
           ))}

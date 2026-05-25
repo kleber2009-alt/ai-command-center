@@ -1,9 +1,26 @@
 import { TRPCError } from '@trpc/server';
 import { brollPlans, clips, db, projects } from '@vp/db';
 import { QUEUE, enqueue } from '@vp/queue';
+import type { BRollInsert } from '@vp/shared';
+import { presignDownload } from '@vp/storage';
 import { and, desc, eq } from 'drizzle-orm';
 import { z } from 'zod';
 import { protectedProcedure, router } from '../trpc.js';
+
+/** Library inserts store R2 keys; sign them so the editor can display them. */
+async function signLibraryInserts(inserts: BRollInsert[]): Promise<BRollInsert[]> {
+  return Promise.all(
+    inserts.map(async (ins) =>
+      ins.fromUserLibrary
+        ? {
+            ...ins,
+            assetUrl: await presignDownload(ins.assetUrl, 'library'),
+            thumbnailUrl: await presignDownload(ins.thumbnailUrl, 'library'),
+          }
+        : ins,
+    ),
+  );
+}
 
 /** Throw unless the clip belongs to a project owned by the caller. */
 async function ownedClip(userId: string, clipId: string) {
@@ -44,7 +61,9 @@ export const clipsRouter = router({
         .where(eq(brollPlans.clipId, clip.id))
         .orderBy(desc(brollPlans.version))
         .limit(1);
-      return { clip, brollPlan: plan ?? null };
+      if (!plan) return { clip, brollPlan: null };
+      const inserts = await signLibraryInserts(plan.inserts as BRollInsert[]);
+      return { clip, brollPlan: { ...plan, inserts } };
     }),
 
   // Re-run the B-roll engine for a clip (broll.regenerateBroll wired here, §7).

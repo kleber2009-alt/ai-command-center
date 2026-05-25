@@ -1,5 +1,5 @@
-import type { StockAsset, TranscriptWord } from '@vp/shared';
-import type { BrollEngineDeps } from '../src/deps.js';
+import { type StockAsset, type TranscriptWord, cosineSimilarity } from '@vp/shared';
+import type { BrollEngineDeps, LibraryCandidate } from '../src/deps.js';
 
 /**
  * Build a word-level transcript from a script. Each entry is [text, gapMsAfter].
@@ -45,6 +45,26 @@ export function makeAsset(over: Partial<StockAsset> = {}): StockAsset {
   };
 }
 
+/** A user-library asset with a precomputed embedding (for my_library/hybrid). */
+export function makeLibraryAsset(
+  id: string,
+  embedding: number[],
+  over: Partial<StockAsset> = {},
+): StockAsset & { embedding: number[] } {
+  return {
+    ...makeAsset({
+      id,
+      provider: 'user_library',
+      providerAssetId: id,
+      url: `library/${id}.mp4`,
+      thumbnailUrl: `library/${id}_thumb.jpg`,
+      description: `library asset ${id}`,
+      ...over,
+    }),
+    embedding,
+  };
+}
+
 /**
  * A deterministic, fully-offline deps double. The LLM verdict and the embedding
  * function are driven by simple keyword tables so tests are reproducible and
@@ -57,6 +77,8 @@ export interface MockConfig {
   assetsByConcept?: Record<string, StockAsset[]>;
   /** Embedding space: substring → vector. Cosine drives ranking + diversity. */
   embedTable?: { match: string; vector: number[] }[];
+  /** User-library assets; searchLibrary ranks them by cosine like pgvector. */
+  library?: (StockAsset & { embedding: number[] })[];
 }
 
 export function makeMockDeps(cfg: MockConfig = {}): BrollEngineDeps & { calls: { llm: number } } {
@@ -108,6 +130,18 @@ export function makeMockDeps(cfg: MockConfig = {}): BrollEngineDeps & { calls: {
     },
     async searchPixabay(query: string): Promise<StockAsset[]> {
       return findAssets(cfg.assetsByConcept, query, 'pixabay');
+    },
+    async searchLibrary(queryEmbedding, opts): Promise<LibraryCandidate[]> {
+      // Mirror pgvector: rank all library assets by cosine to the query.
+      return (cfg.library ?? [])
+        .filter((a) => !opts.minDurationMs || a.durationMs >= opts.minDurationMs)
+        .map((a) => ({
+          ...a,
+          provider: 'user_library' as const,
+          similarity: cosineSimilarity(queryEmbedding, a.embedding),
+        }))
+        .sort((x, y) => y.similarity - x.similarity)
+        .slice(0, opts.limit ?? 20);
     },
   };
 }

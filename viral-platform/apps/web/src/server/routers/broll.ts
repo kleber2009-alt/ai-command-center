@@ -1,7 +1,14 @@
 import { TRPCError } from '@trpc/server';
-import { searchPexels, searchPixabay } from '@vp/ai';
-import { brollPlans, clips, db, projects } from '@vp/db';
-import { BROLL, type BRollInsert, brollReplaceInput, brollSearchInput } from '@vp/shared';
+import { embedOne, searchPexels, searchPixabay } from '@vp/ai';
+import { brollPlans, clips, db, projects, searchLibraryAssets } from '@vp/db';
+import {
+  BROLL,
+  type BRollInsert,
+  brollReplaceInput,
+  brollSearchInput,
+  brollSearchLibraryInput,
+} from '@vp/shared';
+import { presignDownload } from '@vp/storage';
 import { desc, eq } from 'drizzle-orm';
 import { protectedProcedure, router } from '../trpc.js';
 
@@ -16,14 +23,32 @@ async function assertOwnsClip(userId: string, clipId: string): Promise<void> {
 }
 
 export const brollRouter = router({
-  // Manual stock search for the editor's "Search manually" action (§8.2).
-  search: protectedProcedure.input(brollSearchInput).query(async ({ input }) => {
+  // Manual STOCK search for the editor's "From stock" tab (§8.2).
+  searchStock: protectedProcedure.input(brollSearchInput).query(async ({ input }) => {
     const minLen = input.durationMs + BROLL.assetMarginMs;
     const [pexels, pixabay] = await Promise.all([
       searchPexels(input.query).catch(() => []),
       searchPixabay(input.query).catch(() => []),
     ]);
     return [...pexels, ...pixabay].filter((a) => a.durationMs >= minLen);
+  }),
+
+  // Semantic LIBRARY search for the editor's "From my library" tab (§8.2).
+  searchLibrary: protectedProcedure.input(brollSearchLibraryInput).query(async ({ ctx, input }) => {
+    const queryEmbedding = await embedOne(input.query);
+    const results = await searchLibraryAssets(ctx.userId, queryEmbedding, {
+      collectionId: input.collectionId,
+      minDurationMs: input.durationMs ? input.durationMs + BROLL.assetMarginMs : undefined,
+      limit: 24,
+    });
+    // url/thumbnailUrl are R2 keys; sign them for the browser.
+    return Promise.all(
+      results.map(async (r) => ({
+        ...r,
+        url: await presignDownload(r.url, 'library'),
+        thumbnailUrl: await presignDownload(r.thumbnailUrl, 'library'),
+      })),
+    );
   }),
 
   // Replace a single insert's asset in the latest plan (broll.replaceInsert, §7).

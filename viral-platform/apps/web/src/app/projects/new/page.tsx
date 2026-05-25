@@ -1,7 +1,8 @@
 'use client';
 
+import { BrollModeSelector } from '@/components/BrollModeSelector';
 import { trpc } from '@/lib/trpc';
-import { MAX_UPLOAD_BYTES } from '@vp/shared';
+import { type BrollMode, MAX_UPLOAD_BYTES } from '@vp/shared';
 import { UploadCloud } from 'lucide-react';
 import { useRouter } from 'next/navigation';
 import { useState } from 'react';
@@ -15,6 +16,7 @@ export default function NewProjectPage() {
   const presign = trpc.uploads.presign.useMutation();
   const create = trpc.projects.create.useMutation();
   const [busy, setBusy] = useState(false);
+  const [mode, setMode] = useState<BrollMode>('auto_stock');
   const [error, setError] = useState<string | null>(null);
 
   async function handleFile(file: File) {
@@ -43,6 +45,7 @@ export default function NewProjectPage() {
         filename: file.name,
         durationMs,
         sizeBytes: file.size,
+        brollMode: mode,
       });
       router.push(`/projects/${projectId}`);
     } catch (e) {
@@ -54,6 +57,12 @@ export default function NewProjectPage() {
   return (
     <main className="mx-auto max-w-2xl px-6 py-16">
       <h1 className="text-2xl font-bold">New project</h1>
+
+      <div className="mt-6">
+        <p className="mb-2 text-sm font-medium text-muted">B-roll source</p>
+        <BrollModeSelector value={mode} onChange={setMode} disabled={busy} />
+      </div>
+
       <label
         className="mt-8 flex h-64 cursor-pointer flex-col items-center justify-center gap-3 rounded-xl border-2 border-dashed border-border bg-card text-muted hover:border-primary"
         onDragOver={(e) => e.preventDefault()}

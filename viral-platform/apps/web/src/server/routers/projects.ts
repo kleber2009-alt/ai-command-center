@@ -6,6 +6,7 @@ import {
   MAX_CONCURRENT_PROJECTS_PER_USER,
   createProjectInput,
   listProjectsInput,
+  setBrollModeInput,
 } from '@vp/shared';
 import { and, count, desc, eq, inArray, lt } from 'drizzle-orm';
 import { z } from 'zod';
@@ -38,6 +39,8 @@ export const projectsRouter = router({
         sourceVideoR2Key: input.r2Key,
         durationMs: input.durationMs,
         sizeBytes: input.sizeBytes,
+        brollMode: input.brollMode,
+        libraryCollectionId: input.libraryCollectionId ?? null,
         status: 'uploaded',
       })
       .returning();
@@ -113,4 +116,16 @@ export const projectsRouter = router({
         .where(and(eq(projects.id, input.id), eq(projects.userId, ctx.userId)));
       return { ok: true };
     }),
+
+  // Switch B-roll sourcing mode + collection (§7). Clips are re-planned via
+  // clips.regenerateBroll afterwards.
+  setBrollMode: protectedProcedure.input(setBrollModeInput).mutation(async ({ ctx, input }) => {
+    const res = await db
+      .update(projects)
+      .set({ brollMode: input.brollMode, libraryCollectionId: input.libraryCollectionId ?? null })
+      .where(and(eq(projects.id, input.projectId), eq(projects.userId, ctx.userId)))
+      .returning({ id: projects.id });
+    if (res.length === 0) throw new TRPCError({ code: 'NOT_FOUND' });
+    return { ok: true };
+  }),
 });

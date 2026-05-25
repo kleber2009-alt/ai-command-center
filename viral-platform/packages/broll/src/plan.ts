@@ -22,10 +22,12 @@ export function buildInsert(
   confidence: number,
   clipStartMs: number,
   clipEndMs: number,
+  opts: { lowConfidence?: boolean } = {},
 ): BRollInsert {
   const duration = clamp(candidate.suggestedDurationMs, BROLL.insertMinMs, BROLL.insertMaxMs);
   const startMs = clamp(candidate.insertAtMs, clipStartMs, clipEndMs - duration);
   const endMs = Math.min(startMs + duration, clipEndMs);
+  const fromUserLibrary = asset.provider === 'user_library';
   return {
     startMs,
     endMs,
@@ -36,7 +38,9 @@ export function buildInsert(
     thumbnailUrl: asset.thumbnailUrl,
     confidence,
     overlayStyle: chooseOverlay(endMs - startMs),
-    reason: candidate.reasoning,
+    reason: fromUserLibrary ? `из вашей галереи: ${candidate.visualConcept}` : candidate.reasoning,
+    fromUserLibrary,
+    ...(opts.lowConfidence ? { lowConfidence: true } : {}),
   };
 }
 

@@ -177,6 +177,40 @@ importers:
         specifier: ^5.7.2
         version: 5.9.3
 
+  apps/worker-library:
+    dependencies:
+      '@vp/ai':
+        specifier: workspace:*
+        version: link:../../packages/ai
+      '@vp/db':
+        specifier: workspace:*
+        version: link:../../packages/db
+      '@vp/ffmpeg':
+        specifier: workspace:*
+        version: link:../../packages/ffmpeg
+      '@vp/queue':
+        specifier: workspace:*
+        version: link:../../packages/queue
+      '@vp/shared':
+        specifier: workspace:*
+        version: link:../../packages/shared
+      '@vp/storage':
+        specifier: workspace:*
+        version: link:../../packages/storage
+      drizzle-orm:
+        specifier: ^0.38.3
+        version: 0.38.4(@types/react@19.2.15)(postgres@3.4.9)(react@19.2.6)
+    devDependencies:
+      '@types/node':
+        specifier: ^22.10.5
+        version: 22.19.19
+      tsx:
+        specifier: ^4.19.2
+        version: 4.22.3
+      typescript:
+        specifier: ^5.7.2
+        version: 5.9.3
+
   apps/worker-render:
     dependencies:
       '@vp/db':

@@ -17,7 +17,11 @@ export async function failProject(projectId: string, reason: string): Promise<vo
     .where(eq(projects.id, projectId));
 }
 
-export async function logJobStart(jobId: string, projectId: string, type: string): Promise<string> {
+export async function logJobStart(
+  jobId: string,
+  projectId: string | null,
+  type: string,
+): Promise<string> {
   const [row] = await db
     .insert(jobsLog)
     .values({ jobId, projectId, type, status: 'running' })

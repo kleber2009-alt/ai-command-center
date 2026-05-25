@@ -5,9 +5,16 @@
 export type ExportFormat = '9:16' | '1:1' | '16:9';
 export type RenderQuality = '1080p' | '4k';
 
-export type BRollProvider = 'pexels' | 'pixabay' | 'user';
+/** Stock search providers. */
+export type BRollProvider = 'pexels' | 'pixabay';
+/** Where an insert's asset ultimately came from. */
+export type BRollSource = BRollProvider | 'user_library';
 export type OverlayStyle = 'fullscreen' | 'picture-in-picture' | 'split';
 export type BRollStyle = 'literal' | 'metaphorical';
+
+/** B-roll sourcing mode chosen per project / per regenerate (§4.0). */
+export type BrollMode = 'auto_stock' | 'my_library' | 'hybrid';
+export const BROLL_MODES = ['auto_stock', 'my_library', 'hybrid'] as const;
 
 /** A single word with word-level timing, as returned by the transcriber. */
 export interface TranscriptWord {
@@ -42,13 +49,17 @@ export interface BRollInsert {
   startMs: number;
   endMs: number;
   query: string;
-  source: BRollProvider;
+  source: BRollSource;
   assetId: string;
   assetUrl: string;
   thumbnailUrl: string;
   confidence: number; // 0..1
   overlayStyle: OverlayStyle;
   reason: string;
+  /** Convenience flag for UI badges (§4.1). */
+  fromUserLibrary: boolean;
+  /** my_library mode found nothing good enough; user should fix manually (§4.4.4). */
+  lowConfidence?: boolean;
 }
 
 export interface BRollPlan {
@@ -69,10 +80,14 @@ export interface BRollCandidate {
   insertAtMs: number;
 }
 
-/** A stock asset returned by Pexels / Pixabay (step 3, §4.2). */
+/**
+ * A B-roll candidate asset. Used for both stock results (Pexels/Pixabay) and
+ * user-library assets — the unified ranking pipeline operates on this shape
+ * (§4.2 step 4). Library assets carry a precomputed `embedding`.
+ */
 export interface StockAsset {
   id: string;
-  provider: BRollProvider;
+  provider: BRollSource;
   providerAssetId: string;
   url: string;
   thumbnailUrl: string;
@@ -81,6 +96,21 @@ export interface StockAsset {
   height: number;
   tags: string[];
   description: string;
+  /** Present for user_library assets (stored in pgvector); absent for stock. */
+  embedding?: number[];
+}
+
+/** Vision-tagging output stored on a user-library asset (§4.4.3). */
+export interface AssetAiMetadata {
+  description: string;
+  tags: string[];
+  sceneType: 'indoor' | 'outdoor' | 'abstract' | 'product' | 'person' | 'screen';
+  mood: string[];
+  dominantColors: string[];
+  hasFaces: boolean;
+  hasTextOverlay: boolean;
+  motionIntensity: 'static' | 'slow' | 'medium' | 'fast';
+  usabilityScore: number; // 0..100
 }
 
 /** A ranked asset with its similarity to the query concept (step 4, §4.2). */

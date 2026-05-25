@@ -38,10 +38,23 @@ export const BROLL = {
   fadeMs: 200,
   /** Candidates pulled per provider before ranking. */
   topPerProvider: 10,
+  /** Candidates pulled from the user library via pgvector search (§4.4.4). */
+  libraryCandidateLimit: 20,
   /** Final shortlist size after cosine ranking. */
   topRanked: 3,
   /** Diversity: reject a candidate too similar to a recently-used one. */
   diversitySimilarityCeiling: 0.92,
+
+  // --- My Library / Hybrid tuning (§4.4, §4.5) ---
+  /** Hybrid: minimum similarity for a library asset to count as "confident". */
+  hybridConfidentSimilarity: 0.6,
+  /** Hybrid: if at least this many confident library hits exist, skip stock. */
+  hybridConfidentMin: 3,
+  /** Hybrid: score bonus added to user-library candidates during ranking. */
+  hybridLibraryBonus: 0.15,
+  /** my_library: below this similarity an insert is flagged low-confidence. */
+  libraryMinSimilarity: 0.5,
+  libraryConfidentMin: 3,
 } as const;
 
 // --- Cache TTLs in seconds (§4.4) ---
@@ -72,15 +85,48 @@ export const CREDIT_COSTS = {
   transcribePerMinute: 1,
   clipDetectionPerProject: 2,
   brollPlanPerClip: 1,
+  /** Vision tagging + embedding when indexing a library asset (§9). */
+  indexAssetCredits: 0.5,
   render1080pPerClip: 2,
   render4kPerClip: 5,
 } as const;
 
+const GB = 1024 * 1024 * 1024;
+const MB = 1024 * 1024;
+
 export const PLANS = {
-  free: { credits: 30, priceUsd: 0, watermark: true, seats: 1 },
-  creator: { credits: 500, priceUsd: 19, watermark: false, seats: 1 },
-  pro: { credits: 2000, priceUsd: 49, watermark: false, seats: 1 },
-  agency: { credits: 8000, priceUsd: 149, watermark: false, seats: 5 },
+  free: {
+    credits: 30,
+    priceUsd: 0,
+    watermark: true,
+    seats: 1,
+    libraryAssets: 10,
+    libraryBytes: 100 * MB,
+  },
+  creator: {
+    credits: 500,
+    priceUsd: 19,
+    watermark: false,
+    seats: 1,
+    libraryAssets: 200,
+    libraryBytes: 5 * GB,
+  },
+  pro: {
+    credits: 2000,
+    priceUsd: 49,
+    watermark: false,
+    seats: 1,
+    libraryAssets: 2000,
+    libraryBytes: 50 * GB,
+  },
+  agency: {
+    credits: 8000,
+    priceUsd: 149,
+    watermark: false,
+    seats: 5,
+    libraryAssets: Number.POSITIVE_INFINITY,
+    libraryBytes: 500 * GB,
+  },
 } as const;
 
 export type PlanId = keyof typeof PLANS;

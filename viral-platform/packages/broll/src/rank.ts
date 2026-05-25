@@ -66,15 +66,21 @@ export function rankAssets(
   assets: StockAsset[],
   assetEmbeddings: Map<string, number[]>,
   topN: number = BROLL.topRanked,
+  /** Optional per-asset score bonus (hybrid adds +0.15 to library, §4.5). It
+   *  affects ordering only; `similarity` stays the raw cosine. */
+  scoreBonus?: (asset: StockAsset) => number,
 ): RankedAsset[] {
   return assets
     .map((asset) => {
       const v = assetEmbeddings.get(asset.id);
-      return v ? { asset, similarity: cosineSimilarity(queryEmbedding, v) } : null;
+      if (!v) return null;
+      const similarity = cosineSimilarity(queryEmbedding, v);
+      return { asset, similarity, score: similarity + (scoreBonus?.(asset) ?? 0) };
     })
-    .filter((r): r is RankedAsset => r !== null)
-    .sort((a, b) => b.similarity - a.similarity)
-    .slice(0, topN);
+    .filter((r): r is RankedAsset & { score: number } => r !== null)
+    .sort((a, b) => b.score - a.score)
+    .slice(0, topN)
+    .map(({ asset, similarity }) => ({ asset, similarity }));
 }
 
 /**

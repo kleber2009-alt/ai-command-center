@@ -31,6 +31,24 @@ export const hookAnalysisSchema = z.object({
   recommendation: z.string(),
 });
 
+/** Vision tagging output for a library asset (§4.4.3). */
+export const assetTaggingSchema = z.object({
+  description: z.string().default(''),
+  tags: z.array(z.string()).default([]),
+  scene_type: z
+    .enum(['indoor', 'outdoor', 'abstract', 'product', 'person', 'screen'])
+    .catch('abstract'),
+  mood: z.array(z.string()).default([]),
+  dominant_colors: z.array(z.string()).default([]),
+  has_faces: z.boolean().default(false),
+  has_text_overlay: z.boolean().default(false),
+  motion_intensity: z.enum(['static', 'slow', 'medium', 'fast']).catch('static'),
+  usability_score: z.number().min(0).max(100).default(50),
+});
+export type AssetTaggingRaw = z.infer<typeof assetTaggingSchema>;
+
+export const brollMode = z.enum(['auto_stock', 'my_library', 'hybrid']);
+
 // --- API input schemas (tRPC, §7) ---
 
 export const createProjectInput = z.object({
@@ -38,6 +56,14 @@ export const createProjectInput = z.object({
   filename: z.string().min(1),
   durationMs: z.number().int().positive(),
   sizeBytes: z.number().int().positive(),
+  brollMode: brollMode.default('auto_stock'),
+  libraryCollectionId: z.string().uuid().optional(),
+});
+
+export const setBrollModeInput = z.object({
+  projectId: z.string().uuid(),
+  brollMode,
+  libraryCollectionId: z.string().uuid().nullish(),
 });
 
 export const listProjectsInput = z.object({
@@ -47,7 +73,7 @@ export const listProjectsInput = z.object({
 
 export const stockAssetInput = z.object({
   id: z.string().min(1),
-  provider: z.enum(['pexels', 'pixabay', 'user']),
+  provider: z.enum(['pexels', 'pixabay', 'user_library']),
   providerAssetId: z.string().min(1),
   url: z.string().url(),
   thumbnailUrl: z.string().url(),
@@ -67,6 +93,57 @@ export const brollReplaceInput = z.object({
 export const brollSearchInput = z.object({
   query: z.string().min(2),
   durationMs: z.number().int().positive(),
+});
+
+export const brollSearchLibraryInput = z.object({
+  query: z.string().min(2),
+  durationMs: z.number().int().positive().optional(),
+  collectionId: z.string().uuid().optional(),
+});
+
+// --- Library API input schemas (§7) ---
+
+export const createCollectionInput = z.object({ name: z.string().min(1).max(80) });
+export const renameCollectionInput = z.object({
+  collectionId: z.string().uuid(),
+  name: z.string().min(1).max(80),
+});
+export const collectionIdInput = z.object({ collectionId: z.string().uuid() });
+export const assetIdInput = z.object({ assetId: z.string().uuid() });
+
+export const libraryUploadInitInput = z.object({
+  filename: z.string().min(1),
+  contentType: z.string().min(1),
+  sizeBytes: z.number().int().positive(),
+  collectionId: z.string().uuid().optional(),
+});
+
+export const libraryUploadCompleteInput = z.object({
+  r2Key: z.string().min(1),
+  filename: z.string().min(1),
+  contentType: z.string().min(1),
+  sizeBytes: z.number().int().positive(),
+  fileHash: z.string().min(8),
+  collectionId: z.string().uuid().optional(),
+});
+
+export const listAssetsInput = z.object({
+  collectionId: z.string().uuid().optional(),
+  type: z.enum(['video', 'image']).optional(),
+  tags: z.array(z.string()).optional(),
+  search: z.string().optional(),
+  cursor: z.string().optional(),
+  limit: z.number().int().min(1).max(60).default(40),
+});
+
+export const updateAssetTagsInput = z.object({
+  assetId: z.string().uuid(),
+  userTags: z.array(z.string().min(1).max(40)).max(40),
+});
+
+export const moveAssetInput = z.object({
+  assetId: z.string().uuid(),
+  collectionId: z.string().uuid(),
 });
 
 export const startRenderInput = z.object({

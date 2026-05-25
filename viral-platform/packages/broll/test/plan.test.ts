@@ -58,6 +58,19 @@ describe('buildInsert', () => {
     expect(ins.source).toBe('pexels');
     expect(ins.confidence).toBe(0.73);
     expect(ins.query).toBe('concept');
+    expect(ins.fromUserLibrary).toBe(false);
+  });
+
+  it('flags user-library assets and labels their reason', () => {
+    const ins = buildInsert(candidate(), makeAsset({ provider: 'user_library' }), 0.8, 0, 60_000);
+    expect(ins.source).toBe('user_library');
+    expect(ins.fromUserLibrary).toBe(true);
+    expect(ins.reason).toContain('галереи');
+  });
+
+  it('carries a low-confidence flag when asked', () => {
+    const ins = buildInsert(candidate(), makeAsset(), 0.4, 0, 60_000, { lowConfidence: true });
+    expect(ins.lowConfidence).toBe(true);
   });
 });
 
@@ -73,6 +86,7 @@ describe('enforceDensity', () => {
     confidence,
     overlayStyle: 'fullscreen',
     reason: 'r',
+    fromUserLibrary: false,
   });
 
   it('keeps all inserts when under the coverage budget', () => {

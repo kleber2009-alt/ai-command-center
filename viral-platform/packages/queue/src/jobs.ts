@@ -3,6 +3,7 @@ export const QUEUE = {
   transcribe: 'transcribe',
   detect: 'detect-clips',
   broll: 'broll-plan',
+  indexAsset: 'index-user-asset',
   renderPreview: 'render-preview',
   renderFinal: 'render-final',
 } as const;
@@ -40,10 +41,17 @@ export interface RenderJob {
   preview: boolean;
 }
 
+/** Background indexing of a freshly-uploaded library asset (§4.4.3). */
+export interface IndexAssetJob {
+  userId: string;
+  assetId: string;
+}
+
 export interface JobPayloads {
   [QUEUE.transcribe]: TranscribeJob;
   [QUEUE.detect]: DetectClipsJob;
   [QUEUE.broll]: BrollPlanJob;
+  [QUEUE.indexAsset]: IndexAssetJob;
   [QUEUE.renderPreview]: RenderJob;
   [QUEUE.renderFinal]: RenderJob;
 }

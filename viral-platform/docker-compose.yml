@@ -59,6 +59,7 @@ services:
       /bin/sh -c "
       mc alias set local http://minio:9000 viral viralsecret;
       mc mb --ignore-existing local/viral-videos;
+      mc mb --ignore-existing local/user-library;
       mc anonymous set download local/viral-videos;
       exit 0;
       "

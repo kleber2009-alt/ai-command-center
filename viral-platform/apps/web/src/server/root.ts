@@ -1,6 +1,7 @@
 import { billingRouter } from './routers/billing.js';
 import { brollRouter } from './routers/broll.js';
 import { clipsRouter } from './routers/clips.js';
+import { libraryRouter } from './routers/library.js';
 import { projectsRouter } from './routers/projects.js';
 import { rendersRouter } from './routers/renders.js';
 import { uploadsRouter } from './routers/uploads.js';
@@ -11,6 +12,7 @@ export const appRouter = router({
   projects: projectsRouter,
   clips: clipsRouter,
   broll: brollRouter,
+  library: libraryRouter,
   renders: rendersRouter,
   billing: billingRouter,
 });
