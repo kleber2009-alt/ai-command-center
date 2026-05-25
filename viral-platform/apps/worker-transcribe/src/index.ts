@@ -65,7 +65,7 @@ createWorker(QUEUE.transcribe, async (job) => {
         pct: 100,
         message: 'Transcribed',
       });
-      await enqueue(QUEUE.detect, { projectId, userId: job.data.userId }, `detect:${projectId}`);
+      await enqueue(QUEUE.detect, { projectId, userId: job.data.userId }, `detect-${projectId}`);
       await logJobFinish(logId, 'done');
     } finally {
       await rm(dir, { recursive: true, force: true });

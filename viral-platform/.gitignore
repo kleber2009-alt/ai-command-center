@@ -22,3 +22,6 @@ venv/
 *.log
 playwright-report/
 test-results/
+
+# redis dump
+*.rdb

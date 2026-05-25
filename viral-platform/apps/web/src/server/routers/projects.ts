@@ -63,7 +63,7 @@ export const projectsRouter = router({
         sourceVideoR2Key: project.sourceVideoR2Key,
         durationMs: project.durationMs,
       },
-      `transcribe:${project.id}`,
+      `transcribe-${project.id}`,
     );
 
     return { projectId: project.id };

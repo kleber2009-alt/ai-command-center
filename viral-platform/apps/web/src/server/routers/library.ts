@@ -166,7 +166,7 @@ export const libraryRouter = router({
       await enqueue(
         QUEUE.indexAsset,
         { userId: ctx.userId, assetId: asset.id },
-        `index:${asset.id}`,
+        `index-${asset.id}`,
       );
       return { assetId: asset.id };
     }),

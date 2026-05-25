@@ -1,4 +1,4 @@
-import { and, cosineDistance, desc, eq, gte, isNull, sql } from 'drizzle-orm';
+import { and, eq, gte, isNull, sql } from 'drizzle-orm';
 import { db } from './client.js';
 import { assetUsageLog, collections, userAssets } from './schema.js';
 
@@ -27,7 +27,12 @@ export async function searchLibraryAssets(
   queryEmbedding: number[],
   opts: { collectionId?: string; minDurationMs?: number; limit?: number } = {},
 ): Promise<LibrarySearchResult[]> {
-  const similarity = sql<number>`1 - (${cosineDistance(userAssets.embedding, queryEmbedding)})`;
+  // Embedding is stored as vector(3072) but the HNSW index is on a halfvec
+  // cast (plain-vector HNSW caps at 2000 dims). Cast both sides to halfvec so
+  // the cosine operator matches the expression index.
+  const queryVec = `[${queryEmbedding.join(',')}]`;
+  const distance = sql<number>`(${userAssets.embedding}::halfvec(3072)) <=> ${queryVec}::halfvec(3072)`;
+  const similarity = sql<number>`1 - (${distance})`;
   const where = and(
     eq(userAssets.userId, userId),
     eq(userAssets.status, 'ready'),
@@ -51,7 +56,7 @@ export async function searchLibraryAssets(
     })
     .from(userAssets)
     .where(where)
-    .orderBy(desc(similarity))
+    .orderBy(distance) // ascending distance = best matches first (uses HNSW)
     .limit(opts.limit ?? 20);
 
   return rows.map((r) => {

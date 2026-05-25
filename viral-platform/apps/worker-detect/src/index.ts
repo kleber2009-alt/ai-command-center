@@ -83,7 +83,7 @@ createWorker(QUEUE.detect, async (job) => {
 
     await setProjectStatus(projectId, 'planning_broll');
     for (const { id } of inserted) {
-      await enqueue(QUEUE.broll, { projectId, userId, clipId: id }, `broll:${id}`);
+      await enqueue(QUEUE.broll, { projectId, userId, clipId: id }, `broll-${id}`);
     }
 
     await publishProgress({

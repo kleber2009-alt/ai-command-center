@@ -1,4 +1,3 @@
-import { EMBEDDING_DIM } from '@vp/shared';
 import { relations, sql } from 'drizzle-orm';
 import {
   bigint,
@@ -147,13 +146,12 @@ export const brollAssetsCache = pgTable(
     height: integer('height').notNull().default(0),
     description: text('description').notNull().default(''),
     tags: jsonb('tags').notNull().default(sql`'[]'::jsonb`),
-    embedding: vector('embedding', { dimensions: EMBEDDING_DIM }),
+    // Full-precision storage; the HNSW index is built on a halfvec cast
+    // (3072 dims exceeds plain-vector HNSW's 2000-dim cap) — see migrations.
+    embedding: vector('embedding', { dimensions: 3072 }),
     createdAt: timestamp('created_at', { withTimezone: true }).notNull().defaultNow(),
   },
-  (t) => [
-    index('broll_assets_cache_provider_idx').on(t.provider, t.providerAssetId),
-    index('broll_assets_cache_embedding_idx').using('hnsw', t.embedding.op('vector_cosine_ops')),
-  ],
+  (t) => [index('broll_assets_cache_provider_idx').on(t.provider, t.providerAssetId)],
 );
 
 // --- collections: a user's named B-roll galleries (§4.4.2) ---
@@ -191,7 +189,8 @@ export const userAssets = pgTable(
     orientation: text('orientation').notNull().default('landscape'),
     aiMetadata: jsonb('ai_metadata'),
     userTags: text('user_tags').array().notNull().default(sql`'{}'::text[]`),
-    embedding: vector('embedding', { dimensions: EMBEDDING_DIM }),
+    // Full-precision storage; HNSW index built on a halfvec cast (see migrations).
+    embedding: vector('embedding', { dimensions: 3072 }),
     status: assetStatusEnum('status').notNull().default('processing'),
     errorReason: text('error_reason'),
     sizeBytes: bigint('size_bytes', { mode: 'number' }).notNull(),
@@ -202,7 +201,6 @@ export const userAssets = pgTable(
   (t) => [
     index('user_assets_list_idx').on(t.userId, t.status, t.deletedAt),
     index('user_assets_collection_idx').on(t.collectionId, t.status),
-    index('user_assets_embedding_idx').using('hnsw', t.embedding.op('vector_cosine_ops')),
     // Dedup live (non-deleted) uploads per user by content hash (§6).
     uniqueIndex('user_assets_user_hash_idx')
       .on(t.userId, t.fileHash)
