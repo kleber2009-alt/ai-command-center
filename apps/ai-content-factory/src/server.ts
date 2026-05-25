@@ -32,6 +32,7 @@ import { isImageEngine, type ImageEngine } from './renderers/image-engines.js';
 import { log } from './lib/logger.js';
 import { getAllClipMeta, deleteClipMeta, setClipMeta, type ClipMeta } from './lib/footage-meta.js';
 import { getAllScreenMeta, deleteScreenMeta, setScreenMeta, type ScreenMeta } from './lib/screen-meta.js';
+import { createMetaStore, type AssetMetaBase } from './lib/keyval-meta.js';
 import { describeClip } from './generators/clip-describer.js';
 import { describeScreen } from './generators/screen-describer.js';
 

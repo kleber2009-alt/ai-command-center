@@ -37,6 +37,7 @@ export default async function NewVideoPage({
           fitScore: true,
           fitWhy: true,
           thumbnailUrl: true,
+          rewrittenScript: true,
         },
       })
     : null;
@@ -94,7 +95,9 @@ export default async function NewVideoPage({
               Открыть оригинал в Instagram ↗
             </a>
             <p className="font-serif text-[12px] text-text-mute mt-2 max-w-[60ch]">
-              Перепиши хук под себя — и в монтаж. Реальная транскрипция и переозвучка по голосу — следующий шаг pipeline.
+              {parserRef?.rewrittenScript
+                ? 'Сценарий уже переписан Claude под твою нишу по структуре хук → боль → раскрытие → CTA. Подправь под себя, выбери аватар — и в монтаж.'
+                : 'Перепиши хук под себя — и в монтаж.'}
             </p>
           </div>
         </div>
@@ -109,7 +112,11 @@ export default async function NewVideoPage({
           <Link href="/generate" className="btn-primary">Загрузить фото →</Link>
         </div>
       ) : (
-        <VideoForm avatars={avatars} initialAvatarId={avatarId} />
+        <VideoForm
+          avatars={avatars}
+          initialAvatarId={avatarId}
+          initialScript={parserRef?.rewrittenScript ?? undefined}
+        />
       )}
     </div>
   );
