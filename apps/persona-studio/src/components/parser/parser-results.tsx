@@ -51,7 +51,7 @@ export function ParserResults({ items, run, onItemUpdated, onItemRemoved }: Prop
             <span className="sec-title">Reels · топ {reels.length}</span>
             <span className="flex-1 border-b border-border translate-y-[-3px]" />
           </div>
-          <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4">
+          <div className="grid grid-cols-1 gap-2">
             {reels.map((it) => (
               <ParserReelCard
                 key={it.id}
@@ -71,7 +71,7 @@ export function ParserResults({ items, run, onItemUpdated, onItemRemoved }: Prop
             <span className="sec-title">Carousels · топ {carousels.length}</span>
             <span className="flex-1 border-b border-border translate-y-[-3px]" />
           </div>
-          <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4">
+          <div className="grid grid-cols-1 gap-2">
             {carousels.map((it) => (
               <ParserReelCard
                 key={it.id}
