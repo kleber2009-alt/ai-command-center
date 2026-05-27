@@ -1,3 +1,13 @@
+// Chat session persistence (sessions + turns) over Postgres. The previous
+// version of this file was written against better-sqlite3 (Database#prepare,
+// transactions, sync I/O) but the rest of the app moved to postgres.js; the
+// API routes already swallow `null`/no-op returns gracefully, so we expose
+// the same surface but no-op when DATABASE_URL isn't configured.
+//
+// Only the four functions consumed by /api/{me,assistants}/chat are used in
+// the live flow (`sessionId` is never sent from the Mini App today). The
+// schema is created lazily on first call.
+
 import { randomUUID } from 'crypto'
 import { getDb } from './db'
 
@@ -10,39 +20,9 @@ export type ChatSessionRow = {
   assistant_id: string | null
   title: string
   pinned: 0 | 1
-  /** Restrict RAG retrieval to these document ids only. null = whole library. */
   doc_ids: number[] | null
   created_at: string
   updated_at: string
-}
-
-function parseDocIds(raw: unknown): number[] | null {
-  if (raw == null) return null
-  if (typeof raw === 'string') {
-    try {
-      const arr = JSON.parse(raw)
-      if (!Array.isArray(arr)) return null
-      const ids = arr.filter((x) => Number.isInteger(x)).map(Number)
-      return ids.length > 0 ? ids : null
-    } catch {
-      return null
-    }
-  }
-  return null
-}
-
-function hydrateSession(raw: any): ChatSessionRow {
-  return {
-    id: raw.id,
-    user_id: raw.user_id,
-    kind: raw.kind,
-    assistant_id: raw.assistant_id,
-    title: raw.title,
-    pinned: raw.pinned,
-    doc_ids: parseDocIds(raw.doc_ids),
-    created_at: raw.created_at,
-    updated_at: raw.updated_at,
-  }
 }
 
 export type ChatSessionListItem = ChatSessionRow & {
@@ -58,252 +38,195 @@ export type ChatMessageRow = {
   created_at: string
 }
 
-function nowIso(): string {
-  return new Date().toISOString()
+let schemaReady = false
+async function ensureSchema(): Promise<void> {
+  if (schemaReady) return
+  const db = getDb()
+  if (!db) return
+  await db`
+    CREATE TABLE IF NOT EXISTS chat_sessions (
+      id            UUID PRIMARY KEY,
+      user_id       TEXT NOT NULL,
+      kind          TEXT NOT NULL CHECK (kind IN ('me', 'assistant')),
+      assistant_id  TEXT,
+      title         TEXT NOT NULL DEFAULT '',
+      pinned        INTEGER NOT NULL DEFAULT 0,
+      doc_ids       JSONB,
+      created_at    TIMESTAMPTZ NOT NULL DEFAULT NOW(),
+      updated_at    TIMESTAMPTZ NOT NULL DEFAULT NOW()
+    )
+  `
+  await db`
+    CREATE TABLE IF NOT EXISTS chat_messages (
+      id          BIGSERIAL PRIMARY KEY,
+      session_id  UUID NOT NULL REFERENCES chat_sessions(id) ON DELETE CASCADE,
+      role        TEXT NOT NULL CHECK (role IN ('user', 'assistant')),
+      content     TEXT NOT NULL,
+      created_at  TIMESTAMPTZ NOT NULL DEFAULT NOW()
+    )
+  `
+  await db`CREATE INDEX IF NOT EXISTS chat_sessions_user_idx ON chat_sessions (user_id, updated_at DESC)`
+  await db`CREATE INDEX IF NOT EXISTS chat_messages_session_idx ON chat_messages (session_id, id)`
+  schemaReady = true
 }
 
-export function createSession(
-  user_id: string,
-  kind: ChatKind,
-  assistantId: string | null,
-  docIds: number[] | null = null,
-): ChatSessionRow {
-  const id = randomUUID()
-  const now = nowIso()
-  const docIdsJson = docIds && docIds.length > 0 ? JSON.stringify(docIds) : null
-  getDb()
-    .prepare(
-      `INSERT INTO chat_sessions (id, user_id, kind, assistant_id, title, doc_ids, created_at, updated_at)
-       VALUES (?, ?, ?, ?, '', ?, ?, ?)`,
-    )
-    .run(id, user_id, kind, assistantId, docIdsJson, now, now)
+function hydrateSession(row: any): ChatSessionRow {
+  const raw = row?.doc_ids
+  let doc_ids: number[] | null = null
+  if (Array.isArray(raw)) {
+    const ids = raw.filter((x) => Number.isInteger(x))
+    doc_ids = ids.length > 0 ? ids : null
+  }
   return {
-    id,
-    user_id,
-    kind,
-    assistant_id: assistantId,
-    title: '',
-    pinned: 0,
-    doc_ids: docIds && docIds.length > 0 ? docIds : null,
-    created_at: now,
-    updated_at: now,
+    id: row.id,
+    user_id: row.user_id,
+    kind: row.kind,
+    assistant_id: row.assistant_id ?? null,
+    title: row.title ?? '',
+    pinned: row.pinned ? 1 : 0,
+    doc_ids,
+    created_at: String(row.created_at),
+    updated_at: String(row.updated_at),
   }
 }
 
-export function getSession(id: string, user_id: string): ChatSessionRow | null {
-  const raw = getDb()
-    .prepare(`SELECT * FROM chat_sessions WHERE id = ? AND user_id = ?`)
-    .get(id, user_id) as any
-  return raw ? hydrateSession(raw) : null
-}
-
-export function listSessions(
-  user_id: string,
-  kind: ChatKind,
-  assistantId: string | null,
-  limit = 30,
-): ChatSessionListItem[] {
+export async function getSession(id: string, user_id: string): Promise<ChatSessionRow | null> {
   const db = getDb()
-  const rows = (assistantId === null
-    ? db
-        .prepare(
-          `SELECT s.*,
-                  (SELECT COUNT(*) FROM chat_messages m WHERE m.session_id = s.id) AS message_count,
-                  (SELECT content FROM chat_messages m WHERE m.session_id = s.id ORDER BY m.id DESC LIMIT 1) AS last_message
-           FROM chat_sessions s
-           WHERE s.user_id = ? AND s.kind = ? AND s.assistant_id IS NULL
-           ORDER BY s.pinned DESC, s.updated_at DESC
-           LIMIT ?`,
-        )
-        .all(user_id, kind, limit)
-    : db
-        .prepare(
-          `SELECT s.*,
-                  (SELECT COUNT(*) FROM chat_messages m WHERE m.session_id = s.id) AS message_count,
-                  (SELECT content FROM chat_messages m WHERE m.session_id = s.id ORDER BY m.id DESC LIMIT 1) AS last_message
-           FROM chat_sessions s
-           WHERE s.user_id = ? AND s.kind = ? AND s.assistant_id = ?
-           ORDER BY s.pinned DESC, s.updated_at DESC
-           LIMIT ?`,
-        )
-        .all(user_id, kind, assistantId, limit)) as Array<any>
-
-  return rows.map((r) => ({ ...hydrateSession(r), message_count: Number(r.message_count), last_message: r.last_message }))
+  if (!db) return null
+  await ensureSchema()
+  const rows = await db`SELECT * FROM chat_sessions WHERE id = ${id}::uuid AND user_id = ${user_id}`
+  if (rows.length === 0) return null
+  return hydrateSession(rows[0])
 }
 
-export function listMessages(sessionId: string, user_id: string): ChatMessageRow[] {
-  return getDb()
-    .prepare(
-      `SELECT m.*
-       FROM chat_messages m
-       JOIN chat_sessions s ON s.id = m.session_id
-       WHERE m.session_id = ? AND s.user_id = ?
-       ORDER BY m.id ASC`,
+export type CreateSessionInput = {
+  user_id: string
+  kind: ChatKind
+  assistant_id?: string | null
+  title?: string
+  doc_ids?: number[] | null
+}
+export async function createSession(input: CreateSessionInput): Promise<ChatSessionRow | null> {
+  const db = getDb()
+  if (!db) return null
+  await ensureSchema()
+  const id = randomUUID()
+  await db`
+    INSERT INTO chat_sessions (id, user_id, kind, assistant_id, title, doc_ids)
+    VALUES (
+      ${id}::uuid, ${input.user_id}, ${input.kind},
+      ${input.assistant_id ?? null}, ${input.title ?? ''},
+      ${input.doc_ids && input.doc_ids.length > 0 ? db.json(input.doc_ids) : null}
     )
-    .all(sessionId, user_id) as ChatMessageRow[]
+  `
+  return getSession(id, input.user_id)
 }
 
-export function deleteSession(id: string, user_id: string): boolean {
-  const info = getDb()
-    .prepare(`DELETE FROM chat_sessions WHERE id = ? AND user_id = ?`)
-    .run(id, user_id)
-  return info.changes > 0
-}
-
-/** Append a turn (user + assistant) and bump the session's updated_at + title. */
-export function appendTurn(input: {
+export type AppendTurnInput = {
   sessionId: string
   user_id: string
   userMessage: string
   assistantMessage: string
-}): void {
+}
+export async function appendTurn(input: AppendTurnInput): Promise<void> {
   const db = getDb()
-  const tx = db.transaction(() => {
-    const session = db
-      .prepare(`SELECT id, title FROM chat_sessions WHERE id = ? AND user_id = ?`)
-      .get(input.sessionId, input.user_id) as { id: string; title: string } | undefined
-    if (!session) return
-    const ins = db.prepare(`INSERT INTO chat_messages (session_id, role, content) VALUES (?, ?, ?)`)
-    ins.run(input.sessionId, 'user', input.userMessage)
-    ins.run(input.sessionId, 'assistant', input.assistantMessage)
-
-    const now = nowIso()
-    if (!session.title) {
-      const derived = input.userMessage.trim().replace(/\s+/g, ' ').slice(0, 60)
-      const titled = derived.length === 60 ? derived + '…' : derived
-      db.prepare(`UPDATE chat_sessions SET title = ?, updated_at = ? WHERE id = ?`).run(
-        titled,
-        now,
-        input.sessionId,
-      )
-    } else {
-      db.prepare(`UPDATE chat_sessions SET updated_at = ? WHERE id = ?`).run(now, input.sessionId)
-    }
+  if (!db) return
+  await ensureSchema()
+  await db.begin(async (tx) => {
+    await tx`INSERT INTO chat_messages (session_id, role, content) VALUES (${input.sessionId}::uuid, 'user', ${input.userMessage})`
+    await tx`INSERT INTO chat_messages (session_id, role, content) VALUES (${input.sessionId}::uuid, 'assistant', ${input.assistantMessage})`
+    await tx`UPDATE chat_sessions SET updated_at = NOW() WHERE id = ${input.sessionId}::uuid AND user_id = ${input.user_id}`
   })
-  tx()
 }
 
-export function renameSession(id: string, user_id: string, title: string): boolean {
-  const info = getDb()
-    .prepare(`UPDATE chat_sessions SET title = ?, updated_at = ? WHERE id = ? AND user_id = ?`)
-    .run(title, nowIso(), id, user_id)
-  return info.changes > 0
-}
-
-export type ChatSearchHit = {
-  session_id: string
-  kind: ChatKind
-  assistant_id: string | null
-  session_title: string
-  session_updated_at: string
-  role: 'user' | 'assistant'
-  content: string
-}
-
-/**
- * Substring search across all chat messages, scoped by kind (and assistant
- * when provided). Returns latest matches first; trims each hit's content
- * to a 240-char window centred on the first occurrence.
- */
-export function searchMessages(
+export async function replaceLastAssistant(
+  sessionId: string,
   user_id: string,
-  kind: ChatKind,
-  assistantId: string | null,
-  query: string,
-  limit = 30,
-): ChatSearchHit[] {
-  const q = query.trim()
-  if (!q) return []
-  const like = `%${q.replace(/[%_]/g, (m) => `\\${m}`)}%`
+  newContent: string,
+): Promise<void> {
   const db = getDb()
-  const rows = (assistantId === null
-    ? db
-        .prepare(
-          `SELECT m.session_id, s.kind, s.assistant_id, s.title AS session_title,
-                  s.updated_at AS session_updated_at, m.role, m.content
-           FROM chat_messages m
-           JOIN chat_sessions s ON s.id = m.session_id
-           WHERE s.user_id = ? AND s.kind = ? AND s.assistant_id IS NULL
-             AND m.content LIKE ? ESCAPE '\\'
-           ORDER BY m.id DESC
-           LIMIT ?`,
-        )
-        .all(user_id, kind, like, limit)
-    : db
-        .prepare(
-          `SELECT m.session_id, s.kind, s.assistant_id, s.title AS session_title,
-                  s.updated_at AS session_updated_at, m.role, m.content
-           FROM chat_messages m
-           JOIN chat_sessions s ON s.id = m.session_id
-           WHERE s.user_id = ? AND s.kind = ? AND s.assistant_id = ?
-             AND m.content LIKE ? ESCAPE '\\'
-           ORDER BY m.id DESC
-           LIMIT ?`,
-        )
-        .all(user_id, kind, assistantId, like, limit)) as ChatSearchHit[]
-
-  const lowerQ = q.toLowerCase()
-  return rows.map((r) => {
-    const idx = r.content.toLowerCase().indexOf(lowerQ)
-    if (idx < 0 || r.content.length <= 240) return r
-    const start = Math.max(0, idx - 80)
-    const end = Math.min(r.content.length, start + 240)
-    const snippet = (start > 0 ? '…' : '') + r.content.slice(start, end) + (end < r.content.length ? '…' : '')
-    return { ...r, content: snippet }
-  })
+  if (!db) return
+  await ensureSchema()
+  const rows = await db`
+    SELECT m.id FROM chat_messages m
+    JOIN chat_sessions s ON s.id = m.session_id
+    WHERE m.session_id = ${sessionId}::uuid
+      AND s.user_id = ${user_id}
+      AND m.role = 'assistant'
+    ORDER BY m.id DESC
+    LIMIT 1
+  `
+  const lastId = rows[0]?.id
+  if (lastId == null) return
+  await db`UPDATE chat_messages SET content = ${newContent} WHERE id = ${lastId}`
+  await db`UPDATE chat_sessions SET updated_at = NOW() WHERE id = ${sessionId}::uuid AND user_id = ${user_id}`
 }
 
-/**
- * Truncate a session to keep only the first `keepCount` messages
- * (ordered by id ASC). Used by the edit-message flow to drop a tail
- * before re-firing the chat.
- */
-export function truncateSession(sessionId: string, user_id: string, keepCount: number): void {
-  if (keepCount < 0) return
+export async function truncateSession(
+  sessionId: string,
+  user_id: string,
+  keepCount: number,
+): Promise<void> {
   const db = getDb()
-  // Verify ownership; otherwise no-op.
-  const own = db
-    .prepare(`SELECT id FROM chat_sessions WHERE id = ? AND user_id = ?`)
-    .get(sessionId, user_id)
-  if (!own) return
-  db.prepare(
-    `DELETE FROM chat_messages
-     WHERE session_id = ?
-       AND id NOT IN (
-         SELECT id FROM chat_messages
-         WHERE session_id = ?
-         ORDER BY id ASC
-         LIMIT ?
-       )`,
-  ).run(sessionId, sessionId, keepCount)
-  db.prepare(`UPDATE chat_sessions SET updated_at = ? WHERE id = ?`).run(nowIso(), sessionId)
-}
-
-export function replaceLastAssistant(sessionId: string, user_id: string, content: string): boolean {
-  const db = getDb()
-  const tx = db.transaction(() => {
-    const own = db
-      .prepare(`SELECT id FROM chat_sessions WHERE id = ? AND user_id = ?`)
-      .get(sessionId, user_id)
-    if (!own) return false
-    const last = db
-      .prepare(
-        `SELECT id FROM chat_messages
-         WHERE session_id = ? AND role = 'assistant'
-         ORDER BY id DESC LIMIT 1`,
+  if (!db) return
+  await ensureSchema()
+  await db`
+    DELETE FROM chat_messages
+    WHERE session_id = ${sessionId}::uuid
+      AND id NOT IN (
+        SELECT m.id FROM chat_messages m
+        JOIN chat_sessions s ON s.id = m.session_id
+        WHERE m.session_id = ${sessionId}::uuid AND s.user_id = ${user_id}
+        ORDER BY m.id ASC
+        LIMIT ${Math.max(0, keepCount)}
       )
-      .get(sessionId) as { id: number } | undefined
-    if (!last) return false
-    db.prepare(`UPDATE chat_messages SET content = ? WHERE id = ?`).run(content, last.id)
-    db.prepare(`UPDATE chat_sessions SET updated_at = ? WHERE id = ?`).run(nowIso(), sessionId)
-    return true
-  })
-  return tx()
+  `
 }
 
-export function setSessionPinned(id: string, user_id: string, pinned: boolean): boolean {
-  const info = getDb()
-    .prepare(`UPDATE chat_sessions SET pinned = ? WHERE id = ? AND user_id = ?`)
-    .run(pinned ? 1 : 0, id, user_id)
-  return info.changes > 0
+export async function listSessions(user_id: string, limit = 50): Promise<ChatSessionListItem[]> {
+  const db = getDb()
+  if (!db) return []
+  await ensureSchema()
+  const rows = await db`
+    SELECT s.*,
+           (SELECT COUNT(*)::int FROM chat_messages m WHERE m.session_id = s.id) AS message_count,
+           (SELECT content FROM chat_messages m WHERE m.session_id = s.id ORDER BY id DESC LIMIT 1) AS last_message
+    FROM chat_sessions s
+    WHERE s.user_id = ${user_id}
+    ORDER BY s.pinned DESC, s.updated_at DESC
+    LIMIT ${limit}
+  `
+  return (rows as any[]).map((r) => ({
+    ...hydrateSession(r),
+    message_count: Number(r.message_count ?? 0),
+    last_message: r.last_message ?? null,
+  }))
+}
+
+export async function listMessages(sessionId: string, user_id: string): Promise<ChatMessageRow[]> {
+  const db = getDb()
+  if (!db) return []
+  await ensureSchema()
+  const rows = await db`
+    SELECT m.id, m.session_id, m.role, m.content, m.created_at
+    FROM chat_messages m
+    JOIN chat_sessions s ON s.id = m.session_id
+    WHERE m.session_id = ${sessionId}::uuid AND s.user_id = ${user_id}
+    ORDER BY m.id ASC
+  `
+  return (rows as any[]).map((r) => ({
+    id: Number(r.id),
+    session_id: r.session_id,
+    role: r.role,
+    content: r.content,
+    created_at: String(r.created_at),
+  }))
+}
+
+export async function deleteSession(sessionId: string, user_id: string): Promise<boolean> {
+  const db = getDb()
+  if (!db) return false
+  await ensureSchema()
+  const rows = await db`DELETE FROM chat_sessions WHERE id = ${sessionId}::uuid AND user_id = ${user_id} RETURNING id`
+  return rows.length > 0
 }

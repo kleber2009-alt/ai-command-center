@@ -50,7 +50,7 @@ export async function POST(req: NextRequest) {
   const profileBlock = profileToContext(profile)
 
   // Resolve session early — we may need its doc_ids to scope RAG.
-  const session = body.sessionId ? getSession(body.sessionId, auth.user_id) : null
+  const session = body.sessionId ? await getSession(body.sessionId, auth.user_id) : null
   const validSession = session && session.kind === 'me' ? session : null
   const restrictDocIds: string[] | undefined = Array.isArray(validSession?.doc_ids)
     ? validSession!.doc_ids.map(String)
