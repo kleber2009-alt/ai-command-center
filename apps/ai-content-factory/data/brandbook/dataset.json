@@ -1,0 +1,1498 @@
+{
+  "description": "54 эталонных слайда из 12 карусели от @ilia.paliy / @theromanknox / @drcintas / @julieta_publicista. Reference dataset для генерации Instagram-карусели в стилистике этих авторов. Используй это как образец воронки (cover/hook/problem/step/proof/offer/cta), визуальной подачи, типографики, лид-магнитов и CTA-шаблонов. НЕ копируй текст дословно — используй структуру и приёмы.",
+  "source": "carousel_prompts_dataset.md",
+  "generated_at": "2026-05-27T03:41:32.416Z",
+  "slide_count": 54,
+  "carousels": [
+    {
+      "author": "@ilia.paliy",
+      "topic": "Claude для Instagram-блогера: упаковка, stories, лид-магнит, прогрев",
+      "slides": [
+        "IMG_1658.png"
+      ]
+    },
+    {
+      "author": "@ilia.paliy",
+      "topic": "Claude для Instagram-блогера",
+      "slides": [
+        "IMG_1659.png",
+        "IMG_1660.png",
+        "IMG_1661.png",
+        "IMG_1662.png"
+      ]
+    },
+    {
+      "author": "@ilia.paliy",
+      "topic": "Трамп встретился в Пекине / ИИ-связки 2026",
+      "slides": [
+        "IMG_1664.png"
+      ]
+    },
+    {
+      "author": "@ilia.paliy",
+      "topic": "ИИ-связки 2026",
+      "slides": [
+        "IMG_1666.png",
+        "IMG_1668.png"
+      ]
+    },
+    {
+      "author": "@ilia.paliy",
+      "topic": "Адам Моссери / скрытая функция Instagram",
+      "slides": [
+        "IMG_1670.png"
+      ]
+    },
+    {
+      "author": "@ilia.paliy",
+      "topic": "Адам Моссери / скрытая функция",
+      "slides": [
+        "IMG_1672.png",
+        "IMG_1673.png",
+        "IMG_1674.png"
+      ]
+    },
+    {
+      "author": "@ilia.paliy",
+      "topic": "Теневой бан / охваты Instagram",
+      "slides": [
+        "IMG_1675.png"
+      ]
+    },
+    {
+      "author": "@ilia.paliy",
+      "topic": "Теневой бан / охваты",
+      "slides": [
+        "IMG_1676.png",
+        "IMG_1677.png",
+        "IMG_1678.png"
+      ]
+    },
+    {
+      "author": "@theromanknox",
+      "topic": "Master Claude in a week",
+      "slides": [
+        "IMG_1689.png",
+        "IMG_1690.png",
+        "IMG_1691.png",
+        "IMG_1694.png"
+      ]
+    },
+    {
+      "author": "@theromanknox",
+      "topic": "9 YouTube courses worth watching in 2025",
+      "slides": [
+        "IMG_1699.png"
+      ]
+    },
+    {
+      "author": "@theromanknox",
+      "topic": "9 YouTube courses 2025",
+      "slides": [
+        "IMG_1700.png",
+        "IMG_1702.png",
+        "IMG_1703.png",
+        "IMG_1704.png"
+      ]
+    },
+    {
+      "author": "@theromanknox",
+      "topic": "Top Free vs Paid AI Tools 2026",
+      "slides": [
+        "IMG_1705.png"
+      ]
+    },
+    {
+      "author": "@theromanknox",
+      "topic": "Free vs Paid AI Tools",
+      "slides": [
+        "IMG_1706.png",
+        "IMG_1709.png",
+        "IMG_1710.png"
+      ]
+    },
+    {
+      "author": "@theromanknox",
+      "topic": "Monetize 2026 World Cup with Claude",
+      "slides": [
+        "IMG_1712.png"
+      ]
+    },
+    {
+      "author": "@theromanknox",
+      "topic": "2026 World Cup Claude",
+      "slides": [
+        "IMG_1713.png",
+        "IMG_1714.png",
+        "IMG_1715.png",
+        "IMG_1716.png",
+        "IMG_1717.png",
+        "IMG_1718.png",
+        "IMG_1719.png",
+        "IMG_1720.png"
+      ]
+    },
+    {
+      "author": "@theromanknox",
+      "topic": "Claude's Design Flaws — Fixed with 3 Skills",
+      "slides": [
+        "IMG_1721.png"
+      ]
+    },
+    {
+      "author": "@theromanknox",
+      "topic": "Claude Design Flaws / 3 Skills",
+      "slides": [
+        "IMG_1722.png",
+        "IMG_1723.png",
+        "IMG_1724.png",
+        "IMG_1725.png",
+        "IMG_1726.png"
+      ]
+    },
+    {
+      "author": "@theromanknox",
+      "topic": "Billion Dollar AI Team — 8 Business Legends, 1 Claude Skill",
+      "slides": [
+        "IMG_1727.png"
+      ]
+    },
+    {
+      "author": "@drcintas",
+      "topic": "Claude can make videos autonomously (Higgsfield)",
+      "slides": [
+        "IMG_1728.png"
+      ]
+    },
+    {
+      "author": "@drcintas",
+      "topic": "Claude can make videos",
+      "slides": [
+        "IMG_1729.png",
+        "IMG_1730.png",
+        "IMG_1731.png"
+      ]
+    },
+    {
+      "author": "@julieta_publicista",
+      "topic": "Как я делаю карусели через Claude за 10 минут",
+      "slides": [
+        "IMG_1739.png"
+      ]
+    },
+    {
+      "author": "@julieta_publicista",
+      "topic": "Карусели через Claude",
+      "slides": [
+        "IMG_1740.png",
+        "IMG_1741.png",
+        "IMG_1742.png",
+        "IMG_1743.png"
+      ]
+    }
+  ],
+  "slides": [
+    {
+      "filename": "IMG_1658.png",
+      "author": "@ilia.paliy",
+      "carousel_topic": "Claude для Instagram-блогера: упаковка, stories, лид-магнит, прогрев",
+      "slide_position": "1/6",
+      "funnel_role": "cover",
+      "format": "Instagram 4:5 (1080x1350)",
+      "visual_description": "Сюрреалистичный 3D-рендер: задняя часть лошади (круп с хвостом, тёмно-коричневая шерсть с белым основанием хвоста) с встроенной серебристой металлической биркой-подковой на ягодице. На бирке — фирменный оранжевый звездообразный логотип Claude (asterisk) и надпись 'Claude' тёмным шрифтом. Фон светло-серый, мягкое студийное освещение. Под изображением — массивный жирный заголовок чёрным на белом. Внизу — призыв SWIPE LEFT с чёрной стрелкой.",
+      "text_content": {
+        "header_left": "@ilia.paliy",
+        "header_right": "Нейросети | ИИ | Маркетинг",
+        "counter": "1/6",
+        "main_headline": "ЕСЛИ У ТЕБЯ НЕТ ЭТОГО ФАЙЛА С НАВЫКАМИ ДЛЯ CLAUDE - ТЫ ИСПОЛЬЗУЕШЬ ЕГО НЕ ПОЛНОСТЬЮ",
+        "cta": "SWIPE LEFT →"
+      },
+      "structure": "header bar / hero визуал (3D-рендер лошади с биркой) / провокационный заголовок капсом / CTA свайп",
+      "design_tokens": {
+        "background": "`белый #FFFFFF`",
+        "accent": "`Claude orange asterisk`",
+        "headline_font": "`Inter/Montserrat ExtraBold UPPERCASE`",
+        "headline_color": "`#0A0A0A`",
+        "mood": "`сюрреализм + ирония + кликбейт`"
+      }
+    },
+    {
+      "filename": "IMG_1659.png",
+      "author": "@ilia.paliy",
+      "carousel_topic": "Claude для Instagram-блогера",
+      "slide_position": "2/6",
+      "funnel_role": "step",
+      "format": "Instagram 4:5",
+      "visual_description": "Белый минималистичный слайд. Сверху — заголовок кобальтово-синего цвета '1. УПАКОВКА ПРОФИЛЯ' (большой капс). Под ним по центру 'Claude:' чёрным. Ниже — чек-лист из 4 пунктов с синими круглыми чек-боксами с белыми галочками. В нижней половине — мокап тёмного браузерного окна (фиолетово-чёрный градиент) с голубоватым свечением вокруг, внутри — скриншот PDF на фиолетовом фоне с таблицами 'Сильные/Слабые стороны' и альтернативами никнеймов.",
+      "text_content": {
+        "header_left": "@ilia.paliy",
+        "header_right": "Нейросети | ИИ | Маркетинг",
+        "counter": "2/6",
+        "headline": "1. УПАКОВКА ПРОФИЛЯ",
+        "subtitle": "Claude:",
+        "mockup_content": "Воронка по никнеймам / SEO в Instagram"
+      },
+      "structure": "header / синий заголовок шага / subtitle 'Claude:' / 4 buleta с галочками / тёмный мокап с PDF-скрином",
+      "design_tokens": {
+        "background": "`#FFFFFF`",
+        "headline_color": "`#2D5BFF (cobalt blue)`",
+        "checkmark_circle": "`#2D5BFF + white check`",
+        "mockup_bg": "`linear-gradient(180deg, #1a0033 0%, #000 100%)`",
+        "mockup_glow": "`soft blue 0 0 22px rgba(45,91,255,0.35)`",
+        "fonts": "`Inter / Montserrat Bold`"
+      }
+    },
+    {
+      "filename": "IMG_1660.png",
+      "author": "@ilia.paliy",
+      "carousel_topic": "Claude для Instagram-блогера",
+      "slide_position": "3/6",
+      "funnel_role": "step",
+      "format": "Instagram 4:5",
+      "visual_description": "Тот же шаблон, что 1659. Кобальтовый заголовок '2. СОЗДАНИЕ ВОВЛЕКАЮЩИХ STORIES' (две строки). 'Claude:' подзаголовок. Чек-лист из 3 пунктов с синими галочками. Внизу — тёмный мокап браузера/чата с голубым свечением, внутри Claude-интерфейс: текстовая инструкция по созданию серии из 4 сторис на тему ИИ-автоматизации (Сторис 1 — Хук, Сторис 2 — Боль/Контекст).",
+      "text_content": {
+        "header_left": "@ilia.paliy",
+        "header_right": "Нейросети | ИИ | Маркетинг",
+        "counter": "3/6",
+        "headline": "2. СОЗДАНИЕ ВОВЛЕКАЮЩИХ STORIES",
+        "subtitle": "Claude:",
+        "mockup_content": "Reading instagram stories skill / 4 сторис: хук, боль/контекст, опрос, цепляющий элемент"
+      },
+      "structure": "header / синий заголовок шага (двустрочный) / 'Claude:' / 3 буллета / тёмный мокап с примером сторис-серии",
+      "design_tokens": {
+        "background": "`#FFFFFF`",
+        "headline_color": "`#2D5BFF`",
+        "mockup": "`dark UI screenshot of Claude chat with stories breakdown`",
+        "fonts": "`Inter Bold`"
+      }
+    },
+    {
+      "filename": "IMG_1661.png",
+      "author": "@ilia.paliy",
+      "carousel_topic": "Claude для Instagram-блогера",
+      "slide_position": "4/6",
+      "funnel_role": "step",
+      "format": "Instagram 4:5",
+      "visual_description": "Шаблон тот же. Кобальтовый заголовок '3. СОЗДАНИЕ ЛИД-МАГНИТА'. 'Claude:'. Чек-лист из 4 пунктов. Внизу мокап тёмного браузера с PDF-обложкой 'Курс по АИ-генерациям' на чёрном фоне с оранжевыми тегами 'INSTAGRAM + TELEGRAM, 10 КАСАНИЙ, 14 ДНЕЙ, 50 МЕСТ' и блоком 'СТРАТЕГИЯ' с оранжевой полосой слева.",
+      "text_content": {
+        "header_left": "@ilia.paliy",
+        "header_right": "Нейросети | ИИ | Маркетинг",
+        "counter": "4/6",
+        "headline": "3. СОЗДАНИЕ ЛИД-МАГНИТА",
+        "subtitle": "Claude:",
+        "mockup_content": "Воронка прогрева для курса по АИ-генерациям: чёрная обложка с оранжевыми акцентами"
+      },
+      "structure": "header / синий заголовок шага / 'Claude:' / 4 буллета / тёмный мокап PDF лид-магнита с оранжевыми CTA",
+      "design_tokens": {
+        "background": "`#FFFFFF`",
+        "headline_color": "`#2D5BFF`",
+        "mockup_bg": "`black + orange/red accent`",
+        "accent_inside_mockup": "`#E55B2B (Claude orange)`"
+      }
+    },
+    {
+      "filename": "IMG_1662.png",
+      "author": "@ilia.paliy",
+      "carousel_topic": "Claude для Instagram-блогера",
+      "slide_position": "5/6",
+      "funnel_role": "step",
+      "format": "Instagram 4:5",
+      "visual_description": "Шаблон тот же. Кобальтовый заголовок '4. СОЗДАНИЕ ПРОГРЕВА ПОД НИШУ' (двустрочный). 'Claude:'. Чек-лист из 4 пунктов. Мокап тёмного PDF: 'КАК ДЕЛАТЬ РЕАЛИСТИЧНЫЕ ФОТО В NANO BANANA' — гайд по нейросети, белый текст на чёрном с оранжевыми акцентами.",
+      "text_content": {
+        "header_left": "@ilia.paliy",
+        "counter": "5/6",
+        "headline": "4. СОЗДАНИЕ ПРОГРЕВА ПОД НИШУ",
+        "subtitle": "Claude:",
+        "mockup_content": "PDF-гайд 'Как делать реалистичные фото в Nano Banana — 7 профессиональных приёмов'"
+      },
+      "structure": "header / синий заголовок шага (двустрочный) / 'Claude:' / 4 буллета / тёмный мокап PDF-гайда",
+      "design_tokens": {
+        "background": "`#FFFFFF`",
+        "headline_color": "`#2D5BFF`",
+        "mockup_palette": "`black + orange Claude accent`"
+      }
+    },
+    {
+      "filename": "IMG_1664.png",
+      "author": "@ilia.paliy",
+      "carousel_topic": "Трамп встретился в Пекине / ИИ-связки 2026",
+      "slide_position": "1/6",
+      "funnel_role": "cover",
+      "format": "Instagram 4:5",
+      "visual_description": "Полноформатное фото на весь слайд: Дональд Трамп (слева) и Си Цзиньпин (справа) стоят бок о бок в тёмных костюмах перед флагами США и Китая. Студийная съёмка, насыщенные цвета, тёмно-синий фон. Поверх фото — белый кликбейт-заголовок капсом и тонкий подзаголовок. CTA 'SWIPE LEFT' внизу.",
+      "text_content": {
+        "header_right": "Нейросети | ИИ | Маркетинг",
+        "counter": "1/6",
+        "headline": "ТРАМП ВСТРЕТИЛСЯ В ПЕКИНЕ С 17 ЛИДЕРАМИ СЕО",
+        "subtitle": "ПОЯВИЛИСЬ НОВЫЕ ИИ-СВЯЗКИ, КОТОРЫЕ БУДУТ ДАВАТЬ РЕЗУЛЬТАТ В 2026",
+        "cta": "SWIPE LEFT →"
+      },
+      "structure": "fullscreen фото политиков / overlay-заголовок капсом / подзаголовок / CTA",
+      "design_tokens": {
+        "headline_color": "`#FFFFFF`",
+        "headline_weight": "`extra bold uppercase`",
+        "background": "`фотофон с двумя политиками`",
+        "vibe": "`news-style clickbait`"
+      }
+    },
+    {
+      "filename": "IMG_1666.png",
+      "author": "@ilia.paliy",
+      "carousel_topic": "ИИ-связки 2026",
+      "slide_position": "3/6",
+      "funnel_role": "proof",
+      "format": "Instagram 4:5",
+      "visual_description": "Сверху — белая зона с двумя iPhone-мокапами под углом: левый чёрный с экраном Claude.ai ('Think fast, build faster'), правый — серебристый с HeyGen ('Turn your ideas into videos in minutes'). Под мокапом — синий заголовок 'CLAUDE + HEYGEN'. Чек-лист из 2 пунктов с синими галочками. Внизу — синий accent-bar слева и фраза 'Связка для: экспертного блога и контента без съёмок'.",
+      "text_content": {
+        "counter": "3/6",
+        "headline": "CLAUDE + HEYGEN",
+        "use_case_label": "Связка для:",
+        "use_case_text": "экспертного блога и контента без съёмок"
+      },
+      "structure": "header / два iPhone-мокапа под углом (Claude + HeyGen) / синий заголовок 'X + Y' / 2-buleta чеклист / use-case блок с вертикальной синей полосой",
+      "design_tokens": {
+        "background": "`#FFFFFF`",
+        "headline_color": "`#2D5BFF`",
+        "mockup_style": "`tilted iPhone pair, premium product shot`",
+        "use_case_accent": "`blue left-border`"
+      }
+    },
+    {
+      "filename": "IMG_1668.png",
+      "author": "@ilia.paliy",
+      "carousel_topic": "ИИ-связки 2026",
+      "slide_position": "5/6",
+      "funnel_role": "proof",
+      "format": "Instagram 4:5",
+      "visual_description": "Та же композиция, что 1666. Два iPhone-мокапа: левый чёрный с perplexity.ai (тёмный UI, текстовая строка 'Что вы хотите узнать?'), правый — gamma.app ('Воплотите свои идеи в жизнь'). Синий заголовок 'PERPLEXITY + GAMMA'. Чек-лист из 2. Use-case блок.",
+      "text_content": {
+        "counter": "5/6",
+        "headline": "PERPLEXITY + GAMMA",
+        "use_case_label": "Связка для:",
+        "use_case_text": "лид-магнитов / обучений / контент-планов"
+      },
+      "structure": "header / два iPhone-мокапа / синий заголовок 'X + Y' / 2-buleta чеклист / use-case с синей полосой",
+      "design_tokens": {
+        "background": "`#FFFFFF`",
+        "headline_color": "`#2D5BFF`",
+        "consistent_template": "`same as IMG_1666`"
+      }
+    },
+    {
+      "filename": "IMG_1670.png",
+      "author": "@ilia.paliy",
+      "carousel_topic": "Адам Моссери / скрытая функция Instagram",
+      "slide_position": "1/5",
+      "funnel_role": "cover",
+      "format": "Instagram 4:5",
+      "visual_description": "Полноформатное фото на весь слайд: портрет Адама Моссери (CEO Instagram) — мужчина в очках, чёрный пиджак, серьёзное выражение лица, держит микрофон. Розово-малиновый градиентный фон (как из подкаста/конференции). Поверх фото — белый кликбейт-заголовок капсом и подзаголовок мелким. CTA 'SWIPE LEFT' внизу.",
+      "text_content": {
+        "counter": "1/5",
+        "headline": "АДАМ МОССЕРИ НАМЕКНУЛ О СКРЫТОЙ ФУНКЦИИ",
+        "subtitle": "ТЕПЕРЬ ТЫ МОЖЕШЬ НАСТРАИВАТЬ АЛГОРИТМЫ САМ. КАК СДЕЛАТЬ",
+        "cta": "SWIPE LEFT →"
+      },
+      "structure": "fullscreen фото CEO / overlay-заголовок капсом / подзаголовок / CTA",
+      "design_tokens": {
+        "background": "`розово-малиновый градиент с фото`",
+        "headline_color": "`#FFFFFF`",
+        "mood": "`news clickbait, viral hook`"
+      }
+    },
+    {
+      "filename": "IMG_1672.png",
+      "author": "@ilia.paliy",
+      "carousel_topic": "Адам Моссери / скрытая функция",
+      "slide_position": "3/5",
+      "funnel_role": "step",
+      "format": "Instagram 4:5",
+      "visual_description": "Белый фон. По центру серый заголовок 'Используй:'. Чек-лист из 5 пунктов с синими галочками (lowercase). Внизу — три скриншота Reels вертикальных видео под углом, с лёгкими синими тенями (галерея результатов автора).",
+      "text_content": {
+        "counter": "3/5",
+        "headline": "Используй:"
+      },
+      "structure": "header / 'Используй:' / 5-buleta чеклист / тройной мокап Reels-скриншотов",
+      "design_tokens": {
+        "background": "`#FFFFFF`",
+        "headline_color": "`тёмно-серый`",
+        "checkmark": "`blue circle + white check`",
+        "reels_treatment": "`тонкая синяя тень/glow, скруглённые углы`"
+      }
+    },
+    {
+      "filename": "IMG_1673.png",
+      "author": "@ilia.paliy",
+      "carousel_topic": "Адам Моссери / скрытая функция",
+      "slide_position": "4/5",
+      "funnel_role": "proof",
+      "format": "Instagram 4:5",
+      "visual_description": "Белый фон. В центре — оранжевый закруглённый квадрат-иконка с белой Claude-астериск-эмблемой (с лёгкой синей тенью). Под ним кобальтовый капс 'ЗАПОМНИ:'. Жирный чёрный заголовок 'Instagram умеет распознавать ai-тексты и режет охваты и удержание'. Ниже — серый параграф объяснения о том, что Claude настроен писать тексты, которые алгоритм считает человеческими.",
+      "text_content": {
+        "counter": "4/5",
+        "icon": "orange Claude squircle logo",
+        "label": "ЗАПОМНИ:",
+        "headline": "Instagram умеет распознавать ai-тексты и режет охваты и удержание",
+        "body": "Но я настроил Claude так, что его тексты алгоритмы считывают как живой человеческий контент. Именно такой контент Instagram сейчас продвигает в 2026."
+      },
+      "structure": "header / orange Claude icon / синий капс 'ЗАПОМНИ' / жирный заголовок / параграф",
+      "design_tokens": {
+        "background": "`#FFFFFF`",
+        "icon_bg": "`Claude orange #E55B2B squircle`",
+        "label_color": "`#2D5BFF`",
+        "headline_color": "`#0A0A0A`"
+      }
+    },
+    {
+      "filename": "IMG_1674.png",
+      "author": "@ilia.paliy",
+      "carousel_topic": "Адам Моссери / скрытая функция",
+      "slide_position": "5/5",
+      "funnel_role": "cta",
+      "format": "Instagram 4:5",
+      "visual_description": "Белый минималистичный финал-слайд. По центру — чёрный жирный капс-заголовок в 4 строки (вопрос). Ниже — эмодзи руки с ручкой ✍️ и фраза 'Пиши в комментариях'. Затем большой кобальтовый текст «СТАРТ» с синим подчёркиванием. И финальная строка серым 'и я отправлю подробности в директ.'",
+      "text_content": {
+        "counter": "5/5",
+        "headline": "ХОЧЕШЬ КОНТЕНТ, КОТОРЫЙ БУДЕТ СОЗДАВАТЬСЯ БЕЗ ТЕБЯ И INSTAGRAM БУДЕТ ПРОДВИГАТЬ ЕГО В 2026?",
+        "cta_line": "✍️ Пиши в комментариях",
+        "magic_word": "«СТАРТ»",
+        "closer": "и я отправлю подробности в директ."
+      },
+      "structure": "header / вопрос капсом / 'Пиши в комментариях' / магическое слово синим / закрывающая строка",
+      "design_tokens": {
+        "background": "`#FFFFFF`",
+        "headline_color": "`тёмно-серый/чёрный`",
+        "magic_word_color": "`#2D5BFF с underline`",
+        "fonts": "`Inter Bold`"
+      }
+    },
+    {
+      "filename": "IMG_1675.png",
+      "author": "@ilia.paliy",
+      "carousel_topic": "Теневой бан / охваты Instagram",
+      "slide_position": "1/4",
+      "funnel_role": "cover",
+      "format": "Instagram 4:5",
+      "visual_description": "Полноформатное фото: молодой мужчина в коричневом свитере, очках, смеётся, сидит со скрещёнными руками в светлом лофте с кирпичной стеной и большими окнами. Поверх — белый жирный капс-заголовок в 5 строк. Ниже — крупно белым 'КАК ИСПРАВИТЬ ЗА 10 СЕК'. CTA 'SWIPE LEFT' внизу.",
+      "text_content": {
+        "counter": "1/4",
+        "headline": "ТЫ ПОПАЛ В СПИСОК ОГРАНИЧЕННЫХ АККАУНТОВ, ЕСЛИ ТВОИ ПОСТЫ НАБИРАЮТ МЕНЬШЕ ТЫСЯЧИ ПРОСМОТРОВ.",
+        "subhead": "КАК ИСПРАВИТЬ ЗА 10 СЕК",
+        "cta": "SWIPE LEFT →"
+      },
+      "structure": "fullscreen lifestyle-портрет автора / overlay-заголовок-провокация / подзаголовок-обещание / CTA",
+      "design_tokens": {
+        "headline_color": "`#FFFFFF`",
+        "headline_weight": "`ExtraBold uppercase`",
+        "photo_style": "`lifestyle, daylight loft, candid laughing portrait`",
+        "mood": "`viral clickbait`"
+      }
+    },
+    {
+      "filename": "IMG_1676.png",
+      "author": "@ilia.paliy",
+      "carousel_topic": "Теневой бан / охваты",
+      "slide_position": "2/4",
+      "funnel_role": "step",
+      "format": "Instagram 4:5",
+      "visual_description": "Белый фон. Кобальтовый 'ШАГ 1.' Под ним чёрный двустрочный заголовок-инструкция. Ниже — 3 реальных скриншота интерфейса Instagram (профиль автора, экран Просмотры с прогресс-барами, экран Профессиональной панели со статистикой 8.3 млн просмотров) — каждый со скруглёнными углами и лёгкой голубой обводкой/тенью.",
+      "text_content": {
+        "counter": "2/4",
+        "step_label": "ШАГ 1.",
+        "instruction": "Сделай скрин своего профиля и статистику за последние 30 дней.",
+        "mockup_details": "профиль ilia.paliy (639 публикаций, 292 тыс. подписчиков), статистика просмотров (Reels 61.8%, Публикации 32.6%, Истории 5.6%), профессиональная панель (8.3 млн просмотров, 605.2 тыс. взаимодействий)"
+      },
+      "structure": "header / 'ШАГ 1.' синим / инструкция чёрным / 3 скрина Instagram-аналитики в коллаже",
+      "design_tokens": {
+        "background": "`#FFFFFF`",
+        "step_color": "`#2D5BFF`",
+        "instruction_color": "`#0A0A0A`",
+        "screenshot_treatment": "`тонкая голубая обводка + soft glow`"
+      }
+    },
+    {
+      "filename": "IMG_1677.png",
+      "author": "@ilia.paliy",
+      "carousel_topic": "Теневой бан / охваты",
+      "slide_position": "3/4",
+      "funnel_role": "step",
+      "format": "Instagram 4:5",
+      "visual_description": "Белый фон. Кобальтовый 'ШАГ 2.'. Чёрный двустрочный заголовок 'Выгрузи эти скрины в Claude и скажи:'. Ниже — большая белая карточка с тонкой голубой обводкой и скруглёнными углами, внутри — длинный промпт-инструкция для Claude от лица CEO Instagram.",
+      "text_content": {
+        "counter": "3/4",
+        "step_label": "ШАГ 2.",
+        "instruction": "Выгрузи эти скрины в Claude и скажи:",
+        "prompt_inside_card": "Представь, что ты CEO Instagram Адам Моссери. Проанализируй мой профиль по этим скриншотам. Объясни, как новые алгоритм инстаграм считывает мой контент и почему он не масштабирует охваты. Дай чёткий список правок: • что в контенте выглядит размыто или конфликтно • что мешает рекомендациям • и 20 ключевых маркеров (lsi), которые нужно встроить в описания и субтитры, чтобы алгоритм быстрее понял мою аудиторию."
+      },
+      "structure": "header / 'ШАГ 2.' синим / инструкция / большая белая карточка с готовым промптом",
+      "design_tokens": {
+        "background": "`#FFFFFF`",
+        "card_border": "`thin blue 1px`",
+        "card_shadow": "`soft drop shadow`",
+        "prompt_text_color": "`тёмно-серый`"
+      }
+    },
+    {
+      "filename": "IMG_1678.png",
+      "author": "@ilia.paliy",
+      "carousel_topic": "Теневой бан / охваты",
+      "slide_position": "4/4",
+      "funnel_role": "cta",
+      "format": "Instagram 4:5",
+      "visual_description": "Белый минималистичный финал. Чёрный заголовок капсом в 3 строки про выход из теневого бана. Ниже эмодзи ✍️ и 'Пиши в комментариях'. Большое кобальтовое подчёркнутое слово «КОД». Финальная серая фраза.",
+      "text_content": {
+        "counter": "4/4",
+        "headline": "ЕСЛИ ХОЧЕШЬ ВЫЙТИ ИЗ ТЕНЕВОГО БАНА И НАЧАТЬ ПОЛУЧАТЬ ТАКИЕ ОХВАТЫ.",
+        "cta_line": "✍️ Пиши в комментариях",
+        "magic_word": "«КОД»",
+        "closer": "отправлю полный промпт, который создаст актуальный контент план под новое обновление Инстаграм."
+      },
+      "structure": "header / вопрос-обещание капсом / 'Пиши в комментариях' / магическое слово синим / закрывающая фраза",
+      "design_tokens": {
+        "background": "`#FFFFFF`",
+        "magic_word_color": "`#2D5BFF underline`",
+        "template": "`идентичен IMG_1674 (унифицированный финал-слайд автора)`"
+      }
+    },
+    {
+      "filename": "IMG_1689.png",
+      "author": "@theromanknox",
+      "carousel_topic": "Master Claude in a week",
+      "slide_position": "1/6",
+      "funnel_role": "cover",
+      "format": "Instagram 4:5",
+      "visual_description": "Полноформатный 3D-рендер: матовая темно-коричневая объёмная сцена с пастельно-персиковой подставкой, на которой стоит стопка белых страниц, увенчанная огромным оранжевым 3D-логотипом Claude (asterisk) — рендер премиум-качества с мягкой золотистой подсветкой полукругом сверху. Поверх — белый жирный заголовок 'Master Claude in a week' (Claude — на персиковом плашке, как ярлык). Внизу слева — два маленьких лейбла 'Social media @Roman.Knox' и 'Free Guides knoxhub.io/hub'.",
+      "text_content": {
+        "counter": "1/6",
+        "headline": "Master Claude in a week",
+        "footer_left_1": "Social media @Roman.Knox",
+        "footer_left_2": "Free Guides knoxhub.io/hub"
+      },
+      "structure": "fullscreen premium 3D-рендер с логотипом Claude / overlay-заголовок (Claude на плашке) / footer-лейблы",
+      "design_tokens": {
+        "background": "`deep brown #2A1A0F`",
+        "accent": "`Claude orange + peach platform`",
+        "light": "`warm rim-light arc`",
+        "headline_font": "`rounded serif/sans bold`",
+        "headline_color": "`#FFFFFF`",
+        "claude_word_bg": "`peach plate #F4B98C`"
+      }
+    },
+    {
+      "filename": "IMG_1690.png",
+      "author": "@theromanknox",
+      "carousel_topic": "Master Claude in a week",
+      "slide_position": "2/6",
+      "funnel_role": "hook",
+      "format": "Instagram 4:5",
+      "visual_description": "Светло-серый фон с миллиметровой сеткой. Сверху по центру — миниатюрный 3D-логотип Claude (на пьедестале из страниц). Под ним — чёрный массивный заголовок 'AI is everywhere, Mastery is rare.' (две строки). Ниже — сравнительная пара карточек: левая розоватая 'CASUAL USER' с примером плохого промпта 'write me a caption' и описанием 'Generic output. Sounds like every other account.'; правая мятно-зелёная 'POWER USER' с примером качественного промпта 'You're the voice behind my brand. Here's the context...' и описанием 'On-brand, specific, ready to post.' Внизу подпись 'The difference isn't AI. It's how you speak to it.'",
+      "text_content": {
+        "counter": "2/6",
+        "headline": "AI is everywhere, Mastery is rare.",
+        "card_left_label": "CASUAL USER",
+        "card_left_quote": "\"write me a caption\"",
+        "card_left_desc": "Generic output. Sounds like every other account. You delete it.",
+        "card_right_label": "POWER USER",
+        "card_right_quote": "\"You're the voice behind my brand. Here's the context...\"",
+        "card_right_desc": "On-brand, specific, ready to post. Saves you 2 hours.",
+        "footnote": "The difference isn't AI. It's how you speak to it.",
+        "footer_left_1": "Social media @Roman.Knox",
+        "footer_left_2": "Free Guides knoxhub.io/hub",
+        "page_indicator": "1/5",
+        "swipe": "swipe ←"
+      },
+      "structure": "header (grid bg) / mini-logo / bold black headline / two contrast cards (red vs green) / footnote / footer + swipe",
+      "design_tokens": {
+        "background": "`off-white with subtle grid #F5F3EE`",
+        "left_card_bg": "`soft red/coral pink`",
+        "right_card_bg": "`soft mint green`",
+        "card_corners": "`rounded-lg`",
+        "headline_font": "`Inter ExtraBold`",
+        "headline_color": "`#0A0A0A`",
+        "tag_color_left": "`#D44848`",
+        "tag_color_right": "`#2EA66B`"
+      }
+    },
+    {
+      "filename": "IMG_1691.png",
+      "author": "@theromanknox",
+      "carousel_topic": "Master Claude in a week",
+      "slide_position": "3/6",
+      "funnel_role": "step",
+      "format": "Instagram 4:5",
+      "visual_description": "Тот же шаблон (grid bg, mini Claude logo). Заголовок 'Skip the questions, Deliver the context.' Под ним крупный mockup 'prompt builder' — окно в стиле macOS терминала с коричневым titlebar (три цветных кнопки) и кремовым контентом, где 4 строки-поля: ROLE / CONTEXT / TASK / FORMAT, каждая с цветной плашкой-значением (пастельный розовый, лиловый, мятный, голубой). Снизу мокапа — фраза 'role + context + task + format. four fields. every time. without fail.'",
+      "text_content": {
+        "counter": "3/6",
+        "headline": "Skip the questions, Deliver the context.",
+        "mockup_title": "prompt builder",
+        "field_role": "You're a copywriter for a personal brand...",
+        "field_context": "Audience: women 18-35 building solo businesses",
+        "field_task": "Write a carousel hook about digital products",
+        "field_format": "Lowercase, one sentence, story-led",
+        "footnote": "role + context + task + format. four fields. every time. without fail.",
+        "page_indicator": "2/5"
+      },
+      "structure": "header / mini-logo / bold headline / browser-style 'prompt builder' card с 4 цветными полями / footnote / footer",
+      "design_tokens": {
+        "background": "`grid off-white`",
+        "mockup_titlebar_bg": "`warm brown`",
+        "mockup_body_bg": "`cream`",
+        "field_tags_palette": "`pastel pink/violet/mint/sky`",
+        "headline_color": "`#0A0A0A`"
+      }
+    },
+    {
+      "filename": "IMG_1694.png",
+      "author": "@theromanknox",
+      "carousel_topic": "Master Claude in a week",
+      "slide_position": "6/6",
+      "funnel_role": "cta",
+      "format": "Instagram 4:5",
+      "visual_description": "Тот же шаблон. Mini Claude-logo сверху. Заголовок 'Create one workflow, Keep it simple.' Внизу — большой мокап 'content workflow' в коричневом окне с тремя выбираемыми карточками: 'Content (hooks + captions)', 'Research (trends + insights)', 'Email (drafts + sequences)'. Подпись 'save 3-5 hrs/week'. Финал-фраза в кремовом блоке: 'one workflow mastered beats three half-built. start small. make it repeatable.'",
+      "text_content": {
+        "counter": "6/6",
+        "headline": "Create one workflow, Keep it simple.",
+        "mockup_title": "content workflow",
+        "section_label": "PICK ONE TO AUTOMATE",
+        "card_1": "Content — hooks + captions",
+        "card_2": "Research — trends + insights",
+        "card_3": "Email — drafts + sequences",
+        "footnote_in_mockup": "save 3-5 hrs/week",
+        "main_message": "one workflow mastered beats three half-built. start small. make it repeatable.",
+        "page_indicator": "5/5"
+      },
+      "structure": "header / mini-logo / bold headline / 'content workflow' mockup с 3 карточками / сообщение",
+      "design_tokens": {
+        "mockup_palette": "`warm brown + dark olive + cream`",
+        "cards_palette": "`warm sand / cool gray / mint sage`",
+        "icons": "`small flat icons inside cards (pencil, magnifier, envelope)`"
+      }
+    },
+    {
+      "filename": "IMG_1699.png",
+      "author": "@theromanknox",
+      "carousel_topic": "9 YouTube courses worth watching in 2025",
+      "slide_position": "5/10",
+      "funnel_role": "proof",
+      "format": "Instagram 4:5",
+      "visual_description": "Кремовый/бежевый фон с акварельными разводами облаков. Сверху — заголовок 'ChatGPT Masterclass' двухцветный (тёмно-коричневый + золотисто-горчичный) с акварельной плашкой за ним. Ниже — звёздочка-маркер ✦ и тёмный описательный заголовок курса в 2 строки. Под ним — большой мокап YouTube-видео с черной рамкой и золотой обводкой: thumbnail с надписью 'ChatGPT FULL COURSE' на зелёной плашке и портретом ведущего справа. Внизу — акварельная плашка с подписью 'Instructor: Daragh Walsh'. Лейблы Instagram @Roman.Knox, 'Page 4/9', 'swipe'.",
+      "text_content": {
+        "counter": "5/10",
+        "headline": "ChatGPT Masterclass",
+        "description": "ChatGPT Masterclass 2025 From Beginner to Expert – Full Tutorial Comprehensive Guide to Using ChatGPT Effectively",
+        "thumbnail_text": "ChatGPT FULL COURSE",
+        "instructor": "Daragh Walsh",
+        "page": "4/9"
+      },
+      "structure": "header / акварельный заголовок курса / описание со звёздочкой-маркером / YouTube-mockup с обводкой / instructor-плашка",
+      "design_tokens": {
+        "background": "`cream beige #F5EFE0`",
+        "headline_palette": "`duotone dark brown #3A2B0F + mustard gold #B58620`",
+        "watercolor_clouds": "`soft taupe smudges`",
+        "thumbnail_frame": "`black + gold outline`",
+        "sparkle_icon": "`small golden ✦`"
+      }
+    },
+    {
+      "filename": "IMG_1700.png",
+      "author": "@theromanknox",
+      "carousel_topic": "9 YouTube courses 2025",
+      "slide_position": "6/10",
+      "funnel_role": "proof",
+      "format": "Instagram 4:5",
+      "visual_description": "Тот же шаблон. Заголовок 'The Ultimate 4-Hour Sales Blueprint' (трёхстрочный, duotone). Описание — про Alex Hormozi masterclass. Thumbnail: красное огромное слово 'SALES' с эффектом 'разъезжающейся' типографики и портретом мужчины с бородой и кепкой между букв. Instructor: Alex Hormozi.",
+      "text_content": {
+        "counter": "6/10",
+        "headline": "The Ultimate 4-Hour Sales Blueprint",
+        "description": "Unlock the psychology, strategy, and execution behind elite-level sales. In this 4-hour masterclass, Alex Hormozi breaks down the exact frameworks that separate top performers from the rest.",
+        "thumbnail_text": "SALES",
+        "instructor": "Alex Hormozi",
+        "page": "5/9"
+      },
+      "structure": "тот же шаблон, что 1699",
+      "design_tokens": {
+        "thumbnail_style": "`большое красное SALES + портрет внутри букв`",
+        "consistent_template": "`duotone headline + watercolor + YouTube frame`"
+      }
+    },
+    {
+      "filename": "IMG_1702.png",
+      "author": "@theromanknox",
+      "carousel_topic": "9 YouTube courses 2025",
+      "slide_position": "8/10",
+      "funnel_role": "proof",
+      "format": "Instagram 4:5",
+      "visual_description": "Тот же шаблон. Заголовок 'Copywriting Course'. Два пункта со звёздочками: '8-Hour Copywriting Course' и 'Learn the Skills to Write & Earn'. Thumbnail: $0 → $10K с зелёными столбиками графика и улыбающимся мужчиной в белой кепке. Instructor: Tyson 4D.",
+      "text_content": {
+        "counter": "8/10",
+        "headline": "Copywriting Course",
+        "bullet_1": "Free 8-Hour Copywriting Course for Beginners From $0 to $10K/Month in Just 90 Days",
+        "bullet_2": "Learn the Skills to Write & Earn",
+        "thumbnail": "$0 — $10K bar chart + smiling man, big 'COPYWRITING' bottom",
+        "instructor": "Tyson 4D",
+        "page": "7/9"
+      },
+      "structure": "тот же шаблон",
+      "design_tokens": {
+        "thumbnail_palette": "`black + green money-bars`",
+        "consistent_template": "`Knox YouTube курсы`"
+      }
+    },
+    {
+      "filename": "IMG_1703.png",
+      "author": "@theromanknox",
+      "carousel_topic": "9 YouTube courses 2025",
+      "slide_position": "9/10",
+      "funnel_role": "proof",
+      "format": "Instagram 4:5",
+      "visual_description": "Шаблон. Заголовок 'No-Code AI Agents'. Описание про Lang Chain, OpenAI. Thumbnail: мужчина в оранжевом джемпере со скрещенными руками, рядом надпись 'No-code AI AGENTS full guide' и ряд из 5 иконок сервисов (n8n, Lang Chain, ChatGPT, Convertkit, и т.п.). Instructor: Liam Ottley.",
+      "text_content": {
+        "counter": "9/10",
+        "headline": "No-Code AI Agents",
+        "description": "Learn to Build & Sell AI-Powered Agents Featuring Lang Chain, Open AI & More",
+        "thumbnail_text": "No-code AI AGENTS full guide",
+        "instructor": "Liam Ottley",
+        "page": "8/9"
+      },
+      "structure": "тот же шаблон",
+      "design_tokens": {
+        "thumbnail": "`white bg, smiling man in orange sweater, row of tech tool icons`"
+      }
+    },
+    {
+      "filename": "IMG_1704.png",
+      "author": "@theromanknox",
+      "carousel_topic": "9 YouTube courses 2025",
+      "slide_position": "10/10",
+      "funnel_role": "proof",
+      "format": "Instagram 4:5",
+      "visual_description": "Шаблон. Заголовок '7 Business Future Use Cases'. Thumbnail: сюрреалистичный AI-арт — мужчина с банановой гримасой 'NANO' на лице, фон с приматами/обезьянами на скалах под красным небом. Instructor: Awa Penn.",
+      "text_content": {
+        "counter": "10/10",
+        "headline": "7 Business Future Use Cases",
+        "description": "7 Business Applications for Nano Banana Pro by 2026. Explore Future Use Cases & Innovations. Strategic Insights for Emerging Tech in Business",
+        "thumbnail": "AI-сюрреализм: человек с бананом на лице, обезьяны вокруг",
+        "instructor": "Awa Penn",
+        "page": "9/9"
+      },
+      "structure": "тот же шаблон, финальная карточка серии",
+      "design_tokens": {
+        "thumbnail": "`Nano Banana AI-art, red sky, primates`"
+      }
+    },
+    {
+      "filename": "IMG_1705.png",
+      "author": "@theromanknox",
+      "carousel_topic": "Top Free vs Paid AI Tools 2026",
+      "slide_position": "1/8",
+      "funnel_role": "cover",
+      "format": "Instagram 4:5",
+      "visual_description": "Фото автора (Roman Knox) в светлой рубашке за столом в стильном офисе с книжными полками. Вокруг его головы — парящие иконки приложений (Higgsfield, Sora-like, Canva, Hailuo, аудиоволны). Снизу — две диагональные плашки: красная 'PAID' слева и зелёная 'FREE' справа со словом 'VS' посередине. Курсивная белая подпись 'Top Free AI Tools you must know'. Стрелочка к sound-off иконке.",
+      "text_content": {
+        "counter": "1/8",
+        "label_paid": "PAID",
+        "label_free": "FREE",
+        "vs": "VS",
+        "subtitle": "Top Free AI Tools you must know",
+        "footer": "Social media @Roman.Knox"
+      },
+      "structure": "lifestyle-портрет автора с floating иконками AI-инструментов / диагональная плашка PAID vs FREE / подзаголовок",
+      "design_tokens": {
+        "label_paid_bg": "`coral red #E56B5C`",
+        "label_free_bg": "`lime green #B5E45A`",
+        "icons_palette": "`разные пастельные/яркие squircle-иконки`",
+        "background": "`lifestyle photo с тёплым светом`"
+      }
+    },
+    {
+      "filename": "IMG_1706.png",
+      "author": "@theromanknox",
+      "carousel_topic": "Free vs Paid AI Tools",
+      "slide_position": "2/8",
+      "funnel_role": "comparison",
+      "format": "Instagram 4:5",
+      "visual_description": "Светлый фон с миллиметровой сеткой. Сверху — коричневая закруглённая плашка с белым '01', под ней чёрный заголовок 'Avatar Creation'. Две карточки сравнения: верхняя 'Paid' белая с розовым 'Paid' тегом — HeyGen $39/month + большой Hey/Gen логотип. Нижняя 'Free' тёмно-коричневая с салатным тегом 'Free' — Hedra $0/month + чёрный astroid-style логотип.",
+      "text_content": {
+        "counter": "2/8",
+        "step_number": "01",
+        "category": "Avatar Creation",
+        "paid_tool": "HeyGen",
+        "paid_price": "$39 /month",
+        "free_tool": "Hedra",
+        "free_price": "$0 /month",
+        "page": "1/7"
+      },
+      "structure": "header / номер в коричневой плашке / заголовок категории / Paid карточка / Free карточка / footer",
+      "design_tokens": {
+        "background": "`off-white #F4F1EA grid`",
+        "number_pill_bg": "`dark brown`",
+        "paid_card_bg": "`white + coral pink accents`",
+        "free_card_bg": "`dark brown #2A1F15 + lime accents`",
+        "paid_tag_bg": "`coral red`",
+        "free_tag_bg": "`lime green`",
+        "logo_treatment": "`premium squircle icons`"
+      }
+    },
+    {
+      "filename": "IMG_1709.png",
+      "author": "@theromanknox",
+      "carousel_topic": "Free vs Paid AI Tools",
+      "slide_position": "5/8",
+      "funnel_role": "comparison",
+      "format": "Instagram 4:5",
+      "visual_description": "Тот же шаблон. '04' плашка, заголовок 'Video Creation'. Paid: Higgsfield $49/month (лаймовый squircle с чёрной волной). Free: Hailuo $0/month (оранжево-фиолетовый круглый логотип).",
+      "text_content": {
+        "counter": "5/8",
+        "step_number": "04",
+        "category": "Video Creation",
+        "paid_tool": "Higgsfield",
+        "paid_price": "$49 /month",
+        "free_tool": "Hailuo",
+        "free_price": "$0 /month",
+        "page": "4/7"
+      },
+      "structure": "тот же шаблон, что 1706",
+      "design_tokens": {
+        "icons": "`Higgsfield lime + Hailuo gradient circle`"
+      }
+    },
+    {
+      "filename": "IMG_1710.png",
+      "author": "@theromanknox",
+      "carousel_topic": "Free vs Paid AI Tools",
+      "slide_position": "6/8",
+      "funnel_role": "comparison",
+      "format": "Instagram 4:5",
+      "visual_description": "Шаблон. '05' плашка, заголовок 'Presentatin/Design'. Paid: Canva $17/month (синий круглый Canva-логотип). Free: Loveart $0/month (чёрный 'L+глаз' иконка).",
+      "text_content": {
+        "counter": "6/8",
+        "step_number": "05",
+        "category": "Presentatin/Design",
+        "paid_tool": "Canva",
+        "paid_price": "$17 /month",
+        "free_tool": "Loveart",
+        "free_price": "$0 /month",
+        "page": "5/7"
+      },
+      "structure": "тот же шаблон",
+      "design_tokens": {
+        "note": "`опечатка в оригинале 'Presentatin' — сохранена для аутентичности`"
+      }
+    },
+    {
+      "filename": "IMG_1712.png",
+      "author": "@theromanknox",
+      "carousel_topic": "Monetize 2026 World Cup with Claude",
+      "slide_position": "1/9",
+      "funnel_role": "cover",
+      "format": "Instagram 4:5",
+      "visual_description": "3D-рендер на тёмно-коричневом фоне: золотой кубок FIFA World Cup, стопка стодолларовых купюр слева, оранжевый 3D Claude-asterisk справа. Тёплая золотая засветка сверху, размытые картины на стенах на дальнем плане (как в музее). Поверх — большой белый и оранжевый заголовок 'Monetize 2026 World Cup with Claude' (Claude — оранжевым, '2026 World Cup' — на оранжевой плашке). Внизу — лейблы Social media и Free Guides.",
+      "text_content": {
+        "counter": "1/9",
+        "headline_1": "Monetize",
+        "headline_2": "2026 World Cup",
+        "headline_3": "with Claude",
+        "footer_left_1": "Social media @Roman.Knox",
+        "footer_left_2": "Free Guides knoxhub.io/hub"
+      },
+      "structure": "fullscreen 3D-рендер (кубок + деньги + Claude) / большой многоцветный заголовок-overlay / footer",
+      "design_tokens": {
+        "background": "`deep brown museum-like`",
+        "headline_colors": "`white + orange Claude tone`",
+        "claude_word_color": "`Claude orange gradient`",
+        "world_cup_bg": "`orange tilted plate`"
+      }
+    },
+    {
+      "filename": "IMG_1713.png",
+      "author": "@theromanknox",
+      "carousel_topic": "2026 World Cup Claude",
+      "slide_position": "2/9",
+      "funnel_role": "hook",
+      "format": "Instagram 4:5",
+      "visual_description": "Светлый фон с сеткой. Сверху справа — миниатюрный 3D-натюрморт из cover (трофей + деньги + Claude). Слева большой оранжево-красный жирный заголовок 'The Goldmine Nobody is Talking About'. Ниже — 3 розово-персиковых карточки-фрагмента с короткими тезисами, каждая с цветной полосой сверху и иконкой в оранжевой плашке справа: глаз / денежный мешок / Claude-астериск.",
+      "text_content": {
+        "counter": "2/9",
+        "headline": "The Goldmine Nobody is Talking About",
+        "card_1": "5 Billion+ viewers are about to glue their eyes to screens for 39 straight days.",
+        "card_2": "While everyone else is just arguing with friends, a small group of smart creators is quietly banking 5-figure months.",
+        "card_3": "They aren't pro editors or soccer experts. They are regular folks using Claude AI to create viral content at lightning speed.",
+        "page": "1/8"
+      },
+      "structure": "header / mini 3D-натюрморт / большой оранжевый заголовок-хук / 3 stat-карточки с иконками",
+      "design_tokens": {
+        "background": "`off-white grid`",
+        "headline_color": "`warm orange-red #E36B3F`",
+        "card_bg": "`soft peach #FBE6D9`",
+        "icon_squircle": "`Claude orange #E55B2B`",
+        "card_top_bar": "`gradient orange`"
+      }
+    },
+    {
+      "filename": "IMG_1714.png",
+      "author": "@theromanknox",
+      "carousel_topic": "2026 World Cup Claude",
+      "slide_position": "3/9",
+      "funnel_role": "step",
+      "format": "Instagram 4:5",
+      "visual_description": "Шаблон. Сверху — оранжевая флажок-плашка 'Step 1:' и заголовок 'Warm Up the Algorithm NOW'. Слева — текст-инструкция, две персиковые карточки 'The Claude Prompt to use:' и 'Pro Tip:'. Справа — большая рука с iPhone, на экране — драматичное фото футболиста в красной форме Real Madrid в полёте, мяч сверху-слева.",
+      "text_content": {
+        "counter": "3/9",
+        "step_flag": "Step 1:",
+        "headline": "Warm Up the Algorithm NOW",
+        "body": "Don't wait until June 11. Start 4-5 weeks out to get the algorithm's love.",
+        "card_1_label": "The Claude Prompt to use:",
+        "card_1_text": "\"Create 30 days of engaging soccer content hooks and captions for a new account targeting Gen"
+      },
+      "structure": "header / Step flag + headline / описание / 2 prompt-карточки / iPhone-мокап с динамичным фото справа",
+      "design_tokens": {
+        "step_flag_bg": "`orange tilted plate`",
+        "card_bg": "`soft peach with orange label tab`",
+        "phone_image": "`dramatic action shot of soccer player mid-kick`"
+      },
+      "image_generation_prompt": "Instagram slide 4:5, off-white grid bg. Top-left: orange tilted plate 'Step 1:' + bold orange headline 'Warm Up the Algorithm NOW'. Below on left: black body text 'Don't wait until June 11. Start 4-5 weeks out to get the algorithm's love.' Two stacked peach cards with orange label tabs — Card 1 'The Claude Prompt to use:': '\"Create 30 days of engaging soccer content hooks and captions for a new account targeting Gen"
+    },
+    {
+      "filename": "IMG_1715.png",
+      "author": "@theromanknox",
+      "carousel_topic": "2026 World Cup Claude",
+      "slide_position": "4/9",
+      "funnel_role": "step",
+      "format": "Instagram 4:5",
+      "visual_description": "Шаблон. Слева 'Step 2: Let Claude Do the Heavy Lifting'. Два пункта с круглыми orange-splash-иконками футбольного мяча. Карточка 'Claude will instantly:' с 3 sparkle-буллетами. Справа на весь правый край — фото футбольного мяча в воротах с сеткой.",
+      "text_content": {
+        "counter": "4/9",
+        "step_flag": "Step 2",
+        "headline": "Let Claude Do the Heavy Lifting",
+        "bullet_1": "You don't even need to watch every single match.",
+        "bullet_2": "Feed match summaries or transcripts into Claude right after the final whistle.",
+        "card_label": "Claude will instantly:",
+        "card_bullet_1": "Extract the most controversial, viral moments.",
+        "card_bullet_2": "Generate ready-to-record voiceover scripts.",
+        "card_bullet_3": "Suggest angles (e.g., \"Focus on this underdog story\").",
+        "page": "3/8"
+      },
+      "structure": "header / Step 2 flag + headline / 2 буллета с soccer-splash иконками / 'Claude will instantly' card / фото мяча в сетке",
+      "design_tokens": {
+        "splash_icons": "`orange paint-splash circles with mini soccer balls`",
+        "right_image": "`soccer ball in net side angle`"
+      }
+    },
+    {
+      "filename": "IMG_1716.png",
+      "author": "@theromanknox",
+      "carousel_topic": "2026 World Cup Claude",
+      "slide_position": "5/9",
+      "funnel_role": "step",
+      "format": "Instagram 4:5",
+      "visual_description": "Шаблон. 'Step 3: Scale at Lightning Speed'. Описание. Две карточки 'Use Claude to:' с буллетами и 'The Stack:'. Внизу — фото футболиста, бьющего по мячу на траве, и платформенные иконки (Facebook, Instagram, TikTok).",
+      "text_content": {
+        "counter": "5/9",
+        "step_flag": "Step 3:",
+        "headline": "Scale at Lightning Speed",
+        "body": "One solid viral clip can pay for months of effort. Don't limit it to one platform.",
+        "card_1_label": "Use Claude to:",
+        "card_2_label": "The Stack:",
+        "card_2_text": "Pair Claude's scripts with CapCut for fast editing and Canva for eye-catching thumbnails.",
+        "page": "4/8"
+      },
+      "structure": "Step 3 flag + headline / описание / 2 карточки (Use Claude to / The Stack) / фото с мячом + соцсетевые squircle-иконки",
+      "design_tokens": {
+        "platform_icons": "`Facebook blue, Instagram gradient, TikTok black`"
+      }
+    },
+    {
+      "filename": "IMG_1717.png",
+      "author": "@theromanknox",
+      "carousel_topic": "2026 World Cup Claude",
+      "slide_position": "6/9",
+      "funnel_role": "step",
+      "format": "Instagram 4:5",
+      "visual_description": "Шаблон. 'Step 4: Turn Views Into Revenue'. Большая тёмно-коричневая таблица с 2 столбцами 'Monetization Strategy' | 'How It Works' и 4 строками: Affiliate Marketing, Brand Deals, Platform Payouts, Digital Products.",
+      "text_content": {
+        "counter": "6/9",
+        "step_flag": "Step 4:",
+        "headline": "Turn Views Into Revenue",
+        "body": "One solid viral clip can pay for months of effort. Don't limit it to one platform.",
+        "page": "5/8"
+      },
+      "structure": "Step 4 flag + headline / body / тёмно-коричневая таблица 2×4 с разделителями",
+      "design_tokens": {
+        "table_bg": "`dark chocolate brown`",
+        "table_text": "`white`",
+        "table_dividers": "`subtle warm lines`"
+      }
+    },
+    {
+      "filename": "IMG_1718.png",
+      "author": "@theromanknox",
+      "carousel_topic": "2026 World Cup Claude",
+      "slide_position": "7/9",
+      "funnel_role": "warning",
+      "format": "Instagram 4:5",
+      "visual_description": "Шаблон. 'Step 5: Common Mistakes to Avoid'. Подзаголовок 'Don't Flop on the Big Stage'. 3 розово-персиковые карточки с красным X-крестом слева и красной полосой-акцентом сверху, каждая — описание ошибки.",
+      "text_content": {
+        "counter": "7/9",
+        "step_flag": "Step 5:",
+        "headline": "Common Mistakes to Avoid",
+        "subtitle": "Don't Flop on the Big Stage",
+        "mistake_1_label": "Waiting too late:",
+        "mistake_1_text": "Starting during the tournament means missing the algorithm boost.",
+        "mistake_2_label": "Pure Spam:",
+        "mistake_2_text": "Claude gives you the blueprint, but your human touch and unique voice make it stick.",
+        "mistake_3_label": "Ignoring local angles::",
+        "mistake_3_text": "Regional fanbases (like South Asia) are intensely passionate. Target their favorite teams/stars!",
+        "page": "6/8"
+      },
+      "structure": "Step 5 flag + headline / подзаголовок / 3 карточки с red X icons",
+      "design_tokens": {
+        "x_icon_bg": "`red circle with white X`",
+        "card_top_bar": "`warm red-orange gradient`"
+      }
+    },
+    {
+      "filename": "IMG_1719.png",
+      "author": "@theromanknox",
+      "carousel_topic": "2026 World Cup Claude",
+      "slide_position": "8/9",
+      "funnel_role": "checklist",
+      "format": "Instagram 4:5",
+      "visual_description": "Шаблон. 'Step 6: The Ultimate Workflow Check-list'. Подзаголовок 'Your Daily Tournament Routine'. 3 персиковые чек-лист карточки с пустыми квадратными чекбоксами слева: Morning / Mid-day / Evening, каждая с инструкцией.",
+      "text_content": {
+        "counter": "8/9",
+        "step_flag": "Step 6:",
+        "headline": "The Ultimate Workflow Check-list",
+        "subtitle": "Your Daily Tournament Routine",
+        "morning_label": "Morning:",
+        "morning_text": "Ask Claude for today's top match previews & hot takes.",
+        "midday_label": "Mid-day:",
+        "midday_text": "Drop live match data/news into Claude for quick reaction angles.",
+        "evening_label": "Evening:",
+        "evening_text": "Post 3-5 short-form clips across Reels, Shorts, and TikTok.",
+        "page": "7/8"
+      },
+      "structure": "Step 6 flag + headline / Daily Tournament Routine / 3 чек-карточки Morning/Mid-day/Evening",
+      "design_tokens": {
+        "checkbox": "`empty square outline`",
+        "labels_color": "`warm red-orange`"
+      }
+    },
+    {
+      "filename": "IMG_1720.png",
+      "author": "@theromanknox",
+      "carousel_topic": "2026 World Cup Claude",
+      "slide_position": "9/9",
+      "funnel_role": "cta",
+      "format": "Instagram 4:5",
+      "visual_description": "Шаблон. Слева частично виден размытый блёклый X-логотип (Twitter). По центру — 3D-натюрморт (трофей + деньги + Claude). Заголовок 'Ready to Kick Off?' оранжево-красным. Карточка 'Want the full breakdowns?' с описанием и CTA 'Go to the link in my bio to follow me on X and read the complete series!' Внизу — большой 3D X-логотип в чёрной squircle.",
+      "text_content": {
+        "counter": "9/9",
+        "background_logo": "X (blurred)",
+        "still_life": "trophy + money + Claude logo",
+        "headline": "Ready to Kick Off?",
+        "card_question": "Want the full breakdowns?",
+        "card_body": "This guide was adapted from my deep-dive articles on X (Twitter). I post daily monetization strategies, prompts, and frameworks there that are too long for Instagram.",
+        "cta": "Go to the link in my bio to follow me on X and read the complete series!",
+        "page": "8/8"
+      },
+      "structure": "blurred X-logo BG / 3D натюрморт / 'Ready to Kick Off?' / CTA-карточка / большой X-logo squircle",
+      "design_tokens": {
+        "blur_bg_logo": "`soft blurred X mark left`",
+        "x_logo_squircle": "`3D glossy black squircle with white X`"
+      }
+    },
+    {
+      "filename": "IMG_1721.png",
+      "author": "@theromanknox",
+      "carousel_topic": "Claude's Design Flaws — Fixed with 3 Skills",
+      "slide_position": "1/6",
+      "funnel_role": "cover",
+      "format": "Instagram 4:5",
+      "visual_description": "Драматичная фишай-перспектива снизу в джунглях: гигантская оранжево-коричневая 3D-фигура робота-блока (стилизованный 'AI-головастик' с квадратными глазами), вокруг — лианы, обезьяны на деревьях, попугаи, тукан, питон, бромелии. Тёплое солнце пробивается сквозь крону. Поверх — заголовок: оранжевый прямоугольник 'Claude's' + коричневый длинный прямоугольник 'Design Flaws'. Под фигурой металлический glitchy-текст 'Fixed with 3 Skills'.",
+      "text_content": {
+        "counter": "1/6",
+        "headline_1": "Claude's",
+        "headline_2": "Design Flaws",
+        "subline": "Fixed with 3 Skills"
+      },
+      "structure": "fullscreen jungle 3D-scene / oversized AI-block creature / двухтоновый заголовок-плашка / metallic subline",
+      "design_tokens": {
+        "scene_style": "`jungle, fisheye, magical realism, warm sunbeams`",
+        "headline_block_1": "`orange tilted plate`",
+        "headline_block_2": "`dark brown tilted plate`",
+        "subline_treatment": "`chrome metallic glitch text`"
+      }
+    },
+    {
+      "filename": "IMG_1722.png",
+      "author": "@theromanknox",
+      "carousel_topic": "Claude Design Flaws / 3 Skills",
+      "slide_position": "2/6",
+      "funnel_role": "step",
+      "format": "Instagram 4:5",
+      "visual_description": "Светло-бежевый фон. Слева — '#01:' и заголовок 'Impeccable Trains Claude in Design Mastery' (тёмно-коричневые буквы с разделением оттенков). Справа вверху — оранжевый squircle Claude. Ниже — два перекрывающихся мокапа: коричневое окно 'pbakaus / Impeccable' (как GitHub-репозиторий с яркими mac-traffic-light кнопками) с описанием 'impeccable Anti-AI-slop design CLI IQ commands to steer the result when words fail.' И тёмное терминальное окно 'Code' с примером CLI-вывода ('Scanning 24 design tells... 4 design tells caught Ship blocked. Fix or override.'). Подпись внизу '18 commands to fix what Claude shipped — without rewriting your prompt.'",
+      "text_content": {
+        "counter": "2/6",
+        "skill_number": "#01:",
+        "headline": "Impeccable Trains Claude in Design Mastery",
+        "mockup_1_path": "pbakaus / Impeccable",
+        "mockup_1_title": "Impeccable",
+        "mockup_1_desc": "impeccable Anti-AI-slop design CLI IQ commands to steer the result when words fail.",
+        "mockup_1_meta": "JavaScript icon • 1.2k",
+        "mockup_2_title": "Code",
+        "mockup_2_content": "Scanning 24 design tells... hero.tsx:14 - purple gradient on white button.tsx:32 - Inter font detected card.tsx:29 - bounce easing on hover footer.tsx:5 - cramped padding (8px) 4 design tells caught Ship blocked. Fix or override.",
+        "footnote": "18 commands to fix what Claude shipped — without rewriting your prompt.",
+        "page": "1/5"
+      },
+      "structure": "header / #01 + bold headline / Claude-squircle / два перекрывающихся mockup (repo-card + terminal) / footnote",
+      "design_tokens": {
+        "background": "`warm cream`",
+        "headline_palette": "`duotone brown`",
+        "repo_window_bg": "`warm brown`",
+        "terminal_bg": "`near-black with cream code text`"
+      }
+    },
+    {
+      "filename": "IMG_1723.png",
+      "author": "@theromanknox",
+      "carousel_topic": "Claude Design Flaws / 3 Skills",
+      "slide_position": "3/6",
+      "funnel_role": "step",
+      "format": "Instagram 4:5",
+      "visual_description": "Шаблон. '#02:' + заголовок 'Motion Principles Refines Claude's Animations'. Те же двойные мокапы: repo-окно 'carlzentos / design-motion-principles' с описанием 'Combines Rauno + Emil + Pasquale's motion philosophies into one auditor.' + 'TypeScript icon • 2.1k'. Тёмное окно Code с CLI: '3 PRINCIPLES • 1 AUDITOR / RAUNO cubic-bezier overshoot detected → smooth / EMIL duration 60ms → 240ms (snappier) / PASQUALE stagger children by 60ms / fixes applied. ship it.' Footnote 'Claude's motion stops feeling janky — starts feeling intentional.'",
+      "text_content": {
+        "counter": "3/6",
+        "skill_number": "#02:",
+        "headline": "Motion Principles Refines Claude's Animations",
+        "mockup_1_path": "carlzentos / design-motion-principles",
+        "mockup_1_desc": "Combines Rauno + Emil + Pasquale's motion philosophies into one auditor.",
+        "mockup_1_meta": "TypeScript icon • 2.1k",
+        "terminal_code": "3 PRINCIPLES • 1 AUDITOR / RAUNO: cubic-bezier overshoot detected → smooth / EMIL: duration 60ms → 240ms (snappier) / PASQUALE: stagger children by 60ms / fixes applied. ship it.",
+        "footnote": "Claude's motion stops feeling janky — starts feeling intentional.",
+        "page": "2/5"
+      },
+      "structure": "тот же шаблон, что 1722",
+      "design_tokens": {
+        "consistent_template": "`Knox Design Flaws series — duotone + repo + terminal`"
+      }
+    },
+    {
+      "filename": "IMG_1724.png",
+      "author": "@theromanknox",
+      "carousel_topic": "Claude Design Flaws / 3 Skills",
+      "slide_position": "4/6",
+      "funnel_role": "step",
+      "format": "Instagram 4:5",
+      "visual_description": "Шаблон. '#03:' + 'Frontend-Design Takes Top Priority'. Repo-окно 'anthropics / skills' с описанием 'Anthropic's official skill that teaches Claude to think about design before writing code.' Markdown icon • 14.2k. Тёмное окно Code с большой стилизованной типографикой в три строки: 'Distinct.' / 'Opinionated.' / 'Designed.' и подписью 'Real typography. Real palettes. Real motion.' Footnote 'Built by the people who built Claude. Install it before anything else.'",
+      "text_content": {
+        "counter": "4/6",
+        "skill_number": "#03:",
+        "headline": "Frontend-Design Takes Top Priority",
+        "mockup_1_path": "anthropics / skills",
+        "mockup_1_desc": "Anthropic's official skill that teaches Claude to think about design before writing code.",
+        "mockup_1_meta": "Markdown icon • 14.2k",
+        "terminal_subline": "Real typography. Real palettes. Real motion.",
+        "footnote": "Built by the people who built Claude. Install it before anything else.",
+        "page": "3/5"
+      },
+      "structure": "тот же шаблон",
+      "design_tokens": {
+        "consistent_template": "`Knox 3 Skills series`",
+        "terminal_typography": "`large italic display in orange/cream gradient`"
+      }
+    },
+    {
+      "filename": "IMG_1725.png",
+      "author": "@theromanknox",
+      "carousel_topic": "Claude Design Flaws / 3 Skills",
+      "slide_position": "5/6",
+      "funnel_role": "summary",
+      "format": "Instagram 4:5",
+      "visual_description": "Шаблон. Заголовок 'The Stack — Stack all three. Watch what happens.' (двухсторонний: 'The Stack' меньше, 'Stack all three. Watch what happens.' большим жирным). Справа — orange Claude squircle. Слева — три ступенчато перекрывающиеся repo-карточки: 'anthropics / Impeccable', 'anthropics / design-motion-principles', 'anthropics / skills'. Поверх — тёмное окно Code с типографикой 'Senior Graphic Designer level.' + subline.",
+      "text_content": {
+        "counter": "5/6",
+        "section_label": "The Stack",
+        "headline": "Stack all three. Watch what happens.",
+        "stack_card_1": "anthropics / Impeccable",
+        "stack_card_2": "anthropics / design-motion-principles",
+        "stack_card_3": "anthropics / skills",
+        "terminal_text": "Senior Graphic Designer level.",
+        "terminal_subline": "Real typography. Real palettes. Real motion.",
+        "page": "4/5"
+      },
+      "structure": "header / 'The Stack' label + bold headline / 3 stacked repo-карточки / тёмное окно с типографикой",
+      "design_tokens": {
+        "stacked_cards_effect": "`three brown repo cards offset vertically`",
+        "terminal_overlay": "`near-black with orange italic display text`"
+      }
+    },
+    {
+      "filename": "IMG_1726.png",
+      "author": "@theromanknox",
+      "carousel_topic": "Claude Design Flaws / 3 Skills",
+      "slide_position": "6/6",
+      "funnel_role": "cta",
+      "format": "Instagram 4:5",
+      "visual_description": "Шаблон. По центру — orange Claude squircle сверху. Большая тёмная Code-карточка с гигантской italic-типографикой 'Claim Your Free Design Guide' (3 строки в оранжево-кремовом gradient). Ниже — коричневая карточка 'Free Design' с инструкцией 'Type DESIGN below and I'll send you the step-by-step guide instantly.'",
+      "text_content": {
+        "counter": "6/6",
+        "icon": "orange Claude squircle",
+        "card_title": "Free Design",
+        "card_body": "Type DESIGN below and I'll send you the step-by-step guide instantly.",
+        "page": "5/5"
+      },
+      "structure": "header / centered Claude squircle / large Code-card с заголовком-call-out / brown CTA-карточка с magic-word DESIGN",
+      "design_tokens": {
+        "code_card_bg": "`near-black with rounded top label 'Code'`",
+        "headline_gradient": "`orange to cream italic display`",
+        "cta_card_bg": "`dark chocolate brown`"
+      }
+    },
+    {
+      "filename": "IMG_1727.png",
+      "author": "@theromanknox",
+      "carousel_topic": "Billion Dollar AI Team — 8 Business Legends, 1 Claude Skill",
+      "slide_position": "1/10",
+      "funnel_role": "cover",
+      "format": "Instagram 4:5",
+      "visual_description": "Тёмно-коричневый radial-gradient фон. Сверху — оранжево-красная скошенная плашка 'Billion Dollar AI Team' + чёрный пилл 'B Business Legends, 1 Claude Skill'. Ниже — сетка 8 портретов экспертов 3×3 (с центром-Claude-логотипом): Grant Cardone, Alex Hormozi, Gary Vee / Russell Brunson, [centre Claude asterisk], Dan Kennedy / Jordan Belfort, Seth Godin, Tony Robbins. Каждый в коричневой пиктограммной рамке с именем сверху и экспертизой. Между фото и центром — изогнутые персиковые стрелки. Внизу — оранжевая плашка 'Coment Team' и лейблы Instagram + Free Guides.",
+      "text_content": {
+        "counter": "1/10",
+        "headline": "Billion Dollar AI Team",
+        "tagline_pill": "8 Business Legends, 1 Claude Skill",
+        "cta_pill": "Coment Team"
+      },
+      "structure": "header / orange title bar + tagline pill / 3×3 grid with central Claude / connecting arrows / CTA pill",
+      "design_tokens": {
+        "background": "`deep brown radial`",
+        "title_bar": "`orange-red gradient tilted bar`",
+        "frame_style": "`brown rounded squircle with name label`",
+        "central_logo": "`3D Claude asterisk on dark cylinder`",
+        "arrows": "`warm peach curved`"
+      }
+    },
+    {
+      "filename": "IMG_1728.png",
+      "author": "@drcintas",
+      "carousel_topic": "Claude can make videos autonomously (Higgsfield)",
+      "slide_position": "1/7",
+      "funnel_role": "cover",
+      "format": "Instagram 4:5",
+      "visual_description": "Полноформатный кадр-крик: extreme close-up лица блондинки, рот распахнут, в нём — крошки от шоколадного печенья, размытые руки держат хрустящий снек. Низ — белая зона с двумя squircle-иконками (лаймовая Higgsfield + оранжевый Claude). Жирный чёрный заголовок 'Claude can now Make Videos' ('Make' и 'Videos' разной коричневой/оранжевой палитрой) + italic 'autonomously' с чёрной кривой стрелкой к иконке звука.",
+      "text_content": {
+        "counter": "1/7",
+        "headline_1": "Claude can now",
+        "headline_2": "Make Videos",
+        "subline": "autonomously",
+        "creator_handle": "drcintas"
+      },
+      "structure": "shock-photo (extreme close-up рот + еда) / 2 squircle-иконки / двухтоновый заголовок / italic подзаголовок / curved arrow",
+      "design_tokens": {
+        "background": "`viral shock close-up photo`",
+        "headline_palette": "`black + warm orange duotone`",
+        "italic_subline": "`handwritten-style italic`"
+      }
+    },
+    {
+      "filename": "IMG_1729.png",
+      "author": "@drcintas",
+      "carousel_topic": "Claude can make videos",
+      "slide_position": "2/7",
+      "funnel_role": "step",
+      "format": "Instagram 4:5",
+      "visual_description": "Светло-серый фон в горошек. Большая '1.' в коричневом. Заголовок 'CLAUDE .md'. Описание про роль файла как 'flow director'. Подзаголовок 'Location' + плашка с путём 'my-project/CLAUDE.md'. Чёрный список из 4 буллетов (Start URL / Required Model / Order / Video Format). Сбоку — squircle-иконка Higgsfield + Claude. Изогнутая чёрная стрелка вниз к мокапу: тёмное окно с папкой 'Claude' и MD-документом 'CLAUDE.md'. Низ — лейбл 'drcintas' + 'Page 2/7' оранжевая пилл.",
+      "text_content": {
+        "counter": "2/7",
+        "step_number": "1.",
+        "headline": "CLAUDE .md",
+        "description": "Acts as the flow director. Claude reads it automatically when starting in the project directory.",
+        "subheader": "Location",
+        "path": "my-project/CLAUDE.md",
+        "mockup": "Claude folder + CLAUDE.md file",
+        "page_pill": "Page 2/7"
+      },
+      "structure": "header / большая '1.' / заголовок файла / описание / Location + path / 4 буллета / curved arrow / file-system mockup",
+      "design_tokens": {
+        "background": "`off-white with subtle dot pattern`",
+        "number_color": "`warm brown`",
+        "path_pill": "`thin brown outline rounded`",
+        "icons_top_right": "`Higgsfield + Claude squircles + sparkle`",
+        "page_pill_bg": "`orange`"
+      }
+    },
+    {
+      "filename": "IMG_1730.png",
+      "author": "@drcintas",
+      "carousel_topic": "Claude can make videos",
+      "slide_position": "3/7",
+      "funnel_role": "step",
+      "format": "Instagram 4:5",
+      "visual_description": "Тот же шаблон. '2.' + 'MCP Playwright'. Описание про browser automation tools. Подзаголовок 'SETTINGS.JSON' + плашка с JSON-конфигом ('mcpServers': playwright + npx + args). Подзаголовок 'Avilable tools' + список инструментов. Внизу — статус '~/.claude/settings.json Active in session'.",
+      "text_content": {
+        "counter": "3/7",
+        "step_number": "2.",
+        "headline": "MCP Playwright",
+        "description": "Exposes browser automation tools directly to Claude. No manual intervention.",
+        "subheader_1": "SETTINGS.JSON",
+        "json_content": "{ \"mcpServers\": { \"playwright\": { \"command\": \"npx\", \"args\": [\"@playwright/mcp@latest\"] }}}",
+        "subheader_2": "Avilable tools",
+        "tools_list": "browser_navigate, browser_click, browser_type, browser_file_upload, browser_snapshot",
+        "status": "~/.claude/settings.json Active in session",
+        "page_pill": "Page 3/7"
+      },
+      "structure": "тот же шаблон, что 1729",
+      "design_tokens": {
+        "json_pill": "`тонкий outline rounded card`",
+        "note": "`опечатка 'Avilable' сохранена для аутентичности оригинала`"
+      }
+    },
+    {
+      "filename": "IMG_1731.png",
+      "author": "@drcintas",
+      "carousel_topic": "Claude can make videos",
+      "slide_position": "4/7",
+      "funnel_role": "step",
+      "format": "Instagram 4:5",
+      "visual_description": "Тот же шаблон. '3.' + 'Skill UGC → Claude'. Описание про markdown-файлы как specialized system prompts. 'LOCATION' + путь '.claude/skills/seedance-ugc-scriptwriter/SKILL.md'. 4 буллета (Language / Format / Style / Arc). 'Folder sturcture' + горизонтальный мокап файловой системы: 3 синие папки (agents, assets, references) + 1 документ SKILL.md.",
+      "text_content": {
+        "counter": "4/7",
+        "step_number": "3.",
+        "headline": "Skill UGC → Claude",
+        "description": "Markdown files that Claude loads when invoking /seedance-ugc-scriptwriter. Specialized system prompts.",
+        "subheader_1": "LOCATION",
+        "path": ".claude/skills/seedance-ugc-scriptwriter/SKILL.md",
+        "subheader_2": "Folder sturcture",
+        "page_pill": "Page 4/7"
+      },
+      "structure": "тот же шаблон, финал-step",
+      "design_tokens": {
+        "folder_mockup": "`dark rounded card with orange outline, 3 blue folder icons + 1 document icon`",
+        "note": "`опечатка 'sturcture' сохранена`"
+      }
+    },
+    {
+      "filename": "IMG_1739.png",
+      "author": "@julieta_publicista",
+      "carousel_topic": "Как я делаю карусели через Claude за 10 минут",
+      "slide_position": "1/6",
+      "funnel_role": "cover",
+      "format": "Instagram 4:5 (внутри тёмная рамка типа film-strip)",
+      "visual_description": "Чёрные горизонтальные полосы сверху/снизу как у фильма. Внутри — extreme close-up лицо темнокожей пожилой женщины с морщинами вокруг глаза, рот частично открыт, видны зубы (язык). Тёплый коричневый тон фото. Поверх — белый минималистичный заголовок засечками капсом 'КАК Я ДЕЛАЮ КАРУСЕЛИ ЧЕРЕЗ CLAUDE'. Подзаголовок '[ ЗА 10 МИНУТ ]' в брекетах. Тонкая разделительная линия. Italic подпись 'промт для каруселей — в конце'. Оранжевая нарисованная Claude-астериск-иконка вручную (sketchy). По углам — '@JULIETA_PUBLICISTA' / 'CONTENT' / '2026' / 'ЛИСТАЙ КАРУСЕЛЬ'.",
+      "text_content": {
+        "counter": "1/6",
+        "header_top_left": "@JULIETA_PUBLICISTA",
+        "header_top_right": "CONTENT",
+        "headline": "КАК Я ДЕЛАЮ КАРУСЕЛИ ЧЕРЕЗ CLAUDE",
+        "subhead_brackets": "[ ЗА 10 МИНУТ ]",
+        "italic_note": "промт для каруселей — в конце",
+        "footer_left": "2026",
+        "footer_right": "ЛИСТАЙ КАРУСЕЛЬ"
+      },
+      "structure": "film-strip frame / extreme close-up face photo / minimal serif headline overlay / bracketed subhead / sketchy Claude icon / corner labels",
+      "design_tokens": {
+        "framing": "`black film bars top/bottom`",
+        "headline_font": "`thin serif uppercase (Cormorant/Playfair Light)`",
+        "italic_note_font": "`casual italic serif`",
+        "claude_icon": "`hand-drawn orange sketch`",
+        "vibe": "`редакторский / fashion-magazine / Vogue-aesthetic`"
+      }
+    },
+    {
+      "filename": "IMG_1740.png",
+      "author": "@julieta_publicista",
+      "carousel_topic": "Карусели через Claude",
+      "slide_position": "2/6",
+      "funnel_role": "step",
+      "format": "Instagram 4:5",
+      "visual_description": "Серо-молочный фон со скруглёнными чёрными полосами. Сверху корнерные лейблы '@JULIETA_PUBLICISTA' / 'CONTENT' / '02'. Слева — мелкий ШАГ ПЕРВЫЙ. Курсивный serif-заголовок 'открой claude и создай проект' (в два цвета — чёрный + серый italic). Рядом — оранжевый hand-drawn Claude-астериск. Описание серым: про создание проекта 'карусели для instagram'. Ниже — белая карточка с тёмным мокапом Claude-сайдбара (New chat / Search / Chats / Projects (подчёркнуто красным) / Code / Customize / Design / More / Recents).",
+      "text_content": {
+        "counter": "2/6",
+        "header": "@JULIETA_PUBLICISTA / CONTENT / 02",
+        "step_label": "ШАГ ПЕРВЫЙ:",
+        "headline_part_1": "открой claude",
+        "headline_part_2": "и создай проект",
+        "body": "назови его под свою задачу – например, «карусели для instagram». теперь все карусели делаешь одной кнопкой прямо здесь – не нужно каждый раз создавать новый чат",
+        "mockup_content": "Claude sidebar: New chat, Search, Chats, Projects (red underline), Code, Customize, Design, More, Recents",
+        "page_arrow": "( → )"
+      },
+      "structure": "film-strip / шаг + курсивный заголовок / hand-drawn Claude icon / описание / тёмный mockup Claude UI",
+      "design_tokens": {
+        "headline_font": "`Cormorant/Playfair Italic — split black + gray`",
+        "claude_icon": "`hand-drawn orange sketch`",
+        "mockup_bg": "`near-black UI screenshot`",
+        "underline_red_stroke": "`rough red marker under 'Projects'`"
+      }
+    },
+    {
+      "filename": "IMG_1741.png",
+      "author": "@julieta_publicista",
+      "carousel_topic": "Карусели через Claude",
+      "slide_position": "3/6",
+      "funnel_role": "step",
+      "format": "Instagram 4:5",
+      "visual_description": "Тот же шаблон. Сверху — тёмный мокап-окно с длинным system-prompt (английский, инструкции по генерации HTML-каруселей со STRICT OUTPUT RULES). Ниже — 'ШАГ ВТОРОЙ:' и курсивный 2-строчный заголовок 'вставь специальный промт в настройки'. Серое описание: 'один раз прописываешь инструкции: твой стиль, структуру слайдов, tone of voice. и Claude уже знает как с тобой работать – больше повторять не надо'.",
+      "text_content": {
+        "counter": "3/6",
+        "header": "@JULIETA_PUBLICISTA / CONTENT / 03",
+        "step_label": "ШАГ ВТОРОЙ:",
+        "headline_part_1": "вставь специальный",
+        "headline_part_2": "промт в настройки",
+        "body": "один раз прописываешь инструкции: твой стиль, структуру слайдов, tone of voice. и Claude уже знает как с тобой работать – больше повторять не надо",
+        "mockup_prompt": "You generate Instagram carousels as HTML files. Your ONLY job: fill {{SLOTS}} in the template from Project Knowledge and output complete HTML. Nothing else. ## STRICT OUTPUT RULES - Output ONLY raw HTML from <!DOCTYPE html> to </html> -"
+      },
+      "structure": "header / тёмный mockup с system-prompt (вверху) / 'ШАГ ВТОРОЙ:' + курсивный заголовок / описание",
+      "design_tokens": {
+        "prompt_mockup_bg": "`near-black, rounded large`",
+        "consistent_template": "`Julieta editorial`"
+      }
+    },
+    {
+      "filename": "IMG_1742.png",
+      "author": "@julieta_publicista",
+      "carousel_topic": "Карусели через Claude",
+      "slide_position": "4/6",
+      "funnel_role": "step",
+      "format": "Instagram 4:5",
+      "visual_description": "Тот же шаблон. Сверху тёмный mockup с пользовательским сообщением (Тема: как набрать первую 1000 подписчиков / Аудитория: эксперты и предприниматели / Хэндл: @julieta_publicista) и индикатором 'Working / Read the frontend design skill' с orange Claude-iconкой. 'ШАГ ТРЕТИЙ:' + курсивный заголовок 'напиши тему – получи карусель'. Параметры с bold-метками (Тема / Аудитория / Хэндл). Описание про готовую карусель.",
+      "text_content": {
+        "counter": "4/6",
+        "header": "@JULIETA_PUBLICISTA / CONTENT / 04",
+        "step_label": "ШАГ ТРЕТИЙ:",
+        "headline_part_1": "напиши тему –",
+        "headline_part_2": "получи карусель",
+        "mockup_user_message": "Тема: как набрать первую 1000 подписчиков",
+        "mockup_status": "✶ Working",
+        "body": "и получаешь готовую карусель – текст по слайдам и визуал. или просто скинь сценарий своего reels – Claude разложит его по слайдам и подберет структуру под твою аудиторию",
+        "page_arrow": "( → )"
+      },
+      "structure": "header / тёмный mockup chat (вверху) / ШАГ + курсивный заголовок / список параметров / описание",
+      "design_tokens": {
+        "mockup_working_indicator": "`small orange Claude sparkle + working status`",
+        "params_style": "`bold black label : gray value`"
+      }
+    },
+    {
+      "filename": "IMG_1743.png",
+      "author": "@julieta_publicista",
+      "carousel_topic": "Карусели через Claude",
+      "slide_position": "5/6",
+      "funnel_role": "proof",
+      "format": "Instagram 4:5",
+      "visual_description": "Тот же шаблон. 'ШАГ ЧЕТВЁРТЫЙ:' + курсивный 'получай слайды и редактируй прямо в чате'. Описание про правки в чате (поменяй заголовок / сделай текст короче / убери слайд). Заголовок раздела 'ПРИМЕРЫ ГОТОВЫХ КАРУСЕЛЕЙ →'. Сетка 2×2 из четырёх миниатюр обложек других каруселей автора: матрёшки 'какие ошибки ты делаешь в промптах в chatGPT' / пожилая женщина в желтом кардигане 'беги от таких клиентов' / молодая женщина в кепке 'Как я делаю карусели через Claude за 10 минут' / женщина в AR-очках 'ИНСТАГРАМ УЖЕ ЗНАЕТ ЧТО ЗАЛЕТИТ'.",
+      "text_content": {
+        "counter": "5/6",
+        "header": "@JULIETA_PUBLICISTA / CONTENT / 05",
+        "step_label": "ШАГ ЧЕТВЕРТЫЙ:",
+        "headline_part_1": "получай слайды и",
+        "headline_part_2": "редактируй прямо в чате",
+        "body": "просто пишешь что не нравится – и Claude исправит. например: «поменяй заголовок», «сделай текст короче», «убери слайд». Claude правит мгновенно. никаких Canva, никаких правок вручную",
+        "examples_label": "ПРИМЕРЫ ГОТОВЫХ КАРУСЕЛЕЙ →",
+        "page_arrow": "( → )"
+      },
+      "structure": "header / ШАГ + курсивный заголовок / описание / 'ПРИМЕРЫ →' / 2×2 grid превью каруселей",
+      "design_tokens": {
+        "preview_grid": "`4 dashed-border cells with full-bleed mini-cover images`",
+        "consistent_template": "`Julieta editorial`"
+      }
+    }
+  ]
+}
