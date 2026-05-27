@@ -1,7 +1,8 @@
-// Generates a validated Carousel JSON via Claude (opus — creative), grounded in
-// the rubric's prompt template and few-shot examples.
+// Generates a validated Carousel JSON via Claude (opus — creative). System
+// prompt = Brandbook-only training context (three files in data/brandbook/).
+// Everything else (references library, prompts/*, rubric.examplesFile) is
+// explicitly excluded per editor decision.
 
-import { readFile } from 'node:fs/promises';
 import { callClaude } from './claude.js';
 import { carouselSchema, SLIDE_CONTRACT, type Carousel } from '../schemas/carousel.js';
 import { loadPrompt } from '../lib/prompt.js';
@@ -24,19 +25,9 @@ export interface GenerateCarouselOptions {
 }
 
 export async function generateCarousel(opts: GenerateCarouselOptions): Promise<Carousel> {
-  // System prompt = training context (all prompts/*.md + reference descriptions)
-  // + few-shot examples from rubric. Both go into the cached system block so
-  // repeated runs hit cache_read pricing instead of full input billing.
-  const trainingBlock = loadTrainingContext({ rubricSlug: opts.rubricSlug, format: 'carousel' });
-  let fewShot: string | undefined;
-  if (opts.rubric.examplesFile) {
-    try {
-      fewShot = await readFile(fromAppRoot(opts.rubric.examplesFile), 'utf8');
-    } catch {
-      fewShot = undefined;
-    }
-  }
-  const system = [trainingBlock, fewShot].filter(Boolean).join('\n\n---\n\n') || undefined;
+  // System prompt = Brandbook-only training context. No rubric.examplesFile,
+  // no references catalog, no prompts/* — those are excluded by design.
+  const system = loadTrainingContext({ rubricSlug: opts.rubricSlug, format: 'carousel' }) || undefined;
 
   // Interpolate the template, then append the exact slide-field contract so the
   // model emits schema-valid JSON.

@@ -147,18 +147,9 @@ export async function generateReelsScript(opts: GenerateReelsOptions): Promise<R
 
   const prompt = [template, '', rag, libraryBlock, '', '## Контракт вывода', REELS_CONTRACT].join('\n');
 
-  // Training context (filtered for this rubric + reels format) + few-shot
-  // examples go into the cached system prompt — same pattern as carousel.
-  const trainingBlock = loadTrainingContext({ rubricSlug: opts.rubricSlug, format: 'reels' });
-  let fewShot: string | undefined;
-  if (opts.rubric.examplesFile) {
-    try {
-      fewShot = await readFile(fromAppRoot(opts.rubric.examplesFile), 'utf8');
-    } catch {
-      fewShot = undefined;
-    }
-  }
-  const system = [trainingBlock, fewShot].filter(Boolean).join('\n\n---\n\n') || undefined;
+  // System prompt = Brandbook-only training context. No rubric.examplesFile,
+  // no references catalog, no prompts/* — those are excluded by design.
+  const system = loadTrainingContext({ rubricSlug: opts.rubricSlug, format: 'reels' }) || undefined;
 
   return callClaude<ReelsScript>({
     prompt,

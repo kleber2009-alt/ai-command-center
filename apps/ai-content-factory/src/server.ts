@@ -39,6 +39,7 @@ import { describeReference } from './generators/reference-describer.js';
 import { planWindow, readPlan, replacePlan, type ContentPlanItem } from './lib/content-plan.js';
 import { runWeeklyInsights, applyProposalAsPlan } from './pipelines/weekly-insights.js';
 import { triggers as schedulerTriggers } from './scheduler.js';
+import { resetTrainingContextCache } from './lib/training-context.js';
 
 const __dirname = dirname(fileURLToPath(import.meta.url));
 const PUBLIC_DIR = resolve(__dirname, '..', 'public');
@@ -957,6 +958,9 @@ app.put('/api/brandbook/:key', (req, res) => {
   }
   mkdirSync(BRANDBOOK_ROOT, { recursive: true });
   writeFileSync(join(BRANDBOOK_ROOT, BRANDBOOK_FILES[key]), text, 'utf8');
+  // Brandbook is the SOLE training source — drop cache so the next generation
+  // picks up the new content immediately.
+  resetTrainingContextCache();
   res.json({ ok: true, ...readBrandbookEntry(key) });
 });
 
