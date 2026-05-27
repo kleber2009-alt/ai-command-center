@@ -138,6 +138,16 @@ CREATE TABLE IF NOT EXISTS tg_chat_context (
   created_at           TEXT NOT NULL DEFAULT (strftime('%Y-%m-%dT%H:%M:%fZ', 'now')),
   updated_at           TEXT NOT NULL DEFAULT (strftime('%Y-%m-%dT%H:%M:%fZ', 'now'))
 );
+
+-- Process-wide settings (key/value). Holds the global kill-switch
+-- 'auto_reply_enabled' that gates the responder across all chats —
+-- separate from per-chat tg_chats.auto_reply so the dashboard can
+-- pause the whole bot without rewriting every chat row.
+CREATE TABLE IF NOT EXISTS tg_settings (
+  key         TEXT PRIMARY KEY,
+  value       TEXT NOT NULL,
+  updated_at  TEXT NOT NULL DEFAULT (strftime('%Y-%m-%dT%H:%M:%fZ', 'now'))
+);
 `;
 
 // Idempotent migrations for older SQLite files where tg_chat_context
