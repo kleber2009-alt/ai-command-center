@@ -139,7 +139,7 @@ export async function callClaude<T>(opts: CallClaudeOptions): Promise<T | string
   }
 
   const model = MODEL_IDS[opts.model ?? 'haiku'];
-  const maxAttempts = opts.maxAttempts ?? 3;
+  const maxAttempts = opts.maxAttempts ?? 5;
   const userContent = opts.promptFile
     ? await loadPrompt(opts.promptFile, opts.variables)
     : interpolateInline(opts.prompt!, opts.variables);
