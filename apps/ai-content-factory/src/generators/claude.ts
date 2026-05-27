@@ -24,7 +24,10 @@ const PRICING: Record<string, { input: number; output: number; cacheWrite: numbe
   'claude-haiku-4-5-20251001': { input: 1, output: 5, cacheWrite: 1.25, cacheRead: 0.1 },
 };
 
-const RETRYABLE_STATUS = new Set([408, 409, 429, 500, 502, 503, 504]);
+// 408 timeout, 409 conflict, 425 too-early, 429 rate-limit, 500/502/503/504
+// generic 5xx, 529 Anthropic "overloaded" (часто бывает в пиках, всегда
+// retriable per Anthropic docs).
+const RETRYABLE_STATUS = new Set([408, 409, 425, 429, 500, 502, 503, 504, 529]);
 
 export interface CallClaudeOptions {
   /** Path to a prompt template (.md). Mutually exclusive with `prompt`. */
