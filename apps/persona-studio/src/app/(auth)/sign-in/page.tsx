@@ -21,47 +21,135 @@ export default function SignInPage({ searchParams }: { searchParams: Promise<{ e
   const emailOn = hasEmail();
 
   return (
-    <main className="min-h-screen flex items-center justify-center px-6">
-      <div className="w-full max-w-md">
-        <div className="flex items-baseline gap-3 mb-10">
-          <span className="inline-block w-[7px] h-[7px] rounded-full bg-lime translate-y-[-1px]" />
-          <span className="mono text-[12px] tracking-widest font-bold uppercase">Persona Studio</span>
-          <span className="mono text-[11px] tracking-[0.18em] text-text-dim">v0.1 · beta</span>
-        </div>
-
-        <p className="sec-num mb-3">/ 00 · access</p>
-        <h1 className="font-serif text-[44px] leading-[1.05] mb-3">Войди в студию.</h1>
-        <p className="font-serif text-[16px] text-text-dim mb-8 max-w-[40ch]">
-          Один клик через Google — без паролей. Бонус 10 токенов сразу после первого входа.
-        </p>
-
-        {googleOn && <GoogleButton />}
-
-        {googleOn && emailOn && (
-          <div className="flex items-center gap-3 my-6">
-            <span className="flex-1 border-b border-border" />
-            <span className="mono text-[10px] tracking-widest uppercase text-text-mute">or</span>
-            <span className="flex-1 border-b border-border" />
+    <main className="min-h-[100svh] grid lg:grid-cols-[minmax(0,1fr)_minmax(0,1.1fr)]">
+      {/* LEFT: sign-in form */}
+      <section className="flex items-center justify-center px-5 sm:px-8 py-12 lg:py-16">
+        <div className="w-full max-w-[440px]">
+          <div className="flex items-baseline gap-3 mb-10">
+            <span className="inline-block w-[7px] h-[7px] rounded-full bg-lime translate-y-[-1px]" />
+            <span className="mono text-[12px] tracking-widest font-bold uppercase">Persona Studio</span>
+            <span className="mono text-[11px] tracking-[0.18em] text-text-dim hidden sm:inline">v0.1 · beta</span>
           </div>
-        )}
 
-        {emailOn && <EmailForm error={searchParams} />}
+          <p className="sec-num mb-3">/ 00 · access</p>
+          <h1 className="font-serif text-[40px] sm:text-[44px] leading-[1.05] mb-3">Войди в студию.</h1>
+          <p className="font-serif text-[15px] sm:text-[16px] text-text-dim mb-8 max-w-[40ch]">
+            Один клик через Google — без паролей. Бонус 10 токенов сразу после первого входа.
+          </p>
 
-        {!googleOn && !emailOn && (
-          <div className="border border-border-2 bg-surface p-5">
-            <p className="mono text-[10px] tracking-widest uppercase text-pink mb-2">/ no-providers</p>
-            <p className="font-serif text-[14px] text-text-dim">
-              Sign-in temporarily unavailable. Свяжись с админом в Telegram —{' '}
-              <a href="https://t.me/ilia_pali0" className="text-cyan hover:underline">@ilia_pali0</a>.
+          {googleOn && <GoogleButton />}
+
+          {googleOn && emailOn && (
+            <div className="flex items-center gap-3 my-6">
+              <span className="flex-1 border-b border-border" />
+              <span className="mono text-[10px] tracking-widest uppercase text-text-mute">or</span>
+              <span className="flex-1 border-b border-border" />
+            </div>
+          )}
+
+          {emailOn && <EmailForm error={searchParams} />}
+
+          {!googleOn && !emailOn && (
+            <div className="border border-border-2 bg-surface p-5">
+              <p className="mono text-[10px] tracking-widest uppercase text-pink mb-2">/ no-providers</p>
+              <p className="font-serif text-[14px] text-text-dim">
+                Sign-in temporarily unavailable. Свяжись с админом в Telegram —{' '}
+                <a href="https://t.me/ilia_pali0" className="text-cyan hover:underline">@ilia_pali0</a>.
+              </p>
+            </div>
+          )}
+
+          <p className="mono text-[10px] tracking-widest uppercase text-text-mute mt-10 leading-[1.6]">
+            Загружая фото, ты соглашаешься с обработкой изображения лица.
+          </p>
+        </div>
+      </section>
+
+      {/* RIGHT: showcase — hidden on small viewports to keep first-touch fast */}
+      <aside
+        aria-label="Примеры обложек, сгенерированных в Persona Studio"
+        className="hidden lg:flex relative flex-col justify-center border-l border-border bg-[#050505] overflow-hidden"
+      >
+        {/* subtle gradient haze */}
+        <div className="absolute inset-0 pointer-events-none opacity-[0.35] bg-[radial-gradient(60%_50%_at_70%_30%,#1a2a05_0%,transparent_70%),radial-gradient(50%_45%_at_30%_75%,#2a0510_0%,transparent_70%)]" />
+
+        <div className="relative px-10 xl:px-16 py-12">
+          <div className="flex items-baseline justify-between mb-8">
+            <p className="sec-num">/ examples</p>
+            <p className="mono text-[10px] tracking-widest uppercase text-text-mute">обложки · карусели</p>
+          </div>
+
+          <div className="grid grid-cols-2 gap-3 xl:gap-4 max-w-[640px]">
+            {SHOWCASE.map((c, i) => (
+              <CoverPreview key={i} {...c} />
+            ))}
+          </div>
+
+          <div className="mt-10 max-w-[440px]">
+            <p className="font-serif italic text-[14px] text-text-dim leading-[1.6]">
+              Одно фото — десять аватаров, виральные обложки и говорящее видео. Всё в одной студии, без переключения между приложениями.
             </p>
           </div>
-        )}
-
-        <p className="mono text-[10px] tracking-widest uppercase text-text-mute mt-10">
-          Загружая фото, ты соглашаешься с обработкой изображения лица.
-        </p>
-      </div>
+        </div>
+      </aside>
     </main>
+  );
+}
+
+type Cover = {
+  kicker: string;
+  title: string;
+  subtitle: string;
+  cta: string;
+  tone: 'lime' | 'pink' | 'cyan' | 'warm';
+};
+
+const SHOWCASE: Cover[] = [
+  { kicker: '01 · burnout', title: 'ВЫГОРАНИЕ — ЭТО НЕ ЛЕНЬ', subtitle: 'симптомы, которые ты пропустил', cta: 'читать', tone: 'pink' },
+  { kicker: '02 · hooks', title: 'ПОЧЕМУ ТВОЙ ХУК СКУЧНЫЙ', subtitle: 'пять фиксов от автора с 2M', cta: 'разбор', tone: 'lime' },
+  { kicker: '03 · story', title: 'Я ПРОВАЛИЛСЯ 47 РАЗ', subtitle: 'и сделал один виральный', cta: 'история', tone: 'cyan' },
+  { kicker: '04 · rhythm', title: 'НЕ ПОСТЬ. ВЫПУСКАЙ.', subtitle: 'новый ритм для Instagram', cta: 'метод', tone: 'warm' },
+  { kicker: '05 · craft', title: 'ОДНО ФОТО — ДЕСЯТЬ ЛИЦ', subtitle: 'за две минуты, без фотографа', cta: 'попробуй', tone: 'lime' },
+  { kicker: '06 · cold start', title: 'КОНТЕНТ БЕЗ ВДОХНОВЕНИЯ', subtitle: 'парсер найдёт, что выстрелит', cta: 'парсер', tone: 'pink' },
+];
+
+function CoverPreview({ kicker, title, subtitle, cta, tone }: Cover) {
+  const toneRing: Record<Cover['tone'], string> = {
+    lime: 'from-[#1a2a05] via-[#0a0a0a] to-[#050505]',
+    pink: 'from-[#2a0510] via-[#0a0a0a] to-[#050505]',
+    cyan: 'from-[#051a1a] via-[#0a0a0a] to-[#050505]',
+    warm: 'from-[#2a1505] via-[#0a0a0a] to-[#050505]',
+  };
+  const toneText: Record<Cover['tone'], string> = {
+    lime: 'text-lime',
+    pink: 'text-pink',
+    cyan: 'text-cyan',
+    warm: 'text-warm',
+  };
+  return (
+    <div
+      className={`relative aspect-[4/5] border border-border bg-gradient-to-br ${toneRing[tone]} p-3 xl:p-4 flex flex-col justify-between overflow-hidden`}
+    >
+      <div className="flex items-start justify-between">
+        <p className={`mono text-[8px] tracking-widest uppercase ${toneText[tone]}`}>{kicker}</p>
+        <span className="mono text-[8px] tracking-widest uppercase text-text-mute">4:5</span>
+      </div>
+
+      <div>
+        <p
+          className="font-serif font-bold uppercase leading-[1.0] text-[13px] xl:text-[15px] text-text"
+          style={{ letterSpacing: '-0.01em' }}
+        >
+          {title}
+        </p>
+        <p className={`font-serif italic text-[10px] xl:text-[11px] mt-1 ${toneText[tone]}`}>{subtitle}</p>
+      </div>
+
+      <div className="flex items-center justify-between">
+        <span className={`mono text-[8px] tracking-widest uppercase ${toneText[tone]}`}>→ {cta}</span>
+        <span className="mono text-[7px] tracking-widest uppercase text-text-faint">persona</span>
+      </div>
+    </div>
   );
 }
 
@@ -103,7 +191,7 @@ async function EmailForm({ error }: { error: Promise<{ error?: string; sent?: st
           autoComplete="email"
         />
       </label>
-      <button type="submit" className="btn-ghost justify-center">
+      <button type="submit" className="btn-ghost justify-center w-full">
         Прислать magic-link →
       </button>
       {params.sent && (
