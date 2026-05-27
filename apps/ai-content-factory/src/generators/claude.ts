@@ -216,7 +216,11 @@ export async function callClaude<T>(opts: CallClaudeOptions): Promise<T | string
         error: err instanceof Error ? err.message : String(err),
       });
       if (!willRetry) break;
-      await sleep(2 ** (attempt - 1) * 1000); // 1s, 2s, 4s
+      // 529 (overloaded) держится дольше — стартуем с 4 с, иначе с 1 с.
+      // Exponential: 1/2/4/8/16 либо 4/8/16/32/64 для 529.
+      const is529 = err instanceof Anthropic.APIError && err.status === 529;
+      const baseMs = is529 ? 4000 : 1000;
+      await sleep(2 ** (attempt - 1) * baseMs);
     }
   }
 
