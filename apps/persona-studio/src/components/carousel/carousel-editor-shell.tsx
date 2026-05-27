@@ -39,6 +39,7 @@ export function CarouselEditorShell({ initial, avatars }: Props) {
   const [coverAvatarId, setCoverAvatarId] = useState<string | null>(
     initial.coverAvatarId ?? avatars[0]?.id ?? null,
   );
+  const [styleId, setStyleId] = useState<string>(initial.style || 'persona-minimal');
   const [activeIndex, setActiveIndex] = useState(0);
   const [saveStatus, setSaveStatus] = useState<SaveStatus>('idle');
   const [savedAt, setSavedAt] = useState<string | null>(null);
@@ -55,12 +56,16 @@ export function CarouselEditorShell({ initial, avatars }: Props) {
   // refs для свежих значений в save (без зависимости в эффекте)
   const slidesRef = useRef(slides);
   const coverRef = useRef(coverAvatarId);
+  const styleRef = useRef(styleId);
   useEffect(() => {
     slidesRef.current = slides;
   }, [slides]);
   useEffect(() => {
     coverRef.current = coverAvatarId;
   }, [coverAvatarId]);
+  useEffect(() => {
+    styleRef.current = styleId;
+  }, [styleId]);
 
   const persist = useCallback(async () => {
     setSaveStatus('saving');
@@ -73,6 +78,7 @@ export function CarouselEditorShell({ initial, avatars }: Props) {
           ...(s.accent?.trim() ? { accent: s.accent.trim() } : {}),
         })),
         coverAvatarId: coverRef.current,
+        style: styleRef.current,
       };
       const res = await fetch(`/api/carousels/draft/${initial.id}`, {
         method: 'PATCH',
@@ -177,6 +183,11 @@ export function CarouselEditorShell({ initial, avatars }: Props) {
     scheduleSave();
   };
 
+  const changeStyle = (id: string) => {
+    setStyleId(id);
+    scheduleSave();
+  };
+
   // Stepper + валидация для финального шага
   const allFilled = slides.every((s) => !slideHasError(s)) && Boolean(coverAvatarId);
   const renderStepStatus =
@@ -248,7 +259,9 @@ export function CarouselEditorShell({ initial, avatars }: Props) {
     <div className="grid gap-3 min-h-[calc(100dvh-140px)]">
       <GlobalStepper steps={steps} />
 
-      <div className="grid grid-cols-1 lg:grid-cols-[340px_1fr] gap-3 lg:h-[calc(100dvh-220px)] lg:min-h-[560px]">
+      <StyleSelector value={styleId} onChange={changeStyle} />
+
+      <div className="grid grid-cols-1 lg:grid-cols-[340px_1fr] gap-3 lg:h-[calc(100dvh-280px)] lg:min-h-[520px]">
         <SlidesRail
           slides={slides}
           activeIndex={activeIndex}
