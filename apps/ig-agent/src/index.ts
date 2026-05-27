@@ -120,6 +120,17 @@ async function main(): Promise<void> {
 
   const shutdown = async (sig: string) => {
     logger.info('shutdown signal', { sig });
+    // Owner-facing alert: any unexpected SIGTERM means the IG inbox is going
+    // dark — SendPulse webhooks will start failing within seconds. Best-effort,
+    // short timeout: we can't block shutdown if Telegram is slow.
+    try {
+      await Promise.race([
+        notifier.send(`🚨 ig-agent останавливается (signal: ${sig}). Если не я — кто-то снял контейнер.`),
+        new Promise((resolve) => setTimeout(resolve, 2500)),
+      ]);
+    } catch (err) {
+      logger.warn('shutdown notify failed', { err: err instanceof Error ? err.message : String(err) });
+    }
     try {
       digestScheduler.stop();
     } catch (err) {
