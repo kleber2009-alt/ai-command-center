@@ -594,6 +594,15 @@ export function startAdminServer(deps: AdminDeps): AdminHandle {
       return next();
     }
 
+    // Internal proxy bypass. The aisales dashboard origin reverse-proxies
+    // /ig-api/* here with an X-Internal-Auth header set by Caddy. The
+    // header can't be forged by a browser (Caddy strips client-supplied
+    // copies via header_up), and the secret never leaves the Hetzner box.
+    if (config.internalApiToken) {
+      const hdr = c.req.header('x-internal-auth') ?? '';
+      if (hdr && safeEqual(hdr, config.internalApiToken)) return next();
+    }
+
     // Session cookie path.
     if (signer) {
       const cookies = parseCookies(c.req.header('cookie'));

@@ -4,6 +4,7 @@ import { getCurrentUser } from '@/lib/auth';
 import { prisma } from '@/lib/prisma';
 import { VideoForm } from '@/components/video-form';
 import { EmptyState } from '@/components/empty-state';
+import { VoiceStatus } from '@/components/voice-status';
 
 export const dynamic = 'force-dynamic';
 export const metadata = { title: 'New video — Persona Studio' };
@@ -60,6 +61,7 @@ export default async function NewVideoPage({
         <p className="font-serif text-[16px] text-text-dim mt-3 max-w-[60ch]">
           HeyGen возьмёт выбранного аватара, оживит губы под скрипт и выдаст MP4 за 2–4 минуты. Списывается 30 токенов.
         </p>
+        <VoiceStatus />
       </header>
 
       {(parserRef || sourceUrl) && (

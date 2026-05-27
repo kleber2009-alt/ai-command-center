@@ -84,6 +84,10 @@ export interface Config {
   adminSessionSecret: string | undefined;
   adminUsername: string | undefined;
   adminPassword: string | undefined;
+  // Shared secret used by the aisales dashboard reverse-proxy (Caddy
+  // header_up X-Internal-Auth) so /api/* can be reached without the
+  // magic-link cookie when called from the dashboard origin.
+  internalApiToken: string | undefined;
 
   // Behavior
   logLevel: LogLevel;
@@ -123,6 +127,7 @@ export function loadConfig(): Config {
     adminSessionSecret: optional('ADMIN_SESSION_SECRET'),
     adminUsername: optional('ADMIN_USERNAME'),
     adminPassword: optional('ADMIN_PASSWORD'),
+    internalApiToken: optional('INTERNAL_API_TOKEN'),
 
     logLevel: parseLogLevel(process.env.LOG_LEVEL),
     confidenceThreshold: parseThreshold(process.env.CONFIDENCE_THRESHOLD),

@@ -3,7 +3,8 @@ import { useEffect, useRef, useState } from 'react'
 import {
   AudioLines, Loader2, Copy, Check, TriangleAlert, Link as LinkIcon,
   Download, FileText, Sparkles, Languages, History, Trash2, ChevronRight, Youtube, FileAudio,
-  LayoutGrid, Video, Shuffle, Send, Bot, Brain, ExternalLink,
+  LayoutGrid, Video, Shuffle, Send, Bot, Brain, Image as ImageIcon, Zap,
+  Wand2,
 } from 'lucide-react'
 import { getTelegram, isInTelegram } from '@/lib/telegram'
 import { apiFetch } from '@/lib/api-client'
@@ -296,6 +297,9 @@ export default function TranscribePage() {
   const [checkoutUpgrading, setCheckoutUpgrading] = useState(false)
   const [checkoutNotice, setCheckoutNotice] = useState<'success' | 'cancel' | null>(null)
   const [quotaExceeded, setQuotaExceeded] = useState(false)
+  const [tgResend, setTgResend] = useState<'idle' | 'sending' | 'sent' | 'error'>('idle')
+  const [showPricing, setShowPricing] = useState(false)
+  const [historySource, setHistorySource] = useState<'all' | 'youtube' | 'other'>('all')
 
   async function loadHistory() {
     try {
@@ -1003,7 +1007,7 @@ export default function TranscribePage() {
             <div className="flex flex-wrap gap-2">
               {([
                 ['carousel', 'Карусель', LayoutGrid] as const,
-                ['carousel-image', 'Карусель с фото', Image] as const,
+                ['carousel-image', 'Карусель с фото', ImageIcon] as const,
                 ['reels-new', 'Рилс новый', Video] as const,
                 ['reels-remix', 'Рилс ремикс', Shuffle] as const,
                 ['tg-post', 'Пост в Telegram', Send] as const,
@@ -1061,13 +1065,14 @@ export default function TranscribePage() {
                 </div>
                 <div className="flex items-center gap-2">
                   <SoftButton
-                    onClick={() => {
-                      localStorage.setItem('carousel_slides', JSON.stringify(generations.carousel!))
-                      window.open('/carousel', '_blank')
-                    }}
-                    icon={<ExternalLink className="h-3.5 w-3.5 text-apple-blue" />}
+                    onClick={() => downloadFile(
+                      JSON.stringify(generations.carousel, null, 2),
+                      `${safeFilename(result?.transcript.slice(0, 40) ?? null, 'carousel')}.json`,
+                      'application/json',
+                    )}
+                    icon={<Download className="h-3.5 w-3.5 text-apple-blue" />}
                   >
-                    Дизайнер
+                    .json
                   </SoftButton>
                   <SoftButton
                     onClick={() => copyText(formatCarouselForCopy(generations.carousel!))}
@@ -1094,7 +1099,7 @@ export default function TranscribePage() {
             <div className="overflow-hidden rounded-apple-lg border border-apple-line bg-white shadow-apple-sm">
               <div className="flex items-center justify-between border-b border-apple-line px-5 py-3">
                 <div className="flex items-center gap-2">
-                  <Image className="h-4 w-4 text-apple-blue" />
+                  <ImageIcon className="h-4 w-4 text-apple-blue" />
                   <h3 className="text-[13px] font-semibold text-apple-ink">
                     Карусель с фото · {generations['carousel-image'].slides.length} слайдов
                   </h3>

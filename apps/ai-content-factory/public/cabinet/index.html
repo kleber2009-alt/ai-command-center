@@ -175,7 +175,8 @@ button,input,select,textarea{font:inherit;color:inherit}
           <button type="button" class="sty"        data-sty="drcintas"     style="padding:8px 6px;border:1px solid var(--sep);background:var(--surface-2);border-radius:var(--r1);font-size:12px;cursor:pointer;text-align:left">🎬 @drcintas<br><span style="font-size:10px;color:var(--t3)">Hollywood · neon · cinematic</span></button>
           <button type="button" class="sty"        data-sty="julieta_publicista" style="grid-column:1 / -1;padding:8px 6px;border:1px solid var(--sep);background:var(--surface-2);border-radius:var(--r1);font-size:12px;cursor:pointer;text-align:left">💬 @julieta_publicista<br><span style="font-size:10px;color:var(--t3)">minimalist warm · business advice</span></button>
         </div>
-        <div class="hint" style="margin-top:6px">Эталоны стиля живут в <code>data/brandbook/dataset.json</code> — 54 слайда из 12 каруселей этих 4 авторов. «Авто» — Claude сам подбирает под рубрику и тему.</div>
+        <div class="hint" id="style-hint" style="margin-top:6px">Эталоны стиля живут в <code>data/brandbook/dataset.json</code> — 54 слайда из 12 каруселей этих 4 авторов. «Авто» — Claude сам подбирает.</div>
+        <div id="style-warning" style="display:none;margin-top:6px;padding:8px 10px;background:#FFF8E1;border:1px solid #F0C419;border-radius:var(--r1);font-size:11px;color:#7E5800">⚠️ Puppeteer всегда рендерит из брендбука и <strong>игнорирует выбор стиля</strong>. Для имитации стиля автора используй <strong>Nano Banana 2</strong> или <strong>GPT Image 2</strong>.</div>
       </div>
 
       <div class="rubrics" id="rubrics-list">

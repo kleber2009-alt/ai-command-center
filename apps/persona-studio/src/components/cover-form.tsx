@@ -13,7 +13,7 @@ export function CoverForm({ avatars, initialAvatarId }: { avatars: Avatar[]; ini
   const [cta, setCta] = useState('SWIPE LEFT →');
   const [niche, setNiche] = useState('');
   const [style, setStyle] = useState('ai-visionary');
-  const [aspect, setAspect] = useState<'4:5' | '1:1' | '9:16'>('4:5');
+  const [aspect, setAspect] = useState<Aspect>('4:5');
   const [busy, setBusy] = useState(false);
   const [error, setError] = useState<string | null>(null);
 
@@ -82,25 +82,18 @@ export function CoverForm({ avatars, initialAvatarId }: { avatars: Avatar[]; ini
           <input className="input" value={niche} onChange={(e) => setNiche(e.target.value)} maxLength={120} placeholder="founders / creators / coaches…" />
         </Field>
 
-        <div className="grid grid-cols-2 gap-3">
-          <Field label="Style preset">
-            <select className="input" value={style} onChange={(e) => setStyle(e.target.value)}>
-              <option value="ai-visionary">AI Visionary</option>
-              <option value="viral-reels-cover">Viral Reels Cover</option>
-              <option value="dark-premium">Dark Premium</option>
-              <option value="editorial-fashion">Editorial Fashion</option>
-              <option value="cinematic-creator">Cinematic Creator</option>
-              <option value="minimal-apple-style">Minimal Apple Style</option>
-            </select>
-          </Field>
-          <Field label="Aspect">
-            <select className="input" value={aspect} onChange={(e) => setAspect(e.target.value as '4:5' | '1:1' | '9:16')}>
-              <option value="4:5">4:5 — Instagram cover</option>
-              <option value="1:1">1:1 — square</option>
-              <option value="9:16">9:16 — Reels / Stories</option>
-            </select>
-          </Field>
-        </div>
+        <Field label="Style preset">
+          <select className="input" value={style} onChange={(e) => setStyle(e.target.value)}>
+            <option value="ai-visionary">AI Visionary</option>
+            <option value="viral-reels-cover">Viral Reels Cover</option>
+            <option value="dark-premium">Dark Premium</option>
+            <option value="editorial-fashion">Editorial Fashion</option>
+            <option value="cinematic-creator">Cinematic Creator</option>
+            <option value="minimal-apple-style">Minimal Apple Style</option>
+          </select>
+        </Field>
+
+        <AspectPicker value={aspect} onChange={setAspect} />
 
         <div className="flex flex-wrap items-center gap-4 pt-2">
           <button type="submit" className="btn-primary" disabled={busy}>
@@ -112,9 +105,9 @@ export function CoverForm({ avatars, initialAvatarId }: { avatars: Avatar[]; ini
 
       {/* preview */}
       <aside className="bg-surface border border-border p-5">
-        <div className="mono text-[10px] tracking-widest uppercase text-pink mb-3">/ preview · 4:5</div>
+        <div className="mono text-[10px] tracking-widest uppercase text-pink mb-3">/ preview · {aspect}</div>
         <div
-          className="aspect-[4/5] border border-border-2 relative overflow-hidden"
+          className={`${ASPECT_CLASS[aspect]} border border-border-2 relative overflow-hidden`}
           style={{
             background:
               'linear-gradient(170deg, #2a0a20 0%, #14050f 100%)',
@@ -153,5 +146,57 @@ function Field({ label, hint, children }: { label: string; hint?: string; childr
       {children}
       {hint && <span className="mono text-[10px] tracking-wider text-text-mute mt-1">{hint}</span>}
     </label>
+  );
+}
+
+type Aspect = '4:5' | '1:1' | '9:16';
+
+const ASPECT_CLASS: Record<Aspect, string> = {
+  '4:5': 'aspect-[4/5]',
+  '1:1': 'aspect-square',
+  '9:16': 'aspect-[9/16]',
+};
+
+const ASPECT_OPTIONS: Array<{ value: Aspect; label: string; hint: string; box: string }> = [
+  { value: '4:5', label: '4:5', hint: 'Instagram пост / обложка карусели', box: 'w-8 h-10' },
+  { value: '1:1', label: '1:1', hint: 'квадрат — лента, миниатюра', box: 'w-9 h-9' },
+  { value: '9:16', label: '9:16', hint: 'Reels / Stories / Shorts', box: 'w-6 h-10' },
+];
+
+function AspectPicker({ value, onChange }: { value: Aspect; onChange: (v: Aspect) => void }) {
+  return (
+    <div className="grid gap-2">
+      <span className="label">Aspect</span>
+      <div role="radiogroup" aria-label="Формат обложки" className="grid grid-cols-3 gap-2">
+        {ASPECT_OPTIONS.map((opt) => {
+          const active = value === opt.value;
+          return (
+            <button
+              key={opt.value}
+              type="button"
+              role="radio"
+              aria-checked={active}
+              onClick={() => onChange(opt.value)}
+              className={`border px-3 py-3 flex flex-col items-center gap-2 transition-colors ${
+                active
+                  ? 'border-lime bg-lime/[0.06]'
+                  : 'border-border bg-surface hover:border-border-2'
+              }`}
+            >
+              <span
+                className={`${opt.box} border ${active ? 'border-lime' : 'border-text-mute'} block`}
+                aria-hidden
+              />
+              <span className={`mono text-[11px] tracking-widest uppercase ${active ? 'text-lime' : 'text-text'}`}>
+                {opt.label}
+              </span>
+              <span className="font-serif italic text-[11px] text-text-mute text-center leading-tight">
+                {opt.hint}
+              </span>
+            </button>
+          );
+        })}
+      </div>
+    </div>
   );
 }

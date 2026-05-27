@@ -224,7 +224,6 @@ export default function LandingPage() {
             <Link href="/transcribe" className="hover:text-apple-ink">Транскрибация</Link>
             <Link href="/me" className="hover:text-apple-ink">Я</Link>
             <Link href="/assistants" className="hover:text-apple-ink">Ассистенты</Link>
-            <Link href="/materials" className="hover:text-apple-ink">Материалы</Link>
           </div>
         </div>
       </footer>

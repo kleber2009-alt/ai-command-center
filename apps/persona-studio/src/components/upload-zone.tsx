@@ -177,7 +177,7 @@ export function UploadZone({
             if (e.target) e.target.value = '';
           }}
         />
-        <div className="sec-num mb-3">/A · upload</div>
+        <div className="sec-num mb-3">/00 · upload</div>
         <div className="font-serif italic text-[26px] leading-tight mb-3">
           {slotsLeft > 0
             ? `Перетащи до ${slotsLeft} фото или нажми, чтобы выбрать.`
@@ -197,7 +197,7 @@ export function UploadZone({
       {uploads.length > 0 && (
         <div>
           <div className="flex items-baseline gap-3 mb-3">
-            <span className="sec-num">/B · pick primary</span>
+            <span className="sec-num">/01 · pick primary</span>
             <span className="font-serif italic text-[14px] text-text-dim">
               выбери фото, по которому строим 10 аватаров
             </span>

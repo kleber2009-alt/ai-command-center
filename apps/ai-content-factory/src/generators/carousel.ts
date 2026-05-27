@@ -43,20 +43,38 @@ export async function generateCarousel(opts: GenerateCarouselOptions): Promise<C
   // no references catalog, no prompts/* — those are excluded by design.
   const system = loadTrainingContext({ rubricSlug: opts.rubricSlug, format: 'carousel' }) || undefined;
 
-  // Interpolate the template, then append the exact slide-field contract so the
-  // model emits schema-valid JSON.
-  const template = await loadPrompt(fromAppRoot(opts.rubric.promptFile), {
-    topic: opts.topic,
-    episode: opts.episode,
-  });
+  // When a style anchor is selected, the editor explicitly wants the carousel
+  // to be driven by the chosen author's dataset entries — not by the rubric
+  // prompt template (which prescribes a different tone / structure). Skip the
+  // rubric template entirely in that case and feed Claude a minimal "topic →
+  // carousel" prompt anchored to the dataset author.
+  let template: string;
+  if (opts.styleAuthor) {
+    template = [
+      `# Карусель в стиле @${opts.styleAuthor}`,
+      '',
+      `Тема: ${opts.topic}`,
+      `Эпизод: ${opts.episode}`,
+      '',
+      `Источник правды — три файла Брендбука (см. system-prompt). В частности,`,
+      `в \`data/brandbook/dataset.json\` есть реальные слайды этого автора —`,
+      `следуй их структуре воронки (cover → hook → step → proof → cta),`,
+      `типографике и тону.`,
+    ].join('\n');
+  } else {
+    template = await loadPrompt(fromAppRoot(opts.rubric.promptFile), {
+      topic: opts.topic,
+      episode: opts.episode,
+    });
+  }
   const rag = opts.ragContext ? `${opts.ragContext}\n\n` : '';
   const slideCountBlock =
     typeof opts.slideCount === 'number' && opts.slideCount > 0
-      ? `\n\n## ЖЁСТКОЕ ОГРАНИЧЕНИЕ\n\nМассив \`slides\` должен содержать РОВНО ${opts.slideCount} элемент(ов). Не больше и не меньше. Если структура рубрики требует больше — сократи; если меньше — расширь дополнительными слайдами типа list/quote/stat.`
+      ? `\n\n## ЖЁСТКОЕ ОГРАНИЧЕНИЕ\n\nМассив \`slides\` должен содержать РОВНО ${opts.slideCount} элемент(ов). Не больше и не меньше.`
       : '';
   const styleDesc = opts.styleAuthor ? STYLE_DESCRIPTIONS[opts.styleAuthor] : undefined;
   const styleBlock = styleDesc
-    ? `\n\n## СТИЛЕВОЙ ANCHOR · @${opts.styleAuthor}\n\nИмитируй стиль автора @${opts.styleAuthor} из \`data/brandbook/dataset.json\`. В этом dataset'е есть его реальные карусели — найди их в массиве \`slides\` (поле \`author\` === "@${opts.styleAuthor}") и следуй их визуальной подаче, типографике и структуре воронки (cover → hook → step → proof → cta).\n\nКлючевые черты стиля: ${styleDesc}\n\nНе копируй текст дословно — заимствуй приёмы.`
+    ? `\n\n## СТИЛЕВОЙ ANCHOR · @${opts.styleAuthor}\n\nИмитируй стиль автора @${opts.styleAuthor} из \`data/brandbook/dataset.json\`. Найди в массиве \`slides\` все слайды с \`author\` === "@${opts.styleAuthor}" и следуй их подаче. ИГНОРИРУЙ рубрику-обёртку — стиль автора главнее.\n\nКлючевые черты: ${styleDesc}\n\nНе копируй текст дословно — заимствуй приёмы.`
     : '';
   const prompt = `${template}\n\n${rag}## Контракт полей слайдов\n\n${SLIDE_CONTRACT}${slideCountBlock}${styleBlock}`;
 

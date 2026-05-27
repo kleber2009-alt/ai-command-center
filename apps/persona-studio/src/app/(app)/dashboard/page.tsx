@@ -103,28 +103,28 @@ export default async function DashboardPage({
         <div className="mt-8 grid md:grid-cols-2 lg:grid-cols-4 gap-[2px] bg-border border border-border">
           <ActionCard
             href="/generate"
-            num="/A · upload"
+            kicker="upload"
             title="Загрузить фото"
             sub={`-${COSTS.avatarGeneration} токенов / батч`}
             tone="lime"
           />
           <ActionCard
             href={avatarsCount > 0 ? '/videos/new' : '/generate?need=video'}
-            num="/B · talk"
+            kicker="talk"
             title="Создать видео"
             sub={avatarsCount > 0 ? `-${COSTS.heygenVideo} / video` : `нужен аватар · -${COSTS.heygenVideo} / video`}
             tone="cyan"
           />
           <ActionCard
             href={avatarsCount > 0 ? '/covers/new' : '/generate?need=cover'}
-            num="/C · publish"
+            kicker="publish"
             title="Сделать обложку"
             sub={avatarsCount > 0 ? `-${COSTS.coverGeneration} / cover` : `нужен аватар · -${COSTS.coverGeneration} / cover`}
             tone="pink"
           />
           <ActionCard
             href="/voice"
-            num="/D · voice"
+            kicker="voice"
             title="Обучить свой голос"
             sub="через Persona Train"
             tone="warm"

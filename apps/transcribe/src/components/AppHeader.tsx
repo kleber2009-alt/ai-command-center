@@ -4,8 +4,8 @@ import { useEffect, useState } from 'react'
 import Link from 'next/link'
 import { usePathname } from 'next/navigation'
 import {
-  Menu, X, Mic, Brain, Bot, Sparkles,
-  MessageSquare, User, BookOpen, Search, History,
+  Menu, X, Mic, Brain, Bot,
+  MessageSquare, User, BookOpen, Search, History, Settings,
 } from 'lucide-react'
 
 type LeafItem = { href: string; label: string; icon: typeof Menu }
@@ -25,13 +25,12 @@ const ITEMS: Item[] = [
     ],
   },
   { href: '/assistants', label: 'Ассистенты', icon: Bot },
-  { href: '/materials', label: 'Материалы', icon: Sparkles },
 ]
 
 function getSectionTitle(pathname: string): string {
   if (pathname.startsWith('/me')) return 'Я'
   if (pathname.startsWith('/assistants')) return 'Ассистенты'
-  if (pathname.startsWith('/materials')) return 'Материалы'
+  if (pathname.startsWith('/admin')) return 'Админ'
   return 'Транскрибация'
 }
 
@@ -174,11 +173,11 @@ export default function AppHeader() {
             История чатов
           </Link>
           <Link
-            href="/materials"
+            href="/admin"
             className="flex items-center gap-3 rounded-lg px-3 py-2.5 text-[14px] font-medium text-apple-muted transition-colors hover:bg-apple-bg-soft hover:text-apple-ink"
           >
-            <Sparkles className="h-4 w-4" />
-            Сгенерированные материалы
+            <Settings className="h-4 w-4" />
+            Админ-панель
           </Link>
         </nav>
       </aside>

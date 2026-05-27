@@ -1,7 +1,37 @@
 import { NextRequest, NextResponse } from 'next/server'
 import { dbGetTranscript, dbMergeGenerations } from '@/lib/transcripts-db'
 import { streamAnthropic } from '@/lib/anthropic-stream'
-import { authenticate } from '@/lib/telegram-auth'
+import { authenticate, verifyInitData } from '@/lib/telegram-auth'
+import { sendCarouselMediaGroup } from '@/lib/telegram-bot'
+
+// Fan-out image generation through kie.ai. Returns one URL (or null) per
+// prompt. Failures inside a single slide don't abort the batch — the UI
+// shows a placeholder for null slots.
+async function generateKieImages(prompts: string[], apiKey: string): Promise<(string | null)[]> {
+  const results = await Promise.allSettled(
+    prompts.map(async (prompt) => {
+      const res = await fetch('https://api.kie.ai/v1/images/generations', {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+          Authorization: `Bearer ${apiKey}`,
+        },
+        body: JSON.stringify({
+          model: 'gpt-image-1',
+          prompt,
+          size: '1024x1024',
+          n: 1,
+        }),
+      })
+      if (!res.ok) throw new Error(`kie.ai ${res.status}`)
+      const data = await res.json()
+      const url = data?.data?.[0]?.url ?? data?.images?.[0]?.url ?? null
+      if (!url) throw new Error('no image url in kie.ai response')
+      return url as string
+    }),
+  )
+  return results.map((r) => (r.status === 'fulfilled' ? r.value : null))
+}
 
 export const maxDuration = 120
 
@@ -210,6 +240,18 @@ function ndjsonResponse(events: Array<Record<string, any>>): Response {
 export async function POST(req: NextRequest) {
   const auth = authenticate(req)
   if ('error' in auth) return auth.error
+
+  // Extract the Telegram chat id (when present) so the carousel-image branch
+  // can auto-deliver to the user's private chat with the bot. We re-parse the
+  // initData here because authenticate() throws away the user object.
+  const botToken = process.env.TELEGRAM_BOT_TOKEN
+  let tgChatId: number | null = null
+  if (botToken) {
+    const initData = (req.headers.get('authorization') || '').replace(/^tma\s+/, '')
+    const verified = initData ? verifyInitData(initData, botToken) : null
+    if (verified?.user?.id) tgChatId = verified.user.id
+  }
+
   const { id, transcript, type } = (await req.json()) as Body
 
   if (!type || !VALID_TYPES.includes(type)) {
@@ -272,9 +314,7 @@ export async function POST(req: NextRequest) {
 
       let slides: Array<{ n: number; title: string; body: string }>
       try {
-        const parsed = extractJsonObject(raw)
-        const validated = validate('carousel', parsed) as CarouselContent
-        slides = validated.slides
+        slides = parseCarousel(raw).slides
       } catch (e: any) {
         return NextResponse.json({ error: `Не удалось распарсить слайды: ${e.message}` }, { status: 500 })
       }

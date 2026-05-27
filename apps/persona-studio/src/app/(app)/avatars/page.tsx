@@ -24,7 +24,7 @@ export default async function AvatarsPage({ searchParams }: { searchParams: Prom
         <div className="grid gap-8">
           <header>
             <div className="flex items-baseline gap-3 mb-2">
-              <span className="sec-num">/AVATARS</span>
+              <span className="sec-num">/00</span>
               <span className="sec-title">live render</span>
               <span className="flex-1 border-b border-border translate-y-[-3px]" />
               <Link href="/avatars" className="mono text-[10px] tracking-widest uppercase text-text-mute hover:text-text">

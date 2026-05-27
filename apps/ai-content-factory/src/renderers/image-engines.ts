@@ -135,23 +135,31 @@ export function buildSlidePrompt(slide: Slide, ctx: SlideRenderContext): string 
     );
   }
 
+  // When a style reference exists, rubric tokens (accent, coverBg, handle)
+  // pull the image-gen towards a different look — strip them and use only
+  // the palette/handle from the reference itself.
   if (styleRef) {
     lines.push(
-      `Slide ${index + 1} of ${total}. Counter "${counter}" top-right (small).`,
-      `Handle "${rubric.handle}" top-left (small).`,
+      `Slide ${index + 1} of ${total}. Counter "${counter}" — place it like the reference puts it.`,
       `Funnel role: ${funnelFor(slide.type)}.`,
     );
   }
 
   switch (slide.type) {
     case 'cover':
-      lines.push(
-        `Solid ${rubric.coverBg ?? rubric.accent} background instead of white.`,
-        `Large bold uppercase title centered: "${slide.title}".`,
-      );
-      if (slide.subtitle) lines.push(`Subtitle below title: "${slide.subtitle}".`);
-      if (slide.label) lines.push(`Small kicker above title: "${slide.label}".`);
-      lines.push(`Bottom: small text "SWIPE LEFT" with arrow.`);
+      if (styleRef) {
+        lines.push(`Title (large, in the style above): "${slide.title}".`);
+        if (slide.subtitle) lines.push(`Subtitle: "${slide.subtitle}".`);
+        if (slide.label) lines.push(`Small kicker: "${slide.label}".`);
+      } else {
+        lines.push(
+          `Solid ${rubric.coverBg ?? rubric.accent} background instead of white.`,
+          `Large bold uppercase title centered: "${slide.title}".`,
+        );
+        if (slide.subtitle) lines.push(`Subtitle below title: "${slide.subtitle}".`);
+        if (slide.label) lines.push(`Small kicker above title: "${slide.label}".`);
+        lines.push(`Bottom: small text "SWIPE LEFT" with arrow.`);
+      }
       break;
     case 'quote':
       lines.push(`Center: large italic quote text "${slide.text}".`);
@@ -159,21 +167,37 @@ export function buildSlidePrompt(slide: Slide, ctx: SlideRenderContext): string 
       break;
     case 'list':
       if (slide.title) lines.push(`Top: bold title "${slide.title}".`);
-      lines.push(`Vertical list of items, each prefixed with a ${rubric.accent} bullet dot:`);
+      if (styleRef) {
+        lines.push(`Vertical list of items (use the reference's bullet style and palette):`);
+      } else {
+        lines.push(`Vertical list of items, each prefixed with a ${rubric.accent} bullet dot:`);
+      }
       for (const item of slide.items) lines.push(`  • ${item}`);
       break;
     case 'stat':
-      lines.push(`Huge accent-colored number "${slide.value}" filling most of the slide.`);
+      if (styleRef) {
+        lines.push(`Huge number "${slide.value}" filling most of the slide (use the reference's palette and typography).`);
+      } else {
+        lines.push(`Huge accent-colored number "${slide.value}" filling most of the slide.`);
+      }
       lines.push(`Below: caption "${slide.caption}" in normal weight.`);
       break;
     case 'code':
-      lines.push(`Center: monospace code block with dark background, ${rubric.accent} syntax accent.`);
+      if (styleRef) {
+        lines.push(`Center: monospace code block (use the reference's mockup treatment).`);
+      } else {
+        lines.push(`Center: monospace code block with dark background, ${rubric.accent} syntax accent.`);
+      }
       lines.push(`Code: ${slide.code}`);
       if (slide.caption) lines.push(`Below code: "${slide.caption}".`);
       break;
     case 'cta':
       lines.push(`Center: large bold "${slide.headline}".`);
-      lines.push(`Below: ${rubric.accent}-colored CTA "${slide.action}".`);
+      if (styleRef) {
+        lines.push(`Below: CTA "${slide.action}" (use the reference's button/keyword style).`);
+      } else {
+        lines.push(`Below: ${rubric.accent}-colored CTA "${slide.action}".`);
+      }
       break;
   }
   return lines.join('\n');
