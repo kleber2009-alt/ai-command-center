@@ -58,6 +58,15 @@ function parsePositiveInt(raw: string | undefined, fallback: number): number {
   return n;
 }
 
+function parseNonNegativeInt(raw: string | undefined, fallback: number): number {
+  if (!raw) return fallback;
+  const n = Number(raw);
+  if (!Number.isInteger(n) || n < 0) {
+    throw new Error(`Expected non-negative integer, got: ${raw}`);
+  }
+  return n;
+}
+
 export interface Config {
   // SendPulse
   sendPulseClientId: string;

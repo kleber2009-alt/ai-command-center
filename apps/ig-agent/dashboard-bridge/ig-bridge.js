@@ -603,26 +603,59 @@
     // Poll every 3s for new messages / status changes so an open
     // conversation tab stays live without F5. We pause polling when the
     // tab is hidden (saves API + tokens) and resume on visibility change.
+    //
+    // Race protection: any operation that mutates server state (sendReply,
+    // analyzeNow, takeover, status change) bumps `mutationGen` and sets
+    // `mutationInFlight=true`. The tick skips while in-flight and discards
+    // its own result if the generation changed during its await — that
+    // way an "optimistic" reload after sending a message never gets
+    // overwritten by a stale poll.
+    let mutationGen = 0;
+    let mutationInFlight = false;
+    function beginMutation() {
+      mutationGen += 1;
+      mutationInFlight = true;
+      return mutationGen;
+    }
+    function endMutation() {
+      mutationInFlight = false;
+    }
+    // Expose to sendReply / analyzeNow / Lost / takeover via closure-level
+    // wrappers. We re-bind them so their existing call sites stay simple.
+    const _sendReply = sendReply;
+    sendReply = async function (text) {
+      beginMutation();
+      try { return await _sendReply(text); }
+      finally { endMutation(); }
+    };
+    const _analyzeNow = analyzeNow;
+    analyzeNow = async function () {
+      beginMutation();
+      try { return await _analyzeNow(); }
+      finally { endMutation(); }
+    };
+
     let pollTimer = null;
     let polling = false;
     async function tick() {
-      if (polling || document.hidden) return;
+      if (polling || mutationInFlight || document.hidden) return;
       polling = true;
+      const myGen = mutationGen;
       try {
         const m = await api('/contacts/' + contactId + '/messages?limit=200');
+        if (myGen !== mutationGen) return; // a mutation finished while we were fetching — discard
         const next = m.messages || [];
-        // Skip re-render if no change (count + last id match what we have).
         const sameCount = next.length === messages.length;
         const sameTail = sameCount && next.length && messages[messages.length - 1] &&
           next[next.length - 1].id === messages[messages.length - 1].id;
         if (!sameTail) {
           messages = next;
           renderFeed();
-          // Recommendations and contact details change less often but cheap to refresh.
           const [r, c] = await Promise.all([
             api('/contacts/' + contactId + '/recommendations').catch(() => ({ recommendations: [] })),
             api('/contacts/' + contactId).catch(() => null),
           ]);
+          if (myGen !== mutationGen) return; // late arrival after a mutation — discard
           recommendations = r.recommendations || recommendations;
           if (c && c.contact) {
             contact = c.contact;
@@ -640,12 +673,13 @@
       }
     }
     pollTimer = setInterval(tick, 3000);
-    document.addEventListener('visibilitychange', () => {
-      if (!document.hidden) tick(); // immediate refresh on return
-    });
-    window.addEventListener('beforeunload', () => {
+    const onVisChange = () => { if (!document.hidden) tick(); };
+    document.addEventListener('visibilitychange', onVisChange);
+    const onUnload = () => {
       if (pollTimer) clearInterval(pollTimer);
-    });
+      document.removeEventListener('visibilitychange', onVisChange);
+    };
+    window.addEventListener('beforeunload', onUnload);
   }
 
   // ---------- PULSE ----------------------------------------------------
