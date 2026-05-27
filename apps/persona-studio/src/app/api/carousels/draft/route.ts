@@ -12,6 +12,7 @@ import { z } from 'zod';
 import { getCurrentUserOrApiKey } from '@/lib/auth';
 import { prisma } from '@/lib/prisma';
 import { splitCaptionIntoSlides, isClaudeConfigured } from '@/lib/parser/claude';
+import { DEFAULT_STYLE, isValidStyle } from '@/lib/carousel/styles';
 
 export const runtime = 'nodejs';
 export const maxDuration = 90;
@@ -22,6 +23,7 @@ const Body = z
     caption: z.string().max(3000).optional(),
     slidesCount: z.number().int().min(3).max(20).default(6),
     coverAvatarId: z.string().optional(),
+    style: z.string().optional(),
   })
   .refine((b) => Boolean(b.parserItemId || b.caption), {
     message: 'parserItemId or caption required',
