@@ -120,6 +120,45 @@ export function createPipeline(deps: PipelineDeps): Pipeline {
 
       const conversation = await deps.conversations.ensureActive(contact.id);
 
+      // 1b. Echo branch — this event is OUR side talking (operator via the
+      // Instagram/SendPulse mobile UI, or our own bot bouncing back). We
+      // persist it as direction='outgoing' so the admin sees the full
+      // thread, but skip classifier/responder entirely. Dedup on
+      // sendpulse_message_id so our own responder/manual-reply rows don't
+      // get duplicated when Meta echoes them back.
+      if (event.isEcho) {
+        if (
+          event.sendpulseMessageId &&
+          (await deps.messages.existsBySendpulseMessageId(event.sendpulseMessageId))
+        ) {
+          deps.logger.info('echo already persisted, skipping dedup', {
+            contactId: contact.id,
+            sendpulseMessageId: event.sendpulseMessageId,
+          });
+          return;
+        }
+        const outgoing = await deps.messages.insert({
+          contactId: contact.id,
+          direction: 'outgoing',
+          // 'manual' covers both an operator typing in IG/SendPulse and
+          // any externally-injected reply we didn't author ourselves.
+          source: 'manual',
+          text: event.text,
+          mediaUrl: event.mediaUrl,
+          mediaType: event.mediaType,
+          sendpulseMessageId: event.sendpulseMessageId,
+          rawPayload: event.rawEvent,
+        });
+        await deps.contacts.touchLastMessage(contact.id);
+        deps.logger.info('echo persisted as outgoing', {
+          contactId: contact.id,
+          messageId: outgoing.id,
+        });
+        // Don't run classifier/responder/analyst — that would loop on our
+        // own messages and waste tokens.
+        return;
+      }
+
       // 2. Persist the incoming message + bump contact's last-seen.
       const incoming = await deps.messages.insert({
         contactId: contact.id,
