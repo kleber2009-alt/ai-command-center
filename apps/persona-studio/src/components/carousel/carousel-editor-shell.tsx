@@ -257,6 +257,58 @@ export function CarouselEditorShell({ initial, avatars }: Props) {
     }
   }
 
+  /**
+   * Перерендер ОДНОГО слайда без перезаписи остальных PNG'ов. Перед
+   * запросом форсируем persist если есть несохранённые изменения, чтобы
+   * сервер взял свежий текст слайда из БД.
+   */
+  async function rerenderOne(index: number) {
+    if (singleRendering.has(index)) return;
+    if (dirtyRef.current) {
+      if (timerRef.current) {
+        clearTimeout(timerRef.current);
+        timerRef.current = null;
+      }
+      await persist();
+    }
+    setSingleRendering((s) => new Set([...s, index]));
+    setRenderError(null);
+    try {
+      const res = await fetch(
+        `/api/carousels/draft/${initial.id}/render?onlyIndex=${index}`,
+        { method: 'POST' },
+      );
+      const text = await res.text();
+      let json: { imageUrls?: string[]; message?: string; error?: string } = {};
+      try {
+        json = JSON.parse(text);
+      } catch {
+        /* leave default */
+      }
+      if (!res.ok) {
+        setRenderError(json.message || json.error || `HTTP ${res.status}`);
+        return;
+      }
+      if (json.imageUrls) setImageUrls(json.imageUrls);
+    } catch (e) {
+      setRenderError((e as Error).message || 'network error');
+    } finally {
+      setSingleRendering((s) => {
+        const next = new Set(s);
+        next.delete(index);
+        return next;
+      });
+    }
+  }
+
+  /** Клик по плитке в галерее: выбрать слайд + скроллить к редактору. */
+  function editFromGallery(index: number) {
+    setActiveIndex(index);
+    requestAnimationFrame(() => {
+      editorAnchorRef.current?.scrollIntoView({ behavior: 'smooth', block: 'start' });
+    });
+  }
+
   const activeSlide = slides[activeIndex] ?? slides[0];
 
   return (
