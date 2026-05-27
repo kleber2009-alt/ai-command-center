@@ -936,10 +936,17 @@
         api('/settings').catch(() => ({ settings: {} })),
         api('/stats').catch(() => null),
       ]);
-      // The "agent" toggle on each card reflects the GLOBAL auto_reply_enabled
-      // flag (one IG agent → one switch). The active prompt stays selected in
-      // the DB; auto_reply_enabled just gates whether responder runs at all.
+      // Two independent flags on the IG agent card:
+      //   botOn  (bot_enabled)        — master kill-switch; OFF = webhook
+      //                                  pipeline bypassed entirely
+      //   autoOn (auto_reply_enabled) — silences responder; classifier +
+      //                                  analyst keep running
+      // The big header toggle flips bot_enabled. The CTA pause button
+      // flips auto_reply_enabled. Defaults: bot ON, auto reading from DB.
       let autoOn = String((settingsResp.settings && settingsResp.settings.auto_reply_enabled) || 'false') === 'true';
+      let botOn = String((settingsResp.settings && settingsResp.settings.bot_enabled) !== undefined
+        ? settingsResp.settings.bot_enabled
+        : 'true') !== 'false';
 
       grid.innerHTML = '';
       if (!prompts.length) {
@@ -949,38 +956,64 @@
       for (const p of prompts) {
         const card = el('div', { class: 'ag' });
         const isActivePrompt = !!p.active;
-        // Effective agent state: prompt is active in DB AND global toggle is on.
-        const agentRunning = isActivePrompt && autoOn;
+        // Effective agent state combines three flags:
+        //   bot_enabled=false                            → "off"      (red)
+        //   bot_enabled=true & auto_reply_enabled=false  → "paused"   (yellow)
+        //   both true & this is the active prompt        → "active"   (green)
+        //   inactive prompt                              → "idle"     (gray)
+        const fullyRunning = isActivePrompt && botOn && autoOn;
+        let badgeText, badgeCls, statusText, statusCls;
+        if (!isActivePrompt) {
+          badgeText = 'idle'; badgeCls = 'badge--ghost'; statusText = 'idle'; statusCls = 'muted';
+        } else if (!botOn) {
+          badgeText = 'off'; badgeCls = 'badge--red'; statusText = 'бот выключен'; statusCls = 'muted';
+        } else if (!autoOn) {
+          badgeText = 'paused'; badgeCls = 'badge--yellow'; statusText = 'на паузе'; statusCls = 'muted';
+        } else {
+          badgeText = 'active'; badgeCls = 'badge--green'; statusText = 'отвечает'; statusCls = 'c-green';
+        }
         card.innerHTML =
           '<div class="ag__top">' +
             '<div class="ag__icon" style="background:var(--blue-bg);color:#7BC0FF">🤖</div>' +
             '<div style="flex:1">' +
               '<div class="ag__title">' + escapeHtml(p.name || p.kind || ('Prompt v' + p.version)) +
                 (isActivePrompt
-                  ? ' <span class="badge ' + (autoOn ? 'badge--green' : 'badge--yellow') + '" style="margin-left:4px">' + (autoOn ? 'active' : 'paused') + '</span>'
+                  ? ' <span class="badge ' + badgeCls + '" style="margin-left:4px">' + badgeText + '</span>'
                   : '') +
               '</div>' +
               '<div class="ag__sub">v' + escapeHtml(String(p.version || '?')) + ' · ' + escapeHtml(p.kind || 'responder') + '</div>' +
             '</div>' +
-            '<div class="ag-toggle' + (agentRunning ? ' is-on' : '') + '" data-agent-toggle></div>' +
+            '<div class="ag-toggle' + (botOn ? ' is-on' : '') + '" data-bot-toggle title="Бот (master kill-switch)"></div>' +
           '</div>' +
           '<div class="ag__metrics">' +
             '<div class="ag__metric"><div class="ag__metric-lab">Версия</div><div class="ag__metric-val">' + escapeHtml(String(p.version || '?')) + '</div></div>' +
             '<div class="ag__metric"><div class="ag__metric-lab">Тип</div><div class="ag__metric-val">' + escapeHtml(p.kind || '—') + '</div></div>' +
             '<div class="ag__metric"><div class="ag__metric-lab">Создан</div><div class="ag__metric-val">' + escapeHtml(formatDay(p.created_at).split(' · ')[0] || '—') + '</div></div>' +
-            '<div class="ag__metric"><div class="ag__metric-lab">Статус</div><div class="ag__metric-val ' + (agentRunning ? 'c-green' : 'muted') + '">' + (agentRunning ? 'отвечает' : (isActivePrompt ? 'на паузе' : 'idle')) + '</div></div>' +
+            '<div class="ag__metric"><div class="ag__metric-lab">Статус</div><div class="ag__metric-val ' + statusCls + '">' + statusText + '</div></div>' +
           '</div>' +
+          (isActivePrompt
+            ? '<div class="ag__ctrls" style="display:flex;gap:8px;margin:8px 0 4px;flex-wrap:wrap">' +
+                '<button class="btn btn--' + (botOn ? 'secondary' : 'primary') + '" data-toggle-bot style="flex:1;min-width:140px">' +
+                  (botOn ? '⏻ Выключить бота' : '⏻ Включить бота') +
+                '</button>' +
+                '<button class="btn btn--' + (autoOn ? 'secondary' : 'primary') + '" data-toggle-auto ' +
+                  (botOn ? '' : 'disabled style="flex:1;min-width:140px;opacity:.5"') +
+                  (botOn ? ' style="flex:1;min-width:140px"' : '') + '>' +
+                  (autoOn ? '🔕 Выключить автоответ' : '🔔 Включить автоответ') +
+                '</button>' +
+              '</div>'
+            : '') +
           '<div class="ag__cta">' +
             (isActivePrompt
-              ? '<button class="btn btn--' + (autoOn ? 'secondary' : 'primary') + '" data-toggle-auto>' + (autoOn ? '⏸ Поставить на паузу' : '▶ Включить') + '</button>'
-              : '<button class="btn btn--primary" data-activate>▶ Сделать активным</button>') +
-            '<button class="btn btn--ghost" data-view>📜 Просмотр</button>' +
+              ? '<button class="btn btn--ghost" data-view>📜 Просмотр</button>'
+              : '<button class="btn btn--primary" data-activate>▶ Сделать активным</button>' +
+                '<button class="btn btn--ghost" data-view>📜 Просмотр</button>') +
           '</div>';
 
-        // Toggle in the header row → flip global auto_reply_enabled for the
-        // currently-active prompt. Other prompts' toggles activate that prompt
-        // first (otherwise we'd be toggling auto for a prompt that won't run).
-        const headToggle = $('[data-agent-toggle]', card);
+        // Header toggle → bot_enabled (master kill-switch).
+        // For non-active prompts it still activates the prompt (otherwise
+        // there's no useful action on the header click).
+        const headToggle = $('[data-bot-toggle]', card);
         if (headToggle) {
           headToggle.style.cursor = 'pointer';
           headToggle.onclick = async () => {
@@ -989,24 +1022,37 @@
                 await api('/prompts/' + p.id + '/activate', { method: 'POST', body: {} });
                 toast('Активирован: ' + (p.name || 'v' + p.version));
               } else {
-                const next = !autoOn;
-                await api('/settings', { method: 'POST', body: { auto_reply_enabled: next } });
-                autoOn = next;
-                toast('Агент: ' + (next ? 'включён' : 'на паузе'));
+                const next = !botOn;
+                await api('/settings', { method: 'POST', body: { bot_enabled: next } });
+                botOn = next;
+                toast('Бот: ' + (next ? 'включён' : 'выключен'));
               }
               initAgents();
             } catch (e) { toast('Ошибка: ' + e.message, 'err'); }
           };
         }
 
+        const botBtn = $('[data-toggle-bot]', card);
+        if (botBtn) {
+          botBtn.onclick = async () => {
+            try {
+              const next = !botOn;
+              await api('/settings', { method: 'POST', body: { bot_enabled: next } });
+              botOn = next;
+              toast('Бот: ' + (next ? 'включён' : 'выключен'));
+              initAgents();
+            } catch (e) { toast('Ошибка: ' + e.message, 'err'); }
+          };
+        }
+
         const ctaToggle = $('[data-toggle-auto]', card);
-        if (ctaToggle) {
+        if (ctaToggle && !ctaToggle.disabled) {
           ctaToggle.onclick = async () => {
             try {
               const next = !autoOn;
               await api('/settings', { method: 'POST', body: { auto_reply_enabled: next } });
               autoOn = next;
-              toast('Агент: ' + (next ? 'включён' : 'на паузе'));
+              toast('Автоответ: ' + (next ? 'включён' : 'выключен'));
               initAgents();
             } catch (e) { toast('Ошибка: ' + e.message, 'err'); }
           };
