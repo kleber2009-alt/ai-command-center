@@ -59,7 +59,7 @@ services:
     container_name: vp-web
     env_file: .env
     ports:
-      - '3018:3000' # Caddy reverse-proxies here (see deploy/Caddyfile.snippet)
+      - '${VP_WEB_PORT:-3018}:3000' # host port (set VP_WEB_PORT in .env if 3018 is taken); Caddy proxies here
     restart: unless-stopped
     depends_on:
       vp-postgres:

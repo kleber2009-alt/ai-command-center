@@ -25,6 +25,8 @@ if ! grep -qE '^NEXT_PUBLIC_AUTH_DISABLED=true' .env \
 fi
 
 C=(docker compose -f docker-compose.prod.yml)
+WEB_PORT="$(grep -E '^VP_WEB_PORT=' .env | head -1 | cut -d= -f2- || true)"
+: "${WEB_PORT:=3018}"
 
 echo "── 1/4 build images (web + worker) ──"
 "${C[@]}" build
@@ -40,9 +42,9 @@ echo "── 4/4 (re)create web + workers ──"
   vp-web vp-worker-transcribe vp-worker-detect vp-worker-broll \
   vp-worker-library vp-worker-render
 
-echo "── health-check http://localhost:3018/ ──"
+echo "── health-check http://localhost:${WEB_PORT}/ ──"
 for i in $(seq 1 30); do
-  if curl -fsS -o /dev/null http://localhost:3018/ 2>/dev/null; then
+  if curl -fsS -o /dev/null "http://localhost:${WEB_PORT}/" 2>/dev/null; then
     echo "✓ vp-web healthy after ${i}×3s"
     "${C[@]}" ps
     exit 0
