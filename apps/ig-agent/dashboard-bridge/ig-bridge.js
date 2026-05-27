@@ -343,8 +343,15 @@
             '<span class="t-md c-blue">' + escapeHtml(username) + '</span>' +
             '<span class="badge ' + (STATUS_BADGE[status] || 'badge--ghost') + '">' + escapeHtml(STATUS_LABELS[status] || status) + '</span>';
         }
-        // Pause AI / takeover toggle
-        const pauseBtn = Array.from($$('.btn', convHead)).find((b) => /pause ai/i.test(b.textContent || ''));
+        // Pause AI / takeover toggle. Tag the button with a stable role
+        // attribute on first render so subsequent renders (polling tick
+        // re-runs renderHeader) can re-find it after we've mutated the
+        // textContent to "▶ Resume AI".
+        let pauseBtn = $('[data-ig-role="pause-ai"]', convHead);
+        if (!pauseBtn) {
+          pauseBtn = Array.from($$('.btn', convHead)).find((b) => /pause ai/i.test(b.textContent || ''));
+          if (pauseBtn) pauseBtn.setAttribute('data-ig-role', 'pause-ai');
+        }
         if (pauseBtn) {
           const aiHandled = !(conversation && conversation.ai_handled === false);
           pauseBtn.textContent = aiHandled ? '⏸ Pause AI' : '▶ Resume AI';
@@ -415,8 +422,13 @@
         }
       }
 
-      // Lost button — bottom action
-      const lostBtn = Array.from($$('.btn', pane)).find((b) => /lost/i.test(b.textContent || ''));
+      // Lost button — bottom action. Tagged with data-ig-role so polling
+      // re-renders find it even if text was edited.
+      let lostBtn = $('[data-ig-role="lost"]', pane);
+      if (!lostBtn) {
+        lostBtn = Array.from($$('.btn', pane)).find((b) => /lost/i.test(b.textContent || ''));
+        if (lostBtn) lostBtn.setAttribute('data-ig-role', 'lost');
+      }
       if (lostBtn) {
         lostBtn.onclick = async () => {
           if (!confirm('Перевести в Lost?')) return;
@@ -520,8 +532,14 @@
         }
       }
 
-      // Status quick-picker — re-purpose existing "Перенести встречу" button row
-      const moveBtn = $$('.btn').find((b) => /перенести/i.test(b.textContent || ''));
+      // Re-purpose existing "Перенести встречу" button → "🤖 Анализ".
+      // Once renamed, the regex stops matching, so we tag it with a
+      // stable data-ig-role on first run and re-find by role thereafter.
+      let moveBtn = $('[data-ig-role="analyze"]');
+      if (!moveBtn) {
+        moveBtn = $$('.btn').find((b) => /перенести/i.test(b.textContent || ''));
+        if (moveBtn) moveBtn.setAttribute('data-ig-role', 'analyze');
+      }
       if (moveBtn) {
         moveBtn.textContent = '🤖 Анализ';
         moveBtn.onclick = analyzeNow;
