@@ -31,8 +31,9 @@
   .sec-spacer { flex:1; border-bottom:1px solid #1a1a1a; transform:translateY(-2px); }
 
   /* AGENT TABS */
-  .agent-tabs { display:grid; grid-template-columns:repeat(4, 1fr); gap:2px; }
-  @media (max-width:900px) { .agent-tabs { grid-template-columns:repeat(2, 1fr); } }
+  .agent-tabs { display:grid; grid-template-columns:repeat(5, 1fr); gap:2px; }
+  @media (max-width:1200px) { .agent-tabs { grid-template-columns:repeat(3, 1fr); } }
+  @media (max-width:700px) { .agent-tabs { grid-template-columns:repeat(2, 1fr); } }
   .agent-tab { background:#0f0f0f; border:1px solid #1a1a1a; padding:18px 22px; cursor:pointer; display:flex; flex-direction:column; gap:8px; min-height:124px; transition:border-color 0.15s; text-align:left; font-family:inherit; color:inherit; }
   .agent-tab:hover { border-color:#3a3a3a; }
   .agent-tab.active { border-color:#c8f060; background:#0d1216; }
@@ -148,7 +149,7 @@
       <a class="nav-link" href="/reels/index.html">Reels</a>
     </nav>
   </div>
-  <div class="topbar-meta"><span>15 МАЯ · 21:04</span> · <span class="v">4/4 ONLINE</span></div>
+  <div class="topbar-meta"><span>15 МАЯ · 21:04</span> · <span class="v">5/5 ONLINE</span></div>
 </header>
 
 <main class="shell">
@@ -156,7 +157,7 @@
   <!-- AGENT TABS -->
   <div class="sec-head">
     <span class="sec-num">/01</span>
-    <span class="sec-title">4 агента · текущая нагрузка</span>
+    <span class="sec-title">5 агентов · текущая нагрузка</span>
     <span class="sec-spacer"></span>
   </div>
 
@@ -188,6 +189,13 @@
       <div class="at-name">РОП</div>
       <div class="at-model">claude-opus-4.7 · digest scheduler</div>
       <div class="at-load"><span class="val pink">2</span><span class="units">задачи<br/>в очереди</span></div>
+    </button>
+
+    <button class="agent-tab" data-agent="newnewnnn">
+      <div class="at-status"><span class="dot"></span><span class="lbl">● ON · daily 09:00</span></div>
+      <div class="at-name">@newnewnnn_bot</div>
+      <div class="at-model">claude-haiku-4-5 · group analyzer</div>
+      <div class="at-load"><span class="val lime">214</span><span class="units">сообщений<br/>за 24ч</span></div>
     </button>
 
   </div>
