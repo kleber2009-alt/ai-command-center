@@ -1,5 +1,10 @@
 import MeChat from './MeChat'
+import OwnerGate from '@/components/OwnerGate'
 
 export default function MePage() {
-  return <MeChat />
+  return (
+    <OwnerGate>
+      <MeChat />
+    </OwnerGate>
+  )
 }
