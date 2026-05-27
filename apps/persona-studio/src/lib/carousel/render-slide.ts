@@ -225,61 +225,87 @@ function clickbaitNode(input: RenderSlideInput): JSXNode {
 }
 
 function clickbaitCover(input: RenderSlideInput): JSXNode {
-  // Top bar — minimal, lower-case style
-  const header: JSXNode = el(
-    'div',
-    { position: 'absolute', top: 40, left: 60, right: 60, display: 'flex', justifyContent: 'space-between', alignItems: 'center', fontFamily: 'JetBrainsMono', fontSize: 22, color: CLICK.textGray },
-    [
-      el('div', { display: 'flex' }, 'Нейросети · ИИ · Маркетинг'),
-      el('div', { display: 'flex', padding: '4px 10px', backgroundColor: '#F0F0F0', borderRadius: 12 }, counter(input.index, input.total)),
-    ],
-  );
+  // Полноэкранное фото (аватар) + сильное затемнение снизу + белый
+  // UPPERCASE-заголовок в нижней трети + SWIPE LEFT. Если аватара нет —
+  // fallback на белый фон с чёрным заголовком, как раньше.
+  if (!input.avatarDataUri) {
+    return el(
+      'div',
+      { width: SLIDE_W, height: SLIDE_H, backgroundColor: CLICK.bg, display: 'flex', flexDirection: 'column', justifyContent: 'center', padding: 80, position: 'relative' },
+      [
+        el(
+          'div',
+          { position: 'absolute', top: 40, left: 60, right: 60, display: 'flex', justifyContent: 'space-between', alignItems: 'center', fontFamily: 'JetBrainsMono', fontSize: 22, color: CLICK.textGray },
+          [
+            el('div', { display: 'flex' }, 'Нейросети · ИИ · Маркетинг'),
+            el('div', { display: 'flex', padding: '4px 10px', backgroundColor: '#F0F0F0', borderRadius: 12 }, counter(input.index, input.total)),
+          ],
+        ),
+        el('div', { fontFamily: 'Tinos', fontWeight: 700, color: CLICK.text, fontSize: 96, lineHeight: 1.05, letterSpacing: -1, textTransform: 'uppercase', display: 'flex' }, input.title),
+        el('div', { marginTop: 40, fontFamily: 'Tinos', color: CLICK.textGray, fontSize: 38, lineHeight: 1.35, display: 'flex' }, input.body),
+        el('div', { position: 'absolute', bottom: 60, left: 80, fontFamily: 'JetBrainsMono', fontWeight: 700, fontSize: 28, color: CLICK.text, letterSpacing: 4, display: 'flex' }, 'SWIPE LEFT  →'),
+      ],
+    );
+  }
 
   return el(
     'div',
-    { width: SLIDE_W, height: SLIDE_H, backgroundColor: CLICK.bg, display: 'flex', flexDirection: 'column', justifyContent: 'center', padding: 80, position: 'relative' },
+    { position: 'relative', width: SLIDE_W, height: SLIDE_H, display: 'flex', backgroundColor: '#000' },
     [
-      header,
       el(
-        'div',
-        {
-          fontFamily: 'Tinos',
-          fontWeight: 700,
-          color: CLICK.text,
-          fontSize: 96,
-          lineHeight: 1.05,
-          letterSpacing: -1,
-          textTransform: 'uppercase',
-          display: 'flex',
-        },
-        input.title,
+        'img',
+        { position: 'absolute', top: 0, left: 0, width: SLIDE_W, height: SLIDE_H, objectFit: 'cover' },
+        undefined,
+        { src: input.avatarDataUri },
       ),
+      // Двойной gradient: верхний лёгкий + нижний сильный для читаемости текста
+      el('div', {
+        position: 'absolute', top: 0, left: 0, width: SLIDE_W, height: SLIDE_H,
+        background:
+          'linear-gradient(to bottom, rgba(0,0,0,0.25) 0%, rgba(0,0,0,0.1) 35%, rgba(0,0,0,0.5) 60%, rgba(0,0,0,0.92) 100%)',
+      }),
+      // Top header: tagline + counter
       el(
         'div',
-        {
-          marginTop: 40,
-          fontFamily: 'Tinos',
-          color: CLICK.textGray,
-          fontSize: 38,
-          lineHeight: 1.35,
-          display: 'flex',
-        },
-        input.body,
+        { position: 'absolute', top: 56, left: 64, right: 64, display: 'flex', justifyContent: 'space-between', alignItems: 'center', fontFamily: 'JetBrainsMono', fontSize: 22, color: '#FFFFFF', letterSpacing: 2 },
+        [
+          el('div', { display: 'flex', textTransform: 'uppercase' }, 'Нейросети · ИИ · Маркетинг'),
+          el('div', { display: 'flex', padding: '4px 12px', backgroundColor: 'rgba(255,255,255,0.15)', borderRadius: 12 }, counter(input.index, input.total)),
+        ],
       ),
+      // Bottom block: headline + subtitle + SWIPE LEFT
       el(
         'div',
-        {
-          position: 'absolute',
-          bottom: 60,
-          left: 80,
-          fontFamily: 'JetBrainsMono',
-          fontWeight: 700,
-          fontSize: 28,
-          color: CLICK.text,
-          letterSpacing: 4,
-          display: 'flex',
-        },
-        'SWIPE LEFT  →',
+        { position: 'absolute', bottom: 80, left: 64, right: 64, display: 'flex', flexDirection: 'column' },
+        [
+          el(
+            'div',
+            { fontFamily: 'Tinos', fontWeight: 700, color: '#FFFFFF', fontSize: 88, lineHeight: 1.0, letterSpacing: -1, textTransform: 'uppercase', display: 'flex' },
+            input.title,
+          ),
+          el(
+            'div',
+            { marginTop: 28, fontFamily: 'Tinos', color: 'rgba(255,255,255,0.85)', fontSize: 32, lineHeight: 1.35, textTransform: 'uppercase', display: 'flex' },
+            input.body,
+          ),
+          el(
+            'div',
+            {
+              marginTop: 40,
+              padding: '12px 20px',
+              backgroundColor: CLICK.cobalt,
+              color: '#FFFFFF',
+              fontFamily: 'JetBrainsMono',
+              fontWeight: 700,
+              fontSize: 24,
+              letterSpacing: 4,
+              textTransform: 'uppercase',
+              alignSelf: 'flex-start',
+              display: 'flex',
+            },
+            'SWIPE LEFT  →',
+          ),
+        ],
       ),
     ],
   );
@@ -449,45 +475,76 @@ function knoxNode(input: RenderSlideInput): JSXNode {
 }
 
 function knoxCover(input: RenderSlideInput): JSXNode {
+  // Фото-фоном верхняя ~55%, снизу — cream-плашка с duotone-заголовком,
+  // на стыке — тонкая золотая полоса. Без аватара — старый cream-only вид.
+  if (!input.avatarDataUri) {
+    return el(
+      'div',
+      { width: SLIDE_W, height: SLIDE_H, backgroundColor: KNOX.bg, display: 'flex', flexDirection: 'column', padding: 80, position: 'relative', justifyContent: 'center' },
+      [
+        el(
+          'div',
+          { position: 'absolute', top: 56, left: 80, right: 80, display: 'flex', justifyContent: 'space-between', fontFamily: 'JetBrainsMono', color: KNOX.textMute, fontSize: 22, letterSpacing: 2 },
+          [el('div', { display: 'flex' }, '✦  KNOX EDITION'), el('div', { display: 'flex' }, counter(input.index, input.total))],
+        ),
+        el('div', { fontFamily: 'Tinos', fontWeight: 700, fontSize: 110, lineHeight: 1.0, color: KNOX.brown, letterSpacing: -2, display: 'flex' }, input.title),
+        el('div', { marginTop: 28, fontFamily: 'Tinos', fontStyle: 'italic', fontSize: 40, color: KNOX.gold, lineHeight: 1.35, display: 'flex' }, input.body),
+        el('div', { position: 'absolute', bottom: 80, left: 80, display: 'flex', flexDirection: 'column', gap: 6, fontFamily: 'JetBrainsMono', color: KNOX.textMute, fontSize: 20 }, [
+          el('div', { display: 'flex' }, 'persona · ai-content engine'),
+          el('div', { display: 'flex' }, 'crafted slide 01'),
+        ]),
+      ],
+    );
+  }
+
+  const PHOTO_H = 740; // ≈ 55% от 1350
   return el(
     'div',
-    { width: SLIDE_W, height: SLIDE_H, backgroundColor: KNOX.bg, display: 'flex', flexDirection: 'column', padding: 80, position: 'relative', justifyContent: 'center' },
+    { position: 'relative', width: SLIDE_W, height: SLIDE_H, display: 'flex', backgroundColor: KNOX.bg },
     [
+      // Фото-верх
       el(
         'div',
-        { position: 'absolute', top: 56, left: 80, right: 80, display: 'flex', justifyContent: 'space-between', fontFamily: 'JetBrainsMono', color: KNOX.textMute, fontSize: 22, letterSpacing: 2 },
-        [el('div', { display: 'flex' }, '✦  KNOX EDITION'), el('div', { display: 'flex' }, counter(input.index, input.total))],
+        { position: 'absolute', top: 0, left: 0, width: SLIDE_W, height: PHOTO_H, overflow: 'hidden', display: 'flex' },
+        el(
+          'img',
+          { width: SLIDE_W, height: PHOTO_H, objectFit: 'cover' },
+          undefined,
+          { src: input.avatarDataUri },
+        ),
       ),
+      // Лёгкий warm-tint поверх фото (объединяет с cream-плашкой)
+      el('div', {
+        position: 'absolute', top: 0, left: 0, width: SLIDE_W, height: PHOTO_H,
+        background: 'linear-gradient(to bottom, rgba(58,43,15,0.08) 0%, rgba(245,239,224,0.0) 50%, rgba(245,239,224,0.6) 100%)',
+      }),
+      // Header tags поверх фото
       el(
         'div',
-        {
-          fontFamily: 'Tinos',
-          fontWeight: 700,
-          fontSize: 110,
-          lineHeight: 1.0,
-          color: KNOX.brown,
-          letterSpacing: -2,
-          display: 'flex',
-        },
-        input.title,
+        { position: 'absolute', top: 56, left: 80, right: 80, display: 'flex', justifyContent: 'space-between', fontFamily: 'JetBrainsMono', color: '#FFFFFF', fontSize: 22, letterSpacing: 2 },
+        [
+          el('div', { display: 'flex', padding: '4px 10px', backgroundColor: 'rgba(58,43,15,0.7)' }, '✦  KNOX EDITION'),
+          el('div', { display: 'flex', padding: '4px 10px', backgroundColor: 'rgba(58,43,15,0.7)' }, counter(input.index, input.total)),
+        ],
       ),
+      // Золотая полоса-разделитель
+      el('div', { position: 'absolute', top: PHOTO_H - 4, left: 0, width: SLIDE_W, height: 4, backgroundColor: KNOX.gold }),
+      // Cream-плашка снизу
       el(
         'div',
-        {
-          marginTop: 28,
-          fontFamily: 'Tinos',
-          fontStyle: 'italic',
-          fontSize: 40,
-          color: KNOX.gold,
-          lineHeight: 1.35,
-          display: 'flex',
-        },
-        input.body,
-      ),
-      el(
-        'div',
-        { position: 'absolute', bottom: 80, left: 80, display: 'flex', flexDirection: 'column', gap: 6, fontFamily: 'JetBrainsMono', color: KNOX.textMute, fontSize: 20 },
-        [el('div', { display: 'flex' }, 'persona · ai-content engine'), el('div', { display: 'flex' }, 'crafted slide 01')],
+        { position: 'absolute', top: PHOTO_H, left: 0, width: SLIDE_W, height: SLIDE_H - PHOTO_H, backgroundColor: KNOX.bg, padding: 64, display: 'flex', flexDirection: 'column', justifyContent: 'center' },
+        [
+          el(
+            'div',
+            { fontFamily: 'Tinos', fontWeight: 700, fontSize: 76, lineHeight: 1.0, color: KNOX.brown, letterSpacing: -2, display: 'flex' },
+            input.title,
+          ),
+          el(
+            'div',
+            { marginTop: 18, fontFamily: 'Tinos', fontStyle: 'italic', fontSize: 32, color: KNOX.gold, lineHeight: 1.35, display: 'flex' },
+            input.body,
+          ),
+        ],
       ),
     ],
   );

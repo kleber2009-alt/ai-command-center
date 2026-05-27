@@ -3,6 +3,12 @@ import { dbGetTranscript, dbMergeGenerations } from '@/lib/transcripts-db'
 import { streamAnthropic } from '@/lib/anthropic-stream'
 import { authenticate, verifyInitData } from '@/lib/telegram-auth'
 import { sendCarouselMediaGroup } from '@/lib/telegram-bot'
+import {
+  DEFAULT_CAROUSEL_STYLE,
+  getCarouselStyle,
+  isValidCarouselStyle,
+  type CarouselStyleId,
+} from '@/lib/carousel-styles'
 
 // Fan-out image generation through kie.ai. Returns one URL (or null) per
 // prompt. Failures inside a single slide don't abort the batch — the UI
@@ -37,7 +43,7 @@ export const maxDuration = 120
 
 type GenType = 'carousel' | 'reels-new' | 'reels-remix' | 'tg-post' | 'carousel-image'
 
-type Body = { id?: string; transcript?: string; type: GenType }
+type Body = { id?: string; transcript?: string; type: GenType; style?: CarouselStyleId }
 
 type CarouselContent = {
   slides: Array<{ n: number; title: string; body: string }>
@@ -63,12 +69,14 @@ const VALID_TYPES: GenType[] = ['carousel', 'reels-new', 'reels-remix', 'tg-post
 // Markdown-first prompts so the stream looks readable while it's running.
 // At the end the server parses the markdown back into the legacy structured
 // shape the UI expects.
-function buildPrompt(type: GenType, transcript: string): string {
+function buildPrompt(type: GenType, transcript: string, styleId: CarouselStyleId = DEFAULT_CAROUSEL_STYLE): string {
   const text = transcript.slice(0, 30000)
+  const style = getCarouselStyle(styleId)
+  const styleBlock = style.prompt ? `\n${style.prompt}\n` : ''
 
   if (type === 'carousel') {
     return `Ты — топовый копирайтер, специализирующийся на залипательных каруселях для Instagram и LinkedIn. Твои карусели имеют средний engagement в 3-5 раз выше среднего.
-
+${styleBlock}
 Из транскрипта ниже сделай карусель из 8-10 слайдов на русском.
 
 Правила:
@@ -252,7 +260,8 @@ export async function POST(req: NextRequest) {
     if (verified?.user?.id) tgChatId = verified.user.id
   }
 
-  const { id, transcript, type } = (await req.json()) as Body
+  const { id, transcript, type, style } = (await req.json()) as Body
+  const styleId: CarouselStyleId = isValidCarouselStyle(style) ? style : DEFAULT_CAROUSEL_STYLE
 
   if (!type || !VALID_TYPES.includes(type)) {
     return NextResponse.json(
@@ -301,7 +310,7 @@ export async function POST(req: NextRequest) {
         body: JSON.stringify({
           model: 'claude-haiku-4-5-20251001',
           max_tokens: 4096,
-          messages: [{ role: 'user', content: buildPrompt('carousel', text) }],
+          messages: [{ role: 'user', content: buildPrompt('carousel', text, styleId) }],
         }),
       })
       if (!res.ok) {
@@ -351,7 +360,7 @@ export async function POST(req: NextRequest) {
   }
 
   // ── standard text-only generation ────────────────────────────────────────
-  const prompt = buildPrompt(type, text)
+  const prompt = buildPrompt(type, text, styleId)
 
   return streamAnthropic(
     {

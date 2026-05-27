@@ -12,6 +12,7 @@ import {
 import {
   getOrCreateUser,
   getUserByTelegramId,
+  getQuota,
   grantProDays,
   recordStarsPayment,
   upsertCloneDraft,
@@ -19,6 +20,7 @@ import {
   clearCloneDraft,
   type UserTier,
 } from '@/lib/users-db'
+import { dbListTranscripts } from '@/lib/transcripts-db'
 
 export const runtime = 'nodejs'
 
@@ -172,6 +174,14 @@ async function handleCommand(msg: TgMessage) {
   }
   if (cmd === '/pro' || cmd === '/billing' || cmd === '/subscription') {
     await sendFeatureCard(msg.chat.id, 'pro', msg.from)
+    return
+  }
+  if (cmd === '/usage' || cmd === '/quota') {
+    await handleUsage(msg)
+    return
+  }
+  if (cmd === '/last') {
+    await handleLast(msg)
     return
   }
 
@@ -900,6 +910,77 @@ async function fetchUserPhotos(tgUserId: number): Promise<{ id: number; name: st
 
 function escapeHtml(s: string): string {
   return s.replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;')
+}
+
+async function handleUsage(msg: TgMessage) {
+  if (!msg.from) return
+  const user = await getUserByTelegramId(msg.from.id)
+  if (!user) {
+    await sendMessage(msg.chat.id, 'Сначала открой /start, чтобы я создал твой аккаунт.')
+    return
+  }
+  const quota = await getQuota(user.id, user.subscription_tier)
+  if (!quota) {
+    await sendMessage(msg.chat.id, '⚠️ Не смог достать твою квоту. Попробуй позже.')
+    return
+  }
+  const used = Math.round(quota.minutes_used * 10) / 10
+  const unlimited = quota.minutes_limit === -1
+  const resets = quota.resets_at
+    ? new Date(quota.resets_at).toLocaleDateString('ru-RU', { day: 'numeric', month: 'long' })
+    : null
+  const lines = [
+    `📊 <b>Использование</b>`,
+    '',
+    `Тариф: <b>${user.subscription_tier.toUpperCase()}</b>`,
+    unlimited
+      ? `Минут использовано: ${used} (безлимит)`
+      : `Минут: ${used} / ${quota.minutes_limit}`,
+  ]
+  if (resets && !unlimited) lines.push(`Сброс лимита: ${resets}`)
+  await sendMessage(msg.chat.id, lines.join('\n'), {
+    parse_mode: 'HTML',
+    reply_markup: {
+      inline_keyboard: [
+        [{ text: '🚀 Открыть приложение', web_app: { url: TMA_URL } }],
+        ...(user.subscription_tier === 'free' ? [[{ text: '💎 Pro', callback_data: 'feat:pro' }]] : []),
+      ],
+    },
+  })
+}
+
+async function handleLast(msg: TgMessage) {
+  if (!msg.from) return
+  const rows = await dbListTranscripts(1)
+  if (!rows || rows.length === 0) {
+    await sendMessage(
+      msg.chat.id,
+      'История пуста. Открой приложение и расшифруй первое видео — потом покажу здесь.',
+      {
+        reply_markup: {
+          inline_keyboard: [[{ text: '🚀 Открыть приложение', web_app: { url: TMA_URL } }]],
+        },
+      },
+    )
+    return
+  }
+  const r = rows[0]
+  const dur = r.duration ? `${Math.round(r.duration / 60)} мин · ` : ''
+  const title = r.title || r.url
+  const preview = (r.transcript || '').slice(0, 600).replace(/[<>&]/g, '')
+  await sendMessage(
+    msg.chat.id,
+    `🎬 <b>Последний транскрипт</b>\n\n${dur}${escapeHtml(title)}\n\n<i>${escapeHtml(preview)}…</i>`,
+    {
+      parse_mode: 'HTML',
+      reply_markup: {
+        inline_keyboard: [
+          [{ text: '🚀 Открыть в приложении', web_app: { url: `${TMA_URL}transcribe?id=${r.id}` } }],
+        ],
+      },
+      disable_web_page_preview: true,
+    },
+  )
 }
 
 async function handleStart(msg: TgMessage) {

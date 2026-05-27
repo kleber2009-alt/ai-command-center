@@ -680,9 +680,16 @@
     const grid = $('.agents-grid');
     if (!grid) return;
     try {
-      const data = await api('/prompts');
-      const prompts = data.prompts || [];
-      const stats = await api('/stats').catch(() => null);
+      const [{ prompts = [] }, settingsResp, stats] = await Promise.all([
+        api('/prompts'),
+        api('/settings').catch(() => ({ settings: {} })),
+        api('/stats').catch(() => null),
+      ]);
+      // The "agent" toggle on each card reflects the GLOBAL auto_reply_enabled
+      // flag (one IG agent → one switch). The active prompt stays selected in
+      // the DB; auto_reply_enabled just gates whether responder runs at all.
+      let autoOn = String((settingsResp.settings && settingsResp.settings.auto_reply_enabled) || 'false') === 'true';
+
       grid.innerHTML = '';
       if (!prompts.length) {
         grid.appendChild(el('div', { class: 'ig-loading' }, 'Промптов в базе нет.'));
@@ -690,51 +697,95 @@
       }
       for (const p of prompts) {
         const card = el('div', { class: 'ag' });
-        const isActive = !!p.active;
+        const isActivePrompt = !!p.active;
+        // Effective agent state: prompt is active in DB AND global toggle is on.
+        const agentRunning = isActivePrompt && autoOn;
         card.innerHTML =
           '<div class="ag__top">' +
             '<div class="ag__icon" style="background:var(--blue-bg);color:#7BC0FF">🤖</div>' +
             '<div style="flex:1">' +
               '<div class="ag__title">' + escapeHtml(p.name || p.kind || ('Prompt v' + p.version)) +
-                (isActive ? ' <span class="badge badge--green" style="margin-left:4px">active</span>' : '') +
+                (isActivePrompt
+                  ? ' <span class="badge ' + (autoOn ? 'badge--green' : 'badge--yellow') + '" style="margin-left:4px">' + (autoOn ? 'active' : 'paused') + '</span>'
+                  : '') +
               '</div>' +
               '<div class="ag__sub">v' + escapeHtml(String(p.version || '?')) + ' · ' + escapeHtml(p.kind || 'responder') + '</div>' +
             '</div>' +
-            '<div class="ag-toggle' + (isActive ? ' is-on' : '') + '"></div>' +
+            '<div class="ag-toggle' + (agentRunning ? ' is-on' : '') + '" data-agent-toggle></div>' +
           '</div>' +
           '<div class="ag__metrics">' +
             '<div class="ag__metric"><div class="ag__metric-lab">Версия</div><div class="ag__metric-val">' + escapeHtml(String(p.version || '?')) + '</div></div>' +
             '<div class="ag__metric"><div class="ag__metric-lab">Тип</div><div class="ag__metric-val">' + escapeHtml(p.kind || '—') + '</div></div>' +
             '<div class="ag__metric"><div class="ag__metric-lab">Создан</div><div class="ag__metric-val">' + escapeHtml(formatDay(p.created_at).split(' · ')[0] || '—') + '</div></div>' +
-            '<div class="ag__metric"><div class="ag__metric-lab">Статус</div><div class="ag__metric-val ' + (isActive ? 'c-green' : 'muted') + '">' + (isActive ? 'active' : 'idle') + '</div></div>' +
+            '<div class="ag__metric"><div class="ag__metric-lab">Статус</div><div class="ag__metric-val ' + (agentRunning ? 'c-green' : 'muted') + '">' + (agentRunning ? 'отвечает' : (isActivePrompt ? 'на паузе' : 'idle')) + '</div></div>' +
           '</div>' +
           '<div class="ag__cta">' +
-            '<button class="btn btn--' + (isActive ? 'secondary' : 'primary') + '" data-activate>' + (isActive ? '✓ Активен' : '▶ Активировать') + '</button>' +
+            (isActivePrompt
+              ? '<button class="btn btn--' + (autoOn ? 'secondary' : 'primary') + '" data-toggle-auto>' + (autoOn ? '⏸ Поставить на паузу' : '▶ Включить') + '</button>'
+              : '<button class="btn btn--primary" data-activate>▶ Сделать активным</button>') +
             '<button class="btn btn--ghost" data-view>📜 Просмотр</button>' +
           '</div>';
-        const activateBtn = $('[data-activate]', card);
-        if (activateBtn && !isActive) {
-          activateBtn.onclick = async () => {
+
+        // Toggle in the header row → flip global auto_reply_enabled for the
+        // currently-active prompt. Other prompts' toggles activate that prompt
+        // first (otherwise we'd be toggling auto for a prompt that won't run).
+        const headToggle = $('[data-agent-toggle]', card);
+        if (headToggle) {
+          headToggle.style.cursor = 'pointer';
+          headToggle.onclick = async () => {
             try {
-              await api('/prompts/' + p.id + '/activate', { method: 'POST', body: {} });
-              toast('Активирован: ' + (p.name || 'prompt v' + p.version));
+              if (!isActivePrompt) {
+                await api('/prompts/' + p.id + '/activate', { method: 'POST', body: {} });
+                toast('Активирован: ' + (p.name || 'v' + p.version));
+              } else {
+                const next = !autoOn;
+                await api('/settings', { method: 'POST', body: { auto_reply_enabled: next } });
+                autoOn = next;
+                toast('Агент: ' + (next ? 'включён' : 'на паузе'));
+              }
               initAgents();
             } catch (e) { toast('Ошибка: ' + e.message, 'err'); }
           };
         }
+
+        const ctaToggle = $('[data-toggle-auto]', card);
+        if (ctaToggle) {
+          ctaToggle.onclick = async () => {
+            try {
+              const next = !autoOn;
+              await api('/settings', { method: 'POST', body: { auto_reply_enabled: next } });
+              autoOn = next;
+              toast('Агент: ' + (next ? 'включён' : 'на паузе'));
+              initAgents();
+            } catch (e) { toast('Ошибка: ' + e.message, 'err'); }
+          };
+        }
+
+        const activateBtn = $('[data-activate]', card);
+        if (activateBtn) {
+          activateBtn.onclick = async () => {
+            try {
+              await api('/prompts/' + p.id + '/activate', { method: 'POST', body: {} });
+              toast('Активирован: ' + (p.name || 'v' + p.version));
+              initAgents();
+            } catch (e) { toast('Ошибка: ' + e.message, 'err'); }
+          };
+        }
+
         const viewBtn = $('[data-view]', card);
         if (viewBtn) {
           viewBtn.onclick = () => {
             alert((p.system_prompt || p.body || p.text || '— тело промпта недоступно —').slice(0, 4000));
           };
         }
+
         grid.appendChild(card);
       }
-      // Replace top-of-page model summary if there's a slot
       if (stats && stats.models) {
         const subt = $('.page-h__subtitle');
         if (subt) {
-          subt.textContent = 'Responder: ' + stats.models.responder + ' · Classifier: ' + stats.models.classifier + ' · Analyst: ' + stats.models.analyst;
+          subt.textContent = 'Responder: ' + stats.models.responder + ' · Classifier: ' + stats.models.classifier + ' · Analyst: ' + stats.models.analyst +
+            ' · агент: ' + (autoOn ? 'отвечает' : 'на паузе');
         }
       }
     } catch (e) {

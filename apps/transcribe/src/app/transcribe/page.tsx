@@ -10,6 +10,7 @@ import { getTelegram, isInTelegram } from '@/lib/telegram'
 import { apiFetch } from '@/lib/api-client'
 import MarkdownMessage from '@/components/MarkdownMessage'
 import { readNdjson } from '@/lib/stream-client'
+import { CAROUSEL_STYLES, DEFAULT_CAROUSEL_STYLE, type CarouselStyleId } from '@/lib/carousel-styles'
 
 type Paragraph = { text: string; start: number; end: number }
 type Source = 'youtube' | 'deepgram' | 'ytdlp+deepgram' | 'apify+deepgram'
@@ -413,6 +414,7 @@ export default function TranscribePage() {
   const [tgResend, setTgResend] = useState<'idle' | 'sending' | 'sent' | 'error'>('idle')
   const [showPricing, setShowPricing] = useState(false)
   const [historySource, setHistorySource] = useState<'all' | 'youtube' | 'other'>('all')
+  const [carouselStyle, setCarouselStyle] = useState<CarouselStyleId>(DEFAULT_CAROUSEL_STYLE)
 
   async function loadHistory() {
     try {
@@ -765,7 +767,12 @@ export default function TranscribePage() {
       const res = await apiFetch('/api/transcribe/generate', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ id: result.id, transcript: result.transcript, type }),
+        body: JSON.stringify({
+          id: result.id,
+          transcript: result.transcript,
+          type,
+          style: (type === 'carousel' || type === 'carousel-image') ? carouselStyle : undefined,
+        }),
       })
       if (!res.ok) {
         const data = await res.json().catch(() => ({}))
@@ -1170,6 +1177,35 @@ export default function TranscribePage() {
             <div className="mb-3 text-[12px] font-medium text-apple-muted">
               Превратить в контент
             </div>
+
+            {/* Style picker — affects carousel + carousel-image only */}
+            <div className="mb-3 rounded-xl border border-apple-line bg-apple-bg-soft p-3">
+              <div className="mb-2 flex items-center justify-between gap-2">
+                <span className="text-[11px] font-medium uppercase tracking-wide text-apple-faint">
+                  Стиль карусели
+                </span>
+                <span className="text-[11px] text-apple-faint">
+                  {CAROUSEL_STYLES.find((s) => s.id === carouselStyle)?.hint}
+                </span>
+              </div>
+              <div className="flex flex-wrap gap-1.5">
+                {CAROUSEL_STYLES.map((s) => (
+                  <button
+                    key={s.id}
+                    type="button"
+                    onClick={() => setCarouselStyle(s.id)}
+                    className={`rounded-full px-3 py-1 text-[12px] font-medium transition-all ${
+                      carouselStyle === s.id
+                        ? 'bg-apple-ink text-apple-bg'
+                        : 'bg-apple-bg-elev text-apple-muted hover:bg-white hover:text-apple-ink'
+                    }`}
+                  >
+                    {s.label}
+                  </button>
+                ))}
+              </div>
+            </div>
+
             <div className="flex flex-wrap gap-2">
               {([
                 ['carousel', 'Карусель', LayoutGrid] as const,
