@@ -1381,10 +1381,45 @@
       const won = f.customer || 0;
       const wonRate = total ? ((won / total) * 100).toFixed(1) + '%' : '0%';
 
-      // KPI tiles (4 numbers at the bottom of the prototype).
+      // KPI tiles (4 cards at the top of the prototype). The static
+      // HTML labels them «Лидов / Won / Конверсия / MRR-рост» — but we
+      // don't have MRR data, so tile #4 was getting `msgs` shoved into
+      // it under a misleading «MRR-рост» label. Fix: relabel #4 to
+      // «Сообщений» and clear all stale ▲ +N% deltas (no period
+      // comparison available yet).
       const tiles = $$('.t-xl.fw6.mono');
       const vals = [total, won, wonRate, msgs];
-      tiles.forEach((t, i) => { if (vals[i] != null) t.textContent = vals[i]; });
+      const labels = ['Лидов', 'Won', 'Конверсия', 'Сообщений'];
+      tiles.forEach((t, i) => {
+        if (vals[i] != null) t.textContent = vals[i];
+        if (i === 3) t.classList.remove('c-green'); // was hardcoded green
+        const card = t.parentElement;
+        if (!card) return;
+        const xsTexts = card.querySelectorAll('.t-xs');
+        // .t-xs[0] = label ("Лидов"/etc), .t-xs[1] = delta ("▲ +17%").
+        if (xsTexts[0] && labels[i]) xsTexts[0].textContent = labels[i];
+        if (xsTexts[1]) {
+          xsTexts[1].textContent = '';
+          xsTexts[1].classList.remove('c-green', 'c-red');
+        }
+      });
+
+      // Honest subtitle. Static HTML hard-codes "Срез с 14 мая по
+      // 20 мая · 7 дней · обновлено 06:00" — completely stale. Pull
+      // the actual window from /reports.daily (server controls span)
+      // and stamp it with the request time.
+      const daily = reports.daily || [];
+      const subtEl = $('.page-h__subtitle');
+      if (subtEl && daily.length) {
+        const first = daily[0].day;
+        const last = daily[daily.length - 1].day;
+        const stamp = new Date().toLocaleTimeString('ru-RU', { hour: '2-digit', minute: '2-digit' });
+        subtEl.textContent = 'Срез с ' + first + ' по ' + last + ' · ' +
+          daily.length + ' ' + pluralRu(daily.length, ['день', 'дня', 'дней']) +
+          ' · обновлено ' + stamp;
+      } else if (subtEl) {
+        subtEl.textContent = 'Нет данных в /ig-api/reports.daily';
+      }
 
       // Insert / refresh dynamic dashboard cards at the top of <main>.
       const main = $('main');

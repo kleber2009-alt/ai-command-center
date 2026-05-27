@@ -1,15 +1,38 @@
 import { redirect } from 'next/navigation';
-import { getCurrentUser } from '@/lib/auth';
-import { TopNav } from '@/components/nav';
+import { getCurrentUser, signOut } from '@/lib/auth';
+import { Sidebar } from '@/components/shell/sidebar';
+import { TopActionBar } from '@/components/shell/top-action-bar';
+import { AIDirectorBar } from '@/components/shell/ai-director-bar';
 
 export default async function AppLayout({ children }: { children: React.ReactNode }) {
   const user = await getCurrentUser();
   if (!user) redirect('/sign-in');
 
+  async function doSignOut() {
+    'use server';
+    await signOut({ redirectTo: '/sign-in' });
+  }
+
   return (
-    <>
-      <TopNav email={user.email} balance={user.tokenBalance} isAdmin={user.role === 'admin'} />
-      <main className="max-w-[1480px] mx-auto px-6 pb-24 pt-6">{children}</main>
-    </>
+    <div className="app-shell">
+      <Sidebar
+        email={user.email}
+        balance={user.tokenBalance}
+        isAdmin={user.role === 'admin'}
+        plan={user.plan ?? 'Pro'}
+      />
+
+      <div className="shell-main">
+        <TopActionBar signOutAction={doSignOut} />
+
+        <main className="flex-1 px-4 sm:px-8 lg:px-10 pt-6 pb-2">
+          <div className="max-w-[1480px] mx-auto">
+            {children}
+          </div>
+        </main>
+
+        <AIDirectorBar />
+      </div>
+    </div>
   );
 }
