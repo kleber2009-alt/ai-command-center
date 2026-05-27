@@ -228,28 +228,30 @@ function Stat({ k, v, sub, accent }: { k: string; v: number | string; sub?: stri
 
 function ActionCard({
   href,
-  num,
+  kicker,
   title,
   sub,
   tone,
 }: {
   href: string;
-  num: string;
+  kicker: string;
   title: string;
   sub: string;
   tone: 'lime' | 'cyan' | 'pink' | 'warm';
 }) {
-  const subColor =
+  const toneColor =
     tone === 'lime' ? 'text-lime' : tone === 'cyan' ? 'text-cyan' : tone === 'pink' ? 'text-pink' : 'text-warm';
   return (
     <Link
       href={href}
       className="bg-surface hover:bg-surface-2 transition-colors p-5 flex flex-col justify-between min-h-[150px]"
     >
-      <div className="sec-num mb-2">{num}</div>
+      <span className={`mono text-[10px] tracking-[0.22em] uppercase font-bold ${toneColor}`}>
+        · {kicker}
+      </span>
       <div>
         <div className="font-serif italic text-[20px] leading-tight">{title} →</div>
-        <span className={`mono text-[10px] tracking-widest mt-2 inline-block ${subColor}`}>{sub}</span>
+        <span className={`mono text-[10px] tracking-widest mt-2 inline-block ${toneColor}`}>{sub}</span>
       </div>
     </Link>
   );

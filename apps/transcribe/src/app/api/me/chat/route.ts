@@ -46,18 +46,21 @@ export async function POST(req: NextRequest) {
     return NextResponse.json({ error: 'ANTHROPIC_API_KEY не настроен' }, { status: 500 })
   }
 
-  const profile = loadProfile(auth.user_id)
+  const profile = await loadProfile()
   const profileBlock = profileToContext(profile)
 
   // Resolve session early — we may need its doc_ids to scope RAG.
   const session = body.sessionId ? getSession(body.sessionId, auth.user_id) : null
   const validSession = session && session.kind === 'me' ? session : null
-  const restrictDocIds: number[] | null = validSession?.doc_ids ?? null
+  const restrictDocIds: string[] | undefined = Array.isArray(validSession?.doc_ids)
+    ? validSession!.doc_ids.map(String)
+    : undefined
+  const topK = typeof body.topK === 'number' ? body.topK : 8
 
   const lastUser = messages[messages.length - 1].content
   let contextBlock = ''
   let citations: Array<{
-    document_id: number
+    document_id: string
     document_title: string
     chunk_index: number
     similarity: number

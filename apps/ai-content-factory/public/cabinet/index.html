@@ -434,6 +434,14 @@ const STYLE_LABELS = {
   julieta_publicista: '@julieta_publicista · minimalist',
 };
 
+function refreshStyleWarning() {
+  const warn = document.getElementById('style-warning');
+  if (!warn) return;
+  const stylePicked = state.style && state.style !== 'auto';
+  const isPuppeteer = state.engine === 'puppeteer';
+  warn.style.display = stylePicked && isPuppeteer ? '' : 'none';
+}
+
 document.querySelectorAll('#styles-row .sty').forEach((b) => {
   b.onclick = () => {
     state.style = b.dataset.sty;
@@ -445,6 +453,7 @@ document.querySelectorAll('#styles-row .sty').forEach((b) => {
     });
     const lbl = document.getElementById('style-current');
     if (lbl) lbl.textContent = '· ' + (STYLE_LABELS[state.style] || state.style);
+    refreshStyleWarning();
   };
 });
 
