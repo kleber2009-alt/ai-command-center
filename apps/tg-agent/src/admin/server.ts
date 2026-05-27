@@ -333,21 +333,33 @@ function wireApi(app: Hono, deps: AdminDeps): void {
     return c.json({
       bot: '@newnewnnn_bot',
       auto_reply_enabled: deps.settings.getGlobalAutoReply(),
+      bot_enabled: deps.settings.getBotEnabled(),
     });
   });
   app.post('/api/settings', async (c) => {
-    let body: { auto_reply_enabled?: unknown };
+    let body: { auto_reply_enabled?: unknown; bot_enabled?: unknown };
     try {
       body = await c.req.json();
     } catch {
       return c.json({ error: 'invalid json' }, 400);
     }
-    if (typeof body.auto_reply_enabled !== 'boolean') {
-      return c.json({ error: 'auto_reply_enabled (boolean) required' }, 400);
+    const hasAutoReply = typeof body.auto_reply_enabled === 'boolean';
+    const hasBotEnabled = typeof body.bot_enabled === 'boolean';
+    if (!hasAutoReply && !hasBotEnabled) {
+      return c.json({ error: 'auto_reply_enabled or bot_enabled (boolean) required' }, 400);
     }
-    const next = deps.settings.setGlobalAutoReply(body.auto_reply_enabled);
-    deps.logger.info('global auto_reply changed', { auto_reply_enabled: next });
-    return c.json({ auto_reply_enabled: next });
+    if (hasAutoReply) {
+      const next = deps.settings.setGlobalAutoReply(body.auto_reply_enabled as boolean);
+      deps.logger.info('global auto_reply changed', { auto_reply_enabled: next });
+    }
+    if (hasBotEnabled) {
+      const next = deps.settings.setBotEnabled(body.bot_enabled as boolean);
+      deps.logger.info('bot_enabled changed', { bot_enabled: next });
+    }
+    return c.json({
+      auto_reply_enabled: deps.settings.getGlobalAutoReply(),
+      bot_enabled: deps.settings.getBotEnabled(),
+    });
   });
 
   // ── KB routes ────────────────────────────────────────────────────────────

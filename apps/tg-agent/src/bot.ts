@@ -91,6 +91,15 @@ export function createBot(deps: BotDeps): CreateBotResult {
     const chatId = ctx.chat.id;
     const chatTitle = 'title' in ctx.chat ? ctx.chat.title : undefined;
 
+    // Master kill-switch. When OFF the bot stays connected (long-poll keeps
+    // running so we don't accumulate updates) but ignores every group
+    // message — no classify, no log, no respond. Distinct from
+    // auto_reply_enabled, which only mutes the responder.
+    if (!settings.getBotEnabled()) {
+      logger.debug('skip: bot globally disabled', { chatId, chatTitle });
+      return;
+    }
+
     if (config.allowedChatIds.size > 0 && !config.allowedChatIds.has(chatId)) {
       logger.debug('skip: chat not in allowlist', { chatId, chatTitle });
       return;
