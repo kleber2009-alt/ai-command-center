@@ -573,6 +573,53 @@
     };
 
     await reload();
+
+    // Poll every 10s for new messages / status changes so an open
+    // conversation tab stays live without F5. We pause polling when the
+    // tab is hidden (saves API + tokens) and resume on visibility change.
+    let pollTimer = null;
+    let polling = false;
+    async function tick() {
+      if (polling || document.hidden) return;
+      polling = true;
+      try {
+        const m = await api('/contacts/' + contactId + '/messages?limit=200');
+        const next = m.messages || [];
+        // Skip re-render if no change (count + last id match what we have).
+        const sameCount = next.length === messages.length;
+        const sameTail = sameCount && next.length && messages[messages.length - 1] &&
+          next[next.length - 1].id === messages[messages.length - 1].id;
+        if (!sameTail) {
+          messages = next;
+          renderFeed();
+          // Recommendations and contact details change less often but cheap to refresh.
+          const [r, c] = await Promise.all([
+            api('/contacts/' + contactId + '/recommendations').catch(() => ({ recommendations: [] })),
+            api('/contacts/' + contactId).catch(() => null),
+          ]);
+          recommendations = r.recommendations || recommendations;
+          if (c && c.contact) {
+            contact = c.contact;
+            const convs = c.conversations || [];
+            conversation = convs.find((cv) => cv.status === 'active') || convs[0] || conversation;
+          }
+          renderHeader();
+          renderSidebar();
+          renderAnalysis();
+        }
+      } catch (_) {
+        // Silent: transient API blips are common; next tick retries.
+      } finally {
+        polling = false;
+      }
+    }
+    pollTimer = setInterval(tick, 10000);
+    document.addEventListener('visibilitychange', () => {
+      if (!document.hidden) tick(); // immediate refresh on return
+    });
+    window.addEventListener('beforeunload', () => {
+      if (pollTimer) clearInterval(pollTimer);
+    });
   }
 
   // ---------- PULSE ----------------------------------------------------
@@ -960,14 +1007,136 @@
   async function initReports() {
     ensureStyles();
     try {
-      const s = await api('/stats');
-      const by = (s.contacts && s.contacts.by_status) || {};
-      const msgs = (s.messages && (s.messages.total || 0)) || 0;
+      const [stats, reports] = await Promise.all([api('/stats'), api('/reports')]);
+      const total = (stats.contacts && stats.contacts.total) || 0;
+      const f = reports.funnel || {};
+      const msgs = (stats.messages && stats.messages.total) || 0;
+      const won = f.customer || 0;
+      const wonRate = total ? ((won / total) * 100).toFixed(1) + '%' : '0%';
+
+      // KPI tiles (4 numbers at the bottom of the prototype).
       const tiles = $$('.t-xl.fw6.mono');
-      const total = (s.contacts && s.contacts.total) || 0;
-      const wonRate = total && by.customer ? ((by.customer / total) * 100).toFixed(1) + '%' : '0%';
-      const vals = [total, by.customer || 0, wonRate, msgs];
+      const vals = [total, won, wonRate, msgs];
       tiles.forEach((t, i) => { if (vals[i] != null) t.textContent = vals[i]; });
+
+      // Insert / refresh dynamic dashboard cards at the top of <main>.
+      const main = $('main');
+      if (!main) return;
+      let host = $('#ig-reports-cards');
+      if (!host) {
+        host = el('section', {
+          id: 'ig-reports-cards',
+          style: { display: 'grid', gridTemplateColumns: 'repeat(3, 1fr)', gap: '14px', margin: '16px 0' },
+        });
+        // Place right after the page-h.
+        const pageH = $('.page-h', main);
+        if (pageH && pageH.parentElement) pageH.parentElement.insertBefore(host, pageH.nextSibling);
+        else main.prepend(host);
+      }
+      host.innerHTML = '';
+
+      // --- Funnel card -------------------------------------------------
+      const funnelOrder = [
+        { k: 'new', label: 'Новые', color: 'var(--blue)' },
+        { k: 'warm', label: 'Тёплые', color: 'var(--yellow)' },
+        { k: 'hot', label: 'Горячие', color: 'var(--red)' },
+        { k: 'customer', label: 'Купили', color: 'var(--green)' },
+        { k: 'lost', label: 'Потеряны', color: 'var(--text-mute)' },
+      ];
+      const maxFunnel = Math.max(1, ...funnelOrder.map((f2) => f[f2.k] || 0));
+      const funnelCard = el('div', { class: 'card' });
+      funnelCard.innerHTML =
+        '<div class="section-h">Воронка по статусам</div>' +
+        '<div style="display:flex;flex-direction:column;gap:8px;margin-top:8px">' +
+          funnelOrder.map((row) => {
+            const v = f[row.k] || 0;
+            const pct = (v / maxFunnel) * 100;
+            const ratePct = total ? ((v / total) * 100).toFixed(1) : '0';
+            return (
+              '<div>' +
+                '<div style="display:flex;justify-content:space-between;font-size:11.5px;margin-bottom:3px">' +
+                  '<span class="muted">' + row.label + '</span>' +
+                  '<span class="mono">' + v + ' · ' + ratePct + '%</span>' +
+                '</div>' +
+                '<div style="height:6px;border-radius:3px;background:var(--bg-card-2);overflow:hidden">' +
+                  '<div style="height:100%;width:' + pct + '%;background:' + row.color + '"></div>' +
+                '</div>' +
+              '</div>'
+            );
+          }).join('') +
+        '</div>';
+      host.appendChild(funnelCard);
+
+      // --- Top intents card -------------------------------------------
+      const intentsCard = el('div', { class: 'card' });
+      const intents = reports.intents || [];
+      const maxIntent = Math.max(1, ...intents.map((i) => i.n));
+      intentsCard.innerHTML =
+        '<div class="section-h">Топ-12 intent\'ов (incoming)</div>' +
+        '<div style="display:flex;flex-direction:column;gap:6px;margin-top:8px;font-size:11.5px">' +
+          (intents.length ? intents.map((row) => {
+            const pct = (row.n / maxIntent) * 100;
+            return (
+              '<div style="display:flex;align-items:center;gap:10px">' +
+                '<span class="mono" style="flex:0 0 145px;color:var(--text-mid)">' + escapeHtml(row.intent) + '</span>' +
+                '<div style="flex:1;height:5px;border-radius:3px;background:var(--bg-card-2);overflow:hidden">' +
+                  '<div style="height:100%;width:' + pct + '%;background:var(--blue)"></div>' +
+                '</div>' +
+                '<span class="mono" style="flex:0 0 36px;text-align:right">' + row.n + '</span>' +
+              '</div>'
+            );
+          }).join('') : '<div class="muted">Нет данных</div>') +
+        '</div>';
+      host.appendChild(intentsCard);
+
+      // --- Qualification card -----------------------------------------
+      const q = reports.qualification || {};
+      const qualCard = el('div', { class: 'card' });
+      qualCard.innerHTML =
+        '<div class="section-h">Сегменты (квалификация)</div>' +
+        '<div style="display:grid;grid-template-columns:repeat(5,1fr);gap:8px;margin-top:10px">' +
+          ['A','B','C','D','unknown'].map((k) => (
+            '<div style="text-align:center;padding:10px 6px;background:var(--bg-card-2);border-radius:8px">' +
+              '<div class="mono" style="font-size:18px;font-weight:600;color:' +
+                (k === 'A' ? 'var(--purple)' : k === 'B' ? 'var(--blue)' : k === 'C' ? 'var(--yellow)' : 'var(--text-muted)') + '">' +
+                (q[k] || 0) + '</div>' +
+              '<div class="t-sm muted">' + k + '</div>' +
+            '</div>'
+          )).join('') +
+        '</div>';
+      host.appendChild(qualCard);
+
+      // --- Daily activity sparkline (last 14 days) --------------------
+      const daily = reports.daily || [];
+      const dailyCard = el('div', {
+        class: 'card',
+        style: { gridColumn: '1 / -1' },
+      });
+      const maxBar = Math.max(1, ...daily.map((d) => d.incoming + d.outgoing));
+      dailyCard.innerHTML =
+        '<div class="section-h">Активность за 14 дней (incoming/outgoing)</div>' +
+        '<div style="display:flex;align-items:flex-end;gap:6px;margin-top:14px;height:120px">' +
+          daily.map((d) => {
+            const inPct = (d.incoming / maxBar) * 100;
+            const outPct = (d.outgoing / maxBar) * 100;
+            const day = d.day.slice(5);
+            return (
+              '<div style="flex:1;display:flex;flex-direction:column;align-items:center;gap:4px;height:100%" title="' +
+                escapeHtml(d.day) + ': ' + d.incoming + ' in / ' + d.outgoing + ' out">' +
+                '<div style="flex:1;width:100%;display:flex;flex-direction:column;justify-content:flex-end;gap:1px">' +
+                  '<div style="width:100%;background:var(--blue);height:' + inPct + '%;border-radius:2px 2px 0 0"></div>' +
+                  '<div style="width:100%;background:var(--green);height:' + outPct + '%"></div>' +
+                '</div>' +
+                '<div class="mono" style="font-size:10px;color:var(--text-muted)">' + escapeHtml(day) + '</div>' +
+              '</div>'
+            );
+          }).join('') +
+        '</div>' +
+        '<div style="display:flex;gap:14px;margin-top:10px;font-size:11px">' +
+          '<span><span style="display:inline-block;width:10px;height:8px;background:var(--blue);border-radius:2px;vertical-align:middle;margin-right:4px"></span>incoming</span>' +
+          '<span><span style="display:inline-block;width:10px;height:8px;background:var(--green);border-radius:2px;vertical-align:middle;margin-right:4px"></span>outgoing</span>' +
+        '</div>';
+      host.appendChild(dailyCard);
     } catch (e) {
       toast('Reports: ' + e.message, 'err');
     }

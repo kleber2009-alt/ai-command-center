@@ -947,6 +947,58 @@ export function startAdminServer(deps: AdminDeps): AdminHandle {
     return c.json({ stages, total: rows.length });
   });
 
+  // Reports aggregate — one round-trip for every chart on /reports:
+  //   - funnel: counts by lead_status
+  //   - intents: top intents from incoming messages
+  //   - daily: last 14 days of incoming/outgoing volume
+  //   - qualification: A/B/C/D segment mix
+  //   - recent_wins: contacts who transitioned to customer
+  app.get('/api/reports', async (c) => {
+    const [funnel, intents, daily, qual] = await Promise.all([
+      query<{ lead_status: string; n: string }>(
+        deps.pool,
+        `SELECT COALESCE(lead_status, 'new') AS lead_status, COUNT(*)::text AS n
+           FROM contacts GROUP BY lead_status`,
+      ),
+      query<{ intent: string; n: string }>(
+        deps.pool,
+        `SELECT intent, COUNT(*)::text AS n FROM messages
+            WHERE direction='incoming' AND intent IS NOT NULL
+            GROUP BY intent ORDER BY COUNT(*) DESC LIMIT 12`,
+      ),
+      query<{ day: string; incoming: string; outgoing: string }>(
+        deps.pool,
+        `SELECT to_char(date_trunc('day', created_at), 'YYYY-MM-DD') AS day,
+                COUNT(*) FILTER (WHERE direction='incoming')::text AS incoming,
+                COUNT(*) FILTER (WHERE direction='outgoing')::text AS outgoing
+           FROM messages
+          WHERE created_at >= NOW() - INTERVAL '14 days'
+          GROUP BY 1 ORDER BY 1 ASC`,
+      ),
+      query<{ qualification: string | null; n: string }>(
+        deps.pool,
+        `SELECT qualification, COUNT(*)::text AS n FROM contacts GROUP BY qualification`,
+      ),
+    ]);
+
+    const funnelObj: Record<string, number> = { new: 0, warm: 0, hot: 0, customer: 0, lost: 0 };
+    for (const r of funnel) funnelObj[r.lead_status] = Number(r.n);
+
+    const qualObj: Record<string, number> = { A: 0, B: 0, C: 0, D: 0, unknown: 0 };
+    for (const r of qual) qualObj[r.qualification ?? 'unknown'] = Number(r.n);
+
+    return c.json({
+      funnel: funnelObj,
+      intents: intents.map((r) => ({ intent: r.intent, n: Number(r.n) })),
+      daily: daily.map((r) => ({
+        day: r.day,
+        incoming: Number(r.incoming),
+        outgoing: Number(r.outgoing),
+      })),
+      qualification: qualObj,
+    });
+  });
+
   app.get('/api/prompts', async (c) => {
     const rows = await deps.prompts.list();
     return c.json({ prompts: rows });
