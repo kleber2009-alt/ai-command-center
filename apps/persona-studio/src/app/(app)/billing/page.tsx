@@ -5,6 +5,7 @@ import { formatDate } from '@/lib/utils';
 import { BillingActions } from '@/components/billing-actions';
 import { EmptyState } from '@/components/empty-state';
 import { COSTS } from '@/lib/tokens';
+import { PageHero } from '@/components/shell/page-hero';
 
 export const dynamic = 'force-dynamic';
 export const metadata = { title: 'Billing — Persona Studio' };

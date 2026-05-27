@@ -3,6 +3,7 @@ import { redirect } from 'next/navigation';
 import { getCurrentUser } from '@/lib/auth';
 import { prisma } from '@/lib/prisma';
 import { EmptyState } from '@/components/empty-state';
+import { PageHero } from '@/components/shell/page-hero';
 
 export const dynamic = 'force-dynamic';
 export const metadata = { title: 'Carousels — Persona Studio' };
@@ -23,23 +24,22 @@ export default async function CarouselsPage() {
 
   return (
     <div className="grid gap-8">
-      <header>
-        <div className="flex items-baseline gap-3 mb-4">
-          <span className="sec-num">/00</span>
-          <span className="sec-title">Carousels</span>
-          <span className="flex-1 border-b border-border translate-y-[-3px]" />
-          <Link href="/parser" className="mono text-[10px] tracking-widest uppercase text-lime">
-            из парсера →
-          </Link>
-        </div>
-        <h1 className="font-serif text-[28px] sm:text-[36px] md:text-[44px] leading-tight max-w-[26ch]">
-          Карусели — <span className="italic text-warm">сценарий, разбитый на слайды.</span>
-        </h1>
-        <p className="font-serif text-[14px] sm:text-[16px] text-text-dim mt-3 max-w-[60ch]">
-          Берём найденный парсером пост, Claude разбивает его на N слайдов по структуре
-          обложка → раскрытие → CTA. Первый слайд — твой аватар, остальные — уникализированные тексты.
-        </p>
-      </header>
+      <PageHero
+        eyebrow="CREATE · 04 · CAROUSEL"
+        title={
+          <>
+            Carousels — <span className="italic text-gold">a script split into slides.</span>
+          </>
+        }
+        description="Берём найденный парсером пост, Claude разбивает его на N слайдов: обложка → раскрытие → CTA. Первый слайд — твой аватар, остальные — уникализированные тексты."
+        actions={[{ label: 'Open parser', href: '/parser' }]}
+        meta={
+          <>
+            <div className="mono text-[9px] tracking-[0.28em] uppercase text-text-muted">Drafts</div>
+            <div className="font-serif text-[28px] text-gold leading-none">{drafts.length}</div>
+          </>
+        }
+      />
 
       {drafts.length === 0 ? (
         <EmptyState
