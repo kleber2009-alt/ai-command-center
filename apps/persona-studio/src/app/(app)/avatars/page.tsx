@@ -5,6 +5,7 @@ import { prisma } from '@/lib/prisma';
 import { AvatarGrid } from '@/components/avatar-grid';
 import { EmptyState } from '@/components/empty-state';
 import { formatDate } from '@/lib/utils';
+import { PageHero } from '@/components/shell/page-hero';
 
 export const dynamic = 'force-dynamic';
 export const metadata = { title: 'Avatars — Persona Studio' };
@@ -49,19 +50,22 @@ export default async function AvatarsPage({ searchParams }: { searchParams: Prom
 
   return (
     <div className="grid gap-8">
-      <header>
-        <div className="flex items-baseline gap-3 mb-4">
-          <span className="sec-num">/00</span>
-          <span className="sec-title">My avatars</span>
-          <span className="flex-1 border-b border-border translate-y-[-3px]" />
-          <Link href="/generate" className="mono text-[10px] tracking-widest uppercase text-lime">
-            new batch →
-          </Link>
-        </div>
-        <h1 className="font-serif text-[28px] sm:text-[36px] md:text-[44px] leading-tight max-w-[18ch]">
-          Все батчи аватаров.
-        </h1>
-      </header>
+      <PageHero
+        eyebrow="LIBRARY · AVATARS"
+        title={
+          <>
+            All avatar <span className="italic text-gold">batches.</span>
+          </>
+        }
+        description="Каждый батч — одно загруженное селфи, развёрнутое Gemini в десять портретов в разных стилях."
+        actions={[{ label: 'New batch', href: '/generate' }]}
+        meta={
+          <>
+            <div className="mono text-[9px] tracking-[0.28em] uppercase text-text-muted">Batches</div>
+            <div className="font-serif text-[28px] text-gold leading-none">{generations.length}</div>
+          </>
+        }
+      />
 
       {generations.length === 0 ? (
         <EmptyState

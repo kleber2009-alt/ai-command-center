@@ -4,6 +4,7 @@ import { getCurrentUser } from '@/lib/auth';
 import { prisma } from '@/lib/prisma';
 import { VideoCard } from '@/components/video-card';
 import { EmptyState } from '@/components/empty-state';
+import { PageHero } from '@/components/shell/page-hero';
 
 export const dynamic = 'force-dynamic';
 export const metadata = { title: 'Videos — Persona Studio' };
@@ -28,31 +29,32 @@ export default async function VideosPage({ searchParams }: { searchParams: Promi
 
   return (
     <div className="grid gap-8">
-      <header>
-        <div className="flex items-baseline gap-3 mb-4">
-          <span className="sec-num">/00</span>
-          <span className="sec-title">My talking-photo videos</span>
-          <span className="flex-1 border-b border-border translate-y-[-3px]" />
-          <Link href="/edits" className="mono text-[10px] tracking-widest uppercase text-text-mute hover:text-text">
-            montage →
-          </Link>
-          {selectedAvatar ? (
-            <Link
-              href={`/videos/new?avatarId=${selectedAvatar.id}`}
-              className="mono text-[10px] tracking-widest uppercase text-lime"
-            >
-              new video · {selectedAvatar.styleLabel} →
-            </Link>
-          ) : (
-            <Link href="/avatars" className="mono text-[10px] tracking-widest uppercase text-lime">
-              choose avatar →
-            </Link>
-          )}
-        </div>
-        <h1 className="font-serif text-[28px] sm:text-[36px] md:text-[44px] leading-tight max-w-[22ch]">
-          Все говорящие <span className="italic text-warm">видео.</span>
-        </h1>
-      </header>
+      <PageHero
+        eyebrow="LIBRARY · VIDEOS"
+        title={
+          <>
+            Talking-photo <span className="italic text-gold">videos.</span>
+          </>
+        }
+        description="HeyGen берёт выбранного аватара, оживляет губы под скрипт и выдаёт MP4 за 2–4 минуты."
+        actions={
+          selectedAvatar
+            ? [
+                { label: `New video · ${selectedAvatar.styleLabel}`, href: `/videos/new?avatarId=${selectedAvatar.id}` },
+                { label: 'Montage →', href: '/edits', tone: 'ghost' },
+              ]
+            : [
+                { label: 'Choose avatar', href: '/avatars' },
+                { label: 'Montage →', href: '/edits', tone: 'ghost' },
+              ]
+        }
+        meta={
+          <>
+            <div className="mono text-[9px] tracking-[0.28em] uppercase text-text-muted">Library</div>
+            <div className="font-serif text-[28px] text-gold leading-none">{videos.length}</div>
+          </>
+        }
+      />
 
       {videos.length === 0 ? (
         selectedAvatar ? (

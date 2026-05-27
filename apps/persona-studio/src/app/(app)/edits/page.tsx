@@ -4,6 +4,7 @@ import { getCurrentUser } from '@/lib/auth';
 import { prisma } from '@/lib/prisma';
 import { EditCard } from '@/components/edit-card';
 import { EmptyState } from '@/components/empty-state';
+import { PageHero } from '@/components/shell/page-hero';
 
 export const dynamic = 'force-dynamic';
 export const metadata = { title: 'Montage — Persona Studio' };
@@ -38,31 +39,26 @@ export default async function EditsPage({ searchParams }: { searchParams: Promis
 
   return (
     <div className="grid gap-8">
-      <header>
-        <div className="flex items-baseline gap-3 mb-4">
-          <span className="sec-num">/00</span>
-          <span className="sec-title">Montage · Submagic</span>
-          <span className="flex-1 border-b border-border translate-y-[-3px]" />
-          {latestVideo ? (
-            <Link
-              href={`/edits/new?videoId=${latestVideo.id}`}
-              className="mono text-[10px] tracking-widest uppercase text-lime"
-            >
-              new edit →
-            </Link>
-          ) : (
-            <Link href="/videos" className="mono text-[10px] tracking-widest uppercase text-lime">
-              сначала видео →
-            </Link>
-          )}
-        </div>
-        <h1 className="font-serif text-[28px] sm:text-[36px] md:text-[44px] leading-tight max-w-[22ch]">
-          Готовое видео — <span className="italic text-warm">в монтаж.</span>
-        </h1>
-        <p className="font-serif text-[14px] sm:text-[16px] text-text-dim mt-3 max-w-[60ch]">
-          Submagic берёт твой mp4, накладывает шаблон в стиле известных авторов и автоматические субтитры. На выходе — готовый для Reels / Shorts ролик.
-        </p>
-      </header>
+      <PageHero
+        eyebrow="VIDEO PRODUCTION SUITE · SUBMAGIC"
+        title={
+          <>
+            Finished videos — <span className="italic text-gold">edited.</span>
+          </>
+        }
+        description="Submagic берёт твой mp4, накладывает шаблон в стиле известных авторов и автоматические субтитры. На выходе — готовый Reels / Shorts."
+        actions={
+          latestVideo
+            ? [{ label: 'New edit', href: `/edits/new?videoId=${latestVideo.id}` }]
+            : [{ label: 'Need a video first', href: '/videos', tone: 'ghost' }]
+        }
+        meta={
+          <>
+            <div className="mono text-[9px] tracking-[0.28em] uppercase text-text-muted">Renders</div>
+            <div className="font-serif text-[28px] text-gold leading-none">{edits.length}</div>
+          </>
+        }
+      />
 
       {edits.length === 0 ? (
         latestVideo ? (
