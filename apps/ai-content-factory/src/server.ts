@@ -277,15 +277,10 @@ app.delete('/api/uploads/photo/:id', (req, res) => {
   res.json({ ok: true });
 });
 
-// Style anchor — выбранный автор из dataset.json. Только эти значения
-// валидны; всё остальное (включая "auto") передаётся как undefined.
-const VALID_STYLES = new Set(['ilia.paliy', 'theromanknox', 'drcintas', 'julieta_publicista']);
-
 app.post('/api/generate', (req, res) => {
-  const { format, rubric, topic, episode, slideCount, photoId, deliver, rag, engine, style } = req.body ?? {};
+  const { format, rubric, topic, episode, slideCount, photoId, deliver, rag, engine } = req.body ?? {};
   const fmt: Format = format === 'reels' ? 'reels' : 'carousel';
   const eng: ImageEngine = isImageEngine(engine) ? engine : 'puppeteer';
-  const styleAuthor = typeof style === 'string' && VALID_STYLES.has(style) ? style : undefined;
   if (typeof rubric !== 'string' || typeof topic !== 'string' || !topic.trim()) {
     res.status(400).json({ error: 'rubric and topic are required strings' });
     return;
@@ -332,7 +327,6 @@ app.post('/api/generate', (req, res) => {
           deliver: job.deliver,
           rag: rag !== false,
           engine: eng,
-          styleAuthor,
         });
         job.runId = result.outDir.split('/').pop() ?? '';
       } else {

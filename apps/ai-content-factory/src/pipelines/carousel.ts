@@ -40,10 +40,6 @@ export interface CarouselPipelineOptions {
    * Будет скопировано в outDir как attached-photo.<ext> и приклеено первым
    * в Telegram-доставке. */
   attachedPhoto?: string;
-  /** Стилевой anchor — handle автора из dataset.json без @ (ilia.paliy /
-   * theromanknox / drcintas / julieta_publicista). Если задан, в prompt
-   * инжектится явная инструкция «стилизуй под этого автора». */
-  styleAuthor?: string;
 }
 
 export interface CarouselPipelineResult {
@@ -92,7 +88,6 @@ export async function runCarouselPipeline(
       episode: opts.episode,
       slideCount: opts.slideCount,
       ragContext: ragText,
-      styleAuthor: opts.styleAuthor,
     }));
 
   const withCaption = opts.withCaption ?? generating;
@@ -118,10 +113,7 @@ export async function runCarouselPipeline(
     await writeFile(captionPath, captionText, 'utf8');
   }
 
-  const { slidePaths } = await renderCarousel(carousel, rubric, outDir, {
-    engine: opts.engine ?? 'puppeteer',
-    styleAuthor: opts.styleAuthor,
-  });
+  const { slidePaths } = await renderCarousel(carousel, rubric, outDir, opts.engine ?? 'puppeteer');
 
   // Прикреплённое пользователем фото — копируем в outDir и кладём ПЕРВЫМ
   // в массив слайдов (станет cover'ом карусели и в Telegram-доставке).
