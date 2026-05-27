@@ -130,6 +130,10 @@ export interface Config {
   igAgentUrl: string | undefined;
   igAgentUsername: string | undefined;
   igAgentPassword: string | undefined;
+  // Shared secret that lets a trusted upstream (Caddy /tg-api/* proxy
+  // on the unified dashboard) skip cookie/basic-auth on /api/*. Empty
+  // ⇒ no bypass — admin stays sealed behind session/basic-auth.
+  internalAuthToken: string | undefined;
 }
 
 export function loadConfig(): Config {
@@ -198,5 +202,6 @@ export function loadConfig(): Config {
     igAgentUrl: optional('IG_AGENT_URL') ?? 'http://ig-agent:8081',
     igAgentUsername: optional('IG_AGENT_USERNAME'),
     igAgentPassword: optional('IG_AGENT_PASSWORD'),
+    internalAuthToken: optional('INTERNAL_AUTH_TOKEN'),
   };
 }

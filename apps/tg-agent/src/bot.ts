@@ -6,6 +6,7 @@ import type { ChatService } from './db/chats.js';
 import type { DraftRow, DraftService } from './db/drafts.js';
 import type { LeadService } from './db/leads.js';
 import type { MessageStore } from './db/messages.js';
+import type { SettingsService } from './db/settings.js';
 import { decide } from './decision.js';
 import type { HealthMonitor } from './health.js';
 import type { Logger } from './logger.js';
@@ -30,6 +31,7 @@ export interface BotDeps {
   drafts: DraftService;
   health: HealthMonitor;
   memory: MemoryService;
+  settings: SettingsService;
 }
 
 const ACTIONS_THAT_REPLY: ReadonlySet<Action> = new Set([
@@ -54,7 +56,7 @@ function isPaymentText(text: string): boolean {
 }
 
 export function createBot(deps: BotDeps): CreateBotResult {
-  const { bot, config, logger, classifier, responder, chats, leads, messages, drafts, health, memory } =
+  const { bot, config, logger, classifier, responder, chats, leads, messages, drafts, health, memory, settings } =
     deps;
   let notifier: Notifier | null = null;
 
@@ -115,6 +117,10 @@ export function createBot(deps: BotDeps): CreateBotResult {
 
     try {
       const chatState = chats.touch(chatId, chatTitle);
+      // Effective kill-switch: chat must be opted in AND global toggle on.
+      // Global lives in tg_settings; flipped from the unified dashboard.
+      const globalAutoReply = settings.getGlobalAutoReply();
+      const autoReplyOn = chatState.autoReply && globalAutoReply;
       let classification;
       let classifierCacheRead = 0;
       if (isPaymentText(text)) {
@@ -161,12 +167,13 @@ export function createBot(deps: BotDeps): CreateBotResult {
         leadStatus: lead?.status ?? null,
         leadChanged: lead?.changed ?? false,
         autoReply: chatState.autoReply,
+        globalAutoReply,
         classifierCacheRead,
       });
 
       const wantsAutoReply = ACTIONS_THAT_REPLY.has(decision.action);
       const wantsDraft = decision.action === 'DRAFT_FOR_OWNER';
-      const shouldGenerate = (wantsAutoReply && chatState.autoReply) || wantsDraft;
+      const shouldGenerate = (wantsAutoReply && autoReplyOn) || wantsDraft;
 
       let reply: string | null = null;
       let draftText: string | null = null;
@@ -240,7 +247,7 @@ export function createBot(deps: BotDeps): CreateBotResult {
           });
         }
 
-        if (generated && wantsAutoReply && chatState.autoReply) {
+        if (generated && wantsAutoReply && autoReplyOn) {
           reply = generated;
           try {
             await ctx.reply(reply, {
@@ -272,8 +279,11 @@ export function createBot(deps: BotDeps): CreateBotResult {
             draft: truncate(draftText, 200),
           });
         }
-      } else if (wantsAutoReply && !chatState.autoReply) {
-        logger.info('reply suppressed: auto_reply is OFF for this chat', baseLog);
+      } else if (wantsAutoReply && !autoReplyOn) {
+        logger.info('reply suppressed: auto_reply OFF', {
+          ...baseLog,
+          reason: !globalAutoReply ? 'global' : 'chat',
+        });
       }
 
       const messageRowId = messages.log({
@@ -321,7 +331,7 @@ export function createBot(deps: BotDeps): CreateBotResult {
       }
 
       const isPayment = classification.class === 'PAYMENT_RECEIVED';
-      if (notifier && (isPayment || (chatState.autoReply && lead))) {
+      if (notifier && (isPayment || (autoReplyOn && lead))) {
         await notifier.notifyOwner({
           chatId,
           chatTitle,

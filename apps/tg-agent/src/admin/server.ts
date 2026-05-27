@@ -20,6 +20,7 @@ import type { HealthMonitor } from '../health.js';
 import type { KbManager } from '../kb-manager.js';
 import type { MemoryService } from '../memory/service.js';
 import type { PromptConfig } from '../prompt-config.js';
+import type { SettingsService } from '../db/settings.js';
 import type { Logger } from '../logger.js';
 import { createIgProxy, type IgProxy } from './ig_proxy.js';
 import {
@@ -81,6 +82,13 @@ export interface AdminDeps {
   igAgentUrl: string | undefined;
   igAgentUsername: string | undefined;
   igAgentPassword: string | undefined;
+  // Process-wide settings (global auto_reply kill-switch).
+  settings: SettingsService;
+  // When non-empty, requests carrying `X-Internal-Auth: <this>` skip
+  // cookie/basic-auth. Used by the unified dashboard's Caddy proxy
+  // (`/tg-api/*`) so the operator can flip the global toggle without
+  // a separate login.
+  internalAuthToken: string | undefined;
 }
 
 export interface AdminHandle {
@@ -104,10 +112,22 @@ export function startAdminServer(deps: AdminDeps): AdminHandle {
     if (!deps.password) {
       throw new Error('admin: ADMIN_PASSWORD is empty and session auth not configured');
     }
-    app.use(
-      '*',
-      basicAuth({ username: deps.username, password: deps.password, realm: 'tg-agent admin' }),
-    );
+    const basicAuthMw = basicAuth({
+      username: deps.username,
+      password: deps.password,
+      realm: 'tg-agent admin',
+    });
+    app.use('*', async (c, next) => {
+      // X-Internal-Auth bypass: trusted upstream (Caddy /tg-api/*).
+      if (deps.internalAuthToken) {
+        const hdr = c.req.header('x-internal-auth') ?? '';
+        if (hdr === deps.internalAuthToken) {
+          await next();
+          return;
+        }
+      }
+      return basicAuthMw(c, next);
+    });
     app.get('/', (c) => c.html(ui));
   }
 
@@ -190,6 +210,17 @@ function wireSessionAuth(app: Hono, deps: AdminDeps, uiHtml: string): void {
     ) {
       await next();
       return;
+    }
+    // X-Internal-Auth bypass: lets the unified-dashboard Caddy proxy
+    // (`/tg-api/*`) talk to /api/* without owning a session cookie.
+    // Header is set by Caddy from a server-side secret, so an end-user
+    // browser can never forge it.
+    if (deps.internalAuthToken) {
+      const hdr = c.req.header('x-internal-auth') ?? '';
+      if (hdr === deps.internalAuthToken) {
+        await next();
+        return;
+      }
     }
     const cookie = getCookie(c, COOKIE_NAME);
     if (!signer.verifySession(cookie)) {
@@ -296,6 +327,28 @@ function wireApi(app: Hono, deps: AdminDeps): void {
   );
 
   app.get('/api/health', (c) => c.json({ items: deps.health.snapshot() }));
+
+  // ── Global settings (auto_reply kill-switch + meta for the unified dashboard)
+  app.get('/api/settings', (c) => {
+    return c.json({
+      bot: '@newnewnnn_bot',
+      auto_reply_enabled: deps.settings.getGlobalAutoReply(),
+    });
+  });
+  app.post('/api/settings', async (c) => {
+    let body: { auto_reply_enabled?: unknown };
+    try {
+      body = await c.req.json();
+    } catch {
+      return c.json({ error: 'invalid json' }, 400);
+    }
+    if (typeof body.auto_reply_enabled !== 'boolean') {
+      return c.json({ error: 'auto_reply_enabled (boolean) required' }, 400);
+    }
+    const next = deps.settings.setGlobalAutoReply(body.auto_reply_enabled);
+    deps.logger.info('global auto_reply changed', { auto_reply_enabled: next });
+    return c.json({ auto_reply_enabled: next });
+  });
 
   // ── KB routes ────────────────────────────────────────────────────────────
   if (deps.kbManager) {

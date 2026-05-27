@@ -11,6 +11,7 @@ import { createDraftService } from './db/drafts.js';
 import { openDb } from './db/index.js';
 import { createLeadService } from './db/leads.js';
 import { createMessageStore } from './db/messages.js';
+import { createSettingsService } from './db/settings.js';
 import { createStatsService } from './db/stats.js';
 import { createBillingService } from './db/billing.js';
 import { createDealService } from './db/deals.js';
@@ -59,6 +60,7 @@ async function main(): Promise<void> {
   const messages = createMessageStore(db);
   const drafts = createDraftService(db);
   const stats = createStatsService(db);
+  const settings = createSettingsService(db);
   const dealService = createDealService(db);
   const billingService = createBillingService(db);
   const kbManager = createKbManager(dirname(resolve(config.databasePath)));
@@ -147,6 +149,7 @@ async function main(): Promise<void> {
     drafts,
     health,
     memory,
+    settings,
   });
 
   const notifier = createNotifier({
@@ -192,6 +195,8 @@ async function main(): Promise<void> {
       igAgentUrl: config.igAgentUrl,
       igAgentUsername: config.igAgentUsername,
       igAgentPassword: config.igAgentPassword,
+      settings,
+      internalAuthToken: config.internalAuthToken,
       sendMagicLink: sessionAuthReady
         ? async (telegramId, url) => {
             await bot.api.sendMessage(
