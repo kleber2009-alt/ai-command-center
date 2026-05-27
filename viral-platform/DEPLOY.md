@@ -20,20 +20,16 @@ pgvector Postgres + Redis, so it never touches the shared `infra-postgres` /
    (set `user-library` lifecycle: delete soft-deleted objects after 7 days, §4.4.7).
 3. **GitHub** — add the secrets/vars below.
 
-## GitHub secrets / variables
+## CI-only secrets / variables (skip for manual deploy)
 
-**Secrets**
-- `HETZNER_SSH_KEY` — already used by the other deploys.
-- `VP_ENV_FILE` — the full body of `/etc/viral-platform.env` (template below).
+**Secrets:** `HETZNER_SSH_KEY`, `VP_ENV_FILE` (full body of the `.env` below).
+**Variables:** `VP_NEXT_PUBLIC_CLERK_PUBLISHABLE_KEY`, `VP_NEXT_PUBLIC_STRIPE_PUBLISHABLE_KEY`.
 
-**Variables**
-- `VP_NEXT_PUBLIC_CLERK_PUBLISHABLE_KEY`
-- `VP_NEXT_PUBLIC_STRIPE_PUBLISHABLE_KEY`
+## `.env` template (copy from `.env.prod.example`)
 
-> The two `NEXT_PUBLIC_*` values are inlined into the web bundle at build time,
-> so they're repo **variables** (not secret) and also passed as build args.
-
-## `/etc/viral-platform.env` template (→ `VP_ENV_FILE`)
+The `NEXT_PUBLIC_*` values are inlined into the web bundle **at build time** —
+if `NEXT_PUBLIC_CLERK_PUBLISHABLE_KEY` is missing, `next build` fails with
+"Missing publishableKey".
 
 ```dotenv
 NODE_ENV=production
@@ -69,28 +65,25 @@ STRIPE_WEBHOOK_SECRET=
 NEXT_PUBLIC_STRIPE_PUBLISHABLE_KEY=
 ```
 
-## Deploy
+## Deploy — manual (recommended, no git/CI needed)
 
-Push to `main` (paths under `viral-platform/**`) or run the
-**deploy-viral-platform** workflow manually. It SSHes in, pulls the repo, writes
-`/etc/viral-platform.env`, then:
-
-1. builds `vp-web` + the worker image,
-2. starts `vp-postgres`/`vp-redis` and runs `@vp/db migrate`
-   (creates the `vector` extension, applies the generated schema, then the
-   custom halfvec HNSW indexes),
-3. (re)creates web + all workers,
-4. health-checks `http://localhost:3018/`.
-
-### Manual equivalent (on the box)
+Drop the project folder anywhere on the box (e.g. `/root/viral-platform`), then:
 ```bash
-cd /root/ai-command-center/viral-platform
-C="docker compose -f docker-compose.prod.yml --env-file /etc/viral-platform.env"
-$C build
-$C up -d vp-postgres vp-redis
-$C run --rm vp-worker-broll pnpm --filter @vp/db migrate
-$C up -d
+cd /root/viral-platform
+cp .env.prod.example .env
+nano .env                 # fill in real keys (Clerk pk_ is mandatory)
+./scripts/deploy.sh       # build → migrate → up → health-check
 ```
+`scripts/deploy.sh` reads the local `.env`, builds `vp-web` + the worker image,
+starts `vp-postgres`/`vp-redis`, runs `@vp/db migrate` (creates the `vector`
+extension, applies the schema, then the custom halfvec HNSW indexes), recreates
+web + all workers, and health-checks `http://localhost:3018/`. Re-run any time.
+
+## Deploy — CI (optional)
+
+Push to `main` (paths under `viral-platform/**`) or run **deploy-viral-platform**
+manually. It SSHes in, pulls the repo, writes `/etc/viral-platform.env`, copies
+it to `viral-platform/.env`, and runs `scripts/deploy.sh`.
 
 ## What works once deployed
 

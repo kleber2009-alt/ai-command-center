@@ -1,0 +1,51 @@
+#!/usr/bin/env bash
+# One-shot production deploy for viral-platform (Docker, e.g. Hetzner).
+# Run from anywhere; resolves the project root itself.
+#
+#   cp .env.prod.example .env && nano .env   # fill in real keys first
+#   ./scripts/deploy.sh
+#
+# Re-run any time to rebuild + roll out the latest code. Idempotent.
+set -euo pipefail
+
+cd "$(dirname "$0")/.."   # → project root (where docker-compose.prod.yml lives)
+
+if [ ! -f .env ]; then
+  echo "ERROR: .env missing. Run: cp .env.prod.example .env && nano .env" >&2
+  exit 1
+fi
+
+# Guard against the #1 build failure: Clerk key absent → next build crashes.
+if ! grep -qE '^NEXT_PUBLIC_CLERK_PUBLISHABLE_KEY=pk_' .env; then
+  echo "ERROR: NEXT_PUBLIC_CLERK_PUBLISHABLE_KEY (pk_...) is required in .env, or the web build fails." >&2
+  exit 1
+fi
+
+C=(docker compose -f docker-compose.prod.yml)
+
+echo "── 1/4 build images (web + worker) ──"
+"${C[@]}" build
+
+echo "── 2/4 start Postgres + Redis ──"
+"${C[@]}" up -d vp-postgres vp-redis
+
+echo "── 3/4 migrate DB (extension + schema + halfvec HNSW) ──"
+"${C[@]}" run --rm vp-worker-broll pnpm --filter @vp/db migrate
+
+echo "── 4/4 (re)create web + workers ──"
+"${C[@]}" up -d --force-recreate \
+  vp-web vp-worker-transcribe vp-worker-detect vp-worker-broll \
+  vp-worker-library vp-worker-render
+
+echo "── health-check http://localhost:3018/ ──"
+for i in $(seq 1 30); do
+  if curl -fsS -o /dev/null http://localhost:3018/ 2>/dev/null; then
+    echo "✓ vp-web healthy after ${i}×3s"
+    "${C[@]}" ps
+    exit 0
+  fi
+  sleep 3
+done
+echo "✗ vp-web did not respond within 90s — logs:" >&2
+docker logs --tail=120 vp-web || true
+exit 1

@@ -63,30 +63,10 @@ jobs:
           script: |
             set -e
             cd /root/ai-command-center/viral-platform
-            COMPOSE="docker compose -f docker-compose.prod.yml --env-file /etc/viral-platform.env"
-
-            echo "── build images ──"
-            $COMPOSE build vp-web vp-worker-broll
-
-            echo "── run DB migrations (extension + schema + halfvec HNSW) ──"
-            $COMPOSE up -d vp-postgres vp-redis
-            $COMPOSE run --rm vp-worker-broll pnpm --filter @vp/db migrate
-
-            echo "── (re)create web + workers ──"
-            $COMPOSE up -d --force-recreate \
-              vp-web vp-worker-transcribe vp-worker-detect vp-worker-broll \
-              vp-worker-library vp-worker-render
-
-            echo "── health-check vp-web ──"
-            for i in $(seq 1 30); do
-              if curl -fsS http://localhost:3018/ >/dev/null 2>&1; then
-                echo "✓ healthy after ${i}×3s"; exit 0
-              fi
-              sleep 3
-            done
-            echo "✗ vp-web did not respond within 90s"
-            docker logs --tail=120 vp-web || true
-            exit 1
+            # The compose file reads a project-local .env; deploy-ssh wrote the
+            # secrets to /etc/viral-platform.env, so mirror it here.
+            cp /etc/viral-platform.env .env
+            ./scripts/deploy.sh
         env:
           NEXT_PUBLIC_CLERK_PUBLISHABLE_KEY: ${{ vars.VP_NEXT_PUBLIC_CLERK_PUBLISHABLE_KEY }}
           NEXT_PUBLIC_STRIPE_PUBLISHABLE_KEY: ${{ vars.VP_NEXT_PUBLIC_STRIPE_PUBLISHABLE_KEY }}

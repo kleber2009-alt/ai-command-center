@@ -1,11 +1,10 @@
-# Production stack for viral-platform on the Hetzner box. Isolated compose
-# project (own pgvector Postgres + Redis) so it never touches the shared
-# infra-postgres / aisales-postgres databases.
+# Production stack for viral-platform. Isolated compose project (own pgvector
+# Postgres + Redis) so it never touches any shared databases.
 #
-# All config (DATABASE_URL, REDIS_URL, POSTGRES_*, API keys) comes from
-# /etc/viral-platform.env, written by the deploy workflow. See DEPLOY.md.
-#
-#   docker compose -f docker-compose.prod.yml --env-file /etc/viral-platform.env up -d
+# All config (DATABASE_URL, REDIS_URL, POSTGRES_*, API keys, NEXT_PUBLIC_*)
+# comes from a local .env file next to this compose file. Copy it from the
+# template and fill it in, then run scripts/deploy.sh:
+#   cp .env.prod.example .env && nano .env && ./scripts/deploy.sh
 name: viral-platform
 
 x-worker: &worker
@@ -13,7 +12,7 @@ x-worker: &worker
     context: .
     dockerfile: Dockerfile.worker
   image: viral-platform-worker:latest
-  env_file: /etc/viral-platform.env
+  env_file: .env
   restart: unless-stopped
   depends_on:
     vp-postgres:
@@ -25,7 +24,7 @@ services:
   vp-postgres:
     image: pgvector/pgvector:pg16
     container_name: vp-postgres
-    env_file: /etc/viral-platform.env
+    env_file: .env
     volumes:
       - vp_pg_data:/var/lib/postgresql/data
       - ./packages/db/init:/docker-entrypoint-initdb.d:ro
@@ -57,7 +56,7 @@ services:
         NEXT_PUBLIC_STRIPE_PUBLISHABLE_KEY: ${NEXT_PUBLIC_STRIPE_PUBLISHABLE_KEY}
     image: viral-platform-web:latest
     container_name: vp-web
-    env_file: /etc/viral-platform.env
+    env_file: .env
     ports:
       - '3018:3000' # Caddy reverse-proxies here (see deploy/Caddyfile.snippet)
     restart: unless-stopped
