@@ -460,29 +460,32 @@
 
     function renderAnalysis() {
       const aiRec = $('.ai-rec');
-      const rec = recommendations[0];
+      // "next_message" rec is the suggested reply; "action" rec is operator guidance.
+      const nextMsg = recommendations.find((r) => r.type === 'next_message');
+      const action = recommendations.find((r) => r.type === 'action');
+      const draft = (nextMsg && nextMsg.content) || '';
       if (aiRec) {
         const textEl = $('.ai-rec__text', aiRec);
         const headEl = $('.ai-rec__h', aiRec);
         if (textEl) {
-          if (rec && rec.recommendation) textEl.textContent = rec.recommendation;
-          else if (rec && rec.summary) textEl.textContent = rec.summary;
+          if (draft) textEl.textContent = draft;
+          else if (action) textEl.textContent = action.content;
           else textEl.textContent = 'Рекомендаций пока нет — нажми «🤖 Анализ» ниже.';
         }
-        if (headEl && rec) {
+        if (headEl && (nextMsg || action)) {
           const badge = $('.badge', headEl);
-          if (badge) badge.textContent = 'AI · ' + (rec.model || 'analyst');
+          const rec = nextMsg || action;
+          if (badge) badge.textContent = (rec.type === 'next_message' ? 'Draft' : 'Action') + ' · ' + (rec.priority || 'normal');
         }
-        // Wire CTA buttons
         const insertBtn = $('[data-action="insert"]', aiRec);
         const sendBtn = $('[data-action="send"]', aiRec);
         const rewriteBtn = $('[data-action="rewrite"]', aiRec);
         const softerBtn = $('[data-action="softer"]', aiRec);
         const harderBtn = $('[data-action="harder"]', aiRec);
         const ta = $('.conv-input textarea');
-        if (insertBtn && ta) insertBtn.onclick = () => { ta.value = (rec && rec.recommendation) || ''; ta.focus(); };
+        if (insertBtn && ta) insertBtn.onclick = () => { ta.value = draft; ta.focus(); };
         if (sendBtn) sendBtn.onclick = async () => {
-          const text = (rec && rec.recommendation) || (ta && ta.value) || '';
+          const text = draft || (ta && ta.value) || '';
           if (!text.trim()) return toast('Пустой ответ', 'err');
           await sendReply(text);
         };
@@ -747,26 +750,24 @@
     try {
       const data = await api('/contacts?limit=500');
       const contacts = data.contacts || [];
-      // Update channel chips with counts
-      const chips = $$('.chips .chip');
       const total = contacts.length;
-      const ig = contacts.length; // all are IG for now
+      const chips = $$('.chips .chip');
       const allChip = chips.find((c) => /^все/i.test(c.textContent || ''));
       if (allChip) {
         const cnt = $('.chip__count', allChip); if (cnt) cnt.textContent = total;
       }
-      // Replace pipeline table body if present
       const rows = $$('table tbody tr');
       if (rows.length) {
         const tbody = rows[0].parentElement;
         tbody.innerHTML = '';
         for (const c of contacts.slice(0, 50)) {
           const status = c.lead_status || 'new';
-          const name = c.full_name || c.first_name || (c.username ? '@' + c.username : 'Контакт');
+          const fullName = [c.first_name, c.last_name].filter(Boolean).join(' ');
+          const name = fullName || (c.ig_username ? '@' + c.ig_username : 'Контакт');
           const tr = document.createElement('tr');
           tr.innerHTML =
             '<td>' + escapeHtml(name) + '</td>' +
-            '<td>' + escapeHtml(c.username ? '@' + c.username : '—') + '</td>' +
+            '<td>' + escapeHtml(c.ig_username ? '@' + c.ig_username : '—') + '</td>' +
             '<td><span class="badge ' + (STATUS_BADGE[status] || 'badge--ghost') + '">' + escapeHtml(STATUS_LABELS[status] || status) + '</span></td>' +
             '<td>' + escapeHtml(relativeTime(c.last_message_at || c.updated_at || c.created_at)) + '</td>' +
             '<td><div class="row-actions"><a href="conversation.html?id=' + encodeURIComponent(c.id) + '" class="btn btn--secondary">Открыть</a></div></td>';
@@ -785,10 +786,11 @@
     try {
       const s = await api('/stats');
       const by = (s.contacts && s.contacts.by_status) || {};
-      const msgs = (s.messages && (s.messages.total || s.messages.last_7d || s.messages.count)) || 0;
-      // mini KPI tiles at the bottom typically have .t-xl.fw6.mono
+      const msgs = (s.messages && (s.messages.total || 0)) || 0;
       const tiles = $$('.t-xl.fw6.mono');
-      const vals = [s.contacts.total, by.customer || 0, (by.customer && s.contacts.total ? ((by.customer / s.contacts.total) * 100).toFixed(1) + '%' : '0%'), msgs];
+      const total = (s.contacts && s.contacts.total) || 0;
+      const wonRate = total && by.customer ? ((by.customer / total) * 100).toFixed(1) + '%' : '0%';
+      const vals = [total, by.customer || 0, wonRate, msgs];
       tiles.forEach((t, i) => { if (vals[i] != null) t.textContent = vals[i]; });
     } catch (e) {
       toast('Reports: ' + e.message, 'err');
