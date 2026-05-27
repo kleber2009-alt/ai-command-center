@@ -953,11 +953,56 @@
 
         grid.appendChild(card);
       }
+
+      // Static card: tg-agent (@newnewnnn_bot) — отдельный сервис, БД и канал.
+      // Источник правды: apps/tg-agent. Здесь — только заглушка-визитка.
+      const tgCard = el('div', { class: 'ag' });
+      tgCard.innerHTML =
+        '<div class="ag__top">' +
+          '<div class="ag__icon" style="background:var(--blue-bg);color:#7BC0FF">💬</div>' +
+          '<div style="flex:1">' +
+            '<div class="ag__title">@newnewnnn_bot <span class="badge badge--green" style="margin-left:4px">live</span></div>' +
+            '<div class="ag__sub">TG-группы · classifier + responder + daily digest</div>' +
+          '</div>' +
+          '<div class="ag-toggle is-on" data-tg-toggle></div>' +
+        '</div>' +
+        '<div class="ag__metrics">' +
+          '<div class="ag__metric"><div class="ag__metric-lab">Модель</div><div class="ag__metric-val">haiku-4-5</div></div>' +
+          '<div class="ag__metric"><div class="ag__metric-lab">Классов</div><div class="ag__metric-val">10</div></div>' +
+          '<div class="ag__metric"><div class="ag__metric-lab">Digest</div><div class="ag__metric-val">24ч → owner</div></div>' +
+          '<div class="ag__metric"><div class="ag__metric-lab">Статус</div><div class="ag__metric-val c-green">отвечает</div></div>' +
+        '</div>' +
+        '<div class="ag__cta">' +
+          '<a class="btn btn--secondary" href="https://t.me/newnewnnn_bot" target="_blank" rel="noopener" style="text-decoration:none;display:flex;align-items:center;justify-content:center">📨 Открыть в TG</a>' +
+          '<button class="btn btn--ghost" data-tg-info>📜 Описание</button>' +
+        '</div>';
+      const tgInfoBtn = $('[data-tg-info]', tgCard);
+      if (tgInfoBtn) {
+        tgInfoBtn.onclick = () => {
+          alert(
+            '@newnewnnn_bot — отдельный TG-агент (apps/tg-agent).\n\n' +
+            '• Читает все сообщения в группах, где состоит\n' +
+            '• Классификатор (Claude Haiku 4.5, 10 классов: question, price_request, objection, buying_intent, ...)\n' +
+            '• Decision engine: REPLY / NOTIFY / DRAFT_FOR_OWNER / IGNORE\n' +
+            '• Responder в тоне владельца на REPLY-решения\n' +
+            '• DM-уведомление владельцу на горячий лид\n' +
+            '• Ежедневный gzip-бэкап SQLite в DM владельца (BACKUP_INTERVAL_HOURS=24)\n\n' +
+            'Контейнер: tg-agent · admin: tg.46-62-215-11.nip.io',
+          );
+        };
+      }
+      const tgToggle = $('[data-tg-toggle]', tgCard);
+      if (tgToggle) {
+        tgToggle.style.cursor = 'pointer';
+        tgToggle.onclick = () => toast('Управление @newnewnnn_bot — через apps/tg-agent admin');
+      }
+      grid.appendChild(tgCard);
+
       if (stats && stats.models) {
         const subt = $('.page-h__subtitle');
         if (subt) {
           subt.textContent = 'Responder: ' + stats.models.responder + ' · Classifier: ' + stats.models.classifier + ' · Analyst: ' + stats.models.analyst +
-            ' · агент: ' + (autoOn ? 'отвечает' : 'на паузе');
+            ' · 2 агента: IG (' + (autoOn ? 'отвечает' : 'на паузе') + ') + TG (@newnewnnn_bot · live)';
         }
       }
     } catch (e) {
