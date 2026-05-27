@@ -108,20 +108,18 @@ export default async function DashboardPage({
             tone="lime"
           />
           <ActionCard
-            href={avatarsCount > 0 ? '/videos/new' : '/avatars'}
+            href={avatarsCount > 0 ? '/videos/new' : '/generate?need=video'}
             num="/B · talk"
-            title={avatarsCount > 0 ? 'Создать видео' : 'Сначала выбрать аватара'}
-            sub={`-${COSTS.heygenVideo} / video`}
+            title="Создать видео"
+            sub={avatarsCount > 0 ? `-${COSTS.heygenVideo} / video` : `нужен аватар · -${COSTS.heygenVideo} / video`}
             tone="cyan"
-            disabled={avatarsCount === 0}
           />
           <ActionCard
-            href={avatarsCount > 0 ? '/covers/new' : '/avatars'}
+            href={avatarsCount > 0 ? '/covers/new' : '/generate?need=cover'}
             num="/C · publish"
-            title={avatarsCount > 0 ? 'Сделать обложку' : 'Сначала выбрать аватара'}
-            sub={`-${COSTS.coverGeneration} / cover`}
+            title="Сделать обложку"
+            sub={avatarsCount > 0 ? `-${COSTS.coverGeneration} / cover` : `нужен аватар · -${COSTS.coverGeneration} / cover`}
             tone="pink"
-            disabled={avatarsCount === 0}
           />
           <ActionCard
             href="/voice"
@@ -231,21 +229,19 @@ function ActionCard({
   title,
   sub,
   tone,
-  disabled,
 }: {
   href: string;
   num: string;
   title: string;
   sub: string;
   tone: 'lime' | 'cyan' | 'pink' | 'warm';
-  disabled?: boolean;
 }) {
   const subColor =
     tone === 'lime' ? 'text-lime' : tone === 'cyan' ? 'text-cyan' : tone === 'pink' ? 'text-pink' : 'text-warm';
   return (
     <Link
       href={href}
-      className={`bg-surface ${disabled ? 'opacity-60' : 'hover:bg-surface-2'} transition-colors p-5 flex flex-col justify-between min-h-[150px]`}
+      className="bg-surface hover:bg-surface-2 transition-colors p-5 flex flex-col justify-between min-h-[150px]"
     >
       <div className="sec-num mb-2">{num}</div>
       <div>

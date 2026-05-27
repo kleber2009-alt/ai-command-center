@@ -3,6 +3,7 @@ import { redirect } from 'next/navigation';
 import { getCurrentUser } from '@/lib/auth';
 import { prisma } from '@/lib/prisma';
 import { formatDate } from '@/lib/utils';
+import { EmptyState } from '@/components/empty-state';
 import { RetryCoverButton } from './retry-button';
 
 export const dynamic = 'force-dynamic';
@@ -34,11 +35,11 @@ export default async function CoversPage({ searchParams }: { searchParams: Promi
       </header>
 
       {covers.length === 0 ? (
-        <div className="border border-border-2 border-dashed p-12 text-center bg-surface">
-          <div className="sec-num mb-3">/EMPTY</div>
-          <div className="font-serif italic text-[22px] mb-4">Ни одной обложки. Сделаем первую?</div>
-          <Link href="/covers/new" className="btn-primary">Создать обложку →</Link>
-        </div>
+        <EmptyState
+          title="Ни одной обложки. Сделаем первую?"
+          description="Выбираешь аватара, пишешь идею — Claude генерирует заголовок, подзаголовок и CTA, картинку рендерит Gemini за 10 секунд."
+          cta={{ href: '/covers/new', label: 'Создать обложку' }}
+        />
       ) : (
         <div className="grid grid-cols-2 md:grid-cols-4 gap-[2px] bg-border border border-border">
           {covers.map((c) => (

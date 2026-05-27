@@ -10,12 +10,13 @@ export const metadata = { title: 'Generate — Persona Studio' };
 export default async function GeneratePage({
   searchParams,
 }: {
-  searchParams: Promise<{ onboarding?: string }>;
+  searchParams: Promise<{ onboarding?: string; need?: string }>;
 }) {
   const user = await getCurrentUser();
   if (!user) redirect('/sign-in');
   const params = await searchParams;
   const onboarding = params.onboarding === '1';
+  const need = params.need === 'video' ? 'video' : params.need === 'cover' ? 'cover' : null;
   const uploads = await prisma.upload.findMany({
     where: { userId: user.id, status: 'ready' },
     orderBy: { createdAt: 'desc' },
@@ -45,6 +46,16 @@ export default async function GeneratePage({
           20 ниш с готовыми пакетами по 10 промптов, или свой текст. Лицо сохраняется 1:1.
         </p>
       </header>
+
+      {need && !onboarding && (
+        <div className="border border-cyan/40 bg-[#05151a] p-5">
+          <p className="mono text-[10px] tracking-widest uppercase text-cyan mb-2">/ prerequisite</p>
+          <p className="font-serif text-[15px] sm:text-[16px] leading-snug">
+            Чтобы {need === 'video' ? 'собрать видео' : 'сделать обложку'}, сначала нужен хотя бы один аватар.
+            Загрузи селфи ниже — через ~60 секунд вернёмся к {need === 'video' ? 'видео' : 'обложке'}.
+          </p>
+        </div>
+      )}
 
       {onboarding && (
         <div className="border border-lime/40 bg-[#0a1305] p-5 sm:p-6">

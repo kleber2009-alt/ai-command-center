@@ -4,17 +4,16 @@ import { useEffect, useState } from 'react';
 import { createPortal } from 'react-dom';
 import Link from 'next/link';
 import { usePathname } from 'next/navigation';
-
-type Item = { href: string; label: string; key: string };
+import type { NavGroup } from './nav';
 
 export function MobileMenu({
-  items,
+  groups,
   isAdmin,
   email,
   balance,
   signOutAction,
 }: {
-  items: Item[];
+  groups: NavGroup[];
   isAdmin: boolean;
   email: string;
   balance: number;
@@ -43,6 +42,9 @@ export function MobileMenu({
       document.body.style.overflow = prevBody;
     };
   }, [open]);
+
+  const isActive = (href: string) =>
+    !!pathname && (pathname === href || pathname.startsWith(`${href}/`));
 
   const drawer =
     mounted && open
@@ -104,29 +106,49 @@ export function MobileMenu({
                 <span className="mono text-[10px] tracking-wider text-text-dim truncate">{email}</span>
               </div>
 
-              <nav className="grid gap-1 mono text-[12px] tracking-[0.16em] uppercase">
-                {items.map((it) => {
-                  const active = !!pathname && (pathname === it.href || pathname.startsWith(`${it.href}/`));
-                  return (
-                    <Link
-                      key={it.key}
-                      href={it.href}
-                      onClick={() => setOpen(false)}
-                      className={`py-3 px-3 border-l-2 transition-colors ${
-                        active
-                          ? 'border-lime text-text bg-surface'
-                          : 'border-transparent text-text-dim hover:text-text hover:bg-surface'
-                      }`}
-                    >
-                      {it.label}
-                    </Link>
-                  );
-                })}
+              <nav className="grid gap-5 mono text-[12px] tracking-[0.16em] uppercase">
+                <Link
+                  href="/dashboard"
+                  onClick={() => setOpen(false)}
+                  className={`py-2.5 px-3 border-l-2 transition-colors ${
+                    isActive('/dashboard')
+                      ? 'border-lime text-text bg-surface'
+                      : 'border-transparent text-text-dim hover:text-text hover:bg-surface'
+                  }`}
+                >
+                  Dashboard
+                </Link>
+
+                {groups.map((g) => (
+                  <div key={g.key} className="grid gap-0.5">
+                    <span className="mono text-[9px] tracking-[0.22em] uppercase text-lime px-3 mb-1">
+                      {g.label}
+                    </span>
+                    {g.items.map((it) => {
+                      const active = isActive(it.href);
+                      return (
+                        <Link
+                          key={it.key}
+                          href={it.href}
+                          onClick={() => setOpen(false)}
+                          className={`py-2.5 px-3 border-l-2 transition-colors ${
+                            active
+                              ? 'border-lime text-text bg-surface'
+                              : 'border-transparent text-text-dim hover:text-text hover:bg-surface'
+                          }`}
+                        >
+                          {it.label}
+                        </Link>
+                      );
+                    })}
+                  </div>
+                ))}
+
                 {isAdmin && (
                   <Link
                     href="/admin"
                     onClick={() => setOpen(false)}
-                    className={`py-3 px-3 border-l-2 transition-colors ${
+                    className={`py-2.5 px-3 border-l-2 transition-colors ${
                       pathname?.startsWith('/admin')
                         ? 'border-pink text-text bg-surface'
                         : 'border-transparent text-pink hover:bg-surface'

@@ -3,6 +3,7 @@ import { redirect } from 'next/navigation';
 import { getCurrentUser } from '@/lib/auth';
 import { prisma } from '@/lib/prisma';
 import { AvatarGrid } from '@/components/avatar-grid';
+import { EmptyState } from '@/components/empty-state';
 import { formatDate } from '@/lib/utils';
 
 export const dynamic = 'force-dynamic';
@@ -63,13 +64,11 @@ export default async function AvatarsPage({ searchParams }: { searchParams: Prom
       </header>
 
       {generations.length === 0 ? (
-        <div className="border border-border-2 border-dashed p-12 text-center bg-surface">
-          <div className="sec-num mb-3">/EMPTY</div>
-          <div className="font-serif italic text-[24px] mb-4">
-            Ещё ни одного батча. Загрузи фото — построим 10.
-          </div>
-          <Link href="/generate" className="btn-primary">Загрузить фото →</Link>
-        </div>
+        <EmptyState
+          title="Ещё ни одного батча."
+          description="Загрузи селфи — через ~60 секунд получишь 10 портретов в разных стилях."
+          cta={{ href: '/generate', label: 'Загрузить фото' }}
+        />
       ) : (
         <div className="grid gap-2">
           {generations.map((g) => (
