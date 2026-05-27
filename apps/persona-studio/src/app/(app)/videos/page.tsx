@@ -3,6 +3,7 @@ import { redirect } from 'next/navigation';
 import { getCurrentUser } from '@/lib/auth';
 import { prisma } from '@/lib/prisma';
 import { VideoCard } from '@/components/video-card';
+import { EmptyState } from '@/components/empty-state';
 
 export const dynamic = 'force-dynamic';
 export const metadata = { title: 'Videos — Persona Studio' };
@@ -54,21 +55,23 @@ export default async function VideosPage({ searchParams }: { searchParams: Promi
       </header>
 
       {videos.length === 0 ? (
-        <div className="border border-border-2 border-dashed p-12 text-center bg-surface">
-          <div className="sec-num mb-3">/EMPTY</div>
-          <div className="font-serif italic text-[22px] mb-4">
-            {selectedAvatar
-              ? 'Видео ещё нет. Соберём первое прямо сейчас?'
-              : 'Сначала выбери аватара на /avatars, потом возвращайся.'}
-          </div>
-          {selectedAvatar ? (
-            <Link href={`/videos/new?avatarId=${selectedAvatar.id}`} className="btn-primary">
-              Создать видео из {selectedAvatar.styleLabel} →
-            </Link>
-          ) : (
-            <Link href="/avatars" className="btn-primary">К аватарам →</Link>
-          )}
-        </div>
+        selectedAvatar ? (
+          <EmptyState
+            title="Видео ещё нет. Соберём первое прямо сейчас?"
+            description="HeyGen возьмёт выбранного аватара, оживит губы под скрипт и выдаст MP4 за 2–4 минуты."
+            cta={{
+              href: `/videos/new?avatarId=${selectedAvatar.id}`,
+              label: `Создать видео из ${selectedAvatar.styleLabel}`,
+            }}
+          />
+        ) : (
+          <EmptyState
+            kind="need-avatar"
+            title="Сначала выбери аватара, потом возвращайся."
+            description="Сними галочку «primary» на нужном портрете в списке аватаров — он станет лицом всех будущих видео."
+            cta={{ href: '/avatars', label: 'К аватарам' }}
+          />
+        )
       ) : (
         <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4">
           {videos.map((v) => (

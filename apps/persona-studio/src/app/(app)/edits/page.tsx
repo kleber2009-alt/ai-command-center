@@ -3,6 +3,7 @@ import { redirect } from 'next/navigation';
 import { getCurrentUser } from '@/lib/auth';
 import { prisma } from '@/lib/prisma';
 import { EditCard } from '@/components/edit-card';
+import { EmptyState } from '@/components/empty-state';
 
 export const dynamic = 'force-dynamic';
 export const metadata = { title: 'Montage — Persona Studio' };
@@ -64,21 +65,20 @@ export default async function EditsPage({ searchParams }: { searchParams: Promis
       </header>
 
       {edits.length === 0 ? (
-        <div className="border border-border-2 border-dashed p-12 text-center bg-surface">
-          <div className="sec-num mb-3">/EMPTY</div>
-          <div className="font-serif italic text-[22px] mb-4">
-            {latestVideo
-              ? 'Здесь будут смонтированные видео. Запустим первое?'
-              : 'Сначала нужно хотя бы одно готовое видео на /videos.'}
-          </div>
-          {latestVideo ? (
-            <Link href={`/edits/new?videoId=${latestVideo.id}`} className="btn-primary">
-              В монтаж →
-            </Link>
-          ) : (
-            <Link href="/videos" className="btn-primary">К видео →</Link>
-          )}
-        </div>
+        latestVideo ? (
+          <EmptyState
+            title="Здесь будут смонтированные видео. Запустим первое?"
+            description="Submagic накладывает шаблон в стиле известных авторов и автоматические субтитры — на выходе готовый Reels / Shorts."
+            cta={{ href: `/edits/new?videoId=${latestVideo.id}`, label: 'В монтаж' }}
+          />
+        ) : (
+          <EmptyState
+            kind="need-video"
+            title="Сначала нужно хотя бы одно готовое видео."
+            description="Собери видео из аватара — его потом можно отправить в монтаж Submagic."
+            cta={{ href: '/videos', label: 'К видео' }}
+          />
+        )
       ) : (
         <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4">
           {edits.map((e) => (

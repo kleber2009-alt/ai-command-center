@@ -3,6 +3,7 @@ import { redirect } from 'next/navigation';
 import { getCurrentUser } from '@/lib/auth';
 import { prisma } from '@/lib/prisma';
 import { VideoForm } from '@/components/video-form';
+import { EmptyState } from '@/components/empty-state';
 
 export const dynamic = 'force-dynamic';
 export const metadata = { title: 'New video — Persona Studio' };
@@ -104,13 +105,12 @@ export default async function NewVideoPage({
       )}
 
       {avatars.length === 0 ? (
-        <div className="border border-border-2 border-dashed p-12 text-center bg-surface">
-          <div className="sec-num mb-3">/NO-AVATARS</div>
-          <div className="font-serif italic text-[22px] mb-4">
-            Сначала нужен хотя бы один готовый аватар.
-          </div>
-          <Link href="/generate" className="btn-primary">Загрузить фото →</Link>
-        </div>
+        <EmptyState
+          kind="need-avatar"
+          title="Сначала нужен хотя бы один готовый аватар."
+          description="Загрузи селфи — через ~60 секунд вернёмся к видео с готовым лицом."
+          cta={{ href: '/generate?need=video', label: 'Загрузить фото' }}
+        />
       ) : (
         <VideoForm
           avatars={avatars}

@@ -3,6 +3,7 @@ import { redirect } from 'next/navigation';
 import { getCurrentUser } from '@/lib/auth';
 import { prisma } from '@/lib/prisma';
 import { EditForm } from '@/components/edit-form';
+import { EmptyState } from '@/components/empty-state';
 import { COSTS } from '@/lib/tokens';
 
 export const dynamic = 'force-dynamic';
@@ -32,13 +33,12 @@ export default async function NewEditPage({ searchParams }: { searchParams: Prom
       </header>
 
       {videos.length === 0 ? (
-        <div className="border border-border-2 border-dashed p-8 text-center bg-surface">
-          <div className="sec-num mb-2">/NO-VIDEOS</div>
-          <div className="font-serif italic text-[20px] mb-3">
-            Сначала нужно хотя бы одно готовое видео.
-          </div>
-          <Link href="/videos/new" className="btn-primary">Создать видео →</Link>
-        </div>
+        <EmptyState
+          kind="need-video"
+          title="Сначала нужно хотя бы одно готовое видео."
+          description="Submagic монтирует уже готовое MP4 — собери его в /videos и возвращайся."
+          cta={{ href: '/videos/new', label: 'Создать видео' }}
+        />
       ) : (
         <EditForm
           videos={videos.map((v) => ({

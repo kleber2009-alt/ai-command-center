@@ -2,6 +2,7 @@ import Link from 'next/link';
 import { redirect } from 'next/navigation';
 import { getCurrentUser } from '@/lib/auth';
 import { prisma } from '@/lib/prisma';
+import { EmptyState } from '@/components/empty-state';
 
 export const dynamic = 'force-dynamic';
 export const metadata = { title: 'Carousels — Persona Studio' };
