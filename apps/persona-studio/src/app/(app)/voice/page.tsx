@@ -1,4 +1,5 @@
 import Link from 'next/link';
+import { PageHero } from '@/components/shell/page-hero';
 
 export const metadata = { title: 'Voice training — Persona Studio' };
 
@@ -54,57 +55,41 @@ const STEPS = [
 export default function VoicePage() {
   return (
     <div className="grid gap-12">
-      <header>
-        <div className="flex items-baseline gap-3 mb-4">
-          <span className="sec-num">/00</span>
-          <span className="sec-title">Voice training</span>
-          <span className="flex-1 border-b border-border translate-y-[-3px]" />
-          <a
-            href={PERSONA_TRAIN_URL}
-            target="_blank"
-            rel="noopener noreferrer"
-            className="mono text-[10px] tracking-widest uppercase text-lime"
-          >
-            persona-train →
-          </a>
-        </div>
-
-        <div className="mono text-[10px] uppercase tracking-[0.3em] text-lime mb-4">
-          PERSONA TRAIN · IVC
-        </div>
-        <h1 className="font-serif text-[44px] leading-[1.05] tracking-tight md:text-[56px]">
-          Обучи свой <span className="italic text-warm">аватар</span>
-          <br />
-          говорить <span className="italic text-warm">твоим голосом</span>.
-        </h1>
-        <p className="mt-6 max-w-[58ch] text-[14px] leading-relaxed text-text-dim">
-          Шли голосовые сообщения в Telegram — бот накапливает samples, ElevenLabs IVC клонирует тембр.
-          Получаешь персональный <code className="mono text-[12px] text-cyan">voice_id</code>, который
-          вставляешь в форму генерации видео — и аватар начинает озвучивать любой скрипт твоим голосом.
-        </p>
-
-        <div className="mt-10 flex flex-wrap gap-3">
-          <a
-            href={`${PERSONA_TRAIN_URL}/cabinet`}
-            target="_blank"
-            rel="noopener noreferrer"
-            className="btn-primary"
-          >
-            Открыть кабинет Persona Train →
-          </a>
-          <a
-            href={PERSONA_TRAIN_BOT}
-            target="_blank"
-            rel="noopener noreferrer"
-            className="btn-ghost"
-          >
-            Telegram-бот →
-          </a>
-          <Link href="/videos/new" className="btn-ghost">
-            У меня уже есть voice_id →
-          </Link>
-        </div>
-      </header>
+      <PageHero
+        eyebrow="PERSONA TRAIN · IVC · 02"
+        title={
+          <>
+            Train your avatar
+            <br />
+            to speak <span className="italic text-gold">in your own voice</span>.
+          </>
+        }
+        description={
+          <>
+            Send voice notes to the Telegram bot — samples accumulate, ElevenLabs IVC clones your timbre.
+            You get a personal <code className="mono text-[12px] text-gold">voice_id</code> that you paste
+            into the video form, and the avatar starts narrating any script in your voice.
+          </>
+        }
+        meta={
+          <>
+            <div className="mono text-[9px] tracking-[0.28em] uppercase text-text-muted">External</div>
+            <a
+              href={PERSONA_TRAIN_URL}
+              target="_blank"
+              rel="noopener noreferrer"
+              className="font-serif italic text-gold hover:underline text-[14px]"
+            >
+              persona-train.46-62-215-11.nip.io →
+            </a>
+          </>
+        }
+        actions={[
+          { label: 'Open Persona Train', href: `${PERSONA_TRAIN_URL}/cabinet` },
+          { label: 'Telegram bot', href: PERSONA_TRAIN_BOT, tone: 'ghost' },
+          { label: 'I already have voice_id', href: '/videos/new', tone: 'ghost' },
+        ]}
+      />
 
       {/* ── 4 пилона ───────────────────────────────────── */}
       <section>

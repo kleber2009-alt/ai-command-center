@@ -3,6 +3,7 @@ import { GenerateStudio } from '@/components/generate-studio';
 import { redirect } from 'next/navigation';
 import { getCurrentUser } from '@/lib/auth';
 import { prisma } from '@/lib/prisma';
+import { PageHero } from '@/components/shell/page-hero';
 
 export const dynamic = 'force-dynamic';
 export const metadata = { title: 'Generate — Persona Studio' };
