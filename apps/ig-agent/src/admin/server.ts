@@ -1066,7 +1066,7 @@ export function startAdminServer(deps: AdminDeps): AdminHandle {
 
   // Global system settings — small k/v store. Only whitelisted keys can
   // be mutated through the UI; everything else is read-only on this API.
-  const WRITABLE_SETTINGS = new Set(['auto_reply_enabled']);
+  const WRITABLE_SETTINGS = new Set(['auto_reply_enabled', 'bot_enabled']);
 
   app.get('/api/settings', async (c) => {
     const all = await deps.settings.all();
