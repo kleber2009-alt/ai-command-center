@@ -33,20 +33,26 @@ export default async function GeneratePage({
   }));
   return (
     <div className="grid gap-10">
-      <header>
-        <div className="flex items-baseline gap-3 mb-4">
-          <span className="sec-num">/00</span>
-          <span className="sec-title">Generate avatars</span>
-          <span className="flex-1 border-b border-border translate-y-[-3px]" />
-        </div>
-        <h1 className="font-serif text-[32px] sm:text-[44px] md:text-[56px] leading-[1.05] tracking-[-0.02em] max-w-[18ch]">
-          До 10 фото — <span className="italic text-warm">десять аватаров.</span>
-        </h1>
-        <p className="font-serif text-[15px] sm:text-[17px] text-text-dim mt-4 max-w-[60ch]">
-          Загрузи до 10 фото, выбери лучшее как primary. Дальше — три режима: дефолтные 10 стилей,
-          20 ниш с готовыми пакетами по 10 промптов, или свой текст. Лицо сохраняется 1:1.
-        </p>
-      </header>
+      <PageHero
+        eyebrow="CREATE · 01 · AVATAR"
+        title={
+          <>
+            One photo, <span className="italic text-gold">ten avatars.</span>
+          </>
+        }
+        description={
+          <>
+            Загрузи до 10 фото, выбери лучшее как primary. Дальше — три режима: дефолтные 10 стилей,
+            20 ниш с готовыми пакетами по 10 промптов, или свой текст. Лицо сохраняется 1:1.
+          </>
+        }
+        meta={
+          <>
+            <div className="mono text-[9px] tracking-[0.28em] uppercase text-text-muted">Engine</div>
+            <div className="font-serif italic text-gold text-[14px]">Gemini Image · Nano Banana 2</div>
+          </>
+        }
+      />
 
       {need && !onboarding && (
         <div className="border border-cyan/40 bg-[#05151a] p-5">

@@ -5,6 +5,7 @@ import { prisma } from '@/lib/prisma';
 import { formatDate } from '@/lib/utils';
 import { EmptyState } from '@/components/empty-state';
 import { RetryCoverButton } from './retry-button';
+import { PageHero } from '@/components/shell/page-hero';
 
 export const dynamic = 'force-dynamic';
 export const metadata = { title: 'Covers — Persona Studio' };
@@ -22,17 +23,22 @@ export default async function CoversPage({ searchParams }: { searchParams: Promi
 
   return (
     <div className="grid gap-8">
-      <header>
-        <div className="flex items-baseline gap-3 mb-4">
-          <span className="sec-num">/00</span>
-          <span className="sec-title">My covers</span>
-          <span className="flex-1 border-b border-border translate-y-[-3px]" />
-          <Link href="/covers/new" className="mono text-[10px] tracking-widest uppercase text-lime">
-            new cover →
-          </Link>
-        </div>
-        <h1 className="font-serif text-[28px] sm:text-[36px] md:text-[44px] leading-tight">Все обложки карусели.</h1>
-      </header>
+      <PageHero
+        eyebrow="LIBRARY · COVERS"
+        title={
+          <>
+            All carousel covers. <span className="italic text-gold">Editorial-ready.</span>
+          </>
+        }
+        description="Выбираешь аватара, пишешь идею — Claude собирает заголовок, подзаголовок и CTA, Gemini рендерит обложку за 10 секунд."
+        actions={[{ label: 'New cover', href: '/covers/new' }]}
+        meta={
+          <>
+            <div className="mono text-[9px] tracking-[0.28em] uppercase text-text-muted">Total</div>
+            <div className="font-serif text-[28px] text-gold leading-none">{covers.length}</div>
+          </>
+        }
+      />
 
       {covers.length === 0 ? (
         <EmptyState
