@@ -4,6 +4,7 @@ import { useCallback, useEffect, useRef, useState } from 'react';
 import { GlobalStepper } from './global-stepper';
 import { SlidesRail } from './slides-rail';
 import { SlideEditorPane } from './slide-editor-pane';
+import { StyleSelector } from './style-selector';
 import type {
   CarouselAvatarOption,
   CarouselDraftSerialized,

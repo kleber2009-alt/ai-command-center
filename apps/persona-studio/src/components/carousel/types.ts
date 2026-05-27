@@ -18,6 +18,7 @@ export type CarouselDraftSerialized = {
   coverAvatarId: string | null;
   slidesCount: number;
   slides: SlideShape[];
+  style: string;
   status: string;
   imageUrls: string[];
   createdAt: string;

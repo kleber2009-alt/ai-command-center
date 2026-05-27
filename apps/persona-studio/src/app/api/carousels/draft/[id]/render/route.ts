@@ -15,6 +15,7 @@ import { NextRequest, NextResponse } from 'next/server';
 import { getCurrentUserOrApiKey } from '@/lib/auth';
 import { prisma } from '@/lib/prisma';
 import { renderSlide, type SlideKind } from '@/lib/carousel/render-slide';
+import { isValidStyle, DEFAULT_STYLE } from '@/lib/carousel/styles';
 import { uploadBuffer } from '@/lib/storage';
 import { s3, BUCKET } from '@/lib/storage';
 import { GetObjectCommand } from '@aws-sdk/client-s3';
@@ -105,6 +106,8 @@ export async function POST(req: NextRequest, ctx: { params: Promise<{ id: string
       ? await avatarToDataUri(draft.coverAvatar.imageUrl)
       : null;
 
+    const style = isValidStyle(draft.style) ? draft.style : DEFAULT_STYLE;
+
     // Последовательно рендерим — satori CPU-heavy, параллельность
     // в одном Node-процессе ничего не ускорит и риск OOM выше.
     const urls: string[] = [];
@@ -117,6 +120,7 @@ export async function POST(req: NextRequest, ctx: { params: Promise<{ id: string
         kind,
         title: s.title.trim(),
         body: s.body.trim(),
+        style,
         avatarDataUri: kind === 'cover' ? avatarUri || undefined : undefined,
       });
       const key = `carousels/${user.id}/${draft.id}/${String(i + 1).padStart(2, '0')}.png`;

@@ -19,6 +19,7 @@ const SlideSchema = z.object({
 const PatchBody = z.object({
   slides: z.array(SlideSchema).min(2).max(20).optional(),
   coverAvatarId: z.string().nullable().optional(),
+  style: z.string().optional(),
 });
 
 export async function GET(_req: NextRequest, ctx: { params: Promise<{ id: string }> }) {
@@ -63,11 +64,16 @@ export async function PATCH(req: NextRequest, ctx: { params: Promise<{ id: strin
     }
   }
 
+  if (data.style && !isValidStyle(data.style)) {
+    return NextResponse.json({ error: 'bad_style' }, { status: 400 });
+  }
+
   const draft = await prisma.carouselDraft.update({
     where: { id },
     data: {
       ...(data.slides ? { slides: data.slides, slidesCount: data.slides.length } : {}),
       ...(data.coverAvatarId !== undefined ? { coverAvatarId: data.coverAvatarId } : {}),
+      ...(data.style ? { style: data.style } : {}),
     },
   });
 

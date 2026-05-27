@@ -41,6 +41,7 @@ export default async function NewCarouselPage({
     coverAvatarId: draft.coverAvatarId,
     slidesCount: draft.slidesCount,
     slides,
+    style: draft.style,
     status: draft.status,
     imageUrls: draft.imageUrls,
     createdAt: draft.createdAt.toISOString(),
