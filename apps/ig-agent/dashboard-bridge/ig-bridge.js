@@ -574,7 +574,7 @@
 
     await reload();
 
-    // Poll every 10s for new messages / status changes so an open
+    // Poll every 3s for new messages / status changes so an open
     // conversation tab stays live without F5. We pause polling when the
     // tab is hidden (saves API + tokens) and resume on visibility change.
     let pollTimer = null;
@@ -613,7 +613,7 @@
         polling = false;
       }
     }
-    pollTimer = setInterval(tick, 10000);
+    pollTimer = setInterval(tick, 3000);
     document.addEventListener('visibilitychange', () => {
       if (!document.hidden) tick(); // immediate refresh on return
     });
