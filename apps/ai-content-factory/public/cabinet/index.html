@@ -530,6 +530,7 @@ document.querySelectorAll('#format-toggle .seg').forEach((b) => {
       x.style.boxShadow = on ? '0 1px 2px rgba(0,0,0,.04)' : 'none';
     });
     document.getElementById('engine-picker').style.display = state.format === 'carousel' ? '' : 'none';
+    const sp = document.getElementById('style-picker'); if (sp) sp.style.display = state.format === 'carousel' ? '' : 'none';
     document.getElementById('cost-hint').textContent = state.format === 'reels'
       ? 'Один прогон ≈ $0.10–0.25 (Opus + Haiku). Без библиотеки клипов отдаётся только сценарий.'
       : 'Один прогон ≈ $0.05–0.20 (Puppeteer) или $0.40–1.70 (image-engine за 10 слайдов).';
@@ -766,7 +767,7 @@ document.getElementById('btn-generate').onclick = async () => {
     const { jobId } = await api('/api/generate', {
       method: 'POST',
       headers: { 'content-type': 'application/json' },
-      body: JSON.stringify({ format: state.format, engine: state.engine, rubric: state.rubric, topic, slideCount, photoId: state.photoId, deliver, rag }),
+      body: JSON.stringify({ format: state.format, engine: state.engine, style: state.style, rubric: state.rubric, topic, slideCount, photoId: state.photoId, deliver, rag }),
     });
     state.activeJob = jobId;
     pollJob(jobId);
