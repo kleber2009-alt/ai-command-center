@@ -4,6 +4,7 @@ import { getCurrentUser } from '@/lib/auth';
 import { prisma } from '@/lib/prisma';
 import { formatDate } from '@/lib/utils';
 import { COSTS } from '@/lib/tokens';
+import { EmptyState } from '@/components/empty-state';
 
 export const dynamic = 'force-dynamic';
 
@@ -138,9 +139,11 @@ export default async function DashboardPage({
           <span className="flex-1 border-b border-border translate-y-[-3px]" />
         </div>
         {generations.length === 0 ? (
-          <p className="mono text-[11px] tracking-widest uppercase text-text-mute">
-            /EMPTY — ещё ни одной генерации. <Link href="/generate" className="text-lime">Загрузить фото →</Link>
-          </p>
+          <EmptyState
+            size="sm"
+            title="ещё ни одной генерации."
+            cta={{ href: '/generate', label: 'Загрузить фото' }}
+          />
         ) : (
           <div className="border border-border">
             {generations.map((g) => (

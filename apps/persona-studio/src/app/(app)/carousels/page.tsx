@@ -42,16 +42,11 @@ export default async function CarouselsPage() {
       </header>
 
       {drafts.length === 0 ? (
-        <div className="border border-border-2 border-dashed p-12 text-center bg-surface">
-          <div className="sec-num mb-3">/EMPTY</div>
-          <div className="font-serif italic text-[22px] mb-4">
-            Черновиков карусели пока нет.
-          </div>
-          <p className="font-serif text-[14px] text-text-mute mb-6 max-w-[42ch] mx-auto">
-            Открой парсер, найди залётную карусель, нажми «Создать карусель» — и попадёшь сюда с готовыми слайдами.
-          </p>
-          <Link href="/parser" className="btn-primary">Открыть парсер →</Link>
-        </div>
+        <EmptyState
+          title="Черновиков карусели пока нет."
+          description="Открой парсер, найди залётную карусель, нажми «Создать карусель» — и попадёшь сюда с готовыми слайдами."
+          cta={{ href: '/parser', label: 'Открыть парсер' }}
+        />
       ) : (
         <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4">
           {drafts.map((d) => {

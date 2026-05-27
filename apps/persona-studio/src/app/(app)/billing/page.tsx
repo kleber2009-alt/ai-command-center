@@ -3,6 +3,7 @@ import { getCurrentUser } from '@/lib/auth';
 import { prisma } from '@/lib/prisma';
 import { formatDate } from '@/lib/utils';
 import { BillingActions } from '@/components/billing-actions';
+import { EmptyState } from '@/components/empty-state';
 import { COSTS } from '@/lib/tokens';
 
 export const dynamic = 'force-dynamic';
@@ -89,7 +90,7 @@ export default async function BillingPage() {
           <span className="mono text-[10px] tracking-widest uppercase text-text-mute">{recent.length} / last 30</span>
         </div>
         {recent.length === 0 ? (
-          <p className="mono text-[11px] tracking-widest uppercase text-text-mute">/EMPTY</p>
+          <EmptyState size="sm" title="транзакций пока нет." />
         ) : (
           <div className="border border-border">
             {recent.map((t) => (
