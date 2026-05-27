@@ -68,7 +68,13 @@ export function guardRequest(req: NextRequest, options: GuardOptions): GuardResu
   //    routes require a configured bot token; without it they
   //    return 403, because we have no way to check who is calling.
   const botToken = process.env.TELEGRAM_BOT_TOKEN
-  const headerInitData = req.headers.get(INIT_DATA_HEADER)
+  // Accept both header conventions: the Mini App's `apiFetch` sends
+  // `Authorization: tma <initData>`, while older clients send the raw
+  // `x-telegram-init-data`. Either is valid.
+  const authHeader = req.headers.get('authorization') ?? ''
+  const headerInitData =
+    req.headers.get(INIT_DATA_HEADER) ??
+    (authHeader.toLowerCase().startsWith('tma ') ? authHeader.slice(4).trim() : null)
   // Single-tenant mode: ownerOnly routes no longer force `requireInitData`,
   // because the ownerOnly gate below falls back to OWNER_TELEGRAM_ID when
   // initData is missing. Strict caller can still opt in via the explicit

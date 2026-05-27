@@ -947,6 +947,52 @@ export function startAdminServer(deps: AdminDeps): AdminHandle {
     return c.json({ stages, total: rows.length });
   });
 
+  // Free-text search over message bodies. Matches incoming OR outgoing,
+  // ranked by recency. Returns one row per matched message + the contact
+  // that owns it. Used by /research and the ⌘K command palette.
+  app.get('/api/search', async (c) => {
+    const q = (c.req.query('q') ?? '').trim();
+    if (!q || q.length < 2) return c.json({ results: [], q });
+    const limit = Math.min(Math.max(Number(c.req.query('limit') ?? 50), 1), 200);
+    const rows = await query<{
+      message_id: string;
+      contact_id: string;
+      created_at: string;
+      direction: string;
+      text: string;
+      intent: string | null;
+      ig_username: string | null;
+      first_name: string | null;
+      last_name: string | null;
+      lead_status: string | null;
+    }>(
+      deps.pool,
+      `SELECT m.id AS message_id, m.contact_id, m.created_at, m.direction, m.text, m.intent,
+              c.ig_username, c.first_name, c.last_name, c.lead_status
+         FROM messages m
+         JOIN contacts c ON c.id = m.contact_id
+        WHERE m.text ILIKE $1
+        ORDER BY m.created_at DESC
+        LIMIT $2`,
+      ['%' + q.replace(/[%_]/g, '\\$&') + '%', limit],
+    );
+    return c.json({
+      q,
+      results: rows.map((r) => ({
+        message_id: r.message_id,
+        contact_id: r.contact_id,
+        created_at: r.created_at,
+        direction: r.direction,
+        text: r.text,
+        intent: r.intent,
+        ig_username: r.ig_username,
+        name: [r.first_name, r.last_name].filter(Boolean).join(' ') ||
+              (r.ig_username ? '@' + r.ig_username : 'Контакт'),
+        lead_status: r.lead_status,
+      })),
+    });
+  });
+
   // Reports aggregate — one round-trip for every chart on /reports:
   //   - funnel: counts by lead_status
   //   - intents: top intents from incoming messages

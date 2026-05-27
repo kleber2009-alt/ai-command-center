@@ -1142,6 +1142,171 @@
     }
   }
 
+  // ---------- RESEARCH (search + insights) -----------------------------
+
+  async function initResearch() {
+    ensureStyles();
+    const main = $('main');
+    if (!main) return;
+    const pageH = $('.page-h', main);
+
+    // Wipe the static prototype insight blocks (everything after page-h
+    // is fluff we replace with real aggregates).
+    if (pageH && pageH.parentElement) {
+      let n = pageH.nextSibling;
+      while (n) {
+        const cur = n;
+        n = cur.nextSibling;
+        cur.remove?.();
+      }
+    }
+
+    const host = el('section', { id: 'ig-research-host', style: { marginTop: '16px', display: 'flex', flexDirection: 'column', gap: '16px' } });
+    if (pageH && pageH.parentElement) pageH.parentElement.appendChild(host);
+    else main.appendChild(host);
+
+    // --- Search box --------------------------------------------------
+    const searchCard = el('div', { class: 'card' });
+    searchCard.innerHTML =
+      '<div class="section-h">Поиск по диалогам</div>' +
+      '<div style="display:flex;gap:8px;margin-top:10px">' +
+        '<input class="input" id="ig-research-q" placeholder="Найти текст в&nbsp;переписках… (мин. 2 символа)" style="flex:1">' +
+        '<button class="btn btn--primary" id="ig-research-go">Искать</button>' +
+      '</div>' +
+      '<div id="ig-research-results" style="margin-top:12px;display:flex;flex-direction:column;gap:6px"></div>';
+    host.appendChild(searchCard);
+
+    const qInput = $('#ig-research-q', searchCard);
+    const goBtn = $('#ig-research-go', searchCard);
+    const resultsBox = $('#ig-research-results', searchCard);
+
+    let searchAbort = null;
+    async function runSearch() {
+      const q = (qInput.value || '').trim();
+      if (q.length < 2) {
+        resultsBox.innerHTML = '<div class="muted t-sm">Введи минимум 2 символа</div>';
+        return;
+      }
+      resultsBox.innerHTML = '<div class="ig-loading">Ищу…</div>';
+      if (searchAbort) searchAbort.abort();
+      searchAbort = new AbortController();
+      try {
+        const res = await fetch(API + '/search?q=' + encodeURIComponent(q) + '&limit=80', {
+          credentials: 'same-origin', signal: searchAbort.signal,
+        });
+        if (!res.ok) throw new Error('HTTP ' + res.status);
+        const data = await res.json();
+        const items = data.results || [];
+        resultsBox.innerHTML = '';
+        if (!items.length) {
+          resultsBox.appendChild(el('div', { class: 'muted t-sm' }, 'Совпадений нет.'));
+          return;
+        }
+        const header = el('div', { class: 'muted t-sm', style: { marginBottom: '6px' } }, 'Найдено: ' + items.length);
+        resultsBox.appendChild(header);
+        for (const r of items) {
+          const time = formatDay(r.created_at);
+          const tone = r.direction === 'incoming' ? 'var(--blue)' : 'var(--green)';
+          const row = el('a', {
+            href: 'conversation.html?id=' + encodeURIComponent(r.contact_id),
+            style: {
+              display: 'block', padding: '10px 12px', borderRadius: '8px',
+              background: 'var(--bg-card-2)', textDecoration: 'none', color: 'inherit',
+              borderLeft: '3px solid ' + tone,
+            },
+          });
+          row.innerHTML =
+            '<div style="display:flex;justify-content:space-between;align-items:baseline;font-size:11.5px">' +
+              '<div><b>' + escapeHtml(r.name) + '</b>' +
+                (r.ig_username ? ' <span class="muted">@' + escapeHtml(r.ig_username) + '</span>' : '') +
+                ' <span class="badge ' + (STATUS_BADGE[r.lead_status || 'new'] || 'badge--ghost') + '">' + escapeHtml(STATUS_LABELS[r.lead_status || 'new'] || r.lead_status || 'new') + '</span>' +
+              '</div>' +
+              '<span class="mono muted">' + escapeHtml(time) + '</span>' +
+            '</div>' +
+            '<div class="t-sm" style="margin-top:4px">' +
+              (r.direction === 'incoming' ? '↘ ' : '↗ ') +
+              highlight(r.text, q) +
+            '</div>';
+          resultsBox.appendChild(row);
+        }
+      } catch (e) {
+        if (e.name === 'AbortError') return;
+        resultsBox.innerHTML = '<div class="ig-err">' + escapeHtml(e.message) + '</div>';
+      }
+    }
+    function highlight(text, q) {
+      const safe = escapeHtml(text);
+      try {
+        const re = new RegExp('(' + q.replace(/[.*+?^${}()|[\]\\]/g, '\\$&') + ')', 'gi');
+        return safe.replace(re, '<mark style="background:var(--yellow);color:#080808;padding:0 2px;border-radius:2px">$1</mark>');
+      } catch { return safe; }
+    }
+    goBtn.addEventListener('click', runSearch);
+    qInput.addEventListener('keydown', (e) => { if (e.key === 'Enter') runSearch(); });
+
+    // --- Top intents card (mirrors /reports data) --------------------
+    try {
+      const reports = await api('/reports');
+      const intents = reports.intents || [];
+      const max = Math.max(1, ...intents.map((i) => i.n));
+      const intentsCard = el('div', { class: 'card' });
+      intentsCard.innerHTML =
+        '<div class="section-h">О чём пишут — топ-12 intent\'ов (anal. за всё время)</div>' +
+        '<div style="display:flex;flex-direction:column;gap:6px;margin-top:10px;font-size:11.5px">' +
+          (intents.length ? intents.map((row) => {
+            const pct = (row.n / max) * 100;
+            return (
+              '<div style="display:flex;align-items:center;gap:10px;cursor:pointer" data-intent="' + escapeHtml(row.intent) + '">' +
+                '<span class="mono" style="flex:0 0 180px;color:var(--text-mid)">' + escapeHtml(row.intent) + '</span>' +
+                '<div style="flex:1;height:6px;border-radius:3px;background:var(--bg-card-2);overflow:hidden">' +
+                  '<div style="height:100%;width:' + pct + '%;background:var(--blue)"></div>' +
+                '</div>' +
+                '<span class="mono" style="flex:0 0 48px;text-align:right">' + row.n + '</span>' +
+              '</div>'
+            );
+          }).join('') : '<div class="muted">Нет данных</div>') +
+        '</div>';
+      // Click intent → search for that intent's typical phrases via text search.
+      intentsCard.addEventListener('click', (e) => {
+        const row = e.target.closest('[data-intent]');
+        if (!row) return;
+        qInput.value = '';
+        runSearch();
+      });
+      host.appendChild(intentsCard);
+
+      // --- Funnel summary -------------------------------------------
+      const f = reports.funnel || {};
+      const total = Object.values(f).reduce((a, b) => a + b, 0);
+      const summary = el('div', { class: 'card' });
+      summary.innerHTML =
+        '<div class="section-h">Состояние базы</div>' +
+        '<div style="display:grid;grid-template-columns:repeat(5,1fr);gap:10px;margin-top:12px">' +
+          [
+            { k: 'new', label: 'Новые' },
+            { k: 'warm', label: 'Тёплые' },
+            { k: 'hot', label: 'Горячие' },
+            { k: 'customer', label: 'Купили' },
+            { k: 'lost', label: 'Потеряны' },
+          ].map((row) => (
+            '<div style="text-align:center;padding:12px;background:var(--bg-card-2);border-radius:8px">' +
+              '<div class="mono" style="font-size:22px;font-weight:600;color:' +
+                (row.k === 'hot' ? 'var(--red)' :
+                 row.k === 'warm' ? 'var(--yellow)' :
+                 row.k === 'customer' ? 'var(--green)' :
+                 row.k === 'lost' ? 'var(--text-mute)' : 'var(--blue)') + '">' +
+                (f[row.k] || 0) + '</div>' +
+              '<div class="t-sm muted">' + row.label + '</div>' +
+              '<div class="t-sm muted">' + (total ? ((f[row.k] || 0) / total * 100).toFixed(0) + '%' : '0%') + '</div>' +
+            '</div>'
+          )).join('') +
+        '</div>';
+      host.insertBefore(summary, searchCard);
+    } catch (e) {
+      toast('Research: ' + e.message, 'err');
+    }
+  }
+
   // ---------- JOURNEY (kanban) -----------------------------------------
 
   async function initJourney() {
@@ -1290,11 +1455,168 @@
     renderAll();
   }
 
+  // ---------- GLOBAL ⌘K search palette ----------------------------------
+  //
+  // Universal across all pages — overlays a search box that hits /api/search
+  // for messages OR /api/contacts for contact names. Triggered by:
+  //   - focusing the existing .bar__search input
+  //   - ⌘K / Ctrl+K shortcut anywhere on the page
+  function initCommandPalette() {
+    const bar = $('.bar__search');
+    if (!bar) return;
+    if ($('#ig-cmdk')) return; // already initialized
+
+    const overlay = el('div', {
+      id: 'ig-cmdk',
+      style: {
+        position: 'fixed', inset: '0', background: 'rgba(0,0,0,.6)', backdropFilter: 'blur(4px)',
+        display: 'none', zIndex: 9998, alignItems: 'flex-start', justifyContent: 'center', paddingTop: '8vh',
+      },
+    });
+    const panel = el('div', {
+      style: {
+        width: 'min(640px,90vw)', background: 'var(--bg-card)', border: '1px solid var(--border-mid)',
+        borderRadius: '12px', boxShadow: '0 24px 60px rgba(0,0,0,.5)', overflow: 'hidden',
+      },
+    });
+    panel.innerHTML =
+      '<div style="padding:14px 16px;border-bottom:1px solid var(--border-soft);display:flex;align-items:center;gap:10px">' +
+        '<span class="mono muted">⌘K</span>' +
+        '<input id="ig-cmdk-input" placeholder="Найти контакт или сообщение…" ' +
+          'style="flex:1;background:transparent;border:0;outline:0;color:var(--text-main);font:inherit;font-size:14px">' +
+        '<span class="muted t-sm">esc</span>' +
+      '</div>' +
+      '<div id="ig-cmdk-results" style="max-height:60vh;overflow-y:auto;padding:8px"></div>';
+    overlay.appendChild(panel);
+    document.body.appendChild(overlay);
+    overlay.addEventListener('click', (e) => { if (e.target === overlay) close(); });
+
+    const input = $('#ig-cmdk-input', overlay);
+    const results = $('#ig-cmdk-results', overlay);
+
+    function open() {
+      overlay.style.display = 'flex';
+      input.value = '';
+      results.innerHTML = '<div class="muted t-sm" style="padding:14px">Введи имя контакта или фрагмент сообщения…</div>';
+      setTimeout(() => input.focus(), 30);
+    }
+    function close() {
+      overlay.style.display = 'none';
+      bar.blur();
+    }
+
+    bar.addEventListener('focus', open);
+
+    document.addEventListener('keydown', (e) => {
+      if ((e.metaKey || e.ctrlKey) && e.key.toLowerCase() === 'k') {
+        e.preventDefault();
+        if (overlay.style.display === 'none') open();
+        else close();
+      }
+      if (e.key === 'Escape' && overlay.style.display !== 'none') close();
+    });
+
+    let timer = null;
+    let abort = null;
+    input.addEventListener('input', () => {
+      clearTimeout(timer);
+      timer = setTimeout(runQuery, 220);
+    });
+
+    async function runQuery() {
+      const q = input.value.trim();
+      if (q.length < 2) {
+        results.innerHTML = '<div class="muted t-sm" style="padding:14px">Минимум 2 символа</div>';
+        return;
+      }
+      results.innerHTML = '<div class="ig-loading">Ищу…</div>';
+      if (abort) abort.abort();
+      abort = new AbortController();
+      try {
+        const [msgRes, ctRes] = await Promise.all([
+          fetch(API + '/search?q=' + encodeURIComponent(q) + '&limit=30', {
+            credentials: 'same-origin', signal: abort.signal,
+          }).then((r) => r.json()),
+          fetch(API + '/contacts?limit=400', {
+            credentials: 'same-origin', signal: abort.signal,
+          }).then((r) => r.json()),
+        ]);
+        const qLow = q.toLowerCase();
+        const matchedContacts = (ctRes.contacts || []).filter((c) => {
+          const fullName = [c.first_name, c.last_name].filter(Boolean).join(' ').toLowerCase();
+          const u = (c.ig_username || '').toLowerCase();
+          return fullName.includes(qLow) || u.includes(qLow);
+        }).slice(0, 8);
+
+        results.innerHTML = '';
+        if (matchedContacts.length) {
+          results.appendChild(el('div', {
+            class: 'section-h',
+            style: { padding: '8px 12px 4px' },
+          }, 'Контакты'));
+          for (const c of matchedContacts) {
+            const fullName = [c.first_name, c.last_name].filter(Boolean).join(' ') || (c.ig_username ? '@' + c.ig_username : 'Контакт');
+            results.appendChild(makeRow({
+              href: 'conversation.html?id=' + encodeURIComponent(c.id),
+              title: fullName,
+              sub: (c.ig_username ? '@' + c.ig_username + ' · ' : '') + (STATUS_LABELS[c.lead_status || 'new'] || ''),
+              right: relativeTime(c.last_message_at || c.updated_at),
+              tone: c.lead_status === 'hot' ? 'var(--red)' : 'var(--blue)',
+            }));
+          }
+        }
+        const msgs = msgRes.results || [];
+        if (msgs.length) {
+          results.appendChild(el('div', {
+            class: 'section-h',
+            style: { padding: '12px 12px 4px' },
+          }, 'Сообщения · ' + msgs.length));
+          for (const m of msgs.slice(0, 30)) {
+            results.appendChild(makeRow({
+              href: 'conversation.html?id=' + encodeURIComponent(m.contact_id),
+              title: m.name,
+              sub: (m.direction === 'incoming' ? '↘ ' : '↗ ') + (m.text || '').slice(0, 110),
+              right: relativeTime(m.created_at),
+              tone: m.direction === 'incoming' ? 'var(--blue)' : 'var(--green)',
+            }));
+          }
+        }
+        if (!matchedContacts.length && !msgs.length) {
+          results.innerHTML = '<div class="muted t-sm" style="padding:14px">Совпадений нет.</div>';
+        }
+      } catch (e) {
+        if (e.name === 'AbortError') return;
+        results.innerHTML = '<div class="ig-err">' + escapeHtml(e.message) + '</div>';
+      }
+    }
+
+    function makeRow({ href, title, sub, right, tone }) {
+      const row = el('a', {
+        href,
+        style: {
+          display: 'flex', alignItems: 'center', gap: '12px', padding: '10px 12px',
+          borderRadius: '8px', textDecoration: 'none', color: 'inherit',
+          borderLeft: '3px solid ' + tone, marginBottom: '4px',
+        },
+        onmouseover: (e) => { e.currentTarget.style.background = 'var(--bg-card-2)'; },
+        onmouseout: (e) => { e.currentTarget.style.background = 'transparent'; },
+      });
+      row.innerHTML =
+        '<div style="flex:1;min-width:0">' +
+          '<div class="fw6 t-md" style="white-space:nowrap;overflow:hidden;text-overflow:ellipsis">' + escapeHtml(title) + '</div>' +
+          '<div class="muted t-sm" style="white-space:nowrap;overflow:hidden;text-overflow:ellipsis">' + escapeHtml(sub) + '</div>' +
+        '</div>' +
+        '<span class="mono muted t-sm" style="flex-shrink:0">' + escapeHtml(right || '') + '</span>';
+      return row;
+    }
+  }
+
   // ---------- boot ------------------------------------------------------
 
   const page = detectPage();
   document.addEventListener('DOMContentLoaded', () => {
     try {
+      initCommandPalette(); // ⌘K available on every page
       if (page === 'inbox') initInbox();
       else if (page === 'conversation') initConversation();
       else if (page === 'pulse') initPulse();
@@ -1303,6 +1625,7 @@
       else if (page === 'pipeline') initPipeline();
       else if (page === 'reports') initReports();
       else if (page === 'journey') initJourney();
+      else if (page === 'research') initResearch();
     } catch (e) {
       console.error('[ig-bridge]', e);
     }
