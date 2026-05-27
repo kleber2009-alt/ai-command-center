@@ -29,137 +29,34 @@ export interface SlideRenderContext {
   rubric: RubricConfig;
   index: number;
   total: number;
-  /** Author handle without @ (ilia.paliy / theromanknox / drcintas /
-   * julieta_publicista). If set, looks up a matching reference slide in
-   * data/brandbook/dataset.json and prepends its image_generation_prompt
-   * as a style anchor. */
-  styleAuthor?: string;
-}
-
-interface DatasetSlide {
-  filename?: string;
-  author?: string;
-  funnel_role?: string;
-  visual_description?: string;
-  design_tokens?: Record<string, string>;
-  image_generation_prompt?: string;
-}
-
-interface BrandbookDataset {
-  slides?: DatasetSlide[];
-}
-
-let datasetCache: { value: BrandbookDataset | null; ts: number } | null = null;
-function loadDataset(): BrandbookDataset | null {
-  if (datasetCache && Date.now() - datasetCache.ts < 60_000) return datasetCache.value;
-  try {
-    // Lazy require to keep this file leaf-importable from anywhere.
-    const fs = require('node:fs') as typeof import('node:fs');
-    const path = require('node:path') as typeof import('node:path');
-    const here = path.dirname(new URL(import.meta.url).pathname);
-    const file = path.resolve(here, '../../data/brandbook/dataset.json');
-    if (!fs.existsSync(file)) {
-      datasetCache = { value: null, ts: Date.now() };
-      return null;
-    }
-    const parsed = JSON.parse(fs.readFileSync(file, 'utf8')) as BrandbookDataset;
-    datasetCache = { value: parsed, ts: Date.now() };
-    return parsed;
-  } catch {
-    datasetCache = { value: null, ts: Date.now() };
-    return null;
-  }
-}
-
-/** Map our slide types to the funnel roles used in the dataset. */
-function funnelFor(slideType: Slide['type']): string {
-  if (slideType === 'cover') return 'cover';
-  if (slideType === 'cta') return 'cta';
-  if (slideType === 'code' || slideType === 'list') return 'step';
-  return 'proof'; // quote / stat
-}
-
-/** Finds the best matching reference slide for a given author + funnel role.
- * Falls back to any slide of the same author if no role match exists. */
-function findStyleRef(author: string, funnel: string): DatasetSlide | null {
-  const ds = loadDataset();
-  if (!ds?.slides) return null;
-  const handle = '@' + author;
-  const sameAuthor = ds.slides.filter((s) => s.author === handle);
-  if (sameAuthor.length === 0) return null;
-  const byRole = sameAuthor.find((s) => s.funnel_role === funnel);
-  return byRole ?? sameAuthor[0] ?? null;
 }
 
 /** Builds a model-agnostic prompt describing one slide. Same prose is fed to
  * both Gemini and OpenAI so visual style stays consistent when comparing.
- * When ctx.styleAuthor is set, prepends a STYLE REFERENCE block with the
- * matching dataset slide's image_generation_prompt — this is what teaches
- * the image-gen model the visual language (3D renders, beige grids, peach
- * platforms, dark code mockups, italic serif headlines, etc.). */
+ * Source of truth — Brandbook (template.html / brandbook.md / dataset.json).
+ * Image-gen engines also receive the Brandbook indirectly via the carousel
+ * generator's system prompt; this slide-prompt provides the concrete content
+ * + minimal generic constraints. */
 export function buildSlidePrompt(slide: Slide, ctx: SlideRenderContext): string {
   const { rubric, index, total } = ctx;
   const counter = `${index + 1}/${total}`;
   const lines: string[] = [];
 
-  // ── STYLE REFERENCE (priority) — overrides the default "minimalist Apple"
-  // base when a styleAuthor is selected. The image-gen model imitates the
-  // visual language of the matched reference slide from dataset.json.
-  let styleRef: DatasetSlide | null = null;
-  if (ctx.styleAuthor) {
-    styleRef = findStyleRef(ctx.styleAuthor, funnelFor(slide.type));
-  }
-  if (styleRef) {
-    lines.push(
-      `## STYLE REFERENCE — imitate this visual language from @${ctx.styleAuthor}`,
-      `Match the visual style, palette, typography, layout, mockup treatment, ` +
-        `and overall mood of the reference below. The CONTENT (text, headline) ` +
-        `must come from "YOUR SLIDE" section, not the reference.`,
-      ``,
-      `REFERENCE visual description:`,
-      styleRef.visual_description ?? '',
-      ``,
-      `REFERENCE image-gen prompt (style anchor — copy aesthetics, not text):`,
-      styleRef.image_generation_prompt ?? '',
-      ``,
-      `## YOUR SLIDE`,
-    );
-  } else {
-    lines.push(
-      `Instagram carousel slide, vertical 4:5 aspect ratio (1080×1350px), minimalist Apple-style design.`,
-      `Solid white background. Accent color: ${rubric.accent}.`,
-      `Top-left: small uppercase handle text "${rubric.handle}" in dark gray, modern sans-serif.`,
-      `Top-right: small counter "${counter}" in light gray.`,
-      `Use Inter font for body, JetBrains Mono for code. All text is in RUSSIAN (Cyrillic).`,
-      `NO photographs, NO illustrations, just clean typography on solid color.`,
-    );
-  }
-
-  // When a style reference exists, rubric tokens (accent, coverBg, handle)
-  // pull the image-gen towards a different look — strip them and use only
-  // the palette/handle from the reference itself.
-  if (styleRef) {
-    lines.push(
-      `Slide ${index + 1} of ${total}. Counter "${counter}" — place it like the reference puts it.`,
-      `Funnel role: ${funnelFor(slide.type)}.`,
-    );
-  }
+  lines.push(
+    `Instagram carousel slide, vertical 4:5 aspect ratio (1080×1350px).`,
+    `Follow the Brandbook for palette, typography, layout, and visual treatment ` +
+      `(template.html / brandbook.md / dataset.json — see system prompt).`,
+    `Top-left: small uppercase handle text "${rubric.handle}" in dark gray.`,
+    `Top-right: small counter "${counter}".`,
+    `All text is in RUSSIAN (Cyrillic).`,
+  );
 
   switch (slide.type) {
     case 'cover':
-      if (styleRef) {
-        lines.push(`Title (large, in the style above): "${slide.title}".`);
-        if (slide.subtitle) lines.push(`Subtitle: "${slide.subtitle}".`);
-        if (slide.label) lines.push(`Small kicker: "${slide.label}".`);
-      } else {
-        lines.push(
-          `Solid ${rubric.coverBg ?? rubric.accent} background instead of white.`,
-          `Large bold uppercase title centered: "${slide.title}".`,
-        );
-        if (slide.subtitle) lines.push(`Subtitle below title: "${slide.subtitle}".`);
-        if (slide.label) lines.push(`Small kicker above title: "${slide.label}".`);
-        lines.push(`Bottom: small text "SWIPE LEFT" with arrow.`);
-      }
+      lines.push(`Large bold uppercase title centered: "${slide.title}".`);
+      if (slide.subtitle) lines.push(`Subtitle below title: "${slide.subtitle}".`);
+      if (slide.label) lines.push(`Small kicker above title: "${slide.label}".`);
+      lines.push(`Bottom: small text "SWIPE LEFT" with arrow.`);
       break;
     case 'quote':
       lines.push(`Center: large italic quote text "${slide.text}".`);
@@ -167,37 +64,21 @@ export function buildSlidePrompt(slide: Slide, ctx: SlideRenderContext): string 
       break;
     case 'list':
       if (slide.title) lines.push(`Top: bold title "${slide.title}".`);
-      if (styleRef) {
-        lines.push(`Vertical list of items (use the reference's bullet style and palette):`);
-      } else {
-        lines.push(`Vertical list of items, each prefixed with a ${rubric.accent} bullet dot:`);
-      }
+      lines.push(`Vertical list of items (bullets per Brandbook):`);
       for (const item of slide.items) lines.push(`  • ${item}`);
       break;
     case 'stat':
-      if (styleRef) {
-        lines.push(`Huge number "${slide.value}" filling most of the slide (use the reference's palette and typography).`);
-      } else {
-        lines.push(`Huge accent-colored number "${slide.value}" filling most of the slide.`);
-      }
-      lines.push(`Below: caption "${slide.caption}" in normal weight.`);
+      lines.push(`Huge number "${slide.value}" filling most of the slide.`);
+      lines.push(`Below: caption "${slide.caption}".`);
       break;
     case 'code':
-      if (styleRef) {
-        lines.push(`Center: monospace code block (use the reference's mockup treatment).`);
-      } else {
-        lines.push(`Center: monospace code block with dark background, ${rubric.accent} syntax accent.`);
-      }
+      lines.push(`Center: monospace code block (treatment per Brandbook).`);
       lines.push(`Code: ${slide.code}`);
       if (slide.caption) lines.push(`Below code: "${slide.caption}".`);
       break;
     case 'cta':
       lines.push(`Center: large bold "${slide.headline}".`);
-      if (styleRef) {
-        lines.push(`Below: CTA "${slide.action}" (use the reference's button/keyword style).`);
-      } else {
-        lines.push(`Below: ${rubric.accent}-colored CTA "${slide.action}".`);
-      }
+      lines.push(`Below: CTA "${slide.action}".`);
       break;
   }
   return lines.join('\n');
