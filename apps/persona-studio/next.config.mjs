@@ -13,6 +13,9 @@ const nextConfig = {
   experimental: {
     serverActions: { bodySizeLimit: '25mb' },
   },
+  // Native bindings (.node) и yoga-wasm которые тащит satori/resvg не должны
+  // ходить через webpack — пусть резолвятся require'ом в runtime.
+  serverExternalPackages: ['@resvg/resvg-js', 'satori', 'yoga-wasm-web'],
 };
 
 export default nextConfig;
