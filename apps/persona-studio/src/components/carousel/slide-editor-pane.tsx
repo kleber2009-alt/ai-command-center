@@ -1,6 +1,6 @@
 'use client';
 
-import { useState } from 'react';
+import { useRef, useState } from 'react';
 import { CoverPickerPopover } from './cover-picker-popover';
 import type { CarouselAvatarOption, SlideShape } from './types';
 
@@ -184,7 +184,179 @@ export function SlideEditorPane({
             }`}
           />
         </label>
+
+        <SlideMediaUploader
+          value={slide.image ?? null}
+          onChange={(url) => onSlideChange({ image: url ?? undefined })}
+          disabled={isCover}
+          coverHint={isCover}
+        />
       </div>
     </section>
+  );
+}
+
+// ───────────────────────────────────────────────────────────────────────
+// SlideMediaUploader: drag-and-drop / click для загрузки фото/скриншота,
+// предпросмотр, кнопка удалить. Используется на reveal/cta слайдах
+// (на cover место занимает avatar — селектор обложки в шапке).
+// ───────────────────────────────────────────────────────────────────────
+function SlideMediaUploader({
+  value,
+  onChange,
+  disabled,
+  coverHint,
+}: {
+  value: string | null;
+  onChange: (url: string | null) => void;
+  disabled?: boolean;
+  coverHint?: boolean;
+}) {
+  const inputRef = useRef<HTMLInputElement>(null);
+  const [uploading, setUploading] = useState(false);
+  const [error, setError] = useState<string | null>(null);
+  const [dragOver, setDragOver] = useState(false);
+
+  async function uploadFile(file: File) {
+    if (!file) return;
+    setUploading(true);
+    setError(null);
+    try {
+      const fd = new FormData();
+      fd.set('file', file);
+      const res = await fetch('/api/carousels/upload-media', {
+        method: 'POST',
+        body: fd,
+      });
+      const json = await res.json().catch(() => ({}));
+      if (!res.ok) {
+        setError(json.message || json.error || `HTTP ${res.status}`);
+        return;
+      }
+      onChange(json.url);
+    } catch (e) {
+      setError((e as Error).message || 'network error');
+    } finally {
+      setUploading(false);
+    }
+  }
+
+  function onSelect(e: React.ChangeEvent<HTMLInputElement>) {
+    const f = e.target.files?.[0];
+    if (f) void uploadFile(f);
+    // reset чтобы можно было повторно выбрать тот же файл
+    e.target.value = '';
+  }
+
+  function onDrop(e: React.DragEvent<HTMLDivElement>) {
+    e.preventDefault();
+    setDragOver(false);
+    if (disabled || uploading) return;
+    const f = e.dataTransfer.files?.[0];
+    if (f) void uploadFile(f);
+  }
+
+  return (
+    <div className="grid gap-1.5">
+      <div className="flex items-baseline justify-between">
+        <span className="mono text-[9px] tracking-[0.18em] uppercase text-text-mute">
+          медиа · фото / скриншот / mockup
+        </span>
+        {coverHint && (
+          <span className="mono text-[9px] tracking-wider text-text-mute">
+            на обложке используется аватар
+          </span>
+        )}
+      </div>
+
+      {value ? (
+        <div className="relative border border-border bg-bg overflow-hidden grid grid-cols-[160px_1fr] gap-3 p-3">
+          {/* eslint-disable-next-line @next/next/no-img-element */}
+          <img
+            src={value}
+            alt="slide media"
+            className="w-full h-[120px] object-cover border border-border bg-surface"
+          />
+          <div className="grid gap-2 content-start min-w-0">
+            <span className="mono text-[10px] text-text-dim truncate">{value.split('/').pop()}</span>
+            <span className="mono text-[9px] text-text-mute">
+              Будет нарисовано как mockup-карточка в нижней части слайда после
+              «Сгенерировать PNG».
+            </span>
+            <div className="flex items-center gap-2 mt-1">
+              <button
+                type="button"
+                onClick={() => inputRef.current?.click()}
+                disabled={uploading || disabled}
+                className="mono text-[10px] tracking-widest uppercase text-lime hover:underline disabled:opacity-30"
+              >
+                {uploading ? 'загружаю…' : 'заменить'}
+              </button>
+              <span className="text-text-mute">·</span>
+              <button
+                type="button"
+                onClick={() => onChange(null)}
+                disabled={uploading || disabled}
+                className="mono text-[10px] tracking-widest uppercase text-text-mute hover:text-pink disabled:opacity-30"
+              >
+                удалить
+              </button>
+            </div>
+          </div>
+        </div>
+      ) : (
+        <div
+          onDragOver={(e) => {
+            e.preventDefault();
+            if (!disabled && !uploading) setDragOver(true);
+          }}
+          onDragLeave={() => setDragOver(false)}
+          onDrop={onDrop}
+          onClick={() => !disabled && !uploading && inputRef.current?.click()}
+          className={`border border-dashed bg-bg/40 grid place-items-center min-h-[88px] text-center px-4 py-3 cursor-pointer transition ${
+            disabled
+              ? 'border-border opacity-50 cursor-not-allowed'
+              : dragOver
+                ? 'border-lime bg-lime/[0.04]'
+                : 'border-border hover:border-text-dim'
+          }`}
+          role="button"
+          aria-disabled={disabled || uploading}
+          tabIndex={disabled ? -1 : 0}
+        >
+          {uploading ? (
+            <span className="mono text-[11px] text-lime">↑ загружаю…</span>
+          ) : disabled ? (
+            <span className="mono text-[10px] text-text-mute">
+              недоступно для cover-слайда
+            </span>
+          ) : (
+            <div className="grid gap-1">
+              <span className="mono text-[11px] tracking-widest uppercase text-text-dim">
+                + перетащи фото или кликни
+              </span>
+              <span className="mono text-[9px] text-text-mute">
+                JPG / PNG / WebP до 8 MB
+              </span>
+            </div>
+          )}
+        </div>
+      )}
+
+      <input
+        ref={inputRef}
+        type="file"
+        accept="image/jpeg,image/png,image/webp"
+        onChange={onSelect}
+        className="hidden"
+        disabled={disabled || uploading}
+      />
+
+      {error && (
+        <div className="border border-pink/40 bg-pink/5 px-2 py-1 mono text-[10px] text-pink">
+          {error}
+        </div>
+      )}
+    </div>
   );
 }

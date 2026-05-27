@@ -14,6 +14,7 @@ const SlideSchema = z.object({
   title: z.string().min(1).max(120),
   body: z.string().min(1).max(500),
   accent: z.string().max(120).optional(),
+  image: z.string().url().max(500).optional(),
 });
 
 const PatchBody = z.object({

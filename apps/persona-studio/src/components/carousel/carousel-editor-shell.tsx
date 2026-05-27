@@ -80,6 +80,7 @@ export function CarouselEditorShell({ initial, avatars }: Props) {
           title: s.title.trim() || ' ',
           body: s.body.trim() || ' ',
           ...(s.accent?.trim() ? { accent: s.accent.trim() } : {}),
+          ...(s.image ? { image: s.image } : {}),
         })),
         coverAvatarId: coverRef.current,
         style: styleRef.current,

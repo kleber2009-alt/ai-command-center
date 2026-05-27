@@ -25,7 +25,11 @@ export type RenderSlideInput = {
   title: string;
   body: string;
   style: CarouselStyleId;
+  // Аватар-обложки для cover-слайдов
   avatarDataUri?: string;
+  // Пользовательское фото/скрин/mockup для reveal/cta слайдов — рисуется
+  // как карточка в нижней части слайда, с фирменной рамкой стиля.
+  mediaDataUri?: string;
 };
 
 // ── helpers ───────────────────────────────────────────────────────────
@@ -168,6 +172,7 @@ function personaCover(input: RenderSlideInput): JSXNode {
 }
 
 function personaReveal(input: RenderSlideInput): JSXNode {
+  const hasMedia = Boolean(input.mediaDataUri);
   return el(
     'div',
     { width: SLIDE_W, height: SLIDE_H, backgroundColor: PERSONA.bg, display: 'flex', flexDirection: 'column', padding: 80, position: 'relative' },
@@ -178,8 +183,22 @@ function personaReveal(input: RenderSlideInput): JSXNode {
         [el('div', { display: 'flex', color: PERSONA.lime }, '/ раскрытие'), el('div', { display: 'flex' }, counter(input.index, input.total))],
       ),
       el('div', { marginTop: 28, width: 96, height: 4, backgroundColor: PERSONA.lime }),
-      el('div', { marginTop: 56, fontFamily: 'Tinos', fontWeight: 700, color: PERSONA.text, fontSize: 80, lineHeight: 1.1, display: 'flex' }, input.title),
-      el('div', { marginTop: 48, fontFamily: 'Tinos', color: PERSONA.textDim, fontSize: 38, lineHeight: 1.4, display: 'flex' }, input.body),
+      el('div', { marginTop: hasMedia ? 36 : 56, fontFamily: 'Tinos', fontWeight: 700, color: PERSONA.text, fontSize: hasMedia ? 60 : 80, lineHeight: 1.1, display: 'flex' }, input.title),
+      el('div', { marginTop: hasMedia ? 24 : 48, fontFamily: 'Tinos', color: PERSONA.textDim, fontSize: hasMedia ? 30 : 38, lineHeight: 1.35, display: 'flex' }, input.body),
+      ...(hasMedia
+        ? [
+            el(
+              'div',
+              { marginTop: 36, padding: 8, backgroundColor: PERSONA.surface, border: `2px solid ${PERSONA.lime}`, display: 'flex', alignSelf: 'stretch', flex: 1, maxHeight: 480 },
+              el(
+                'img',
+                { width: '100%', height: '100%', objectFit: 'contain' },
+                undefined,
+                { src: input.mediaDataUri! },
+              ),
+            ),
+          ]
+        : []),
     ],
   );
 }
@@ -312,8 +331,10 @@ function clickbaitCover(input: RenderSlideInput): JSXNode {
 }
 
 function clickbaitReveal(input: RenderSlideInput): JSXNode {
+  const hasMedia = Boolean(input.mediaDataUri);
   const bullets = splitBullets(input.body);
-  const useChecklist = bullets.length >= 2;
+  // С медиа отключаем чек-листы — слишком плотно. С медиа body всегда параграф.
+  const useChecklist = !hasMedia && bullets.length >= 2;
   const stepLabel = `${String(input.index).padStart(2, '0')}. ШАГ`;
 
   return el(

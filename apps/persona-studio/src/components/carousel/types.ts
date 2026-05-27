@@ -4,6 +4,10 @@ export type SlideShape = {
   title: string;
   body: string;
   accent?: string;
+  // Опциональный URL фото/скриншота, который будет нарисован как
+  // mockup-карточка внизу слайда (см. render-slide.ts). Загружается
+  // через POST /api/carousels/upload-media.
+  image?: string;
 };
 
 export type CarouselAvatarOption = {
