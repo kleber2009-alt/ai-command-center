@@ -907,7 +907,26 @@
 
   // ---------- AGENTS ---------------------------------------------------
 
+  // Serialize initAgents() invocations. The page calls itself after every
+  // toggle/activate click; rapid clicks used to interleave two refreshes,
+  // letting the loser stomp the winner's render with stale `autoOn`. Now:
+  // if a render is in-flight we just mark "rerun after current finishes".
+  let agentsRunning = false;
+  let agentsRerun = false;
   async function initAgents() {
+    if (agentsRunning) { agentsRerun = true; return; }
+    agentsRunning = true;
+    try {
+      await initAgentsImpl();
+    } finally {
+      agentsRunning = false;
+      if (agentsRerun) {
+        agentsRerun = false;
+        initAgents();
+      }
+    }
+  }
+  async function initAgentsImpl() {
     ensureStyles();
     const grid = $('.agents-grid');
     if (!grid) return;

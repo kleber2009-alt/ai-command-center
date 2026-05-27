@@ -40,6 +40,7 @@ import type { Pipeline } from '../pipeline.js';
 import type { Analyst } from '../analyst.js';
 import type { SendPulseClient } from '../sendpulse/client.js';
 import type { DigestSchedulerHandle } from '../scheduler.js';
+import type { HealthMonitor } from '../health.js';
 import { parseWebhookBody } from '../webhook.js';
 
 const here = dirname(fileURLToPath(import.meta.url));
@@ -439,6 +440,7 @@ export interface AdminDeps {
   notifier: Notifier;
   digests: DigestStore;
   digestScheduler: DigestSchedulerHandle;
+  health: HealthMonitor;
 }
 
 export interface AdminHandle {
@@ -532,11 +534,13 @@ export function startAdminServer(deps: AdminDeps): AdminHandle {
     for (const event of parsed.messages) {
       try {
         await deps.pipeline.handle(event);
+        deps.health.recordSuccess();
       } catch (err) {
         logger.error('pipeline handle failed', {
           err: err instanceof Error ? err.message : String(err),
           sendpulseContactId: event.sendpulseContactId,
         });
+        deps.health.recordFailure(err);
       }
     }
 
