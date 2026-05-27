@@ -13,10 +13,16 @@ FROM node:20-slim AS runtime
 WORKDIR /app
 ENV NODE_ENV=production
 
-# pg_dump for the daily backup scheduler (src/backup.ts). Pin to v16
-# to match the prod aisales-postgres major. gzip is in -slim base.
+# pg_dump for the daily backup scheduler (src/backup.ts). The Debian
+# bookworm base ships postgresql-client-15, but our server is 16.13 and
+# pg_dump refuses cross-major. Pull postgresql-client-16 from PGDG.
 RUN apt-get update \
-  && apt-get install -y --no-install-recommends postgresql-client \
+  && apt-get install -y --no-install-recommends ca-certificates gnupg wget \
+  && install -d /usr/share/postgresql-common/pgdg \
+  && wget --quiet -O /usr/share/postgresql-common/pgdg/apt.postgresql.org.asc https://www.postgresql.org/media/keys/ACCC4CF8.asc \
+  && echo "deb [signed-by=/usr/share/postgresql-common/pgdg/apt.postgresql.org.asc] https://apt.postgresql.org/pub/repos/apt bookworm-pgdg main" > /etc/apt/sources.list.d/pgdg.list \
+  && apt-get update \
+  && apt-get install -y --no-install-recommends postgresql-client-16 \
   && rm -rf /var/lib/apt/lists/*
 
 COPY apps/ig-agent/package.json ./
