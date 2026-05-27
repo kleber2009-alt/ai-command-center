@@ -1252,14 +1252,93 @@
   async function initPipeline() {
     ensureStyles();
     try {
-      const data = await api('/contacts?limit=500');
+      const [data, reports] = await Promise.all([
+        api('/contacts?limit=500'),
+        api('/reports').catch(() => ({})),
+      ]);
       const contacts = data.contacts || [];
       const total = contacts.length;
-      const chips = $$('.chips .chip');
-      const allChip = chips.find((c) => /^все/i.test(c.textContent || ''));
-      if (allChip) {
-        const cnt = $('.chip__count', allChip); if (cnt) cnt.textContent = total;
+
+      // Honest title + subtitle. The prototype HTML hard-codes
+      // "Pipeline · 128 клиентов" and "IG 82 · TG 46 · Прогноз оплат
+      // сегодня: ₽142к → ₽210к" — none of which match anything we
+      // actually know. Replace with live totals; TG/WA stay 0 because
+      // ig-agent only ingests Instagram via SendPulse.
+      const by = { new: 0, warm: 0, hot: 0, customer: 0, lost: 0, support: 0 };
+      const q = { A: 0, B: 0, C: 0, D: 0, unknown: 0 };
+      const todayISO = new Date().toISOString().slice(0, 10);
+      let newToday = 0;
+      let waitingHandoff = 0;
+      let staleHot = 0;
+      const now = Date.now();
+      for (const c of contacts) {
+        const st = c.lead_status || 'new';
+        if (st in by) by[st]++;
+        const ql = c.qualification || 'unknown';
+        if (ql in q) q[ql]++; else q.unknown++;
+        const createdDay = (c.created_at || '').slice(0, 10);
+        if (createdDay === todayISO) newToday++;
+        if (c.ai_handled === false) waitingHandoff++;
+        if (st === 'hot') {
+          const last = new Date(c.last_message_at || c.updated_at || c.created_at).getTime();
+          if (now - last > 30 * 60 * 1000) staleHot++;
+        }
       }
+
+      const titleEl = $('.page-h__title');
+      if (titleEl) titleEl.textContent = 'Pipeline · ' + total + ' ' + pluralClients(total);
+      const subEl = $('.page-h__subtitle');
+      if (subEl) {
+        subEl.textContent =
+          'IG ' + total + ' · TG 0 · ' + by.hot + ' горячих · ' +
+          by.customer + ' клиентов · ' + by.lost + ' lost';
+      }
+
+      // Channel chips (Все/IG/TG/WA). Only IG has data; TG/WA → 0 to
+      // stop the "Канал" widget from claiming we have 46 TG leads.
+      const chips = $$('.chips .chip');
+      for (const chip of chips) {
+        const label = (chip.textContent || '').trim().toLowerCase();
+        const cnt = $('.chip__count', chip);
+        if (!cnt) continue;
+        if (label.startsWith('все')) cnt.textContent = total;
+        else if (label.startsWith('ig')) cnt.textContent = total;
+        else if (label.startsWith('tg')) cnt.textContent = 0;
+        else if (label.startsWith('wa')) cnt.textContent = 0;
+        // Segment chips A/B/C (no extra letters before count).
+        else if (/^a\b/.test(label)) cnt.textContent = q.A;
+        else if (/^b\b/.test(label)) cnt.textContent = q.B;
+        else if (/^c\b/.test(label)) cnt.textContent = q.C;
+      }
+
+      // Sidebar sb-list counts: status filters, stages, agent breakdown.
+      // We honestly map what we can; the rest go to 0 so they stop
+      // pretending. STAGE values come from reports.funnel when available,
+      // otherwise from local lead_status totals.
+      const f = reports.funnel || by;
+      const sbItems = $$('.sb-list .sb-list__item');
+      for (const it of sbItems) {
+        const txt = (it.textContent || '').toLowerCase();
+        const cnt = $('.sb-list__item-count', it);
+        if (!cnt) continue;
+        if (/всё|все/.test(txt)) cnt.textContent = total;
+        else if (/требуют тебя/.test(txt)) cnt.textContent = waitingHandoff;
+        else if (/без ответа/.test(txt)) cnt.textContent = staleHot;
+        else if (/близко к.*оплате/.test(txt)) cnt.textContent = by.warm + by.hot;
+        else if (/vip|a-сегмент|сегмент a/.test(txt)) cnt.textContent = q.A;
+        else if (/новые сегодня/.test(txt)) cnt.textContent = newToday;
+        // Stages (Hello/Discovery/Pitch/Objections/Close/Followup/Won/Lost).
+        // We don't have stage data in /contacts, so map to 0 — the
+        // Journey page has the real numbers via /journey.
+        else if (/hello|discovery|pitch|objections?|close|follow.?up|won|lost/.test(txt)) {
+          if (/won|lost/.test(txt)) cnt.textContent = (f.customer || 0) + (f.lost || 0);
+          else cnt.textContent = 0;
+        }
+        // AI-agent breakdown (Greeting/Discovery/Pitch/Closer/Follow-up).
+        // Single prompt in DB → all zeros until we add per-prompt usage.
+        else if (/greeting|closer/.test(txt)) cnt.textContent = 0;
+      }
+
       const rows = $$('table tbody tr');
       if (rows.length) {
         const tbody = rows[0].parentElement;
