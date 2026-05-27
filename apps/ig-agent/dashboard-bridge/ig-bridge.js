@@ -579,6 +579,7 @@
 
   async function initPulse() {
     ensureStyles();
+    renderPulseAlerts(); // fire-and-forget; cards independent from KPIs
     try {
       const s = await api('/stats');
       const by = (s.contacts && s.contacts.by_status) || {};
@@ -623,6 +624,130 @@
     } catch (e) {
       toast('Pulse: ' + e.message, 'err');
     }
+  }
+
+  // Build the right-side Alerts column from real data. Strict signal:
+  // only contacts whose LAST message is incoming (i.e., a real waiting
+  // reply). Hot status gets priority; conversations with `ai_handled=false`
+  // (operator paused AI) are flagged separately.
+  async function renderPulseAlerts() {
+    const alertsBox = $('.alerts');
+    if (!alertsBox) return;
+    alertsBox.innerHTML = '<div class="ig-loading">Сканирую горячие диалоги…</div>';
+    const headerBadge = (() => {
+      const heads = $$('.row--between .section-h');
+      const h = heads.find((x) => /alerts/i.test(x.textContent || ''));
+      return h && h.parentElement ? h.parentElement.querySelector('.badge') : null;
+    })();
+
+    try {
+      // Pull the hottest 25 contacts, then check each one's latest message
+      // direction. Two-tier limit keeps N+1 queries bounded.
+      const { contacts: hotList = [] } = await api('/contacts?status=hot&limit=25');
+      // Also pull warm with takeover potentially; for now hot-only — strongest signal.
+
+      const checks = await Promise.all(
+        hotList.slice(0, 20).map(async (c) => {
+          try {
+            const m = await api('/contacts/' + c.id + '/messages?limit=3');
+            const list = m.messages || [];
+            if (!list.length) return null;
+            const last = list[list.length - 1];
+            if (!last || last.direction !== 'incoming') return null;
+            return { contact: c, msg: last };
+          } catch {
+            return null;
+          }
+        }),
+      );
+      const alerts = checks
+        .filter(Boolean)
+        .sort((a, b) => new Date(b.msg.created_at) - new Date(a.msg.created_at));
+
+      if (headerBadge) {
+        if (alerts.length) {
+          headerBadge.classList.add('badge--red', 'badge--pulse');
+          headerBadge.innerHTML = '<span class="dot"></span>' + alerts.length + ' требуют ответа';
+          headerBadge.style.display = '';
+        } else {
+          headerBadge.innerHTML = '<span class="dot"></span>чисто';
+          headerBadge.classList.remove('badge--pulse');
+        }
+      }
+
+      alertsBox.innerHTML = '';
+      if (!alerts.length) {
+        alertsBox.appendChild(el('div', {
+          class: 'card',
+          style: { padding: '20px', textAlign: 'center', color: 'var(--text-muted)', fontSize: '13px' },
+        }, '✓ Нет горячих диалогов без ответа'));
+      } else {
+        for (const a of alerts) {
+          alertsBox.appendChild(buildPulseAlertCard(a.contact, a.msg));
+        }
+      }
+
+      // Re-populate the "Что сделать сейчас" card with the same priority list.
+      const todoCard = $$('.card').find((c) => /сделать сейчас/i.test(c.textContent || ''));
+      if (todoCard) {
+        const col = todoCard.querySelector('.col');
+        if (col) {
+          col.innerHTML = '';
+          if (!alerts.length) {
+            col.appendChild(el('div', { class: 'muted t-sm' }, 'Список пуст — всё под контролем.'));
+          } else {
+            const palette = ['c-red', 'c-yellow', 'c-blue', 'c-purple', 'c-green'];
+            alerts.slice(0, 5).forEach((a, i) => {
+              const fullName = [a.contact.first_name, a.contact.last_name].filter(Boolean).join(' ');
+              const display = fullName || (a.contact.ig_username ? '@' + a.contact.ig_username : 'Контакт');
+              const row = el('a', {
+                class: 'row gap-2',
+                href: 'conversation.html?id=' + encodeURIComponent(a.contact.id),
+                style: { textDecoration: 'none', color: 'inherit', padding: '4px 0' },
+              });
+              row.innerHTML =
+                '<span class="' + palette[i] + ' mono fw6">' + (i + 1) + '</span>' +
+                '<span class="t-md">Ответить <b>' + escapeHtml(display) + '</b> — «' + escapeHtml((a.msg.text || '').slice(0, 50)) + '»</span>';
+              col.appendChild(row);
+            });
+          }
+        }
+      }
+    } catch (e) {
+      alertsBox.innerHTML = '';
+      alertsBox.appendChild(el('div', { class: 'ig-err' }, 'Алерты: ' + e.message));
+    }
+  }
+
+  function buildPulseAlertCard(contact, msg) {
+    const fullName = [contact.first_name, contact.last_name].filter(Boolean).join(' ');
+    const display = fullName || (contact.ig_username ? '@' + contact.ig_username : 'Контакт');
+    const handle = contact.ig_username ? '@' + contact.ig_username : 'id:' + (contact.sendpulse_contact_id || '').slice(0, 8);
+    const time = relativeTime(msg.created_at);
+    const preview = (msg.text || '').slice(0, 110);
+    const card = el('div', { class: 'alert alert--hot' });
+    card.innerHTML =
+      '<span class="alert__dot"></span>' +
+      '<div style="flex:1">' +
+        '<div class="alert__title">Горячий лид без ответа</div>' +
+        '<div class="alert__text"><b>' + escapeHtml(display) + '</b> · ' + escapeHtml(handle) + ' · IG</div>' +
+        '<div class="alert__text" style="margin-top:4px;color:var(--text-muted)">«' + escapeHtml(preview) + '»</div>' +
+        '<div class="alert__time">⏱ ' + escapeHtml(time) + ' назад</div>' +
+        '<div class="alert__cta">' +
+          '<a href="conversation.html?id=' + encodeURIComponent(contact.id) + '" class="btn btn--primary" style="font-size:11.5px;height:26px">Ответить →</a>' +
+          '<button class="btn btn--ghost" style="font-size:11.5px;height:26px" data-ai-handle>Передать AI</button>' +
+        '</div>' +
+      '</div>';
+    const btn = $('[data-ai-handle]', card);
+    if (btn) {
+      btn.onclick = async () => {
+        try {
+          await api('/contacts/' + contact.id + '/takeover', { method: 'POST', body: { ai_handled: true } });
+          toast('AI возобновлён для ' + display);
+        } catch (e) { toast('Ошибка: ' + e.message, 'err'); }
+      };
+    }
+    return card;
   }
 
   // ---------- SETTINGS -------------------------------------------------

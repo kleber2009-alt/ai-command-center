@@ -73,6 +73,15 @@ export async function POST(req: NextRequest, ctx: { params: Promise<{ id: string
   const user = auth.user;
   const { id } = await ctx.params;
 
+  // ?onlyIndex=N — рендерить только один слайд (0-based). Если задан,
+  // обновляем imageUrls по позиции, не трогая остальные PNG'и. Полезно
+  // когда юзер поправил текст одного слайда и не хочет ждать полный run.
+  const onlyIndexRaw = req.nextUrl.searchParams.get('onlyIndex');
+  const onlyIndex = onlyIndexRaw != null ? Number(onlyIndexRaw) : null;
+  if (onlyIndexRaw != null && (!Number.isFinite(onlyIndex) || onlyIndex! < 0)) {
+    return NextResponse.json({ error: 'bad_only_index' }, { status: 400 });
+  }
+
   const draft = await prisma.carouselDraft.findFirst({
     where: { id, userId: user.id },
     include: {
@@ -85,8 +94,12 @@ export async function POST(req: NextRequest, ctx: { params: Promise<{ id: string
   if (slides.length < 2) {
     return NextResponse.json({ error: 'not_enough_slides', message: 'Нужно минимум 2 слайда.' }, { status: 400 });
   }
-  // Валидация — нельзя рендерить пустые
-  for (let i = 0; i < slides.length; i++) {
+  if (onlyIndex != null && onlyIndex >= slides.length) {
+    return NextResponse.json({ error: 'only_index_out_of_range', message: `Нет слайда ${onlyIndex + 1}.` }, { status: 400 });
+  }
+  // Валидация: при single-render — только этот слайд; при full — все.
+  const indicesToValidate = onlyIndex != null ? [onlyIndex] : slides.map((_, i) => i);
+  for (const i of indicesToValidate) {
     const s = slides[i];
     if (!s?.title?.trim() || !s?.body?.trim()) {
       return NextResponse.json(
@@ -102,16 +115,17 @@ export async function POST(req: NextRequest, ctx: { params: Promise<{ id: string
   });
 
   try {
-    const avatarUri = draft.coverAvatar?.imageUrl
-      ? await avatarToDataUri(draft.coverAvatar.imageUrl)
-      : null;
+    // Аватар нужен только если cover-слайд попадает в render (либо full,
+    // либо onlyIndex === 0). Иначе экономим fetch на ~200KB.
+    const needsAvatar = onlyIndex == null || onlyIndex === 0;
+    const avatarUri =
+      needsAvatar && draft.coverAvatar?.imageUrl
+        ? await avatarToDataUri(draft.coverAvatar.imageUrl)
+        : null;
 
     const style = isValidStyle(draft.style) ? draft.style : DEFAULT_STYLE;
 
-    // Последовательно рендерим — satori CPU-heavy, параллельность
-    // в одном Node-процессе ничего не ускорит и риск OOM выше.
-    const urls: string[] = [];
-    for (let i = 0; i < slides.length; i++) {
+    const renderOne = async (i: number): Promise<string> => {
       const s = slides[i];
       const kind = slideKindFor(i, slides.length);
       const png = await renderSlide({
@@ -123,21 +137,38 @@ export async function POST(req: NextRequest, ctx: { params: Promise<{ id: string
         style,
         avatarDataUri: kind === 'cover' ? avatarUri || undefined : undefined,
       });
+      // ?v=<timestamp> чтобы IG/Caddy не закэшировали старую версию по тому
+      // же S3-ключу. Ключ остаётся стабильным (один PNG на позицию).
       const key = `carousels/${user.id}/${draft.id}/${String(i + 1).padStart(2, '0')}.png`;
-      const url = await uploadBuffer({
+      const baseUrl = await uploadBuffer({
         key,
         body: png,
         contentType: 'image/png',
         cacheControl: 'public, max-age=2592000',
       });
-      urls.push(url);
+      return `${baseUrl}?v=${Date.now()}`;
+    };
+
+    let newUrls: string[];
+    if (onlyIndex != null) {
+      // Берём существующие, обновляем одну позицию. Если массив короче
+      // (например, частично-рендеренное состояние) — расширим.
+      const current = Array.isArray(draft.imageUrls) ? [...draft.imageUrls] : [];
+      while (current.length < slides.length) current.push('');
+      current[onlyIndex] = await renderOne(onlyIndex);
+      newUrls = current;
+    } else {
+      newUrls = [];
+      for (let i = 0; i < slides.length; i++) {
+        newUrls.push(await renderOne(i));
+      }
     }
 
     const updated = await prisma.carouselDraft.update({
       where: { id },
       data: {
         status: 'rendered',
-        imageUrls: urls,
+        imageUrls: newUrls,
         completedAt: new Date(),
         errorMsg: null,
       },
@@ -146,7 +177,8 @@ export async function POST(req: NextRequest, ctx: { params: Promise<{ id: string
     return NextResponse.json({
       ok: true,
       draftId: updated.id,
-      imageUrls: urls,
+      imageUrls: newUrls,
+      onlyIndex,
       status: updated.status,
     });
   } catch (e) {

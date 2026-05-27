@@ -49,6 +49,10 @@ export function CarouselEditorShell({ initial, avatars }: Props) {
   );
   const [renderError, setRenderError] = useState<string | null>(null);
   const [imageUrls, setImageUrls] = useState<string[]>(initial.imageUrls ?? []);
+  // Set of indices in-flight для per-slide rerender (показываем spinner на плитке)
+  const [singleRendering, setSingleRendering] = useState<Set<number>>(() => new Set());
+  // Якорь на редактор — для scrollIntoView из галереи
+  const editorAnchorRef = useRef<HTMLDivElement | null>(null);
 
   // dirty-флаг и таймер для дебаунса
   const dirtyRef = useRef(false);
