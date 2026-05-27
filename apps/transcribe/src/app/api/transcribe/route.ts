@@ -13,7 +13,8 @@ import {
   isApifyConfigured,
   isInstagramUrl,
 } from '@/lib/apify-client'
-import { authenticate } from '@/lib/telegram-auth'
+import { guardWithUser } from '@/lib/api-guard'
+import { deductMinutes } from '@/lib/users-db'
 import { indexTranscribeRow } from '@/lib/memory'
 
 export const maxDuration = 60
@@ -269,8 +270,20 @@ async function dispatch(url: string, language: 'auto' | 'ru' | 'en'): Promise<Re
 }
 
 export async function POST(req: NextRequest) {
-  const auth = authenticate(req)
-  if ('error' in auth) return auth.error
+  const guard = await guardWithUser(req, { rateLimit: { key: 'transcribe', max: 20, windowMs: 60_000 } })
+  if (!guard.ok) return guard.response
+  const { user, quota } = guard
+
+  // Quota check — block if the user has already hit the free/Pro cap. The
+  // value is in minutes; deductMinutes is called after transcription with
+  // the actual duration. `-1` means unlimited.
+  if (quota.minutes_limit !== -1 && quota.minutes_used >= quota.minutes_limit) {
+    return NextResponse.json(
+      { error: 'quota_exceeded', minutes_used: quota.minutes_used, minutes_limit: quota.minutes_limit },
+      { status: 402 },
+    )
+  }
+
   const { url: rawUrl, language = 'ru' } = (await req.json()) as Body
 
   if (!rawUrl || typeof rawUrl !== 'string') {
@@ -297,15 +310,20 @@ export async function POST(req: NextRequest) {
       return NextResponse.json({ error: result.error }, { status: result.status })
     }
 
-    const id = await saveTranscript(auth.user_id, url, result)
+    const id = await saveTranscript(user.id, url, result)
+
+    // Deduct minutes against the user's quota. Fire-and-forget — even if
+    // bookkeeping fails the transcription itself already succeeded.
+    if (result.duration && result.duration > 0) {
+      deductMinutes(user.id, result.duration / 60).catch((e) => {
+        console.warn('[transcribe] deductMinutes failed:', e?.message)
+      })
+    }
 
     // Fire-and-forget index into the shared "aicex-memory" Qdrant
-    // collection. `auth.user_id` is "tg:<telegram_id>" — extract the
-    // numeric id so cross-app search can scope to the brain's owner.
+    // collection. Scope to the brain's owner by telegram_id.
     if (id) {
-      const tgId = auth.user_id.startsWith('tg:')
-        ? Number(auth.user_id.slice(3)) || null
-        : null
+      const tgId = user.telegram_id || null
       const title = makeTitle(result.transcript, url)
       indexTranscribeRow({
         naturalKey: id,
