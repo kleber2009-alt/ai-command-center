@@ -11,6 +11,7 @@ import type {
 } from './types';
 
 type SaveStatus = 'idle' | 'saving' | 'saved' | 'error';
+type RenderStatus = 'idle' | 'rendering' | 'done' | 'error';
 
 type Props = {
   initial: CarouselDraftSerialized;
@@ -41,6 +42,11 @@ export function CarouselEditorShell({ initial, avatars }: Props) {
   const [saveStatus, setSaveStatus] = useState<SaveStatus>('idle');
   const [savedAt, setSavedAt] = useState<string | null>(null);
   const [saveError, setSaveError] = useState<string | null>(null);
+  const [renderStatus, setRenderStatus] = useState<RenderStatus>(
+    initial.imageUrls.length > 0 ? 'done' : 'idle',
+  );
+  const [renderError, setRenderError] = useState<string | null>(null);
+  const [imageUrls, setImageUrls] = useState<string[]>(initial.imageUrls ?? []);
 
   // dirty-флаг и таймер для дебаунса
   const dirtyRef = useRef(false);
@@ -172,6 +178,12 @@ export function CarouselEditorShell({ initial, avatars }: Props) {
 
   // Stepper + валидация для финального шага
   const allFilled = slides.every((s) => !slideHasError(s)) && Boolean(coverAvatarId);
+  const renderStepStatus =
+    renderStatus === 'done'
+      ? ('done' as const)
+      : renderStatus === 'rendering'
+        ? ('active' as const)
+        : ('pending' as const);
   const steps = [
     {
       key: 'parser',
@@ -184,17 +196,58 @@ export function CarouselEditorShell({ initial, avatars }: Props) {
       label: 'Обложка',
       status: coverAvatarId ? ('done' as const) : ('active' as const),
     },
-    { key: 'slides', label: 'Слайды', status: 'active' as const },
-    { key: 'render', label: 'Рендер PNG', status: 'pending' as const },
+    {
+      key: 'slides',
+      label: 'Слайды',
+      status:
+        renderStatus === 'done' ? ('done' as const) : ('active' as const),
+    },
+    { key: 'render', label: 'Рендер PNG', status: renderStepStatus },
   ];
+
+  async function runRender() {
+    if (renderStatus === 'rendering') return;
+    // Если есть dirty-флаг, сохраняем сначала чтобы не разойтись с БД
+    if (dirtyRef.current) {
+      if (timerRef.current) {
+        clearTimeout(timerRef.current);
+        timerRef.current = null;
+      }
+      await persist();
+    }
+    setRenderStatus('rendering');
+    setRenderError(null);
+    try {
+      const res = await fetch(`/api/carousels/draft/${initial.id}/render`, {
+        method: 'POST',
+      });
+      const text = await res.text();
+      let json: { imageUrls?: string[]; message?: string; error?: string } = {};
+      try {
+        json = JSON.parse(text);
+      } catch {
+        /* leave default */
+      }
+      if (!res.ok) {
+        setRenderError(json.message || json.error || `HTTP ${res.status}`);
+        setRenderStatus('error');
+        return;
+      }
+      setImageUrls(json.imageUrls ?? []);
+      setRenderStatus('done');
+    } catch (e) {
+      setRenderError((e as Error).message || 'network error');
+      setRenderStatus('error');
+    }
+  }
 
   const activeSlide = slides[activeIndex] ?? slides[0];
 
   return (
-    <div className="grid gap-3 h-[calc(100dvh-140px)] min-h-[640px]">
+    <div className="grid gap-3 min-h-[calc(100dvh-140px)]">
       <GlobalStepper steps={steps} />
 
-      <div className="grid grid-cols-1 lg:grid-cols-[340px_1fr] gap-3 flex-1 min-h-0">
+      <div className="grid grid-cols-1 lg:grid-cols-[340px_1fr] gap-3 lg:h-[calc(100dvh-220px)] lg:min-h-[560px]">
         <SlidesRail
           slides={slides}
           activeIndex={activeIndex}
@@ -227,28 +280,83 @@ export function CarouselEditorShell({ initial, avatars }: Props) {
 
           {/* Footer */}
           <div className="border border-border bg-surface px-4 py-3 flex flex-wrap items-center gap-3 justify-between shrink-0">
-            <div className="mono text-[10px] tracking-[0.16em] uppercase">
+            <div className="mono text-[10px] tracking-[0.16em] uppercase flex flex-wrap items-center gap-3">
               <SaveIndicator status={saveStatus} savedAt={savedAt} error={saveError} />
+              {renderStatus === 'rendering' && (
+                <span className="text-lime">· рендерю PNG, 3–8 сек</span>
+              )}
+              {renderStatus === 'done' && imageUrls.length > 0 && (
+                <span className="text-text-dim">· готово {imageUrls.length} PNG</span>
+              )}
+              {renderStatus === 'error' && (
+                <span className="text-pink">· ошибка рендера · {renderError}</span>
+              )}
             </div>
             <button
               type="button"
-              disabled={!allFilled}
+              disabled={!allFilled || renderStatus === 'rendering'}
               title={
-                allFilled
-                  ? 'Рендер PNG — следующий этап (скоро)'
-                  : 'Сначала заполни все слайды и выбери обложку'
+                !allFilled
+                  ? 'Сначала заполни все слайды и выбери обложку'
+                  : renderStatus === 'rendering'
+                    ? 'Рендерится…'
+                    : renderStatus === 'done'
+                      ? 'Перерендерить с текущими текстами'
+                      : 'Сгенерировать PNG для каждого слайда'
               }
               className="btn-primary disabled:opacity-40 disabled:cursor-not-allowed"
-              onClick={() => {
-                // Phase 2 — render pipeline. Сейчас просто toast-like подсказка.
-                alert('Рендер PNG появится в следующем релизе. Черновик сохранён в /carousels.');
-              }}
+              onClick={runRender}
             >
-              Сгенерировать PNG →
+              {renderStatus === 'rendering'
+                ? 'Рендерю PNG…'
+                : renderStatus === 'done'
+                  ? 'Перерендерить →'
+                  : 'Сгенерировать PNG →'}
             </button>
           </div>
         </div>
       </div>
+
+      {/* Galery of rendered PNGs */}
+      {imageUrls.length > 0 && (
+        <section className="grid gap-3 mt-2">
+          <div className="flex items-baseline gap-3">
+            <span className="sec-num">/04</span>
+            <span className="sec-title">Готовая карусель · {imageUrls.length} PNG</span>
+            <span className="flex-1 border-b border-border translate-y-[-3px]" />
+            <span className="mono text-[10px] tracking-[0.18em] uppercase text-text-mute">
+              1080×1350 · 4:5
+            </span>
+          </div>
+          <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 lg:grid-cols-6 gap-2">
+            {imageUrls.map((url, i) => (
+              <a
+                key={url}
+                href={url}
+                target="_blank"
+                rel="noopener noreferrer"
+                download={`slide-${String(i + 1).padStart(2, '0')}.png`}
+                className="relative aspect-[4/5] border border-border hover:border-lime/60 bg-surface overflow-hidden group"
+                title={`Открыть/сохранить слайд ${i + 1}`}
+              >
+                {/* eslint-disable-next-line @next/next/no-img-element */}
+                <img
+                  src={url}
+                  alt={`Slide ${i + 1}`}
+                  loading="lazy"
+                  className="w-full h-full object-cover"
+                />
+                <span className="absolute top-1 left-1 px-1.5 py-0.5 mono text-[9px] tracking-widest uppercase bg-black/80 text-lime">
+                  {String(i + 1).padStart(2, '0')}
+                </span>
+                <span className="absolute bottom-1 right-1 px-1.5 py-0.5 mono text-[8px] tracking-widest uppercase bg-black/0 group-hover:bg-black/80 text-text-mute group-hover:text-lime opacity-0 group-hover:opacity-100 transition">
+                  ↓ PNG
+                </span>
+              </a>
+            ))}
+          </div>
+        </section>
+      )}
     </div>
   );
 }
