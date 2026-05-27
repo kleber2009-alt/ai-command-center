@@ -55,6 +55,10 @@ export interface MessageStore {
   recentForContact(contactId: string, limit: number): Promise<Message[]>;
   updateAnalysis(id: string, intent: string | null, sentiment: string | null): Promise<void>;
   stats(): Promise<MessageStats>;
+  // Dedup helper for Meta's is_echo events — we re-receive every outbound
+  // message as a webhook and must not insert duplicates of rows the
+  // responder/manual-reply paths already persisted.
+  existsBySendpulseMessageId(id: string): Promise<boolean>;
 }
 
 export function createMessageStore(pool: DbPool): MessageStore {
@@ -118,6 +122,15 @@ export function createMessageStore(pool: DbPool): MessageStore {
         'UPDATE messages SET intent = COALESCE($2, intent), sentiment = COALESCE($3, sentiment) WHERE id = $1',
         [id, intent, sentiment],
       );
+    },
+
+    async existsBySendpulseMessageId(id) {
+      const rows = await query<{ exists: boolean }>(
+        pool,
+        'SELECT EXISTS (SELECT 1 FROM messages WHERE sendpulse_message_id = $1) AS exists',
+        [id],
+      );
+      return rows[0]?.exists === true;
     },
 
     async stats() {

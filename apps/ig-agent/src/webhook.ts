@@ -21,6 +21,11 @@ export interface ParsedIncomingMessage {
   // whether to invoke the AI responder — we never want to reply to
   // synthesized placeholders like "[image]" or "[subscribed]".
   hasUserText: boolean;
+  // True when Meta tags the event as is_echo — i.e. THIS message was sent
+  // BY the page (operator via Instagram/SendPulse app, or our own bot).
+  // The pipeline persists it as direction='outgoing' and does NOT invoke
+  // the classifier/responder (would create an infinite loop).
+  isEcho: boolean;
   // Raw event title from SendPulse (incoming_message, subscribed,
   // chat_opened, message_reaction, ...) — kept so the analyst and UI
   // can branch on event type without re-parsing rawEvent.
@@ -100,9 +105,12 @@ function parseEvent(event: unknown): ParsedIncomingMessage | null {
   //   { title: "Проверить подписку✅", payload: "...", mid, is_echo, ... }
   const igMsg = pick(channel, 'message');
 
-  // is_echo=true means the event is the bot's own outbound message
-  // bouncing back as a webhook — never reply to those, drop entirely.
-  if (pick(igMsg, 'is_echo') === true) return null;
+  // is_echo=true means the event represents a message THE PAGE sent — either
+  // the operator replying via the Instagram/SendPulse mobile UI, or our
+  // own bot's outbound bouncing back. We MUST persist these so the admin
+  // sees the full thread; the pipeline branches on `isEcho` to suppress
+  // the classifier/responder for them.
+  const isEcho = pick(igMsg, 'is_echo') === true;
 
   // Attachments — Instagram sends them in channel_data.message.attachments
   // or channel_data.media. Capture URL + type for the inbox preview.
@@ -183,6 +191,7 @@ function parseEvent(event: unknown): ParsedIncomingMessage | null {
     profilePicUrl,
     text,
     hasUserText,
+    isEcho,
     eventTitle: title,
     mediaUrl,
     mediaType,
