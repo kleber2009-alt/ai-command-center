@@ -366,6 +366,10 @@ model CarouselDraft {
   coverAvatarId   String?
   coverAvatar     Avatar?  @relation(fields: [coverAvatarId], references: [id], onDelete: SetNull)
   slidesCount     Int      @default(6)
+  // Стиль рендера слайдов — определяет шаблон/палитру/типографику.
+  // Каталог в src/lib/carousel/styles.ts: persona-minimal (dark serif),
+  // clickbait-bold (paliy-style white+cobalt), knox-cream (cream duotone).
+  style           String   @default("persona-minimal")
   // [{ title: string, body: string, accent?: string }]
   slides          Json
   // draft | rendered | failed. Пока всегда draft — render отдельный pipeline.
