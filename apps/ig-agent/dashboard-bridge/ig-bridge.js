@@ -212,10 +212,11 @@
 
     function renderThreadCard(c) {
       const status = c.lead_status || 'new';
-      const aiHandled = c.ai_handled !== false; // default true
-      const username = c.username ? '@' + c.username : (c.sendpulse_contact_id ? 'id:' + c.sendpulse_contact_id.slice(0, 8) : '');
-      const last = c.last_message_text || c.last_incoming_text || '—';
-      const name = c.full_name || c.first_name || username || 'Контакт';
+      const aiHandled = c.ai_handled !== false; // default true; conversations API holds the real flag
+      const username = c.ig_username ? '@' + c.ig_username : (c.sendpulse_contact_id ? 'id:' + c.sendpulse_contact_id.slice(0, 8) : '');
+      const fullName = [c.first_name, c.last_name].filter(Boolean).join(' ');
+      const name = fullName || (c.ig_username ? '@' + c.ig_username : '') || 'Контакт';
+      const last = '—'; // listing endpoint doesn't include message preview; skip
       const time = relativeTime(c.last_message_at || c.updated_at || c.created_at);
       const badgeCls = STATUS_BADGE[status] || '';
       const card = el('div', {
@@ -310,8 +311,9 @@
     }
 
     function renderHeader() {
-      const name = contact.full_name || contact.first_name || (contact.username ? '@' + contact.username : 'Контакт');
-      const username = contact.username ? '@' + contact.username : 'id:' + (contact.sendpulse_contact_id || '').slice(0, 8);
+      const fullName = [contact.first_name, contact.last_name].filter(Boolean).join(' ');
+      const username = contact.ig_username ? '@' + contact.ig_username : 'id:' + (contact.sendpulse_contact_id || '').slice(0, 8);
+      const name = fullName || (contact.ig_username ? '@' + contact.ig_username : '') || 'Контакт';
       const status = contact.lead_status || 'new';
       const head = $('.cl-head');
       if (head) {
@@ -381,13 +383,14 @@
 
       fieldsAfter('Контакт', [
         ['Канал', '<span class="badge badge--ig">IG</span>'],
-        ['Username', '<span class="mono c-blue">' + escapeHtml(contact.username ? '@' + contact.username : '—') + '</span>'],
+        ['Username', '<span class="mono c-blue">' + escapeHtml(contact.ig_username ? '@' + contact.ig_username : '—') + '</span>'],
         ['SendPulse ID', '<span class="mono">' + escapeHtml((contact.sendpulse_contact_id || '').slice(0, 14)) + '</span>'],
+        ['Квалификация', '<span class="badge badge--purple">' + escapeHtml(contact.qualification || '—') + '</span>'],
         ['Статус', '<span class="badge ' + (STATUS_BADGE[contact.lead_status || 'new'] || 'badge--ghost') + '">' + escapeHtml(STATUS_LABELS[contact.lead_status || 'new']) + '</span>'],
       ]);
 
       fieldsAfter('Активность', [
-        ['Первый контакт', '<span class="mono">' + escapeHtml(formatDay(contact.created_at)) + '</span>'],
+        ['Первый контакт', '<span class="mono">' + escapeHtml(formatDay(contact.first_seen_at || contact.created_at)) + '</span>'],
         ['Последнее', '<span class="mono">' + escapeHtml(formatDay(contact.last_message_at || contact.updated_at)) + '</span>'],
         ['Сообщений', '<span class="mono">' + (messages.length || 0) + '</span>'],
         ['Рекомендаций', '<span class="mono c-blue">' + (recommendations.length || 0) + '</span>'],
@@ -399,13 +402,15 @@
       if (aiHead) {
         const parent = aiHead.parentElement;
         const p = parent && parent.querySelector('p');
-        const latest = recommendations[0];
+        // Prefer the highest-priority "action" recommendation as the summary.
+        const action = recommendations.find((r) => r.type === 'action');
+        const fallback = recommendations[0];
         if (p) {
-          if (latest && (latest.summary || latest.recommendation)) {
-            p.textContent = latest.summary || latest.recommendation || '';
-          } else {
+          if (action) p.textContent = action.content;
+          else if (fallback) p.textContent = fallback.content;
+          else {
             const lastInc = [...messages].reverse().find((m) => m.direction === 'incoming' && m.text);
-            p.textContent = lastInc ? lastInc.text : 'Аналитики пока нет. Нажми «AI: анализ» чтобы получить рекомендацию.';
+            p.textContent = lastInc ? lastInc.text : 'Аналитики пока нет. Нажми «🤖 Анализ» чтобы получить рекомендацию.';
           }
         }
       }

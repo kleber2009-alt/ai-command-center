@@ -214,11 +214,13 @@ function QuotaBar({
   tier,
   onUpgrade,
   upgrading,
+  onShowPricing,
 }: {
   quota: QuotaData
   tier: string
   onUpgrade: () => void
   upgrading: boolean
+  onShowPricing: () => void
 }) {
   const unlimited = quota.minutes_limit === -1
   const pct = unlimited ? 0 : Math.min(100, (quota.minutes_used / quota.minutes_limit) * 100)
@@ -228,27 +230,40 @@ function QuotaBar({
     : ''
   const barColor = pct >= 100 ? '#ef4444' : pct >= 80 ? '#f97316' : '#007aff'
 
+  if (unlimited) {
+    return (
+      <div className="flex items-center gap-3 rounded-full border border-apple-line bg-apple-bg-soft px-4 py-2 shadow-apple-sm">
+        <span className="text-[12px] font-medium text-apple-muted">{used} мин · безлимит</span>
+        <span className="ml-auto rounded-full bg-apple-bg-elev px-2 py-0.5 text-[11px] font-medium capitalize text-apple-muted">
+          {tier}
+        </span>
+      </div>
+    )
+  }
+
   return (
     <div className="flex items-center gap-3 rounded-apple-lg border border-apple-line bg-white px-4 py-3 shadow-apple-sm">
       <div className="min-w-0 flex-1">
         <div className="mb-1.5 flex items-center justify-between gap-2">
           <span className="text-[12px] font-medium text-apple-muted">
-            {unlimited ? `${used} мин · безлимит` : `${used} / ${quota.minutes_limit} мин`}
+            {used} / {quota.minutes_limit} мин
           </span>
           <div className="flex items-center gap-2">
-            {resetsDate && !unlimited && (
+            {resetsDate && (
               <span className="text-[11px] text-apple-faint">сброс {resetsDate}</span>
             )}
-            <span className="rounded-full bg-apple-bg-soft px-2 py-0.5 text-[11px] font-medium capitalize text-apple-muted">
+            <button
+              type="button"
+              onClick={onShowPricing}
+              className="rounded-full bg-apple-bg-soft px-2 py-0.5 text-[11px] font-medium capitalize text-apple-muted hover:bg-apple-bg-elev"
+            >
               {tier}
-            </span>
+            </button>
           </div>
         </div>
-        {!unlimited && (
-          <div className="h-1 overflow-hidden rounded-full bg-apple-bg-soft">
-            <div className="h-full rounded-full transition-all" style={{ width: `${pct}%`, backgroundColor: barColor }} />
-          </div>
-        )}
+        <div className="h-1 overflow-hidden rounded-full bg-apple-bg-soft">
+          <div className="h-full rounded-full transition-all" style={{ width: `${pct}%`, backgroundColor: barColor }} />
+        </div>
       </div>
       {tier === 'free' && (
         <button
@@ -260,6 +275,104 @@ function QuotaBar({
           Pro
         </button>
       )}
+    </div>
+  )
+}
+
+function PricingModal({
+  tier,
+  onClose,
+  onUpgrade,
+  upgrading,
+}: {
+  tier: string
+  onClose: () => void
+  onUpgrade: () => void
+  upgrading: boolean
+}) {
+  const plans = [
+    {
+      id: 'free',
+      name: 'Free',
+      price: '0 ₽',
+      minutes: '60 мин/мес',
+      features: ['История транскриптов', 'Саммари, перевод', 'Карусели и Reels-сценарии'],
+    },
+    {
+      id: 'pro',
+      name: 'Pro',
+      price: '990 ₽/мес',
+      minutes: '600 мин/мес',
+      features: ['Всё из Free', 'Карусели с фото (kie.ai)', 'Приоритет на воркерах', 'Доставка в Telegram'],
+      highlighted: true,
+    },
+    {
+      id: 'team',
+      name: 'Team',
+      price: 'по запросу',
+      minutes: 'безлимит',
+      features: ['Всё из Pro', 'Несколько пользователей', '«Второй мозг» с RAG', 'Приоритет-саппорт'],
+    },
+  ]
+  return (
+    <div className="fixed inset-0 z-50 flex items-end justify-center bg-black/40 p-4 sm:items-center" onClick={onClose}>
+      <div
+        onClick={(e) => e.stopPropagation()}
+        className="w-full max-w-2xl overflow-hidden rounded-apple-lg border border-apple-line bg-white shadow-2xl"
+      >
+        <div className="flex items-center justify-between border-b border-apple-line px-5 py-3">
+          <h3 className="text-[15px] font-semibold text-apple-ink">Тарифы</h3>
+          <button onClick={onClose} className="rounded-full p-1.5 text-apple-faint hover:bg-apple-bg-soft hover:text-apple-ink" aria-label="Закрыть">
+            <Check className="h-4 w-4 rotate-45" />
+          </button>
+        </div>
+        <div className="grid gap-3 p-5 sm:grid-cols-3">
+          {plans.map((p) => {
+            const current = p.id === tier
+            return (
+              <div
+                key={p.id}
+                className={`relative rounded-xl border p-4 ${
+                  p.highlighted
+                    ? 'border-apple-blue bg-apple-blue/5'
+                    : 'border-apple-line bg-apple-bg-elev'
+                }`}
+              >
+                {p.highlighted && (
+                  <span className="absolute -top-2 right-3 rounded-full bg-apple-blue px-2 py-0.5 text-[10px] font-medium uppercase tracking-wide text-white">
+                    Популярный
+                  </span>
+                )}
+                <div className="mb-1 text-[13px] font-semibold capitalize text-apple-ink">{p.name}</div>
+                <div className="mb-0.5 text-[18px] font-bold text-apple-ink">{p.price}</div>
+                <div className="mb-3 text-[12px] text-apple-muted">{p.minutes}</div>
+                <ul className="mb-3 space-y-1.5 text-[12px] text-apple-muted">
+                  {p.features.map((f) => (
+                    <li key={f} className="flex items-start gap-1.5">
+                      <Check className="mt-0.5 h-3 w-3 flex-shrink-0 text-emerald-500" />
+                      <span>{f}</span>
+                    </li>
+                  ))}
+                </ul>
+                {p.id === 'pro' && !current && (
+                  <button
+                    onClick={onUpgrade}
+                    disabled={upgrading}
+                    className="w-full rounded-full bg-apple-blue py-1.5 text-[12px] font-medium text-white hover:bg-apple-blue-hover disabled:opacity-50"
+                  >
+                    {upgrading ? 'Открываем…' : 'Перейти на Pro'}
+                  </button>
+                )}
+                {current && (
+                  <div className="rounded-full bg-apple-bg-soft py-1.5 text-center text-[12px] font-medium text-apple-muted">
+                    Текущий тариф
+                  </div>
+                )}
+              </div>
+            )
+          })}
+        </div>
+      </div>
     </div>
   )
 }
@@ -812,12 +925,19 @@ export default function TranscribePage() {
 
       {/* Checkout success / cancel notice */}
       {checkoutNotice === 'success' && (
-        <div className="flex items-center gap-2.5 rounded-apple-lg border border-emerald-200 bg-emerald-50 px-4 py-3">
-          <Check className="h-4 w-4 flex-shrink-0 text-emerald-600" />
-          <p className="text-[14px] text-emerald-700">Подписка активирована. Спасибо!</p>
-          <button onClick={() => setCheckoutNotice(null)} className="ml-auto text-[12px] text-emerald-600 hover:underline">
-            ✕
-          </button>
+        <div className="rounded-apple-lg border border-emerald-200 bg-emerald-50 p-4">
+          <div className="flex items-center gap-2.5">
+            <Sparkles className="h-4 w-4 flex-shrink-0 text-emerald-600" />
+            <p className="flex-1 text-[14px] font-medium text-emerald-700">Pro активирован — спасибо!</p>
+            <button onClick={() => setCheckoutNotice(null)} className="text-[12px] text-emerald-600 hover:underline">
+              ✕
+            </button>
+          </div>
+          <ul className="mt-2 space-y-1 pl-7 text-[12px] text-emerald-700">
+            <li>+540 минут к месячному лимиту</li>
+            <li>Доступна карусель с фото (kie.ai)</li>
+            <li>Автодоставка карусели в твой Telegram-чат</li>
+          </ul>
         </div>
       )}
       {checkoutNotice === 'cancel' && (
@@ -835,6 +955,19 @@ export default function TranscribePage() {
           quota={quotaStatus.quota}
           tier={quotaStatus.tier}
           onUpgrade={handleUpgrade}
+          upgrading={checkoutUpgrading}
+          onShowPricing={() => setShowPricing(true)}
+        />
+      )}
+
+      {showPricing && (
+        <PricingModal
+          tier={quotaStatus?.tier ?? 'free'}
+          onClose={() => setShowPricing(false)}
+          onUpgrade={() => {
+            setShowPricing(false)
+            handleUpgrade()
+          }}
           upgrading={checkoutUpgrading}
         />
       )}
@@ -857,6 +990,39 @@ export default function TranscribePage() {
             {checkoutUpgrading ? <Loader2 className="h-3 w-3 animate-spin" /> : <Zap className="h-3 w-3" />}
             Upgrade
           </button>
+        </div>
+      )}
+
+      {/* Onboarding hint — first-time empty state */}
+      {!result && !loading && !error && (
+        <div className="rounded-apple-lg border border-dashed border-apple-line bg-apple-bg-soft p-5">
+          <div className="mb-2 flex items-center gap-2">
+            <Wand2 className="h-4 w-4 text-apple-blue" />
+            <h3 className="text-[13px] font-semibold text-apple-ink">Не знаешь с чего начать?</h3>
+          </div>
+          <p className="mb-3 text-[13px] text-apple-muted">
+            Вставь ссылку на YouTube, Reels, TikTok, X или mp3-файл — и через 10 секунд получишь текст,
+            саммари, карусель или сценарий рилса. Или попробуй на нашем примере:
+          </p>
+          <div className="flex flex-wrap gap-2">
+            {[
+              { label: 'TED · 12 мин', url: 'https://www.youtube.com/watch?v=arj7oStGLkU' },
+              { label: 'YC Lecture', url: 'https://www.youtube.com/watch?v=CBYhVcO4WgI' },
+            ].map((s) => (
+              <button
+                key={s.url}
+                type="button"
+                onClick={() => {
+                  setUrl(s.url)
+                  setTimeout(() => submitRef.current(), 0)
+                }}
+                className="inline-flex items-center gap-1.5 rounded-full border border-apple-line bg-apple-bg-elev px-3 py-1.5 text-[12px] font-medium text-apple-ink shadow-apple-sm hover:bg-white"
+              >
+                <Youtube className="h-3.5 w-3.5 text-apple-muted" />
+                {s.label}
+              </button>
+            ))}
+          </div>
         </div>
       )}
 
@@ -1026,11 +1192,12 @@ export default function TranscribePage() {
           </div>
 
           {/* Streaming preview — shows while a generation is in flight, before the structured card lands */}
-          {(['carousel', 'reels-new', 'reels-remix', 'tg-post'] as const).map((t) => {
+          {(['carousel', 'carousel-image', 'reels-new', 'reels-remix', 'tg-post'] as const).map((t) => {
             const md = genStream[t]
             if (!md || generations[t]) return null
             const label =
               t === 'carousel' ? 'Карусель' :
+              t === 'carousel-image' ? 'Карусель с фото' :
               t === 'reels-new' ? 'Рилс — новый' :
               t === 'reels-remix' ? 'Рилс — ремикс' :
               'Пост в Telegram'
@@ -1104,7 +1271,7 @@ export default function TranscribePage() {
                     Карусель с фото · {generations['carousel-image'].slides.length} слайдов
                   </h3>
                 </div>
-                {inTg && (
+                {inTg ? (
                   <button
                     type="button"
                     onClick={resendCarouselToTelegram}
@@ -1120,6 +1287,21 @@ export default function TranscribePage() {
                       ? 'Ошибка — повторить'
                       : 'Отправить в Telegram'}
                   </button>
+                ) : (
+                  <SoftButton
+                    onClick={() => {
+                      const urls = generations['carousel-image']!.slides
+                        .map((s) => s.imageUrl)
+                        .filter(Boolean)
+                        .join('\n')
+                      copyText(urls)
+                      setTgResend('sent')
+                      setTimeout(() => setTgResend('idle'), 2000)
+                    }}
+                    icon={tgResend === 'sent' ? <Check className="h-3.5 w-3.5 text-emerald-500" /> : <Copy className="h-3.5 w-3.5" />}
+                  >
+                    {tgResend === 'sent' ? 'Скопировано' : 'Скопировать ссылки'}
+                  </SoftButton>
                 )}
               </div>
               <div className="grid max-h-[80vh] grid-cols-1 gap-4 overflow-y-auto p-5 sm:grid-cols-2">
@@ -1226,7 +1408,7 @@ export default function TranscribePage() {
               {batchSummary}
             </div>
           )}
-          <div className="border-b border-apple-line bg-apple-bg-elev px-5 py-2">
+          <div className="space-y-2 border-b border-apple-line bg-apple-bg-elev px-5 py-2">
             <input
               type="text"
               value={historyQuery}
@@ -1234,15 +1416,32 @@ export default function TranscribePage() {
               placeholder="Поиск по истории…"
               className="w-full rounded-full border border-apple-line bg-apple-bg-soft px-3 py-1.5 text-[12px] text-apple-ink placeholder:text-apple-faint outline-none transition-all focus:border-apple-line-strong focus:bg-apple-bg-elev"
             />
+            <div className="inline-flex rounded-full bg-apple-bg-soft p-0.5">
+              {(['all', 'youtube', 'other'] as const).map((s) => (
+                <button
+                  key={s}
+                  type="button"
+                  onClick={() => setHistorySource(s)}
+                  className={`rounded-full px-3 py-1 text-[11px] font-medium transition-all ${
+                    historySource === s
+                      ? 'bg-apple-bg-elev text-apple-ink shadow-apple-sm'
+                      : 'text-apple-muted hover:text-apple-ink'
+                  }`}
+                >
+                  {s === 'all' ? 'Все' : s === 'youtube' ? 'YouTube' : 'Другие'}
+                </button>
+              ))}
+            </div>
           </div>
           <div className="max-h-[60vh] divide-y divide-apple-line overflow-y-auto">
             {(() => {
               const q = historyQuery.trim().toLowerCase()
-              const filtered = q
-                ? history.filter(it =>
-                    (it.title || '').toLowerCase().includes(q) || it.url.toLowerCase().includes(q),
-                  )
-                : history
+              const filtered = history.filter((it) => {
+                if (historySource === 'youtube' && it.source !== 'youtube') return false
+                if (historySource === 'other' && it.source === 'youtube') return false
+                if (!q) return true
+                return (it.title || '').toLowerCase().includes(q) || it.url.toLowerCase().includes(q)
+              })
               if (filtered.length === 0) {
                 return (
                   <div className="p-6 text-center text-[13px] text-apple-faint">
