@@ -6,6 +6,7 @@ import { NextRequest, NextResponse } from 'next/server';
 import { z } from 'zod';
 import { getCurrentUserOrApiKey } from '@/lib/auth';
 import { prisma } from '@/lib/prisma';
+import { isValidStyle } from '@/lib/carousel/styles';
 
 export const runtime = 'nodejs';
 

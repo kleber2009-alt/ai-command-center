@@ -104,6 +104,8 @@ export async function POST(req: NextRequest) {
     );
   }
 
+  const style = data.style && isValidStyle(data.style) ? data.style : DEFAULT_STYLE;
+
   const draft = await prisma.carouselDraft.create({
     data: {
       userId: user.id,
@@ -111,6 +113,7 @@ export async function POST(req: NextRequest) {
       coverAvatarId,
       slidesCount: splitResult.slides.length,
       slides: splitResult.slides,
+      style,
       status: 'draft',
     },
   });
