@@ -118,7 +118,10 @@ export async function runCarouselPipeline(
     await writeFile(captionPath, captionText, 'utf8');
   }
 
-  const { slidePaths } = await renderCarousel(carousel, rubric, outDir, opts.engine ?? 'puppeteer');
+  const { slidePaths } = await renderCarousel(carousel, rubric, outDir, {
+    engine: opts.engine ?? 'puppeteer',
+    styleAuthor: opts.styleAuthor,
+  });
 
   // Прикреплённое пользователем фото — копируем в outDir и кладём ПЕРВЫМ
   // в массив слайдов (станет cover'ом карусели и в Telegram-доставке).
