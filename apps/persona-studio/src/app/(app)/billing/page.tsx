@@ -29,49 +29,32 @@ export default async function BillingPage() {
 
   return (
     <div className="grid gap-8">
-      <header>
-        <div className="flex items-baseline gap-3 mb-4">
-          <span className="sec-num">/00</span>
-          <span className="sec-title">Billing</span>
-          <span className="flex-1 border-b border-border translate-y-[-3px]" />
-          <span className="mono text-[10px] tracking-widest uppercase text-text-mute">plan: {user.plan}</span>
+      <PageHero
+        eyebrow={`SUBSCRIPTION · PLAN ${user.plan?.toUpperCase()}`}
+        title={
+          <>
+            Tokens fuel <span className="italic text-gold">every generation.</span>
+          </>
+        }
+        description="Все генерации списываются с единого баланса. Пополнение — через CryptoBot (USDT) или Telegram Stars. Без подписок и автосписаний."
+        meta={
+          <>
+            <div className="mono text-[9px] tracking-[0.28em] uppercase text-text-muted">Balance</div>
+            <div className="font-serif text-[44px] text-gold leading-none">{user.tokenBalance}</div>
+            <div className="mono text-[9px] tracking-[0.22em] uppercase text-text-muted">tokens</div>
+          </>
+        }
+      />
+
+      <section>
+        <div className="grid grid-cols-1 sm:grid-cols-5 gap-px bg-border-soft border border-border-soft">
+          <CostCard label="Avatar batch" cost={COSTS.avatarGeneration} note="10 portraits" />
+          <CostCard label="Carousel cover" cost={COSTS.coverGeneration} note="single image" />
+          <CostCard label="Talking video" cost={COSTS.heygenVideo} note="up to 60s" />
+          <CostCard label="Submagic edit" cost={COSTS.submagicEdit} note="Reels-ready" />
+          <CostCard label="Voice training" cost={0} note="external · free" />
         </div>
-        <div className="grid grid-cols-1 sm:grid-cols-2 gap-[2px] bg-border border border-border">
-          <div className="bg-bg p-5 sm:p-6">
-            <div className="mono text-[10px] tracking-widest uppercase text-text-mute mb-3">баланс</div>
-            <div className="font-serif text-[48px] sm:text-[64px] leading-none text-lime break-words">{user.tokenBalance}</div>
-            <div className="mono text-[10px] tracking-wider text-text-mute mt-2">токенов · списываются при каждой генерации</div>
-          </div>
-          <div className="bg-bg p-5 sm:p-6">
-            <div className="mono text-[10px] tracking-widest uppercase text-text-mute mb-3">сколько стоит</div>
-            <ul className="grid gap-2 font-serif text-[14px] sm:text-[15px] text-text-dim">
-              <li className="flex justify-between gap-3">
-                <span>Батч из 10 аватаров</span>
-                <span className="mono text-text shrink-0">−{COSTS.avatarGeneration} t</span>
-              </li>
-              <li className="flex justify-between gap-3">
-                <span>Одна обложка карусели</span>
-                <span className="mono text-text shrink-0">−{COSTS.coverGeneration} t</span>
-              </li>
-              <li className="flex justify-between gap-3">
-                <span>Говорящее видео (до 60 сек)</span>
-                <span className="mono text-text shrink-0">−{COSTS.heygenVideo} t</span>
-              </li>
-              <li className="flex justify-between gap-3">
-                <span>Монтаж видео в Submagic</span>
-                <span className="mono text-text shrink-0">−{COSTS.submagicEdit} t</span>
-              </li>
-              <li className="flex justify-between gap-3">
-                <span>Обучение голоса</span>
-                <span className="mono text-text-mute shrink-0">бесплатно*</span>
-              </li>
-            </ul>
-            <p className="mono text-[9px] tracking-wider text-text-mute mt-3">
-              * голос обучается во внешнем сервисе Persona Train
-            </p>
-          </div>
-        </div>
-      </header>
+      </section>
 
       <section>
         <div className="flex items-baseline gap-3 mb-3">
@@ -111,6 +94,19 @@ export default async function BillingPage() {
           </div>
         )}
       </section>
+    </div>
+  );
+}
+
+function CostCard({ label, cost, note }: { label: string; cost: number; note: string }) {
+  return (
+    <div className="bg-bg-panel p-5">
+      <div className="mono text-[9px] tracking-[0.28em] uppercase text-text-muted mb-3">{label}</div>
+      <div className="font-serif text-[28px] leading-none text-text-primary">
+        {cost > 0 ? `−${cost}` : 'free'}
+        {cost > 0 && <span className="mono text-[11px] text-text-muted ml-1">t</span>}
+      </div>
+      <div className="mono text-[9px] tracking-[0.22em] uppercase text-text-muted mt-2">{note}</div>
     </div>
   );
 }

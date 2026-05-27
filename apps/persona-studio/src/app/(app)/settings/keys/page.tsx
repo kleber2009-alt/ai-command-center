@@ -2,6 +2,7 @@ import { redirect } from 'next/navigation';
 import { getCurrentUser } from '@/lib/auth';
 import { prisma } from '@/lib/prisma';
 import { ApiKeysManager } from '@/components/api-keys-manager';
+import { PageHero } from '@/components/shell/page-hero';
 
 export const dynamic = 'force-dynamic';
 export const metadata = { title: 'API keys — Persona Studio' };
@@ -26,21 +27,21 @@ export default async function ApiKeysPage() {
 
   return (
     <div className="grid gap-8">
-      <header>
-        <div className="flex items-baseline gap-3 mb-4">
-          <span className="sec-num">/00</span>
-          <span className="sec-title">API keys</span>
-          <span className="flex-1 border-b border-border translate-y-[-3px]" />
-          <span className="mono text-[10px] tracking-widest uppercase text-text-mute">
-            sdk · @persona-studio/sdk
-          </span>
-        </div>
-        <p className="font-serif italic text-[14px] text-text-dim max-w-[60ch]">
-          Ключи нужны для интеграции Persona Studio в сторонние приложения через SDK
-          или прямые HTTP-вызовы. Один ключ = доступ ко всем данным аккаунта.
-          Plaintext показывается ровно один раз при создании — сохрани его сразу.
-        </p>
-      </header>
+      <PageHero
+        eyebrow="SETTINGS · INTEGRATIONS · API KEYS"
+        title={
+          <>
+            Programmatic access — <span className="italic text-gold">your studio as an API.</span>
+          </>
+        }
+        description="Ключи нужны для интеграции Persona Studio в сторонние приложения через SDK или прямые HTTP-вызовы. Один ключ = доступ ко всем данным аккаунта. Plaintext показывается ровно один раз при создании — сохрани сразу."
+        meta={
+          <>
+            <div className="mono text-[9px] tracking-[0.28em] uppercase text-text-muted">SDK</div>
+            <div className="font-serif italic text-gold text-[14px]">@persona-studio/sdk</div>
+          </>
+        }
+      />
 
       <ApiKeysManager
         initialKeys={keys.map((k) => ({
