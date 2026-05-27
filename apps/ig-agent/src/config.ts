@@ -107,6 +107,11 @@ export interface Config {
   digestModel: string;
   digestDailyHourUtc: number;
   digestWindowHours: number;
+
+  // Backup + health monitor
+  backupIntervalHours: number;
+  healthFailureThreshold: number;
+  healthAlertCooldownMinutes: number;
 }
 
 export function loadConfig(): Config {
@@ -149,5 +154,12 @@ export function loadConfig(): Config {
       'claude-sonnet-4-6',
     digestDailyHourUtc: parseHourUtc(process.env.DIGEST_DAILY_HOUR_UTC, 3),
     digestWindowHours: parsePositiveInt(process.env.DIGEST_WINDOW_HOURS, 24),
+
+    // Backup: 0 disables. Default 24h matches tg-agent. Health: alert
+    // after N consecutive pipeline failures, with a cooldown so the
+    // owner doesn't get spammed when the upstream stays down.
+    backupIntervalHours: parseNonNegativeInt(process.env.BACKUP_INTERVAL_HOURS, 24),
+    healthFailureThreshold: parsePositiveInt(process.env.HEALTH_FAILURE_THRESHOLD, 3),
+    healthAlertCooldownMinutes: parsePositiveInt(process.env.HEALTH_ALERT_COOLDOWN_MINUTES, 30),
   };
 }
