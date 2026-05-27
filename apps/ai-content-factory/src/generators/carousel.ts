@@ -55,11 +55,23 @@ export async function generateCarousel(opts: GenerateCarouselOptions): Promise<C
       '',
       `Тема: ${opts.topic}`,
       `Эпизод: ${opts.episode}`,
+      `Рубрика (slug): ${opts.rubricSlug ?? opts.rubric.label}`,
       '',
       `Источник правды — три файла Брендбука (см. system-prompt). В частности,`,
       `в \`data/brandbook/dataset.json\` есть реальные слайды этого автора —`,
       `следуй их структуре воронки (cover → hook → step → proof → cta),`,
       `типографике и тону.`,
+      '',
+      `## ОБЯЗАТЕЛЬНЫЕ ПОЛЯ ВЫВОДА`,
+      '',
+      `Верни JSON ровно с этими полями верхнего уровня:`,
+      `{`,
+      `  "rubric": "${opts.rubricSlug ?? 'hood'}",`,
+      `  "topic": "${opts.topic.replace(/"/g, '\\"')}",`,
+      `  "episode": ${opts.episode},`,
+      `  "slides": [ ... ]`,
+      `}`,
+      `Поля rubric/topic/episode/slides обязательны, всё остальное запрещено.`,
     ].join('\n');
   } else {
     template = await loadPrompt(fromAppRoot(opts.rubric.promptFile), {
