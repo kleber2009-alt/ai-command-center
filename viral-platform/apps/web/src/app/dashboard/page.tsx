@@ -1,5 +1,6 @@
 'use client';
 
+import { AUTH_DISABLED } from '@/lib/auth';
 import { trpc } from '@/lib/trpc';
 import { UserButton } from '@clerk/nextjs';
 import { Plus } from 'lucide-react';
@@ -21,7 +22,7 @@ export default function DashboardPage() {
           >
             <Plus size={18} /> New project
           </Link>
-          <UserButton />
+          {AUTH_DISABLED ? <span className="text-sm text-muted">demo</span> : <UserButton />}
         </div>
       </header>
 

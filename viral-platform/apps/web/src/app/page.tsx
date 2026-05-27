@@ -1,6 +1,9 @@
+import { AUTH_DISABLED } from '@/lib/auth';
 import { SignInButton, SignedIn, SignedOut } from '@clerk/nextjs';
 import { PLANS } from '@vp/shared';
 import Link from 'next/link';
+
+const ctaClass = 'rounded-lg bg-primary px-6 py-3 font-semibold text-white';
 
 // Minimal MVP landing (§8.1): hero + plans + CTA.
 export default function LandingPage() {
@@ -14,24 +17,26 @@ export default function LandingPage() {
           Upload once. Get captioned, B-roll-enhanced 9:16 / 1:1 / 16:9 clips in minutes.
         </p>
         <div className="mt-10 flex justify-center gap-4">
-          <SignedOut>
-            <SignInButton mode="modal">
-              <button
-                type="button"
-                className="rounded-lg bg-primary px-6 py-3 font-semibold text-white"
-              >
-                Get started free
-              </button>
-            </SignInButton>
-          </SignedOut>
-          <SignedIn>
-            <Link
-              href="/dashboard"
-              className="rounded-lg bg-primary px-6 py-3 font-semibold text-white"
-            >
+          {AUTH_DISABLED ? (
+            <Link href="/dashboard" className={ctaClass}>
               Open dashboard
             </Link>
-          </SignedIn>
+          ) : (
+            <>
+              <SignedOut>
+                <SignInButton mode="modal">
+                  <button type="button" className={ctaClass}>
+                    Get started free
+                  </button>
+                </SignInButton>
+              </SignedOut>
+              <SignedIn>
+                <Link href="/dashboard" className={ctaClass}>
+                  Open dashboard
+                </Link>
+              </SignedIn>
+            </>
+          )}
         </div>
       </section>
 

@@ -1,3 +1,4 @@
+import { AUTH_DISABLED } from '@/lib/auth';
 import { TRPCProvider } from '@/lib/trpc';
 import { ClerkProvider } from '@clerk/nextjs';
 import type { Metadata } from 'next';
@@ -9,13 +10,13 @@ export const metadata: Metadata = {
 };
 
 export default function RootLayout({ children }: { children: React.ReactNode }) {
-  return (
-    <ClerkProvider>
-      <html lang="en" className="dark">
-        <body>
-          <TRPCProvider>{children}</TRPCProvider>
-        </body>
-      </html>
-    </ClerkProvider>
+  const tree = (
+    <html lang="en" className="dark">
+      <body>
+        <TRPCProvider>{children}</TRPCProvider>
+      </body>
+    </html>
   );
+  // Demo mode renders without Clerk so no publishable key is needed at build.
+  return AUTH_DISABLED ? tree : <ClerkProvider>{tree}</ClerkProvider>;
 }

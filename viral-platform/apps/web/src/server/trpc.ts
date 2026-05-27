@@ -1,3 +1,4 @@
+import { AUTH_DISABLED, DEMO_USER_ID } from '@/lib/auth';
 import { auth } from '@clerk/nextjs/server';
 import { TRPCError, initTRPC } from '@trpc/server';
 import { db, users } from '@vp/db';
@@ -7,8 +8,10 @@ import superjson from 'superjson';
 /**
  * tRPC context: resolves the Clerk user and lazily provisions a users row
  * (the Clerk webhook is the primary path, this is a safety net for dev).
+ * In demo mode (AUTH_DISABLED) every request runs as the shared demo user.
  */
 export async function createContext() {
+  if (AUTH_DISABLED) return { userId: DEMO_USER_ID, db };
   const { userId } = await auth();
   return { userId, db };
 }

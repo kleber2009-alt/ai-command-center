@@ -1,3 +1,4 @@
+import { AUTH_DISABLED, DEMO_USER_ID } from '@/lib/auth';
 import { auth } from '@clerk/nextjs/server';
 import { db, projects } from '@vp/db';
 import { getLastProgress, subscribeProgress } from '@vp/queue';
@@ -11,7 +12,7 @@ export const dynamic = 'force-dynamic';
  * disconnects. Replaces polling.
  */
 export async function GET(_req: Request, { params }: { params: Promise<{ id: string }> }) {
-  const { userId } = await auth();
+  const userId = AUTH_DISABLED ? DEMO_USER_ID : (await auth()).userId;
   if (!userId) return new Response('Unauthorized', { status: 401 });
 
   const { id } = await params;

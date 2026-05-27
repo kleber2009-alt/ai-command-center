@@ -16,8 +16,11 @@ if [ ! -f .env ]; then
 fi
 
 # Guard against the #1 build failure: Clerk key absent → next build crashes.
-if ! grep -qE '^NEXT_PUBLIC_CLERK_PUBLISHABLE_KEY=pk_' .env; then
-  echo "ERROR: NEXT_PUBLIC_CLERK_PUBLISHABLE_KEY (pk_...) is required in .env, or the web build fails." >&2
+# Skipped in demo mode (NEXT_PUBLIC_AUTH_DISABLED=true), which needs no Clerk key.
+if ! grep -qE '^NEXT_PUBLIC_AUTH_DISABLED=true' .env \
+  && ! grep -qE '^NEXT_PUBLIC_CLERK_PUBLISHABLE_KEY=pk_' .env; then
+  echo "ERROR: set NEXT_PUBLIC_CLERK_PUBLISHABLE_KEY (pk_...) in .env," >&2
+  echo "       or use demo mode: NEXT_PUBLIC_AUTH_DISABLED=true (cp .env.demo.example .env)." >&2
   exit 1
 fi
 

@@ -65,7 +65,22 @@ STRIPE_WEBHOOK_SECRET=
 NEXT_PUBLIC_STRIPE_PUBLISHABLE_KEY=
 ```
 
-## Deploy — manual (recommended, no git/CI needed)
+## Deploy — demo mode (zero external keys)
+
+Just want the site up with no Clerk/AI/R2 keys? Use demo mode — `.env.demo.example`
+sets `NEXT_PUBLIC_AUTH_DISABLED=true`, so the app builds and runs with no auth
+under a shared demo user:
+```bash
+cd /root/viral-platform
+cp .env.demo.example .env
+nano .env                 # only change POSTGRES_PASSWORD (and the one in DATABASE_URL)
+./scripts/deploy.sh
+```
+Caveats: (1) **no login — open to anyone** who reaches the URL; (2) the UI works
+but **video processing/upload still need AI + R2 keys** (jobs fail without them,
+credits refund). Fill those in and re-run to enable the pipeline.
+
+## Deploy — manual with auth (recommended for real use)
 
 Drop the project folder anywhere on the box (e.g. `/root/viral-platform`), then:
 ```bash
