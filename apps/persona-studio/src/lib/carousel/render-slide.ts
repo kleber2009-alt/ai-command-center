@@ -417,9 +417,33 @@ function clickbaitReveal(input: RenderSlideInput): JSXNode {
           )
         : el(
             'div',
-            { marginTop: 48, fontFamily: 'Tinos', color: CLICK.textGray, fontSize: 38, lineHeight: 1.4, display: 'flex' },
+            { marginTop: hasMedia ? 24 : 48, fontFamily: 'Tinos', color: CLICK.textGray, fontSize: hasMedia ? 28 : 38, lineHeight: 1.4, display: 'flex' },
             input.body,
           ),
+      ...(hasMedia
+        ? [
+            // dark gradient frame с glow — как PDF-мокапы у paliy
+            el(
+              'div',
+              {
+                marginTop: 32,
+                padding: 12,
+                background: 'linear-gradient(180deg, #1a0033 0%, #000 100%)',
+                border: '1px solid rgba(45,91,255,0.4)',
+                display: 'flex',
+                alignSelf: 'stretch',
+                flex: 1,
+                maxHeight: 500,
+              },
+              el(
+                'img',
+                { width: '100%', height: '100%', objectFit: 'contain' },
+                undefined,
+                { src: input.mediaDataUri! },
+              ),
+            ),
+          ]
+        : []),
     ],
   );
 }
