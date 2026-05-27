@@ -74,7 +74,7 @@ export function createHealthMonitor(opts: HealthMonitorOptions): HealthMonitor {
           .send(
             `🚨 ig-agent: ${consecutive} ошибок подряд в pipeline.\n` +
               `Последняя: ${lastError}\n` +
-              'SendPulse webhook'ы могут падать. Загляни в логи: docker logs --tail=200 ig-agent',
+              'SendPulse webhooks могут падать. Логи: docker logs --tail=200 ig-agent',
           )
           .catch((notifyErr) =>
             logger.warn('health alert notify failed', {

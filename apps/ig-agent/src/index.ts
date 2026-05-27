@@ -17,6 +17,8 @@ import { startAdminServer } from './admin/server.js';
 import { createDigestStore } from './db/digests.js';
 import { createDigestGenerator } from './digest.js';
 import { startDigestScheduler } from './scheduler.js';
+import { createHealthMonitor } from './health.js';
+import { startBackupScheduler } from './backup.js';
 
 async function main(): Promise<void> {
   const config = loadConfig();
@@ -93,6 +95,20 @@ async function main(): Promise<void> {
     windowHours: config.digestWindowHours,
   });
 
+  const health = createHealthMonitor({
+    notifier,
+    logger,
+    failureThreshold: config.healthFailureThreshold,
+    alertCooldownMinutes: config.healthAlertCooldownMinutes,
+  });
+
+  const backupScheduler = startBackupScheduler({
+    databaseUrl: config.databaseUrl,
+    notifier,
+    intervalHours: config.backupIntervalHours,
+    logger,
+  });
+
   const admin = startAdminServer({
     config,
     logger,
@@ -109,6 +125,7 @@ async function main(): Promise<void> {
     notifier,
     digests,
     digestScheduler,
+    health,
   });
 
   // Best-effort startup ping so the owner knows the bot is up and where
@@ -135,6 +152,11 @@ async function main(): Promise<void> {
       digestScheduler.stop();
     } catch (err) {
       logger.warn('digest scheduler stop failed', { err: err instanceof Error ? err.message : String(err) });
+    }
+    try {
+      backupScheduler.stop();
+    } catch (err) {
+      logger.warn('backup scheduler stop failed', { err: err instanceof Error ? err.message : String(err) });
     }
     try {
       await admin.close();

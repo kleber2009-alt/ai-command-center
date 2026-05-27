@@ -13,6 +13,12 @@ FROM node:20-slim AS runtime
 WORKDIR /app
 ENV NODE_ENV=production
 
+# pg_dump for the daily backup scheduler (src/backup.ts). Pin to v16
+# to match the prod aisales-postgres major. gzip is in -slim base.
+RUN apt-get update \
+  && apt-get install -y --no-install-recommends postgresql-client \
+  && rm -rf /var/lib/apt/lists/*
+
 COPY apps/ig-agent/package.json ./
 RUN npm install --omit=dev --no-audit --no-fund \
   && rm -rf /root/.npm
