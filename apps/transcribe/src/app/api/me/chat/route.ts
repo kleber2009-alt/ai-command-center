@@ -113,13 +113,13 @@ export async function POST(req: NextRequest) {
     async (fullText) => {
       if (!validSession) return
       if (body.regenerate) {
-        replaceLastAssistant(validSession.id, auth.user_id, fullText)
+        await replaceLastAssistant(validSession.id, auth.user_id, fullText)
         return
       }
       if (typeof body.truncateToCount === 'number') {
-        truncateSession(validSession.id, auth.user_id, body.truncateToCount)
+        await truncateSession(validSession.id, auth.user_id, body.truncateToCount)
       }
-      appendTurn({
+      await appendTurn({
         sessionId: validSession.id,
         user_id: auth.user_id,
         userMessage: lastUser,

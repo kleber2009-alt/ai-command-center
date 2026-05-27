@@ -50,7 +50,7 @@ export async function POST(req: NextRequest) {
     return NextResponse.json({ error: 'Нет сообщений от пользователя' }, { status: 400 })
   }
 
-  const session = sessionId ? getSession(sessionId, auth.user_id) : null
+  const session = sessionId ? await getSession(sessionId, auth.user_id) : null
   const validSession =
     session && session.kind === 'assistant' && session.assistant_id === assistantId ? session : null
 
@@ -117,14 +117,14 @@ export async function POST(req: NextRequest) {
     async (fullText) => {
       if (!validSession) return
       if (regenerate) {
-        replaceLastAssistant(validSession.id, auth.user_id, fullText)
+        await replaceLastAssistant(validSession.id, auth.user_id, fullText)
         return
       }
       if (typeof body.truncateToCount === 'number') {
-        truncateSession(validSession.id, auth.user_id, body.truncateToCount)
+        await truncateSession(validSession.id, auth.user_id, body.truncateToCount)
       }
       const lastUser = cleaned[cleaned.length - 1].content
-      appendTurn({
+      await appendTurn({
         sessionId: validSession.id,
         user_id: auth.user_id,
         userMessage: lastUser,

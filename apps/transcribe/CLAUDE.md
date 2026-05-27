@@ -50,7 +50,7 @@ Without these tables (or env vars), `getServerSupabase()` returns `null` and sav
 
 ## Routing
 
-- `src/app/page.tsx` redirects `/` → `/transcribe`.
+- `src/app/page.tsx` — full marketing landing (hero, 6 feature cards, stats strip, bottom CTA → `/transcribe` and `/me`).
 - `/transcribe` — own layout (`src/app/transcribe/layout.tsx`) with mobile-first centered container (max-w-2xl), no sidebar. Everything is one page.
 - `/admin` — separate route group, wider layout (`src/app/admin/layout.tsx`, max-w-7xl), kanban board. API is **owner-only** — non-owners see empty shell, CRUD returns 403.
 - `/me` (`src/app/me/`) — owner's personal RAG library. Subpages: `/me/library` (upload + browse), `/me/profile` (edit metadata). Documents → `me_documents`, chunked via `src/lib/chunking.ts` (strips NUL bytes from PDF extraction), embedded via OpenAI `text-embedding-3-small`, stored in `me_chunks` as pgvector. `/api/me/chat` does cosine-similarity retrieval (`match_me_chunks`) and streams a `claude-sonnet-4-6` reply that quotes from them.

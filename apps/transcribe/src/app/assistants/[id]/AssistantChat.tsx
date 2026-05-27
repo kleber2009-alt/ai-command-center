@@ -217,10 +217,6 @@ export default function AssistantChat({ id, name, description, icon, buttonText,
     setLoading(true)
     if (isInTelegram()) getTelegram()?.HapticFeedback?.impactOccurred?.('light')
 
-    // Strip leading assistant messages (help text) — API requires user-first history
-    const firstUser = next.findIndex((m) => m.role === 'user')
-    const toSend = firstUser >= 0 ? next.slice(firstUser) : next
-
     try {
       const truncateToCount = isEdit ? opts.editAtIndex! : undefined
       // Strip leading assistant messages: Claude API requires messages[0].role === 'user'.
