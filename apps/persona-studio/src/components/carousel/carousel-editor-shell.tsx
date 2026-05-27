@@ -317,7 +317,10 @@ export function CarouselEditorShell({ initial, avatars }: Props) {
 
       <StyleSelector value={styleId} onChange={changeStyle} />
 
-      <div className="grid grid-cols-1 lg:grid-cols-[340px_1fr] gap-3 lg:h-[calc(100dvh-280px)] lg:min-h-[520px]">
+      <div
+        ref={editorAnchorRef}
+        className="grid grid-cols-1 lg:grid-cols-[340px_1fr] gap-3 lg:h-[calc(100dvh-280px)] lg:min-h-[520px] scroll-mt-4"
+      >
         <SlidesRail
           slides={slides}
           activeIndex={activeIndex}
@@ -395,35 +398,85 @@ export function CarouselEditorShell({ initial, avatars }: Props) {
             <span className="sec-title">Готовая карусель · {imageUrls.length} PNG</span>
             <span className="flex-1 border-b border-border translate-y-[-3px]" />
             <span className="mono text-[10px] tracking-[0.18em] uppercase text-text-mute">
-              1080×1350 · 4:5
+              1080×1350 · клик = править · ↻ = перерендер
             </span>
           </div>
           <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 lg:grid-cols-6 gap-2">
-            {imageUrls.map((url, i) => (
-              <a
-                key={url}
-                href={url}
-                target="_blank"
-                rel="noopener noreferrer"
-                download={`slide-${String(i + 1).padStart(2, '0')}.png`}
-                className="relative aspect-[4/5] border border-border hover:border-lime/60 bg-surface overflow-hidden group"
-                title={`Открыть/сохранить слайд ${i + 1}`}
-              >
-                {/* eslint-disable-next-line @next/next/no-img-element */}
-                <img
-                  src={url}
-                  alt={`Slide ${i + 1}`}
-                  loading="lazy"
-                  className="w-full h-full object-cover"
-                />
-                <span className="absolute top-1 left-1 px-1.5 py-0.5 mono text-[9px] tracking-widest uppercase bg-black/80 text-lime">
-                  {String(i + 1).padStart(2, '0')}
-                </span>
-                <span className="absolute bottom-1 right-1 px-1.5 py-0.5 mono text-[8px] tracking-widest uppercase bg-black/0 group-hover:bg-black/80 text-text-mute group-hover:text-lime opacity-0 group-hover:opacity-100 transition">
-                  ↓ PNG
-                </span>
-              </a>
-            ))}
+            {imageUrls.map((url, i) => {
+              if (!url) return null;
+              const isRerendering = singleRendering.has(i);
+              const isActive = i === activeIndex;
+              return (
+                <div
+                  key={i}
+                  className={`relative aspect-[4/5] border bg-surface overflow-hidden group transition ${
+                    isActive ? 'border-lime' : 'border-border hover:border-lime/60'
+                  }`}
+                >
+                  {/* eslint-disable-next-line @next/next/no-img-element */}
+                  <img
+                    src={url}
+                    alt={`Slide ${i + 1}`}
+                    loading="lazy"
+                    className={`w-full h-full object-cover transition ${
+                      isRerendering ? 'opacity-30' : ''
+                    }`}
+                  />
+
+                  {/* Main click area — выбрать слайд для редактирования */}
+                  <button
+                    type="button"
+                    onClick={() => editFromGallery(i)}
+                    className="absolute inset-0 w-full h-full cursor-pointer"
+                    title={`Редактировать слайд ${i + 1}`}
+                    aria-label={`Редактировать слайд ${i + 1}`}
+                  />
+
+                  {/* Index badge */}
+                  <span className="absolute top-1 left-1 px-1.5 py-0.5 mono text-[9px] tracking-widest uppercase bg-black/80 text-lime pointer-events-none">
+                    {String(i + 1).padStart(2, '0')}
+                  </span>
+
+                  {/* Rerender spinner overlay */}
+                  {isRerendering && (
+                    <div className="absolute inset-0 flex items-center justify-center pointer-events-none">
+                      <span className="mono text-[10px] tracking-widest uppercase bg-black/80 text-lime px-2 py-1">
+                        ↻ рендерю…
+                      </span>
+                    </div>
+                  )}
+
+                  {/* Action bar — поверх клик-зоны */}
+                  <div className="absolute bottom-1 right-1 flex items-center gap-1 opacity-0 group-hover:opacity-100 transition">
+                    <button
+                      type="button"
+                      onClick={(e) => {
+                        e.stopPropagation();
+                        void rerenderOne(i);
+                      }}
+                      disabled={isRerendering}
+                      className="w-7 h-7 mono text-[12px] bg-black/85 text-lime hover:bg-lime hover:text-black border border-lime/40 disabled:opacity-30 disabled:cursor-not-allowed flex items-center justify-center"
+                      title="Перерендерить только этот слайд"
+                      aria-label="Перерендерить слайд"
+                    >
+                      ↻
+                    </button>
+                    <a
+                      href={url}
+                      target="_blank"
+                      rel="noopener noreferrer"
+                      download={`slide-${String(i + 1).padStart(2, '0')}.png`}
+                      onClick={(e) => e.stopPropagation()}
+                      className="w-7 h-7 mono text-[11px] bg-black/85 text-lime hover:bg-lime hover:text-black border border-lime/40 flex items-center justify-center"
+                      title="Скачать PNG"
+                      aria-label="Скачать PNG"
+                    >
+                      ↓
+                    </a>
+                  </div>
+                </div>
+              );
+            })}
           </div>
         </section>
       )}
