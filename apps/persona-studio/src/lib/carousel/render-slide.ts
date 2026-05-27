@@ -639,11 +639,43 @@ function knoxReveal(input: RenderSlideInput): JSXNode {
         [
           el(
             'div',
-            { fontFamily: 'Tinos', color: KNOX.textBody, fontSize: 36, lineHeight: 1.4, display: 'flex' },
+            { fontFamily: 'Tinos', color: KNOX.textBody, fontSize: input.mediaDataUri ? 30 : 36, lineHeight: 1.4, display: 'flex' },
             input.body,
           ),
         ],
       ),
+      ...(input.mediaDataUri
+        ? [
+            // Премиальная рамка с золотом, как у YouTube-мокапов knox
+            el(
+              'div',
+              {
+                marginTop: 32,
+                padding: 6,
+                backgroundColor: KNOX.brown,
+                display: 'flex',
+                alignSelf: 'stretch',
+                flex: 1,
+                maxHeight: 460,
+              },
+              el(
+                'div',
+                {
+                  padding: 4,
+                  backgroundColor: KNOX.gold,
+                  display: 'flex',
+                  flex: 1,
+                },
+                el(
+                  'img',
+                  { width: '100%', height: '100%', objectFit: 'contain' },
+                  undefined,
+                  { src: input.mediaDataUri! },
+                ),
+              ),
+            ),
+          ]
+        : []),
     ],
   );
 }

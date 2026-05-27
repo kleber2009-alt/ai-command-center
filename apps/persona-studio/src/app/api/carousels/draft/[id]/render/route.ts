@@ -23,7 +23,7 @@ import { GetObjectCommand } from '@aws-sdk/client-s3';
 export const runtime = 'nodejs';
 export const maxDuration = 120;
 
-type SlideJson = { title: string; body: string; accent?: string };
+type SlideJson = { title: string; body: string; accent?: string; image?: string };
 
 const slideKindFor = (index: number, total: number): SlideKind => {
   if (index === 0) return 'cover';
@@ -128,6 +128,10 @@ export async function POST(req: NextRequest, ctx: { params: Promise<{ id: string
     const renderOne = async (i: number): Promise<string> => {
       const s = slides[i];
       const kind = slideKindFor(i, slides.length);
+      // Media (фото/скриншот/mockup) — только для non-cover слайдов.
+      // Cover-место занимает avatar.
+      const mediaUri =
+        kind !== 'cover' && s.image ? await avatarToDataUri(s.image) : null;
       const png = await renderSlide({
         index: i + 1,
         total: slides.length,
@@ -136,6 +140,7 @@ export async function POST(req: NextRequest, ctx: { params: Promise<{ id: string
         body: s.body.trim(),
         style,
         avatarDataUri: kind === 'cover' ? avatarUri || undefined : undefined,
+        mediaDataUri: mediaUri || undefined,
       });
       // ?v=<timestamp> чтобы IG/Caddy не закэшировали старую версию по тому
       // же S3-ключу. Ключ остаётся стабильным (один PNG на позицию).
