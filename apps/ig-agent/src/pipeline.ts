@@ -88,6 +88,18 @@ export function createPipeline(deps: PipelineDeps): Pipeline {
 
   return {
     async handle(event) {
+      // Master kill-switch. When OFF, the webhook still ACKs 200 but the
+      // pipeline is fully bypassed — no upsert, no classify, no responder,
+      // no analyst, no notifier. Distinct from auto_reply_enabled, which
+      // only silences the responder while ingestion + analysis stay alive.
+      const botOn = await deps.settings.getBool('bot_enabled', true);
+      if (!botOn) {
+        deps.logger.info('bot globally disabled, skip pipeline entirely', {
+          sendpulseContactId: event.sendpulseContactId,
+        });
+        return;
+      }
+
       // 1. Upsert contact (+enrich on first touch via getContact).
       let contact = await deps.contacts.upsertFromWebhook({
         sendpulseContactId: event.sendpulseContactId,
