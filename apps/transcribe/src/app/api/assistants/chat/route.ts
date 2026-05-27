@@ -57,12 +57,12 @@ export async function POST(req: NextRequest) {
   // Always layer the user profile on top of the assistant's base prompt:
   // it's cheap, doesn't need extra API calls, and dramatically improves
   // personalisation. Library retrieval (RAG) is opt-in via useBrainContext.
-  const profile = loadProfile(auth.user_id)
+  const profile = await loadProfile()
   const profileBlock = profileToContext(profile)
 
   let contextBlock = ''
   let citations: Array<{
-    document_id: number
+    document_id: string
     document_title: string
     chunk_index: number
     similarity: number

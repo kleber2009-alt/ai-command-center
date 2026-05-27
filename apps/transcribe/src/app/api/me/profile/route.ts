@@ -6,7 +6,8 @@ export async function GET(req: NextRequest) {
   const auth = authenticate(req)
   if ('error' in auth) return auth.error
   try {
-    return NextResponse.json({ profile: loadProfile(auth.user_id), configured: true })
+    const profile = await loadProfile()
+    return NextResponse.json({ profile, configured: true })
   } catch (e: any) {
     return NextResponse.json({ error: e?.message || 'Ошибка чтения профиля' }, { status: 500 })
   }
@@ -28,7 +29,7 @@ export async function PUT(req: NextRequest) {
             metrics: String(p.metrics ?? ''),
           }))
       : []
-    const updated = saveProfile(auth.user_id, {
+    const updated = await saveProfile({
       bio: String(body.bio ?? ''),
       projects: String(body.projects ?? ''),
       projects_list: projectsList,
