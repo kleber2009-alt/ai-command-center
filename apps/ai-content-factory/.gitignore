@@ -19,6 +19,12 @@ data/assets/b-roll/*
 !data/assets/b-roll/.gitkeep
 data/assets/audio/*
 !data/assets/audio/.gitkeep
+data/assets/prompts/*
+!data/assets/prompts/.gitkeep
+data/assets/references/*
+!data/assets/references/.gitkeep
+data/assets/screens/*
+!data/assets/screens/.gitkeep
 
 # Knowledge base: the SQLite DB is runtime data (backed up via cron, not tracked).
 # Keep the skeleton + the seed example; ignore the live database files.
