@@ -1084,110 +1084,144 @@
       // flag in tg_settings). Caddy proxies /tg-api/* → 127.0.0.1:8080
       // with X-Internal-Auth, so the dashboard's basic_auth gate is
       // the only credential the browser needs.
+      // TG-agent flags parallel the IG ones: bot_enabled (master kill) +
+      // auto_reply_enabled (responder mute). Both live in tg_settings.
       let tgAutoOn = true;
+      let tgBotOn = true;
       try {
         const tgSettings = await fetch('/tg-api/settings', { credentials: 'include' })
           .then((r) => (r.ok ? r.json() : null));
         if (tgSettings && typeof tgSettings.auto_reply_enabled === 'boolean') {
           tgAutoOn = tgSettings.auto_reply_enabled;
         }
+        if (tgSettings && typeof tgSettings.bot_enabled === 'boolean') {
+          tgBotOn = tgSettings.bot_enabled;
+        }
       } catch (_) {
-        // network down → fall through with optimistic default; POST
+        // network down → fall through with optimistic defaults; POST
         // below surfaces the real error if the flip itself fails.
       }
 
-      const renderTgCard = (autoOn) => {
+      const refreshTgSubtitle = () => {
+        if (!(stats && stats.models)) return;
+        const subt2 = $('.page-h__subtitle');
+        if (!subt2) return;
+        const igState = !botOn ? 'выключен' : (autoOn ? 'отвечает' : 'на паузе');
+        const tgState = !tgBotOn ? 'выключен' : (tgAutoOn ? 'отвечает' : 'на паузе');
+        subt2.textContent =
+          'Responder: ' + stats.models.responder +
+          ' · Classifier: ' + stats.models.classifier +
+          ' · Analyst: ' + stats.models.analyst +
+          ' · 2 агента: IG (' + igState + ') + TG (' + tgState + ')';
+      };
+
+      const renderTgCard = (botFlag, autoFlag) => {
+        let badgeText, badgeCls, statusText, statusCls;
+        if (!botFlag) {
+          badgeText = 'off'; badgeCls = 'badge--red'; statusText = 'бот выключен'; statusCls = 'muted';
+        } else if (!autoFlag) {
+          badgeText = 'paused'; badgeCls = 'badge--yellow'; statusText = 'на паузе'; statusCls = 'muted';
+        } else {
+          badgeText = 'active'; badgeCls = 'badge--green'; statusText = 'отвечает'; statusCls = 'c-green';
+        }
         const card = el('div', { class: 'ag' });
         card.innerHTML =
           '<div class="ag__top">' +
             '<div class="ag__icon" style="background:var(--blue-bg);color:#7BC0FF">💬</div>' +
             '<div style="flex:1">' +
-              '<div class="ag__title">@newnewnnn_bot <span class="badge ' + (autoOn ? 'badge--green' : 'badge--yellow') + '" style="margin-left:4px">' + (autoOn ? 'active' : 'paused') + '</span></div>' +
+              '<div class="ag__title">@newnewnnn_bot <span class="badge ' + badgeCls + '" style="margin-left:4px">' + badgeText + '</span></div>' +
               '<div class="ag__sub">TG-группы · classifier + responder + daily digest</div>' +
             '</div>' +
-            '<div class="ag-toggle' + (autoOn ? ' is-on' : '') + '" data-tg-toggle></div>' +
+            '<div class="ag-toggle' + (botFlag ? ' is-on' : '') + '" data-tg-bot-toggle title="Бот (master kill-switch)"></div>' +
           '</div>' +
           '<div class="ag__metrics">' +
             '<div class="ag__metric"><div class="ag__metric-lab">Модель</div><div class="ag__metric-val">haiku-4-5</div></div>' +
             '<div class="ag__metric"><div class="ag__metric-lab">Классов</div><div class="ag__metric-val">10</div></div>' +
             '<div class="ag__metric"><div class="ag__metric-lab">Digest</div><div class="ag__metric-val">24ч → owner</div></div>' +
-            '<div class="ag__metric"><div class="ag__metric-lab">Статус</div><div class="ag__metric-val ' + (autoOn ? 'c-green' : 'muted') + '">' + (autoOn ? 'отвечает' : 'на паузе') + '</div></div>' +
+            '<div class="ag__metric"><div class="ag__metric-lab">Статус</div><div class="ag__metric-val ' + statusCls + '">' + statusText + '</div></div>' +
+          '</div>' +
+          '<div class="ag__ctrls" style="display:flex;gap:8px;margin:8px 0 4px;flex-wrap:wrap">' +
+            '<button class="btn btn--' + (botFlag ? 'secondary' : 'primary') + '" data-tg-bot-btn style="flex:1;min-width:140px">' +
+              (botFlag ? '⏻ Выключить бота' : '⏻ Включить бота') +
+            '</button>' +
+            '<button class="btn btn--' + (autoFlag ? 'secondary' : 'primary') + '" data-tg-auto-btn ' +
+              'style="flex:1;min-width:140px' + (botFlag ? '' : ';opacity:.5') + '"' +
+              (botFlag ? '' : ' disabled') + '>' +
+              (autoFlag ? '🔕 Выключить автоответ' : '🔔 Включить автоответ') +
+            '</button>' +
           '</div>' +
           '<div class="ag__cta">' +
-            '<button class="btn btn--' + (autoOn ? 'secondary' : 'primary') + '" data-tg-cta>' + (autoOn ? '⏸ Поставить на паузу' : '▶ Включить') + '</button>' +
             '<button class="btn btn--ghost" data-tg-info>📜 Описание</button>' +
+            '<a class="btn btn--ghost" href="https://t.me/newnewnnn_bot" target="_blank" rel="noopener" style="text-decoration:none;display:inline-flex;align-items:center;justify-content:center">📨 Открыть в TG</a>' +
           '</div>';
         return card;
       };
 
       const wireTgCard = (card) => {
-        const flip = async () => {
-          const t = $('[data-tg-toggle]', card);
-          const current = t ? t.classList.contains('is-on') : tgAutoOn;
-          const next = !current;
+        const postSettings = async (patch) => {
+          const r = await fetch('/tg-api/settings', {
+            method: 'POST',
+            credentials: 'include',
+            headers: { 'content-type': 'application/json' },
+            body: JSON.stringify(patch),
+          });
+          if (!r.ok) throw new Error('HTTP ' + r.status);
+          return r.json();
+        };
+        const flipBot = async () => {
           try {
-            const r = await fetch('/tg-api/settings', {
-              method: 'POST',
-              credentials: 'include',
-              headers: { 'content-type': 'application/json' },
-              body: JSON.stringify({ auto_reply_enabled: next }),
-            });
-            if (!r.ok) throw new Error('HTTP ' + r.status);
-            const data = await r.json();
+            const data = await postSettings({ bot_enabled: !tgBotOn });
+            tgBotOn = !!data.bot_enabled;
             tgAutoOn = !!data.auto_reply_enabled;
-            const fresh = renderTgCard(tgAutoOn);
+            const fresh = renderTgCard(tgBotOn, tgAutoOn);
             wireTgCard(fresh);
             card.replaceWith(fresh);
-            // Refresh the subtitle so it reflects the new TG state too.
-            if (stats && stats.models) {
-              const subt2 = $('.page-h__subtitle');
-              if (subt2) {
-                subt2.textContent =
-                  'Responder: ' + stats.models.responder +
-                  ' · Classifier: ' + stats.models.classifier +
-                  ' · Analyst: ' + stats.models.analyst +
-                  ' · 2 агента: IG (' + (autoOn ? 'отвечает' : 'на паузе') +
-                  ') + TG (' + (tgAutoOn ? 'отвечает' : 'на паузе') + ')';
-              }
-            }
-            toast('@newnewnnn_bot: ' + (tgAutoOn ? 'включён' : 'на паузе'));
-          } catch (e) {
-            toast('tg-agent: ' + (e && e.message ? e.message : 'ошибка'), 'err');
-          }
+            refreshTgSubtitle();
+            toast('@newnewnnn_bot бот: ' + (tgBotOn ? 'включён' : 'выключен'));
+          } catch (e) { toast('tg-agent: ' + (e && e.message ? e.message : 'ошибка'), 'err'); }
         };
-        const t = $('[data-tg-toggle]', card);
-        if (t) { t.style.cursor = 'pointer'; t.onclick = flip; }
-        const cta = $('[data-tg-cta]', card);
-        if (cta) cta.onclick = flip;
+        const flipAuto = async () => {
+          try {
+            const data = await postSettings({ auto_reply_enabled: !tgAutoOn });
+            tgBotOn = !!data.bot_enabled;
+            tgAutoOn = !!data.auto_reply_enabled;
+            const fresh = renderTgCard(tgBotOn, tgAutoOn);
+            wireTgCard(fresh);
+            card.replaceWith(fresh);
+            refreshTgSubtitle();
+            toast('@newnewnnn_bot автоответ: ' + (tgAutoOn ? 'включён' : 'выключен'));
+          } catch (e) { toast('tg-agent: ' + (e && e.message ? e.message : 'ошибка'), 'err'); }
+        };
+        const t = $('[data-tg-bot-toggle]', card);
+        if (t) { t.style.cursor = 'pointer'; t.onclick = flipBot; }
+        const botBtn = $('[data-tg-bot-btn]', card);
+        if (botBtn) botBtn.onclick = flipBot;
+        const autoBtn = $('[data-tg-auto-btn]', card);
+        if (autoBtn && !autoBtn.disabled) autoBtn.onclick = flipAuto;
         const info = $('[data-tg-info]', card);
         if (info) {
           info.onclick = () => {
             alert(
               '@newnewnnn_bot — отдельный TG-агент (apps/tg-agent).\n\n' +
+              '• Бот (master kill-switch) — выключает всю обработку входящих\n' +
+              '• Автоответ — глушит только responder, классификатор/логи остаются\n\n' +
               '• Читает все сообщения в группах, где состоит\n' +
               '• Классификатор (Claude Haiku 4.5, 10 классов)\n' +
               '• Decision engine: REPLY / NOTIFY / DRAFT_FOR_OWNER / IGNORE\n' +
               '• Responder в тоне владельца на REPLY-решения\n' +
               '• DM-уведомление владельцу на горячий лид\n' +
               '• Ежедневный gzip-бэкап SQLite в DM владельца\n\n' +
-              'Контейнер: tg-agent · admin: tg.46-62-215-11.nip.io\n' +
-              'Глобальный auto_reply живёт в tg_settings — этот тоггл его и переключает.',
+              'Контейнер: tg-agent · admin: tg.46-62-215-11.nip.io',
             );
           };
         }
       };
 
-      const tgCard = renderTgCard(tgAutoOn);
+      const tgCard = renderTgCard(tgBotOn, tgAutoOn);
       wireTgCard(tgCard);
       grid.appendChild(tgCard);
 
-      if (stats && stats.models) {
-        const subt = $('.page-h__subtitle');
-        if (subt) {
-          subt.textContent = 'Responder: ' + stats.models.responder + ' · Classifier: ' + stats.models.classifier + ' · Analyst: ' + stats.models.analyst +
-            ' · 2 агента: IG (' + (autoOn ? 'отвечает' : 'на паузе') + ') + TG (' + (tgAutoOn ? 'отвечает' : 'на паузе') + ')';
-        }
-      }
+      refreshTgSubtitle();
     } catch (e) {
       grid.innerHTML = '';
       grid.appendChild(el('div', { class: 'ig-err' }, 'Не удалось загрузить агентов: ' + e.message));
