@@ -791,6 +791,10 @@ export function startAdminServer(deps: AdminDeps): AdminHandle {
     }
   });
 
+  // Pipeline health snapshot — consecutive failures + last error. Used
+  // by the agents-page status pill and by external uptime probes.
+  app.get('/api/health', (c) => c.json(deps.health.snapshot()));
+
   // Aggregate dashboard counters. One round-trip for all pulse / reports
   // / agents tiles — cheaper than 6 separate calls from the SPA.
   app.get('/api/stats', async (c) => {
