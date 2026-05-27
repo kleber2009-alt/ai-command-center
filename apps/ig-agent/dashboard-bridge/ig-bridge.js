@@ -504,8 +504,16 @@
             const tone = m.direction === 'incoming' ? 'c-blue' : (m.source === 'manual' ? 'c-yellow' : 'c-green');
             const stage = m.intent ? '<span class="stage">' + escapeHtml(m.intent) + '</span>' : '';
             const text = (m.text || '').slice(0, 80);
+            // Date/time split: escape each half separately so the <br> stays
+            // as real markup (the old code escaped *after* inserting <br>,
+            // producing visible "&lt;br&gt;" in the rendered timeline).
+            const day = formatDay(m.created_at);
+            const sepIdx = day.indexOf(' · ');
+            const datePart = sepIdx >= 0 ? day.slice(0, sepIdx) : day;
+            const timePart = sepIdx >= 0 ? day.slice(sepIdx + 3) : '';
+            const dayHtml = escapeHtml(datePart) + (timePart ? '<br>' + escapeHtml(timePart) : '');
             tlList.appendChild(el('div', { class: 'tl-item', html:
-              '<span class="tl-t ' + tone + '">' + escapeHtml(formatDay(m.created_at).replace(' · ', '<br>')) + '</span>' +
+              '<span class="tl-t ' + tone + '">' + dayHtml + '</span>' +
               '<span class="tl-ev">' + escapeHtml(text) + ' ' + stage + '</span>',
             }));
           }
