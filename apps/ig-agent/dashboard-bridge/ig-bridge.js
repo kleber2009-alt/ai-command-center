@@ -1239,12 +1239,19 @@
 
   // Russian plural: 1 агент / 2-4 агента / 5+ агентов (с учётом 11-14).
   function pluralAgents(n) {
+    return pluralRu(n, ['агент', 'агента', 'агентов']);
+  }
+  function pluralClients(n) {
+    return pluralRu(n, ['клиент', 'клиента', 'клиентов']);
+  }
+  // Generic Russian plural picker: forms = [one, few, many].
+  function pluralRu(n, forms) {
     const mod10 = n % 10;
     const mod100 = n % 100;
-    if (mod100 >= 11 && mod100 <= 14) return 'агентов';
-    if (mod10 === 1) return 'агент';
-    if (mod10 >= 2 && mod10 <= 4) return 'агента';
-    return 'агентов';
+    if (mod100 >= 11 && mod100 <= 14) return forms[2];
+    if (mod10 === 1) return forms[0];
+    if (mod10 >= 2 && mod10 <= 4) return forms[1];
+    return forms[2];
   }
 
   // ---------- PIPELINE -------------------------------------------------
@@ -1638,6 +1645,19 @@
       // --- Funnel summary -------------------------------------------
       const f = reports.funnel || {};
       const total = Object.values(f).reduce((a, b) => a + b, 0);
+
+      // Honest subtitle. Static HTML claims "Анализ 2 847 диалогов
+      // за 30 дней · обновляется ночью через Analytics Agent" — both
+      // numbers are mock and there is no nightly Analytics Agent job.
+      // Source of truth: /reports.funnel sum + the timestamp of this
+      // request.
+      const subt = $('.page-h__subtitle');
+      if (subt) {
+        const stamp = new Date().toLocaleTimeString('ru-RU', { hour: '2-digit', minute: '2-digit' });
+        subt.textContent = 'Анализ ' + total + ' ' + pluralRu(total, ['диалог', 'диалога', 'диалогов']) +
+          ' · live из /ig-api/reports · обновлено ' + stamp;
+      }
+
       const summary = el('div', { class: 'card' });
       summary.innerHTML =
         '<div class="section-h">Состояние базы</div>' +
