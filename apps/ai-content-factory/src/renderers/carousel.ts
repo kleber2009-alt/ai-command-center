@@ -21,14 +21,24 @@ export interface RenderResult {
   engine: ImageEngine;
 }
 
+export interface RenderOptions {
+  engine?: ImageEngine;
+  /** Author handle (без @) — image-gen engines подмешивают эталон из
+   * data/brandbook/dataset.json как стилевой anchor. */
+  styleAuthor?: string;
+}
+
 export async function renderCarousel(
   carousel: Carousel,
   rubric: RubricConfig,
   outDir: string,
-  engine: ImageEngine = 'puppeteer',
+  options: ImageEngine | RenderOptions = 'puppeteer',
 ): Promise<RenderResult> {
   await mkdir(outDir, { recursive: true });
   const total = carousel.slides.length;
+  // Back-compat: 4-й аргумент мог быть строкой engine, теперь — объект.
+  const opts: RenderOptions = typeof options === 'string' ? { engine: options } : options;
+  const engine = opts.engine ?? 'puppeteer';
 
   if (engine === 'puppeteer') {
     return renderWithPuppeteer(carousel, rubric, outDir, total);
@@ -39,13 +49,13 @@ export async function renderCarousel(
   const slidePaths: string[] = [];
   for (let index = 0; index < total; index++) {
     const slide = carousel.slides[index]!;
-    const ctx: SlideRenderContext = { rubric, index, total };
+    const ctx: SlideRenderContext = { rubric, index, total, styleAuthor: opts.styleAuthor };
     const buffer = await renderSlideImage(engine, slide, ctx);
     const file = join(outDir, `slide-${String(index + 1).padStart(2, '0')}.png`);
     await writeFile(file, buffer);
     slidePaths.push(file);
   }
-  log.info(`Rendered ${slidePaths.length} slides via ${engine}`, { outDir });
+  log.info(`Rendered ${slidePaths.length} slides via ${engine}${opts.styleAuthor ? ` (style: @${opts.styleAuthor})` : ''}`, { outDir });
   return { slidePaths, engine };
 }
 

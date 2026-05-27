@@ -101,14 +101,47 @@ export function buildSlidePrompt(slide: Slide, ctx: SlideRenderContext): string 
   const { rubric, index, total } = ctx;
   const counter = `${index + 1}/${total}`;
   const lines: string[] = [];
-  lines.push(
-    `Instagram carousel slide, vertical 4:5 aspect ratio (1080×1350px), minimalist Apple-style design.`,
-    `Solid white background. Accent color: ${rubric.accent}.`,
-    `Top-left: small uppercase handle text "${rubric.handle}" in dark gray, modern sans-serif.`,
-    `Top-right: small counter "${counter}" in light gray.`,
-    `Use Inter font for body, JetBrains Mono for code. All text is in RUSSIAN (Cyrillic).`,
-    `NO photographs, NO illustrations, just clean typography on solid color.`,
-  );
+
+  // ── STYLE REFERENCE (priority) — overrides the default "minimalist Apple"
+  // base when a styleAuthor is selected. The image-gen model imitates the
+  // visual language of the matched reference slide from dataset.json.
+  let styleRef: DatasetSlide | null = null;
+  if (ctx.styleAuthor) {
+    styleRef = findStyleRef(ctx.styleAuthor, funnelFor(slide.type));
+  }
+  if (styleRef) {
+    lines.push(
+      `## STYLE REFERENCE — imitate this visual language from @${ctx.styleAuthor}`,
+      `Match the visual style, palette, typography, layout, mockup treatment, ` +
+        `and overall mood of the reference below. The CONTENT (text, headline) ` +
+        `must come from "YOUR SLIDE" section, not the reference.`,
+      ``,
+      `REFERENCE visual description:`,
+      styleRef.visual_description ?? '',
+      ``,
+      `REFERENCE image-gen prompt (style anchor — copy aesthetics, not text):`,
+      styleRef.image_generation_prompt ?? '',
+      ``,
+      `## YOUR SLIDE`,
+    );
+  } else {
+    lines.push(
+      `Instagram carousel slide, vertical 4:5 aspect ratio (1080×1350px), minimalist Apple-style design.`,
+      `Solid white background. Accent color: ${rubric.accent}.`,
+      `Top-left: small uppercase handle text "${rubric.handle}" in dark gray, modern sans-serif.`,
+      `Top-right: small counter "${counter}" in light gray.`,
+      `Use Inter font for body, JetBrains Mono for code. All text is in RUSSIAN (Cyrillic).`,
+      `NO photographs, NO illustrations, just clean typography on solid color.`,
+    );
+  }
+
+  if (styleRef) {
+    lines.push(
+      `Slide ${index + 1} of ${total}. Counter "${counter}" top-right (small).`,
+      `Handle "${rubric.handle}" top-left (small).`,
+      `Funnel role: ${funnelFor(slide.type)}.`,
+    );
+  }
 
   switch (slide.type) {
     case 'cover':

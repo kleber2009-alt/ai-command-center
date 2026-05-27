@@ -7,9 +7,28 @@ import { COSTS } from '@/lib/tokens';
 
 export const dynamic = 'force-dynamic';
 
-export default async function DashboardPage() {
+export default async function DashboardPage({
+  searchParams,
+}: {
+  searchParams: Promise<{ welcome?: string }>;
+}) {
   const user = await getCurrentUser();
   if (!user) redirect('/sign-in');
+
+  const params = await searchParams;
+  const welcomeSkipped = params.welcome === 'skipped';
+
+  const firstGenerationExists = (await prisma.avatarGeneration.count({
+    where: { userId: user.id },
+  })) > 0;
+
+  // First-touch: brand-new user, no generations yet, hasn't explicitly skipped onboarding →
+  // route them straight to /generate with an onboarding overlay. They can opt-out via
+  // ?welcome=skipped (link on /generate?onboarding=1), and after the first generation
+  // they'll naturally land on dashboard.
+  if (!firstGenerationExists && !welcomeSkipped) {
+    redirect('/generate?onboarding=1');
+  }
 
   const [generations, avatarsCount, coversCount, videosCount, recentAvatars, recentCovers] = await Promise.all([
     prisma.avatarGeneration.findMany({
