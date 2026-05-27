@@ -96,6 +96,7 @@ async function main(): Promise<void> {
   const admin = startAdminServer({
     config,
     logger,
+    pool,
     contacts,
     conversations,
     messages,

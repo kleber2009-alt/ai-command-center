@@ -27,6 +27,7 @@ import {
 } from './auth.js';
 import type { Config } from '../config.js';
 import type { Logger } from '../logger.js';
+import { query, type DbPool } from '../db/index.js';
 import type { ContactService, LeadStatus } from '../db/contacts.js';
 import type { ConversationService } from '../db/conversations.js';
 import type { MessageStore } from '../db/messages.js';
@@ -425,6 +426,7 @@ window.IG = (function () {
 export interface AdminDeps {
   config: Config;
   logger: Logger;
+  pool: DbPool;
   contacts: ContactService;
   conversations: ConversationService;
   messages: MessageStore;
@@ -815,6 +817,134 @@ export function startAdminServer(deps: AdminDeps): AdminHandle {
         classifier: config.classifierModel,
       },
     });
+  });
+
+  // ---- Journey (kanban) -----------------------------------------------
+  //
+  // Classifies every contact into one of 7 funnel stages from real signals:
+  //   - last incoming intent (set by the analyst)
+  //   - presence of any outgoing reply (= AI/operator engaged)
+  //   - lead_status (customer/lost = terminal stages)
+  //   - recency (silent threads → follow-up)
+  //
+  // One SQL per call (LATERAL joins keep it cheap). The classification
+  // mirrors the prototype's 7 columns: Hello / Discovery / Pitch /
+  // Objections / Close / Follow-up / Won-Lost.
+  app.get('/api/journey', async (c) => {
+    const limit = Math.min(Math.max(Number(c.req.query('limit') ?? 800), 1), 2000);
+    const rows = await query<{
+      id: string;
+      ig_username: string | null;
+      first_name: string | null;
+      last_name: string | null;
+      lead_status: string | null;
+      qualification: string | null;
+      first_seen_at: string;
+      last_message_at: string | null;
+      last_intent: string | null;
+      last_sentiment: string | null;
+      last_incoming_text: string | null;
+      last_incoming_at: string | null;
+      has_outgoing: boolean;
+      last_outgoing_at: string | null;
+      msg_count: number;
+    }>(
+      deps.pool,
+      `SELECT c.id, c.ig_username, c.first_name, c.last_name,
+              c.lead_status, c.qualification, c.first_seen_at, c.last_message_at,
+              li.intent     AS last_intent,
+              li.sentiment  AS last_sentiment,
+              li.text       AS last_incoming_text,
+              li.created_at AS last_incoming_at,
+              EXISTS (
+                SELECT 1 FROM messages mo
+                WHERE mo.contact_id = c.id AND mo.direction = 'outgoing'
+              ) AS has_outgoing,
+              (SELECT MAX(created_at) FROM messages mo
+                 WHERE mo.contact_id = c.id AND mo.direction = 'outgoing') AS last_outgoing_at,
+              (SELECT COUNT(*)::int FROM messages mm WHERE mm.contact_id = c.id) AS msg_count
+         FROM contacts c
+         LEFT JOIN LATERAL (
+           SELECT m.intent, m.sentiment, m.text, m.created_at
+             FROM messages m
+            WHERE m.contact_id = c.id
+              AND m.direction = 'incoming'
+              AND m.text IS NOT NULL
+            ORDER BY m.created_at DESC
+            LIMIT 1
+         ) li ON true
+         WHERE EXISTS (SELECT 1 FROM messages mx WHERE mx.contact_id = c.id)
+         ORDER BY c.last_message_at DESC NULLS LAST
+         LIMIT $1`,
+      [limit],
+    );
+
+    // Stage classification rules — applied in order; first match wins.
+    // Intent vocabulary comes from the analyst's actual outputs (verified
+    // against `SELECT DISTINCT intent FROM messages`):
+    const GREETING_INTENTS = new Set([
+      'subscription_check', 'new_subscriber', 'new_follower', 'new_subscription',
+      'subscription', 'subscription_confirmed', 'greeting', 'keyword_trigger',
+    ]);
+    const QUESTION_INTENTS = new Set([
+      'question_format', 'question_product', 'question_price', 'question_service',
+      'product_inquiry', 'lead_magnet_request', 'tool_recommendation',
+      'profile_request', 'support_request',
+    ]);
+    const OBJECTION_INTENTS = new Set(['off_topic', 'reel_share', 'shared_reel', 'content_share', 'media_shared']);
+    const NOW = Date.now();
+    const STALE_MS = 24 * 60 * 60 * 1000;
+
+    function classify(r: typeof rows[number]): string {
+      if (r.lead_status === 'customer') return 'won_lost';
+      if (r.lead_status === 'lost') return 'won_lost';
+      if (r.last_intent === 'ready_to_buy') return 'close';
+      if (r.lead_status === 'hot') return 'objections';
+      if (r.last_intent && OBJECTION_INTENTS.has(r.last_intent)) return 'objections';
+      if (r.last_sentiment === 'negative' && r.has_outgoing) return 'objections';
+      // Stale conversations that had an outgoing reply — operator needs to revisit
+      const lastTs = r.last_message_at ? Date.parse(r.last_message_at) : 0;
+      if (r.has_outgoing && lastTs && NOW - lastTs > STALE_MS) return 'follow_up';
+      if (r.last_intent && QUESTION_INTENTS.has(r.last_intent)) {
+        return r.has_outgoing ? 'pitch' : 'discovery';
+      }
+      if (r.last_intent && GREETING_INTENTS.has(r.last_intent)) return 'hello';
+      // Fallback bucket — incoming exists but intent unknown.
+      return r.has_outgoing ? 'pitch' : 'hello';
+    }
+
+    function fmtCard(r: typeof rows[number], stage: string) {
+      const fullName = [r.first_name, r.last_name].filter(Boolean).join(' ');
+      const name = fullName || (r.ig_username ? '@' + r.ig_username : 'Контакт');
+      return {
+        id: r.id,
+        name,
+        ig_username: r.ig_username,
+        lead_status: r.lead_status,
+        qualification: r.qualification,
+        preview: (r.last_incoming_text || '').slice(0, 140),
+        last_intent: r.last_intent,
+        last_sentiment: r.last_sentiment,
+        last_message_at: r.last_message_at,
+        first_seen_at: r.first_seen_at,
+        msg_count: r.msg_count,
+        has_outgoing: r.has_outgoing,
+        stage,
+        // For Won/Lost column the UI needs to know which sub-status.
+        won_status:
+          r.lead_status === 'customer' ? 'won' :
+          r.lead_status === 'lost' ? 'lost' : null,
+      };
+    }
+
+    const stages: Record<string, ReturnType<typeof fmtCard>[]> = {
+      hello: [], discovery: [], pitch: [], objections: [], close: [], follow_up: [], won_lost: [],
+    };
+    for (const r of rows) {
+      const stage = classify(r);
+      stages[stage]!.push(fmtCard(r, stage));
+    }
+    return c.json({ stages, total: rows.length });
   });
 
   app.get('/api/prompts', async (c) => {

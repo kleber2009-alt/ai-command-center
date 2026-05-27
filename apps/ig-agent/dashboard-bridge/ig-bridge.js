@@ -973,6 +973,154 @@
     }
   }
 
+  // ---------- JOURNEY (kanban) -----------------------------------------
+
+  async function initJourney() {
+    ensureStyles();
+    const kanban = $('.kanban');
+    if (!kanban) return;
+
+    const STAGE_TITLES = [
+      { stage: 'hello', titles: ['hello'] },
+      { stage: 'discovery', titles: ['discovery'] },
+      { stage: 'pitch', titles: ['pitch'] },
+      { stage: 'objections', titles: ['objections', 'objection'] },
+      { stage: 'close', titles: ['close'] },
+      { stage: 'follow_up', titles: ['follow-up', 'follow up', 'followup'] },
+      { stage: 'won_lost', titles: ['won', 'lost', 'won / lost', 'won/lost'] },
+    ];
+
+    function colFor(stage) {
+      const cols = $$('.kanban__col', kanban);
+      const titles = STAGE_TITLES.find((s) => s.stage === stage)?.titles || [];
+      return cols.find((col) => {
+        const t = ($('.kanban__h-title', col)?.textContent || '').trim().toLowerCase();
+        return titles.some((cand) => t.includes(cand));
+      });
+    }
+
+    for (const col of $$('.kanban__col', kanban)) {
+      const head = $('.kanban__h', col);
+      Array.from(col.children).forEach((ch) => { if (ch !== head) ch.remove(); });
+      col.appendChild(el('div', { class: 'ig-loading' }, 'Загрузка…'));
+    }
+
+    let data;
+    try {
+      data = await api('/journey?limit=800');
+    } catch (e) {
+      toast('Journey: ' + e.message, 'err');
+      return;
+    }
+
+    // Channel filter (Все / IG / TG). We only have IG data; TG chip becomes
+    // a no-op but stays visually consistent.
+    const filterChips = $$('.page-h .chips .chip');
+    let activeChannel = 'all';
+    filterChips.forEach((chip) => {
+      chip.addEventListener('click', () => {
+        filterChips.forEach((c) => c.classList.remove('chip--on'));
+        chip.classList.add('chip--on');
+        const t = (chip.textContent || '').trim().toLowerCase();
+        activeChannel = t.startsWith('ig') ? 'ig' : t.startsWith('tg') ? 'tg' : 'all';
+        renderAll();
+      });
+    });
+
+    function renderAll() {
+      for (const { stage } of STAGE_TITLES) {
+        const col = colFor(stage);
+        if (!col) continue;
+        const head = $('.kanban__h', col);
+        Array.from(col.children).forEach((ch) => { if (ch !== head) ch.remove(); });
+
+        let cards = data.stages[stage] || [];
+        if (activeChannel === 'tg') cards = [];
+
+        const countEl = $('.kanban__h-count', col);
+        if (countEl) countEl.textContent = cards.length;
+
+        if (!cards.length) {
+          col.appendChild(el('div', {
+            class: 'empty',
+            style: { padding: '18px', textAlign: 'center' },
+          }, el('div', { class: 't-sm muted' }, 'пусто')));
+          continue;
+        }
+
+        const TOP = 8;
+        cards.slice(0, TOP).forEach((card) => col.appendChild(buildKanbanCard(card)));
+
+        if (cards.length > TOP) {
+          col.appendChild(el('div', {
+            class: 'empty',
+            style: { padding: '14px', textAlign: 'center', cursor: 'pointer' },
+            onclick: () => expandColumn(col, cards, head),
+          }, el('div', { class: 't-sm muted' }, '+ ' + (cards.length - TOP) + ' ещё')));
+        }
+      }
+    }
+
+    function expandColumn(col, cards, head) {
+      Array.from(col.children).forEach((ch) => { if (ch !== head) ch.remove(); });
+      cards.forEach((card) => col.appendChild(buildKanbanCard(card)));
+    }
+
+    function buildKanbanCard(card) {
+      const hintCls = stageHintClass(card);
+      const hintText = stageHintText(card);
+      const handle = card.ig_username ? '@' + card.ig_username : '';
+      const time = relativeTime(card.last_message_at);
+      const vip = card.qualification === 'A';
+      const node = el('div', {
+        class: 'kanban__card' + (vip ? ' is-vip' : ''),
+        style: { cursor: 'pointer' },
+        onclick: () => { location.href = 'conversation.html?id=' + encodeURIComponent(card.id); },
+      });
+      const wonLostLabel = card.won_status === 'won'
+        ? '<span class="badge badge--green">✓ оплачено</span>'
+        : card.won_status === 'lost'
+          ? '<span class="badge badge--lost">lost</span>'
+          : '';
+      node.innerHTML =
+        '<div class="kc__top">' +
+          '<span class="badge badge--ig">IG</span>' +
+          (vip ? ' <span class="badge badge--purple">VIP</span>' : '') +
+          ' ' + wonLostLabel +
+          '<span class="mono">' + escapeHtml(time) + '</span>' +
+        '</div>' +
+        '<div class="kc__name">' + escapeHtml(card.name) + '</div>' +
+        (card.preview ? '<div class="kc__msg">«' + escapeHtml(card.preview) + '»</div>' : '') +
+        (hintText ? '<div class="kc__hint ' + hintCls + '">' + escapeHtml(hintText) + '</div>' : '') +
+        '<div class="kc__foot">' +
+          '<span>' + escapeHtml(handle || ('сообщ. ' + card.msg_count)) + ' · ' +
+            escapeHtml(card.qualification || '—') + '</span>' +
+          '<span class="muted">' + (card.has_outgoing ? 'AI отвечал' : 'не отвечали') + '</span>' +
+        '</div>';
+      return node;
+    }
+
+    function stageHintClass(card) {
+      if (card.stage === 'objections' || card.lead_status === 'hot') return 'kc__hint--red';
+      if (card.stage === 'follow_up') return 'kc__hint--warn';
+      return '';
+    }
+    function stageHintText(card) {
+      if (card.stage === 'won_lost') {
+        return card.won_status === 'won' ? '💰 закрыт оплатой' : '❌ потеряли — причина в чате';
+      }
+      if (card.stage === 'close') return '🤝 готов к покупке — отправь счёт';
+      if (card.stage === 'objections') return '⚠ возражение — нужен оператор';
+      if (card.stage === 'follow_up') return '⏰ молчит > 24ч — напомни';
+      if (card.stage === 'pitch') return '🤖 AI выслал предложение';
+      if (card.stage === 'discovery') return '🤖 уточняет потребность';
+      if (card.stage === 'hello') return '👋 первое касание';
+      return '';
+    }
+
+    renderAll();
+  }
+
   // ---------- boot ------------------------------------------------------
 
   const page = detectPage();
@@ -985,6 +1133,7 @@
       else if (page === 'agents') initAgents();
       else if (page === 'pipeline') initPipeline();
       else if (page === 'reports') initReports();
+      else if (page === 'journey') initJourney();
     } catch (e) {
       console.error('[ig-bridge]', e);
     }
