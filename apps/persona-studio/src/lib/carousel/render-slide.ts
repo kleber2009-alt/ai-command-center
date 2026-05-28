@@ -1,10 +1,12 @@
 // Рендер одного слайда карусели в PNG через satori (JSX→SVG) + resvg (SVG→PNG).
-// Размер 1080×1350 (4:5 — стандарт Instagram-карусели).
+// Размер 1080×1350 (4:5 — стандарт Instagram-карусели). AI Carousel Engine v2.
 //
 // Маршрутизация по style:
-//   - persona-minimal — тёмный фон, Tinos serif, lime-акценты
-//   - clickbait-bold  — белый фон, кобальт, UPPERCASE BOLD заголовки + checklist
-//   - knox-cream      — cream фон, duotone заголовки (brown + gold), премиум-look
+//   - persona-minimal    — Bold Dark: dark bg, oversized serif, lime
+//   - clickbait-bold     — Clean Light: white bg, cobalt, editorial grid
+//   - knox-cream         — Grid Pastel: cream + duotone brown/gold premium
+//   - neon-tech          — Neon Tech: deep purple, cyan glow, glass cards
+//   - handwritten-viral  — Handwritten Viral: paper, marker, sticky notes
 //
 // Каждый стиль реализует три варианта по позиции: cover / reveal / cta.
 

@@ -1,8 +1,14 @@
-// Каталог стилей карусели. Каждый стиль = id, label, описание, swatch
-// (мини-палитра для UI-превью), и набор шаблонов для трёх типов слайдов
-// (cover/reveal/cta). Рендер маршрутизируется по style в render-slide.ts.
+// Каталог стилей карусели — AI Carousel Engine v2.
+// 5 фиксированных визуальных DNA: каждая обложка + slides + cta идут по
+// единому набору правил (палитра, типографика, layout, иконки). Рендер
+// маршрутизируется по id в render-slide.ts.
 
-export type CarouselStyleId = 'persona-minimal' | 'clickbait-bold' | 'knox-cream';
+export type CarouselStyleId =
+  | 'persona-minimal'
+  | 'clickbait-bold'
+  | 'knox-cream'
+  | 'neon-tech'
+  | 'handwritten-viral';
 
 export type CarouselStyleMeta = {
   id: CarouselStyleId;
@@ -17,27 +23,43 @@ export type CarouselStyleMeta = {
 export const CAROUSEL_STYLES: CarouselStyleMeta[] = [
   {
     id: 'persona-minimal',
-    label: 'Persona Minimal',
+    label: 'Bold Dark',
     description:
-      'Тёмный минимализм. Аватар фоном на обложке, Tinos serif, lime-акценты. Дефолт.',
+      'Тёмный фон, oversized typography, lime/yellow акценты. Cinematic contrast, floating AI icons. Стиль топовых AI creators.',
     swatch: ['#080808', '#c8f060', '#f5f0e8'],
     tag: 'dark / serif / lime',
   },
   {
     id: 'clickbait-bold',
-    label: 'Clickbait Bold',
+    label: 'Clean Light',
     description:
-      'Белый фон, кобальтовый «1. ШАГ», чёрные UPPERCASE-хуки, сине-галочные чеклисты. Стиль русскоязычных tech-блогеров.',
+      'Editorial whitespace, кобальт-акценты, UPPERCASE хуки + чек-листы. Strict grid, минимум иконок, чистая сетка.',
     swatch: ['#FFFFFF', '#2D5BFF', '#0A0A0A'],
-    tag: 'white / cobalt / bold',
+    tag: 'white / cobalt / editorial',
   },
   {
     id: 'knox-cream',
-    label: 'Knox Cream',
+    label: 'Grid Pastel',
     description:
-      'Cream/beige фон, duotone заголовки (brown + gold), премиум YouTube/inforgaphic-look. Стиль @theromanknox.',
+      'Cream/beige фон, duotone заголовки (brown + gold), premium magazine look. Corner markers, editorial cards.',
     swatch: ['#F5EFE0', '#3A2B0F', '#B58620'],
     tag: 'cream / duotone / premium',
+  },
+  {
+    id: 'neon-tech',
+    label: 'Neon Tech',
+    description:
+      'Deep purple/blue градиент, cyan и неон-розовые свечения. Glass cards, wireframes, sci-fi minimal. AI OS / cyber UI.',
+    swatch: ['#0A001F', '#00F0FF', '#FF2DAA'],
+    tag: 'cyber / glass / neon',
+  },
+  {
+    id: 'handwritten-viral',
+    label: 'Handwritten Viral',
+    description:
+      'Бумага/блокнот, маркер, обводки, стрелки, sticky notes. Creator-notes vibe — brainstorm, viral coaching content.',
+    swatch: ['#F4ECD8', '#E63946', '#FFD400'],
+    tag: 'paper / marker / handmade',
   },
 ];
 
