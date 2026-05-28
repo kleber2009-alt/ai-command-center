@@ -40,6 +40,7 @@ import { planWindow, readPlan, replacePlan, type ContentPlanItem } from './lib/c
 import { runWeeklyInsights, applyProposalAsPlan } from './pipelines/weekly-insights.js';
 import { triggers as schedulerTriggers } from './scheduler.js';
 import { resetTrainingContextCache } from './lib/training-context.js';
+import { readBotState, writeBotState } from './lib/bot-toggle.js';
 
 const __dirname = dirname(fileURLToPath(import.meta.url));
 const PUBLIC_DIR = resolve(__dirname, '..', 'public');
@@ -1009,6 +1010,20 @@ app.post('/api/plan/apply', (req, res) => {
   if (!Array.isArray(items)) { res.status(400).json({ error: 'proposal.items[] required' }); return; }
   const plan = replacePlan(applyProposalAsPlan({ items: items as never }));
   res.json({ version: plan.version, items: plan.items.length });
+});
+
+app.get('/api/bot-state', (_req, res) => {
+  res.json(readBotState());
+});
+
+app.post('/api/bot-state', (req, res) => {
+  const body = (req.body ?? {}) as { carousel?: unknown; reels?: unknown };
+  const patch: Partial<{ carousel: boolean; reels: boolean }> = {};
+  if (typeof body.carousel === 'boolean') patch.carousel = body.carousel;
+  if (typeof body.reels === 'boolean') patch.reels = body.reels;
+  const next = writeBotState(patch);
+  log.info('Bot state updated via UI', { ...next });
+  res.json(next);
 });
 
 app.post('/api/scheduler/trigger/:job', async (req, res) => {

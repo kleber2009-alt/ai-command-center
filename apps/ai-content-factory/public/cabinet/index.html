@@ -148,6 +148,29 @@ button,input,select,textarea{font:inherit;color:inherit}
   <!-- ── left: form + runs ────────────────────────────────────────── -->
   <div>
     <div class="card" style="margin-bottom:16px">
+      <h2>Автопостинг</h2>
+      <p style="font-size:12px;color:var(--t2);margin:-6px 0 12px">Запланированные cron-прогоны. Не влияет на ручную генерацию ниже.</p>
+      <div style="display:grid;grid-template-columns:1fr 1fr;gap:8px">
+        <button type="button" class="bot-toggle" id="bot-toggle-carousel" data-fmt="carousel"
+          style="padding:12px;border:1px solid var(--sep);background:var(--surface-2);border-radius:var(--r2);cursor:pointer;display:flex;align-items:center;justify-content:space-between;gap:10px;text-align:left;transition:all .15s">
+          <div>
+            <div style="font-size:13px;font-weight:600;color:var(--t1)">Карусели</div>
+            <div style="font-size:11px;color:var(--t2)">08:00 ежедневно</div>
+          </div>
+          <span class="bot-pill" style="font-size:10px;font-weight:700;letter-spacing:.5px;padding:4px 10px;border-radius:999px;background:var(--t3);color:#fff">—</span>
+        </button>
+        <button type="button" class="bot-toggle" id="bot-toggle-reels" data-fmt="reels"
+          style="padding:12px;border:1px solid var(--sep);background:var(--surface-2);border-radius:var(--r2);cursor:pointer;display:flex;align-items:center;justify-content:space-between;gap:10px;text-align:left;transition:all .15s">
+          <div>
+            <div style="font-size:13px;font-weight:600;color:var(--t1)">Рилсы</div>
+            <div style="font-size:11px;color:var(--t2)">14:00 ежедневно</div>
+          </div>
+          <span class="bot-pill" style="font-size:10px;font-weight:700;letter-spacing:.5px;padding:4px 10px;border-radius:999px;background:var(--t3);color:#fff">—</span>
+        </button>
+      </div>
+    </div>
+
+    <div class="card" style="margin-bottom:16px">
       <h2>Сгенерировать</h2>
 
       <div class="format-toggle" id="format-toggle" style="display:flex;background:var(--surface-2);border:1px solid var(--sep);border-radius:var(--r2);padding:3px;margin-bottom:14px">
@@ -520,6 +543,45 @@ async function loadHealth() {
     }
   } catch (e) { console.error(e); }
 }
+
+function renderBotState(s) {
+  for (const fmt of ['carousel', 'reels']) {
+    const btn = document.getElementById('bot-toggle-' + fmt);
+    if (!btn) continue;
+    const on = !!s[fmt];
+    const pill = btn.querySelector('.bot-pill');
+    pill.textContent = on ? 'ON' : 'OFF';
+    pill.style.background = on ? 'var(--green)' : 'var(--red)';
+    btn.style.borderColor = on ? 'var(--green)' : 'var(--red)';
+    btn.style.background = on ? 'rgba(29,131,72,.06)' : 'rgba(192,57,43,.06)';
+  }
+}
+
+async function loadBotState() {
+  try { renderBotState(await api('/api/bot-state')); }
+  catch (e) { console.error(e); }
+}
+
+document.querySelectorAll('.bot-toggle').forEach((btn) => {
+  btn.onclick = async () => {
+    const fmt = btn.dataset.fmt;
+    const pill = btn.querySelector('.bot-pill');
+    const next = pill.textContent !== 'ON';
+    btn.disabled = true;
+    try {
+      const s = await api('/api/bot-state', {
+        method: 'POST',
+        headers: { 'content-type': 'application/json' },
+        body: JSON.stringify({ [fmt]: next }),
+      });
+      renderBotState(s);
+    } catch (e) {
+      alert('Не удалось переключить: ' + e.message);
+    } finally {
+      btn.disabled = false;
+    }
+  };
+});
 
 async function loadRubrics() {
   try {
@@ -1336,9 +1398,11 @@ function bindPlanTriggers() {
 bindPlanTriggers();
 
 loadHealth();
+loadBotState();
 loadRubrics();
 loadRuns();
 setInterval(loadHealth, 30000);
+setInterval(loadBotState, 30000);
 setInterval(loadRuns, 15000);
 setInterval(() => {
   if (state.page === 'footage') {

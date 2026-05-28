@@ -17,14 +17,14 @@ export function StyleSelector({ value, onChange }: Props) {
     <div className="border border-border bg-surface px-3 py-2.5 grid gap-2">
       <div className="flex items-baseline gap-3">
         <span className="mono text-[10px] tracking-[0.18em] uppercase text-text-mute">
-          стиль рендера
+          стиль рендера · 5 DNA
         </span>
         <span className="flex-1 border-b border-border translate-y-[-3px]" />
         <span className="mono text-[9px] tracking-wider text-text-mute">
           применяется при «Сгенерировать PNG»
         </span>
       </div>
-      <div className="grid grid-cols-1 sm:grid-cols-3 gap-2">
+      <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-5 gap-2">
         {CAROUSEL_STYLES.map((s) => {
           const active = s.id === value;
           return (

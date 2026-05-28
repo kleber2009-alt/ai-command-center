@@ -23,6 +23,7 @@ import {
   type PlanFormat,
 } from './lib/content-plan.js';
 import { log } from './lib/logger.js';
+import { readBotState } from './lib/bot-toggle.js';
 
 const TZ = process.env.TZ || 'Europe/Moscow';
 const CAROUSEL_CRON = process.env.CAROUSEL_CRON || '0 8 * * *';
@@ -154,8 +155,14 @@ export function startScheduler(): void {
   if (started) return;
   started = true;
 
-  cron.schedule(CAROUSEL_CRON, () => { void runCarousel(); }, { timezone: TZ });
-  cron.schedule(REELS_CRON, () => { void runReels(); }, { timezone: TZ });
+  cron.schedule(CAROUSEL_CRON, () => {
+    if (!readBotState().carousel) { log.info('Carousel cron skipped — bot disabled via UI'); return; }
+    void runCarousel();
+  }, { timezone: TZ });
+  cron.schedule(REELS_CRON, () => {
+    if (!readBotState().reels) { log.info('Reels cron skipped — bot disabled via UI'); return; }
+    void runReels();
+  }, { timezone: TZ });
   cron.schedule(INSIGHTS_CRON, () => { void runInsightsCron(); }, { timezone: TZ });
   cron.schedule(HEARTBEAT_CRON, () => { void runHeartbeat(); }, { timezone: TZ });
 

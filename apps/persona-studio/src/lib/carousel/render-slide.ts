@@ -91,12 +91,16 @@ export async function renderSlide(input: RenderSlideInput): Promise<Buffer> {
 function bgFor(style: CarouselStyleId): string {
   if (style === 'clickbait-bold') return '#FFFFFF';
   if (style === 'knox-cream') return '#F5EFE0';
+  if (style === 'neon-tech') return '#0A001F';
+  if (style === 'handwritten-viral') return '#F4ECD8';
   return '#080808';
 }
 
 function buildNode(input: RenderSlideInput): JSXNode {
   if (input.style === 'clickbait-bold') return clickbaitNode(input);
   if (input.style === 'knox-cream') return knoxNode(input);
+  if (input.style === 'neon-tech') return neonNode(input);
+  if (input.style === 'handwritten-viral') return paperNode(input);
   return personaNode(input);
 }
 
@@ -734,6 +738,831 @@ function knoxCTA(input: RenderSlideInput): JSXNode {
           display: 'flex',
         },
         '✦  start here',
+      ),
+    ],
+  );
+}
+
+// ═══════════════════════════════════════════════════════════════════════
+// STYLE 4: NEON-TECH (deep purple + cyan glow + glass cards)
+// ═══════════════════════════════════════════════════════════════════════
+const NEON = {
+  bg: '#0A001F',
+  bgDeep: '#020010',
+  glass: 'rgba(255,255,255,0.06)',
+  glassBorder: 'rgba(0,240,255,0.35)',
+  text: '#F0F4FF',
+  textDim: '#A4B8E6',
+  textMute: '#6478B0',
+  cyan: '#00F0FF',
+  electric: '#2D5BFF',
+  purple: '#A020F0',
+  pink: '#FF2DAA',
+};
+
+const NEON_BG_GRADIENT =
+  'radial-gradient(circle at 20% 10%, rgba(160,32,240,0.45) 0%, transparent 55%),' +
+  'radial-gradient(circle at 85% 75%, rgba(0,240,255,0.32) 0%, transparent 55%),' +
+  'linear-gradient(180deg, #0A001F 0%, #020010 100%)';
+
+function neonNode(input: RenderSlideInput): JSXNode {
+  if (input.kind === 'cover') return neonCover(input);
+  if (input.kind === 'cta') return neonCTA(input);
+  return neonReveal(input);
+}
+
+function neonCover(input: RenderSlideInput): JSXNode {
+  const avatarLayer: JSXNode = input.avatarDataUri
+    ? el(
+        'div',
+        {
+          position: 'absolute',
+          bottom: 100,
+          right: 64,
+          width: 380,
+          height: 380,
+          borderRadius: 190,
+          overflow: 'hidden',
+          border: `3px solid ${NEON.cyan}`,
+          boxShadow: `0 0 60px ${NEON.cyan}`,
+          display: 'flex',
+        },
+        el(
+          'img',
+          { width: 380, height: 380, objectFit: 'cover' },
+          undefined,
+          { src: input.avatarDataUri },
+        ),
+      )
+    : el('div', { display: 'flex' });
+  return el(
+    'div',
+    {
+      position: 'relative',
+      width: SLIDE_W,
+      height: SLIDE_H,
+      display: 'flex',
+      backgroundImage: NEON_BG_GRADIENT,
+    },
+    [
+      // grid wireframe
+      el('div', {
+        position: 'absolute',
+        top: 0,
+        left: 0,
+        width: SLIDE_W,
+        height: SLIDE_H,
+        backgroundImage:
+          'linear-gradient(rgba(0,240,255,0.06) 1px, transparent 1px),' +
+          'linear-gradient(90deg, rgba(0,240,255,0.06) 1px, transparent 1px)',
+        backgroundSize: '60px 60px',
+      }),
+      // top label
+      el(
+        'div',
+        {
+          position: 'absolute',
+          top: 56,
+          left: 64,
+          right: 64,
+          display: 'flex',
+          justifyContent: 'space-between',
+          alignItems: 'center',
+          fontFamily: 'JetBrainsMono',
+          fontSize: 22,
+          letterSpacing: 4,
+          textTransform: 'uppercase',
+          color: NEON.cyan,
+        },
+        [
+          el(
+            'div',
+            {
+              display: 'flex',
+              padding: '6px 14px',
+              border: `1px solid ${NEON.glassBorder}`,
+              backgroundColor: NEON.glass,
+            },
+            '/ NEON · AI · OS',
+          ),
+          el('div', { display: 'flex', color: NEON.textDim }, counter(input.index, input.total)),
+        ],
+      ),
+      // headline
+      el(
+        'div',
+        {
+          position: 'absolute',
+          top: 240,
+          left: 64,
+          right: 64,
+          display: 'flex',
+          flexDirection: 'column',
+          gap: 28,
+        },
+        [
+          el(
+            'div',
+            {
+              fontFamily: 'Tinos',
+              fontWeight: 700,
+              fontSize: 108,
+              lineHeight: 0.98,
+              letterSpacing: -2,
+              color: NEON.text,
+              display: 'flex',
+              textShadow: `0 0 28px ${NEON.cyan}`,
+            },
+            input.title,
+          ),
+          el(
+            'div',
+            {
+              fontFamily: 'Tinos',
+              fontStyle: 'italic',
+              fontSize: 36,
+              lineHeight: 1.35,
+              color: NEON.textDim,
+              display: 'flex',
+              maxWidth: 760,
+            },
+            input.body,
+          ),
+        ],
+      ),
+      avatarLayer,
+      // CTA strip
+      el(
+        'div',
+        {
+          position: 'absolute',
+          bottom: 72,
+          left: 64,
+          display: 'flex',
+          padding: '14px 24px',
+          border: `1px solid ${NEON.cyan}`,
+          backgroundColor: NEON.glass,
+          color: NEON.cyan,
+          fontFamily: 'JetBrainsMono',
+          fontWeight: 700,
+          fontSize: 24,
+          letterSpacing: 4,
+          textTransform: 'uppercase',
+        },
+        '◇  SWIPE →',
+      ),
+    ],
+  );
+}
+
+function neonReveal(input: RenderSlideInput): JSXNode {
+  const hasMedia = Boolean(input.mediaDataUri);
+  const stepLabel = `// ${String(input.index).padStart(2, '0')}`;
+  return el(
+    'div',
+    {
+      width: SLIDE_W,
+      height: SLIDE_H,
+      display: 'flex',
+      flexDirection: 'column',
+      padding: 72,
+      position: 'relative',
+      backgroundImage: NEON_BG_GRADIENT,
+    },
+    [
+      // grid wireframe
+      el('div', {
+        position: 'absolute',
+        top: 0,
+        left: 0,
+        width: SLIDE_W,
+        height: SLIDE_H,
+        backgroundImage:
+          'linear-gradient(rgba(0,240,255,0.05) 1px, transparent 1px),' +
+          'linear-gradient(90deg, rgba(0,240,255,0.05) 1px, transparent 1px)',
+        backgroundSize: '60px 60px',
+      }),
+      el(
+        'div',
+        {
+          display: 'flex',
+          justifyContent: 'space-between',
+          fontFamily: 'JetBrainsMono',
+          fontSize: 22,
+          letterSpacing: 4,
+          textTransform: 'uppercase',
+          color: NEON.cyan,
+        },
+        [
+          el('div', { display: 'flex' }, stepLabel),
+          el('div', { display: 'flex', color: NEON.textDim }, counter(input.index, input.total)),
+        ],
+      ),
+      // glow underline
+      el('div', {
+        marginTop: 18,
+        width: 140,
+        height: 3,
+        backgroundColor: NEON.cyan,
+        boxShadow: `0 0 16px ${NEON.cyan}`,
+      }),
+      el(
+        'div',
+        {
+          marginTop: hasMedia ? 36 : 56,
+          fontFamily: 'Tinos',
+          fontWeight: 700,
+          fontSize: hasMedia ? 64 : 84,
+          lineHeight: 1.05,
+          letterSpacing: -1,
+          color: NEON.text,
+          display: 'flex',
+        },
+        input.title,
+      ),
+      // glass card body
+      el(
+        'div',
+        {
+          marginTop: 36,
+          padding: 36,
+          backgroundColor: NEON.glass,
+          border: `1px solid ${NEON.glassBorder}`,
+          display: 'flex',
+        },
+        el(
+          'div',
+          {
+            fontFamily: 'Tinos',
+            fontSize: hasMedia ? 28 : 34,
+            lineHeight: 1.4,
+            color: NEON.textDim,
+            display: 'flex',
+          },
+          input.body,
+        ),
+      ),
+      ...(hasMedia
+        ? [
+            el(
+              'div',
+              {
+                marginTop: 28,
+                padding: 8,
+                background: 'linear-gradient(135deg, #2D5BFF 0%, #A020F0 50%, #FF2DAA 100%)',
+                display: 'flex',
+                alignSelf: 'stretch',
+                flex: 1,
+                maxHeight: 440,
+              },
+              el(
+                'div',
+                {
+                  padding: 4,
+                  backgroundColor: NEON.bgDeep,
+                  display: 'flex',
+                  flex: 1,
+                },
+                el(
+                  'img',
+                  { width: '100%', height: '100%', objectFit: 'contain' },
+                  undefined,
+                  { src: input.mediaDataUri! },
+                ),
+              ),
+            ),
+          ]
+        : []),
+    ],
+  );
+}
+
+function neonCTA(input: RenderSlideInput): JSXNode {
+  return el(
+    'div',
+    {
+      width: SLIDE_W,
+      height: SLIDE_H,
+      display: 'flex',
+      flexDirection: 'column',
+      padding: 80,
+      position: 'relative',
+      justifyContent: 'center',
+      backgroundImage: NEON_BG_GRADIENT,
+    },
+    [
+      el('div', {
+        position: 'absolute',
+        top: 0,
+        left: 0,
+        width: SLIDE_W,
+        height: SLIDE_H,
+        backgroundImage:
+          'linear-gradient(rgba(0,240,255,0.05) 1px, transparent 1px),' +
+          'linear-gradient(90deg, rgba(0,240,255,0.05) 1px, transparent 1px)',
+        backgroundSize: '60px 60px',
+      }),
+      el(
+        'div',
+        {
+          position: 'absolute',
+          top: 56,
+          left: 64,
+          right: 64,
+          display: 'flex',
+          justifyContent: 'space-between',
+          fontFamily: 'JetBrainsMono',
+          fontSize: 22,
+          letterSpacing: 4,
+          textTransform: 'uppercase',
+          color: NEON.pink,
+        },
+        [el('div', { display: 'flex' }, '◇  FINAL'), el('div', { display: 'flex', color: NEON.textDim }, counter(input.index, input.total))],
+      ),
+      el(
+        'div',
+        {
+          fontFamily: 'Tinos',
+          fontWeight: 700,
+          fontSize: 104,
+          lineHeight: 1.0,
+          letterSpacing: -2,
+          color: NEON.text,
+          display: 'flex',
+          textShadow: `0 0 32px ${NEON.pink}`,
+        },
+        input.title,
+      ),
+      el(
+        'div',
+        {
+          marginTop: 40,
+          fontFamily: 'Tinos',
+          fontStyle: 'italic',
+          fontSize: 38,
+          lineHeight: 1.4,
+          color: NEON.textDim,
+          display: 'flex',
+        },
+        input.body,
+      ),
+      el(
+        'div',
+        {
+          marginTop: 60,
+          padding: '24px 40px',
+          background: `linear-gradient(90deg, ${NEON.electric}, ${NEON.pink})`,
+          color: NEON.text,
+          fontFamily: 'JetBrainsMono',
+          fontWeight: 700,
+          fontSize: 30,
+          letterSpacing: 4,
+          textTransform: 'uppercase',
+          alignSelf: 'flex-start',
+          display: 'flex',
+        },
+        '◇  COMMENT "AI"',
+      ),
+    ],
+  );
+}
+
+// ═══════════════════════════════════════════════════════════════════════
+// STYLE 5: HANDWRITTEN-VIRAL (paper + marker + sticky notes)
+// ═══════════════════════════════════════════════════════════════════════
+const PAPER = {
+  bg: '#F4ECD8',
+  bgDeep: '#E8DEC2',
+  ink: '#1A1612',
+  inkSoft: '#403828',
+  red: '#E63946',
+  yellow: '#FFD400',
+  yellowSoft: '#FFE665',
+  blue: '#2D5BFF',
+};
+
+const PAPER_GRID = {
+  position: 'absolute' as const,
+  top: 0,
+  left: 0,
+  width: SLIDE_W,
+  height: SLIDE_H,
+  backgroundImage:
+    'linear-gradient(rgba(26,22,18,0.06) 1px, transparent 1px),' +
+    'linear-gradient(90deg, rgba(26,22,18,0.06) 1px, transparent 1px)',
+  backgroundSize: '40px 40px',
+};
+
+function paperNode(input: RenderSlideInput): JSXNode {
+  if (input.kind === 'cover') return paperCover(input);
+  if (input.kind === 'cta') return paperCTA(input);
+  return paperReveal(input);
+}
+
+function paperCover(input: RenderSlideInput): JSXNode {
+  const avatarTile: JSXNode = input.avatarDataUri
+    ? el(
+        'div',
+        {
+          position: 'absolute',
+          bottom: 100,
+          right: 80,
+          width: 340,
+          height: 420,
+          padding: 12,
+          backgroundColor: '#FFFFFF',
+          border: `3px solid ${PAPER.ink}`,
+          boxShadow: '8px 8px 0 rgba(26,22,18,0.85)',
+          transform: 'rotate(3deg)',
+          display: 'flex',
+        },
+        el(
+          'img',
+          { width: '100%', height: '100%', objectFit: 'cover' },
+          undefined,
+          { src: input.avatarDataUri },
+        ),
+      )
+    : el('div', { display: 'flex' });
+  return el(
+    'div',
+    { position: 'relative', width: SLIDE_W, height: SLIDE_H, display: 'flex', backgroundColor: PAPER.bg },
+    [
+      el('div', PAPER_GRID),
+      // sticky note
+      el(
+        'div',
+        {
+          position: 'absolute',
+          top: 60,
+          left: 60,
+          padding: '10px 18px',
+          backgroundColor: PAPER.yellowSoft,
+          border: `2px solid ${PAPER.ink}`,
+          transform: 'rotate(-4deg)',
+          fontFamily: 'JetBrainsMono',
+          fontWeight: 700,
+          fontSize: 22,
+          letterSpacing: 2,
+          color: PAPER.ink,
+          textTransform: 'uppercase',
+          display: 'flex',
+        },
+        '// VIRAL NOTE',
+      ),
+      el(
+        'div',
+        {
+          position: 'absolute',
+          top: 76,
+          right: 80,
+          fontFamily: 'JetBrainsMono',
+          fontSize: 22,
+          letterSpacing: 4,
+          color: PAPER.inkSoft,
+          display: 'flex',
+        },
+        counter(input.index, input.total),
+      ),
+      // headline + scribble underline
+      el(
+        'div',
+        {
+          position: 'absolute',
+          top: 220,
+          left: 80,
+          right: 80,
+          display: 'flex',
+          flexDirection: 'column',
+          gap: 24,
+        },
+        [
+          el(
+            'div',
+            {
+              fontFamily: 'Tinos',
+              fontStyle: 'italic',
+              fontWeight: 700,
+              fontSize: 104,
+              lineHeight: 1.0,
+              color: PAPER.ink,
+              display: 'flex',
+            },
+            input.title,
+          ),
+          // highlighter strip
+          el('div', {
+            width: 320,
+            height: 22,
+            backgroundColor: PAPER.yellow,
+            marginTop: -6,
+          }),
+          el(
+            'div',
+            {
+              marginTop: 12,
+              fontFamily: 'Tinos',
+              fontSize: 36,
+              lineHeight: 1.4,
+              color: PAPER.inkSoft,
+              maxWidth: 640,
+              display: 'flex',
+            },
+            input.body,
+          ),
+        ],
+      ),
+      avatarTile,
+      // red marker arrow
+      el(
+        'div',
+        {
+          position: 'absolute',
+          bottom: 80,
+          left: 80,
+          padding: '10px 16px',
+          backgroundColor: PAPER.red,
+          color: '#FFFFFF',
+          fontFamily: 'JetBrainsMono',
+          fontWeight: 700,
+          fontSize: 26,
+          letterSpacing: 4,
+          textTransform: 'uppercase',
+          transform: 'rotate(-2deg)',
+          display: 'flex',
+        },
+        '→ листай дальше',
+      ),
+    ],
+  );
+}
+
+function paperReveal(input: RenderSlideInput): JSXNode {
+  const hasMedia = Boolean(input.mediaDataUri);
+  const bullets = splitBullets(input.body);
+  const useChecklist = !hasMedia && bullets.length >= 2;
+  return el(
+    'div',
+    {
+      width: SLIDE_W,
+      height: SLIDE_H,
+      backgroundColor: PAPER.bg,
+      display: 'flex',
+      flexDirection: 'column',
+      padding: 72,
+      position: 'relative',
+    },
+    [
+      el('div', PAPER_GRID),
+      // top sticky
+      el(
+        'div',
+        {
+          display: 'flex',
+          justifyContent: 'space-between',
+          alignItems: 'center',
+          fontFamily: 'JetBrainsMono',
+          fontSize: 22,
+          color: PAPER.inkSoft,
+        },
+        [
+          el(
+            'div',
+            {
+              display: 'flex',
+              padding: '6px 14px',
+              backgroundColor: PAPER.yellowSoft,
+              border: `2px solid ${PAPER.ink}`,
+              transform: 'rotate(-3deg)',
+              fontWeight: 700,
+              letterSpacing: 3,
+              textTransform: 'uppercase',
+              color: PAPER.ink,
+            },
+            `STEP ${String(input.index).padStart(2, '0')}`,
+          ),
+          el(
+            'div',
+            { display: 'flex', letterSpacing: 4 },
+            counter(input.index, input.total),
+          ),
+        ],
+      ),
+      // scribbled underline (offset rectangle to mimic marker stroke)
+      el(
+        'div',
+        {
+          marginTop: 48,
+          fontFamily: 'Tinos',
+          fontStyle: 'italic',
+          fontWeight: 700,
+          fontSize: hasMedia ? 60 : 80,
+          lineHeight: 1.05,
+          color: PAPER.ink,
+          display: 'flex',
+        },
+        input.title,
+      ),
+      el('div', {
+        marginTop: -4,
+        width: 240,
+        height: 14,
+        backgroundColor: PAPER.yellow,
+        transform: 'skewY(-1deg)',
+      }),
+      useChecklist
+        ? el(
+            'div',
+            { marginTop: 48, display: 'flex', flexDirection: 'column', gap: 22 },
+            bullets.slice(0, 6).map((b, idx) =>
+              el(
+                'div',
+                {
+                  display: 'flex',
+                  alignItems: 'center',
+                  gap: 20,
+                  padding: '10px 14px',
+                  backgroundColor: idx % 2 === 0 ? '#FFFFFF' : 'transparent',
+                  border: idx % 2 === 0 ? `2px solid ${PAPER.ink}` : 'none',
+                  transform: `rotate(${idx % 2 === 0 ? -0.4 : 0.4}deg)`,
+                },
+                [
+                  el(
+                    'div',
+                    {
+                      width: 36,
+                      height: 36,
+                      backgroundColor: PAPER.red,
+                      color: '#fff',
+                      display: 'flex',
+                      alignItems: 'center',
+                      justifyContent: 'center',
+                      fontFamily: 'JetBrainsMono',
+                      fontWeight: 700,
+                      fontSize: 22,
+                      flexShrink: 0,
+                    },
+                    '✓',
+                  ),
+                  el(
+                    'div',
+                    {
+                      fontFamily: 'Tinos',
+                      color: PAPER.ink,
+                      fontSize: 32,
+                      lineHeight: 1.35,
+                      display: 'flex',
+                      flex: 1,
+                    },
+                    b,
+                  ),
+                ],
+              ),
+            ),
+          )
+        : el(
+            'div',
+            {
+              marginTop: 36,
+              padding: 28,
+              backgroundColor: '#FFFFFF',
+              border: `2px solid ${PAPER.ink}`,
+              transform: 'rotate(-0.4deg)',
+              boxShadow: '6px 6px 0 rgba(26,22,18,0.85)',
+              fontFamily: 'Tinos',
+              color: PAPER.ink,
+              fontSize: hasMedia ? 28 : 34,
+              lineHeight: 1.4,
+              display: 'flex',
+            },
+            input.body,
+          ),
+      ...(hasMedia
+        ? [
+            el(
+              'div',
+              {
+                marginTop: 32,
+                padding: 12,
+                backgroundColor: '#FFFFFF',
+                border: `3px solid ${PAPER.ink}`,
+                transform: 'rotate(0.6deg)',
+                boxShadow: '8px 8px 0 rgba(26,22,18,0.85)',
+                display: 'flex',
+                alignSelf: 'stretch',
+                flex: 1,
+                maxHeight: 420,
+              },
+              el(
+                'img',
+                { width: '100%', height: '100%', objectFit: 'contain' },
+                undefined,
+                { src: input.mediaDataUri! },
+              ),
+            ),
+          ]
+        : []),
+    ],
+  );
+}
+
+function paperCTA(input: RenderSlideInput): JSXNode {
+  return el(
+    'div',
+    {
+      width: SLIDE_W,
+      height: SLIDE_H,
+      backgroundColor: PAPER.bg,
+      display: 'flex',
+      flexDirection: 'column',
+      padding: 80,
+      position: 'relative',
+      justifyContent: 'center',
+    },
+    [
+      el('div', PAPER_GRID),
+      el(
+        'div',
+        {
+          position: 'absolute',
+          top: 64,
+          left: 80,
+          padding: '8px 16px',
+          backgroundColor: PAPER.red,
+          color: '#FFFFFF',
+          fontFamily: 'JetBrainsMono',
+          fontWeight: 700,
+          fontSize: 22,
+          letterSpacing: 4,
+          textTransform: 'uppercase',
+          transform: 'rotate(-3deg)',
+          display: 'flex',
+        },
+        '★ FINAL',
+      ),
+      el(
+        'div',
+        {
+          position: 'absolute',
+          top: 70,
+          right: 80,
+          fontFamily: 'JetBrainsMono',
+          fontSize: 22,
+          letterSpacing: 4,
+          color: PAPER.inkSoft,
+          display: 'flex',
+        },
+        counter(input.index, input.total),
+      ),
+      el(
+        'div',
+        {
+          fontFamily: 'Tinos',
+          fontStyle: 'italic',
+          fontWeight: 700,
+          fontSize: 96,
+          lineHeight: 1.05,
+          color: PAPER.ink,
+          display: 'flex',
+        },
+        input.title,
+      ),
+      el('div', {
+        marginTop: -2,
+        width: 360,
+        height: 18,
+        backgroundColor: PAPER.yellow,
+        transform: 'skewY(-1deg)',
+      }),
+      el(
+        'div',
+        {
+          marginTop: 36,
+          fontFamily: 'Tinos',
+          fontSize: 38,
+          lineHeight: 1.4,
+          color: PAPER.inkSoft,
+          display: 'flex',
+        },
+        input.body,
+      ),
+      el(
+        'div',
+        {
+          marginTop: 56,
+          padding: '20px 32px',
+          backgroundColor: PAPER.ink,
+          color: PAPER.yellowSoft,
+          fontFamily: 'JetBrainsMono',
+          fontWeight: 700,
+          fontSize: 30,
+          letterSpacing: 4,
+          textTransform: 'uppercase',
+          alignSelf: 'flex-start',
+          transform: 'rotate(-1deg)',
+          display: 'flex',
+        },
+        '✎  SAVE & SHARE',
       ),
     ],
   );
