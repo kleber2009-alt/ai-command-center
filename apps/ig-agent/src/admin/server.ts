@@ -42,6 +42,7 @@ import type { SendPulseClient } from '../sendpulse/client.js';
 import type { DigestSchedulerHandle } from '../scheduler.js';
 import type { HealthMonitor } from '../health.js';
 import { parseWebhookBody } from '../webhook.js';
+import { backfillContact } from '../backfill.js';
 
 const here = dirname(fileURLToPath(import.meta.url));
 // Try both layouts: compiled (dist/admin/ui) and dev (src/admin/ui).
@@ -697,6 +698,34 @@ export function startAdminServer(deps: AdminDeps): AdminHandle {
     const limit = Math.min(Math.max(Number(c.req.query('limit') ?? 200), 1), 1000);
     const rows = await deps.messages.listForContact(id, limit);
     return c.json({ messages: rows });
+  });
+
+  // Idempotent: pulls every message SendPulse has for this contact and inserts
+  // the ones our DB is missing (deduped by sendpulse_message_id). The bridge
+  // calls this once before rendering a conversation so opened threads always
+  // surface the complete history, not just events that arrived via webhook.
+  app.post('/api/contacts/:id/backfill', async (c) => {
+    const id = c.req.param('id');
+    const limitRaw = c.req.query('limit') ?? '300';
+    const limit = Math.min(Math.max(Number(limitRaw) || 300, 1), 500);
+    try {
+      const result = await backfillContact(
+        {
+          contacts: deps.contacts,
+          messages: deps.messages,
+          sendPulse: deps.sendPulse,
+          logger,
+        },
+        id,
+        limit,
+      );
+      return c.json({ ok: true, ...result });
+    } catch (err) {
+      const msg = err instanceof Error ? err.message : String(err);
+      if (msg.includes('not found')) return c.json({ error: 'not found' }, 404);
+      logger.error('backfill endpoint failed', { contactId: id, err: msg });
+      return c.json({ error: 'backfill failed', detail: msg }, 502);
+    }
   });
 
   app.get('/api/contacts/:id/recommendations', async (c) => {

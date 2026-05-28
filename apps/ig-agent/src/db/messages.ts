@@ -37,6 +37,9 @@ export interface InsertMessageInput {
   sentiment?: string | null;
   sendpulseMessageId?: string | null;
   rawPayload?: unknown;
+  // Backfill path overrides this so historic messages retain their original
+  // SendPulse timestamp. Live webhook inserts omit it and get NOW().
+  createdAt?: string | Date | null;
 }
 
 export interface MessageStats {
@@ -64,6 +67,10 @@ export interface MessageStore {
 export function createMessageStore(pool: DbPool): MessageStore {
   return {
     async insert(input) {
+      const createdAt =
+        input.createdAt instanceof Date
+          ? input.createdAt.toISOString()
+          : input.createdAt ?? null;
       const rows = await query<Message>(
         pool,
         `INSERT INTO messages (
@@ -71,9 +78,9 @@ export function createMessageStore(pool: DbPool): MessageStore {
            text, media_url, media_type,
            ai_model, ai_prompt_version, ai_tokens_used, ai_confidence,
            intent, sentiment,
-           sendpulse_message_id, raw_payload
+           sendpulse_message_id, raw_payload, created_at
          )
-         VALUES ($1,$2,$3,$4,$5,$6,$7,$8,$9,$10,$11,$12,$13,$14)
+         VALUES ($1,$2,$3,$4,$5,$6,$7,$8,$9,$10,$11,$12,$13,$14,COALESCE($15::timestamptz, NOW()))
          RETURNING *`,
         [
           input.contactId,
@@ -90,6 +97,7 @@ export function createMessageStore(pool: DbPool): MessageStore {
           input.sentiment ?? null,
           input.sendpulseMessageId ?? null,
           input.rawPayload === undefined ? null : JSON.stringify(input.rawPayload),
+          createdAt,
         ],
       );
       const row = rows[0];

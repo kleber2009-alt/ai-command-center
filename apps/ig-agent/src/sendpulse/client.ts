@@ -38,9 +38,29 @@ export interface SendMessageResult {
   raw: unknown;
 }
 
+// One row from `GET /instagram/chats/messages`. We keep the shape loose —
+// SendPulse mixes text / attachments / postback / reply_to_message events
+// under the same envelope, and we use raw_payload to retain the rest.
+export interface SendPulseHistoryMessage {
+  id: string;
+  contact_id: string;
+  bot_id?: string | null;
+  direction: number; // 1 = incoming (user → page), 2 = outgoing (page → user)
+  type?: string | null;
+  channel?: string | null;
+  status?: number | null;
+  sent_by?: string | null;
+  created_at: string;
+  data?: Record<string, unknown> | null;
+}
+
 export interface SendPulseClient {
   sendText(contactId: string, text: string): Promise<SendMessageResult>;
   getContact(contactId: string): Promise<SendPulseContact | undefined>;
+  // Pulls historic messages for a contact. Used by the backfill path so the
+  // dashboard surfaces every message SendPulse has, not just the events
+  // that arrived via webhook after we wired the bot up.
+  getChatHistory(contactId: string, limit?: number): Promise<SendPulseHistoryMessage[]>;
 }
 
 interface CachedToken {
@@ -166,6 +186,19 @@ export function createSendPulseClient(opts: SendPulseClientOptions): SendPulseCl
         });
         return undefined;
       }
+    },
+
+    async getChatHistory(contactId, limit = 200) {
+      const safe = Math.min(Math.max(limit, 1), 500);
+      const { json } = await call(
+        'GET',
+        `/chats/messages?contact_id=${encodeURIComponent(contactId)}&limit=${safe}`,
+      );
+      if (!json || typeof json !== 'object') return [];
+      const data = (json as { data?: unknown }).data;
+      if (!Array.isArray(data)) return [];
+      // SendPulse returns newest-first; the caller decides ordering.
+      return data as SendPulseHistoryMessage[];
     },
   };
 }

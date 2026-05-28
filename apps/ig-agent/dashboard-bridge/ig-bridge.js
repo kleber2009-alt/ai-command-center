@@ -288,12 +288,28 @@
     let conversation = null;
     let messages = [];
     let recommendations = [];
+    // Only sync SendPulse history on first open — the polling tick below
+    // calls `reload()` every 3s and we don't want to hammer SendPulse.
+    let backfilled = false;
 
     async function reload() {
       try {
+        // Idempotent: pulls anything SendPulse has that our DB is missing
+        // (flow auto-replies, attachments, postbacks, pre-webhook messages).
+        // Fire-and-await so the messages query below sees the new rows.
+        if (!backfilled) {
+          backfilled = true;
+          try {
+            await api('/contacts/' + contactId + '/backfill?limit=500', { method: 'POST' });
+          } catch (be) {
+            // Surface to console but don't block render — we still want
+            // to show whatever messages we already have locally.
+            console.warn('backfill failed:', be && be.message);
+          }
+        }
         const [c, m, r] = await Promise.all([
           api('/contacts/' + contactId),
-          api('/contacts/' + contactId + '/messages?limit=200'),
+          api('/contacts/' + contactId + '/messages?limit=1000'),
           api('/contacts/' + contactId + '/recommendations'),
         ]);
         contact = c.contact;
