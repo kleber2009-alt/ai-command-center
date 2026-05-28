@@ -96,6 +96,19 @@ export function SlideEditorPane({
     }
   }
 
+  async function handleDispatchImage(mode?: 'hero-avatar' | 'object' | 'ui' | 'slide-media') {
+    if (imageBusyOrPending) return;
+    setImageBusy(true);
+    setImageDispatchError(null);
+    try {
+      await onDispatchImage(mode ?? defaultImageMode);
+    } catch (e) {
+      setImageDispatchError((e as Error).message || 'dispatch failed');
+    } finally {
+      setImageBusy(false);
+    }
+  }
+
   return (
     <section className="border border-border bg-surface flex flex-col h-full overflow-hidden">
       {/* Header */}
@@ -326,6 +339,87 @@ export function SlideEditorPane({
           {regenError && (
             <div className="border border-pink/40 bg-pink/5 px-2 py-1 mono text-[10px] text-pink">
               {regenError}
+            </div>
+          )}
+        </div>
+
+        {/* AI Image panel — kie Nano Banana 2 / Flux Kontext */}
+        <div className="grid gap-1.5 border border-border bg-bg/40 p-3">
+          <div className="flex items-baseline justify-between">
+            <span className="mono text-[9px] tracking-[0.18em] uppercase text-gold">
+              🎨 AI image · nano banana 2
+            </span>
+            <span className="mono text-[9px] tracking-wider text-text-mute">
+              mode: {defaultImageMode}
+            </span>
+          </div>
+          {isCover && (
+            <div className="grid grid-cols-2 sm:grid-cols-4 gap-1">
+              {(
+                [
+                  { key: 'hero-avatar', label: 'Hero avatar', hint: 'identity-safe' },
+                  { key: 'object', label: 'Object', hint: 'продукт / икон.' },
+                  { key: 'ui', label: 'UI / Screen', hint: 'дашборд' },
+                  { key: 'slide-media', label: 'Free media', hint: 'editorial' },
+                ] as const
+              ).map((m) => {
+                const active = defaultImageMode === m.key;
+                return (
+                  <button
+                    key={m.key}
+                    type="button"
+                    onClick={() => handleDispatchImage(m.key)}
+                    disabled={
+                      imageBusyOrPending ||
+                      (m.key === 'hero-avatar' && !coverAvatarId)
+                    }
+                    className={`border px-2 py-1.5 mono text-[9px] tracking-[0.16em] uppercase text-left transition ${
+                      active
+                        ? 'border-gold text-gold bg-gold/[0.05]'
+                        : 'border-border text-text-mute hover:border-text-dim hover:text-text-dim'
+                    } disabled:opacity-30 disabled:cursor-not-allowed`}
+                    title={`mode = ${m.key}`}
+                  >
+                    <span className="block text-[10px]">{m.label}</span>
+                    <span className="block mono text-[8px] tracking-wider mt-0.5 text-text-mute">
+                      {m.hint}
+                    </span>
+                  </button>
+                );
+              })}
+            </div>
+          )}
+          <div className="flex items-center gap-2">
+            <button
+              type="button"
+              onClick={() => handleDispatchImage()}
+              disabled={imageBusyOrPending || Boolean(imageDisabledReason)}
+              className="mono text-[10px] tracking-[0.18em] uppercase px-3 py-1.5 border border-gold/60 text-gold hover:bg-gold hover:text-black transition disabled:opacity-30 disabled:cursor-not-allowed"
+              title={imageDisabledReason || `${defaultImageMode}`}
+            >
+              {slide.imageStatus === 'pending'
+                ? '🎨 генерю…'
+                : imageBusy
+                  ? '🎨 ставлю в очередь…'
+                  : slide.image
+                    ? '🎨 regenerate →'
+                    : '🎨 generate →'}
+            </button>
+            <span className="mono text-[9px] tracking-wider text-text-mute">
+              {imageDisabledReason
+                ? imageDisabledReason
+                : slide.imageStatus === 'pending'
+                  ? 'kie работает ~10–30с'
+                  : slide.imageStatus === 'failed'
+                    ? 'fail, попробуй ещё'
+                    : slide.imageStatus === 'done'
+                      ? 'готово · нажми чтобы пересоздать'
+                      : 'kie сгенерит и зальёт в media'}
+            </span>
+          </div>
+          {(imageDispatchError || slide.imageError) && (
+            <div className="border border-pink/40 bg-pink/5 px-2 py-1 mono text-[10px] text-pink break-all">
+              {imageDispatchError || slide.imageError}
             </div>
           )}
         </div>
