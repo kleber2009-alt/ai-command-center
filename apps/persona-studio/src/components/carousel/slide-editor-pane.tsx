@@ -17,6 +17,8 @@ type Props = {
   onRemove: () => void;
   /** Async AI-регенерация копи слайда. Подкидывается из shell. */
   onRegenCopy: (intent?: string) => Promise<void>;
+  /** Async AI image-generation (kie Nano Banana 2 / Flux Kontext). */
+  onDispatchImage: (mode: 'hero-avatar' | 'object' | 'ui' | 'slide-media') => Promise<void>;
 };
 
 const TITLE_LIMIT = 120;
@@ -43,17 +45,39 @@ export function SlideEditorPane({
   onDuplicate,
   onRemove,
   onRegenCopy,
+  onDispatchImage,
 }: Props) {
   const [coverOpen, setCoverOpen] = useState(false);
   const [actionsOpen, setActionsOpen] = useState(false);
   const [regenIntent, setRegenIntent] = useState('');
   const [regenBusy, setRegenBusy] = useState(false);
   const [regenError, setRegenError] = useState<string | null>(null);
+  const [imageBusy, setImageBusy] = useState(false);
+  const [imageDispatchError, setImageDispatchError] = useState<string | null>(null);
   const isCover = slideIndex === 0;
   const isCTA = slideIndex === slidesTotal - 1;
   const role = slideRoleFor(slideIndex, slidesTotal);
   const coverAvatar = avatars.find((a) => a.id === coverAvatarId) ?? null;
   const activeCoverType: CoverType = (slide.coverType ?? 'avatar') as CoverType;
+
+  // Mode авто-выбирается из роли слайда и cover type.
+  const defaultImageMode: 'hero-avatar' | 'object' | 'ui' | 'slide-media' = isCover
+    ? activeCoverType === 'avatar'
+      ? 'hero-avatar'
+      : activeCoverType === 'object'
+        ? 'object'
+        : activeCoverType === 'ui'
+          ? 'ui'
+          : 'slide-media' // split — без AI-картинки
+    : 'slide-media';
+
+  const imageBusyOrPending = imageBusy || slide.imageStatus === 'pending';
+  const imageDisabledReason =
+    isCover && activeCoverType === 'split'
+      ? 'split-обложке AI-картинка не нужна'
+      : isCover && defaultImageMode === 'hero-avatar' && !coverAvatarId
+        ? 'выбери cover-аватар'
+        : undefined;
 
   const titleOverLimit = slide.title.length > TITLE_LIMIT;
   const bodyOverLimit = slide.body.length > BODY_LIMIT;

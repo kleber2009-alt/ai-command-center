@@ -263,6 +263,107 @@ export function CarouselEditorShell({ initial, avatars }: Props) {
   }
 
   /**
+   * AI image-generation одного слайда. Заряжает токены, ставит в очередь,
+   * патчит локальный state на pending. Поллер ниже подхватит и обновит
+   * картинку, когда воркер закончит.
+   */
+  async function dispatchSlideImage(
+    index: number,
+    mode: 'hero-avatar' | 'object' | 'ui' | 'slide-media',
+  ): Promise<void> {
+    if (dirtyRef.current) {
+      if (timerRef.current) {
+        clearTimeout(timerRef.current);
+        timerRef.current = null;
+      }
+      await persist();
+    }
+    const res = await fetch(
+      `/api/carousels/draft/${initial.id}/slide-image?index=${index}`,
+      {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ mode }),
+      },
+    );
+    const text = await res.text();
+    let json: { message?: string; error?: string } = {};
+    try {
+      json = JSON.parse(text);
+    } catch {
+      /* leave default */
+    }
+    if (!res.ok) {
+      throw new Error(json.message || json.error || `HTTP ${res.status}`);
+    }
+    // Mark slide as pending locally — поллер уже стартанул.
+    setSlides((prev) =>
+      prev.map((s, i) =>
+        i === index ? { ...s, imageStatus: 'pending', imageError: undefined } : s,
+      ),
+    );
+  }
+
+  // Polling: для слайдов в imageStatus='pending' дергаем GET каждые 3с,
+  // пока статус не сменится. Один интервал на весь shell — внутри один
+  // tick опрашивает все pending-слайды параллельно.
+  useEffect(() => {
+    const pendingIndices = slides
+      .map((s, i) => (s.imageStatus === 'pending' ? i : -1))
+      .filter((i) => i >= 0);
+    if (pendingIndices.length === 0) return;
+
+    let cancelled = false;
+    const tick = async () => {
+      const results = await Promise.all(
+        pendingIndices.map(async (i) => {
+          try {
+            const res = await fetch(
+              `/api/carousels/draft/${initial.id}/slide-image?index=${i}`,
+            );
+            if (!res.ok) return null;
+            const j = (await res.json()) as {
+              index: number;
+              status: 'pending' | 'done' | 'failed' | null;
+              image: string | null;
+              error: string | null;
+            };
+            return j;
+          } catch {
+            return null;
+          }
+        }),
+      );
+      if (cancelled) return;
+      setSlides((prev) => {
+        let changed = false;
+        const next = prev.map((s, i) => {
+          const r = results.find((x) => x && x.index === i);
+          if (!r) return s;
+          if (r.status === 'pending') return s; // no change yet
+          changed = true;
+          return {
+            ...s,
+            image: r.image ?? s.image,
+            imageStatus: (r.status ?? undefined) as
+              | 'pending'
+              | 'done'
+              | 'failed'
+              | undefined,
+            imageError: r.error ?? undefined,
+          };
+        });
+        return changed ? next : prev;
+      });
+    };
+    const interval = setInterval(tick, 3000);
+    return () => {
+      cancelled = true;
+      clearInterval(interval);
+    };
+  }, [slides, initial.id]);
+
+  /**
    * AI-регенерация копи (title/body) одного слайда через Claude. Перед
    * запросом форсируем persist если есть несохранённые изменения, чтобы
    * сервер видел актуальный slides[i] и соседей. После успеха применяем
@@ -403,6 +504,7 @@ export function CarouselEditorShell({ initial, avatars }: Props) {
               onDuplicate={() => duplicateSlide(activeIndex)}
               onRemove={() => removeSlide(activeIndex)}
               onRegenCopy={(intent) => regenCopy(activeIndex, intent)}
+              onDispatchImage={(mode) => dispatchSlideImage(activeIndex, mode)}
             />
           ) : (
             <div className="border border-border bg-surface p-6 text-text-mute mono text-[11px]">
