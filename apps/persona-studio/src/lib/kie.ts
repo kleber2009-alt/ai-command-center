@@ -361,15 +361,23 @@ function isTransientFluxFail(failCode: string, failMsg: string): boolean {
   return false;
 }
 
+export class KieFluxTransientError extends KieError {
+  constructor(code: string, message: string, public taskId: string) {
+    super(code, message);
+    this.name = 'KieFluxTransientError';
+  }
+}
+
 export async function generateImageWithFlux(opts: {
   prompt: string;
   inputImageUrl: string;
   aspectRatio?: FluxAspect;
   outputFormat?: 'jpeg' | 'png';
 }): Promise<{ bytes: Buffer; mime: string; taskId: string }> {
-  const MAX_ATTEMPTS = 2;
+  const MAX_ATTEMPTS = 4;
   let lastFail: { failCode: string; failMsg: string } | null = null;
   let lastTaskId = '';
+  let lastWasTransient = false;
   for (let attempt = 1; attempt <= MAX_ATTEMPTS; attempt++) {
     const taskId = await submitFluxKontext({
       prompt: opts.prompt,
@@ -384,15 +392,17 @@ export async function generateImageWithFlux(opts: {
       return { bytes, mime, taskId };
     }
     if (result.state !== 'failed') {
-      // waitForFluxKontext throws TIMEOUT before returning 'processing', but be safe.
       throw new KieError('TIMEOUT', `flux task ${taskId} still ${result.state}`);
     }
     lastFail = { failCode: result.failCode, failMsg: result.failMsg };
-    if (!isTransientFluxFail(result.failCode, result.failMsg) || attempt === MAX_ATTEMPTS) break;
-    await new Promise((r) => setTimeout(r, 4_000 * attempt));
+    lastWasTransient = isTransientFluxFail(result.failCode, result.failMsg);
+    if (!lastWasTransient || attempt === MAX_ATTEMPTS) break;
+    await new Promise((r) => setTimeout(r, 6_000 * attempt));
   }
   const fail = lastFail ?? { failCode: 'UNKNOWN', failMsg: 'flux failed' };
-  throw new KieError(fail.failCode, `${fail.failMsg} (taskId=${lastTaskId})`);
+  const message = `${fail.failMsg} (taskId=${lastTaskId})`;
+  if (lastWasTransient) throw new KieFluxTransientError(fail.failCode, message, lastTaskId);
+  throw new KieError(fail.failCode, message);
 }
 
 /**

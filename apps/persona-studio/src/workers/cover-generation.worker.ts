@@ -1,7 +1,7 @@
 import { Worker } from 'bullmq';
 import { prisma } from '@/lib/prisma';
 import { connection, QUEUE_NAMES, type CoverGenerationJob } from '@/lib/queue';
-import { generateImageWithFlux, KieError } from '@/lib/kie';
+import { generateImageWithFlux, generateImage, KieError, KieFluxTransientError } from '@/lib/kie';
 import { keyFor, uploadBuffer } from '@/lib/storage';
 import { refundTokens } from '@/lib/tokens';
 import { styleBySlug } from '@/lib/styles';
@@ -11,6 +11,17 @@ import type { FluxAspect } from '@/lib/kie';
 function aspectToFlux(aspect: string): FluxAspect {
   switch (aspect) {
     case '4:5': return '3:4';        // Flux не поддерживает 4:5 — ближайший по портрету
+    case '1:1': return '1:1';
+    case '9:16': return '9:16';
+    case '3:4': return '3:4';
+    case '16:9': return '16:9';
+    default: return '3:4';
+  }
+}
+
+function aspectToNano(aspect: string): '1:1' | '16:9' | '9:16' | '4:3' | '3:4' {
+  switch (aspect) {
+    case '4:5': return '3:4';
     case '1:1': return '1:1';
     case '9:16': return '9:16';
     case '3:4': return '3:4';
@@ -50,14 +61,32 @@ export function startCoverWorker() {
       });
 
       try {
-        // Используем уже сгенерированный аватар как input для Flux Kontext.
-        // avatar.imageUrl публичен через media.46-62-215-11.nip.io — kie достанет.
-        const out = await generateImageWithFlux({
-          prompt,
-          inputImageUrl: cover.avatar.imageUrl,
-          aspectRatio: aspectToFlux(cover.aspect),
-          outputFormat: 'jpeg',
-        });
+        let engine: 'flux' | 'nano-banana' = 'flux';
+        let out: { bytes: Buffer; mime: string; taskId: string };
+        try {
+          // Основной путь — identity-preserving edit через Flux Kontext.
+          // avatar.imageUrl публичен через media.46-62-215-11.nip.io — kie достанет.
+          out = await generateImageWithFlux({
+            prompt,
+            inputImageUrl: cover.avatar.imageUrl,
+            aspectRatio: aspectToFlux(cover.aspect),
+            outputFormat: 'jpeg',
+          });
+        } catch (e) {
+          // Flux backend целиком прилёг (transient 5xx после всех попыток) —
+          // fallback на Nano Banana 2 с тем же аватаром как референс.
+          // Identity сохраняется хуже, но лучше отдать обложку, чем ноль.
+          if (!(e instanceof KieFluxTransientError)) throw e;
+          console.warn(`[cover-worker] ${coverId} flux exhausted (${e.code}: ${e.message}); falling back to nano-banana-2`);
+          engine = 'nano-banana';
+          out = await generateImage({
+            prompt,
+            referenceImageUrl: cover.avatar.imageUrl,
+            aspectRatio: aspectToNano(cover.aspect),
+            resolution: '1K',
+            outputFormat: 'jpg',
+          });
+        }
 
         const ext = out.mime.split('/')[1] ?? 'jpg';
         const key = keyFor('cover', userId, ext);
@@ -73,8 +102,8 @@ export function startCoverWorker() {
             errorMsg: null,
           },
         });
-        console.log(`[cover-worker] ${coverId} done (flux taskId=${out.taskId})`);
-        return { ok: true, taskId: out.taskId };
+        console.log(`[cover-worker] ${coverId} done (${engine} taskId=${out.taskId})`);
+        return { ok: true, engine, taskId: out.taskId };
       } catch (e) {
         const msg = e instanceof KieError ? `${e.code}: ${e.message}` : (e instanceof Error ? e.message : String(e));
         await prisma.cover.update({
