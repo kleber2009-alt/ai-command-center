@@ -31,6 +31,7 @@ type SlideJson = {
   accent?: string;
   image?: string;
   coverType?: CoverType;
+  imageMode?: 'composite' | 'replace';
 };
 
 const slideKindFor = (index: number, total: number): SlideKind => {
@@ -137,6 +138,34 @@ export async function POST(req: NextRequest, ctx: { params: Promise<{ id: string
       const s = slides[i];
       const kind = slideKindFor(i, slides.length);
       const coverType = isValidCoverType(s.coverType) ? s.coverType : undefined;
+
+      // ── REPLACE mode: AI-картинка САМА = финал слайда. Скипаем satori.
+      // Требование: imageMode='replace' + есть валидный s.image. Иначе
+      // деградируем до satori-composite, чтобы не выкинуть пользователю
+      // ошибку при недогенерированной картинке.
+      if (s.imageMode === 'replace' && s.image) {
+        // Перезаливаем bytes в наш S3-ключ слайда чтобы IG/Caddy видели
+        // стабильный URL (kie CDN URL'ы протекают через ?v= но не lifecycle).
+        const fetched = await fetch(s.image, {
+          signal: AbortSignal.timeout(60_000),
+        });
+        if (!fetched.ok) {
+          throw new Error(`replace_fetch_failed: HTTP ${fetched.status} for ${s.image}`);
+        }
+        const buf = Buffer.from(await fetched.arrayBuffer());
+        const contentType = fetched.headers.get('content-type') || 'image/jpeg';
+        const ext = (contentType.split('/')[1] || 'jpg').replace(/[^a-z0-9]/gi, '').slice(0, 4) || 'jpg';
+        const key = `carousels/${user.id}/${draft.id}/${String(i + 1).padStart(2, '0')}.${ext}`;
+        const baseUrl = await uploadBuffer({
+          key,
+          body: buf,
+          contentType,
+          cacheControl: 'public, max-age=2592000',
+        });
+        return `${baseUrl}?v=${Date.now()}`;
+      }
+
+      // ── COMPOSITE mode (default): satori как раньше.
       // Cover-слайд: для type=avatar (или undefined) хочется аватар-фон.
       // Для object/ui — фотка-скриншот из s.image (если есть) идёт как
       // mediaDataUri внутрь shared cover-type рендера. Split — без медиа.

@@ -22,6 +22,7 @@ const SlideSchema = z.object({
   imageStatus: z.enum(['pending', 'done', 'failed']).optional(),
   imageError: z.string().max(400).optional(),
   imagePromptUsed: z.string().max(4000).optional(),
+  imageMode: z.enum(['composite', 'replace']).optional(),
 });
 
 const PatchBody = z.object({

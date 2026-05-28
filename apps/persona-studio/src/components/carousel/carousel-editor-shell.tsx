@@ -85,6 +85,7 @@ export function CarouselEditorShell({ initial, avatars }: Props) {
           ...(s.imageStatus ? { imageStatus: s.imageStatus } : {}),
           ...(s.imageError ? { imageError: s.imageError } : {}),
           ...(s.imagePromptUsed ? { imagePromptUsed: s.imagePromptUsed } : {}),
+          ...(s.imageMode ? { imageMode: s.imageMode } : {}),
         })),
         coverAvatarId: coverRef.current,
         style: styleRef.current,

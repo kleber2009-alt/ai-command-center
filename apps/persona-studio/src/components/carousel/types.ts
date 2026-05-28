@@ -5,6 +5,16 @@ export type { CoverType } from '@/lib/carousel/prompts';
 
 export type SlideImageStatus = 'pending' | 'done' | 'failed';
 
+/**
+ * Как использовать `image` при финальном рендере карусели:
+ *   - 'composite' (default) — satori рисует typography поверх, image идёт
+ *     как mockup-карточка / cover-фон (текущее поведение).
+ *   - 'replace'             — пропускаем satori, image сам по себе и есть
+ *     финальный PNG слайда. Подходит когда Nano Banana 2 нарисовала готовую
+ *     editorial-композицию с типографикой.
+ */
+export type SlideImageMode = 'composite' | 'replace';
+
 export type SlideShape = {
   title: string;
   body: string;
@@ -22,6 +32,8 @@ export type SlideShape = {
   imageError?: string;
   // Сохранённый prompt (debug + аудит).
   imagePromptUsed?: string;
+  // composite | replace — см. SlideImageMode выше.
+  imageMode?: SlideImageMode;
 };
 
 export type CarouselAvatarOption = {
