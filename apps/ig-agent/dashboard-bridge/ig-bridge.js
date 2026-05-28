@@ -658,7 +658,7 @@
       polling = true;
       const myGen = mutationGen;
       try {
-        const m = await api('/contacts/' + contactId + '/messages?limit=200');
+        const m = await api('/contacts/' + contactId + '/messages?limit=1000');
         if (myGen !== mutationGen) return; // a mutation finished while we were fetching — discard
         const next = m.messages || [];
         const sameCount = next.length === messages.length;
