@@ -3,17 +3,25 @@
 import type { CoverType } from '@/lib/carousel/prompts';
 export type { CoverType } from '@/lib/carousel/prompts';
 
+export type SlideImageStatus = 'pending' | 'done' | 'failed';
+
 export type SlideShape = {
   title: string;
   body: string;
   accent?: string;
   // Опциональный URL фото/скриншота, который будет нарисован как
   // mockup-карточка внизу слайда (см. render-slide.ts). Загружается
-  // через POST /api/carousels/upload-media.
+  // через POST /api/carousels/upload-media или генерируется AI через
+  // POST /api/carousels/draft/[id]/slide-image.
   image?: string;
   // Тип обложки — применяется только для slide[0]. Остальные слайды
   // игнорируют. Управляет layout-маршрутом в render-slide.ts.
   coverType?: CoverType;
+  // AI image generation tracking (Nano Banana / Flux Kontext через kie).
+  imageStatus?: SlideImageStatus;
+  imageError?: string;
+  // Сохранённый prompt (debug + аудит).
+  imagePromptUsed?: string;
 };
 
 export type CarouselAvatarOption = {

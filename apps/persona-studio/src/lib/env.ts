@@ -71,6 +71,7 @@ const envSchema = z.object({
   COST_HEYGEN_VIDEO: z.coerce.number().default(30),
   COST_OMNIHUMAN_VIDEO: z.coerce.number().default(50),
   COST_SUBMAGIC_EDIT: z.coerce.number().default(15),
+  COST_SLIDE_IMAGE: z.coerce.number().default(3),
   SIGNUP_BONUS_TOKENS: z.coerce.number().default(10),
 
   // ── Auth ──────────────────────────────────────

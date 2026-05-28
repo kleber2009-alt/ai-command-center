@@ -33,6 +33,7 @@ export const QUEUE_NAMES = {
   heygenVideo: 'heygen-video',
   omnihumanVideo: 'omnihuman-video',
   submagicEdit: 'submagic-edit',
+  slideImage: 'slide-image',
 } as const;
 
 export type AvatarGenerationJob = {
@@ -54,6 +55,19 @@ export type VideoJob = {
 export type EditJob = {
   editId: string;
   userId: string;
+};
+
+/**
+ * AI Carousel Engine — generation of a single slide-level image via
+ * Nano Banana 2 (text-to-image) or Flux Kontext (image-to-image). Воркер
+ * читает CarouselDraft → строит prompt → kie → S3 → patches slide.image.
+ */
+export type SlideImageJob = {
+  draftId: string;
+  userId: string;
+  slideIndex: number;
+  /** hero-avatar | object | ui | slide-media — см. SlideImageMode. */
+  mode: 'hero-avatar' | 'object' | 'ui' | 'slide-media';
 };
 
 // Backward-compat alias.
@@ -98,6 +112,14 @@ export function editQueue() {
     _editQueue = new Queue<EditJob>(QUEUE_NAMES.submagicEdit, options());
   }
   return _editQueue;
+}
+
+let _slideImageQueue: Queue<SlideImageJob> | null = null;
+export function slideImageQueue() {
+  if (!_slideImageQueue) {
+    _slideImageQueue = new Queue<SlideImageJob>(QUEUE_NAMES.slideImage, options());
+  }
+  return _slideImageQueue;
 }
 
 /** Engine-aware dispatcher — pass the queueName from EngineConfig. */

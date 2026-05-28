@@ -107,4 +107,5 @@ export const COSTS = {
   heygenVideo: env.COST_HEYGEN_VIDEO,
   omnihumanVideo: env.COST_OMNIHUMAN_VIDEO,
   submagicEdit: env.COST_SUBMAGIC_EDIT,
+  slideImage: env.COST_SLIDE_IMAGE,
 };

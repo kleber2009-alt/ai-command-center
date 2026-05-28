@@ -17,6 +17,11 @@ const SlideSchema = z.object({
   accent: z.string().max(120).optional(),
   image: z.string().url().max(500).optional(),
   coverType: z.enum(COVER_TYPES).optional(),
+  // AI image-gen status — пропускаем как-есть; клиент это не редактирует,
+  // но при PATCH со всеми слайдами нам нужно сохранить значения.
+  imageStatus: z.enum(['pending', 'done', 'failed']).optional(),
+  imageError: z.string().max(400).optional(),
+  imagePromptUsed: z.string().max(4000).optional(),
 });
 
 const PatchBody = z.object({
