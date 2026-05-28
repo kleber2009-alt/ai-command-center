@@ -418,6 +418,80 @@ export function CarouselEditorShell({ initial, avatars }: Props) {
   }
 
   /**
+   * Batch AI image-gen для всей карусели. Эндпоинт сам решает кому какой
+   * mode, какие слайды скипнуть (split / empty / already-done), и сколько
+   * списать токенов. После 202 — поллер сам подтянет каждый pending-слайд.
+   */
+  const [batchBusy, setBatchBusy] = useState(false);
+  const [batchMessage, setBatchMessage] = useState<string | null>(null);
+  async function dispatchBatch(opts: { skipExisting: boolean }) {
+    if (batchBusy) return;
+    setBatchBusy(true);
+    setBatchMessage(null);
+    try {
+      if (dirtyRef.current) {
+        if (timerRef.current) {
+          clearTimeout(timerRef.current);
+          timerRef.current = null;
+        }
+        await persist();
+      }
+      const res = await fetch(`/api/carousels/draft/${initial.id}/slide-image/batch`, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ skipExisting: opts.skipExisting }),
+      });
+      const text = await res.text();
+      let json: {
+        enqueued?: Array<{ index: number; mode: string }>;
+        skipped?: Array<{ index: number; reason: string }>;
+        tokensCharged?: number;
+        message?: string;
+        error?: string;
+      } = {};
+      try {
+        json = JSON.parse(text);
+      } catch {
+        /* leave default */
+      }
+      if (!res.ok && res.status !== 402) {
+        setBatchMessage(json.message || json.error || `HTTP ${res.status}`);
+        return;
+      }
+      // Локально помечаем все enqueued индексы как pending, чтобы поллер
+      // подхватил их сразу же.
+      if (Array.isArray(json.enqueued) && json.enqueued.length > 0) {
+        const pendingSet = new Set(json.enqueued.map((e) => e.index));
+        setSlides((prev) =>
+          prev.map((s, i) =>
+            pendingSet.has(i)
+              ? { ...s, imageStatus: 'pending', imageError: undefined }
+              : s,
+          ),
+        );
+      }
+      const enqCount = json.enqueued?.length ?? 0;
+      const skipCount = json.skipped?.length ?? 0;
+      const charged = json.tokensCharged ?? 0;
+      const insufficient = res.status === 402;
+      setBatchMessage(
+        [
+          `${enqCount} в очереди`,
+          skipCount > 0 ? `${skipCount} скип` : null,
+          charged > 0 ? `−${charged} токенов` : null,
+          insufficient ? '· баланс закончился' : null,
+        ]
+          .filter(Boolean)
+          .join(' · '),
+      );
+    } catch (e) {
+      setBatchMessage((e as Error).message || 'network error');
+    } finally {
+      setBatchBusy(false);
+    }
+  }
+
+  /**
    * Перерендер ОДНОГО слайда без перезаписи остальных PNG'ов. Перед
    * запросом форсируем persist если есть несохранённые изменения, чтобы
    * сервер взял свежий текст слайда из БД.
@@ -470,6 +544,7 @@ export function CarouselEditorShell({ initial, avatars }: Props) {
   }
 
   const activeSlide = slides[activeIndex] ?? slides[0];
+  const pendingAiCount = slides.filter((s) => s.imageStatus === 'pending').length;
 
   return (
     <div className="grid gap-3 min-h-[calc(100dvh-140px)]">
@@ -526,28 +601,56 @@ export function CarouselEditorShell({ initial, avatars }: Props) {
               {renderStatus === 'error' && (
                 <span className="text-pink">· ошибка рендера · {renderError}</span>
               )}
+              {pendingAiCount > 0 && (
+                <span className="text-gold">· 🎨 {pendingAiCount} в очереди kie</span>
+              )}
+              {batchMessage && <span className="text-text-dim">· {batchMessage}</span>}
             </div>
-            <button
-              type="button"
-              disabled={!allFilled || renderStatus === 'rendering'}
-              title={
-                !allFilled
-                  ? 'Сначала заполни все слайды и выбери обложку'
-                  : renderStatus === 'rendering'
-                    ? 'Рендерится…'
-                    : renderStatus === 'done'
-                      ? 'Перерендерить с текущими текстами'
-                      : 'Сгенерировать PNG для каждого слайда'
-              }
-              className="btn-primary disabled:opacity-40 disabled:cursor-not-allowed"
-              onClick={runRender}
-            >
-              {renderStatus === 'rendering'
-                ? 'Рендерю PNG…'
-                : renderStatus === 'done'
-                  ? 'Перерендерить →'
-                  : 'Сгенерировать PNG →'}
-            </button>
+            <div className="flex items-center gap-2 flex-wrap">
+              <button
+                type="button"
+                disabled={batchBusy || !allFilled}
+                title={
+                  !allFilled
+                    ? 'Сначала заполни все слайды и выбери обложку'
+                    : 'Поставить в kie всю карусель (skip уже готовые)'
+                }
+                className="mono text-[10px] tracking-[0.18em] uppercase px-3 py-1.5 border border-gold/60 text-gold hover:bg-gold hover:text-black transition disabled:opacity-30 disabled:cursor-not-allowed"
+                onClick={() => dispatchBatch({ skipExisting: true })}
+              >
+                {batchBusy ? '🎨 enqueue…' : '🎨 Generate all'}
+              </button>
+              <button
+                type="button"
+                disabled={batchBusy || !allFilled}
+                title="Перегенерировать ВСЕ слайды, даже те у которых уже есть AI-картинка"
+                className="mono text-[10px] tracking-[0.18em] uppercase px-2 py-1.5 border border-border text-text-mute hover:border-gold/60 hover:text-gold transition disabled:opacity-30 disabled:cursor-not-allowed"
+                onClick={() => dispatchBatch({ skipExisting: false })}
+              >
+                ⟲ all
+              </button>
+              <button
+                type="button"
+                disabled={!allFilled || renderStatus === 'rendering'}
+                title={
+                  !allFilled
+                    ? 'Сначала заполни все слайды и выбери обложку'
+                    : renderStatus === 'rendering'
+                      ? 'Рендерится…'
+                      : renderStatus === 'done'
+                        ? 'Перерендерить с текущими текстами'
+                        : 'Сгенерировать PNG для каждого слайда'
+                }
+                className="btn-primary disabled:opacity-40 disabled:cursor-not-allowed"
+                onClick={runRender}
+              >
+                {renderStatus === 'rendering'
+                  ? 'Рендерю PNG…'
+                  : renderStatus === 'done'
+                    ? 'Перерендерить →'
+                    : 'Сгенерировать PNG →'}
+              </button>
+            </div>
           </div>
         </div>
       </div>

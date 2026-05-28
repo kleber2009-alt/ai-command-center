@@ -345,12 +345,49 @@ export function SlideEditorPane({
 
         {/* AI Image panel — kie Nano Banana 2 / Flux Kontext */}
         <div className="grid gap-1.5 border border-border bg-bg/40 p-3">
-          <div className="flex items-baseline justify-between">
+          <div className="flex items-baseline justify-between gap-3">
             <span className="mono text-[9px] tracking-[0.18em] uppercase text-gold">
               🎨 AI image · nano banana 2
             </span>
             <span className="mono text-[9px] tracking-wider text-text-mute">
               mode: {defaultImageMode}
+            </span>
+          </div>
+          {/* Composite vs Replace toggle — определяет, рисует ли satori
+              сверху typography или AI-картинка идёт сама по себе финалом. */}
+          <div className="flex items-center gap-1.5 text-[9px] mono tracking-wider uppercase">
+            <span className="text-text-mute">render:</span>
+            {(
+              [
+                { key: 'composite', label: 'composite', hint: 'satori поверх' },
+                { key: 'replace', label: 'replace', hint: 'AI = финал' },
+              ] as const
+            ).map((m) => {
+              const active = (slide.imageMode ?? 'composite') === m.key;
+              return (
+                <button
+                  key={m.key}
+                  type="button"
+                  onClick={() =>
+                    onSlideChange({
+                      imageMode: m.key === 'composite' ? undefined : m.key,
+                    })
+                  }
+                  className={`px-2 py-0.5 border transition ${
+                    active
+                      ? 'border-gold text-gold bg-gold/[0.05]'
+                      : 'border-border text-text-mute hover:border-text-dim hover:text-text-dim'
+                  }`}
+                  title={m.hint}
+                >
+                  {m.label}
+                </button>
+              );
+            })}
+            <span className="text-text-mute truncate ml-1">
+              {(slide.imageMode ?? 'composite') === 'replace'
+                ? 'AI картинка = финальный PNG (skip satori)'
+                : 'satori типографика поверх AI-фона'}
             </span>
           </div>
           {isCover && (
