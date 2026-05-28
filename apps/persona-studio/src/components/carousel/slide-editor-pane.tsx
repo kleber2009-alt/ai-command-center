@@ -2,7 +2,8 @@
 
 import { useRef, useState } from 'react';
 import { CoverPickerPopover } from './cover-picker-popover';
-import type { CarouselAvatarOption, SlideShape } from './types';
+import type { CarouselAvatarOption, CoverType, SlideShape } from './types';
+import { COVER_TYPES, COVER_TYPE_LABEL, COVER_TYPE_DESC } from '@/lib/carousel/prompts';
 
 type Props = {
   slide: SlideShape;
@@ -14,6 +15,8 @@ type Props = {
   onCoverAvatarChange: (id: string | null) => void;
   onDuplicate: () => void;
   onRemove: () => void;
+  /** Async AI-регенерация копи слайда. Подкидывается из shell. */
+  onRegenCopy: (intent?: string) => Promise<void>;
 };
 
 const TITLE_LIMIT = 120;
@@ -39,16 +42,35 @@ export function SlideEditorPane({
   onCoverAvatarChange,
   onDuplicate,
   onRemove,
+  onRegenCopy,
 }: Props) {
   const [coverOpen, setCoverOpen] = useState(false);
   const [actionsOpen, setActionsOpen] = useState(false);
+  const [regenIntent, setRegenIntent] = useState('');
+  const [regenBusy, setRegenBusy] = useState(false);
+  const [regenError, setRegenError] = useState<string | null>(null);
   const isCover = slideIndex === 0;
   const isCTA = slideIndex === slidesTotal - 1;
   const role = slideRoleFor(slideIndex, slidesTotal);
   const coverAvatar = avatars.find((a) => a.id === coverAvatarId) ?? null;
+  const activeCoverType: CoverType = (slide.coverType ?? 'avatar') as CoverType;
 
   const titleOverLimit = slide.title.length > TITLE_LIMIT;
   const bodyOverLimit = slide.body.length > BODY_LIMIT;
+
+  async function handleRegen() {
+    if (regenBusy) return;
+    setRegenBusy(true);
+    setRegenError(null);
+    try {
+      await onRegenCopy(regenIntent.trim() || undefined);
+      setRegenIntent('');
+    } catch (e) {
+      setRegenError((e as Error).message || 'regen failed');
+    } finally {
+      setRegenBusy(false);
+    }
+  }
 
   return (
     <section className="border border-border bg-surface flex flex-col h-full overflow-hidden">
@@ -135,6 +157,53 @@ export function SlideEditorPane({
 
       {/* Fields */}
       <div className="flex-1 overflow-y-auto p-4 sm:p-5 grid gap-4 content-start [&::-webkit-scrollbar]:w-1.5 [&::-webkit-scrollbar-thumb]:bg-border-2">
+        {/* Cover type picker — only for slide 0 */}
+        {isCover && (
+          <div className="grid gap-1.5">
+            <div className="flex items-baseline justify-between">
+              <span className="mono text-[9px] tracking-[0.18em] uppercase text-text-mute">
+                cover type · 4 layout
+              </span>
+              <span className="mono text-[9px] tracking-wider text-text-mute truncate ml-3">
+                {COVER_TYPE_DESC[activeCoverType]}
+              </span>
+            </div>
+            <div className="grid grid-cols-2 sm:grid-cols-4 gap-1.5">
+              {COVER_TYPES.map((t) => {
+                const active = activeCoverType === t;
+                return (
+                  <button
+                    key={t}
+                    type="button"
+                    onClick={() => onSlideChange({ coverType: t })}
+                    className={`border px-2 py-2 mono text-[10px] tracking-[0.16em] uppercase text-left transition ${
+                      active
+                        ? 'border-lime bg-lime/[0.05] text-text'
+                        : 'border-border hover:border-text-dim text-text-dim'
+                    }`}
+                    title={COVER_TYPE_DESC[t]}
+                  >
+                    <span className="block text-[12px] tracking-[0.2em]">{COVER_TYPE_LABEL[t]}</span>
+                    <span
+                      className={`block mono text-[9px] tracking-wider mt-0.5 ${
+                        active ? 'text-lime' : 'text-text-mute'
+                      }`}
+                    >
+                      {t === 'avatar'
+                        ? 'аватар · фон'
+                        : t === 'object'
+                          ? 'объект · центр'
+                          : t === 'split'
+                            ? 'a / b'
+                            : 'ui · скрин'}
+                    </span>
+                  </button>
+                );
+              })}
+            </div>
+          </div>
+        )}
+
         <label className="grid gap-1.5">
           <div className="flex items-baseline justify-between">
             <span className="mono text-[9px] tracking-[0.18em] uppercase text-text-mute">title</span>
@@ -185,11 +254,74 @@ export function SlideEditorPane({
           />
         </label>
 
+        {/* AI Regen panel — Claude rewrite этого слайда с учётом стиля + соседей */}
+        <div className="grid gap-1.5 border border-border bg-bg/40 p-3">
+          <div className="flex items-baseline justify-between">
+            <span className="mono text-[9px] tracking-[0.18em] uppercase text-lime">
+              ✨ AI regen · claude
+            </span>
+            <span className="mono text-[9px] tracking-wider text-text-mute">
+              учитывает стиль и соседей
+            </span>
+          </div>
+          <div className="flex flex-wrap gap-1.5">
+            {['сделай острее', 'добавь цифру', 'короче', 'добавь конкретики'].map((q) => (
+              <button
+                key={q}
+                type="button"
+                disabled={regenBusy}
+                onClick={() => setRegenIntent(q)}
+                className={`mono text-[9px] tracking-wider uppercase px-2 py-1 border transition ${
+                  regenIntent === q
+                    ? 'border-lime text-lime bg-lime/[0.05]'
+                    : 'border-border text-text-mute hover:border-text-dim hover:text-text-dim'
+                } disabled:opacity-30 disabled:cursor-not-allowed`}
+              >
+                {q}
+              </button>
+            ))}
+          </div>
+          <div className="flex items-stretch gap-1.5">
+            <input
+              type="text"
+              value={regenIntent}
+              onChange={(e) => setRegenIntent(e.target.value.slice(0, 200))}
+              placeholder="что изменить (опционально)…"
+              disabled={regenBusy}
+              className="flex-1 bg-bg border border-border focus:border-lime/60 focus:outline-none px-2 py-1.5 mono text-[11px] text-text disabled:opacity-50"
+            />
+            <button
+              type="button"
+              onClick={handleRegen}
+              disabled={regenBusy}
+              className="mono text-[10px] tracking-[0.18em] uppercase px-3 py-1.5 border border-lime/60 text-lime hover:bg-lime hover:text-black transition disabled:opacity-30 disabled:cursor-not-allowed"
+            >
+              {regenBusy ? '✨ генерю…' : '✨ regen →'}
+            </button>
+          </div>
+          {regenError && (
+            <div className="border border-pink/40 bg-pink/5 px-2 py-1 mono text-[10px] text-pink">
+              {regenError}
+            </div>
+          )}
+        </div>
+
         <SlideMediaUploader
           value={slide.image ?? null}
           onChange={(url) => onSlideChange({ image: url ?? undefined })}
-          disabled={isCover}
-          coverHint={isCover}
+          disabled={isCover && activeCoverType === 'avatar'}
+          coverHint={isCover && activeCoverType === 'avatar'}
+          mediaHint={
+            isCover
+              ? activeCoverType === 'object'
+                ? 'центральный объект (продукт/иконка/логотип)'
+                : activeCoverType === 'ui'
+                  ? 'скриншот UI / дашборда / браузера'
+                  : activeCoverType === 'split'
+                    ? 'split-обложке медиа не нужно'
+                    : undefined
+              : undefined
+          }
         />
       </div>
     </section>
@@ -206,11 +338,13 @@ function SlideMediaUploader({
   onChange,
   disabled,
   coverHint,
+  mediaHint,
 }: {
   value: string | null;
   onChange: (url: string | null) => void;
   disabled?: boolean;
   coverHint?: boolean;
+  mediaHint?: string;
 }) {
   const inputRef = useRef<HTMLInputElement>(null);
   const [uploading, setUploading] = useState(false);
@@ -262,11 +396,13 @@ function SlideMediaUploader({
         <span className="mono text-[9px] tracking-[0.18em] uppercase text-text-mute">
           медиа · фото / скриншот / mockup
         </span>
-        {coverHint && (
+        {coverHint ? (
           <span className="mono text-[9px] tracking-wider text-text-mute">
             на обложке используется аватар
           </span>
-        )}
+        ) : mediaHint ? (
+          <span className="mono text-[9px] tracking-wider text-lime">{mediaHint}</span>
+        ) : null}
       </div>
 
       {value ? (

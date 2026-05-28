@@ -13,7 +13,8 @@
 import satori from 'satori';
 import { Resvg } from '@resvg/resvg-js';
 import { loadFonts } from './fonts';
-import type { CarouselStyleId } from './styles';
+import { STYLE_TOKENS, type CarouselStyleId, type StyleTokens } from './styles';
+import type { CoverType } from './prompts';
 
 export const SLIDE_W = 1080;
 export const SLIDE_H = 1350;
@@ -31,7 +32,12 @@ export type RenderSlideInput = {
   avatarDataUri?: string;
   // Пользовательское фото/скрин/mockup для reveal/cta слайдов — рисуется
   // как карточка в нижней части слайда, с фирменной рамкой стиля.
+  // Для cover-слайдов используется как object/ui-картинка (см. coverType).
   mediaDataUri?: string;
+  // Тип обложки (только для kind='cover'). По умолчанию 'avatar' —
+  // существующие per-style AVATAR covers. Остальные типы используют
+  // shared cover-type рендеры с токенами стиля.
+  coverType?: CoverType;
 };
 
 // ── helpers ───────────────────────────────────────────────────────────
@@ -97,6 +103,16 @@ function bgFor(style: CarouselStyleId): string {
 }
 
 function buildNode(input: RenderSlideInput): JSXNode {
+  // CoverType routing — только для cover-слайдов. Если тип задан и это не
+  // 'avatar' — идём в shared cover-type рендер с токенами стиля. Любой
+  // другой kind или coverType='avatar' (или undefined) — старый per-style
+  // флоу.
+  if (input.kind === 'cover' && input.coverType && input.coverType !== 'avatar') {
+    const tokens = STYLE_TOKENS[input.style];
+    if (input.coverType === 'object') return coverTypeObject(input, tokens);
+    if (input.coverType === 'split') return coverTypeSplit(input, tokens);
+    if (input.coverType === 'ui') return coverTypeUI(input, tokens);
+  }
   if (input.style === 'clickbait-bold') return clickbaitNode(input);
   if (input.style === 'knox-cream') return knoxNode(input);
   if (input.style === 'neon-tech') return neonNode(input);
@@ -1563,6 +1579,419 @@ function paperCTA(input: RenderSlideInput): JSXNode {
           display: 'flex',
         },
         '✎  SAVE & SHARE',
+      ),
+    ],
+  );
+}
+
+// ═══════════════════════════════════════════════════════════════════════
+// SHARED COVER-TYPE RENDERERS (Object / Split / UI)
+// Используют токены стиля (STYLE_TOKENS) и адаптируют общий layout под
+// палитру конкретного стиля. Активируются когда coverType !== 'avatar'.
+// ═══════════════════════════════════════════════════════════════════════
+
+function coverTypeHeader(input: RenderSlideInput, tokens: StyleTokens, label: string): JSXNode {
+  return el(
+    'div',
+    {
+      position: 'absolute',
+      top: 56,
+      left: 64,
+      right: 64,
+      display: 'flex',
+      justifyContent: 'space-between',
+      alignItems: 'center',
+      fontFamily: tokens.mono,
+      fontSize: 22,
+      letterSpacing: 4,
+      textTransform: 'uppercase',
+      color: tokens.accent,
+    },
+    [
+      el('div', { display: 'flex' }, `${tokens.mark}  ${label}`),
+      el('div', { display: 'flex', color: tokens.textDim }, counter(input.index, input.total)),
+    ],
+  );
+}
+
+// ─── OBJECT COVER ──────────────────────────────────────────────────────
+// Большой объект по центру + huge typography. Если есть mediaDataUri —
+// используем как «объект». Иначе — placeholder: огромный mono-символ
+// (мини-маркер стиля), стилизованный как 3D-логотип.
+function coverTypeObject(input: RenderSlideInput, tokens: StyleTokens): JSXNode {
+  const object: JSXNode = input.mediaDataUri
+    ? el(
+        'div',
+        {
+          width: 560,
+          height: 560,
+          display: 'flex',
+          padding: 16,
+          backgroundColor: tokens.surface,
+          border: `2px solid ${tokens.accent}`,
+        },
+        el(
+          'img',
+          { width: '100%', height: '100%', objectFit: 'contain' },
+          undefined,
+          { src: input.mediaDataUri },
+        ),
+      )
+    : el(
+        'div',
+        {
+          width: 480,
+          height: 480,
+          display: 'flex',
+          alignItems: 'center',
+          justifyContent: 'center',
+          fontFamily: tokens.serif,
+          fontWeight: 700,
+          fontSize: 320,
+          lineHeight: 1,
+          color: tokens.accent,
+          backgroundColor: tokens.surface,
+          border: `2px solid ${tokens.accent}`,
+        },
+        tokens.mark,
+      );
+
+  return el(
+    'div',
+    {
+      position: 'relative',
+      width: SLIDE_W,
+      height: SLIDE_H,
+      display: 'flex',
+      flexDirection: 'column',
+      backgroundColor: tokens.bg,
+      padding: 64,
+      justifyContent: 'space-between',
+    },
+    [
+      coverTypeHeader(input, tokens, 'OBJECT'),
+      // Object centered in middle
+      el(
+        'div',
+        {
+          flex: 1,
+          display: 'flex',
+          alignItems: 'center',
+          justifyContent: 'center',
+          marginTop: 72,
+        },
+        object,
+      ),
+      // Headline at bottom
+      el(
+        'div',
+        { display: 'flex', flexDirection: 'column', gap: 18 },
+        [
+          el(
+            'div',
+            {
+              fontFamily: tokens.serif,
+              fontWeight: 700,
+              fontSize: 84,
+              lineHeight: 1.0,
+              letterSpacing: -1,
+              color: tokens.text,
+              display: 'flex',
+            },
+            input.title,
+          ),
+          el(
+            'div',
+            {
+              fontFamily: tokens.serif,
+              fontStyle: 'italic',
+              fontSize: 30,
+              lineHeight: 1.35,
+              color: tokens.textDim,
+              display: 'flex',
+              maxWidth: 880,
+            },
+            input.body,
+          ),
+        ],
+      ),
+    ],
+  );
+}
+
+// ─── SPLIT COVER ──────────────────────────────────────────────────────
+// Левая половина = тезис A, правая = тезис B. Берём title и распиливаем
+// по " vs " / " / " / "—". Если разделителя нет — слева title, справа
+// первое предложение body как «второй полюс».
+function splitTitle(title: string, body: string): { left: string; right: string } {
+  const seps = [/\s+vs\.?\s+/i, /\s+\/\s+/, /\s+—\s+/, /\s+vs\s+/i];
+  for (const re of seps) {
+    if (re.test(title)) {
+      const [a, b] = title.split(re);
+      return { left: (a || '').trim(), right: (b || '').trim() };
+    }
+  }
+  // fallback: title vs первое предложение body
+  const firstSent = (body.split(/[.!?]/)[0] || '').trim().slice(0, 40);
+  return { left: title.trim(), right: firstSent || 'NEW' };
+}
+
+function coverTypeSplit(input: RenderSlideInput, tokens: StyleTokens): JSXNode {
+  const { left, right } = splitTitle(input.title, input.body);
+  return el(
+    'div',
+    {
+      position: 'relative',
+      width: SLIDE_W,
+      height: SLIDE_H,
+      display: 'flex',
+      backgroundColor: tokens.bg,
+    },
+    [
+      // Left half
+      el(
+        'div',
+        {
+          width: SLIDE_W / 2,
+          height: SLIDE_H,
+          display: 'flex',
+          flexDirection: 'column',
+          justifyContent: 'center',
+          alignItems: 'center',
+          padding: 56,
+          backgroundColor: tokens.bg,
+        },
+        [
+          el(
+            'div',
+            {
+              fontFamily: tokens.mono,
+              fontSize: 22,
+              letterSpacing: 4,
+              textTransform: 'uppercase',
+              color: tokens.textDim,
+              marginBottom: 16,
+              display: 'flex',
+            },
+            'A',
+          ),
+          el(
+            'div',
+            {
+              fontFamily: tokens.serif,
+              fontWeight: 700,
+              fontSize: 96,
+              lineHeight: 1.0,
+              textAlign: 'center',
+              color: tokens.text,
+              display: 'flex',
+            },
+            left,
+          ),
+        ],
+      ),
+      // Right half — accent-coloured
+      el(
+        'div',
+        {
+          width: SLIDE_W / 2,
+          height: SLIDE_H,
+          display: 'flex',
+          flexDirection: 'column',
+          justifyContent: 'center',
+          alignItems: 'center',
+          padding: 56,
+          backgroundColor: tokens.accent,
+        },
+        [
+          el(
+            'div',
+            {
+              fontFamily: tokens.mono,
+              fontSize: 22,
+              letterSpacing: 4,
+              textTransform: 'uppercase',
+              color: tokens.bg,
+              marginBottom: 16,
+              display: 'flex',
+            },
+            'B',
+          ),
+          el(
+            'div',
+            {
+              fontFamily: tokens.serif,
+              fontWeight: 700,
+              fontSize: 96,
+              lineHeight: 1.0,
+              textAlign: 'center',
+              color: tokens.bg,
+              display: 'flex',
+            },
+            right,
+          ),
+        ],
+      ),
+      // Top + bottom shared bands
+      el(
+        'div',
+        {
+          position: 'absolute',
+          top: 48,
+          left: 56,
+          right: 56,
+          display: 'flex',
+          justifyContent: 'space-between',
+          fontFamily: tokens.mono,
+          fontSize: 22,
+          letterSpacing: 4,
+          textTransform: 'uppercase',
+        },
+        [
+          el('div', { display: 'flex', color: tokens.text }, `${tokens.mark} SPLIT`),
+          el('div', { display: 'flex', color: tokens.bg }, counter(input.index, input.total)),
+        ],
+      ),
+      // body subtitle centered at bottom across both halves
+      el(
+        'div',
+        {
+          position: 'absolute',
+          bottom: 56,
+          left: 56,
+          right: 56,
+          fontFamily: tokens.mono,
+          fontSize: 24,
+          letterSpacing: 3,
+          textTransform: 'uppercase',
+          color: tokens.text,
+          textAlign: 'center',
+          display: 'flex',
+          justifyContent: 'center',
+        },
+        input.body.toUpperCase().slice(0, 80),
+      ),
+    ],
+  );
+}
+
+// ─── UI COVER ──────────────────────────────────────────────────────────
+// Дашборд / скриншот / browser window как hero. Использует mediaDataUri
+// (если есть) внутри chrome-frame с дотами macOS-стиля. Заголовок снизу.
+function coverTypeUI(input: RenderSlideInput, tokens: StyleTokens): JSXNode {
+  const chromeBar = el(
+    'div',
+    {
+      display: 'flex',
+      alignItems: 'center',
+      gap: 8,
+      padding: '12px 18px',
+      backgroundColor: tokens.surface,
+      borderBottom: `1px solid ${tokens.textMute}`,
+    },
+    [
+      el('div', { width: 14, height: 14, borderRadius: 7, backgroundColor: '#FF5F57', display: 'flex' }),
+      el('div', { width: 14, height: 14, borderRadius: 7, backgroundColor: '#FEBC2E', display: 'flex' }),
+      el('div', { width: 14, height: 14, borderRadius: 7, backgroundColor: '#28C840', display: 'flex' }),
+      el(
+        'div',
+        {
+          marginLeft: 16,
+          fontFamily: tokens.mono,
+          fontSize: 18,
+          color: tokens.textDim,
+          display: 'flex',
+        },
+        'persona-studio.app',
+      ),
+    ],
+  );
+
+  const screen: JSXNode = input.mediaDataUri
+    ? el(
+        'img',
+        { width: '100%', height: '100%', objectFit: 'cover' },
+        undefined,
+        { src: input.mediaDataUri },
+      )
+    : el(
+        'div',
+        {
+          width: '100%',
+          height: '100%',
+          display: 'flex',
+          alignItems: 'center',
+          justifyContent: 'center',
+          fontFamily: tokens.mono,
+          fontSize: 80,
+          letterSpacing: 6,
+          color: tokens.accent,
+          backgroundColor: tokens.bg,
+        },
+        '◼ ◼ ◼',
+      );
+
+  return el(
+    'div',
+    {
+      position: 'relative',
+      width: SLIDE_W,
+      height: SLIDE_H,
+      display: 'flex',
+      flexDirection: 'column',
+      backgroundColor: tokens.bg,
+      padding: 56,
+      paddingTop: 130,
+    },
+    [
+      coverTypeHeader(input, tokens, 'UI / SCREEN'),
+      // Browser-window mock
+      el(
+        'div',
+        {
+          width: SLIDE_W - 112,
+          flex: 1,
+          maxHeight: 760,
+          display: 'flex',
+          flexDirection: 'column',
+          border: `2px solid ${tokens.text}`,
+          backgroundColor: tokens.surface,
+          overflow: 'hidden',
+        },
+        [chromeBar, el('div', { flex: 1, display: 'flex' }, screen)],
+      ),
+      // Headline
+      el(
+        'div',
+        { marginTop: 32, display: 'flex', flexDirection: 'column', gap: 14 },
+        [
+          el(
+            'div',
+            {
+              fontFamily: tokens.serif,
+              fontWeight: 700,
+              fontSize: 72,
+              lineHeight: 1.05,
+              letterSpacing: -1,
+              color: tokens.text,
+              display: 'flex',
+            },
+            input.title,
+          ),
+          el(
+            'div',
+            {
+              fontFamily: tokens.serif,
+              fontStyle: 'italic',
+              fontSize: 28,
+              lineHeight: 1.35,
+              color: tokens.textDim,
+              display: 'flex',
+              maxWidth: 880,
+            },
+            input.body,
+          ),
+        ],
       ),
     ],
   );

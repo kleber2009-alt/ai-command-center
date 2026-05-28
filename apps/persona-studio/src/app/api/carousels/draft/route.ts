@@ -90,12 +90,15 @@ export async function POST(req: NextRequest) {
     select: { nicheDescription: true },
   });
 
+  const style = data.style && isValidStyle(data.style) ? data.style : DEFAULT_STYLE;
+
   const splitResult = await splitCaptionIntoSlides({
     niche: cfg?.nicheDescription || '',
     userName: user.name || user.email.split('@')[0] || 'эксперт',
     caption,
     fitWhy,
     slidesCount: data.slidesCount,
+    styleId: style,
   });
   if (!splitResult.ok) {
     return NextResponse.json(
@@ -103,8 +106,6 @@ export async function POST(req: NextRequest) {
       { status: 502 },
     );
   }
-
-  const style = data.style && isValidStyle(data.style) ? data.style : DEFAULT_STYLE;
 
   const draft = await prisma.carouselDraft.create({
     data: {

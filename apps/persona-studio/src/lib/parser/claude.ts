@@ -4,6 +4,11 @@
 
 import { env } from '@/lib/env';
 import type { ScoredPost, RateResult, ClaudeRating } from './types';
+import {
+  buildSlideCopyPrompt,
+  buildSlideRegenPrompt,
+} from '@/lib/carousel/prompts';
+import { DEFAULT_STYLE, isValidStyle, type CarouselStyleId } from '@/lib/carousel/styles';
 
 const ANTHROPIC_API = 'https://api.anthropic.com/v1/messages';
 const MAX_ATTEMPTS = 3;
@@ -259,44 +264,25 @@ export async function splitCaptionIntoSlides(args: {
   caption: string;
   fitWhy?: string | null;
   slidesCount: number;
+  /** Опционально — Style DNA injection. Если не задан, используется DEFAULT_STYLE. */
+  styleId?: string;
 }): Promise<{ ok: true; slides: SlideText[] } | { ok: false; error: string }> {
   if (!isClaudeConfigured()) return { ok: false, error: 'ANTHROPIC_API_KEY missing' };
   const caption = (args.caption || '').trim();
   if (!caption) return { ok: false, error: 'empty caption' };
   const n = Math.max(3, Math.min(20, args.slidesCount));
+  const styleId: CarouselStyleId = isValidStyle(args.styleId || '')
+    ? (args.styleId as CarouselStyleId)
+    : DEFAULT_STYLE;
 
-  const system = `Ты — сценарист Instagram-каруселей для эксперта ${args.userName}.
-
-Ниша эксперта: ${args.niche || 'не указана'}
-
-Тебе показывают «залетевший» пост конкурента. Твоя задача — разбить его на ${n} слайдов карусели, НЕ цитируя оригинал дословно, а перепиcав суть голосом эксперта ${args.userName} под его нишу.
-
-Структура карусели на ${n} слайдов:
-- Слайд 1 = ОБЛОЖКА: провокационный хук-заголовок (2–7 слов в title) + подзаголовок (10–20 слов в body). Должен заставить листать дальше.
-- Слайды 2..${n - 1} = РАСКРЫТИЕ: каждый слайд раскрывает один концепт/инсайт/шаг. title = краткий заголовок (3–6 слов), body = развёрнутая мысль (15–40 слов).
-- Слайд ${n} = CTA: title — действие («Сохрани», «Поделись», «Напиши в комменты»), body — короткое объяснение почему стоит это сделать (10–25 слов).
-
-Верни СТРОГО JSON-массив длины ${n}, без markdown, без преамбулы:
-[
-  { "title": "...", "body": "..." },
-  { "title": "...", "body": "..." },
-  ...
-]
-
-ТРЕБОВАНИЯ:
-- Ровно ${n} объектов.
-- Каждый объект имеет поля title и body, оба непустые.
-- Русский язык, разговорный, без эмодзи и хэштегов.
-- Без markdown в title и body (никаких **жирно**, ## заголовков и т.п.).
-- title — короткий, body — развёрнутый.
-- Не повторяй один и тот же тезис на разных слайдах.`;
-
-  const userMsg = `Оригинальный пост конкурента:
-"""
-${caption.slice(0, 1500)}
-"""${args.fitWhy ? `\n\nКонтекст (зачем переписываем): ${args.fitWhy}` : ''}
-
-Верни JSON-массив из ${n} слайдов:`;
+  const { system, user: userMsg } = buildSlideCopyPrompt({
+    styleId,
+    niche: args.niche,
+    userName: args.userName,
+    slidesCount: n,
+    topic: caption,
+    fitWhy: args.fitWhy ?? null,
+  });
 
   // ~200 input + ~250 output per slide на русском → даём запас 400/слайд + headroom.
   const maxTokens = Math.min(8000, 800 + n * 400);
@@ -335,4 +321,69 @@ ${caption.slice(0, 1500)}
   // Pad/truncate до ровно n — но не вынуждаем Claude'а если он вернул n-1.
   // Лучше отдать что есть и юзер дополнит/удалит в редакторе.
   return { ok: true, slides };
+}
+
+/**
+ * Регенерация ОДНОГО слайда карусели (title + body) с учётом Style DNA и
+ * соседей. Используется кнопкой «✨ Regen» в SlideEditorPane.
+ *
+ * Принимает текущий слайд и опциональный intent ("сделай острее", "добавь
+ * цифру"). Возвращает новый title/body — клиент уже сам сохранит через
+ * PATCH /draft/[id].
+ */
+export async function regenSlideCopy(args: {
+  niche: string;
+  userName: string;
+  styleId: string;
+  slideIndex: number;
+  slidesTotal: number;
+  current: { title: string; body: string };
+  neighbors: {
+    prev?: { title: string; body: string };
+    next?: { title: string; body: string };
+  };
+  intent?: string;
+}): Promise<{ ok: true; title: string; body: string } | { ok: false; error: string }> {
+  if (!isClaudeConfigured()) return { ok: false, error: 'ANTHROPIC_API_KEY missing' };
+
+  const styleId: CarouselStyleId = isValidStyle(args.styleId)
+    ? (args.styleId as CarouselStyleId)
+    : DEFAULT_STYLE;
+
+  const { system, user } = buildSlideRegenPrompt({
+    styleId,
+    niche: args.niche,
+    userName: args.userName,
+    slideIndex: args.slideIndex,
+    slidesTotal: args.slidesTotal,
+    current: args.current,
+    neighbors: args.neighbors,
+    intent: args.intent,
+  });
+
+  const res = await chat(system, user, 1200);
+  if (!res.ok) {
+    return { ok: false, error: `claude ${res.status}: ${res.details.slice(0, 200)}` };
+  }
+
+  let parsed: unknown;
+  try {
+    const cleaned = res.text
+      .replace(/^```(?:json)?\s*/i, '')
+      .replace(/```\s*$/, '')
+      .trim();
+    parsed = JSON.parse(cleaned);
+  } catch (e) {
+    return { ok: false, error: `json parse: ${(e as Error).message}` };
+  }
+  if (!parsed || typeof parsed !== 'object') {
+    return { ok: false, error: 'claude returned non-object' };
+  }
+  const obj = parsed as { title?: unknown; body?: unknown };
+  const title = typeof obj.title === 'string' ? obj.title.trim().slice(0, 120) : '';
+  const body = typeof obj.body === 'string' ? obj.body.trim().slice(0, 500) : '';
+  if (!title || !body) {
+    return { ok: false, error: 'claude returned empty title or body' };
+  }
+  return { ok: true, title, body };
 }

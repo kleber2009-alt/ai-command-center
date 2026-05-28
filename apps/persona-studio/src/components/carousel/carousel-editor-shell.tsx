@@ -81,6 +81,7 @@ export function CarouselEditorShell({ initial, avatars }: Props) {
           body: s.body.trim() || ' ',
           ...(s.accent?.trim() ? { accent: s.accent.trim() } : {}),
           ...(s.image ? { image: s.image } : {}),
+          ...(s.coverType ? { coverType: s.coverType } : {}),
         })),
         coverAvatarId: coverRef.current,
         style: styleRef.current,
@@ -259,6 +260,59 @@ export function CarouselEditorShell({ initial, avatars }: Props) {
   }
 
   /**
+   * AI-регенерация копи (title/body) одного слайда через Claude. Перед
+   * запросом форсируем persist если есть несохранённые изменения, чтобы
+   * сервер видел актуальный slides[i] и соседей. После успеха применяем
+   * результат к локальному state. Сам endpoint уже обновил БД.
+   */
+  async function regenCopy(index: number, intent?: string) {
+    if (dirtyRef.current) {
+      if (timerRef.current) {
+        clearTimeout(timerRef.current);
+        timerRef.current = null;
+      }
+      await persist();
+    }
+    const res = await fetch(
+      `/api/carousels/draft/${initial.id}/slide-regen?index=${index}`,
+      {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ intent: intent ?? '' }),
+      },
+    );
+    const text = await res.text();
+    let json: {
+      slide?: { title?: string; body?: string };
+      slides?: SlideShape[];
+      message?: string;
+      error?: string;
+    } = {};
+    try {
+      json = JSON.parse(text);
+    } catch {
+      /* leave default */
+    }
+    if (!res.ok) {
+      throw new Error(json.message || json.error || `HTTP ${res.status}`);
+    }
+    if (Array.isArray(json.slides)) {
+      setSlides(json.slides);
+    } else if (json.slide?.title && json.slide?.body) {
+      const newSlide = json.slide;
+      setSlides((prev) =>
+        prev.map((s, i) =>
+          i === index ? { ...s, title: newSlide.title!, body: newSlide.body! } : s,
+        ),
+      );
+    }
+    // Server уже сохранил в БД — снимаем dirty-флаг и показываем «сохранено».
+    dirtyRef.current = false;
+    setSaveStatus('saved');
+    setSavedAt(new Date().toLocaleTimeString('ru-RU'));
+  }
+
+  /**
    * Перерендер ОДНОГО слайда без перезаписи остальных PNG'ов. Перед
    * запросом форсируем persist если есть несохранённые изменения, чтобы
    * сервер взял свежий текст слайда из БД.
@@ -345,6 +399,7 @@ export function CarouselEditorShell({ initial, avatars }: Props) {
               onCoverAvatarChange={changeCoverAvatar}
               onDuplicate={() => duplicateSlide(activeIndex)}
               onRemove={() => removeSlide(activeIndex)}
+              onRegenCopy={(intent) => regenCopy(activeIndex, intent)}
             />
           ) : (
             <div className="border border-border bg-surface p-6 text-text-mute mono text-[11px]">

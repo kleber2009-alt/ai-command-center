@@ -7,6 +7,7 @@ import { z } from 'zod';
 import { getCurrentUserOrApiKey } from '@/lib/auth';
 import { prisma } from '@/lib/prisma';
 import { isValidStyle } from '@/lib/carousel/styles';
+import { COVER_TYPES } from '@/lib/carousel/prompts';
 
 export const runtime = 'nodejs';
 
@@ -15,6 +16,7 @@ const SlideSchema = z.object({
   body: z.string().min(1).max(500),
   accent: z.string().max(120).optional(),
   image: z.string().url().max(500).optional(),
+  coverType: z.enum(COVER_TYPES).optional(),
 });
 
 const PatchBody = z.object({

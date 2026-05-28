@@ -23,7 +23,15 @@ import { GetObjectCommand } from '@aws-sdk/client-s3';
 export const runtime = 'nodejs';
 export const maxDuration = 120;
 
-type SlideJson = { title: string; body: string; accent?: string; image?: string };
+import { isValidCoverType, type CoverType } from '@/lib/carousel/prompts';
+
+type SlideJson = {
+  title: string;
+  body: string;
+  accent?: string;
+  image?: string;
+  coverType?: CoverType;
+};
 
 const slideKindFor = (index: number, total: number): SlideKind => {
   if (index === 0) return 'cover';
@@ -128,10 +136,20 @@ export async function POST(req: NextRequest, ctx: { params: Promise<{ id: string
     const renderOne = async (i: number): Promise<string> => {
       const s = slides[i];
       const kind = slideKindFor(i, slides.length);
-      // Media (фото/скриншот/mockup) — только для non-cover слайдов.
-      // Cover-место занимает avatar.
-      const mediaUri =
-        kind !== 'cover' && s.image ? await avatarToDataUri(s.image) : null;
+      const coverType = isValidCoverType(s.coverType) ? s.coverType : undefined;
+      // Cover-слайд: для type=avatar (или undefined) хочется аватар-фон.
+      // Для object/ui — фотка-скриншот из s.image (если есть) идёт как
+      // mediaDataUri внутрь shared cover-type рендера. Split — без медиа.
+      // Reveal/CTA — старое поведение: media из s.image внизу карточкой.
+      const wantsAvatarBg =
+        kind === 'cover' && (!coverType || coverType === 'avatar');
+      const mediaSource =
+        kind !== 'cover'
+          ? s.image
+          : coverType === 'object' || coverType === 'ui'
+            ? s.image
+            : undefined;
+      const mediaUri = mediaSource ? await avatarToDataUri(mediaSource) : null;
       const png = await renderSlide({
         index: i + 1,
         total: slides.length,
@@ -139,8 +157,9 @@ export async function POST(req: NextRequest, ctx: { params: Promise<{ id: string
         title: s.title.trim(),
         body: s.body.trim(),
         style,
-        avatarDataUri: kind === 'cover' ? avatarUri || undefined : undefined,
+        avatarDataUri: wantsAvatarBg ? avatarUri || undefined : undefined,
         mediaDataUri: mediaUri || undefined,
+        coverType,
       });
       // ?v=<timestamp> чтобы IG/Caddy не закэшировали старую версию по тому
       // же S3-ключу. Ключ остаётся стабильным (один PNG на позицию).
