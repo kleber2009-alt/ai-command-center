@@ -1,5 +1,7 @@
 import Link from 'next/link';
 import { LayoutDashboard, BookOpen, Newspaper, Users, MailCheck } from 'lucide-react';
+import { currentAdmin } from '@/lib/admin-auth';
+import { AdminLogin } from './AdminLogin';
 
 const NAV = [
   { href: '/admin', label: 'Дашборд', icon: LayoutDashboard },
@@ -9,7 +11,14 @@ const NAV = [
   { href: '/admin/leads', label: 'Лиды', icon: MailCheck },
 ];
 
+export const dynamic = 'force-dynamic';
+
 export default function AdminLayout({ children }: { children: React.ReactNode }) {
+  // Gate the whole panel behind an admin session (spec 6).
+  if (!currentAdmin()) {
+    return <AdminLogin />;
+  }
+
   return (
     <div className="flex min-h-screen bg-neutral-50 text-neutral-900">
       <aside className="w-60 shrink-0 border-r border-neutral-200 bg-white p-4">

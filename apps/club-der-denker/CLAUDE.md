@@ -57,7 +57,11 @@ scrypt + signed tokens in the scaffold — swap for Auth.js/Supabase Auth in pro
 
 ## Status
 
-**Scaffold** (structure + verified engine + API/admin/mobile skeletons). Not yet
-deployed; not in Command Center. See `README.md` for run steps and the
-open TODOs (real IAP verification, social auth, cron inactivity sweep, asset
-storage, deploy).
+**Scaffold** (structure + verified engine + working API/admin/mobile). The admin
+panel is functional (cookie-gated login, content/posts/users CRUD), the
+inactivity-sweep cron is wired (`/api/cron/inactivity-sweep`), and the backend
+ships a Dockerfile + compose (`DEPLOY.md`). Production build passes.
+
+Remaining before prod (see `README.md`): real IAP receipt verification, social
+auth, media/asset storage, production auth provider, Command Center + CI.
+Not yet deployed; not in Command Center.

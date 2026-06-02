@@ -93,6 +93,7 @@ export async function POST(req: NextRequest) {
       joker_available: streak.jokerAvailable,
       joker_used: streak.jokerUsed,
       last_active_day: today,
+      last_tz: tz,
     })
     .eq('id', auth.userId);
 

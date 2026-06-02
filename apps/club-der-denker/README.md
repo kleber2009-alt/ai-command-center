@@ -65,16 +65,33 @@ npm install
 npm start                         # Expo dev server; press i / a for iOS / Android
 ```
 
+## Admin panel
+
+Gated by a signed httpOnly session cookie (`src/lib/admin-auth.ts`). The first
+admin is bootstrapped from `ADMIN_EMAIL` / `ADMIN_PASSWORD` on first login and
+persisted to `cdd_admins`. Functional sections:
+
+- **Контент курса** — interactive 28×4 grid; edit body + 3-4 options per locale.
+- **Лента сообщества** — create / publish / delete posts per locale.
+- **Пользователи** — list + block / unblock.
+- **Лиды / Дашборд** — conversion overview.
+
+Admin CRUD API: `/api/admin/{login,logout,items,posts,users}`.
+
+## Deploy
+
+See `backend/DEPLOY.md`. Dockerfile + `docker-compose.yml` build a standalone
+Next server on `:3020`. The inactivity sweep runs via cron hitting
+`POST /api/cron/inactivity-sweep` hourly (guarded by `CRON_SECRET`).
+
 ## Open TODOs before production
 
 - Real Apple App Store Server API + Google Play Developer API receipt
   verification (JWS / Pub/Sub) in `lib/engine/iap.ts` + webhook routes.
 - Social auth (Google / Apple Sign-In) provider routes.
-- Cron **inactivity sweep** at each user's local midnight (`streak.applyInactivitySweep`).
 - Media/asset storage for item images/videos (bucket + signed URLs).
 - Swap the scaffold auth (scrypt + signed token) for Auth.js / Supabase Auth.
-- Admin CRUD wiring (`/api/admin/*`) behind admin auth.
-- Dockerfile + compose + Caddy route for deploy.
+- Wire the app into Command Center + a CI deploy workflow.
 
 See `ARCHITECTURE.md` for the full design rationale and `CLAUDE.md` for the
 orientation/rules summary.
