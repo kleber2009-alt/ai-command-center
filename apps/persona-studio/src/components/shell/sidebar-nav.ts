@@ -59,6 +59,7 @@ export const SIDEBAR_SECTIONS: SidebarSection[] = [
     label: 'Discover',
     key: 'discover',
     items: [
+      { href: '/research', label: 'Research', key: 'disc-research', hint: 'niche-based viral hunt' },
       { href: '/parser', label: 'Viral Posts', key: 'disc-viral' },
       { href: '/parser', label: 'Competitor Radar', key: 'disc-radar' },
       { href: '/parser', label: 'Trends', key: 'disc-trends' },
