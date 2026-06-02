@@ -43,6 +43,8 @@ model User {
   researchPageAnalyses ResearchPageAnalysis[]
   researchFavorites    ResearchFavorite[]
   researchWatchlist    ResearchWatchlist[]
+  researchFolders      ResearchFolder[]
+  researchRadars       ResearchRadar[]
 }
 
 // API key для интеграции Persona Studio в сторонние проекты.
@@ -649,6 +651,61 @@ model ResearchSearch {
   createdAt     DateTime @default(now())
 
   @@index([userId, createdAt])
+}
+
+// Папки/проекты пользователя (ТЗ §10). Один из 3 типов:
+//   - bloggers → folder_items.itemType='author', itemId=ResearchAuthor.id
+//   - videos   → folder_items.itemType='reel',   itemId=ResearchReel.id
+//   - ideas    → folder_items.itemType='idea',   itemId=произвольный string
+//     (например, slug recommendation'а из ResearchAnalysis или текст идеи)
+model ResearchFolder {
+  id        String   @id @default(cuid())
+  userId    String
+  user      User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+  name      String
+  type      String // bloggers | videos | ideas
+  createdAt DateTime @default(now())
+
+  items ResearchFolderItem[]
+
+  @@index([userId, type])
+}
+
+model ResearchFolderItem {
+  id        String         @id @default(cuid())
+  folderId  String
+  folder    ResearchFolder @relation(fields: [folderId], references: [id], onDelete: Cascade)
+  itemType  String // author | reel | idea
+  itemId    String
+  note      String? // для idea — текст идеи; для других — заметка
+  createdAt DateTime       @default(now())
+
+  @@unique([folderId, itemType, itemId])
+  @@index([folderId, createdAt])
+}
+
+// Радар — сохранённый поисковый запрос (ниша + фильтры), который cron
+// перезапускает по расписанию и копит новые выбросы. Связь с
+// ResearchSearch выдачей — через journal-таблицу (последний run).
+model ResearchRadar {
+  id            String    @id @default(cuid())
+  userId        String
+  user          User      @relation(fields: [userId], references: [id], onDelete: Cascade)
+  niche         String
+  filters       Json
+  // Интервал перезапуска в часах (24 = раз в сутки). n8n/BullMQ cron
+  // фильтрует по (now - lastRunAt) > interval.
+  intervalHrs   Int       @default(24)
+  enabled       Boolean   @default(true)
+  lastRunAt     DateTime?
+  // Последняя замеченная выдача — массив ResearchReel.id из последнего
+  // run'а. Используется UI для подсветки "что нового по сравнению с
+  // предыдущим run'ом".
+  lastResultIds String[]  @default([])
+  createdAt     DateTime  @default(now())
+
+  @@index([userId, createdAt])
+  @@index([enabled, lastRunAt])
 }
 
 // Per-item override for the left sidebar. Absence = visible (default).
