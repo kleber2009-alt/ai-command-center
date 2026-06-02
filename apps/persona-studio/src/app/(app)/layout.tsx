@@ -4,7 +4,7 @@ import { Sidebar } from '@/components/shell/sidebar';
 import { TopActionBar } from '@/components/shell/top-action-bar';
 import { AIDirectorBar } from '@/components/shell/ai-director-bar';
 import { getHiddenSidebarKeys } from '@/lib/sidebar-overrides';
-import { getLocale } from '@/lib/i18n';
+import { getLocale } from '@/lib/i18n-server';
 
 export default async function AppLayout({ children }: { children: React.ReactNode }) {
   const user = await getCurrentUser();

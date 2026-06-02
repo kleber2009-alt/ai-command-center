@@ -7,8 +7,10 @@
 // English is the canonical key; Russian is the translation. If a key is
 // missing from RU_DICT we fall back to the key itself, so the UI never
 // shows an empty string.
-
-import { cookies } from 'next/headers';
+//
+// This module is import-safe from both server and client components. The
+// `getLocale()` helper that reads cookies lives in `i18n-server.ts` so
+// `next/headers` doesn't leak into the client bundle.
 
 export type Locale = 'ru' | 'en';
 export const LOCALE_COOKIE = 'persona-locale';
@@ -108,12 +110,6 @@ const RU_DICT: Record<string, string> = {
 export function t(key: string, locale: Locale): string {
   if (locale === 'en') return key;
   return RU_DICT[key] ?? key;
-}
-
-export async function getLocale(): Promise<Locale> {
-  const store = await cookies();
-  const value = store.get(LOCALE_COOKIE)?.value;
-  return value === 'en' ? 'en' : 'ru';
 }
 
 export function isLocale(value: unknown): value is Locale {
