@@ -1,0 +1,75 @@
+{
+  "folders": [
+    { "path": "backend", "name": "🖥️ backend (API + admin)" },
+    { "path": "mobile", "name": "📱 mobile (Expo)" },
+    { "path": "supabase", "name": "🗄️ supabase (migrations)" },
+    { "path": "../../landings/club-der-denker", "name": "🌐 landing" }
+  ],
+  "settings": {
+    "editor.formatOnSave": true,
+    "editor.defaultFormatter": "esbenp.prettier-vscode",
+    "editor.codeActionsOnSave": { "source.fixAll.eslint": "explicit" },
+    "eslint.workingDirectories": [
+      { "directory": "backend", "changeProcessCWD": true },
+      { "directory": "mobile", "changeProcessCWD": true }
+    ],
+    "typescript.tsdk": "backend/node_modules/typescript/lib",
+    "typescript.enablePromptUseWorkspaceTsdk": true,
+    "files.exclude": {
+      "**/node_modules": true,
+      "**/.next": true,
+      "**/.expo": true,
+      "**/.turbo": true
+    },
+    "search.exclude": {
+      "**/node_modules": true,
+      "**/package-lock.json": true,
+      "**/.next": true,
+      "**/.expo": true
+    },
+    "tailwindCSS.experimental.classRegex": [["cva\\(([^)]*)\\)", "[\"'`]([^\"'`]*).*?[\"'`]"]]
+  },
+  "extensions": {
+    "recommendations": [
+      "dbaeumer.vscode-eslint",
+      "esbenp.prettier-vscode",
+      "bradlc.vscode-tailwindcss",
+      "expo.vscode-expo-tools",
+      "ms-azuretools.vscode-docker",
+      "github.vscode-github-actions"
+    ]
+  },
+  "tasks": {
+    "version": "2.0.0",
+    "tasks": [
+      {
+        "label": "backend: dev (:3020)",
+        "type": "shell",
+        "command": "npm run dev",
+        "options": { "cwd": "${workspaceFolder:🖥️ backend (API + admin)}" },
+        "problemMatcher": []
+      },
+      {
+        "label": "backend: typecheck",
+        "type": "shell",
+        "command": "npm run typecheck",
+        "options": { "cwd": "${workspaceFolder:🖥️ backend (API + admin)}" },
+        "problemMatcher": ["$tsc"]
+      },
+      {
+        "label": "backend: test (engine)",
+        "type": "shell",
+        "command": "npm test",
+        "options": { "cwd": "${workspaceFolder:🖥️ backend (API + admin)}" },
+        "problemMatcher": []
+      },
+      {
+        "label": "mobile: start (Expo)",
+        "type": "shell",
+        "command": "npm start",
+        "options": { "cwd": "${workspaceFolder:📱 mobile (Expo)}" },
+        "problemMatcher": []
+      }
+    ]
+  }
+}
