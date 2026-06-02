@@ -405,3 +405,11 @@ model CryptoInvoice {
   @@index([userId, createdAt])
   @@index([invoiceId])
 }
+
+// Per-item override for the left sidebar. Absence = visible (default).
+// Only items the admin toggled off are stored here with `hidden = true`.
+model SidebarItemOverride {
+  itemKey   String   @id
+  hidden    Boolean  @default(false)
+  updatedAt DateTime @updatedAt
+}

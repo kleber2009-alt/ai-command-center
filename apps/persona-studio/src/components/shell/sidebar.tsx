@@ -10,6 +10,7 @@ type Props = {
   balance: number;
   isAdmin: boolean;
   plan?: string;
+  hiddenKeys?: string[];
 };
 
 function isActive(pathname: string, item: SidebarItem): boolean {
@@ -21,9 +22,14 @@ function isActive(pathname: string, item: SidebarItem): boolean {
   return pathname === base || pathname.startsWith(base + '/');
 }
 
-export function Sidebar({ email, balance, isAdmin, plan = 'Pro' }: Props) {
+export function Sidebar({ email, balance, isAdmin, plan = 'Pro', hiddenKeys = [] }: Props) {
   const pathname = usePathname() || '';
   const [open, setOpen] = useState(false);
+
+  const hidden = new Set(hiddenKeys);
+  const visibleSections = SIDEBAR_SECTIONS
+    .map((s) => ({ ...s, items: s.items.filter((i) => !hidden.has(i.key)) }))
+    .filter((s) => s.items.length > 0);
 
   return (
     <>
@@ -74,7 +80,7 @@ export function Sidebar({ email, balance, isAdmin, plan = 'Pro' }: Props) {
 
         {/* nav body */}
         <nav className="flex-1 overflow-y-auto px-3 py-5 space-y-5">
-          {SIDEBAR_SECTIONS.map((section) => (
+          {visibleSections.map((section) => (
             <div key={section.key}>
               {section.key !== 'home' && (
                 <div className="px-3 mb-1.5 mono text-[9px] tracking-[0.28em] uppercase text-text-muted">

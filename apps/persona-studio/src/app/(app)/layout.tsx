@@ -3,10 +3,13 @@ import { getCurrentUser, signOut } from '@/lib/auth';
 import { Sidebar } from '@/components/shell/sidebar';
 import { TopActionBar } from '@/components/shell/top-action-bar';
 import { AIDirectorBar } from '@/components/shell/ai-director-bar';
+import { getHiddenSidebarKeys } from '@/lib/sidebar-overrides';
 
 export default async function AppLayout({ children }: { children: React.ReactNode }) {
   const user = await getCurrentUser();
   if (!user) redirect('/sign-in');
+
+  const hiddenSidebarKeys = await getHiddenSidebarKeys();
 
   async function doSignOut() {
     'use server';
@@ -20,6 +23,7 @@ export default async function AppLayout({ children }: { children: React.ReactNod
         balance={user.tokenBalance}
         isAdmin={user.role === 'admin'}
         plan={user.plan ?? 'Pro'}
+        hiddenKeys={hiddenSidebarKeys}
       />
 
       <div className="shell-main">

@@ -2,6 +2,8 @@ import { redirect } from 'next/navigation';
 import { getCurrentAdmin } from '@/lib/auth';
 import { prisma } from '@/lib/prisma';
 import { AdminUsersPanel } from '@/components/admin-users';
+import { AdminSidebarPanel } from '@/components/admin-sidebar-panel';
+import { getSidebarOverviewWithState } from '@/lib/sidebar-overrides';
 import { formatDate } from '@/lib/utils';
 
 export const dynamic = 'force-dynamic';
@@ -11,7 +13,7 @@ export default async function AdminPage() {
   const admin = await getCurrentAdmin();
   if (!admin) redirect('/dashboard');
 
-  const [users, totals, recentTx] = await Promise.all([
+  const [users, totals, recentTx, sidebarItems] = await Promise.all([
     prisma.user.findMany({
       orderBy: { createdAt: 'desc' },
       take: 100,
@@ -38,6 +40,7 @@ export default async function AdminPage() {
       take: 15,
       include: { user: { select: { email: true } } },
     }),
+    getSidebarOverviewWithState(),
   ]);
 
   const [avatarCount, coverCount, videoCount, processingCount] = await Promise.all([
@@ -82,6 +85,15 @@ export default async function AdminPage() {
       <section>
         <div className="flex items-baseline gap-3 mb-3">
           <span className="sec-num">/02</span>
+          <span className="sec-title">Sidebar — управление пунктами меню</span>
+          <span className="flex-1 border-b border-border translate-y-[-3px]" />
+        </div>
+        <AdminSidebarPanel initialItems={sidebarItems} />
+      </section>
+
+      <section>
+        <div className="flex items-baseline gap-3 mb-3">
+          <span className="sec-num">/03</span>
           <span className="sec-title">Recent token transactions</span>
           <span className="flex-1 border-b border-border translate-y-[-3px]" />
         </div>
