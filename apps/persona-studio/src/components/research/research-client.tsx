@@ -5,7 +5,6 @@
 // чипы синонимов от Claude, баннер свежести, фильтры/сортировки,
 // верхний агрегатор по выборке.
 
-import Link from 'next/link';
 import { useState, useTransition } from 'react';
 import { ResearchReelCard } from './research-reel-card';
 import { ResearchTable } from './research-table';
@@ -188,13 +187,27 @@ export function ResearchClient() {
             </div>
           )}
 
-          {/* Freshness banner */}
+          {/* Freshness banner + add to radar */}
           {result && (
-            <div className="border-l-2 border-cyan bg-cyan/5 px-3 py-2 font-serif italic text-[12.5px] text-text-dim leading-snug">
-              {result.cacheHit
-                ? 'Результаты из недавнего поиска. Жми «Обновить» чтобы пересобрать с нуля.'
-                : 'Ролики собраны напрямую из поиска Instagram — актуальны и продвигаются прямо сейчас.'}
+            <div className="flex flex-wrap gap-2 items-center pt-1">
+              <div className="flex-1 min-w-[300px] border-l-2 border-cyan bg-cyan/5 px-3 py-2 font-serif italic text-[12.5px] text-text-dim leading-snug">
+                {result.cacheHit
+                  ? 'Результаты из недавнего поиска. Жми «Обновить» чтобы пересобрать с нуля.'
+                  : 'Ролики собраны напрямую из поиска Instagram — актуальны и продвигаются прямо сейчас.'}
+              </div>
+              <button
+                type="button"
+                onClick={addToRadar}
+                disabled={pendingRadar}
+                className="btn-ghost text-[10px] tracking-widest uppercase whitespace-nowrap"
+                title="Сохранить нишу как радар — cron будет обновлять её раз в сутки"
+              >
+                {pendingRadar ? '…' : '+ В радар'}
+              </button>
             </div>
+          )}
+          {radarMsg && (
+            <div className="mono text-[10px] tracking-wider text-lime">{radarMsg}</div>
           )}
 
           {error && (
@@ -204,6 +217,39 @@ export function ResearchClient() {
           )}
         </form>
       </section>
+
+      {/* Niche aggregate summary (Module 4) */}
+      {result?.nicheSummary && (
+        <section className="border border-gold/40 bg-gold/5 p-5 grid gap-3">
+          <div className="flex items-baseline justify-between gap-3 flex-wrap">
+            <h2 className="mono text-[10px] tracking-widest uppercase text-gold">
+              Паттерны ниши «{result.niche}»
+            </h2>
+            <span className="mono text-[9px] tracking-widest uppercase text-text-mute">
+              Claude · по топ-{result.reels.length} рилсам
+            </span>
+          </div>
+          <p className="font-serif text-[15px] leading-relaxed text-text">
+            {result.nicheSummary.summary}
+          </p>
+          <div className="grid sm:grid-cols-3 gap-3 pt-1">
+            {result.nicheSummary.dominant_hooks.length > 0 && (
+              <SummaryChipBox title="Доминирующие хуки" items={result.nicheSummary.dominant_hooks} tone="lime" />
+            )}
+            {result.nicheSummary.dominant_formats.length > 0 && (
+              <SummaryChipBox title="Форматы" items={result.nicheSummary.dominant_formats} tone="cyan" />
+            )}
+            {result.nicheSummary.dominant_topics.length > 0 && (
+              <SummaryChipBox title="Темы" items={result.nicheSummary.dominant_topics} tone="text" />
+            )}
+          </div>
+          {result.nicheSummary.duration_band && (
+            <div className="mono text-[10px] tracking-widest uppercase text-text-mute">
+              Длительность: <span className="text-text">{result.nicheSummary.duration_band}</span>
+            </div>
+          )}
+        </section>
+      )}
 
       {/* Filters + aggregate */}
       {result && (
@@ -240,6 +286,42 @@ export function ResearchClient() {
             <Aggregate label="ΣПРОСМ" value={aggregates.sumViews} />
             <Aggregate label="ΣЛАЙКИ" value={aggregates.sumLikes} />
             <Aggregate label="ΣКОММ" value={aggregates.sumComments} />
+            <div className="flex gap-1">
+              <button
+                type="button"
+                onClick={() => setView('cards')}
+                className={`px-2 py-1 mono text-[10px] tracking-widest uppercase border ${
+                  view === 'cards' ? 'border-gold text-gold' : 'border-border text-text-mute hover:text-text'
+                }`}
+              >
+                Карточки
+              </button>
+              <button
+                type="button"
+                onClick={() => setView('table')}
+                className={`px-2 py-1 mono text-[10px] tracking-widest uppercase border ${
+                  view === 'table' ? 'border-gold text-gold' : 'border-border text-text-mute hover:text-text'
+                }`}
+              >
+                Таблица
+              </button>
+            </div>
+            <div className="flex gap-1">
+              <button
+                type="button"
+                onClick={() => exportData('csv')}
+                className="btn-ghost text-[10px] tracking-widest uppercase"
+              >
+                CSV
+              </button>
+              <button
+                type="button"
+                onClick={() => exportData('json')}
+                className="btn-ghost text-[10px] tracking-widest uppercase"
+              >
+                JSON
+              </button>
+            </div>
             <button
               type="button"
               onClick={() => submit(undefined, { force: true })}
@@ -275,12 +357,16 @@ export function ResearchClient() {
         </section>
       )}
 
-      {displayed.length > 0 && (
+      {displayed.length > 0 && view === 'cards' && (
         <section className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-0.5 bg-border-soft">
           {displayed.map((reel) => (
             <ResearchReelCard key={reel.id} reel={reel} />
           ))}
         </section>
+      )}
+
+      {displayed.length > 0 && view === 'table' && (
+        <ResearchTable reels={displayed} />
       )}
 
       {/* Stats footer */}
@@ -331,6 +417,35 @@ function Aggregate({ label, value }: { label: string; value: number }) {
     <div className="grid gap-0.5 text-right">
       <span className="mono text-[8px] tracking-widest uppercase text-text-mute">{label}</span>
       <span className="font-serif text-[16px] text-text leading-none">{formatCount(value)}</span>
+    </div>
+  );
+}
+
+function SummaryChipBox({
+  title,
+  items,
+  tone,
+}: {
+  title: string;
+  items: string[];
+  tone: 'lime' | 'cyan' | 'text';
+}) {
+  const chipCls =
+    tone === 'lime'
+      ? 'border-lime/40 text-lime'
+      : tone === 'cyan'
+        ? 'border-cyan/40 text-cyan'
+        : 'border-border text-text';
+  return (
+    <div className="grid gap-1.5">
+      <span className="mono text-[9px] tracking-widest uppercase text-text-mute">{title}</span>
+      <div className="flex flex-wrap gap-1.5">
+        {items.map((it) => (
+          <span key={it} className={`px-2 py-1 border mono text-[10px] tracking-wider ${chipCls}`}>
+            {it}
+          </span>
+        ))}
+      </div>
     </div>
   );
 }
