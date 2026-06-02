@@ -1,6 +1,7 @@
 import { useEffect, useState, useCallback } from 'react';
 import { FlatList, View, Text, Image, StyleSheet } from 'react-native';
 import { Screen, Loading, Button, Heading } from '@/components/ui';
+import { useIAP } from '@/iap/useIAP';
 import { i18n, t } from '@/i18n';
 import { api } from '@/api/client';
 import { colors, radii, spacing, typography } from '@/theme';
@@ -31,6 +32,9 @@ export function FeedScreen() {
       .finally(() => setLoading(false));
   }, []);
 
+  // Subscribing (authenticated) verifies inline; reload the feed on success.
+  const { busy, subscribeCommunity } = useIAP(() => load());
+
   useEffect(() => {
     load();
   }, [load]);
@@ -42,7 +46,7 @@ export function FeedScreen() {
       <Screen>
         <View style={styles.center}>
           <Heading>{t('feed_locked_title')}</Heading>
-          <Button label={t('subscribe_community')} onPress={() => { /* TODO(IAP): subscription purchase */ }} />
+          <Button label={t('subscribe_community')} loading={busy} onPress={subscribeCommunity} />
         </View>
       </Screen>
     );

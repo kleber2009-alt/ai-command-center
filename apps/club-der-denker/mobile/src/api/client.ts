@@ -42,6 +42,13 @@ export const api = {
     request<{ token: string }>(`/api/auth/login`, { method: 'POST', body: JSON.stringify({ email, password }) }),
   socialSignIn: (provider: 'apple' | 'google', identityToken: string) =>
     request<{ token: string }>(`/api/auth/social`, { method: 'POST', body: JSON.stringify({ provider, identityToken }) }),
+  verifyApple: (jws: string) =>
+    request<{ product: string; status: string }>(`/api/iap/verify`, { method: 'POST', body: JSON.stringify({ platform: 'apple', jws }) }),
+  verifyGoogle: (productId: string, purchaseToken: string, isSubscription: boolean) =>
+    request<{ product: string; status: string }>(`/api/iap/verify`, {
+      method: 'POST',
+      body: JSON.stringify({ platform: 'google', productId, purchaseToken, isSubscription }),
+    }),
   today: (locale: string) =>
     request<{ locked: boolean; items: any[]; dayIndex: number }>(`/api/course/today?tz=${encodeURIComponent(deviceTimeZone())}&locale=${locale}`),
   answer: (itemId: string, selectedKey: string) =>

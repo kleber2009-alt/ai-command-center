@@ -1,9 +1,10 @@
-import { useState } from 'react';
+import { useState, useCallback } from 'react';
 import { View, Text, TextInput, TouchableOpacity, StyleSheet, Alert } from 'react-native';
 import type { NativeStackScreenProps } from '@react-navigation/native-stack';
 import { Screen, Button, Heading } from '@/components/ui';
 import { api } from '@/api/client';
 import { useSession } from '@/store/SessionContext';
+import { appleAvailable, appleSignIn, useGoogleAuth } from '@/auth/social';
 import { t } from '@/i18n';
 import { colors, radii, spacing, typography } from '@/theme';
 import type { FunnelStackParamList } from '@/navigation';
@@ -20,6 +21,20 @@ export function LoginScreen({ navigation }: Props) {
   const [password, setPassword] = useState('');
   const [busy, setBusy] = useState(false);
 
+  const exchange = useCallback(
+    async (provider: 'apple' | 'google', idToken: string) => {
+      try {
+        const { token } = await api.socialSignIn(provider, idToken);
+        await signIn(token);
+      } catch (e: any) {
+        Alert.alert(t('error_generic'), e.message);
+      }
+    },
+    [signIn],
+  );
+
+  const { promptGoogle } = useGoogleAuth((idToken) => exchange('google', idToken));
+
   async function submit() {
     setBusy(true);
     try {
@@ -32,10 +47,13 @@ export function LoginScreen({ navigation }: Props) {
     }
   }
 
-  async function social(provider: 'apple' | 'google') {
-    // TODO(social auth): obtain the native identity token via
-    // expo-apple-authentication / expo-auth-session, then exchange it here.
-    Alert.alert(provider === 'apple' ? 'Apple' : 'Google', t('error_generic'));
+  async function onApple() {
+    try {
+      const idToken = await appleSignIn();
+      await exchange('apple', idToken);
+    } catch (e: any) {
+      if (e?.code !== 'ERR_REQUEST_CANCELED') Alert.alert('Apple', e.message ?? t('error_generic'));
+    }
   }
 
   return (
@@ -47,10 +65,12 @@ export function LoginScreen({ navigation }: Props) {
         <Button label={t('login_cta')} loading={busy} onPress={submit} />
 
         <Text style={styles.divider}>{t('or_continue_with')}</Text>
-        <TouchableOpacity style={[styles.social, styles.apple]} onPress={() => social('apple')}>
-          <Text style={styles.socialTextDark}> {t('continue_apple')}</Text>
-        </TouchableOpacity>
-        <TouchableOpacity style={[styles.social, styles.google]} onPress={() => social('google')}>
+        {appleAvailable() ? (
+          <TouchableOpacity style={[styles.social, styles.apple]} onPress={onApple}>
+            <Text style={styles.socialTextDark}> {t('continue_apple')}</Text>
+          </TouchableOpacity>
+        ) : null}
+        <TouchableOpacity style={[styles.social, styles.google]} onPress={() => promptGoogle()}>
           <Text style={styles.socialTextLight}>G  {t('continue_google')}</Text>
         </TouchableOpacity>
       </View>

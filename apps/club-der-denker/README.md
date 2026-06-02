@@ -99,13 +99,33 @@ See `backend/DEPLOY.md`. Dockerfile + `docker-compose.yml` build a standalone
 Next server on `:3020`. The inactivity sweep runs via cron hitting
 `POST /api/cron/inactivity-sweep` hourly (guarded by `CRON_SECRET`).
 
+## Social sign-in & IAP (end-to-end)
+
+- **Social auth** (`/api/auth/social`): verifies Apple/Google OIDC identity
+  tokens against each provider's JWKS (`lib/social-auth.ts`, via `jose`), then
+  resolves by provider subject → email → new lead. Client flow in
+  `mobile/src/auth/social.ts` (expo-apple-authentication + expo-auth-session),
+  wired into the Login screen.
+- **IAP** (`/api/iap/verify`): client-initiated, authenticated receipt
+  validation — Apple StoreKit2 JWS verification + Google Play Developer API
+  (`lib/engine/iap-verify.ts`). Client hook `mobile/src/iap/useIAP.ts` drives
+  the course purchase (Paywall, tied to the lead via `appAccountToken` so the
+  webhook validates pre-account) and the community subscription (Feed). Async
+  store webhooks (`/api/iap/{apple,google,web}`) remain the source of truth.
+
+Required env (see `.env.example`): `APPLE_CLIENT_IDS`, `GOOGLE_CLIENT_IDS`,
+`GOOGLE_PLAY_PACKAGE_NAME`, `GOOGLE_SERVICE_ACCOUNT_JSON`. Mobile client ids /
+SKUs live in `mobile/app.json` → `expo.extra`.
+
 ## Open TODOs before production
 
-- Real Apple App Store Server API + Google Play Developer API receipt
-  verification (JWS / Pub/Sub) in `lib/engine/iap.ts` + webhook routes.
-- Social auth (Google / Apple Sign-In) provider routes.
+- Webhook signature verification for `/api/iap/{apple,google,web}` (the
+  client-initiated `/api/iap/verify` path is implemented; the async notifications
+  still log-only).
+- Apple JWS x5c full chain validation up to Apple's root CA (currently
+  leaf-cert signature verification) in `lib/engine/iap-verify.ts`.
 - Media/asset storage for item images/videos (bucket + signed URLs).
-- Swap the scaffold auth (scrypt + signed token) for Auth.js / Supabase Auth.
+- Swap the scaffold session token for Auth.js / Supabase Auth if desired.
 - Wire the app into Command Center + a CI deploy workflow.
 
 See `ARCHITECTURE.md` for the full design rationale and `CLAUDE.md` for the

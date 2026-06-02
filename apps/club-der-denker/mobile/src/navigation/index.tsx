@@ -28,7 +28,7 @@ export type FunnelStackParamList = {
   Branch: undefined;
   Objection: undefined;
   Email: undefined;
-  Paywall: undefined;
+  Paywall: { leadUserId?: string };
   Register: { email: string };
   Login: undefined;
 };

@@ -1,6 +1,7 @@
 import { View, Text, StyleSheet } from 'react-native';
 import type { NativeStackScreenProps } from '@react-navigation/native-stack';
 import { Screen, Button, Heading, Body, Card } from '@/components/ui';
+import { useIAP } from '@/iap/useIAP';
 import { t } from '@/i18n';
 import { colors, spacing, typography } from '@/theme';
 import type { FunnelStackParamList } from '@/navigation';
@@ -10,17 +11,19 @@ type Props = NativeStackScreenProps<FunnelStackParamList, 'Paywall'>;
 /**
  * Step 6 (spec 3.1 / spec 4): product description + sales page, shown only
  * after successful email capture. Purchase uses native IAP (react-native-iap):
- * Product 1 = non-consumable course access. The store receipt is validated by
- * the backend webhook before account creation is allowed.
+ * Product 1 = non-consumable course access, tied to the lead via appAccountToken
+ * so the store webhook validates it. On purchase we proceed to account creation.
  */
 const FEATURES = ['feature_items', 'feature_days', 'feature_community'];
 
-export function PaywallScreen({ navigation }: Props) {
-  async function buy() {
-    // TODO(IAP): react-native-iap requestPurchase(courseSku). On success the
-    // backend receives the Apple/Google webhook and flips course_access->active,
-    // then we proceed to account creation (set password).
-    navigation.replace('Register', { email: '' });
+export function PaywallScreen({ navigation, route }: Props) {
+  const { busy, buyCourse } = useIAP((product) => {
+    // Course bought (validated by webhook for the lead) -> set a password.
+    if (product) navigation.replace('Register', { email: '' });
+  });
+
+  function buy() {
+    buyCourse(route.params?.leadUserId);
   }
 
   return (
@@ -38,7 +41,7 @@ export function PaywallScreen({ navigation }: Props) {
         </Card>
       </View>
       <View style={{ gap: spacing.sm }}>
-        <Button label={t('buy_course')} onPress={buy} />
+        <Button label={t('buy_course')} loading={busy} onPress={buy} />
         <Button label={t('restore')} variant="ghost" onPress={() => navigation.navigate('Login')} />
       </View>
     </Screen>

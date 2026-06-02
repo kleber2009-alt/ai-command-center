@@ -22,7 +22,7 @@ export interface ValidatedReceipt {
   receiptRef: string;
   purchasedAt: Date;
   expiresAt?: Date; // subscriptions only
-  status: 'active' | 'expired' | 'refunded' | 'revoked';
+  status: 'pending' | 'active' | 'expired' | 'refunded' | 'revoked';
 }
 
 /**

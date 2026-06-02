@@ -27,8 +27,8 @@ export function EmailScreen({ navigation }: Props) {
     setBusy(true);
     try {
       const deviceId = await getDeviceId();
-      await api.saveLead(email, deviceId, i18n.locale);
-      navigation.replace('Paywall');
+      const { userId } = await api.saveLead(email, deviceId, i18n.locale);
+      navigation.replace('Paywall', { leadUserId: userId });
     } catch (e: any) {
       Alert.alert(t('error_generic'), e.message);
     } finally {
