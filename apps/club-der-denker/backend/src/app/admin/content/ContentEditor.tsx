@@ -2,6 +2,7 @@
 
 import { useEffect, useState, useCallback } from 'react';
 import { MediaUpload } from '../MediaUpload';
+import { ImportButton } from './ImportButton';
 
 const LOCALES = ['de', 'en', 'ru', 'es', 'fr', 'it'] as const;
 type Locale = (typeof LOCALES)[number];
@@ -51,17 +52,20 @@ export function ContentEditor() {
 
   return (
     <div>
-      <div className="mb-4 flex items-center gap-2">
-        <span className="text-sm text-neutral-500">Локаль:</span>
-        {LOCALES.map((l) => (
-          <button
-            key={l}
-            onClick={() => setLocale(l)}
-            className={`rounded-md px-2 py-1 text-xs ${locale === l ? 'bg-neutral-900 text-white' : 'bg-neutral-100'}`}
-          >
-            {l.toUpperCase()}
-          </button>
-        ))}
+      <div className="mb-4 flex flex-wrap items-center justify-between gap-2">
+        <div className="flex items-center gap-2">
+          <span className="text-sm text-neutral-500">Локаль:</span>
+          {LOCALES.map((l) => (
+            <button
+              key={l}
+              onClick={() => setLocale(l)}
+              className={`rounded-md px-2 py-1 text-xs ${locale === l ? 'bg-neutral-900 text-white' : 'bg-neutral-100'}`}
+            >
+              {l.toUpperCase()}
+            </button>
+          ))}
+        </div>
+        <ImportButton onDone={load} />
       </div>
 
       <div className="grid grid-cols-1 gap-3 md:grid-cols-2 lg:grid-cols-4">

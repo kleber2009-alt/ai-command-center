@@ -3,6 +3,7 @@ import { serviceClient } from '@/lib/supabase/server';
 import { ok, fail } from '@/lib/http';
 import { applyValidatedReceipt, ValidatedReceipt } from '@/lib/engine/iap';
 import { verifyAppleJws, appleTransactionToReceipt } from '@/lib/engine/iap-verify';
+import { log } from '@/lib/logger';
 
 /**
  * POST /api/iap/apple
@@ -46,6 +47,7 @@ export async function POST(req: NextRequest) {
     await logWebhook(db, notification.notificationType, signatureOk, raw);
     return ok({ received: true, applied });
   } catch (e: any) {
+    log.error('apple webhook failed', { signatureOk, err: e.message });
     await logWebhook(db, raw?.notificationType, signatureOk, raw);
     return fail(`apple webhook: ${e.message}`, 400);
   }

@@ -40,6 +40,10 @@ export const api = {
     request<{ token: string }>(`/api/auth/register`, { method: 'POST', body: JSON.stringify({ email, password }) }),
   login: (email: string, password: string) =>
     request<{ token: string }>(`/api/auth/login`, { method: 'POST', body: JSON.stringify({ email, password }) }),
+  forgotPassword: (email: string) =>
+    request<{ sent: boolean }>(`/api/auth/forgot`, { method: 'POST', body: JSON.stringify({ email }) }),
+  resetPassword: (email: string, code: string, password: string) =>
+    request<{ token: string }>(`/api/auth/reset`, { method: 'POST', body: JSON.stringify({ email, code, password }) }),
   socialSignIn: (provider: 'apple' | 'google', identityToken: string) =>
     request<{ token: string }>(`/api/auth/social`, { method: 'POST', body: JSON.stringify({ provider, identityToken }) }),
   verifyApple: (jws: string) =>

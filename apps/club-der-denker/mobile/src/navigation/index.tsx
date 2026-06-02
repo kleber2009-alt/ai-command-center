@@ -10,6 +10,7 @@ import { EmailScreen } from '@/screens/EmailScreen';
 import { PaywallScreen } from '@/screens/PaywallScreen';
 import { RegisterScreen } from '@/screens/RegisterScreen';
 import { LoginScreen } from '@/screens/LoginScreen';
+import { ForgotPasswordScreen } from '@/screens/ForgotPasswordScreen';
 import { CourseScreen } from '@/screens/CourseScreen';
 import { FeedScreen } from '@/screens/FeedScreen';
 import { ProfileScreen } from '@/screens/ProfileScreen';
@@ -31,6 +32,7 @@ export type FunnelStackParamList = {
   Paywall: { leadUserId?: string };
   Register: { email: string };
   Login: undefined;
+  ForgotPassword: undefined;
 };
 
 export type MainTabParamList = {
@@ -53,6 +55,7 @@ function FunnelNavigator() {
       <FunnelStack.Screen name="Paywall" component={PaywallScreen} />
       <FunnelStack.Screen name="Register" component={RegisterScreen} />
       <FunnelStack.Screen name="Login" component={LoginScreen} />
+      <FunnelStack.Screen name="ForgotPassword" component={ForgotPasswordScreen} />
     </FunnelStack.Navigator>
   );
 }

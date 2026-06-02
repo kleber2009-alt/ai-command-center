@@ -44,6 +44,7 @@ const translations: Record<AppLocale, Record<string, string>> = {
     cancel: 'Abbrechen', delete: 'Löschen',
     level_1: 'Gast', level_2: 'Starter', level_3: 'Fortgeschritten', level_4: 'Profi', level_5: 'Meister',
     error_generic: 'Etwas ist schiefgelaufen', error_offline: 'Offline – zwischengespeicherter Inhalt',
+    forgot_link: 'Passwort vergessen?', forgot_title: 'Passwort zurücksetzen', forgot_hint: 'Wir senden dir einen Code per E-Mail.', send_code: 'Code senden', code_sent: 'Code gesendet — prüfe deine E-Mails.', reset_title: 'Neues Passwort', code_label: 'Code', new_password: 'Neues Passwort', reset_cta: 'Passwort speichern',
   },
   en: {
     next: 'Next', continue: 'Continue', back: 'Back',
@@ -69,6 +70,7 @@ const translations: Record<AppLocale, Record<string, string>> = {
     cancel: 'Cancel', delete: 'Delete',
     level_1: 'Guest', level_2: 'Starter', level_3: 'Advanced', level_4: 'Pro', level_5: 'Master',
     error_generic: 'Something went wrong', error_offline: 'Offline – showing cached content',
+    forgot_link: 'Forgot password?', forgot_title: 'Reset password', forgot_hint: 'We will email you a code.', send_code: 'Send code', code_sent: 'Code sent — check your email.', reset_title: 'New password', code_label: 'Code', new_password: 'New password', reset_cta: 'Save password',
   },
   ru: {
     next: 'Далее', continue: 'Продолжить', back: 'Назад',
@@ -94,6 +96,7 @@ const translations: Record<AppLocale, Record<string, string>> = {
     cancel: 'Отмена', delete: 'Удалить',
     level_1: 'Гость', level_2: 'Новичок', level_3: 'Продвинутый', level_4: 'Профи', level_5: 'Мастер',
     error_generic: 'Что-то пошло не так', error_offline: 'Офлайн — показан кеш',
+    forgot_link: 'Забыли пароль?', forgot_title: 'Сброс пароля', forgot_hint: 'Мы отправим код на e-mail.', send_code: 'Отправить код', code_sent: 'Код отправлен — проверьте почту.', reset_title: 'Новый пароль', code_label: 'Код', new_password: 'Новый пароль', reset_cta: 'Сохранить пароль',
   },
   es: {
     next: 'Siguiente', continue: 'Continuar', back: 'Atrás',
@@ -119,6 +122,7 @@ const translations: Record<AppLocale, Record<string, string>> = {
     cancel: 'Cancelar', delete: 'Eliminar',
     level_1: 'Invitado', level_2: 'Principiante', level_3: 'Avanzado', level_4: 'Pro', level_5: 'Maestro',
     error_generic: 'Algo salió mal', error_offline: 'Sin conexión — contenido en caché',
+    forgot_link: '¿Olvidaste la contraseña?', forgot_title: 'Restablecer contraseña', forgot_hint: 'Te enviaremos un código por correo.', send_code: 'Enviar código', code_sent: 'Código enviado — revisa tu correo.', reset_title: 'Nueva contraseña', code_label: 'Código', new_password: 'Nueva contraseña', reset_cta: 'Guardar contraseña',
   },
   fr: {
     next: 'Suivant', continue: 'Continuer', back: 'Retour',
@@ -144,6 +148,7 @@ const translations: Record<AppLocale, Record<string, string>> = {
     cancel: 'Annuler', delete: 'Supprimer',
     level_1: 'Invité', level_2: 'Débutant', level_3: 'Avancé', level_4: 'Pro', level_5: 'Maître',
     error_generic: 'Une erreur est survenue', error_offline: 'Hors ligne — contenu en cache',
+    forgot_link: 'Mot de passe oublié ?', forgot_title: 'Réinitialiser le mot de passe', forgot_hint: 'Nous t’enverrons un code par e-mail.', send_code: 'Envoyer le code', code_sent: 'Code envoyé — vérifie tes e-mails.', reset_title: 'Nouveau mot de passe', code_label: 'Code', new_password: 'Nouveau mot de passe', reset_cta: 'Enregistrer le mot de passe',
   },
   it: {
     next: 'Avanti', continue: 'Continua', back: 'Indietro',
@@ -169,6 +174,7 @@ const translations: Record<AppLocale, Record<string, string>> = {
     cancel: 'Annulla', delete: 'Elimina',
     level_1: 'Ospite', level_2: 'Principiante', level_3: 'Avanzato', level_4: 'Pro', level_5: 'Maestro',
     error_generic: 'Qualcosa è andato storto', error_offline: 'Offline — contenuto in cache',
+    forgot_link: 'Password dimenticata?', forgot_title: 'Reimposta password', forgot_hint: 'Ti invieremo un codice via email.', send_code: 'Invia codice', code_sent: 'Codice inviato — controlla l’email.', reset_title: 'Nuova password', code_label: 'Codice', new_password: 'Nuova password', reset_cta: 'Salva password',
   },
 };
 

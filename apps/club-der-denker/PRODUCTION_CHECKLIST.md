@@ -9,7 +9,11 @@ derived from the *Technisches Lastenheft v1.2*. Legend: ✅ done in repo ·
 ## Stage 1 — Operational hardening (code) ✅
 - ✅ `/api/health` DB-connectivity probe (monitoring + deploy check).
 - ✅ Rate limiting on public endpoints (`leads`, `funnel/event`, `auth/*`).
-- 🚧 Password reset + SMTP (optional — only if email login is offered broadly).
+- ✅ Password reset + SMTP: `/api/auth/forgot` + `/api/auth/reset` (6-digit code,
+      `migration 0005`, `lib/mail.ts`); mobile ForgotPassword screen. Needs
+      `SMTP_URL` / `MAIL_FROM`.
+- ✅ Structured JSON logging (`lib/logger.ts`) wired into IAP webhooks; optional
+      `SENTRY_DSN` for aggregation.
 - 🚧 Signed-URL gated media (optional; conflicts with offline cache).
 
 ## Stage 2 — Infrastructure (ТЗ §2) ⚙️
@@ -49,16 +53,35 @@ App config:
       matching the store products.
 
 ## Stage 5 — Content (ТЗ §3.1/§3.3/§6) 📝
+- ✅ Bulk import tool: admin "Импорт CSV/JSON" → `/api/admin/import` (creates
+      items + upserts per-locale translations). See format below.
 - [ ] 3 free items + practical case + objection copy, all 6 locales.
 - [ ] 112 course items (28×4) with options + feedback, all 6 locales.
 - [ ] Item media (image/video) uploaded via admin.
 - [ ] Product sales page copy (funnel step 6).
 - [ ] Initial community feed posts (optional at launch).
 
+**Import format** (JSON array, or CSV with the same columns):
+```json
+[
+  { "kind": "course", "globalOrder": 1, "locale": "de",
+    "body": "…", "options": [
+      { "key": "a", "label": "…", "feedback": "…" },
+      { "key": "b", "label": "…", "feedback": "…" }
+    ], "mediaUrl": null, "mediaKind": "text" }
+]
+```
+`kind`: `course` (needs `globalOrder` 1–112) · `free` (1–3) · `case`. One row
+per (item, locale). CSV columns: `kind,globalOrder,locale,body,optionsJson,mediaUrl,mediaKind`.
+
 ## Stage 6 — Legal & compliance (ТЗ §5; store rules) ⚙️🚧
-- [ ] Datenschutzerklärung, Impressum, AGB (DE) — link from landing + app.
+- ✅ Datenschutz / Impressum / AGB / Konto-löschen **templates** in
+      `landings/club-der-denker/` (linked from the landing footer) — fill the
+      `[Platzhalter]` with real legal content before publishing.
+- ✅ Public account-deletion page (`konto-loeschen.html`, Apple-required URL);
+      backend `DELETE /api/profile` + in-app Profile flow.
+- [ ] Replace placeholders with binding legal text (provider, contact, dates).
 - [ ] Apple App Privacy + Google Data safety forms.
-- [ ] Public account-deletion path (Apple-required); backend `DELETE /api/profile` ✅.
 - ✅ PCI-DSS by design (no card data; store interfaces only).
 
 ## Stage 7 — QA & release ⚙️

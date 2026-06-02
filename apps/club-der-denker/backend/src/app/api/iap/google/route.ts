@@ -3,6 +3,7 @@ import { serviceClient } from '@/lib/supabase/server';
 import { ok, fail } from '@/lib/http';
 import { applyValidatedReceipt } from '@/lib/engine/iap';
 import { verifyGooglePubSubJwt, verifyGooglePurchase } from '@/lib/engine/iap-verify';
+import { log } from '@/lib/logger';
 
 /**
  * POST /api/iap/google
@@ -52,6 +53,7 @@ export async function POST(req: NextRequest) {
     await logWebhook(db, eventType, signatureOk, raw);
     return ok({ received: true, applied });
   } catch (e: any) {
+    log.error('google webhook failed', { signatureOk, eventType, err: e.message });
     await logWebhook(db, eventType, signatureOk, raw);
     // 401 for auth failures so Pub/Sub retries; 400 otherwise.
     return fail(`google webhook: ${e.message}`, signatureOk ? 400 : 401);

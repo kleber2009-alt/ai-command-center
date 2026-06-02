@@ -63,6 +63,7 @@ export function LoginScreen({ navigation }: Props) {
         <TextInput style={styles.input} placeholder={t('login_email')} placeholderTextColor={colors.textFaint} autoCapitalize="none" keyboardType="email-address" value={email} onChangeText={setEmail} />
         <TextInput style={styles.input} placeholder={t('login_password')} placeholderTextColor={colors.textFaint} secureTextEntry value={password} onChangeText={setPassword} />
         <Button label={t('login_cta')} loading={busy} onPress={submit} />
+        <Text style={styles.forgot} onPress={() => navigation.navigate('ForgotPassword')}>{t('forgot_link')}</Text>
 
         <Text style={styles.divider}>{t('or_continue_with')}</Text>
         {appleAvailable() ? (
@@ -81,6 +82,7 @@ export function LoginScreen({ navigation }: Props) {
 
 const styles = StyleSheet.create({
   input: { ...typography.body, color: colors.text, borderWidth: 1, borderColor: colors.border, borderRadius: radii.md, padding: spacing.md, backgroundColor: colors.surface },
+  forgot: { ...typography.caption, color: colors.accent, textAlign: 'center', paddingVertical: 4 },
   divider: { ...typography.caption, color: colors.textFaint, textAlign: 'center', marginTop: spacing.sm },
   social: { borderRadius: radii.md, paddingVertical: 16, alignItems: 'center', justifyContent: 'center' },
   apple: { backgroundColor: '#ffffff' },
