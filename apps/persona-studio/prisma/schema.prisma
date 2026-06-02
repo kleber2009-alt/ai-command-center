@@ -9,35 +9,35 @@ datasource db {
 
 // ── Auth.js v5 / NextAuth core ──────────────────
 model User {
-  id            String    @id @default(cuid())
-  email         String    @unique
-  emailVerified DateTime?
-  name          String?
-  image         String?
-  tokenBalance  Int       @default(0)
-  plan          String    @default("free") // free | starter | pro | agency
-  role          String    @default("user") // user | admin
-  telegramId    String?   @unique           // numeric TG user id (string for forward-compat), set if logged in via Mini App
-  telegramHandle String?                     // @username at time of TMA login
-  createdAt     DateTime  @default(now())
-  updatedAt     DateTime  @updatedAt
+  id             String    @id @default(cuid())
+  email          String    @unique
+  emailVerified  DateTime?
+  name           String?
+  image          String?
+  tokenBalance   Int       @default(0)
+  plan           String    @default("free") // free | starter | pro | agency
+  role           String    @default("user") // user | admin
+  telegramId     String?   @unique // numeric TG user id (string for forward-compat), set if logged in via Mini App
+  telegramHandle String? // @username at time of TMA login
+  createdAt      DateTime  @default(now())
+  updatedAt      DateTime  @updatedAt
 
-  accounts            Account[]
-  sessions            Session[]
-  uploads             Upload[]
-  avatarGenerations   AvatarGeneration[]
-  avatars             Avatar[]
-  covers              Cover[]
-  videoGenerations    VideoGeneration[]
-  videoEdits          VideoEdit[]
-  tokenTransactions   TokenTransaction[]
-  apiKeys             ApiKey[]
-  cryptoInvoices      CryptoInvoice[]
-  parserConfig        ParserConfig?
-  parserRuns          ParserRun[]
-  parserItems         ParserItem[]
-  carouselDrafts      CarouselDraft[]
-  researchSearches    ResearchSearch[]
+  accounts          Account[]
+  sessions          Session[]
+  uploads           Upload[]
+  avatarGenerations AvatarGeneration[]
+  avatars           Avatar[]
+  covers            Cover[]
+  videoGenerations  VideoGeneration[]
+  videoEdits        VideoEdit[]
+  tokenTransactions TokenTransaction[]
+  apiKeys           ApiKey[]
+  cryptoInvoices    CryptoInvoice[]
+  parserConfig      ParserConfig?
+  parserRuns        ParserRun[]
+  parserItems       ParserItem[]
+  carouselDrafts    CarouselDraft[]
+  researchSearches  ResearchSearch[]
 }
 
 // API key для интеграции Persona Studio в сторонние проекты.
@@ -45,16 +45,16 @@ model User {
 // один раз при создании. Префикс (первые 8 символов) сохраняется для UI,
 // чтобы пользователь мог отличить свои ключи без расшифровки.
 model ApiKey {
-  id          String    @id @default(cuid())
-  userId      String
-  user        User      @relation(fields: [userId], references: [id], onDelete: Cascade)
-  name        String                                    // human label
-  prefix      String                                    // first 8 chars of plaintext, e.g. "ps_a1b2"
-  hashedKey   String    @unique                         // sha256(plaintext)
-  scopes      String    @default("read,write")          // CSV: read | write
-  lastUsedAt  DateTime?
-  revokedAt   DateTime?
-  createdAt   DateTime  @default(now())
+  id         String    @id @default(cuid())
+  userId     String
+  user       User      @relation(fields: [userId], references: [id], onDelete: Cascade)
+  name       String // human label
+  prefix     String // first 8 chars of plaintext, e.g. "ps_a1b2"
+  hashedKey  String    @unique // sha256(plaintext)
+  scopes     String    @default("read,write") // CSV: read | write
+  lastUsedAt DateTime?
+  revokedAt  DateTime?
+  createdAt  DateTime  @default(now())
 
   @@index([userId, createdAt])
   @@index([hashedKey])
@@ -102,13 +102,13 @@ model Upload {
   id        String   @id @default(cuid())
   userId    String
   user      User     @relation(fields: [userId], references: [id], onDelete: Cascade)
-  fileUrl   String                                 // S3 key или signed URL
-  fileType  String                                 // image/jpeg, video/mp4, ...
+  fileUrl   String // S3 key или signed URL
+  fileType  String // image/jpeg, video/mp4, ...
   bytes     Int
   width     Int?
   height    Int?
-  status    String   @default("ready")             // uploading | ready | rejected
-  reason    String?                                // если rejected
+  status    String   @default("ready") // uploading | ready | rejected
+  reason    String? // если rejected
   createdAt DateTime @default(now())
 
   avatarGenerations AvatarGeneration[]
@@ -118,18 +118,18 @@ model Upload {
 
 // Batch — 1 запрос на «создай 10 аватаров»
 model AvatarGeneration {
-  id          String   @id @default(cuid())
+  id          String    @id @default(cuid())
   userId      String
-  user        User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+  user        User      @relation(fields: [userId], references: [id], onDelete: Cascade)
   uploadId    String
-  upload      Upload   @relation(fields: [uploadId], references: [id], onDelete: Cascade)
-  status      String   @default("pending")       // pending | processing | completed | failed | partial
-  tokensCost  Int      @default(10)
-  jobId       String?                            // BullMQ job id
+  upload      Upload    @relation(fields: [uploadId], references: [id], onDelete: Cascade)
+  status      String    @default("pending") // pending | processing | completed | failed | partial
+  tokensCost  Int       @default(10)
+  jobId       String? // BullMQ job id
   errorMsg    String?
   startedAt   DateTime?
   completedAt DateTime?
-  createdAt   DateTime @default(now())
+  createdAt   DateTime  @default(now())
 
   avatars Avatar[]
 
@@ -139,23 +139,23 @@ model AvatarGeneration {
 
 // Каждый из 10 итоговых аватаров
 model Avatar {
-  id             String   @id @default(cuid())
-  userId         String
-  user           User     @relation(fields: [userId], references: [id], onDelete: Cascade)
-  generationId   String
-  generation     AvatarGeneration @relation(fields: [generationId], references: [id], onDelete: Cascade)
-  imageUrl       String                                 // S3 key
-  imageThumbUrl  String?
-  style          String                                 // "luxury-founder" | ...
-  styleLabel     String                                 // "Luxury Founder"
-  status         String   @default("pending")           // pending | done | failed
-  promptUsed     String?  @db.Text
-  selected       Boolean  @default(false)
-  errorMsg       String?
-  createdAt      DateTime @default(now())
+  id            String           @id @default(cuid())
+  userId        String
+  user          User             @relation(fields: [userId], references: [id], onDelete: Cascade)
+  generationId  String
+  generation    AvatarGeneration @relation(fields: [generationId], references: [id], onDelete: Cascade)
+  imageUrl      String // S3 key
+  imageThumbUrl String?
+  style         String // "luxury-founder" | ...
+  styleLabel    String // "Luxury Founder"
+  status        String           @default("pending") // pending | done | failed
+  promptUsed    String?          @db.Text
+  selected      Boolean          @default(false)
+  errorMsg      String?
+  createdAt     DateTime         @default(now())
 
-  videos VideoGeneration[]
-  covers Cover[]
+  videos         VideoGeneration[]
+  covers         Cover[]
   carouselDrafts CarouselDraft[]
 
   @@index([userId, createdAt])
@@ -166,30 +166,30 @@ model Avatar {
 // omnihuman-1.5). Маршрутизация очереди и валидация полей — в
 // src/lib/video-engines.ts.
 model VideoGeneration {
-  id          String   @id @default(cuid())
-  userId      String
-  user        User     @relation(fields: [userId], references: [id], onDelete: Cascade)
-  avatarId    String
-  avatar      Avatar   @relation(fields: [avatarId], references: [id], onDelete: Cascade)
-  engine      String   @default("heygen-v5")         // VideoEngine slug
-  script      String?  @db.Text                      // для engine.inputMode='script'
-  audioUrl    String?                                // synthesized mp3 (OmniHuman) или advanced override
-  language    String   @default("ru")
-  voiceId     String?
-  aspect      String   @default("9:16")              // 9:16 | 1:1 | 16:9
-  quality     String   @default("2k")                 // 1080p | 2k
-  background  String?
-  subtitles   Boolean  @default(true)
-  heygenVersion String @default("V")                 // legacy: V | IV (зеркалит engine.heygenVersion)
-  motionPrompt  String? @db.Text                      // null → MAX_REALISM_MOTION_PROMPT
-  status      String   @default("pending")           // pending | processing | completed | failed
-  engineJobId String?                                // generic remote job id (kie/omnihuman)
-  heygenJobId String?                                // legacy HeyGen video_id
-  videoUrl    String?
-  tokensCost  Int      @default(30)
-  errorMsg    String?
-  createdAt   DateTime @default(now())
-  completedAt DateTime?
+  id            String    @id @default(cuid())
+  userId        String
+  user          User      @relation(fields: [userId], references: [id], onDelete: Cascade)
+  avatarId      String
+  avatar        Avatar    @relation(fields: [avatarId], references: [id], onDelete: Cascade)
+  engine        String    @default("heygen-v5") // VideoEngine slug
+  script        String?   @db.Text // для engine.inputMode='script'
+  audioUrl      String? // synthesized mp3 (OmniHuman) или advanced override
+  language      String    @default("ru")
+  voiceId       String?
+  aspect        String    @default("9:16") // 9:16 | 1:1 | 16:9
+  quality       String    @default("2k") // 1080p | 2k
+  background    String?
+  subtitles     Boolean   @default(true)
+  heygenVersion String    @default("V") // legacy: V | IV (зеркалит engine.heygenVersion)
+  motionPrompt  String?   @db.Text // null → MAX_REALISM_MOTION_PROMPT
+  status        String    @default("pending") // pending | processing | completed | failed
+  engineJobId   String? // generic remote job id (kie/omnihuman)
+  heygenJobId   String? // legacy HeyGen video_id
+  videoUrl      String?
+  tokensCost    Int       @default(30)
+  errorMsg      String?
+  createdAt     DateTime  @default(now())
+  completedAt   DateTime?
 
   edits VideoEdit[]
 
@@ -199,22 +199,22 @@ model VideoGeneration {
 // Submagic-монтаж готового видео. Источник — VideoGeneration.videoUrl,
 // результат — отдельный mp4 с применённым шаблоном / субтитрами.
 model VideoEdit {
-  id                 String   @id @default(cuid())
-  userId             String
-  user               User     @relation(fields: [userId], references: [id], onDelete: Cascade)
-  videoGenerationId  String
-  videoGeneration    VideoGeneration @relation(fields: [videoGenerationId], references: [id], onDelete: Cascade)
-  template           String                                 // hormozi | mrbeast | devin | iman-gadzhi | ali-abdaal | minimal
-  subtitlesEnabled   Boolean  @default(true)                 // Submagic всегда включает субтитры; флаг — для UI
-  subtitleLanguage   String   @default("ru")                // ISO-639-1 (ru | en | es | …)
-  brollsEnabled      Boolean  @default(false)                // Submagic magicBrolls — авто-вставка B-roll кадров
-  submagicProjectId  String?                                // id проекта в Submagic
-  status             String   @default("pending")           // pending | processing | completed | failed
-  resultUrl          String?                                // финальный mp4 в нашем S3
-  tokensCost         Int      @default(15)
-  errorMsg           String?
-  createdAt          DateTime @default(now())
-  completedAt        DateTime?
+  id                String          @id @default(cuid())
+  userId            String
+  user              User            @relation(fields: [userId], references: [id], onDelete: Cascade)
+  videoGenerationId String
+  videoGeneration   VideoGeneration @relation(fields: [videoGenerationId], references: [id], onDelete: Cascade)
+  template          String // hormozi | mrbeast | devin | iman-gadzhi | ali-abdaal | minimal
+  subtitlesEnabled  Boolean         @default(true) // Submagic всегда включает субтитры; флаг — для UI
+  subtitleLanguage  String          @default("ru") // ISO-639-1 (ru | en | es | …)
+  brollsEnabled     Boolean         @default(false) // Submagic magicBrolls — авто-вставка B-roll кадров
+  submagicProjectId String? // id проекта в Submagic
+  status            String          @default("pending") // pending | processing | completed | failed
+  resultUrl         String? // финальный mp4 в нашем S3
+  tokensCost        Int             @default(15)
+  errorMsg          String?
+  createdAt         DateTime        @default(now())
+  completedAt       DateTime?
 
   @@index([userId, createdAt])
   @@index([videoGenerationId])
@@ -222,23 +222,23 @@ model VideoEdit {
 
 // Обложка карусели из выбранного аватара
 model Cover {
-  id         String   @id @default(cuid())
-  userId     String
-  user       User     @relation(fields: [userId], references: [id], onDelete: Cascade)
-  avatarId   String
-  avatar     Avatar   @relation(fields: [avatarId], references: [id], onDelete: Cascade)
-  title      String
-  subtitle   String?
-  cta        String?
-  niche      String?
-  style      String   @default("ai-visionary")
-  aspect     String   @default("4:5")                // 4:5 | 1:1 | 9:16
-  imageUrl   String?
-  status     String   @default("pending")            // pending | processing | completed | failed
-  promptUsed String?  @db.Text
-  tokensCost Int      @default(3)
-  errorMsg   String?
-  createdAt  DateTime @default(now())
+  id          String    @id @default(cuid())
+  userId      String
+  user        User      @relation(fields: [userId], references: [id], onDelete: Cascade)
+  avatarId    String
+  avatar      Avatar    @relation(fields: [avatarId], references: [id], onDelete: Cascade)
+  title       String
+  subtitle    String?
+  cta         String?
+  niche       String?
+  style       String    @default("ai-visionary")
+  aspect      String    @default("4:5") // 4:5 | 1:1 | 9:16
+  imageUrl    String?
+  status      String    @default("pending") // pending | processing | completed | failed
+  promptUsed  String?   @db.Text
+  tokensCost  Int       @default(3)
+  errorMsg    String?
+  createdAt   DateTime  @default(now())
   completedAt DateTime?
 
   @@index([userId, createdAt])
@@ -249,10 +249,10 @@ model TokenTransaction {
   id        String   @id @default(cuid())
   userId    String
   user      User     @relation(fields: [userId], references: [id], onDelete: Cascade)
-  amount    Int                                       // + начисление, − списание
-  type      String                                    // signup_bonus | purchase | charge | refund | manual
-  reason    String                                    // "avatar-generation:xxx" | "cover:yyy" | ...
-  refId     String?                                   // id связанного объекта
+  amount    Int // + начисление, − списание
+  type      String // signup_bonus | purchase | charge | refund | manual
+  reason    String // "avatar-generation:xxx" | "cover:yyy" | ...
+  refId     String? // id связанного объекта
   createdAt DateTime @default(now())
 
   @@index([userId, createdAt])
@@ -266,48 +266,48 @@ model TokenTransaction {
 // одним кликом запускает «создать видео» (VideoGeneration) и далее
 // монтаж (VideoEdit) — единый пайплайн Парсер → Видео → Монтаж.
 model ParserConfig {
-  id                String    @id @default(cuid())
-  userId            String    @unique
-  user              User      @relation(fields: [userId], references: [id], onDelete: Cascade)
-  nicheDescription  String?   @db.Text                  // «коучинг продаж B2B, конфронтационный стиль»
-  competitors       String[]  @default([])              // ["expert_one", "expert_two"] (без @)
-  hashtags          String[]  @default([])              // ["salescoaching", "b2bsales"] (без #)
-  postedWithinDays  Int       @default(7)
-  perTargetLimit    Int       @default(25)
+  id                  String   @id @default(cuid())
+  userId              String   @unique
+  user                User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+  nicheDescription    String?  @db.Text // «коучинг продаж B2B, конфронтационный стиль»
+  competitors         String[] @default([]) // ["expert_one", "expert_two"] (без @)
+  hashtags            String[] @default([]) // ["salescoaching", "b2bsales"] (без #)
+  postedWithinDays    Int      @default(7)
+  perTargetLimit      Int      @default(25)
   // Пороги для REELS. Apify не у всех постов отдаёт shares —
   // посты без этого поля проходят фильтр (см. scoring.ts).
-  minPlays          Int       @default(100000)            // 100k views minimum
-  minLikes          Int       @default(1000)
-  minComments      Int       @default(1000)                // 1k comments minimum
-  minShares         Int       @default(1000)               // 1k reposts/shares minimum (reshareCount от Apify)
+  minPlays            Int      @default(100000) // 100k views minimum
+  minLikes            Int      @default(1000)
+  minComments         Int      @default(1000) // 1k comments minimum
+  minShares           Int      @default(1000) // 1k reposts/shares minimum (reshareCount от Apify)
   // Пороги для CAROUSELS. У каруселей нет plays и обычно нет shares —
   // фильтр только по likes/comments. По умолчанию те же значения, что для
   // рилсов — пользователь решает мягче/жёстче через форму.
-  minCarouselLikes    Int     @default(1000)
-  minCarouselComments Int     @default(1000)
-  reelsCount        Int       @default(5)
-  carouselsCount    Int       @default(5)
-  enabled           Boolean   @default(true)
-  createdAt         DateTime  @default(now())
-  updatedAt         DateTime  @updatedAt
+  minCarouselLikes    Int      @default(1000)
+  minCarouselComments Int      @default(1000)
+  reelsCount          Int      @default(5)
+  carouselsCount      Int      @default(5)
+  enabled             Boolean  @default(true)
+  createdAt           DateTime @default(now())
+  updatedAt           DateTime @updatedAt
 }
 
 // Каждый запуск парсера (ручной или плановый). Полные результаты живут
 // в ParserItem.
 model ParserRun {
-  id              String    @id @default(cuid())
-  userId          String
-  user            User      @relation(fields: [userId], references: [id], onDelete: Cascade)
-  status          String    @default("pending")        // pending | processing | completed | failed
-  postsScanned    Int       @default(0)
-  reelsFound      Int       @default(0)
-  carouselsFound  Int       @default(0)
-  claudeSummary   String?   @db.Text
-  errorMsg        String?
-  startedAt       DateTime  @default(now())
-  completedAt     DateTime?
+  id             String    @id @default(cuid())
+  userId         String
+  user           User      @relation(fields: [userId], references: [id], onDelete: Cascade)
+  status         String    @default("pending") // pending | processing | completed | failed
+  postsScanned   Int       @default(0)
+  reelsFound     Int       @default(0)
+  carouselsFound Int       @default(0)
+  claudeSummary  String?   @db.Text
+  errorMsg       String?
+  startedAt      DateTime  @default(now())
+  completedAt    DateTime?
 
-  items           ParserItem[]
+  items ParserItem[]
 
   @@index([userId, startedAt])
 }
@@ -320,29 +320,29 @@ model ParserItem {
   user              User      @relation(fields: [userId], references: [id], onDelete: Cascade)
   runId             String
   run               ParserRun @relation(fields: [runId], references: [id], onDelete: Cascade)
-  url               String                                 // https://www.instagram.com/reel/<shortcode>/
+  url               String // https://www.instagram.com/reel/<shortcode>/
   shortcode         String?
-  kind              String                                 // reel | carousel
-  owner             String?                                // ownerUsername без @
+  kind              String // reel | carousel
+  owner             String? // ownerUsername без @
   thumbnailUrl      String?
   caption           String?   @db.Text
   plays             Int       @default(0)
   likes             Int       @default(0)
   comments          Int       @default(0)
   ageHours          Float     @default(0)
-  velocityScore    Float     @default(0)                  // 0..1, composite от scoring.ts
-  fitScore          Int?                                   // 1..10 от Claude
-  fitWhy            String?                                // 6-12 слов, почему такой score
+  velocityScore     Float     @default(0) // 0..1, composite от scoring.ts
+  fitScore          Int? // 1..10 от Claude
+  fitWhy            String? // 6-12 слов, почему такой score
   // Уникализированный сценарий по структуре хук→боль→раскрытие→CTA, который
   // подставится в VideoForm на /videos/new когда юзер жмёт «Создать видео».
   // Генерится Claude по caption+niche, кэшируется здесь, чтобы повторный
   // переход не делал лишний rewrite.
   rewrittenScript   String?   @db.Text
-  status            String    @default("new")              // new | used | dismissed
-  videoGenerationId String?                                // если уже отправлен в работу
+  status            String    @default("new") // new | used | dismissed
+  videoGenerationId String? // если уже отправлен в работу
   createdAt         DateTime  @default(now())
 
-  carouselDrafts    CarouselDraft[]
+  carouselDrafts CarouselDraft[]
 
   @@index([userId, createdAt])
   @@index([runId])
@@ -357,31 +357,31 @@ model ParserItem {
 // slides — JSON-массив { title, body, accent? }. Не нормализуем в отдельную
 // таблицу, потому что редактирование происходит цельно (форма с N textarea).
 model CarouselDraft {
-  id              String   @id @default(cuid())
-  userId          String
-  user            User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+  id            String      @id @default(cuid())
+  userId        String
+  user          User        @relation(fields: [userId], references: [id], onDelete: Cascade)
   // Источник: если из парсера — линк на ParserItem, иначе free-form caption.
-  parserItemId    String?
-  parserItem      ParserItem? @relation(fields: [parserItemId], references: [id], onDelete: SetNull)
+  parserItemId  String?
+  parserItem    ParserItem? @relation(fields: [parserItemId], references: [id], onDelete: SetNull)
   // Аватар для первого (обложечного) слайда — выбирается из готовых Avatar.
-  coverAvatarId   String?
-  coverAvatar     Avatar?  @relation(fields: [coverAvatarId], references: [id], onDelete: SetNull)
-  slidesCount     Int      @default(6)
+  coverAvatarId String?
+  coverAvatar   Avatar?     @relation(fields: [coverAvatarId], references: [id], onDelete: SetNull)
+  slidesCount   Int         @default(6)
   // Стиль рендера слайдов — определяет шаблон/палитру/типографику.
   // Каталог в src/lib/carousel/styles.ts: persona-minimal (dark serif),
   // clickbait-bold (paliy-style white+cobalt), knox-cream (cream duotone).
-  style           String   @default("persona-minimal")
+  style         String      @default("persona-minimal")
   // [{ title: string, body: string, accent?: string }]
-  slides          Json
+  slides        Json
   // draft | rendered | failed. Пока всегда draft — render отдельный pipeline.
-  status          String   @default("draft")
+  status        String      @default("draft")
   // S3 URLs финальных PNG'ов в порядке слайдов (заполняется в Phase 2 render).
-  imageUrls       String[] @default([])
-  tokensCost      Int      @default(0)
-  errorMsg        String?
-  createdAt       DateTime @default(now())
-  updatedAt       DateTime @updatedAt
-  completedAt     DateTime?
+  imageUrls     String[]    @default([])
+  tokensCost    Int         @default(0)
+  errorMsg      String?
+  createdAt     DateTime    @default(now())
+  updatedAt     DateTime    @updatedAt
+  completedAt   DateTime?
 
   @@index([userId, createdAt])
   @@index([parserItemId])
@@ -390,21 +390,129 @@ model CarouselDraft {
 // Инвойсы CryptoBot (@CryptoBot Telegram). Создаются перед редиректом в bot_invoice_url,
 // мармаются paid вебхуком после оплаты, токены зачисляются идемпотентно (по invoiceId).
 model CryptoInvoice {
-  id          String   @id @default(cuid())
-  userId      String
-  user        User     @relation(fields: [userId], references: [id], onDelete: Cascade)
-  invoiceId   String   @unique                       // id из CryptoBot
-  pack        String                                  // "starter" | "pro" | "agency"
-  tokens      Int                                     // сколько токенов начислить при оплате
-  asset       String                                  // "USDT" | "TON" | "BTC" | ...
-  amount      String                                  // строка чтоб не терять точность ("9.50")
-  status      String   @default("active")             // active | paid | expired | failed
-  payUrl      String                                  // bot_invoice_url
-  createdAt   DateTime @default(now())
-  paidAt      DateTime?
+  id        String    @id @default(cuid())
+  userId    String
+  user      User      @relation(fields: [userId], references: [id], onDelete: Cascade)
+  invoiceId String    @unique // id из CryptoBot
+  pack      String // "starter" | "pro" | "agency"
+  tokens    Int // сколько токенов начислить при оплате
+  asset     String // "USDT" | "TON" | "BTC" | ...
+  amount    String // строка чтоб не терять точность ("9.50")
+  status    String    @default("active") // active | paid | expired | failed
+  payUrl    String // bot_invoice_url
+  createdAt DateTime  @default(now())
+  paidAt    DateTime?
 
   @@index([userId, createdAt])
   @@index([invoiceId])
+}
+
+// ── Research (Viral Content Research, Badunga-style) ──
+// Параллельный стек к Parser*. Парсер был про "конфиг юзера → competitors+hashtags".
+// Research — про on-demand поиск по нише, индексацию авторов и расчёт
+// относительной виральности (views / median_views автора).
+//
+// ResearchAuthor — кэш профиля + медиана последних N рилсов. Создаётся
+// при первом появлении автора в выдаче и рефрешится по TTL.
+// Уникальность: (platform, username).
+model ResearchAuthor {
+  id            String    @id @default(cuid())
+  platform      String    @default("instagram") // instagram | tiktok | youtube (v2+)
+  username      String // без @
+  externalId    String? // IG user id если удалось вытащить
+  followers     Int?
+  postsCount    Int?
+  avatarUrl     String?
+  profileUrl    String?
+  categories    String[]  @default([]) // авто-теги ниши
+  // Главное поле: медиана просмотров последних medianWindow рилсов.
+  // На её основе считается виральность каждого ролика (views / medianViews).
+  medianViews   Float?
+  medianWindow  Int       @default(30)
+  engagementAvg Float? // средний ER по последним рилсам
+  lowConfidence Boolean   @default(false) // true если < N рилсов в истории
+  lastIndexedAt DateTime?
+  rawStats      Json? // сырой ответ профильного скрейпера
+  createdAt     DateTime  @default(now())
+  updatedAt     DateTime  @updatedAt
+
+  reels ResearchReel[]
+
+  @@unique([platform, username])
+  @@index([lastIndexedAt])
+}
+
+// ResearchReel — один ролик с посчитанными метриками относительно автора.
+// Уникальность: (platform, externalId) — реальный IG media id или shortcode,
+// в зависимости от того что отдаёт actor.
+model ResearchReel {
+  id             String         @id @default(cuid())
+  platform       String         @default("instagram")
+  externalId     String // shortcode | media id (то, что уникально у платформы)
+  authorId       String
+  author         ResearchAuthor @relation(fields: [authorId], references: [id], onDelete: Cascade)
+  url            String
+  videoUrl       String?
+  thumbnailUrl   String?
+  caption        String?        @db.Text
+  captionHash    String? // sha1 от нормализованной caption — для дедупа на этапе 1
+  postedAt       DateTime?
+  durationSec    Int?
+  views          Int            @default(0)
+  likes          Int            @default(0)
+  comments       Int            @default(0)
+  shares         Int            @default(0)
+  music          String?
+  hashtags       String[]       @default([])
+  language       String? // BCP-47, опционально
+  postType       String         @default("reel") // reel | image | carousel
+  // ── Расчётные метрики (см. lib/research/metrics.ts) ──
+  virality       Float? // views / authorMedian, округлено до 0.1
+  engagementRate Float? // (likes + comments) / views * 100
+  velocity       Float? // views / max(дней с публикации, 0.5)
+  viralScore     Float? // 0..100 композит по ТЗ §2
+  reach          Float? // views / followers (если followers есть)
+  nicheTags      String[]       @default([])
+  indexedAt      DateTime       @default(now())
+  updatedAt      DateTime       @updatedAt
+
+  @@unique([platform, externalId])
+  @@index([authorId])
+  @@index([viralScore])
+  @@index([postedAt])
+}
+
+// Кэш поисковой выдачи. Ключ = (niche normalized + filtersHash).
+// resultReelIds — массив ResearchReel.id в порядке отдачи.
+model ResearchSearchCache {
+  id            String   @id @default(cuid())
+  niche         String // нормализованная (lowercase + trim)
+  filtersHash   String // sha1 от сериализованных фильтров
+  resultReelIds String[] @default([])
+  summary       String? // niche-aggregate summary от Claude если был
+  expansion     Json? // { keywords, hashtags } от expand-niche
+  createdAt     DateTime @default(now())
+  expiresAt     DateTime
+
+  @@unique([niche, filtersHash])
+  @@index([expiresAt])
+}
+
+// История поисков пользователя. Не путать с кэшем — этот журнал нужен
+// для UI (последние ниши пользователя) и для радаров позже.
+model ResearchSearch {
+  id            String   @id @default(cuid())
+  userId        String
+  user          User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+  niche         String
+  filters       Json
+  resultReelIds String[] @default([])
+  summary       String?  @db.Text
+  cacheHit      Boolean  @default(false)
+  durationMs    Int?
+  createdAt     DateTime @default(now())
+
+  @@index([userId, createdAt])
 }
 
 // Per-item override for the left sidebar. Absence = visible (default).
