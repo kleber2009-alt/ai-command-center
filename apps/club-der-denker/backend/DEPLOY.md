@@ -67,7 +67,9 @@ It only adjusts streak/joker — course progress is never touched.
 Point the store server notifications at:
 
 - Apple App Store Server Notifications V2 → `POST /api/iap/apple`
-  (verifies the signed JWS payload + nested transaction).
+  (verifies the signed JWS payload + nested transaction; the x5c chain is
+  validated to Apple's root — set `APPLE_ROOT_CA_FINGERPRINT` to the SHA-256
+  fingerprint of "Apple Root CA - G3" and `APPLE_REQUIRE_ROOT_PIN=true`).
 - Google Play RTDN (Pub/Sub push) → `POST /api/iap/google`
   (set the Pub/Sub push OIDC audience/service account in `GOOGLE_PUBSUB_AUDIENCE`
   / `GOOGLE_PUBSUB_SA_EMAIL`; the purchase is re-validated via the Play API).

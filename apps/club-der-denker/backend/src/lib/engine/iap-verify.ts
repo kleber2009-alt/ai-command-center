@@ -1,4 +1,5 @@
 import { importX509, jwtVerify, decodeProtectedHeader, SignJWT, importPKCS8, createRemoteJWKSet } from 'jose';
+import { X509Certificate } from 'crypto';
 import { ValidatedReceipt } from './iap';
 import { ProductKind } from '../types';
 
@@ -12,20 +13,58 @@ function classify(productId: string, hasExpiry: boolean): ProductKind {
   return hasExpiry || /sub|community/i.test(productId) ? 'community_subscription' : 'course_access';
 }
 
+const normalizeFp = (s: string) => s.replace(/[:\s]/g, '').toLowerCase();
+
+/**
+ * Validate the Apple x5c certificate chain (leaf -> intermediate -> root):
+ *   - every cert is within its validity window;
+ *   - each cert is signed by the next one up;
+ *   - the root is self-signed;
+ *   - the root is pinned to Apple's root CA via APPLE_ROOT_CA_FINGERPRINT
+ *     (SHA-256). If unset and APPLE_REQUIRE_ROOT_PIN=true, validation fails
+ *     closed (recommended in production).
+ * Returns the leaf certificate PEM for JWS signature verification.
+ */
+export function validateAppleCertChain(x5c: string[]): string {
+  if (x5c.length < 2) throw new Error('incomplete x5c chain');
+
+  const certs = x5c.map((b64) => new X509Certificate(Buffer.from(b64, 'base64')));
+  const now = Date.now();
+
+  for (let i = 0; i < certs.length; i++) {
+    const c = certs[i];
+    if (Date.parse(c.validFrom) > now || Date.parse(c.validTo) < now) {
+      throw new Error(`certificate ${i} outside its validity window`);
+    }
+    if (i < certs.length - 1 && !c.verify(certs[i + 1].publicKey)) {
+      throw new Error(`broken chain signature at certificate ${i}`);
+    }
+  }
+
+  const root = certs[certs.length - 1];
+  if (!root.verify(root.publicKey)) throw new Error('root certificate is not self-signed');
+
+  const pin = process.env.APPLE_ROOT_CA_FINGERPRINT;
+  if (pin) {
+    if (normalizeFp(root.fingerprint256) !== normalizeFp(pin)) throw new Error('root CA pin mismatch');
+  } else if (process.env.APPLE_REQUIRE_ROOT_PIN === 'true') {
+    throw new Error('APPLE_ROOT_CA_FINGERPRINT required but not set');
+  }
+
+  return certs[0].toString(); // leaf as PEM
+}
+
 // ---------------------------------------------------------------------------
 // Apple — verify a StoreKit 2 / App Store Server signed payload (JWS). The JWS
-// header carries the signing cert chain in x5c (leaf first); we verify the
-// signature with the leaf certificate.
-//
-// TODO(hardening): validate the full x5c chain up to Apple's root CA (G3) and
-// check the leaf's validity window before trusting the payload.
+// header carries the signing cert chain in x5c (leaf first); we validate the
+// chain up to Apple's pinned root, then verify the JWS with the leaf key.
 // ---------------------------------------------------------------------------
 export async function verifyAppleJws(jws: string): Promise<Record<string, any>> {
   const header = decodeProtectedHeader(jws);
   const x5c = header.x5c;
   if (!x5c || x5c.length === 0) throw new Error('missing x5c in JWS header');
 
-  const leafPem = `-----BEGIN CERTIFICATE-----\n${x5c[0]}\n-----END CERTIFICATE-----`;
+  const leafPem = validateAppleCertChain(x5c);
   const key = await importX509(leafPem, 'ES256');
   const { payload } = await jwtVerify(jws, key);
   return payload as Record<string, any>;

@@ -124,8 +124,6 @@ SKUs live in `mobile/app.json` → `expo.extra`.
 
 ## Open TODOs before production
 
-- Apple JWS x5c full chain validation up to Apple's root CA (currently
-  leaf-cert signature verification) in `lib/engine/iap-verify.ts`.
 - Gated (signed-URL) delivery for paid media if the public bucket is too open
   (currently public bucket with unguessable paths — see migration 0004).
 - Swap the scaffold session token for Auth.js / Supabase Auth if desired.

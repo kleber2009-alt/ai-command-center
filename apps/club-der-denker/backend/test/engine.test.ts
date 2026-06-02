@@ -4,6 +4,7 @@ import { levelForProgress, currentDayIndex, itemsDoneToday } from '../src/lib/en
 import { evaluateUnlock, localDay } from '../src/lib/engine/unlock';
 import { registerActivity, applyInactivitySweep, grantJokerOnPurchase } from '../src/lib/engine/streak';
 import { evaluateCommunityAccess } from '../src/lib/engine/community';
+import { validateAppleCertChain } from '../src/lib/engine/iap-verify';
 
 test('levels: thresholds per spec 3.3', () => {
   assert.equal(levelForProgress(0, false), 1); // guest
@@ -103,4 +104,14 @@ test('community: active subscription overrides final-level lock', () => {
   const a = evaluateCommunityAccess({ purchasedAt, subscriptionActiveUntil: new Date('2026-08-01T00:00:00Z'), level: 5, now: new Date('2026-07-15T00:00:00Z') });
   assert.equal(a.canRead, true);
   assert.equal(a.reason, 'subscription');
+});
+
+test('apple chain: rejects empty / single-cert chains', () => {
+  assert.throws(() => validateAppleCertChain([]), /incomplete x5c chain/);
+  assert.throws(() => validateAppleCertChain(['onlyleaf']), /incomplete x5c chain/);
+});
+
+test('apple chain: rejects malformed cert data', () => {
+  // two entries pass the length guard but are not valid DER certificates
+  assert.throws(() => validateAppleCertChain(['bm90LWFzbg==', 'bm90LWFzbg==']));
 });
