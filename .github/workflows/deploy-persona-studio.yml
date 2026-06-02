@@ -65,6 +65,12 @@ jobs:
           port:     ${{ vars.HETZNER_SSH_PORT || 22 }}
           key:      ${{ secrets.HETZNER_SSH_KEY }}
           script_stop: true
+          # appleboy/ssh-action's default command_timeout is 10m. Docker rebuild of
+          # persona-studio (web + worker images, ~470 npm deps + `next build`) takes
+          # 8–12 min from a cold layer cache → past deploys aborted with
+          # "Run Command Timeout". Give the SSH session enough headroom; the job-
+          # level `timeout-minutes: 25` above is the real upper bound.
+          command_timeout: 22m
           envs: TARGET_REF,MONOREPO_PATH,SOURCE_PATH,SKIP_BUILD,HEALTH_URL
           script: |
             set -euo pipefail
