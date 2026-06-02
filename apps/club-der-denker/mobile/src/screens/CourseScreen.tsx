@@ -5,6 +5,7 @@ import { ItemCard, ItemData } from '@/components/ItemCard';
 import { ProgressBar, LevelBadge, StreakPill } from '@/components/gamification';
 import { api, deviceTimeZone } from '@/api/client';
 import { savePack, loadPack, enqueueAnswer } from '@/cache/offline';
+import { syncAnswerQueue } from '@/cache/sync';
 import { i18n, t, levelName } from '@/i18n';
 import { colors, spacing, typography } from '@/theme';
 
@@ -24,6 +25,8 @@ export function CourseScreen() {
   const refresh = useCallback(async () => {
     setLoading(true);
     try {
+      // Spec 5: drain any answers queued while offline before reading state.
+      await syncAnswerQueue().catch(() => {});
       const [today, prof] = await Promise.all([api.today(i18n.locale), api.profile().catch(() => null)]);
       setProfile(prof);
       if (today.locked) {
@@ -55,6 +58,8 @@ export function CourseScreen() {
     try {
       const res = await api.answer(item.id, selectedKey);
       setProfile((p: any) => (p ? { ...p, level: res.level, streakDays: res.streakDays, itemsCompleted: res.itemsCompleted, progress: res.itemsCompleted / 112 } : p));
+      // A successful online answer means we're connected — flush any backlog.
+      syncAnswerQueue().catch(() => {});
     } catch {
       await enqueueAnswer({ itemId: item.id, selectedKey, tz: deviceTimeZone(), at: Date.now() });
     } finally {

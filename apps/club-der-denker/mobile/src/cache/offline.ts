@@ -41,6 +41,11 @@ export async function loadQueue(): Promise<QueuedAnswer[]> {
   return raw ? (JSON.parse(raw) as QueuedAnswer[]) : [];
 }
 
+export async function replaceQueue(items: QueuedAnswer[]): Promise<void> {
+  if (items.length === 0) return clearQueue();
+  await AsyncStorage.setItem(QUEUE_KEY, JSON.stringify(items));
+}
+
 export async function clearQueue(): Promise<void> {
   await AsyncStorage.removeItem(QUEUE_KEY);
 }

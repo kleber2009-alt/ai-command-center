@@ -51,10 +51,12 @@ export const api = {
     }),
   today: (locale: string) =>
     request<{ locked: boolean; items: any[]; dayIndex: number }>(`/api/course/today?tz=${encodeURIComponent(deviceTimeZone())}&locale=${locale}`),
-  answer: (itemId: string, selectedKey: string) =>
+  // tz defaults to the current device tz, but queued offline answers replay
+  // with their originally-captured tz so the unlock check stays correct.
+  answer: (itemId: string, selectedKey: string, tz: string = deviceTimeZone()) =>
     request<{ itemsCompleted: number; level: number; streakDays: number }>(`/api/course/answer`, {
       method: 'POST',
-      body: JSON.stringify({ itemId, selectedKey, tz: deviceTimeZone() }),
+      body: JSON.stringify({ itemId, selectedKey, tz }),
     }),
   feed: (locale: string, category?: string) =>
     request<{ locked: boolean; showPaywall: boolean; posts: any[] }>(

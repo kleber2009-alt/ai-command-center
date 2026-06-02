@@ -78,6 +78,9 @@ The client is a complete frontend:
   buttons), Course with a level/streak/progress header + offline cache,
   read-only Feed with subscription paywall, and a Profile dashboard (level
   badge, streak, joker, instant 6-language switch, logout, GDPR delete).
+- **Offline (spec 5)** — the daily pack is cached; answers made offline queue
+  in `cache/offline.ts` and replay in order via `cache/sync.ts` when the Course
+  screen reloads or the next online answer succeeds (original tz preserved).
 - **i18n** — full UI string set across all 6 locales.
 
 ## Admin panel
