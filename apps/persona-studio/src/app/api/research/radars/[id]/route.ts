@@ -37,7 +37,7 @@ export async function PATCH(req: NextRequest, { params }: { params: Promise<{ id
       enabled: body.enabled,
       intervalHrs: body.intervalHrs,
       niche: body.niche,
-      filters: body.filters ?? undefined,
+      filters: body.filters === undefined ? undefined : (body.filters as object),
     },
   });
   return NextResponse.json({ ok: true, radar: updated });

@@ -244,6 +244,15 @@ export function ReelDetailClient({ reel: initialReel }: { reel: Reel }) {
           </button>
           <button
             type="button"
+            onClick={forgeToVideo}
+            disabled={pendingForge}
+            className="btn-ghost text-[11px] tracking-widest uppercase border-gold/50 text-gold"
+            title="Переписать сценарий через Forge и открыть форму создания видео"
+          >
+            {pendingForge ? 'Уникализирую сценарий…' : 'Переработать в видео →'}
+          </button>
+          <button
+            type="button"
             onClick={transcribe}
             disabled={pendingTranscribe || Boolean(transcript?.improved)}
             className="btn-ghost text-[11px] tracking-widest uppercase"

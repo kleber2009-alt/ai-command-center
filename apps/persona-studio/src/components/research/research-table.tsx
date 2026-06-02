@@ -100,7 +100,7 @@ export function ResearchTable({ reels }: { reels: ResearchReelView[] }) {
   );
 }
 
-function Th({ children, align = 'left' }: { children: React.ReactNode; align?: 'left' | 'right' }) {
+function Th({ children = null, align = 'left' }: { children?: React.ReactNode; align?: 'left' | 'right' }) {
   return (
     <th
       className={`px-2 py-2 ${align === 'right' ? 'text-right' : 'text-left'} whitespace-nowrap`}
