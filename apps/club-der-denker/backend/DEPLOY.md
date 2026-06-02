@@ -67,11 +67,16 @@ It only adjusts streak/joker — course progress is never touched.
 Point the store server notifications at:
 
 - Apple App Store Server Notifications V2 → `POST /api/iap/apple`
+  (verifies the signed JWS payload + nested transaction).
 - Google Play RTDN (Pub/Sub push) → `POST /api/iap/google`
+  (set the Pub/Sub push OIDC audience/service account in `GOOGLE_PUBSUB_AUDIENCE`
+  / `GOOGLE_PUBSUB_SA_EMAIL`; the purchase is re-validated via the Play API).
 - Web-fallback gateway → `POST /api/iap/web`
+  (HMAC-SHA256 over the raw body in `x-signature`, secret
+  `WEB_GATEWAY_WEBHOOK_SECRET`).
 
-Signature/receipt verification is stubbed (`src/lib/engine/iap.ts` +
-webhook routes) — implement before going live.
+All three verify their signature and apply the validated receipt; the
+client-initiated `POST /api/iap/verify` covers the immediate post-purchase path.
 
 ## Notes
 

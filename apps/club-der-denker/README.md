@@ -112,8 +112,11 @@ Next server on `:3020`. The inactivity sweep runs via cron hitting
   validation — Apple StoreKit2 JWS verification + Google Play Developer API
   (`lib/engine/iap-verify.ts`). Client hook `mobile/src/iap/useIAP.ts` drives
   the course purchase (Paywall, tied to the lead via `appAccountToken` so the
-  webhook validates pre-account) and the community subscription (Feed). Async
-  store webhooks (`/api/iap/{apple,google,web}`) remain the source of truth.
+  webhook validates pre-account) and the community subscription (Feed).
+- **Async webhooks** (`/api/iap/{apple,google,web}`): each authenticates the
+  notification — Apple signed-JWS payload, Google Pub/Sub OIDC token, web HMAC —
+  then re-validates and applies the receipt. Source of truth for renewals,
+  refunds and pre-account course purchases.
 
 Required env (see `.env.example`): `APPLE_CLIENT_IDS`, `GOOGLE_CLIENT_IDS`,
 `GOOGLE_PLAY_PACKAGE_NAME`, `GOOGLE_SERVICE_ACCOUNT_JSON`. Mobile client ids /
@@ -121,9 +124,6 @@ SKUs live in `mobile/app.json` → `expo.extra`.
 
 ## Open TODOs before production
 
-- Webhook signature verification for `/api/iap/{apple,google,web}` (the
-  client-initiated `/api/iap/verify` path is implemented; the async notifications
-  still log-only).
 - Apple JWS x5c full chain validation up to Apple's root CA (currently
   leaf-cert signature verification) in `lib/engine/iap-verify.ts`.
 - Gated (signed-URL) delivery for paid media if the public bucket is too open

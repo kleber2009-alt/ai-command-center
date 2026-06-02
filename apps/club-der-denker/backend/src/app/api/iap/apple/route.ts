@@ -1,46 +1,62 @@
 import { NextRequest } from 'next/server';
 import { serviceClient } from '@/lib/supabase/server';
 import { ok, fail } from '@/lib/http';
-import { applyValidatedReceipt } from '@/lib/engine/iap';
+import { applyValidatedReceipt, ValidatedReceipt } from '@/lib/engine/iap';
+import { verifyAppleJws, appleTransactionToReceipt } from '@/lib/engine/iap-verify';
 
 /**
  * POST /api/iap/apple
- * App Store Server Notifications V2 webhook (spec 4 "Проверка на бэкенде").
- * Logs the raw notification, verifies the signed payload (JWS), maps it to a
- * ValidatedReceipt, and applies access flags. Idempotent on transaction id.
- *
- * TODO(production): verify the JWS signature chain against Apple's root CA and
- * decode the transactionInfo / renewalInfo claims.
+ * App Store Server Notifications V2 (spec 4). Body: { signedPayload } — a JWS
+ * signed by Apple. We verify it, then verify the nested signedTransactionInfo
+ * JWS, derive the user from appAccountToken, and apply the validated receipt.
+ * Idempotent: applyValidatedReceipt upserts on (platform, transactionId).
  */
+function statusFromNotification(type: string | undefined): ValidatedReceipt['status'] | undefined {
+  switch (type) {
+    case 'REFUND': return 'refunded';
+    case 'REVOKE': return 'revoked';
+    case 'EXPIRED': return 'expired';
+    default: return undefined;
+  }
+}
+
 export async function POST(req: NextRequest) {
   const raw = await req.json().catch(() => null);
-  if (!raw) return fail('invalid payload', 422);
-
   const db = serviceClient();
+
+  let signatureOk = false;
+  let applied = false;
+  try {
+    if (!raw?.signedPayload) return fail('missing signedPayload', 422);
+
+    const notification = await verifyAppleJws(raw.signedPayload);
+    signatureOk = true;
+
+    const txJws = notification.data?.signedTransactionInfo;
+    if (txJws) {
+      const tx = await verifyAppleJws(txJws);
+      const userId = tx.appAccountToken;
+      if (userId) {
+        const receipt = appleTransactionToReceipt(userId, tx, statusFromNotification(notification.notificationType));
+        await applyValidatedReceipt(db, receipt);
+        applied = true;
+      }
+    }
+
+    await logWebhook(db, notification.notificationType, signatureOk, raw);
+    return ok({ received: true, applied });
+  } catch (e: any) {
+    await logWebhook(db, raw?.notificationType, signatureOk, raw);
+    return fail(`apple webhook: ${e.message}`, 400);
+  }
+}
+
+async function logWebhook(db: ReturnType<typeof serviceClient>, eventType: string | undefined, signatureOk: boolean, raw: unknown) {
   await db.from('cdd_iap_webhooks').insert({
     platform: 'apple',
-    event_type: raw?.notificationType ?? null,
-    signature_ok: false, // set true once JWS verification is implemented
-    raw,
+    event_type: eventType ?? null,
+    signature_ok: signatureOk,
+    raw: raw ?? {},
+    processed_at: new Date().toISOString(),
   });
-
-  // --- Placeholder mapping; replace with verified JWS decode. ---
-  const decoded = raw?.data?.signedTransactionInfo;
-  if (!decoded?.appAccountToken || !decoded?.transactionId) {
-    return ok({ received: true, applied: false });
-  }
-
-  await applyValidatedReceipt(db, {
-    userId: decoded.appAccountToken, // App Store appAccountToken == our user id
-    product: decoded.productId?.includes('subscription') ? 'community_subscription' : 'course_access',
-    platform: 'apple',
-    storeTransactionId: decoded.transactionId,
-    originalTransactionId: decoded.originalTransactionId,
-    receiptRef: decoded.transactionId,
-    purchasedAt: new Date(Number(decoded.purchaseDate ?? Date.now())),
-    expiresAt: decoded.expiresDate ? new Date(Number(decoded.expiresDate)) : undefined,
-    status: 'active',
-  });
-
-  return ok({ received: true, applied: true });
 }

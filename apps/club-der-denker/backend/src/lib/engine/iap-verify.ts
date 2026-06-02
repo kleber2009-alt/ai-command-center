@@ -1,11 +1,11 @@
-import { importX509, jwtVerify, decodeProtectedHeader, SignJWT, importPKCS8 } from 'jose';
+import { importX509, jwtVerify, decodeProtectedHeader, SignJWT, importPKCS8, createRemoteJWKSet } from 'jose';
 import { ValidatedReceipt } from './iap';
 import { ProductKind } from '../types';
 
 /**
- * Real receipt verification (spec 4) for the client-initiated /api/iap/verify
- * flow. The caller is already authenticated, so the user id comes from the
- * session — store identifiers are opaque and no card data is involved.
+ * Real receipt verification (spec 4) for both the client-initiated
+ * /api/iap/verify flow and the async store webhooks. Store identifiers are
+ * opaque and no card data is involved.
  */
 
 function classify(productId: string, hasExpiry: boolean): ProductKind {
@@ -13,29 +13,33 @@ function classify(productId: string, hasExpiry: boolean): ProductKind {
 }
 
 // ---------------------------------------------------------------------------
-// Apple — verify a StoreKit 2 signed transaction (JWS). The JWS header carries
-// the signing cert chain in x5c (leaf first). We verify the signature with the
-// leaf certificate.
+// Apple — verify a StoreKit 2 / App Store Server signed payload (JWS). The JWS
+// header carries the signing cert chain in x5c (leaf first); we verify the
+// signature with the leaf certificate.
 //
 // TODO(hardening): validate the full x5c chain up to Apple's root CA (G3) and
 // check the leaf's validity window before trusting the payload.
 // ---------------------------------------------------------------------------
-export async function verifyAppleTransaction(userId: string, jws: string): Promise<ValidatedReceipt> {
+export async function verifyAppleJws(jws: string): Promise<Record<string, any>> {
   const header = decodeProtectedHeader(jws);
   const x5c = header.x5c;
-  if (!x5c || x5c.length === 0) throw new Error('missing x5c in transaction header');
+  if (!x5c || x5c.length === 0) throw new Error('missing x5c in JWS header');
 
   const leafPem = `-----BEGIN CERTIFICATE-----\n${x5c[0]}\n-----END CERTIFICATE-----`;
   const key = await importX509(leafPem, 'ES256');
   const { payload } = await jwtVerify(jws, key);
+  return payload as Record<string, any>;
+}
 
-  const p = payload as Record<string, any>;
+/** Map a decoded App Store transaction payload to a ValidatedReceipt. */
+export function appleTransactionToReceipt(userId: string, p: Record<string, any>, forcedStatus?: ValidatedReceipt['status']): ValidatedReceipt {
   const expiresMs = p.expiresDate ? Number(p.expiresDate) : undefined;
   const revoked = !!p.revocationDate;
   const now = Date.now();
 
   let status: ValidatedReceipt['status'] = 'active';
-  if (revoked) status = 'revoked';
+  if (forcedStatus) status = forcedStatus;
+  else if (revoked) status = 'revoked';
   else if (expiresMs && expiresMs < now) status = 'expired';
 
   return {
@@ -49,6 +53,10 @@ export async function verifyAppleTransaction(userId: string, jws: string): Promi
     expiresAt: expiresMs ? new Date(expiresMs) : undefined,
     status,
   };
+}
+
+export async function verifyAppleTransaction(userId: string, jws: string): Promise<ValidatedReceipt> {
+  return appleTransactionToReceipt(userId, await verifyAppleJws(jws));
 }
 
 // ---------------------------------------------------------------------------
@@ -83,7 +91,7 @@ async function googleAccessToken(): Promise<string> {
 }
 
 export async function verifyGooglePurchase(
-  userId: string,
+  userId: string | undefined,
   productId: string,
   purchaseToken: string,
   isSubscription: boolean,
@@ -119,8 +127,14 @@ export async function verifyGooglePurchase(
     if (data.purchaseTimeMillis) purchasedAt = new Date(Number(data.purchaseTimeMillis));
   }
 
+  // For the webhook path the user id is carried by the obfuscated external
+  // account id we set at purchase time (obfuscatedAccountIdAndroid).
+  const resolvedUserId = userId
+    ?? (isSubscription ? data.externalAccountIdentifiers?.obfuscatedExternalAccountId : data.obfuscatedExternalAccountId);
+  if (!resolvedUserId) throw new Error('cannot resolve user from purchase');
+
   return {
-    userId,
+    userId: resolvedUserId,
     product: isSubscription ? 'community_subscription' : 'course_access',
     platform: 'google',
     storeTransactionId: data.orderId ?? data.latestOrderId ?? purchaseToken,
@@ -129,4 +143,29 @@ export async function verifyGooglePurchase(
     expiresAt,
     status,
   };
+}
+
+// ---------------------------------------------------------------------------
+// Google Pub/Sub push authentication. RTDN notifications arrive as authenticated
+// Pub/Sub push requests carrying a Google-signed OIDC JWT in the Authorization
+// header. We verify the signature, the audience (the push endpoint) and the
+// service-account email configured on the subscription.
+// ---------------------------------------------------------------------------
+const googleOidcJwks = createRemoteJWKSet(new URL('https://www.googleapis.com/oauth2/v3/certs'));
+
+export async function verifyGooglePubSubJwt(authHeader: string | null): Promise<void> {
+  const token = authHeader?.startsWith('Bearer ') ? authHeader.slice(7) : '';
+  if (!token) throw new Error('missing Pub/Sub bearer token');
+
+  const audience = process.env.GOOGLE_PUBSUB_AUDIENCE;
+  const { payload } = await jwtVerify(token, googleOidcJwks, {
+    issuer: ['https://accounts.google.com', 'accounts.google.com'],
+    ...(audience ? { audience } : {}),
+  });
+
+  const expectedEmail = process.env.GOOGLE_PUBSUB_SA_EMAIL;
+  if (expectedEmail && payload.email !== expectedEmail) {
+    throw new Error('Pub/Sub token email mismatch');
+  }
+  if (payload.email_verified === false) throw new Error('Pub/Sub token email unverified');
 }
