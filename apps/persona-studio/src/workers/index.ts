@@ -4,6 +4,7 @@ import { startHeygenWorker } from './heygen-video.worker';
 import { startOmnihumanWorker } from './omnihuman-video.worker';
 import { startSubmagicEditWorker } from './submagic-edit.worker';
 import { startSlideImageWorker } from './slide-image.worker';
+import { startResearchCronWorker } from './research-cron.worker';
 
 const workers = [
   startAvatarWorker(),
@@ -12,10 +13,11 @@ const workers = [
   startOmnihumanWorker(),
   startSubmagicEditWorker(),
   startSlideImageWorker(),
+  startResearchCronWorker(),
 ];
 
 console.log(
-  '[persona-studio:worker] started avatar + cover + heygen + omnihuman + submagic-edit + slide-image workers',
+  '[persona-studio:worker] started avatar + cover + heygen + omnihuman + submagic-edit + slide-image + research-cron workers',
 );
 
 async function shutdown(reason: string) {
