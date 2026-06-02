@@ -58,6 +58,11 @@ const envSchema = z.object({
   APIFY_TIMEOUT_MS: z.coerce.number().default(60_000),
   ANTHROPIC_API_KEY: z.string().min(1).optional(),
   ANTHROPIC_PARSER_MODEL: z.string().default('claude-haiku-4-5-20251001'),
+  // OpenAI — нужен только для транскрибации (Whisper API). Если задан и
+  // WHISPER_SERVICE_URL не задан, transcribeReel идёт в api.openai.com.
+  // $0.006/мин — для v1-объёмов копейки, проще чем поднимать faster-whisper.
+  OPENAI_API_KEY: z.string().min(1).optional(),
+  OPENAI_WHISPER_MODEL: z.string().default('whisper-1'),
 
   // ── Submagic (editing / captions) ─────────────
   SUBMAGIC_API_KEY: z.string().min(1).optional(),
@@ -86,6 +91,15 @@ const envSchema = z.object({
   APIFY_MONTHLY_BUDGET_CENTS: z.coerce.number().default(5000),
   // Стоимость 1 элемента (USD-cents). Дефолт = $2.30/1000 actor.
   APIFY_CENTS_PER_ITEM: z.coerce.number().default(0.23),
+  // Voyage AI — эмбеддинги для семантического дедупа research-рилсов.
+  // Без ключа дедуп работает по captionHash (fallback).
+  VOYAGE_API_KEY: z.string().min(1).optional(),
+  VOYAGE_MODEL: z.string().default('voyage-3'),
+  // Qdrant — vector store. На проде уже бежит как aisales-qdrant.
+  QDRANT_URL: z.string().url().optional(),
+  QDRANT_API_KEY: z.string().min(1).optional(),
+  // Имя коллекции для research-рилсов. Каждая запись = один ResearchReel.
+  QDRANT_REELS_COLLECTION: z.string().default('research_reels'),
   SIGNUP_BONUS_TOKENS: z.coerce.number().default(10),
 
   // ── Auth ──────────────────────────────────────
