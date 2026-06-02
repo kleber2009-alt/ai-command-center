@@ -22,22 +22,27 @@ model User {
   createdAt      DateTime  @default(now())
   updatedAt      DateTime  @updatedAt
 
-  accounts          Account[]
-  sessions          Session[]
-  uploads           Upload[]
-  avatarGenerations AvatarGeneration[]
-  avatars           Avatar[]
-  covers            Cover[]
-  videoGenerations  VideoGeneration[]
-  videoEdits        VideoEdit[]
-  tokenTransactions TokenTransaction[]
-  apiKeys           ApiKey[]
-  cryptoInvoices    CryptoInvoice[]
-  parserConfig      ParserConfig?
-  parserRuns        ParserRun[]
-  parserItems       ParserItem[]
-  carouselDrafts    CarouselDraft[]
-  researchSearches  ResearchSearch[]
+  accounts             Account[]
+  sessions             Session[]
+  uploads              Upload[]
+  avatarGenerations    AvatarGeneration[]
+  avatars              Avatar[]
+  covers               Cover[]
+  videoGenerations     VideoGeneration[]
+  videoEdits           VideoEdit[]
+  tokenTransactions    TokenTransaction[]
+  apiKeys              ApiKey[]
+  cryptoInvoices       CryptoInvoice[]
+  parserConfig         ParserConfig?
+  parserRuns           ParserRun[]
+  parserItems          ParserItem[]
+  carouselDrafts       CarouselDraft[]
+  researchSearches     ResearchSearch[]
+  researchAnalyses     ResearchAnalysis[]
+  researchHooks        ResearchHook[]
+  researchPageAnalyses ResearchPageAnalysis[]
+  researchFavorites    ResearchFavorite[]
+  researchWatchlist    ResearchWatchlist[]
 }
 
 // API key для интеграции Persona Studio в сторонние проекты.
@@ -436,7 +441,9 @@ model ResearchAuthor {
   createdAt     DateTime  @default(now())
   updatedAt     DateTime  @updatedAt
 
-  reels ResearchReel[]
+  reels         ResearchReel[]
+  pageAnalyses  ResearchPageAnalysis[]
+  watchlistedBy ResearchWatchlist[]
 
   @@unique([platform, username])
   @@index([lastIndexedAt])
@@ -476,10 +483,139 @@ model ResearchReel {
   indexedAt      DateTime       @default(now())
   updatedAt      DateTime       @updatedAt
 
+  transcripts ResearchTranscript[]
+  analyses    ResearchAnalysis[]
+  hooks       ResearchHook[]
+  favorites   ResearchFavorite[]
+
   @@unique([platform, externalId])
   @@index([authorId])
   @@index([viralScore])
   @@index([postedAt])
+}
+
+// Транскрипт ролика. На Этапе 3 источник = "stub" (caption fallback) либо
+// "whisper" (когда подключим self-hosted faster-whisper). Поле improved
+// помечает текст, прогнанный через Claude для очистки филлеров и разбивки
+// на абзацы.
+model ResearchTranscript {
+  id        String       @id @default(cuid())
+  reelId    String
+  reel      ResearchReel @relation(fields: [reelId], references: [id], onDelete: Cascade)
+  lang      String       @default("ru")
+  text      String       @db.Text
+  improved  Boolean      @default(false)
+  source    String       @default("stub") // stub | whisper | api | caption
+  createdAt DateTime     @default(now())
+
+  @@index([reelId])
+}
+
+// Глубокий анализ ролика по ТЗ §6.2. JSON-структура диктуется промптом
+// в lib/research/analyze.ts — Prisma хранит «как есть», валидирует Claude.
+model ResearchAnalysis {
+  id              String       @id @default(cuid())
+  reelId          String
+  reel            ResearchReel @relation(fields: [reelId], references: [id], onDelete: Cascade)
+  userId          String
+  user            User         @relation(fields: [userId], references: [id], onDelete: Cascade)
+  hooks           Json // [{text, formula, strength}]
+  storytelling    Json // {structure, beats[]}
+  format          Json // {type, duration_band, pacing}
+  style           Json // {visual, audio, text_overlay}
+  whyViral        String       @db.Text
+  recommendations Json // string[]
+  model           String // claude-sonnet-4-6 | ...
+  tokensCost      Int          @default(0)
+  createdAt       DateTime     @default(now())
+
+  @@index([reelId, createdAt])
+  @@index([userId, createdAt])
+}
+
+// Анализ страницы автора (ТЗ §7). Уникален на (authorId, userId) — каждый
+// пользователь получает свой персональный разбор, но один автор для одного
+// юзера хранится один.
+model ResearchPageAnalysis {
+  id              String         @id @default(cuid())
+  authorId        String
+  author          ResearchAuthor @relation(fields: [authorId], references: [id], onDelete: Cascade)
+  userId          String
+  user            User           @relation(fields: [userId], references: [id], onDelete: Cascade)
+  summary         String         @db.Text
+  outliers        Json // [{reel_id, virality, why}]
+  cadence         Json // {posts_per_week, best_days, best_time}
+  bestFormats     Json // string[]
+  bestTopics      Json // string[]
+  recurringHooks  Json // string[]
+  recommendations Json // string[]
+  model           String
+  tokensCost      Int            @default(0)
+  createdAt       DateTime       @default(now())
+
+  @@unique([authorId, userId])
+  @@index([userId, createdAt])
+}
+
+// Галерея хуков (ТЗ §9). Auto — собираются из ResearchAnalysis.hooks,
+// generated — POST /hooks/generate, custom — пользовательские.
+model ResearchHook {
+  id           String        @id @default(cuid())
+  text         String        @db.Text
+  formula      String // вопрос | кейс | личный опыт | негатив | обучение | проблема | против течения | секрет | список | сравнение | свои
+  sourceReelId String?
+  sourceReel   ResearchReel? @relation(fields: [sourceReelId], references: [id], onDelete: SetNull)
+  niche        String?
+  language     String?
+  // Если хук вытащен из вирусного ролика — сюда падают views того ролика.
+  // Сортировка «сначала самые залетевшие» использует именно это поле.
+  sourceViews  Int           @default(0)
+  // origin = auto (из ResearchAnalysis) | generated (Claude по формуле) | custom (юзер)
+  origin       String        @default("auto")
+  isCustom     Boolean       @default(false)
+  userId       String?
+  user         User?         @relation(fields: [userId], references: [id], onDelete: Cascade)
+  createdAt    DateTime      @default(now())
+
+  @@index([formula])
+  @@index([sourceViews])
+  @@index([userId, createdAt])
+}
+
+// Избранное на любой сущности research (reel | author | hook).
+// Универсальная таблица — itemType + itemId без FK, FK создал бы по 3
+// колонки и заставил бы делать null-FK pattern. Орфаны вычищаем
+// отдельным cron'ом или просто скрываем в UI если не найдено.
+model ResearchFavorite {
+  id        String        @id @default(cuid())
+  userId    String
+  user      User          @relation(fields: [userId], references: [id], onDelete: Cascade)
+  itemType  String // reel | author | hook
+  itemId    String
+  // Опциональная мягкая привязка для reels — позволяет включить reel в
+  // запрос с include: {favorites: true}. Не обязательная.
+  reelId    String?
+  reel      ResearchReel? @relation(fields: [reelId], references: [id], onDelete: SetNull)
+  createdAt DateTime      @default(now())
+
+  @@unique([userId, itemType, itemId])
+  @@index([userId, createdAt])
+}
+
+// Авторы в наблюдении пользователя (ТЗ §10). refresh* — параметры для
+// будущего n8n cron, который пройдёт по списку и вызовет indexAuthor.
+model ResearchWatchlist {
+  id              String         @id @default(cuid())
+  userId          String
+  user            User           @relation(fields: [userId], references: [id], onDelete: Cascade)
+  authorId        String
+  author          ResearchAuthor @relation(fields: [authorId], references: [id], onDelete: Cascade)
+  refreshInterval Int            @default(24) // часов
+  lastRefreshAt   DateTime?
+  addedAt         DateTime       @default(now())
+
+  @@unique([userId, authorId])
+  @@index([lastRefreshAt])
 }
 
 // Кэш поисковой выдачи. Ключ = (niche normalized + filtersHash).

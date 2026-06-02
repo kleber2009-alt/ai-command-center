@@ -72,6 +72,14 @@ const envSchema = z.object({
   COST_OMNIHUMAN_VIDEO: z.coerce.number().default(50),
   COST_SUBMAGIC_EDIT: z.coerce.number().default(15),
   COST_SLIDE_IMAGE: z.coerce.number().default(3),
+  // ── Research (Badunga-style) ──
+  COST_RESEARCH_TRANSCRIBE: z.coerce.number().default(5),
+  COST_RESEARCH_TRANSLATE: z.coerce.number().default(1),
+  COST_RESEARCH_ANALYZE: z.coerce.number().default(5),
+  COST_RESEARCH_PAGE_ANALYZE: z.coerce.number().default(10),
+  COST_RESEARCH_REFRESH_AUTHOR: z.coerce.number().default(5),
+  COST_RESEARCH_HOOK_GEN: z.coerce.number().default(1),
+  ANTHROPIC_DEEP_MODEL: z.string().default('claude-sonnet-4-6'),
   SIGNUP_BONUS_TOKENS: z.coerce.number().default(10),
 
   // ── Auth ──────────────────────────────────────

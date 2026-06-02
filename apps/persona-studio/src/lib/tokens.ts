@@ -108,4 +108,11 @@ export const COSTS = {
   omnihumanVideo: env.COST_OMNIHUMAN_VIDEO,
   submagicEdit: env.COST_SUBMAGIC_EDIT,
   slideImage: env.COST_SLIDE_IMAGE,
+  // ── Research (Badunga-style) ──
+  researchTranscribe: env.COST_RESEARCH_TRANSCRIBE,
+  researchTranslate: env.COST_RESEARCH_TRANSLATE,
+  researchAnalyze: env.COST_RESEARCH_ANALYZE,
+  researchPageAnalyze: env.COST_RESEARCH_PAGE_ANALYZE,
+  researchRefreshAuthor: env.COST_RESEARCH_REFRESH_AUTHOR,
+  researchHookGen: env.COST_RESEARCH_HOOK_GEN,
 };
