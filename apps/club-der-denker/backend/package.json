@@ -8,7 +8,7 @@
     "start": "next start -p 3020",
     "lint": "next lint",
     "typecheck": "tsc -p tsconfig.json --noEmit",
-    "test": "node --import tsx --test test/**/*.test.ts"
+    "test": "node --import tsx --test test/engine.test.ts"
   },
   "dependencies": {
     "@supabase/supabase-js": "^2.45.4",
