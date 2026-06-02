@@ -61,9 +61,8 @@ export const SIDEBAR_SECTIONS: SidebarSection[] = [
     items: [
       { href: '/research', label: 'Research', key: 'disc-research', hint: 'niche-based viral hunt' },
       { href: '/research/hooks', label: 'Hook Gallery', key: 'disc-hooks', hint: 'millions-of-views hooks' },
-      { href: '/parser', label: 'Viral Posts', key: 'disc-viral' },
-      { href: '/parser', label: 'Competitor Radar', key: 'disc-radar' },
-      { href: '/parser', label: 'Trends', key: 'disc-trends' },
+      { href: '/research/radars', label: 'Radars', key: 'disc-radars', hint: 'saved niche trackers' },
+      { href: '/parser', label: 'Viral Posts (legacy)', key: 'disc-viral' },
     ],
   },
   {
