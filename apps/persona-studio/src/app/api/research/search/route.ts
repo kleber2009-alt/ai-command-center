@@ -31,6 +31,8 @@ import {
 import { captionHash, dedupeByCaption } from '@/lib/research/dedupe';
 import { getCachedSearch, putCachedSearch, type ResearchFilters } from '@/lib/research/cache';
 import { summarizeNiche, type NicheSummary } from '@/lib/research/niche-summary';
+import { embedBatch, isEmbeddingsConfigured } from '@/lib/research/embeddings';
+import { upsertReels, findDuplicateReelIds, isQdrantConfigured } from '@/lib/research/qdrant';
 
 export const runtime = 'nodejs';
 export const maxDuration = 180;
@@ -315,7 +317,52 @@ export async function POST(req: NextRequest) {
   });
 
   let rows = dbReels.map(toReelRow);
+  // Стадия 1: дешёвый дедуп по captionHash — отсекает прямые копии текста.
   rows = dedupeByCaption(rows);
+
+  // Стадия 2: семантический дедуп через Voyage + Qdrant (ТЗ §3/§4).
+  // Если эмбеддинги или Qdrant не настроены — пропускаем, остаёмся
+  // с captionHash-дедупом.
+  if (isEmbeddingsConfigured() && isQdrantConfigured() && rows.length > 0) {
+    const texts = rows.map((r) => (r.caption || '').slice(0, 1000));
+    const vectors = await embedBatch(texts);
+
+    // upsert ДО search — чтобы рилсы из батча были видны друг другу.
+    const pointsToUpsert = rows
+      .map((r, i) => {
+        const v = vectors[i];
+        if (!v) return null;
+        return {
+          id: r.id,
+          vector: v,
+          payload: {
+            reelId: r.id,
+            authorUsername: r.author.username,
+            viralScore: r.viralScore,
+            virality: r.virality,
+            postedAt: r.postedAt ? r.postedAt.toISOString() : null,
+          },
+        };
+      })
+      .filter((p): p is NonNullable<typeof p> => Boolean(p));
+    if (pointsToUpsert.length > 0) {
+      await upsertReels(pointsToUpsert);
+    }
+
+    const dupeIds = await findDuplicateReelIds(
+      rows
+        .map((r, i) => {
+          const v = vectors[i];
+          if (!v) return null;
+          return { reelId: r.id, vector: v, viralScore: r.viralScore };
+        })
+        .filter((x): x is NonNullable<typeof x> => Boolean(x)),
+    );
+    if (dupeIds.size > 0) {
+      rows = rows.filter((r) => !dupeIds.has(r.id));
+    }
+  }
+
   rows = sortReels(rows, body.sortBy || 'viral_score').slice(0, body.limit);
 
   // 6.5. Niche-aggregate summary (Модуль 4). Только если рилсов
