@@ -5,8 +5,10 @@
 // чипы синонимов от Claude, баннер свежести, фильтры/сортировки,
 // верхний агрегатор по выборке.
 
+import Link from 'next/link';
 import { useState, useTransition } from 'react';
 import { ResearchReelCard } from './research-reel-card';
+import { ResearchTable } from './research-table';
 import type {
   Period,
   ResearchReelView,
@@ -14,6 +16,8 @@ import type {
   SearchResponse,
   SortField,
 } from './types';
+
+type ViewMode = 'cards' | 'table';
 
 const SORT_OPTIONS: Array<{ value: SortField; label: string }> = [
   { value: 'viral_score', label: 'Виральный счёт' },
@@ -43,6 +47,9 @@ export function ResearchClient() {
   const [pending, startTransition] = useTransition();
   const [result, setResult] = useState<SearchResponse | null>(null);
   const [error, setError] = useState<string | null>(null);
+  const [view, setView] = useState<ViewMode>('cards');
+  const [pendingRadar, startRadar] = useTransition();
+  const [radarMsg, setRadarMsg] = useState<string | null>(null);
 
   function submit(nicheValue?: string, opts: { force?: boolean } = {}) {
     const q = (nicheValue ?? niche).trim();
@@ -82,6 +89,35 @@ export function ResearchClient() {
   function onSubmit(e: React.FormEvent) {
     e.preventDefault();
     submit();
+  }
+
+  function addToRadar() {
+    if (!result) return;
+    setRadarMsg(null);
+    startRadar(async () => {
+      const res = await fetch('/api/research/radars', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          niche: result.niche,
+          filters: { period, sortBy },
+          intervalHrs: 24,
+        }),
+      });
+      if (res.ok) {
+        setRadarMsg('Добавлено в радар. Будет обновляться раз в сутки.');
+        setTimeout(() => setRadarMsg(null), 4000);
+      } else {
+        const json = await res.json().catch(() => ({}));
+        setRadarMsg('Не удалось: ' + (json.message || json.error || `HTTP ${res.status}`));
+      }
+    });
+  }
+
+  function exportData(format: 'csv' | 'json') {
+    if (!result) return;
+    const ids = result.reels.map((r) => r.id).join(',');
+    window.open(`/api/research/export?format=${format}&ids=${encodeURIComponent(ids)}`, '_blank');
   }
 
   // Re-sort клиент-сайд без нового запроса

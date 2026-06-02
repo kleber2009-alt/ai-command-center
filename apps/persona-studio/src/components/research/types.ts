@@ -33,6 +33,15 @@ export type ResearchFilters = {
   period: Period;
 };
 
+export type NicheSummaryView = {
+  summary: string;
+  dominant_hooks: string[];
+  dominant_formats: string[];
+  dominant_topics: string[];
+  duration_band: string;
+  outlier_examples: Array<{ reel_id: string; why: string }>;
+};
+
 export type SearchResponse = {
   ok: true;
   cacheHit: boolean;
@@ -40,6 +49,7 @@ export type SearchResponse = {
   keywords: string[];
   hashtags: string[];
   summary: string | null;
+  nicheSummary?: NicheSummaryView | null;
   reels: ResearchReelView[];
   stats?: {
     scraped: number;
