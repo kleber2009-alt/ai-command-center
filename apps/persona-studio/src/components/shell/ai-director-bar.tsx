@@ -2,6 +2,7 @@
 
 import { useState } from 'react';
 import { useRouter } from 'next/navigation';
+import { t, type Locale } from '@/lib/i18n';
 
 const SUGGESTIONS = [
   { label: 'Viral Reel about habits', target: '/videos/new' },
@@ -10,7 +11,7 @@ const SUGGESTIONS = [
   { label: 'Productivity tips video', target: '/videos/new' },
 ];
 
-export function AIDirectorBar() {
+export function AIDirectorBar({ locale }: { locale: Locale }) {
   const [collapsed, setCollapsed] = useState(false);
   const [prompt, setPrompt] = useState('');
   const router = useRouter();
@@ -30,10 +31,10 @@ export function AIDirectorBar() {
           type="button"
           onClick={() => setCollapsed(false)}
           className="btn-ghost shadow-editorial"
-          title="Open AI Director"
+          title={t('Open AI Director', locale)}
         >
           <span className="text-gold mono text-[10px]">◆</span>
-          <span>AI Director</span>
+          <span>{t('AI Director', locale)}</span>
         </button>
       </div>
     );
@@ -45,20 +46,20 @@ export function AIDirectorBar() {
         <div className="flex items-start justify-between gap-3 mb-3">
           <div>
             <div className="flex items-center gap-2 mono text-[9px] tracking-[0.28em] uppercase">
-              <span className="text-gold">◆ AI Director</span>
-              <span className="text-text-muted">· beta</span>
+              <span className="text-gold">◆ {t('AI Director', locale)}</span>
+              <span className="text-text-muted">· {t('beta', locale)}</span>
             </div>
             <div className="mt-1 font-serif italic text-[13px] text-text-secondary">
-              Tell AI what to create. It will handle the rest.
+              {t('Tell AI what to create. It will handle the rest.', locale)}
             </div>
           </div>
           <button
             type="button"
             onClick={() => setCollapsed(true)}
             className="mono text-[10px] tracking-[0.22em] uppercase text-text-muted hover:text-gold"
-            aria-label="Collapse director bar"
+            aria-label={t('Collapse director bar', locale)}
           >
-            hide
+            {t('hide', locale)}
           </button>
         </div>
 
@@ -66,11 +67,11 @@ export function AIDirectorBar() {
           <input
             value={prompt}
             onChange={(e) => setPrompt(e.target.value)}
-            placeholder="What do you want to create today?"
+            placeholder={t('What do you want to create today?', locale)}
             className="input flex-1"
           />
           <button type="submit" className="btn-primary" disabled={!prompt.trim()}>
-            send
+            {t('send', locale)}
           </button>
         </form>
 
@@ -82,7 +83,7 @@ export function AIDirectorBar() {
               onClick={() => router.push(s.target)}
               className="mono text-[10px] tracking-[0.18em] uppercase px-3 py-1.5 border border-border-soft text-text-secondary hover:border-gold/60 hover:text-gold transition-colors rounded-sm"
             >
-              {s.label}
+              {t(s.label, locale)}
             </button>
           ))}
         </div>

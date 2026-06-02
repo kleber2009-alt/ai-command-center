@@ -4,12 +4,14 @@ import Link from 'next/link';
 import { useState, useEffect, useRef } from 'react';
 import { useRouter } from 'next/navigation';
 import { QUICK_CREATE_ACTIONS } from './sidebar-nav';
+import { t, type Locale } from '@/lib/i18n';
 
 type Props = {
   signOutAction: () => Promise<void> | void;
+  locale: Locale;
 };
 
-export function TopActionBar({ signOutAction }: Props) {
+export function TopActionBar({ signOutAction, locale }: Props) {
   const [createOpen, setCreateOpen] = useState(false);
   const [query, setQuery] = useState('');
   const router = useRouter();
@@ -44,7 +46,7 @@ export function TopActionBar({ signOutAction }: Props) {
             <input
               value={query}
               onChange={(e) => setQuery(e.target.value)}
-              placeholder="Search anything…"
+              placeholder={t('Search anything…', locale)}
               className="w-full bg-transparent border-0 border-b border-border-soft focus:border-gold/60 outline-none py-2 pl-7 pr-3 font-sans text-[14px] text-text-primary placeholder:text-text-muted/70 transition-colors"
             />
           </label>
@@ -52,9 +54,9 @@ export function TopActionBar({ signOutAction }: Props) {
 
         <button
           type="button"
-          aria-label="Notifications"
+          aria-label={t('Notifications', locale)}
           className="btn-icon"
-          title="Notifications"
+          title={t('Notifications', locale)}
         >
           <span className="mono text-[12px]">◔</span>
         </button>
@@ -66,7 +68,7 @@ export function TopActionBar({ signOutAction }: Props) {
             className="btn-primary"
           >
             <span className="text-[14px] leading-none">+</span>
-            <span>Create Content</span>
+            <span>{t('Create Content', locale)}</span>
           </button>
 
           {createOpen && (
@@ -75,7 +77,7 @@ export function TopActionBar({ signOutAction }: Props) {
               className="absolute right-0 top-full mt-2 w-[320px] panel shadow-editorial p-2 z-50"
             >
               <div className="px-3 py-2 mono text-[9px] tracking-[0.28em] uppercase text-text-muted border-b border-border-soft mb-1">
-                Quick create
+                {t('Quick create', locale)}
               </div>
               <ul>
                 {QUICK_CREATE_ACTIONS.map((action) => (
@@ -87,10 +89,10 @@ export function TopActionBar({ signOutAction }: Props) {
                     >
                       <div className="min-w-0">
                         <div className="font-serif text-[15px] text-text-primary group-hover:text-gold transition-colors">
-                          {action.label}
+                          {t(action.label, locale)}
                         </div>
                         <div className="mono text-[9px] tracking-[0.2em] uppercase text-text-muted">
-                          {action.hint}
+                          {t(action.hint, locale)}
                         </div>
                       </div>
                       <span
@@ -112,7 +114,7 @@ export function TopActionBar({ signOutAction }: Props) {
         </div>
 
         <form action={signOutAction} className="hidden sm:block">
-          <button className="btn-icon" type="submit" title="Sign out">
+          <button className="btn-icon" type="submit" title={t('Sign out', locale)}>
             <span className="mono text-[10px]">⤓</span>
           </button>
         </form>

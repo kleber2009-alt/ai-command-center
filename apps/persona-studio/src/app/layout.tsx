@@ -1,6 +1,7 @@
 import type { Metadata, Viewport } from 'next';
 import Script from 'next/script';
 import './globals.css';
+import { getLocale } from '@/lib/i18n';
 
 export const metadata: Metadata = {
   title: 'Persona Studio — Luxury AI Content Studio',
@@ -14,9 +15,10 @@ export const viewport: Viewport = {
   viewportFit: 'cover',
 };
 
-export default function RootLayout({ children }: { children: React.ReactNode }) {
+export default async function RootLayout({ children }: { children: React.ReactNode }) {
+  const locale = await getLocale();
   return (
-    <html lang="ru">
+    <html lang={locale}>
       <head>
         {/* Editorial typography pair: Playfair Display (serif) + Inter (sans) + JetBrains Mono (status labels). */}
         <link rel="preconnect" href="https://fonts.googleapis.com" />

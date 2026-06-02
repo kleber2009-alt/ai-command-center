@@ -4,6 +4,8 @@ import Link from 'next/link';
 import { usePathname } from 'next/navigation';
 import { useState } from 'react';
 import { SIDEBAR_SECTIONS, type SidebarItem } from './sidebar-nav';
+import { t, type Locale } from '@/lib/i18n';
+import { LocaleSwitcher } from '@/components/locale-switcher';
 
 type Props = {
   email: string;
@@ -11,6 +13,7 @@ type Props = {
   isAdmin: boolean;
   plan?: string;
   hiddenKeys?: string[];
+  locale: Locale;
 };
 
 function isActive(pathname: string, item: SidebarItem): boolean {
@@ -22,7 +25,7 @@ function isActive(pathname: string, item: SidebarItem): boolean {
   return pathname === base || pathname.startsWith(base + '/');
 }
 
-export function Sidebar({ email, balance, isAdmin, plan = 'Pro', hiddenKeys = [] }: Props) {
+export function Sidebar({ email, balance, isAdmin, plan = 'Pro', hiddenKeys = [], locale }: Props) {
   const pathname = usePathname() || '';
   const [open, setOpen] = useState(false);
 
@@ -37,7 +40,7 @@ export function Sidebar({ email, balance, isAdmin, plan = 'Pro', hiddenKeys = []
       <button
         type="button"
         onClick={() => setOpen((v) => !v)}
-        aria-label="Toggle navigation"
+        aria-label={t('Toggle navigation', locale)}
         className="lg:hidden fixed top-3 left-3 z-50 w-10 h-10 flex items-center justify-center bg-bg-panel border border-border-soft text-text-primary"
       >
         <span className="mono text-[10px] tracking-[0.2em]">{open ? '×' : '≡'}</span>
@@ -84,7 +87,7 @@ export function Sidebar({ email, balance, isAdmin, plan = 'Pro', hiddenKeys = []
             <div key={section.key}>
               {section.key !== 'home' && (
                 <div className="px-3 mb-1.5 mono text-[9px] tracking-[0.28em] uppercase text-text-muted">
-                  {section.label}
+                  {t(section.label, locale)}
                 </div>
               )}
               <ul className="space-y-px">
@@ -114,10 +117,10 @@ export function Sidebar({ email, balance, isAdmin, plan = 'Pro', hiddenKeys = []
                               : 'bg-text-muted/40 group-hover:bg-text-secondary',
                           ].join(' ')}
                         />
-                        <span className="text-[13px] tracking-tight">{item.label}</span>
+                        <span className="text-[13px] tracking-tight">{t(item.label, locale)}</span>
                         {item.hint && (
                           <span className="ml-auto mono text-[8.5px] tracking-[0.18em] uppercase text-text-muted/70">
-                            {item.hint}
+                            {t(item.hint, locale)}
                           </span>
                         )}
                       </Link>
@@ -130,7 +133,7 @@ export function Sidebar({ email, balance, isAdmin, plan = 'Pro', hiddenKeys = []
           {isAdmin && (
             <div>
               <div className="px-3 mb-1.5 mono text-[9px] tracking-[0.28em] uppercase text-pink">
-                Admin
+                {t('Admin', locale)}
               </div>
               <Link
                 href="/admin"
@@ -143,7 +146,7 @@ export function Sidebar({ email, balance, isAdmin, plan = 'Pro', hiddenKeys = []
                 ].join(' ')}
               >
                 <span className="inline-block w-1 h-1 rounded-full bg-pink" />
-                <span className="text-[13px] tracking-tight">Console</span>
+                <span className="text-[13px] tracking-tight">{t('Console', locale)}</span>
               </Link>
             </div>
           )}
@@ -156,7 +159,7 @@ export function Sidebar({ email, balance, isAdmin, plan = 'Pro', hiddenKeys = []
             className="flex items-baseline justify-between hover:opacity-90"
           >
             <span className="mono text-[9px] tracking-[0.28em] uppercase text-text-muted">
-              Tokens
+              {t('Tokens', locale)}
             </span>
             <span className="font-serif text-[22px] text-gold leading-none">
               {balance}
@@ -167,7 +170,7 @@ export function Sidebar({ email, balance, isAdmin, plan = 'Pro', hiddenKeys = []
             className="flex items-baseline justify-between hover:opacity-90"
           >
             <span className="mono text-[9px] tracking-[0.28em] uppercase text-text-muted">
-              Plan
+              {t('Plan', locale)}
             </span>
             <span className="mono text-[11px] tracking-[0.16em] uppercase text-text-primary">
               {plan}
@@ -182,16 +185,19 @@ export function Sidebar({ email, balance, isAdmin, plan = 'Pro', hiddenKeys = []
                 {email.split('@')[0]}
               </div>
               <div className="mono text-[8.5px] tracking-[0.22em] uppercase text-text-muted">
-                {isAdmin ? 'Admin' : 'Creator'}
+                {isAdmin ? t('Admin', locale) : t('Creator', locale)}
               </div>
             </div>
           </div>
-          <Link
-            href="/billing"
-            className="block mono text-[9px] tracking-[0.22em] uppercase text-text-muted hover:text-gold transition-colors"
-          >
-            Help & Docs →
-          </Link>
+          <div className="pt-3 border-t border-border-soft flex items-center justify-between gap-3">
+            <Link
+              href="/billing"
+              className="mono text-[9px] tracking-[0.22em] uppercase text-text-muted hover:text-gold transition-colors"
+            >
+              {t('Help & Docs →', locale)}
+            </Link>
+            <LocaleSwitcher locale={locale} />
+          </div>
         </div>
       </aside>
     </>
