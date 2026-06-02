@@ -29,6 +29,7 @@ import {
 } from '@/lib/research/metrics';
 import { captionHash, dedupeByCaption } from '@/lib/research/dedupe';
 import { getCachedSearch, putCachedSearch, type ResearchFilters } from '@/lib/research/cache';
+import { summarizeNiche, type NicheSummary } from '@/lib/research/niche-summary';
 
 export const runtime = 'nodejs';
 export const maxDuration = 180;
@@ -316,12 +317,31 @@ export async function POST(req: NextRequest) {
   rows = dedupeByCaption(rows);
   rows = sortReels(rows, body.sortBy || 'viral_score').slice(0, body.limit);
 
+  // 6.5. Niche-aggregate summary (Модуль 4). Только если рилсов
+  // достаточно — иначе шумно. Не блокируем основную отдачу: если
+  // summarizeNiche упал, просто возвращаем без summary.
+  let nicheSummary: NicheSummary | null = null;
+  if (rows.length >= 5) {
+    const summaryRes = await summarizeNiche({
+      niche: body.niche,
+      reels: rows.map((r) => ({
+        id: r.id,
+        views: r.views,
+        virality: r.virality,
+        engagement: r.engagementRate,
+        duration: null,
+        caption: r.caption || '',
+      })),
+    });
+    if (summaryRes.ok) nicheSummary = summaryRes.data;
+  }
+
   // 7. Кэш + журнал
   await putCachedSearch({
     niche: body.niche,
     filters: filtersForCache,
     resultReelIds: rows.map((r) => r.id),
-    summary: null, // в Этапе 1 niche-aggregate summary не делаем — это Модуль 4
+    summary: nicheSummary?.summary ?? null,
     expansion: { keywords: expansion.keywords, hashtags: expansion.hashtags },
   });
 
@@ -342,7 +362,8 @@ export async function POST(req: NextRequest) {
     niche: body.niche,
     keywords: expansion.keywords,
     hashtags: expansion.hashtags,
-    summary: null,
+    summary: nicheSummary?.summary ?? null,
+    nicheSummary,
     reels: rows,
     stats: {
       scraped: allItems.length,
