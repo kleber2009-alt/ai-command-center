@@ -74,7 +74,11 @@ export async function expandNiche(niche: string): Promise<NicheExpansion> {
     return fallbackExpand(cleaned);
   }
   if (!res.ok) {
-    console.warn(`[expand-niche] claude ${res.status}`);
+    // Полный body важен для отладки: 400 от Anthropic может означать что
+    // угодно (закончились кредиты, неверная модель, плохой ключ) — статус
+    // сам по себе бесполезен. Режем до 400 символов чтобы не засорить логи.
+    const body = await res.text().catch(() => '');
+    console.warn(`[expand-niche] claude ${res.status} ${body.slice(0, 400)}`);
     return fallbackExpand(cleaned);
   }
 
