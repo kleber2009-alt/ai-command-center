@@ -2,6 +2,7 @@ import { NextRequest } from 'next/server';
 import { serviceClient } from '@/lib/supabase/server';
 import { normalizeLocale } from '@/lib/i18n';
 import { ok, fail } from '@/lib/http';
+import { guardRate } from '@/lib/ratelimit';
 import { z } from 'zod';
 
 /**
@@ -17,6 +18,9 @@ const Body = z.object({
 });
 
 export async function POST(req: NextRequest) {
+  const limited = guardRate(req, 'leads', 10, 60_000);
+  if (limited) return limited;
+
   const parsed = Body.safeParse(await req.json().catch(() => null));
   if (!parsed.success) return fail('invalid email', 422);
 

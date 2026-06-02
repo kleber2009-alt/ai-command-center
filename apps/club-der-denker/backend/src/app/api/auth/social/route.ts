@@ -3,6 +3,7 @@ import { serviceClient } from '@/lib/supabase/server';
 import { ok, fail } from '@/lib/http';
 import { issueToken } from '@/lib/auth';
 import { verifySocialToken } from '@/lib/social-auth';
+import { guardRate } from '@/lib/ratelimit';
 import { z } from 'zod';
 
 /**
@@ -19,6 +20,9 @@ const Body = z.object({
 });
 
 export async function POST(req: NextRequest) {
+  const limited = guardRate(req, 'social', 15, 60_000);
+  if (limited) return limited;
+
   const parsed = Body.safeParse(await req.json().catch(() => null));
   if (!parsed.success) return fail('invalid body', 422);
 

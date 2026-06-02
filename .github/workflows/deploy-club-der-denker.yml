@@ -93,7 +93,7 @@ jobs:
 
             echo "── health-check ──"
             for i in $(seq 1 25); do
-              if curl -fsS http://localhost:3020/admin >/dev/null 2>&1; then
+              if curl -fsS http://localhost:3020/api/health >/dev/null 2>&1; then
                 echo "✓ healthy after ${i}×3s"; exit 0
               fi
               sleep 3
