@@ -77,6 +77,7 @@ export async function POST(req: NextRequest, { params }: { params: Promise<{ id:
         followers: reel.author.followers,
         medianViews: reel.author.medianViews,
       },
+      thumbnailUrl: reel.thumbnailUrl,
     });
     if (!result.ok) {
       await refundTokens({

@@ -1,12 +1,15 @@
 'use client';
 
 import Link from 'next/link';
-import { useState } from 'react';
+import { useState, useTransition } from 'react';
 import type { ResearchReelView } from './types';
+import { AddToFolderModal } from './add-to-folder-modal';
 
 type Props = {
   reel: ResearchReelView;
   blurred?: boolean;
+  /** Initial favorite state (true если уже в избранном). По умолчанию false. */
+  initialFavorited?: boolean;
 };
 
 const formatCount = (n: number) => {
@@ -40,12 +43,29 @@ function viralityClass(v: number | null): string {
   return 'text-text border-border';
 }
 
-export function ResearchReelCard({ reel, blurred }: Props) {
+export function ResearchReelCard({ reel, blurred, initialFavorited = false }: Props) {
   const [thumbFailed, setThumbFailed] = useState(false);
+  const [favorited, setFavorited] = useState(initialFavorited);
+  const [showFolderModal, setShowFolderModal] = useState(false);
+  const [, startFavTransition] = useTransition();
   const showThumb = reel.thumbnailUrl && !thumbFailed;
   const virality = reel.virality;
 
+  function toggleFavorite() {
+    const next = !favorited;
+    setFavorited(next); // optimistic
+    startFavTransition(async () => {
+      const res = await fetch('/api/research/favorites', {
+        method: next ? 'POST' : 'DELETE',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ itemType: 'reel', itemId: reel.id }),
+      });
+      if (!res.ok) setFavorited(!next); // rollback
+    });
+  }
+
   return (
+    <>
     <article
       className={`relative border border-border bg-surface flex flex-col overflow-hidden ${
         blurred ? 'pointer-events-none select-none' : ''
@@ -90,11 +110,23 @@ export function ResearchReelCard({ reel, blurred }: Props) {
         <div className="absolute top-2 right-2 flex flex-col gap-1.5">
           <button
             type="button"
-            className="px-1.5 py-1 bg-black/80 border border-border hover:border-pink mono text-[10px] text-text"
-            title="В избранное"
+            onClick={toggleFavorite}
+            className={`px-1.5 py-1 bg-black/80 border mono text-[10px] ${
+              favorited ? 'border-pink text-pink' : 'border-border text-text hover:border-pink'
+            }`}
+            title={favorited ? 'В избранном (клик чтобы убрать)' : 'В избранное'}
             aria-label="favorite"
           >
-            ♡
+            {favorited ? '♥' : '♡'}
+          </button>
+          <button
+            type="button"
+            onClick={() => setShowFolderModal(true)}
+            className="px-1.5 py-1 bg-black/80 border border-border hover:border-gold mono text-[10px] text-text"
+            title="В папку"
+            aria-label="add to folder"
+          >
+            +
           </button>
           <a
             href={reel.url}
@@ -141,9 +173,13 @@ export function ResearchReelCard({ reel, blurred }: Props) {
         ) : (
           <div className="w-6 h-6 rounded-full bg-bg border border-border" />
         )}
-        <span className="mono text-[11px] tracking-wider text-text truncate flex-1">
+        <Link
+          href={`/research/author/${reel.author.username}`}
+          className="mono text-[11px] tracking-wider text-text hover:text-lime truncate flex-1"
+          title="Анализ профиля"
+        >
           @{reel.author.username}
-        </span>
+        </Link>
         {reel.author.followers != null && (
           <span className="mono text-[9px] tracking-widest uppercase text-text-mute">
             {formatCount(reel.author.followers)}
@@ -171,6 +207,14 @@ export function ResearchReelCard({ reel, blurred }: Props) {
         Анализ видео →
       </Link>
     </article>
+    {showFolderModal && (
+      <AddToFolderModal
+        itemType="reel"
+        itemId={reel.id}
+        onClose={() => setShowFolderModal(false)}
+      />
+    )}
+    </>
   );
 }
 

@@ -39,7 +39,9 @@ const formatCount = (n: number) => {
   return String(n);
 };
 
-export function ResearchClient() {
+const DEMO_VISIBLE = 5; // ТЗ §5/§12 — первые N карточек, остальные blur
+
+export function ResearchClient({ isFreePlan = false }: { isFreePlan?: boolean }) {
   const [niche, setNiche] = useState('');
   const [sortBy, setSortBy] = useState<SortField>('viral_score');
   const [period, setPeriod] = useState<Period>('all');
@@ -358,15 +360,27 @@ export function ResearchClient() {
       )}
 
       {displayed.length > 0 && view === 'cards' && (
-        <section className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-0.5 bg-border-soft">
-          {displayed.map((reel) => (
-            <ResearchReelCard key={reel.id} reel={reel} />
-          ))}
+        <section className="relative">
+          <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-0.5 bg-border-soft">
+            {displayed.map((reel, i) => (
+              <ResearchReelCard
+                key={reel.id}
+                reel={reel}
+                blurred={isFreePlan && i >= DEMO_VISIBLE}
+              />
+            ))}
+          </div>
+          {isFreePlan && displayed.length > DEMO_VISIBLE && <DemoGate visibleCount={DEMO_VISIBLE} totalCount={displayed.length} />}
         </section>
       )}
 
       {displayed.length > 0 && view === 'table' && (
-        <ResearchTable reels={displayed} />
+        <>
+          <ResearchTable reels={isFreePlan ? displayed.slice(0, DEMO_VISIBLE) : displayed} />
+          {isFreePlan && displayed.length > DEMO_VISIBLE && (
+            <DemoGate visibleCount={DEMO_VISIBLE} totalCount={displayed.length} compact />
+          )}
+        </>
       )}
 
       {/* Stats footer */}
@@ -417,6 +431,47 @@ function Aggregate({ label, value }: { label: string; value: number }) {
     <div className="grid gap-0.5 text-right">
       <span className="mono text-[8px] tracking-widest uppercase text-text-mute">{label}</span>
       <span className="font-serif text-[16px] text-text leading-none">{formatCount(value)}</span>
+    </div>
+  );
+}
+
+function DemoGate({
+  visibleCount,
+  totalCount,
+  compact = false,
+}: {
+  visibleCount: number;
+  totalCount: number;
+  compact?: boolean;
+}) {
+  if (compact) {
+    return (
+      <div className="border border-gold/40 bg-gold/5 p-4 text-center grid gap-2">
+        <div className="font-serif italic text-[15px] text-text">
+          Скрыто {totalCount - visibleCount} карточек. Демо-режим показывает только первые {visibleCount}.
+        </div>
+        <div>
+          <a href="/billing" className="btn-primary text-[10px] tracking-widest uppercase inline-block">
+            Снять ограничения →
+          </a>
+        </div>
+      </div>
+    );
+  }
+  return (
+    <div className="pointer-events-none absolute inset-x-0 bottom-0 flex justify-center pb-6">
+      <div className="pointer-events-auto border border-gold/40 bg-bg/95 backdrop-blur p-5 grid gap-2 max-w-md text-center">
+        <span className="mono text-[9px] tracking-widest uppercase text-gold">DEMO MODE</span>
+        <div className="font-serif text-[16px] text-text">
+          Тебе видны первые {visibleCount} из {totalCount} рилсов.
+        </div>
+        <p className="font-serif italic text-[13px] text-text-mute leading-snug">
+          Остальные размыты. На платном тарифе — вся выдача без ограничений + анализ, транскрибация, генератор хуков.
+        </p>
+        <a href="/billing" className="btn-primary text-[10px] tracking-widest uppercase">
+          Снять ограничения →
+        </a>
+      </div>
     </div>
   );
 }

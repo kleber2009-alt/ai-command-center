@@ -22,7 +22,7 @@ export default async function ResearchPage() {
         description="Вписываешь нишу — получаешь ленту реальных Instagram-рилсов с просмотрами, виральностью × и вовлечённостью. Метрики считаются относительно медианы автора, поэтому 50× — это реальный выброс, а не толстый канал."
       />
 
-      <ResearchClient />
+      <ResearchClient isFreePlan={user.plan === 'free'} />
     </div>
   );
 }

@@ -13,7 +13,7 @@
 // аккаунты обновляются чаще, у мелких медиана стабильна.
 
 import { prisma } from '@/lib/prisma';
-import { scrapeAccountPosts } from '@/lib/parser/apify';
+import { guardedScrapeAccount } from './apify-budget';
 import { classify } from '@/lib/parser/scoring';
 import type { ScoredPost } from '@/lib/parser/types';
 import {
@@ -98,7 +98,7 @@ export async function indexAuthor(
 
   // Скрейп: достаём последние рилсы. Apify-actor отдаёт и followers/owner
   // в каждом item-е, и сам список рилсов. Берём оттуда и то и другое.
-  const scraped = await scrapeAccountPosts(handle, {
+  const scraped = await guardedScrapeAccount(handle, {
     days: APIFY_LOOKBACK_DAYS,
     limit: medianWindow,
   });

@@ -80,6 +80,12 @@ const envSchema = z.object({
   COST_RESEARCH_REFRESH_AUTHOR: z.coerce.number().default(5),
   COST_RESEARCH_HOOK_GEN: z.coerce.number().default(1),
   ANTHROPIC_DEEP_MODEL: z.string().default('claude-sonnet-4-6'),
+  // Monthly Apify budget cap in CENTS (ТЗ §16 риск «Бюджет Apify»).
+  // 5000 = $50/мес. Каждый scrape инкрементит usage; при превышении —
+  // дальнейшие вызовы возвращают error без обращения к Apify.
+  APIFY_MONTHLY_BUDGET_CENTS: z.coerce.number().default(5000),
+  // Стоимость 1 элемента (USD-cents). Дефолт = $2.30/1000 actor.
+  APIFY_CENTS_PER_ITEM: z.coerce.number().default(0.23),
   SIGNUP_BONUS_TOKENS: z.coerce.number().default(10),
 
   // ── Auth ──────────────────────────────────────

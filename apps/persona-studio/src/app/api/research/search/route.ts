@@ -17,7 +17,8 @@ import { NextRequest, NextResponse } from 'next/server';
 import { z } from 'zod';
 import { getCurrentUserOrApiKey } from '@/lib/auth';
 import { prisma } from '@/lib/prisma';
-import { isApifyConfigured, scrapeHashtagPosts, type ApifyItem } from '@/lib/parser/apify';
+import { isApifyConfigured, type ApifyItem } from '@/lib/parser/apify';
+import { guardedScrapeHashtag } from '@/lib/research/apify-budget';
 import { classify } from '@/lib/parser/scoring';
 import type { ScoredPost } from '@/lib/parser/types';
 import { expandNiche } from '@/lib/research/expand-niche';
@@ -184,7 +185,7 @@ export async function POST(req: NextRequest) {
   const allItems: ApifyItem[] = [];
   const settled = await Promise.allSettled(
     tagsToScrape.map((tag) =>
-      scrapeHashtagPosts(tag, { days: 30, limit: 25 }).then((r) => ({ tag, r })),
+      guardedScrapeHashtag(tag, { days: 30, limit: 25 }).then((r) => ({ tag, r })),
     ),
   );
   for (const s of settled) {

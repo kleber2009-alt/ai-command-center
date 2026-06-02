@@ -9,7 +9,8 @@
 // и возвращает дельту "что нового" — сравнивает с lastResultIds.
 
 import { prisma } from '@/lib/prisma';
-import { type ApifyItem, scrapeHashtagPosts } from '@/lib/parser/apify';
+import type { ApifyItem } from '@/lib/parser/apify';
+import { guardedScrapeHashtag } from './apify-budget';
 import { classify } from '@/lib/parser/scoring';
 import type { ScoredPost } from '@/lib/parser/types';
 import { expandNiche } from './expand-niche';
@@ -45,7 +46,7 @@ export async function runRadar(radarId: string, opts: { maxNewAuthors?: number }
   const allItems: ApifyItem[] = [];
   const settled = await Promise.allSettled(
     tagsToScrape.map((tag) =>
-      scrapeHashtagPosts(tag, { days: 30, limit: 25 }).then((r) => ({ tag, r })),
+      guardedScrapeHashtag(tag, { days: 30, limit: 25 }).then((r) => ({ tag, r })),
     ),
   );
   for (const s of settled) {

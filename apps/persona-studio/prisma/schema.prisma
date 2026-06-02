@@ -708,6 +708,19 @@ model ResearchRadar {
   @@index([enabled, lastRunAt])
 }
 
+// Месячный трекер расхода на Apify (ТЗ §16). По одному ряду на YYYYMM.
+// Инкрементируется после каждого скрейпа (см. lib/research/apify-budget.ts).
+// `cents` хранится как Int, конвертация в $ только в UI/логах.
+model ResearchApifyUsage {
+  month        String   @id // YYYYMM, например "202606"
+  callsMade    Int      @default(0)
+  itemsScraped Int      @default(0)
+  estCostCents Int      @default(0)
+  // Маркер последнего алерта (75/90/100), чтобы не спамить тем же уровнем
+  lastAlertPct Int      @default(0)
+  updatedAt    DateTime @updatedAt
+}
+
 // Per-item override for the left sidebar. Absence = visible (default).
 // Only items the admin toggled off are stored here with `hidden = true`.
 model SidebarItemOverride {

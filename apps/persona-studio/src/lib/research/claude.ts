@@ -26,6 +26,10 @@ export function isClaudeConfigured(): boolean {
  * Универсальный chat-вызов. По умолчанию использует ANTHROPIC_DEEP_MODEL
  * (Sonnet) — для analyze/page-analyze это критично. Хуки и расширение
  * ниши явно передают `claude-haiku` чтобы сэкономить.
+ *
+ * Vision: если передан `imageUrls[]`, они добавляются к user-сообщению как
+ * image-блоки (ТЗ §6.2 — превью идёт в модель). Anthropic поддерживает
+ * url-источник (`source: { type: 'url', url }`) — НЕ скачиваем сами.
  */
 export async function claudeChat(opts: {
   system: string;
@@ -33,15 +37,32 @@ export async function claudeChat(opts: {
   maxTokens?: number;
   model?: string;
   timeoutMs?: number;
+  /** Опциональные image URL для vision. Только https. Игнорируем data: и недоступные ссылки на сервере Anthropic. */
+  imageUrls?: string[];
 }): Promise<ChatResult> {
   const apiKey = env.ANTHROPIC_API_KEY;
   if (!apiKey) return { ok: false, status: 503, details: 'ANTHROPIC_API_KEY missing' };
+
+  type ContentBlock =
+    | { type: 'text'; text: string }
+    | { type: 'image'; source: { type: 'url'; url: string } };
+
+  let messageContent: string | ContentBlock[] = opts.user;
+  const validImages = (opts.imageUrls || []).filter(
+    (u) => typeof u === 'string' && /^https:\/\//.test(u),
+  );
+  if (validImages.length > 0) {
+    messageContent = [
+      ...validImages.map<ContentBlock>((url) => ({ type: 'image', source: { type: 'url', url } })),
+      { type: 'text', text: opts.user },
+    ];
+  }
 
   const body = JSON.stringify({
     model: opts.model || env.ANTHROPIC_DEEP_MODEL,
     max_tokens: opts.maxTokens ?? 4000,
     system: opts.system,
-    messages: [{ role: 'user', content: opts.user }],
+    messages: [{ role: 'user', content: messageContent }],
   });
 
   let lastStatus = 0;

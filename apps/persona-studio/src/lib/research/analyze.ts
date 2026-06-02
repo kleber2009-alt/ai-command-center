@@ -68,6 +68,8 @@ export type AnalyzeInput = {
     medianViews: number | null;
   };
   niche?: string;
+  /** Превью ролика (https only) — ТЗ §6.2 «Вход для модели: ... + превью (vision)». */
+  thumbnailUrl?: string | null;
 };
 
 export type AnalyzeOk = {
@@ -124,11 +126,17 @@ ${input.transcript.slice(0, 4000)}
 
 ` : ''}Разложи на JSON по схеме.`;
 
+  // Thumbnails из Instagram CDN иногда дают 403 на серверной стороне,
+  // но Anthropic Vision сам делает fetch с правильным User-Agent. Не
+  // фильтруем агрессивно — пусть модель сама пропустит если не загрузится.
+  const imageUrls = input.thumbnailUrl ? [input.thumbnailUrl] : [];
+
   const res = await claudeChat({
     system,
     user: userMsg,
     maxTokens: 3000,
     timeoutMs: 90_000,
+    imageUrls,
   });
   if (!res.ok) return { ok: false, error: res.details, status: res.status };
 

@@ -83,6 +83,8 @@ export function ReelDetailClient({ reel: initialReel }: { reel: Reel }) {
   const [pendingTranscribe, startTranscribe] = useTransition();
   const [pendingAnalyze, startAnalyze] = useTransition();
   const [pendingForge, startForge] = useTransition();
+  const [pendingTranslate, startTranslate] = useTransition();
+  const [translation, setTranslation] = useState<{ text: string; lang: string } | null>(null);
   const [error, setError] = useState<string | null>(null);
   const [copied, setCopied] = useState(false);
 
@@ -122,6 +124,24 @@ export function ReelDetailClient({ reel: initialReel }: { reel: Reel }) {
     navigator.clipboard.writeText(transcript.text).then(() => {
       setCopied(true);
       setTimeout(() => setCopied(false), 1500);
+    });
+  }
+
+  function translate() {
+    if (!transcript) return;
+    setError(null);
+    startTranslate(async () => {
+      const res = await fetch(`/api/research/reels/${reel.id}/translate`, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ source: 'transcript', targetLang: 'ru' }),
+      });
+      const json = await res.json();
+      if (!res.ok) {
+        setError(json.message || json.error || `HTTP ${res.status}`);
+        return;
+      }
+      setTranslation({ text: json.translated, lang: json.targetLang });
     });
   }
 
@@ -302,13 +322,24 @@ export function ReelDetailClient({ reel: initialReel }: { reel: Reel }) {
               Транскрибация {transcript?.improved && '(улучшенная)'}
             </h2>
             {transcript && (
-              <button
-                type="button"
-                onClick={copyTranscript}
-                className="mono text-[9px] tracking-widest uppercase text-text-mute hover:text-lime"
-              >
-                {copied ? '✓ скопировано' : 'копировать'}
-              </button>
+              <div className="flex gap-3">
+                <button
+                  type="button"
+                  onClick={copyTranscript}
+                  className="mono text-[9px] tracking-widest uppercase text-text-mute hover:text-lime"
+                >
+                  {copied ? '✓ скопировано' : 'копировать'}
+                </button>
+                <button
+                  type="button"
+                  onClick={translate}
+                  disabled={pendingTranslate || Boolean(translation)}
+                  className="mono text-[9px] tracking-widest uppercase text-text-mute hover:text-cyan"
+                  title="Перевести на русский (1 кр.)"
+                >
+                  {translation ? '✓ переведено' : pendingTranslate ? 'перевожу…' : 'перевести (1 кр.)'}
+                </button>
+              </div>
             )}
           </div>
           {transcript ? (
@@ -316,6 +347,16 @@ export function ReelDetailClient({ reel: initialReel }: { reel: Reel }) {
               <p className="font-serif text-[14.5px] leading-relaxed text-text whitespace-pre-wrap">
                 {transcript.text}
               </p>
+              {translation && (
+                <div className="border-t border-border-soft pt-3 grid gap-1">
+                  <span className="mono text-[9px] tracking-widest uppercase text-cyan">
+                    Перевод ({translation.lang})
+                  </span>
+                  <p className="font-serif text-[14.5px] leading-relaxed text-text whitespace-pre-wrap">
+                    {translation.text}
+                  </p>
+                </div>
+              )}
               {transcript.source === 'caption' && (
                 <div className="border-l-2 border-warm bg-warm/5 px-3 py-2 mono text-[10px] tracking-wider text-text-dim">
                   Источник — описание поста (whisper-сервис не настроен). Для реальной речи подключи WHISPER_SERVICE_URL.
