@@ -1,47 +1,50 @@
 import { useState } from 'react';
-import { View, Text, TextInput, TouchableOpacity, StyleSheet, Alert } from 'react-native';
+import { View, TextInput, StyleSheet, Alert } from 'react-native';
 import type { NativeStackScreenProps } from '@react-navigation/native-stack';
+import { Screen, Button, Heading } from '@/components/ui';
 import { api } from '@/api/client';
-import { setToken } from '@/store/session';
-import type { RootStackParamList } from '@/navigation';
+import { useSession } from '@/store/SessionContext';
+import { t } from '@/i18n';
+import { colors, radii, spacing, typography } from '@/theme';
+import type { FunnelStackParamList } from '@/navigation';
 
-type Props = NativeStackScreenProps<RootStackParamList, 'Register'>;
+type Props = NativeStackScreenProps<FunnelStackParamList, 'Register'>;
 
 /**
  * Step 7 (spec 3.1): after confirmed payment the user sets a password. The
  * backend converts the anonymous lead into a full user profile and issues a
- * session token.
+ * session token; signIn() flips the root navigator into the main tabs.
  */
-export function RegisterScreen({ route, navigation }: Props) {
+export function RegisterScreen({ route }: Props) {
+  const { signIn } = useSession();
   const [email, setEmail] = useState(route.params?.email ?? '');
   const [password, setPassword] = useState('');
+  const [busy, setBusy] = useState(false);
 
   async function submit() {
+    setBusy(true);
     try {
       const { token } = await api.register(email, password);
-      await setToken(token);
-      navigation.replace('Course');
+      await signIn(token);
     } catch (e: any) {
-      Alert.alert('Fehler', e.message);
+      Alert.alert(t('error_generic'), e.message);
+    } finally {
+      setBusy(false);
     }
   }
 
   return (
-    <View style={styles.container}>
-      <Text style={styles.title}>Konto erstellen</Text>
-      <TextInput style={styles.input} placeholder="E-Mail" autoCapitalize="none" keyboardType="email-address" value={email} onChangeText={setEmail} />
-      <TextInput style={styles.input} placeholder="Passwort" secureTextEntry value={password} onChangeText={setPassword} />
-      <TouchableOpacity style={styles.btn} onPress={submit}>
-        <Text style={styles.btnText}>Speichern</Text>
-      </TouchableOpacity>
-    </View>
+    <Screen scroll>
+      <View style={{ flex: 1, justifyContent: 'center', gap: spacing.md }}>
+        <Heading>{t('register_title')}</Heading>
+        <TextInput style={styles.input} placeholder={t('login_email')} placeholderTextColor={colors.textFaint} autoCapitalize="none" keyboardType="email-address" value={email} onChangeText={setEmail} />
+        <TextInput style={styles.input} placeholder={t('register_password')} placeholderTextColor={colors.textFaint} secureTextEntry value={password} onChangeText={setPassword} />
+      </View>
+      <Button label={t('register_save')} loading={busy} onPress={submit} />
+    </Screen>
   );
 }
 
 const styles = StyleSheet.create({
-  container: { flex: 1, justifyContent: 'center', padding: 24, gap: 14 },
-  title: { fontSize: 22, fontWeight: '700', marginBottom: 8 },
-  input: { borderWidth: 1, borderColor: '#d4d4d4', borderRadius: 10, padding: 16, fontSize: 16 },
-  btn: { backgroundColor: '#111', borderRadius: 10, padding: 16, alignItems: 'center' },
-  btnText: { color: '#fff', fontSize: 16, fontWeight: '600' },
+  input: { ...typography.body, color: colors.text, borderWidth: 1, borderColor: colors.border, borderRadius: radii.md, padding: spacing.md, backgroundColor: colors.surface },
 });

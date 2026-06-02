@@ -40,6 +40,8 @@ export const api = {
     request<{ token: string }>(`/api/auth/register`, { method: 'POST', body: JSON.stringify({ email, password }) }),
   login: (email: string, password: string) =>
     request<{ token: string }>(`/api/auth/login`, { method: 'POST', body: JSON.stringify({ email, password }) }),
+  socialSignIn: (provider: 'apple' | 'google', identityToken: string) =>
+    request<{ token: string }>(`/api/auth/social`, { method: 'POST', body: JSON.stringify({ provider, identityToken }) }),
   today: (locale: string) =>
     request<{ locked: boolean; items: any[]; dayIndex: number }>(`/api/course/today?tz=${encodeURIComponent(deviceTimeZone())}&locale=${locale}`),
   answer: (itemId: string, selectedKey: string) =>

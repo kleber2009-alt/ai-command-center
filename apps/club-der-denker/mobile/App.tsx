@@ -1,34 +1,41 @@
 import { useEffect, useState } from 'react';
-import { NavigationContainer } from '@react-navigation/native';
+import { NavigationContainer, DefaultTheme } from '@react-navigation/native';
 import { SafeAreaProvider } from 'react-native-safe-area-context';
 import { StatusBar } from 'expo-status-bar';
-import { ActivityIndicator, View } from 'react-native';
 import { RootNavigator } from '@/navigation';
+import { SessionProvider, useSession } from '@/store/SessionContext';
+import { Loading } from '@/components/ui';
 import { initLocale } from '@/i18n';
+import { colors } from '@/theme';
 
-export default function App() {
-  const [ready, setReady] = useState(false);
+const navTheme = {
+  ...DefaultTheme,
+  colors: { ...DefaultTheme.colors, background: colors.bg, card: colors.surface, text: colors.text, border: colors.border, primary: colors.accent },
+};
+
+function Gate() {
+  const { ready } = useSession();
+  const [localeReady, setLocaleReady] = useState(false);
 
   useEffect(() => {
-    // Spec 3.1: no splash/registration before the first item. We only resolve
-    // the locale (device language) before rendering the funnel directly.
-    initLocale().finally(() => setReady(true));
+    // Spec 3.1: no splash/registration before the first item — we only resolve
+    // the locale (device language) before rendering.
+    initLocale().finally(() => setLocaleReady(true));
   }, []);
 
-  if (!ready) {
-    return (
-      <View style={{ flex: 1, justifyContent: 'center' }}>
-        <ActivityIndicator />
-      </View>
-    );
-  }
+  if (!ready || !localeReady) return <Loading />;
+  return <RootNavigator />;
+}
 
+export default function App() {
   return (
     <SafeAreaProvider>
-      <NavigationContainer>
-        <RootNavigator />
-      </NavigationContainer>
-      <StatusBar style="auto" />
+      <SessionProvider>
+        <NavigationContainer theme={navTheme}>
+          <Gate />
+        </NavigationContainer>
+        <StatusBar style="light" />
+      </SessionProvider>
     </SafeAreaProvider>
   );
 }

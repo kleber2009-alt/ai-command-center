@@ -63,7 +63,22 @@ cd mobile
 npm install
 # set apiBaseUrl in app.json -> expo.extra.apiBaseUrl
 npm start                         # Expo dev server; press i / a for iOS / Android
+npm run typecheck
 ```
+
+The client is a complete frontend:
+
+- **Design system** — `src/theme.ts` (dark tokens) + `src/components/ui.tsx`
+  (Screen, Button, Card, Loading, ErrorView) + `gamification.tsx`
+  (ProgressBar, LevelBadge, StreakPill, StepDots).
+- **Navigation** — auth-gated root (`SessionContext`): unauthenticated funnel
+  stack (Funnel→Case→Branch→[Objection|Email]→Paywall→Register, + Login) and
+  an authenticated bottom-tab bar (Course / Community / Profile).
+- **Screens** — all funnel steps, a returning-user Login (email + Apple/Google
+  buttons), Course with a level/streak/progress header + offline cache,
+  read-only Feed with subscription paywall, and a Profile dashboard (level
+  badge, streak, joker, instant 6-language switch, logout, GDPR delete).
+- **i18n** — full UI string set across all 6 locales.
 
 ## Admin panel
 

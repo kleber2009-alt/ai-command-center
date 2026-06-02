@@ -1,73 +1,75 @@
-import { useEffect, useState } from 'react';
-import { FlatList, View, Text, Image, ActivityIndicator, TouchableOpacity, StyleSheet } from 'react-native';
-import type { NativeStackScreenProps } from '@react-navigation/native-stack';
-import { api } from '@/api/client';
+import { useEffect, useState, useCallback } from 'react';
+import { FlatList, View, Text, Image, StyleSheet } from 'react-native';
+import { Screen, Loading, Button, Heading } from '@/components/ui';
 import { i18n, t } from '@/i18n';
-import type { RootStackParamList } from '@/navigation';
-
-type Props = NativeStackScreenProps<RootStackParamList, 'Feed'>;
+import { api } from '@/api/client';
+import { colors, radii, spacing, typography } from '@/theme';
 
 /**
  * Read-only community feed (spec 3.4). Renders admin posts only — no comments,
  * likes or user posts. When access is locked, shows the subscription paywall.
  */
-export function FeedScreen(_props: Props) {
+export function FeedScreen() {
   const [posts, setPosts] = useState<any[]>([]);
   const [paywall, setPaywall] = useState(false);
   const [loading, setLoading] = useState(true);
 
-  useEffect(() => {
+  const load = useCallback(() => {
+    setLoading(true);
     api
       .feed(i18n.locale)
       .then((r) => {
-        if (r.locked) setPaywall(r.showPaywall);
-        else setPosts(r.posts);
+        if (r.locked) {
+          setPaywall(r.showPaywall);
+          setPosts([]);
+        } else {
+          setPaywall(false);
+          setPosts(r.posts);
+        }
       })
+      .catch(() => setPosts([]))
       .finally(() => setLoading(false));
   }, []);
 
-  if (loading) {
-    return (
-      <View style={styles.center}>
-        <ActivityIndicator />
-      </View>
-    );
-  }
+  useEffect(() => {
+    load();
+  }, [load]);
+
+  if (loading) return <Loading />;
 
   if (paywall) {
     return (
-      <View style={styles.center}>
-        <Text style={styles.title}>Community</Text>
-        <TouchableOpacity style={styles.btn}>
-          <Text style={styles.btnText}>{t('subscribe_community')}</Text>
-        </TouchableOpacity>
-      </View>
+      <Screen>
+        <View style={styles.center}>
+          <Heading>{t('feed_locked_title')}</Heading>
+          <Button label={t('subscribe_community')} onPress={() => { /* TODO(IAP): subscription purchase */ }} />
+        </View>
+      </Screen>
     );
   }
 
   return (
-    <FlatList
-      contentContainerStyle={{ padding: 16, paddingTop: 60 }}
-      data={posts}
-      keyExtractor={(p) => p.id}
-      renderItem={({ item }) => (
-        <View style={styles.post}>
-          {item.mediaUrl ? <Image source={{ uri: item.mediaUrl }} style={styles.media} /> : null}
-          <Text style={styles.postTitle}>{item.title}</Text>
-          <Text style={styles.postBody}>{item.body}</Text>
-        </View>
-      )}
-    />
+    <Screen>
+      <FlatList
+        contentContainerStyle={{ padding: spacing.lg, gap: spacing.lg }}
+        data={posts}
+        keyExtractor={(p) => p.id}
+        renderItem={({ item }) => (
+          <View style={styles.post}>
+            {item.mediaUrl ? <Image source={{ uri: item.mediaUrl }} style={styles.media} /> : null}
+            <Text style={styles.title}>{item.title}</Text>
+            <Text style={styles.body}>{item.body}</Text>
+          </View>
+        )}
+      />
+    </Screen>
   );
 }
 
 const styles = StyleSheet.create({
-  center: { flex: 1, justifyContent: 'center', alignItems: 'center', padding: 24, gap: 16 },
-  title: { fontSize: 22, fontWeight: '700' },
-  btn: { backgroundColor: '#111', borderRadius: 10, padding: 16, alignItems: 'center', alignSelf: 'stretch' },
-  btnText: { color: '#fff', fontSize: 16, fontWeight: '600' },
-  post: { marginBottom: 20, gap: 8 },
-  media: { width: '100%', height: 180, borderRadius: 12 },
-  postTitle: { fontSize: 18, fontWeight: '600' },
-  postBody: { fontSize: 15, color: '#444', lineHeight: 22 },
+  center: { flex: 1, justifyContent: 'center', alignItems: 'center', gap: spacing.lg, padding: spacing.lg },
+  post: { gap: spacing.sm, borderBottomWidth: 1, borderBottomColor: colors.border, paddingBottom: spacing.lg },
+  media: { width: '100%', height: 180, borderRadius: radii.lg, backgroundColor: colors.surfaceAlt },
+  title: { ...typography.title, color: colors.text },
+  body: { ...typography.body, color: colors.textMuted },
 });

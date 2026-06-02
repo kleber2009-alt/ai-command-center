@@ -1,86 +1,105 @@
-import { useEffect, useState } from 'react';
-import { View, Text, TouchableOpacity, ActivityIndicator, StyleSheet, Alert } from 'react-native';
-import type { NativeStackScreenProps } from '@react-navigation/native-stack';
+import { useEffect, useState, useCallback } from 'react';
+import { View, Text, TouchableOpacity, StyleSheet, Alert } from 'react-native';
+import { Screen, Loading, Button, Card } from '@/components/ui';
+import { ProgressBar, LevelBadge, StreakPill } from '@/components/gamification';
 import { api } from '@/api/client';
-import { setLocale, SUPPORTED, t } from '@/i18n';
-import { clearToken } from '@/store/session';
-import type { RootStackParamList } from '@/navigation';
-
-type Props = NativeStackScreenProps<RootStackParamList, 'Profile'>;
+import { useSession } from '@/store/SessionContext';
+import { setLocale, SUPPORTED, LOCALE_NAMES, t, levelName, AppLocale } from '@/i18n';
+import { colors, radii, spacing, typography } from '@/theme';
 
 /**
- * Profile dashboard (spec 3.2): name, email, level badge, activity history,
- * joker status; language switch and GDPR account deletion.
+ * Profile dashboard (spec 3.2): name, email, level badge, activity, joker
+ * status; instant language switch and GDPR account deletion.
  */
-export function ProfileScreen({ navigation }: Props) {
+export function ProfileScreen() {
+  const { signOut } = useSession();
   const [profile, setProfile] = useState<any>(null);
 
-  useEffect(() => {
+  const load = useCallback(() => {
     api.profile().then(setProfile).catch(() => {});
   }, []);
 
-  async function changeLocale(loc: (typeof SUPPORTED)[number]) {
+  useEffect(() => {
+    load();
+  }, [load]);
+
+  async function changeLocale(loc: AppLocale) {
     await setLocale(loc);
     await api.setLocale(loc).catch(() => {});
-    setProfile({ ...profile, locale: loc });
+    setProfile((p: any) => ({ ...p, locale: loc }));
   }
 
   function confirmDelete() {
-    Alert.alert('Konto löschen', 'GDPR: Daten werden unwiderruflich entfernt.', [
-      { text: 'Abbrechen', style: 'cancel' },
+    Alert.alert(t('delete_confirm_title'), t('delete_confirm_body'), [
+      { text: t('cancel'), style: 'cancel' },
       {
-        text: 'Löschen',
+        text: t('delete'),
         style: 'destructive',
         onPress: async () => {
-          await api.deleteAccount();
-          await clearToken();
-          navigation.replace('Funnel');
+          await api.deleteAccount().catch(() => {});
+          await signOut();
         },
       },
     ]);
   }
 
-  if (!profile) {
-    return (
-      <View style={styles.center}>
-        <ActivityIndicator />
-      </View>
-    );
-  }
+  if (!profile) return <Loading />;
+
+  const joker = profile.jokerAvailable ? `1 ${t('joker_available')}` : profile.jokerUsed ? `0 (${t('joker_used')})` : '0';
 
   return (
-    <View style={styles.container}>
-      <Text style={styles.email}>{profile.email}</Text>
-      <Text style={styles.stat}>{t('level')}: {profile.level}</Text>
-      <Text style={styles.stat}>{t('streak')}: {profile.streakDays}</Text>
-      <Text style={styles.stat}>Joker: {profile.jokerAvailable ? '1' : profile.jokerUsed ? '0 (verbraucht)' : '0'}</Text>
-      <Text style={styles.stat}>{profile.itemsCompleted} / 112</Text>
+    <Screen scroll>
+      <Text style={styles.email}>{profile.displayName ?? profile.email}</Text>
 
-      <View style={styles.langRow}>
-        {SUPPORTED.map((loc) => (
-          <TouchableOpacity key={loc} style={[styles.lang, profile.locale === loc && styles.langActive]} onPress={() => changeLocale(loc)}>
-            <Text style={profile.locale === loc ? styles.langActiveText : styles.langText}>{loc.toUpperCase()}</Text>
-          </TouchableOpacity>
-        ))}
+      <Card style={{ gap: spacing.md }}>
+        <View style={styles.row}>
+          <LevelBadge level={profile.level} label={levelName(profile.level)} />
+          <StreakPill days={profile.streakDays} label={t('profile_streak')} />
+        </View>
+        <ProgressBar value={profile.progress ?? 0} />
+        <View style={styles.statRow}>
+          <Stat label={t('profile_progress')} value={`${profile.itemsCompleted} / 112`} />
+          <Stat label={t('profile_joker')} value={joker} />
+        </View>
+      </Card>
+
+      <View style={{ gap: spacing.sm }}>
+        <Text style={styles.sectionLabel}>{t('language')}</Text>
+        <View style={styles.langRow}>
+          {SUPPORTED.map((loc) => (
+            <TouchableOpacity key={loc} style={[styles.lang, profile.locale === loc && styles.langActive]} onPress={() => changeLocale(loc)}>
+              <Text style={profile.locale === loc ? styles.langActiveText : styles.langText}>{LOCALE_NAMES[loc]}</Text>
+            </TouchableOpacity>
+          ))}
+        </View>
       </View>
 
-      <TouchableOpacity style={styles.delete} onPress={confirmDelete}>
-        <Text style={styles.deleteText}>Konto löschen (GDPR)</Text>
-      </TouchableOpacity>
+      <View style={{ flex: 1 }} />
+      <Button label={t('logout')} variant="secondary" onPress={signOut} />
+      <Button label={t('delete_account')} variant="danger" onPress={confirmDelete} />
+    </Screen>
+  );
+}
+
+function Stat({ label, value }: { label: string; value: string }) {
+  return (
+    <View style={{ flex: 1 }}>
+      <Text style={styles.statLabel}>{label}</Text>
+      <Text style={styles.statValue}>{value}</Text>
     </View>
   );
 }
 
 const styles = StyleSheet.create({
-  center: { flex: 1, justifyContent: 'center', alignItems: 'center' },
-  container: { flex: 1, padding: 24, paddingTop: 80, gap: 12 },
-  email: { fontSize: 18, fontWeight: '700' },
-  stat: { fontSize: 16, color: '#444' },
-  langRow: { flexDirection: 'row', flexWrap: 'wrap', gap: 8, marginTop: 16 },
-  lang: { borderWidth: 1, borderColor: '#d4d4d4', borderRadius: 8, paddingVertical: 8, paddingHorizontal: 12 },
-  langActive: { backgroundColor: '#111', borderColor: '#111' },
-  langText: { color: '#111' },
-  langActiveText: { color: '#fff' },
-  delete: { marginTop: 'auto', padding: 16, alignItems: 'center' },
-  deleteText: { color: '#c0392b', fontSize: 15 },
+  email: { ...typography.h2, color: colors.text, marginBottom: spacing.sm },
+  row: { flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center' },
+  statRow: { flexDirection: 'row', gap: spacing.md },
+  statLabel: { ...typography.caption, color: colors.textFaint },
+  statValue: { ...typography.title, color: colors.text },
+  sectionLabel: { ...typography.caption, color: colors.textFaint, textTransform: 'uppercase' },
+  langRow: { flexDirection: 'row', flexWrap: 'wrap', gap: spacing.sm },
+  lang: { borderWidth: 1, borderColor: colors.border, borderRadius: radii.sm, paddingVertical: spacing.sm, paddingHorizontal: spacing.md, backgroundColor: colors.surface },
+  langActive: { backgroundColor: colors.accent, borderColor: colors.accent },
+  langText: { ...typography.caption, color: colors.text },
+  langActiveText: { ...typography.caption, color: colors.accentText, fontWeight: '600' },
 });

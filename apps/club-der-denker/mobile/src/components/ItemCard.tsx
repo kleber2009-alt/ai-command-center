@@ -1,6 +1,8 @@
 import { useState } from 'react';
 import { View, Text, TouchableOpacity, Image, StyleSheet } from 'react-native';
+import { Button } from '@/components/ui';
 import { t } from '@/i18n';
+import { colors, radii, spacing, typography } from '@/theme';
 
 /**
  * The fixed three-step element mechanic (spec 3.1 step 2 / 3.3):
@@ -16,36 +18,45 @@ export interface ItemData {
   options: { key: string; label: string; feedback: string }[];
 }
 
-export function ItemCard({ item, onNext }: { item: ItemData; onNext: (selectedKey: string) => void }) {
+export function ItemCard({ item, onNext, busy }: { item: ItemData; onNext: (selectedKey: string) => void; busy?: boolean }) {
   const [selected, setSelected] = useState<string | null>(null);
   const chosen = item.options.find((o) => o.key === selected);
 
   return (
-    <View style={styles.card}>
+    <View style={styles.container}>
       {item.mediaKind === 'image' && item.mediaUrl ? (
         <Image source={{ uri: item.mediaUrl }} style={styles.media} resizeMode="cover" />
       ) : null}
+      {item.mediaKind === 'video' && item.mediaUrl ? (
+        <View style={styles.videoPlaceholder}>
+          <Text style={styles.videoIcon}>▶</Text>
+        </View>
+      ) : null}
+
       <Text style={styles.body}>{item.body}</Text>
 
       <View style={styles.options}>
-        {item.options.map((o) => (
-          <TouchableOpacity
-            key={o.key}
-            disabled={selected !== null}
-            onPress={() => setSelected(o.key)}
-            style={[styles.option, selected === o.key && styles.optionSelected]}
-          >
-            <Text style={styles.optionLabel}>{o.label}</Text>
-          </TouchableOpacity>
-        ))}
+        {item.options.map((o) => {
+          const isSelected = selected === o.key;
+          const locked = selected !== null;
+          return (
+            <TouchableOpacity
+              key={o.key}
+              activeOpacity={0.85}
+              disabled={locked}
+              onPress={() => setSelected(o.key)}
+              style={[styles.option, isSelected && styles.optionSelected, locked && !isSelected && styles.optionDimmed]}
+            >
+              <Text style={[styles.optionLabel, isSelected && styles.optionLabelSelected]}>{o.label}</Text>
+            </TouchableOpacity>
+          );
+        })}
       </View>
 
       {chosen ? (
         <View style={styles.feedback}>
           <Text style={styles.feedbackText}>{chosen.feedback}</Text>
-          <TouchableOpacity style={styles.nextBtn} onPress={() => onNext(chosen.key)}>
-            <Text style={styles.nextText}>{t('next')}</Text>
-          </TouchableOpacity>
+          <Button label={t('next')} loading={busy} onPress={() => onNext(chosen.key)} />
         </View>
       ) : null}
     </View>
@@ -53,15 +64,17 @@ export function ItemCard({ item, onNext }: { item: ItemData; onNext: (selectedKe
 }
 
 const styles = StyleSheet.create({
-  card: { padding: 20, gap: 16 },
-  media: { width: '100%', height: 200, borderRadius: 12 },
-  body: { fontSize: 18, lineHeight: 26 },
-  options: { gap: 10 },
-  option: { borderWidth: 1, borderColor: '#d4d4d4', borderRadius: 10, padding: 14 },
-  optionSelected: { borderColor: '#111', backgroundColor: '#f5f5f5' },
-  optionLabel: { fontSize: 16 },
-  feedback: { gap: 12, marginTop: 8 },
-  feedbackText: { fontSize: 15, color: '#444' },
-  nextBtn: { backgroundColor: '#111', borderRadius: 10, padding: 14, alignItems: 'center' },
-  nextText: { color: '#fff', fontSize: 16, fontWeight: '600' },
+  container: { gap: spacing.lg },
+  media: { width: '100%', height: 200, borderRadius: radii.lg },
+  videoPlaceholder: { width: '100%', height: 200, borderRadius: radii.lg, backgroundColor: colors.surfaceAlt, alignItems: 'center', justifyContent: 'center' },
+  videoIcon: { color: colors.text, fontSize: 40 },
+  body: { ...typography.title, color: colors.text },
+  options: { gap: spacing.sm },
+  option: { borderWidth: 1, borderColor: colors.border, borderRadius: radii.md, padding: spacing.md, backgroundColor: colors.surface },
+  optionSelected: { borderColor: colors.accent, backgroundColor: colors.surfaceAlt },
+  optionDimmed: { opacity: 0.5 },
+  optionLabel: { ...typography.body, color: colors.text },
+  optionLabelSelected: { fontWeight: '600' },
+  feedback: { gap: spacing.md, backgroundColor: colors.surfaceAlt, borderRadius: radii.md, padding: spacing.md },
+  feedbackText: { ...typography.body, color: colors.textMuted },
 });
