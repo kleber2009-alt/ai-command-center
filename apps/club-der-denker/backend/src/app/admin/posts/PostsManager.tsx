@@ -1,6 +1,7 @@
 'use client';
 
 import { useEffect, useState, useCallback } from 'react';
+import { MediaUpload } from '../MediaUpload';
 
 const LOCALES = ['de', 'en', 'ru', 'es', 'fr', 'it'] as const;
 
@@ -22,7 +23,8 @@ export function PostsManager() {
   const [locale, setLocale] = useState<(typeof LOCALES)[number]>('de');
   const [title, setTitle] = useState('');
   const [body, setBody] = useState('');
-  const [mediaUrl, setMediaUrl] = useState('');
+  const [mediaUrl, setMediaUrl] = useState<string | null>(null);
+  const [mediaKind, setMediaKind] = useState('text');
   const [busy, setBusy] = useState(false);
 
   const load = useCallback(async () => {
@@ -42,15 +44,16 @@ export function PostsManager() {
       method: 'POST',
       headers: { 'content-type': 'application/json' },
       body: JSON.stringify({
-        mediaKind: mediaUrl ? 'image' : 'text',
-        mediaUrl: mediaUrl || null,
+        mediaKind,
+        mediaUrl,
         publish,
         translation: { locale, title, body },
       }),
     });
     setTitle('');
     setBody('');
-    setMediaUrl('');
+    setMediaUrl(null);
+    setMediaKind('text');
     setBusy(false);
     load();
   }
@@ -83,7 +86,9 @@ export function PostsManager() {
         </div>
         <input className="mb-2 w-full rounded-md border border-neutral-300 px-3 py-2 text-sm" placeholder="Заголовок" value={title} onChange={(e) => setTitle(e.target.value)} />
         <textarea className="mb-2 w-full rounded-md border border-neutral-300 px-3 py-2 text-sm" rows={3} placeholder="Текст" value={body} onChange={(e) => setBody(e.target.value)} />
-        <input className="mb-3 w-full rounded-md border border-neutral-300 px-3 py-2 text-sm" placeholder="URL медиа (необязательно)" value={mediaUrl} onChange={(e) => setMediaUrl(e.target.value)} />
+        <div className="mb-3">
+          <MediaUpload prefix="posts" value={mediaUrl} mediaKind={mediaKind} onUploaded={(url, kind) => { setMediaUrl(url); setMediaKind(kind); }} />
+        </div>
         <div className="flex gap-2">
           <button onClick={() => create(false)} disabled={busy} className="rounded-md bg-neutral-100 px-3 py-2 text-sm disabled:opacity-50">Черновик</button>
           <button onClick={() => create(true)} disabled={busy} className="rounded-md bg-neutral-900 px-3 py-2 text-sm text-white disabled:opacity-50">Опубликовать</button>

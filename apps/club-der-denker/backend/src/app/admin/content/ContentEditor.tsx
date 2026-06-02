@@ -1,6 +1,7 @@
 'use client';
 
 import { useEffect, useState, useCallback } from 'react';
+import { MediaUpload } from '../MediaUpload';
 
 const LOCALES = ['de', 'en', 'ru', 'es', 'fr', 'it'] as const;
 type Locale = (typeof LOCALES)[number];
@@ -12,6 +13,8 @@ interface Item {
   global_order: number | null;
   day_index: number | null;
   day_slot: number | null;
+  media_kind: string;
+  media_url: string | null;
   cdd_item_translations: Translation[];
 }
 
@@ -108,6 +111,8 @@ function ItemModal({ item, locale, onClose, onSaved }: { item: Item; locale: Loc
   const [options, setOptions] = useState<Option[]>(
     existing?.options?.length ? existing.options : [{ key: 'a', label: '', feedback: '' }, { key: 'b', label: '', feedback: '' }],
   );
+  const [mediaUrl, setMediaUrl] = useState<string | null>(item.media_url);
+  const [mediaKind, setMediaKind] = useState<string>(item.media_kind);
   const [busy, setBusy] = useState(false);
 
   async function save() {
@@ -119,6 +124,17 @@ function ItemModal({ item, locale, onClose, onSaved }: { item: Item; locale: Loc
     });
     setBusy(false);
     onSaved();
+  }
+
+  async function onMedia(url: string, kind: string) {
+    setMediaUrl(url);
+    setMediaKind(kind);
+    // Media is shared across locales — persist immediately on the item.
+    await fetch('/api/admin/items', {
+      method: 'POST',
+      headers: { 'content-type': 'application/json' },
+      body: JSON.stringify({ itemId: item.id, mediaKind: kind, mediaUrl: url }),
+    });
   }
 
   return (
@@ -134,6 +150,9 @@ function ItemModal({ item, locale, onClose, onSaved }: { item: Item; locale: Loc
           value={body}
           onChange={(e) => setBody(e.target.value)}
         />
+        <div className="mb-4">
+          <MediaUpload prefix="items" value={mediaUrl} mediaKind={mediaKind} onUploaded={onMedia} />
+        </div>
         <div className="space-y-2">
           {options.map((o, i) => (
             <div key={i} className="flex gap-2">

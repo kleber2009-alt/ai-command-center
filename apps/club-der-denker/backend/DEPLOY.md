@@ -11,9 +11,13 @@ provided by the client:
 ```bash
 psql "$DATABASE_URL" -f ../supabase/migrations/0001_init.sql
 psql "$DATABASE_URL" -f ../supabase/migrations/0003_add_user_tz.sql
+psql "$DATABASE_URL" -f ../supabase/migrations/0004_storage_bucket.sql  # cdd-media bucket
 # optional structural scaffold (no content):
 psql "$DATABASE_URL" -f ../supabase/migrations/0002_seed_example.sql
 ```
+
+Media (item images/videos, post media) is stored in the public `cdd-media`
+Supabase Storage bucket; admins upload via `POST /api/admin/upload`.
 
 ## 2. Environment
 

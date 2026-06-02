@@ -86,12 +86,14 @@ Gated by a signed httpOnly session cookie (`src/lib/admin-auth.ts`). The first
 admin is bootstrapped from `ADMIN_EMAIL` / `ADMIN_PASSWORD` on first login and
 persisted to `cdd_admins`. Functional sections:
 
-- **Контент курса** — interactive 28×4 grid; edit body + 3-4 options per locale.
-- **Лента сообщества** — create / publish / delete posts per locale.
+- **Контент курса** — interactive 28×4 grid; edit body + 3-4 options per locale
+  and upload item media (image/video).
+- **Лента сообщества** — create / publish / delete posts per locale with media.
 - **Пользователи** — list + block / unblock.
 - **Лиды / Дашборд** — conversion overview.
 
-Admin CRUD API: `/api/admin/{login,logout,items,posts,users}`.
+Admin CRUD API: `/api/admin/{login,logout,items,posts,users,upload}`. Media is
+stored in the public `cdd-media` Supabase Storage bucket (migration 0004).
 
 ## Deploy
 
@@ -124,7 +126,8 @@ SKUs live in `mobile/app.json` → `expo.extra`.
   still log-only).
 - Apple JWS x5c full chain validation up to Apple's root CA (currently
   leaf-cert signature verification) in `lib/engine/iap-verify.ts`.
-- Media/asset storage for item images/videos (bucket + signed URLs).
+- Gated (signed-URL) delivery for paid media if the public bucket is too open
+  (currently public bucket with unguessable paths — see migration 0004).
 - Swap the scaffold session token for Auth.js / Supabase Auth if desired.
 - Wire the app into Command Center + a CI deploy workflow.
 
