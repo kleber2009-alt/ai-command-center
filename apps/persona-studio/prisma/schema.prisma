@@ -37,6 +37,7 @@ model User {
   parserRuns          ParserRun[]
   parserItems         ParserItem[]
   carouselDrafts      CarouselDraft[]
+  researchSearches    ResearchSearch[]
 }
 
 // API key для интеграции Persona Studio в сторонние проекты.
