@@ -1,5 +1,6 @@
 'use client';
 
+import Link from 'next/link';
 import { useState } from 'react';
 import type { ResearchReelView } from './types';
 
@@ -163,14 +164,12 @@ export function ResearchReelCard({ reel, blurred }: Props) {
       </div>
 
       {/* CTA */}
-      <button
-        type="button"
-        className="btn-primary w-full !rounded-none border-t border-border text-[11px] tracking-widest uppercase"
-        disabled
-        title="Этап 3 — анализ контента"
+      <Link
+        href={`/research/${reel.id}`}
+        className="btn-primary w-full !rounded-none border-t border-border text-[11px] tracking-widest uppercase text-center"
       >
         Анализ видео →
-      </button>
+      </Link>
     </article>
   );
 }
