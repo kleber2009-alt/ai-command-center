@@ -82,6 +82,7 @@ export function ReelDetailClient({ reel: initialReel }: { reel: Reel }) {
   const [reel, setReel] = useState<Reel>(initialReel);
   const [pendingTranscribe, startTranscribe] = useTransition();
   const [pendingAnalyze, startAnalyze] = useTransition();
+  const [pendingForge, startForge] = useTransition();
   const [error, setError] = useState<string | null>(null);
   const [copied, setCopied] = useState(false);
 
@@ -121,6 +122,19 @@ export function ReelDetailClient({ reel: initialReel }: { reel: Reel }) {
     navigator.clipboard.writeText(transcript.text).then(() => {
       setCopied(true);
       setTimeout(() => setCopied(false), 1500);
+    });
+  }
+
+  function forgeToVideo() {
+    setError(null);
+    startForge(async () => {
+      const res = await fetch(`/api/research/reels/${reel.id}/forge`, { method: 'POST' });
+      const json = await res.json();
+      if (!res.ok || !json.parserItemId) {
+        setError(json.message || json.error || `HTTP ${res.status}`);
+        return;
+      }
+      router.push(`/videos/new?parserItemId=${json.parserItemId}`);
     });
   }
 
