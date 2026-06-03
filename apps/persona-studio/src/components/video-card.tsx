@@ -1,6 +1,7 @@
 'use client';
 
 import { useEffect, useState } from 'react';
+import { useRouter } from 'next/navigation';
 import { formatDate } from '@/lib/utils';
 
 type Video = {
@@ -22,6 +23,33 @@ type Video = {
 
 export function VideoCard({ initial, autopoll }: { initial: Video; autopoll: boolean }) {
   const [v, setV] = useState<Video>(initial);
+  const router = useRouter();
+  const [retrying, setRetrying] = useState(false);
+  const [retryError, setRetryError] = useState<string | null>(null);
+
+  const handleRetry = async () => {
+    setRetrying(true);
+    setRetryError(null);
+    try {
+      const res = await fetch(`/api/videos/${v.id}/retry`, { method: 'POST' });
+      const data = await res.json().catch(() => ({}));
+      if (!res.ok) {
+        setRetryError(
+          data.error === 'insufficient_tokens'
+            ? 'Недостаточно токенов'
+            : data.error === 'avatar_not_ready'
+              ? 'Аватар ещё не готов'
+              : 'Не удалось повторить',
+        );
+        return;
+      }
+      router.refresh();
+    } catch {
+      setRetryError('Сеть недоступна');
+    } finally {
+      setRetrying(false);
+    }
+  };
 
   useEffect(() => {
     if (!autopoll) return;
@@ -97,6 +125,17 @@ export function VideoCard({ initial, autopoll }: { initial: Video; autopoll: boo
                   <div className="mono text-pink text-[11px] tracking-widest uppercase font-bold">/FAILED</div>
                   {v.errorMsg && (
                     <div className="font-serif italic text-[12px] text-text-dim mt-2">{v.errorMsg.slice(0, 140)}</div>
+                  )}
+                  <button
+                    type="button"
+                    onClick={handleRetry}
+                    disabled={retrying}
+                    className="btn-primary justify-center mt-3 mx-auto disabled:opacity-60"
+                  >
+                    {retrying ? 'Повтор…' : 'Повторить ↻'}
+                  </button>
+                  {retryError && (
+                    <div className="mono text-pink text-[9px] tracking-widest uppercase mt-2">{retryError}</div>
                   )}
                 </>
               ) : (
