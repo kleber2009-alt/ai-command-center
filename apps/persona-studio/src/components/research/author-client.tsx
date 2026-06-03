@@ -6,6 +6,7 @@
 import Link from 'next/link';
 import { useState, useTransition } from 'react';
 import { useRouter } from 'next/navigation';
+import { igProxy } from './types';
 
 type Author = {
   id: string;
@@ -127,7 +128,7 @@ export function AuthorClient({
         {author.avatarUrl ? (
           // eslint-disable-next-line @next/next/no-img-element
           <img
-            src={author.avatarUrl}
+            src={igProxy(author.avatarUrl)}
             alt={author.username}
             referrerPolicy="no-referrer"
             className="w-20 h-20 rounded-full object-cover bg-bg border border-border"
@@ -252,7 +253,7 @@ function ReelTile({ reel }: { reel: Reel }) {
       {reel.thumbnailUrl && !thumbFailed ? (
         // eslint-disable-next-line @next/next/no-img-element
         <img
-          src={reel.thumbnailUrl}
+          src={igProxy(reel.thumbnailUrl)}
           alt=""
           referrerPolicy="no-referrer"
           onError={() => setThumbFailed(true)}

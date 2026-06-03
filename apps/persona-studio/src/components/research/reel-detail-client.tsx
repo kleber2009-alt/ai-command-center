@@ -6,6 +6,7 @@
 
 import { useState, useTransition } from 'react';
 import { useRouter } from 'next/navigation';
+import { igProxy } from './types';
 
 type Reel = {
   id: string;
@@ -166,7 +167,7 @@ export function ReelDetailClient({ reel: initialReel }: { reel: Reel }) {
           {reel.thumbnailUrl ? (
             // eslint-disable-next-line @next/next/no-img-element
             <img
-              src={reel.thumbnailUrl}
+              src={igProxy(reel.thumbnailUrl)}
               alt={reel.author.username}
               referrerPolicy="no-referrer"
               className="w-full h-full object-cover"
@@ -191,7 +192,7 @@ export function ReelDetailClient({ reel: initialReel }: { reel: Reel }) {
             {reel.author.avatarUrl ? (
               // eslint-disable-next-line @next/next/no-img-element
               <img
-                src={reel.author.avatarUrl}
+                src={igProxy(reel.author.avatarUrl)}
                 alt={reel.author.username}
                 referrerPolicy="no-referrer"
                 className="w-8 h-8 rounded-full object-cover bg-bg"

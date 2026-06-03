@@ -78,3 +78,12 @@ export type SearchResponse = {
 };
 
 export type SearchError = { ok: false; error: string; message?: string };
+
+// Превью/аватары Instagram CDN отдаются с CORP same-origin → браузер не
+// встраивает их с нашего домена. Проксируем такие URL через свой сервер.
+// Не-IG ссылки (если вдруг будут) отдаём как есть.
+export function igProxy(url: string | null | undefined): string | undefined {
+  if (!url) return undefined;
+  if (!/(?:\.cdninstagram\.com|\.fbcdn\.net)/i.test(url)) return url;
+  return `/api/research/thumb?u=${encodeURIComponent(url)}`;
+}

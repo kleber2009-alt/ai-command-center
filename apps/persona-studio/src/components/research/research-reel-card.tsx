@@ -2,7 +2,7 @@
 
 import Link from 'next/link';
 import { useState, useTransition } from 'react';
-import type { ResearchReelView } from './types';
+import { igProxy, type ResearchReelView } from './types';
 import { AddToFolderModal } from './add-to-folder-modal';
 
 type Props = {
@@ -76,7 +76,7 @@ export function ResearchReelCard({ reel, blurred, initialFavorited = false }: Pr
         {showThumb ? (
           // eslint-disable-next-line @next/next/no-img-element
           <img
-            src={reel.thumbnailUrl!}
+            src={igProxy(reel.thumbnailUrl)}
             alt={reel.author.username}
             referrerPolicy="no-referrer"
             loading="lazy"
@@ -165,7 +165,7 @@ export function ResearchReelCard({ reel, blurred, initialFavorited = false }: Pr
         {reel.author.avatarUrl ? (
           // eslint-disable-next-line @next/next/no-img-element
           <img
-            src={reel.author.avatarUrl}
+            src={igProxy(reel.author.avatarUrl)}
             alt={reel.author.username}
             referrerPolicy="no-referrer"
             className="w-6 h-6 rounded-full object-cover bg-bg"

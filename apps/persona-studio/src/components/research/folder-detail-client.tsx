@@ -6,6 +6,7 @@
 import Link from 'next/link';
 import { useRouter } from 'next/navigation';
 import { useState, useTransition } from 'react';
+import { igProxy } from './types';
 
 type FolderType = 'bloggers' | 'videos' | 'ideas';
 type ReelItem = {
@@ -124,7 +125,7 @@ export function FolderDetailClient({
                   {it.reel.thumbnailUrl ? (
                     // eslint-disable-next-line @next/next/no-img-element
                     <img
-                      src={it.reel.thumbnailUrl}
+                      src={igProxy(it.reel.thumbnailUrl)}
                       alt=""
                       referrerPolicy="no-referrer"
                       className="w-full h-full object-cover"
@@ -170,7 +171,7 @@ export function FolderDetailClient({
                 {it.author.avatarUrl ? (
                   // eslint-disable-next-line @next/next/no-img-element
                   <img
-                    src={it.author.avatarUrl}
+                    src={igProxy(it.author.avatarUrl)}
                     alt=""
                     referrerPolicy="no-referrer"
                     className="w-12 h-12 rounded-full object-cover bg-bg border border-border"
