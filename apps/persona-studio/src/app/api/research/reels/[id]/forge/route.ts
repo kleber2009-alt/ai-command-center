@@ -1,20 +1,27 @@
 // POST /api/research/reels/:id/forge — мост Research → Video pipeline.
-// Берёт ResearchReel, создаёт синтетический ParserRun + ParserItem
-// и сразу запускает rewrite (Claude) чтобы вернуть готовый сценарий.
+// Берёт ResearchReel, создаёт синтетический ParserRun + ParserItem и
+// готовит сценарий по выбранному режиму, затем форма создания видео
+// подхватывает rewrittenScript из ParserItem (этот pipeline уже работает).
 //
-// Это нужно потому, что весь pipeline "VideoForm подхватывает
-// rewrittenScript из ParserItem" уже существует и работает. Не
-// дублируем сценарист-логику.
+// Body: { mode?: 'niche' | 'uniquify' | 'transcript' }  (default 'niche')
+//   - niche      — новый сценарий под нишу/голос юзера (Claude rewriteScript)
+//   - uniquify   — рерайт исходного текста: тот же смысл и язык, другие слова
+//   - transcript — дословный текст из транскрипта (без переписывания)
 
 import { NextRequest, NextResponse } from 'next/server';
+import { z } from 'zod';
 import { getCurrentUserOrApiKey } from '@/lib/auth';
 import { prisma } from '@/lib/prisma';
-import { rewriteScript, isClaudeConfigured } from '@/lib/parser/claude';
+import { rewriteScript, uniquifyScript, isClaudeConfigured } from '@/lib/parser/claude';
 
 export const runtime = 'nodejs';
 export const maxDuration = 90;
 
 const FORGE_RUN_SUFFIX = '· Forge bridge';
+
+const Body = z.object({
+  mode: z.enum(['niche', 'uniquify', 'transcript']).default('niche'),
+});
 
 export async function POST(req: NextRequest, { params }: { params: Promise<{ id: string }> }) {
   const ctx = await getCurrentUserOrApiKey(req);
@@ -22,29 +29,23 @@ export async function POST(req: NextRequest, { params }: { params: Promise<{ id:
   const user = ctx.user;
   const { id } = await params;
 
+  const parsed = Body.safeParse(await req.json().catch(() => ({})));
+  const mode = parsed.success ? parsed.data.mode : 'niche';
+
   const reel = await prisma.researchReel.findUnique({
     where: { id },
-    include: { author: true, analyses: { where: { userId: user.id }, orderBy: { createdAt: 'desc' }, take: 1 } },
+    include: {
+      author: true,
+      analyses: { where: { userId: user.id }, orderBy: { createdAt: 'desc' }, take: 1 },
+      transcripts: { orderBy: { createdAt: 'desc' }, take: 1 },
+    },
   });
   if (!reel) return NextResponse.json({ error: 'not_found' }, { status: 404 });
 
-  // Идемпотентность: если у юзера уже есть ParserItem для этого reel
-  // (по URL), переиспользуем его
-  const existing = await prisma.parserItem.findFirst({
-    where: { userId: user.id, url: reel.url },
-    orderBy: { createdAt: 'desc' },
-  });
-  if (existing && existing.rewrittenScript) {
-    return NextResponse.json({
-      ok: true,
-      cached: true,
-      parserItemId: existing.id,
-      script: existing.rewrittenScript,
-    });
-  }
+  const transcript = reel.transcripts[0] || null;
 
-  // Создаём ParserRun-обёртку (synthetic, не настоящий парсер-прогон)
-  // или переиспользуем последнюю forge-обёртку юзера за последние сутки
+  // Создаём ParserRun-обёртку (synthetic) или переиспользуем последнюю
+  // forge-обёртку юзера за сутки.
   const recentForgeRun = await prisma.parserRun.findFirst({
     where: {
       userId: user.id,
@@ -62,14 +63,16 @@ export async function POST(req: NextRequest, { params }: { params: Promise<{ id:
           postsScanned: 0,
           reelsFound: 0,
           carouselsFound: 0,
-          // Мягкий маркер — отличает Forge-обёртки от настоящих run'ов
           errorMsg: FORGE_RUN_SUFFIX,
           completedAt: new Date(),
         },
       });
 
-  // Создаём ParserItem из ResearchReel
-  let item = existing;
+  // ParserItem идемпотентен по (userId, url) — переиспользуем, если есть.
+  let item = await prisma.parserItem.findFirst({
+    where: { userId: user.id, url: reel.url },
+    orderBy: { createdAt: 'desc' },
+  });
   if (!item) {
     item = await prisma.parserItem.create({
       data: {
@@ -87,12 +90,11 @@ export async function POST(req: NextRequest, { params }: { params: Promise<{ id:
         ageHours: reel.postedAt
           ? Math.round((Date.now() - reel.postedAt.getTime()) / 3_600_000)
           : 0,
-        velocityScore: (reel.viralScore || 0) / 100, // нормировка 0..1
-        // Если у юзера есть анализ — подставим fit-score из silaы лучшего хука
+        velocityScore: (reel.viralScore || 0) / 100,
         fitScore: reel.analyses[0]
           ? Math.round(
-              ((Array.isArray((reel.analyses[0].hooks as unknown[])) &&
-                ((reel.analyses[0].hooks as Array<{ strength?: number }>)[0]?.strength)) ||
+              ((Array.isArray(reel.analyses[0].hooks as unknown[]) &&
+                (reel.analyses[0].hooks as Array<{ strength?: number }>)[0]?.strength) ||
                 7),
             )
           : null,
@@ -102,42 +104,55 @@ export async function POST(req: NextRequest, { params }: { params: Promise<{ id:
     });
   }
 
-  // Запускаем rewrite (Claude) для готового сценария
-  if (!isClaudeConfigured()) {
-    return NextResponse.json({
-      ok: true,
-      parserItemId: item.id,
-      script: null,
-      note: 'claude_not_configured — сценарий не сгенерирован, но ParserItem создан.',
-    });
-  }
-  const cfg = await prisma.parserConfig.findUnique({ where: { userId: user.id } });
-  const niche = cfg?.nicheDescription || '';
+  // ── Готовим текст сценария по режиму ──────────────────────────────
+  let script: string | null = null;
 
-  const result = await rewriteScript({
-    niche,
-    userName: user.name || user.email.split('@')[0] || 'эксперт',
-    caption: reel.caption || '',
-    fitWhy: item.fitWhy,
-  });
-  if (!result.ok) {
-    return NextResponse.json({
-      ok: true,
-      parserItemId: item.id,
-      script: null,
-      error: result.error,
+  if (mode === 'transcript') {
+    if (!transcript?.text) {
+      return NextResponse.json(
+        { error: 'no_transcript', message: 'Сначала закажи транскрибацию ролика.' },
+        { status: 422 },
+      );
+    }
+    script = transcript.text;
+  } else if (mode === 'uniquify') {
+    const source = (transcript?.text || reel.caption || '').trim();
+    if (!source) {
+      return NextResponse.json(
+        { error: 'no_source_text', message: 'Нет исходного текста: закажи транскрибацию.' },
+        { status: 422 },
+      );
+    }
+    if (!isClaudeConfigured()) {
+      return NextResponse.json({ ok: true, parserItemId: item.id, script: null, mode, note: 'claude_not_configured' });
+    }
+    const result = await uniquifyScript({ text: source });
+    if (!result.ok) {
+      return NextResponse.json({ error: 'uniquify_failed', message: result.error }, { status: 502 });
+    }
+    script = result.script;
+  } else {
+    // mode === 'niche'
+    if (!isClaudeConfigured()) {
+      return NextResponse.json({ ok: true, parserItemId: item.id, script: null, mode, note: 'claude_not_configured' });
+    }
+    const cfg = await prisma.parserConfig.findUnique({ where: { userId: user.id } });
+    const result = await rewriteScript({
+      niche: cfg?.nicheDescription || '',
+      userName: user.name || user.email.split('@')[0] || 'эксперт',
+      caption: reel.caption || '',
+      fitWhy: item.fitWhy,
     });
+    if (!result.ok) {
+      return NextResponse.json({ error: 'rewrite_failed', message: result.error }, { status: 502 });
+    }
+    script = result.script;
   }
 
   await prisma.parserItem.update({
     where: { id: item.id },
-    data: { rewrittenScript: result.script, status: 'used' },
+    data: { rewrittenScript: script, status: 'used' },
   });
 
-  return NextResponse.json({
-    ok: true,
-    cached: false,
-    parserItemId: item.id,
-    script: result.script,
-  });
+  return NextResponse.json({ ok: true, parserItemId: item.id, script, mode });
 }

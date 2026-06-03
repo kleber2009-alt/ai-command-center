@@ -1,6 +1,6 @@
 // Минимальный Claude-клиент для fit-to-niche оценки постов. Без npm SDK —
 // прямой fetch к /v1/messages с ретраями на 408/429/5xx, дизайн повторяет
-// apps/infra-worker/lib/anthropic.js.
+// services/node/infra-worker/lib/anthropic.js.
 
 import { env } from '@/lib/env';
 import type { ScoredPost, RateResult, ClaudeRating } from './types';
@@ -187,6 +187,52 @@ export async function rateWithClaude(args: {
  * результат кэшируется в ParserItem.rewrittenScript и подставляется в
  * VideoForm как initialScript.
  */
+// Уникализация: переписать исходный текст ДРУГИМИ словами, сохранив смысл
+// 1-в-1 и ТОТ ЖЕ язык (не перевод, не адаптация под нишу). Нужно чтобы
+// получить «тот же ролик, но уникальный текст» — обход дословного копирования.
+export async function uniquifyScript(args: {
+  text: string;
+}): Promise<{ ok: true; script: string } | { ok: false; error: string }> {
+  if (!isClaudeConfigured()) {
+    return { ok: false, error: 'ANTHROPIC_API_KEY missing' };
+  }
+  const src = (args.text || '').trim();
+  if (!src) return { ok: false, error: 'empty text' };
+
+  const system = `Ты — редактор, который делает рерайт (уникализацию) текста.
+
+Задача: переписать текст ДРУГИМИ словами, сохранив смысл максимально близко к оригиналу.
+
+ЖЁСТКИЕ ПРАВИЛА:
+- Сохрани ТОТ ЖЕ ЯЗЫК, что и у оригинала. НЕ переводи на другой язык.
+- Сохрани смысл, факты, тон и порядок мыслей — это должна быть «та же мысль, но уникальными словами».
+- Меняй формулировки, синонимы, структуру предложений — чтобы текст не совпадал с оригиналом дословно.
+- Сохрани примерно ту же длину.
+- Убери хэштеги, @-упоминания, эмодзи и markdown.
+- Верни ТОЛЬКО переписанный текст, без преамбул, заголовков и кавычек.`;
+
+  const userMsg = `Оригинальный текст:
+"""
+${src.slice(0, 2500)}
+"""
+
+Уникализированный текст (тот же язык, тот же смысл, другие слова):`;
+
+  const res = await chat(system, userMsg);
+  if (!res.ok) {
+    return { ok: false, error: `claude ${res.status}: ${res.details.slice(0, 200)}` };
+  }
+  const cleaned = res.text
+    .replace(/^```(?:\w+)?\s*/i, '')
+    .replace(/```\s*$/, '')
+    .replace(/^(вот\s+текст[:.\s]*|уникализированный\s+текст[:.\s]*)/i, '')
+    .trim();
+  if (cleaned.length < 20) {
+    return { ok: false, error: `claude returned too-short text (${cleaned.length} chars)` };
+  }
+  return { ok: true, script: cleaned };
+}
+
 export async function rewriteScript(args: {
   niche: string;
   userName: string;

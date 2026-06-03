@@ -83,11 +83,16 @@ export function ReelDetailClient({ reel: initialReel }: { reel: Reel }) {
   const [reel, setReel] = useState<Reel>(initialReel);
   const [pendingTranscribe, startTranscribe] = useTransition();
   const [pendingAnalyze, startAnalyze] = useTransition();
-  const [pendingForge, startForge] = useTransition();
+  const [, startForge] = useTransition();
   const [pendingTranslate, startTranslate] = useTransition();
   const [translation, setTranslation] = useState<{ text: string; lang: string } | null>(null);
   const [error, setError] = useState<string | null>(null);
   const [copied, setCopied] = useState(false);
+  // Модалка «Переработать в видео»: выбор источника текста.
+  const [forgeOpen, setForgeOpen] = useState(false);
+  const [forgeBusy, setForgeBusy] = useState<null | 'uniquify' | 'transcript' | 'transcribe'>(null);
+  const [forgeError, setForgeError] = useState<string | null>(null);
+  const [uniquified, setUniquified] = useState<{ text: string; parserItemId: string } | null>(null);
 
   const transcript = reel.transcripts[0] || null;
   const analysis = reel.analyses[0] || null;
@@ -146,16 +151,70 @@ export function ReelDetailClient({ reel: initialReel }: { reel: Reel }) {
     });
   }
 
-  function forgeToVideo() {
-    setError(null);
+  // Открыть модалку выбора источника текста.
+  function openForge() {
+    setForgeError(null);
+    setUniquified(null);
+    setForgeOpen(true);
+  }
+
+  async function forge(mode: 'uniquify' | 'transcript'): Promise<{ parserItemId: string; script: string | null } | null> {
+    const res = await fetch(`/api/research/reels/${reel.id}/forge`, {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ mode }),
+    });
+    const json = await res.json();
+    if (!res.ok || !json.parserItemId) {
+      setForgeError(json.message || json.error || `HTTP ${res.status}`);
+      return null;
+    }
+    return { parserItemId: json.parserItemId, script: json.script ?? null };
+  }
+
+  // Уникализация: рерайт текста (тот же смысл/язык), показываем превью.
+  function runUniquify() {
+    setForgeError(null);
+    setForgeBusy('uniquify');
     startForge(async () => {
-      const res = await fetch(`/api/research/reels/${reel.id}/forge`, { method: 'POST' });
+      const r = await forge('uniquify');
+      setForgeBusy(null);
+      if (r && r.script) setUniquified({ text: r.script, parserItemId: r.parserItemId });
+      else if (r) setForgeError('Не удалось уникализировать текст (Claude недоступен).');
+    });
+  }
+
+  // Создать видео из дословного транскрипта.
+  function createFromTranscript() {
+    setForgeError(null);
+    setForgeBusy('transcript');
+    startForge(async () => {
+      const r = await forge('transcript');
+      setForgeBusy(null);
+      if (r) router.push(`/videos/new?parserItemId=${r.parserItemId}`);
+    });
+  }
+
+  // Создать видео из уникализированного текста (parserItem уже готов).
+  function createFromUniquified() {
+    if (!uniquified) return;
+    router.push(`/videos/new?parserItemId=${uniquified.parserItemId}`);
+  }
+
+  // Заказать транскрибацию прямо из модалки (5 кр.).
+  function transcribeInModal() {
+    setForgeError(null);
+    setForgeBusy('transcribe');
+    startTranscribe(async () => {
+      const res = await fetch(`/api/research/reels/${reel.id}/transcribe`, { method: 'POST' });
       const json = await res.json();
-      if (!res.ok || !json.parserItemId) {
-        setError(json.message || json.error || `HTTP ${res.status}`);
+      setForgeBusy(null);
+      if (!res.ok) {
+        setForgeError(json.message || json.error || `HTTP ${res.status}`);
         return;
       }
-      router.push(`/videos/new?parserItemId=${json.parserItemId}`);
+      setReel((r) => ({ ...r, transcripts: [json.transcript, ...r.transcripts] }));
+      router.refresh();
     });
   }
 
@@ -265,12 +324,11 @@ export function ReelDetailClient({ reel: initialReel }: { reel: Reel }) {
           </button>
           <button
             type="button"
-            onClick={forgeToVideo}
-            disabled={pendingForge}
+            onClick={openForge}
             className="btn-ghost text-[11px] tracking-widest uppercase border-gold/50 text-gold"
-            title="Переписать сценарий через Forge и открыть форму создания видео"
+            title="Выбрать источник текста и создать видео"
           >
-            {pendingForge ? 'Уникализирую сценарий…' : 'Переработать в видео →'}
+            Переработать в видео →
           </button>
           <button
             type="button"
@@ -394,6 +452,137 @@ export function ReelDetailClient({ reel: initialReel }: { reel: Reel }) {
           </section>
         )}
       </main>
+
+      {/* Модалка «Переработать в видео» — выбор источника текста */}
+      {forgeOpen && (
+        <div
+          className="fixed inset-0 z-50 flex items-center justify-center bg-black/70 p-4"
+          onClick={() => !forgeBusy && setForgeOpen(false)}
+        >
+          <div
+            className="w-full max-w-3xl max-h-[88vh] overflow-y-auto border border-border bg-surface p-6 grid gap-5"
+            onClick={(e) => e.stopPropagation()}
+          >
+            <div className="flex items-start justify-between gap-4">
+              <div className="grid gap-1">
+                <h2 className="font-serif text-[20px] text-text">Переработать в видео</h2>
+                <p className="mono text-[10px] tracking-widest uppercase text-text-mute">
+                  Выбери источник текста для сценария
+                </p>
+              </div>
+              <button
+                type="button"
+                onClick={() => !forgeBusy && setForgeOpen(false)}
+                className="mono text-[12px] tracking-widest uppercase text-text-mute hover:text-text"
+              >
+                ✕
+              </button>
+            </div>
+
+            <div className="grid md:grid-cols-2 gap-4">
+              {/* Вариант 1 — транскрибация (дословно) */}
+              <div className="border border-border-soft bg-bg p-4 grid gap-3 content-start">
+                <h3 className="mono text-[10px] tracking-widest uppercase text-cyan">
+                  Транскрибация
+                </h3>
+                <p className="font-serif text-[13px] text-text-mute leading-snug">
+                  Дословный текст из ролика — то, что реально произносится.
+                </p>
+                {transcript?.text ? (
+                  <>
+                    <div className="border border-border-soft bg-surface p-3 max-h-40 overflow-y-auto">
+                      <p className="font-serif text-[13px] leading-relaxed text-text-dim whitespace-pre-wrap">
+                        {transcript.text}
+                      </p>
+                    </div>
+                    <button
+                      type="button"
+                      onClick={createFromTranscript}
+                      disabled={forgeBusy !== null}
+                      className="btn-primary text-[11px] tracking-widest uppercase justify-center"
+                    >
+                      {forgeBusy === 'transcript' ? 'Готовлю…' : 'Создать видео →'}
+                    </button>
+                  </>
+                ) : (
+                  <>
+                    <p className="font-serif italic text-[13px] text-text-mute">
+                      Транскрипта ещё нет. Закажи транскрибацию ролика.
+                    </p>
+                    <button
+                      type="button"
+                      onClick={transcribeInModal}
+                      disabled={forgeBusy !== null || pendingTranscribe}
+                      className="btn-ghost text-[11px] tracking-widest uppercase justify-center"
+                    >
+                      {forgeBusy === 'transcribe' || pendingTranscribe ? 'Транскрибирую…' : 'Транскрибация (5 кр.)'}
+                    </button>
+                  </>
+                )}
+              </div>
+
+              {/* Вариант 2 — уникализация (рерайт, тот же смысл/язык) */}
+              <div className="border border-border-soft bg-bg p-4 grid gap-3 content-start">
+                <h3 className="mono text-[10px] tracking-widest uppercase text-gold">
+                  Уникализация
+                </h3>
+                <p className="font-serif text-[13px] text-text-mute leading-snug">
+                  Новый текст — тот же смысл и язык, но переписан другими словами.
+                </p>
+                {uniquified ? (
+                  <>
+                    <div className="border border-gold/40 bg-surface p-3 max-h-40 overflow-y-auto">
+                      <p className="font-serif text-[13px] leading-relaxed text-text whitespace-pre-wrap">
+                        {uniquified.text}
+                      </p>
+                    </div>
+                    <div className="grid grid-cols-2 gap-2">
+                      <button
+                        type="button"
+                        onClick={runUniquify}
+                        disabled={forgeBusy !== null}
+                        className="btn-ghost text-[10px] tracking-widest uppercase justify-center"
+                      >
+                        {forgeBusy === 'uniquify' ? 'Ещё раз…' : 'Заново'}
+                      </button>
+                      <button
+                        type="button"
+                        onClick={createFromUniquified}
+                        disabled={forgeBusy !== null}
+                        className="btn-primary text-[10px] tracking-widest uppercase justify-center"
+                      >
+                        Создать видео →
+                      </button>
+                    </div>
+                  </>
+                ) : (
+                  <>
+                    <p className="font-serif italic text-[13px] text-text-mute">
+                      {transcript?.text
+                        ? 'Источник — транскрипт ролика.'
+                        : 'Источник — описание поста (или закажи транскрибацию слева для точности).'}
+                    </p>
+                    <button
+                      type="button"
+                      onClick={runUniquify}
+                      disabled={forgeBusy !== null}
+                      className="btn-primary text-[11px] tracking-widest uppercase justify-center"
+                    >
+                      {forgeBusy === 'uniquify' ? 'Уникализирую…' : 'Уникализировать'}
+                    </button>
+                  </>
+                )}
+              </div>
+            </div>
+
+            {forgeError && (
+              <div className="border border-pink/40 bg-pink/5 px-3 py-2 mono text-[10px] text-pink">
+                {forgeError}
+              </div>
+            )}
+          </div>
+        </div>
+      )}
     </div>
   );
 }
