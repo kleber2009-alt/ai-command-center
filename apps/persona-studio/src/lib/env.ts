@@ -102,6 +102,26 @@ const envSchema = z.object({
   QDRANT_REELS_COLLECTION: z.string().default('research_reels'),
   SIGNUP_BONUS_TOKENS: z.coerce.number().default(10),
 
+  // ── Scheduler & Autoposting ───────────────────
+  // Все optional — модуль деградирует мягко: без ключей канал просто
+  // нельзя подключить, остальное приложение работает.
+  //
+  // Telegram: переиспользуем TELEGRAM_BOT_TOKEN (тот же бот, что и для TMA-
+  // оплат). Для постинга в канал бот должен быть его админом.
+  TELEGRAM_BOT_TOKEN: z.string().min(1).optional(),
+  // 32-байтный секрет (base64 или hex) для AES-256-GCM шифрования
+  // long-lived IG-токенов в SocialAccount.accessToken. Без него подключение
+  // Instagram недоступно (lib/publish/crypto бросит).
+  PUBLISH_TOKEN_SECRET: z.string().min(1).optional(),
+  // Meta / Facebook Login for Instagram Graph Content Publishing API.
+  META_APP_ID: z.string().min(1).optional(),
+  META_APP_SECRET: z.string().min(1).optional(),
+  META_OAUTH_REDIRECT: z.string().url().optional(),
+  IG_GRAPH_VERSION: z.string().default('v21.0'),
+  // Интервал publish-sweep (мс). Каждый тик берёт scheduled-посты с
+  // scheduledAt <= now и ставит их таргеты в очередь.
+  PUBLISH_CRON_TICK_MS: z.coerce.number().default(60_000),
+
   // ── Auth ──────────────────────────────────────
   AUTH_SECRET: z.string().min(1).optional(),
   AUTH_URL: z.string().url().optional(),

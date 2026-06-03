@@ -137,13 +137,21 @@ export function EditCard({ initial, autopoll }: { initial: Edit; autopoll: boole
         <span>{formatDate(e.createdAt)}</span>
       </div>
       {e.status === 'completed' && e.resultUrl && (
-        <a
-          href={`/api/edits/${e.id}/download`}
-          download
-          className="btn-ghost justify-center"
-        >
-          Скачать MP4 ↓
-        </a>
+        <div className="grid gap-2">
+          <a
+            href={`/api/edits/${e.id}/download`}
+            download
+            className="btn-ghost justify-center"
+          >
+            Скачать MP4 ↓
+          </a>
+          <a
+            href={`/schedule/new?source=edit&id=${e.id}`}
+            className="btn-primary justify-center"
+          >
+            Запланировать публикацию ↗
+          </a>
+        </div>
       )}
     </article>
   );

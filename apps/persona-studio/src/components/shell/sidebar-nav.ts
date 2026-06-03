@@ -70,8 +70,8 @@ export const SIDEBAR_SECTIONS: SidebarSection[] = [
     label: 'Automation',
     key: 'automation',
     items: [
-      { href: '/dashboard#agents', label: 'Queue', key: 'auto-queue' },
-      { href: '/dashboard#agents', label: 'Scheduled', key: 'auto-scheduled' },
+      { href: '/schedule', label: 'Scheduled', key: 'auto-scheduled', hint: 'plan & autopost' },
+      { href: '/schedule/new', label: 'New Post', key: 'auto-new', hint: 'schedule a publish' },
       { href: '/dashboard#agents', label: 'AI Agents', key: 'auto-agents' },
     ],
   },

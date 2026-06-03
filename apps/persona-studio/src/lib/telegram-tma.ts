@@ -99,7 +99,7 @@ export function verifyInitData(initData: string): VerifiedInitData {
 
 const BOT_API = 'https://api.telegram.org';
 
-async function botCall<T = unknown>(method: string, body: Record<string, unknown>): Promise<T> {
+export async function botCall<T = unknown>(method: string, body: Record<string, unknown>): Promise<T> {
   const token = botTokenOrThrow();
   const res = await fetch(`${BOT_API}/bot${token}/${method}`, {
     method: 'POST',

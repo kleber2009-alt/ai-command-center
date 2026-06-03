@@ -39,6 +39,13 @@ export const NAV_GROUPS: NavGroup[] = [
     ],
   },
   {
+    label: 'Автопостинг',
+    key: 'automation',
+    items: [
+      { href: '/schedule', label: 'Schedule', key: 'schedule', hint: 'план и автопостинг' },
+    ],
+  },
+  {
     label: 'Аккаунт',
     key: 'account',
     items: [

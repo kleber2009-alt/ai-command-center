@@ -34,6 +34,7 @@ export const QUEUE_NAMES = {
   omnihumanVideo: 'omnihuman-video',
   submagicEdit: 'submagic-edit',
   slideImage: 'slide-image',
+  postPublish: 'post-publish',
 } as const;
 
 export type AvatarGenerationJob = {
@@ -130,3 +131,16 @@ export function queueForName(name: string): Queue<VideoJob> {
 
 // Legacy alias — старый код звал videoQueue().
 export const videoQueue = heygenQueue;
+
+/** Autoposting — one job per PostTarget (фан-аут публикации на канал). */
+export type PublishJob = {
+  targetId: string;
+};
+
+let _publishQueue: Queue<PublishJob> | null = null;
+export function publishQueue() {
+  if (!_publishQueue) {
+    _publishQueue = new Queue<PublishJob>(QUEUE_NAMES.postPublish, options());
+  }
+  return _publishQueue;
+}

@@ -45,6 +45,8 @@ model User {
   researchWatchlist    ResearchWatchlist[]
   researchFolders      ResearchFolder[]
   researchRadars       ResearchRadar[]
+  socialAccounts       SocialAccount[]
+  scheduledPosts       ScheduledPost[]
 }
 
 // API key для интеграции Persona Studio в сторонние проекты.
@@ -198,7 +200,8 @@ model VideoGeneration {
   createdAt     DateTime  @default(now())
   completedAt   DateTime?
 
-  edits VideoEdit[]
+  edits          VideoEdit[]
+  scheduledPosts ScheduledPost[]
 
   @@index([userId, createdAt])
 }
@@ -222,6 +225,8 @@ model VideoEdit {
   errorMsg          String?
   createdAt         DateTime        @default(now())
   completedAt       DateTime?
+
+  scheduledPosts ScheduledPost[]
 
   @@index([userId, createdAt])
   @@index([videoGenerationId])
@@ -727,4 +732,83 @@ model SidebarItemOverride {
   itemKey   String   @id
   hidden    Boolean  @default(false)
   updatedAt DateTime @updatedAt
+}
+
+// ── Scheduler & Autoposting ─────────────────────
+// Замыкает pipeline: готовое видео (VideoGeneration / VideoEdit) →
+// запланированная публикация в подключённые каналы (Instagram / Telegram).
+//
+// SocialAccount — подключённый канал публикации. ScheduledPost — единица
+// планирования (одно видео + caption + время). PostTarget — фан-аут одной
+// публикации на N каналов (можно постить и в IG, и в TG одновременно).
+
+// Подключённый канал публикации. Для Instagram храним зашифрованный
+// long-lived Graph-токен (lib/publish/crypto), для Telegram — chatId канала
+// (бот должен быть админом). externalId: IG business user id / TG chat id.
+model SocialAccount {
+  id             String    @id @default(cuid())
+  userId         String
+  user           User      @relation(fields: [userId], references: [id], onDelete: Cascade)
+  platform       String // instagram | telegram
+  displayName    String // @handle / название канала
+  externalId     String // IG business user id  /  TG chat id (-100… или @channel)
+  accessToken    String?   @db.Text // long-lived IG token, ЗАШИФРОВАН (AES-256-GCM)
+  tokenExpiresAt DateTime?
+  meta           Json? // { fbPageId, igUsername, channelTitle, ... }
+  status         String    @default("active") // active | expired | revoked
+  createdAt      DateTime  @default(now())
+  updatedAt      DateTime  @updatedAt
+
+  postTargets PostTarget[]
+
+  @@unique([userId, platform, externalId])
+  @@index([userId])
+}
+
+// Запланированная публикация. mediaUrl — снапшот итогового mp4 на момент
+// планирования (чтобы переименование/удаление исходника не ломало пост).
+// status: draft (черновик) | scheduled (в очереди на время) |
+//   publishing (sweep взял в работу) | published (все таргеты ok) |
+//   partial (часть таргетов failed) | failed (все failed) | canceled.
+model ScheduledPost {
+  id                String           @id @default(cuid())
+  userId            String
+  user              User             @relation(fields: [userId], references: [id], onDelete: Cascade)
+  sourceType        String // video | edit
+  videoGenerationId String?
+  videoGeneration   VideoGeneration? @relation(fields: [videoGenerationId], references: [id], onDelete: SetNull)
+  videoEditId       String?
+  videoEdit         VideoEdit?       @relation(fields: [videoEditId], references: [id], onDelete: SetNull)
+  mediaUrl          String           @db.Text
+  caption           String?          @db.Text
+  scheduledAt       DateTime
+  status            String           @default("scheduled")
+  publishedAt       DateTime?
+  errorMsg          String?
+  createdAt         DateTime         @default(now())
+  updatedAt         DateTime         @updatedAt
+
+  targets PostTarget[]
+
+  @@index([status, scheduledAt])
+  @@index([userId, scheduledAt])
+}
+
+// Фан-аут одной публикации на конкретный канал. remoteId / permalink
+// заполняются после успешной отправки. attempts — для backoff/диагностики.
+model PostTarget {
+  id              String        @id @default(cuid())
+  scheduledPostId String
+  scheduledPost   ScheduledPost @relation(fields: [scheduledPostId], references: [id], onDelete: Cascade)
+  socialAccountId String
+  socialAccount   SocialAccount @relation(fields: [socialAccountId], references: [id], onDelete: Cascade)
+  platform        String // денормализовано (instagram | telegram)
+  status          String        @default("pending") // pending | publishing | published | failed
+  remoteId        String? // IG media id / TG message_id
+  permalink       String? // ссылка на опубликованный пост
+  attempts        Int           @default(0)
+  errorMsg        String?
+  publishedAt     DateTime?
+
+  @@index([scheduledPostId])
 }

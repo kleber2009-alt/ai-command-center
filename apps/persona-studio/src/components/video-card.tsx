@@ -166,19 +166,27 @@ export function VideoCard({ initial, autopoll }: { initial: Video; autopoll: boo
         <span>{formatDate(v.createdAt)}</span>
       </div>
       {v.status === 'completed' && v.videoUrl && (
-        <div className="grid grid-cols-2 gap-2">
+        <div className="grid gap-2">
+          <div className="grid grid-cols-2 gap-2">
+            <a
+              href={`/api/videos/${v.id}/download`}
+              download
+              className="btn-ghost justify-center"
+            >
+              Скачать ↓
+            </a>
+            <a
+              href={`/edits/new?videoId=${v.id}`}
+              className="btn-primary justify-center"
+            >
+              В монтаж →
+            </a>
+          </div>
           <a
-            href={`/api/videos/${v.id}/download`}
-            download
+            href={`/schedule/new?source=video&id=${v.id}`}
             className="btn-ghost justify-center"
           >
-            Скачать ↓
-          </a>
-          <a
-            href={`/edits/new?videoId=${v.id}`}
-            className="btn-primary justify-center"
-          >
-            В монтаж →
+            Запланировать публикацию ↗
           </a>
         </div>
       )}
