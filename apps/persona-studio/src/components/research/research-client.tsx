@@ -6,10 +6,14 @@
 // верхний агрегатор по выборке.
 
 import { useState, useTransition } from 'react';
+import { useRouter } from 'next/navigation';
 import { ResearchReelCard } from './research-reel-card';
 import { ResearchTable } from './research-table';
 import type {
+  DurationBand,
+  LanguageFilter,
   Period,
+  PostTypeFilter,
   ResearchReelView,
   SearchError,
   SearchResponse,
@@ -33,6 +37,30 @@ const PERIOD_OPTIONS: Array<{ value: Period; label: string }> = [
   { value: '90d', label: '90 дней' },
 ];
 
+const LANGUAGE_OPTIONS: Array<{ value: LanguageFilter; label: string }> = [
+  { value: 'all', label: 'Любой язык' },
+  { value: 'ru', label: 'Русский' },
+  { value: 'en', label: 'English' },
+  { value: 'other', label: 'Другой / н/д' },
+];
+
+const POSTTYPE_OPTIONS: Array<{ value: PostTypeFilter; label: string }> = [
+  { value: 'all', label: 'Все типы' },
+  { value: 'reel', label: 'Reels' },
+  { value: 'image', label: 'Фото' },
+  { value: 'carousel', label: 'Карусель' },
+];
+
+const DURATION_OPTIONS: Array<{ value: DurationBand; label: string }> = [
+  { value: 'all', label: 'Любая длина' },
+  { value: 'short', label: 'до 30 сек' },
+  { value: 'medium', label: '30–60 сек' },
+  { value: 'long', label: '60+ сек' },
+];
+
+const DEFAULT_SORT: SortField = 'viral_score';
+const DEFAULT_PERIOD: Period = 'all';
+
 const formatCount = (n: number) => {
   if (n >= 1_000_000) return (n / 1_000_000).toFixed(1) + 'M';
   if (n >= 1_000) return (n / 1_000).toFixed(1) + 'K';
@@ -42,17 +70,47 @@ const formatCount = (n: number) => {
 const DEMO_VISIBLE = 5; // ТЗ §5/§12 — первые N карточек, остальные blur
 
 export function ResearchClient({ isFreePlan = false }: { isFreePlan?: boolean }) {
+  const router = useRouter();
   const [niche, setNiche] = useState('');
-  const [sortBy, setSortBy] = useState<SortField>('viral_score');
-  const [period, setPeriod] = useState<Period>('all');
+  const [sortBy, setSortBy] = useState<SortField>(DEFAULT_SORT);
+  const [period, setPeriod] = useState<Period>(DEFAULT_PERIOD);
+  // Клиент-сайд фильтры (применяются к уже полученной выборке, ТЗ §5)
+  const [language, setLanguage] = useState<LanguageFilter>('all');
+  const [postType, setPostType] = useState<PostTypeFilter>('all');
+  const [duration, setDuration] = useState<DurationBand>('all');
   const [pending, startTransition] = useTransition();
   const [result, setResult] = useState<SearchResponse | null>(null);
   const [error, setError] = useState<string | null>(null);
   const [view, setView] = useState<ViewMode>('cards');
   const [pendingRadar, startRadar] = useTransition();
   const [radarMsg, setRadarMsg] = useState<string | null>(null);
+  // Поиск конкретного блогера (ТЗ §5, скрины 1/3/4)
+  const [blogger, setBlogger] = useState('');
 
-  function submit(nicheValue?: string, opts: { force?: boolean } = {}) {
+  function openBlogger(e: React.FormEvent) {
+    e.preventDefault();
+    const handle = blogger.trim().replace(/^@+/, '').replace(/\s+/g, '');
+    if (handle.length < 3) {
+      setError('Введи @username блогера (минимум 3 символа)');
+      return;
+    }
+    router.push(`/research/author/${encodeURIComponent(handle.toLowerCase())}`);
+  }
+
+  function resetFilters() {
+    const needReSearch = period !== DEFAULT_PERIOD;
+    setSortBy(DEFAULT_SORT);
+    setLanguage('all');
+    setPostType('all');
+    setDuration('all');
+    setPeriod(DEFAULT_PERIOD);
+    if (needReSearch && result) submit(undefined, { force: false, period: DEFAULT_PERIOD });
+  }
+
+  function submit(
+    nicheValue?: string,
+    opts: { force?: boolean; period?: Period; sortBy?: SortField } = {},
+  ) {
     const q = (nicheValue ?? niche).trim();
     if (q.length < 2) {
       setError('Введи нишу (минимум 2 символа)');
@@ -66,8 +124,8 @@ export function ResearchClient({ isFreePlan = false }: { isFreePlan?: boolean })
           headers: { 'Content-Type': 'application/json' },
           body: JSON.stringify({
             niche: q,
-            sortBy,
-            period,
+            sortBy: opts.sortBy ?? sortBy,
+            period: opts.period ?? period,
             limit: 40,
             force: opts.force ?? false,
           }),
@@ -140,7 +198,38 @@ export function ResearchClient({ isFreePlan = false }: { isFreePlan?: boolean })
     return arr;
   }
 
-  const displayed = result ? applyLocalSort(result.reels) : [];
+  // Клиент-сайд фильтры по языку / типу / длительности (ТЗ §5).
+  // Период обрабатывается на сервере (re-query), остальное — мгновенно.
+  function applyClientFilters(reels: ResearchReelView[]): ResearchReelView[] {
+    return reels.filter((r) => {
+      if (language !== 'all') {
+        const lang = r.language; // 'ru' | 'en' | null
+        if (language === 'other') {
+          if (lang === 'ru' || lang === 'en') return false;
+        } else if (lang !== language) {
+          return false;
+        }
+      }
+      if (postType !== 'all' && (r.postType || 'reel') !== postType) return false;
+      if (duration !== 'all') {
+        const d = r.durationSec;
+        if (d == null) return false; // длительность неизвестна — прячем при явном выборе
+        if (duration === 'short' && d > 30) return false;
+        if (duration === 'medium' && (d <= 30 || d > 60)) return false;
+        if (duration === 'long' && d <= 60) return false;
+      }
+      return true;
+    });
+  }
+
+  const filtersDirty =
+    sortBy !== DEFAULT_SORT ||
+    period !== DEFAULT_PERIOD ||
+    language !== 'all' ||
+    postType !== 'all' ||
+    duration !== 'all';
+
+  const displayed = result ? applyLocalSort(applyClientFilters(result.reels)) : [];
   const aggregates = computeAggregates(displayed);
 
   return (
@@ -218,6 +307,36 @@ export function ResearchClient({ isFreePlan = false }: { isFreePlan?: boolean })
             </div>
           )}
         </form>
+
+        {/* Поиск конкретного блогера (ТЗ §5, скрины 1/3/4) */}
+        <form
+          onSubmit={openBlogger}
+          className="mt-4 pt-4 border-t border-border-soft flex flex-col sm:flex-row gap-2 sm:items-end"
+        >
+          <div className="grid gap-1 flex-1">
+            <label className="mono text-[10px] tracking-widest uppercase text-text-mute">
+              …или открой конкретного блогера
+            </label>
+            <div className="flex items-center bg-bg border border-border focus-within:border-cyan px-3">
+              <span className="font-serif text-[15px] text-text-mute select-none">@</span>
+              <input
+                type="text"
+                value={blogger}
+                onChange={(e) => setBlogger(e.target.value)}
+                placeholder="username (минимум 3 символа)"
+                className="flex-1 bg-transparent outline-none py-2.5 pl-1 font-serif text-[15px] text-text placeholder:text-text-mute placeholder:italic"
+                autoComplete="off"
+                spellCheck={false}
+              />
+            </div>
+          </div>
+          <button
+            type="submit"
+            className="btn-ghost whitespace-nowrap text-[12px] tracking-widest uppercase"
+          >
+            Анализ профиля →
+          </button>
+        </form>
       </section>
 
       {/* Niche aggregate summary (Module 4) */}
@@ -255,8 +374,9 @@ export function ResearchClient({ isFreePlan = false }: { isFreePlan?: boolean })
 
       {/* Filters + aggregate */}
       {result && (
-        <section className="border border-border bg-surface p-4 grid gap-4 lg:grid-cols-[1fr_auto] items-end">
-          <div className="grid grid-cols-2 sm:grid-cols-4 gap-3">
+        <section className="border border-border bg-surface p-4 grid gap-4">
+          {/* Ряд фильтров (ТЗ §5) */}
+          <div className="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-5 gap-3 items-end">
             <SelectField
               label="Сортировка"
               value={sortBy}
@@ -267,27 +387,62 @@ export function ResearchClient({ isFreePlan = false }: { isFreePlan?: boolean })
               label="Период"
               value={period}
               onChange={(v) => {
-                setPeriod(v as Period);
-                submit(undefined, { force: false });
+                const p = v as Period;
+                setPeriod(p);
+                submit(undefined, { force: false, period: p });
               }}
               options={PERIOD_OPTIONS}
             />
-            <div className="grid gap-1">
-              <span className="mono text-[9px] tracking-widest uppercase text-text-mute">Найдено</span>
-              <span className="font-serif text-[22px] text-gold leading-none">{displayed.length}</span>
-            </div>
-            <div className="grid gap-1">
-              <span className="mono text-[9px] tracking-widest uppercase text-text-mute">Сред. виральность</span>
-              <span className="font-serif text-[22px] text-lime leading-none">
-                {aggregates.avgVirality ? `${aggregates.avgVirality.toFixed(1)}×` : '—'}
-              </span>
-            </div>
+            <SelectField
+              label="Язык"
+              value={language}
+              onChange={(v) => setLanguage(v as LanguageFilter)}
+              options={LANGUAGE_OPTIONS}
+            />
+            <SelectField
+              label="Тип поста"
+              value={postType}
+              onChange={(v) => setPostType(v as PostTypeFilter)}
+              options={POSTTYPE_OPTIONS}
+            />
+            <SelectField
+              label="Длительность"
+              value={duration}
+              onChange={(v) => setDuration(v as DurationBand)}
+              options={DURATION_OPTIONS}
+            />
           </div>
 
+          {/* Ряд агрегатов по выборке + действия (ТЗ §5 тулбар) */}
+          <div className="flex flex-wrap items-end justify-between gap-3 border-t border-border-soft pt-3">
+            <div className="flex flex-wrap items-end gap-x-4 gap-y-2">
+              <div className="grid gap-0.5">
+                <span className="mono text-[8px] tracking-widest uppercase text-text-mute">Найдено</span>
+                <span className="font-serif text-[18px] text-gold leading-none">{displayed.length}</span>
+              </div>
+              <div className="grid gap-0.5">
+                <span className="mono text-[8px] tracking-widest uppercase text-text-mute">Сред. вир.</span>
+                <span className="font-serif text-[18px] text-lime leading-none">
+                  {aggregates.avgVirality ? `${aggregates.avgVirality.toFixed(1)}×` : '—'}
+                </span>
+              </div>
+              <Aggregate label="Медиана" value={aggregates.medianViews} />
+              <Aggregate label="ΣПРОСМ" value={aggregates.sumViews} />
+              <Aggregate label="ΣЛАЙКИ" value={aggregates.sumLikes} />
+              <Aggregate label="ΣКОММ" value={aggregates.sumComments} />
+              <Aggregate label="ΣРЕПОСТ" value={aggregates.sumShares} />
+            </div>
+
           <div className="flex flex-wrap items-center gap-3 text-right">
-            <Aggregate label="ΣПРОСМ" value={aggregates.sumViews} />
-            <Aggregate label="ΣЛАЙКИ" value={aggregates.sumLikes} />
-            <Aggregate label="ΣКОММ" value={aggregates.sumComments} />
+            {filtersDirty && (
+              <button
+                type="button"
+                onClick={resetFilters}
+                className="btn-ghost text-[10px] tracking-widest uppercase whitespace-nowrap text-pink"
+              >
+                Сбросить всё
+              </button>
+            )}
             <div className="flex gap-1">
               <button
                 type="button"
@@ -332,6 +487,7 @@ export function ResearchClient({ isFreePlan = false }: { isFreePlan?: boolean })
             >
               Обновить
             </button>
+          </div>
           </div>
         </section>
       )}
@@ -389,8 +545,26 @@ export function ResearchClient({ isFreePlan = false }: { isFreePlan?: boolean })
           <span>скрейп: {result.stats.scraped}</span>
           <span>кандидатов: {result.stats.candidates}</span>
           <span>авторов: {result.stats.authors}</span>
+          {result.stats.byKind && (
+            <span title="распределение типов из скрейпа">
+              типы: R{result.stats.byKind.reels}/C{result.stats.byKind.carousels}/I
+              {result.stats.byKind.images}/U{result.stats.byKind.unknown} · пропущено{' '}
+              {result.stats.byKind.skipped}
+            </span>
+          )}
           <span>время: {(result.stats.durationMs / 1000).toFixed(1)}с</span>
           {result.cacheHit && <span className="text-lime">из кэша</span>}
+        </section>
+      )}
+      {/* Диагностика причины пустой выдачи */}
+      {result && result.errors && result.errors.length > 0 && displayed.length === 0 && (
+        <section className="border border-pink/30 bg-pink/5 p-3 grid gap-1">
+          <span className="mono text-[9px] tracking-widest uppercase text-pink">Диагностика</span>
+          {result.errors.map((e, i) => (
+            <span key={i} className="mono text-[10px] text-text-dim break-all">
+              {e}
+            </span>
+          ))}
         </section>
       )}
     </div>
@@ -514,5 +688,13 @@ function computeAggregates(reels: ResearchReelView[]) {
   const avgVirality = viralities.length > 0
     ? viralities.reduce((a, b) => a + b, 0) / viralities.length
     : null;
-  return { sumViews, sumLikes, sumComments, sumShares, avgVirality };
+  // Медиана просмотров по выборке (ТЗ §5 тулбар).
+  const sortedViews = reels.map((r) => r.views || 0).sort((a, b) => a - b);
+  const n = sortedViews.length;
+  const medianViews = n === 0
+    ? 0
+    : n % 2
+      ? sortedViews[(n - 1) / 2]
+      : Math.round((sortedViews[n / 2 - 1] + sortedViews[n / 2]) / 2);
+  return { sumViews, sumLikes, sumComments, sumShares, avgVirality, medianViews };
 }

@@ -16,6 +16,7 @@ export type ApifyItem = Record<string, unknown> & {
   ownerUsername?: string;
   caption?: string;
   videoUrl?: string;
+  videoDuration?: number;   // длительность видео в секундах (Apify reel-scraper)
   videoPlayCount?: number;
   videoViewCount?: number;
   likesCount?: number;

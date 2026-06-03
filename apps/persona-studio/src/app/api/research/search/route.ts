@@ -65,6 +65,9 @@ type ReelRow = {
   likes: number;
   comments: number;
   shares: number;
+  durationSec: number | null;
+  postType: string;
+  language: string | null;
   postedAt: Date | null;
   virality: number | null;
   engagementRate: number | null;
@@ -204,9 +207,44 @@ export async function POST(req: NextRequest) {
   const cls = classify(allItems);
   const candidates: ScoredPost[] = cls.reels;
 
-  // Уникальные авторы из выдачи → индексируем (до maxNewAuthors)
+  // Диагностика: если из выдачи не выделилось ни одного рилса, понять —
+  // отсеялись на парсинге (skipped) или это всё карусели/фото.
+  const byKind = {
+    reels: cls.reels.length,
+    carousels: cls.carousels.length,
+    images: cls.images.length,
+    unknown: cls.unknown.length,
+    skipped: cls.skipped,
+  };
+  if (cls.reels.length === 0 && allItems.length > 0) {
+    const sample = allItems[0] || {};
+    console.warn(
+      '[research/search] 0 reels from',
+      allItems.length,
+      'items. byKind=',
+      byKind,
+      'sampleKeys=',
+      Object.keys(sample).slice(0, 40),
+      'sample.type=',
+      (sample as { type?: unknown }).type,
+      'sample.productType=',
+      (sample as { productType?: unknown }).productType,
+      'sample.timestamp=',
+      (sample as { timestamp?: unknown }).timestamp,
+    );
+    errors.push(
+      `0 reels из ${allItems.length}: типы R${byKind.reels}/C${byKind.carousels}/I${byKind.images}/U${byKind.unknown}, пропущено ${byKind.skipped}`,
+    );
+  }
+
+  // Авторов собираем из ВСЕХ постов хэштега, а не только из рилсов.
+  // По многим нишам топ хэштега — это карусели/фото (напр. «нейросети»:
+  // 0 видео, всё инфографика), но у каждого поста есть ownerUsername.
+  // Индексация автора всё равно подтянет его последние N РИЛСОВ (ТЗ §3.1),
+  // и именно они станут выдачей — иначе ниши без рилсов в топе дают пусто.
+  const allClassified: ScoredPost[] = [...cls.reels, ...cls.carousels, ...cls.images];
   const uniqueOwners = Array.from(
-    new Set(candidates.map((c) => c.owner?.toLowerCase()).filter((o): o is string => Boolean(o))),
+    new Set(allClassified.map((c) => c.owner?.toLowerCase()).filter((o): o is string => Boolean(o))),
   );
 
   // Существующие записи — чтобы не считать их «новыми»
@@ -275,6 +313,7 @@ export async function POST(req: NextRequest) {
           likes: c.likes,
           comments: c.comments,
           shares: c.shares,
+          durationSec: c.durationSec,
           postType: 'reel',
           virality: metrics.virality,
           engagementRate: metrics.engagementRate,
@@ -289,6 +328,7 @@ export async function POST(req: NextRequest) {
           shares: c.shares,
           caption: c.caption || null,
           captionHash: captionHash(c.caption || ''),
+          durationSec: c.durationSec,
           virality: metrics.virality,
           engagementRate: metrics.engagementRate,
           velocity: metrics.velocity,
@@ -299,21 +339,24 @@ export async function POST(req: NextRequest) {
     }),
   );
 
-  // 6. Перечитаем уже сохранённые рилсы с фильтрами периода/типа и
-  // применим финальную сортировку. Делаем это через БД, чтобы кэш
-  // в следующий раз отдавал ровно тот же набор.
+  // 6. Перечитаем сохранённые рилсы НИШИ и применим финальную сортировку.
+  // Берём все рилсы найденных авторов (а не только хэштег-рилсы): это и
+  // прямые выбросы из хэштег-грида, и подтянутые при индексации рилсы
+  // авторов ниши. Так выдача не пустеет на нишах без рилсов в топе.
   const cutoff = periodCutoff(body.period);
+  const nicheAuthorIds = Array.from(authorByName.values()).map((a) => a.id);
   const whereClause: Record<string, unknown> = {
     platform: 'instagram',
-    authorId: { in: Array.from(authorByName.values()).map((a) => a.id) },
-    externalId: { in: enriched.map((e) => e.c.shortcode!) },
+    authorId: { in: nicheAuthorIds },
+    postType: body.postType || 'reel',
   };
   if (cutoff) whereClause.postedAt = { gte: cutoff };
-  if (body.postType) whereClause.postType = body.postType;
 
   const dbReels = await prisma.researchReel.findMany({
     where: whereClause,
     include: { author: true },
+    orderBy: { viralScore: 'desc' },
+    take: Math.max(body.limit * 3, 120), // запас под дедуп/сортировку
   });
 
   let rows = dbReels.map(toReelRow);
@@ -415,13 +458,25 @@ export async function POST(req: NextRequest) {
     reels: rows,
     stats: {
       scraped: allItems.length,
-      candidates: candidates.length,
+      candidates: dbReels.length, // рилсов ниши найдено в БД (после индексации авторов)
       indexed: indexResults.length,
       authors: allAuthors.length,
       durationMs: Date.now() - started,
+      byKind,
     },
     errors: errors.slice(0, 5),
   });
+}
+
+// Лёгкая эвристика языка по caption (Apify язык не отдаёт): доля
+// кириллицы vs латиницы. Используется только если в БД language не задан.
+function detectLang(caption: string | null): string | null {
+  if (!caption) return null;
+  const cyr = (caption.match(/[Ѐ-ӿ]/g) || []).length;
+  const lat = (caption.match(/[A-Za-z]/g) || []).length;
+  if (cyr === 0 && lat === 0) return null;
+  if (cyr >= lat && cyr > 0) return 'ru';
+  return 'en';
 }
 
 function toReelRow(r: {
@@ -434,6 +489,9 @@ function toReelRow(r: {
   likes: number;
   comments: number;
   shares: number;
+  durationSec: number | null;
+  postType: string;
+  language: string | null;
   postedAt: Date | null;
   virality: number | null;
   engagementRate: number | null;
@@ -457,6 +515,9 @@ function toReelRow(r: {
     likes: r.likes,
     comments: r.comments,
     shares: r.shares,
+    durationSec: r.durationSec,
+    postType: r.postType,
+    language: r.language || detectLang(r.caption),
     postedAt: r.postedAt,
     virality: r.virality,
     engagementRate: r.engagementRate,

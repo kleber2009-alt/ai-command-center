@@ -10,6 +10,9 @@ export type ResearchReelView = {
   likes: number;
   comments: number;
   shares: number;
+  durationSec: number | null;
+  postType: string;
+  language: string | null;
   postedAt: string | null;
   virality: number | null;
   engagementRate: number | null;
@@ -27,10 +30,16 @@ export type ResearchReelView = {
 
 export type SortField = 'viral_score' | 'views' | 'virality' | 'engagement' | 'date';
 export type Period = 'all' | '7d' | '30d' | '90d';
+export type LanguageFilter = 'all' | 'ru' | 'en' | 'other';
+export type PostTypeFilter = 'all' | 'reel' | 'image' | 'carousel';
+export type DurationBand = 'all' | 'short' | 'medium' | 'long';
 
 export type ResearchFilters = {
   sortBy: SortField;
   period: Period;
+  language: LanguageFilter;
+  postType: PostTypeFilter;
+  duration: DurationBand;
 };
 
 export type NicheSummaryView = {
@@ -57,6 +66,13 @@ export type SearchResponse = {
     indexed: number;
     authors: number;
     durationMs: number;
+    byKind?: {
+      reels: number;
+      carousels: number;
+      images: number;
+      unknown: number;
+      skipped: number;
+    };
   };
   errors?: string[];
 };

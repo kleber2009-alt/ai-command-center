@@ -108,6 +108,7 @@ function normalize(item: ApifyItem | null | undefined): ScoredPost | null {
     likes,
     comments,
     shares,
+    durationSec: Number(item.videoDuration) > 0 ? Math.round(Number(item.videoDuration)) : null,
     engagement,
     viewsPerHour: plays / ageH,
     engPerHour: engagement / ageH,

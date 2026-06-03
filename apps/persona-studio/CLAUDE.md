@@ -63,6 +63,45 @@ Token balance changes go through `src/lib/tokens.ts` (`charge` / `refund` / `cre
 
 `Dockerfile` (web) + `Dockerfile.worker` (worker). `docker-compose.yml` + `docker-compose.dev.yml` ship both. CI: `.github/workflows/deploy-persona-studio.yml` + `deploy-persona-landing.yml`.
 
+## Research module (виральный ресёрч)
+
+Модуль «Ресёрч вирусного контента» (ТЗ Badunga-уровня) живёт в:
+- API: `src/app/api/research/**` (search, reels/:id +transcribe/translate/analyze/forge,
+  authors/:id +analyze-page/refresh, folders, watchlist, favorites, hooks +generate,
+  radars +run, export).
+- Lib: `src/lib/research/**` (`metrics.ts` — медиана/виральность/ER/velocity/reach +
+  перцентильный `viralScore`; `index-author.ts`, `expand-niche.ts`, `analyze*.ts`,
+  `hooks-gen.ts`, `transcribe.ts`, `dedupe.ts`, `embeddings.ts`, `qdrant.ts`,
+  `cache.ts`, `apify-budget.ts`, `run-radar.ts`, `niche-summary.ts`).
+- UI: `src/app/(app)/research/**` + `src/components/research/**`.
+- Cron: `src/workers/research-cron.worker.ts` (radar-sweep 15м, watchlist-sweep 60м).
+
+Формулы метрик — в `metrics.ts`, считаются одинаково везде:
+виральность=`views/medianViews` (0.1×), ER=`(likes+comments)/views*100` (репосты
+исключены), velocity=`views/max(дней,0.5)`, reach=`views/followers`,
+`viralScore`=`0.5·reach+0.2·ER+0.15·velocity+0.15·virality` перцентильно (без reach →
+вес в virality). `lowConfidence` при <N рилсов.
+
+### Принятые отклонения от буквы ТЗ (де-факто архитектура)
+
+Функционально эквивалентны ТЗ, но реализованы на существующем стеке Persona Studio:
+
+- **Семантический дедуп: Qdrant + Voyage вместо pgvector.** ТЗ просит pgvector в
+  Postgres; реально — внешний Qdrant (`qdrant.ts`, cosine > 0.92) + эмбеддинги Voyage
+  (`embeddings.ts`). Эмбеддинги в Prisma не хранятся. Если Qdrant/Voyage не настроены —
+  остаётся дешёвый дедуп по `captionHash`.
+- **Cron: BullMQ-воркер вместо n8n.** ТЗ описывает n8n для watchlist/radars; реально —
+  `research-cron.worker.ts` на BullMQ/Redis. Те же задачи (radar-run, author-refresh).
+- **Кредиты: `TokenTransaction` вместо `credit_ledger`.** Списания идут через
+  `src/lib/tokens.ts` (`charge`/`refund`/`credit`), а не через отдельную таблицу.
+- **`language`/`durationSec` рилса.** Apify не отдаёт язык; `language` определяется
+  эвристикой по caption в `search/route.ts` (`detectLang`, доля кириллицы/латиницы).
+  `durationSec` берётся из `videoDuration` Apify (`scoring.ts`); у рилсов, собранных до
+  этого изменения, длительность `null` и фильтр «Длительность» их скрывает.
+
+Фильтры выдачи (язык / тип / длительность) применяются клиент-сайд к уже полученной
+выборке; период — серверным re-query (кэш-консистентность). См. `research-client.tsx`.
+
 ## Landing
 
 `/landings/persona-studio/` (static).
