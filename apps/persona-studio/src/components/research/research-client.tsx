@@ -67,34 +67,33 @@ const DURATION_OPTIONS: Array<{ value: DurationBand; label: string }> = [
   { value: 'long', label: '60+ сек' },
 ];
 
-const DEFAULT_SORT: SortField = 'viral_score';
+// По умолчанию — «самое популярное по просмотрам»: сортировка по views,
+// порог 1 млн (пустые остальные метрики). Совпадает с авто-режимом сервера.
+const DEFAULT_SORT: SortField = 'views';
 const DEFAULT_PERIOD: Period = 'all';
 
 // Пороги вхождения в выдачу — задаются пользователем ДО поиска (ТЗ §5).
-const DEFAULT_MIN_VIEWS = 100_000;
-const DEFAULT_MIN_LIKES = 0; // 0 = без порога (исходная спецификация — без лайков)
-const DEFAULT_MIN_COMMENTS = 300;
-const DEFAULT_MIN_SHARES = 300;
+// Пустые поля (0) трактуются как «без порога»; если пусты ВСЕ — сервер
+// сам включает популярное (1 млн просмотров).
+const DEFAULT_MIN_VIEWS = 1_000_000; // «от 1 млн» по умолчанию
+const DEFAULT_MIN_LIKES = 0;
+const DEFAULT_MIN_COMMENTS = 0;
+const DEFAULT_MIN_SHARES = 0;
 
 type Thresholds = { views: number; likes: number; comments: number; shares: number };
 
-// Пресеты порогов. «Базово» совпадает с дефолтом из спецификации.
+// Пресеты порогов. «Популярное» — дефолт (самое просматриваемое, 1 млн+).
 const THRESHOLD_PRESETS: Array<{ key: string; label: string; values: Thresholds }> = [
-  { key: 'soft', label: 'Мягко', values: { views: 10_000, likes: 0, comments: 50, shares: 0 } },
+  { key: 'soft', label: 'Мягко', values: { views: 100_000, likes: 0, comments: 0, shares: 0 } },
   {
     key: 'base',
-    label: 'Базово',
-    values: {
-      views: DEFAULT_MIN_VIEWS,
-      likes: DEFAULT_MIN_LIKES,
-      comments: DEFAULT_MIN_COMMENTS,
-      shares: DEFAULT_MIN_SHARES,
-    },
+    label: 'Популярное',
+    values: { views: 1_000_000, likes: 0, comments: 0, shares: 0 },
   },
   {
     key: 'hard',
-    label: 'Жёстко',
-    values: { views: 500_000, likes: 5_000, comments: 1_000, shares: 500 },
+    label: 'Вирусное',
+    values: { views: 1_000_000, likes: 0, comments: 1_000, shares: 0 },
   },
 ];
 
@@ -436,7 +435,7 @@ export function ResearchClient({ isFreePlan = false }: { isFreePlan?: boolean })
                 label="Просмотры"
                 value={minViews}
                 onChange={setMinViews}
-                placeholder="100000"
+                placeholder="1000000"
               />
               <ThresholdField
                 label="Лайки"
@@ -448,18 +447,19 @@ export function ResearchClient({ isFreePlan = false }: { isFreePlan?: boolean })
                 label="Комментарии"
                 value={minComments}
                 onChange={setMinComments}
-                placeholder="300"
+                placeholder="без порога"
               />
               <ThresholdField
                 label="Репосты"
                 value={minShares}
                 onChange={setMinShares}
-                placeholder="300"
+                placeholder="без порога"
               />
             </div>
             <span className="mono text-[9px] tracking-wider text-text-mute">
-              Применяются к новому поиску. Пустое поле — без порога. Репосты Instagram
-              отдаёт не всегда — рилсы без данных о репостах порог не отсекает.
+              Применяются к новому поиску. Пустое поле — без порога. Если очистить ВСЕ
+              метрики — включается «самое популярное»: рилсы от 1 млн просмотров по убыванию.
+              Репосты Instagram отдаёт не всегда — рилсы без данных о репостах порог не отсекает.
             </span>
           </div>
 
@@ -479,6 +479,14 @@ export function ResearchClient({ isFreePlan = false }: { isFreePlan?: boolean })
                   {kw}
                 </button>
               ))}
+            </div>
+          )}
+
+          {/* Авто-режим «самое популярное» */}
+          {result?.autoPopular && (
+            <div className="mono text-[9px] tracking-widest uppercase text-gold pt-1">
+              Авто-режим: самое популярное — рилсы от{' '}
+              {formatCount(result.appliedMinViews || 1_000_000)} просмотров
             </div>
           )}
 

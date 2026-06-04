@@ -59,6 +59,9 @@ export type SearchResponse = {
   hashtags: string[];
   summary: string | null;
   nicheSummary?: NicheSummaryView | null;
+  // Авто-режим «самое популярное» (пустые метрики → порог 1 млн просмотров).
+  autoPopular?: boolean;
+  appliedMinViews?: number;
   reels: ResearchReelView[];
   stats?: {
     scraped: number;

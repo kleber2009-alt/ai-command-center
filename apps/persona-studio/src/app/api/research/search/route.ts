@@ -59,7 +59,7 @@ const bodySchema = z.object({
   limit: z.number().int().min(1).max(100).default(30),
   // Сколько новых авторов разрешаем индексировать в этом запросе
   // (защита от взрывного потребления Apify-кредитов).
-  maxNewAuthors: z.number().int().min(0).max(30).default(10),
+  maxNewAuthors: z.number().int().min(0).max(30).default(18),
   // Принудительно обновить кэш (UI: «Обновить»)
   force: z.boolean().default(false),
 });
@@ -138,12 +138,23 @@ export async function POST(req: NextRequest) {
     );
   }
 
+  // Авто-режим «самое популярное»: если пользователь не задал НИ ОДНОЙ
+  // метрики — ищем самый просматриваемый контент (порог 1 млн просмотров,
+  // сортировка по просмотрам). Так пустой запрос не возвращает мусор и не
+  // схлопывается в ноль из-за случайных жёстких фильтров.
+  const AUTO_POPULAR_MIN_VIEWS = 1_000_000;
+  const noMetrics =
+    body.minViews === 0 && body.minLikes === 0 && body.minComments === 0 && body.minShares === 0;
+  const autoPopular = noMetrics;
+  const effMinViews = noMetrics ? AUTO_POPULAR_MIN_VIEWS : body.minViews;
+  const effSortBy: z.infer<typeof SortField> = noMetrics ? 'views' : body.sortBy || 'viral_score';
+
   const filtersForCache: ResearchFilters = {
     period: body.period,
     language: body.language,
     postType: body.postType,
     durationBand: body.durationBand ?? null,
-    minViews: body.minViews,
+    minViews: effMinViews,
     minLikes: body.minLikes,
     minComments: body.minComments,
     minShares: body.minShares,
@@ -162,7 +173,7 @@ export async function POST(req: NextRequest) {
       const ordered = cached.resultReelIds
         .map((id) => byId.get(id))
         .filter((r): r is NonNullable<typeof r> => Boolean(r));
-      const sorted = sortReels(ordered.map(toReelRow), body.sortBy || 'viral_score').slice(0, body.limit);
+      const sorted = sortReels(ordered.map(toReelRow), effSortBy).slice(0, body.limit);
       const expansion = (cached.expansion as { keywords?: string[]; hashtags?: string[] } | null) || null;
 
       await prisma.researchSearch.create({
@@ -184,6 +195,8 @@ export async function POST(req: NextRequest) {
         keywords: expansion?.keywords || [],
         hashtags: expansion?.hashtags || [],
         summary: cached.summary,
+        autoPopular,
+        appliedMinViews: effMinViews,
         reels: sorted,
       });
     }
@@ -200,9 +213,12 @@ export async function POST(req: NextRequest) {
 
   const errors: string[] = [];
   const allItems: ApifyItem[] = [];
+  // Шире окно и больше items: хэштег-грид по многим нишам — карусели/фото,
+  // рилсы приходят в основном через индексацию найденных авторов, поэтому
+  // нужно набрать как можно больше уникальных авторов из выдачи.
   const settled = await Promise.allSettled(
     tagsToScrape.map((tag) =>
-      guardedScrapeHashtag(tag, { days: 30, limit: 25 }).then((r) => ({ tag, r })),
+      guardedScrapeHashtag(tag, { days: 90, limit: 50 }).then((r) => ({ tag, r })),
     ),
   );
   for (const s of settled) {
@@ -364,7 +380,8 @@ export async function POST(req: NextRequest) {
   };
   if (cutoff) whereClause.postedAt = { gte: cutoff };
   // Пороги вхождения (ДО поиска): views/comments — жёстко в DB-запросе.
-  if (body.minViews > 0) whereClause.views = { gte: body.minViews };
+  // effMinViews учитывает авто-режим «самое популярное» (1 млн при пустых метриках).
+  if (effMinViews > 0) whereClause.views = { gte: effMinViews };
   if (body.minLikes > 0) whereClause.likes = { gte: body.minLikes };
   if (body.minComments > 0) whereClause.comments = { gte: body.minComments };
 
@@ -429,7 +446,7 @@ export async function POST(req: NextRequest) {
     rows = rows.filter((r) => r.shares === 0 || r.shares >= body.minShares);
   }
 
-  rows = sortReels(rows, body.sortBy || 'viral_score').slice(0, body.limit);
+  rows = sortReels(rows, effSortBy).slice(0, body.limit);
 
   // 6.5. Niche-aggregate summary (Модуль 4). Только если рилсов
   // достаточно — иначе шумно. Не блокируем основную отдачу: если
@@ -478,6 +495,8 @@ export async function POST(req: NextRequest) {
     hashtags: expansion.hashtags,
     summary: nicheSummary?.summary ?? null,
     nicheSummary,
+    autoPopular,
+    appliedMinViews: effMinViews,
     reels: rows,
     stats: {
       scraped: allItems.length,
