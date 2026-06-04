@@ -48,6 +48,13 @@ const bodySchema = z.object({
   postType: z.enum(['reel', 'image', 'carousel']).optional(),
   durationBand: z.enum(['short', 'medium', 'long']).nullable().optional(),
   sortBy: SortField.optional(),
+  // Пороги вхождения в корпус (задаются пользователем ДО поиска, ТЗ §5).
+  // views/comments — жёсткие (применяются в DB-запросе), shares — мягкий:
+  // Apify часто не отдаёт это поле, поэтому shares === 0 трактуем как
+  // «неизвестно» и пропускаем (как filterReelsByThresholds в scoring.ts).
+  minViews: z.number().int().min(0).max(1_000_000_000).default(100_000),
+  minComments: z.number().int().min(0).max(100_000_000).default(300),
+  minShares: z.number().int().min(0).max(100_000_000).default(300),
   limit: z.number().int().min(1).max(100).default(30),
   // Сколько новых авторов разрешаем индексировать в этом запросе
   // (защита от взрывного потребления Apify-кредитов).
@@ -135,6 +142,9 @@ export async function POST(req: NextRequest) {
     language: body.language,
     postType: body.postType,
     durationBand: body.durationBand ?? null,
+    minViews: body.minViews,
+    minComments: body.minComments,
+    minShares: body.minShares,
   };
 
   // 1. Проверка кэша — если есть и не force, отдаём.
@@ -351,6 +361,9 @@ export async function POST(req: NextRequest) {
     postType: body.postType || 'reel',
   };
   if (cutoff) whereClause.postedAt = { gte: cutoff };
+  // Пороги вхождения (ДО поиска): views/comments — жёстко в DB-запросе.
+  if (body.minViews > 0) whereClause.views = { gte: body.minViews };
+  if (body.minComments > 0) whereClause.comments = { gte: body.minComments };
 
   const dbReels = await prisma.researchReel.findMany({
     where: whereClause,
@@ -404,6 +417,13 @@ export async function POST(req: NextRequest) {
     if (dupeIds.size > 0) {
       rows = rows.filter((r) => !dupeIds.has(r.id));
     }
+  }
+
+  // Порог репостов — мягкий: Apify часто не отдаёт shares, поэтому
+  // shares === 0 трактуем как «неизвестно» и НЕ отсекаем (иначе по
+  // большинству ниш выдача схлопнется в ноль).
+  if (body.minShares > 0) {
+    rows = rows.filter((r) => r.shares === 0 || r.shares >= body.minShares);
   }
 
   rows = sortReels(rows, body.sortBy || 'viral_score').slice(0, body.limit);

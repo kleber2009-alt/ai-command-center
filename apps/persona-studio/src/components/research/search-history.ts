@@ -15,6 +15,10 @@ export type SearchHistoryEntry = {
   sortBy: SortField;
   count: number; // сколько рилсов в выдаче
   cacheHit: boolean;
+  // Пороги, с которыми был сделан поиск (для восстановления и показа).
+  minViews?: number;
+  minComments?: number;
+  minShares?: number;
   response: SearchResponse;
 };
 
@@ -66,11 +70,14 @@ export function addHistoryEntry(
     niche: string;
     period: Period;
     sortBy: SortField;
+    minViews?: number;
+    minComments?: number;
+    minShares?: number;
     at: number;
     response: SearchResponse;
   },
 ): SearchHistoryEntry[] {
-  const { niche, period, sortBy, at, response } = params;
+  const { niche, period, sortBy, minViews, minComments, minShares, at, response } = params;
   const entry: SearchHistoryEntry = {
     id: `${at}-${Math.round(at % 100000)}`,
     niche,
@@ -79,6 +86,9 @@ export function addHistoryEntry(
     sortBy,
     count: response.reels.length,
     cacheHit: response.cacheHit,
+    minViews,
+    minComments,
+    minShares,
     response,
   };
   const existing = loadHistory().filter(

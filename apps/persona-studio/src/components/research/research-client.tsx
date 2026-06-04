@@ -70,6 +70,11 @@ const DURATION_OPTIONS: Array<{ value: DurationBand; label: string }> = [
 const DEFAULT_SORT: SortField = 'viral_score';
 const DEFAULT_PERIOD: Period = 'all';
 
+// Пороги вхождения в выдачу — задаются пользователем ДО поиска (ТЗ §5).
+const DEFAULT_MIN_VIEWS = 100_000;
+const DEFAULT_MIN_COMMENTS = 300;
+const DEFAULT_MIN_SHARES = 300;
+
 const formatCount = (n: number) => {
   if (n >= 1_000_000) return (n / 1_000_000).toFixed(1) + 'M';
   if (n >= 1_000) return (n / 1_000).toFixed(1) + 'K';
@@ -95,6 +100,10 @@ export function ResearchClient({ isFreePlan = false }: { isFreePlan?: boolean })
   const [radarMsg, setRadarMsg] = useState<string | null>(null);
   // Поиск конкретного блогера (ТЗ §5, скрины 1/3/4)
   const [blogger, setBlogger] = useState('');
+  // Пороги вхождения — задаются ДО поиска, уходят в тело запроса.
+  const [minViews, setMinViews] = useState(DEFAULT_MIN_VIEWS);
+  const [minComments, setMinComments] = useState(DEFAULT_MIN_COMMENTS);
+  const [minShares, setMinShares] = useState(DEFAULT_MIN_SHARES);
   // История поиска (localStorage) — чтобы выдача не пропадала при обновлении
   const [history, setHistory] = useState<SearchHistoryEntry[]>([]);
   const [historyOpen, setHistoryOpen] = useState(false);
@@ -110,8 +119,22 @@ export function ResearchClient({ isFreePlan = false }: { isFreePlan?: boolean })
       setNiche(last.niche);
       setPeriod(last.period);
       setSortBy(last.sortBy);
+      if (last.minViews != null) setMinViews(last.minViews);
+      if (last.minComments != null) setMinComments(last.minComments);
+      if (last.minShares != null) setMinShares(last.minShares);
     }
   }, []);
+
+  const thresholdsDirty =
+    minViews !== DEFAULT_MIN_VIEWS ||
+    minComments !== DEFAULT_MIN_COMMENTS ||
+    minShares !== DEFAULT_MIN_SHARES;
+
+  function resetThresholds() {
+    setMinViews(DEFAULT_MIN_VIEWS);
+    setMinComments(DEFAULT_MIN_COMMENTS);
+    setMinShares(DEFAULT_MIN_SHARES);
+  }
 
   function restoreFromHistory(entry: SearchHistoryEntry) {
     setError(null);
@@ -119,6 +142,9 @@ export function ResearchClient({ isFreePlan = false }: { isFreePlan?: boolean })
     setNiche(entry.niche);
     setPeriod(entry.period);
     setSortBy(entry.sortBy);
+    if (entry.minViews != null) setMinViews(entry.minViews);
+    if (entry.minComments != null) setMinComments(entry.minComments);
+    if (entry.minShares != null) setMinShares(entry.minShares);
     setLanguage('all');
     setPostType('all');
     setDuration('all');
@@ -164,6 +190,9 @@ export function ResearchClient({ isFreePlan = false }: { isFreePlan?: boolean })
             niche: q,
             sortBy: opts.sortBy ?? sortBy,
             period: opts.period ?? period,
+            minViews,
+            minComments,
+            minShares,
             limit: 40,
             force: opts.force ?? false,
           }),
@@ -183,6 +212,9 @@ export function ResearchClient({ isFreePlan = false }: { isFreePlan?: boolean })
             niche: q,
             period: opts.period ?? period,
             sortBy: opts.sortBy ?? sortBy,
+            minViews,
+            minComments,
+            minShares,
             at: Date.now(),
             response: json,
           }),
@@ -319,6 +351,48 @@ export function ResearchClient({ isFreePlan = false }: { isFreePlan?: boolean })
             >
               {pending ? 'Ищу залётные…' : 'Найти вирусные'}
             </button>
+          </div>
+
+          {/* Пороги вхождения — задаются ДО поиска (ТЗ §5) */}
+          <div className="grid gap-1.5 pt-1">
+            <div className="flex items-center justify-between gap-2">
+              <span className="mono text-[10px] tracking-widest uppercase text-text-mute">
+                Минимальные пороги
+              </span>
+              {thresholdsDirty && (
+                <button
+                  type="button"
+                  onClick={resetThresholds}
+                  className="btn-ghost text-[9px] tracking-widest uppercase text-pink"
+                >
+                  По умолчанию
+                </button>
+              )}
+            </div>
+            <div className="grid grid-cols-3 gap-2">
+              <ThresholdField
+                label="Просмотры"
+                value={minViews}
+                onChange={setMinViews}
+                placeholder="100000"
+              />
+              <ThresholdField
+                label="Комментарии"
+                value={minComments}
+                onChange={setMinComments}
+                placeholder="300"
+              />
+              <ThresholdField
+                label="Репосты"
+                value={minShares}
+                onChange={setMinShares}
+                placeholder="300"
+              />
+            </div>
+            <span className="mono text-[9px] tracking-wider text-text-mute">
+              Применяются к новому поиску. Репосты Instagram отдаёт не всегда — рилсы без
+              данных о репостах порог не отсекает.
+            </span>
           </div>
 
           {/* Niche expansion chips */}
@@ -637,6 +711,38 @@ export function ResearchClient({ isFreePlan = false }: { isFreePlan?: boolean })
         onRestore={restoreFromHistory}
         onRemove={(id) => setHistory(removeHistoryEntry(id))}
         onClear={() => setHistory(clearHistory())}
+      />
+    </div>
+  );
+}
+
+// Поле порога: целое число ≥ 0. Пустое значение трактуем как 0 (без порога).
+function ThresholdField({
+  label,
+  value,
+  onChange,
+  placeholder,
+}: {
+  label: string;
+  value: number;
+  onChange: (v: number) => void;
+  placeholder?: string;
+}) {
+  return (
+    <div className="grid gap-1">
+      <span className="mono text-[9px] tracking-widest uppercase text-text-mute">{label}</span>
+      <input
+        type="text"
+        inputMode="numeric"
+        value={value === 0 ? '' : String(value)}
+        onChange={(e) => {
+          const digits = e.target.value.replace(/[^\d]/g, '');
+          onChange(digits === '' ? 0 : Math.min(Number(digits), 1_000_000_000));
+        }}
+        placeholder={placeholder}
+        className="bg-bg border border-border focus:border-gold outline-none px-2 py-1.5 mono text-[12px] tracking-wider text-text placeholder:text-text-mute"
+        autoComplete="off"
+        spellCheck={false}
       />
     </div>
   );

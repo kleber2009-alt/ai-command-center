@@ -15,6 +15,12 @@ export type ResearchFilters = {
   language?: string;
   postType?: 'reel' | 'image' | 'carousel';
   durationBand?: 'short' | 'medium' | 'long' | null;
+  // Пороги вхождения в корпус (задаются пользователем ДО поиска).
+  // Меняют какие рилсы попадают в выборку → обязаны быть в filtersHash,
+  // иначе разные пороги отдадут один и тот же кэш.
+  minViews?: number;
+  minComments?: number;
+  minShares?: number;
   // сортировка влияет на отдачу, но НЕ на корпус — поэтому в filtersHash
   // её можно НЕ включать. Включаем только то, что меняет какие рилсы
   // попадают в выборку. Сортировка применяется поверх кэша.
