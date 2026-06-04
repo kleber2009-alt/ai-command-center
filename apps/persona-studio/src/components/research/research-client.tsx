@@ -72,8 +72,31 @@ const DEFAULT_PERIOD: Period = 'all';
 
 // Пороги вхождения в выдачу — задаются пользователем ДО поиска (ТЗ §5).
 const DEFAULT_MIN_VIEWS = 100_000;
+const DEFAULT_MIN_LIKES = 0; // 0 = без порога (исходная спецификация — без лайков)
 const DEFAULT_MIN_COMMENTS = 300;
 const DEFAULT_MIN_SHARES = 300;
+
+type Thresholds = { views: number; likes: number; comments: number; shares: number };
+
+// Пресеты порогов. «Базово» совпадает с дефолтом из спецификации.
+const THRESHOLD_PRESETS: Array<{ key: string; label: string; values: Thresholds }> = [
+  { key: 'soft', label: 'Мягко', values: { views: 10_000, likes: 0, comments: 50, shares: 0 } },
+  {
+    key: 'base',
+    label: 'Базово',
+    values: {
+      views: DEFAULT_MIN_VIEWS,
+      likes: DEFAULT_MIN_LIKES,
+      comments: DEFAULT_MIN_COMMENTS,
+      shares: DEFAULT_MIN_SHARES,
+    },
+  },
+  {
+    key: 'hard',
+    label: 'Жёстко',
+    values: { views: 500_000, likes: 5_000, comments: 1_000, shares: 500 },
+  },
+];
 
 const formatCount = (n: number) => {
   if (n >= 1_000_000) return (n / 1_000_000).toFixed(1) + 'M';
@@ -102,6 +125,7 @@ export function ResearchClient({ isFreePlan = false }: { isFreePlan?: boolean })
   const [blogger, setBlogger] = useState('');
   // Пороги вхождения — задаются ДО поиска, уходят в тело запроса.
   const [minViews, setMinViews] = useState(DEFAULT_MIN_VIEWS);
+  const [minLikes, setMinLikes] = useState(DEFAULT_MIN_LIKES);
   const [minComments, setMinComments] = useState(DEFAULT_MIN_COMMENTS);
   const [minShares, setMinShares] = useState(DEFAULT_MIN_SHARES);
   // История поиска (localStorage) — чтобы выдача не пропадала при обновлении
@@ -120,6 +144,7 @@ export function ResearchClient({ isFreePlan = false }: { isFreePlan?: boolean })
       setPeriod(last.period);
       setSortBy(last.sortBy);
       if (last.minViews != null) setMinViews(last.minViews);
+      if (last.minLikes != null) setMinLikes(last.minLikes);
       if (last.minComments != null) setMinComments(last.minComments);
       if (last.minShares != null) setMinShares(last.minShares);
     }
@@ -127,11 +152,29 @@ export function ResearchClient({ isFreePlan = false }: { isFreePlan?: boolean })
 
   const thresholdsDirty =
     minViews !== DEFAULT_MIN_VIEWS ||
+    minLikes !== DEFAULT_MIN_LIKES ||
     minComments !== DEFAULT_MIN_COMMENTS ||
     minShares !== DEFAULT_MIN_SHARES;
 
+  // Какой пресет сейчас активен (если значения точно совпадают).
+  const activePreset = THRESHOLD_PRESETS.find(
+    (p) =>
+      p.values.views === minViews &&
+      p.values.likes === minLikes &&
+      p.values.comments === minComments &&
+      p.values.shares === minShares,
+  )?.key;
+
+  function applyPreset(values: Thresholds) {
+    setMinViews(values.views);
+    setMinLikes(values.likes);
+    setMinComments(values.comments);
+    setMinShares(values.shares);
+  }
+
   function resetThresholds() {
     setMinViews(DEFAULT_MIN_VIEWS);
+    setMinLikes(DEFAULT_MIN_LIKES);
     setMinComments(DEFAULT_MIN_COMMENTS);
     setMinShares(DEFAULT_MIN_SHARES);
   }
@@ -143,6 +186,7 @@ export function ResearchClient({ isFreePlan = false }: { isFreePlan?: boolean })
     setPeriod(entry.period);
     setSortBy(entry.sortBy);
     if (entry.minViews != null) setMinViews(entry.minViews);
+    if (entry.minLikes != null) setMinLikes(entry.minLikes);
     if (entry.minComments != null) setMinComments(entry.minComments);
     if (entry.minShares != null) setMinShares(entry.minShares);
     setLanguage('all');
@@ -191,6 +235,7 @@ export function ResearchClient({ isFreePlan = false }: { isFreePlan?: boolean })
             sortBy: opts.sortBy ?? sortBy,
             period: opts.period ?? period,
             minViews,
+            minLikes,
             minComments,
             minShares,
             limit: 40,
@@ -213,6 +258,7 @@ export function ResearchClient({ isFreePlan = false }: { isFreePlan?: boolean })
             period: opts.period ?? period,
             sortBy: opts.sortBy ?? sortBy,
             minViews,
+            minLikes,
             minComments,
             minShares,
             at: Date.now(),
@@ -355,26 +401,48 @@ export function ResearchClient({ isFreePlan = false }: { isFreePlan?: boolean })
 
           {/* Пороги вхождения — задаются ДО поиска (ТЗ §5) */}
           <div className="grid gap-1.5 pt-1">
-            <div className="flex items-center justify-between gap-2">
+            <div className="flex items-center justify-between gap-2 flex-wrap">
               <span className="mono text-[10px] tracking-widest uppercase text-text-mute">
                 Минимальные пороги
               </span>
-              {thresholdsDirty && (
-                <button
-                  type="button"
-                  onClick={resetThresholds}
-                  className="btn-ghost text-[9px] tracking-widest uppercase text-pink"
-                >
-                  По умолчанию
-                </button>
-              )}
+              <div className="flex items-center gap-1.5">
+                {THRESHOLD_PRESETS.map((p) => (
+                  <button
+                    type="button"
+                    key={p.key}
+                    onClick={() => applyPreset(p.values)}
+                    className={`px-2 py-1 mono text-[9px] tracking-widest uppercase border ${
+                      activePreset === p.key
+                        ? 'border-gold text-gold'
+                        : 'border-border text-text-mute hover:text-text'
+                    }`}
+                  >
+                    {p.label}
+                  </button>
+                ))}
+                {thresholdsDirty && (
+                  <button
+                    type="button"
+                    onClick={resetThresholds}
+                    className="btn-ghost text-[9px] tracking-widest uppercase text-pink"
+                  >
+                    Сброс
+                  </button>
+                )}
+              </div>
             </div>
-            <div className="grid grid-cols-3 gap-2">
+            <div className="grid grid-cols-2 sm:grid-cols-4 gap-2">
               <ThresholdField
                 label="Просмотры"
                 value={minViews}
                 onChange={setMinViews}
                 placeholder="100000"
+              />
+              <ThresholdField
+                label="Лайки"
+                value={minLikes}
+                onChange={setMinLikes}
+                placeholder="без порога"
               />
               <ThresholdField
                 label="Комментарии"
@@ -390,8 +458,8 @@ export function ResearchClient({ isFreePlan = false }: { isFreePlan?: boolean })
               />
             </div>
             <span className="mono text-[9px] tracking-wider text-text-mute">
-              Применяются к новому поиску. Репосты Instagram отдаёт не всегда — рилсы без
-              данных о репостах порог не отсекает.
+              Применяются к новому поиску. Пустое поле — без порога. Репосты Instagram
+              отдаёт не всегда — рилсы без данных о репостах порог не отсекает.
             </span>
           </div>
 

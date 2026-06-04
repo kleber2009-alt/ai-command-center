@@ -53,6 +53,7 @@ const bodySchema = z.object({
   // Apify часто не отдаёт это поле, поэтому shares === 0 трактуем как
   // «неизвестно» и пропускаем (как filterReelsByThresholds в scoring.ts).
   minViews: z.number().int().min(0).max(1_000_000_000).default(100_000),
+  minLikes: z.number().int().min(0).max(100_000_000).default(0),
   minComments: z.number().int().min(0).max(100_000_000).default(300),
   minShares: z.number().int().min(0).max(100_000_000).default(300),
   limit: z.number().int().min(1).max(100).default(30),
@@ -143,6 +144,7 @@ export async function POST(req: NextRequest) {
     postType: body.postType,
     durationBand: body.durationBand ?? null,
     minViews: body.minViews,
+    minLikes: body.minLikes,
     minComments: body.minComments,
     minShares: body.minShares,
   };
@@ -363,6 +365,7 @@ export async function POST(req: NextRequest) {
   if (cutoff) whereClause.postedAt = { gte: cutoff };
   // Пороги вхождения (ДО поиска): views/comments — жёстко в DB-запросе.
   if (body.minViews > 0) whereClause.views = { gte: body.minViews };
+  if (body.minLikes > 0) whereClause.likes = { gte: body.minLikes };
   if (body.minComments > 0) whereClause.comments = { gte: body.minComments };
 
   const dbReels = await prisma.researchReel.findMany({

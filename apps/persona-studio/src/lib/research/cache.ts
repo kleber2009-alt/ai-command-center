@@ -19,6 +19,7 @@ export type ResearchFilters = {
   // Меняют какие рилсы попадают в выборку → обязаны быть в filtersHash,
   // иначе разные пороги отдадут один и тот же кэш.
   minViews?: number;
+  minLikes?: number;
   minComments?: number;
   minShares?: number;
   // сортировка влияет на отдачу, но НЕ на корпус — поэтому в filtersHash
