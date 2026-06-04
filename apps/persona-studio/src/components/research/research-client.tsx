@@ -5,10 +5,19 @@
 // чипы синонимов от Claude, баннер свежести, фильтры/сортировки,
 // верхний агрегатор по выборке.
 
-import { useState, useTransition } from 'react';
+import { useEffect, useState, useTransition } from 'react';
 import { useRouter } from 'next/navigation';
+import { History } from 'lucide-react';
 import { ResearchReelCard } from './research-reel-card';
 import { ResearchTable } from './research-table';
+import { SearchHistoryDrawer } from './search-history-drawer';
+import {
+  addHistoryEntry,
+  clearHistory,
+  loadHistory,
+  removeHistoryEntry,
+  type SearchHistoryEntry,
+} from './search-history';
 import type {
   DurationBand,
   LanguageFilter,
@@ -86,6 +95,35 @@ export function ResearchClient({ isFreePlan = false }: { isFreePlan?: boolean })
   const [radarMsg, setRadarMsg] = useState<string | null>(null);
   // Поиск конкретного блогера (ТЗ §5, скрины 1/3/4)
   const [blogger, setBlogger] = useState('');
+  // История поиска (localStorage) — чтобы выдача не пропадала при обновлении
+  const [history, setHistory] = useState<SearchHistoryEntry[]>([]);
+  const [historyOpen, setHistoryOpen] = useState(false);
+
+  // На монтировании подтягиваем историю и восстанавливаем последнюю выдачу,
+  // чтобы обновление страницы не стирало результаты.
+  useEffect(() => {
+    const entries = loadHistory();
+    setHistory(entries);
+    if (entries.length > 0) {
+      const last = entries[0];
+      setResult(last.response);
+      setNiche(last.niche);
+      setPeriod(last.period);
+      setSortBy(last.sortBy);
+    }
+  }, []);
+
+  function restoreFromHistory(entry: SearchHistoryEntry) {
+    setError(null);
+    setResult(entry.response);
+    setNiche(entry.niche);
+    setPeriod(entry.period);
+    setSortBy(entry.sortBy);
+    setLanguage('all');
+    setPostType('all');
+    setDuration('all');
+    setHistoryOpen(false);
+  }
 
   function openBlogger(e: React.FormEvent) {
     e.preventDefault();
@@ -139,6 +177,16 @@ export function ResearchClient({ isFreePlan = false }: { isFreePlan?: boolean })
         }
         setResult(json);
         if (nicheValue !== undefined) setNiche(nicheValue);
+        // Сохраняем выдачу в историю (localStorage), чтобы пережить рефреш.
+        setHistory(
+          addHistoryEntry({
+            niche: q,
+            period: opts.period ?? period,
+            sortBy: opts.sortBy ?? sortBy,
+            at: Date.now(),
+            response: json,
+          }),
+        );
       } catch (e) {
         setError((e as Error).message || 'network error');
       }
@@ -237,9 +285,23 @@ export function ResearchClient({ isFreePlan = false }: { isFreePlan?: boolean })
       {/* Search form */}
       <section className="border border-border bg-surface p-5">
         <form onSubmit={onSubmit} className="grid gap-3">
-          <label className="mono text-[10px] tracking-widest uppercase text-text-mute">
-            Ниша или тема
-          </label>
+          <div className="flex items-center justify-between gap-3">
+            <label className="mono text-[10px] tracking-widest uppercase text-text-mute">
+              Ниша или тема
+            </label>
+            <button
+              type="button"
+              onClick={() => setHistoryOpen(true)}
+              className="btn-ghost flex items-center gap-1.5 text-[10px] tracking-widest uppercase whitespace-nowrap"
+              title="История прошлых поисков"
+            >
+              <History className="w-3.5 h-3.5" />
+              История
+              {history.length > 0 && (
+                <span className="text-gold">{history.length}</span>
+              )}
+            </button>
+          </div>
           <div className="flex flex-col sm:flex-row gap-2">
             <input
               type="text"
@@ -567,6 +629,15 @@ export function ResearchClient({ isFreePlan = false }: { isFreePlan?: boolean })
           ))}
         </section>
       )}
+
+      <SearchHistoryDrawer
+        open={historyOpen}
+        entries={history}
+        onClose={() => setHistoryOpen(false)}
+        onRestore={restoreFromHistory}
+        onRemove={(id) => setHistory(removeHistoryEntry(id))}
+        onClear={() => setHistory(clearHistory())}
+      />
     </div>
   );
 }
