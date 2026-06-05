@@ -7,6 +7,7 @@
     "build": "next build",
     "start": "next start -p 3020",
     "lint": "next lint",
+    "test": "node --import tsx --test --experimental-test-module-mocks \"tests/**/*.test.ts\"",
     "worker": "node --env-file=.env --import tsx --watch src/workers/index.ts",
     "worker:prod": "node --env-file=.env --import tsx src/workers/index.ts",
     "db:generate": "prisma generate",
