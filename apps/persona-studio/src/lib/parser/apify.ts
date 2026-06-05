@@ -46,11 +46,12 @@ async function callScraper(body: Record<string, unknown>): Promise<ScrapeResult>
 async function runActor(
   actorId: string,
   body: Record<string, unknown>,
+  opts: { timeoutMs?: number } = {},
 ): Promise<ScrapeResult> {
   const token = env.APIFY_TOKEN;
   if (!token) return { ok: false, error: 'APIFY_TOKEN missing' };
   const actor = actorId;
-  const timeoutMs = env.APIFY_TIMEOUT_MS;
+  const timeoutMs = opts.timeoutMs || env.APIFY_TIMEOUT_MS;
   const url = `https://api.apify.com/v2/acts/${actor}/run-sync-get-dataset-items?token=${encodeURIComponent(
     token,
   )}&timeout=${Math.floor(timeoutMs / 1000)}`;
@@ -177,7 +178,13 @@ export async function scrapeSearchReels(
   if (!q) return { ok: false, error: 'query required' };
   if (!isReelsSearchConfigured()) return { ok: false, error: 'reels_search_not_configured' };
   const maxPages = opts.maxPages || env.APIFY_REELS_SEARCH_MAX_PAGES;
-  const r = await runActor(env.APIFY_REELS_SEARCH_ACTOR, { query: q, maxPages });
+  // Длиннее обычного таймаута: у run-sync актора бывает холодный старт,
+  // 60с не всегда хватает и вызов рвётся по AbortSignal.
+  const r = await runActor(
+    env.APIFY_REELS_SEARCH_ACTOR,
+    { query: q, maxPages },
+    { timeoutMs: env.APIFY_REELS_SEARCH_TIMEOUT_MS },
+  );
   if (!r.ok) return r;
   const mapped = r.items.map((it) => mapSearchReelToApifyItem(it as SearchReelItem));
   return { ok: true, items: mapped };

@@ -226,10 +226,16 @@ export async function POST(req: NextRequest) {
         continue;
       }
       const { q, r } = s.value;
-      if (r.ok) allItems.push(...r.items);
-      else errors.push(`reels-search "${q}": ${r.error}`);
+      if (r.ok) {
+        allItems.push(...r.items);
+        console.log(`[research/search] reels-search "${q}" → ${r.items.length} items`);
+      } else {
+        errors.push(`reels-search "${q}": ${r.error}`);
+        console.warn(`[research/search] reels-search "${q}" FAILED: ${r.error}`);
+      }
     }
     if (allItems.length > 0) source = 'reels-search';
+    console.log(`[research/search] reels-search total=${allItems.length} source=${source}`);
   }
 
   // 3b. Фолбэк — хэштег-скрейп (если reels-search выключен или пуст).
