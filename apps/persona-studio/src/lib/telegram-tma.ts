@@ -142,9 +142,11 @@ export async function createStarsInvoiceLink(opts: {
 
 export type StarsPackSlug = 'trial' | 'starter' | 'pro' | 'agency';
 
+// Perks/economics mirror cryptobot.ts PACKS (см. docs/UNIT_ECONOMICS.md).
+// Trial = аватары + обложка, без премиум-видео.
 export const STARS_PACKS: Record<StarsPackSlug, { tokens: number; stars: number; label: string; perks: string; trial?: boolean }> = {
-  trial:   { tokens: 43,   stars: 75,   label: 'Trial',   perks: 'Полная связка: аватары + видео + обложка', trial: true },
-  starter: { tokens: 100,  stars: 650,  label: 'Starter', perks: '~10 батчей аватаров или 33 обложки' },
-  pro:     { tokens: 400,  stars: 2100, label: 'Pro',     perks: '~13 видео + батчи аватаров' },
-  agency:  { tokens: 1200, stars: 5700, label: 'Agency',  perks: 'безлимит на месяц для команды' },
+  trial:   { tokens: 43,   stars: 75,   label: 'Trial',   perks: '10 аватаров + обложка', trial: true },
+  starter: { tokens: 100,  stars: 650,  label: 'Starter', perks: '1 видео или ~8 батчей аватаров' },
+  pro:     { tokens: 400,  stars: 2100, label: 'Pro',     perks: '~4 видео + аватары и обложки' },
+  agency:  { tokens: 1200, stars: 5700, label: 'Agency',  perks: '~12 видео — для команды' },
 };

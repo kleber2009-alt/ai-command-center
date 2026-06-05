@@ -11,13 +11,13 @@ const TRIAL = {
   tokens: 43,
   usdt: '1.00',
   stars: 75,
-  desc: 'Одна полная связка: аватары + говорящее видео + обложка',
+  desc: '10 аватаров + обложка',
 };
 
 const PACKS = [
-  { id: 'starter', label: 'Starter', tokens: 100, usdt: '9.00', stars: 650,  desc: '~10 батчей аватаров или 33 обложки' },
-  { id: 'pro',     label: 'Pro',     tokens: 400, usdt: '29.00', stars: 2100, desc: '~13 видео + батчи аватаров', featured: true },
-  { id: 'agency',  label: 'Agency',  tokens: 1200, usdt: '79.00', stars: 5700, desc: 'безлимит на месяц для команды' },
+  { id: 'starter', label: 'Starter', tokens: 100, usdt: '9.00', stars: 650,  desc: '1 видео или ~8 батчей аватаров' },
+  { id: 'pro',     label: 'Pro',     tokens: 400, usdt: '29.00', stars: 2100, desc: '~4 видео + аватары и обложки', featured: true },
+  { id: 'agency',  label: 'Agency',  tokens: 1200, usdt: '79.00', stars: 5700, desc: '~12 видео — для команды' },
 ] as const;
 
 type CreateResp = {

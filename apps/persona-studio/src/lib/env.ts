@@ -75,10 +75,14 @@ const envSchema = z.object({
   SUBMAGIC_POLL_INTERVAL_MS: z.coerce.number().default(8_000),
 
   // ── Costs (env-driven) ────────────────────────
+  // Token costs calibrated to provider COGS for ~55% gross margin at the Pro
+  // pack ($0.0725/token). See docs/UNIT_ECONOMICS.md. Video engines are the
+  // expensive items: HeyGen Avatar IV ~$3/video, OmniHuman ~$4.3/video at
+  // public list prices — hence 100 / 140 tokens (was 30 / 50, which lost money).
   COST_AVATAR_GENERATION: z.coerce.number().default(10),
   COST_COVER_GENERATION: z.coerce.number().default(3),
-  COST_HEYGEN_VIDEO: z.coerce.number().default(30),
-  COST_OMNIHUMAN_VIDEO: z.coerce.number().default(50),
+  COST_HEYGEN_VIDEO: z.coerce.number().default(100),
+  COST_OMNIHUMAN_VIDEO: z.coerce.number().default(140),
   COST_SUBMAGIC_EDIT: z.coerce.number().default(15),
   COST_SLIDE_IMAGE: z.coerce.number().default(3),
   // ── Research (Badunga-style) ──

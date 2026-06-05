@@ -119,14 +119,15 @@ export function verifyWebhookSignature(rawBody: string, signatureHex: string): b
 }
 
 // ── Pack catalog ─────────────────────────────────────────
-// 1 USDT ≈ 1 USD. Цены подобраны под стоимость операций
-// (avatar batch 10, cover 3, video 30) с целевой маржой ~3x.
-
+// 1 USDT ≈ 1 USD. Token costs операций (avatar 10, cover 3, HeyGen 100,
+// OmniHuman 140 — см. docs/UNIT_ECONOMICS.md) дают ~55% маржу на Pro.
+// Trial намеренно НЕ включает премиум-видео: 43 токена покрывают батч аватаров
+// + обложку (COGS ~$0.39 за $1), а не видео за ~$3 (иначе убыток −$2.7/триал).
 export type PackSlug = 'trial' | 'starter' | 'pro' | 'agency';
 
 export const PACKS: Record<PackSlug, { tokens: number; usdt: string; label: string; perks: string; trial?: boolean }> = {
-  trial:   { tokens: 43,   usdt: '1.00',  label: 'Trial',   perks: 'полная связка: аватары + видео + обложка', trial: true },
-  starter: { tokens: 100,  usdt: '9.00',  label: 'Starter', perks: '~10 батчей аватаров или 33 обложки' },
-  pro:     { tokens: 400,  usdt: '29.00', label: 'Pro',     perks: '~13 видео + батчи аватаров' },
-  agency:  { tokens: 1200, usdt: '79.00', label: 'Agency',  perks: 'безлимит на месяц для команды' },
+  trial:   { tokens: 43,   usdt: '1.00',  label: 'Trial',   perks: '10 аватаров + обложка', trial: true },
+  starter: { tokens: 100,  usdt: '9.00',  label: 'Starter', perks: '1 видео или ~8 батчей аватаров' },
+  pro:     { tokens: 400,  usdt: '29.00', label: 'Pro',     perks: '~4 видео + аватары и обложки' },
+  agency:  { tokens: 1200, usdt: '79.00', label: 'Agency',  perks: '~12 видео — для команды' },
 };
