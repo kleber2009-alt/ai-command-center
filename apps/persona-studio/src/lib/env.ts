@@ -35,7 +35,9 @@ const envSchema = z.object({
   WORKER_PER_STYLE_PARALLEL: z.coerce.number().default(3),
 
   // ── HeyGen ────────────────────────────────────
-  HEYGEN_API_KEY: z.string().min(1),
+  // Optional: движок видео деградирует мягко. Без ключа создание HeyGen-видео
+  // отдаёт доменную ошибку (heygen.ts keyOrThrow), но web/worker стартуют.
+  HEYGEN_API_KEY: z.string().min(1).optional(),
   HEYGEN_API_BASE: z.string().url().default('https://api.heygen.com'),
   HEYGEN_UPLOAD_BASE: z.string().url().default('https://upload.heygen.com'),
 
@@ -45,7 +47,9 @@ const envSchema = z.object({
   OMNIHUMAN_MAX_POLL_MS: z.coerce.number().default(420_000), // 7 минут
 
   // ── ElevenLabs TTS ────────────────────────────
-  ELEVENLABS_API_KEY: z.string().min(1),
+  // Optional: нужен только для OmniHuman-видео с TTS. Без ключа synthesize()
+  // кидает доменную ошибку MISSING_KEY, но приложение поднимается.
+  ELEVENLABS_API_KEY: z.string().min(1).optional(),
   ELEVENLABS_API_BASE: z.string().url().default('https://api.elevenlabs.io/v1'),
   ELEVENLABS_MODEL: z.string().default('eleven_turbo_v2_5'),
   ELEVENLABS_TTS_TIMEOUT_MS: z.coerce.number().default(30_000),

@@ -42,6 +42,9 @@ export async function synthesize(opts: TtsOpts): Promise<{ bytes: Buffer; mime: 
   }
   if (!opts.voiceId) throw new ElevenlabsError('MISSING_VOICE', 'voiceId required');
 
+  const apiKey = env.ELEVENLABS_API_KEY;
+  if (!apiKey) throw new ElevenlabsError('MISSING_KEY', 'ELEVENLABS_API_KEY is not set');
+
   const model = opts.model ?? env.ELEVENLABS_MODEL;
   const timeoutMs = opts.timeoutMs ?? env.ELEVENLABS_TTS_TIMEOUT_MS;
 
@@ -54,7 +57,7 @@ export async function synthesize(opts: TtsOpts): Promise<{ bytes: Buffer; mime: 
       {
         method: 'POST',
         headers: {
-          'xi-api-key': env.ELEVENLABS_API_KEY,
+          'xi-api-key': apiKey,
           'Content-Type': 'application/json',
           Accept: 'audio/mpeg',
         },
