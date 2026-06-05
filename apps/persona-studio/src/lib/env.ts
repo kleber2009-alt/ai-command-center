@@ -113,6 +113,10 @@ const envSchema = z.object({
   // Telegram: переиспользуем TELEGRAM_BOT_TOKEN (тот же бот, что и для TMA-
   // оплат). Для постинга в канал бот должен быть его админом.
   TELEGRAM_BOT_TOKEN: z.string().min(1).optional(),
+  // Secret passed to setWebhook(secret_token=…) and checked on each Telegram
+  // webhook call. REQUIRED in production (the webhook credits tokens) — without
+  // it the /api/telegram/webhook route fails closed with 503.
+  TELEGRAM_WEBHOOK_SECRET: z.string().min(1).optional(),
   // 32-байтный секрет (base64 или hex) для AES-256-GCM шифрования
   // long-lived IG-токенов в SocialAccount.accessToken. Без него подключение
   // Instagram недоступно (lib/publish/crypto бросит).
