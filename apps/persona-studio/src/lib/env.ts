@@ -60,7 +60,9 @@ const envSchema = z.object({
   // Reels в приложении IG). Возвращает рилсы со всеми метриками, включая
   // shares. Используется как ОСНОВНОЙ источник в /api/research/search.
   // 'off' (или пустое) → отключить и работать только через хэштеги.
-  APIFY_REELS_SEARCH_ACTOR: z.string().default('data-slayer~instagram-search-reels'),
+  // patient_discovery/instagram-search-reels (actor id). Вход {query, maxPages},
+  // cookieless. Можно заменить на 'data-slayer~instagram-search-reels' и др.
+  APIFY_REELS_SEARCH_ACTOR: z.string().default('TxU0ZBQIHdR20dr9C'),
   APIFY_REELS_SEARCH_MAX_PAGES: z.coerce.number().default(2),
   // Сколько запросов (ниша + смежные ключи) гоняем за один поиск.
   APIFY_REELS_SEARCH_MAX_QUERIES: z.coerce.number().default(3),
