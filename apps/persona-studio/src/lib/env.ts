@@ -56,6 +56,14 @@ const envSchema = z.object({
   APIFY_LOOKBACK_DAYS: z.coerce.number().default(7),
   APIFY_RESULTS_LIMIT: z.coerce.number().default(25),
   APIFY_TIMEOUT_MS: z.coerce.number().default(60_000),
+  // Reels keyword-search actor (ищет рилсы напрямую по запросу, как поиск
+  // Reels в приложении IG). Возвращает рилсы со всеми метриками, включая
+  // shares. Используется как ОСНОВНОЙ источник в /api/research/search.
+  // 'off' (или пустое) → отключить и работать только через хэштеги.
+  APIFY_REELS_SEARCH_ACTOR: z.string().default('data-slayer~instagram-search-reels'),
+  APIFY_REELS_SEARCH_MAX_PAGES: z.coerce.number().default(2),
+  // Сколько запросов (ниша + смежные ключи) гоняем за один поиск.
+  APIFY_REELS_SEARCH_MAX_QUERIES: z.coerce.number().default(3),
   ANTHROPIC_API_KEY: z.string().min(1).optional(),
   ANTHROPIC_PARSER_MODEL: z.string().default('claude-haiku-4-5-20251001'),
   // OpenAI — нужен только для транскрибации (Whisper API). Если задан и

@@ -12,6 +12,7 @@ import { prisma } from '@/lib/prisma';
 import {
   scrapeAccountPosts as _scrapeAccountPosts,
   scrapeHashtagPosts as _scrapeHashtagPosts,
+  scrapeSearchReels as _scrapeSearchReels,
   type ScrapeResult,
 } from '@/lib/parser/apify';
 
@@ -117,6 +118,19 @@ export async function guardedScrapeHashtag(
     return { ok: false, error: `apify_budget_exceeded: ${(check.spentCents / 100).toFixed(2)}$ of ${(check.budgetCents / 100).toFixed(2)}$` };
   }
   const r = await _scrapeHashtagPosts(tag, opts);
+  if (r.ok) await recordApifyUsage({ itemsScraped: r.items.length });
+  return r;
+}
+
+export async function guardedSearchReels(
+  query: string,
+  opts: { maxPages?: number } = {},
+): Promise<ScrapeResult> {
+  const check = await checkApifyBudget();
+  if (!check.ok) {
+    return { ok: false, error: `apify_budget_exceeded: ${(check.spentCents / 100).toFixed(2)}$ of ${(check.budgetCents / 100).toFixed(2)}$` };
+  }
+  const r = await _scrapeSearchReels(query, opts);
   if (r.ok) await recordApifyUsage({ itemsScraped: r.items.length });
   return r;
 }
