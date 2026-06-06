@@ -3,6 +3,7 @@ import { prisma } from '@/lib/prisma';
 import { connection, QUEUE_NAMES, type CoverGenerationJob } from '@/lib/queue';
 import { generateImageWithFlux, generateImage, KieError, KieFluxTransientError } from '@/lib/kie';
 import { keyFor, uploadBuffer } from '@/lib/storage';
+import { maybeWatermark } from '@/lib/watermark';
 import { refundTokens } from '@/lib/tokens';
 import { styleBySlug } from '@/lib/styles';
 import { buildCoverPrompt } from '@/lib/prompts';
@@ -90,7 +91,11 @@ export function startCoverWorker() {
 
         const ext = out.mime.split('/')[1] ?? 'jpg';
         const key = keyFor('cover', userId, ext);
-        const url = await uploadBuffer({ key, body: out.bytes, contentType: out.mime });
+        const url = await uploadBuffer({
+          key,
+          body: await maybeWatermark(out.bytes, out.mime, userId),
+          contentType: out.mime,
+        });
 
         await prisma.cover.update({
           where: { id: coverId },

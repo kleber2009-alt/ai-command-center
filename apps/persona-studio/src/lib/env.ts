@@ -148,6 +148,12 @@ const envSchema = z.object({
   // lib/moderation.ts; listed here for docs.
   MODERATION_REQUIRED: z.string().optional(),
 
+  // ── Free-plan watermark ───────────────────────
+  // Off by default. When 'true', generated images (avatar/cover) for users who
+  // have never paid get a "Persona Studio" watermark. Keyed on hasEverPaid, not
+  // User.plan (which never upgrades). Read via process.env in lib/watermark.ts.
+  WATERMARK_FREE_PLAN: z.string().optional(),
+
   // ── Auth ──────────────────────────────────────
   AUTH_SECRET: z.string().min(1).optional(),
   AUTH_URL: z.string().url().optional(),

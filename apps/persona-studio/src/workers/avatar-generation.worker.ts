@@ -3,6 +3,7 @@ import { prisma } from '@/lib/prisma';
 import { connection, QUEUE_NAMES, type AvatarGenerationJob } from '@/lib/queue';
 import { generateImageWithFlux, generateImage, KieError } from '@/lib/kie';
 import { keyFor, uploadBuffer } from '@/lib/storage';
+import { maybeWatermark } from '@/lib/watermark';
 import { refundTokens } from '@/lib/tokens';
 import { styleBySlug } from '@/lib/styles';
 import { buildAvatarPrompt } from '@/lib/prompts';
@@ -74,7 +75,7 @@ export function startAvatarWorker() {
           const key = keyFor('avatar', userId, ext);
           const url = await uploadBuffer({
             key,
-            body: out.bytes,
+            body: await maybeWatermark(out.bytes, out.mime, userId),
             contentType: out.mime,
           });
           await prisma.avatar.update({
