@@ -15,11 +15,12 @@
 
 import { NextRequest, NextResponse } from 'next/server';
 import { z } from 'zod';
+import { env } from '@/lib/env';
 import { getCurrentUserOrApiKey } from '@/lib/auth';
 import { enforceRateLimit } from '@/lib/ratelimit';
 import { prisma } from '@/lib/prisma';
-import { isApifyConfigured, type ApifyItem } from '@/lib/parser/apify';
-import { guardedScrapeHashtag } from '@/lib/research/apify-budget';
+import { isApifyConfigured, isReelsSearchConfigured, type ApifyItem } from '@/lib/parser/apify';
+import { guardedScrapeHashtag, guardedSearchReels } from '@/lib/research/apify-budget';
 import { classify } from '@/lib/parser/scoring';
 import type { ScoredPost } from '@/lib/parser/types';
 import { expandNiche } from '@/lib/research/expand-niche';
@@ -208,30 +209,59 @@ export async function POST(req: NextRequest) {
   // 2. Расширение ниши через Claude
   const expansion = await expandNiche(body.niche);
 
-  // 3. Apify hashtag-search в параллель. Если Claude не вернул хэштеги
-  // (или нет ключа) — используем нишу как один тег.
-  const tagsToScrape = expansion.hashtags.length > 0
-    ? expansion.hashtags
-    : [body.niche.replace(/[^\p{L}\p{N}]/gu, '').toLowerCase()].filter(Boolean);
-
   const errors: string[] = [];
   const allItems: ApifyItem[] = [];
-  // Шире окно и больше items: хэштег-грид по многим нишам — карусели/фото,
-  // рилсы приходят в основном через индексацию найденных авторов, поэтому
-  // нужно набрать как можно больше уникальных авторов из выдачи.
-  const settled = await Promise.allSettled(
-    tagsToScrape.map((tag) =>
-      guardedScrapeHashtag(tag, { days: 90, limit: 50 }).then((r) => ({ tag, r })),
-    ),
-  );
-  for (const s of settled) {
-    if (s.status === 'rejected') {
-      errors.push(`scrape: ${String(s.reason).slice(0, 200)}`);
-      continue;
+  let source: 'reels-search' | 'hashtag' = 'hashtag';
+
+  // 3a. ОСНОВНОЙ источник — keyword-поиск рилсов напрямую (как поиск Reels
+  // в IG-приложении). Возвращает рилсы со всеми метриками (включая shares),
+  // без проблемы «хэштег-грид = одни карусели». Гоняем нишу + смежные ключи.
+  if (isReelsSearchConfigured()) {
+    const queries = Array.from(
+      new Set([body.niche, ...expansion.keywords].map((q) => q.trim()).filter(Boolean)),
+    ).slice(0, Math.max(1, env.APIFY_REELS_SEARCH_MAX_QUERIES));
+    const settled = await Promise.allSettled(
+      queries.map((q) => guardedSearchReels(q).then((r) => ({ q, r }))),
+    );
+    for (const s of settled) {
+      if (s.status === 'rejected') {
+        errors.push(`reels-search: ${String(s.reason).slice(0, 200)}`);
+        continue;
+      }
+      const { q, r } = s.value;
+      if (r.ok) {
+        allItems.push(...r.items);
+        console.log(`[research/search] reels-search "${q}" → ${r.items.length} items`);
+      } else {
+        errors.push(`reels-search "${q}": ${r.error}`);
+        console.warn(`[research/search] reels-search "${q}" FAILED: ${r.error}`);
+      }
     }
-    const { tag, r } = s.value;
-    if (r.ok) allItems.push(...r.items);
-    else errors.push(`#${tag}: ${r.error}`);
+    if (allItems.length > 0) source = 'reels-search';
+    console.log(`[research/search] reels-search total=${allItems.length} source=${source}`);
+  }
+
+  // 3b. Фолбэк — хэштег-скрейп (если reels-search выключен или пуст).
+  // Шире окно и больше items: хэштег-грид по многим нишам — карусели/фото,
+  // рилсы приходят в основном через индексацию найденных авторов.
+  if (allItems.length === 0) {
+    const tagsToScrape = expansion.hashtags.length > 0
+      ? expansion.hashtags
+      : [body.niche.replace(/[^\p{L}\p{N}]/gu, '').toLowerCase()].filter(Boolean);
+    const settled = await Promise.allSettled(
+      tagsToScrape.map((tag) =>
+        guardedScrapeHashtag(tag, { days: 90, limit: 50 }).then((r) => ({ tag, r })),
+      ),
+    );
+    for (const s of settled) {
+      if (s.status === 'rejected') {
+        errors.push(`scrape: ${String(s.reason).slice(0, 200)}`);
+        continue;
+      }
+      const { tag, r } = s.value;
+      if (r.ok) allItems.push(...r.items);
+      else errors.push(`#${tag}: ${r.error}`);
+    }
   }
 
   // 4. Классифицируем и берём только рилсы (etap 1 — только Reels по ТЗ §15.1)
@@ -292,7 +322,19 @@ export async function POST(req: NextRequest) {
     if (r.status === 'rejected') errors.push(`index: ${String(r.reason).slice(0, 200)}`);
   }
 
-  // Перечитаем авторов уже с медианой
+  // Лёгкие stub-записи авторов для ВСЕХ владельцев рилсов. reels-search
+  // возвращает рилсы десятков авторов, а медиану мы считаем только у части
+  // (maxNewAuthors) — без stub-строки рилс нельзя апсёртить (нужен authorId),
+  // и большая часть выдачи терялась бы. Медиана у stub'ов = null (виральность
+  // не считается, но порог/сортировка по просмотрам работают).
+  if (uniqueOwners.length > 0) {
+    await prisma.researchAuthor.createMany({
+      data: uniqueOwners.map((username) => ({ platform: 'instagram', username })),
+      skipDuplicates: true,
+    });
+  }
+
+  // Перечитаем авторов уже с медианой (+ stub'ы)
   const allAuthors = await prisma.researchAuthor.findMany({
     where: { platform: 'instagram', username: { in: uniqueOwners } },
   });
@@ -508,6 +550,7 @@ export async function POST(req: NextRequest) {
       authors: allAuthors.length,
       durationMs: Date.now() - started,
       byKind,
+      source,
     },
     errors: errors.slice(0, 5),
   });
