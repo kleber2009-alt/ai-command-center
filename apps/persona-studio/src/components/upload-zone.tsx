@@ -60,6 +60,8 @@ export function UploadZone({
   const [primaryId, setPrimaryId] = useState<string | null>(initialUploads?.[0]?.id ?? null);
   const [busy, setBusy] = useState<null | 'uploading' | 'generating'>(null);
   const [error, setError] = useState<string | null>(null);
+  // Consent is required server-side before an avatar batch is enqueued.
+  const [consent, setConsent] = useState(false);
 
   useEffect(() => {
     if (!primaryId && uploads.length > 0) setPrimaryId(uploads[0].id);
@@ -127,13 +129,17 @@ export function UploadZone({
       setError('Выбери основное фото для генерации');
       return;
     }
+    if (!consent) {
+      setError('Подтвердите согласие на обработку фото');
+      return;
+    }
     setError(null);
     setBusy('generating');
     try {
       const res = await fetch('/api/generate-avatars', {
         method: 'POST',
         headers: { 'content-type': 'application/json' },
-        body: JSON.stringify({ uploadId: primaryId, ...(extraBody ?? {}) }),
+        body: JSON.stringify({ uploadId: primaryId, consent: true, ...(extraBody ?? {}) }),
       });
       const json = (await res.json()) as GenResp | { error: string; have?: number; need?: number };
       if (!res.ok || 'error' in json) {
@@ -152,7 +158,7 @@ export function UploadZone({
       setError(String(e));
       setBusy(null);
     }
-  }, [router, primaryId, extraBody]);
+  }, [router, primaryId, extraBody, consent]);
 
   return (
     <div className="grid gap-6">
@@ -255,12 +261,26 @@ export function UploadZone({
         </div>
       )}
 
+      {/* Consent — required before enqueuing an avatar batch */}
+      <label className="flex items-start gap-2 text-xs text-text-mute max-w-xl cursor-pointer">
+        <input
+          type="checkbox"
+          className="mt-0.5"
+          checked={consent}
+          onChange={(e) => setConsent(e.target.checked)}
+        />
+        <span>
+          Это моё фото (или у меня есть согласие изображённого человека), и я разрешаю
+          его обработку для генерации AI-аватаров.
+        </span>
+      </label>
+
       {/* Generate action */}
       <div className="flex flex-wrap items-center gap-4">
         <button
           type="button"
           className="btn-primary"
-          disabled={!primaryId || busy === 'generating'}
+          disabled={!primaryId || !consent || busy === 'generating'}
           onClick={handleGenerate}
         >
           {busy === 'generating' ? 'Generating 10 avatars…' : (generateLabel ?? 'Generate 10 Avatars →')}

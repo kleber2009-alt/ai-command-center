@@ -141,6 +141,13 @@ const envSchema = z.object({
   RATELIMIT_RESEARCH_PER_MIN: z.coerce.number().default(10),
   RATELIMIT_GENERATE_PER_MIN: z.coerce.number().default(20),
 
+  // ── Moderation ────────────────────────────────
+  // Avatar source images are checked (single human face + SFW) via Anthropic
+  // vision. Without ANTHROPIC_API_KEY moderation is skipped (logged) — set
+  // MODERATION_REQUIRED=true to fail closed instead. Read via process.env in
+  // lib/moderation.ts; listed here for docs.
+  MODERATION_REQUIRED: z.string().optional(),
+
   // ── Auth ──────────────────────────────────────
   AUTH_SECRET: z.string().min(1).optional(),
   AUTH_URL: z.string().url().optional(),

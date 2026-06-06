@@ -2,6 +2,7 @@ import { NextRequest, NextResponse } from 'next/server';
 import { z } from 'zod';
 import { getCurrentUserOrApiKey } from '@/lib/auth';
 import { enforceRateLimit } from '@/lib/ratelimit';
+import { moderateAvatarSource } from '@/lib/moderation';
 import { prisma } from '@/lib/prisma';
 import { chargeTokens, refundTokens, COSTS, InsufficientTokensError } from '@/lib/tokens';
 import { avatarQueue } from '@/lib/queue';
@@ -15,6 +16,8 @@ const SLOTS = 10;
 
 const Body = z.object({
   uploadId: z.string().min(1),
+  // Consent to process the uploaded face — required before enqueuing a batch.
+  consent: z.boolean().optional(),
   mode: z.enum(['default', 'niche', 'custom']).optional(),
   nicheSlug: z.string().min(1).optional(),
   customPrompts: z.array(z.string().min(4).max(1200)).min(1).max(SLOTS).optional(),
@@ -83,12 +86,31 @@ export async function POST(req: NextRequest) {
   const parsed = Body.safeParse(await req.json().catch(() => ({})));
   if (!parsed.success) return NextResponse.json({ error: 'bad_body' }, { status: 400 });
 
+  // Consent gate — must be explicit before we process a face.
+  if (parsed.data.consent !== true) {
+    return NextResponse.json({ error: 'consent_required' }, { status: 400 });
+  }
+
   const upload = await prisma.upload.findFirst({
     where: { id: parsed.data.uploadId, userId: user.id },
   });
   if (!upload) return NextResponse.json({ error: 'upload_not_found' }, { status: 404 });
   if (upload.status !== 'ready') {
     return NextResponse.json({ error: 'upload_not_ready', status: upload.status }, { status: 409 });
+  }
+
+  // Image moderation: exactly one human face, SFW. Runs BEFORE any token
+  // charge, so a rejected photo never costs the user (acceptance: «без списания»).
+  const verdict = await moderateAvatarSource({ fileUrl: upload.fileUrl, fileType: upload.fileType });
+  if (!verdict.ok) {
+    await prisma.upload.update({
+      where: { id: upload.id },
+      data: { status: 'rejected', reason: verdict.reason },
+    });
+    return NextResponse.json(
+      { error: 'moderation_failed', code: verdict.code, reason: verdict.reason },
+      { status: 422 },
+    );
   }
 
   const mode = parsed.data.mode ?? 'default';
