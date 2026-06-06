@@ -131,13 +131,14 @@ jobs:
             docker compose up -d --force-recreate || echo "── ⚠ up -d returned non-zero, continuing to verify ──"
 
             # ── 5. prisma migrations ─────────────────────────────────
-            # persona-studio uses `prisma db push` (declarative schema), not
-            # versioned migrations — there's no prisma/migrations/ directory,
-            # so the migrate step is a no-op. Schema changes are applied
-            # manually via `npm run db:push` from a workstation.
+            # Versioned migrations live in prisma/migrations/. The prod DB
+            # predates them (created via `prisma db push`), so we use a
+            # baseline-aware deploy script: on a schema that exists without
+            # migration history it records 0_init as applied (without re-running
+            # its CREATE TABLEs), then applies any pending migrations. Idempotent.
             test -d "$SOURCE_PATH/prisma/migrations" \
-              && (docker compose exec -T web npx -y prisma@5.22.0 migrate deploy || echo "── ⚠ prisma migrate failed; continuing ──") \
-              || echo "── no prisma/migrations dir (declarative schema), skipping ──"
+              && (docker compose exec -T web node prisma/deploy.mjs || echo "── ⚠ prisma migrate failed; continuing ──") \
+              || echo "── no prisma/migrations dir, skipping ──"
 
             # ── 6. health-check (up to 60 s) ─────────────────────────
             echo "── waiting for persona-studio-web → $HEALTH_URL ──"
