@@ -127,8 +127,10 @@ jobs:
             # ssh-action even when all containers start (likely stop-grace
             # warning). Tolerate the exit code; health check at step 6 is the
             # real verdict.
-            echo "── docker compose up -d --force-recreate ──"
-            docker compose up -d --force-recreate || echo "── ⚠ up -d returned non-zero, continuing to verify ──"
+            # --remove-orphans cleans up the old single `persona-studio-worker`
+            # container after the PS-13 split into worker-generation + worker-cron.
+            echo "── docker compose up -d --force-recreate --remove-orphans ──"
+            docker compose up -d --force-recreate --remove-orphans || echo "── ⚠ up -d returned non-zero, continuing to verify ──"
 
             # ── 5. prisma migrations ─────────────────────────────────
             # Versioned migrations live in prisma/migrations/. The prod DB
