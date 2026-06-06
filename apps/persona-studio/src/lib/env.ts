@@ -134,6 +134,13 @@ const envSchema = z.object({
   // scheduledAt <= now и ставит их таргеты в очередь.
   PUBLISH_CRON_TICK_MS: z.coerce.number().default(60_000),
 
+  // ── Rate limiting (per-user, per-minute) ──────
+  // research-search burns Apify budget on uncached searches → stricter.
+  // generate-* are token-gated but still throttled against bursts/leaked keys.
+  // Read directly via process.env in lib/ratelimit.ts; listed here for docs.
+  RATELIMIT_RESEARCH_PER_MIN: z.coerce.number().default(10),
+  RATELIMIT_GENERATE_PER_MIN: z.coerce.number().default(20),
+
   // ── Auth ──────────────────────────────────────
   AUTH_SECRET: z.string().min(1).optional(),
   AUTH_URL: z.string().url().optional(),

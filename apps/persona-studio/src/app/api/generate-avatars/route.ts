@@ -1,6 +1,7 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { z } from 'zod';
 import { getCurrentUserOrApiKey } from '@/lib/auth';
+import { enforceRateLimit } from '@/lib/ratelimit';
 import { prisma } from '@/lib/prisma';
 import { chargeTokens, refundTokens, COSTS, InsufficientTokensError } from '@/lib/tokens';
 import { avatarQueue } from '@/lib/queue';
@@ -75,6 +76,8 @@ function customSlots(prompts: string[]): AvatarSlot[] {
 export async function POST(req: NextRequest) {
   const ctx = await getCurrentUserOrApiKey(req);
   if (!ctx) return NextResponse.json({ error: 'UNAUTHORIZED' }, { status: 401 });
+  const limited = await enforceRateLimit(ctx, 'generate');
+  if (limited) return limited;
   const user = ctx.user;
 
   const parsed = Body.safeParse(await req.json().catch(() => ({})));

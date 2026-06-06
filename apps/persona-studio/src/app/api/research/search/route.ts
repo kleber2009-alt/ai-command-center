@@ -16,6 +16,7 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { z } from 'zod';
 import { getCurrentUserOrApiKey } from '@/lib/auth';
+import { enforceRateLimit } from '@/lib/ratelimit';
 import { prisma } from '@/lib/prisma';
 import { isApifyConfigured, type ApifyItem } from '@/lib/parser/apify';
 import { guardedScrapeHashtag } from '@/lib/research/apify-budget';
@@ -122,6 +123,8 @@ export async function POST(req: NextRequest) {
   const started = Date.now();
   const ctx = await getCurrentUserOrApiKey(req);
   if (!ctx) return NextResponse.json({ error: 'UNAUTHORIZED' }, { status: 401 });
+  const limited = await enforceRateLimit(ctx, 'research-search');
+  if (limited) return limited;
   const user = ctx.user;
 
   let body: z.infer<typeof bodySchema>;
