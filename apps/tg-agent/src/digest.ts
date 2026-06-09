@@ -3,6 +3,7 @@ import { type Bot } from 'grammy';
 
 import type { ChatService } from './db/chats.js';
 import type { DigestPayload, DigestStore, MessageForDigest } from './db/digests.js';
+import type { ForumRouter } from './forum.js';
 import type { Logger } from './logger.js';
 
 // Same TG hard limit as everywhere else — we split the DM if the
@@ -269,6 +270,13 @@ export interface BuildAndDeliverDeps {
   store: DigestStore;
   generator: DigestGenerator;
   logger: Logger;
+  // Forum mode (optional). When a router is supplied and routeReports
+  // is on, the digest is also posted into the source chat's agent
+  // thread. keepOwnerDm controls whether the owner still gets the DM
+  // copy during the parallel-run cutover (default true).
+  forumRouter?: ForumRouter;
+  forumRouteReports?: boolean;
+  forumKeepOwnerDm?: boolean;
 }
 
 export interface BuildAndDeliverInput {
@@ -294,7 +302,9 @@ export async function buildAndDeliverDigest(
   deps: BuildAndDeliverDeps,
   input: BuildAndDeliverInput,
 ): Promise<BuildAndDeliverResult> {
-  const { store, generator, bot, ownerTelegramId, logger } = deps;
+  const { store, generator, bot, ownerTelegramId, logger, forumRouter } = deps;
+  const routeToForum = Boolean(forumRouter && deps.forumRouteReports);
+  const keepOwnerDm = deps.forumKeepOwnerDm ?? true;
   const sinceIso = new Date(
     Date.now() - input.windowHours * 60 * 60 * 1000,
   ).toISOString();
@@ -345,8 +355,34 @@ export async function buildAndDeliverDigest(
   });
   if (payload.gist) store.upsertContextSummary(input.chatId, payload.gist);
 
+  // Flow 1: route the report into the source chat's agent thread.
+  // dedup_key = the digest row id, so a retry can't double-post but
+  // each new digest does.
+  if (routeToForum && forumRouter) {
+    try {
+      await forumRouter.routeReport({
+        sourceChatId: input.chatId,
+        sourceLabel: input.chatTitle,
+        summary: summaryMd,
+        raw: payload,
+        periodStart: sinceIso,
+        periodEnd: row.generated_at,
+        dedupKey: `digest:${row.id}`,
+      });
+    } catch (err) {
+      logger.error('digest: forum route failed', {
+        chatId: input.chatId,
+        reportId: row.id,
+        error: err instanceof Error ? err.message : String(err),
+      });
+    }
+  }
+
+  // Owner DM. Suppressed once forum routing is on and the parallel-run
+  // copy is no longer wanted (FORUM_KEEP_OWNER_DM=false).
+  const wantOwnerDm = input.deliver && (!routeToForum || keepOwnerDm);
   let delivered = false;
-  if (input.deliver) {
+  if (wantOwnerDm) {
     try {
       for (const chunk of splitForTelegram(summaryMd)) {
         await bot.api.sendMessage(ownerTelegramId, chunk, {
@@ -389,6 +425,10 @@ export interface DigestSchedulerDeps {
   dailyHourUtc: number;
   // Window each report covers. 24 by default.
   windowHours: number;
+  // Forum routing (optional) — forwarded to buildAndDeliverDigest.
+  forumRouter?: ForumRouter;
+  forumRouteReports?: boolean;
+  forumKeepOwnerDm?: boolean;
 }
 
 export interface DigestSchedulerHandle {
@@ -422,6 +462,9 @@ export function startDigestScheduler(
               store: deps.store,
               generator: deps.generator,
               logger: deps.logger,
+              forumRouter: deps.forumRouter,
+              forumRouteReports: deps.forumRouteReports,
+              forumKeepOwnerDm: deps.forumKeepOwnerDm,
             },
             {
               chatId: c.chat_id,

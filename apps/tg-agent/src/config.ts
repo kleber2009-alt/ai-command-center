@@ -120,6 +120,17 @@ export interface Config {
   digestEnabled: boolean;
   agentChatEnabled: boolean;
   agentChatModel: string;
+  // Forum mode: route reports into per-topic agents in one supergroup.
+  forumEnabled: boolean;
+  forumGroupId: number | undefined;
+  forumAgentModel: string;
+  // During the parallel-run cutover, keep DMing the owner the digests
+  // as before while also routing them into threads.
+  forumRouteReports: boolean;
+  forumKeepOwnerDm: boolean;
+  // When false (default), only the OWNER_TELEGRAM_ID gets answers in
+  // topics; team chatter is ignored to control cost/noise.
+  forumRespondToTeam: boolean;
   reportEnabled: boolean;
   reportHourUtc: number;
   reportRunOnStart: boolean;
@@ -143,6 +154,11 @@ export function loadConfig(): Config {
   const ownerTelegramId = ownerRaw ? Number(ownerRaw) : undefined;
   if (ownerRaw && !Number.isFinite(ownerTelegramId)) {
     throw new Error(`OWNER_TELEGRAM_ID must be numeric, got: ${ownerRaw}`);
+  }
+
+  const forumGroupRaw = optional('FORUM_GROUP_ID');
+  if (forumGroupRaw && !Number.isFinite(Number(forumGroupRaw))) {
+    throw new Error(`FORUM_GROUP_ID must be numeric, got: ${forumGroupRaw}`);
   }
 
   return {
@@ -196,6 +212,22 @@ export function loadConfig(): Config {
       (optional('AGENT_CHAT_ENABLED') ?? 'true').toLowerCase() !== 'false',
     agentChatModel:
       optional('AGENT_CHAT_MODEL') ?? optional('DIGEST_MODEL') ?? 'claude-sonnet-4-6',
+    // Forum mode is OFF until a group id is set, so installing this
+    // release changes nothing in production until explicitly enabled.
+    forumEnabled:
+      (optional('FORUM_ENABLED') ?? 'false').toLowerCase() === 'true' &&
+      !!optional('FORUM_GROUP_ID'),
+    forumGroupId: optional('FORUM_GROUP_ID')
+      ? Number(optional('FORUM_GROUP_ID'))
+      : undefined,
+    forumAgentModel:
+      optional('FORUM_AGENT_MODEL') ?? optional('DIGEST_MODEL') ?? 'claude-sonnet-4-6',
+    forumRouteReports:
+      (optional('FORUM_ROUTE_REPORTS') ?? 'true').toLowerCase() !== 'false',
+    forumKeepOwnerDm:
+      (optional('FORUM_KEEP_OWNER_DM') ?? 'true').toLowerCase() !== 'false',
+    forumRespondToTeam:
+      (optional('FORUM_RESPOND_TO_TEAM') ?? 'false').toLowerCase() === 'true',
     reportEnabled:
       (optional('REPORT_ENABLED') ?? 'true').toLowerCase() !== 'false',
     reportHourUtc: parseHourOfDay('REPORT_HOUR_UTC', optional('REPORT_HOUR_UTC'), 6),

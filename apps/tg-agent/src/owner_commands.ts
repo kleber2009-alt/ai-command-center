@@ -1,9 +1,11 @@
 import type { Bot, Context, Filter } from 'grammy';
 
 import type { AgentChat } from './agent_chat.js';
+import type { AgentService } from './db/agents.js';
 import type { ChatService } from './db/chats.js';
 import type { DigestStore } from './db/digests.js';
 import { buildAndDeliverDigest, type DigestGenerator, splitForTelegram } from './digest.js';
+import type { ForumRouter } from './forum.js';
 import {
   clusterHash,
   findDuplicates,
@@ -29,6 +31,13 @@ export interface OwnerCommandsDeps {
   dupHandle?: DupSchedulerHandle;
   // Optional: when set, /reset clears the running conversation thread.
   agentChat?: AgentChat;
+  // Forum mode (optional). Enables /topics, /bindthread, /routes,
+  // /route, /unroute and routes manual /pulse, /digest into threads.
+  agents?: AgentService;
+  forumRouter?: ForumRouter;
+  forumGroupId?: number;
+  forumRouteReports?: boolean;
+  forumKeepOwnerDm?: boolean;
 }
 
 // Help blurb shown for /help. Kept terse — the owner already knows
@@ -55,6 +64,14 @@ const HELP_TEXT = [
   '  Бот ищет кластеры близких по смыслу сообщений (sim ≥ 0.75) с ≥ 2 разными авторами.',
   '  Авто-сводка приходит раз в сутки сама — команда для ручного запроса.',
   '/reset — забыть текущий диалог со мной и начать с чистого листа.',
+  '',
+  'Форум-режим (ветки = агенты):',
+  '/topics — список агентов и привязанных тем.',
+  '/bindthread <slug|имя> — привязать текущую тему к агенту (отправить внутри темы).',
+  '/createtopics — создать недостающие темы для агентов (в форум-группе).',
+  '/routes — какой чат в какую ветку маршрутизируется.',
+  '/route <source_chat_id> <slug> — задать маршрут чата в ветку.',
+  '/unroute <source_chat_id> — убрать маршрут.',
   '/help — это сообщение.',
 ].join('\n');
 
@@ -63,7 +80,13 @@ const HELP_TEXT = [
 // achieve that by registering on the same Bot instance from index.ts
 // before createBot() is called — see index.ts ordering.
 export function registerOwnerCommands(deps: OwnerCommandsDeps): void {
-  const { bot, ownerTelegramId, chats, store, generator, windowHours, logger, memory, db, agentChat } = deps;
+  const { bot, ownerTelegramId, chats, store, generator, windowHours, logger, memory, db, agentChat, agents, forumRouter } = deps;
+
+  const forumDeps = {
+    forumRouter,
+    forumRouteReports: deps.forumRouteReports,
+    forumKeepOwnerDm: deps.forumKeepOwnerDm,
+  };
 
   const isOwnerDm = (ctx: Context): boolean =>
     ctx.chat?.type === 'private' && ctx.from?.id === ownerTelegramId;
@@ -98,6 +121,7 @@ export function registerOwnerCommands(deps: OwnerCommandsDeps): void {
             store,
             generator,
             logger,
+            ...forumDeps,
           },
           {
             chatId: c.chat_id,
@@ -172,7 +196,7 @@ export function registerOwnerCommands(deps: OwnerCommandsDeps): void {
     await ctx.reply(`Готовлю сводку по «${chatRow.title ?? chatId}», окно ${hours}ч…`);
     try {
       const result = await buildAndDeliverDigest(
-        { bot, ownerTelegramId, store, generator, logger },
+        { bot, ownerTelegramId, store, generator, logger, ...forumDeps },
         {
           chatId,
           chatTitle: chatRow.title ?? undefined,
@@ -357,6 +381,151 @@ export function registerOwnerCommands(deps: OwnerCommandsDeps): void {
     if (!isOwnerDm(ctx)) return;
     agentChat?.reset(ownerTelegramId);
     await ctx.reply('Диалог сброшен. Начнём с чистого листа — задавай вопрос.');
+  });
+
+  // ── Forum management ─────────────────────────────────────────────
+  const isOwner = (ctx: Context): boolean => ctx.from?.id === ownerTelegramId;
+
+  // /topics — roster of agents and their bound threads. Works in the
+  // owner DM or inside the forum group.
+  bot.command('topics', async (ctx) => {
+    if (!isOwner(ctx)) return;
+    if (!agents) {
+      await ctx.reply('Форум-режим выключен (нет FORUM_GROUP_ID / FORUM_ENABLED).');
+      return;
+    }
+    const list = agents.list();
+    const lines = ['Агенты (ветки форума):', ''];
+    for (const a of list) {
+      const bound = a.thread_id !== null ? `thread ${a.thread_id}` : 'не привязан';
+      const active = a.is_active ? '' : ' · выключен';
+      lines.push(`• ${a.name} (${a.slug}) — ${bound} · ${a.model}${active}`);
+    }
+    lines.push('', 'Привязать тему: зайди в нужную тему и отправь /bindthread <slug>.');
+    await ctx.reply(lines.join('\n'), { link_preview_options: { is_disabled: true } });
+  });
+
+  // /bindthread <slug> — bind the current topic to an agent. Must be
+  // sent inside the topic in the forum group.
+  bot.command('bindthread', async (ctx) => {
+    if (!isOwner(ctx) || !agents) return;
+    if (deps.forumGroupId === undefined || ctx.chat?.id !== deps.forumGroupId) {
+      await ctx.reply('Команду нужно отправить внутри темы в форум-группе.');
+      return;
+    }
+    const arg = ctx.match?.toString().trim();
+    if (!arg) {
+      await ctx.reply('Использование: /bindthread <slug или имя>. Список: /topics');
+      return;
+    }
+    // Match by slug first, then by display name (case-insensitive) so
+    // /bindthread Финансист works as well as /bindthread finance.
+    const needle = arg.toLowerCase();
+    const agent =
+      agents.getBySlug(needle) ??
+      agents.list().find((a) => a.name.toLowerCase() === needle) ??
+      null;
+    if (!agent) {
+      await ctx.reply(`Агент "${arg}" не найден. /topics — список.`);
+      return;
+    }
+    const threadId = ctx.message?.message_thread_id ?? 1;
+    agents.bindThread(agent.slug, threadId);
+    await ctx.reply(`✓ Тема (thread ${threadId}) привязана к агенту «${agent.name}».`);
+  });
+
+  // /createtopics — create a forum topic for every agent that has no
+  // bound thread yet, and bind it. Run inside the forum group. Useful
+  // for a fresh setup; existing topics are left as-is.
+  bot.command('createtopics', async (ctx) => {
+    if (!isOwner(ctx) || !agents) return;
+    if (deps.forumGroupId === undefined || ctx.chat?.id !== deps.forumGroupId) {
+      await ctx.reply('Команду нужно отправить в форум-группе.');
+      return;
+    }
+    const pending = agents.list().filter((a) => a.thread_id === null && a.slug !== 'general');
+    if (pending.length === 0) {
+      await ctx.reply('Все агенты уже привязаны к темам. /topics — список.');
+      return;
+    }
+    const created: string[] = [];
+    for (const a of pending) {
+      try {
+        const topic = await bot.api.createForumTopic(deps.forumGroupId, a.name);
+        agents.bindThread(a.slug, topic.message_thread_id);
+        created.push(`${a.name} (thread ${topic.message_thread_id})`);
+      } catch (err) {
+        logger.error('forum: createForumTopic failed', {
+          slug: a.slug,
+          error: err instanceof Error ? err.message : String(err),
+        });
+      }
+    }
+    await ctx.reply(
+      created.length > 0
+        ? `✓ Созданы и привязаны темы:\n${created.map((c) => `• ${c}`).join('\n')}`
+        : 'Не удалось создать темы. Проверь, что бот — админ с правом Manage Topics.',
+    );
+  });
+
+  // /routes — list source-chat → agent routes.
+  bot.command('routes', async (ctx) => {
+    if (!isOwnerDm(ctx)) return;
+    if (!agents) {
+      await ctx.reply('Форум-режим выключен.');
+      return;
+    }
+    const routes = agents.listRoutes();
+    if (routes.length === 0) {
+      await ctx.reply(
+        'Маршрутов нет. Добавить: /route <source_chat_id> <slug>.\n' +
+          'Без маршрута отчёт уходит в General или классифицируется моделью.',
+      );
+      return;
+    }
+    const lines = ['Маршруты (чат → агент):', ''];
+    for (const r of routes) {
+      const label = r.source_label ? ` «${r.source_label}»` : '';
+      lines.push(`• ${r.source_chat_id}${label} → ${r.agent_name} (${r.agent_slug})`);
+    }
+    await ctx.reply(lines.join('\n'), { link_preview_options: { is_disabled: true } });
+  });
+
+  // /route <source_chat_id> <slug> — add/replace a route.
+  bot.command('route', async (ctx) => {
+    if (!isOwnerDm(ctx) || !agents) return;
+    const parts = (ctx.match?.toString() ?? '').trim().split(/\s+/).filter(Boolean);
+    if (parts.length < 2) {
+      await ctx.reply('Использование: /route <source_chat_id> <slug>. Список агентов: /topics');
+      return;
+    }
+    const sourceChatId = Number(parts[0]);
+    const slug = parts[1]!.toLowerCase();
+    if (!Number.isFinite(sourceChatId)) {
+      await ctx.reply('source_chat_id должен быть числом. Список чатов: /chats');
+      return;
+    }
+    const agent = agents.getBySlug(slug);
+    if (!agent) {
+      await ctx.reply(`Агент "${slug}" не найден. /topics — список.`);
+      return;
+    }
+    const label = chats.listAll().find((c) => c.chat_id === sourceChatId)?.title ?? null;
+    agents.upsertRoute(sourceChatId, agent.id, label);
+    await ctx.reply(`✓ Чат ${sourceChatId} теперь маршрутизируется в «${agent.name}».`);
+  });
+
+  // /unroute <source_chat_id> — remove a route.
+  bot.command('unroute', async (ctx) => {
+    if (!isOwnerDm(ctx) || !agents) return;
+    const arg = ctx.match?.toString().trim();
+    const sourceChatId = Number(arg);
+    if (!arg || !Number.isFinite(sourceChatId)) {
+      await ctx.reply('Использование: /unroute <source_chat_id>');
+      return;
+    }
+    agents.deleteRoute(sourceChatId);
+    await ctx.reply(`✓ Маршрут для чата ${sourceChatId} удалён.`);
   });
 
   // Hint for first-time DMs from the owner. Doesn't override the

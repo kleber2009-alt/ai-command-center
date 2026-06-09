@@ -2,6 +2,15 @@ import { Bot } from 'grammy';
 
 import { createAgentChat, type AgentChat } from './agent_chat.js';
 import { startAdminServer, type AdminHandle } from './admin/server.js';
+import { createAgentService } from './db/agents.js';
+import { createForumStore } from './db/forum.js';
+import {
+  createDirectionClassifier,
+  createForumRouter,
+  defaultAgentSeeds,
+  type ForumRouter,
+} from './forum.js';
+import { createForumAgent, type ForumAgent } from './forum_agent.js';
 import { startBackupScheduler, type BackupHandle } from './backup.js';
 import { createBot } from './bot.js';
 import { createClassifier } from './classifier.js';
@@ -66,6 +75,12 @@ async function main(): Promise<void> {
   const billingService = createBillingService(db);
   const kbManager = createKbManager(dirname(resolve(config.databasePath)));
   const digestStore = createDigestStore(db);
+  const agentService = createAgentService(db);
+  const forumStore = createForumStore(db);
+  // Seed the default agent roster (idempotent — only inserts missing
+  // slugs). Lets /topics show the roster even before forum mode is on.
+  const seeded = agentService.seedDefaults(defaultAgentSeeds(config.forumAgentModel));
+  if (seeded.inserted > 0) logger.info('forum: seeded agents', { inserted: seeded.inserted });
 
   // Memory: OpenAI embeddings of every tg_message into Qdrant.
   // Falls back to a noop service when MEMORY_ENABLED=false or the
@@ -132,6 +147,38 @@ async function main(): Promise<void> {
     logger.info('agent chat disabled (AGENT_CHAT_ENABLED=false)');
   }
 
+  // Forum mode: one supergroup, each topic a specialised agent.
+  // Built only when FORUM_ENABLED=true AND FORUM_GROUP_ID is set, so
+  // installing this release is a no-op until explicitly turned on.
+  let forumRouter: ForumRouter | undefined;
+  let forumAgent: ForumAgent | undefined;
+  if (config.forumEnabled && config.forumGroupId !== undefined) {
+    forumRouter = createForumRouter({
+      bot,
+      groupId: config.forumGroupId,
+      agents: agentService,
+      forum: forumStore,
+      logger,
+      // Cheap Haiku call to pick a direction when no source_route matches.
+      classifyDirection: createDirectionClassifier({
+        apiKey: config.anthropicApiKey,
+        model: config.classifierModel,
+      }),
+    });
+    forumAgent = createForumAgent({
+      apiKey: config.anthropicApiKey,
+      forum: forumStore,
+      logger,
+    });
+    logger.info('forum mode enabled', {
+      groupId: config.forumGroupId,
+      routeReports: config.forumRouteReports,
+      keepOwnerDm: config.forumKeepOwnerDm,
+    });
+  } else {
+    logger.info('forum mode disabled (set FORUM_ENABLED=true + FORUM_GROUP_ID)');
+  }
+
   if (config.digestEnabled && config.ownerTelegramId !== undefined) {
     registerOwnerCommands({
       bot,
@@ -144,6 +191,11 @@ async function main(): Promise<void> {
       memory,
       db,
       agentChat,
+      agents: agentService,
+      forumRouter,
+      forumGroupId: config.forumGroupId,
+      forumRouteReports: config.forumRouteReports,
+      forumKeepOwnerDm: config.forumKeepOwnerDm,
     });
   } else if (!config.digestEnabled) {
     logger.info('digest disabled (DIGEST_ENABLED=false)');
@@ -173,6 +225,10 @@ async function main(): Promise<void> {
     memory,
     settings,
     agentChat,
+    agents: agentService,
+    forum: forumStore,
+    forumAgent,
+    forumRouter,
   });
 
   const notifier = createNotifier({
@@ -286,6 +342,9 @@ async function main(): Promise<void> {
       logger,
       dailyHourUtc: config.digestDailyHourUtc,
       windowHours: config.digestWindowHours,
+      forumRouter,
+      forumRouteReports: config.forumRouteReports,
+      forumKeepOwnerDm: config.forumKeepOwnerDm,
     });
   }
 
