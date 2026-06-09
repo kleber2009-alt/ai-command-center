@@ -89,6 +89,60 @@ Per-`(chat_id, user_id)` status with a one-way commercial ranking:
 
 `negative` is sticky (manual override only). `SUPPORT_REQUEST` → `support` unless already `buyer`.
 
+## Owner chat agent (`src/agent_chat.ts`)
+
+Conversational analyst the owner talks to **directly in the bot's DM** —
+just send a free-form question in Russian (e.g. «что обсуждали в AICEX за
+сутки?», «были ли возражения по цене?», «кому я не ответил?»). Claude
+(Sonnet by default, `AGENT_CHAT_MODEL`) runs a tool-use loop over the
+bot's own data and answers grounded in what it finds. Tools:
+
+- `list_chats` — chats with id, counts, last activity, latest gist.
+- `search_memory` — semantic search over Qdrant (tg-agent + transcribe);
+  no-ops gracefully when memory is disabled.
+- `get_chat_digest` — latest structured digest for one chat.
+- `get_recent_messages` — raw transcript for a chat over an N-hour window.
+
+Multi-turn: an **in-memory** per-owner session keeps the running thread
+(trimmed to the last 24 messages, reset after 12h idle or via `/reset`).
+Routing lives in `bot.ts` `handleOwnerPrivateMessage`: replies to a
+draft-edit force_reply still go to the draft flow; any other non-command
+text from the owner goes to the agent. Gated by `AGENT_CHAT_ENABLED`
+(default on) + `OWNER_TELEGRAM_ID`. Only the owner is served.
+
+## Forum mode (`src/forum.ts`, `src/forum_agent.ts`, `src/db/agents.ts`, `src/db/forum.ts`)
+
+Migrates the bot's output from a single owner-DM feed into **one forum
+supergroup where each topic (thread) is a specialised agent** (Контент /
+Продуктолог / Финансист / Ассистент / General). See `AGENTS.md` for the
+roster and `ARCHITECTURE.md` for the two data flows.
+
+- **Schema** (added to `db/schema.ts`): `tg_agents` (one row per topic /
+  role; `thread_id` = Telegram `message_thread_id`, General = 1),
+  `tg_source_routes` (monitored chat → agent), `tg_reports` (routed
+  reports, dedup via `dedup_key`), `tg_thread_messages` (per-thread
+  history = the agent's memory).
+- **Flow 1 — reports → threads**: `buildAndDeliverDigest` (digest.ts)
+  calls `ForumRouter.routeReport`. Source chat resolves to an agent via
+  `tg_source_routes`; no route → Claude direction-classifier → General.
+  Posted with `sendMessage(GROUP_ID, message_thread_id)`. `dedup_key =
+  digest:<row.id>` so retries never double-post.
+- **Flow 2 — dialog in a topic**: `bot.ts` branches messages in
+  `FORUM_GROUP_ID` to `handleForumMessage` (before the lead pipeline),
+  looks up the agent by `message_thread_id`, and `ForumAgent.ask` answers
+  grounded in role + recent `tg_reports` + recent `tg_thread_messages`.
+  Both turns are persisted as the agent's memory. Owner-only unless
+  `FORUM_RESPOND_TO_TEAM=true`.
+- **Topic binding**: auto on `forum_topic_created` when the title matches
+  an agent name; else `/bindthread <slug|имя>` inside the topic, or
+  `/createtopics` to create+bind missing ones.
+- **Routing config (no code)**: `/route <source_chat_id> <slug>`,
+  `/unroute`, `/routes`, `/topics`.
+- **Parallel-run cutover**: `FORUM_ROUTE_REPORTS` + `FORUM_KEEP_OWNER_DM`
+  keep the old owner-DM feed alongside threads until you flip it off.
+- **Off by default**: built only when `FORUM_ENABLED=true` AND
+  `FORUM_GROUP_ID` set — installing the release is a no-op until enabled.
+
 ## Owner notifications (`src/notifier.ts`)
 
 Bot DMs `OWNER_TELEGRAM_ID` on `REPLY_AND_NOTIFY` / `NOTIFY_ONLY` / `DRAFT_FOR_OWNER`. Owner must `/start` the bot first.
@@ -113,7 +167,9 @@ CONFIDENCE_THRESHOLD, LOG_LEVEL, CLASSIFIER_MODEL, RESPONDER_MODEL,
 DATABASE_PATH, ADMIN_PORT, ADMIN_USERNAME, ADMIN_PASSWORD,
 ADMIN_SESSION_SECRET, ADMIN_PUBLIC_URL,
 BACKUP_INTERVAL_HOURS, HEALTH_FAILURE_THRESHOLD, HEALTH_ALERT_COOLDOWN_MINUTES,
-IGNORED_USER_IDS
+IGNORED_USER_IDS, AGENT_CHAT_ENABLED, AGENT_CHAT_MODEL,
+FORUM_ENABLED, FORUM_GROUP_ID, FORUM_AGENT_MODEL, FORUM_ROUTE_REPORTS,
+FORUM_KEEP_OWNER_DM, FORUM_RESPOND_TO_TEAM
 ```
 
 ## BotFather setup

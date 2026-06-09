@@ -1,9 +1,15 @@
 import { Bot, type CallbackQueryContext, type Context, type Filter } from 'grammy';
 
+import type { AgentChat } from './agent_chat.js';
 import type { Classifier } from './classifier.js';
+import type { AgentService } from './db/agents.js';
+import type { ForumStore } from './db/forum.js';
+import { GENERAL_THREAD_ID, type ForumRouter } from './forum.js';
+import type { ForumAgent } from './forum_agent.js';
 import type { Config } from './config.js';
 import type { ChatService } from './db/chats.js';
 import type { DraftRow, DraftService } from './db/drafts.js';
+import { splitForTelegram } from './digest.js';
 import type { LeadService } from './db/leads.js';
 import type { MessageStore } from './db/messages.js';
 import type { SettingsService } from './db/settings.js';
@@ -32,6 +38,14 @@ export interface BotDeps {
   health: HealthMonitor;
   memory: MemoryService;
   settings: SettingsService;
+  // Optional: when set, free-form owner DMs (not commands, not draft
+  // edits) are answered by the conversational analyst agent.
+  agentChat?: AgentChat;
+  // Forum mode: present only when FORUM_ENABLED + FORUM_GROUP_ID set.
+  agents?: AgentService;
+  forum?: ForumStore;
+  forumAgent?: ForumAgent;
+  forumRouter?: ForumRouter;
 }
 
 const ACTIONS_THAT_REPLY: ReadonlySet<Action> = new Set([
@@ -56,7 +70,7 @@ function isPaymentText(text: string): boolean {
 }
 
 export function createBot(deps: BotDeps): CreateBotResult {
-  const { bot, config, logger, classifier, responder, chats, leads, messages, drafts, health, memory, settings } =
+  const { bot, config, logger, classifier, responder, chats, leads, messages, drafts, health, memory, settings, agentChat, agents, forum, forumAgent, forumRouter } =
     deps;
   let notifier: Notifier | null = null;
 
@@ -70,6 +84,26 @@ export function createBot(deps: BotDeps): CreateBotResult {
       chats.touch(chatId, chatTitle);
       logger.info('chat registered via my_chat_member', { chatId, chatTitle, status });
     }
+  });
+
+  // Forum topic created → try to auto-bind it to an agent whose name
+  // matches the topic title (e.g. a topic «Финансист» binds to the
+  // finance agent). The owner can always re-bind via /bindthread.
+  bot.on('message:forum_topic_created', (ctx) => {
+    if (!config.forumEnabled || !agents) return;
+    if (ctx.chat.id !== config.forumGroupId) return;
+    const threadId = ctx.message.message_thread_id;
+    const name = ctx.message.forum_topic_created.name?.trim();
+    if (threadId === undefined || !name) return;
+    const match = agents
+      .listActive()
+      .find((a) => a.name.toLowerCase() === name.toLowerCase());
+    if (!match) {
+      logger.info('forum: topic created, no agent name match', { threadId, name });
+      return;
+    }
+    agents.bindThread(match.slug, threadId);
+    logger.info('forum: topic auto-bound', { threadId, name, slug: match.slug });
   });
 
   bot.on('message:text', async (ctx) => {
@@ -86,6 +120,15 @@ export function createBot(deps: BotDeps): CreateBotResult {
     }
 
     if (chatType !== 'group' && chatType !== 'supergroup') return;
+
+    // Forum control group: messages here are a dialog with the
+    // per-topic agent, NOT lead-classification material. Handle and
+    // return before the monitoring pipeline so these never become
+    // "leads" and never get auto-replied by the responder.
+    if (config.forumEnabled && ctx.chat.id === config.forumGroupId) {
+      await handleForumMessage(ctx);
+      return;
+    }
 
     const text = ctx.message.text;
     const chatId = ctx.chat.id;
@@ -405,15 +448,129 @@ export function createBot(deps: BotDeps): CreateBotResult {
     });
   });
 
+  // Flow 2: owner writes in a forum topic → the agent bound to that
+  // thread answers with thread-scoped context, replying in the same
+  // topic. Persists both turns to tg_thread_messages as the agent's
+  // memory.
+  async function handleForumMessage(
+    ctx: Filter<Context, 'message:text'>,
+  ): Promise<void> {
+    if (!forumAgent || !forumRouter || !agents || !forum) return;
+
+    const threadId = ctx.message.message_thread_id ?? GENERAL_THREAD_ID;
+    const agent = agents.getByThread(threadId);
+    if (!agent || !agent.is_active) return;
+
+    // v1 answers only the owner unless FORUM_RESPOND_TO_TEAM is on.
+    if (!config.forumRespondToTeam && ctx.from?.id !== config.ownerTelegramId) return;
+
+    const text = ctx.message.text?.trim();
+    // Commands are consumed by their own handlers; skip stray slashes.
+    if (!text || text.startsWith('/')) return;
+
+    try {
+      await bot.api
+        .sendChatAction(
+          ctx.chat.id,
+          'typing',
+          threadId !== GENERAL_THREAD_ID ? { message_thread_id: threadId } : {},
+        )
+        .catch(() => {});
+
+      const reply = await forumAgent.ask(agent, text);
+      health.recordSuccess('responder');
+
+      const sent = await forumRouter.sendToThread(threadId, reply);
+      health.recordSuccess('telegram');
+
+      forum.appendThreadMessage({
+        agentId: agent.id,
+        threadId,
+        role: 'user',
+        content: text,
+        tgMessageId: ctx.message.message_id,
+      });
+      forum.appendThreadMessage({
+        agentId: agent.id,
+        threadId,
+        role: 'assistant',
+        content: reply,
+        tgMessageId: sent?.message_id ?? null,
+      });
+
+      logger.info('forum: dialog answered', {
+        slug: agent.slug,
+        threadId,
+        questionChars: text.length,
+        replyChars: reply.length,
+      });
+    } catch (err) {
+      health.recordFailure('responder', err);
+      logger.error('forum: dialog failed', {
+        slug: agent.slug,
+        threadId,
+        error: err instanceof Error ? err.message : String(err),
+      });
+    }
+  }
+
   async function handleOwnerPrivateMessage(
     ctx: Filter<Context, 'message:text'>,
   ): Promise<void> {
     const replyTo = ctx.message?.reply_to_message?.message_id;
-    if (!replyTo) return;
 
-    const draft = drafts.findByEditPrompt(replyTo);
-    if (!draft) return;
+    // A reply to a force_reply'd draft-edit prompt: route to the
+    // draft-edit flow, never to the chat agent.
+    if (replyTo) {
+      const draftForEdit = drafts.findByEditPrompt(replyTo);
+      if (draftForEdit) {
+        await handleDraftEditReply(ctx, draftForEdit);
+        return;
+      }
+    }
 
+    // Otherwise this is a free-form question for the analyst agent.
+    // Commands are consumed by their own handlers before reaching here;
+    // skip anything else that still looks like a command (stray slash).
+    const text = ctx.message?.text?.trim();
+    if (!text || text.startsWith('/')) return;
+    if (!agentChat) return;
+
+    const ownerId = ctx.from?.id;
+    if (ownerId === undefined) return;
+
+    try {
+      await ctx.replyWithChatAction('typing');
+      const answer = await agentChat.ask(ownerId, text, () => {
+        // Telegram clears the typing indicator after ~5s; refresh it
+        // before each Claude / tool round so the owner sees it's alive.
+        void ctx.replyWithChatAction('typing').catch(() => {});
+      });
+      health.recordSuccess('responder');
+      for (const chunk of splitForTelegram(answer)) {
+        await ctx.reply(chunk, { link_preview_options: { is_disabled: true } });
+      }
+      logger.info('agent_chat: answered', {
+        ownerId,
+        question: truncate(text, 200),
+        answerChars: answer.length,
+      });
+    } catch (err) {
+      health.recordFailure('responder', err);
+      logger.error('agent_chat: failed', {
+        ownerId,
+        error: err instanceof Error ? err.message : String(err),
+      });
+      await ctx
+        .reply('Не получилось обработать вопрос. Попробуй ещё раз чуть позже.')
+        .catch(() => {});
+    }
+  }
+
+  async function handleDraftEditReply(
+    ctx: Filter<Context, 'message:text'>,
+    draft: DraftRow,
+  ): Promise<void> {
     const newText = ctx.message?.text?.trim();
     if (!newText) {
       await ctx.reply('Пустой текст. Черновик не отправлен.');

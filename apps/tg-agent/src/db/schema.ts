@@ -148,6 +148,66 @@ CREATE TABLE IF NOT EXISTS tg_settings (
   value       TEXT NOT NULL,
   updated_at  TEXT NOT NULL DEFAULT (strftime('%Y-%m-%dT%H:%M:%fZ', 'now'))
 );
+
+-- ── Forum mode ────────────────────────────────────────────────────
+-- The bot's output migrates from a single owner-DM feed into one
+-- forum supergroup where each topic (thread) is a specialised agent.
+-- tg_agents = one row per forum topic / role. thread_id is the
+-- Telegram message_thread_id (General = 1); NULL until the topic is
+-- discovered/created and bound.
+CREATE TABLE IF NOT EXISTS tg_agents (
+  id             INTEGER PRIMARY KEY AUTOINCREMENT,
+  thread_id      INTEGER UNIQUE,
+  slug           TEXT NOT NULL UNIQUE,
+  name           TEXT NOT NULL,
+  system_prompt  TEXT NOT NULL DEFAULT '',
+  model          TEXT NOT NULL DEFAULT 'claude-sonnet-4-6',
+  tools          TEXT NOT NULL DEFAULT '[]',
+  is_active      INTEGER NOT NULL DEFAULT 1,
+  created_at     TEXT NOT NULL DEFAULT (strftime('%Y-%m-%dT%H:%M:%fZ', 'now')),
+  updated_at     TEXT NOT NULL DEFAULT (strftime('%Y-%m-%dT%H:%M:%fZ', 'now'))
+);
+
+-- Which monitored chat feeds which agent/thread. source_chat_id maps
+-- to tg_chats.chat_id. One route per source chat.
+CREATE TABLE IF NOT EXISTS tg_source_routes (
+  source_chat_id  INTEGER PRIMARY KEY,
+  source_label    TEXT,
+  agent_id        INTEGER NOT NULL REFERENCES tg_agents(id) ON DELETE CASCADE,
+  enabled         INTEGER NOT NULL DEFAULT 1,
+  created_at      TEXT NOT NULL DEFAULT (strftime('%Y-%m-%dT%H:%M:%fZ', 'now'))
+);
+CREATE INDEX IF NOT EXISTS tg_source_routes_agent_idx ON tg_source_routes (agent_id);
+
+-- Structured reports the Collector routes into a thread. dedup_key =
+-- source_chat_id + period bound, so retries don't double-post.
+CREATE TABLE IF NOT EXISTS tg_reports (
+  id              INTEGER PRIMARY KEY AUTOINCREMENT,
+  agent_id        INTEGER REFERENCES tg_agents(id) ON DELETE SET NULL,
+  source_chat_id  INTEGER,
+  summary         TEXT NOT NULL,
+  raw             TEXT,
+  period_start    TEXT,
+  period_end      TEXT,
+  tg_message_id   INTEGER,
+  dedup_key       TEXT UNIQUE,
+  created_at      TEXT NOT NULL DEFAULT (strftime('%Y-%m-%dT%H:%M:%fZ', 'now'))
+);
+CREATE INDEX IF NOT EXISTS tg_reports_agent_idx ON tg_reports (agent_id, created_at DESC);
+
+-- Per-thread conversation = an agent's memory of its own direction.
+-- role: user | assistant | report | system.
+CREATE TABLE IF NOT EXISTS tg_thread_messages (
+  id             INTEGER PRIMARY KEY AUTOINCREMENT,
+  agent_id       INTEGER REFERENCES tg_agents(id) ON DELETE CASCADE,
+  thread_id      INTEGER NOT NULL,
+  role           TEXT NOT NULL,
+  content        TEXT NOT NULL,
+  tg_message_id  INTEGER,
+  created_at     TEXT NOT NULL DEFAULT (strftime('%Y-%m-%dT%H:%M:%fZ', 'now'))
+);
+CREATE INDEX IF NOT EXISTS tg_thread_messages_thread_idx
+  ON tg_thread_messages (thread_id, created_at DESC);
 `;
 
 // Idempotent migrations for older SQLite files where tg_chat_context
