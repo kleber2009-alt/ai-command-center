@@ -204,6 +204,7 @@ async function runForUser(userId, payload) {
     summary: claudeRated.summary,
     postsScanned: allItems.length,
     errors,
+    scoringUnavailable: claudeRated.failed,
   });
 
   const deliverable = await queryOne(
@@ -399,8 +400,11 @@ async function discoverAndSuggestCandidates({ userId, tgChatId, deliveryBot, cfg
 // Claude scoring — даёт каждому посту fit-to-niche 1–10 + reason
 // ═══════════════════════════════════════════════════════════════════
 async function rateWithClaude({ niche, userName, reels, carousels }) {
-  const fallback = { reels: [], carousels: [], summary: null };
-  if (reels.length === 0 && carousels.length === 0) return fallback;
+  // failed=true означает «скоринг сломался» (для футера в TG);
+  // при пустом входе скоринга просто нет — это не сбой.
+  const empty = { reels: [], carousels: [], summary: null, failed: false };
+  const failedFallback = { reels: [], carousels: [], summary: null, failed: true };
+  if (reels.length === 0 && carousels.length === 0) return empty;
 
   // Готовим компактный список для Claude — без огромных подписей.
   const pack = (arr, prefix) => arr.map((p, i) => ({
@@ -440,7 +444,7 @@ async function rateWithClaude({ niche, userName, reels, carousels }) {
 
   if (!res.ok) {
     console.warn(`[viral_discover] claude failed: ${res.status} ${String(res.details).slice(0, 150)}`);
-    return fallback;
+    return failedFallback;
   }
 
   let parsed;
@@ -453,9 +457,9 @@ async function rateWithClaude({ niche, userName, reels, carousels }) {
     parsed = JSON.parse(cleaned);
   } catch (e) {
     console.warn(`[viral_discover] claude json parse: ${e.message}; text=${res.text.slice(0, 200)}`);
-    return fallback;
+    return failedFallback;
   }
-  if (!Array.isArray(parsed)) return fallback;
+  if (!Array.isArray(parsed)) return failedFallback;
 
   const byIdx = new Map();
   let summary = null;
@@ -471,6 +475,7 @@ async function rateWithClaude({ niche, userName, reels, carousels }) {
     reels: reels.map((_, i) => byIdx.get(`R${i + 1}`) || null),
     carousels: carousels.map((_, i) => byIdx.get(`C${i + 1}`) || null),
     summary,
+    failed: false,
   };
 }
 
@@ -485,7 +490,7 @@ function mergeClaudeScores(posts, claudeRatings) {
 // ═══════════════════════════════════════════════════════════════════
 // Telegram-сообщение
 // ═══════════════════════════════════════════════════════════════════
-function buildMessage({ userName, reels, carousels, summary, postsScanned, errors }) {
+function buildMessage({ userName, reels, carousels, summary, postsScanned, errors, scoringUnavailable }) {
   const lines = [];
   lines.push(`<b>Аня ✍️</b>`);
   lines.push(`Доброе утро, ${escapeHtml(userName)}. Посмотрела ${postsScanned} постов конкурентов — вот что сейчас залетает в нише:`);
@@ -504,6 +509,10 @@ function buildMessage({ userName, reels, carousels, summary, postsScanned, error
   if (summary) {
     lines.push(`<b>Что я вижу:</b>`);
     lines.push(escapeHtml(summary));
+    lines.push('');
+  }
+  if (scoringUnavailable) {
+    lines.push(`<i>⚠️ Оценки соответствия нише (X/10) временно недоступны — посты отранжированы по скорости. Попробую снова в следующей выдаче.</i>`);
     lines.push('');
   }
   if (errors.length > 0) {

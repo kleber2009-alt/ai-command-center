@@ -24,6 +24,51 @@ import { buildCabinetLink } from './cabinet.js';
 const BOT = 'parser';
 const CABINET_BASE_URL = process.env.CABINET_BASE_URL || 'https://parser.46-62-215-11.nip.io';
 
+// ═══ Командное меню @parser_instaa_bot (setMyCommands) ════════════════
+// Регистрируется на boot воркера. Делает /discover («новая выдача») и
+// остальные команды видимыми в «/»-меню и в кнопке-меню Telegram.
+const PARSER_BOT_COMMANDS = [
+  { command: 'discover',   description: '🔎 Новая выдача сейчас' },
+  { command: 'menu',       description: 'Меню: источники, пороги, кабинет' },
+  { command: 'list',       description: 'Мои источники (аккаунты и хэштеги)' },
+  { command: 'add',        description: 'Добавить аккаунт или хэштег' },
+  { command: 'thresholds', description: 'Пороги виральности (пресеты)' },
+  { command: 'cabinet',    description: 'Открыть веб-кабинет' },
+  { command: 'pause',      description: 'Пауза ежедневной выдачи' },
+  { command: 'resume',     description: 'Возобновить выдачу' },
+  { command: 'help',       description: 'Помощь' },
+];
+
+export async function bootstrapParserMenu() {
+  const token = process.env.TG_PARSER_BOT_TOKEN;
+  if (!token) {
+    console.log('[parser_bot] bootstrapParserMenu: TG_PARSER_BOT_TOKEN not set, skip');
+    return { ok: false, error: 'no_token' };
+  }
+  const call = async (method, payload) => {
+    try {
+      const r = await fetch(`https://api.telegram.org/bot${token}/${method}`, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify(payload),
+      });
+      const j = await r.json().catch(() => ({}));
+      return Boolean(j?.ok);
+    } catch (e) {
+      console.warn(`[parser_bot] ${method} failed: ${e?.message || e}`);
+      return false;
+    }
+  };
+  const cmds = await call('setMyCommands', {
+    commands: PARSER_BOT_COMMANDS,
+    scope: { type: 'all_private_chats' },
+    language_code: 'ru',
+  });
+  const btn = await call('setChatMenuButton', { menu_button: { type: 'commands' } });
+  console.log('[parser_bot] bootstrapParserMenu:', { setMyCommands: cmds, setChatMenuButton: btn });
+  return { ok: Boolean(cmds && btn) };
+}
+
 // ═══ Entry points ════════════════════════════════════════════════════
 
 export async function handleStart(msg) {
@@ -133,6 +178,7 @@ export async function handleCallback(cq) {
           WHERE user_id = $2`,
         [cand.handle, cand.user_id],
       );
+      console.log(`[parser_bot] candidate accepted: user=${cand.user_id} handle=${cand.handle} id=${candId}`);
       await ack(cq, `✓ ${cand.handle} добавлен`);
       await editFooter(cq.message, `\n— ✅ ${cand.handle} добавлен в источники`);
     } else {
@@ -142,6 +188,7 @@ export async function handleCallback(cq) {
           WHERE id = $1`,
         [candId],
       );
+      console.log(`[parser_bot] candidate rejected: user=${cand.user_id} handle=${cand.handle} id=${candId} (user tapped ❌ on suggestion)`);
       await ack(cq, '👍 Учту');
       await editFooter(cq.message, `\n— ❌ ${cand.handle} отклонён`);
     }
@@ -195,6 +242,16 @@ export async function handleCallback(cq) {
   }
 
   const { user, config } = await ensureUserAndConfig(chatId, cq.from);
+
+  // ── Threshold preset buttons (под /thresholds) ──────────────
+  if (data.startsWith('thr:')) {
+    const p = THRESHOLD_PRESETS[data.slice(4)];
+    if (!p) return await ack(cq);
+    await applyThresholds(user.id, p.mp, p.ml, p.mc);
+    await ack(cq, `✓ ${p.label}`);
+    await sendText(chatId, `<b>${p.label}</b> · ` + thresholdsResultText(p.mp, p.ml, p.mc), { bot: BOT });
+    return;
+  }
 
   // ── Wizard callbacks ──
   if (data === 'wiz:begin') {
@@ -368,35 +425,77 @@ async function handleCommand(msg, user, config) {
 
 // ═══ Thresholds (мин. метрики «жирного» контента) ════════════════════
 
+// Пресеты порогов — единые с кабинетом (landings/viral-discover/cabinet).
+const THRESHOLD_PRESETS = {
+  soft: { label: 'Мягко',  mp: 30000,  ml: 300,  mc: 50,   note: 'широкий охват' },
+  base: { label: 'Базово', mp: 100000, ml: 1000, mc: 500,  note: 'рабочий баланс' },
+  hard: { label: 'Жёстко', mp: 300000, ml: 3000, mc: 1000, note: 'только хиты' },
+  off:  { label: 'Без фильтра', mp: 0,  ml: 0,    mc: 0,    note: 'все посты' },
+};
+
+function presetFromKeyword(s) {
+  const k = String(s || '').trim().toLowerCase().replace(/ё/g, 'е');
+  if (/^(soft|мягк)/.test(k)) return 'soft';
+  if (/^(base|базов|средн)/.test(k)) return 'base';
+  if (/^(hard|жестк)/.test(k)) return 'hard';
+  if (/^(off|выкл|0)/.test(k)) return 'off';
+  return null;
+}
+
+async function applyThresholds(userId, mp, ml, mc) {
+  await query(
+    `UPDATE viral_discover_configs SET min_plays = $1, min_likes = $2, min_comments = $3 WHERE user_id = $4`,
+    [mp, ml, mc, userId],
+  );
+}
+
+function thresholdsResultText(mp, ml, mc) {
+  return `✓ Пороги обновлены:\n• ≥${formatCount(mp)} просмотров\n• ≥${formatCount(ml)} лайков\n• ≥${formatCount(mc)} комментариев\n\nПрименятся в следующем /discover.`;
+}
+
 async function handleThresholds(chatId, userId, arg) {
   const cfg = await queryOne(
     `SELECT min_plays, min_likes, min_comments FROM viral_discover_configs WHERE user_id = $1`,
     [userId],
   );
   if (!arg) {
+    const pp = (k) => `≥${formatCount(THRESHOLD_PRESETS[k].mp)} / ≥${formatCount(THRESHOLD_PRESETS[k].ml)} / ≥${formatCount(THRESHOLD_PRESETS[k].mc)}`;
+    const reply_markup = { inline_keyboard: [
+      [
+        { text: '🟢 Мягко',  callback_data: 'thr:soft' },
+        { text: '🔵 Базово', callback_data: 'thr:base' },
+        { text: '🔴 Жёстко', callback_data: 'thr:hard' },
+      ],
+      [ { text: '⚪️ Выключить фильтр', callback_data: 'thr:off' } ],
+    ]};
     await sendText(chatId,
       '<b>🎯 Пороги виральности</b>\n\n' +
       `Сейчас: ≥<b>${formatCount(cfg?.min_plays || 0)}</b> просмотров · ≥<b>${formatCount(cfg?.min_likes || 0)}</b> лайков · ≥<b>${formatCount(cfg?.min_comments || 0)}</b> комментариев.\n\n` +
-      'Поменять — одной командой:\n' +
-      '<code>/thresholds 100000 1000 500</code>\n\n' +
-      '<i>Лайки = proxy для репостов — Instagram перестал отдавать share count публично.</i>\n' +
-      '<i>Чтобы выключить фильтр — <code>/thresholds 0 0 0</code>.</i>',
-      { bot: BOT });
+      'Выбери пресет кнопкой:\n' +
+      `🟢 <b>Мягко</b> — ${pp('soft')} <i>(${THRESHOLD_PRESETS.soft.note})</i>\n` +
+      `🔵 <b>Базово</b> — ${pp('base')} <i>(${THRESHOLD_PRESETS.base.note})</i>\n` +
+      `🔴 <b>Жёстко</b> — ${pp('hard')} <i>(${THRESHOLD_PRESETS.hard.note})</i>\n\n` +
+      'Или задай вручную: <code>/thresholds 100000 1000 500</code>\n' +
+      '<i>Лайки = proxy для репостов — Instagram перестал отдавать share count публично.</i>',
+      { bot: BOT, reply_markup });
+    return;
+  }
+  // Пресет ключевым словом: /thresholds мягко|базово|жёстко|выкл
+  const pk = presetFromKeyword(arg);
+  if (pk) {
+    const p = THRESHOLD_PRESETS[pk];
+    await applyThresholds(userId, p.mp, p.ml, p.mc);
+    await sendText(chatId, `<b>${p.label}</b> · ` + thresholdsResultText(p.mp, p.ml, p.mc), { bot: BOT });
     return;
   }
   const parts = arg.split(/\s+/).map((s) => parseInt(s.replace(/[\s,_]/g, ''), 10));
   if (parts.length !== 3 || parts.some((n) => !Number.isFinite(n) || n < 0)) {
-    await sendText(chatId, 'Жду три числа: <code>/thresholds &lt;просмотры&gt; &lt;лайки&gt; &lt;комментарии&gt;</code>\n\nПример: <code>/thresholds 100000 1000 500</code>', { bot: BOT });
+    await sendText(chatId, 'Жду три числа или пресет (<code>мягко</code>/<code>базово</code>/<code>жёстко</code>): <code>/thresholds &lt;просмотры&gt; &lt;лайки&gt; &lt;комментарии&gt;</code>\n\nПример: <code>/thresholds 100000 1000 500</code>', { bot: BOT });
     return;
   }
   const [mp, ml, mc] = parts;
-  await query(
-    `UPDATE viral_discover_configs SET min_plays = $1, min_likes = $2, min_comments = $3 WHERE user_id = $4`,
-    [mp, ml, mc, userId],
-  );
-  await sendText(chatId,
-    `✓ Пороги обновлены:\n• ≥${formatCount(mp)} просмотров\n• ≥${formatCount(ml)} лайков\n• ≥${formatCount(mc)} комментариев\n\nПрименятся в следующем /discover.`,
-    { bot: BOT });
+  await applyThresholds(userId, mp, ml, mc);
+  await sendText(chatId, thresholdsResultText(mp, ml, mc), { bot: BOT });
 }
 
 function formatCount(n) {
@@ -631,7 +730,7 @@ async function sendHelp(chatId) {
     '/add @acc или #tag — добавить источник\n' +
     '/remove @acc или #tag — убрать\n' +
     '/niche [текст] — изменить нишу\n' +
-    '/thresholds — пороги виральности (просмотры/лайки/комменты)\n' +
+    '/thresholds — пороги виральности (пресеты Мягко/Базово/Жёстко или вручную)\n' +
     '/pause /resume — пауза / возобновление\n' +
     '/reset — сбросить и пройти настройку заново\n\n' +
     'Cron-выдача: каждое утро <b>08:00 МСК</b>.\n' +

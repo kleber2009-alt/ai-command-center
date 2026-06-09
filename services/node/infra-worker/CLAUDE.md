@@ -43,14 +43,51 @@ schedule_rules (cron-templates)
 - **Scoring**: `lib/scoring.js` — рейтинг "зайдёт ли это в блоге 1–10" от Claude
 - **Связанные `lib/`**: `apify.js`, `scoring.js`, `tg.js`, `webhook.js`
 
-При правках "Парсера" — это всё внутри `apps/infra-worker/`, не отдельное приложение.
+При правках "Парсера" — это всё внутри `services/node/infra-worker/`, не отдельное приложение.
 
 ## Source-of-truth
 
-- **Canonical**: `apps/infra-worker/` в этом репо.
-- **Prod build context**: `/home/aisales/infra-worker-viral-clone/` на проде (sync через `rsync --delete` с Mac).
+- **Canonical**: `services/node/infra-worker/` в этом репо.
+- **Prod build context**: `/home/aisales/infra-worker-viral-clone/` на проде (НЕ bind-mount — код запекается в образ при `docker build`).
 
-После консолидации репо: обнови rsync target на Mac (`apps/infra-worker/` вместо старого пути). Этот пункт ещё не сделан — until then, prod path is authoritative.
+### Синхронизация (сверено 2026-06-09)
+
+Репо и прод build context **сведены файл-в-файл** по всем deploy-релевантным
+файлам (`worker.js`, `lib/**`, `handlers/**`, `Dockerfile`, `package.json`).
+Раньше они разошлись (репо ушёл вперёд), и слепое копирование `worker.js`/
+`webhook.js` уронило воркер в crash-loop (ESM: `webhook.js` не отдавал
+`bootstrapOwnerHqMenu`). Теперь копировать любой файл репо → build context
+безопасно.
+
+**Дормант-фичи в репо, НЕ задеплоенные на прод** (файлы есть, но не подключены):
+- `handlers/daily_dm_digest.js` + `migrations/026_daily_dm_digest_rule.sql` —
+  не зарегистрирован в `handlers/index.js`, миграция не применена.
+- owner-HQ-меню (`bootstrapOwnerHqMenu` в `webhook.js`/`worker.js`) — откатано
+  до прод-версии. При желании релизить — это отдельный осознанный деплой.
+- `bootstrapParserMenu()` в `parser_bot.js` — функция есть, но НЕ вызывается;
+  командное меню `@parser_instaa_bot` зарегистрировано out-of-band разовым
+  `setMyCommands` (Telegram хранит его на своей стороне).
+
+### Деплой воркера (manual hotpatch)
+
+```bash
+# 1. скопировать изменённые файлы (НЕ worker.js/webhook.js целиком без diff!)
+scp <file> prod:/home/aisales/infra-worker-viral-clone/<path>
+# 2. собрать новый тег (флаги обязательны — см. ниже)
+ssh prod 'cd /home/aisales/infra-worker-viral-clone && \
+  docker build --no-cache --pull --provenance=false --sbom=false \
+  -t infra-aisales-worker:hotpatch-YYYYMMDD-N .'
+# 3. перепинить override на новый тег + recreate
+ssh root@46.62.215.11 'sed -i "s|image: infra-aisales-worker:.*|image: infra-aisales-worker:hotpatch-YYYYMMDD-N|" \
+  /root/ai-command-center/infra/docker-compose.override.yml && \
+  cd /root/ai-command-center/infra && \
+  docker compose -f docker-compose.yml -f docker-compose.override.yml \
+  --env-file /root/ai-command-center/infra/.env up -d --force-recreate aisales-worker'
+# 4. health-check: контейнер жив 15с + логи без crash-loop
+```
+
+Текущий рабочий тег: `hotpatch-20260609-3` (Codex-фолбэк + пресеты порогов).
+Откат — перепин override на предыдущий рабочий тег.
 
 ## Управление
 

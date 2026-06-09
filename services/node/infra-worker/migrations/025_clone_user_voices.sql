@@ -16,7 +16,7 @@
 --
 -- Applied via:
 --   docker exec -i aisales-postgres psql -U aisales -d aisales \
---     < apps/infra-worker/migrations/025_clone_user_voices.sql
+--     < services/node/infra-worker/migrations/025_clone_user_voices.sql
 -- ============================================================
 
 -- ── 1. Сами обученные голоса клиентов /clone ───────────────────
