@@ -61,6 +61,13 @@ Hono HTTP server (`src/admin/server.ts`) + vanilla-JS SPA
 
 Three SPA tabs: leads/chats, **drafts** (inline approval queue), **analytics** (`src/db/stats.ts` — daily classifications, leads-by-status, response counts).
 
+## HQ owner commands
+
+When `OFFICE_HQ_BASE_URL` is set, owner-DM commands `/hq`, `/brief`,
+`/standup`, `/focus`, `/escalations`, `/decide` become a thin transport
+layer over `apps/command-center` office HQ API. The Telegram bot stays a
+messaging surface; the office logic remains centralized in command-center.
+
 ## Classifier (`src/classifier.ts`)
 
 Claude Haiku 4.5 + tool-use, 10 classes:
@@ -113,6 +120,7 @@ CONFIDENCE_THRESHOLD, LOG_LEVEL, CLASSIFIER_MODEL, RESPONDER_MODEL,
 DATABASE_PATH, ADMIN_PORT, ADMIN_USERNAME, ADMIN_PASSWORD,
 ADMIN_SESSION_SECRET, ADMIN_PUBLIC_URL,
 BACKUP_INTERVAL_HOURS, HEALTH_FAILURE_THRESHOLD, HEALTH_ALERT_COOLDOWN_MINUTES,
+OFFICE_HQ_BASE_URL, OFFICE_HQ_WEB_URL, OFFICE_HQ_TIMEOUT_MS,
 IGNORED_USER_IDS
 ```
 

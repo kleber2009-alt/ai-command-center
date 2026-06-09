@@ -44,6 +44,10 @@ auto_reply.
 - **Уведомления владельцу** (`src/notifier.ts`): DM с триаж-блоком
   на `REPLY_AND_NOTIFY` / `NOTIFY_ONLY` / `DRAFT_FOR_OWNER`.
   Владелец должен один раз написать боту `/start`.
+- **HQ-команды владельца** (`src/office_hq.ts` + `src/owner_commands.ts`):
+  `/hq`, `/brief`, `/standup`, `/focus`, `/escalations`, `/decide`
+  ходят в `apps/command-center` и возвращают штабные сводки как от
+  одной организованной команды, а не от россыпи ботов.
 - **Kill switch:** `tg_chats.auto_reply` переключается из админки.
   Когда OFF — бот всё ещё классифицирует и пишет в БД, но не
   отвечает и не дёргает владельца.
@@ -75,6 +79,8 @@ docker compose logs -f
 | `ALLOWED_CHAT_IDS`   | id групп через запятую |
 | `ADMIN_PASSWORD`     | пароль для админки на :8080 |
 | `ADMIN_USERNAME`     | по умолчанию `admin` |
+| `OFFICE_HQ_BASE_URL` | base URL `command-center`, например `https://command-center.46-62-215-11.nip.io` |
+| `OFFICE_HQ_WEB_URL`  | публичный URL для deep-link в `/office/decisions` |
 
 Подготовка Telegram:
 

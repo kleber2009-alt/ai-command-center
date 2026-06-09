@@ -31,6 +31,7 @@ import { createEmbeddingClient } from './memory/embeddings.js';
 import { createQdrantClient } from './memory/qdrant.js';
 import { createMemoryService, createNoopMemoryService, type MemoryService } from './memory/service.js';
 import { createNotifier } from './notifier.js';
+import { createOfficeHqClient } from './office_hq.js';
 import { registerOwnerCommands } from './owner_commands.js';
 import { startReportScheduler, type ReporterHandle } from './reporter.js';
 import { createResponder } from './responder.js';
@@ -111,6 +112,12 @@ async function main(): Promise<void> {
     apiKey: config.anthropicApiKey,
     model: config.digestModel,
   });
+  const officeHq = createOfficeHqClient({
+    baseUrl: config.officeHqBaseUrl,
+    webUrl: config.officeHqWebUrl,
+    timeoutMs: config.officeHqTimeoutMs,
+    logger,
+  });
   if (config.digestEnabled && config.ownerTelegramId !== undefined) {
     registerOwnerCommands({
       bot,
@@ -122,11 +129,19 @@ async function main(): Promise<void> {
       logger,
       memory,
       db,
+      officeHq,
     });
   } else if (!config.digestEnabled) {
     logger.info('digest disabled (DIGEST_ENABLED=false)');
   } else {
     logger.warn('digest disabled — OWNER_TELEGRAM_ID is not set');
+  }
+
+  if (officeHq.enabled) {
+    logger.info('office HQ transport enabled', {
+      baseUrl: config.officeHqBaseUrl,
+      webUrl: config.officeHqWebUrl,
+    });
   }
 
   const health = createHealthMonitor({
