@@ -94,19 +94,27 @@ export function NewPostClient({
       <div className="grid gap-6">
         <section className="grid gap-3">
           <h2 className="sec-title">Видео</h2>
-          <div className="grid grid-cols-3 sm:grid-cols-4 gap-3 max-h-[320px] overflow-y-auto pr-1">
+          <div className="grid grid-cols-[repeat(auto-fill,minmax(104px,1fr))] gap-3 max-h-[380px] overflow-y-auto pr-1">
             {sources.map((s) => {
               const active = s.sourceType === selected.sourceType && s.id === selected.id;
               return (
                 <button
                   key={`${s.sourceType}:${s.id}`}
                   onClick={() => setSelected(s)}
-                  className={`relative aspect-[9/16] overflow-hidden rounded-sm border ${
+                  className={`relative aspect-[9/16] overflow-hidden rounded-sm border bg-black/40 ${
                     active ? 'border-gold ring-1 ring-gold' : 'border-border-soft'
                   }`}
                   title={s.label}
                 >
-                  <video src={s.mediaUrl} className="w-full h-full object-cover bg-black/40" muted playsInline preload="metadata" />
+                  {/* #t=0.1 forces the browser to paint the first frame as a
+                      poster — otherwise preload=metadata leaves the tile black. */}
+                  <video
+                    src={`${s.mediaUrl}#t=0.1`}
+                    className="w-full h-full object-cover"
+                    muted
+                    playsInline
+                    preload="metadata"
+                  />
                   <span className="absolute bottom-0 inset-x-0 bg-black/60 text-[9px] mono uppercase tracking-[0.14em] px-1 py-0.5 truncate">
                     {s.sourceType === 'edit' ? 'монтаж' : 'видео'}
                   </span>
