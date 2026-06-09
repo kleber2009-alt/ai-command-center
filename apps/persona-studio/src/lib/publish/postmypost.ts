@@ -38,6 +38,12 @@ export class PostMyPostError extends Error {
 
 const INSTAGRAM_CHANNEL_CODE = 'instagram';
 const STATUS_PENDING_PUBLICATION = 5;
+// When a project has the approval ("согласование") workflow enabled, a freshly
+// created publication lands in 'approval' instead of going straight to the
+// publish queue — it then waits for a manual approve in the PostMyPost
+// dashboard and never reaches Instagram on its own. We detect that and
+// auto-approve by re-submitting as pending_publication.
+const STATUS_APPROVAL = 12;
 const TYPE_REELS = 4;
 const UPLOAD_OK = 1;
 const UPLOAD_ERROR = 2;
@@ -58,7 +64,7 @@ function base(): string {
   return env.POSTMYPOST_API_BASE || 'https://api.postmypost.io/v4.1';
 }
 
-type Method = 'GET' | 'POST';
+type Method = 'GET' | 'POST' | 'PUT';
 
 async function call<T>(method: Method, path: string, opts?: { query?: Record<string, string | number>; body?: unknown }): Promise<T> {
   const url = new URL(`${base()}${path}`);
@@ -200,22 +206,37 @@ export async function createReelPublication(opts: {
   caption?: string;
   postAt: Date;
 }): Promise<number> {
-  const res = await call<{ id: number }>('POST', '/publications', {
-    body: {
-      project_id: opts.projectId,
-      post_at: opts.postAt.toISOString(),
-      account_ids: [opts.accountId],
-      publication_status: STATUS_PENDING_PUBLICATION,
-      details: [
-        {
-          account_id: opts.accountId,
-          publication_type: TYPE_REELS,
-          content: opts.caption?.slice(0, 2200) ?? undefined,
-          file_ids: [opts.fileId],
-          instagram_share_to_feed: true,
-        },
-      ],
-    },
+  // Body shared by the create (POST) and the auto-approve (PUT) — the update
+  // endpoint replaces the publication, so it must carry the same fields.
+  const detail = {
+    account_id: opts.accountId,
+    publication_type: TYPE_REELS,
+    content: opts.caption?.slice(0, 2200) ?? undefined,
+    file_ids: [opts.fileId],
+    instagram_share_to_feed: true,
+  };
+  const body = {
+    post_at: opts.postAt.toISOString(),
+    account_ids: [opts.accountId],
+    publication_status: STATUS_PENDING_PUBLICATION,
+    details: [detail],
+  };
+
+  const res = await call<{ id: number; publication_status?: number }>('POST', '/publications', {
+    body: { project_id: opts.projectId, ...body },
   });
+
+  // Auto-approve: if the project's approval workflow parked the publication in
+  // 'approval' (12), push it to 'pending publication' (5) so it publishes
+  // without a manual click. No-op when it's already queued/publishing.
+  const status =
+    res.publication_status ??
+    (await call<{ publication_status?: number }>('GET', `/publications/${res.id}`)).publication_status;
+  if (status === STATUS_APPROVAL) {
+    await call('PUT', `/publications/${res.id}`, {
+      body: { ...body, publication_status: STATUS_PENDING_PUBLICATION },
+    });
+  }
+
   return res.id;
 }
