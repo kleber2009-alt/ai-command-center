@@ -10,8 +10,7 @@ on:
   push:
     branches: [main]
     paths:
-      - 'apps/persona-studio/src/lib/tokens.ts'
-      - 'apps/persona-studio/tests/**'
+      - 'apps/persona-studio/**'
       - '.github/workflows/test-persona-studio.yml'
   pull_request:
     paths:
