@@ -94,23 +94,25 @@ export function NewPostClient({
       <div className="grid gap-6">
         <section className="grid gap-3">
           <h2 className="sec-title">Видео</h2>
-          <div className="grid grid-cols-[repeat(auto-fill,minmax(104px,1fr))] gap-3 max-h-[380px] overflow-y-auto pr-1">
+          <div className="grid grid-cols-[repeat(auto-fill,minmax(120px,1fr))] gap-3 max-h-[420px] overflow-y-auto pr-1">
             {sources.map((s) => {
               const active = s.sourceType === selected.sourceType && s.id === selected.id;
               return (
                 <button
                   key={`${s.sourceType}:${s.id}`}
                   onClick={() => setSelected(s)}
-                  className={`relative aspect-[9/16] overflow-hidden rounded-sm border bg-black/40 ${
+                  className={`group relative aspect-square overflow-hidden rounded-sm border bg-black/40 ${
                     active ? 'border-gold ring-1 ring-gold' : 'border-border-soft'
                   }`}
                   title={s.label}
                 >
-                  {/* #t=0.1 forces the browser to paint the first frame as a
-                      poster — otherwise preload=metadata leaves the tile black. */}
+                  {/* Sources mix landscape/portrait — a square tile with
+                      object-cover crops to a uniform thumbnail (no letterbox).
+                      #t=0.1 forces the browser to paint the first frame;
+                      preload=metadata alone leaves the tile black. */}
                   <video
                     src={`${s.mediaUrl}#t=0.1`}
-                    className="w-full h-full object-cover"
+                    className="absolute inset-0 h-full w-full object-cover object-center"
                     muted
                     playsInline
                     preload="metadata"
