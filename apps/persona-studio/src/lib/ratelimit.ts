@@ -9,9 +9,9 @@
 // OPEN: if Redis is unreachable we allow the request rather than block paying
 // users on an infra hiccup (the Apify monthly cap is the backstop for cost).
 //
-// `next/server` is imported lazily inside enforceRateLimit so the pure
-// rateLimit() stays unit-testable with just tsx (no Next, no Redis).
-import IORedis from 'ioredis';
+// `next/server` and `ioredis` are imported lazily (inside the functions that
+// need them) so the pure rateLimit() stays unit-testable with just tsx — no
+// Next, no Redis, no dependency install in CI.
 
 export type RateResult = { ok: boolean; limit: number; remaining: number; resetSec: number };
 
@@ -22,9 +22,10 @@ export type RedisLike = {
   ttl(key: string): Promise<number>;
 };
 
-let _redis: IORedis | null = null;
-function getRedis(): RedisLike {
+let _redis: RedisLike | null = null;
+async function getRedis(): Promise<RedisLike> {
   if (_redis) return _redis;
+  const { default: IORedis } = await import('ioredis');
   _redis = new IORedis(process.env.REDIS_URL ?? 'redis://localhost:6379/3', {
     maxRetriesPerRequest: null,
     enableReadyCheck: false,
@@ -41,14 +42,15 @@ export async function rateLimit(
   key: string,
   limit: number,
   windowSec: number,
-  redis: RedisLike = getRedis(),
+  redis?: RedisLike,
 ): Promise<RateResult> {
   const windowId = Math.floor(Date.now() / 1000 / windowSec);
   const bucketKey = `rl:${key}:${windowId}`;
   try {
-    const count = await redis.incr(bucketKey);
-    if (count === 1) await redis.expire(bucketKey, windowSec);
-    const ttl = await redis.ttl(bucketKey);
+    const client = redis ?? (await getRedis());
+    const count = await client.incr(bucketKey);
+    if (count === 1) await client.expire(bucketKey, windowSec);
+    const ttl = await client.ttl(bucketKey);
     const resetSec = ttl > 0 ? ttl : windowSec;
     return { ok: count <= limit, limit, remaining: Math.max(0, limit - count), resetSec };
   } catch {
