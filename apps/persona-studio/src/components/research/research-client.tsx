@@ -73,28 +73,21 @@ const DEFAULT_SORT: SortField = 'views';
 const DEFAULT_PERIOD: Period = 'all';
 
 // Пороги вхождения в выдачу — задаются пользователем ДО поиска (ТЗ §5).
-// Пустые поля (0) трактуются как «без порога»; если пусты ВСЕ — сервер
-// сам включает популярное (1 млн просмотров).
-const DEFAULT_MIN_VIEWS = 1_000_000; // «от 1 млн» по умолчанию
+// Пустые поля (0) = «без порога». Если пусты ВСЕ — авто-режим: сортировка
+// по убыванию просмотров, полная страница (самые популярные сверху).
+const DEFAULT_MIN_VIEWS = 0;
 const DEFAULT_MIN_LIKES = 0;
 const DEFAULT_MIN_COMMENTS = 0;
 const DEFAULT_MIN_SHARES = 0;
 
 type Thresholds = { views: number; likes: number; comments: number; shares: number };
 
-// Пресеты порогов. «Популярное» — дефолт (самое просматриваемое, 1 млн+).
+// Пресеты — жёсткие пороги по просмотрам (опционально). Без пресета (пусто) —
+// авто-режим «самое популярное» с полной страницей результатов.
 const THRESHOLD_PRESETS: Array<{ key: string; label: string; values: Thresholds }> = [
-  { key: 'soft', label: 'Мягко', values: { views: 100_000, likes: 0, comments: 0, shares: 0 } },
-  {
-    key: 'base',
-    label: 'Популярное',
-    values: { views: 1_000_000, likes: 0, comments: 0, shares: 0 },
-  },
-  {
-    key: 'hard',
-    label: 'Вирусное',
-    values: { views: 1_000_000, likes: 0, comments: 1_000, shares: 0 },
-  },
+  { key: 'soft', label: 'от 100K', values: { views: 100_000, likes: 0, comments: 0, shares: 0 } },
+  { key: 'mid', label: 'от 500K', values: { views: 500_000, likes: 0, comments: 0, shares: 0 } },
+  { key: 'hard', label: 'от 1M', values: { views: 1_000_000, likes: 0, comments: 0, shares: 0 } },
 ];
 
 const formatCount = (n: number) => {
@@ -435,7 +428,7 @@ export function ResearchClient({ isFreePlan = false }: { isFreePlan?: boolean })
                 label="Просмотры"
                 value={minViews}
                 onChange={setMinViews}
-                placeholder="1000000"
+                placeholder="пусто = все"
               />
               <ThresholdField
                 label="Лайки"
@@ -457,8 +450,8 @@ export function ResearchClient({ isFreePlan = false }: { isFreePlan?: boolean })
               />
             </div>
             <span className="mono text-[9px] tracking-wider text-text-mute">
-              Применяются к новому поиску. Пустое поле — без порога. Если очистить ВСЕ
-              метрики — включается «самое популярное»: рилсы от 1 млн просмотров по убыванию.
+              Применяются к новому поиску. Пустые поля = авто-режим: самые просматриваемые
+              рилсы, полная страница. Впиши значения (или выбери пресет) для жёсткого фильтра.
               Репосты Instagram отдаёт не всегда — рилсы без данных о репостах порог не отсекает.
             </span>
           </div>
@@ -485,8 +478,8 @@ export function ResearchClient({ isFreePlan = false }: { isFreePlan?: boolean })
           {/* Авто-режим «самое популярное» */}
           {result?.autoPopular && (
             <div className="mono text-[9px] tracking-widest uppercase text-gold pt-1">
-              Авто-режим: самое популярное — рилсы от{' '}
-              {formatCount(result.appliedMinViews || 1_000_000)} просмотров
+              Авто-режим: самые просматриваемые рилсы (по убыванию). Задай пороги для
+              жёсткого фильтра.
             </div>
           )}
 

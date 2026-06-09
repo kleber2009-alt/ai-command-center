@@ -63,7 +63,7 @@ const envSchema = z.object({
   // patient_discovery/instagram-search-reels (actor id). Вход {query, maxPages},
   // cookieless. Можно заменить на 'data-slayer~instagram-search-reels' и др.
   APIFY_REELS_SEARCH_ACTOR: z.string().default('TxU0ZBQIHdR20dr9C'),
-  APIFY_REELS_SEARCH_MAX_PAGES: z.coerce.number().default(2),
+  APIFY_REELS_SEARCH_MAX_PAGES: z.coerce.number().default(4),
   // Таймаут вызова reels-search актора (мс). Больше дефолтного APIFY_TIMEOUT_MS
   // из-за возможного холодного старта run-sync актора. Должен быть < maxDuration.
   APIFY_REELS_SEARCH_TIMEOUT_MS: z.coerce.number().default(150_000),

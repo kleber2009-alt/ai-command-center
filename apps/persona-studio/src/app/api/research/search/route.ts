@@ -140,14 +140,15 @@ export async function POST(req: NextRequest) {
   }
 
   // Авто-режим «самое популярное»: если пользователь не задал НИ ОДНОЙ
-  // метрики — ищем самый просматриваемый контент (порог 1 млн просмотров,
-  // сортировка по просмотрам). Так пустой запрос не возвращает мусор и не
-  // схлопывается в ноль из-за случайных жёстких фильтров.
-  const AUTO_POPULAR_MIN_VIEWS = 1_000_000;
+  // метрики — НЕ режем жёстким порогом (иначе по узким нишам выдача
+  // схлопывается в пару рилсов), а просто сортируем по убыванию просмотров
+  // и отдаём верхние `limit`. Так всегда возвращается полная страница,
+  // самые просматриваемые — сверху. Жёсткие пороги применяются только когда
+  // пользователь явно вписал значения (или выбрал пресет).
   const noMetrics =
     body.minViews === 0 && body.minLikes === 0 && body.minComments === 0 && body.minShares === 0;
   const autoPopular = noMetrics;
-  const effMinViews = noMetrics ? AUTO_POPULAR_MIN_VIEWS : body.minViews;
+  const effMinViews = body.minViews; // 0 при autoPopular → без порога
   const effSortBy: z.infer<typeof SortField> = noMetrics ? 'views' : body.sortBy || 'viral_score';
 
   const filtersForCache: ResearchFilters = {
