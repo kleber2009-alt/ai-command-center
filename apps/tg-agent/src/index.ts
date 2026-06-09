@@ -31,6 +31,7 @@ import { createEmbeddingClient } from './memory/embeddings.js';
 import { createQdrantClient } from './memory/qdrant.js';
 import { createMemoryService, createNoopMemoryService, type MemoryService } from './memory/service.js';
 import { createNotifier } from './notifier.js';
+import { createOfficeHqClient } from './office_hq.js';
 import { registerOwnerCommands } from './owner_commands.js';
 import { startReportScheduler, type ReporterHandle } from './reporter.js';
 import { createResponder } from './responder.js';
@@ -41,13 +42,17 @@ async function main(): Promise<void> {
   const promptConfig = createPromptConfig(dirname(resolve(config.databasePath)));
 
   const classifier = createClassifier({
-    apiKey: config.anthropicApiKey,
+    apiKey: config.llmApiKey,
+    baseUrl: config.llmBaseUrl,
     model: config.classifierModel,
+    reasoningEffort: config.llmReasoningEffort,
     promptConfig,
   });
   const responder = createResponder({
-    apiKey: config.anthropicApiKey,
+    apiKey: config.llmApiKey,
+    baseUrl: config.llmBaseUrl,
     model: config.responderModel,
+    reasoningEffort: config.llmReasoningEffort,
     promptConfig,
   });
 
@@ -108,8 +113,15 @@ async function main(): Promise<void> {
   // /chats, /digest, /context win over the generic owner-DM branch
   // in bot.ts. Force-reply'd edit-prompt replies still flow through.
   const digestGenerator = createDigestGenerator({
-    apiKey: config.anthropicApiKey,
+    apiKey: config.llmApiKey,
+    baseUrl: config.llmBaseUrl,
     model: config.digestModel,
+  });
+  const officeHq = createOfficeHqClient({
+    baseUrl: config.officeHqBaseUrl,
+    webUrl: config.officeHqWebUrl,
+    timeoutMs: config.officeHqTimeoutMs,
+    logger,
   });
   if (config.digestEnabled && config.ownerTelegramId !== undefined) {
     registerOwnerCommands({
@@ -122,11 +134,19 @@ async function main(): Promise<void> {
       logger,
       memory,
       db,
+      officeHq,
     });
   } else if (!config.digestEnabled) {
     logger.info('digest disabled (DIGEST_ENABLED=false)');
   } else {
     logger.warn('digest disabled — OWNER_TELEGRAM_ID is not set');
+  }
+
+  if (officeHq.enabled) {
+    logger.info('office HQ transport enabled', {
+      baseUrl: config.officeHqBaseUrl,
+      webUrl: config.officeHqWebUrl,
+    });
   }
 
   const health = createHealthMonitor({

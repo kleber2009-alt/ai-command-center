@@ -1,4 +1,4 @@
-import type { Bot, Context, Filter } from 'grammy';
+import { InlineKeyboard, type Bot, type Context, type Filter } from 'grammy';
 
 import type { ChatService } from './db/chats.js';
 import type { DigestStore } from './db/digests.js';
@@ -14,6 +14,7 @@ import {
 import type { Db } from './db/index.js';
 import type { Logger } from './logger.js';
 import type { MemoryService } from './memory/service.js';
+import type { OfficeHqClient, OfficeHqView } from './office_hq.js';
 
 export interface OwnerCommandsDeps {
   bot: Bot;
@@ -25,53 +26,70 @@ export interface OwnerCommandsDeps {
   logger: Logger;
   memory: MemoryService;
   db: Db;
+  officeHq: OfficeHqClient;
   dupHandle?: DupSchedulerHandle;
 }
 
-// Help blurb shown for /help. Kept terse — the owner already knows
-// the bot exists; he just needs the surface area on one screen.
-const HELP_TEXT = [
-  'Команды (только для владельца, в этом DM):',
-  '',
-  '/pulse — сводки по всем чатам за последние N часов (по умолчанию 24).',
-  '/pulse 48 — то же самое с произвольным окном в часах.',
-  '/chats — список чатов: название, id, последняя сводка, кол-во сообщений за сутки.',
-  '/digest <chat_id> — сгенерировать и прислать свежую сводку по одному чату.',
-  '/digest <chat_id> 12 — то же, с явным окном в часах.',
-  '/context <chat_id> <текст> — задать project_context для чата: что важно владельцу',
-  '  (продукты, ICP, на что обращать внимание). Используется в каждой сводке.',
-  '/memory <запрос> [--chat=X --source=Y --since=7d --limit=N] — семантический поиск.',
-  '  По всем источникам (tg-agent + transcribe). Фильтры опциональны.',
-  '  Пример: /memory возражения по цене --chat=AICEX --since=7d',
-  '/duplicates [дней=7] — найти повторяющиеся вопросы от разных людей.',
-  '  Бот ищет кластеры близких по смыслу сообщений (sim ≥ 0.75) с ≥ 2 разными авторами.',
-  '  Авто-сводка приходит раз в сутки сама — команда для ручного запроса.',
-  '/help — это сообщение.',
-].join('\n');
+function buildHelpText(hqEnabled: boolean): string {
+  const lines = [
+    'Команды (только для владельца, в этом DM):',
+    '',
+    '/menu — меню с кнопками для быстрых действий.',
+    '/pulse — сводки по всем чатам за последние N часов (по умолчанию 24).',
+    '/pulse 48 — то же самое с произвольным окном в часах.',
+    '/chats — список чатов: название, id, последняя сводка, кол-во сообщений за сутки.',
+    '/digest <chat_id> — сгенерировать и прислать свежую сводку по одному чату.',
+    '/digest <chat_id> 12 — то же, с явным окном в часах.',
+    '/context <chat_id> <текст> — задать project_context для чата: что важно владельцу',
+    '  (продукты, ICP, на что обращать внимание). Используется в каждой сводке.',
+    '/memory <запрос> [--chat=X --source=Y --since=7d --limit=N] — семантический поиск.',
+    '  По всем источникам (tg-agent + transcribe). Фильтры опциональны.',
+    '  Пример: /memory возражения по цене --chat=AICEX --since=7d',
+    '/duplicates [дней=7] — найти повторяющиеся вопросы от разных людей.',
+    '  Бот ищет кластеры близких по смыслу сообщений (sim ≥ 0.75) с ≥ 2 разными авторами.',
+    '  Авто-сводка приходит раз в сутки сама — команда для ручного запроса.',
+  ]
+
+  if (hqEnabled) {
+    lines.push(
+      '',
+      'HQ surface:',
+      '/hq — протокол штаба и краткая помощь.',
+      '/brief — короткий CEO-ready штабной бриф.',
+      '/standup — сводка по всей агентской команде.',
+      '/focus — weekly focus + p0/p1 очередь.',
+      '/escalations — только то, что имеет право прерывать день.',
+      '/decide — pending decisions и путь в Web Office.',
+    )
+  }
+
+  lines.push('', '/help — это сообщение.')
+  return lines.join('\n')
+}
 
 // Register handlers. Must be wired BEFORE bot.on('message:text') in
 // bot.ts so commands take priority over the generic handler. We
 // achieve that by registering on the same Bot instance from index.ts
 // before createBot() is called — see index.ts ordering.
 export function registerOwnerCommands(deps: OwnerCommandsDeps): void {
-  const { bot, ownerTelegramId, chats, store, generator, windowHours, logger, memory, db } = deps;
+  const { bot, ownerTelegramId, chats, store, generator, windowHours, logger, memory, db, officeHq } = deps;
 
   const isOwnerDm = (ctx: Context): boolean =>
     ctx.chat?.type === 'private' && ctx.from?.id === ownerTelegramId;
 
   bot.command('help', async (ctx) => {
     if (!isOwnerDm(ctx)) return;
-    await ctx.reply(HELP_TEXT, { link_preview_options: { is_disabled: true } });
+    await ctx.reply(buildHelpText(officeHq.enabled), { link_preview_options: { is_disabled: true } });
   });
 
-  bot.command('pulse', async (ctx) => {
-    if (!isOwnerDm(ctx)) return;
-    const arg = ctx.match?.toString().trim();
-    const hours = parseWindowArg(arg, windowHours);
-    if (hours === null) {
-      await ctx.reply('Использование: /pulse [окно_в_часах], например /pulse 24');
-      return;
-    }
+  if (officeHq.enabled) {
+    registerOfficeHqCommands({ bot, isOwnerDm, officeHq, logger });
+  }
+
+  // Extracted action bodies so both the slash command and the inline
+  // menu buttons can invoke them. `ctx.reply` posts to the owner DM in
+  // both the command and callback-query contexts.
+  async function runPulse(ctx: Context, hours: number): Promise<void> {
     const list = chats.listAll();
     if (list.length === 0) {
       await ctx.reply('Бот ещё не видел ни одного чата.');
@@ -108,10 +126,9 @@ export function registerOwnerCommands(deps: OwnerCommandsDeps): void {
       }
     }
     await ctx.reply(`Готово. Отправлено: ${sent}, пропущено: ${skipped}.`);
-  });
+  }
 
-  bot.command('chats', async (ctx) => {
-    if (!isOwnerDm(ctx)) return;
+  async function runChats(ctx: Context): Promise<void> {
     const list = chats.listAll();
     if (list.length === 0) {
       await ctx.reply('Чаты не зарегистрированы.');
@@ -136,6 +153,101 @@ export function registerOwnerCommands(deps: OwnerCommandsDeps): void {
     for (const chunk of splitForTelegram(lines.join('\n').trim())) {
       await ctx.reply(chunk, { link_preview_options: { is_disabled: true } });
     }
+  }
+
+  async function runDuplicates(ctx: Context, days: number): Promise<void> {
+    if (!memory.enabled) {
+      await ctx.reply('Память отключена — детектор дубликатов не запустится.');
+      return;
+    }
+    await ctx.reply(`🔍 Ищу дубликаты вопросов за ${days} дней…`);
+    try {
+      const clusters = await findDuplicates(
+        { db, memory, chats, logger },
+        { daysBack: days, minUsers: 2, minSimilarity: 0.75 },
+      );
+      if (clusters.length === 0) {
+        await ctx.reply(`За ${days} дн дубликатов не нашёл (порог: 2+ уникальных автора, sim ≥ 0.75).`);
+        return;
+      }
+      // For on-demand /duplicates we surface ALL clusters (don't
+      // apply the 7-day cooldown that the scheduler uses), but
+      // still record them so the scheduler skips duplicates next
+      // run.
+      let sent = 0;
+      for (const cluster of clusters) {
+        const md = renderClusterMarkdown(cluster);
+        for (const chunk of splitForTelegram(md)) {
+          await ctx.reply(chunk, {
+            parse_mode: 'HTML',
+            link_preview_options: { is_disabled: true },
+          });
+        }
+        const hash = clusterHash(cluster);
+        if (!wasSentRecently(db, hash, 7)) recordAlert(db, cluster);
+        sent++;
+        if (sent >= 10) break;
+      }
+      await ctx.reply(`Готово. Кластеров: ${clusters.length}, показано: ${sent}.`);
+    } catch (err) {
+      logger.error('/duplicates failed', {
+        error: err instanceof Error ? err.message : String(err),
+      });
+      await ctx.reply('Ошибка детектора. Проверь логи.');
+    }
+  }
+
+  // Inline-keyboard menu shown by /menu and /start. Only argument-free
+  // actions become buttons; commands that need input (/digest,
+  // /context, /memory) stay text-only and are listed in /help.
+  function buildMainMenu(): InlineKeyboard {
+    const kb = new InlineKeyboard()
+      .text('📊 Пульс 24ч', 'menu:pulse')
+      .text('💬 Чаты', 'menu:chats')
+      .row()
+      .text('🔁 Дубликаты', 'menu:dups')
+      .text('ℹ️ Помощь', 'menu:help');
+    if (officeHq.enabled) {
+      kb.row()
+        .text('📋 Бриф', 'menu:hq:brief')
+        .text('🧑‍🤝‍🧑 Стендап', 'menu:hq:standup')
+        .row()
+        .text('🎯 Фокус', 'menu:hq:focus')
+        .text('🚨 Эскалации', 'menu:hq:escalations')
+        .row()
+        .text('✅ Решения', 'menu:hq:decisions');
+    }
+    return kb;
+  }
+
+  const MENU_TEXT = 'Меню AICEX-агента — выбери действие:';
+
+  async function showMenu(ctx: Context): Promise<void> {
+    await ctx.reply(MENU_TEXT, {
+      reply_markup: buildMainMenu(),
+      link_preview_options: { is_disabled: true },
+    });
+  }
+
+  bot.command('menu', async (ctx) => {
+    if (!isOwnerDm(ctx)) return;
+    await showMenu(ctx);
+  });
+
+  bot.command('pulse', async (ctx) => {
+    if (!isOwnerDm(ctx)) return;
+    const arg = ctx.match?.toString().trim();
+    const hours = parseWindowArg(arg, windowHours);
+    if (hours === null) {
+      await ctx.reply('Использование: /pulse [окно_в_часах], например /pulse 24');
+      return;
+    }
+    await runPulse(ctx, hours);
+  });
+
+  bot.command('chats', async (ctx) => {
+    if (!isOwnerDm(ctx)) return;
+    await runChats(ctx);
   });
 
   bot.command('digest', async (ctx) => {
@@ -297,50 +409,54 @@ export function registerOwnerCommands(deps: OwnerCommandsDeps): void {
 
   bot.command('duplicates', async (ctx) => {
     if (!isOwnerDm(ctx)) return;
-    if (!memory.enabled) {
-      await ctx.reply('Память отключена — детектор дубликатов не запустится.');
-      return;
-    }
     const arg = ctx.match?.toString().trim() ?? '';
     const days = arg ? Number(arg) : 7;
     if (!Number.isFinite(days) || days < 1 || days > 90) {
       await ctx.reply('Использование: /duplicates [дней=7]\nДиапазон 1..90.');
       return;
     }
-    await ctx.reply(`🔍 Ищу дубликаты вопросов за ${days} дней…`);
+    await runDuplicates(ctx, days);
+  });
+
+  // Inline-menu button taps. `menu:<action>` for the local actions and
+  // `menu:hq:<view>` for the office-HQ surface. Owner-only, like every
+  // command above. Always answerCallbackQuery to clear Telegram's
+  // loading spinner.
+  bot.callbackQuery(/^menu:/, async (ctx) => {
+    if (ctx.from?.id !== ownerTelegramId) {
+      await ctx.answerCallbackQuery({ text: 'Только владелец', show_alert: true });
+      return;
+    }
+    const data = ctx.callbackQuery.data ?? '';
     try {
-      const clusters = await findDuplicates(
-        { db, memory, chats, logger },
-        { daysBack: days, minUsers: 2, minSimilarity: 0.75 },
-      );
-      if (clusters.length === 0) {
-        await ctx.reply(`За ${days} дн дубликатов не нашёл (порог: 2+ уникальных автора, sim ≥ 0.75).`);
-        return;
+      if (data === 'menu:pulse') {
+        await ctx.answerCallbackQuery({ text: 'Считаю пульс…' });
+        await runPulse(ctx, windowHours);
+      } else if (data === 'menu:chats') {
+        await ctx.answerCallbackQuery();
+        await runChats(ctx);
+      } else if (data === 'menu:dups') {
+        await ctx.answerCallbackQuery({ text: 'Ищу дубликаты…' });
+        await runDuplicates(ctx, 7);
+      } else if (data === 'menu:help') {
+        await ctx.answerCallbackQuery();
+        await ctx.reply(buildHelpText(officeHq.enabled), {
+          reply_markup: buildMainMenu(),
+          link_preview_options: { is_disabled: true },
+        });
+      } else if (data.startsWith('menu:hq:') && officeHq.enabled) {
+        await ctx.answerCallbackQuery();
+        const view = data.slice('menu:hq:'.length) as OfficeHqView;
+        await replyWithOfficeHqView({ ctx, officeHq, logger, view });
+      } else {
+        await ctx.answerCallbackQuery();
       }
-      // For on-demand /duplicates we surface ALL clusters (don't
-      // apply the 7-day cooldown that the scheduler uses), but
-      // still record them so the scheduler skips duplicates next
-      // run.
-      let sent = 0;
-      for (const cluster of clusters) {
-        const md = renderClusterMarkdown(cluster);
-        for (const chunk of splitForTelegram(md)) {
-          await ctx.reply(chunk, {
-            parse_mode: 'HTML',
-            link_preview_options: { is_disabled: true },
-          });
-        }
-        const hash = clusterHash(cluster);
-        if (!wasSentRecently(db, hash, 7)) recordAlert(db, cluster);
-        sent++;
-        if (sent >= 10) break;
-      }
-      await ctx.reply(`Готово. Кластеров: ${clusters.length}, показано: ${sent}.`);
     } catch (err) {
-      logger.error('/duplicates failed', {
+      logger.error('menu callback failed', {
+        data,
         error: err instanceof Error ? err.message : String(err),
       });
-      await ctx.reply('Ошибка детектора. Проверь логи.');
+      await ctx.reply('Не получилось выполнить действие. Проверь логи.').catch(() => {});
     }
   });
 
@@ -349,11 +465,110 @@ export function registerOwnerCommands(deps: OwnerCommandsDeps): void {
   // DMs — we just append our own help line after acknowledging.
   bot.command('start', async (ctx) => {
     if (!isOwnerDm(ctx)) return;
-    await ctx.reply(
-      `Бот готов. ${HELP_TEXT}`,
-      { link_preview_options: { is_disabled: true } },
-    );
+    await ctx.reply('Бот готов. Жми кнопки или используй команды (/help).', {
+      reply_markup: buildMainMenu(),
+      link_preview_options: { is_disabled: true },
+    });
   });
+
+  // Register the native Telegram command list, scoped to the owner's
+  // private chat so group members don't see owner-only commands in
+  // their "/" menu. Fire-and-forget — a failed setMyCommands must not
+  // block bot startup. The command list mirrors /help.
+  void registerOwnerCommandMenu(bot, ownerTelegramId, officeHq.enabled).catch((err) => {
+    logger.warn('setMyCommands failed', {
+      error: err instanceof Error ? err.message : String(err),
+    });
+  });
+}
+
+async function registerOwnerCommandMenu(
+  bot: Bot,
+  ownerTelegramId: number,
+  hqEnabled: boolean,
+): Promise<void> {
+  const commands = [
+    { command: 'menu', description: 'Меню с кнопками' },
+    { command: 'pulse', description: 'Сводки по всем чатам за 24ч' },
+    { command: 'chats', description: 'Список чатов' },
+    { command: 'digest', description: 'Сводка по одному чату: /digest <chat_id>' },
+    { command: 'context', description: 'Задать контекст чата: /context <chat_id> <текст>' },
+    { command: 'memory', description: 'Семантический поиск: /memory <запрос>' },
+    { command: 'duplicates', description: 'Повторяющиеся вопросы' },
+    ...(hqEnabled
+      ? [
+          { command: 'brief', description: 'Штабной бриф' },
+          { command: 'standup', description: 'Стендап команды агентов' },
+          { command: 'focus', description: 'Weekly focus + p0/p1' },
+          { command: 'escalations', description: 'Эскалации' },
+          { command: 'decide', description: 'Pending decisions' },
+        ]
+      : []),
+    { command: 'help', description: 'Список всех команд' },
+  ];
+  await bot.api.setMyCommands(commands, {
+    scope: { type: 'chat', chat_id: ownerTelegramId },
+  });
+}
+
+function registerOfficeHqCommands({
+  bot,
+  isOwnerDm,
+  officeHq,
+  logger,
+}: {
+  bot: Bot
+  isOwnerDm(ctx: Context): boolean
+  officeHq: OfficeHqClient
+  logger: Logger
+}) {
+  const commandToView: Array<{ command: string; view: OfficeHqView }> = [
+    { command: 'hq', view: 'help' },
+    { command: 'brief', view: 'brief' },
+    { command: 'standup', view: 'standup' },
+    { command: 'focus', view: 'focus' },
+    { command: 'escalations', view: 'escalations' },
+    { command: 'decide', view: 'decisions' },
+  ]
+
+  for (const item of commandToView) {
+    bot.command(item.command, async (ctx) => {
+      if (!isOwnerDm(ctx)) return
+      await replyWithOfficeHqView({ ctx, officeHq, logger, view: item.view })
+    })
+  }
+}
+
+async function replyWithOfficeHqView({
+  ctx,
+  officeHq,
+  logger,
+  view,
+}: {
+  ctx: Context
+  officeHq: OfficeHqClient
+  logger: Logger
+  view: OfficeHqView
+}) {
+  try {
+    const payload = await officeHq.fetchView(view)
+    const suffix =
+      view === 'decisions' && officeHq.webUrl
+        ? `\n\nOpen Web Office: ${officeHq.webUrl.replace(/\/+$/, '')}/office/decisions`
+        : ''
+    for (const chunk of splitForTelegram(`${payload.text}${suffix}`)) {
+      await ctx.reply(chunk, { link_preview_options: { is_disabled: true } })
+    }
+  } catch (error) {
+    logger.error('office HQ command failed', {
+      view,
+      error: error instanceof Error ? error.message : String(error),
+    })
+    await ctx.reply(
+      'HQ surface сейчас недоступен. Проверь OFFICE_HQ_BASE_URL и доступность command-center.',
+      { link_preview_options: { is_disabled: true } },
+    )
+  }
 }
 
 function parseWindowArg(raw: string | undefined, fallback: number): number | null {

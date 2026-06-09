@@ -1,10 +1,11 @@
 # tg-agent — CLAUDE.md
 
 Single-process Node.js + TypeScript service that joins Telegram groups as a
-regular bot, reads every text message, classifies its intent with Claude
-Haiku, generates replies in the owner's tone-of-voice when the decision
-engine says so, updates per-user lead status, DMs the owner on hot leads,
-and serves an admin dashboard on the same process.
+regular bot, reads every text message, classifies its intent with an
+OpenAI-compatible LLM (codex.sale, `gpt-5.4-mini` by default), generates
+replies in the owner's tone-of-voice when the decision engine says so,
+updates per-user lead status, DMs the owner on hot leads, and serves an
+admin dashboard on the same process.
 
 Everything lives in **one container with one SQLite file** — no external
 DB, no Vercel, no Supabase.
@@ -61,12 +62,19 @@ Hono HTTP server (`src/admin/server.ts`) + vanilla-JS SPA
 
 Three SPA tabs: leads/chats, **drafts** (inline approval queue), **analytics** (`src/db/stats.ts` — daily classifications, leads-by-status, response counts).
 
+## HQ owner commands
+
+When `OFFICE_HQ_BASE_URL` is set, owner-DM commands `/hq`, `/brief`,
+`/standup`, `/focus`, `/escalations`, `/decide` become a thin transport
+layer over `apps/command-center` office HQ API. The Telegram bot stays a
+messaging surface; the office logic remains centralized in command-center.
+
 ## Classifier (`src/classifier.ts`)
 
-Claude Haiku 4.5 + tool-use, 10 classes:
+`gpt-5.4-mini` (codex.sale, OpenAI-compatible) + function-calling, 10 classes:
 `GENERAL_CHAT`, `QUESTION`, `PRODUCT_INTEREST`, `PRICE_REQUEST`, `OBJECTION`, `BUYING_INTENT`, `NEGATIVE`, `SUPPORT_REQUEST`, `OWNER_REQUEST`, `SPAM`.
 
-Anthropic prompt caching is enabled on the (large, static) system prompt + tool definitions to keep per-message cost low at scale.
+The forced `classify` tool returns structured JSON. The static system prompt is the cacheable prefix — codex.sale applies automatic prompt caching (hits surface under `usage.prompt_tokens_details.cached_tokens`). `reasoning_effort` defaults to `low` to keep per-message latency + cost down.
 
 ## Decision engine (`src/decision.ts`)
 
@@ -76,7 +84,7 @@ Maps class → `Action`: `IGNORE`, `REPLY`, `REPLY_SOFT`, `REPLY_AND_NOTIFY`, `N
 
 ## Responder (`src/responder.ts`)
 
-Claude Haiku 4.5 with a per-class strategy. Tone + strategies live in `src/prompts.ts`. Knowledge base (`src/knowledge/knowledge_base.md`, plain markdown the owner edits) is embedded into the system prompt with prompt caching — **the responder may only state facts from this file**.
+`gpt-5.4-mini` (codex.sale) with a per-class strategy. Tone + strategies live in `src/prompts.ts`. Knowledge base (`src/knowledge/knowledge_base.md`, plain markdown the owner edits) is embedded into the system prompt (cacheable prefix) — **the responder may only state facts from this file**. `reasoning_effort` defaults to `low`.
 
 ## Drafts + inline approval (`src/db/drafts.ts`)
 
@@ -95,7 +103,7 @@ Bot DMs `OWNER_TELEGRAM_ID` on `REPLY_AND_NOTIFY` / `NOTIFY_ONLY` / `DRAFT_FOR_O
 
 ## Health monitor (`src/health.ts`)
 
-Tracks consecutive Anthropic / Telegram failures. After `HEALTH_FAILURE_THRESHOLD` in a row the bot DMs the owner; cooldown between repeats is `HEALTH_ALERT_COOLDOWN_MINUTES`. Recovery DM sent when the channel comes back.
+Tracks consecutive codex.sale / Telegram failures. After `HEALTH_FAILURE_THRESHOLD` in a row the bot DMs the owner; cooldown between repeats is `HEALTH_ALERT_COOLDOWN_MINUTES`. Recovery DM sent when the channel comes back.
 
 ## Daily backup (`src/backup.ts`)
 
@@ -108,13 +116,22 @@ Per-chat `tg_chats.auto_reply` toggled from the admin panel. When OFF the bot st
 ## Env (`.env.example`)
 
 ```
-TELEGRAM_BOT_TOKEN, ANTHROPIC_API_KEY, OWNER_TELEGRAM_ID, ALLOWED_CHAT_IDS,
+TELEGRAM_BOT_TOKEN, CODEX_API_KEY, CODEX_BASE_URL, CODEX_REASONING_EFFORT,
+OWNER_TELEGRAM_ID, ALLOWED_CHAT_IDS,
 CONFIDENCE_THRESHOLD, LOG_LEVEL, CLASSIFIER_MODEL, RESPONDER_MODEL,
 DATABASE_PATH, ADMIN_PORT, ADMIN_USERNAME, ADMIN_PASSWORD,
 ADMIN_SESSION_SECRET, ADMIN_PUBLIC_URL,
 BACKUP_INTERVAL_HOURS, HEALTH_FAILURE_THRESHOLD, HEALTH_ALERT_COOLDOWN_MINUTES,
-IGNORED_USER_IDS
+OFFICE_HQ_BASE_URL, OFFICE_HQ_WEB_URL, OFFICE_HQ_TIMEOUT_MS,
+IGNORED_USER_IDS, OPENAI_API_KEY (только для памяти/эмбеддингов)
 ```
+
+> **LLM-провайдер**: `CODEX_API_KEY` — ключ codex.sale (`sk-inv-…`).
+> `CODEX_BASE_URL` по умолчанию `https://codex.sale/v1`,
+> `CODEX_REASONING_EFFORT` — `low|medium|high` (по умолчанию `low`).
+> Для обратной совместимости, если `CODEX_API_KEY` не задан, ключ берётся
+> из `ANTHROPIC_API_KEY`. Память (Qdrant) использует отдельный
+> `OPENAI_API_KEY` — codex.sale не отдаёт эмбеддинг-модели.
 
 ## BotFather setup
 
@@ -126,4 +143,10 @@ See `apps/tg-agent/README.md` for the full deploy walkthrough including Caddy / 
 
 ## Models
 
-Both classifier and responder use `claude-haiku-4-5-20251001`. Fast + cheap; appropriate for high-volume short turns.
+All LLM calls go to **codex.sale** (OpenAI-compatible `/v1`, key `sk-inv-…`):
+
+- Classifier + responder: `gpt-5.4-mini` (`CLASSIFIER_MODEL` / `RESPONDER_MODEL`).
+- Daily digest: `gpt-5.5` (`DIGEST_MODEL`), `reasoning_effort=medium`.
+- Other available models: `gpt-5.4`, `gpt-5.5` (context 128k).
+
+Embeddings for memory stay on OpenAI (`OPENAI_API_KEY`, `text-embedding-3-small`) — codex.sale has no embedding endpoint. The shared OpenAI-compatible client lives in `src/llm.ts`.

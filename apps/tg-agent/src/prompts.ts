@@ -69,15 +69,14 @@ export const RESPONDER_STRATEGIES: Record<string, string> = {
 // The responder system prompt is split into two pieces:
 //
 //   1. Static — tone of voice + knowledge base. Same bytes across
-//      every call as long as knowledge_base.md doesn't change.
-//      Marked with cache_control in responder.ts.
+//      every call as long as knowledge_base.md doesn't change. Sent
+//      as the system message in responder.ts.
 //   2. Dynamic — per-class strategy + the user's message. Lives in
-//      the user turn, after the cache breakpoint.
+//      the user turn, after the cacheable prefix.
 //
 // This keeps the cacheable prefix identical regardless of which class
-// the classifier picked. Until the KB grows past Haiku 4.5's 4096-
-// token minimum the cache silently won't activate, but the structure
-// is correct for when it does.
+// the classifier picked, so codex.sale's automatic prompt caching can
+// serve it from cache on repeat calls.
 
 export function buildResponderSystemPrompt(knowledgeBase: string, tone?: string): string {
   return `Ты — AI-ассистент Ильи Палии в Telegram-чате.
