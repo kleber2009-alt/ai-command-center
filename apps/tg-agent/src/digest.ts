@@ -1,6 +1,7 @@
-import Anthropic from '@anthropic-ai/sdk';
+import OpenAI from 'openai';
 import { type Bot } from 'grammy';
 
+import { createLlmClient, type ReasoningEffort } from './llm.js';
 import type { ChatService } from './db/chats.js';
 import type { DigestPayload, DigestStore, MessageForDigest } from './db/digests.js';
 import type { Logger } from './logger.js';
@@ -20,13 +21,15 @@ const TOOL_NAME = 'report_digest';
 // stays short (≤7) so the rendered DM fits in one Telegram message
 // most of the time. The model decides what's worth listing —
 // empty arrays are valid and common (a quiet chat has no decisions).
-const digestTool: Anthropic.Tool = {
-  name: TOOL_NAME,
-  description:
-    'Возвращает структурированную сводку по чату для владельца. Все строки на русском.',
-  input_schema: {
-    type: 'object',
-    properties: {
+const digestTool: OpenAI.Chat.Completions.ChatCompletionTool = {
+  type: 'function',
+  function: {
+    name: TOOL_NAME,
+    description:
+      'Возвращает структурированную сводку по чату для владельца. Все строки на русском.',
+    parameters: {
+      type: 'object',
+      properties: {
       gist: {
         type: 'string',
         description:
@@ -81,16 +84,17 @@ const digestTool: Anthropic.Tool = {
           'Что владелец легко может пропустить: тихие возражения, скрытое недовольство, оборванные нитки разговора, упоминания конкурентов, намёки на отток, тон, который может перерасти в проблему. Без панических преувеличений.',
       },
     },
-    required: [
-      'gist',
-      'topics',
-      'open_questions',
-      'decisions',
-      'project_signals',
-      'follow_ups',
-      'links',
-      'blind_spots',
-    ],
+      required: [
+        'gist',
+        'topics',
+        'open_questions',
+        'decisions',
+        'project_signals',
+        'follow_ups',
+        'links',
+        'blind_spots',
+      ],
+    },
   },
 };
 
@@ -108,7 +112,9 @@ const SYSTEM_PROMPT = `Ты — аналитик-помощник владель
 
 export interface DigestGeneratorOptions {
   apiKey: string;
+  baseUrl: string;
   model: string;
+  reasoningEffort?: ReasoningEffort;
 }
 
 export interface DigestGenerator {
@@ -124,9 +130,11 @@ export interface GenerateInput {
 
 export function createDigestGenerator({
   apiKey,
+  baseUrl,
   model,
+  reasoningEffort = 'medium',
 }: DigestGeneratorOptions): DigestGenerator {
-  const client = new Anthropic({ apiKey });
+  const client = createLlmClient({ apiKey, baseUrl });
 
   return {
     async generate(input): Promise<DigestPayload> {
@@ -149,29 +157,33 @@ export function createDigestGenerator({
         transcript,
       ].join('\n');
 
-      const response = await client.messages.create({
+      const response = await client.chat.completions.create({
         model,
-        max_tokens: 2048,
-        system: [
-          {
-            type: 'text',
-            text: SYSTEM_PROMPT,
-            cache_control: { type: 'ephemeral' },
-          },
-        ],
+        // Reasoning + the structured payload share the budget on
+        // gpt-5.x; 4096 is comfortable for an 8-array digest.
+        max_completion_tokens: 4096,
+        reasoning_effort: reasoningEffort,
         tools: [digestTool],
-        tool_choice: { type: 'tool', name: TOOL_NAME },
-        messages: [{ role: 'user', content: userBody }],
+        tool_choice: { type: 'function', function: { name: TOOL_NAME } },
+        messages: [
+          { role: 'system', content: SYSTEM_PROMPT },
+          { role: 'user', content: userBody },
+        ],
       });
 
-      const toolUse = response.content.find(
-        (block): block is Anthropic.ToolUseBlock =>
-          block.type === 'tool_use' && block.name === TOOL_NAME,
+      const toolCall = response.choices[0]?.message?.tool_calls?.find(
+        (tc) => tc.type === 'function' && tc.function.name === TOOL_NAME,
       );
-      if (!toolUse) {
-        throw new Error('Digest model did not return a tool_use block');
+      if (!toolCall || toolCall.type !== 'function') {
+        throw new Error('Digest model did not return a tool call');
       }
-      return parsePayload(toolUse.input);
+      let parsed: unknown;
+      try {
+        parsed = JSON.parse(toolCall.function.arguments);
+      } catch {
+        throw new Error('Digest model returned non-JSON tool arguments');
+      }
+      return parsePayload(parsed);
     },
   };
 }

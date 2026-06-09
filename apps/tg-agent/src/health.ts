@@ -3,13 +3,13 @@ import type { Bot } from 'grammy';
 import type { Logger } from './logger.js';
 
 // Channels we track independently — classifier and responder both hit
-// Anthropic so they often fail together, but reporting separately
+// codex.sale so they often fail together, but reporting separately
 // helps the owner figure out whether a per-request retry would help.
 export type HealthChannel = 'classifier' | 'responder' | 'telegram';
 
 const HEADERS: Record<HealthChannel, string> = {
-  classifier: 'Classifier (Anthropic)',
-  responder: 'Responder (Anthropic)',
+  classifier: 'Classifier (Codex)',
+  responder: 'Responder (Codex)',
   telegram: 'Telegram API',
 };
 
@@ -107,7 +107,7 @@ export function createHealthMonitor(deps: HealthDeps): HealthMonitor {
             `Подряд ошибок: ${state.consecutive_failures}\n` +
             `Последняя: ${truncate(state.last_error, 300)}\n\n` +
             'Бот продолжает классифицировать, но не отвечает в чатах ' +
-            'пока не восстановится. Проверьте API-ключ и статус Anthropic.',
+            'пока не восстановится. Проверьте API-ключ и статус codex.sale.',
         );
       }
     },

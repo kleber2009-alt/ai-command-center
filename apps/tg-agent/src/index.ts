@@ -42,13 +42,17 @@ async function main(): Promise<void> {
   const promptConfig = createPromptConfig(dirname(resolve(config.databasePath)));
 
   const classifier = createClassifier({
-    apiKey: config.anthropicApiKey,
+    apiKey: config.llmApiKey,
+    baseUrl: config.llmBaseUrl,
     model: config.classifierModel,
+    reasoningEffort: config.llmReasoningEffort,
     promptConfig,
   });
   const responder = createResponder({
-    apiKey: config.anthropicApiKey,
+    apiKey: config.llmApiKey,
+    baseUrl: config.llmBaseUrl,
     model: config.responderModel,
+    reasoningEffort: config.llmReasoningEffort,
     promptConfig,
   });
 
@@ -109,7 +113,8 @@ async function main(): Promise<void> {
   // /chats, /digest, /context win over the generic owner-DM branch
   // in bot.ts. Force-reply'd edit-prompt replies still flow through.
   const digestGenerator = createDigestGenerator({
-    apiKey: config.anthropicApiKey,
+    apiKey: config.llmApiKey,
+    baseUrl: config.llmBaseUrl,
     model: config.digestModel,
   });
   const officeHq = createOfficeHqClient({

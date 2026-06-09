@@ -1,5 +1,4 @@
-import Anthropic from '@anthropic-ai/sdk';
-
+import { createLlmClient, cacheReadTokens, type ReasoningEffort } from './llm.js';
 import { loadKnowledgeBase } from './knowledge/index.js';
 import type { PromptConfig } from './prompt-config.js';
 import {
@@ -10,7 +9,9 @@ import type { MessageClass } from './types.js';
 
 export interface ResponderOptions {
   apiKey: string;
+  baseUrl: string;
   model: string;
+  reasoningEffort?: ReasoningEffort;
   promptConfig?: PromptConfig;
 }
 
@@ -37,33 +38,35 @@ export interface Responder {
   generateWithStats(input: RespondInput): Promise<ResponderResult>;
 }
 
-const MAX_REPLY_TOKENS = 350;
+// Reasoning tokens on gpt-5.x share the completion budget. We want
+// short replies (the prompt enforces that), but the cap must leave
+// room for low-effort reasoning on top of the visible answer, or the
+// model can spend the whole budget thinking and return empty.
+const MAX_REPLY_TOKENS = 900;
 
-export function createResponder({ apiKey, model, promptConfig }: ResponderOptions): Responder {
-  const client = new Anthropic({ apiKey });
+export function createResponder({
+  apiKey,
+  baseUrl,
+  model,
+  reasoningEffort = 'low',
+  promptConfig,
+}: ResponderOptions): Responder {
+  const client = createLlmClient({ apiKey, baseUrl });
 
   async function call(input: RespondInput): Promise<ResponderResult> {
     const kb = loadKnowledgeBase();
     const systemText = buildResponderSystemPrompt(kb.raw, promptConfig?.getTone());
 
-    const response = await client.messages.create({
+    const response = await client.chat.completions.create({
       model,
-      max_tokens: MAX_REPLY_TOKENS,
-      // System as an array of typed blocks so we can attach
-      // cache_control. The bytes of `systemText` are stable across
-      // every call as long as knowledge_base.md doesn't change, so
-      // this caches on Anthropic's side once the prefix is large
-      // enough (Haiku 4.5 needs ≥ 4096 tokens — see
-      // shared/prompt-caching.md). The dynamic per-class strategy is
-      // in the user turn, after the cache breakpoint.
-      system: [
-        {
-          type: 'text',
-          text: systemText,
-          cache_control: { type: 'ephemeral' },
-        },
-      ],
+      max_completion_tokens: MAX_REPLY_TOKENS,
+      reasoning_effort: reasoningEffort,
+      // `systemText` is stable across calls as long as
+      // knowledge_base.md / tone don't change, so codex.sale caches
+      // the prefix automatically. The dynamic per-class strategy goes
+      // in the user turn, after the cacheable prefix.
       messages: [
+        { role: 'system', content: systemText },
         {
           role: 'user',
           content: buildResponderUserMessage({
@@ -77,11 +80,7 @@ export function createResponder({ apiKey, model, promptConfig }: ResponderOption
       ],
     });
 
-    const text = response.content
-      .filter((block): block is Anthropic.TextBlock => block.type === 'text')
-      .map((block) => block.text)
-      .join('')
-      .trim();
+    const text = (response.choices[0]?.message?.content ?? '').trim();
 
     if (!text) {
       throw new Error('Responder returned empty reply');
@@ -89,8 +88,8 @@ export function createResponder({ apiKey, model, promptConfig }: ResponderOption
 
     return {
       text,
-      cacheReadInputTokens: response.usage.cache_read_input_tokens ?? 0,
-      cacheCreationInputTokens: response.usage.cache_creation_input_tokens ?? 0,
+      cacheReadInputTokens: cacheReadTokens(response.usage),
+      cacheCreationInputTokens: 0,
     };
   }
 

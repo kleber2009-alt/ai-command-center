@@ -1,5 +1,7 @@
 import 'dotenv/config';
 
+import type { ReasoningEffort } from './llm.js';
+
 function required(name: string): string {
   const value = process.env[name];
   if (!value || value.trim() === '') {
@@ -92,9 +94,19 @@ function parseLogLevel(raw: string | undefined): LogLevel {
   throw new Error(`Invalid LOG_LEVEL: ${raw}`);
 }
 
+function parseReasoningEffort(raw: string | undefined): ReasoningEffort {
+  const v = (raw ?? 'low').toLowerCase();
+  if (v === 'low' || v === 'medium' || v === 'high') return v;
+  throw new Error(`CODEX_REASONING_EFFORT must be low|medium|high, got: ${raw}`);
+}
+
 export interface Config {
   telegramBotToken: string;
-  anthropicApiKey: string;
+  // LLM provider — codex.sale (OpenAI-compatible /v1). Drives the
+  // classifier, responder and daily digest.
+  llmApiKey: string;
+  llmBaseUrl: string;
+  llmReasoningEffort: ReasoningEffort;
   ownerTelegramId: number | undefined;
   allowedChatIds: Set<number>;
   confidenceThreshold: number;
@@ -148,13 +160,18 @@ export function loadConfig(): Config {
 
   return {
     telegramBotToken: required('TELEGRAM_BOT_TOKEN'),
-    anthropicApiKey: required('ANTHROPIC_API_KEY'),
+    // codex.sale API key (sk-inv-…). CODEX_API_KEY is canonical;
+    // ANTHROPIC_API_KEY is accepted as a legacy fallback so existing
+    // deploys don't hard-fail on the rename.
+    llmApiKey: required(process.env.CODEX_API_KEY ? 'CODEX_API_KEY' : 'ANTHROPIC_API_KEY'),
+    llmBaseUrl: optional('CODEX_BASE_URL') ?? 'https://codex.sale/v1',
+    llmReasoningEffort: parseReasoningEffort(optional('CODEX_REASONING_EFFORT')),
     ownerTelegramId,
     allowedChatIds: parseChatIds(optional('ALLOWED_CHAT_IDS')),
     confidenceThreshold: parseThreshold(optional('CONFIDENCE_THRESHOLD')),
     logLevel: parseLogLevel(optional('LOG_LEVEL')),
-    classifierModel: optional('CLASSIFIER_MODEL') ?? 'claude-haiku-4-5-20251001',
-    responderModel: optional('RESPONDER_MODEL') ?? 'claude-haiku-4-5-20251001',
+    classifierModel: optional('CLASSIFIER_MODEL') ?? 'gpt-5.4-mini',
+    responderModel: optional('RESPONDER_MODEL') ?? 'gpt-5.4-mini',
     databasePath: optional('DATABASE_PATH') ?? './data/tg-agent.db',
     adminPort: parsePort(optional('ADMIN_PORT'), 8080),
     adminUsername: optional('ADMIN_USERNAME') ?? 'admin',
@@ -177,7 +194,7 @@ export function loadConfig(): Config {
     stripeProPriceId: optional('STRIPE_PRO_PRICE_ID'),
     stripeEnterprisePriceId: optional('STRIPE_ENTERPRISE_PRICE_ID'),
     digestModel:
-      optional('DIGEST_MODEL') ?? optional('INSIGHTS_MODEL') ?? 'claude-sonnet-4-6',
+      optional('DIGEST_MODEL') ?? optional('INSIGHTS_MODEL') ?? 'gpt-5.5',
     digestDailyHourUtc: parseHourOfDay(
       'DIGEST_DAILY_HOUR_UTC',
       optional('DIGEST_DAILY_HOUR_UTC'),
