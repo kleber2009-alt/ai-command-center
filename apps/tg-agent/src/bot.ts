@@ -1,9 +1,11 @@
 import { Bot, type CallbackQueryContext, type Context, type Filter } from 'grammy';
 
+import type { AgentChat } from './agent_chat.js';
 import type { Classifier } from './classifier.js';
 import type { Config } from './config.js';
 import type { ChatService } from './db/chats.js';
 import type { DraftRow, DraftService } from './db/drafts.js';
+import { splitForTelegram } from './digest.js';
 import type { LeadService } from './db/leads.js';
 import type { MessageStore } from './db/messages.js';
 import type { SettingsService } from './db/settings.js';
@@ -32,6 +34,9 @@ export interface BotDeps {
   health: HealthMonitor;
   memory: MemoryService;
   settings: SettingsService;
+  // Optional: when set, free-form owner DMs (not commands, not draft
+  // edits) are answered by the conversational analyst agent.
+  agentChat?: AgentChat;
 }
 
 const ACTIONS_THAT_REPLY: ReadonlySet<Action> = new Set([
@@ -56,7 +61,7 @@ function isPaymentText(text: string): boolean {
 }
 
 export function createBot(deps: BotDeps): CreateBotResult {
-  const { bot, config, logger, classifier, responder, chats, leads, messages, drafts, health, memory, settings } =
+  const { bot, config, logger, classifier, responder, chats, leads, messages, drafts, health, memory, settings, agentChat } =
     deps;
   let notifier: Notifier | null = null;
 
@@ -409,11 +414,59 @@ export function createBot(deps: BotDeps): CreateBotResult {
     ctx: Filter<Context, 'message:text'>,
   ): Promise<void> {
     const replyTo = ctx.message?.reply_to_message?.message_id;
-    if (!replyTo) return;
 
-    const draft = drafts.findByEditPrompt(replyTo);
-    if (!draft) return;
+    // A reply to a force_reply'd draft-edit prompt: route to the
+    // draft-edit flow, never to the chat agent.
+    if (replyTo) {
+      const draftForEdit = drafts.findByEditPrompt(replyTo);
+      if (draftForEdit) {
+        await handleDraftEditReply(ctx, draftForEdit);
+        return;
+      }
+    }
 
+    // Otherwise this is a free-form question for the analyst agent.
+    // Commands are consumed by their own handlers before reaching here;
+    // skip anything else that still looks like a command (stray slash).
+    const text = ctx.message?.text?.trim();
+    if (!text || text.startsWith('/')) return;
+    if (!agentChat) return;
+
+    const ownerId = ctx.from?.id;
+    if (ownerId === undefined) return;
+
+    try {
+      await ctx.replyWithChatAction('typing');
+      const answer = await agentChat.ask(ownerId, text, () => {
+        // Telegram clears the typing indicator after ~5s; refresh it
+        // before each Claude / tool round so the owner sees it's alive.
+        void ctx.replyWithChatAction('typing').catch(() => {});
+      });
+      health.recordSuccess('responder');
+      for (const chunk of splitForTelegram(answer)) {
+        await ctx.reply(chunk, { link_preview_options: { is_disabled: true } });
+      }
+      logger.info('agent_chat: answered', {
+        ownerId,
+        question: truncate(text, 200),
+        answerChars: answer.length,
+      });
+    } catch (err) {
+      health.recordFailure('responder', err);
+      logger.error('agent_chat: failed', {
+        ownerId,
+        error: err instanceof Error ? err.message : String(err),
+      });
+      await ctx
+        .reply('Не получилось обработать вопрос. Попробуй ещё раз чуть позже.')
+        .catch(() => {});
+    }
+  }
+
+  async function handleDraftEditReply(
+    ctx: Filter<Context, 'message:text'>,
+    draft: DraftRow,
+  ): Promise<void> {
     const newText = ctx.message?.text?.trim();
     if (!newText) {
       await ctx.reply('Пустой текст. Черновик не отправлен.');

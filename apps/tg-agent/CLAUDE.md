@@ -89,6 +89,27 @@ Per-`(chat_id, user_id)` status with a one-way commercial ranking:
 
 `negative` is sticky (manual override only). `SUPPORT_REQUEST` → `support` unless already `buyer`.
 
+## Owner chat agent (`src/agent_chat.ts`)
+
+Conversational analyst the owner talks to **directly in the bot's DM** —
+just send a free-form question in Russian (e.g. «что обсуждали в AICEX за
+сутки?», «были ли возражения по цене?», «кому я не ответил?»). Claude
+(Sonnet by default, `AGENT_CHAT_MODEL`) runs a tool-use loop over the
+bot's own data and answers grounded in what it finds. Tools:
+
+- `list_chats` — chats with id, counts, last activity, latest gist.
+- `search_memory` — semantic search over Qdrant (tg-agent + transcribe);
+  no-ops gracefully when memory is disabled.
+- `get_chat_digest` — latest structured digest for one chat.
+- `get_recent_messages` — raw transcript for a chat over an N-hour window.
+
+Multi-turn: an **in-memory** per-owner session keeps the running thread
+(trimmed to the last 24 messages, reset after 12h idle or via `/reset`).
+Routing lives in `bot.ts` `handleOwnerPrivateMessage`: replies to a
+draft-edit force_reply still go to the draft flow; any other non-command
+text from the owner goes to the agent. Gated by `AGENT_CHAT_ENABLED`
+(default on) + `OWNER_TELEGRAM_ID`. Only the owner is served.
+
 ## Owner notifications (`src/notifier.ts`)
 
 Bot DMs `OWNER_TELEGRAM_ID` on `REPLY_AND_NOTIFY` / `NOTIFY_ONLY` / `DRAFT_FOR_OWNER`. Owner must `/start` the bot first.
@@ -113,7 +134,7 @@ CONFIDENCE_THRESHOLD, LOG_LEVEL, CLASSIFIER_MODEL, RESPONDER_MODEL,
 DATABASE_PATH, ADMIN_PORT, ADMIN_USERNAME, ADMIN_PASSWORD,
 ADMIN_SESSION_SECRET, ADMIN_PUBLIC_URL,
 BACKUP_INTERVAL_HOURS, HEALTH_FAILURE_THRESHOLD, HEALTH_ALERT_COOLDOWN_MINUTES,
-IGNORED_USER_IDS
+IGNORED_USER_IDS, AGENT_CHAT_ENABLED, AGENT_CHAT_MODEL
 ```
 
 ## BotFather setup

@@ -1,5 +1,6 @@
 import type { Bot, Context, Filter } from 'grammy';
 
+import type { AgentChat } from './agent_chat.js';
 import type { ChatService } from './db/chats.js';
 import type { DigestStore } from './db/digests.js';
 import { buildAndDeliverDigest, type DigestGenerator, splitForTelegram } from './digest.js';
@@ -26,11 +27,18 @@ export interface OwnerCommandsDeps {
   memory: MemoryService;
   db: Db;
   dupHandle?: DupSchedulerHandle;
+  // Optional: when set, /reset clears the running conversation thread.
+  agentChat?: AgentChat;
 }
 
 // Help blurb shown for /help. Kept terse — the owner already knows
 // the bot exists; he just needs the surface area on one screen.
 const HELP_TEXT = [
+  'Просто напиши мне вопрос обычным текстом — я аналитик по твоим чатам.',
+  'Например: «что обсуждали в AICEX за последние сутки?», «были ли возражения',
+  'по цене на этой неделе?», «кому я не ответил?». Я сам подниму нужные данные',
+  '(поиск по памяти, сводки, журнал сообщений) и отвечу.',
+  '',
   'Команды (только для владельца, в этом DM):',
   '',
   '/pulse — сводки по всем чатам за последние N часов (по умолчанию 24).',
@@ -46,6 +54,7 @@ const HELP_TEXT = [
   '/duplicates [дней=7] — найти повторяющиеся вопросы от разных людей.',
   '  Бот ищет кластеры близких по смыслу сообщений (sim ≥ 0.75) с ≥ 2 разными авторами.',
   '  Авто-сводка приходит раз в сутки сама — команда для ручного запроса.',
+  '/reset — забыть текущий диалог со мной и начать с чистого листа.',
   '/help — это сообщение.',
 ].join('\n');
 
@@ -54,7 +63,7 @@ const HELP_TEXT = [
 // achieve that by registering on the same Bot instance from index.ts
 // before createBot() is called — see index.ts ordering.
 export function registerOwnerCommands(deps: OwnerCommandsDeps): void {
-  const { bot, ownerTelegramId, chats, store, generator, windowHours, logger, memory, db } = deps;
+  const { bot, ownerTelegramId, chats, store, generator, windowHours, logger, memory, db, agentChat } = deps;
 
   const isOwnerDm = (ctx: Context): boolean =>
     ctx.chat?.type === 'private' && ctx.from?.id === ownerTelegramId;
@@ -342,6 +351,12 @@ export function registerOwnerCommands(deps: OwnerCommandsDeps): void {
       });
       await ctx.reply('Ошибка детектора. Проверь логи.');
     }
+  });
+
+  bot.command('reset', async (ctx) => {
+    if (!isOwnerDm(ctx)) return;
+    agentChat?.reset(ownerTelegramId);
+    await ctx.reply('Диалог сброшен. Начнём с чистого листа — задавай вопрос.');
   });
 
   // Hint for first-time DMs from the owner. Doesn't override the

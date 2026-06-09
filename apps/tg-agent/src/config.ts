@@ -118,6 +118,8 @@ export interface Config {
   digestDailyHourUtc: number;
   digestWindowHours: number;
   digestEnabled: boolean;
+  agentChatEnabled: boolean;
+  agentChatModel: string;
   reportEnabled: boolean;
   reportHourUtc: number;
   reportRunOnStart: boolean;
@@ -187,6 +189,13 @@ export function loadConfig(): Config {
     ),
     digestEnabled:
       (optional('DIGEST_ENABLED') ?? 'true').toLowerCase() !== 'false',
+    // Free-form conversational agent in the owner's DM. Defaults to the
+    // digest model (Sonnet) — it reasons over tool results, so the
+    // stronger model is worth it; the volume is tiny (just the owner).
+    agentChatEnabled:
+      (optional('AGENT_CHAT_ENABLED') ?? 'true').toLowerCase() !== 'false',
+    agentChatModel:
+      optional('AGENT_CHAT_MODEL') ?? optional('DIGEST_MODEL') ?? 'claude-sonnet-4-6',
     reportEnabled:
       (optional('REPORT_ENABLED') ?? 'true').toLowerCase() !== 'false',
     reportHourUtc: parseHourOfDay('REPORT_HOUR_UTC', optional('REPORT_HOUR_UTC'), 6),

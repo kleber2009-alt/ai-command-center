@@ -1,5 +1,6 @@
 import { Bot } from 'grammy';
 
+import { createAgentChat, type AgentChat } from './agent_chat.js';
 import { startAdminServer, type AdminHandle } from './admin/server.js';
 import { startBackupScheduler, type BackupHandle } from './backup.js';
 import { createBot } from './bot.js';
@@ -111,6 +112,26 @@ async function main(): Promise<void> {
     apiKey: config.anthropicApiKey,
     model: config.digestModel,
   });
+
+  // Conversational analyst agent for the owner's DM. Lets the owner
+  // ask free-form questions about his chats; Claude pulls the data it
+  // needs (memory search, digests, transcripts) via tool-use. Disabled
+  // with AGENT_CHAT_ENABLED=false or when no owner is configured.
+  let agentChat: AgentChat | undefined;
+  if (config.agentChatEnabled && config.ownerTelegramId !== undefined) {
+    agentChat = createAgentChat({
+      apiKey: config.anthropicApiKey,
+      model: config.agentChatModel,
+      chats,
+      digests: digestStore,
+      memory,
+      logger,
+    });
+    logger.info('agent chat enabled', { model: config.agentChatModel });
+  } else if (!config.agentChatEnabled) {
+    logger.info('agent chat disabled (AGENT_CHAT_ENABLED=false)');
+  }
+
   if (config.digestEnabled && config.ownerTelegramId !== undefined) {
     registerOwnerCommands({
       bot,
@@ -122,6 +143,7 @@ async function main(): Promise<void> {
       logger,
       memory,
       db,
+      agentChat,
     });
   } else if (!config.digestEnabled) {
     logger.info('digest disabled (DIGEST_ENABLED=false)');
@@ -150,6 +172,7 @@ async function main(): Promise<void> {
     health,
     memory,
     settings,
+    agentChat,
   });
 
   const notifier = createNotifier({
