@@ -43,6 +43,14 @@ type Account = {
   tokenExpiresAt: string | null;
 };
 
+type IgAccount = {
+  accountId: number;
+  projectId: number;
+  projectName: string;
+  name: string;
+  login: string | null;
+};
+
 function fmtDate(iso: string): string {
   return new Date(iso).toLocaleString('ru-RU', {
     day: '2-digit',
@@ -103,6 +111,9 @@ export function ScheduleClient({
   const [connecting, setConnecting] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const [busy, setBusy] = useState<string | null>(null);
+  const [igAccounts, setIgAccounts] = useState<IgAccount[]>([]);
+  const [igLoading, setIgLoading] = useState(false);
+  const [igPickerOpen, setIgPickerOpen] = useState(false);
   const [, startTransition] = useTransition();
 
   async function connectTelegram() {
@@ -122,6 +133,47 @@ export function ScheduleClient({
     }
     setAccounts((a) => [json.account, ...a.filter((x) => x.id !== json.account.id)]);
     setChatId('');
+  }
+
+  // ── Instagram via PostMyPost ──────────────────
+  async function loadIgAccounts() {
+    setIgLoading(true);
+    setError(null);
+    const res = await fetch('/api/schedule/accounts/postmypost');
+    const json = await res.json().catch(() => ({}));
+    setIgLoading(false);
+    if (!res.ok) {
+      setError(
+        json.error === 'not_configured'
+          ? 'PostMyPost не настроен (нет POSTMYPOST_API_TOKEN)'
+          : json.message || json.error || `HTTP ${res.status}`,
+      );
+      return;
+    }
+    setIgAccounts(json.accounts ?? []);
+    setIgPickerOpen(true);
+  }
+
+  async function connectIg(acc: IgAccount) {
+    setConnecting(true);
+    setError(null);
+    const res = await fetch('/api/schedule/accounts/postmypost', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({
+        accountId: acc.accountId,
+        projectId: acc.projectId,
+        displayName: acc.login ? `@${acc.login}` : acc.name,
+      }),
+    });
+    const json = await res.json().catch(() => ({}));
+    setConnecting(false);
+    if (!res.ok) {
+      setError(json.message || json.error || `HTTP ${res.status}`);
+      return;
+    }
+    setAccounts((a) => [json.account, ...a.filter((x) => x.id !== json.account.id)]);
+    setIgPickerOpen(false);
   }
 
   function disconnect(id: string) {
@@ -235,7 +287,7 @@ export function ScheduleClient({
             )}
           </div>
 
-          {/* Instagram connect */}
+          {/* Instagram connect — via PostMyPost */}
           <div className="card p-4 grid gap-3">
             <div className="flex items-center gap-2 text-[14px]">
               <Instagram size={15} /> Instagram
@@ -243,20 +295,51 @@ export function ScheduleClient({
             {igReady ? (
               <>
                 <p className="font-serif italic text-[12px] text-text-muted leading-relaxed">
-                  Подключите Instagram Business / Creator аккаунт через Facebook —
-                  публикуем Reels напрямую в ленту.
+                  Публикация идёт через сервис{' '}
+                  <a href="https://app.postmypost.io" target="_blank" rel="noreferrer" className="underline">
+                    PostMyPost
+                  </a>
+                  . Подключите свой Instagram в его кабинете, затем выберите аккаунт здесь.
                 </p>
-                <Link
-                  href="/api/schedule/accounts/instagram/start"
-                  className="btn-primary inline-flex items-center gap-1.5 w-fit"
-                >
-                  <Instagram size={14} /> Подключить Instagram
-                </Link>
+                {!igPickerOpen ? (
+                  <button
+                    onClick={loadIgAccounts}
+                    disabled={igLoading}
+                    className="btn-primary inline-flex items-center gap-1.5 w-fit"
+                  >
+                    {igLoading ? <Loader2 size={14} className="animate-spin" /> : <Instagram size={14} />}
+                    Выбрать Instagram-аккаунт
+                  </button>
+                ) : igAccounts.length === 0 ? (
+                  <p className="font-serif italic text-[12px] text-amber-400/80">
+                    В PostMyPost нет подключённых Instagram-аккаунтов. Подключите аккаунт в{' '}
+                    <a href="https://app.postmypost.io" target="_blank" rel="noreferrer" className="underline">
+                      кабинете PostMyPost
+                    </a>{' '}
+                    и повторите.
+                  </p>
+                ) : (
+                  <div className="grid gap-2">
+                    {igAccounts.map((acc) => (
+                      <button
+                        key={`${acc.projectId}:${acc.accountId}`}
+                        onClick={() => connectIg(acc)}
+                        disabled={connecting}
+                        className="border border-border-soft hover:border-gold px-3 py-2 text-left text-[13px] flex items-center justify-between gap-2"
+                      >
+                        <span>
+                          {acc.login ? `@${acc.login}` : acc.name}
+                          <span className="text-text-muted text-[11px]"> · {acc.projectName}</span>
+                        </span>
+                        <Plus size={13} />
+                      </button>
+                    ))}
+                  </div>
+                )}
               </>
             ) : (
               <p className="font-serif italic text-[12px] text-amber-400/80">
-                Не настроены META_APP_ID / META_APP_SECRET / PUBLISH_TOKEN_SECRET —
-                подключение Instagram недоступно.
+                Не настроен POSTMYPOST_API_TOKEN — подключение Instagram недоступно.
               </p>
             )}
           </div>

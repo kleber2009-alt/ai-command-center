@@ -6,8 +6,7 @@
 
 import { prisma } from '@/lib/prisma';
 import { publishQueue } from '@/lib/queue';
-import { decryptToken } from './crypto';
-import { publishReel, InstagramError } from './instagram';
+import { uploadVideoByUrl, createReelPublication, PostMyPostError } from './postmypost';
 import { sendChannelVideo } from './telegram-channel';
 
 export class PublishError extends Error {
@@ -75,18 +74,28 @@ export async function publishTarget(targetId: string): Promise<'published' | 'fa
     let permalink: string | null = null;
 
     if (target.platform === 'instagram') {
-      if (!account.accessToken) {
-        throw new PublishError('NO_TOKEN', 'У Instagram-аккаунта нет токена');
+      // Instagram via PostMyPost: account.externalId = PostMyPost account_id,
+      // meta.projectId = PostMyPost project. Upload our public mp4 by URL, then
+      // create a Reel publication scheduled ~now (the sweep already waited for
+      // scheduledAt). PostMyPost performs the actual IG publish on its side.
+      const meta = (account.meta ?? {}) as { projectId?: number };
+      const projectId = meta.projectId;
+      if (!projectId) {
+        throw new PublishError('NO_PROJECT', 'У Instagram-аккаунта нет project_id PostMyPost');
       }
-      const token = decryptToken(account.accessToken);
-      const res = await publishReel({
-        igUserId: account.externalId,
-        token,
-        videoUrl: post.mediaUrl,
+      const accountId = Number(account.externalId);
+      const fileId = await uploadVideoByUrl({ projectId, url: post.mediaUrl });
+      const pubId = await createReelPublication({
+        projectId,
+        accountId,
+        fileId,
         caption: post.caption ?? undefined,
+        // Buffer a couple minutes — PostMyPost schedules and publishes async.
+        postAt: new Date(Date.now() + 120_000),
       });
-      remoteId = res.mediaId;
-      permalink = res.permalink;
+      remoteId = `pmp:${pubId}`;
+      // PostMyPost publishes asynchronously; no synchronous IG permalink.
+      permalink = null;
     } else if (target.platform === 'telegram') {
       const res = await sendChannelVideo({
         chatId: account.externalId,
@@ -110,11 +119,12 @@ export async function publishTarget(targetId: string): Promise<'published' | 'fa
   } catch (err) {
     const msg = errorMessage(err);
 
-    // Auth failures on IG → mark the account expired so the UI prompts reconnect.
+    // If PostMyPost reports the IG account is no longer connected/authorized,
+    // flag it so the UI prompts the user to reconnect it inside PostMyPost.
     if (
       target.platform === 'instagram' &&
-      err instanceof InstagramError &&
-      /190|access token|expired|OAuth/i.test(`${err.code} ${err.message}`)
+      err instanceof PostMyPostError &&
+      /not connected|auth|unauthor|403|account/i.test(`${err.code} ${err.message}`)
     ) {
       await prisma.socialAccount.update({
         where: { id: account.id },

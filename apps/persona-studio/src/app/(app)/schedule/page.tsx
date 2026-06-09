@@ -3,8 +3,7 @@ import { getCurrentUser } from '@/lib/auth';
 import { prisma } from '@/lib/prisma';
 import { PageHero } from '@/components/shell/page-hero';
 import { ScheduleClient } from '@/components/schedule/schedule-client';
-import { instagramConfigured } from '@/lib/publish/instagram';
-import { tokenCryptoReady } from '@/lib/publish/crypto';
+import { postmypostConfigured } from '@/lib/publish/postmypost';
 import { env } from '@/lib/env';
 
 export const dynamic = 'force-dynamic';
@@ -39,7 +38,7 @@ export default async function SchedulePage() {
     }),
   ]);
 
-  const igReady = instagramConfigured() && tokenCryptoReady();
+  const igReady = postmypostConfigured();
   const tgReady = Boolean(env.TELEGRAM_BOT_TOKEN);
 
   const upcoming = posts.filter((p) => p.status === 'scheduled' || p.status === 'publishing').length;
