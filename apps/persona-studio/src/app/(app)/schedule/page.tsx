@@ -4,6 +4,7 @@ import { prisma } from '@/lib/prisma';
 import { PageHero } from '@/components/shell/page-hero';
 import { ScheduleClient } from '@/components/schedule/schedule-client';
 import { postmypostConfigured } from '@/lib/publish/postmypost';
+import { getBotUsername } from '@/lib/publish/telegram-channel';
 import { env } from '@/lib/env';
 
 export const dynamic = 'force-dynamic';
@@ -40,6 +41,7 @@ export default async function SchedulePage() {
 
   const igReady = postmypostConfigured();
   const tgReady = Boolean(env.TELEGRAM_BOT_TOKEN);
+  const tgBotUsername = tgReady ? await getBotUsername() : null;
 
   const upcoming = posts.filter((p) => p.status === 'scheduled' || p.status === 'publishing').length;
 
@@ -90,6 +92,7 @@ export default async function SchedulePage() {
         }))}
         igReady={igReady}
         tgReady={tgReady}
+        tgBotUsername={tgBotUsername}
       />
     </div>
   );

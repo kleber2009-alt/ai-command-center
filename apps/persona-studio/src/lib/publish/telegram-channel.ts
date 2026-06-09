@@ -20,6 +20,20 @@ export async function getChat(chatId: string): Promise<TgChat> {
   return botCall<TgChat>('getChat', { chat_id: chatId });
 }
 
+// Bot @username — resolved once via getMe and cached. Used in connect hints /
+// error messages so the user knows exactly which bot to add to the channel.
+let _botUsername: string | null = null;
+export async function getBotUsername(): Promise<string | null> {
+  if (_botUsername) return _botUsername;
+  try {
+    const me = await botCall<{ username?: string }>('getMe', {});
+    _botUsername = me.username ?? null;
+  } catch {
+    _botUsername = null;
+  }
+  return _botUsername;
+}
+
 /**
  * Verify the bot itself is an administrator of the channel. Throws a
  * TelegramError otherwise so connect/publish surface a readable reason.

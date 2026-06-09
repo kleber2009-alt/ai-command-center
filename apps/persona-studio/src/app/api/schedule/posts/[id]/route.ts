@@ -50,12 +50,22 @@ export async function DELETE(req: NextRequest, { params }: { params: Promise<{ i
   const post = await loadPost(ctx.user.id, id);
   if (!post) return NextResponse.json({ error: 'not_found' }, { status: 404 });
   // Can't cancel something already mid-publish or done.
-  if (post.status === 'publishing' || post.status === 'published') {
+  // Already-published posts can't be un-published. 'publishing' IS cancelable:
+  // a post can get stuck there if a publish job is lost (e.g. a redeploy
+  // mid-flight), and the user needs a way out. Cancel the post and mark any
+  // still-pending/publishing targets canceled too.
+  if (post.status === 'published') {
     return NextResponse.json({ error: 'not_cancelable', status: post.status }, { status: 409 });
   }
-  await prisma.scheduledPost.update({
-    where: { id: post.id },
-    data: { status: 'canceled' },
-  });
+  await prisma.$transaction([
+    prisma.postTarget.updateMany({
+      where: { scheduledPostId: post.id, status: { in: ['pending', 'publishing'] } },
+      data: { status: 'canceled' },
+    }),
+    prisma.scheduledPost.update({
+      where: { id: post.id },
+      data: { status: 'canceled' },
+    }),
+  ]);
   return NextResponse.json({ ok: true });
 }

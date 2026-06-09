@@ -99,11 +99,13 @@ export function ScheduleClient({
   initialAccounts,
   igReady,
   tgReady,
+  tgBotUsername,
 }: {
   initialPosts: Post[];
   initialAccounts: Account[];
   igReady: boolean;
   tgReady: boolean;
+  tgBotUsername: string | null;
 }) {
   const [posts, setPosts] = useState<Post[]>(initialPosts);
   const [accounts, setAccounts] = useState<Account[]>(initialAccounts);
@@ -213,6 +215,13 @@ export function ScheduleClient({
 
   return (
     <div className="grid gap-10">
+      {/* ── New post CTA (always reachable, not only on empty queue) ── */}
+      <div className="flex justify-end">
+        <Link href="/schedule/new" className="btn-primary w-fit inline-flex items-center gap-1.5">
+          <Plus size={14} /> Запланировать пост
+        </Link>
+      </div>
+
       {/* ── Channels ─────────────────────────── */}
       <section className="grid gap-4">
         <h2 className="sec-title">Каналы публикации</h2>
@@ -260,8 +269,22 @@ export function ScheduleClient({
             {tgReady ? (
               <>
                 <p className="font-serif italic text-[12px] text-text-muted leading-relaxed">
-                  Добавьте бота в канал как администратора, затем введите ID канала
-                  (<span className="mono">-100…</span>) или <span className="mono">@username</span>.
+                  Добавьте бота{' '}
+                  {tgBotUsername ? (
+                    <a
+                      href={`https://t.me/${tgBotUsername}`}
+                      target="_blank"
+                      rel="noreferrer"
+                      className="mono not-italic text-gold underline"
+                    >
+                      @{tgBotUsername}
+                    </a>
+                  ) : (
+                    'нашего бота'
+                  )}{' '}
+                  в канал как администратора (с правом «Публикация сообщений»), затем
+                  введите ID канала (<span className="mono">-100…</span>) или{' '}
+                  <span className="mono">@username</span>.
                 </p>
                 <div className="flex gap-2">
                   <input
@@ -450,7 +473,7 @@ function PostGroup({
                   {onCancel && (
                     <button
                       onClick={() => onCancel(p.id)}
-                      disabled={busy === p.id || p.status === 'publishing'}
+                      disabled={busy === p.id}
                       className="btn-ghost text-[12px] inline-flex items-center gap-1.5"
                     >
                       <Trash2 size={12} /> Отменить

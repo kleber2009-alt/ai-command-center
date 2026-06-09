@@ -35,7 +35,7 @@ export async function enqueuePostNow(postId: string): Promise<number> {
   });
   const queue = publishQueue();
   for (const t of targets) {
-    await queue.add('publish', { targetId: t.id }, { jobId: `publish:${t.id}` });
+    await queue.add('publish', { targetId: t.id }, { jobId: `publish-${t.id}` });
   }
   return targets.length;
 }

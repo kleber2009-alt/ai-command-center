@@ -9,7 +9,7 @@ import { NextRequest, NextResponse } from 'next/server';
 import { z } from 'zod';
 import { getCurrentUserOrApiKey } from '@/lib/auth';
 import { prisma } from '@/lib/prisma';
-import { getChat, assertBotIsAdmin } from '@/lib/publish/telegram-channel';
+import { getChat, assertBotIsAdmin, getBotUsername } from '@/lib/publish/telegram-channel';
 import { TelegramError } from '@/lib/telegram-tma';
 
 export const runtime = 'nodejs';
@@ -80,7 +80,16 @@ export async function POST(req: NextRequest) {
   } catch (e) {
     if (e instanceof TelegramError) {
       const status = e.code === 'BOT_NOT_ADMIN' ? 409 : 400;
-      return NextResponse.json({ error: e.code, message: e.message }, { status });
+      const bot = await getBotUsername();
+      const botRef = bot ? `@${bot}` : 'нашего бота';
+      // "chat not found" means the bot isn't a member of the channel yet —
+      // Telegram won't resolve a -100… id until the bot is added.
+      const message = /chat not found/i.test(e.message)
+        ? `Бот ${botRef} ещё не добавлен в этот канал. Добавьте ${botRef} администратором канала (с правом «Публикация сообщений») и повторите.`
+        : e.code === 'BOT_NOT_ADMIN'
+          ? `Бот ${botRef} в канале есть, но не администратор. Дайте ему право «Публикация сообщений» и повторите.`
+          : e.message;
+      return NextResponse.json({ error: e.code, message }, { status });
     }
     return NextResponse.json({ error: 'connect_failed', message: String(e) }, { status: 500 });
   }
