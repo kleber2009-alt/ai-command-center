@@ -432,6 +432,17 @@ img{display:block;max-width:100%}
 .set-cell .danger:hover{background:rgba(240,96,144,.06)}
 .set-cell .saved-tag{font-family:var(--mono);font-size:10.5px;letter-spacing:.12em;text-transform:uppercase;color:var(--accent-lime);font-weight:700}
 
+/* Threshold presets */
+.preset-row{display:flex;align-items:center;gap:8px;flex-wrap:wrap;margin-bottom:14px}
+.preset-lbl{font-family:var(--mono);font-size:10.5px;letter-spacing:.12em;text-transform:uppercase;color:var(--text-mute)}
+.preset-chip{
+  font-family:var(--mono);font-size:11px;font-weight:700;letter-spacing:.08em;text-transform:uppercase;
+  color:var(--text-dim);background:none;border:1px solid var(--border-2);padding:6px 12px;cursor:pointer;transition:all .15s;
+}
+.preset-chip:hover{border-color:var(--accent-dim);color:var(--text)}
+.preset-chip.active{border-color:var(--accent);color:var(--accent);background:rgba(94,92,230,.08)}
+.preset-chip.preset-off{color:var(--text-mute)}
+
 /* Toggle switch */
 .toggle{display:flex;align-items:center;gap:14px;padding:14px 16px;border:1px solid var(--border);background:var(--bg)}
 .toggle .lbl{display:flex;flex-direction:column;gap:3px}
@@ -751,10 +762,17 @@ img{display:block;max-width:100%}
             <div class="set-cell">
               <h3>Пороги виральности</h3>
               <p class="desc">Минимальные метрики, ниже которых пост не считается «жирным». Лайки = proxy для репостов (Instagram перестал отдавать share count публично).</p>
+              <div class="preset-row">
+                <span class="preset-lbl">Пресеты:</span>
+                <button class="preset-chip" data-preset="soft" data-mp="30000"  data-ml="300"  data-mc="50"   title="≥30K просмотров · ≥300 лайков · ≥50 комментов — широкий охват">Мягко</button>
+                <button class="preset-chip" data-preset="base" data-mp="100000" data-ml="1000" data-mc="500"  title="≥100K просмотров · ≥1K лайков · ≥500 комментов — рабочий баланс">Базово</button>
+                <button class="preset-chip" data-preset="hard" data-mp="300000" data-ml="3000" data-mc="1000" title="≥300K просмотров · ≥3K лайков · ≥1K комментов — только хиты">Жёстко</button>
+                <button class="preset-chip preset-off" data-preset="off" data-mp="0" data-ml="0" data-mc="0" title="Без фильтра — все посты">Выкл</button>
+              </div>
               <div class="fld-row">
-                <div class="fld"><label>мин. просмотров</label><input type="number" id="minPlays" value="0"></div>
-                <div class="fld"><label>мин. лайков</label><input type="number" id="minLikes" value="0"></div>
-                <div class="fld"><label>мин. комментариев</label><input type="number" id="minComments" value="0"></div>
+                <div class="fld"><label>мин. просмотров</label><input type="number" id="minPlays" value="0" min="0" step="1000"></div>
+                <div class="fld"><label>мин. лайков</label><input type="number" id="minLikes" value="0" min="0" step="100"></div>
+                <div class="fld"><label>мин. комментариев</label><input type="number" id="minComments" value="0" min="0" step="10"></div>
               </div>
               <p class="hint">Выключить фильтр полностью — поставить все три в 0.</p>
               <div class="row-bot">
@@ -767,9 +785,9 @@ img{display:block;max-width:100%}
               <h3>Выдача</h3>
               <p class="desc">Сколько постов показывать в каждой утренней сводке.</p>
               <div class="fld-row">
-                <div class="fld"><label>рилсов</label><input type="number" id="reelsCount" value="5"></div>
-                <div class="fld"><label>каруселей</label><input type="number" id="carouselsCount" value="5"></div>
-                <div class="fld"><label>окно (дней)</label><input type="number" id="postedWithinDays" value="7"></div>
+                <div class="fld"><label>рилсов</label><input type="number" id="reelsCount" value="5" min="1" max="10" step="1"></div>
+                <div class="fld"><label>каруселей</label><input type="number" id="carouselsCount" value="5" min="1" max="10" step="1"></div>
+                <div class="fld"><label>окно (дней)</label><input type="number" id="postedWithinDays" value="7" min="1" max="30" step="1"></div>
               </div>
               <p class="hint">Окно — за сколько последних дней парсер берёт посты. Меньше = свежее, но меньше выбор.</p>
               <div class="row-bot">
@@ -796,13 +814,10 @@ img{display:block;max-width:100%}
               </div>
               <div class="fld">
                 <label>время доставки (МСК)</label>
-                <select>
-                  <option>06:00</option>
-                  <option>07:00</option>
+                <select disabled title="В v1 время фиксировано">
                   <option selected>08:00</option>
-                  <option>09:00</option>
-                  <option>10:00</option>
                 </select>
+                <span class="hint">В текущей версии выдача всегда в 08:00 МСК. Выбор времени — в ближайшем обновлении.</span>
               </div>
               <div class="row-bot">
                 <button class="save">Сохранить</button>
@@ -904,6 +919,10 @@ img{display:block;max-width:100%}
     const K_CAND  = 'parser_cabinet_candidates';
     const K_PEND  = 'parser_cabinet_first_run_pending';
     const K_ME    = 'parser_cabinet_me';
+    const K_VER   = 'parser_cabinet_demo_version';
+    // Бамп при изменении формата demo-данных — старые runs из localStorage
+    // (например, со сломанными /p/<slug>/ ссылками) сбросятся автоматически.
+    const DEMO_VERSION = '3';
 
     const read = (k, d) => { try { const s = localStorage.getItem(k); return s ? JSON.parse(s) : d; } catch(_) { return d; } };
     const write = (k, v) => { try { localStorage.setItem(k, JSON.stringify(v)); } catch(_) {} };
@@ -968,21 +987,40 @@ img{display:block;max-width:100%}
       {handle: '@neyro.smm',          reason: 'Хэштег #нейросети — её аудитория пересекается с твоей на 40%.'},
     ];
 
+    // Пул РЕАЛЬНЫХ постов — чтобы кнопка «смотреть» в демо вела на конкретный
+    // существующий рилс/пост (а не на 404). Автор берётся отсюда же, чтобы
+    // подпись совпадала со ссылкой. Аккаунты — из дефолтного набора ниши.
+    const REAL_REELS = [
+      {author: '@kossolapov_igor', url: 'https://www.instagram.com/kossolapov_igor/reel/Czx38PrshOc/'},
+      {author: '@kossolapov_igor', url: 'https://www.instagram.com/kossolapov_igor/reel/C95Db8OtN17/'},
+      {author: '@kossolapov_igor', url: 'https://www.instagram.com/kossolapov_igor/reel/DAxwGLquA37/'},
+      {author: '@kossolapov_igor', url: 'https://www.instagram.com/kossolapov_igor/reel/DDptUc7zakK/'},
+      {author: '@directoreels',    url: 'https://www.instagram.com/directoreels/reel/C2rboXXig1O/'},
+      {author: '@liza.tkachyk',    url: 'https://www.instagram.com/liza.tkachyk/reel/DGX49afTgM6/'},
+    ];
+    const REAL_POSTS = [
+      {author: '@liza.tkachyk', url: 'https://www.instagram.com/p/ClG2USvpWU5/'},
+      {author: '@liza.tkachyk', url: 'https://www.instagram.com/p/DRXL8B6EgGu/'},
+      {author: '@liza.tkachyk', url: 'https://www.instagram.com/p/DVkhzgciB53/'},
+      {author: '@liza.tkachyk', url: 'https://www.instagram.com/p/DP9PtYtAiOZ/'},
+    ];
+
     function pick(arr){ return arr[Math.floor(Math.random()*arr.length)]; }
     function fakeNum(min, max){ return Math.floor(min + Math.random() * (max - min)); }
     function hoursAgo(h){ return new Date(Date.now() - h*3600*1000).toISOString(); }
 
     function makePost(cfg, isCarousel, idx, ranAtMs){
-      const sources = (cfg.competitors || []).concat((cfg.hashtags || []).map(h => '#' + h));
-      const author = pick(sources.length ? sources : ['@expert_one','@coach_marina','@guru_alex']);
       const pool = isCarousel ? CAR_HOOKS : REEL_HOOKS;
       const [reason, scoreBase] = pool[idx % pool.length];
       const score = Math.max(1, Math.min(10, scoreBase + (Math.random() < 0.3 ? -1 : 0)));
       const tHours = fakeNum(2, 48);
-      const slug = Math.random().toString(36).slice(2, 13);
+      // Автор + ссылка берутся из пула РЕАЛЬНЫХ постов — «смотреть» открывает
+      // конкретный существующий рилс/пост, подпись совпадает со ссылкой.
+      const realPool = isCarousel ? REAL_POSTS : REAL_REELS;
+      const real = realPool[idx % realPool.length];
       const post = {
-        author,
-        url: 'https://www.instagram.com/p/' + slug + '/',
+        author: real.author,
+        url: real.url,
         claude_score: score,
         claude_reason: reason,
         taken_at: new Date((ranAtMs || Date.now()) - tHours*3600*1000).toISOString(),
@@ -1050,6 +1088,11 @@ img{display:block;max-width:100%}
     }
 
     function getRuns(){
+      // Авто-инвалидация устаревших demo-данных при смене DEMO_VERSION.
+      if (localStorage.getItem(K_VER) !== DEMO_VERSION) {
+        try { localStorage.removeItem(K_RUNS); } catch(_) {}
+        try { localStorage.setItem(K_VER, DEMO_VERSION); } catch(_) {}
+      }
       let runs = read(K_RUNS, null);
       if (runs === null) { runs = seedHistory(getCfg()); write(K_RUNS, runs); }
       if (localStorage.getItem(K_PEND) === '1') {
@@ -1244,7 +1287,7 @@ img{display:block;max-width:100%}
             <div class="n">${i + 1}</div>
             <div class="top-row">
               <span class="score ${cls}">${esc(score)}/10</span>
-              <span class="author">${esc(author.startsWith('@') ? author : '@' + author)} <small>· instagram</small></span>
+              <span class="author">${esc(/^[@#]/.test(author) ? author : '@' + author)} <small>· instagram</small></span>
             </div>
             <div class="acts">
               <a class="open" href="${esc(url)}" target="_blank" rel="noopener">смотреть ↗</a>
@@ -1400,6 +1443,11 @@ img{display:block;max-width:100%}
     $('#minPlays').value         = cfg.min_plays ?? 0;
     $('#minLikes').value         = cfg.min_likes ?? 0;
     $('#minComments').value      = cfg.min_comments ?? 0;
+    // Подсветить пресет, если текущие пороги совпадают с одним из них.
+    $$('.preset-chip').forEach((c) => c.classList.toggle('active',
+      +c.dataset.mp === (cfg.min_plays ?? 0) &&
+      +c.dataset.ml === (cfg.min_likes ?? 0) &&
+      +c.dataset.mc === (cfg.min_comments ?? 0)));
     $('#reelsCount').value       = cfg.reels_count ?? 5;
     $('#carouselsCount').value   = cfg.carousels_count ?? 5;
     $('#postedWithinDays').value = cfg.posted_within_days ?? 7;
@@ -1588,6 +1636,17 @@ img{display:block;max-width:100%}
     setTimeout(() => { tag?.classList.add('hidden'); }, 1600);
   }
   document.addEventListener('click', (e) => {
+    // Threshold preset chip → заполняем инпуты и сохраняем через штатный путь.
+    const chip = e.target.closest('.preset-chip');
+    if (chip) {
+      $('#minPlays').value    = chip.dataset.mp;
+      $('#minLikes').value    = chip.dataset.ml;
+      $('#minComments').value = chip.dataset.mc;
+      $$('.preset-chip').forEach((c) => c.classList.toggle('active', c === chip));
+      document.querySelector('.set-cell .save[data-save="thresholds"]')?.click();
+      return;
+    }
+
     const saveBtn = e.target.closest('.set-cell .save');
     if (saveBtn) {
       const kind = saveBtn.dataset.save;
