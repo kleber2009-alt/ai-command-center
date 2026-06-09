@@ -21,6 +21,9 @@ name: deploy-tg-agent
 #   TG_AGENT_RESPONDER_MODEL          (claude-haiku-4-5-20251001)
 #   TG_AGENT_IGNORED_USER_IDS         (optional, comma-separated)
 #   TG_AGENT_REPORT_HOUR_UTC          (optional, 0..23, default 6)
+#   TG_AGENT_FORUM_GROUP_ID           (optional, forum supergroup id, e.g. -100…)
+#   TG_AGENT_FORUM_ENABLED            (optional, "true" to activate forum mode; default off)
+#   TG_AGENT_FORUM_KEEP_OWNER_DM      (optional, "false" to stop legacy owner-DM output; default true)
 
 on:
   push:
@@ -79,6 +82,9 @@ jobs:
             REPORT_ENABLED=true
             REPORT_HOUR_UTC=${{ vars.TG_AGENT_REPORT_HOUR_UTC || '6' }}
             REPORT_RUN_ON_START=true
+            FORUM_GROUP_ID=${{ vars.TG_AGENT_FORUM_GROUP_ID }}
+            FORUM_ENABLED=${{ vars.TG_AGENT_FORUM_ENABLED || 'false' }}
+            FORUM_KEEP_OWNER_DM=${{ vars.TG_AGENT_FORUM_KEEP_OWNER_DM || 'true' }}
           script: |
             COMPOSE=/root/ai-command-center/apps/tg-agent/docker-compose.yml
 
