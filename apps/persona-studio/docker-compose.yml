@@ -14,16 +14,37 @@ services:
     ports:
       - "3020:3020"
     depends_on:
-      - worker
+      - worker-generation
+      - worker-cron
 
-  worker:
+  # PS-13: workers split into two processes so a crash in one group doesn't
+  # restart the other. worker-generation handles the latency-critical,
+  # token-charged user path (avatar/cover/video/montage/slide); worker-cron
+  # handles background sweeps (research radars/watchlist, scheduled publish).
+  # Both build the same `worker` image; WORKER_GROUP selects which queues run.
+  worker-generation:
     image: persona-studio-worker
-    container_name: persona-studio-worker
+    container_name: persona-studio-worker-generation
     build:
       context: .
       target: worker
     restart: unless-stopped
     env_file: .env
+    environment:
+      - WORKER_GROUP=generation
+    networks:
+      - aisales-net
+
+  worker-cron:
+    image: persona-studio-worker
+    container_name: persona-studio-worker-cron
+    build:
+      context: .
+      target: worker
+    restart: unless-stopped
+    env_file: .env
+    environment:
+      - WORKER_GROUP=cron
     networks:
       - aisales-net
 

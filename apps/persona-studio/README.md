@@ -1,8 +1,21 @@
 # Persona Studio
 
-AI Avatar Content Studio — 1 фото → 10 AI-аватаров → HeyGen-видео или виральная обложка карусели.
+AI Identity / Content Studio. Полный конвейер личного контента:
 
-Next.js 15 App Router + TS + Tailwind + Prisma (Postgres) + BullMQ (Redis) + S3-compatible storage + Gemini Image API (Nano Banana 2).
+**Research/Parser → Script → Avatar → Video → Montage → Schedule → Autopost.**
+
+- **Research** — поиск вирусного контента по нише, метрики/viralScore, анализ роликов и авторов, хуки, папки/радары (Apify + Claude + Qdrant/Voyage).
+- **Parser** — трендовые посты конкурентов → в работу одним кликом.
+- **Avatar** — 1 фото → батч AI-аватаров (kie.ai: Flux Kontext / Nano Banana).
+- **Video** — говорящее видео из аватара: HeyGen Avatar IV / ByteDance OmniHuman (+ ElevenLabs TTS).
+- **Montage** — Submagic (субтитры, b-roll, шаблоны).
+- **Cover / Carousel** — обложки и многослайдовые карусели.
+- **Scheduler** — автопостинг в Instagram (Graph API) и Telegram.
+- **Платформа** — Auth.js v5 (magic-link + Google + Telegram Mini App), биллинг CryptoBot + Telegram Stars, API-ключи + SDK, админка, i18n RU/EN.
+
+Стек: Next.js 15 App Router + TS + Tailwind + Prisma (Postgres) + BullMQ (Redis,
+9 воркеров) + S3 (MinIO/R2) + провайдеры (kie.ai, HeyGen, ElevenLabs, Submagic,
+Apify, Anthropic, Voyage/Qdrant).
 
 ## Архитектура
 
@@ -94,7 +107,12 @@ pnpm worker       # tsx watch src/workers/index.ts
 
 Открыть `http://localhost:3020`, ввести email → откроется mailpit (`http://localhost:8025`) с magic-link.
 
-## Прод-деплой (план)
+## Прод-деплой
+
+Задеплоено: `persona-app.46-62-215-11.nip.io` (web :3020) + worker, CI —
+`.github/workflows/deploy-persona-studio.yml` (push в `main`). Миграции
+применяются baseline-aware скриптом `prisma/deploy.mjs` (см.
+`prisma/migrations/README.md`). Раскладка:
 
 1. БД `persona_studio` в `aisales-postgres` (тот же container).
 2. Bucket `persona-studio-media` в `aisales-minio` (или Cloudflare R2 — поменять `S3_*` env).
@@ -106,25 +124,31 @@ pnpm worker       # tsx watch src/workers/index.ts
 
 ## Token costs (env-driven)
 
+Калибровка под себестоимость провайдеров (~55% маржа на Pro) — см.
+[`docs/UNIT_ECONOMICS.md`](docs/UNIT_ECONOMICS.md).
+
 ```
-COST_AVATAR_GENERATION=10
-COST_COVER_GENERATION=3
-COST_HEYGEN_VIDEO=30
 SIGNUP_BONUS_TOKENS=10
+COST_AVATAR_GENERATION=10     # батч из 10 аватаров
+COST_COVER_GENERATION=3
+COST_SLIDE_IMAGE=3
+COST_HEYGEN_VIDEO=100         # HeyGen Avatar IV
+COST_OMNIHUMAN_VIDEO=140      # ByteDance OmniHuman + ElevenLabs TTS
+COST_SUBMAGIC_EDIT=15
+COST_RESEARCH_*=1..10         # transcribe / analyze / page-analyze / hooks / refresh
 ```
 
-Возврат — автоматический:
-- `failed` batch → полный возврат
-- `partial` batch (часть аватаров провалилась) → пропорциональный возврат
-- `failed` cover → полный возврат
+Возврат — автоматический: `failed` batch → полный возврат; `partial` batch →
+пропорциональный (`floor(cost·failed/total)`); `failed` cover/video → полный.
 
-## TODO до GA
+## Production hardening (статус)
 
-- [ ] HeyGen-видео pipeline (`VideoGeneration` модель уже есть, нужны worker + API + UI).
-- [ ] Stripe checkout вместо dev-stub в `billing/buy-tokens`.
-- [ ] Face-detect / single-person check перед enqueue avatar batch (сейчас — только MIME/size).
-- [ ] Moderation layer (consent + NSFW + чужие лица).
-- [ ] Admin panel (`/admin` — users / generations / costs / refund).
-- [ ] Лимиты на free-плане (1 batch).
-- [ ] Watermark на free-плане.
-- [ ] E2E тесты (Playwright).
+Сделано: явная `sharp`-зависимость; провайдерские ключи опциональны (прод
+поднимается с одним KIE); версионированные prisma-миграции с baseline-aware
+деплоем; rate-limiting дорогих эндпоинтов; consent + image-модерация (один
+человеческий лик + SFW) перед батчем; репрайс видео в плюс; fail-closed
+Telegram-вебхук; юнит-тесты денежного пути + smoke + CI. Источник истины по
+задачам — Notion «Persona Studio — Production & First Client».
+
+Осталось: Sentry (`@sentry/nextjs` + DSN); прод-SMTP (SPF/DKIM) для magic-link;
+лимиты/watermark free-плана; браузерный E2E; (опц.) split воркеров.

@@ -35,7 +35,9 @@ const envSchema = z.object({
   WORKER_PER_STYLE_PARALLEL: z.coerce.number().default(3),
 
   // ── HeyGen ────────────────────────────────────
-  HEYGEN_API_KEY: z.string().min(1),
+  // Optional: движок видео деградирует мягко. Без ключа создание HeyGen-видео
+  // отдаёт доменную ошибку (heygen.ts keyOrThrow), но web/worker стартуют.
+  HEYGEN_API_KEY: z.string().min(1).optional(),
   HEYGEN_API_BASE: z.string().url().default('https://api.heygen.com'),
   HEYGEN_UPLOAD_BASE: z.string().url().default('https://upload.heygen.com'),
 
@@ -45,7 +47,9 @@ const envSchema = z.object({
   OMNIHUMAN_MAX_POLL_MS: z.coerce.number().default(420_000), // 7 минут
 
   // ── ElevenLabs TTS ────────────────────────────
-  ELEVENLABS_API_KEY: z.string().min(1),
+  // Optional: нужен только для OmniHuman-видео с TTS. Без ключа synthesize()
+  // кидает доменную ошибку MISSING_KEY, но приложение поднимается.
+  ELEVENLABS_API_KEY: z.string().min(1).optional(),
   ELEVENLABS_API_BASE: z.string().url().default('https://api.elevenlabs.io/v1'),
   ELEVENLABS_MODEL: z.string().default('eleven_turbo_v2_5'),
   ELEVENLABS_TTS_TIMEOUT_MS: z.coerce.number().default(30_000),
@@ -84,10 +88,14 @@ const envSchema = z.object({
   SUBMAGIC_POLL_INTERVAL_MS: z.coerce.number().default(8_000),
 
   // ── Costs (env-driven) ────────────────────────
+  // Token costs calibrated to provider COGS for ~55% gross margin at the Pro
+  // pack ($0.0725/token). See docs/UNIT_ECONOMICS.md. Video engines are the
+  // expensive items: HeyGen Avatar IV ~$3/video, OmniHuman ~$4.3/video at
+  // public list prices — hence 100 / 140 tokens (was 30 / 50, which lost money).
   COST_AVATAR_GENERATION: z.coerce.number().default(10),
   COST_COVER_GENERATION: z.coerce.number().default(3),
-  COST_HEYGEN_VIDEO: z.coerce.number().default(30),
-  COST_OMNIHUMAN_VIDEO: z.coerce.number().default(50),
+  COST_HEYGEN_VIDEO: z.coerce.number().default(100),
+  COST_OMNIHUMAN_VIDEO: z.coerce.number().default(140),
   COST_SUBMAGIC_EDIT: z.coerce.number().default(15),
   COST_SLIDE_IMAGE: z.coerce.number().default(3),
   // ── Research (Badunga-style) ──
@@ -122,6 +130,10 @@ const envSchema = z.object({
   // Telegram: переиспользуем TELEGRAM_BOT_TOKEN (тот же бот, что и для TMA-
   // оплат). Для постинга в канал бот должен быть его админом.
   TELEGRAM_BOT_TOKEN: z.string().min(1).optional(),
+  // Secret passed to setWebhook(secret_token=…) and checked on each Telegram
+  // webhook call. REQUIRED in production (the webhook credits tokens) — without
+  // it the /api/telegram/webhook route fails closed with 503.
+  TELEGRAM_WEBHOOK_SECRET: z.string().min(1).optional(),
   // 32-байтный секрет (base64 или hex) для AES-256-GCM шифрования
   // long-lived IG-токенов в SocialAccount.accessToken. Без него подключение
   // Instagram недоступно (lib/publish/crypto бросит).
@@ -134,6 +146,26 @@ const envSchema = z.object({
   // Интервал publish-sweep (мс). Каждый тик берёт scheduled-посты с
   // scheduledAt <= now и ставит их таргеты в очередь.
   PUBLISH_CRON_TICK_MS: z.coerce.number().default(60_000),
+
+  // ── Rate limiting (per-user, per-minute) ──────
+  // research-search burns Apify budget on uncached searches → stricter.
+  // generate-* are token-gated but still throttled against bursts/leaked keys.
+  // Read directly via process.env in lib/ratelimit.ts; listed here for docs.
+  RATELIMIT_RESEARCH_PER_MIN: z.coerce.number().default(10),
+  RATELIMIT_GENERATE_PER_MIN: z.coerce.number().default(20),
+
+  // ── Moderation ────────────────────────────────
+  // Avatar source images are checked (single human face + SFW) via Anthropic
+  // vision. Without ANTHROPIC_API_KEY moderation is skipped (logged) — set
+  // MODERATION_REQUIRED=true to fail closed instead. Read via process.env in
+  // lib/moderation.ts; listed here for docs.
+  MODERATION_REQUIRED: z.string().optional(),
+
+  // ── Free-plan watermark ───────────────────────
+  // Off by default. When 'true', generated images (avatar/cover) for users who
+  // have never paid get a "Persona Studio" watermark. Keyed on hasEverPaid, not
+  // User.plan (which never upgrades). Read via process.env in lib/watermark.ts.
+  WATERMARK_FREE_PLAN: z.string().optional(),
 
   // ── Auth ──────────────────────────────────────
   AUTH_SECRET: z.string().min(1).optional(),

@@ -76,14 +76,22 @@ async function sendMessage(chatId: number, text: string, opts?: { withTmaButton?
 }
 
 export async function POST(req: NextRequest) {
-  // Verify webhook secret (set in setWebhook). If TELEGRAM_WEBHOOK_SECRET is
-  // not configured, accept all (dev). In prod, set it.
+  // Verify webhook secret (set in setWebhook via secret_token).
+  // This endpoint credits tokens on successful_payment, so an unverified
+  // request is a money-minting vector. Fail CLOSED in production: if the
+  // secret is not configured, reject everything rather than trust the caller.
+  // In dev we allow an unset secret for local testing.
   const expectedSecret = process.env.TELEGRAM_WEBHOOK_SECRET;
   if (expectedSecret) {
     const got = req.headers.get('x-telegram-bot-api-secret-token');
     if (got !== expectedSecret) {
       return NextResponse.json({ error: 'bad_secret' }, { status: 401 });
     }
+  } else if (process.env.NODE_ENV === 'production') {
+    return NextResponse.json(
+      { error: 'webhook_secret_not_configured' },
+      { status: 503 },
+    );
   }
 
   let update: Update;

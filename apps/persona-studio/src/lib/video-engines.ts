@@ -44,8 +44,11 @@ export type EngineConfig = {
 
 // Cost defaults — env-driven. Process.env читается в Node и при build на Next:
 // на клиенте эти числа уже зашиты как литералы при бандлинге.
-const COST_HEYGEN = Number(process.env.COST_HEYGEN_VIDEO ?? 30);
-const COST_OMNIHUMAN = Number(process.env.COST_OMNIHUMAN_VIDEO ?? 50);
+// Keep these fallbacks in sync with env.ts COST_* defaults (see
+// docs/UNIT_ECONOMICS.md). Video is the expensive item — these cover
+// provider COGS at ~55% margin on Pro.
+const COST_HEYGEN = Number(process.env.COST_HEYGEN_VIDEO ?? 100);
+const COST_OMNIHUMAN = Number(process.env.COST_OMNIHUMAN_VIDEO ?? 140);
 
 export const VIDEO_ENGINES: Record<VideoEngine, EngineConfig> = {
   // Avatar V — настоящий v3 движок (engine.type='avatar_v'). Самая свежая

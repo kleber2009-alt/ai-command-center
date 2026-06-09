@@ -1,0 +1,36 @@
+name: test-persona-studio
+
+# Unit tests for Persona Studio. The token-ledger tests mock the Prisma client
+# and the env module (Node's built-in test runner + module mocking), so they
+# need no database, no env secrets, and no full dependency install — just tsx
+# for the TypeScript transform. Fast (<1 min) and isolated from the workspace
+# lockfile.
+
+on:
+  push:
+    branches: [main]
+    paths:
+      - 'apps/persona-studio/**'
+      - '.github/workflows/test-persona-studio.yml'
+  pull_request:
+    paths:
+      - 'apps/persona-studio/**'
+      - '.github/workflows/test-persona-studio.yml'
+  workflow_dispatch:
+
+jobs:
+  unit:
+    runs-on: ubuntu-latest
+    timeout-minutes: 5
+    defaults:
+      run:
+        working-directory: apps/persona-studio
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 22
+
+      - name: Run token-ledger unit tests
+        run: npx -y tsx@4.19.2 --test --experimental-test-module-mocks "tests/**/*.test.ts"
