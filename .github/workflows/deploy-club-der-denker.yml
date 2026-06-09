@@ -1,0 +1,103 @@
+name: deploy-club-der-denker
+
+# Deploy apps/club-der-denker/backend (Next.js standalone + admin) to Hetzner.
+# Container: cdd-backend (:3020). Compose at apps/club-der-denker/backend/.
+#
+# ─── Required GitHub secrets ───────────────────────────────────────
+#   HETZNER_SSH_KEY
+#   CDD_SUPABASE_URL
+#   CDD_SUPABASE_SERVICE_ROLE_KEY
+#   CDD_AUTH_SECRET                     (openssl rand -base64 32)
+#   CDD_ADMIN_PASSWORD
+#   CDD_CRON_SECRET
+#   CDD_GOOGLE_SERVICE_ACCOUNT_JSON     (single-line JSON)
+#   CDD_WEB_GATEWAY_WEBHOOK_SECRET
+#
+# ─── Required GitHub repository variables ──────────────────────────
+#   CDD_ADMIN_EMAIL
+#   CDD_APPLE_CLIENT_IDS                (comma-separated)
+#   CDD_APPLE_BUNDLE_ID
+#   CDD_GOOGLE_CLIENT_IDS              (comma-separated)
+#   CDD_GOOGLE_PLAY_PACKAGE_NAME
+#   CDD_GOOGLE_PUBSUB_AUDIENCE
+#   CDD_GOOGLE_PUBSUB_SA_EMAIL
+
+on:
+  push:
+    branches: [main]
+    paths:
+      - 'apps/club-der-denker/backend/**'
+      - '.github/workflows/deploy-club-der-denker.yml'
+      - '.github/actions/deploy-ssh/**'
+  workflow_dispatch:
+    inputs:
+      ref:
+        required: false
+        default: 'main'
+
+concurrency:
+  group: deploy-club-der-denker
+  cancel-in-progress: false
+
+jobs:
+  deploy:
+    runs-on: ubuntu-latest
+    timeout-minutes: 25
+
+    steps:
+      - uses: actions/checkout@v4
+
+      - id: ref
+        run: |
+          if [ "${{ github.event_name }}" = "workflow_dispatch" ]; then
+            echo "value=${{ github.event.inputs.ref || 'main' }}" >> "$GITHUB_OUTPUT"
+          else
+            echo "value=${{ github.ref_name }}" >> "$GITHUB_OUTPUT"
+          fi
+
+      - uses: ./.github/actions/deploy-ssh
+        with:
+          app_name: club-der-denker
+          ref:      ${{ steps.ref.outputs.value }}
+          ssh_key:  ${{ secrets.HETZNER_SSH_KEY }}
+          env_file: |
+            SUPABASE_URL=${{ secrets.CDD_SUPABASE_URL }}
+            SUPABASE_SERVICE_ROLE_KEY=${{ secrets.CDD_SUPABASE_SERVICE_ROLE_KEY }}
+            AUTH_SECRET=${{ secrets.CDD_AUTH_SECRET }}
+            ADMIN_EMAIL=${{ vars.CDD_ADMIN_EMAIL }}
+            ADMIN_PASSWORD=${{ secrets.CDD_ADMIN_PASSWORD }}
+            CRON_SECRET=${{ secrets.CDD_CRON_SECRET }}
+            APPLE_CLIENT_IDS=${{ vars.CDD_APPLE_CLIENT_IDS }}
+            APPLE_BUNDLE_ID=${{ vars.CDD_APPLE_BUNDLE_ID }}
+            GOOGLE_CLIENT_IDS=${{ vars.CDD_GOOGLE_CLIENT_IDS }}
+            GOOGLE_PLAY_PACKAGE_NAME=${{ vars.CDD_GOOGLE_PLAY_PACKAGE_NAME }}
+            GOOGLE_SERVICE_ACCOUNT_JSON=${{ secrets.CDD_GOOGLE_SERVICE_ACCOUNT_JSON }}
+            GOOGLE_PUBSUB_AUDIENCE=${{ vars.CDD_GOOGLE_PUBSUB_AUDIENCE }}
+            GOOGLE_PUBSUB_SA_EMAIL=${{ vars.CDD_GOOGLE_PUBSUB_SA_EMAIL }}
+            WEB_GATEWAY_WEBHOOK_SECRET=${{ secrets.CDD_WEB_GATEWAY_WEBHOOK_SECRET }}
+            NODE_ENV=production
+          script: |
+            APP_DIR=/root/ai-command-center/apps/club-der-denker/backend
+            COMPOSE="$APP_DIR/docker-compose.yml"
+            echo "── using compose at $COMPOSE ──"
+
+            # compose reads runtime env from .env.local (gitignored); supply it
+            # from the root-only /etc/club-der-denker.env written by deploy-ssh.
+            cp /etc/club-der-denker.env "$APP_DIR/.env.local"
+
+            echo "── building cdd-backend ──"
+            docker compose -f "$COMPOSE" build cdd-backend
+
+            echo "── recreating cdd-backend ──"
+            docker compose -f "$COMPOSE" up -d --force-recreate cdd-backend
+
+            echo "── health-check ──"
+            for i in $(seq 1 25); do
+              if curl -fsS http://localhost:3020/api/health >/dev/null 2>&1; then
+                echo "✓ healthy after ${i}×3s"; exit 0
+              fi
+              sleep 3
+            done
+            echo "✗ cdd-backend did not respond within 75s"
+            docker logs --tail=80 cdd-backend || true
+            exit 1

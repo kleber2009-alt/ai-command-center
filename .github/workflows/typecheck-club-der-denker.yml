@@ -1,0 +1,39 @@
+name: club-der-denker typecheck
+
+# Standalone app (backend + mobile each have their own package-lock.json).
+on:
+  pull_request:
+    paths:
+      - 'apps/club-der-denker/**'
+      - '.github/workflows/typecheck-club-der-denker.yml'
+
+jobs:
+  backend:
+    runs-on: ubuntu-latest
+    defaults:
+      run:
+        working-directory: apps/club-der-denker/backend
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v5
+        with:
+          node-version: '20'
+      - run: npm ci
+      - name: Typecheck
+        run: npm run typecheck
+      - name: Engine tests
+        run: npm test
+
+  mobile:
+    runs-on: ubuntu-latest
+    defaults:
+      run:
+        working-directory: apps/club-der-denker/mobile
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v5
+        with:
+          node-version: '20'
+      - run: npm ci
+      - name: Typecheck
+        run: npm run typecheck

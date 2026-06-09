@@ -1,0 +1,14 @@
+# Club Der Denker backend + admin (Next.js standalone). Host port 3020.
+# Put runtime secrets in .env.local (gitignored): SUPABASE_URL,
+# SUPABASE_SERVICE_ROLE_KEY, AUTH_SECRET, ADMIN_EMAIL/PASSWORD, CRON_SECRET.
+services:
+  cdd-backend:
+    build:
+      context: .
+    image: cdd-backend
+    container_name: cdd-backend
+    restart: unless-stopped
+    env_file:
+      - .env.local
+    ports:
+      - "3020:3020"

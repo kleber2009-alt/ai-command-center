@@ -19,7 +19,8 @@ env vars, and routes, see `CLAUDE.md` / `README.md` inside each `apps/<app>/`.
 │   ├── infra-worker/       # cron+queue Office Worker (9 handlers)
 │   ├── ai-content-factory/ # Autonomous IG content factory (Claude + Puppeteer + RAG)
 │   ├── ig-content/         # Next.js SaaS — Instagram Serial Content Automation (Supabase + 5 agents)
-│   └── voice-circle-bot/   # Python TG bot for video circles
+│   ├── voice-circle-bot/   # Python TG bot for video circles
+│   └── club-der-denker/    # Universal course engine — RN mobile + Next.js backend/admin (scaffold, not in Command Center)
 ├── landings/               # static landing pages (one folder per product)
 ├── supabase/               # SQL migrations shared across apps
 ├── scripts/                # backup + deploy shell scripts
@@ -47,6 +48,11 @@ env vars, and routes, see `CLAUDE.md` / `README.md` inside each `apps/<app>/`.
 | 10 | 📡 **Залётный / Viral Discover** (`viral-discover`) | production | **6/6 ✅** | `apps/infra-worker/handlers/viral_discover.js` + `lib/parser_bot.js` | `landings/viral-discover/cabinet/` | `dashboard.../landings/viral-discover/`, `parser.46-62-215-11.nip.io`, `@parser_instaa_bot` | `infra-aisales-worker-1` |
 | 11 | 🏭 **AI Content Factory** (`ai-content-factory`) | dev | 3/6 | `apps/ai-content-factory` | `landings/ai-content-factory` | TG-доставка через бота владельца | `infra-ai-content-factory-1` (после деплоя) |
 | 12 | 📸 **IG Serial Content** (`ig-content`) | production | 6/8 | `apps/ig-content` | (web-app сам = сайт) | `https://igcontent.46-62-215-11.nip.io` | `ig-content` (host port 3017) |
+| 13 | 🧠 **Club Der Denker** (`club-der-denker`) | dev (scaffold) | — | `apps/club-der-denker` (backend+admin / mobile) | `landings/club-der-denker` | `cdd.46-62-215-11.nip.io` (planned) | `cdd-backend` (:3020, planned) |
+
+> Row 13 is a scaffold: not yet deployed. Adding it to the live Command Center
+> dashboard requires inserting a row into the `aisales` DB `projects` table —
+> which needs explicit approval (see "Always require explicit user approval").
 
 ### Infrastructure-only apps (not in Command Center)
 
@@ -191,5 +197,6 @@ When the task is scoped to a single app, read its `CLAUDE.md` first:
 - [`apps/ai-content-factory/CLAUDE.md`](apps/ai-content-factory/CLAUDE.md) — TS/ESM, Claude + Voyage + sqlite-vec + Puppeteer carousel pipeline, Telegram delivery
 - [`apps/ig-content/CLAUDE.md`](apps/ig-content/CLAUDE.md) — Next.js 14 + Supabase, 5 AI-agents (Strategist / Reels / Carousel / Analytics), pgvector RAG, port 3010, deploy `igcontent.46-62-215-11.nip.io`
 - [`apps/voice-circle-bot/CLAUDE.md`](apps/voice-circle-bot/CLAUDE.md) — prototype, not in prod
+- [`apps/club-der-denker/CLAUDE.md`](apps/club-der-denker/CLAUDE.md) — universal course engine: RN mobile + Next.js backend/admin, engine rules (levels/unlock/streak/community/IAP), funnel order; scaffold, not in prod
 
 Per-app `README.md` / `DEPLOY.md` / `ROADMAP.md` remain authoritative for deep architecture and deploy steps. Each `apps/<app>/CLAUDE.md` is the orientation layer.

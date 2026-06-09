@@ -1,0 +1,274 @@
+<!DOCTYPE html>
+<html lang="de">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<meta name="theme-color" content="#0f0f12">
+<title>Club Der Denker — 28 Tage. 112 Gedanken. Ein klarer Kopf.</title>
+<meta name="description" content="Ein geführtes 28-Tage-Denkprogramm fürs Smartphone. Jeden Tag vier kompakte Einheiten, klare Rückmeldung, sichtbarer Fortschritt. iOS & Android.">
+<meta property="og:title" content="Club Der Denker">
+<meta property="og:description" content="28 Tage. 112 Gedanken. Ein klarer Kopf. Das geführte Denkprogramm für dein Smartphone.">
+<meta property="og:type" content="website">
+<style>
+*,*::before,*::after{margin:0;padding:0;box-sizing:border-box}
+:root{
+  --bg:#0f0f12;
+  --surface:#1a1a20;
+  --surface-2:#23232c;
+  --border:#2e2e38;
+  --t1:#f5f5f7;
+  --t2:#a1a1aa;
+  --t3:#71717a;
+  --accent:#6d5dfc;
+  --accent-hover:#8275ff;
+  --accent-soft:rgba(109,93,252,.12);
+  --success:#34d399;
+  --warn:#fbbf24;
+  --r2:10px;--r3:12px;--r4:16px;--r5:24px;
+  --font:-apple-system,BlinkMacSystemFont,'SF Pro Display','SF Pro Text','Inter','Helvetica Neue',Arial,sans-serif;
+  --max:1080px;
+}
+html{scroll-behavior:smooth}
+html,body{background:var(--bg);color:var(--t1);-webkit-font-smoothing:antialiased;text-rendering:optimizeLegibility}
+body{font-family:var(--font);font-size:17px;line-height:1.5}
+a{color:inherit;text-decoration:none}
+::selection{background:var(--accent-soft);color:var(--t1)}
+img{max-width:100%;display:block}
+.wrap{max-width:var(--max);margin:0 auto;padding:0 24px}
+.muted{color:var(--t2)}
+
+/* ===== Topbar ===== */
+header.top{position:sticky;top:0;z-index:50;background:rgba(15,15,18,.72);backdrop-filter:saturate(180%) blur(20px);border-bottom:1px solid var(--border)}
+.top .wrap{display:flex;align-items:center;justify-content:space-between;height:56px}
+.brand{display:flex;align-items:center;gap:10px;font-weight:700;letter-spacing:-.01em}
+.brand .dot{width:22px;height:22px;border-radius:7px;background:linear-gradient(135deg,var(--accent),#a78bfa);display:grid;place-items:center;font-size:12px}
+.nav{display:flex;gap:28px;font-size:15px}
+.nav a{color:var(--t2);transition:color .2s}
+.nav a:hover{color:var(--t1)}
+.btn{display:inline-flex;align-items:center;justify-content:center;gap:8px;font-weight:600;border-radius:var(--r3);padding:12px 20px;transition:.2s;cursor:pointer;border:1px solid transparent;font-size:15px}
+.btn-primary{background:var(--accent);color:#fff}
+.btn-primary:hover{background:var(--accent-hover)}
+.btn-ghost{background:var(--surface-2);color:var(--t1);border-color:var(--border)}
+.btn-ghost:hover{border-color:var(--accent)}
+.top .btn{padding:9px 16px}
+@media(max-width:720px){.nav{display:none}}
+
+/* ===== Hero ===== */
+.hero{position:relative;text-align:center;padding:96px 0 72px;overflow:hidden}
+.hero::before{content:"";position:absolute;inset:-20% 0 auto;height:520px;background:radial-gradient(60% 60% at 50% 0,rgba(109,93,252,.22),transparent 70%);pointer-events:none}
+.kicker{display:inline-flex;align-items:center;gap:8px;font-size:13px;font-weight:600;color:var(--t2);background:var(--surface);border:1px solid var(--border);padding:7px 14px;border-radius:999px;margin-bottom:28px}
+.kicker .pulse{width:7px;height:7px;border-radius:50%;background:var(--success);box-shadow:0 0 0 0 rgba(52,211,153,.6);animation:pulse 2s infinite}
+@keyframes pulse{0%{box-shadow:0 0 0 0 rgba(52,211,153,.5)}70%{box-shadow:0 0 0 8px rgba(52,211,153,0)}100%{box-shadow:0 0 0 0 rgba(52,211,153,0)}}
+h1{font-size:clamp(40px,7vw,72px);line-height:1.05;letter-spacing:-.03em;font-weight:700;margin-bottom:22px}
+h1 .grad{background:linear-gradient(120deg,#a78bfa,#6d5dfc 60%,#34d399);-webkit-background-clip:text;background-clip:text;color:transparent}
+.lead{font-size:clamp(18px,2.4vw,22px);color:var(--t2);max-width:660px;margin:0 auto 36px}
+.cta-row{display:flex;gap:14px;justify-content:center;flex-wrap:wrap}
+.store{display:inline-flex;align-items:center;gap:11px;background:var(--surface);border:1px solid var(--border);border-radius:var(--r4);padding:12px 20px;transition:.2s}
+.store:hover{border-color:var(--accent);transform:translateY(-1px)}
+.store .ic{font-size:24px}
+.store small{display:block;font-size:11px;color:var(--t3);line-height:1.2}
+.store strong{font-size:16px;font-weight:600}
+
+/* ===== Stat strip ===== */
+.stats{display:grid;grid-template-columns:repeat(4,1fr);gap:1px;background:var(--border);border:1px solid var(--border);border-radius:var(--r5);overflow:hidden;margin-top:72px}
+.stats div{background:var(--bg);padding:28px 16px;text-align:center}
+.stats .n{font-size:clamp(28px,4vw,40px);font-weight:700;letter-spacing:-.02em;background:linear-gradient(120deg,#a78bfa,#6d5dfc);-webkit-background-clip:text;background-clip:text;color:transparent}
+.stats .l{font-size:13px;color:var(--t2);margin-top:6px}
+@media(max-width:720px){.stats{grid-template-columns:repeat(2,1fr)}}
+
+/* ===== Sections ===== */
+section{padding:88px 0}
+.sec-head{text-align:center;max-width:680px;margin:0 auto 56px}
+.sec-head .tag{font-size:13px;font-weight:700;letter-spacing:.08em;text-transform:uppercase;color:var(--accent);margin-bottom:14px}
+h2{font-size:clamp(30px,4.5vw,44px);line-height:1.1;letter-spacing:-.02em;font-weight:700;margin-bottom:16px}
+.sec-head p{font-size:18px;color:var(--t2)}
+
+/* steps */
+.steps{display:grid;grid-template-columns:repeat(3,1fr);gap:20px}
+.step{background:var(--surface);border:1px solid var(--border);border-radius:var(--r5);padding:32px}
+.step .num{width:40px;height:40px;border-radius:12px;background:var(--accent-soft);color:var(--accent);display:grid;place-items:center;font-weight:700;font-size:18px;margin-bottom:20px}
+.step h3{font-size:20px;margin-bottom:10px;letter-spacing:-.01em}
+.step p{color:var(--t2);font-size:15px}
+@media(max-width:860px){.steps{grid-template-columns:1fr}}
+
+/* day rhythm */
+.rhythm{display:grid;grid-template-columns:1.1fr .9fr;gap:48px;align-items:center}
+.rhythm .copy h2{margin-bottom:18px}
+.rhythm .copy p{color:var(--t2);margin-bottom:16px}
+.rhythm ul{list-style:none;display:grid;gap:12px;margin-top:24px}
+.rhythm li{display:flex;gap:12px;align-items:flex-start;font-size:15px}
+.rhythm li .ck{color:var(--success);flex:none;margin-top:2px}
+.phone{justify-self:center;width:280px;aspect-ratio:9/19;background:linear-gradient(180deg,var(--surface),#101015);border:1px solid var(--border);border-radius:36px;padding:14px;box-shadow:0 40px 80px -30px rgba(109,93,252,.4)}
+.phone .screen{height:100%;background:var(--bg);border-radius:24px;border:1px solid var(--border);padding:18px;display:flex;flex-direction:column;gap:14px;overflow:hidden}
+.phone .bar{height:8px;border-radius:999px;background:var(--surface-2);overflow:hidden}
+.phone .bar i{display:block;height:100%;width:46%;background:linear-gradient(90deg,var(--accent),#a78bfa);border-radius:999px}
+.phone .row{display:flex;justify-content:space-between;align-items:center}
+.chip{font-size:11px;color:var(--t2);background:var(--surface-2);border:1px solid var(--border);border-radius:999px;padding:5px 10px}
+.phone .q{font-size:14px;font-weight:600;line-height:1.35}
+.opt{font-size:13px;color:var(--t2);border:1px solid var(--border);border-radius:10px;padding:11px 12px;background:var(--surface)}
+.opt.sel{border-color:var(--accent);color:var(--t1);background:var(--surface-2)}
+.fb{font-size:12px;color:var(--success);background:rgba(52,211,153,.08);border-radius:10px;padding:10px 12px}
+@media(max-width:860px){.rhythm{grid-template-columns:1fr;gap:40px}.rhythm .copy{order:2}.phone{order:1}}
+
+/* features */
+.grid{display:grid;grid-template-columns:repeat(3,1fr);gap:20px}
+.card{background:var(--surface);border:1px solid var(--border);border-radius:var(--r5);padding:28px;transition:.2s}
+.card:hover{border-color:var(--accent);transform:translateY(-2px)}
+.card .ic{width:44px;height:44px;border-radius:12px;background:var(--accent-soft);display:grid;place-items:center;font-size:20px;margin-bottom:18px}
+.card h3{font-size:18px;margin-bottom:8px;letter-spacing:-.01em}
+.card p{color:var(--t2);font-size:14.5px}
+@media(max-width:860px){.grid{grid-template-columns:1fr}}
+
+/* levels */
+.levels{display:flex;gap:14px;flex-wrap:wrap;justify-content:center;margin-top:8px}
+.lvl{flex:1;min-width:160px;background:var(--surface);border:1px solid var(--border);border-radius:var(--r4);padding:22px;text-align:center}
+.lvl .b{width:36px;height:36px;border-radius:50%;margin:0 auto 12px;display:grid;place-items:center;font-weight:700;color:#fff;background:var(--accent)}
+.lvl h4{font-size:15px;margin-bottom:4px}
+.lvl small{color:var(--t3);font-size:12px}
+
+/* CTA */
+.final{text-align:center;background:radial-gradient(70% 120% at 50% 0,rgba(109,93,252,.18),transparent 70%);border:1px solid var(--border);border-radius:32px;padding:64px 24px;margin:0 24px}
+.final h2{margin-bottom:14px}
+.final p{color:var(--t2);max-width:520px;margin:0 auto 30px}
+
+footer{border-top:1px solid var(--border);padding:40px 0;color:var(--t3);font-size:14px}
+footer .wrap{display:flex;justify-content:space-between;align-items:center;flex-wrap:wrap;gap:16px}
+footer a{color:var(--t2)}
+footer a:hover{color:var(--t1)}
+</style>
+</head>
+<body>
+
+<header class="top">
+  <div class="wrap">
+    <div class="brand"><span class="dot">🧠</span> Club Der Denker</div>
+    <nav class="nav">
+      <a href="#how">So funktioniert's</a>
+      <a href="#rhythm">Der Tag</a>
+      <a href="#features">Funktionen</a>
+      <a href="#levels">Fortschritt</a>
+    </nav>
+    <a href="#get" class="btn btn-primary">Loslegen</a>
+  </div>
+</header>
+
+<section class="hero">
+  <div class="wrap">
+    <span class="kicker"><span class="pulse"></span> Geführtes 28-Tage-Denkprogramm</span>
+    <h1>28 Tage.<br>112 Gedanken.<br><span class="grad">Ein klarer Kopf.</span></h1>
+    <p class="lead">Jeden Tag vier kompakte Einheiten. Anschauen, entscheiden, sofortige Rückmeldung. Kein Account nötig zum Ausprobieren — du startest direkt.</p>
+    <div class="cta-row">
+      <a href="#get" class="store"><span class="ic"></span><span><small>Laden im</small><strong>App Store</strong></span></a>
+      <a href="#get" class="store"><span class="ic">▶</span><span><small>Jetzt bei</small><strong>Google Play</strong></span></a>
+    </div>
+
+    <div class="stats">
+      <div><div class="n">112</div><div class="l">Einheiten</div></div>
+      <div><div class="n">28</div><div class="l">Tage</div></div>
+      <div><div class="n">5</div><div class="l">Stufen</div></div>
+      <div><div class="n">6</div><div class="l">Sprachen</div></div>
+    </div>
+  </div>
+</section>
+
+<section id="how">
+  <div class="wrap">
+    <div class="sec-head">
+      <div class="tag">So funktioniert's</div>
+      <h2>Drei Schritte. Immer gleich.</h2>
+      <p>Jede Einheit folgt demselben klaren Rhythmus — vom kostenlosen Einstieg bis zur letzten Einheit.</p>
+    </div>
+    <div class="steps">
+      <div class="step"><div class="num">1</div><h3>Anschauen</h3><p>Ein kompakter Gedanke — als Text, Bild oder Video. Fokussiert, ohne Ablenkung.</p></div>
+      <div class="step"><div class="num">2</div><h3>Entscheiden</h3><p>Eine Frage, drei bis vier Antworten. Du wählst — es gibt kein „falsch", nur Bewegung.</p></div>
+      <div class="step"><div class="num">3</div><h3>Verstehen</h3><p>Sofortige Rückmeldung erscheint, und die nächste Einheit wird freigeschaltet.</p></div>
+    </div>
+  </div>
+</section>
+
+<section id="rhythm" style="padding-top:0">
+  <div class="wrap">
+    <div class="rhythm">
+      <div class="copy">
+        <div class="tag" style="color:var(--accent);font-size:13px;font-weight:700;letter-spacing:.08em;text-transform:uppercase;margin-bottom:14px">Der Tagesrhythmus</div>
+        <h2>Vier Einheiten am Tag. Nicht mehr.</h2>
+        <p>Bewusst begrenzt: Nach vier Einheiten ist Schluss. Die nächsten vier öffnen pünktlich um Mitternacht — in deiner Zeitzone.</p>
+        <p class="muted">So bleibt es leicht, dranzubleiben, statt sich zu überfordern.</p>
+        <ul>
+          <li><span class="ck">✓</span> Genau 4 Einheiten pro Tag, 28 Tage lang</li>
+          <li><span class="ck">✓</span> Funktioniert offline — der Tag ist gespeichert</li>
+          <li><span class="ck">✓</span> Ein Joker fängt einen verpassten Tag ab</li>
+        </ul>
+      </div>
+      <div class="phone">
+        <div class="screen">
+          <div class="row"><span class="chip">⬢ Stufe 3</span><span class="chip">🔥 12 · Serie</span></div>
+          <div class="bar"><i></i></div>
+          <span class="chip" style="align-self:flex-start">Tag 13</span>
+          <div class="q">Was hält dich gerade am meisten zurück?</div>
+          <div class="opt">Die Zeit</div>
+          <div class="opt sel">Die erste Entscheidung</div>
+          <div class="opt">Die Anderen</div>
+          <div class="fb">Genau — der erste Schritt wiegt am schwersten. Weiter →</div>
+        </div>
+      </div>
+    </div>
+  </div>
+</section>
+
+<section id="features" style="background:var(--surface);border-block:1px solid var(--border)">
+  <div class="wrap">
+    <div class="sec-head">
+      <div class="tag">Funktionen</div>
+      <h2>Gebaut, damit du dranbleibst</h2>
+      <p>Kleine Mechaniken, große Wirkung — alles auf Kontinuität ausgelegt.</p>
+    </div>
+    <div class="grid">
+      <div class="card"><div class="ic">🔥</div><h3>Serie & Joker</h3><p>Jeder Tag zählt. Ein einmaliger Joker rettet deine Serie, wenn das Leben dazwischenkommt — dein Kursfortschritt bleibt unberührt.</p></div>
+      <div class="card"><div class="ic">⬢</div><h3>Fünf Stufen</h3><p>Dein Fortschritt wird sichtbar: fünf Stufen, allein nach zurückgelegten Einheiten — nicht nach Tempo oder „richtigen" Antworten.</p></div>
+      <div class="card"><div class="ic">📡</div><h3>Voll offline</h3><p>Das Tagespaket ist auf dem Gerät gespeichert. Verbindung weg? Du machst weiter — synchronisiert wird im Hintergrund.</p></div>
+      <div class="card"><div class="ic">🌍</div><h3>6 Sprachen</h3><p>Deutsch, Englisch, Russisch, Spanisch, Französisch, Italienisch — sofort umschaltbar, im ganzen Programm.</p></div>
+      <div class="card"><div class="ic">▤</div><h3>Community-Feed</h3><p>Kuratierte Impulse zum Lesen — fokussiert und ruhig, ohne Lärm und endloses Scrollen.</p></div>
+      <div class="card"><div class="ic">🔒</div><h3>Privat & sicher</h3><p>DSGVO-konform, verschlüsselte Übertragung, jederzeit vollständig löschbar. Zahlungsdaten bleiben bei Apple und Google.</p></div>
+    </div>
+  </div>
+</section>
+
+<section id="levels">
+  <div class="wrap">
+    <div class="sec-head">
+      <div class="tag">Dein Fortschritt</div>
+      <h2>Von Gast zu Meister</h2>
+      <p>Fünf Stufen begleiten dich durch die 112 Einheiten.</p>
+    </div>
+    <div class="levels">
+      <div class="lvl"><div class="b">1</div><h4>Gast</h4><small>Kostenloser Einstieg</small></div>
+      <div class="lvl"><div class="b">2</div><h4>Starter</h4><small>Ab Einheit 4</small></div>
+      <div class="lvl"><div class="b">3</div><h4>Fortgeschritten</h4><small>25 % geschafft</small></div>
+      <div class="lvl"><div class="b">4</div><h4>Profi</h4><small>50 % geschafft</small></div>
+      <div class="lvl"><div class="b" style="background:linear-gradient(135deg,#6d5dfc,#34d399)">5</div><h4>Meister</h4><small>Alle 112 Einheiten</small></div>
+    </div>
+  </div>
+</section>
+
+<section id="get" style="padding-top:0">
+  <div class="final">
+    <h2>Bereit, klarer zu denken?</h2>
+    <p>Starte direkt — ohne Anmeldung, ohne Umwege. Die ersten Einheiten sind kostenlos.</p>
+    <div class="cta-row">
+      <a href="#" class="store"><span class="ic"></span><span><small>Laden im</small><strong>App Store</strong></span></a>
+      <a href="#" class="store"><span class="ic">▶</span><span><small>Jetzt bei</small><strong>Google Play</strong></span></a>
+    </div>
+  </div>
+</section>
+
+<footer>
+  <div class="wrap">
+    <div class="brand"><span class="dot">🧠</span> Club Der Denker</div>
+    <div>© <span id="y"></span> Club Der Denker · <a href="datenschutz.html">Datenschutz</a> · <a href="impressum.html">Impressum</a> · <a href="agb.html">AGB</a> · <a href="konto-loeschen.html">Konto löschen</a></div>
+  </div>
+</footer>
+
+<script>document.getElementById('y').textContent=new Date().getFullYear();</script>
+</body>
+</html>

@@ -1,0 +1,401 @@
+<!DOCTYPE html>
+<html lang="ru">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Club Der Denker — все страницы проекта</title>
+<style>
+  *,*::before,*::after{margin:0;padding:0;box-sizing:border-box}
+  :root{
+    --bg:#0f0f12;--surface:#1a1a20;--surface2:#23232c;--border:#2e2e38;
+    --t1:#f5f5f7;--t2:#a1a1aa;--t3:#71717a;--accent:#6d5dfc;--accentT:#fff;
+    --success:#34d399;--danger:#f87171;
+    --font:-apple-system,BlinkMacSystemFont,'SF Pro Text','Inter',Segoe UI,Arial,sans-serif;
+  }
+  body{font-family:var(--font);background:#08080a;color:var(--t1);padding:40px 24px 80px}
+  .page-h{max-width:1200px;margin:0 auto 40px}
+  .page-h h1{font-size:32px;letter-spacing:-.02em}
+  .page-h p{color:var(--t2);margin-top:8px}
+  h2.group{max-width:1200px;margin:56px auto 8px;font-size:22px;letter-spacing:-.01em}
+  h2.group span{color:var(--t3);font-size:14px;font-weight:400;margin-left:8px}
+  .gallery{max-width:1200px;margin:0 auto;display:flex;flex-wrap:wrap;gap:28px}
+  .cap{font-size:13px;color:var(--t2);margin-top:10px;text-align:center}
+  .cap b{color:var(--t1);font-weight:600}
+
+  /* ---- phone frame ---- */
+  .phone{width:248px}
+  .frame{width:248px;height:520px;background:#000;border-radius:34px;padding:10px;border:1px solid #2a2a32;box-shadow:0 30px 60px -30px rgba(109,93,252,.45)}
+  .screen{position:relative;height:100%;background:var(--bg);border-radius:26px;overflow:hidden;display:flex;flex-direction:column;padding:18px 16px;gap:12px}
+  .notch{position:absolute;top:8px;left:50%;transform:translateX(-50%);width:80px;height:5px;border-radius:3px;background:#26262e}
+  .screen.center{justify-content:center;align-items:stretch}
+
+  /* primitives mirroring the app */
+  .h1{font-size:22px;font-weight:700;letter-spacing:-.02em;line-height:1.15}
+  .h2{font-size:18px;font-weight:600}
+  .body{font-size:13px;line-height:1.45}
+  .muted{color:var(--t2)}
+  .faint{color:var(--t3)}
+  .btn{border-radius:12px;padding:13px;text-align:center;font-weight:600;font-size:14px}
+  .btn-primary{background:var(--accent);color:#fff}
+  .btn-sec{background:var(--surface2);color:var(--t1)}
+  .btn-ghost{color:var(--t2);text-align:center;font-size:13px;padding:8px}
+  .btn-danger{color:var(--danger);text-align:center;font-size:13px}
+  .input{border:1px solid var(--border);background:var(--surface);border-radius:12px;padding:13px;color:var(--t3);font-size:13px}
+  .card{background:var(--surface);border:1px solid var(--border);border-radius:16px;padding:16px}
+  .media{width:100%;height:96px;border-radius:14px;background:linear-gradient(135deg,#23232c,#15151a);display:grid;place-items:center;color:#3a3a44;font-size:26px}
+  .opt{border:1px solid var(--border);border-radius:10px;padding:11px 12px;font-size:13px;background:var(--surface)}
+  .opt.sel{border-color:var(--accent);background:var(--surface2)}
+  .opt.dim{opacity:.5}
+  .fb{background:var(--surface2);border-radius:10px;padding:11px;font-size:12px;color:var(--t2)}
+  .dots{display:flex;gap:6px;justify-content:center}
+  .dot{width:7px;height:7px;border-radius:4px;background:var(--border)}
+  .dot.on{width:20px;background:var(--accent)}
+  .dot.done{background:var(--accent)}
+  .badge{display:inline-flex;align-items:center;gap:7px;background:var(--surface2);border-radius:999px;padding:5px 11px;font-size:11px}
+  .badge .b{width:20px;height:20px;border-radius:10px;background:var(--accent);color:#fff;display:grid;place-items:center;font-weight:700;font-size:11px}
+  .pill{display:inline-flex;align-items:center;gap:5px;background:var(--surface2);border-radius:999px;padding:5px 11px;font-size:11px}
+  .pbar{height:8px;border-radius:999px;background:var(--surface2);overflow:hidden}
+  .pbar i{display:block;height:100%;background:var(--accent);border-radius:999px}
+  .row{display:flex;justify-content:space-between;align-items:center}
+  .tabbar{position:absolute;bottom:0;left:0;right:0;height:46px;background:var(--surface);border-top:1px solid var(--border);display:flex}
+  .tabbar div{flex:1;display:grid;place-items:center;font-size:10px;color:var(--t3);gap:2px}
+  .tabbar div.on{color:var(--accent)}
+  .tabbar .ic{font-size:15px}
+  .grow{flex:1}
+  .gap6{display:flex;flex-direction:column;gap:6px}
+  .gap8{display:flex;flex-direction:column;gap:8px}
+  .gap10{display:flex;flex-direction:column;gap:10px}
+  .choiceA{background:var(--surface2);border:1px solid var(--border);border-radius:18px;padding:26px;text-align:center;font-weight:600}
+  .choiceB{background:var(--accent);border-radius:18px;padding:26px;text-align:center;font-weight:600;color:#fff}
+  .lang{display:flex;flex-wrap:wrap;gap:6px}
+  .lang span{border:1px solid var(--border);border-radius:8px;padding:6px 9px;font-size:11px;color:var(--t2)}
+  .lang span.on{background:var(--accent);border-color:var(--accent);color:#fff}
+  .social{background:#fff;color:#111;border-radius:12px;padding:12px;text-align:center;font-size:13px;font-weight:600}
+  .social.g{border:1px solid var(--border);color:#3c4043}
+  .post{border-bottom:1px solid var(--border);padding-bottom:12px}
+
+  /* ---- admin window ---- */
+  .win{width:560px}
+  .winframe{border:1px solid #d9d9de;border-radius:12px;overflow:hidden;background:#fafafa;box-shadow:0 20px 50px -25px rgba(0,0,0,.6)}
+  .winbar{background:#ececef;height:30px;display:flex;align-items:center;gap:6px;padding:0 12px;border-bottom:1px solid #d9d9de}
+  .winbar i{width:11px;height:11px;border-radius:50%;background:#c8c8cd}
+  .winbar .url{margin-left:10px;font-size:11px;color:#6e6e73;background:#fff;border-radius:6px;padding:3px 10px}
+  .admin{display:flex;min-height:320px;background:#fafafa;color:#1c1c1e;font-size:13px}
+  .side{width:130px;background:#fff;border-right:1px solid #e5e5ea;padding:14px 10px}
+  .side .lg{font-weight:700;font-size:13px;margin-bottom:14px}
+  .side a{display:flex;gap:8px;align-items:center;padding:7px 8px;border-radius:7px;color:#3a3a3c;font-size:12px}
+  .side a.on{background:#f0f0f3}
+  .main{flex:1;padding:18px}
+  .main h3{font-size:17px;margin-bottom:14px}
+  .cards4{display:grid;grid-template-columns:1fr 1fr;gap:10px}
+  .scard{background:#fff;border:1px solid #e5e5ea;border-radius:10px;padding:12px}
+  .scard .l{font-size:11px;color:#8e8e93}
+  .scard .v{font-size:20px;font-weight:700;margin-top:3px}
+  .daygrid{display:grid;grid-template-columns:1fr 1fr 1fr;gap:8px}
+  .day{background:#fff;border:1px solid #e5e5ea;border-radius:9px;padding:10px}
+  .day .t{font-size:11px;font-weight:600;margin-bottom:5px}
+  .day .s{font-size:10px;color:#aeaeb2}
+  .day .s.ok{color:#1d8348}
+  table{width:100%;border-collapse:collapse;font-size:12px}
+  th{text-align:left;color:#8e8e93;font-weight:500;border-bottom:1px solid #e5e5ea;padding:6px 4px}
+  td{border-bottom:1px solid #f0f0f3;padding:7px 4px}
+  .tagbtn{background:#fee;color:#c0392b;border-radius:6px;padding:3px 7px;font-size:10px;display:inline-block}
+  .loginbox{margin:auto;width:230px;background:#fff;border:1px solid #e5e5ea;border-radius:12px;padding:20px;display:flex;flex-direction:column;gap:10px}
+  .loginbox .lg{font-weight:600}
+  .ai{border:1px solid #d9d9de;border-radius:8px;padding:9px;color:#aaa;font-size:12px}
+  .pbtn{background:#1c1c1e;color:#fff;border-radius:8px;padding:9px;text-align:center;font-size:12px}
+  .modal{position:relative;background:#fff;border:1px solid #e5e5ea;border-radius:12px;padding:16px;margin:10px;box-shadow:0 10px 30px rgba(0,0,0,.15)}
+  a.link{color:var(--accent)}
+</style>
+</head>
+<body>
+<div class="page-h">
+  <h1>🧠 Club Der Denker — все страницы проекта</h1>
+  <p class="muted">Статические мокапы на реальных дизайн-токенах приложения. Мобильные экраны (Expo/React Native) и админка (Next.js). Лендинг — отдельный файл <code>landings/club-der-denker/index.html</code>.</p>
+</div>
+
+<!-- ===================== MOBILE: FUNNEL ===================== -->
+<h2 class="group">Мобильное приложение · Воронка <span>(без регистрации, строгий порядок — ТЗ 3.1)</span></h2>
+<div class="gallery">
+
+  <!-- 1 Funnel free item -->
+  <div class="phone"><div class="frame"><div class="screen"><div class="notch"></div>
+    <div class="dots" style="margin-top:14px"><span class="dot done"></span><span class="dot on"></span><span class="dot"></span></div>
+    <div class="media">🖼</div>
+    <div class="h2">Was hält dich gerade am meisten zurück?</div>
+    <div class="gap8">
+      <div class="opt dim">Die Zeit</div>
+      <div class="opt sel">Die erste Entscheidung</div>
+      <div class="opt dim">Die Anderen</div>
+    </div>
+    <div class="fb">Genau — der erste Schritt wiegt am schwersten.</div>
+    <div class="btn btn-primary">Weiter</div>
+  </div></div><div class="cap"><b>1. Funnel</b> · 3 бесплатных элемента</div></div>
+
+  <!-- 2 Case -->
+  <div class="phone"><div class="frame"><div class="screen"><div class="notch"></div>
+    <div class="media" style="height:130px;margin-top:10px">🖼</div>
+    <div class="body">Stell dir vor, du stehst morgens vor genau einer Entscheidung, die deinen Tag bestimmt…</div>
+    <div class="grow"></div>
+    <div class="btn btn-primary">Weiter</div>
+  </div></div><div class="cap"><b>2. Case</b> · практический кейс</div></div>
+
+  <!-- 3 Branch -->
+  <div class="phone"><div class="frame"><div class="screen center"><div class="notch"></div>
+    <div class="h1" style="text-align:center;margin-bottom:8px">Wähle deinen Weg</div>
+    <div class="gap10">
+      <div class="choiceA">Variante A</div>
+      <div class="choiceB">Variante B</div>
+    </div>
+  </div></div><div class="cap"><b>3. Branch</b> · бинарный выбор A/Б</div></div>
+
+  <!-- 4 Objection -->
+  <div class="phone"><div class="frame"><div class="screen"><div class="notch"></div>
+    <div class="grow" style="display:flex;flex-direction:column;justify-content:center;gap:10px">
+      <div class="h1">Einen Moment</div>
+      <div class="body muted">Viele zögern genau hier. Das ist normal — und genau deshalb lohnt sich der nächste Schritt.</div>
+    </div>
+    <div class="btn btn-primary">Weiter</div>
+  </div></div><div class="cap"><b>4. Objection</b> · путь A (возражения)</div></div>
+
+  <!-- 5 Email -->
+  <div class="phone"><div class="frame"><div class="screen"><div class="notch"></div>
+    <div class="grow" style="display:flex;flex-direction:column;justify-content:center;gap:10px">
+      <div class="h1">Bleib dran</div>
+      <div class="body muted">Gib deine E-Mail-Adresse ein, um fortzufahren.</div>
+      <div class="input">E-Mail-Adresse</div>
+    </div>
+    <div class="btn btn-primary">Weiter</div>
+  </div></div><div class="cap"><b>5. Email</b> · сбор лида (до цен)</div></div>
+
+  <!-- 6 Paywall -->
+  <div class="phone"><div class="frame"><div class="screen"><div class="notch"></div>
+    <div class="grow" style="display:flex;flex-direction:column;justify-content:center;gap:12px">
+      <div class="h1">Hauptprogramm</div>
+      <div class="body muted">Schalte das vollständige Programm frei.</div>
+      <div class="card gap8">
+        <div class="body"><span style="color:var(--success)">✓</span> 112 Elemente</div>
+        <div class="body"><span style="color:var(--success)">✓</span> 28 Tage</div>
+        <div class="body"><span style="color:var(--success)">✓</span> Community-Zugang</div>
+      </div>
+    </div>
+    <div class="gap8">
+      <div class="btn btn-primary">Kurs freischalten</div>
+      <div class="btn-ghost">Käufe wiederherstellen</div>
+    </div>
+  </div></div><div class="cap"><b>6. Paywall</b> · IAP покупка курса</div></div>
+
+  <!-- 7 Register -->
+  <div class="phone"><div class="frame"><div class="screen"><div class="notch"></div>
+    <div class="grow" style="display:flex;flex-direction:column;justify-content:center;gap:10px">
+      <div class="h1">Konto erstellen</div>
+      <div class="input">E-Mail</div>
+      <div class="input">Passwort</div>
+    </div>
+    <div class="btn btn-primary">Speichern</div>
+  </div></div><div class="cap"><b>7. Register</b> · пароль после оплаты</div></div>
+
+  <!-- 8 Login -->
+  <div class="phone"><div class="frame"><div class="screen"><div class="notch"></div>
+    <div class="grow" style="display:flex;flex-direction:column;justify-content:center;gap:9px">
+      <div class="h1">Willkommen zurück</div>
+      <div class="input">E-Mail</div>
+      <div class="input">Passwort</div>
+      <div class="btn btn-primary">Anmelden</div>
+      <div class="faint" style="text-align:center;font-size:11px;margin-top:4px">Oder fortfahren mit</div>
+      <div class="social"> Mit Apple fortfahren</div>
+      <div class="social g">G  Mit Google fortfahren</div>
+    </div>
+  </div></div><div class="cap"><b>8. Login</b> · вход + соц-авторизация</div></div>
+</div>
+
+<!-- ===================== MOBILE: APP TABS ===================== -->
+<h2 class="group">Мобильное приложение · Основные вкладки <span>(после авторизации)</span></h2>
+<div class="gallery">
+
+  <!-- 9 Course active -->
+  <div class="phone"><div class="frame"><div class="screen"><div class="notch"></div>
+    <div class="gap10" style="margin-top:8px">
+      <div class="row"><span class="badge"><span class="b">3</span>Fortgeschritten</span><span class="pill">🔥 12 · Serie</span></div>
+      <div class="pbar"><i style="width:46%"></i></div>
+      <div class="faint" style="font-size:11px">Tag 13</div>
+    </div>
+    <div class="media">🖼</div>
+    <div class="h2">Welche Annahme stellst du heute infrage?</div>
+    <div class="gap8">
+      <div class="opt">Eine alte Gewohnheit</div>
+      <div class="opt sel">Ein „Ich kann das nicht"</div>
+      <div class="opt">Eine fremde Meinung</div>
+    </div>
+    <div class="tabbar"><div class="on"><span class="ic">◉</span>Kurs</div><div><span class="ic">▤</span>Community</div><div><span class="ic">☻</span>Profil</div></div>
+  </div></div><div class="cap"><b>9. Course</b> · дневной пакет + шапка прогресса</div></div>
+
+  <!-- 10 Course locked -->
+  <div class="phone"><div class="frame"><div class="screen"><div class="notch"></div>
+    <div class="gap10" style="margin-top:8px">
+      <div class="row"><span class="badge"><span class="b">3</span>Fortgeschritten</span><span class="pill">🔥 13 · Serie</span></div>
+      <div class="pbar"><i style="width:50%"></i></div>
+      <div class="faint" style="font-size:11px">Tag 14</div>
+    </div>
+    <div class="grow" style="display:grid;place-items:center;text-align:center;padding:0 14px">
+      <div class="body muted">Die nächsten Elemente öffnen um 00:00 Uhr.</div>
+    </div>
+    <div class="tabbar"><div class="on"><span class="ic">◉</span>Kurs</div><div><span class="ic">▤</span>Community</div><div><span class="ic">☻</span>Profil</div></div>
+  </div></div><div class="cap"><b>10. Course</b> · блокировка до полуночи</div></div>
+
+  <!-- 11 Feed -->
+  <div class="phone"><div class="frame"><div class="screen" style="padding-bottom:46px"><div class="notch"></div>
+    <div class="gap10" style="margin-top:8px;overflow:hidden">
+      <div class="post gap6"><div class="media" style="height:80px">🖼</div><div class="h2" style="font-size:15px">Der Mut zur kleinen Entscheidung</div><div class="body muted" style="font-size:12px">Nicht die große Wende verändert den Tag…</div></div>
+      <div class="post gap6"><div class="h2" style="font-size:15px">Drei Minuten Stille</div><div class="body muted" style="font-size:12px">Ein kurzer Impuls für heute Mittag.</div></div>
+    </div>
+    <div class="tabbar"><div><span class="ic">◉</span>Kurs</div><div class="on"><span class="ic">▤</span>Community</div><div><span class="ic">☻</span>Profil</div></div>
+  </div></div><div class="cap"><b>11. Feed</b> · лента только для чтения</div></div>
+
+  <!-- 12 Feed paywall -->
+  <div class="phone"><div class="frame"><div class="screen"><div class="notch"></div>
+    <div class="grow" style="display:grid;place-items:center;text-align:center;gap:14px;padding:0 12px">
+      <div class="h1">Community</div>
+      <div class="body muted" style="font-size:12px">Dein 28-Tage-Zugang ist abgelaufen.</div>
+      <div class="btn btn-primary" style="width:100%">Community abonnieren</div>
+    </div>
+    <div class="tabbar"><div><span class="ic">◉</span>Kurs</div><div class="on"><span class="ic">▤</span>Community</div><div><span class="ic">☻</span>Profil</div></div>
+  </div></div><div class="cap"><b>12. Feed</b> · paywall подписки</div></div>
+
+  <!-- 13 Profile -->
+  <div class="phone"><div class="frame"><div class="screen" style="padding-bottom:46px"><div class="notch"></div>
+    <div class="h2" style="margin-top:6px">anna@example.com</div>
+    <div class="card gap10">
+      <div class="row"><span class="badge"><span class="b">3</span>Fortgeschritten</span><span class="pill">🔥 12 · Serie</span></div>
+      <div class="pbar"><i style="width:46%"></i></div>
+      <div class="row"><div><div class="faint" style="font-size:10px">Fortschritt</div><div class="body">52 / 112</div></div><div><div class="faint" style="font-size:10px">Joker</div><div class="body">1 verfügbar</div></div></div>
+    </div>
+    <div class="faint" style="font-size:10px;text-transform:uppercase">Sprache</div>
+    <div class="lang"><span class="on">Deutsch</span><span>English</span><span>Русский</span><span>Español</span></div>
+    <div class="grow"></div>
+    <div class="btn btn-sec">Abmelden</div>
+    <div class="btn-danger">Konto löschen (GDPR)</div>
+    <div class="tabbar"><div><span class="ic">◉</span>Kurs</div><div><span class="ic">▤</span>Community</div><div class="on"><span class="ic">☻</span>Profil</div></div>
+  </div></div><div class="cap"><b>13. Profile</b> · уровень, серия, язык, GDPR</div></div>
+</div>
+
+<!-- ===================== ADMIN ===================== -->
+<h2 class="group">Админка <span>(Next.js, веб, светлая тема)</span></h2>
+<div class="gallery">
+
+  <!-- A Login -->
+  <div class="win"><div class="winframe"><div class="winbar"><i></i><i></i><i></i><span class="url">cdd.46-62-215-11.nip.io/admin</span></div>
+    <div class="admin"><div class="loginbox">
+      <div class="lg">Club Der Denker — вход</div>
+      <div class="ai">E-mail</div>
+      <div class="ai">Пароль</div>
+      <div class="pbtn">Войти</div>
+    </div></div>
+  </div></div><div class="cap"><b>Admin · Login</b></div></div>
+
+  <!-- B Dashboard -->
+  <div class="win"><div class="winframe"><div class="winbar"><i></i><i></i><i></i><span class="url">/admin</span></div>
+    <div class="admin">
+      <div class="side"><div class="lg">Club Der Denker</div>
+        <a class="on">▢ Дашборд</a><a>▭ Контент курса</a><a>▤ Лента</a><a>☻ Пользователи</a><a>✉ Лиды</a></div>
+      <div class="main"><h3>Дашборд</h3>
+        <div class="cards4">
+          <div class="scard"><div class="l">Элементов курса</div><div class="v">112 / 112</div></div>
+          <div class="scard"><div class="l">Активные юзеры</div><div class="v">348</div></div>
+          <div class="scard"><div class="l">Лиды (всего)</div><div class="v">1 204</div></div>
+          <div class="scard"><div class="l">Конверсия E-mail→покупка</div><div class="v">28.9%</div></div>
+        </div>
+      </div>
+    </div>
+  </div></div><div class="cap"><b>Admin · Дашборд</b> · метрики + конверсия</div></div>
+
+  <!-- C Content -->
+  <div class="win"><div class="winframe"><div class="winbar"><i></i><i></i><i></i><span class="url">/admin/content</span></div>
+    <div class="admin">
+      <div class="side"><div class="lg">Club Der Denker</div>
+        <a>▢ Дашборд</a><a class="on">▭ Контент курса</a><a>▤ Лента</a><a>☻ Пользователи</a><a>✉ Лиды</a></div>
+      <div class="main"><h3>Контент курса</h3>
+        <div style="margin-bottom:10px;display:flex;gap:5px">
+          <span style="background:#1c1c1e;color:#fff;border-radius:6px;padding:3px 7px;font-size:11px">DE</span>
+          <span style="background:#f0f0f3;border-radius:6px;padding:3px 7px;font-size:11px">EN</span>
+          <span style="background:#f0f0f3;border-radius:6px;padding:3px 7px;font-size:11px">RU</span>
+        </div>
+        <div class="daygrid">
+          <div class="day"><div class="t">День 1</div><div class="s ok">Эл. 1 ✓</div><div class="s ok">Эл. 2 ✓</div><div class="s">Эл. 3 —</div><div class="s">Эл. 4 —</div></div>
+          <div class="day"><div class="t">День 2</div><div class="s ok">Эл. 1 ✓</div><div class="s">Эл. 2 —</div><div class="s">Эл. 3 —</div><div class="s">Эл. 4 —</div></div>
+          <div class="day"><div class="t">День 3</div><div class="s">Эл. 1 —</div><div class="s">Эл. 2 —</div><div class="s">Эл. 3 —</div><div class="s">Эл. 4 —</div></div>
+        </div>
+      </div>
+    </div>
+  </div></div><div class="cap"><b>Admin · Контент</b> · сетка 28×4 по локалям</div></div>
+
+  <!-- D Content editor modal -->
+  <div class="win"><div class="winframe"><div class="winbar"><i></i><i></i><i></i><span class="url">/admin/content</span></div>
+    <div class="admin" style="background:rgba(0,0,0,.35)">
+      <div class="modal" style="width:100%">
+        <div style="font-size:12px;font-weight:600;margin-bottom:10px">День 13, элемент 2 · DE</div>
+        <div class="ai" style="height:50px;margin-bottom:8px">Текст элемента…</div>
+        <div class="ai" style="margin-bottom:8px;color:#777">📷 Загрузить медиа</div>
+        <div style="display:flex;gap:6px;margin-bottom:6px"><div class="ai" style="width:34px">a</div><div class="ai" style="flex:1">Вариант</div><div class="ai" style="flex:1">Фидбэк</div></div>
+        <div style="display:flex;gap:6px"><div class="ai" style="width:34px">b</div><div class="ai" style="flex:1">Вариант</div><div class="ai" style="flex:1">Фидбэк</div></div>
+        <div style="display:flex;justify-content:flex-end;gap:8px;margin-top:14px"><span style="font-size:12px;color:#777;padding:8px">Отмена</span><div class="pbtn" style="padding:8px 16px">Сохранить</div></div>
+      </div>
+    </div>
+  </div></div><div class="cap"><b>Admin · Редактор элемента</b> · тело + опции + медиа</div></div>
+
+  <!-- E Posts -->
+  <div class="win"><div class="winframe"><div class="winbar"><i></i><i></i><i></i><span class="url">/admin/posts</span></div>
+    <div class="admin">
+      <div class="side"><div class="lg">Club Der Denker</div>
+        <a>▢ Дашборд</a><a>▭ Контент курса</a><a class="on">▤ Лента</a><a>☻ Пользователи</a><a>✉ Лиды</a></div>
+      <div class="main"><h3>Лента сообщества</h3>
+        <div class="scard" style="margin-bottom:10px">
+          <div class="ai" style="margin-bottom:6px">Заголовок</div>
+          <div class="ai" style="height:40px;margin-bottom:6px">Текст…</div>
+          <div class="ai" style="color:#777;margin-bottom:8px">📷 Загрузить медиа</div>
+          <div style="display:flex;gap:6px"><span style="background:#f0f0f3;border-radius:6px;padding:6px 9px;font-size:11px">Черновик</span><span class="pbtn" style="padding:6px 12px">Опубликовать</span></div>
+        </div>
+        <div class="scard row"><div><b style="font-size:12px">Der Mut zur kleinen Entscheidung</b><div class="s" style="font-size:10px;color:#1d8348">Опубликовано</div></div><span class="tagbtn">Удалить</span></div>
+      </div>
+    </div>
+  </div></div><div class="cap"><b>Admin · Лента</b> · создание/публикация постов</div></div>
+
+  <!-- F Users -->
+  <div class="win"><div class="winframe"><div class="winbar"><i></i><i></i><i></i><span class="url">/admin/users</span></div>
+    <div class="admin">
+      <div class="side"><div class="lg">Club Der Denker</div>
+        <a>▢ Дашборд</a><a>▭ Контент курса</a><a>▤ Лента</a><a class="on">☻ Пользователи</a><a>✉ Лиды</a></div>
+      <div class="main"><h3>Пользователи</h3>
+        <table>
+          <tr><th>E-mail</th><th>Статус</th><th>Ур.</th><th>Прогресс</th><th></th></tr>
+          <tr><td>anna@example.com</td><td>active</td><td>3</td><td>52/112</td><td><span class="tagbtn" style="background:#fee;color:#c0392b">Заблок.</span></td></tr>
+          <tr><td>max@example.com</td><td>active</td><td>5</td><td>112/112</td><td><span class="tagbtn" style="background:#fee;color:#c0392b">Заблок.</span></td></tr>
+          <tr><td>lea@example.com</td><td>blocked</td><td>2</td><td>9/112</td><td><span class="tagbtn" style="background:#e6f6ec;color:#1d8348">Разблок.</span></td></tr>
+        </table>
+      </div>
+    </div>
+  </div></div><div class="cap"><b>Admin · Пользователи</b> · блокировка/разблокировка</div></div>
+
+  <!-- G Leads -->
+  <div class="win"><div class="winframe"><div class="winbar"><i></i><i></i><i></i><span class="url">/admin/leads</span></div>
+    <div class="admin">
+      <div class="side"><div class="lg">Club Der Denker</div>
+        <a>▢ Дашборд</a><a>▭ Контент курса</a><a>▤ Лента</a><a>☻ Пользователи</a><a class="on">✉ Лиды</a></div>
+      <div class="main"><h3>Лиды</h3>
+        <div style="font-size:11px;color:#8e8e93;margin-bottom:10px">Всего: 1 204 · Конвертировано: 348 · Конверсия: 28.9%</div>
+        <table>
+          <tr><th>E-mail</th><th>Статус</th><th>Язык</th><th>Создан</th></tr>
+          <tr><td>anna@example.com</td><td>Покупка</td><td>de</td><td>02.06.2026</td></tr>
+          <tr><td>tom@example.com</td><td>Лид</td><td>en</td><td>02.06.2026</td></tr>
+          <tr><td>ivan@example.com</td><td>Лид</td><td>ru</td><td>01.06.2026</td></tr>
+        </table>
+      </div>
+    </div>
+  </div></div><div class="cap"><b>Admin · Лиды</b> · таблица + конверсия</div></div>
+</div>
+
+<h2 class="group">Лендинг <span>landings/club-der-denker/index.html</span></h2>
+<div class="gallery"><div class="muted" style="font-size:14px">Маркетинговый лендинг — отдельный самодостаточный файл (открой <code>landings/club-der-denker/index.html</code> в браузере). Прикреплён отдельно.</div></div>
+
+</body>
+</html>
