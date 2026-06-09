@@ -134,15 +134,13 @@ const envSchema = z.object({
   // webhook call. REQUIRED in production (the webhook credits tokens) — without
   // it the /api/telegram/webhook route fails closed with 503.
   TELEGRAM_WEBHOOK_SECRET: z.string().min(1).optional(),
-  // 32-байтный секрет (base64 или hex) для AES-256-GCM шифрования
-  // long-lived IG-токенов в SocialAccount.accessToken. Без него подключение
-  // Instagram недоступно (lib/publish/crypto бросит).
-  PUBLISH_TOKEN_SECRET: z.string().min(1).optional(),
-  // Meta / Facebook Login for Instagram Graph Content Publishing API.
-  META_APP_ID: z.string().min(1).optional(),
-  META_APP_SECRET: z.string().min(1).optional(),
-  META_OAUTH_REDIRECT: z.string().url().optional(),
-  IG_GRAPH_VERSION: z.string().default('v21.0'),
+  // Instagram-публикация идёт через сторонний сервис PostMyPost
+  // (https://postmypost.io) — официальный SMM-API. Один токен на аккаунт
+  // сервиса; пользователь подключает свой IG в кабинете PostMyPost, мы лишь
+  // ссылаемся на его account_id + project_id. Без токена подключение
+  // Instagram в UI недоступно (postmypostConfigured() === false).
+  POSTMYPOST_API_TOKEN: z.string().min(1).optional(),
+  POSTMYPOST_API_BASE: z.string().url().default('https://api.postmypost.io/v4.1'),
   // Интервал publish-sweep (мс). Каждый тик берёт scheduled-посты с
   // scheduledAt <= now и ставит их таргеты в очередь.
   PUBLISH_CRON_TICK_MS: z.coerce.number().default(60_000),
