@@ -62,6 +62,16 @@ export async function POST(req: NextRequest, { params }: { params: Promise<{ id:
       });
       return NextResponse.json({ error: 'transcribe_failed', message: t.error }, { status: 502 });
     }
+    // Caption-фоллбек — это не транскрибация речи: клиент не должен платить
+    // за текст, который и так видит под постом. Возвращаем списание.
+    if (t.source === 'caption') {
+      await refundTokens({
+        userId: ctx.user.id,
+        amount: cost,
+        reason: 'research_transcribe_caption_fallback',
+        refId: reel.id,
+      });
+    }
     const improved = await improveTranscript(t.text, t.lang);
     const saved = await prisma.researchTranscript.create({
       data: {
@@ -77,7 +87,7 @@ export async function POST(req: NextRequest, { params }: { params: Promise<{ id:
       transcript: saved,
       cached: false,
       note: t.source === 'caption'
-        ? 'Whisper-сервис не настроен — использовано описание поста. Подключи WHISPER_SERVICE_URL для реальной транскрибации.'
+        ? 'Транскрибация аудио недоступна — использовано описание поста, токены возвращены.'
         : null,
     });
   } catch (e) {
