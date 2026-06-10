@@ -146,8 +146,8 @@ export async function POST(req: NextRequest) {
         `<b>Команды:</b>\n` +
         `/start — приветствие + Mini App\n` +
         `/app — открыть Mini App\n` +
-        `/help — эта подсказка\n\n` +
-        `Поддержка: @ilia_pali0`,
+        `/help — эта подсказка` +
+        (process.env.SUPPORT_TELEGRAM_URL ? `\n\nПоддержка: ${process.env.SUPPORT_TELEGRAM_URL}` : ''),
         { withTmaButton: true },
       );
     }

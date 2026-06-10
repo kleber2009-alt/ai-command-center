@@ -49,15 +49,7 @@ export default function SignInPage({ searchParams }: { searchParams: Promise<{ e
 
           {emailOn && <EmailForm error={searchParams} />}
 
-          {!googleOn && !emailOn && (
-            <div className="border border-border-2 bg-surface p-5">
-              <p className="mono text-[10px] tracking-widest uppercase text-pink mb-2">/ no-providers</p>
-              <p className="font-serif text-[14px] text-text-dim">
-                Sign-in temporarily unavailable. Свяжись с админом в Telegram —{' '}
-                <a href="https://t.me/ilia_pali0" className="text-cyan hover:underline">@ilia_pali0</a>.
-              </p>
-            </div>
-          )}
+          {!googleOn && !emailOn && <NoProviders />}
 
           <p className="mono text-[10px] tracking-widest uppercase text-text-mute mt-10 leading-[1.6]">
             Загружая фото, ты соглашаешься с обработкой изображения лица.
@@ -93,6 +85,46 @@ export default function SignInPage({ searchParams }: { searchParams: Promise<{ e
         </div>
       </aside>
     </main>
+  );
+}
+
+// NextAuth passes machine error codes (?error=Configuration etc.) — show
+// the user something actionable instead.
+function authErrorText(code: string): string {
+  switch (code) {
+    case 'Configuration':
+      return 'вход временно недоступен, попробуй позже.';
+    case 'AccessDenied':
+      return 'доступ запрещён для этого аккаунта.';
+    case 'Verification':
+      return 'ссылка из письма устарела — запроси новую.';
+    case 'EmailSignInError':
+    case 'EmailSend':
+      return 'не удалось отправить письмо — проверь адрес и попробуй ещё раз.';
+    default:
+      return 'не получилось войти — попробуй ещё раз.';
+  }
+}
+
+function NoProviders() {
+  // Support contact is configurable so the personal admin handle never
+  // hardcodes into a client-facing error.
+  const supportUrl = process.env.SUPPORT_TELEGRAM_URL;
+  return (
+    <div className="border border-border-2 bg-surface p-5">
+      <p className="mono text-[10px] tracking-widest uppercase text-pink mb-2">/ no-providers</p>
+      <p className="font-serif text-[14px] text-text-dim">
+        Вход временно недоступен.{' '}
+        {supportUrl ? (
+          <>
+            Напиши в поддержку —{' '}
+            <a href={supportUrl} className="text-cyan hover:underline">Telegram</a>.
+          </>
+        ) : (
+          'Попробуй позже.'
+        )}
+      </p>
+    </div>
   );
 }
 
@@ -201,7 +233,7 @@ async function EmailForm({ error }: { error: Promise<{ error?: string; sent?: st
       )}
       {params.error && (
         <p className="mono text-[11px] text-pink tracking-wider mt-2">
-          /ERROR — {params.error}
+          /ERROR — {authErrorText(params.error)}
         </p>
       )}
     </form>
