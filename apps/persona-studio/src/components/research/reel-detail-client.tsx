@@ -419,7 +419,7 @@ export function ReelDetailClient({ reel: initialReel }: { reel: Reel }) {
               )}
               {transcript.source === 'caption' && (
                 <div className="border-l-2 border-warm bg-warm/5 px-3 py-2 mono text-[10px] tracking-wider text-text-dim">
-                  Источник — описание поста (whisper-сервис не настроен). Для реальной речи подключи WHISPER_SERVICE_URL.
+                  Это описание поста, а не расшифровка речи — транскрибация аудио сейчас недоступна. Токены за запрос возвращены.
                 </div>
               )}
             </>

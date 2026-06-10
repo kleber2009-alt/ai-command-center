@@ -99,6 +99,14 @@ const formatCount = (n: number) => {
 
 const DEMO_VISIBLE = 5; // ТЗ §5/§12 — первые N карточек, остальные blur
 
+const EXAMPLE_NICHES = [
+  'психология отношений',
+  'нейросети для маркетинга',
+  'фитнес дома',
+  'личные финансы',
+  'продажи b2b',
+];
+
 export function ResearchClient({ isFreePlan = false }: { isFreePlan?: boolean }) {
   const router = useRouter();
   const [niche, setNiche] = useState('');
@@ -698,17 +706,56 @@ export function ResearchClient({ isFreePlan = false }: { isFreePlan?: boolean })
         </section>
       )}
 
-      {/* Grid */}
-      {pending && !result && (
-        <section className="border border-border bg-surface p-12 text-center">
-          <div className="mono text-[10px] tracking-widest uppercase text-text-mute">
-            Скрейп Instagram + индексация авторов…
+      {/* Onboarding — первый визит, пока не было ни одного поиска */}
+      {!pending && !result && (
+        <section className="border border-border bg-surface p-8 lg:p-12 grid gap-6">
+          <div>
+            <div className="mono text-[10px] tracking-widest uppercase text-gold mb-2">/ как это работает</div>
+            <div className="font-serif text-[22px] text-text leading-snug max-w-[48ch]">
+              Введи нишу — получишь ленту рилсов, которые реально залетели,
+              с метриками виральности по каждому.
+            </div>
           </div>
-          <div className="font-serif italic text-[16px] text-text-dim mt-2">
-            Это может занять до 60 секунд при первом поиске ниши.
+          <div className="grid sm:grid-cols-3 gap-4">
+            <div className="border border-border-soft p-4">
+              <div className="mono text-[10px] tracking-widest uppercase text-text-mute mb-2">01 · Поиск</div>
+              <div className="font-serif italic text-[14px] text-text-dim leading-snug">
+                Скрейпим свежие рилсы ниши и считаем виральность, ER и скорость набора просмотров. Поиск бесплатный.
+              </div>
+            </div>
+            <div className="border border-border-soft p-4">
+              <div className="mono text-[10px] tracking-widest uppercase text-text-mute mb-2">02 · Разбор</div>
+              <div className="font-serif italic text-[14px] text-text-dim leading-snug">
+                Лучшие ролики транскрибируй и разбирай AI-анализом: хук, структура, почему залетело.
+              </div>
+            </div>
+            <div className="border border-border-soft p-4">
+              <div className="mono text-[10px] tracking-widest uppercase text-text-mute mb-2">03 · Свой контент</div>
+              <div className="font-serif italic text-[14px] text-text-dim leading-snug">
+                Генерируй хуки и сценарии по формулам залетевших — и ставь нишу на радар, чтобы не пропускать новое.
+              </div>
+            </div>
+          </div>
+          <div className="grid gap-2">
+            <span className="mono text-[10px] tracking-widest uppercase text-text-mute">Попробуй с примера</span>
+            <div className="flex flex-wrap gap-1.5">
+              {EXAMPLE_NICHES.map((n) => (
+                <button
+                  key={n}
+                  type="button"
+                  onClick={() => submit(n)}
+                  className="px-3 py-1.5 mono text-[10px] tracking-widest uppercase border border-border text-text-dim hover:border-gold hover:text-gold transition-colors"
+                >
+                  {n}
+                </button>
+              ))}
+            </div>
           </div>
         </section>
       )}
+
+      {/* Grid */}
+      {pending && !result && <SearchProgress />}
 
       {result && displayed.length === 0 && (
         <section className="border border-border bg-surface p-12 text-center">
@@ -787,6 +834,43 @@ export function ResearchClient({ isFreePlan = false }: { isFreePlan?: boolean })
 }
 
 // Поле порога: целое число ≥ 0. Пустое значение трактуем как 0 (без порога).
+// Поиск — один синхронный запрос без серверного прогресса, поэтому этапы
+// показываем по таймеру: они соответствуют реальному порядку работы
+// search/route.ts (скрейп → метрики → индексация авторов).
+function SearchProgress() {
+  const [elapsed, setElapsed] = useState(0);
+  useEffect(() => {
+    const t = setInterval(() => setElapsed((s) => s + 1), 1000);
+    return () => clearInterval(t);
+  }, []);
+  const stages = [
+    { from: 0, label: 'Скрейпим свежие рилсы из Instagram…' },
+    { from: 15, label: 'Считаем виральность, ER и скорость набора…' },
+    { from: 35, label: 'Индексируем авторов ниши…' },
+  ];
+  const current = [...stages].reverse().find((s) => elapsed >= s.from) ?? stages[0];
+  const pct = Math.min(95, Math.round(elapsed * 2.2));
+  return (
+    <section className="border border-border bg-surface p-12 text-center grid gap-4">
+      <div className="mono text-[10px] tracking-widest uppercase text-text-mute">
+        {current.label}
+      </div>
+      <div className="max-w-[360px] w-full mx-auto">
+        <div className="h-[2px] bg-border overflow-hidden">
+          <div className="h-full bg-gold transition-all duration-1000" style={{ width: `${pct}%` }} />
+        </div>
+        <div className="flex justify-between mt-1.5 mono text-[9px] tracking-widest uppercase text-text-mute">
+          <span>{elapsed} c</span>
+          <span>до ~60 c при первом поиске ниши</span>
+        </div>
+      </div>
+      <div className="font-serif italic text-[14px] text-text-dim">
+        Повторные поиски той же ниши отдаются из кэша почти мгновенно.
+      </div>
+    </section>
+  );
+}
+
 function ThresholdField({
   label,
   value,
