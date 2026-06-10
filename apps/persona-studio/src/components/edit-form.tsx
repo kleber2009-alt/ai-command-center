@@ -120,8 +120,14 @@ export function EditForm({
         const code = (body && (body.error as string)) ?? `http_${res.status}`;
         if (code === 'insufficient_tokens') {
           setError(`Не хватает токенов: нужно ${body.need}, у тебя ${body.have}. Пополни баланс.`);
+        } else if (code === 'submagic_not_configured') {
+          setError('Монтаж временно недоступен. Попробуй позже.');
+        } else if (code === 'video_not_ready') {
+          setError('Видео ещё не готово — дождись окончания рендера.');
+        } else if (code === 'enqueue_failed') {
+          setError('Не удалось поставить монтаж в очередь. Токены возвращены, попробуй ещё раз.');
         } else {
-          setError(`Не удалось запустить монтаж: ${code}`);
+          setError(`Не удалось запустить монтаж (${code}). Попробуй ещё раз.`);
         }
         return;
       }

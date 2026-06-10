@@ -136,8 +136,9 @@ export async function POST(req: NextRequest) {
   }
 
   if (!isApifyConfigured()) {
+    console.error('[research/search] APIFY_TOKEN is not configured — search unavailable');
     return NextResponse.json(
-      { error: 'apify_not_configured', message: 'APIFY_TOKEN не задан в окружении сервера.' },
+      { error: 'apify_not_configured', message: 'Сервис поиска временно недоступен. Попробуй позже.' },
       { status: 503 },
     );
   }
