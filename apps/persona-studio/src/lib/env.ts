@@ -111,6 +111,10 @@ const envSchema = z.object({
   COST_RESEARCH_REFRESH_AUTHOR: z.coerce.number().default(5),
   COST_RESEARCH_HOOK_GEN: z.coerce.number().default(1),
   ANTHROPIC_DEEP_MODEL: z.string().default('claude-sonnet-4-6'),
+  // OpenAI model used as a vision-capable fallback for research/radar when the
+  // Anthropic API is unavailable (out of credits / auth). gpt-4o-mini supports
+  // image inputs, matching the deep model's vision use.
+  OPENAI_DEEP_MODEL: z.string().default('gpt-4o-mini'),
   // Monthly Apify budget cap in CENTS (ТЗ §16 риск «Бюджет Apify»).
   // 5000 = $50/мес. Каждый scrape инкрементит usage; при превышении —
   // дальнейшие вызовы возвращают error без обращения к Apify.
