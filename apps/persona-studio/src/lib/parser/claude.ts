@@ -11,6 +11,7 @@ import {
 import { DEFAULT_STYLE, isValidStyle, type CarouselStyleId } from '@/lib/carousel/styles';
 
 const ANTHROPIC_API = 'https://api.anthropic.com/v1/messages';
+const OPENAI_API = 'https://api.openai.com/v1/chat/completions';
 const MAX_ATTEMPTS = 3;
 const BASE_BACKOFF_MS = 1000;
 const MAX_BACKOFF_MS = 8000;
@@ -20,17 +21,40 @@ const MAX_CLAUDE_TOKENS = 1500;
 const sleep = (ms: number) => new Promise<void>((r) => setTimeout(r, ms));
 
 export function isClaudeConfigured(): boolean {
-  return Boolean(env.ANTHROPIC_API_KEY);
+  // Either provider is enough — chat() falls back to OpenAI when Anthropic is
+  // unavailable (out of credits / auth), so the parser keeps working.
+  return Boolean(env.ANTHROPIC_API_KEY || env.OPENAI_API_KEY);
 }
 
 type ChatResult =
   | { ok: true; text: string }
   | { ok: false; status: number; details: string };
 
+/**
+ * One chat turn. Anthropic is primary; on any Anthropic failure (notably the
+ * "credit balance too low" 400) we transparently retry the same prompt on
+ * OpenAI when OPENAI_API_KEY is set. Auto-reverts to Anthropic once it works.
+ */
 async function chat(system: string, user: string, maxTokens = MAX_CLAUDE_TOKENS): Promise<ChatResult> {
-  const apiKey = env.ANTHROPIC_API_KEY;
-  if (!apiKey) return { ok: false, status: 503, details: 'ANTHROPIC_API_KEY missing' };
+  if (env.ANTHROPIC_API_KEY) {
+    const r = await chatAnthropic(env.ANTHROPIC_API_KEY, system, user, maxTokens);
+    if (r.ok) return r;
+    if (env.OPENAI_API_KEY) {
+      console.warn(`[parser-claude] anthropic ${r.status} (${r.details.slice(0, 80)}) — falling back to OpenAI`);
+      return chatOpenAI(env.OPENAI_API_KEY, system, user, maxTokens);
+    }
+    return r;
+  }
+  if (env.OPENAI_API_KEY) return chatOpenAI(env.OPENAI_API_KEY, system, user, maxTokens);
+  return { ok: false, status: 503, details: 'no AI provider configured (ANTHROPIC_API_KEY / OPENAI_API_KEY)' };
+}
 
+async function chatAnthropic(
+  apiKey: string,
+  system: string,
+  user: string,
+  maxTokens: number,
+): Promise<ChatResult> {
   const body = JSON.stringify({
     model: env.ANTHROPIC_PARSER_MODEL,
     max_tokens: maxTokens,
@@ -64,6 +88,59 @@ async function chat(system: string, user: string, maxTokens = MAX_CLAUDE_TOKENS)
     if (res.ok) {
       const data = (await res.json()) as { content?: Array<{ text?: string }> };
       const text = (data.content?.[0]?.text || '').trim();
+      return { ok: true, text };
+    }
+    const txt = await res.text().catch(() => '');
+    lastStatus = res.status;
+    lastDetails = txt.slice(0, 600);
+    if (!RETRY_STATUSES.has(res.status) || attempt === MAX_ATTEMPTS - 1) {
+      return { ok: false, status: lastStatus, details: lastDetails };
+    }
+    await sleep(Math.min(BASE_BACKOFF_MS * 2 ** attempt, MAX_BACKOFF_MS));
+  }
+  return { ok: false, status: lastStatus, details: lastDetails };
+}
+
+async function chatOpenAI(
+  apiKey: string,
+  system: string,
+  user: string,
+  maxTokens: number,
+): Promise<ChatResult> {
+  const body = JSON.stringify({
+    model: env.OPENAI_PARSER_MODEL,
+    max_tokens: maxTokens,
+    messages: [
+      { role: 'system', content: system },
+      { role: 'user', content: user },
+    ],
+  });
+
+  let lastStatus = 0;
+  let lastDetails = '';
+  for (let attempt = 0; attempt < MAX_ATTEMPTS; attempt++) {
+    let res: Response;
+    try {
+      res = await fetch(OPENAI_API, {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+          Authorization: `Bearer ${apiKey}`,
+        },
+        body,
+      });
+    } catch (e) {
+      lastStatus = 502;
+      lastDetails = 'openai_unreachable: ' + ((e as Error)?.message || String(e));
+      if (attempt < MAX_ATTEMPTS - 1) {
+        await sleep(Math.min(BASE_BACKOFF_MS * 2 ** attempt, MAX_BACKOFF_MS));
+        continue;
+      }
+      return { ok: false, status: lastStatus, details: lastDetails };
+    }
+    if (res.ok) {
+      const data = (await res.json()) as { choices?: Array<{ message?: { content?: string } }> };
+      const text = (data.choices?.[0]?.message?.content || '').trim();
       return { ok: true, text };
     }
     const txt = await res.text().catch(() => '');
