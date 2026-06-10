@@ -94,7 +94,7 @@ export function NewPostClient({
       <div className="grid gap-6">
         <section className="grid gap-3">
           <h2 className="sec-title">Видео</h2>
-          <div className="grid grid-cols-[repeat(auto-fill,minmax(120px,1fr))] gap-3 max-h-[420px] overflow-y-auto pr-1">
+          <div className="grid grid-cols-[repeat(auto-fill,minmax(120px,1fr))] gap-5 max-h-[420px] overflow-y-auto pr-1 p-1">
             {sources.map((s) => {
               const active = s.sourceType === selected.sourceType && s.id === selected.id;
               return (
