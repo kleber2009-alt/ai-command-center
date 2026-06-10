@@ -80,6 +80,11 @@ const envSchema = z.object({
   // $0.006/мин — для v1-объёмов копейки, проще чем поднимать faster-whisper.
   OPENAI_API_KEY: z.string().min(1).optional(),
   OPENAI_WHISPER_MODEL: z.string().default('whisper-1'),
+  // Chat model used as an automatic fallback when the Anthropic API is
+  // unavailable (e.g. out of credits / auth). Lets the parser keep generating
+  // scripts & carousels on the OpenAI key; auto-reverts to Anthropic once it
+  // works again.
+  OPENAI_PARSER_MODEL: z.string().default('gpt-4o-mini'),
 
   // ── Submagic (editing / captions) ─────────────
   SUBMAGIC_API_KEY: z.string().min(1).optional(),
