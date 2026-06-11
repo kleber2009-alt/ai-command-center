@@ -56,7 +56,7 @@ type Update = {
   };
 };
 
-const TMA_URL = 'https://persona-app.46-62-215-11.nip.io/tma';
+const TMA_URL = `${process.env.AUTH_URL ?? 'https://persona-app.46-62-215-11.nip.io'}/tma`;
 
 async function sendMessage(chatId: number, text: string, opts?: { withTmaButton?: boolean }) {
   const token = process.env.TELEGRAM_BOT_TOKEN;

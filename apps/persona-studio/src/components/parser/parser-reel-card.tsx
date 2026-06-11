@@ -3,6 +3,7 @@
 import { useRouter } from 'next/navigation';
 import { useState } from 'react';
 import type { ParserItemSerialized } from './types';
+import { igProxy } from '../research/types';
 
 type Props = {
   item: ParserItemSerialized;
@@ -116,7 +117,7 @@ export function ParserReelCard({ item, onUpdated, onRemoved }: Props) {
         {showThumb ? (
           // eslint-disable-next-line @next/next/no-img-element
           <img
-            src={item.thumbnailUrl!}
+            src={igProxy(item.thumbnailUrl)}
             alt={item.owner || ''}
             referrerPolicy="no-referrer"
             loading="lazy"

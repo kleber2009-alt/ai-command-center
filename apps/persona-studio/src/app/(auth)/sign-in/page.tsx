@@ -19,6 +19,7 @@ function hasEmail(): boolean {
 export default function SignInPage({ searchParams }: { searchParams: Promise<{ error?: string; sent?: string }> }) {
   const googleOn = hasGoogle();
   const emailOn = hasEmail();
+  const bonus = Number(process.env.SIGNUP_BONUS_TOKENS ?? 10);
 
   return (
     <main className="min-h-[100svh] grid lg:grid-cols-[minmax(0,1fr)_minmax(0,1.1fr)]">
@@ -34,7 +35,7 @@ export default function SignInPage({ searchParams }: { searchParams: Promise<{ e
           <p className="sec-num mb-3">/ 00 · access</p>
           <h1 className="font-serif text-[40px] sm:text-[44px] leading-[1.05] mb-3">Войди в студию.</h1>
           <p className="font-serif text-[15px] sm:text-[16px] text-text-dim mb-8 max-w-[40ch]">
-            Один клик через Google — без паролей. Бонус 10 токенов сразу после первого входа.
+            Один клик через Google — без паролей. Бонус {bonus} токенов сразу после первого входа.
           </p>
 
           {googleOn && <GoogleButton />}

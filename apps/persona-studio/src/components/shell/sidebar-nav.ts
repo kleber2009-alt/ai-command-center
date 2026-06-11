@@ -81,7 +81,7 @@ export const SIDEBAR_SECTIONS: SidebarSection[] = [
     items: [
       { href: '/billing', label: 'Subscription', key: 'set-subscription' },
       { href: '/settings/keys', label: 'Integrations', key: 'set-integrations' },
-      { href: '/billing', label: 'Settings', key: 'set-settings' },
+      { href: '/help', label: 'Help & Docs', key: 'set-help' },
     ],
   },
 ];

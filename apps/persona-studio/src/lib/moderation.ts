@@ -54,20 +54,104 @@ function parseAssessment(text: string): VisionAssessment | null {
   }
 }
 
+// Anthropic vision assessment. Returns null (not throws) on a provider error so
+// the caller can fall back to OpenAI instead of failing open.
+async function assessWithAnthropic(
+  apiKey: string,
+  base64: string,
+  mediaType: string,
+): Promise<VisionAssessment | null> {
+  const r = await fetch('https://api.anthropic.com/v1/messages', {
+    method: 'POST',
+    headers: {
+      'x-api-key': apiKey,
+      'anthropic-version': '2023-06-01',
+      'content-type': 'application/json',
+    },
+    signal: AbortSignal.timeout(20_000),
+    body: JSON.stringify({
+      model: env.ANTHROPIC_PARSER_MODEL,
+      max_tokens: 100,
+      system: SYSTEM,
+      messages: [
+        {
+          role: 'user',
+          content: [
+            { type: 'image', source: { type: 'base64', media_type: mediaType, data: base64 } },
+            { type: 'text', text: 'Assess this image. Return only the JSON.' },
+          ],
+        },
+      ],
+    }),
+  });
+  if (!r.ok) {
+    console.warn(`[moderation] anthropic ${r.status} — trying OpenAI fallback`);
+    return null;
+  }
+  const data = (await r.json()) as { content?: Array<{ text?: string }> };
+  return parseAssessment(data.content?.[0]?.text ?? '');
+}
+
+// OpenAI vision fallback — used when Anthropic is unavailable (out of credits /
+// auth). Mirrors the parser's OpenAI fallback so a zero Anthropic balance can't
+// silently disable moderation. gpt-4o-mini (OPENAI_DEEP_MODEL) takes image input
+// via a base64 data URL.
+async function assessWithOpenAI(
+  apiKey: string,
+  base64: string,
+  mediaType: string,
+): Promise<VisionAssessment | null> {
+  const r = await fetch('https://api.openai.com/v1/chat/completions', {
+    method: 'POST',
+    headers: {
+      authorization: `Bearer ${apiKey}`,
+      'content-type': 'application/json',
+    },
+    signal: AbortSignal.timeout(20_000),
+    body: JSON.stringify({
+      model: env.OPENAI_DEEP_MODEL,
+      max_tokens: 100,
+      messages: [
+        { role: 'system', content: SYSTEM },
+        {
+          role: 'user',
+          content: [
+            { type: 'text', text: 'Assess this image. Return only the JSON.' },
+            { type: 'image_url', image_url: { url: `data:${mediaType};base64,${base64}` } },
+          ],
+        },
+      ],
+    }),
+  });
+  if (!r.ok) {
+    console.warn(`[moderation] openai ${r.status} — fallback failed`);
+    return null;
+  }
+  const data = (await r.json()) as { choices?: Array<{ message?: { content?: string } }> };
+  return parseAssessment(data.choices?.[0]?.message?.content ?? '');
+}
+
 /**
  * Moderate an avatar source image. Returns a verdict; callers reject the batch
  * (without charging tokens) when `ok` is false.
+ *
+ * Tries Anthropic vision first, then falls back to OpenAI vision — so a zero
+ * Anthropic balance can't silently turn moderation off. Only when BOTH providers
+ * fail does it fail open (or fail closed when MODERATION_REQUIRED=true).
  */
 export async function moderateAvatarSource(upload: {
   fileUrl: string;
   fileType: string;
 }): Promise<ModerationVerdict> {
-  const apiKey = env.ANTHROPIC_API_KEY;
-  if (!apiKey) {
-    if (process.env.MODERATION_REQUIRED === 'true') {
+  const anthropicKey = env.ANTHROPIC_API_KEY;
+  const openaiKey = env.OPENAI_API_KEY;
+  const required = process.env.MODERATION_REQUIRED === 'true';
+
+  if (!anthropicKey && !openaiKey) {
+    if (required) {
       return { ok: false, code: 'nsfw', reason: 'Модерация не настроена (MODERATION_REQUIRED).' };
     }
-    console.warn('[moderation] ANTHROPIC_API_KEY missing → skipping image moderation');
+    console.warn('[moderation] no vision provider configured → skipping image moderation');
     return { ok: true, skipped: true };
   }
 
@@ -77,39 +161,22 @@ export async function moderateAvatarSource(upload: {
     const base64 = Buffer.from(await res.arrayBuffer()).toString('base64');
     const mediaType = /^image\//.test(upload.fileType) ? upload.fileType : 'image/jpeg';
 
-    const r = await fetch('https://api.anthropic.com/v1/messages', {
-      method: 'POST',
-      headers: {
-        'x-api-key': apiKey,
-        'anthropic-version': '2023-06-01',
-        'content-type': 'application/json',
-      },
-      signal: AbortSignal.timeout(20_000),
-      body: JSON.stringify({
-        model: env.ANTHROPIC_PARSER_MODEL,
-        max_tokens: 100,
-        system: SYSTEM,
-        messages: [
-          {
-            role: 'user',
-            content: [
-              { type: 'image', source: { type: 'base64', media_type: mediaType, data: base64 } },
-              { type: 'text', text: 'Assess this image. Return only the JSON.' },
-            ],
-          },
-        ],
-      }),
-    });
-    if (!r.ok) throw new Error(`anthropic ${r.status}`);
-    const data = (await r.json()) as { content?: Array<{ text?: string }> };
-    const text = data.content?.[0]?.text ?? '';
-    const assessment = parseAssessment(text);
-    if (!assessment) throw new Error('unparseable assessment');
-    return decideVerdict(assessment);
+    let assessment: VisionAssessment | null = null;
+    if (anthropicKey) assessment = await assessWithAnthropic(anthropicKey, base64, mediaType);
+    if (!assessment && openaiKey) assessment = await assessWithOpenAI(openaiKey, base64, mediaType);
+
+    if (assessment) return decideVerdict(assessment);
+    throw new Error('no assessment from any provider');
   } catch (e) {
-    // Fail OPEN on transient/provider errors — don't block paying users on an
-    // Anthropic hiccup. The consent gate still applies.
-    console.warn('[moderation] check failed, allowing (fail-open):', e instanceof Error ? e.message : e);
+    const msg = e instanceof Error ? e.message : String(e);
+    // Both providers failed (or the image couldn't be fetched). Fail closed only
+    // when explicitly required; otherwise don't block paying users on a provider
+    // hiccup — the consent gate still applies.
+    if (required) {
+      console.warn('[moderation] check failed, blocking (MODERATION_REQUIRED):', msg);
+      return { ok: false, code: 'nsfw', reason: 'Модерация временно недоступна, попробуйте позже.' };
+    }
+    console.warn('[moderation] check failed, allowing (fail-open):', msg);
     return { ok: true, skipped: true };
   }
 }

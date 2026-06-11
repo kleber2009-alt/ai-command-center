@@ -11,6 +11,8 @@ export default async function ApiKeysPage() {
   const user = await getCurrentUser();
   if (!user) redirect('/sign-in');
 
+  const appUrl = process.env.AUTH_URL ?? 'https://persona-app.46-62-215-11.nip.io';
+
   const keys = await prisma.apiKey.findMany({
     where: { userId: user.id },
     orderBy: { createdAt: 'desc' },
@@ -58,7 +60,7 @@ export default async function ApiKeysPage() {
 {`import { createPersonaClient } from '@persona-studio/sdk';
 
 const ps = createPersonaClient({
-  baseUrl: 'https://persona-app.46-62-215-11.nip.io',
+  baseUrl: '${appUrl}',
   apiKey:  process.env.PERSONA_API_KEY!,
 });
 

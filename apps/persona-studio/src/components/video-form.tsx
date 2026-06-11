@@ -14,6 +14,9 @@ import {
   type VoiceProvider,
 } from '@/lib/video-engines';
 
+const PERSONA_TRAIN_URL =
+  process.env.NEXT_PUBLIC_PERSONA_TRAIN_URL ?? 'https://persona-train.46-62-215-11.nip.io';
+
 type Avatar = {
   id: string;
   styleLabel: string;
@@ -278,7 +281,7 @@ export function VideoForm({
             label="Custom voice (IVC)"
             hint={
               <>
-                Свой обученный голос из <a href="https://persona-train.46-62-215-11.nip.io/cabinet" target="_blank" rel="noopener noreferrer" className="text-cyan hover:underline">Persona Train</a>.
+                Свой обученный голос из <a href={`${PERSONA_TRAIN_URL}/cabinet`} target="_blank" rel="noopener noreferrer" className="text-cyan hover:underline">Persona Train</a>.
                 Вставь сюда <code className="mono text-cyan">voice_id</code> — он перебьёт preset выше. Сохраняется локально.
               </>
             }

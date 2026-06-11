@@ -14,6 +14,9 @@ export function bytesHuman(n: number) {
 export function formatDate(d: Date | string) {
   const date = typeof d === 'string' ? new Date(d) : d;
   return new Intl.DateTimeFormat('ru-RU', {
+    // Pin the timezone so server (UTC) and client (local) render identical text —
+    // otherwise React throws a hydration mismatch (#418) on every list with dates.
+    timeZone: 'Europe/Moscow',
     day: '2-digit',
     month: 'short',
     hour: '2-digit',
