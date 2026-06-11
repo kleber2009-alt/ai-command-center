@@ -3,7 +3,8 @@ import { PageHero } from '@/components/shell/page-hero';
 
 export const metadata = { title: 'Voice training — Persona Studio' };
 
-const PERSONA_TRAIN_URL = 'https://persona-train.46-62-215-11.nip.io';
+const PERSONA_TRAIN_URL =
+  process.env.NEXT_PUBLIC_PERSONA_TRAIN_URL ?? 'https://persona-train.46-62-215-11.nip.io';
 const PERSONA_TRAIN_BOT = 'https://t.me/ilia_pali0_bot';
 
 const PILLARS = [
@@ -80,7 +81,7 @@ export default function VoicePage() {
               rel="noopener noreferrer"
               className="font-serif italic text-gold hover:underline text-[14px]"
             >
-              persona-train.46-62-215-11.nip.io →
+              {PERSONA_TRAIN_URL.replace(/^https?:\/\//, '')} →
             </a>
           </>
         }

@@ -53,6 +53,8 @@ type IgAccount = {
 
 function fmtDate(iso: string): string {
   return new Date(iso).toLocaleString('ru-RU', {
+    // Fixed timezone → server and client render the same string (no #418 hydration mismatch).
+    timeZone: 'Europe/Moscow',
     day: '2-digit',
     month: 'short',
     hour: '2-digit',

@@ -191,7 +191,7 @@ export function Sidebar({ email, balance, isAdmin, plan = 'Pro', hiddenKeys = []
           </div>
           <div className="pt-3 border-t border-border-soft flex items-center justify-between gap-3">
             <Link
-              href="/billing"
+              href="/help"
               className="mono text-[9px] tracking-[0.22em] uppercase text-text-muted hover:text-gold transition-colors"
             >
               {t('Help & Docs →', locale)}
