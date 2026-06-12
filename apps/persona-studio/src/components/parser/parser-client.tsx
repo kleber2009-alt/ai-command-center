@@ -3,6 +3,7 @@
 import { useState } from 'react';
 import { ParserSetup } from './parser-setup';
 import { ParserResults } from './parser-results';
+import { ParserHistory } from './parser-history';
 import type {
   ParserConfigSerialized,
   ParserItemSerialized,
@@ -13,12 +14,14 @@ type Props = {
   initialConfig: ParserConfigSerialized | null;
   initialRun: ParserRunSerialized | null;
   initialItems: ParserItemSerialized[];
+  initialHistory: ParserRunSerialized[];
 };
 
-export function ParserClient({ initialConfig, initialRun, initialItems }: Props) {
+export function ParserClient({ initialConfig, initialRun, initialItems, initialHistory }: Props) {
   const [config, setConfig] = useState<ParserConfigSerialized | null>(initialConfig);
   const [run, setRun] = useState<ParserRunSerialized | null>(initialRun);
   const [items, setItems] = useState<ParserItemSerialized[]>(initialItems);
+  const [history, setHistory] = useState<ParserRunSerialized[]>(initialHistory);
   const [running, setRunning] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const [setupOpen, setSetupOpen] = useState(!initialConfig);
@@ -51,6 +54,11 @@ export function ParserClient({ initialConfig, initialRun, initialItems }: Props)
       // /api/parser/run возвращает items + summary в run-объекте
       const items = (json.items as ParserItemSerialized[] | undefined) || [];
       const errs = (json.errors as string[] | undefined) || [];
+      // Предыдущая выдача уходит в «Историю поиска», новая встаёт наверх.
+      const prevRun = run;
+      if (prevRun?.id) {
+        setHistory((h) => [prevRun, ...h.filter((r) => r.id !== prevRun.id)]);
+      }
       setItems(items);
       setRun({
         id: (json.runId as string) || '',
@@ -166,6 +174,9 @@ export function ParserClient({ initialConfig, initialRun, initialItems }: Props)
           onItemRemoved={(id) => setItems((cur) => cur.filter((i) => i.id !== id))}
         />
       )}
+
+      {/* История поиска — прошлые прогоны */}
+      {!running && <ParserHistory runs={history} />}
     </div>
   );
 }

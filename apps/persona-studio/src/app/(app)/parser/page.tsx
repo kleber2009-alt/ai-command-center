@@ -15,10 +15,15 @@ export default async function ParserPage() {
     where: { userId: user.id },
   });
 
-  const lastRun = await prisma.parserRun.findFirst({
+  // Все завершённые прогоны: самый свежий = текущая выдача, остальные —
+  // «История поиска».
+  const completedRuns = await prisma.parserRun.findMany({
     where: { userId: user.id, status: 'completed' },
     orderBy: { startedAt: 'desc' },
+    take: 30,
   });
+  const lastRun = completedRuns[0] ?? null;
+  const historyRuns = completedRuns.slice(1);
 
   const items = lastRun
     ? await prisma.parserItem.findMany({
@@ -67,6 +72,11 @@ export default async function ParserPage() {
         initialItems={items.map((it) => ({
           ...it,
           createdAt: it.createdAt.toISOString(),
+        }))}
+        initialHistory={historyRuns.map((r) => ({
+          ...r,
+          startedAt: r.startedAt.toISOString(),
+          completedAt: r.completedAt?.toISOString() ?? null,
         }))}
       />
     </div>
