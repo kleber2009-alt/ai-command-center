@@ -86,7 +86,10 @@ export const VIDEO_ENGINES: Record<VideoEngine, EngineConfig> = {
     inputMode: 'script',
     voiceProvider: 'elevenlabs',
     supportedAspects: ['9:16', '1:1', '16:9'],
-    enabled: false,
+    // Enabled as a selectable engine AND as the automatic fallback target when
+    // HeyGen hits a free-tier limit (photo-avatar cap / video credits) — KIE has
+    // no per-account limits, so video generation is never blocked by the plan.
+    enabled: true,
   },
 };
 

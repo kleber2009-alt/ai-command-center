@@ -1,6 +1,8 @@
 import { Worker } from 'bullmq';
 import { prisma } from '@/lib/prisma';
-import { connection, QUEUE_NAMES, type HeygenVideoJob } from '@/lib/queue';
+import { connection, QUEUE_NAMES, omnihumanQueue, type HeygenVideoJob } from '@/lib/queue';
+import { isEnabledEngine } from '@/lib/video-engines';
+import { ELEVENLABS_VOICE_PRESETS } from '@/lib/elevenlabs-voices';
 import {
   uploadTalkingPhoto,
   createVideoAvatarIV,
@@ -173,6 +175,35 @@ export function startHeygenWorker() {
         return { ok: true, bytes: dl.bytes.length };
       } catch (e) {
         const msg = e instanceof HeygenError ? `${e.code}: ${e.message}` : (e instanceof Error ? e.message : String(e));
+
+        // HeyGen free-tier limits (photo-avatar count, video credits, voice quota)
+        // shouldn't hard-fail the user. Re-route the job to OmniHuman (KIE — no
+        // per-account limits) so it still completes. Voice provider differs
+        // (HeyGen voice → ElevenLabs TTS), so substitute a safe multilingual
+        // default voice for the OmniHuman TTS step. Keep the tokens (no refund).
+        const isPlanLimit =
+          e instanceof HeygenError &&
+          /401028|exceeded your limit|photo avatar|insufficient credit|quota|upgrade your plan/i.test(
+            `${e.code} ${e.message}`,
+          );
+        if (isPlanLimit && row.engine !== 'omnihuman-1.5' && isEnabledEngine('omnihuman-1.5')) {
+          const fallbackVoice = ELEVENLABS_VOICE_PRESETS[0]?.voice_id ?? '';
+          console.warn(`[heygen-worker] ${videoId} HeyGen limit (${msg.slice(0, 90)}) → OmniHuman fallback`);
+          await prisma.videoGeneration.update({
+            where: { id: videoId },
+            data: {
+              engine: 'omnihuman-1.5',
+              heygenJobId: null,
+              audioUrl: null,
+              voiceId: fallbackVoice,
+              status: 'processing',
+              errorMsg: 'heygen limit → omnihuman fallback',
+            },
+          });
+          await omnihumanQueue().add('generate', { videoId, userId }, { jobId: `omni-${videoId}` });
+          return { ok: true, fallback: 'omnihuman' as const };
+        }
+
         const maxAttempts = job.opts.attempts ?? 1;
         const isFinal = job.attemptsMade + 1 >= maxAttempts;
         if (isFinal) {
