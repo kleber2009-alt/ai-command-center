@@ -24,3 +24,12 @@ services:
     env_file: .env
     command: ["review_bot.py"]
     restart: unless-stopped
+
+# Контейнеры цепляются к ВНЕШНЕЙ сети, где живёт Postgres, чтобы DATABASE_URL
+# мог ходить на него по hostname (на проде — aisales-postgres в aisales_aisales-net).
+# Имя сети переопределяется через TGVIRAL_NETWORK в .env; должна существовать заранее.
+networks:
+  default:
+    name: ${TGVIRAL_NETWORK:-aisales_aisales-net}
+    external: true
+

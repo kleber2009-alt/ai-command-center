@@ -76,6 +76,15 @@ services:
     env_file: .env
     command: ["review_bot.py"]
     restart: unless-stopped
+
+# Контейнеры цепляются к ВНЕШНЕЙ сети, где живёт Postgres, чтобы DATABASE_URL
+# мог ходить на него по hostname (на проде — aisales-postgres в aisales_aisales-net).
+# Имя сети переопределяется через TGVIRAL_NETWORK в .env; должна существовать заранее.
+networks:
+  default:
+    name: ${TGVIRAL_NETWORK:-aisales_aisales-net}
+    external: true
+
 COMPOSE_EOF
 
 cat > .env.example <<'ENVEX_EOF'
@@ -102,7 +111,12 @@ TOP_N=10
 # Необязательно для парсера / ОБЯЗАТЕЛЬНО для review_bot.py:
 # куда складывать и откуда читать результаты (Supabase/Postgres).
 # Для tg_viral_parser.py пусто = только вывод в консоль, без записи в БД.
+# Прод (aisales-postgres в общей сети): postgresql://tg_viral:ПАРОЛЬ@aisales-postgres:5432/tg_viral
 DATABASE_URL=
+
+# Внешняя docker-сеть, куда подключить контейнеры, чтобы дойти до Postgres по hostname.
+# Прод: aisales_aisales-net (сеть, где живёт aisales-postgres). Должна существовать заранее.
+TGVIRAL_NETWORK=aisales_aisales-net
 
 # ── review_bot.py (модуль 2: ревью + публикация) ────────────────────────────
 # Бот @BotFather (можно тот же, что шлёт дайджесты)
@@ -951,7 +965,6 @@ BOT_EOF
 chmod +x tg_viral_parser.py review_bot.py 2>/dev/null || true
 ok "Файлы проекта на месте"
 
-# выбрать «docker compose» (v2) или «docker-compose» (v1)
 if docker compose version >/dev/null 2>&1; then DC="docker compose"
 elif command -v docker-compose >/dev/null 2>&1; then DC="docker-compose"
 else die "Docker Compose не найден. Установи Docker Desktop и запусти его."; fi
