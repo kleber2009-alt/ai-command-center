@@ -1,10 +1,12 @@
 # tg-viral-parser — CLAUDE.md
 
-**Модуль 1** нового пайплайна виральных постов из **Telegram-каналов** конкурентов:
-парсинг → **скоринг** → (дальше) ревью в боте → публикация.
+Пайплайн виральных постов из **Telegram-каналов** конкурентов:
+парсинг → **скоринг** → **ревью в боте** → **публикация**.
 
-Один самодостаточный файл `tg_viral_parser.py`: парсит свежие посты конкурентов,
-скорит их по относительной виральности и (опционально) кладёт в Postgres с оценкой.
+- **Модуль 1** — `tg_viral_parser.py`: парсит свежие посты конкурентов, скорит их
+  по относительной виральности и кладёт в Postgres (`parsed_posts`) с оценкой.
+- **Модуль 2** — `review_bot.py`: шлёт топ скоренных постов владельцу на ревью
+  (inline-кнопки) и публикует одобренное в канал.
 
 > Не путать с `viral_discover` (`apps/infra-worker`) — тот про **Instagram** через
 > Apify. Здесь — **Telegram** через user-session (MTProto / Telethon).
@@ -60,16 +62,48 @@ python tg_viral_parser.py selftest   # проверка математики с�
 
 `.env` и `*.session` в `.gitignore` — НЕ коммитим.
 
-## Docker
+## Модуль 2 — review_bot.py (ревью + публикация)
 
-CLI отрабатывает и завершается (cron-style), поэтому compose без restart-петли —
-запуск по требованию / по расписанию:
+Telegram-бот (`python-telegram-bot`, Bot API): берёт топ постов из `parsed_posts`
+(`review_status='new'`), шлёт владельцу карточками с inline-кнопками и публикует
+одобренное в канал.
 
-```bash
-docker compose run --rm tg-viral-parser run        # парсинг + скоринг (по умолч.)
-docker compose run --rm tg-viral-parser selftest   # проверка скоринга на моках
-docker compose run --rm tg-viral-parser init-db    # 1 раз: создать таблицу
-docker compose run --rm tg-viral-parser login      # 1 раз: получить session string
+```
+/start   — проверка доступа (отвечает только OWNER_TELEGRAM_ID)
+/review  — прислать топ необработанных постов на ревью (REVIEW_BATCH штук)
+✅ Одобрить → publish_text(row) → PUBLISH_CHANNEL,  review_status='published'
+❌ Отклонить →                                       review_status='rejected'
 ```
 
-`Dockerfile` → `ENTRYPOINT python -u tg_viral_parser.py`, команда — аргументом.
+Гонки/повторные клики защищены SQL: `sent` ставится только из `new`, финальный
+статус — только из `('new','sent')`, поэтому старая кнопка не перезапишет уже
+опубликованное. Публикуется `text` поста (медиа-файлы в БД не хранятся — у чистого
+медиа в канал уходит ссылка на оригинал как черновик).
+
+Функции представления (`card_text`, `publish_text`, `post_url`) чистые —
+проверяются `python review_bot.py selftest` без сети/БД/telegram.
+
+Доп. env (см. `.env.example`): `TELEGRAM_BOT_TOKEN`, `OWNER_TELEGRAM_ID`,
+`PUBLISH_CHANNEL` (бот должен быть **админом** канала), `REVIEW_BATCH`.
+`DATABASE_URL` для бота **обязателен**.
+
+## Docker
+
+Два сервиса в `docker-compose.yml`:
+
+- **tg-viral-parser** — CLI, отрабатывает и завершается (cron-style), без restart-петли:
+
+  ```bash
+  docker compose run --rm tg-viral-parser                          # парсинг+скоринг (по умолч.)
+  docker compose run --rm tg-viral-parser tg_viral_parser.py selftest   # проверка скоринга
+  docker compose run --rm tg-viral-parser tg_viral_parser.py init-db    # 1 раз: таблица
+  docker compose run --rm tg-viral-parser tg_viral_parser.py login      # 1 раз: session string
+  ```
+
+- **tg-viral-review-bot** — long-running review-бот (polling), `restart: unless-stopped`:
+
+  ```bash
+  docker compose up -d tg-viral-review-bot
+  ```
+
+`Dockerfile` → `ENTRYPOINT ["python","-u"]`; скрипт+команда — через CMD/compose `command`.

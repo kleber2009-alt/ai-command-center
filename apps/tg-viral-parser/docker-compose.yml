@@ -8,9 +8,19 @@
 #   docker compose run --rm tg-viral-parser init-db    # 1 раз: создать таблицу
 #   docker compose run --rm tg-viral-parser login      # 1 раз: получить session string
 services:
+  # Модуль 1 — парсер+скоринг. CLI отрабатывает и завершается (cron-style).
   tg-viral-parser:
     build: .
     image: tg-viral-parser:local
     container_name: tg-viral-parser
     env_file: .env
     restart: "no"
+
+  # Модуль 2 — review-бот (ревью + публикация). Long-running, polling.
+  tg-viral-review-bot:
+    build: .
+    image: tg-viral-parser:local
+    container_name: tg-viral-review-bot
+    env_file: .env
+    command: ["review_bot.py"]
+    restart: unless-stopped
