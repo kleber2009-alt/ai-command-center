@@ -1,0 +1,16 @@
+# tg-viral-parser — парсинг+скоринг виральных постов Telegram-каналов конкурентов.
+#
+# Это не сервис, а CLI, который отрабатывает и завершается (cron-style),
+# поэтому без restart-петли. Запускать по требованию или по расписанию:
+#
+#   docker compose run --rm tg-viral-parser run        # парсинг + скоринг (по умолч.)
+#   docker compose run --rm tg-viral-parser selftest   # проверка скоринга на моках
+#   docker compose run --rm tg-viral-parser init-db    # 1 раз: создать таблицу
+#   docker compose run --rm tg-viral-parser login      # 1 раз: получить session string
+services:
+  tg-viral-parser:
+    build: .
+    image: tg-viral-parser:local
+    container_name: tg-viral-parser
+    env_file: .env
+    restart: "no"

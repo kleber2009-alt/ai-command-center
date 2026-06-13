@@ -59,3 +59,17 @@ python tg_viral_parser.py selftest   # проверка математики с�
 (`new|sent|approved|rejected|published`) — задел под следующий модуль (ревью в боте).
 
 `.env` и `*.session` в `.gitignore` — НЕ коммитим.
+
+## Docker
+
+CLI отрабатывает и завершается (cron-style), поэтому compose без restart-петли —
+запуск по требованию / по расписанию:
+
+```bash
+docker compose run --rm tg-viral-parser run        # парсинг + скоринг (по умолч.)
+docker compose run --rm tg-viral-parser selftest   # проверка скоринга на моках
+docker compose run --rm tg-viral-parser init-db    # 1 раз: создать таблицу
+docker compose run --rm tg-viral-parser login      # 1 раз: получить session string
+```
+
+`Dockerfile` → `ENTRYPOINT python -u tg_viral_parser.py`, команда — аргументом.
