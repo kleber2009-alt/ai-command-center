@@ -71,20 +71,30 @@ Telegram-бот (`python-telegram-bot`, Bot API): берёт топ постов
 ```
 /start   — проверка доступа (отвечает только OWNER_TELEGRAM_ID)
 /review  — прислать топ необработанных постов на ревью (REVIEW_BATCH штук)
-✅ Одобрить → publish_text(row) → PUBLISH_CHANNEL,  review_status='published'
-❌ Отклонить →                                       review_status='rejected'
+✅ Одобрить → build_publish_text(row) → PUBLISH_CHANNEL,  review_status='published'
+❌ Отклонить →                                            review_status='rejected'
 ```
 
 Гонки/повторные клики защищены SQL: `sent` ставится только из `new`, финальный
 статус — только из `('new','sent')`, поэтому старая кнопка не перезапишет уже
-опубликованное. Публикуется `text` поста (медиа-файлы в БД не хранятся — у чистого
-медиа в канал уходит ссылка на оригинал как черновик).
+опубликованное.
 
-Функции представления (`card_text`, `publish_text`, `post_url`) чистые —
-проверяются `python review_bot.py selftest` без сети/БД/telegram.
+**Авто-пуш** (`REVIEW_DAILY_TIME=HH:MM` UTC): JobQueue раз в день сам шлёт топ на
+ревью (та же `push_review_batch`, что у `/review`). Пусто = только ручной `/review`.
+
+**Рерайт через Claude** (`ANTHROPIC_API_KEY`): при одобрении текст переписывается
+(`build_publish_text` → `rewrite_text`) в самостоятельный пост, а не дословную копию
+конкурента; модель — `ANTHROPIC_MODEL` (по умолч. `claude-sonnet-4-6`). Ключ не задан →
+публикуется verbatim. Рерайт упал → пост НЕ публикуется, кнопки остаются (не льём
+чужой текст молча). Чистое медиа (без текста) рерайт пропускает → ссылка на оригинал.
+
+Функции представления (`card_text`, `publish_text`, `post_url`, `_parse_hhmm`) и
+`build_publish_text` (с выключенным рерайтом) чистые — проверяются
+`python review_bot.py selftest` без сети/БД/telegram/Claude.
 
 Доп. env (см. `.env.example`): `TELEGRAM_BOT_TOKEN`, `OWNER_TELEGRAM_ID`,
-`PUBLISH_CHANNEL` (бот должен быть **админом** канала), `REVIEW_BATCH`.
+`PUBLISH_CHANNEL` (бот должен быть **админом** канала), `REVIEW_BATCH`,
+`REVIEW_DAILY_TIME` (опц.), `ANTHROPIC_API_KEY`/`ANTHROPIC_MODEL` (опц.).
 `DATABASE_URL` для бота **обязателен**.
 
 ## Docker

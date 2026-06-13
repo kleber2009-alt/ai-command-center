@@ -8,8 +8,13 @@ review_bot.py — модуль 2: ревью скоренных постов в 
 шлёт их владельцу карточками с inline-кнопками «✅ Одобрить / ❌ Отклонить»:
 
     • Одобрить → текст поста публикуется в твой канал (PUBLISH_CHANNEL),
-                 review_status = 'published'.
+                 review_status = 'published'. Если задан ANTHROPIC_API_KEY —
+                 текст перед публикацией переписывается через Claude (свой пост,
+                 а не дословная копия конкурента).
     • Отклонить → review_status = 'rejected'.
+
+Авто-пуш: если задан REVIEW_DAILY_TIME (HH:MM UTC) — бот раз в день сам присылает
+топ на ревью (как ручной /review). Пусто = только ручной /review.
 
 Бот отвечает ТОЛЬКО владельцу (OWNER_TELEGRAM_ID) — остальные игнорируются.
 
@@ -25,6 +30,9 @@ review_bot.py — модуль 2: ревью скоренных постов в 
     OWNER_TELEGRAM_ID=         # твой numeric id (только он видит ревью)
     PUBLISH_CHANNEL=@my_channel   # куда публиковать одобренное (@username или -100…)
     REVIEW_BATCH=10            # сколько постов слать за один /review
+    REVIEW_DAILY_TIME=06:00   # необязательно: ежедневный авто-пуш топа (HH:MM UTC)
+    ANTHROPIC_API_KEY=        # необязательно: рерайт текста через Claude перед публикацией
+    ANTHROPIC_MODEL=claude-sonnet-4-6   # модель рерайта (по умолч.)
 ───────────────────────────────────────────────────────────
 
 ────────────────────────────────────────────────────────────────────────────
@@ -44,7 +52,7 @@ from __future__ import annotations
 import logging
 import os
 import sys
-from datetime import datetime, timezone
+from datetime import datetime, time as dtime, timezone
 from typing import Any, Mapping
 
 from dotenv import load_dotenv
@@ -67,6 +75,11 @@ class BotConfig:
     publish_channel: str = os.getenv("PUBLISH_CHANNEL", "")
     database_url: str = os.getenv("DATABASE_URL", "")
     review_batch: int = int(os.getenv("REVIEW_BATCH", "10"))
+    # "HH:MM" UTC — ежедневный авто-пуш топа на ревью. Пусто = только ручной /review.
+    daily_time: str = os.getenv("REVIEW_DAILY_TIME", "")
+    # Рерайт текста через Claude перед публикацией. Пусто = публикуем verbatim.
+    anthropic_api_key: str = os.getenv("ANTHROPIC_API_KEY", "")
+    anthropic_model: str = os.getenv("ANTHROPIC_MODEL", "claude-sonnet-4-6")
 
     @classmethod
     def validate(cls) -> None:
@@ -116,6 +129,48 @@ def publish_text(row: Mapping[str, Any]) -> str:
     if text:
         return text
     return f"Источник (медиа без текста): {post_url(row['channel'], row['message_id'])}"
+
+
+# ════════════════════════════════════════════════════════════════════════════
+#  REWRITE  (Claude — переписать чужой пост в наш, перед публикацией)
+# ════════════════════════════════════════════════════════════════════════════
+REWRITE_SYSTEM = (
+    "Ты — редактор Telegram-канала. На вход даётся текст чужого вирального поста "
+    "конкурента. Перепиши его своими словами на русском как самостоятельный пост для "
+    "нашего канала: сохрани цепляющий смысл и структуру (хук → польза → призыв), но не "
+    "копируй формулировки дословно; убери чужой брендинг, ссылки и упоминания авторства. "
+    "Верни ТОЛЬКО готовый текст поста, без пояснений и кавычек."
+)
+
+
+async def rewrite_text(original: str) -> str:
+    """Переписать текст через Claude. Возвращает оригинал, если модель ответила пусто."""
+    from anthropic import AsyncAnthropic
+    client = AsyncAnthropic(api_key=BotConfig.anthropic_api_key)
+    msg = await client.messages.create(
+        model=BotConfig.anthropic_model,
+        max_tokens=1024,
+        system=REWRITE_SYSTEM,
+        messages=[{"role": "user", "content": original}],
+    )
+    parts = [b.text for b in msg.content if getattr(b, "type", None) == "text"]
+    out = "\n".join(p.strip() for p in parts if p).strip()
+    return out or original
+
+
+async def build_publish_text(row: Mapping[str, Any]) -> str:
+    """Что уйдёт в канал: рерайт через Claude, если задан ключ и есть авторский текст;
+    иначе — verbatim (поведение по умолчанию)."""
+    base = publish_text(row)
+    if not BotConfig.anthropic_api_key:
+        return base
+    if not (row["text"] or "").strip():  # чистое медиа — рерайтить нечего
+        return base
+    return await rewrite_text(base)
+
+
+def _rewrite_active(row: Mapping[str, Any]) -> bool:
+    return bool(BotConfig.anthropic_api_key and (row["text"] or "").strip())
 
 
 # ════════════════════════════════════════════════════════════════════════════
@@ -209,21 +264,38 @@ async def cmd_start(update, context) -> None:
     )
 
 
-async def cmd_review(update, context) -> None:
-    if not _is_owner(update):
-        return
+async def push_review_batch(bot) -> int:
+    """Прислать владельцу очередную пачку необработанных постов карточками.
+    Общая логика для ручного /review и ежедневного авто-пуша. Возвращает число постов."""
     rows = await fetch_batch(BotConfig.review_batch)
     if not rows:
-        await update.message.reply_text("Новых постов на ревью нет.")
-        return
-    await update.message.reply_text(f"На ревью: {len(rows)} постов ↓")
+        return 0
+    await bot.send_message(chat_id=BotConfig.owner_id, text=f"На ревью: {len(rows)} постов ↓")
     for row in rows:
-        await context.bot.send_message(
+        await bot.send_message(
             chat_id=BotConfig.owner_id,
             text=card_text(row),
             reply_markup=_keyboard(row["id"]),
             disable_web_page_preview=False,
         )
+    return len(rows)
+
+
+async def cmd_review(update, context) -> None:
+    if not _is_owner(update):
+        return
+    n = await push_review_batch(context.bot)
+    if n == 0:
+        await update.message.reply_text("Новых постов на ревью нет.")
+
+
+async def daily_review_job(context) -> None:
+    """JobQueue-колбэк: ежедневный авто-пуш топа на ревью."""
+    try:
+        n = await push_review_batch(context.bot)
+        logger.info("daily review push: %s posts", n)
+    except Exception:
+        logger.exception("daily review job failed")
 
 
 async def on_callback(update, context) -> None:
@@ -252,7 +324,16 @@ async def on_callback(update, context) -> None:
             await query.edit_message_text("ℹ️ Уже обработано.\n\n" + (query.message.text or ""))
             return
         try:
-            await context.bot.send_message(chat_id=BotConfig.publish_channel, text=publish_text(row))
+            text_to_publish = await build_publish_text(row)
+        except Exception as e:  # рерайт упал — не публикуем чужой текст молча, оставляем кнопки
+            logger.exception("rewrite failed for post %s", post_id)
+            await query.edit_message_text(
+                f"⚠️ Рерайт через Claude не удался: {e}\n\n" + (query.message.text or ""),
+                reply_markup=_keyboard(post_id),
+            )
+            return
+        try:
+            await context.bot.send_message(chat_id=BotConfig.publish_channel, text=text_to_publish)
         except Exception as e:  # права бота / неверный канал — не теряем статус, сообщаем
             logger.exception("publish failed for post %s", post_id)
             await query.edit_message_text(
@@ -261,12 +342,19 @@ async def on_callback(update, context) -> None:
             )
             return
         await set_status(post_id, "published")
-        await query.edit_message_text("✅ Опубликовано.\n\n" + (query.message.text or ""))
+        note = " (переписано Claude)" if _rewrite_active(row) else ""
+        await query.edit_message_text(f"✅ Опубликовано{note}.\n\n" + (query.message.text or ""))
 
 
 # ════════════════════════════════════════════════════════════════════════════
 #  ENTRYPOINT
 # ════════════════════════════════════════════════════════════════════════════
+def _parse_hhmm(s: str) -> dtime:
+    """'06:30' → datetime.time(6, 30, UTC). Бросает ValueError на мусоре."""
+    hh, mm = (int(x) for x in s.strip().split(":", 1))
+    return dtime(hour=hh, minute=mm, tzinfo=timezone.utc)
+
+
 def run() -> None:
     BotConfig.validate()
     from telegram.ext import Application, CommandHandler, CallbackQueryHandler
@@ -275,7 +363,15 @@ def run() -> None:
     app.add_handler(CommandHandler("start", cmd_start))
     app.add_handler(CommandHandler("review", cmd_review))
     app.add_handler(CallbackQueryHandler(on_callback))
-    logger.info("review-bot started; owner=%s publish_channel=%s", BotConfig.owner_id, BotConfig.publish_channel)
+
+    if BotConfig.daily_time:
+        app.job_queue.run_daily(daily_review_job, time=_parse_hhmm(BotConfig.daily_time))
+        logger.info("daily review push scheduled at %s UTC", BotConfig.daily_time)
+
+    logger.info(
+        "review-bot started; owner=%s publish_channel=%s rewrite=%s",
+        BotConfig.owner_id, BotConfig.publish_channel, bool(BotConfig.anthropic_api_key),
+    )
     app.run_polling(allowed_updates=["message", "callback_query"])
 
 
@@ -298,6 +394,16 @@ def _selftest() -> None:
     media_only = {**row, "text": ""}
     assert "медиа без текста" in publish_text(media_only)
     assert post_url("@ch", 5) == "https://t.me/ch/5"
+
+    # парсер времени для ежедневного авто-пуша
+    assert _parse_hhmm("06:30") == dtime(6, 30, tzinfo=timezone.utc)
+
+    # рерайт выключен (нет ключа) → build_publish_text возвращает verbatim, без сети к Claude
+    import asyncio
+    BotConfig.anthropic_api_key = ""
+    assert asyncio.run(build_publish_text(row)) == "Как мы выросли x10\nза месяц"
+    assert _rewrite_active(row) is False
+
     print(card_text(row))
     print("\nselftest OK")
 
