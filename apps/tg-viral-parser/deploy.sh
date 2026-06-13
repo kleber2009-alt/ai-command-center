@@ -42,14 +42,16 @@ if [[ ! -f .env ]]; then
   warn "Минимум: TELEGRAM_BOT_TOKEN, OWNER_TELEGRAM_ID, PUBLISH_CHANNEL, DATABASE_URL, TG_API_ID, TG_API_HASH, COMPETITOR_CHANNELS."
   exit 0
 fi
-set -a; . ./.env; set +a
+# .env читаем БЕЗ source — значения могут содержать спецсимволы/кавычки, которые
+# ломают разбор bash. Docker сам прочитает env_file; тут только валидация.
+get_env() { sed -n "s/^$1=//p" .env | tail -n1; }
 ok ".env найден"
 
 # ── 3. обязательные переменные ───────────────────────────────────────────────
 bold "[3/8] Проверяю обязательные переменные…"
 missing=()
 for v in TELEGRAM_BOT_TOKEN OWNER_TELEGRAM_ID PUBLISH_CHANNEL DATABASE_URL TG_API_ID TG_API_HASH COMPETITOR_CHANNELS; do
-  [[ -n "${!v:-}" ]] || missing+=("$v")
+  [[ -n "$(get_env "$v")" ]] || missing+=("$v")
 done
 if (( ${#missing[@]} )); then
   die "Не заполнены в .env: ${missing[*]}"
@@ -63,7 +65,7 @@ ok "Образ собран"
 
 # ── 5. session string для парсера (один раз, интерактивно) ───────────────────
 bold "[5/8] Проверяю TG_SESSION_STRING…"
-if [[ -z "${TG_SESSION_STRING:-}" ]]; then
+if [[ -z "$(get_env TG_SESSION_STRING)" ]]; then
   warn "TG_SESSION_STRING пуст — запускаю интерактивный login (введи номер ОТДЕЛЬНОГО аккаунта и код из Telegram)."
   $DC run --rm tg-viral-parser tg_viral_parser.py login
   warn "Скопируй строку выше в .env как TG_SESSION_STRING= и запусти deploy.sh снова."
