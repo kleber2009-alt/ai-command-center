@@ -213,15 +213,25 @@ def _csv(name: str) -> list[str]:
     return [x.strip() for x in os.getenv(name, "").split(",") if x.strip()]
 
 
+def _int_env(name: str, default: int = 0) -> int:
+    """Терпимый парсинг числа из .env — кривое значение (плейсхолдер, пустая
+    строка) не роняет импорт traceback'ом, а превращается в default; ловится в validate()."""
+    raw = os.getenv(name, "").strip()
+    try:
+        return int(raw)
+    except ValueError:
+        return default
+
+
 @dataclass
 class Config:
-    api_id: int = int(os.getenv("TG_API_ID", "0"))
+    api_id: int = _int_env("TG_API_ID", 0)
     api_hash: str = os.getenv("TG_API_HASH", "")
     session_string: str = os.getenv("TG_SESSION_STRING", "")
     competitor_channels: list[str] = field(default_factory=lambda: _csv("COMPETITOR_CHANNELS"))
-    posts_per_channel: int = int(os.getenv("POSTS_PER_CHANNEL", "100"))
-    lookback_days: int = int(os.getenv("LOOKBACK_DAYS", "7"))
-    top_n: int = int(os.getenv("TOP_N", "10"))
+    posts_per_channel: int = _int_env("POSTS_PER_CHANNEL", 100)
+    lookback_days: int = _int_env("LOOKBACK_DAYS", 7)
+    top_n: int = _int_env("TOP_N", 10)
     database_url: str = os.getenv("DATABASE_URL", "")
 
     def validate(self) -> None:
@@ -612,12 +622,22 @@ logger = logging.getLogger("review-bot")
 # ════════════════════════════════════════════════════════════════════════════
 #  CONFIG
 # ════════════════════════════════════════════════════════════════════════════
+def _int_env(name: str, default: int = 0) -> int:
+    """Терпимый парсинг числа из .env — плейсхолдер/пустая строка → default
+    (ловится в validate()), без traceback на импорте."""
+    raw = os.getenv(name, "").strip()
+    try:
+        return int(raw)
+    except ValueError:
+        return default
+
+
 class BotConfig:
     token: str = os.getenv("TELEGRAM_BOT_TOKEN", "")
-    owner_id: int = int(os.getenv("OWNER_TELEGRAM_ID", "0"))
+    owner_id: int = _int_env("OWNER_TELEGRAM_ID", 0)
     publish_channel: str = os.getenv("PUBLISH_CHANNEL", "")
     database_url: str = os.getenv("DATABASE_URL", "")
-    review_batch: int = int(os.getenv("REVIEW_BATCH", "10"))
+    review_batch: int = _int_env("REVIEW_BATCH", 10)
     # "HH:MM" UTC — ежедневный авто-пуш топа на ревью. Пусто = только ручной /review.
     daily_time: str = os.getenv("REVIEW_DAILY_TIME", "")
     # Рерайт текста через Claude перед публикацией. Пусто = публикуем verbatim.
@@ -981,7 +1001,6 @@ if [[ ! -f .env ]]; then
   warn "Минимум: TELEGRAM_BOT_TOKEN, OWNER_TELEGRAM_ID, PUBLISH_CHANNEL, DATABASE_URL, TG_API_ID, TG_API_HASH, COMPETITOR_CHANNELS."
   exit 0
 fi
-# .env читаем БЕЗ source — значения могут содержать спецсимволы/кавычки.
 get_env() { sed -n "s/^$1=//p" .env | tail -n1; }
 ok ".env найден"
 

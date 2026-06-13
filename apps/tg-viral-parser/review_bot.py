@@ -69,12 +69,22 @@ logger = logging.getLogger("review-bot")
 # ════════════════════════════════════════════════════════════════════════════
 #  CONFIG
 # ════════════════════════════════════════════════════════════════════════════
+def _int_env(name: str, default: int = 0) -> int:
+    """Терпимый парсинг числа из .env — плейсхолдер/пустая строка → default
+    (ловится в validate()), без traceback на импорте."""
+    raw = os.getenv(name, "").strip()
+    try:
+        return int(raw)
+    except ValueError:
+        return default
+
+
 class BotConfig:
     token: str = os.getenv("TELEGRAM_BOT_TOKEN", "")
-    owner_id: int = int(os.getenv("OWNER_TELEGRAM_ID", "0"))
+    owner_id: int = _int_env("OWNER_TELEGRAM_ID", 0)
     publish_channel: str = os.getenv("PUBLISH_CHANNEL", "")
     database_url: str = os.getenv("DATABASE_URL", "")
-    review_batch: int = int(os.getenv("REVIEW_BATCH", "10"))
+    review_batch: int = _int_env("REVIEW_BATCH", 10)
     # "HH:MM" UTC — ежедневный авто-пуш топа на ревью. Пусто = только ручной /review.
     daily_time: str = os.getenv("REVIEW_DAILY_TIME", "")
     # Рерайт текста через Claude перед публикацией. Пусто = публикуем verbatim.

@@ -71,15 +71,25 @@ def _csv(name: str) -> list[str]:
     return [x.strip() for x in os.getenv(name, "").split(",") if x.strip()]
 
 
+def _int_env(name: str, default: int = 0) -> int:
+    """Терпимый парсинг числа из .env — кривое значение (плейсхолдер, пустая
+    строка) не роняет импорт traceback'ом, а превращается в default; ловится в validate()."""
+    raw = os.getenv(name, "").strip()
+    try:
+        return int(raw)
+    except ValueError:
+        return default
+
+
 @dataclass
 class Config:
-    api_id: int = int(os.getenv("TG_API_ID", "0"))
+    api_id: int = _int_env("TG_API_ID", 0)
     api_hash: str = os.getenv("TG_API_HASH", "")
     session_string: str = os.getenv("TG_SESSION_STRING", "")
     competitor_channels: list[str] = field(default_factory=lambda: _csv("COMPETITOR_CHANNELS"))
-    posts_per_channel: int = int(os.getenv("POSTS_PER_CHANNEL", "100"))
-    lookback_days: int = int(os.getenv("LOOKBACK_DAYS", "7"))
-    top_n: int = int(os.getenv("TOP_N", "10"))
+    posts_per_channel: int = _int_env("POSTS_PER_CHANNEL", 100)
+    lookback_days: int = _int_env("LOOKBACK_DAYS", 7)
+    top_n: int = _int_env("TOP_N", 10)
     database_url: str = os.getenv("DATABASE_URL", "")
 
     def validate(self) -> None:
