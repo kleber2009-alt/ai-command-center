@@ -11,9 +11,11 @@ import { env } from '@/lib/env';
 import { prisma } from '@/lib/prisma';
 import {
   scrapeAccountPosts as _scrapeAccountPosts,
+  scrapeAccountDetails as _scrapeAccountDetails,
   scrapeHashtagPosts as _scrapeHashtagPosts,
   scrapeSearchReels as _scrapeSearchReels,
   type ScrapeResult,
+  type ProfileResult,
 } from '@/lib/parser/apify';
 
 const ALERT_THRESHOLDS = [75, 90, 100] as const;
@@ -106,6 +108,20 @@ export async function guardedScrapeAccount(
   }
   const r = await _scrapeAccountPosts(handle, opts);
   if (r.ok) await recordApifyUsage({ itemsScraped: r.items.length });
+  return r;
+}
+
+/**
+ * Профиль аккаунта (followers / posts / avatar) — отдельный дешёвый вызов
+ * (1 item), т.к. скрейп рилсов 'posts' не несёт счётчик подписчиков.
+ */
+export async function guardedScrapeDetails(handle: string): Promise<ProfileResult> {
+  const check = await checkApifyBudget();
+  if (!check.ok) {
+    return { ok: false, error: `apify_budget_exceeded: ${(check.spentCents / 100).toFixed(2)}$ of ${(check.budgetCents / 100).toFixed(2)}$` };
+  }
+  const r = await _scrapeAccountDetails(handle);
+  if (r.ok) await recordApifyUsage({ itemsScraped: 1 });
   return r;
 }
 

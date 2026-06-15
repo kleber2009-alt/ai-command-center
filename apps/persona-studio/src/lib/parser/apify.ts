@@ -103,6 +103,49 @@ export async function scrapeAccountPosts(
   });
 }
 
+// Сырой профиль аккаунта (resultsType:'details'). Только отсюда actor отдаёт
+// followersCount / postsCount / profilePicUrl — в 'posts'-items их нет, поэтому
+// followers/avatar нельзя получить из обычного скрейпа рилсов.
+export type ApifyProfile = Record<string, unknown> & {
+  id?: string;
+  username?: string;
+  fullName?: string;
+  followersCount?: number;
+  followsCount?: number;
+  postsCount?: number;
+  profilePicUrl?: string;
+  profilePicUrlHD?: string;
+  private?: boolean;
+  verified?: boolean;
+  businessCategoryName?: string;
+  latestPosts?: ApifyItem[];
+};
+
+export type ProfileResult =
+  | { ok: true; profile: ApifyProfile }
+  | { ok: false; error: string };
+
+/**
+ * Профиль аккаунта (followers / posts / avatar). Один item, дешёвый вызов.
+ * Вызывается из indexAuthor отдельно от скрейпа рилсов, т.к. 'posts' не несёт
+ * счётчик подписчиков.
+ */
+export async function scrapeAccountDetails(handle: string): Promise<ProfileResult> {
+  if (!handle) return { ok: false, error: 'handle required' };
+  const username = handle.replace(/^@/, '').trim();
+  const r = await callScraper({
+    directUrls: [`https://www.instagram.com/${username}/`],
+    resultsType: 'details',
+    resultsLimit: 1,
+  });
+  if (!r.ok) return r;
+  const profile = (r.items[0] ?? null) as ApifyProfile | null;
+  if (!profile || typeof profile !== 'object') {
+    return { ok: false, error: 'apify returned no profile item' };
+  }
+  return { ok: true, profile };
+}
+
 export function isReelsSearchConfigured(): boolean {
   const actor = env.APIFY_REELS_SEARCH_ACTOR.trim().toLowerCase();
   return Boolean(env.APIFY_TOKEN) && actor !== '' && actor !== 'off';

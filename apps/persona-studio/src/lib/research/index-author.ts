@@ -12,8 +12,9 @@
 // не дёргаем Apify повторно. TTL зависит от размера аудитории — крупные
 // аккаунты обновляются чаще, у мелких медиана стабильна.
 
+import { Prisma } from '@prisma/client';
 import { prisma } from '@/lib/prisma';
-import { guardedScrapeAccount } from './apify-budget';
+import { guardedScrapeAccount, guardedScrapeDetails } from './apify-budget';
 import { classify } from '@/lib/parser/scoring';
 import type { ScoredPost } from '@/lib/parser/types';
 import {
@@ -142,9 +143,23 @@ export async function indexAuthor(
   const cls = classify(scraped.items);
   const reels: ScoredPost[] = cls.reels;
 
-  // Followers — у разных версий actor'а лежит в разных полях. Пробежимся
-  // по всем items включая non-reel, чтобы поймать значение.
+  // Профиль аккаунта: followers / postsCount / avatar лежат ТОЛЬКО в
+  // resultsType:'details' — обычный скрейп рилсов ('posts') их не несёт.
+  // Поэтому делаем отдельный дешёвый details-вызов. Best-effort: если он
+  // не удался, падаем на (как правило пустые) поля из items.
+  const details = await guardedScrapeDetails(handle);
+  const profile = details.ok ? details.profile : null;
+  const profileExternalId =
+    profile && (typeof profile.id === 'string' || typeof profile.id === 'number')
+      ? String(profile.id)
+      : null;
+
+  // Followers — у разных версий actor'а лежит в разных полях. Сначала из
+  // профиля (details), затем пробегаемся по items как fallback.
   const followersFromItems = (() => {
+    if (typeof profile?.followersCount === 'number' && profile.followersCount > 0) {
+      return profile.followersCount;
+    }
     for (const it of scraped.items) {
       const f =
         (it as Record<string, unknown>).ownerFollowersCount ||
@@ -156,6 +171,9 @@ export async function indexAuthor(
   })();
 
   const postsCountFromItems = (() => {
+    if (typeof profile?.postsCount === 'number' && profile.postsCount > 0) {
+      return profile.postsCount;
+    }
     for (const it of scraped.items) {
       const p =
         (it as Record<string, unknown>).ownerPostsCount ||
@@ -167,6 +185,8 @@ export async function indexAuthor(
   })();
 
   const avatarUrl = (() => {
+    const fromProfile = profile?.profilePicUrlHD || profile?.profilePicUrl;
+    if (typeof fromProfile === 'string' && fromProfile.length > 0) return fromProfile;
     for (const it of scraped.items) {
       const a =
         (it as Record<string, unknown>).ownerProfilePicUrl ||
@@ -187,10 +207,12 @@ export async function indexAuthor(
     create: {
       platform: 'instagram',
       username: handle,
+      externalId: profileExternalId,
       followers: followersFromItems,
       postsCount: postsCountFromItems,
       avatarUrl,
       profileUrl: `https://www.instagram.com/${handle}/`,
+      rawStats: profile ? (profile as Prisma.InputJsonValue) : undefined,
       medianViews: medianStats.median,
       medianWindow: medianStats.windowUsed || medianWindow,
       engagementAvg: erAvg,
@@ -198,10 +220,12 @@ export async function indexAuthor(
       lastIndexedAt: new Date(),
     },
     update: {
+      externalId: profileExternalId ?? existing?.externalId ?? null,
       followers: followersFromItems ?? existing?.followers ?? null,
       postsCount: postsCountFromItems ?? existing?.postsCount ?? null,
       avatarUrl: avatarUrl ?? existing?.avatarUrl ?? null,
       profileUrl: `https://www.instagram.com/${handle}/`,
+      ...(profile ? { rawStats: profile as Prisma.InputJsonValue } : {}),
       medianViews: medianStats.median,
       medianWindow: medianStats.windowUsed || medianWindow,
       engagementAvg: erAvg,
