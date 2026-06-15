@@ -47,6 +47,8 @@ model User {
   researchRadars       ResearchRadar[]
   socialAccounts       SocialAccount[]
   scheduledPosts       ScheduledPost[]
+  personas             Persona[]
+  provenances          Provenance[]
 }
 
 // API key для интеграции Persona Studio в сторонние проекты.
@@ -166,6 +168,7 @@ model Avatar {
   videos         VideoGeneration[]
   covers         Cover[]
   carouselDrafts CarouselDraft[]
+  personas       Persona[]
 
   @@index([userId, createdAt])
   @@index([generationId, style])
@@ -494,6 +497,7 @@ model ResearchReel {
   analyses    ResearchAnalysis[]
   hooks       ResearchHook[]
   favorites   ResearchFavorite[]
+  provenances Provenance[]
 
   @@unique([platform, externalId])
   @@index([authorId])
@@ -811,4 +815,57 @@ model PostTarget {
   publishedAt     DateTime?
 
   @@index([scheduledPostId])
+}
+
+// ── Studio (Мастер-ТЗ Persona Studio) ──────────────
+// Спека пишет схемы в Postgres-схему `studio.*`; на нашем Prisma-стеке это
+// обычные модели. Модуль A (Persona) и сквозное требование §2 (антиплагиат /
+// провенанс) — фундамент S1, на котором строятся бриф → генерация →
+// публикация (SocialAccount/ScheduledPost/PostTarget уже есть в схеме).
+
+// Persona — first-class сущность (Мастер-ТЗ §3, Модуль A). Связывает выбранный
+// аватар (talking-head источник), голос (ElevenLabs voice id), бренд-кит и
+// tone-of-voice. Одна персона помечается дефолтной и подставляется в воркспейс
+// генерации одним кликом.
+model Persona {
+  id             String   @id @default(cuid())
+  userId         String
+  user           User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+  name           String
+  avatarId       String? // выбранный Avatar (talking-head источник), опц.
+  avatar         Avatar?  @relation(fields: [avatarId], references: [id], onDelete: SetNull)
+  avatarModelRef String? // ссылка на обученный аватар (kie.ai/OmniHuman), если есть
+  voiceId        String? // ElevenLabs voice id (клон или сток)
+  voiceProvider  String   @default("elevenlabs")
+  lang           String   @default("ru")
+  brand          Json     @default("{}") // { primary, accent, fontHeading, fontBody, logoUrl }
+  tone           Json     @default("{}") // { examples: string[], taboo: string[], length: short|medium|long }
+  isDefault      Boolean  @default(false)
+  createdAt      DateTime @default(now())
+  updatedAt      DateTime @updatedAt
+
+  @@index([userId, createdAt])
+  @@index([userId, isDefault])
+}
+
+// Provenance — сквозное требование §2 (антиплагиат / трансформация). Каждый
+// сгенерированный ассет хранит источник-вдохновение и результат similarity-gate.
+// Контент с gate='block' не уходит в «Опубликовано». `assetId` ссылается на
+// будущую studio.generations (S2) свободной строкой.
+model Provenance {
+  id           String        @id @default(cuid())
+  userId       String
+  user         User          @relation(fields: [userId], references: [id], onDelete: Cascade)
+  assetId      String? // generation id (S2) — пока свободная ссылка
+  assetType    String        @default("generation") // generation | script | content_item
+  sourceReelId String?
+  sourceReel   ResearchReel? @relation(fields: [sourceReelId], references: [id], onDelete: SetNull)
+  similarity   Float? // cosine 0..1; null если эмбеддинги/источник недоступны
+  gate         String // pass | warn | block
+  reason       String? // диагностика (no_embeddings_or_source | embed_failed | ...)
+  checkedAt    DateTime      @default(now())
+
+  @@index([userId, checkedAt])
+  @@index([assetId])
+  @@index([sourceReelId])
 }
