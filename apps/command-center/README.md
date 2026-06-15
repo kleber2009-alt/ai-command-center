@@ -1,6 +1,11 @@
 # AI Command Center
 
-Next.js 14 дашборд для оператора AI Mastery Platform. 7 страниц, 10 API endpoints, читает live-данные из `aisales-postgres` (см. `apps/aisales/`).
+Next.js 14 дашборд для оператора AI Mastery Platform. Сейчас совмещает два слоя:
+
+- текущий проектный хаб и каталог модулей;
+- новый skeleton `Web Office` для агентской команды, решений, памяти и office-core.
+
+Читает live-данные из `aisales-postgres` (см. `apps/aisales/`).
 
 ## Страницы
 
@@ -13,6 +18,11 @@ Next.js 14 дашборд для оператора AI Mastery Platform. 7 ст�
 | `/metrics` | 4 sparkline-карточки за 30 дней + воронка |
 | `/briefing` | Auto-summary с risks/growth/forecast (из БД) |
 | `/settings` | Editable промпты агентов (override в БД, fallback на in-code) |
+| `/office` | CEO overview новой агентской операционной системы |
+| `/office/agents` | Состав агентской команды и ее источники сигналов |
+| `/office/decisions` | Decision Inbox skeleton |
+| `/office/memory` | Memory + journal skeleton |
+| `/office/model` | office-core data model skeleton |
 
 ## API
 
