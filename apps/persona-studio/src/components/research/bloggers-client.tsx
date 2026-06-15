@@ -14,6 +14,7 @@
 
 import React, { useCallback, useEffect, useMemo, useState } from 'react';
 import { useRouter } from 'next/navigation';
+import { igProxy, type ResearchReelView } from './types';
 
 const C = {
   bg: '#080808', panel: '#0e0e0e', card: '#121212', cardHover: '#181818',
@@ -277,6 +278,35 @@ function Donut({ segs, size = 96 }: { segs: { value: number; color: string }[]; 
   );
 }
 
+/* ---------- media (reel) cover card ---------- */
+function ReelCover({ reel }: { reel: ResearchReelView }) {
+  const [failed, setFailed] = useState(false);
+  const src = igProxy(reel.thumbnailUrl);
+  const showThumb = src && !failed;
+  const xn = reel.virality;
+  return (
+    <a href={reel.url} target="_blank" rel="noreferrer" className="card-b" style={{ display: 'block', background: C.card, border: `1px solid ${C.border}`, borderRadius: 12, overflow: 'hidden', textDecoration: 'none' }}>
+      <div style={{ position: 'relative', width: '100%', aspectRatio: '4 / 5', background: showThumb ? '#000' : avatarGrad(reel.id.length + reel.views) }}>
+        {showThumb ? (
+          // eslint-disable-next-line @next/next/no-img-element
+          <img src={src} alt={reel.caption?.slice(0, 40) || reel.author.username} onError={() => setFailed(true)} style={{ width: '100%', height: '100%', objectFit: 'cover', display: 'block' }} />
+        ) : (
+          <div style={{ width: '100%', height: '100%', display: 'flex', alignItems: 'center', justifyContent: 'center', fontFamily: 'Georgia', fontSize: 30, color: '#0a0a0a', fontWeight: 700 }}>{(reel.author.username[0] || '?').toUpperCase()}</div>
+        )}
+        {/* виральность badge */}
+        {xn != null && xn > 0 && (
+          <span className="mono" style={{ position: 'absolute', top: 8, left: 8, padding: '3px 7px', borderRadius: 7, fontSize: 11, fontWeight: 700, background: xn >= 2 ? C.lime : 'rgba(8,8,8,.78)', color: xn >= 2 ? '#0a0a0a' : C.text }}>{xn.toFixed(1)}x</span>
+        )}
+        {/* views + author overlay */}
+        <div style={{ position: 'absolute', left: 0, right: 0, bottom: 0, padding: '18px 10px 9px', background: 'linear-gradient(180deg, transparent, rgba(8,8,8,.92))' }}>
+          <div className="mono" style={{ fontSize: 13, fontWeight: 600, color: '#fff' }}>▶ {fmt(reel.views)}</div>
+          <div className="mono" style={{ fontSize: 10, color: '#d8d2c8', marginTop: 2, whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis' }}>@{reel.author.username}</div>
+        </div>
+      </div>
+    </a>
+  );
+}
+
 const SORTS = [{ id: 'followers', label: 'По подписчикам' }, { id: 'views', label: 'По просмотрам' }, { id: 'er', label: 'По вовлечению' }];
 const TABS = ['Обзор', 'Виральность', 'Контент', 'Тайминг', 'AI-разбор'];
 
@@ -381,7 +411,7 @@ function Analysis({ author, seed, onClose, onToggleSpy, onToast }: {
         {/* head */}
         <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start' }}>
           <div style={{ display: 'flex', gap: 14, alignItems: 'center' }}>
-            <Avatar src={author.avatarUrl} name={author.username} seed={seed} size={58} />
+            <Avatar src={igProxy(author.avatarUrl)} name={author.username} seed={seed} size={58} />
             <div>
               <div className="mono" style={{ fontSize: 17, fontWeight: 700 }}>@{author.username}</div>
               <div style={{ fontSize: 13, color: C.muted }}>{author.niche || 'без ниши'} · {author.platform}</div>
@@ -662,6 +692,9 @@ export function BloggersClient() {
   const [selected, setSelected] = useState<string | null>(null);
   const [showAdd, setShowAdd] = useState(false);
   const [toast, setToast] = useState('');
+  // Лента поиска: media (reels с обложками) + блогеры. null = режим каталога.
+  const [feed, setFeed] = useState<ResearchReelView[] | null>(null);
+  const [searching, setSearching] = useState(false);
 
   const showToast = useCallback((m: string) => {
     setToast(m);
@@ -685,6 +718,38 @@ export function BloggersClient() {
   }, []);
 
   useEffect(() => { loadAuthors(); loadFolders(); }, [loadAuthors, loadFolders]);
+
+  const runSearch = useCallback(async () => {
+    const niche = query.trim();
+    if (niche.length < 2) { showToast('Введите запрос для поиска'); return; }
+    setSearching(true);
+    try {
+      const res = await fetch('/api/research/search', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ niche, limit: 30 }),
+      });
+      const data = await res.json();
+      if (data.ok) {
+        setFeed(data.reels ?? []);
+        // Поиск индексирует новых авторов — подтянем их в каталог,
+        // чтобы карточки блогеров в ленте были с полным функционалом.
+        loadAuthors();
+        if (!data.reels?.length) showToast('Ничего не нашли по этому запросу');
+      } else if (data.error === 'apify_not_configured') {
+        showToast('Поиск недоступен: APIFY не настроен на сервере');
+      } else if (data.error === 'insufficient_tokens') {
+        showToast(`Не хватает токенов: нужно ${data.need}, есть ${data.have}`);
+      } else {
+        showToast('Поиск не удался');
+      }
+    } catch {
+      showToast('Ошибка поиска');
+    }
+    setSearching(false);
+  }, [query, loadAuthors, showToast]);
+
+  const clearSearch = useCallback(() => { setFeed(null); setQuery(''); }, []);
 
   const spyCount = bloggers.filter((b) => b.isWatching).length;
 
@@ -731,9 +796,41 @@ export function BloggersClient() {
     return r;
   }, [bloggers, query, folder, sort, sizeMin]);
 
+  // Блогеры из ленты поиска — уникальные авторы найденных рилсов,
+  // сматченные с каталогом (для isWatching / папок / полного функционала).
+  const feedAuthors = useMemo(() => {
+    if (!feed) return [];
+    const ids = new Set(feed.map((r) => r.author.id));
+    return bloggers.filter((b) => ids.has(b.id));
+  }, [feed, bloggers]);
+
   const detail = bloggers.find((b) => b.id === selected) ?? null;
   const detailSeed = detail ? bloggers.indexOf(detail) : 0;
   const activeFolderName = folder === 'spy' ? 'Шпион' : folders.find((f) => f.id === folder)?.name;
+
+  const renderBloggerCard = (b: BloggerRow, i: number) => (
+    <div key={b.id} className="card-b" onClick={() => setSelected(b.id)} style={{ background: C.card, border: `1px solid ${b.isWatching ? C.pink + '44' : C.border}`, borderRadius: 14, padding: 16, cursor: 'pointer', position: 'relative' }}>
+      {b.isWatching && <div className="mono" style={{ position: 'absolute', top: 12, right: 12, display: 'flex', alignItems: 'center', gap: 6, fontSize: 9, letterSpacing: '.1em', textTransform: 'uppercase', color: C.pink }}><span className="live-dot" style={{ width: 6, height: 6, borderRadius: 6, background: C.pink, display: 'inline-block' }} />Парсинг</div>}
+      <div style={{ display: 'flex', gap: 12, alignItems: 'center', marginBottom: 16 }}>
+        <Avatar src={igProxy(b.avatarUrl)} name={b.username} seed={i} size={48} />
+        <div style={{ minWidth: 0 }}>
+          <div className="mono" style={{ fontSize: 14, fontWeight: 600, color: C.text, whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis' }}>@{b.username}</div>
+          <div style={{ fontSize: 12, color: C.muted, display: 'flex', gap: 7, alignItems: 'center', marginTop: 2 }}>
+            <span className="mono" style={{ fontSize: 9, padding: '2px 6px', borderRadius: 5, border: `1px solid ${C.border}`, color: C.faint }}>IG</span>{b.niche || 'без ниши'}
+          </div>
+        </div>
+      </div>
+      <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr 1fr', gap: 10, paddingTop: 14, borderTop: `1px solid ${C.borderSoft}` }}>
+        <Stat label="Подписч." value={fmt(b.followers)} />
+        <Stat label="Медиана" value={fmt(b.medianViews)} color={C.blue} />
+        <Stat label="Вовлеч." value={b.engagementAvg.toFixed(1) + '%'} color={erColor(b.engagementAvg)} />
+      </div>
+      <div style={{ display: 'flex', gap: 6, marginTop: 14 }}>
+        <button onClick={(e) => { e.stopPropagation(); setSelected(b.id); }} className="spy-add mono" style={{ flex: 1, padding: '9px 0', borderRadius: 9, cursor: 'pointer', fontSize: 11, letterSpacing: '.04em', textTransform: 'uppercase', background: 'transparent', border: `1px solid ${C.border}`, color: C.muted }}>Анализ</button>
+        <button onClick={(e) => { e.stopPropagation(); toggleSpy(b.id); }} className="spy-add mono" style={{ flex: 1, padding: '9px 0', borderRadius: 9, cursor: 'pointer', fontSize: 11, letterSpacing: '.04em', textTransform: 'uppercase', background: b.isWatching ? C.pink + '14' : 'transparent', border: `1px solid ${b.isWatching ? C.pink + '55' : C.border}`, color: b.isWatching ? C.pink : C.muted }}>{b.isWatching ? '✓ Шпион' : '+ Шпион'}</button>
+      </div>
+    </div>
+  );
 
   return (
     <div style={{ color: C.text, fontFamily: 'Georgia, serif' }}>
@@ -759,9 +856,10 @@ export function BloggersClient() {
           </div>
           <div style={{ display: 'flex', gap: 10, alignItems: 'center' }}>
             <div style={{ position: 'relative' }}>
-              <input value={query} onChange={(e) => setQuery(e.target.value)} placeholder="Поиск по блогерам" className="mono" style={{ background: C.card, border: `1px solid ${C.border}`, color: C.text, borderRadius: 10, padding: '11px 14px 11px 36px', width: 300, fontSize: 13, outline: 'none' }} />
+              <input value={query} onChange={(e) => setQuery(e.target.value)} onKeyDown={(e) => e.key === 'Enter' && runSearch()} placeholder="Ниша, тема или @username" className="mono" style={{ background: C.card, border: `1px solid ${C.border}`, color: C.text, borderRadius: 10, padding: '11px 14px 11px 36px', width: 300, fontSize: 13, outline: 'none' }} />
               <span style={{ position: 'absolute', left: 13, top: 11, color: C.faint, fontSize: 14 }}>⌕</span>
             </div>
+            <button onClick={runSearch} disabled={searching} className="btn-prim mono" style={{ background: C.blue, color: '#0a0a0a', border: 'none', borderRadius: 10, padding: '11px 20px', fontSize: 12, fontWeight: 700, letterSpacing: '.04em', cursor: searching ? 'wait' : 'pointer', textTransform: 'uppercase', opacity: searching ? 0.6 : 1 }}>{searching ? 'Ищем…' : 'Поиск'}</button>
             <button onClick={() => setShowAdd(true)} className="btn-prim mono" style={{ background: C.lime, color: '#0a0a0a', border: 'none', borderRadius: 10, padding: '11px 18px', fontSize: 12, fontWeight: 700, letterSpacing: '.04em', cursor: 'pointer', textTransform: 'uppercase' }}>+ Добавить блогера</button>
           </div>
         </div>
@@ -773,48 +871,63 @@ export function BloggersClient() {
         </div>
 
         <div style={{ display: 'flex', alignItems: 'baseline', gap: 14, marginBottom: 18 }}>
-          <span className="mono" style={{ fontSize: 11, letterSpacing: '.12em', textTransform: 'uppercase', color: C.faint }}>Найдено</span>
-          <span style={{ font: '400 34px/1 Georgia, serif', color: C.text }}>{loading ? '—' : list.length}</span>
-          {folder && <button onClick={() => setFolder(null)} className="mono" style={{ background: 'transparent', border: 'none', color: C.pink, fontSize: 11.5, cursor: 'pointer' }}>✕ {activeFolderName}</button>}
+          <span className="mono" style={{ fontSize: 11, letterSpacing: '.12em', textTransform: 'uppercase', color: C.faint }}>{feed ? 'Лента поиска' : 'Найдено'}</span>
+          {feed ? (
+            <>
+              <span style={{ font: '400 34px/1 Georgia, serif', color: C.text }}>{searching ? '—' : feed.length}</span>
+              <span className="mono" style={{ fontSize: 11.5, color: C.muted }}>медиа · {feedAuthors.length} блогеров</span>
+              <button onClick={clearSearch} className="mono" style={{ background: 'transparent', border: 'none', color: C.pink, fontSize: 11.5, cursor: 'pointer' }}>✕ Сбросить</button>
+            </>
+          ) : (
+            <>
+              <span style={{ font: '400 34px/1 Georgia, serif', color: C.text }}>{loading ? '—' : list.length}</span>
+              {folder && <button onClick={() => setFolder(null)} className="mono" style={{ background: 'transparent', border: 'none', color: C.pink, fontSize: 11.5, cursor: 'pointer' }}>✕ {activeFolderName}</button>}
+            </>
+          )}
         </div>
 
         <div className="ps-main" style={{ display: 'grid', gridTemplateColumns: '1fr 280px', gap: 22, alignItems: 'start' }}>
-          <div className="ps-grid" style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fill, minmax(330px, 1fr))', gap: 12 }}>
-            {loading && Array.from({ length: 6 }).map((_, i) => (
-              <div key={i} style={{ background: C.card, border: `1px solid ${C.border}`, borderRadius: 14, padding: 16, height: 168 }}>
-                <div style={{ display: 'flex', gap: 12, alignItems: 'center' }}>
-                  <div style={{ width: 48, height: 48, borderRadius: '50%', background: '#1a1a1a' }} />
-                  <div style={{ flex: 1 }}><div style={{ height: 12, width: '60%', background: '#1a1a1a', borderRadius: 4, marginBottom: 8 }} /><div style={{ height: 10, width: '40%', background: '#161616', borderRadius: 4 }} /></div>
-                </div>
+          {feed ? (
+            <div style={{ display: 'grid', gap: 26 }}>
+              {/* Медиа — обложки рилсов */}
+              <div>
+                <div className="mono" style={{ fontSize: 10, letterSpacing: '.12em', textTransform: 'uppercase', color: C.faint, marginBottom: 12 }}>Медиа · {searching ? '…' : feed.length} обложек</div>
+                {searching ? (
+                  <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fill, minmax(150px,1fr))', gap: 10 }}>
+                    {Array.from({ length: 8 }).map((_, i) => <div key={i} style={{ aspectRatio: '4 / 5', borderRadius: 12, background: '#161616' }} />)}
+                  </div>
+                ) : feed.length ? (
+                  <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fill, minmax(150px,1fr))', gap: 10 }}>
+                    {feed.map((r) => <ReelCover key={r.id} reel={r} />)}
+                  </div>
+                ) : (
+                  <div style={{ padding: '40px 0', textAlign: 'center', color: C.muted }}><div style={{ fontSize: 15 }}>Ничего не нашли</div><div className="mono" style={{ fontSize: 12, color: C.faint, marginTop: 6 }}>Попробуй другой запрос</div></div>
+                )}
               </div>
-            ))}
-
-            {!loading && list.map((b, i) => (
-              <div key={b.id} className="card-b" onClick={() => setSelected(b.id)} style={{ background: C.card, border: `1px solid ${b.isWatching ? C.pink + '44' : C.border}`, borderRadius: 14, padding: 16, cursor: 'pointer', position: 'relative' }}>
-                {b.isWatching && <div className="mono" style={{ position: 'absolute', top: 12, right: 12, display: 'flex', alignItems: 'center', gap: 6, fontSize: 9, letterSpacing: '.1em', textTransform: 'uppercase', color: C.pink }}><span className="live-dot" style={{ width: 6, height: 6, borderRadius: 6, background: C.pink, display: 'inline-block' }} />Парсинг</div>}
-                <div style={{ display: 'flex', gap: 12, alignItems: 'center', marginBottom: 16 }}>
-                  <Avatar src={b.avatarUrl} name={b.username} seed={i} size={48} />
-                  <div style={{ minWidth: 0 }}>
-                    <div className="mono" style={{ fontSize: 14, fontWeight: 600, color: C.text, whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis' }}>@{b.username}</div>
-                    <div style={{ fontSize: 12, color: C.muted, display: 'flex', gap: 7, alignItems: 'center', marginTop: 2 }}>
-                      <span className="mono" style={{ fontSize: 9, padding: '2px 6px', borderRadius: 5, border: `1px solid ${C.border}`, color: C.faint }}>IG</span>{b.niche || 'без ниши'}
-                    </div>
+              {/* Блогеры из ленты */}
+              {feedAuthors.length > 0 && (
+                <div>
+                  <div className="mono" style={{ fontSize: 10, letterSpacing: '.12em', textTransform: 'uppercase', color: C.faint, marginBottom: 12 }}>Блогеры · {feedAuthors.length}</div>
+                  <div className="ps-grid" style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fill, minmax(330px, 1fr))', gap: 12 }}>
+                    {feedAuthors.map((b, i) => renderBloggerCard(b, i))}
                   </div>
                 </div>
-                <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr 1fr', gap: 10, paddingTop: 14, borderTop: `1px solid ${C.borderSoft}` }}>
-                  <Stat label="Подписч." value={fmt(b.followers)} />
-                  <Stat label="Медиана" value={fmt(b.medianViews)} color={C.blue} />
-                  <Stat label="Вовлеч." value={b.engagementAvg.toFixed(1) + '%'} color={erColor(b.engagementAvg)} />
+              )}
+            </div>
+          ) : (
+            <div className="ps-grid" style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fill, minmax(330px, 1fr))', gap: 12 }}>
+              {loading && Array.from({ length: 6 }).map((_, i) => (
+                <div key={i} style={{ background: C.card, border: `1px solid ${C.border}`, borderRadius: 14, padding: 16, height: 168 }}>
+                  <div style={{ display: 'flex', gap: 12, alignItems: 'center' }}>
+                    <div style={{ width: 48, height: 48, borderRadius: '50%', background: '#1a1a1a' }} />
+                    <div style={{ flex: 1 }}><div style={{ height: 12, width: '60%', background: '#1a1a1a', borderRadius: 4, marginBottom: 8 }} /><div style={{ height: 10, width: '40%', background: '#161616', borderRadius: 4 }} /></div>
+                  </div>
                 </div>
-                <div style={{ display: 'flex', gap: 6, marginTop: 14 }}>
-                  <button onClick={(e) => { e.stopPropagation(); setSelected(b.id); }} className="spy-add mono" style={{ flex: 1, padding: '9px 0', borderRadius: 9, cursor: 'pointer', fontSize: 11, letterSpacing: '.04em', textTransform: 'uppercase', background: 'transparent', border: `1px solid ${C.border}`, color: C.muted }}>Анализ</button>
-                  <button onClick={(e) => { e.stopPropagation(); toggleSpy(b.id); }} className="spy-add mono" style={{ flex: 1, padding: '9px 0', borderRadius: 9, cursor: 'pointer', fontSize: 11, letterSpacing: '.04em', textTransform: 'uppercase', background: b.isWatching ? C.pink + '14' : 'transparent', border: `1px solid ${b.isWatching ? C.pink + '55' : C.border}`, color: b.isWatching ? C.pink : C.muted }}>{b.isWatching ? '✓ Шпион' : '+ Шпион'}</button>
-                </div>
-              </div>
-            ))}
-
-            {!loading && list.length === 0 && <div style={{ gridColumn: '1 / -1', padding: '60px 0', textAlign: 'center', color: C.muted }}><div style={{ fontSize: 16, marginBottom: 6 }}>Никого не нашли</div><div className="mono" style={{ fontSize: 12, color: C.faint }}>Измени фильтры или добавь нового блогера через «+ Добавить блогера»</div></div>}
-          </div>
+              ))}
+              {!loading && list.map((b, i) => renderBloggerCard(b, i))}
+              {!loading && list.length === 0 && <div style={{ gridColumn: '1 / -1', padding: '60px 0', textAlign: 'center', color: C.muted }}><div style={{ fontSize: 16, marginBottom: 6 }}>Никого не нашли</div><div className="mono" style={{ fontSize: 12, color: C.faint }}>Введите нишу и нажмите «Поиск», либо добавьте блогера через «+ Добавить блогера»</div></div>}
+            </div>
+          )}
 
           <aside className="ps-side" style={{ background: C.panel, border: `1px solid ${C.border}`, borderRadius: 14, padding: 16, position: 'sticky', top: 20 }}>
             <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: 14 }}>
