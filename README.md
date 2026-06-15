@@ -8,6 +8,13 @@ Self-hosted Next.js app + Telegram Mini App с тремя поверхностя
 
 Подробное описание архитектуры — в [`CLAUDE.md`](./CLAUDE.md).
 
+Навигация по репозиторию:
+
+- [`PROJECTS.md`](./PROJECTS.md) — канонический инвентарь проектов и их статусов
+- [`docs/REPO_STRUCTURE.md`](./docs/REPO_STRUCTURE.md) — целевая структура репозитория и план миграции
+- [`docs/AGENT_OFFICE_SYSTEM.md`](./docs/AGENT_OFFICE_SYSTEM.md) — архитектура личной ИИ-команды: Telegram HQ + Web Office
+- [`docs/OFFICE_CORE_DATA_MODEL.md`](./docs/OFFICE_CORE_DATA_MODEL.md) — модель данных office-core: events, tasks, decisions, memory, journal
+
 ---
 
 ## Стек

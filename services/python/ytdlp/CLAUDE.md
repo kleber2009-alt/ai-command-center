@@ -3,7 +3,7 @@
 FastAPI + yt-dlp Docker companion service. Runs on Railway (prod) or
 Hetzner (`infra-ytdlp-1`).
 
-Used by `apps/transcribe` and `apps/infra-worker` (viral_clone pipeline)
+Used by `apps/transcribe` and `services/node/infra-worker` (viral_clone pipeline)
 to extract direct media URLs that Deepgram / Whisper can ingest, when our
 own YouTube captions parser is rate-limited or for sources without
 captions (TikTok / X / Vimeo / SoundCloud / Facebook / Instagram fallback).
