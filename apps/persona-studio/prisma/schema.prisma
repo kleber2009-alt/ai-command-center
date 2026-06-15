@@ -49,6 +49,8 @@ model User {
   scheduledPosts       ScheduledPost[]
   personas             Persona[]
   provenances          Provenance[]
+  briefs               Brief[]
+  generations          Generation[]
 }
 
 // API key для интеграции Persona Studio в сторонние проекты.
@@ -203,8 +205,9 @@ model VideoGeneration {
   createdAt     DateTime  @default(now())
   completedAt   DateTime?
 
-  edits          VideoEdit[]
-  scheduledPosts ScheduledPost[]
+  edits             VideoEdit[]
+  scheduledPosts    ScheduledPost[]
+  studioGenerations Generation[]
 
   @@index([userId, createdAt])
 }
@@ -229,7 +232,8 @@ model VideoEdit {
   createdAt         DateTime        @default(now())
   completedAt       DateTime?
 
-  scheduledPosts ScheduledPost[]
+  scheduledPosts    ScheduledPost[]
+  studioGenerations Generation[]
 
   @@index([userId, createdAt])
   @@index([videoGenerationId])
@@ -498,6 +502,7 @@ model ResearchReel {
   hooks       ResearchHook[]
   favorites   ResearchFavorite[]
   provenances Provenance[]
+  briefs      Brief[]
 
   @@unique([platform, externalId])
   @@index([authorId])
@@ -844,6 +849,8 @@ model Persona {
   createdAt      DateTime @default(now())
   updatedAt      DateTime @updatedAt
 
+  briefs Brief[]
+
   @@index([userId, createdAt])
   @@index([userId, isDefault])
 }
@@ -868,4 +875,60 @@ model Provenance {
   @@index([userId, checkedAt])
   @@index([assetId])
   @@index([sourceReelId])
+}
+
+// Brief — заказ на генерацию (Мастер-ТЗ §4, Модуль B). Создаётся из находки
+// Research («Клонировать формат») или с нуля. §2: хранит ТОЛЬКО структуру
+// (архетип хука, формат, длину, тайминг), а НЕ дословный текст источника.
+model Brief {
+  id            String        @id @default(cuid())
+  userId        String
+  user          User          @relation(fields: [userId], references: [id], onDelete: Cascade)
+  personaId     String?
+  persona       Persona?      @relation(fields: [personaId], references: [id], onDelete: SetNull)
+  sourceReelId  String? // источник-вдохновение (может быть null — с нуля)
+  sourceReel    ResearchReel? @relation(fields: [sourceReelId], references: [id], onDelete: SetNull)
+  hookArchetype String? // тип хука (структура, не текст)
+  format        String? // talking-head | listicle | story | ...
+  lengthSec     Int? // целевая длина
+  lang          String        @default("ru")
+  topic         String?       @db.Text // наш угол/тема (net-new, не текст источника)
+  status        String        @default("draft") // draft | ready
+  createdAt     DateTime      @default(now())
+  updatedAt     DateTime      @updatedAt
+
+  generations Generation[]
+
+  @@index([userId, createdAt])
+  @@index([personaId])
+}
+
+// Generation — прогон пайплайна по брифу (Мастер-ТЗ §4). Стадии:
+// script → voice → video → edit → done (или error). Тяжёлые стадии
+// переиспользуют существующие VideoGeneration (OmniHuman) и VideoEdit
+// (Submagic). similarity/gate — результат §2-проверки сценария.
+model Generation {
+  id                String           @id @default(cuid())
+  briefId           String
+  brief             Brief            @relation(fields: [briefId], references: [id], onDelete: Cascade)
+  userId            String
+  user              User             @relation(fields: [userId], references: [id], onDelete: Cascade)
+  stage             String           @default("script") // script | voice | video | edit | done | error
+  status            String           @default("pending") // pending | processing | completed | failed
+  script            String?          @db.Text // net-new сценарий под персону
+  similarity        Float? // §2 cosine к источнику
+  gate              String? // pass | warn | block
+  videoGenerationId String? // переиспользуемый VideoGeneration (OmniHuman)
+  videoGeneration   VideoGeneration? @relation(fields: [videoGenerationId], references: [id], onDelete: SetNull)
+  videoEditId       String? // переиспользуемый VideoEdit (Submagic)
+  videoEdit         VideoEdit?       @relation(fields: [videoEditId], references: [id], onDelete: SetNull)
+  finalUrl          String? // итог после автомонтажа
+  costCredits       Int              @default(0)
+  errorMsg          String?
+  meta              Json             @default("{}")
+  createdAt         DateTime         @default(now())
+  updatedAt         DateTime         @updatedAt
+
+  @@index([userId, createdAt])
+  @@index([briefId])
 }
