@@ -28,6 +28,7 @@ const RU_DICT: Record<string, string> = {
   Admin: 'Админ',
 
   // ── Sidebar items ──
+  Personas: 'Персоны',
   Avatar: 'Аватар',
   Voice: 'Голос',
   Video: 'Видео',
@@ -55,6 +56,7 @@ const RU_DICT: Record<string, string> = {
   Console: 'Консоль',
 
   // ── Sidebar hints ──
+  'avatar · voice · brand': 'аватар · голос · бренд',
   '1 photo → 10 avatars': '1 фото → 10 аватаров',
   'clone & train': 'клонирование и обучение',
   'talking-photo': 'говорящее фото',

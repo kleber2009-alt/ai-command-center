@@ -102,6 +102,38 @@ Token balance changes go through `src/lib/tokens.ts` (`charge` / `refund` / `cre
 Фильтры выдачи (язык / тип / длительность) применяются клиент-сайд к уже полученной
 выборке; период — серверным re-query (кэш-консистентность). См. `research-client.tsx`.
 
+## Studio module (Мастер-ТЗ Persona Studio)
+
+Сшивает research-слой с PRODUCE → PUBLISH → MEASURE. Раскатывается по спринтам
+S1–S6. Спека пишет схемы в Postgres-схему `studio.*` и ссылается на `spy.reels`;
+на нашем Prisma-стеке это обычные модели, ссылающиеся на `ResearchReel`.
+
+**Уже есть в схеме (PUBLISH, Модули C/G):** `SocialAccount` (OAuth-каналы IG/TG,
+токены AES-256-GCM), `ScheduledPost` + `PostTarget` (контент-план и фан-аут
+автопубликации). API/воркеры публикации — см. `src/app/api/**` и sweep-воркер.
+
+**S1 (готово) — фундамент:**
+- **§2 Антиплагиат / провенанс.** `src/lib/studio/similarity.ts` — cosine между
+  эмбеддингом сгенерированного текста и текстом источника (Voyage, тот же что в
+  research-дедупе). Пороги `≥0.85 → block`, `0.75–0.85 → warn`, иначе `pass`.
+  `recordProvenance()` пишет модель `Provenance`. Без `VOYAGE_API_KEY`/источника
+  → `pass` с `reason`. Вызывается из S2-генерации сценария перед сохранением.
+- **Модуль A · Persona.** Модель `Persona` (аватар + voiceId + brand + tone +
+  isDefault). API `src/app/api/personas/**`. UI `src/app/(app)/personas/` +
+  `src/components/persona/personas-client.tsx`. Sidebar «Create → Personas».
+  Первая персона юзера всегда дефолтная; удаление дефолтной переносит флаг.
+- Хелперы: `src/lib/studio/{types,persona,similarity}.ts`.
+
+**S2 (дальше):** `Brief`/`Generation` связывают research-находку → Claude-сценарий
+(net-new под персону) → **similarity-gate (готов)** → голос (ElevenLabs) → видео
+(OmniHuman) → монтаж (Submagic) → `ScheduledPost`. Бóльшая часть PRODUCE-пайплайна
+уже существует россыпью: `Avatar`, `VideoGeneration` (engine omnihuman + voiceId),
+`VideoEdit`, `Cover`.
+
+> Схема — declarative (`prisma db push`, без `migrations/`). Новые таблицы
+> применяются `pnpm db:push` с воркстейшна или `docker compose exec web npx
+> prisma db push` на проде.
+
 ## Landing
 
 `/landings/persona-studio/` (static).
