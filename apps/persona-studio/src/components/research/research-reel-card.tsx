@@ -1,6 +1,7 @@
 'use client';
 
 import Link from 'next/link';
+import { useRouter } from 'next/navigation';
 import { useState, useTransition } from 'react';
 import { igProxy, type ResearchReelView } from './types';
 import { AddToFolderModal } from './add-to-folder-modal';
@@ -44,12 +45,33 @@ function viralityClass(v: number | null): string {
 }
 
 export function ResearchReelCard({ reel, blurred, initialFavorited = false }: Props) {
+  const router = useRouter();
   const [thumbFailed, setThumbFailed] = useState(false);
   const [favorited, setFavorited] = useState(initialFavorited);
   const [showFolderModal, setShowFolderModal] = useState(false);
+  const [cloning, setCloning] = useState(false);
   const [, startFavTransition] = useTransition();
   const showThumb = reel.thumbnailUrl && !thumbFailed;
   const virality = reel.virality;
+
+  // «Клонировать формат» (Мастер-ТЗ §2 + §4): создаёт бриф из находки —
+  // переносится только структура, без дословного текста — и ведёт в воркспейс.
+  async function cloneFormat() {
+    if (cloning) return;
+    setCloning(true);
+    try {
+      const res = await fetch('/api/briefs', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ sourceReelId: reel.id }),
+      });
+      const data = await res.json();
+      if (res.ok && data.brief) router.push(`/briefs/${data.brief.id}`);
+      else setCloning(false);
+    } catch {
+      setCloning(false);
+    }
+  }
 
   function toggleFavorite() {
     const next = !favorited;
@@ -137,6 +159,16 @@ export function ResearchReelCard({ reel, blurred, initialFavorited = false }: Pr
           >
             ↗
           </a>
+          <button
+            type="button"
+            onClick={cloneFormat}
+            disabled={cloning}
+            className="px-1.5 py-1 bg-black/80 border border-border hover:border-gold mono text-[10px] text-text disabled:opacity-50"
+            title="Клонировать формат → бриф в воркспейсе"
+            aria-label="clone format"
+          >
+            {cloning ? '…' : '⎘'}
+          </button>
         </div>
 
         {/* ER + score footer over thumb */}

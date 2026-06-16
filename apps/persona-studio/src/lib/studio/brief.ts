@@ -28,6 +28,9 @@ type GenerationRow = {
   errorMsg: string | null;
   createdAt: Date;
   updatedAt: Date;
+  // опц. join'ы для воркспейса
+  videoGeneration?: { status: string; videoUrl: string | null } | null;
+  videoEdit?: { status: string; resultUrl: string | null } | null;
 };
 
 export function serializeGeneration(g: GenerationRow): GenerationView {
@@ -46,8 +49,17 @@ export function serializeGeneration(g: GenerationRow): GenerationView {
     errorMsg: g.errorMsg,
     createdAt: g.createdAt.toISOString(),
     updatedAt: g.updatedAt.toISOString(),
+    videoStatus: g.videoGeneration?.status ?? null,
+    videoUrl: g.videoGeneration?.videoUrl ?? null,
+    editStatus: g.videoEdit?.status ?? null,
   };
 }
+
+// include для «богатой» генерации (воркспейс-поллинг)
+export const GENERATION_INCLUDE = {
+  videoGeneration: { select: { status: true, videoUrl: true } },
+  videoEdit: { select: { status: true, resultUrl: true } },
+} as const;
 
 type BriefRow = {
   id: string;

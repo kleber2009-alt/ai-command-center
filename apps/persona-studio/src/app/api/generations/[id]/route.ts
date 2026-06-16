@@ -5,8 +5,9 @@ import { NextRequest, NextResponse } from 'next/server';
 import { z } from 'zod';
 import { getCurrentUserOrApiKey } from '@/lib/auth';
 import { prisma } from '@/lib/prisma';
-import { serializeGeneration } from '@/lib/studio/brief';
+import { GENERATION_INCLUDE, serializeGeneration } from '@/lib/studio/brief';
 import { checkSimilarity, recordProvenance } from '@/lib/studio/similarity';
+import { advanceGeneration } from '@/lib/studio/produce';
 
 export const runtime = 'nodejs';
 
@@ -16,7 +17,12 @@ export async function GET(req: NextRequest, { params }: { params: Promise<{ id: 
   const ctx = await getCurrentUserOrApiKey(req);
   if (!ctx) return NextResponse.json({ error: 'UNAUTHORIZED' }, { status: 401 });
   const { id } = await params;
-  const gen = await prisma.generation.findFirst({ where: { id, userId: ctx.user.id } });
+  // Poll-driven продвижение: синхронизирует статус видео/монтажа на Generation.
+  await advanceGeneration({ userId: ctx.user.id, generationId: id });
+  const gen = await prisma.generation.findFirst({
+    where: { id, userId: ctx.user.id },
+    include: GENERATION_INCLUDE,
+  });
   if (!gen) return NextResponse.json({ error: 'not_found' }, { status: 404 });
   return NextResponse.json({ ok: true, generation: serializeGeneration(gen) });
 }

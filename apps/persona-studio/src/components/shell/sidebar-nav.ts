@@ -30,6 +30,7 @@ export const SIDEBAR_SECTIONS: SidebarSection[] = [
     key: 'create',
     items: [
       { href: '/personas', label: 'Personas', key: 'create-personas', hint: 'avatar · voice · brand' },
+      { href: '/briefs', label: 'Workspace', key: 'create-workspace', hint: 'brief → script → video' },
       { href: '/generate', label: 'Avatar', key: 'create-avatar', hint: '1 photo → 10 avatars' },
       { href: '/voice', label: 'Voice', key: 'create-voice', hint: 'clone & train' },
       { href: '/videos/new', label: 'Video', key: 'create-video', hint: 'talking-photo' },
