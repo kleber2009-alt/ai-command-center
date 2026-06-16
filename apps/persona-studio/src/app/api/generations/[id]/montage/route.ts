@@ -6,8 +6,7 @@ import { z } from 'zod';
 import { getCurrentUserOrApiKey } from '@/lib/auth';
 import { prisma } from '@/lib/prisma';
 import { GENERATION_INCLUDE, serializeGeneration } from '@/lib/studio/brief';
-import { startMontageStage } from '@/lib/studio/produce';
-import { produceErrorStatus } from '../produce/route';
+import { startMontageStage, produceErrorStatus } from '@/lib/studio/produce';
 
 export const runtime = 'nodejs';
 

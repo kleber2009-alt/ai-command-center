@@ -5,8 +5,7 @@ import { NextRequest, NextResponse } from 'next/server';
 import { getCurrentUserOrApiKey } from '@/lib/auth';
 import { prisma } from '@/lib/prisma';
 import { GENERATION_INCLUDE, serializeGeneration } from '@/lib/studio/brief';
-import { finalizeWithoutMontage } from '@/lib/studio/produce';
-import { produceErrorStatus } from '../produce/route';
+import { finalizeWithoutMontage, produceErrorStatus } from '@/lib/studio/produce';
 
 export const runtime = 'nodejs';
 

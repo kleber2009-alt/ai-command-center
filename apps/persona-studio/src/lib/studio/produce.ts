@@ -29,6 +29,26 @@ export type ProduceError =
   | { code: 'voice_required' }
   | { code: 'insufficient_tokens'; have: number; need: number };
 
+// HTTP-маппинг ошибок продюсинга. Живёт в lib (не в route.ts), т.к. Next.js
+// запрещает не-handler экспорты из route-модулей.
+export function produceErrorStatus(err: ProduceError): number {
+  switch (err.code) {
+    case 'not_found':
+      return 404;
+    case 'insufficient_tokens':
+      return 402;
+    case 'blocked_by_gate':
+    case 'no_script':
+    case 'persona_required':
+    case 'avatar_required':
+    case 'voice_required':
+    case 'bad_stage':
+      return 409;
+    default:
+      return 400;
+  }
+}
+
 /**
  * Стадия «Видео»: из утверждённого сценария создаёт VideoGeneration и ставит
  * в очередь. Возвращает { ok, generation } или { ok:false, error }.
