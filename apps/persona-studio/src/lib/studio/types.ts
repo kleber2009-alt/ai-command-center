@@ -70,6 +70,10 @@ export type GenerationView = {
   errorMsg: string | null;
   createdAt: string;
   updatedAt: string;
+  // подтягиваются из связанных VideoGeneration/VideoEdit (для воркспейса)
+  videoStatus?: string | null;
+  videoUrl?: string | null;
+  editStatus?: string | null;
 };
 
 export type BriefView = {
