@@ -33,7 +33,7 @@ minio==7.2.10
 # Auth
 python-jose[cryptography]==3.3.0
 passlib[bcrypt]==1.7.4
-python-multipart==0.0.12
+python-multipart==0.0.31
 
 # Audio (Whisper SRT)
 openai==1.54.0  # для whisper transcription
