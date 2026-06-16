@@ -7,7 +7,7 @@
 
 import { useCallback, useEffect, useRef, useState } from 'react';
 import Link from 'next/link';
-import { Wand2, Film, Scissors, CheckCircle2, AlertTriangle, RefreshCw, Loader2 } from 'lucide-react';
+import { Wand2, Film, Scissors, CheckCircle2, AlertTriangle, RefreshCw, Loader2, CalendarPlus } from 'lucide-react';
 import type { BriefView, GenerationView, SimilarityGate } from '@/lib/studio/types';
 
 type PersonaReady = { hasAvatar: boolean; hasVoice: boolean; name: string | null };
@@ -114,6 +114,13 @@ export function WorkspaceClient({
   const personaOk = personaReady.hasAvatar && personaReady.hasVoice;
   const gate = gen?.gate as SimilarityGate | null;
   const videoReady = gen?.stage === 'video' && gen.status === 'completed' && gen.videoUrl;
+
+  // Handoff в контент-план (Модуль C): монтаж → edit, иначе сырое видео.
+  const scheduleHref = gen?.videoEditId
+    ? `/schedule/new?source=edit&id=${gen.videoEditId}`
+    : gen?.videoGenerationId
+      ? `/schedule/new?source=video&id=${gen.videoGenerationId}`
+      : null;
 
   return (
     <div className="grid gap-5 max-w-3xl">
@@ -273,7 +280,15 @@ export function WorkspaceClient({
           <p className="mono text-[10px] tracking-widest uppercase text-text-mute">
             Ассет прошёл §2-gate · потрачено {gen.costCredits} кр.
           </p>
-          <div className="flex items-center gap-3">
+          <div className="flex flex-wrap items-center gap-3">
+            {scheduleHref && (
+              <Link
+                href={scheduleHref}
+                className="flex items-center gap-2 px-4 py-2 border border-lime/60 bg-lime/10 mono text-[10px] tracking-widest uppercase text-lime hover:bg-lime/20"
+              >
+                <CalendarPlus size={13} /> Запланировать публикацию
+              </Link>
+            )}
             <a
               href={gen.finalUrl}
               target="_blank"
@@ -282,9 +297,6 @@ export function WorkspaceClient({
             >
               Скачать / открыть
             </a>
-            <span className="mono text-[10px] tracking-widest uppercase text-text-mute">
-              публикация в контент-план — следующий шаг (Модуль C)
-            </span>
           </div>
         </section>
       )}
