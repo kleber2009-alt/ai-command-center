@@ -42,7 +42,7 @@ const envSchema = z.object({
   HEYGEN_UPLOAD_BASE: z.string().url().default('https://upload.heygen.com'),
 
   // ── OmniHuman (kie.ai) ────────────────────────
-  KIE_OMNIHUMAN_MODEL: z.string().default('bytedance-omnihuman-1.5'),
+  KIE_OMNIHUMAN_MODEL: z.string().default('bytedance/omni-human'),
   OMNIHUMAN_MAX_TTS_CHARS: z.coerce.number().default(400),
   OMNIHUMAN_MAX_POLL_MS: z.coerce.number().default(420_000), // 7 минут
 

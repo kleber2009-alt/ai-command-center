@@ -1,24 +1,26 @@
-// OmniHuman 1.5 client — ByteDance lifelike avatar via kie.ai playground API.
+// OmniHuman client — ByteDance lifelike avatar via kie.ai Market Jobs API.
 //
-// Flow (mirrors kie.ts createTask/recordInfo pattern):
+// ВАЖНО (проверено на проде против live kie.ai 2026-06): OmniHuman — это
+// market-модель (jobs API), НЕ playground. Корректные параметры:
 //
-//   POST {KIE_BASE}/playground/createTask
+//   POST {KIE_BASE}/jobs/createTask
 //        Authorization: Bearer <KIE_API_KEY>
-//        body: { model: <KIE_OMNIHUMAN_MODEL>, input: { image_url, audio_url, aspect_ratio? } }
+//        body: { model: "bytedance/omni-human", input: { image, audio } }
 //        → { code: 200, data: { taskId } }
 //
-//   GET  {KIE_BASE}/playground/recordInfo?taskId=<id>
+//   GET  {KIE_BASE}/jobs/recordInfo?taskId=<id>
 //        → { code: 200, data: { state, resultJson, failCode, failMsg } }
 //
-//   resultJson: { resultUrls: [<mp4 url>] }
+//   state: "waiting" | "queuing" | "generating" | "success" | "fail"
+//   resultJson: { resultUrls: [<mp4 url>] } (только при state="success")
 //
-// OmniHuman constraints (validated via aimlapi + piapi docs):
-//   - audio file MUST be publicly fetchable; ≤ 30 seconds
-//   - image MUST contain a clear single face
-//   - output is mp4 (1080p), aspect comes from input image unless overridden
+// Поля input — именно `image` / `audio` (НЕ image_url/audio_url): kie отвечает
+// "image is required" на image_url. aspect не передаём — берётся из картинки.
 //
-// Model slug на kie может отличаться от провайдера к провайдеру; держим
-// в env (KIE_OMNIHUMAN_MODEL) с дефолтом 'bytedance-omnihuman-1.5'.
+// OmniHuman constraints: аудио публично доступно, ≤15s для лучшего качества;
+// картинка — один чёткий кадр лица; выход — mp4.
+//
+// Model slug — env KIE_OMNIHUMAN_MODEL (дефолт 'bytedance/omni-human').
 
 import { env } from './env';
 
@@ -50,7 +52,7 @@ type KieCreateResp = {
   data?: { taskId?: string; recordId?: string };
 };
 
-type KieState = 'waiting' | 'processing' | 'success' | 'failed';
+type KieState = 'waiting' | 'queuing' | 'generating' | 'success' | 'fail';
 
 type KieRecordResp = {
   code: number;
@@ -65,19 +67,19 @@ type KieRecordResp = {
 };
 
 export async function submitOmnihuman(opts: OmniSubmitOpts): Promise<string> {
+  // kie omni-human ждёт ровно image/audio; aspect берётся из картинки, лишние
+  // поля приводят к 500 — поэтому шлём минимум.
   const input: Record<string, unknown> = {
-    image_url: opts.imageUrl,
-    audio_url: opts.audioUrl,
+    image: opts.imageUrl,
+    audio: opts.audioUrl,
   };
-  if (opts.aspectRatio) input.aspect_ratio = opts.aspectRatio;
-  if (opts.prompt) input.prompt = opts.prompt;
 
   const body = {
     model: opts.model ?? env.KIE_OMNIHUMAN_MODEL,
     input,
   };
 
-  const res = await fetch(`${env.KIE_BASE_URL}/playground/createTask`, {
+  const res = await fetch(`${env.KIE_BASE_URL}/jobs/createTask`, {
     method: 'POST',
     headers: {
       Authorization: `Bearer ${env.KIE_API_KEY}`,
@@ -106,7 +108,7 @@ export type OmniStatus =
 
 export async function getOmnihumanStatus(taskId: string): Promise<OmniStatus> {
   const res = await fetch(
-    `${env.KIE_BASE_URL}/playground/recordInfo?taskId=${encodeURIComponent(taskId)}`,
+    `${env.KIE_BASE_URL}/jobs/recordInfo?taskId=${encodeURIComponent(taskId)}`,
     {
       headers: { Authorization: `Bearer ${env.KIE_API_KEY}` },
       signal: AbortSignal.timeout(STATUS_TIMEOUT_MS),
@@ -156,7 +158,7 @@ export async function getOmnihumanStatus(taskId: string): Promise<OmniStatus> {
     return { state: 'success', taskId, videoUrl, creditsConsumed: d.creditsConsumed };
   }
 
-  if (d.state === 'failed') {
+  if (d.state === 'fail') {
     return {
       state: 'failed',
       taskId,
@@ -165,7 +167,8 @@ export async function getOmnihumanStatus(taskId: string): Promise<OmniStatus> {
     };
   }
 
-  return { state: d.state, taskId };
+  // waiting | queuing | generating → ещё в работе
+  return { state: 'waiting', taskId };
 }
 
 /**
