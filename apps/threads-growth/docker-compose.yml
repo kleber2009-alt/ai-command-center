@@ -13,7 +13,7 @@ services:
     container_name: threads-growth-db
     environment:
       POSTGRES_USER: threads_viral
-      POSTGRES_PASSWORD: threads_viral
+      POSTGRES_PASSWORD: ${POSTGRES_PASSWORD:-threads_viral}
       POSTGRES_DB: threads_growth
     ports:
       - "5439:5432"

@@ -1,0 +1,108 @@
+name: deploy-threads-growth
+
+# Deploy apps/threads-growth (AI Threads Growth Agent — FastAPI + pgvector +
+# Telegram approval bot) to Hetzner. Uses the app's own docker-compose.yml:
+#   - threads-growth-db   (pgvector/pgvector:pg16, dedicated)
+#   - threads-growth-api  (FastAPI :8088->8080)
+#   - threads-growth-bot  (Telegram approval, long-running polling)
+#
+# ─── Required GitHub secrets ───────────────────────────────────────
+#   HETZNER_SSH_KEY                        (shared, already configured)
+#   THREADS_GROWTH_TOKEN_ENCRYPTION_KEY    (Fernet key — REQUIRED to store account tokens)
+#   THREADS_GROWTH_ANTHROPIC_API_KEY       (analysis / rewrite / replies)
+#   THREADS_GROWTH_APIFY_TOKEN             (discovery)
+#   THREADS_GROWTH_APIFY_THREADS_ACTOR     (+ _TWITTER_ACTOR / _REDDIT_ACTOR, optional)
+#   THREADS_GROWTH_VOYAGE_API_KEY          (optional — embeddings/dedup; lexical fallback otherwise)
+#   THREADS_GROWTH_TELEGRAM_BOT_TOKEN      (approval bot)
+#   THREADS_GROWTH_OWNER_TELEGRAM_ID       (approval bot owner)
+#   THREADS_GROWTH_DB_PASSWORD             (optional — dedicated db password; default 'threads_viral')
+
+on:
+  push:
+    branches: [main]
+    paths:
+      - 'apps/threads-growth/**'
+      - '.github/workflows/deploy-threads-growth.yml'
+      - '.github/actions/deploy-ssh/**'
+  workflow_dispatch:
+    inputs:
+      ref:
+        description: 'Git ref to deploy (branch or commit)'
+        required: false
+        default: 'main'
+
+concurrency:
+  group: deploy-threads-growth
+  cancel-in-progress: false
+
+jobs:
+  deploy:
+    runs-on: ubuntu-latest
+    timeout-minutes: 20
+
+    steps:
+      - uses: actions/checkout@v4
+
+      - id: ref
+        run: |
+          if [ "${{ github.event_name }}" = "workflow_dispatch" ]; then
+            echo "value=${{ github.event.inputs.ref || 'main' }}" >> "$GITHUB_OUTPUT"
+          else
+            echo "value=${{ github.ref_name }}" >> "$GITHUB_OUTPUT"
+          fi
+
+      - uses: ./.github/actions/deploy-ssh
+        with:
+          app_name: threads-growth
+          ref:      ${{ steps.ref.outputs.value }}
+          ssh_key:  ${{ secrets.HETZNER_SSH_KEY }}
+          # Body of /etc/threads-growth.env (root-only). Also copied to the app
+          # dir as .env so compose `env_file:` picks it up for api/bot.
+          env_file: |
+            DATABASE_URL=postgresql+psycopg://threads_viral:${{ secrets.THREADS_GROWTH_DB_PASSWORD || 'threads_viral' }}@db:5432/threads_growth
+            POSTGRES_PASSWORD=${{ secrets.THREADS_GROWTH_DB_PASSWORD || 'threads_viral' }}
+            TOKEN_ENCRYPTION_KEY=${{ secrets.THREADS_GROWTH_TOKEN_ENCRYPTION_KEY }}
+            ANTHROPIC_API_KEY=${{ secrets.THREADS_GROWTH_ANTHROPIC_API_KEY }}
+            ANTHROPIC_MODEL=claude-sonnet-4-6
+            APIFY_TOKEN=${{ secrets.THREADS_GROWTH_APIFY_TOKEN }}
+            APIFY_THREADS_ACTOR=${{ secrets.THREADS_GROWTH_APIFY_THREADS_ACTOR }}
+            APIFY_TWITTER_ACTOR=${{ secrets.THREADS_GROWTH_APIFY_TWITTER_ACTOR }}
+            APIFY_REDDIT_ACTOR=${{ secrets.THREADS_GROWTH_APIFY_REDDIT_ACTOR }}
+            VOYAGE_API_KEY=${{ secrets.THREADS_GROWTH_VOYAGE_API_KEY }}
+            TELEGRAM_BOT_TOKEN=${{ secrets.THREADS_GROWTH_TELEGRAM_BOT_TOKEN }}
+            OWNER_TELEGRAM_ID=${{ secrets.THREADS_GROWTH_OWNER_TELEGRAM_ID }}
+          script: |
+            APP=/root/ai-command-center/apps/threads-growth
+            cd "$APP"
+
+            # compose `env_file: .env` для api/bot + интерполяция ${POSTGRES_PASSWORD} в db.
+            cp /etc/threads-growth.env "$APP/.env"
+
+            echo "── build api image ──"
+            docker compose build api
+
+            echo "── start dedicated pgvector db ──"
+            docker compose up -d db
+            for i in $(seq 1 30); do
+              if docker compose exec -T db pg_isready -U threads_viral -d threads_growth >/dev/null 2>&1; then
+                echo "✓ db ready after ${i}×2s"; break
+              fi
+              sleep 2
+            done
+
+            echo "── apply migrations (alembic upgrade head) ──"
+            docker compose run --rm api alembic upgrade head
+
+            echo "── start api + approval bot ──"
+            docker compose up -d --force-recreate api bot
+
+            echo "── health-check ──"
+            for i in $(seq 1 20); do
+              if curl -fsS http://localhost:8088/health >/dev/null 2>&1; then
+                echo "✓ healthy after ${i}×3s"; exit 0
+              fi
+              sleep 3
+            done
+            echo "✗ api did not respond within 60s"
+            docker logs --tail=80 threads-growth-api || true
+            exit 1
