@@ -695,6 +695,9 @@ export function BloggersClient() {
   // Лента поиска: media (reels с обложками) + блогеры. null = режим каталога.
   const [feed, setFeed] = useState<ResearchReelView[] | null>(null);
   const [searching, setSearching] = useState(false);
+  // Причина пустой выдачи: 'empty' — реально ничего, 'scraper' — парсер
+  // (Apify) упал/исчерпал лимит. Различаем, чтобы не врать «ничего не нашли».
+  const [searchNote, setSearchNote] = useState<'empty' | 'scraper' | null>(null);
 
   const showToast = useCallback((m: string) => {
     setToast(m);
@@ -723,6 +726,7 @@ export function BloggersClient() {
     const niche = query.trim();
     if (niche.length < 2) { showToast('Введите запрос для поиска'); return; }
     setSearching(true);
+    setSearchNote(null);
     try {
       const res = await fetch('/api/research/search', {
         method: 'POST',
@@ -735,21 +739,36 @@ export function BloggersClient() {
         // Поиск индексирует новых авторов — подтянем их в каталог,
         // чтобы карточки блогеров в ленте были с полным функционалом.
         loadAuthors();
-        if (!data.reels?.length) showToast('Ничего не нашли по этому запросу');
+        if (!data.reels?.length) {
+          // Бэкенд при сбое Apify (исчерпан лимит / упал актор) всё равно
+          // отдаёт ok:true с пустым reels и причиной в data.errors. Не выдаём
+          // это за «ничего не нашли» — показываем честную причину.
+          const errs: string[] = Array.isArray(data.errors) ? data.errors : [];
+          const scraperDown = errs.some((e) =>
+            /budget|limit|platform-feature-disabled|apify \d{3}|reels_search_not_configured|apify fetch/i.test(e),
+          );
+          setSearchNote(scraperDown ? 'scraper' : 'empty');
+          showToast(scraperDown
+            ? 'Поиск временно недоступен: парсер исчерпал лимит. Попробуйте позже'
+            : 'Ничего не нашли по этому запросу');
+        }
       } else if (data.error === 'apify_not_configured') {
+        setSearchNote('scraper');
         showToast('Поиск недоступен: APIFY не настроен на сервере');
       } else if (data.error === 'insufficient_tokens') {
         showToast(`Не хватает токенов: нужно ${data.need}, есть ${data.have}`);
       } else {
+        setSearchNote('scraper');
         showToast('Поиск не удался');
       }
     } catch {
+      setSearchNote('scraper');
       showToast('Ошибка поиска');
     }
     setSearching(false);
   }, [query, loadAuthors, showToast]);
 
-  const clearSearch = useCallback(() => { setFeed(null); setQuery(''); }, []);
+  const clearSearch = useCallback(() => { setFeed(null); setQuery(''); setSearchNote(null); }, []);
 
   const spyCount = bloggers.filter((b) => b.isWatching).length;
 
@@ -796,13 +815,48 @@ export function BloggersClient() {
     return r;
   }, [bloggers, query, folder, sort, sizeMin]);
 
-  // Блогеры из ленты поиска — уникальные авторы найденных рилсов,
-  // сматченные с каталогом (для isWatching / папок / полного функционала).
-  const feedAuthors = useMemo(() => {
-    if (!feed) return [];
-    const ids = new Set(feed.map((r) => r.author.id));
-    return bloggers.filter((b) => ids.has(b.id));
-  }, [feed, bloggers]);
+  // Топ блогеров ниши — ранжированный список авторов из ленты поиска.
+  // Агрегируем рилсы по автору (его лучшие просмотры / средний ER / число
+  // попаданий в выдачу), мёржим с каталогом (isWatching / папки / полный
+  // функционал карточки), синтезируем строку для ещё не проиндексированных
+  // авторов. Сортировка/фильтр — те же чипы, что и в каталоге.
+  const topBloggers = useMemo(() => {
+    if (!feed) return [] as Array<BloggerRow & { hits: number; topViews: number }>;
+    const byCatalog = new Map(bloggers.map((b) => [b.id, b]));
+    const agg = new Map<string, {
+      a: ResearchReelView['author']; hits: number; topViews: number; erSum: number; erN: number;
+    }>();
+    for (const r of feed) {
+      const id = r.author.id;
+      const cur = agg.get(id) ?? { a: r.author, hits: 0, topViews: 0, erSum: 0, erN: 0 };
+      cur.hits += 1;
+      cur.topViews = Math.max(cur.topViews, r.views || 0);
+      if (r.engagementRate != null) { cur.erSum += r.engagementRate; cur.erN += 1; }
+      agg.set(id, cur);
+    }
+    const rows = Array.from(agg.values()).map(({ a, hits, topViews, erSum, erN }) => {
+      const cat = byCatalog.get(a.id);
+      const erFromFeed = erN ? erSum / erN : 0;
+      const row: BloggerRow & { hits: number; topViews: number } = cat
+        ? { ...cat, hits, topViews }
+        : {
+            id: a.id, platform: 'instagram', username: a.username, niche: null,
+            followers: a.followers ?? 0, postsCount: 0,
+            medianViews: a.medianViews ?? topViews, engagementAvg: erFromFeed,
+            avatarUrl: a.avatarUrl ?? '', lowConfidence: true, lastIndexedAt: null,
+            isWatching: false, refreshInterval: null, folderIds: [], hits, topViews,
+          };
+      return row;
+    });
+    const ranked = rows.filter((b) => b.followers >= sizeMin);
+    ranked.sort((a, b) =>
+      sort === 'views'
+        ? (b.medianViews || b.topViews) - (a.medianViews || a.topViews)
+        : sort === 'er'
+          ? b.engagementAvg - a.engagementAvg
+          : (b.followers || b.topViews) - (a.followers || a.topViews));
+    return ranked;
+  }, [feed, bloggers, sort, sizeMin]);
 
   const detail = bloggers.find((b) => b.id === selected) ?? null;
   const detailSeed = detail ? bloggers.indexOf(detail) : 0;
@@ -875,7 +929,7 @@ export function BloggersClient() {
           {feed ? (
             <>
               <span style={{ font: '400 34px/1 Georgia, serif', color: C.text }}>{searching ? '—' : feed.length}</span>
-              <span className="mono" style={{ fontSize: 11.5, color: C.muted }}>медиа · {feedAuthors.length} блогеров</span>
+              <span className="mono" style={{ fontSize: 11.5, color: C.muted }}>медиа · {topBloggers.length} блогеров</span>
               <button onClick={clearSearch} className="mono" style={{ background: 'transparent', border: 'none', color: C.pink, fontSize: 11.5, cursor: 'pointer' }}>✕ Сбросить</button>
             </>
           ) : (
@@ -889,28 +943,46 @@ export function BloggersClient() {
         <div className="ps-main" style={{ display: 'grid', gridTemplateColumns: '1fr 280px', gap: 22, alignItems: 'start' }}>
           {feed ? (
             <div style={{ display: 'grid', gap: 26 }}>
-              {/* Медиа — обложки рилсов */}
+              {/* Топ блогеров ниши — главный результат поиска */}
               <div>
-                <div className="mono" style={{ fontSize: 10, letterSpacing: '.12em', textTransform: 'uppercase', color: C.faint, marginBottom: 12 }}>Медиа · {searching ? '…' : feed.length} обложек</div>
+                <div className="mono" style={{ fontSize: 10, letterSpacing: '.12em', textTransform: 'uppercase', color: C.faint, marginBottom: 12 }}>Топ блогеров ниши · {searching ? '…' : topBloggers.length}</div>
                 {searching ? (
-                  <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fill, minmax(150px,1fr))', gap: 10 }}>
-                    {Array.from({ length: 8 }).map((_, i) => <div key={i} style={{ aspectRatio: '4 / 5', borderRadius: 12, background: '#161616' }} />)}
+                  <div className="ps-grid" style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fill, minmax(330px, 1fr))', gap: 12 }}>
+                    {Array.from({ length: 4 }).map((_, i) => <div key={i} style={{ background: C.card, border: `1px solid ${C.border}`, borderRadius: 14, height: 168 }} />)}
                   </div>
-                ) : feed.length ? (
-                  <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fill, minmax(150px,1fr))', gap: 10 }}>
-                    {feed.map((r) => <ReelCover key={r.id} reel={r} />)}
+                ) : topBloggers.length ? (
+                  <div className="ps-grid" style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fill, minmax(330px, 1fr))', gap: 12 }}>
+                    {topBloggers.map((b, i) => renderBloggerCard(b, i))}
                   </div>
                 ) : (
-                  <div style={{ padding: '40px 0', textAlign: 'center', color: C.muted }}><div style={{ fontSize: 15 }}>Ничего не нашли</div><div className="mono" style={{ fontSize: 12, color: C.faint, marginTop: 6 }}>Попробуй другой запрос</div></div>
+                  <div style={{ padding: '40px 0', textAlign: 'center', color: C.muted }}>
+                    {searchNote === 'scraper' ? (
+                      <>
+                        <div style={{ fontSize: 15 }}>Поиск временно недоступен</div>
+                        <div className="mono" style={{ fontSize: 12, color: C.faint, marginTop: 6 }}>Парсер исчерпал месячный лимит или недоступен. Попробуйте позже</div>
+                      </>
+                    ) : (
+                      <>
+                        <div style={{ fontSize: 15 }}>Ничего не нашли</div>
+                        <div className="mono" style={{ fontSize: 12, color: C.faint, marginTop: 6 }}>Попробуй другой запрос</div>
+                      </>
+                    )}
+                  </div>
                 )}
               </div>
-              {/* Блогеры из ленты */}
-              {feedAuthors.length > 0 && (
+              {/* Медиа — обложки рилсов (доказательная база ниши) */}
+              {(searching || feed.length > 0) && (
                 <div>
-                  <div className="mono" style={{ fontSize: 10, letterSpacing: '.12em', textTransform: 'uppercase', color: C.faint, marginBottom: 12 }}>Блогеры · {feedAuthors.length}</div>
-                  <div className="ps-grid" style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fill, minmax(330px, 1fr))', gap: 12 }}>
-                    {feedAuthors.map((b, i) => renderBloggerCard(b, i))}
-                  </div>
+                  <div className="mono" style={{ fontSize: 10, letterSpacing: '.12em', textTransform: 'uppercase', color: C.faint, marginBottom: 12 }}>Медиа · {searching ? '…' : feed.length} обложек</div>
+                  {searching ? (
+                    <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fill, minmax(150px,1fr))', gap: 10 }}>
+                      {Array.from({ length: 8 }).map((_, i) => <div key={i} style={{ aspectRatio: '4 / 5', borderRadius: 12, background: '#161616' }} />)}
+                    </div>
+                  ) : (
+                    <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fill, minmax(150px,1fr))', gap: 10 }}>
+                      {feed.map((r) => <ReelCover key={r.id} reel={r} />)}
+                    </div>
+                  )}
                 </div>
               )}
             </div>
