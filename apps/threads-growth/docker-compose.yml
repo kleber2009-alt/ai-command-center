@@ -32,5 +32,17 @@ services:
       - "8088:8080"
     restart: unless-stopped
 
+  # Telegram-апрув: шлёт владельцу черновики контента/реплаев с inline-кнопками.
+  # Тот же образ, что api; long-running polling, портов не слушает.
+  bot:
+    build: ./backend
+    image: threads-growth:local
+    container_name: threads-growth-bot
+    command: ["python", "-m", "app.bot.approval_bot"]
+    env_file: .env
+    depends_on:
+      - db
+    restart: unless-stopped
+
 volumes:
   threads_growth_pgdata:
