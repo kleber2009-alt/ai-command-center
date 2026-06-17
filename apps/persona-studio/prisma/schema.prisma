@@ -819,7 +819,30 @@ model PostTarget {
   errorMsg        String?
   publishedAt     DateTime?
 
+  metrics OwnPostMetric[]
+
   @@index([scheduledPostId])
+}
+
+// Module D · Measure (Мастер-ТЗ §6). Ежедневный снимок метрик опубликованного
+// поста (по таргету = пост на конкретной площадке). По ним считается твоя
+// медиана и твой Xn — замыкает петлю: опубликованное возвращается метриками и
+// сопоставляется с источником-вдохновением (ScheduledPost → Generation →
+// Brief → sourceReel). Источник метрик: manual (ручной ввод) или будущий
+// коллектор по API площадки (гейтится доступом, как и публикация — §9).
+model OwnPostMetric {
+  postTargetId String
+  postTarget   PostTarget @relation(fields: [postTargetId], references: [id], onDelete: Cascade)
+  capturedAt   DateTime   @db.Date // суточный снимок
+  views        Int        @default(0)
+  likes        Int        @default(0)
+  comments     Int        @default(0)
+  saves        Int        @default(0)
+  shares       Int        @default(0)
+  source       String     @default("manual") // manual | postmypost | telegram | ig
+  createdAt    DateTime   @default(now())
+
+  @@id([postTargetId, capturedAt])
 }
 
 // ── Studio (Мастер-ТЗ Persona Studio) ──────────────
