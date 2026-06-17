@@ -191,5 +191,6 @@ When the task is scoped to a single app, read its `CLAUDE.md` first:
 - [`apps/ai-content-factory/CLAUDE.md`](apps/ai-content-factory/CLAUDE.md) — TS/ESM, Claude + Voyage + sqlite-vec + Puppeteer carousel pipeline, Telegram delivery
 - [`apps/ig-content/CLAUDE.md`](apps/ig-content/CLAUDE.md) — Next.js 14 + Supabase, 5 AI-agents (Strategist / Reels / Carousel / Analytics), pgvector RAG, port 3010, deploy `igcontent.46-62-215-11.nip.io`
 - [`apps/voice-circle-bot/CLAUDE.md`](apps/voice-circle-bot/CLAUDE.md) — prototype, not in prod
+- [`apps/threads-growth/CLAUDE.md`](apps/threads-growth/CLAUDE.md) — AI Threads Growth Agent (FastAPI + pgvector + Claude + Apify + n8n): relative-virality scoring (xn), Reply Engine, warmup-ramp, similarity-gated rewrite, learning loop — **WIP, не задеплоен**
 
 Per-app `README.md` / `DEPLOY.md` / `ROADMAP.md` remain authoritative for deep architecture and deploy steps. Each `apps/<app>/CLAUDE.md` is the orientation layer.

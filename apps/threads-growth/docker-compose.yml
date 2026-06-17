@@ -1,0 +1,36 @@
+# AI Threads Growth Agent — локальный/прод стек.
+#
+#   docker compose up -d db api          # Postgres+pgvector + FastAPI
+#   docker compose run --rm api alembic upgrade head   # миграции
+#   docker compose run --rm api python -m app.workers.scrape_worker scrape
+#
+# n8n планирует воркеры по расписанию (§14) через `docker compose run` или HTTP
+# к эндпоинтам. На проде Postgres можно переиспользовать общий aisales-postgres —
+# тогда сервис db не нужен, только DATABASE_URL во внешнюю БД.
+services:
+  db:
+    image: pgvector/pgvector:pg16
+    container_name: threads-growth-db
+    environment:
+      POSTGRES_USER: threads_viral
+      POSTGRES_PASSWORD: threads_viral
+      POSTGRES_DB: threads_growth
+    ports:
+      - "5439:5432"
+    volumes:
+      - threads_growth_pgdata:/var/lib/postgresql/data
+    restart: unless-stopped
+
+  api:
+    build: ./backend
+    image: threads-growth:local
+    container_name: threads-growth-api
+    env_file: .env
+    depends_on:
+      - db
+    ports:
+      - "8088:8080"
+    restart: unless-stopped
+
+volumes:
+  threads_growth_pgdata:
