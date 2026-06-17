@@ -6,7 +6,7 @@
 
 import { useState } from 'react';
 import Link from 'next/link';
-import { BarChart3, ExternalLink, Pencil } from 'lucide-react';
+import { BarChart3, ExternalLink, Pencil, RefreshCw } from 'lucide-react';
 import type { MeasureDashboard, MeasurePost } from '@/lib/measure/measure';
 
 const fmt = (n: number | null) => {
@@ -26,6 +26,8 @@ function xnClass(v: number | null): string {
 export function MeasureClient({ initial }: { initial: MeasureDashboard }) {
   const [data, setData] = useState(initial);
   const [editing, setEditing] = useState<string | null>(null);
+  const [collecting, setCollecting] = useState(false);
+  const [collectMsg, setCollectMsg] = useState<string | null>(null);
 
   async function refresh() {
     const res = await fetch('/api/measure');
@@ -33,13 +35,48 @@ export function MeasureClient({ initial }: { initial: MeasureDashboard }) {
     if (res.ok) setData(d);
   }
 
+  // Авто-сбор метрик из API площадок (Instagram/PostMyPost) по запросу.
+  async function collect() {
+    setCollecting(true);
+    setCollectMsg(null);
+    try {
+      const res = await fetch('/api/measure/collect', { method: 'POST' });
+      const d = await res.json();
+      if (res.ok) {
+        setCollectMsg(`Собрано: ${d.collected}, пропущено: ${d.skipped}`);
+        await refresh();
+      } else {
+        setCollectMsg('Не удалось собрать метрики');
+      }
+    } catch {
+      setCollectMsg('Ошибка сети');
+    } finally {
+      setCollecting(false);
+    }
+  }
+
   return (
     <div className="grid gap-5">
-      <header className="grid gap-1">
-        <h1 className="font-serif text-2xl text-text">Аналитика</h1>
-        <p className="mono text-[11px] tracking-widest uppercase text-text-mute">
-          что у меня залетает · твой Xn vs источник
-        </p>
+      <header className="flex items-end justify-between gap-3">
+        <div className="grid gap-1">
+          <h1 className="font-serif text-2xl text-text">Аналитика</h1>
+          <p className="mono text-[11px] tracking-widest uppercase text-text-mute">
+            что у меня залетает · твой Xn vs источник
+          </p>
+        </div>
+        <div className="grid gap-1 justify-items-end">
+          <button
+            onClick={collect}
+            disabled={collecting}
+            className="flex items-center gap-1.5 px-3 py-2 border border-gold/60 mono text-[10px] tracking-widest uppercase text-gold hover:bg-gold/10 disabled:opacity-50"
+          >
+            <RefreshCw size={12} className={collecting ? 'animate-spin' : ''} />
+            {collecting ? 'Сбор…' : 'Собрать метрики'}
+          </button>
+          {collectMsg && (
+            <span className="mono text-[9px] tracking-widest uppercase text-text-mute">{collectMsg}</span>
+          )}
+        </div>
       </header>
 
       {/* Сводка */}

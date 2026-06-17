@@ -240,3 +240,68 @@ export async function createReelPublication(opts: {
 
   return res.id;
 }
+
+// ── Analytics (Module D · Measure) ────────────────────────────
+// PostMyPost-публикация после выхода в IG несёт статистику. Точная форма
+// ответа /publications/{id} в разных аккаунтах отличается, поэтому извлекаем
+// метрики защитно: ищем числа по типичным ключам на верхнем уровне и во
+// вложенных контейнерах (statistic/stats/statistics/insights/metrics). Если
+// ничего не нашли — возвращаем null (коллектор пропустит, останется ручной ввод).
+
+export type PmpStats = {
+  views: number | null;
+  likes: number | null;
+  comments: number | null;
+  saves: number | null;
+  shares: number | null;
+};
+
+function pickNum(obj: unknown, keys: string[]): number | null {
+  if (!obj || typeof obj !== 'object') return null;
+  const rec = obj as Record<string, unknown>;
+  for (const k of keys) {
+    const v = rec[k];
+    if (typeof v === 'number' && Number.isFinite(v)) return v;
+    if (typeof v === 'string' && /^\d+$/.test(v)) return Number(v);
+  }
+  return null;
+}
+
+export async function getPublicationStats(pubId: number): Promise<PmpStats | null> {
+  if (!postmypostConfigured()) return null;
+  let pub: Record<string, unknown>;
+  try {
+    pub = await call<Record<string, unknown>>('GET', `/publications/${pubId}`);
+  } catch {
+    return null;
+  }
+  // Кандидаты-контейнеры со статистикой.
+  const containers: unknown[] = [
+    pub,
+    pub.statistic,
+    pub.stats,
+    pub.statistics,
+    pub.insights,
+    pub.metrics,
+    // иногда метрики лежат в первом details[].
+    Array.isArray(pub.details) ? (pub.details as unknown[])[0] : undefined,
+  ].filter(Boolean);
+
+  const find = (keys: string[]): number | null => {
+    for (const c of containers) {
+      const n = pickNum(c, keys);
+      if (n != null) return n;
+    }
+    return null;
+  };
+
+  const stats: PmpStats = {
+    views: find(['views', 'plays', 'play_count', 'video_views', 'reach', 'impressions']),
+    likes: find(['likes', 'like_count', 'likes_count']),
+    comments: find(['comments', 'comment_count', 'comments_count']),
+    saves: find(['saves', 'saved', 'save_count']),
+    shares: find(['shares', 'reposts', 'share_count']),
+  };
+  const any = Object.values(stats).some((v) => v != null);
+  return any ? stats : null;
+}
