@@ -5,15 +5,17 @@
 // статус связанных VideoGeneration/VideoEdit на Generation.
 
 import { prisma } from '@/lib/prisma';
-import { engineConfig, VIDEO_ENGINE_LIST, type VideoEngine } from '@/lib/video-engines';
+import { engineConfig, VIDEO_ENGINES, VIDEO_ENGINE_LIST, type VideoEngine } from '@/lib/video-engines';
 import { STYLE_TEMPLATE_NAMES } from '@/lib/edit-templates';
 import { chargeTokens, refundTokens, InsufficientTokensError, COSTS } from '@/lib/tokens';
 import { queueForName, editQueue } from '@/lib/queue';
 
-// Движок по умолчанию — первый включённый (сейчас heygen-v5; OmniHuman
-// придёт сюда же, как только enabled). Оба inputMode='script' → нужен
-// script + voiceId + аватар, что и даёт персона.
+// Движок воркспейса по умолчанию — OmniHuman 1.5 (Мастер-ТЗ §0.2: аватар +
+// липсинк к озвучке ElevenLabs). Если он почему-то выключен — откатываемся на
+// первый включённый (HeyGen). Все они inputMode='script' → нужен script +
+// voiceId + аватар, что и даёт персона.
 export function defaultEngine(): VideoEngine {
+  if (VIDEO_ENGINES['omnihuman-1.5']?.enabled) return 'omnihuman-1.5';
   return (VIDEO_ENGINE_LIST[0] as VideoEngine) ?? 'heygen-v5';
 }
 
