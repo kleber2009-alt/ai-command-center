@@ -103,6 +103,8 @@ const envSchema = z.object({
   COST_OMNIHUMAN_VIDEO: z.coerce.number().default(140),
   COST_SUBMAGIC_EDIT: z.coerce.number().default(15),
   COST_SLIDE_IMAGE: z.coerce.number().default(3),
+  // ── Studio workspace (Мастер-ТЗ §10 — единый прайс) ──
+  COST_STUDIO_SCRIPT: z.coerce.number().default(2),
   // ── Research (Badunga-style) ──
   COST_RESEARCH_TRANSCRIBE: z.coerce.number().default(5),
   COST_RESEARCH_TRANSLATE: z.coerce.number().default(1),

@@ -47,7 +47,8 @@ export default async function BillingPage() {
       />
 
       <section>
-        <div className="grid grid-cols-1 sm:grid-cols-5 gap-px bg-border-soft border border-border-soft">
+        <div className="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-6 gap-px bg-border-soft border border-border-soft">
+          <CostCard label="AI script" cost={COSTS.studioScript} note="бриф → сценарий" />
           <CostCard label="Avatar batch" cost={COSTS.avatarGeneration} note="10 portraits" />
           <CostCard label="Carousel cover" cost={COSTS.coverGeneration} note="single image" />
           <CostCard label="Talking video" cost={COSTS.heygenVideo} note="up to 60s" />

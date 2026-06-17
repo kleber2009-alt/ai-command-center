@@ -6,7 +6,7 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { getCurrentUserOrApiKey } from '@/lib/auth';
 import { prisma } from '@/lib/prisma';
-import { chargeTokens, refundTokens, InsufficientTokensError } from '@/lib/tokens';
+import { chargeTokens, refundTokens, InsufficientTokensError, COSTS } from '@/lib/tokens';
 import { serializeGeneration } from '@/lib/studio/brief';
 import { generateScript } from '@/lib/studio/generate-script';
 import { checkSimilarity, recordProvenance } from '@/lib/studio/similarity';
@@ -15,7 +15,8 @@ import { normalizeTone } from '@/lib/studio/persona';
 export const runtime = 'nodejs';
 export const maxDuration = 120;
 
-const SCRIPT_CREDITS = 2;
+// Единый прайс (§10) — стоимость стадии «Сценарий».
+const SCRIPT_CREDITS = COSTS.studioScript;
 
 export async function POST(req: NextRequest, { params }: { params: Promise<{ id: string }> }) {
   const ctx = await getCurrentUserOrApiKey(req);
