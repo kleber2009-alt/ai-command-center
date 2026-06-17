@@ -55,6 +55,7 @@ class Settings(BaseSettings):
     owner_telegram_id: int = 0
     review_batch: int = 10               # сколько карточек слать за один /drafts|/replies
     review_daily_time: str = ""          # HH:MM UTC: ежедневный авто-пуш на ревью (пусто = только вручную)
+    webapp_auth_disabled: bool = False   # 1 — отключить Telegram-авторизацию мини-аппы (только для локальной разработки)
 
     # — Шифрование токенов аккаунтов (§13, access_token[encrypted]) —
     token_encryption_key: str = ""       # Fernet key: `python -c "from cryptography.fernet import Fernet;print(Fernet.generate_key().decode())"`
