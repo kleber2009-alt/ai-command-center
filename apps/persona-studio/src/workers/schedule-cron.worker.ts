@@ -14,13 +14,16 @@ import { connection } from '@/lib/queue';
 import { prisma } from '@/lib/prisma';
 import { publishQueue } from '@/lib/queue';
 import { env } from '@/lib/env';
+import { collectDue } from '@/lib/measure/collect';
 
 const QUEUE_NAME = 'schedule-cron';
 const TICK_MS = env.PUBLISH_CRON_TICK_MS || 60_000;
+const METRICS_TICK_MS = env.METRICS_CRON_TICK_MS || 21_600_000;
 const CONCURRENCY = 1;
 
 type PublishSweepJob = { kind: 'publish-sweep' };
-type CronJob = PublishSweepJob;
+type MetricsSweepJob = { kind: 'metrics-sweep' };
+type CronJob = PublishSweepJob | MetricsSweepJob;
 
 let _queue: Queue<CronJob> | null = null;
 function scheduleCronQueue() {
@@ -45,7 +48,18 @@ async function scheduleRecurring(): Promise<void> {
     { kind: 'publish-sweep' },
     { repeat: { every: TICK_MS }, jobId: 'recurring:publish-sweep' },
   );
-  console.log(`[schedule-cron] scheduled publish-sweep every ${Math.round(TICK_MS / 1000)}s`);
+  await queue.add(
+    'metrics-sweep',
+    { kind: 'metrics-sweep' },
+    { repeat: { every: METRICS_TICK_MS }, jobId: 'recurring:metrics-sweep' },
+  );
+  console.log(
+    `[schedule-cron] scheduled publish-sweep every ${Math.round(TICK_MS / 1000)}s, metrics-sweep every ${Math.round(METRICS_TICK_MS / 60000)}m`,
+  );
+}
+
+async function handleMetricsSweep(): Promise<{ collected: number; skipped: number }> {
+  return collectDue();
 }
 
 async function handlePublishSweep(): Promise<{ posts: number; targets: number }> {
@@ -93,6 +107,13 @@ export function startScheduleCronWorker() {
         const r = await handlePublishSweep();
         if (r.targets > 0) {
           console.log(`[schedule-cron] swept ${r.posts} posts → ${r.targets} targets enqueued`);
+        }
+        return r;
+      }
+      if (job.data.kind === 'metrics-sweep') {
+        const r = await handleMetricsSweep();
+        if (r.collected > 0) {
+          console.log(`[schedule-cron] metrics-sweep collected ${r.collected} (skipped ${r.skipped})`);
         }
         return r;
       }

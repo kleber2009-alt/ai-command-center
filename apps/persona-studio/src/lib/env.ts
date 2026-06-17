@@ -155,6 +155,8 @@ const envSchema = z.object({
   // Интервал publish-sweep (мс). Каждый тик берёт scheduled-посты с
   // scheduledAt <= now и ставит их таргеты в очередь.
   PUBLISH_CRON_TICK_MS: z.coerce.number().default(60_000),
+  // Module D · авто-сбор метрик опубликованных постов (default 6 ч).
+  METRICS_CRON_TICK_MS: z.coerce.number().default(21_600_000),
 
   // ── Rate limiting (per-user, per-minute) ──────
   // research-search burns Apify budget on uncached searches → stricter.
