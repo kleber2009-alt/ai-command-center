@@ -19,6 +19,7 @@ backend/app/
   models/     # 10 SQLAlchemy-моделей §13
   services/   # 9 сервисов §5–§12
   workers/    # 5 воркеров (дёргает n8n)
+  bot/        # approval_bot.py — Telegram-апрув контента и реплаев (MVP)
   prompts/    # *.md: style_profile / viral_analysis / rewrite_threads / reply_generation / scoring
 alembic/      # 0001_initial — extension vector + все таблицы
 ```
@@ -53,7 +54,16 @@ cd backend
 python -m app.services.scoring_service     # selftest
 python -m app.services.warmup_service      # selftest
 python -m app.services.learning_service    # selftest
+python -m app.bot.approval_bot selftest    # карточки/коллбэки бота
 ```
+
+## Telegram-апрув (MVP)
+
+`app/bot/approval_bot.py` (python-telegram-bot): `/drafts` и `/replies` шлют
+владельцу (OWNER_TELEGRAM_ID) карточки с кнопками Одобрить / Опубликовать /
+Отклонить. Переходы статусов race-safe (UPDATE ... WHERE status IN (...)).
+Telegram/SQLAlchemy/config импортируются лениво — модуль и его selftest грузятся
+на голом stdlib. Деплой — сервис `bot` в `docker-compose.yml`.
 
 ## Внешние вызовы — gated
 

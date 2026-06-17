@@ -99,6 +99,25 @@ n8n дёргает воркеры (`docker compose run --rm api python -m app.wo
 | каждый 1ч | `app.workers.analytics_worker collect` | сбор инсайтов + снимки подписчиков |
 | ежедн. 00:05 | `app.workers.analytics_worker daily` | warmup-tick + дневная петля |
 
+## Telegram-апрув (MVP)
+
+Апрув контента и реплаев — через бота (`app/bot/approval_bot.py`), пока нет
+веб-дашборда (v2). Запуск: `docker compose up -d bot` или
+`python -m app.bot.approval_bot`.
+
+```
+/start    — проверка доступа (отвечает только OWNER_TELEGRAM_ID)
+/drafts   — адаптации (generated_content) на ревью карточками
+/replies  — реплаи на ревью
+```
+
+Кнопки под карточкой: **✅ Одобрить** (→ `approved`), **🚀 Опубликовать/Ответить**
+(approve + немедленная публикация), **❌ Отклонить / ⏭ Пропустить**. Повторные
+клики и гонки безопасны — переход применяется только из ожидаемого статуса.
+Опц. `REVIEW_DAILY_TIME=HH:MM` (UTC) — ежедневный авто-пуш на ревью.
+
+Проверка чистых функций бота: `python -m app.bot.approval_bot selftest`.
+
 ## Безопасность
 
 `access_token` аккаунтов шифруется Fernet (`core/security.py`) — в БД не хранится

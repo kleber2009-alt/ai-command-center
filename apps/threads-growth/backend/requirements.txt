@@ -11,4 +11,5 @@ cryptography>=42
 anthropic>=0.40
 apify-client>=1.7
 voyageai>=0.3
+python-telegram-bot[job-queue]>=21.6
 python-dotenv>=1.0

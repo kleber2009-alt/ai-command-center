@@ -53,6 +53,8 @@ class Settings(BaseSettings):
     # — Telegram-апрув —
     telegram_bot_token: str = ""
     owner_telegram_id: int = 0
+    review_batch: int = 10               # сколько карточек слать за один /drafts|/replies
+    review_daily_time: str = ""          # HH:MM UTC: ежедневный авто-пуш на ревью (пусто = только вручную)
 
     # — Шифрование токенов аккаунтов (§13, access_token[encrypted]) —
     token_encryption_key: str = ""       # Fernet key: `python -c "from cryptography.fernet import Fernet;print(Fernet.generate_key().decode())"`

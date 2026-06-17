@@ -21,4 +21,6 @@ EXPOSE 8080
 #   python -m app.workers.reply_worker
 #   python -m app.workers.publish_worker
 #   python -m app.workers.analytics_worker [collect|daily]
+# Telegram-апрув (long-running) — отдельный сервис в docker-compose:
+#   python -m app.bot.approval_bot
 CMD ["uvicorn", "app.main:app", "--host", "0.0.0.0", "--port", "8080"]

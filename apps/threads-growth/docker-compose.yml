@@ -32,5 +32,17 @@ services:
       - "8088:8080"
     restart: unless-stopped
 
+  # Telegram-апрув (MVP) — long-running polling. Нужны TELEGRAM_BOT_TOKEN /
+  # OWNER_TELEGRAM_ID в .env; без них контейнер завершится с понятным сообщением.
+  bot:
+    build: ./backend
+    image: threads-growth:local
+    container_name: threads-growth-bot
+    env_file: .env
+    depends_on:
+      - db
+    command: ["python", "-m", "app.bot.approval_bot"]
+    restart: unless-stopped
+
 volumes:
   threads_growth_pgdata:
