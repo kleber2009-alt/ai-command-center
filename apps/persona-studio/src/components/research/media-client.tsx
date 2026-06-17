@@ -83,7 +83,7 @@ const fmtCount = (n: number) => {
 
 export function MediaClient() {
   const [filters, setFilters] = useState<Filters>(DEFAULT_FILTERS);
-  const [search, setSearch] = useState(''); // raw input, debounced into filters.q
+  const [search, setSearch] = useState(''); // raw input, commits into filters.q on submit
   const [view, setView] = useState<'cards' | 'table'>('cards');
 
   const [items, setItems] = useState<MediaReel[]>([]);
@@ -95,10 +95,11 @@ export function MediaClient() {
   const [error, setError] = useState<string | null>(null);
   const [hidden, setHidden] = useState<Set<string>>(new Set());
 
-  // Дебаунс строки поиска 300 мс (ТЗ §5).
-  useEffect(() => {
-    const t = setTimeout(() => setFilters((f) => ({ ...f, q: search })), 300);
-    return () => clearTimeout(t);
+  // Поиск по ключевым словам запускается только по нажатию кнопки «Поиск»
+  // (или Enter в поле). Строка ввода больше не дебаунсится в filters.q —
+  // коммит происходит явно в commitSearch().
+  const commitSearch = useCallback(() => {
+    setFilters((f) => (f.q === search ? f : { ...f, q: search }));
   }, [search]);
 
   // requestId защищает от гонки ответов при быстром переключении фильтров.
@@ -164,7 +165,13 @@ export function MediaClient() {
       </header>
 
       {/* ── Search ── */}
-      <div className="flex items-center gap-2">
+      <form
+        className="flex items-center gap-2"
+        onSubmit={(e) => {
+          e.preventDefault();
+          commitSearch();
+        }}
+      >
         <input
           type="search"
           value={search}
@@ -173,6 +180,12 @@ export function MediaClient() {
           className="flex-1 bg-surface border border-border px-3 py-2 font-serif text-[14px] text-text placeholder:text-text-mute focus:border-gold outline-none"
         />
         <button
+          type="submit"
+          className="px-4 py-2 border border-gold bg-gold/10 mono text-[10px] tracking-widest uppercase text-gold hover:bg-gold/20"
+        >
+          Поиск
+        </button>
+        <button
           type="button"
           onClick={() => setView(view === 'cards' ? 'table' : 'cards')}
           className="px-3 py-2 border border-border mono text-[10px] tracking-widest uppercase text-text hover:border-gold"
@@ -180,7 +193,7 @@ export function MediaClient() {
         >
           {view === 'cards' ? 'Таблица' : 'Карточки'}
         </button>
-      </div>
+      </form>
 
       {/* ── Filters ── */}
       <div className="grid gap-2 border border-border-soft bg-surface p-3">
