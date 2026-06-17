@@ -1,10 +1,19 @@
 'use client';
 
-// Страница «Медиа» — post-level витрина над ResearchReel (ТЗ «Медиа», §5).
-// Поиск по ключевым словам + фильтры (тип / период / виральность / блогер /
-// избранное), сортировки, виды «Карточки / Таблица», keyset-пагинация
-// (бесконечный скролл), счётчик «Найдено», скрытие постов (локальное, до
-// перезагрузки — ТЗ §3.5). Данные тянет из GET /api/research/media.
+// Страница «Медиа» — post-level витрина над виральным ресёрчем.
+//
+// Два режима:
+//   • SEARCH (введено ключевое слово + нажата «Поиск») — ЖИВОЙ запрос к
+//     Instagram через POST /api/research/search (Apify reels-search → индексация
+//     авторов → метрики → ранжирование). Каждое новое ключевое слово =
+//     новый глобальный поиск по всему Instagram, а не по локальной базе.
+//   • BROWSE (поле пустое) — витрина по уже накопленной базе через
+//     GET /api/research/media (keyset-пагинация, серверные фильтры).
+//
+// В режиме SEARCH фильтры (тип / период / виральность / блогер / сортировка)
+// применяются КЛИЕНТ-САЙД к уже полученной выдаче — смена чипа не дёргает
+// Apify повторно (защита кредитов). Новый запрос к Instagram — только по
+// кнопке «Поиск» (новое ключевое слово) или Enter.
 
 import { useCallback, useEffect, useRef, useState } from 'react';
 import { ResearchReelCard } from './research-reel-card';
@@ -18,7 +27,6 @@ type TypeFilter = 'all' | 'reel' | 'post' | 'carousel';
 type Period = 'all' | '1' | '7' | '30';
 
 type Filters = {
-  q: string;
   sort: Sort;
   type: TypeFilter;
   period: Period;
@@ -28,7 +36,6 @@ type Filters = {
 };
 
 const DEFAULT_FILTERS: Filters = {
-  q: '',
   sort: 'xn',
   type: 'all',
   period: 'all',
@@ -62,9 +69,11 @@ const VIRAL_OPTS: Array<{ v: number; label: string }> = [
   { v: 5, label: '≥5×' },
 ];
 
-function buildQuery(f: Filters, cursor: string | null): string {
+const PERIOD_DAYS: Record<string, number> = { '1': 1, '7': 7, '30': 30 };
+
+// Browse-режим: серверный запрос к локальной базе.
+function buildBrowseQuery(f: Filters, cursor: string | null): string {
   const p = new URLSearchParams();
-  if (f.q) p.set('q', f.q);
   p.set('sort', f.sort);
   if (f.type !== 'all') p.set('type', f.type);
   if (f.period !== 'all') p.set('period', f.period);
@@ -75,6 +84,24 @@ function buildQuery(f: Filters, cursor: string | null): string {
   return p.toString();
 }
 
+// Search-режим: клиент-сайд сортировка по выбранному критерию.
+function sortReels(list: MediaReel[], sort: Sort): MediaReel[] {
+  const arr = [...list];
+  arr.sort((a, b) => {
+    switch (sort) {
+      case 'views': return (b.views || 0) - (a.views || 0);
+      case 'likes': return (b.likes || 0) - (a.likes || 0);
+      case 'recent': {
+        const da = a.postedAt ? new Date(a.postedAt).getTime() : 0;
+        const db = b.postedAt ? new Date(b.postedAt).getTime() : 0;
+        return db - da;
+      }
+      default: return (b.virality || 0) - (a.virality || 0);
+    }
+  });
+  return arr;
+}
+
 const fmtCount = (n: number) => {
   if (n >= 1_000_000) return (n / 1_000_000).toFixed(1).replace('.0', '') + 'M';
   if (n >= 1_000) return (n / 1_000).toFixed(1).replace('.0', '') + 'K';
@@ -83,7 +110,8 @@ const fmtCount = (n: number) => {
 
 export function MediaClient() {
   const [filters, setFilters] = useState<Filters>(DEFAULT_FILTERS);
-  const [search, setSearch] = useState(''); // raw input, commits into filters.q on submit
+  const [search, setSearch] = useState(''); // raw input
+  const [committedQ, setCommittedQ] = useState(''); // ключевое слово, по которому реально искали
   const [view, setView] = useState<'cards' | 'table'>('cards');
 
   const [items, setItems] = useState<MediaReel[]>([]);
@@ -95,51 +123,129 @@ export function MediaClient() {
   const [error, setError] = useState<string | null>(null);
   const [hidden, setHidden] = useState<Set<string>>(new Set());
 
-  // Поиск по ключевым словам запускается только по нажатию кнопки «Поиск»
-  // (или Enter в поле). Строка ввода больше не дебаунсится в filters.q —
-  // коммит происходит явно в commitSearch().
-  const commitSearch = useCallback(() => {
-    setFilters((f) => (f.q === search ? f : { ...f, q: search }));
-  }, [search]);
+  const isSearchMode = committedQ.trim().length > 0;
 
-  // requestId защищает от гонки ответов при быстром переключении фильтров.
+  // requestId защищает от гонки ответов при быстром переключении запросов.
   const reqRef = useRef(0);
 
-  const fetchPage = useCallback(
-    async (f: Filters, cur: string | null) => {
-      const rid = ++reqRef.current;
-      const more = Boolean(cur);
-      if (more) setLoadingMore(true);
-      else setLoading(true);
-      setError(null);
-      try {
-        const res = await fetch(`/api/research/media?${buildQuery(f, cur)}`);
-        if (!res.ok) throw new Error(`HTTP ${res.status}`);
-        const data = await res.json();
-        if (rid !== reqRef.current) return; // устаревший ответ
-        setItems((prev) => (more ? [...prev, ...data.items] : data.items));
-        setCursor(data.nextCursor ?? null);
-        setCount(data.count ?? null);
-        setCountMode(data.countMode ?? 'exact');
-      } catch (e) {
-        if (rid !== reqRef.current) return;
-        setError(e instanceof Error ? e.message : 'Не удалось загрузить');
-      } finally {
-        if (rid === reqRef.current) {
-          setLoading(false);
-          setLoadingMore(false);
-        }
+  // ── BROWSE: локальная база, keyset-пагинация ──
+  const fetchBrowse = useCallback(async (f: Filters, cur: string | null) => {
+    const rid = ++reqRef.current;
+    const more = Boolean(cur);
+    if (more) setLoadingMore(true);
+    else setLoading(true);
+    setError(null);
+    try {
+      const res = await fetch(`/api/research/media?${buildBrowseQuery(f, cur)}`);
+      if (!res.ok) throw new Error(`HTTP ${res.status}`);
+      const data = await res.json();
+      if (rid !== reqRef.current) return;
+      setItems((prev) => (more ? [...prev, ...data.items] : data.items));
+      setCursor(data.nextCursor ?? null);
+      setCount(data.count ?? null);
+      setCountMode(data.countMode ?? 'exact');
+    } catch (e) {
+      if (rid !== reqRef.current) return;
+      setError(e instanceof Error ? e.message : 'Не удалось загрузить');
+    } finally {
+      if (rid === reqRef.current) {
+        setLoading(false);
+        setLoadingMore(false);
       }
-    },
-    [],
-  );
+    }
+  }, []);
 
-  // Сброс выдачи при смене любого фильтра.
+  // ── SEARCH: живой глобальный поиск по Instagram (Apify) ──
+  const runSearch = useCallback(async (q: string) => {
+    const rid = ++reqRef.current;
+    setLoading(true);
+    setLoadingMore(false);
+    setError(null);
+    setCursor(null); // у живого поиска нет keyset-пагинации
+    try {
+      const res = await fetch('/api/research/search', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          niche: q,
+          // авто-режим «самое популярное»: без жёстких порогов отдаётся полная
+          // страница, самые просматриваемые сверху (фильтры применим клиент-сайд).
+          minViews: 0,
+          minLikes: 0,
+          minComments: 0,
+          minShares: 0,
+          sortBy: 'viral_score',
+          period: 'all',
+          limit: 60,
+          force: false, // тот же niche в пределах кэша не дёргает Apify заново
+        }),
+      });
+      const json = await res.json();
+      if (rid !== reqRef.current) return;
+      if (!res.ok || !json.ok) {
+        setError(json.message || json.error || `HTTP ${res.status}`);
+        setItems([]);
+        setCount(0);
+        return;
+      }
+      const reels: MediaReel[] = (json.reels ?? []).map((r: ResearchReelView) => ({
+        ...r,
+        isFav: false,
+      }));
+      setItems(reels);
+      setCount(reels.length);
+      setCountMode('exact');
+    } catch (e) {
+      if (rid !== reqRef.current) return;
+      setError(e instanceof Error ? e.message : 'Не удалось выполнить поиск');
+      setItems([]);
+    } finally {
+      if (rid === reqRef.current) setLoading(false);
+    }
+  }, []);
+
+  // Запуск живого поиска при смене ключевого слова (по кнопке «Поиск»/Enter).
   useEffect(() => {
-    fetchPage(filters, null);
-  }, [filters, fetchPage]);
+    const q = committedQ.trim();
+    if (q) runSearch(q);
+  }, [committedQ, runSearch]);
 
-  const visible = items.filter((r) => !hidden.has(r.id));
+  // Browse-режим: серверный re-query при смене фильтров. В search-режиме НЕ
+  // дёргаем сервер на смену фильтра — фильтрация идёт клиент-сайд (см. visible()).
+  useEffect(() => {
+    if (!isSearchMode) fetchBrowse(filters, null);
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [isSearchMode, filters, fetchBrowse]);
+
+  // Коммит ключевого слова → запускает живой поиск (или возврат в browse, если пусто).
+  const commitSearch = useCallback(() => {
+    setCommittedQ(search.trim());
+  }, [search]);
+
+  // ── Клиент-сайд фильтрация выдачи живого поиска ──
+  function filterSearchReels(list: MediaReel[]): MediaReel[] {
+    let arr = list.filter((r) => !hidden.has(r.id));
+    if (filters.type !== 'all') {
+      const want = filters.type === 'post' ? 'image' : filters.type;
+      arr = arr.filter((r) => (r.postType || 'reel') === want);
+    }
+    if (filters.period in PERIOD_DAYS) {
+      const cutoff = Date.now() - PERIOD_DAYS[filters.period] * 86_400_000;
+      arr = arr.filter((r) => r.postedAt && new Date(r.postedAt).getTime() >= cutoff);
+    }
+    if (filters.viral > 0) arr = arr.filter((r) => (r.virality ?? 0) >= filters.viral);
+    if (filters.blogger.trim()) {
+      const b = filters.blogger.trim().replace(/^@/, '').toLowerCase();
+      arr = arr.filter((r) => r.author.username.toLowerCase().includes(b));
+    }
+    return sortReels(arr, filters.sort);
+  }
+
+  const visible = isSearchMode
+    ? filterSearchReels(items)
+    : items.filter((r) => !hidden.has(r.id));
+
+  const displayCount = isSearchMode ? visible.length : count;
 
   function update<K extends keyof Filters>(key: K, value: Filters[K]) {
     setFilters((f) => ({ ...f, [key]: value }));
@@ -147,6 +253,7 @@ export function MediaClient() {
 
   function reset() {
     setSearch('');
+    setCommittedQ('');
     setFilters(DEFAULT_FILTERS);
   }
 
@@ -166,33 +273,40 @@ export function MediaClient() {
 
       {/* ── Search ── */}
       <form
-        className="flex items-center gap-2"
+        className="grid gap-1.5"
         onSubmit={(e) => {
           e.preventDefault();
           commitSearch();
         }}
       >
-        <input
-          type="search"
-          value={search}
-          onChange={(e) => setSearch(e.target.value)}
-          placeholder='Ключевые слова · поддержка "фраз" и -исключений'
-          className="flex-1 bg-surface border border-border px-3 py-2 font-serif text-[14px] text-text placeholder:text-text-mute focus:border-gold outline-none"
-        />
-        <button
-          type="submit"
-          className="px-4 py-2 border border-gold bg-gold/10 mono text-[10px] tracking-widest uppercase text-gold hover:bg-gold/20"
-        >
-          Поиск
-        </button>
-        <button
-          type="button"
-          onClick={() => setView(view === 'cards' ? 'table' : 'cards')}
-          className="px-3 py-2 border border-border mono text-[10px] tracking-widest uppercase text-text hover:border-gold"
-          title="Переключить вид"
-        >
-          {view === 'cards' ? 'Таблица' : 'Карточки'}
-        </button>
+        <div className="flex items-center gap-2">
+          <input
+            type="search"
+            value={search}
+            onChange={(e) => setSearch(e.target.value)}
+            placeholder="Ниша или ключевое слово · напр. психология, смм, продажи b2b"
+            className="flex-1 bg-surface border border-border px-3 py-2 font-serif text-[14px] text-text placeholder:text-text-mute focus:border-gold outline-none"
+          />
+          <button
+            type="submit"
+            disabled={loading}
+            className="px-4 py-2 border border-gold bg-gold/10 mono text-[10px] tracking-widest uppercase text-gold hover:bg-gold/20 disabled:opacity-50"
+          >
+            {loading && isSearchMode ? 'Ищу…' : 'Поиск'}
+          </button>
+          <button
+            type="button"
+            onClick={() => setView(view === 'cards' ? 'table' : 'cards')}
+            className="px-3 py-2 border border-border mono text-[10px] tracking-widest uppercase text-text hover:border-gold"
+            title="Переключить вид"
+          >
+            {view === 'cards' ? 'Таблица' : 'Карточки'}
+          </button>
+        </div>
+        <p className="mono text-[9px] tracking-widest uppercase text-text-mute">
+          Каждый поиск — живой запрос ко всему Instagram (до ~60 сек на новую нишу).
+          Пустое поле — лента по уже накопленной базе.
+        </p>
       </form>
 
       {/* ── Filters ── */}
@@ -233,9 +347,11 @@ export function MediaClient() {
             placeholder="@username"
             className="bg-bg border border-border px-2 py-1 mono text-[11px] text-text placeholder:text-text-mute focus:border-gold outline-none w-44"
           />
-          <Chip active={filters.fav} onClick={() => update('fav', !filters.fav)}>
-            ♥ Избранное
-          </Chip>
+          {!isSearchMode && (
+            <Chip active={filters.fav} onClick={() => update('fav', !filters.fav)}>
+              ♥ Избранное
+            </Chip>
+          )}
           <button
             type="button"
             onClick={reset}
@@ -248,10 +364,11 @@ export function MediaClient() {
 
       {/* ── Count ── */}
       <div className="mono text-[11px] tracking-widest uppercase text-text-mute">
-        {count != null && (
+        {displayCount != null && (
           <span>
-            Найдено: {countMode === 'estimated' ? '~' : ''}
-            {fmtCount(count)}
+            {isSearchMode ? `Instagram · «${committedQ}» · найдено: ` : 'Найдено: '}
+            {countMode === 'estimated' && !isSearchMode ? '~' : ''}
+            {fmtCount(displayCount)}
             {hidden.size > 0 && ` · скрыто ${hidden.size}`}
           </span>
         )}
@@ -264,11 +381,20 @@ export function MediaClient() {
           <p className="font-serif text-[13px] text-text-dim">{error}</p>
           <button
             type="button"
-            onClick={() => fetchPage(filters, null)}
+            onClick={() => (isSearchMode ? runSearch(committedQ.trim()) : fetchBrowse(filters, null))}
             className="mono text-[10px] tracking-widest uppercase text-text hover:text-gold underline justify-self-center"
           >
             Повторить
           </button>
+        </div>
+      ) : loading && isSearchMode ? (
+        <div className="border border-border bg-surface p-12 text-center grid gap-2">
+          <p className="mono text-[11px] tracking-widest uppercase text-text-mute">
+            Скрейп Instagram + индексация авторов…
+          </p>
+          <p className="font-serif italic text-[15px] text-text-dim">
+            Живой поиск по нише «{committedQ}». Это может занять до 60 секунд при первом запросе.
+          </p>
         </div>
       ) : loading ? (
         <div className="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-4 gap-4">
@@ -280,8 +406,9 @@ export function MediaClient() {
         <div className="border border-border-soft bg-surface p-10 text-center grid gap-2">
           <p className="mono text-[11px] tracking-widest uppercase text-text-mute">Ничего не найдено</p>
           <p className="font-serif text-[13px] text-text-dim">
-            Измени запрос или ослабь фильтры. Контент появляется по мере индексации
-            блогеров и нишевого ресёрча.
+            {isSearchMode
+              ? 'По этому ключевому слову Instagram ничего не вернул или всё отсеяли фильтры. Попробуй другую формулировку или ослабь фильтры.'
+              : 'Введи ключевое слово и нажми «Поиск» — это запустит живой поиск по Instagram.'}
           </p>
         </div>
       ) : view === 'table' ? (
@@ -305,11 +432,11 @@ export function MediaClient() {
         </div>
       )}
 
-      {/* ── Load more (keyset) ── */}
-      {!loading && cursor && visible.length > 0 && (
+      {/* ── Load more (keyset, только в browse-режиме) ── */}
+      {!loading && !isSearchMode && cursor && visible.length > 0 && (
         <button
           type="button"
-          onClick={() => fetchPage(filters, cursor)}
+          onClick={() => fetchBrowse(filters, cursor)}
           disabled={loadingMore}
           className="justify-self-center px-6 py-2 border border-border mono text-[11px] tracking-widest uppercase text-text hover:border-gold disabled:opacity-50"
         >
