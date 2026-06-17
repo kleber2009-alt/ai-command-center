@@ -39,6 +39,37 @@ function encodeCursor(id: string): string {
   return Buffer.from(id, 'utf8').toString('base64');
 }
 
+// Разбор строки поиска: "фразы в кавычках", -исключения, остальные слова.
+// Возвращает позитивные термы (каждый должен встретиться) и исключения.
+function parseQuery(raw: string): { positives: string[]; excluded: string[] } {
+  const positives: string[] = [];
+  const excluded: string[] = [];
+  // Сначала вынимаем "фразы" целиком.
+  const rest = raw.replace(/"([^"]+)"/g, (_, phrase: string) => {
+    const p = phrase.trim();
+    if (p) positives.push(p);
+    return ' ';
+  });
+  for (const tok of rest.split(/\s+/).filter(Boolean)) {
+    if (tok.startsWith('-') && tok.length > 1) excluded.push(tok.slice(1));
+    else positives.push(tok);
+  }
+  return { positives, excluded };
+}
+
+// Один позитивный терм матчится по caption (substring, регистронезависимо)
+// ИЛИ по hashtags / nicheTags (точный элемент массива, в нижнем регистре).
+function termMatch(t: string): Prisma.ResearchReelWhereInput {
+  const lower = t.toLowerCase();
+  return {
+    OR: [
+      { caption: { contains: t, mode: 'insensitive' } },
+      { hashtags: { has: lower } },
+      { nicheTags: { has: lower } },
+    ],
+  };
+}
+
 // Сортировка → составной orderBy (sortField, id) под keyset-пагинацию.
 function orderByFor(sort: Sort): Prisma.ResearchReelOrderByWithRelationInput[] {
   switch (sort) {
@@ -79,7 +110,15 @@ export async function GET(req: NextRequest) {
     where.postedAt = { gte: new Date(Date.now() - PERIODS[period] * 86_400_000) };
   }
   if (viral > 0) where.virality = { gte: viral };
-  if (q) where.caption = { contains: q, mode: 'insensitive' };
+  if (q) {
+    const { positives, excluded } = parseQuery(q);
+    const and: Prisma.ResearchReelWhereInput[] = [];
+    for (const t of positives) and.push(termMatch(t));
+    for (const x of excluded) {
+      and.push({ NOT: { caption: { contains: x, mode: 'insensitive' } } });
+    }
+    if (and.length) where.AND = and;
+  }
   if (blogger && blogger !== 'all') where.author = { is: { username: blogger } };
   if (fav) where.favorites = { some: { userId } };
 
