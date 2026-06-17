@@ -1,6 +1,7 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { getCurrentUserOrApiKey } from '@/lib/auth';
 import { prisma } from '@/lib/prisma';
+import { COSTS } from '@/lib/tokens';
 
 export const runtime = 'nodejs';
 
@@ -24,5 +25,11 @@ export async function GET(req: NextRequest) {
     balance: fresh?.tokenBalance ?? 0,
     plan: fresh?.plan ?? 'free',
     recent,
+    // Единый прайс воркспейса (§10) — для индикатора сметы перед генерацией.
+    costs: {
+      script: COSTS.studioScript,
+      video: COSTS.heygenVideo,
+      montage: COSTS.submagicEdit,
+    },
   });
 }

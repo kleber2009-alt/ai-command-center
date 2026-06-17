@@ -30,7 +30,27 @@ export function WorkspaceClient({
   const [script, setScript] = useState(initialBrief.generations[0]?.script ?? '');
   const [busy, setBusy] = useState<string | null>(null);
   const [error, setError] = useState<string | null>(null);
+  const [upsell, setUpsell] = useState(false);
+  const [balance, setBalance] = useState<number | null>(null);
+  const [costs, setCosts] = useState<{ script: number; video: number; montage: number } | null>(null);
   const pollRef = useRef<ReturnType<typeof setInterval> | null>(null);
+
+  // Баланс + единый прайс (Модуль H, §10) — смета перед запуском генерации.
+  const refreshBalance = useCallback(async () => {
+    try {
+      const res = await fetch('/api/billing/balance');
+      const d = await res.json();
+      if (res.ok) {
+        setBalance(d.balance ?? null);
+        if (d.costs) setCosts(d.costs);
+      }
+    } catch {
+      /* не критично */
+    }
+  }, []);
+  useEffect(() => {
+    void refreshBalance();
+  }, [refreshBalance]);
 
   const stopPoll = useCallback(() => {
     if (pollRef.current) {
@@ -72,11 +92,17 @@ export function WorkspaceClient({
         body: body ? JSON.stringify(body) : undefined,
       });
       const data = await res.json();
+      if (res.status === 402) {
+        setUpsell(true);
+        setError('Недостаточно токенов');
+        return null;
+      }
       if (!res.ok) throw new Error(data.error || 'failed');
       if (data.generation) {
         setGen(data.generation);
         if (data.generation.script) setScript(data.generation.script);
       }
+      void refreshBalance();
       return data;
     } catch (e) {
       setError((e as Error).message);
@@ -115,6 +141,10 @@ export function WorkspaceClient({
   const gate = gen?.gate as SimilarityGate | null;
   const videoReady = gen?.stage === 'video' && gen.status === 'completed' && gen.videoUrl;
 
+  // Хватает ли баланса на стадию (если баланс ещё не загружен — не блокируем).
+  const canAfford = (cost: number | undefined) =>
+    balance == null || cost == null || balance >= cost;
+
   // Handoff в контент-план (Модуль C): монтаж → edit, иначе сырое видео.
   const scheduleHref = gen?.videoEditId
     ? `/schedule/new?source=edit&id=${gen.videoEditId}`
@@ -139,7 +169,39 @@ export function WorkspaceClient({
       {/* Пайплайн-степпер */}
       <Stepper stage={gen?.stage ?? 'script'} status={gen?.status ?? 'pending'} />
 
-      {error && (
+      {/* Баланс + смета (Модуль H, §10) */}
+      {balance != null && costs && (
+        <div className="flex flex-wrap items-center gap-x-4 gap-y-1 border border-border-soft bg-surface px-3 py-2">
+          <span className="mono text-[10px] tracking-widest uppercase text-text-dim">
+            Баланс <span className="text-gold">{balance}</span> кр.
+          </span>
+          <span className="mono text-[9px] tracking-widest uppercase text-text-mute">
+            сценарий {costs.script} · видео {costs.video} · монтаж {costs.montage}
+          </span>
+          <Link
+            href="/billing"
+            className="ml-auto mono text-[9px] tracking-widest uppercase text-text-mute hover:text-gold underline"
+          >
+            пополнить
+          </Link>
+        </div>
+      )}
+
+      {upsell && (
+        <div className="border border-pink/50 bg-surface p-3 flex items-center gap-3">
+          <span className="mono text-[11px] text-pink flex-1">
+            Недостаточно токенов для этой стадии.
+          </span>
+          <Link
+            href="/billing"
+            className="px-3 py-1.5 border border-gold bg-gold/10 mono text-[10px] tracking-widest uppercase text-gold hover:bg-gold/20"
+          >
+            Пополнить баланс
+          </Link>
+        </div>
+      )}
+
+      {error && !upsell && (
         <div className="border border-pink/40 bg-surface p-3 mono text-[11px] text-pink">{error}</div>
       )}
 
@@ -160,11 +222,12 @@ export function WorkspaceClient({
         {!gen ? (
           <button
             onClick={genScript}
-            disabled={busy === 'script'}
+            disabled={busy === 'script' || !canAfford(costs?.script)}
+            title={!canAfford(costs?.script) ? 'Недостаточно токенов' : ''}
             className="justify-self-start flex items-center gap-2 px-5 py-2 border border-gold bg-gold/10 mono text-[10px] tracking-widest uppercase text-gold hover:bg-gold/20 disabled:opacity-50"
           >
             {busy === 'script' ? <Loader2 size={13} className="animate-spin" /> : <Wand2 size={13} />}
-            Сгенерировать сценарий
+            Сгенерировать сценарий{costs ? ` · ${costs.script} кр` : ''}
           </button>
         ) : (
           <>
@@ -193,17 +256,19 @@ export function WorkspaceClient({
                 </button>
                 <button
                   onClick={produce}
-                  disabled={busy === 'produce' || gate === 'block' || !personaOk}
+                  disabled={busy === 'produce' || gate === 'block' || !personaOk || !canAfford(costs?.video)}
                   title={
                     gate === 'block'
                       ? 'Слишком похоже на источник — переформулируйте'
                       : !personaOk
                         ? 'Нужна персона с аватаром и голосом'
-                        : ''
+                        : !canAfford(costs?.video)
+                          ? 'Недостаточно токенов'
+                          : ''
                   }
                   className="ml-auto flex items-center gap-2 px-5 py-2 border border-gold bg-gold/10 mono text-[10px] tracking-widest uppercase text-gold hover:bg-gold/20 disabled:opacity-40"
                 >
-                  <Film size={13} /> Снять видео
+                  <Film size={13} /> Снять видео{costs ? ` · ${costs.video} кр` : ''}
                 </button>
               </div>
             )}
@@ -254,10 +319,11 @@ export function WorkspaceClient({
             <div className="flex flex-wrap items-center gap-3">
               <button
                 onClick={montage}
-                disabled={busy === 'montage'}
+                disabled={busy === 'montage' || !canAfford(costs?.montage)}
+                title={!canAfford(costs?.montage) ? 'Недостаточно токенов' : ''}
                 className="flex items-center gap-2 px-4 py-2 border border-gold bg-gold/10 mono text-[10px] tracking-widest uppercase text-gold hover:bg-gold/20 disabled:opacity-50"
               >
-                <Scissors size={13} /> Смонтировать (субтитры/B-roll)
+                <Scissors size={13} /> Смонтировать{costs ? ` · ${costs.montage} кр` : ''}
               </button>
               <button
                 onClick={finalize}

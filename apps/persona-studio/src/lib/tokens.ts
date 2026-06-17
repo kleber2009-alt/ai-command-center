@@ -108,6 +108,8 @@ export const COSTS = {
   omnihumanVideo: env.COST_OMNIHUMAN_VIDEO,
   submagicEdit: env.COST_SUBMAGIC_EDIT,
   slideImage: env.COST_SLIDE_IMAGE,
+  // ── Studio workspace ──
+  studioScript: env.COST_STUDIO_SCRIPT,
   // ── Research (Badunga-style) ──
   researchTranscribe: env.COST_RESEARCH_TRANSCRIBE,
   researchTranslate: env.COST_RESEARCH_TRANSLATE,
