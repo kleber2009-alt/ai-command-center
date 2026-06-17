@@ -1,0 +1,1202 @@
+<!DOCTYPE html>
+<html lang="ru">
+<head>
+<meta charset="UTF-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover, maximum-scale=1, user-scalable=no" />
+<title>Threads Growth</title>
+<script src="https://telegram.org/js/telegram-web-app.js"></script>
+<style>
+  :root {
+    /* Telegram theme fallbacks (light) */
+    --bg: #ffffff;
+    --secondary-bg: #f0f2f5;
+    --text: #000000;
+    --hint: #999999;
+    --link: #2481cc;
+    --button: #2481cc;
+    --button-text: #ffffff;
+    --destructive: #d14343;
+    /* derived */
+    --border: rgba(150, 150, 150, 0.22);
+    --card-radius: 12px;
+    --gap: 12px;
+    --safe-top: env(safe-area-inset-top, 0px);
+    --safe-bottom: env(safe-area-inset-bottom, 0px);
+  }
+
+  * { box-sizing: border-box; -webkit-tap-highlight-color: transparent; }
+  html, body { margin: 0; padding: 0; }
+  body {
+    font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, Helvetica, Arial, sans-serif;
+    background: var(--bg);
+    color: var(--text);
+    font-size: 15px;
+    line-height: 1.45;
+    -webkit-font-smoothing: antialiased;
+    overscroll-behavior-y: contain;
+  }
+
+  #app {
+    max-width: 640px;
+    margin: 0 auto;
+    min-height: 100vh;
+    display: flex;
+    flex-direction: column;
+  }
+
+  /* ===== Sticky header ===== */
+  header {
+    position: sticky;
+    top: 0;
+    z-index: 50;
+    background: color-mix(in srgb, var(--bg) 92%, transparent);
+    backdrop-filter: saturate(180%) blur(14px);
+    -webkit-backdrop-filter: saturate(180%) blur(14px);
+    border-bottom: 1px solid var(--border);
+    padding-top: var(--safe-top);
+  }
+  .head-top {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    padding: 12px 16px 8px;
+  }
+  .head-title {
+    font-size: 18px;
+    font-weight: 700;
+    letter-spacing: -0.2px;
+    display: flex;
+    align-items: center;
+    gap: 8px;
+  }
+  .head-title .logo { color: var(--button); display: inline-flex; }
+  .refresh-btn {
+    display: inline-flex;
+    align-items: center;
+    gap: 6px;
+    border: 1px solid var(--border);
+    background: var(--secondary-bg);
+    color: var(--text);
+    border-radius: 20px;
+    padding: 7px 12px;
+    font-size: 13px;
+    font-weight: 500;
+    cursor: pointer;
+    min-height: 36px;
+  }
+  .refresh-btn:active { opacity: 0.6; }
+  .refresh-btn.spin .icon { animation: spin 0.8s linear infinite; }
+
+  /* ===== Tabs ===== */
+  .tabs {
+    display: flex;
+    gap: 4px;
+    padding: 0 12px 10px;
+    overflow-x: auto;
+    scrollbar-width: none;
+  }
+  .tabs::-webkit-scrollbar { display: none; }
+  .tab {
+    flex: 0 0 auto;
+    border: none;
+    background: transparent;
+    color: var(--hint);
+    padding: 8px 14px;
+    border-radius: 18px;
+    font-size: 14px;
+    font-weight: 600;
+    cursor: pointer;
+    white-space: nowrap;
+    transition: background .18s ease, color .18s ease;
+    display: inline-flex;
+    align-items: center;
+    gap: 6px;
+    min-height: 40px;
+  }
+  .tab.active {
+    background: var(--button);
+    color: var(--button-text);
+  }
+  .tab:not(.active):active { background: var(--secondary-bg); }
+
+  /* ===== Main / sections ===== */
+  main {
+    flex: 1;
+    padding: 14px 16px calc(28px + var(--safe-bottom));
+  }
+  section { display: none; }
+  section.active { display: block; animation: fade .22s ease; }
+  @keyframes fade { from { opacity: 0; transform: translateY(6px); } to { opacity: 1; transform: none; } }
+  @keyframes spin { to { transform: rotate(360deg); } }
+
+  .section-label {
+    font-size: 13px;
+    font-weight: 700;
+    text-transform: uppercase;
+    letter-spacing: 0.5px;
+    color: var(--hint);
+    margin: 18px 2px 10px;
+    display: flex;
+    align-items: center;
+    gap: 7px;
+  }
+  .section-label:first-child { margin-top: 4px; }
+
+  /* ===== Cards ===== */
+  .card {
+    background: var(--secondary-bg);
+    border: 1px solid var(--border);
+    border-radius: var(--card-radius);
+    padding: 14px;
+    margin-bottom: var(--gap);
+  }
+  .card-head {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    gap: 8px;
+    margin-bottom: 8px;
+  }
+  .card-text {
+    font-size: 14.5px;
+    line-height: 1.5;
+    white-space: pre-wrap;
+    word-break: break-word;
+  }
+  .card-text.clamped {
+    display: -webkit-box;
+    -webkit-line-clamp: 4;
+    -webkit-box-orient: vertical;
+    overflow: hidden;
+  }
+  .quoted {
+    font-style: italic;
+    color: var(--hint);
+    border-left: 3px solid var(--border);
+    padding: 4px 0 4px 10px;
+    margin: 4px 0 10px;
+    font-size: 13.5px;
+    white-space: pre-wrap;
+    word-break: break-word;
+  }
+  .expand-link {
+    color: var(--link);
+    font-size: 13px;
+    cursor: pointer;
+    font-weight: 500;
+    margin-top: 4px;
+    display: inline-block;
+  }
+
+  .meta-row {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 6px 10px;
+    margin-top: 10px;
+    font-size: 12px;
+    color: var(--hint);
+  }
+  .meta-row .kv { display: inline-flex; align-items: center; gap: 4px; }
+  .meta-row .kv b { color: var(--text); font-weight: 600; }
+
+  /* Badges */
+  .badge {
+    display: inline-flex;
+    align-items: center;
+    gap: 4px;
+    font-size: 11.5px;
+    font-weight: 700;
+    padding: 3px 9px;
+    border-radius: 20px;
+    background: color-mix(in srgb, var(--hint) 18%, transparent);
+    color: var(--text);
+    white-space: nowrap;
+  }
+  .badge.green { background: rgba(52,199,89,0.18); color: #1f9d4d; }
+  .badge.blue  { background: rgba(36,129,204,0.18); color: var(--link); }
+  .badge.amber { background: rgba(255,159,10,0.20); color: #c77800; }
+  .badge.grey  { background: color-mix(in srgb, var(--hint) 18%, transparent); color: var(--hint); }
+  .badge.score { background: rgba(36,129,204,0.16); color: var(--link); }
+  .handle { font-weight: 700; font-size: 14.5px; }
+
+  /* Buttons */
+  .btn-row {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 8px;
+    margin-top: 12px;
+  }
+  .btn {
+    flex: 1 1 auto;
+    min-width: 92px;
+    min-height: 40px;
+    border: 1px solid var(--border);
+    background: var(--bg);
+    color: var(--text);
+    border-radius: 10px;
+    padding: 9px 12px;
+    font-size: 13.5px;
+    font-weight: 600;
+    cursor: pointer;
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    gap: 6px;
+    transition: opacity .15s, transform .05s;
+  }
+  .btn:active { transform: scale(0.97); opacity: 0.85; }
+  .btn[disabled] { opacity: 0.5; pointer-events: none; }
+  .btn.primary { background: var(--button); color: var(--button-text); border-color: transparent; }
+  .btn.danger { color: var(--destructive); border-color: color-mix(in srgb, var(--destructive) 40%, transparent); }
+  .btn.wide { flex-basis: 100%; }
+
+  .top-action { margin: 4px 0 16px; }
+
+  /* Chips */
+  .chips {
+    display: flex;
+    gap: 6px;
+    flex-wrap: wrap;
+    margin: 4px 0 14px;
+  }
+  .chip {
+    border: 1px solid var(--border);
+    background: var(--secondary-bg);
+    color: var(--text);
+    border-radius: 18px;
+    padding: 7px 13px;
+    font-size: 13px;
+    font-weight: 600;
+    cursor: pointer;
+    min-height: 38px;
+    display: inline-flex;
+    align-items: center;
+  }
+  .chip.active { background: var(--button); color: var(--button-text); border-color: transparent; }
+
+  /* Stats */
+  .stat-card {
+    background: var(--secondary-bg);
+    border: 1px solid var(--border);
+    border-radius: var(--card-radius);
+    padding: 18px;
+    margin-bottom: var(--gap);
+    text-align: center;
+  }
+  .stat-value { font-size: 34px; font-weight: 800; letter-spacing: -1px; line-height: 1; }
+  .stat-label { font-size: 13px; color: var(--hint); margin-top: 6px; font-weight: 500; }
+
+  /* Weight bar */
+  .bar-track {
+    height: 8px;
+    border-radius: 6px;
+    background: color-mix(in srgb, var(--hint) 22%, transparent);
+    overflow: hidden;
+    margin-top: 8px;
+  }
+  .bar-fill { height: 100%; border-radius: 6px; background: var(--button); transition: width .4s ease; }
+
+  .pos { color: #1f9d4d; font-weight: 700; }
+  .neg { color: var(--destructive); font-weight: 700; }
+
+  /* Forms */
+  .collapsible-toggle {
+    width: 100%;
+    border: 1px dashed var(--border);
+    background: transparent;
+    color: var(--link);
+    border-radius: 10px;
+    padding: 11px;
+    font-size: 14px;
+    font-weight: 600;
+    cursor: pointer;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    gap: 6px;
+    margin-bottom: 14px;
+    min-height: 44px;
+  }
+  .form {
+    background: var(--secondary-bg);
+    border: 1px solid var(--border);
+    border-radius: var(--card-radius);
+    padding: 14px;
+    margin-bottom: 16px;
+  }
+  .form.hidden { display: none; }
+  .field { margin-bottom: 11px; }
+  .field label {
+    display: block;
+    font-size: 12.5px;
+    color: var(--hint);
+    font-weight: 600;
+    margin-bottom: 5px;
+  }
+  .field label .req { color: var(--destructive); }
+  .field input, .field select {
+    width: 100%;
+    border: 1px solid var(--border);
+    background: var(--bg);
+    color: var(--text);
+    border-radius: 9px;
+    padding: 11px 12px;
+    font-size: 15px;
+    font-family: inherit;
+    min-height: 44px;
+  }
+  .field input:focus, .field select:focus { outline: none; border-color: var(--button); }
+
+  /* States */
+  .state {
+    text-align: center;
+    color: var(--hint);
+    padding: 38px 16px;
+    font-size: 14px;
+  }
+  .state .icon { opacity: 0.5; margin-bottom: 10px; }
+  .state .err-msg { color: var(--destructive); margin-bottom: 14px; word-break: break-word; }
+  .spinner {
+    width: 26px; height: 26px;
+    border: 3px solid color-mix(in srgb, var(--hint) 30%, transparent);
+    border-top-color: var(--button);
+    border-radius: 50%;
+    animation: spin .8s linear infinite;
+    margin: 0 auto 12px;
+  }
+  .skeleton {
+    background: var(--secondary-bg);
+    border: 1px solid var(--border);
+    border-radius: var(--card-radius);
+    padding: 14px;
+    margin-bottom: var(--gap);
+  }
+  .sk-line {
+    height: 12px;
+    border-radius: 6px;
+    background: linear-gradient(90deg, color-mix(in srgb,var(--hint) 14%,transparent) 25%, color-mix(in srgb,var(--hint) 26%,transparent) 50%, color-mix(in srgb,var(--hint) 14%,transparent) 75%);
+    background-size: 200% 100%;
+    animation: shimmer 1.3s infinite;
+    margin-bottom: 9px;
+  }
+  @keyframes shimmer { from { background-position: 200% 0; } to { background-position: -200% 0; } }
+
+  /* Toast */
+  #toast {
+    position: fixed;
+    left: 50%;
+    bottom: calc(24px + var(--safe-bottom));
+    transform: translateX(-50%) translateY(20px);
+    background: var(--text);
+    color: var(--bg);
+    padding: 11px 18px;
+    border-radius: 12px;
+    font-size: 14px;
+    font-weight: 500;
+    max-width: 86%;
+    text-align: center;
+    opacity: 0;
+    pointer-events: none;
+    transition: opacity .22s, transform .22s;
+    z-index: 200;
+    box-shadow: 0 8px 28px rgba(0,0,0,0.28);
+  }
+  #toast.show { opacity: 1; transform: translateX(-50%) translateY(0); }
+  #toast.err { background: var(--destructive); color: #fff; }
+
+  .icon { display: inline-flex; flex-shrink: 0; }
+</style>
+</head>
+<body>
+<div id="app">
+  <header>
+    <div class="head-top">
+      <div class="head-title">
+        <span class="logo" id="logoIcon"></span>
+        <span>Threads Growth</span>
+      </div>
+      <button class="refresh-btn" id="refreshBtn">
+        <span class="icon" id="refreshIcon"></span>
+        <span>Обновить</span>
+      </button>
+    </div>
+    <div class="tabs" id="tabs"></div>
+  </header>
+  <main>
+    <section id="sec-review"></section>
+    <section id="sec-viral"></section>
+    <section id="sec-analytics"></section>
+    <section id="sec-accounts"></section>
+    <section id="sec-competitors"></section>
+  </main>
+</div>
+<div id="toast"></div>
+
+<script>
+"use strict";
+
+/* =========================================================
+ * Telegram bootstrap
+ * =======================================================*/
+const TG = window.Telegram && window.Telegram.WebApp ? window.Telegram.WebApp : null;
+try { if (TG) { TG.ready(); TG.expand(); } } catch (e) {}
+
+function haptic(kind, style) {
+  try {
+    if (!TG || !TG.HapticFeedback) return;
+    if (kind === "impact") TG.HapticFeedback.impactOccurred(style || "light");
+    else if (kind === "notify") TG.HapticFeedback.notificationOccurred(style || "success");
+  } catch (e) {}
+}
+
+function confirmTg(message) {
+  return new Promise((resolve) => {
+    try {
+      if (TG && TG.showConfirm) { TG.showConfirm(message, (ok) => resolve(!!ok)); return; }
+    } catch (e) {}
+    resolve(window.confirm(message));
+  });
+}
+
+function openLink(url) {
+  if (!url) return;
+  try { if (TG && TG.openLink) { TG.openLink(url); return; } } catch (e) {}
+  window.open(url, "_blank");
+}
+
+/* =========================================================
+ * Theme: map themeParams -> CSS vars
+ * =======================================================*/
+function applyTheme() {
+  const p = (TG && TG.themeParams) ? TG.themeParams : {};
+  const r = document.documentElement.style;
+  const set = (cssVar, val) => { if (val) r.setProperty(cssVar, val); };
+  set("--bg", p.bg_color);
+  set("--secondary-bg", p.secondary_bg_color || p.section_bg_color);
+  set("--text", p.text_color);
+  set("--hint", p.hint_color);
+  set("--link", p.link_color);
+  set("--button", p.button_color);
+  set("--button-text", p.button_text_color);
+  set("--destructive", p.destructive_text_color);
+  try {
+    if (TG) {
+      if (TG.setHeaderColor && p.bg_color) TG.setHeaderColor(p.bg_color);
+      if (TG.setBackgroundColor && p.bg_color) TG.setBackgroundColor(p.bg_color);
+    }
+  } catch (e) {}
+}
+applyTheme();
+try { if (TG) TG.onEvent("themeChanged", applyTheme); } catch (e) {}
+
+/* =========================================================
+ * Icons (lucide-style inline SVG, 20px, currentColor)
+ * =======================================================*/
+function icon(name, size) {
+  const s = size || 20;
+  const open = `<svg class="icon" width="${s}" height="${s}" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">`;
+  const P = {
+    check: '<polyline points="20 6 9 17 4 12"/>',
+    send: '<path d="m22 2-7 20-4-9-9-4Z"/><path d="M22 2 11 13"/>',
+    x: '<path d="M18 6 6 18"/><path d="m6 6 12 12"/>',
+    refresh: '<path d="M3 12a9 9 0 0 1 9-9 9.75 9.75 0 0 1 6.74 2.74L21 8"/><path d="M21 3v5h-5"/><path d="M21 12a9 9 0 0 1-9 9 9.75 9.75 0 0 1-6.74-2.74L3 16"/><path d="M3 21v-5h5"/>',
+    inbox: '<polyline points="22 12 16 12 14 15 10 15 8 12 2 12"/><path d="M5.45 5.11 2 12v6a2 2 0 0 0 2 2h16a2 2 0 0 0 2-2v-6l-3.45-6.89A2 2 0 0 0 16.76 4H7.24a2 2 0 0 0-1.79 1.11z"/>',
+    flame: '<path d="M8.5 14.5A2.5 2.5 0 0 0 11 12c0-1.38-.5-2-1-3-1.072-2.143-.224-4.054 2-6 .5 2.5 2 4.9 4 6.5 2 1.6 3 3.5 3 5.5a7 7 0 1 1-14 0c0-1.153.433-2.294 1-3a2.5 2.5 0 0 0 2.5 2.5z"/>',
+    chart: '<path d="M3 3v16a2 2 0 0 0 2 2h16"/><path d="M18 17V9"/><path d="M13 17V5"/><path d="M8 17v-3"/>',
+    users: '<path d="M16 21v-2a4 4 0 0 0-4-4H6a4 4 0 0 0-4 4v2"/><circle cx="9" cy="7" r="4"/><path d="M22 21v-2a4 4 0 0 0-3-3.87"/><path d="M16 3.13a4 4 0 0 1 0 7.75"/>',
+    target: '<circle cx="12" cy="12" r="10"/><circle cx="12" cy="12" r="6"/><circle cx="12" cy="12" r="2"/>',
+    plus: '<path d="M5 12h14"/><path d="M12 5v14"/>',
+    trash: '<path d="M3 6h18"/><path d="M19 6v14a2 2 0 0 1-2 2H7a2 2 0 0 1-2-2V6"/><path d="M8 6V4a2 2 0 0 1 2-2h4a2 2 0 0 1 2 2v2"/><path d="M10 11v6"/><path d="M14 11v6"/>',
+    zap: '<path d="M4 14a1 1 0 0 1-.78-1.63l9.9-10.2a.5.5 0 0 1 .86.46l-1.92 6.02A1 1 0 0 0 13 10h7a1 1 0 0 1 .78 1.63l-9.9 10.2a.5.5 0 0 1-.86-.46l1.92-6.02A1 1 0 0 0 11 14z"/>',
+    link: '<path d="M10 13a5 5 0 0 0 7.54.54l3-3a5 5 0 0 0-7.07-7.07l-1.72 1.71"/><path d="M14 11a5 5 0 0 0-7.54-.54l-3 3a5 5 0 0 0 7.07 7.07l1.71-1.71"/>',
+    search: '<circle cx="11" cy="11" r="8"/><path d="m21 21-4.3-4.3"/>',
+    box: '<path d="M21 16V8a2 2 0 0 0-1-1.73l-7-4a2 2 0 0 0-2 0l-7 4A2 2 0 0 0 3 8v8a2 2 0 0 0 1 1.73l7 4a2 2 0 0 0 2 0l7-4A2 2 0 0 0 21 16z"/><path d="m3.3 7 8.7 5 8.7-5"/><path d="M12 22V12"/>',
+    sprout: '<path d="M7 20h10"/><path d="M10 20c5.5-2.5.8-6.4 3-10"/><path d="M9.5 9.4c1.1.8 1.8 2.2 2.3 3.7-2 .4-3.5.4-4.8-.3-1.2-.6-2.3-1.9-3-4.2 2.8-.5 4.4 0 5.5.8z"/><path d="M14.1 6a7 7 0 0 0-1.1 4c1.9-.1 3.3-.6 4.3-1.4 1-1 1.6-2.3 1.7-4.6-2.7.1-4 1-4.9 2z"/>',
+    activity: '<path d="M22 12h-2.48a2 2 0 0 0-1.93 1.46l-2.35 8.36a.25.25 0 0 1-.48 0L9.24 2.18a.25.25 0 0 0-.48 0l-2.35 8.36A2 2 0 0 1 4.49 12H2"/>',
+    layers: '<path d="m12.83 2.18a2 2 0 0 0-1.66 0L2.6 6.08a1 1 0 0 0 0 1.83l8.58 3.91a2 2 0 0 0 1.66 0l8.58-3.9a1 1 0 0 0 0-1.83Z"/><path d="m6.08 9.5-3.49 1.59a1 1 0 0 0 0 1.81l8.6 3.91a2 2 0 0 0 1.65 0l8.58-3.9a1 1 0 0 0 0-1.83l-3.49-1.59"/>',
+    eye: '<path d="M2.062 12.348a1 1 0 0 1 0-.696 10.75 10.75 0 0 1 19.876 0 1 1 0 0 1 0 .696 10.75 10.75 0 0 1-19.876 0"/><circle cx="12" cy="12" r="3"/>',
+    heart: '<path d="M19 14c1.49-1.46 3-3.21 3-5.5A5.5 5.5 0 0 0 16.5 3c-1.76 0-3 .5-4.5 2-1.5-1.5-2.74-2-4.5-2A5.5 5.5 0 0 0 2 8.5c0 2.3 1.5 4.05 3 5.5l7 7Z"/>',
+  };
+  return open + (P[name] || "") + "</svg>";
+}
+
+/* =========================================================
+ * Formatting helpers (defensive)
+ * =======================================================*/
+const DASH = "—";
+function isNil(v) { return v === null || v === undefined || v === ""; }
+function fmt1(v) { const n = Number(v); return Number.isFinite(n) ? n.toFixed(1) : DASH; }
+function fmt2(v) { const n = Number(v); return Number.isFinite(n) ? n.toFixed(2) : DASH; }
+function fmtInt(v) { const n = Number(v); return Number.isFinite(n) ? Math.round(n).toLocaleString("ru-RU") : DASH; }
+function txt(v) { return isNil(v) ? DASH : String(v); }
+function esc(s) {
+  return String(s == null ? "" : s)
+    .replace(/&/g, "&amp;").replace(/</g, "&lt;").replace(/>/g, "&gt;")
+    .replace(/"/g, "&quot;").replace(/'/g, "&#39;");
+}
+function handleAt(v) {
+  if (isNil(v)) return DASH;
+  const s = String(v);
+  return s.startsWith("@") ? s : "@" + s;
+}
+function signed(v) {
+  const n = Number(v);
+  if (!Number.isFinite(n)) return { html: DASH };
+  const sign = n > 0 ? "+" : "";
+  const cls = n > 0 ? "pos" : (n < 0 ? "neg" : "");
+  return { html: `<span class="${cls}">${sign}${fmtInt(n)}</span>` };
+}
+
+/* =========================================================
+ * Toast
+ * =======================================================*/
+let toastTimer = null;
+function toast(msg, isErr) {
+  const el = document.getElementById("toast");
+  el.textContent = msg;
+  el.className = isErr ? "err show" : "show";
+  clearTimeout(toastTimer);
+  toastTimer = setTimeout(() => { el.className = el.className.replace("show", "").trim(); }, 2600);
+}
+
+/* =========================================================
+ * API helper — every request carries tma initData auth
+ * =======================================================*/
+async function api(method, path, body) {
+  const initData = TG && TG.initData ? TG.initData : "";
+  const opts = {
+    method,
+    headers: { "Authorization": "tma " + initData },
+  };
+  if (body !== undefined && body !== null) {
+    opts.headers["Content-Type"] = "application/json";
+    opts.body = JSON.stringify(body);
+  }
+  let res;
+  try {
+    res = await fetch(path, opts);
+  } catch (netErr) {
+    throw new Error("Сеть недоступна");
+  }
+  let data = null;
+  const ct = res.headers.get("content-type") || "";
+  try {
+    if (ct.includes("application/json")) data = await res.json();
+    else { const t = await res.text(); data = t ? { detail: t } : null; }
+  } catch (e) { data = null; }
+  if (!res.ok) {
+    let detail = "Ошибка " + res.status;
+    if (data) {
+      if (typeof data.detail === "string") detail = data.detail;
+      else if (Array.isArray(data.detail) && data.detail[0] && data.detail[0].msg) detail = data.detail[0].msg;
+      else if (typeof data.message === "string") detail = data.message;
+    }
+    throw new Error(detail);
+  }
+  return data;
+}
+
+function asArray(v) {
+  if (Array.isArray(v)) return v;
+  if (v && Array.isArray(v.items)) return v.items;
+  if (v && Array.isArray(v.data)) return v.data;
+  if (v && Array.isArray(v.results)) return v.results;
+  return [];
+}
+
+/* =========================================================
+ * Render-state helpers
+ * =======================================================*/
+function skeletons(n) {
+  let h = "";
+  for (let i = 0; i < (n || 3); i++) {
+    h += `<div class="skeleton"><div class="sk-line" style="width:70%"></div><div class="sk-line" style="width:95%"></div><div class="sk-line" style="width:45%"></div></div>`;
+  }
+  return h;
+}
+function emptyState(label) {
+  return `<div class="state">${icon("inbox", 30)}<div>${esc(label || "Ничего нет")}</div></div>`;
+}
+function errorState(msg, retryId) {
+  return `<div class="state">${icon("x", 30)}<div class="err-msg">${esc(msg || "Ошибка загрузки")}</div>` +
+    `<button class="btn primary" style="max-width:200px;margin:0 auto" data-retry="${esc(retryId)}">Повторить</button></div>`;
+}
+function spinnerState(label) {
+  return `<div class="state"><div class="spinner"></div><div>${esc(label || "Загрузка…")}</div></div>`;
+}
+
+/* =========================================================
+ * App state + tab config
+ * =======================================================*/
+const TABS = [
+  { id: "review",      label: "Ревью",      ic: "inbox",  sec: "sec-review",      render: renderReview },
+  { id: "viral",       label: "Виралка",    ic: "flame",  sec: "sec-viral",       render: renderViral },
+  { id: "analytics",   label: "Аналитика",  ic: "chart",  sec: "sec-analytics",   render: renderAnalytics },
+  { id: "accounts",    label: "Аккаунты",   ic: "users",  sec: "sec-accounts",    render: renderAccounts },
+  { id: "competitors", label: "Конкуренты", ic: "target", sec: "sec-competitors", render: renderCompetitors },
+];
+let activeTab = "review";
+const viralFilter = { category: "" };
+const ui = { acctFormOpen: false, compFormOpen: false };
+
+/* =========================================================
+ * Tab bar
+ * =======================================================*/
+function buildTabs() {
+  const wrap = document.getElementById("tabs");
+  wrap.innerHTML = TABS.map(t =>
+    `<button class="tab ${t.id === activeTab ? "active" : ""}" data-tab="${t.id}">${icon(t.ic, 16)}<span>${t.label}</span></button>`
+  ).join("");
+  wrap.querySelectorAll(".tab").forEach(b => {
+    b.addEventListener("click", () => switchTab(b.dataset.tab));
+  });
+}
+function switchTab(id) {
+  if (id === activeTab) { TABS.find(t => t.id === id).render(); return; }
+  activeTab = id;
+  haptic("impact", "light");
+  document.querySelectorAll(".tab").forEach(b => b.classList.toggle("active", b.dataset.tab === id));
+  document.querySelectorAll("section").forEach(s => s.classList.remove("active"));
+  const tab = TABS.find(t => t.id === id);
+  document.getElementById(tab.sec).classList.add("active");
+  tab.render();
+}
+
+document.getElementById("logoIcon").innerHTML = icon("activity", 22);
+document.getElementById("refreshIcon").innerHTML = icon("refresh", 16);
+document.getElementById("refreshBtn").addEventListener("click", () => {
+  haptic("impact", "light");
+  const b = document.getElementById("refreshBtn");
+  b.classList.add("spin");
+  Promise.resolve(TABS.find(t => t.id === activeTab).render()).finally(() => {
+    setTimeout(() => b.classList.remove("spin"), 600);
+  });
+});
+
+/* Delegate retry buttons globally */
+document.querySelector("main").addEventListener("click", (e) => {
+  const r = e.target.closest("[data-retry]");
+  if (r) {
+    const fn = retryRegistry[r.dataset.retry];
+    if (fn) fn();
+  }
+});
+const retryRegistry = {};
+
+/* =========================================================
+ * Generic action wrapper
+ * =======================================================*/
+async function doAction(btn, fn, successMsg) {
+  if (btn) btn.disabled = true;
+  try {
+    await fn();
+    haptic("notify", "success");
+    if (successMsg) toast(successMsg);
+    return true;
+  } catch (err) {
+    haptic("notify", "error");
+    toast(err.message || "Ошибка", true);
+    if (btn) btn.disabled = false;
+    return false;
+  }
+}
+
+function removeCard(btn) {
+  const card = btn.closest(".card");
+  if (card) { card.style.transition = "opacity .2s, transform .2s"; card.style.opacity = "0"; card.style.transform = "scale(0.97)"; setTimeout(() => card.remove(), 200); }
+}
+
+/* =========================================================
+ * SECTION 1 — Ревью (drafts + replies)
+ * =======================================================*/
+async function renderReview() {
+  const sec = document.getElementById("sec-review");
+  retryRegistry["review"] = renderReview;
+  sec.innerHTML =
+    `<div class="section-label">${icon("box", 15)} Черновики контента</div>` +
+    `<div id="rev-drafts">${skeletons(2)}</div>` +
+    `<div class="section-label">${icon("send", 15)} Черновики реплаев</div>` +
+    `<div id="rev-replies">${skeletons(2)}</div>`;
+  loadDrafts();
+  loadReplies();
+}
+
+async function loadDrafts() {
+  const host = document.getElementById("rev-drafts");
+  if (!host) return;
+  try {
+    const data = await api("GET", "/api/content/drafts?status=draft&limit=50");
+    const list = asArray(data);
+    if (!list.length) { host.innerHTML = emptyState("Ничего нет"); return; }
+    host.innerHTML = list.map(draftCard).join("");
+    wireDraftCards(host);
+  } catch (err) {
+    host.innerHTML = errorState(err.message, "review");
+  }
+}
+
+function draftCard(d) {
+  const id = esc(d && d.id);
+  const content = txt(d && d.content);
+  const long = content.length > 160;
+  return `<div class="card" data-id="${id}">
+    <div class="card-text ${long ? "clamped" : ""}" data-full="${esc(content)}">${esc(content)}</div>
+    ${long ? `<span class="expand-link" data-expand>Показать полностью</span>` : ""}
+    <div class="meta-row">
+      <span class="kv">acct <b>${txt(d && d.account_id)}</b></span>
+      <span class="kv">sem <b>${fmt2(d && d.similarity_score)}</b></span>
+      <span class="kv">text <b>${fmt2(d && d.text_similarity)}</b></span>
+    </div>
+    <div class="btn-row">
+      <button class="btn" data-act="approve" data-id="${id}">${icon("check", 16)} Одобрить</button>
+      <button class="btn primary" data-act="publish" data-id="${id}">${icon("send", 16)} Опубликовать</button>
+      <button class="btn danger" data-act="reject" data-id="${id}">${icon("x", 16)} Отклонить</button>
+    </div>
+  </div>`;
+}
+
+function wireDraftCards(host) {
+  host.querySelectorAll("[data-expand]").forEach(el => {
+    el.addEventListener("click", () => {
+      const t = el.previousElementSibling;
+      const clamped = t.classList.toggle("clamped");
+      el.textContent = clamped ? "Показать полностью" : "Свернуть";
+    });
+  });
+  host.querySelectorAll("[data-act]").forEach(btn => {
+    btn.addEventListener("click", async () => {
+      const id = btn.dataset.id;
+      const act = btn.dataset.act;
+      haptic("impact", "medium");
+      if (act === "approve") {
+        const ok = await doAction(btn, () => api("POST", `/api/content/${id}/approve`), "Черновик одобрен");
+        if (ok) removeCard(btn);
+      } else if (act === "publish") {
+        if (!(await confirmTg("Опубликовать этот пост сейчас?"))) { return; }
+        const ok = await doAction(btn, () => api("POST", `/api/publishing/publish-now?content_id=${encodeURIComponent(id)}`), "Опубликовано");
+        if (ok) removeCard(btn);
+      } else if (act === "reject") {
+        if (!(await confirmTg("Отклонить этот черновик?"))) { return; }
+        const ok = await doAction(btn, () => api("POST", `/api/content/${id}/reject`), "Отклонено");
+        if (ok) removeCard(btn);
+      }
+    });
+  });
+}
+
+async function loadReplies() {
+  const host = document.getElementById("rev-replies");
+  if (!host) return;
+  try {
+    const data = await api("GET", "/api/replies?status=draft&limit=50");
+    const list = asArray(data);
+    if (!list.length) { host.innerHTML = emptyState("Ничего нет"); return; }
+    host.innerHTML = list.map(replyCard).join("");
+    wireReplyCards(host);
+  } catch (err) {
+    host.innerHTML = errorState(err.message, "review");
+  }
+}
+
+function replyCard(r) {
+  const id = esc(r && r.id);
+  return `<div class="card" data-id="${id}">
+    <div class="card-head">
+      <span class="handle">${esc(handleAt(r && r.target_author))}</span>
+      <span class="badge score">${icon("zap", 13)} xn ${fmt1(r && r.xn_score)}</span>
+    </div>
+    ${!isNil(r && r.target_text) ? `<div class="quoted">${esc(r.target_text)}</div>` : ""}
+    <div class="card-text">${esc(txt(r && r.text))}</div>
+    <div class="meta-row"><span class="kv">acct <b>${txt(r && r.account_id)}</b></span></div>
+    <div class="btn-row">
+      <button class="btn" data-act="approve" data-id="${id}">${icon("check", 16)} Одобрить</button>
+      <button class="btn primary" data-act="publish" data-id="${id}">${icon("send", 16)} Ответить</button>
+      <button class="btn danger" data-act="skip" data-id="${id}">${icon("x", 16)} Пропустить</button>
+    </div>
+  </div>`;
+}
+
+function wireReplyCards(host) {
+  host.querySelectorAll("[data-act]").forEach(btn => {
+    btn.addEventListener("click", async () => {
+      const id = btn.dataset.id;
+      const act = btn.dataset.act;
+      haptic("impact", "medium");
+      if (act === "approve") {
+        const ok = await doAction(btn, () => api("POST", `/api/replies/${id}/approve`), "Реплай одобрен");
+        if (ok) removeCard(btn);
+      } else if (act === "publish") {
+        if (!(await confirmTg("Опубликовать ответ сейчас?"))) { return; }
+        const ok = await doAction(btn, () => api("POST", `/api/replies/${id}/publish-now`), "Ответ отправлен");
+        if (ok) removeCard(btn);
+      } else if (act === "skip") {
+        if (!(await confirmTg("Пропустить этот реплай?"))) { return; }
+        const ok = await doAction(btn, () => api("POST", `/api/replies/${id}/skip`), "Пропущено");
+        if (ok) removeCard(btn);
+      }
+    });
+  });
+}
+
+/* =========================================================
+ * SECTION 2 — Виралка (discovery)
+ * =======================================================*/
+const CAT_CLASS = { A: "green", B: "blue", C: "amber", D: "grey" };
+async function renderViral() {
+  const sec = document.getElementById("sec-viral");
+  retryRegistry["viral"] = renderViral;
+  const cats = ["", "A", "B", "C", "D"];
+  const chipsHtml = cats.map(c =>
+    `<button class="chip ${viralFilter.category === c ? "active" : ""}" data-cat="${c}">${c === "" ? "Все" : c}</button>`
+  ).join("");
+  sec.innerHTML =
+    `<button class="btn primary wide top-action" id="scrapeBtn">${icon("search", 16)} Запустить скрейп</button>` +
+    `<div class="chips" id="viral-chips">${chipsHtml}</div>` +
+    `<div id="viral-list">${skeletons(3)}</div>`;
+
+  sec.querySelectorAll("#viral-chips .chip").forEach(ch => {
+    ch.addEventListener("click", () => {
+      viralFilter.category = ch.dataset.cat;
+      haptic("impact", "light");
+      renderViral();
+    });
+  });
+
+  document.getElementById("scrapeBtn").addEventListener("click", async () => {
+    if (!(await confirmTg("Запустить скрейп виральных постов? Это может занять время."))) return;
+    const btn = document.getElementById("scrapeBtn");
+    btn.disabled = true;
+    btn.innerHTML = `<div class="spinner" style="width:16px;height:16px;margin:0;border-width:2px"></div> Скрейпинг…`;
+    haptic("impact", "medium");
+    try {
+      await api("POST", "/api/viral-posts/scrape?source=threads&query=&limit=100");
+      haptic("notify", "success");
+      toast("Скрейп запущен");
+    } catch (err) {
+      haptic("notify", "error");
+      toast(err.message || "Ошибка", true);
+    } finally {
+      renderViral();
+    }
+  });
+
+  loadViral();
+}
+
+async function loadViral() {
+  const host = document.getElementById("viral-list");
+  if (!host) return;
+  let path = "/api/viral-posts?limit=50";
+  if (viralFilter.category) path += "&category=" + encodeURIComponent(viralFilter.category);
+  try {
+    const data = await api("GET", path);
+    const list = asArray(data);
+    if (!list.length) { host.innerHTML = emptyState("Ничего нет"); return; }
+    host.innerHTML = list.map(viralCard).join("");
+    host.querySelectorAll("[data-url]").forEach(el => {
+      el.addEventListener("click", () => { haptic("impact", "light"); openLink(el.dataset.url); });
+    });
+  } catch (err) {
+    host.innerHTML = errorState(err.message, "viral");
+  }
+}
+
+function viralCard(v) {
+  const cat = v && v.category ? String(v.category).toUpperCase() : "";
+  const catCls = CAT_CLASS[cat] || "grey";
+  const body = txt((v && (v.content != null ? v.content : v.text)));
+  const url = v && v.url ? esc(v.url) : "";
+  return `<div class="card">
+    <div class="card-head">
+      <span class="handle">${esc(handleAt(v && v.author))}</span>
+      ${cat ? `<span class="badge ${catCls}">${cat}${!isNil(v && v.rank) ? " · #" + esc(v.rank) : ""}</span>` : ""}
+    </div>
+    <div class="card-text clamped">${esc(body)}</div>
+    <div class="meta-row">
+      <span class="kv">${icon("zap", 13)} xn <b>${fmt1(v && v.xn_score)}</b></span>
+      <span class="kv">${icon("activity", 13)} vel <b>${fmt1(v && v.velocity)}</b></span>
+      <span class="kv">${icon("eye", 13)} <b>${fmtInt(v && v.views)}</b></span>
+      <span class="kv">${icon("heart", 13)} <b>${fmtInt(v && v.likes)}</b></span>
+      ${!isNil(v && v.source) ? `<span class="kv">src <b>${esc(v.source)}</b></span>` : ""}
+    </div>
+    ${url ? `<div class="btn-row"><button class="btn wide" data-url="${url}">${icon("link", 16)} Открыть пост</button></div>` : ""}
+  </div>`;
+}
+
+/* =========================================================
+ * SECTION 3 — Аналитика
+ * =======================================================*/
+async function renderAnalytics() {
+  const sec = document.getElementById("sec-analytics");
+  retryRegistry["analytics"] = renderAnalytics;
+  sec.innerHTML =
+    `<div id="an-overview">${skeletons(2)}</div>` +
+    `<div class="section-label">${icon("layers", 15)} Топ-паттерны</div>` +
+    `<div id="an-patterns">${skeletons(2)}</div>`;
+  loadOverview();
+  loadPatterns();
+}
+
+async function loadOverview() {
+  const host = document.getElementById("an-overview");
+  if (!host) return;
+  try {
+    const data = await api("GET", "/api/analytics/overview") || {};
+    const accounts = asArray(data.accounts);
+    let html = `<div class="stat-card"><div class="stat-value">${fmtInt(data.published_total)}</div><div class="stat-label">Всего опубликовано</div></div>`;
+    html += `<div class="section-label">${icon("users", 15)} Аккаунты</div>`;
+    if (!accounts.length) {
+      html += emptyState("Ничего нет");
+    } else {
+      html += accounts.map(a => {
+        const d = signed(a && a.follower_delta);
+        return `<div class="card">
+          <div class="card-head">
+            <span class="handle">${esc(handleAt(a && a.handle))}</span>
+            <span class="badge ${statusBadge(a && a.status)}">${esc(txt(a && a.status))}</span>
+          </div>
+          <div class="meta-row">
+            <span class="kv">warmup <b>${txt(a && a.warmup_day)}</b></span>
+            <span class="kv">Δ подписчиков ${d.html}</span>
+          </div>
+        </div>`;
+      }).join("");
+    }
+    host.innerHTML = html;
+  } catch (err) {
+    host.innerHTML = errorState(err.message, "analytics");
+  }
+}
+
+async function loadPatterns() {
+  const host = document.getElementById("an-patterns");
+  if (!host) return;
+  try {
+    const data = await api("GET", "/api/analytics/patterns?limit=20");
+    let list = asArray(data).slice();
+    if (!list.length) { host.innerHTML = emptyState("Ничего нет"); return; }
+    list.sort((a, b) => (Number(b && b.weight) || 0) - (Number(a && a.weight) || 0));
+    const max = Math.max.apply(null, list.map(p => Math.abs(Number(p && p.weight) || 0)).concat([0.0001]));
+    host.innerHTML = list.map(p => {
+      const name = (p && (p.label || p.name || p.structure)) || ("Паттерн #" + txt(p && p.id));
+      const w = Number(p && p.weight);
+      const pct = Number.isFinite(w) ? Math.max(2, Math.min(100, Math.round(Math.abs(w) / max * 100))) : 0;
+      return `<div class="card">
+        <div class="card-head">
+          <span style="font-weight:600;font-size:14px">${esc(name)}</span>
+          <span class="badge score">${fmt2(p && p.weight)}</span>
+        </div>
+        <div class="bar-track"><div class="bar-fill" style="width:${pct}%"></div></div>
+      </div>`;
+    }).join("");
+  } catch (err) {
+    host.innerHTML = errorState(err.message, "analytics");
+  }
+}
+
+function statusBadge(status) {
+  const s = String(status || "").toLowerCase();
+  if (s.includes("active") || s.includes("running") || s.includes("live")) return "green";
+  if (s.includes("warmup") || s.includes("warming")) return "amber";
+  if (s.includes("paused") || s.includes("banned") || s.includes("error")) return "grey";
+  return "blue";
+}
+
+/* =========================================================
+ * SECTION 4 — Аккаунты
+ * =======================================================*/
+async function renderAccounts() {
+  const sec = document.getElementById("sec-accounts");
+  retryRegistry["accounts"] = renderAccounts;
+  sec.innerHTML =
+    `<button class="collapsible-toggle" id="acctToggle">${icon("plus", 18)} Добавить аккаунт</button>` +
+    `<div class="form ${ui.acctFormOpen ? "" : "hidden"}" id="acctForm">
+      <div class="field"><label>handle <span class="req">*</span></label><input id="ac-handle" placeholder="@username" /></div>
+      <div class="field"><label>threads_user_id</label><input id="ac-tuid" placeholder="123456" /></div>
+      <div class="field"><label>access_token</label><input id="ac-token" placeholder="THQ..." /></div>
+      <div class="field"><label>niche_id</label><input id="ac-niche" type="number" inputmode="numeric" placeholder="1" /></div>
+      <div class="field"><label>tone_of_voice</label><input id="ac-tone" placeholder="дружелюбный, экспертный…" /></div>
+      <button class="btn primary wide" id="acctSubmit">${icon("check", 16)} Создать</button>
+    </div>` +
+    `<div id="acct-list">${skeletons(3)}</div>`;
+
+  document.getElementById("acctToggle").addEventListener("click", () => {
+    ui.acctFormOpen = !ui.acctFormOpen;
+    document.getElementById("acctForm").classList.toggle("hidden", !ui.acctFormOpen);
+    haptic("impact", "light");
+  });
+  document.getElementById("acctSubmit").addEventListener("click", submitAccount);
+  loadAccounts();
+}
+
+async function submitAccount() {
+  const btn = document.getElementById("acctSubmit");
+  const handle = document.getElementById("ac-handle").value.trim();
+  if (!handle) { toast("Укажите handle", true); haptic("notify", "error"); return; }
+  const body = {};
+  body.handle = handle;
+  const tuid = document.getElementById("ac-tuid").value.trim();
+  const token = document.getElementById("ac-token").value.trim();
+  const niche = document.getElementById("ac-niche").value.trim();
+  const tone = document.getElementById("ac-tone").value.trim();
+  if (tuid) body.threads_user_id = tuid;
+  if (token) body.access_token = token;
+  if (niche) body.niche_id = Number(niche);
+  if (tone) body.tone_of_voice = tone;
+  haptic("impact", "medium");
+  const ok = await doAction(btn, () => api("POST", "/api/accounts", body), "Аккаунт добавлен");
+  if (ok) {
+    ["ac-handle","ac-tuid","ac-token","ac-niche","ac-tone"].forEach(i => { document.getElementById(i).value = ""; });
+    ui.acctFormOpen = false;
+    renderAccounts();
+  }
+}
+
+async function loadAccounts() {
+  const host = document.getElementById("acct-list");
+  if (!host) return;
+  try {
+    const data = await api("GET", "/api/accounts");
+    const list = asArray(data);
+    if (!list.length) { host.innerHTML = emptyState("Ничего нет"); return; }
+    host.innerHTML = list.map(accountCard).join("");
+    host.querySelectorAll("[data-warmup]").forEach(btn => {
+      btn.addEventListener("click", async () => {
+        const id = btn.dataset.warmup;
+        if (!(await confirmTg("Выполнить warmup tick для аккаунта?"))) return;
+        haptic("impact", "medium");
+        const ok = await doAction(btn, () => api("POST", `/api/accounts/${id}/warmup-tick`), "Warmup выполнен");
+        if (ok) renderAccounts();
+      });
+    });
+  } catch (err) {
+    host.innerHTML = errorState(err.message, "accounts");
+  }
+}
+
+function accountCard(a) {
+  const id = esc(a && a.id);
+  const hasToken = a && a.has_token;
+  return `<div class="card">
+    <div class="card-head">
+      <span class="handle">${esc(handleAt(a && a.handle))}</span>
+      <span class="badge ${statusBadge(a && a.status)}">${esc(txt(a && a.status))}</span>
+    </div>
+    <div class="meta-row">
+      <span class="kv">id <b>${txt(a && a.id)}</b></span>
+      <span class="kv">tuid <b>${txt(a && a.threads_user_id)}</b></span>
+      <span class="kv">niche <b>${txt(a && a.niche_id)}</b></span>
+      <span class="kv">warmup <b>${txt(a && a.warmup_day)}</b></span>
+      <span class="kv">post cap <b>${txt(a && a.daily_post_cap)}</b></span>
+      <span class="kv">reply cap <b>${txt(a && a.daily_reply_cap)}</b></span>
+      <span class="badge ${hasToken ? "green" : "grey"}">${hasToken ? "токен есть" : "нет токена"}</span>
+    </div>
+    ${!isNil(a && a.tone_of_voice) ? `<div class="meta-row"><span class="kv">tone <b>${esc(a.tone_of_voice)}</b></span></div>` : ""}
+    <div class="btn-row">
+      <button class="btn wide" data-warmup="${id}">${icon("sprout", 16)} Warmup tick</button>
+    </div>
+  </div>`;
+}
+
+/* =========================================================
+ * SECTION 5 — Конкуренты
+ * =======================================================*/
+async function renderCompetitors() {
+  const sec = document.getElementById("sec-competitors");
+  retryRegistry["competitors"] = renderCompetitors;
+  sec.innerHTML =
+    `<button class="collapsible-toggle" id="compToggle">${icon("plus", 18)} Добавить конкурента</button>` +
+    `<div class="form ${ui.compFormOpen ? "" : "hidden"}" id="compForm">
+      <div class="field"><label>platform <span class="req">*</span></label>
+        <select id="cp-platform">
+          <option value="threads">threads</option>
+          <option value="twitter">twitter</option>
+          <option value="reddit">reddit</option>
+        </select></div>
+      <div class="field"><label>username <span class="req">*</span></label><input id="cp-username" placeholder="@username" /></div>
+      <div class="field"><label>profile_url</label><input id="cp-url" placeholder="https://…" /></div>
+      <div class="field"><label>niche</label><input id="cp-niche" placeholder="ниша" /></div>
+      <button class="btn primary wide" id="compSubmit">${icon("check", 16)} Добавить</button>
+    </div>` +
+    `<div id="comp-list">${skeletons(3)}</div>`;
+
+  document.getElementById("compToggle").addEventListener("click", () => {
+    ui.compFormOpen = !ui.compFormOpen;
+    document.getElementById("compForm").classList.toggle("hidden", !ui.compFormOpen);
+    haptic("impact", "light");
+  });
+  document.getElementById("compSubmit").addEventListener("click", submitCompetitor);
+  loadCompetitors();
+}
+
+async function submitCompetitor() {
+  const btn = document.getElementById("compSubmit");
+  const platform = document.getElementById("cp-platform").value.trim();
+  const username = document.getElementById("cp-username").value.trim();
+  if (!platform) { toast("Укажите платформу", true); haptic("notify", "error"); return; }
+  if (!username) { toast("Укажите username", true); haptic("notify", "error"); return; }
+  const body = { platform, username };
+  const url = document.getElementById("cp-url").value.trim();
+  const niche = document.getElementById("cp-niche").value.trim();
+  if (url) body.profile_url = url;
+  if (niche) body.niche = niche;
+  haptic("impact", "medium");
+  const ok = await doAction(btn, () => api("POST", "/api/competitors", body), "Конкурент добавлен");
+  if (ok) {
+    ["cp-username","cp-url","cp-niche"].forEach(i => { document.getElementById(i).value = ""; });
+    ui.compFormOpen = false;
+    renderCompetitors();
+  }
+}
+
+async function loadCompetitors() {
+  const host = document.getElementById("comp-list");
+  if (!host) return;
+  try {
+    const data = await api("GET", "/api/competitors?active_only=true");
+    const list = asArray(data);
+    if (!list.length) { host.innerHTML = emptyState("Ничего нет"); return; }
+    host.innerHTML = list.map(competitorCard).join("");
+    host.querySelectorAll("[data-url]").forEach(el =>
+      el.addEventListener("click", () => { haptic("impact", "light"); openLink(el.dataset.url); }));
+    host.querySelectorAll("[data-del]").forEach(btn => {
+      btn.addEventListener("click", async () => {
+        const id = btn.dataset.del;
+        if (!(await confirmTg("Убрать этого конкурента?"))) return;
+        haptic("impact", "medium");
+        const ok = await doAction(btn, () => api("DELETE", `/api/competitors/${id}`), "Конкурент удалён");
+        if (ok) removeCard(btn);
+      });
+    });
+  } catch (err) {
+    host.innerHTML = errorState(err.message, "competitors");
+  }
+}
+
+function competitorCard(c) {
+  const id = esc(c && c.id);
+  return `<div class="card">
+    <div class="card-head">
+      <span class="handle">${esc(handleAt(c && c.username))}</span>
+      <span class="badge blue">${esc(txt(c && c.platform))}</span>
+    </div>
+    <div class="meta-row">
+      ${!isNil(c && c.niche) ? `<span class="kv">ниша <b>${esc(c.niche)}</b></span>` : ""}
+      <span class="badge ${c && c.is_active ? "green" : "grey"}">${c && c.is_active ? "активен" : "неактивен"}</span>
+    </div>
+    <div class="btn-row">
+      ${!isNil(c && c.profile_url) ? `<button class="btn" data-url="${esc(c.profile_url)}">${icon("link", 16)} Профиль</button>` : ""}
+      <button class="btn danger" data-del="${id}">${icon("trash", 16)} Убрать</button>
+    </div>
+  </div>`;
+}
+
+/* =========================================================
+ * Init
+ * =======================================================*/
+buildTabs();
+document.getElementById("sec-review").classList.add("active");
+renderReview();
+</script>
+</body>
+</html>
