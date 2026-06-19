@@ -17,7 +17,7 @@ import { pool, query, queryOne, withTx, waitForDb } from './lib/db.js';
 import { getHandler, SUPPORTED_KINDS } from './handlers/index.js';
 import { isAnthropicConfigured } from './lib/anthropic.js';
 import { isTgConfigured } from './lib/tg.js';
-import { registerWebhook } from './lib/webhook.js';
+import { bootstrapOwnerHqMenu, registerWebhook } from './lib/webhook.js';
 import { isWhisperConfigured } from './lib/whisper.js';
 import { isHeygenConfigured } from './lib/heygen.js';
 import { isSubmagicConfigured, isBypass as isSubmagicBypass } from './lib/submagic.js';
@@ -57,6 +57,7 @@ let fastify;
   registerWebhook(fastify);
   await fastify.listen({ host: '0.0.0.0', port: HTTP_PORT });
   console.log(`[worker] http listening on :${HTTP_PORT}`);
+  bootstrapOwnerHqMenu().catch((e) => console.warn('[worker] bootstrapOwnerHqMenu failed:', e?.message));
 
   // Start loops.
   scheduleTick(jobTick, POLL_INTERVAL_MS, 'jobTick');
