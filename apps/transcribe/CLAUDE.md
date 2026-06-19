@@ -28,7 +28,7 @@ The app degrades gracefully when these are missing — set them in
 - `DEEPGRAM_API_KEY` — `src/app/api/transcribe/route.ts` for non-YouTube URLs.
 - `NEXT_PUBLIC_SUPABASE_URL`, `NEXT_PUBLIC_SUPABASE_ANON_KEY` — browser client (`src/lib/supabase.ts`)
 - `SUPABASE_SERVICE_KEY` — server routes via `src/lib/transcripts-db.ts`. Required for history + generation caching. **Do not expose to client.**
-- `YTDLP_SERVICE_URL` (optional) — base URL of `apps/ytdlp` service. When set, `/api/transcribe` falls back to yt-dlp + Deepgram for YouTube when our captions parser is IP-blocked; uses yt-dlp + Deepgram for TikTok / X (and as Instagram backup when `APIFY_API_TOKEN` is unset or Apify fails).
+- `YTDLP_SERVICE_URL` (optional) — base URL of the `services/python/ytdlp` service. When set, `/api/transcribe` falls back to yt-dlp + Deepgram for YouTube when our captions parser is IP-blocked; uses yt-dlp + Deepgram for TikTok / X (and as Instagram backup when `APIFY_API_TOKEN` is unset or Apify fails).
 - `YTDLP_SERVICE_API_KEY` (optional) — main app sends `Authorization: Bearer <key>`.
 - `APIFY_API_TOKEN` (optional) — Instagram URLs go through `apify/instagram-scraper` instead of yt-dlp.
 - `OPENAI_API_KEY` — required by `/api/me/documents` (POST) and `/api/me/chat` for `text-embedding-3-small`. Without it the `/me` library can't ingest new documents or do retrieval; the page falls back to a no-RAG mode.
