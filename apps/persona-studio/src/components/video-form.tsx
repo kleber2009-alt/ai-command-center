@@ -14,9 +14,6 @@ import {
   type VoiceProvider,
 } from '@/lib/video-engines';
 
-const PERSONA_TRAIN_URL =
-  process.env.NEXT_PUBLIC_PERSONA_TRAIN_URL ?? 'https://persona-train.46-62-215-11.nip.io';
-
 type Avatar = {
   id: string;
   styleLabel: string;
@@ -89,7 +86,7 @@ export function VideoForm({
   const customActive = cfg.voiceProvider === 'elevenlabs' && customVoiceId.trim().length > 0;
   const effectiveVoiceId = customActive ? customVoiceId.trim() : voiceId;
   const voice = customActive
-    ? { voice_id: customVoiceId.trim(), label: 'Custom (IVC)', language: 'ru' }
+    ? { voice_id: customVoiceId.trim(), label: 'Свой голос', language: 'ru' }
     : voiceCatalog.find((v) => v.voice_id === voiceId) ?? voiceCatalog[0];
 
   const submit = async (e: React.FormEvent) => {
@@ -256,10 +253,10 @@ export function VideoForm({
           label="Voice"
           hint={
             customActive
-              ? '↓ используется Custom voice (IVC) — preset из dropdown игнорируется'
+              ? '↓ используется свой голос — пресет из списка игнорируется'
               : cfg.voiceProvider === 'heygen'
-                ? 'Голос HeyGen + язык'
-                : 'ElevenLabs · мультиязык (ru/en)'
+                ? 'Встроенный голос + язык'
+                : 'Голос · мультиязык (ru/en)'
           }
         >
           <select
@@ -278,11 +275,11 @@ export function VideoForm({
 
         {cfg.voiceProvider === 'elevenlabs' && (
           <Field
-            label="Custom voice (IVC)"
+            label="Свой голос (ID)"
             hint={
               <>
-                Свой обученный голос из <a href={`${PERSONA_TRAIN_URL}/cabinet`} target="_blank" rel="noopener noreferrer" className="text-cyan hover:underline">Persona Train</a>.
-                Вставь сюда <code className="mono text-cyan">voice_id</code> — он перебьёт preset выше. Сохраняется локально.
+                Свой обученный голос — вставьте <code className="mono text-cyan">ID</code>, он перебьёт
+                выбранный из списка. Сохраняется локально.
               </>
             }
           >
@@ -292,7 +289,7 @@ export function VideoForm({
                 className="input mono flex-1"
                 value={customVoiceId}
                 onChange={(e) => setCustomVoiceId(e.target.value)}
-                placeholder="elv_xxxxxxxxxxxxxxxxxxxxxxxxx"
+                placeholder="ID голоса"
                 spellCheck={false}
                 autoComplete="off"
               />

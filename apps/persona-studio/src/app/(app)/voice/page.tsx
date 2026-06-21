@@ -11,7 +11,7 @@ const PILLARS = [
   {
     kicker: 'voice cloning',
     title: 'Клон голоса из накопленного',
-    body: 'Шлёшь голосовые в Telegram — бот складывает в samples. На пороге 180с автоматически переклонирует через ElevenLabs IVC.',
+    body: 'Шлёшь голосовые в Telegram — бот складывает в samples. На пороге 180с автоматически переклонирует голос.',
     endpoint: 'POST /api/voice/train',
   },
   {
@@ -23,13 +23,13 @@ const PILLARS = [
   {
     kicker: 'voice analyzer',
     title: 'Профиль голоса бренда',
-    body: 'Транскрипт → Claude Sonnet 4.6 → структурированный JSON (tone, values, favorite_phrases, style_examples).',
+    body: 'Транскрипт → AI-анализ → структурированный JSON (tone, values, favorite_phrases, style_examples).',
     endpoint: 'POST /api/voice/analyze',
   },
   {
     kicker: 'avatar training',
     title: 'Аватар из кружков',
-    body: 'Кружки копятся как avatar_samples. /avatar → пайплайн в HeyGen/Higgsfield.',
+    body: 'Кружки копятся как avatar_samples. /avatar → пайплайн генерации аватара.',
     endpoint: 'POST /api/avatar/train',
   },
 ];
@@ -37,7 +37,7 @@ const PILLARS = [
 const STEPS = [
   {
     title: 'Привязка',
-    body: 'В кабинете Persona Train создаёшь one-time код, в боте /start @твой_handle XXX-XXX. Чат привязан к owner.',
+    body: 'В кабинете обучения голоса создаёшь one-time код, в боте /start @твой_handle XXX-XXX. Чат привязан к owner.',
   },
   {
     title: 'Шли голосовые',
@@ -49,7 +49,7 @@ const STEPS = [
   },
   {
     title: 'В Persona Studio',
-    body: 'Берёшь voice_id из кабинета Persona Train, вставляешь в форму генерации видео — аватар заговорит твоим голосом (engine ElevenLabs).',
+    body: 'Берёшь ID голоса из кабинета, вставляешь в форму генерации видео — аватар заговорит твоим голосом.',
   },
 ];
 
@@ -57,7 +57,7 @@ export default function VoicePage() {
   return (
     <div className="grid gap-12">
       <PageHero
-        eyebrow="PERSONA TRAIN · IVC · 02"
+        eyebrow="ОБУЧЕНИЕ ГОЛОСА · 02"
         title={
           <>
             Train your avatar
@@ -67,8 +67,8 @@ export default function VoicePage() {
         }
         description={
           <>
-            Send voice notes to the Telegram bot — samples accumulate, ElevenLabs IVC clones your timbre.
-            You get a personal <code className="mono text-[12px] text-gold">voice_id</code> that you paste
+            Send voice notes to the Telegram bot — samples accumulate and your timbre is cloned.
+            You get a personal <code className="mono text-[12px] text-gold">voice ID</code> that you paste
             into the video form, and the avatar starts narrating any script in your voice.
           </>
         }
@@ -86,9 +86,9 @@ export default function VoicePage() {
           </>
         }
         actions={[
-          { label: 'Open Persona Train', href: `${PERSONA_TRAIN_URL}/cabinet` },
+          { label: 'Открыть кабинет голоса', href: `${PERSONA_TRAIN_URL}/cabinet` },
           { label: 'Telegram bot', href: PERSONA_TRAIN_BOT, tone: 'ghost' },
-          { label: 'I already have voice_id', href: '/videos/new', tone: 'ghost' },
+          { label: 'У меня уже есть ID голоса', href: '/videos/new', tone: 'ghost' },
         ]}
       />
 
@@ -147,21 +147,20 @@ export default function VoicePage() {
         </h2>
         <ol className="grid gap-3 text-[13px] leading-relaxed text-text-dim list-decimal pl-5">
           <li>
-            Открой <a href={`${PERSONA_TRAIN_URL}/cabinet`} target="_blank" rel="noopener noreferrer" className="text-cyan hover:underline">кабинет Persona Train</a>,
+            Открой <a href={`${PERSONA_TRAIN_URL}/cabinet`} target="_blank" rel="noopener noreferrer" className="text-cyan hover:underline">кабинет обучения голоса</a>,
             привяжи Telegram-бот и накачай голосовых.
           </li>
-          <li>После <code className="mono text-[12px] text-cyan">/train</code> скопируй свой <code className="mono text-[12px] text-cyan">voice_id</code> (ElevenLabs IVC).</li>
+          <li>После <code className="mono text-[12px] text-cyan">/train</code> скопируй свой <code className="mono text-[12px] text-cyan">ID голоса</code>.</li>
           <li>
-            На странице <Link href="/videos/new" className="text-cyan hover:underline">/videos/new</Link> выбери
-            движок с провайдером <code className="mono text-[12px] text-cyan">ElevenLabs</code> и
-            вставь свой <code className="mono text-[12px] text-cyan">voice_id</code> в поле «Custom voice (IVC)».
+            На странице <Link href="/videos/new" className="text-cyan hover:underline">/videos/new</Link> вставь
+            свой <code className="mono text-[12px] text-cyan">ID голоса</code> в поле «Свой голос (ID)».
           </li>
           <li>Аватар озвучит скрипт твоим голосом.</li>
         </ol>
       </section>
 
       <footer className="text-center mono text-[10px] tracking-[0.15em] text-text-mute">
-        Persona Train · ElevenLabs IVC · Anthropic Sonnet 4.6
+        Обучение голоса · клонирование тембра · AI-анализ
       </footer>
     </div>
   );

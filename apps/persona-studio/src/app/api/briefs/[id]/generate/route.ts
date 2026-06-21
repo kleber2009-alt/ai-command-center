@@ -75,17 +75,20 @@ export async function POST(req: NextRequest, { params }: { params: Promise<{ id:
   });
 
   if (!gen.ok) {
+    // §3 white-label: сырую ошибку модели логируем, клиенту — нейтральный текст.
+    console.error('[studio-script] generation failed:', gen.error);
     await refundTokens({
       userId: ctx.user.id,
       amount: SCRIPT_CREDITS,
       reason: `studio-script-refund:${brief.id}`,
     });
+    const clientMsg = 'Не удалось сгенерировать сценарий. Повторите попытку.';
     const failed = await prisma.generation.update({
       where: { id: generation.id },
-      data: { stage: 'error', status: 'failed', errorMsg: gen.error, costCredits: 0 },
+      data: { stage: 'error', status: 'failed', errorMsg: clientMsg, costCredits: 0 },
     });
     return NextResponse.json(
-      { ok: false, error: gen.error, generation: serializeGeneration(failed) },
+      { ok: false, error: clientMsg, generation: serializeGeneration(failed) },
       { status: 502 },
     );
   }
