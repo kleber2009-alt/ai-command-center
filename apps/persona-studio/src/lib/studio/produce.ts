@@ -227,9 +227,15 @@ export async function advanceGeneration(opts: { userId: string; generationId: st
     if (vg.status === 'completed' && vg.videoUrl) {
       await prisma.generation.update({ where: { id: gen.id }, data: { status: 'completed' } });
     } else if (vg.status === 'failed') {
+      // §3 white-label: не выносим наружу сырые ошибки провайдеров
+      // (TTS/озвучка/видео-движок) — нейтральный текст для клиента.
       await prisma.generation.update({
         where: { id: gen.id },
-        data: { stage: 'error', status: 'failed', errorMsg: vg.errorMsg ?? 'video_failed' },
+        data: {
+          stage: 'error',
+          status: 'failed',
+          errorMsg: 'Не удалось сгенерировать видео. Попробуйте другой голос или повторите.',
+        },
       });
     }
     return;
@@ -246,7 +252,7 @@ export async function advanceGeneration(opts: { userId: string; generationId: st
       // Видео осталось — откатываем стадию на video/completed, монтаж можно повторить.
       await prisma.generation.update({
         where: { id: gen.id },
-        data: { stage: 'video', status: 'completed', errorMsg: ve.errorMsg ?? 'montage_failed' },
+        data: { stage: 'video', status: 'completed', errorMsg: 'Не удалось смонтировать. Повторите попытку.' },
       });
     }
   }

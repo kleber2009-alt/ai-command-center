@@ -7,12 +7,17 @@
 
 import { useMemo, useState } from 'react';
 import { Plus, Star, Trash2, Pencil, Check, X, Mic, Palette } from 'lucide-react';
+import { ELEVENLABS_VOICE_PRESETS } from '@/lib/elevenlabs-voices';
 import type {
   PersonaAvatarOption,
   PersonaTone,
   PersonaToneLength,
   PersonaView,
 } from '@/lib/studio/types';
+
+// Нейтральный каталог голосов (без бренда провайдера) для пикера персоны.
+const VOICE_OPTIONS = ELEVENLABS_VOICE_PRESETS.map((v) => ({ id: v.voice_id, label: v.label }));
+const VOICE_PRESET_IDS = new Set(VOICE_OPTIONS.map((v) => v.id));
 
 type Props = {
   initialPersonas: PersonaView[];
@@ -373,13 +378,30 @@ function PersonaForm({
             ))}
           </div>
         </Field>
-        <Field label="ElevenLabs voice id">
-          <input
-            value={form.voiceId}
+        <Field label="Голос">
+          <select
+            value={VOICE_PRESET_IDS.has(form.voiceId) ? form.voiceId : ''}
             onChange={(e) => set('voiceId', e.target.value)}
-            placeholder="напр. 21m00Tcm4TlvDq8ikWAM"
-            className="w-full bg-bg border border-border px-3 py-2 mono text-[12px] text-text placeholder:text-text-mute focus:border-gold outline-none"
-          />
+            className="w-full bg-bg border border-border px-3 py-2 font-serif text-[13px] text-text focus:border-gold outline-none"
+          >
+            <option value="">— выберите голос —</option>
+            {VOICE_OPTIONS.map((v) => (
+              <option key={v.id} value={v.id}>
+                {v.label}
+              </option>
+            ))}
+          </select>
+          <details className="mt-1">
+            <summary className="mono text-[9px] tracking-widest uppercase text-text-mute cursor-pointer hover:text-text">
+              свой голос (ID)
+            </summary>
+            <input
+              value={VOICE_PRESET_IDS.has(form.voiceId) ? '' : form.voiceId}
+              onChange={(e) => set('voiceId', e.target.value)}
+              placeholder="ID голоса"
+              className="mt-1 w-full bg-bg border border-border px-3 py-2 mono text-[12px] text-text placeholder:text-text-mute focus:border-gold outline-none"
+            />
+          </details>
         </Field>
       </div>
 
