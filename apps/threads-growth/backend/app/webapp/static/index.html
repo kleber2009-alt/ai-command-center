@@ -896,6 +896,27 @@ async function loadViral() {
     host.querySelectorAll("[data-url]").forEach(el => {
       el.addEventListener("click", () => { haptic("impact", "light"); openLink(el.dataset.url); });
     });
+    host.querySelectorAll("[data-adapt]").forEach(el => {
+      el.addEventListener("click", async () => {
+        if (!(await confirmTg("Сгенерировать адаптации этого поста под ваш стиль? Черновики появятся во вкладке «Ревью»."))) return;
+        el.disabled = true;
+        const orig = el.innerHTML;
+        el.innerHTML = `<div class="spinner" style="width:16px;height:16px;margin:0;border-width:2px"></div> Адаптирую…`;
+        haptic("impact", "medium");
+        try {
+          const r = await api("POST", "/api/content/generate/" + encodeURIComponent(el.dataset.adapt));
+          const n = r && (r.generated != null ? r.generated : (Array.isArray(r && r.drafts) ? r.drafts.length : 0));
+          haptic("notify", "success");
+          el.innerHTML = `${icon("check", 16)} ${(n || 0)} в «Ревью»`;
+          toast(n ? (n + " черновик(ов) создано, см. «Ревью»") : "Адаптации не прошли гейт уникальности", !n);
+        } catch (err) {
+          haptic("notify", "error");
+          el.disabled = false;
+          el.innerHTML = orig;
+          toast(err.message || "Ошибка", true);
+        }
+      });
+    });
   } catch (err) {
     host.innerHTML = errorState(err.message, "viral");
   }
@@ -919,7 +940,10 @@ function viralCard(v) {
       <span class="kv">${icon("heart", 13)} <b>${fmtInt(v && v.likes)}</b></span>
       ${!isNil(v && v.source) ? `<span class="kv">src <b>${esc(v.source)}</b></span>` : ""}
     </div>
-    ${url ? `<div class="btn-row"><button class="btn wide" data-url="${url}">${icon("link", 16)} Открыть пост</button></div>` : ""}
+    ${(!isNil(v && v.id) || url) ? `<div class="btn-row">
+      ${!isNil(v && v.id) ? `<button class="btn primary" data-adapt="${esc(v.id)}">${icon("sprout", 16)} Адаптировать</button>` : ""}
+      ${url ? `<button class="btn" data-url="${url}">${icon("link", 16)} Открыть</button>` : ""}
+    </div>` : ""}
   </div>`;
 }
 
