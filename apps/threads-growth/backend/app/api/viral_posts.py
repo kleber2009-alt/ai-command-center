@@ -37,10 +37,16 @@ def get_viral_post(post_id: int, db: Session = Depends(get_session)):
 @router.post("/scrape")
 def trigger_scrape(source: str = "threads", query: str = "", limit: int = 100,
                    db: Session = Depends(get_session)):
-    """Синхронный прогон дискавери (в проде дёргается n8n-кроном через воркер)."""
+    """Синхронный прогон дискавери: сохранить свежую виралку и сразу отскорить
+    (xn/velocity/category), чтобы лента отдавала уже ранжированные посты.
+    В проде тот же путь дёргает n8n-крон через воркер (scrape → rescore)."""
     from app.services.scraper_service import collect_and_store
+    from app.workers.scrape_worker import rescore
 
     try:
-        return collect_and_store(db, source, query, limit)
+        result = collect_and_store(db, source, query, limit)
     except RuntimeError as e:
         raise HTTPException(503, str(e))
+    db.commit()                     # без коммита get_session-сессия откатит вставки
+    scoring = rescore()             # считает xn/category для status='new' (своя транзакция)
+    return {**result, **scoring}
