@@ -637,6 +637,7 @@ const TABS = [
 ];
 let activeTab = "review";
 const viralFilter = { category: "" };
+let viralQuery = "";
 const ui = { acctFormOpen: false, compFormOpen: false };
 
 /* =========================================================
@@ -850,7 +851,9 @@ async function renderViral() {
     `<button class="chip ${viralFilter.category === c ? "active" : ""}" data-cat="${c}">${c === "" ? "Все" : c}</button>`
   ).join("");
   sec.innerHTML =
-    `<button class="btn primary wide top-action" id="scrapeBtn">${icon("search", 16)} Запустить скрейп</button>` +
+    `<div class="field"><label>Поиск залетевших постов по теме</label>
+       <input id="scrapeQuery" placeholder="напр. AI-агенты, деньги, запуск" value="${esc(viralQuery)}" /></div>` +
+    `<button class="btn primary wide top-action" id="scrapeBtn">${icon("search", 16)} Найти в Threads</button>` +
     `<div class="chips" id="viral-chips">${chipsHtml}</div>` +
     `<div id="viral-list">${skeletons(3)}</div>`;
 
@@ -863,20 +866,26 @@ async function renderViral() {
   });
 
   document.getElementById("scrapeBtn").addEventListener("click", async () => {
-    if (!(await confirmTg("Запустить скрейп виральных постов? Это может занять время."))) return;
+    const q = (document.getElementById("scrapeQuery").value || "").trim();
+    viralQuery = q;
+    if (!q) { toast("Введите тему или ключевое слово", true); return; }
+    if (!(await confirmTg(`Найти залетевшие посты по теме «${q}»? Это может занять до минуты.`))) return;
     const btn = document.getElementById("scrapeBtn");
     btn.disabled = true;
-    btn.innerHTML = `<div class="spinner" style="width:16px;height:16px;margin:0;border-width:2px"></div> Скрейпинг…`;
+    btn.innerHTML = `<div class="spinner" style="width:16px;height:16px;margin:0;border-width:2px"></div> Ищу в Threads…`;
     haptic("impact", "medium");
     try {
-      await api("POST", "/api/viral-posts/scrape?source=threads&query=&limit=100");
+      const r = await api("POST", "/api/viral-posts/scrape?source=threads&limit=100&query=" + encodeURIComponent(q));
       haptic("notify", "success");
-      toast("Скрейп запущен");
+      const saved = r && (r.saved != null ? r.saved : 0);
+      toast(saved ? (saved + " новых постов найдено") : "Новых постов не найдено", !saved);
     } catch (err) {
       haptic("notify", "error");
       toast(err.message || "Ошибка", true);
     } finally {
-      renderViral();
+      loadViral();
+      const b = document.getElementById("scrapeBtn");
+      if (b) { b.disabled = false; b.innerHTML = `${icon("search", 16)} Найти в Threads`; }
     }
   });
 

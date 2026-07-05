@@ -19,9 +19,14 @@ class Settings(BaseSettings):
 
     # — Дискавери (Apify) —
     apify_token: str = ""
-    apify_threads_actor: str = ""        # id актора-скрейпера Threads
+    apify_threads_actor: str = ""        # id актора-скрейпера Threads (напр. futurizerush/meta-threads-scraper)
     apify_twitter_actor: str = ""
     apify_reddit_actor: str = ""
+    # JSON-шаблон run_input под конкретного актора (плейсхолдеры "{query}"/{limit}).
+    # Пусто = дефолт keywords[]/resultsLimit/sort. Задать, если у актора иные ключи.
+    apify_threads_input: str = ""
+    apify_twitter_input: str = ""
+    apify_reddit_input: str = ""
     lookback_hours: int = 72             # фильтр свежести дискавери (§5)
     dedup_threshold: float = 0.92        # косинус-дубль по embedding (§5)
 

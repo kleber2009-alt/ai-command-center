@@ -7,6 +7,7 @@ apify-client импортируется лениво; без APIFY_TOKEN/акт�
 """
 from __future__ import annotations
 
+import json
 from dataclasses import dataclass, field
 from datetime import datetime, timedelta, timezone
 
@@ -81,12 +82,30 @@ def normalize_post_data(source: str, raw: dict) -> NormalizedPost:
     )
 
 
+def _run_input(source: str, query: str, limit: int) -> dict:
+    """run_input актора для keyword-поиска. Схемы акторов разнятся, поэтому форму
+    можно переопределить JSON-шаблоном в env (APIFY_THREADS_INPUT и т.п.):
+    плейсхолдеры `"{query}"` (подставится как JSON-строка) и `{limit}` (число).
+    Дефолт рассчитан на актор с полями keywords[]/resultsLimit/sort
+    (напр. futurizerush/meta-threads-scraper). Свежесть фильтруем сами (_is_fresh),
+    поэтому дату в input не закладываем."""
+    template = {
+        "threads": settings.apify_threads_input,
+        "twitter": settings.apify_twitter_input,
+        "reddit": settings.apify_reddit_input,
+    }.get(source, "")
+    if template.strip():
+        raw = template.replace('"{query}"', json.dumps(query)).replace("{limit}", str(int(limit)))
+        return json.loads(raw)
+    return {"keywords": [query] if query else [], "resultsLimit": limit, "sort": "top"}
+
+
 def collect_posts(source: str, query: str, limit: int = 100) -> list[NormalizedPost]:
     actor_id = _ACTORS.get(source, lambda: "")()
     if not actor_id:
         raise RuntimeError(f"Актор Apify для источника '{source}' не настроен в .env.")
     client = _client()
-    run = client.actor(actor_id).call(run_input={"query": query, "resultsLimit": limit})
+    run = client.actor(actor_id).call(run_input=_run_input(source, query, limit))
     items = client.dataset(run["defaultDatasetId"]).iterate_items()
     return [normalize_post_data(source, it) for it in items]
 
