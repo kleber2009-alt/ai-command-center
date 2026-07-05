@@ -1,167 +1,78 @@
 import Link from 'next/link';
 import { PageHero } from '@/components/shell/page-hero';
+import { VoiceClone } from '@/components/voice/voice-clone';
+import { listClonedVoices } from '@/lib/elevenlabs';
 
-export const metadata = { title: 'Voice training — Persona Studio' };
+export const dynamic = 'force-dynamic';
+export const metadata = { title: 'Голос — Persona Studio' };
 
-const PERSONA_TRAIN_URL =
-  process.env.NEXT_PUBLIC_PERSONA_TRAIN_URL ?? 'https://persona-train.46-62-215-11.nip.io';
-const PERSONA_TRAIN_BOT = 'https://t.me/ilia_pali0_bot';
+// Нативное клонирование голоса — целиком внутри persona-studio (один проект,
+// один домен). Загрузка образца → клон на сервере → голос появляется в списке
+// и выбирается в персоне. Без внешних кабинетов и упоминания провайдера.
+export default async function VoicePage() {
+  const voices = await listClonedVoices().catch(() => []);
 
-const PILLARS = [
-  {
-    kicker: 'voice cloning',
-    title: 'Клон голоса из накопленного',
-    body: 'Шлёшь голосовые в Telegram — бот складывает в samples. На пороге 180с автоматически переклонирует голос.',
-    endpoint: 'POST /api/voice/train',
-  },
-  {
-    kicker: 'text-to-voice',
-    title: 'Озвучка любого текста',
-    body: 'Любой текст в боте → voice-note твоим голосом. Дальше пересылаешь native-share Telegram.',
-    endpoint: 'POST /api/voice/generate',
-  },
-  {
-    kicker: 'voice analyzer',
-    title: 'Профиль голоса бренда',
-    body: 'Транскрипт → AI-анализ → структурированный JSON (tone, values, favorite_phrases, style_examples).',
-    endpoint: 'POST /api/voice/analyze',
-  },
-  {
-    kicker: 'avatar training',
-    title: 'Аватар из кружков',
-    body: 'Кружки копятся как avatar_samples. /avatar → пайплайн генерации аватара.',
-    endpoint: 'POST /api/avatar/train',
-  },
-];
-
-const STEPS = [
-  {
-    title: 'Привязка',
-    body: 'В кабинете обучения голоса создаёшь one-time код, в боте /start @твой_handle XXX-XXX. Чат привязан к owner.',
-  },
-  {
-    title: 'Шли голосовые',
-    body: 'Любое voice/audio в бот → попадает в voice_samples. Прогресс-бар к auto-train порогу.',
-  },
-  {
-    title: 'Train / generate',
-    body: '/train пересоздаёт voice_id из накопленного. Дальше любой текст в чат → бот отвечает voice-note.',
-  },
-  {
-    title: 'В Persona Studio',
-    body: 'Берёшь ID голоса из кабинета, вставляешь в форму генерации видео — аватар заговорит твоим голосом.',
-  },
-];
-
-export default function VoicePage() {
   return (
-    <div className="grid gap-12">
+    <div className="grid gap-10">
       <PageHero
-        eyebrow="ОБУЧЕНИЕ ГОЛОСА · 02"
+        eyebrow="ГОЛОС · 02"
         title={
           <>
-            Train your avatar
-            <br />
-            to speak <span className="italic text-gold">in your own voice</span>.
+            Обучите аватар говорить <span className="italic text-gold">вашим голосом</span>.
           </>
         }
         description={
           <>
-            Send voice notes to the Telegram bot — samples accumulate and your timbre is cloned.
-            You get a personal <code className="mono text-[12px] text-gold">voice ID</code> that you paste
-            into the video form, and the avatar starts narrating any script in your voice.
+            Загрузите короткую запись своего голоса — создадим цифровой голос прямо здесь. Дальше
+            выберите его в персоне, и аватар озвучит любой сценарий вашим тембром.
           </>
         }
-        meta={
-          <>
-            <div className="mono text-[9px] tracking-[0.28em] uppercase text-text-muted">External</div>
-            <a
-              href={PERSONA_TRAIN_URL}
-              target="_blank"
-              rel="noopener noreferrer"
-              className="font-serif italic text-gold hover:underline text-[14px]"
-            >
-              {PERSONA_TRAIN_URL.replace(/^https?:\/\//, '')} →
-            </a>
-          </>
-        }
-        actions={[
-          { label: 'Открыть кабинет голоса', href: `${PERSONA_TRAIN_URL}/cabinet` },
-          { label: 'Telegram bot', href: PERSONA_TRAIN_BOT, tone: 'ghost' },
-          { label: 'У меня уже есть ID голоса', href: '/videos/new', tone: 'ghost' },
-        ]}
       />
 
-      {/* ── 4 пилона ───────────────────────────────────── */}
-      <section>
-        <div className="mb-6 flex items-baseline gap-3">
+      <section className="grid gap-3">
+        <div className="flex items-baseline gap-3">
           <span className="sec-num">/01</span>
-          <span className="sec-title">Capabilities</span>
+          <span className="sec-title">Клонировать голос</span>
           <span className="flex-1 border-b border-border translate-y-[-3px]" />
         </div>
-        <div className="grid gap-[2px] md:grid-cols-2 bg-border border border-border">
-          {PILLARS.map((p) => (
-            <div key={p.title} className="bg-surface p-6">
-              <div className="mb-3 mono text-[9px] uppercase tracking-[0.3em] text-text-mute">
-                {p.kicker}
-              </div>
-              <h3 className="font-serif text-[20px] leading-tight">{p.title}</h3>
-              <p className="mt-2 text-[13px] leading-relaxed text-text-dim">{p.body}</p>
-              <code className="mt-4 inline-block bg-surface-2 px-2 py-1 mono text-[10px] text-cyan">
-                {p.endpoint}
-              </code>
-            </div>
-          ))}
-        </div>
+        <VoiceClone />
+        <p className="mono text-[10px] tracking-wider text-text-mute">
+          Совет: 30–90 секунд чистой речи без шума и музыки дают лучший результат. Форматы: mp3, m4a,
+          wav, ogg.
+        </p>
       </section>
 
-      {/* ── how it works ───────────────────────────────── */}
-      <section>
-        <div className="mb-6 flex items-baseline gap-3">
+      <section className="grid gap-3">
+        <div className="flex items-baseline gap-3">
           <span className="sec-num">/02</span>
-          <span className="sec-title">How it works</span>
+          <span className="sec-title">Мои голоса</span>
           <span className="flex-1 border-b border-border translate-y-[-3px]" />
         </div>
-        <ol className="space-y-4">
-          {STEPS.map((s, i) => (
-            <li key={s.title} className="flex gap-4 border-l-2 border-border pl-6 py-1">
-              <div className="flex h-9 w-9 shrink-0 items-center justify-center rounded-full border border-lime/40 mono text-[12px] font-bold text-lime -ml-[1.65rem] bg-bg">
-                {i + 1}
-              </div>
-              <div>
-                <div className="font-serif italic text-[18px]">{s.title}</div>
-                <div className="text-[13px] leading-relaxed text-text-dim mt-1">{s.body}</div>
-              </div>
-            </li>
-          ))}
-        </ol>
+        {voices.length === 0 ? (
+          <p className="mono text-[11px] tracking-widest uppercase text-text-mute">
+            Пока нет своих голосов — склонируйте первый выше.
+          </p>
+        ) : (
+          <ul className="border border-border">
+            {voices.map((v) => (
+              <li
+                key={v.voiceId}
+                className="flex items-center gap-3 px-4 py-3 border-b border-border last:border-b-0 bg-surface"
+              >
+                <span className="font-serif text-[14px] text-text flex-1 truncate">{v.name}</span>
+                <span className="mono text-[9px] tracking-widest uppercase text-lime">готов</span>
+              </li>
+            ))}
+          </ul>
+        )}
+        <p className="mono text-[10px] tracking-wider text-text-mute">
+          Выберите голос в{' '}
+          <Link href="/personas" className="text-gold hover:underline">
+            персоне
+          </Link>{' '}
+          — он подставится в генерацию видео.
+        </p>
       </section>
-
-      {/* ── how-to-use в Persona Studio ───────────────── */}
-      <section className="border border-border-2 bg-surface p-8">
-        <div className="mono text-[10px] uppercase tracking-[0.3em] text-lime mb-3">
-          / handoff to videos
-        </div>
-        <h2 className="font-serif text-[28px] leading-tight mb-4">
-          Как использовать обученный голос в видео
-        </h2>
-        <ol className="grid gap-3 text-[13px] leading-relaxed text-text-dim list-decimal pl-5">
-          <li>
-            Открой <a href={`${PERSONA_TRAIN_URL}/cabinet`} target="_blank" rel="noopener noreferrer" className="text-cyan hover:underline">кабинет обучения голоса</a>,
-            привяжи Telegram-бот и накачай голосовых.
-          </li>
-          <li>После <code className="mono text-[12px] text-cyan">/train</code> скопируй свой <code className="mono text-[12px] text-cyan">ID голоса</code>.</li>
-          <li>
-            На странице <Link href="/videos/new" className="text-cyan hover:underline">/videos/new</Link> вставь
-            свой <code className="mono text-[12px] text-cyan">ID голоса</code> в поле «Свой голос (ID)».
-          </li>
-          <li>Аватар озвучит скрипт твоим голосом.</li>
-        </ol>
-      </section>
-
-      <footer className="text-center mono text-[10px] tracking-[0.15em] text-text-mute">
-        Обучение голоса · клонирование тембра · AI-анализ
-      </footer>
     </div>
   );
 }
