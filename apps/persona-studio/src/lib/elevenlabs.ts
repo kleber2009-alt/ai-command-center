@@ -96,3 +96,60 @@ export async function synthesize(opts: TtsOpts): Promise<{ bytes: Buffer; mime: 
     clearTimeout(timer);
   }
 }
+
+// ── Voice cloning (IVC) — нативно внутри persona-studio (один проект) ──
+// POST {BASE}/voices/add (multipart): name + files[] → { voice_id }.
+// GET  {BASE}/voices → список; берём категорию cloned/professional/generated.
+
+export type ClonedVoice = { voiceId: string; name: string };
+
+export async function cloneVoice(opts: {
+  name: string;
+  files: { blob: Blob; filename: string }[];
+  description?: string;
+}): Promise<ClonedVoice> {
+  const apiKey = env.ELEVENLABS_API_KEY;
+  if (!apiKey) throw new ElevenlabsError('MISSING_KEY', 'ELEVENLABS_API_KEY is not set');
+  if (!opts.files.length) throw new ElevenlabsError('NO_SAMPLE', 'no audio sample provided');
+
+  const fd = new FormData();
+  fd.append('name', opts.name);
+  if (opts.description) fd.append('description', opts.description);
+  for (const f of opts.files) fd.append('files', f.blob, f.filename);
+
+  const res = await fetch(`${env.ELEVENLABS_API_BASE}/voices/add`, {
+    method: 'POST',
+    headers: { 'xi-api-key': apiKey },
+    body: fd,
+    signal: AbortSignal.timeout(120_000),
+  });
+  if (!res.ok) {
+    const t = await res.text().catch(() => '');
+    throw new ElevenlabsError(`HTTP_${res.status}`, t.slice(0, 500));
+  }
+  const data = (await res.json().catch(() => ({}))) as { voice_id?: string };
+  if (!data.voice_id) throw new ElevenlabsError('NO_VOICE_ID', 'clone returned no voice_id');
+  return { voiceId: data.voice_id, name: opts.name };
+}
+
+/** Список голосов пользователя (клоны). Ошибки/недоступность → пустой список. */
+export async function listClonedVoices(): Promise<ClonedVoice[]> {
+  const apiKey = env.ELEVENLABS_API_KEY;
+  if (!apiKey) return [];
+  try {
+    const res = await fetch(`${env.ELEVENLABS_API_BASE}/voices`, {
+      headers: { 'xi-api-key': apiKey },
+      signal: AbortSignal.timeout(15_000),
+    });
+    if (!res.ok) return [];
+    const data = (await res.json().catch(() => ({}))) as {
+      voices?: { voice_id: string; name: string; category?: string }[];
+    };
+    const own = new Set(['cloned', 'professional', 'generated']);
+    return (data.voices ?? [])
+      .filter((v) => v.category && own.has(v.category))
+      .map((v) => ({ voiceId: v.voice_id, name: v.name }));
+  } catch {
+    return [];
+  }
+}

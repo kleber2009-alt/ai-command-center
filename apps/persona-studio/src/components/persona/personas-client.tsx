@@ -5,9 +5,10 @@
 // формой, назначение дефолтной (подставляется в воркспейс генерации S2).
 // Данные: /api/personas (GET/POST), /api/personas/:id (PATCH/DELETE).
 
-import { useMemo, useState } from 'react';
+import { useEffect, useMemo, useState } from 'react';
 import { Plus, Star, Trash2, Pencil, Check, X, Mic, Palette } from 'lucide-react';
 import { ELEVENLABS_VOICE_PRESETS } from '@/lib/elevenlabs-voices';
+import { VoiceClone } from '@/components/voice/voice-clone';
 import type {
   PersonaAvatarOption,
   PersonaTone,
@@ -17,7 +18,6 @@ import type {
 
 // Нейтральный каталог голосов (без бренда провайдера) для пикера персоны.
 const VOICE_OPTIONS = ELEVENLABS_VOICE_PRESETS.map((v) => ({ id: v.voice_id, label: v.label }));
-const VOICE_PRESET_IDS = new Set(VOICE_OPTIONS.map((v) => v.id));
 
 type Props = {
   initialPersonas: PersonaView[];
@@ -348,6 +348,23 @@ function PersonaForm({
 }) {
   const set = <K extends keyof FormState>(k: K, v: FormState[K]) => setForm({ ...form, [k]: v });
 
+  // Свои (склонированные) голоса — нативно из /api/voice/list, без бренда.
+  const [cloned, setCloned] = useState<{ id: string; label: string }[]>([]);
+  useEffect(() => {
+    fetch('/api/voice/list')
+      .then((r) => r.json())
+      .then((d) => {
+        if (Array.isArray(d.voices)) {
+          setCloned(
+            d.voices.map((v: { voiceId: string; name: string }) => ({ id: v.voiceId, label: `Мой голос: ${v.name}` })),
+          );
+        }
+      })
+      .catch(() => {});
+  }, []);
+  const allVoices = [...cloned, ...VOICE_OPTIONS];
+  const allVoiceIds = new Set(allVoices.map((v) => v.id));
+
   return (
     <div className="border border-gold/40 bg-surface p-4 grid gap-4">
       <div className="flex items-center justify-between">
@@ -380,12 +397,12 @@ function PersonaForm({
         </Field>
         <Field label="Голос">
           <select
-            value={VOICE_PRESET_IDS.has(form.voiceId) ? form.voiceId : ''}
+            value={allVoiceIds.has(form.voiceId) ? form.voiceId : ''}
             onChange={(e) => set('voiceId', e.target.value)}
             className="w-full bg-bg border border-border px-3 py-2 font-serif text-[13px] text-text focus:border-gold outline-none"
           >
             <option value="">— выберите голос —</option>
-            {VOICE_OPTIONS.map((v) => (
+            {allVoices.map((v) => (
               <option key={v.id} value={v.id}>
                 {v.label}
               </option>
@@ -396,12 +413,24 @@ function PersonaForm({
               свой голос (ID)
             </summary>
             <input
-              value={VOICE_PRESET_IDS.has(form.voiceId) ? '' : form.voiceId}
+              value={allVoiceIds.has(form.voiceId) ? '' : form.voiceId}
               onChange={(e) => set('voiceId', e.target.value)}
               placeholder="ID голоса"
               className="mt-1 w-full bg-bg border border-border px-3 py-2 mono text-[12px] text-text placeholder:text-text-mute focus:border-gold outline-none"
             />
           </details>
+          <div className="mt-2">
+            <VoiceClone
+              compact
+              onCloned={(v) => {
+                setCloned((prev) => [
+                  { id: v.voiceId, label: `Мой голос: ${v.name}` },
+                  ...prev.filter((x) => x.id !== v.voiceId),
+                ]);
+                set('voiceId', v.voiceId);
+              }}
+            />
+          </div>
         </Field>
       </div>
 
