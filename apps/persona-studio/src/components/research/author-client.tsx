@@ -7,6 +7,7 @@ import Link from 'next/link';
 import { useState, useTransition } from 'react';
 import { useRouter } from 'next/navigation';
 import { igProxy } from './types';
+import { apiErrorText } from './error-text';
 
 type Author = {
   id: string;
@@ -88,7 +89,7 @@ export function AuthorClient({
       const res = await fetch(`/api/research/authors/${author.id}/refresh`, { method: 'POST' });
       const json = await res.json();
       if (!res.ok) {
-        setError(json.message || json.error || `HTTP ${res.status}`);
+        setError(apiErrorText(json, res.status));
         return;
       }
       router.refresh();
@@ -101,7 +102,7 @@ export function AuthorClient({
       const res = await fetch(`/api/research/authors/${author.id}/analyze-page`, { method: 'POST' });
       const json = await res.json();
       if (!res.ok) {
-        setError(json.message || json.error || `HTTP ${res.status}`);
+        setError(apiErrorText(json, res.status));
         return;
       }
       setAnalysis(json.analysis);
