@@ -2,9 +2,10 @@
 import Link from 'next/link'
 import { usePathname } from 'next/navigation'
 import { useEffect, useState } from 'react'
-import { LayoutGrid, Zap, Wallet, Bot, Package, Menu, X } from 'lucide-react'
+import { LayoutGrid, Zap, Wallet, Bot, Package, Menu, X, Building2 } from 'lucide-react'
 
 const nav = [
+  { href: '/office',    icon: Building2,   label: 'Офис' },
   { href: '/dashboard', icon: LayoutGrid, label: 'Проекты' },
   { href: '/balances',  icon: Wallet,     label: 'Балансы' },
   { href: '/bots',      icon: Bot,        label: 'Боты' },
@@ -73,7 +74,8 @@ export default function DashboardLayout({ children }: { children: React.ReactNod
           {nav.map(({ href, icon: Icon, label }) => {
             const active =
               path === href ||
-              (href === '/dashboard' && path.startsWith('/projects'))
+              (href === '/dashboard' && path.startsWith('/projects')) ||
+              (href === '/office' && path.startsWith('/office'))
             return (
               <Link key={href} href={href}
                 className={`flex items-center gap-3 px-3 py-2 rounded-lg text-sm transition-all ${
