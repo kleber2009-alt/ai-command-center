@@ -13,10 +13,74 @@
 import { query, queryOne } from './db.js';
 import { createInvoiceForPlan, handlePreCheckout, handleSuccessfulPayment, listActivePlans, handleRefundedPayment, refundByChargeId } from './billing.js';
 import { cloneVoice } from './voice.js';
+import {
+  confirmFounderTaskLocal,
+  fetchFounderPlanSnapshot,
+  founderPlanKeyboard,
+  requestFounderTaskProdApproval,
+  renderFounderPlanMessage,
+  listFounderPriorityTasks,
+} from './founder_plan.js';
 import * as parserBot from './parser_bot.js';
 
 const EXPECTED_SECRET = process.env.TG_OFFICE_WEBHOOK_SECRET || '';
 const TOKEN = process.env.TG_OFFICE_BOT_TOKEN || '';
+const OWNER_TELEGRAM_ID = Number(process.env.OWNER_TELEGRAM_ID || 0);
+const OFFICE_HQ_BASE_URL = (process.env.OFFICE_HQ_BASE_URL || '').replace(/\/+$/, '');
+const OFFICE_HQ_WEB_URL = (process.env.OFFICE_HQ_WEB_URL || OFFICE_HQ_BASE_URL || '').replace(/\/+$/, '');
+const OFFICE_HQ_TIMEOUT_MS = Math.max(1000, Number(process.env.OFFICE_HQ_TIMEOUT_MS || 7000));
+const OFFICE_HQ_VIEWS = {
+  '/hq': 'snapshot',
+  '/brief': 'brief',
+  '/standup': 'standup',
+  '/focus': 'focus',
+  '/escalations': 'escalations',
+  '/decide': 'decisions',
+};
+const OFFICE_HQ_VIEW_LABELS = {
+  snapshot: 'Штаб',
+  brief: 'Бриф',
+  standup: 'Планерка',
+  focus: 'Фокус',
+  escalations: 'Риски',
+  decisions: 'Решения',
+};
+const OFFICE_HQ_KIND_LABELS = {
+  chief_of_staff: 'Шеф штаба',
+  product: 'Продукт',
+  growth: 'Рост',
+  research: 'Ресерч',
+  sales: 'Продажи',
+  support: 'Поддержка',
+  ops: 'Операции',
+  finance: 'Финансы',
+};
+const OFFICE_HQ_DECISION_STATUSES = {
+  approved: 'Одобрить',
+  deferred: 'Отложить',
+  rejected: 'Отклонить',
+};
+const OFFICE_HQ_OPTION_LABELS = {
+  pause_24h: 'пауза 24 часа',
+  keep_running: 'оставить как есть',
+  shift_focus: 'сместить фокус',
+  split_focus: 'разделить фокус',
+  manual_takeover: 'ручной перехват',
+  draft_reply_only: 'только черновик ответа',
+  let_ai_continue: 'дать ИИ продолжить',
+  ship_prod: 'выкатить в прод',
+  hold_local: 'оставить на локали',
+  none: 'без рекомендации',
+};
+const OWNER_HQ_COMMANDS = [
+  { command: 'hq', description: 'Обзор офиса' },
+  { command: 'plan', description: 'План дня от штаба' },
+  { command: 'brief', description: 'Короткий бриф по офису' },
+  { command: 'standup', description: 'Ежедневная планерка' },
+  { command: 'focus', description: 'Главный фокус команды' },
+  { command: 'escalations', description: 'Эскалации и блокеры' },
+  { command: 'decide', description: 'Решения, которые ждут тебя' },
+];
 
 export function registerWebhook(fastify) {
   // Health endpoint for quick sanity checks
@@ -273,7 +337,11 @@ export function registerWebhook(fastify) {
         request.log.info({ out }, 'refunded_payment processed');
       } else if (update.message?.text) {
         const t = update.message.text.trim();
-        if (t === '/start' || t.startsWith('/start ')) {
+        if (detectFounderPlanCommand(t) && isOwnerHqMessage(update.message)) {
+          await handleFounderPlanCommand(update.message);
+        } else if (detectOfficeHqView(t) && isOwnerHqMessage(update.message)) {
+          await handleOfficeHqCommand(update.message);
+        } else if (t === '/start' || t.startsWith('/start ')) {
           await handleStart(update.message);
         } else if (t === '/clone' || t.startsWith('/clone ') || t.startsWith('/clone@')) {
           await handleClone(update.message);
@@ -344,6 +412,14 @@ async function handlePaymentThankYou(msg, out) {
 // ═══ Callback queries ════════════════════════════════════════════════
 async function handleCallback(cq) {
   const data = String(cq.data || '');
+  if (data.startsWith('plan:')) {
+    await handleFounderPlanCallback(cq);
+    return;
+  }
+  if (data.startsWith('hq:')) {
+    await handleOfficeHqCallback(cq);
+    return;
+  }
   if (!data.startsWith('d:')) {
     await tgApi('answerCallbackQuery', { callback_query_id: cq.id });
     return;
@@ -406,6 +482,17 @@ async function handleStart(msg) {
   const chatId = msg.chat.id;
   const firstName = msg.from?.first_name || msg.from?.username || 'друг';
 
+  if (isOwnerHqMessage(msg)) {
+    await tgApi('sendMessage', {
+      chat_id: chatId,
+      text: buildOfficeHqIntro(firstName),
+      parse_mode: 'HTML',
+      disable_web_page_preview: true,
+      reply_markup: officeHqKeyboard('snapshot'),
+    });
+    return;
+  }
+
   // Already linked?
   const linked = await queryOne(
     'SELECT id, name FROM platform_users WHERE tg_chat_id = $1',
@@ -433,6 +520,672 @@ async function handleStart(msg) {
       `<i>chat_id: ${chatId}</i>`,
     parse_mode: 'HTML',
     disable_web_page_preview: true,
+  });
+}
+
+function isOwnerHqMessage(msg) {
+  return isOwnerHqChat(msg?.chat, msg?.from?.id);
+}
+
+function isOwnerHqChat(chat, userId) {
+  return Boolean(
+    chat?.type === 'private' &&
+    OWNER_TELEGRAM_ID &&
+    Number(userId) === OWNER_TELEGRAM_ID,
+  );
+}
+
+function normalizeCommand(text) {
+  const raw = String(text || '').trim().split(/\s+/, 1)[0] || '';
+  return raw.toLowerCase().replace(/@[^/\s]+$/, '');
+}
+
+function detectOfficeHqView(text) {
+  const command = normalizeCommand(text);
+  return OFFICE_HQ_VIEWS[command] || null;
+}
+
+function detectFounderPlanCommand(text) {
+  return normalizeCommand(text) === '/plan';
+}
+
+function parseFounderPlanCallback(data) {
+  if (!data.startsWith('plan:')) return null;
+  const parts = data.split(':');
+  if (parts[1] === 'refresh') return { action: 'refresh' };
+  if (parts[1] === 'local') return { action: 'local', id: parts[2] || '' };
+  if (parts[1] === 'prod') return { action: 'prod', id: parts[2] || '' };
+  return null;
+}
+
+function parseOfficeHqCallback(data) {
+  if (!data.startsWith('hq:')) return null;
+  const parts = data.split(':');
+  if (parts[1] === 'act') {
+    return { action: 'decision', status: parts[2] || '', id: parts[3] || '' };
+  }
+  if (parts[1] === 'refresh') {
+    return { action: 'refresh', view: parts[2] || 'snapshot' };
+  }
+  return { action: 'view', view: parts[1] || 'snapshot' };
+}
+
+function officeHqViewTitle(view) {
+  return OFFICE_HQ_VIEW_LABELS[view] || 'HQ';
+}
+
+function officeHqOptionLabel(value) {
+  if (!value) return 'без рекомендации';
+  return OFFICE_HQ_OPTION_LABELS[value] || String(value).replaceAll('_', ' ');
+}
+
+function officeHqRoleEmoji(kind) {
+  switch (kind) {
+    case 'chief_of_staff': return '🎯';
+    case 'product': return '🧩';
+    case 'growth': return '📈';
+    case 'research': return '🧠';
+    case 'sales': return '💼';
+    case 'support': return '🤝';
+    case 'ops': return '🛠';
+    case 'finance': return '💳';
+    default: return '•';
+  }
+}
+
+function officeHqToneEmoji(tone) {
+  switch (tone) {
+    case 'critical': return '🔴';
+    case 'warning': return '🟠';
+    case 'good': return '🟢';
+    default: return '🔵';
+  }
+}
+
+function officeHqFormatClock(value) {
+  const date = new Date(value || Date.now());
+  if (Number.isNaN(date.getTime())) return 'только что';
+  return date.toISOString().slice(11, 16) + ' UTC';
+}
+
+function officeHqDecisionActionRows(snapshot) {
+  const queue = Array.isArray(snapshot?.decisionQueue) ? snapshot.decisionQueue : [];
+  const firstPending = queue.find((decision) => decision.status === 'pending');
+  if (!firstPending?.id) return [];
+
+  return [[
+    { text: OFFICE_HQ_DECISION_STATUSES.approved, callback_data: `hq:act:approved:${firstPending.id}` },
+    { text: OFFICE_HQ_DECISION_STATUSES.deferred, callback_data: `hq:act:deferred:${firstPending.id}` },
+    { text: OFFICE_HQ_DECISION_STATUSES.rejected, callback_data: `hq:act:rejected:${firstPending.id}` },
+  ]];
+}
+
+function officeHqKeyboard(activeView, snapshot) {
+  const navRows = [
+    ['snapshot', 'brief', 'standup'],
+    ['focus', 'escalations', 'decisions'],
+  ].map((row) => row.map((view) => ({
+    text: activeView === view ? `• ${officeHqViewTitle(view)}` : officeHqViewTitle(view),
+    callback_data: `hq:${view}`,
+  })));
+
+  const webButtons = [];
+  if (OFFICE_HQ_WEB_URL) {
+    webButtons.push({ text: 'Открыть штаб', url: `${OFFICE_HQ_WEB_URL}/office/hq` });
+    webButtons.push({ text: 'Открыть решения', url: `${OFFICE_HQ_WEB_URL}/office/decisions` });
+  }
+
+  const rows = [
+    ...navRows,
+    ...(activeView === 'decisions' ? officeHqDecisionActionRows(snapshot) : []),
+    [{ text: 'Обновить', callback_data: `hq:refresh:${activeView}` }],
+  ];
+  if (webButtons.length) rows.push(webButtons);
+
+  return { inline_keyboard: rows };
+}
+
+function buildOfficeHqIntro(firstName) {
+  const lines = [
+    `<b>Штаб AI Growth Office</b>`,
+    `Привет, ${escapeHtml(firstName)}.`,
+    '',
+    'Теперь ты общаешься не с разрозненными агентами, а с одним штабом.',
+    '',
+    '<b>Команды штаба</b>',
+    '/plan - утренний план дня с локальным и прод-апрувом',
+    '/hq - общий штаб и состояние команды',
+    '/brief - короткий бриф для основателя',
+    '/standup - статус всех ролей',
+    '/focus - главный фокус недели',
+    '/escalations - риски и блокеры',
+    '/decide - очередь решений',
+  ];
+  if (OFFICE_HQ_WEB_URL) {
+    lines.push('', `Веб-офис: ${escapeHtml(`${OFFICE_HQ_WEB_URL}/office/hq`)}`);
+  }
+  return lines.join('\n');
+}
+
+async function fetchOfficeHqSnapshot() {
+  if (!OFFICE_HQ_BASE_URL) {
+    return { ok: false, error: 'OFFICE_HQ_BASE_URL is not set' };
+  }
+
+  const controller = new AbortController();
+  const timeout = setTimeout(() => controller.abort(), OFFICE_HQ_TIMEOUT_MS);
+
+  try {
+    const url = new URL('/api/office/hq', OFFICE_HQ_BASE_URL);
+    url.searchParams.set('view', 'snapshot');
+    const res = await fetch(url, {
+      signal: controller.signal,
+      headers: { Accept: 'application/json' },
+    });
+    const data = await res.json().catch(() => null);
+    if (!res.ok) {
+      return { ok: false, error: data?.error || `HQ API ${res.status}` };
+    }
+    if (!data?.summary || !data?.cards) {
+      return { ok: false, error: data?.error || 'HQ snapshot missing summary/cards' };
+    }
+    return {
+      ok: true,
+      snapshot: data,
+    };
+  } catch (error) {
+    return { ok: false, error: error?.name === 'AbortError' ? 'HQ API timeout' : (error?.message || String(error)) };
+  } finally {
+    clearTimeout(timeout);
+  }
+}
+
+async function updateOfficeHqDecision({ id, status, snapshot }) {
+  if (!OFFICE_HQ_BASE_URL) {
+    return { ok: false, error: 'OFFICE_HQ_BASE_URL is not set' };
+  }
+
+  const decision = Array.isArray(snapshot?.decisionQueue)
+    ? snapshot.decisionQueue.find((item) => item.id === id)
+    : null;
+
+  const controller = new AbortController();
+  const timeout = setTimeout(() => controller.abort(), OFFICE_HQ_TIMEOUT_MS);
+
+  try {
+    const url = new URL('/api/office/decisions', OFFICE_HQ_BASE_URL);
+    const res = await fetch(url, {
+      method: 'PATCH',
+      signal: controller.signal,
+      headers: {
+        Accept: 'application/json',
+        'Content-Type': 'application/json',
+      },
+      body: JSON.stringify({
+        id,
+        status,
+        actorId: 'telegram-hq',
+        selectedOptionKey: status === 'approved' ? decision?.recommended || null : null,
+        resolutionNote:
+          status === 'approved'
+            ? 'Решение одобрено из Telegram HQ.'
+            : status === 'deferred'
+              ? 'Решение отложено из Telegram HQ.'
+              : 'Решение отклонено из Telegram HQ.',
+      }),
+    });
+
+    const data = await res.json().catch(() => null);
+    if (!res.ok) {
+      return { ok: false, error: data?.error || `Decision API ${res.status}` };
+    }
+
+    return { ok: true, payload: data };
+  } catch (error) {
+    return {
+      ok: false,
+      error: error?.name === 'AbortError' ? 'Истек таймаут обновления решения' : (error?.message || String(error)),
+    };
+  } finally {
+    clearTimeout(timeout);
+  }
+}
+
+function splitTelegramText(text, maxLength = 3500) {
+  const chunks = [];
+  let rest = String(text || '').trim();
+  while (rest.length > maxLength) {
+    let cut = rest.lastIndexOf('\n\n', maxLength);
+    if (cut < maxLength * 0.5) cut = rest.lastIndexOf('\n', maxLength);
+    if (cut < maxLength * 0.5) cut = rest.lastIndexOf(' ', maxLength);
+    if (cut < maxLength * 0.5) cut = maxLength;
+    chunks.push(rest.slice(0, cut).trim());
+    rest = rest.slice(cut).trim();
+  }
+  if (rest) chunks.push(rest);
+  return chunks.length ? chunks : [''];
+}
+
+function officeHqWebPath(view) {
+  if (!OFFICE_HQ_WEB_URL) return '';
+  if (view === 'decisions') return `${OFFICE_HQ_WEB_URL}/office/decisions`;
+  return `${OFFICE_HQ_WEB_URL}/office/hq`;
+}
+
+function fallbackTeamFromSnapshot(snapshot) {
+  const roster = [
+    { slug: 'chief-of-staff', name: 'Шеф штаба', kind: 'chief_of_staff', roleLabel: 'Шеф штаба' },
+    { slug: 'product-agent', name: 'Продукт', kind: 'product', roleLabel: 'Продукт' },
+    { slug: 'growth-agent', name: 'Рост', kind: 'growth', roleLabel: 'Рост' },
+    { slug: 'research-agent', name: 'Ресерч', kind: 'research', roleLabel: 'Ресерч' },
+    { slug: 'sales-agent', name: 'Продажи', kind: 'sales', roleLabel: 'Продажи' },
+    { slug: 'support-agent', name: 'Поддержка', kind: 'support', roleLabel: 'Поддержка' },
+    { slug: 'ops-agent', name: 'Операции', kind: 'ops', roleLabel: 'Операции' },
+    { slug: 'finance-agent', name: 'Финансы', kind: 'finance', roleLabel: 'Финансы' },
+  ];
+  return roster.map((member, index) => {
+    let statusTone = 'active';
+    let statusLabel = 'В рабочем ритме';
+    let focusLabel = snapshot.summary?.weeklyFocus || 'Идет по штатному ритму';
+    if (member.kind === 'chief_of_staff') {
+      statusTone = snapshot.summary?.pendingDecisions > 0 ? 'warning' : 'good';
+      statusLabel = snapshot.summary?.pendingDecisions > 0 ? `${snapshot.summary.pendingDecisions} решений ждут апрува` : 'Синхронизирован';
+      focusLabel = 'Готовит бриф и рекомендации для основателя';
+    } else if (member.kind === 'ops') {
+      statusTone = snapshot.summary?.criticalAlerts > 0 ? 'critical' : 'good';
+      statusLabel = snapshot.summary?.criticalAlerts > 0 ? `${snapshot.summary.criticalAlerts} активных алертов` : 'Инфра стабильна';
+      focusLabel = 'Следит за инцидентами, очередями и доставкой';
+    } else if (member.kind === 'sales') {
+      statusTone = snapshot.summary?.pendingDecisions > 0 ? 'warning' : 'good';
+      statusLabel = snapshot.summary?.pendingDecisions > 0 ? 'Есть горячие эпизоды' : 'Воронка под контролем';
+      focusLabel = 'Следит за горячими лидами и зависшими повторными касаниями';
+    } else if (index < 4) {
+      statusLabel = 'Активен';
+      focusLabel = snapshot.summary?.weeklyFocus || 'Ведет свою зону';
+    }
+    return {
+      slug: member.slug,
+      name: member.name,
+      kind: member.kind,
+      roleLabel: member.roleLabel,
+      statusTone,
+      statusLabel,
+      focusLabel,
+    };
+  });
+}
+
+function officeHqTeam(snapshot) {
+  return Array.isArray(snapshot.team) && snapshot.team.length ? snapshot.team : fallbackTeamFromSnapshot(snapshot);
+}
+
+function formatOfficeHqList(items, emptyLabel, limit = 5) {
+  const safeItems = Array.isArray(items) ? items.filter(Boolean) : [];
+  const chosen = safeItems.slice(0, limit);
+  if (!chosen.length) return [`- ${escapeHtml(emptyLabel)}`];
+  return chosen.map((item) => `- ${escapeHtml(item)}`);
+}
+
+function renderOfficeHqOverview(snapshot) {
+  const team = officeHqTeam(snapshot).slice(0, 6);
+  return [
+    '<b>Штаб AI Growth Office</b>',
+    `<i>${snapshot.fallback ? 'РЕЗЕРВ' : 'БОЕВОЙ РЕЖИМ'} · обновлено ${officeHqFormatClock(snapshot.generatedAt)}</i>`,
+    '',
+    `<b>Сейчас:</b> ${snapshot.summary.activeAgents} агентов · ${snapshot.summary.openTasks} задач · ${snapshot.summary.pendingDecisions} решений · ${snapshot.summary.criticalAlerts} алертов`,
+    `<b>Фокус недели:</b> ${escapeHtml(snapshot.summary.weeklyFocus)}`,
+    '',
+    '<b>Штабная доска</b>',
+    ...team.map((member) =>
+      `${officeHqRoleEmoji(member.kind)} <b>${escapeHtml(member.roleLabel || OFFICE_HQ_KIND_LABELS[member.kind] || member.name)}</b> · ${officeHqToneEmoji(member.statusTone)} ${escapeHtml(member.statusLabel)}`
+    ),
+    '',
+    '<b>Что штаб рекомендует сейчас</b>',
+    ...formatOfficeHqList(snapshot.cards?.recommendations, 'Сейчас явных рекомендаций нет.', 3),
+  ].join('\n');
+}
+
+function renderOfficeHqBrief(snapshot) {
+  return [
+    '<b>Краткий бриф</b>',
+    `<i>Обновлено ${officeHqFormatClock(snapshot.generatedAt)}</i>`,
+    '',
+    `<b>Ситуация:</b> ${escapeHtml(snapshot.cards?.situation || 'Нет краткой сводки по ситуации.')}`,
+    '',
+    '<b>Что изменилось</b>',
+    ...formatOfficeHqList(snapshot.cards?.changed, 'Крупных изменений не зафиксировано.', 4),
+    '',
+    '<b>Риски</b>',
+    ...formatOfficeHqList(snapshot.cards?.risks, 'Прямо сейчас срочных рисков нет.', 4),
+    '',
+    '<b>Что требует твоего решения</b>',
+    ...formatOfficeHqList(snapshot.cards?.decisions, 'Нет решений в ожидании.', 4),
+    '',
+    '<b>Следующие действия по владельцам</b>',
+    ...formatOfficeHqList(snapshot.cards?.nextActions, 'Срочных действий в очереди нет.', 4),
+  ].join('\n');
+}
+
+function renderOfficeHqStandup(snapshot) {
+  const team = officeHqTeam(snapshot);
+  return [
+    '<b>Планерка команды</b>',
+    `<i>Отчитываются ${snapshot.summary.activeAgents} агентов</i>`,
+    '',
+    ...team.map((member) =>
+      `${officeHqRoleEmoji(member.kind)} <b>${escapeHtml(member.roleLabel || member.name)}</b> · ${officeHqToneEmoji(member.statusTone)} ${escapeHtml(member.statusLabel)}\n${escapeHtml(member.focusLabel || member.mission || 'Ведет свою зону')}`
+    ),
+  ].join('\n\n');
+}
+
+function renderOfficeHqFocus(snapshot) {
+  return [
+    '<b>Фокус недели</b>',
+    '',
+    `<b>Фокус недели:</b> ${escapeHtml(snapshot.summary.weeklyFocus)}`,
+    '',
+    '<b>Что штаб защищает на этой неделе</b>',
+    ...formatOfficeHqList(snapshot.cards?.recommendations, 'Явных защитных ходов не зафиксировано.', 5),
+    '',
+    '<b>Очередь P0 / на апрув</b>',
+    ...formatOfficeHqList(snapshot.cards?.nextActions, 'Задач P0 в очереди нет.', 5),
+  ].join('\n');
+}
+
+function renderOfficeHqEscalations(snapshot) {
+  return [
+    '<b>Эскалации</b>',
+    '',
+    `<b>Критических алертов:</b> ${escapeHtml(String(snapshot.summary.criticalAlerts))}`,
+    '',
+    '<b>Активные риски</b>',
+    ...formatOfficeHqList(snapshot.cards?.risks, 'Сейчас эскалаций нет.', 5),
+    '',
+    '<b>Как работает эскалация</b>',
+    snapshot.summary.criticalAlerts > 0
+      ? '- Операции и шеф штаба ведут критические вопросы прямо в внимание основателя.'
+      : '- Некритичные вопросы остаются внутри обычного цикла офиса.',
+  ].join('\n');
+}
+
+function renderOfficeHqDecisions(snapshot) {
+  const queue = Array.isArray(snapshot.decisionQueue) ? snapshot.decisionQueue : [];
+  return [
+    '<b>Входящие решения</b>',
+    '',
+    `<b>Ждут апрува:</b> ${escapeHtml(String(snapshot.summary.pendingDecisions))}`,
+    '',
+    ...formatOfficeHqList(snapshot.cards?.decisions, 'Нет решений в ожидании.', 6),
+    ...(queue[0]
+      ? [
+          '',
+          `<b>Первое решение для действия:</b> ${escapeHtml(queue[0].title)}`,
+          `Рекомендация: <code>${escapeHtml(officeHqOptionLabel(queue[0].recommended))}</code>`,
+        ]
+      : []),
+    '',
+    ...formatOfficeHqList(snapshot.cards?.recommendations, 'Отдельной рекомендации не приложено.', 3),
+  ].join('\n');
+}
+
+function renderOfficeHqMessage(snapshot, view) {
+  switch (view) {
+    case 'brief':
+      return renderOfficeHqBrief(snapshot);
+    case 'standup':
+      return renderOfficeHqStandup(snapshot);
+    case 'focus':
+      return renderOfficeHqFocus(snapshot);
+    case 'escalations':
+      return renderOfficeHqEscalations(snapshot);
+    case 'decisions':
+      return renderOfficeHqDecisions(snapshot);
+    case 'snapshot':
+    default:
+      return renderOfficeHqOverview(snapshot);
+  }
+}
+
+function trimTelegramHtml(text, maxLength = 3900) {
+  const value = String(text || '').trim();
+  if (value.length <= maxLength) return value;
+  return value.slice(0, maxLength - 32).trimEnd() + '\n\n<i>Открой веб-офис для полной версии.</i>';
+}
+
+async function handleFounderPlanCommand(msg) {
+  const chatId = msg.chat?.id;
+  if (!chatId) return;
+
+  const snapshotResult = await fetchFounderPlanSnapshot();
+  if (!snapshotResult.ok) {
+    await tgApi('sendMessage', {
+      chat_id: chatId,
+      text: `План дня пока недоступен.\n\nПричина: ${snapshotResult.error}`.slice(0, 3800),
+      disable_web_page_preview: true,
+    });
+    return;
+  }
+
+  const tasks = await listFounderPriorityTasks(3);
+  const text = trimTelegramHtml(renderFounderPlanMessage(snapshotResult.snapshot, tasks));
+  await tgApi('sendMessage', {
+    chat_id: chatId,
+    text,
+    parse_mode: 'HTML',
+    disable_web_page_preview: true,
+    reply_markup: founderPlanKeyboard(tasks),
+  });
+}
+
+async function handleFounderPlanCallback(cq) {
+  if (!isOwnerHqChat(cq.message?.chat, cq.from?.id)) {
+    await tgApi('answerCallbackQuery', { callback_query_id: cq.id, text: 'План доступен только владельцу.' });
+    return;
+  }
+
+  const parsed = parseFounderPlanCallback(String(cq.data || ''));
+  if (!parsed) {
+    await tgApi('answerCallbackQuery', { callback_query_id: cq.id });
+    return;
+  }
+
+  if (parsed.action === 'local') {
+    const result = await confirmFounderTaskLocal(parsed.id, `telegram:${cq.from?.id || 'owner'}`);
+    if (!result.ok) {
+      await tgApi('answerCallbackQuery', {
+        callback_query_id: cq.id,
+        text: result.error === 'task_not_found' ? 'Задача не найдена.' : 'Не удалось подтвердить локальный шаг.',
+        show_alert: false,
+      });
+      return;
+    }
+  }
+
+  if (parsed.action === 'prod') {
+    const result = await requestFounderTaskProdApproval(parsed.id, `telegram:${cq.from?.id || 'owner'}`);
+    if (!result.ok) {
+      const text =
+        result.error === 'local_confirmation_required'
+          ? 'Сначала подтверди локальный шаг.'
+          : result.error === 'task_not_found'
+            ? 'Задача не найдена.'
+            : 'Не удалось запросить прод-апрув.';
+      await tgApi('answerCallbackQuery', {
+        callback_query_id: cq.id,
+        text,
+        show_alert: false,
+      });
+      return;
+    }
+  }
+
+  const snapshotResult = await fetchFounderPlanSnapshot();
+  if (!snapshotResult.ok) {
+    await tgApi('answerCallbackQuery', {
+      callback_query_id: cq.id,
+      text: `Не удалось обновить план: ${snapshotResult.error}`.slice(0, 180),
+      show_alert: false,
+    });
+    return;
+  }
+
+  const tasks = await listFounderPriorityTasks(3);
+  const text = trimTelegramHtml(renderFounderPlanMessage(snapshotResult.snapshot, tasks));
+  const edit = await tgApi('editMessageText', {
+    chat_id: cq.message.chat.id,
+    message_id: cq.message.message_id,
+    text,
+    parse_mode: 'HTML',
+    disable_web_page_preview: true,
+    reply_markup: founderPlanKeyboard(tasks),
+  });
+
+  if (!edit?.ok && !/message is not modified/i.test(String(edit?.error || ''))) {
+    await tgApi('sendMessage', {
+      chat_id: cq.message.chat.id,
+      text,
+      parse_mode: 'HTML',
+      disable_web_page_preview: true,
+      reply_markup: founderPlanKeyboard(tasks),
+    });
+  }
+
+  const notice =
+    parsed.action === 'local'
+      ? 'Задача взята в локальную работу.'
+      : parsed.action === 'prod'
+        ? 'Прод-апрув отправлен в решения.'
+        : 'План обновлен.';
+
+  await tgApi('answerCallbackQuery', {
+    callback_query_id: cq.id,
+    text: notice,
+  });
+}
+
+async function handleOfficeHqCommand(msg) {
+  const chatId = msg.chat?.id;
+  const view = detectOfficeHqView(msg.text);
+  if (!chatId || !view) return;
+
+  const result = await fetchOfficeHqSnapshot();
+  if (!result.ok) {
+    await tgApi('sendMessage', {
+      chat_id: chatId,
+      text:
+        'HQ временно недоступен.\n\n' +
+        `Причина: ${result.error}\n` +
+        (OFFICE_HQ_WEB_URL ? `Веб-офис: ${OFFICE_HQ_WEB_URL}/office/hq` : ''),
+      disable_web_page_preview: true,
+    });
+    return;
+  }
+
+  const snapshot = result.snapshot;
+  const payload = trimTelegramHtml(renderOfficeHqMessage(snapshot, view));
+  await tgApi('sendMessage', {
+    chat_id: chatId,
+    text: payload,
+    parse_mode: 'HTML',
+    disable_web_page_preview: true,
+    reply_markup: officeHqKeyboard(view, snapshot),
+  });
+}
+
+async function handleOfficeHqCallback(cq) {
+  if (!isOwnerHqChat(cq.message?.chat, cq.from?.id)) {
+    await tgApi('answerCallbackQuery', { callback_query_id: cq.id, text: 'Панель HQ доступна только владельцу.' });
+    return;
+  }
+
+  const parsed = parseOfficeHqCallback(String(cq.data || ''));
+  if (!parsed) {
+    await tgApi('answerCallbackQuery', { callback_query_id: cq.id });
+    return;
+  }
+
+  const result = await fetchOfficeHqSnapshot();
+  if (!result.ok) {
+    await tgApi('answerCallbackQuery', {
+      callback_query_id: cq.id,
+      text: `HQ недоступен: ${result.error}`.slice(0, 180),
+      show_alert: false,
+    });
+    return;
+  }
+
+  let snapshot = result.snapshot;
+  let view = parsed.view === 'help' ? 'snapshot' : parsed.view;
+
+  if (parsed.action === 'decision') {
+    const status = parsed.status;
+    if (!parsed.id || !Object.prototype.hasOwnProperty.call(OFFICE_HQ_DECISION_STATUSES, status)) {
+      await tgApi('answerCallbackQuery', {
+        callback_query_id: cq.id,
+        text: 'Не понял действие по решению.',
+      });
+      return;
+    }
+
+    const actionResult = await updateOfficeHqDecision({ id: parsed.id, status, snapshot });
+    if (!actionResult.ok) {
+      await tgApi('answerCallbackQuery', {
+        callback_query_id: cq.id,
+        text: `Не удалось обновить решение: ${actionResult.error}`.slice(0, 180),
+        show_alert: false,
+      });
+      return;
+    }
+
+    const refreshed = await fetchOfficeHqSnapshot();
+    if (!refreshed.ok) {
+      await tgApi('answerCallbackQuery', {
+        callback_query_id: cq.id,
+        text: 'Решение обновлено, но HQ не успел перезагрузиться.',
+      });
+      return;
+    }
+    snapshot = refreshed.snapshot;
+    view = 'decisions';
+  }
+
+  const text = trimTelegramHtml(renderOfficeHqMessage(snapshot, view));
+  const edit = await tgApi('editMessageText', {
+    chat_id: cq.message.chat.id,
+    message_id: cq.message.message_id,
+    text,
+    parse_mode: 'HTML',
+    disable_web_page_preview: true,
+    reply_markup: officeHqKeyboard(view, snapshot),
+  });
+
+  if (!edit?.ok && /message is not modified/i.test(String(edit?.error || ''))) {
+    await tgApi('answerCallbackQuery', {
+      callback_query_id: cq.id,
+      text: `Уже открыт режим «${officeHqViewTitle(view)}».`,
+    });
+    return;
+  }
+
+  if (!edit?.ok) {
+    await tgApi('sendMessage', {
+      chat_id: cq.message.chat.id,
+      text,
+      parse_mode: 'HTML',
+      disable_web_page_preview: true,
+      reply_markup: officeHqKeyboard(view, snapshot),
+    });
+  }
+
+  const notice =
+    parsed.action === 'refresh'
+      ? 'HQ обновлен.'
+      : parsed.action === 'decision'
+        ? `Решение: ${OFFICE_HQ_DECISION_STATUSES[parsed.status]}`
+        : officeHqViewTitle(view);
+  await tgApi('answerCallbackQuery', {
+    callback_query_id: cq.id,
+    text: notice,
   });
 }
 
@@ -762,6 +1515,25 @@ async function handleDiscoverEditTarget(msg) {
       parse_mode: 'HTML',
     });
   }
+}
+
+export async function bootstrapOwnerHqMenu() {
+  if (!TOKEN || !OWNER_TELEGRAM_ID) return { ok: false, error: 'owner_hq_menu_disabled' };
+  const setMyCommands = await tgApi('setMyCommands', {
+    commands: OWNER_HQ_COMMANDS,
+    scope: { type: 'chat', chat_id: OWNER_TELEGRAM_ID },
+    language_code: 'ru',
+  });
+  const setChatMenuButton = await tgApi('setChatMenuButton', {
+    chat_id: OWNER_TELEGRAM_ID,
+    menu_button: { type: 'commands' },
+  });
+  console.log('[webhook] bootstrapOwnerHqMenu:', {
+    setMyCommands: setMyCommands?.ok,
+    setChatMenuButton: setChatMenuButton?.ok,
+    ownerTelegramId: OWNER_TELEGRAM_ID,
+  });
+  return { ok: Boolean(setMyCommands?.ok), setMyCommands, setChatMenuButton };
 }
 
 // ═══ TG API ════════════════════════════════════════════════════════
