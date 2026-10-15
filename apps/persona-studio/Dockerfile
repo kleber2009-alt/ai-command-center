@@ -51,10 +51,14 @@ CMD ["node", "server.js"]
 # ── runner: worker ──────────────────────────
 FROM node:${NODE_VERSION} AS worker
 WORKDIR /app
-RUN apk add --no-cache libc6-compat openssl
+# ffmpeg — склейка клипов OmniHuman в длинное видео (src/lib/ffmpeg.ts) и
+# монтаж по скиллам (src/lib/montage/**: libass-субтитры, loudnorm, zoompan).
+# fontconfig — libass ищет шрифты из public/fonts через fontsdir.
+RUN apk add --no-cache libc6-compat openssl ffmpeg fontconfig
 ENV NODE_ENV=production
 COPY --from=builder /app/node_modules ./node_modules
 COPY --from=builder /app/src ./src
+COPY --from=builder /app/public/fonts ./public/fonts
 COPY --from=builder /app/prisma ./prisma
 COPY --from=builder /app/tsconfig.json ./tsconfig.json
 COPY --from=builder /app/package.json ./package.json

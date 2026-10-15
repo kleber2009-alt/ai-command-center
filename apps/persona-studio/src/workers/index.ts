@@ -4,6 +4,7 @@ import { startHeygenWorker } from './heygen-video.worker';
 import { startOmnihumanWorker } from './omnihuman-video.worker';
 import { startSubmagicEditWorker } from './submagic-edit.worker';
 import { startSlideImageWorker } from './slide-image.worker';
+import { startSkillMontageWorker } from './skill-montage.worker';
 import { startResearchCronWorker } from './research-cron.worker';
 import { startPostPublishWorker } from './post-publish.worker';
 import { startScheduleCronWorker } from './schedule-cron.worker';
@@ -24,6 +25,7 @@ const generationWorkers = () => [
   startOmnihumanWorker(),
   startSubmagicEditWorker(),
   startSlideImageWorker(),
+  startSkillMontageWorker(),
 ];
 
 const cronWorkers = () => [

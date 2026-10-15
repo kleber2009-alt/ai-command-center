@@ -13,7 +13,8 @@
 import satori from 'satori';
 import { Resvg } from '@resvg/resvg-js';
 import { loadFonts } from './fonts';
-import { STYLE_TOKENS, type CarouselStyleId, type StyleTokens } from './styles';
+import { STYLE_TOKENS, skillOf, type CarouselStyleId, type StyleTokens } from './styles';
+import { buildSkillNode, skillBg } from './render-skill';
 import type { CoverType } from './prompts';
 
 export const SLIDE_W = 1080;
@@ -38,6 +39,8 @@ export type RenderSlideInput = {
   // существующие per-style AVATAR covers. Остальные типы используют
   // shared cover-type рендеры с токенами стиля.
   coverType?: CoverType;
+  // @ник в шапке скилл-стилей (karusel). Для 5 Persona-DNA не используется.
+  handle?: string;
 };
 
 // ── helpers ───────────────────────────────────────────────────────────
@@ -79,7 +82,24 @@ function splitBullets(body: string): string[] {
 // ── PUBLIC: render ────────────────────────────────────────────────────
 export async function renderSlide(input: RenderSlideInput): Promise<Buffer> {
   const fonts = await loadFonts();
-  const node = buildNode(input);
+  const skill = skillOf(input.style);
+  // Скилл-стили (karusel/montazh-rils): общий движок раскладки скилла.
+  // coverType object/split/ui — по-прежнему shared-рендеры с токенами стиля.
+  const useSkill = skill && !(input.kind === 'cover' && input.coverType && input.coverType !== 'avatar');
+  const node = useSkill
+    ? buildSkillNode(skill, {
+        index: input.index,
+        total: input.total,
+        kind: input.kind,
+        title: input.title,
+        body: input.body,
+        avatarDataUri: input.avatarDataUri,
+        mediaDataUri: input.mediaDataUri,
+        handle: input.handle,
+        width: SLIDE_W,
+        height: SLIDE_H,
+      })
+    : buildNode(input);
   const svg = await satori(node as unknown as Parameters<typeof satori>[0], {
     width: SLIDE_W,
     height: SLIDE_H,
@@ -87,7 +107,7 @@ export async function renderSlide(input: RenderSlideInput): Promise<Buffer> {
   });
   const png = new Resvg(svg, {
     fitTo: { mode: 'width', value: SLIDE_W },
-    background: bgFor(input.style),
+    background: skill ? skillBg(skill, input.kind) : bgFor(input.style),
   })
     .render()
     .asPng();

@@ -134,6 +134,35 @@ S1–S6. Спека пишет схемы в Postgres-схему `studio.*` и �
 > применяются `pnpm db:push` с воркстейшна или `docker compose exec web npx
 > prisma db push` на проде.
 
+## Skills module (монтаж и карусели по скиллам @ilia.paliy)
+
+Перенос Claude-скиллов `karusel`, `montazh-rils` (+ arena / kobalt / scheme /
+uimotion) и `montazh-dlinnogo-video-youtube` в продукт.
+
+- **Общий каталог стилей:** `src/lib/skills/styles.ts` — 20 стилей (цвета, шрифты,
+  режим акцента, фон). Чистый модуль, им пользуются и карусель, и монтаж.
+- **Шрифты:** статичные инстансы вариативных TTF скиллов в `public/fonts/`
+  (имя семейства в TTF = имя в satori и в ASS, напр. `Montserrat 800`). Список —
+  `SKILL_FONT_FILES` в `src/lib/carousel/fonts.ts`. Лицензии — `FONT-LICENSE.md`.
+- **Карусели:** id стиля `skill-<id>`; рендер `src/lib/carousel/render-skill.ts`
+  (раскладка скилла karusel: ник + «3/9», обложка-хук с `*акцентом*` и кикером
+  `[гайд]`, пункты 01/02, пара `✕ …`/`✓ …` в body, CTA «пиши «СЛОВО»» +
+  «сохрани»). Правила копирайта для Claude — `skillRules()` в `prompts.ts`.
+  Превью стилей — `public/skill-previews/<id>.jpg`. Карусель из темы —
+  `NewCarouselForm` на `/carousels` (POST `/api/carousels/draft` с `caption`).
+- **Монтаж:** `/montage`, модель `Montage`, очередь `skill-montage`
+  (`src/workers/skill-montage.worker.ts`, concurrency 1). Пайплайн
+  `src/lib/montage/`: `transcribe-words.ts` (Whisper verbose_json, слова) →
+  `edl.ts` (паузы > gapMax вырезаются, субтитры 1–3 слова, акцент) → `ass.ts`
+  (libass: Cap/CapBox/Hook/CtaVerb/CtaWord) → `render.ts` (один проход ffmpeg:
+  select/aselect, crop или размытая подложка, zoompan-панчи, `ass`, loudnorm
+  −14 LUFS). Пресеты — `presets.ts` (12 шт., youtube = 16:9). Нужен
+  `OPENAI_API_KEY` или `WHISPER_SERVICE_URL`; без них POST `/api/montages` → 503.
+  Своя запись: POST `/api/montages/upload` (сырой body, ≤ 500 МБ, стрим в S3).
+  Env: `COST_SKILL_MONTAGE` (20), `MONTAGE_MAX_SOURCE_SEC` (900), `FFPROBE_PATH`.
+  Образ воркера: `ffmpeg` + `fontconfig` + `public/fonts`.
+- Тесты: `tests/montage.test.ts`.
+
 ## Landing
 
 `/landings/persona-studio/` (static).

@@ -7,6 +7,7 @@
 // метриками. Claude получает компактный JSON-снапшот, не raw caption'ы
 // всех рилсов — иначе вылетим за input window.
 
+import { env } from '@/lib/env';
 import { claudeChat, parseJsonResponse } from './claude';
 
 export type PageAnalysisInput = {
@@ -174,5 +175,5 @@ export async function analyzePage(input: PageAnalysisInput): Promise<PageAnalyze
 
   if (!out.summary) return { ok: false, error: 'claude_empty_response' };
 
-  return { ok: true, data: out, model: 'claude-sonnet-4-6' };
+  return { ok: true, data: out, model: env.ANTHROPIC_DEEP_MODEL };
 }

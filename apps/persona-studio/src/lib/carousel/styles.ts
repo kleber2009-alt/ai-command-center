@@ -2,13 +2,35 @@
 // 5 фиксированных визуальных DNA: каждая обложка + slides + cta идут по
 // единому набору правил (палитра, типографика, layout, иконки). Рендер
 // маршрутизируется по id в render-slide.ts.
+//
+// + Скилл-стили (`skill-<id>`) — 20 стилей из скиллов karusel / montazh-rils
+// (см. src/lib/skills/styles.ts). Рендерятся общим движком render-skill.ts по
+// раскладке скилла karusel: обложка-хук с *акцентом*, пункты 01/02 с парой
+// ✕/✓, призыв «пиши «слово»» + «сохрани».
 
-export type CarouselStyleId =
+import { SKILL_STYLES, findSkillStyle, type SkillStyle } from '@/lib/skills/styles';
+
+export type LegacyCarouselStyleId =
   | 'persona-minimal'
   | 'clickbait-bold'
   | 'knox-cream'
   | 'neon-tech'
   | 'handwritten-viral';
+
+export type SkillCarouselStyleId = `skill-${string}`;
+
+export type CarouselStyleId = LegacyCarouselStyleId | SkillCarouselStyleId;
+
+export const SKILL_STYLE_PREFIX = 'skill-';
+
+export function isSkillStyleId(id: string): id is SkillCarouselStyleId {
+  return id.startsWith(SKILL_STYLE_PREFIX) && Boolean(findSkillStyle(id.slice(SKILL_STYLE_PREFIX.length)));
+}
+
+/** Скилл-стиль по id карусели (`skill-palii` → palii) или undefined. */
+export function skillOf(id: string): SkillStyle | undefined {
+  return id.startsWith(SKILL_STYLE_PREFIX) ? findSkillStyle(id.slice(SKILL_STYLE_PREFIX.length)) : undefined;
+}
 
 export type CarouselStyleMeta = {
   id: CarouselStyleId;
@@ -18,9 +40,11 @@ export type CarouselStyleMeta = {
   swatch: [string, string, string];
   // Краткая характеристика для UI tag-line
   tag: string;
+  // persona — 5 исходных DNA; skill — стили из скиллов монтажа/каруселей
+  group: 'persona' | 'skill';
 };
 
-export const CAROUSEL_STYLES: CarouselStyleMeta[] = [
+const PERSONA_STYLES: Omit<CarouselStyleMeta, 'group'>[] = [
   {
     id: 'persona-minimal',
     label: 'Bold Dark',
@@ -63,6 +87,18 @@ export const CAROUSEL_STYLES: CarouselStyleMeta[] = [
   },
 ];
 
+export const CAROUSEL_STYLES: CarouselStyleMeta[] = [
+  ...PERSONA_STYLES.map((s) => ({ ...s, group: 'persona' as const })),
+  ...SKILL_STYLES.map((s) => ({
+    id: `${SKILL_STYLE_PREFIX}${s.id}` as SkillCarouselStyleId,
+    label: s.label,
+    description: s.description,
+    swatch: [s.coverDark ? s.darkBg : s.lightBg, s.accent, s.revealDark ? s.inkOnDark : s.ink] as [string, string, string],
+    tag: s.tag,
+    group: 'skill' as const,
+  })),
+];
+
 export const DEFAULT_STYLE: CarouselStyleId = 'persona-minimal';
 
 export function isValidStyle(s: string): s is CarouselStyleId {
@@ -93,7 +129,7 @@ export type StyleTokens = {
   mark: string;
 };
 
-export const STYLE_TOKENS: Record<CarouselStyleId, StyleTokens> = {
+const LEGACY_TOKENS: Record<LegacyCarouselStyleId, StyleTokens> = {
   'persona-minimal': {
     bg: '#080808',
     surface: '#0f0f0f',
@@ -155,6 +191,27 @@ export const STYLE_TOKENS: Record<CarouselStyleId, StyleTokens> = {
     mark: '★',
   },
 };
+
+function skillTokens(s: SkillStyle): StyleTokens {
+  const dark = s.coverDark;
+  return {
+    bg: dark ? s.darkBg : s.lightBg,
+    surface: dark ? 'rgba(255,255,255,0.06)' : 'rgba(0,0,0,0.04)',
+    text: dark ? s.inkOnDark : s.ink,
+    textDim: s.mute,
+    textMute: s.mute,
+    accent: s.accent,
+    accent2: s.accent2 ?? s.accent,
+    serif: s.titleFont,
+    mono: s.monoFont,
+    mark: '●',
+  };
+}
+
+export const STYLE_TOKENS: Record<CarouselStyleId, StyleTokens> = {
+  ...LEGACY_TOKENS,
+  ...Object.fromEntries(SKILL_STYLES.map((s) => [`${SKILL_STYLE_PREFIX}${s.id}`, skillTokens(s)])),
+} as Record<CarouselStyleId, StyleTokens>;
 
 export function styleTokens(id: string): StyleTokens {
   return STYLE_TOKENS[(isValidStyle(id) ? id : DEFAULT_STYLE) as CarouselStyleId];

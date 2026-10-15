@@ -28,6 +28,7 @@ export const NAV_GROUPS: NavGroup[] = [
       { href: '/covers', label: 'Covers', key: 'covers', hint: 'обложки карусели' },
       { href: '/carousels', label: 'Carousels', key: 'carousels', hint: 'слайды' },
       { href: '/videos', label: 'Videos', key: 'videos', hint: 'talking-photo' },
+      { href: '/montage', label: 'Скиллы монтажа', key: 'skill-montage', hint: 'стили рилсов' },
       { href: '/edits', label: 'Montage', key: 'edits', hint: 'Submagic-монтаж' },
     ],
   },

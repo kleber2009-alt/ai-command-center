@@ -7,6 +7,7 @@
 // предположительно бессмысленный (анализ детерминирован по входу).
 // Caller сам должен проверить кэш в БД перед charge.
 
+import { env } from '@/lib/env';
 import { claudeChat, parseJsonResponse } from './claude';
 
 const HOOK_FORMULAS = [
@@ -184,7 +185,7 @@ ${input.transcript.slice(0, 4000)}
   return {
     ok: true,
     data: out,
-    model: 'claude-sonnet-4-6',
+    model: env.ANTHROPIC_DEEP_MODEL,
     inputTokens: res.inputTokens,
     outputTokens: res.outputTokens,
   };

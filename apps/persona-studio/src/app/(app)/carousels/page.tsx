@@ -5,6 +5,7 @@ import { prisma } from '@/lib/prisma';
 import { EmptyState } from '@/components/empty-state';
 import { PageHero } from '@/components/shell/page-hero';
 import { CAROUSEL_STYLES, styleMeta } from '@/lib/carousel/styles';
+import { NewCarouselForm } from '@/components/carousel/new-carousel-form';
 
 export const dynamic = 'force-dynamic';
 export const metadata = { title: 'AI Carousel Engine v2 — Persona Studio' };
@@ -52,7 +53,7 @@ export default async function CarouselsPage() {
             <div className="mono text-[9px] tracking-[0.28em] uppercase text-text-muted">Drafts</div>
             <div className="font-serif text-[28px] text-gold leading-none">{drafts.length}</div>
             <div className="mono text-[9px] tracking-[0.22em] uppercase text-text-muted mt-3">
-              Style DNA · {CAROUSEL_STYLES.length}
+              Стилей · {CAROUSEL_STYLES.length}
             </div>
           </>
         }
@@ -68,37 +69,17 @@ export default async function CarouselsPage() {
         }
       />
 
-      {/* 5 Style DNA — single source of truth for what the engine can render */}
+      {/* Новая карусель из темы — стили скилла karusel + 5 Persona DNA */}
       <section className="grid gap-3">
         <div className="flex items-baseline gap-3">
           <span className="sec-num">/01</span>
-          <span className="sec-title">Style DNA · 5 визуальных систем</span>
+          <span className="sec-title">Новая карусель · {CAROUSEL_STYLES.length} стилей</span>
           <span className="flex-1 border-b border-border translate-y-[-3px]" />
           <span className="mono text-[10px] tracking-[0.18em] uppercase text-text-mute">
-            single palette · single grid · single voice
+            хук · пункты 01/02 · ✕/✓ · «пиши слово»
           </span>
         </div>
-        <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-5 gap-2">
-          {CAROUSEL_STYLES.map((s) => (
-            <div
-              key={s.id}
-              className="border border-border bg-surface p-3 grid gap-2 hover:border-text-dim transition"
-            >
-              <div className="flex border border-border overflow-hidden">
-                {s.swatch.map((c, i) => (
-                  <span key={i} className="block flex-1" style={{ background: c, height: 32 }} />
-                ))}
-              </div>
-              <div className="grid gap-0.5">
-                <span className="font-serif text-[14px] text-text leading-tight">{s.label}</span>
-                <span className="mono text-[9px] tracking-wider text-text-mute uppercase">{s.tag}</span>
-              </div>
-              <p className="font-serif italic text-[12px] text-text-dim leading-snug line-clamp-3">
-                {s.description}
-              </p>
-            </div>
-          ))}
-        </div>
+        <NewCarouselForm />
       </section>
 
       {/* Drafts list */}

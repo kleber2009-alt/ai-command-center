@@ -35,6 +35,7 @@ export const QUEUE_NAMES = {
   submagicEdit: 'submagic-edit',
   slideImage: 'slide-image',
   postPublish: 'post-publish',
+  skillMontage: 'skill-montage',
 } as const;
 
 export type AvatarGenerationJob = {
@@ -69,6 +70,12 @@ export type SlideImageJob = {
   slideIndex: number;
   /** hero-avatar | object | ui | slide-media — см. SlideImageMode. */
   mode: 'hero-avatar' | 'object' | 'ui' | 'slide-media';
+};
+
+/** Монтаж по скиллам — воркер читает Montage row (src/workers/skill-montage.worker.ts). */
+export type MontageJob = {
+  montageId: string;
+  userId: string;
 };
 
 // Backward-compat alias.
@@ -121,6 +128,14 @@ export function slideImageQueue() {
     _slideImageQueue = new Queue<SlideImageJob>(QUEUE_NAMES.slideImage, options());
   }
   return _slideImageQueue;
+}
+
+let _montageQueue: Queue<MontageJob> | null = null;
+export function montageQueue() {
+  if (!_montageQueue) {
+    _montageQueue = new Queue<MontageJob>(QUEUE_NAMES.skillMontage, options());
+  }
+  return _montageQueue;
 }
 
 /** Engine-aware dispatcher — pass the queueName from EngineConfig. */

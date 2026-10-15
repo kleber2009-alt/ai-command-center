@@ -15,7 +15,7 @@ import { NextRequest, NextResponse } from 'next/server';
 import { getCurrentUserOrApiKey } from '@/lib/auth';
 import { prisma } from '@/lib/prisma';
 import { renderSlide, type SlideKind } from '@/lib/carousel/render-slide';
-import { isValidStyle, DEFAULT_STYLE } from '@/lib/carousel/styles';
+import { isValidStyle, DEFAULT_STYLE, skillOf } from '@/lib/carousel/styles';
 import { uploadBuffer } from '@/lib/storage';
 import { s3, BUCKET } from '@/lib/storage';
 import { GetObjectCommand } from '@aws-sdk/client-s3';
@@ -133,6 +133,8 @@ export async function POST(req: NextRequest, ctx: { params: Promise<{ id: string
         : null;
 
     const style = isValidStyle(draft.style) ? draft.style : DEFAULT_STYLE;
+    // @ник для шапки скилл-стилей: подключённый Instagram → дефолтная персона.
+    const handle = skillOf(style) ? await resolveHandle(user.id) : undefined;
 
     const renderOne = async (i: number): Promise<string> => {
       const s = slides[i];
@@ -189,6 +191,7 @@ export async function POST(req: NextRequest, ctx: { params: Promise<{ id: string
         avatarDataUri: wantsAvatarBg ? avatarUri || undefined : undefined,
         mediaDataUri: mediaUri || undefined,
         coverType,
+        handle,
       });
       // ?v=<timestamp> чтобы IG/Caddy не закэшировали старую версию по тому
       // же S3-ключу. Ключ остаётся стабильным (один PNG на позицию).
@@ -243,4 +246,18 @@ export async function POST(req: NextRequest, ctx: { params: Promise<{ id: string
     });
     return NextResponse.json({ error: 'render_failed', message: msg }, { status: 500 });
   }
+}
+
+async function resolveHandle(userId: string): Promise<string | undefined> {
+  const ig = await prisma.socialAccount.findFirst({
+    where: { userId, platform: 'instagram', status: 'active' },
+    select: { displayName: true },
+    orderBy: { createdAt: 'asc' },
+  });
+  if (ig?.displayName) return ig.displayName.replace(/^@/, '');
+  const persona = await prisma.persona.findFirst({
+    where: { userId, isDefault: true },
+    select: { name: true },
+  });
+  return persona?.name ?? undefined;
 }

@@ -80,7 +80,7 @@ export const VIDEO_ENGINES: Record<VideoEngine, EngineConfig> = {
   },
   'omnihuman-1.5': {
     label: 'OmniHuman 1.5 — Lifelike',
-    description: 'ByteDance lipsync + ElevenLabs TTS, выразительная анимация (≤30s аудио).',
+    description: 'ByteDance lipsync + ElevenLabs TTS, выразительная анимация. Длинные ролики собираются из клипов по ~14с (лимит модели) и склеиваются.',
     cost: COST_OMNIHUMAN,
     queueName: 'omnihuman-video',
     inputMode: 'script',

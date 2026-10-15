@@ -51,6 +51,7 @@ model User {
   provenances          Provenance[]
   briefs               Brief[]
   generations          Generation[]
+  montages             Montage[]
 }
 
 // API key для интеграции Persona Studio в сторонние проекты.
@@ -208,6 +209,7 @@ model VideoGeneration {
   edits             VideoEdit[]
   scheduledPosts    ScheduledPost[]
   studioGenerations Generation[]
+  montages          Montage[]
 
   @@index([userId, createdAt])
 }
@@ -375,6 +377,35 @@ model ParserItem {
 //
 // slides — JSON-массив { title, body, accent? }. Не нормализуем в отдельную
 // таблицу, потому что редактирование происходит цельно (форма с N textarea).
+// Монтаж по скиллам montazh-rils / montazh-dlinnogo-video-youtube — собственный
+// движок на ffmpeg (src/lib/montage/**): чистка пауз по пословным таймкодам,
+// пословные субтитры в стиле скилла, хук-титр, CTA «пиши «слово»», −14 LUFS.
+// Источник — готовое аватар-видео или загруженная запись.
+model Montage {
+  id                String           @id @default(cuid())
+  userId            String
+  user              User             @relation(fields: [userId], references: [id], onDelete: Cascade)
+  videoGenerationId String?
+  videoGeneration   VideoGeneration? @relation(fields: [videoGenerationId], references: [id], onDelete: SetNull)
+  sourceUrl         String // исходник (VideoGeneration.videoUrl или загрузка в S3)
+  style             String // id пресета монтажа (palii | arena | kobalt | … | youtube)
+  format            String           @default("9:16") // 9:16 | 16:9
+  hookTitle         String? // титр хука, поддерживает *акцент*
+  ctaWord           String? // кодовое слово призыва «пиши «слово»»
+  options           Json             @default("{}") // { cutSilence, subtitles, punch }
+  status            String           @default("pending") // pending | processing | completed | failed
+  transcript        Json? // [{ w, s, e }] — слова с таймкодами исходника
+  resultUrl         String?
+  durationSec       Float?
+  tokensCost        Int              @default(20)
+  errorMsg          String?
+  createdAt         DateTime         @default(now())
+  completedAt       DateTime?
+
+  @@index([userId, createdAt])
+  @@index([videoGenerationId])
+}
+
 model CarouselDraft {
   id            String      @id @default(cuid())
   userId        String

@@ -43,8 +43,20 @@ const envSchema = z.object({
 
   // ── OmniHuman (kie.ai) ────────────────────────
   KIE_OMNIHUMAN_MODEL: z.string().default('bytedance/omni-human'),
-  OMNIHUMAN_MAX_TTS_CHARS: z.coerce.number().default(400),
-  OMNIHUMAN_MAX_POLL_MS: z.coerce.number().default(420_000), // 7 минут
+  // Общий потолок скрипта (символов). Скрипт режется на чанки ≤ CHUNK_CHARS и
+  // склеивается ffmpeg — совпадает с лимитом API (script.max(1500)).
+  OMNIHUMAN_MAX_TTS_CHARS: z.coerce.number().default(1500),
+  // Размер одного чанка. OmniHuman (kie.ai) деградирует на аудио >15с, поэтому
+  // ~200 символов ≈ 14с русской речи (безопасно < 15с).
+  OMNIHUMAN_CHUNK_CHARS: z.coerce.number().default(200),
+  // Верхняя граница числа клипов на одно видео (защита от лишних kie-джоб).
+  OMNIHUMAN_MAX_CHUNKS: z.coerce.number().default(10),
+  OMNIHUMAN_MAX_POLL_MS: z.coerce.number().default(420_000), // 7 минут на клип
+  // Путь к ffmpeg (склейка клипов). В образе воркера — системный `ffmpeg`.
+  FFMPEG_PATH: z.string().default('ffmpeg'),
+  FFPROBE_PATH: z.string().default('ffprobe'),
+  // Потолок длительности исходника для монтажа по скиллам (секунд).
+  MONTAGE_MAX_SOURCE_SEC: z.coerce.number().default(900),
 
   // ── ElevenLabs TTS ────────────────────────────
   // Optional: нужен только для OmniHuman-видео с TTS. Без ключа synthesize()
@@ -74,7 +86,7 @@ const envSchema = z.object({
   // Сколько запросов (ниша + смежные ключи) гоняем за один поиск.
   APIFY_REELS_SEARCH_MAX_QUERIES: z.coerce.number().default(3),
   ANTHROPIC_API_KEY: z.string().min(1).optional(),
-  ANTHROPIC_PARSER_MODEL: z.string().default('claude-haiku-4-5-20251001'),
+  ANTHROPIC_PARSER_MODEL: z.string().default('claude-haiku-5-5'),
   // OpenAI — нужен только для транскрибации (Whisper API). Если задан и
   // WHISPER_SERVICE_URL не задан, transcribeReel идёт в api.openai.com.
   // $0.006/мин — для v1-объёмов копейки, проще чем поднимать faster-whisper.
@@ -103,6 +115,8 @@ const envSchema = z.object({
   COST_OMNIHUMAN_VIDEO: z.coerce.number().default(140),
   COST_SUBMAGIC_EDIT: z.coerce.number().default(15),
   COST_SLIDE_IMAGE: z.coerce.number().default(3),
+  // Монтаж по скиллам (ffmpeg + Whisper word-timestamps, без внешнего монтажёра).
+  COST_SKILL_MONTAGE: z.coerce.number().default(20),
   // ── Studio workspace (Мастер-ТЗ §10 — единый прайс) ──
   COST_STUDIO_SCRIPT: z.coerce.number().default(2),
   // ── Research (Badunga-style) ──
@@ -112,7 +126,7 @@ const envSchema = z.object({
   COST_RESEARCH_PAGE_ANALYZE: z.coerce.number().default(10),
   COST_RESEARCH_REFRESH_AUTHOR: z.coerce.number().default(5),
   COST_RESEARCH_HOOK_GEN: z.coerce.number().default(1),
-  ANTHROPIC_DEEP_MODEL: z.string().default('claude-sonnet-4-6'),
+  ANTHROPIC_DEEP_MODEL: z.string().default('claude-sonnet-5-5'),
   // OpenAI model used as a vision-capable fallback for research/radar when the
   // Anthropic API is unavailable (out of credits / auth). gpt-4o-mini supports
   // image inputs, matching the deep model's vision use.

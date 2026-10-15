@@ -15,7 +15,8 @@
 // Все функции возвращают plain text. Сам fetch к Anthropic / Gemini /
 // GPT-Image сидит в отдельных libs (lib/parser/claude.ts, lib/gemini.ts).
 
-import type { CarouselStyleId } from './styles';
+import { SKILL_STYLES } from '@/lib/skills/styles';
+import { SKILL_STYLE_PREFIX, skillOf, type CarouselStyleId, type LegacyCarouselStyleId } from './styles';
 
 // ─────────────────────────────────────────────────────────────────────
 // COVER TYPES
@@ -64,7 +65,7 @@ type StyleDNA = {
   };
 };
 
-export const STYLE_DNA: Record<CarouselStyleId, StyleDNA> = {
+const LEGACY_DNA: Record<LegacyCarouselStyleId, StyleDNA> = {
   'persona-minimal': {
     label: 'Bold Dark',
     palette: 'matte black #080808 background, cream #f5f0e8 text, lime #c8f060 accent, warm gold #f0c860 secondary',
@@ -147,6 +148,48 @@ export const STYLE_DNA: Record<CarouselStyleId, StyleDNA> = {
   },
 };
 
+// Скилл-стили (karusel): единые лимиты скилла — обложка ≤8 слов, ≤50 слов
+// на слайд, title ≤10 слов. Голос — как в рилсах @ilia.paliy.
+const SKILL_COPY_LIMITS: StyleDNA['copyLimits'] = {
+  coverTitle: '3–8 слов, 1–2 слова в *звёздочках* (акцент)',
+  coverBody: '6–14 слов — польза/обещание',
+  revealTitle: '2–8 слов, 1 слово в *звёздочках*',
+  revealBody: '15–40 слов; для пары «антипример → пример» две строки: «✕ …» и «✓ …»',
+  ctaTitle: 'пиши «СЛОВО» — одно кодовое слово в «ёлочках»',
+  ctaBody: '6–14 слов — что получит за слово',
+};
+
+export const STYLE_DNA: Record<CarouselStyleId, StyleDNA> = {
+  ...LEGACY_DNA,
+  ...Object.fromEntries(
+    SKILL_STYLES.map((s) => [
+      `${SKILL_STYLE_PREFIX}${s.id}`,
+      {
+        label: s.label,
+        palette: `светлый фон ${s.lightBg}, тёмный ${s.darkBg}, текст ${s.ink}/${s.inkOnDark}, акцент ${s.accent}`,
+        typography: `${s.titleFont} для заголовков (${s.titleCase === 'upper' ? 'КАПС' : s.titleCase === 'lower' ? 'строчные' : 'как есть'}), ${s.bodyFont} для текста`,
+        layout: 'скилл karusel: ник + счётчик «3/9» сверху, обложка-хук с акцентом и плашкой-кикером, пункты с крупным номером 01/02, пары ✕/✓, прогресс-бар и «листай →» снизу, финал «пиши «слово»» + «сохрани»',
+        vibe: s.description,
+        voice: 'разговорный, конкретный, как в рилсах @ilia.paliy: без воды, с цифрами и примерами',
+        copyLimits: SKILL_COPY_LIMITS,
+      } satisfies StyleDNA,
+    ]),
+  ),
+} as Record<CarouselStyleId, StyleDNA>;
+
+/** Доп. правила структуры для скилл-стилей (karusel §2–§4). */
+function skillRules(styleId: CarouselStyleId, n: number): string {
+  if (!skillOf(styleId)) return '';
+  return `
+
+ПРАВИЛА СКИЛЛА «КАРУСЕЛЬ» (обязательны):
+- Акцент: 1–2 ключевых слова в title оборачивай в *звёздочки* — они подсветятся цветом стиля. В body звёздочки тоже можно, но редко.
+- Слайд 2 — «контракт»: «вот ${Math.max(1, n - 3)} …» (что будет дальше).
+- Слайды-пункты: title — суть пункта; минимум в двух пунктах body = пара «антипример → пример» РОВНО в две строки, разделённые \n: первая начинается с «✕ », вторая с «✓ ».
+- Последний слайд: title = «пиши «СЛОВО»» (одно кодовое слово капсом в «ёлочках»), body = что человек получит в директ.
+- Не более 50 слов на слайд, title не длиннее 10 слов. Символы ✕ ✓ « » * разрешены, остальные эмодзи — нет.`;
+}
+
 function dnaBlock(styleId: CarouselStyleId): string {
   const d = STYLE_DNA[styleId];
   return [
@@ -205,7 +248,7 @@ ${dna}
 - Голос соответствует "voice" стиля.
 - Русский язык, без эмодзи, без хэштегов, без markdown в title/body.
 - Не повторяй один и тот же тезис на разных слайдах.
-- Каждый body можно структурировать буллетами через "·" если стиль это поддерживает (Clean Light, Handwritten Viral).`;
+- Каждый body можно структурировать буллетами через "·" если стиль это поддерживает (Clean Light, Handwritten Viral).${skillRules(styleId, n)}`;
 
   const userMsg = `Тема / источник:
 """
@@ -258,7 +301,7 @@ ${dna}
 - Сохрани суть и место слайда в потоке (не дублируй соседей).
 - Соблюдай голос и стиль автора.
 - Русский, без эмодзи, без markdown, без хэштегов.
-- Один title (короткий, цепляющий) + один body (раскрытие).
+- Один title (короткий, цепляющий) + один body (раскрытие).${skillRules(styleId, slidesTotal)}
 
 Верни СТРОГО JSON без markdown, без преамбулы, без \`\`\`:
 { "title": "...", "body": "..." }`;
