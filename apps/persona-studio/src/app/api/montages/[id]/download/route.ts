@@ -1,6 +1,8 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { getCurrentUserOrApiKey } from '@/lib/auth';
+import { GetObjectCommand } from '@aws-sdk/client-s3';
 import { prisma } from '@/lib/prisma';
+import { BUCKET, keyFromPublicUrl, s3 } from '@/lib/storage';
 
 export const runtime = 'nodejs';
 
@@ -19,6 +21,25 @@ export async function GET(req: NextRequest, { params }: { params: Promise<{ id: 
   }
 
   const rangeHeader = req.headers.get('range') ?? undefined;
+  const filename = `persona-montage-${m.style}-${m.id.slice(0, 6)}.mp4`;
+
+  // Свой файл — читаем через S3-клиент (публичный URL может быть недоступен
+  // изнутри контейнера web).
+  const key = keyFromPublicUrl(m.resultUrl);
+  if (key) {
+    const obj = await s3.send(new GetObjectCommand({ Bucket: BUCKET, Key: key, Range: rangeHeader }));
+    const headers: Record<string, string> = {
+      'Content-Type': obj.ContentType ?? 'video/mp4',
+      'Content-Disposition': `attachment; filename="${filename}"`,
+      'Cache-Control': 'private, max-age=0, no-store',
+      'Accept-Ranges': 'bytes',
+    };
+    if (obj.ContentLength != null) headers['Content-Length'] = String(obj.ContentLength);
+    if (obj.ContentRange) headers['Content-Range'] = obj.ContentRange;
+    const body = obj.Body?.transformToWebStream();
+    return new NextResponse(body ?? null, { status: obj.ContentRange ? 206 : 200, headers });
+  }
+
   let src: Response;
   try {
     src = await fetch(m.resultUrl, {
@@ -34,7 +55,7 @@ export async function GET(req: NextRequest, { params }: { params: Promise<{ id: 
 
   const headers: Record<string, string> = {
     'Content-Type': src.headers.get('content-type') ?? 'video/mp4',
-    'Content-Disposition': `attachment; filename="persona-montage-${m.style}-${m.id.slice(0, 6)}.mp4"`,
+    'Content-Disposition': `attachment; filename="${filename}"`,
     'Cache-Control': 'private, max-age=0, no-store',
     'Accept-Ranges': 'bytes',
   };

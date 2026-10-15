@@ -200,6 +200,8 @@ export function CarouselEditorShell({ initial, avatars }: Props) {
 
   // Stepper + валидация для финального шага
   const allFilled = slides.every((s) => !slideHasError(s)) && Boolean(coverAvatarId);
+  // Скилл-стили (karusel) рендерят обложку-хук и без фото — аватар не обязателен.
+  const canRender = slides.every((s) => !slideHasError(s)) && (Boolean(coverAvatarId) || styleId.startsWith('skill-'));
   const renderStepStatus =
     renderStatus === 'done'
       ? ('done' as const)
@@ -631,9 +633,9 @@ export function CarouselEditorShell({ initial, avatars }: Props) {
               </button>
               <button
                 type="button"
-                disabled={!allFilled || renderStatus === 'rendering'}
+                disabled={!canRender || renderStatus === 'rendering'}
                 title={
-                  !allFilled
+                  !canRender
                     ? 'Сначала заполни все слайды и выбери обложку'
                     : renderStatus === 'rendering'
                       ? 'Рендерится…'

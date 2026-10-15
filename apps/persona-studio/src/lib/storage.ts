@@ -49,6 +49,13 @@ export function publicUrl(key: string) {
   return `${publicBase.replace(/\/$/, '')}/${key}`;
 }
 
+/** Ключ объекта по нашему публичному URL (без ?query), иначе null. */
+export function keyFromPublicUrl(url: string): string | null {
+  const base = `${publicBase.replace(/\/$/, '')}/`;
+  if (!url.startsWith(base)) return null;
+  return decodeURIComponent(url.slice(base.length).split('?')[0]);
+}
+
 export async function signedDownloadUrl(key: string, ttlSec = 60 * 10) {
   return getSignedUrl(s3, new GetObjectCommand({ Bucket: bucket, Key: key }), {
     expiresIn: ttlSec,

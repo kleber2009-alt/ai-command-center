@@ -10,7 +10,8 @@ import { prisma } from '@/lib/prisma';
 import { env } from '@/lib/env';
 import { connection, QUEUE_NAMES, type MontageJob } from '@/lib/queue';
 import { refundTokens } from '@/lib/tokens';
-import { keyFor, uploadBuffer } from '@/lib/storage';
+import { GetObjectCommand } from '@aws-sdk/client-s3';
+import { BUCKET, keyFor, keyFromPublicUrl, s3, uploadBuffer } from '@/lib/storage';
 import type { Word } from '@/lib/montage/edl';
 import { montagePreset } from '@/lib/montage/presets';
 import { DEFAULT_MONTAGE_OPTIONS, extractAudio, probe, renderMontage, type MontageOptions } from '@/lib/montage/render';
@@ -23,6 +24,15 @@ import { transcribeWords, TranscribeWordsError } from '@/lib/montage/transcribe-
 const MAX_SOURCE_BYTES = 1024 * 1024 * 1024; // 1 ГБ
 
 async function download(url: string, to: string) {
+  // Свои файлы (загрузки, аватар-видео) читаем через S3-клиент: публичный URL
+  // (S3_PUBLIC_URL) может быть недоступен изнутри контейнера воркера.
+  const key = keyFromPublicUrl(url);
+  if (key) {
+    const obj = await s3.send(new GetObjectCommand({ Bucket: BUCKET, Key: key }));
+    if ((obj.ContentLength ?? 0) > MAX_SOURCE_BYTES) throw new UnrecoverableError('SOURCE_TOO_LARGE: исходник больше 1 ГБ');
+    await pipeline(obj.Body as Readable, createWriteStream(to));
+    return;
+  }
   const res = await fetch(url, { signal: AbortSignal.timeout(600_000) });
   if (!res.ok || !res.body) throw new Error(`source_download_failed: HTTP ${res.status}`);
   const len = Number(res.headers.get('content-length') ?? 0);
