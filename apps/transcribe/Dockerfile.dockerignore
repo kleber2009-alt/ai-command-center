@@ -12,7 +12,7 @@
 # Exclude unrelated apps (build context is the repo root)
 apps/ai-office/
 apps/ai-sales/
-apps/ytdlp/
+services/python/ytdlp/
 
 # Other repo cruft
 docs/

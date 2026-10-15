@@ -15,7 +15,7 @@ Python TG-бот для приёма и обработки видео-кружк
 ## Локальный запуск
 
 ```bash
-cd apps/voice-circle-bot
+cd services/python/voice-circle-bot
 cp .env.example .env
 docker compose up -d --build
 ```
