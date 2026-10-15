@@ -304,13 +304,27 @@ function cover(s: SkillStyle, input: SkillSlideInput): Node {
 }
 
 // ── reveal ─────────────────────────────────────────────────────────────
+/**
+ * Нормализуем body от Claude: «пункт · пункт · пункт» → строки; пара может прийти
+ * одной строкой («× плохо·✓ хорошо») — разрезаем перед ✓ и перед ✕/×.
+ */
+function bodyLines(body: string): string[] {
+  let t = body.replace(/\s*([✓✔])/g, '\n$1').replace(/\s*([✕✗×])\s/g, '\n$1 ');
+  if ((t.match(/·/g) ?? []).length >= 2) t = t.replace(/\s*·\s*/g, '\n');
+  return t
+    .split('\n')
+    .map((l) => l.replace(/^[·\s]+|[·\s]+$/g, '').trim())
+    .filter(Boolean);
+}
+
 function pairOf(body: string): { anti: string; good: string; rest: string } | null {
-  const lines = body.split('\n').map((l) => l.trim()).filter(Boolean);
-  const anti = lines.find((l) => /^[✕✗×x]\s/i.test(l));
-  const good = lines.find((l) => /^[✓✔]\s/.test(l));
+  const lines = bodyLines(body);
+  const anti = lines.find((l) => /^[✕✗×]\s*/.test(l));
+  const good = lines.find((l) => /^[✓✔]\s*/.test(l));
   if (!anti || !good) return null;
   const rest = lines.filter((l) => l !== anti && l !== good).join('\n');
-  return { anti: anti.replace(/^\S+\s+/, ''), good: good.replace(/^\S+\s+/, ''), rest };
+  const strip = (l: string) => l.replace(/^[✕✗×✓✔]\s*/, '').trim();
+  return { anti: strip(anti), good: strip(good), rest };
 }
 
 function pairCard(s: SkillStyle, surf: Surface, text: string, good: boolean): Node {
@@ -353,7 +367,7 @@ function reveal(s: SkillStyle, input: SkillSlideInput): Node {
     if (pair.rest) blocks.push(rich(s, surf, pair.rest, { font: s.bodyFont, size: 36, lineHeight: 1.3, color: surf.dark ? 'rgba(255,255,255,0.75)' : s.mute }));
     blocks.push(el('div', { display: 'flex', flexDirection: 'column', gap: 20, marginTop: 8 }, [pairCard(s, surf, pair.anti, false), pairCard(s, surf, pair.good, true)]));
   } else {
-    blocks.push(rich(s, surf, input.body, { font: s.bodyFont, size: bSize, lineHeight: 1.32, color: surf.dark ? 'rgba(255,255,255,0.82)' : s.mute }));
+    blocks.push(rich(s, surf, bodyLines(input.body).join('\n'), { font: s.bodyFont, size: bSize, lineHeight: 1.32, color: surf.dark ? 'rgba(255,255,255,0.82)' : s.mute }));
   }
   if (hasMedia) {
     blocks.push(
