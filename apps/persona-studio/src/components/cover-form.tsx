@@ -2,10 +2,11 @@
 
 import { useState } from 'react';
 import { useRouter } from 'next/navigation';
+import { ArrowRight, Loader2 } from 'lucide-react';
 
 type Avatar = { id: string; styleLabel: string; style: string; imageUrl: string };
 
-export function CoverForm({ avatars, initialAvatarId }: { avatars: Avatar[]; initialAvatarId?: string }) {
+export function CoverForm({ avatars, initialAvatarId, cost }: { avatars: Avatar[]; initialAvatarId?: string; cost: number }) {
   const router = useRouter();
   const [avatarId, setAvatarId] = useState<string>(initialAvatarId ?? avatars[0]?.id ?? '');
   const [title, setTitle] = useState('Я СОЗДАЛ СЕБЕ AI-АВАТАРА');
@@ -53,8 +54,8 @@ export function CoverForm({ avatars, initialAvatarId }: { avatars: Avatar[]; ini
   };
 
   return (
-    <form onSubmit={submit} className="grid lg:grid-cols-[1fr_360px] gap-6">
-      <div className="grid gap-5">
+    <form onSubmit={submit} className="grid items-start gap-6 lg:grid-cols-[1fr_360px]">
+      <div className="panel reveal grid gap-5 p-5 sm:p-6">
         <Field label="Avatar" hint="Выбери лицо для обложки">
           <select className="input" value={avatarId} onChange={(e) => setAvatarId(e.target.value)}>
             {avatars.length === 0 && <option value="">Нет готовых аватаров</option>}
@@ -97,41 +98,50 @@ export function CoverForm({ avatars, initialAvatarId }: { avatars: Avatar[]; ini
 
         <div className="flex flex-wrap items-center gap-4 pt-2">
           <button type="submit" className="btn-primary" disabled={busy}>
-            {busy ? 'Generating…' : 'Generate cover · 3 tokens →'}
+            {busy && <Loader2 size={16} className="animate-spin" aria-hidden />}
+            {busy ? 'Генерирую…' : `Создать обложку · ${cost} токенов`}
+            {!busy && <ArrowRight size={16} aria-hidden />}
           </button>
-          {error && <span className="mono text-[11px] text-pink tracking-wider">/ERROR — {error}</span>}
+          {error && (
+            <span className="fade-in w-full rounded-2xl border border-danger/30 bg-danger/10 px-4 py-2.5 text-[13px] text-danger">
+              /ERROR — {error}
+            </span>
+          )}
         </div>
       </div>
 
       {/* preview */}
-      <aside className="bg-surface border border-border p-5">
-        <div className="mono text-[10px] tracking-widest uppercase text-pink mb-3">/ preview · {aspect}</div>
+      <aside className="panel reveal p-5 lg:sticky lg:top-6" style={{ ['--i' as string]: 1 } as React.CSSProperties}>
+        <div className="mb-3 flex items-center gap-2">
+          <span className="sec-num">/ preview</span>
+          <span className="text-[12px] tabular-nums text-text-mute">{aspect}</span>
+        </div>
         <div
-          className={`${ASPECT_CLASS[aspect]} border border-border-2 relative overflow-hidden`}
+          className={`${ASPECT_CLASS[aspect]} relative overflow-hidden rounded-[20px] border border-border-2`}
           style={{
             background:
-              'linear-gradient(170deg, #2a0a20 0%, #14050f 100%)',
+              'linear-gradient(170deg, rgba(255,61,139,0.22) 0%, rgba(11,11,13,0.92) 100%)',
             backgroundImage: selectedAvatar?.imageUrl
-              ? `linear-gradient(180deg, rgba(8,8,8,0.0) 0%, rgba(8,8,8,0.8) 90%), url(${selectedAvatar.imageUrl})`
-              : 'linear-gradient(170deg, #2a0a20 0%, #14050f 100%)',
+              ? `linear-gradient(180deg, rgba(11,11,13,0) 0%, rgba(11,11,13,0.82) 90%), url(${selectedAvatar.imageUrl})`
+              : 'linear-gradient(170deg, rgba(255,61,139,0.22) 0%, rgba(11,11,13,0.92) 100%)',
             backgroundSize: 'cover',
             backgroundPosition: 'center',
           }}
         >
           <div className="absolute inset-0 p-5 flex flex-col justify-between">
-            <span className="mono text-[10px] tracking-widest uppercase text-text-mute">/ cover · {aspect}</span>
+            <span className="self-start rounded-full bg-black/50 px-2.5 py-1 text-[11px] font-medium text-white/85 backdrop-blur-md">/ cover · {aspect}</span>
             <div>
-              <div className="font-serif text-[24px] leading-[1.05] uppercase tracking-tight text-text">{title}</div>
+              <div className="break-words text-[22px] font-extrabold leading-[1.05] tracking-[-0.02em] text-text">{title}</div>
               {subtitle && (
-                <div className="font-serif italic text-[15px] text-pink mt-1 leading-tight">{subtitle}</div>
+                <div className="mt-1.5 break-words text-[14px] font-medium leading-tight text-pink">{subtitle}</div>
               )}
               {cta && (
-                <div className="mono text-[10px] tracking-widest uppercase text-pink font-bold mt-4">{cta}</div>
+                <div className="mt-4 inline-block max-w-full break-words rounded-full bg-pink px-3 py-1 text-[11px] font-semibold text-white">{cta}</div>
               )}
             </div>
           </div>
         </div>
-        <p className="mono text-[10px] tracking-widest uppercase text-text-mute mt-3">
+        <p className="mt-4 border-t border-border-soft pt-3 text-[12px] leading-relaxed text-text-mute">
           Это набросок. Финальную обложку рендерит Nano Banana 2.
         </p>
       </aside>
@@ -141,10 +151,10 @@ export function CoverForm({ avatars, initialAvatarId }: { avatars: Avatar[]; ini
 
 function Field({ label, hint, children }: { label: string; hint?: string; children: React.ReactNode }) {
   return (
-    <label className="grid gap-1">
+    <label className="grid gap-1.5">
       <span className="label">{label}</span>
       {children}
-      {hint && <span className="mono text-[10px] tracking-wider text-text-mute mt-1">{hint}</span>}
+      {hint && <span className="mt-0.5 text-[12px] leading-snug text-text-mute">{hint}</span>}
     </label>
   );
 }
@@ -177,20 +187,20 @@ function AspectPicker({ value, onChange }: { value: Aspect; onChange: (v: Aspect
               role="radio"
               aria-checked={active}
               onClick={() => onChange(opt.value)}
-              className={`border px-3 py-3 flex flex-col items-center gap-2 transition-colors ${
+              className={`flex flex-col items-center gap-2 rounded-[18px] border px-3 py-3.5 transition-all duration-300 ease-settle ${
                 active
-                  ? 'border-lime bg-lime/[0.06]'
-                  : 'border-border bg-surface hover:border-border-2'
+                  ? 'border-blue bg-blue/[0.14] shadow-glow'
+                  : 'border-border-soft bg-white/[0.04] hover:border-border-2 hover:bg-white/[0.07]'
               }`}
             >
               <span
-                className={`${opt.box} border ${active ? 'border-lime' : 'border-text-mute'} block`}
+                className={`${opt.box} block rounded-md border-2 transition-colors ${active ? 'border-gold bg-blue/20' : 'border-text-mute'}`}
                 aria-hidden
               />
-              <span className={`mono text-[11px] tracking-widest uppercase ${active ? 'text-lime' : 'text-text'}`}>
+              <span className={`text-[13px] font-bold tabular-nums ${active ? 'text-text' : 'text-text-dim'}`}>
                 {opt.label}
               </span>
-              <span className="font-serif italic text-[11px] text-text-mute text-center leading-tight">
+              <span className="text-center text-[11px] leading-tight text-text-mute">
                 {opt.hint}
               </span>
             </button>

@@ -1,9 +1,15 @@
 import Link from 'next/link';
 import { redirect } from 'next/navigation';
+import { cookies } from 'next/headers';
 import { getCurrentUser } from '@/lib/auth';
+import { listOwnedVoices } from '@/lib/voice/owned';
 import { prisma } from '@/lib/prisma';
 import { formatDate } from '@/lib/utils';
 import { COSTS } from '@/lib/tokens';
+import { engineConfig } from '@/lib/video-engines';
+import { defaultEngine } from '@/lib/studio/produce';
+import { ArrowRight, Play } from 'lucide-react';
+import { Icon3D, type Icon3DName } from '@/components/ui/icon3d';
 
 export const dynamic = 'force-dynamic';
 
@@ -11,11 +17,11 @@ type StatusTone = 'ready' | 'processing' | 'queued' | 'failed' | 'partial';
 
 function mapStatus(raw: string): { label: string; tone: StatusTone } {
   const s = raw.toLowerCase();
-  if (s === 'done' || s === 'completed' || s === 'ready') return { label: 'Ready', tone: 'ready' };
-  if (s === 'failed' || s === 'error') return { label: 'Failed', tone: 'failed' };
-  if (s === 'partial') return { label: 'Partial', tone: 'partial' };
-  if (s === 'queued' || s === 'pending' || s === 'scheduled') return { label: 'Queued', tone: 'queued' };
-  return { label: raw.charAt(0).toUpperCase() + raw.slice(1), tone: 'processing' };
+  if (s === 'done' || s === 'completed' || s === 'ready') return { label: 'Готово', tone: 'ready' };
+  if (s === 'failed' || s === 'error') return { label: 'Ошибка', tone: 'failed' };
+  if (s === 'partial') return { label: 'Частично', tone: 'partial' };
+  if (s === 'queued' || s === 'pending' || s === 'scheduled') return { label: 'В очереди', tone: 'queued' };
+  return { label: 'В работе', tone: 'processing' };
 }
 
 const statusClass: Record<StatusTone, string> = {
@@ -35,7 +41,9 @@ export default async function DashboardPage({
   if (!user) redirect('/sign-in');
 
   const params = await searchParams;
-  const welcomeSkipped = params.welcome === 'skipped';
+  // ?welcome=skipped is the legacy link; the cookie is set by /api/onboarding/skip.
+  const welcomeSkipped =
+    params.welcome === 'skipped' || (await cookies()).get('ps_onboarding_skipped')?.value === '1';
 
   const firstGenerationExists =
     (await prisma.avatarGeneration.count({ where: { userId: user.id } })) > 0;
@@ -61,6 +69,10 @@ export default async function DashboardPage({
     pendingAvatarBatch,
     pendingVideo,
     pendingEdit,
+    montagesCount,
+    pendingMontage,
+    carouselsCount,
+    scheduledCount,
   ] = await Promise.all([
     prisma.avatarGeneration.findMany({
       where: { userId: user.id },
@@ -71,12 +83,7 @@ export default async function DashboardPage({
     prisma.cover.count({ where: { userId: user.id, status: 'completed' } }),
     prisma.videoGeneration.count({ where: { userId: user.id, status: 'completed' } }),
     prisma.videoEdit.count({ where: { userId: user.id, status: 'completed' } }),
-    // "Voices trained" = distinct custom voice_ids seen across user's video jobs.
-    prisma.videoGeneration.findMany({
-      where: { userId: user.id, voiceId: { not: null } },
-      select: { voiceId: true },
-      distinct: ['voiceId'],
-    }),
+    listOwnedVoices(user.id).then((v) => v.length).catch(() => 0),
     prisma.avatar.findMany({
       where: { userId: user.id, status: 'done' },
       orderBy: { createdAt: 'desc' },
@@ -118,6 +125,12 @@ export default async function DashboardPage({
     prisma.videoEdit.findFirst({
       where: { userId: user.id, status: { in: ['processing', 'pending'] } },
     }),
+    prisma.montage.count({ where: { userId: user.id, status: 'completed' } }),
+    prisma.montage.findFirst({
+      where: { userId: user.id, status: { in: ['processing', 'pending'] } },
+    }),
+    prisma.carouselDraft.count({ where: { userId: user.id } }),
+    prisma.scheduledPost.count({ where: { userId: user.id, status: 'scheduled' } }),
   ]);
 
   const lowBalance = user.tokenBalance < COSTS.avatarGeneration;
@@ -134,28 +147,28 @@ export default async function DashboardPage({
   for (const g of generations.slice(0, 3)) {
     activity.push({
       time: g.createdAt,
-      label: `Avatar batch ${g.id.slice(0, 6)} · ${g.status}`,
+      label: `Пакет аватаров · ${mapStatus(g.status).label.toLowerCase()}`,
       tone: mapStatus(g.status).tone,
     });
   }
   for (const v of recentVideos.slice(0, 2)) {
     activity.push({
       time: v.createdAt,
-      label: `Video render · ${v.status}`,
+      label: `Видео · ${mapStatus(v.status).label.toLowerCase()}`,
       tone: mapStatus(v.status).tone,
     });
   }
   for (const e of recentEdits.slice(0, 2)) {
     activity.push({
       time: e.createdAt,
-      label: `Submagic edit · ${e.status}`,
+      label: `Монтаж · ${mapStatus(e.status).label.toLowerCase()}`,
       tone: mapStatus(e.status).tone,
     });
   }
   for (const c of recentCovers.slice(0, 2)) {
     activity.push({
       time: c.createdAt,
-      label: `Cover · ${c.title || c.id.slice(0, 6)}`,
+      label: `Обложка · ${c.title || c.id.slice(0, 6)}`,
       tone: 'ready',
     });
   }
@@ -164,77 +177,95 @@ export default async function DashboardPage({
   return (
     <div className="space-y-12">
       {/* === HERO === */}
-      <section className="relative hero-gradient border border-border-soft overflow-hidden">
-        <div className="grid lg:grid-cols-[1.05fr_0.95fr] gap-0">
-          {/* Left: editorial text */}
-          <div className="p-8 lg:p-14 flex flex-col justify-between min-h-[420px] lg:min-h-[560px]">
+      <section className="panel relative overflow-hidden !rounded-[28px]">
+        <div className="hero-gradient pointer-events-none absolute inset-0" />
+        <div className="relative grid lg:grid-cols-[1.05fr_0.95fr] gap-0">
+          {/* Left: headline */}
+          <div className="p-7 lg:p-12 flex flex-col justify-between min-h-[400px] lg:min-h-[520px]">
             <div>
-              <div className="eyebrow mb-6">
-                <span className="text-gold">◆</span> Welcome back, {displayName.toUpperCase()}
+              <div className="eyebrow mb-6 reveal">
+                <span className="h-1.5 w-1.5 rounded-full bg-gold shadow-[0_0_8px_2px_rgba(59,140,255,0.6)]" />
+                С возвращением, {displayName}
               </div>
-              <h1 className="display-1 mb-6">
-                AI creates.<br />
-                <span className="italic text-gold">You inspire.</span><br />
-                We scale.
+              <h1 className="display-2 mb-6 reveal" style={{ ['--i' as string]: 1 } as React.CSSProperties}>
+                AI создаёт.<br />
+                <span className="italic text-gold">Ты вдохновляешь.</span><br />
+                Мы масштабируем.
               </h1>
-              <p className="font-serif italic text-[18px] leading-[1.55] text-text-secondary max-w-[42ch]">
-                Your personal AI studio for content that connects and converts.
-                Avatars, voice, video, carousels — assembled by autonomous agents.
+              <p
+                className="reveal text-[16px] leading-[1.6] text-text-dim max-w-[44ch]"
+                style={{ ['--i' as string]: 2 } as React.CSSProperties}
+              >
+                Личная AI-студия контента: аватары, голос, видео, карусели и монтаж
+                по скиллам — всё в одном месте.
               </p>
             </div>
 
-            <div className="mt-10 flex flex-wrap items-center gap-4">
+            <div
+              className="mt-10 flex flex-wrap items-center gap-3 reveal"
+              style={{ ['--i' as string]: 3 } as React.CSSProperties}
+            >
               <Link href="/generate" className="btn-primary">
-                Open Studio →
+                Открыть студию
+                <ArrowRight size={16} strokeWidth={2.2} aria-hidden="true" />
               </Link>
-              <Link
-                href="#pipeline"
-                className="mono text-[11px] tracking-[0.22em] uppercase text-text-secondary hover:text-gold transition-colors"
-              >
-                Watch studio intro →
+              <Link href="/help" className="btn-ghost">
+                <Play size={14} strokeWidth={2.2} aria-hidden="true" />
+                Как это работает
               </Link>
             </div>
           </div>
 
-          {/* Right: cinematic portrait */}
-          <div className="relative bg-bg-card min-h-[340px] lg:min-h-[560px] overflow-hidden">
+          {/* Right: portrait */}
+          <div className="relative m-3 lg:m-4 lg:ml-0 rounded-[22px] bg-white/[0.03] border border-border-soft min-h-[320px] lg:min-h-[488px] overflow-hidden fade-in">
             {heroImage ? (
               <div
                 className="absolute inset-0 bg-cover bg-center"
                 style={{ backgroundImage: `url(${heroImage})` }}
               />
             ) : (
-              <div className="absolute inset-0 flex items-center justify-center">
-                <div className="text-center">
-                  <div className="font-serif italic text-[28px] text-text-secondary mb-2">
-                    no portrait yet
+              <div className="absolute inset-0 flex items-center justify-center p-6">
+                <div className="flex flex-col items-center text-center gap-4">
+                  <div className="pop-in">
+                    <Icon3D name="avatar" size={56} tile sway />
                   </div>
-                  <Link href="/generate" className="mono text-[10px] tracking-[0.28em] uppercase text-gold hover:underline">
-                    Generate first avatar →
+                  <div className="text-[22px] font-semibold tracking-[-0.02em] text-text-dim">
+                    портрета пока нет
+                  </div>
+                  <Link href="/generate" className="btn-ghost">
+                    Создать первый аватар
+                    <ArrowRight size={16} strokeWidth={2.2} aria-hidden="true" />
                   </Link>
                 </div>
               </div>
             )}
-            <div className="absolute inset-0 bg-gradient-to-l from-transparent via-bg-main/10 to-bg-main/60 pointer-events-none" />
-            <div className="absolute top-6 right-6 mono text-[9px] tracking-[0.28em] uppercase text-text-primary/80">
-              Persona · {new Date().getFullYear()}
+            {heroImage && (
+              <div className="absolute inset-0 bg-gradient-to-t from-bg-main/70 via-transparent to-transparent pointer-events-none" />
+            )}
+            <div className="absolute top-4 right-4 eyebrow !py-1 !px-3 !text-[11px]">
+              Персона · {new Date().getFullYear()}
             </div>
-            <div className="absolute bottom-6 right-6 text-right">
-              <div className="mono text-[9px] tracking-[0.28em] uppercase text-text-primary/70">primary avatar</div>
+            <div className="absolute bottom-4 right-4 text-right">
+              <div className="text-[12px] text-text-dim">основной аватар</div>
               {heroAvatar?.styleLabel && (
-                <div className="font-serif italic text-[16px] text-text-primary">{heroAvatar.styleLabel}</div>
+                <div className="text-[16px] font-semibold tracking-[-0.01em] text-text-primary">{heroAvatar.styleLabel}</div>
               )}
             </div>
           </div>
         </div>
 
         {lowBalance && (
-          <div className="border-t border-border-soft px-8 lg:px-14 py-4 flex flex-wrap items-center justify-between gap-3 bg-bg-card/80">
-            <div className="mono text-[10px] tracking-[0.22em] uppercase text-pink">
-              ◆ low balance · {user.tokenBalance} tokens left · batch costs {COSTS.avatarGeneration}
+          <div className="relative mx-3 mb-3 lg:mx-4 lg:mb-4 rounded-[20px] border border-pink/25 bg-pink/[0.08] px-5 py-3 flex flex-wrap items-center justify-between gap-3">
+            <div className="flex items-center gap-3 text-[14px] text-text">
+              <Icon3D name="warning" size={22} />
+              <span>
+                <span className="font-semibold text-pink">мало токенов</span>
+                <span className="text-text-dim"> · осталось {user.tokenBalance} · пакет аватаров стоит {COSTS.avatarGeneration}</span>
+              </span>
             </div>
-            <Link href="/billing" className="btn-ghost text-pink border-pink/40 hover:border-pink">
-              Top up →
+            <Link href="/billing" className="btn-ghost !border-pink/40 hover:!border-pink">
+              Пополнить
+              <ArrowRight size={16} strokeWidth={2.2} aria-hidden="true" />
             </Link>
           </div>
         )}
@@ -242,54 +273,59 @@ export default async function DashboardPage({
 
       {/* === STATS ROW === */}
       <section>
-        <SectionHeader num="/01" title="Studio at a glance" />
-        <div className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-5 gap-px bg-border-soft border border-border-soft">
-          <MetricCard label="Videos created" value={videosCount} accent="gold" />
-          <MetricCard label="Avatars ready" value={avatarsCount} accent="lime" />
-          <MetricCard label="Voices trained" value={voicesCount.length} accent="cyan" />
-          <MetricCard label="Covers designed" value={coversCount} accent="pink" />
-          <MetricCard label="Edits rendered" value={editsCount} accent="gold" />
+        <SectionHeader num="/01" title="Студия в цифрах" />
+        <div className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-5 gap-3 stagger">
+          <MetricCard label="Видео" value={videosCount} accent="gold" icon="videos" />
+          <MetricCard label="Аватары" value={avatarsCount} accent="lime" icon="avatar" />
+          <MetricCard label="Голоса" value={voicesCount} accent="cyan" icon="voice" />
+          <MetricCard label="Обложки" value={coversCount} accent="pink" icon="covers" />
+          <MetricCard label="Монтажи" value={editsCount + montagesCount} accent="gold" icon="montage" />
         </div>
       </section>
 
       {/* === CREATE NEXT MASTERPIECE === */}
       <section>
-        <SectionHeader num="/02" title="Create your next masterpiece" right={<span className="mono text-[10px] tracking-[0.22em] uppercase text-text-muted">5 surfaces</span>} />
-        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-5 gap-3">
+        <SectionHeader num="/02" title="Что создаём" right={<span className="text-[12px] text-text-mute">5 инструментов</span>} />
+        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-5 gap-3 stagger">
           <FeatureCard
             href="/generate"
-            kicker="01 · Avatar"
-            title="Create a digital version of yourself"
+            kicker="01 · Аватар"
+            title="Цифровая версия тебя из одного фото"
             cost={`-${COSTS.avatarGeneration}t`}
             accent="gold"
+            icon="avatar"
           />
           <FeatureCard
             href="/voice"
-            kicker="02 · Voice"
-            title="Clone your voice or train a new one"
-            cost="external"
+            kicker="02 · Голос"
+            title="Клонируй свой голос для видео"
+            cost="бесплатно"
             accent="lime"
+            icon="voice"
           />
           <FeatureCard
             href={avatarsCount > 0 ? '/videos/new' : '/generate?need=video'}
-            kicker="03 · Video"
-            title="Generate videos with your avatar"
-            cost={`-${COSTS.heygenVideo}t`}
+            kicker="03 · Видео"
+            title="Говорящее видео с твоим аватаром"
+            cost={`-${engineConfig(defaultEngine()).cost}t`}
             accent="cyan"
+            icon="video"
           />
           <FeatureCard
-            href={avatarsCount > 0 ? '/carousels' : '/generate?need=carousel'}
-            kicker="04 · Carousel"
-            title="Create scroll-stopping carousel posts"
-            cost="—"
+            href="/carousels"
+            kicker="04 · Карусель"
+            title="Карусель по скиллу из одной темы"
+            cost="по слайдам"
             accent="pink"
+            icon="carousel"
           />
           <FeatureCard
-            href="/edits/new"
-            kicker="05 · Montage"
-            title="Edit and assemble cinematic videos"
-            cost={`-${COSTS.submagicEdit}t`}
+            href="/montage"
+            kicker="05 · Монтаж"
+            title="Монтаж рилса по скиллу: паузы, титры, панчи"
+            cost={`-${COSTS.skillMontage}t`}
             accent="gold"
+            icon="montage"
           />
         </div>
       </section>
@@ -298,22 +334,22 @@ export default async function DashboardPage({
       <section>
         <SectionHeader
           num="/03"
-          title="Recent creations"
-          right={
-            <Link href="/avatars" className="mono text-[10px] tracking-[0.22em] uppercase text-gold hover:underline">
-              Library →
-            </Link>
-          }
+          title="Последние работы"
+          right={<HeaderLink href="/avatars">Библиотека</HeaderLink>}
         />
         {recentAvatars.length + recentCovers.length + recentVideos.length === 0 ? (
-          <div className="panel p-10 text-center">
-            <div className="font-serif italic text-[18px] text-text-secondary mb-3">
-              No creations yet — your library is a blank canvas.
+          <div className="panel p-10 flex flex-col items-center text-center gap-4 reveal">
+            <Icon3D name="sparkles" size={40} tile sway />
+            <div className="text-[16px] text-text-dim">
+              Пока пусто — начни с аватара, остальное соберётся вокруг него.
             </div>
-            <Link href="/generate" className="btn-primary">Start with an avatar →</Link>
+            <Link href="/generate" className="btn-primary">
+              Создать аватар
+              <ArrowRight size={16} strokeWidth={2.2} aria-hidden="true" />
+            </Link>
           </div>
         ) : (
-          <div className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-5 gap-3">
+          <div className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-5 gap-3 stagger">
             {recentVideos.slice(0, 2).map((v) => {
               const status = mapStatus(v.status);
               return (
@@ -323,21 +359,21 @@ export default async function DashboardPage({
                   className="card-editorial overflow-hidden flex flex-col"
                 >
                   <div
-                    className="aspect-[4/5] relative bg-bg-card"
+                    className="aspect-[4/5] relative bg-white/[0.03]"
                     style={v.avatar?.imageUrl ? { backgroundImage: `url(${v.avatar.imageUrl})`, backgroundSize: 'cover', backgroundPosition: 'center' } : undefined}
                   >
-                    <div className="absolute top-3 left-3 mono text-[8.5px] tracking-[0.22em] uppercase bg-black/60 text-text-primary px-2 py-1">
-                      Talking video
+                    <div className={`absolute top-3 left-3 ${MEDIA_TAG}`}>
+                      Видео
                     </div>
                     <div className="absolute bottom-3 left-3">
-                      <span className={statusClass[status.tone]}>{status.label}</span>
+                      <span className={`${statusClass[status.tone]} bg-black/60 backdrop-blur`}>{status.label}</span>
                     </div>
                   </div>
-                  <div className="p-3">
-                    <div className="font-serif italic text-[14px] text-text-primary truncate">
-                      {v.script ? v.script.slice(0, 38) : `video ${v.id.slice(0, 6)}`}
+                  <div className="p-3.5">
+                    <div className="text-[14px] font-medium text-text-primary truncate">
+                      {v.script ? v.script.slice(0, 38) : 'Говорящее видео'}
                     </div>
-                    <div className="mono text-[9px] tracking-[0.2em] uppercase text-text-muted mt-1">
+                    <div className="text-[12px] text-text-mute mt-1 tabular-nums">
                       {formatDate(v.createdAt)}
                     </div>
                   </div>
@@ -351,20 +387,20 @@ export default async function DashboardPage({
                 className="card-editorial overflow-hidden flex flex-col"
               >
                 <div
-                  className="aspect-[4/5] relative p-4 flex flex-col justify-between bg-bg-card"
+                  className="aspect-[4/5] relative p-3 flex flex-col justify-between bg-white/[0.03]"
                   style={c.imageUrl ? { backgroundImage: `url(${c.imageUrl})`, backgroundSize: 'cover', backgroundPosition: 'center' } : undefined}
                 >
-                  <div className="mono text-[8.5px] tracking-[0.22em] uppercase bg-black/60 text-text-primary px-2 py-1 self-start">
-                    Cover
+                  <div className={`${MEDIA_TAG} self-start`}>
+                    Обложка
                   </div>
                   <div>
-                    <div className="font-serif italic text-[18px] leading-tight text-text-primary drop-shadow">
+                    <div className="text-[17px] font-semibold tracking-[-0.01em] leading-tight text-text-primary drop-shadow">
                       {c.title}
                     </div>
                   </div>
                 </div>
-                <div className="p-3">
-                  <div className="mono text-[9px] tracking-[0.2em] uppercase text-text-muted">
+                <div className="p-3.5">
+                  <div className="text-[12px] text-text-mute tabular-nums">
                     {formatDate(c.createdAt)}
                   </div>
                 </div>
@@ -377,16 +413,16 @@ export default async function DashboardPage({
                 className="card-editorial overflow-hidden flex flex-col"
               >
                 <div
-                  className="aspect-[4/5] relative bg-bg-card"
+                  className="aspect-[4/5] relative bg-white/[0.03]"
                   style={a.imageUrl ? { backgroundImage: `url(${a.imageUrl})`, backgroundSize: 'cover', backgroundPosition: 'center' } : undefined}
                 >
-                  <div className="absolute top-3 left-3 mono text-[8.5px] tracking-[0.22em] uppercase bg-black/60 text-text-primary px-2 py-1">
-                    Avatar
+                  <div className={`absolute top-3 left-3 ${MEDIA_TAG}`}>
+                    Аватар
                   </div>
                 </div>
-                <div className="p-3">
-                  <div className="font-serif italic text-[14px] text-text-primary truncate">{a.styleLabel || a.style}</div>
-                  <div className="mono text-[9px] tracking-[0.2em] uppercase text-text-muted mt-1">
+                <div className="p-3.5">
+                  <div className="text-[14px] font-medium text-text-primary truncate">{a.styleLabel || a.style}</div>
+                  <div className="text-[12px] text-text-mute mt-1 tabular-nums">
                     {formatDate(a.createdAt)}
                   </div>
                 </div>
@@ -398,52 +434,81 @@ export default async function DashboardPage({
 
       {/* === AI AGENTS AT WORK === */}
       <section id="agents">
-        <SectionHeader num="/04" title="AI agents at work" right={<span className="mono text-[10px] tracking-[0.22em] uppercase text-text-muted">live</span>} />
-        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-5 gap-3">
+        <SectionHeader
+          num="/04"
+          title="Что сейчас в работе"
+          right={
+            <span className="inline-flex items-center gap-1.5 text-[12px] text-text-mute">
+              <span className="h-1.5 w-1.5 rounded-full bg-green animate-pulse" />
+              онлайн
+            </span>
+          }
+        />
+        <div className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-6 gap-3 stagger">
           <AgentCard
-            name="Avatar Agent"
-            task={pendingAvatarBatch ? `Rendering batch ${pendingAvatarBatch.id.slice(0, 6)}` : 'Idle · ready for next batch'}
-            progress={pendingAvatarBatch ? 42 : null}
+            name="Аватары"
+            icon="avatar"
+            task={pendingAvatarBatch ? 'Генерирую пакет аватаров' : 'Свободен · жду фото'}
+            busy={!!pendingAvatarBatch}
             tone={pendingAvatarBatch ? 'processing' : 'ready'}
           />
           <AgentCard
-            name="Voice Agent"
-            task={voicesCount.length > 0 ? `${voicesCount.length} voice${voicesCount.length === 1 ? '' : 's'} connected` : 'No voice cloned yet'}
-            progress={null}
-            tone={voicesCount.length > 0 ? 'ready' : 'queued'}
+            name="Голос"
+            icon="voice"
+            task={voicesCount > 0 ? `Голосов: ${voicesCount}` : 'Голос ещё не клонирован'}
+            busy={false}
+            tone={voicesCount > 0 ? 'ready' : 'queued'}
           />
           <AgentCard
-            name="Video Agent"
-            task={pendingVideo ? `Generating ${pendingVideo.id.slice(0, 6)}` : 'Idle · awaiting script'}
-            progress={pendingVideo ? 76 : null}
+            name="Видео"
+            icon="video"
+            task={pendingVideo ? 'Рендерю говорящее видео' : 'Свободен · жду сценарий'}
+            busy={!!pendingVideo}
             tone={pendingVideo ? 'processing' : 'ready'}
           />
           <AgentCard
-            name="Hook Agent"
-            task={parserItems.length > 0 ? `Found ${parserItems.length} viral hook${parserItems.length === 1 ? '' : 's'}` : 'Awaiting parser run'}
-            progress={null}
+            name="Карусели"
+            icon="carousel"
+            task={carouselsCount > 0 ? `Каруселей: ${carouselsCount}` : 'Ещё ни одной карусели'}
+            busy={false}
+            tone={carouselsCount > 0 ? 'ready' : 'queued'}
+          />
+          <AgentCard
+            name="Хуки"
+            icon="hooks"
+            task={parserItems.length > 0 ? `Найдено идей: ${parserItems.length}` : 'Жду запуска парсера'}
+            busy={false}
             tone={parserItems.length > 0 ? 'ready' : 'queued'}
           />
           <AgentCard
-            name="Submagic Agent"
-            task={pendingEdit ? `Editing ${pendingEdit.id.slice(0, 6)}` : 'Idle · awaiting video'}
-            progress={pendingEdit ? 58 : null}
-            tone={pendingEdit ? 'processing' : 'ready'}
+            name="Монтаж"
+            icon="montage"
+            task={pendingMontage || pendingEdit ? 'Монтирую ролик' : 'Свободен · жду видео'}
+            busy={!!(pendingMontage || pendingEdit)}
+            tone={pendingMontage || pendingEdit ? 'processing' : 'ready'}
           />
         </div>
       </section>
 
       {/* === CONTENT PIPELINE === */}
       <section id="pipeline">
-        <SectionHeader num="/05" title="Content pipeline" right={<span className="mono text-[10px] tracking-[0.22em] uppercase text-text-muted">photo → publish</span>} />
-        <div className="panel p-6 lg:p-8">
-          <div className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-6 gap-3">
-            <PipelineStep n="01" label="Upload" status={avatarsCount > 0 || pendingAvatarBatch ? 'ready' : 'queued'} />
-            <PipelineStep n="02" label="Avatar" status={avatarsCount > 0 ? 'ready' : pendingAvatarBatch ? 'processing' : 'queued'} />
-            <PipelineStep n="03" label="Voice" status={voicesCount.length > 0 ? 'ready' : 'queued'} />
-            <PipelineStep n="04" label="Video" status={videosCount > 0 ? 'ready' : pendingVideo ? 'processing' : 'queued'} />
-            <PipelineStep n="05" label="Edit" status={editsCount > 0 ? 'ready' : pendingEdit ? 'processing' : 'queued'} />
-            <PipelineStep n="06" label="Publish" status={editsCount > 0 ? 'queued' : 'queued'} />
+        <SectionHeader
+          num="/05"
+          title="Путь контента"
+          right={
+            <span className="inline-flex items-center gap-1.5 text-[12px] text-text-mute">
+              фото <ArrowRight size={12} aria-hidden="true" /> публикация
+            </span>
+          }
+        />
+        <div className="panel p-4 lg:p-5">
+          <div className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-6 gap-3 stagger">
+            <PipelineStep n="01" label="Фото" href="/generate" status={avatarsCount > 0 || pendingAvatarBatch ? 'ready' : 'queued'} />
+            <PipelineStep n="02" label="Аватар" href="/avatars" status={avatarsCount > 0 ? 'ready' : pendingAvatarBatch ? 'processing' : 'queued'} />
+            <PipelineStep n="03" label="Голос" href="/voice" status={voicesCount > 0 ? 'ready' : 'queued'} />
+            <PipelineStep n="04" label="Видео" href="/videos" status={videosCount > 0 ? 'ready' : pendingVideo ? 'processing' : 'queued'} />
+            <PipelineStep n="05" label="Монтаж" href="/montage" status={editsCount + montagesCount > 0 ? 'ready' : pendingEdit || pendingMontage ? 'processing' : 'queued'} />
+            <PipelineStep n="06" label="Публикация" href="/schedule" status={scheduledCount > 0 ? 'processing' : 'queued'} />
           </div>
         </div>
       </section>
@@ -452,69 +517,66 @@ export default async function DashboardPage({
       <section>
         <SectionHeader
           num="/06"
-          title="Trend intelligence"
-          right={
-            <Link href="/parser" className="mono text-[10px] tracking-[0.22em] uppercase text-gold hover:underline">
-              Open radar →
-            </Link>
-          }
+          title="Идеи из парсера"
+          right={<HeaderLink href="/parser">Открыть парсер</HeaderLink>}
         />
-        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-5 gap-px bg-border-soft border border-border-soft">
-          {(parserItems.length > 0
-            ? parserItems
-            : [
-                { id: 'mock1', caption: 'AI Avatars', fitScore: 9 },
-                { id: 'mock2', caption: 'Productivity Tips', fitScore: 8 },
-                { id: 'mock3', caption: 'Morning Routine', fitScore: 7 },
-                { id: 'mock4', caption: 'Mindset Shift', fitScore: 7 },
-                { id: 'mock5', caption: 'Digital Minimalism', fitScore: 6 },
-              ]
-          )
-            .slice(0, 5)
-            .map((p, i) => (
+        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-5 gap-3 stagger">
+          {parserItems.length === 0 ? (
+            <div className="panel p-6 flex flex-wrap items-center justify-between gap-4 md:col-span-2 lg:col-span-5">
+              <div className="flex items-center gap-4 text-[15px] text-text-dim">
+                <Icon3D name="trends" size={24} tile />
+                Идей пока нет — найди вирусные ролики в своей нише.
+              </div>
+              <Link href="/research" className="btn-ghost">
+                Открыть ресёрч
+                <ArrowRight size={16} strokeWidth={2.2} aria-hidden="true" />
+              </Link>
+            </div>
+          ) : (
+            parserItems.slice(0, 5).map((p, i) => (
               <TrendCard
                 key={p.id}
                 rank={String(i + 1).padStart(2, '0')}
-                topic={(p.caption || '').slice(0, 36) || 'Trend topic'}
+                topic={(p.caption || '').slice(0, 36) || 'Идея'}
                 score={p.fitScore ?? 0}
-                isMock={parserItems.length === 0}
               />
-            ))}
+            ))
+          )}
         </div>
       </section>
 
       {/* === ACTIVITY FEED + STORAGE === */}
       <section className="grid lg:grid-cols-[2fr_1fr] gap-6">
         <div>
-          <SectionHeader num="/07" title="Activity feed" />
-          <div className="panel">
+          <SectionHeader num="/07" title="Лента событий" />
+          <div className="panel overflow-hidden">
             {activity.length === 0 ? (
-              <div className="p-6 font-serif italic text-text-secondary">No activity yet — your studio is quiet.</div>
+              <div className="p-6 flex items-center gap-4 text-[15px] text-text-dim">
+                <Icon3D name="bell" size={24} tile />
+                Пока тихо — событий ещё нет.
+              </div>
             ) : (
-              activity.slice(0, 6).map((a, i) => (
-                <div
-                  key={i}
-                  className="grid grid-cols-[auto_1fr_auto] gap-4 items-center px-5 py-3 border-b border-border-soft last:border-b-0"
-                >
-                  <span className={statusClass[a.tone]}>{a.tone}</span>
-                  <span className="font-serif italic text-[14px] text-text-primary truncate">{a.label}</span>
-                  <span className="mono text-[10px] tracking-[0.2em] uppercase text-text-muted whitespace-nowrap">
-                    {formatDate(a.time)}
-                  </span>
-                </div>
-              ))
+              <div className="stagger">
+                {activity.slice(0, 6).map((a, i) => (
+                  <div
+                    key={i}
+                    className="grid grid-cols-[auto_1fr_auto] gap-4 items-center px-5 py-3.5 border-b border-border-soft last:border-b-0"
+                  >
+                    <span className={statusClass[a.tone]}>{TONE_LABEL[a.tone]}</span>
+                    <span className="text-[14px] text-text-primary truncate">{a.label}</span>
+                    <span className="text-[12px] text-text-mute whitespace-nowrap tabular-nums">
+                      {formatDate(a.time)}
+                    </span>
+                  </div>
+                ))}
+              </div>
             )}
           </div>
         </div>
 
         <div>
-          <SectionHeader num="/08" title="Storage & usage" />
-          <StorageCard
-            avatars={avatarsCount}
-            covers={coversCount}
-            videos={videosCount}
-            edits={editsCount}
-          />
+          <SectionHeader num="/08" title="Баланс" />
+          <BalanceCard balance={user.tokenBalance} scheduled={scheduledCount} />
         </div>
       </section>
 
@@ -522,33 +584,32 @@ export default async function DashboardPage({
       <section>
         <SectionHeader
           num="/09"
-          title="Last avatar batches"
-          right={
-            <Link href="/avatars" className="mono text-[10px] tracking-[0.22em] uppercase text-gold hover:underline">
-              All batches →
-            </Link>
-          }
+          title="Последние пакеты аватаров"
+          right={<HeaderLink href="/avatars">Все пакеты</HeaderLink>}
         />
         {generations.length === 0 ? (
-          <div className="panel p-6 font-serif italic text-text-secondary">No batches yet.</div>
+          <div className="panel p-6 flex items-center gap-4 text-[15px] text-text-dim">
+            <Icon3D name="folders" size={24} tile />
+            Пакетов пока нет.
+          </div>
         ) : (
-          <div className="panel divide-y divide-border-soft">
+          <div className="panel overflow-hidden divide-y divide-border-soft stagger">
             {generations.map((g) => {
               const status = mapStatus(g.status);
               return (
                 <Link
                   key={g.id}
                   href="/avatars"
-                  className="grid grid-cols-[1fr_auto_auto_auto] gap-4 items-center px-5 py-3 hover:bg-bg-card transition-colors"
+                  className="grid grid-cols-[1fr_auto_auto_auto] gap-4 items-center px-5 py-3.5 hover:bg-white/[0.04] transition-colors"
                 >
-                  <span className="font-serif italic text-[15px] text-text-primary truncate">
-                    Batch {g.id.slice(0, 6)}
+                  <span className="text-[15px] font-medium text-text-primary truncate">
+                    Пакет от {formatDate(g.createdAt)}
                   </span>
                   <span className={statusClass[status.tone]}>{status.label}</span>
-                  <span className="mono text-[10px] tracking-[0.22em] uppercase text-text-muted">
+                  <span className="rounded-full bg-white/[0.05] px-2.5 py-0.5 text-[12px] text-text-dim tabular-nums">
                     -{g.tokensCost}t
                   </span>
-                  <span className="mono text-[10px] tracking-[0.22em] uppercase text-text-muted whitespace-nowrap">
+                  <span className="text-[12px] text-text-mute whitespace-nowrap tabular-nums">
                     {formatDate(g.createdAt)}
                   </span>
                 </Link>
@@ -565,6 +626,19 @@ export default async function DashboardPage({
 /*  Sub-components                                                */
 /* ============================================================ */
 
+type Accent = 'gold' | 'lime' | 'cyan' | 'pink';
+
+const ACCENT_TEXT: Record<Accent, string> = {
+  gold: 'text-gold',
+  lime: 'text-lime',
+  cyan: 'text-cyan',
+  pink: 'text-pink',
+};
+
+/** small glass tag that sits on top of media previews */
+const MEDIA_TAG =
+  'rounded-full bg-black/55 backdrop-blur px-2.5 py-1 text-[11px] font-medium text-text-primary';
+
 function SectionHeader({
   num,
   title,
@@ -575,12 +649,24 @@ function SectionHeader({
   right?: React.ReactNode;
 }) {
   return (
-    <div className="flex items-baseline gap-4 mb-4">
+    <div className="flex items-center gap-3 mb-4">
       <span className="sec-num">{num}</span>
       <span className="sec-title">{title}</span>
-      <span className="flex-1 border-b border-border-soft translate-y-[-3px]" />
+      <span className="flex-1 border-b border-border-soft" />
       {right}
     </div>
+  );
+}
+
+function HeaderLink({ href, children }: { href: string; children: React.ReactNode }) {
+  return (
+    <Link
+      href={href}
+      className="group inline-flex items-center gap-1 rounded-full px-2.5 py-1 text-[13px] font-medium text-gold hover:bg-blue/10 transition-colors"
+    >
+      {children}
+      <ArrowRight size={14} strokeWidth={2.2} className="transition-transform group-hover:translate-x-0.5" aria-hidden="true" />
+    </Link>
   );
 }
 
@@ -588,19 +674,20 @@ function MetricCard({
   label,
   value,
   accent,
+  icon,
 }: {
   label: string;
   value: number;
-  accent: 'gold' | 'lime' | 'cyan' | 'pink';
+  accent: Accent;
+  icon: Icon3DName;
 }) {
-  const cls =
-    accent === 'gold' ? 'text-gold' :
-    accent === 'lime' ? 'text-lime' :
-    accent === 'cyan' ? 'text-cyan' : 'text-pink';
   return (
-    <div className="bg-bg-panel p-6">
-      <div className="mono text-[9px] tracking-[0.28em] uppercase text-text-muted mb-3">{label}</div>
-      <div className={`font-serif text-[44px] leading-none ${cls}`}>{value}</div>
+    <div className="panel p-5">
+      <div className="flex items-start justify-between gap-2 mb-4">
+        <div className="text-[13px] text-text-mute">{label}</div>
+        <Icon3D name={icon} size={20} tile />
+      </div>
+      <div className={`text-[40px] leading-none font-extrabold tabular-nums tracking-[-0.02em] ${ACCENT_TEXT[accent]}`}>{value}</div>
     </div>
   );
 }
@@ -611,32 +698,35 @@ function FeatureCard({
   title,
   cost,
   accent,
+  icon,
 }: {
   href: string;
   kicker: string;
   title: string;
   cost: string;
-  accent: 'gold' | 'lime' | 'cyan' | 'pink';
+  accent: Accent;
+  icon: Icon3DName;
 }) {
-  const cls =
-    accent === 'gold' ? 'text-gold' :
-    accent === 'lime' ? 'text-lime' :
-    accent === 'cyan' ? 'text-cyan' : 'text-pink';
   return (
     <Link
       href={href}
-      className="card-editorial p-6 flex flex-col justify-between min-h-[200px] group"
+      className="card-editorial p-5 flex flex-col justify-between gap-5 min-h-[220px] group"
     >
-      <div>
-        <div className={`mono text-[9px] tracking-[0.28em] uppercase ${cls}`}>{kicker}</div>
+      <div className="flex items-start justify-between gap-2">
+        <Icon3D name={icon} size={28} tile />
+        <span className={`text-[12px] font-semibold ${ACCENT_TEXT[accent]}`}>{kicker}</span>
       </div>
       <div>
-        <div className="font-serif italic text-[20px] leading-snug text-text-primary mb-4">
+        <div className="text-[18px] font-semibold tracking-[-0.02em] leading-snug text-text-primary mb-4">
           {title}
         </div>
         <div className="flex items-center justify-between">
-          <span className="mono text-[10px] tracking-[0.22em] uppercase text-text-muted">{cost}</span>
-          <span className={`mono text-[14px] transition-transform group-hover:translate-x-1 ${cls}`}>→</span>
+          <span className="rounded-full bg-white/[0.05] border border-border-soft px-2.5 py-0.5 text-[12px] text-text-dim tabular-nums">
+            {cost}
+          </span>
+          <span className="inline-flex h-8 w-8 items-center justify-center rounded-full bg-white/[0.05] text-text-dim transition-all group-hover:bg-blue group-hover:text-white group-hover:translate-x-0.5">
+            <ArrowRight size={16} strokeWidth={2.2} aria-hidden="true" />
+          </span>
         </div>
       </div>
     </Link>
@@ -645,55 +735,61 @@ function FeatureCard({
 
 function AgentCard({
   name,
+  icon,
   task,
-  progress,
+  busy,
   tone,
 }: {
   name: string;
+  icon: Icon3DName;
   task: string;
-  progress: number | null;
+  busy: boolean;
   tone: StatusTone;
 }) {
   return (
     <div className="panel p-5">
-      <div className="flex items-center justify-between mb-3">
-        <span className="mono text-[9px] tracking-[0.28em] uppercase text-text-muted">{name}</span>
-        <span className={statusClass[tone]}>{tone}</span>
+      <div className="flex items-start justify-between gap-2 mb-3">
+        <Icon3D name={icon} size={20} tile />
+        <span className={statusClass[tone]}>{TONE_LABEL[tone]}</span>
       </div>
-      <div className="font-serif italic text-[14px] text-text-primary leading-snug min-h-[40px]">
+      <div className="text-[15px] font-semibold tracking-[-0.01em] text-text mb-1">{name}</div>
+      <div className="text-[14px] text-text-dim leading-snug min-h-[40px]">
         {task}
       </div>
-      {progress !== null && (
-        <div className="mt-3">
-          <div className="h-[2px] bg-border-soft overflow-hidden">
-            <div
-              className="h-full bg-gold transition-all duration-700"
-              style={{ width: `${progress}%` }}
-            />
-          </div>
-          <div className="mono text-[9px] tracking-[0.28em] uppercase text-text-muted mt-1.5">{progress}%</div>
+      {busy && (
+        <div className="mt-3 h-1.5 rounded-full bg-white/[0.08] overflow-hidden">
+          <div className="skeleton h-full w-full rounded-full" />
         </div>
       )}
     </div>
   );
 }
 
+const TONE_LABEL: Record<StatusTone, string> = {
+  ready: 'Готово',
+  processing: 'В работе',
+  queued: 'Ожидает',
+  failed: 'Ошибка',
+  partial: 'Частично',
+};
+
 function PipelineStep({
   n,
   label,
+  href,
   status,
 }: {
   n: string;
   label: string;
+  href: string;
   status: StatusTone;
 }) {
-  const statusLabel = status === 'ready' ? 'Ready' : status === 'processing' ? 'Processing' : status === 'queued' ? 'Queued' : status === 'partial' ? 'Partial' : 'Failed';
   return (
-    <div className="border border-border-soft p-4 bg-bg-card">
-      <div className="mono text-[9px] tracking-[0.28em] uppercase text-text-muted mb-2">{n}</div>
-      <div className="font-serif text-[18px] text-text-primary mb-2">{label}</div>
-      <span className={statusClass[status]}>{statusLabel}</span>
-    </div>
+    <Link href={href} className="rounded-[18px] border border-border-soft bg-white/[0.03] p-4 transition-colors hover:bg-white/[0.06] hover:border-border-2">
+      <div className="mb-3"><span className="sec-num">{n}</span></div>
+      <div className="text-[17px] font-semibold tracking-[-0.02em] text-text-primary mb-3">{label}</div>
+      <span className={statusClass[status]}>{TONE_LABEL[status]}</span>
+    </Link>
   );
 }
 
@@ -701,63 +797,59 @@ function TrendCard({
   rank,
   topic,
   score,
-  isMock,
 }: {
   rank: string;
   topic: string;
   score: number;
-  isMock: boolean;
 }) {
   return (
-    <div className="bg-bg-panel p-5 flex flex-col gap-2">
+    <div className="panel p-5 flex flex-col gap-3">
       <div className="flex items-center justify-between">
-        <span className="mono text-[10px] tracking-[0.28em] uppercase text-text-muted">{rank}</span>
-        {isMock && <span className="mono text-[8px] tracking-[0.28em] uppercase text-text-muted/60">mock</span>}
+        <span className="sec-num">{rank}</span>
       </div>
-      <div className="font-serif italic text-[18px] text-text-primary leading-snug min-h-[44px]">
+      <div className="text-[17px] font-semibold tracking-[-0.02em] text-text-primary leading-snug min-h-[44px]">
         {topic}
       </div>
-      <div className="mono text-[10px] tracking-[0.22em] uppercase text-gold">
-        fit {score}/10
+      <div>
+        <span className="inline-flex rounded-full bg-blue/15 px-2.5 py-0.5 text-[12px] font-semibold text-gold tabular-nums">
+          совпадение {score}/10
+        </span>
       </div>
     </div>
   );
 }
 
-function StorageCard({
-  avatars,
-  covers,
-  videos,
-  edits,
-}: {
-  avatars: number;
-  covers: number;
-  videos: number;
-  edits: number;
-}) {
-  // Rough estimate until storage tracking lands: avg sizes per asset type in MB.
-  const usedMb = avatars * 1.2 + covers * 1.6 + videos * 28 + edits * 24;
-  const quotaGb = 200;
-  const usedGb = usedMb / 1024;
-  const pct = Math.min(100, (usedGb / quotaGb) * 100);
-
+function BalanceCard({ balance, scheduled }: { balance: number; scheduled: number }) {
+  const rows: { label: string; cost: number }[] = [
+    { label: 'Пакет аватаров', cost: COSTS.avatarGeneration },
+    { label: 'Монтаж по скиллу', cost: COSTS.skillMontage },
+    { label: 'Говорящее видео', cost: engineConfig(defaultEngine()).cost },
+    { label: 'Обложка', cost: COSTS.coverGeneration },
+  ];
   return (
     <div className="panel p-5">
-      <div className="flex items-baseline justify-between mb-3">
-        <div className="font-serif text-[26px] text-text-primary leading-none">
-          {usedGb.toFixed(1)} <span className="text-text-muted text-[14px]">/ {quotaGb} GB</span>
+      <div className="flex items-baseline justify-between mb-4">
+        <div className="text-[30px] font-extrabold tabular-nums tracking-[-0.02em] text-text-primary leading-none">
+          {balance} <span className="text-text-mute text-[14px] font-medium">токенов</span>
         </div>
-        <span className="mono text-[9px] tracking-[0.28em] uppercase text-gold">{pct.toFixed(0)}%</span>
+        <Icon3D name="coin" size={22} tile />
       </div>
-      <div className="h-[3px] bg-border-soft overflow-hidden mb-4">
-        <div className="h-full bg-gold transition-all duration-700" style={{ width: `${pct}%` }} />
-      </div>
-      <ul className="space-y-1.5 mono text-[10px] tracking-[0.22em] uppercase text-text-secondary">
-        <li className="flex justify-between"><span>Videos</span><span>{videos}</span></li>
-        <li className="flex justify-between"><span>Avatars</span><span>{avatars}</span></li>
-        <li className="flex justify-between"><span>Covers</span><span>{covers}</span></li>
-        <li className="flex justify-between"><span>Edits</span><span>{edits}</span></li>
+      <ul className="space-y-2 text-[13px] text-text-dim mb-4">
+        {rows.map((r) => (
+          <li key={r.label} className="flex justify-between">
+            <span>{r.label}</span>
+            <span className="tabular-nums text-text">{r.cost}</span>
+          </li>
+        ))}
+        <li className="flex justify-between border-t border-border-soft pt-2">
+          <span>Запланировано публикаций</span>
+          <span className="tabular-nums text-text">{scheduled}</span>
+        </li>
       </ul>
+      <Link href="/billing" className="btn-ghost w-full justify-center">
+        Пополнить
+        <ArrowRight size={16} strokeWidth={2.2} aria-hidden="true" />
+      </Link>
     </div>
   );
 }

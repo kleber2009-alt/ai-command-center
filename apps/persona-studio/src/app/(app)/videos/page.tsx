@@ -1,5 +1,5 @@
-import Link from 'next/link';
 import { redirect } from 'next/navigation';
+import { ArrowDown } from 'lucide-react';
 import { getCurrentUser } from '@/lib/auth';
 import { prisma } from '@/lib/prisma';
 import { VideoCard } from '@/components/video-card';
@@ -33,7 +33,7 @@ export default async function VideosPage({ searchParams }: { searchParams: Promi
         eyebrow="LIBRARY · VIDEOS"
         title={
           <>
-            Talking-photo <span className="italic text-gold">videos.</span>
+            Talking-photo <span className="italic">videos.</span>
           </>
         }
         description="HeyGen берёт выбранного аватара, оживляет губы под скрипт и выдаёт MP4 за 2–4 минуты."
@@ -41,17 +41,18 @@ export default async function VideosPage({ searchParams }: { searchParams: Promi
           selectedAvatar
             ? [
                 { label: `New video · ${selectedAvatar.styleLabel}`, href: `/videos/new?avatarId=${selectedAvatar.id}` },
-                { label: 'Montage →', href: '/edits', tone: 'ghost' },
+                { label: 'Montage', href: '/edits', tone: 'ghost' },
               ]
             : [
                 { label: 'Choose avatar', href: '/avatars' },
-                { label: 'Montage →', href: '/edits', tone: 'ghost' },
+                { label: 'Montage', href: '/edits', tone: 'ghost' },
               ]
         }
+        icon="videos"
         meta={
           <>
-            <div className="mono text-[9px] tracking-[0.28em] uppercase text-text-muted">Library</div>
-            <div className="font-serif text-[28px] text-gold leading-none">{videos.length}</div>
+            <div className="label">Library</div>
+            <div className="text-[40px] font-extrabold leading-none tracking-[-0.02em] tabular-nums text-gold">{videos.length}</div>
           </>
         }
       />
@@ -75,7 +76,7 @@ export default async function VideosPage({ searchParams }: { searchParams: Promi
           />
         )
       ) : (
-        <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4">
+        <div className="stagger grid grid-cols-1 gap-4 sm:grid-cols-2 lg:grid-cols-3">
           {videos.map((v) => (
             <VideoCard
               key={v.id}
@@ -90,8 +91,9 @@ export default async function VideosPage({ searchParams }: { searchParams: Promi
       )}
 
       {focus && (
-        <p className="mono text-[10px] tracking-widest uppercase text-text-mute text-center">
-          /scroll · карточка {focus.slice(0, 8)} ↓
+        <p className="flex items-center justify-center gap-1.5 text-center text-[12px] text-text-mute">
+          /scroll · карточка {focus.slice(0, 8)}
+          <ArrowDown size={13} aria-hidden />
         </p>
       )}
     </div>

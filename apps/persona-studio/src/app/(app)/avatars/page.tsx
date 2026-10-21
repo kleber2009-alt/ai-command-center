@@ -1,4 +1,5 @@
 import Link from 'next/link';
+import { ArrowLeft, ChevronRight } from 'lucide-react';
 import { redirect } from 'next/navigation';
 import { getCurrentUser } from '@/lib/auth';
 import { prisma } from '@/lib/prisma';
@@ -23,15 +24,13 @@ export default async function AvatarsPage({ searchParams }: { searchParams: Prom
     if (exists) {
       return (
         <div className="grid gap-8">
-          <header>
-            <div className="flex items-baseline gap-3 mb-2">
-              <span className="sec-num">/00</span>
-              <span className="sec-title">live render</span>
-              <span className="flex-1 border-b border-border translate-y-[-3px]" />
-              <Link href="/avatars" className="mono text-[10px] tracking-widest uppercase text-text-mute hover:text-text">
-                ← все батчи
-              </Link>
-            </div>
+          <header className="reveal flex flex-wrap items-center gap-3">
+            <Link href="/avatars" className="btn-ghost !px-4 !py-2 text-[13px]">
+              <ArrowLeft size={14} aria-hidden />
+              все батчи
+            </Link>
+            <span className="sec-num">/00</span>
+            <span className="sec-title">live render</span>
           </header>
           <AvatarGrid generationId={exists.id} />
         </div>
@@ -54,15 +53,16 @@ export default async function AvatarsPage({ searchParams }: { searchParams: Prom
         eyebrow="LIBRARY · AVATARS"
         title={
           <>
-            All avatar <span className="italic text-gold">batches.</span>
+            All avatar <span className="italic">batches.</span>
           </>
         }
         description="Каждый батч — одно загруженное селфи, развёрнутое Gemini в десять портретов в разных стилях."
+        icon="avatar"
         actions={[{ label: 'New batch', href: '/generate' }]}
         meta={
           <>
-            <div className="mono text-[9px] tracking-[0.28em] uppercase text-text-muted">Batches</div>
-            <div className="font-serif text-[28px] text-gold leading-none">{generations.length}</div>
+            <div className="label">Batches</div>
+            <div className="text-[40px] font-extrabold leading-none tracking-[-0.02em] tabular-nums text-gold">{generations.length}</div>
           </>
         }
       />
@@ -74,25 +74,25 @@ export default async function AvatarsPage({ searchParams }: { searchParams: Prom
           cta={{ href: '/generate', label: 'Загрузить фото' }}
         />
       ) : (
-        <div className="grid gap-2">
+        <div className="stagger grid gap-3">
           {generations.map((g) => (
             <Link
               key={g.id}
               href={`/avatars?generationId=${g.id}`}
-              className="border border-border bg-surface hover:bg-surface-2 transition-colors px-4 sm:px-5 py-4 grid grid-cols-[1fr_auto] gap-3 sm:gap-4 items-center"
+              className="card-editorial group grid grid-cols-[1fr_auto] items-center gap-3 px-4 py-4 sm:gap-4 sm:px-5"
             >
-              <div className="grid gap-2 min-w-0">
-                <div className="flex flex-wrap items-baseline gap-x-3 gap-y-1">
-                  <span className="mono text-[10px] tracking-widest uppercase text-lime">/{g.status}</span>
-                  <span className="font-serif italic text-[16px] sm:text-[18px]">batch {g.id.slice(0, 6)}</span>
-                  <span className="mono text-[9px] sm:text-[10px] tracking-widest text-text-mute">{formatDate(g.createdAt)}</span>
+              <div className="grid min-w-0 gap-3">
+                <div className="flex flex-wrap items-center gap-x-3 gap-y-1">
+                  <span className={`status-badge status-${g.status === 'pending' ? 'queued' : g.status}`}>{g.status}</span>
+                  <span className="text-[16px] font-semibold tracking-[-0.02em] sm:text-[17px]">batch {g.id.slice(0, 6)}</span>
+                  <span className="text-[12px] text-text-mute tabular-nums">{formatDate(g.createdAt)}</span>
                 </div>
                 {g.avatars.length > 0 && (
-                  <div className="flex gap-1 overflow-hidden">
+                  <div className="flex gap-1.5 overflow-hidden">
                     {g.avatars.map((a) => (
                       <div
                         key={a.id}
-                        className="w-10 h-12 sm:w-12 sm:h-14 bg-surface-2 border border-border shrink-0"
+                        className="h-12 w-10 shrink-0 rounded-xl border border-border-soft bg-surface-2 sm:h-14 sm:w-12"
                         style={
                           a.imageUrl
                             ? { backgroundImage: `url(${a.imageUrl})`, backgroundSize: 'cover', backgroundPosition: 'center' }
@@ -103,8 +103,9 @@ export default async function AvatarsPage({ searchParams }: { searchParams: Prom
                   </div>
                 )}
               </div>
-              <span className="mono text-[10px] tracking-widest uppercase text-text-mute whitespace-nowrap text-right">
-                {g._count.avatars}/10 →
+              <span className="flex items-center gap-1 whitespace-nowrap text-right text-[13px] font-semibold tabular-nums text-text-dim transition-colors group-hover:text-text">
+                {g._count.avatars}/10
+                <ChevronRight size={16} aria-hidden className="transition-transform group-hover:translate-x-0.5" />
               </span>
             </Link>
           ))}

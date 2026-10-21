@@ -5,6 +5,10 @@ import { prisma } from '@/lib/prisma';
 import { VideoForm } from '@/components/video-form';
 import { EmptyState } from '@/components/empty-state';
 import { VoiceStatus } from '@/components/voice-status';
+import { PageHero } from '@/components/shell/page-hero';
+import { ArrowLeft, ExternalLink } from 'lucide-react';
+import { engineConfig } from '@/lib/video-engines';
+import { defaultEngine } from '@/lib/studio/produce';
 
 export const dynamic = 'force-dynamic';
 export const metadata = { title: 'New video — Persona Studio' };
@@ -46,58 +50,62 @@ export default async function NewVideoPage({
 
   return (
     <div className="grid gap-8">
-      <header>
-        <div className="flex items-baseline gap-3 mb-4">
-          <span className="sec-num">/00</span>
-          <span className="sec-title">New talking-photo video</span>
-          <span className="flex-1 border-b border-border translate-y-[-3px]" />
-          <Link href="/videos" className="mono text-[10px] tracking-widest uppercase text-text-mute hover:text-text">
-            ← all videos
-          </Link>
-        </div>
-        <h1 className="font-serif text-[44px] leading-tight max-w-[22ch]">
-          Твой аватар <span className="italic text-warm">говорит твоим голосом.</span>
-        </h1>
-        <p className="font-serif text-[16px] text-text-dim mt-3 max-w-[60ch]">
-          HeyGen возьмёт выбранного аватара, оживит губы под скрипт и выдаст MP4 за 2–4 минуты. Списывается 30 токенов.
-        </p>
-        <VoiceStatus />
-      </header>
+      <div className="-mb-4 flex flex-wrap items-center gap-3">
+        <Link href="/videos" className="btn-ghost !px-4 !py-2 text-[13px]">
+          <ArrowLeft size={14} aria-hidden />
+          all videos
+        </Link>
+        <span className="sec-num">/00</span>
+        <span className="sec-title">New talking-photo video</span>
+      </div>
+
+      <PageHero
+        eyebrow="CREATE · VIDEO"
+        icon="video"
+        title={
+          <>
+            Твой аватар <span className="italic">говорит твоим голосом.</span>
+          </>
+        }
+        description={`AI оживит выбранного аватара под сценарий и выдаст MP4 за 2–4 минуты. Спишется ${engineConfig(defaultEngine()).cost} токенов.`}
+        extra={<VoiceStatus />}
+      />
 
       {(parserRef || sourceUrl) && (
-        <div className="border border-lime/40 bg-lime/[0.04] p-4 sm:p-5 flex flex-col sm:flex-row gap-4 items-start">
+        <div className="panel reveal flex flex-col items-start gap-4 border-lime/25 p-4 sm:flex-row sm:p-5">
           {parserRef?.thumbnailUrl && (
             // eslint-disable-next-line @next/next/no-img-element
             <img
               src={parserRef.thumbnailUrl}
               alt="reference"
               referrerPolicy="no-referrer"
-              className="w-20 h-28 sm:w-24 sm:h-32 object-cover border border-border shrink-0"
+              className="h-28 w-20 shrink-0 rounded-2xl border border-border-soft object-cover sm:h-32 sm:w-24"
             />
           )}
-          <div className="grid gap-1 min-w-0 flex-1">
-            <span className="mono text-[10px] tracking-widest uppercase text-lime">/parser · референс</span>
-            <p className="font-serif text-[14px] sm:text-[15px] text-text">
+          <div className="grid min-w-0 flex-1 gap-1.5">
+            <span className="label !text-lime">/parser · референс</span>
+            <p className="text-[15px] font-semibold text-text sm:text-[16px]">
               {parserRef?.owner ? `@${parserRef.owner}` : 'Instagram'}
               {parserRef?.fitScore != null && (
-                <span className="mono text-[11px] text-warm ml-2">{parserRef.fitScore}/10</span>
+                <span className="ml-2 rounded-full bg-blue/15 px-2 py-0.5 text-[11px] font-semibold tabular-nums text-gold">{parserRef.fitScore}/10</span>
               )}
             </p>
             {parserRef?.fitWhy && (
-              <p className="font-serif italic text-[12.5px] text-text-dim">{parserRef.fitWhy}</p>
+              <p className="text-[13px] text-text-dim">{parserRef.fitWhy}</p>
             )}
             {parserRef?.caption && (
-              <p className="font-serif text-[12px] text-text-mute line-clamp-2">{parserRef.caption}</p>
+              <p className="line-clamp-2 text-[12px] text-text-mute">{parserRef.caption}</p>
             )}
             <a
               href={parserRef?.url || sourceUrl}
               target="_blank"
               rel="noopener noreferrer"
-              className="mono text-[10px] tracking-widest uppercase text-lime hover:underline mt-1"
+              className="mt-1 inline-flex items-center gap-1.5 justify-self-start text-[13px] font-medium text-lime hover:underline"
             >
-              Открыть оригинал в Instagram ↗
+              Открыть оригинал в Instagram
+              <ExternalLink size={13} aria-hidden />
             </a>
-            <p className="font-serif text-[12px] text-text-mute mt-2 max-w-[60ch]">
+            <p className="mt-2 max-w-[60ch] text-[12px] text-text-mute">
               {parserRef?.rewrittenScript
                 ? 'Сценарий уже переписан Claude под твою нишу по структуре хук → боль → раскрытие → CTA. Подправь под себя, выбери аватар — и в монтаж.'
                 : 'Перепиши хук под себя — и в монтаж.'}

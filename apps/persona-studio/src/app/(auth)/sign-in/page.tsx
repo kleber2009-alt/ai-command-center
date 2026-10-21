@@ -1,4 +1,6 @@
+import { ArrowRight, Check, AlertCircle } from 'lucide-react';
 import { signIn } from '@/lib/auth';
+import { Icon3D } from '@/components/ui/icon3d';
 
 export const metadata = { title: 'Sign in — Persona Studio' };
 // Force per-request rendering so the page reflects current runtime env
@@ -24,43 +26,52 @@ export default function SignInPage({ searchParams }: { searchParams: Promise<{ e
   return (
     <main className="min-h-[100svh] grid lg:grid-cols-[minmax(0,1fr)_minmax(0,1.1fr)]">
       {/* LEFT: sign-in form */}
-      <section className="flex items-center justify-center px-5 sm:px-8 py-12 lg:py-16">
-        <div className="w-full max-w-[440px]">
-          <div className="flex items-baseline gap-3 mb-10">
-            <span className="inline-block w-[7px] h-[7px] rounded-full bg-lime translate-y-[-1px]" />
-            <span className="mono text-[12px] tracking-widest font-bold uppercase">Persona Studio</span>
-            <span className="mono text-[11px] tracking-[0.18em] text-text-dim hidden sm:inline">v0.1 · beta</span>
+      <section className="flex items-center justify-center px-4 sm:px-8 py-12 lg:py-16">
+        <div className="w-full max-w-[460px]">
+          <div className="flex items-center gap-3 mb-8 fade-in">
+            <Icon3D name="sparkles" size={26} tile="purple" />
+            <div className="min-w-0">
+              <div className="text-[17px] font-semibold tracking-[-0.02em] lowercase leading-tight">
+                persona <span className="text-gold">studio</span>
+              </div>
+              <div className="text-[11px] text-text-mute">v0.1 · beta</div>
+            </div>
           </div>
 
-          <p className="sec-num mb-3">/ 00 · access</p>
-          <h1 className="font-serif text-[40px] sm:text-[44px] leading-[1.05] mb-3">Войди в студию.</h1>
-          <p className="font-serif text-[15px] sm:text-[16px] text-text-dim mb-8 max-w-[40ch]">
-            Один клик через Google — без паролей. Бонус {bonus} токенов сразу после первого входа.
-          </p>
-
-          {googleOn && <GoogleButton />}
-
-          {googleOn && emailOn && (
-            <div className="flex items-center gap-3 my-6">
-              <span className="flex-1 border-b border-border" />
-              <span className="mono text-[10px] tracking-widest uppercase text-text-mute">or</span>
-              <span className="flex-1 border-b border-border" />
+          <div className="panel p-6 sm:p-8 shadow-glass reveal">
+            <div className="eyebrow mb-5">
+              <span className="h-1.5 w-1.5 rounded-full bg-gold shadow-[0_0_8px_2px_rgba(59,140,255,0.6)]" />
+              / 00 · access
             </div>
-          )}
+            <h1 className="display-2 !text-[38px] sm:!text-[44px] mb-3">Войди в студию.</h1>
+            <p className="text-[15px] sm:text-[16px] leading-[1.6] text-text-dim mb-7 max-w-[40ch]">
+              Один клик через Google — без паролей. Бонус {bonus} токенов сразу после первого входа.
+            </p>
 
-          {emailOn && <EmailForm error={searchParams} />}
+            {googleOn && <GoogleButton />}
 
-          {!googleOn && !emailOn && (
-            <div className="border border-border-2 bg-surface p-5">
-              <p className="mono text-[10px] tracking-widest uppercase text-pink mb-2">/ no-providers</p>
-              <p className="font-serif text-[14px] text-text-dim">
-                Sign-in temporarily unavailable. Свяжись с админом в Telegram —{' '}
-                <a href="https://t.me/ilia_pali0" className="text-cyan hover:underline">@ilia_pali0</a>.
-              </p>
-            </div>
-          )}
+            {googleOn && emailOn && (
+              <div className="flex items-center gap-3 my-5">
+                <span className="flex-1 border-b border-border-soft" />
+                <span className="text-[12px] text-text-mute">or</span>
+                <span className="flex-1 border-b border-border-soft" />
+              </div>
+            )}
 
-          <p className="mono text-[10px] tracking-widest uppercase text-text-mute mt-10 leading-[1.6]">
+            {emailOn && <EmailForm error={searchParams} />}
+
+            {!googleOn && !emailOn && (
+              <div className="rounded-[18px] border border-pink/25 bg-pink/[0.08] p-5">
+                <p className="text-[12px] font-semibold uppercase tracking-[0.08em] text-pink mb-2">/ no-providers</p>
+                <p className="text-[14px] text-text-dim">
+                  Sign-in temporarily unavailable. Свяжись с админом в Telegram —{' '}
+                  <a href="https://t.me/ilia_pali0" className="text-gold hover:underline">@ilia_pali0</a>.
+                </p>
+              </div>
+            )}
+          </div>
+
+          <p className="text-[12px] text-text-mute mt-6 leading-[1.6] px-1">
             Загружая фото, ты соглашаешься с обработкой изображения лица.
           </p>
         </div>
@@ -69,25 +80,26 @@ export default function SignInPage({ searchParams }: { searchParams: Promise<{ e
       {/* RIGHT: showcase — hidden on small viewports to keep first-touch fast */}
       <aside
         aria-label="Примеры обложек, сгенерированных в Persona Studio"
-        className="hidden lg:flex relative flex-col justify-center border-l border-border bg-[#050505] overflow-hidden"
+        className="hidden lg:flex relative flex-col justify-center border-l border-border-soft bg-white/[0.02] overflow-hidden"
       >
-        {/* subtle gradient haze */}
-        <div className="absolute inset-0 pointer-events-none opacity-[0.35] bg-[radial-gradient(60%_50%_at_70%_30%,#1a2a05_0%,transparent_70%),radial-gradient(50%_45%_at_30%_75%,#2a0510_0%,transparent_70%)]" />
+        {/* soft blue / pink glows */}
+        <div className="absolute -top-24 right-0 h-[420px] w-[420px] rounded-full bg-blue/20 blur-[120px] pointer-events-none" />
+        <div className="absolute -bottom-24 left-0 h-[380px] w-[380px] rounded-full bg-pink/10 blur-[120px] pointer-events-none" />
 
         <div className="relative px-10 xl:px-16 py-12">
-          <div className="flex items-baseline justify-between mb-8">
-            <p className="sec-num">/ examples</p>
-            <p className="mono text-[10px] tracking-widest uppercase text-text-mute">обложки · карусели</p>
+          <div className="flex items-center justify-between mb-8 max-w-[640px]">
+            <span className="sec-num">/ examples</span>
+            <span className="text-[12px] text-text-mute">обложки · карусели</span>
           </div>
 
-          <div className="grid grid-cols-2 gap-3 xl:gap-4 max-w-[640px]">
+          <div className="grid grid-cols-3 gap-3 xl:gap-4 max-w-[640px] stagger">
             {SHOWCASE.map((c, i) => (
               <CoverPreview key={i} {...c} />
             ))}
           </div>
 
           <div className="mt-10 max-w-[440px]">
-            <p className="font-serif italic text-[14px] text-text-dim leading-[1.6]">
+            <p className="text-[14px] text-text-dim leading-[1.6]">
               Одно фото — десять аватаров, виральные обложки и говорящее видео. Всё в одной студии, без переключения между приложениями.
             </p>
           </div>
@@ -115,11 +127,11 @@ const SHOWCASE: Cover[] = [
 ];
 
 function CoverPreview({ kicker, title, subtitle, cta, tone }: Cover) {
-  const toneRing: Record<Cover['tone'], string> = {
-    lime: 'from-[#1a2a05] via-[#0a0a0a] to-[#050505]',
-    pink: 'from-[#2a0510] via-[#0a0a0a] to-[#050505]',
-    cyan: 'from-[#051a1a] via-[#0a0a0a] to-[#050505]',
-    warm: 'from-[#2a1505] via-[#0a0a0a] to-[#050505]',
+  const toneGlow: Record<Cover['tone'], string> = {
+    lime: 'from-lime/[0.16]',
+    pink: 'from-pink/[0.18]',
+    cyan: 'from-cyan/[0.16]',
+    warm: 'from-blue/[0.22]',
   };
   const toneText: Record<Cover['tone'], string> = {
     lime: 'text-lime',
@@ -129,26 +141,25 @@ function CoverPreview({ kicker, title, subtitle, cta, tone }: Cover) {
   };
   return (
     <div
-      className={`relative aspect-[4/5] border border-border bg-gradient-to-br ${toneRing[tone]} p-3 xl:p-4 flex flex-col justify-between overflow-hidden`}
+      className={`relative aspect-[4/5] rounded-[20px] border border-border-soft bg-gradient-to-br ${toneGlow[tone]} via-white/[0.03] to-transparent backdrop-blur-xl p-3 xl:p-4 flex flex-col justify-between overflow-hidden`}
     >
-      <div className="flex items-start justify-between">
-        <p className={`mono text-[8px] tracking-widest uppercase ${toneText[tone]}`}>{kicker}</p>
-        <span className="mono text-[8px] tracking-widest uppercase text-text-mute">4:5</span>
+      <div className="flex items-start justify-between gap-2">
+        <span className={`text-[10px] font-semibold ${toneText[tone]}`}>{kicker}</span>
+        <span className="rounded-full bg-white/[0.06] px-1.5 py-0.5 text-[9px] text-text-mute">4:5</span>
       </div>
 
       <div>
-        <p
-          className="font-serif font-bold uppercase leading-[1.0] text-[13px] xl:text-[15px] text-text"
-          style={{ letterSpacing: '-0.01em' }}
-        >
+        <p className="font-extrabold uppercase leading-[1.0] tracking-[-0.01em] text-[13px] xl:text-[15px] text-text">
           {title}
         </p>
-        <p className={`font-serif italic text-[10px] xl:text-[11px] mt-1 ${toneText[tone]}`}>{subtitle}</p>
+        <p className={`text-[10px] xl:text-[11px] mt-1.5 ${toneText[tone]}`}>{subtitle}</p>
       </div>
 
       <div className="flex items-center justify-between">
-        <span className={`mono text-[8px] tracking-widest uppercase ${toneText[tone]}`}>→ {cta}</span>
-        <span className="mono text-[7px] tracking-widest uppercase text-text-faint">persona</span>
+        <span className={`inline-flex items-center gap-1 text-[10px] font-semibold ${toneText[tone]}`}>
+          <ArrowRight size={11} strokeWidth={2.4} aria-hidden="true" /> {cta}
+        </span>
+        <span className="text-[9px] text-text-faint lowercase">persona</span>
       </div>
     </div>
   );
@@ -162,7 +173,9 @@ function GoogleButton() {
   return (
     <form action={action}>
       <button type="submit" className="btn-primary justify-center w-full flex items-center gap-3">
-        <GoogleGlyph />
+        <span className="inline-flex h-6 w-6 items-center justify-center rounded-full bg-white">
+          <GoogleGlyph />
+        </span>
         <span>Войти через Google</span>
       </button>
     </form>
@@ -193,15 +206,18 @@ async function EmailForm({ error }: { error: Promise<{ error?: string; sent?: st
         />
       </label>
       <button type="submit" className="btn-ghost justify-center w-full">
-        Прислать magic-link →
+        Прислать magic-link
+        <ArrowRight size={16} strokeWidth={2.2} aria-hidden="true" />
       </button>
       {params.sent && (
-        <p className="mono text-[11px] text-cyan tracking-wider mt-2">
+        <p className="mt-1 inline-flex items-center gap-2 rounded-full bg-green/10 px-3 py-1.5 text-[13px] text-green">
+          <Check size={14} strokeWidth={2.4} aria-hidden="true" />
           /SENT — проверь почту.
         </p>
       )}
       {params.error && (
-        <p className="mono text-[11px] text-pink tracking-wider mt-2">
+        <p className="mt-1 inline-flex items-center gap-2 rounded-full bg-danger/10 px-3 py-1.5 text-[13px] text-danger break-all">
+          <AlertCircle size={14} strokeWidth={2.4} aria-hidden="true" />
           /ERROR — {params.error}
         </p>
       )}
@@ -211,7 +227,7 @@ async function EmailForm({ error }: { error: Promise<{ error?: string; sent?: st
 
 function GoogleGlyph() {
   return (
-    <svg width="18" height="18" viewBox="0 0 18 18" aria-hidden="true">
+    <svg width="14" height="14" viewBox="0 0 18 18" aria-hidden="true">
       <path fill="#4285F4" d="M17.64 9.2c0-.64-.06-1.25-.17-1.84H9v3.48h4.84c-.21 1.13-.84 2.08-1.79 2.72v2.26h2.9c1.7-1.56 2.69-3.87 2.69-6.62z"/>
       <path fill="#34A853" d="M9 18c2.43 0 4.47-.8 5.96-2.18l-2.9-2.26c-.8.54-1.83.86-3.06.86-2.35 0-4.34-1.59-5.05-3.72H.92v2.34A9 9 0 0 0 9 18z"/>
       <path fill="#FBBC05" d="M3.95 10.7A5.4 5.4 0 0 1 3.66 9c0-.59.1-1.16.29-1.7V4.96H.92A9 9 0 0 0 0 9c0 1.45.35 2.83.92 4.04l3.03-2.34z"/>

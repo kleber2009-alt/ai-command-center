@@ -2,6 +2,7 @@
 
 import { useState, useTransition } from 'react';
 import { useRouter } from 'next/navigation';
+import { Loader2, RefreshCw } from 'lucide-react';
 
 export function RetryCoverButton({ id }: { id: string }) {
   const router = useRouter();
@@ -29,11 +30,12 @@ export function RetryCoverButton({ id }: { id: string }) {
         type="button"
         onClick={onClick}
         disabled={pending}
-        className="mono text-[9px] tracking-widest uppercase text-lime hover:underline disabled:opacity-50 text-left"
+        className="btn-ghost !justify-self-start !px-3.5 !py-1.5 text-[12px]"
       >
-        {pending ? 'retrying…' : 'retry →'}
+        {pending ? <Loader2 size={13} className="animate-spin" aria-hidden /> : <RefreshCw size={13} aria-hidden />}
+        {pending ? 'retrying…' : 'retry'}
       </button>
-      {err && <span className="mono text-[9px] text-pink">{err}</span>}
+      {err && <span className="text-[11px] text-danger">{err}</span>}
     </div>
   );
 }

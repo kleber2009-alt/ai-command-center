@@ -4,6 +4,7 @@ import { useMemo, useState } from 'react';
 import { UploadZone } from '@/components/upload-zone';
 import { AVATAR_STYLES } from '@/lib/styles';
 import { NICHES } from '@/lib/niches';
+import { Icon3D, type Icon3DName } from '@/components/ui/icon3d';
 
 type Mode = 'default' | 'niche' | 'custom';
 
@@ -17,7 +18,7 @@ type InitialUpload = {
 
 const SLOTS = 10;
 
-export function GenerateStudio({ initialUploads }: { initialUploads: InitialUpload[] }) {
+export function GenerateStudio({ initialUploads, cost }: { initialUploads: InitialUpload[]; cost: number }) {
   const [mode, setMode] = useState<Mode>('default');
   const [nicheSlug, setNicheSlug] = useState<string>(NICHES[0]?.slug ?? '');
   const [customText, setCustomText] = useState<string>('');
@@ -45,15 +46,15 @@ export function GenerateStudio({ initialUploads }: { initialUploads: InitialUplo
 
   const generateLabel =
     mode === 'custom'
-      ? `Generate ${SLOTS} avatars · custom →`
+      ? `Создать ${SLOTS} аватаров · свои промпты →`
       : mode === 'niche'
-      ? `Generate ${SLOTS} avatars · ${selectedNiche.label} →`
-      : `Generate ${SLOTS} avatars →`;
+      ? `Создать ${SLOTS} аватаров · ${selectedNiche.label} →`
+      : `Создать ${SLOTS} аватаров →`;
 
   const costHint =
     mode === 'custom' && customPrompts.length === 0
       ? 'Введи хотя бы один промпт (мин. 4 символа)'
-      : 'Спишется 10 токенов · ~3-5 мин на Flux Kontext Pro';
+      : `Спишется ${cost} токенов · ~3–5 минут`;
 
   return (
     <div className="grid gap-10">
@@ -66,44 +67,28 @@ export function GenerateStudio({ initialUploads }: { initialUploads: InitialUplo
 
       {/* MODE SWITCHER */}
       <section>
-        <div className="flex items-baseline gap-3 mb-3">
-          <span className="sec-num">/01</span>
-          <span className="sec-title">Что сгенерировать</span>
-          <span className="flex-1 border-b border-border translate-y-[-3px]" />
-          <span className="mono text-[10px] tracking-widest uppercase text-text-mute">
-            mode: {mode}
-          </span>
-        </div>
-        <div className="grid grid-cols-3 gap-[2px] bg-border border border-border">
+        <SecHead num="/01" title="Что сгенерировать" meta={`mode: ${mode}`} />
+        <div className="stagger grid grid-cols-1 gap-3 sm:grid-cols-3">
           <ModeBtn active={mode === 'default'} onClick={() => setMode('default')}
-            label="Default 10" sub="фирменные режиссёрские стили" />
+            icon="sparkles" label="Default 10" sub="фирменные режиссёрские стили" />
           <ModeBtn active={mode === 'niche'} onClick={() => setMode('niche')}
-            label="По нише" sub="20 ниш × 10 паков" />
+            icon="bloggers" label="По нише" sub="20 ниш × 10 паков" />
           <ModeBtn active={mode === 'custom'} onClick={() => setMode('custom')}
-            label="Свой промпт" sub="до 10 строк, твой текст" />
+            icon="magic" label="Свой промпт" sub="до 10 строк, твой текст" />
         </div>
       </section>
 
       {/* DEFAULT — 10 fixed styles */}
       {mode === 'default' && (
         <section>
-          <div className="flex items-baseline gap-3 mb-3">
-            <span className="sec-num">/02</span>
-            <span className="sec-title">Default · 10 styles</span>
-            <span className="flex-1 border-b border-border translate-y-[-3px]" />
-            <span className="mono text-[10px] tracking-widest uppercase text-text-mute">10 styles</span>
-          </div>
-          <div className="grid grid-cols-1 md:grid-cols-2 gap-[2px] bg-border border border-border">
+          <SecHead num="/02" title="Default · 10 styles" meta="10 styles" />
+          <div className="stagger grid grid-cols-1 gap-3 md:grid-cols-2">
             {AVATAR_STYLES.map((s, i) => (
-              <div key={s.slug} className="bg-surface px-5 py-4 grid grid-cols-[56px_1fr] gap-4 items-center">
-                <span className="mono text-[20px] font-bold text-text-faint">
-                  {(i + 1).toString().padStart(2, '0')}
-                </span>
+              <div key={s.slug} className="panel grid grid-cols-[44px_1fr] items-center gap-4 px-5 py-4">
+                <Num i={i} />
                 <div>
-                  <div className="font-serif italic text-[19px] leading-tight">{s.label}</div>
-                  <div className="mono text-[10px] tracking-widest uppercase text-text-mute mt-1">
-                    {s.description}
-                  </div>
+                  <div className="text-[17px] font-semibold leading-tight tracking-[-0.02em]">{s.label}</div>
+                  <div className="mt-1 text-[12px] text-text-mute">{s.description}</div>
                 </div>
               </div>
             ))}
@@ -113,17 +98,10 @@ export function GenerateStudio({ initialUploads }: { initialUploads: InitialUplo
 
       {/* NICHE — 20 niches × 10 packs */}
       {mode === 'niche' && (
-        <section className="grid gap-6">
+        <section className="grid gap-8">
           <div>
-            <div className="flex items-baseline gap-3 mb-3">
-              <span className="sec-num">/02</span>
-              <span className="sec-title">Выбери нишу</span>
-              <span className="flex-1 border-b border-border translate-y-[-3px]" />
-              <span className="mono text-[10px] tracking-widest uppercase text-text-mute">
-                {NICHES.length} ниш
-              </span>
-            </div>
-            <div className="flex flex-wrap gap-[2px] bg-border border border-border">
+            <SecHead num="/02" title="Выбери нишу" meta={`${NICHES.length} ниш`} />
+            <div className="flex flex-wrap gap-2">
               {NICHES.map((n) => {
                 const active = n.slug === selectedNiche.slug;
                 return (
@@ -131,16 +109,14 @@ export function GenerateStudio({ initialUploads }: { initialUploads: InitialUplo
                     key={n.slug}
                     type="button"
                     onClick={() => setNicheSlug(n.slug)}
-                    className={`px-3 py-2 text-left transition-colors ${
-                      active ? 'bg-lime text-[#0a1a00]' : 'bg-surface hover:bg-surface-2 text-text-main'
+                    className={`rounded-2xl border px-3.5 py-2 text-left transition-colors ${
+                      active
+                        ? 'border-transparent bg-blue text-white shadow-glow'
+                        : 'border-border-soft bg-white/[0.04] text-text hover:bg-white/[0.07]'
                     }`}
                   >
-                    <div className="mono text-[10px] tracking-widest uppercase font-bold leading-tight">
-                      {n.label}
-                    </div>
-                    <div className={`mono text-[9px] tracking-wider mt-0.5 ${
-                      active ? 'text-[#0a1a00]/70' : 'text-text-mute'
-                    }`}>
+                    <div className="text-[13px] font-semibold leading-tight">{n.label}</div>
+                    <div className={`mt-0.5 text-[11px] ${active ? 'text-white/75' : 'text-text-mute'}`}>
                       {n.description}
                     </div>
                   </button>
@@ -150,28 +126,15 @@ export function GenerateStudio({ initialUploads }: { initialUploads: InitialUplo
           </div>
 
           <div>
-            <div className="flex items-baseline gap-3 mb-3">
-              <span className="sec-num">/03</span>
-              <span className="sec-title">{selectedNiche.label} · 10 паков</span>
-              <span className="flex-1 border-b border-border translate-y-[-3px]" />
-              <span className="mono text-[10px] tracking-widest uppercase text-text-mute">
-                10 prompts
-              </span>
-            </div>
-            <div className="grid grid-cols-1 md:grid-cols-2 gap-[2px] bg-border border border-border">
+            <SecHead num="/03" title={`${selectedNiche.label} · 10 паков`} meta="10 prompts" />
+            <div key={selectedNiche.slug} className="stagger grid grid-cols-1 gap-3 md:grid-cols-2">
               {selectedNiche.prompts.map((p, i) => (
-                <div key={p.slug} className="bg-surface px-5 py-4 grid grid-cols-[56px_1fr] gap-4 items-start">
-                  <span className="mono text-[20px] font-bold text-text-faint">
-                    {(i + 1).toString().padStart(2, '0')}
-                  </span>
+                <div key={p.slug} className="panel grid grid-cols-[44px_1fr] items-start gap-4 px-5 py-4">
+                  <Num i={i} />
                   <div>
-                    <div className="font-serif italic text-[19px] leading-tight">{p.label}</div>
-                    <div className="mono text-[10px] tracking-widest uppercase text-text-mute mt-1">
-                      {p.description}
-                    </div>
-                    <div className="text-[12px] text-text-dim mt-2 leading-snug">
-                      {p.promptStyle}
-                    </div>
+                    <div className="text-[17px] font-semibold leading-tight tracking-[-0.02em]">{p.label}</div>
+                    <div className="mt-1 text-[12px] text-text-mute">{p.description}</div>
+                    <div className="mt-2 text-[12px] leading-snug text-text-dim">{p.promptStyle}</div>
                   </div>
                 </div>
               ))}
@@ -182,17 +145,10 @@ export function GenerateStudio({ initialUploads }: { initialUploads: InitialUplo
 
       {/* CUSTOM — user prompts */}
       {mode === 'custom' && (
-        <section>
-          <div className="flex items-baseline gap-3 mb-3">
-            <span className="sec-num">/02</span>
-            <span className="sec-title">Свой промпт</span>
-            <span className="flex-1 border-b border-border translate-y-[-3px]" />
-            <span className="mono text-[10px] tracking-widest uppercase text-text-mute">
-              {customPrompts.length} / {SLOTS}
-            </span>
-          </div>
-          <p className="font-serif text-[15px] text-text-dim mb-3 max-w-[70ch]">
-            Опиши на английском <span className="italic">wardrobe + setting + lighting</span> (одна строка = один аватар).
+        <section className="fade-in">
+          <SecHead num="/02" title="Свой промпт" meta={`${customPrompts.length} / ${SLOTS}`} />
+          <p className="mb-4 max-w-[70ch] text-[15px] leading-relaxed text-text-dim">
+            Опиши на английском <span className="accent-pill text-[13px] font-medium">wardrobe + setting + lighting</span> (одна строка = один аватар).
             До {SLOTS} строк. Если меньше — циклически дублируем, чтобы заполнить пачку.
             Identity-блок добавим автоматически — твоё лицо сохранится.
           </p>
@@ -203,10 +159,10 @@ export function GenerateStudio({ initialUploads }: { initialUploads: InitialUplo
             placeholder={`wearing a navy linen suit, on a sunlit mediterranean terrace, warm golden afternoon light, refined editorial mood.
 wearing a black turtleneck, against a deep charcoal backdrop with single rim light, chiaroscuro portrait mood.
 ...`}
-            className="w-full bg-surface border border-border p-4 mono text-[13px] leading-relaxed text-text-main focus:outline-none focus:border-lime"
+            className="input !font-mono !text-[13px] !leading-relaxed"
           />
           {customPrompts.length > 0 && (
-            <div className="mt-3 mono text-[10px] tracking-widest uppercase text-text-mute">
+            <div className="mt-3 text-[12px] text-text-mute tabular-nums">
               valid lines: {customPrompts.length} · 1..{SLOTS}
             </div>
           )}
@@ -216,14 +172,35 @@ wearing a black turtleneck, against a deep charcoal backdrop with single rim lig
   );
 }
 
+function SecHead({ num, title, meta }: { num: string; title: string; meta?: string }) {
+  return (
+    <div className="mb-4 flex items-center gap-3">
+      <span className="sec-num">{num}</span>
+      <span className="sec-title">{title}</span>
+      <span className="h-px flex-1 bg-border-soft" />
+      {meta && <span className="text-[12px] text-text-mute tabular-nums">{meta}</span>}
+    </div>
+  );
+}
+
+function Num({ i }: { i: number }) {
+  return (
+    <span className="flex h-10 w-10 items-center justify-center rounded-full bg-white/[0.05] text-[14px] font-extrabold tabular-nums tracking-[-0.02em] text-text-mute">
+      {(i + 1).toString().padStart(2, '0')}
+    </span>
+  );
+}
+
 function ModeBtn({
   active,
   onClick,
+  icon,
   label,
   sub,
 }: {
   active: boolean;
   onClick: () => void;
+  icon: Icon3DName;
   label: string;
   sub: string;
 }) {
@@ -231,17 +208,15 @@ function ModeBtn({
     <button
       type="button"
       onClick={onClick}
-      className={`px-5 py-4 text-left transition-colors ${
-        active ? 'bg-lime text-[#0a1a00]' : 'bg-surface hover:bg-surface-2 text-text-main'
+      aria-pressed={active}
+      className={`card-editorial flex items-center gap-4 px-5 py-4 text-left ${
+        active ? '!border-blue !bg-blue/[0.16] shadow-glow' : ''
       }`}
     >
-      <div className="font-serif italic text-[20px] leading-tight">{label}</div>
-      <div
-        className={`mono text-[10px] tracking-widest uppercase mt-1 ${
-          active ? 'text-[#0a1a00]/70' : 'text-text-mute'
-        }`}
-      >
-        {sub}
+      <Icon3D name={icon} size={26} tile={active ? 'blue' : true} />
+      <div className="min-w-0">
+        <div className="text-[17px] font-semibold leading-tight tracking-[-0.02em]">{label}</div>
+        <div className={`mt-1 text-[12px] ${active ? 'text-text-dim' : 'text-text-mute'}`}>{sub}</div>
       </div>
     </button>
   );
