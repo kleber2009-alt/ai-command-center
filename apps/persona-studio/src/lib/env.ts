@@ -218,7 +218,10 @@ function loadEnv(): Env {
     _env = process.env as unknown as Env;
     return _env;
   }
-  const parsed = envSchema.safeParse(process.env);
+  // `KEY=` in an env file means "not set": drop empty values so optional keys
+  // fall back to their defaults instead of failing min(1).
+  const raw = Object.fromEntries(Object.entries(process.env).filter(([, v]) => v !== ''));
+  const parsed = envSchema.safeParse(raw);
   if (!parsed.success) {
     const issues = parsed.error.issues
       .map((i) => `  ${i.path.join('.')}: ${i.message}`)

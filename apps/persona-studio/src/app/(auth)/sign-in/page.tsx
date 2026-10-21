@@ -15,6 +15,8 @@ function hasGoogle(): boolean {
 function hasEmail(): boolean {
   // Mailpit is a dev capture SMTP that doesn't deliver to real inboxes — hide.
   const host = process.env.EMAIL_SERVER_HOST;
+  // Fresh server without SMTP: links go to the server log (see lib/auth.ts).
+  if (!host && process.env.AUTH_LOG_MAGIC_LINKS === 'true') return true;
   return Boolean(host && host !== 'mailpit');
 }
 
