@@ -1,0 +1,18 @@
+{$DOMAIN} {
+	encode zstd gzip
+
+	# Public media (avatars, covers, montages, carousel PNGs) straight from the S3 store.
+	handle_path /media/* {
+		rewrite * /persona-studio-media{uri}
+		reverse_proxy s3:8333
+	}
+
+	handle {
+		reverse_proxy web:3020 {
+			transport http {
+				read_timeout 15m
+				write_timeout 15m
+			}
+		}
+	}
+}
