@@ -4,6 +4,7 @@ import { getCurrentUser } from '@/lib/auth';
 import { prisma } from '@/lib/prisma';
 import { EmptyState } from '@/components/empty-state';
 import { PageHero } from '@/components/shell/page-hero';
+import { ArrowRight } from 'lucide-react';
 import { CAROUSEL_STYLES, styleMeta } from '@/lib/carousel/styles';
 import { NewCarouselForm } from '@/components/carousel/new-carousel-form';
 
@@ -37,32 +38,37 @@ export default async function CarouselsPage() {
   return (
     <div className="grid gap-8">
       <PageHero
-        eyebrow="CREATE · 04 · AI CAROUSEL ENGINE v2"
+        eyebrow="создать · карусель"
         title={
           <>
-            Editorial carousels — <span className="italic text-gold">cinematic, viral, on-brand.</span>
+            Карусели — <span className="italic text-gold">из одной темы за минуту.</span>
           </>
         }
-        description="Тема + аватар + стиль → за 30 секунд: cover, slides и CTA в едином visual identity. Pipeline ведёт Claude (hook → structure → split), а satori → resvg печатает 1080×1350 PNG."
+        description="Тема и стиль → за 30 секунд: обложка-хук, слайды и призыв в едином стиле. Готовые PNG 1080×1350 — сразу в Instagram или Telegram."
         actions={[
-          { label: 'Open parser', href: '/parser' },
-          { label: 'Avatars', href: '/avatars', tone: 'ghost' },
+          { label: 'Открыть парсер', href: '/parser' },
+          { label: 'Аватары', href: '/avatars', tone: 'ghost' },
         ]}
+        icon="carousel"
         meta={
           <>
-            <div className="mono text-[9px] tracking-[0.28em] uppercase text-text-muted">Drafts</div>
-            <div className="font-serif text-[28px] text-gold leading-none">{drafts.length}</div>
-            <div className="mono text-[9px] tracking-[0.22em] uppercase text-text-muted mt-3">
-              Стилей · {CAROUSEL_STYLES.length}
-            </div>
+            <div className="label">Черновики</div>
+            <div className="text-[40px] font-extrabold leading-none tabular-nums tracking-[-0.02em] text-gold">{drafts.length}</div>
+            <div className="label pt-3">Стилей · {CAROUSEL_STYLES.length}</div>
           </>
         }
         extra={
-          <div className="mono text-[10px] tracking-[0.22em] uppercase text-text-muted flex flex-wrap gap-x-3 gap-y-1.5 items-center">
+          <div className="flex flex-wrap items-center gap-1.5">
             {PIPELINE.map((step, i) => (
-              <span key={step} className="flex items-center gap-3">
-                <span className={i === 0 ? 'text-gold' : 'text-text-dim'}>{step}</span>
-                {i < PIPELINE.length - 1 && <span className="text-border">→</span>}
+              <span key={step} className="flex items-center gap-1.5">
+                <span
+                  className={`rounded-full border px-3 py-1 text-[12px] font-medium ${
+                    i === 0 ? 'border-transparent bg-blue text-white' : 'border-border-soft bg-white/[0.04] text-text-dim'
+                  }`}
+                >
+                  {step}
+                </span>
+                {i < PIPELINE.length - 1 && <ArrowRight size={13} className="text-text-mute" />}
               </span>
             ))}
           </div>
@@ -71,11 +77,11 @@ export default async function CarouselsPage() {
 
       {/* Новая карусель из темы — стили скилла karusel + 5 Persona DNA */}
       <section className="grid gap-3">
-        <div className="flex items-baseline gap-3">
+        <div className="flex flex-wrap items-center gap-3">
           <span className="sec-num">/01</span>
           <span className="sec-title">Новая карусель · {CAROUSEL_STYLES.length} стилей</span>
-          <span className="flex-1 border-b border-border translate-y-[-3px]" />
-          <span className="mono text-[10px] tracking-[0.18em] uppercase text-text-mute">
+          <span className="hidden flex-1 border-b border-border-soft sm:block" />
+          <span className="text-[12px] text-text-mute">
             хук · пункты 01/02 · ✕/✓ · «пиши слово»
           </span>
         </div>
@@ -84,13 +90,11 @@ export default async function CarouselsPage() {
 
       {/* Drafts list */}
       <section className="grid gap-3">
-        <div className="flex items-baseline gap-3">
+        <div className="flex flex-wrap items-center gap-3">
           <span className="sec-num">/02</span>
           <span className="sec-title">Drafts · {drafts.length}</span>
-          <span className="flex-1 border-b border-border translate-y-[-3px]" />
-          <span className="mono text-[10px] tracking-[0.18em] uppercase text-text-mute">
-            cover · slides · cta · png
-          </span>
+          <span className="hidden flex-1 border-b border-border-soft sm:block" />
+          <span className="text-[12px] text-text-mute">cover · slides · cta · png</span>
         </div>
 
         {drafts.length === 0 ? (
@@ -100,7 +104,7 @@ export default async function CarouselsPage() {
             cta={{ href: '/parser', label: 'Открыть парсер' }}
           />
         ) : (
-          <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4">
+          <div className="stagger grid grid-cols-1 gap-4 sm:grid-cols-2 lg:grid-cols-3">
             {drafts.map((d) => {
               const slides = Array.isArray(d.slides) ? (d.slides as Array<{ title?: string }>) : [];
               const first = slides[0] || {};
@@ -109,13 +113,13 @@ export default async function CarouselsPage() {
                 <Link
                   key={d.id}
                   href={`/carousels/new?draftId=${d.id}`}
-                  className="border border-border bg-surface p-4 grid gap-3 hover:border-text-dim transition"
+                  className="card-editorial grid gap-4 p-5"
                 >
                   <div className="flex items-center justify-between gap-3">
-                    <span className="mono text-[10px] tracking-widest uppercase text-text-mute">
+                    <span className="rounded-full bg-white/[0.06] px-2.5 py-1 text-[12px] font-medium text-text-dim">
                       /draft · {slides.length} sl.
                     </span>
-                    <span className="mono text-[9px] text-text-mute">
+                    <span className="text-[12px] tabular-nums text-text-mute">
                       {new Date(d.createdAt).toLocaleDateString('ru-RU')}
                     </span>
                   </div>
@@ -125,30 +129,30 @@ export default async function CarouselsPage() {
                       <img
                         src={d.coverAvatar.imageUrl}
                         alt={d.coverAvatar.styleLabel}
-                        className="w-14 h-18 sm:w-16 sm:h-20 object-cover border border-border shrink-0"
+                        className="h-[72px] w-14 shrink-0 rounded-xl border border-border-soft object-cover sm:h-20 sm:w-16"
                       />
                     )}
-                    <div className="grid gap-1 min-w-0">
-                      <p className="font-serif text-[15px] text-text leading-snug line-clamp-2">
+                    <div className="grid min-w-0 gap-1.5">
+                      <p className="line-clamp-2 text-[16px] font-semibold leading-snug tracking-[-0.02em] text-text">
                         {first.title || 'Без заголовка'}
                       </p>
                       {d.parserItem?.owner && (
-                        <span className="mono text-[10px] text-text-mute">
+                        <span className="text-[12px] text-text-mute">
                           @{d.parserItem.owner}
                           {d.parserItem.fitScore != null && (
-                            <span className="text-warm ml-2">{d.parserItem.fitScore}/10</span>
+                            <span className="ml-2 font-semibold text-gold">{d.parserItem.fitScore}/10</span>
                           )}
                         </span>
                       )}
                     </div>
                   </div>
-                  <div className="flex items-center gap-2 pt-1 border-t border-border-soft">
-                    <div className="flex border border-border-soft overflow-hidden">
+                  <div className="flex items-center gap-2 border-t border-border-soft pt-3">
+                    <div className="flex overflow-hidden rounded-full border border-border-soft">
                       {meta.swatch.map((c, i) => (
                         <span key={i} className="block" style={{ background: c, width: 10, height: 14 }} />
                       ))}
                     </div>
-                    <span className="mono text-[9px] tracking-wider uppercase text-text-mute truncate">
+                    <span className="truncate text-[12px] text-text-mute">
                       {meta.label} · {meta.tag}
                     </span>
                   </div>

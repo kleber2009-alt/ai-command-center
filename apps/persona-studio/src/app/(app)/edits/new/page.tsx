@@ -2,6 +2,8 @@ import Link from 'next/link';
 import { redirect } from 'next/navigation';
 import { getCurrentUser } from '@/lib/auth';
 import { prisma } from '@/lib/prisma';
+import { ArrowLeft } from 'lucide-react';
+import { Icon3D } from '@/components/ui/icon3d';
 import { EditForm } from '@/components/edit-form';
 import { EmptyState } from '@/components/empty-state';
 import { COSTS } from '@/lib/tokens';
@@ -23,12 +25,13 @@ export default async function NewEditPage({ searchParams }: { searchParams: Prom
 
   return (
     <div className="grid gap-4">
-      <header className="flex items-baseline gap-3">
+      <header className="panel flex flex-wrap items-center gap-3 !rounded-2xl px-4 py-3">
+        <Icon3D name="videos" size={20} tile />
         <span className="sec-num">/00</span>
         <span className="sec-title">New edit · Submagic</span>
-        <span className="flex-1 border-b border-border translate-y-[-3px]" />
-        <Link href="/edits" className="mono text-[10px] tracking-widest uppercase text-text-mute hover:text-text">
-          ← all edits
+        <span className="flex-1" />
+        <Link href="/edits" className="btn-ghost !px-4 !py-2 text-[13px]">
+          <ArrowLeft size={14} /> all edits
         </Link>
       </header>
 

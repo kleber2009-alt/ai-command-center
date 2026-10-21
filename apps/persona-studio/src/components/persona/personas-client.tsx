@@ -7,6 +7,8 @@
 
 import { useEffect, useMemo, useState } from 'react';
 import { Plus, Star, Trash2, Pencil, Check, X, Mic, Palette } from 'lucide-react';
+import { PageHero } from '@/components/shell/page-hero';
+import { Icon3D } from '@/components/ui/icon3d';
 import { ELEVENLABS_VOICE_PRESETS } from '@/lib/elevenlabs-voices';
 import { VoiceClone } from '@/components/voice/voice-clone';
 import type {
@@ -194,21 +196,17 @@ export function PersonasClient({ initialPersonas, avatarOptions }: Props) {
   }
 
   return (
-    <div className="grid gap-5">
-      <header className="flex items-end justify-between gap-3">
-        <div className="grid gap-1">
-          <h1 className="font-serif text-2xl text-text">Персоны</h1>
-          <p className="mono text-[11px] tracking-widest uppercase text-text-mute">
-            аватар · голос · бренд · tone-of-voice
-          </p>
-        </div>
-        <button
-          onClick={openNew}
-          className="flex items-center gap-1.5 px-3 py-2 border border-gold/60 mono text-[10px] tracking-widest uppercase text-gold hover:bg-gold/10"
-        >
-          <Plus size={13} /> Новая персона
-        </button>
-      </header>
+    <div className="grid gap-6">
+      <PageHero
+        eyebrow="аватар · голос · бренд · tone-of-voice"
+        title="Персоны"
+        icon="personas"
+        extra={
+          <button type="button" onClick={openNew} className="btn-primary">
+            <Plus size={16} /> Новая персона
+          </button>
+        }
+      />
 
       {editing && (
         <PersonaForm
@@ -224,85 +222,87 @@ export function PersonasClient({ initialPersonas, avatarOptions }: Props) {
       )}
 
       {personas.length === 0 && !editing ? (
-        <div className="border border-border-soft bg-surface p-10 text-center grid gap-2">
-          <p className="mono text-[11px] tracking-widest uppercase text-text-mute">
-            Пока нет персон
-          </p>
-          <p className="font-serif text-[13px] text-text-dim">
+        <div className="panel reveal grid justify-items-center gap-3 p-10 text-center">
+          <Icon3D name="personas" size={40} tile sway />
+          <p className="text-[17px] font-semibold tracking-[-0.02em] text-text">Пока нет персон</p>
+          <p className="max-w-[46ch] text-[14px] leading-relaxed text-text-dim">
             Создайте первую персону — она задаст голос, аватар и стиль для всей генерации.
           </p>
+          <button type="button" onClick={openNew} className="btn-primary mt-2">
+            <Plus size={16} /> Новая персона
+          </button>
         </div>
       ) : (
-        <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4">
+        <div className="stagger grid grid-cols-1 gap-4 sm:grid-cols-2 lg:grid-cols-3">
           {personas.map((p) => {
             const av = p.avatar ?? (p.avatarId ? avatarById.get(p.avatarId) : null) ?? null;
             const bg = av?.imageThumbUrl || av?.imageUrl;
             return (
-              <div
-                key={p.id}
-                className="relative border border-border bg-surface p-4 grid gap-3"
-              >
-                <div className="flex items-start gap-3">
+              <div key={p.id} className="card-editorial grid gap-4 p-5">
+                <div className="flex items-start gap-3.5">
                   <div
-                    className="w-14 h-14 shrink-0 border border-border-soft bg-bg"
+                    className="grid h-16 w-16 shrink-0 place-items-center overflow-hidden rounded-2xl border border-border-soft bg-white/[0.04]"
                     style={
                       bg
                         ? { backgroundImage: `url(${bg})`, backgroundSize: 'cover', backgroundPosition: 'center' }
                         : undefined
                     }
-                  />
-                  <div className="min-w-0 grid gap-1">
+                  >
+                    {!bg && <Icon3D name="avatar" size={30} />}
+                  </div>
+                  <div className="grid min-w-0 gap-1.5">
                     <div className="flex items-center gap-2">
-                      <h2 className="font-serif text-[15px] text-text truncate">{p.name}</h2>
+                      <h2 className="truncate text-[17px] font-semibold tracking-[-0.02em] text-text">{p.name}</h2>
                       {p.isDefault && (
-                        <span className="mono text-[8px] tracking-widest uppercase text-gold border border-gold/50 px-1 py-0.5">
+                        <span className="rounded-full bg-blue px-2 py-0.5 text-[11px] font-semibold text-white">
                           default
                         </span>
                       )}
                     </div>
-                    <p className="mono text-[10px] tracking-widest uppercase text-text-mute">
-                      {p.lang.toUpperCase()}
-                    </p>
+                    <p className="text-[12px] font-medium text-text-mute">{p.lang.toUpperCase()}</p>
                   </div>
                 </div>
 
                 <div className="flex flex-wrap gap-1.5">
-                  <Tag icon={<Mic size={10} />} on={!!p.voiceId} label={p.voiceId ? 'голос' : 'нет голоса'} />
-                  <Tag icon={<Palette size={10} />} on={!!p.brand.primary} label="бренд" />
+                  <Tag icon={<Mic size={12} />} on={!!p.voiceId} label={p.voiceId ? 'голос' : 'нет голоса'} />
+                  <Tag icon={<Palette size={12} />} on={!!p.brand.primary} label="бренд" />
                   {p.tone.length && <Tag label={`tone: ${p.tone.length}`} on />}
                 </div>
 
                 {(p.brand.primary || p.brand.accent) && (
-                  <div className="flex gap-1">
+                  <div className="flex gap-1.5">
                     {p.brand.primary && (
-                      <span className="w-5 h-5 border border-border-soft" style={{ background: p.brand.primary }} />
+                      <span className="h-6 w-6 rounded-full border border-border-2" style={{ background: p.brand.primary }} />
                     )}
                     {p.brand.accent && (
-                      <span className="w-5 h-5 border border-border-soft" style={{ background: p.brand.accent }} />
+                      <span className="h-6 w-6 rounded-full border border-border-2" style={{ background: p.brand.accent }} />
                     )}
                   </div>
                 )}
 
-                <div className="flex items-center gap-3 pt-1 border-t border-border-soft mt-1">
+                <div className="mt-1 flex items-center gap-1 border-t border-border-soft pt-3">
                   <button
+                    type="button"
                     onClick={() => openEdit(p)}
-                    className="flex items-center gap-1 mono text-[9px] tracking-widest uppercase text-text-mute hover:text-text"
+                    className="flex items-center gap-1.5 rounded-full px-2.5 py-1.5 text-[13px] text-text-dim transition-colors hover:bg-white/[0.06] hover:text-text"
                   >
-                    <Pencil size={11} /> править
+                    <Pencil size={13} /> править
                   </button>
                   {!p.isDefault && (
                     <button
+                      type="button"
                       onClick={() => makeDefault(p)}
-                      className="flex items-center gap-1 mono text-[9px] tracking-widest uppercase text-text-mute hover:text-gold"
+                      className="flex items-center gap-1.5 rounded-full px-2.5 py-1.5 text-[13px] text-text-dim transition-colors hover:bg-white/[0.06] hover:text-gold"
                     >
-                      <Star size={11} /> по умолчанию
+                      <Star size={13} /> по умолчанию
                     </button>
                   )}
                   <button
+                    type="button"
                     onClick={() => remove(p)}
-                    className="flex items-center gap-1 mono text-[9px] tracking-widest uppercase text-text-mute hover:text-pink ml-auto"
+                    className="ml-auto flex items-center gap-1.5 rounded-full px-2.5 py-1.5 text-[13px] text-text-mute transition-colors hover:bg-danger/10 hover:text-danger"
                   >
-                    <Trash2 size={11} /> удалить
+                    <Trash2 size={13} /> удалить
                   </button>
                 </div>
               </div>
@@ -317,8 +317,8 @@ export function PersonasClient({ initialPersonas, avatarOptions }: Props) {
 function Tag({ label, on, icon }: { label: string; on: boolean; icon?: React.ReactNode }) {
   return (
     <span
-      className={`flex items-center gap-1 px-1.5 py-0.5 border mono text-[9px] tracking-widest uppercase ${
-        on ? 'border-border text-text-dim' : 'border-border-soft text-text-mute'
+      className={`flex items-center gap-1.5 rounded-full border px-2.5 py-1 text-[12px] ${
+        on ? 'border-border-2 bg-white/[0.06] text-text-dim' : 'border-border-soft text-text-mute'
       }`}
     >
       {icon}
@@ -366,12 +366,15 @@ function PersonaForm({
   const allVoiceIds = new Set(allVoices.map((v) => v.id));
 
   return (
-    <div className="border border-gold/40 bg-surface p-4 grid gap-4">
+    <div className="panel reveal grid gap-5 border-gold/40 p-6">
       <div className="flex items-center justify-between">
-        <h2 className="font-serif text-[15px] text-text">
-          {isNew ? 'Новая персона' : 'Редактирование персоны'}
-        </h2>
-        <button onClick={onCancel} className="text-text-mute hover:text-text">
+        <div className="flex items-center gap-3">
+          <Icon3D name="personas" size={22} tile />
+          <h2 className="text-[18px] font-semibold tracking-[-0.02em] text-text">
+            {isNew ? 'Новая персона' : 'Редактирование персоны'}
+          </h2>
+        </div>
+        <button type="button" onClick={onCancel} className="btn-icon" aria-label="Закрыть">
           <X size={16} />
         </button>
       </div>
@@ -381,13 +384,13 @@ function PersonaForm({
           value={form.name}
           onChange={(e) => set('name', e.target.value)}
           placeholder="Например: Эксперт по продажам"
-          className="w-full bg-bg border border-border px-3 py-2 font-serif text-[14px] text-text placeholder:text-text-mute focus:border-gold outline-none"
+          className="input"
         />
       </Field>
 
       <div className="grid sm:grid-cols-2 gap-4">
         <Field label="Язык генерации">
-          <div className="flex gap-1.5">
+          <div className="flex flex-wrap gap-1.5">
             {LANGS.map((l) => (
               <Chip key={l.v} active={form.lang === l.v} onClick={() => set('lang', l.v)}>
                 {l.label}
@@ -399,7 +402,7 @@ function PersonaForm({
           <select
             value={allVoiceIds.has(form.voiceId) ? form.voiceId : ''}
             onChange={(e) => set('voiceId', e.target.value)}
-            className="w-full bg-bg border border-border px-3 py-2 font-serif text-[13px] text-text focus:border-gold outline-none"
+            className="input"
           >
             <option value="">— выберите голос —</option>
             {allVoices.map((v) => (
@@ -408,15 +411,15 @@ function PersonaForm({
               </option>
             ))}
           </select>
-          <details className="mt-1">
-            <summary className="mono text-[9px] tracking-widest uppercase text-text-mute cursor-pointer hover:text-text">
+          <details className="mt-1.5">
+            <summary className="cursor-pointer text-[12px] text-text-mute hover:text-text">
               свой голос (ID)
             </summary>
             <input
               value={allVoiceIds.has(form.voiceId) ? '' : form.voiceId}
               onChange={(e) => set('voiceId', e.target.value)}
               placeholder="ID голоса"
-              className="mt-1 w-full bg-bg border border-border px-3 py-2 mono text-[12px] text-text placeholder:text-text-mute focus:border-gold outline-none"
+              className="input mt-1.5 font-mono text-[12px]"
             />
           </details>
           <div className="mt-2">
@@ -436,15 +439,18 @@ function PersonaForm({
 
       <Field label="Аватар (talking-head источник)">
         {avatarOptions.length === 0 ? (
-          <p className="mono text-[10px] tracking-widest uppercase text-text-mute">
+          <p className="text-[13px] text-text-mute">
             Нет готовых аватаров — создайте их в разделе «Аватар»
           </p>
         ) : (
           <div className="flex gap-2 flex-wrap">
             <button
+              type="button"
               onClick={() => set('avatarId', null)}
-              className={`w-14 h-14 border grid place-items-center mono text-[9px] uppercase ${
-                form.avatarId === null ? 'border-gold text-gold' : 'border-border-soft text-text-mute'
+              className={`grid h-14 w-14 place-items-center rounded-2xl border text-[12px] transition-colors ${
+                form.avatarId === null
+                  ? 'border-transparent bg-blue text-white'
+                  : 'border-border-soft bg-white/[0.04] text-text-mute hover:bg-white/[0.07]'
               }`}
             >
               нет
@@ -454,15 +460,18 @@ function PersonaForm({
               const active = form.avatarId === a.id;
               return (
                 <button
+                  type="button"
                   key={a.id}
                   onClick={() => set('avatarId', a.id)}
                   title={a.styleLabel}
-                  className={`relative w-14 h-14 border ${active ? 'border-gold' : 'border-border-soft hover:border-border'}`}
+                  className={`relative h-14 w-14 overflow-hidden rounded-2xl border-2 transition-all ${
+                    active ? 'border-gold shadow-glow' : 'border-transparent hover:border-border-2'
+                  }`}
                   style={{ backgroundImage: `url(${bg})`, backgroundSize: 'cover', backgroundPosition: 'center' }}
                 >
                   {active && (
                     <span className="absolute inset-0 grid place-items-center bg-black/40">
-                      <Check size={16} className="text-gold" />
+                      <Check size={18} className="text-white" />
                     </span>
                   )}
                 </button>
@@ -484,7 +493,7 @@ function PersonaForm({
             value={form.logoUrl}
             onChange={(e) => set('logoUrl', e.target.value)}
             placeholder="https://…"
-            className="w-full bg-bg border border-border px-3 py-2 mono text-[11px] text-text placeholder:text-text-mute focus:border-gold outline-none"
+            className="input"
           />
         </Field>
       </div>
@@ -495,7 +504,7 @@ function PersonaForm({
           onChange={(e) => set('examples', e.target.value)}
           rows={3}
           placeholder="Вставьте 1–3 примера ваших текстов — генерация подстроится под стиль"
-          className="w-full bg-bg border border-border px-3 py-2 font-serif text-[13px] text-text placeholder:text-text-mute focus:border-gold outline-none resize-y"
+          className="input"
         />
       </Field>
 
@@ -505,11 +514,11 @@ function PersonaForm({
             value={form.taboo}
             onChange={(e) => set('taboo', e.target.value)}
             placeholder="например: дёшево, гарантия, успех"
-            className="w-full bg-bg border border-border px-3 py-2 font-serif text-[13px] text-text placeholder:text-text-mute focus:border-gold outline-none"
+            className="input"
           />
         </Field>
         <Field label="Длина текста">
-          <div className="flex gap-1.5">
+          <div className="flex flex-wrap gap-1.5">
             <Chip active={form.length === ''} onClick={() => set('length', '')}>
               авто
             </Chip>
@@ -522,30 +531,23 @@ function PersonaForm({
         </Field>
       </div>
 
-      <label className="flex items-center gap-2 mono text-[10px] tracking-widest uppercase text-text-dim cursor-pointer">
+      <label className="flex cursor-pointer items-center gap-3 text-[14px] text-text-dim">
         <input
           type="checkbox"
           checked={form.isDefault}
           onChange={(e) => set('isDefault', e.target.checked)}
-          className="accent-gold"
+          className="toggle"
         />
         Сделать персоной по умолчанию
       </label>
 
-      {error && <p className="mono text-[11px] text-pink">{error}</p>}
+      {error && <p className="text-[13px] text-danger">{error}</p>}
 
       <div className="flex items-center gap-3">
-        <button
-          onClick={onSave}
-          disabled={busy}
-          className="px-5 py-2 border border-gold bg-gold/10 mono text-[10px] tracking-widest uppercase text-gold hover:bg-gold/20 disabled:opacity-50"
-        >
+        <button type="button" onClick={onSave} disabled={busy} className="btn-primary">
           {busy ? 'Сохранение…' : 'Сохранить'}
         </button>
-        <button
-          onClick={onCancel}
-          className="mono text-[10px] tracking-widest uppercase text-text-mute hover:text-text underline"
-        >
+        <button type="button" onClick={onCancel} className="btn-ghost">
           Отмена
         </button>
       </div>
@@ -553,12 +555,15 @@ function PersonaForm({
   );
 }
 
+// A <div role="group">, not a <label>: several fields hold buttons/chips, and a
+// click anywhere inside a <label> is forwarded to its first control (that used
+// to reset the avatar to «нет»).
 function Field({ label, children }: { label: string; children: React.ReactNode }) {
   return (
-    <label className="grid gap-1.5">
-      <span className="mono text-[9px] tracking-widest uppercase text-text-mute">{label}</span>
+    <div role="group" aria-label={label} className="grid gap-1.5">
+      <span className="label">{label}</span>
       {children}
-    </label>
+    </div>
   );
 }
 
@@ -573,9 +578,12 @@ function Chip({
 }) {
   return (
     <button
+      type="button"
       onClick={onClick}
-      className={`px-2.5 py-1 border mono text-[10px] tracking-widest uppercase transition-colors ${
-        active ? 'border-gold text-gold' : 'border-border text-text-mute hover:border-border'
+      className={`rounded-full border px-3.5 py-1.5 text-[13px] transition-colors ${
+        active
+          ? 'border-transparent bg-blue text-white'
+          : 'border-border-soft bg-white/[0.04] text-text-dim hover:bg-white/[0.07]'
       }`}
     >
       {children}
@@ -590,13 +598,13 @@ function ColorInput({ value, onChange }: { value: string; onChange: (v: string) 
         type="color"
         value={/^#[0-9a-fA-F]{6}$/.test(value) ? value : '#000000'}
         onChange={(e) => onChange(e.target.value)}
-        className="w-9 h-9 bg-bg border border-border p-0.5 cursor-pointer"
+        className="h-11 w-11 shrink-0 cursor-pointer rounded-xl border border-border-soft bg-white/[0.05] p-1"
       />
       <input
         value={value}
         onChange={(e) => onChange(e.target.value)}
         placeholder="#000000"
-        className="flex-1 bg-bg border border-border px-2 py-2 mono text-[11px] text-text placeholder:text-text-mute focus:border-gold outline-none"
+        className="input flex-1 font-mono text-[12px]"
       />
     </div>
   );

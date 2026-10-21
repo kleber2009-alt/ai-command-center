@@ -1,6 +1,7 @@
 'use client';
 
 import { useEffect, useState } from 'react';
+import { CalendarPlus, Download, Loader2 } from 'lucide-react';
 import { formatDate } from '@/lib/utils';
 import { findTemplate, getTemplate as legacyShim } from '@/lib/edit-templates';
 
@@ -64,25 +65,26 @@ export function EditCard({ initial, autopoll }: { initial: Edit; autopoll: boole
   const preset = directHit ?? (legacy ? findTemplate(legacy.submagicTemplate) : undefined);
 
   return (
-    <article id={e.id} className="bg-surface border border-border p-4 grid gap-3">
-      <div className="flex items-baseline justify-between">
+    <article id={e.id} className="panel grid scroll-mt-24 gap-3 p-4">
+      <div className="flex items-center justify-between gap-2">
         <span
-          className={`mono text-[10px] tracking-widest uppercase font-bold ${
-            e.status === 'completed' ? 'text-lime' :
-            e.status === 'failed' ? 'text-pink' :
-            'text-cyan animate-pulse'
+          className={`status-badge ${
+            e.status === 'completed' ? 'status-ready' :
+            e.status === 'failed' ? 'status-failed' :
+            e.status === 'pending' ? 'status-queued' :
+            'status-processing'
           }`}
         >
-          /{e.status}
+          {e.status}
         </span>
-        <span className="mono text-[10px] tracking-widest text-text-mute">
+        <span className="truncate text-[12px] font-medium text-text-mute">
           {resolvedName.toUpperCase()} · {e.subtitleLanguage.toUpperCase()}
           {e.brollsEnabled && <span className="text-lime"> · B-ROLLS</span>}
         </span>
       </div>
 
       <div
-        className={`relative ${aspectClass} border border-border-2 overflow-hidden flex items-center justify-center bg-bg`}
+        className={`relative ${aspectClass} flex items-center justify-center overflow-hidden rounded-[18px] border border-border-soft bg-bg`}
       >
         {e.status === 'completed' && e.resultUrl ? (
           <video
@@ -100,7 +102,7 @@ export function EditCard({ initial, autopoll }: { initial: Edit; autopoll: boole
               style={{
                 background: e.videoGeneration?.avatar?.imageUrl
                   ? `linear-gradient(180deg, rgba(8,8,8,0.0) 0%, rgba(8,8,8,0.7) 100%), url(${e.videoGeneration.avatar.imageUrl})`
-                  : 'linear-gradient(170deg, #0a1820 0%, #051018 100%)',
+                  : 'linear-gradient(170deg, rgba(31,123,255,0.22) 0%, rgba(11,11,13,1) 100%)',
                 backgroundSize: 'cover',
                 backgroundPosition: 'center',
               }}
@@ -108,17 +110,17 @@ export function EditCard({ initial, autopoll }: { initial: Edit; autopoll: boole
             <div className="relative z-[1] text-center px-3">
               {e.status === 'failed' ? (
                 <>
-                  <div className="mono text-pink text-[11px] tracking-widest uppercase font-bold">/FAILED</div>
+                  <span className="status-badge status-failed">failed</span>
                   {e.errorMsg && (
-                    <div className="font-serif italic text-[12px] text-text-dim mt-2">{e.errorMsg.slice(0, 140)}</div>
+                    <div className="mt-2 text-[12px] text-text-dim">{e.errorMsg.slice(0, 140)}</div>
                   )}
                 </>
               ) : (
                 <>
-                  <div className="mono text-cyan text-[11px] tracking-widest uppercase animate-pulse">/{e.status}</div>
-                  <div className="font-serif italic text-[14px] text-text mt-2">Submagic монтирует… ~3–8 мин</div>
+                  <Loader2 size={20} className="mx-auto animate-spin text-gold" />
+                  <div className="mt-2 text-[14px] font-medium text-text">Submagic монтирует… ~3–8 мин</div>
                   {e.submagicProjectId && (
-                    <div className="mono text-[9px] tracking-widest text-text-mute mt-1">
+                    <div className="mt-1 text-[11px] text-text-mute">
                       submagic · {e.submagicProjectId.slice(0, 10)}
                     </div>
                   )}
@@ -129,10 +131,10 @@ export function EditCard({ initial, autopoll }: { initial: Edit; autopoll: boole
         )}
       </div>
 
-      <div className="font-serif italic text-[14px] text-text-dim leading-snug">
+      <div className="text-[13px] leading-snug text-text-dim">
         {preset?.tags.join(' · ') ?? '—'}
       </div>
-      <div className="flex items-center justify-between mono text-[9px] tracking-widest text-text-mute">
+      <div className="flex items-center justify-between gap-2 text-[12px] tabular-nums text-text-mute">
         <span>{e.subtitlesEnabled ? 'субтитры on' : 'без субтитров'}{e.brollsEnabled ? ' · b-rolls on' : ''}</span>
         <span>{formatDate(e.createdAt)}</span>
       </div>
@@ -143,13 +145,13 @@ export function EditCard({ initial, autopoll }: { initial: Edit; autopoll: boole
             download
             className="btn-ghost justify-center"
           >
-            Скачать MP4 ↓
+            <Download size={15} /> Скачать MP4
           </a>
           <a
             href={`/schedule/new?source=edit&id=${e.id}`}
             className="btn-primary justify-center"
           >
-            Запланировать публикацию ↗
+            <CalendarPlus size={15} /> Запланировать публикацию
           </a>
         </div>
       )}

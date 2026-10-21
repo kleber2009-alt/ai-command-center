@@ -1,6 +1,18 @@
 'use client';
 
 import { useRef, useState } from 'react';
+import {
+  ArrowRight,
+  ChevronDown,
+  Copy,
+  Image as ImageIcon,
+  Loader2,
+  MoreHorizontal,
+  Palette,
+  Sparkles,
+  Trash2,
+  Upload,
+} from 'lucide-react';
 import { CoverPickerPopover } from './cover-picker-popover';
 import type { CarouselAvatarOption, CoverType, SlideShape } from './types';
 import { COVER_TYPES, COVER_TYPE_LABEL, COVER_TYPE_DESC } from '@/lib/carousel/prompts';
@@ -110,16 +122,16 @@ export function SlideEditorPane({
   }
 
   return (
-    <section className="border border-border bg-surface flex flex-col h-full overflow-hidden">
+    <section className="panel flex h-full flex-col overflow-hidden">
       {/* Header */}
-      <header className="flex items-center justify-between gap-3 px-4 py-3 border-b border-border shrink-0">
-        <div className="flex items-baseline gap-3 min-w-0">
-          <span className="mono text-[10px] tracking-[0.18em] uppercase text-text-mute">
+      <header className="flex shrink-0 items-center justify-between gap-3 border-b border-border-soft px-4 py-3">
+        <div className="flex min-w-0 items-center gap-2.5">
+          <span className="sec-num">
             /slide {String(slideIndex + 1).padStart(2, '0')}
           </span>
           <span
-            className={`mono text-[9px] tracking-[0.18em] uppercase ${
-              isCover ? 'text-lime' : isCTA ? 'text-warm' : 'text-text-dim'
+            className={`rounded-full px-2.5 py-0.5 text-[11px] font-semibold uppercase tracking-[0.06em] ${
+              isCover ? 'bg-lime/15 text-lime' : isCTA ? 'bg-pink/15 text-pink' : 'bg-white/[0.06] text-text-dim'
             }`}
           >
             {role}
@@ -131,14 +143,14 @@ export function SlideEditorPane({
             <button
               type="button"
               onClick={() => setCoverOpen((v) => !v)}
-              className="flex items-center gap-2 px-2.5 py-1.5 border border-border hover:border-text-dim mono text-[10px] tracking-[0.16em] uppercase max-w-[200px]"
+              className="btn-ghost max-w-[220px] !px-3.5 !py-2 text-[13px]"
               title="Выбрать обложку"
             >
-              <span className="text-text-mute">🖼</span>
+              <ImageIcon size={14} className="shrink-0 text-text-mute" />
               <span className="truncate">
                 {coverAvatar ? coverAvatar.styleLabel : 'Выбрать обложку'}
               </span>
-              <span className="text-text-mute">▾</span>
+              <ChevronDown size={14} className="shrink-0 text-text-mute" />
             </button>
           )}
 
@@ -157,22 +169,22 @@ export function SlideEditorPane({
               <button
                 type="button"
                 onClick={() => setActionsOpen((v) => !v)}
-                className="px-2 py-1 mono text-[12px] text-text-dim hover:text-text border border-border"
+                className="btn-icon !h-9 !w-9"
                 aria-label="Действия со слайдом"
               >
-                •••
+                <MoreHorizontal size={16} />
               </button>
               {actionsOpen && (
-                <div className="absolute top-full right-0 mt-1 z-10 w-44 bg-[#0f0f0f] border border-border-2 shadow-lg">
+                <div className="pop-in absolute right-0 top-full z-10 mt-2 w-48 overflow-hidden rounded-2xl border border-border-2 bg-bg-card/95 p-1 shadow-glass backdrop-blur-xl">
                   <button
                     type="button"
                     onClick={() => {
                       setActionsOpen(false);
                       onDuplicate();
                     }}
-                    className="block w-full text-left px-3 py-2 mono text-[11px] tracking-wider uppercase text-text-dim hover:bg-surface-2 hover:text-text"
+                    className="flex w-full items-center gap-2 rounded-xl px-3 py-2 text-left text-[13px] text-text-dim hover:bg-white/[0.06] hover:text-text"
                   >
-                    Дублировать
+                    <Copy size={14} /> Дублировать
                   </button>
                   <button
                     type="button"
@@ -181,9 +193,9 @@ export function SlideEditorPane({
                       onRemove();
                     }}
                     disabled={slidesTotal <= 2}
-                    className="block w-full text-left px-3 py-2 mono text-[11px] tracking-wider uppercase text-text-dim hover:bg-surface-2 hover:text-pink disabled:opacity-30"
+                    className="flex w-full items-center gap-2 rounded-xl px-3 py-2 text-left text-[13px] text-text-dim hover:bg-danger/10 hover:text-danger disabled:opacity-30"
                   >
-                    Удалить слайд
+                    <Trash2 size={14} /> Удалить слайд
                   </button>
                 </div>
               )}
@@ -193,19 +205,19 @@ export function SlideEditorPane({
       </header>
 
       {/* Fields */}
-      <div className="flex-1 overflow-y-auto p-4 sm:p-5 grid gap-4 content-start [&::-webkit-scrollbar]:w-1.5 [&::-webkit-scrollbar-thumb]:bg-border-2">
+      <div className="grid flex-1 content-start gap-5 overflow-y-auto p-4 sm:p-5 [&::-webkit-scrollbar-thumb]:bg-border-2 [&::-webkit-scrollbar]:w-1.5">
         {/* Cover type picker — only for slide 0 */}
         {isCover && (
           <div className="grid gap-1.5">
             <div className="flex items-baseline justify-between">
-              <span className="mono text-[9px] tracking-[0.18em] uppercase text-text-mute">
+              <span className="label">
                 cover type · 4 layout
               </span>
-              <span className="mono text-[9px] tracking-wider text-text-mute truncate ml-3">
+              <span className="ml-3 truncate text-[12px] text-text-mute">
                 {COVER_TYPE_DESC[activeCoverType]}
               </span>
             </div>
-            <div className="grid grid-cols-2 sm:grid-cols-4 gap-1.5">
+            <div className="grid grid-cols-2 gap-2 sm:grid-cols-4">
               {COVER_TYPES.map((t) => {
                 const active = activeCoverType === t;
                 return (
@@ -213,17 +225,17 @@ export function SlideEditorPane({
                     key={t}
                     type="button"
                     onClick={() => onSlideChange({ coverType: t })}
-                    className={`border px-2 py-2 mono text-[10px] tracking-[0.16em] uppercase text-left transition ${
+                    className={`rounded-2xl border px-3 py-2.5 text-left transition-colors ${
                       active
-                        ? 'border-lime bg-lime/[0.05] text-text'
-                        : 'border-border hover:border-text-dim text-text-dim'
+                        ? 'border-gold bg-blue/[0.12] text-text shadow-glow'
+                        : 'border-border-soft bg-white/[0.03] text-text-dim hover:bg-white/[0.06]'
                     }`}
                     title={COVER_TYPE_DESC[t]}
                   >
-                    <span className="block text-[12px] tracking-[0.2em]">{COVER_TYPE_LABEL[t]}</span>
+                    <span className="block text-[13px] font-semibold">{COVER_TYPE_LABEL[t]}</span>
                     <span
-                      className={`block mono text-[9px] tracking-wider mt-0.5 ${
-                        active ? 'text-lime' : 'text-text-mute'
+                      className={`mt-0.5 block text-[11px] ${
+                        active ? 'text-gold' : 'text-text-mute'
                       }`}
                     >
                       {t === 'avatar'
@@ -243,10 +255,10 @@ export function SlideEditorPane({
 
         <label className="grid gap-1.5">
           <div className="flex items-baseline justify-between">
-            <span className="mono text-[9px] tracking-[0.18em] uppercase text-text-mute">title</span>
+            <span className="label">title</span>
             <span
-              className={`mono text-[9px] tracking-wider ${
-                titleOverLimit ? 'text-pink' : 'text-text-mute'
+              className={`text-[12px] tabular-nums ${
+                titleOverLimit ? 'text-danger' : 'text-text-mute'
               }`}
             >
               {slide.title.length} / {TITLE_LIMIT}
@@ -257,18 +269,18 @@ export function SlideEditorPane({
             value={slide.title}
             onChange={(e) => onSlideChange({ title: e.target.value.slice(0, TITLE_LIMIT) })}
             placeholder={isCover ? 'Провокационный хук (2–7 слов)' : 'Заголовок слайда'}
-            className={`bg-bg border px-3 py-2 font-serif text-[18px] sm:text-[20px] leading-tight focus:outline-none resize-none ${
-              titleOverLimit ? 'border-pink focus:border-pink' : 'border-border focus:border-lime/60'
+            className={`input !min-h-0 resize-none !text-[18px] font-semibold !leading-tight tracking-[-0.02em] sm:!text-[20px] ${
+              titleOverLimit ? '!border-danger' : ''
             }`}
           />
         </label>
 
         <label className="grid gap-1.5">
           <div className="flex items-baseline justify-between">
-            <span className="mono text-[9px] tracking-[0.18em] uppercase text-text-mute">body</span>
+            <span className="label">body</span>
             <span
-              className={`mono text-[9px] tracking-wider ${
-                bodyOverLimit ? 'text-pink' : 'text-text-mute'
+              className={`text-[12px] tabular-nums ${
+                bodyOverLimit ? 'text-danger' : 'text-text-mute'
               }`}
             >
               {slide.body.length} / {BODY_LIMIT}
@@ -285,19 +297,19 @@ export function SlideEditorPane({
                   ? 'Зачем юзеру нажать CTA — 10–25 слов.'
                   : 'Развёрнутая мысль 15–40 слов, один концепт.'
             }
-            className={`bg-bg border px-3 py-2.5 font-serif text-[14px] leading-relaxed focus:outline-none min-h-[140px] ${
-              bodyOverLimit ? 'border-pink focus:border-pink' : 'border-border focus:border-lime/60'
+            className={`input min-h-[140px] ${
+              bodyOverLimit ? '!border-danger' : ''
             }`}
           />
         </label>
 
         {/* AI Regen panel — Claude rewrite этого слайда с учётом стиля + соседей */}
-        <div className="grid gap-1.5 border border-border bg-bg/40 p-3">
-          <div className="flex items-baseline justify-between">
-            <span className="mono text-[9px] tracking-[0.18em] uppercase text-lime">
-              ✨ AI regen · claude
+        <div className="grid gap-3 rounded-[20px] border border-border-soft bg-white/[0.03] p-4">
+          <div className="flex flex-wrap items-center justify-between gap-2">
+            <span className="flex items-center gap-1.5 text-[13px] font-semibold text-lime">
+              <Sparkles size={14} /> AI regen · claude
             </span>
-            <span className="mono text-[9px] tracking-wider text-text-mute">
+            <span className="text-[12px] text-text-mute">
               учитывает стиль и соседей
             </span>
           </div>
@@ -308,54 +320,56 @@ export function SlideEditorPane({
                 type="button"
                 disabled={regenBusy}
                 onClick={() => setRegenIntent(q)}
-                className={`mono text-[9px] tracking-wider uppercase px-2 py-1 border transition ${
+                className={`rounded-full border px-3 py-1 text-[12px] transition-colors ${
                   regenIntent === q
-                    ? 'border-lime text-lime bg-lime/[0.05]'
-                    : 'border-border text-text-mute hover:border-text-dim hover:text-text-dim'
-                } disabled:opacity-30 disabled:cursor-not-allowed`}
+                    ? 'border-transparent bg-blue text-white'
+                    : 'border-border-soft bg-white/[0.04] text-text-dim hover:bg-white/[0.07]'
+                } disabled:cursor-not-allowed disabled:opacity-30`}
               >
                 {q}
               </button>
             ))}
           </div>
-          <div className="flex items-stretch gap-1.5">
+          <div className="flex items-stretch gap-2">
             <input
               type="text"
               value={regenIntent}
               onChange={(e) => setRegenIntent(e.target.value.slice(0, 200))}
               placeholder="что изменить (опционально)…"
               disabled={regenBusy}
-              className="flex-1 bg-bg border border-border focus:border-lime/60 focus:outline-none px-2 py-1.5 mono text-[11px] text-text disabled:opacity-50"
+              className="input flex-1 !rounded-full !py-2 text-[13px] disabled:opacity-50"
             />
             <button
               type="button"
               onClick={handleRegen}
               disabled={regenBusy}
-              className="mono text-[10px] tracking-[0.18em] uppercase px-3 py-1.5 border border-lime/60 text-lime hover:bg-lime hover:text-black transition disabled:opacity-30 disabled:cursor-not-allowed"
+              className="btn-lime !px-4 !py-2 text-[13px]"
             >
-              {regenBusy ? '✨ генерю…' : '✨ regen →'}
+              {regenBusy ? <Loader2 size={14} className="animate-spin" /> : <Sparkles size={14} />}
+              {regenBusy ? 'генерю…' : 'regen'}
+              {!regenBusy && <ArrowRight size={14} />}
             </button>
           </div>
           {regenError && (
-            <div className="border border-pink/40 bg-pink/5 px-2 py-1 mono text-[10px] text-pink">
+            <div className="rounded-xl border border-danger/40 bg-danger/10 px-3 py-1.5 text-[12px] text-danger">
               {regenError}
             </div>
           )}
         </div>
 
         {/* AI Image panel — kie Nano Banana 2 / Flux Kontext */}
-        <div className="grid gap-1.5 border border-border bg-bg/40 p-3">
-          <div className="flex items-baseline justify-between gap-3">
-            <span className="mono text-[9px] tracking-[0.18em] uppercase text-gold">
-              🎨 AI image · nano banana 2
+        <div className="grid gap-3 rounded-[20px] border border-border-soft bg-white/[0.03] p-4">
+          <div className="flex flex-wrap items-center justify-between gap-2">
+            <span className="flex items-center gap-1.5 text-[13px] font-semibold text-gold">
+              <Palette size={14} /> AI image · nano banana 2
             </span>
-            <span className="mono text-[9px] tracking-wider text-text-mute">
+            <span className="text-[12px] text-text-mute">
               mode: {defaultImageMode}
             </span>
           </div>
           {/* Composite vs Replace toggle — определяет, рисует ли satori
               сверху typography или AI-картинка идёт сама по себе финалом. */}
-          <div className="flex items-center gap-1.5 text-[9px] mono tracking-wider uppercase">
+          <div className="flex flex-wrap items-center gap-1.5 text-[12px]">
             <span className="text-text-mute">render:</span>
             {(
               [
@@ -373,10 +387,10 @@ export function SlideEditorPane({
                       imageMode: m.key === 'composite' ? undefined : m.key,
                     })
                   }
-                  className={`px-2 py-0.5 border transition ${
+                  className={`rounded-full border px-3 py-1 transition-colors ${
                     active
-                      ? 'border-gold text-gold bg-gold/[0.05]'
-                      : 'border-border text-text-mute hover:border-text-dim hover:text-text-dim'
+                      ? 'border-transparent bg-blue text-white'
+                      : 'border-border-soft bg-white/[0.04] text-text-dim hover:bg-white/[0.07]'
                   }`}
                   title={m.hint}
                 >
@@ -384,14 +398,14 @@ export function SlideEditorPane({
                 </button>
               );
             })}
-            <span className="text-text-mute truncate ml-1">
+            <span className="ml-1 truncate text-text-mute">
               {(slide.imageMode ?? 'composite') === 'replace'
                 ? 'AI картинка = финальный PNG (skip satori)'
                 : 'satori типографика поверх AI-фона'}
             </span>
           </div>
           {isCover && (
-            <div className="grid grid-cols-2 sm:grid-cols-4 gap-1">
+            <div className="grid grid-cols-2 gap-2 sm:grid-cols-4">
               {(
                 [
                   { key: 'hero-avatar', label: 'Hero avatar', hint: 'identity-safe' },
@@ -410,15 +424,15 @@ export function SlideEditorPane({
                       imageBusyOrPending ||
                       (m.key === 'hero-avatar' && !coverAvatarId)
                     }
-                    className={`border px-2 py-1.5 mono text-[9px] tracking-[0.16em] uppercase text-left transition ${
+                    className={`rounded-2xl border px-3 py-2 text-left transition-colors ${
                       active
-                        ? 'border-gold text-gold bg-gold/[0.05]'
-                        : 'border-border text-text-mute hover:border-text-dim hover:text-text-dim'
-                    } disabled:opacity-30 disabled:cursor-not-allowed`}
+                        ? 'border-gold bg-blue/[0.12] text-text'
+                        : 'border-border-soft bg-white/[0.03] text-text-dim hover:bg-white/[0.06]'
+                    } disabled:cursor-not-allowed disabled:opacity-30`}
                     title={`mode = ${m.key}`}
                   >
-                    <span className="block text-[10px]">{m.label}</span>
-                    <span className="block mono text-[8px] tracking-wider mt-0.5 text-text-mute">
+                    <span className="block text-[12px] font-semibold">{m.label}</span>
+                    <span className="mt-0.5 block text-[11px] text-text-mute">
                       {m.hint}
                     </span>
                   </button>
@@ -426,23 +440,25 @@ export function SlideEditorPane({
               })}
             </div>
           )}
-          <div className="flex items-center gap-2">
+          <div className="flex flex-wrap items-center gap-3">
             <button
               type="button"
               onClick={() => handleDispatchImage()}
               disabled={imageBusyOrPending || Boolean(imageDisabledReason)}
-              className="mono text-[10px] tracking-[0.18em] uppercase px-3 py-1.5 border border-gold/60 text-gold hover:bg-gold hover:text-black transition disabled:opacity-30 disabled:cursor-not-allowed"
+              className="btn-primary !px-4 !py-2 text-[13px]"
               title={imageDisabledReason || `${defaultImageMode}`}
             >
+              {imageBusyOrPending ? <Loader2 size={14} className="animate-spin" /> : <Palette size={14} />}
               {slide.imageStatus === 'pending'
-                ? '🎨 генерю…'
+                ? 'генерю…'
                 : imageBusy
-                  ? '🎨 ставлю в очередь…'
+                  ? 'ставлю в очередь…'
                   : slide.image
-                    ? '🎨 regenerate →'
-                    : '🎨 generate →'}
+                    ? 'regenerate'
+                    : 'generate'}
+              {!imageBusyOrPending && <ArrowRight size={14} />}
             </button>
-            <span className="mono text-[9px] tracking-wider text-text-mute">
+            <span className="text-[12px] text-text-mute">
               {imageDisabledReason
                 ? imageDisabledReason
                 : slide.imageStatus === 'pending'
@@ -455,7 +471,7 @@ export function SlideEditorPane({
             </span>
           </div>
           {(imageDispatchError || slide.imageError) && (
-            <div className="border border-pink/40 bg-pink/5 px-2 py-1 mono text-[10px] text-pink break-all">
+            <div className="break-all rounded-xl border border-danger/40 bg-danger/10 px-3 py-1.5 text-[12px] text-danger">
               {imageDispatchError || slide.imageError}
             </div>
           )}
@@ -548,29 +564,29 @@ function SlideMediaUploader({
   return (
     <div className="grid gap-1.5">
       <div className="flex items-baseline justify-between">
-        <span className="mono text-[9px] tracking-[0.18em] uppercase text-text-mute">
+        <span className="label">
           медиа · фото / скриншот / mockup
         </span>
         {coverHint ? (
-          <span className="mono text-[9px] tracking-wider text-text-mute">
+          <span className="text-[12px] text-text-mute">
             на обложке используется аватар
           </span>
         ) : mediaHint ? (
-          <span className="mono text-[9px] tracking-wider text-lime">{mediaHint}</span>
+          <span className="text-[12px] text-lime">{mediaHint}</span>
         ) : null}
       </div>
 
       {value ? (
-        <div className="relative border border-border bg-bg overflow-hidden grid grid-cols-[160px_1fr] gap-3 p-3">
+        <div className="relative grid grid-cols-[160px_1fr] gap-4 overflow-hidden rounded-[20px] border border-border-soft bg-white/[0.03] p-3">
           {/* eslint-disable-next-line @next/next/no-img-element */}
           <img
             src={value}
             alt="slide media"
-            className="w-full h-[120px] object-cover border border-border bg-surface"
+            className="h-[120px] w-full rounded-xl border border-border-soft bg-white/[0.04] object-cover"
           />
           <div className="grid gap-2 content-start min-w-0">
-            <span className="mono text-[10px] text-text-dim truncate">{value.split('/').pop()}</span>
-            <span className="mono text-[9px] text-text-mute">
+            <span className="truncate text-[13px] font-medium text-text-dim">{value.split('/').pop()}</span>
+            <span className="text-[12px] leading-relaxed text-text-mute">
               Будет нарисовано как mockup-карточка в нижней части слайда после
               «Сгенерировать PNG».
             </span>
@@ -579,18 +595,18 @@ function SlideMediaUploader({
                 type="button"
                 onClick={() => inputRef.current?.click()}
                 disabled={uploading || disabled}
-                className="mono text-[10px] tracking-widest uppercase text-lime hover:underline disabled:opacity-30"
+                className="btn-ghost !px-3.5 !py-1.5 text-[12px]"
               >
+                {uploading ? <Loader2 size={13} className="animate-spin" /> : <Upload size={13} />}
                 {uploading ? 'загружаю…' : 'заменить'}
               </button>
-              <span className="text-text-mute">·</span>
               <button
                 type="button"
                 onClick={() => onChange(null)}
                 disabled={uploading || disabled}
-                className="mono text-[10px] tracking-widest uppercase text-text-mute hover:text-pink disabled:opacity-30"
+                className="flex items-center gap-1.5 rounded-full px-3 py-1.5 text-[12px] text-text-mute transition-colors hover:bg-danger/10 hover:text-danger disabled:opacity-30"
               >
-                удалить
+                <Trash2 size={13} /> удалить
               </button>
             </div>
           </div>
@@ -604,29 +620,32 @@ function SlideMediaUploader({
           onDragLeave={() => setDragOver(false)}
           onDrop={onDrop}
           onClick={() => !disabled && !uploading && inputRef.current?.click()}
-          className={`border border-dashed bg-bg/40 grid place-items-center min-h-[88px] text-center px-4 py-3 cursor-pointer transition ${
+          className={`grid min-h-[96px] cursor-pointer place-items-center rounded-[24px] border border-dashed px-4 py-4 text-center transition-colors ${
             disabled
-              ? 'border-border opacity-50 cursor-not-allowed'
+              ? 'cursor-not-allowed border-white/15 bg-white/[0.03] opacity-50'
               : dragOver
-                ? 'border-lime bg-lime/[0.04]'
-                : 'border-border hover:border-text-dim'
+                ? 'border-gold/60 bg-blue/[0.06]'
+                : 'border-white/15 bg-white/[0.03] hover:border-gold/60 hover:bg-blue/[0.06]'
           }`}
           role="button"
           aria-disabled={disabled || uploading}
           tabIndex={disabled ? -1 : 0}
         >
           {uploading ? (
-            <span className="mono text-[11px] text-lime">↑ загружаю…</span>
+            <span className="flex items-center gap-2 text-[13px] text-gold">
+              <Loader2 size={14} className="animate-spin" /> загружаю…
+            </span>
           ) : disabled ? (
-            <span className="mono text-[10px] text-text-mute">
+            <span className="text-[13px] text-text-mute">
               недоступно для cover-слайда
             </span>
           ) : (
-            <div className="grid gap-1">
-              <span className="mono text-[11px] tracking-widest uppercase text-text-dim">
-                + перетащи фото или кликни
+            <div className="grid justify-items-center gap-1.5">
+              <Upload size={18} className="text-text-mute" />
+              <span className="text-[13px] font-medium text-text-dim">
+                перетащи фото или кликни
               </span>
-              <span className="mono text-[9px] text-text-mute">
+              <span className="text-[12px] text-text-mute">
                 JPG / PNG / WebP до 8 MB
               </span>
             </div>
@@ -644,7 +663,7 @@ function SlideMediaUploader({
       />
 
       {error && (
-        <div className="border border-pink/40 bg-pink/5 px-2 py-1 mono text-[10px] text-pink">
+        <div className="rounded-xl border border-danger/40 bg-danger/10 px-3 py-1.5 text-[12px] text-danger">
           {error}
         </div>
       )}

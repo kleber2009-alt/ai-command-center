@@ -2,6 +2,7 @@ import { redirect } from 'next/navigation';
 import { getCurrentUser } from '@/lib/auth';
 import { prisma } from '@/lib/prisma';
 import { COSTS } from '@/lib/tokens';
+import { ArrowRight } from 'lucide-react';
 import { PageHero } from '@/components/shell/page-hero';
 import { MontageStudio } from '@/components/montage/montage-studio';
 import { MONTAGE_PRESETS } from '@/lib/montage/presets';
@@ -32,10 +33,10 @@ export default async function MontagePage() {
   return (
     <div className="grid gap-8">
       <PageHero
-        eyebrow="SKILL MONTAGE · MONTAZH-RILS ENGINE"
+        eyebrow="монтаж по скиллам"
         title={
           <>
-            Монтаж по скиллам — <span className="italic text-gold">как в рилсах @ilia.paliy.</span>
+            Монтаж по скиллам — <span className="italic text-gold">паузы, титры, панчи.</span>
           </>
         }
         description="Свой движок монтажа на ffmpeg по пайплайну скилла montazh-rils: пословные таймкоды, вырезка пауз, субтитры в стиле скилла, хук-титр сверху и призыв «пиши «слово»» в конце. Без внешнего монтажёра."
@@ -43,19 +44,26 @@ export default async function MontagePage() {
           { label: 'Карусели', href: '/carousels' },
           { label: 'Submagic-монтаж', href: '/edits', tone: 'ghost' },
         ]}
+        icon="montage"
         meta={
           <>
-            <div className="mono text-[9px] tracking-[0.28em] uppercase text-text-muted">Стилей</div>
-            <div className="font-serif text-[28px] text-gold leading-none">{MONTAGE_PRESETS.length}</div>
-            <div className="mono text-[9px] tracking-[0.22em] uppercase text-text-muted mt-3">Ролики · {montages.length}</div>
+            <div className="label">Стилей</div>
+            <div className="text-[40px] font-extrabold leading-none tabular-nums tracking-[-0.02em] text-gold">{MONTAGE_PRESETS.length}</div>
+            <div className="label pt-3">Ролики · {montages.length}</div>
           </>
         }
         extra={
-          <div className="mono text-[10px] tracking-[0.22em] uppercase text-text-muted flex flex-wrap gap-x-3 gap-y-1.5 items-center">
+          <div className="flex flex-wrap items-center gap-1.5">
             {PIPELINE.map((step, i) => (
-              <span key={step} className="flex items-center gap-3">
-                <span className={i === 0 ? 'text-gold' : 'text-text-dim'}>{step}</span>
-                {i < PIPELINE.length - 1 && <span className="text-border">→</span>}
+              <span key={step} className="flex items-center gap-1.5">
+                <span
+                  className={`rounded-full border px-3 py-1 text-[12px] font-medium ${
+                    i === 0 ? 'border-transparent bg-blue text-white' : 'border-border-soft bg-white/[0.04] text-text-dim'
+                  }`}
+                >
+                  {step}
+                </span>
+                {i < PIPELINE.length - 1 && <ArrowRight size={13} className="text-text-mute" />}
               </span>
             ))}
           </div>

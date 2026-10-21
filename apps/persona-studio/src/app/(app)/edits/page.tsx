@@ -2,6 +2,7 @@ import Link from 'next/link';
 import { redirect } from 'next/navigation';
 import { getCurrentUser } from '@/lib/auth';
 import { prisma } from '@/lib/prisma';
+import { ArrowDown } from 'lucide-react';
 import { EditCard } from '@/components/edit-card';
 import { EmptyState } from '@/components/empty-state';
 import { PageHero } from '@/components/shell/page-hero';
@@ -40,22 +41,23 @@ export default async function EditsPage({ searchParams }: { searchParams: Promis
   return (
     <div className="grid gap-8">
       <PageHero
-        eyebrow="VIDEO PRODUCTION SUITE · SUBMAGIC"
+        eyebrow="монтаж готовых видео"
         title={
           <>
-            Finished videos — <span className="italic text-gold">edited.</span>
+            Готовые видео — <span className="italic text-gold">с монтажом.</span>
           </>
         }
-        description="Submagic берёт твой mp4, накладывает шаблон в стиле известных авторов и автоматические субтитры. На выходе — готовый Reels / Shorts."
+        description="Берём твой mp4, накладываем шаблон в стиле известных авторов и автоматические субтитры. На выходе — готовый Reels / Shorts."
         actions={
           latestVideo
             ? [{ label: 'New edit', href: `/edits/new?videoId=${latestVideo.id}` }]
             : [{ label: 'Need a video first', href: '/videos', tone: 'ghost' }]
         }
+        icon="videos"
         meta={
           <>
-            <div className="mono text-[9px] tracking-[0.28em] uppercase text-text-muted">Renders</div>
-            <div className="font-serif text-[28px] text-gold leading-none">{edits.length}</div>
+            <div className="label">Renders</div>
+            <div className="text-[40px] font-extrabold leading-none tabular-nums tracking-[-0.02em] text-gold">{edits.length}</div>
           </>
         }
       />
@@ -76,7 +78,7 @@ export default async function EditsPage({ searchParams }: { searchParams: Promis
           />
         )
       ) : (
-        <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4">
+        <div className="stagger grid grid-cols-1 gap-4 sm:grid-cols-2 lg:grid-cols-3">
           {edits.map((e) => (
             <EditCard
               key={e.id}
@@ -91,8 +93,8 @@ export default async function EditsPage({ searchParams }: { searchParams: Promis
       )}
 
       {focus && (
-        <p className="mono text-[10px] tracking-widest uppercase text-text-mute text-center">
-          /scroll · карточка {focus.slice(0, 8)} ↓
+        <p className="flex items-center justify-center gap-1.5 text-center text-[12px] text-text-mute">
+          /scroll · карточка {focus.slice(0, 8)} <ArrowDown size={13} />
         </p>
       )}
     </div>

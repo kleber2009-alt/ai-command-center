@@ -7,6 +7,7 @@
 
 import { useState } from 'react';
 import { useRouter } from 'next/navigation';
+import { ArrowRight, Loader2, Sparkles } from 'lucide-react';
 import { StyleSelector } from './style-selector';
 
 export function NewCarouselForm({ defaultStyle = 'skill-palii' }: { defaultStyle?: string }) {
@@ -42,18 +43,18 @@ export function NewCarouselForm({ defaultStyle = 'skill-palii' }: { defaultStyle
   }
 
   return (
-    <form onSubmit={submit} className="grid gap-3">
+    <form onSubmit={submit} className="panel grid gap-4 p-5 sm:p-6">
       <textarea
         value={topic}
         onChange={(e) => setTopic(e.target.value)}
         rows={4}
         maxLength={3000}
         placeholder="Тема, тезисы, сценарий рилса или текст поста. Например: «5 промптов, которые заменят монтажёра»"
-        className="w-full border border-border bg-surface px-3 py-2.5 text-[14px] leading-relaxed focus:outline-none focus:border-text-dim"
+        className="input"
       />
       <StyleSelector value={style} onChange={setStyle} />
       <div className="flex flex-wrap items-center gap-3">
-        <label className="mono text-[10px] tracking-[0.18em] uppercase text-text-mute flex items-center gap-2">
+        <label className="flex items-center gap-2.5 text-[13px] text-text-dim">
           слайдов
           <input
             type="number"
@@ -61,17 +62,19 @@ export function NewCarouselForm({ defaultStyle = 'skill-palii' }: { defaultStyle
             max={20}
             value={slides}
             onChange={(e) => setSlides(Math.max(3, Math.min(20, Number(e.target.value) || 8)))}
-            className="w-16 border border-border bg-surface px-2 py-1 text-text"
+            className="input !w-20 !rounded-full !px-3.5 !py-2 text-center tabular-nums"
           />
         </label>
         <button
           type="submit"
           disabled={busy || !topic.trim()}
-          className="border border-lime text-lime px-4 py-2 mono text-[11px] tracking-[0.18em] uppercase disabled:opacity-40 hover:bg-lime/[0.08] transition"
+          className="btn-primary"
         >
-          {busy ? 'Claude пишет слайды…' : 'Сделать карусель →'}
+          {busy ? <Loader2 size={15} className="animate-spin" /> : <Sparkles size={15} />}
+          {busy ? 'Claude пишет слайды…' : 'Сделать карусель'}
+          {!busy && <ArrowRight size={15} />}
         </button>
-        {error && <span className="mono text-[11px] text-red-400">{error}</span>}
+        {error && <span className="text-[13px] text-danger">{error}</span>}
       </div>
     </form>
   );
