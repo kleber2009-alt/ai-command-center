@@ -120,6 +120,15 @@ const RU_DICT: Record<string, string> = {
 
   // ── Misc UI chrome ──
   'Toggle navigation': 'Открыть меню',
+
+  // ── UI-моушн shell ──
+  'AI content studio': 'AI-студия контента',
+  'Top up': 'Пополнить',
+  plan: 'план',
+  'Search viral content by niche…': 'Найти вирусные ролики по нише…',
+  'Describe the content — AI will draft the brief and script.':
+    'Опиши ролик — AI соберёт бриф и сценарий в воркспейсе.',
+  'Could not create a brief — try again': 'Не получилось создать бриф — попробуй ещё раз',
 };
 
 export function t(key: string, locale: Locale): string {
