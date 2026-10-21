@@ -9,6 +9,7 @@ import { CalendarPlus, Download, Film, Loader2, Scissors, Upload } from 'lucide-
 import { Icon3D } from '@/components/ui/icon3d';
 import { MONTAGE_PRESETS, findMontagePreset } from '@/lib/montage/presets';
 import { EditsStepper } from '@/components/edits-stepper';
+import { PresetPreview } from './preset-preview';
 
 type Video = { id: string; videoUrl: string | null; aspect: string; createdAt: string; label: string };
 export type MontageRow = {
@@ -35,6 +36,7 @@ export function MontageStudio({ videos, initial, cost }: { videos: Video[]; init
   const [videoId, setVideoId] = useState(videos[0]?.id ?? '');
   const [file, setFile] = useState<File | null>(null);
   const [style, setStyle] = useState('palii');
+  const [hovered, setHovered] = useState<string | null>(null);
   const [hookTitle, setHookTitle] = useState('');
   const [ctaWord, setCtaWord] = useState('');
   const [cutSilence, setCutSilence] = useState(true);
@@ -173,7 +175,7 @@ export function MontageStudio({ videos, initial, cost }: { videos: Video[]; init
         {/* 02 — стиль */}
         <div id="montage-style" className="grid scroll-mt-24 gap-3">
           <span className="flex items-center gap-2.5"><span className="sec-num">02</span><span className="sec-title">скилл-стиль монтажа · {MONTAGE_PRESETS.length}</span></span>
-          <div className="grid grid-cols-1 gap-2.5 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4">
+          <div className="stagger grid grid-cols-1 gap-2.5 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4">
             {MONTAGE_PRESETS.map((p) => {
               const active = p.id === style;
               return (
@@ -181,10 +183,15 @@ export function MontageStudio({ videos, initial, cost }: { videos: Video[]; init
                   key={p.id}
                   type="button"
                   onClick={() => setStyle(p.id)}
-                  className={`grid gap-2.5 rounded-2xl border p-3 text-left transition-colors ${
+                  onMouseEnter={() => setHovered(p.id)}
+                  onMouseLeave={() => setHovered((h) => (h === p.id ? null : h))}
+                  onFocus={() => setHovered(p.id)}
+                  onBlur={() => setHovered((h) => (h === p.id ? null : h))}
+                  className={`content-start grid gap-2.5 rounded-2xl border p-3 text-left transition-[transform,border-color,background-color,box-shadow] duration-300 ease-out hover:-translate-y-0.5 ${
                     active ? 'border-gold bg-blue/[0.12] shadow-glow' : 'border-border-soft bg-white/[0.03] hover:border-border-2 hover:bg-white/[0.06]'
                   }`}
                 >
+                  <PresetPreview preset={p} playing={active || hovered === p.id} />
                   <div className="flex items-center gap-2.5">
                     {/* eslint-disable-next-line @next/next/no-img-element */}
                     <img src={`/skill-previews/${p.styleId ?? p.id}.jpg`} alt="" className="h-[44px] w-auto rounded-lg border border-border-soft" loading="lazy" />

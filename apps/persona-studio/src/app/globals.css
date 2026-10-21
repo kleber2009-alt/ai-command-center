@@ -453,6 +453,20 @@ a:hover .icon-3d, button:hover .icon-3d, .card-editorial:hover .icon-3d {
   }
 }
 
+/* ---------- skill caption fonts (live montage previews; same TTFs as ffmpeg/ASS) ---------- */
+
+@font-face { font-family: 'Montserrat 800'; src: url('/fonts/Montserrat-800.ttf') format('truetype'); font-display: swap; }
+@font-face { font-family: 'Montserrat 900'; src: url('/fonts/Montserrat-900.ttf') format('truetype'); font-display: swap; }
+@font-face { font-family: 'Playfair 700'; src: url('/fonts/PlayfairDisplay-700.ttf') format('truetype'); font-display: swap; }
+@font-face { font-family: 'Playfair 700 Italic'; src: url('/fonts/PlayfairDisplay-700i.ttf') format('truetype'); font-display: swap; }
+@font-face { font-family: 'Unbounded 800'; src: url('/fonts/Unbounded-800.ttf') format('truetype'); font-display: swap; }
+@font-face { font-family: 'Nunito 900'; src: url('/fonts/Nunito-900.ttf') format('truetype'); font-display: swap; }
+@font-face { font-family: 'Inter 700'; src: url('/fonts/Inter-700.ttf') format('truetype'); font-display: swap; }
+@font-face { font-family: 'Manrope 800'; src: url('/fonts/Manrope-800.ttf') format('truetype'); font-display: swap; }
+@font-face { font-family: 'JetBrainsMono 800'; src: url('/fonts/JetBrainsMono-800.ttf') format('truetype'); font-display: swap; }
+@font-face { font-family: 'Onest 600'; src: url('/fonts/Onest-600.ttf') format('truetype'); font-display: swap; }
+@font-face { font-family: 'InterTight 700'; src: url('/fonts/InterTight-700.ttf') format('truetype'); font-display: swap; }
+
 /* ---------- scrollbar ---------- */
 
 ::-webkit-scrollbar { width: 10px; height: 10px; }

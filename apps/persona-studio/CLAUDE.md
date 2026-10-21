@@ -161,6 +161,9 @@ uimotion) и `montazh-dlinnogo-video-youtube` в продукт.
   Своя запись: POST `/api/montages/upload` (сырой body, ≤ 500 МБ, стрим в S3).
   Env: `COST_SKILL_MONTAGE` (20), `MONTAGE_MAX_SOURCE_SEC` (900), `FFPROBE_PATH`.
   Образ воркера: `ffmpeg` + `fontconfig` + `public/fonts`.
+  Галерея стилей на `/montage` — живые превью `components/montage/preset-preview.tsx`:
+  демо-фраза проигрывается по `mode`/`entry`/`accent`/`plate`/`activeColor` пресета
+  (играет выбранная и наведённая карточка); шрифты субтитров — `@font-face` в `globals.css`.
 - Тесты: `tests/montage.test.ts`.
 
 ## Landing
