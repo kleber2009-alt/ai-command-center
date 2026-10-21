@@ -3,9 +3,11 @@
 #
 #   sudo bash apps/persona-studio/scripts/add-domain.sh app.example.com
 #
-# Before running: DNS A-record <subdomain> → 46.62.215.11 (GoDaddy → DNS →
-# Add record, type A, TTL 600) and it must already resolve, otherwise Caddy
-# can't get the Let's Encrypt certificate.
+# Before running: DNS A-record <subdomain> → 46.62.215.11 at whichever provider
+# hosts the zone's nameservers (registrar ≠ DNS host: aicex.club is registered
+# at GoDaddy but its DNS is on Cloudflare). It must already resolve, otherwise
+# Caddy can't get the Let's Encrypt certificate. Cloudflare-proxied record →
+# BEHIND_CLOUDFLARE=1 and SSL/TLS mode «Full».
 #
 # What it does (idempotent):
 #   1. Backs up /etc/caddy/Caddyfile and appends a site block
@@ -27,12 +29,20 @@ if [ -z "$DOMAIN" ]; then
 fi
 
 resolved="$(getent ahostsv4 "$DOMAIN" | awk 'NR==1{print $1}' || true)"
-if [ "$resolved" != "$SERVER_IP" ]; then
+if [ "$resolved" = "$SERVER_IP" ]; then
+  echo "✓ DNS: $DOMAIN → $resolved"
+elif [ "${BEHIND_CLOUDFLARE:-0}" = "1" ]; then
+  # Proxied (orange cloud) record: DNS shows Cloudflare edge IPs. Origin must
+  # be this box and Cloudflare SSL/TLS mode "Full" — Caddy still gets its own
+  # certificate via the HTTP-01 challenge passed through the proxy.
+  echo "• DNS: $DOMAIN → $resolved (Cloudflare proxy) — trusting BEHIND_CLOUDFLARE=1"
+else
   echo "✗ $DOMAIN resolves to '${resolved:-nothing}', expected $SERVER_IP." >&2
-  echo "  Add the A-record in GoDaddy and wait a few minutes, then re-run." >&2
+  echo "  Point the A-record at $SERVER_IP (where the zone's DNS is hosted —" >&2
+  echo "  check: dig NS <domain>). If the record is Cloudflare-proxied, re-run" >&2
+  echo "  with BEHIND_CLOUDFLARE=1." >&2
   exit 1
 fi
-echo "✓ DNS: $DOMAIN → $resolved"
 
 stamp="$(date +%Y%m%d_%H%M%S)"
 if grep -qE "^[[:space:]]*${DOMAIN//./\\.}[[:space:]]*\{" "$CADDYFILE"; then
