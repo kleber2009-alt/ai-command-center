@@ -5,6 +5,7 @@ import { enforceRateLimit } from '@/lib/ratelimit';
 import { prisma } from '@/lib/prisma';
 import { chargeTokens, refundTokens, COSTS, InsufficientTokensError } from '@/lib/tokens';
 import { coverQueue } from '@/lib/queue';
+import { kieConfigured, PROVIDER_NOT_CONFIGURED } from '@/lib/providers';
 
 export const runtime = 'nodejs';
 
@@ -21,6 +22,7 @@ const Body = z.object({
 export async function POST(req: NextRequest) {
   const ctx = await getCurrentUserOrApiKey(req);
   if (!ctx) return NextResponse.json({ error: 'UNAUTHORIZED' }, { status: 401 });
+  if (!kieConfigured()) return NextResponse.json(PROVIDER_NOT_CONFIGURED, { status: 503 });
   const limited = await enforceRateLimit(ctx, 'generate');
   if (limited) return limited;
   const user = ctx.user;

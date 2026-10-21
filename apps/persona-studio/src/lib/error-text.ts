@@ -32,6 +32,7 @@ const TEXT: Record<string, string> = {
   script_required: 'Напишите сценарий.',
   voice_required: 'Выберите голос.',
   aspect_unsupported: 'Этот формат кадра не поддерживается выбранным движком.',
+  provider_not_configured: 'Генерация пока не подключена: администратору нужно добавить ключ провайдера.',
 };
 
 type ErrBody = { error?: string; message?: string; have?: number; need?: number } | null | undefined;
