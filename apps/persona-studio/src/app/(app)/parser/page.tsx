@@ -35,6 +35,7 @@ export default async function ParserPage() {
   return (
     <div className="grid gap-8">
       <PageHero
+        icon="viral"
         eyebrow="TREND INTELLIGENCE · VIRAL DISCOVER"
         title={
           <>
@@ -44,8 +45,8 @@ export default async function ParserPage() {
         description="Каждое утро AI смотрит, что взлетает у твоих конкурентов в Instagram, и оценивает каждый пост 1–10. Один клик — пост уходит в съёмку видео, затем в монтаж."
         meta={
           <>
-            <div className="mono text-[9px] tracking-[0.28em] uppercase text-text-muted">In feed</div>
-            <div className="font-serif text-[28px] text-gold leading-none">{items.length}</div>
+            <div className="label">In feed</div>
+            <div className="text-[32px] font-extrabold tabular-nums tracking-[-0.02em] text-gold leading-none">{items.length}</div>
           </>
         }
       />

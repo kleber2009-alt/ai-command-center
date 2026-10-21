@@ -1,5 +1,6 @@
 'use client';
 
+import { Icon3D } from '@/components/ui/icon3d';
 import { ParserReelCard } from './parser-reel-card';
 import type { ParserItemSerialized, ParserRunSerialized } from './types';
 
@@ -13,12 +14,13 @@ type Props = {
 export function ParserResults({ items, run, onItemUpdated, onItemRemoved }: Props) {
   if (!run) {
     return (
-      <div className="border border-border-2 border-dashed p-10 text-center bg-surface">
-        <div className="sec-num mb-3">/EMPTY</div>
-        <div className="font-serif italic text-[20px] text-text-dim mb-3">
+      <div className="rounded-[24px] border border-dashed border-white/15 bg-white/[0.03] p-10 flex flex-col items-center text-center fade-in">
+        <Icon3D name="radars" size={44} tile />
+        <div className="sec-num my-3">/EMPTY</div>
+        <div className="text-[19px] font-semibold tracking-[-0.02em] text-text mb-2">
           Парсер ещё не запускался.
         </div>
-        <p className="font-serif text-[14px] text-text-mute max-w-[42ch] mx-auto">
+        <p className="text-[14px] text-text-dim max-w-[42ch]">
           Сохрани настройки и нажми «Запустить парсер» — Аня соберёт топ-постов и оценит их под твою нишу.
         </p>
       </div>
@@ -27,12 +29,13 @@ export function ParserResults({ items, run, onItemUpdated, onItemRemoved }: Prop
 
   if (items.length === 0) {
     return (
-      <div className="border border-border-2 border-dashed p-10 text-center bg-surface">
-        <div className="sec-num mb-3">/EMPTY</div>
-        <div className="font-serif italic text-[20px] text-text-dim mb-2">
+      <div className="rounded-[24px] border border-dashed border-white/15 bg-white/[0.03] p-10 flex flex-col items-center text-center fade-in">
+        <Icon3D name="radars" size={44} tile />
+        <div className="sec-num my-3">/EMPTY</div>
+        <div className="text-[19px] font-semibold tracking-[-0.02em] text-text mb-2">
           Ни одного поста по текущим порогам.
         </div>
-        <p className="font-serif text-[13px] text-text-mute">
+        <p className="text-[14px] text-text-dim">
           Apify посмотрел <span className="text-text">{run.postsScanned}</span> постов. Понизь пороги или добавь больше источников.
         </p>
       </div>
@@ -46,12 +49,12 @@ export function ParserResults({ items, run, onItemUpdated, onItemRemoved }: Prop
     <div className="grid gap-8">
       {reels.length > 0 && (
         <section className="grid gap-4">
-          <div className="flex items-baseline gap-3">
+          <div className="flex items-center gap-3">
             <span className="sec-num">/02</span>
             <span className="sec-title">Reels · топ {reels.length}</span>
-            <span className="flex-1 border-b border-border translate-y-[-3px]" />
+            <span className="flex-1 h-px bg-border-soft" />
           </div>
-          <div className="grid grid-cols-1 gap-2">
+          <div className="grid grid-cols-1 gap-3 stagger">
             {reels.map((it) => (
               <ParserReelCard
                 key={it.id}
@@ -66,12 +69,12 @@ export function ParserResults({ items, run, onItemUpdated, onItemRemoved }: Prop
 
       {carousels.length > 0 && (
         <section className="grid gap-4">
-          <div className="flex items-baseline gap-3">
+          <div className="flex items-center gap-3">
             <span className="sec-num">/03</span>
             <span className="sec-title">Carousels · топ {carousels.length}</span>
-            <span className="flex-1 border-b border-border translate-y-[-3px]" />
+            <span className="flex-1 h-px bg-border-soft" />
           </div>
-          <div className="grid grid-cols-1 gap-2">
+          <div className="grid grid-cols-1 gap-3 stagger">
             {carousels.map((it) => (
               <ParserReelCard
                 key={it.id}

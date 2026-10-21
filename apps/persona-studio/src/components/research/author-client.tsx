@@ -6,6 +6,8 @@
 import Link from 'next/link';
 import { useState, useTransition } from 'react';
 import { useRouter } from 'next/navigation';
+import { Check, ExternalLink, Eye, Flame, RefreshCw, Sparkles } from 'lucide-react';
+import { Icon3D } from '@/components/ui/icon3d';
 import { igProxy } from './types';
 
 type Author = {
@@ -124,24 +126,28 @@ export function AuthorClient({
   return (
     <div className="grid gap-6">
       {/* Profile hero */}
-      <section className="border border-border bg-surface p-6 grid lg:grid-cols-[auto_1fr_auto] gap-5 items-start">
+      <section className="panel relative overflow-hidden !rounded-[28px] p-6 md:p-8 reveal">
+        <div className="hero-gradient pointer-events-none absolute inset-0" />
+        <div className="relative grid lg:grid-cols-[auto_1fr_auto] gap-6 items-start">
         {author.avatarUrl ? (
           // eslint-disable-next-line @next/next/no-img-element
           <img
             src={igProxy(author.avatarUrl)}
             alt={author.username}
             referrerPolicy="no-referrer"
-            className="w-20 h-20 rounded-full object-cover bg-bg border border-border"
+            className="w-20 h-20 rounded-full object-cover bg-white/[0.05] ring-2 ring-white/15 pop-in"
           />
         ) : (
-          <div className="w-20 h-20 rounded-full bg-bg border border-border" />
+          <div className="w-20 h-20 rounded-full bg-white/[0.05] ring-2 ring-white/15 flex items-center justify-center">
+            <Icon3D name="bloggers" size={36} />
+          </div>
         )}
 
-        <div className="grid gap-2 min-w-0">
-          <div className="flex items-baseline gap-3 flex-wrap">
-            <h1 className="font-serif text-[28px] text-text leading-none">@{author.username}</h1>
+        <div className="grid gap-4 min-w-0">
+          <div className="flex items-center gap-3 flex-wrap">
+            <h1 className="text-[30px] font-semibold tracking-[-0.02em] text-text leading-none">@{author.username}</h1>
             {author.lowConfidence && (
-              <span className="px-1.5 py-0.5 mono text-[8px] tracking-widest uppercase border border-warm text-warm">
+              <span className="status-badge status-partial">
                 low confidence
               </span>
             )}
@@ -156,7 +162,7 @@ export function AuthorClient({
               accent="cyan"
             />
           </div>
-          <div className="mono text-[9px] tracking-widest uppercase text-text-mute">
+          <div className="flex flex-wrap items-center gap-x-1 text-[12px] text-text-mute">
             обновлено: {relDate(author.lastIndexedAt)}
             {author.profileUrl && (
               <>
@@ -165,9 +171,10 @@ export function AuthorClient({
                   href={author.profileUrl}
                   target="_blank"
                   rel="noopener noreferrer"
-                  className="hover:text-lime"
+                  className="inline-flex items-center gap-1 hover:text-gold transition-colors"
                 >
-                  открыть профиль ↗
+                  открыть профиль
+                  <ExternalLink className="h-3 w-3" />
                 </a>
               </>
             )}
@@ -179,36 +186,40 @@ export function AuthorClient({
             type="button"
             onClick={analyze}
             disabled={pendingAnalyze || analysis !== null}
-            className="btn-primary text-[12px] tracking-widest uppercase whitespace-nowrap"
+            className="btn-primary"
           >
-            {analysis ? 'Анализ готов ✓' : pendingAnalyze ? 'Анализирую…' : 'Анализ страницы (10 кр.) →'}
+            {analysis ? <Check className="h-4 w-4" /> : pendingAnalyze ? <RefreshCw className="h-4 w-4 animate-spin" /> : <Sparkles className="h-4 w-4" />}
+            {analysis ? 'Анализ готов' : pendingAnalyze ? 'Анализирую…' : 'Анализ страницы (10 кр.)'}
           </button>
           <div className="flex gap-2">
             <button
               type="button"
               onClick={refresh}
               disabled={pendingRefresh}
-              className="btn-ghost text-[10px] tracking-widest uppercase"
+              className="btn-ghost !px-4 !py-2 !text-[13px]"
             >
+              <RefreshCw className={`h-4 w-4 ${pendingRefresh ? 'animate-spin' : ''}`} />
               {pendingRefresh ? '…' : 'Обновить (5 кр.)'}
             </button>
             <button
               type="button"
               onClick={toggleWatch}
               disabled={pendingWatch}
-              className={`btn-ghost text-[10px] tracking-widest uppercase ${
-                author.isWatching ? 'border-pink text-pink' : ''
+              className={`btn-ghost !px-4 !py-2 !text-[13px] ${
+                author.isWatching ? '!border-pink/50 !text-pink' : ''
               }`}
               title={author.isWatching ? 'Перестать наблюдать' : 'Добавить в наблюдение'}
             >
-              {author.isWatching ? 'в наблюдении ✓' : '+ наблюдать'}
+              {author.isWatching ? <Check className="h-4 w-4" /> : <Eye className="h-4 w-4" />}
+              {author.isWatching ? 'в наблюдении' : 'наблюдать'}
             </button>
           </div>
+        </div>
         </div>
       </section>
 
       {error && (
-        <div className="border border-pink/40 bg-pink/5 px-3 py-2 mono text-[11px] text-pink">
+        <div className="rounded-2xl border border-pink/40 bg-pink/[0.06] px-4 py-2.5 text-[13px] text-pink fade-in">
           {error}
         </div>
       )}
@@ -217,11 +228,12 @@ export function AuthorClient({
       {analysis ? (
         <PageAnalysisView analysis={analysis} reels={reels} />
       ) : (
-        <section className="border border-border-soft bg-surface/50 p-8 text-center grid gap-3">
-          <div className="font-serif italic text-[17px] text-text-dim">
+        <section className="rounded-[24px] border border-dashed border-white/15 bg-white/[0.03] p-8 flex flex-col items-center text-center gap-3 reveal" style={{ ['--i' as string]: 1 } as React.CSSProperties}>
+          <Icon3D name="analytics" size={40} tile />
+          <div className="text-[17px] font-semibold tracking-[-0.02em] text-text">
             Разбор страницы ещё не заказан.
           </div>
-          <div className="font-serif text-[14px] text-text-mute max-w-prose mx-auto">
+          <div className="text-[14px] text-text-dim max-w-prose">
             Claude посмотрит последние рилсы, найдёт выбросы, скажет на каком формате растёт аккаунт,
             что повторять и что игнорировать.
           </div>
@@ -229,11 +241,12 @@ export function AuthorClient({
       )}
 
       {/* Reels grid */}
-      <section className="grid gap-3">
-        <h2 className="mono text-[10px] tracking-widest uppercase text-text-mute">
-          Последние {reels.length} рилсов
+      <section className="grid gap-4">
+        <h2 className="flex items-center gap-3">
+          <span className="sec-num">/01</span>
+          <span className="sec-title">Последние {reels.length} рилсов</span>
         </h2>
-        <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 lg:grid-cols-5 gap-0.5 bg-border-soft">
+        <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 lg:grid-cols-5 gap-3 stagger">
           {reels.map((r) => (
             <ReelTile key={r.id} reel={r} />
           ))}
@@ -248,7 +261,7 @@ function ReelTile({ reel }: { reel: Reel }) {
   return (
     <Link
       href={`/research/${reel.id}`}
-      className="relative aspect-[4/5] bg-surface block overflow-hidden hover:border hover:border-lime"
+      className="card-editorial group relative block aspect-[4/5] overflow-hidden !rounded-[20px]"
     >
       {reel.thumbnailUrl && !thumbFailed ? (
         // eslint-disable-next-line @next/next/no-img-element
@@ -257,22 +270,23 @@ function ReelTile({ reel }: { reel: Reel }) {
           alt=""
           referrerPolicy="no-referrer"
           onError={() => setThumbFailed(true)}
-          className="w-full h-full object-cover"
+          className="w-full h-full object-cover transition-transform duration-500 ease-settle group-hover:scale-[1.04]"
         />
       ) : (
-        <div className="w-full h-full flex items-center justify-center mono text-[9px] tracking-widest uppercase text-text-mute">
-          REEL
+        <div className="w-full h-full flex items-center justify-center">
+          <Icon3D name="video" size={32} />
         </div>
       )}
       {reel.virality != null && (
-        <div className="absolute top-1 left-1 px-1.5 py-0.5 bg-black/85 mono text-[10px] tracking-wider text-gold">
-          🔥 {reel.virality.toFixed(1)}×
+        <div className="absolute top-2 left-2 inline-flex items-center gap-1 rounded-full bg-black/60 px-2 py-0.5 text-[12px] font-bold tabular-nums text-gold backdrop-blur-md">
+          <Flame className="h-3 w-3" />
+          {reel.virality.toFixed(1)}×
         </div>
       )}
-      <div className="absolute bottom-1 left-1 right-1 flex justify-between mono text-[9px] tracking-wider text-text">
-        <span className="bg-black/85 px-1">{fmt(reel.views)}</span>
+      <div className="absolute bottom-2 left-2 right-2 flex justify-between text-[11px] font-semibold tabular-nums text-text">
+        <span className="rounded-full bg-black/60 px-2 py-0.5 backdrop-blur-md">{fmt(reel.views)}</span>
         {reel.engagementRate != null && (
-          <span className="bg-black/85 px-1 text-cyan">{reel.engagementRate.toFixed(1)}%</span>
+          <span className="rounded-full bg-black/60 px-2 py-0.5 text-cyan backdrop-blur-md">{reel.engagementRate.toFixed(1)}%</span>
         )}
       </div>
     </Link>
@@ -283,9 +297,9 @@ function Stat({ label, value, accent }: { label: string; value: string; accent?:
   const cls =
     accent === 'gold' ? 'text-gold' : accent === 'lime' ? 'text-lime' : accent === 'cyan' ? 'text-cyan' : 'text-text';
   return (
-    <div className="grid gap-0.5">
-      <span className="mono text-[8px] tracking-widest uppercase text-text-mute">{label}</span>
-      <span className={`font-serif text-[20px] leading-none ${cls}`}>{value}</span>
+    <div className="grid gap-1 rounded-2xl border border-border-soft bg-white/[0.04] px-3.5 py-3">
+      <span className="label">{label}</span>
+      <span className={`text-[22px] font-extrabold tabular-nums tracking-[-0.02em] leading-none ${cls}`}>{value}</span>
     </div>
   );
 }
@@ -303,29 +317,35 @@ function PageAnalysisView({ analysis, reels }: { analysis: Analysis; reels: Reel
   const reelById = new Map(reels.map((r) => [r.id, r]));
 
   return (
-    <section className="grid gap-4">
-      <div className="border border-gold/40 bg-gold/5 p-5 grid gap-2">
-        <h3 className="mono text-[10px] tracking-widest uppercase text-gold">Резюме</h3>
-        <p className="font-serif text-[15px] leading-relaxed text-text">{analysis.summary}</p>
+    <section className="grid gap-4 stagger">
+      <div className="panel !border-gold/30 !bg-blue/[0.06] p-6 grid gap-2.5">
+        <h3 className="flex items-center gap-2.5 text-[15px] font-semibold tracking-[-0.02em] text-gold">
+          <Icon3D name="brain" size={20} tile />
+          Резюме
+        </h3>
+        <p className="text-[15px] leading-relaxed text-text">{analysis.summary}</p>
       </div>
 
       {outliers.length > 0 && (
-        <div className="border border-border bg-surface p-5 grid gap-3">
-          <h3 className="mono text-[10px] tracking-widest uppercase text-text-mute">Выбросы</h3>
-          <div className="grid sm:grid-cols-2 lg:grid-cols-3 gap-2">
+        <div className="panel p-5 grid gap-3">
+          <h3 className="label">Выбросы</h3>
+          <div className="grid sm:grid-cols-2 lg:grid-cols-3 gap-3">
             {outliers.map((o) => {
               const reel = reelById.get(o.reel_id);
               return (
                 <Link
                   key={o.reel_id}
                   href={`/research/${o.reel_id}`}
-                  className="border border-border-soft p-3 bg-bg hover:border-gold grid gap-2"
+                  className="rounded-2xl border border-border-soft bg-white/[0.03] p-4 grid gap-2 transition-colors hover:border-gold/50 hover:bg-blue/[0.06]"
                 >
                   <div className="flex items-center gap-2">
-                    <span className="mono text-[12px] tracking-wider text-gold">🔥 {o.virality.toFixed(1)}×</span>
-                    {reel && <span className="mono text-[10px] text-text-mute">{fmt(reel.views)} просм.</span>}
+                    <span className="inline-flex items-center gap-1 text-[14px] font-bold tabular-nums text-gold">
+                      <Flame className="h-3.5 w-3.5" />
+                      {o.virality.toFixed(1)}×
+                    </span>
+                    {reel && <span className="text-[12px] tabular-nums text-text-mute">{fmt(reel.views)} просм.</span>}
                   </div>
-                  <p className="font-serif text-[13px] leading-snug text-text-dim line-clamp-3">{o.why}</p>
+                  <p className="text-[13px] leading-snug text-text-dim line-clamp-3">{o.why}</p>
                 </Link>
               );
             })}
@@ -335,8 +355,8 @@ function PageAnalysisView({ analysis, reels }: { analysis: Analysis; reels: Reel
 
       <div className="grid lg:grid-cols-2 gap-4">
         {cadence && (
-          <div className="border border-border bg-surface p-4 grid gap-2">
-            <h3 className="mono text-[10px] tracking-widest uppercase text-text-mute">Ритм публикаций</h3>
+          <div className="panel p-5 grid gap-3">
+            <h3 className="label">Ритм публикаций</h3>
             <div className="grid grid-cols-3 gap-3">
               <Stat label="ПОСТ./НЕД" value={String(cadence.posts_per_week ?? '—')} />
               <Stat label="ЛУЧ. ДНИ" value={(cadence.best_days || []).join(', ') || '—'} />
@@ -345,11 +365,11 @@ function PageAnalysisView({ analysis, reels }: { analysis: Analysis; reels: Reel
           </div>
         )}
         {formats.length > 0 && (
-          <div className="border border-border bg-surface p-4 grid gap-2">
-            <h3 className="mono text-[10px] tracking-widest uppercase text-text-mute">Работающие форматы</h3>
+          <div className="panel p-5 grid gap-3 content-start">
+            <h3 className="label">Работающие форматы</h3>
             <div className="flex flex-wrap gap-1.5">
               {formats.map((f) => (
-                <span key={f} className="px-2 py-1 border border-border mono text-[11px] tracking-wider text-text">
+                <span key={f} className="rounded-full border border-border-soft bg-white/[0.04] px-3 py-1 text-[13px] text-text">
                   {f}
                 </span>
               ))}
@@ -357,11 +377,11 @@ function PageAnalysisView({ analysis, reels }: { analysis: Analysis; reels: Reel
           </div>
         )}
         {topics.length > 0 && (
-          <div className="border border-border bg-surface p-4 grid gap-2">
-            <h3 className="mono text-[10px] tracking-widest uppercase text-text-mute">Темы, которые заходят</h3>
+          <div className="panel p-5 grid gap-3 content-start">
+            <h3 className="label">Темы, которые заходят</h3>
             <div className="flex flex-wrap gap-1.5">
               {topics.map((t) => (
-                <span key={t} className="px-2 py-1 border border-cyan/40 mono text-[11px] tracking-wider text-cyan">
+                <span key={t} className="rounded-full border border-cyan/30 bg-cyan/[0.08] px-3 py-1 text-[13px] text-cyan">
                   {t}
                 </span>
               ))}
@@ -369,11 +389,11 @@ function PageAnalysisView({ analysis, reels }: { analysis: Analysis; reels: Reel
           </div>
         )}
         {hooks.length > 0 && (
-          <div className="border border-border bg-surface p-4 grid gap-2">
-            <h3 className="mono text-[10px] tracking-widest uppercase text-text-mute">Хук-формулы автора</h3>
+          <div className="panel p-5 grid gap-3 content-start">
+            <h3 className="label">Хук-формулы автора</h3>
             <div className="flex flex-wrap gap-1.5">
               {hooks.map((h) => (
-                <span key={h} className="px-2 py-1 border border-lime/40 mono text-[11px] tracking-wider text-lime">
+                <span key={h} className="rounded-full border border-lime/30 bg-lime/[0.08] px-3 py-1 text-[13px] text-lime">
                   {h}
                 </span>
               ))}
@@ -383,12 +403,13 @@ function PageAnalysisView({ analysis, reels }: { analysis: Analysis; reels: Reel
       </div>
 
       {recs.length > 0 && (
-        <div className="border border-lime/40 bg-lime/5 p-5 grid gap-3">
-          <h3 className="mono text-[10px] tracking-widest uppercase text-lime">Рекомендации</h3>
-          <ol className="grid gap-2">
+        <div className="panel !border-lime/30 !bg-lime/[0.05] p-6 grid gap-3">
+          <h3 className="label !text-lime">Рекомендации</h3>
+          <ol className="grid gap-2.5">
             {recs.map((r, i) => (
-              <li key={i} className="font-serif text-[14.5px] leading-snug text-text">
-                <span className="mono text-[10px] tracking-wider text-lime">{String(i + 1).padStart(2, '0')}.</span> {r}
+              <li key={i} className="flex gap-3 text-[14.5px] leading-snug text-text">
+                <span className="inline-flex h-6 min-w-[30px] items-center justify-center rounded-full bg-lime/15 text-[11px] font-semibold tabular-nums text-lime">{String(i + 1).padStart(2, '0')}</span>
+                <span>{r}</span>
               </li>
             ))}
           </ol>

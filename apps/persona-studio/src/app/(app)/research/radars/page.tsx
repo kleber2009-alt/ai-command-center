@@ -19,6 +19,7 @@ export default async function RadarsPage() {
   return (
     <div className="grid gap-8">
       <PageHero
+        icon="radars"
         eyebrow="NICHE RADAR · BACKGROUND HUNT"
         title={
           <>

@@ -7,7 +7,8 @@
 
 import { useEffect, useState, useTransition } from 'react';
 import { useRouter } from 'next/navigation';
-import { History } from 'lucide-react';
+import { ArrowRight, Download, History, LayoutGrid, Plus, RefreshCw, Search, Sparkles, Table2, X } from 'lucide-react';
+import { Icon3D } from '@/components/ui/icon3d';
 import { ResearchReelCard } from './research-reel-card';
 import { ResearchTable } from './research-table';
 import { SearchHistoryDrawer } from './search-history-drawer';
@@ -353,61 +354,65 @@ export function ResearchClient({ isFreePlan = false }: { isFreePlan?: boolean })
   return (
     <div className="grid gap-6">
       {/* Search form */}
-      <section className="border border-border bg-surface p-5">
-        <form onSubmit={onSubmit} className="grid gap-3">
+      <section className="panel p-5 md:p-6 reveal">
+        <form onSubmit={onSubmit} className="grid gap-4">
           <div className="flex items-center justify-between gap-3">
-            <label className="mono text-[10px] tracking-widest uppercase text-text-mute">
+            <label className="label">
               Ниша или тема
             </label>
             <button
               type="button"
               onClick={() => setHistoryOpen(true)}
-              className="btn-ghost flex items-center gap-1.5 text-[10px] tracking-widest uppercase whitespace-nowrap"
+              className="btn-ghost !px-4 !py-2 !text-[13px]"
               title="История прошлых поисков"
             >
-              <History className="w-3.5 h-3.5" />
+              <History className="w-4 h-4" />
               История
               {history.length > 0 && (
-                <span className="text-gold">{history.length}</span>
+                <span className="rounded-full bg-blue/20 px-1.5 text-[11px] font-semibold tabular-nums text-gold">{history.length}</span>
               )}
             </button>
           </div>
           <div className="flex flex-col sm:flex-row gap-2">
-            <input
-              type="text"
-              value={niche}
-              onChange={(e) => setNiche(e.target.value)}
-              placeholder="психология отношений, продажи b2b, нейросети для маркетинга…"
-              className="flex-1 bg-bg border border-border focus:border-gold outline-none px-3 py-2.5 font-serif text-[15px] text-text placeholder:text-text-mute placeholder:italic"
-              autoComplete="off"
-              spellCheck={false}
-            />
+            <div className="relative flex-1">
+              <Search className="pointer-events-none absolute left-4 top-1/2 h-4 w-4 -translate-y-1/2 text-text-mute" />
+              <input
+                type="text"
+                value={niche}
+                onChange={(e) => setNiche(e.target.value)}
+                placeholder="психология отношений, продажи b2b, нейросети для маркетинга…"
+                className="input !rounded-full !py-3 !pl-11 !text-[15px]"
+                autoComplete="off"
+                spellCheck={false}
+              />
+            </div>
             <button
               type="submit"
               disabled={pending}
-              className="btn-primary whitespace-nowrap text-[12px] tracking-widest uppercase"
+              className="btn-primary"
             >
+              {pending ? (
+                <RefreshCw className="w-4 h-4 animate-spin" />
+              ) : (
+                <Search className="w-4 h-4" />
+              )}
               {pending ? 'Ищу залётные…' : 'Найти вирусные'}
             </button>
           </div>
 
           {/* Пороги вхождения — задаются ДО поиска (ТЗ §5) */}
-          <div className="grid gap-1.5 pt-1">
+          <div className="grid gap-2.5 pt-1">
             <div className="flex items-center justify-between gap-2 flex-wrap">
-              <span className="mono text-[10px] tracking-widest uppercase text-text-mute">
+              <span className="label">
                 Минимальные пороги
               </span>
-              <div className="flex items-center gap-1.5">
+              <div className="flex flex-wrap items-center gap-1.5">
                 {THRESHOLD_PRESETS.map((p) => (
                   <button
                     type="button"
                     key={p.key}
                     onClick={() => applyPreset(p.values)}
-                    className={`px-2 py-1 mono text-[9px] tracking-widest uppercase border ${
-                      activePreset === p.key
-                        ? 'border-gold text-gold'
-                        : 'border-border text-text-mute hover:text-text'
-                    }`}
+                    className={chipCls(activePreset === p.key)}
                   >
                     {p.label}
                   </button>
@@ -416,14 +421,14 @@ export function ResearchClient({ isFreePlan = false }: { isFreePlan?: boolean })
                   <button
                     type="button"
                     onClick={resetThresholds}
-                    className="btn-ghost text-[9px] tracking-widest uppercase text-pink"
+                    className="rounded-full border border-pink/40 bg-pink/[0.08] px-3.5 py-1.5 text-[13px] text-pink transition-colors hover:bg-pink/[0.14]"
                   >
                     Сброс
                   </button>
                 )}
               </div>
             </div>
-            <div className="grid grid-cols-2 sm:grid-cols-4 gap-2">
+            <div className="grid grid-cols-2 sm:grid-cols-4 gap-2.5">
               <ThresholdField
                 label="Просмотры"
                 value={minViews}
@@ -449,7 +454,7 @@ export function ResearchClient({ isFreePlan = false }: { isFreePlan?: boolean })
                 placeholder="без порога"
               />
             </div>
-            <span className="mono text-[9px] tracking-wider text-text-mute">
+            <span className="text-[12px] leading-relaxed text-text-mute">
               Применяются к новому поиску. Пустые поля = авто-режим: самые просматриваемые
               рилсы, полная страница. Впиши значения (или выбери пресет) для жёсткого фильтра.
               Репосты Instagram отдаёт не всегда — рилсы без данных о репостах порог не отсекает.
@@ -458,16 +463,16 @@ export function ResearchClient({ isFreePlan = false }: { isFreePlan?: boolean })
 
           {/* Niche expansion chips */}
           {result && result.keywords.length > 0 && (
-            <div className="flex flex-wrap gap-1.5 pt-2">
-              <span className="mono text-[9px] tracking-widest uppercase text-text-mute self-center">
-                СМЕЖНЫЕ ТЕМЫ:
+            <div className="flex flex-wrap items-center gap-1.5 pt-1">
+              <span className="label mr-1">
+                Смежные темы:
               </span>
               {result.keywords.map((kw) => (
                 <button
                   type="button"
                   key={kw}
                   onClick={() => submit(kw)}
-                  className="px-2 py-1 border border-border hover:border-lime hover:text-lime mono text-[10px] tracking-wider text-text-dim"
+                  className="rounded-full border border-border-soft bg-white/[0.04] px-3.5 py-1.5 text-[13px] text-text-dim transition-colors hover:border-lime/50 hover:bg-lime/[0.08] hover:text-lime"
                 >
                   {kw}
                 </button>
@@ -477,7 +482,8 @@ export function ResearchClient({ isFreePlan = false }: { isFreePlan?: boolean })
 
           {/* Авто-режим «самое популярное» */}
           {result?.autoPopular && (
-            <div className="mono text-[9px] tracking-widest uppercase text-gold pt-1">
+            <div className="flex items-center gap-2 text-[13px] text-gold">
+              <Sparkles className="h-4 w-4 flex-none" />
               Авто-режим: самые просматриваемые рилсы (по убыванию). Задай пороги для
               жёсткого фильтра.
             </div>
@@ -485,8 +491,8 @@ export function ResearchClient({ isFreePlan = false }: { isFreePlan?: boolean })
 
           {/* Freshness banner + add to radar */}
           {result && (
-            <div className="flex flex-wrap gap-2 items-center pt-1">
-              <div className="flex-1 min-w-[300px] border-l-2 border-cyan bg-cyan/5 px-3 py-2 font-serif italic text-[12.5px] text-text-dim leading-snug">
+            <div className="flex flex-wrap gap-2 items-center">
+              <div className="flex-1 min-w-[260px] rounded-2xl border border-cyan/20 bg-cyan/[0.06] px-4 py-2.5 text-[13px] text-text-dim leading-snug">
                 {result.cacheHit
                   ? 'Результаты из недавнего поиска. Жми «Обновить» чтобы пересобрать с нуля.'
                   : 'Ролики собраны напрямую из поиска Instagram — актуальны и продвигаются прямо сейчас.'}
@@ -495,19 +501,24 @@ export function ResearchClient({ isFreePlan = false }: { isFreePlan?: boolean })
                 type="button"
                 onClick={addToRadar}
                 disabled={pendingRadar}
-                className="btn-ghost text-[10px] tracking-widest uppercase whitespace-nowrap"
+                className="btn-ghost !px-4 !py-2 !text-[13px]"
                 title="Сохранить нишу как радар — cron будет обновлять её раз в сутки"
               >
-                {pendingRadar ? '…' : '+ В радар'}
+                {pendingRadar ? (
+                  <RefreshCw className="w-4 h-4 animate-spin" />
+                ) : (
+                  <Plus className="w-4 h-4" />
+                )}
+                {pendingRadar ? '…' : 'В радар'}
               </button>
             </div>
           )}
           {radarMsg && (
-            <div className="mono text-[10px] tracking-wider text-lime">{radarMsg}</div>
+            <div className="text-[13px] text-lime fade-in">{radarMsg}</div>
           )}
 
           {error && (
-            <div className="border border-pink/40 bg-pink/5 px-3 py-2 mono text-[11px] text-pink">
+            <div className="rounded-2xl border border-pink/40 bg-pink/[0.06] px-4 py-2.5 text-[13px] text-pink fade-in">
               {error}
             </div>
           )}
@@ -516,20 +527,20 @@ export function ResearchClient({ isFreePlan = false }: { isFreePlan?: boolean })
         {/* Поиск конкретного блогера (ТЗ §5, скрины 1/3/4) */}
         <form
           onSubmit={openBlogger}
-          className="mt-4 pt-4 border-t border-border-soft flex flex-col sm:flex-row gap-2 sm:items-end"
+          className="mt-5 pt-5 border-t border-border-soft flex flex-col sm:flex-row gap-2 sm:items-end"
         >
-          <div className="grid gap-1 flex-1">
-            <label className="mono text-[10px] tracking-widest uppercase text-text-mute">
+          <div className="grid gap-1.5 flex-1">
+            <label className="label">
               …или открой конкретного блогера
             </label>
-            <div className="flex items-center bg-bg border border-border focus-within:border-cyan px-3">
-              <span className="font-serif text-[15px] text-text-mute select-none">@</span>
+            <div className="relative">
+              <span className="pointer-events-none absolute left-4 top-1/2 -translate-y-1/2 select-none text-[15px] text-text-mute">@</span>
               <input
                 type="text"
                 value={blogger}
                 onChange={(e) => setBlogger(e.target.value)}
                 placeholder="username (минимум 3 символа)"
-                className="flex-1 bg-transparent outline-none py-2.5 pl-1 font-serif text-[15px] text-text placeholder:text-text-mute placeholder:italic"
+                className="input !rounded-full !py-3 !pl-9 !text-[15px]"
                 autoComplete="off"
                 spellCheck={false}
               />
@@ -537,28 +548,30 @@ export function ResearchClient({ isFreePlan = false }: { isFreePlan?: boolean })
           </div>
           <button
             type="submit"
-            className="btn-ghost whitespace-nowrap text-[12px] tracking-widest uppercase"
+            className="btn-ghost"
           >
-            Анализ профиля →
+            Анализ профиля
+            <ArrowRight className="w-4 h-4" />
           </button>
         </form>
       </section>
 
       {/* Niche aggregate summary (Module 4) */}
       {result?.nicheSummary && (
-        <section className="border border-gold/40 bg-gold/5 p-5 grid gap-3">
-          <div className="flex items-baseline justify-between gap-3 flex-wrap">
-            <h2 className="mono text-[10px] tracking-widest uppercase text-gold">
+        <section className="panel !border-gold/30 !bg-blue/[0.06] p-5 md:p-6 grid gap-4 reveal">
+          <div className="flex items-center justify-between gap-3 flex-wrap">
+            <h2 className="flex items-center gap-3 text-[17px] font-semibold tracking-[-0.02em] text-text">
+              <Icon3D name="brain" size={22} tile />
               Паттерны ниши «{result.niche}»
             </h2>
-            <span className="mono text-[9px] tracking-widest uppercase text-text-mute">
+            <span className="eyebrow">
               Claude · по топ-{result.reels.length} рилсам
             </span>
           </div>
-          <p className="font-serif text-[15px] leading-relaxed text-text">
+          <p className="text-[15px] leading-relaxed text-text">
             {result.nicheSummary.summary}
           </p>
-          <div className="grid sm:grid-cols-3 gap-3 pt-1">
+          <div className="grid sm:grid-cols-3 gap-4 pt-1">
             {result.nicheSummary.dominant_hooks.length > 0 && (
               <SummaryChipBox title="Доминирующие хуки" items={result.nicheSummary.dominant_hooks} tone="lime" />
             )}
@@ -570,7 +583,7 @@ export function ResearchClient({ isFreePlan = false }: { isFreePlan?: boolean })
             )}
           </div>
           {result.nicheSummary.duration_band && (
-            <div className="mono text-[10px] tracking-widest uppercase text-text-mute">
+            <div className="text-[13px] text-text-mute">
               Длительность: <span className="text-text">{result.nicheSummary.duration_band}</span>
             </div>
           )}
@@ -579,7 +592,7 @@ export function ResearchClient({ isFreePlan = false }: { isFreePlan?: boolean })
 
       {/* Filters + aggregate */}
       {result && (
-        <section className="border border-border bg-surface p-4 grid gap-4">
+        <section className="panel p-5 grid gap-5 reveal">
           {/* Ряд фильтров (ТЗ §5) */}
           <div className="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-5 gap-3 items-end">
             <SelectField
@@ -619,15 +632,15 @@ export function ResearchClient({ isFreePlan = false }: { isFreePlan?: boolean })
           </div>
 
           {/* Ряд агрегатов по выборке + действия (ТЗ §5 тулбар) */}
-          <div className="flex flex-wrap items-end justify-between gap-3 border-t border-border-soft pt-3">
-            <div className="flex flex-wrap items-end gap-x-4 gap-y-2">
-              <div className="grid gap-0.5">
-                <span className="mono text-[8px] tracking-widest uppercase text-text-mute">Найдено</span>
-                <span className="font-serif text-[18px] text-gold leading-none">{displayed.length}</span>
+          <div className="flex flex-wrap items-end justify-between gap-4 border-t border-border-soft pt-4">
+            <div className="flex flex-wrap items-end gap-x-6 gap-y-3">
+              <div className="grid gap-1">
+                <span className="label">Найдено</span>
+                <span className="text-[24px] font-extrabold tabular-nums tracking-[-0.02em] text-gold leading-none">{displayed.length}</span>
               </div>
-              <div className="grid gap-0.5">
-                <span className="mono text-[8px] tracking-widest uppercase text-text-mute">Сред. вир.</span>
-                <span className="font-serif text-[18px] text-lime leading-none">
+              <div className="grid gap-1">
+                <span className="label">Сред. вир.</span>
+                <span className="text-[24px] font-extrabold tabular-nums tracking-[-0.02em] text-lime leading-none">
                   {aggregates.avgVirality ? `${aggregates.avgVirality.toFixed(1)}×` : '—'}
                 </span>
               </div>
@@ -638,58 +651,58 @@ export function ResearchClient({ isFreePlan = false }: { isFreePlan?: boolean })
               <Aggregate label="ΣРЕПОСТ" value={aggregates.sumShares} />
             </div>
 
-          <div className="flex flex-wrap items-center gap-3 text-right">
+          <div className="flex flex-wrap items-center gap-2">
             {filtersDirty && (
               <button
                 type="button"
                 onClick={resetFilters}
-                className="btn-ghost text-[10px] tracking-widest uppercase whitespace-nowrap text-pink"
+                className="btn-ghost !px-4 !py-2 !text-[13px] !text-pink"
               >
+                <X className="w-4 h-4" />
                 Сбросить всё
               </button>
             )}
-            <div className="flex gap-1">
+            <div className="flex rounded-full border border-border-soft bg-white/[0.04] p-1">
               <button
                 type="button"
                 onClick={() => setView('cards')}
-                className={`px-2 py-1 mono text-[10px] tracking-widest uppercase border ${
-                  view === 'cards' ? 'border-gold text-gold' : 'border-border text-text-mute hover:text-text'
-                }`}
+                className={segCls(view === 'cards')}
               >
+                <LayoutGrid className="w-3.5 h-3.5" />
                 Карточки
               </button>
               <button
                 type="button"
                 onClick={() => setView('table')}
-                className={`px-2 py-1 mono text-[10px] tracking-widest uppercase border ${
-                  view === 'table' ? 'border-gold text-gold' : 'border-border text-text-mute hover:text-text'
-                }`}
+                className={segCls(view === 'table')}
               >
+                <Table2 className="w-3.5 h-3.5" />
                 Таблица
-              </button>
-            </div>
-            <div className="flex gap-1">
-              <button
-                type="button"
-                onClick={() => exportData('csv')}
-                className="btn-ghost text-[10px] tracking-widest uppercase"
-              >
-                CSV
-              </button>
-              <button
-                type="button"
-                onClick={() => exportData('json')}
-                className="btn-ghost text-[10px] tracking-widest uppercase"
-              >
-                JSON
               </button>
             </div>
             <button
               type="button"
+              onClick={() => exportData('csv')}
+              className="btn-ghost !px-4 !py-2 !text-[13px]"
+            >
+              <Download className="w-4 h-4" />
+              CSV
+            </button>
+            <button
+              type="button"
+              onClick={() => exportData('json')}
+              className="btn-ghost !px-4 !py-2 !text-[13px]"
+            >
+              <Download className="w-4 h-4" />
+              JSON
+            </button>
+            <button
+              type="button"
               onClick={() => submit(undefined, { force: true })}
               disabled={pending}
-              className="btn-ghost text-[10px] tracking-widest uppercase whitespace-nowrap"
+              className="btn-ghost !px-4 !py-2 !text-[13px]"
             >
+              <RefreshCw className={`w-4 h-4 ${pending ? 'animate-spin' : ''}`} />
               Обновить
             </button>
           </div>
@@ -699,22 +712,24 @@ export function ResearchClient({ isFreePlan = false }: { isFreePlan?: boolean })
 
       {/* Grid */}
       {pending && !result && (
-        <section className="border border-border bg-surface p-12 text-center">
-          <div className="mono text-[10px] tracking-widest uppercase text-text-mute">
+        <section className="panel p-12 flex flex-col items-center text-center fade-in">
+          <Icon3D name="processing" size={44} tile sway />
+          <div className="mt-4 text-[15px] font-semibold tracking-[-0.02em] text-text">
             Скрейп Instagram + индексация авторов…
           </div>
-          <div className="font-serif italic text-[16px] text-text-dim mt-2">
+          <div className="text-[14px] text-text-dim mt-1.5">
             Это может занять до 60 секунд при первом поиске ниши.
           </div>
         </section>
       )}
 
       {result && displayed.length === 0 && (
-        <section className="border border-border bg-surface p-12 text-center">
-          <div className="font-serif text-[18px] text-text-dim">
+        <section className="panel p-12 flex flex-col items-center text-center fade-in">
+          <Icon3D name="research" size={44} tile />
+          <div className="mt-4 text-[18px] font-semibold tracking-[-0.02em] text-text">
             Ничего не залетело по этим критериям.
           </div>
-          <div className="mono text-[10px] tracking-widest uppercase text-text-mute mt-2">
+          <div className="text-[13px] text-text-mute mt-1.5">
             Попробуй смежную тему из чипов выше или расширь период
           </div>
         </section>
@@ -722,7 +737,7 @@ export function ResearchClient({ isFreePlan = false }: { isFreePlan?: boolean })
 
       {displayed.length > 0 && view === 'cards' && (
         <section className="relative">
-          <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-0.5 bg-border-soft">
+          <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-4 stagger">
             {displayed.map((reel, i) => (
               <ResearchReelCard
                 key={reel.id}
@@ -746,7 +761,7 @@ export function ResearchClient({ isFreePlan = false }: { isFreePlan?: boolean })
 
       {/* Stats footer */}
       {result?.stats && (
-        <section className="mono text-[9px] tracking-widest uppercase text-text-mute flex flex-wrap gap-4">
+        <section className="flex flex-wrap gap-x-4 gap-y-1 text-[12px] tabular-nums text-text-mute">
           <span>скрейп: {result.stats.scraped}</span>
           <span>кандидатов: {result.stats.candidates}</span>
           <span>авторов: {result.stats.authors}</span>
@@ -763,10 +778,10 @@ export function ResearchClient({ isFreePlan = false }: { isFreePlan?: boolean })
       )}
       {/* Диагностика причины пустой выдачи */}
       {result && result.errors && result.errors.length > 0 && displayed.length === 0 && (
-        <section className="border border-pink/30 bg-pink/5 p-3 grid gap-1">
-          <span className="mono text-[9px] tracking-widest uppercase text-pink">Диагностика</span>
+        <section className="rounded-2xl border border-pink/30 bg-pink/[0.06] p-4 grid gap-1.5">
+          <span className="label !text-pink">Диагностика</span>
           {result.errors.map((e, i) => (
-            <span key={i} className="mono text-[10px] text-text-dim break-all">
+            <span key={i} className="font-mono text-[11px] text-text-dim break-all">
               {e}
             </span>
           ))}
@@ -785,6 +800,21 @@ export function ResearchClient({ isFreePlan = false }: { isFreePlan?: boolean })
   );
 }
 
+// Segmented / chip styles (UI-моушн pills).
+function chipCls(active: boolean): string {
+  return `rounded-full border px-3.5 py-1.5 text-[13px] transition-colors ${
+    active
+      ? 'border-transparent bg-blue text-white'
+      : 'border-border-soft bg-white/[0.04] text-text-dim hover:bg-white/[0.07]'
+  }`;
+}
+
+function segCls(active: boolean): string {
+  return `inline-flex items-center gap-1.5 rounded-full px-3 py-1.5 text-[13px] transition-colors ${
+    active ? 'bg-blue text-white' : 'text-text-dim hover:text-text'
+  }`;
+}
+
 // Поле порога: целое число ≥ 0. Пустое значение трактуем как 0 (без порога).
 function ThresholdField({
   label,
@@ -798,8 +828,8 @@ function ThresholdField({
   placeholder?: string;
 }) {
   return (
-    <div className="grid gap-1">
-      <span className="mono text-[9px] tracking-widest uppercase text-text-mute">{label}</span>
+    <div className="grid gap-1.5">
+      <span className="text-[12px] text-text-mute">{label}</span>
       <input
         type="text"
         inputMode="numeric"
@@ -809,7 +839,7 @@ function ThresholdField({
           onChange(digits === '' ? 0 : Math.min(Number(digits), 1_000_000_000));
         }}
         placeholder={placeholder}
-        className="bg-bg border border-border focus:border-gold outline-none px-2 py-1.5 mono text-[12px] tracking-wider text-text placeholder:text-text-mute"
+        className="input !py-2.5 !text-[14px] tabular-nums"
         autoComplete="off"
         spellCheck={false}
       />
@@ -829,12 +859,12 @@ function SelectField({
   options: Array<{ value: string; label: string }>;
 }) {
   return (
-    <div className="grid gap-1">
-      <span className="mono text-[9px] tracking-widest uppercase text-text-mute">{label}</span>
+    <div className="grid gap-1.5">
+      <span className="text-[12px] text-text-mute">{label}</span>
       <select
         value={value}
         onChange={(e) => onChange(e.target.value)}
-        className="bg-bg border border-border focus:border-gold outline-none px-2 py-1.5 mono text-[11px] tracking-wider text-text"
+        className="input !py-2.5 !text-[14px]"
       >
         {options.map((o) => (
           <option key={o.value} value={o.value}>
@@ -848,9 +878,9 @@ function SelectField({
 
 function Aggregate({ label, value }: { label: string; value: number }) {
   return (
-    <div className="grid gap-0.5 text-right">
-      <span className="mono text-[8px] tracking-widest uppercase text-text-mute">{label}</span>
-      <span className="font-serif text-[16px] text-text leading-none">{formatCount(value)}</span>
+    <div className="grid gap-1 text-right">
+      <span className="label">{label}</span>
+      <span className="text-[17px] font-bold tabular-nums tracking-[-0.02em] text-text leading-none">{formatCount(value)}</span>
     </div>
   );
 }
@@ -866,30 +896,31 @@ function DemoGate({
 }) {
   if (compact) {
     return (
-      <div className="border border-gold/40 bg-gold/5 p-4 text-center grid gap-2">
-        <div className="font-serif italic text-[15px] text-text">
+      <div className="panel !border-gold/30 !bg-blue/[0.06] p-5 text-center grid gap-3 justify-items-center">
+        <div className="text-[15px] text-text">
           Скрыто {totalCount - visibleCount} карточек. Демо-режим показывает только первые {visibleCount}.
         </div>
-        <div>
-          <a href="/billing" className="btn-primary text-[10px] tracking-widest uppercase inline-block">
-            Снять ограничения →
-          </a>
-        </div>
+        <a href="/billing" className="btn-primary">
+          Снять ограничения
+          <ArrowRight className="w-4 h-4" />
+        </a>
       </div>
     );
   }
   return (
     <div className="pointer-events-none absolute inset-x-0 bottom-0 flex justify-center pb-6">
-      <div className="pointer-events-auto border border-gold/40 bg-bg/95 backdrop-blur p-5 grid gap-2 max-w-md text-center">
-        <span className="mono text-[9px] tracking-widest uppercase text-gold">DEMO MODE</span>
-        <div className="font-serif text-[16px] text-text">
+      <div className="pointer-events-auto panel !bg-bg/90 !border-gold/30 shadow-glass p-6 grid gap-3 max-w-md text-center justify-items-center pop-in">
+        <Icon3D name="bolt" size={32} tile />
+        <span className="eyebrow">DEMO MODE</span>
+        <div className="text-[17px] font-semibold tracking-[-0.02em] text-text">
           Тебе видны первые {visibleCount} из {totalCount} рилсов.
         </div>
-        <p className="font-serif italic text-[13px] text-text-mute leading-snug">
+        <p className="text-[13px] text-text-mute leading-snug">
           Остальные размыты. На платном тарифе — вся выдача без ограничений + анализ, транскрибация, генератор хуков.
         </p>
-        <a href="/billing" className="btn-primary text-[10px] tracking-widest uppercase">
-          Снять ограничения →
+        <a href="/billing" className="btn-primary">
+          Снять ограничения
+          <ArrowRight className="w-4 h-4" />
         </a>
       </div>
     </div>
@@ -907,16 +938,16 @@ function SummaryChipBox({
 }) {
   const chipCls =
     tone === 'lime'
-      ? 'border-lime/40 text-lime'
+      ? 'border-lime/30 bg-lime/[0.08] text-lime'
       : tone === 'cyan'
-        ? 'border-cyan/40 text-cyan'
-        : 'border-border text-text';
+        ? 'border-cyan/30 bg-cyan/[0.08] text-cyan'
+        : 'border-border-soft bg-white/[0.04] text-text';
   return (
-    <div className="grid gap-1.5">
-      <span className="mono text-[9px] tracking-widest uppercase text-text-mute">{title}</span>
+    <div className="grid gap-2 content-start">
+      <span className="label">{title}</span>
       <div className="flex flex-wrap gap-1.5">
         {items.map((it) => (
-          <span key={it} className={`px-2 py-1 border mono text-[10px] tracking-wider ${chipCls}`}>
+          <span key={it} className={`rounded-full border px-3 py-1 text-[12.5px] ${chipCls}`}>
             {it}
           </span>
         ))}

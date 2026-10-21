@@ -72,19 +72,21 @@ export function SearchHistoryDrawer({
         type="button"
         aria-label="Закрыть"
         onClick={onClose}
-        className="absolute inset-0 bg-bg/70 backdrop-blur-sm"
+        className="absolute inset-0 bg-black/60 backdrop-blur-sm fade-in"
       />
 
       {/* Panel */}
-      <aside className="relative w-full max-w-md h-full bg-surface border-l border-border flex flex-col shadow-2xl">
-        <header className="flex items-center justify-between gap-3 px-5 py-4 border-b border-border">
-          <div className="flex items-center gap-2">
-            <History className="w-4 h-4 text-gold" />
-            <h2 className="mono text-[11px] tracking-widest uppercase text-text">
+      <aside className="relative m-2 flex h-[calc(100%-16px)] w-full max-w-md flex-col overflow-hidden rounded-[24px] border border-border-soft bg-surface/95 shadow-glass backdrop-blur-2xl reveal">
+        <header className="flex items-center justify-between gap-3 px-5 py-4 border-b border-border-soft">
+          <div className="flex items-center gap-2.5">
+            <span className="inline-flex h-8 w-8 items-center justify-center rounded-full bg-blue/15">
+              <History className="w-4 h-4 text-gold" />
+            </span>
+            <h2 className="text-[16px] font-semibold tracking-[-0.02em] text-text">
               История поиска
             </h2>
             {entries.length > 0 && (
-              <span className="mono text-[10px] text-text-mute">({entries.length})</span>
+              <span className="rounded-full bg-white/[0.06] px-2 py-0.5 text-[12px] tabular-nums text-text-mute">{entries.length}</span>
             )}
           </div>
           <div className="flex items-center gap-2">
@@ -92,7 +94,7 @@ export function SearchHistoryDrawer({
               <button
                 type="button"
                 onClick={onClear}
-                className="btn-ghost text-[9px] tracking-widest uppercase text-pink"
+                className="btn-ghost !px-3.5 !py-1.5 !text-[12px] !text-pink"
               >
                 Очистить
               </button>
@@ -101,38 +103,38 @@ export function SearchHistoryDrawer({
               type="button"
               onClick={onClose}
               aria-label="Закрыть"
-              className="text-text-mute hover:text-text p-1"
+              className="btn-icon !h-8 !w-8"
             >
               <X className="w-4 h-4" />
             </button>
           </div>
         </header>
 
-        <div className="flex-1 overflow-y-auto">
+        <div className="flex-1 overflow-y-auto p-2">
           {entries.length === 0 ? (
-            <div className="px-5 py-16 text-center grid gap-2">
-              <Clock className="w-6 h-6 text-text-mute mx-auto" />
-              <p className="font-serif italic text-[15px] text-text-dim">
+            <div className="px-5 py-16 flex flex-col items-center text-center gap-2">
+              <Clock className="w-7 h-7 text-text-mute" />
+              <p className="text-[15px] font-medium text-text-dim">
                 Пока ничего не искали.
               </p>
-              <p className="mono text-[10px] tracking-wider uppercase text-text-mute">
+              <p className="text-[12px] text-text-mute">
                 Каждый поиск сохранится здесь автоматически
               </p>
             </div>
           ) : (
-            <ul className="divide-y divide-border-soft">
+            <ul className="grid gap-1 stagger">
               {entries.map((entry) => (
                 <li key={entry.id} className="group">
-                  <div className="flex items-start gap-2 px-5 py-3 hover:bg-bg/60">
+                  <div className="flex items-start gap-2 rounded-2xl px-4 py-3 transition-colors hover:bg-white/[0.05]">
                     <button
                       type="button"
                       onClick={() => onRestore(entry)}
                       className="flex-1 text-left grid gap-1"
                     >
-                      <span className="font-serif text-[15px] text-text leading-snug">
+                      <span className="text-[15px] font-medium text-text leading-snug">
                         {entry.niche}
                       </span>
-                      <span className="mono text-[9px] tracking-wider uppercase text-text-mute flex flex-wrap gap-x-2 gap-y-0.5">
+                      <span className="text-[12px] text-text-mute flex flex-wrap gap-x-2 gap-y-0.5">
                         <span className="text-gold">{entry.count} рилсов</span>
                         <span>· {PERIOD_LABEL[entry.period]}</span>
                         <span>· {SORT_LABEL[entry.sortBy]}</span>
@@ -144,7 +146,7 @@ export function SearchHistoryDrawer({
                       type="button"
                       aria-label="Удалить из истории"
                       onClick={() => onRemove(entry.id)}
-                      className="opacity-0 group-hover:opacity-100 text-text-mute hover:text-pink p-1 shrink-0"
+                      className="btn-icon !h-8 !w-8 shrink-0 opacity-0 group-hover:opacity-100 hover:!text-pink"
                     >
                       <Trash2 className="w-3.5 h-3.5" />
                     </button>

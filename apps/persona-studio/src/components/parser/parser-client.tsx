@@ -1,6 +1,8 @@
 'use client';
 
 import { useState } from 'react';
+import { ArrowRight, Pencil, RefreshCw } from 'lucide-react';
+import { Icon3D } from '@/components/ui/icon3d';
 import { ParserSetup } from './parser-setup';
 import { ParserResults } from './parser-results';
 import { ParserHistory } from './parser-history';
@@ -88,13 +90,13 @@ export function ParserClient({ initialConfig, initialRun, initialItems, initialH
     <div className="grid gap-8">
       {/* Сводка по конфигу — компактная, всегда видна */}
       {hasConfig && !setupOpen && (
-        <div className="border border-border p-4 sm:p-5 bg-surface flex flex-wrap items-start gap-4 justify-between">
+        <div className="panel p-5 sm:p-6 flex flex-wrap items-start gap-4 justify-between reveal">
           <div className="grid gap-1 min-w-0 flex-1">
-            <span className="mono text-[10px] tracking-widest uppercase text-text-mute">ниша</span>
-            <p className="font-serif text-[14px] sm:text-[15px] text-text">
+            <span className="label">ниша</span>
+            <p className="text-[15px] font-medium text-text">
               {config?.nicheDescription || 'не задана'}
             </p>
-            <div className="flex flex-wrap gap-x-4 gap-y-1 mt-2 mono text-[10px] tracking-wider uppercase text-text-dim">
+            <div className="flex flex-wrap gap-1.5 mt-2.5 text-[12px] text-text-dim [&>span]:rounded-full [&>span]:bg-white/[0.05] [&>span]:px-2.5 [&>span]:py-1 tabular-nums">
               <span>акк: <span className="text-text">{config?.competitors.length || 0}</span></span>
               <span>тег: <span className="text-text">{config?.hashtags.length || 0}</span></span>
               <span>дней: <span className="text-text">{config?.postedWithinDays}</span></span>
@@ -109,6 +111,7 @@ export function ParserClient({ initialConfig, initialRun, initialItems, initialH
               className="btn-ghost"
               disabled={running}
             >
+              <Pencil className="h-4 w-4" />
               Изменить
             </button>
             <button
@@ -118,7 +121,9 @@ export function ParserClient({ initialConfig, initialRun, initialItems, initialH
               disabled={running || !hasTargets}
               title={!hasTargets ? 'Добавь хотя бы один аккаунт или хэштег' : undefined}
             >
-              {running ? 'Сканирую…' : 'Запустить парсер →'}
+              {running && <RefreshCw className="h-4 w-4 animate-spin" />}
+              {running ? 'Сканирую…' : 'Запустить парсер'}
+              {!running && <ArrowRight className="h-4 w-4" />}
             </button>
           </div>
         </div>
@@ -138,16 +143,17 @@ export function ParserClient({ initialConfig, initialRun, initialItems, initialH
 
       {/* Ошибка / статус */}
       {error && (
-        <div className="border border-pink/40 bg-pink/5 p-4 mono text-[12px] text-pink">
+        <div className="rounded-2xl border border-pink/40 bg-pink/[0.06] px-4 py-3 text-[13px] text-pink fade-in">
           {error}
         </div>
       )}
 
       {/* Loading bar */}
       {running && (
-        <div className="border border-border bg-surface p-6 text-center">
-          <div className="mono text-[10px] tracking-widest uppercase text-text-mute mb-2">/scan</div>
-          <div className="font-serif italic text-[18px] text-text-dim">
+        <div className="panel p-8 flex flex-col items-center gap-3 text-center fade-in">
+          <Icon3D name="processing" size={44} tile sway />
+          <span className="sec-num">/scan</span>
+          <div className="text-[17px] font-semibold tracking-[-0.02em] text-text">
             Apify скрейпит, Claude оценивает… 60–90 секунд.
           </div>
         </div>
@@ -155,9 +161,12 @@ export function ParserClient({ initialConfig, initialRun, initialItems, initialH
 
       {/* Summary от Claude */}
       {run?.claudeSummary && !running && (
-        <div className="border-l-2 border-lime pl-4 py-3">
-          <div className="mono text-[10px] tracking-widest uppercase text-lime mb-2">наблюдение</div>
-          <p className="font-serif italic text-[15px] sm:text-[16px] text-text">
+        <div className="panel !border-lime/30 !bg-lime/[0.05] p-5 sm:p-6 reveal">
+          <div className="mb-2 flex items-center gap-2.5">
+            <Icon3D name="brain" size={20} tile="lime" />
+            <span className="label !text-lime">наблюдение</span>
+          </div>
+          <p className="text-[15px] sm:text-[16px] leading-relaxed text-text">
             {run.claudeSummary}
           </p>
         </div>

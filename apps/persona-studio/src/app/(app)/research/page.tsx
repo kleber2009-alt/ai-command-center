@@ -13,6 +13,7 @@ export default async function ResearchPage() {
   return (
     <div className="grid gap-8">
       <PageHero
+        icon="research"
         eyebrow="VIRAL CONTENT RESEARCH · NICHE HUNT"
         title={
           <>

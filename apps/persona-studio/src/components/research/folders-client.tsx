@@ -6,6 +6,8 @@
 import Link from 'next/link';
 import { useState, useTransition } from 'react';
 import { useRouter } from 'next/navigation';
+import { Folder as FolderIcon, Plus, Trash2 } from 'lucide-react';
+import { Icon3D, type Icon3DName } from '@/components/ui/icon3d';
 
 type FolderType = 'bloggers' | 'videos' | 'ideas';
 type Folder = {
@@ -84,41 +86,44 @@ export function FoldersClient({ initialFolders }: { initialFolders: Folder[] }) 
   };
 
   return (
-    <div className="grid gap-6">
+    <div className="grid gap-8">
       {error && (
-        <div className="border border-pink/40 bg-pink/5 px-3 py-2 mono text-[11px] text-pink">{error}</div>
+        <div className="rounded-2xl border border-pink/40 bg-pink/[0.06] px-4 py-2.5 text-[13px] text-pink">{error}</div>
       )}
-      {(Object.keys(TYPE_META) as FolderType[]).map((type) => {
+      {(Object.keys(TYPE_META) as FolderType[]).map((type, idx) => {
         const meta = TYPE_META[type];
         const list = byType[type];
         const toneCls =
           meta.tone === 'gold'
-            ? 'text-gold border-gold/40'
+            ? 'text-gold bg-blue/[0.12]'
             : meta.tone === 'lime'
-              ? 'text-lime border-lime/40'
-              : 'text-cyan border-cyan/40';
+              ? 'text-lime bg-lime/[0.12]'
+              : 'text-cyan bg-cyan/[0.12]';
         return (
-          <section key={type} className="grid gap-3">
-            <div className="flex items-baseline justify-between gap-3">
-              <div className="flex items-baseline gap-3">
-                <h2 className={`mono text-[10px] tracking-widest uppercase ${toneCls.split(' ')[0]}`}>
+          <section key={type} className="grid gap-4 reveal" style={{ ['--i' as string]: idx } as React.CSSProperties}>
+            <div className="flex items-center justify-between gap-3 flex-wrap">
+              <div className="flex items-center gap-3 flex-wrap">
+                <span className="sec-num">/{String(idx + 1).padStart(2, '0')}</span>
+                <h2 className="flex items-center gap-2 text-[17px] font-semibold tracking-[-0.02em] text-text">
+                  <Icon3D name={TYPE_ICON[type]} size={22} />
                   {meta.label}
                 </h2>
-                <span className="font-serif italic text-[13px] text-text-mute">{meta.hint}</span>
+                <span className="sec-title">{meta.hint}</span>
               </div>
               <button
                 type="button"
                 onClick={() => startCreate(type)}
-                className="mono text-[10px] tracking-widest uppercase text-text-mute hover:text-text"
+                className="btn-ghost !px-4 !py-2 !text-[13px]"
               >
-                + Создать
+                <Plus className="h-4 w-4" />
+                Создать
               </button>
             </div>
 
             {creating === type && (
-              <div className="border border-border bg-surface p-3 flex gap-2 items-end">
-                <div className="flex-1 grid gap-1">
-                  <span className="mono text-[9px] tracking-widest uppercase text-text-mute">
+              <div className="panel p-4 flex flex-wrap gap-2 items-end pop-in">
+                <div className="flex-1 min-w-[200px] grid gap-1.5">
+                  <span className="text-[12px] text-text-mute">
                     Название
                   </span>
                   <input
@@ -137,21 +142,21 @@ export function FoldersClient({ initialFolders }: { initialFolders: Folder[] }) 
                           ? 'Хуки про деньги'
                           : 'Идеи на октябрь'
                     }
-                    className="bg-bg border border-border focus:border-gold outline-none px-2 py-1.5 font-serif text-[14px] text-text"
+                    className="input"
                   />
                 </div>
                 <button
                   type="button"
                   onClick={submitCreate}
                   disabled={busy}
-                  className="btn-primary text-[10px] tracking-widest uppercase"
+                  className="btn-primary"
                 >
                   {busy ? '…' : 'Создать'}
                 </button>
                 <button
                   type="button"
                   onClick={() => setCreating(null)}
-                  className="btn-ghost text-[10px] tracking-widest uppercase"
+                  className="btn-ghost"
                 >
                   Отмена
                 </button>
@@ -159,28 +164,28 @@ export function FoldersClient({ initialFolders }: { initialFolders: Folder[] }) 
             )}
 
             {list.length === 0 && creating !== type && (
-              <div className="border border-border-soft bg-surface/50 px-4 py-6 font-serif italic text-[14px] text-text-mute text-center">
+              <div className="rounded-[24px] border border-dashed border-white/15 bg-white/[0.03] px-4 py-7 text-[14px] text-text-mute text-center">
                 Папок типа «{meta.label}» пока нет.
               </div>
             )}
 
             {list.length > 0 && (
-              <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-2">
+              <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-3 stagger">
                 {list.map((f) => (
                   <Link
                     key={f.id}
                     href={`/research/folders/${f.id}`}
-                    className={`border ${toneCls} bg-surface p-3 grid gap-1 hover:border-text relative group`}
+                    className="card-editorial group flex items-center gap-3.5 p-4"
                   >
-                    <div className="flex justify-between items-baseline">
-                      <span className="font-serif text-[15px] text-text truncate">{f.name}</span>
-                      <span className={`mono text-[10px] tracking-wider ${toneCls.split(' ')[0]}`}>
-                        {f.itemCount}
+                    <span className={`flex h-11 w-11 flex-none items-center justify-center rounded-2xl ${toneCls}`}>
+                      <FolderIcon className="h-5 w-5" />
+                    </span>
+                    <div className="grid min-w-0 flex-1 gap-0.5">
+                      <span className="text-[15px] font-semibold tracking-[-0.01em] text-text truncate">{f.name}</span>
+                      <span className="text-[12px] text-text-mute">
+                        {meta.label} · <span className="tabular-nums">{f.itemCount}</span>
                       </span>
                     </div>
-                    <span className="mono text-[9px] tracking-widest uppercase text-text-mute">
-                      {meta.label}
-                    </span>
                     <button
                       type="button"
                       onClick={(e) => {
@@ -188,10 +193,10 @@ export function FoldersClient({ initialFolders }: { initialFolders: Folder[] }) 
                         e.stopPropagation();
                         deleteFolder(f.id);
                       }}
-                      className="absolute top-1 right-1 mono text-[10px] text-text-mute hover:text-pink opacity-0 group-hover:opacity-100 px-1"
+                      className="btn-icon !h-8 !w-8 opacity-0 group-hover:opacity-100 hover:!text-pink"
                       aria-label="delete"
                     >
-                      ✕
+                      <Trash2 className="h-3.5 w-3.5" />
                     </button>
                   </Link>
                 ))}
@@ -203,3 +208,5 @@ export function FoldersClient({ initialFolders }: { initialFolders: Folder[] }) 
     </div>
   );
 }
+
+const TYPE_ICON: Record<FolderType, Icon3DName> = { bloggers: 'bloggers', videos: 'videos', ideas: 'sparkles' };

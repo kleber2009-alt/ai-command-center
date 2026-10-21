@@ -20,6 +20,7 @@ export default async function FoldersIndex() {
   return (
     <div className="grid gap-8">
       <PageHero
+        icon="folders"
         eyebrow="LIBRARY · FOLDERS"
         title={
           <>

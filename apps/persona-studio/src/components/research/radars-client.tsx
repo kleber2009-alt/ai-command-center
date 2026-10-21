@@ -1,6 +1,8 @@
 'use client';
 
 import { useState, useTransition } from 'react';
+import { ArrowRight, Pause, Play, Power, RefreshCw, Trash2 } from 'lucide-react';
+import { Icon3D } from '@/components/ui/icon3d';
 
 type Radar = {
   id: string;
@@ -77,13 +79,14 @@ export function RadarsClient({ initialRadars }: { initialRadars: Radar[] }) {
 
   if (radars.length === 0) {
     return (
-      <div className="border border-border-soft bg-surface/50 p-8 text-center">
-        <div className="font-serif italic text-[17px] text-text-dim">
+      <div className="rounded-[24px] border border-dashed border-white/15 bg-white/[0.03] p-10 flex flex-col items-center gap-3 text-center fade-in">
+        <Icon3D name="radars" size={44} tile sway />
+        <div className="text-[18px] font-semibold tracking-[-0.02em] text-text">
           Пока ни одного радара.
         </div>
-        <div className="font-serif text-[14px] text-text-mute mt-2 max-w-prose mx-auto">
+        <div className="text-[14px] text-text-dim max-w-prose">
           На странице{' '}
-          <a href="/research" className="text-lime hover:text-gold">
+          <a href="/research" className="text-gold hover:text-lime">
             Research
           </a>{' '}
           после поиска нажми «+ В радар» — сохранится ниша + фильтры, и cron будет проверять её
@@ -94,66 +97,71 @@ export function RadarsClient({ initialRadars }: { initialRadars: Radar[] }) {
   }
 
   return (
-    <div className="grid gap-3">
+    <div className="grid gap-3 stagger">
       {error && (
-        <div className="border border-pink/40 bg-pink/5 px-3 py-2 mono text-[11px] text-pink">
+        <div className="rounded-2xl border border-pink/40 bg-pink/[0.06] px-4 py-2.5 text-[13px] text-pink">
           {error}
         </div>
       )}
       {radars.map((r) => (
         <article
           key={r.id}
-          className={`border bg-surface p-4 grid sm:grid-cols-[1fr_auto] gap-3 items-center ${
-            r.enabled ? 'border-border' : 'border-border-soft opacity-60'
+          className={`panel p-5 grid sm:grid-cols-[auto_1fr_auto] gap-4 items-center ${
+            r.enabled ? '' : 'opacity-60'
           }`}
         >
-          <div className="grid gap-1">
-            <div className="flex items-baseline gap-3 flex-wrap">
-              <h3 className="font-serif text-[17px] text-text">{r.niche}</h3>
+          <Icon3D name="radars" size={24} tile />
+          <div className="grid gap-1.5 min-w-0">
+            <div className="flex items-center gap-3 flex-wrap">
+              <h3 className="text-[17px] font-semibold tracking-[-0.02em] text-text">{r.niche}</h3>
               {r.enabled ? (
-                <span className="mono text-[8px] tracking-widest uppercase px-1.5 py-0.5 bg-lime/10 border border-lime/40 text-lime">
+                <span className="status-badge status-ready">
                   активен
                 </span>
               ) : (
-                <span className="mono text-[8px] tracking-widest uppercase px-1.5 py-0.5 border border-border text-text-mute">
+                <span className="status-badge text-text-mute">
                   пауза
                 </span>
               )}
             </div>
-            <div className="flex gap-4 mono text-[10px] tracking-wider text-text-mute flex-wrap">
-              <span>интервал: <span className="text-text">{r.intervalHrs}ч</span></span>
+            <div className="flex gap-4 text-[12.5px] text-text-mute flex-wrap">
+              <span>интервал: <span className="tabular-nums text-text">{r.intervalHrs}ч</span></span>
               <span>посл. запуск: <span className="text-text">{relDate(r.lastRunAt)}</span></span>
-              <span>в выдаче: <span className="text-gold">{r.lastResultCount}</span></span>
+              <span>в выдаче: <span className="font-semibold tabular-nums text-gold">{r.lastResultCount}</span></span>
             </div>
           </div>
-          <div className="flex gap-1 sm:justify-end flex-wrap">
+          <div className="flex gap-1.5 sm:justify-end flex-wrap items-center">
             <a
               href={`/research?niche=${encodeURIComponent(r.niche)}`}
-              className="btn-ghost text-[10px] tracking-widest uppercase"
+              className="btn-ghost !px-4 !py-2 !text-[13px]"
             >
               Открыть
+              <ArrowRight className="h-4 w-4" />
             </a>
             <button
               type="button"
               onClick={() => run(r.id)}
               disabled={running === r.id}
-              className="btn-primary text-[10px] tracking-widest uppercase"
+              className="btn-primary !px-4 !py-2 !text-[13px]"
             >
+              {running === r.id ? <RefreshCw className="h-4 w-4 animate-spin" /> : <Play className="h-3.5 w-3.5 fill-current" />}
               {running === r.id ? '…' : 'Запустить'}
             </button>
             <button
               type="button"
               onClick={() => toggle(r.id, r.enabled)}
-              className="btn-ghost text-[10px] tracking-widest uppercase"
+              className="btn-ghost !px-4 !py-2 !text-[13px]"
             >
+              {r.enabled ? <Pause className="h-4 w-4" /> : <Power className="h-4 w-4" />}
               {r.enabled ? 'Пауза' : 'Включить'}
             </button>
             <button
               type="button"
               onClick={() => remove(r.id)}
-              className="mono text-[9px] tracking-widest uppercase text-text-mute hover:text-pink px-2"
+              aria-label="Удалить радар"
+              className="btn-icon hover:!text-pink hover:!border-pink/40"
             >
-              ✕
+              <Trash2 className="h-4 w-4" />
             </button>
           </div>
         </article>
