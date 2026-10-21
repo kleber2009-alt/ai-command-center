@@ -17,3 +17,6 @@ Dockerfile
 .dockerignore
 .uploads
 .tmp
+
+# deploy configs carry generated secrets — never in the build context
+deploy/
