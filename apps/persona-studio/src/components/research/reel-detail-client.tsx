@@ -5,6 +5,7 @@
 // или CTA «заказать анализ». Дизайн в системе Persona Studio.
 
 import { useState, useTransition } from 'react';
+import { createPortal } from 'react-dom';
 import { useRouter } from 'next/navigation';
 import { ArrowRight, ArrowUpRight, Check, Clapperboard, Copy, ExternalLink, FileText, Flame, Languages, RefreshCw, Sparkles, Wand2, X } from 'lucide-react';
 import { Icon3D } from '@/components/ui/icon3d';
@@ -470,6 +471,7 @@ export function ReelDetailClient({ reel: initialReel }: { reel: Reel }) {
 
       {/* Модалка «Переработать в видео» — выбор источника текста */}
       {forgeOpen && (
+        <Portal>
         <div
           className="fixed inset-0 z-50 flex items-center justify-center bg-black/60 backdrop-blur-sm p-4 fade-in"
           onClick={() => !forgeBusy && setForgeOpen(false)}
@@ -607,6 +609,7 @@ export function ReelDetailClient({ reel: initialReel }: { reel: Reel }) {
             )}
           </div>
         </div>
+        </Portal>
       )}
     </div>
   );
@@ -728,4 +731,10 @@ function Row({ label, value }: { label: string; value: string }) {
       <span className="text-[13.5px] text-text">{value || '—'}</span>
     </div>
   );
+}
+
+// Overlays render into <body>: an animated ancestor (filter/transform) would
+// otherwise become the containing block for `position: fixed`.
+function Portal({ children }: { children: React.ReactNode }) {
+  return createPortal(children, document.body);
 }

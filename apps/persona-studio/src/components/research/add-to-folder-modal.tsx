@@ -7,6 +7,7 @@
 // Сама грузит список папок нужного типа лениво при открытии.
 
 import { useEffect, useState } from 'react';
+import { createPortal } from 'react-dom';
 import { Plus, X } from 'lucide-react';
 import { Icon3D } from '@/components/ui/icon3d';
 
@@ -100,6 +101,7 @@ export function AddToFolderModal({
   }
 
   return (
+    <Portal>
     <div
       className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/60 backdrop-blur-sm fade-in"
       onClick={onClose}
@@ -196,5 +198,12 @@ export function AddToFolderModal({
         )}
       </div>
     </div>
+    </Portal>
   );
+}
+
+// Overlays render into <body>: an animated ancestor (filter/transform) would
+// otherwise become the containing block for `position: fixed`.
+function Portal({ children }: { children: React.ReactNode }) {
+  return createPortal(children, document.body);
 }

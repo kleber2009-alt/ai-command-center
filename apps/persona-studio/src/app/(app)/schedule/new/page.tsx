@@ -66,7 +66,7 @@ export default async function NewSchedulePage({
           </>
         }
         description="Выберите готовое видео, напишите подпись, отметьте каналы и время — остальное сделает автопостинг."
-        actions={[{ label: '← К расписанию', href: '/schedule', tone: 'ghost' }]}
+        actions={[{ label: 'К расписанию', href: '/schedule', tone: 'ghost' }]}
       />
 
       {accounts.length === 0 ? (

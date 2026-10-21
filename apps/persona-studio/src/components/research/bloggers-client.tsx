@@ -13,6 +13,7 @@
 // Тайминг/AI-разбор» — из ResearchPageAnalysis (Claude) + рилсов.
 
 import React, { useCallback, useEffect, useMemo, useState } from 'react';
+import { createPortal } from 'react-dom';
 import { useRouter } from 'next/navigation';
 import {
   ArrowRight, BarChart3, Check, ChevronRight, Copy, Eye, EyeOff, Folder as FolderIcon, Instagram,
@@ -430,6 +431,7 @@ function Analysis({ author, seed, onClose, onToggleSpy, onToast }: {
   const tile = 'rounded-[20px] border border-border-soft bg-white/[0.04]';
 
   return (
+    <Portal>
     <div onClick={onClose} className="fixed inset-0 z-50 flex justify-end bg-black/60 backdrop-blur-sm fade-in">
       <div onClick={(e) => e.stopPropagation()} className="m-2 h-[calc(100%-16px)] w-[720px] max-w-[96vw] overflow-y-auto rounded-[24px] border border-border-soft bg-surface/95 p-6 shadow-glass backdrop-blur-2xl md:p-7 reveal">
         {/* head */}
@@ -702,6 +704,7 @@ function Analysis({ author, seed, onClose, onToggleSpy, onToast }: {
         )}
       </div>
     </div>
+    </Portal>
   );
 }
 
@@ -727,6 +730,7 @@ function AddModal({ onClose, onAdded, onToast }: { onClose: () => void; onAdded:
     setBusy(false);
   };
   return (
+    <Portal>
     <div onClick={onClose} className="fixed inset-0 z-[60] flex items-center justify-center bg-black/60 p-4 backdrop-blur-sm fade-in">
       <div onClick={(e) => e.stopPropagation()} className="panel !bg-surface/95 w-[420px] max-w-[92vw] p-6 shadow-glass pop-in">
         <div className="mb-4 flex items-center gap-3">
@@ -747,6 +751,7 @@ function AddModal({ onClose, onAdded, onToast }: { onClose: () => void; onAdded:
         <div className="mt-3.5 text-[12px] leading-relaxed text-text-mute">Первичный парс собирает последние рилсы и считает медиану. Списываются кредиты за скрейп.</div>
       </div>
     </div>
+    </Portal>
   );
 }
 
@@ -1180,10 +1185,18 @@ export function BloggersClient() {
       {showAdd && <AddModal onClose={() => setShowAdd(false)} onAdded={loadAuthors} onToast={showToast} />}
 
       {toast && (
+        <Portal>
         <div className="fixed bottom-6 left-1/2 z-[80] -translate-x-1/2 rounded-full border border-border-soft bg-surface/90 px-5 py-3 text-[13px] text-text shadow-glass backdrop-blur-xl fade-in">
           {toast}
         </div>
+        </Portal>
       )}
     </div>
   );
+}
+
+// Overlays render into <body>: an animated ancestor (filter/transform) would
+// otherwise become the containing block for `position: fixed`.
+function Portal({ children }: { children: React.ReactNode }) {
+  return createPortal(children, document.body);
 }

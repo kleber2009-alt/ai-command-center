@@ -2,6 +2,7 @@
 
 import Link from 'next/link';
 import { useEffect, useState, useTransition } from 'react';
+import { createPortal } from 'react-dom';
 import { ArrowUpRight, Check, Copy, Flame, Plus, Sparkles, X } from 'lucide-react';
 import { Icon3D } from '@/components/ui/icon3d';
 
@@ -439,6 +440,7 @@ function GenerateHooksModal({
 
 function Modal({ title, children, onClose }: { title: string; children: React.ReactNode; onClose: () => void }) {
   return (
+    <Portal>
     <div
       className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/60 backdrop-blur-sm fade-in"
       onClick={onClose}
@@ -461,5 +463,12 @@ function Modal({ title, children, onClose }: { title: string; children: React.Re
         {children}
       </div>
     </div>
+    </Portal>
   );
+}
+
+// Overlays render into <body>: an animated ancestor (filter/transform) would
+// otherwise become the containing block for `position: fixed`.
+function Portal({ children }: { children: React.ReactNode }) {
+  return createPortal(children, document.body);
 }

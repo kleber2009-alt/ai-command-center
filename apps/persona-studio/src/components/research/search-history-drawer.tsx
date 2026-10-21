@@ -4,6 +4,7 @@
 // записи восстанавливает её выдачу мгновенно (без повторного скрейпа).
 
 import { useEffect } from 'react';
+import { createPortal } from 'react-dom';
 import { Clock, History, Trash2, X } from 'lucide-react';
 import type { SearchHistoryEntry } from './search-history';
 import type { Period, SortField } from './types';
@@ -66,6 +67,7 @@ export function SearchHistoryDrawer({
   if (!open) return null;
 
   return (
+    <Portal>
     <div className="fixed inset-0 z-50 flex justify-end">
       {/* Backdrop */}
       <button
@@ -158,5 +160,12 @@ export function SearchHistoryDrawer({
         </div>
       </aside>
     </div>
+    </Portal>
   );
+}
+
+// Overlays render into <body>: an animated ancestor (filter/transform) would
+// otherwise become the containing block for `position: fixed`.
+function Portal({ children }: { children: React.ReactNode }) {
+  return createPortal(children, document.body);
 }
