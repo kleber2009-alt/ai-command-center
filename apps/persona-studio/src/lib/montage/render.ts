@@ -114,8 +114,12 @@ export async function renderMontage(opts: {
   const duration = totalDuration(segs);
   const outWords = remapWords(opts.words, segs);
 
+  // символов в субтитре: 16:9 — всегда одна строка (≤ 82 % ширины кадра);
+  // караоке/reveal 9:16 — до двух строк; pop — одна короткая строка
+  const maxChars =
+    preset.format === '16:9' ? 30 : preset.mode === 'karaoke' ? 40 : preset.mode === 'reveal' ? 30 : 18;
   const captions = options.subtitles
-    ? buildCaptions(outWords, { min: preset.words[0], max: preset.words[1], maxChars: preset.format === '16:9' ? 34 : preset.mode === 'karaoke' ? 40 : 18 })
+    ? buildCaptions(outWords, { min: preset.words[0], max: preset.words[1], maxChars })
     : [];
   const assPath = path.join(opts.workDir, 'subs.ass');
   await writeFile(assPath, buildAss({ preset, captions, duration, hookTitle: opts.hookTitle, ctaWord: opts.ctaWord }), 'utf8');
@@ -140,19 +144,26 @@ export async function renderMontage(opts: {
     chains.push(`[cut]scale=${W}:${H}:force_original_aspect_ratio=increase,crop=${W}:${H},setsar=1[framed]`);
   }
 
-  // 3) зум-панч на каждом втором куске (скилл: «zoom punches» на склейках)
+  // 3) зум-панч на склейках: montazh-rils — каждый второй кусок, 1.08;
+  //    мягкие пресеты задают силу (punchZoom) и интервал (YouTube: ≤ 8 в минуту)
   let last = 'framed';
   if (options.punch && segs.length > 2) {
+    const zoom = preset.punchZoom ?? 1.08;
+    const minGap = preset.punchMinGap ?? 0;
     let acc = 0;
+    let lastZone = -Infinity;
     const zones: string[] = [];
     segs.forEach((g, i) => {
       const len = g.e - g.s;
-      if (i % 2 === 1 && len > 0.6) zones.push(`between(on/${FPS},${r3(acc)},${r3(acc + len)})`);
+      if (i % 2 === 1 && len > 0.6 && acc - lastZone >= minGap) {
+        zones.push(`between(on/${FPS},${r3(acc)},${r3(acc + len)})`);
+        lastZone = acc;
+      }
       acc += len;
     });
     if (zones.length) {
       chains.push(
-        `[framed]zoompan=z='if(${zones.join('+')},1.08,1)':x='iw/2-(iw/zoom/2)':y='ih/2-(ih/zoom/2)':d=1:s=${W}x${H}:fps=${FPS}[zoomed]`,
+        `[framed]zoompan=z='if(${zones.join('+')},${zoom},1)':x='iw/2-(iw/zoom/2)':y='ih/2-(ih/zoom/2)':d=1:s=${W}x${H}:fps=${FPS}[zoomed]`,
       );
       last = 'zoomed';
     }

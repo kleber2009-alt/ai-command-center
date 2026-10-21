@@ -1,7 +1,7 @@
 import { test } from 'node:test';
 import assert from 'node:assert/strict';
 import { buildCaptions, keepSegments, mapTime, remapWords, totalDuration } from '../src/lib/montage/edl.ts';
-import { buildAss, assColor } from '../src/lib/montage/ass.ts';
+import { buildAss, assColor, assFontSize } from '../src/lib/montage/ass.ts';
 import { MONTAGE_PRESETS, montagePreset } from '../src/lib/montage/presets.ts';
 import { SKILL_STYLES, parseAccents, findSkillStyle } from '../src/lib/skills/styles.ts';
 
@@ -50,7 +50,47 @@ test('buildAss: хук, призыв и субтитры попадают в с�
 test('пресеты монтажа ссылаются на существующие стили и уникальны', () => {
   const ids = MONTAGE_PRESETS.map((p) => p.id);
   assert.equal(new Set(ids).size, ids.length);
-  for (const p of MONTAGE_PRESETS) assert.ok(findSkillStyle(p.id), `нет стиля для пресета ${p.id}`);
+  for (const p of MONTAGE_PRESETS) {
+    assert.ok(findSkillStyle(p.styleId ?? p.id), `нет стиля для пресета ${p.id}`);
+  }
+});
+
+test('reveal: по событию на слово, будущие слова невидимы, строка одна и та же', () => {
+  // короткие слова без пунктуации — один субтитр, без акцента
+  const phrase = [
+    { w: 'это', s: 1.0, e: 1.3 },
+    { w: 'мой', s: 1.4, e: 1.7 },
+    { w: 'рилс', s: 1.8, e: 2.2 },
+  ];
+  const caps = buildCaptions(phrase, { min: 1, max: 5, maxChars: 30 });
+  assert.equal(caps.length, 1);
+  const ass = buildAss({ preset: montagePreset('promoface'), captions: caps, duration: 12 });
+  const capEvents = ass.split('\n').filter((l) => l.includes(',Cap,'));
+  // одно событие на каждое слово
+  assert.equal(capEvents.length, phrase.length);
+  // первое событие: следующие слова скрыты, но присутствуют (строка не перестраивается)
+  const first = capEvents[0];
+  assert.match(first, /\{\\alpha&HFF&\}мой\{\\alpha&H00&\} \{\\alpha&HFF&\}рилс/);
+  // произносимое слово приходит синим #0D83FF и перетекает в белый
+  assert.match(first, /\\1c&HFF830D&\\t\(200,470,\\1c&HFFFFFF&\)/);
+  // promo-face: слово появляется за 0.1 c до произнесения (1.4 − 0.1)
+  assert.match(capEvents[1], /Dialogue: 1,0:00:01\.30,/);
+  // тень без обводки
+  assert.match(ass, /Style: Cap,InterTight 700,122,[^\n]*,1,0,4,5,/); // 86 CSS px × 1.424
+});
+
+test('вход субтитра целиком: neon-schema — сдвиг 18 px и размытие 6 → 0', () => {
+  const caps = buildCaptions(words, { min: 1, max: 1, maxChars: 18 });
+  const ass = buildAss({ preset: montagePreset('scheme'), captions: caps, duration: 12 });
+  assert.match(ass, /\\move\(558,1350,540,1350,0,133\)\\fad\(133,0\)\\blur6\\t\(0,133,\\blur0\)/);
+  assert.match(ass, /ПРИВЕТ,/); // капс
+});
+
+test('YouTube: слово входит с масштаба 1.35 и размытия 12', () => {
+  const caps = buildCaptions(words, { min: 2, max: 5, maxChars: 34 });
+  const ass = buildAss({ preset: montagePreset('youtube'), captions: caps, duration: 12 });
+  assert.match(ass, /PlayResX: 1920/);
+  assert.match(ass, /\\alpha&HFF&\\blur12\\fscy135\\t\(0,167,\\alpha&H00&\\blur0\\fscy100\)/);
 });
 
 test('каталог скилл-стилей: 20 уникальных, разметка акцента', () => {
@@ -61,4 +101,11 @@ test('каталог скилл-стилей: 20 уникальных, разм�
     { text: 'промптов', accent: true },
     { text: ', которые', accent: false },
   ]]);
+});
+
+test('assFontSize: CSS-пиксели скилла → кегль libass по Win-метрикам шрифта', () => {
+  assert.equal(assFontSize('Montserrat 800', 84), 131); // 84 × 1.562
+  assert.equal(assFontSize('Playfair 700 Italic', 100), 141);
+  assert.equal(assFontSize('JetBrains Mono', 100), 157);
+  assert.equal(assFontSize('Неизвестный 400', 100), 145); // запасной коэффициент
 });

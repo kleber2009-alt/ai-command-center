@@ -163,17 +163,19 @@ export const SKILL_STYLES: SkillStyle[] = [
     lightBg: '#FAFAFB', darkBg: '#0B0B0D', ink: '#0B0B0D', inkOnDark: '#F5F5F7', mute: '#8A8A93',
     accent: '#1F7BFF', accentInk: '#FFFFFF', accent2: '#FF3D8B',
     titleFont: 'Onest 600', bodyFont: 'Onest 400', monoFont: MONO,
-    titleCase: 'none', accentMode: 'box', pattern: 'grid',
+    // reels-ui-motion: заголовки всегда строчными
+    titleCase: 'lower', accentMode: 'box', pattern: 'grid',
     revealDark: true, coverDark: true, ctaDark: true,
   },
   {
     id: 'scheme', label: 'Схема', skill: 'montazh-rils',
-    description: 'Чёрный фон с сеткой и звёздами, один лаймовый акцент со свечением, Unbounded строчными, растущая схема.',
+    description: 'Почти чёрный фон с сеткой 90 px, один лаймовый акцент со свечением, Unbounded строчными, растущая схема.',
     tag: 'чёрный / лайм-неон / схема',
-    lightBg: '#0A0B09', darkBg: '#0A0B09', ink: '#F2F2F2', inkOnDark: '#F2F2F2', mute: '#8C8F86',
-    accent: '#C6F432', accentInk: '#0A0A0A',
+    // токены reels-neon-schema (src/tokens.ts скилла)
+    lightBg: '#080808', darkBg: '#080808', ink: '#F8F8F8', inkOnDark: '#F8F8F8', mute: '#8A8A8A',
+    accent: '#C8F850', accentInk: '#080808',
     titleFont: 'Unbounded 800', bodyFont: 'Inter 400', monoFont: MONO,
-    titleCase: 'lower', accentMode: 'glow', pattern: 'stars',
+    titleCase: 'lower', accentMode: 'glow', pattern: 'grid',
     revealDark: true, coverDark: true, ctaDark: true,
   },
   {
@@ -218,10 +220,11 @@ export const SKILL_STYLES: SkillStyle[] = [
   },
   {
     id: 'youtube', label: 'YouTube · Монтаж ЭМ', skill: 'montazh-youtube',
-    description: 'Обои macOS, белые окна со «светофором», голубой акцент #3AA8F0 — стиль ролика «Монтаж ЭМ».',
+    description: 'Обои macOS, окна со «светофором», голубой акцент #4FB2F0 — стиль ролика «Монтаж ЭМ».',
     tag: 'macOS / окна / голубой',
-    lightBg: '#FFFFFF', darkBg: '#160C22', ink: '#16171B', inkOnDark: '#F1F0F4', mute: '#7B7D86',
-    accent: '#3AA8F0', accentInk: '#FFFFFF', accent2: '#F39A12',
+    // токены montazh-dlinnogo-video-youtube (theme.ts скилла)
+    lightBg: '#FFFFFF', darkBg: '#05070C', ink: '#16171B', inkOnDark: '#F1F0F4', mute: '#7B7D86',
+    accent: '#4FB2F0', accentInk: '#061018', accent2: '#00C767',
     titleFont: 'Montserrat 800', bodyFont: 'Inter 400', monoFont: MONO,
     titleCase: 'none', accentMode: 'color', pattern: 'wallpaper',
     revealDark: false, coverDark: true, ctaDark: true,

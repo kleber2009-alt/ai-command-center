@@ -169,7 +169,7 @@ export function MontageStudio({ videos, initial, cost }: { videos: Video[]; init
                 >
                   <div className="flex items-center gap-2.5">
                     {/* eslint-disable-next-line @next/next/no-img-element */}
-                    <img src={`/skill-previews/${p.id}.jpg`} alt="" className="h-[44px] w-auto border border-border" loading="lazy" />
+                    <img src={`/skill-previews/${p.styleId ?? p.id}.jpg`} alt="" className="h-[44px] w-auto border border-border" loading="lazy" />
                     <div className="grid gap-0.5 min-w-0">
                       <span className={`font-serif text-[14px] leading-tight ${active ? 'text-text' : 'text-text-dim'}`}>{p.label}</span>
                       <span className="mono text-[9px] tracking-wider text-text-mute uppercase truncate">

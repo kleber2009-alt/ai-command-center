@@ -28,6 +28,7 @@ export const SKILL_FONT_FILES: [name: string, file: string][] = [
   ['JetBrainsMono 800', 'JetBrainsMono-800.ttf'],
   ['PressStart2P', 'PressStart2P.ttf'],
   ['InterTight 400', 'InterTight-400.ttf'],
+  ['InterTight 700', 'InterTight-700.ttf'],
   ['InterTight 900', 'InterTight-900.ttf'],
   ['Oswald 700', 'Oswald-700.ttf'],
   ['Cormorant 600', 'CormorantGaramond-600.ttf'],
