@@ -67,26 +67,26 @@ export function AdminSidebarPanel({ initialItems }: { initialItems: Item[] }) {
 
   return (
     <div className="grid gap-4">
-      <div className="flex flex-wrap items-center gap-4 border border-border bg-surface p-4">
-        <span className="mono text-[10px] tracking-widest uppercase text-text-mute">
+      <div className="panel flex flex-wrap items-center gap-4 p-4">
+        <span className="text-[13px] tabular-nums text-text-mute">
           {items.length} items · {hiddenCount} hidden
           {isPending && <span className="ml-3 text-text-dim">/refreshing…</span>}
         </span>
-        <span className="ml-auto font-serif italic text-[13px] text-text-dim">
+        <span className="ml-auto text-[13px] text-text-dim">
           Toggle on = пункт показывается в левом меню
         </span>
       </div>
 
       {err && (
-        <div className="border border-border bg-surface px-4 py-3 mono text-[11px] tracking-wider text-pink">
+        <div className="rounded-2xl border border-pink/40 bg-pink/[0.06] px-4 py-2.5 text-[13px] text-pink">
           /ERROR — {err}
         </div>
       )}
 
-      <div className="grid gap-3">
+      <div className="grid gap-3 stagger">
         {grouped.map((g) => (
-          <div key={g.sectionKey} className="border border-border">
-            <div className="px-5 py-2 bg-surface border-b border-border mono text-[10px] tracking-widest uppercase text-text-dim">
+          <div key={g.sectionKey} className="panel overflow-hidden">
+            <div className="px-5 py-2.5 border-b border-border-soft label !text-text-dim">
               /{g.sectionLabel}
             </div>
             {g.items.map((item) => {
@@ -94,17 +94,17 @@ export function AdminSidebarPanel({ initialItems }: { initialItems: Item[] }) {
               return (
                 <div
                   key={item.key}
-                  className="grid grid-cols-[1fr_220px_120px] gap-3 px-5 py-3 items-center border-b border-border last:border-b-0 bg-surface hover:bg-surface-2 transition-colors"
+                  className="grid grid-cols-[1fr_auto_80px] sm:grid-cols-[1fr_220px_120px] gap-3 px-5 py-3 items-center border-b border-border-soft last:border-b-0 hover:bg-white/[0.03] transition-colors"
                 >
                   <div className="grid">
-                    <span className="font-serif italic text-[15px] truncate">{item.label}</span>
-                    <span className="mono text-[10px] tracking-wider text-text-mute truncate">
+                    <span className="text-[14.5px] font-medium text-text truncate">{item.label}</span>
+                    <span className="font-mono text-[11px] text-text-mute truncate">
                       {item.key} · {item.href}
                     </span>
                   </div>
                   <div
-                    className={`mono text-[10px] tracking-widest uppercase text-right ${
-                      visible ? 'text-lime' : 'text-pink'
+                    className={`status-badge justify-self-end ${
+                      visible ? 'status-ready' : 'status-failed'
                     }`}
                   >
                     {visible ? '/VISIBLE' : '/HIDDEN'}
@@ -117,17 +117,16 @@ export function AdminSidebarPanel({ initialItems }: { initialItems: Item[] }) {
                       disabled={busyKey === item.key}
                       onClick={() => toggle(item, visible)}
                       className={[
-                        'relative inline-flex h-6 w-12 items-center transition-colors',
-                        'border',
-                        visible ? 'bg-lime/20 border-lime' : 'bg-bg border-border-2',
+                        'relative inline-flex h-7 w-[46px] items-center rounded-full transition-colors duration-300 ease-settle',
+                        visible ? 'bg-blue' : 'bg-white/20',
                         busyKey === item.key ? 'opacity-50' : '',
                       ].join(' ')}
                       title={visible ? 'Спрятать из меню' : 'Показывать в меню'}
                     >
                       <span
                         className={[
-                          'inline-block h-4 w-4 transform transition-transform',
-                          visible ? 'translate-x-7 bg-lime' : 'translate-x-1 bg-text-mute',
+                          'inline-block h-[22px] w-[22px] rounded-full bg-white shadow-[0_2px_6px_rgba(0,0,0,0.35)] transform transition-transform duration-[450ms] ease-pop',
+                          visible ? 'translate-x-[21px]' : 'translate-x-[3px]',
                         ].join(' ')}
                       />
                     </button>

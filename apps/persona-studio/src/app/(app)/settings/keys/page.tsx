@@ -30,6 +30,7 @@ export default async function ApiKeysPage() {
   return (
     <div className="grid gap-8">
       <PageHero
+        icon="keys"
         eyebrow="SETTINGS · INTEGRATIONS · API KEYS"
         title={
           <>
@@ -39,8 +40,8 @@ export default async function ApiKeysPage() {
         description="Ключи нужны для интеграции Persona Studio в сторонние приложения через SDK или прямые HTTP-вызовы. Один ключ = доступ ко всем данным аккаунта. Plaintext показывается ровно один раз при создании — сохрани сразу."
         meta={
           <>
-            <div className="mono text-[9px] tracking-[0.28em] uppercase text-text-muted">SDK</div>
-            <div className="font-serif italic text-gold text-[14px]">@persona-studio/sdk</div>
+            <div className="label">SDK</div>
+            <div className="font-mono text-gold text-[13px]">@persona-studio/sdk</div>
           </>
         }
       />
@@ -54,9 +55,9 @@ export default async function ApiKeysPage() {
         }))}
       />
 
-      <section className="grid gap-3 mt-6">
-        <h2 className="sec-title">Quickstart</h2>
-        <pre className="bg-surface border border-border p-4 text-[12px] mono overflow-x-auto leading-relaxed">
+      <section className="grid gap-3 mt-2">
+        <h2 className="flex items-center gap-3"><span className="sec-num">/02</span><span className="sec-title">Quickstart</span></h2>
+        <pre className="panel !bg-black/30 p-5 text-[12.5px] font-mono text-text-dim overflow-x-auto leading-relaxed">
 {`import { createPersonaClient } from '@persona-studio/sdk';
 
 const ps = createPersonaClient({
@@ -74,8 +75,8 @@ const video  = await ps.createVideo({
   voiceId:  'ru-male-1',
 });`}
         </pre>
-        <p className="font-serif italic text-[12px] text-text-mute">
-          Полная документация — в <code className="mono">apps/persona-studio/sdk/README.md</code>.
+        <p className="text-[12.5px] text-text-mute">
+          Полная документация — в <code className="font-mono text-text-dim">apps/persona-studio/sdk/README.md</code>.
         </p>
       </section>
     </div>

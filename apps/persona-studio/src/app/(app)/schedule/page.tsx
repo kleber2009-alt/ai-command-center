@@ -48,6 +48,7 @@ export default async function SchedulePage() {
   return (
     <div className="grid gap-8">
       <PageHero
+        icon="schedule"
         eyebrow="AUTOMATION · SCHEDULE"
         title={
           <>
@@ -58,8 +59,8 @@ export default async function SchedulePage() {
         actions={[{ label: 'Запланировать пост', href: '/schedule/new' }]}
         meta={
           <>
-            <div className="mono text-[9px] tracking-[0.28em] uppercase text-text-muted">В очереди</div>
-            <div className="font-serif text-[28px] text-gold leading-none">{upcoming}</div>
+            <div className="label">В очереди</div>
+            <div className="text-[32px] font-extrabold tabular-nums tracking-[-0.02em] text-gold leading-none">{upcoming}</div>
           </>
         }
       />

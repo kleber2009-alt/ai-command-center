@@ -5,6 +5,7 @@ import { AdminUsersPanel } from '@/components/admin-users';
 import { AdminSidebarPanel } from '@/components/admin-sidebar-panel';
 import { getSidebarOverviewWithState } from '@/lib/sidebar-overrides';
 import { formatDate } from '@/lib/utils';
+import { PageHero } from '@/components/shell/page-hero';
 
 export const dynamic = 'force-dynamic';
 export const metadata = { title: 'Admin — Persona Studio' };
@@ -53,16 +54,14 @@ export default async function AdminPage() {
   return (
     <div className="grid gap-8">
       <header>
-        <div className="flex items-baseline gap-3 mb-4">
-          <span className="sec-num">/00</span>
-          <span className="sec-title">Admin · Persona Studio</span>
-          <span className="flex-1 border-b border-border translate-y-[-3px]" />
-          <span className="mono text-[10px] tracking-widest uppercase text-pink">
-            /{admin.email}
-          </span>
-        </div>
+        <PageHero
+          eyebrow="/00 · ADMIN"
+          title="Admin · Persona Studio"
+          icon="gear"
+          meta={<span className="eyebrow !text-pink">{admin.email}</span>}
+        />
 
-        <div className="grid grid-cols-2 md:grid-cols-4 gap-[2px] bg-border border border-border">
+        <div className="grid grid-cols-2 md:grid-cols-4 gap-3 stagger">
           <Stat k="Users" v={totals._count._all} accent="text" />
           <Stat k="Tokens outstanding" v={totals._sum.tokenBalance ?? 0} accent="lime" sub="balance × all users" />
           <Stat k="Artefacts" v={`${avatarCount} + ${coverCount} + ${videoCount}`} accent="cyan" sub="avatars · covers · videos" small />
@@ -71,10 +70,10 @@ export default async function AdminPage() {
       </header>
 
       <section>
-        <div className="flex items-baseline gap-3 mb-3">
+        <div className="flex items-center gap-3 mb-4">
           <span className="sec-num">/01</span>
           <span className="sec-title">Users — grant tokens</span>
-          <span className="flex-1 border-b border-border translate-y-[-3px]" />
+          <span className="flex-1 h-px bg-border-soft" />
         </div>
         <AdminUsersPanel
           initialUsers={users.map((u) => ({ ...u, createdAt: u.createdAt.toISOString() }))}
@@ -83,36 +82,36 @@ export default async function AdminPage() {
       </section>
 
       <section>
-        <div className="flex items-baseline gap-3 mb-3">
+        <div className="flex items-center gap-3 mb-4">
           <span className="sec-num">/02</span>
           <span className="sec-title">Sidebar — управление пунктами меню</span>
-          <span className="flex-1 border-b border-border translate-y-[-3px]" />
+          <span className="flex-1 h-px bg-border-soft" />
         </div>
         <AdminSidebarPanel initialItems={sidebarItems} />
       </section>
 
       <section>
-        <div className="flex items-baseline gap-3 mb-3">
+        <div className="flex items-center gap-3 mb-4">
           <span className="sec-num">/03</span>
           <span className="sec-title">Recent token transactions</span>
-          <span className="flex-1 border-b border-border translate-y-[-3px]" />
+          <span className="flex-1 h-px bg-border-soft" />
         </div>
         {recentTx.length === 0 ? (
-          <p className="mono text-[11px] tracking-widest uppercase text-text-mute">/EMPTY</p>
+          <p className="rounded-[24px] border border-dashed border-white/15 bg-white/[0.03] p-6 text-center text-[13px] text-text-mute">/EMPTY</p>
         ) : (
-          <div className="border border-border">
+          <div className="panel overflow-x-auto">
             {recentTx.map((t) => (
               <div
                 key={t.id}
-                className="grid grid-cols-[70px_1fr_160px_1fr_auto] gap-4 items-center px-5 py-3 border-b border-border last:border-b-0 bg-surface"
+                className="grid min-w-[720px] grid-cols-[70px_1fr_160px_1fr_auto] gap-4 items-center px-5 py-3 border-b border-border-soft last:border-b-0 transition-colors hover:bg-white/[0.03]"
               >
-                <span className={`mono text-[14px] font-bold ${t.amount > 0 ? 'text-lime' : 'text-pink'}`}>
+                <span className={`text-[14px] font-bold tabular-nums ${t.amount > 0 ? 'text-lime' : 'text-pink'}`}>
                   {t.amount > 0 ? '+' : ''}{t.amount}
                 </span>
-                <span className="mono text-[10px] tracking-widest uppercase text-text-dim">{t.type}</span>
-                <span className="font-serif italic text-[13px] text-text-dim truncate">{t.user.email}</span>
-                <span className="mono text-[10px] tracking-wider text-text-mute truncate">{t.reason}</span>
-                <span className="mono text-[10px] tracking-widest text-text-mute">{formatDate(t.createdAt)}</span>
+                <span className="justify-self-start rounded-full bg-white/[0.06] px-2.5 py-0.5 text-[11px] font-medium text-text-dim">{t.type}</span>
+                <span className="text-[13px] text-text truncate">{t.user.email}</span>
+                <span className="text-[12.5px] text-text-mute truncate">{t.reason}</span>
+                <span className="text-[12px] tabular-nums text-text-mute">{formatDate(t.createdAt)}</span>
               </div>
             ))}
           </div>
@@ -141,12 +140,12 @@ function Stat({
     accent === 'pink' ? 'text-pink' :
     'text-text';
   return (
-    <div className="bg-bg p-5">
-      <div className="mono text-[10px] tracking-widest uppercase text-text-mute mb-2">{k}</div>
-      <div className={`font-serif leading-none ${small ? 'text-[26px]' : 'text-[40px]'} ${colorClass}`}>
+    <div className="panel p-5">
+      <div className="label mb-2.5">{k}</div>
+      <div className={`font-extrabold tabular-nums tracking-[-0.02em] leading-none ${small ? 'text-[26px]' : 'text-[40px]'} ${colorClass}`}>
         {v}
       </div>
-      {sub && <div className="mono text-[10px] tracking-wider text-text-mute mt-2">{sub}</div>}
+      {sub && <div className="text-[12px] text-text-mute mt-2">{sub}</div>}
     </div>
   );
 }

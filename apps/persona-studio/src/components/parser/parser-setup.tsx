@@ -1,6 +1,7 @@
 'use client';
 
 import { useState } from 'react';
+import { ArrowRight, ChevronDown } from 'lucide-react';
 import type { ParserConfigSerialized } from './types';
 
 type Props = {
@@ -73,17 +74,17 @@ export function ParserSetup({ initial, onSaved, onCancel }: Props) {
   return (
     <form
       onSubmit={save}
-      className="border border-border p-5 sm:p-6 bg-surface grid gap-5"
+      className="panel p-5 sm:p-7 grid gap-5 reveal"
     >
-      <div className="flex items-baseline gap-3">
+      <div className="flex items-center gap-3">
         <span className="sec-num">/01</span>
         <span className="sec-title">Настройка парсера</span>
-        <span className="flex-1 border-b border-border translate-y-[-3px]" />
+        <span className="flex-1 h-px bg-border-soft" />
       </div>
 
       {/* Ниша */}
       <label className="grid gap-2">
-        <span className="mono text-[10px] tracking-widest uppercase text-text-mute">
+        <span className="label">
           Ниша · 1–2 предложения
         </span>
         <textarea
@@ -91,9 +92,9 @@ export function ParserSetup({ initial, onSaved, onCancel }: Props) {
           value={niche}
           onChange={(e) => setNiche(e.target.value)}
           placeholder="Например: коучинг продаж B2B, конфронтационный стиль, аудитория — РОПы и собственники."
-          className="bg-bg border border-border px-3 py-2.5 font-serif text-[14px] leading-relaxed focus:outline-none focus:border-lime/60"
+          className="input !min-h-0"
         />
-        <span className="mono text-[9px] tracking-wider text-text-mute">
+        <span className="text-[12px] text-text-mute">
           Claude использует ниху как эталон при оценке fit-to-niche 1–10.
         </span>
       </label>
@@ -101,7 +102,7 @@ export function ParserSetup({ initial, onSaved, onCancel }: Props) {
       {/* Источники */}
       <div className="grid sm:grid-cols-2 gap-5">
         <label className="grid gap-2">
-          <span className="mono text-[10px] tracking-widest uppercase text-text-mute">
+          <span className="label">
             Аккаунты конкурентов
           </span>
           <textarea
@@ -109,15 +110,15 @@ export function ParserSetup({ initial, onSaved, onCancel }: Props) {
             value={competitorsRaw}
             onChange={(e) => setCompetitorsRaw(e.target.value)}
             placeholder="@expert_one, @expert_two, @expert_three"
-            className="bg-bg border border-border px-3 py-2.5 mono text-[12px] leading-relaxed focus:outline-none focus:border-lime/60"
+            className="input !min-h-0"
           />
-          <span className="mono text-[9px] tracking-wider text-text-mute">
+          <span className="text-[12px] text-text-mute">
             До 50. Через запятую, пробел или новую строку.
           </span>
         </label>
 
         <label className="grid gap-2">
-          <span className="mono text-[10px] tracking-widest uppercase text-text-mute">
+          <span className="label">
             Хэштеги ниши
           </span>
           <textarea
@@ -125,9 +126,9 @@ export function ParserSetup({ initial, onSaved, onCancel }: Props) {
             value={hashtagsRaw}
             onChange={(e) => setHashtagsRaw(e.target.value)}
             placeholder="#salescoaching, #b2bsales"
-            className="bg-bg border border-border px-3 py-2.5 mono text-[12px] leading-relaxed focus:outline-none focus:border-lime/60"
+            className="input !min-h-0"
           />
-          <span className="mono text-[9px] tracking-wider text-text-mute">
+          <span className="text-[12px] text-text-mute">
             До 20. Будут парситься топ-посты по тегу.
           </span>
         </label>
@@ -135,8 +136,9 @@ export function ParserSetup({ initial, onSaved, onCancel }: Props) {
 
       {/* Тонкие настройки */}
       <details className="grid gap-4">
-        <summary className="mono text-[10px] tracking-widest uppercase text-text-dim cursor-pointer">
-          Тонкие настройки ▾
+        <summary className="inline-flex w-fit cursor-pointer list-none items-center gap-1.5 rounded-full border border-border-soft bg-white/[0.04] px-3.5 py-1.5 text-[13px] text-text-dim transition-colors hover:bg-white/[0.07] [&::-webkit-details-marker]:hidden">
+          Тонкие настройки
+          <ChevronDown className="h-3.5 w-3.5" />
         </summary>
 
         <div className="grid sm:grid-cols-3 gap-4 mt-3">
@@ -145,36 +147,37 @@ export function ParserSetup({ initial, onSaved, onCancel }: Props) {
           <NumberField label="Топ каруселей" value={carouselsCount} onChange={setCarouselsCount} min={1} max={20} />
         </div>
 
-        <div className="mono text-[9px] tracking-widest uppercase text-text-dim">Reels</div>
+        <div className="label !text-text-dim mt-2">Reels</div>
         <div className="grid sm:grid-cols-2 lg:grid-cols-4 gap-4">
           <NumberField label="Мин. просмотров" value={minPlays} onChange={setMinPlays} min={0} step={10000} />
           <NumberField label="Мин. лайков" value={minLikes} onChange={setMinLikes} min={0} />
           <NumberField label="Мин. комментариев" value={minComments} onChange={setMinComments} min={0} step={100} />
           <NumberField label="Мин. репостов" value={minShares} onChange={setMinShares} min={0} step={100} />
         </div>
-        <p className="mono text-[9px] tracking-wider text-text-mute">
+        <p className="text-[12px] leading-relaxed text-text-mute">
           Reels дефолт: 100k просмотров / 1k лайков / 1k комментариев / 1k репостов. Apify не у всех постов отдаёт счётчик репостов — посты без этого поля проходят фильтр.
         </p>
 
-        <div className="mono text-[9px] tracking-widest uppercase text-text-dim mt-2">Carousels</div>
+        <div className="label !text-text-dim mt-2">Carousels</div>
         <div className="grid sm:grid-cols-2 gap-4">
           <NumberField label="Мин. лайков (карусели)" value={minCarouselLikes} onChange={setMinCarouselLikes} min={0} step={100} />
           <NumberField label="Мин. комментариев (карусели)" value={minCarouselComments} onChange={setMinCarouselComments} min={0} step={10} />
         </div>
-        <p className="mono text-[9px] tracking-wider text-text-mute">
+        <p className="text-[12px] leading-relaxed text-text-mute">
           Carousels дефолт: 1k лайков / 1k комментариев — тот же бар что у рилсов. У каруселей нет plays и shares, поэтому фильтр идёт только по этим двум метрикам.
         </p>
       </details>
 
       {error && (
-        <div className="border border-pink/40 bg-pink/5 p-3 mono text-[11px] text-pink">
+        <div className="rounded-2xl border border-pink/40 bg-pink/[0.06] px-4 py-2.5 text-[13px] text-pink">
           {error}
         </div>
       )}
 
-      <div className="flex flex-wrap items-center gap-3 pt-2 border-t border-border">
+      <div className="flex flex-wrap items-center gap-3 pt-4 border-t border-border-soft">
         <button type="submit" className="btn-primary" disabled={saving}>
-          {saving ? 'Сохраняю…' : initial ? 'Сохранить' : 'Сохранить и перейти к запуску →'}
+          {saving ? 'Сохраняю…' : initial ? 'Сохранить' : 'Сохранить и перейти к запуску'}
+          {!saving && !initial && <ArrowRight className="h-4 w-4" />}
         </button>
         {onCancel && (
           <button type="button" className="btn-ghost" onClick={onCancel} disabled={saving}>
@@ -203,7 +206,7 @@ function NumberField({
 }) {
   return (
     <label className="grid gap-2">
-      <span className="mono text-[10px] tracking-widest uppercase text-text-mute">{label}</span>
+      <span className="label">{label}</span>
       <input
         type="number"
         value={value}
@@ -211,7 +214,7 @@ function NumberField({
         min={min}
         max={max}
         step={step}
-        className="bg-bg border border-border px-3 py-2 mono text-[13px] focus:outline-none focus:border-lime/60"
+        className="input tabular-nums"
       />
     </label>
   );

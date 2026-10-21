@@ -3,6 +3,7 @@ import Link from 'next/link';
 import { getCurrentUser } from '@/lib/auth';
 import { prisma } from '@/lib/prisma';
 import { PageHero } from '@/components/shell/page-hero';
+import { Icon3D } from '@/components/ui/icon3d';
 import { NewPostClient } from '@/components/schedule/new-post-client';
 
 export const dynamic = 'force-dynamic';
@@ -57,6 +58,7 @@ export default async function NewSchedulePage({
   return (
     <div className="grid gap-8">
       <PageHero
+        icon="newpost"
         eyebrow="AUTOMATION · SCHEDULE · NEW"
         title={
           <>
@@ -68,8 +70,9 @@ export default async function NewSchedulePage({
       />
 
       {accounts.length === 0 ? (
-        <div className="card p-8 text-center grid gap-3">
-          <p className="font-serif italic text-[15px] text-text-secondary">
+        <div className="rounded-[24px] border border-dashed border-white/15 bg-white/[0.03] p-10 flex flex-col items-center text-center gap-3 fade-in">
+          <Icon3D name="schedule" size={44} tile />
+          <p className="text-[15px] text-text-dim">
             Сначала подключите хотя бы один канал публикации.
           </p>
           <Link href="/schedule" className="btn-primary w-fit mx-auto">
@@ -77,8 +80,9 @@ export default async function NewSchedulePage({
           </Link>
         </div>
       ) : sources.length === 0 ? (
-        <div className="card p-8 text-center grid gap-3">
-          <p className="font-serif italic text-[15px] text-text-secondary">
+        <div className="rounded-[24px] border border-dashed border-white/15 bg-white/[0.03] p-10 flex flex-col items-center text-center gap-3 fade-in">
+          <Icon3D name="video" size={44} tile />
+          <p className="text-[15px] text-text-dim">
             Нет готовых видео для публикации. Сгенерируйте видео или монтаж.
           </p>
           <Link href="/videos/new" className="btn-primary w-fit mx-auto">
