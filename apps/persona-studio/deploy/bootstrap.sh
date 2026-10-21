@@ -117,6 +117,20 @@ cat > s3.json <<EOF
 EOF
 chmod 644 s3.json
 
+# Shared HTTPS edge for every project on this server (see Caddyfile import).
+mkdir -p /opt/edge/sites /opt/backups
+
+# Daily DB backup 03:20, 7 days kept locally. Copy them off the server too.
+cat > /etc/cron.d/persona-studio-backup <<CRON
+20 3 * * * root cd $DEPLOY && docker compose -f docker-compose.prod.yml --env-file .env.prod exec -T postgres pg_dump -U persona -Fc persona_studio > /opt/backups/persona_\$(date +\%F).dump && find /opt/backups -name 'persona_*.dump' -mtime +7 -delete
+CRON
+
+# Firewall: SSH + web only.
+if command -v ufw >/dev/null 2>&1; then
+  ufw allow 22/tcp >/dev/null; ufw allow 80/tcp >/dev/null; ufw allow 443 >/dev/null
+  ufw --force enable >/dev/null || true
+fi
+
 # ── 4. Build + start ────────────────────────────────────────
 log "Building and starting (first build takes ~5–10 min)"
 COMPOSE=(docker compose -f docker-compose.prod.yml --env-file .env.prod)

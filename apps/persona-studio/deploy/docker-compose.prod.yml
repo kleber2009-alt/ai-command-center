@@ -97,9 +97,16 @@ services:
       DOMAIN: ${DOMAIN:?set in .env.prod}
     volumes:
       - ./Caddyfile:/etc/caddy/Caddyfile:ro
+      - /opt/edge/sites:/etc/caddy/sites:ro
       - caddydata:/data
       - caddyconfig:/config
     depends_on: [web]
+    networks: [default, edge]
+
+networks:
+  # Shared with other projects' stacks so this Caddy can proxy to them.
+  edge:
+    name: edge
 
 volumes:
   pgdata:

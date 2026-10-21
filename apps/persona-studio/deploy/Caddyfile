@@ -16,3 +16,7 @@
 		}
 	}
 }
+
+# Other projects on this server drop their site blocks into /opt/edge/sites
+# (e.g. transcribe.caddy) and join the `edge` Docker network.
+import /etc/caddy/sites/*.caddy
