@@ -5,6 +5,8 @@ import { formatDate } from '@/lib/utils';
 import { BillingActions } from '@/components/billing-actions';
 import { EmptyState } from '@/components/empty-state';
 import { COSTS } from '@/lib/tokens';
+import { engineConfig } from '@/lib/video-engines';
+import { defaultEngine } from '@/lib/studio/produce';
 import { PageHero } from '@/components/shell/page-hero';
 import { Icon3D } from '@/components/ui/icon3d';
 
@@ -32,30 +34,31 @@ export default async function BillingPage() {
     <div className="grid gap-8">
       <PageHero
         icon="billing"
-        eyebrow={`SUBSCRIPTION · PLAN ${user.plan?.toUpperCase()}`}
+        eyebrow={`баланс · план ${user.plan ?? "free"}`}
         title={
           <>
-            Tokens fuel <span className="italic text-gold">every generation.</span>
+            Токены — <span className="italic text-gold">топливо каждой генерации.</span>
           </>
         }
         description="Все генерации списываются с единого баланса. Пополнение — через CryptoBot (USDT) или Telegram Stars. Без подписок и автосписаний."
         meta={
           <>
-            <div className="label">Balance</div>
+            <div className="label">Баланс</div>
             <div className="text-[48px] font-extrabold tabular-nums tracking-[-0.03em] text-gold leading-none">{user.tokenBalance}</div>
-            <div className="label">tokens</div>
+            <div className="label">токенов</div>
           </>
         }
       />
 
       <section>
-        <div className="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-6 gap-3 stagger">
-          <CostCard label="AI script" cost={COSTS.studioScript} note="бриф → сценарий" />
-          <CostCard label="Avatar batch" cost={COSTS.avatarGeneration} note="10 portraits" />
-          <CostCard label="Carousel cover" cost={COSTS.coverGeneration} note="single image" />
-          <CostCard label="Talking video" cost={COSTS.heygenVideo} note="up to 60s" />
-          <CostCard label="Submagic edit" cost={COSTS.submagicEdit} note="Reels-ready" />
-          <CostCard label="Voice training" cost={0} note="external · free" />
+        <div className="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-7 gap-3 stagger">
+          <CostCard label="Сценарий" cost={COSTS.studioScript} note="бриф → сценарий" />
+          <CostCard label="Пакет аватаров" cost={COSTS.avatarGeneration} note="10 портретов" />
+          <CostCard label="Обложка" cost={COSTS.coverGeneration} note="одно изображение" />
+          <CostCard label="Говорящее видео" cost={engineConfig(defaultEngine()).cost} note="аватар + голос" />
+          <CostCard label="Монтаж по скиллу" cost={COSTS.skillMontage} note="паузы · титры · панчи" />
+          <CostCard label="AI-картинка слайда" cost={COSTS.slideImage} note="за слайд карусели" />
+          <CostCard label="Клон голоса" cost={0} note="бесплатно" />
         </div>
       </section>
 
@@ -104,13 +107,13 @@ export default async function BillingPage() {
 function CostCard({ label, cost, note }: { label: string; cost: number; note: string }) {
   return (
     <div className="panel p-5">
-      <div className="mb-3 flex items-center justify-between gap-2">
+      <div className="mb-3 flex items-start justify-between gap-2">
         <span className="label">{label}</span>
-        <Icon3D name="coin" size={18} />
+        <Icon3D name="coin" size={18} className="flex-none" />
       </div>
       <div className="text-[28px] font-extrabold leading-none tabular-nums tracking-[-0.02em] text-text">
-        {cost > 0 ? `−${cost}` : 'free'}
-        {cost > 0 && <span className="ml-1 text-[12px] font-medium text-text-mute">t</span>}
+        {cost > 0 ? `−${cost}` : '0'}
+        <span className="ml-1 text-[12px] font-medium text-text-mute">ток.</span>
       </div>
       <div className="mt-2 text-[12px] text-text-mute">{note}</div>
     </div>

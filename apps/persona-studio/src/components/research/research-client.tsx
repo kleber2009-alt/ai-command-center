@@ -99,7 +99,14 @@ const formatCount = (n: number) => {
 
 const DEMO_VISIBLE = 5; // ТЗ §5/§12 — первые N карточек, остальные blur
 
-export function ResearchClient({ isFreePlan = false }: { isFreePlan?: boolean }) {
+export function ResearchClient({
+  isFreePlan = false,
+  initialNiche,
+}: {
+  isFreePlan?: boolean;
+  /** ?niche= from the top search bar / radars «Открыть» — searched on mount. */
+  initialNiche?: string;
+}) {
   const router = useRouter();
   const [niche, setNiche] = useState('');
   const [sortBy, setSortBy] = useState<SortField>(DEFAULT_SORT);
@@ -130,6 +137,21 @@ export function ResearchClient({ isFreePlan = false }: { isFreePlan?: boolean })
   useEffect(() => {
     const entries = loadHistory();
     setHistory(entries);
+    const wanted = initialNiche?.trim();
+    if (wanted) {
+      // Same niche already searched → restore that result instead of a new query.
+      const hit = entries.find((e) => e.niche.trim().toLowerCase() === wanted.toLowerCase());
+      if (hit) {
+        setResult(hit.response);
+        setNiche(hit.niche);
+        setPeriod(hit.period);
+        setSortBy(hit.sortBy);
+      } else {
+        setNiche(wanted);
+        submit(wanted);
+      }
+      return;
+    }
     if (entries.length > 0) {
       const last = entries[0];
       setResult(last.response);
@@ -141,6 +163,7 @@ export function ResearchClient({ isFreePlan = false }: { isFreePlan?: boolean })
       if (last.minComments != null) setMinComments(last.minComments);
       if (last.minShares != null) setMinShares(last.minShares);
     }
+    // eslint-disable-next-line react-hooks/exhaustive-deps -- mount-only restore
   }, []);
 
   const thresholdsDirty =

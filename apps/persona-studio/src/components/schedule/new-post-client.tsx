@@ -3,10 +3,12 @@
 import { useMemo, useState } from 'react';
 import { useRouter } from 'next/navigation';
 import { Send, Instagram, Link2, Loader2, AlertTriangle, Calendar, Check } from 'lucide-react';
+import { errorText } from '@/lib/error-text';
 
 type Source = {
-  sourceType: 'video' | 'edit';
+  sourceType: 'video' | 'edit' | 'montage' | 'carousel';
   id: string;
+  /** mp4 for video sources; the cover PNG for a carousel */
   mediaUrl: string;
   label: string;
   createdAt: string;
@@ -49,11 +51,30 @@ export function NewPostClient({
 
   const [selected, setSelected] = useState<Source>(initial);
   const [caption, setCaption] = useState('');
-  const [accountIds, setAccountIds] = useState<string[]>(accounts.map((a) => a.id));
+  const [accountIds, setAccountIds] = useState<string[]>(
+    accounts.filter((a) => initial.sourceType !== 'carousel' || a.platform === 'telegram').map((a) => a.id),
+  );
   const [when, setWhen] = useState(defaultWhen());
   const [publishNow, setPublishNow] = useState(false);
   const [submitting, setSubmitting] = useState(false);
   const [error, setError] = useState<string | null>(null);
+
+  const SOURCE_LABEL: Record<Source['sourceType'], string> = {
+    video: 'видео',
+    edit: 'монтаж',
+    montage: 'скилл-монтаж',
+    carousel: 'карусель',
+  };
+  // Carousels go out as a Telegram album only (see /api/schedule/posts).
+  const isCarousel = selected.sourceType === 'carousel';
+  const accountAllowed = (a: Account) => !isCarousel || a.platform === 'telegram';
+
+  function selectSource(s: Source) {
+    setSelected(s);
+    if (s.sourceType === 'carousel') {
+      setAccountIds((ids) => ids.filter((id) => accounts.find((a) => a.id === id)?.platform === 'telegram'));
+    }
+  }
 
   function toggleAccount(id: string) {
     setAccountIds((ids) => (ids.includes(id) ? ids.filter((x) => x !== id) : [...ids, id]));
@@ -81,7 +102,7 @@ export function NewPostClient({
     const json = await res.json().catch(() => ({}));
     setSubmitting(false);
     if (!res.ok) {
-      setError(json.error || `HTTP ${res.status}`);
+      setError(errorText(json, res.status));
       return;
     }
     router.push('/schedule');
@@ -93,7 +114,7 @@ export function NewPostClient({
       {/* ── Compose ──────────────────────── */}
       <div className="grid gap-6 content-start">
         <section className="panel p-5 sm:p-6 grid gap-4 reveal">
-          <h2 className="flex items-center gap-3"><span className="sec-num">/01</span><span className="sec-title">Видео</span></h2>
+          <h2 className="flex items-center gap-3"><span className="sec-num">/01</span><span className="sec-title">Что публикуем</span></h2>
           <div className="grid grid-cols-[repeat(auto-fill,minmax(120px,1fr))] gap-3 max-h-[420px] overflow-y-auto p-1">
             {sources.map((s) => {
               const active = s.sourceType === selected.sourceType && s.id === selected.id;
@@ -101,7 +122,7 @@ export function NewPostClient({
                 <button
                   key={`${s.sourceType}:${s.id}`}
                   type="button"
-                  onClick={() => setSelected(s)}
+                  onClick={() => selectSource(s)}
                   className={`group relative aspect-square overflow-hidden rounded-2xl border bg-black/40 transition-all duration-300 ease-settle ${
                     active ? 'border-gold ring-2 ring-gold/70 scale-[0.98]' : 'border-border-soft hover:border-border-2'
                   }`}
@@ -111,15 +132,20 @@ export function NewPostClient({
                       object-cover crops to a uniform thumbnail (no letterbox).
                       #t=0.1 forces the browser to paint the first frame;
                       preload=metadata alone leaves the tile black. */}
-                  <video
-                    src={`${s.mediaUrl}#t=0.1`}
-                    className="absolute inset-0 h-full w-full object-cover object-center"
-                    muted
-                    playsInline
-                    preload="metadata"
-                  />
+                  {s.sourceType === 'carousel' ? (
+                    // eslint-disable-next-line @next/next/no-img-element
+                    <img src={s.mediaUrl} alt="" className="absolute inset-0 h-full w-full object-cover object-center" loading="lazy" />
+                  ) : (
+                    <video
+                      src={`${s.mediaUrl}#t=0.1`}
+                      className="absolute inset-0 h-full w-full object-cover object-center"
+                      muted
+                      playsInline
+                      preload="metadata"
+                    />
+                  )}
                   <span className="absolute bottom-1.5 left-1.5 rounded-full bg-black/60 px-2 py-0.5 text-[10.5px] font-medium text-text backdrop-blur-md truncate">
-                    {s.sourceType === 'edit' ? 'монтаж' : 'видео'}
+                    {SOURCE_LABEL[s.sourceType]}
                   </span>
                   {active && (
                     <span className="absolute top-1.5 right-1.5 inline-flex h-6 w-6 items-center justify-center rounded-full bg-blue text-white pop-in">
@@ -150,8 +176,16 @@ export function NewPostClient({
         <section className="grid gap-3">
           <h2 className="flex items-center gap-3"><span className="sec-num">/03</span><span className="sec-title">Каналы</span></h2>
           <div className="grid gap-2">
+            {isCarousel && (
+              <p className="text-[12px] text-text-mute">Карусель уходит альбомом — только в Telegram-каналы.</p>
+            )}
             {accounts.map((a) => (
-              <label key={a.id} className="flex items-center gap-3 rounded-2xl border border-border-soft bg-white/[0.04] px-3.5 py-3 cursor-pointer transition-colors hover:bg-white/[0.07]">
+              <label
+                key={a.id}
+                className={`flex items-center gap-3 rounded-2xl border border-border-soft bg-white/[0.04] px-3.5 py-3 transition-colors ${
+                  accountAllowed(a) ? 'cursor-pointer hover:bg-white/[0.07]' : 'cursor-not-allowed opacity-45'
+                }`}
+              >
                 <span className="inline-flex h-8 w-8 flex-none items-center justify-center rounded-full bg-white/[0.06] text-text-dim">
                   <PlatformIcon platform={a.platform} />
                 </span>
@@ -160,6 +194,7 @@ export function NewPostClient({
                   type="checkbox"
                   className="toggle"
                   checked={accountIds.includes(a.id)}
+                  disabled={!accountAllowed(a)}
                   onChange={() => toggleAccount(a.id)}
                 />
               </label>

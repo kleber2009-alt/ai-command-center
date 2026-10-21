@@ -25,7 +25,7 @@ export function PageHero({ eyebrow, title, description, meta, actions, extra, ic
     <section className="panel relative mb-8 overflow-hidden !rounded-[28px]">
       <div className="hero-gradient pointer-events-none absolute inset-0" />
       {icon && (
-        <div className="pointer-events-none absolute -right-2 -top-2 hidden md:block opacity-95 pop-in">
+        <div className="pointer-events-none absolute right-5 top-5 hidden md:block opacity-95 pop-in">
           <Icon3D name={icon} size={132} sway />
         </div>
       )}

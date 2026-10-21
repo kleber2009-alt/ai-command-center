@@ -5,7 +5,7 @@
 
 import { useEffect, useRef, useState } from 'react';
 import { useRouter } from 'next/navigation';
-import { Download, Film, Loader2, Scissors, Upload } from 'lucide-react';
+import { CalendarPlus, Download, Film, Loader2, Scissors, Upload } from 'lucide-react';
 import { Icon3D } from '@/components/ui/icon3d';
 import { MONTAGE_PRESETS, findMontagePreset } from '@/lib/montage/presets';
 import { EditsStepper } from '@/components/edits-stepper';
@@ -301,9 +301,14 @@ export function MontageStudio({ videos, initial, cost }: { videos: Video[]; init
                       {r.durationSec ? ` · ${r.durationSec.toFixed(1)} c` : ''}
                     </span>
                     {r.status === 'completed' && (
-                      <a href={`/api/montages/${r.id}/download`} className="btn-ghost !px-3.5 !py-1.5 text-[12px]">
-                        <Download size={13} /> скачать
-                      </a>
+                      <span className="flex items-center gap-1.5">
+                        <a href={`/schedule/new?source=montage&id=${r.id}`} className="btn-ghost !px-3.5 !py-1.5 text-[12px]">
+                          <CalendarPlus size={13} /> в план
+                        </a>
+                        <a href={`/api/montages/${r.id}/download`} className="btn-ghost !px-3.5 !py-1.5 text-[12px]">
+                          <Download size={13} /> скачать
+                        </a>
+                      </span>
                     )}
                   </div>
                 </article>

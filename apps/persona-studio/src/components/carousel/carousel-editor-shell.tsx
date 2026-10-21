@@ -1,7 +1,7 @@
 'use client';
 
 import { useCallback, useEffect, useRef, useState } from 'react';
-import { ArrowRight, Check, Download, Loader2, Palette, RefreshCw } from 'lucide-react';
+import { ArrowRight, CalendarPlus, Check, Download, Loader2, Palette, RefreshCw } from 'lucide-react';
 import { GlobalStepper } from './global-stepper';
 import { SlidesRail } from './slides-rail';
 import { SlideEditorPane } from './slide-editor-pane';
@@ -603,7 +603,14 @@ export function CarouselEditorShell({ initial, avatars }: Props) {
                 <span className="text-lime">· рендерю PNG, 3–8 сек</span>
               )}
               {renderStatus === 'done' && imageUrls.length > 0 && (
-                <span className="text-text-dim">· готово {imageUrls.length} PNG</span>
+                <span className="flex items-center gap-2 text-text-dim">
+                  · готово {imageUrls.length} PNG
+                  {imageUrls.filter(Boolean).length === slides.length && (
+                    <a href={`/schedule/new?source=carousel&id=${initial.id}`} className="inline-flex items-center gap-1 font-medium text-gold hover:underline">
+                      <CalendarPlus size={13} /> в план публикаций
+                    </a>
+                  )}
+                </span>
               )}
               {renderStatus === 'error' && (
                 <span className="text-danger">· ошибка рендера · {renderError}</span>

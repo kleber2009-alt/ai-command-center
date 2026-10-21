@@ -1,6 +1,7 @@
 'use client';
 
 import { useState, useTransition } from 'react';
+import { errorText } from '@/lib/error-text';
 import Link from 'next/link';
 import {
   Send,
@@ -184,11 +185,14 @@ export function ScheduleClient({
   }
 
   function disconnect(id: string) {
+    if (!window.confirm('Отключить канал? Запланированные публикации в него не уйдут.')) return;
     setBusy(id);
+    setError(null);
     startTransition(async () => {
       const res = await fetch(`/api/schedule/accounts/${id}`, { method: 'DELETE' });
       setBusy(null);
       if (res.ok) setAccounts((a) => a.filter((x) => x.id !== id));
+      else setError(errorText(await res.json().catch(() => null), res.status));
     });
   }
 
@@ -199,17 +203,23 @@ export function ScheduleClient({
       setBusy(null);
       if (res.ok) {
         setPosts((ps) => ps.map((p) => (p.id === id ? { ...p, status: 'publishing' } : p)));
+      } else {
+        setError(errorText(await res.json().catch(() => null), res.status));
       }
     });
   }
 
   function cancel(id: string) {
+    if (!window.confirm('Отменить публикацию?')) return;
     setBusy(id);
+    setError(null);
     startTransition(async () => {
       const res = await fetch(`/api/schedule/posts/${id}`, { method: 'DELETE' });
       setBusy(null);
       if (res.ok) {
         setPosts((ps) => ps.map((p) => (p.id === id ? { ...p, status: 'canceled' } : p)));
+      } else {
+        setError(errorText(await res.json().catch(() => null), res.status));
       }
     });
   }
@@ -322,7 +332,7 @@ export function ScheduleClient({
           {/* Instagram connect — via PostMyPost */}
           <div className="panel p-5 grid gap-3 content-start">
             <div className="flex items-center gap-2.5 text-[15px] font-semibold tracking-[-0.01em] text-text">
-              <Instagram size={15} /> Instagram
+              <span className="inline-flex h-8 w-8 items-center justify-center rounded-full bg-pink/15 text-pink"><Instagram size={15} /></span> Instagram
             </div>
             {igReady ? (
               <>
