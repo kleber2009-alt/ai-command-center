@@ -7,7 +7,7 @@
 import { prisma } from '@/lib/prisma';
 import { publishQueue } from '@/lib/queue';
 import { uploadVideoByUrl, createReelPublication, PostMyPostError } from './postmypost';
-import { sendChannelVideo } from './telegram-channel';
+import { sendChannelAlbum, sendChannelVideo } from './telegram-channel';
 
 export class PublishError extends Error {
   constructor(
@@ -73,7 +73,19 @@ export async function publishTarget(targetId: string): Promise<'published' | 'fa
     let remoteId: string;
     let permalink: string | null = null;
 
-    if (target.platform === 'instagram') {
+    if (post.sourceType === 'carousel') {
+      // mediaUrl holds the slide PNG URLs, newline-separated.
+      if (target.platform !== 'telegram') {
+        throw new PublishError('CAROUSEL_UNSUPPORTED', 'Карусели публикуются только в Telegram-каналы');
+      }
+      const res = await sendChannelAlbum({
+        chatId: account.externalId,
+        photoUrls: post.mediaUrl.split('\n').filter(Boolean),
+        caption: post.caption ?? undefined,
+      });
+      remoteId = String(res.messageId);
+      permalink = res.permalink;
+    } else if (target.platform === 'instagram') {
       // Instagram via PostMyPost: account.externalId = PostMyPost account_id,
       // meta.projectId = PostMyPost project. Upload our public mp4 by URL, then
       // create a Reel publication scheduled ~now (the sweep already waited for

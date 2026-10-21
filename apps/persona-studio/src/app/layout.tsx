@@ -42,12 +42,12 @@ export const viewport: Viewport = {
 export default async function RootLayout({ children }: { children: React.ReactNode }) {
   const locale = await getLocale();
   return (
-    <html lang={locale} className={`${ui.variable} ${code.variable}`}>
+    <html lang={locale} className={`${ui.variable} ${code.variable}`} suppressHydrationWarning>
       <head>
         {/* Telegram WebApp SDK — loaded everywhere so Stars-pay & viewport helpers work after redirect from /tma */}
         <Script src="https://telegram.org/js/telegram-web-app.js?57" strategy="beforeInteractive" />
       </head>
-      <body>{children}</body>
+      <body suppressHydrationWarning>{children}</body>
     </html>
   );
 }

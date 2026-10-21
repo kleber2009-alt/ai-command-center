@@ -814,7 +814,7 @@ model ScheduledPost {
   id                String           @id @default(cuid())
   userId            String
   user              User             @relation(fields: [userId], references: [id], onDelete: Cascade)
-  sourceType        String // video | edit
+  sourceType        String // video | edit | montage | carousel (mediaUrl = newline-separated PNGs)
   videoGenerationId String?
   videoGeneration   VideoGeneration? @relation(fields: [videoGenerationId], references: [id], onDelete: SetNull)
   videoEditId       String?

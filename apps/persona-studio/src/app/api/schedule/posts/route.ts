@@ -1,7 +1,9 @@
 // GET  /api/schedule/posts  — list the user's scheduled posts (+ targets)
-// POST /api/schedule/posts  — create a scheduled post from a ready video/edit
+// POST /api/schedule/posts  — create a scheduled post from a ready video, edit,
+//                             skill montage or rendered carousel
 //
-// On create we snapshot the source's final mp4 into mediaUrl, fan it out into
+// On create we snapshot the source's final media into mediaUrl (a carousel
+// stores its slide PNG URLs newline-separated, in order), fan it out into
 // one PostTarget per chosen SocialAccount, and — if scheduledAt is already due
 // — enqueue it immediately (otherwise the schedule-cron sweep picks it up).
 
@@ -14,7 +16,7 @@ import { enqueuePostNow } from '@/lib/publish';
 export const runtime = 'nodejs';
 
 const Body = z.object({
-  sourceType: z.enum(['video', 'edit']),
+  sourceType: z.enum(['video', 'edit', 'montage', 'carousel']),
   sourceId: z.string().min(1),
   caption: z.string().max(2200).optional(),
   scheduledAt: z.string().datetime(),
@@ -58,13 +60,28 @@ export async function POST(req: NextRequest) {
       return NextResponse.json({ error: 'source_not_ready', status: v.status }, { status: 409 });
     }
     mediaUrl = v.videoUrl;
-  } else {
+  } else if (sourceType === 'edit') {
     const e = await prisma.videoEdit.findFirst({ where: { id: sourceId, userId } });
     if (!e) return NextResponse.json({ error: 'source_not_found' }, { status: 404 });
     if (e.status !== 'completed' || !e.resultUrl) {
       return NextResponse.json({ error: 'source_not_ready', status: e.status }, { status: 409 });
     }
     mediaUrl = e.resultUrl;
+  } else if (sourceType === 'montage') {
+    const m = await prisma.montage.findFirst({ where: { id: sourceId, userId } });
+    if (!m) return NextResponse.json({ error: 'source_not_found' }, { status: 404 });
+    if (m.status !== 'completed' || !m.resultUrl) {
+      return NextResponse.json({ error: 'source_not_ready', status: m.status }, { status: 409 });
+    }
+    mediaUrl = m.resultUrl;
+  } else {
+    const c = await prisma.carouselDraft.findFirst({ where: { id: sourceId, userId } });
+    if (!c) return NextResponse.json({ error: 'source_not_found' }, { status: 404 });
+    const urls = c.imageUrls.filter(Boolean);
+    if (urls.length < 2 || urls.length !== c.slidesCount) {
+      return NextResponse.json({ error: 'source_not_ready', status: c.status }, { status: 409 });
+    }
+    mediaUrl = urls.join('\n');
   }
 
   // Verify all targets belong to the user and are active.
@@ -80,6 +97,12 @@ export async function POST(req: NextRequest) {
       { error: 'account_inactive', accountId: inactive.id, status: inactive.status },
       { status: 409 },
     );
+  }
+
+  // Carousels go out as a Telegram album; the Instagram path (PostMyPost)
+  // only publishes Reels today.
+  if (sourceType === 'carousel' && accounts.some((a) => a.platform !== 'telegram')) {
+    return NextResponse.json({ error: 'carousel_telegram_only' }, { status: 409 });
   }
 
   const when = new Date(scheduledAt);
