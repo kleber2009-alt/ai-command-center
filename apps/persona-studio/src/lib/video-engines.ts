@@ -86,9 +86,9 @@ export const VIDEO_ENGINES: Record<VideoEngine, EngineConfig> = {
     inputMode: 'script',
     voiceProvider: 'elevenlabs',
     supportedAspects: ['9:16', '1:1', '16:9'],
-    // Selectable engine only: a HeyGen job that hits a plan limit fails with a
-    // clear reason instead of silently switching here (see heygen-video.worker).
-    enabled: true,
+    // Off: video goes through HeyGen only. Kept in the registry so old rows and
+    // the worker still resolve; retry of such a row moves it to HeyGen.
+    enabled: false,
   },
 };
 

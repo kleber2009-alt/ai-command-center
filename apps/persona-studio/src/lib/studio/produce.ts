@@ -9,6 +9,7 @@ import { engineConfig, VIDEO_ENGINES, VIDEO_ENGINE_LIST, type VideoEngine } from
 import { STYLE_TEMPLATE_NAMES } from '@/lib/edit-templates';
 import { chargeTokens, refundTokens, InsufficientTokensError, COSTS } from '@/lib/tokens';
 import { queueForName, editQueue } from '@/lib/queue';
+import { heygenVoiceFor } from '@/lib/heygen-voices';
 
 // Движок воркспейса по умолчанию — OmniHuman 1.5 (Мастер-ТЗ §0.2: аватар +
 // липсинк к озвучке ElevenLabs). Если он почему-то выключен — откатываемся на
@@ -100,7 +101,8 @@ export async function startVideoStage(opts: {
       avatarId: persona.avatarId,
       engine,
       script: gen.script,
-      voiceId: persona.voiceId,
+      // Persona voices are ElevenLabs; HeyGen needs one of its own.
+      voiceId: cfg.voiceProvider === 'heygen' ? heygenVoiceFor(persona.voiceId, gen.brief.lang) : persona.voiceId,
       language: gen.brief.lang,
       aspect: '9:16',
       quality: '2k',
