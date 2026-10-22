@@ -133,6 +133,22 @@ def main():
             return f"{len(rows)} оплат" + (f"; нет колонок: {', '.join(missing)}" if missing else "")
         run("payments", ps)
 
+    for e in cfg.get("embeds", []):
+        if not e.get("url"):
+            continue
+        def emb(e=e):
+            import build
+            req = urllib.request.Request(e["url"], headers={"User-Agent": "Mozilla/5.0 funnel-analytics"})
+            with urllib.request.urlopen(req, timeout=60) as r:
+                html = r.read().decode("utf-8", errors="replace")
+            if "<" not in html[:2000]:
+                raise RuntimeError("ответ не похож на HTML")
+            p = build.embed_path(data, e)
+            p.parent.mkdir(parents=True, exist_ok=True)
+            p.write_text(html, encoding="utf-8")
+            return f"{len(html) // 1024} КБ"
+        run("embed:" + e["title"], emb)
+
     if os.environ.get("META_TOKEN") and cfg.get("ad_account_id"):
         def meta():
             import meta_api
