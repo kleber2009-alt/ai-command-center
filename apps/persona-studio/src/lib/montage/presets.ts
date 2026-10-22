@@ -1,6 +1,6 @@
 // Пресеты монтажа из скиллов montazh-rils (палий, стикер, журнал, неон, крем,
 // apple, тех-обзор, арена, кобальт), reels-ui-motion, reels-neon-schema,
-// reels-promo-face и montazh-dlinnogo-video-youtube. Параметры субтитров, хука и
+// reels-promo-face, reels-promo-story и montazh-dlinnogo-video-youtube. Параметры субтитров, хука и
 // призыва взяты из SKILL.md каждого скилла (кегли — в пикселях кадра 1080×1920
 // / 1920×1080, как в Remotion-проектах скиллов).
 //
@@ -39,9 +39,10 @@ export type MontagePreset = {
    * pop        — масштаб 1.25 → 1 за 120 мс (montazh-rils);
    * blur-slide — сдвиг 18 px + размытие 6 → 0 за 4 кадра (neon-schema Word.tsx);
    * rise       — проявление с размытием и подъёмом (ui-motion / promo-face);
-   * scale-blur — масштаб 1.35 → 1 и размытие 12 → 0 за 5 кадров (YouTube Captions.tsx).
+   * scale-blur — масштаб 1.35 → 1 и размытие 12 → 0 за 5 кадров (YouTube Captions.tsx);
+   * fly        — слово «влетает» со смазом и защёлкивается в строку (promo-story Kinetic).
    */
-  entry?: 'pop' | 'blur-slide' | 'rise' | 'scale-blur';
+  entry?: 'pop' | 'blur-slide' | 'rise' | 'scale-blur' | 'fly';
   /** reveal: слово появляется раньше, чем произнесено (сек) — promo-face: 3 кадра */
   lead?: number;
   /** цвет только что произнесённого слова, затем перетекает в capColor (promo-face) */
@@ -157,6 +158,19 @@ export const MONTAGE_PRESETS: MontagePreset[] = [
     // в скилле — наезд камеры 1 → 1.08 за ~4 c; резкие панчи «превращают морф в кашу»
     punchZoom: 1.04, punchMinGap: 4,
     capColor: '#FFFFFF', accent: 'color', ...REELS, ctaVerb: 'пиши в комментариях',
+  },
+  {
+    // reels-promo-story, кинетический локап (приёмы A/B/Q): бит 1–3 слова, Inter
+    // Tight 700 116 px чуть ниже центра (над ним — плашка призыва); слово влетает со смазом и защёлкивается
+    // в плотную строку, летит синим #0D83FF и белеет, когда село; камера медленно
+    // наезжает 1 → 1.1. В скилле ролик без лица на музыке — здесь та же подача
+    // слов поверх записи с речью (iOS-сцены и 3D-эмодзи движок не рисует).
+    id: 'promostory', label: 'Промо-история · без лица', skill: 'reels-promo-story', styleId: 'promo',
+    description: 'Кинетический локап: короткие биты Inter Tight крупно, слова влетают со смазом синими и белеют, синий акцент.',
+    format: '9:16', capFont: 'InterTight 700', capSize: 116, capY: 1150, capCase: 'none',
+    words: [1, 3], mode: 'reveal', entry: 'fly', activeColor: '#0D83FF', shadowOnly: true,
+    punchZoom: 1.06, punchMinGap: 3,
+    capColor: '#FFFFFF', accent: 'color', ...REELS, ctaVerb: 'пиши',
   },
   {
     // montazh-dlinnogo-video-youtube (Captions.tsx): Montserrat 800 84 px,

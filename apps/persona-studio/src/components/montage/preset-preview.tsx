@@ -34,8 +34,20 @@ function applyCase(w: string, c: MontagePreset['capCase']): string {
 }
 
 /** transform/opacity/filter слова через `since` секунд после входа */
-function entryStyle(entry: NonNullable<MontagePreset['entry']>, since: number, k: number): CSSProperties {
+/** promo-story: каждое слово влетает со своей стороны [dx, dy, rot] */
+const FLY_FROM: [number, number, number][] = [[-120, 30, -8], [110, -40, 6], [0, 90, -4], [-90, -70, 5], [130, 50, -6]];
+
+function entryStyle(entry: NonNullable<MontagePreset['entry']>, since: number, k: number, i = 0): CSSProperties {
   switch (entry) {
+    case 'fly': {
+      const p = easeOut(since / 0.23);
+      const [dx, dy, rot] = FLY_FROM[i % FLY_FROM.length];
+      return {
+        opacity: clamp(since / 0.08),
+        transform: `translate(${(1 - p) * dx * k}px, ${(1 - p) * dy * k}px) rotate(${(1 - p) * rot}deg)`,
+        filter: `blur(${(1 - p) * 16 * k}px)`,
+      };
+    }
     case 'blur-slide': {
       const p = easeOut(since / 0.133);
       return { opacity: p, transform: `translateX(${(1 - p) * 18 * k}px)`, filter: `blur(${(1 - p) * 6 * k}px)` };
@@ -121,7 +133,7 @@ export function PresetPreview({ preset, playing }: { preset: MontagePreset; play
     } else {
       const appear = spokenAt - (preset.lead ?? 0);
       if (t < appear) return <span key={i} style={{ ...style, opacity: 0 }}>{text}</span>;
-      style = { ...style, ...entryStyle(entry, t - appear, k) };
+      style = { ...style, ...entryStyle(entry, t - appear, k, i) };
       if (preset.activeColor && !accent) style.color = mixHex(preset.activeColor, preset.capColor, clamp((t - spokenAt) / 0.47));
     }
 

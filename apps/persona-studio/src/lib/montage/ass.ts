@@ -85,6 +85,8 @@ function inlineEntry(entry: Entry): { from: string; to: string; ms: number } {
       return { from: '\\alpha&HFF&\\blur12\\fscy135', to: '\\alpha&H00&\\blur0\\fscy100', ms: 167 };
     case 'blur-slide':
       return { from: '\\alpha&HFF&\\blur6', to: '\\alpha&H00&\\blur0', ms: 133 };
+    case 'fly': // promo-story Kinetic: смаз и «защёлкивание» (spring ≈ 14 кадров)
+      return { from: '\\alpha&HFF&\\blur16\\fscy60', to: '\\alpha&H00&\\blur0\\fscy100', ms: 230 };
     default:
       return { from: '\\fscy125', to: '\\fscy100', ms: 120 };
   }
@@ -97,7 +99,9 @@ function blockEntry(entry: Entry, x: number, y: number): string {
       return `\\an5\\move(${x + 18},${y},${x},${y},0,133)\\fad(133,0)\\blur6\\t(0,133,\\blur0)`;
     case 'rise': // ui-motion Headline: размытие 14 → 0, подъём 28 px
       return `\\an5\\move(${x},${y + 28},${x},${y},0,300)\\fad(200,0)\\blur14\\t(0,300,\\blur0)`;
-    case 'scale-blur': // YouTube Captions.tsx: масштаб 1.35 → 1, размытие 12 → 0, 5 кадров
+    case 'fly': // promo-story Kinetic: влёт сбоку со смазом, 14 кадров
+      return `\\an5\\move(${x - 90},${y + 40},${x},${y},0,230)\\fad(120,0)\\blur16\\t(0,230,\\blur0)`;
+        case 'scale-blur': // YouTube Captions.tsx: масштаб 1.35 → 1, размытие 12 → 0, 5 кадров
       return `\\an5\\pos(${x},${y})\\fad(100,0)\\fscx135\\fscy135\\blur12\\t(0,167,\\fscx100\\fscy100\\blur0)`;
     default: // montazh-rils: масштаб 1.25 → 1 за 120 мс
       return `\\an5\\pos(${x},${y})\\fscx125\\fscy125\\t(0,120,\\fscx100\\fscy100)`;

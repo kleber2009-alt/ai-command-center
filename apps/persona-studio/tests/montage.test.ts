@@ -109,3 +109,20 @@ test('assFontSize: CSS-пиксели скилла → кегль libass по Wi
   assert.equal(assFontSize('JetBrains Mono', 100), 157);
   assert.equal(assFontSize('Неизвестный 400', 100), 145); // запасной коэффициент
 });
+
+test('promo-story: слово влетает со смазом, синим, и белеет; призыв не перекрывает строку', () => {
+  const phrase = [
+    { w: 'хватит', s: 1.0, e: 1.3 },
+    { w: 'выгорать', s: 1.4, e: 1.9 },
+  ];
+  const caps = buildCaptions(phrase, { min: 1, max: 3, maxChars: 30 });
+  const p = montagePreset('promostory');
+  const ass = buildAss({ preset: p, captions: caps, duration: 12 });
+  const capEvents = ass.split('\n').filter((l) => l.includes(',Cap,'));
+  assert.equal(capEvents.length, phrase.length);
+  // fly: смаз 16 → 0 и сжатие по вертикали 60 → 100 % за 230 мс
+  assert.match(capEvents[0], /\\alpha&HFF&\\blur16\\fscy60\\1c&HFF830D&/);
+  assert.match(capEvents[0], /\\t\(0,230,\\alpha&H00&\\blur0\\fscy100\)/);
+  // строка ниже плашки призыва (слово призыва — верхом на y 800, ~170 px высотой)
+  assert.ok(p.capY - p.capSize / 2 > 800 + 170);
+});

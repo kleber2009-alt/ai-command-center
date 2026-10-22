@@ -156,7 +156,7 @@ uimotion) и `montazh-dlinnogo-video-youtube` в продукт.
   `edl.ts` (паузы > gapMax вырезаются, субтитры 1–3 слова, акцент) → `ass.ts`
   (libass: Cap/CapBox/Hook/CtaVerb/CtaWord) → `render.ts` (один проход ffmpeg:
   select/aselect, crop или размытая подложка, zoompan-панчи, `ass`, loudnorm
-  −14 LUFS). Пресеты — `presets.ts` (12 шт., youtube = 16:9). Нужен
+  −14 LUFS). Пресеты — `presets.ts` (14 шт., youtube = 16:9). Нужен
   `OPENAI_API_KEY` или `WHISPER_SERVICE_URL`; без них POST `/api/montages` → 503.
   Своя запись: POST `/api/montages/upload` (сырой body, ≤ 500 МБ, стрим в S3).
   Env: `COST_SKILL_MONTAGE` (20), `MONTAGE_MAX_SOURCE_SEC` (900), `FFPROBE_PATH`.
