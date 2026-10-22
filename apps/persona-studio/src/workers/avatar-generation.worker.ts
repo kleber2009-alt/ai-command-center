@@ -7,6 +7,7 @@ import { maybeWatermark } from '@/lib/watermark';
 import { refundTokens } from '@/lib/tokens';
 import { styleBySlug } from '@/lib/styles';
 import { buildAvatarPrompt } from '@/lib/prompts';
+import { refreshAppSettings } from '@/lib/app-settings';
 
 const CONCURRENCY = Number(process.env.WORKER_AVATAR_CONCURRENCY ?? 2);
 const PER_STYLE_PARALLEL = Number(process.env.WORKER_PER_STYLE_PARALLEL ?? 3);
@@ -16,6 +17,7 @@ export function startAvatarWorker() {
   const worker = new Worker<AvatarGenerationJob>(
     QUEUE_NAMES.avatarGeneration,
     async (job) => {
+      await refreshAppSettings(); // admin-set provider keys (see lib/app-settings.ts)
       const { generationId, userId } = job.data;
 
       const generation = await prisma.avatarGeneration.findUnique({

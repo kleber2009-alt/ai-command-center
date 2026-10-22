@@ -76,6 +76,18 @@ export async function loadAppSettings(): Promise<void> {
   }
 }
 
+let lastLoadAt = 0;
+/**
+ * Re-read AppSetting at most once per `maxAgeMs`. Workers call it at the start
+ * of every job: the web process applies a key the moment the admin saves it and
+ * accepts work right away, so the worker must not wait for the 30 s sync tick.
+ */
+export async function refreshAppSettings(maxAgeMs = 2_000): Promise<void> {
+  if (Date.now() - lastLoadAt < maxAgeMs) return;
+  lastLoadAt = Date.now();
+  await loadAppSettings();
+}
+
 let timer: ReturnType<typeof setInterval> | null = null;
 /** Keep this process in sync with keys changed from another process. */
 export function startAppSettingsSync(intervalMs = 30_000): void {

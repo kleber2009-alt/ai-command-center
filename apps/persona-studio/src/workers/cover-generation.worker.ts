@@ -8,6 +8,7 @@ import { refundTokens } from '@/lib/tokens';
 import { styleBySlug } from '@/lib/styles';
 import { buildCoverPrompt } from '@/lib/prompts';
 import type { FluxAspect } from '@/lib/kie';
+import { refreshAppSettings } from '@/lib/app-settings';
 
 function aspectToFlux(aspect: string): FluxAspect {
   switch (aspect) {
@@ -35,6 +36,7 @@ export function startCoverWorker() {
   const worker = new Worker<CoverGenerationJob>(
     QUEUE_NAMES.coverGeneration,
     async (job) => {
+      await refreshAppSettings(); // admin-set provider keys (see lib/app-settings.ts)
       const { coverId, userId } = job.data;
 
       const cover = await prisma.cover.findUnique({

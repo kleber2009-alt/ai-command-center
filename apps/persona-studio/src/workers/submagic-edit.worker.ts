@@ -10,11 +10,13 @@ import {
 } from '@/lib/submagic';
 import { keyFor, uploadBuffer } from '@/lib/storage';
 import { getTemplate } from '@/lib/edit-templates';
+import { refreshAppSettings } from '@/lib/app-settings';
 
 export function startSubmagicEditWorker() {
   const worker = new Worker<EditJob>(
     QUEUE_NAMES.submagicEdit,
     async (job) => {
+      await refreshAppSettings(); // admin-set provider keys (see lib/app-settings.ts)
       const { editId, userId } = job.data;
 
       const row = await prisma.videoEdit.findUnique({

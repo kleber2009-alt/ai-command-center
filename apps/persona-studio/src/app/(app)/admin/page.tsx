@@ -56,7 +56,9 @@ export default async function AdminPage() {
   ]);
 
   return (
-    <div className="grid gap-8">
+    // minmax(0,1fr): the wide user/transaction tables scroll inside their own
+    // containers instead of stretching the page past a phone screen.
+    <div className="grid grid-cols-[minmax(0,1fr)] gap-8">
       <header>
         <PageHero
           eyebrow="/00 · ADMIN"

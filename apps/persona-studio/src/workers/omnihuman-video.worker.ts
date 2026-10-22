@@ -14,6 +14,7 @@ import { refundTokens } from '@/lib/tokens';
 import { concatVideos, FfmpegError } from '@/lib/ffmpeg';
 import { segmentScript } from '@/lib/segment';
 import { env } from '@/lib/env';
+import { refreshAppSettings } from '@/lib/app-settings';
 
 function logEvent(event: string, data: Record<string, unknown> = {}) {
   console.log(JSON.stringify({ event, ts: new Date().toISOString(), ...data }));
@@ -63,6 +64,7 @@ export function startOmnihumanWorker() {
   const worker = new Worker<VideoJob>(
     QUEUE_NAMES.omnihumanVideo,
     async (job) => {
+      await refreshAppSettings(); // admin-set provider keys (see lib/app-settings.ts)
       const { videoId, userId } = job.data;
       const startMs = Date.now();
 

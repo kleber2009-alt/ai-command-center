@@ -18,6 +18,7 @@ import {
 } from '@/lib/heygen';
 import { fetchMedia, keyFor, uploadBuffer } from '@/lib/storage';
 import { refundTokens } from '@/lib/tokens';
+import { refreshAppSettings } from '@/lib/app-settings';
 
 async function fetchBytes(url: string): Promise<{ bytes: Buffer; mime: string }> {
   const res = await fetchMedia(url);
@@ -31,6 +32,7 @@ export function startHeygenWorker() {
   const worker = new Worker<HeygenVideoJob>(
     QUEUE_NAMES.heygenVideo,
     async (job) => {
+      await refreshAppSettings(); // admin-set provider keys (see lib/app-settings.ts)
       const { videoId, userId } = job.data;
 
       const row = await prisma.videoGeneration.findUnique({

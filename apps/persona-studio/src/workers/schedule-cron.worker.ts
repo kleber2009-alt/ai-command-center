@@ -15,6 +15,7 @@ import { prisma } from '@/lib/prisma';
 import { publishQueue } from '@/lib/queue';
 import { env } from '@/lib/env';
 import { collectDue } from '@/lib/measure/collect';
+import { refreshAppSettings } from '@/lib/app-settings';
 
 const QUEUE_NAME = 'schedule-cron';
 const TICK_MS = env.PUBLISH_CRON_TICK_MS || 60_000;
@@ -103,6 +104,7 @@ export function startScheduleCronWorker() {
   const worker = new Worker<CronJob>(
     QUEUE_NAME,
     async (job) => {
+      await refreshAppSettings(); // admin-set provider keys (see lib/app-settings.ts)
       if (job.data.kind === 'publish-sweep') {
         const r = await handlePublishSweep();
         if (r.targets > 0) {

@@ -6,11 +6,13 @@
 import { Worker } from 'bullmq';
 import { connection, QUEUE_NAMES, type PublishJob } from '@/lib/queue';
 import { publishTarget } from '@/lib/publish';
+import { refreshAppSettings } from '@/lib/app-settings';
 
 export function startPostPublishWorker() {
   const worker = new Worker<PublishJob>(
     QUEUE_NAMES.postPublish,
     async (job) => {
+      await refreshAppSettings(); // admin-set provider keys (see lib/app-settings.ts)
       const { targetId } = job.data;
       const result = await publishTarget(targetId);
       return { ok: result === 'published', targetId };
