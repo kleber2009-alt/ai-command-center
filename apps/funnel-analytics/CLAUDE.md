@@ -13,4 +13,4 @@ one self-contained HTML dashboard. Not deployed; not in Command Center. See `REA
 - `dist/` is gitignored.
 - `update.py` refreshes all configured sources and rebuilds; `getcourse.py` exports paid deals with UTM.
 - Prod: `.github/workflows/update-funnel-analytics.yml` (cron every 3h) → `https://dashboard.aicex.club`
-  (Caddy basic auth, managed block in `/etc/caddy/Caddyfile`). `private/*.enc` is encrypted real data.
+  (public, optional basic auth via FUNNEL_DASHBOARD_PASSWORD; managed block in `/etc/caddy/Caddyfile`). `private/*.enc` is encrypted real data.
