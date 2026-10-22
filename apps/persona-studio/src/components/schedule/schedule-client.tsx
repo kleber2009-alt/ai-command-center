@@ -482,9 +482,12 @@ function PostGroup({
                 ))}
               </div>
               {(() => {
-                // Post-level error, else the first failed channel's reason (not just a badge).
-                const failed = p.errorMsg ?? p.targets.find((t) => t.status === 'failed' && t.errorMsg)?.errorMsg;
-                return failed ? <p className="text-[12.5px] text-danger">{jobErrorText(failed, PUBLISH_FAILED)}</p> : null;
+                // Post summary («1/2 каналов не опубликовано») + the first failed
+                // channel's reason, so the user sees why — not just a badge.
+                const reason = p.targets.find((t) => t.status === 'failed' && t.errorMsg)?.errorMsg;
+                const parts = [p.errorMsg ? jobErrorText(p.errorMsg, PUBLISH_FAILED) : null, reason ? jobErrorText(reason, PUBLISH_FAILED) : null]
+                  .filter((x, i, a): x is string => !!x && a.indexOf(x) === i);
+                return parts.length ? <p className="text-[12.5px] text-danger">{parts.join(' — ')}</p> : null;
               })()}
               {(onPublishNow || onCancel) && (
                 <div className="flex gap-2 mt-1">
