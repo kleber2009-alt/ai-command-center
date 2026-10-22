@@ -235,7 +235,10 @@ export function startHeygenWorker() {
             where: { id: videoId },
             data: {
               status: 'failed',
-              errorMsg: 'HEYGEN_LIMIT: Исчерпан лимит аккаунта HeyGen (фото-аватары или кредиты), токены возвращены. Освободите место в HeyGen и повторите.',
+              // API credits are a separate HeyGen balance from the web plan's.
+              errorMsg: /insufficient.?credit/i.test(msg)
+                ? 'HEYGEN_LIMIT: На API-балансе HeyGen закончились кредиты, токены возвращены. Пополните API-кредиты в HeyGen и повторите.'
+                : 'HEYGEN_LIMIT: Исчерпан лимит аккаунта HeyGen (фото-аватары или кредиты), токены возвращены. Освободите место в HeyGen и повторите.',
             },
           });
           await refundTokens({ userId, amount: row.tokensCost, reason: 'heygen-video:plan-limit', refId: videoId });
