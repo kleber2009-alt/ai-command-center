@@ -12,5 +12,6 @@ one self-contained HTML dashboard. Not deployed; not in Command Center. See `REA
 - `make_sample.py` → `sample/`: fictional demo dataset (deterministic seed). Never commit real client data.
 - `dist/` is gitignored.
 - `update.py` refreshes all configured sources and rebuilds; `getcourse.py` exports paid deals with UTM.
-- Prod: `.github/workflows/update-funnel-analytics.yml` (cron every 3h) → `https://dashboard.aicex.club`
+- Prod: own server, `deploy/setup-server.sh` installs a cron (every 3h: git pull + update.py) → `https://dashboard.aicex.club`;
+  the GitHub workflow is manual-only
   (public, optional basic auth via FUNNEL_DASHBOARD_PASSWORD; managed block in `/etc/caddy/Caddyfile`). `private/*.enc` is encrypted real data.
