@@ -191,11 +191,13 @@ table.grid tr.hd td{font-weight:650;background:color-mix(in srgb,var(--series-1)
 </header>
 
 <nav class="tabs" id="tabs">
-<button class="tab" data-t="funnel">Воронка и реклама</button>
+<button class="tab" data-t="funnel">Сквозная аналитика</button>
 <button class="tab" data-t="fin">Доходы и расходы</button>
 <button class="tab" data-t="content">Контент</button>
 </nav>
 <section class="tabpane" id="tab-funnel">
+<div id="setup"></div>
+<div id="funnelBody">
 <div class="ctlbar">
 <span id="presets" style="display:contents"></span>
 <button class="rangefield" id="rangeField">Период: <b id="rangeText">—</b> <span style="color:var(--text-muted)">▾</span></button>
@@ -270,6 +272,7 @@ table.grid tr.hd td{font-weight:650;background:color-mix(in srgb,var(--series-1)
 Рекламный слой берёт расход по объявлениям за весь выгруженный период и все оплаты с UTM-метками; оплата привязывается к объявлению по
 <span class="mono">utm_content</span> (ID или имя объявления), иначе к группе по <span class="mono">utm_term</span> или к кампании по <span class="mono">utm_campaign</span>.
 </footer>
+</div>
 </section>
 
 <section class="tabpane" id="tab-fin">
@@ -1042,8 +1045,27 @@ function contentTabs(){
   show(tabs.some(t=>t[0]===saved)?saved:ART?ART.tabs[0].id:'sum');
 }
 
+// ═══════════ data sources checklist ═══════════
+function setupRender(){
+  const S=D.sources||{configured:[],status:{},files:{}},st=S.status||{},f=S.files||{};
+  const L=[
+    ['decomposition','Декомпозиция вебинаров','Google Sheets: строка на вебинарное окно — бюджет, показы, клики, регистрации, зрители, заявки, предоплаты, оплаты, выручка',!!D.days.length],
+    ['meta','Рекламный кабинет Meta','API: расход, показы, клики, Lead по кампаниям, группам и объявлениям; разрезы по плейсментам и странам',!!D.tree.length],
+    ['payments','Оплаты с UTM','GetCourse API (или таблица): дата, сумма, utm_source / medium / campaign / term / content',!!D.pays.length],
+    ['finance','Доходы и расходы','Google Sheets «Расходы академия нейросетей»',!!(D.fin&&D.fin.months.length)],
+    ['content','Контент','Контент-план и анализ хуков',!!D.content]];
+  const missing=L.filter(x=>!x[3]);
+  const row=([k,t,d,has])=>{const s=st[k];
+    const state=has&&s&&s.ok?`<span class="romi s-good">● обновлено ${esc(s.at)}</span>`:has?'<span class="romi s-good">● есть данные</span>':s&&!s.ok?`<span class="romi s-critical">● ошибка: ${esc(s.error)}</span>`:'<span class="romi s-na">○ не подключено</span>';
+    return `<tr><td class="l"><b>${t}</b><em>${d}</em></td><td class="l">${state}${s&&s.note?`<em>${esc(s.note)}</em>`:''}</td></tr>`};
+  $('setup').innerHTML=missing.length||Object.values(st).some(s=>!s.ok)?`<h2>Источники данных <span class="q">· обновляются автоматически по расписанию</span></h2>
+    <div class="scroll"><table style="min-width:520px"><tbody>${L.map(row).join('')}</tbody></table></div>
+    ${!D.days.length?'<div class="warn">Сквозная аналитика считается от декомпозиции: как только она подключится, здесь появятся KPI школы, воронка, динамика по окнам, сверка с кабинетом, дерево кампаний, лендинги, хуки, плейсменты и прибыль — как в примере.</div>':''}`:'';
+  $('funnelBody').style.display=D.days.length||D.tree.length?'':'none';
+}
+
 // ═══════════ tabs + init ═══════════
-const HAS={funnel:D.days.length>0,fin:FIN.length>0,content:!!(CT&&CT.pubs&&CT.pubs.length)};
+const HAS={funnel:true,fin:FIN.length>0,content:!!(CT&&CT.pubs&&CT.pubs.length)};
 let curTab=null;
 function showTab(t){curTab=t;
   document.querySelectorAll('.tab').forEach(b=>b.classList.toggle('on',b.dataset.t===t));
@@ -1053,7 +1075,8 @@ document.querySelectorAll('.tab').forEach(b=>{if(!HAS[b.dataset.t])b.remove();el
 const origRefresh=refresh;
 refresh=function(){origRefresh();if(HAS.content&&$('cCalcOut').children.length)calcRender(CT.pubs.filter(p=>p.acc===CT.own));if(HAS.content&&$('acOut'))artCalc()};
 header();
-if(HAS.funnel){
+setupRender();
+if(D.days.length||D.tree.length){
 document.querySelectorAll('.preset[data-p]').forEach(b=>b.onclick=()=>{
   clearPresets();b.classList.add('on');const p=b.dataset.p;
   if(p==='all'){selFrom=selTo=null}

@@ -1,0 +1,110 @@
+name: update-funnel-analytics
+
+# Production for apps/funnel-analytics: https://<FUNNEL_DOMAIN> (dashboard.aicex.club), behind a password.
+# On every run (schedule, push to main, manual) on the Hetzner box:
+#   1. writes config.json + keys, decrypts the content-tab data shipped encrypted in the repo
+#   2. (once / when the password changes) adds a managed site block to /etc/caddy/Caddyfile:
+#      backup → validate → reload, restores the backup if validation fails
+#   3. pulls every configured source (finance sheet, decomposition sheet, GetCourse, Meta Ads),
+#      rebuilds the page and swaps it in atomically. A failing source keeps its last data.
+#
+# ─── Required GitHub secrets ───────────────────────────────────────
+#   HETZNER_SSH_KEY
+#   FUNNEL_CONFIG_JSON          config.json (title, fx, target_cpr, ad_account_id, finance, sources)
+#   FUNNEL_DASHBOARD_PASSWORD   password for the site (login: FUNNEL_DASHBOARD_USER, default "aicex")
+#   FUNNEL_DATA_KEY             decrypts apps/funnel-analytics/private/*.enc (content tab)
+#   FUNNEL_META_TOKEN           Meta system-user token with ads_read              (optional)
+#   FUNNEL_GETCOURSE_KEY        GetCourse API secret key                           (optional)
+#
+# ─── GitHub repository variables ──────────────────────────────────
+#   FUNNEL_DOMAIN               dashboard.aicex.club
+#   FUNNEL_DASHBOARD_USER       default aicex
+#   FUNNEL_GETCOURSE_ACCOUNT    school domain on GetCourse                         (optional)
+
+on:
+  schedule:
+    - cron: '23 */3 * * *'
+  push:
+    branches: [main]
+    paths:
+      - 'apps/funnel-analytics/**'
+      - '.github/workflows/update-funnel-analytics.yml'
+  workflow_dispatch:
+
+concurrency:
+  group: update-funnel-analytics
+  cancel-in-progress: false
+
+jobs:
+  update:
+    runs-on: ubuntu-latest
+    timeout-minutes: 30
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: ./.github/actions/deploy-ssh
+        env:
+          FUNNEL_CONFIG_JSON: ${{ secrets.FUNNEL_CONFIG_JSON }}
+          FUNNEL_DATA_KEY: ${{ secrets.FUNNEL_DATA_KEY }}
+          FUNNEL_PASS: ${{ secrets.FUNNEL_DASHBOARD_PASSWORD }}
+          FUNNEL_USER: ${{ vars.FUNNEL_DASHBOARD_USER || 'aicex' }}
+          FUNNEL_DOMAIN: ${{ vars.FUNNEL_DOMAIN || 'dashboard.aicex.club' }}
+        with:
+          app_name: funnel-analytics
+          ref: main
+          ssh_key: ${{ secrets.HETZNER_SSH_KEY }}
+          envs: FUNNEL_CONFIG_JSON,FUNNEL_DATA_KEY,FUNNEL_PASS,FUNNEL_USER,FUNNEL_DOMAIN
+          env_file: |
+            META_TOKEN=${{ secrets.FUNNEL_META_TOKEN }}
+            GETCOURSE_KEY=${{ secrets.FUNNEL_GETCOURSE_KEY }}
+            GETCOURSE_ACCOUNT=${{ vars.FUNNEL_GETCOURSE_ACCOUNT }}
+          script: |
+            set -euo pipefail
+            APP="$REPO_PATH/apps/funnel-analytics"
+            DATA=/root/funnel-analytics-data
+            WEB=/var/www/funnel-analytics
+            mkdir -p "$DATA" "$WEB"; chmod 700 "$DATA"
+
+            # ── 1. config + private data ──────────────────────────────
+            [ -n "$FUNNEL_CONFIG_JSON" ] || { echo "FUNNEL_CONFIG_JSON is empty"; exit 1; }
+            printf '%s' "$FUNNEL_CONFIG_JSON" > "$DATA/config.json"
+            python3 -c "import json,sys; json.load(open('$DATA/config.json'))"
+            if [ -n "${FUNNEL_DATA_KEY:-}" ] && [ -f "$APP/private/content.json.gz.enc" ]; then
+              openssl enc -d -aes-256-cbc -pbkdf2 -iter 200000 -pass env:FUNNEL_DATA_KEY \
+                -in "$APP/private/content.json.gz.enc" | gunzip > "$DATA/content.json.new"
+              mv "$DATA/content.json.new" "$DATA/content.json"
+            fi
+
+            # ── 2. Caddy site block (idempotent) ──────────────────────
+            if [ -n "${FUNNEL_PASS:-}" ]; then
+              CF=/etc/caddy/Caddyfile
+              PWSHA=$(printf '%s|%s|%s' "$FUNNEL_DOMAIN" "$FUNNEL_USER" "$FUNNEL_PASS" | sha256sum | cut -c1-16)
+              if ! grep -q "# >>> funnel-analytics $PWSHA" "$CF"; then
+                cp "$CF" "$CF.bak.$(date +%Y%m%d_%H%M%S)"
+                HASH=$(caddy hash-password --plaintext "$FUNNEL_PASS")
+                python3 - "$CF" "$FUNNEL_DOMAIN" "$FUNNEL_USER" "$HASH" "$WEB" "$PWSHA" <<'PY'
+            import re, sys
+            cf, domain, user, h, web, tag = sys.argv[1:]
+            s = open(cf).read()
+            s = re.sub(r"\n?# >>> funnel-analytics.*?# <<< funnel-analytics\n?", "\n", s, flags=re.S)
+            block = (f"\n# >>> funnel-analytics {tag} (managed by .github/workflows/update-funnel-analytics.yml)\n"
+                     f"{domain} {{\n\tbasicauth {{\n\t\t{user} {h}\n\t}}\n\troot * {web}\n"
+                     f"\theader Cache-Control \"no-store\"\n\theader X-Robots-Tag \"noindex, nofollow\"\n"
+                     f"\tfile_server\n}}\n# <<< funnel-analytics\n")
+            open(cf, "w").write(s.rstrip("\n") + "\n" + block)
+            PY
+                if caddy validate --config "$CF" --adapter caddyfile; then
+                  systemctl reload caddy
+                  echo "caddy: site $FUNNEL_DOMAIN configured"
+                else
+                  LAST=$(ls -t "$CF".bak.* | head -1); cp "$LAST" "$CF"
+                  echo "caddy validate failed — restored $LAST"; exit 1
+                fi
+              fi
+            fi
+
+            # ── 3. refresh sources + rebuild ─────────────────────────
+            set -a; . /etc/funnel-analytics.env; set +a
+            python3 "$APP/update.py" --data "$DATA" --out "$WEB/index.html.tmp"
+            mv "$WEB/index.html.tmp" "$WEB/index.html"
+            echo "dashboard → https://$FUNNEL_DOMAIN"

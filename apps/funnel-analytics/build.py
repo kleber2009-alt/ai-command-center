@@ -232,6 +232,13 @@ def main():
         "lands": sorted({c["land"] for c in tree}),
         "fin": load_json(data / "finance.json"),
         "content": load_json(data / "content.json"),
+        "sources": {"configured": sorted(k for k, v in cfg.get("sources", {}).items() if v and k in
+                                         ("finance_sheet", "decomposition_sheet", "payments")) +
+                    (["meta"] if cfg.get("ad_account_id") else []),
+                    "status": load_json(data / "sources.json") or {},
+                    "files": {k: (data / f).exists() for k, f in (("decomposition", "decomposition.csv"),
+                              ("payments", "payments.csv"), ("meta", "meta_ads.csv"), ("finance", "finance.json"),
+                              ("content", "content.json"))}},
     }
     tpl = (HERE / "template.html").read_text(encoding="utf-8")
     payload = json.dumps(D, ensure_ascii=False, separators=(",", ":")).replace("</", "<\\/")

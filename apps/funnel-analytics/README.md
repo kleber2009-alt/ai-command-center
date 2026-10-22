@@ -122,3 +122,18 @@ utm_source=facebook&utm_medium={{placement}}&utm_campaign={{campaign.id}}&utm_te
 Результат — статический HTML. Его можно положить в `landings/<client>/` или раздавать через Caddy
 (`file_server`). Для ежедневного обновления подойдёт cron на прод-боксе:
 `python3 build.py --data /path --fetch --since … --until … --out /var/www/…/index.html`.
+
+
+## Прод: dashboard.aicex.club
+
+Workflow `.github/workflows/update-funnel-analytics.yml` каждые 3 часа (и при пуше в `main`) на Hetzner:
+забирает все подключённые источники (`update.py`), пересобирает страницу в `/var/www/funnel-analytics/`
+и отдаёт её через Caddy по адресу `FUNNEL_DOMAIN` под паролем (basic auth, `noindex`).
+Данные и ключи живут только на сервере: `/root/funnel-analytics-data` (0700) и `/etc/funnel-analytics.env` (0600).
+Данные вкладки «Контент» лежат в репо зашифрованными (`private/content.json.gz.enc`, ключ — секрет `FUNNEL_DATA_KEY`).
+
+Подключение источников — ключ `sources` в `FUNNEL_CONFIG_JSON` (см. docstring `update.py`), ключи API — секреты
+`FUNNEL_META_TOKEN`, `FUNNEL_GETCOURSE_KEY`. Состояние каждого источника видно на вкладке «Сквозная аналитика».
+
+DNS: зона `aicex.club` обслуживается Cloudflare — запись `A dashboard → 46.62.215.11`, режим «DNS only»
+(серое облако), чтобы Caddy сам выпустил сертификат.
