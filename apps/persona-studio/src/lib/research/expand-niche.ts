@@ -7,8 +7,9 @@
 // (чипы-подсказки под полем поиска, см. ТЗ §5).
 
 import { env } from '@/lib/env';
+import { ANTHROPIC_BASE } from '@/lib/provider-urls';
 
-const ANTHROPIC_API = 'https://api.anthropic.com/v1/messages';
+const ANTHROPIC_API = `${ANTHROPIC_BASE}/v1/messages`;
 const MAX_TOKENS = 600;
 const MAX_KEYWORDS = 12;
 const MAX_HASHTAGS = 10;

@@ -12,10 +12,11 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { prisma } from '@/lib/prisma';
 import { creditTokens } from '@/lib/tokens';
+import { TELEGRAM_API_BASE } from '@/lib/provider-urls';
 
 export const runtime = 'nodejs';
 
-const BOT_API = 'https://api.telegram.org';
+const BOT_API = TELEGRAM_API_BASE;
 
 async function answerPreCheckout(queryId: string, ok: boolean, error?: string) {
   const token = process.env.TELEGRAM_BOT_TOKEN;

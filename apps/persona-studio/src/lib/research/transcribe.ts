@@ -9,8 +9,9 @@
 
 import { env } from '@/lib/env';
 import { claudeChat } from './claude';
+import { OPENAI_BASE } from '@/lib/provider-urls';
 
-const OPENAI_WHISPER_URL = 'https://api.openai.com';
+const OPENAI_WHISPER_URL = OPENAI_BASE;
 
 type WhisperConfig =
   | { kind: 'self-hosted'; baseUrl: string; apiKey?: string; model: string }

@@ -5,8 +5,9 @@
 // captionHash-дедуп. Не блокируем pipeline если key не настроен.
 
 import { env } from '@/lib/env';
+import { VOYAGE_API_BASE } from '@/lib/provider-urls';
 
-const API_URL = 'https://api.voyageai.com/v1/embeddings';
+const API_URL = `${VOYAGE_API_BASE}/v1/embeddings`;
 const MAX_TEXT_CHARS = 8000; // ~ 4k tokens
 const TIMEOUT_MS = 20_000;
 
