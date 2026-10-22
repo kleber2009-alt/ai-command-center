@@ -98,7 +98,9 @@ export async function createProject(input: CreateProjectInput): Promise<Submagic
   return {
     id,
     status: ((data.status as string) ?? 'pending') as SubmagicProjectStatus,
-    downloadUrl: (data.downloadUrl as string) ?? (data.videoUrl as string) ?? null,
+    // No fallback to data.videoUrl: Submagic echoes the *source* URL there, so a
+    // missing downloadUrl must surface as SUBMAGIC_NO_URL, not the unedited video.
+    downloadUrl: (data.downloadUrl as string) ?? null,
   };
 }
 
@@ -114,7 +116,7 @@ export async function getProject(id: string): Promise<SubmagicProject> {
   return {
     id,
     status: ((data.status as string) ?? 'processing') as SubmagicProjectStatus,
-    downloadUrl: (data.downloadUrl as string) ?? (data.videoUrl as string) ?? null,
+    downloadUrl: (data.downloadUrl as string) ?? null,
     errorMessage: (data.errorMessage as string) ?? (data.error as string) ?? null,
   };
 }

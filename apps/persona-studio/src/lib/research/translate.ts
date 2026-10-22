@@ -6,7 +6,7 @@
 // caption — caller сам решает что переводить.
 
 import { env } from '@/lib/env';
-import { claudeChat } from './claude';
+import { claudeChat, isClaudeConfigured } from './claude';
 
 const MAX_INPUT_CHARS = 12_000;
 
@@ -39,7 +39,7 @@ export async function translateText(opts: {
   /** Опционально — подсказать модели исходный язык, если уверены. */
   sourceLang?: string;
 }): Promise<TranslateResult> {
-  if (!env.ANTHROPIC_API_KEY) return { ok: false, error: 'no_api_key' };
+  if (!isClaudeConfigured()) return { ok: false, error: 'no_api_key' };
   const text = (opts.text || '').trim();
   if (!text) return { ok: false, error: 'empty_text' };
   const targetLang = (opts.targetLang || 'ru').toLowerCase().slice(0, 5);

@@ -8,7 +8,7 @@
 //      (source='caption'), чтобы analyze не блокировался.
 
 import { env } from '@/lib/env';
-import { claudeChat } from './claude';
+import { claudeChat, isClaudeConfigured } from './claude';
 import { OPENAI_BASE } from '@/lib/provider-urls';
 
 const OPENAI_WHISPER_URL = OPENAI_BASE;
@@ -114,7 +114,7 @@ export async function improveTranscript(raw: string, lang = 'ru'): Promise<{
   text: string;
   improved: boolean;
 }> {
-  if (!env.ANTHROPIC_API_KEY || raw.length < 50) {
+  if (!isClaudeConfigured() || raw.length < 50) {
     return { ok: true, text: raw, improved: false };
   }
   const system = `Ты — редактор расшифровок. Тебе дают сырую транскрипцию короткого вертикального видео (Reels) на ${

@@ -22,6 +22,7 @@
 //      states: pending | waiting | processing | completed | failed
 
 import { request as httpsRequest } from 'node:https';
+import { request as httpRequest } from 'node:http';
 
 const HEYGEN_KEY_ENV = 'HEYGEN_API_KEY';
 const HEYGEN_BASE = process.env.HEYGEN_API_BASE || 'https://api.heygen.com';
@@ -110,11 +111,13 @@ function heygenGetWithBody<T>(urlString: string, body: object, timeoutMs: number
   const key = keyOrThrow();
   const payload = JSON.stringify(body);
   return new Promise((resolve, reject) => {
-    const req = httpsRequest(
+    // http: only for a configured non-TLS base (local fakes / proxies).
+    const send = url.protocol === 'http:' ? httpRequest : httpsRequest;
+    const req = send(
       {
         method: 'GET',
         hostname: url.hostname,
-        port: url.port || 443,
+        port: url.port || (url.protocol === 'http:' ? 80 : 443),
         path: url.pathname + (url.search || ''),
         headers: {
           'X-Api-Key': key,
