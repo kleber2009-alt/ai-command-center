@@ -27,7 +27,7 @@ const GROUP_LABEL: Record<string, string> = {
   research: 'Ресёрч',
   publish: 'Публикация',
   billing: 'Оплата',
-  mail: 'Почта для входа',
+  mail: 'Вход на сайт',
 };
 
 export function AdminIntegrations({ initialItems }: { initialItems: IntegrationItem[] }) {
@@ -36,6 +36,35 @@ export function AdminIntegrations({ initialItems }: { initialItems: IntegrationI
   const [busy, setBusy] = useState<string | null>(null);
   const [error, setError] = useState<string | null>(null);
   const [saved, setSaved] = useState<string | null>(null);
+  const [bulk, setBulk] = useState('');
+  const [bulkResult, setBulkResult] = useState<string | null>(null);
+
+  async function importBulk() {
+    setBusy('bulk');
+    setError(null);
+    setBulkResult(null);
+    try {
+      const res = await fetch('/api/admin/integrations', {
+        method: 'POST',
+        headers: { 'content-type': 'application/json' },
+        body: JSON.stringify({ bulk }),
+      });
+      const data = await res.json().catch(() => null);
+      if (!res.ok) throw new Error(errorText(data, res.status));
+      setItems(data.items);
+      setBulk('');
+      const names = (data.saved as string[]).map((k) => items.find((i) => i.key === k)?.label ?? k);
+      setBulkResult(
+        names.length
+          ? `Сохранено: ${names.join(', ')}.${data.restart ? ' Сайт перезапускается — обновите страницу через 15 секунд.' : ''}`
+          : 'В тексте не нашлось ключей знакомых сервисов.',
+      );
+    } catch (e) {
+      setError(exceptionText(e));
+    } finally {
+      setBusy(null);
+    }
+  }
 
   async function save(key: string, value: string) {
     setBusy(key);
@@ -68,6 +97,32 @@ export function AdminIntegrations({ initialItems }: { initialItems: IntegrationI
         Подключено {connected} из {items.length}. Ключ начинает работать в течение 30 секунд — перезапуск не нужен
         (кроме почты).
       </p>
+      <div className="panel grid gap-3 p-4">
+        <div className="grid gap-0.5">
+          <span className="text-[15px] font-semibold tracking-[-0.01em] text-text">Вставить всё разом</span>
+          <span className="text-[12px] text-text-mute">
+            Вставьте заметку со всеми ключами как есть — сайт сам найдёт ключи сервисов и сохранит их. Пароли и прочие
+            данные из текста не сохраняются.
+          </span>
+        </div>
+        <textarea
+          value={bulk}
+          onChange={(e) => setBulk(e.target.value)}
+          rows={4}
+          autoComplete="off"
+          spellCheck={false}
+          placeholder="Вставьте текст с ключами"
+          className="input font-mono text-[12px]"
+          aria-label="Текст с ключами"
+        />
+        <div className="flex flex-wrap items-center gap-3">
+          <button type="button" onClick={() => void importBulk()} disabled={!bulk.trim() || busy === 'bulk'} className="btn-primary !px-4 !py-2 text-[13px]">
+            {busy === 'bulk' ? <Loader2 size={14} className="animate-spin" /> : null}
+            Найти и сохранить ключи
+          </button>
+          {bulkResult && <span className="text-[13px] text-text-dim">{bulkResult}</span>}
+        </div>
+      </div>
       {error && <p className="rounded-2xl border border-danger/40 bg-danger/[0.08] px-4 py-2.5 text-[13px] text-danger">{error}</p>}
       {groups.map((g) => (
         <div key={g} className="grid gap-2.5">

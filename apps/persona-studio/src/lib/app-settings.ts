@@ -35,6 +35,8 @@ export const INTEGRATIONS: Integration[] = [
   { key: 'TELEGRAM_BOT_TOKEN', label: 'Telegram-бот', purpose: 'Оплата Stars, мини-приложение, автопостинг в каналы', url: 'https://t.me/BotFather', secret: true, group: 'publish' },
   { key: 'POSTMYPOST_API_TOKEN', label: 'PostMyPost', purpose: 'Автопостинг в Instagram', url: 'https://postmypost.io', secret: true, group: 'publish' },
   { key: 'CRYPTOBOT_TOKEN', label: 'CryptoBot', purpose: 'Оплата в USDT', url: 'https://t.me/CryptoBot', secret: true, group: 'billing' },
+  { key: 'AUTH_GOOGLE_ID', label: 'Google — Client ID', purpose: 'Вход через Google (в Google Cloud добавьте redirect https://<домен>/api/auth/callback/google)', url: 'https://console.cloud.google.com/apis/credentials', secret: false, group: 'mail', restart: true },
+  { key: 'AUTH_GOOGLE_SECRET', label: 'Google — Client secret', purpose: 'Секрет того же OAuth-клиента', secret: true, group: 'mail', restart: true },
   { key: 'EMAIL_SERVER_HOST', label: 'SMTP-сервер', purpose: 'Письма со ссылкой входа (например smtp.resend.com)', secret: false, group: 'mail', restart: true },
   { key: 'EMAIL_SERVER_PORT', label: 'SMTP-порт', purpose: '465 (SSL) или 587', secret: false, group: 'mail', restart: true },
   { key: 'EMAIL_SERVER_USER', label: 'SMTP-логин', purpose: 'Логин почтового сервиса', secret: false, group: 'mail', restart: true },
