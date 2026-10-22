@@ -41,7 +41,7 @@ docker compose -f docker-compose.prod.yml --env-file .env.prod up -d
 |---|---|
 | `KIE_API_KEY` | аватары, обложки, видео OmniHuman, AI-картинки слайдов |
 | `ANTHROPIC_API_KEY` | сценарии, карусели, модерация фото, ресёрч |
-| `OPENAI_API_KEY` | распознавание речи для монтажа (Whisper) |
+| `OPENAI_API_KEY` | запасной вариант для текстов; распознавание речи уже работает локально (контейнер `whisper`) |
 | `ELEVENLABS_API_KEY` | клон голоса и озвучка |
 | `EMAIL_SERVER_*` | письма со ссылкой входа (Resend/Brevo/Яндекс SMTP, порт 465) |
 | `TELEGRAM_BOT_TOKEN`, `CRYPTOBOT_TOKEN` | оплата Stars / USDT, автопостинг в TG |

@@ -1,5 +1,6 @@
 # Self-contained Persona Studio stack for a fresh server (no external
-# networks): Caddy (HTTPS) + web + 2 workers + Postgres + Redis + S3 (SeaweedFS).
+# networks): Caddy (HTTPS) + web + 2 workers + Postgres + Redis + S3 (SeaweedFS)
+# + local Whisper (speech-to-text).
 # Started by deploy/bootstrap.sh; config comes from deploy/.env.prod.
 #
 #   docker compose -f deploy/docker-compose.prod.yml --env-file deploy/.env.prod up -d --build
@@ -52,6 +53,24 @@ services:
         echo "s3.bucket.create -name persona-studio-media" | weed shell -master=s3:9333
     restart: "no"
 
+  # Local speech-to-text (OpenAI-compatible, faster-whisper on CPU): word
+  # timestamps for skill montage and reel transcripts without an OpenAI key.
+  whisper:
+    image: ghcr.io/speaches-ai/speaches:0.8.3-cpu
+    restart: unless-stopped
+    volumes: [whispermodels:/home/ubuntu/.cache/huggingface]
+
+  # One-shot: download the model once (kept in the whispermodels volume).
+  whisper-init:
+    image: curlimages/curl:8.11.1
+    depends_on: [whisper]
+    entrypoint: ["/bin/sh", "-c"]
+    command:
+      - >
+        for i in $$(seq 1 90); do curl -sf http://whisper:8000/health >/dev/null && break; sleep 2; done;
+        curl -sf -X POST http://whisper:8000/v1/models/Systran/faster-whisper-small -m 1200
+    restart: "no"
+
   # One-shot: create/align tables from prisma/schema.prisma (declarative; refuses
   # destructive changes, so re-running on deploy is safe).
   migrate:
@@ -72,12 +91,16 @@ services:
       migrate: { condition: service_completed_successfully }
       redis: { condition: service_started }
       s3-init: { condition: service_completed_successfully }
+    environment:
+      WHISPER_SERVICE_URL: ${WHISPER_SERVICE_URL-http://whisper:8000}
 
   worker-generation:
     <<: *app-env
     image: persona-studio-worker
     restart: unless-stopped
-    environment: [WORKER_GROUP=generation]
+    environment:
+      WORKER_GROUP: generation
+      WHISPER_SERVICE_URL: ${WHISPER_SERVICE_URL-http://whisper:8000}
     depends_on:
       migrate: { condition: service_completed_successfully }
 
@@ -85,7 +108,9 @@ services:
     <<: *app-env
     image: persona-studio-worker
     restart: unless-stopped
-    environment: [WORKER_GROUP=cron]
+    environment:
+      WORKER_GROUP: cron
+      WHISPER_SERVICE_URL: ${WHISPER_SERVICE_URL-http://whisper:8000}
     depends_on:
       migrate: { condition: service_completed_successfully }
 
@@ -112,5 +137,6 @@ volumes:
   pgdata:
   redisdata:
   s3data:
+  whispermodels:
   caddydata:
   caddyconfig:
