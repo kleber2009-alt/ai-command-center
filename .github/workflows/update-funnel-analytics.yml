@@ -1,6 +1,8 @@
 name: update-funnel-analytics
 
-# Production for apps/funnel-analytics: https://<FUNNEL_DOMAIN> (dashboard.aicex.club), behind a password.
+# Production for apps/funnel-analytics: https://<FUNNEL_DOMAIN>, behind a password.
+# FUNNEL_DOMAIN may list several hosts: "funnel.46-62-215-11.nip.io, dashboard.aicex.club"
+# (add the custom one only after its DNS A record points at 46.62.215.11).
 # On every run (schedule, push to main, manual) on the Hetzner box:
 #   1. writes config.json + keys, decrypts the content-tab data shipped encrypted in the repo
 #   2. (once / when the password changes) adds a managed site block to /etc/caddy/Caddyfile:
@@ -17,7 +19,7 @@ name: update-funnel-analytics
 #   FUNNEL_GETCOURSE_KEY        GetCourse API secret key                           (optional)
 #
 # ─── GitHub repository variables ──────────────────────────────────
-#   FUNNEL_DOMAIN               dashboard.aicex.club
+#   FUNNEL_DOMAIN               default funnel.46-62-215-11.nip.io
 #   FUNNEL_DASHBOARD_USER       default aicex
 #   FUNNEL_GETCOURSE_ACCOUNT    school domain on GetCourse                         (optional)
 
@@ -48,7 +50,7 @@ jobs:
           FUNNEL_DATA_KEY: ${{ secrets.FUNNEL_DATA_KEY }}
           FUNNEL_PASS: ${{ secrets.FUNNEL_DASHBOARD_PASSWORD }}
           FUNNEL_USER: ${{ vars.FUNNEL_DASHBOARD_USER || 'aicex' }}
-          FUNNEL_DOMAIN: ${{ vars.FUNNEL_DOMAIN || 'dashboard.aicex.club' }}
+          FUNNEL_DOMAIN: ${{ vars.FUNNEL_DOMAIN || 'funnel.46-62-215-11.nip.io' }}
         with:
           app_name: funnel-analytics
           ref: main
@@ -66,7 +68,10 @@ jobs:
             mkdir -p "$DATA" "$WEB"; chmod 700 "$DATA"
 
             # ── 1. config + private data ──────────────────────────────
-            [ -n "$FUNNEL_CONFIG_JSON" ] || { echo "FUNNEL_CONFIG_JSON is empty"; exit 1; }
+            if [ -z "$FUNNEL_CONFIG_JSON" ] || [ -z "${FUNNEL_PASS:-}" ]; then
+              # not configured yet: never publish the finance data without a password
+              echo "::warning::FUNNEL_CONFIG_JSON / FUNNEL_DASHBOARD_PASSWORD not set — skipping"; exit 0
+            fi
             printf '%s' "$FUNNEL_CONFIG_JSON" > "$DATA/config.json"
             python3 -c "import json,sys; json.load(open('$DATA/config.json'))"
             if [ -n "${FUNNEL_DATA_KEY:-}" ] && [ -f "$APP/private/content.json.gz.enc" ]; then
@@ -76,7 +81,7 @@ jobs:
             fi
 
             # ── 2. Caddy site block (idempotent) ──────────────────────
-            if [ -n "${FUNNEL_PASS:-}" ]; then
+            if true; then
               CF=/etc/caddy/Caddyfile
               PWSHA=$(printf '%s|%s|%s' "$FUNNEL_DOMAIN" "$FUNNEL_USER" "$FUNNEL_PASS" | sha256sum | cut -c1-16)
               if ! grep -q "# >>> funnel-analytics $PWSHA" "$CF"; then
@@ -107,4 +112,4 @@ jobs:
             set -a; . /etc/funnel-analytics.env; set +a
             python3 "$APP/update.py" --data "$DATA" --out "$WEB/index.html.tmp"
             mv "$WEB/index.html.tmp" "$WEB/index.html"
-            echo "dashboard → https://$FUNNEL_DOMAIN"
+            echo "dashboard → https://${FUNNEL_DOMAIN%%,*}"
