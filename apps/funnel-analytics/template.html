@@ -1,0 +1,660 @@
+<!doctype html>
+<html lang="ru">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1">
+<title>Сквозная аналитика</title>
+<style>
+*{box-sizing:border-box}
+:root{color-scheme:light;--surface-1:#fcfcfb;--plane:#f9f9f7;--line:#e6e5e1;
+--text-primary:#0b0b0b;--text-secondary:#52514e;--text-muted:#82817c;
+--series-1:#2a78d6;--good:#0ca30c;--warning:#d99a0b;--critical:#d03b3b}
+@media (prefers-color-scheme:dark){:root:not([data-theme="light"]){color-scheme:dark;
+--surface-1:#1a1a19;--plane:#0d0d0d;--line:#33322f;--text-primary:#fff;--text-secondary:#c3c2b7;
+--text-muted:#8c8b83;--series-1:#3987e5;--warning:#fab219}}
+:root[data-theme="dark"]{color-scheme:dark;--surface-1:#1a1a19;--plane:#0d0d0d;--line:#33322f;
+--text-primary:#fff;--text-secondary:#c3c2b7;--text-muted:#8c8b83;--series-1:#3987e5;--warning:#fab219}
+body{margin:0;background:var(--plane);color:var(--text-primary);
+font:15px/1.5 ui-sans-serif,-apple-system,"Segoe UI",Roboto,sans-serif;padding:24px 16px 70px}
+.wrap{max-width:1300px;margin:0 auto}
+header{display:flex;justify-content:space-between;align-items:flex-start;gap:20px;flex-wrap:wrap;margin-bottom:6px}
+h1{font-size:25px;margin:0 0 4px;letter-spacing:-.01em}h1 .g{color:var(--series-1)}
+.meta{font-size:12.5px;color:var(--text-muted);text-align:right;line-height:1.6}
+.sub{color:var(--text-secondary);font-size:13.5px;margin:0}
+h2{font-size:17px;margin:32px 0 4px;letter-spacing:-.01em}
+h2 .q{font-weight:400;color:var(--text-muted);font-size:13px}
+.h2note{color:var(--text-muted);font-size:13px;margin:0 0 12px}
+.panel,.card{background:var(--surface-1);border:1px solid var(--line);border-radius:12px;padding:15px 17px}
+.ctlbar{display:flex;gap:8px;flex-wrap:wrap;align-items:center;margin:16px 0 6px;position:relative}
+.preset,.rangefield{background:var(--surface-1);border:1px solid var(--line);border-radius:9px;padding:7px 13px;
+font:inherit;font-size:13.5px;color:var(--text-secondary);cursor:pointer}
+.preset.on{background:var(--series-1);border-color:var(--series-1);color:#fff;font-weight:600}
+.rangefield b{color:var(--text-primary)}
+.ctl{display:flex;align-items:center;gap:8px;flex-wrap:wrap;font-size:13px;color:var(--text-secondary);
+background:var(--surface-1);border:1px solid var(--line);border-radius:10px;padding:8px 12px;margin-left:auto}
+.ctl input{padding:5px 7px;border:1px solid var(--line);border-radius:7px;background:var(--plane);
+color:var(--text-primary);font:inherit;font-variant-numeric:tabular-nums}
+#fx,#tgt{width:62px}#act{width:150px}
+.calpop{display:none;position:absolute;top:46px;left:0;z-index:40;background:var(--surface-1);
+border:1px solid var(--line);border-radius:13px;padding:14px;box-shadow:0 12px 34px rgba(0,0,0,.16);width:min(94vw,332px)}
+.calpop.on{display:block}
+.calhead{display:flex;align-items:center;justify-content:space-between;margin-bottom:10px}
+.calhead b{font-size:14px}
+.calnav{cursor:pointer;font-size:19px;line-height:1;color:var(--text-secondary);padding:1px 10px;border-radius:7px;user-select:none}
+.calnav:hover{background:color-mix(in srgb,var(--text-muted) 14%,transparent)}
+.calnav.off{opacity:.25;pointer-events:none}
+.calfoot{display:flex;align-items:center;justify-content:space-between;gap:10px;margin-top:11px;
+padding-top:11px;border-top:1px solid var(--line);flex-wrap:wrap}
+.calfoot input[type=date]{padding:4px 6px;border:1px solid var(--line);border-radius:6px;
+background:var(--plane);color:var(--text-primary);font:inherit;font-size:12px}
+.grid7{display:grid;grid-template-columns:repeat(7,1fr);gap:2px}
+.dow{font-size:10px;color:var(--text-muted);text-align:center;padding:2px 0}
+.cd{aspect-ratio:1;border-radius:5px;display:flex;flex-direction:column;align-items:center;justify-content:center;
+font-size:10.5px;cursor:pointer;font-variant-numeric:tabular-nums}
+.cd.off{color:var(--text-muted);opacity:.35;cursor:default}
+.cd.sel{outline:2px solid var(--series-1);outline-offset:-2px}
+.cd .cdv{font-size:8px;color:var(--text-muted);line-height:1}
+.callegend{font-size:11.5px;color:var(--text-muted);margin-top:10px;text-align:center}
+.metricsel{display:flex;gap:6px;flex-wrap:wrap;margin-bottom:10px}
+.metricsel .m,.dirbtn{font-size:12.5px;padding:5px 11px;border:1px solid var(--line);border-radius:20px;
+cursor:pointer;color:var(--text-secondary);background:var(--surface-1);font-family:inherit}
+.metricsel .m.on,.dirbtn.on{background:var(--series-1);border-color:var(--series-1);color:#fff;font-weight:600}
+.dirbar{display:flex;gap:7px;flex-wrap:wrap;align-items:center;margin:10px 0 12px}
+.tiles{display:grid;grid-template-columns:repeat(auto-fit,minmax(146px,1fr));gap:9px}
+.tile{background:var(--surface-1);border:1px solid var(--line);border-radius:12px;padding:11px 13px}
+.tile .k{font-size:11px;color:var(--text-secondary);text-transform:uppercase;letter-spacing:.04em}
+.tile .v{font-size:22px;font-weight:650;letter-spacing:-.02em;margin-top:4px;font-variant-numeric:tabular-nums}
+.tile .n{font-size:11px;color:var(--text-muted);margin-top:2px}
+.scroll{overflow-x:auto;background:var(--surface-1);border:1px solid var(--line);border-radius:12px}
+table{border-collapse:collapse;width:100%;font-size:13.5px;min-width:700px}
+th{text-align:right;font-weight:600;font-size:11px;text-transform:uppercase;letter-spacing:.03em;
+color:var(--text-muted);padding:10px 11px;border-bottom:1px solid var(--line);white-space:nowrap;user-select:none}
+th[data-k]{cursor:pointer}
+th.l{text-align:left}th[data-k]:hover{color:var(--text-primary)}
+td{padding:9px 11px;border-bottom:1px solid var(--line);vertical-align:middle;text-align:right;
+font-variant-numeric:tabular-nums;white-space:nowrap}
+td.l{text-align:left;white-space:normal}
+td em{display:block;font-style:normal;font-size:11px;color:var(--text-muted);margin-top:2px;font-weight:400}
+tr:last-child td{border-bottom:0}
+tbody tr:hover{background:color-mix(in srgb,var(--series-1) 6%,transparent)}
+tr.tot td{font-weight:650;background:color-mix(in srgb,var(--text-muted) 7%,transparent)}
+.mono{font-family:ui-monospace,SFMono-Regular,Menlo,monospace;font-size:12px}
+.dot{display:inline-block;width:8px;height:8px;border-radius:50%;margin-right:6px;vertical-align:1px;background:var(--c,var(--text-muted))}
+.s-good{--c:var(--good)}.s-warning{--c:var(--warning)}.s-critical{--c:var(--critical)}.s-na{--c:var(--text-muted)}
+.romi{font-weight:600;color:var(--c)}
+.bar{display:inline-block;width:74px;height:8px;background:color-mix(in srgb,var(--text-muted) 16%,transparent);
+border-radius:5px;overflow:hidden;vertical-align:middle;margin-right:7px}
+.bar i{display:block;height:100%;border-radius:0 4px 4px 0;background:var(--c,var(--series-1))}
+tr.trc td{font-weight:600}
+tr.trc,tr.tra{cursor:pointer}
+tr.tra td{color:var(--text-secondary)}
+tr.trad td{color:var(--text-secondary);font-size:13px}
+.chev{display:inline-block;width:14px;color:var(--text-muted);font-size:11px}
+.chev.sp{opacity:0}
+.fstep{display:grid;grid-template-columns:190px 1fr 120px;gap:12px;align-items:center;margin-bottom:8px}
+.flab{font-size:13px;color:var(--text-secondary)}
+.ftrack{height:25px;display:flex;align-items:center;gap:9px}
+.ftrack i{display:block;height:25px;border-radius:0 4px 4px 0;min-width:3px}
+.fval{font-variant-numeric:tabular-nums;font-weight:600;font-size:13.5px}
+.fconv{font-size:12.5px;color:var(--text-muted);text-align:right;font-variant-numeric:tabular-nums}
+@media(max-width:640px){.fstep{grid-template-columns:110px 1fr 64px;gap:8px}.flab{font-size:12px}}
+.finputs{display:flex;gap:18px;flex-wrap:wrap;font-size:12.5px;color:var(--text-muted);
+margin-bottom:14px;padding-bottom:12px;border-bottom:1px solid var(--line)}
+.finputs b{color:var(--text-primary)}
+.warn{border-left:3px solid var(--warning);background:var(--surface-1);border-radius:0 10px 10px 0;
+padding:12px 15px;margin:10px 0;font-size:13.5px;color:var(--text-secondary)}
+.warn b{color:var(--text-primary)}
+.crit{border-left-color:var(--critical)}.ok{border-left-color:var(--good)}
+a.prev{color:var(--series-1);text-decoration:none;font-weight:600}
+.two{display:grid;grid-template-columns:minmax(0,1fr) minmax(0,1fr);gap:18px}
+@media(max-width:940px){.two{grid-template-columns:minmax(0,1fr)}}
+.badge{display:inline-block;font-size:11px;padding:2px 8px;border-radius:20px;font-weight:400;
+background:color-mix(in srgb,var(--warning) 18%,transparent);color:var(--text-secondary);vertical-align:2px;margin-left:8px}
+.pie{display:flex;gap:18px;align-items:center;flex-wrap:wrap}
+.pielegend{font-size:13px}
+.pielegend div{display:flex;align-items:center;gap:8px;margin-bottom:6px}
+.pielegend i{width:11px;height:11px;border-radius:3px;display:block;flex:none}
+ul.act{margin:8px 0 0;padding-left:20px}ul.act li{margin-bottom:8px;color:var(--text-secondary)}
+ul.act li b{color:var(--text-primary)}
+.pl table{min-width:0;margin-top:9px}
+.two .scroll table{min-width:520px}
+.na{color:var(--critical);font-weight:600}
+footer{margin-top:38px;padding-top:16px;border-top:1px solid var(--line);font-size:12.5px;color:var(--text-muted);line-height:1.7}
+svg.lc{width:100%;height:210px;display:block}
+</style>
+</head>
+<body>
+<div class="wrap">
+<header>
+<div><h1 id="title">—</h1><p class="sub" id="subtitle"></p></div>
+<div class="meta" id="hmeta"></div>
+</header>
+
+<div class="ctlbar">
+<span id="presets" style="display:contents"></span>
+<button class="rangefield" id="rangeField">Период: <b id="rangeText">—</b> <span style="color:var(--text-muted)">▾</span></button>
+<div class="calpop" id="calPop">
+  <div class="calhead"><span class="calnav" id="prevM">‹</span><b id="calTitle">—</b><span class="calnav" id="nextM">›</span></div>
+  <div class="metricsel" id="calMet" style="justify-content:center">
+    <span class="m on" data-m="usd">Бюджет</span><span class="m" data-m="regs">Регистрации</span>
+    <span class="m" data-m="visits">Зрители</span><span class="m" data-m="sales">Оплаты</span>
+    <span class="m" data-m="rev_rub">Выручка</span></div>
+  <div class="grid7" id="dow"></div>
+  <div class="grid7" id="calGrid" style="margin-top:4px"></div>
+  <div class="callegend">Первый клик — начало периода, второй — конец. Заливка дня — выбранная метрика. Дни без вебинарного окна неактивны.</div>
+  <div class="calfoot"><span><input type="date" id="dFrom"> — <input type="date" id="dTo"></span>
+  <button class="preset" id="calDone">Готово</button></div>
+</div>
+<div class="ctl"><label for="fx">Курс ₽/$</label><input id="fx" type="number" min="1" step="1">
+<label for="tgt">Цель цены рег. $</label><input id="tgt" type="number" min="0.1" step="0.1">
+<label for="act">ID кабинета</label><input id="act" placeholder="act_123456789"></div>
+</div>
+
+<h2>Школа за период <span class="q">· по декомпозиции — все продажи, не только рекламные</span></h2>
+<div class="tiles" id="kpis"></div>
+
+<h2>Сквозная воронка <span class="q">· клики → регистрации → зрители → заявки → предоплаты → оплаты</span></h2>
+<div class="panel" id="funnel"></div>
+
+<h2>Динамика по окнам <span class="q">· клик по метрике — включить/выключить кривую</span></h2>
+<div class="panel"><div class="metricsel" id="chartleg"></div><div id="chart"></div></div>
+
+<h2>Помесячно <span class="q">· клик по заголовку — сортировка</span></h2>
+<div class="scroll"><table id="months"></table></div>
+
+<h2>Сверка с рекламным кабинетом <span class="q" id="reconQ"></span></h2>
+<p class="h2note">Одно событие в двух системах должно сходиться. Где не сходится — там либо потерянные деньги, либо неверно обученная оптимизация.</p>
+<div class="scroll"><table id="recon"></table></div>
+<div id="reconWarn"></div>
+
+<h2>Рекламный слой <span class="q">· атрибуция до объявления</span><span class="badge">не зависит от выбранного периода</span></h2>
+<p class="h2note" id="attrNote"></p>
+<div class="dirbar" id="dirBar"></div>
+<div class="tiles" id="adkpis"></div>
+
+<h2>Кампании → группы → объявления <span class="q">· как в Ads Manager · клик по строке — раскрыть, по заголовку — сортировка</span></h2>
+<p class="h2note">Расход, показы и Lead — из кабинета. Оплаты и выручка подняты из UTM-меток файла оплат.</p>
+<div class="scroll"><table id="tree"></table></div>
+
+<h2>Лендинги <span class="q">· метрика клик→лид не зависит от настройки пикселя на сайте</span></h2>
+<div class="scroll"><table id="lands"></table></div>
+
+<div class="two">
+<div><h2>Источники продаж</h2><div class="panel">
+<div class="metricsel" id="pieMet"><span class="m on" data-m="n">Оплаты</span><span class="m" data-m="rev">Выручка</span></div>
+<div id="pie"></div></div></div>
+<div><h2>Хуки</h2><div class="scroll"><table id="cutHook"></table></div></div>
+</div>
+<div class="two" style="margin-top:20px">
+<div><h2>Плейсменты</h2><div class="scroll"><table id="cutPl"></table></div></div>
+<div><h2>Страны</h2><div class="scroll"><table id="cutGeo"></table></div></div>
+</div>
+<p class="h2note" style="margin-top:10px">ROMI без звёздочки — по реальному расходу из кабинета. <b>ROMI*</b> — модельный: расхода в этом разрезе нет, поэтому считаю по среднему CAC <b id="cacnote">—</b> за привязанную оплату.</p>
+
+<h2>Юнит-экономика и прибыль <span class="q" id="plQ"></span></h2>
+<div class="two" id="pl"></div>
+<div id="plWarn"></div>
+
+<h2>Что делать</h2>
+<div class="card"><ul class="act" id="todo"></ul></div>
+
+<footer>
+<b>Как считается.</b> Декомпозиция ведётся по вебинарным окнам; значения окна делятся поровну между его днями, поэтому период режется по дням.
+Бюджет в рублях = $ × курс. ROMI = выручка ÷ расход − 1. Сверка сравнивает таблицу с кабинетом за те же дни.
+Рекламный слой берёт расход по объявлениям за весь выгруженный период и все оплаты с UTM-метками; оплата привязывается к объявлению по
+<span class="mono">utm_content</span> (ID или имя объявления), иначе к группе по <span class="mono">utm_term</span> или к кампании по <span class="mono">utm_campaign</span>.
+</footer>
+</div>
+
+<script>
+const D=/*__DATA__*/null;
+let FX=D.fx, TGT=D.target_cpr, ACT=(D.act||'').replace(/^act_/,'');
+let selFrom=null, selTo=null, landFilter=null, inclNoTag=false;
+let calMetric='usd', chartMet=new Set(['usd','regs','sales']), pieMet='n';
+const KEYS=['usd','imp','clicks','regs','visits','apps','prepay','sales','rev_rub','fact_rub'];
+const MONFULL=['Январь','Февраль','Март','Апрель','Май','Июнь','Июль','Август','Сентябрь','Октябрь','Ноябрь','Декабрь'];
+const MONS=[...new Set(D.days.map(r=>r.d.slice(0,7)))].sort();
+const monName=m=>MONFULL[+m.slice(5)-1];
+let calMonth=MONS.length?MONS[MONS.length-1]:new Date().toISOString().slice(0,7);
+
+const $=id=>document.getElementById(id);
+const esc=s=>String(s??'').replace(/[&<>"]/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;'}[c]));
+const fmt=(v,d=0)=>new Intl.NumberFormat('ru-RU',{maximumFractionDigits:d}).format(v||0);
+const rub=v=>fmt(v)+' ₽';
+const usd=v=>(v<0?'−':'')+'$'+(Math.abs(v)>=100?fmt(Math.abs(v)):Math.abs(v).toFixed(2));
+const pct=(a,b,d=1)=>b?(100*a/b).toFixed(d)+'%':'—';
+const cprClass=c=>c==null?'na':c<=TGT?'good':c<=2*TGT?'warning':'critical';
+const romiClass=r=>r==null?'na':r>=100?'good':r>=0?'warning':'critical';
+const romiTxt=r=>r==null?'—':(r>=0?'+':'−')+fmt(Math.abs(r))+'%';
+const sum=(arr,k)=>arr.reduce((a,r)=>a+(r[k]||0),0);
+const inRange=ds=>!selFrom||(ds>=selFrom&&ds<=(selTo||selFrom));
+const isoOf=(y,m,d)=>`${y}-${String(m).padStart(2,'0')}-${String(d).padStart(2,'0')}`;
+function agg(){const o={};KEYS.forEach(k=>o[k]=0);
+  D.days.forEach(r=>{if(inRange(r.d))KEYS.forEach(k=>o[k]+=r[k]||0)});return o}
+const rangeLabel=()=>!selFrom?'весь период':(selFrom===(selTo||selFrom)?selFrom:selFrom+' — '+selTo);
+const tile=x=>`<div class="tile"><div class="k">${x[0]}</div><div class="v ${x[3]?'romi s-'+x[3]:''}">${x[1]}</div><div class="n">${x[2]||''}</div></div>`;
+// month keys touched by the selected period (all months when nothing is selected)
+const selMonths=()=>MONS.filter(m=>!selFrom||(m>=selFrom.slice(0,7)&&m<=(selTo||selFrom).slice(0,7)));
+
+// ─────────── header ───────────
+function header(){
+  const ads=D.tree.reduce((a,c)=>a+c.adsets.reduce((b,s)=>b+s.ads.filter(x=>x.id!=='—').length,0),0);
+  document.title=D.title+' · Сквозная аналитика';
+  $('title').innerHTML=`${esc(D.title)} · <span class="g">Сквозная аналитика</span>`;
+  $('subtitle').textContent=D.subtitle;
+  $('hmeta').innerHTML=`обновлено ${esc(D.generated)}<br>${D.wins.length} вебинарных окон · ${D.tree.length} кампаний · ${ads} объявлений<br>кабинет: ${esc(D.meta_mode)}`;
+  $('presets').innerHTML=MONS.map(m=>`<button class="preset" data-p="${m}">${monName(m)}</button>`).join('')+
+    '<button class="preset" data-p="all">Всё</button>';
+  $('dirBar').innerHTML='<button class="dirbtn on" data-d="">Все лендинги</button>'+
+    D.lands.map(l=>`<button class="dirbtn" data-d="${esc(l)}">${esc(l)}</button>`).join('')+
+    `<label style="display:inline-flex;align-items:center;gap:7px;font-size:13px;color:var(--text-muted);cursor:pointer;margin-left:6px">
+    <input type="checkbox" id="inclNoTag" style="width:15px;height:15px;cursor:pointer">+ оплаты без метки <span style="opacity:.7">(= весь файл)</span></label>`;
+  $('fx').value=FX;$('tgt').value=TGT;$('act').value=ACT;
+}
+
+// ─────────── school KPIs ───────────
+function kpis(){
+  const s=agg(),cost=s.usd*FX,cpr=s.regs?s.usd/s.regs:null;
+  const romi=cost?(s.rev_rub/cost-1)*100:null, fromi=cost?(s.fact_rub/cost-1)*100:null;
+  $('kpis').innerHTML=[['Бюджет',rub(cost),usd(s.usd)],
+   ['Показы',fmt(s.imp),'CTR '+pct(s.clicks,s.imp,2)],
+   ['Клики',fmt(s.clicks),'CPC '+(s.clicks?usd(s.usd/s.clicks):'—')],
+   ['Регистрации',fmt(s.regs),'клик→рег '+pct(s.regs,s.clicks)],
+   ['Цена регистрации',cpr==null?'—':'$'+cpr.toFixed(2),'цель ≤$'+TGT.toFixed(2),cprClass(cpr)],
+   ['Зрители вебинара',fmt(s.visits),'доходимость '+pct(s.visits,s.regs)],
+   ['Заявки',fmt(s.apps),'зритель→заявка '+pct(s.apps,s.visits)],
+   ['Оплаты',fmt(s.sales),'заявка→оплата '+pct(s.sales,s.apps)],
+   ['Предоплаты',fmt(s.prepay),s.prepay?'':'не заполняются'],
+   ['Средний чек',s.sales?rub(s.rev_rub/s.sales):'—','по заявленной'],
+   ['CAC',s.sales?rub(cost/s.sales):'—','бюджет ÷ оплаты'],
+   ['Выручка',rub(s.rev_rub),'факт '+rub(s.fact_rub)],
+   ['ROMI',romiTxt(romi),'по факту '+romiTxt(fromi),romiClass(romi)],
+   ['Рег → продажа',pct(s.sales,s.regs,2),'сквозная']].map(tile).join('');
+}
+function funnel(){
+  const s=agg(),cost=s.usd*FX;
+  const st=[['Клики по ссылке',s.clicks],['Регистрации на вебинар',s.regs],['Зрители вебинара',s.visits],
+            ['Заявки на курс',s.apps],['Предоплаты',s.prepay],['Оплаты',s.sales]];
+  const col=['#b7d3f6','#86b6ef','#5598e7','#2a78d6','#1c5cab','#104281'];
+  const mx=st[0][1]||1;
+  // prepayments and payments both convert from applications: prepay is a side branch, not a step
+  let h=`<div class="finputs"><span>Расход <b>${rub(cost)}</b></span><span>Показы <b>${fmt(s.imp)}</b></span>
+  <span>CTR <b>${pct(s.clicks,s.imp,2)}</b></span><span>Цена регистрации <b>${s.regs?'$'+(s.usd/s.regs).toFixed(2):'—'}</b></span>
+  <span>CAC <b>${s.sales?rub(cost/s.sales):'—'}</b></span></div>`;
+  st.forEach((x,i)=>{
+    const base=i===0?null:st[Math.min(i-1,3)][1];
+    const c=base===null?'':(base?'→ '+pct(x[1],base):'—');
+    h+=`<div class="fstep"><div class="flab">${x[0]}</div><div class="ftrack">
+    <i style="width:${Math.max(x[1]/mx*100,0.4).toFixed(3)}%;background:${col[i]}"></i><span class="fval">${fmt(x[1])}</span></div>
+    <div class="fconv">${c}</div></div>`});
+  h+=`<p class="h2note" style="margin:12px 0 0">Клик → оплата <b>${pct(s.sales,s.clicks,2)}</b> · регистрация → оплата <b>${pct(s.sales,s.regs,2)}</b> · на одну продажу нужно <b>${s.sales?fmt(s.regs/s.sales):'—'}</b> регистраций и <b>${s.sales?fmt(s.visits/s.sales):'—'}</b> зрителей вебинара.</p>`;
+  $('funnel').innerHTML=h;
+}
+
+// ─────────── multi-metric chart ───────────
+const MET={usd:{l:'Бюджет',c:'#2a78d6',f:usd},regs:{l:'Регистрации',c:'#eb6834',f:fmt},
+ visits:{l:'Зрители',c:'#1baf7a',f:fmt},apps:{l:'Заявки',c:'#eda100',f:fmt},
+ sales:{l:'Оплаты',c:'#e87ba4',f:fmt},rev_rub:{l:'Выручка',c:'#7a5ad8',f:rub},
+ clicks:{l:'Клики',c:'#008300',f:fmt},cpr:{l:'Цена рег.',c:'#e34948',f:v=>v==null?'—':'$'+v.toFixed(2)}};
+const mval=(w,k)=>k==='cpr'?(w.regs?w.usd/w.regs:null):(w[k]||0);
+function chart(){
+  const ws=D.wins.filter(w=>w.days.some(inRange));
+  $('chartleg').innerHTML=Object.keys(MET).map(k=>{
+    const on=chartMet.has(k),last=ws.length?mval(ws[ws.length-1],k):null;
+    return `<span class="m ${on?'on':''}" data-m="${k}" style="${on?'background:'+MET[k].c+';border-color:'+MET[k].c:''}">${MET[k].l}${on&&last!=null?' · '+MET[k].f(last):''}</span>`}).join('');
+  $('chartleg').querySelectorAll('.m').forEach(b=>b.onclick=()=>{
+    const k=b.dataset.m;chartMet.has(k)?chartMet.delete(k):chartMet.add(k);chart()});
+  if(!ws.length||!chartMet.size){$('chart').innerHTML='<p class="h2note">нет данных за период</p>';return}
+  const W=1000,H=190,P={t:12,r:12,b:26,l:12},n=ws.length;
+  const xs=i=>P.l+(n===1?(W-P.l-P.r)/2:i*(W-P.l-P.r)/(n-1));
+  let g='';
+  chartMet.forEach(k=>{
+    const vals=ws.map(w=>mval(w,k)),mx=Math.max(...vals.filter(v=>v!=null),0)||1;
+    const pts=vals.map((v,i)=>v==null?null:[xs(i),H-P.b-(v/mx)*(H-P.t-P.b),v,ws[i].label]).filter(Boolean);
+    g+=`<polyline fill="none" stroke="${MET[k].c}" stroke-width="2" stroke-linejoin="round" vector-effect="non-scaling-stroke"
+      points="${pts.map(p=>p[0].toFixed(1)+','+p[1].toFixed(1)).join(' ')}"/>`;
+    g+=pts.map(p=>`<circle cx="${p[0].toFixed(1)}" cy="${p[1].toFixed(1)}" r="3.5" fill="${MET[k].c}" stroke="var(--surface-1)" stroke-width="1.5"><title>${esc(p[3])} · ${MET[k].l}: ${MET[k].f(p[2])}</title></circle>`).join('');
+  });
+  const step=Math.ceil(n/16);
+  const lab=ws.map((w,i)=>i%step?'':`<text x="${xs(i).toFixed(1)}" y="${H-8}" font-size="10" fill="var(--text-muted)" text-anchor="middle">${esc(w.label.split(' ')[0])}</text>`).join('');
+  $('chart').innerHTML=`<svg class="lc" viewBox="0 0 ${W} ${H}" preserveAspectRatio="none">${g}${lab}</svg>
+  <p class="h2note" style="margin:6px 0 0">Каждая кривая нормирована на свой максимум — сравнивайте форму, не высоту. Точка = вебинарное окно, наведите для значения.</p>`;
+}
+
+// ─────────── calendar ───────────
+const calVal=r=>calMetric==='usd'?r.usd*FX:r[calMetric];
+function renderCal(){
+  const mx=Math.max(...D.days.map(calVal),1);
+  const [y,mo]=calMonth.split('-').map(Number);
+  $('calTitle').textContent=MONFULL[mo-1]+' '+y;
+  $('dow').innerHTML=['Пн','Вт','Ср','Чт','Пт','Сб','Вс'].map(d=>`<div class="dow">${d}</div>`).join('');
+  let cells='';
+  for(let i=0;i<(new Date(y,mo-1,1).getDay()+6)%7;i++)cells+='<div></div>';
+  for(let dd=1;dd<=new Date(y,mo,0).getDate();dd++){
+    const ds=isoOf(y,mo,dd),r=D.days.find(x=>x.d===ds),v=r?calVal(r):null,has=r!=null;
+    const a=has?(0.12+0.75*v/mx):0, sel=selFrom&&inRange(ds);
+    cells+=`<div class="cd ${has?'':'off'} ${sel?'sel':''}" ${has?`data-d="${ds}"`:''}
+      title="${has?ds+' · '+esc(r.win)+' · '+(calMetric==='usd'||calMetric==='rev_rub'?rub(v):fmt(v)):'нет вебинарного окна'}"
+      style="${has?`background:color-mix(in srgb, var(--series-1) ${(a*100).toFixed(0)}%, transparent)`:''}">
+      <span>${dd}</span>${has?`<span class="cdv">${v>=1000?Math.round(v/1000)+'k':Math.round(v)}</span>`:''}</div>`;
+  }
+  $('calGrid').innerHTML=cells;
+  $('prevM').classList.toggle('off',!MONS.length||calMonth<=MONS[0]);
+  $('nextM').classList.toggle('off',!MONS.length||calMonth>=MONS[MONS.length-1]);
+  $('dFrom').value=selFrom||'';$('dTo').value=selTo||selFrom||'';
+  document.querySelectorAll('.cd[data-d]').forEach(c=>c.onclick=()=>{
+    const d=c.dataset.d;
+    if(!selFrom||selTo||d<selFrom){selFrom=d;selTo=null}else{selTo=d}
+    clearPresets();refresh()});
+}
+function shiftMonth(n){const [y,m]=calMonth.split('-').map(Number),d=new Date(y,m-1+n,1);
+  calMonth=isoOf(d.getFullYear(),d.getMonth()+1,1).slice(0,7);renderCal()}
+const clearPresets=()=>document.querySelectorAll('.preset[data-p]').forEach(x=>x.classList.remove('on'));
+
+// ─────────── sortable helper ───────────
+const sorts={};
+function sortable(id,cols,rows,def,render){
+  const st=sorts[id]||(sorts[id]={k:def,dir:-1});
+  const col=cols.find(c=>c[0]===st.k);
+  rows=rows.slice().sort((a,b)=>{const x=col[3](a),y=col[3](b);
+    return (typeof x==='string'?x.localeCompare(y):(x??-1e15)-(y??-1e15))*st.dir});
+  const el=$(id);
+  el.innerHTML='<thead><tr>'+cols.map(c=>`<th class="${c[2]?'l':''}" data-k="${c[0]}">${c[1]}${st.k===c[0]?(st.dir<0?' ↓':' ↑'):''}</th>`).join('')+'</tr></thead><tbody>'+render(rows)+'</tbody>';
+  el.querySelectorAll('th[data-k]').forEach(th=>th.onclick=()=>{
+    const k=th.dataset.k;st.dir=st.k===k?-st.dir:-1;st.k=k;refresh()});
+}
+
+// ─────────── monthly ───────────
+function months(){
+  const mk=(name,ds)=>{const s={name};KEYS.forEach(k=>s[k]=sum(ds,k));const cost=s.usd*FX;
+    Object.assign(s,{cost,cpr:s.regs?s.usd/s.regs:null,romi:cost?(s.rev_rub/cost-1)*100:null,
+      cac:s.sales?cost/s.sales:null,avg:s.sales?s.rev_rub/s.sales:null,show:s.regs?s.visits/s.regs:null});return s};
+  const rows=MONS.map(m=>({...mk(monName(m)+' '+m.slice(0,4),D.days.filter(r=>r.d.startsWith(m))),m}));
+  const tot=mk('ИТОГО',D.days);
+  const F=k=>r=>r[k];
+  const cols=[['m','Месяц',1,F('m')],['cost','Бюджет',0,F('cost')],['imp','Показы',0,F('imp')],['clicks','Клики',0,F('clicks')],
+    ['regs','Рег.',0,F('regs')],['cpr','Цена рег.',0,F('cpr')],['visits','Зрители',0,F('visits')],['show','Доход-ть',0,F('show')],
+    ['apps','Заявки',0,F('apps')],['sales','Оплаты',0,F('sales')],['cac','CAC',0,F('cac')],['avg','Ср. чек',0,F('avg')],
+    ['rev_rub','Выручка',0,F('rev_rub')],['romi','ROMI',0,F('romi')]];
+  const row=(s,cls)=>`<tr class="${cls||''}"><td class="l"><span class="dot s-${romiClass(s.romi)}"></span>${s.name}</td>
+    <td>${rub(s.cost)}</td><td>${fmt(s.imp)}</td><td>${fmt(s.clicks)}</td><td>${fmt(s.regs)}</td>
+    <td class="romi s-${cprClass(s.cpr)}">${s.cpr==null?'—':'$'+s.cpr.toFixed(2)}</td><td>${fmt(s.visits)}</td><td>${pct(s.visits,s.regs)}</td>
+    <td>${fmt(s.apps)}</td><td>${fmt(s.sales)}</td><td>${s.cac==null?'—':rub(s.cac)}</td><td>${s.avg==null?'—':rub(s.avg)}</td>
+    <td>${rub(s.rev_rub)}</td><td class="romi s-${romiClass(s.romi)}">${romiTxt(s.romi)}</td></tr>`;
+  sortable('months',cols,rows,'m',rs=>rs.map(r=>row(r)).join('')+row(tot,'tot'));
+}
+
+// ─────────── reconciliation with Meta ───────────
+function recon(){
+  const s=agg(), md=D.meta_daily.filter(r=>inRange(r.d));
+  const winDays=new Set(D.days.filter(r=>inRange(r.d)).map(r=>r.d));
+  const mw=md.filter(r=>winDays.has(r.d));
+  const m={spend:sum(md,'spend'),clicks:sum(md,'clicks'),leads:sum(md,'leads'),purch:sum(md,'purchases')};
+  const w={spend:sum(mw,'spend'),clicks:sum(mw,'clicks'),leads:sum(mw,'leads')};
+  $('reconQ').textContent='· '+rangeLabel();
+  if(!D.meta_daily.length){$('recon').innerHTML='<tbody><tr><td class="l">Нет выгрузки кабинета (meta_daily.csv) — сверка недоступна.</td></tr></tbody>';$('reconWarn').innerHTML='';return}
+  const ratio=(a,b)=>b?a/b:null;
+  const rC=ratio(w.clicks,s.clicks), rL=ratio(w.leads,s.regs);
+  const cplT=s.regs?s.usd/s.regs:null, cplM=m.leads?m.spend/m.leads:null;
+  const outside=m.spend-s.usd;
+  const near=r=>r!=null&&r>0.85&&r<1.15;
+  const rows=[
+   ['Бюджет',usd(s.usd),usd(m.spend),outside>0.05*m.spend?'critical':outside>0.01*m.spend?'warning':'good',usd(-outside),
+     outside>0.05*m.spend?`В таблице только вебинарные окна: ${usd(outside)} расхода в дни между вебинарами в неё не попали.`:'Сходится.'],
+   ['Клики по ссылке',fmt(s.clicks),fmt(m.clicks),near(rC)?'good':'warning',rC==null?'—':'×'+rC.toFixed(2)+' в дни окон',
+     near(rC)?'В дни окон сходится — один и тот же трафик.':'Даже в дни окон клики расходятся — проверьте, откуда в таблицу попадают клики.'],
+   ['Регистрации / события Lead',fmt(s.regs),fmt(m.leads),rL==null?'na':rL>1.3?'critical':rL<0.7?'warning':'good',rL==null?'—':'×'+rL.toFixed(2)+' в дни окон',
+     rL==null?'—':rL>1.3?`<b>Главный разрыв.</b> В те же дни пиксель дал ${fmt(w.leads)} Lead против ${fmt(s.regs)} реальных регистраций.`
+       :rL<0.7?`Пиксель теряет регистрации: ${fmt(w.leads)} Lead против ${fmt(s.regs)}. Оптимизации не хватает сигнала.`:'Сходится — пиксель Lead считает честно.'],
+   ['Цена регистрации',cplT==null?'—':'$'+cplT.toFixed(2),cplM==null?'—':'$'+cplM.toFixed(2),
+     cplT&&cplM&&cplT/cplM>1.3?'critical':'good',cplT&&cplM?'×'+(cplT/cplM).toFixed(2):'—',
+     cplT&&cplM&&cplT/cplM>1.3?'В кабинете реклама выглядит дешевле, чем есть на самом деле.':'Сходится.'],
+   ['Оплаты',fmt(s.sales),m.purch?fmt(m.purch):'—',m.purch?'good':s.sales?'critical':'na',m.purch?'×'+(m.purch/(s.sales||1)).toFixed(2):'—',
+     m.purch?'Purchase передаётся в кабинет.':'Purchase не настроен: ROAS в Ads Manager = 0, алгоритм не знает, кто покупает.']];
+  $('recon').innerHTML=`<thead><tr><th class="l">Показатель</th><th>Таблица</th><th>Кабинет Meta</th><th>Расхождение</th><th class="l">Что это значит</th></tr></thead><tbody>`+
+   rows.map(r=>`<tr><td class="l">${r[0]}</td><td>${r[1]}</td><td>${r[2]}</td><td class="romi s-${r[3]}">${r[4]}</td><td class="l">${r[5]}</td></tr>`).join('')+'</tbody>';
+  let h='';
+  if(rL!=null&&rL>1.3)h+=`<div class="warn crit"><b>Пиксель Lead двоит регистрации (×${rL.toFixed(1)}).</b> Реклама оптимизируется под событие, которое срабатывает чаще реальной регистрации: дубли на странице «спасибо» или Lead повешен на промежуточный шаг. CPL в кабинете $${cplM.toFixed(2)} против реальных $${cplT.toFixed(2)}.</div>`;
+  if(outside>0.05*m.spend&&m.spend){const fr=(s.rev_rub/(m.spend*FX)-1)*100,tr=(s.rev_rub/(s.usd*FX)-1)*100;
+    h+=`<div class="warn"><b>${usd(outside)} расхода вне декомпозиции.</b> На полном расходе ROMI за период не ${romiTxt(tr)}, а <b>${romiTxt(fr)}</b>.</div>`}
+  $('reconWarn').innerHTML=h;
+}
+
+// ─────────── ad layer ───────────
+const landOk=c=>!landFilter||c.land===landFilter;
+const untagged=()=>D.pays.filter(p=>!p.cid);
+function adAgg(){
+  const o={spend:0,leads:0,clicks:0,impressions:0,lpv:0,n:0,rev:0};
+  D.tree.filter(landOk).forEach(c=>Object.keys(o).forEach(k=>o[k]+=c[k]));
+  if(inclNoTag&&!landFilter)untagged().forEach(p=>{o.n++;o.rev+=p.rub});
+  return o;
+}
+const CAC=()=>{const a=adAgg(),n=a.n-(inclNoTag&&!landFilter?untagged().length:0);return n?a.spend*FX/n:0};
+function attrNote(){
+  const P=D.pays,nod=P.filter(p=>!p.d).length,meta=P.filter(p=>p.cid).length,
+    toAd=P.filter(p=>p.ad&&p.ad!=='—').length,rev=sum(P,'rub');
+  $('attrNote').innerHTML=`В файле оплат ${P.length} продаж на ${rub(rev)}; ${nod} строк без даты (${pct(nod,P.length,0)}).
+   Метку рекламы, которую удалось сопоставить с кабинетом, несут ${meta}. К конкретному объявлению привязано <b>${toAd} из ${P.length} продаж (${pct(toAd,P.length,0)})</b>.`;
+}
+function adKpis(){
+  const a=adAgg(),cost=a.spend*FX,romi=cost?(a.rev/cost-1)*100:null;
+  $('adkpis').innerHTML=[['Расход',rub(cost),usd(a.spend)],
+   ['События Lead',fmt(a.leads),'CPL '+(a.leads?usd(a.spend/a.leads):'—')],
+   ['Клики',fmt(a.clicks),'CTR '+pct(a.clicks,a.impressions,2)],
+   ['Клик→лид',pct(a.leads,a.clicks),'качество лендинга'],
+   ['Оплат привязано',fmt(a.n),inclNoTag&&!landFilter?'включая без метки':'только с меткой рекламы'],
+   ['Выручка привязана',rub(a.rev),'из '+rub(sum(D.pays,'rub'))+' в файле'],
+   ['CAC',a.n?rub(cost/a.n):'—','расход ÷ оплаты'],
+   ['ROMI',romiTxt(romi),inclNoTag?'с учётом всех продаж':'нижняя граница',romiClass(romi)]].map(tile).join('');
+}
+const adHref=id=>`https://adsmanager.facebook.com/adsmanager/manage/ads?act=${encodeURIComponent(ACT)}&selected_ad_ids=${encodeURIComponent(id)}`;
+const adLink=ad=>ad.id==='—'?`<span class="mono" title="${ad.macro?'макросы url_tags не раскрылись':'utm_content не совпал ни с одним объявлением'}">${esc(ad.name)}</span>`
+  :ACT?`<a class="prev" target="_blank" rel="noopener" href="${adHref(ad.id)}">${esc(ad.name)} ↗</a>`
+  :`<span title="введите ID кабинета, чтобы открыть креатив">${esc(ad.name)}</span>`;
+let expanded=new Set();
+function tcells(x){
+  const cost=x.spend*FX,cpl=x.leads?x.spend/x.leads:null,romi=cost?(x.rev/cost-1)*100:null;
+  return `<td>${x.spend?rub(cost):'—'}</td><td>${x.impressions?fmt(x.impressions):'—'}</td><td>${x.impressions?pct(x.clicks,x.impressions,2):'—'}</td>
+  <td>${x.leads?fmt(x.leads):'—'}</td><td class="romi s-${cprClass(cpl)}">${cpl!=null?'$'+cpl.toFixed(2):'—'}</td>
+  <td>${x.clicks?fmt(x.clicks):'—'}</td><td>${x.n||0}</td><td>${x.rev?rub(x.rev):'—'}</td>
+  <td class="romi s-${romiClass(romi)}">${romiTxt(romi)}</td>`;
+}
+function tree(){
+  const v=k=>x=>({name:x.name,spend:x.spend,impressions:x.impressions,leads:x.leads,clicks:x.clicks,n:x.n,rev:x.rev,
+    ctr:x.impressions?x.clicks/x.impressions:null,cpl:x.leads?-x.spend/x.leads:null,romi:x.spend?x.rev/(x.spend*FX):null}[k]);
+  const cols=[['name','Кампания / группа / объявление',1],['spend','Расход'],['impressions','Показы'],['ctr','CTR'],
+    ['leads','Lead'],['cpl','CPL'],['clicks','Клики'],['n','Оплат'],['rev','Выручка'],['romi','ROMI']].map(c=>[c[0],c[1],c[2],v(c[0])]);
+  const st=sorts.tree||{k:'spend',dir:-1},key=cols.find(c=>c[0]===st.k)[3];
+  const ord=arr=>arr.slice().sort((a,b)=>{const x=key(a),y=key(b);return(typeof x==='string'?x.localeCompare(y):(x??-1e15)-(y??-1e15))*st.dir});
+  sortable('tree',cols,D.tree.filter(landOk),'spend',cs=>{
+    let h='';
+    cs.forEach(c=>{
+      const open=expanded.has('c|'+c.id),R=c.spend?c.rev/(c.spend*FX):null;
+      const s=R==null?'na':R>=2?'good':R>=1?'warning':'critical';
+      h+=`<tr class="trc" data-id="c|${esc(c.id)}"><td class="l"><span class="chev">${open?'▾':'▸'}</span><span class="dot s-${s}"></span>${esc(c.name)}<em>${esc(c.status)} · ${esc(c.land)}</em></td>${tcells(c)}</tr>`;
+      if(open)ord(c.adsets).forEach(a=>{
+        const aid='a|'+c.id+'|'+a.id,ao=expanded.has(aid);
+        h+=`<tr class="tra" data-id="${esc(aid)}"><td class="l" style="padding-left:30px"><span class="chev">${ao?'▾':'▸'}</span>${esc(a.name)}</td>${tcells(a)}</tr>`;
+        if(ao)ord(a.ads).forEach(ad=>{
+          h+=`<tr class="trad"><td class="l" style="padding-left:58px"><span class="chev sp"></span>${adLink(ad)}
+          <em>${ad.id!=='—'?'<span class="mono">'+esc(ad.id)+'</span>':''}${ad.pl.length?' · '+esc(ad.pl.join(', ')):''}</em></td>${tcells(ad)}</tr>`})});
+    });
+    return h||'<tr><td class="l" colspan="10">нет кампаний под фильтром</td></tr>';
+  });
+  $('tree').querySelectorAll('tr[data-id]').forEach(tr=>tr.onclick=e=>{
+    if(e.target.closest('a'))return;const id=tr.dataset.id;
+    expanded.has(id)?expanded.delete(id):expanded.add(id);tree()});
+}
+function lands(){
+  const L={};
+  D.tree.forEach(c=>{const l=L[c.land]||(L[c.land]={k:c.land,spend:0,clicks:0,lpv:0,leads:0,n:0,rev:0});
+    ['spend','clicks','lpv','leads','n','rev'].forEach(k=>l[k]+=c[k])});
+  const rows=Object.values(L).filter(l=>l.spend>0);
+  const mx=Math.max(...rows.map(l=>l.clicks?l.leads/l.clicks:0),0.0001);
+  const F=f=>f;
+  const cols=[['k','Лендинг',1,F(l=>l.k)],['spend','Расход',0,F(l=>l.spend)],['clicks','Клики',0,F(l=>l.clicks)],
+    ['lpvr','Клик→LPV',0,F(l=>l.clicks?l.lpv/l.clicks:null)],['clr','Клик→лид',1,F(l=>l.clicks?l.leads/l.clicks:null)],
+    ['leads','Лиды',0,F(l=>l.leads)],['cpl','CPL',0,F(l=>l.leads?-l.spend/l.leads:null)],['n','Оплат',0,F(l=>l.n)],
+    ['roas','ROAS',0,F(l=>l.rev/(l.spend*FX))]];
+  sortable('lands',cols,rows,'clr',rs=>rs.map(l=>{const R=l.rev/(l.spend*FX),s=R>=2?'good':R>=1?'warning':'critical',cl=l.clicks?l.leads/l.clicks:0;
+   return `<tr><td class="l"><span class="dot s-${s}"></span>${esc(l.k)}</td><td>${rub(l.spend*FX)}</td><td>${fmt(l.clicks)}</td>
+   <td>${pct(l.lpv,l.clicks)}</td><td class="l"><span class="bar"><i style="width:${(cl/mx*100).toFixed(0)}%"></i></span>${pct(l.leads,l.clicks)}</td>
+   <td>${fmt(l.leads)}</td><td class="romi s-${cprClass(l.leads?l.spend/l.leads:null)}">${l.leads?'$'+(l.spend/l.leads).toFixed(2):'—'}</td><td>${l.n}</td>
+   <td class="romi s-${s}">${R.toFixed(2)} <span style="font-weight:400;color:var(--text-muted)">(${romiTxt((R-1)*100)})</span></td></tr>`}).join('')||'<tr><td class="l" colspan="9">нет данных</td></tr>');
+}
+const SRC_COL=['#2a78d6','#eb6834','#1baf7a','#eda100','#7a5ad8','#82817c'];
+function pie(){
+  const g={};D.pays.forEach(p=>{const x=g[p.src]||(g[p.src]={k:p.src,n:0,rev:0});x.n++;x.rev+=p.rub});
+  const src=Object.values(g).sort((a,b)=>b[pieMet]-a[pieMet]),tot=sum(src,pieMet)||1;
+  let acc=0,seg='';const R=68,cx=76,cy=76;
+  src.forEach((r,i)=>{const frac=r[pieMet]/tot;if(frac>=0.9999){seg+=`<circle cx="${cx}" cy="${cy}" r="${R}" fill="${SRC_COL[i%6]}"/>`;return}
+    const a0=acc*2*Math.PI-Math.PI/2;acc+=frac;const a1=acc*2*Math.PI-Math.PI/2;
+    seg+=`<path d="M${cx},${cy} L${(cx+R*Math.cos(a0)).toFixed(2)},${(cy+R*Math.sin(a0)).toFixed(2)} A${R},${R} 0 ${frac>0.5?1:0},1 ${(cx+R*Math.cos(a1)).toFixed(2)},${(cy+R*Math.sin(a1)).toFixed(2)} Z" fill="${SRC_COL[i%6]}" stroke="var(--surface-1)" stroke-width="2"/>`});
+  $('pie').innerHTML=`<div class="pie"><svg width="152" height="152" viewBox="0 0 152 152">${seg}</svg>
+   <div class="pielegend">${src.map((r,i)=>`<div><i style="background:${SRC_COL[i%6]}"></i>
+   <span>${esc(r.k)} — <b>${pieMet==='n'?r.n+' оплат':rub(r.rev)}</b> · ${(r[pieMet]/tot*100).toFixed(0)}%</span></div>`).join('')}</div></div>`;
+}
+// hook / placement / country cuts: real ROMI where Meta gives spend for the slice, modelled by CAC otherwise
+function cut(id,title,field,spendOf){
+  const cac=CAC(),g={};
+  D.pays.filter(p=>(p.cid||inclNoTag)&&(!landFilter||p.land===landFilter)).forEach(p=>{
+    const x=g[p[field]]||(g[p[field]]={k:p[field],n:0,rev:0,ads:new Set()});x.n++;x.rev+=p.rub;if(p.ad&&p.ad!=='—')x.ads.add(p.ad)});
+  if(spendOf)Object.keys(spendOf).forEach(k=>{if(!g[k]&&spendOf[k]>0)g[k]={k,n:0,rev:0,ads:new Set()}});
+  const rows=Object.values(g).map(r=>{const sp=spendOf&&spendOf[r.k]!=null?spendOf[r.k]*FX:null;
+    const cost=sp??(cac?r.n*cac:null);return{...r,sp,model:sp==null,romi:cost?(r.rev/cost-1)*100:null,avg:r.n?r.rev/r.n:null}});
+  const tot=sum(rows,'rev')||1;
+  const cols=[['k',title,1,r=>String(r.k)],['n','Оплат',0,r=>r.n],['rev','Выручка',0,r=>r.rev],['sp','Расход',0,r=>r.sp],
+    ['romi','ROMI',0,r=>r.romi],['share','Доля',0,r=>r.rev]];
+  sortable(id,cols,rows,'rev',rs=>rs.map(r=>{
+    const links=ACT&&r.ads.size?' '+[...r.ads].slice(0,6).map(a=>`<a class="prev" target="_blank" rel="noopener" href="${adHref(a)}" title="открыть объявление">↗</a>`).join(''):'';
+    return `<tr><td class="l">${esc(r.k)}${links}</td><td>${r.n}</td><td>${rub(r.rev)}</td><td>${r.sp==null?'—':rub(r.sp)}</td>
+    <td class="romi s-${romiClass(r.romi)}">${romiTxt(r.romi)}${r.model&&r.romi!=null?'*':''}</td>
+    <td><span class="bar"><i style="width:${(r.rev/tot*100).toFixed(1)}%"></i></span>${(r.rev/tot*100).toFixed(0)}%</td></tr>`}).join('')||'<tr><td class="l" colspan="6">нет оплат с меткой</td></tr>');
+}
+function hookSpend(){const o={};D.tree.filter(landOk).forEach(c=>c.adsets.forEach(s=>s.ads.forEach(a=>{if(a.id!=='—')o[a.hook]=(o[a.hook]||0)+a.spend})));return o}
+
+// ─────────── P&L ───────────
+function costFor(spec,m,rev){
+  if(spec&&typeof spec==='object'&&'rate' in spec)return{v:spec.rate*rev,note:(spec.rate*100).toFixed(1)+'% от выручки'};
+  if(typeof spec==='number')return{v:spec};
+  const v=spec?spec[m]:undefined;
+  if(v==null){const prev=Object.keys(spec||{}).filter(k=>k<m&&spec[k]!=null).sort().pop();
+    return{v:null,est:prev?spec[prev]:null,estFrom:prev}}
+  return{v};
+}
+function pl(){
+  const ms=selMonths();
+  $('plQ').textContent='· '+(ms.length===1?monName(ms[0])+' '+ms[0].slice(0,4):ms.length?ms.map(monName).join(', '):'нет данных');
+  const days=D.days.filter(r=>ms.includes(r.d.slice(0,7)));
+  const md=D.meta_daily.filter(r=>ms.includes(r.d.slice(0,7)));
+  const rev=sum(days,'rev_rub'),fact=sum(days,'fact_rub');
+  const adUsd=md.length?sum(md,'spend'):sum(days,'usd');
+  let lines=[['Выручка (заявленная)',rev]],missing=[],estSum=0,net=rev-adUsd*FX;
+  lines.push([`Реклама (${md.length?'кабинет, весь расход':'по декомпозиции'})`,-adUsd*FX]);
+  Object.entries(D.costs).forEach(([name,spec])=>{
+    let v=0,miss=false,est=0,note='';
+    ms.forEach(m=>{const mr=sum(days.filter(r=>r.d.startsWith(m)),'rev_rub'),c=costFor(spec,m,mr);
+      if(c.note)note=c.note;
+      if(c.v==null){miss=true;if(c.est!=null){est+=c.est;missing.push([name,m,c.est,c.estFrom])}else missing.push([name,m,null])}
+      else v+=c.v});
+    net-=v;estSum+=est;
+    lines.push([name+(note?` <span style="color:var(--text-muted)">(${note})</span>`:''),miss&&!v?null:-v,miss]);
+  });
+  const L=r=>`<tr><td class="l">${r[0]}${r[2]&&r[1]!=null?' <span class="na">· частично не заполнено</span>':''}</td><td class="${r[1]==null?'na':''}">${r[1]==null?'не заполнено':rub(r[1])}</td></tr>`;
+  const card1=`<div class="card pl"><b>По данным</b><table><tbody>${lines.map(L).join('')}
+    <tr class="tot"><td class="l">Чистая прибыль</td><td>${rub(net)}</td></tr></tbody></table></div>`;
+  const real=net-estSum, onFact=real-(rev-fact);
+  const card2=`<div class="card pl"><b>${missing.length?'Если подставить пропущенные расходы':'С поправкой на фактическую выручку'}</b><table><tbody>
+    <tr><td class="l">Чистая прибыль по данным</td><td>${rub(net)}</td></tr>
+    ${missing.filter(x=>x[2]!=null).map(x=>`<tr><td class="l">${esc(x[0])} · ${monName(x[1])} <span style="color:var(--text-muted)">(как в ${monName(x[3]).toLowerCase()})</span></td><td>${rub(-x[2])}</td></tr>`).join('')}
+    <tr><td class="l">Разница заявленной и фактической выручки</td><td>${rub(-(rev-fact))}</td></tr>
+    <tr class="tot"><td class="l">Реальная чистая прибыль</td><td>≈ ${rub(onFact)}</td></tr>
+    <tr><td class="l" colspan="2" style="color:var(--text-muted);font-size:12.5px;white-space:normal">Маржа ${pct(onFact,fact||1,0)} от фактической выручки ${rub(fact)}.</td></tr></tbody></table></div>`;
+  $('pl').innerHTML=card1+card2;
+  let h='';
+  if(missing.length){const ex=missing.filter(x=>x[2]!=null);
+    h+=`<div class="warn"><b>Прибыль завышена${ex.length?' примерно на '+rub(estSum):''}</b> — не заполнены: ${missing.map(x=>esc(x[0])+' ('+monName(x[1]).toLowerCase()+')').join(', ')}.</div>`}
+  if(md.length&&days.length){const ws=sum(days,'usd');if(adUsd>ws*1.05)
+    h+=`<div class="warn">Реклама в P&L взята из кабинета целиком (${usd(adUsd)}), а не только по вебинарным окнам (${usd(ws)}).</div>`}
+  $('plWarn').innerHTML=h;
+}
+
+// ─────────── what to do ───────────
+function todo(){
+  const s=agg(),md=D.meta_daily.filter(r=>inRange(r.d)),winDays=new Set(D.days.filter(r=>inRange(r.d)).map(r=>r.d));
+  const wl=sum(md.filter(r=>winDays.has(r.d)),'leads'),items=[];
+  if(md.length&&s.regs&&wl/s.regs>1.3)items.push(`<b>Починить пиксель Lead.</b> В ${(wl/s.regs).toFixed(1)} раза больше событий, чем регистраций — Meta оптимизируется под мусор. Самый дорогой баг в системе.`);
+  if(md.length&&!sum(md,'purchases')&&s.sales)items.push('<b>Поставить Purchase с передачей выручки</b> (пиксель + Conversions API). Кабинет не видит ни одной продажи, ROAS в интерфейсе 0.');
+  const P=D.pays,toAd=P.filter(p=>p.ad&&p.ad!=='—').length,share=P.length?toAd/P.length:0;
+  if(share<0.8)items.push(`<b>Довести атрибуцию с ${(share*100).toFixed(0)}% до 90%+.</b> UTM должны доезжать до кассы: <span class="mono">utm_campaign={{campaign.id}}&amp;utm_term={{adset.id}}&amp;utm_content={{ad.id}}&amp;utm_medium={{placement}}</span> в параметрах URL на уровне объявления.`);
+  const macro=D.tree.some(c=>c.adsets.some(a=>a.ads.some(x=>x.macro)));
+  if(macro)items.push('<b>Макросы не раскрываются.</b> В части оплат пришло <span class="mono">{{ad.id}}</span> буквально — метки вписаны в сам URL, а не в поле «Параметры URL».');
+  const nod=P.filter(p=>!p.d).length;
+  if(nod/(P.length||1)>0.1)items.push(`<b>Проставлять дату у каждой оплаты.</b> ${nod} из ${P.length} строк без даты — их нельзя положить на период.`);
+  const md2=D.meta_daily.filter(r=>inRange(r.d)),out=sum(md2,'spend')-s.usd;
+  if(md2.length&&out>0.05*sum(md2,'spend'))items.push(`<b>Вести декомпозицию по всем дням, а не только по окнам.</b> ${usd(out)} расхода за период вне таблицы — ROMI в таблице завышен.`);
+  const cpr=s.regs?s.usd/s.regs:null;
+  if(cpr!=null&&cpr>TGT)items.push(`<b>Цена регистрации $${cpr.toFixed(2)} выше цели $${TGT.toFixed(2)}.</b> Начните с кампаний с худшим CPL в дереве выше и с лендинга с худшей конверсией клик→лид.`);
+  const L={};D.tree.forEach(c=>{const l=L[c.land]||(L[c.land]={k:c.land,cl:0,ld:0,sp:0});l.cl+=c.clicks;l.ld+=c.leads;l.sp+=c.spend});
+  const lr=Object.values(L).filter(l=>l.cl>200).sort((a,b)=>b.ld/b.cl-a.ld/a.cl);
+  if(lr.length>1&&lr[0].ld/lr[0].cl>1.5*lr[lr.length-1].ld/lr[lr.length-1].cl){const w=lr[lr.length-1],b=lr[0];
+    items.push(`<b>Перелить трафик с лендинга «${esc(w.k)}» на «${esc(b.k)}».</b> Клик→лид ${pct(w.ld,w.cl)} против ${pct(b.ld,b.cl)}; на «${esc(w.k)}» ушло ${rub(w.sp*FX)}.`)}
+  const losers=D.tree.filter(c=>c.spend*FX>3*(CAC()||Infinity)&&!c.n);
+  if(losers.length)items.push(`<b>Проверить кампании без единой оплаты:</b> ${losers.map(c=>esc(c.name)+' ('+rub(c.spend*FX)+')').join(', ')} — потратили больше трёх средних CAC.`);
+  const ms=selMonths();
+  const miss=Object.entries(D.costs).filter(([n,sp])=>ms.some(m=>costFor(sp,m,0).v==null)).map(x=>x[0]);
+  if(miss.length)items.push(`<b>Заполнить расходы в P&L:</b> ${miss.map(esc).join(', ')}. Без них прибыль за период завышена.`);
+  if(!items.length)items.push('<b>Критичных расхождений не найдено.</b> Следующий шаг — масштабировать кампании с ROMI выше +100%.');
+  $('todo').innerHTML=items.map(x=>`<li>${x}</li>`).join('');
+}
+
+// ─────────── wiring ───────────
+function refresh(){
+  $('rangeText').textContent=rangeLabel();
+  kpis();funnel();chart();months();recon();renderCal();
+  attrNote();adKpis();tree();lands();pie();
+  cut('cutHook','Хук / имя креатива','hook',hookSpend());
+  cut('cutPl','Плейсмент','pl',landFilter?null:D.bd.placement);
+  cut('cutGeo','Страна','geo',landFilter?null:D.bd.country);
+  $('cacnote').textContent=rub(CAC());
+  pl();todo();
+}
+header();
+document.querySelectorAll('.preset[data-p]').forEach(b=>b.onclick=()=>{
+  clearPresets();b.classList.add('on');const p=b.dataset.p;
+  if(p==='all'){selFrom=selTo=null}
+  else{const ds=D.days.filter(r=>r.d.startsWith(p)).map(r=>r.d);selFrom=ds[0];selTo=ds[ds.length-1];calMonth=p}
+  refresh()});
+$('rangeField').onclick=e=>{e.stopPropagation();$('calPop').classList.toggle('on')};
+$('calDone').onclick=()=>$('calPop').classList.remove('on');
+$('prevM').onclick=()=>shiftMonth(-1);
+$('nextM').onclick=()=>shiftMonth(1);
+function applyInputs(){
+  let f=$('dFrom').value,t=$('dTo').value;if(!f)return;
+  if(t&&t<f)[f,t]=[t,f];
+  selFrom=f;selTo=t||null;calMonth=f.slice(0,7);clearPresets();refresh();
+}
+$('dFrom').onchange=applyInputs;$('dTo').onchange=applyInputs;
+$('calPop').onclick=e=>e.stopPropagation();
+document.addEventListener('click',()=>$('calPop').classList.remove('on'));
+document.querySelectorAll('#calMet .m').forEach(b=>b.onclick=()=>{
+  document.querySelectorAll('#calMet .m').forEach(x=>x.classList.remove('on'));
+  b.classList.add('on');calMetric=b.dataset.m;renderCal()});
+document.querySelectorAll('#dirBar .dirbtn').forEach(b=>b.onclick=()=>{
+  document.querySelectorAll('#dirBar .dirbtn').forEach(x=>x.classList.remove('on'));
+  b.classList.add('on');landFilter=b.dataset.d||null;refresh()});
+$('inclNoTag').onchange=e=>{inclNoTag=e.target.checked;refresh()};
+document.querySelectorAll('#pieMet .m').forEach(b=>b.onclick=()=>{
+  document.querySelectorAll('#pieMet .m').forEach(x=>x.classList.remove('on'));
+  b.classList.add('on');pieMet=b.dataset.m;pie()});
+$('fx').oninput=e=>{FX=parseFloat(e.target.value)||D.fx;refresh()};
+$('tgt').oninput=e=>{TGT=parseFloat(e.target.value)||D.target_cpr;refresh()};
+const ACT_KEY='funnel_act_'+D.title;
+$('act').oninput=e=>{ACT=(e.target.value||'').trim().replace(/^act_/,'');
+  try{localStorage.setItem(ACT_KEY,ACT)}catch(_){};refresh()};
+try{const sv=localStorage.getItem(ACT_KEY);if(sv&&!ACT){ACT=sv;$('act').value=sv}}catch(_){}
+const last=document.querySelector(`.preset[data-p="${MONS[MONS.length-1]}"]`);
+(last||document.querySelector('.preset[data-p="all"]')).click();
+</script>
+</body>
+</html>

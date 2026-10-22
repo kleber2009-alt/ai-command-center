@@ -19,6 +19,7 @@ env vars, and routes, see `CLAUDE.md` / `README.md` inside each `apps/<app>/`.
 │   ├── infra-worker/       # cron+queue Office Worker (9 handlers)
 │   ├── ai-content-factory/ # Autonomous IG content factory (Claude + Puppeteer + RAG)
 │   ├── ig-content/         # Next.js SaaS — Instagram Serial Content Automation (Supabase + 5 agents)
+│   ├── funnel-analytics/   # Сквозная аналитика: декомпозиция × Meta Ads × оплаты UTM → static HTML dashboard
 │   └── voice-circle-bot/   # Python TG bot for video circles
 ├── landings/               # static landing pages (one folder per product)
 ├── supabase/               # SQL migrations shared across apps
@@ -55,6 +56,7 @@ env vars, and routes, see `CLAUDE.md` / `README.md` inside each `apps/<app>/`.
 | `apps/ytdlp` | FastAPI yt-dlp companion (URL → media) | `infra-ytdlp-1` |
 | `apps/infra-worker` | Office Worker, 9 cron handlers (`daily_briefing`, `weekly_recap`, `monthly_calendar`, `welcome_sequence`, `welcome_voice`, `subscription_expiry_check`, `viral_clone`, `viral_clone_sweep`, `viral_discover`) | `infra-aisales-worker-1` |
 | `apps/persona-train` | Forked voice-training stack (own domain) — **в Command Center НЕТ**, отдельная инициатива Ильи | `persona-train.46-62-215-11.nip.io`, `@ilia_pali0_bot`, `persona-train-web :3030` |
+| `apps/funnel-analytics` | Сквозная аналитика вебинарной воронки (Python stdlib → один HTML), `python3 build.py` — **не задеплоен** | — |
 | `apps/voice-circle-bot` | Python TG-bot prototype для видео-кружков — **в Command Center НЕТ**, не задеплоен | — |
 
 ## When Claude is asked to change something
