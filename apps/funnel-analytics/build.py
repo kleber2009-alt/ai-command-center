@@ -194,8 +194,10 @@ def load_embeds(data, cfg):
     for e in cfg.get("embeds", []):
         p = embed_path(data, e)
         if p.exists():
-            out.append({"title": e["title"], "url": e.get("url", ""), "note": e.get("note", ""),
-                        "html": p.read_text(encoding="utf-8", errors="replace"),
+            html = p.read_text(encoding="utf-8", errors="replace")
+            for old, new in e.get("replace", {}).items():  # e.g. rebrand the copied page
+                html = html.replace(old, new)
+            out.append({"title": e["title"], "url": e.get("url", ""), "note": e.get("note", ""), "html": html,
                         "fetched": dt.datetime.fromtimestamp(p.stat().st_mtime).strftime("%d.%m.%Y %H:%M")})
     return out
 
