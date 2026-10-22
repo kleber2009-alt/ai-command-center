@@ -176,6 +176,9 @@ tr.fcat{cursor:pointer}tr.fcat td{font-weight:600}tr.fitem td{color:var(--text-s
 .slide .stext{font-size:13.5px}
 .cin{display:grid;grid-template-columns:1fr 130px;gap:8px 14px;align-items:center;max-width:620px}
 .cin input{padding:6px 8px;border:1px solid var(--line);border-radius:7px;background:var(--plane);color:var(--text-primary);font:inherit;text-align:right}
+table.grid{min-width:0;font-size:12.5px}table.grid td{padding:5px 8px;white-space:nowrap;max-width:340px;overflow:hidden;text-overflow:ellipsis}
+table.grid td.t{text-align:left}table.grid td.rn{color:var(--text-muted);font-size:11px;background:color-mix(in srgb,var(--text-muted) 6%,transparent);position:sticky;left:0}
+table.grid tr.hd td{font-weight:650;background:color-mix(in srgb,var(--series-1) 7%,transparent)}
 .st.paid{background:color-mix(in srgb,var(--good) 16%,transparent)}.st.unpaid{background:color-mix(in srgb,var(--warning) 22%,transparent)}
 
 </style>
@@ -283,6 +286,9 @@ tr.fcat{cursor:pointer}tr.fcat td{font-weight:600}tr.fitem td{color:var(--text-s
 <h2>Расходы по статьям <span class="q">· план / факт / статус · клик по категории — раскрыть</span></h2>
 <div class="scroll"><table id="finCats"></table></div>
 <div id="finWarn"></div>
+<h2>Все листы таблицы <span class="q">· как в Google Sheets, без формул</span></h2>
+<div class="dirbar"><select class="sel" id="shSel"></select><span class="h2note" id="shNote" style="margin:0"></span></div>
+<div class="scroll" id="shWrap" style="max-height:640px;overflow:auto"><table id="shTbl" class="grid"></table></div>
 <footer id="finFoot"></footer>
 </section>
 
@@ -749,17 +755,20 @@ function finMonth(f){
     margin:rev?profit/rev*100:null,marginPlan:revPlan?profitPlan/revPlan*100:null,done:revPlan?rev/revPlan*100:null,sh};
 }
 const FINM=FIN.map(finMonth);
-function finScope(){return finSel?FIN.filter(f=>f.m===finSel):FIN}
+function finScope(){return !finSel?FIN:FIN.filter(f=>finSel.length===4?f.m.startsWith(finSel):f.m===finSel)}
 function finAgg(){const ms=finScope().map(finMonth),o={};
   ['rev','revPlan','exp','expPlan','shares','sharesPlan','profit','profitPlan','unpaid','refunds'].forEach(k=>o[k]=sum(ms,k));
-  o.margin=o.rev?o.profit/o.rev*100:null;o.marginPlan=o.revPlan?o.profitPlan/o.revPlan*100:null;o.done=o.revPlan?o.rev/o.revPlan*100:null;return o}
+  // plan completion only over months that have a plan, otherwise months without a plan inflate it
+  const wp=ms.filter(m=>m.revPlan>0);o.revWithPlan=sum(wp,'rev');
+  o.margin=o.rev?o.profit/o.rev*100:null;o.marginPlan=o.revPlan?o.profitPlan/o.revPlan*100:null;o.done=o.revPlan?o.revWithPlan/o.revPlan*100:null;return o}
 const dPct=(f,p)=>p?((f/p-1)*100>=0?'+':'−')+Math.abs((f/p-1)*100).toFixed(0)+'% к плану':'плана нет';
 function finRender(){
-  const label=finSel?fmName(finSel):(FIN.length>1?fmName(FIN[0].m)+' — '+fmName(FIN[FIN.length-1].m):FIN.length?fmName(FIN[0].m):'');
+  const sc=finScope();
+  const label=finSel&&finSel.length>4?fmName(finSel):sc.length>1?fmName(sc[0].m)+' — '+fmName(sc[sc.length-1].m):sc.length?fmName(sc[0].m):'';
   $('finQ').textContent='· '+label;$('revQ').textContent='· '+label;
   const a=finAgg();
   $('finKpis').innerHTML=[
-   ['Выручка',rub(a.rev),a.revPlan?'план '+rub(a.revPlan)+' · '+a.done.toFixed(0)+'%':'',a.done==null?null:a.done>=100?'good':a.done>=85?'warning':'critical'],
+   ['Выручка',rub(a.rev),a.revPlan?'план '+rub(a.revPlan)+' · выполнено '+a.done.toFixed(0)+'%'+(a.revWithPlan<a.rev-1?' (по месяцам с планом)':''):'плана нет',a.done==null?null:a.done>=100?'good':a.done>=85?'warning':'critical'],
    ['Расходы',rub(a.exp),'план '+rub(a.expPlan)+' · '+dPct(a.exp,a.expPlan),a.expPlan&&a.exp>a.expPlan*1.1?'critical':null],
    ['Доли партнёров',rub(a.shares),'% от прибыли'],
    ['Чистая прибыль',rub(a.profit),'план '+rub(a.profitPlan),a.profit<0?'critical':a.profitPlan&&a.profit<a.profitPlan*0.85?'warning':'good'],
@@ -778,11 +787,12 @@ function finRender(){
     FINM.forEach((m,i)=>{const x0=P.l+i*gw+gw/2-1.5*bw-2;
       [[m.rev,C.rev],[m.exp+m.shares,C.cost],[m.profit,C.profit]].forEach(([v,c],j)=>{
         const yy=Math.min(y(v),y(0)),h=Math.abs(y(v)-y(0));
-        g+=`<rect x="${(x0+j*(bw+2)).toFixed(1)}" y="${yy.toFixed(1)}" width="${bw}" height="${Math.max(h,1).toFixed(1)}" rx="2" fill="${c[1]}" opacity="${!finSel||finSel===m.m?1:.3}"><title>${fmName(m.m)} · ${c[0]}: ${rub(v)}</title></rect>`});
+        g+=`<rect x="${(x0+j*(bw+2)).toFixed(1)}" y="${yy.toFixed(1)}" width="${bw}" height="${Math.max(h,1).toFixed(1)}" rx="2" fill="${c[1]}" opacity="${!finSel||(finSel.length===4?m.m.startsWith(finSel):finSel===m.m)?1:.3}"><title>${fmName(m.m)} · ${c[0]}: ${rub(v)}</title></rect>`});
       g+=`<text x="${(P.l+i*gw+gw/2).toFixed(1)}" y="${H-9}" font-size="10.5" fill="var(--text-muted)" text-anchor="middle">${monName(m.m).slice(0,3)} ${m.m.slice(2,4)}</text>
       <rect class="fhit" data-m="${m.m}" x="${(P.l+i*gw).toFixed(1)}" y="0" width="${gw.toFixed(1)}" height="${H}" fill="transparent" style="cursor:pointer"/>`});
     $('finChart').innerHTML=`<div style="overflow-x:auto"><svg viewBox="0 0 ${W} ${H}" style="width:100%;min-width:${Math.min(W,640)}px;height:${H}px;display:block">${g}</svg></div>`;
     $('finChart').querySelectorAll('.fhit').forEach(r=>r.onclick=()=>{finSel=finSel===r.dataset.m?null:r.dataset.m;finRender()});
+    const box=$('finChart').firstElementChild;if(box&&!box.dataset.s){box.scrollLeft=box.scrollWidth;box.dataset.s=1}
   }
   // monthly table
   const F=k=>r=>r[k];
@@ -799,6 +809,9 @@ function finRender(){
   finScope().forEach(f=>{f.revenue.forEach(r=>{if(r.fact)ch[r.ch]=(ch[r.ch]||0)+r.fact});(f.revenue_detail||[]).forEach(r=>det[r.ch]=(det[r.ch]||0)+r.fact)});
   // breakdown groups (лава · евро ...) also become top-level when the sheet lists them only in the breakdown
   const grp={};Object.entries(det).forEach(([k,v])=>{const g=k.split(' · ')[0];grp[g]=(grp[g]||0)+v});
+  // early tabs only have «Итого выручка»: keep the remainder visible instead of losing it
+  const rest=finScope().reduce((a,f)=>{const r=(f.sheet||{}).rev_fact,c=sum(f.revenue,'fact')+sum(f.revenue_detail||[],'fact');return r!=null&&r-c>1?a+(r-c):a},0);
+  if(rest>1)ch['Без разбивки по каналам']=rest;
   const top=Object.entries({...ch,...Object.fromEntries(Object.entries(grp).map(([g,v])=>['Выручка '+g,v]))}).sort((x,y)=>y[1]-x[1]);
   const tmax=Math.max(...top.map(x=>x[1]),1),ttot=top.reduce((x,y)=>x+y[1],0);
   $('finRev').innerHTML=(top.map(([k,v])=>`<div class="hbar"><span class="l" title="${esc(k)}">${esc(k)}</span><span class="t"><i style="width:${(v/tmax*100).toFixed(1)}%"></i></span><span class="v">${rub(v)}</span></div>`).join('')||'<p class="h2note">нет данных</p>')+
@@ -824,12 +837,17 @@ function finRender(){
       return h}).join('')+`<tr class="tot"><td class="l">Итого с долями</td><td>${rub(sum(crows,'plan'))}</td><td>${rub(sum(crows,'fact'))}</td><td></td><td></td><td>${rub(sum(crows,'unpaid'))}</td></tr>`);
   $('finCats').querySelectorAll('tr.fcat').forEach(tr=>tr.onclick=()=>{const k=tr.dataset.c;finOpen.has(k)?finOpen.delete(k):finOpen.add(k);finRender()});
   // warnings
-  let w='';
+  let w='';const profDiff=[];
   finScope().forEach(f=>{const m=finMonth(f);
     if(m.sh.exp_fact!=null&&Math.abs(m.sh.exp_fact-m.exp)>1)w+=`<div class="warn"><b>${fmName(f.m)}: «Итого расходы» в таблице ${rub(m.sh.exp_fact)}, а сумма строк ${rub(m.exp)}.</b> Формула итога не охватывает часть строк.</div>`;
-    if(m.sh.rev_fact!=null&&m.revCh&&Math.abs(m.sh.rev_fact-m.revCh-sum(f.revenue_detail||[],'fact'))>1&&Math.abs(m.sh.rev_fact-m.revCh)>1){
-      const lava=sum(f.revenue_detail||[],'fact');w+=`<div class="warn"><b>${fmName(f.m)}: каналы не сходятся с «Итого выручка».</b> Строки ${rub(m.revCh)} + детализация ${rub(lava)} против ${rub(m.sh.rev_fact)}.</div>`}
-    if(m.sh.profit_fact!=null&&Math.abs(m.sh.profit_fact-m.profit)>1)w+=`<div class="warn crit"><b>${fmName(f.m)}: «Итоговая прибыль» в таблице ${rub(m.sh.profit_fact)}, а выручка − расходы − доли = ${rub(m.profit)}</b> (разница ${rub(m.sh.profit_fact-m.profit)}). Проверьте формулу: например, строка выручки может прибавляться к прибыли второй раз, хотя уже входит в «Итого выручка».</div>`});
+    const chSum=m.revCh+sum(f.revenue_detail||[],'fact');
+    if(m.sh.rev_fact!=null&&chSum>0&&m.sh.rev_fact-chSum<-1){
+      const lava=sum(f.revenue_detail||[],'fact');w+=`<div class="warn"><b>${fmName(f.m)}: каналы больше «Итого выручка» на ${rub(chSum-m.sh.rev_fact)}.</b> Строки ${rub(m.revCh)} + детализация ${rub(lava)} против ${rub(m.sh.rev_fact)} — часть каналов не вошла в формулу итога.</div>`}
+    if(m.sh.profit_fact!=null&&Math.abs(m.sh.profit_fact-m.profit)>1)profDiff.push([f,m])});
+  if(profDiff.length){const man=([f,m])=>{const x=f.revenue.find(r=>/манифест/i.test(r.ch));return x&&Math.abs(m.sh.profit_fact-m.profit-x.fact)<2};
+    const allMan=profDiff.every(man);
+    w+=`<div class="warn crit"><b>«Итоговая прибыль» в таблице расходится с расчётом «выручка − расходы − доли» в ${profDiff.length} мес.</b>${allMan?' Везде разница ровно равна «Манифестам»: они уже входят в «Итого выручка» и прибавляются к прибыли второй раз.':''}
+    <br>${profDiff.map(([f,m])=>`${fmName(f.m)}: ${rub(m.sh.profit_fact)} в таблице против ${rub(m.profit)} (${m.sh.profit_fact>m.profit?'+':'−'}${rub(Math.abs(m.sh.profit_fact-m.profit))}${man([f,m])?', = манифесты':''})`).join(' · ')}</div>`}
   const over=crows.flatMap(c=>Object.values(c.items).filter(i=>i.plan&&i.fact>i.plan*1.15&&i.fact-i.plan>10000).map(i=>[c.k,i])).sort((x,y)=>(y[1].fact-y[1].plan)-(x[1].fact-x[1].plan)).slice(0,6);
   if(over.length)w+=`<div class="warn crit"><b>Перерасход по статьям:</b> ${over.map(([c,i])=>`${esc(i.k)} +${rub(i.fact-i.plan)} (${fmt((i.fact/i.plan-1)*100)}%)`).join(' · ')}.</div>`;
   const noPlan=crows.flatMap(c=>Object.values(c.items).filter(i=>!i.plan&&i.fact>=10000)).sort((x,y)=>y.fact-x.fact).slice(0,6);
@@ -837,8 +855,25 @@ function finRender(){
   if(a.unpaid)w+=`<div class="warn"><b>${rub(a.unpaid)} по статьям со статусом не «Выплачено».</b> Если статусы в таблице актуальны — это ещё не оплаченные обязательства, и денег на счёте сейчас больше, чем останется после расчётов. Если нет — обновите статусы.</div>`;
   $('finWarn').innerHTML=w;
   $('finFoot').innerHTML=`<b>Источник:</b> ${esc(D.fin.source||'таблица расходов')}. Расходы — сумма строк листа (план/факт), доли партнёров — строки «%», прибыль = выручка − расходы − доли. Выгружено ${esc(D.fin.fetched||D.generated)}.`;
-  $('finMonths').innerHTML=FIN.map(f=>`<button class="preset ${finSel===f.m?'on':''}" data-m="${f.m}">${fmName(f.m)}</button>`).join('')+`<button class="preset ${finSel?'':'on'}" data-m="">Все месяцы</button>`;
+  const years=[...new Set(FIN.map(f=>f.m.slice(0,4)))];
+  $('finMonths').innerHTML=`<button class="preset ${finSel?'':'on'}" data-m="">Все ${FIN.length} мес.</button>`+
+    years.map(y=>`<button class="preset ${finSel===y?'on':''}" data-m="${y}">${y} год</button>`).join('')+
+    `<select class="sel" id="finMonSel"><option value="">Месяц…</option>${FIN.slice().reverse().map(f=>`<option value="${f.m}" ${finSel===f.m?'selected':''}>${fmName(f.m)}</option>`).join('')}</select>`;
+  $('finMonSel').onchange=e=>{finSel=e.target.value||null;finRender()};
   $('finMonths').querySelectorAll('.preset').forEach(b=>b.onclick=()=>{finSel=b.dataset.m||null;finRender()});
+}
+
+// raw sheets
+let shCur=null;
+function sheetsRender(){
+  const S=(D.fin&&D.fin.sheets)||[];if(!S.length){$('shSel').parentElement.style.display='none';return}
+  if(shCur==null)shCur=S.findIndex(x=>x.month===(FIN.length?FIN[FIN.length-1].m:null));if(shCur<0)shCur=0;
+  $('shSel').innerHTML=S.map((x,i)=>`<option value="${i}" ${i===shCur?'selected':''}>${esc(x.name)}${x.month?' · в отчёте':''}</option>`).join('');
+  $('shSel').onchange=e=>{shCur=+e.target.value;sheetsRender()};
+  const sh=S[shCur],rows=sh.rows.filter(r=>r.some(c=>c!==''));
+  const isHd=r=>r.some(c=>typeof c==='string'&&/^(план|факт|статус)$/i.test(c));
+  $('shNote').textContent=`${rows.length} строк · ${sh.rows[0]?sh.rows[0].length:0} столбцов${sh.month?' · разобран в отчёт как '+fmName(sh.month):''}`;
+  $('shTbl').innerHTML='<tbody>'+rows.map((r,i)=>`<tr class="${isHd(r)?'hd':''}"><td class="rn">${i+1}</td>${r.map(c=>typeof c==='number'?`<td>${fmt(c,2)}</td>`:`<td class="t" title="${esc(c)}">${esc(c)}</td>`).join('')}</tr>`).join('')+'</tbody>';
 }
 
 // ═══════════ Контент ═══════════
@@ -1055,7 +1090,7 @@ try{const sv=localStorage.getItem(ACT_KEY);if(sv&&!ACT){ACT=sv;$('act').value=sv
 const last=document.querySelector(`.preset[data-p="${MONS[MONS.length-1]}"]`);
 (last||document.querySelector('.preset[data-p="all"]')).click();
 }
-if(HAS.fin)finRender();
+if(HAS.fin){finRender();sheetsRender()}
 if(HAS.content){contentRender();contentTabs()}
 {const want=location.hash.slice(1);showTab(HAS[want]?want:Object.keys(HAS).find(k=>HAS[k])||'funnel')}
 if(Object.values(HAS).filter(Boolean).length<2)$('tabs').style.display='none';

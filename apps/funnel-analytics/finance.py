@@ -65,8 +65,36 @@ def _col(ref):
     return n - 1
 
 
+DATE_FMT_IDS = set(range(14, 23)) | {45, 46, 47}
+
+
+def _date_styles(z):
+    """Indexes of cellXfs that format a number as a date (so serials like 46303 become 09.10.2026)."""
+    if "xl/styles.xml" not in z.namelist():
+        return set()
+    st = ET.fromstring(z.read("xl/styles.xml"))
+    custom = {}
+    nf = st.find("m:numFmts", NS)
+    for f in (nf if nf is not None else []):
+        code = re.sub(r'"[^"]*"|\\.|\[[^]]*\]', "", f.get("formatCode", "")).lower()
+        custom[int(f.get("numFmtId"))] = bool(re.search(r"[dy]", code)) or bool(re.search(r"(^|[^h:])m+([^m:s]|$)", code) and "d" in code)
+    xfs = st.find("m:cellXfs", NS)
+    out = set()
+    for i, xf in enumerate(xfs if xfs is not None else []):
+        fid = int(xf.get("numFmtId", 0))
+        if fid in DATE_FMT_IDS or custom.get(fid):
+            out.add(i)
+    return out
+
+
+def _serial_to_date(v):
+    import datetime as dt
+    return (dt.date(1899, 12, 30) + dt.timedelta(days=int(v))).strftime("%d.%m.%Y")
+
+
 def read_xlsx(data):
     z = zipfile.ZipFile(io.BytesIO(data))
+    dates = _date_styles(z)
     shared = []
     if "xl/sharedStrings.xml" in z.namelist():
         for si in ET.fromstring(z.read("xl/sharedStrings.xml")).findall("m:si", NS):
@@ -93,6 +121,8 @@ def read_xlsx(data):
                     val = v.text == "1"
                 else:
                     val = float(v.text)
+                    if int(c.get("s", 0)) in dates and 20000 < val < 80000:
+                        val = _serial_to_date(val)
                 cells[_col(c.get("r"))] = val
             idx = int(row.get("r")) - 1
             while len(rows) < idx:
@@ -148,64 +178,95 @@ def variant_score(name):
 
 # ─────────── one monthly tab ───────────
 def parse_month(rows):
+    """One monthly tab -> items / revenue channels / partner shares / the tab's own totals.
+
+    Two layouts exist: the current one (<section>,План,Факт,Статус) and the early one
+    (Dec 2024 - Jan 2025: <item>,<amount>,<status>, no plan column).
+    """
+    old = not any(len(r) > 1 and txt(r[1]).lower() == "план" for r in rows)
     items, revenue, shares, sheet = [], [], [], {}
-    section, mode = "Прочее", "exp"
-    labels = {}  # column -> label from the row above "Итого выручка" (channel breakdown header)
-    for i, r in enumerate(rows):
+    section, mode = ("Клуб" if old else "Прочее"), "exp"
+    labels = {}  # column -> label from the header of the channel breakdown (Выручка лава / евро / доллар ...)
+
+    def pf(r):  # (plan, fact) of a summary row in either layout
+        b, c = num(r[1]), num(r[2])
+        return (None, b) if old else (b, c)
+
+    for r in rows:
         r = list(r) + [None] * (6 - len(r))
         a = txt(r[0])
         low = a.lower()
-        b, c = num(r[1]), num(r[2])
         if not any(txt(x) for x in r):
-            if mode == "exp":
+            if mode == "exp" and not old:
                 section = "Прочее"
             continue
+        if mode == "done":
+            break
         if low.startswith("итого расход"):
-            sheet["exp_plan"], sheet["exp_fact"], mode = b, c, "rev"
+            sheet["exp_plan"], sheet["exp_fact"] = pf(r)
+            mode = "rev"
             continue
         if mode == "exp":
+            b, c = num(r[1]), num(r[2])
             if txt(r[1]).lower() == "план" or (a and not any(txt(x) for x in r[1:4])):
                 section = a or section
                 continue
             if not a:
                 continue
-            items.append({"cat": section, "item": a, "plan": b or 0, "fact": c or 0,
-                          "status": txt(r[3]), "note": txt(r[4]) if num(r[4]) is None else ""})
+            if old:
+                items.append({"cat": section, "item": a, "plan": 0, "fact": b or 0, "status": txt(r[2]),
+                              "note": txt(r[3]) if num(r[3]) is None else ""})
+            else:
+                items.append({"cat": section, "item": a, "plan": b or 0, "fact": c or 0, "status": txt(r[3]),
+                              "note": txt(r[4]) if num(r[4]) is None else ""})
             continue
-        # revenue / summary block
+        # revenue / summary block; everything below «Маржинальность» is side calculations
+        plan, fact = pf(r)
         if low.startswith("итого выручка"):
-            sheet["rev_plan"], sheet["rev_fact"] = b, c
+            sheet["rev_plan"], sheet["rev_fact"] = plan, fact
             for col, lab in labels.items():
                 v = num(r[col]) if col < len(r) else None
                 if v:
-                    revenue.append({"ch": lab["group"] + " · " + lab["name"] if lab["group"] else lab["name"],
+                    revenue.append({"ch": (lab["group"] + " · " if lab["group"] else "") + lab["name"],
                                     "fact": v, "detail": True})
-            continue
-        if low.startswith("итоговая прибыль"):
-            sheet["profit_plan"], sheet["profit_fact"] = b, c
+            mode = "after"
+        elif low.startswith("итоговая прибыль"):
+            sheet["profit_plan"], sheet["profit_fact"] = plan, fact
         elif low.startswith("итого прибыль"):
-            sheet["gross_plan"], sheet["gross_fact"] = b, c
+            sheet["gross_plan"], sheet["gross_fact"] = plan, fact
         elif low.startswith("итоговые расходы"):
-            sheet["total_exp_plan"], sheet["total_exp_fact"] = b, c
+            sheet["total_exp_plan"], sheet["total_exp_fact"] = plan, fact
         elif low.startswith("маржинальн"):
-            sheet["margin_plan"], sheet["margin_fact"] = b, c
+            to_pct = lambda v: None if v is None else (v * 100 if abs(v) <= 1.5 else v)
+            sheet["margin_plan"], sheet["margin_fact"] = to_pct(plan), to_pct(fact)
+            mode = "done"
         elif a.startswith("%"):
-            shares.append({"item": a.lstrip("% ").strip(), "plan": b or 0, "fact": c or 0})
-        elif a and (b is not None or c is not None):
-            revenue.append({"ch": a, "fact": c or 0, "plan": b or 0})
-        # header row for the channel breakdown, e.g. ",,,Выручка лава,евро,доллар,Рубли,,Выручка ДОП,Счета на ИП,..."
-        texts = [(j, txt(x)) for j, x in enumerate(r) if j >= 4 and txt(x) and num(x) is None]
-        if len(texts) >= 3:
-            group = ""
-            labels = {}
-            for j, t in texts:
-                if t.lower().startswith("выручка"):
-                    group = t.replace("Выручка", "").replace("выручка", "").strip() or t
-                else:
-                    labels[j] = {"name": t, "group": group}
-    # top-level channels = rows of column A, the breakdown (detail) is kept separately
+            shares.append({"item": a.lstrip("% ").strip(), "plan": plan or 0, "fact": fact or 0})
+        elif a and fact is not None and (mode == "rev" or "манифест" in low):
+            # channels sit between «Итого расходы» and «Итого выручка»; «Манифесты» comes right after it
+            revenue.append({"ch": a, "fact": fact or 0, "plan": plan or 0})
+        if mode == "rev":
+            texts = [(j, txt(x)) for j, x in enumerate(r) if j >= 4 and txt(x) and num(x) is None]
+            if len(texts) >= 3:
+                group, labels = "", {}
+                for j, t in texts:
+                    if t.lower().startswith("выручка"):
+                        group = re.sub(r"(?i)^выручка\s*", "", t).strip() or t
+                    elif not t.lower().startswith("конвертац"):
+                        labels[j] = {"name": t, "group": group}
     return {"items": items, "revenue": [x for x in revenue if not x.get("detail")],
-            "revenue_detail": [x for x in revenue if x.get("detail")], "shares": shares, "sheet": sheet}
+            "revenue_detail": [x for x in revenue if x.get("detail")], "shares": shares, "sheet": sheet,
+            "layout": "early" if old else "plan-fact"}
+
+
+def trim_grid(rows):
+    """Drop empty trailing rows/columns; numbers stay numbers, text is stripped."""
+    rows = [[(round(x, 2) if isinstance(x, float) else txt(x)) if x is not None and txt(x) != "" else ""
+             for x in r] for r in rows]
+    while rows and not any(c != "" for c in rows[-1]):
+        rows.pop()
+    width = max((max((i + 1 for i, c in enumerate(r) if c != ""), default=0) for r in rows), default=0)
+    return [r[:width] + [""] * (width - len(r[:width])) for r in rows]
 
 
 def parse_book(book, cfg):
@@ -251,10 +312,15 @@ def main():
     else:
         sys.exit("нужен --sheet, --xlsx или --csv")
     months = parse_book(book, cfg)
+    used = {m["tab"] for m in months}
+    sheets = [{"name": n.strip(), "month": next((m["m"] for m in months if m["tab"] == n), None),
+               "rows": trim_grid(rows)} for n, rows in book.items()]
     out = Path(a.out).expanduser()
     out.parent.mkdir(parents=True, exist_ok=True)
-    out.write_text(json.dumps({"months": months}, ensure_ascii=False, indent=1), encoding="utf-8")
-    print(f"{out}: {len(months)} мес. ({', '.join(m['m'] for m in months)})")
+    out.write_text(json.dumps({"months": months, "sheets": [x for x in sheets if x["rows"]]},
+                              ensure_ascii=False, separators=(",", ":")), encoding="utf-8")
+    print(f"{out}: {len(months)} мес. ({', '.join(m['m'] for m in months)}); листов всего {len(sheets)}, "
+          f"из них помесячных в отчёте {len(used)}")
 
 
 if __name__ == "__main__":
