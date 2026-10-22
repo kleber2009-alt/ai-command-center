@@ -73,6 +73,8 @@ python3 finance.py --sheet "https://docs.google.com/spreadsheets/d/<id>/edit" --
 
 ### Контент (вкладка «Контент»)
 
+`import_content_plan.py <папка с index.html, hooks.json, ready.json> content.json content.json <ссылка>` переносит все вкладки контент-плана (готовые карусели и рилс, лид-магниты, инструкцию, базу хуков, мои хуки, сценарии VSL, расчёт, показ актива) во вкладку «Контент» как подвкладки.
+
 `content.json`: `{"own": "<ваш аккаунт>", "pubs": [{"acc","url","ins","xn","date","fmt","hook"}], "accounts": [{"acc","lang","posts","median","max"}], "mechanics": [...], "slides": [...]}` — формат в `sample/content.json`.
 
 ### Кабинет Meta по API

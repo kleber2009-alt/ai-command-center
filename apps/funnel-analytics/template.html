@@ -143,6 +143,39 @@ color:var(--text-secondary);cursor:pointer;white-space:nowrap;margin-bottom:-1px
 tr.own td{background:color-mix(in srgb,var(--series-1) 8%,transparent)}
 tr.fcat{cursor:pointer}tr.fcat td{font-weight:600}tr.fitem td{color:var(--text-secondary);font-size:13px}
 .st{font-size:11px;padding:1px 7px;border-radius:10px;background:color-mix(in srgb,var(--text-muted) 14%,transparent);color:var(--text-secondary);white-space:nowrap}
+.subtabs{display:flex;gap:6px;flex-wrap:wrap;margin:14px 0 6px}
+.subtabs .dirbtn.blue:not(.on){border-color:color-mix(in srgb,var(--series-1) 45%,var(--line));color:var(--series-1)}
+.cpane{display:none}.cpane.on{display:block}
+.art{font-size:14.5px;overflow-wrap:anywhere}.art h2{margin-top:26px}.art p{margin:8px 0}
+.art .muted,.art .note,.art .mech{color:var(--text-muted)}.art .note,.art .mech{font-size:13px}
+.art .callout{border-left:3px solid var(--warning);background:color-mix(in srgb,var(--warning) 10%,var(--surface-1));padding:12px 15px;border-radius:0 10px 10px 0;margin:10px 0}
+.art .callout p{margin:6px 0 0;color:var(--text-secondary)}
+.art .grid2{display:grid;grid-template-columns:repeat(auto-fit,minmax(280px,1fr));gap:12px;margin:10px 0}
+.art .card{margin:10px 0}.art .grid2 .card{margin:0}.art .card h3{margin:0 0 6px;font-size:15px}
+.art .tbl{overflow-x:auto;background:var(--surface-1);border:1px solid var(--line);border-radius:12px;margin:10px 0}
+.art .tbl table{min-width:640px}.art td,.art th{text-align:left;white-space:normal;vertical-align:top}
+.art td.num,.art th.num{text-align:right;white-space:nowrap}
+.art ul.refs{margin:0;padding-left:18px}.art ul.refs li{margin-bottom:5px}
+.art .flag,.art .big{color:var(--warning);font-weight:600}.art .rank{color:var(--text-muted);margin-right:8px;font-family:ui-monospace,monospace}
+.art .kpis{display:grid;grid-template-columns:repeat(auto-fit,minmax(160px,1fr));gap:9px;margin:12px 0}
+.art .kpi{background:var(--surface-1);border:1px solid var(--line);border-radius:12px;padding:11px 13px;display:flex;flex-direction:column;gap:3px}
+.art .kpi b{font-size:21px;font-variant-numeric:tabular-nums}.art .kpi span{font-size:12px;color:var(--text-muted)}
+.art .eyebrow{font-size:11.5px;letter-spacing:.06em;text-transform:uppercase;color:var(--text-muted);font-weight:600}
+.pill{display:inline-block;font-size:11.5px;font-weight:600;padding:2px 8px;border-radius:999px;white-space:nowrap;background:color-mix(in srgb,var(--text-muted) 16%,transparent);color:var(--text-secondary)}
+.pill.r{background:color-mix(in srgb,#e87ba4 20%,transparent);color:#c2427a}.pill.k{background:color-mix(in srgb,var(--series-1) 16%,transparent);color:var(--series-1)}
+.art .hook{font-weight:600;line-height:1.45}.art .proof{font-size:12px;font-weight:600;color:var(--warning)}
+.scards{display:flex;flex-direction:column;gap:12px}
+.scard{background:var(--surface-1);border:1px solid var(--line);border-radius:12px;padding:16px 18px;display:flex;flex-direction:column;gap:10px}
+.scard header{display:flex;gap:10px;align-items:baseline;flex-wrap:wrap}.scard h3{margin:0;font-size:16px;line-height:1.4}
+.scard .no{font-family:ui-monospace,monospace;color:var(--text-muted);font-size:13px}
+.rpill{align-self:flex-start;background:color-mix(in srgb,var(--warning) 16%,transparent);color:var(--text-primary);font-weight:600;font-size:12px;padding:4px 10px;border-radius:12px}
+.stext{white-space:pre-wrap;font-size:14.5px;line-height:1.6;max-width:76ch}
+.slides{display:grid;grid-template-columns:repeat(auto-fill,minmax(230px,1fr));gap:10px}
+.slide{border:1px solid var(--line);border-radius:10px;padding:11px 13px;background:var(--plane);display:flex;flex-direction:column;gap:6px}
+.slide .sn{font-size:11px;letter-spacing:.06em;text-transform:uppercase;color:var(--text-muted);font-weight:600}
+.slide .stext{font-size:13.5px}
+.cin{display:grid;grid-template-columns:1fr 130px;gap:8px 14px;align-items:center;max-width:620px}
+.cin input{padding:6px 8px;border:1px solid var(--line);border-radius:7px;background:var(--plane);color:var(--text-primary);font:inherit;text-align:right}
 .st.paid{background:color-mix(in srgb,var(--good) 16%,transparent)}.st.unpaid{background:color-mix(in srgb,var(--warning) 22%,transparent)}
 
 </style>
@@ -254,6 +287,9 @@ tr.fcat{cursor:pointer}tr.fcat td{font-weight:600}tr.fitem td{color:var(--text-s
 </section>
 
 <section class="tabpane" id="tab-content">
+<div class="subtabs" id="cSub"></div>
+<div class="art" id="cIntro"></div>
+<div class="cpane" id="cp-sum">
 <p class="h2note" id="cSrc" style="margin-top:14px"></p>
 <div class="tiles" id="cKpis"></div>
 <h2>Публикации с наибольшим числом входов <span class="q">· входы = комментарии с кодовым словом · × нормы = входы ÷ медиана автора за год</span></h2>
@@ -271,6 +307,8 @@ tr.fcat{cursor:pointer}tr.fcat td{font-weight:600}tr.fitem td{color:var(--text-s
 <div class="scroll"><table id="cSlides"></table></div>
 <h2>Калькулятор: сколько публикаций нужно на цель <span class="q">· свяжется с ценой регистрации из рекламы, если есть воронка</span></h2>
 <div class="panel"><div class="calc" id="cCalcIn"></div><div class="tiles" id="cCalcOut"></div><p class="h2note" id="cCalcNote" style="margin:10px 0 0"></p></div>
+</div>
+<div id="cArt"></div>
 </section>
 
 </div>
@@ -867,6 +905,108 @@ function calcRender(mine){
   $('cCalcNote').innerHTML=`Ожидания по входам по умолчанию — ваша медиана по формату в выборке (рилс ${fmt(medF('Рилс'))}, карусель ${fmt(medF('Карусель'))}). Подставьте свои реальные цифры за последние 30 дней.`;
 }
 
+
+// ═══════════ Контент: вкладки контент-плана ═══════════
+const ART=CT&&CT.artifact||null;
+let cSubCur=null;
+const AF={top:'all',btn:'all',fmt:'all',mark:'all',pot:'all',scr:'all',lm:'all'};
+const PROOF={'Просмотры':'Статистика профиля: просмотры за 30 дней','Подписчики':'Прирост подписчиков за месяц','Воронка':'Директ: счётчик переписок за день','Выручка':'Уведомления об оплатах'};
+const PROOFS=[...Object.values(PROOF),'Комментарии с кодовым словом под роликом','Всё сразу: день блога в цифрах'];
+const EVN={'МК1':'МК №1','МК2':'МК №2','МК3':'МК №3'};
+const proofOf=x=>x.proof||PROOF[x.btn]||'';
+const pubBy=()=>Object.fromEntries((CT.pubs||[]).map(p=>[p.id,p]));
+function refsHtml(x){const B=pubBy();return (x.refs||[]).map(k=>B[k]).filter(Boolean).map(r=>`${igLink(r.acc,r.url,r.acc)} <span class="mech">«${esc(r.hook)}» · ${fmt(r.ins)} входов</span>`).join('<br>')||'<span class="mech">—</span>'}
+// virality / potential score, same thresholds as the content plan
+function hookScore(x){
+  const B=pubBy(),rs=(x.refs||[]).map(k=>B[k]).filter(Boolean);
+  const mc=rs.length?Math.max(...rs.map(r=>r.ins||0)):0,mx=rs.length?Math.max(...rs.map(r=>r.xn||0)):0;
+  const v=!rs.length?-1:(mc>=10000||mx>=100)?2:(mc>=3000||mx>=30)?1:0;
+  const t=x.h||'',why=[];let p=Math.max(v,0);
+  if(v===2)why.push('референс залетел');else if(v===1)why.push('референс выше нормы');
+  if(/^(«?Не |Перестань|Хватит|Стоп|Никогда|Убери|Удали)/i.test(t)||/(опять|всего|всё равно).{0,30}просмотр|не раст[её]т|от 100 до 1000/i.test(t)){p++;why.push('приём с высокой медианой (запрет или боль просмотров)')}
+  if(/claude|chatgpt|нейросет|промпт|скилл|навык|файл/i.test(t)&&/\d/.test(t)){p++;why.push('инструмент + цифра')}
+  if(/покажу|забирай|вот |как я |шаг|схем|разбираю/i.test(t)){p++;why.push('зритель что-то забирает')}
+  if(x.act){p++;why.push('цифра показана скрином')}
+  if(/\[N\]/.test(t)){p--;why.push('нет своей цифры, нужно подставить')}
+  if(!/\d|покажу|забирай|вот |как я |шаг|схем|разбираю/i.test(t))why.push('нет ни цифры, ни обещания показать');
+  return{v,mc,mx,p:p>=3?2:p>=2?1:0,why};
+}
+const LV=['низкая','средняя','высокая'],LP=['низкий','средний','высокий'];
+function scoreHtml(x){const s=hookScore(x);
+  return `<div><span class="pill ${s.v===2?'r':s.v===1?'k':''}">Виральность: ${s.v<0?'нет данных':LV[s.v]}</span></div>${s.v>=0?`<div class="mech">${fmt(s.mc)} комм.${s.mx?', '+Math.round(s.mx)+'× нормы':''}</div>`:''}
+  <div style="margin-top:6px"><span class="pill ${s.p===2?'r':s.p===1?'k':''}">Потенциал: ${LP[s.p]}</span></div><div class="mech">${esc(s.why.join('; '))}</div>`}
+const fmtPill=f=>`<span class="pill ${f==='Рилс'?'r':f==='Карусель'?'k':''}">${esc(f)}</span>`;
+function chips(key,opts){return `<div class="dirbar">${opts.map(([v,l])=>`<button class="dirbtn ${AF[key]===v?'on':''}" data-af="${key}" data-v="${esc(v)}">${l}</button>`).join('')}</div>`}
+const SLOT={
+  ready6:()=>{const L=ART.ready.carousels||[];return `<div class="scards">${L.map(c=>`<article class="scard"><h3>${esc(c.title)}</h3>${c.pill?`<div class="rpill">${esc(c.pill)}</div>`:''}${c.note?`<div class="mech">${esc(c.note)}</div>`:''}
+    <div class="slides">${(c.slides||[]).map((t,j)=>`<div class="slide"><div class="sn">Слайд ${j+1}</div><div class="stext">${esc(t)}</div></div>`).join('')}</div></article>`).join('')||'<p class="muted">Пока нет.</p>'}</div>`},
+  ready7:()=>`<div class="scards">${(ART.ready.reels||[]).map(r=>`<article class="scard"><h3>${esc(r.title)}</h3>${r.pill?`<div class="rpill">${esc(r.pill)}</div>`:''}<div class="stext">${esc((r.text||'').trim())}</div></article>`).join('')||'<p class="muted">Пока нет.</p>'}</div>`,
+  ready10:()=>{const F=ART.ready.files||[];
+    return chips('lm',[['all','Все'],['Разработать','Разработать'],['Доработать СТА','Доработать СТА'],['Готов','Готов']])+
+    `<div class="scards">${F.filter(r=>AF.lm==='all'||(r.st||'Разработать')===AF.lm).map(r=>`<article class="scard"><h3>${esc(r.title)}</h3><div><span class="pill ${(r.st||'')==='Готов'?'k':'r'}">${esc(r.st||'Разработать')}</span></div>${r.pill?`<div class="rpill">${esc(r.pill)}</div>`:''}<div class="stext">${esc(r.text||'')}</div></article>`).join('')||'<p class="muted">Нет лид-магнитов под фильтр.</p>'}</div>`},
+  plantbl:()=>{const H=ART.hooks;
+    const rows=H.filter(x=>(AF.btn==='all'||x.btn===AF.btn)&&(AF.fmt==='all'||x.fmt===AF.fmt||x.fmt==='Рилс / карусель')&&(AF.pot==='all'||hookScore(x).p===+AF.pot)&&
+      (AF.mark==='all'||(AF.mark==='vsl'&&x.vsl)||(AF.mark==='act'&&x.act)||(AF.mark==='comp'&&x.comp)||(x.event&&x.event===AF.mark)));
+    return chips('btn',[['all','Все кнопки'],['Просмотры','Просмотры'],['Воронка','Воронка'],['Подписчики','Подписчики'],['Выручка','Выручка']])+
+      chips('fmt',[['all','Все форматы'],['Рилс','Рилс'],['Карусель','Карусели']])+
+      chips('mark',[['all','Все хуки'],['vsl','Под VSL'],['act','Показ актива · 29.09'],['comp','Хуки конкурентов · 01.10'],['МК1','МК №1 · 0 → 10 000'],['МК2','МК №2 · до 50–300 тысяч'],['МК3','МК №3 · продажи 24/7']])+
+      chips('pot',[['all','Любой потенциал'],['2','Высокий'],['1','Средний'],['0','Низкий']])+
+      `<p class="h2note">Показано ${rows.length} из ${H.length}</p><div class="tbl"><table><thead><tr><th class="num">№</th><th>Хук</th><th>Кнопка</th><th>Формат</th><th>Отметки</th><th>Какой скрин</th><th>Оценка</th><th>Референс</th></tr></thead><tbody>`+
+      (rows.map(x=>`<tr><td class="num">${H.indexOf(x)+1}</td><td><div class="hook">${esc(x.h)}</div>${x.own?'<div class="mech">Ваш пример</div>':''}</td>
+      <td><span class="pill ${x.btn==='Просмотры'||x.btn==='Подписчики'?'r':'k'}">${esc(x.btn)}</span></td><td><span class="mech">${esc(x.fmt)}</span></td>
+      <td>${x.vsl?'<div class="mech">Под VSL</div>':''}${x.act?'<div class="mech">Показ актива</div>':''}${x.comp?'<div class="mech">Хук конкурента</div>':''}${x.event?`<div class="mech">${EVN[x.event]||esc(x.event)}</div>`:''}</td>
+      <td><span class="proof">${esc(proofOf(x))}</span></td><td style="min-width:190px">${scoreHtml(x)}</td><td style="min-width:200px">${refsHtml(x)}</td></tr>`).join('')||'<tr><td colspan="8" class="muted">Нет хуков под этот фильтр.</td></tr>')+'</tbody></table></div>'},
+  own9:()=>{const L=ART.ready.hooks||[];return `<div class="tbl"><table><thead><tr><th class="num">№</th><th>Хук</th><th>Формат</th><th>Откуда</th></tr></thead><tbody>${L.map((x,i)=>`<tr><td class="num">${i+1}</td><td><div class="hook">${esc(x.h)}</div></td><td><span class="mech">${esc(x.fmt)}</span></td><td><span class="mech">${esc(x.src||'')}</span></td></tr>`).join('')}</tbody></table></div>`},
+  arch:()=>{const B=pubBy();return `<div class="arch">${CT.mechanics.map((x,i)=>`<div class="card"><h3><span class="rank">${String(i+1).padStart(2,'0')}</span>${esc(x.n)}</h3><div class="big">${esc(x.stat)}</div><p>${esc(x.why)}</p>
+    <ul>${x.refs.map(k=>B[k]).filter(Boolean).map(r=>`<li>${igLink(r.acc,r.url,r.acc)}: «${esc(r.hook)}» — ${fmt(r.ins)} входов${r.xn?', '+fmt(r.xn)+'× нормы':''}${r.date?', '+r.date:''}</li>`).join('')}</ul></div>`).join('')}</div>`},
+  toptbl:()=>{const B=pubBy(),T=(ART.top||[]).map(k=>B[k]).filter(Boolean).sort((a,b)=>b.ins-a.ins).filter(r=>AF.top==='all'||r.fmt===AF.top);
+    return chips('top',[['all','Все'],['Карусель','Карусели'],['Рилс','Рилс']])+`<div class="tbl"><table><thead><tr><th>Аккаунт</th><th>Формат</th><th>Хук / первая фраза</th><th class="num">Входы</th><th class="num">× нормы</th><th>Дата</th></tr></thead><tbody>${T.map(r=>`<tr><td>${igLink(r.acc,r.url,r.acc)}</td><td>${fmtPill(r.fmt)}</td><td>«${esc(r.hook)}»</td><td class="num">${fmt(r.ins)}</td><td class="num">${r.xn==null?'—':fmt(r.xn)+'×'}</td><td class="mono">${r.date||'—'}</td></tr>`).join('')}</tbody></table></div>`},
+  acctbl:()=>`<div class="tbl"><table><thead><tr><th>Аккаунт</th><th>Язык</th><th class="num">Публикаций за год</th><th class="num">Медиана входов</th><th class="num">Максимум</th></tr></thead><tbody>${CT.accounts.map(a=>`<tr class="${a.acc===CT.own?'own':''}"><td>${igLink(a.acc)}</td><td>${esc(a.lang)}</td><td class="num">${fmt(a.posts)}</td><td class="num">${fmt(a.median)}</td><td class="num">${fmt(a.max)}</td></tr>`).join('')}</tbody></table></div>`,
+  scripts:()=>{const H=ART.hooks,L=H.filter(x=>x.vsl&&x.script&&(AF.scr==='all'||x.script.type===AF.scr));
+    return chips('scr',[['all','Все'],['Рилс','Рилс'],['Карусель','Карусели']])+`<div class="scards">${L.map(x=>{const sc=x.script;
+      const body=sc.type==='Карусель'?`${sc.refs?`<div class="note"><b>Референсы:</b> ${sc.refs.map(r=>`${igLink(r[0],'https://www.instagram.com/p/'+r[1]+'/',r[0])} — ${esc(r[2])}, ${fmt(r[3])} входов`).join('; ')}</div>`:''}<div class="slides">${(sc.slides||[]).map((t,i)=>`<div class="slide"><div class="sn">Слайд ${i+1}</div><div class="stext">${esc(t)}</div>${sc.slideRef&&sc.slideRef[i]?`<div class="mech">По образцу — ${esc(sc.slideRef[i])}</div>`:''}</div>`).join('')}</div>`
+        :`<div class="stext">${esc(sc.text||'')}</div>`;
+      return `<article class="scard"><header><span class="no">№${H.indexOf(x)+1}</span>${fmtPill(sc.type)}<h3>${esc(x.h)}</h3></header>${body}</article>`}).join('')||'<p class="muted">Нет сценариев под этот фильтр.</p>'}</div>`},
+  actlist:()=>{const H=ART.hooks,L=H.filter(x=>x.act);
+    return PROOFS.map(p=>{const g=L.filter(x=>proofOf(x)===p);if(!g.length)return '';
+      return `<div class="card"><h3>${esc(p)}</h3><div class="tbl" style="border:0;margin:0"><table><tbody>${g.map(x=>`<tr><td class="num">${H.indexOf(x)+1}</td><td><div class="hook">${esc(x.h)}</div><div class="mech">${esc(x.fmt)}${x.vsl?' · Под VSL':''}</div></td><td style="min-width:220px">${refsHtml(x)}</td></tr>`).join('')}</tbody></table></div></div>`}).join('')||'<p class="muted">Нет хуков.</p>'},
+  calc:()=>{const F=[['goal','Цель: регистраций ЦА на VSL',10000],['r','Входов с рилс в среднем',1000,'Медиана Ильи за год — 222 на публикацию. Сильные хуки рынка дают 1 000–30 000.'],['k','Входов с карусели в среднем',600,'Лучшие карусели Ильи за год: 2 000–8 600.'],
+      ['cv','Конверсия: вход → регистрация, %',35],['ca','Доля ЦА среди регистраций, %',70],['nr','Сколько рилс выпустим',30],['nk','Сколько каруселей выпустим',30]];
+    return `<div class="panel"><div class="cin">${F.map(([k,l,v,n])=>`<label for="ac_${k}">${l}${n?`<br><span class="mech">${n}</span>`:''}</label><input id="ac_${k}" class="acin" type="number" min="0" value="${v}">`).join('')}</div>
+      <div class="tiles" id="acOut" style="margin-top:14px"></div><div class="callout" style="margin-top:12px"><b>Что это значит</b><p id="acConcl"></p></div></div>`},
+};
+function artCalc(){const v=id=>Number(($('ac_'+id)||{}).value)||0;
+  const goal=v('goal'),r=v('r'),k=v('k'),cv=v('cv')/100,ca=v('ca')/100,nr=v('nr'),nk=v('nk');
+  const regs=Math.round((r*nr+k*nk)*cv*ca),needR=cv*ca*nr>0?Math.max(0,Math.round((goal/(cv*ca)-k*nk)/nr)):0;
+  const fr=D.days&&D.days.length?agg():null,cpr=fr&&fr.regs?fr.usd/fr.regs:null;
+  $('acOut').innerHTML=[['Регистраций ЦА',fmt(regs),'при этих допущениях'],['Нужно входов на рилс',fmt(needR),'в среднем, чтобы дойти до цели'],
+    ['То же через рекламу',cpr&&ca?rub(goal/ca*cpr*FX):'—',cpr?'по цене регистрации $'+cpr.toFixed(2)+' из воронки':'нет данных воронки']].map(tile).join('');
+  $('acConcl').textContent=regs>=goal?`При этих допущениях выйдет ${fmt(regs)} регистраций ЦА — цель достижима. Условие: средний рилс собирает около ${fmt(needR)} входов, это примерно в ${Math.max(1,Math.round(needR/222))} раза выше медианы Ильи за год.`
+    :`При этих допущениях выйдет ${fmt(regs)} регистраций ЦА — не хватает ${fmt(goal-regs)}. Чтобы дойти до цели, средний рилс должен собирать около ${fmt(needR)} входов.`;
+}
+function artPane(t){
+  const el=$('cp-'+t.id);
+  el.innerHTML=t.html.replace(/<div class="callout"><b>Что это значит<\/b><p><\/p><\/div>/,'');
+  // slots carry their own table wrappers: lift them out of the original .tbl box
+  el.querySelectorAll('.tbl > [data-slot]').forEach(sl=>sl.parentElement.replaceWith(sl));
+  el.querySelectorAll('[data-slot]').forEach(sl=>{const f=SLOT[sl.dataset.slot];sl.innerHTML=f?f():''});
+  el.querySelectorAll('[data-af]').forEach(b=>b.onclick=()=>{AF[b.dataset.af]=b.dataset.v;artPane(t)});
+  if(el.querySelector('.acin')){el.querySelectorAll('.acin').forEach(i=>i.oninput=artCalc);artCalc()}
+}
+function contentTabs(){
+  const tabs=[['sum','Сводка',false],...(ART?ART.tabs.map(t=>[t.id,t.title,['t6','t7','t10'].includes(t.id)]):[])];
+  if(ART){$('cArt').innerHTML=ART.tabs.map(t=>`<div class="cpane art" id="cp-${t.id}"></div>`).join('');
+    $('cIntro').innerHTML=`<details style="margin:4px 0 8px"><summary class="h2note" style="cursor:pointer">О документе: ${esc(ART.tabs.length)} разделов контент-плана · <a class="prev" href="${esc(ART.url)}" target="_blank" rel="noopener">оригинал ↗</a></summary>${ART.intro.replace('<b>—</b><span>хуков','<b>'+ART.hooks.length+'</b><span>хуков')}</details>`;
+    ART.tabs.forEach(artPane)}
+  $('cSub').innerHTML=tabs.map(([id,l,blue])=>`<button class="dirbtn ${blue?'blue':''}" data-c="${id}">${esc(l)}</button>`).join('');
+  const show=id=>{cSubCur=id;document.querySelectorAll('#cSub .dirbtn').forEach(b=>b.classList.toggle('on',b.dataset.c===id));
+    document.querySelectorAll('#tab-content .cpane').forEach(p=>p.classList.toggle('on',p.id==='cp-'+id));
+    try{localStorage.setItem('content_sub',id)}catch(_){}};
+  $('cSub').querySelectorAll('.dirbtn').forEach(b=>b.onclick=()=>show(b.dataset.c));
+  let saved=null;try{saved=localStorage.getItem('content_sub')}catch(_){}
+  show(tabs.some(t=>t[0]===saved)?saved:ART?ART.tabs[0].id:'sum');
+}
+
 // ═══════════ tabs + init ═══════════
 const HAS={funnel:D.days.length>0,fin:FIN.length>0,content:!!(CT&&CT.pubs&&CT.pubs.length)};
 let curTab=null;
@@ -876,7 +1016,7 @@ function showTab(t){curTab=t;
   try{history.replaceState(null,'','#'+t)}catch(_){}}
 document.querySelectorAll('.tab').forEach(b=>{if(!HAS[b.dataset.t])b.remove();else b.onclick=()=>showTab(b.dataset.t)});
 const origRefresh=refresh;
-refresh=function(){origRefresh();if(HAS.content&&$('cCalcOut').children.length)calcRender(CT.pubs.filter(p=>p.acc===CT.own))};
+refresh=function(){origRefresh();if(HAS.content&&$('cCalcOut').children.length)calcRender(CT.pubs.filter(p=>p.acc===CT.own));if(HAS.content&&$('acOut'))artCalc()};
 header();
 if(HAS.funnel){
 document.querySelectorAll('.preset[data-p]').forEach(b=>b.onclick=()=>{
@@ -916,7 +1056,7 @@ const last=document.querySelector(`.preset[data-p="${MONS[MONS.length-1]}"]`);
 (last||document.querySelector('.preset[data-p="all"]')).click();
 }
 if(HAS.fin)finRender();
-if(HAS.content)contentRender();
+if(HAS.content){contentRender();contentTabs()}
 {const want=location.hash.slice(1);showTab(HAS[want]?want:Object.keys(HAS).find(k=>HAS[k])||'funnel')}
 if(Object.values(HAS).filter(Boolean).length<2)$('tabs').style.display='none';
 
