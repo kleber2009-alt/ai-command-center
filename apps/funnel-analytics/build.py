@@ -184,6 +184,22 @@ def finalize_tree(camps):
     return tree
 
 
+def embed_path(data, e):
+    return data / "embeds" / (re.sub(r"[^a-z0-9]+", "-", (e.get("id") or e["title"]).lower()).strip("-") + ".html")
+
+
+def load_embeds(data, cfg):
+    """External pages shown as their own tabs (config «embeds»), from the copy update.py keeps in data/embeds."""
+    out = []
+    for e in cfg.get("embeds", []):
+        p = embed_path(data, e)
+        if p.exists():
+            out.append({"title": e["title"], "url": e.get("url", ""), "note": e.get("note", ""),
+                        "html": p.read_text(encoding="utf-8", errors="replace"),
+                        "fetched": dt.datetime.fromtimestamp(p.stat().st_mtime).strftime("%d.%m.%Y %H:%M")})
+    return out
+
+
 def load_json(path):
     return json.loads(path.read_text(encoding="utf-8")) if path.exists() else None
 
@@ -232,6 +248,7 @@ def main():
         "lands": sorted({c["land"] for c in tree}),
         "fin": load_json(data / "finance.json"),
         "content": load_json(data / "content.json"),
+        "embeds": load_embeds(data, cfg),
         "sources": {"configured": sorted(k for k, v in cfg.get("sources", {}).items() if v and k in
                                          ("finance_sheet", "decomposition_sheet", "payments")) +
                     (["meta"] if cfg.get("ad_account_id") else []),

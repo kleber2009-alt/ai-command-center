@@ -77,6 +77,12 @@ python3 finance.py --sheet "https://docs.google.com/spreadsheets/d/<id>/edit" --
 
 `content.json`: `{"own": "<ваш аккаунт>", "pubs": [{"acc","url","ins","xn","date","fmt","hook"}], "accounts": [{"acc","lang","posts","median","max"}], "mechanics": [...], "slides": [...]}` — формат в `sample/content.json`.
 
+### Внешние страницы отдельными вкладками
+
+`"embeds": [{"title": "Realism AI", "url": "https://realism-ai-dashboard.netlify.app/", "note": "Пример"}]` в config.json:
+`update.py` при каждом обновлении сохраняет свежую копию страницы в `data/embeds/` (если не скачалась — остаётся прошлая),
+вкладка показывает её в изолированном iframe (sandbox, без доступа к дашборду) со ссылкой на оригинал.
+
 ### Кабинет Meta по API
 
 ```bash
