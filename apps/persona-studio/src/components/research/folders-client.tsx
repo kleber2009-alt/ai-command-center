@@ -6,6 +6,7 @@
 import Link from 'next/link';
 import { useState, useTransition } from 'react';
 import { useRouter } from 'next/navigation';
+import { apiErrorText } from './error-text';
 
 type FolderType = 'bloggers' | 'videos' | 'ideas';
 type Folder = {
@@ -50,7 +51,7 @@ export function FoldersClient({ initialFolders }: { initialFolders: Folder[] }) 
       });
       const json = await res.json();
       if (!res.ok) {
-        setError(json.message || json.error || `HTTP ${res.status}`);
+        setError(apiErrorText(json, res.status));
         return;
       }
       setFolders((f) => [

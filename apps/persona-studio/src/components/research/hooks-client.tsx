@@ -2,6 +2,7 @@
 
 import Link from 'next/link';
 import { useEffect, useState, useTransition } from 'react';
+import { apiErrorText } from './error-text';
 
 type Hook = {
   id: string;
@@ -247,7 +248,7 @@ function AddHookModal({
       });
       const json = await res.json();
       if (!res.ok) {
-        setError(json.message || json.error || `HTTP ${res.status}`);
+        setError(apiErrorText(json, res.status));
         return;
       }
       onSaved();
@@ -357,7 +358,7 @@ function GenerateHooksModal({
       });
       const json = await res.json();
       if (!res.ok) {
-        setError(json.message || json.error || `HTTP ${res.status}`);
+        setError(apiErrorText(json, res.status));
         return;
       }
       onDone();

@@ -18,6 +18,7 @@ import {
   removeHistoryEntry,
   type SearchHistoryEntry,
 } from './search-history';
+import { apiErrorText } from './error-text';
 import type {
   DurationBand,
   LanguageFilter,
@@ -237,7 +238,7 @@ export function ResearchClient({ isFreePlan = false }: { isFreePlan?: boolean })
         const json: SearchResponse | SearchError = await res.json();
         if (!res.ok || !('ok' in json) || !json.ok) {
           const err = json as SearchError;
-          setError(err.message || err.error || `HTTP ${res.status}`);
+          setError(apiErrorText(err, res.status));
           setResult(null);
           return;
         }
@@ -286,7 +287,7 @@ export function ResearchClient({ isFreePlan = false }: { isFreePlan?: boolean })
         setTimeout(() => setRadarMsg(null), 4000);
       } else {
         const json = await res.json().catch(() => ({}));
-        setRadarMsg('Не удалось: ' + (json.message || json.error || `HTTP ${res.status}`));
+        setRadarMsg('Не удалось: ' + (apiErrorText(json, res.status)));
       }
     });
   }

@@ -1,6 +1,7 @@
 'use client';
 
 import { useState, useTransition } from 'react';
+import { apiErrorText } from './error-text';
 
 type Radar = {
   id: string;
@@ -38,7 +39,7 @@ export function RadarsClient({ initialRadars }: { initialRadars: Radar[] }) {
       const json = await res.json();
       setRunning(null);
       if (!res.ok) {
-        setError(json.message || json.error || `HTTP ${res.status}`);
+        setError(apiErrorText(json, res.status));
         return;
       }
       // Обновляем lastRunAt в state

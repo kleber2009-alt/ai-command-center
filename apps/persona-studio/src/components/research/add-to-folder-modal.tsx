@@ -7,6 +7,7 @@
 // Сама грузит список папок нужного типа лениво при открытии.
 
 import { useEffect, useState } from 'react';
+import { apiErrorText } from './error-text';
 
 type ItemType = 'reel' | 'author' | 'idea';
 const ITEM_TYPE_TO_FOLDER_TYPE: Record<ItemType, 'bloggers' | 'videos' | 'ideas'> = {
@@ -66,7 +67,7 @@ export function AddToFolderModal({
       });
       const json = await res.json();
       if (!res.ok) {
-        setError(json.message || json.error || `HTTP ${res.status}`);
+        setError(apiErrorText(json, res.status));
         return;
       }
       onAdded?.();
@@ -88,7 +89,7 @@ export function AddToFolderModal({
       });
       const crJson = await cr.json();
       if (!cr.ok) {
-        setError(crJson.message || crJson.error || `HTTP ${cr.status}`);
+        setError(apiErrorText(crJson, cr.status));
         return;
       }
       await addToFolder(crJson.folder.id);

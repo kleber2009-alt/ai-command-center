@@ -5,6 +5,7 @@ import { enforceRateLimit } from '@/lib/ratelimit';
 import { prisma } from '@/lib/prisma';
 import { chargeTokens, refundTokens, InsufficientTokensError, COSTS } from '@/lib/tokens';
 import { editQueue } from '@/lib/queue';
+import { env } from '@/lib/env';
 import { STYLE_TEMPLATE_NAMES, SUBTITLE_LANGUAGES, isStyleTemplate } from '@/lib/edit-templates';
 
 export const runtime = 'nodejs';
@@ -35,6 +36,14 @@ export async function POST(req: NextRequest) {
       return NextResponse.json({ error: 'bad_body', issues: parsed.error.issues }, { status: 400 });
     }
     const data = parsed.data;
+
+    if (!env.SUBMAGIC_API_KEY) {
+      console.error('[api/edits] SUBMAGIC_API_KEY is not configured — montage unavailable');
+      return NextResponse.json(
+        { error: 'submagic_not_configured', message: 'Монтаж временно недоступен. Попробуй позже.' },
+        { status: 503 },
+      );
+    }
 
     const video = await prisma.videoGeneration.findFirst({
       where: { id: data.videoGenerationId, userId: user.id },

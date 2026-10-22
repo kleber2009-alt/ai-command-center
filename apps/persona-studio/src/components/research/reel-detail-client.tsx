@@ -7,6 +7,7 @@
 import { useState, useTransition } from 'react';
 import { useRouter } from 'next/navigation';
 import { igProxy } from './types';
+import { apiErrorText } from './error-text';
 
 type Reel = {
   id: string;
@@ -103,7 +104,7 @@ export function ReelDetailClient({ reel: initialReel }: { reel: Reel }) {
       const res = await fetch(`/api/research/reels/${reel.id}/transcribe`, { method: 'POST' });
       const json = await res.json();
       if (!res.ok) {
-        setError(json.message || json.error || `HTTP ${res.status}`);
+        setError(apiErrorText(json, res.status));
         return;
       }
       setReel((r) => ({ ...r, transcripts: [json.transcript, ...r.transcripts] }));
@@ -117,7 +118,7 @@ export function ReelDetailClient({ reel: initialReel }: { reel: Reel }) {
       const res = await fetch(`/api/research/reels/${reel.id}/analyze`, { method: 'POST' });
       const json = await res.json();
       if (!res.ok) {
-        setError(json.message || json.error || `HTTP ${res.status}`);
+        setError(apiErrorText(json, res.status));
         return;
       }
       setReel((r) => ({ ...r, analyses: [json.analysis, ...r.analyses] }));
@@ -144,7 +145,7 @@ export function ReelDetailClient({ reel: initialReel }: { reel: Reel }) {
       });
       const json = await res.json();
       if (!res.ok) {
-        setError(json.message || json.error || `HTTP ${res.status}`);
+        setError(apiErrorText(json, res.status));
         return;
       }
       setTranslation({ text: json.translated, lang: json.targetLang });
@@ -166,7 +167,7 @@ export function ReelDetailClient({ reel: initialReel }: { reel: Reel }) {
     });
     const json = await res.json();
     if (!res.ok || !json.parserItemId) {
-      setForgeError(json.message || json.error || `HTTP ${res.status}`);
+      setForgeError(apiErrorText(json, res.status));
       return null;
     }
     return { parserItemId: json.parserItemId, script: json.script ?? null };
@@ -210,7 +211,7 @@ export function ReelDetailClient({ reel: initialReel }: { reel: Reel }) {
       const json = await res.json();
       setForgeBusy(null);
       if (!res.ok) {
-        setForgeError(json.message || json.error || `HTTP ${res.status}`);
+        setForgeError(apiErrorText(json, res.status));
         return;
       }
       setReel((r) => ({ ...r, transcripts: [json.transcript, ...r.transcripts] }));

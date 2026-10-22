@@ -23,6 +23,19 @@ type Edit = {
   } | null;
 };
 
+// errorMsg хранит технический код/текст из воркера — наружу отдаём
+// человеческое объяснение, токены при failed уже возвращены воркером.
+function humanEditError(raw: string | null): string {
+  const msg = raw ?? '';
+  if (msg.includes('SUBMAGIC_NO_API_KEY') || msg.includes('not configured')) {
+    return 'Монтаж временно недоступен на сервере. Токены возвращены.';
+  }
+  if (msg === 'enqueue_failed') {
+    return 'Не удалось поставить задачу в очередь. Токены возвращены, попробуй ещё раз.';
+  }
+  return 'Монтаж не получился. Токены возвращены — попробуй ещё раз.';
+}
+
 export function EditCard({ initial, autopoll }: { initial: Edit; autopoll: boolean }) {
   const [e, setE] = useState<Edit>(initial);
 
@@ -109,9 +122,7 @@ export function EditCard({ initial, autopoll }: { initial: Edit; autopoll: boole
               {e.status === 'failed' ? (
                 <>
                   <div className="mono text-pink text-[11px] tracking-widest uppercase font-bold">/FAILED</div>
-                  {e.errorMsg && (
-                    <div className="font-serif italic text-[12px] text-text-dim mt-2">{e.errorMsg.slice(0, 140)}</div>
-                  )}
+                  <div className="font-serif italic text-[12px] text-text-dim mt-2">{humanEditError(e.errorMsg)}</div>
                 </>
               ) : (
                 <>

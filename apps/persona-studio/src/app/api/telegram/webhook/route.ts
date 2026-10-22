@@ -88,6 +88,11 @@ export async function POST(req: NextRequest) {
       return NextResponse.json({ error: 'bad_secret' }, { status: 401 });
     }
   } else if (process.env.NODE_ENV === 'production') {
+    // Stars payments silently die here if the secret is missing: Telegram
+    // retries, the buyer never gets tokens. Make sure this is loud in logs.
+    console.error(
+      '[telegram/webhook] TELEGRAM_WEBHOOK_SECRET is not configured — rejecting update, Stars payments are broken until it is set',
+    );
     return NextResponse.json(
       { error: 'webhook_secret_not_configured' },
       { status: 503 },
@@ -141,8 +146,8 @@ export async function POST(req: NextRequest) {
         `<b>Команды:</b>\n` +
         `/start — приветствие + Mini App\n` +
         `/app — открыть Mini App\n` +
-        `/help — эта подсказка\n\n` +
-        `Поддержка: @ilia_pali0`,
+        `/help — эта подсказка` +
+        (process.env.SUPPORT_TELEGRAM_URL ? `\n\nПоддержка: ${process.env.SUPPORT_TELEGRAM_URL}` : ''),
         { withTmaButton: true },
       );
     }

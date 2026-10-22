@@ -15,7 +15,7 @@ on:
   push:
     branches: [main]
     paths:
-      - 'persona-studio-landing/**'
+      - 'landings/persona-studio/**'
       - '.github/workflows/deploy-persona-landing.yml'
   workflow_dispatch:
     inputs:
@@ -51,11 +51,11 @@ jobs:
             set -euo pipefail
 
             DEST=/var/www/persona-studio-landing
-            REPO=/root/aisales-app-v2
+            REPO=/root/ai-command-center
 
             # Ensure repo clone exists on server
             if [ ! -d "$REPO/.git" ]; then
-              git clone https://github.com/kleber2009-alt/aisales-app-v2.git "$REPO"
+              git clone https://github.com/kleber2009-alt/ai-command-center.git "$REPO"
             fi
 
             cd "$REPO"
@@ -65,7 +65,7 @@ jobs:
 
             echo "── syncing landing to $DEST ──"
             mkdir -p "$DEST"
-            rsync -av --delete "$REPO/persona-studio-landing/" "$DEST/"
+            rsync -av --delete "$REPO/landings/persona-studio/" "$DEST/"
 
             echo "── ensuring Caddy block exists ──"
             CADDYFILE=/etc/caddy/Caddyfile
