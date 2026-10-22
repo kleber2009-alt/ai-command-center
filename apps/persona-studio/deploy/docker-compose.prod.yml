@@ -123,6 +123,7 @@ services:
     volumes:
       - ./Caddyfile:/etc/caddy/Caddyfile:ro
       - /opt/edge/sites:/etc/caddy/sites:ro
+      - /opt/edge/status:/srv/status:ro
       - caddydata:/data
       - caddyconfig:/config
     depends_on: [web]
