@@ -159,7 +159,57 @@ def main():
     print(f"sample written to {OUT}: {len(windows)} windows, {len(ads)} ads, {total_sales} payments")
 
 
+def finance_and_content():
+    """Fictional income/expense months (finance.json, finance.py format) and content stats (content.json)."""
+    import json
+    cats = {"Сотрудники": [("Руководитель контента", 120000), ("Дизайнер", 60000), ("Техспец", 40000), ("СММ", 60000)],
+            "Сервисы": [("Сейлбот", 17000), ("GetCourse", 25000), ("Подписки ИИ", 15000), ("Телефония", 3300)],
+            "Продукт": [("Куратор флагмана", 75000), ("Кураторы потока", 90000)],
+            "KPI": [("ОП", 400000)],
+            "Налог и возвраты": [("Налог", 300000), ("Возвраты", 0)]}
+    months = []
+    for m, rev_plan in (("2026-07", 3500000), ("2026-08", 4000000), ("2026-09", 4500000)):
+        rev = round(rev_plan * rnd.uniform(0.78, 1.08))
+        items = []
+        for cat, rows in cats.items():
+            for name, plan in rows:
+                fact = plan * rnd.uniform(0.8, 1.3) if plan else rnd.choice([0, 45000, 90000])
+                if name == "ОП":
+                    fact = rev * 0.11
+                if name == "Налог":
+                    fact = rev * 0.07
+                items.append({"cat": cat, "item": name, "plan": plan, "fact": round(fact),
+                              "status": "Выплачено" if rnd.random() > 0.3 else "Не выплачено", "note": ""})
+        ch = [("GetCourse", 0.72), ("Lava", 0.18), ("Счета на ИП", 0.1)]
+        exp = sum(i["fact"] for i in items)
+        shares = [{"item": "продюсера", "plan": 0, "fact": round((rev - exp) * 0.03)}]
+        months.append({"m": m, "tab": "Расходы " + m, "items": items,
+                       "revenue": [{"ch": c, "fact": round(rev * w), "plan": 0} for c, w in ch],
+                       "revenue_detail": [], "shares": shares,
+                       "sheet": {"rev_plan": rev_plan, "rev_fact": sum(round(rev * w) for _, w in ch), "exp_fact": exp}})
+    (OUT / "finance.json").write_text(json.dumps({"source": "демо-таблица", "months": months}, ensure_ascii=False, indent=1),
+                                      encoding="utf-8")
+    accs = [("school.example", "RU", 220, 180, 6200), ("competitor_one", "RU", 300, 95, 14000),
+            ("competitor_two", "EN", 150, 410, 52000), ("competitor_three", "RU", 90, 40, 2100)]
+    pubs = []
+    for i in range(40):
+        acc, lang, posts, med, mx = rnd.choice(accs)
+        ins = int(min(mx, med * rnd.lognormvariate(1.2, 1.1)))
+        pubs.append({"id": f"p{i}", "acc": acc, "url": f"https://www.instagram.com/{acc}/", "ins": ins,
+                     "xn": round(ins / med, 1), "date": f"{rnd.randint(1, 9):02d}.2026",
+                     "fmt": rnd.choice(["Рилс", "Рилс", "Карусель"]), "hook": rnd.choice(HOOKS)})
+    content = {"source": "демо-выборка", "own": "school.example", "pubs": pubs,
+               "accounts": [{"acc": a, "lang": l, "posts": p, "median": m, "max": x} for a, l, p, m, x in accs],
+               "mechanics": [{"n": "Инструмент + результат + срок", "stat": "14 000 входов", "why": "Конкретный результат за короткий срок.",
+                              "refs": [p["id"] for p in pubs[:2]]}],
+               "slides": [{"n": "1", "role": "Обложка", "q": "«Стоит ли смотреть?»", "what": "Тренд + результат + срочность"},
+                          {"n": "2–8", "role": "Шаги", "q": "«Как сделать?»", "what": "Шаг, пример, результат"},
+                          {"n": "9", "role": "Призыв", "q": "«Как получить остальное?»", "what": "Кодовое слово и что внутри"}]}
+    (OUT / "content.json").write_text(json.dumps(content, ensure_ascii=False, indent=1), encoding="utf-8")
+
+
 MONTHS_GEN = {7: "июля", 8: "августа", 9: "сентября"}
 
 if __name__ == "__main__":
     main()
+    finance_and_content()

@@ -8,6 +8,9 @@ Inputs (CSV, UTF-8, comma-separated) in --data dir:
   meta_daily.csv      Meta Ads, account level, per day                     } or exported by hand
   meta_breakdowns.csv Meta spend by placement / country (optional)         }
   config.json         title, FX rate, landing mapping, non-ad costs
+  finance.json        income/expense report from the school's sheet (finance.py), optional
+  content.json        content analytics: publications, entries per post, accounts, hooks, optional
+Every source is optional: the page shows only the tabs it has data for.
 
 Usage:
   python3 build.py                        # demo data from sample/
@@ -181,6 +184,10 @@ def finalize_tree(camps):
     return tree
 
 
+def load_json(path):
+    return json.loads(path.read_text(encoding="utf-8")) if path.exists() else None
+
+
 def load_meta_daily(rows):
     out = []
     for r in rows:
@@ -206,9 +213,9 @@ def main():
         import meta_api
         meta_api.export(data, cfg.get("ad_account_id"), a.since, a.until)
 
-    days, wins = load_decomposition(read_csv(data / "decomposition.csv"))
+    days, wins = load_decomposition(read_csv(data / "decomposition.csv", required=False))
     camps = build_tree(read_csv(data / "meta_ads.csv", required=False), cfg)
-    pays = attach_payments(read_csv(data / "payments.csv"), camps, cfg)
+    pays = attach_payments(read_csv(data / "payments.csv", required=False), camps, cfg)
     bd = defaultdict(dict)
     for r in read_csv(data / "meta_breakdowns.csv", required=False):
         bd[r.get("dim")][r.get("key")] = bd[r.get("dim")].get(r.get("key"), 0) + num(r.get("spend"))
@@ -223,6 +230,8 @@ def main():
         "days": days, "wins": wins, "meta_daily": load_meta_daily(read_csv(data / "meta_daily.csv", required=False)),
         "tree": tree, "pays": pays, "bd": bd, "costs": cfg.get("costs", {}),
         "lands": sorted({c["land"] for c in tree}),
+        "fin": load_json(data / "finance.json"),
+        "content": load_json(data / "content.json"),
     }
     tpl = (HERE / "template.html").read_text(encoding="utf-8")
     payload = json.dumps(D, ensure_ascii=False, separators=(",", ":")).replace("</", "<\\/")
@@ -230,7 +239,10 @@ def main():
     out.parent.mkdir(parents=True, exist_ok=True)
     out.write_text(tpl.replace("/*__DATA__*/null", payload), encoding="utf-8")
     tagged = sum(1 for p in pays if p["cid"])
-    print(f"{out}: {len(wins)} окон, {len(tree)} кампаний, {len(pays)} оплат (к рекламе привязано {tagged})")
+    fin_n = len(D["fin"]["months"]) if D["fin"] else 0
+    cnt_n = len(D["content"]["pubs"]) if D["content"] else 0
+    print(f"{out}: {len(wins)} окон, {len(tree)} кампаний, {len(pays)} оплат (к рекламе привязано {tagged}), "
+          f"финансы {fin_n} мес., контент {cnt_n} публикаций")
 
 
 if __name__ == "__main__":

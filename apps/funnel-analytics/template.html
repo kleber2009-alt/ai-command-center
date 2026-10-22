@@ -121,6 +121,30 @@ ul.act li b{color:var(--text-primary)}
 .na{color:var(--critical);font-weight:600}
 footer{margin-top:38px;padding-top:16px;border-top:1px solid var(--line);font-size:12.5px;color:var(--text-muted);line-height:1.7}
 svg.lc{width:100%;height:210px;display:block}
+.tabs{display:flex;gap:4px;border-bottom:1px solid var(--line);margin:14px 0 4px;overflow-x:auto}
+.tab{background:none;border:0;border-bottom:2px solid transparent;padding:9px 14px;font:inherit;font-size:14.5px;
+color:var(--text-secondary);cursor:pointer;white-space:nowrap;margin-bottom:-1px}
+.tab.on{color:var(--text-primary);border-bottom-color:var(--series-1);font-weight:600}
+.tabpane{display:none}.tabpane.on{display:block}
+.hbar{display:grid;grid-template-columns:minmax(90px,220px) 1fr 110px;gap:10px;align-items:center;margin-bottom:7px;font-size:13px}
+.hbar .t{height:16px;background:color-mix(in srgb,var(--text-muted) 12%,transparent);border-radius:4px;overflow:hidden}
+.hbar .t i{display:block;height:100%;background:var(--series-1);border-radius:0 4px 4px 0}
+.hbar .v{text-align:right;font-variant-numeric:tabular-nums;font-weight:600}
+.hbar .l{color:var(--text-secondary);overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+.legend{display:flex;gap:14px;flex-wrap:wrap;font-size:12.5px;color:var(--text-secondary);margin-bottom:8px}
+.legend i{display:inline-block;width:10px;height:10px;border-radius:2px;margin-right:5px;vertical-align:-1px}
+.sel{padding:6px 9px;border:1px solid var(--line);border-radius:8px;background:var(--surface-1);color:var(--text-primary);font:inherit;font-size:13px}
+.calc{display:grid;grid-template-columns:repeat(auto-fit,minmax(170px,1fr));gap:10px;margin-bottom:12px}
+.calc label{font-size:12px;color:var(--text-secondary);display:block;margin-bottom:3px}
+.calc input{width:100%;padding:6px 8px;border:1px solid var(--line);border-radius:7px;background:var(--plane);color:var(--text-primary);font:inherit}
+.arch{display:grid;grid-template-columns:repeat(auto-fit,minmax(280px,1fr));gap:10px}
+.arch .card h3{font-size:14.5px;margin:0 0 4px}.arch .card p{font-size:13px;color:var(--text-secondary);margin:6px 0}
+.arch .card ul{margin:6px 0 0;padding-left:18px;font-size:12.5px;color:var(--text-muted)}
+tr.own td{background:color-mix(in srgb,var(--series-1) 8%,transparent)}
+tr.fcat{cursor:pointer}tr.fcat td{font-weight:600}tr.fitem td{color:var(--text-secondary);font-size:13px}
+.st{font-size:11px;padding:1px 7px;border-radius:10px;background:color-mix(in srgb,var(--text-muted) 14%,transparent);color:var(--text-secondary);white-space:nowrap}
+.st.paid{background:color-mix(in srgb,var(--good) 16%,transparent)}.st.unpaid{background:color-mix(in srgb,var(--warning) 22%,transparent)}
+
 </style>
 </head>
 <body>
@@ -130,6 +154,12 @@ svg.lc{width:100%;height:210px;display:block}
 <div class="meta" id="hmeta"></div>
 </header>
 
+<nav class="tabs" id="tabs">
+<button class="tab" data-t="funnel">Воронка и реклама</button>
+<button class="tab" data-t="fin">Доходы и расходы</button>
+<button class="tab" data-t="content">Контент</button>
+</nav>
+<section class="tabpane" id="tab-funnel">
 <div class="ctlbar">
 <span id="presets" style="display:contents"></span>
 <button class="rangefield" id="rangeField">Период: <b id="rangeText">—</b> <span style="color:var(--text-muted)">▾</span></button>
@@ -204,6 +234,45 @@ svg.lc{width:100%;height:210px;display:block}
 Рекламный слой берёт расход по объявлениям за весь выгруженный период и все оплаты с UTM-метками; оплата привязывается к объявлению по
 <span class="mono">utm_content</span> (ID или имя объявления), иначе к группе по <span class="mono">utm_term</span> или к кампании по <span class="mono">utm_campaign</span>.
 </footer>
+</section>
+
+<section class="tabpane" id="tab-fin">
+<div class="ctlbar" id="finMonths"></div>
+<h2>Итоги <span class="q" id="finQ"></span></h2>
+<div class="tiles" id="finKpis"></div>
+<h2>По месяцам <span class="q">· выручка, расходы и прибыль по факту</span></h2>
+<div class="panel"><div class="legend" id="finLeg"></div><div id="finChart"></div></div>
+<div class="scroll" style="margin-top:12px"><table id="finMonthsTbl"></table></div>
+<div class="two">
+<div><h2>Выручка по каналам <span class="q" id="revQ"></span></h2><div class="panel" id="finRev"></div></div>
+<div><h2>Структура расходов <span class="q">· доля в факте</span></h2><div class="panel" id="finStruct"></div></div>
+</div>
+<h2>Расходы по статьям <span class="q">· план / факт / статус · клик по категории — раскрыть</span></h2>
+<div class="scroll"><table id="finCats"></table></div>
+<div id="finWarn"></div>
+<footer id="finFoot"></footer>
+</section>
+
+<section class="tabpane" id="tab-content">
+<p class="h2note" id="cSrc" style="margin-top:14px"></p>
+<div class="tiles" id="cKpis"></div>
+<h2>Публикации с наибольшим числом входов <span class="q">· входы = комментарии с кодовым словом · × нормы = входы ÷ медиана автора за год</span></h2>
+<div class="dirbar" id="cFilters"></div>
+<div class="scroll"><table id="cTop"></table></div>
+<div class="two">
+<div><h2>Входы по аккаунтам <span class="q">· медиана за год</span></h2><div class="panel" id="cAccBars"></div></div>
+<div><h2>Рилс против каруселей</h2><div class="panel" id="cFmt"></div></div>
+</div>
+<h2>Аккаунты в анализе</h2>
+<div class="scroll"><table id="cAcc"></table></div>
+<h2>10 механик, которые дают больше всего входов</h2>
+<div class="arch" id="cArch"></div>
+<h2>Структура сильной карусели</h2>
+<div class="scroll"><table id="cSlides"></table></div>
+<h2>Калькулятор: сколько публикаций нужно на цель <span class="q">· свяжется с ценой регистрации из рекламы, если есть воронка</span></h2>
+<div class="panel"><div class="calc" id="cCalcIn"></div><div class="tiles" id="cCalcOut"></div><p class="h2note" id="cCalcNote" style="margin:10px 0 0"></p></div>
+</section>
+
 </div>
 
 <script>
@@ -242,7 +311,11 @@ function header(){
   document.title=D.title+' · Сквозная аналитика';
   $('title').innerHTML=`${esc(D.title)} · <span class="g">Сквозная аналитика</span>`;
   $('subtitle').textContent=D.subtitle;
-  $('hmeta').innerHTML=`обновлено ${esc(D.generated)}<br>${D.wins.length} вебинарных окон · ${D.tree.length} кампаний · ${ads} объявлений<br>кабинет: ${esc(D.meta_mode)}`;
+  const parts=[];
+  if(D.days.length)parts.push(`${D.wins.length} вебинарных окон · ${D.tree.length} кампаний · ${ads} объявлений`);
+  if(D.fin&&D.fin.months.length)parts.push(`финансы: ${D.fin.months.length} мес.`);
+  if(D.content)parts.push(`контент: ${D.content.pubs.length} публикаций`);
+  $('hmeta').innerHTML=`обновлено ${esc(D.generated)}<br>${parts.join('<br>')}${D.days.length?'<br>кабинет: '+esc(D.meta_mode):''}`;
   $('presets').innerHTML=MONS.map(m=>`<button class="preset" data-p="${m}">${monName(m)}</button>`).join('')+
     '<button class="preset" data-p="all">Всё</button>';
   $('dirBar').innerHTML='<button class="dirbtn on" data-d="">Все лендинги</button>'+
@@ -361,7 +434,8 @@ function sortable(id,cols,rows,def,render){
   const el=$(id);
   el.innerHTML='<thead><tr>'+cols.map(c=>`<th class="${c[2]?'l':''}" data-k="${c[0]}">${c[1]}${st.k===c[0]?(st.dir<0?' ↓':' ↑'):''}</th>`).join('')+'</tr></thead><tbody>'+render(rows)+'</tbody>';
   el.querySelectorAll('th[data-k]').forEach(th=>th.onclick=()=>{
-    const k=th.dataset.k;st.dir=st.k===k?-st.dir:-1;st.k=k;refresh()});
+    const k=th.dataset.k;st.dir=st.k===k?-st.dir:-1;st.k=k;
+    (id.startsWith('fin')?finRender:/^c[A-Z]/.test(id)?contentRender:refresh)()});
 }
 
 // ─────────── monthly ───────────
@@ -609,7 +683,7 @@ function todo(){
 }
 
 // ─────────── wiring ───────────
-function refresh(){
+let refresh=function(){
   $('rangeText').textContent=rangeLabel();
   kpis();funnel();chart();months();recon();renderCal();
   attrNote();adKpis();tree();lands();pie();
@@ -619,7 +693,192 @@ function refresh(){
   $('cacnote').textContent=rub(CAC());
   pl();todo();
 }
+
+// ═══════════ Доходы и расходы ═══════════
+const FIN=(D.fin&&D.fin.months)||[];
+let finSel=null, finOpen=new Set();
+const PAID=st=>/^выплачено/i.test(st||'');
+const fmName=m=>monName(m)+' '+m.slice(0,4);
+function finMonth(f){
+  const it=f.items, sh=f.sheet||{};
+  const exp=sum(it,'fact'), expPlan=sum(it,'plan'), shares=sum(f.shares,'fact'), sharesPlan=sum(f.shares,'plan');
+  const revCh=sum(f.revenue,'fact');
+  const rev=sh.rev_fact??revCh, revPlan=sh.rev_plan??0;
+  const profit=rev-exp-shares, profitPlan=revPlan-expPlan-sharesPlan;
+  const unpaid=it.filter(x=>x.fact>0&&!PAID(x.status)).reduce((a,x)=>a+x.fact,0);
+  const refunds=it.filter(x=>/возврат/i.test(x.item)).reduce((a,x)=>a+x.fact,0);
+  return {m:f.m,tab:f.tab,rev,revPlan,revCh,exp,expPlan,shares,sharesPlan,profit,profitPlan,unpaid,refunds,
+    margin:rev?profit/rev*100:null,marginPlan:revPlan?profitPlan/revPlan*100:null,done:revPlan?rev/revPlan*100:null,sh};
+}
+const FINM=FIN.map(finMonth);
+function finScope(){return finSel?FIN.filter(f=>f.m===finSel):FIN}
+function finAgg(){const ms=finScope().map(finMonth),o={};
+  ['rev','revPlan','exp','expPlan','shares','sharesPlan','profit','profitPlan','unpaid','refunds'].forEach(k=>o[k]=sum(ms,k));
+  o.margin=o.rev?o.profit/o.rev*100:null;o.marginPlan=o.revPlan?o.profitPlan/o.revPlan*100:null;o.done=o.revPlan?o.rev/o.revPlan*100:null;return o}
+const dPct=(f,p)=>p?((f/p-1)*100>=0?'+':'−')+Math.abs((f/p-1)*100).toFixed(0)+'% к плану':'плана нет';
+function finRender(){
+  const label=finSel?fmName(finSel):(FIN.length>1?fmName(FIN[0].m)+' — '+fmName(FIN[FIN.length-1].m):FIN.length?fmName(FIN[0].m):'');
+  $('finQ').textContent='· '+label;$('revQ').textContent='· '+label;
+  const a=finAgg();
+  $('finKpis').innerHTML=[
+   ['Выручка',rub(a.rev),a.revPlan?'план '+rub(a.revPlan)+' · '+a.done.toFixed(0)+'%':'',a.done==null?null:a.done>=100?'good':a.done>=85?'warning':'critical'],
+   ['Расходы',rub(a.exp),'план '+rub(a.expPlan)+' · '+dPct(a.exp,a.expPlan),a.expPlan&&a.exp>a.expPlan*1.1?'critical':null],
+   ['Доли партнёров',rub(a.shares),'% от прибыли'],
+   ['Чистая прибыль',rub(a.profit),'план '+rub(a.profitPlan),a.profit<0?'critical':a.profitPlan&&a.profit<a.profitPlan*0.85?'warning':'good'],
+   ['Маржинальность',a.margin==null?'—':a.margin.toFixed(1)+'%','план '+(a.marginPlan==null?'—':a.marginPlan.toFixed(1)+'%'),a.margin==null?null:a.margin>=40?'good':a.margin>=20?'warning':'critical'],
+   ['Не выплачено',rub(a.unpaid),'начислено, статус ≠ «Выплачено»',a.unpaid?'warning':null],
+   ['Возвраты',rub(a.refunds),a.rev?pct(a.refunds,a.rev)+' выручки':''],
+  ].map(tile).join('');
+  // chart: grouped bars revenue / expenses+shares / profit by month
+  const C={rev:['Выручка','#2a78d6'],cost:['Расходы + доли','#eb6834'],profit:['Прибыль','#1baf7a']};
+  $('finLeg').innerHTML=Object.values(C).map(c=>`<span><i style="background:${c[1]}"></i>${c[0]}</span>`).join('')+'<span style="color:var(--text-muted)">клик по месяцу — выбрать</span>';
+  if(FINM.length){
+    const W=Math.max(640,FINM.length*70),H=220,P={t:10,b:28,l:8,r:8};
+    const mx=Math.max(...FINM.map(m=>Math.max(m.rev,m.exp+m.shares,m.profit)),1),mn=Math.min(0,...FINM.map(m=>m.profit));
+    const y=v=>P.t+(mx-v)/(mx-mn)*(H-P.t-P.b),gw=(W-P.l-P.r)/FINM.length,bw=Math.min(16,gw/4);
+    let g=`<line x1="0" x2="${W}" y1="${y(0).toFixed(1)}" y2="${y(0).toFixed(1)}" stroke="var(--line)"/>`;
+    FINM.forEach((m,i)=>{const x0=P.l+i*gw+gw/2-1.5*bw-2;
+      [[m.rev,C.rev],[m.exp+m.shares,C.cost],[m.profit,C.profit]].forEach(([v,c],j)=>{
+        const yy=Math.min(y(v),y(0)),h=Math.abs(y(v)-y(0));
+        g+=`<rect x="${(x0+j*(bw+2)).toFixed(1)}" y="${yy.toFixed(1)}" width="${bw}" height="${Math.max(h,1).toFixed(1)}" rx="2" fill="${c[1]}" opacity="${!finSel||finSel===m.m?1:.3}"><title>${fmName(m.m)} · ${c[0]}: ${rub(v)}</title></rect>`});
+      g+=`<text x="${(P.l+i*gw+gw/2).toFixed(1)}" y="${H-9}" font-size="10.5" fill="var(--text-muted)" text-anchor="middle">${monName(m.m).slice(0,3)} ${m.m.slice(2,4)}</text>
+      <rect class="fhit" data-m="${m.m}" x="${(P.l+i*gw).toFixed(1)}" y="0" width="${gw.toFixed(1)}" height="${H}" fill="transparent" style="cursor:pointer"/>`});
+    $('finChart').innerHTML=`<div style="overflow-x:auto"><svg viewBox="0 0 ${W} ${H}" style="width:100%;min-width:${Math.min(W,640)}px;height:${H}px;display:block">${g}</svg></div>`;
+    $('finChart').querySelectorAll('.fhit').forEach(r=>r.onclick=()=>{finSel=finSel===r.dataset.m?null:r.dataset.m;finRender()});
+  }
+  // monthly table
+  const F=k=>r=>r[k];
+  sortable('finMonthsTbl',[['m','Месяц',1,F('m')],['revPlan','План выручки',0,F('revPlan')],['rev','Выручка',0,F('rev')],['done','% плана',0,F('done')],
+    ['exp','Расходы',0,F('exp')],['shares','Доли',0,F('shares')],['profit','Прибыль',0,F('profit')],['margin','Маржа',0,F('margin')],['unpaid','Не выплачено',0,F('unpaid')]],
+    FINM,'m',rs=>rs.map(r=>`<tr class="${finSel===r.m?'own':''}" data-m="${r.m}" style="cursor:pointer"><td class="l">${fmName(r.m)}<em>${esc(r.tab)}</em></td>
+    <td>${r.revPlan?rub(r.revPlan):'—'}</td><td>${rub(r.rev)}</td><td class="romi s-${r.done==null?'na':r.done>=100?'good':r.done>=85?'warning':'critical'}">${r.done==null?'—':r.done.toFixed(0)+'%'}</td>
+    <td>${rub(r.exp)}</td><td>${rub(r.shares)}</td><td class="romi s-${r.profit<0?'critical':'good'}">${rub(r.profit)}</td>
+    <td>${r.margin==null?'—':r.margin.toFixed(1)+'%'}</td><td>${r.unpaid?rub(r.unpaid):'—'}</td></tr>`).join('')+(FINM.length>1?(()=>{const t=FINM.reduce((o,m)=>{['revPlan','rev','exp','shares','profit','unpaid'].forEach(k=>o[k]=(o[k]||0)+m[k]);return o},{});
+      return `<tr class="tot"><td class="l">ИТОГО</td><td>${rub(t.revPlan)}</td><td>${rub(t.rev)}</td><td>${t.revPlan?(t.rev/t.revPlan*100).toFixed(0)+'%':'—'}</td><td>${rub(t.exp)}</td><td>${rub(t.shares)}</td><td>${rub(t.profit)}</td><td>${t.rev?(t.profit/t.rev*100).toFixed(1)+'%':'—'}</td><td>${rub(t.unpaid)}</td></tr>`})():''));
+  $('finMonthsTbl').querySelectorAll('tr[data-m]').forEach(tr=>tr.onclick=()=>{finSel=finSel===tr.dataset.m?null:tr.dataset.m;finRender()});
+  // revenue channels
+  const ch={},det={};
+  finScope().forEach(f=>{f.revenue.forEach(r=>{if(r.fact)ch[r.ch]=(ch[r.ch]||0)+r.fact});(f.revenue_detail||[]).forEach(r=>det[r.ch]=(det[r.ch]||0)+r.fact)});
+  // breakdown groups (лава · евро ...) also become top-level when the sheet lists them only in the breakdown
+  const grp={};Object.entries(det).forEach(([k,v])=>{const g=k.split(' · ')[0];grp[g]=(grp[g]||0)+v});
+  const top=Object.entries({...ch,...Object.fromEntries(Object.entries(grp).map(([g,v])=>['Выручка '+g,v]))}).sort((x,y)=>y[1]-x[1]);
+  const tmax=Math.max(...top.map(x=>x[1]),1),ttot=top.reduce((x,y)=>x+y[1],0);
+  $('finRev').innerHTML=(top.map(([k,v])=>`<div class="hbar"><span class="l" title="${esc(k)}">${esc(k)}</span><span class="t"><i style="width:${(v/tmax*100).toFixed(1)}%"></i></span><span class="v">${rub(v)}</span></div>`).join('')||'<p class="h2note">нет данных</p>')+
+    (Object.keys(det).length?`<p class="h2note" style="margin:10px 0 4px">Детализация: ${Object.entries(det).map(([k,v])=>esc(k)+' '+rub(v)).join(' · ')}</p>`:'')+
+    `<p class="h2note" style="margin:6px 0 0">Сумма каналов ${rub(ttot)} · в таблице «Итого выручка» ${rub(finAgg().rev)}</p>`;
+  // categories
+  const cats={};
+  finScope().forEach(f=>f.items.forEach(x=>{const c=cats[x.cat]||(cats[x.cat]={k:x.cat,plan:0,fact:0,unpaid:0,items:{}});
+    c.plan+=x.plan;c.fact+=x.fact;if(x.fact&&!PAID(x.status))c.unpaid+=x.fact;
+    const i=c.items[x.item]||(c.items[x.item]={k:x.item,plan:0,fact:0,status:new Set(),note:''});i.plan+=x.plan;i.fact+=x.fact;if(x.status)i.status.add(x.status);if(x.note)i.note=x.note}));
+  finScope().forEach(f=>f.shares.forEach(x=>{const c=cats['Доли партнёров']||(cats['Доли партнёров']={k:'Доли партнёров',plan:0,fact:0,unpaid:0,items:{}});
+    c.plan+=x.plan;c.fact+=x.fact;const i=c.items[x.item]||(c.items[x.item]={k:'% '+x.item,plan:0,fact:0,status:new Set(),note:''});i.plan+=x.plan;i.fact+=x.fact}));
+  const crows=Object.values(cats),ctot=sum(crows,'fact')||1,cmax=Math.max(...crows.map(c=>c.fact),1);
+  $('finStruct').innerHTML=crows.slice().sort((x,y)=>y.fact-x.fact).filter(c=>c.fact>0).map(c=>`<div class="hbar"><span class="l">${esc(c.k)}</span><span class="t"><i style="width:${(c.fact/cmax*100).toFixed(1)}%;background:#eb6834"></i></span><span class="v">${(c.fact/ctot*100).toFixed(0)}% · ${fmt(c.fact/1000)}к</span></div>`).join('');
+  const dev=(f,pl)=>pl?(f-pl)/pl*100:(f?null:0);
+  const devCell=(f,pl)=>{const d=dev(f,pl);return `<td class="romi s-${d==null?'warning':d>15?'critical':d>0?'warning':'good'}">${d==null?'вне плана':(d>=0?'+':'−')+fmt(Math.abs(d))+'%'}</td>`};
+  const stCell=st=>[...st].map(x=>`<span class="st ${PAID(x)?'paid':/не выпл/i.test(x)?'unpaid':''}">${esc(x)}</span>`).join(' ');
+  sortable('finCats',[['k','Статья',1,r=>r.k],['plan','План',0,r=>r.plan],['fact','Факт',0,r=>r.fact],['dev','Отклонение',0,r=>dev(r.fact,r.plan)??1e9],['share','Доля',0,r=>r.fact],['unpaid','Не выплачено',0,r=>r.unpaid]],
+    crows,'fact',rs=>rs.map(c=>{const open=finOpen.has(c.k);
+      let h=`<tr class="fcat" data-c="${esc(c.k)}"><td class="l"><span class="chev">${open?'▾':'▸'}</span>${esc(c.k)}</td><td>${rub(c.plan)}</td><td>${rub(c.fact)}</td>${devCell(c.fact,c.plan)}
+      <td><span class="bar"><i style="width:${(c.fact/ctot*100).toFixed(1)}%;background:#eb6834"></i></span>${(c.fact/ctot*100).toFixed(0)}%</td><td>${c.unpaid?rub(c.unpaid):'—'}</td></tr>`;
+      if(open)Object.values(c.items).sort((x,y)=>y.fact-x.fact).forEach(i=>{h+=`<tr class="fitem"><td class="l" style="padding-left:30px">${esc(i.k)}${i.note?`<em>${esc(i.note)}</em>`:''}</td><td>${i.plan?rub(i.plan):'—'}</td><td>${i.fact?rub(i.fact):'—'}</td>${devCell(i.fact,i.plan)}<td>${stCell(i.status)}</td><td></td></tr>`});
+      return h}).join('')+`<tr class="tot"><td class="l">Итого с долями</td><td>${rub(sum(crows,'plan'))}</td><td>${rub(sum(crows,'fact'))}</td><td></td><td></td><td>${rub(sum(crows,'unpaid'))}</td></tr>`);
+  $('finCats').querySelectorAll('tr.fcat').forEach(tr=>tr.onclick=()=>{const k=tr.dataset.c;finOpen.has(k)?finOpen.delete(k):finOpen.add(k);finRender()});
+  // warnings
+  let w='';
+  finScope().forEach(f=>{const m=finMonth(f);
+    if(m.sh.exp_fact!=null&&Math.abs(m.sh.exp_fact-m.exp)>1)w+=`<div class="warn"><b>${fmName(f.m)}: «Итого расходы» в таблице ${rub(m.sh.exp_fact)}, а сумма строк ${rub(m.exp)}.</b> Формула итога не охватывает часть строк.</div>`;
+    if(m.sh.rev_fact!=null&&m.revCh&&Math.abs(m.sh.rev_fact-m.revCh-sum(f.revenue_detail||[],'fact'))>1&&Math.abs(m.sh.rev_fact-m.revCh)>1){
+      const lava=sum(f.revenue_detail||[],'fact');w+=`<div class="warn"><b>${fmName(f.m)}: каналы не сходятся с «Итого выручка».</b> Строки ${rub(m.revCh)} + детализация ${rub(lava)} против ${rub(m.sh.rev_fact)}.</div>`}
+    if(m.sh.profit_fact!=null&&Math.abs(m.sh.profit_fact-m.profit)>1)w+=`<div class="warn crit"><b>${fmName(f.m)}: «Итоговая прибыль» в таблице ${rub(m.sh.profit_fact)}, а выручка − расходы − доли = ${rub(m.profit)}</b> (разница ${rub(m.sh.profit_fact-m.profit)}). Проверьте формулу: например, строка выручки может прибавляться к прибыли второй раз, хотя уже входит в «Итого выручка».</div>`});
+  const over=crows.flatMap(c=>Object.values(c.items).filter(i=>i.plan&&i.fact>i.plan*1.15&&i.fact-i.plan>10000).map(i=>[c.k,i])).sort((x,y)=>(y[1].fact-y[1].plan)-(x[1].fact-x[1].plan)).slice(0,6);
+  if(over.length)w+=`<div class="warn crit"><b>Перерасход по статьям:</b> ${over.map(([c,i])=>`${esc(i.k)} +${rub(i.fact-i.plan)} (${fmt((i.fact/i.plan-1)*100)}%)`).join(' · ')}.</div>`;
+  const noPlan=crows.flatMap(c=>Object.values(c.items).filter(i=>!i.plan&&i.fact>=10000)).sort((x,y)=>y.fact-x.fact).slice(0,6);
+  if(noPlan.length)w+=`<div class="warn"><b>Расходы вне плана:</b> ${noPlan.map(i=>esc(i.k)+' '+rub(i.fact)).join(' · ')}.</div>`;
+  if(a.unpaid)w+=`<div class="warn"><b>${rub(a.unpaid)} по статьям со статусом не «Выплачено».</b> Если статусы в таблице актуальны — это ещё не оплаченные обязательства, и денег на счёте сейчас больше, чем останется после расчётов. Если нет — обновите статусы.</div>`;
+  $('finWarn').innerHTML=w;
+  $('finFoot').innerHTML=`<b>Источник:</b> ${esc(D.fin.source||'таблица расходов')}. Расходы — сумма строк листа (план/факт), доли партнёров — строки «%», прибыль = выручка − расходы − доли. Выгружено ${esc(D.fin.fetched||D.generated)}.`;
+  $('finMonths').innerHTML=FIN.map(f=>`<button class="preset ${finSel===f.m?'on':''}" data-m="${f.m}">${fmName(f.m)}</button>`).join('')+`<button class="preset ${finSel?'':'on'}" data-m="">Все месяцы</button>`;
+  $('finMonths').querySelectorAll('.preset').forEach(b=>b.onclick=()=>{finSel=b.dataset.m||null;finRender()});
+}
+
+// ═══════════ Контент ═══════════
+const CT=D.content||null;
+let cFmt='',cWho='',cLang='';
+const median=a=>{if(!a.length)return 0;const s=a.slice().sort((x,y)=>x-y),m=s.length>>1;return s.length%2?s[m]:(s[m-1]+s[m])/2};
+const igLink=(acc,url,txt)=>`<a class="prev" target="_blank" rel="noopener" href="${esc(url||'https://www.instagram.com/'+acc+'/')}">${esc(txt||acc)}</a>`;
+function contentRender(){
+  const own=CT.own, accLang=Object.fromEntries(CT.accounts.map(a=>[a.acc,a.lang]));
+  $('cSrc').innerHTML=`Источник: ${esc(CT.source)}. Свой аккаунт: <b>${esc(own)}</b>.`;
+  const P=CT.pubs, mine=P.filter(p=>p.acc===own), market=P.filter(p=>p.acc!==own);
+  const ownAcc=CT.accounts.find(a=>a.acc===own);
+  const rankMed=CT.accounts.slice().sort((x,y)=>y.median-x.median).findIndex(a=>a.acc===own)+1;
+  $('cKpis').innerHTML=[['Публикаций в выборке',fmt(P.length),'топ по входам за год'],['Аккаунтов',fmt(CT.accounts.length),CT.accounts.filter(a=>a.lang.includes('RU')).length+' RU · '+CT.accounts.filter(a=>a.lang.includes('EN')).length+' EN'],
+   ['Рекорд рынка',fmt(Math.max(...P.map(p=>p.ins))),'входов на одну публикацию'],
+   ['Ваша медиана',ownAcc?fmt(ownAcc.median):'—',ownAcc?`${rankMed}-е место из ${CT.accounts.length} · ${ownAcc.posts} публ./год`:'',ownAcc&&ownAcc.median>=median(CT.accounts.map(a=>a.median))?'good':'warning'],
+   ['Ваш максимум',ownAcc?fmt(ownAcc.max):'—','входов'],
+   ['Ваши в топе',fmt(mine.length),mine.length?'медиана '+fmt(median(mine.map(p=>p.ins)))+' входов':'']].map(tile).join('');
+  // filters
+  const btn=(grp,v,l,cur)=>`<button class="dirbtn ${cur===v?'on':''}" data-g="${grp}" data-v="${v}">${l}</button>`;
+  $('cFilters').innerHTML=btn('f','','Все форматы',cFmt)+btn('f','Рилс','Рилс',cFmt)+btn('f','Карусель','Карусели',cFmt)+
+    '<span style="width:10px"></span>'+btn('w','','Все аккаунты',cWho)+btn('w','own','Только мои',cWho)+btn('w','market','Только рынок',cWho)+
+    '<span style="width:10px"></span>'+btn('l','','RU + EN',cLang)+btn('l','RU','RU',cLang)+btn('l','EN','EN',cLang);
+  $('cFilters').querySelectorAll('.dirbtn').forEach(b=>b.onclick=()=>{const v=b.dataset.v;({f:()=>cFmt=v,w:()=>cWho=v,l:()=>cLang=v})[b.dataset.g]();contentRender()});
+  const rows=P.filter(p=>(!cFmt||p.fmt===cFmt)&&(!cWho||(cWho==='own')===(p.acc===own))&&(!cLang||(accLang[p.acc]||'').includes(cLang)));
+  const pmax=Math.max(...rows.map(p=>p.ins),1);
+  sortable('cTop',[['acc','Аккаунт',1,p=>p.acc],['fmt','Формат',0,p=>p.fmt],['hook','Хук / первая фраза',1,p=>p.hook],['ins','Входы',0,p=>p.ins],['xn','× нормы',0,p=>p.xn],['date','Дата',0,p=>p.date?p.date.slice(3)+p.date.slice(0,2):'']],
+    rows,'ins',rs=>rs.map(p=>`<tr class="${p.acc===own?'own':''}"><td class="l">${igLink(p.acc,'https://www.instagram.com/'+p.acc+'/')}</td><td>${p.fmt}</td>
+    <td class="l">${igLink(p.acc,p.url,'«'+p.hook+'»')}</td><td><span class="bar"><i style="width:${(p.ins/pmax*100).toFixed(1)}%"></i></span>${fmt(p.ins)}</td>
+    <td class="romi s-${p.xn==null?'na':p.xn>=100?'good':p.xn>=30?'warning':'na'}">${p.xn==null?'—':fmt(p.xn)+'×'}</td><td>${p.date||'—'}</td></tr>`).join('')||'<tr><td class="l" colspan="6">нет публикаций под фильтром</td></tr>');
+  // account medians bars
+  const acs=CT.accounts.filter(a=>!cLang||a.lang.includes(cLang)).sort((x,y)=>y.median-x.median).slice(0,15),amax=Math.max(...acs.map(a=>a.median),1);
+  $('cAccBars').innerHTML=acs.map(a=>`<div class="hbar"><span class="l" style="${a.acc===own?'color:var(--series-1);font-weight:600':''}">${esc(a.acc)}</span><span class="t"><i style="width:${(a.median/amax*100).toFixed(1)}%;${a.acc===own?'':'opacity:.55'}"></i></span><span class="v">${fmt(a.median)}</span></div>`).join('')+
+    '<p class="h2note" style="margin:8px 0 0">Медиана честнее максимума: показывает, сколько входов приносит обычная публикация автора.</p>';
+  // format comparison
+  const fs=['Рилс','Карусель'].map(f=>{const all=rows.filter(p=>p.fmt===f),m=all.filter(p=>p.acc===own);return{f,n:all.length,med:median(all.map(p=>p.ins)),mn:m.length,mmed:median(m.map(p=>p.ins))}});
+  $('cFmt').innerHTML=`<div style="overflow-x:auto"><table style="min-width:0"><thead><tr><th class="l">Формат</th><th>В топе</th><th>Медиана рынка</th><th>Ваших</th><th>Ваша медиана</th></tr></thead><tbody>${fs.map(x=>`<tr><td class="l">${x.f}</td><td>${x.n}</td><td>${fmt(x.med)}</td><td>${x.mn}</td><td>${x.mn?fmt(x.mmed):'—'}</td></tr>`).join('')}</tbody></table></div>
+   <p class="h2note" style="margin:10px 0 0">Медианы считаются по публикациям в выборке под текущими фильтрами.</p>`;
+  sortable('cAcc',[['acc','Аккаунт',1,a=>a.acc],['lang','Язык',0,a=>a.lang],['posts','Публикаций за год',0,a=>a.posts],['median','Медиана входов',0,a=>a.median],['max','Максимум',0,a=>a.max],['top','В топе',0,a=>P.filter(p=>p.acc===a.acc).length]],
+    CT.accounts.filter(a=>!cLang||a.lang.includes(cLang)),'median',rs=>rs.map(a=>`<tr class="${a.acc===own?'own':''}"><td class="l">${igLink(a.acc)}</td><td>${esc(a.lang)}</td><td>${fmt(a.posts)}</td><td>${fmt(a.median)}</td><td>${fmt(a.max)}</td><td>${P.filter(p=>p.acc===a.acc).length||'—'}</td></tr>`).join(''));
+  const byId=Object.fromEntries(P.map(p=>[p.id,p]));
+  $('cArch').innerHTML=CT.mechanics.map((x,i)=>`<div class="card"><h3>${String(i+1).padStart(2,'0')} · ${esc(x.n)}</h3><div class="romi s-good" style="font-size:15px">${esc(x.stat)}</div><p>${esc(x.why)}</p>
+    <ul>${x.refs.map(k=>byId[k]).filter(Boolean).map(r=>`<li>${igLink(r.acc,r.url,r.acc)} — «${esc(r.hook)}» · ${fmt(r.ins)} входов${r.xn?' · '+fmt(r.xn)+'× нормы':''}</li>`).join('')}</ul></div>`).join('');
+  $('cSlides').innerHTML=`<thead><tr><th class="l">Слайд</th><th class="l">Роль</th><th class="l">Вопрос читателя</th><th class="l">Что на слайде</th></tr></thead><tbody>`+
+    CT.slides.map(x=>`<tr><td class="l">${esc(x.n)}</td><td class="l"><b>${esc(x.role)}</b></td><td class="l">${esc(x.q)}</td><td class="l">${esc(x.what)}</td></tr>`).join('')+'</tbody>';
+  calcRender(mine);
+}
+let CALC=null;
+function calcRender(mine){
+  const medF=f=>median(mine.filter(p=>p.fmt===f).map(p=>p.ins))||median(CT.pubs.filter(p=>p.fmt===f).map(p=>p.ins));
+  if(!CALC)CALC={goal:10000,ta:60,conv:35,reel:Math.round(medF('Рилс')),car:Math.round(medF('Карусель')),share:50};
+  const F=[['goal','Цель: регистраций ЦА'],['ta','Доля ЦА в регистрациях, %'],['conv','Конверсия вход → регистрация, %'],['reel','Входов на рилс (ожидание)'],['car','Входов на карусель (ожидание)'],['share','Доля каруселей в плане, %']];
+  if(!$('cCalcIn').children.length){
+    $('cCalcIn').innerHTML=F.map(([k,l])=>`<div><label for="cc_${k}">${l}</label><input id="cc_${k}" type="number" min="0" value="${CALC[k]}"></div>`).join('');
+    F.forEach(([k])=>$('cc_'+k).oninput=e=>{CALC[k]=parseFloat(e.target.value)||0;calcRender(mine)});
+  }
+  const c=CALC,regs=c.ta?c.goal/(c.ta/100):0,ins=c.conv?regs/(c.conv/100):0;
+  const avg=c.reel*(1-c.share/100)+c.car*(c.share/100),posts=avg?Math.ceil(ins/avg):null;
+  const nCar=posts?Math.round(posts*c.share/100):0;
+  const fr=D.days&&D.days.length?agg():null,cpr=fr&&fr.regs?fr.usd/fr.regs:null;
+  $('cCalcOut').innerHTML=[['Нужно регистраций',fmt(regs),'всего, с учётом доли ЦА'],['Нужно входов',fmt(ins),'комментариев с кодовым словом'],
+    ['Публикаций',posts==null?'—':fmt(posts),posts?`${fmt(posts-nCar)} рилс + ${fmt(nCar)} каруселей`:''],
+    ['То же через рекламу',cpr?rub(regs*cpr*FX):'—',cpr?'по текущей цене регистрации $'+cpr.toFixed(2):'нет данных воронки']].map(tile).join('');
+  $('cCalcNote').innerHTML=`Ожидания по входам по умолчанию — ваша медиана по формату в выборке (рилс ${fmt(medF('Рилс'))}, карусель ${fmt(medF('Карусель'))}). Подставьте свои реальные цифры за последние 30 дней.`;
+}
+
+// ═══════════ tabs + init ═══════════
+const HAS={funnel:D.days.length>0,fin:FIN.length>0,content:!!(CT&&CT.pubs&&CT.pubs.length)};
+let curTab=null;
+function showTab(t){curTab=t;
+  document.querySelectorAll('.tab').forEach(b=>b.classList.toggle('on',b.dataset.t===t));
+  document.querySelectorAll('.tabpane').forEach(p=>p.classList.toggle('on',p.id==='tab-'+t));
+  try{history.replaceState(null,'','#'+t)}catch(_){}}
+document.querySelectorAll('.tab').forEach(b=>{if(!HAS[b.dataset.t])b.remove();else b.onclick=()=>showTab(b.dataset.t)});
+const origRefresh=refresh;
+refresh=function(){origRefresh();if(HAS.content&&$('cCalcOut').children.length)calcRender(CT.pubs.filter(p=>p.acc===CT.own))};
 header();
+if(HAS.funnel){
 document.querySelectorAll('.preset[data-p]').forEach(b=>b.onclick=()=>{
   clearPresets();b.classList.add('on');const p=b.dataset.p;
   if(p==='all'){selFrom=selTo=null}
@@ -655,6 +914,12 @@ $('act').oninput=e=>{ACT=(e.target.value||'').trim().replace(/^act_/,'');
 try{const sv=localStorage.getItem(ACT_KEY);if(sv&&!ACT){ACT=sv;$('act').value=sv}}catch(_){}
 const last=document.querySelector(`.preset[data-p="${MONS[MONS.length-1]}"]`);
 (last||document.querySelector('.preset[data-p="all"]')).click();
+}
+if(HAS.fin)finRender();
+if(HAS.content)contentRender();
+{const want=location.hash.slice(1);showTab(HAS[want]?want:Object.keys(HAS).find(k=>HAS[k])||'funnel')}
+if(Object.values(HAS).filter(Boolean).length<2)$('tabs').style.display='none';
+
 </script>
 </body>
 </html>

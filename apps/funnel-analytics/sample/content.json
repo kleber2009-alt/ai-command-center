@@ -1,0 +1,467 @@
+{
+ "source": "демо-выборка",
+ "own": "school.example",
+ "pubs": [
+  {
+   "id": "p0",
+   "acc": "school.example",
+   "url": "https://www.instagram.com/school.example/",
+   "ins": 992,
+   "xn": 5.5,
+   "date": "01.2026",
+   "fmt": "Карусель",
+   "hook": "1000 Reels за вечер"
+  },
+  {
+   "id": "p1",
+   "acc": "competitor_three",
+   "url": "https://www.instagram.com/competitor_three/",
+   "ins": 11,
+   "xn": 0.3,
+   "date": "09.2026",
+   "fmt": "Рилс",
+   "hook": "пока одни не понимают ИИ"
+  },
+  {
+   "id": "p2",
+   "acc": "competitor_one",
+   "url": "https://www.instagram.com/competitor_one/",
+   "ins": 80,
+   "xn": 0.8,
+   "date": "08.2026",
+   "fmt": "Рилс",
+   "hook": "как я заменил монтажёра"
+  },
+  {
+   "id": "p3",
+   "acc": "school.example",
+   "url": "https://www.instagram.com/school.example/",
+   "ins": 609,
+   "xn": 3.4,
+   "date": "05.2026",
+   "fmt": "Рилс",
+   "hook": "как я заменил монтажёра"
+  },
+  {
+   "id": "p4",
+   "acc": "competitor_one",
+   "url": "https://www.instagram.com/competitor_one/",
+   "ins": 362,
+   "xn": 3.8,
+   "date": "06.2026",
+   "fmt": "Рилс",
+   "hook": "это не съёмка — это ИИ"
+  },
+  {
+   "id": "p5",
+   "acc": "competitor_three",
+   "url": "https://www.instagram.com/competitor_three/",
+   "ins": 25,
+   "xn": 0.6,
+   "date": "01.2026",
+   "fmt": "Карусель",
+   "hook": "как я заменил монтажёра"
+  },
+  {
+   "id": "p6",
+   "acc": "competitor_one",
+   "url": "https://www.instagram.com/competitor_one/",
+   "ins": 1229,
+   "xn": 12.9,
+   "date": "03.2026",
+   "fmt": "Рилс",
+   "hook": "1000 Reels за вечер"
+  },
+  {
+   "id": "p7",
+   "acc": "competitor_one",
+   "url": "https://www.instagram.com/competitor_one/",
+   "ins": 276,
+   "xn": 2.9,
+   "date": "03.2026",
+   "fmt": "Карусель",
+   "hook": "пока одни не понимают ИИ"
+  },
+  {
+   "id": "p8",
+   "acc": "competitor_three",
+   "url": "https://www.instagram.com/competitor_three/",
+   "ins": 754,
+   "xn": 18.9,
+   "date": "05.2026",
+   "fmt": "Карусель",
+   "hook": "это не съёмка — это ИИ"
+  },
+  {
+   "id": "p9",
+   "acc": "competitor_two",
+   "url": "https://www.instagram.com/competitor_two/",
+   "ins": 734,
+   "xn": 1.8,
+   "date": "07.2026",
+   "fmt": "Рилс",
+   "hook": "ИИ-аватар вместо блогера"
+  },
+  {
+   "id": "p10",
+   "acc": "competitor_one",
+   "url": "https://www.instagram.com/competitor_one/",
+   "ins": 133,
+   "xn": 1.4,
+   "date": "03.2026",
+   "fmt": "Рилс",
+   "hook": "1000 Reels за вечер"
+  },
+  {
+   "id": "p11",
+   "acc": "competitor_one",
+   "url": "https://www.instagram.com/competitor_one/",
+   "ins": 138,
+   "xn": 1.5,
+   "date": "04.2026",
+   "fmt": "Карусель",
+   "hook": "как я заменил монтажёра"
+  },
+  {
+   "id": "p12",
+   "acc": "competitor_two",
+   "url": "https://www.instagram.com/competitor_two/",
+   "ins": 2060,
+   "xn": 5.0,
+   "date": "03.2026",
+   "fmt": "Карусель",
+   "hook": "пока одни не понимают ИИ"
+  },
+  {
+   "id": "p13",
+   "acc": "school.example",
+   "url": "https://www.instagram.com/school.example/",
+   "ins": 260,
+   "xn": 1.4,
+   "date": "05.2026",
+   "fmt": "Рилс",
+   "hook": "пока одни не понимают ИИ"
+  },
+  {
+   "id": "p14",
+   "acc": "school.example",
+   "url": "https://www.instagram.com/school.example/",
+   "ins": 587,
+   "xn": 3.3,
+   "date": "04.2026",
+   "fmt": "Рилс",
+   "hook": "пока одни не понимают ИИ"
+  },
+  {
+   "id": "p15",
+   "acc": "competitor_three",
+   "url": "https://www.instagram.com/competitor_three/",
+   "ins": 343,
+   "xn": 8.6,
+   "date": "08.2026",
+   "fmt": "Карусель",
+   "hook": "пока одни не понимают ИИ"
+  },
+  {
+   "id": "p16",
+   "acc": "competitor_one",
+   "url": "https://www.instagram.com/competitor_one/",
+   "ins": 555,
+   "xn": 5.8,
+   "date": "06.2026",
+   "fmt": "Карусель",
+   "hook": "как я заменил монтажёра"
+  },
+  {
+   "id": "p17",
+   "acc": "competitor_one",
+   "url": "https://www.instagram.com/competitor_one/",
+   "ins": 77,
+   "xn": 0.8,
+   "date": "01.2026",
+   "fmt": "Рилс",
+   "hook": "1000 Reels за вечер"
+  },
+  {
+   "id": "p18",
+   "acc": "competitor_two",
+   "url": "https://www.instagram.com/competitor_two/",
+   "ins": 1258,
+   "xn": 3.1,
+   "date": "09.2026",
+   "fmt": "Рилс",
+   "hook": "это не съёмка — это ИИ"
+  },
+  {
+   "id": "p19",
+   "acc": "competitor_two",
+   "url": "https://www.instagram.com/competitor_two/",
+   "ins": 3690,
+   "xn": 9.0,
+   "date": "01.2026",
+   "fmt": "Карусель",
+   "hook": "пока одни не понимают ИИ"
+  },
+  {
+   "id": "p20",
+   "acc": "competitor_one",
+   "url": "https://www.instagram.com/competitor_one/",
+   "ins": 135,
+   "xn": 1.4,
+   "date": "04.2026",
+   "fmt": "Рилс",
+   "hook": "1000 Reels за вечер"
+  },
+  {
+   "id": "p21",
+   "acc": "competitor_one",
+   "url": "https://www.instagram.com/competitor_one/",
+   "ins": 45,
+   "xn": 0.5,
+   "date": "03.2026",
+   "fmt": "Рилс",
+   "hook": "1000 Reels за вечер"
+  },
+  {
+   "id": "p22",
+   "acc": "competitor_three",
+   "url": "https://www.instagram.com/competitor_three/",
+   "ins": 71,
+   "xn": 1.8,
+   "date": "09.2026",
+   "fmt": "Карусель",
+   "hook": "1000 Reels за вечер"
+  },
+  {
+   "id": "p23",
+   "acc": "competitor_three",
+   "url": "https://www.instagram.com/competitor_three/",
+   "ins": 332,
+   "xn": 8.3,
+   "date": "09.2026",
+   "fmt": "Рилс",
+   "hook": "это не съёмка — это ИИ"
+  },
+  {
+   "id": "p24",
+   "acc": "competitor_two",
+   "url": "https://www.instagram.com/competitor_two/",
+   "ins": 189,
+   "xn": 0.5,
+   "date": "05.2026",
+   "fmt": "Рилс",
+   "hook": "пока одни не понимают ИИ"
+  },
+  {
+   "id": "p25",
+   "acc": "competitor_two",
+   "url": "https://www.instagram.com/competitor_two/",
+   "ins": 615,
+   "xn": 1.5,
+   "date": "08.2026",
+   "fmt": "Рилс",
+   "hook": "как я заменил монтажёра"
+  },
+  {
+   "id": "p26",
+   "acc": "competitor_three",
+   "url": "https://www.instagram.com/competitor_three/",
+   "ins": 170,
+   "xn": 4.2,
+   "date": "06.2026",
+   "fmt": "Карусель",
+   "hook": "пока одни не понимают ИИ"
+  },
+  {
+   "id": "p27",
+   "acc": "competitor_three",
+   "url": "https://www.instagram.com/competitor_three/",
+   "ins": 97,
+   "xn": 2.4,
+   "date": "06.2026",
+   "fmt": "Карусель",
+   "hook": "пока одни не понимают ИИ"
+  },
+  {
+   "id": "p28",
+   "acc": "competitor_three",
+   "url": "https://www.instagram.com/competitor_three/",
+   "ins": 139,
+   "xn": 3.5,
+   "date": "05.2026",
+   "fmt": "Карусель",
+   "hook": "ИИ-аватар вместо блогера"
+  },
+  {
+   "id": "p29",
+   "acc": "competitor_two",
+   "url": "https://www.instagram.com/competitor_two/",
+   "ins": 1095,
+   "xn": 2.7,
+   "date": "06.2026",
+   "fmt": "Рилс",
+   "hook": "это не съёмка — это ИИ"
+  },
+  {
+   "id": "p30",
+   "acc": "competitor_two",
+   "url": "https://www.instagram.com/competitor_two/",
+   "ins": 737,
+   "xn": 1.8,
+   "date": "06.2026",
+   "fmt": "Рилс",
+   "hook": "это не съёмка — это ИИ"
+  },
+  {
+   "id": "p31",
+   "acc": "competitor_two",
+   "url": "https://www.instagram.com/competitor_two/",
+   "ins": 478,
+   "xn": 1.2,
+   "date": "01.2026",
+   "fmt": "Карусель",
+   "hook": "1000 Reels за вечер"
+  },
+  {
+   "id": "p32",
+   "acc": "competitor_one",
+   "url": "https://www.instagram.com/competitor_one/",
+   "ins": 229,
+   "xn": 2.4,
+   "date": "04.2026",
+   "fmt": "Карусель",
+   "hook": "пока одни не понимают ИИ"
+  },
+  {
+   "id": "p33",
+   "acc": "competitor_three",
+   "url": "https://www.instagram.com/competitor_three/",
+   "ins": 79,
+   "xn": 2.0,
+   "date": "04.2026",
+   "fmt": "Рилс",
+   "hook": "ИИ-аватар вместо блогера"
+  },
+  {
+   "id": "p34",
+   "acc": "competitor_two",
+   "url": "https://www.instagram.com/competitor_two/",
+   "ins": 7953,
+   "xn": 19.4,
+   "date": "07.2026",
+   "fmt": "Карусель",
+   "hook": "как я заменил монтажёра"
+  },
+  {
+   "id": "p35",
+   "acc": "competitor_two",
+   "url": "https://www.instagram.com/competitor_two/",
+   "ins": 2846,
+   "xn": 6.9,
+   "date": "01.2026",
+   "fmt": "Рилс",
+   "hook": "как я заменил монтажёра"
+  },
+  {
+   "id": "p36",
+   "acc": "school.example",
+   "url": "https://www.instagram.com/school.example/",
+   "ins": 2955,
+   "xn": 16.4,
+   "date": "02.2026",
+   "fmt": "Рилс",
+   "hook": "это не съёмка — это ИИ"
+  },
+  {
+   "id": "p37",
+   "acc": "competitor_two",
+   "url": "https://www.instagram.com/competitor_two/",
+   "ins": 1705,
+   "xn": 4.2,
+   "date": "01.2026",
+   "fmt": "Рилс",
+   "hook": "пока одни не понимают ИИ"
+  },
+  {
+   "id": "p38",
+   "acc": "school.example",
+   "url": "https://www.instagram.com/school.example/",
+   "ins": 1769,
+   "xn": 9.8,
+   "date": "07.2026",
+   "fmt": "Рилс",
+   "hook": "ИИ-аватар вместо блогера"
+  },
+  {
+   "id": "p39",
+   "acc": "school.example",
+   "url": "https://www.instagram.com/school.example/",
+   "ins": 427,
+   "xn": 2.4,
+   "date": "07.2026",
+   "fmt": "Карусель",
+   "hook": "1000 Reels за вечер"
+  }
+ ],
+ "accounts": [
+  {
+   "acc": "school.example",
+   "lang": "RU",
+   "posts": 220,
+   "median": 180,
+   "max": 6200
+  },
+  {
+   "acc": "competitor_one",
+   "lang": "RU",
+   "posts": 300,
+   "median": 95,
+   "max": 14000
+  },
+  {
+   "acc": "competitor_two",
+   "lang": "EN",
+   "posts": 150,
+   "median": 410,
+   "max": 52000
+  },
+  {
+   "acc": "competitor_three",
+   "lang": "RU",
+   "posts": 90,
+   "median": 40,
+   "max": 2100
+  }
+ ],
+ "mechanics": [
+  {
+   "n": "Инструмент + результат + срок",
+   "stat": "14 000 входов",
+   "why": "Конкретный результат за короткий срок.",
+   "refs": [
+    "p0",
+    "p1"
+   ]
+  }
+ ],
+ "slides": [
+  {
+   "n": "1",
+   "role": "Обложка",
+   "q": "«Стоит ли смотреть?»",
+   "what": "Тренд + результат + срочность"
+  },
+  {
+   "n": "2–8",
+   "role": "Шаги",
+   "q": "«Как сделать?»",
+   "what": "Шаг, пример, результат"
+  },
+  {
+   "n": "9",
+   "role": "Призыв",
+   "q": "«Как получить остальное?»",
+   "what": "Кодовое слово и что внутри"
+  }
+ ]
+}
