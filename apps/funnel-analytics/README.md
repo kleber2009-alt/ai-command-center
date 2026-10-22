@@ -82,6 +82,7 @@ python3 finance.py --sheet "https://docs.google.com/spreadsheets/d/<id>/edit" --
 `"embeds": [{"title": "Realism AI", "url": "https://realism-ai-dashboard.netlify.app/", "note": "Пример"}]` в config.json:
 `update.py` при каждом обновлении сохраняет свежую копию страницы в `data/embeds/` (если не скачалась — остаётся прошлая),
 вкладка показывает её в изолированном iframe (sandbox, без доступа к дашборду) со ссылкой на оригинал.
+`"replace": {"Realism AI": "Aicex AI"}` в записи embeds меняет текст в копии (например, название) при каждой сборке.
 
 ### Кабинет Meta по API
 

@@ -147,7 +147,7 @@ def main():
             p.parent.mkdir(parents=True, exist_ok=True)
             p.write_text(html, encoding="utf-8")
             return f"{len(html) // 1024} КБ"
-        run("embed:" + e["title"], emb)
+        run("embed:" + (e.get("id") or e["title"]), emb)
 
     if os.environ.get("META_TOKEN") and cfg.get("ad_account_id"):
         def meta():
