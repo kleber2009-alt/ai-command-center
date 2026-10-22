@@ -126,14 +126,11 @@ utm_source=facebook&utm_medium={{placement}}&utm_campaign={{campaign.id}}&utm_te
 
 ## Прод: dashboard.aicex.club
 
-Workflow `.github/workflows/update-funnel-analytics.yml` (адрес по умолчанию `funnel.46-62-215-11.nip.io`, свой домен — переменная `FUNNEL_DOMAIN`) каждые 3 часа (и при пуше в `main`) на Hetzner:
-забирает все подключённые источники (`update.py`), пересобирает страницу в `/var/www/funnel-analytics/`
-и отдаёт её через Caddy по адресу `FUNNEL_DOMAIN` (`noindex`; открыто всем, пароль — только если задан секрет `FUNNEL_DASHBOARD_PASSWORD`).
-Данные и ключи живут только на сервере: `/root/funnel-analytics-data` (0700) и `/etc/funnel-analytics.env` (0600).
-Данные вкладки «Контент» лежат в репо зашифрованными (`private/content.json.gz.enc`, ключ — секрет `FUNNEL_DATA_KEY`).
+Дашборд живёт на своём сервере и обновляется сам: `deploy/setup-server.sh` (под root) ставит код в
+`/opt/ai-command-center`, кладёт данные в `/opt/funnel-analytics-data` (0700), включает cron каждые 3 часа
+(`/usr/local/bin/funnel-analytics-update`: git pull → расшифровка данных контента → `update.py`) и подключает
+сайт в Caddy или nginx (бэкап конфига, проверка, при ошибке откат). Лог: `/var/log/funnel-analytics.log`.
+Ключи API (Meta, GetCourse) — в `/etc/funnel-analytics.env`. Сайт открыт без пароля, `noindex`.
+Данные вкладки «Контент» лежат в репо зашифрованными (`private/content.json.gz.enc`).
 
-Подключение источников — ключ `sources` в `FUNNEL_CONFIG_JSON` (см. docstring `update.py`), ключи API — секреты
-`FUNNEL_META_TOKEN`, `FUNNEL_GETCOURSE_KEY`. Состояние каждого источника видно на вкладке «Сквозная аналитика».
-
-DNS: зона `aicex.club` обслуживается Cloudflare — запись `A dashboard → 46.62.215.11`, режим «DNS only»
-(серое облако), чтобы Caddy сам выпустил сертификат.
+DNS: зона `aicex.club` в Cloudflare — запись `A dashboard → <IP сервера>`, режим «DNS only».

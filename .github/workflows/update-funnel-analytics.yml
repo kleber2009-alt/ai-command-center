@@ -24,14 +24,9 @@ name: update-funnel-analytics
 #   FUNNEL_DASHBOARD_USER       default aicex
 #   FUNNEL_GETCOURSE_ACCOUNT    school domain on GetCourse                         (optional)
 
+# Manual only: the dashboard now runs on its own server, which pulls this repo and rebuilds
+# every 3 hours from cron (see apps/funnel-analytics/deploy/setup-server.sh).
 on:
-  schedule:
-    - cron: '23 */3 * * *'
-  push:
-    branches: [main]
-    paths:
-      - 'apps/funnel-analytics/**'
-      - '.github/workflows/update-funnel-analytics.yml'
   workflow_dispatch:
 
 concurrency:
