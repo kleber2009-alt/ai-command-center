@@ -3,9 +3,12 @@ import { getCurrentAdmin } from '@/lib/auth';
 import { prisma } from '@/lib/prisma';
 import { AdminUsersPanel } from '@/components/admin-users';
 import { AdminSidebarPanel } from '@/components/admin-sidebar-panel';
+import { AdminIntegrations } from '@/components/admin-integrations';
+import { integrationStatus } from '@/lib/app-settings';
 import { getSidebarOverviewWithState } from '@/lib/sidebar-overrides';
 import { formatDate } from '@/lib/utils';
 import { PageHero } from '@/components/shell/page-hero';
+import { reasonLabel, txTypeLabel } from '@/lib/token-reasons';
 
 export const dynamic = 'force-dynamic';
 export const metadata = { title: 'Admin — Persona Studio' };
@@ -14,6 +17,7 @@ export default async function AdminPage() {
   const admin = await getCurrentAdmin();
   if (!admin) redirect('/dashboard');
 
+  const integrations = await integrationStatus();
   const [users, totals, recentTx, sidebarItems] = await Promise.all([
     prisma.user.findMany({
       orderBy: { createdAt: 'desc' },
@@ -69,6 +73,15 @@ export default async function AdminPage() {
         </div>
       </header>
 
+      <section id="integrations">
+        <div className="flex items-center gap-3 mb-4">
+          <span className="sec-num">/00</span>
+          <span className="sec-title">Интеграции — ключи сервисов</span>
+          <span className="flex-1 h-px bg-border-soft" />
+        </div>
+        <AdminIntegrations initialItems={integrations} />
+      </section>
+
       <section>
         <div className="flex items-center gap-3 mb-4">
           <span className="sec-num">/01</span>
@@ -108,9 +121,9 @@ export default async function AdminPage() {
                 <span className={`text-[14px] font-bold tabular-nums ${t.amount > 0 ? 'text-lime' : 'text-pink'}`}>
                   {t.amount > 0 ? '+' : ''}{t.amount}
                 </span>
-                <span className="justify-self-start rounded-full bg-white/[0.06] px-2.5 py-0.5 text-[11px] font-medium text-text-dim">{t.type}</span>
+                <span className="justify-self-start rounded-full bg-white/[0.06] px-2.5 py-0.5 text-[11px] font-medium text-text-dim">{txTypeLabel(t.type)}</span>
                 <span className="text-[13px] text-text truncate">{t.user.email}</span>
-                <span className="text-[12.5px] text-text-mute truncate">{t.reason}</span>
+                <span className="text-[12.5px] text-text-mute truncate">{reasonLabel(t.reason)}</span>
                 <span className="text-[12px] tabular-nums text-text-mute">{formatDate(t.createdAt)}</span>
               </div>
             ))}

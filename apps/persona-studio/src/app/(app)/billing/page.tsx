@@ -9,6 +9,7 @@ import { engineConfig } from '@/lib/video-engines';
 import { defaultEngine } from '@/lib/studio/produce';
 import { PageHero } from '@/components/shell/page-hero';
 import { Icon3D } from '@/components/ui/icon3d';
+import { reasonLabel, txTypeLabel } from '@/lib/token-reasons';
 
 export const dynamic = 'force-dynamic';
 export const metadata = { title: 'Billing — Persona Studio' };
@@ -77,7 +78,7 @@ export default async function BillingPage() {
           <span className="sec-num">/02</span>
           <span className="sec-title">История транзакций</span>
           <span className="flex-1 h-px bg-border-soft" />
-          <span className="text-[12px] tabular-nums text-text-mute">{recent.length} / last 30</span>
+          <span className="text-[12px] tabular-nums text-text-mute">{recent.length} из последних 30</span>
         </div>
         {recent.length === 0 ? (
           <EmptyState size="sm" title="транзакций пока нет." />
@@ -91,8 +92,8 @@ export default async function BillingPage() {
                 <span className={`text-[15px] font-bold tabular-nums row-span-2 sm:row-span-1 self-center ${t.amount > 0 ? 'text-lime' : 'text-pink'}`}>
                   {t.amount > 0 ? '+' : ''}{t.amount}
                 </span>
-                <span className="justify-self-start rounded-full bg-white/[0.06] px-2.5 py-0.5 text-[11px] font-medium text-text-dim order-3 sm:order-none col-start-2 sm:col-auto">{t.type}</span>
-                <span className="text-[13px] sm:text-[14px] text-text-dim truncate min-w-0 col-start-2 sm:col-auto">{t.reason}</span>
+                <span className="justify-self-start rounded-full bg-white/[0.06] px-2.5 py-0.5 text-[11px] font-medium text-text-dim order-3 sm:order-none col-start-2 sm:col-auto">{txTypeLabel(t.type)}</span>
+                <span className="text-[13px] sm:text-[14px] text-text-dim truncate min-w-0 col-start-2 sm:col-auto">{reasonLabel(t.reason)}</span>
                 <span className="hidden sm:inline font-mono text-[11px] text-text-mute">{t.refId?.slice(0, 8)}</span>
                 <span className="text-[12px] tabular-nums text-text-mute whitespace-nowrap justify-self-end">{formatDate(t.createdAt)}</span>
               </div>

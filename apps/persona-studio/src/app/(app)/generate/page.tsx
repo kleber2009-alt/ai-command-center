@@ -87,10 +87,11 @@ export default async function GeneratePage({
                 </p>
               </div>
             </div>
-            <Link href="/api/onboarding/skip" className="btn-ghost !px-4 !py-2 text-[13px]">
+            {/* Plain <a>: an API route (sets a cookie + redirects) must not go through the RSC router. */}
+            <a href="/api/onboarding/skip" className="btn-ghost !px-4 !py-2 text-[13px]">
               пропустить
               <ArrowRight size={14} aria-hidden />
-            </Link>
+            </a>
           </div>
         </div>
       )}

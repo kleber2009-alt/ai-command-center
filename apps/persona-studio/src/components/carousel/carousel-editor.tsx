@@ -2,6 +2,7 @@
 
 import { useState } from 'react';
 import type { CarouselAvatarOption, CarouselDraftSerialized, SlideShape } from './types';
+import { errorText } from '@/lib/error-text';
 
 type Props = {
   initial: CarouselDraftSerialized;
@@ -59,7 +60,7 @@ export function CarouselEditor({ initial, avatars }: Props) {
       });
       const json = await res.json();
       if (!res.ok) {
-        setError(json.message || json.error || `HTTP ${res.status}`);
+        setError(errorText(json, res.status));
         return;
       }
       setSavedAt(new Date().toLocaleTimeString('ru-RU'));

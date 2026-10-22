@@ -11,6 +11,7 @@ import type {
   ParserItemSerialized,
   ParserRunSerialized,
 } from './types';
+import { errorText } from '@/lib/error-text';
 
 type Props = {
   initialConfig: ParserConfigSerialized | null;
@@ -45,7 +46,7 @@ export function ParserClient({ initialConfig, initialRun, initialItems, initialH
         try { json = JSON.parse(raw); } catch { /* не JSON */ }
       }
       if (!res.ok) {
-        const msg = (json.message as string) || (json.error as string) || raw.slice(0, 200) || `HTTP ${res.status}`;
+        const msg = errorText(json as { error?: string; message?: string }, res.status);
         setError(msg);
         return;
       }

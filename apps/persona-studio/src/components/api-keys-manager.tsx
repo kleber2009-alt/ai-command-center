@@ -3,6 +3,7 @@
 import { useState } from 'react';
 import { Check, Copy, EyeOff, KeyRound, RefreshCw } from 'lucide-react';
 import { Icon3D } from '@/components/ui/icon3d';
+import { exceptionText } from '@/lib/error-text';
 
 type ApiKeyRow = {
   id: string;
@@ -53,7 +54,7 @@ export function ApiKeysManager({ initialKeys }: { initialKeys: ApiKeyRow[] }) {
       ]);
       setName('');
     } catch (e) {
-      setError(String(e));
+      setError(exceptionText(e));
     } finally {
       setBusy(false);
     }
@@ -106,7 +107,7 @@ export function ApiKeysManager({ initialKeys }: { initialKeys: ApiKeyRow[] }) {
               <button
                 type="button"
                 className="btn-ghost !px-4 !py-2 !text-[13px]"
-                onClick={() => navigator.clipboard.writeText(justCreated.plaintext)}
+                onClick={() => navigator.clipboard.writeText(justCreated.plaintext).catch(() => {})}
               >
                 <Copy className="h-4 w-4" />
                 copy

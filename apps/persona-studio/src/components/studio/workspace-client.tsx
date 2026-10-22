@@ -21,7 +21,7 @@ import {
   ExternalLink,
   Trash2,
 } from 'lucide-react';
-import { errorText } from '@/lib/error-text';
+import { errorText, jobErrorText } from '@/lib/error-text';
 import { PageHero } from '@/components/shell/page-hero';
 import { Icon3D } from '@/components/ui/icon3d';
 import type { BriefView, GenerationView, SimilarityGate } from '@/lib/studio/types';
@@ -163,7 +163,7 @@ export function WorkspaceClient({
         body: JSON.stringify({ script }),
       });
       const data = await res.json();
-      if (!res.ok) throw new Error(data.error || 'save_failed');
+      if (!res.ok) throw new Error(errorText(data, res.status));
       setGen(data.generation);
     } catch (e) {
       setError((e as Error).message);
@@ -339,7 +339,7 @@ export function WorkspaceClient({
           {gen.stage === 'error' && (
             <div className="flex flex-wrap items-center gap-3">
               <span className="flex items-center gap-2 text-[14px] text-danger">
-                <AlertTriangle size={15} /> {gen.errorMsg || 'Ошибка'}
+                <AlertTriangle size={15} /> {jobErrorText(gen.errorMsg)}
               </span>
               <button
                 type="button"

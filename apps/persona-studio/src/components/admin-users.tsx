@@ -2,6 +2,7 @@
 
 import { useCallback, useEffect, useState } from 'react';
 import { formatDate } from '@/lib/utils';
+import { errorText, exceptionText } from '@/lib/error-text';
 
 type AdminUser = {
   id: string;
@@ -58,13 +59,13 @@ export function AdminUsersPanel({ initialUsers, currentUserId }: { initialUsers:
       });
       const j = (await res.json()) as { ok?: boolean; user?: { email: string; tokenBalance: number }; error?: string };
       if (!res.ok || !j.ok) {
-        setErr(j.error ?? `http_${res.status}`);
+        setErr(errorText(j, res.status));
       } else if (j.user) {
         setFlash(`${j.user.email} → ${j.user.tokenBalance} токенов (${amount > 0 ? '+' : ''}${amount})`);
         setUsers((prev) => prev.map((u) => (u.id === userId ? { ...u, tokenBalance: j.user!.tokenBalance } : u)));
       }
     } catch (e) {
-      setErr(String(e));
+      setErr(exceptionText(e));
     } finally {
       setBusyId(null);
     }

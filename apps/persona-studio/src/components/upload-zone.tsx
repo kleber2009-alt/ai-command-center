@@ -5,7 +5,7 @@ import { useRouter } from 'next/navigation';
 import { ArrowRight, Check, Loader2, X } from 'lucide-react';
 import { bytesHuman } from '@/lib/utils';
 import { Icon3D } from '@/components/ui/icon3d';
-import { errorText } from '@/lib/error-text';
+import { errorText, exceptionText } from '@/lib/error-text';
 
 type UploadItem = {
   id: string;
@@ -152,12 +152,12 @@ export function UploadZone({
       }
       router.push(`/avatars?generationId=${json.id}`);
     } catch (e) {
-      setError(String(e));
+      setError(exceptionText(e));
       setBusy(null);
     }
   }, [router, primaryId, extraBody, consent]);
 
-  const label = busy === 'generating' ? 'Generating 10 avatars…' : (generateLabel ?? 'Generate 10 Avatars →');
+  const label = busy === 'generating' ? 'Генерирую 10 аватаров…' : (generateLabel ?? 'Сгенерировать 10 аватаров →');
   const labelText = label.replace(/\s*→\s*$/, '');
   const hasArrow = labelText !== label;
 

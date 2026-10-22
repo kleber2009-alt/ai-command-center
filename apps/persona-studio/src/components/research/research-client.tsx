@@ -29,6 +29,7 @@ import type {
   SearchResponse,
   SortField,
 } from './types';
+import { errorText } from '@/lib/error-text';
 
 type ViewMode = 'cards' | 'table';
 
@@ -261,7 +262,7 @@ export function ResearchClient({
         const json: SearchResponse | SearchError = await res.json();
         if (!res.ok || !('ok' in json) || !json.ok) {
           const err = json as SearchError;
-          setError(err.message || err.error || `HTTP ${res.status}`);
+          setError(errorText(err, res.status));
           setResult(null);
           return;
         }
@@ -310,7 +311,7 @@ export function ResearchClient({
         setTimeout(() => setRadarMsg(null), 4000);
       } else {
         const json = await res.json().catch(() => ({}));
-        setRadarMsg('Не удалось: ' + (json.message || json.error || `HTTP ${res.status}`));
+        setRadarMsg('Не удалось: ' + (errorText(json, res.status)));
       }
     });
   }

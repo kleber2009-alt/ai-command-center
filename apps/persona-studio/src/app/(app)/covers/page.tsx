@@ -6,6 +6,7 @@ import { formatDate } from '@/lib/utils';
 import { EmptyState } from '@/components/empty-state';
 import { RetryCoverButton } from './retry-button';
 import { PageHero } from '@/components/shell/page-hero';
+import { jobErrorText } from '@/lib/error-text';
 
 export const dynamic = 'force-dynamic';
 export const metadata = { title: 'Covers — Persona Studio' };
@@ -87,7 +88,7 @@ export default async function CoversPage({ searchParams }: { searchParams: Promi
                 {c.status === 'failed' && (
                   <div className="mt-3 grid gap-2">
                     {c.errorMsg && (
-                      <div className="break-words text-[11px] leading-snug text-danger/90">{c.errorMsg}</div>
+                      <div className="break-words text-[11px] leading-snug text-danger/90">{jobErrorText(c.errorMsg)}</div>
                     )}
                     <RetryCoverButton id={c.id} />
                   </div>

@@ -33,9 +33,81 @@ const TEXT: Record<string, string> = {
   voice_required: 'Выберите голос.',
   aspect_unsupported: 'Этот формат кадра не поддерживается выбранным движком.',
   provider_not_configured: 'Генерация пока не подключена: администратору нужно добавить ключ провайдера.',
+  not_configured: 'Функция пока не подключена на сервере.',
+  FORBIDDEN: 'Недостаточно прав.',
+  INSUFFICIENT_TOKENS: 'Недостаточно токенов.',
+  too_many_files: 'Слишком много файлов за раз — максимум 10.',
+  all_failed: 'Ни один файл не загрузился — проверьте формат и размер.',
+  heic_decode_failed: 'Не удалось прочитать HEIC-фото — сохраните его как JPEG.',
+  unknown_niche: 'Такой ниши нет — выберите из списка.',
+  niche_slug_required: 'Выберите нишу.',
+  custom_prompts_required: 'Добавьте хотя бы одно описание образа.',
+  engine_disabled: 'Этот движок сейчас отключён — выберите другой.',
+  audio_url_required: 'Загрузите аудио.',
+  not_failed: 'Повторить можно только упавшую генерацию.',
+  cover_not_ready: 'Обложка ещё не готова.',
+  edit_not_ready: 'Монтаж ещё не готов.',
+  montage_not_ready: 'Монтаж ещё не готов.',
+  fetch_failed: 'Не удалось скачать файл — попробуйте ещё раз.',
+  persona_required: 'Выберите персону для брифа.',
+  avatar_required: 'У персоны нет аватара — добавьте его в «Персонах».',
+  blocked_by_gate: 'Сценарий слишком похож на источник — перепишите его.',
+  bad_stage: 'Этот шаг сейчас недоступен — обновите страницу.',
+  no_script: 'Сначала сгенерируйте сценарий.',
+  script_too_short: 'Сценарий слишком короткий.',
+  script_locked: 'Сценарий уже отправлен в производство — менять нельзя.',
+  source_reel_not_found: 'Исходный ролик не найден.',
+  bad_avatar: 'Аватар не найден.',
+  bad_style: 'Неизвестный стиль.',
+  bad_index: 'Слайд не найден.',
+  not_enough_slides: 'Нужно минимум 2 слайда.',
+  not_editable: 'Пост уже опубликован — менять нельзя.',
+  not_cancelable: 'Этот пост уже нельзя отменить.',
+  already_in_flight: 'Уже выполняется — подождите.',
+  trial_already_used: 'Пробный пакет уже использован.',
+  cryptobot_create_failed: 'Не удалось создать счёт — попробуйте позже.',
+  stars_create_failed: 'Не удалось создать счёт в Telegram — попробуйте позже.',
+  connect_failed: 'Не удалось подключить канал — проверьте данные.',
+  account_unavailable: 'Канал недоступен — переподключите его.',
+  postmypost_error: 'PostMyPost вернул ошибку — попробуйте позже.',
+  user_not_found: 'Пользователь не найден.',
+  author_not_found: 'Автор не найден.',
+  parser_item_not_found: 'Материал парсера не найден.',
+  empty_username: 'Укажите username.',
+  rewrite_failed: 'Не удалось переписать текст — попробуйте ещё раз.',
+  transcribe_failed: 'Не удалось распознать речь — попробуйте ещё раз.',
+  translate_failed: 'Не удалось перевести — попробуйте ещё раз.',
+  analyze_failed: 'Не удалось сделать разбор — попробуйте ещё раз.',
+  refresh_failed: 'Не удалось обновить данные — попробуйте ещё раз.',
+  render_failed: 'Не удалось отрисовать — попробуйте ещё раз.',
+  regen_failed: 'Не удалось перегенерировать слайд — попробуйте ещё раз.',
+  split_failed: 'Не удалось разбить текст на слайды — попробуйте ещё раз.',
+  parser_run_failed: 'Парсинг не удался — попробуйте позже.',
 };
 
-type ErrBody = { error?: string; message?: string; have?: number; need?: number } | null | undefined;
+/**
+ * Stored job error (VideoGeneration/VideoEdit/Montage/Cover/PostTarget.errorMsg)
+ * → text for the user. Workers keep provider diagnostics there
+ * (`HEYGEN_FAILED: …`, `OMNIHUMAN_TTS_HTTP_500: {…}`); we show only a Russian
+ * explanation — the worker's own Russian part if it wrote one, else a generic line.
+ */
+export function jobErrorText(
+  msg: string | null | undefined,
+  generic = 'Генерация не удалась, токены возвращены. Попробуйте ещё раз.',
+): string {
+  const m = (msg ?? '').trim();
+  if (!m) return generic;
+  if (m === 'enqueue_failed' || m === 'retry_enqueue_failed') return TEXT.enqueue_failed;
+  if (/^SOURCE_TOO_LONG/.test(m)) return 'Исходник слишком длинный — максимум 15 минут.';
+  if (/^SOURCE_TOO_LARGE/.test(m)) return 'Исходник больше 1 ГБ — сожмите видео.';
+  if (/^NO_AUDIO/.test(m)) return 'В исходнике нет звуковой дорожки.';
+  // `CODE: русский текст` → русский текст; целиком русская строка — как есть.
+  const tail = m.replace(/^[A-Z0-9_]+(?::\s*|\s+)/, '');
+  if (/^[^a-z{]*[а-яё]/i.test(tail) && !/[{}]|https?:\/\//.test(tail)) return tail.slice(0, 200);
+  return generic;
+}
+
+type ErrBody ={ error?: string; message?: string; have?: number; need?: number } | null | undefined;
 
 export function errorText(body: ErrBody | string, status?: number): string {
   const b: ErrBody = typeof body === 'string' ? { error: body } : body;
@@ -43,8 +115,16 @@ export function errorText(body: ErrBody | string, status?: number): string {
   if (code === 'insufficient_tokens') {
     return b?.need != null ? `Недостаточно токенов: есть ${b.have ?? 0}, нужно ${b.need}.` : 'Недостаточно токенов.';
   }
-  if (code && TEXT[code]) return TEXT[code];
-  // Server-provided Russian message wins over a generic fallback.
+  // A server-provided Russian message is the most specific text we have.
   if (b?.message && /[а-яё]/i.test(b.message)) return b.message;
+  if (code && TEXT[code]) return TEXT[code];
   return status ? `Не получилось (код ${status}) — попробуйте ещё раз.` : 'Не получилось — попробуйте ещё раз.';
+}
+
+/** A caught exception → text for the user: our own Russian messages pass, network/JS errors don't. */
+export function exceptionText(e: unknown): string {
+  const msg = e instanceof Error ? e.message : typeof e === 'string' ? e : '';
+  if (/[а-яё]/i.test(msg)) return msg;
+  if (/fetch|network|load failed/i.test(msg)) return 'Нет связи с сервером — проверьте интернет и попробуйте ещё раз.';
+  return errorText(null);
 }

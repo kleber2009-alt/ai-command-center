@@ -16,11 +16,11 @@ import {
   type HeygenModelVersion,
   type Quality,
 } from '@/lib/heygen';
-import { keyFor, uploadBuffer } from '@/lib/storage';
+import { fetchMedia, keyFor, uploadBuffer } from '@/lib/storage';
 import { refundTokens } from '@/lib/tokens';
 
 async function fetchBytes(url: string): Promise<{ bytes: Buffer; mime: string }> {
-  const res = await fetch(url);
+  const res = await fetchMedia(url);
   if (!res.ok) throw new Error(`fetch_${res.status}`);
   const mime = res.headers.get('content-type') ?? 'image/jpeg';
   const ab = await res.arrayBuffer();

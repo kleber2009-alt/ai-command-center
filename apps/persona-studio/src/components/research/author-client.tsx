@@ -9,6 +9,7 @@ import { useRouter } from 'next/navigation';
 import { Check, ExternalLink, Eye, Flame, RefreshCw, Sparkles } from 'lucide-react';
 import { Icon3D } from '@/components/ui/icon3d';
 import { igProxy } from './types';
+import { errorText } from '@/lib/error-text';
 
 type Author = {
   id: string;
@@ -90,7 +91,7 @@ export function AuthorClient({
       const res = await fetch(`/api/research/authors/${author.id}/refresh`, { method: 'POST' });
       const json = await res.json();
       if (!res.ok) {
-        setError(json.message || json.error || `HTTP ${res.status}`);
+        setError(errorText(json, res.status));
         return;
       }
       router.refresh();
@@ -103,7 +104,7 @@ export function AuthorClient({
       const res = await fetch(`/api/research/authors/${author.id}/analyze-page`, { method: 'POST' });
       const json = await res.json();
       if (!res.ok) {
-        setError(json.message || json.error || `HTTP ${res.status}`);
+        setError(errorText(json, res.status));
         return;
       }
       setAnalysis(json.analysis);

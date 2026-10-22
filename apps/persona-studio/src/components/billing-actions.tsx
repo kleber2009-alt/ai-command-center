@@ -4,6 +4,7 @@ import { useEffect, useRef, useState } from 'react';
 import { useRouter } from 'next/navigation';
 import { ArrowRight, ExternalLink, Star } from 'lucide-react';
 import { Icon3D } from '@/components/ui/icon3d';
+import { errorText, exceptionText } from '@/lib/error-text';
 
 type Method = 'cryptobot' | 'stars';
 
@@ -86,7 +87,7 @@ export function BillingActions({ trialUsed }: { trialUsed?: boolean }) {
         return;
       }
       if (!res.ok || !j.payUrl) {
-        setError(j.detail ?? j.error ?? `http_${res.status}`);
+        setError(errorText(j, res.status));
         return;
       }
       const inv = j as CreateResp;
@@ -105,7 +106,7 @@ export function BillingActions({ trialUsed }: { trialUsed?: boolean }) {
         setActiveInvoice(inv);
       }
     } catch (e) {
-      setError(e instanceof Error ? e.message : String(e));
+      setError(exceptionText(e));
     } finally {
       setBusy(null);
     }

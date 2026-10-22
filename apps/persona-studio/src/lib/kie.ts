@@ -19,6 +19,8 @@
 //   output_format: lowercase ("jpg","png")
 //   resolution:   uppercase ("1K","2K","4K")
 
+import { fetchMedia } from './storage';
+
 // `||` not `??`: an empty `KIE_BASE_URL=` in .env means default, not ''.
 const KIE_BASE = process.env.KIE_BASE_URL || 'https://api.kie.ai/api/v1';
 const KIE_MODEL = process.env.KIE_IMAGE_MODEL || 'nano-banana-2';
@@ -423,7 +425,7 @@ export async function toKieReference(opts: {
   }
   // local dev — encode as data URI
   if (!opts.fetchBytes) {
-    const res = await fetch(opts.fileUrl);
+    const res = await fetchMedia(opts.fileUrl);
     if (!res.ok) throw new KieError(`REF_HTTP_${res.status}`, `failed to fetch ref for inlining`);
     const ab = await res.arrayBuffer();
     return `data:${opts.mime};base64,${Buffer.from(ab).toString('base64')}`;

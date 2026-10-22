@@ -9,6 +9,7 @@ import { useState } from 'react';
 import { useRouter } from 'next/navigation';
 import { ArrowRight, Loader2, Sparkles } from 'lucide-react';
 import { StyleSelector } from './style-selector';
+import { errorText } from '@/lib/error-text';
 
 export function NewCarouselForm({ defaultStyle = 'skill-palii' }: { defaultStyle?: string }) {
   const router = useRouter();
@@ -31,7 +32,7 @@ export function NewCarouselForm({ defaultStyle = 'skill-palii' }: { defaultStyle
       });
       const json = await res.json().catch(() => ({}));
       if (!res.ok || !json.draftId) {
-        setError(json.message || json.error || `HTTP ${res.status}`);
+        setError(errorText(json, res.status));
         return;
       }
       router.push(`/carousels/new?draftId=${json.draftId}`);

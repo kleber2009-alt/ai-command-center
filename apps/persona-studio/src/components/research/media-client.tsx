@@ -22,6 +22,7 @@ import { PageHero } from '@/components/shell/page-hero';
 import { ResearchReelCard } from './research-reel-card';
 import { ResearchTable } from './research-table';
 import type { ResearchReelView } from './types';
+import { errorText } from '@/lib/error-text';
 
 type MediaReel = ResearchReelView & { isFav: boolean };
 
@@ -186,7 +187,7 @@ export function MediaClient() {
       const json = await res.json();
       if (rid !== reqRef.current) return;
       if (!res.ok || !json.ok) {
-        setError(json.message || json.error || `HTTP ${res.status}`);
+        setError(errorText(json, res.status));
         setItems([]);
         setCount(0);
         return;

@@ -4,6 +4,7 @@ import { useEffect, useState } from 'react';
 import { CalendarPlus, Download, Loader2 } from 'lucide-react';
 import { formatDate } from '@/lib/utils';
 import { findTemplate, getTemplate as legacyShim } from '@/lib/edit-templates';
+import { jobErrorText } from '@/lib/error-text';
 
 type Edit = {
   id: string;
@@ -112,7 +113,7 @@ export function EditCard({ initial, autopoll }: { initial: Edit; autopoll: boole
                 <>
                   <span className="status-badge status-failed">failed</span>
                   {e.errorMsg && (
-                    <div className="mt-2 text-[12px] text-text-dim">{e.errorMsg.slice(0, 140)}</div>
+                    <div className="mt-2 text-[12px] text-text-dim">{jobErrorText(e.errorMsg)}</div>
                   )}
                 </>
               ) : (

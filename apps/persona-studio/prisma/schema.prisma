@@ -774,6 +774,15 @@ model SidebarItemOverride {
   updatedAt DateTime @updatedAt
 }
 
+// Provider keys / SMTP entered by the admin in «Админ → Интеграции». Applied
+// on top of process.env at startup and synced every 30 s (src/lib/app-settings.ts),
+// so keys can be set from the browser without editing .env on the server.
+model AppSetting {
+  key       String   @id
+  value     String   @db.Text
+  updatedAt DateTime @updatedAt
+}
+
 // ── Scheduler & Autoposting ─────────────────────
 // Замыкает pipeline: готовое видео (VideoGeneration / VideoEdit) →
 // запланированная публикация в подключённые каналы (Instagram / Telegram).

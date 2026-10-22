@@ -3,6 +3,7 @@
 import { useState } from 'react';
 import { useRouter } from 'next/navigation';
 import { ArrowRight, Loader2 } from 'lucide-react';
+import { exceptionText } from '@/lib/error-text';
 
 type Avatar = { id: string; styleLabel: string; style: string; imageUrl: string };
 
@@ -48,7 +49,7 @@ export function CoverForm({ avatars, initialAvatarId, cost }: { avatars: Avatar[
       }
       router.push(`/covers?focus=${json.id}`);
     } catch (e) {
-      setError(String(e));
+      setError(exceptionText(e));
       setBusy(false);
     }
   };

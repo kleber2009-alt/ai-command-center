@@ -232,6 +232,11 @@ function loadEnv(): Env {
   return _env;
 }
 
+/** Re-parse process.env on next access (after admin-set keys were applied). */
+export function resetEnvCache(): void {
+  _env = null;
+}
+
 export const env = new Proxy({} as Env, {
   get(_, key: string) {
     return loadEnv()[key as keyof Env];

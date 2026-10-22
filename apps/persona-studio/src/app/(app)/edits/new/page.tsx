@@ -1,3 +1,5 @@
+import { readdirSync } from 'node:fs';
+import path from 'node:path';
 import Link from 'next/link';
 import { redirect } from 'next/navigation';
 import { getCurrentUser } from '@/lib/auth';
@@ -10,6 +12,18 @@ import { COSTS } from '@/lib/tokens';
 
 export const dynamic = 'force-dynamic';
 export const metadata = { title: 'New edit — Persona Studio' };
+
+// Template previews are added by hand (public/template-previews/README.md);
+// only request the ones that exist, otherwise every card logs a 404.
+function shippedPreviews(): string[] {
+  try {
+    return readdirSync(path.join(process.cwd(), 'public/template-previews'))
+      .filter((f) => f.endsWith('.jpg'))
+      .map((f) => f.slice(0, -4));
+  } catch {
+    return [];
+  }
+}
 
 export default async function NewEditPage({ searchParams }: { searchParams: Promise<{ videoId?: string }> }) {
   const user = await getCurrentUser();
@@ -54,6 +68,7 @@ export default async function NewEditPage({ searchParams }: { searchParams: Prom
           }))}
           initialVideoId={videoId}
           cost={COSTS.submagicEdit}
+          previews={shippedPreviews()}
         />
       )}
     </div>

@@ -6,6 +6,7 @@ import { ArrowRight, EyeOff, Heart, Instagram, MessageCircle, Play, RefreshCw } 
 import { Icon3D } from '@/components/ui/icon3d';
 import type { ParserItemSerialized } from './types';
 import { igProxy } from '../research/types';
+import { errorText } from '@/lib/error-text';
 
 type Props = {
   item: ParserItemSerialized;
@@ -72,7 +73,7 @@ export function ParserReelCard({ item, onUpdated, onRemoved }: Props) {
         });
         const json = await res.json();
         if (!res.ok) {
-          setError(json.message || json.error || `HTTP ${res.status}`);
+          setError(errorText(json, res.status));
           return;
         }
         onUpdated({ ...item, status: 'used' });
@@ -84,7 +85,7 @@ export function ParserReelCard({ item, onUpdated, onRemoved }: Props) {
       });
       const json = await res.json();
       if (!res.ok) {
-        setError(json.message || json.error || `HTTP ${res.status}`);
+        setError(errorText(json, res.status));
         return;
       }
       onUpdated({ ...item, status: 'used', rewrittenScript: json.script });

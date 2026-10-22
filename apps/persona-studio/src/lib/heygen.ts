@@ -23,6 +23,7 @@
 
 import { request as httpsRequest } from 'node:https';
 import { request as httpRequest } from 'node:http';
+import { fetchMedia } from '@/lib/storage';
 
 const HEYGEN_KEY_ENV = 'HEYGEN_API_KEY';
 const HEYGEN_BASE = process.env.HEYGEN_API_BASE || 'https://api.heygen.com';
@@ -445,7 +446,7 @@ export async function waitForVideo(videoId: string): Promise<HeygenVideoStatus> 
 }
 
 export async function downloadBytes(url: string): Promise<{ bytes: Buffer; mime: string }> {
-  const res = await fetch(url, { signal: AbortSignal.timeout(180_000) });
+  const res = await fetchMedia(url, { signal: AbortSignal.timeout(180_000) });
   if (!res.ok) throw new HeygenError(`DL_HTTP_${res.status}`, `download failed: ${url}`);
   const mime = res.headers.get('content-type') ?? 'video/mp4';
   const ab = await res.arrayBuffer();

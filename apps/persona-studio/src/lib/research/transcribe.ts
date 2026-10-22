@@ -10,6 +10,7 @@
 import { env } from '@/lib/env';
 import { claudeChat, isClaudeConfigured } from './claude';
 import { OPENAI_BASE } from '@/lib/provider-urls';
+import { fetchMedia } from '@/lib/storage';
 
 const OPENAI_WHISPER_URL = OPENAI_BASE;
 
@@ -164,7 +165,7 @@ async function transcribeViaWhisper(opts: {
   // добавляем общий заголовок, иногда помогает.
   let videoBuffer: ArrayBuffer;
   try {
-    const dl = await fetch(opts.videoUrl, {
+    const dl = await fetchMedia(opts.videoUrl, {
       headers: {
         'User-Agent':
           'Mozilla/5.0 (X11; Linux x86_64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/120 Safari/537.36',

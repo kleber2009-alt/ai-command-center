@@ -111,6 +111,13 @@ export function startCoverWorker() {
         return { ok: true, engine, taskId: out.taskId };
       } catch (e) {
         const msg = e instanceof KieError ? `${e.code}: ${e.message}` : (e instanceof Error ? e.message : String(e));
+        // BullMQ retries the job (attempts: 3); refund and mark failed only once,
+        // on the last attempt — otherwise every attempt refunds the same charge.
+        const isFinal = job.attemptsMade + 1 >= (job.opts.attempts ?? 1);
+        if (!isFinal) {
+          await prisma.cover.update({ where: { id: coverId }, data: { errorMsg: msg.slice(0, 500) } });
+          throw e;
+        }
         await prisma.cover.update({
           where: { id: coverId },
           data: { status: 'failed', errorMsg: msg.slice(0, 500) },

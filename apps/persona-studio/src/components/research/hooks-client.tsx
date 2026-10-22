@@ -5,6 +5,7 @@ import { useEffect, useState, useTransition } from 'react';
 import { createPortal } from 'react-dom';
 import { ArrowUpRight, Check, Copy, Flame, Plus, Sparkles, X } from 'lucide-react';
 import { Icon3D } from '@/components/ui/icon3d';
+import { errorText } from '@/lib/error-text';
 
 type Hook = {
   id: string;
@@ -190,6 +191,8 @@ function HookCard({ hook, formulas }: { hook: Hook; formulas: FormulaDef[] }) {
     navigator.clipboard.writeText(hook.text).then(() => {
       setCopied(true);
       setTimeout(() => setCopied(false), 1500);
+    }).catch(() => {
+      // Clipboard can be denied (insecure context, in-app browsers) — nothing to show.
     });
   }
   return (
@@ -258,7 +261,7 @@ function AddHookModal({
       });
       const json = await res.json();
       if (!res.ok) {
-        setError(json.message || json.error || `HTTP ${res.status}`);
+        setError(errorText(json, res.status));
         return;
       }
       onSaved();
@@ -368,7 +371,7 @@ function GenerateHooksModal({
       });
       const json = await res.json();
       if (!res.ok) {
-        setError(json.message || json.error || `HTTP ${res.status}`);
+        setError(errorText(json, res.status));
         return;
       }
       onDone();

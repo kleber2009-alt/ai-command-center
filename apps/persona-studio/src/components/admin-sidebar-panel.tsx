@@ -2,6 +2,7 @@
 
 import { useMemo, useState, useTransition } from 'react';
 import { useRouter } from 'next/navigation';
+import { errorText, exceptionText } from '@/lib/error-text';
 
 type Item = {
   key: string;
@@ -53,13 +54,13 @@ export function AdminSidebarPanel({ initialItems }: { initialItems: Item[] }) {
       if (!res.ok || !j.ok) {
         // revert
         setItems((prev) => prev.map((i) => (i.key === item.key ? { ...i, hidden: !nextHidden } : i)));
-        setErr(j.error ?? `http_${res.status}`);
+        setErr(errorText(j, res.status));
       } else {
         startTransition(() => router.refresh());
       }
     } catch (e) {
       setItems((prev) => prev.map((i) => (i.key === item.key ? { ...i, hidden: !nextHidden } : i)));
-      setErr(String(e));
+      setErr(exceptionText(e));
     } finally {
       setBusyKey(null);
     }

@@ -14,6 +14,7 @@
 // эмпирически: Bearer возвращает 401 UNAUTHORIZED, x-api-key — принимается).
 
 import { env } from './env';
+import { fetchMedia } from '@/lib/storage';
 
 export class SubmagicError extends Error {
   constructor(public code: string, message: string) {
@@ -136,7 +137,7 @@ export async function waitForProject(id: string): Promise<SubmagicProject> {
 }
 
 export async function downloadBytes(url: string): Promise<{ bytes: Buffer; mime: string }> {
-  const res = await fetch(url);
+  const res = await fetchMedia(url);
   if (!res.ok) {
     throw new SubmagicError(`SUBMAGIC_DOWNLOAD_${res.status}`, await readError(res));
   }

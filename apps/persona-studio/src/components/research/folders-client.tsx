@@ -8,6 +8,7 @@ import { useState, useTransition } from 'react';
 import { useRouter } from 'next/navigation';
 import { Folder as FolderIcon, Plus, Trash2 } from 'lucide-react';
 import { Icon3D, type Icon3DName } from '@/components/ui/icon3d';
+import { errorText } from '@/lib/error-text';
 
 type FolderType = 'bloggers' | 'videos' | 'ideas';
 type Folder = {
@@ -52,7 +53,7 @@ export function FoldersClient({ initialFolders }: { initialFolders: Folder[] }) 
       });
       const json = await res.json();
       if (!res.ok) {
-        setError(json.message || json.error || `HTTP ${res.status}`);
+        setError(errorText(json, res.status));
         return;
       }
       setFolders((f) => [

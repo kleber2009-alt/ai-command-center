@@ -1,6 +1,7 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { getCurrentUserOrApiKey } from '@/lib/auth';
 import { prisma } from '@/lib/prisma';
+import { fetchMedia } from '@/lib/storage';
 
 export const runtime = 'nodejs';
 
@@ -28,7 +29,7 @@ export async function GET(req: NextRequest, { params }: { params: Promise<{ id: 
   // Content-Disposition, чтобы браузер скачал, а не открыл в табе.
   let src: Response;
   try {
-    src = await fetch(avatar.imageUrl, { signal: AbortSignal.timeout(DOWNLOAD_TIMEOUT_MS) });
+    src = await fetchMedia(avatar.imageUrl, { signal: AbortSignal.timeout(DOWNLOAD_TIMEOUT_MS) });
   } catch (e) {
     return NextResponse.json(
       { error: 'fetch_failed', detail: e instanceof Error ? e.message : String(e) },

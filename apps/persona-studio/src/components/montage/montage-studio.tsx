@@ -9,6 +9,7 @@ import { CalendarPlus, Download, Film, Loader2, Scissors, Upload } from 'lucide-
 import { Icon3D } from '@/components/ui/icon3d';
 import { MONTAGE_PRESETS, findMontagePreset } from '@/lib/montage/presets';
 import { EditsStepper } from '@/components/edits-stepper';
+import { errorText, jobErrorText, exceptionText } from '@/lib/error-text';
 
 type Video = { id: string; videoUrl: string | null; aspect: string; createdAt: string; label: string };
 export type MontageRow = {
@@ -73,7 +74,7 @@ export function MontageStudio({ videos, initial, cost }: { videos: Video[]; init
           body: file,
         });
         const uj = await up.json().catch(() => ({}));
-        if (!up.ok) throw new Error(uj.error === 'file_too_large' ? 'Файл больше 500 МБ' : uj.error || `upload HTTP ${up.status}`);
+        if (!up.ok) throw new Error(uj.error === 'file_too_large' ? 'Файл больше 500 МБ' : errorText(uj, up.status));
         sourceUrl = uj.url;
       }
       setBusy('Ставлю в очередь…');
@@ -91,7 +92,7 @@ export function MontageStudio({ videos, initial, cost }: { videos: Video[]; init
       const json = await res.json().catch(() => ({}));
       if (!res.ok) {
         throw new Error(
-          json.error === 'insufficient_tokens' ? `Не хватает токенов: нужно ${json.need}, есть ${json.have}` : json.message || json.error || `HTTP ${res.status}`,
+          json.error === 'insufficient_tokens' ? `Не хватает токенов: нужно ${json.need}, есть ${json.have}` : errorText(json, res.status),
         );
       }
       setRows((r) => [
@@ -102,7 +103,7 @@ export function MontageStudio({ videos, initial, cost }: { videos: Video[]; init
       if (fileRef.current) fileRef.current.value = '';
       router.refresh();
     } catch (e) {
-      setError(e instanceof Error ? e.message : String(e));
+      setError(exceptionText(e));
     } finally {
       setBusy(null);
     }
@@ -291,7 +292,7 @@ export function MontageStudio({ videos, initial, cost }: { videos: Video[]; init
                     <div className={`grid w-full place-items-center rounded-[18px] border border-border-soft bg-white/[0.03] ${r.format === '16:9' ? 'aspect-video' : 'aspect-[9/16]'}`}>
                       <span className={`flex flex-col items-center gap-2 px-4 text-center text-[12px] ${r.status === 'failed' ? 'text-danger' : 'text-text-mute'}`}>
                         {r.status !== 'failed' && <Loader2 size={18} className="animate-spin text-gold" />}
-                        {r.status === 'failed' ? r.errorMsg ?? 'ошибка' : 'распознаю речь · режу паузы · рендер…'}
+                        {r.status === 'failed' ? jobErrorText(r.errorMsg) : 'распознаю речь · режу паузы · рендер…'}
                       </span>
                     </div>
                   )}

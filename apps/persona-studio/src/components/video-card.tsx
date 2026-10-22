@@ -4,6 +4,7 @@ import { useEffect, useState } from 'react';
 import { useRouter } from 'next/navigation';
 import { ArrowRight, CalendarClock, Download, Loader2, Music, RefreshCw } from 'lucide-react';
 import { formatDate } from '@/lib/utils';
+import { jobErrorText } from '@/lib/error-text';
 
 type Video = {
   id: string;
@@ -120,7 +121,7 @@ export function VideoCard({ initial, autopoll }: { initial: Video; autopoll: boo
                 <>
                   <span className="status-badge status-failed bg-black/50">/FAILED</span>
                   {v.errorMsg && (
-                    <div className="mt-2 max-w-[28ch] text-[12px] leading-snug text-text-dim">{v.errorMsg.slice(0, 140)}</div>
+                    <div className="mt-2 max-w-[28ch] text-[12px] leading-snug text-text-dim">{jobErrorText(v.errorMsg)}</div>
                   )}
                   <button
                     type="button"

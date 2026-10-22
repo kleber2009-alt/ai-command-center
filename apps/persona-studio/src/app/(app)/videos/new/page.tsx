@@ -126,6 +126,7 @@ export default async function NewVideoPage({
           avatars={avatars}
           initialAvatarId={avatarId}
           initialScript={parserRef?.rewrittenScript ?? undefined}
+          initialEngine={defaultEngine()}
         />
       )}
     </div>

@@ -16,6 +16,7 @@ import {
 import { CoverPickerPopover } from './cover-picker-popover';
 import type { CarouselAvatarOption, CoverType, SlideShape } from './types';
 import { COVER_TYPES, COVER_TYPE_LABEL, COVER_TYPE_DESC } from '@/lib/carousel/prompts';
+import { errorText } from '@/lib/error-text';
 
 type Props = {
   slide: SlideShape;
@@ -535,7 +536,7 @@ function SlideMediaUploader({
       });
       const json = await res.json().catch(() => ({}));
       if (!res.ok) {
-        setError(json.message || json.error || `HTTP ${res.status}`);
+        setError(errorText(json, res.status));
         return;
       }
       onChange(json.url);

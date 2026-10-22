@@ -9,6 +9,7 @@ import { Plus, Sparkles, Film } from 'lucide-react';
 import { PageHero } from '@/components/shell/page-hero';
 import { Icon3D } from '@/components/ui/icon3d';
 import type { BriefView } from '@/lib/studio/types';
+import { errorText } from '@/lib/error-text';
 
 type PersonaOpt = { id: string; name: string; isDefault: boolean };
 
@@ -45,7 +46,7 @@ export function BriefsClient({
         body: JSON.stringify({ topic: topic.trim() || null, personaId: personaId || null }),
       });
       const data = await res.json();
-      if (!res.ok) throw new Error(data.error || 'create_failed');
+      if (!res.ok) throw new Error(errorText(data, res.status));
       router.push(`/briefs/${data.brief.id}`);
     } catch (e) {
       setError((e as Error).message);

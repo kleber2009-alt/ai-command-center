@@ -3,6 +3,7 @@
 import { useState, useTransition } from 'react';
 import { useRouter } from 'next/navigation';
 import { Loader2, RefreshCw } from 'lucide-react';
+import { errorText } from '@/lib/error-text';
 
 export function RetryCoverButton({ id }: { id: string }) {
   const router = useRouter();
@@ -14,13 +15,13 @@ export function RetryCoverButton({ id }: { id: string }) {
     try {
       const res = await fetch(`/api/covers/${id}/retry`, { method: 'POST' });
       if (!res.ok) {
-        const data = (await res.json().catch(() => ({}))) as { error?: string };
-        setErr(data.error ?? `HTTP ${res.status}`);
+        const data = (await res.json().catch(() => ({}))) as { error?: string; message?: string; have?: number; need?: number };
+        setErr(errorText(data, res.status));
         return;
       }
       startTransition(() => router.refresh());
-    } catch (e) {
-      setErr(e instanceof Error ? e.message : 'failed');
+    } catch {
+      setErr(errorText(null));
     }
   }
 
@@ -33,7 +34,7 @@ export function RetryCoverButton({ id }: { id: string }) {
         className="btn-ghost !justify-self-start !px-3.5 !py-1.5 text-[12px]"
       >
         {pending ? <Loader2 size={13} className="animate-spin" aria-hidden /> : <RefreshCw size={13} aria-hidden />}
-        {pending ? 'retrying…' : 'retry'}
+        {pending ? 'Повторяю…' : 'Повторить'}
       </button>
       {err && <span className="text-[11px] text-danger">{err}</span>}
     </div>

@@ -14,6 +14,7 @@ import {
   type EngineAspect,
   type VoiceProvider,
 } from '@/lib/video-engines';
+import { errorText, exceptionText } from '@/lib/error-text';
 
 type Avatar = {
   id: string;
@@ -41,8 +42,11 @@ export function VideoForm({
   avatars,
   initialAvatarId,
   initialScript,
+  initialEngine = 'heygen-v5',
 }: {
   avatars: Avatar[];
+  /** Engine preselected in the form — the studio default (see defaultEngine()). */
+  initialEngine?: VideoEngine;
   initialAvatarId?: string;
   // Если страница пришла из парсера с уже переписанным сценарием — подставляем
   // его как стартовое значение textarea. Reset-кнопка всё равно возвращает к
@@ -50,7 +54,7 @@ export function VideoForm({
   initialScript?: string;
 }) {
   const router = useRouter();
-  const [engine, setEngine] = useState<VideoEngine>('heygen-v5');
+  const [engine, setEngine] = useState<VideoEngine>(initialEngine);
   // Если URL-параметр avatarId не соответствует ни одному из готовых аватаров
   // (удалён, ещё генерится, или принадлежит другому юзеру) — fallback на первый
   // доступный, чтобы не сабмитить заведомо невалидный id.
@@ -60,7 +64,9 @@ export function VideoForm({
       : (avatars[0]?.id ?? '');
   const [avatarId, setAvatarId] = useState<string>(resolvedInitial);
   const [script, setScript] = useState(initialScript?.trim() || DEFAULT_SCRIPT);
-  const [voiceId, setVoiceId] = useState<string>(HEYGEN_VOICES[0]?.voice_id ?? '');
+  const [voiceId, setVoiceId] = useState<string>(
+    VOICE_CATALOGS[VIDEO_ENGINES[initialEngine].voiceProvider][0]?.voice_id ?? '',
+  );
   const [customVoiceId, setCustomVoiceId] = useState<string>('');
   const [aspect, setAspect] = useState<EngineAspect>('9:16');
   const [quality, setQuality] = useState<'1080p' | '2k'>('2k');
@@ -165,11 +171,7 @@ export function VideoForm({
                     ? 'Выбери голос'
                     : code === 'UNAUTHORIZED'
                       ? 'Сессия истекла — перезайди в аккаунт'
-                      : code === 'internal_error'
-                        ? `Сервер: ${json?.message ?? 'internal_error'}`
-                        : code
-                          ? code
-                          : `HTTP ${res.status}${raw ? `: ${raw.slice(0, 200)}` : ''}`;
+                      : errorText(json, res.status);
         setError(msg);
         setBusy(false);
         return;
@@ -181,7 +183,7 @@ export function VideoForm({
       }
       router.push(`/videos?focus=${json.id}`);
     } catch (e) {
-      setError(e instanceof Error ? e.message : String(e));
+      setError(exceptionText(e));
       setBusy(false);
     }
   };
@@ -418,7 +420,7 @@ export function VideoForm({
         <div className="flex flex-wrap items-center gap-4 pt-2">
           <button type="submit" className="btn-primary" disabled={busy}>
             {busy && <Loader2 size={16} className="animate-spin" aria-hidden />}
-            {busy ? 'Submitting…' : `Generate video · ${cfg.cost} tokens`}
+            {busy ? 'Отправляю…' : `Создать видео · ${cfg.cost} токенов`}
             {!busy && <ArrowRight size={16} aria-hidden />}
           </button>
           <span className="text-[12px] text-text-mute">

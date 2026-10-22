@@ -9,6 +9,7 @@ import { useState } from 'react';
 import { ChevronDown, RefreshCw } from 'lucide-react';
 import { ParserReelCard } from './parser-reel-card';
 import type { ParserItemSerialized, ParserRunSerialized } from './types';
+import { errorText } from '@/lib/error-text';
 
 type Props = {
   runs: ParserRunSerialized[];
@@ -40,7 +41,7 @@ function HistoryRow({ run }: { run: ParserRunSerialized }) {
         const res = await fetch(`/api/parser/runs/${run.id}`);
         const json = await res.json();
         if (!res.ok) {
-          setError(json.message || json.error || `HTTP ${res.status}`);
+          setError(errorText(json, res.status));
           return;
         }
         setItems((json.items as ParserItemSerialized[]) || []);

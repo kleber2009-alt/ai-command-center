@@ -2,7 +2,7 @@
 
 import Link from 'next/link';
 import { usePathname } from 'next/navigation';
-import { useState } from 'react';
+import { useEffect, useState } from 'react';
 import { Menu, X } from 'lucide-react';
 import { SIDEBAR_SECTIONS, type SidebarItem } from './sidebar-nav';
 import { t, type Locale } from '@/lib/i18n';
@@ -34,9 +34,31 @@ function activeKey(pathname: string, items: SidebarItem[]): string | null {
   return best?.key ?? null;
 }
 
+// The sidebar lives in the shared (app) layout, which client-side navigation
+// does not re-render — so the server-provided balance would stay stale after a
+// paid action. Re-read it on every route change (and when the layout re-renders).
+function useLiveBalance(initial: number, pathname: string): number {
+  const [value, setValue] = useState(initial);
+  useEffect(() => setValue(initial), [initial]);
+  useEffect(() => {
+    let alive = true;
+    fetch('/api/billing/balance', { cache: 'no-store' })
+      .then((r) => (r.ok ? r.json() : null))
+      .then((d: { balance?: unknown } | null) => {
+        if (alive && typeof d?.balance === 'number') setValue(d.balance);
+      })
+      .catch(() => {});
+    return () => {
+      alive = false;
+    };
+  }, [pathname]);
+  return value;
+}
+
 export function Sidebar({ email, balance, isAdmin, plan = 'free', hiddenKeys = [], locale }: Props) {
   const pathname = usePathname() || '';
   const [open, setOpen] = useState(false);
+  const liveBalance = useLiveBalance(balance, pathname);
 
   const hidden = new Set(hiddenKeys);
   const visibleSections = SIDEBAR_SECTIONS
@@ -147,7 +169,7 @@ export function Sidebar({ email, balance, isAdmin, plan = 'free', hiddenKeys = [
             <Icon3D name="coin" size={26} sway />
             <div className="min-w-0 flex-1">
               <div className="text-[11px] text-text-mute">{t('Tokens', locale)}</div>
-              <div className="text-[20px] font-extrabold leading-none tracking-[-0.02em] tabular-nums">{balance}</div>
+              <div className="text-[20px] font-extrabold leading-none tracking-[-0.02em] tabular-nums">{liveBalance}</div>
             </div>
             <span className="rounded-full bg-blue px-3 py-1.5 text-[12px] font-semibold text-white">
               {t('Top up', locale)}

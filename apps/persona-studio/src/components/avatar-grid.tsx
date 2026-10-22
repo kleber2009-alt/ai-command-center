@@ -4,6 +4,7 @@ import { useEffect, useState } from 'react';
 import Link from 'next/link';
 import { ArrowRight, Check, Download, Loader2 } from 'lucide-react';
 import { Icon3D } from '@/components/ui/icon3d';
+import { errorText, exceptionText } from '@/lib/error-text';
 
 type Avatar = {
   id: string;
@@ -36,7 +37,7 @@ export function AvatarGrid({ generationId }: { generationId: string }) {
         const res = await fetch(`/api/generate-avatars?id=${generationId}`, { cache: 'no-store' });
         if (!res.ok) {
           const j = await res.json().catch(() => ({}));
-          setErr(j.error ?? `http_${res.status}`);
+          setErr(errorText(j, res.status));
           return;
         }
         const data = (await res.json()) as Generation;
@@ -45,7 +46,7 @@ export function AvatarGrid({ generationId }: { generationId: string }) {
         if (data.status === 'completed' || data.status === 'failed') return;
         timer = setTimeout(poll, 3500);
       } catch (e) {
-        setErr(String(e));
+        setErr(exceptionText(e));
       }
     };
 

@@ -10,6 +10,7 @@ import { BarChart3, Eye, ExternalLink, Flame, Heart, MessageCircle, Pencil, Refr
 import { Icon3D } from '@/components/ui/icon3d';
 import { PageHero } from '@/components/shell/page-hero';
 import type { MeasureDashboard, MeasurePost } from '@/lib/measure/measure';
+import { errorText } from '@/lib/error-text';
 
 const fmt = (n: number | null) => {
   if (n == null) return '—';
@@ -250,7 +251,7 @@ function MetricForm({ post, onSaved }: { post: MeasurePost; onSaved: () => void 
       });
       if (!res.ok) {
         const d = await res.json().catch(() => ({}));
-        throw new Error(d.error || 'save_failed');
+        throw new Error(errorText(d, res.status));
       }
       onSaved();
     } catch (e) {

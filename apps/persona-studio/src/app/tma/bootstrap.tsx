@@ -2,6 +2,7 @@
 
 import { useEffect, useState } from 'react';
 import { Icon3D } from '@/components/ui/icon3d';
+import { errorText, exceptionText } from '@/lib/error-text';
 
 export function TmaBootstrap() {
   const [status, setStatus] = useState<'init' | 'loading' | 'ok' | 'error' | 'no-tg'>('init');
@@ -34,7 +35,7 @@ export function TmaBootstrap() {
         if (!res.ok) {
           const j = (await res.json().catch(() => ({}))) as { error?: string; detail?: string };
           setStatus('error');
-          setMsg(j.detail ?? j.error ?? `HTTP ${res.status}`);
+          setMsg(errorText(j, res.status));
           return;
         }
         setStatus('ok');
@@ -42,7 +43,7 @@ export function TmaBootstrap() {
         window.location.replace('/dashboard');
       } catch (e) {
         setStatus('error');
-        setMsg(e instanceof Error ? e.message : String(e));
+        setMsg(exceptionText(e));
       }
     })();
   }, []);

@@ -3,6 +3,7 @@
 import { useState, useTransition } from 'react';
 import { ArrowRight, Pause, Play, Power, RefreshCw, Trash2 } from 'lucide-react';
 import { Icon3D } from '@/components/ui/icon3d';
+import { errorText } from '@/lib/error-text';
 
 type Radar = {
   id: string;
@@ -40,7 +41,7 @@ export function RadarsClient({ initialRadars }: { initialRadars: Radar[] }) {
       const json = await res.json();
       setRunning(null);
       if (!res.ok) {
-        setError(json.message || json.error || `HTTP ${res.status}`);
+        setError(errorText(json, res.status));
         return;
       }
       // Обновляем lastRunAt в state

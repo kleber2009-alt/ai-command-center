@@ -10,6 +10,7 @@ import { useEffect, useState } from 'react';
 import { createPortal } from 'react-dom';
 import { Plus, X } from 'lucide-react';
 import { Icon3D } from '@/components/ui/icon3d';
+import { errorText } from '@/lib/error-text';
 
 type ItemType = 'reel' | 'author' | 'idea';
 const ITEM_TYPE_TO_FOLDER_TYPE: Record<ItemType, 'bloggers' | 'videos' | 'ideas'> = {
@@ -69,7 +70,7 @@ export function AddToFolderModal({
       });
       const json = await res.json();
       if (!res.ok) {
-        setError(json.message || json.error || `HTTP ${res.status}`);
+        setError(errorText(json, res.status));
         return;
       }
       onAdded?.();
@@ -91,7 +92,7 @@ export function AddToFolderModal({
       });
       const crJson = await cr.json();
       if (!cr.ok) {
-        setError(crJson.message || crJson.error || `HTTP ${cr.status}`);
+        setError(errorText(crJson, cr.status));
         return;
       }
       await addToFolder(crJson.folder.id);

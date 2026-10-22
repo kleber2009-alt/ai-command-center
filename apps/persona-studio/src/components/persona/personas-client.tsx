@@ -17,6 +17,7 @@ import type {
   PersonaToneLength,
   PersonaView,
 } from '@/lib/studio/types';
+import { errorText } from '@/lib/error-text';
 
 // Нейтральный каталог голосов (без бренда провайдера) для пикера персоны.
 const VOICE_OPTIONS = ELEVENLABS_VOICE_PRESETS.map((v) => ({ id: v.voice_id, label: v.label }));
@@ -154,7 +155,7 @@ export function PersonasClient({ initialPersonas, avatarOptions }: Props) {
         body: JSON.stringify(payload),
       });
       const data = await res.json();
-      if (!res.ok) throw new Error(data.error || 'save_failed');
+      if (!res.ok) throw new Error(errorText(data, res.status));
       const saved: PersonaView = data.persona;
       setPersonas((prev) => {
         // Если saved дефолтная — снимаем флаг с остальных локально.

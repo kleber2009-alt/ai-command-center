@@ -1,7 +1,9 @@
 'use client';
 
 import { useState, useTransition } from 'react';
-import { errorText } from '@/lib/error-text';
+import { errorText, jobErrorText } from '@/lib/error-text';
+
+const PUBLISH_FAILED = 'Не удалось опубликовать — проверьте подключение канала и попробуйте ещё раз.';
 import Link from 'next/link';
 import {
   Send,
@@ -136,7 +138,7 @@ export function ScheduleClient({
     const json = await res.json().catch(() => ({}));
     setConnecting(false);
     if (!res.ok) {
-      setError(json.message || json.error || `HTTP ${res.status}`);
+      setError(errorText(json, res.status));
       return;
     }
     setAccounts((a) => [json.account, ...a.filter((x) => x.id !== json.account.id)]);
@@ -154,7 +156,7 @@ export function ScheduleClient({
       setError(
         json.error === 'not_configured'
           ? 'PostMyPost не настроен (нет POSTMYPOST_API_TOKEN)'
-          : json.message || json.error || `HTTP ${res.status}`,
+          : errorText(json, res.status),
       );
       return;
     }
@@ -177,7 +179,7 @@ export function ScheduleClient({
     const json = await res.json().catch(() => ({}));
     setConnecting(false);
     if (!res.ok) {
-      setError(json.message || json.error || `HTTP ${res.status}`);
+      setError(errorText(json, res.status));
       return;
     }
     setAccounts((a) => [json.account, ...a.filter((x) => x.id !== json.account.id)]);
@@ -465,7 +467,7 @@ function PostGroup({
                   <span
                     key={t.id}
                     className="inline-flex items-center gap-1.5 rounded-full border border-border-soft bg-white/[0.04] py-0.5 pl-2.5 pr-1 text-[12px] text-text-dim"
-                    title={t.errorMsg ?? undefined}
+                    title={t.errorMsg ? jobErrorText(t.errorMsg, PUBLISH_FAILED) : undefined}
                   >
                     <PlatformIcon platform={t.platform} />
                     {t.permalink ? (
@@ -479,9 +481,11 @@ function PostGroup({
                   </span>
                 ))}
               </div>
-              {p.errorMsg && (
-                <p className="text-[12.5px] text-danger">{p.errorMsg}</p>
-              )}
+              {(() => {
+                // Post-level error, else the first failed channel's reason (not just a badge).
+                const failed = p.errorMsg ?? p.targets.find((t) => t.status === 'failed' && t.errorMsg)?.errorMsg;
+                return failed ? <p className="text-[12.5px] text-danger">{jobErrorText(failed, PUBLISH_FAILED)}</p> : null;
+              })()}
               {(onPublishNow || onCancel) && (
                 <div className="flex gap-2 mt-1">
                   {onPublishNow && (

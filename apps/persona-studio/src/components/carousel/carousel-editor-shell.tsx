@@ -11,6 +11,7 @@ import type {
   CarouselDraftSerialized,
   SlideShape,
 } from './types';
+import { errorText } from '@/lib/error-text';
 
 type SaveStatus = 'idle' | 'saving' | 'saved' | 'error';
 type RenderStatus = 'idle' | 'rendering' | 'done' | 'error';
@@ -98,10 +99,10 @@ export function CarouselEditorShell({ initial, avatars }: Props) {
       });
       if (!res.ok) {
         const text = await res.text().catch(() => '');
-        let msg = `HTTP ${res.status}`;
+        let msg = errorText(null, res.status);
         try {
           const j = JSON.parse(text);
-          msg = j.message || j.error || msg;
+          msg = errorText(j, res.status);
         } catch {
           /* not json */
         }
@@ -258,7 +259,7 @@ export function CarouselEditorShell({ initial, avatars }: Props) {
         /* leave default */
       }
       if (!res.ok) {
-        setRenderError(json.message || json.error || `HTTP ${res.status}`);
+        setRenderError(errorText(json, res.status));
         setRenderStatus('error');
         return;
       }
@@ -302,7 +303,7 @@ export function CarouselEditorShell({ initial, avatars }: Props) {
       /* leave default */
     }
     if (!res.ok) {
-      throw new Error(json.message || json.error || `HTTP ${res.status}`);
+      throw new Error(errorText(json, res.status));
     }
     // Mark slide as pending locally — поллер уже стартанул.
     setSlides((prev) =>
@@ -406,7 +407,7 @@ export function CarouselEditorShell({ initial, avatars }: Props) {
       /* leave default */
     }
     if (!res.ok) {
-      throw new Error(json.message || json.error || `HTTP ${res.status}`);
+      throw new Error(errorText(json, res.status));
     }
     if (Array.isArray(json.slides)) {
       setSlides(json.slides);
@@ -462,7 +463,7 @@ export function CarouselEditorShell({ initial, avatars }: Props) {
         /* leave default */
       }
       if (!res.ok && res.status !== 402) {
-        setBatchMessage(json.message || json.error || `HTTP ${res.status}`);
+        setBatchMessage(errorText(json, res.status));
         return;
       }
       // Локально помечаем все enqueued индексы как pending, чтобы поллер
@@ -527,7 +528,7 @@ export function CarouselEditorShell({ initial, avatars }: Props) {
         /* leave default */
       }
       if (!res.ok) {
-        setRenderError(json.message || json.error || `HTTP ${res.status}`);
+        setRenderError(errorText(json, res.status));
         return;
       }
       if (json.imageUrls) setImageUrls(json.imageUrls);

@@ -2,10 +2,11 @@
 
 import { useEffect, useMemo, useRef, useState } from 'react';
 import { useRouter } from 'next/navigation';
-import { STYLE_TEMPLATES, SUBTITLE_LANGUAGES, previewUrl } from '@/lib/edit-templates';
+import { STYLE_TEMPLATES, SUBTITLE_LANGUAGES, previewUrl, templateSlug } from '@/lib/edit-templates';
 import { ArrowRight, ChevronDown, Loader2, Search, X } from 'lucide-react';
 import { Popover } from './popover';
 import { EditsStepper } from './edits-stepper';
+import { exceptionText } from '@/lib/error-text';
 
 type SourceVideo = {
   id: string;
@@ -31,10 +32,13 @@ export function EditForm({
   videos,
   initialVideoId,
   cost,
+  previews = [],
 }: {
   videos: SourceVideo[];
   initialVideoId?: string;
   cost: number;
+  /** Slugs that have a shipped /template-previews/<slug>.jpg — others use the gradient. */
+  previews?: string[];
 }) {
   const router = useRouter();
 
@@ -129,7 +133,7 @@ export function EditForm({
       router.push(`/edits?focus=${body.id}`);
       router.refresh();
     } catch (e) {
-      setError(e instanceof Error ? e.message : String(e));
+      setError(exceptionText(e));
     } finally {
       setBusy(false);
     }
@@ -334,14 +338,16 @@ export function EditForm({
                       }`}
                     >
                       <div className="absolute inset-0" style={{ background: gradientFor(t.name) }} />
-                      {/* eslint-disable-next-line @next/next/no-img-element */}
-                      <img
-                        src={previewUrl(t.name)}
-                        alt=""
-                        loading="lazy"
-                        onError={(ev) => ((ev.currentTarget as HTMLImageElement).style.display = 'none')}
-                        className="absolute inset-0 w-full h-full object-cover"
-                      />
+                      {previews.includes(templateSlug(t.name)) && (
+                        // eslint-disable-next-line @next/next/no-img-element
+                        <img
+                          src={previewUrl(t.name)}
+                          alt=""
+                          loading="lazy"
+                          onError={(ev) => ((ev.currentTarget as HTMLImageElement).style.display = 'none')}
+                          className="absolute inset-0 w-full h-full object-cover"
+                        />
+                      )}
                       <div className="absolute inset-0 bg-gradient-to-t from-black/85 via-transparent to-transparent" />
                       <div className="absolute inset-x-0 bottom-0 p-1.5">
                         <div className="text-[12px] font-semibold leading-tight">{t.name}</div>

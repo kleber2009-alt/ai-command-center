@@ -8,6 +8,7 @@ import { startSkillMontageWorker } from './skill-montage.worker';
 import { startResearchCronWorker } from './research-cron.worker';
 import { startPostPublishWorker } from './post-publish.worker';
 import { startScheduleCronWorker } from './schedule-cron.worker';
+import { loadAppSettings, startAppSettingsSync } from '@/lib/app-settings';
 
 // Worker grouping (PS-13): run subsets in separate processes/containers so a
 // crash in one group doesn't take down the others. Selected via WORKER_GROUP:
@@ -34,14 +35,22 @@ const cronWorkers = () => [
   startScheduleCronWorker(),
 ];
 
-const workers =
-  GROUP === 'generation'
-    ? generationWorkers()
-    : GROUP === 'cron'
-      ? cronWorkers()
-      : [...generationWorkers(), ...cronWorkers()];
+type StartedWorker = { close(): Promise<void> };
+let workers: StartedWorker[] = [];
 
-console.log(`[persona-studio:worker] group=${GROUP} — started ${workers.length} workers`);
+// Admin-set integration keys (AppSetting) must be in process.env before the
+// first job runs; they're then re-synced every 30 s.
+void loadAppSettings().then(() => {
+  startAppSettingsSync();
+  workers =
+    GROUP === 'generation'
+      ? generationWorkers()
+      : GROUP === 'cron'
+        ? cronWorkers()
+        : [...generationWorkers(), ...cronWorkers()];
+  console.log(`[persona-studio:worker] group=${GROUP} — started ${workers.length} workers`);
+});
+
 async function shutdown(reason: string) {
   console.log(`[persona-studio:worker] shutting down (${reason})…`);
   await Promise.all(workers.map((w) => w.close()));

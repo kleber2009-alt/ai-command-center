@@ -3,6 +3,7 @@
 import { useState } from 'react';
 import { ArrowRight, ChevronDown } from 'lucide-react';
 import type { ParserConfigSerialized } from './types';
+import { errorText } from '@/lib/error-text';
 
 type Props = {
   initial: ParserConfigSerialized | null;
@@ -60,7 +61,7 @@ export function ParserSetup({ initial, onSaved, onCancel }: Props) {
       });
       const json = await res.json();
       if (!res.ok) {
-        setError(json.message || json.error || `HTTP ${res.status}`);
+        setError(errorText(json, res.status));
         return;
       }
       onSaved(json.config);

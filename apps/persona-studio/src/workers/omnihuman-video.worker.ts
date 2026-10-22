@@ -171,6 +171,14 @@ export function startOmnihumanWorker() {
       } catch (e) {
         const code = errCode(e);
         const msg = errMsg(e);
+        const errorMsg = `OMNIHUMAN_${stage.toUpperCase()}_${code}: ${msg}`.slice(0, 500);
+        // BullMQ retries the job (attempts: 3); refund and mark failed only once,
+        // on the last attempt — otherwise every attempt refunds the same charge.
+        const isFinal = job.attemptsMade + 1 >= (job.opts.attempts ?? 1);
+        if (!isFinal) {
+          await prisma.videoGeneration.update({ where: { id: videoId }, data: { errorMsg } });
+          throw e;
+        }
         await refundTokens({
           userId,
           amount: row.tokensCost,
@@ -179,10 +187,7 @@ export function startOmnihumanWorker() {
         });
         await prisma.videoGeneration.update({
           where: { id: videoId },
-          data: {
-            status: 'failed',
-            errorMsg: `OMNIHUMAN_${stage.toUpperCase()}_${code}: ${msg}`.slice(0, 500),
-          },
+          data: { status: 'failed', errorMsg },
         });
         logEvent('video_generation_failed', {
           videoGenId: videoId,
