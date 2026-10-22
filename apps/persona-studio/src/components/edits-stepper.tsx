@@ -21,7 +21,7 @@ type Props = {
  */
 export function EditsStepper({ steps, activeKey, onJump }: Props) {
   return (
-    <nav aria-label="Progress" className="flex items-center gap-1 overflow-x-auto sm:gap-2">
+    <nav aria-label="Шаги" className="flex items-center gap-1 overflow-x-auto sm:gap-2">
       {steps.map((step, idx) => {
         const isActive = step.key === activeKey;
         const isDone = step.done;

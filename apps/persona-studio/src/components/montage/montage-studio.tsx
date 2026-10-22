@@ -10,6 +10,7 @@ import { Icon3D } from '@/components/ui/icon3d';
 import { MONTAGE_PRESETS, findMontagePreset } from '@/lib/montage/presets';
 import { EditsStepper } from '@/components/edits-stepper';
 import { errorText, jobErrorText, exceptionText } from '@/lib/error-text';
+import { statusLabel } from '@/lib/i18n';
 
 type Video = { id: string; videoUrl: string | null; aspect: string; createdAt: string; label: string };
 export type MontageRow = {
@@ -276,7 +277,7 @@ export function MontageStudio({ videos, initial, cost }: { videos: Video[]; init
               return (
                 <article key={r.id} className="panel grid gap-3 p-4">
                   <div className="flex items-center justify-between gap-2">
-                    <span className={`status-badge ${statusClass(r.status)}`}>{r.status}</span>
+                    <span className={`status-badge ${statusClass(r.status)}`}>{statusLabel(r.status)}</span>
                     <span className="truncate text-[12px] text-text-mute">
                       {p?.label ?? r.style} · {r.format}
                     </span>

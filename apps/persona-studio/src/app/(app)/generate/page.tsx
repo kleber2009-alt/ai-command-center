@@ -9,7 +9,7 @@ import { PageHero } from '@/components/shell/page-hero';
 import { COSTS } from '@/lib/tokens';
 
 export const dynamic = 'force-dynamic';
-export const metadata = { title: 'Generate — Persona Studio' };
+export const metadata = { title: 'Генерация аватаров — Persona Studio' };
 
 export default async function GeneratePage({
   searchParams,
@@ -37,22 +37,22 @@ export default async function GeneratePage({
   return (
     <div className="grid gap-10">
       <PageHero
-        eyebrow="CREATE · 01 · AVATAR"
+        eyebrow="СОЗДАТЬ · 01 · АВАТАР"
         title={
           <>
-            One photo, <span className="italic">ten avatars.</span>
+            Одно фото — <span className="italic">десять аватаров.</span>
           </>
         }
         description={
           <>
-            Загрузи до 10 фото, выбери лучшее как primary. Дальше — три режима: дефолтные 10 стилей,
+            Загрузи до 10 фото, выбери лучшее как основное. Дальше — три режима: дефолтные 10 стилей,
             20 ниш с готовыми пакетами по 10 промптов, или свой текст. Лицо сохраняется 1:1.
           </>
         }
         icon="avatar"
         meta={
           <>
-            <div className="label">Engine</div>
+            <div className="label">Движок</div>
             <div className="text-[14px] font-medium text-gold">AI-генерация · 10 стилей</div>
           </>
         }
@@ -62,7 +62,7 @@ export default async function GeneratePage({
         <div className="panel reveal flex items-start gap-4 p-5 sm:p-6">
           <Icon3D name="warning" size={26} tile />
           <div>
-            <p className="label mb-1.5 !text-cyan">/ prerequisite</p>
+            <p className="label mb-1.5 !text-cyan">/ сначала</p>
             <p className="text-[15px] leading-snug sm:text-[16px]">
               Чтобы {need === 'video' ? 'собрать видео' : need === 'carousel' ? 'поставить аватар на обложку карусели' : 'сделать обложку'}, сначала нужен хотя бы один аватар.
               Загрузи селфи ниже — через ~60 секунд вернёмся к {need === 'video' ? 'видео' : need === 'carousel' ? 'карусели' : 'обложке'}.
@@ -77,13 +77,13 @@ export default async function GeneratePage({
             <div className="flex max-w-[64ch] items-start gap-4">
               <Icon3D name="sparkles" size={30} tile="lime" sway />
               <div>
-                <p className="label mb-2 !text-lime">/ welcome · шаг 1 из 1</p>
+                <p className="label mb-2 !text-lime">/ старт · шаг 1 из 1</p>
                 <h2 className="mb-2 text-[22px] font-semibold leading-tight tracking-[-0.02em] sm:text-[26px]">
                   Загрузи селфи — ниже будет всё остальное.
                 </h2>
                 <p className="text-[14px] text-text-dim sm:text-[15px]">
                   Хорошо работают: лицо в фокусе, ровный свет, без очков, разрешение от 1024px. Можно сразу несколько — выберешь
-                  primary в следующем шаге.
+                  основное в следующем шаге.
                 </p>
               </div>
             </div>
@@ -101,7 +101,7 @@ export default async function GeneratePage({
       <p className="flex flex-wrap items-center gap-1.5 text-[13px] text-text-mute">
         После генерации —
         <Link href="/avatars" className="inline-flex items-center gap-1 font-medium text-gold hover:text-text">
-          /avatars
+          «Аватары»
           <ArrowRight size={13} aria-hidden />
         </Link>
         для выбора лучшего и сборки обложки.

@@ -16,14 +16,14 @@ type Props = {
 
 const slideRoleFor = (index: number, total: number) => {
   if (index === 0) return 'ОБЛОЖКА';
-  if (index === total - 1) return 'CTA';
+  if (index === total - 1) return 'ПРИЗЫВ';
   return 'РАСКРЫТИЕ';
 };
 
 const roleColor = (role: string, active: boolean) => {
   if (active) return 'text-gold';
   if (role === 'ОБЛОЖКА') return 'text-lime';
-  if (role === 'CTA') return 'text-pink';
+  if (role === 'ПРИЗЫВ') return 'text-pink';
   return 'text-text-dim';
 };
 
@@ -109,7 +109,7 @@ export function SlidesRail({
                         {error && (
                           <span
                             className="ml-auto inline-block w-1.5 h-1.5 rounded-full bg-pink"
-                            title="Пустой title или body"
+                            title="Пустой заголовок или текст"
                           />
                         )}
                       </div>

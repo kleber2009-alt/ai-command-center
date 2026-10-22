@@ -3,7 +3,7 @@
 import { useState } from 'react';
 import { useRouter } from 'next/navigation';
 import { ArrowRight, Loader2 } from 'lucide-react';
-import { exceptionText } from '@/lib/error-text';
+import { errorText, exceptionText } from '@/lib/error-text';
 
 type Avatar = { id: string; styleLabel: string; style: string; imageUrl: string };
 
@@ -41,8 +41,8 @@ export function CoverForm({ avatars, initialAvatarId, cost }: { avatars: Avatar[
           'error' in json
             ? json.error === 'insufficient_tokens'
               ? `Недостаточно токенов: ${json.have}/${json.need}`
-              : json.error
-            : `failed_${res.status}`;
+              : errorText(json, res.status)
+            : errorText(null, res.status);
         setError(msg);
         setBusy(false);
         return;
@@ -57,7 +57,7 @@ export function CoverForm({ avatars, initialAvatarId, cost }: { avatars: Avatar[
   return (
     <form onSubmit={submit} className="grid items-start gap-6 lg:grid-cols-[1fr_360px]">
       <div className="panel reveal grid gap-5 p-5 sm:p-6">
-        <Field label="Avatar" hint="Выбери лицо для обложки">
+        <Field label="Аватар" hint="Выбери лицо для обложки">
           <select className="input" value={avatarId} onChange={(e) => setAvatarId(e.target.value)}>
             {avatars.length === 0 && <option value="">Нет готовых аватаров</option>}
             {avatars.map((a) => (
@@ -68,23 +68,23 @@ export function CoverForm({ avatars, initialAvatarId, cost }: { avatars: Avatar[
           </select>
         </Field>
 
-        <Field label="Headline" hint="Главный текст обложки (3-7 слов)">
+        <Field label="Заголовок" hint="Главный текст обложки (3-7 слов)">
           <input className="input" value={title} onChange={(e) => setTitle(e.target.value)} maxLength={200} required />
         </Field>
 
-        <Field label="Subtitle" hint="Подзаголовок, опционально">
+        <Field label="Подзаголовок" hint="Подзаголовок, опционально">
           <input className="input" value={subtitle} onChange={(e) => setSubtitle(e.target.value)} maxLength={200} />
         </Field>
 
-        <Field label="CTA" hint="Призыв — Swipe / Save / Read…">
+        <Field label="Призыв" hint="Например: Листай / Сохрани / Читай…">
           <input className="input" value={cta} onChange={(e) => setCta(e.target.value)} maxLength={80} />
         </Field>
 
-        <Field label="Niche" hint="Кому это адресовано (опционально)">
-          <input className="input" value={niche} onChange={(e) => setNiche(e.target.value)} maxLength={120} placeholder="founders / creators / coaches…" />
+        <Field label="Ниша" hint="Кому это адресовано (опционально)">
+          <input className="input" value={niche} onChange={(e) => setNiche(e.target.value)} maxLength={120} placeholder="фаундеры / блогеры / коучи…" />
         </Field>
 
-        <Field label="Style preset">
+        <Field label="Стиль">
           <select className="input" value={style} onChange={(e) => setStyle(e.target.value)}>
             <option value="ai-visionary">AI Visionary</option>
             <option value="viral-reels-cover">Viral Reels Cover</option>
@@ -105,7 +105,7 @@ export function CoverForm({ avatars, initialAvatarId, cost }: { avatars: Avatar[
           </button>
           {error && (
             <span className="fade-in w-full rounded-2xl border border-danger/30 bg-danger/10 px-4 py-2.5 text-[13px] text-danger">
-              /ERROR — {error}
+              Ошибка — {error}
             </span>
           )}
         </div>
@@ -114,7 +114,7 @@ export function CoverForm({ avatars, initialAvatarId, cost }: { avatars: Avatar[
       {/* preview */}
       <aside className="panel reveal p-5 lg:sticky lg:top-6" style={{ ['--i' as string]: 1 } as React.CSSProperties}>
         <div className="mb-3 flex items-center gap-2">
-          <span className="sec-num">/ preview</span>
+          <span className="sec-num">/ превью</span>
           <span className="text-[12px] tabular-nums text-text-mute">{aspect}</span>
         </div>
         <div
@@ -130,7 +130,7 @@ export function CoverForm({ avatars, initialAvatarId, cost }: { avatars: Avatar[
           }}
         >
           <div className="absolute inset-0 p-5 flex flex-col justify-between">
-            <span className="self-start rounded-full bg-black/50 px-2.5 py-1 text-[11px] font-medium text-white/85 backdrop-blur-md">/ cover · {aspect}</span>
+            <span className="self-start rounded-full bg-black/50 px-2.5 py-1 text-[11px] font-medium text-white/85 backdrop-blur-md">/ обложка · {aspect}</span>
             <div>
               <div className="break-words text-[22px] font-extrabold leading-[1.05] tracking-[-0.02em] text-text">{title}</div>
               {subtitle && (
@@ -177,7 +177,7 @@ const ASPECT_OPTIONS: Array<{ value: Aspect; label: string; hint: string; box: s
 function AspectPicker({ value, onChange }: { value: Aspect; onChange: (v: Aspect) => void }) {
   return (
     <div className="grid gap-2">
-      <span className="label">Aspect</span>
+      <span className="label">Формат</span>
       <div role="radiogroup" aria-label="Формат обложки" className="grid grid-cols-3 gap-2">
         {ASPECT_OPTIONS.map((opt) => {
           const active = value === opt.value;

@@ -91,7 +91,7 @@ export function ParserReelCard({ item, onUpdated, onRemoved }: Props) {
       onUpdated({ ...item, status: 'used', rewrittenScript: json.script });
       router.push(`/videos/new?parserItemId=${item.id}`);
     } catch (e) {
-      setError((e as Error).message || 'network error');
+      setError((e as Error).message || 'Нет связи с сервером');
     } finally {
       setRewriting(false);
     }
@@ -130,7 +130,7 @@ export function ParserReelCard({ item, onUpdated, onRemoved }: Props) {
         ) : (
           <div className="w-full h-full aspect-[4/5] flex flex-col items-center justify-center gap-1 text-[10px] font-semibold uppercase tracking-[0.06em] text-text-mute">
             <Icon3D name={isCarousel ? 'carousel' : 'video'} size={24} />
-            <span>{isCarousel ? 'CAR' : 'REEL'}</span>
+            <span>{isCarousel ? 'КАРУСЕЛЬ' : 'РИЛС'}</span>
           </div>
         )}
         {item.fitScore != null && (

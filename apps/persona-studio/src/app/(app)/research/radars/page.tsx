@@ -20,13 +20,13 @@ export default async function RadarsPage() {
     <div className="grid gap-8">
       <PageHero
         icon="radars"
-        eyebrow="NICHE RADAR · BACKGROUND HUNT"
+        eyebrow="РАДАР НИШИ · ФОНОВЫЙ ПОИСК"
         title={
           <>
             Сохранённые ниши, которые <span className="italic text-gold">сами себя пополняют.</span>
           </>
         }
-        description="Каждый радар — сохранённый поисковый запрос. Cron перезапускает его раз в сутки и копит свежие выбросы — открываешь и видишь «что новое залетело» с прошлого визита."
+        description="Каждый радар — сохранённый поисковый запрос. Фоновая задача перезапускает его раз в сутки и копит свежие выбросы — открываешь и видишь «что новое залетело» с прошлого визита."
       />
       <RadarsClient
         initialRadars={radars.map((r) => ({

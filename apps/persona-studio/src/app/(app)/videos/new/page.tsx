@@ -11,7 +11,7 @@ import { engineConfig } from '@/lib/video-engines';
 import { defaultEngine } from '@/lib/studio/produce';
 
 export const dynamic = 'force-dynamic';
-export const metadata = { title: 'New video — Persona Studio' };
+export const metadata = { title: 'Новое видео — Persona Studio' };
 
 export default async function NewVideoPage({
   searchParams,
@@ -53,14 +53,14 @@ export default async function NewVideoPage({
       <div className="-mb-4 flex flex-wrap items-center gap-3">
         <Link href="/videos" className="btn-ghost !px-4 !py-2 text-[13px]">
           <ArrowLeft size={14} aria-hidden />
-          all videos
+          все видео
         </Link>
         <span className="sec-num">/00</span>
-        <span className="sec-title">New talking-photo video</span>
+        <span className="sec-title">Новое видео с говорящим фото</span>
       </div>
 
       <PageHero
-        eyebrow="CREATE · VIDEO"
+        eyebrow="СОЗДАТЬ · ВИДЕО"
         icon="video"
         title={
           <>
@@ -77,13 +77,13 @@ export default async function NewVideoPage({
             // eslint-disable-next-line @next/next/no-img-element
             <img
               src={parserRef.thumbnailUrl}
-              alt="reference"
+              alt="референс"
               referrerPolicy="no-referrer"
               className="h-28 w-20 shrink-0 rounded-2xl border border-border-soft object-cover sm:h-32 sm:w-24"
             />
           )}
           <div className="grid min-w-0 flex-1 gap-1.5">
-            <span className="label !text-lime">/parser · референс</span>
+            <span className="label !text-lime">из парсера · референс</span>
             <p className="text-[15px] font-semibold text-text sm:text-[16px]">
               {parserRef?.owner ? `@${parserRef.owner}` : 'Instagram'}
               {parserRef?.fitScore != null && (
@@ -107,7 +107,7 @@ export default async function NewVideoPage({
             </a>
             <p className="mt-2 max-w-[60ch] text-[12px] text-text-mute">
               {parserRef?.rewrittenScript
-                ? 'Сценарий уже переписан Claude под твою нишу по структуре хук → боль → раскрытие → CTA. Подправь под себя, выбери аватар — и в монтаж.'
+                ? 'Сценарий уже переписан Claude под твою нишу по структуре хук → боль → раскрытие → призыв. Подправь под себя, выбери аватар — и в монтаж.'
                 : 'Перепиши хук под себя — и в монтаж.'}
             </p>
           </div>

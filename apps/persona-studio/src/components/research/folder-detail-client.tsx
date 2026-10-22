@@ -162,7 +162,7 @@ export function FolderDetailClient({
                   onClick={() => removeItem(it)}
                   disabled={busy}
                   className="absolute top-2.5 right-2.5 inline-flex h-8 w-8 items-center justify-center rounded-full border border-white/15 bg-black/55 text-text backdrop-blur-md transition-colors hover:border-pink/60 hover:text-pink"
-                  aria-label="remove"
+                  aria-label="Убрать из папки"
                 >
                   <X className="h-3.5 w-3.5" />
                 </button>
@@ -204,7 +204,7 @@ export function FolderDetailClient({
                   onClick={() => removeItem(it)}
                   disabled={busy}
                   className="btn-icon !h-8 !w-8 hover:!text-pink"
-                  aria-label="remove"
+                  aria-label="Убрать из папки"
                 >
                   <X className="h-3.5 w-3.5" />
                 </button>
@@ -225,7 +225,7 @@ export function FolderDetailClient({
                 onClick={() => removeItem(it)}
                 disabled={busy}
                 className="btn-icon !h-8 !w-8 hover:!text-pink"
-                aria-label="remove"
+                aria-label="Убрать из папки"
               >
                 <X className="h-3.5 w-3.5" />
               </button>

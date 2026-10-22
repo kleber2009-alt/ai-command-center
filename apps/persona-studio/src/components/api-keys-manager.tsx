@@ -3,7 +3,7 @@
 import { useState } from 'react';
 import { Check, Copy, EyeOff, KeyRound, RefreshCw } from 'lucide-react';
 import { Icon3D } from '@/components/ui/icon3d';
-import { exceptionText } from '@/lib/error-text';
+import { errorText, exceptionText } from '@/lib/error-text';
 
 type ApiKeyRow = {
   id: string;
@@ -36,7 +36,7 @@ export function ApiKeysManager({ initialKeys }: { initialKeys: ApiKeyRow[] }) {
       });
       const j = (await res.json()) as CreatedKey | { error: string };
       if (!res.ok || 'error' in j) {
-        setError('error' in j ? j.error : `failed_${res.status}`);
+        setError(errorText('error' in j ? j : null, res.status));
         return;
       }
       setJustCreated(j);
@@ -74,18 +74,18 @@ export function ApiKeysManager({ initialKeys }: { initialKeys: ApiKeyRow[] }) {
     <div className="grid gap-6">
       <form onSubmit={create} className="panel p-5 grid gap-3 sm:grid-cols-[1fr_auto] items-end reveal">
         <label className="grid gap-1.5">
-          <span className="label">Key name</span>
+          <span className="label">Название ключа</span>
           <input
             className="input"
             value={name}
             onChange={(e) => setName(e.target.value)}
-            placeholder="my-app / production / staging…"
+            placeholder="моё-приложение / прод / тест…"
             maxLength={80}
           />
         </label>
         <button type="submit" className="btn-primary" disabled={busy}>
           {busy ? <RefreshCw className="h-4 w-4 animate-spin" /> : <KeyRound className="h-4 w-4" />}
-          {busy ? 'Creating…' : 'Create key'}
+          {busy ? 'Создаём…' : 'Создать ключ'}
         </button>
       </form>
 
@@ -97,7 +97,7 @@ export function ApiKeysManager({ initialKeys }: { initialKeys: ApiKeyRow[] }) {
         <div className="panel !border-lime/40 !bg-lime/[0.05] p-5 grid gap-3 pop-in">
           <div className="flex items-center gap-2 text-[13px] font-semibold text-lime">
             <Check className="h-4 w-4" />
-            key created — copy now, it will not be shown again
+            ключ создан — скопируй сейчас, больше он не покажется
           </div>
           <div className="grid gap-2.5">
             <code className="font-mono text-[12.5px] break-all rounded-2xl border border-border-soft bg-black/30 p-3.5 text-text">
@@ -110,7 +110,7 @@ export function ApiKeysManager({ initialKeys }: { initialKeys: ApiKeyRow[] }) {
                 onClick={() => navigator.clipboard.writeText(justCreated.plaintext).catch(() => {})}
               >
                 <Copy className="h-4 w-4" />
-                copy
+                копировать
               </button>
               <button
                 type="button"
@@ -118,7 +118,7 @@ export function ApiKeysManager({ initialKeys }: { initialKeys: ApiKeyRow[] }) {
                 onClick={() => setJustCreated(null)}
               >
                 <EyeOff className="h-4 w-4" />
-                hide
+                скрыть
               </button>
             </div>
           </div>
@@ -128,10 +128,10 @@ export function ApiKeysManager({ initialKeys }: { initialKeys: ApiKeyRow[] }) {
       <div className="panel overflow-x-auto">
         <div className="min-w-[560px]">
         <div className="px-5 py-3 grid grid-cols-[1fr_auto_auto_auto_auto] gap-4 border-b border-border-soft label">
-          <span>name · prefix</span>
-          <span>scopes</span>
-          <span>last used</span>
-          <span>created</span>
+          <span>название · префикс</span>
+          <span>доступ</span>
+          <span>использован</span>
+          <span>создан</span>
           <span></span>
         </div>
         {keys.length === 0 && (
@@ -159,10 +159,10 @@ export function ApiKeysManager({ initialKeys }: { initialKeys: ApiKeyRow[] }) {
               {new Date(k.createdAt).toISOString().slice(0, 10)}
             </span>
             {k.revokedAt ? (
-              <span className="status-badge text-text-mute">revoked</span>
+              <span className="status-badge text-text-mute">отозван</span>
             ) : (
               <button type="button" onClick={() => revoke(k.id)} className="btn-ghost !px-3.5 !py-1.5 !text-[12px] hover:!text-pink hover:!border-pink/40">
-                revoke
+                отозвать
               </button>
             )}
           </div>

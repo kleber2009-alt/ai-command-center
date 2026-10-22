@@ -149,7 +149,7 @@ export function AuthorClient({
             <h1 className="text-[30px] font-semibold tracking-[-0.02em] text-text leading-none">@{author.username}</h1>
             {author.lowConfidence && (
               <span className="status-badge status-partial">
-                low confidence
+                мало данных
               </span>
             )}
           </div>

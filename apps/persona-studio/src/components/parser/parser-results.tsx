@@ -16,7 +16,7 @@ export function ParserResults({ items, run, onItemUpdated, onItemRemoved }: Prop
     return (
       <div className="rounded-[24px] border border-dashed border-white/15 bg-white/[0.03] p-10 flex flex-col items-center text-center fade-in">
         <Icon3D name="radars" size={44} tile />
-        <div className="sec-num my-3">/EMPTY</div>
+        <div className="sec-num my-3">Пусто</div>
         <div className="text-[19px] font-semibold tracking-[-0.02em] text-text mb-2">
           Парсер ещё не запускался.
         </div>
@@ -31,7 +31,7 @@ export function ParserResults({ items, run, onItemUpdated, onItemRemoved }: Prop
     return (
       <div className="rounded-[24px] border border-dashed border-white/15 bg-white/[0.03] p-10 flex flex-col items-center text-center fade-in">
         <Icon3D name="radars" size={44} tile />
-        <div className="sec-num my-3">/EMPTY</div>
+        <div className="sec-num my-3">Пусто</div>
         <div className="text-[19px] font-semibold tracking-[-0.02em] text-text mb-2">
           Ни одного поста по текущим порогам.
         </div>
@@ -71,7 +71,7 @@ export function ParserResults({ items, run, onItemUpdated, onItemRemoved }: Prop
         <section className="grid gap-4">
           <div className="flex items-center gap-3">
             <span className="sec-num">/03</span>
-            <span className="sec-title">Carousels · топ {carousels.length}</span>
+            <span className="sec-title">Карусели · топ {carousels.length}</span>
             <span className="flex-1 h-px bg-border-soft" />
           </div>
           <div className="grid grid-cols-1 gap-3 stagger">

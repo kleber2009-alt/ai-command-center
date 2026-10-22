@@ -4,7 +4,7 @@ import { ResearchClient } from '@/components/research/research-client';
 import { PageHero } from '@/components/shell/page-hero';
 
 export const dynamic = 'force-dynamic';
-export const metadata = { title: 'Research — Persona Studio' };
+export const metadata = { title: 'Ресёрч — Persona Studio' };
 
 export default async function ResearchPage({
   searchParams,

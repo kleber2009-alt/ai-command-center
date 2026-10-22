@@ -57,37 +57,37 @@ export function TmaBootstrap() {
         </span>
       </div>
       {status === 'init' && (
-        <p className="status-badge status-queued">/ INIT</p>
+        <p className="status-badge status-queued">/ запуск</p>
       )}
       {status === 'loading' && (
         <>
           <div className="pop-in"><Icon3D name="processing" size={44} tile sway /></div>
           <p className="text-[18px] font-semibold tracking-[-0.02em]">Подключаем твой Telegram…</p>
-          <p className="status-badge status-processing">/ VERIFYING</p>
+          <p className="status-badge status-processing">/ проверяем</p>
         </>
       )}
       {status === 'ok' && (
         <>
           <div className="pop-in"><Icon3D name="done" size={44} tile /></div>
           <p className="text-[18px] font-semibold tracking-[-0.02em]">Готово, заходим в студию.</p>
-          <p className="status-badge status-ready">/ REDIRECTING</p>
+          <p className="status-badge status-ready">/ переходим</p>
         </>
       )}
       {status === 'no-tg' && (
         <>
           <div className="pop-in"><Icon3D name="warning" size={44} tile /></div>
-          <p className="status-badge status-failed">/ NO-TELEGRAM</p>
+          <p className="status-badge status-failed">/ нет Telegram</p>
           <p className="text-[15px] leading-[1.55] text-text-dim">
             Эта страница работает только внутри Telegram Mini App. На вебе используй{' '}
-            <a href="/sign-in" className="text-gold font-medium hover:underline">/sign-in</a>.
+            <a href="/sign-in" className="text-gold font-medium hover:underline">страницу входа</a>.
           </p>
         </>
       )}
       {status === 'error' && (
         <>
           <div className="pop-in"><Icon3D name="warning" size={44} tile /></div>
-          <p className="status-badge status-failed">/ ERROR</p>
-          <p className="text-[14px] leading-[1.55] text-text-dim break-words">{msg ?? 'unknown'}</p>
+          <p className="status-badge status-failed">/ ошибка</p>
+          <p className="text-[14px] leading-[1.55] text-text-dim break-words">{msg ?? 'неизвестная ошибка'}</p>
         </>
       )}
     </div>

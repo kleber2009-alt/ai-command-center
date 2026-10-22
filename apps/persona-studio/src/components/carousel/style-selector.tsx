@@ -16,7 +16,7 @@ type Props = {
 export function StyleSelector({ value, onChange }: Props) {
   const groups = [
     { key: 'skill', title: 'скиллы · стили рилсов', items: CAROUSEL_STYLES.filter((s) => s.group === 'skill') },
-    { key: 'persona', title: 'persona · 5 DNA', items: CAROUSEL_STYLES.filter((s) => s.group === 'persona') },
+    { key: 'persona', title: 'Persona · 5 ДНК-стилей', items: CAROUSEL_STYLES.filter((s) => s.group === 'persona') },
   ];
   return (
     <div className="grid gap-4 rounded-[20px] border border-border-soft bg-white/[0.03] p-4">
@@ -72,7 +72,7 @@ export function StyleSelector({ value, onChange }: Props) {
                   {active && (
                     <span className="grid h-5 w-5 shrink-0 place-items-center rounded-full bg-blue text-white">
                       <Check size={12} strokeWidth={3} />
-                      <span className="sr-only">active</span>
+                      <span className="sr-only">выбран</span>
                     </span>
                   )}
                 </button>

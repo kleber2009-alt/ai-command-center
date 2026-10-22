@@ -113,7 +113,7 @@ export function CarouselEditorShell({ initial, avatars }: Props) {
       dirtyRef.current = false;
     } catch (e) {
       setSaveStatus('error');
-      setSaveError((e as Error).message || 'network error');
+      setSaveError((e as Error).message || 'Нет связи с сервером');
     }
   }, [initial.id]);
 
@@ -266,7 +266,7 @@ export function CarouselEditorShell({ initial, avatars }: Props) {
       setImageUrls(json.imageUrls ?? []);
       setRenderStatus('done');
     } catch (e) {
-      setRenderError((e as Error).message || 'network error');
+      setRenderError((e as Error).message || 'Нет связи с сервером');
       setRenderStatus('error');
     }
   }
@@ -493,7 +493,7 @@ export function CarouselEditorShell({ initial, avatars }: Props) {
           .join(' · '),
       );
     } catch (e) {
-      setBatchMessage((e as Error).message || 'network error');
+      setBatchMessage((e as Error).message || 'Нет связи с сервером');
     } finally {
       setBatchBusy(false);
     }
@@ -533,7 +533,7 @@ export function CarouselEditorShell({ initial, avatars }: Props) {
       }
       if (json.imageUrls) setImageUrls(json.imageUrls);
     } catch (e) {
-      setRenderError((e as Error).message || 'network error');
+      setRenderError((e as Error).message || 'Нет связи с сервером');
     } finally {
       setSingleRendering((s) => {
         const next = new Set(s);
@@ -705,7 +705,7 @@ export function CarouselEditorShell({ initial, avatars }: Props) {
                   {/* eslint-disable-next-line @next/next/no-img-element */}
                   <img
                     src={url}
-                    alt={`Slide ${i + 1}`}
+                    alt={`Слайд ${i + 1}`}
                     loading="lazy"
                     className={`w-full h-full object-cover transition ${
                       isRerendering ? 'opacity-30' : ''

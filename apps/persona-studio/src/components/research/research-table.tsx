@@ -50,7 +50,7 @@ export function ResearchTable({ reels }: { reels: ResearchReelView[] }) {
             <Th align="right">Комм.</Th>
             <Th align="right">Реп.</Th>
             <Th align="right">ER%</Th>
-            <Th align="right">VS</Th>
+            <Th align="right">Скор</Th>
             <Th align="right">Дата</Th>
             <Th>Описание</Th>
             <Th></Th>

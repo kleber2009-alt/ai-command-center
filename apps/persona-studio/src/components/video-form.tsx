@@ -15,6 +15,7 @@ import {
   type VoiceProvider,
 } from '@/lib/video-engines';
 import { errorText, exceptionText } from '@/lib/error-text';
+import { statusLabel } from '@/lib/i18n';
 
 type Avatar = {
   id: string;
@@ -164,7 +165,7 @@ export function VideoForm({
             : code === 'avatar_not_found'
               ? 'Аватар не найден — выбери другого из списка'
               : code === 'avatar_not_ready'
-                ? `Аватар ещё не готов (status: ${json?.status ?? 'unknown'})`
+                ? `Аватар ещё не готов (статус: ${statusLabel(json?.status) || 'неизвестен'})`
                 : code === 'script_required'
                   ? 'Скрипт обязателен (минимум 5 символов)'
                   : code === 'voice_required'
@@ -191,7 +192,7 @@ export function VideoForm({
   return (
     <form onSubmit={submit} className="grid items-start gap-6 lg:grid-cols-[1fr_360px]">
       <div className="panel reveal grid gap-5 p-5 sm:p-6">
-        <Field label="Engine" hint={cfg.description}>
+        <Field label="Движок" hint={cfg.description}>
           <select
             className="input"
             value={engine}
@@ -208,13 +209,13 @@ export function VideoForm({
           >
             {VIDEO_ENGINE_LIST.map((slug) => (
               <option key={slug} value={slug}>
-                {VIDEO_ENGINES[slug].label} · {VIDEO_ENGINES[slug].cost} tok
+                {VIDEO_ENGINES[slug].label} · {VIDEO_ENGINES[slug].cost} ток.
               </option>
             ))}
           </select>
         </Field>
 
-        <Field label="Avatar" hint="Лицо, которое будет говорить">
+        <Field label="Аватар" hint="Лицо, которое будет говорить">
           <select className="input" value={avatarId} onChange={(e) => setAvatarId(e.target.value)}>
             {avatars.length === 0 && <option value="">Нет готовых аватаров</option>}
             {avatars.map((a) => (
@@ -226,10 +227,10 @@ export function VideoForm({
         </Field>
 
         <Field
-          label="Script"
+          label="Сценарий"
           hint={
             `Текст, который произнесёт аватар · ${script.length}/1500 · ` +
-            `шаблон оптимизирован под lipsync (~25 сек, естественные паузы, риторический вопрос для вариативности мимики)`
+            `шаблон оптимизирован под синхронизацию губ (~25 сек, естественные паузы, риторический вопрос для вариативности мимики)`
           }
         >
           <div className="grid gap-2">
@@ -248,13 +249,13 @@ export function VideoForm({
               className="inline-flex items-center gap-1.5 self-start rounded-full border border-border-soft bg-white/[0.04] px-3.5 py-1.5 text-[13px] text-text-dim transition-colors hover:bg-white/[0.07] hover:text-text disabled:opacity-40 disabled:hover:bg-white/[0.04]"
             >
               <RotateCcw size={13} aria-hidden />
-              вернуть realism-шаблон
+              вернуть реалистичный шаблон
             </button>
           </div>
         </Field>
 
         <Field
-          label="Voice"
+          label="Голос"
           hint={
             customActive
               ? 'используется свой голос — пресет из списка игнорируется'
@@ -305,9 +306,9 @@ export function VideoForm({
                     setCustomVoiceId('');
                     try { window.localStorage.removeItem(CUSTOM_VOICE_LS_KEY); } catch { /* ignore */ }
                   }}
-                  title="Сбросить и вернуться к preset"
+                  title="Сбросить и вернуться к голосу из списка"
                 >
-                  reset
+                  сбросить
                 </button>
               )}
             </div>
@@ -315,7 +316,7 @@ export function VideoForm({
         )}
 
         <div className="grid gap-3 sm:grid-cols-2">
-          <Field label="Aspect">
+          <Field label="Формат">
             <select
               className="input"
               value={aspect}
@@ -323,12 +324,12 @@ export function VideoForm({
             >
               {cfg.supportedAspects.map((a) => (
                 <option key={a} value={a}>
-                  {a === '9:16' ? '9:16 — Reels / TikTok / Shorts' : a === '1:1' ? '1:1 — Instagram square' : '16:9 — YouTube / Web'}
+                  {a === '9:16' ? '9:16 — Reels / TikTok / Shorts' : a === '1:1' ? '1:1 — квадрат для Instagram' : '16:9 — YouTube / сайт'}
                 </option>
               ))}
             </select>
           </Field>
-          <Field label="Quality" hint="Разрешение рендера (только HeyGen)">
+          <Field label="Качество" hint="Разрешение рендера (только HeyGen)">
             <select
               className="input"
               value={quality}
@@ -343,7 +344,7 @@ export function VideoForm({
 
         {cfg.voiceProvider === 'heygen' && (
           <div className="grid gap-3 sm:grid-cols-2">
-            <Field label="Background" hint="HEX-цвет фона (только HeyGen)">
+            <Field label="Фон" hint="HEX-цвет фона (только HeyGen)">
               <input
                 type="text"
                 className="input mono"
@@ -353,7 +354,7 @@ export function VideoForm({
                 placeholder="#0a0a0a"
               />
             </Field>
-            <Field label="Subtitles" hint="Включить субтитры (только HeyGen)">
+            <Field label="Субтитры" hint="Включить субтитры (только HeyGen)">
               <span className="flex cursor-pointer items-center gap-3 rounded-[14px] border border-border-soft bg-white/[0.05] px-4 py-[7px]">
                 <input
                   type="checkbox"
@@ -362,7 +363,7 @@ export function VideoForm({
                   className="toggle"
                 />
                 <span className={`text-[13px] font-semibold ${subtitles ? 'text-text' : 'text-text-mute'}`}>
-                  {subtitles ? 'on' : 'off'}
+                  {subtitles ? 'вкл' : 'выкл'}
                 </span>
               </span>
             </Field>
@@ -377,14 +378,14 @@ export function VideoForm({
               aria-expanded={motionAdvancedOpen}
               className="flex w-full items-center justify-between px-4 py-3 text-[13px] font-medium text-text-dim transition-colors hover:bg-white/[0.04] hover:text-text"
             >
-              <span>/ advanced · motion prompt {motionPrompt.trim() ? '· custom' : '· default'}</span>
+              <span>/ дополнительно · промпт движения {motionPrompt.trim() ? '· свой' : '· по умолчанию'}</span>
               <ChevronDown size={16} aria-hidden className={`transition-transform duration-300 ease-settle ${motionAdvancedOpen ? 'rotate-180' : ''}`} />
             </button>
             {motionAdvancedOpen && (
               <div className="fade-in space-y-3 px-4 pb-4">
                 <p className="text-[12px] text-text-dim">
-                  Описание движения для Avatar IV motion engine (English).
-                  Пусто = использовать дефолт max-realism.
+                  Описание движения для движка Avatar IV (на английском).
+                  Пусто = максимально реалистичный вариант по умолчанию.
                 </p>
                 <textarea
                   className="input !min-h-[140px] w-full !font-mono !text-[12px] !leading-snug"
@@ -399,7 +400,7 @@ export function VideoForm({
                     onClick={() => setMotionPrompt(MAX_REALISM_MOTION_PROMPT)}
                     className="rounded-full border border-border-soft bg-white/[0.04] px-3.5 py-1.5 text-[13px] text-text-dim hover:bg-white/[0.07] hover:text-text"
                   >
-                    insert default
+                    вставить по умолчанию
                   </button>
                   {motionPrompt && (
                     <button
@@ -407,7 +408,7 @@ export function VideoForm({
                       onClick={() => setMotionPrompt('')}
                       className="rounded-full border border-pink/30 bg-pink/10 px-3.5 py-1.5 text-[13px] text-pink hover:bg-pink/15"
                     >
-                      reset
+                      сбросить
                     </button>
                   )}
                   <span className="ml-auto tabular-nums text-text-mute">{motionPrompt.length}/2000</span>
@@ -424,11 +425,11 @@ export function VideoForm({
             {!busy && <ArrowRight size={16} aria-hidden />}
           </button>
           <span className="text-[12px] text-text-mute">
-            {cfg.label} · voice: {cfg.voiceProvider}
+            {cfg.label} · голос: {cfg.voiceProvider}
           </span>
           {error && (
             <span className="fade-in w-full rounded-2xl border border-danger/30 bg-danger/10 px-4 py-2.5 text-[13px] text-danger">
-              /ERROR — {error}
+              Ошибка — {error}
             </span>
           )}
         </div>
@@ -436,7 +437,7 @@ export function VideoForm({
 
       <aside className="panel reveal p-5 lg:sticky lg:top-6" style={{ ['--i' as string]: 1 } as React.CSSProperties}>
         <div className="mb-3 flex items-center gap-2">
-          <span className="sec-num">/ preview</span>
+          <span className="sec-num">/ превью</span>
           <span className="text-[12px] tabular-nums text-text-mute">{aspect}</span>
         </div>
         <div
@@ -462,18 +463,18 @@ export function VideoForm({
           </div>
         </div>
         <div className="mt-4 grid gap-2 text-[12px] text-text-dim [&>div]:gap-3">
-          <div className="flex justify-between"><span className="text-text-mute">engine</span><span>{cfg.label}</span></div>
+          <div className="flex justify-between"><span className="text-text-mute">движок</span><span>{cfg.label}</span></div>
           <div className="flex justify-between">
-            <span className="text-text-mute">voice</span>
+            <span className="text-text-mute">голос</span>
             <span className={customActive ? 'text-lime' : ''}>
               {voice?.label}{customActive ? ` · ${customVoiceId.slice(0, 8)}…` : ''}
             </span>
           </div>
-          <div className="flex justify-between"><span className="text-text-mute">aspect</span><span>{aspect}</span></div>
+          <div className="flex justify-between"><span className="text-text-mute">формат</span><span>{aspect}</span></div>
           {cfg.voiceProvider === 'heygen' && (
             <>
-              <div className="flex justify-between"><span className="text-text-mute">quality</span><span>{quality === '2k' ? '2K · QHD' : '1080p · FullHD'}</span></div>
-              <div className="flex justify-between"><span className="text-text-mute">bg</span><span>{background}</span></div>
+              <div className="flex justify-between"><span className="text-text-mute">качество</span><span>{quality === '2k' ? '2K · QHD' : '1080p · FullHD'}</span></div>
+              <div className="flex justify-between"><span className="text-text-mute">фон</span><span>{background}</span></div>
             </>
           )}
         </div>

@@ -46,7 +46,7 @@ function HistoryRow({ run }: { run: ParserRunSerialized }) {
         }
         setItems((json.items as ParserItemSerialized[]) || []);
       } catch (e) {
-        setError((e as Error).message || 'network error');
+        setError((e as Error).message || 'Нет связи с сервером');
       } finally {
         setLoading(false);
       }

@@ -174,7 +174,7 @@ export function EditForm({
             {/* Overlay summary */}
             <div className="absolute left-3 right-3 top-3 flex items-start justify-between gap-2">
               <span className="rounded-full bg-bg/75 px-2.5 py-1 text-[11px] font-semibold text-text backdrop-blur">
-                /preview · {selected?.aspect ?? '9:16'}
+                /превью · {selected?.aspect ?? '9:16'}
               </span>
               <span className="rounded-full bg-blue px-2.5 py-1 text-[11px] font-semibold text-white">
                 {preset?.name ?? template}
@@ -184,12 +184,12 @@ export function EditForm({
               <div className="flex flex-wrap gap-1.5">
                 {subtitlesEnabled && (
                   <span className="rounded-full bg-bg/75 px-2.5 py-1 text-[11px] font-semibold uppercase text-text backdrop-blur">
-                    cc · {subtitleLanguage.toUpperCase()}
+                    субт. · {subtitleLanguage.toUpperCase()}
                   </span>
                 )}
                 {brollsEnabled && (
                   <span className="rounded-full bg-lime px-2.5 py-1 text-[11px] font-semibold text-bg">
-                    B-rolls
+                    перебивки
                   </span>
                 )}
               </div>
@@ -439,7 +439,7 @@ export function EditForm({
                 <div className="grid min-w-0 gap-1">
                   <span className="label">04 · Опции</span>
                   <span className="truncate text-[15px] font-medium">
-                    {subtitlesEnabled ? 'CC on' : 'CC off'} · {brollsEnabled ? <span className="text-lime">B-rolls on</span> : 'B-rolls off'}
+                    {subtitlesEnabled ? 'субтитры вкл' : 'субтитры выкл'} · {brollsEnabled ? <span className="text-lime">перебивки вкл</span> : 'перебивки выкл'}
                   </span>
                 </div>
                 <ChevronDown size={16} className="shrink-0 text-text-mute" />
@@ -457,7 +457,7 @@ export function EditForm({
                   <div className="grid min-w-0 gap-1">
                     <span className="text-[14px] font-semibold">Субтитры</span>
                     <span className="text-[12px] leading-snug text-text-dim">
-                      Submagic всегда накладывает captions в стиле шаблона.
+                      Submagic всегда накладывает субтитры в стиле шаблона.
                     </span>
                   </div>
                 </label>
@@ -469,7 +469,7 @@ export function EditForm({
                     className="toggle"
                   />
                   <div className="grid min-w-0 gap-1">
-                    <span className="text-[14px] font-semibold">Magic B-rolls</span>
+                    <span className="text-[14px] font-semibold">Авто-перебивки</span>
                     <span className="text-[12px] leading-snug text-text-dim">
                       Авто-вставка релевантных сток-кадров. +1–2 мин рендера.
                     </span>

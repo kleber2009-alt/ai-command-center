@@ -34,7 +34,18 @@ services:
   s3:
     image: chrislusf/seaweedfs:4.48
     restart: unless-stopped
-    command: ["server", "-dir=/data", "-s3", "-s3.port=8333", "-s3.config=/etc/seaweedfs/s3.json", "-volume.max=0"]
+    # 1 GB volumes, grown one at a time: the defaults (30 GB volumes, 7 per
+    # grow) can't be allocated on a small disk and uploads fail with
+    # "No writable volumes".
+    command:
+      - server
+      - -dir=/data
+      - -s3
+      - -s3.port=8333
+      - -s3.config=/etc/seaweedfs/s3.json
+      - -volume.max=200
+      - -master.volumeSizeLimitMB=1024
+      - -master.defaultReplication=000
     volumes:
       - s3data:/data
       - ./s3.json:/etc/seaweedfs/s3.json:ro

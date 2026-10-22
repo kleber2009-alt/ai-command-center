@@ -162,7 +162,7 @@ export function NewPostClient({
           <h2 className="flex items-center gap-3"><span className="sec-num">/02</span><span className="sec-title">Подпись</span></h2>
           <textarea
             className="input min-h-[120px] resize-y"
-            placeholder="Текст поста (caption). Для Instagram — до 2200 символов, для Telegram — до 1024."
+            placeholder="Текст поста (подпись). Для Instagram — до 2200 символов, для Telegram — до 1024."
             value={caption}
             onChange={(e) => setCaption(e.target.value)}
             maxLength={2200}

@@ -109,7 +109,7 @@ export function BriefsClient({
           <Icon3D name="workspace" size={40} tile sway />
           <p className="text-[17px] font-semibold tracking-[-0.02em] text-text">Пока нет брифов</p>
           <p className="max-w-[52ch] text-[14px] leading-relaxed text-text-dim">
-            Создайте бриф с нуля или нажмите «Клонировать формат» на находке в Research.
+            Создайте бриф с нуля или нажмите «Клонировать формат» на находке в «Ресёрче».
           </p>
         </div>
       ) : (

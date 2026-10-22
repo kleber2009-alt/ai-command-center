@@ -10,7 +10,7 @@ type Method = 'cryptobot' | 'stars';
 
 const TRIAL = {
   id: 'trial' as const,
-  label: 'Trial',
+  label: 'Пробный',
   tokens: 43,
   usdt: '1.00',
   stars: 75,
@@ -18,9 +18,9 @@ const TRIAL = {
 };
 
 const PACKS = [
-  { id: 'starter', label: 'Starter', tokens: 100, usdt: '9.00', stars: 650,  desc: '1 видео или ~8 батчей аватаров' },
-  { id: 'pro',     label: 'Pro',     tokens: 400, usdt: '29.00', stars: 2100, desc: '~4 видео + аватары и обложки', featured: true },
-  { id: 'agency',  label: 'Agency',  tokens: 1200, usdt: '79.00', stars: 5700, desc: '~12 видео — для команды' },
+  { id: 'starter', label: 'Старт', tokens: 100, usdt: '9.00', stars: 650,  desc: '1 видео или ~8 батчей аватаров' },
+  { id: 'pro',     label: 'Про',     tokens: 400, usdt: '29.00', stars: 2100, desc: '~4 видео + аватары и обложки', featured: true },
+  { id: 'agency',  label: 'Агентство',  tokens: 1200, usdt: '79.00', stars: 5700, desc: '~12 видео — для команды' },
 ] as const;
 
 type CreateResp = {
@@ -83,7 +83,7 @@ export function BillingActions({ trialUsed }: { trialUsed?: boolean }) {
       });
       const j = (await res.json().catch(() => ({}))) as Partial<CreateResp> & { error?: string; detail?: string; status?: string };
       if (res.status === 409 && j.error === 'trial_already_used') {
-        setError(j.status === 'paid' ? 'Trial уже активирован. Дальше — Starter и выше.' : 'У тебя уже есть открытый trial-инвойс.');
+        setError(j.status === 'paid' ? 'Пробный пакет уже активирован. Дальше — «Старт» и выше.' : 'У тебя уже есть открытый счёт на пробный пакет.');
         return;
       }
       if (!res.ok || !j.payUrl) {
@@ -114,7 +114,7 @@ export function BillingActions({ trialUsed }: { trialUsed?: boolean }) {
 
   const priceLabel = (usdt: string, stars: number) =>
     method === 'stars'
-      ? <>{stars} <Star className="inline h-[0.55em] w-[0.55em] -translate-y-[0.1em] fill-amber text-amber" aria-label="Stars" /></>
+      ? <>{stars} <Star className="inline h-[0.55em] w-[0.55em] -translate-y-[0.1em] fill-amber text-amber" aria-label="звёзд" /></>
       : <>{usdt} <span className="text-[0.4em] font-semibold tracking-[0.04em] text-text-dim">USDT</span></>;
 
   return (
@@ -151,7 +151,7 @@ export function BillingActions({ trialUsed }: { trialUsed?: boolean }) {
           <div className="flex items-center gap-4">
             <Icon3D name="sparkles" size={32} tile="yellow" sway />
             <div className="grid gap-1">
-              <div className="label !text-amber">TRIAL · one-time</div>
+              <div className="label !text-amber">ПРОБНЫЙ · один раз</div>
               <div className="text-[28px] font-extrabold leading-tight tabular-nums tracking-[-0.02em] text-text">
                 {priceLabel(TRIAL.usdt, TRIAL.stars)}
               </div>
@@ -190,7 +190,7 @@ export function BillingActions({ trialUsed }: { trialUsed?: boolean }) {
                   {p.label}
                 </span>
                 {featured && (
-                  <span className="rounded-full bg-lime px-2.5 py-0.5 text-[11px] font-semibold uppercase tracking-[0.04em] text-bg">recommended</span>
+                  <span className="rounded-full bg-lime px-2.5 py-0.5 text-[11px] font-semibold uppercase tracking-[0.04em] text-bg">советуем</span>
                 )}
               </div>
               <div className="text-[44px] font-extrabold leading-none tabular-nums tracking-[-0.03em] text-text mb-1">
@@ -207,7 +207,7 @@ export function BillingActions({ trialUsed }: { trialUsed?: boolean }) {
               disabled={busy !== null || (method === 'stars' && !inTma)}
               className={`mt-6 w-full ${featured ? 'btn-primary' : 'btn-ghost'}`}
             >
-              {busy === p.id ? 'Создаём…' : `Купить · +${p.tokens}t`}
+              {busy === p.id ? 'Создаём…' : `Купить · +${p.tokens} ток.`}
               {busy !== p.id && <ArrowRight className="h-4 w-4" />}
             </button>
           </div>
@@ -221,7 +221,7 @@ export function BillingActions({ trialUsed }: { trialUsed?: boolean }) {
             <Icon3D name="processing" size={28} tile="lime" sway />
             <div>
               <div className="label !text-lime mb-1">
-                waiting
+                ждём оплату
               </div>
               <div className="text-[14.5px] text-text">
                 Инвойс {activeInvoice.amount} {activeInvoice.asset === 'XTR' ? '★' : activeInvoice.asset} открыт.
@@ -251,9 +251,9 @@ export function BillingActions({ trialUsed }: { trialUsed?: boolean }) {
 
       <p className="text-[12.5px] text-text-mute">
         {method === 'stars' ? (
-          <>Оплата Telegram Stars · мгновенное зачисление через бот-webhook</>
+          <>Оплата Telegram Stars · мгновенное зачисление через бота</>
         ) : (
-          <>Оплата через <a href="https://t.me/CryptoBot" target="_blank" rel="noopener noreferrer" className="text-gold hover:underline">@CryptoBot</a> · USDT/TON/BTC · авто-зачисление в течение ~30 сек</>
+          <>Оплата через <a href="https://t.me/CryptoBot" target="_blank" rel="noopener noreferrer" className="text-gold hover:underline">@CryptoBot</a> · USDT/TON/BTC · автозачисление в течение ~30 сек</>
         )}
       </p>
     </div>

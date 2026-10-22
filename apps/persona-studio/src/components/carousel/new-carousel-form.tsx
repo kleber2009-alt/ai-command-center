@@ -37,7 +37,7 @@ export function NewCarouselForm({ defaultStyle = 'skill-palii' }: { defaultStyle
       }
       router.push(`/carousels/new?draftId=${json.draftId}`);
     } catch (err) {
-      setError(err instanceof Error ? err.message : 'network_error');
+      setError(err instanceof Error ? err.message : 'Нет связи с сервером');
     } finally {
       setBusy(false);
     }

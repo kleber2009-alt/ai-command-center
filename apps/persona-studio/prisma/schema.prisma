@@ -166,6 +166,9 @@ model Avatar {
   promptUsed    String?          @db.Text
   selected      Boolean          @default(false)
   errorMsg      String?
+  // HeyGen v3 photo-avatar created from this image — reused by later videos
+  // and job retries (creating one costs HeyGen credits).
+  heygenAvatarId String?
   createdAt     DateTime         @default(now())
 
   videos         VideoGeneration[]

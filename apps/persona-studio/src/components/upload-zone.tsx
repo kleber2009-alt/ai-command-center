@@ -35,7 +35,7 @@ function describeFailure(f: UploadFailure): string {
     case 'file_too_large': {
       const mb = f.bytes ? (f.bytes / 1024 / 1024).toFixed(1) : '?';
       const lim = f.max ? Math.round(f.max / 1024 / 1024) : '?';
-      return `${who}: слишком большой (${mb} MB, лимит ${lim} MB)`;
+      return `${who}: слишком большой (${mb} МБ, лимит ${lim} МБ)`;
     }
     case 'heic_decode_failed':
       return `${who}: HEIC не декодируется — пересохрани как JPG`;
@@ -189,18 +189,18 @@ export function UploadZone({
         <div className="mb-4 flex justify-center">
           <Icon3D name={busy === 'uploading' ? 'processing' : 'assets'} size={34} tile sway />
         </div>
-        <div className="sec-num mb-3">/00 · upload</div>
+        <div className="sec-num mb-3">/00 · загрузка</div>
         <div className="mx-auto mb-3 max-w-[34ch] text-[22px] font-semibold leading-tight tracking-[-0.02em] sm:text-[26px]">
           {slotsLeft > 0
             ? `Перетащи до ${slotsLeft} фото или нажми, чтобы выбрать.`
             : `Лимит ${MAX_PHOTOS} фото достигнут — удали лишние.`}
         </div>
         <div className="text-[12px] text-text-mute">
-          JPG · PNG · WEBP · HEIC · до 20 MB · мин. 512×512 · до {MAX_PHOTOS} фото на аккаунт
+          JPG · PNG · WEBP · HEIC · до 20 МБ · мин. 512×512 · до {MAX_PHOTOS} фото на аккаунт
         </div>
         {busy === 'uploading' && (
           <div className="mt-5 flex justify-center">
-            <span className="status-badge status-processing">/UPLOADING…</span>
+            <span className="status-badge status-processing">загружаем…</span>
           </div>
         )}
       </div>
@@ -209,7 +209,7 @@ export function UploadZone({
       {uploads.length > 0 && (
         <div>
           <div className="mb-4 flex flex-wrap items-center gap-3">
-            <span className="sec-num">/01 · pick primary</span>
+            <span className="sec-num">/01 · основное фото</span>
             <span className="sec-title">выбери фото, по которому строим 10 аватаров</span>
             <span className="hidden h-px flex-1 bg-border-soft sm:block" />
             <span className="text-[12px] text-text-mute tabular-nums">
@@ -240,7 +240,7 @@ export function UploadZone({
                   {isPrimary && (
                     <span className="pop-in absolute left-2 top-2 inline-flex items-center gap-1 rounded-full bg-blue px-2.5 py-1 text-[11px] font-semibold text-white">
                       <Check size={12} aria-hidden />
-                      primary
+                      основное
                     </span>
                   )}
                   <span className="absolute bottom-2 left-2.5 text-[11px] font-medium text-white/80 tabular-nums">
@@ -302,7 +302,7 @@ export function UploadZone({
         </span>
         {error && (
           <span className="fade-in w-full rounded-2xl border border-danger/30 bg-danger/10 px-4 py-2.5 text-[13px] text-danger">
-            /ERROR — {error}
+            Ошибка — {error}
           </span>
         )}
       </div>

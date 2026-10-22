@@ -63,7 +63,7 @@ export function CoverPickerPopover({ open, avatars, selectedId, onSelect, onClos
 
       {avatars.length === 0 ? (
         <div className="p-4 text-[13px] text-text-mute">
-          У тебя нет готовых аватаров — сначала сделай хотя бы один в /generate.
+          У тебя нет готовых аватаров — сначала сделай хотя бы один в «Аватаре».
         </div>
       ) : (
         <div className="max-h-[260px] overflow-y-auto p-2 [&::-webkit-scrollbar]:w-1.5 [&::-webkit-scrollbar-thumb]:bg-border-2">
@@ -92,7 +92,7 @@ export function CoverPickerPopover({ open, avatars, selectedId, onSelect, onClos
                   />
                   {isSelected && (
                     <span className="absolute bottom-1 right-1 rounded-full bg-blue px-1.5 py-0.5 text-[9px] font-semibold uppercase text-white">
-                      cover
+                      обложка
                     </span>
                   )}
                 </button>

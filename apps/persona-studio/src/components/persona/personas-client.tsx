@@ -57,7 +57,7 @@ const EMPTY_FORM: FormState = {
 
 const LANGS = [
   { v: 'ru', label: 'Русский' },
-  { v: 'en', label: 'English' },
+  { v: 'en', label: 'Английский' },
 ];
 const LENGTHS: Array<{ v: PersonaToneLength; label: string }> = [
   { v: 'short', label: 'Короткие' },
@@ -199,7 +199,7 @@ export function PersonasClient({ initialPersonas, avatarOptions }: Props) {
   return (
     <div className="grid gap-6">
       <PageHero
-        eyebrow="аватар · голос · бренд · tone-of-voice"
+        eyebrow="аватар · голос · бренд · тон"
         title="Персоны"
         icon="personas"
         extra={
@@ -267,7 +267,7 @@ export function PersonasClient({ initialPersonas, avatarOptions }: Props) {
                 <div className="flex flex-wrap gap-1.5">
                   <Tag icon={<Mic size={12} />} on={!!p.voiceId} label={p.voiceId ? 'голос' : 'нет голоса'} />
                   <Tag icon={<Palette size={12} />} on={!!p.brand.primary} label="бренд" />
-                  {p.tone.length && <Tag label={`tone: ${p.tone.length}`} on />}
+                  {p.tone.length && <Tag label={`тексты: ${(LENGTHS.find((l) => l.v === p.tone.length)?.label ?? p.tone.length).toLowerCase()}`} on />}
                 </div>
 
                 {(p.brand.primary || p.brand.accent) && (
@@ -438,7 +438,7 @@ function PersonaForm({
         </Field>
       </div>
 
-      <Field label="Аватар (talking-head источник)">
+      <Field label="Аватар (лицо для говорящего видео)">
         {avatarOptions.length === 0 ? (
           <p className="text-[13px] text-text-mute">
             Нет готовых аватаров — создайте их в разделе «Аватар»
@@ -499,7 +499,7 @@ function PersonaForm({
         </Field>
       </div>
 
-      <Field label="Tone-of-voice — примеры постов (по одному на строку)">
+      <Field label="Тон — примеры постов (по одному на строку)">
         <textarea
           value={form.examples}
           onChange={(e) => set('examples', e.target.value)}

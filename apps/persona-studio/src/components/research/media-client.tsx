@@ -141,7 +141,7 @@ export function MediaClient() {
     setError(null);
     try {
       const res = await fetch(`/api/research/media?${buildBrowseQuery(f, cur)}`);
-      if (!res.ok) throw new Error(`HTTP ${res.status}`);
+      if (!res.ok) throw new Error(errorText(null, res.status));
       const data = await res.json();
       if (rid !== reqRef.current) return;
       setItems((prev) => (more ? [...prev, ...data.items] : data.items));
@@ -269,7 +269,7 @@ export function MediaClient() {
     <div className="grid gap-5">
       {/* ── Header ── */}
       <PageHero
-        eyebrow="RESEARCH · MEDIA"
+        eyebrow="РЕСЁРЧ · МЕДИА"
         title="Медиа"
         icon="media"
         description="Поиск контента по постам · фильтры виральности и ниши"
@@ -439,7 +439,7 @@ export function MediaClient() {
                 type="button"
                 onClick={() => hide(r.id)}
                 title="Скрыть пост"
-                aria-label="hide"
+                aria-label="Скрыть"
                 className="absolute top-2.5 right-12 z-10 inline-flex h-8 w-8 items-center justify-center rounded-full border border-white/15 bg-black/55 text-text opacity-0 backdrop-blur-md transition-opacity hover:border-pink/60 hover:text-pink group-hover:opacity-100"
               >
                 <EyeOff className="h-3.5 w-3.5" />

@@ -66,7 +66,7 @@ export function ParserSetup({ initial, onSaved, onCancel }: Props) {
       }
       onSaved(json.config);
     } catch (err) {
-      setError((err as Error).message || 'network error');
+      setError((err as Error).message || 'Нет связи с сервером');
     } finally {
       setSaving(false);
     }
@@ -96,7 +96,7 @@ export function ParserSetup({ initial, onSaved, onCancel }: Props) {
           className="input !min-h-0"
         />
         <span className="text-[12px] text-text-mute">
-          Claude использует ниху как эталон при оценке fit-to-niche 1–10.
+          Claude сверяет посты с нишей и ставит оценку соответствия 1–10.
         </span>
       </label>
 
@@ -156,16 +156,16 @@ export function ParserSetup({ initial, onSaved, onCancel }: Props) {
           <NumberField label="Мин. репостов" value={minShares} onChange={setMinShares} min={0} step={100} />
         </div>
         <p className="text-[12px] leading-relaxed text-text-mute">
-          Reels дефолт: 100k просмотров / 1k лайков / 1k комментариев / 1k репостов. Apify не у всех постов отдаёт счётчик репостов — посты без этого поля проходят фильтр.
+          Reels по умолчанию: 100k просмотров / 1k лайков / 1k комментариев / 1k репостов. Apify не у всех постов отдаёт счётчик репостов — посты без этого поля проходят фильтр.
         </p>
 
-        <div className="label !text-text-dim mt-2">Carousels</div>
+        <div className="label !text-text-dim mt-2">Карусели</div>
         <div className="grid sm:grid-cols-2 gap-4">
           <NumberField label="Мин. лайков (карусели)" value={minCarouselLikes} onChange={setMinCarouselLikes} min={0} step={100} />
           <NumberField label="Мин. комментариев (карусели)" value={minCarouselComments} onChange={setMinCarouselComments} min={0} step={10} />
         </div>
         <p className="text-[12px] leading-relaxed text-text-mute">
-          Carousels дефолт: 1k лайков / 1k комментариев — тот же бар что у рилсов. У каруселей нет plays и shares, поэтому фильтр идёт только по этим двум метрикам.
+          Карусели по умолчанию: 1k лайков / 1k комментариев — та же планка, что у рилсов. У каруселей нет просмотров и репостов, поэтому фильтр идёт только по этим двум метрикам.
         </p>
       </details>
 

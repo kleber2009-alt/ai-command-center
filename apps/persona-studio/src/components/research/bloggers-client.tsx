@@ -468,7 +468,7 @@ function Analysis({ author, seed, onClose, onToggleSpy, onToast }: {
             ['Подписчики', fmt(author.followers), 'text', a?.delta30 != null ? `${a.delta30 >= 0 ? '+' : ''}${a.delta30.toFixed(1)}% / 30д` : '—'],
             ['Медиана', fmt(median), 'blue', `постов: ${author.postsCount || '—'}`],
             ['Вовлечение', author.engagementAvg.toFixed(1) + '%', erTone(author.engagementAvg), a?.perWeek != null ? `${a.perWeek} постов/нед` : '—'],
-            ['Hit-rate', (a?.hitRate ?? 0) + '%', (a?.hitRate ?? 0) >= 45 ? 'lime' : 'mute', 'выше медианы'],
+            ['Доля хитов', (a?.hitRate ?? 0) + '%', (a?.hitRate ?? 0) >= 45 ? 'lime' : 'mute', 'выше медианы'],
           ] as Array<[string, string, Tone, string]>).map(([l, v, c, sub], k) => (
             <div key={k} className={`${tile} px-4 py-3.5`}>
               <div className="label mb-1.5 !text-[10px]">{l}</div>
@@ -535,7 +535,7 @@ function Analysis({ author, seed, onClose, onToggleSpy, onToast }: {
                   <div className="mt-1.5 text-[12.5px] text-text-dim">{a.cv < 0.8 ? 'Стабильно выстреливает' : a.cv < 1.2 ? 'Умеренный разброс' : '«Лотерея» — редкие хиты'}</div>
                 </div>
                 <div className={`${tile} p-4`}>
-                  <div className="label mb-2 !text-[10px]">Hit-rate</div>
+                  <div className="label mb-2 !text-[10px]">Доля хитов</div>
                   <div className={`text-[24px] font-extrabold tabular-nums tracking-[-0.02em] ${a.hitRate >= 45 ? 'text-lime' : 'text-text-mute'}`}>{a.hitRate}%</div>
                   <div className="mt-1.5 text-[12.5px] text-text-dim">постов выше медианы канала</div>
                 </div>
@@ -550,7 +550,7 @@ function Analysis({ author, seed, onClose, onToggleSpy, onToast }: {
                   {a.topViral.map(({ r, x }, k) => (
                     <a key={r.id} href={r.url} target="_blank" rel="noreferrer" className={`${tile} flex items-center gap-3 px-3.5 py-2.5 no-underline transition-colors hover:border-gold/40 hover:bg-white/[0.06]`}>
                       <span className={`flex h-8 w-11 flex-none items-center justify-center rounded-full text-[12px] font-bold tabular-nums ${x >= 2 ? 'bg-lime text-bg' : 'bg-white/[0.08] text-text'}`}>{x.toFixed(1)}x</span>
-                      <span className="flex-1 truncate text-[13px] text-text-dim">{r.caption?.slice(0, 60) || `Reel #${k + 1}`}</span>
+                      <span className="flex-1 truncate text-[13px] text-text-dim">{r.caption?.slice(0, 60) || `Рилс №${k + 1}`}</span>
                       <span className="text-[13px] font-semibold tabular-nums text-gold">{fmt(r.views)}</span>
                     </a>
                   ))}
@@ -739,7 +739,7 @@ function AddModal({ onClose, onAdded, onToast }: { onClose: () => void; onAdded:
         </div>
         <div className="relative mb-4">
           <span className="pointer-events-none absolute left-4 top-1/2 -translate-y-1/2 text-[14px] text-text-mute">@</span>
-          <input autoFocus value={username} onChange={(e) => setUsername(e.target.value)} onKeyDown={(e) => e.key === 'Enter' && submit()} placeholder="instagram username" className="input !rounded-full !pl-9" />
+          <input autoFocus value={username} onChange={(e) => setUsername(e.target.value)} onKeyDown={(e) => e.key === 'Enter' && submit()} placeholder="username в Instagram" className="input !rounded-full !pl-9" />
         </div>
         <div className="flex gap-2">
           <button type="button" onClick={onClose} className="btn-ghost flex-1">Отмена</button>

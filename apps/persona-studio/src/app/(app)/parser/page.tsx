@@ -5,7 +5,7 @@ import { ParserClient } from '@/components/parser/parser-client';
 import { PageHero } from '@/components/shell/page-hero';
 
 export const dynamic = 'force-dynamic';
-export const metadata = { title: 'Parser — Persona Studio' };
+export const metadata = { title: 'Парсер — Persona Studio' };
 
 export default async function ParserPage() {
   const user = await getCurrentUser();
@@ -36,16 +36,16 @@ export default async function ParserPage() {
     <div className="grid gap-8">
       <PageHero
         icon="viral"
-        eyebrow="TREND INTELLIGENCE · VIRAL DISCOVER"
+        eyebrow="ТРЕНДЫ · ВИРАЛЬНЫЕ ПОСТЫ"
         title={
           <>
-            Viral posts of competitors — <span className="italic text-gold">ready to work.</span>
+            Виральные посты конкурентов — <span className="italic text-gold">бери в работу.</span>
           </>
         }
         description="Каждое утро AI смотрит, что взлетает у твоих конкурентов в Instagram, и оценивает каждый пост 1–10. Один клик — пост уходит в съёмку видео, затем в монтаж."
         meta={
           <>
-            <div className="label">In feed</div>
+            <div className="label">В ленте</div>
             <div className="text-[32px] font-extrabold tabular-nums tracking-[-0.02em] text-gold leading-none">{items.length}</div>
           </>
         }

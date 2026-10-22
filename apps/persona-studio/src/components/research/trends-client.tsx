@@ -66,7 +66,7 @@ export function TrendsClient({
   return (
     <div className="grid gap-5">
       <PageHero
-        eyebrow="RESEARCH · TRENDS"
+        eyebrow="РЕСЁРЧ · ТРЕНДЫ"
         title="Тренды"
         icon="trends"
         description="аудио · хуки · форматы · темы за окно"

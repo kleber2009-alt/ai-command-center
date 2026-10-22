@@ -5,7 +5,7 @@ import { ApiKeysManager } from '@/components/api-keys-manager';
 import { PageHero } from '@/components/shell/page-hero';
 
 export const dynamic = 'force-dynamic';
-export const metadata = { title: 'API keys — Persona Studio' };
+export const metadata = { title: 'API-ключи — Persona Studio' };
 
 export default async function ApiKeysPage() {
   const user = await getCurrentUser();
@@ -31,13 +31,13 @@ export default async function ApiKeysPage() {
     <div className="grid gap-8">
       <PageHero
         icon="keys"
-        eyebrow="SETTINGS · INTEGRATIONS · API KEYS"
+        eyebrow="НАСТРОЙКИ · ИНТЕГРАЦИИ · API-КЛЮЧИ"
         title={
           <>
-            Programmatic access — <span className="italic text-gold">your studio as an API.</span>
+            Доступ из кода — <span className="italic text-gold">твоя студия как API.</span>
           </>
         }
-        description="Ключи нужны для интеграции Persona Studio в сторонние приложения через SDK или прямые HTTP-вызовы. Один ключ = доступ ко всем данным аккаунта. Plaintext показывается ровно один раз при создании — сохрани сразу."
+        description="Ключи нужны для интеграции Persona Studio в сторонние приложения через SDK или прямые HTTP-вызовы. Один ключ = доступ ко всем данным аккаунта. Полный ключ показывается ровно один раз при создании — сохрани сразу."
         meta={
           <>
             <div className="label">SDK</div>
@@ -56,7 +56,7 @@ export default async function ApiKeysPage() {
       />
 
       <section className="grid gap-3 mt-2">
-        <h2 className="flex items-center gap-3"><span className="sec-num">/02</span><span className="sec-title">Quickstart</span></h2>
+        <h2 className="flex items-center gap-3"><span className="sec-num">/02</span><span className="sec-title">Быстрый старт</span></h2>
         <pre className="panel !bg-black/30 p-5 text-[12.5px] font-mono text-text-dim overflow-x-auto leading-relaxed">
 {`import { createPersonaClient } from '@persona-studio/sdk';
 

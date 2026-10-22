@@ -12,7 +12,7 @@ import { Icon3D } from '@/components/ui/icon3d';
 import { reasonLabel, txTypeLabel } from '@/lib/token-reasons';
 
 export const dynamic = 'force-dynamic';
-export const metadata = { title: 'Billing — Persona Studio' };
+export const metadata = { title: 'Оплата — Persona Studio' };
 
 export default async function BillingPage() {
   const user = await getCurrentUser();

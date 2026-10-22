@@ -5,6 +5,7 @@ import Link from 'next/link';
 import { ArrowRight, Check, Download, Loader2 } from 'lucide-react';
 import { Icon3D } from '@/components/ui/icon3d';
 import { errorText, exceptionText } from '@/lib/error-text';
+import { statusLabel } from '@/lib/i18n';
 
 type Avatar = {
   id: string;
@@ -76,13 +77,13 @@ export function AvatarGrid({ generationId }: { generationId: string }) {
 
   if (err)
     return (
-      <p className="rounded-2xl border border-danger/30 bg-danger/10 px-4 py-3 text-[13px] text-danger">/ERROR {err}</p>
+      <p className="rounded-2xl border border-danger/30 bg-danger/10 px-4 py-3 text-[13px] text-danger">Ошибка: {err}</p>
     );
   if (!gen)
     return (
       <p className="inline-flex items-center gap-2 text-[13px] text-text-mute">
         <Loader2 size={15} className="animate-spin" aria-hidden />
-        /LOADING…
+        Загрузка…
       </p>
     );
 
@@ -93,9 +94,9 @@ export function AvatarGrid({ generationId }: { generationId: string }) {
     <div className="grid gap-6">
       <div className="flex flex-wrap items-center gap-3">
         <span className="sec-num">/00</span>
-        <span className="sec-title">Generation {gen.id.slice(0, 8)}</span>
+        <span className="sec-title">Генерация {gen.id.slice(0, 8)}</span>
         <span className="hidden h-px flex-1 bg-border-soft sm:block" />
-        <span className={`status-badge status-${statusCls}`}>{gen.status}</span>
+        <span className={`status-badge status-${statusCls}`}>{statusLabel(gen.status)}</span>
       </div>
 
       <div className="stagger grid grid-cols-2 gap-3 md:grid-cols-5">
@@ -132,9 +133,9 @@ export function AvatarGrid({ generationId }: { generationId: string }) {
             <div className="absolute inset-x-0 bottom-0 z-[2] bg-gradient-to-t from-black/90 via-black/55 to-transparent px-3 pb-2.5 pt-8">
               <div className="line-clamp-2 text-[13px] font-semibold leading-tight tracking-[-0.01em] sm:text-[14px]">{a.styleLabel}</div>
               <div className={`mt-1 text-[11px] ${a.status === 'failed' ? 'text-danger' : a.selected ? 'text-gold' : 'text-text-dim'}`}>
-                {a.status === 'pending' && '/queued…'}
-                {a.status === 'done' && (a.selected ? '/selected' : '/ready · tap to choose')}
-                {a.status === 'failed' && '/failed'}
+                {a.status === 'pending' && 'в очереди…'}
+                {a.status === 'done' && (a.selected ? 'выбран' : 'готов · нажми, чтобы выбрать')}
+                {a.status === 'failed' && 'ошибка'}
               </div>
             </div>
 
@@ -152,14 +153,14 @@ export function AvatarGrid({ generationId }: { generationId: string }) {
                 ) : a.selected ? (
                   <span className="pop-in inline-flex items-center gap-1.5 rounded-full bg-blue px-3 py-1.5 text-[12px] font-semibold text-white shadow-glow">
                     <Check size={14} aria-hidden />
-                    Selected
+                    Выбран
                   </span>
                 ) : null}
               </button>
             )}
             {a.status === 'pending' && (
               <div className="pointer-events-none absolute inset-0 flex items-center justify-center">
-                <span className="status-badge status-processing">/RENDER</span>
+                <span className="status-badge status-processing">рендер</span>
               </div>
             )}
           </div>
@@ -171,7 +172,7 @@ export function AvatarGrid({ generationId }: { generationId: string }) {
           <div className="flex items-center gap-4">
             <Icon3D name="done" size={28} tile />
             <div>
-              <div className="label mb-1 !text-lime">/ selected</div>
+              <div className="label mb-1 !text-lime">/ выбран</div>
               <div className="text-[20px] font-semibold tracking-[-0.02em] sm:text-[22px]">{selected.styleLabel}</div>
             </div>
           </div>

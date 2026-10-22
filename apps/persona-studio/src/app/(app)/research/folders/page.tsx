@@ -21,13 +21,13 @@ export default async function FoldersIndex() {
     <div className="grid gap-8">
       <PageHero
         icon="folders"
-        eyebrow="LIBRARY · FOLDERS"
+        eyebrow="БИБЛИОТЕКА · ПАПКИ"
         title={
           <>
             Папки и проекты — <span className="italic text-gold">блогеры, видео, идеи.</span>
           </>
         }
-        description="Сохраняй найденных конкурентов в папку «Блогеры», залётные ролики — в «Видео», action-пункты из рекомендаций — в «Идеи». Каждая папка живёт сама по себе и не теряется между поисками."
+        description="Сохраняй найденных конкурентов в папку «Блогеры», залётные ролики — в «Видео», пункты действий из рекомендаций — в «Идеи». Каждая папка живёт сама по себе и не теряется между поисками."
       />
       <FoldersClient
         initialFolders={folders.map((f) => ({

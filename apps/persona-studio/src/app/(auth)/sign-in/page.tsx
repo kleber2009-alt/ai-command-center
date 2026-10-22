@@ -2,7 +2,7 @@ import { ArrowRight, Check, AlertCircle } from 'lucide-react';
 import { signIn } from '@/lib/auth';
 import { Icon3D } from '@/components/ui/icon3d';
 
-export const metadata = { title: 'Sign in — Persona Studio' };
+export const metadata = { title: 'Вход — Persona Studio' };
 // Force per-request rendering so the page reflects current runtime env
 // (AUTH_GOOGLE_ID, EMAIL_SERVER_HOST) — otherwise Next.js statically
 // pre-renders at build time and bakes in whatever providers existed then.
@@ -36,14 +36,14 @@ export default function SignInPage({ searchParams }: { searchParams: Promise<{ e
               <div className="text-[17px] font-semibold tracking-[-0.02em] lowercase leading-tight">
                 persona <span className="text-gold">studio</span>
               </div>
-              <div className="text-[11px] text-text-mute">v0.1 · beta</div>
+              <div className="text-[11px] text-text-mute">v0.1 · бета</div>
             </div>
           </div>
 
           <div className="panel p-6 sm:p-8 shadow-glass reveal">
             <div className="eyebrow mb-5">
               <span className="h-1.5 w-1.5 rounded-full bg-gold shadow-[0_0_8px_2px_rgba(59,140,255,0.6)]" />
-              / 00 · access
+              / 00 · вход
             </div>
             <h1 className="display-2 !text-[38px] sm:!text-[44px] mb-3">Войди в студию.</h1>
             <p className="text-[15px] sm:text-[16px] leading-[1.6] text-text-dim mb-7 max-w-[40ch]">
@@ -55,7 +55,7 @@ export default function SignInPage({ searchParams }: { searchParams: Promise<{ e
             {googleOn && emailOn && (
               <div className="flex items-center gap-3 my-5">
                 <span className="flex-1 border-b border-border-soft" />
-                <span className="text-[12px] text-text-mute">or</span>
+                <span className="text-[12px] text-text-mute">или</span>
                 <span className="flex-1 border-b border-border-soft" />
               </div>
             )}
@@ -64,9 +64,9 @@ export default function SignInPage({ searchParams }: { searchParams: Promise<{ e
 
             {!googleOn && !emailOn && (
               <div className="rounded-[18px] border border-pink/25 bg-pink/[0.08] p-5">
-                <p className="text-[12px] font-semibold uppercase tracking-[0.08em] text-pink mb-2">/ no-providers</p>
+                <p className="text-[12px] font-semibold uppercase tracking-[0.08em] text-pink mb-2">/ вход недоступен</p>
                 <p className="text-[14px] text-text-dim">
-                  Sign-in temporarily unavailable. Свяжись с админом в Telegram —{' '}
+                  Вход временно недоступен. Свяжись с админом в Telegram —{' '}
                   <a href="https://t.me/ilia_pali0" className="text-gold hover:underline">@ilia_pali0</a>.
                 </p>
               </div>
@@ -90,7 +90,7 @@ export default function SignInPage({ searchParams }: { searchParams: Promise<{ e
 
         <div className="relative px-10 xl:px-16 py-12">
           <div className="flex items-center justify-between mb-8 max-w-[640px]">
-            <span className="sec-num">/ examples</span>
+            <span className="sec-num">/ примеры</span>
             <span className="text-[12px] text-text-mute">обложки · карусели</span>
           </div>
 
@@ -120,12 +120,12 @@ type Cover = {
 };
 
 const SHOWCASE: Cover[] = [
-  { kicker: '01 · burnout', title: 'ВЫГОРАНИЕ — ЭТО НЕ ЛЕНЬ', subtitle: 'симптомы, которые ты пропустил', cta: 'читать', tone: 'pink' },
-  { kicker: '02 · hooks', title: 'ПОЧЕМУ ТВОЙ ХУК СКУЧНЫЙ', subtitle: 'пять фиксов от автора с 2M', cta: 'разбор', tone: 'lime' },
-  { kicker: '03 · story', title: 'Я ПРОВАЛИЛСЯ 47 РАЗ', subtitle: 'и сделал один виральный', cta: 'история', tone: 'cyan' },
-  { kicker: '04 · rhythm', title: 'НЕ ПОСТЬ. ВЫПУСКАЙ.', subtitle: 'новый ритм для Instagram', cta: 'метод', tone: 'warm' },
-  { kicker: '05 · craft', title: 'ОДНО ФОТО — ДЕСЯТЬ ЛИЦ', subtitle: 'за две минуты, без фотографа', cta: 'попробуй', tone: 'lime' },
-  { kicker: '06 · cold start', title: 'КОНТЕНТ БЕЗ ВДОХНОВЕНИЯ', subtitle: 'парсер найдёт, что выстрелит', cta: 'парсер', tone: 'pink' },
+  { kicker: '01 · выгорание', title: 'ВЫГОРАНИЕ — ЭТО НЕ ЛЕНЬ', subtitle: 'симптомы, которые ты пропустил', cta: 'читать', tone: 'pink' },
+  { kicker: '02 · хуки', title: 'ПОЧЕМУ ТВОЙ ХУК СКУЧНЫЙ', subtitle: 'пять фиксов от автора с 2M', cta: 'разбор', tone: 'lime' },
+  { kicker: '03 · история', title: 'Я ПРОВАЛИЛСЯ 47 РАЗ', subtitle: 'и сделал один виральный', cta: 'история', tone: 'cyan' },
+  { kicker: '04 · ритм', title: 'НЕ ПОСТЬ. ВЫПУСКАЙ.', subtitle: 'новый ритм для Instagram', cta: 'метод', tone: 'warm' },
+  { kicker: '05 · ремесло', title: 'ОДНО ФОТО — ДЕСЯТЬ ЛИЦ', subtitle: 'за две минуты, без фотографа', cta: 'попробуй', tone: 'lime' },
+  { kicker: '06 · с нуля', title: 'КОНТЕНТ БЕЗ ВДОХНОВЕНИЯ', subtitle: 'парсер найдёт, что выстрелит', cta: 'парсер', tone: 'pink' },
 ];
 
 function CoverPreview({ kicker, title, subtitle, cta, tone }: Cover) {
@@ -197,30 +197,30 @@ async function EmailForm({ error }: { error: Promise<{ error?: string; sent?: st
   return (
     <form action={action} className="grid gap-3">
       <label className="grid gap-2">
-        <span className="label">Email</span>
+        <span className="label">Почта</span>
         <input
           name="email"
           type="email"
           required
-          placeholder="you@studio.com"
+          placeholder="ты@почта.ru"
           className="input"
           autoComplete="email"
         />
       </label>
       <button type="submit" className="btn-ghost justify-center w-full">
-        Прислать magic-link
+        Прислать ссылку для входа
         <ArrowRight size={16} strokeWidth={2.2} aria-hidden="true" />
       </button>
       {params.sent && (
         <p className="mt-1 inline-flex items-center gap-2 rounded-full bg-green/10 px-3 py-1.5 text-[13px] text-green">
           <Check size={14} strokeWidth={2.4} aria-hidden="true" />
-          /SENT — проверь почту.
+          Отправили — проверь почту.
         </p>
       )}
       {params.error && (
         <p className="mt-1 inline-flex items-center gap-2 rounded-full bg-danger/10 px-3 py-1.5 text-[13px] text-danger break-all">
           <AlertCircle size={14} strokeWidth={2.4} aria-hidden="true" />
-          /ERROR — {params.error}
+          Ошибка — {params.error}
         </p>
       )}
     </form>

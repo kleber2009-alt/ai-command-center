@@ -138,7 +138,7 @@ export function ResearchReelCard({ reel, blurred, initialFavorited = false }: Pr
             onClick={toggleFavorite}
             className={`${thumbBtn} ${favorited ? '!border-pink/60 !text-pink' : 'hover:!text-pink'}`}
             title={favorited ? 'В избранном (клик чтобы убрать)' : 'В избранное'}
-            aria-label="favorite"
+            aria-label="В избранное"
           >
             <Heart className={`h-3.5 w-3.5 ${favorited ? 'fill-current' : ''}`} />
           </button>
@@ -147,7 +147,7 @@ export function ResearchReelCard({ reel, blurred, initialFavorited = false }: Pr
             onClick={() => setShowFolderModal(true)}
             className={thumbBtn}
             title="В папку"
-            aria-label="add to folder"
+            aria-label="Добавить в папку"
           >
             <FolderPlus className="h-3.5 w-3.5" />
           </button>
@@ -167,7 +167,7 @@ export function ResearchReelCard({ reel, blurred, initialFavorited = false }: Pr
             disabled={cloning}
             className={`${thumbBtn} disabled:opacity-50`}
             title="Клонировать формат → бриф в воркспейсе"
-            aria-label="clone format"
+            aria-label="Повторить формат"
           >
             {cloning ? <RefreshCw className="h-3.5 w-3.5 animate-spin" /> : <Copy className="h-3.5 w-3.5" />}
           </button>

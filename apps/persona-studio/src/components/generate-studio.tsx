@@ -67,10 +67,10 @@ export function GenerateStudio({ initialUploads, cost }: { initialUploads: Initi
 
       {/* MODE SWITCHER */}
       <section>
-        <SecHead num="/01" title="Что сгенерировать" meta={`mode: ${mode}`} />
+        <SecHead num="/01" title="Что сгенерировать" meta={`режим: ${mode === 'default' ? 'базовый' : mode === 'niche' ? 'ниша' : 'свой'}`} />
         <div className="stagger grid grid-cols-1 gap-3 sm:grid-cols-3">
           <ModeBtn active={mode === 'default'} onClick={() => setMode('default')}
-            icon="sparkles" label="Default 10" sub="фирменные режиссёрские стили" />
+            icon="sparkles" label="Базовые 10" sub="фирменные режиссёрские стили" />
           <ModeBtn active={mode === 'niche'} onClick={() => setMode('niche')}
             icon="bloggers" label="По нише" sub="20 ниш × 10 паков" />
           <ModeBtn active={mode === 'custom'} onClick={() => setMode('custom')}
@@ -81,7 +81,7 @@ export function GenerateStudio({ initialUploads, cost }: { initialUploads: Initi
       {/* DEFAULT — 10 fixed styles */}
       {mode === 'default' && (
         <section>
-          <SecHead num="/02" title="Default · 10 styles" meta="10 styles" />
+          <SecHead num="/02" title="Базовые · 10 стилей" meta="10 стилей" />
           <div className="stagger grid grid-cols-1 gap-3 md:grid-cols-2">
             {AVATAR_STYLES.map((s, i) => (
               <div key={s.slug} className="panel grid grid-cols-[44px_1fr] items-center gap-4 px-5 py-4">
@@ -126,7 +126,7 @@ export function GenerateStudio({ initialUploads, cost }: { initialUploads: Initi
           </div>
 
           <div>
-            <SecHead num="/03" title={`${selectedNiche.label} · 10 паков`} meta="10 prompts" />
+            <SecHead num="/03" title={`${selectedNiche.label} · 10 паков`} meta="10 промптов" />
             <div key={selectedNiche.slug} className="stagger grid grid-cols-1 gap-3 md:grid-cols-2">
               {selectedNiche.prompts.map((p, i) => (
                 <div key={p.slug} className="panel grid grid-cols-[44px_1fr] items-start gap-4 px-5 py-4">
@@ -148,9 +148,9 @@ export function GenerateStudio({ initialUploads, cost }: { initialUploads: Initi
         <section className="fade-in">
           <SecHead num="/02" title="Свой промпт" meta={`${customPrompts.length} / ${SLOTS}`} />
           <p className="mb-4 max-w-[70ch] text-[15px] leading-relaxed text-text-dim">
-            Опиши на английском <span className="accent-pill text-[13px] font-medium">wardrobe + setting + lighting</span> (одна строка = один аватар).
+            Опиши на английском <span className="accent-pill text-[13px] font-medium">одежду + место + свет</span> (одна строка = один аватар).
             До {SLOTS} строк. Если меньше — циклически дублируем, чтобы заполнить пачку.
-            Identity-блок добавим автоматически — твоё лицо сохранится.
+            Блок сохранения лица добавим автоматически — твоё лицо сохранится.
           </p>
           <textarea
             value={customText}
@@ -163,7 +163,7 @@ wearing a black turtleneck, against a deep charcoal backdrop with single rim lig
           />
           {customPrompts.length > 0 && (
             <div className="mt-3 text-[12px] text-text-mute tabular-nums">
-              valid lines: {customPrompts.length} · 1..{SLOTS}
+              подходящих строк: {customPrompts.length} · 1..{SLOTS}
             </div>
           )}
         </section>

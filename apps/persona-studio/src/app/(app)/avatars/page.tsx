@@ -7,9 +7,10 @@ import { AvatarGrid } from '@/components/avatar-grid';
 import { EmptyState } from '@/components/empty-state';
 import { formatDate } from '@/lib/utils';
 import { PageHero } from '@/components/shell/page-hero';
+import { statusLabel } from '@/lib/i18n';
 
 export const dynamic = 'force-dynamic';
-export const metadata = { title: 'Avatars — Persona Studio' };
+export const metadata = { title: 'Аватары — Persona Studio' };
 
 export default async function AvatarsPage({ searchParams }: { searchParams: Promise<{ generationId?: string }> }) {
   const user = await getCurrentUser();
@@ -30,7 +31,7 @@ export default async function AvatarsPage({ searchParams }: { searchParams: Prom
               все батчи
             </Link>
             <span className="sec-num">/00</span>
-            <span className="sec-title">live render</span>
+            <span className="sec-title">рендер в реальном времени</span>
           </header>
           <AvatarGrid generationId={exists.id} />
         </div>
@@ -50,18 +51,18 @@ export default async function AvatarsPage({ searchParams }: { searchParams: Prom
   return (
     <div className="grid gap-8">
       <PageHero
-        eyebrow="LIBRARY · AVATARS"
+        eyebrow="БИБЛИОТЕКА · АВАТАРЫ"
         title={
           <>
-            All avatar <span className="italic">batches.</span>
+            Все батчи <span className="italic">аватаров.</span>
           </>
         }
         description="Каждый батч — одно загруженное селфи, развёрнутое Gemini в десять портретов в разных стилях."
         icon="avatar"
-        actions={[{ label: 'New batch', href: '/generate' }]}
+        actions={[{ label: 'Новый батч', href: '/generate' }]}
         meta={
           <>
-            <div className="label">Batches</div>
+            <div className="label">Батчи</div>
             <div className="text-[40px] font-extrabold leading-none tracking-[-0.02em] tabular-nums text-gold">{generations.length}</div>
           </>
         }
@@ -83,8 +84,8 @@ export default async function AvatarsPage({ searchParams }: { searchParams: Prom
             >
               <div className="grid min-w-0 gap-3">
                 <div className="flex flex-wrap items-center gap-x-3 gap-y-1">
-                  <span className={`status-badge status-${g.status === 'pending' ? 'queued' : g.status}`}>{g.status}</span>
-                  <span className="text-[16px] font-semibold tracking-[-0.02em] sm:text-[17px]">batch {g.id.slice(0, 6)}</span>
+                  <span className={`status-badge status-${g.status === 'pending' ? 'queued' : g.status}`}>{statusLabel(g.status)}</span>
+                  <span className="text-[16px] font-semibold tracking-[-0.02em] sm:text-[17px]">батч {g.id.slice(0, 6)}</span>
                   <span className="text-[12px] text-text-mute tabular-nums">{formatDate(g.createdAt)}</span>
                 </div>
                 {g.avatars.length > 0 && (

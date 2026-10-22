@@ -293,7 +293,7 @@ export function ReelDetailClient({ reel: initialReel }: { reel: Reel }) {
             />
             <Metric label="МЕДИАНА" value={reel.author.medianViews != null ? fmt(reel.author.medianViews) : '—'} />
             <Metric
-              label="VS"
+              label="ВИР. СКОР"
               value={reel.viralScore != null ? `${reel.viralScore.toFixed(0)}` : '—'}
               accent="lime"
             />
@@ -435,7 +435,7 @@ export function ReelDetailClient({ reel: initialReel }: { reel: Reel }) {
               )}
               {transcript.source === 'caption' && (
                 <div className="rounded-2xl border border-amber/25 bg-amber/[0.06] px-4 py-2.5 text-[12.5px] text-text-dim">
-                  Источник — описание поста (whisper-сервис не настроен). Для реальной речи подключи WHISPER_SERVICE_URL.
+                  Источник — описание поста (сервис распознавания речи не настроен). Для реальной речи подключи WHISPER_SERVICE_URL.
                 </div>
               )}
             </>
@@ -704,7 +704,7 @@ function AnalysisView({
             <h3 className="label">Стиль</h3>
             <Row label="Визуал" value={style.visual} />
             <Row label="Аудио" value={style.audio} />
-            <Row label="Текст overlay" value={style.text_overlay ? 'да' : 'нет'} />
+            <Row label="Текст поверх видео" value={style.text_overlay ? 'да' : 'нет'} />
           </div>
         )}
       </div>

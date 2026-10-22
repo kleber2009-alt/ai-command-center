@@ -16,6 +16,7 @@ import {
 import { CoverPickerPopover } from './cover-picker-popover';
 import type { CarouselAvatarOption, CoverType, SlideShape } from './types';
 import { COVER_TYPES, COVER_TYPE_LABEL, COVER_TYPE_DESC } from '@/lib/carousel/prompts';
+import { t as tr } from '@/lib/i18n';
 import { errorText } from '@/lib/error-text';
 
 type Props = {
@@ -39,7 +40,7 @@ const BODY_LIMIT = 500;
 
 const slideRoleFor = (index: number, total: number) => {
   if (index === 0) return 'ОБЛОЖКА';
-  if (index === total - 1) return 'CTA';
+  if (index === total - 1) return 'ПРИЗЫВ';
   return 'РАСКРЫТИЕ';
 };
 
@@ -87,9 +88,9 @@ export function SlideEditorPane({
   const imageBusyOrPending = imageBusy || slide.imageStatus === 'pending';
   const imageDisabledReason =
     isCover && activeCoverType === 'split'
-      ? 'split-обложке AI-картинка не нужна'
+      ? 'сплит-обложке AI-картинка не нужна'
       : isCover && defaultImageMode === 'hero-avatar' && !coverAvatarId
-        ? 'выбери cover-аватар'
+        ? 'выбери аватар для обложки'
         : undefined;
 
   const titleOverLimit = slide.title.length > TITLE_LIMIT;
@@ -103,7 +104,7 @@ export function SlideEditorPane({
       await onRegenCopy(regenIntent.trim() || undefined);
       setRegenIntent('');
     } catch (e) {
-      setRegenError((e as Error).message || 'regen failed');
+      setRegenError((e as Error).message || 'Не удалось перегенерировать');
     } finally {
       setRegenBusy(false);
     }
@@ -116,7 +117,7 @@ export function SlideEditorPane({
     try {
       await onDispatchImage(mode ?? defaultImageMode);
     } catch (e) {
-      setImageDispatchError((e as Error).message || 'dispatch failed');
+      setImageDispatchError((e as Error).message || 'Не удалось запустить');
     } finally {
       setImageBusy(false);
     }
@@ -128,7 +129,7 @@ export function SlideEditorPane({
       <header className="flex shrink-0 items-center justify-between gap-3 border-b border-border-soft px-4 py-3">
         <div className="flex min-w-0 items-center gap-2.5">
           <span className="sec-num">
-            /slide {String(slideIndex + 1).padStart(2, '0')}
+            /слайд {String(slideIndex + 1).padStart(2, '0')}
           </span>
           <span
             className={`rounded-full px-2.5 py-0.5 text-[11px] font-semibold uppercase tracking-[0.06em] ${
@@ -212,7 +213,7 @@ export function SlideEditorPane({
           <div className="grid gap-1.5">
             <div className="flex items-baseline justify-between">
               <span className="label">
-                cover type · 4 layout
+                тип обложки · 4 макета
               </span>
               <span className="ml-3 truncate text-[12px] text-text-mute">
                 {COVER_TYPE_DESC[activeCoverType]}
@@ -233,7 +234,7 @@ export function SlideEditorPane({
                     }`}
                     title={COVER_TYPE_DESC[t]}
                   >
-                    <span className="block text-[13px] font-semibold">{COVER_TYPE_LABEL[t]}</span>
+                    <span className="block text-[13px] font-semibold">{tr(COVER_TYPE_LABEL[t], 'ru')}</span>
                     <span
                       className={`mt-0.5 block text-[11px] ${
                         active ? 'text-gold' : 'text-text-mute'
@@ -256,7 +257,7 @@ export function SlideEditorPane({
 
         <label className="grid gap-1.5">
           <div className="flex items-baseline justify-between">
-            <span className="label">title</span>
+            <span className="label">заголовок</span>
             <span
               className={`text-[12px] tabular-nums ${
                 titleOverLimit ? 'text-danger' : 'text-text-mute'
@@ -278,7 +279,7 @@ export function SlideEditorPane({
 
         <label className="grid gap-1.5">
           <div className="flex items-baseline justify-between">
-            <span className="label">body</span>
+            <span className="label">текст</span>
             <span
               className={`text-[12px] tabular-nums ${
                 bodyOverLimit ? 'text-danger' : 'text-text-mute'
@@ -295,7 +296,7 @@ export function SlideEditorPane({
               isCover
                 ? 'Подзаголовок 10–20 слов — заставь листать дальше.'
                 : isCTA
-                  ? 'Зачем юзеру нажать CTA — 10–25 слов.'
+                  ? 'Зачем нажать на призыв — 10–25 слов.'
                   : 'Развёрнутая мысль 15–40 слов, один концепт.'
             }
             className={`input min-h-[140px] ${
@@ -308,7 +309,7 @@ export function SlideEditorPane({
         <div className="grid gap-3 rounded-[20px] border border-border-soft bg-white/[0.03] p-4">
           <div className="flex flex-wrap items-center justify-between gap-2">
             <span className="flex items-center gap-1.5 text-[13px] font-semibold text-lime">
-              <Sparkles size={14} /> AI regen · claude
+              <Sparkles size={14} /> AI-переписать · Claude
             </span>
             <span className="text-[12px] text-text-mute">
               учитывает стиль и соседей
@@ -347,7 +348,7 @@ export function SlideEditorPane({
               className="btn-lime !px-4 !py-2 text-[13px]"
             >
               {regenBusy ? <Loader2 size={14} className="animate-spin" /> : <Sparkles size={14} />}
-              {regenBusy ? 'генерю…' : 'regen'}
+              {regenBusy ? 'генерю…' : 'переписать'}
               {!regenBusy && <ArrowRight size={14} />}
             </button>
           </div>
@@ -362,20 +363,20 @@ export function SlideEditorPane({
         <div className="grid gap-3 rounded-[20px] border border-border-soft bg-white/[0.03] p-4">
           <div className="flex flex-wrap items-center justify-between gap-2">
             <span className="flex items-center gap-1.5 text-[13px] font-semibold text-gold">
-              <Palette size={14} /> AI image · nano banana 2
+              <Palette size={14} /> AI-картинка · Nano Banana 2
             </span>
             <span className="text-[12px] text-text-mute">
-              mode: {defaultImageMode}
+              режим: {defaultImageMode}
             </span>
           </div>
           {/* Composite vs Replace toggle — определяет, рисует ли satori
               сверху typography или AI-картинка идёт сама по себе финалом. */}
           <div className="flex flex-wrap items-center gap-1.5 text-[12px]">
-            <span className="text-text-mute">render:</span>
+            <span className="text-text-mute">рендер:</span>
             {(
               [
-                { key: 'composite', label: 'composite', hint: 'satori поверх' },
-                { key: 'replace', label: 'replace', hint: 'AI = финал' },
+                { key: 'composite', label: 'наложение', hint: 'текст поверх картинки' },
+                { key: 'replace', label: 'замена', hint: 'AI = финал' },
               ] as const
             ).map((m) => {
               const active = (slide.imageMode ?? 'composite') === m.key;
@@ -401,18 +402,18 @@ export function SlideEditorPane({
             })}
             <span className="ml-1 truncate text-text-mute">
               {(slide.imageMode ?? 'composite') === 'replace'
-                ? 'AI картинка = финальный PNG (skip satori)'
-                : 'satori типографика поверх AI-фона'}
+                ? 'AI-картинка = финальный PNG (без наложения текста)'
+                : 'типографика поверх AI-фона'}
             </span>
           </div>
           {isCover && (
             <div className="grid grid-cols-2 gap-2 sm:grid-cols-4">
               {(
                 [
-                  { key: 'hero-avatar', label: 'Hero avatar', hint: 'identity-safe' },
-                  { key: 'object', label: 'Object', hint: 'продукт / икон.' },
-                  { key: 'ui', label: 'UI / Screen', hint: 'дашборд' },
-                  { key: 'slide-media', label: 'Free media', hint: 'editorial' },
+                  { key: 'hero-avatar', label: 'Аватар-герой', hint: 'лицо 1:1' },
+                  { key: 'object', label: 'Объект', hint: 'продукт / икон.' },
+                  { key: 'ui', label: 'Интерфейс', hint: 'дашборд' },
+                  { key: 'slide-media', label: 'Свободное медиа', hint: 'editorial' },
                 ] as const
               ).map((m) => {
                 const active = defaultImageMode === m.key;
@@ -430,7 +431,7 @@ export function SlideEditorPane({
                         ? 'border-gold bg-blue/[0.12] text-text'
                         : 'border-border-soft bg-white/[0.03] text-text-dim hover:bg-white/[0.06]'
                     } disabled:cursor-not-allowed disabled:opacity-30`}
-                    title={`mode = ${m.key}`}
+                    title={`режим = ${m.key}`}
                   >
                     <span className="block text-[12px] font-semibold">{m.label}</span>
                     <span className="mt-0.5 block text-[11px] text-text-mute">
@@ -455,8 +456,8 @@ export function SlideEditorPane({
                 : imageBusy
                   ? 'ставлю в очередь…'
                   : slide.image
-                    ? 'regenerate'
-                    : 'generate'}
+                    ? 'пересоздать'
+                    : 'сгенерировать'}
               {!imageBusyOrPending && <ArrowRight size={14} />}
             </button>
             <span className="text-[12px] text-text-mute">
@@ -465,10 +466,10 @@ export function SlideEditorPane({
                 : slide.imageStatus === 'pending'
                   ? 'kie работает ~10–30с'
                   : slide.imageStatus === 'failed'
-                    ? 'fail, попробуй ещё'
+                    ? 'не вышло, попробуй ещё'
                     : slide.imageStatus === 'done'
                       ? 'готово · нажми чтобы пересоздать'
-                      : 'kie сгенерит и зальёт в media'}
+                      : 'kie сгенерит и зальёт в медиа'}
             </span>
           </div>
           {(imageDispatchError || slide.imageError) && (
@@ -490,7 +491,7 @@ export function SlideEditorPane({
                 : activeCoverType === 'ui'
                   ? 'скриншот UI / дашборда / браузера'
                   : activeCoverType === 'split'
-                    ? 'split-обложке медиа не нужно'
+                    ? 'сплит-обложке медиа не нужно'
                     : undefined
               : undefined
           }
@@ -541,7 +542,7 @@ function SlideMediaUploader({
       }
       onChange(json.url);
     } catch (e) {
-      setError((e as Error).message || 'network error');
+      setError((e as Error).message || 'Нет связи с сервером');
     } finally {
       setUploading(false);
     }
@@ -566,7 +567,7 @@ function SlideMediaUploader({
     <div className="grid gap-1.5">
       <div className="flex items-baseline justify-between">
         <span className="label">
-          медиа · фото / скриншот / mockup
+          медиа · фото / скриншот / мокап
         </span>
         {coverHint ? (
           <span className="text-[12px] text-text-mute">
@@ -582,13 +583,13 @@ function SlideMediaUploader({
           {/* eslint-disable-next-line @next/next/no-img-element */}
           <img
             src={value}
-            alt="slide media"
+            alt="медиа слайда"
             className="h-[120px] w-full rounded-xl border border-border-soft bg-white/[0.04] object-cover"
           />
           <div className="grid gap-2 content-start min-w-0">
             <span className="truncate text-[13px] font-medium text-text-dim">{value.split('/').pop()}</span>
             <span className="text-[12px] leading-relaxed text-text-mute">
-              Будет нарисовано как mockup-карточка в нижней части слайда после
+              Будет нарисовано как мокап-карточка в нижней части слайда после
               «Сгенерировать PNG».
             </span>
             <div className="flex items-center gap-2 mt-1">
@@ -638,7 +639,7 @@ function SlideMediaUploader({
             </span>
           ) : disabled ? (
             <span className="text-[13px] text-text-mute">
-              недоступно для cover-слайда
+              недоступно для слайда-обложки
             </span>
           ) : (
             <div className="grid justify-items-center gap-1.5">
@@ -647,7 +648,7 @@ function SlideMediaUploader({
                 перетащи фото или кликни
               </span>
               <span className="text-[12px] text-text-mute">
-                JPG / PNG / WebP до 8 MB
+                JPG / PNG / WebP до 8 МБ
               </span>
             </div>
           )}

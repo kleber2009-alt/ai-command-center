@@ -5,6 +5,7 @@ import { CalendarPlus, Download, Loader2 } from 'lucide-react';
 import { formatDate } from '@/lib/utils';
 import { findTemplate, getTemplate as legacyShim } from '@/lib/edit-templates';
 import { jobErrorText } from '@/lib/error-text';
+import { statusLabel } from '@/lib/i18n';
 
 type Edit = {
   id: string;
@@ -76,11 +77,11 @@ export function EditCard({ initial, autopoll }: { initial: Edit; autopoll: boole
             'status-processing'
           }`}
         >
-          {e.status}
+          {statusLabel(e.status)}
         </span>
         <span className="truncate text-[12px] font-medium text-text-mute">
           {resolvedName.toUpperCase()} · {e.subtitleLanguage.toUpperCase()}
-          {e.brollsEnabled && <span className="text-lime"> · B-ROLLS</span>}
+          {e.brollsEnabled && <span className="text-lime"> · ПЕРЕБИВКИ</span>}
         </span>
       </div>
 
@@ -111,7 +112,7 @@ export function EditCard({ initial, autopoll }: { initial: Edit; autopoll: boole
             <div className="relative z-[1] text-center px-3">
               {e.status === 'failed' ? (
                 <>
-                  <span className="status-badge status-failed">failed</span>
+                  <span className="status-badge status-failed">ошибка</span>
                   {e.errorMsg && (
                     <div className="mt-2 text-[12px] text-text-dim">{jobErrorText(e.errorMsg)}</div>
                   )}
@@ -136,7 +137,7 @@ export function EditCard({ initial, autopoll }: { initial: Edit; autopoll: boole
         {preset?.tags.join(' · ') ?? '—'}
       </div>
       <div className="flex items-center justify-between gap-2 text-[12px] tabular-nums text-text-mute">
-        <span>{e.subtitlesEnabled ? 'субтитры on' : 'без субтитров'}{e.brollsEnabled ? ' · b-rolls on' : ''}</span>
+        <span>{e.subtitlesEnabled ? 'с субтитрами' : 'без субтитров'}{e.brollsEnabled ? ' · с перебивками' : ''}</span>
         <span>{formatDate(e.createdAt)}</span>
       </div>
       {e.status === 'completed' && e.resultUrl && (

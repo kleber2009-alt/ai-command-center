@@ -22,7 +22,7 @@ type Folder = {
 const TYPE_META: Record<FolderType, { label: string; hint: string; tone: 'gold' | 'lime' | 'cyan' }> = {
   bloggers: { label: 'Блогеры', hint: 'конкуренты под наблюдением', tone: 'gold' },
   videos: { label: 'Видео', hint: 'залётные ролики на разбор', tone: 'lime' },
-  ideas: { label: 'Идеи', hint: 'action-пункты из рекомендаций', tone: 'cyan' },
+  ideas: { label: 'Идеи', hint: 'пункты действий из рекомендаций', tone: 'cyan' },
 };
 
 export function FoldersClient({ initialFolders }: { initialFolders: Folder[] }) {
@@ -195,7 +195,7 @@ export function FoldersClient({ initialFolders }: { initialFolders: Folder[] }) 
                         deleteFolder(f.id);
                       }}
                       className="btn-icon !h-8 !w-8 opacity-0 group-hover:opacity-100 hover:!text-pink"
-                      aria-label="delete"
+                      aria-label="Удалить папку"
                     >
                       <Trash2 className="h-3.5 w-3.5" />
                     </button>

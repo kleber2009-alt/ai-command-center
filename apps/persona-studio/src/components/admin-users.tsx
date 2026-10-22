@@ -93,30 +93,30 @@ export function AdminUsersPanel({ initialUsers, currentUserId }: { initialUsers:
           className="input !rounded-full flex-1 min-w-[200px]"
         />
         <span className="text-[13px] tabular-nums text-text-mute">
-          {loading ? '/loading…' : `${users.length} users`}
+          {loading ? 'загрузка…' : `пользователей: ${users.length}`}
         </span>
       </div>
 
       {(err || flash) && (
         <div className="rounded-2xl border border-border-soft bg-white/[0.04] px-4 py-2.5 text-[13px] fade-in">
-          {flash && <span className="text-lime">/OK — {flash}</span>}
-          {err && <span className="text-pink">/ERROR — {err}</span>}
+          {flash && <span className="text-lime">Готово — {flash}</span>}
+          {err && <span className="text-pink">Ошибка — {err}</span>}
         </div>
       )}
 
       <div className="panel overflow-x-auto">
         <div className="min-w-[760px]">
         <div className="grid grid-cols-[1fr_90px_90px_120px_1fr] gap-3 px-5 py-3 border-b border-border-soft label">
-          <span>User</span>
-          <span className="text-right">Balance</span>
-          <span className="text-right">Plan</span>
-          <span>Activity</span>
-          <span>Grant tokens</span>
+          <span>Пользователь</span>
+          <span className="text-right">Баланс</span>
+          <span className="text-right">План</span>
+          <span>Активность</span>
+          <span>Начислить токены</span>
         </div>
 
         {users.length === 0 ? (
           <div className="px-5 py-6 text-[13px] text-text-mute">
-            /EMPTY
+            Никого не нашли
           </div>
         ) : (
           users.map((u) => (
@@ -129,8 +129,8 @@ export function AdminUsersPanel({ initialUsers, currentUserId }: { initialUsers:
               <div className="grid">
                 <span className="text-[14.5px] font-medium text-text truncate">
                   {u.name || u.email}
-                  {u.role === 'admin' && <span className="ml-2 rounded-full bg-pink/15 px-2 py-0.5 text-[10px] font-semibold text-pink">ADMIN</span>}
-                  {u.id === currentUserId && <span className="ml-2 rounded-full bg-lime/15 px-2 py-0.5 text-[10px] font-semibold text-lime">YOU</span>}
+                  {u.role === 'admin' && <span className="ml-2 rounded-full bg-pink/15 px-2 py-0.5 text-[10px] font-semibold text-pink">АДМИН</span>}
+                  {u.id === currentUserId && <span className="ml-2 rounded-full bg-lime/15 px-2 py-0.5 text-[10px] font-semibold text-lime">ВЫ</span>}
                 </span>
                 <span className="text-[12px] text-text-mute truncate">{u.email}</span>
                 <span className="font-mono text-[10.5px] text-text-mute/70">
@@ -141,7 +141,7 @@ export function AdminUsersPanel({ initialUsers, currentUserId }: { initialUsers:
               <div className="text-[22px] font-extrabold tabular-nums tracking-[-0.02em] text-lime text-right leading-none">{u.tokenBalance}</div>
               <div className="text-[12px] font-medium uppercase text-text-dim text-right">{u.plan}</div>
               <div className="text-[12px] tabular-nums text-text-mute">
-                {u._count.avatarGenerations}b · {u._count.covers}c · {u._count.videoGenerations}v
+                {u._count.avatarGenerations} б · {u._count.covers} о · {u._count.videoGenerations} в
               </div>
 
               <div className="flex flex-wrap gap-1.5">
@@ -162,7 +162,7 @@ export function AdminUsersPanel({ initialUsers, currentUserId }: { initialUsers:
                   onClick={() => grantCustom(u.id)}
                   className="rounded-full border border-border-soft bg-white/[0.04] px-3 py-1 text-[12px] text-text-dim hover:bg-white/[0.08] hover:text-text transition-colors disabled:opacity-40"
                 >
-                  custom
+                  своё
                 </button>
               </div>
             </div>

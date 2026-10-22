@@ -51,7 +51,7 @@ const PERIOD_OPTIONS: Array<{ value: Period; label: string }> = [
 const LANGUAGE_OPTIONS: Array<{ value: LanguageFilter; label: string }> = [
   { value: 'all', label: 'Любой язык' },
   { value: 'ru', label: 'Русский' },
-  { value: 'en', label: 'English' },
+  { value: 'en', label: 'Английский' },
   { value: 'other', label: 'Другой / н/д' },
 ];
 
@@ -283,7 +283,7 @@ export function ResearchClient({
           }),
         );
       } catch (e) {
-        setError((e as Error).message || 'network error');
+        setError((e as Error).message || 'Нет связи с сервером');
       }
     });
   }
@@ -526,7 +526,7 @@ export function ResearchClient({
                 onClick={addToRadar}
                 disabled={pendingRadar}
                 className="btn-ghost !px-4 !py-2 !text-[13px]"
-                title="Сохранить нишу как радар — cron будет обновлять её раз в сутки"
+                title="Сохранить нишу как радар — он будет обновляться раз в сутки"
               >
                 {pendingRadar ? (
                   <RefreshCw className="w-4 h-4 animate-spin" />
@@ -935,7 +935,7 @@ function DemoGate({
     <div className="pointer-events-none absolute inset-x-0 bottom-0 flex justify-center pb-6">
       <div className="pointer-events-auto panel !bg-bg/90 !border-gold/30 shadow-glass p-6 grid gap-3 max-w-md text-center justify-items-center pop-in">
         <Icon3D name="bolt" size={32} tile />
-        <span className="eyebrow">DEMO MODE</span>
+        <span className="eyebrow">ДЕМО-РЕЖИМ</span>
         <div className="text-[17px] font-semibold tracking-[-0.02em] text-text">
           Тебе видны первые {visibleCount} из {totalCount} рилсов.
         </div>

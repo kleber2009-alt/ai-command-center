@@ -50,7 +50,7 @@ const RU_DICT: Record<string, string> = {
   'Hook Gallery': 'Галерея хуков',
   Radars: 'Радары',
   Folders: 'Папки',
-  'Viral Posts (legacy)': 'Виральные посты (legacy)',
+  'Viral Posts (legacy)': 'Виральные посты (старое)',
   Queue: 'Очередь',
   Scheduled: 'Запланировано',
   'AI Agents': 'AI-агенты',
@@ -64,7 +64,7 @@ const RU_DICT: Record<string, string> = {
   '1 photo → 10 avatars': '1 фото → 10 аватаров',
   'clone & train': 'клонирование и обучение',
   'talking-photo': 'говорящее фото',
-  'editorial slides': 'editorial-слайды',
+  'editorial slides': 'редакционные слайды',
   '25 styles · skills': '25 стилей · скиллы',
   'Skill Montage': 'Скиллы монтажа',
   'reels styles · ffmpeg': 'стили рилсов · паузы · субтитры',
@@ -77,6 +77,10 @@ const RU_DICT: Record<string, string> = {
   'millions-of-views hooks': 'хуки на миллионы просмотров',
   'saved niche trackers': 'сохранённые трекеры ниш',
   'bloggers · videos · ideas': 'блогеры · видео · идеи',
+  'plan & autopost': 'план и автопостинг',
+  'New Post': 'Новый пост',
+  'schedule a publish': 'запланировать публикацию',
+  'Help & Docs': 'Помощь и доки',
 
   // ── Sidebar footer ──
   Tokens: 'Токены',
@@ -118,6 +122,11 @@ const RU_DICT: Record<string, string> = {
   'Talking video about AI': 'Говорящее видео про AI',
   'Productivity tips video': 'Видео про продуктивность',
 
+  // ── Carousel cover types (labels live in lib/carousel/prompts.ts) ──
+  Object: 'Объект',
+  Split: 'Сплит',
+  'UI / Screen': 'Интерфейс',
+
   // ── Misc UI chrome ──
   'Toggle navigation': 'Открыть меню',
 
@@ -130,6 +139,28 @@ const RU_DICT: Record<string, string> = {
     'Опиши ролик — AI соберёт бриф и сценарий в воркспейсе.',
   'Could not create a brief — try again': 'Не получилось создать бриф — попробуй ещё раз',
 };
+
+// Job status (generation / render / edit rows) → short Russian chip text.
+// The raw value stays in the DB and in CSS classes; only the label changes.
+const STATUS_RU: Record<string, string> = {
+  pending: 'в очереди',
+  queued: 'в очереди',
+  processing: 'в работе',
+  rendering: 'рендер',
+  uploading: 'загрузка',
+  completed: 'готово',
+  done: 'готово',
+  ready: 'готово',
+  failed: 'ошибка',
+  partial: 'частично',
+  rejected: 'отклонено',
+  draft: 'черновик',
+};
+
+export function statusLabel(status: string | null | undefined): string {
+  const s = status ?? '';
+  return STATUS_RU[s] ?? s;
+}
 
 export function t(key: string, locale: Locale): string {
   if (locale === 'en') return key;

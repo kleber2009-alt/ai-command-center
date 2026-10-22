@@ -61,7 +61,7 @@ export function MeasureClient({ initial }: { initial: MeasureDashboard }) {
   return (
     <div className="grid gap-5">
       <PageHero
-        eyebrow="MEASURE · ANALYTICS"
+        eyebrow="ИЗМЕРЕНИЕ · АНАЛИТИКА"
         title="Аналитика"
         icon="analytics"
         description="что у меня залетает · твой Xn vs источник"

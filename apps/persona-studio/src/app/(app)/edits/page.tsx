@@ -8,7 +8,7 @@ import { EmptyState } from '@/components/empty-state';
 import { PageHero } from '@/components/shell/page-hero';
 
 export const dynamic = 'force-dynamic';
-export const metadata = { title: 'Montage — Persona Studio' };
+export const metadata = { title: 'Монтаж — Persona Studio' };
 
 export default async function EditsPage({ searchParams }: { searchParams: Promise<{ focus?: string }> }) {
   const user = await getCurrentUser();
@@ -50,13 +50,13 @@ export default async function EditsPage({ searchParams }: { searchParams: Promis
         description="Берём твой mp4, накладываем шаблон в стиле известных авторов и автоматические субтитры. На выходе — готовый Reels / Shorts."
         actions={
           latestVideo
-            ? [{ label: 'New edit', href: `/edits/new?videoId=${latestVideo.id}` }]
-            : [{ label: 'Need a video first', href: '/videos', tone: 'ghost' }]
+            ? [{ label: 'Новый монтаж', href: `/edits/new?videoId=${latestVideo.id}` }]
+            : [{ label: 'Сначала нужно видео', href: '/videos', tone: 'ghost' }]
         }
         icon="videos"
         meta={
           <>
-            <div className="label">Renders</div>
+            <div className="label">Рендеры</div>
             <div className="text-[40px] font-extrabold leading-none tabular-nums tracking-[-0.02em] text-gold">{edits.length}</div>
           </>
         }
@@ -94,7 +94,7 @@ export default async function EditsPage({ searchParams }: { searchParams: Promis
 
       {focus && (
         <p className="flex items-center justify-center gap-1.5 text-center text-[12px] text-text-mute">
-          /scroll · карточка {focus.slice(0, 8)} <ArrowDown size={13} />
+          листай · карточка {focus.slice(0, 8)} <ArrowDown size={13} />
         </p>
       )}
     </div>

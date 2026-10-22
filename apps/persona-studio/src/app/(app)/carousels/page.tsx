@@ -9,16 +9,16 @@ import { CAROUSEL_STYLES, styleMeta } from '@/lib/carousel/styles';
 import { NewCarouselForm } from '@/components/carousel/new-carousel-form';
 
 export const dynamic = 'force-dynamic';
-export const metadata = { title: 'AI Carousel Engine v2 — Persona Studio' };
+export const metadata = { title: 'Карусели — Persona Studio' };
 
 const PIPELINE = [
-  'INPUT',
-  'HOOK',
-  'STRUCTURE',
-  'STYLE',
-  'LAYOUT',
-  'IMAGE',
-  'EXPORT',
+  'ТЕМА',
+  'ХУК',
+  'СТРУКТУРА',
+  'СТИЛЬ',
+  'ВЁРСТКА',
+  'КАРТИНКИ',
+  'ЭКСПОРТ',
 ];
 
 export default async function CarouselsPage() {
@@ -92,9 +92,9 @@ export default async function CarouselsPage() {
       <section className="grid gap-3">
         <div className="flex flex-wrap items-center gap-3">
           <span className="sec-num">/02</span>
-          <span className="sec-title">Drafts · {drafts.length}</span>
+          <span className="sec-title">Черновики · {drafts.length}</span>
           <span className="hidden flex-1 border-b border-border-soft sm:block" />
-          <span className="text-[12px] text-text-mute">cover · slides · cta · png</span>
+          <span className="text-[12px] text-text-mute">обложка · слайды · призыв · png</span>
         </div>
 
         {drafts.length === 0 ? (
@@ -117,7 +117,7 @@ export default async function CarouselsPage() {
                 >
                   <div className="flex items-center justify-between gap-3">
                     <span className="rounded-full bg-white/[0.06] px-2.5 py-1 text-[12px] font-medium text-text-dim">
-                      /draft · {slides.length} sl.
+                      черновик · {slides.length} сл.
                     </span>
                     <span className="text-[12px] tabular-nums text-text-mute">
                       {new Date(d.createdAt).toLocaleDateString('ru-RU')}

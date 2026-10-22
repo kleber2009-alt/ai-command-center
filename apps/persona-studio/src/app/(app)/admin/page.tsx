@@ -11,7 +11,7 @@ import { PageHero } from '@/components/shell/page-hero';
 import { reasonLabel, txTypeLabel } from '@/lib/token-reasons';
 
 export const dynamic = 'force-dynamic';
-export const metadata = { title: 'Admin — Persona Studio' };
+export const metadata = { title: 'Админка — Persona Studio' };
 
 export default async function AdminPage() {
   const admin = await getCurrentAdmin();
@@ -61,17 +61,17 @@ export default async function AdminPage() {
     <div className="grid grid-cols-[minmax(0,1fr)] gap-8">
       <header>
         <PageHero
-          eyebrow="/00 · ADMIN"
-          title="Admin · Persona Studio"
+          eyebrow="/00 · АДМИНКА"
+          title="Админка · Persona Studio"
           icon="gear"
           meta={<span className="eyebrow !text-pink">{admin.email}</span>}
         />
 
         <div className="grid grid-cols-2 md:grid-cols-4 gap-3 stagger">
-          <Stat k="Users" v={totals._count._all} accent="text" />
-          <Stat k="Tokens outstanding" v={totals._sum.tokenBalance ?? 0} accent="lime" sub="balance × all users" />
-          <Stat k="Artefacts" v={`${avatarCount} + ${coverCount} + ${videoCount}`} accent="cyan" sub="avatars · covers · videos" small />
-          <Stat k="In progress" v={processingCount} accent={processingCount > 0 ? 'pink' : 'text'} sub="active batches" />
+          <Stat k="Пользователи" v={totals._count._all} accent="text" />
+          <Stat k="Токенов на руках" v={totals._sum.tokenBalance ?? 0} accent="lime" sub="баланс всех пользователей" />
+          <Stat k="Результаты" v={`${avatarCount} + ${coverCount} + ${videoCount}`} accent="cyan" sub="аватары · обложки · видео" small />
+          <Stat k="В работе" v={processingCount} accent={processingCount > 0 ? 'pink' : 'text'} sub="активные батчи" />
         </div>
       </header>
 
@@ -87,7 +87,7 @@ export default async function AdminPage() {
       <section>
         <div className="flex items-center gap-3 mb-4">
           <span className="sec-num">/01</span>
-          <span className="sec-title">Users — grant tokens</span>
+          <span className="sec-title">Пользователи — начислить токены</span>
           <span className="flex-1 h-px bg-border-soft" />
         </div>
         <AdminUsersPanel
@@ -99,7 +99,7 @@ export default async function AdminPage() {
       <section>
         <div className="flex items-center gap-3 mb-4">
           <span className="sec-num">/02</span>
-          <span className="sec-title">Sidebar — управление пунктами меню</span>
+          <span className="sec-title">Сайдбар — управление пунктами меню</span>
           <span className="flex-1 h-px bg-border-soft" />
         </div>
         <AdminSidebarPanel initialItems={sidebarItems} />
@@ -108,11 +108,11 @@ export default async function AdminPage() {
       <section>
         <div className="flex items-center gap-3 mb-4">
           <span className="sec-num">/03</span>
-          <span className="sec-title">Recent token transactions</span>
+          <span className="sec-title">Последние операции с токенами</span>
           <span className="flex-1 h-px bg-border-soft" />
         </div>
         {recentTx.length === 0 ? (
-          <p className="rounded-[24px] border border-dashed border-white/15 bg-white/[0.03] p-6 text-center text-[13px] text-text-mute">/EMPTY</p>
+          <p className="rounded-[24px] border border-dashed border-white/15 bg-white/[0.03] p-6 text-center text-[13px] text-text-mute">Пока пусто</p>
         ) : (
           <div className="panel overflow-x-auto">
             {recentTx.map((t) => (

@@ -7,9 +7,10 @@ import { EmptyState } from '@/components/empty-state';
 import { RetryCoverButton } from './retry-button';
 import { PageHero } from '@/components/shell/page-hero';
 import { jobErrorText } from '@/lib/error-text';
+import { statusLabel } from '@/lib/i18n';
 
 export const dynamic = 'force-dynamic';
-export const metadata = { title: 'Covers — Persona Studio' };
+export const metadata = { title: 'Обложки — Persona Studio' };
 
 export default async function CoversPage({ searchParams }: { searchParams: Promise<{ focus?: string }> }) {
   const user = await getCurrentUser();
@@ -25,18 +26,18 @@ export default async function CoversPage({ searchParams }: { searchParams: Promi
   return (
     <div className="grid gap-8">
       <PageHero
-        eyebrow="LIBRARY · COVERS"
+        eyebrow="БИБЛИОТЕКА · ОБЛОЖКИ"
         title={
           <>
-            All carousel covers. <span className="italic">Editorial-ready.</span>
+            Все обложки каруселей. <span className="italic">Готовы к публикации.</span>
           </>
         }
         description="Выбираешь аватара, пишешь идею — Claude собирает заголовок, подзаголовок и CTA, Gemini рендерит обложку за 10 секунд."
-        actions={[{ label: 'New cover', href: '/covers/new' }]}
+        actions={[{ label: 'Новая обложка', href: '/covers/new' }]}
         icon="covers"
         meta={
           <>
-            <div className="label">Total</div>
+            <div className="label">Всего</div>
             <div className="text-[40px] font-extrabold leading-none tracking-[-0.02em] tabular-nums text-gold">{covers.length}</div>
           </>
         }
@@ -64,7 +65,7 @@ export default async function CoversPage({ searchParams }: { searchParams: Promi
               }
             >
               <div className="flex items-center justify-between gap-2 pr-10">
-                <span className={`status-badge status-${c.status === 'pending' ? 'queued' : c.status} truncate bg-black/50 backdrop-blur-md`}>{c.status}</span>
+                <span className={`status-badge status-${c.status === 'pending' ? 'queued' : c.status} truncate bg-black/50 backdrop-blur-md`}>{statusLabel(c.status)}</span>
                 <span className="shrink-0 rounded-full bg-black/50 px-2 py-0.5 text-[11px] font-medium tabular-nums text-white/80 backdrop-blur-md">{c.aspect}</span>
               </div>
               {c.status === 'completed' && c.imageUrl && (

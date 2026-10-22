@@ -8,7 +8,7 @@ import { CarouselEditorShell } from '@/components/carousel/carousel-editor-shell
 import type { CarouselDraftSerialized, SlideShape } from '@/components/carousel/types';
 
 export const dynamic = 'force-dynamic';
-export const metadata = { title: 'Carousel — Persona Studio' };
+export const metadata = { title: 'Карусель — Persona Studio' };
 
 export default async function NewCarouselPage({
   searchParams,
@@ -59,10 +59,10 @@ export default async function NewCarouselPage({
         <div className="flex min-w-0 flex-wrap items-center gap-3">
           <Icon3D name="carousel" size={20} tile />
           <span className="sec-num">/00</span>
-          <span className="sec-title">Carousel · черновик</span>
+          <span className="sec-title">Карусель · черновик</span>
           {draft.parserItem && (
             <div className="ml-1 hidden items-center gap-2 text-[12px] text-text-mute sm:flex">
-              <span className="rounded-full bg-lime/15 px-2 py-0.5 font-medium text-lime">/parser</span>
+              <span className="rounded-full bg-lime/15 px-2 py-0.5 font-medium text-lime">из парсера</span>
               {draft.parserItem.owner && (
                 <span className="text-text">@{draft.parserItem.owner}</span>
               )}

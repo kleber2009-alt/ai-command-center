@@ -3,6 +3,7 @@
 import { useMemo, useState, useTransition } from 'react';
 import { useRouter } from 'next/navigation';
 import { errorText, exceptionText } from '@/lib/error-text';
+import { t } from '@/lib/i18n';
 
 type Item = {
   key: string;
@@ -70,17 +71,17 @@ export function AdminSidebarPanel({ initialItems }: { initialItems: Item[] }) {
     <div className="grid gap-4">
       <div className="panel flex flex-wrap items-center gap-4 p-4">
         <span className="text-[13px] tabular-nums text-text-mute">
-          {items.length} items · {hiddenCount} hidden
-          {isPending && <span className="ml-3 text-text-dim">/refreshing…</span>}
+          {items.length} пунктов · {hiddenCount} скрыто
+          {isPending && <span className="ml-3 text-text-dim">обновляем…</span>}
         </span>
         <span className="ml-auto text-[13px] text-text-dim">
-          Toggle on = пункт показывается в левом меню
+          Переключатель включён = пункт показывается в левом меню
         </span>
       </div>
 
       {err && (
         <div className="rounded-2xl border border-pink/40 bg-pink/[0.06] px-4 py-2.5 text-[13px] text-pink">
-          /ERROR — {err}
+          Ошибка — {err}
         </div>
       )}
 
@@ -88,7 +89,7 @@ export function AdminSidebarPanel({ initialItems }: { initialItems: Item[] }) {
         {grouped.map((g) => (
           <div key={g.sectionKey} className="panel overflow-hidden">
             <div className="px-5 py-2.5 border-b border-border-soft label !text-text-dim">
-              /{g.sectionLabel}
+              /{t(g.sectionLabel, 'ru')}
             </div>
             {g.items.map((item) => {
               const visible = !item.hidden;
@@ -98,7 +99,7 @@ export function AdminSidebarPanel({ initialItems }: { initialItems: Item[] }) {
                   className="grid grid-cols-[1fr_auto_80px] sm:grid-cols-[1fr_220px_120px] gap-3 px-5 py-3 items-center border-b border-border-soft last:border-b-0 hover:bg-white/[0.03] transition-colors"
                 >
                   <div className="grid">
-                    <span className="text-[14.5px] font-medium text-text truncate">{item.label}</span>
+                    <span className="text-[14.5px] font-medium text-text truncate">{t(item.label, 'ru')}</span>
                     <span className="font-mono text-[11px] text-text-mute truncate">
                       {item.key} · {item.href}
                     </span>
@@ -108,7 +109,7 @@ export function AdminSidebarPanel({ initialItems }: { initialItems: Item[] }) {
                       visible ? 'status-ready' : 'status-failed'
                     }`}
                   >
-                    {visible ? '/VISIBLE' : '/HIDDEN'}
+                    {visible ? 'видно' : 'скрыто'}
                   </div>
                   <div className="flex justify-end">
                     <button

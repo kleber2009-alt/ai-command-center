@@ -9,7 +9,7 @@ import { ArrowLeft } from 'lucide-react';
 import { COSTS } from '@/lib/tokens';
 
 export const dynamic = 'force-dynamic';
-export const metadata = { title: 'New cover — Persona Studio' };
+export const metadata = { title: 'Новая обложка — Persona Studio' };
 
 export default async function NewCoverPage({ searchParams }: { searchParams: Promise<{ avatarId?: string }> }) {
   const user = await getCurrentUser();
@@ -28,14 +28,14 @@ export default async function NewCoverPage({ searchParams }: { searchParams: Pro
       <div className="-mb-4 flex flex-wrap items-center gap-3">
         <Link href="/covers" className="btn-ghost !px-4 !py-2 text-[13px]">
           <ArrowLeft size={14} aria-hidden />
-          all covers
+          все обложки
         </Link>
         <span className="sec-num">/00</span>
-        <span className="sec-title">New carousel cover</span>
+        <span className="sec-title">Новая обложка карусели</span>
       </div>
 
       <PageHero
-        eyebrow="CREATE · COVER"
+        eyebrow="СОЗДАТЬ · ОБЛОЖКА"
         icon="covers"
         title={
           <>

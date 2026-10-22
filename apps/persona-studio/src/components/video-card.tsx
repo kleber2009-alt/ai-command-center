@@ -5,6 +5,7 @@ import { useRouter } from 'next/navigation';
 import { ArrowRight, CalendarClock, Download, Loader2, Music, RefreshCw } from 'lucide-react';
 import { formatDate } from '@/lib/utils';
 import { jobErrorText } from '@/lib/error-text';
+import { statusLabel } from '@/lib/i18n';
 
 type Video = {
   id: string;
@@ -88,7 +89,7 @@ export function VideoCard({ initial, autopoll }: { initial: Video; autopoll: boo
   return (
     <article id={v.id} className="card-editorial grid gap-3 p-4">
       <div className="flex items-center justify-between gap-2">
-        <span className={`status-badge status-${statusCls}`}>{v.status}</span>
+        <span className={`status-badge status-${statusCls}`}>{statusLabel(v.status)}</span>
         <span className="text-[12px] tabular-nums text-text-mute">{v.aspect} · {v.language}</span>
       </div>
 
@@ -119,7 +120,7 @@ export function VideoCard({ initial, autopoll }: { initial: Video; autopoll: boo
             <div className="relative z-[1] grid justify-items-center px-3 text-center">
               {v.status === 'failed' ? (
                 <>
-                  <span className="status-badge status-failed bg-black/50">/FAILED</span>
+                  <span className="status-badge status-failed bg-black/50">ошибка</span>
                   {v.errorMsg && (
                     <div className="mt-2 max-w-[28ch] text-[12px] leading-snug text-text-dim">{jobErrorText(v.errorMsg)}</div>
                   )}
@@ -138,7 +139,7 @@ export function VideoCard({ initial, autopoll }: { initial: Video; autopoll: boo
                 </>
               ) : (
                 <>
-                  <span className={`status-badge status-${statusCls} bg-black/50`}>/{v.status}</span>
+                  <span className={`status-badge status-${statusCls} bg-black/50`}>{statusLabel(v.status)}</span>
                   <div className="mt-2.5 text-[15px] font-semibold tracking-[-0.01em] text-text">Рендерим… ~2–4 мин</div>
                   {(v.engineJobId || v.heygenJobId) && (
                     <div className="mt-1 font-mono text-[10px] text-text-mute">

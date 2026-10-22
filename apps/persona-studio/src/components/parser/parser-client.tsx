@@ -81,7 +81,7 @@ export function ParserClient({ initialConfig, initialRun, initialItems, initialH
         );
       }
     } catch (e) {
-      setError((e as Error).message || 'network error');
+      setError((e as Error).message || 'Нет связи с сервером');
     } finally {
       setRunning(false);
     }
@@ -101,8 +101,8 @@ export function ParserClient({ initialConfig, initialRun, initialItems, initialH
               <span>акк: <span className="text-text">{config?.competitors.length || 0}</span></span>
               <span>тег: <span className="text-text">{config?.hashtags.length || 0}</span></span>
               <span>дней: <span className="text-text">{config?.postedWithinDays}</span></span>
-              <span>топ-R: <span className="text-text">{config?.reelsCount}</span></span>
-              <span>топ-C: <span className="text-text">{config?.carouselsCount}</span></span>
+              <span>рилсов: <span className="text-text">{config?.reelsCount}</span></span>
+              <span>каруселей: <span className="text-text">{config?.carouselsCount}</span></span>
             </div>
           </div>
           <div className="flex flex-wrap items-center gap-2">
@@ -153,7 +153,7 @@ export function ParserClient({ initialConfig, initialRun, initialItems, initialH
       {running && (
         <div className="panel p-8 flex flex-col items-center gap-3 text-center fade-in">
           <Icon3D name="processing" size={44} tile sway />
-          <span className="sec-num">/scan</span>
+          <span className="sec-num">/поиск</span>
           <div className="text-[17px] font-semibold tracking-[-0.02em] text-text">
             Apify скрейпит, Claude оценивает… 60–90 секунд.
           </div>
