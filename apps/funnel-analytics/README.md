@@ -128,7 +128,7 @@ utm_source=facebook&utm_medium={{placement}}&utm_campaign={{campaign.id}}&utm_te
 
 Workflow `.github/workflows/update-funnel-analytics.yml` (адрес по умолчанию `funnel.46-62-215-11.nip.io`, свой домен — переменная `FUNNEL_DOMAIN`) каждые 3 часа (и при пуше в `main`) на Hetzner:
 забирает все подключённые источники (`update.py`), пересобирает страницу в `/var/www/funnel-analytics/`
-и отдаёт её через Caddy по адресу `FUNNEL_DOMAIN` под паролем (basic auth, `noindex`).
+и отдаёт её через Caddy по адресу `FUNNEL_DOMAIN` (`noindex`; открыто всем, пароль — только если задан секрет `FUNNEL_DASHBOARD_PASSWORD`).
 Данные и ключи живут только на сервере: `/root/funnel-analytics-data` (0700) и `/etc/funnel-analytics.env` (0600).
 Данные вкладки «Контент» лежат в репо зашифрованными (`private/content.json.gz.enc`, ключ — секрет `FUNNEL_DATA_KEY`).
 

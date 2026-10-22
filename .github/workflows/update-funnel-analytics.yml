@@ -1,6 +1,7 @@
 name: update-funnel-analytics
 
-# Production for apps/funnel-analytics: https://<FUNNEL_DOMAIN>, behind a password.
+# Production for apps/funnel-analytics: https://<FUNNEL_DOMAIN>. Public unless FUNNEL_DASHBOARD_PASSWORD is set
+# (then basic auth). Always noindex.
 # FUNNEL_DOMAIN may list several hosts: "funnel.46-62-215-11.nip.io, dashboard.aicex.club"
 # (add the custom one only after its DNS A record points at 46.62.215.11).
 # On every run (schedule, push to main, manual) on the Hetzner box:
@@ -13,7 +14,7 @@ name: update-funnel-analytics
 # ─── Required GitHub secrets ───────────────────────────────────────
 #   HETZNER_SSH_KEY
 #   FUNNEL_CONFIG_JSON          config.json (title, fx, target_cpr, ad_account_id, finance, sources)
-#   FUNNEL_DASHBOARD_PASSWORD   password for the site (login: FUNNEL_DASHBOARD_USER, default "aicex")
+#   FUNNEL_DASHBOARD_PASSWORD   optional: set it to put the site behind basic auth (login FUNNEL_DASHBOARD_USER)
 #   FUNNEL_DATA_KEY             decrypts apps/funnel-analytics/private/*.enc (content tab)
 #   FUNNEL_META_TOKEN           Meta system-user token with ads_read              (optional)
 #   FUNNEL_GETCOURSE_KEY        GetCourse API secret key                           (optional)
@@ -68,9 +69,8 @@ jobs:
             mkdir -p "$DATA" "$WEB"; chmod 700 "$DATA"
 
             # ── 1. config + private data ──────────────────────────────
-            if [ -z "$FUNNEL_CONFIG_JSON" ] || [ -z "${FUNNEL_PASS:-}" ]; then
-              # not configured yet: never publish the finance data without a password
-              echo "::warning::FUNNEL_CONFIG_JSON / FUNNEL_DASHBOARD_PASSWORD not set — skipping"; exit 0
+            if [ -z "$FUNNEL_CONFIG_JSON" ]; then
+              echo "::warning::FUNNEL_CONFIG_JSON not set — skipping"; exit 0
             fi
             printf '%s' "$FUNNEL_CONFIG_JSON" > "$DATA/config.json"
             python3 -c "import json,sys; json.load(open('$DATA/config.json'))"
@@ -86,14 +86,16 @@ jobs:
               PWSHA=$(printf '%s|%s|%s' "$FUNNEL_DOMAIN" "$FUNNEL_USER" "$FUNNEL_PASS" | sha256sum | cut -c1-16)
               if ! grep -q "# >>> funnel-analytics $PWSHA" "$CF"; then
                 cp "$CF" "$CF.bak.$(date +%Y%m%d_%H%M%S)"
-                HASH=$(caddy hash-password --plaintext "$FUNNEL_PASS")
+                HASH=""
+                [ -z "${FUNNEL_PASS:-}" ] || HASH=$(caddy hash-password --plaintext "$FUNNEL_PASS")
                 python3 - "$CF" "$FUNNEL_DOMAIN" "$FUNNEL_USER" "$HASH" "$WEB" "$PWSHA" <<'PY'
             import re, sys
             cf, domain, user, h, web, tag = sys.argv[1:]
             s = open(cf).read()
             s = re.sub(r"\n?# >>> funnel-analytics.*?# <<< funnel-analytics\n?", "\n", s, flags=re.S)
+            auth = f"\tbasicauth {{\n\t\t{user} {h}\n\t}}\n" if h else ""
             block = (f"\n# >>> funnel-analytics {tag} (managed by .github/workflows/update-funnel-analytics.yml)\n"
-                     f"{domain} {{\n\tbasicauth {{\n\t\t{user} {h}\n\t}}\n\troot * {web}\n"
+                     f"{domain} {{\n{auth}\troot * {web}\n"
                      f"\theader Cache-Control \"no-store\"\n\theader X-Robots-Tag \"noindex, nofollow\"\n"
                      f"\tfile_server\n}}\n# <<< funnel-analytics\n")
             open(cf, "w").write(s.rstrip("\n") + "\n" + block)
