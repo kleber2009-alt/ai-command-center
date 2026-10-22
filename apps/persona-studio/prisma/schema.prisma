@@ -169,6 +169,9 @@ model Avatar {
   // HeyGen v3 photo-avatar created from this image — reused by later videos
   // and job retries (creating one costs HeyGen credits).
   heygenAvatarId String?
+  // HeyGen v2 talking_photo (Avatar IV) for this image — same reuse reason:
+  // each new one counts against the account's photo-avatar limit.
+  heygenTalkingPhotoId String?
   createdAt     DateTime         @default(now())
 
   videos         VideoGeneration[]

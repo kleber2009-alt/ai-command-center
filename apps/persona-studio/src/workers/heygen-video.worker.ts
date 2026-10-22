@@ -1,8 +1,6 @@
-import { Worker } from 'bullmq';
+import { UnrecoverableError, Worker } from 'bullmq';
 import { prisma } from '@/lib/prisma';
-import { connection, QUEUE_NAMES, omnihumanQueue, type HeygenVideoJob } from '@/lib/queue';
-import { isEnabledEngine } from '@/lib/video-engines';
-import { ELEVENLABS_VOICE_PRESETS } from '@/lib/elevenlabs-voices';
+import { connection, QUEUE_NAMES, type HeygenVideoJob } from '@/lib/queue';
 import {
   uploadTalkingPhoto,
   createVideoAvatarIV,
@@ -63,18 +61,38 @@ export function startHeygenWorker() {
         let effectiveVersion: HeygenModelVersion = (row.heygenVersion as HeygenModelVersion) ?? 'V';
 
         const runIVPath = async (bytes: Buffer, mime: string): Promise<string> => {
+          // Reuse the talking_photo made for this image earlier: every new one
+          // counts against the HeyGen photo-avatar limit, and once it is hit
+          // every video fails.
+          const createIV = (talkingPhotoId: string) =>
+            createVideoAvatarIV({
+              talkingPhotoId,
+              voiceId: row.voiceId!,
+              script: row.script!,
+              aspect: (row.aspect as Aspect) ?? '9:16',
+              quality: (row.quality as Quality) ?? '2k',
+              background: row.background ?? '#000000',
+              motionPrompt: row.motionPrompt ?? undefined,
+            });
+          const cached = row.avatar.heygenTalkingPhotoId;
+          if (cached) {
+            try {
+              console.log(`[heygen-worker] ${videoId} (IV) reusing talking_photo_id=${cached}`);
+              const id = await createIV(cached);
+              console.log(`[heygen-worker] ${videoId} heygen_video_id=${id}`);
+              return id;
+            } catch (e) {
+              // Deleted on the HeyGen side → upload a fresh one below.
+              const stale = e instanceof HeygenError && /not.?found|not exist|invalid.*talking/i.test(e.message);
+              if (!stale) throw e;
+              console.warn(`[heygen-worker] ${videoId} cached talking_photo gone (${e.message.slice(0, 120)}), re-uploading`);
+            }
+          }
           console.log(`[heygen-worker] ${videoId} (IV) uploading talking_photo…`);
           const asset = await uploadTalkingPhoto({ bytes, mime });
           console.log(`[heygen-worker] ${videoId} talking_photo_id=${asset.id}`);
-          const id = await createVideoAvatarIV({
-            talkingPhotoId: asset.id,
-            voiceId: row.voiceId!,
-            script: row.script!,
-            aspect: (row.aspect as Aspect) ?? '9:16',
-            quality: (row.quality as Quality) ?? '2k',
-            background: row.background ?? '#000000',
-            motionPrompt: row.motionPrompt ?? undefined,
-          });
+          await prisma.avatar.update({ where: { id: row.avatarId }, data: { heygenTalkingPhotoId: asset.id } });
+          const id = await createIV(asset.id);
           console.log(`[heygen-worker] ${videoId} heygen_video_id=${id}`);
           return id;
         };
@@ -202,32 +220,26 @@ export function startHeygenWorker() {
       } catch (e) {
         const msg = e instanceof HeygenError ? `${e.code}: ${e.message}` : (e instanceof Error ? e.message : String(e));
 
-        // HeyGen free-tier limits (photo-avatar count, video credits, voice quota)
-        // shouldn't hard-fail the user. Re-route the job to OmniHuman (KIE — no
-        // per-account limits) so it still completes. Voice provider differs
-        // (HeyGen voice → ElevenLabs TTS), so substitute a safe multilingual
-        // default voice for the OmniHuman TTS step. Keep the tokens (no refund).
+        // HeyGen plan limits (photo-avatar count, video credits, voice quota).
+        // The user picked HeyGen, so we don't silently switch to OmniHuman (a
+        // different face animation and a different voice). Fail at once with a
+        // clear reason and refund — retrying can't get past a plan limit.
         const isPlanLimit =
           e instanceof HeygenError &&
           /401028|exceeded your limit|photo avatar|insufficient credit|quota|upgrade your plan/i.test(
             `${e.code} ${e.message}`,
           );
-        if (isPlanLimit && row.engine !== 'omnihuman-1.5' && isEnabledEngine('omnihuman-1.5')) {
-          const fallbackVoice = ELEVENLABS_VOICE_PRESETS[0]?.voice_id ?? '';
-          console.warn(`[heygen-worker] ${videoId} HeyGen limit (${msg.slice(0, 90)}) → OmniHuman fallback`);
+        if (isPlanLimit) {
+          console.warn(`[heygen-worker] ${videoId} HeyGen plan limit: ${msg.slice(0, 300)}`);
           await prisma.videoGeneration.update({
             where: { id: videoId },
             data: {
-              engine: 'omnihuman-1.5',
-              heygenJobId: null,
-              audioUrl: null,
-              voiceId: fallbackVoice,
-              status: 'processing',
-              errorMsg: 'heygen limit → omnihuman fallback',
+              status: 'failed',
+              errorMsg: 'HEYGEN_LIMIT: Исчерпан лимит аккаунта HeyGen (фото-аватары или кредиты), токены возвращены. Освободите место в HeyGen и повторите.',
             },
           });
-          await omnihumanQueue().add('generate', { videoId, userId }, { jobId: `omni-${videoId}` });
-          return { ok: true, fallback: 'omnihuman' as const };
+          await refundTokens({ userId, amount: row.tokensCost, reason: 'heygen-video:plan-limit', refId: videoId });
+          throw new UnrecoverableError(msg);
         }
 
         const maxAttempts = job.opts.attempts ?? 1;
