@@ -73,7 +73,7 @@ export default function AdminPage() {
   }, [tasks, stageFilter, projectFilter])
 
   const projectCounts = useMemo(() => {
-    const c: Record<TaskProject | 'all', number> = { all: tasks.length, transcribe: 0, ytdlp: 0, 'ai-office': 0, general: 0 }
+    const c: Record<TaskProject | 'all', number> = { all: tasks.length, transcribe: 0, ytdlp: 0, 'ai-sales': 0, general: 0 }
     tasks.forEach(t => {
       const p = (t.project ?? 'general') as TaskProject
       c[p] = (c[p] ?? 0) + 1

@@ -6,7 +6,7 @@ This file provides guidance to Claude Code (claude.ai/code) when working with co
 
 A monorepo (npm workspaces) bundling several related projects under one
 roof. The flagship app is the transcription Mini App; the others are
-support services and a legacy static site kept for reference.
+support services around it.
 
 ```
 /
@@ -14,18 +14,17 @@ support services and a legacy static site kept for reference.
 │   ├── transcribe/   # Next.js 14 app + Telegram Mini App (the flagship)
 │   ├── tg-agent/     # Node.js Telegram group AI agent (Railway, long-polling)
 │   ├── ytdlp/        # FastAPI + yt-dlp companion microservice (Railway)
-│   ├── ai-sales/     # Multi-agent IG+TG sales system (FastAPI + Caddy on Hetzner)
-│   └── ai-office/    # legacy static "AI Business Command Center" site
+│   └── ai-sales/     # Multi-agent IG+TG sales system (FastAPI + Caddy on Hetzner)
 ├── packages/         # reserved for shared code (empty)
 ├── supabase/         # SQL migrations shared across apps
 └── docs/
 ```
 
 `apps/transcribe` and `apps/tg-agent` are node workspaces; `apps/ytdlp`
-and `apps/ai-sales/code` are Python; `apps/ai-office` and the
-`apps/ai-sales` portal/dashboard prototype are static HTML. Root `package.json`
-proxies `dev/build/start/lint` to `apps/transcribe` and exposes
-`tg-agent:dev|build|start|typecheck` for the Telegram agent.
+and `apps/ai-sales/code` are Python; the `apps/ai-sales` portal/dashboard
+prototype is static HTML. Root `package.json` proxies `dev/build/start/lint`
+to `apps/transcribe` and exposes `tg-agent:dev|build|start|typecheck` for
+the Telegram agent.
 
 The transcribe app is a single-purpose web app and Telegram Mini App for
 transcribing video / audio links and turning the transcript into short-form
@@ -106,7 +105,7 @@ SQL Editor:
   manually if you're seeding fresh.
 - `004_tasks_project.sql` — adds `project text` column to `tasks` so the
   `/admin` board can split tasks per monorepo project
-  (`transcribe` | `ytdlp` | `ai-office` | `general`, default `general`).
+  (`transcribe` | `ytdlp` | `ai-sales` | `general`, default `general`).
 
 `supabase/seed_initial_tasks.sql` (not under `migrations/`) is an optional
 one-shot seed that populates the `/admin` board with the current project

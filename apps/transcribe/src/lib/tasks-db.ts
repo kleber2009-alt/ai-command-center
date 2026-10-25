@@ -1,6 +1,6 @@
 export type TaskStatus = 'backlog' | 'in_progress' | 'blocked' | 'done'
 export type TaskPriority = 'low' | 'medium' | 'high'
-export type TaskProject = 'transcribe' | 'ytdlp' | 'ai-office' | 'general'
+export type TaskProject = 'transcribe' | 'ytdlp' | 'ai-sales' | 'general'
 
 export type Task = {
   id: string
@@ -30,11 +30,11 @@ export const PRIORITY_LABEL: Record<TaskPriority, string> = {
   high: 'high',
 }
 
-export const TASK_PROJECTS: TaskProject[] = ['transcribe', 'ytdlp', 'ai-office', 'general']
+export const TASK_PROJECTS: TaskProject[] = ['transcribe', 'ytdlp', 'ai-sales', 'general']
 
 export const PROJECT_LABEL: Record<TaskProject, string> = {
   transcribe: 'Transcribe',
   ytdlp: 'yt-dlp',
-  'ai-office': 'AI Office',
+  'ai-sales': 'AI Sales',
   general: 'General',
 }
