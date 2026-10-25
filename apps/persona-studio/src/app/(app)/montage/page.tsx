@@ -5,12 +5,12 @@ import { COSTS } from '@/lib/tokens';
 import { ArrowRight } from 'lucide-react';
 import { PageHero } from '@/components/shell/page-hero';
 import { MontageStudio } from '@/components/montage/montage-studio';
-import { MONTAGE_PRESETS } from '@/lib/montage/presets';
+import { KADRIK_STYLES } from '@/lib/montage/kadrik-styles';
 
 export const dynamic = 'force-dynamic';
 export const metadata = { title: 'Скиллы монтажа — Persona Studio' };
 
-const PIPELINE = ['Whisper · слова', 'паузы ≤ 0.2 c', 'субтитры 1–3 слова', 'хук + «пиши слово»', '−14 LUFS'];
+const PIPELINE = ['стиль Студии Кадрика', 'Claude Code + скилл', 'нарезка и титры', 'проверка кадров', 'mp4 / тексты'];
 
 export default async function MontagePage() {
   const user = await getCurrentUser();
@@ -36,10 +36,10 @@ export default async function MontagePage() {
         eyebrow="монтаж по скиллам"
         title={
           <>
-            Монтаж по скиллам — <span className="italic text-gold">паузы, титры, панчи.</span>
+            Монтаж по скиллам — <span className="italic text-gold">стили Студии Кадрика.</span>
           </>
         }
-        description="Свой движок монтажа на ffmpeg по пайплайну скилла montazh-rils: пословные таймкоды, вырезка пауз, субтитры в стиле скилла, хук-титр сверху и призыв «пиши «слово»» в конце. Без внешнего монтажёра."
+        description="Те же 31 скилл и стиль, что в мини-аппе @studio_kadrik_bot: рилсы, стили @ilia.paliy, YouTube, клипы и тексты. Выбери стиль, дай видео — Кадрик смонтирует его скиллом через Claude Code и вернёт готовый ролик сюда."
         actions={[
           { label: 'Карусели', href: '/carousels' },
           { label: 'Submagic-монтаж', href: '/edits', tone: 'ghost' },
@@ -48,7 +48,7 @@ export default async function MontagePage() {
         meta={
           <>
             <div className="label">Стилей</div>
-            <div className="text-[40px] font-extrabold leading-none tabular-nums tracking-[-0.02em] text-gold">{MONTAGE_PRESETS.length}</div>
+            <div className="text-[40px] font-extrabold leading-none tabular-nums tracking-[-0.02em] text-gold">{KADRIK_STYLES.length}</div>
             <div className="label pt-3">Ролики · {montages.length}</div>
           </>
         }
@@ -70,7 +70,7 @@ export default async function MontagePage() {
         }
       />
       <MontageStudio
-        cost={COSTS.skillMontage}
+        cost={COSTS.kadrikMontage}
         videos={videos.map((v) => ({
           id: v.id,
           videoUrl: v.videoUrl,
@@ -88,6 +88,7 @@ export default async function MontagePage() {
           resultUrl: m.resultUrl,
           durationSec: m.durationSec,
           errorMsg: m.errorMsg,
+          progress: m.progress,
           createdAt: m.createdAt.toISOString(),
         }))}
       />

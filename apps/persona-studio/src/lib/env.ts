@@ -104,6 +104,14 @@ const envSchema = z.object({
   SUBMAGIC_MAX_POLL_MS: z.coerce.number().default(900_000), // 15 минут
   SUBMAGIC_POLL_INTERVAL_MS: z.coerce.number().default(8_000),
 
+  // ── Студия Кадрика (монтаж скиллами Creator Pack) ──
+  // Бот @studio_kadrik_bot монтирует Claude Code со скиллом на своей машине;
+  // Persona шлёт ему задачи по /api/ext/jobs (src/lib/montage/kadrik.ts).
+  KADRIK_API_URL: z.string().url().optional(),
+  KADRIK_API_KEY: z.string().min(1).optional(),
+  KADRIK_MAX_WAIT_MS: z.coerce.number().default(8 * 3600_000), // монтаж скиллом идёт 20–90 минут, YouTube — дольше
+  KADRIK_POLL_INTERVAL_MS: z.coerce.number().default(15_000),
+
   // ── Costs (env-driven) ────────────────────────
   // Token costs calibrated to provider COGS for ~55% gross margin at the Pro
   // pack ($0.0725/token). See docs/UNIT_ECONOMICS.md. Video engines are the
@@ -117,6 +125,8 @@ const envSchema = z.object({
   COST_SLIDE_IMAGE: z.coerce.number().default(3),
   // Монтаж по скиллам (ffmpeg + Whisper word-timestamps, без внешнего монтажёра).
   COST_SKILL_MONTAGE: z.coerce.number().default(20),
+  // Монтаж скиллом в Студии Кадрика (Claude Code ~$3–6 за рилс); YouTube — ×4.
+  COST_KADRIK_MONTAGE: z.coerce.number().default(80),
   // ── Studio workspace (Мастер-ТЗ §10 — единый прайс) ──
   COST_STUDIO_SCRIPT: z.coerce.number().default(2),
   // ── Research (Badunga-style) ──

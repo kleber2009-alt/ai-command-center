@@ -323,7 +323,7 @@ export default async function DashboardPage({
             href="/montage"
             kicker="05 · Монтаж"
             title="Монтаж рилса по скиллу: паузы, титры, панчи"
-            cost={`-${COSTS.skillMontage}t`}
+            cost={`-${COSTS.kadrikMontage}t`}
             accent="gold"
             icon="montage"
           />
@@ -822,7 +822,7 @@ function TrendCard({
 function BalanceCard({ balance, scheduled }: { balance: number; scheduled: number }) {
   const rows: { label: string; cost: number }[] = [
     { label: 'Пакет аватаров', cost: COSTS.avatarGeneration },
-    { label: 'Монтаж по скиллу', cost: COSTS.skillMontage },
+    { label: 'Монтаж по скиллу', cost: COSTS.kadrikMontage },
     { label: 'Говорящее видео', cost: engineConfig(defaultEngine()).cost },
     { label: 'Обложка', cost: COSTS.coverGeneration },
   ];

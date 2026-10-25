@@ -2,6 +2,7 @@ import { redirect } from 'next/navigation';
 import Link from 'next/link';
 import { getCurrentUser } from '@/lib/auth';
 import { prisma } from '@/lib/prisma';
+import { findKadrikStyle } from '@/lib/montage/kadrik-styles';
 import { PageHero } from '@/components/shell/page-hero';
 import { Icon3D } from '@/components/ui/icon3d';
 import { NewPostClient } from '@/components/schedule/new-post-client';
@@ -32,7 +33,8 @@ export default async function NewSchedulePage({
       select: { id: true, resultUrl: true, template: true, createdAt: true },
     }),
     prisma.montage.findMany({
-      where: { userId: user.id, status: 'completed', resultUrl: { not: null } },
+      // тексты и наборы клипов (format text, zip) в пост не годятся
+      where: { userId: user.id, status: 'completed', resultUrl: { not: null }, format: { not: 'text' } },
       orderBy: { createdAt: 'desc' },
       take: 50,
       select: { id: true, resultUrl: true, style: true, hookTitle: true, createdAt: true },
@@ -55,7 +57,7 @@ export default async function NewSchedulePage({
       sourceType: 'montage' as const,
       id: m.id,
       mediaUrl: m.resultUrl!,
-      label: m.hookTitle ? m.hookTitle.replace(/\*/g, '') : `Скилл-монтаж · ${m.style}`,
+      label: m.hookTitle ? m.hookTitle.replace(/\*/g, '') : `Монтаж · ${findKadrikStyle(m.style)?.name ?? m.style}`,
       createdAt: m.createdAt.toISOString(),
     })),
     // Only fully rendered carousels (every slide has a PNG) can be published.

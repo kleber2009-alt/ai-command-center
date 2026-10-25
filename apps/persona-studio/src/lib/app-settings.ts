@@ -29,6 +29,8 @@ export const INTEGRATIONS: Integration[] = [
   { key: 'OPENAI_API_KEY', label: 'OpenAI', purpose: 'Запасной провайдер для текстов, если Claude недоступен', url: 'https://platform.openai.com/api-keys', secret: true, group: 'text' },
   { key: 'ELEVENLABS_API_KEY', label: 'ElevenLabs', purpose: 'Клонирование голоса и озвучка видео', url: 'https://elevenlabs.io/app/settings/api-keys', secret: true, group: 'voice' },
   { key: 'HEYGEN_API_KEY', label: 'HeyGen', purpose: 'Альтернативный движок говорящего видео', url: 'https://app.heygen.com/settings?nav=API', secret: true, group: 'generation' },
+  { key: 'KADRIK_API_URL', label: 'Студия Кадрика — адрес', purpose: 'Монтаж по стилям Кадрика (раздел «Скиллы монтажа»): адрес мини-аппа бота, например https://kadrik.example.com', secret: false, group: 'generation' },
+  { key: 'KADRIK_API_KEY', label: 'Студия Кадрика — ключ', purpose: 'PERSONA_API_KEY из .env бота @studio_kadrik_bot', secret: true, group: 'generation' },
   { key: 'SUBMAGIC_API_KEY', label: 'Submagic', purpose: 'Монтаж готовых видео по шаблонам (раздел «Монтаж»)', url: 'https://app.submagic.co/api', secret: true, group: 'generation' },
   { key: 'APIFY_TOKEN', label: 'Apify', purpose: 'Ресёрч вирусных рилсов, парсер, радары', url: 'https://console.apify.com/settings/integrations', secret: true, group: 'research' },
   { key: 'VOYAGE_API_KEY', label: 'Voyage AI', purpose: 'Антиплагиат сценариев и дедуп ресёрча (опционально)', url: 'https://dash.voyageai.com/api-keys', secret: true, group: 'research' },

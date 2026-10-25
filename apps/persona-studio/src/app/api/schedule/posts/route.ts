@@ -73,6 +73,7 @@ export async function POST(req: NextRequest) {
     if (m.status !== 'completed' || !m.resultUrl) {
       return NextResponse.json({ error: 'source_not_ready', status: m.status }, { status: 409 });
     }
+    if (m.format === 'text') return NextResponse.json({ error: 'source_not_video' }, { status: 409 });
     mediaUrl = m.resultUrl;
   } else {
     const c = await prisma.carouselDraft.findFirst({ where: { id: sourceId, userId } });

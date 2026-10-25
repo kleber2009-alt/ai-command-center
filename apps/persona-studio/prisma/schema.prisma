@@ -387,6 +387,8 @@ model ParserItem {
 // движок на ffmpeg (src/lib/montage/**): чистка пауз по пословным таймкодам,
 // пословные субтитры в стиле скилла, хук-титр, CTA «пиши «слово»», −14 LUFS.
 // Источник — готовое аватар-видео или загруженная запись.
+// Стили Студии Кадрика (style = id скилла Creator Pack, src/lib/montage/kadrik-styles.ts)
+// монтирует бот Кадрика: externalId — id его задачи, progress — строка этапа.
 model Montage {
   id                String           @id @default(cuid())
   userId            String
@@ -394,8 +396,8 @@ model Montage {
   videoGenerationId String?
   videoGeneration   VideoGeneration? @relation(fields: [videoGenerationId], references: [id], onDelete: SetNull)
   sourceUrl         String // исходник (VideoGeneration.videoUrl или загрузка в S3)
-  style             String // id пресета монтажа (palii | arena | kobalt | … | youtube)
-  format            String           @default("9:16") // 9:16 | 16:9
+  style             String // id скилла Кадрика (montazh-rils | business-short-form-reels | …); старые — ffmpeg-пресеты palii | arena | …
+  format            String           @default("9:16") // 9:16 | 16:9 | text (тексты и наборы клипов — zip)
   hookTitle         String? // титр хука, поддерживает *акцент*
   ctaWord           String? // кодовое слово призыва «пиши «слово»»
   options           Json             @default("{}") // { cutSilence, subtitles, punch }
@@ -405,6 +407,8 @@ model Montage {
   durationSec       Float?
   tokensCost        Int              @default(20)
   errorMsg          String?
+  externalId        String? // id задачи в боте Кадрика
+  progress          String? // «рендер · …» — последний этап работы скилла
   createdAt         DateTime         @default(now())
   completedAt       DateTime?
 

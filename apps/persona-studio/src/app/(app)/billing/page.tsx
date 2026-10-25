@@ -57,7 +57,7 @@ export default async function BillingPage() {
           <CostCard label="Пакет аватаров" cost={COSTS.avatarGeneration} note="10 портретов" />
           <CostCard label="Обложка" cost={COSTS.coverGeneration} note="одно изображение" />
           <CostCard label="Говорящее видео" cost={engineConfig(defaultEngine()).cost} note="аватар + голос" />
-          <CostCard label="Монтаж по скиллу" cost={COSTS.skillMontage} note="паузы · титры · панчи" />
+          <CostCard label="Монтаж по скиллу" cost={COSTS.kadrikMontage} note="стили Студии Кадрика · YouTube ×4" />
           <CostCard label="AI-картинка слайда" cost={COSTS.slideImage} note="за слайд карусели" />
           <CostCard label="Клон голоса" cost={0} note="бесплатно" />
         </div>
