@@ -1,0 +1,8 @@
+// Деплой hq.aicex.club: Worker hq-aicex, только статика (custom domain привязан в Cloudflare).
+// cd apps/hq && npx wrangler deploy   (нужны CLOUDFLARE_API_TOKEN с Workers Scripts: Edit и CLOUDFLARE_ACCOUNT_ID)
+{
+  "name": "hq-aicex",
+  "compatibility_date": "2026-10-01",
+  "workers_dev": false,
+  "assets": { "directory": "." }
+}

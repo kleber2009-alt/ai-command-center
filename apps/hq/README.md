@@ -39,4 +39,8 @@ cd apps/hq && python3 -m http.server 8000   # http://localhost:8000
 
 ## Деплой
 
-Сайт отдаётся через Cloudflare — содержимое папки выкладывается как есть, без сборки.
+Cloudflare Worker `hq-aicex` (только статика, домен hq.aicex.club):
+
+```bash
+cd apps/hq && npx wrangler deploy   # CLOUDFLARE_API_TOKEN (Workers Scripts: Edit) + CLOUDFLARE_ACCOUNT_ID
+```
