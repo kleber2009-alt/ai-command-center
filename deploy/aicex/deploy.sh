@@ -20,7 +20,7 @@ log() { echo "── $* ──"; }
 # ── 1. one-time secrets ──────────────────────────────────────────────
 mkdir -p "$ETC" && chmod 700 "$ETC"
 touch "$ETC/stack.env"; chmod 600 "$ETC/stack.env"
-for k in PG_PASSWORD TRANSCRIBE_WEBHOOK_SECRET YTDLP_KEY; do
+for k in PG_PASSWORD TRANSCRIBE_WEBHOOK_SECRET YTDLP_KEY TG_ADMIN_SESSION_SECRET; do
   grep -q "^$k=" "$ETC/stack.env" || { echo "$k=$(openssl rand -hex 24)" >> "$ETC/stack.env"; log "generated $k"; }
 done
 set -a; . "$ETC/stack.env"; set +a

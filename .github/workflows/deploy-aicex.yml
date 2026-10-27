@@ -4,8 +4,9 @@
 # /opt/aicex (separate from /opt/ai-command-center, which Persona Studio
 # auto-deploys from).
 #
-# Secrets/vars reused from the per-app workflows; HETZNER_HOST now points
-# at the new box.
+# Secrets/vars reused from the per-app workflows; shared ANTHROPIC_API_KEY,
+# OPENAI_API_KEY, DEEPGRAM_API_KEY, ADMIN_PASSWORD and var OWNER_TELEGRAM_ID
+# fill in for any per-app one left empty. HETZNER_HOST points at the new box.
 name: deploy-aicex
 
 on:
@@ -43,14 +44,14 @@ jobs:
           REF: ${{ github.sha }}
           BRANCH: ${{ github.ref_name }}
           SERVICES: ${{ github.event.inputs.services }}
-          CC_ADMIN_PASSWORD: ${{ secrets.COMMAND_CENTER_ADMIN_PASSWORD }}
+          CC_ADMIN_PASSWORD: ${{ secrets.COMMAND_CENTER_ADMIN_PASSWORD || secrets.ADMIN_PASSWORD }}
           TRANSCRIBE_BOT_TOKEN: ${{ secrets.TRANSCRIBE_TELEGRAM_BOT_TOKEN }}
           TRANSCRIBE_ENV: |
-            ANTHROPIC_API_KEY=${{ secrets.TRANSCRIBE_ANTHROPIC_API_KEY }}
-            DEEPGRAM_API_KEY=${{ secrets.TRANSCRIBE_DEEPGRAM_API_KEY }}
-            OPENAI_API_KEY=${{ secrets.TRANSCRIBE_OPENAI_API_KEY }}
+            ANTHROPIC_API_KEY=${{ secrets.TRANSCRIBE_ANTHROPIC_API_KEY || secrets.ANTHROPIC_API_KEY }}
+            DEEPGRAM_API_KEY=${{ secrets.TRANSCRIBE_DEEPGRAM_API_KEY || secrets.DEEPGRAM_API_KEY }}
+            OPENAI_API_KEY=${{ secrets.TRANSCRIBE_OPENAI_API_KEY || secrets.OPENAI_API_KEY }}
             TELEGRAM_BOT_TOKEN=${{ secrets.TRANSCRIBE_TELEGRAM_BOT_TOKEN }}
-            OWNER_TELEGRAM_ID=${{ vars.TRANSCRIBE_OWNER_TELEGRAM_ID }}
+            OWNER_TELEGRAM_ID=${{ vars.TRANSCRIBE_OWNER_TELEGRAM_ID || vars.OWNER_TELEGRAM_ID }}
             APIFY_API_TOKEN=${{ secrets.TRANSCRIBE_APIFY_API_TOKEN }}
           YTDLP_ENV: |
             COOKIES_B64=${{ secrets.YTDLP_COOKIES_B64 }}
@@ -58,15 +59,14 @@ jobs:
             PORT=8080
           TG_AGENT_ENV: |
             TELEGRAM_BOT_TOKEN=${{ secrets.TG_AGENT_TELEGRAM_BOT_TOKEN }}
-            ANTHROPIC_API_KEY=${{ secrets.TG_AGENT_ANTHROPIC_API_KEY }}
-            OWNER_TELEGRAM_ID=${{ vars.TG_AGENT_OWNER_TELEGRAM_ID }}
+            ANTHROPIC_API_KEY=${{ secrets.TG_AGENT_ANTHROPIC_API_KEY || secrets.ANTHROPIC_API_KEY }}
+            OWNER_TELEGRAM_ID=${{ vars.TG_AGENT_OWNER_TELEGRAM_ID || vars.OWNER_TELEGRAM_ID }}
             ALLOWED_CHAT_IDS=${{ vars.TG_AGENT_ALLOWED_CHAT_IDS }}
             IGNORED_USER_IDS=${{ vars.TG_AGENT_IGNORED_USER_IDS }}
             CLASSIFIER_MODEL=${{ vars.TG_AGENT_CLASSIFIER_MODEL }}
             RESPONDER_MODEL=${{ vars.TG_AGENT_RESPONDER_MODEL }}
-            ADMIN_USERNAME=${{ vars.TG_AGENT_ADMIN_USERNAME }}
-            ADMIN_PASSWORD=${{ secrets.TG_AGENT_ADMIN_PASSWORD }}
-            ADMIN_SESSION_SECRET=${{ secrets.TG_AGENT_ADMIN_SESSION_SECRET }}
+            ADMIN_USERNAME=${{ vars.TG_AGENT_ADMIN_USERNAME || 'admin' }}
+            ADMIN_PASSWORD=${{ secrets.TG_AGENT_ADMIN_PASSWORD || secrets.ADMIN_PASSWORD }}
             LOG_LEVEL=info
             NODE_ENV=production
             REPORT_ENABLED=true
@@ -75,7 +75,7 @@ jobs:
             FORUM_ENABLED=${{ vars.TG_AGENT_FORUM_ENABLED || 'false' }}
             FORUM_KEEP_OWNER_DM=${{ vars.TG_AGENT_FORUM_KEEP_OWNER_DM || 'true' }}
           AI_OFFICE_ENV: |
-            ANTHROPIC_API_KEY=${{ secrets.WORKER_ANTHROPIC_API_KEY }}
+            ANTHROPIC_API_KEY=${{ secrets.WORKER_ANTHROPIC_API_KEY || secrets.ANTHROPIC_API_KEY }}
             ELEVENLABS_API_KEY=${{ secrets.WORKER_ELEVENLABS_API_KEY }}
         with:
           host:     ${{ vars.HETZNER_HOST }}
