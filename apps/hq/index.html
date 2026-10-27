@@ -261,7 +261,7 @@
 <div id="labels"></div>
 
 <header class="top">
-  <div class="brand glass"><span class="logo"></span><div><b>AI Office</b><div class="crumbs" id="crumbs"></div></div></div>
+  <div class="brand glass"><span class="logo"></span><div><b id="brandName">AI Office</b><div class="crumbs" id="crumbs"></div></div></div>
   <nav class="tabs glass" id="tabs"></nav>
 </header>
 
@@ -297,8 +297,18 @@
 <div id="lightbox" hidden><img alt=""><p></p></div>
 <div id="loader">Собираю офис…</div>
 
-<script src="dept-content.js?v=2"></script>
-<script src="agent-content.js?v=2"></script>
+<script src="office.config.js?v=3"></script>
+<script>
+  // предпросмотр из мастера настройки: setup.html кладёт черновик настроек в localStorage
+  try {
+    if (/[?&]preview\b/.test(location.search)) {
+      const draft = localStorage.getItem('office:preview');
+      if (draft) window.OFFICE_CONFIG = JSON.parse(draft);
+    }
+  } catch (e) {}
+</script>
+<script src="dept-content.js?v=3"></script>
+<script src="agent-content.js?v=3"></script>
 <script type="module">
 import * as THREE from 'three';
 import { OrbitControls } from 'three/addons/controls/OrbitControls.js';
@@ -311,64 +321,36 @@ import { UnrealBloomPass } from 'three/addons/postprocessing/UnrealBloomPass.js'
 import { OutputPass } from 'three/addons/postprocessing/OutputPass.js';
 import { GLTFLoader } from 'three/addons/loaders/GLTFLoader.js';
 
-/* ================= ДАННЫЕ: департаменты, руководители, агенты =================
-   photo: ссылка на фото руководителя — появится в табличке и карточке.
-   Позже по фото будет сделана реальная 3D-модель человека. */
+/* ================= ДАННЫЕ: отделы, руководители, агенты =================
+   Состав офиса — в office.config.js, карточки и досье агентов — в agent-content.js.
+   Здесь только оформление: цвета комнат и внешность руководителей в 3D. */
 
-const DEPTS = [
-  { id:'ceo', name:'Стратегия и продукт', short:'СП', accent:'#2f7bff', column:'#0a3fd6',
-    screen:{ mode:0, deep:'#00030a', glow:'#1f5cff', spark:'#a6d8ff' },
-    head:{ id:'ilia', name:'Илья', title:'Основатель — стратегия, видение, продукт', photo:'', model:'', height:1.8,
-           skin:'#e8bfa4', hair:'#2b1d14', hairStyle:'swept', suit:'#141416', top:'#111113' },
-    props:['ball'],
-    agents:[
-      { id:'product',  name:'Разработка продуктов',   role:'Собирает продукты кодом и выкладывает',     color:'#4da3ff', status:'working',  task:'Дорабатывает Persona Studio 2.0' },
-      { id:'market',   name:'Исследования рынка',     role:'Изучает рынок, конкурентов и тренды',       color:'#9b6bff', status:'thinking', task:'Собирает игровые концепции' },
-      { id:'briefing', name:'Утренний брифинг',       role:'Сводка дня: почта, календарь, задачи',      color:'#ffd166', status:'idle',     task:'Соберёт брифинг утром' },
-      { id:'specs',    name:'ТЗ и документы',         role:'Пишет ТЗ, планы и гайды',                   color:'#5ad1ff', status:'working',  task:'Пишет гайд для клиента' },
-      { id:'skills',   name:'Скиллы и автоматизации', role:'Создаёт скиллы, плагины и MCP для команды', color:'#3ddc97', status:'working',  task:'Упаковывает пакет скиллов' },
-    ] },
-  { id:'marketing', name:'Отдел маркетинга', short:'ОМ', accent:'#a46cd6', column:'#6a34a8',
-    screen:{ mode:1, deep:'#05010a', glow:'#b46cff', spark:'#ffb3e6' },
-    head:{ id:'firuza', name:'Фируза', title:'Руководитель отдела маркетинга', photo:'people/firuza-face.jpg', model:'people/firuza.glb', height:1.68,
-           skin:'#ecc6ad', hair:'#2a1610', hairStyle:'long', suit:'#141416', top:'#141416', necklace:'#a46cd6' },
-    props:[],
-    agents:[
-      { id:'slides',     name:'Презентации',      role:'Слайды вебинаров, эфиров и питчей',         color:'#4da3ff', status:'thinking', task:'Продумывает структуру вебинара' },
-      { id:'creatives',  name:'Креативы',         role:'Рекламные креативы для Meta',               color:'#ff7a59', status:'working',  task:'Генерирует креативы для теста' },
-      { id:'funnels',    name:'Воронки',          role:'Бот, прогрев по дням и оффер',              color:'#3ddc97', status:'working',  task:'Собирает прогрев в боте' },
-      { id:'publish',    name:'Публикации',       role:'Контент-план и выпуск в соцсети',           color:'#ffd166', status:'working',  task:'Ставит рилс в публикацию' },
-      { id:'analytics',  name:'Аналитика',        role:'Охваты, лиды, выручка и ROMI',              color:'#5ad1ff', status:'thinking', task:'Считает ROMI за неделю' },
-      { id:'audience',   name:'Анализ аудитории', role:'Аудитория, ниша и конкуренты',              color:'#c38bff', status:'working',  task:'Ищет выбросы в нише' },
-      { id:'scripts',    name:'Сценарии',         role:'Сценарии рилсов с кодовым словом',          color:'#ff5d8f', status:'working',  task:'Пишет 10 продающих рилсов' },
-      { id:'montage',    name:'Монтаж видео',     role:'Рилсы и YouTube кодом, 35+ стилей',         color:'#ff9f43', status:'working',  task:'Монтирует рилс' },
-      { id:'carousel',   name:'Карусели',         role:'Карусели Instagram в 24 стилях',            color:'#ffe08a', status:'idle',     task:'Ждёт сценарий' },
-      { id:'landings',   name:'Лендинги',         role:'Сайты и лендинги на aicex.club',            color:'#6366f1', status:'working',  task:'Верстает лендинг' },
-      { id:'leadmagnet', name:'Лид-магниты',      role:'Подарки за подписку: PDF, уроки, чек-листы', color:'#2fb9a6', status:'thinking', task:'Придумывает подарок' },
-      { id:'avatar',     name:'Видео с аватаром', role:'Ролики с ИИ-двойником без съёмки',          color:'#e0559c', status:'idle',     task:'Ждёт текст' },
-    ] },
-  { id:'sales', name:'Отдел продаж', short:'ОП', accent:'#16c98a', column:'#0c8f63',
-    screen:{ mode:1, deep:'#01030a', glow:'#16ffa0', spark:'#6f8bff' },
-    head:{ id:'bogdan', name:'Богдан', title:'РОП — руководитель отдела продаж', photo:'people/bogdan-face.jpg', model:'', height:1.85,
-           skin:'#e6b59b', hair:'#5a3420', hairStyle:'swept', suit:'#151517', top:'#111113', cross:true, sneakers:true },
-    props:['dogs'],
-    agents:[
-      { id:'chats',    name:'Переписки',             role:'Ведёт переписки с клиентами',           color:'#5ad1ff', status:'working',  task:'Отвечает в директ' },
-      { id:'comments', name:'Ответы на комментарии', role:'Отвечает на кодовые слова под постами', color:'#ffd166', status:'working',  task:'Разбирает комментарии под рилсом' },
-      { id:'consult',  name:'ИИ-консультации',       role:'Отвечает на вопросы по базе знаний',    color:'#c38bff', status:'thinking', task:'Учит новые ответы' },
-      { id:'mailings', name:'Рассылки',              role:'Рассылки по базе в боте',               color:'#ff7a59', status:'idle',     task:'Ждёт запуск' },
-      { id:'closer',   name:'Закрытие сделок',       role:'Доводит тёплых лидов до оплаты',        color:'#3ddc97', status:'working',  task:'Ведёт тёплых лидов' },
-    ] },
-  { id:'traffic', name:'Реклама Meta', short:'RM', accent:'#ff7a3d', column:'#c4552c',
-    screen:{ mode:2, deep:'#1d0a12', glow:'#ff8a3d', spark:'#ffd58a' },
-    head:{ id:'nurken', name:'Нуркен', title:'Таргетолог — реклама в Meta', photo:'people/nurken-face.jpg', model:'', height:1.75,
-           skin:'#c69072', hair:'#16110e', hairStyle:'curly', suit:'#141416', top:'#0e0e10', turtleneck:true, glasses:true, beard:true },
-    props:['hookah'],
-    agents:[
-      { id:'metaads',   name:'Рекламные кампании', role:'Запускает и ведёт кампании в Meta',  color:'#ff7a59', status:'working',  task:'Следит за ценой лида' },
-      { id:'adreports', name:'Отчёты по рекламе',  role:'Расходы, лиды и цена лида по дням', color:'#5ad1ff', status:'thinking', task:'Готовит отчёт за неделю' },
-    ] },
+const CFG = window.OFFICE_CONFIG || { depts:[] };
+const CATALOG = window.AGENT_CATALOG || {};
+const ROOM_STYLES = [
+  { accent:'#2f7bff', column:'#0a3fd6', screen:{ mode:0, deep:'#00030a', glow:'#1f5cff', spark:'#a6d8ff' }, props:['ball'] },
+  { accent:'#a46cd6', column:'#6a34a8', screen:{ mode:1, deep:'#05010a', glow:'#b46cff', spark:'#ffb3e6' }, props:[] },
+  { accent:'#16c98a', column:'#0c8f63', screen:{ mode:1, deep:'#01030a', glow:'#16ffa0', spark:'#6f8bff' }, props:['dogs'] },
+  { accent:'#ff7a3d', column:'#c4552c', screen:{ mode:2, deep:'#1d0a12', glow:'#ff8a3d', spark:'#ffd58a' }, props:['hookah'] },
 ];
+const LOOKS = {
+  m1:{ height:1.85, skin:'#e6b59b', hair:'#5a3420', hairStyle:'swept', suit:'#151517', top:'#111113', cross:true, sneakers:true },
+  m2:{ height:1.75, skin:'#c69072', hair:'#16110e', hairStyle:'curly', suit:'#141416', top:'#0e0e10', turtleneck:true, glasses:true, beard:true },
+  m3:{ height:1.8,  skin:'#e8bfa4', hair:'#2b1d14', hairStyle:'swept', suit:'#141416', top:'#111113' },
+  f1:{ height:1.68, skin:'#ecc6ad', hair:'#2a1610', hairStyle:'long', suit:'#141416', top:'#141416', necklace:'#a46cd6' },
+};
+const initials = s => s.split(/\s+/).filter(w => w.length > 2).slice(0, 2).map(w => w[0]).join('').toUpperCase() || s.slice(0, 2).toUpperCase();
+const DEPTS = CFG.depts.slice(0, 4).map((d, i) => {
+  const st = ROOM_STYLES[i % ROOM_STYLES.length];
+  return {
+    ...st, ...d, short:d.short || initials(d.name),
+    head:{ photo:'', model:'', ...LOOKS[d.head.look] || LOOKS.m3, ...d.head },
+    agents:(d.agents || []).filter(id => CATALOG[id]).slice(0, 12).map(id => ({ id, ...CATALOG[id], ...(CFG.agents || {})[id] })),
+  };
+});
+const BRAND = CFG.brand || 'AI Office';
+document.title = `${BRAND} — ИИ-офис`;
+document.getElementById('brandName').textContent = BRAND;
 
 const STATUS = {
   working:  { label:'работает', color:'#3ddc97' },
@@ -1217,7 +1199,7 @@ function renderUI() {
   if (!d) {
     const total = DEPTS.reduce((n, x) => n + x.agents.length, 0);
     $('sideTitle').textContent = 'Департаменты';
-    $('sideSub').textContent = `${DEPTS.length} ${DEPTS.length > 4 ? 'отделов' : 'отдела'} · ${total} ${plural(total)}`;
+    $('sideSub').textContent = `${DEPTS.length} ${word(DEPTS.length, 'отдел', 'отдела', 'отделов')} · ${total} ${plural(total)}`;
     $('sideDemo').hidden = false; $('sideDemo').textContent = '▶ Демо офиса';
     $('sideList').innerHTML = DEPTS.map(x => `
       <li data-dept="${x.id}"><span class="dept-ic" style="--c:${x.accent}">${esc(x.short)}</span>
@@ -1440,6 +1422,7 @@ function showTab(tab) {
     h = (c.results || []).map(resultHTML).join('');
     if (c.artifacts?.length) h += `<h4>Документы и артефакты</h4><div class="links">${c.artifacts.map(x => `<a href="${esc(x.url)}" target="_blank" rel="noopener"><b>${esc(x.title)}</b></a>`).join('')}</div>`;
     if (!h) h = `<div class="empty">Готовых материалов пока нет — они появятся здесь после первых задач агента.</div>`;
+    else if (CFG.examplesNote) h = `<p class="teamline" style="margin:0 0 14px">${esc(CFG.examplesNote)}</p>` + h;
   } else if (tab === 'skills') {
     h = `<div class="skills">${(c.skills || []).map(s => `<div><b>${esc(s.title)}</b><code>${esc(s.name)}</code><p>${esc(s.desc)}</p>${s.say ? `<i>Скажи: «${esc(s.say)}»</i>` : ''}</div>`).join('')}</div>`;
   } else {
@@ -1478,7 +1461,7 @@ $('lightbox').onclick = () => $('lightbox').hidden = true;
 const demo = { slides:[], i:0, timer:null, playing:true, DUR:8000 };
 
 const HEADS = window.HEAD_CONTENT || {};
-const headOf = id => HEADS[id] || { lead:'', zones:[], process:[], materials:[] };
+const headOf = deptId => HEADS[deptId] || { lead:'', zones:[], process:[], materials:[] };
 const chips = list => list.length ? `<div class="chipsrow">${list.map(x => `<span>${esc(x)}</span>`).join('')}</div>` : '';
 const avHTML = a => `<span class="av" style="--c:${esc(a.color)}"></span>`;
 const skillNames = cs => new Set(cs.flatMap(c => (c.skills || []).map(s => s.name)));
@@ -1520,7 +1503,7 @@ function orgHTML(d) {
 function buildDeptSlides(d) {
   const cs = d.agents.map(a => ({ a, c:contentOf(a.id) }));
   const nWorks = cs.reduce((n, x) => n + worksCount(x.c), 0);
-  const h = headOf(d.head.id);
+  const h = headOf(d.id);
   const S = [`<div class="kick">${esc(d.name)}</div><h1>Как работает<br>${esc(d.name.toLowerCase())}</h1>
     <p class="sub">${esc(h.lead || `Руководитель — ${d.head.name}.`)} В подчинении ${d.agents.length} ${plural(d.agents.length)}, каждый работает своими скиллами и сдаёт готовый результат.</p>
     ${stats([[d.agents.length, plural(d.agents.length)], [skillNames(cs.map(x => x.c)).size, 'скиллов'], [nWorks, 'готовых работ']])}`,
@@ -1532,7 +1515,7 @@ function buildDeptSlides(d) {
 }
 
 function buildHeadSlides(d) {
-  const p = d.head, h = headOf(p.id);
+  const p = d.head, h = headOf(d.id);
   const cs = d.agents.map(a => ({ a, c:contentOf(a.id) }));
   const nWorks = cs.reduce((n, x) => n + worksCount(x.c), 0);
   const imgs = cs.flatMap(x => imagesOf(x.c));
@@ -1569,24 +1552,23 @@ function buildAgentSlides(m) {
 function buildOfficeSlides() {
   const all = DEPTS.flatMap(d => d.agents.map(a => contentOf(a.id)));
   const nAgents = all.length, nWorks = all.reduce((n, c) => n + worksCount(c), 0);
-  const S = [`<div class="kick">AICEX · ИИ-офис</div><h1>Команда из ${DEPTS.length} человек<br>и ${nAgents} ИИ-агентов</h1>
-    <p class="sub">Илья задаёт стратегию и продукт, Фируза ведёт маркетинг, Богдан — продажи, Нуркен — рекламу в Meta. Каждому руководителю подчиняются агенты, названные по своей зоне ответственности.</p>
-    ${stats([[DEPTS.length, 'отдела'], [nAgents, plural(nAgents)], [skillNames(all).size, 'скиллов'], [nWorks, 'готовых работ']])}`,
+  const head = id => DEPTS.find(d => d.id === id)?.head.name;
+  const flow = [
+    ['ceo', 'Продукт', 'стратегия, ТЗ, разработка'], ['marketing', 'Контент', 'сценарии, монтаж, карусели'],
+    ['marketing', 'Воронка', 'лендинг, лид-магнит, бот'], ['traffic', 'Реклама', 'креативы в Meta'],
+    ['sales', 'Продажи', 'переписки и сделки'],
+  ].filter(([id]) => head(id)).map(([id, t, d]) => ({ t, d:`${head(id)}: ${d}` }));
+  const S = [`<div class="kick">${esc(BRAND)} · ИИ-офис</div><h1>Команда из ${DEPTS.length} ${word(DEPTS.length, 'человека', 'человек', 'человек')}<br>и ${nAgents} ИИ-${word(nAgents, 'агента', 'агентов', 'агентов')}</h1>
+    <p class="sub">${DEPTS.map(d => `${esc(d.head.name)} — ${esc(d.name)}`).join(', ')}. Каждому руководителю подчиняются агенты, названные по своей зоне ответственности.</p>
+    ${stats([[DEPTS.length, word(DEPTS.length, 'отдел', 'отдела', 'отделов')], [nAgents, plural(nAgents)], [skillNames(all).size, 'скиллов'], [nWorks, 'готовых работ']])}`,
     `<div class="kick">Структура</div><h2>Кто за что отвечает</h2>
     <div class="org"><div class="kids">${DEPTS.map(d => `<div class="kid wide" style="--accent:${d.accent}">${faceHTML(d.head, d.accent)}<b>${esc(d.head.name)}</b><small>${esc(d.head.title)}</small><small class="ag">${d.agents.map(a => esc(a.name)).join(' · ')}</small></div>`).join('')}</div></div>`,
-    `<div class="kick">Как связаны отделы</div><h2>От идеи до оплаты</h2>${pipeHTML([
-      { t:'Продукт', d:'Илья: стратегия, ТЗ, разработка' },
-      { t:'Контент', d:'Фируза: сценарии, монтаж, карусели' },
-      { t:'Воронка', d:'Фируза: лендинг, лид-магнит, бот' },
-      { t:'Реклама', d:'Нуркен: креативы в Meta' },
-      { t:'Продажи', d:'Богдан: переписки и сделки' },
-      { t:'Аналитика', d:'Цифры возвращаются в план' },
-    ])}`];
+    `<div class="kick">Как связаны отделы</div><h2>От идеи до оплаты</h2>${pipeHTML([...flow, { t:'Аналитика', d:'Цифры возвращаются в план' }])}`];
   DEPTS.forEach(d => {
     const cs = d.agents.map(a => contentOf(a.id));
     const imgs = cs.flatMap(c => imagesOf(c));
     S.push(`<div class="kick" style="color:${d.accent}">${esc(d.name)} · ${esc(d.head.name)}</div><h2>${esc(d.name)}</h2>
-      <p class="sub">${esc(headOf(d.head.id).lead)}</p>${chips(d.agents.map(a => a.name))}
+      <p class="sub">${esc(headOf(d.id).lead)}</p>${chips(d.agents.map(a => a.name))}
       ${imgs.length ? `<div class="mosaic">${imgs.slice(0, 6).map((it, i) => `<img style="--i:${i}" src="${esc(it.src)}" alt="${esc(it.title)}" loading="lazy">`).join('')}</div>` : ''}`);
   });
   const products = contentOf('product').results?.[0]?.items || [];
@@ -1599,7 +1581,7 @@ function buildOfficeSlides() {
 function openDemo(id = 'office') {
   let slides, title, accent = '#2f7bff';
   const d = deptOf(id), m = members.get(id);
-  if (id === 'office' || id === 'plan') { slides = buildOfficeSlides(); title = 'AI Office'; }
+  if (id === 'office' || id === 'plan') { slides = buildOfficeSlides(); title = BRAND; }
   else if (d) { slides = buildDeptSlides(d); title = d.name; accent = d.accent; }
   else if (m?.kind === 'head') { slides = buildHeadSlides(m.dept); title = m.data.name; accent = m.dept.accent; }
   else if (m) { slides = buildAgentSlides(m); title = m.data.name; accent = m.dept.accent; }

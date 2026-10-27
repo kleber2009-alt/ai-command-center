@@ -1,0 +1,381 @@
+<!doctype html>
+<html lang="ru">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover">
+<title>Настройка ИИ-офиса</title>
+<meta name="robots" content="noindex">
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link href="https://fonts.googleapis.com/css2?family=Manrope:wght@400;500;600;700;800&display=swap" rel="stylesheet">
+<style>
+  :root{
+    --bg:#0b0c10; --card:#13151b; --line:rgba(255,255,255,.09); --tx:#f4f6fa; --tx2:rgba(244,246,250,.6);
+    --accent:#2f7bff; --ok:#3ddc97;
+  }
+  *{box-sizing:border-box;margin:0;padding:0}
+  html,body{background:var(--bg);color:var(--tx);font-family:Manrope,system-ui,sans-serif}
+  button,input,select,textarea{font:inherit;color:inherit}
+  button{cursor:pointer;border:0;background:none}
+  a{color:var(--accent)}
+  .wrap{display:grid;grid-template-columns:minmax(0,560px) minmax(0,1fr);gap:24px;padding:24px;max-width:1600px;margin:0 auto}
+  header{grid-column:1/-1;display:flex;align-items:center;gap:14px}
+  .logo{width:40px;height:40px;border-radius:12px;background:conic-gradient(from 200deg,var(--accent),#fff 40%,var(--accent));box-shadow:0 0 24px var(--accent)}
+  header h1{font-size:22px;font-weight:800}
+  header p{font-size:13px;color:var(--tx2);margin-top:2px}
+  .steps{display:flex;flex-direction:column;gap:16px}
+  .step{background:var(--card);border:1px solid var(--line);border-radius:18px;padding:20px}
+  .step h2{font-size:16px;font-weight:800;display:flex;align-items:center;gap:10px}
+  .step h2 i{font-style:normal;display:grid;place-items:center;width:26px;height:26px;border-radius:8px;background:var(--accent);color:#fff;font-size:13px;flex:none}
+  .step > p{font-size:13px;color:var(--tx2);margin:6px 0 14px;line-height:1.5}
+  label{display:block;font-size:12px;color:var(--tx2);margin:10px 0 5px}
+  input[type=text],input[type=url],select,textarea{width:100%;padding:10px 12px;border-radius:11px;background:rgba(255,255,255,.05);border:1px solid var(--line);outline:none}
+  input:focus,select:focus,textarea:focus{border-color:var(--accent)}
+  .row{display:grid;grid-template-columns:1fr 1fr;gap:10px}
+  .dept{border:1px solid var(--line);border-radius:14px;padding:14px;margin-top:12px}
+  .dept-h{display:flex;gap:12px;align-items:center}
+  .ph{width:56px;height:56px;border-radius:50%;background:rgba(255,255,255,.08) center/cover;display:grid;place-items:center;font-weight:800;font-size:18px;flex:none;cursor:pointer;border:2px dashed rgba(255,255,255,.25)}
+  .ph.has{border:2px solid rgba(255,255,255,.85)}
+  .dept-h .grow{flex:1;min-width:0}
+  .chips{display:flex;flex-wrap:wrap;gap:6px;margin-top:8px}
+  .chip{padding:6px 11px;border-radius:99px;font-size:12.5px;border:1px solid var(--line);background:rgba(255,255,255,.04);color:var(--tx2)}
+  .chip.on{background:color-mix(in srgb,var(--c,var(--accent)) 22%,transparent);border-color:var(--c,var(--accent));color:var(--tx)}
+  .chip.on::before{content:'✓ '}
+  .small{font-size:12px;color:var(--tx2)}
+  .prod{display:grid;grid-template-columns:1fr 1.3fr auto;gap:8px;margin-top:8px}
+  .x{width:36px;border-radius:10px;background:rgba(255,255,255,.06);color:var(--tx2)}
+  .add{margin-top:10px;padding:8px 12px;border-radius:10px;background:rgba(255,255,255,.06);font-size:13px;font-weight:700}
+  .big{display:flex;align-items:center;justify-content:center;gap:8px;width:100%;padding:14px;border-radius:14px;background:var(--accent);color:#fff;font-weight:800;font-size:15px;margin-top:6px}
+  .big.alt{background:rgba(255,255,255,.08);color:var(--tx)}
+  .big:disabled{opacity:.5;cursor:default}
+  ol.how{margin:6px 0 0 18px;font-size:13.5px;line-height:1.6}
+  ol.how li{margin:4px 0}
+  .need{display:flex;flex-direction:column;gap:6px;margin-top:8px}
+  .need div{display:flex;justify-content:space-between;gap:10px;align-items:center;padding:9px 12px;border-radius:11px;background:rgba(255,255,255,.04);border:1px solid var(--line);font-size:13px}
+  .need small{color:var(--tx2)}
+  .toggle{display:flex;align-items:center;gap:10px;margin-top:12px;font-size:13.5px}
+  .toggle input{width:18px;height:18px;accent-color:var(--accent)}
+  .preview{position:sticky;top:24px;height:calc(100vh - 48px);border-radius:18px;overflow:hidden;border:1px solid var(--line);background:#e7e8ea}
+  .preview iframe{width:100%;height:100%;border:0;display:block}
+  .preview .bar{position:absolute;left:12px;bottom:12px;display:flex;gap:8px}
+  .preview .bar button{padding:8px 12px;border-radius:10px;background:rgba(14,16,22,.8);color:#fff;font-size:12.5px;font-weight:700;backdrop-filter:blur(8px)}
+  .toast{position:fixed;left:50%;bottom:24px;transform:translateX(-50%);background:#fff;color:#111;padding:10px 16px;border-radius:12px;font-size:13.5px;font-weight:700;opacity:0;transition:.3s;pointer-events:none}
+  .toast.on{opacity:1}
+  .err{color:#ff7a7a;font-size:12.5px;margin-top:8px}
+  @media (max-width:980px){
+    .wrap{grid-template-columns:1fr;padding:16px}
+    .preview{position:relative;top:0;height:70vh;order:-1}
+    .row,.prod{grid-template-columns:1fr}
+  }
+</style>
+</head>
+<body>
+<div class="wrap">
+  <header><span class="logo"></span><div><h1>Настройка ИИ-офиса</h1><p>Заполните 4 шага — справа сразу видно, как выглядит ваш офис. Потом скачайте архив и выложите его.</p></div></header>
+
+  <div class="steps">
+    <section class="step">
+      <h2><i>1</i>Компания</h2>
+      <p>Название попадёт в шапку офиса и демо, главный продукт — в шаблоны задач всех агентов.</p>
+      <div class="row">
+        <div><label>Название компании</label><input type="text" id="brand" placeholder="Например, Школа Анны"></div>
+        <div><label>Главный продукт или оффер</label><input type="text" id="offer" placeholder="Например, курс «Блог с нуля»"></div>
+      </div>
+      <label>Домен сайтов, если есть</label><input type="text" id="domain" placeholder="Например, anna-school.ru">
+    </section>
+
+    <section class="step">
+      <h2><i>2</i>Команда и агенты</h2>
+      <p>Впишите руководителей отделов. Нажмите на кружок, чтобы загрузить фото. Отметьте агентов, которые нужны отделу, — все уже отмечены.</p>
+      <div id="depts"></div>
+    </section>
+
+    <section class="step">
+      <h2><i>3</i>Продукты и материалы</h2>
+      <p>Ссылки на ваши продукты и сайты — их покажут агент «Разработка продуктов» и демо офиса. Можно пропустить.</p>
+      <div id="products"></div>
+      <button class="add" id="addProduct">+ Добавить продукт</button>
+      <label class="toggle"><input type="checkbox" id="examples" checked> Показывать в досье агентов примеры работ AICEX, пока нет своих</label>
+    </section>
+
+    <section class="step">
+      <h2><i>4</i>Скачать и выложить офис</h2>
+      <p>Архив — это готовый сайт: офис, досье агентов, демо и инструкция для Claude.</p>
+      <button class="big" id="download">Скачать офис (.zip)</button>
+      <div class="err" id="err" hidden></div>
+      <ol class="how">
+        <li>Откройте <a href="https://dash.cloudflare.com/?to=/:account/workers-and-pages/create/pages" target="_blank" rel="noopener">Cloudflare → Workers &amp; Pages → Create → Pages</a> и выберите <b>Upload assets</b>. Нет аккаунта — регистрация бесплатная.</li>
+        <li>Впишите имя проекта (латиницей, например <code id="slugHint">my-office</code>) и перетащите скачанный архив.</li>
+        <li>Нажмите <b>Deploy site</b> — офис откроется по адресу <code id="urlHint">my-office.pages.dev</code>.</li>
+      </ol>
+    </section>
+
+    <section class="step">
+      <h2><i>5</i>Подключить Claude</h2>
+      <p>Агенты работают в Claude. Один раз вставьте инструкцию в проект — и ставьте задачи словами.</p>
+      <button class="big alt" id="copyClaude">Скопировать инструкцию для Claude</button>
+      <ol class="how">
+        <li>В <a href="https://claude.ai/projects" target="_blank" rel="noopener">Claude → Projects</a> создайте проект «Офис <span class="brandName">компании</span>».</li>
+        <li>Откройте <b>Project instructions</b> и вставьте скопированный текст.</li>
+        <li>Установите пакет скиллов, который вам передали: <a href="https://claude.ai/settings/capabilities" target="_blank" rel="noopener">Настройки → Возможности → Скиллы</a> → загрузить.</li>
+        <li>Подключите сервисы из списка ниже: <a href="https://claude.ai/settings/connectors" target="_blank" rel="noopener">Настройки → Коннекторы</a>.</li>
+      </ol>
+      <div class="need" id="need"></div>
+    </section>
+  </div>
+
+  <div class="preview">
+    <iframe id="frame" title="Предпросмотр офиса"></iframe>
+    <div class="bar"><button id="refresh">Обновить предпросмотр</button><button id="demo">▶ Демо офиса</button></div>
+  </div>
+</div>
+<div class="toast" id="toast"></div>
+<input type="file" id="photo" accept="image/*" hidden>
+
+<script>window.OFFICE_CONFIG = {};</script>
+<script src="dept-content.js?v=3"></script>
+<script src="agent-content.js?v=3"></script>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/jszip/3.10.1/jszip.min.js"></script>
+<script>
+const CATALOG = window.AGENT_CATALOG, CONTENT = window.AGENT_CONTENT;
+const $ = id => document.getElementById(id);
+const esc = s => String(s ?? '').replace(/[&<>"']/g, c => ({ '&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;' }[c]));
+const ACCENTS = { ceo:'#2f7bff', marketing:'#a46cd6', sales:'#16c98a', traffic:'#ff7a3d' };
+const LOOK_NAMES = { m3:'Мужчина, короткая стрижка', m1:'Мужчина, зачёс', m2:'Мужчина, кудри и очки', f1:'Женщина, длинные волосы' };
+const idsOf = dept => Object.keys(CATALOG).filter(id => CATALOG[id].dept === dept);
+
+// ——— состояние мастера: черновик хранится в браузере, чтобы не потерять ввод ———
+const DEFAULT = {
+  brand:'', offer:'', domain:'', examples:true, products:[],
+  depts:[
+    { id:'ceo',       name:'Стратегия и продукт', head:{ name:'', title:'Основатель — стратегия, видение, продукт', look:'m3', photo:'' }, agents:idsOf('ceo') },
+    { id:'marketing', name:'Отдел маркетинга',    head:{ name:'', title:'Руководитель отдела маркетинга', look:'f1', photo:'' }, agents:idsOf('marketing') },
+    { id:'sales',     name:'Отдел продаж',        head:{ name:'', title:'Руководитель отдела продаж', look:'m1', photo:'' }, agents:idsOf('sales') },
+    { id:'traffic',   name:'Реклама',             head:{ name:'', title:'Таргетолог — реклама в Meta', look:'m2', photo:'' }, agents:idsOf('traffic') },
+  ],
+};
+let S;
+try { S = JSON.parse(localStorage.getItem('office:setup')) || structuredClone(DEFAULT); } catch (e) { S = structuredClone(DEFAULT); }
+const save = () => { try { localStorage.setItem('office:setup', JSON.stringify(S)); } catch (e) {} };
+
+const slug = () => (S.brand || 'my-office').toLowerCase()
+  .replace(/[а-яё]/g, c => ({а:'a',б:'b',в:'v',г:'g',д:'d',е:'e',ё:'e',ж:'zh',з:'z',и:'i',й:'y',к:'k',л:'l',м:'m',н:'n',о:'o',п:'p',р:'r',с:'s',т:'t',у:'u',ф:'f',х:'h',ц:'c',ч:'ch',ш:'sh',щ:'sch',ъ:'',ы:'y',ь:'',э:'e',ю:'yu',я:'ya'}[c]))
+  .replace(/[^a-z0-9]+/g, '-').replace(/^-|-$/g, '').slice(0, 40) || 'my-office';
+
+// ——— настройки офиса из ответов мастера (photoPath: data-URL для предпросмотра, путь — для архива) ———
+function buildConfig(photoPath = d => d.head.photo) {
+  return {
+    brand:S.brand.trim() || 'Мой офис',
+    offer:S.offer.trim(),
+    ...(S.domain?.trim() ? { domain:S.domain.trim().replace(/^https?:\/\//, '').replace(/\/.*$/, '') } : {}),
+    examples:S.examples,
+    examplesNote:S.examples ? 'Это примеры работ агента из офиса AICEX. Ваши работы появятся здесь после первых задач.' : '',
+    depts:S.depts.filter(d => d.agents.length || d.head.name).map(d => ({
+      id:d.id, name:d.name.trim() || 'Отдел',
+      head:{ id:'head-' + d.id, name:d.head.name.trim() || 'Руководитель', title:d.head.title.trim(), look:d.head.look,
+             ...(d.head.photo ? { photo:photoPath(d) } : {}) },
+      agents:d.agents,
+    })),
+    products:S.products.filter(p => p.title.trim() && p.url.trim()),
+    materials:{},
+  };
+}
+
+// ——— шаг 2: отделы ———
+function renderDepts() {
+  $('depts').innerHTML = S.depts.map((d, i) => `
+    <div class="dept" style="--c:${ACCENTS[d.id]}">
+      <div class="dept-h">
+        <span class="ph ${d.head.photo ? 'has' : ''}" data-photo="${i}" title="Загрузить фото" style="${d.head.photo ? `background-image:url(${d.head.photo})` : ''}">${d.head.photo ? '' : '+'}</span>
+        <div class="grow">
+          <input type="text" data-k="name" data-i="${i}" value="${esc(d.name)}" placeholder="Название отдела" style="font-weight:800">
+        </div>
+      </div>
+      <div class="row">
+        <div><label>Имя руководителя</label><input type="text" data-k="head.name" data-i="${i}" value="${esc(d.head.name)}" placeholder="Имя"></div>
+        <div><label>Должность</label><input type="text" data-k="head.title" data-i="${i}" value="${esc(d.head.title)}"></div>
+      </div>
+      <label>Внешность в 3D-офисе</label>
+      <select data-k="head.look" data-i="${i}">${Object.entries(LOOK_NAMES).map(([k, t]) => `<option value="${k}" ${d.head.look === k ? 'selected' : ''}>${t}</option>`).join('')}</select>
+      <label>Агенты отдела · ${d.agents.length} из ${idsOf(d.id).length}</label>
+      <div class="chips">${idsOf(d.id).map(id => `<button class="chip ${d.agents.includes(id) ? 'on' : ''}" data-agent="${id}" data-i="${i}" title="${esc(CATALOG[id].role)}">${esc(CATALOG[id].name)}</button>`).join('')}</div>
+    </div>`).join('');
+}
+$('depts').addEventListener('input', e => {
+  const t = e.target, d = S.depts[t.dataset.i]; if (!d) return;
+  const [a, b] = t.dataset.k.split('.');
+  if (b) d[a][b] = t.value; else d[a] = t.value;
+  changed();
+});
+$('depts').addEventListener('click', e => {
+  const chip = e.target.closest('[data-agent]');
+  if (chip) {
+    const d = S.depts[chip.dataset.i], id = chip.dataset.agent;
+    d.agents = d.agents.includes(id) ? d.agents.filter(x => x !== id) : idsOf(d.id).filter(x => x === id || d.agents.includes(x));
+    renderDepts(); changed();
+  }
+  const ph = e.target.closest('[data-photo]');
+  if (ph) { $('photo').dataset.i = ph.dataset.photo; $('photo').click(); }
+});
+// фото уменьшаем до 320 px — этого хватает для таблички и карточки
+$('photo').addEventListener('change', e => {
+  const f = e.target.files[0], i = +e.target.dataset.i; e.target.value = '';
+  if (!f) return;
+  const img = new Image();
+  img.onload = () => {
+    const k = Math.min(1, 320 / Math.min(img.width, img.height)), c = document.createElement('canvas');
+    const side = Math.min(img.width, img.height);
+    c.width = c.height = Math.round(side * k);
+    c.getContext('2d').drawImage(img, (img.width - side) / 2, (img.height - side) / 2, side, side, 0, 0, c.width, c.height);
+    S.depts[i].head.photo = c.toDataURL('image/jpeg', 0.85);
+    URL.revokeObjectURL(img.src);
+    renderDepts(); changed();
+  };
+  img.src = URL.createObjectURL(f);
+});
+
+// ——— шаг 3: продукты ———
+function renderProducts() {
+  $('products').innerHTML = S.products.map((p, i) => `
+    <div class="prod">
+      <input type="text" data-p="title" data-i="${i}" value="${esc(p.title)}" placeholder="Название">
+      <input type="url" data-p="url" data-i="${i}" value="${esc(p.url)}" placeholder="https://…">
+      <button class="x" data-del="${i}" aria-label="Удалить">×</button>
+    </div>`).join('') || '<p class="small">Продуктов пока нет.</p>';
+}
+$('products').addEventListener('input', e => { const p = S.products[e.target.dataset.i]; if (p) { p[e.target.dataset.p] = e.target.value; changed(); } });
+$('products').addEventListener('click', e => { const i = e.target.dataset.del; if (i != null) { S.products.splice(+i, 1); renderProducts(); changed(); } });
+$('addProduct').onclick = () => { S.products.push({ title:'', url:'', note:'' }); renderProducts(); };
+$('examples').onchange = e => { S.examples = e.target.checked; changed(); };
+$('brand').oninput = e => { S.brand = e.target.value; changed(); };
+$('offer').oninput = e => { S.offer = e.target.value; changed(); };
+$('domain').oninput = e => { S.domain = e.target.value; changed(); };
+
+// ——— шаг 5: что подключить в Claude — из скиллов выбранных агентов ———
+const CONNECTORS = ['ChatPlace', 'Higgsfield', 'HeyGen', 'Windsor.ai', 'Notion', 'Gmail', 'Google Calendar', 'Google Drive', 'Figma', 'Apify'];
+function needs() {
+  const ids = S.depts.flatMap(d => d.agents), conn = new Map(), skills = new Set();
+  for (const id of ids) for (const s of CONTENT[id]?.skills || []) {
+    const c = CONNECTORS.find(n => s.name.startsWith(n));
+    if (c) conn.set(c, [...(conn.get(c) || []), CATALOG[id].name]);
+    else skills.add(s.name);
+  }
+  return { conn, skills };
+}
+function renderNeeds() {
+  const { conn, skills } = needs();
+  $('need').innerHTML = [...conn].map(([c, who]) => `<div><b>${esc(c)}</b><small>${esc([...new Set(who)].slice(0, 3).join(', '))}${new Set(who).size > 3 ? '…' : ''}</small></div>`).join('')
+    + `<div><b>Пакет скиллов</b><small>${skills.size} скиллов для выбранных агентов</small></div>`;
+}
+
+// ——— инструкция для проекта Claude ———
+function claudeInstructions() {
+  const cfg = buildConfig(), { conn } = needs();
+  const L = [];
+  L.push(`# ИИ-офис ${cfg.brand}`, '');
+  L.push(`Ты — ИИ-офис компании «${cfg.brand}». Внутри офиса работают ИИ-агенты, у каждого своя зона ответственности и свои скиллы.${cfg.offer ? ` Главный продукт компании — ${cfg.offer}.` : ''}`, '');
+  L.push('## Как ты работаешь', '');
+  L.push('1. Пойми задачу. Если не хватает данных (продукт, аудитория, формат, срок) — задай до 3 коротких вопросов.');
+  L.push('2. Выбери агента по зоне ответственности из списка ниже и начни ответ строкой «Беру: <агент> · <отдел>».');
+  L.push('3. Работай скиллами и подключениями этого агента. Если нужного подключения нет — скажи, что подключить, и сделай то, что можно без него.');
+  L.push('4. Сдавай готовый результат, а не план: текст, файл, страницу или артефакт, которые можно сразу использовать.');
+  L.push('5. Задача на несколько зон — разбей её по агентам и выполни по порядку, передавая результат дальше.');
+  L.push('6. Действия во внешних сервисах (рассылка, запуск рекламы, публикация) — только после подтверждения пользователя.', '');
+  L.push('## Команда', '');
+  for (const d of cfg.depts) {
+    L.push(`### ${d.name} — ${d.head.name}${d.head.title ? `, ${d.head.title}` : ''}`, '');
+    for (const id of d.agents) {
+      const a = CATALOG[id], c = CONTENT[id] || {};
+      const sk = (c.skills || []).map(s => s.name).join(', ');
+      L.push(`- **${a.name}** — ${(c.lead || a.role).replace(/\s+/g, ' ')}`);
+      if (sk) L.push(`  Скиллы: ${sk}.`);
+      const t = c.templates?.[0];
+      if (t) L.push(`  Пример задачи: «${t.prompt.replace(/«Нейроворонк[аау]»/g, cfg.offer ? `«${cfg.offer}»` : '«продукт»').replace(/aicex\.club/g, cfg.domain || 'ваш-домен.ru')}»`);
+    }
+    L.push('');
+  }
+  if (cfg.products.length) {
+    L.push('## Продукты компании', '');
+    for (const p of cfg.products) L.push(`- ${p.title}: ${p.url}`);
+    L.push('');
+  }
+  if (conn.size) {
+    L.push('## Подключения', '');
+    L.push([...conn.keys()].join(', ') + '. Если подключение не отвечает — попроси пользователя подключить его в Настройках → Коннекторы.');
+  }
+  return L.join('\n');
+}
+
+const README = cfg => `# ${cfg.brand} — ИИ-офис
+
+Этот архив — готовый сайт вашего офиса.
+
+## Как выложить (5 минут)
+1. Cloudflare → Workers & Pages → Create → Pages → Upload assets.
+2. Имя проекта латиницей → перетащите этот архив → Deploy site.
+3. Офис откроется по адресу <имя>.pages.dev. Свой домен: Custom domains → Set up a domain.
+
+## Как подключить Claude
+1. Claude → Projects → New project «Офис ${cfg.brand}».
+2. Project instructions → вставьте текст из файла CLAUDE.md.
+3. Настройки → Возможности → Скиллы → загрузите пакет скиллов.
+4. Настройки → Коннекторы → подключите сервисы из CLAUDE.md (раздел «Подключения»).
+
+## Как поменять офис потом
+Откройте мастер настройки ещё раз, поправьте и скачайте новый архив — в Cloudflare нажмите Create deployment и перетащите его.
+Файл с настройками — office.config.js.
+`;
+
+// ——— архив: файлы офиса + свои настройки + фото + инструкции ———
+$('download').onclick = async () => {
+  const btn = $('download'); btn.disabled = true; btn.textContent = 'Собираю архив…'; $('err').hidden = true;
+  try {
+    if (!window.JSZip) throw new Error('Не загрузилась библиотека архивов — проверьте интернет и обновите страницу.');
+    const zip = new JSZip();
+    for (const f of ['index.html', 'dept-content.js', 'agent-content.js']) {
+      const r = await fetch(f, { cache:'no-store' });
+      if (!r.ok) throw new Error(`Не удалось получить ${f}`);
+      zip.file(f, await r.text());
+    }
+    const cfg = buildConfig(d => `people/${d.id}.jpg`);
+    for (const d of S.depts) if (d.head.photo) zip.file(`people/${d.id}.jpg`, d.head.photo.split(',')[1], { base64:true });
+    zip.file('office.config.js', `/* Настройки офиса «${cfg.brand}». Собраны мастером настройки ${new Date().toISOString().slice(0, 10)}. */\nwindow.OFFICE_CONFIG = ${JSON.stringify(cfg, null, 2)};\n`);
+    zip.file('CLAUDE.md', claudeInstructions());
+    zip.file('README.md', README(cfg));
+    const blob = await zip.generateAsync({ type:'blob' });
+    const a = document.createElement('a');
+    a.href = URL.createObjectURL(blob); a.download = `office-${slug()}.zip`; a.click();
+    setTimeout(() => URL.revokeObjectURL(a.href), 4000);
+    toast('Архив скачан — перетащите его в Cloudflare Pages');
+  } catch (e) { $('err').textContent = e.message; $('err').hidden = false; }
+  btn.disabled = false; btn.textContent = 'Скачать офис (.zip)';
+};
+$('copyClaude').onclick = async () => {
+  try { await navigator.clipboard.writeText(claudeInstructions()); toast('Инструкция скопирована — вставьте её в проект Claude'); }
+  catch (e) { toast('Не удалось скопировать — инструкция есть в архиве, файл CLAUDE.md'); }
+};
+
+// ——— предпросмотр: черновик в localStorage, офис читает его по ?preview ———
+let timer;
+function preview(demo) {
+  try { localStorage.setItem('office:preview', JSON.stringify(buildConfig())); } catch (e) {}
+  $('frame').src = `index.html?preview&t=${Date.now()}`;
+  if (demo) $('frame').onload = () => setTimeout(() => $('frame').contentWindow.VirtualOffice?.openDemo('office'), 1200);
+  else $('frame').onload = null;
+}
+function changed() {
+  save(); renderNeeds();
+  document.querySelectorAll('.brandName').forEach(el => el.textContent = S.brand || 'компании');
+  $('slugHint').textContent = slug(); $('urlHint').textContent = slug() + '.pages.dev';
+  clearTimeout(timer); timer = setTimeout(() => preview(), 1200);
+}
+$('refresh').onclick = () => preview();
+$('demo').onclick = () => preview(true);
+
+let tt;
+function toast(t) { const el = $('toast'); el.textContent = t; el.classList.add('on'); clearTimeout(tt); tt = setTimeout(() => el.classList.remove('on'), 2600); }
+
+$('brand').value = S.brand; $('offer').value = S.offer; $('domain').value = S.domain || ''; $('examples').checked = S.examples;
+renderDepts(); renderProducts(); changed(); preview();
+</script>
+</body>
+</html>
