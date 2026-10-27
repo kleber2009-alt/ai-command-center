@@ -2,10 +2,11 @@
 import Link from 'next/link'
 import { usePathname } from 'next/navigation'
 import { useEffect, useState } from 'react'
-import { LayoutGrid, Zap, Wallet, Bot, Package, Menu, X } from 'lucide-react'
+import { LayoutGrid, Link2, Zap, Wallet, Bot, Package, Menu, X } from 'lucide-react'
 
 const nav = [
   { href: '/dashboard', icon: LayoutGrid, label: 'Проекты' },
+  { href: '/links',     icon: Link2,      label: 'Ссылки' },
   { href: '/balances',  icon: Wallet,     label: 'Балансы' },
   { href: '/bots',      icon: Bot,        label: 'Боты' },
   { href: '/modules',   icon: Package,    label: 'Готовые модули' },

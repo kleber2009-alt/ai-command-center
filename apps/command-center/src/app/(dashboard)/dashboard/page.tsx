@@ -2,6 +2,7 @@
 import { useEffect, useState } from 'react'
 import Link from 'next/link'
 import { RefreshCw, ExternalLink, ArrowRight } from 'lucide-react'
+import { LinkChip } from '@/components/LinkChip'
 
 type Project = {
   slug: string
@@ -124,6 +125,12 @@ function ProjectCard({ p }: { p: Project }) {
                 +{p.technologies.length - 5}
               </span>
             )}
+          </div>
+        )}
+
+        {p.links.length > 0 && (
+          <div className="flex flex-wrap gap-1.5 mb-4">
+            {p.links.map(l => <LinkChip key={l.url + l.label} l={l} />)}
           </div>
         )}
 
