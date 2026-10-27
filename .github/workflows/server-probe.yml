@@ -43,6 +43,14 @@ jobs:
             for f in /etc/aicex/*.env; do
               echo "--- $f"; sed -E 's/^([A-Z0-9_]+)=.+$/\1=<set>/; s/^([A-Z0-9_]+)=$/\1=<EMPTY>/' "$f"
             done
+            echo "== edge sites"; for f in /opt/edge/sites/*.caddy; do [ "$f" = /opt/edge/sites/aicex.caddy ] && continue; echo "--- $f"; cat "$f"; done
+            echo "== funnel-analytics"
+            docker inspect -f '{{range .Mounts}}{{.Source}} -> {{.Destination}}{{"\n"}}{{end}}' funnel-analytics-web
+            docker exec funnel-analytics-web cat /etc/caddy/Caddyfile 2>/dev/null | head -30
+            ls -la /var/www/funnel-analytics /opt/funnel-analytics-data 2>&1 | head -30
+            cat /etc/cron.d/funnel-analytics 2>/dev/null; ls -la /usr/local/bin/funnel-analytics-update 2>&1
+            echo "--- env keys"; sed -E 's/^([A-Z0-9_]+)=.+$/\1=<set>/' /etc/funnel-analytics.env 2>/dev/null
+            echo "--- log"; tail -40 /var/log/funnel-analytics.log 2>&1
             for c in aicex-ytdlp aicex-tg-agent aicex-transcribe; do
               echo "--- logs $c"; docker logs --tail=25 "$c" 2>&1 | sed -E 's/[0-9]{8,}:[A-Za-z0-9_-]{30,}/***/g'
             done
