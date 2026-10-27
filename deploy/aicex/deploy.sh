@@ -3,9 +3,9 @@
 # (/opt/aicex) by .github/workflows/deploy-aicex.yml:
 #   bash deploy/aicex/deploy.sh [service ...]     # default: all services
 #
-# Expects /etc/aicex/{transcribe,tg-agent,ytdlp,ai-office}.env written by the
-# workflow, and CC_ADMIN_PASSWORD / TRANSCRIBE_BOT_TOKEN in the environment.
-# Generated once and kept: /etc/aicex/stack.env (Postgres password, webhook secret).
+# Expects /etc/aicex/{transcribe,tg-agent,ytdlp,ai-office,sales-api,worker}.env written by the
+# workflow, and CC_ADMIN_PASSWORD / *_BOT_TOKEN in the environment.
+# Generated once and kept: /etc/aicex/stack.env (Postgres password, internal secrets).
 set -euo pipefail
 
 cd "$(dirname "$0")"
@@ -13,18 +13,20 @@ REPO=$(cd ../.. && pwd)
 ETC=/etc/aicex
 EDGE_CADDY=${EDGE_CADDY:-persona-studio-caddy-1}
 SERVICES=("$@")
-[ ${#SERVICES[@]} -gt 0 ] || SERVICES=(ytdlp transcribe tg-agent command-center ai-office landings)
+[ ${#SERVICES[@]} -gt 0 ] || SERVICES=(ytdlp worker transcribe tg-agent command-center ai-office landings sales-api sales-static)
 
 log() { echo "── $* ──"; }
 
 # ── 1. one-time secrets ──────────────────────────────────────────────
 mkdir -p "$ETC" && chmod 700 "$ETC"
 touch "$ETC/stack.env"; chmod 600 "$ETC/stack.env"
-for k in PG_PASSWORD TRANSCRIBE_WEBHOOK_SECRET YTDLP_KEY TG_ADMIN_SESSION_SECRET; do
+for k in PG_PASSWORD TRANSCRIBE_WEBHOOK_SECRET YTDLP_KEY TG_ADMIN_SESSION_SECRET \
+         VIRAL_CLONE_DISPATCH_SECRET TG_OFFICE_WEBHOOK_SECRET TG_PARSER_WEBHOOK_SECRET \
+         SALES_TG_WEBHOOK_SECRET CABINET_LINK_SECRET CABINET_SESSION_SECRET; do
   grep -q "^$k=" "$ETC/stack.env" || { echo "$k=$(openssl rand -hex 24)" >> "$ETC/stack.env"; log "generated $k"; }
 done
 set -a; . "$ETC/stack.env"; set +a
-for f in transcribe tg-agent ytdlp ai-office; do touch "$ETC/$f.env"; chmod 600 "$ETC/$f.env"; done
+for f in transcribe tg-agent ytdlp ai-office sales-api worker; do touch "$ETC/$f.env"; chmod 600 "$ETC/$f.env"; done
 
 docker network inspect edge >/dev/null 2>&1 || docker network create edge
 DC=(docker compose -f docker-compose.yml --env-file "$ETC/stack.env")
@@ -79,6 +81,21 @@ migrate aisales \
   apps/aisales/db-init/012_projects_real_urls.sql \
   apps/aisales/db-init/016_projects_active_products.sql \
   apps/aisales/db-init/017_viral_clone_project.sql
+# AI Sales + Office Worker schema (order per apps/ai-sales/CLAUDE.md:
+# 04-database/001 first, then db-init — its 003 is the fixed copy).
+migrate aisales \
+  apps/ai-sales/04-database/001_initial_schema.sql \
+  apps/aisales/db-init/003_analytics_schema.sql \
+  apps/aisales/db-init/004_platform_metrics.sql \
+  apps/aisales/db-init/005_platform_seed.sql \
+  apps/aisales/db-init/006_agent_tasks.sql \
+  apps/aisales/db-init/007_agent_prompts.sql \
+  apps/aisales/db-init/008_revenue_goals.sql \
+  apps/aisales/db-init/013_office_scheduler.sql \
+  apps/aisales/db-init/014_office_user_linking.sql \
+  apps/aisales/db-init/015_payments.sql \
+  $(cd "$REPO" && ls apps/infra-worker/migrations/0{16,17,18,19,20,21,22,23,24,25,26}_*.sql) \
+  deploy/aicex/sql/worker_clone_photos.sql
 
 # ── 3. build + start, one service at a time (keeps build RAM bounded) ─
 health_url() {
@@ -89,6 +106,9 @@ health_url() {
     command-center) echo "http://aicex-command-center:3003/dashboard" ;;
     ai-office)      echo "http://aicex-ai-office:3000/api/health" ;;
     landings)       echo "http://aicex-landings:8080/transcribe/" ;;
+    sales-api)      echo "http://aicex-sales-api:8000/health" ;;
+    sales-static)   echo "http://aicex-sales-static:8080/06-dashboard-prototype/pulse.html" ;;
+    worker)         echo "http://aicex-worker:3000/worker/health" ;;
   esac
 }
 # Keys a service cannot boot without; empty → skip it instead of a crash loop.
@@ -141,14 +161,17 @@ else
   FAILED+=("caddy")
 fi
 
-# ── 5. Telegram webhook for the transcribe bot ───────────────────────
-if [ -n "${TRANSCRIBE_BOT_TOKEN:-}" ] && [[ " ${SERVICES[*]} " == *" transcribe "* ]]; then
-  log "transcribe webhook"
-  curl -fsS "https://api.telegram.org/bot${TRANSCRIBE_BOT_TOKEN}/setWebhook" \
-    --data-urlencode "url=https://transcribe.aicex.club/api/telegram/webhook" \
-    --data-urlencode "secret_token=${TRANSCRIBE_WEBHOOK_SECRET}" \
-    | sed -E 's/"[0-9]+:[A-Za-z0-9_-]{30,}"/"***"/g'; echo
-fi
+# ── 5. Telegram webhooks (only for bots whose token is configured) ───
+set_webhook() {  # <service> <token> <url> <secret>
+  [ -n "$2" ] && [[ " ${SERVICES[*]} " == *" $1 "* ]] || return 0
+  log "webhook $1 → $3"
+  curl -sS "https://api.telegram.org/bot$2/setWebhook" \
+    --data-urlencode "url=$3" --data-urlencode "secret_token=$4"; echo
+}
+set_webhook transcribe "${TRANSCRIBE_BOT_TOKEN:-}" https://transcribe.aicex.club/api/telegram/webhook "$TRANSCRIBE_WEBHOOK_SECRET"
+set_webhook worker     "${OFFICE_BOT_TOKEN:-}"     https://office.aicex.club/worker/tg-webhook        "$TG_OFFICE_WEBHOOK_SECRET"
+set_webhook worker     "${PARSER_BOT_TOKEN:-}"     https://office.aicex.club/worker/parser-webhook    "$TG_PARSER_WEBHOOK_SECRET"
+set_webhook sales-api  "${SALES_BOT_TOKEN:-}"      https://sales-api.aicex.club/webhooks/telegram     "$SALES_TG_WEBHOOK_SECRET"
 
 log "status"
 docker ps --filter name=aicex- --format '{{.Names}}\t{{.Status}}'

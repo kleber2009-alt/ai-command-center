@@ -4,6 +4,27 @@
 # __CC_WRITE_HASH__ is replaced by deploy.sh with a bcrypt hash of the
 # Command Center admin password: reads are public, edits need a login.
 
+(aisales_routes) {
+	encode zstd gzip
+	handle_path /api/* {
+		reverse_proxy aicex-sales-api:8000
+	}
+	handle /webhooks/* {
+		reverse_proxy aicex-sales-api:8000
+	}
+	handle {
+		redir /dashboard /06-dashboard-prototype/pulse.html 301
+		redir /pulse /06-dashboard-prototype/pulse.html 301
+		redir /pipeline /06-dashboard-prototype/pipeline.html 301
+		redir /conversation /06-dashboard-prototype/conversation.html 301
+		redir /project /06-dashboard-prototype/project.html 301
+		redir /agents /06-dashboard-prototype/agents.html 301
+		redir /portal /01-portal/ai-sales-portal.html 301
+		redir /roadmap /05-docs/00-roadmap.html 301
+		reverse_proxy aicex-sales-static:8080
+	}
+}
+
 projects.aicex.club {
 	encode zstd gzip
 	@write not method GET HEAD OPTIONS
@@ -40,9 +61,46 @@ tg.aicex.club {
 	reverse_proxy aicex-tg-agent:8080
 }
 
+# AI Growth Office; /worker/* is the Office Worker (bots, /clone, billing).
 office.aicex.club {
 	encode zstd gzip
-	reverse_proxy aicex-ai-office:3000
+	handle /worker/* {
+		reverse_proxy aicex-worker:3000
+	}
+	handle {
+		reverse_proxy aicex-ai-office:3000
+	}
+}
+
+# AI Sales CRM dashboard (was dashboard.46-62-215-11.nip.io).
+crm.aicex.club {
+	import aisales_routes
+	redir / /06-dashboard-prototype/pulse.html
+}
+
+# AI Sales portal (was aisales.46-62-215-11.nip.io).
+sales.aicex.club {
+	import aisales_routes
+	redir / /01-portal/ai-sales-portal.html
+}
+
+# AI Sales API + bot webhooks (was api.46-62-215-11.nip.io).
+sales-api.aicex.club {
+	encode zstd gzip
+	reverse_proxy aicex-sales-api:8000
+}
+
+# Viral Discover cabinet: UI from the landings, /cabinet/* → worker.
+parser.aicex.club {
+	encode zstd gzip
+	handle /cabinet/* {
+		rewrite * /worker{uri}
+		reverse_proxy aicex-worker:3000
+	}
+	handle {
+		rewrite * /viral-discover/cabinet{uri}
+		reverse_proxy aicex-landings:8080
+	}
 }
 
 landings.aicex.club {

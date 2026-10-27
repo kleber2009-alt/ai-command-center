@@ -13,13 +13,13 @@
 -- ═══════════════════════════════════════════════════════════════════
 
 INSERT INTO schedule_rules
-  (kind, cron_expr, enabled, user_filter, payload_template, notes)
+  (kind, cron_expr, enabled, user_filter, payload_template)
 VALUES (
   'daily_dm_digest',
   '0 18 * * *',
   TRUE,
   '{"system_wide": true}'::jsonb,
-  '{"lookback_hours": 24, "channels": ["ig", "tg"]}'::jsonb,
-  'Ежедневная сводка по IG/TG-перепискам, 21:00 MSK'
+  '{"lookback_hours": 24, "channels": ["ig", "tg"]}'::jsonb
+  -- Ежедневная сводка по IG/TG-перепискам, 21:00 MSK (schedule_rules has no notes column)
 )
 ON CONFLICT DO NOTHING;

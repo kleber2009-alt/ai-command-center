@@ -703,7 +703,7 @@ async function handleStart(msg) {
       `Привет, ${escapeHtml(firstName)} 👋\n\n` +
       'Я — бот команды <b>AI Growth Office</b>. Здесь утренние планёрки от твоих агентов.\n\n' +
       'Сервис в pre-launch. Чтобы связать твой Telegram с аккаунтом — оставь заявку на ' +
-      '<a href="https://ai-office.46-62-215-11.nip.io/">ai-office.46-62-215-11.nip.io</a>, ' +
+      '<a href="https://office.aicex.club/">office.aicex.club</a>, ' +
       'и мы подключим тебя вручную.\n\n' +
       'Пока — посмотри, что я умею:\n\n' +
       `<i>chat_id: ${chatId}</i>`,
@@ -782,7 +782,7 @@ const MENU_TEXTS = {
     '🎙 <b>Голос Ани (твой голосовой клон)</b>\n\n' +
     'Аня — начальник твоего офиса — говорит твоим голосом. Раз в неделю шлёт голосовое с готовым Reels-сценарием и сводкой недели.\n\n' +
     '<b>Чтобы записать голос:</b>\n' +
-    'Зайди в онбординг на сайте — <a href="https://ai-office.46-62-215-11.nip.io/onboarding.html">ai-office.46-62-215-11.nip.io/onboarding.html</a> — шаг 11 «Запиши голос».\n\n' +
+    'Зайди в онбординг на сайте — <a href="https://office.aicex.club/onboarding.html">office.aicex.club/onboarding.html</a> — шаг 11 «Запиши голос».\n\n' +
     '<b>Нужно:</b>\n' +
     '• 30–60 секунд непрерывной речи\n' +
     '• Без эха, без музыки, без второго голоса\n' +
@@ -820,7 +820,7 @@ const MENU_TEXTS = {
     '• /discover_targets — список источников\n' +
     '• /start — приветствие\n\n' +
     '<b>Контакты:</b>\n' +
-    '• Сайт: <a href="https://ai-office.46-62-215-11.nip.io/">ai-office.46-62-215-11.nip.io</a>\n' +
+    '• Сайт: <a href="https://office.aicex.club/">office.aicex.club</a>\n' +
     '• Поддержка: ответь на любое моё сообщение — прочту лично.\n\n' +
     '<b>Что-то сломалось?</b> Напиши сюда: «не работает X» — Илья (founder) увидит в течение часа.',
 };
@@ -848,7 +848,7 @@ async function showMenuSection(cq, section) {
   // billing — extra inline button straight to pricing
   if (section === 'billing') {
     keyboard.inline_keyboard.unshift([
-      { text: '💎 Открыть тарифы', url: 'https://ai-office.46-62-215-11.nip.io/pricing.html' },
+      { text: '💎 Открыть тарифы', url: 'https://office.aicex.club/pricing.html' },
     ]);
   }
 

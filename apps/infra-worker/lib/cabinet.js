@@ -1,6 +1,6 @@
 // ═══════════════════════════════════════════════════════════════════
 // lib/cabinet.js — Fastify routes for the Парсер cabinet
-// (parser.46-62-215-11.nip.io/cabinet/* → /worker/cabinet/* on :3000)
+// (parser.aicex.club/cabinet/* → /worker/cabinet/* on :3000)
 // ───────────────────────────────────────────────────────────────────
 // Auth flow:
 //   1. Bot generates short-lived link token (HMAC of {u, c, e}) and sends

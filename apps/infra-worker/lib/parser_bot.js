@@ -22,7 +22,7 @@ import { sendText } from './tg.js';
 import { buildCabinetLink } from './cabinet.js';
 
 const BOT = 'parser';
-const CABINET_BASE_URL = process.env.CABINET_BASE_URL || 'https://parser.46-62-215-11.nip.io';
+const CABINET_BASE_URL = process.env.CABINET_BASE_URL || 'https://parser.aicex.club';
 
 // ═══ Entry points ════════════════════════════════════════════════════
 
@@ -296,7 +296,7 @@ export async function handleCallback(cq) {
       '• /clone &lt;url&gt; — клонирование любого рилса в твой голос\n' +
       '• Голос — клон через ElevenLabs\n\n' +
       '«Залётный» уже включён в Pro-тариф (1 990 ₽/мес).\n\n' +
-      '<a href="https://ai-office.46-62-215-11.nip.io/">Подробнее</a>',
+      '<a href="https://office.aicex.club/">Подробнее</a>',
       { bot: BOT });
     return;
   }
@@ -635,7 +635,7 @@ async function sendHelp(chatId) {
     '/pause /resume — пауза / возобновление\n' +
     '/reset — сбросить и пройти настройку заново\n\n' +
     'Cron-выдача: каждое утро <b>08:00 МСК</b>.\n' +
-    'Парсер — часть <a href="https://ai-office.46-62-215-11.nip.io/">AI Growth Office</a>.',
+    'Парсер — часть <a href="https://office.aicex.club/">AI Growth Office</a>.',
     { bot: BOT });
 }
 

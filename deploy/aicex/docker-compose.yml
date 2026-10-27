@@ -56,7 +56,8 @@ services:
       TELEGRAM_WEBHOOK_SECRET: ${TRANSCRIBE_WEBHOOK_SECRET}
       NEXT_PUBLIC_APP_URL: https://transcribe.aicex.club
       TMA_URL: https://tma.aicex.club/
-      VIRAL_CLONE_DISPATCH_URL: https://office.aicex.club/worker/viral-clone/dispatch
+      VIRAL_CLONE_DISPATCH_URL: http://worker:3000/worker/viral-clone/dispatch
+      VIRAL_CLONE_DISPATCH_SECRET: ${VIRAL_CLONE_DISPATCH_SECRET}
       MEMORY_ENABLED: 'false'
     depends_on:
       postgres: { condition: service_healthy }
@@ -122,6 +123,62 @@ services:
     networks: [edge]
     mem_limit: 64m
 
+  # ── wave 2: AI Sales + Office Worker ──────────────────────────────
+  sales-api:
+    <<: *base
+    build: { context: ../../apps/ai-sales/code }
+    image: aicex-sales-api
+    container_name: aicex-sales-api
+    command: ['python', '-m', 'uvicorn', 'main:app', '--host', '0.0.0.0', '--port', '8000', '--workers', '1']
+    env_file: /etc/aicex/sales-api.env
+    environment:
+      POSTGRES_URL: postgresql+asyncpg://aicex:${PG_PASSWORD}@postgres:5432/aisales
+      TG_WEBHOOK_SECRET: ${SALES_TG_WEBHOOK_SECRET}
+      CORS_ORIGINS: https://crm.aicex.club,https://sales.aicex.club
+      VOICE_INPUT_DIR: /voice-input
+    volumes:
+      - ../../apps/ai-sales/agent-prompts:/agent-prompts:ro
+      - sales-voice:/voice-input
+    depends_on:
+      postgres: { condition: service_healthy }
+    networks: [default, edge]
+    mem_limit: 768m
+
+  # Static AI Sales portal + dashboard prototype (only the public folders).
+  sales-static:
+    <<: *base
+    image: caddy:2.8-alpine
+    container_name: aicex-sales-static
+    command: caddy file-server --root /srv --listen :8080
+    volumes:
+      - ../../apps/ai-sales/01-portal:/srv/01-portal:ro
+      - ../../apps/ai-sales/05-docs:/srv/05-docs:ro
+      - ../../apps/ai-sales/06-dashboard-prototype:/srv/06-dashboard-prototype:ro
+      - ../../apps/ai-sales/assets:/srv/assets:ro
+    networks: [edge]
+    mem_limit: 64m
+
+  worker:
+    <<: *base
+    build: { context: ../../apps/infra-worker }
+    image: aicex-worker
+    container_name: aicex-worker
+    env_file: /etc/aicex/worker.env
+    environment:
+      DATABASE_URL: postgres://aicex:${PG_PASSWORD}@postgres:5432/aisales
+      HTTP_PORT: 3000
+      PUBLIC_BASE_URL: https://office.aicex.club
+      CABINET_BASE_URL: https://parser.aicex.club
+      VIRAL_CLONE_DISPATCH_SECRET: ${VIRAL_CLONE_DISPATCH_SECRET}
+      TG_OFFICE_WEBHOOK_SECRET: ${TG_OFFICE_WEBHOOK_SECRET}
+      TG_PARSER_WEBHOOK_SECRET: ${TG_PARSER_WEBHOOK_SECRET}
+      CABINET_LINK_SECRET: ${CABINET_LINK_SECRET}
+      CABINET_SESSION_SECRET: ${CABINET_SESSION_SECRET}
+    depends_on:
+      postgres: { condition: service_healthy }
+    networks: [default, edge]
+    mem_limit: 512m
+
 networks:
   edge:
     external: true
@@ -131,3 +188,4 @@ volumes:
   pgdata:
   tg-agent-data:
   voice-notes:
+  sales-voice:
