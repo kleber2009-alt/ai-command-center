@@ -1,0 +1,37 @@
+# Rebuild the funnel-analytics dashboard on the shared server right now and
+# make sure its 3-hourly cron is installed (setup-server.sh's cron file went
+# missing, so /var/www/funnel-analytics stayed empty → 404 on the root).
+name: funnel-analytics-refresh
+
+on:
+  push:
+    branches: ['claude/**']
+    paths:
+      - '.github/workflows/funnel-analytics-refresh.yml'
+  workflow_dispatch:
+
+jobs:
+  refresh:
+    runs-on: ubuntu-latest
+    timeout-minutes: 15
+    steps:
+      - uses: appleboy/ssh-action@v1.0.3
+        with:
+          host:     ${{ vars.HETZNER_HOST }}
+          username: ${{ vars.HETZNER_USER || 'root' }}
+          port:     ${{ vars.HETZNER_SSH_PORT || '22' }}
+          key:      ${{ secrets.HETZNER_SSH_KEY }}
+          command_timeout: 12m
+          script: |
+            set -uo pipefail
+            echo "== update script"; cat /usr/local/bin/funnel-analytics-update
+            CRON=/etc/cron.d/funnel-analytics
+            if [ ! -f "$CRON" ]; then
+              echo '23 */3 * * * root /usr/local/bin/funnel-analytics-update >> /var/log/funnel-analytics.log 2>&1' > "$CRON"
+              chmod 644 "$CRON"; echo "== installed $CRON"
+            fi
+            echo "== run"
+            /usr/local/bin/funnel-analytics-update 2>&1 | tee -a /var/log/funnel-analytics.log | tail -60
+            echo "exit=${PIPESTATUS[0]}"
+            ls -la /var/www/funnel-analytics
+            curl -s -o /dev/null -w 'local http %{http_code}\n' -H 'Host: dashboard.aicex.club' http://127.0.0.1/ || true
