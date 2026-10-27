@@ -30,8 +30,9 @@ export interface ProviderAdapter {
    *  may return status='completed' with output. */
   submit(args: SubmitArgs): Promise<ProviderResult>;
 
-  /** Poll a job's status. Used when no webhook or webhook is late. */
-  getStatus(providerJobId: string): Promise<ProviderResult>;
+  /** Poll a job's status. Used when no webhook or webhook is late.
+   *  `opts.model` is passed by the poller for adapters that need it. */
+  getStatus(providerJobId: string, opts?: { model?: string }): Promise<ProviderResult>;
 
   /** Parse a webhook payload from the provider into our normalized result.
    *  Should verify the signature using `secret`. Returns null if signature invalid. */

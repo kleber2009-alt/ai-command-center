@@ -16,6 +16,9 @@ export const users = pgTable("users", {
   image:         text("image"),
   role:          text("role").$type<"user" | "admin">().notNull().default("user"),
   createdAt:     timestamp("created_at").notNull().defaultNow(),
+  // 0008_onboarding.sql
+  onboardingCompletedAt: timestamp("onboarding_completed_at"),
+  niche:         text("niche"),
 });
 
 export const accounts = pgTable("accounts", {
@@ -163,6 +166,9 @@ export const mediaAssets = pgTable("media_assets", {
   durationMs:   integer("duration_ms"),
   metadata:     jsonb("metadata").$type<Record<string, unknown>>().notNull().default({}),
   isFavorite:   boolean("is_favorite").notNull().default(false),
+  // 0007_featured_media.sql
+  isFeatured:   boolean("is_featured").notNull().default(false),
+  featuredAt:   timestamp("featured_at"),
   createdAt:    timestamp("created_at").notNull().defaultNow(),
 }, (t) => ({
   userCreatedIdx: index("media_user_created_idx").on(t.userId, t.createdAt.desc()),
