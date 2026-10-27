@@ -32,7 +32,12 @@ env vars, and routes, see `CLAUDE.md` / `README.md` inside each `apps/<app>/`.
 ## Product → path map
 
 **Source of truth for product status** — Command Center dashboard:
-`https://command-center.46-62-215-11.nip.io/dashboard` (API: `/api/projects` and `/api/projects/<slug>`).
+`https://projects.aicex.club/dashboard` (API: `/api/projects` and `/api/projects/<slug>`).
+
+> **2026-10-27: the `46.62.215.11` box is gone** (with its databases). Every
+> `*.46-62-215-11.nip.io` URL below is dead; projects now run on
+> `157.180.33.173` under `*.aicex.club` — see "Prod links" right after this
+> table. The table keeps the old URLs as history.
 
 | # | Product (slug) | Status | Milestones | Code path | Landing | Prod URL | Container(s) |
 |---|---|---|---|---|---|---|---|
@@ -87,7 +92,39 @@ npm run persona:worker:{avatar,cover}
 For ai-hub / infra-worker / persona-train / voice-circle-bot / ai-sales —
 `cd apps/<app>` and use its own scripts (Docker / Python / standalone).
 
-## Prod infrastructure
+## Prod links (aicex.club, since 2026-10-27)
+
+Server `157.180.33.173` (Hetzner CAX21, arm64, 8 GB), shared with Persona
+Studio, Finance OS and the montage bot. Persona Studio's Caddy
+(`persona-studio-caddy-1`) owns :80/:443 and imports `/opt/edge/sites/*.caddy`;
+projects join the `edge` Docker network. Wildcard DNS `*.aicex.club` →
+this IP (Cloudflare, DNS only).
+
+| Product | URL |
+|---|---|
+| Command Center | `https://projects.aicex.club/dashboard` (edits need `admin` + `ADMIN_PASSWORD`) |
+| Транскрибация + Mini App | `https://transcribe.aicex.club`, `https://tma.aicex.club` (bot webhook set by deploy) |
+| tg-agent admin | `https://tg.aicex.club` |
+| AI Growth Office + Mini App | `https://office.aicex.club`, `/mini-app/`; Office Worker at `/worker/*` |
+| AI Sales | CRM `https://crm.aicex.club`, portal `https://sales.aicex.club`, API `https://sales-api.aicex.club` |
+| Viral Discover cabinet | `https://parser.aicex.club` |
+| AI Creative Hub | landing `https://aihub.aicex.club`, app `https://aihub-app.aicex.club` |
+| Persona Train | `https://persona-train.aicex.club` |
+| IG Serial Content | `https://ig.aicex.club` (demo mode, no Supabase yet) |
+| AI Content Factory | `https://factory.aicex.club` (cabinet: `admin` + `ADMIN_PASSWORD`) |
+| Landings | `https://landings.aicex.club/<product>/` |
+| Persona Studio | `https://studio.aicex.club` (own stack, autodeploy) |
+| Funnel Analytics | `https://dashboard.aicex.club` (cron rebuild, `/opt/funnel-analytics-src`) |
+
+Deploy: `.github/workflows/deploy-aicex.yml` → `deploy/aicex/deploy.sh` on the
+server (checkout `/opt/aicex`, env in `/etc/aicex/`, one pgvector Postgres
+`aicex-postgres` with DBs `aio`, `aisales`, `aihub`, fresh since the move).
+Keys come from repo secrets; shared ones (`ANTHROPIC_API_KEY`,
+`OPENAI_API_KEY`, `ELEVENLABS_API_KEY`, …, var `OWNER_TELEGRAM_ID`) back any
+per-app secret left empty. Bot webhooks are set only for bots whose token
+secret exists. `server-probe.yml` prints a read-only snapshot of the box.
+
+## Prod infrastructure (old box, lost 2026-10)
 
 - Single Hetzner box, IP `46.62.215.11`, Caddy + nip.io.
 - Source of truth for domains: `/etc/caddy/Caddyfile` on prod.
