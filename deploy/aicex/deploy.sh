@@ -60,7 +60,10 @@ migrate() {
   psql_ -d "$db" -c "CREATE TABLE IF NOT EXISTS _aicex_migrations (name TEXT PRIMARY KEY, applied_at TIMESTAMPTZ DEFAULT NOW())"
   for f in "$@"; do
     if psql_ -d "$db" -tAc "SELECT 1 FROM _aicex_migrations WHERE name='$f'" | grep -q 1; then continue; fi
-    if psql_ -d "$db" -1 < "$REPO/$f"; then
+    # A new enum value cannot be used in the transaction that adds it, so
+    # files with ALTER TYPE ... ADD VALUE run statement by statement.
+    tx=-1; grep -qiE 'ALTER TYPE .* ADD VALUE' "$REPO/$f" && tx=
+    if psql_ -d "$db" $tx < "$REPO/$f"; then
       psql_ -d "$db" -c "INSERT INTO _aicex_migrations(name) VALUES ('$f')"
       echo "  ✓ $db ← $f"
     else
@@ -105,7 +108,8 @@ migrate aisales \
   apps/aisales/db-init/014_office_user_linking.sql \
   apps/aisales/db-init/015_payments.sql \
   $(cd "$REPO" && ls apps/infra-worker/migrations/0{16,17,18,19,20,21,22,23,24,25,26}_*.sql) \
-  deploy/aicex/sql/worker_clone_photos.sql
+  deploy/aicex/sql/worker_clone_photos.sql \
+  deploy/aicex/sql/projects_aicex_links_20261027.sql
 psql_ -d aihub -c 'CREATE EXTENSION IF NOT EXISTS pgcrypto;'
 migrate aihub $(cd "$REPO" && ls apps/ai-hub/drizzle/migrations/*.sql) apps/ai-hub/drizzle/seed/tools.sql
 
