@@ -304,18 +304,26 @@ import { GLTFLoader } from 'three/addons/loaders/GLTFLoader.js';
    Позже по фото будет сделана реальная 3D-модель человека. */
 
 const DEPTS = [
-  { id:'mgmt', name:'Управление', short:'УП', accent:'#2f7bff', column:'#0a3fd6',
+  { id:'ceo', name:'Стратегия и продукт', short:'СП', accent:'#2f7bff', column:'#0a3fd6',
     screen:{ mode:0, deep:'#00030a', glow:'#1f5cff', spark:'#a6d8ff' },
-    head:{ id:'firuza', name:'Фируза', title:'Управляющая', photo:'people/firuza-face.jpg', model:'people/firuza.glb', height:1.68,
-           skin:'#ecc6ad', hair:'#2a1610', hairStyle:'long', suit:'#141416', top:'#141416', necklace:'#a46cd6' },
+    head:{ id:'ilia', name:'Илья', title:'Основатель — стратегия, видение, продукт', photo:'', model:'', height:1.8,
+           skin:'#e8bfa4', hair:'#2b1d14', hairStyle:'swept', suit:'#141416', top:'#111113' },
     props:['ball'],
     agents:[
-      { id:'montage',  name:'Монтаж',      role:'Монтирует рилсы и видео',          color:'#ff7a59', status:'working',  task:'Монтирует рилс' },
-      { id:'carousel', name:'Карусели',    role:'Делает карусели для Instagram',    color:'#ffd166', status:'working',  task:'Собирает карусель из рилса' },
-      { id:'slides',   name:'Презентации', role:'Готовит презентации и слайды',     color:'#4da3ff', status:'thinking', task:'Продумывает структуру вебинара' },
-      { id:'sites',    name:'Сайты',       role:'Собирает сайты и лендинги',        color:'#c38bff', status:'working',  task:'Верстает лендинг' },
-      { id:'funnels',  name:'Воронки',     role:'Строит автоворонки',               color:'#3ddc97', status:'idle',     task:'Ждёт задачу' },
-      { id:'research', name:'Ресёрч контента', role:'Ищет темы, хуки и механики у конкурентов', color:'#9b6bff', status:'working', task:'Ищет тренды недели' },
+      { id:'product', name:'Разработка продуктов', role:'Собирает продукты кодом и выкладывает', color:'#4da3ff', status:'working', task:'Дорабатывает продукт' },
+    ] },
+  { id:'marketing', name:'Отдел маркетинга', short:'ОМ', accent:'#a46cd6', column:'#6a34a8',
+    screen:{ mode:1, deep:'#05010a', glow:'#b46cff', spark:'#ffb3e6' },
+    head:{ id:'firuza', name:'Фируза', title:'Руководитель отдела маркетинга', photo:'people/firuza-face.jpg', model:'people/firuza.glb', height:1.68,
+           skin:'#ecc6ad', hair:'#2a1610', hairStyle:'long', suit:'#141416', top:'#141416', necklace:'#a46cd6' },
+    props:[],
+    agents:[
+      { id:'slides',    name:'Презентации',      role:'Готовит презентации и слайды',            color:'#4da3ff', status:'thinking', task:'Продумывает структуру вебинара' },
+      { id:'creatives', name:'Креативы',         role:'Делает рекламные креативы для Meta',      color:'#ff7a59', status:'working',  task:'Генерирует креативы для теста' },
+      { id:'funnels',   name:'Воронки',          role:'Строит воронки и лендинги',               color:'#3ddc97', status:'working',  task:'Собирает прогрев в боте' },
+      { id:'publish',   name:'Публикации',       role:'Рилсы, карусели и видео для соцсетей',    color:'#ffd166', status:'working',  task:'Монтирует рилс' },
+      { id:'analytics', name:'Аналитика',        role:'Считает охваты, лиды, выручку и ROMI',    color:'#5ad1ff', status:'thinking', task:'Считает ROMI за неделю' },
+      { id:'audience',  name:'Анализ аудитории', role:'Изучает аудиторию, нишу и конкурентов',   color:'#c38bff', status:'working',  task:'Ищет выбросы в нише' },
     ] },
   { id:'sales', name:'Отдел продаж', short:'ОП', accent:'#16c98a', column:'#0c8f63',
     screen:{ mode:1, deep:'#01030a', glow:'#16ffa0', spark:'#6f8bff' },
@@ -323,17 +331,16 @@ const DEPTS = [
            skin:'#e6b59b', hair:'#5a3420', hairStyle:'swept', suit:'#151517', top:'#111113', cross:true, sneakers:true },
     props:['dogs'],
     agents:[
-      { id:'chats',     name:'Переписки', role:'Ведёт переписки с клиентами',  color:'#5ad1ff', status:'working',  task:'Отвечает в директ' },
-      { id:'analytics', name:'Аналитика', role:'Считает конверсии и выручку',  color:'#ffd166', status:'thinking', task:'Считает конверсию за неделю' },
-      { id:'closer',    name:'Продажи',   role:'Закрывает сделки',             color:'#3ddc97', status:'working',  task:'Ведёт 4 тёплых лида' },
+      { id:'chats',  name:'Переписки', role:'Ведёт переписки с клиентами', color:'#5ad1ff', status:'working', task:'Отвечает в директ' },
+      { id:'closer', name:'Продажи',   role:'Помогает закрывать сделки',   color:'#3ddc97', status:'working', task:'Ведёт тёплых лидов' },
     ] },
-  { id:'traffic', name:'Отдел трафика', short:'ОТ', accent:'#ff7a3d', column:'#c4552c',
+  { id:'traffic', name:'Реклама Meta', short:'RM', accent:'#ff7a3d', column:'#c4552c',
     screen:{ mode:2, deep:'#1d0a12', glow:'#ff8a3d', spark:'#ffd58a' },
-    head:{ id:'nurken', name:'Нуркен', title:'Руководитель отдела трафика', photo:'people/nurken-face.jpg', model:'', height:1.75,
+    head:{ id:'nurken', name:'Нуркен', title:'Таргетолог — реклама в Meta', photo:'people/nurken-face.jpg', model:'', height:1.75,
            skin:'#c69072', hair:'#16110e', hairStyle:'curly', suit:'#141416', top:'#0e0e10', turtleneck:true, glasses:true, beard:true },
     props:['hookah'],
     agents:[
-      { id:'creatives', name:'Креативы', role:'Создаёт рекламные креативы', color:'#ff7a59', status:'working', task:'Генерирует 6 креативов для теста' },
+      { id:'metaads', name:'Кабинет Meta', role:'Запускает и ведёт кампании в Meta', color:'#ff7a59', status:'working', task:'Следит за ценой лида' },
     ] },
 ];
 
@@ -347,8 +354,9 @@ const STATUS = {
 /* ================= ПЛАНИРОВКА ================= */
 // Комнаты стоят в ряд вдоль задней стены, перед ними общий коридор-холл.
 const H = 3.0, RW = 10, ZB = -3, ZG = 4, ZC = 8.2;      // высота, шаг комнат, задняя стена, стеклянный фасад, край холла
-const XL = -RW*1.5, XR = RW*1.5;
-DEPTS.forEach((d, i) => d.ox = (i - 1)*RW);
+const NR = DEPTS.length, XL = -RW*NR/2, XR = RW*NR/2;
+DEPTS.forEach((d, i) => d.ox = (i - (NR - 1)/2)*RW);
+const WALLS = DEPTS.slice(1).map(d => d.ox - RW/2);   // перегородки между комнатами
 const SLOTS = [   // места роботов в комнате (локальные координаты)
   { p:[-2.6,1.05,-1.95], look:[0,1,4] },
   { p:[-1.25,1.0,-0.55], look:[0.5,1,4] },
@@ -1052,15 +1060,15 @@ for (const s of [-1, 1]) {
   building.add(sh);
 }
 // перегородки между комнатами и тёмный «срез» стен сверху, как у архитектурного макета
-for (const x of [-RW/2, RW/2]) {
+for (const x of WALLS) {
   boxMM(building, x-0.1, x+0.1, 0, H, ZB, ZG, M.wall);
   boxMM(building, x-0.1, x+0.1, H, H+0.01, ZB, ZG, M.wallTop);
 }
 boxMM(building, XL-0.15, XR+0.15, H, H+0.01, ZB-0.2, ZB, M.wallTop);
 
 // холл: растения, скамьи, ресепшн
-for (const x of [-RW*1.5+0.8, -RW/2, RW/2, RW*1.5-0.8]) plant(building, x, ZG+0.7, 1);
-for (const x of [-RW, RW]) {
+for (const x of [XL+0.8, ...WALLS.filter(x => Math.abs(x) > 3), XR-0.8]) plant(building, x, ZG+0.7, 1);
+for (const x of [XL + RW/2, XR - RW/2]) {
   const b = new THREE.Mesh(new RoundedBoxGeometry(2.2, 0.42, 0.55, 4, 0.08), M.sofa);
   b.position.set(x, 0.21, ZC-1.4); b.castShadow = b.receiveShadow = true; building.add(b);
 }
@@ -1144,7 +1152,7 @@ sun.position.set(8, 16, 14); sun.target.position.set(0, 0, 1);
 sun.castShadow = true;
 const sm = isMobile ? 2048 : 4096;
 sun.shadow.mapSize.set(sm, sm);
-Object.assign(sun.shadow.camera, { left:-17, right:17, top:12, bottom:-10, near:2, far:50 });
+Object.assign(sun.shadow.camera, { left:XL-2, right:XR+2, top:12, bottom:-10, near:2, far:50 });
 sun.shadow.bias = -0.0003; sun.shadow.normalBias = 0.025;
 scene.add(sun, sun.target);
 
@@ -1177,7 +1185,7 @@ function renderUI() {
   if (!d) {
     const total = DEPTS.reduce((n, x) => n + x.agents.length, 0);
     $('sideTitle').textContent = 'Департаменты';
-    $('sideSub').textContent = `${DEPTS.length} отдела · ${total} ${plural(total)}`;
+    $('sideSub').textContent = `${DEPTS.length} ${DEPTS.length > 4 ? 'отделов' : 'отдела'} · ${total} ${plural(total)}`;
     $('sideDemo').hidden = true;
     $('sideList').innerHTML = DEPTS.map(x => `
       <li data-dept="${x.id}"><span class="dept-ic" style="--c:${x.accent}">${esc(x.short)}</span>
@@ -1258,8 +1266,9 @@ const portrait = () => camera.aspect < 1;
 
 function planView() {
   // на вертикальном экране смотрим сверху сбоку — ряд комнат встаёт столбиком
-  if (portrait()) return { pos:V3(12, 25, 1.2), target:V3(0, 0, 1.2) };
-  return { pos:V3(0, 19, 15.5), target:V3(0, 0, 1.2) };
+  const k = NR/3;   // при 4 комнатах отъезжаем дальше
+  if (portrait()) return { pos:V3(12*k, 25*k, 1.2), target:V3(0, 0, 1.2) };
+  return { pos:V3(0, 19*k, 15.5*k), target:V3(0, 0, 1.2) };
 }
 function roomView(d) {
   return { pos:V3(d.ox + 0.3, 1.85, 3.75), target:V3(d.ox - 0.3, 1.15, -1.5) };
@@ -1275,7 +1284,7 @@ function applyMode() {
   if (inRoom) Object.assign(controls, { minDistance:1.2, maxDistance:6.5, minPolarAngle:Math.PI*0.18, maxPolarAngle:Math.PI*0.52, minAzimuthAngle:-1.15, maxAzimuthAngle:1.15 });
   else {
     const az = portrait() ? Math.PI/2 : 0;
-    Object.assign(controls, { minDistance:8, maxDistance:portrait() ? 60 : 42, minPolarAngle:0.15, maxPolarAngle:1.2, minAzimuthAngle:az-0.9, maxAzimuthAngle:az+0.9 });
+    Object.assign(controls, { minDistance:8, maxDistance:(portrait() ? 60 : 42)*Math.max(1, NR/3), minPolarAngle:0.15, maxPolarAngle:1.2, minAzimuthAngle:az-0.9, maxAzimuthAngle:az+0.9 });
   }
 }
 
