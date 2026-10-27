@@ -110,7 +110,8 @@ migrate aisales \
   $(cd "$REPO" && ls apps/infra-worker/migrations/0{16,17,18,19,20,21,22,23,24,25,26}_*.sql) \
   deploy/aicex/sql/worker_clone_photos.sql \
   deploy/aicex/sql/projects_aicex_links_20261027.sql \
-  deploy/aicex/sql/projects_aicex_links_20261027b.sql
+  deploy/aicex/sql/projects_aicex_links_20261027b.sql \
+  deploy/aicex/sql/projects_aicex_links_20261027c.sql
 psql_ -d aihub -c 'CREATE EXTENSION IF NOT EXISTS pgcrypto;'
 migrate aihub $(cd "$REPO" && ls apps/ai-hub/drizzle/migrations/*.sql) apps/ai-hub/drizzle/seed/tools.sql
 

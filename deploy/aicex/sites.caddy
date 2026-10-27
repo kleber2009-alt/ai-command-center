@@ -141,3 +141,10 @@ factory.aicex.club {
 		}
 	}
 }
+
+# Finance OS Mini App (own stack in /opt/finance-os) — stable alias next to
+# its original finance.157-180-33-173.nip.io block in /opt/edge/sites.
+finance.aicex.club {
+	encode zstd gzip
+	reverse_proxy finance-miniapp:80
+}
