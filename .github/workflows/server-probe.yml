@@ -53,12 +53,13 @@ jobs:
             echo "--- log"; tail -40 /var/log/funnel-analytics.log 2>&1
             echo "== aisales migrations"
             docker exec aicex-postgres psql -U aicex -d aisales -tAc "SELECT name FROM _aicex_migrations ORDER BY applied_at" 2>&1 | tail -40
-            echo "== dry-run failing migrations (rolled back)"
-            for f in apps/aisales/db-init/013_office_scheduler.sql apps/aisales/db-init/014_office_user_linking.sql apps/aisales/db-init/015_payments.sql; do
-              echo "--- $f"
-              { echo 'BEGIN;'; cat "/opt/aicex/$f"; echo 'ROLLBACK;'; } \
-                | docker exec -i aicex-postgres psql -U aicex -d aisales -v ON_ERROR_STOP=1 -q 2>&1 | grep -iE "error|line|detail" | head -6
+            echo "== build errors"
+            cd /opt/aicex/deploy/aicex
+            for svc in aihub-web persona-train; do
+              echo "--- $svc"
+              docker compose -f docker-compose.yml --env-file /etc/aicex/stack.env build --progress plain "$svc" 2>&1 | grep -vE '^#[0-9]+ (sha256|extracting|resolve|DONE|CACHED|transferring)' | tail -25
             done
-            for c in aicex-worker; do
+            cd /
+            for c in aicex-worker aicex-ig-content; do
               echo "--- logs $c"; docker logs --tail=25 "$c" 2>&1 | sed -E 's/[0-9]{8,}:[A-Za-z0-9_-]{30,}/***/g'
             done
