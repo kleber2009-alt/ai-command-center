@@ -8,7 +8,7 @@ const personaStudio: ModuleEntry = {
   status: 'beta',
   packageName: '@persona-studio/sdk',
   version: '0.1.0',
-  baseUrl: 'https://persona-app.46-62-215-11.nip.io',
+  baseUrl: 'https://studio.aicex.club',
   docsPath: 'apps/persona-studio/sdk/README.md',
   capabilities: [
     'Аватары: 10 стилей из одной фотографии',
@@ -50,7 +50,7 @@ const personaStudio: ModuleEntry = {
   quickstart: `import { createPersonaClient } from '@persona-studio/sdk';
 
 const ps = createPersonaClient({
-  baseUrl: 'https://persona-app.46-62-215-11.nip.io',
+  baseUrl: 'https://studio.aicex.club',
   apiKey:  process.env.PERSONA_API_KEY!,
 });
 

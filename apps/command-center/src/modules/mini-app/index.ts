@@ -6,7 +6,7 @@ const miniApp: ModuleEntry = {
   tagline:
     'Telegram Mini App для AI Growth Office: онбординг, контент, AI-чат внутри @AI_Growth_Office_Bot.',
   status: 'dev',
-  baseUrl: 'https://ai-office.46-62-215-11.nip.io/mini-app/',
+  baseUrl: 'https://office.aicex.club/mini-app/',
   docsPath: 'apps/ai-office/mini-app',
   capabilities: [
     'Telegram Mini App стартует через бота',

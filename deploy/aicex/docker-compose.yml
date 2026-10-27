@@ -1,0 +1,129 @@
+# aicex stack — projects moved off the lost 46.62.215.11 box onto the
+# shared server (157.180.33.173, arm64) behind the edge Caddy that ships
+# with Persona Studio. Every public service joins the external `edge`
+# network; Caddy reaches it by container name (see sites.caddy).
+#
+# Run by deploy/aicex/deploy.sh — env files live in /etc/aicex/ on the server.
+name: aicex
+
+x-base: &base
+  restart: unless-stopped
+  logging:
+    driver: json-file
+    options: { max-size: '10m', max-file: '3' }
+
+services:
+  postgres:
+    <<: *base
+    image: pgvector/pgvector:pg16
+    container_name: aicex-postgres
+    environment:
+      POSTGRES_USER: aicex
+      POSTGRES_PASSWORD: ${PG_PASSWORD:?set in /etc/aicex/stack.env}
+      POSTGRES_DB: aio
+    volumes:
+      - pgdata:/var/lib/postgresql/data
+    healthcheck:
+      test: ['CMD-SHELL', 'pg_isready -U aicex -d aio']
+      interval: 10s
+      timeout: 5s
+      retries: 10
+    mem_limit: 512m
+
+  ytdlp:
+    <<: *base
+    build: { context: ../../apps/ytdlp }
+    image: aicex-ytdlp
+    container_name: aicex-ytdlp
+    env_file: /etc/aicex/ytdlp.env
+    mem_limit: 512m
+
+  transcribe:
+    <<: *base
+    build: { context: ../.., dockerfile: apps/transcribe/Dockerfile }
+    image: aicex-transcribe
+    container_name: aicex-transcribe
+    env_file: /etc/aicex/transcribe.env
+    environment:
+      NODE_ENV: production
+      PORT: 3000
+      HOSTNAME: 0.0.0.0
+      DATABASE_URL: postgres://aicex:${PG_PASSWORD}@postgres:5432/aio
+      YTDLP_SERVICE_URL: http://ytdlp:8080
+      TELEGRAM_WEBHOOK_SECRET: ${TRANSCRIBE_WEBHOOK_SECRET}
+      NEXT_PUBLIC_APP_URL: https://transcribe.aicex.club
+      TMA_URL: https://tma.aicex.club/
+      VIRAL_CLONE_DISPATCH_URL: https://office.aicex.club/worker/viral-clone/dispatch
+      MEMORY_ENABLED: 'false'
+    depends_on:
+      postgres: { condition: service_healthy }
+      ytdlp: { condition: service_started }
+    networks: [default, edge]
+    mem_limit: 768m
+
+  tg-agent:
+    <<: *base
+    build: { context: ../.., dockerfile: apps/tg-agent/Dockerfile }
+    image: aicex-tg-agent
+    container_name: aicex-tg-agent
+    env_file: /etc/aicex/tg-agent.env
+    environment:
+      DATABASE_PATH: /app/data/tg-agent.db
+      ADMIN_PORT: 8080
+      ADMIN_PUBLIC_URL: https://tg.aicex.club
+      MEMORY_ENABLED: 'false'
+    volumes:
+      - tg-agent-data:/app/data
+    networks: [default, edge]
+    mem_limit: 384m
+
+  command-center:
+    <<: *base
+    build: { context: ../../apps/command-center }
+    image: aicex-command-center
+    container_name: aicex-command-center
+    environment:
+      DATABASE_URL: postgres://aicex:${PG_PASSWORD}@postgres:5432/aisales
+    depends_on:
+      postgres: { condition: service_healthy }
+    networks: [default, edge]
+    mem_limit: 256m
+
+  ai-office:
+    <<: *base
+    build: { context: ../.., dockerfile: infra/services/ai-office/Dockerfile }
+    image: aicex-ai-office
+    container_name: aicex-ai-office
+    env_file: /etc/aicex/ai-office.env
+    environment:
+      NODE_ENV: production
+      PORT: 3000
+      DATABASE_URL: postgres://aicex:${PG_PASSWORD}@postgres:5432/aio
+      PUBLIC_BASE_URL: https://office.aicex.club
+      VOICE_NOTES_DIR: /data/voice-notes
+    volumes:
+      - voice-notes:/data/voice-notes
+    depends_on:
+      postgres: { condition: service_healthy }
+    networks: [default, edge]
+    mem_limit: 256m
+
+  landings:
+    <<: *base
+    image: caddy:2.8-alpine
+    container_name: aicex-landings
+    command: caddy file-server --root /srv --listen :8080
+    volumes:
+      - ../../landings:/srv:ro
+    networks: [edge]
+    mem_limit: 64m
+
+networks:
+  edge:
+    external: true
+    name: edge
+
+volumes:
+  pgdata:
+  tg-agent-data:
+  voice-notes:

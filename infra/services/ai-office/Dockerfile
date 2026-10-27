@@ -1,9 +1,8 @@
 # syntax=docker/dockerfile:1.7
 # ═══════════════════════════════════════════════════════════════════
 # ai-office backend (Fastify + pg)
-# Build context = repo root (so we could also bake ai-office-project
-# static files later if desired — for now they're bind-mounted in
-# docker-compose and served by Caddy directly).
+# Build context = repo root; the static site in apps/ai-office is baked
+# into /app/static and served by Fastify at /.
 # ═══════════════════════════════════════════════════════════════════
 FROM node:22-alpine AS deps
 WORKDIR /app
@@ -18,7 +17,7 @@ COPY --from=deps /app/node_modules ./node_modules
 COPY infra/services/ai-office/. ./
 
 # Static HTML/JS/CSS — served by Fastify at root (one backend serves all)
-COPY ai-office-project ./static
+COPY apps/ai-office ./static
 
 # Non-root user
 RUN addgroup -S app && adduser -S app -G app \

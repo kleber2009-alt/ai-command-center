@@ -81,7 +81,7 @@ export const BOTS: Bot[] = [
       'WFDS-метрика — артефакты с ✅ в TG за 7 дней',
       'Stars billing с auto-renewal + 3/1-day expiry reminders + refund flow',
     ],
-    site: 'https://ai-office.46-62-215-11.nip.io/',
+    site: 'https://office.aicex.club/',
 
     documentation: [
       {
@@ -147,10 +147,10 @@ export const BOTS: Bot[] = [
       '/transcribe <url> — 4 артефакта из видео',
       '/clone <url|@handle> — viral pipeline (Whisper → Claude → HeyGen → Submagic → TG)',
       '/translate <url> <lang> — перевод 50+ языков',
-      'TMA на tma.46-62-215-11.nip.io (без auth)',
+      'TMA на tma.aicex.club (без auth)',
       'Карусель авто-доставляется в TG через sendMediaGroup',
     ],
-    site: 'https://transcribe.46-62-215-11.nip.io/',
+    site: 'https://transcribe.aicex.club/',
 
     documentation: [
       {
@@ -161,7 +161,7 @@ export const BOTS: Bot[] = [
       {
         title: 'Стек и контейнер',
         body:
-          'Next.js standalone, контейнер infra-transcribe-1 (порт 3002). БД aio в infra-postgres-1 (отдельно от aisales!). Auth — TMA initData HMAC + TRANSCRIBE_OWNER_FALLBACK=true для веба (single-tenant). Лендинг на transcribe.46-62-215-11.nip.io, App за basic-auth admin на /transcribe, TMA без auth на tma.46-62-215-11.nip.io.',
+          'Next.js standalone, контейнер infra-transcribe-1 (порт 3002). БД aio в infra-postgres-1 (отдельно от aisales!). Auth — TMA initData HMAC + TRANSCRIBE_OWNER_FALLBACK=true для веба (single-tenant). Лендинг на transcribe.aicex.club, App за basic-auth admin на /transcribe, TMA без auth на tma.aicex.club.',
       },
       {
         title: '/clone — viral pipeline',
@@ -219,7 +219,7 @@ export const BOTS: Bot[] = [
       '/admin: 6 табов (Overview, Users, Jobs, Transactions, Tools, Payments)',
       'Magic-link auth (Auth.js v5) + mailpit для debug',
     ],
-    site: 'https://aihub.46-62-215-11.nip.io/',
+    site: 'https://aihub.aicex.club/',
 
     documentation: [
       {
@@ -281,12 +281,12 @@ export const BOTS: Bot[] = [
       'Личный demo-бот основателя поверх AI Sales System. Прокачивается на реальных диалогах — feedback loop для prompt+RAG → fine-tune readiness. Бэкенд — aisales-api-v2 + дашборд продаж.',
     features: [
       'Входящие лиды → классификация → ответ в голосе Ильи',
-      'Pulse / Pipeline / Inbox / Conversation — UI на dashboard.46-62-215-11.nip.io',
+      'Pulse / Pipeline / Inbox / Conversation — UI на crm.aicex.club',
       'Обучается на approval-loop (north star AWR=70% к мес 6)',
       '9 ролей × отдельная KB (база знаний по нише)',
       'Stage в roadmap: Prompt+RAG → feedback-loop → fine-tune',
     ],
-    site: 'https://dashboard.46-62-215-11.nip.io/',
+    site: 'https://crm.aicex.club/',
 
     documentation: [
       {
@@ -297,7 +297,7 @@ export const BOTS: Bot[] = [
       {
         title: 'Бэкенд',
         body:
-          'aisales-api-v2 (FastAPI :8001) + дашборд продаж на dashboard.46-62-215-11.nip.io. БД aisales (16 таблиц). Экраны: Pulse / Inbox / Pipeline / Journey / Conversation / Agents / Reports.',
+          'aisales-api-v2 (FastAPI :8001) + дашборд продаж на crm.aicex.club. БД aisales (16 таблиц). Экраны: Pulse / Inbox / Pipeline / Journey / Conversation / Agents / Reports.',
       },
       {
         title: 'Roadmap обучения',

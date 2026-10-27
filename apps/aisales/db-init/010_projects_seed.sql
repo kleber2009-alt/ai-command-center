@@ -57,8 +57,8 @@ INSERT INTO projects (slug, name, emoji, tagline, status, description, technolog
  'FastAPI-стек для автоматизации продаж в директ Instagram и Telegram. Поддерживает голосовые, видео-кружки (wav2lip), voice clone Ильи (ElevenLabs), сегментацию клиентов, оценку лидов, эскалацию на оператора. Воронка по 8 стадиям (hello → discovery → pitch → objections → close → followup).',
  ARRAY['FastAPI','Postgres','Redis','Qdrant','MinIO','Anthropic','ElevenLabs','Sieve'],
  '[
-   {"label":"API","url":"https://api.46-62-215-11.nip.io/","kind":"api"},
-   {"label":"Swagger","url":"https://api.46-62-215-11.nip.io/docs","kind":"docs"},
+   {"label":"API","url":"https://sales-api.aicex.club/","kind":"api"},
+   {"label":"Swagger","url":"https://sales-api.aicex.club/docs","kind":"docs"},
    {"label":"Repo","url":"https://github.com/kleber2009-alt/ai-command-center/tree/main/apps/aisales/v2","kind":"repo"}
  ]'::jsonb,
  40),

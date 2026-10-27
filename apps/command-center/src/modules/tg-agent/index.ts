@@ -6,13 +6,13 @@ const tgAgent: ModuleEntry = {
   tagline:
     'Telegram-агент для групп: классификатор сообщений + decision engine + автогенерация ответов + CRM. Production в @newnewnnn_bot.',
   status: 'production',
-  baseUrl: 'https://tg-agent.46-62-215-11.nip.io',
+  baseUrl: 'https://tg.aicex.club',
   docsPath: 'apps/tg-agent/CLAUDE.md',
   capabilities: [
     'Pipeline: ingest → classify → decide → respond',
     'Claude Haiku 4.5 для классификатора и респондера',
     'CRM-таблица контактов и историй диалогов',
-    'Admin-панель tg.46-62-215-11.nip.io',
+    'Admin-панель tg.aicex.club',
   ],
   backend: [
     { label: 'Classifier', path: 'apps/tg-agent/src/classifier' },
@@ -21,7 +21,7 @@ const tgAgent: ModuleEntry = {
     { label: 'CRM', path: 'apps/tg-agent/src/crm' },
   ],
   ui: [
-    { label: 'Admin panel', path: 'tg.46-62-215-11.nip.io' },
+    { label: 'Admin panel', path: 'tg.aicex.club' },
     { label: 'Telegram bot', path: '@newnewnnn_bot' },
   ],
   notes:

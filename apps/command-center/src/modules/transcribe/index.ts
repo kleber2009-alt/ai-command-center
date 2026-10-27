@@ -6,13 +6,13 @@ const transcribe: ModuleEntry = {
   tagline:
     'Аудио/видео → текст + AI-суммаризация, перевод, рерайт. Telegram Mini App + веб-кабинет. Flagship-продукт.',
   status: 'production',
-  baseUrl: 'https://transcribe.46-62-215-11.nip.io',
+  baseUrl: 'https://transcribe.aicex.club',
   docsPath: 'apps/transcribe/CLAUDE.md',
   capabilities: [
     'Транскрибация аудио/видео (multilingual)',
     'AI-функции: summarize / translate / generate (Claude Haiku 4.5)',
     'Чат с ассистентами /me и /assistants (Claude Sonnet 4.6)',
-    'Telegram Mini App: tma.46-62-215-11.nip.io',
+    'Telegram Mini App: tma.aicex.club',
     'Админ-кабинет /admin',
   ],
   backend: [
@@ -21,8 +21,8 @@ const transcribe: ModuleEntry = {
     { label: '/api/assistants/chat', path: 'apps/transcribe/src/app/api/assistants/chat' },
   ],
   ui: [
-    { label: 'Web UI', path: 'transcribe.46-62-215-11.nip.io' },
-    { label: 'Telegram Mini App', path: 'tma.46-62-215-11.nip.io' },
+    { label: 'Web UI', path: 'transcribe.aicex.club' },
+    { label: 'Telegram Mini App', path: 'tma.aicex.club' },
     { label: 'Admin panel', path: '/admin' },
   ],
   notes:

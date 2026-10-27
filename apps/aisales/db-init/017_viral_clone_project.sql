@@ -14,10 +14,10 @@ INSERT INTO projects (slug, name, emoji, tagline, status, description, technolog
  'Pipeline в @your_transscribe_bot: /clone <url> → yt-dlp/Apify → Whisper → Claude rewrite → HeyGen (твой аватар + голос) → Submagic (Hormozi 2 + B-rolls + зумы) → TG sendDocument. End-to-end 4-7 мин. Любая ссылка IG/TikTok/YouTube/X → готовый Reels 1080×1920 с твоим лицом и голосом, переписанный под твою нишу.',
  ARRAY['yt-dlp','Apify','Whisper v3','Claude Opus','HeyGen','Submagic','Telegram Bot API','ElevenLabs'],
  '[
-   {"label":"Лендинг","url":"https://dashboard.46-62-215-11.nip.io/landings/viral-clone/","kind":"live"},
+   {"label":"Лендинг","url":"https://landings.aicex.club/viral-clone/","kind":"live"},
    {"label":"Запустить /clone","url":"https://t.me/your_transscribe_bot","kind":"admin"},
    {"label":"Pipeline handler","url":"https://github.com/kleber2009-alt/aisales-app-v2/blob/main/infra-worker/handlers/viral_clone.js","kind":"repo"},
-   {"label":"Webhook dispatch","url":"https://transcribe.46-62-215-11.nip.io/worker/viral-clone/dispatch","kind":"api"}
+   {"label":"Webhook dispatch","url":"https://transcribe.aicex.club/worker/viral-clone/dispatch","kind":"api"}
  ]'::jsonb,
  25)
 ON CONFLICT (slug) DO UPDATE SET

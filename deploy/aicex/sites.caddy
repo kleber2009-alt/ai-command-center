@@ -1,0 +1,51 @@
+# Site blocks for the aicex stack, installed as /opt/edge/sites/aicex.caddy
+# and imported by the edge Caddy (persona-studio-caddy-1). Upstreams are
+# container names on the shared `edge` network.
+# __CC_WRITE_HASH__ is replaced by deploy.sh with a bcrypt hash of the
+# Command Center admin password: reads are public, edits need a login.
+
+projects.aicex.club {
+	encode zstd gzip
+	@write not method GET HEAD OPTIONS
+	basic_auth @write {
+		admin __CC_WRITE_HASH__
+	}
+	reverse_proxy aicex-command-center:3003
+}
+
+transcribe.aicex.club {
+	encode zstd gzip
+	reverse_proxy aicex-transcribe:3000 {
+		transport http {
+			read_timeout 10m
+			write_timeout 10m
+		}
+	}
+}
+
+# Telegram Mini App: same Next.js app, opens on /transcribe.
+tma.aicex.club {
+	encode zstd gzip
+	redir / /transcribe
+	reverse_proxy aicex-transcribe:3000 {
+		transport http {
+			read_timeout 10m
+			write_timeout 10m
+		}
+	}
+}
+
+tg.aicex.club {
+	encode zstd gzip
+	reverse_proxy aicex-tg-agent:8080
+}
+
+office.aicex.club {
+	encode zstd gzip
+	reverse_proxy aicex-ai-office:3000
+}
+
+landings.aicex.club {
+	encode zstd gzip
+	reverse_proxy aicex-landings:8080
+}

@@ -1,0 +1,129 @@
+# Deploy the aicex stack (deploy/aicex) to the shared server behind the
+# edge Caddy: transcribe + tma, ytdlp, tg-agent, command-center, ai-office,
+# landings — all on *.aicex.club. The server keeps its own checkout in
+# /opt/aicex (separate from /opt/ai-command-center, which Persona Studio
+# auto-deploys from).
+#
+# Secrets/vars reused from the per-app workflows; HETZNER_HOST now points
+# at the new box.
+name: deploy-aicex
+
+on:
+  push:
+    branches: [main, 'claude/blissful-ramanujan-s1t688']
+    paths:
+      - 'deploy/aicex/**'
+      - '.github/workflows/deploy-aicex.yml'
+      - 'apps/transcribe/**'
+      - 'apps/ytdlp/**'
+      - 'apps/tg-agent/**'
+      - 'apps/command-center/**'
+      - 'apps/ai-office/**'
+      - 'infra/services/ai-office/**'
+      - 'landings/**'
+  workflow_dispatch:
+    inputs:
+      services:
+        description: 'Space-separated services (empty = all)'
+        required: false
+        default: ''
+
+concurrency:
+  group: deploy-aicex
+  cancel-in-progress: false
+
+jobs:
+  deploy:
+    runs-on: ubuntu-latest
+    timeout-minutes: 60
+    steps:
+      - name: Deploy over SSH
+        uses: appleboy/ssh-action@v1.0.3
+        env:
+          REF: ${{ github.sha }}
+          BRANCH: ${{ github.ref_name }}
+          SERVICES: ${{ github.event.inputs.services }}
+          CC_ADMIN_PASSWORD: ${{ secrets.COMMAND_CENTER_ADMIN_PASSWORD }}
+          TRANSCRIBE_BOT_TOKEN: ${{ secrets.TRANSCRIBE_TELEGRAM_BOT_TOKEN }}
+          TRANSCRIBE_ENV: |
+            ANTHROPIC_API_KEY=${{ secrets.TRANSCRIBE_ANTHROPIC_API_KEY }}
+            DEEPGRAM_API_KEY=${{ secrets.TRANSCRIBE_DEEPGRAM_API_KEY }}
+            OPENAI_API_KEY=${{ secrets.TRANSCRIBE_OPENAI_API_KEY }}
+            TELEGRAM_BOT_TOKEN=${{ secrets.TRANSCRIBE_TELEGRAM_BOT_TOKEN }}
+            OWNER_TELEGRAM_ID=${{ vars.TRANSCRIBE_OWNER_TELEGRAM_ID }}
+            APIFY_API_TOKEN=${{ secrets.TRANSCRIBE_APIFY_API_TOKEN }}
+            YTDLP_SERVICE_API_KEY=${{ secrets.YTDLP_SERVICE_API_KEY }}
+          YTDLP_ENV: |
+            YTDLP_SERVICE_API_KEY=${{ secrets.YTDLP_SERVICE_API_KEY }}
+            COOKIES_B64=${{ secrets.YTDLP_COOKIES_B64 }}
+            INSTAGRAM_COOKIES_B64=${{ secrets.YTDLP_INSTAGRAM_COOKIES_B64 }}
+            PORT=8080
+          TG_AGENT_ENV: |
+            TELEGRAM_BOT_TOKEN=${{ secrets.TG_AGENT_TELEGRAM_BOT_TOKEN }}
+            ANTHROPIC_API_KEY=${{ secrets.TG_AGENT_ANTHROPIC_API_KEY }}
+            OWNER_TELEGRAM_ID=${{ vars.TG_AGENT_OWNER_TELEGRAM_ID }}
+            ALLOWED_CHAT_IDS=${{ vars.TG_AGENT_ALLOWED_CHAT_IDS }}
+            IGNORED_USER_IDS=${{ vars.TG_AGENT_IGNORED_USER_IDS }}
+            CLASSIFIER_MODEL=${{ vars.TG_AGENT_CLASSIFIER_MODEL }}
+            RESPONDER_MODEL=${{ vars.TG_AGENT_RESPONDER_MODEL }}
+            ADMIN_USERNAME=${{ vars.TG_AGENT_ADMIN_USERNAME }}
+            ADMIN_PASSWORD=${{ secrets.TG_AGENT_ADMIN_PASSWORD }}
+            ADMIN_SESSION_SECRET=${{ secrets.TG_AGENT_ADMIN_SESSION_SECRET }}
+            LOG_LEVEL=info
+            NODE_ENV=production
+            REPORT_ENABLED=true
+            REPORT_HOUR_UTC=${{ vars.TG_AGENT_REPORT_HOUR_UTC || '6' }}
+            FORUM_GROUP_ID=${{ vars.TG_AGENT_FORUM_GROUP_ID }}
+            FORUM_ENABLED=${{ vars.TG_AGENT_FORUM_ENABLED || 'false' }}
+            FORUM_KEEP_OWNER_DM=${{ vars.TG_AGENT_FORUM_KEEP_OWNER_DM || 'true' }}
+          AI_OFFICE_ENV: |
+            ANTHROPIC_API_KEY=${{ secrets.WORKER_ANTHROPIC_API_KEY }}
+            ELEVENLABS_API_KEY=${{ secrets.WORKER_ELEVENLABS_API_KEY }}
+        with:
+          host:     ${{ vars.HETZNER_HOST }}
+          username: ${{ vars.HETZNER_USER || 'root' }}
+          port:     ${{ vars.HETZNER_SSH_PORT || '22' }}
+          key:      ${{ secrets.HETZNER_SSH_KEY }}
+          command_timeout: 55m
+          envs: REF,BRANCH,SERVICES,CC_ADMIN_PASSWORD,TRANSCRIBE_BOT_TOKEN,TRANSCRIBE_ENV,YTDLP_ENV,TG_AGENT_ENV,AI_OFFICE_ENV
+          script: |
+            set -euo pipefail
+            DIR=/opt/aicex
+            if [ ! -d "$DIR/.git" ]; then
+              git clone --no-checkout /opt/ai-command-center "$DIR"
+              git -C "$DIR" remote set-url origin "$(git -C /opt/ai-command-center remote get-url origin)"
+            fi
+            git -C "$DIR" fetch --prune origin "$BRANCH"
+            git -C "$DIR" checkout -f "$REF"
+            echo "── aicex @ $(git -C "$DIR" log -1 --format='%h %s') ──"
+
+            mkdir -p /etc/aicex && chmod 700 /etc/aicex
+            printf '%s\n' "$TRANSCRIBE_ENV" > /etc/aicex/transcribe.env
+            printf '%s\n' "$YTDLP_ENV"      > /etc/aicex/ytdlp.env
+            printf '%s\n' "$TG_AGENT_ENV"   > /etc/aicex/tg-agent.env
+            printf '%s\n' "$AI_OFFICE_ENV"  > /etc/aicex/ai-office.env
+            chmod 600 /etc/aicex/*.env
+
+            # shellcheck disable=SC2086
+            bash "$DIR/deploy/aicex/deploy.sh" $SERVICES
+
+  smoke:
+    runs-on: ubuntu-latest
+    needs: [deploy]
+    timeout-minutes: 5
+    steps:
+      - name: HTTPS smoke
+        run: |
+          fail=0
+          for url in \
+            https://projects.aicex.club/dashboard \
+            https://transcribe.aicex.club/ \
+            https://tma.aicex.club/transcribe \
+            https://tg.aicex.club/healthz \
+            https://office.aicex.club/api/health \
+            https://landings.aicex.club/transcribe/; do
+            code=$(curl -o /dev/null -sw '%{http_code}' -L --max-time 20 "$url" || echo 000)
+            echo "$code  $url"
+            case $code in 2*|3*) ;; *) fail=1 ;; esac
+          done
+          exit $fail

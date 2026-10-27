@@ -4,9 +4,9 @@ const igAgent: ModuleEntry = {
   slug: 'ig-agent',
   name: 'ig-agent',
   tagline:
-    'Instagram DM agent: SendPulse webhook → Claude classifier → responder → owner alerts через общий @newnewnnn_bot. Кабинет magic-link на ig.46-62-215-11.nip.io.',
+    'Instagram DM agent: SendPulse webhook → Claude classifier → responder → owner alerts через общий @newnewnnn_bot. Кабинет magic-link на ig.aicex.club.',
   status: 'production',
-  baseUrl: 'https://ig.46-62-215-11.nip.io',
+  baseUrl: 'https://ig.aicex.club',
   docsPath: 'apps/ig-agent/CLAUDE.md',
   capabilities: [
     'SendPulse webhook → contacts/conversations/messages в shared aisales-postgres',
@@ -25,7 +25,7 @@ const igAgent: ModuleEntry = {
     { label: 'DigestScheduler', path: 'apps/ig-agent/src/scheduler/digest.ts' },
   ],
   ui: [
-    { label: 'Admin (magic-link)', path: 'ig.46-62-215-11.nip.io' },
+    { label: 'Admin (magic-link)', path: 'ig.aicex.club' },
     { label: 'Notifier — @newnewnnn_bot (shared с tg-agent)', path: 't.me/newnewnnn_bot' },
   ],
   notes:

@@ -6,7 +6,7 @@ const aiOffice: ModuleEntry = {
   tagline:
     'Интерактивный pixel-office с 10 AI-агентами + диалоговый виджет. Стартовая страница экосистемы.',
   status: 'production',
-  baseUrl: 'https://ai-office.46-62-215-11.nip.io',
+  baseUrl: 'https://office.aicex.club',
   docsPath: 'apps/ai-office/CLAUDE.md',
   capabilities: [
     '10 интерактивных AI-агентов на canvas',
@@ -20,8 +20,8 @@ const aiOffice: ModuleEntry = {
     { label: 'Embed-страница', path: 'landings/aisales-system/office-embed.html' },
   ],
   ui: [
-    { label: 'Public', path: 'ai-office.46-62-215-11.nip.io' },
-    { label: 'Self-host', path: 'ai-office.46-62-215-11.nip.io' },
+    { label: 'Public', path: 'office.aicex.club' },
+    { label: 'Self-host', path: 'office.aicex.club' },
   ],
   notes:
     'Уже работает как embed через iframe. Полноценный модуль = JS-loader + конфиг + npm @ai-growth-office/embed для встраивания одной строкой <script>.',

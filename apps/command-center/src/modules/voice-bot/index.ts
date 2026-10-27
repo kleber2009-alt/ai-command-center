@@ -6,7 +6,7 @@ const voiceBot: ModuleEntry = {
   tagline:
     'Голосовой клон через ElevenLabs IVC + voice training-flow. Production в @aio_voice_bot.',
   status: 'production',
-  baseUrl: 'https://ai-office.46-62-215-11.nip.io/persona-train',
+  baseUrl: 'https://office.aicex.club/persona-train',
   docsPath: 'apps/ai-office/voice-bot',
   capabilities: [
     'ElevenLabs Instant Voice Cloning',

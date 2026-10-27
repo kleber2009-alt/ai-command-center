@@ -26,14 +26,14 @@ export const runtime = 'nodejs'
 
 const STARS_PRICE_PRO = parseInt(process.env.STARS_PRICE_PRO ?? '750', 10)
 const PRO_SUBSCRIPTION_DAYS = parseInt(process.env.PRO_SUBSCRIPTION_DAYS ?? '30', 10)
-const TMA_URL = process.env.TMA_URL ?? 'https://tma.46-62-215-11.nip.io/'
+const TMA_URL = process.env.TMA_URL ?? 'https://tma.aicex.club/'
 // viral_clone dispatch — куда POST'ить `/clone <url|@handle>`. Обрабатывается
 // office worker'ом (роут /worker/viral-clone/dispatch). Внутри docker-сети
 // `infra_internal`/`aisales_aisales-net` worker не виден напрямую, поэтому
 // зовём через публичный URL ai-office домена (Caddy → worker).
 const VIRAL_DISPATCH_URL =
   process.env.VIRAL_CLONE_DISPATCH_URL ??
-  'https://ai-office.46-62-215-11.nip.io/worker/viral-clone/dispatch'
+  'https://office.aicex.club/worker/viral-clone/dispatch'
 const VIRAL_DISPATCH_SECRET = process.env.VIRAL_CLONE_DISPATCH_SECRET ?? ''
 // Те же worker'ы, что и dispatch, но другие маршруты — список фото и
 // upload нового фото. Берём базу из dispatch-URL, чтобы был один env.

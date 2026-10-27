@@ -240,13 +240,13 @@
    Fallback: ai-office onboarding. */
 (function(){
   const qs = new URLSearchParams(location.search);
-  let cta = qs.get('cta') || 'https://ai-office.46-62-215-11.nip.io/onboarding.html';
+  let cta = qs.get('cta') || 'https://office.aicex.club/onboarding.html';
   if(cta.startsWith('#')){
     try{
       const top = window.top.location;
       cta = top.origin + top.pathname + top.search + cta;
     }catch(e){
-      try{ cta = (document.referrer || 'https://ai-office.46-62-215-11.nip.io/').split('#')[0] + cta; }
+      try{ cta = (document.referrer || 'https://office.aicex.club/').split('#')[0] + cta; }
       catch(e2){}
     }
   }

@@ -22,10 +22,10 @@ INSERT INTO projects (slug, name, emoji, tagline, status, description, technolog
  'SaaS-«AI-команда»: проактивные daily/weekly/monthly артефакты в голосе клиента, не реактивная переписка. Day-0 +23min голосовое от Ани (ElevenLabs клон) — момент истины. ICP: эксперт онлайн-школы 50к–1М ₽/мес. North star — WFDS (Weekly Founder Deliverables Shipped). Pro 1990 / Builder 5900 / Architect 14900 ₽/мес.',
  ARRAY['Next.js','Node.js','ElevenLabs','Telegram','Make.com','Supabase','Postgres'],
  '[
-   {"label":"Лендинг (nip.io)","url":"https://ai-office.46-62-215-11.nip.io/","kind":"live"},
-   {"label":"Лендинг (ai-office.46-62-215-11.nip.io)","url":"https://ai-office.46-62-215-11.nip.io/","kind":"live"},
+   {"label":"Лендинг (nip.io)","url":"https://office.aicex.club/","kind":"live"},
+   {"label":"Лендинг (office.aicex.club)","url":"https://office.aicex.club/","kind":"live"},
    {"label":"@AI_Growth_Office_Bot","url":"https://t.me/AI_Growth_Office_Bot","kind":"admin"},
-   {"label":"WFDS dashboard","url":"https://ai-office.46-62-215-11.nip.io/worker/wfds","kind":"admin"}
+   {"label":"WFDS dashboard","url":"https://office.aicex.club/worker/wfds","kind":"admin"}
  ]'::jsonb,
  10)
 ON CONFLICT (slug) DO UPDATE SET
@@ -49,9 +49,9 @@ INSERT INTO projects (slug, name, emoji, tagline, status, description, technolog
  'Расшифровка любого видео по ссылке в 4 артефакта: IG-карусель 8×PNG, Reels-сценарий, TG-пост, перевод на 50+ языков. Доп.фича: /clone <url> — viral_clone pipeline (yt-dlp → Whisper → Claude rewrite → HeyGen → Submagic Hormozi 2). Free 60 мин/мес, Pro 750⭐/30 дней через Telegram Stars (RU-friendly).',
  ARRAY['Next.js','Whisper','Claude','HeyGen','Submagic','Telegram Stars','TMA','Postgres'],
  '[
-   {"label":"Лендинг","url":"https://transcribe.46-62-215-11.nip.io/","kind":"live"},
-   {"label":"App (basic-auth)","url":"https://transcribe.46-62-215-11.nip.io/transcribe","kind":"admin"},
-   {"label":"TMA","url":"https://tma.46-62-215-11.nip.io/","kind":"live"},
+   {"label":"Лендинг","url":"https://transcribe.aicex.club/","kind":"live"},
+   {"label":"App (basic-auth)","url":"https://transcribe.aicex.club/transcribe","kind":"admin"},
+   {"label":"TMA","url":"https://tma.aicex.club/","kind":"live"},
    {"label":"@your_transscribe_bot","url":"https://t.me/your_transscribe_bot","kind":"admin"}
  ]'::jsonb,
  20)
@@ -76,9 +76,9 @@ INSERT INTO projects (slug, name, emoji, tagline, status, description, technolog
  'SaaS-агрегатор: image/video/upscale Topaz/face-swap/nano-banana/карусель/reels-script. Provider''ы: fal.ai, Replicate, kie.ai. Wallet — race-free через 4 атомарные SECURITY DEFINER функции Postgres. Onboarding-бонус 100 токенов. /admin с 6 табами. Лендинг live, app ждёт env-ключи провайдеров.',
  ARRAY['Next.js 14','TypeScript','Drizzle','Auth.js v5','Postgres','BullMQ','MinIO','Stripe','Telegram Stars'],
  '[
-   {"label":"Лендинг","url":"https://aihub.46-62-215-11.nip.io/","kind":"live"},
-   {"label":"Roadmap","url":"https://aihub.46-62-215-11.nip.io/roadmap.html","kind":"docs"},
-   {"label":"App","url":"https://aihub-app.46-62-215-11.nip.io/","kind":"live"},
+   {"label":"Лендинг","url":"https://aihub.aicex.club/","kind":"live"},
+   {"label":"Roadmap","url":"https://aihub.aicex.club/roadmap.html","kind":"docs"},
+   {"label":"App","url":"https://aihub-app.aicex.club/","kind":"live"},
    {"label":"TMA (@aicex_one_bot)","url":"https://t.me/aicex_one_bot","kind":"admin"}
  ]'::jsonb,
  30)
@@ -103,9 +103,9 @@ INSERT INTO projects (slug, name, emoji, tagline, status, description, technolog
  'CRM/dashboard для команды продаж + AI-агенты под клиентов. 7 главных экранов: Pulse / Inbox / Pipeline / Journey / Conversation / Agents / Reports. Стек: статика /var/www/aisales-dashboard/ + FastAPI бэкенд (aisales-api-v2 :8001). БД aisales — пока seed-фикстура (16 таблиц).',
  ARRAY['FastAPI','Postgres','Redis','Qdrant','MinIO','HTML','Caddy'],
  '[
-   {"label":"Лендинг","url":"https://aisales.46-62-215-11.nip.io/","kind":"live"},
-   {"label":"Dashboard","url":"https://dashboard.46-62-215-11.nip.io/","kind":"admin"},
-   {"label":"API docs","url":"https://dashboard.46-62-215-11.nip.io/api/docs","kind":"api"}
+   {"label":"Лендинг","url":"https://sales.aicex.club/","kind":"live"},
+   {"label":"Dashboard","url":"https://crm.aicex.club/","kind":"admin"},
+   {"label":"API docs","url":"https://crm.aicex.club/api/docs","kind":"api"}
  ]'::jsonb,
  40)
 ON CONFLICT (slug) DO UPDATE SET
@@ -129,7 +129,7 @@ INSERT INTO projects (slug, name, emoji, tagline, status, description, technolog
  'AI Avatar Content Studio: 1 фото → 10 аватаров → HeyGen-видео / обложки карусели. Фабрика контента вокруг лица эксперта. Начато 2026-05-20: лендинг готов, Next.js app впереди.',
  ARRAY['Next.js','HeyGen','nano-banana','Replicate'],
  '[
-   {"label":"Лендинг","url":"https://persona.46-62-215-11.nip.io/","kind":"live"}
+   {"label":"Лендинг","url":"https://studio.aicex.club/","kind":"live"}
  ]'::jsonb,
  50)
 ON CONFLICT (slug) DO UPDATE SET
@@ -153,7 +153,7 @@ INSERT INTO projects (slug, name, emoji, tagline, status, description, technolog
  'Ежедневный парсер ниши: 5 рилсов + 5 каруселей конкурентов с Claude-оценкой 1-10 «зайдёт у меня». Cron 08:00 МСК. Wizard-onboarding через @parser_instaa_bot. Live с 2026-05-20.',
  ARRAY['Apify','Claude','Postgres','Telegram Bot API','cron'],
  '[
-   {"label":"Лендинг","url":"https://viral.46-62-215-11.nip.io/","kind":"live"},
+   {"label":"Лендинг","url":"https://viral.aicex.club/","kind":"live"},
    {"label":"@parser_instaa_bot","url":"https://t.me/parser_instaa_bot","kind":"admin"}
  ]'::jsonb,
  60)
@@ -172,7 +172,7 @@ ON CONFLICT (slug) DO UPDATE SET
 -- ── Roadmap-этапы (только для новых проектов, у voice-bot/mini-app уже есть) ──
 
 INSERT INTO project_milestones (project_slug, ordinal, title, status, notes) VALUES
-('ai-office', 1, 'Лендинг ai-office.nip.io + ai-office.46-62-215-11.nip.io',     'done',         NULL),
+('ai-office', 1, 'Лендинг ai-office.nip.io + office.aicex.club',     'done',         NULL),
 ('ai-office', 2, 'Quiz + AI-консультант Алиса',                         'done',         NULL),
 ('ai-office', 3, 'Stars billing + yearly + refund flow',                'done',         NULL),
 ('ai-office', 4, 'Office Worker: 9 handler-kinds + cron scheduler',     'done',         NULL),
