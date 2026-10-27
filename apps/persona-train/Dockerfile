@@ -16,8 +16,10 @@ COPY . .
 ENV NEXT_TELEMETRY_DISABLED=1
 # src/lib/db.ts throws at import without DATABASE_URL, and `next build`
 # imports route modules while collecting page data. Build-only stub; the
-# real URL comes in at container start.
-RUN DATABASE_URL=postgres://build:build@localhost:5432/build npm run build
+# real URL comes in at container start. The app has no public/ dir, but the
+# web stage copies one.
+RUN mkdir -p public \
+ && DATABASE_URL=postgres://build:build@localhost:5432/build npm run build
 
 # ── runner: web ─────────────────────────────
 FROM node:${NODE_VERSION} AS web
