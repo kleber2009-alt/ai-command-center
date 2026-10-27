@@ -55,9 +55,9 @@ jobs:
             docker exec aicex-postgres psql -U aicex -d aisales -tAc "SELECT name FROM _aicex_migrations ORDER BY applied_at" 2>&1 | tail -40
             echo "== build errors"
             cd /opt/aicex/deploy/aicex
-            for svc in aihub-web persona-train; do
+            for svc in persona-train; do
               echo "--- $svc"
-              docker compose -f docker-compose.yml --env-file /etc/aicex/stack.env build --progress plain "$svc" 2>&1 | grep -vE '^#[0-9]+ (sha256|extracting|resolve|DONE|CACHED|transferring)' | tail -25
+              docker compose -f docker-compose.yml --env-file /etc/aicex/stack.env build --progress plain "$svc" 2>&1 | grep -vE '^#[0-9]+ (sha256|extracting|resolve|DONE|CACHED|transferring)' | tail -45
             done
             cd /
             for c in aicex-worker aicex-ig-content; do
