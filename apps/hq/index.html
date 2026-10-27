@@ -92,7 +92,7 @@
 
   body.embed .top,body.embed .side,body.embed .hint{display:none}
 
-  .sh .demo-btn,.dlbl .demo{background:var(--accent);color:#fff;font-size:12px;font-weight:800;padding:6px 11px;border-radius:99px;white-space:nowrap}
+  .sh .demo-btn,.dlbl .demo,.dh .demo-btn{background:var(--accent);color:#fff;font-size:12px;font-weight:800;padding:6px 11px;border-radius:99px;white-space:nowrap}
   .dlbl .row2{display:flex;gap:12px;align-items:center;margin-top:8px}
   .dlbl .row2 em{margin-top:0}
   .dlbl .demo{background:var(--c);font-style:normal;padding:4px 10px}
@@ -108,6 +108,8 @@
   .dh h2{font-size:22px;font-weight:800}
   .dh p{font-size:13px;color:var(--tx2);margin-top:3px}
   .dh .x{top:16px;right:18px;font-size:24px}
+  .dh .demo-btn{margin-left:auto;margin-right:34px;flex:none}
+  .card .row button[hidden]{display:none}
   .dtabs{display:flex;gap:4px;padding:10px 20px;border-bottom:1px solid rgba(255,255,255,.07);overflow-x:auto;scrollbar-width:none}
   .dtabs button{padding:8px 14px;border-radius:11px;font-size:13px;font-weight:700;color:var(--tx2);white-space:nowrap}
   .dtabs button.on{background:rgba(255,255,255,.1);color:var(--tx)}
@@ -196,6 +198,16 @@
   @keyframes pop{from{opacity:0;transform:translateY(14px) scale(.96)}}
   .slide .pipe div{max-width:none}
   .chipsrow{display:flex;gap:8px;flex-wrap:wrap;margin-top:24px}
+  .chipsrow a.lk{font-size:12.5px;padding:6px 11px;border-radius:99px;background:rgba(255,255,255,.07);border:1px solid rgba(255,255,255,.1);color:inherit;text-decoration:none}
+  .chipsrow a.lk:hover{border-color:var(--accent)}
+  .slide h1.who{display:flex;align-items:center;gap:18px}
+  .slide h1.who .face,.slide h1.who .av{width:72px;height:72px;border-radius:22px;font-size:30px;flex:none}
+  .slide h1.who .face{border-radius:50%}
+  .org .kid.wide{width:230px;border-color:color-mix(in srgb,var(--accent) 60%,transparent)}
+  .org .kid.wide .face{margin:0 auto 10px;width:48px;height:48px;font-size:18px}
+  .org .kid .ag{margin-top:8px;color:#dfe3ea}
+  .demo-skills{grid-template-columns:repeat(auto-fill,minmax(240px,1fr));margin-top:26px;max-width:1100px}
+  .slide .org .kids{max-width:1200px}
   .chipsrow span{font-size:12.5px;padding:6px 11px;border-radius:99px;background:rgba(255,255,255,.07);border:1px solid rgba(255,255,255,.1)}
   .mosaic{display:grid;grid-template-columns:repeat(auto-fit,minmax(150px,1fr));gap:10px;margin-top:26px;max-height:56vh}
   .mosaic.wv{grid-template-columns:minmax(180px,.8fr) 2fr}
@@ -263,13 +275,13 @@
   <h3><span id="cAv"></span><span id="cName"></span></h3>
   <p id="cRole"></p>
   <div class="task"><small id="cTaskT">Сейчас</small><span id="cTask"></span></div>
-  <div class="row"><button class="pri" id="cMain">Досье</button><button id="cFocus">Подлететь</button></div>
+  <div class="row"><button class="pri" id="cMain">Досье</button><button id="cDemo">▶ Демо</button><button id="cFocus">Подлететь</button></div>
 </div>
 
 <div class="hint glass" id="hint">Клик по отделу — войти · тяните — вращать · колесо — зум</div>
 <div class="modal" id="dossier" hidden>
   <div class="dlg">
-    <div class="dh"><span id="dAv"></span><div><h2 id="dName"></h2><p id="dRole"></p></div><button class="x" id="dClose" aria-label="Закрыть">×</button></div>
+    <div class="dh"><span id="dAv"></span><div><h2 id="dName"></h2><p id="dRole"></p></div><button class="demo-btn" id="dDemo">▶ Демо агента</button><button class="x" id="dClose" aria-label="Закрыть">×</button></div>
     <div class="dtabs" id="dTabs"></div>
     <div class="db" id="dBody"></div>
   </div>
@@ -310,7 +322,11 @@ const DEPTS = [
            skin:'#e8bfa4', hair:'#2b1d14', hairStyle:'swept', suit:'#141416', top:'#111113' },
     props:['ball'],
     agents:[
-      { id:'product', name:'Разработка продуктов', role:'Собирает продукты кодом и выкладывает', color:'#4da3ff', status:'working', task:'Дорабатывает продукт' },
+      { id:'product',  name:'Разработка продуктов',   role:'Собирает продукты кодом и выкладывает',     color:'#4da3ff', status:'working',  task:'Дорабатывает Persona Studio 2.0' },
+      { id:'market',   name:'Исследования рынка',     role:'Изучает рынок, конкурентов и тренды',       color:'#9b6bff', status:'thinking', task:'Собирает игровые концепции' },
+      { id:'briefing', name:'Утренний брифинг',       role:'Сводка дня: почта, календарь, задачи',      color:'#ffd166', status:'idle',     task:'Соберёт брифинг утром' },
+      { id:'specs',    name:'ТЗ и документы',         role:'Пишет ТЗ, планы и гайды',                   color:'#5ad1ff', status:'working',  task:'Пишет гайд для клиента' },
+      { id:'skills',   name:'Скиллы и автоматизации', role:'Создаёт скиллы, плагины и MCP для команды', color:'#3ddc97', status:'working',  task:'Упаковывает пакет скиллов' },
     ] },
   { id:'marketing', name:'Отдел маркетинга', short:'ОМ', accent:'#a46cd6', column:'#6a34a8',
     screen:{ mode:1, deep:'#05010a', glow:'#b46cff', spark:'#ffb3e6' },
@@ -318,12 +334,18 @@ const DEPTS = [
            skin:'#ecc6ad', hair:'#2a1610', hairStyle:'long', suit:'#141416', top:'#141416', necklace:'#a46cd6' },
     props:[],
     agents:[
-      { id:'slides',    name:'Презентации',      role:'Готовит презентации и слайды',            color:'#4da3ff', status:'thinking', task:'Продумывает структуру вебинара' },
-      { id:'creatives', name:'Креативы',         role:'Делает рекламные креативы для Meta',      color:'#ff7a59', status:'working',  task:'Генерирует креативы для теста' },
-      { id:'funnels',   name:'Воронки',          role:'Строит воронки и лендинги',               color:'#3ddc97', status:'working',  task:'Собирает прогрев в боте' },
-      { id:'publish',   name:'Публикации',       role:'Рилсы, карусели и видео для соцсетей',    color:'#ffd166', status:'working',  task:'Монтирует рилс' },
-      { id:'analytics', name:'Аналитика',        role:'Считает охваты, лиды, выручку и ROMI',    color:'#5ad1ff', status:'thinking', task:'Считает ROMI за неделю' },
-      { id:'audience',  name:'Анализ аудитории', role:'Изучает аудиторию, нишу и конкурентов',   color:'#c38bff', status:'working',  task:'Ищет выбросы в нише' },
+      { id:'slides',     name:'Презентации',      role:'Слайды вебинаров, эфиров и питчей',         color:'#4da3ff', status:'thinking', task:'Продумывает структуру вебинара' },
+      { id:'creatives',  name:'Креативы',         role:'Рекламные креативы для Meta',               color:'#ff7a59', status:'working',  task:'Генерирует креативы для теста' },
+      { id:'funnels',    name:'Воронки',          role:'Бот, прогрев по дням и оффер',              color:'#3ddc97', status:'working',  task:'Собирает прогрев в боте' },
+      { id:'publish',    name:'Публикации',       role:'Контент-план и выпуск в соцсети',           color:'#ffd166', status:'working',  task:'Ставит рилс в публикацию' },
+      { id:'analytics',  name:'Аналитика',        role:'Охваты, лиды, выручка и ROMI',              color:'#5ad1ff', status:'thinking', task:'Считает ROMI за неделю' },
+      { id:'audience',   name:'Анализ аудитории', role:'Аудитория, ниша и конкуренты',              color:'#c38bff', status:'working',  task:'Ищет выбросы в нише' },
+      { id:'scripts',    name:'Сценарии',         role:'Сценарии рилсов с кодовым словом',          color:'#ff5d8f', status:'working',  task:'Пишет 10 продающих рилсов' },
+      { id:'montage',    name:'Монтаж видео',     role:'Рилсы и YouTube кодом, 35+ стилей',         color:'#ff9f43', status:'working',  task:'Монтирует рилс' },
+      { id:'carousel',   name:'Карусели',         role:'Карусели Instagram в 24 стилях',            color:'#ffe08a', status:'idle',     task:'Ждёт сценарий' },
+      { id:'landings',   name:'Лендинги',         role:'Сайты и лендинги на aicex.club',            color:'#6366f1', status:'working',  task:'Верстает лендинг' },
+      { id:'leadmagnet', name:'Лид-магниты',      role:'Подарки за подписку: PDF, уроки, чек-листы', color:'#2fb9a6', status:'thinking', task:'Придумывает подарок' },
+      { id:'avatar',     name:'Видео с аватаром', role:'Ролики с ИИ-двойником без съёмки',          color:'#e0559c', status:'idle',     task:'Ждёт текст' },
     ] },
   { id:'sales', name:'Отдел продаж', short:'ОП', accent:'#16c98a', column:'#0c8f63',
     screen:{ mode:1, deep:'#01030a', glow:'#16ffa0', spark:'#6f8bff' },
@@ -331,8 +353,11 @@ const DEPTS = [
            skin:'#e6b59b', hair:'#5a3420', hairStyle:'swept', suit:'#151517', top:'#111113', cross:true, sneakers:true },
     props:['dogs'],
     agents:[
-      { id:'chats',  name:'Переписки', role:'Ведёт переписки с клиентами', color:'#5ad1ff', status:'working', task:'Отвечает в директ' },
-      { id:'closer', name:'Закрытие сделок', role:'Доводит тёплых лидов до оплаты',   color:'#3ddc97', status:'working', task:'Ведёт тёплых лидов' },
+      { id:'chats',    name:'Переписки',             role:'Ведёт переписки с клиентами',           color:'#5ad1ff', status:'working',  task:'Отвечает в директ' },
+      { id:'comments', name:'Ответы на комментарии', role:'Отвечает на кодовые слова под постами', color:'#ffd166', status:'working',  task:'Разбирает комментарии под рилсом' },
+      { id:'consult',  name:'ИИ-консультации',       role:'Отвечает на вопросы по базе знаний',    color:'#c38bff', status:'thinking', task:'Учит новые ответы' },
+      { id:'mailings', name:'Рассылки',              role:'Рассылки по базе в боте',               color:'#ff7a59', status:'idle',     task:'Ждёт запуск' },
+      { id:'closer',   name:'Закрытие сделок',       role:'Доводит тёплых лидов до оплаты',        color:'#3ddc97', status:'working',  task:'Ведёт тёплых лидов' },
     ] },
   { id:'traffic', name:'Реклама Meta', short:'RM', accent:'#ff7a3d', column:'#c4552c',
     screen:{ mode:2, deep:'#1d0a12', glow:'#ff8a3d', spark:'#ffd58a' },
@@ -340,7 +365,8 @@ const DEPTS = [
            skin:'#c69072', hair:'#16110e', hairStyle:'curly', suit:'#141416', top:'#0e0e10', turtleneck:true, glasses:true, beard:true },
     props:['hookah'],
     agents:[
-      { id:'metaads', name:'Рекламные кампании', role:'Запускает и ведёт кампании в Meta', color:'#ff7a59', status:'working', task:'Следит за ценой лида' },
+      { id:'metaads',   name:'Рекламные кампании', role:'Запускает и ведёт кампании в Meta',  color:'#ff7a59', status:'working',  task:'Следит за ценой лида' },
+      { id:'adreports', name:'Отчёты по рекламе',  role:'Расходы, лиды и цена лида по дням', color:'#5ad1ff', status:'thinking', task:'Готовит отчёт за неделю' },
     ] },
 ];
 
@@ -364,7 +390,13 @@ const SLOTS = [   // места роботов в комнате (локальн
   { p:[3.55,1.0,2.25],   look:[-1,1,5] },
   { p:[-0.55,1.0,-1.5],  look:[0.3,1,4] },
   { p:[-4.15,0.88,1.6],  look:[0,0.88,4] },
-];
+  { p:[2.9,1.0,-2.0],    look:[0,1,4] },
+  { p:[2.2,1.0,0.9],     look:[0,1,5] },
+  { p:[-3.9,1.0,-0.7],   look:[0,1,4] },
+  { p:[-0.3,1.0,0.5],    look:[0,1,5] },
+  { p:[4.3,1.0,0.9],     look:[-1,1,4] },
+  { p:[4.3,1.0,-1.9],    look:[-1,1,4] },
+]
 
 /* ================= РЕНДЕР ================= */
 
@@ -1186,7 +1218,7 @@ function renderUI() {
     const total = DEPTS.reduce((n, x) => n + x.agents.length, 0);
     $('sideTitle').textContent = 'Департаменты';
     $('sideSub').textContent = `${DEPTS.length} ${DEPTS.length > 4 ? 'отделов' : 'отдела'} · ${total} ${plural(total)}`;
-    $('sideDemo').hidden = true;
+    $('sideDemo').hidden = false; $('sideDemo').textContent = '▶ Демо офиса';
     $('sideList').innerHTML = DEPTS.map(x => `
       <li data-dept="${x.id}"><span class="dept-ic" style="--c:${x.accent}">${esc(x.short)}</span>
         <div><b>${esc(x.name)}</b><small>${esc(x.head.name)} · ${x.agents.length} ${plural(x.agents.length)}</small></div>
@@ -1194,7 +1226,7 @@ function renderUI() {
   } else {
     $('sideTitle').textContent = d.name;
     $('sideSub').textContent = `${d.agents.filter(a => a.status === 'working').length} из ${d.agents.length} в работе`;
-    $('sideDemo').hidden = false;
+    $('sideDemo').hidden = false; $('sideDemo').textContent = '▶ Демо отдела';
     $('sideList').innerHTML = `
       <li class="sep">Руководитель</li>
       <li data-id="${d.head.id}" class="${selected === d.head.id ? 'on' : ''}">${faceHTML(d.head, d.accent)}
@@ -1230,9 +1262,11 @@ function renderCard() {
     $('cRole').textContent = `${data.title} · в подчинении ${dept.agents.length} ${plural(dept.agents.length)}`;
     $('cTaskT').textContent = 'Команда';
     $('cTask').textContent = dept.agents.map(a => a.name).join(', ');
-    $('cMain').textContent = '▶ Демо отдела';
+    $('cMain').textContent = '▶ Демо руководителя';
+    $('cDemo').hidden = true;
   } else {
     $('cMain').textContent = 'Досье';
+    $('cDemo').hidden = false;
     $('cAv').innerHTML = `<span class="av" style="--c:${esc(data.color)}"></span>`;
     $('cName').textContent = data.name;
     $('cRole').textContent = `${data.role} · ${STATUS[data.status].label} · руководитель: ${dept.head.name}`;
@@ -1242,8 +1276,10 @@ function renderCard() {
 }
 $('cardClose').onclick = () => select(null);
 $('cFocus').onclick = () => selected && focusMember(selected);
-$('cMain').onclick = () => { const m = selected && members.get(selected); if (!m) return; m.kind === 'head' ? openDemo(m.dept.id) : openDossier(m.data.id); };
-$('sideDemo').onclick = () => deptOf(mode) && openDemo(mode);
+$('cMain').onclick = () => { const m = selected && members.get(selected); if (!m) return; m.kind === 'head' ? openDemo(m.data.id) : openDossier(m.data.id); };
+$('cDemo').onclick = () => selected && openDemo(selected);
+$('dDemo').onclick = () => { const id = dossierId; closeDossier(); openDemo(id); };
+$('sideDemo').onclick = () => openDemo(deptOf(mode) ? mode : 'office');
 
 function select(id, fly = false) {
   const m = id && members.get(id);
@@ -1441,47 +1477,136 @@ $('lightbox').onclick = () => $('lightbox').hidden = true;
 
 const demo = { slides:[], i:0, timer:null, playing:true, DUR:8000 };
 
-function buildDemoSlides(d) {
-  const S = [];
-  const cs = d.agents.map(a => ({ a, c:contentOf(a.id) }));
-  const nSkills = cs.reduce((n, x) => n + (x.c.skills || []).length, 0);
-  const nWorks = cs.reduce((n, x) => n + worksCount(x.c), 0);
-  S.push(`<div class="kick">${esc(d.name)}</div><h1>Как работает<br>${esc(d.name.toLowerCase())}</h1>
-    <p class="sub">Руководитель — ${esc(d.head.name)}. В подчинении ${d.agents.length} ${plural(d.agents.length)}, каждый работает своими скиллами и сдаёт готовый результат.</p>
-    <div class="stats"><div><b>${d.agents.length}</b><span>${plural(d.agents.length)}</span></div><div><b>${nSkills}</b><span>скиллов</span></div><div><b>${nWorks}</b><span>готовых работ</span></div></div>`);
-  S.push(`<div class="kick">Структура</div><h2>Кто за что отвечает</h2>
-    <div class="org"><div class="boss">${faceHTML(d.head, d.accent)}<div><b>${esc(d.head.name)}</b><small>${esc(d.head.title)} · ставит задачи и принимает работу</small></div></div>
-    <div class="line"></div>
-    <div class="kids">${d.agents.map(a => `<div class="kid"><span class="av" style="--c:${esc(a.color)}"></span><b>${esc(a.name)}</b><small>${esc(a.role)}</small></div>`).join('')}</div></div>`);
-  cs.forEach(({ a, c }, k) => {
-    S.push(`<div class="kick">Агент ${k + 1} из ${d.agents.length} · процесс</div>
-      <h2><span class="av" style="--c:${esc(a.color)}"></span>${esc(a.name)}</h2>
+const HEADS = window.HEAD_CONTENT || {};
+const headOf = id => HEADS[id] || { lead:'', zones:[], process:[], materials:[] };
+const chips = list => list.length ? `<div class="chipsrow">${list.map(x => `<span>${esc(x)}</span>`).join('')}</div>` : '';
+const avHTML = a => `<span class="av" style="--c:${esc(a.color)}"></span>`;
+const skillNames = cs => new Set(cs.flatMap(c => (c.skills || []).map(s => s.name)));
+const stats = list => `<div class="stats">${list.map(([n, t]) => `<div><b>${n}</b><span>${esc(t)}</span></div>`).join('')}</div>`;
+const linkChips = list => list.length ? `<div class="chipsrow">${list.map(x => `<a class="lk" href="${esc(x.url)}" target="_blank" rel="noopener">📄 ${esc(x.title)}</a>`).join('')}</div>` : '';
+const tplHTML = (t, who) => `<div class="tpl"><b>${who ? esc(who) + ' · ' : ''}${esc(t.task)}</b><p>${esc(t.prompt)}</p></div>`;
+const word = (n, one, few, many) => n % 10 === 1 && n % 100 !== 11 ? one : [2,3,4].includes(n % 10) && ![12,13,14].includes(n % 100) ? few : many;
+
+function worksHTML(c, max = 8) {
+  const imgs = imagesOf(c), vid = videosOf(c)[0];
+  if (vid) return `<div class="mosaic wv"><video src="${esc(vid.src)}" muted loop playsinline preload="metadata"></video>
+      <div class="imgs">${imgs.slice(0, 6).map((it, i) => `<img style="--i:${i}" src="${esc(it.src)}" alt="${esc(it.title)}" loading="lazy">`).join('')}</div></div>`;
+  if (imgs.length) return `<div class="mosaic">${imgs.slice(0, max).map((it, i) => `<img style="--i:${i}" src="${esc(it.src)}" alt="${esc(it.title)}" loading="lazy">`).join('')}</div>`;
+  const ls = (c.results || []).flatMap(r => r.type === 'links' ? r.items : []);
+  if (ls.length) return `<div class="links" style="margin-top:22px;max-width:980px">${ls.slice(0, 6).map(it => `<a href="${esc(it.url)}" target="_blank" rel="noopener"><b>${esc(it.title)}</b>${it.note ? `<small>${esc(it.note)}</small>` : ''}</a>`).join('')}</div>`;
+  return '';
+}
+
+// Два слайда на агента: процесс и результаты (второй — только если есть что показать)
+function agentPair(a, c, kick) {
+  const S = [`<div class="kick">${esc(kick)} · процесс</div>
+      <h2>${avHTML(a)}${esc(a.name)}</h2>
       <p class="sub">${esc(c.lead || a.role)}</p>
       ${pipeHTML(c.process || [])}
-      <div class="chipsrow">${(c.skills || []).slice(0, 7).map(s => `<span>${esc(s.title)}</span>`).join('')}</div>`);
-    const imgs = imagesOf(c), vid = videosOf(c)[0];
-    let body;
-    if (vid) body = `<div class="mosaic wv"><video src="${esc(vid.src)}" muted loop playsinline preload="metadata"></video>
-      <div class="imgs">${imgs.slice(0, 6).map((it, i) => `<img style="--i:${i}" src="${esc(it.src)}" alt="${esc(it.title)}" loading="lazy">`).join('')}</div></div>`;
-    else if (imgs.length) body = `<div class="mosaic">${imgs.slice(0, 8).map((it, i) => `<img style="--i:${i}" src="${esc(it.src)}" alt="${esc(it.title)}" loading="lazy">`).join('')}</div>`;
-    else body = `<div class="empty" style="margin-top:26px;max-width:760px">Готовых материалов пока нет — после первых задач здесь появятся работы агента.</div>`
-      + (c.templates?.[0] ? `<div class="tpl" style="margin-top:14px"><b>Пример задачи</b><p>${esc(c.templates[0].prompt)}</p></div>` : '');
-    const links = (c.artifacts || []).slice(0, 4).map(x => `<span>📄 ${esc(x.title)}</span>`).join('');
-    S.push(`<div class="kick">${esc(a.name)} · результаты</div><h2>Что уже сделано</h2>
-      <p class="sub">${worksCount(c) ? `${worksCount(c)} готовых работ: ролики, макеты, документы.` : 'Агент готов к первым задачам.'}</p>${body}
-      ${links ? `<div class="chipsrow">${links}</div>` : ''}`);
-  });
-  const tpls = cs.flatMap(x => (x.c.templates || []).slice(0, 1).map(t => ({ ...t, who:x.a.name }))).slice(0, 3);
-  S.push(`<div class="kick">Как поставить задачу</div><h2>Пишите задачу словами — агент сделает</h2>
-    ${tpls.map(t => `<div class="tpl"><b>${esc(t.who)} · ${esc(t.task)}</b><p>${esc(t.prompt)}</p></div>`).join('')}`);
+      ${chips((c.skills || []).slice(0, 7).map(s => s.title))}`];
+  const body = worksHTML(c);
+  if (body || c.artifacts?.length) S.push(`<div class="kick">${esc(a.name)} · результаты</div><h2>Что уже сделано</h2>
+      <p class="sub">${worksCount(c)} ${word(worksCount(c), 'готовая работа', 'готовые работы', 'готовых работ')}: ролики, макеты, документы, артефакты в Claude.</p>${body}
+      ${linkChips((c.artifacts || []).slice(0, 5))}`);
   return S;
 }
 
-function openDemo(deptId) {
-  const d = deptOf(deptId); if (!d) return;
-  document.documentElement.style.setProperty('--accent', d.accent);
-  $('demoTitle').textContent = d.name;
-  demo.slides = buildDemoSlides(d);
+function orgHTML(d) {
+  return `<div class="org"><div class="boss">${faceHTML(d.head, d.accent)}<div><b>${esc(d.head.name)}</b><small>${esc(d.head.title)} · ставит задачи и принимает работу</small></div></div>
+    <div class="line"></div>
+    <div class="kids">${d.agents.map(a => `<div class="kid">${avHTML(a)}<b>${esc(a.name)}</b><small>${esc(a.role)}</small></div>`).join('')}</div></div>`;
+}
+
+function buildDeptSlides(d) {
+  const cs = d.agents.map(a => ({ a, c:contentOf(a.id) }));
+  const nWorks = cs.reduce((n, x) => n + worksCount(x.c), 0);
+  const h = headOf(d.head.id);
+  const S = [`<div class="kick">${esc(d.name)}</div><h1>Как работает<br>${esc(d.name.toLowerCase())}</h1>
+    <p class="sub">${esc(h.lead || `Руководитель — ${d.head.name}.`)} В подчинении ${d.agents.length} ${plural(d.agents.length)}, каждый работает своими скиллами и сдаёт готовый результат.</p>
+    ${stats([[d.agents.length, plural(d.agents.length)], [skillNames(cs.map(x => x.c)).size, 'скиллов'], [nWorks, 'готовых работ']])}`,
+    `<div class="kick">Структура</div><h2>Кто за что отвечает</h2>${orgHTML(d)}`];
+  cs.forEach(({ a, c }, k) => S.push(...agentPair(a, c, `Агент ${k + 1} из ${d.agents.length}`)));
+  const tpls = cs.flatMap(x => (x.c.templates || []).slice(0, 1).map(t => ({ t, who:x.a.name }))).slice(0, 4);
+  S.push(`<div class="kick">Как поставить задачу</div><h2>Пишите задачу словами — агент сделает</h2>${tpls.map(x => tplHTML(x.t, x.who)).join('')}`);
+  return S;
+}
+
+function buildHeadSlides(d) {
+  const p = d.head, h = headOf(p.id);
+  const cs = d.agents.map(a => ({ a, c:contentOf(a.id) }));
+  const nWorks = cs.reduce((n, x) => n + worksCount(x.c), 0);
+  const imgs = cs.flatMap(x => imagesOf(x.c));
+  const S = [`<div class="kick">${esc(d.name)} · руководитель</div>
+    <h1 class="who">${faceHTML(p, d.accent)}${esc(p.name)}</h1>
+    <p class="sub">${esc(h.lead || p.title)}</p>${chips(h.zones || [])}
+    ${stats([[d.agents.length, plural(d.agents.length) + ' в подчинении'], [skillNames(cs.map(x => x.c)).size, 'скиллов у команды'], [nWorks, 'готовых работ']])}`];
+  if (h.process?.length) S.push(`<div class="kick">${esc(p.name)} · как работает</div><h2>Зона ответственности</h2>
+    <p class="sub">${esc(p.title)}</p>${pipeHTML(h.process)}`);
+  S.push(`<div class="kick">${esc(p.name)} · команда</div><h2>Агенты в подчинении</h2>${orgHTML(d)}`);
+  if (imgs.length || h.materials?.length) S.push(`<div class="kick">${esc(p.name)} · результаты</div><h2>Что уже сделано</h2>
+    ${imgs.length ? `<div class="mosaic">${imgs.slice(0, 8).map((it, i) => `<img style="--i:${i}" src="${esc(it.src)}" alt="${esc(it.title)}" loading="lazy">`).join('')}</div>` : ''}
+    ${linkChips(h.materials || [])}`);
+  const tpls = cs.flatMap(x => (x.c.templates || []).slice(0, 1).map(t => ({ t, who:x.a.name }))).slice(0, 3);
+  if (tpls.length) S.push(`<div class="kick">${esc(p.name)} · задачи</div><h2>Как ${esc(p.name)} ставит задачи агентам</h2>${tpls.map(x => tplHTML(x.t, x.who)).join('')}`);
+  return S;
+}
+
+function buildAgentSlides(m) {
+  const a = m.data, d = m.dept, c = contentOf(a.id);
+  const S = [`<div class="kick">${esc(d.name)} · руководитель ${esc(d.head.name)}</div>
+    <h1 class="who">${avHTML(a)}${esc(a.name)}</h1>
+    <p class="sub">${esc(c.lead || a.role)}</p>
+    ${stats([[(c.skills || []).length, 'скиллов'], [worksCount(c), 'готовых работ'], [(c.templates || []).length, 'шаблонов задач']])}`,
+    `<div class="kick">${esc(a.name)} · процесс</div><h2>Как работает</h2>${pipeHTML(c.process || [])}`];
+  if (c.skills?.length) S.push(`<div class="kick">${esc(a.name)} · скиллы</div><h2>Чем работает</h2>
+    <div class="skills demo-skills">${c.skills.slice(0, 9).map(s => `<div><b>${esc(s.title)}</b><code>${esc(s.name)}</code>${s.say ? `<i>Скажи: «${esc(s.say)}»</i>` : ''}</div>`).join('')}</div>`);
+  const body = worksHTML(c);
+  if (body || c.artifacts?.length) S.push(`<div class="kick">${esc(a.name)} · результаты</div><h2>Что уже сделано</h2>${body}${linkChips((c.artifacts || []).slice(0, 6))}`);
+  if (c.templates?.length) S.push(`<div class="kick">${esc(a.name)} · задачи</div><h2>Как поставить задачу</h2>${c.templates.slice(0, 3).map(t => tplHTML(t)).join('')}`);
+  return S;
+}
+
+function buildOfficeSlides() {
+  const all = DEPTS.flatMap(d => d.agents.map(a => contentOf(a.id)));
+  const nAgents = all.length, nWorks = all.reduce((n, c) => n + worksCount(c), 0);
+  const S = [`<div class="kick">AICEX · ИИ-офис</div><h1>Команда из ${DEPTS.length} человек<br>и ${nAgents} ИИ-агентов</h1>
+    <p class="sub">Илья задаёт стратегию и продукт, Фируза ведёт маркетинг, Богдан — продажи, Нуркен — рекламу в Meta. Каждому руководителю подчиняются агенты, названные по своей зоне ответственности.</p>
+    ${stats([[DEPTS.length, 'отдела'], [nAgents, plural(nAgents)], [skillNames(all).size, 'скиллов'], [nWorks, 'готовых работ']])}`,
+    `<div class="kick">Структура</div><h2>Кто за что отвечает</h2>
+    <div class="org"><div class="kids">${DEPTS.map(d => `<div class="kid wide" style="--accent:${d.accent}">${faceHTML(d.head, d.accent)}<b>${esc(d.head.name)}</b><small>${esc(d.head.title)}</small><small class="ag">${d.agents.map(a => esc(a.name)).join(' · ')}</small></div>`).join('')}</div></div>`,
+    `<div class="kick">Как связаны отделы</div><h2>От идеи до оплаты</h2>${pipeHTML([
+      { t:'Продукт', d:'Илья: стратегия, ТЗ, разработка' },
+      { t:'Контент', d:'Фируза: сценарии, монтаж, карусели' },
+      { t:'Воронка', d:'Фируза: лендинг, лид-магнит, бот' },
+      { t:'Реклама', d:'Нуркен: креативы в Meta' },
+      { t:'Продажи', d:'Богдан: переписки и сделки' },
+      { t:'Аналитика', d:'Цифры возвращаются в план' },
+    ])}`];
+  DEPTS.forEach(d => {
+    const cs = d.agents.map(a => contentOf(a.id));
+    const imgs = cs.flatMap(c => imagesOf(c));
+    S.push(`<div class="kick" style="color:${d.accent}">${esc(d.name)} · ${esc(d.head.name)}</div><h2>${esc(d.name)}</h2>
+      <p class="sub">${esc(headOf(d.head.id).lead)}</p>${chips(d.agents.map(a => a.name))}
+      ${imgs.length ? `<div class="mosaic">${imgs.slice(0, 6).map((it, i) => `<img style="--i:${i}" src="${esc(it.src)}" alt="${esc(it.title)}" loading="lazy">`).join('')}</div>` : ''}`);
+  });
+  const products = contentOf('product').results?.[0]?.items || [];
+  if (products.length) S.push(`<div class="kick">Продукты</div><h2>Что уже работает</h2>
+    <div class="links" style="margin-top:22px;max-width:1100px">${products.map(it => `<a href="${esc(it.url)}" target="_blank" rel="noopener"><b>${esc(it.title)}</b><small>${esc(it.note || '')}</small></a>`).join('')}</div>`);
+  return S;
+}
+
+// openDemo('office' | id отдела | id руководителя или агента)
+function openDemo(id = 'office') {
+  let slides, title, accent = '#2f7bff';
+  const d = deptOf(id), m = members.get(id);
+  if (id === 'office' || id === 'plan') { slides = buildOfficeSlides(); title = 'AI Office'; }
+  else if (d) { slides = buildDeptSlides(d); title = d.name; accent = d.accent; }
+  else if (m?.kind === 'head') { slides = buildHeadSlides(m.dept); title = m.data.name; accent = m.dept.accent; }
+  else if (m) { slides = buildAgentSlides(m); title = m.data.name; accent = m.dept.accent; }
+  else return;
+  document.documentElement.style.setProperty('--accent', accent);
+  $('demoTitle').textContent = title;
+  demo.slides = slides;
   $('stage').innerHTML = demo.slides.map(h => `<section class="slide">${h}</section>`).join('');
   $('dprog').innerHTML = demo.slides.map((_, i) => `<i data-i="${i}"></i>`).join('');
   $('dprog').style.setProperty('--dur', demo.DUR + 'ms');
