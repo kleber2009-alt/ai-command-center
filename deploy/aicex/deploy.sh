@@ -3,7 +3,8 @@
 # (/opt/aicex) by .github/workflows/deploy-aicex.yml:
 #   bash deploy/aicex/deploy.sh [service ...]     # default: all services
 #
-# Expects /etc/aicex/{transcribe,tg-agent,ytdlp,ai-office,sales-api,worker}.env written by the
+# Expects /etc/aicex/<service>.env (transcribe, tg-agent, ytdlp, ai-office, sales-api,
+# worker, aihub, persona-train, content-factory) written by the
 # workflow, and CC_ADMIN_PASSWORD / *_BOT_TOKEN in the environment.
 # Generated once and kept: /etc/aicex/stack.env (Postgres password, internal secrets).
 set -euo pipefail
@@ -13,7 +14,8 @@ REPO=$(cd ../.. && pwd)
 ETC=/etc/aicex
 EDGE_CADDY=${EDGE_CADDY:-persona-studio-caddy-1}
 SERVICES=("$@")
-[ ${#SERVICES[@]} -gt 0 ] || SERVICES=(ytdlp worker transcribe tg-agent command-center ai-office landings sales-api sales-static)
+[ ${#SERVICES[@]} -gt 0 ] || SERVICES=(ytdlp worker transcribe tg-agent command-center ai-office landings sales-api sales-static
+                                     aihub-redis aihub-web persona-train ig-content content-factory)
 
 log() { echo "── $* ──"; }
 
@@ -22,11 +24,12 @@ mkdir -p "$ETC" && chmod 700 "$ETC"
 touch "$ETC/stack.env"; chmod 600 "$ETC/stack.env"
 for k in PG_PASSWORD TRANSCRIBE_WEBHOOK_SECRET YTDLP_KEY TG_ADMIN_SESSION_SECRET \
          VIRAL_CLONE_DISPATCH_SECRET TG_OFFICE_WEBHOOK_SECRET TG_PARSER_WEBHOOK_SECRET \
-         SALES_TG_WEBHOOK_SECRET CABINET_LINK_SECRET CABINET_SESSION_SECRET; do
+         SALES_TG_WEBHOOK_SECRET CABINET_LINK_SECRET CABINET_SESSION_SECRET \
+         AIHUB_AUTH_SECRET PERSONA_TRAIN_WEBHOOK_SECRET; do
   grep -q "^$k=" "$ETC/stack.env" || { echo "$k=$(openssl rand -hex 24)" >> "$ETC/stack.env"; log "generated $k"; }
 done
 set -a; . "$ETC/stack.env"; set +a
-for f in transcribe tg-agent ytdlp ai-office sales-api worker; do touch "$ETC/$f.env"; chmod 600 "$ETC/$f.env"; done
+for f in transcribe tg-agent ytdlp ai-office sales-api worker aihub persona-train content-factory; do touch "$ETC/$f.env"; chmod 600 "$ETC/$f.env"; done
 
 docker network inspect edge >/dev/null 2>&1 || docker network create edge
 DC=(docker compose -f docker-compose.yml --env-file "$ETC/stack.env")
@@ -41,8 +44,10 @@ done
 psql_() { docker exec -i aicex-postgres psql -U aicex -v ON_ERROR_STOP=1 -q "$@"; }
 
 psql_ -d aio -c "SELECT 1" >/dev/null
-psql_ -d aio -tAc "SELECT 1 FROM pg_database WHERE datname='aisales'" | grep -q 1 \
-  || psql_ -d aio -c "CREATE DATABASE aisales"
+for db in aisales aihub; do
+  psql_ -d aio -tAc "SELECT 1 FROM pg_database WHERE datname='$db'" | grep -q 1 \
+    || psql_ -d aio -c "CREATE DATABASE $db"
+done
 
 # Each file runs once (tracked in _aicex_migrations). A failing file is
 # reported and retried on the next deploy instead of blocking the apps.
@@ -73,7 +78,8 @@ migrate aio \
   apps/transcribe/supabase/migrations/006_auth.sql \
   apps/transcribe/supabase/migrations/007_instagram.sql \
   deploy/aicex/sql/transcribe_bot_tables.sql \
-  apps/transcribe/supabase/migrations/008_clone_drafts_voice.sql
+  apps/transcribe/supabase/migrations/008_clone_drafts_voice.sql \
+  apps/persona-train/migrations/001_persona_train.sql
 migrate aisales \
   apps/aisales/db-init/009_projects.sql \
   apps/aisales/db-init/010_projects_seed.sql \
@@ -96,6 +102,18 @@ migrate aisales \
   apps/aisales/db-init/015_payments.sql \
   $(cd "$REPO" && ls apps/infra-worker/migrations/0{16,17,18,19,20,21,22,23,24,25,26}_*.sql) \
   deploy/aicex/sql/worker_clone_photos.sql
+psql_ -d aihub -c 'CREATE EXTENSION IF NOT EXISTS pgcrypto;'
+migrate aihub $(cd "$REPO" && ls apps/ai-hub/drizzle/migrations/*.sql) apps/ai-hub/drizzle/seed/tools.sql
+
+# ── volumes that need a first-run touch ──────────────────────────────
+# persona-train runs as uid 1001; a fresh named volume is root-owned.
+docker volume create aicex_persona-train-data >/dev/null
+docker run --rm -v aicex_persona-train-data:/data alpine:3.20 \
+  sh -c 'mkdir -p /data/voice-notes /data/video-notes && chown -R 1001:1001 /data'
+# content-factory: scheduled generation off until switched on in the cabinet.
+docker volume create aicex_factory-data >/dev/null
+docker run --rm -v aicex_factory-data:/data alpine:3.20 \
+  sh -c '[ -f /data/bot-state.json ] || echo "{\"carousel\":false,\"reels\":false}" > /data/bot-state.json'
 
 # ── 3. build + start, one service at a time (keeps build RAM bounded) ─
 health_url() {
@@ -109,6 +127,11 @@ health_url() {
     sales-api)      echo "http://aicex-sales-api:8000/health" ;;
     sales-static)   echo "http://aicex-sales-static:8080/06-dashboard-prototype/pulse.html" ;;
     worker)         echo "http://aicex-worker:3000/worker/health" ;;
+    aihub-redis)    echo "" ;;
+    aihub-web)      echo "http://aicex-aihub-web:3010/" ;;
+    persona-train)  echo "http://aicex-persona-train:3030/api/health" ;;
+    ig-content)     echo "http://aicex-ig-content:3010/" ;;
+    content-factory) echo "http://aicex-content-factory:3018/api/health" ;;
   esac
 }
 # Keys a service cannot boot without; empty → skip it instead of a crash loop.
@@ -133,6 +156,7 @@ for s in "${SERVICES[@]}"; do
   log "$s: up"
   "${DC[@]}" up -d --no-deps --force-recreate "$s"
   url=$(health_url "$s"); ok=
+  [ -n "$url" ] || { echo "  ✓ $s started"; continue; }
   for i in $(seq 1 40); do
     net=edge; [ "$s" = ytdlp ] && net=aicex_default   # ytdlp is internal-only
     if docker run --rm --network "$net" curlimages/curl:8.11.1 -fsS -o /dev/null --max-time 5 "$url" 2>/dev/null; then ok=1; break; fi
@@ -173,6 +197,7 @@ set_webhook transcribe "${TRANSCRIBE_BOT_TOKEN:-}" https://transcribe.aicex.club
 set_webhook worker     "${OFFICE_BOT_TOKEN:-}"     https://office.aicex.club/worker/tg-webhook        "$TG_OFFICE_WEBHOOK_SECRET"
 set_webhook worker     "${PARSER_BOT_TOKEN:-}"     https://office.aicex.club/worker/parser-webhook    "$TG_PARSER_WEBHOOK_SECRET"
 set_webhook sales-api  "${SALES_BOT_TOKEN:-}"      https://sales-api.aicex.club/webhooks/telegram     "$SALES_TG_WEBHOOK_SECRET"
+set_webhook persona-train "${PERSONA_TRAIN_BOT_TOKEN:-}" https://persona-train.aicex.club/api/telegram/webhook "$PERSONA_TRAIN_WEBHOOK_SECRET"
 
 log "status"
 docker ps --filter name=aicex- --format '{{.Names}}\t{{.Status}}'

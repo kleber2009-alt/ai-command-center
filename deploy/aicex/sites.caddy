@@ -107,3 +107,36 @@ landings.aicex.club {
 	encode zstd gzip
 	reverse_proxy aicex-landings:8080
 }
+
+# ── wave 3 ──────────────────────────────────────────────────────────
+# AI Creative Hub: landing on aihub., the app on aihub-app.
+aihub.aicex.club {
+	encode zstd gzip
+	rewrite * /ai-hub{uri}
+	reverse_proxy aicex-landings:8080
+}
+
+aihub-app.aicex.club {
+	encode zstd gzip
+	reverse_proxy aicex-aihub-web:3010
+}
+
+persona-train.aicex.club {
+	encode zstd gzip
+	reverse_proxy aicex-persona-train:3030
+}
+
+ig.aicex.club, igcontent.aicex.club {
+	encode zstd gzip
+	reverse_proxy aicex-ig-content:3010
+}
+
+factory.aicex.club {
+	encode zstd gzip
+	reverse_proxy aicex-content-factory:3018 {
+		transport http {
+			read_timeout 10m
+			write_timeout 10m
+		}
+	}
+}

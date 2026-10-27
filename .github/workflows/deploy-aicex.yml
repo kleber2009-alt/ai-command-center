@@ -1,6 +1,7 @@
 # Deploy the aicex stack (deploy/aicex) to the shared server behind the
 # edge Caddy: transcribe + tma, ytdlp, tg-agent, command-center, ai-office,
-# landings, AI Sales (api + static) and the Office Worker — all on *.aicex.club. The server keeps its own checkout in
+# landings, AI Sales (api + static), the Office Worker, AI Hub, Persona Train,
+# IG Content (demo mode) and AI Content Factory — all on *.aicex.club. The server keeps its own checkout in
 # /opt/aicex (separate from /opt/ai-command-center, which Persona Studio
 # auto-deploys from).
 #
@@ -24,6 +25,10 @@ on:
       - 'landings/**'
       - 'apps/ai-sales/**'
       - 'apps/infra-worker/**'
+      - 'apps/ai-hub/**'
+      - 'apps/persona-train/**'
+      - 'apps/ig-content/**'
+      - 'apps/ai-content-factory/**'
   workflow_dispatch:
     inputs:
       services:
@@ -51,6 +56,7 @@ jobs:
           OFFICE_BOT_TOKEN: ${{ secrets.TG_OFFICE_BOT_TOKEN }}
           PARSER_BOT_TOKEN: ${{ secrets.TG_PARSER_BOT_TOKEN }}
           SALES_BOT_TOKEN: ${{ secrets.AISALES_TG_BOT_TOKEN }}
+          PERSONA_TRAIN_BOT_TOKEN: ${{ secrets.PERSONA_TRAIN_TELEGRAM_BOT_TOKEN }}
           TRANSCRIBE_ENV: |
             ANTHROPIC_API_KEY=${{ secrets.TRANSCRIBE_ANTHROPIC_API_KEY || secrets.ANTHROPIC_API_KEY }}
             DEEPGRAM_API_KEY=${{ secrets.TRANSCRIBE_DEEPGRAM_API_KEY || secrets.DEEPGRAM_API_KEY }}
@@ -103,13 +109,34 @@ jobs:
             TG_PARSER_BOT_TOKEN=${{ secrets.TG_PARSER_BOT_TOKEN }}
             TG_TRANSCRIBE_BOT_TOKEN=${{ secrets.TRANSCRIBE_TELEGRAM_BOT_TOKEN }}
             LOG_LEVEL=${{ vars.WORKER_LOG_LEVEL || 'info' }}
+          AIHUB_ENV: |
+            ANTHROPIC_API_KEY=${{ secrets.ANTHROPIC_API_KEY }}
+            FAL_KEY=${{ secrets.AI_HUB_FAL_KEY || secrets.FAL_KEY }}
+            KIE_API_KEY=${{ secrets.AI_HUB_KIE_API_KEY || secrets.KIE_API_KEY }}
+            APIFY_TOKEN=${{ secrets.APIFY_API_TOKEN }}
+            REPLICATE_API_TOKEN=${{ secrets.AI_HUB_REPLICATE_API_TOKEN }}
+            TELEGRAM_BOT_TOKEN=${{ secrets.AI_HUB_TELEGRAM_BOT_TOKEN }}
+          PERSONA_TRAIN_ENV: |
+            ANTHROPIC_API_KEY=${{ secrets.ANTHROPIC_API_KEY }}
+            ELEVENLABS_API_KEY=${{ secrets.PERSONA_TRAIN_ELEVENLABS_API_KEY || secrets.ELEVENLABS_API_KEY }}
+            OWNER_TELEGRAM_ID=${{ vars.PERSONA_TRAIN_OWNER_TELEGRAM_ID || vars.OWNER_TELEGRAM_ID }}
+            TG_BOT_TOKEN=${{ secrets.PERSONA_TRAIN_TELEGRAM_BOT_TOKEN }}
+          CONTENT_FACTORY_ENV: |
+            ANTHROPIC_API_KEY=${{ secrets.ANTHROPIC_API_KEY }}
+            VOYAGE_API_KEY=${{ secrets.VOYAGE_API_KEY }}
+            OPENAI_API_KEY=${{ secrets.OPENAI_API_KEY }}
+            KIE_AI_API_KEY=${{ secrets.KIE_API_KEY }}
+            CABINET_USERNAME=admin
+            CABINET_PASSWORD=${{ secrets.ADMIN_PASSWORD }}
+            TELEGRAM_BOT_TOKEN=${{ secrets.CONTENT_FACTORY_TELEGRAM_BOT_TOKEN }}
+            TELEGRAM_CHAT_ID=${{ vars.OWNER_TELEGRAM_ID }}
         with:
           host:     ${{ vars.HETZNER_HOST }}
           username: ${{ vars.HETZNER_USER || 'root' }}
           port:     ${{ vars.HETZNER_SSH_PORT || '22' }}
           key:      ${{ secrets.HETZNER_SSH_KEY }}
           command_timeout: 55m
-          envs: REF,BRANCH,SERVICES,CC_ADMIN_PASSWORD,TRANSCRIBE_BOT_TOKEN,OFFICE_BOT_TOKEN,PARSER_BOT_TOKEN,SALES_BOT_TOKEN,TRANSCRIBE_ENV,YTDLP_ENV,TG_AGENT_ENV,AI_OFFICE_ENV,SALES_API_ENV,WORKER_ENV
+          envs: REF,BRANCH,SERVICES,CC_ADMIN_PASSWORD,TRANSCRIBE_BOT_TOKEN,OFFICE_BOT_TOKEN,PARSER_BOT_TOKEN,SALES_BOT_TOKEN,TRANSCRIBE_ENV,YTDLP_ENV,TG_AGENT_ENV,AI_OFFICE_ENV,SALES_API_ENV,WORKER_ENV,AIHUB_ENV,PERSONA_TRAIN_ENV,CONTENT_FACTORY_ENV,PERSONA_TRAIN_BOT_TOKEN
           script: |
             set -euo pipefail
             DIR=/opt/aicex
@@ -128,6 +155,9 @@ jobs:
             printf '%s\n' "$AI_OFFICE_ENV"  > /etc/aicex/ai-office.env
             printf '%s\n' "$SALES_API_ENV"  > /etc/aicex/sales-api.env
             printf '%s\n' "$WORKER_ENV"     > /etc/aicex/worker.env
+            printf '%s\n' "$AIHUB_ENV"      > /etc/aicex/aihub.env
+            printf '%s\n' "$PERSONA_TRAIN_ENV"   > /etc/aicex/persona-train.env
+            printf '%s\n' "$CONTENT_FACTORY_ENV" > /etc/aicex/content-factory.env
             chmod 600 /etc/aicex/*.env
 
             # shellcheck disable=SC2086
@@ -152,7 +182,12 @@ jobs:
             https://sales.aicex.club/ \
             https://sales-api.aicex.club/health \
             https://office.aicex.club/worker/health \
-            https://parser.aicex.club/; do
+            https://parser.aicex.club/ \
+            https://aihub.aicex.club/ \
+            https://aihub-app.aicex.club/ \
+            https://persona-train.aicex.club/ \
+            https://ig.aicex.club/ \
+            https://factory.aicex.club/api/health; do
             code=$(curl -o /dev/null -sw '%{http_code}' -L --max-time 20 "$url" || echo 000)
             echo "$code  $url"
             case $code in 2*|3*) ;; *) fail=1 ;; esac

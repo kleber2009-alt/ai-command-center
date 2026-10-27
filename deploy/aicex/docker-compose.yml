@@ -179,6 +179,94 @@ services:
     networks: [default, edge]
     mem_limit: 512m
 
+  # ── wave 3 ─────────────────────────────────────────────────────────
+  aihub-redis:
+    <<: *base
+    image: redis:7-alpine
+    container_name: aicex-aihub-redis
+    command: redis-server --save 60 1 --maxmemory 64mb --maxmemory-policy noeviction
+    volumes:
+      - aihub-redis:/data
+    mem_limit: 96m
+
+  # AI Creative Hub web (Next.js + Auth.js magic link; SMTP stubbed, so the
+  # login link is printed to `docker logs aicex-aihub-web | grep MAGIC_LINK`).
+  aihub-web:
+    <<: *base
+    build: { context: ../../apps/ai-hub, target: web }
+    image: aicex-aihub-web
+    container_name: aicex-aihub-web
+    env_file: /etc/aicex/aihub.env
+    environment:
+      DATABASE_URL: postgres://aicex:${PG_PASSWORD}@postgres:5432/aihub
+      REDIS_URL: redis://aihub-redis:6379
+      AUTH_SECRET: ${AIHUB_AUTH_SECRET}
+      AUTH_URL: https://aihub-app.aicex.club
+      NEXTAUTH_URL: https://aihub-app.aicex.club
+      NEXT_PUBLIC_APP_URL: https://aihub-app.aicex.club
+      TELEGRAM_WEBAPP_URL: https://aihub-app.aicex.club/tma
+      SMTP_URL: stub
+    depends_on:
+      postgres: { condition: service_healthy }
+      aihub-redis: { condition: service_started }
+    networks: [default, edge]
+    mem_limit: 384m
+
+  persona-train:
+    <<: *base
+    build: { context: ../../apps/persona-train }
+    image: aicex-persona-train
+    container_name: aicex-persona-train
+    env_file: /etc/aicex/persona-train.env
+    environment:
+      DATABASE_URL: postgres://aicex:${PG_PASSWORD}@postgres:5432/aio
+      PUBLIC_BASE_URL: https://persona-train.aicex.club
+      TG_WEBHOOK_SECRET: ${PERSONA_TRAIN_WEBHOOK_SECRET}
+      VOICE_NOTES_DIR: /data/voice-notes
+      VIDEO_NOTES_DIR: /data/video-notes
+    volumes:
+      - persona-train-data:/data
+    depends_on:
+      postgres: { condition: service_healthy }
+    networks: [default, edge]
+    mem_limit: 256m
+
+  # IG Serial Content in demo mode: in-memory data, canned agents, no
+  # Supabase (a real run needs a Supabase project: auth + PostgREST).
+  ig-content:
+    <<: *base
+    build:
+      context: ../../apps/ig-content
+      args:
+        NEXT_PUBLIC_IGC_DEMO: '1'
+        NEXT_PUBLIC_SUPABASE_URL: https://demo.invalid
+        NEXT_PUBLIC_SUPABASE_ANON_KEY: demo
+    image: aicex-ig-content
+    container_name: aicex-ig-content
+    environment:
+      IGC_DEMO: '1'
+      NEXT_PUBLIC_SITE_URL: https://ig.aicex.club
+    networks: [edge]
+    mem_limit: 256m
+
+  # AI Content Factory: SQLite + Chromium renders; cabinet behind
+  # CABINET_PASSWORD. Scheduled generation starts disabled (deploy.sh seeds
+  # data/bot-state.json) so it does not spend API credits unasked.
+  content-factory:
+    <<: *base
+    build: { context: ../../apps/ai-content-factory }
+    image: aicex-content-factory
+    container_name: aicex-content-factory
+    env_file: /etc/aicex/content-factory.env
+    environment:
+      NODE_ENV: production
+      TZ: Europe/Moscow
+      CABINET_PORT: 3018
+    volumes:
+      - factory-data:/app/data
+    networks: [edge]
+    mem_limit: 1536m
+
 networks:
   edge:
     external: true
@@ -189,3 +277,6 @@ volumes:
   tg-agent-data:
   voice-notes:
   sales-voice:
+  aihub-redis:
+  persona-train-data:
+  factory-data:

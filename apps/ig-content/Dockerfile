@@ -23,8 +23,11 @@ COPY . .
 # must be present here — not only at runtime.
 ARG NEXT_PUBLIC_SUPABASE_URL
 ARG NEXT_PUBLIC_SUPABASE_ANON_KEY
+# Demo mode (in-memory data, no Supabase) — client bundle reads the mirror.
+ARG NEXT_PUBLIC_IGC_DEMO
 ENV NEXT_PUBLIC_SUPABASE_URL=$NEXT_PUBLIC_SUPABASE_URL
 ENV NEXT_PUBLIC_SUPABASE_ANON_KEY=$NEXT_PUBLIC_SUPABASE_ANON_KEY
+ENV NEXT_PUBLIC_IGC_DEMO=$NEXT_PUBLIC_IGC_DEMO
 # NODE_ENV=production is critical — without it Next bundles the development
 # React runtime and SSG of /404, /500 crashes during build.
 ENV NODE_ENV=production
