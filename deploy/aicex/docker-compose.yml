@@ -36,6 +36,8 @@ services:
     image: aicex-ytdlp
     container_name: aicex-ytdlp
     env_file: /etc/aicex/ytdlp.env
+    environment:
+      YTDLP_SERVICE_API_KEY: ${YTDLP_KEY}
     mem_limit: 512m
 
   transcribe:
@@ -50,6 +52,7 @@ services:
       HOSTNAME: 0.0.0.0
       DATABASE_URL: postgres://aicex:${PG_PASSWORD}@postgres:5432/aio
       YTDLP_SERVICE_URL: http://ytdlp:8080
+      YTDLP_SERVICE_API_KEY: ${YTDLP_KEY}
       TELEGRAM_WEBHOOK_SECRET: ${TRANSCRIBE_WEBHOOK_SECRET}
       NEXT_PUBLIC_APP_URL: https://transcribe.aicex.club
       TMA_URL: https://tma.aicex.club/

@@ -19,14 +19,10 @@ log() { echo "── $* ──"; }
 
 # ── 1. one-time secrets ──────────────────────────────────────────────
 mkdir -p "$ETC" && chmod 700 "$ETC"
-if [ ! -f "$ETC/stack.env" ]; then
-  {
-    echo "PG_PASSWORD=$(openssl rand -hex 24)"
-    echo "TRANSCRIBE_WEBHOOK_SECRET=$(openssl rand -hex 24)"
-  } > "$ETC/stack.env"
-  chmod 600 "$ETC/stack.env"
-  log "generated $ETC/stack.env"
-fi
+touch "$ETC/stack.env"; chmod 600 "$ETC/stack.env"
+for k in PG_PASSWORD TRANSCRIBE_WEBHOOK_SECRET YTDLP_KEY; do
+  grep -q "^$k=" "$ETC/stack.env" || { echo "$k=$(openssl rand -hex 24)" >> "$ETC/stack.env"; log "generated $k"; }
+done
 set -a; . "$ETC/stack.env"; set +a
 for f in transcribe tg-agent ytdlp ai-office; do touch "$ETC/$f.env"; chmod 600 "$ETC/$f.env"; done
 
@@ -92,11 +88,26 @@ health_url() {
     tg-agent)       echo "http://aicex-tg-agent:8080/healthz" ;;
     command-center) echo "http://aicex-command-center:3003/dashboard" ;;
     ai-office)      echo "http://aicex-ai-office:3000/api/health" ;;
-    landings)       echo "http://aicex-landings:8080/" ;;
+    landings)       echo "http://aicex-landings:8080/transcribe/" ;;
   esac
 }
-FAILED=()
+# Keys a service cannot boot without; empty → skip it instead of a crash loop.
+required_keys() {
+  case $1 in
+    tg-agent) echo "TELEGRAM_BOT_TOKEN ANTHROPIC_API_KEY" ;;
+  esac
+}
+FAILED=(); SKIPPED=()
 for s in "${SERVICES[@]}"; do
+  missing=
+  for k in $(required_keys "$s"); do
+    grep -qE "^$k=.+" "$ETC/$s.env" || missing="$missing $k"
+  done
+  if [ -n "$missing" ]; then
+    echo "  ⚠ $s skipped — missing:$missing"
+    "${DC[@]}" rm -sf "$s" >/dev/null 2>&1 || true
+    SKIPPED+=("$s(${missing# })"); continue
+  fi
   log "$s: build"
   if ! "${DC[@]}" build "$s"; then FAILED+=("$s(build)"); continue; fi
   log "$s: up"
@@ -142,5 +153,6 @@ fi
 log "status"
 docker ps --filter name=aicex- --format '{{.Names}}\t{{.Status}}'
 free -h | head -2; df -h / | tail -1
+[ ${#SKIPPED[@]} -eq 0 ] || echo "SKIPPED (need secrets): ${SKIPPED[*]}"
 if [ ${#FAILED[@]} -gt 0 ]; then echo "FAILED: ${FAILED[*]}"; exit 1; fi
 echo "✓ all done"
