@@ -1,0 +1,41 @@
+# Read-only snapshot of the prod box: arch, resources, containers, ports,
+# Caddy sites, repo checkouts. Changes nothing on the server.
+name: server-probe
+
+on:
+  push:
+    branches: ['claude/**']
+    paths:
+      - '.github/workflows/server-probe.yml'
+  workflow_dispatch:
+
+jobs:
+  probe:
+    runs-on: ubuntu-latest
+    timeout-minutes: 5
+    steps:
+      - uses: appleboy/ssh-action@v1.0.3
+        with:
+          host:     ${{ vars.HETZNER_HOST }}
+          username: ${{ vars.HETZNER_USER || 'root' }}
+          port:     ${{ vars.HETZNER_SSH_PORT || '22' }}
+          key:      ${{ secrets.HETZNER_SSH_KEY }}
+          script: |
+            echo "== host";      hostname; uname -m; nproc; free -h; df -h /
+            echo "== docker";    docker version --format '{{.Server.Version}}'; docker compose version
+            echo "== ports 80/443"; ss -ltnp | grep -E ':(80|443)\s' || true
+            echo "== containers"
+            docker ps -a --format '{{.Names}}\t{{.Status}}\t{{.Ports}}\t{{index .Labels "com.docker.compose.project"}}\t{{index .Labels "com.docker.compose.project.working_dir"}}'
+            echo "== networks";  docker network ls --format '{{.Name}}'
+            echo "== caddy containers"
+            for c in $(docker ps --format '{{.Names}}' | grep -i caddy); do
+              echo "--- $c mounts:"; docker inspect -f '{{range .Mounts}}{{.Source}} -> {{.Destination}}{{"\n"}}{{end}}' "$c"
+              echo "--- $c Caddyfile:"; docker exec "$c" cat /etc/caddy/Caddyfile 2>/dev/null | head -150
+            done
+            echo "== host caddy"; systemctl is-active caddy 2>/dev/null || true; ls /etc/caddy 2>/dev/null || true
+            echo "== repo checkouts"
+            for d in /root/ai-command-center /opt/* /srv/* /home/*/ai-command-center; do
+              [ -d "$d/.git" ] && echo "$d @ $(git -C "$d" rev-parse --abbrev-ref HEAD) $(git -C "$d" log -1 --format='%h %cd' --date=short) remote=$(git -C "$d" remote get-url origin | sed -E 's#://[^@]+@#://***@#')"
+            done
+            echo "== /etc/*.env"; ls -la /etc/*.env 2>/dev/null || true
+            echo "== listening"; ss -ltn | awk 'NR>1{print $4}' | sort -u | tr '\n' ' '; echo
