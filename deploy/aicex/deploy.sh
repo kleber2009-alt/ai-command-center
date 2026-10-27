@@ -44,6 +44,10 @@ done
 psql_() { docker exec -i aicex-postgres psql -U aicex -v ON_ERROR_STOP=1 -q "$@"; }
 
 psql_ -d aio -c "SELECT 1" >/dev/null
+# Migrations GRANT read access to claude_ro (the read-only role from the old
+# server); it only needs to exist, login stays disabled.
+psql_ -d aio -tAc "SELECT 1 FROM pg_roles WHERE rolname='claude_ro'" | grep -q 1 \
+  || psql_ -d aio -c "CREATE ROLE claude_ro NOLOGIN"
 for db in aisales aihub; do
   psql_ -d aio -tAc "SELECT 1 FROM pg_database WHERE datname='$db'" | grep -q 1 \
     || psql_ -d aio -c "CREATE DATABASE $db"
