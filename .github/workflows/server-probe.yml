@@ -51,6 +51,8 @@ jobs:
             cat /etc/cron.d/funnel-analytics 2>/dev/null; ls -la /usr/local/bin/funnel-analytics-update 2>&1
             echo "--- env keys"; sed -E 's/^([A-Z0-9_]+)=.+$/\1=<set>/' /etc/funnel-analytics.env 2>/dev/null
             echo "--- log"; tail -40 /var/log/funnel-analytics.log 2>&1
-            for c in aicex-ytdlp aicex-tg-agent aicex-transcribe; do
+            echo "== aisales migrations"
+            docker exec aicex-postgres psql -U aicex -d aisales -tAc "SELECT name FROM _aicex_migrations ORDER BY applied_at" 2>&1 | tail -40
+            for c in aicex-worker aicex-sales-api; do
               echo "--- logs $c"; docker logs --tail=25 "$c" 2>&1 | sed -E 's/[0-9]{8,}:[A-Za-z0-9_-]{30,}/***/g'
             done
