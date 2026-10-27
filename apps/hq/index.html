@@ -91,6 +91,65 @@
   #loader.done{opacity:0;pointer-events:none}
 
   body.embed .top,body.embed .side,body.embed .hint{display:none}
+  /* ——— игровой режим (?game) ——— */
+  body.game .tabs,body.game .side,body.game .hint{display:none}
+  body.game .card{left:auto;right:16px}
+  .lbl.guide{border-color:var(--c)}
+  .gtop{position:fixed;top:16px;right:16px;display:flex;align-items:center;gap:14px;padding:8px 10px 8px 14px;z-index:5}
+  .gdots{display:flex;gap:4px}
+  .gdots span{width:24px;height:24px;border-radius:8px;display:grid;place-items:center;font-size:11px;font-weight:800;background:rgba(255,255,255,.08);color:var(--tx2)}
+  .gdots span.ok{background:#3ddc97;color:#06140d}
+  .gdots span.cur{background:var(--accent);color:#fff;box-shadow:0 0 14px var(--accent)}
+  .gstat{display:grid;line-height:1.2}
+  .gstat b{font-size:14px;font-weight:800}
+  .gstat span{font-size:11.5px;color:var(--tx2)}
+  #gHelp{width:30px;height:30px;border-radius:10px;background:rgba(255,255,255,.1);font-weight:800}
+  .gpanel{position:fixed;left:16px;top:84px;width:360px;max-height:calc(100% - 100px);overflow:auto;padding:16px;display:grid;gap:12px;z-index:5}
+  .gph{display:flex;justify-content:space-between;font-size:11.5px;font-weight:700;color:var(--tx2);text-transform:uppercase;letter-spacing:.06em}
+  .gpanel h2{font-size:22px;font-weight:800;margin-top:-4px}
+  .gpanel h3{font-size:12px;font-weight:800;color:var(--tx2);text-transform:uppercase;letter-spacing:.06em;margin-bottom:6px}
+  .gsay{display:flex;gap:10px;align-items:flex-start;padding:10px 12px;border-radius:12px;background:rgba(47,123,255,.16);border:1px solid rgba(47,123,255,.35);font-size:13.5px;line-height:1.45}
+  .gsay i{flex:none;width:26px;height:26px;border-radius:9px;background:#2f7bff;position:relative;box-shadow:0 0 12px #2f7bff}
+  .gsay i::after{content:"";position:absolute;left:6px;right:6px;top:9px;height:5px;border-radius:3px;background:#fff}
+  .gq{list-style:none;display:grid;gap:6px}
+  .gq button{width:100%;display:flex;gap:10px;align-items:flex-start;text-align:left;padding:9px 10px;border-radius:12px;background:rgba(255,255,255,.06);border:1px solid rgba(255,255,255,.08);font-size:13px;line-height:1.4;transition:background .2s}
+  .gq button:hover:not(:disabled){background:rgba(255,255,255,.12)}
+  .gq button i{flex:none;width:18px;height:18px;border-radius:6px;border:1.5px solid rgba(255,255,255,.4);margin-top:1px}
+  .gq button.ok i{background:#3ddc97;border-color:#3ddc97;box-shadow:inset 0 0 0 3px rgba(6,20,13,.9)}
+  .gq button.ok span{color:var(--tx2);text-decoration:line-through}
+  .gq button span{flex:1}
+  .gq button em{font-style:normal;font-size:11px;font-weight:800;color:#ffd166}
+  .gmeta{display:flex;justify-content:space-between;gap:8px;font-size:12px;color:var(--tx2);flex-wrap:wrap}
+  .gmeta b{color:var(--tx)}
+  .grew{display:flex;flex-wrap:wrap;gap:6px}
+  .grew span{font-size:12px;font-weight:700;padding:5px 10px;border-radius:99px;background:color-mix(in srgb,var(--c) 28%,transparent);border:1px solid var(--c)}
+  .grew em{font-style:normal;font-size:12.5px;color:var(--tx2)}
+  .gbtn{width:100%;padding:12px;border-radius:12px;background:rgba(255,255,255,.1);font-weight:800;font-size:14px}
+  .gbtn.pri{background:var(--accent);color:#fff;box-shadow:0 6px 20px rgba(47,123,255,.35)}
+  .gbtn:disabled{opacity:.55;cursor:default;box-shadow:none}
+  .glink{font-size:12px;color:var(--tx2);text-decoration:underline;justify-self:center}
+  .gtoasts{position:fixed;left:50%;top:84px;transform:translateX(-50%);display:grid;gap:8px;z-index:30;pointer-events:none;justify-items:center}
+  .gtoast{padding:10px 16px;border-radius:14px;background:rgba(10,12,18,.88);color:#fff;font-weight:800;font-size:14px;border:1px solid rgba(255,255,255,.16);animation:gin .35s both;transition:opacity .5s,transform .5s}
+  .gtoast.xp{color:#ffd166}.gtoast.lvl{border-color:#3ddc97}.gtoast.hire{border-color:var(--accent);box-shadow:0 0 20px rgba(47,123,255,.4)}
+  .gtoast.out{opacity:0;transform:translateY(-8px)}
+  @keyframes gin{from{opacity:0;transform:translateY(-10px) scale(.96)}}
+  .gmodal{position:fixed;inset:0;z-index:40;display:grid;place-items:center;padding:16px;background:rgba(6,8,12,.45)}
+  .gmodal[hidden]{display:none}
+  .gdlg{width:min(560px,100%);max-height:calc(100% - 32px);overflow:auto;padding:26px;display:grid;gap:12px;text-align:left}
+  .gdlg h2{font-size:26px;font-weight:800}
+  .gdlg p{font-size:14.5px;line-height:1.55;color:#dfe3ea}
+  .geb{font-size:12px;font-weight:800;letter-spacing:.12em;text-transform:uppercase;color:var(--accent)}
+  .gbot{width:56px;height:56px;border-radius:18px;background:#2f7bff;position:relative;box-shadow:0 0 30px #2f7bff}
+  .gbot::after{content:"";position:absolute;left:12px;right:12px;top:19px;height:10px;border-radius:6px;background:#fff}
+  .gpath{display:flex;flex-wrap:wrap;gap:6px}
+  .gpath span{font-size:12px;font-weight:700;padding:4px 9px;border-radius:99px;background:rgba(255,255,255,.08);color:var(--tx2)}
+  @media (max-width:820px){
+    .gtop{top:auto;bottom:calc(46vh + 20px);right:12px;left:12px;justify-content:space-between;padding:6px 8px}
+    .gdots span{width:20px;height:20px;font-size:10px}
+    .gpanel{top:auto;bottom:12px;left:12px;right:12px;width:auto;max-height:46vh}
+    body.game .card{display:none}
+  }
+
 
   .sh .demo-btn,.dlbl .demo,.dh .demo-btn{background:var(--accent);color:#fff;font-size:12px;font-weight:800;padding:6px 11px;border-radius:99px;white-space:nowrap}
   .dlbl .row2{display:flex;gap:12px;align-items:center;margin-top:8px}
@@ -309,6 +368,7 @@
 </script>
 <script src="dept-content.js?v=3"></script>
 <script src="agent-content.js?v=3"></script>
+<script src="track.js?v=1"></script>
 <script type="module">
 import * as THREE from 'three';
 import { OrbitControls } from 'three/addons/controls/OrbitControls.js';
@@ -1284,7 +1344,7 @@ const portrait = () => camera.aspect < 1;
 
 function planView() {
   // на вертикальном экране смотрим сверху сбоку — ряд комнат встаёт столбиком
-  const k = NR/3;   // при 4 комнатах отъезжаем дальше
+  const k = NR/3 * (document.body.classList.contains('game') && !portrait() ? 1.2 : 1);   // при 4 комнатах отъезжаем дальше, в игре — ещё чуть дальше
   if (portrait()) return { pos:V3(12*k, 25*k, 1.2), target:V3(0, 0, 1.2) };
   return { pos:V3(0, 19*k, 15.5*k), target:V3(0, 0, 1.2) };
 }
@@ -1341,7 +1401,7 @@ const pick = (e) => {
   ndc.set(e.clientX/innerWidth*2-1, -(e.clientY/innerHeight)*2+1);
   ray.setFromCamera(ndc, camera);
   if (mode === 'plan') { const h = ray.intersectObjects(floorsForClick, false)[0]; return h && { dept:h.object.userData.dept }; }
-  const h = ray.intersectObjects(clickables, true)[0];
+  const h = ray.intersectObjects(clickables.filter(g => g.visible), true)[0];
   return h && members.get(h.object.userData.memberId)?.dept.id === mode ? { member:h.object.userData.memberId } : null;
 };
 renderer.domElement.addEventListener('pointerdown', e => downAt = [e.clientX, e.clientY]);
@@ -1665,11 +1725,241 @@ addEventListener('message', e => {
   if (d.type === 'office:focus') select(d.id, true);
 });
 
+/* ================= ИГРА: ТРЕК «СВОЙ ИИ-ОФИС» (?game) =================
+   Ученик проходит 10 уровней трека (track.js). Офис стартует пустым: в холле у рецепшена
+   только проводник. Сдал уровень — проводник идёт в нужный отдел, комната открывается,
+   нанятые агенты появляются на своих местах. Прогресс хранится в браузере. */
+
+const TRACK = window.OFFICE_TRACK;
+const GAME = params.has('game') && TRACK ? { level:0, done:{}, xp:0, busy:false, pending:new Set() } : null;
+const GUIDE_C = '#2f7bff';
+const RECEPTION = V3(1.1, 1.0, ZC - 2.7);
+const deptOfAgent = id => [...members.values()].find(m => m.kind === 'bot' && m.data.id === id)?.dept;
+const hiresOf = L => (TRACK?.levels[L]?.hires || []).filter(id => members.has(id));
+const hiredUpTo = L => new Set(TRACK.levels.slice(0, L).flatMap((_, i) => hiresOf(i)));
+const openLevelOf = d => TRACK.levels.findIndex((_, i) => hiresOf(i).some(id => members.get(id).dept.id === d.id));
+const rankOfPassed = n => TRACK.ranks.filter(([l]) => n >= l).at(-1)[1];
+
+if (GAME) {
+  document.body.classList.add('game');
+  try { Object.assign(GAME, JSON.parse(localStorage.getItem('office:game') || '{}')); } catch (e) {}
+  if (params.has('level')) {                       // ?game&level=N — сразу на уровень N, предыдущие пройдены
+    GAME.level = THREE.MathUtils.clamp(+params.get('level') || 0, 0, TRACK.levels.length);
+    GAME.done = {}; GAME.xp = 0;
+    for (let i = 0; i < GAME.level; i++) { GAME.done[i] = TRACK.levels[i].quests.map(() => true); GAME.xp += TRACK.levels[i].xp + TRACK.levels[i].quests.length * TRACK.questXp; }
+  }
+  GAME.busy = false;
+
+  // замок на закрытых комнатах: тонированный объём поверх комнаты
+  const lockMat = new THREE.MeshBasicMaterial({ color:'#161a22', transparent:true, opacity:0.55, depthWrite:false });
+  for (const r of rooms.values()) {
+    const lock = new THREE.Mesh(new THREE.BoxGeometry(RW - 0.25, H - 0.05, ZG - ZB - 0.05), lockMat.clone());
+    lock.position.set(0, H/2, (ZB + ZG)/2); r.P.add(lock); r.lock = lock;
+  }
+
+  // проводник: свой робот в холле у рецепшена
+  const gb = makeBot({ color:GUIDE_C, status:'working' });
+  gb.g.scale.setScalar(1.25); gb.g.position.copy(RECEPTION); building.add(gb.g);
+  gb.ringMat.color.set(GUIDE_C).multiplyScalar(2.5);
+  const gel = document.createElement('div'); gel.className = 'lbl guide'; gel.innerHTML = '<i></i><b>Проводник</b>';
+  gel.style.setProperty('--s', GUIDE_C); gel.style.setProperty('--c', GUIDE_C);
+  const glabel = new CSS2DObject(gel); glabel.position.y = 0.95; gb.g.add(glabel);
+  GAME.guide = { ...gb, path:null, start:0, dur:1, roomId:null };
+
+  // интерфейс игры
+  document.body.insertAdjacentHTML('beforeend', `
+    <div class="gtop glass" id="gTop"></div>
+    <aside class="gpanel glass" id="gPanel" aria-live="polite"></aside>
+    <div class="gtoasts" id="gToasts"></div>
+    <div class="gmodal" id="gModal" hidden><div class="gdlg glass" id="gDlg"></div></div>`);
+  $('gPanel').addEventListener('click', e => {
+    const q = e.target.closest('[data-q]');
+    if (q && !GAME.busy) toggleQuest(+q.dataset.q);
+    if (e.target.id === 'gSubmit') completeLevel();
+    if (e.target.id === 'gReset') resetGame();
+  });
+  $('gModal').addEventListener('click', e => {
+    if (e.target.id === 'gStart') { $('gModal').hidden = true; try { localStorage.setItem('office:game:intro', '1'); } catch (err) {} }
+    if (e.target.id === 'gDemo') { $('gModal').hidden = true; openDemo('office'); }
+    if (e.target.id === 'gAgain') { $('gModal').hidden = true; resetGame(); }
+  });
+  $('gTop').addEventListener('click', e => { if (e.target.id === 'gHelp') showIntro(); });
+
+  // закрытые отделы: не входим, на табличке — когда откроется
+  const _enter = enter;
+  enter = (id, flyCam = true) => {
+    const d = deptOf(id);
+    if (d && !roomOpen(d) && !GAME.busy) { const L = openLevelOf(d); return toast(`Отдел «${d.name}» откроется после уровня ${L} «${TRACK.levels[L].name}»`); }
+    _enter(id, flyCam);
+  };
+  const _applyMode = applyMode;
+  applyMode = () => { _applyMode(); enforceGame(); };
+  const _renderUI = renderUI;
+  renderUI = () => {
+    _renderUI();
+    for (const r of rooms.values()) if (!roomOpen(r.d)) {
+      const L = openLevelOf(r.d);
+      r.el.innerHTML = `<b>${esc(r.d.name)}</b><small>Закрыто · откроется после уровня ${L}</small><div class="row2"><em>${esc(TRACK.levels[L]?.name || '')}</em></div>`;
+    }
+  };
+}
+
+function roomOpen(d) { return !GAME || [...hiredUpTo(GAME.level)].some(id => members.get(id).dept.id === d.id); }
+function enforceGame() {
+  if (!GAME) return;
+  const hired = hiredUpTo(GAME.level);
+  members.forEach(m => {
+    const on = (m.kind === 'bot' ? hired.has(m.data.id) : roomOpen(m.dept)) && !GAME.pending.has(m.data.id);
+    if (!m.spawnAt) m.g.visible = on;
+    if (!on) m.label.visible = false;
+  });
+  for (const r of rooms.values()) if (!r.unlocking) r.lock.visible = !roomOpen(r.d);
+}
+function toast(text, kind = '') {
+  const el = document.createElement('div'); el.className = 'gtoast ' + kind; el.textContent = text;
+  $('gToasts').append(el); setTimeout(() => el.classList.add('out'), 3200); setTimeout(() => el.remove(), 3800);
+}
+function save() { try { localStorage.setItem('office:game', JSON.stringify({ level:GAME.level, done:GAME.done, xp:GAME.xp })); } catch (e) {} }
+
+function renderGame() {
+  const L = GAME.level, total = TRACK.levels.length, lv = TRACK.levels[L];
+  const hired = hiredUpTo(L).size, all = [...members.values()].filter(m => m.kind === 'bot').length;
+  $('gTop').innerHTML = `
+    <div class="gdots">${TRACK.levels.map((t, i) => `<span class="${i < L ? 'ok' : i === L ? 'cur' : ''}" title="${i} · ${esc(t.name)}">${i}</span>`).join('')}</div>
+    <div class="gstat"><b>${GAME.xp} XP</b><span>${esc(rankOfPassed(L))} · агентов ${hired}/${all}</span></div>
+    <button id="gHelp" title="Как играть">?</button>`;
+  if (!lv) {
+    $('gPanel').innerHTML = `<div class="gph"><span>Трек пройден</span><span>${total} из ${total}</span></div>
+      <h2>Офис работает</h2><p class="gsay"><i></i><span>Все ${all} агентов на местах. Ставь задачи словами в проекте Claude — офис сделает.</span></p>
+      <button class="gbtn" id="gReset">Пройти заново</button>`;
+    return;
+  }
+  const done = GAME.done[L] || [], left = lv.quests.length - done.filter(Boolean).length;
+  const reward = hiresOf(L);
+  $('gPanel').innerHTML = `
+    <div class="gph"><span>${esc(lv.phase)}</span><span>Уровень ${L} из ${total - 1}</span></div>
+    <h2>${esc(lv.name)}</h2>
+    <p class="gsay"><i></i><span>${esc(lv.say)}</span></p>
+    <h3>Квесты</h3>
+    <ul class="gq">${lv.quests.map((q, i) => `<li><button data-q="${i}" class="${done[i] ? 'ok' : ''}" ${GAME.busy ? 'disabled' : ''}><i></i><span>${esc(q)}</span><em>+${TRACK.questXp}</em></button></li>`).join('')}</ul>
+    <div class="gmeta"><span>Файл в Claude: <b>${esc(lv.file)}</b></span><span>+${lv.xp} XP за уровень</span></div>
+    <div><h3>Награда — найм в офис</h3><div class="grew">${reward.length ? reward.map(id => { const m = members.get(id); return `<span style="--c:${m.dept.accent}">${esc(m.data.name)}</span>`; }).join('') : '<em>Паспорт проекта и пустой офис с твоим именем</em>'}</div></div>
+    <button class="gbtn pri" id="gSubmit" ${left || GAME.busy ? 'disabled' : ''}>${GAME.busy ? 'Нанимаем агентов…' : left ? `Осталось квестов: ${left}` : 'Сдать уровень'}</button>
+    <button class="glink" id="gReset">Сбросить прогресс</button>`;
+}
+function toggleQuest(i) {
+  const L = GAME.level, arr = GAME.done[L] || (GAME.done[L] = TRACK.levels[L].quests.map(() => false));
+  arr[i] = !arr[i]; GAME.xp += arr[i] ? TRACK.questXp : -TRACK.questXp;
+  if (arr[i]) toast(`+${TRACK.questXp} XP`, 'xp');
+  save(); renderGame();
+}
+
+// ——— сдача уровня: проводник ведёт в отдел, комната открывается, агенты появляются ———
+function guideWalk(points, ms) { Object.assign(GAME.guide, { path:[GAME.guide.g.position.clone(), ...points], start:performance.now(), dur:ms }); }
+const wait = ms => new Promise(r => setTimeout(r, ms));
+async function completeLevel() {
+  const L = GAME.level, lv = TRACK.levels[L], newbies = hiresOf(L);
+  GAME.busy = true; GAME.xp += lv.xp; renderGame();
+  toast(`Уровень ${L} «${lv.name}» пройден · +${lv.xp} XP`, 'lvl');
+  const d = newbies.length ? members.get(newbies[0]).dept : null;
+  if (d) {
+    const wasOpen = roomOpen(d), r = rooms.get(d.id), gx = GAME.guide.g.position.x;
+    mode = 'plan'; selected = null; applyMode(); renderUI();
+    const mid = (gx + d.ox + 3) / 2, span = Math.abs(gx - d.ox - 3);
+    flyTo(V3(mid, 4.6 + span * 0.25, ZC + 4.5 + span * 0.35), V3(mid, 0.8, ZG - 0.5), 1.3);
+    await wait(900);
+    guideWalk([V3(gx, 1.0, ZG + 1.7), V3(d.ox + 3.0, 1.0, ZG + 1.7), V3(d.ox + 3.0, 1.0, ZG - 0.6), V3(d.ox + 2.7, 1.0, 2.5)], 1200 + span * 160);
+    await wait(1000 + span * 160);
+    GAME.pending = new Set([...newbies, ...(wasOpen ? [] : [d.head.id])]);   // покажем их по очереди
+    GAME.level = L + 1;                            // теперь отдел открыт
+    if (!wasOpen) { r.unlocking = performance.now(); toast(`Открыт отдел «${d.name}»`, 'lvl'); }
+    _enterRoom(d);
+    await wait(900);
+    const head = members.get(d.head.id);
+    if (!wasOpen && head) spawn(head);
+    for (const id of newbies) {
+      const m = members.get(id);
+      if (m.dept.id !== d.id) { _enterRoom(m.dept); await wait(1100); }
+      spawn(m); toast(`Нанят агент «${m.data.name}»`, 'hire');
+      await wait(650);
+    }
+  } else GAME.level = L + 1;
+  GAME.busy = false; save(); renderGame(); enforceGame(); renderUI();
+  if (GAME.level >= TRACK.levels.length) setTimeout(showFinal, 900);
+}
+function _enterRoom(d) {
+  const r = rooms.get(d.id);
+  if (r.lock.visible && !r.unlocking) r.unlocking = performance.now();
+  mode = d.id; applyMode(); const v = roomView(d); flyTo(v.pos, v.target, 1.2); members.forEach(paintMember); renderUI();
+}
+function spawn(m) {
+  GAME.pending.delete(m.data.id);
+  m.spawnAt = performance.now(); m.g.visible = true; m.g.scale.setScalar(0.001);
+  const fx = new THREE.Mesh(new THREE.TorusGeometry(0.3, 0.02, 8, 48), new THREE.MeshBasicMaterial({ color:new THREE.Color(m.dept.accent).multiplyScalar(2.2), transparent:true }));
+  fx.rotation.x = Math.PI/2; fx.position.copy(m.g.position); fx.position.y = m.kind === 'head' ? 0.05 : m.g.position.y - 0.36;
+  m.g.parent.add(fx); m.fx = fx;
+  m.label.visible = m.dept.id === mode;
+}
+function resetGame() {
+  try { localStorage.removeItem('office:game'); } catch (e) {}
+  Object.assign(GAME, { level:0, done:{}, xp:0, busy:false, pending:new Set() });
+  members.forEach(m => { m.spawnAt = 0; m.g.scale.setScalar(1); });
+  GAME.guide.path = null; GAME.guide.g.position.copy(RECEPTION);
+  for (const r of rooms.values()) { r.unlocking = 0; r.lock.material.opacity = 0.55; }
+  toPlan(); renderGame(); enforceGame(); renderUI();
+}
+function showIntro() {
+  $('gDlg').innerHTML = `<div class="gbot"></div><div class="geb">Трек «Свой ИИ-офис»</div><h2>Добро пожаловать в ${esc(BRAND)}</h2>
+    ${TRACK.intro.map(p => `<p>${esc(p)}</p>`).join('')}
+    <div class="gpath">${TRACK.levels.map((t, i) => `<span>${i} ${esc(t.name)}</span>`).join('')}</div>
+    <button class="gbtn pri" id="gStart">${GAME.level ? 'Продолжить' : 'Начать уровень 0'}</button>`;
+  $('gModal').hidden = false;
+}
+function showFinal() {
+  const all = [...members.values()].filter(m => m.kind === 'bot').length;
+  $('gDlg').innerHTML = `<div class="gbot"></div><div class="geb">Трек пройден</div><h2>Офис работает на тебя</h2>
+    <p>Все ${all} агентов наняты, ${TRACK.levels.length} уровней пройдено, ${GAME.xp} XP. Ранг — «${esc(rankOfPassed(TRACK.levels.length))}».</p>
+    <p>Дальше офис живёт по недельному циклу: понедельник — контент-план, вторник–четверг — производство, пятница — отчёт и выводы.</p>
+    <button class="gbtn pri" id="gDemo">▶ Демо офиса</button><button class="gbtn" id="gAgain">Пройти заново</button>`;
+  $('gModal').hidden = false;
+}
+function gameTick(t, now) {
+  if (!GAME) return;
+  const G = GAME.guide;
+  if (G.path) {
+    const k = Math.min(1, (now - G.start) / G.dur), e = k < .5 ? 2*k*k : 1 - Math.pow(-2*k + 2, 2)/2;
+    const seg = G.path.slice(1).map((p, i) => p.distanceTo(G.path[i])), tot = seg.reduce((a, b) => a + b, 0);
+    let dist = tot * e, i = 0;
+    while (i < seg.length - 1 && dist > seg[i]) { dist -= seg[i]; i++; }
+    const a = G.path[i], b = G.path[i + 1], p = a.clone().lerp(b, seg[i] ? Math.min(1, dist / seg[i]) : 1);
+    G.g.position.copy(p);
+    if (b.distanceTo(a) > 1e-3) G.g.rotation.y = Math.atan2(b.x - a.x, b.z - a.z);
+    if (k >= 1) G.path = null;
+  }
+  G.g.position.y = 1.0 + Math.sin(t*2.2)*0.04;
+  G.ring.rotation.z = t*1.2; G.ring.scale.setScalar(1 + Math.sin(t*4)*0.08);
+  members.forEach(m => {
+    if (!m.spawnAt) return;
+    const k = Math.min(1, (now - m.spawnAt) / 700), c = 1.70158, s = 1 + (c + 1)*Math.pow(k - 1, 3) + c*Math.pow(k - 1, 2);
+    m.g.scale.setScalar(Math.max(0.001, s));
+    if (m.fx) { m.fx.scale.setScalar(1 + k*2.2); m.fx.material.opacity = 1 - k; if (k >= 1) { m.fx.parent.remove(m.fx); m.fx = null; } }
+    if (k >= 1) { m.spawnAt = 0; m.g.scale.setScalar(1); }
+  });
+  for (const r of rooms.values()) if (r.unlocking) {
+    const k = Math.min(1, (now - r.unlocking) / 900);
+    r.lock.material.opacity = 0.55 * (1 - k);
+    if (k >= 1) { r.unlocking = 0; r.lock.visible = false; r.lock.material.opacity = 0.55; }
+  }
+}
+
 /* ================= СТАРТ И ЦИКЛ ================= */
 
 function onResize() {
   camera.aspect = innerWidth/innerHeight;
   camera.fov = portrait() ? 62 : 46;
+  // в игре слева панель трека — сдвигаем кадр вправо, чтобы она не закрывала офис
+  if (document.body.classList.contains('game') && !portrait()) camera.setViewOffset(innerWidth, innerHeight, -190, 0, innerWidth, innerHeight);
+  else camera.clearViewOffset();
   camera.updateProjectionMatrix();
   renderer.setSize(innerWidth, innerHeight);
   composer.setSize(innerWidth, innerHeight);
@@ -1683,6 +1973,14 @@ addEventListener('resize', onResize); onResize();
   applyMode(); renderUI();
   const start = params.get('room');
   if (deptOf(start)) enter(start);
+  if (GAME) {
+    // проводник ждёт в отделе, куда привёл в последний раз, а в начале — у рецепшена
+    const last = TRACK.levels.slice(0, GAME.level).flatMap((_, i) => hiresOf(i)).at(-1);
+    if (last) { const d = members.get(last).dept; GAME.guide.g.position.set(d.ox + 2.7, 1.0, 2.5); }
+    onResize(); enforceGame(); renderUI(); renderGame();
+    let seen = false; try { seen = !!localStorage.getItem('office:game:intro'); } catch (e) {}
+    if (!seen || GAME.level === 0) showIntro();
+  }
 }
 
 const clock = new THREE.Clock();
@@ -1717,6 +2015,7 @@ renderer.setAnimationLoop(() => {
     camera.position.y = Math.max(camera.position.y, 3.5);
   }
 
+  gameTick(t, now);
   composer.render();
   labelRenderer.render(scene, camera);
 });
