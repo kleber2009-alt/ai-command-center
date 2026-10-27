@@ -219,6 +219,7 @@ services:
     container_name: aicex-persona-train
     env_file: /etc/aicex/persona-train.env
     environment:
+      HOSTNAME: 0.0.0.0   # Next standalone binds $HOSTNAME; reachable from edge
       DATABASE_URL: postgres://aicex:${PG_PASSWORD}@postgres:5432/aio
       PUBLIC_BASE_URL: https://persona-train.aicex.club
       TG_WEBHOOK_SECRET: ${PERSONA_TRAIN_WEBHOOK_SECRET}
