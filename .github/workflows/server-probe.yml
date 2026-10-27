@@ -39,3 +39,10 @@ jobs:
             done
             echo "== /etc/*.env"; ls -la /etc/*.env 2>/dev/null || true
             echo "== listening"; ss -ltn | awk 'NR>1{print $4}' | sort -u | tr '\n' ' '; echo
+            echo "== aicex env keys (values hidden)"
+            for f in /etc/aicex/*.env; do
+              echo "--- $f"; sed -E 's/^([A-Z0-9_]+)=.+$/\1=<set>/; s/^([A-Z0-9_]+)=$/\1=<EMPTY>/' "$f"
+            done
+            for c in aicex-ytdlp aicex-tg-agent aicex-transcribe; do
+              echo "--- logs $c"; docker logs --tail=25 "$c" 2>&1 | sed -E 's/[0-9]{8,}:[A-Za-z0-9_-]{30,}/***/g'
+            done
