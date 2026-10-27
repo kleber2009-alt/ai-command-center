@@ -52,7 +52,7 @@ jobs:
             OPENAI_API_KEY=${{ secrets.TRANSCRIBE_OPENAI_API_KEY || secrets.OPENAI_API_KEY }}
             TELEGRAM_BOT_TOKEN=${{ secrets.TRANSCRIBE_TELEGRAM_BOT_TOKEN }}
             OWNER_TELEGRAM_ID=${{ vars.TRANSCRIBE_OWNER_TELEGRAM_ID || vars.OWNER_TELEGRAM_ID }}
-            APIFY_API_TOKEN=${{ secrets.TRANSCRIBE_APIFY_API_TOKEN }}
+            APIFY_API_TOKEN=${{ secrets.TRANSCRIBE_APIFY_API_TOKEN || secrets.APIFY_API_TOKEN }}
           YTDLP_ENV: |
             COOKIES_B64=${{ secrets.YTDLP_COOKIES_B64 }}
             INSTAGRAM_COOKIES_B64=${{ secrets.YTDLP_INSTAGRAM_COOKIES_B64 }}
@@ -76,7 +76,7 @@ jobs:
             FORUM_KEEP_OWNER_DM=${{ vars.TG_AGENT_FORUM_KEEP_OWNER_DM || 'true' }}
           AI_OFFICE_ENV: |
             ANTHROPIC_API_KEY=${{ secrets.WORKER_ANTHROPIC_API_KEY || secrets.ANTHROPIC_API_KEY }}
-            ELEVENLABS_API_KEY=${{ secrets.WORKER_ELEVENLABS_API_KEY }}
+            ELEVENLABS_API_KEY=${{ secrets.WORKER_ELEVENLABS_API_KEY || secrets.ELEVENLABS_API_KEY }}
         with:
           host:     ${{ vars.HETZNER_HOST }}
           username: ${{ vars.HETZNER_USER || 'root' }}
