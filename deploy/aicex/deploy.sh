@@ -134,7 +134,8 @@ for s in "${SERVICES[@]}"; do
   "${DC[@]}" up -d --no-deps --force-recreate "$s"
   url=$(health_url "$s"); ok=
   for i in $(seq 1 40); do
-    if docker run --rm --network edge curlimages/curl:8.11.1 -fsS -o /dev/null --max-time 5 "$url" 2>/dev/null; then ok=1; break; fi
+    net=edge; [ "$s" = ytdlp ] && net=aicex_default   # ytdlp is internal-only
+    if docker run --rm --network "$net" curlimages/curl:8.11.1 -fsS -o /dev/null --max-time 5 "$url" 2>/dev/null; then ok=1; break; fi
     sleep 3
   done
   if [ -n "$ok" ]; then echo "  ✓ $s healthy"; else
