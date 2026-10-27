@@ -24,7 +24,14 @@ jobs:
           command_timeout: 12m
           script: |
             set -uo pipefail
-            echo "== update script"; cat /usr/local/bin/funnel-analytics-update
+            # /opt/ai-command-center tracks the Persona Studio branch (no
+            # funnel-analytics there); the dashboard's own checkout is main.
+            BIN=/usr/local/bin/funnel-analytics-update
+            if grep -q '^REPO=/opt/ai-command-center;' "$BIN"; then
+              cp "$BIN" "$BIN.bak"
+              sed -i 's#^REPO=/opt/ai-command-center;#REPO=/opt/funnel-analytics-src;#' "$BIN"
+              echo "== REPO → /opt/funnel-analytics-src"
+            fi
             CRON=/etc/cron.d/funnel-analytics
             if [ ! -f "$CRON" ]; then
               echo '23 */3 * * * root /usr/local/bin/funnel-analytics-update >> /var/log/funnel-analytics.log 2>&1' > "$CRON"
