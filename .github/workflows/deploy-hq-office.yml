@@ -3,11 +3,15 @@ name: deploy-hq-office
 # Living office of agents (apps/hq-office) → https://hq2.aicex.club on the aicex box
 # (vars.HETZNER_HOST, where *.aicex.club points). Each run uploads a release to
 # /opt/hq-office/releases/<id>, switches /opt/hq-office/current to it and keeps the
-# static container + edge Caddy site in place (apps/hq-office/deploy/server.sh).
+# static container + edge Caddy site in place (apps/hq-office/deploy/server.sh), and runs the
+# personal assistant (apps/hq-office/assistant, /api/assistant/*) next to it.
 # Also started by hq-office-history.yml after it adds tasks to tasks.auto.js.
 #
 # Secret: HETZNER_SSH_KEY. Variables: HETZNER_HOST, HETZNER_USER, HETZNER_SSH_PORT,
 # HQ_OFFICE_DOMAIN (default hq2.aicex.club).
+# Assistant: secrets HQ_OFFICE_ANTHROPIC_API_KEY (Claude), PERSONA_TRAIN_ELEVENLABS_API_KEY (voice),
+# HQ_ASSISTANT_PASSWORD (owner login; without it the assistant is a guest demo only);
+# optional variable HQ_ASSISTANT_VOICE_ID (otherwise the owner picks the cloned voice on the site).
 
 on:
   push:
@@ -35,7 +39,7 @@ jobs:
 
       - name: Check data files
         run: |
-          for f in office.config.js dept-content.js agent-content.js tasks.js tasks.auto.js works.js; do node --check "apps/hq-office/$f"; done
+          for f in office.config.js dept-content.js agent-content.js tasks.js tasks.auto.js works.js assistant/server.mjs assistant/office.mjs assistant/voice.mjs; do node --check "apps/hq-office/$f"; done
           node -e '
             global.window = {}; for (const f of ["office.config.js", "dept-content.js", "agent-content.js", "tasks.js", "tasks.auto.js", "works.js"])
               require("vm").runInThisContext(require("fs").readFileSync("apps/hq-office/" + f, "utf8"));
@@ -57,19 +61,40 @@ jobs:
           ssh-keyscan -p "$SSH_PORT" -H "$HOST" >> ~/.ssh/known_hosts 2>/dev/null
           echo "SSH=ssh -i $HOME/.ssh/id_deploy -p $SSH_PORT $SSH_USER@$HOST" >> "$GITHUB_ENV"
 
+      - name: Build assistant
+        working-directory: apps/hq-office/assistant
+        run: |
+          npm ci --omit=dev --no-audit --no-fund
+          cp ../../../CLAUDE.md project-map.md
+          node -e 'import("./office.mjs").then(m => { const o = m.loadOffice(".."); if (!o.tasks) throw new Error("no tasks"); console.log(o.tasks + " tasks, " + o.text.length + " chars of office knowledge"); })'
+
       - name: Upload release
         run: |
           REL="$(date -u +%Y%m%d%H%M%S)-${GITHUB_SHA::7}"
           echo "REL=$REL" >> "$GITHUB_ENV"
-          tar -C apps/hq-office --exclude=./deploy --exclude=./sync --exclude=./README.md --exclude=./CLAUDE.md -czf - . \
+          tar -C apps/hq-office --exclude=./deploy --exclude=./sync --exclude=./assistant --exclude=./README.md --exclude=./CLAUDE.md -czf - . \
             | $SSH "mkdir -p /opt/hq-office/releases/$REL && tar -xzf - -C /opt/hq-office/releases/$REL"
+          tar -C apps/hq-office/assistant --exclude=./.data -czf - . \
+            | $SSH "mkdir -p /opt/hq-office/assistant/releases/$REL && tar -xzf - -C /opt/hq-office/assistant/releases/$REL"
+
+      - name: Assistant secrets
+        env:
+          ANTHROPIC: ${{ secrets.HQ_OFFICE_ANTHROPIC_API_KEY }}
+          ELEVEN: ${{ secrets.PERSONA_TRAIN_ELEVENLABS_API_KEY }}
+          PASS: ${{ secrets.HQ_ASSISTANT_PASSWORD }}
+          VOICE: ${{ vars.HQ_ASSISTANT_VOICE_ID }}
+        run: |
+          [ -n "$ANTHROPIC" ] || echo "::warning::HQ_OFFICE_ANTHROPIC_API_KEY is not set — the assistant will not answer"
+          [ -n "$PASS" ] || echo "::warning::HQ_ASSISTANT_PASSWORD is not set — the assistant runs as a guest demo only"
+          printf 'ANTHROPIC_API_KEY=%s\nELEVENLABS_API_KEY=%s\nHQ_ASSISTANT_PASSWORD=%s\nELEVENLABS_VOICE_ID=%s\n' "$ANTHROPIC" "$ELEVEN" "$PASS" "$VOICE" \
+            | $SSH "umask 077 && cat > /opt/hq-office/assistant.env"
 
       - name: Activate
         run: $SSH bash -s -- "$DOMAIN" "$REL" < apps/hq-office/deploy/server.sh
 
       - name: Smoke test
         run: |
-          for path in / /tasks.js /tasks.auto.js; do
+          for path in / /tasks.js /tasks.auto.js /api/assistant/health; do
             code=$(curl -sS -o /dev/null -w '%{http_code}' --retry 8 --retry-delay 5 --retry-all-errors "https://$DOMAIN$path" || echo 000)
             echo "$code https://$DOMAIN$path"
             [ "$code" = 200 ] || exit 1
