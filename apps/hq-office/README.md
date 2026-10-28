@@ -81,15 +81,16 @@ API для встраивания: `VirtualOffice.openTask(id)`, `openDossier(id
 
 ## Выкладка
 
-- **GitHub Actions** `.github/workflows/deploy-hq-office.yml`: при каждом пуше
-  в `main` с изменениями в `apps/hq-office/` файлы уходят на Hetzner
-  (`/var/www/hq-office`), а `deploy/caddy-site.sh` держит блок Caddy для
-  `hq2.aicex.club, hq2.46-62-215-11.nip.io` (бэкап, проверка, откат при ошибке).
-  Адрес на nip.io работает сразу.
-- **hq2.aicex.club**: сейчас `*.aicex.club` по wildcard смотрит на другой сервер
-  (тот, где dashboard.aicex.club). Варианты:
-  1. в Cloudflare добавить A-запись `hq2` → `46.62.215.11` (DNS only) — и
-     перезапустить workflow, сертификат Caddy выпустит сам;
-  2. или на том сервере один раз выполнить
-     `bash /opt/ai-command-center/apps/hq-office/deploy/setup-server.sh` —
-     офис будет обновляться оттуда из GitHub каждые 10 минут.
+`.github/workflows/deploy-hq-office.yml` — на каждый пуш в `main` с изменениями
+в `apps/hq-office/` (и вручную из Actions):
+
+1. проверяет файлы данных (синтаксис, у каждой задачи дата и доказательство);
+2. по SSH (`HETZNER_SSH_KEY`, `vars.HETZNER_HOST` — сервер, на который смотрит
+   `*.aicex.club`) заливает релиз в `/opt/hq-office/releases/<id>`;
+3. `deploy/server.sh` атомарно переключает `/opt/hq-office/current`, держит
+   контейнер со статикой `aicex-hq-office` в сети `edge` и файл сайта
+   `/opt/edge/sites/hq-office.caddy` для edge-Caddy (проверка → reload, при
+   ошибке файл восстанавливается); хранит три последних релиза;
+4. проверяет, что `https://hq2.aicex.club/` и `tasks.js` отвечают 200.
+
+Откат: в Actions перезапустить успешный прошлый прогон или вернуть коммит.
