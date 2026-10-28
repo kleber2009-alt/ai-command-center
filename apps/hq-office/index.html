@@ -356,6 +356,7 @@
      агентов, окна отделов. tasks.js — история реальных задач для правой панели. -->
 <script src="office.config.js"></script>
 <script src="dept-content.js"></script>
+<script src="materials.js"></script>
 <script src="agent-content.js"></script>
 <script src="tasks.js"></script>
 
@@ -463,8 +464,17 @@ window.OFFICE_DATA = (() => {
     leadmagnet: A('Лид-магниты', 'Подарки за подписку: PDF, уроки, чек-листы', '#2fb9a6', 'doc',
       ['Придумывает подарок за подписку', 'PDF «Первые 10 000»', 'Чек-лист связок'],
       [o('funnels', 'передал подарок за подписку', 'Лид-магнит'),
+       o('threads', 'выложил приёмник в канал', 'Пост-приёмник'),
+       o('chats', 'добавил материал в каталог Директа', 'Новый материал'),
        o('head', 'показал идею лид-магнита', 'Идея лид-магнита')],
       [['Лид-магнит «Первые 10 000»', MK('presentation-svyazka.html')], ['12 рабочих связок', ART('Xs6q7BfiHsmEdYxSAXt9DU')]]),
+    threads: A('Threads-ветки', '3 ветки в день → материал в Telegram-канале', '#e8e8e8', 'flow',
+      ['Пишет 3 ветки на завтра', 'Ветка «скилл монтажа» с переходом в канал', 'Перевыпуск победителя с новым хуком'],
+      [o('you', 'прислал 3 ветки на апрув', '3 ветки Threads', 'Одобрите ветки Threads на завтра'),
+       o('leadmagnet', 'просит приёмник под ветку', 'Задание на приёмник'),
+       o('comments', 'ветка вышла — ловим комментарии', 'Ветка в 13:00'),
+       o('analytics', 'принёс цифры веток за 48 часов', 'Шеры, клики, подписки')],
+      [['Каталог бесплатных материалов', ART('5dj56wNJrKph3AYLbiibKH')], ['Код воронки Threads → Telegram', 'https://github.com/kleber2009-alt/ai-command-center/tree/claude/optimistic-newton-qysfiz/apps/threads-growth']]),
     avatar: A('Видео с аватаром', 'Ролики с ИИ-двойником без съёмки', '#e0559c', 'video',
       ['Ждёт текст', 'Ролик с аватаром', 'Озвучка клоном голоса'],
       [o('publish', 'передал ролик с аватаром', 'Ролик с аватаром')],
@@ -473,6 +483,7 @@ window.OFFICE_DATA = (() => {
     chats: A('Переписки', 'Ведёт переписки с клиентами', '#5ad1ff', 'chat',
       ['Отвечает в директ', 'Квалифицирует лидов из Direct', 'Догоняет молчунов'],
       [o('closer', 'передал 5 тёплых лидов', '5 тёплых лидов'),
+       o('threads', 'отдал боли из Директа для веток', 'Частые запросы Директа'),
        o('head', 'отдал сводку переписок', 'Сводка переписок')],
       [['Нейроворонка — ТЗ на Telegram-бота', ART('MEienkWZMA9dp3RugXzJRM')]]),
     comments: A('Ответы на комментарии', 'Отвечает на кодовые слова под постами', '#ffd166', 'chat',
@@ -512,7 +523,7 @@ window.OFFICE_DATA = (() => {
         agents:['product', 'market', 'briefing', 'specs', 'skills'] },
       { id:'marketing', name:'Отдел маркетинга', short:'Маркетинг',
         head:{ id:'firuza', name:'Фируза', title:'Руководитель отдела маркетинга', look:'f1' },
-        agents:['slides', 'creatives', 'funnels', 'publish', 'analytics', 'audience', 'scripts', 'montage', 'carousel', 'landings', 'leadmagnet', 'avatar'] },
+        agents:['slides', 'creatives', 'funnels', 'publish', 'analytics', 'audience', 'scripts', 'montage', 'carousel', 'landings', 'leadmagnet', 'threads', 'avatar'] },
       { id:'sales', name:'Отдел продаж', short:'Продажи',
         head:{ id:'bogdan', name:'Богдан', title:'РОП — руководитель отдела продаж', look:'m1' },
         agents:['chats', 'comments', 'consult', 'mailings', 'closer'] },

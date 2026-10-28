@@ -13,14 +13,16 @@
 """
 from __future__ import annotations
 
+import json
 import logging
 import re
 from datetime import date, datetime, timedelta, timezone
+from pathlib import Path
 from zoneinfo import ZoneInfo
 
 from sqlalchemy import func, select, update
 from sqlalchemy.dialects.postgresql import insert as pg_insert
-from sqlalchemy.orm import Session
+from sqlalchemy.orm import Session, object_session
 
 from app.config import settings
 from app.core.security import decrypt_token, encrypt_token
@@ -253,7 +255,29 @@ def seed(db: Session) -> dict:
     if get_state(db, "cluster_weights") is None:
         set_state(db, "cluster_weights", {str(k): v for k, v in schedule.default_weights().items()})
     db.flush()
-    return {"facts_added": facts, "donors_added": donors}
+    return {"facts_added": facts, "donors_added": donors, "receivers_added": seed_receivers(db)}
+
+
+RECEIVERS_FILE = Path(__file__).resolve().parent / "data" / "receivers.json"
+
+
+def seed_receivers(db: Session) -> int:
+    """Библиотека приёмников = каталог бесплатных материалов канала (тот же, что у ИИ в Директе).
+    Идемпотентно по ссылке; эмбеддинги не считаем (Voyage без оплаты — 3 запроса/мин)."""
+    known = set(db.scalars(select(FunnelReceiver.url).where(FunnelReceiver.url.is_not(None))).all())
+    added = 0
+    for item in json.loads(RECEIVERS_FILE.read_text(encoding="utf-8")):
+        if item["url"] in known:
+            continue
+        access = ("открывается только подписчикам основного канала" if item["channel"] == "main"
+                  else "закрытый канал @ai_razbory, открывается по прямой ссылке")
+        db.add(FunnelReceiver(
+            url=item["url"], title=item["title"], kind=item["kind"], clusters=item["clusters"],
+            contents=f"{item['contents']} Когда предлагать: {item['when']}. Доступ: {access}.",
+            status="active", published_at=now_utc()))
+        added += 1
+    db.flush()
+    return added
 
 
 # ════════════════════════════════════════════════════════════════════════════
@@ -264,8 +288,16 @@ def active_hook_text(t: FunnelThread) -> str:
     return hooks[t.active_hook]["text"] if 0 <= t.active_hook < len(hooks) else ""
 
 
+def receiver_post_url(t: FunnelThread) -> str | None:
+    """Ссылка на пост-приёмник для {post} (только у опубликованного приёмника)."""
+    db = object_session(t)
+    rec = db.get(FunnelReceiver, t.receiver_id) if (db is not None and t.receiver_id) else None
+    return rec.url if rec is not None and rec.status == "active" else None
+
+
 def full_posts(t: FunnelThread, placeholder: str | None = None) -> list[str]:
-    return qa.render_posts(active_hook_text(t), list(t.posts or []), t.link_url, placeholder)
+    return qa.render_posts(active_hook_text(t), list(t.posts or []), t.link_url, placeholder,
+                           post=receiver_post_url(t))
 
 
 def thread_view(db: Session, t: FunnelThread, note: str | None = None) -> dict:
@@ -291,7 +323,7 @@ def thread_view(db: Session, t: FunnelThread, note: str | None = None) -> dict:
 def run_qa(db: Session, t: FunnelThread, check_link: bool = False) -> dict:
     rec = db.get(FunnelReceiver, t.receiver_id) if t.receiver_id else None
     live = tg.link_is_live(t.link_url) if (check_link and t.link_url) else None
-    checks = qa.run_checks(active_hook_text(t), list(t.posts or []), link=t.link_url,
+    checks = qa.run_checks(active_hook_text(t), list(t.posts or []), link=t.link_url, post=receiver_post_url(t),
                            voice_level=settings.funnel_voice_level,
                            has_receiver=bool(rec and rec.status == "active"), link_live=live)
     result = qa.summarize(checks)

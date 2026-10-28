@@ -23,7 +23,7 @@ window.OFFICE_CONFIG = {
       head: { id: 'firuza', name: 'Фируза', title: 'Руководитель отдела маркетинга', look: 'f1',
               photo: 'people/firuza-face.jpg', model: 'people/firuza.glb' },
       agents: ['slides', 'creatives', 'funnels', 'publish', 'analytics', 'audience',
-               'scripts', 'montage', 'carousel', 'landings', 'leadmagnet', 'avatar'] },
+               'scripts', 'montage', 'carousel', 'landings', 'leadmagnet', 'threads', 'avatar'] },
     { id: 'sales', name: 'Отдел продаж',
       head: { id: 'bogdan', name: 'Богдан', title: 'РОП — руководитель отдела продаж', look: 'm1',
               photo: 'people/bogdan-face.jpg' },
@@ -37,6 +37,7 @@ window.OFFICE_CONFIG = {
     product: { task: 'Дорабатывает Persona Studio 2.0' },
     market:  { task: 'Собирает игровые концепции' },
     scripts: { task: 'Пишет 10 продающих рилсов' },
+    threads: { task: 'Пишет 3 ветки на завтра' },
   },
   products: [
     { title: 'Транскрибация', url: 'https://transcribe.aicex.club', note: 'Расшифровка аудио и видео, Telegram Mini App' },
@@ -49,5 +50,7 @@ window.OFFICE_CONFIG = {
     { title: 'AI Growth Office', url: 'https://office.aicex.club', note: 'Сайт ИИ-офиса' },
     { title: 'Маркетинг', url: 'https://marketing.aicex.club', note: 'Витрина работ отдела маркетинга' },
   ],
-  materials: {},
+  materials: {
+    threads: [{ title: 'Бот воронки Threads: карточки веток в теме «Threads»', url: 'https://t.me/c/3008075559/18787' }],
+  },
 };

@@ -14,7 +14,8 @@ from __future__ import annotations
 import re
 from dataclasses import asdict, dataclass
 
-LINK = "{link}"
+LINK = "{link}"   # подписка на канал (своя ссылка-приглашение на ветку)
+POST = "{post}"   # пост-приёмник с материалом (у закрытого канала открывается после подписки)
 MAX_POST = 500
 MAX_HOOK_WORDS = 15
 CLARIFY = "[уточнить]"
@@ -39,11 +40,13 @@ class Check:
     hard: bool = False
 
 
-def render_posts(hook: str, body: list[str], link: str | None, placeholder: str | None = None) -> list[str]:
-    """Полный текст ветки: пост 1 = хук, дальше тело; {link} → реальная ссылка.
+def render_posts(hook: str, body: list[str], link: str | None, placeholder: str | None = None,
+                 post: str | None = None) -> list[str]:
+    """Полный текст ветки: пост 1 = хук, дальше тело; {link} → ссылка-подписка, {post} → пост с материалом.
     Без ссылки — placeholder (для показа) или строка длиной типичной ссылки (для проверки длин)."""
     sub = link or placeholder or ("x" * LINK_PLACEHOLDER_LEN)
-    return [p.replace(LINK, sub) for p in [hook, *body]]
+    psub = post or placeholder or ("x" * LINK_PLACEHOLDER_LEN)
+    return [p.replace(LINK, sub).replace(POST, psub) for p in [hook, *body]]
 
 
 def first_line(text: str) -> str:
@@ -73,9 +76,9 @@ def link_positions(posts: list[str]) -> list[int]:
 
 
 def run_checks(hook: str, body: list[str], *, link: str | None, voice_level: int,
-               has_receiver: bool, link_live: bool | None = None) -> list[Check]:
+               has_receiver: bool, link_live: bool | None = None, post: str | None = None) -> list[Check]:
     raw = [hook, *body]
-    full = render_posts(hook, body, link)
+    full = render_posts(hook, body, link, post=post)
     n = len(raw)
     checks: list[Check] = []
 
@@ -135,6 +138,9 @@ def run_checks(hook: str, body: list[str], *, link: str | None, voice_level: int
     checks.append(Check(f"Громкость {voice_level}/5", vol_ok, "" if vol_ok else note))
 
     checks.append(Check("Приёмник в канале есть", has_receiver, "" if has_receiver else "нужен приёмник"))
+    if any(POST in p for p in raw) and not post:
+        checks.append(Check("Есть пост для {post}", False, "ветка ссылается на материал, а приёмник не выбран",
+                            hard=True))
     if link_live is None:
         checks.append(Check("Ссылка живая", True, "не проверялась"))
     else:
@@ -196,6 +202,10 @@ def _selftest() -> None:
     assert {"Каждый пост ≤500 символов", "Цифры подтверждены (нет «[уточнить]»)", "4–10 постов",
             "Финал с переходом в TG"} <= names, names
     assert render_posts("h {link}", ["b {link}"], "L") == ["h L", "b L"]
+    assert render_posts("h", ["подпишись {link} и забирай {post}"], "L", post="P") == ["h", "подпишись L и забирай P"]
+    nopost = summarize(run_checks(hook, [*body[:-1], body[-1] + " {post}"], link="L", voice_level=4,
+                                  has_receiver=False))
+    assert any("{post}" in b for b in blocking(nopost))
     assert count_numbers("стилист 30–80К за 35 минут") == 3
     print("qa selftest OK")
 
