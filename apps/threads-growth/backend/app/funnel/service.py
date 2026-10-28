@@ -216,6 +216,130 @@ def donor_posts(db: Session, limit: int = 15) -> list[dict]:
              "xn": float(p.xn_score) if p.xn_score is not None else None} for p in rows]
 
 
+# ── Исследование: что реально залетает (research.py) ─────────────────────────
+def research_queries() -> list[str]:
+    return [q.strip() for q in settings.funnel_research_queries.split(",") if q.strip()]
+
+
+def run_research(db: Session) -> dict:
+    """Сбор постов доноров и топа поиска за 30 дней → viral_posts(status='research') с xn."""
+    from app.funnel import research
+
+    donors = set(donor_handles())
+    donors |= {c.username.lower() for c in db.scalars(select(Competitor).where(
+        Competitor.platform == "threads", Competitor.is_active.is_(True))).all()}
+    users = research.fresh(research.fetch_users(sorted(donors), 40)) if donors else []
+    search = research.fresh(research.fetch_search(research_queries(), 25))
+    scores = {**research.score_batch(users), **research.score_batch(search, group_by_author=False)}
+    saved = 0
+    for p in users + search:
+        xn, med = scores.get(p.code, (0.0, 0.0))
+        row = db.scalar(select(ViralPost).where(ViralPost.external_id == p.code))
+        if row is None:
+            row = ViralPost(source="threads", external_id=p.code, status="research")
+            db.add(row)
+            saved += 1
+        elif row.status not in ("research",):
+            continue                     # пост уже в другом конвейере — не трогаем
+        row.author, row.url, row.published_at = p.author, p.url, p.published_at
+        if "\n\n— " not in (row.text or ""):       # развёрнутую ветку не затираем одним хуком
+            row.text = p.text
+        row.likes, row.comments, row.reposts, row.views = p.likes, p.replies, p.reposts + p.shares, p.views
+        row.author_median_views = med
+        row.xn_score = xn
+        row.category = research.category(xn)
+    db.flush()
+    # Лучшие посты разворачиваем в ветку целиком: агентам нужна структура, а не только хук.
+    expanded = 0
+    top = db.scalars(select(ViralPost).where(ViralPost.status == "research", ViralPost.xn_score >= research.PROVEN_XN)
+                     .order_by(ViralPost.xn_score.desc()).limit(research.THREAD_EXPAND_TOP * 3)).all()
+    for row in [r for r in top if "\n\n— " not in (r.text or "") and r.url][:research.THREAD_EXPAND_TOP]:
+        try:
+            body = research.fetch_thread_body(row.url)
+        except Exception as e:  # noqa: BLE001 — без тела ветки хит всё равно полезен
+            log.warning("thread body %s failed: %s", row.url, e)
+            continue
+        if len(body) > 1:
+            row.text = "\n\n— ".join(body)
+            expanded += 1
+    db.flush()
+    return {"donors": len(donors), "posts": len(users) + len(search), "new": saved, "expanded": expanded,
+            "hits": len(research_hits(db, 100))}
+
+
+def _research_row(p: ViralPost, n: int = 900) -> dict:
+    return {"id": p.id, "author": p.author, "xn": float(p.xn_score or 0), "likes": p.likes, "replies": p.comments,
+            "reposts_shares": p.reposts, "date": p.published_at.date().isoformat() if p.published_at else None,
+            "text": (p.text or "")[:n], "url": p.url}
+
+
+def research_hits(db: Session, limit: int = 25) -> list[dict]:
+    from app.funnel.research import PROVEN_XN
+
+    since = now_utc() - timedelta(days=30)
+    rows = db.scalars(select(ViralPost).where(
+        ViralPost.status == "research", ViralPost.xn_score >= PROVEN_XN,
+        (ViralPost.published_at >= since) | ViralPost.published_at.is_(None),
+    ).order_by(ViralPost.xn_score.desc()).limit(limit)).all()
+    return [_research_row(p) for p in rows]
+
+
+def research_text(db: Session, res: dict | None = None, limit: int = 5) -> str:
+    """Сводка исследования для темы «Threads» и команды /top."""
+    hits = research_hits(db, limit)
+    head = "🔎 <b>Что залетает в Threads за 30 дней</b>"
+    if res:
+        head += (f"\nСобрано {res.get('posts', 0)} постов ({res.get('donors', 0)} доноров + поиск), "
+                 f"хитов (xn ≥ 2): {res.get('hits', 0)}")
+    if not hits:
+        return head + "\nХитов пока нет — проверьте APIFY_TOKEN и список доноров (FUNNEL_DONORS)."
+    lines = [head]
+    for h in hits:
+        first = (h["text"] or "").strip().splitlines()[0][:140] if h["text"] else ""
+        lines.append(f"• xn {h['xn']:.1f} · {h['likes']} лайков · @{cards.esc(h['author'])}: {cards.esc(first)}"
+                     + (f' <a href="{cards.esc(h["url"])}">→</a>' if h.get("url") else ""))
+    return "\n".join(lines)
+
+
+def research_flops(db: Session, limit: int = 8) -> list[dict]:
+    since = now_utc() - timedelta(days=30)
+    rows = db.scalars(select(ViralPost).where(
+        ViralPost.status == "research", ViralPost.xn_score < 0.6, ViralPost.published_at >= since,
+    ).order_by(ViralPost.xn_score.asc()).limit(limit)).all()
+    return [_research_row(p, 300) for p in rows]
+
+
+def own_history(db: Session, limit: int = 30) -> list[dict]:
+    rows = db.scalars(select(FunnelThread).where(FunnelThread.status == "published",
+                                                 FunnelThread.verdict.is_not(None))
+                      .order_by(FunnelThread.published_at.desc()).limit(limit)).all()
+    return [{"topic": t.topic, "cluster": t.cluster, "hook": qa.first_line(active_hook_text(t)),
+             "forecast": ((t.qa or {}).get("forecast") or {}).get("score"), "verdict": t.verdict,
+             "metrics": {k: (t.metrics or {}).get(k) for k in ("likes", "replies", "shares", "clicks", "joins")}}
+            for t in rows]
+
+
+def forecast(db: Session, t: FunnelThread) -> dict | None:
+    """Прогноз виральности ветки 0–10 → t.qa['forecast']. None, если агент недоступен."""
+    ids = set((t.qa or {}).get("evidence_ids") or [])
+    hits = research_hits(db, 25)
+    hits.sort(key=lambda h: h["id"] not in ids)          # опорные хиты темы — первыми
+    try:
+        res = agents.forecast_thread(
+            {"topic": t.topic, "cluster": t.cluster, "template": t.template, "hypothesis": t.hypothesis,
+             "posts": full_posts(t, LINK_DISPLAY)},
+            hits=hits, flops=research_flops(db), history=own_history(db))
+    except agents.AgentError as e:
+        log.warning("forecast %s failed: %s", t.id, e)
+        return None
+    known = {h["id"]: h for h in hits}
+    res["evidence"] = [{**e, **{k: known[e["id"]][k] for k in ("author", "xn", "likes", "url")}}
+                       for e in res.get("evidence") or [] if e.get("id") in known]
+    t.qa = {**(t.qa or {}), "forecast": res}
+    db.flush()
+    return res
+
+
 def add_receiver(db: Session, url: str, description: str) -> FunnelReceiver:
     url = url.strip()
     if not re.match(r"^(https?://)?t\.me/", url):
@@ -317,6 +441,7 @@ def thread_view(db: Session, t: FunnelThread, note: str | None = None) -> dict:
         "autopublish": settings.funnel_autopublish, "link_url": t.link_url,
         "permalink": t.permalink, "note": note,
         "media_hint": (t.qa or {}).get("media_hint"), "editor": (t.qa or {}).get("editor"),
+        "forecast": (t.qa or {}).get("forecast"),
     }
 
 
@@ -327,7 +452,7 @@ def run_qa(db: Session, t: FunnelThread, check_link: bool = False) -> dict:
                            voice_level=settings.funnel_voice_level,
                            has_receiver=bool(rec and rec.status == "active"), link_live=live)
     result = qa.summarize(checks)
-    for key in ("editor", "media_hint"):          # заметки агентов переживают перепроверку
+    for key in ("editor", "media_hint", "evidence_ids", "forecast"):   # заметки агентов переживают перепроверку
         if (t.qa or {}).get(key):
             result[key] = t.qa[key]
     t.qa = result
@@ -521,7 +646,7 @@ def plan_day(db: Session, day: date) -> list[FunnelThread]:
         reserve = [{"id": r.id, "topic": r.topic, "cluster": r.cluster} for r in reserve_rows]
         topics = agents.plan_topics(
             day.isoformat(), spec, recent_topics=[t for t in recent if t], reserve=reserve,
-            donor_posts=donor_posts(db), receivers=[receiver_dict(r) for r in db.scalars(
+            donor_posts=research_hits(db), receivers=[receiver_dict(r) for r in db.scalars(
                 select(FunnelReceiver).where(FunnelReceiver.status == "active")).all()],
             facts=facts_texts(db))
         by_slot = {int(x.get("slot", -1)): x for x in topics}
@@ -536,6 +661,7 @@ def plan_day(db: Session, day: date) -> list[FunnelThread]:
                 cluster=s["cluster"], template=s["template"],
                 topic=got.get("topic") or f"[тема не предложена] {s['cluster_name']}",
                 hypothesis=got.get("hypothesis") or "", kind="new", status="planned",
+                qa={"evidence_ids": [int(x) for x in got.get("evidence") or []][:3]},
             )
             db.add(t)
             created.append(t)
@@ -628,8 +754,10 @@ def generate_thread(db: Session, t: FunnelThread) -> FunnelThread:
     recs = receivers_for(db, t.cluster, t.topic or "")
     if t.kind == "new":
         cl = schedule.CLUSTERS[t.cluster]
+        ids = set((t.qa or {}).get("evidence_ids") or [])
         spec = {"topic": t.topic, "hypothesis": t.hypothesis, "cluster": t.cluster, "cluster_name": cl.name,
-                "template": t.template, "template_name": schedule.TEMPLATE_NAMES.get(t.template)}
+                "template": t.template, "template_name": schedule.TEMPLATE_NAMES.get(t.template),
+                "proven_hits_to_mirror": [h for h in research_hits(db, 50) if h["id"] in ids]}
         res = agents.write_thread(spec, facts=facts, receivers=recs, voice_level=voice)
         t.hooks = [dict(h) for h in (res.get("hooks") or [])][:6]
         t.active_hook = 0
@@ -641,13 +769,13 @@ def generate_thread(db: Session, t: FunnelThread) -> FunnelThread:
         t.receiver_id = rid if rid in {r["id"] for r in recs} else None
         t.receiver_brief = (res.get("receiver_brief") or "").strip() or None
         if res.get("media_hint"):
-            t.qa = {"media_hint": res["media_hint"]}
+            t.qa = {**(t.qa or {}), "media_hint": res["media_hint"]}
         if not t.hooks or not t.posts:
             raise agents.AgentError("агент вернул пустую ветку")
         rec = db.get(FunnelReceiver, t.receiver_id) if t.receiver_id else None
         rev = agents.review_thread(_thread_payload(t), facts=facts,
                                    receiver=receiver_dict(rec) if rec else None, voice_level=voice,
-                                   donor_texts=[p["text"] for p in donor_posts(db, 5)])
+                                   donor_texts=[h["text"] for h in research_hits(db, 8)])
         _apply_review(t, rev)
     else:
         t.receiver_id = recs[0]["id"] if recs else None   # свежий приёмник под перевыпуск
@@ -658,6 +786,23 @@ def generate_thread(db: Session, t: FunnelThread) -> FunnelThread:
         _shorten_if_needed(db, t, result)
     except agents.AgentError as e:   # останется ⛔ в проверке — автор сократит правкой
         log.warning("shorten %s failed: %s", t.id, e)
+    fc = forecast(db, t)
+    if fc and fc["score"] < settings.funnel_min_score and t.kind == "new" and fc.get("boost"):
+        # Слабую ветку агент один раз дорабатывает по главной подсказке аналитика.
+        try:
+            before = (list(t.posts), [dict(h) for h in t.hooks])
+            _apply_edit_result(t, agents.edit_thread(
+                {"topic": t.topic, "hook": active_hook_text(t), "posts": t.posts, "facts_needed": t.facts_needed},
+                f"Подними виральность ветки (сейчас {fc['score']}/10): {fc['boost']}",
+                facts=facts, voice_level=voice))
+            run_qa(db, t)
+            fc2 = forecast(db, t)
+            if fc2 is None or fc2["score"] < fc["score"] or not t.qa.get("passed", True):
+                t.posts, t.hooks = before                # доработка не помогла — оставляем первую версию
+                t.qa = {**t.qa, "forecast": fc}
+                run_qa(db, t)
+        except agents.AgentError as e:
+            log.warning("boost %s failed: %s", t.id, e)
     t.status = "draft"
     t.error = None
     db.flush()
@@ -755,6 +900,7 @@ def apply_edit(db: Session, thread_id: int, text: str) -> str:
             add_fact(db, text, kind="fact", source="card")   # ответ автора про цифры — в банк
     t.status = "draft"
     run_qa(db, t)
+    forecast(db, t)
     send_card(db, t, note=f"Правка: {summary}. Новая версия — нужен ✅")
     return f"✏️ Ветка №{t.id}: {summary}."
 
@@ -773,6 +919,7 @@ def swap_hook(db: Session, thread_id: int, idx: int) -> str:
     t.active_hook = idx
     t.status = "draft"
     run_qa(db, t)
+    forecast(db, t)
     send_card(db, t, note=f"Хук {idx + 1} ({t.hooks[idx].get('mechanic', '')}). Нужен ✅")
     return f"🔄 Ветка №{t.id}: хук {idx + 1}."
 
@@ -797,7 +944,7 @@ def replace_thread(db: Session, thread_id: int) -> FunnelThread:
              "cluster_name": schedule.CLUSTERS[cluster].name, "template": template}]
     recent = [t.topic for t in day_threads(db, old.plan_date) if t.topic]
     topics = agents.plan_topics(old.plan_date.isoformat(), spec, recent_topics=recent, reserve=[],
-                                donor_posts=donor_posts(db), receivers=[], facts=facts_texts(db))
+                                donor_posts=research_hits(db), receivers=[], facts=facts_texts(db))
     got = topics[0] if topics else {}
     new = FunnelThread(account_id=old.account_id, plan_date=old.plan_date, slot_at=old.slot_at,
                        cluster=cluster, template=template, topic=got.get("topic") or schedule.CLUSTERS[cluster].name,
@@ -1335,7 +1482,23 @@ def weekly(db: Session, today: date, update_weights: bool) -> str:
     period = f"{start:%d.%m}–{(end - timedelta(days=1)):%d.%m}"
     return cards.weekly_report(period, totals if rows else {}, best, worst, clusters,
                                old, new if update_weights else {},
-                               {c: cl.name for c, cl in schedule.CLUSTERS.items()})
+                               {c: cl.name for c, cl in schedule.CLUSTERS.items()},
+                               calibration=forecast_calibration(db))
+
+
+def forecast_calibration(db: Session, days: int = 30) -> str:
+    """Средний прогноз у победителей и у остальных за 30 дней — видно, угадывает ли аналитик."""
+    rows = db.scalars(select(FunnelThread).where(FunnelThread.verdict.is_not(None),
+                                                 FunnelThread.published_at >= now_utc() - timedelta(days=days))).all()
+    pairs = [(((t.qa or {}).get("forecast") or {}).get("score"), t.verdict) for t in rows]
+    pairs = [(s, v) for s, v in pairs if s is not None]
+    if len(pairs) < 3:
+        return ""
+    win = [s for s, v in pairs if v == "winner"]
+    rest = [s for s, v in pairs if v != "winner"]
+    avg = lambda xs: sum(xs) / len(xs) if xs else 0  # noqa: E731
+    return (f"победители в среднем получали {avg(win):.1f}/10, остальные {avg(rest):.1f}/10 "
+            f"({len(pairs)} веток за {days} дней)")
 
 
 def refresh_account_token(db: Session) -> dict:

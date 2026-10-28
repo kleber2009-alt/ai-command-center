@@ -31,6 +31,7 @@ HELP = (
     "Правка — ответом на карточку текстом или голосом («пост 3: …» — своя версия поста).\n"
     "/plan — темы на завтра\n"
     "/stats — цифры за неделю\n"
+    "/top — что сейчас залетает в Threads (основа планов и прогнозов)\n"
     "/story текст — история или факт в банк (без текста — следующим сообщением или голосом)\n"
     "/receiver t.me/канал/123 описание — добавить пост-приёмник"
 )
@@ -329,6 +330,16 @@ async def cmd_stats(update, context) -> None:
                await _call(update.effective_message, service.weekly, day, False), is_html=True)
 
 
+async def cmd_top(update, context) -> None:
+    """Что сейчас залетает: топ хитов из исследования (основа планов и прогнозов)."""
+    from app.funnel import service
+
+    if not _is_editor(update):
+        return
+    await _say(update.effective_message, await _call(update.effective_message,
+                                                     lambda db: service.research_text(db, None, 10)), is_html=True)
+
+
 async def cmd_story(update, context) -> None:
     from app.funnel import service
 
@@ -392,6 +403,7 @@ def register(app) -> None:
     app.add_handler(CommandHandler("funnel", cmd_funnel))
     app.add_handler(CommandHandler("plan", cmd_plan))
     app.add_handler(CommandHandler("stats", cmd_stats))
+    app.add_handler(CommandHandler("top", cmd_top))
     app.add_handler(CommandHandler("story", cmd_story))
     app.add_handler(CommandHandler("receiver", cmd_receiver))
     app.add_handler(ChatMemberHandler(on_chat_member, ChatMemberHandler.CHAT_MEMBER))

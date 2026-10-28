@@ -1,0 +1,171 @@
+"""Исследование перед планом: что реально залетает в Threads у доноров и по темам.
+
+Каждое утро (05:00 МСК, задача `research`) собираем через Apify свежие посты
+аккаунтов-доноров (FUNNEL_DONORS) и топ поиска по ключевым словам
+(FUNNEL_RESEARCH_QUERIES), считаем относительную виральность и кладём в
+viral_posts со статусом `research`. Лучшие посты разворачиваем в ветку целиком
+(режим «Post by Link»), чтобы агенты видели структуру, а не только хук.
+
+Виральность относительная (как во всём приложении): xn = вовлечённость поста /
+медиана вовлечённости автора (для поиска — медиана выборки по ключевому слову).
+Вовлечённость = лайки + 2·ответы + 3·репосты + 3·шеры + 2·цитаты: шеры и ответы
+весят больше лайков (метрика победителя в скилле — «шеры + комментарии»).
+
+Актор: futurizerush/meta-threads-scraper (APIFY_THREADS_ACTOR), режимы user /
+search / post_link. Проверка чистой логики:  python -m app.funnel.research
+"""
+from __future__ import annotations
+
+import logging
+from dataclasses import dataclass
+from datetime import datetime, timedelta, timezone
+from statistics import median
+
+from app.config import settings
+
+log = logging.getLogger("funnel.research")
+
+DEFAULT_ACTOR = "futurizerush/meta-threads-scraper"
+PROVEN_XN = 2.0          # пост в 2+ раза сильнее обычного у автора — «доказанный» сигнал
+THREAD_EXPAND_TOP = 5    # сколько лучших постов разворачивать в ветку целиком
+
+
+@dataclass
+class Post:
+    code: str
+    author: str
+    text: str
+    url: str
+    published_at: datetime | None
+    likes: int = 0
+    replies: int = 0
+    reposts: int = 0
+    shares: int = 0
+    quotes: int = 0
+    views: int = 0
+    query: str = ""          # ключевое слово, если пост из поиска
+
+    @property
+    def engagement(self) -> int:
+        return self.likes + 2 * self.replies + 3 * self.reposts + 3 * self.shares + 2 * self.quotes
+
+
+def _int(v) -> int:
+    try:
+        return int(v or 0)
+    except (TypeError, ValueError):
+        return 0
+
+
+def _dt(raw: dict) -> datetime | None:
+    ts = raw.get("created_at_timestamp")
+    if ts:
+        return datetime.fromtimestamp(int(ts), tz=timezone.utc)
+    s = raw.get("created_at")
+    if not s:
+        return None
+    try:
+        return datetime.fromisoformat(str(s).replace("Z", "+00:00")).astimezone(timezone.utc)
+    except ValueError:
+        return None
+
+
+def normalize(raw: dict, query: str = "") -> Post | None:
+    if raw.get("record_type") not in (None, "post"):
+        return None
+    code = str(raw.get("post_code") or raw.get("post_url") or "")
+    text = str(raw.get("text_content") or "")
+    if not code or not text.strip():
+        return None
+    return Post(
+        code=code, author=str(raw.get("username") or raw.get("requested_username") or ""),
+        text=text, url=str(raw.get("post_url") or ""), published_at=_dt(raw),
+        likes=_int(raw.get("like_count")), replies=_int(raw.get("reply_count")),
+        reposts=_int(raw.get("repost_count")), shares=_int(raw.get("share_count")),
+        quotes=_int(raw.get("quote_count")), views=_int(raw.get("view_count")), query=query,
+    )
+
+
+def score_batch(posts: list[Post], group_by_author: bool = True) -> dict[str, tuple[float, float]]:
+    """code → (xn, медиана группы). Группа — автор (доноры) или вся выборка (поиск)."""
+    groups: dict[str, list[Post]] = {}
+    for p in posts:
+        groups.setdefault(p.author if group_by_author else (p.query or "_"), []).append(p)
+    out: dict[str, tuple[float, float]] = {}
+    for items in groups.values():
+        med = median([p.engagement for p in items]) if items else 0
+        base = med if med > 0 else 1.0
+        for p in items:
+            out[p.code] = (round(p.engagement / base, 2), float(med))
+    return out
+
+
+def category(xn: float) -> str:
+    if xn >= settings.xn_category_a:
+        return "A"
+    if xn >= settings.xn_category_b:
+        return "B"
+    return "C" if xn >= settings.xn_category_c else "D"
+
+
+# ── Apify ────────────────────────────────────────────────────────────────────
+def _run(run_input: dict) -> list[dict]:
+    if not settings.apify_token:
+        raise RuntimeError("APIFY_TOKEN не задан — исследование Threads невозможно.")
+    from apify_client import ApifyClient
+
+    client = ApifyClient(settings.apify_token)
+    actor = settings.apify_threads_actor or DEFAULT_ACTOR
+    run = client.actor(actor).call(run_input=run_input, timeout_secs=600)
+    return list(client.dataset(run["defaultDatasetId"]).iterate_items())
+
+
+def fetch_users(usernames: list[str], max_posts: int = 40) -> list[Post]:
+    if not usernames:
+        return []
+    items = _run({"mode": "user", "usernames": usernames[:20], "max_posts": max(10, max_posts)})
+    return [p for p in (normalize(i) for i in items) if p]
+
+
+def fetch_search(keywords: list[str], max_posts: int = 30) -> list[Post]:
+    out: list[Post] = []
+    for kw in keywords:
+        items = _run({"mode": "search", "keywords": [kw], "max_posts": max(10, max_posts),
+                      "search_filter": "top", "start_date": "30 days"})
+        out += [p for p in (normalize(i, kw) for i in items) if p]
+    return out
+
+
+def fetch_thread_body(url: str) -> list[str]:
+    """Пост по ссылке → тексты постов автора в этой ветке по порядку (вся ветка, не только хук)."""
+    items = _run({"mode": "post_link", "post_links": [url], "max_posts": 15})
+    posts = [p for p in (normalize(i) for i in items) if p]
+    if not posts:
+        return []
+    author = posts[0].author
+    mine = [p for p in posts if p.author == author]
+    mine.sort(key=lambda p: p.published_at or datetime.min.replace(tzinfo=timezone.utc))
+    return [p.text for p in mine]
+
+
+def fresh(posts: list[Post], days: int = 30) -> list[Post]:
+    since = datetime.now(timezone.utc) - timedelta(days=days)
+    return [p for p in posts if p.published_at is None or p.published_at >= since]
+
+
+def _selftest() -> None:
+    raw = {"record_type": "post", "username": "anna", "post_code": "ABC", "post_url": "https://threads.com/@anna/post/ABC",
+           "text_content": "ОФИГЕЛА от промпта", "created_at": "2026-10-20T10:00:00Z",
+           "like_count": 100, "reply_count": 20, "repost_count": 5, "share_count": 10, "quote_count": 1}
+    p = normalize(raw)
+    assert p and p.engagement == 100 + 40 + 15 + 30 + 2 and p.published_at.year == 2026
+    assert normalize({"record_type": "profile", "username": "x"}) is None
+    posts = [Post(f"c{i}", "anna", "t", "", None, likes=10) for i in range(5)] + [Post("hit", "anna", "t", "", None, likes=80)]
+    sc = score_batch(posts)
+    assert sc["hit"][0] == 8.0 and sc["c0"][0] == 1.0
+    assert category(8.0) == "A" and category(1.0) == "D"
+    print("research selftest OK")
+
+
+if __name__ == "__main__":
+    _selftest()

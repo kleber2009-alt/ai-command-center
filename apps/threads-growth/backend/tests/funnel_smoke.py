@@ -63,6 +63,7 @@ jobs.get_engine = lambda: engine  # type: ignore[assignment]
 
 # ── фейк Claude ──────────────────────────────────────────────────────────────
 LLM_CALLS: list[str] = []
+FORECASTS: list[str] = []
 MECHANICS = ["признание", "заявление", "мольба", "команда", "юмор", "замена"]
 
 
@@ -88,8 +89,9 @@ def fake_structured(role: str, payload: str, schema: dict, *, effort: str, max_t
     LLM_CALLS.append(role)
     if role == "funnel_plan":
         slots = [int(x) for x in re.findall(r'"slot": (\d+)', payload)]
+        hit_ids = [int(x) for x in re.findall(r'"id": (\d+)', payload.split("Исследование:", 1)[-1])][:2]
         return {"slots": [{"slot": s, "topic": f"Тема слота {s}: ИИ находит паттерн самосаботажа",
-                           "hypothesis": "признание vs юмор", "reserve_id": 0} for s in slots]}
+                           "hypothesis": "признание vs юмор", "reserve_id": 0, "evidence": hit_ids} for s in slots]}
     if schema is agents.HOOKS_SCHEMA:
         return {"hooks": fake_hooks("НОВЫЙ УГОЛ: ")}
     if role == "funnel_write":
@@ -110,6 +112,15 @@ def fake_structured(role: str, payload: str, schema: dict, *, effort: str, max_t
             return {"title": "План на неделю после сессии", "kind": "prompts",
                     "contents": "3 промпта + чек-лист", "clusters": [1], "text": "Что будет, если…\n«промпт»"}
         return {"title": "Готовый приёмник", "kind": "instruction", "contents": "инструкция", "clusters": [1, 2]}
+    if role == "funnel_forecast":
+        FORECASTS.append(payload)
+        hits = payload.split("Доказанные хиты за 30 дней:\n", 1)[1].split("\n\nПровалы", 1)[0]
+        ids = [int(x) for x in re.findall(r'"id": (\d+)', hits)][:1]
+        weak = len(FORECASTS) == 1                    # первая ветка дня — слабая, проверяем доработку
+        return {"score": 4.5 if weak else 7.6, "verdict": "повторяет механику хита донора",
+                "why": ["тема про самого читателя", "хит донора с xn 8"],
+                "evidence": [{"id": i, "note": "та же боль и механика признания"} for i in ids] + [{"id": 999999, "note": "выдуманный"}],
+                "risks": ["пост 4 длинный"], "boost": "добавить цифру в первую строку"}
     if role == "funnel_reply":
         return {"reply": "Спасибо! Попробуйте второй этап отдельно — там самое интересное.",
                 "skip": "спам" in payload}
@@ -140,6 +151,25 @@ tg._call = fake_tg  # type: ignore[assignment]
 tg.get_file_bytes = lambda file_id: (b"\xff\xd8fakejpeg", f"photos/{file_id}.jpg")  # type: ignore[assignment]
 tg.link_is_live = lambda url: True  # type: ignore[assignment]
 storage.configured = lambda: True  # type: ignore[assignment]
+
+# ── фейк Apify: исследование ──────────────────────────────────────────────────
+from app.funnel import research  # noqa: E402
+
+_now = datetime.now(ZoneInfo("UTC"))
+
+
+def _rp(code, author, likes, text, shares=0, query=""):
+    return research.Post(code, author, text, f"https://www.threads.com/@{author}/post/{code}",
+                         _now - timedelta(days=3), likes=likes, replies=likes // 10, shares=shares, query=query)
+
+
+research.fetch_users = lambda users, n=40: (  # type: ignore[assignment]
+    [_rp(f"d{i}", "petkova_anjela", 10, f"обычный пост {i}") for i in range(8)]
+    + [_rp("hit1", "petkova_anjela", 900, "Я РЕАЛЬНО ОФИГЕЛА, КОГДА ИИ ПОКАЗАЛ ПАТТЕРН САМОСАБОТАЖА", shares=400),
+       _rp("flop1", "petkova_anjela", 1, "как продвигаться в Threads")])
+research.fetch_search = lambda kws, n=25: [_rp(f"s{i}", f"user{i}", 20, "промпт для ChatGPT", query="ChatGPT")
+                                           for i in range(5)] + [_rp("shit", "x", 600, "ChatGPT разобрал мой гардероб", query="ChatGPT")]
+research.fetch_thread_body = lambda url: ["хук ветки", "пост 2: промпт", "пост 3: финал"]  # type: ignore[assignment]
 storage.put_image = lambda key, data, ct="image/jpeg": key  # type: ignore[assignment]
 storage.public_url = lambda key, ttl=None: f"https://minio.example/{key}?sig=1"  # type: ignore[assignment]
 
@@ -229,6 +259,14 @@ def main() -> None:
 def run() -> None:
     # 0. seed + аккаунт
     print(jobs.run("seed"))
+    res = jobs.run("research")
+    print(res)
+    assert res["hits"] >= 2 and res["expanded"] >= 1, res
+    with session_scope() as db:
+        hits = service.research_hits(db)
+        assert hits[0]["xn"] > 5 and "\n\n— " in hits[0]["text"]       # хит развёрнут в ветку
+        assert any(h["author"] == "x" for h in hits)                        # хит из поиска тоже найден
+        assert service.research_flops(db)
     with session_scope() as db:
         db.add(Account(handle="ilia.paliy", threads_user_id="u1", access_token=encrypt_token("tok-123"),
                        status="active"))
@@ -258,7 +296,15 @@ def run() -> None:
             assert rec is not None and rec.status == "draft"          # приёмника не было → черновик
             assert t.qa["passed"], qa.blocking(t.qa)
             assert t.qa.get("editor") == "проверил: ок"
+    with session_scope() as db:
+        for tid in ids:
+            t = db.get(FunnelThread, tid)
+            fc = t.qa["forecast"]
+            assert fc["score"] == 7.6, fc                                  # слабую (4.5) доработали до 7.6
+            assert fc["evidence"] and all(e["id"] != 999999 for e in fc["evidence"])   # выдуманные id отброшены
+            assert t.qa["evidence_ids"], t.qa
     texts = cards_sent()
+    assert any("Прогноз виральности: 7.6/10" in x for x in texts)
     assert any("Ветка №%d" % ids[0] in x for x in texts)
     assert any("Черновик поста-приёмника" in x for x in texts)
     assert any("<b>9/9</b>" in x for x in texts)
@@ -447,7 +493,7 @@ def run() -> None:
 
     tg_app = Application.builder().token("123:test").build()
     funnel_bot.register(tg_app)
-    assert len(tg_app.handlers[0]) == 8
+    assert len(tg_app.handlers[0]) == 9
 
     # 15. этап 1 (публикуете сами) + остальные кнопки + слой бота
     stage1(later + timedelta(days=1))

@@ -76,7 +76,10 @@ def thread_card(v: dict) -> list[str]:
     mech = hooks[active].get("mechanic", "") if 0 <= active < len(hooks) else ""
     hook_line = f"🎣 Хук {active + 1} из {len(hooks)}" + (f" · {esc(mech)}" if mech else "") + \
         (" · ещё варианты — 🔄 Хук" if len(hooks) > 1 else "")
-    blocks = [head, hook_line]
+    blocks = [head]
+    if v.get("forecast"):
+        blocks.append(forecast_block(v["forecast"]))
+    blocks.append(hook_line)
     if v.get("note"):
         blocks.insert(0, f"🔁 {esc(v['note'])}")
 
@@ -112,6 +115,36 @@ def thread_card(v: dict) -> list[str]:
         blocks.append(f"📝 Редактор: {esc(v['editor'][:400])}")
     blocks.append(status_line(v.get("status", "draft"), v.get("autopublish", False)))
     return _chunks(blocks)
+
+
+def score_bar(score: float) -> str:
+    full = int(round(score))
+    return "●" * full + "○" * (10 - full)
+
+
+def forecast_block(fc: dict) -> str:
+    """Прогноз виральности: оценка, почему, на какие хиты опирается, риски, как поднять."""
+    score = float(fc.get("score") or 0)
+    lines = [f"🔥 <b>Прогноз виральности: {score:.1f}/10</b>  {score_bar(score)}"]
+    if fc.get("verdict"):
+        lines.append(esc(fc["verdict"]))
+    for w in fc.get("why") or []:
+        lines.append(f"• {esc(w)}")
+    ev = fc.get("evidence") or []
+    if ev:
+        lines.append("Опора — посты, которые залетели:")
+        for e in ev[:3]:
+            stats = f"xn {e.get('xn', 0):.1f}, {e.get('likes', 0)} лайков"
+            who = f"@{esc(e.get('author'))}" if e.get("author") else f"пост {e.get('id')}"
+            link = f' <a href="{esc(e["url"])}">открыть</a>' if e.get("url") else ""
+            lines.append(f"  ↳ {who} ({stats}) — {esc(e.get('note'))}{link}")
+    else:
+        lines.append("Опоры в исследовании нет — оценка по механике скилла.")
+    for r in (fc.get("risks") or [])[:3]:
+        lines.append(f"⚠️ {esc(r)}")
+    if fc.get("boost"):
+        lines.append(f"↑ Как поднять: {esc(fc['boost'])}")
+    return "\n".join(lines)
 
 
 def qa_block(qa: dict) -> str:
@@ -239,15 +272,19 @@ def metrics_line(m: dict) -> str:
 
 def report_48h(v: dict, metrics: dict, verdict: str, decision: str) -> str:
     link = f"\n🔗 {esc(v['permalink'])}" if v.get("permalink") else ""
+    fc = (v.get("forecast") or {}).get("score")
+    pred = f"Прогноз был {fc:.1f}/10.\n" if fc is not None else ""
     return (f"📊 <b>48 часов: ветка №{v['id']}</b> — {esc(v.get('topic'))}{link}\n"
-            f"{metrics_line(metrics)}\n"
+            f"{metrics_line(metrics)}\n{pred}"
             f"Итог: {VERDICT_LABELS.get(verdict, verdict)} → {DECISION_LABELS.get(decision, decision)}")
 
 
 def weekly_report(period: str, totals: dict, best: list[dict], worst: list[dict],
                   clusters: list[dict], weights_old: dict, weights_new: dict,
-                  cluster_names: dict[int, str]) -> str:
+                  cluster_names: dict[int, str], calibration: str = "") -> str:
     lines = [f"📈 <b>Неделя {esc(period)}</b>", metrics_line(totals) or "публикаций нет"]
+    if calibration:
+        lines.append(f"🎯 Точность прогноза: {esc(calibration)}")
     if best:
         lines.append("\n<b>Лучшие хуки</b>")
         lines += [f"• №{b['id']} {esc(b.get('mechanic'))}: {esc(b.get('hook'))[:140]} — {metrics_line(b['m'])}"
@@ -300,6 +337,12 @@ def _selftest() -> None:
     assert datas == ["f:ok:7", "f:ed:7", "f:hk:7", "f:ot:7", "f:mt:7", "f:sl:7", "f:sk:7"]
     text, kb = hooks_message(v)
     assert "★ 1." in text and kb["inline_keyboard"][0][0]["callback_data"] == "f:hs:7:1"
+
+    fc = {"score": 7.4, "verdict": "Повторяет механику двух хитов", "why": ["тема про читателя"],
+          "evidence": [{"id": 3, "note": "та же боль", "author": "anna", "xn": 6.2, "likes": 900, "url": "https://t/1"}],
+          "risks": ["длинный пост 4"], "boost": "добавить цифру в первую строку"}
+    with_fc = "\n".join(thread_card({**v, "forecast": fc}))
+    assert "Прогноз виральности: 7.4/10" in with_fc and "@anna" in with_fc and "●●●●●●●○○○" in with_fc
 
     out = handoff_messages({**v, "posts": ["a", "b"], "materials_count": 2})
     assert out[1:] == ["a", "b"] and "фото" in out[0]
