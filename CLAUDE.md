@@ -199,3 +199,11 @@ When the task is scoped to a single app, read its `CLAUDE.md` first:
 - [`apps/threads-growth/CLAUDE.md`](apps/threads-growth/CLAUDE.md) — AI Threads Growth Agent (FastAPI + pgvector + Claude + Apify + n8n): relative-virality scoring (xn), Reply Engine, warmup-ramp, similarity-gated rewrite, learning loop + воронка Threads → Telegram (`app/funnel`: 3 ветки/день карточками в TG, публикация через Threads API, перевыпуск победителей) — **WIP, не задеплоен**
 
 Per-app `README.md` / `DEPLOY.md` / `ROADMAP.md` remain authoritative for deep architecture and deploy steps. Each `apps/<app>/CLAUDE.md` is the orientation layer.
+
+## Project skills (`.claude/skills/`)
+
+- `hq-history` — добавить задачу в историю живого офиса hq2.aicex.club.
+- `remake-top-reel` — «Ремейк залёта»: топ-рилс Ильи (говорящая голова с кодовым словом) → расшифровка →
+  усиленный и уникализированный сценарий → аватар HeyGen голосом Ильи → монтаж стилем «Студии Кадрика»
+  (стекло / панель / бизнес-рилс). Скрипты stdlib-Python; на Mac ставится в `~/.claude/skills` и в каталог
+  мини-аппа Кадрика через `kadrik/install.sh`.

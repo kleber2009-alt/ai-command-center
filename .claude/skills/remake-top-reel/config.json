@@ -1,0 +1,47 @@
+{
+ "_about": "Настройки скилла по умолчанию. Личные правки — в ~/.claude/creator-profile/remake/config.json (scripts/settings.py set ...), этот файл не трогай.",
+ "instagram": {
+  "username": "ilia.paliy",
+  "user_id": "17841446275691322",
+  "windsor_account": "17841446275691322",
+  "graph_version": "v23.0"
+ },
+ "scan": {
+  "days": 180,
+  "min_age_days": 3,
+  "max_items": 200,
+  "reuse_after_days": 60,
+  "weights": {"views": 0.4, "comments": 0.3, "shares": 0.3}
+ },
+ "avatar": {
+  "_about": "Цифровой двойник в HeyGen. confirmed=false — при первом запуске в чате спросить Илью и запомнить выбор.",
+  "look_id": "ac8e5818453b4e99a12e23ca124be57c",
+  "look_name": "IMG_2672 · Motion Look (самый свежий двойник, октябрь 2026)",
+  "voice_id": "009e58e8bf8d4ccc86a21873864d4244",
+  "voice_name": "IMG_2672 (русский клон голоса)",
+  "engine": "avatar_v",
+  "speed": 1.0,
+  "confirmed": false,
+  "alternatives": [
+   {"look_id": "acacbe2973ac49ac89449ad55c6caf7a", "name": "IMG_2672", "voice_id": "d648b0bbe18147fda9b92a34f3956a6c"},
+   {"look_id": "025cc7689ced4904b311c9a0829bf4ab", "name": "Ilia Paliy", "voice_id": "a18b77c30b944eb09f9e3d98eddd37c3"},
+   {"group_id": "03f90fce63174b48821a351d20576076", "name": "ilia.paliy (57 образов)", "voice_id": "90c0fc251ebf410dab41a77aa1b54ed6"}
+  ]
+ },
+ "styles": [
+  {"id": "glass-explainer-reel", "name": "Стеклянная объяснялка", "aka": ["стекло", "стеклянная", "glass", "стеклянное объяснялка"]},
+  {"id": "explainer-panel-reel", "name": "Панель-объяснялка", "aka": ["панель", "панельная", "panel"]},
+  {"id": "business-short-form-reels", "name": "Бизнес-рилс", "aka": ["бизнес", "business"]}
+ ],
+ "style_mode": "ask",
+ "language": "ru",
+ "script": {
+  "words_per_sec": 2.5,
+  "min_sec": 20,
+  "max_sec": 90,
+  "length_ratio": [0.75, 1.3],
+  "max_overlap": 0.35,
+  "warn_overlap": 0.25,
+  "max_common_run": 8
+ }
+}
