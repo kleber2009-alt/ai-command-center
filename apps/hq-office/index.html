@@ -138,6 +138,9 @@
   .skilllist li{padding:12px;border-radius:13px;background:rgba(255,255,255,.045);border:1px solid rgba(255,255,255,.06)}
   .skilllist b{display:block;font-size:13.5px}
   .skilllist code{display:block;font:600 11px var(--f-mono);color:#8fb8ff;margin-top:2px;word-break:break-word}
+  .skilllist b em.lib{font:600 10px var(--f-mono);font-style:normal;text-transform:uppercase;letter-spacing:.05em;color:var(--ok);background:rgba(61,220,151,.14);padding:1px 7px;border-radius:99px;margin-left:6px;vertical-align:2px;white-space:nowrap}
+  .libmore{margin-top:8px}
+  .libmore span{font:600 11px var(--f-mono);color:#8fb8ff;padding:4px 9px}
   .skilllist p{font-size:12.5px;color:var(--ink-2);margin-top:6px;line-height:1.45}
   .skilllist i{display:inline-block;margin-top:8px;font-style:normal;font-size:12px;padding:3px 8px;border-radius:8px;background:rgba(255,255,255,.07)}
   .sk-ag{display:flex;flex-wrap:wrap;gap:4px;margin-top:8px}
@@ -457,10 +460,12 @@
 
 <!-- Контент офиса — те же файлы, что на hq.aicex.club: отделы и руководители, досье и работы
      агентов, окна отделов. tasks.js — история реальных задач для правой панели,
-     tasks.auto.js — задачи из новых PR и ссылок, которые добавляются сами (sync/sync.mjs). -->
+     tasks.auto.js — задачи из новых PR и ссылок, которые добавляются сами (sync/sync.mjs),
+     skills-library.js — названия скиллов из приватной библиотеки офиса. -->
 <script src="office.config.js"></script>
 <script src="dept-content.js"></script>
 <script src="agent-content.js"></script>
+<script src="skills-library.js"></script>
 <script src="tasks.js"></script>
 <script src="tasks.auto.js"></script>
 <script src="works.js"></script>
@@ -2653,20 +2658,40 @@ function worksPanelHTML() {
   }
   return rows.join('');
 }
+// Skills library (skills-library.js): what is really installed and kept in the private repo.
+// "landing-emerald / gold / light" → landing-emerald, landing-gold, landing-light
+const skillNames = name => {
+  const out = []; let prefix = '';
+  for (const p of name.split(/\s*\/\s*/)) {
+    const full = p.includes('-') || !prefix ? p : prefix + p;
+    out.push(full); prefix = full.match(/^(.*-)[^-]+$/)?.[1] || prefix;
+  }
+  return out;
+};
+const LIB = window.OFFICE_SKILLS_LIBRARY || { code:[], desktop:[], extra:[] };
+const LIB_NAMES = new Set([...LIB.code, ...LIB.desktop]);
 const SKILLS = (() => {
   const map = new Map();
   for (const [id, c] of Object.entries(CONTENT)) for (const s of c.skills || []) {
     if (!map.has(s.name)) map.set(s.name, { ...s, agents:[] });
     map.get(s.name).agents.push(id);
   }
-  return [...map.values()];
+  for (const s of LIB.extra || []) if (!map.has(s.name)) map.set(s.name, { ...s, agents:s.agents.filter(id => CATALOG[id]) });
+  const list = [...map.values()];
+  for (const s of list) s.lib = skillNames(s.name).some(n => LIB_NAMES.has(n));
+  return list;
 })();
+const LIB_MORE = [...LIB_NAMES].filter(n => !SKILLS.some(s => skillNames(s.name).includes(n))).sort();
 function skillsHTML() {
   const q = pquery.toLowerCase();
   const list = SKILLS.filter(s => (pdept === 'all' || s.agents.some(id => agentMeta(id).dept?.id === pdept)) && (!q || [s.name, s.title, s.desc, s.say].join(' ').toLowerCase().includes(q)));
-  return `<p class="note">Скиллы Claude, которыми работают агенты. Фраза «Скажи…» запускает скилл в проекте Claude.</p><ul class="skilllist">${list.map(s => `<li>
-    <b>${esc(s.title)}</b><code>${esc(s.name)}</code><p>${esc(s.desc || '')}</p>${s.say ? `<i>Скажи: «${esc(s.say)}»</i>` : ''}
-    <span class="sk-ag">${s.agents.map(id => { const m = agentMeta(id); return `<button data-agent="${esc(id)}" style="--c:${esc(m.color)}"><i></i>${esc(m.name)}</button>`; }).join('')}</span></li>`).join('')}</ul>`;
+  const more = pdept === 'all' ? LIB_MORE.filter(n => !q || n.includes(q)) : [];
+  const libNote = LIB_NAMES.size ? ` Отметка «в библиотеке» — скилл установлен у команды и хранится в библиотеке офиса: всего ${LIB_NAMES.size} скиллов Claude Code и Claude Desktop.` : '';
+  return `<p class="note">Скиллы Claude, которыми работают агенты. Фраза «Скажи…» запускает скилл в проекте Claude.${libNote}</p><ul class="skilllist">${list.map(s => `<li>
+    <b>${esc(s.title)}${s.lib ? '<em class="lib">в библиотеке</em>' : ''}</b><code>${esc(s.name)}</code><p>${esc(s.desc || '')}</p>${s.say ? `<i>Скажи: «${esc(s.say)}»</i>` : ''}
+    <span class="sk-ag">${s.agents.map(id => { const m = agentMeta(id); return `<button data-agent="${esc(id)}" style="--c:${esc(m.color)}"><i></i>${esc(m.name)}</button>`; }).join('')}</span></li>`).join('')}</ul>${more.length ? `
+    <h3 class="eyebrow mon">Ещё в библиотеке · ${more.length}</h3><p class="note">Подключённые наборы: стили монтажа, HyperFrames, служебные скиллы Claude.</p>
+    <div class="chipsrow libmore">${more.map(n => `<span>${esc(n)}</span>`).join('')}</div>` : ''}`;
 }
 function renderPanel() {
   for (const b of $('ptabs').children) { const on = b.dataset.tab === ptab; b.classList.toggle('on', on); b.setAttribute('aria-selected', on); }
@@ -2674,7 +2699,7 @@ function renderPanel() {
   const body = ptab === 'tasks' ? focusHTML() + tasksHTML() : ptab === 'works' ? worksPanelHTML() : ptab === 'team' ? teamHTML() : skillsHTML();
   $('pbody').innerHTML = body;
   const n = visibleTasks().length;
-  let sum = `${SKILLS.length} скиллов`;
+  let sum = `${SKILLS.length} скиллов · ${LIB_NAMES.size} в библиотеке`;
   if (ptab === 'tasks') sum = `${n} ${word(n, 'задача', 'задачи', 'задач')}${n !== TASKS.length ? ` из ${TASKS.length}` : ''} · с доказательствами`;
   if (ptab === 'team') sum = `${bots.filter(b => b.kind === 'bot').length} агентов · ${DEPTS.length} руководителя`;
   if (ptab === 'works') {
