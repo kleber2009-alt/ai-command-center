@@ -4,8 +4,8 @@
    готовые задачи, только дописывает к ним новые PR той же ветки. Удалённая задача не вернётся —
    её PR остаются в seen. Чтобы задача стала «ручной», перенесите её в tasks.js. */
 window.OFFICE_TASKS_AUTO = {
-  "since": "2026-10-28T07:56:58Z",
-  "seen": [148, 149, 150, 151, 152],
+  "since": "2026-10-28T09:09:11Z",
+  "seen": [148, 149, 150, 151, 152, 153],
   "tasks": [
     {
       "id": "gh-148",
@@ -30,10 +30,15 @@ window.OFFICE_TASKS_AUTO = {
           "label": "PR #152 · история пишет тексты только своим ключом HQ_OFFICE_ANTHROPIC_API_KEY",
           "url": "https://github.com/kleber2009-alt/ai-command-center/pull/152"
         },
+        {
+          "kind": "github",
+          "label": "PR #153 · библиотека AICEX на hq2 — скиллы, новые задачи, галереи стилей",
+          "url": "https://github.com/kleber2009-alt/ai-command-center/pull/153"
+        },
         { "kind": "site", "label": "Живой офис агентов — живой сайт", "url": "https://hq2.aicex.club" }
       ],
       "group": "hq-office|claude/affectionate-keller-qy05o4",
-      "prs": [148, 149, 150, 152],
+      "prs": [148, 149, 150, 152, 153],
       "auto": true
     },
     {
