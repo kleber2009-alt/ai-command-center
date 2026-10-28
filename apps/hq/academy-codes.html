@@ -1,0 +1,61 @@
+<!doctype html>
+<html lang="ru">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1">
+<meta name="robots" content="noindex">
+<title>Коды учеников — Академия AICEX</title>
+<style>
+  :root{--bg:#0e1016;--card:#161922;--line:rgba(255,255,255,.12);--tx:#f4f6fa;--tx2:rgba(244,246,250,.62);--amber:#ffb020}
+  *{box-sizing:border-box}
+  body{margin:0;min-height:100vh;background:var(--bg);color:var(--tx);font:15px/1.5 system-ui,-apple-system,sans-serif;display:grid;place-items:start center;padding:32px 16px}
+  main{width:min(560px,100%);display:grid;gap:14px}
+  h1{font-size:24px;margin:0}
+  p{margin:0;color:var(--tx2)}
+  label{font-size:12px;font-weight:700;letter-spacing:.06em;text-transform:uppercase;color:var(--tx2)}
+  input,textarea{width:100%;padding:10px 12px;border-radius:10px;border:1px solid var(--line);background:#0b0d12;color:var(--tx);font:inherit}
+  textarea{min-height:120px;resize:vertical}
+  button{padding:11px 16px;border:0;border-radius:10px;background:var(--amber);color:#1c1300;font-weight:800;font:inherit;font-weight:800;cursor:pointer}
+  pre{margin:0;padding:14px;border-radius:12px;background:var(--card);border:1px solid var(--line);font:14px/1.7 ui-monospace,Menlo,monospace;white-space:pre-wrap}
+</style>
+</head>
+<body>
+<main>
+  <h1>Коды учеников</h1>
+  <p>Код открывает ученику скиллы AICEX в академии. Один код — один ученик. Секрет никуда не отправляется: коды считаются здесь, в браузере.</p>
+  <p>Два ученика с одним именем получат один код. Добавь букву фамилии или цифру: «Анна П», «Анна 2».</p>
+  <label for="secret">Секрет академии</label>
+  <input id="secret" type="password" autocomplete="off">
+  <label for="names">Имена учеников — по одному в строке</label>
+  <textarea id="names" placeholder="Анна&#10;Борис Петров"></textarea>
+  <button id="go" type="button">Сделать коды</button>
+  <pre id="out" hidden></pre>
+</main>
+<script>
+// тот же алгоритм, что в worker.js: имя латиницей + base32(HMAC-SHA256(секрет, имя)).slice(0, 6)
+const TR = { а:'a',б:'b',в:'v',г:'g',д:'d',е:'e',ё:'e',ж:'zh',з:'z',и:'i',й:'y',к:'k',л:'l',м:'m',н:'n',о:'o',п:'p',р:'r',с:'s',т:'t',у:'u',ф:'f',х:'h',ц:'ts',ч:'ch',ш:'sh',щ:'sch',ъ:'',ы:'y',ь:'',э:'e',ю:'yu',я:'ya' };
+const label = (s) => s.toLowerCase().split('').map((c) => (TR[c] != null ? TR[c] : c)).join('').replace(/[^a-z0-9]/g, '').slice(0, 24);
+const B32 = 'ABCDEFGHIJKLMNOPQRSTUVWXYZ234567', enc = new TextEncoder();
+async function signature(secret, name) {
+  const key = await crypto.subtle.importKey('raw', enc.encode(secret), { name: 'HMAC', hash: 'SHA-256' }, false, ['sign']);
+  const mac = new Uint8Array(await crypto.subtle.sign('HMAC', key, enc.encode(name)));
+  let out = '', bits = 0, acc = 0;
+  for (const byte of mac) { acc = ((acc << 8) | byte) & 0xffff; bits += 8; while (bits >= 5 && out.length < 6) { out += B32[(acc >>> (bits - 5)) & 31]; bits -= 5; } if (out.length === 6) break; }
+  return out;
+}
+document.getElementById('go').addEventListener('click', async () => {
+  const secret = document.getElementById('secret').value.trim();
+  const out = document.getElementById('out');
+  const seen = new Set(), rows = [];
+  for (const raw of document.getElementById('names').value.split('\n')) {
+    const n = label(raw.trim());
+    if (n.length < 2 || seen.has(n)) continue;
+    seen.add(n);
+    rows.push(raw.trim() + ' — ' + n + '-' + (await signature(secret, n)));
+  }
+  out.hidden = false;
+  out.textContent = !secret ? 'Впиши секрет академии.' : rows.length ? rows.join('\n') : 'Впиши хотя бы одно имя.';
+});
+</script>
+</body>
+</html>

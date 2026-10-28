@@ -1591,7 +1591,7 @@ window.DEPT_CONTENT = {
         {
           id: 'products', label: 'Что ты продаёшь и почём? Каждый продукт — с новой строки.',
           hint: 'Пиши как есть: название — цена — что получает клиент. Если цены нет, так и напиши.',
-          example: 'Как у AICEX: курс «Нейроворонка». Пак скиллов для Claude — skills.aicex.club. Бот монтажа рилсов — reels.aicex.club. У тебя рядом с каждым продуктом — цена.',
+          example: 'Как у AICEX: курс «Нейроворонка». Пак скиллов монтажа для Claude — skills.aicex.club. Бот монтажа рилсов — reels.aicex.club. У тебя рядом с каждым продуктом — цена.',
           rows: 4,
           help: [
             { type: 'template', title: 'Шаблон линейки', text: 'Продукт 1 — цена — что получает клиент\nПродукт 2 — цена — что получает клиент\nБесплатно — что даёшь без оплаты' },
@@ -1902,7 +1902,7 @@ window.DEPT_CONTENT = {
         text: 'В AICEX так собраны Транскрибация, AI Creative Hub, Бот монтажа и Пак скиллов. Сначала — прототип в Claude. Потом код и выкладка на свой домен.',
         links: [
           { title: 'Транскрибация', url: 'https://transcribe.aicex.club' },
-          { title: 'Пак скиллов', url: 'https://skills.aicex.club' },
+          { title: 'Пак скиллов монтажа', url: 'https://skills.aicex.club' },
           { title: 'AI Creative Hub', url: 'https://aihub.aicex.club' }
         ]
       },
@@ -1914,14 +1914,14 @@ window.DEPT_CONTENT = {
           rows: 3,
           help: [
             { type: 'recommendation', title: 'Что выбрать', text: 'Выбери то, что клиенты просят чаще всего. Или то, что ты делаешь руками снова и снова. Такой продукт легче продать.' },
-            { type: 'material', title: 'Продукты AICEX', text: 'Посмотри, какими бывают продукты: пак скиллов, бот монтажа, расшифровка.', url: 'https://skills.aicex.club' },
+            { type: 'material', title: 'Продукты AICEX', text: 'Посмотри, какими бывают продукты: пак скиллов монтажа, бот монтажа, расшифровка.', url: 'https://skills.aicex.club' },
             { type: 'template', title: 'Шаблон идеи', text: 'Продукт: …\nДля кого: …\nКакую проблему решает: …\nЧто человек делает внутри: …' }
           ]
         },
         {
           id: 'offer', label: 'Как ты продаёшь этот продукт одной фразой? И почём?',
           hint: 'Для кого, какой результат и цена. Пиши так, как говоришь клиенту.',
-          example: 'Как у AICEX: Пак скиллов — готовые скиллы для Claude. Страница продукта — skills.aicex.club.',
+          example: 'Как у AICEX: Пак скиллов монтажа — 12 стилей монтажа рилсов для Claude. Страница продукта — skills.aicex.club.',
           rows: 2,
           help: [
             { type: 'template', title: 'Формула фразы', text: 'Для [кого]: [результат] за [срок] — [цена]' },
@@ -1941,7 +1941,6 @@ window.DEPT_CONTENT = {
       ],
       gifts: [
         { type: 'skill', name: 'web-artifacts-builder', title: 'Прототипы', what: 'Быстрый интерактивный прототип продукта прямо в Claude.', guide: 'claude-skill-upload' },
-        { type: 'skill', name: 'Claude Code', title: 'Разработка', what: 'Пишет код продукта и выкладывает его на твой домен.' },
         { type: 'product', title: 'Транскрибация', url: 'https://transcribe.aicex.club', what: 'Пример продукта AICEX, собранного кодом.' },
         { type: 'template', title: 'Задача «Прототип продукта»', what: 'Готовая формулировка задачи из офиса AICEX.',
           text: 'Сделай кликабельный прототип нового продукта: главный экран, 3 сценария, тарифы. Покажи артефактом в Claude.' }
@@ -1965,7 +1964,7 @@ window.DEPT_CONTENT = {
         output: 'Прототип артефактом, потом код на своём домене',
         owner: 'Ты',
         check: 'Показываешь прототип 3 клиентам и записываешь, что им непонятно.',
-        tools: ['web-artifacts-builder', 'Claude Code']
+        tools: ['web-artifacts-builder']
       },
       boss: null
     },
@@ -2016,7 +2015,7 @@ window.DEPT_CONTENT = {
       ],
       gifts: [
         { type: 'skill', name: 'niche-outlier-research', title: 'Выбросы и комментарии', what: 'Находит залетевшие публикации и разбирает, что в них цепляет.', guide: 'claude-skill-upload' },
-        { type: 'skill', name: 'video-to-written-content', title: 'Видео → текст', what: 'Достаёт смысл из чужого ролика, чтобы понять аудиторию.', guide: 'claude-skill-upload' },
+        { type: 'product', title: 'Транскрибация', url: 'https://transcribe.aicex.club', what: 'Расшифрует чужой ролик в текст — видно, какими словами говорит аудитория.' },
         { type: 'artifact', title: 'ТЗ на продающие рилсы — разбор @bondar_idm', url: 'https://claude.ai/artifact/FmuSoMWs8iVphWcC9AYgPL', what: 'Как AICEX превращает разбор аккаунта в ТЗ.' },
         { type: 'template', title: 'Карта аудитории', what: 'Файл context/audience.md. Его читают сценарии, лендинги и продажи.',
           text: '# Аудитория\n## Типы клиентов\n## Их слова (как есть)\n## Боли\n## Чего хотят\n## Темы для контента' }
@@ -2040,7 +2039,7 @@ window.DEPT_CONTENT = {
         output: 'Обновлённая карта аудитории и темы',
         owner: 'Маркетолог или ты',
         check: 'Сверяешь темы с тем, что спрашивают в директе. 10 минут.',
-        tools: ['niche-outlier-research', 'video-to-written-content']
+        tools: ['niche-outlier-research', 'Транскрибация']
       },
       boss: null
     },
@@ -2050,7 +2049,7 @@ window.DEPT_CONTENT = {
       context: null,
       brief: 'Этот агент пишет сценарии рилсов. Формула AICEX: бытовая сценка + пронумерованная модель + [[кодовое слово]]. Каждый рилс ведёт человека в бота.',
       aicex: {
-        text: 'В AICEX сценарии пишутся скиллом reels-script для блога НЕЙРОЗАПУСК. В конце каждого рилса — кодовое слово: ВОРОНКА, КЛОН или ПОТОК. Человек пишет слово и получает подарок в боте.',
+        text: 'В AICEX сценарии для блога НЕЙРОЗАПУСК пишутся по одной формуле: бытовая сценка + пронумерованная модель + кодовое слово. В конце каждого рилса — ВОРОНКА, КЛОН или ПОТОК. Человек пишет слово и получает подарок в боте.',
         links: [
           { title: 'Нейроворонка — 10 продающих рилс по скелету Бондаря', url: 'https://claude.ai/artifact/MfLyqeAaZGw62HSUwuCCZd' },
           { title: 'Рилс «Claude vs GPT» — сценарий и ТЗ', url: 'https://claude.ai/artifact/Cft7hmLVrPK9P9RA4A8NqM' }
@@ -2064,7 +2063,7 @@ window.DEPT_CONTENT = {
           rows: 3,
           help: [
             { type: 'instruction', title: 'Возьми темы из карты аудитории', text: '- Открой «Проект» в кабинете.\n- Найди файл context/audience.md.\n- Выбери 3 темы, где больше всего живых фраз клиентов.' },
-            { type: 'skill', title: 'Пусть скилл даст темы', text: 'reels-script умеет подбирать темы под нишу.', prompt: 'Используй скилл reels-script. Дай 10 тем для рилсов в нише [твоя ниша]. Для каждой — хук до 8 слов.' }
+            { type: 'skill', title: 'Найди темы скиллом niche-outlier-research', text: 'Скилл AICEX найдёт рилсы, которые залетели в твоей нише. Из них — темы с готовыми хуками.', prompt: 'Используй скилл niche-outlier-research. Найди 10 залетевших рилсов в нише [твоя ниша] и дай по ним 10 тем. Для каждой — хук до 8 слов.' }
           ]
         },
         {
@@ -2089,20 +2088,21 @@ window.DEPT_CONTENT = {
         }
       ],
       gifts: [
-        { type: 'skill', name: 'reels-script', title: 'Сценарии рилсов', what: 'Формула «сценка + модель + кодовое слово». Пишет пачку сценариев за раз.', guide: 'claude-skill-upload' },
+        { type: 'template', title: 'Формула сценария AICEX', what: 'Скелет, по которому AICEX пишет рилсы. Промпт задания уже держит его.', text: '1. Бытовая сценка — 1–2 фразы, узнаваемая ситуация.\n2. Модель по пунктам — 3–5 шагов с номерами.\n3. Кодовое слово — «пиши СЛОВО», и бот пришлёт подарок.\nДлина — до 40 секунд.' },
         { type: 'artifact', title: 'Нейроворонка — 10 продающих рилс по скелету Бондаря', url: 'https://claude.ai/artifact/MfLyqeAaZGw62HSUwuCCZd', what: '10 готовых сценариев AICEX — образец формата.' },
         { type: 'template', title: 'Задача «Пачка сценариев»', what: 'Так AICEX ставит задачу агенту.',
           text: 'Напиши 5 сценариев рилсов про [тема] по формуле «сценка + модель + кодовое слово». Кодовые слова: [слова].' }
       ],
+      upgrade: { title: 'Пак скиллов монтажа', url: 'https://skills.aicex.club', what: 'Скилл reels-script и 12 стилей монтажа для Claude Code. Платно, в академию не входит.' },
       task: {
         title: 'Сделай 5 сценариев на неделю',
         steps: [
-          'Установи скилл reels-script.',
+          'Открой шаблон «Формула сценария AICEX» — по нему Claude пишет сценарии.',
           'Открой проект в Claude и вставь промпт ниже.',
           'Выбери 3 лучших сценария.',
           'Вставь сюда лучший сценарий целиком.'
         ],
-        prompt: 'Используй скилл reels-script. Напиши 5 сценариев рилсов для проекта «{{@project}}» по формуле «бытовая сценка + пронумерованная модель + кодовое слово». Темы: {{topics}}. Кодовое слово и подарок: {{code_word}}. Пиши моим голосом — вот мои тексты: {{voice}}. Боли клиентов бери из context/audience.md. Каждый сценарий — до 40 секунд.',
+        prompt: 'Напиши 5 сценариев рилсов для проекта «{{@project}}» по формуле «бытовая сценка + пронумерованная модель + кодовое слово». Темы: {{topics}}. Кодовое слово и подарок: {{code_word}}. Пиши моим голосом — вот мои тексты: {{voice}}. Боли клиентов бери из context/audience.md. Каждый сценарий — до 40 секунд.',
         result: 'Лучший сценарий целиком.',
         resultType: 'text',
         check: ['В начале есть бытовая сценка', 'Есть пункты по номерам', 'В конце — кодовое слово ученика']
@@ -2113,7 +2113,7 @@ window.DEPT_CONTENT = {
         output: '5 сценариев в проекте',
         owner: 'Маркетолог или ты',
         check: 'Ты выбираешь 3 лучших сценария за 10 минут.',
-        tools: ['reels-script', 'lead-magnet']
+        tools: ['Формула сценария AICEX', 'lead-magnet']
       },
       boss: null
     },
@@ -2144,7 +2144,7 @@ window.DEPT_CONTENT = {
         {
           id: 'clip_script', label: 'Какой сценарий озвучит двойник? Вставь один из сценариев прошлого шага.',
           hint: 'Возьми короткий: до 30 секунд.',
-          example: 'Как у AICEX: рилс на 30 секунд по сценарию из пачки reels-script. Вертикально, с пословными субтитрами.',
+          example: 'Как у AICEX: рилс на 30 секунд по сценарию из пачки агента «Сценарии». Вертикально, с пословными субтитрами.',
           rows: 5,
           help: [
             { type: 'instruction', title: 'Возьми сценарий из проекта', text: '- Открой агента «Сценарии» в офисе.\n- Скопируй самый короткий сценарий.\n- Вставь сюда.' },
@@ -2164,7 +2164,6 @@ window.DEPT_CONTENT = {
       ],
       gifts: [
         { type: 'connector', name: 'HeyGen', title: 'Аватар и голос', what: 'Видео с цифровым двойником, клон голоса, перевод видео.', guide: 'claude-connector' },
-        { type: 'skill', name: 'reels-dvoinik', title: 'Рилс «Двойник»', what: 'Рилс с аватаром HeyGen вместо съёмки.', guide: 'claude-skill-upload' },
         { type: 'product', title: 'Persona Train', url: 'https://persona-train.aicex.club', what: 'Продукт AICEX: клон голоса и аватар.' },
         { type: 'connector', name: 'Higgsfield', title: 'ИИ-персонаж', what: 'Персонаж для рекламы и контента, если не хочешь показывать лицо.', guide: 'claude-connector' }
       ],
@@ -2187,7 +2186,7 @@ window.DEPT_CONTENT = {
         output: 'Вертикальное видео с субтитрами',
         owner: 'Маркетолог или ты',
         check: 'Смотришь ролик и проверяешь голос и текст. 5 минут.',
-        tools: ['HeyGen', 'reels-dvoinik', 'Persona Train']
+        tools: ['HeyGen', 'Persona Train']
       },
       boss: null
     },
@@ -2195,9 +2194,9 @@ window.DEPT_CONTENT = {
     {
       id: '2.4', module: 2, room: 'marketing', agent: 'montage', title: 'Монтаж видео', minutes: 60,
       context: null,
-      brief: 'Этот агент монтирует рилсы кодом: хук, субтитры, вставки, музыка. У AICEX больше 35 стилей монтажа. Ты выбираешь стиль — агент делает ролик.',
+      brief: 'Этот агент монтирует рилсы: хук, субтитры, вставки, музыка. Ты присылаешь запись и выбираешь стиль — Бот монтажа AICEX собирает ролик примерно за 10 минут.',
       aicex: {
-        text: 'В AICEX каждый стиль монтажа — отдельный скилл: Кобальт, UI-моушн, Неоновая схема и другие. Есть Бот монтажа и мини-апп в Telegram. Ролик собирается из записи и сценария.',
+        text: 'В AICEX рилсы монтирует Бот монтажа в Telegram: 23 стиля, монтаж по референсу или по описанию словами. Ролик собирается из записи и сценария. Свои стили AICEX держит скиллами в Claude Code — это отдельный платный пак.',
         links: [
           { title: 'Бот монтажа', url: 'https://reels.aicex.club' },
           { title: 'Мини-апп монтажа', url: 'https://montazh.aicex.club' },
@@ -2207,12 +2206,12 @@ window.DEPT_CONTENT = {
       questions: [
         {
           id: 'style', label: 'Какой стиль монтажа тебе ближе?',
-          hint: 'С лицом или без. Посмотри стили в пакете скиллов и выбери один.',
+          hint: 'С лицом или без. Посмотри стили в Боте монтажа и выбери один.',
           example: 'Как у AICEX: Кобальт — синие студии и белые карточки интерфейсов. Для роликов без лица — Неоновая схема.',
           rows: 2,
           help: [
-            { type: 'material', title: 'Посмотри все стили', text: 'Здесь собраны стили монтажа AICEX с примерами.', url: 'https://claude.ai/artifact/8Sx4z7NmqWs6CnjieSbEHJ' },
-            { type: 'recommendation', title: 'Если не можешь выбрать', text: 'Снимаешь лицо — бери montazh-rils или Кобальт. Не снимаешь — UI-моушн или Неоновую схему. Начни с одного стиля, а не с пяти.' }
+            { type: 'material', title: 'Посмотри все стили', text: 'Здесь 23 стиля монтажа AICEX с живыми кадрами.', url: 'https://reels.aicex.club' },
+            { type: 'recommendation', title: 'Если не можешь выбрать', text: 'Снимаешь лицо — бери «Палий» или «Кобальт». Не снимаешь — стили из раздела «Объяснялки» или «Пульс». Начни с одного стиля, а не с пяти.' }
           ]
         },
         {
@@ -2237,20 +2236,20 @@ window.DEPT_CONTENT = {
         }
       ],
       gifts: [
-        { type: 'skill', name: 'montazh-rils', title: 'Монтаж рилсов', what: 'Базовый движок 9:16: хук с лицом, сплит, пословные субтитры, призыв «пиши слово».', guide: 'claude-skill-upload' },
-        { type: 'skill', name: 'montazh-rils-kobalt', title: 'Стиль «Кобальт»', what: 'Синие студии, белые карточки интерфейсов, 3D-объекты.', guide: 'claude-skill-upload' },
-        { type: 'skill', name: 'reels-neon-schema', title: 'Рилсы без лица', what: 'Неоновая схема с ИИ-озвучкой — без съёмки.', guide: 'claude-skill-upload' },
-        { type: 'product', title: 'Бот монтажа', url: 'https://reels.aicex.club', what: 'Монтаж рилсов кодом по готовым стилям прямо в Telegram.' }
+        { type: 'product', title: 'Мини-апп монтажа', url: 'https://montazh.aicex.club', what: 'Загрузи видео, выбери стиль, кодовое слово и длину — ролик придёт в чат.' },
+        { type: 'template', title: 'Чек-лист рилса', what: 'Что проверить перед публикацией.', text: '- Хук в первые 3 секунды\n- Субтитры по 1–3 слова\n- Вертикально, 9:16\n- До 45 секунд\n- В конце — «пиши СЛОВО»' },
+        { type: 'product', title: 'Бот монтажа', url: 'https://reels.aicex.club', what: 'Пришли запись — рилс в одном из 23 стилей придёт в чат.' }
       ],
+      upgrade: { title: 'Пак скиллов монтажа', url: 'https://skills.aicex.club', what: '12 стилей монтажа AICEX в Claude Code: монтируешь сам и правишь стиль под себя. Платно, в академию не входит.' },
       task: {
         title: 'Смонтируй первый рилс',
         steps: [
-          'Установи скилл стиля, который выбрал.',
-          'Загрузи видео в проект Claude и вставь промпт ниже.',
+          'Открой Бот монтажа в Telegram.',
+          'Загрузи запись, выбери стиль и вставь в пожелания текст ниже.',
           'Посмотри ролик и попроси поправить, если надо.',
           'Вставь сюда ссылку на готовый рилс.'
         ],
-        prompt: 'Смонтируй вертикальный рилс 9:16 в стиле: {{style}}. Исходники: {{footage}}. Хук — первые 3 секунды, пословные субтитры, вставки по смыслу. В конце призыв: {{cta}}. Сценарий возьми у агента «Сценарии» в проекте «{{@project}}».',
+        prompt: 'Рилс 9:16 в стиле «{{style}}». Материалы: {{footage}}. Хук — первые 3 секунды, пословные субтитры, вставки по смыслу. В конце призыв: {{cta}}.',
         result: 'Ссылка на готовый рилс: файл или пост.',
         resultType: 'link',
         check: ['Ролик вертикальный и открывается по ссылке', 'Есть хук в начале и субтитры', 'В конце — призыв с кодовым словом']
@@ -2261,7 +2260,7 @@ window.DEPT_CONTENT = {
         output: 'Готовый рилс 9:16 с субтитрами',
         owner: 'Маркетолог или ты',
         check: 'Смотришь ролик целиком и проверяешь хук и призыв. 5 минут.',
-        tools: ['montazh-rils', 'montazh-rils-kobalt', 'reels-neon-schema', 'Бот монтажа']
+        tools: ['Бот монтажа', 'Мини-апп монтажа']
       },
       boss: {
         task: 'Опубликуй 3 рилса с кодовым словом за неделю.',
@@ -2276,7 +2275,7 @@ window.DEPT_CONTENT = {
       context: null,
       brief: 'Этот агент делает карусели для Instagram в тех же стилях, что и рилсы. Обложка-хук, пункты, призыв «пиши слово». Одна [[карусель]] — из одного сценария.',
       aicex: {
-        text: 'В AICEX карусели делает скилл karusel: 24 стиля, форматы 4:5, 1:1 и 9:16. Готовые слайды уходят в PNG и PDF или альбомом в Telegram.',
+        text: 'В AICEX карусели делаются в одном стиле с рилсами: форматы 4:5, 1:1 и 9:16. Готовые слайды уходят в PNG и PDF или альбомом в Telegram.',
         links: [
           { title: 'Витрина маркетинга AICEX', url: 'https://marketing.aicex.club' }
         ]
@@ -2289,7 +2288,7 @@ window.DEPT_CONTENT = {
           rows: 6,
           help: [
             { type: 'instruction', title: 'Возьми готовый текст', text: '- Открой агента «Сценарии» в офисе.\n- Скопируй сценарий, который понравился больше всех.\n- Вставь сюда.' },
-            { type: 'skill', title: 'Сделай текст из видео', text: 'Если есть ролик — скилл достанет из него тезисы.', prompt: 'Используй скилл video-to-written-content. Вот видео: [ссылка]. Достань 8 тезисов для карусели, по одному на слайд.' }
+            { type: 'material', title: 'Сделай текст из видео', text: 'Загрузи ролик в Транскрибацию AICEX. Потом попроси Claude: «Достань 8 тезисов для карусели, по одному на слайд».', url: 'https://transcribe.aicex.club' }
           ]
         },
         {
@@ -2314,20 +2313,21 @@ window.DEPT_CONTENT = {
         }
       ],
       gifts: [
-        { type: 'skill', name: 'karusel', title: 'Карусели в 24 стилях', what: 'Слайды 4:5, 1:1 или 9:16. PNG, PDF или альбом в Telegram.', guide: 'claude-skill-upload' },
+        { type: 'template', title: 'Структура карусели AICEX', what: '10 слайдов: хук, мысли по одной, призыв.', text: 'Слайд 1 — хук с акцентом\nСлайды 2–9 — по одной мысли, до 25 слов\nСлайд 10 — «пиши [СЛОВО]» и что получит человек' },
         { type: 'skill', name: 'canvas-design', title: 'Обложки', what: 'Статичные обложки и постеры в PNG.', guide: 'claude-skill-upload' },
         { type: 'template', title: 'Задача «Карусель из рилса»', what: 'Так AICEX ставит задачу агенту.',
           text: 'Сделай карусель 10 слайдов 4:5 в стиле [стиль] из сценария рилса. Обложка — хук с акцентом, последний слайд — «пиши [СЛОВО]».' }
       ],
+      upgrade: { title: 'Пак скиллов монтажа', url: 'https://skills.aicex.club', what: 'Карусели в том же стиле, что и рилсы, — скиллом в Claude Code. Платно, в академию не входит.' },
       task: {
         title: 'Сделай первую карусель',
         steps: [
-          'Установи скилл karusel.',
+          'Включи скилл canvas-design в настройках Claude.',
           'Открой проект в Claude и вставь промпт ниже.',
           'Проверь тексты слайдов: до 25 слов на слайд.',
           'Вставь сюда ссылку на PDF или пост.'
         ],
-        prompt: 'Используй скилл karusel. Сделай карусель из 10 слайдов 4:5 в стиле {{style}} для проекта «{{@project}}». Текст: {{source_text}}. Обложка — хук с акцентом. Один слайд — одна мысль, до 25 слов. Последний слайд — призыв: {{cta_word}}. Отдай PNG и PDF.',
+        prompt: 'Используй скилл canvas-design. Сделай карусель из 10 слайдов 4:5 (1080×1350) в стиле {{style}} для проекта «{{@project}}». Текст: {{source_text}}. Обложка — хук с акцентом. Один слайд — одна мысль, до 25 слов. Последний слайд — призыв: {{cta_word}}. Отдай PNG и PDF.',
         result: 'Ссылка на PDF карусели или на пост.',
         resultType: 'link',
         check: ['Есть обложка-хук', 'Слайды короткие, одна мысль на слайд', 'На последнем слайде кодовое слово']
@@ -2338,7 +2338,7 @@ window.DEPT_CONTENT = {
         output: 'Карусель из 10 слайдов в PNG и PDF',
         owner: 'Маркетолог или ты',
         check: 'Пролистываешь слайды и ищешь опечатки. 5 минут.',
-        tools: ['karusel', 'canvas-design']
+        tools: ['canvas-design', 'Структура карусели AICEX']
       },
       boss: null
     },
@@ -2381,14 +2381,14 @@ window.DEPT_CONTENT = {
           example: 'Как у AICEX: темы из последнего анализа аудитории. У каждого рилса своё кодовое слово.',
           rows: 3,
           help: [
-            { type: 'skill', title: 'Пусть скилл даст темы', text: 'reels-script подберёт пачку тем под контент-план.', prompt: 'Используй скилл reels-script. Дай 10 тем на неделю для ниши [твоя ниша]. Для каждой — формат: рилс или карусель.' },
+            { type: 'skill', title: 'Найди темы скиллом niche-outlier-research', text: 'Скилл AICEX найдёт, что залетает в твоей нише прямо сейчас. Из этого — план на неделю.', prompt: 'Используй скилл niche-outlier-research. Найди, что залетает в нише [твоя ниша], и дай 10 тем на неделю. Для каждой — формат: рилс или карусель.' },
             { type: 'example', title: 'Как AICEX строит контент', text: 'Пример контент-стратегии основателя.', url: 'https://claude.ai/artifact/5LwBz4Y5Yhdxj6pDcTG6Wp' }
           ]
         }
       ],
       gifts: [
         { type: 'connector', name: 'Chat Place', title: 'Virale: контент и аккаунты', what: 'Аналитика аккаунтов, рекомендации и генерация контента.', guide: 'claude-connector' },
-        { type: 'skill', name: 'video-to-written-content', title: 'Видео → посты', what: 'Из одного ролика — пост, рассылка и тред.', guide: 'claude-skill-upload' },
+        { type: 'product', title: 'Транскрибация', url: 'https://transcribe.aicex.club', what: 'Расшифрует твой ролик — из текста Claude сделает пост, рассылку и тред.' },
         { type: 'artifact', title: 'Практикум по ИИ-контенту', url: 'https://claude.ai/artifact/AdPDqEVK6EdSsMwdnKMtgk', what: 'Как AICEX делает контент с ИИ.' },
         { type: 'template', title: 'Контент-план на неделю', what: 'Таблица, которую агент заполняет каждый понедельник.',
           text: '| День | Площадка | Формат | Тема | Кодовое слово | Готово |\n|---|---|---|---|---|---|\n| Пн | | рилс | | | |\n| Ср | | карусель | | | |\n| Пт | | рилс | | | |' }
@@ -2412,7 +2412,7 @@ window.DEPT_CONTENT = {
         output: 'Контент-план недели в Notion или Google Drive',
         owner: 'Маркетолог или ты',
         check: 'В пятницу сверяешь, что вышло, а что нет. 10 минут.',
-        tools: ['Chat Place', 'video-to-written-content', 'reels-script']
+        tools: ['Chat Place', 'Транскрибация']
       },
       boss: null
     },
@@ -2423,10 +2423,10 @@ window.DEPT_CONTENT = {
       context: null,
       brief: 'Начинается упаковка. Первый агент — «Лендинги». Он делает сайт уровня студии и выкладывает его на твой домен. Ты присылаешь тексты, фото и оффер — получаешь страницу.',
       aicex: {
-        text: 'В AICEX есть 5 готовых стилей лендинга эксперта и страница «Оплата прошла». Так сделаны сайты skills.aicex.club и reels.aicex.club.',
+        text: 'В AICEX есть 5 готовых стилей лендинга эксперта и страница «Оплата прошла».',
         links: [
           { title: 'Лендинги эксперта: 5 стилей', url: 'https://claude.ai/artifact/F5cjiWb2ss8AvaC3uF3CHi' },
-          { title: 'Пак скиллов — лендинг «Медь»', url: 'https://skills.aicex.club' }
+          { title: 'Лендинг AICEX: Пак скиллов монтажа', url: 'https://skills.aicex.club' }
         ]
       },
       questions: [
@@ -2462,8 +2462,7 @@ window.DEPT_CONTENT = {
         }
       ],
       gifts: [
-        { type: 'skill', name: 'landing-gold', title: 'Лендинг эксперта в 5 стилях', what: 'Пять скиллов: landing-gold, landing-light, landing-neon, landing-emerald, landing-poster. Сайт и страница «Оплата прошла».', guide: 'claude-skill-upload' },
-        { type: 'skill', name: 'copper-landing', title: 'Медь', what: 'Тёмный медный лендинг цифрового продукта — как у Пака скиллов.', guide: 'claude-skill-upload' },
+        { type: 'skill', name: 'landing-gold', title: 'Лендинг эксперта в 5 стилях', what: 'Сайт и страница «Оплата прошла». Пять стилей — пять скиллов: скачай тот, что ближе.', styles: [['landing-gold', 'Золото'], ['landing-light', 'Светлый'], ['landing-neon', 'Неон'], ['landing-emerald', 'Изумруд'], ['landing-poster', 'Постер']] },
         { type: 'artifact', title: 'Лендинги эксперта: 5 стилей', url: 'https://claude.ai/artifact/F5cjiWb2ss8AvaC3uF3CHi', what: 'Все 5 стилей AICEX с примерами.' },
         { type: 'template', title: 'Структура лендинга', what: 'Блоки, из которых AICEX собирает страницу курса.',
           text: '1. Оффер и кнопка\n2. Для кого\n3. Программа\n4. Кейсы\n5. Тарифы\n6. FAQ\n7. Кнопка в бота' }
@@ -2487,7 +2486,7 @@ window.DEPT_CONTENT = {
         output: 'Лендинг и страница «Оплата прошла» на твоём домене',
         owner: 'Ты',
         check: 'Открываешь страницу с телефона и проходишь до кнопки оплаты. 5 минут.',
-        tools: ['landing-gold', 'copper-landing']
+        tools: ['landing-gold']
       },
       boss: null
     },
@@ -2594,7 +2593,7 @@ window.DEPT_CONTENT = {
           help: [
             { type: 'instruction', title: 'Как выбрать вход в воронку', text: '- Есть рилсы — бери кодовое слово под рилсом.\n- Есть сайт — ставь кнопку «Забрать подарок».\n- Есть канал — ссылку на бота в закреп.\n- Начни с одного входа. Остальные добавишь потом.' },
             { type: 'example', title: 'Кодовые слова AICEX', text: 'ВОРОНКА, КЛОН, ПОТОК. Каждое слово короткое и про тему рилса. На каждое — свой лид-магнит.', url: 'https://claude.ai/artifact/MfLyqeAaZGw62HSUwuCCZd' },
-            { type: 'skill', title: 'Подбери слово скиллом reels-script', text: 'Скилл подберёт кодовое слово под тему рилса. Вставь запрос в свой проект Claude.', prompt: 'Подбери 5 кодовых слов для моих рилсов. Слово одно, короткое, связано с подарком. Мой продукт и клиенты — в файлах проекта.' }
+            { type: 'skill', title: 'Вход из Threads скиллом threads-telegram-funnel', text: 'Ведёшь Threads — скилл AICEX напишет ветки, которые приводят людей в бота по твоему слову.', prompt: 'Используй скилл threads-telegram-funnel. Напиши 3 ветки для Threads, которые ведут в моего Telegram-бота по кодовому слову [СЛОВО]. Продукт и клиенты — в файлах проекта.' }
           ]
         },
         {
@@ -2620,7 +2619,7 @@ window.DEPT_CONTENT = {
       ],
       gifts: [
         { type: 'connector', name: 'Chat Place', title: 'Бот и прогрев в Chat Place', what: 'Собирает бота: кодовое слово, подарок, сообщения по дням и кнопки.', guide: 'claude-connector' },
-        { type: 'skill', name: 'lead-magnet', title: 'Лид-магнит', what: 'Делает PDF или страницу-подарок за подписку.', guide: 'claude-skill-upload' },
+        { type: 'skill', name: 'threads-telegram-funnel', title: 'Трафик из Threads в бота', what: 'Пишет ветки для Threads, которые ведут людей в Telegram-бота с подарком.' },
         { type: 'artifact', title: 'Нейроворонка — ТЗ на Telegram-бота', url: 'https://claude.ai/artifact/MEienkWZMA9dp3RugXzJRM', what: 'Готовое ТЗ бота AICEX со сценариями диалогов. Возьми за образец.' },
         { type: 'template', title: 'Прогрев на 7 дней', what: 'Каркас прогрева: что отправлять каждый день.', text: 'День 1 — подарок и знакомство\nДень 2 — урок: первый результат\nДень 3 — история клиента\nДень 4 — ответ на главное сомнение\nДень 5 — мост к офферу и оффер\nДень 6 — вопросы и ответы\nДень 7 — напоминание и дедлайн' }
       ],
@@ -2638,7 +2637,7 @@ window.DEPT_CONTENT = {
         output: 'Подписчики в боте и заявки на продукт.',
         owner: 'Маркетолог или ты.',
         check: 'Раз в неделю смотришь подписки и отписки по дням — 15 минут.',
-        tools: ['Chat Place', 'lead-magnet', 'reels-script']
+        tools: ['Chat Place', 'lead-magnet', 'threads-telegram-funnel']
       },
       boss: { task: 'Запусти бота и собери в нём первых 10 подписчиков.', proof: 'Ссылка на бота и число подписчиков', placeholder: 't.me/… — 12 подписчиков за 5 дней', days: 7 }
     },
@@ -2686,13 +2685,13 @@ window.DEPT_CONTENT = {
         }
       ],
       gifts: [
-        { type: 'skill', name: 'copper-slides-pdf', title: 'Медь-слайды', what: 'Тёмная презентация для эфира или питча — сразу в PDF.', guide: 'claude-skill-upload' },
-        { type: 'skill', name: 'sprint-slides', title: 'Спринт-слайды', what: '16 макетов продающего вебинара: обложка, кейсы, тарифы, дедлайн, QR.', guide: 'claude-skill-upload' },
+        { type: 'skill', name: 'web-artifacts-builder', title: 'Презентация ссылкой', what: 'Слайды артефактом в Claude: листаются в браузере, их можно отправить ссылкой.' },
+        { type: 'template', title: 'Структура продающей презентации', what: 'Порядок слайдов, по которому AICEX собирает эфиры.', text: '1. Обложка и обещание\n2. Боль клиента\n3. Решение\n4. Кейс «было → стало»\n5. Программа\n6. Тарифы и бонусы\n7. Что сделать сейчас' },
         { type: 'skill', name: 'pptx', title: 'PowerPoint', what: 'Собирает файл .pptx, если презентацию нужно править в PowerPoint.', guide: 'claude-skill-upload' }
       ],
       task: {
         title: 'Собери презентацию для своего повода',
-        steps: ['Установи скилл copper-slides-pdf или sprint-slides.', 'Открой проект Claude и вставь промпт ниже.', 'Пролистай слайды и попроси поправить, что не так.', 'Вставь сюда ссылку на презентацию.'],
+        steps: ['Нужен файл PowerPoint — включи скилл pptx в настройках Claude.', 'Открой проект Claude и вставь промпт ниже.', 'Пролистай слайды и попроси поправить, что не так.', 'Вставь сюда ссылку на презентацию.'],
         prompt: 'Сделай презентацию для проекта {{@project}}.\nПовод: {{occasion}}.\nСтиль: {{style}}.\nКейс и цифры: {{proof}}.\nСтруктура: обложка, боль, решение, кейс, программа, тарифы, бонусы, что сделать сейчас. Заголовок до 7 слов, не больше 3 пунктов на слайде. Факты, цены и продукты бери только из файлов проекта.',
         result: 'Ссылка на артефакт с презентацией или на PDF.',
         resultType: 'link',
@@ -2704,7 +2703,7 @@ window.DEPT_CONTENT = {
         output: 'Презентация в PDF или по ссылке.',
         owner: 'Ты или маркетолог.',
         check: 'Пролистываешь слайды и правишь за 20 минут.',
-        tools: ['copper-slides-pdf', 'sprint-slides', 'pptx']
+        tools: ['web-artifacts-builder', 'pptx']
       },
       boss: null
     },
@@ -2787,7 +2786,7 @@ window.DEPT_CONTENT = {
           example: 'Как у AICEX: ВОРОНКА, КЛОН, ПОТОК.',
           rows: 2,
           help: [
-            { type: 'skill', title: 'Подбери слова скиллом reels-script', text: 'Скилл подберёт короткое слово под тему рилса.', prompt: 'Подбери кодовые слова для моих 3 последних рилсов. Одно слово, короткое, связано с подарком из воронки.' },
+            { type: 'template', title: 'Как выбрать слово', text: 'Слово: одно, 4–8 букв, легко набрать с телефона\nСвязано с подарком: …\nНе путается с обычными словами в комментариях: да', prompt: 'Подбери кодовые слова для моих 3 последних рилсов. Одно слово, короткое, связано с подарком из воронки.' },
             { type: 'example', title: 'Слова AICEX', text: 'ВОРОНКА, КЛОН, ПОТОК. Короткие, их легко написать с телефона.', url: 'https://claude.ai/artifact/MfLyqeAaZGw62HSUwuCCZd' }
           ]
         },
@@ -2814,7 +2813,7 @@ window.DEPT_CONTENT = {
       ],
       gifts: [
         { type: 'connector', name: 'Chat Place', title: 'Автоответы на комментарии', what: 'Правило: слово → ответ в комментарии → сообщение в директ.', guide: 'claude-connector' },
-        { type: 'skill', name: 'reels-script', title: 'Кодовые слова', what: 'Подбирает слово под тему рилса.', guide: 'claude-skill-upload' },
+        { type: 'template', title: 'Банк кодовых слов', what: 'Таблица: слово → рилс → подарок. Одно слово — один подарок.', text: '| Слово | Рилс | Подарок | Сообщение в директ |\n|---|---|---|---|\n| ВОРОНКА | … | … | … |\n| КЛОН | … | … | … |' },
         { type: 'template', title: 'Правило автоответа', what: 'Всё, что нужно для одного правила.', text: 'Слово: …\nОтвет в комментарии: …\nСообщение в директ: …\nКнопка: …\nРилс: ссылка' }
       ],
       task: {
@@ -2831,7 +2830,7 @@ window.DEPT_CONTENT = {
         output: 'Ответ под рилсом и подарок в директ.',
         owner: 'Маркетолог ставит правило в день публикации.',
         check: 'Раз в неделю смотришь, сколько слов пришло под каждым рилсом.',
-        tools: ['Chat Place', 'reels-script']
+        tools: ['Chat Place', 'Банк кодовых слов']
       },
       boss: null
     },
@@ -3054,7 +3053,7 @@ window.DEPT_CONTENT = {
       ],
       gifts: [
         { type: 'connector', name: 'Chat Place', title: 'Тарифы, оплата и ссылки с меткой', what: 'Продукты и ссылки на оплату в боте. Видно, откуда пришёл покупатель.', guide: 'claude-connector' },
-        { type: 'skill', name: 'sprint-slides', title: 'Оффер-презентация', what: 'Слайды с тарифами, бонусами и дедлайном.', guide: 'claude-skill-upload' },
+        { type: 'skill', name: 'pptx', title: 'Оффер-презентация', what: 'Слайды с тарифами, бонусами и дедлайном — файлом PowerPoint или PDF.' },
         { type: 'template', title: 'Персональный оффер после созвона', what: 'Каркас оффера для одного клиента.', text: 'Задача клиента: …\nЧто предлагаю: тариф …\nЧто входит: …\nБонус при оплате за 48 часов: …\nСсылка на оплату: …' }
       ],
       task: {
@@ -3071,7 +3070,7 @@ window.DEPT_CONTENT = {
         output: 'Персональный оффер и напоминания до оплаты.',
         owner: 'РОП или ты.',
         check: 'Каждый день — 15 минут на неоплаченные офферы.',
-        tools: ['Chat Place', 'sprint-slides']
+        tools: ['Chat Place', 'pptx']
       },
       boss: { task: 'Доведи первого клиента через воронку до оплаты.', proof: 'Сумма, дата и откуда пришёл клиент. Без его личных данных.', placeholder: '14 900 ₽, 3 ноября, пришёл с рилса через бота', days: 7 }
     },
@@ -3170,7 +3169,7 @@ window.DEPT_CONTENT = {
       ],
       gifts: [
         { type: 'connector', name: 'Windsor.ai', title: 'Данные кабинета', what: 'Статистика Meta Ads за любой период.', guide: 'claude-connector' },
-        { type: 'skill', name: 'dataviz', title: 'Графики', what: 'Отчёт с графиками в одном стиле.', guide: 'claude-skill-upload' },
+        { type: 'template', title: 'Отчёт за неделю', what: 'Пять цифр и вывод — так AICEX смотрит рекламу каждую неделю.', text: '| Неделя | Расход | Клики | Заявки | Цена заявки | Вывод |\n|---|---|---|---|---|---|\n| … | … | … | … | … | … |' },
         { type: 'skill', name: 'xlsx', title: 'Таблица', what: 'Выгрузка в Excel или Google Sheets.', guide: 'claude-skill-upload' }
       ],
       task: {
@@ -3187,7 +3186,7 @@ window.DEPT_CONTENT = {
         output: 'Отчёт с цифрами и предложением, что выключить.',
         owner: 'Таргетолог или ты.',
         check: 'Читаешь отчёт и решаешь, что выключить, — 10 минут.',
-        tools: ['Windsor.ai', 'dataviz', 'xlsx']
+        tools: ['Windsor.ai', 'xlsx']
       },
       boss: null
     },
@@ -3196,7 +3195,7 @@ window.DEPT_CONTENT = {
       context: null,
       brief: 'Агент «Аналитика» сводит рекламу, контент и продажи в один экран. Ты видишь, какой канал приносит деньги, а какой их ест.',
       aicex: {
-        text: 'В AICEX есть сквозная аналитика: реклама, продажи, расходы и контент на одном дашборде. Там ROMI по кампаниям и воронка от клика до оплаты. Данные тянет Windsor.ai, графики делает скилл dataviz.',
+        text: 'В AICEX есть сквозная аналитика: реклама, продажи, расходы и контент на одном дашборде. Там ROMI по кампаниям и воронка от клика до оплаты. Данные тянет Windsor.ai, графики собираются артефактом в Claude.',
         links: [{ title: 'Сквозная аналитика — рабочий дашборд', url: 'https://claude.ai/artifact/UzeN9sagWbM8We1yTWTmGf' }]
       },
       questions: [
@@ -3222,7 +3221,7 @@ window.DEPT_CONTENT = {
         }
       ],
       gifts: [
-        { type: 'skill', name: 'dataviz', title: 'Графики и дашборды', what: 'Единая система графиков: подписи, цвета, светлая и тёмная тема.', guide: 'claude-skill-upload' },
+        { type: 'skill', name: 'web-artifacts-builder', title: 'Дашборд ссылкой', what: 'Графики и цифры артефактом в Claude: открываются по ссылке, обновляются по запросу.' },
         { type: 'connector', name: 'Windsor.ai', title: 'Рекламные кабинеты и соцсети', what: 'Тянет Meta Ads, Instagram и другие источники в один отчёт.', guide: 'claude-connector' },
         { type: 'artifact', title: 'Сквозная аналитика', url: 'https://claude.ai/artifact/UzeN9sagWbM8We1yTWTmGf', what: 'Рабочий дашборд AICEX — возьми за образец.' }
       ],
@@ -3240,7 +3239,7 @@ window.DEPT_CONTENT = {
         output: 'Дашборд и 3 вывода на неделю.',
         owner: 'Маркетолог или ты.',
         check: 'Смотришь дашборд и выбираешь одну задачу на неделю — 15 минут.',
-        tools: ['dataviz', 'Windsor.ai', 'xlsx']
+        tools: ['web-artifacts-builder', 'Windsor.ai', 'xlsx']
       },
       boss: null
     },
@@ -3260,7 +3259,7 @@ window.DEPT_CONTENT = {
           rows: 2,
           help: [
             { type: 'instruction', title: 'Как подключить сервисы', text: '- В Claude открой Settings → Connectors.\n- Подключи Google Calendar и Gmail.\n- Задачи в Notion — подключи и его.' },
-            { type: 'material', title: 'Пак скиллов AICEX', text: 'Готовые скиллы AICEX, среди них — утренний брифинг.', url: 'https://skills.aicex.club' }
+            { type: 'skill', title: 'Скилл morning', text: 'Скилл утреннего брифинга уже есть в Claude. Включи его в настройках и попроси собрать брифинг.', prompt: 'Используй скилл morning. Собери мой брифинг на сегодня: встречи из календаря, важные письма и задачи.' }
           ]
         },
         {
@@ -3314,10 +3313,10 @@ window.DEPT_CONTENT = {
       ownSkill: true,
       brief: 'Последний агент — «Скиллы и автоматизации». Ты сам превращаешь повторяющуюся работу в [[скилл]] и расписываешь неделю офиса. С этого дня офис работает по регламентам.',
       aicex: {
-        text: 'В AICEX повторяющуюся работу превращают в скиллы: монтаж, лендинги, сценарии, ресёрч. Новый сотрудник получает готовый навык вместо инструкции. Скиллы собраны в пакеты.',
+        text: 'В AICEX повторяющуюся работу превращают в скиллы: монтаж, лендинги, сценарии, ресёрч. Новый сотрудник получает готовый навык вместо инструкции. Скиллы монтажа AICEX собраны в платный пак — так навык становится продуктом.',
         links: [
           { title: 'Пакет скиллов по монтажу видео', url: 'https://claude.ai/artifact/8Sx4z7NmqWs6CnjieSbEHJ' },
-          { title: 'Пак скиллов AICEX', url: 'https://skills.aicex.club' },
+          { title: 'Пак скиллов монтажа AICEX', url: 'https://skills.aicex.club' },
           { title: 'Лендинги эксперта: 5 стилей', url: 'https://claude.ai/artifact/F5cjiWb2ss8AvaC3uF3CHi' }
         ]
       },
@@ -3365,13 +3364,13 @@ window.DEPT_CONTENT = {
       ],
       gifts: [
         { type: 'skill', name: 'skill-creator', title: 'Создание скиллов', what: 'Пишет и тестирует новый скилл по примерам.', guide: 'claude-skill-upload' },
-        { type: 'product', title: 'Пак скиллов AICEX', url: 'https://skills.aicex.club', what: 'Готовые скиллы AICEX — образец, как они устроены.' },
+        { type: 'product', title: 'Пак скиллов монтажа', url: 'https://skills.aicex.club', what: 'Так AICEX упаковал 12 своих скиллов в продукт. Твой скилл тоже может стать продуктом.' },
         { type: 'artifact', title: 'Пакет скиллов по монтажу видео', url: 'https://claude.ai/artifact/8Sx4z7NmqWs6CnjieSbEHJ', what: 'Как AICEX собирает скиллы в пакет.' },
         { type: 'template', title: 'Регламент недели офиса', what: 'Строка регламента для каждого агента.', text: 'Отдел: …\nАгент: …\nКогда: день и время\nВход: …\nВыход: …\nКто проверяет: …' }
       ],
       task: {
         title: 'Сделай свой первый скилл и запусти неделю офиса',
-        steps: ['Установи скилл skill-creator.', 'Открой проект и вставь промпт ниже.', 'Ответь на вопросы Claude и проверь скилл на примере.', 'Загрузи скилл в Claude и вставь сюда его описание.'],
+        steps: ['Включи скилл skill-creator в настройках Claude.', 'Открой проект и вставь промпт ниже.', 'Ответь на вопросы Claude и проверь скилл на примере.', 'Загрузи скилл в Claude и вставь сюда его описание.'],
         prompt: 'Ты — агент «Скиллы и автоматизации» проекта {{@project}}.\nЗадача для скилла: {{skill_name}}.\nКогда его брать: {{skill_when}}.\nШаги и результат: {{skill_steps}}.\nНеделя офиса: {{week_plan}}.\nСделай скиллом skill-creator мой первый скилл: SKILL.md с описанием и шагами. Проверь его на одном примере. Потом оформи неделю офиса как регламент: день, агент, вход, выход, кто проверяет.',
         result: 'Описание скилла и регламент недели.',
         resultType: 'text',
@@ -3497,10 +3496,20 @@ window.DEPT_CONTENT = {
       ]
     },
     {
+      id: 'claude-skill-enable', title: 'Включить встроенный скилл', minutes: 1,
+      why: 'Этот скилл уже есть в Claude. Его не скачивают — его включают.',
+      steps: [
+        { screen: 'home', target: 'nav-user', text: 'В Claude нажми на своё имя внизу слева → **Settings**.' },
+        { screen: 'settings', target: 'tab-capabilities', text: 'Открой вкладку **Capabilities**.' },
+        { screen: 'settings', target: 'skill-toggle', text: 'В блоке **Skills** найди скилл и включи переключатель.' },
+        { screen: 'chat', target: 'input', text: 'Нет такого в списке — опиши задачу словами. Claude справится и без скилла.' }
+      ]
+    },
+    {
       id: 'claude-skill-upload', title: 'Установить скилл', minutes: 2,
       why: 'Скилл — готовый рецепт работы. Установил один раз — Claude пользуется им сам.',
       steps: [
-        { screen: 'skills-site', target: 'btn-pack', text: 'Открой skills.aicex.club и скачай нужный скилл архивом .zip.' },
+        { screen: 'academy-skill', target: 'btn-skill', text: 'На карточке скилла в академии нажми **Скачать скилл**. Понадобится код ученика.' },
         { screen: 'home', target: 'nav-user', text: 'В Claude нажми на своё имя внизу слева → **Settings**.' },
         { screen: 'settings', target: 'tab-capabilities', text: 'Открой вкладку **Capabilities**.' },
         { screen: 'settings', target: 'btn-upload', text: 'В блоке **Skills** нажми **Upload skill** и выбери архив.' },
@@ -3529,6 +3538,14 @@ window.DEPT_CONTENT = {
   ];
 
   A.officeUrl = 'https://hq.aicex.club';
+  A.filesUrl = 'https://hq.aicex.club/academy-files';   // скиллы AICEX — архивами, по коду ученика
+
+  // свои скиллы AICEX скачиваются архивом; встроенные в Claude включаются в настройках
+  A.skills = {
+    aicex: { 'niche-outlier-research': 'Выбросы в нише', 'lead-magnet': 'Лид-магнит', 'landing-gold': 'Лендинг «Золото»', 'landing-light': 'Лендинг «Светлый»', 'landing-neon': 'Лендинг «Неон»', 'landing-emerald': 'Лендинг «Изумруд»', 'landing-poster': 'Лендинг «Постер»', 'threads-telegram-funnel': 'Трафик из Threads в Telegram' },
+    soon: ['niche-outlier-research'],   // в аккаунте только SKILL.md, скрипты навыка — у Ильи на компьютере
+    builtin: ['deep-research', 'docs', 'docx', 'pdf', 'pptx', 'xlsx', 'canvas-design', 'web-artifacts-builder', 'skill-creator', 'morning', 'theme-factory']
+  };
 })();
 
 </script>
@@ -4095,9 +4112,22 @@ STAGE.questions = (s) => {
   return h;
 };
 const GIFT_KIND = { skill: 'Скилл', artifact: 'Артефакт', product: 'Продукт AICEX', connector: 'Коннектор', template: 'Шаблон' };
+const skillKind = (n) => (A.skills.aicex[n] ? 'aicex' : A.skills.builtin.indexOf(n) >= 0 ? 'builtin' : '');
+const myCode = () => (S.profile && S.profile.code) || '';
+const skillHref = (n) => A.filesUrl + '/skills/' + n + '.zip?code=' + encodeURIComponent(myCode());
+// без кода — сначала окно с кодом ученика, с кодом — прямая ссылка на архив
+const skillBtn = (n, label) => myCode()
+  ? '<a class="ab sm pri" href="' + esc(skillHref(n)) + '" target="_blank" rel="noopener">' + icon('download', 13) + esc(label) + '</a>'
+  : '<button class="ab sm pri" data-act="skill-code" data-skill="' + esc(n) + '">' + icon('download', 13) + esc(label) + '</button>';
 function giftHTML(g, sid, i) {
   const acts = [];
-  if (g.type === 'skill') { acts.push('<button class="ab sm" data-act="guide" data-id="claude-skill-upload">' + icon('pointer', 13) + 'Как установить</button>'); acts.push('<a class="ab sm" href="https://skills.aicex.club" target="_blank" rel="noopener">Пак скиллов ' + icon('ext', 13) + '</a>'); }
+  if (g.type === 'skill' && skillKind(g.name) === 'builtin') acts.push('<span class="pill ok">' + icon('check', 12) + 'Уже есть в Claude</span><button class="ab sm" data-act="guide" data-id="claude-skill-enable">' + icon('pointer', 13) + 'Как включить</button>');
+  else if (g.type === 'skill' && A.skills.soon.indexOf(g.name) >= 0) acts.push('<span class="pill amber">' + icon('clock', 12) + 'Архив скоро в академии</span>');
+  else if (g.type === 'skill') {
+    if (g.styles) acts.push('<span class="mut sm">Скачать стиль:</span>' + g.styles.map((x) => skillBtn(x[0], x[1])).join(''));
+    else acts.push(skillBtn(g.name, 'Скачать скилл'));
+    acts.push('<button class="ab sm" data-act="guide" data-id="claude-skill-upload">' + icon('pointer', 13) + 'Как установить</button>');
+  }
   if (g.type === 'artifact' || g.type === 'product') acts.push('<a class="ab sm" href="' + esc(g.url) + '" target="_blank" rel="noopener">Открыть ' + icon('ext', 13) + '</a>');
   if (g.type === 'connector') acts.push('<button class="ab sm" data-act="guide" data-id="' + esc(g.guide || 'claude-connector') + '">' + icon('pointer', 13) + 'Как подключить</button>');
   if (g.type === 'template') acts.push('<button class="ab sm" data-act="template" data-id="' + sid + '" data-i="' + i + '">' + icon('template', 13) + 'Открыть шаблон</button>');
@@ -4109,6 +4139,7 @@ STAGE.gifts = (s) => {
   const x = st(s.id);
   return '<p class="mut sm" style="margin:0">Это готовые решения из офиса AICEX. Они твои: лежат в разделе «Решения» и в файле агента.</p>' +
     s.gifts.map((g, i) => giftHTML(g, s.id, i)).join('') +
+    (s.upgrade ? '<div class="box"><span class="eb">Платно · в академию не входит</span><b>' + esc(s.upgrade.title) + '</b><span class="mut sm">' + esc(s.upgrade.what) + '</span><div class="row"><a class="ab sm" href="' + esc(s.upgrade.url) + '" target="_blank" rel="noopener">Посмотреть ' + icon('ext', 13) + '</a></div></div>' : '') +
     '<button class="ab pri full" data-act="gifts-take" data-id="' + s.id + '">' + (x.giftsTaken ? 'К заданию ' : 'Забрать решения и к заданию ') + icon('right') + '</button>';
 };
 STAGE.work = (s) => {
@@ -4222,8 +4253,26 @@ function showLibrary() {
   STEPS.forEach((s) => { if (st(s.id).giftsTaken) s.gifts.forEach((g, i) => got.push([s, g, i])); });
   const groups = ['skill', 'artifact', 'product', 'connector', 'template'];
   openModal('<div class="adh"><div class="stk" style="gap:2px"><span class="eb">Готовые решения AICEX</span><b class="h2">' + got.length + ' ' + plural(got.length, 'решение', 'решения', 'решений') + ' у тебя</b></div><button class="icob" data-act="close" aria-label="Закрыть">' + icon('x') + '</button></div>' +
+    '<div class="spr"><span class="mut sm">' + (myCode() ? 'Код ученика: ' + esc(myCode()) : 'Скиллы AICEX скачиваются по коду ученика.') + '</span><button class="ab ghost sm" data-act="skill-code" data-skill="">' + (myCode() ? 'Сменить код' : 'Ввести код') + '</button></div>' +
     (got.length ? groups.map((g) => { const items = got.filter((x) => x[1].type === g); return items.length ? '<div class="stk"><span class="eb">' + GIFT_KIND[g] + ' · ' + items.length + '</span><div class="lib">' + items.map((x) => giftHTML(x[1], x[0].id, x[2])).join('') + '</div></div>' : ''; }).join('')
       : '<p class="mut">Решения появляются, когда ты забираешь их в шаге. Первые — уже на ресепшне.</p>'), true);
+}
+// код ученика: им открываются архивы скиллов AICEX на сайте академии
+function showCode(skill) {
+  openModal('<div class="adh"><div class="stk" style="gap:2px"><span class="eb">Скиллы AICEX</span><b class="h2">Код ученика</b></div><button class="icob" data-act="close" aria-label="Закрыть">' + icon('x') + '</button></div>' +
+    '<p class="mut sm" style="margin:0">Скиллы AICEX скачиваются по коду ученика. Код приходит после оплаты академии — в письме или в чате потока. Он выглядит так: anna-7KQ2MX.</p>' +
+    '<form id="aCode" class="stk" data-skill="' + esc(skill || '') + '"><div class="reg"><label for="acode">Твой код</label><input class="in" id="acode" autocomplete="off" spellcheck="false" placeholder="имя-XXXXXX" value="' + esc(myCode()) + '"></div>' +
+    '<button class="ab pri" type="submit">' + icon('download', 14) + (skill ? 'Сохранить и скачать' : 'Сохранить') + '</button></form>');
+  setTimeout(() => { const f = $('#acode'); if (f) f.focus(); }, 50);
+}
+function saveCode(form) {
+  const m = String($('#acode').value || '').trim().match(/^([a-z0-9]{2,24})-([a-z2-7]{6})$/i);
+  if (!m) { toast('Код выглядит так: имя-XXXXXX. Проверь, нет ли лишних пробелов.'); return; }
+  S.profile.code = m[1].toLowerCase() + '-' + m[2].toUpperCase();
+  save(); closeModal(); renderPanel();
+  const skill = form.getAttribute('data-skill');
+  if (skill) window.open(skillHref(skill), '_blank', 'noopener');
+  else toast('Код сохранён. Скиллы AICEX скачиваются на карточках.');
 }
 function showTemplate(sid, i) {
   const g = STEP[sid].gifts[i];
@@ -4300,14 +4349,14 @@ const SCREENS = {
   instructions: () => cFrame('<div class="sc-title">Set project instructions</div><span>Provide Claude with relevant instructions and information.</span>' + E('textarea', 'sc-input', '<span style="color:#111d35"># Инструкция для Claude — ' + esc(brand()) + '</span><br>Меня зовут ' + who() + '…', 'min-height:38%') + '<div class="row" style="justify-content:flex-end;gap:6px"><div class="sc-btn">Cancel</div>' + E('btn-save', 'sc-btn dark', 'Save instructions') + '</div>', { active: 1, url: 'claude.ai/project' }),
   'project-add': () => cFrame('<div class="sc-row"><div class="stk" style="gap:7px">' + projSide() + '</div><div class="stk" style="gap:7px"><div class="sc-box"><b>Instructions</b><div class="sc-line m"></div></div><div class="sc-box"><div class="spr"><b>Files</b><span style="font-weight:800">+</span></div></div></div></div><div class="sc-menu" style="right:12px;top:52%">' + E('menu-upload', 'sc-item', 'Upload from device') + '<div class="sc-item">Add text content</div><div class="sc-item">Google Drive</div></div>', { active: 1, url: 'claude.ai/project' }),
   'project-files': () => cFrame('<div class="sc-row"><div class="stk" style="gap:7px">' + projSide() + '</div><div class="stk" style="gap:7px"><div class="sc-box"><b>Instructions</b><div class="sc-line m"></div></div>' + E('files-list', 'sc-box', '<b>Files</b>' + ['CLAUDE.md', 'context/business.md', 'agents/marketing/scripts.md'].map((n) => '<span style="font:9.5px var(--mono)">' + n + '</span>').join('')) + '</div></div>', { active: 1, url: 'claude.ai/project' }),
-  settings: () => cFrame('<div class="sc-title">Capabilities</div><div class="sc-box"><b>Artifacts</b><div class="sc-line m"></div></div><div class="sc-box"><div class="spr"><b>Skills</b>' + E('btn-upload', 'sc-btn', 'Upload skill') + '</div><span>Teach Claude repeatable tasks</span></div>', { side: '<div class="sc-item strong">Settings</div><div class="sc-item">Profile</div><div class="sc-item">Appearance</div>' + E('tab-capabilities', 'sc-item strong', 'Capabilities') + '<div class="sc-item">Connectors</div><div class="sc-item">Billing</div>', noUser: 1, url: 'claude.ai/settings' }),
+  settings: () => cFrame('<div class="sc-title">Capabilities</div><div class="sc-box"><b>Artifacts</b><div class="sc-line m"></div></div><div class="sc-box"><div class="spr"><b>Skills</b>' + E('btn-upload', 'sc-btn', 'Upload skill') + '</div><span>Teach Claude repeatable tasks</span><div class="spr"><span style="font-family:var(--mono)">canvas-design</span>' + E('skill-toggle', 'sc-btn dark', 'On') + '</div></div>', { side: '<div class="sc-item strong">Settings</div><div class="sc-item">Profile</div><div class="sc-item">Appearance</div>' + E('tab-capabilities', 'sc-item strong', 'Capabilities') + '<div class="sc-item">Connectors</div><div class="sc-item">Billing</div>', noUser: 1, url: 'claude.ai/settings' }),
   'settings-connectors': () => cFrame('<div class="sc-title">Connectors</div><div class="sc-box"><div class="spr"><b>Chat Place</b>' + E('btn-connect', 'sc-btn dark', 'Connect') + '</div></div><div class="sc-box"><div class="spr"><b>Google Drive</b><div class="sc-btn">Connect</div></div></div><div class="sc-box"><div class="spr"><b>Windsor.ai</b><div class="sc-btn">Connect</div></div></div>', { side: '<div class="sc-item strong">Settings</div><div class="sc-item">Profile</div><div class="sc-item">Capabilities</div>' + E('tab-connectors', 'sc-item strong', 'Connectors') + '<div class="sc-item">Billing</div>', noUser: 1, url: 'claude.ai/settings/connectors' }),
   chat: () => cFrame('<div class="sc-title" style="margin-top:12%;text-align:center">' + esc(brand()) + '</div>' + E('input', 'sc-input', '<span style="color:#111d35">Вставь промпт и нажми Enter…</span>') + '<span style="text-align:center">Claude сам возьмёт файлы и скиллы проекта</span>', { active: 1 }),
   'chat-answer': () => cFrame('<div class="sc-box" style="justify-self:end;max-width:70%"><span>Промпт из задания…</span></div>' + E('answer', 'sc-box', '<b>Готово. Вот 5 сценариев:</b><div class="sc-line m"></div><div class="sc-line"></div><div class="sc-line s"></div><div class="sc-btn">Copy</div>') + '<div class="sc-input">Reply…</div>', { active: 1 }),
   'cabinet-file': () => oFrame('<div class="spr"><div class="sc-title" style="font-family:var(--mono)">CLAUDE.md</div><div class="row" style="gap:4px">' + E('btn-copy', 'sc-btn dark', 'Скопировать') + '<div class="sc-btn">.md</div></div></div><div class="sc-box"><b># Инструкция для Claude</b><div class="sc-line m"></div><div class="sc-line"></div><div class="sc-line s"></div></div>'),
   'cabinet-files': () => oFrame('<div class="spr"><div class="sc-title">Проект</div>' + E('btn-zip', 'sc-btn dark', 'Скачать всё (.zip)') + '</div>' + ['CLAUDE.md', 'context/business.md', 'agents/strategy/market.md'].map((n) => '<div class="sc-box" style="padding:4px 8px"><span style="font:9.5px var(--mono)">' + n + '</span></div>').join('')),
   'cabinet-prompt': () => oFrame('<div class="sc-title">Задание: сделай 5 сценариев</div><div class="sc-box" style="font:9.5px var(--mono)">Напиши 5 сценариев рилсов для «' + esc(brand()) + '»…</div>' + E('btn-copy-prompt', 'sc-btn dark', 'Скопировать промпт') + '<div class="sc-input">Вставь результат из Claude</div>'),
-  'skills-site': () => '<div class="screen" role="img" aria-label="Схема сайта скиллов"><div class="sc-bar"><i></i><i></i><i></i><span>skills.aicex.club</span></div><div class="sc-body" style="grid-template-columns:1fr"><div class="sc-main"><div class="sc-title">Пак скиллов AICEX</div><div class="sc-row"><div class="sc-box"><b style="font-family:var(--mono)">reels-script</b><div class="sc-line m"></div>' + E('btn-pack', 'sc-btn dark', 'Скачать .zip') + '</div><div class="sc-box"><b style="font-family:var(--mono)">lead-magnet</b><div class="sc-line s"></div><div class="sc-btn">Скачать .zip</div></div></div></div></div></div>',
+  'academy-skill': () => oFrame('<div class="sc-title">Решение · Скилл AICEX</div><div class="sc-box"><b>Лид-магнит</b><span style="font-family:var(--mono)">lead-magnet</span><div class="sc-line m"></div><div class="row" style="gap:4px">' + E('btn-skill', 'sc-btn dark', 'Скачать скилл') + '<div class="sc-btn">Как установить</div></div></div>'),
   office: () => {
     const room = (t, n, id, mk, ag) => E(id, 'sc-box', '<b>' + t + '</b><div>' + Array.from({ length: n }, (_, i) => i === 0 && ag ? E('agent', '', '', 'display:inline-block;width:12px;height:12px;border-radius:50%;background:#2f6bff;margin:2px') : '<span style="display:inline-block;width:10px;height:10px;border-radius:50%;background:#dfe4ec;margin:3px"></span>').join('') + (mk ? E('marker', '', '!', 'display:inline-grid;place-items:center;width:16px;height:16px;border-radius:50%;background:#e79a00;color:#1c1300;font-weight:800;margin:2px') : '') + '</div>');
     return oFrame('<div style="display:grid;grid-template-columns:1fr 1fr;gap:8px">' + room('Стратегия', 3, '', 0, 1) + room('Маркетинг', 4, 'room', 1, 0) + room('Продажи', 0, '', 0, 0) + room('Реклама', 0, '', 0, 0) + '</div>');
@@ -4600,6 +4649,7 @@ const ACT = {
   project: () => showProject(UI.file),
   file: (t) => showProject(t.dataset.path),
   'copy-file': (t) => { const f = fileByPath(t.dataset.path); if (f) copyText(f.text()); },
+  'skill-code': (t) => showCode(t.getAttribute('data-skill')),
   'dl-file': (t) => { const f = fileByPath(t.dataset.path); if (f) offerFile(f.path.split('/').pop(), f.text()); },
   zip: () => zipProject(),
   library: () => showLibrary(),
@@ -4633,7 +4683,10 @@ document.addEventListener('change', (e) => {
   const t = e.target;
   if (t.hasAttribute('data-head')) { S.heads[t.getAttribute('data-head')] = t.value; save(); if (window.OFFICE) window.OFFICE.sync(); toast('Руководитель отдела «' + roomName(t.getAttribute('data-head')) + '» — ' + t.value); }
 });
-document.addEventListener('submit', (e) => { if (e.target.id === 'aOnb') { e.preventDefault(); startProject(); } });
+document.addEventListener('submit', (e) => {
+  if (e.target.id === 'aOnb') { e.preventDefault(); startProject(); }
+  if (e.target.id === 'aCode') { e.preventDefault(); saveCode(e.target); }
+});
 document.addEventListener('keydown', (e) => { if (e.key === 'Escape') { hidePop(); closeModal(); } });
 $('#aModal').addEventListener('click', (e) => { if (e.target.id === 'aModal') closeModal(); });
 

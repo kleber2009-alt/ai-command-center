@@ -162,9 +162,22 @@ STAGE.questions = (s) => {
   return h;
 };
 const GIFT_KIND = { skill: 'Скилл', artifact: 'Артефакт', product: 'Продукт AICEX', connector: 'Коннектор', template: 'Шаблон' };
+const skillKind = (n) => (A.skills.aicex[n] ? 'aicex' : A.skills.builtin.indexOf(n) >= 0 ? 'builtin' : '');
+const myCode = () => (S.profile && S.profile.code) || '';
+const skillHref = (n) => A.filesUrl + '/skills/' + n + '.zip?code=' + encodeURIComponent(myCode());
+// без кода — сначала окно с кодом ученика, с кодом — прямая ссылка на архив
+const skillBtn = (n, label) => myCode()
+  ? '<a class="ab sm pri" href="' + esc(skillHref(n)) + '" target="_blank" rel="noopener">' + icon('download', 13) + esc(label) + '</a>'
+  : '<button class="ab sm pri" data-act="skill-code" data-skill="' + esc(n) + '">' + icon('download', 13) + esc(label) + '</button>';
 function giftHTML(g, sid, i) {
   const acts = [];
-  if (g.type === 'skill') { acts.push('<button class="ab sm" data-act="guide" data-id="claude-skill-upload">' + icon('pointer', 13) + 'Как установить</button>'); acts.push('<a class="ab sm" href="https://skills.aicex.club" target="_blank" rel="noopener">Пак скиллов ' + icon('ext', 13) + '</a>'); }
+  if (g.type === 'skill' && skillKind(g.name) === 'builtin') acts.push('<span class="pill ok">' + icon('check', 12) + 'Уже есть в Claude</span><button class="ab sm" data-act="guide" data-id="claude-skill-enable">' + icon('pointer', 13) + 'Как включить</button>');
+  else if (g.type === 'skill' && A.skills.soon.indexOf(g.name) >= 0) acts.push('<span class="pill amber">' + icon('clock', 12) + 'Архив скоро в академии</span>');
+  else if (g.type === 'skill') {
+    if (g.styles) acts.push('<span class="mut sm">Скачать стиль:</span>' + g.styles.map((x) => skillBtn(x[0], x[1])).join(''));
+    else acts.push(skillBtn(g.name, 'Скачать скилл'));
+    acts.push('<button class="ab sm" data-act="guide" data-id="claude-skill-upload">' + icon('pointer', 13) + 'Как установить</button>');
+  }
   if (g.type === 'artifact' || g.type === 'product') acts.push('<a class="ab sm" href="' + esc(g.url) + '" target="_blank" rel="noopener">Открыть ' + icon('ext', 13) + '</a>');
   if (g.type === 'connector') acts.push('<button class="ab sm" data-act="guide" data-id="' + esc(g.guide || 'claude-connector') + '">' + icon('pointer', 13) + 'Как подключить</button>');
   if (g.type === 'template') acts.push('<button class="ab sm" data-act="template" data-id="' + sid + '" data-i="' + i + '">' + icon('template', 13) + 'Открыть шаблон</button>');
@@ -176,6 +189,7 @@ STAGE.gifts = (s) => {
   const x = st(s.id);
   return '<p class="mut sm" style="margin:0">Это готовые решения из офиса AICEX. Они твои: лежат в разделе «Решения» и в файле агента.</p>' +
     s.gifts.map((g, i) => giftHTML(g, s.id, i)).join('') +
+    (s.upgrade ? '<div class="box"><span class="eb">Платно · в академию не входит</span><b>' + esc(s.upgrade.title) + '</b><span class="mut sm">' + esc(s.upgrade.what) + '</span><div class="row"><a class="ab sm" href="' + esc(s.upgrade.url) + '" target="_blank" rel="noopener">Посмотреть ' + icon('ext', 13) + '</a></div></div>' : '') +
     '<button class="ab pri full" data-act="gifts-take" data-id="' + s.id + '">' + (x.giftsTaken ? 'К заданию ' : 'Забрать решения и к заданию ') + icon('right') + '</button>';
 };
 STAGE.work = (s) => {

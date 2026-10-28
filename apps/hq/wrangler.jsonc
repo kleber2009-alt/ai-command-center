@@ -1,8 +1,12 @@
-// Деплой hq.aicex.club: Worker hq-aicex, только статика (custom domain привязан в Cloudflare).
+// Деплой hq.aicex.club: Worker hq-aicex (custom domain привязан в Cloudflare).
+// Статика отдаётся напрямую; worker.js работает только для /academy-files/* — скиллы академии по коду ученика.
 // cd apps/hq && npx wrangler deploy   (нужны CLOUDFLARE_API_TOKEN с Workers Scripts: Edit и CLOUDFLARE_ACCOUNT_ID)
+// Секрет для кодов: npx wrangler secret put ACADEMY_SECRET
 {
   "name": "hq-aicex",
+  "main": "worker.js",
   "compatibility_date": "2026-10-01",
   "workers_dev": false,
-  "assets": { "directory": "." }
+  "build": { "command": "python3 academy-src/tools/check_files.py" },
+  "assets": { "directory": ".", "binding": "ASSETS", "run_worker_first": ["/academy-files/*"] }
 }

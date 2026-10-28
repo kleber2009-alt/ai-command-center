@@ -3,3 +3,6 @@ wrangler.jsonc
 .assetsignore
 .wrangler
 academy-src
+worker.js
+.dev.vars
+.gitignore

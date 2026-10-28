@@ -103,10 +103,20 @@
       ]
     },
     {
+      id: 'claude-skill-enable', title: 'Включить встроенный скилл', minutes: 1,
+      why: 'Этот скилл уже есть в Claude. Его не скачивают — его включают.',
+      steps: [
+        { screen: 'home', target: 'nav-user', text: 'В Claude нажми на своё имя внизу слева → **Settings**.' },
+        { screen: 'settings', target: 'tab-capabilities', text: 'Открой вкладку **Capabilities**.' },
+        { screen: 'settings', target: 'skill-toggle', text: 'В блоке **Skills** найди скилл и включи переключатель.' },
+        { screen: 'chat', target: 'input', text: 'Нет такого в списке — опиши задачу словами. Claude справится и без скилла.' }
+      ]
+    },
+    {
       id: 'claude-skill-upload', title: 'Установить скилл', minutes: 2,
       why: 'Скилл — готовый рецепт работы. Установил один раз — Claude пользуется им сам.',
       steps: [
-        { screen: 'skills-site', target: 'btn-pack', text: 'Открой skills.aicex.club и скачай нужный скилл архивом .zip.' },
+        { screen: 'academy-skill', target: 'btn-skill', text: 'На карточке скилла в академии нажми **Скачать скилл**. Понадобится код ученика.' },
         { screen: 'home', target: 'nav-user', text: 'В Claude нажми на своё имя внизу слева → **Settings**.' },
         { screen: 'settings', target: 'tab-capabilities', text: 'Открой вкладку **Capabilities**.' },
         { screen: 'settings', target: 'btn-upload', text: 'В блоке **Skills** нажми **Upload skill** и выбери архив.' },
@@ -135,4 +145,12 @@
   ];
 
   A.officeUrl = 'https://hq.aicex.club';
+  A.filesUrl = 'https://hq.aicex.club/academy-files';   // скиллы AICEX — архивами, по коду ученика
+
+  // свои скиллы AICEX скачиваются архивом; встроенные в Claude включаются в настройках
+  A.skills = {
+    aicex: { 'niche-outlier-research': 'Выбросы в нише', 'lead-magnet': 'Лид-магнит', 'landing-gold': 'Лендинг «Золото»', 'landing-light': 'Лендинг «Светлый»', 'landing-neon': 'Лендинг «Неон»', 'landing-emerald': 'Лендинг «Изумруд»', 'landing-poster': 'Лендинг «Постер»', 'threads-telegram-funnel': 'Трафик из Threads в Telegram' },
+    soon: ['niche-outlier-research'],   // в аккаунте только SKILL.md, скрипты навыка — у Ильи на компьютере
+    builtin: ['deep-research', 'docs', 'docx', 'pdf', 'pptx', 'xlsx', 'canvas-design', 'web-artifacts-builder', 'skill-creator', 'morning', 'theme-factory']
+  };
 })();

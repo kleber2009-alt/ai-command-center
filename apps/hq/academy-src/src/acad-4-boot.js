@@ -171,6 +171,7 @@ const ACT = {
   project: () => showProject(UI.file),
   file: (t) => showProject(t.dataset.path),
   'copy-file': (t) => { const f = fileByPath(t.dataset.path); if (f) copyText(f.text()); },
+  'skill-code': (t) => showCode(t.getAttribute('data-skill')),
   'dl-file': (t) => { const f = fileByPath(t.dataset.path); if (f) offerFile(f.path.split('/').pop(), f.text()); },
   zip: () => zipProject(),
   library: () => showLibrary(),
@@ -204,7 +205,10 @@ document.addEventListener('change', (e) => {
   const t = e.target;
   if (t.hasAttribute('data-head')) { S.heads[t.getAttribute('data-head')] = t.value; save(); if (window.OFFICE) window.OFFICE.sync(); toast('Руководитель отдела «' + roomName(t.getAttribute('data-head')) + '» — ' + t.value); }
 });
-document.addEventListener('submit', (e) => { if (e.target.id === 'aOnb') { e.preventDefault(); startProject(); } });
+document.addEventListener('submit', (e) => {
+  if (e.target.id === 'aOnb') { e.preventDefault(); startProject(); }
+  if (e.target.id === 'aCode') { e.preventDefault(); saveCode(e.target); }
+});
 document.addEventListener('keydown', (e) => { if (e.key === 'Escape') { hidePop(); closeModal(); } });
 $('#aModal').addEventListener('click', (e) => { if (e.target.id === 'aModal') closeModal(); });
 

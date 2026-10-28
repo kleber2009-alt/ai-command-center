@@ -22,7 +22,24 @@ node test/demo.js dist/test.html test/shots   # пример «офис AICEX н
 
 ## Деплой
 
-Вместе с hq: `cd apps/hq && npx wrangler deploy` (нужны `CLOUDFLARE_API_TOKEN` с правом Workers Scripts: Edit и `CLOUDFLARE_ACCOUNT_ID`). Папка `academy-src` в ассеты не попадает (`.assetsignore`).
+Вместе с hq: `cd apps/hq && npx wrangler deploy` (нужны `CLOUDFLARE_API_TOKEN` с правом Workers Scripts: Edit и `CLOUDFLARE_ACCOUNT_ID`). Папка `academy-src` и `worker.js` в ассеты не попадают (`.assetsignore`).
+
+## Скиллы AICEX для учеников
+
+Архивы скиллов в git не лежат: репозиторий публичный. Перед деплоем их собирают из папки со скиллами:
+
+```bash
+python3 tools/pack_skills.py <папка со скиллами>   # → ../academy-files/skills/*.zip, личные данные в примерах заменены
+```
+
+Без архивов `wrangler deploy` остановится (`tools/check_files.py`), чтобы не стереть скиллы с сайта.
+
+Архив отдаётся только по коду ученика `имя-XXXXXX`: `../worker.js` стоит перед `/academy-files/*` и сверяет код с секретом. Без кода — страница «Нужен код ученика».
+
+- Секрет: `npx wrangler secret put ACADEMY_SECRET` или Cloudflare → Workers & Pages → hq-aicex → Settings → Variables and Secrets → Add (Secret). В репозиторий не класть.
+- Выдать коды: https://hq.aicex.club/academy-codes (секрет + имена → коды, считается в браузере) или `ACADEMY_SECRET=… python3 tools/codes.py Анна "Борис Петров"`.
+- Отозвать код: имя из кода (`anna`) в переменную `ACADEMY_REVOKED`, через запятую.
+- Новый секрет отзывает все коды сразу.
 
 ## Где что
 
@@ -33,3 +50,5 @@ node test/demo.js dist/test.html test/shots   # пример «офис AICEX н
 | `src/acad-*.js`, `src/academy.css` | логика и вид кабинета |
 | `src/office-academy.js` | 3D-слой: замки комнат, голограммы мест, Проводник, найм |
 | `SPEC.md`, `AGENTS-REAL.md` | схема шага и реальные агенты AICEX — источник готовых решений |
+| `tools/` | архивы скиллов (`pack_skills.py`), коды учеников (`codes.py`), проверка перед деплоем |
+| `../worker.js`, `../academy-codes.html` | выдача скиллов по коду, генератор кодов |
