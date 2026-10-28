@@ -10,7 +10,9 @@
    kind    — тип работы для фильтра
    proof   — ссылки-доказательства, media — что показать прямо в окне задачи
 
-   Новая задача = новый объект в массиве. Даты в формате ГГГГ-ММ-ДД. */
+   Новая задача = новый объект в массиве. Даты в формате ГГГГ-ММ-ДД.
+   Новые PR попадают в историю сами — в tasks.auto.js (sync/sync.mjs). PR, упомянутые здесь
+   через pr(…), синк пропускает, так что ручная задача и автоматическая не задвоятся. */
 window.OFFICE_TASKS = (() => {
   const GH = 'https://github.com/kleber2009-alt/ai-command-center';
   const MK = 'https://marketing.aicex.club/assets/';
@@ -30,7 +32,7 @@ window.OFFICE_TASKS = (() => {
     { id:'living-office', date:'2026-10-27', dateNote:UPD, kind:'Продукт', dept:'ceo', people:['ilia'], agents:['product', 'specs'],
       title:'Живой офис агентов: 3D-зал, где агенты носят друг другу материалы',
       summary:'Вторая версия виртуального офиса: один open-space вместо комнат, агенты ходят между отделами, на мониторах видно их работу, справа — история реальных задач с доказательствами. Это hq2.aicex.club.',
-      proof:[art('USUnYCP83rryz642mYnFjc', 'Живой офис AICEX — артефакт'), commits('apps/hq-office', 'Код офиса на GitHub')] },
+      proof:[...pr(146, 147), art('USUnYCP83rryz642mYnFjc', 'Живой офис AICEX — артефакт'), commits('apps/hq-office', 'Код офиса на GitHub'), site('https://hq2.aicex.club', 'hq2.aicex.club — живой сайт')] },
     { id:'virtual-office', date:'2026-10-27', dateNote:UPD, kind:'Продукт', dept:'ceo', people:['ilia'], agents:['product', 'specs', 'skills'],
       title:'Виртуальный офис агентов hq.aicex.club: отделы, досье агентов, демо-презентации',
       summary:'Первая версия офиса: четыре комнаты отделов, руководители и агенты, досье каждого агента с работами и скиллами, демо отдела и игровой трек «Свой ИИ-офис».',

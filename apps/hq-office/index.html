@@ -103,6 +103,7 @@
   .task:hover{background:rgba(255,255,255,.09);border-color:rgba(255,255,255,.14)}
   .t-meta{display:flex;gap:8px;align-items:center;font:600 10.5px var(--f-mono);color:var(--ink-3);text-transform:uppercase;letter-spacing:.06em;flex-wrap:wrap}
   .t-meta em{font-style:normal;color:var(--ink-2);padding:1px 7px;border-radius:99px;background:rgba(255,255,255,.07)}
+  .t-meta em.fresh{color:var(--ok);background:rgba(61,220,151,.14)}
   .task b{font-size:13.5px;font-weight:700;line-height:1.35;color:var(--ink)}
   .t-who{display:flex;align-items:center;gap:4px;min-width:0}
   .t-who .dots{display:flex;gap:3px;margin-left:2px}
@@ -353,11 +354,13 @@
 <div id="loader">Собираю офис…</div>
 
 <!-- Контент офиса — те же файлы, что на hq.aicex.club: отделы и руководители, досье и работы
-     агентов, окна отделов. tasks.js — история реальных задач для правой панели. -->
+     агентов, окна отделов. tasks.js — история реальных задач для правой панели,
+     tasks.auto.js — задачи из новых PR и ссылок, которые добавляются сами (sync/sync.mjs). -->
 <script src="office.config.js"></script>
 <script src="dept-content.js"></script>
 <script src="agent-content.js"></script>
 <script src="tasks.js"></script>
+<script src="tasks.auto.js"></script>
 
 <!-- ================== ДАННЫЕ ОФИСА ==================
      Состав отделов и руководители — как в office.config.js на hq.aicex.club.
@@ -548,8 +551,10 @@ const CFG = window.OFFICE_CONFIG || DATA.config;
 const CATALOG = { ...DATA.catalog };
 for (const [id, a] of Object.entries(window.AGENT_CATALOG || {})) CATALOG[id] = { ...(CATALOG[id] || { screen:'doc', tasks:[a.task || 'Работает'], out:[] }), ...a };
 const BRAND = CFG.brand || 'AI Office';
-// История реальных задач (tasks.js): в 3D агенты работают и носят именно эти задачи
-const TASKS = (window.OFFICE_TASKS || []).slice().sort((a, b) => b.date.localeCompare(a.date));
+// История реальных задач (tasks.js + tasks.auto.js): в 3D агенты работают и носят именно эти задачи
+const MANUAL_TASKS = window.OFFICE_TASKS || [];
+const TASKS = [...MANUAL_TASKS, ...(window.OFFICE_TASKS_AUTO?.tasks || []).filter(t => !MANUAL_TASKS.some(m => m.id === t.id))]
+  .sort((a, b) => b.date.localeCompare(a.date));
 const tasksOfAgent = id => TASKS.filter(t => (t.agents || []).includes(id));
 for (const [id, a] of Object.entries(CATALOG)) {
   const real = tasksOfAgent(id).map(t => t.title);
@@ -2283,6 +2288,8 @@ const MON_SHORT = ['янв', 'фев', 'мар', 'апр', 'мая', 'июн', '
 const MON_TITLE = ['Январь', 'Февраль', 'Март', 'Апрель', 'Май', 'Июнь', 'Июль', 'Август', 'Сентябрь', 'Октябрь', 'Ноябрь', 'Декабрь'];
 const ymd = iso => iso.split('-').map(Number);
 const fmtDate = (iso, short = false) => { const [y, m, d] = ymd(iso); return `${d} ${(short ? MON_SHORT : MON)[m - 1]}${short ? '' : ' ' + y}`; };
+const isFresh = t => Date.now() - Date.parse(t.date) < 7 * 864e5;
+const freshTag = t => isFresh(t) ? '<em class="fresh">новое</em>' : '';
 
 function drawOwnerScreen() {
   const S = pods[0].owner.scr, g = S.g, W = S.w, H = S.h;
@@ -2364,7 +2371,7 @@ function taskRowHTML(t) {
   const ppl = (t.people || []).map(personOf).filter(Boolean);
   const head = d && !d.head.owner ? PEOPLE[d.head.id] : null;
   return `<li><button class="task" data-task="${esc(t.id)}" style="--c:${d?.accent || '#9aa3b5'}">
-    <span class="t-meta"><time datetime="${t.date}">${fmtDate(t.date, true)}</time><em>${esc(t.kind)}</em></span>
+    <span class="t-meta"><time datetime="${t.date}">${fmtDate(t.date, true)}</time><em>${esc(t.kind)}</em>${freshTag(t)}</span>
     <b>${esc(t.title)}</b>
     <span class="t-who">${ppl.map(p => faceHTML(p, 'xs')).join('')}${head ? faceHTML(head, 'xs') : ''}<span class="dots">${ag.slice(0, 5).map(a => `<i style="--c:${esc(a.color)}" title="${esc(a.name)}"></i>`).join('')}</span><span class="t-dept">${esc(d?.short || '')}</span></span>
     <span class="t-proof">${esc(proofSummary(t))}</span></button></li>`;
@@ -2508,9 +2515,9 @@ function openTask(id, push = true) {
   const ag = (t.agents || []).map(agentMeta);
   const main = ag.find(a => CONTENT[a.id]?.process?.length);
   const skills = [...new Set(ag.flatMap(a => (CONTENT[a.id]?.skills || []).map(s => s.title)))].slice(0, 10);
-  $('tHead').innerHTML = `<span class="t-meta"><time datetime="${t.date}">${fmtDate(t.date)}</time><em style="--c:${d?.accent}">${esc(d?.name || '')}</em><em>${esc(t.kind)}</em></span><h2>${esc(t.title)}</h2>`;
+  $('tHead').innerHTML = `<span class="t-meta"><time datetime="${t.date}">${fmtDate(t.date)}</time><em style="--c:${d?.accent}">${esc(d?.name || '')}</em><em>${esc(t.kind)}</em>${freshTag(t)}</span><h2>${esc(t.title)}</h2>`;
   $('tBody').innerHTML = `
-    <p class="lead">${esc(t.summary)}</p>
+    ${t.summary ? `<p class="lead">${esc(t.summary)}</p>` : ''}
     <div class="who">
       ${ppl.map(p => `<button class="chip" data-person="${esc(p.id === 'ilia' ? DEPTS[0].head.id : p.id)}">${faceHTML(p, 'xs')}${esc(p.name)}</button>`).join('')}
       ${head && !ppl.some(p => p.id === head.id) ? `<button class="chip" data-person="${esc(head.id)}">${faceHTML(head, 'xs')}${esc(head.name)} · ${esc(d.short.toLowerCase())}</button>` : ''}
