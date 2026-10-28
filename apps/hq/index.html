@@ -446,7 +446,8 @@ const params = new URLSearchParams(location.search);
 if (params.get('ui') === '0') document.body.classList.add('embed');
 const isMobile = matchMedia('(max-width:820px)').matches;
 
-const renderer = new THREE.WebGLRenderer({ antialias:true, powerPreference:'high-performance' });
+// сглаживание канвасу не нужно: сцена рисуется в буфер композера (ниже), на канвас идёт готовый кадр
+const renderer = new THREE.WebGLRenderer({ antialias:false, powerPreference:'high-performance' });
 renderer.setPixelRatio(Math.min(devicePixelRatio, isMobile ? 1.5 : 1.75));
 renderer.setSize(innerWidth, innerHeight);
 renderer.shadowMap.enabled = true;
@@ -467,7 +468,8 @@ const controls = new OrbitControls(camera, renderer.domElement);
 controls.enableDamping = true;
 controls.dampingFactor = 0.07;
 
-const composer = new EffectComposer(renderer);
+// MSAA в буфере композера: без него тонкие рамки, полки и светящиеся полоски рябят при зуме, а bloom мигает
+const composer = new EffectComposer(renderer, new THREE.WebGLRenderTarget(innerWidth, innerHeight, { type:THREE.HalfFloatType, samples:4 }));
 composer.addPass(new RenderPass(scene, camera));
 composer.addPass(new UnrealBloomPass(new THREE.Vector2(innerWidth, innerHeight), 0.5, 0.45, 1.6));
 composer.addPass(new OutputPass());
@@ -1985,6 +1987,8 @@ addEventListener('resize', onResize); onResize();
 
 const clock = new THREE.Clock();
 renderer.setAnimationLoop(() => {
+  // досье и демо закрывают офис — не рисуем 3D под ними, чтобы их прокрутка не делила видеокарту со сценой
+  if (!$('demo').hidden || !$('dossier').hidden) return;
   const t = clock.getElapsedTime(), now = performance.now();
   uTime.value = t;
   const dtm = Math.min(0.05, t - (window.__lt ?? t)); window.__lt = t;
@@ -2014,6 +2018,10 @@ renderer.setAnimationLoop(() => {
   } else if (!d) {
     camera.position.y = Math.max(camera.position.y, 3.5);
   }
+  // ближняя плоскость едет за зумом: при постоянных 0.05 на общем плане не хватает точности
+  // буфера глубины, и слои в пару миллиметров (пол, холл, плита, экраны) мерцают при прокрутке
+  const near = THREE.MathUtils.clamp(camera.position.distanceTo(controls.target)*0.02, 0.05, 1);
+  if (Math.abs(near - camera.near) > 1e-3) { camera.near = near; camera.updateProjectionMatrix(); }
 
   gameTick(t, now);
   composer.render();
