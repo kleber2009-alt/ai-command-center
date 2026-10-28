@@ -1,0 +1,296 @@
+/* ==========================================================================
+   Sprint Slides — презентации для вебинаров в стиле ai-sprint-x7.
+   Подключать ПОСЛЕ sprint-core.css. Сцена 1440×810 (16:9) масштабируется под экран.
+   Префикс макетов: sl-. Компоненты внутри слайдов — классы sx- из sprint-core.
+   ========================================================================== */
+
+html, body { height: 100%; margin: 0; overflow: hidden; background: #0b1220; scroll-behavior: auto; }
+.deck { position: fixed; inset: 0; display: flex; align-items: center; justify-content: center; }
+.stage { position: relative; width: 1440px; height: 810px; flex-shrink: 0; transform: scale(var(--sl-scale, 1)); transform-origin: center; }
+
+.slide { position: absolute; inset: 0; display: none; flex-direction: column; overflow: hidden; isolation: isolate; padding: 54px 72px 64px; background: var(--sx-surface); color: var(--sx-ink); border-radius: 0; }
+.slide.is-active { display: flex; animation: sl-in .45s cubic-bezier(.2,.7,.2,1); }
+@keyframes sl-in { from { opacity: 0; transform: translateY(10px); } to { opacity: 1; transform: none; } }
+
+/* шаги внутри слайда: .fx появляется по следующему нажатию */
+.fx { opacity: 0; transform: translateY(14px); transition: opacity .45s ease, transform .45s cubic-bezier(.2,.7,.2,1); }
+.fx.is-shown { opacity: 1; transform: none; }
+.fx-fade { transform: none; }
+
+/* хром слайда (добавляет deck.js): бренд слева снизу, тема и номер справа */
+.sl-chrome { position: absolute; left: 72px; right: 72px; bottom: 24px; z-index: 5; display: flex; align-items: center; justify-content: space-between; font-size: 12px; font-weight: 600; color: var(--sx-muted); pointer-events: none; }
+.sl-chrome .sx-logo { font-size: 14px; color: var(--sx-ink); }
+.sl-chrome-right { display: flex; align-items: center; gap: 18px; letter-spacing: .04em; }
+.sl-chrome-right b { color: var(--sx-blue); font-weight: 700; }
+.slide.sl-dark .sl-chrome, .slide.sl-black .sl-chrome { color: rgba(255,255,255,.45); }
+.slide.sl-dark .sl-chrome .sx-logo, .slide.sl-black .sl-chrome .sx-logo { color: #fff; }
+
+/* фоны */
+.sl-dark  { background: radial-gradient(ellipse at 80% 10%, rgba(22,114,255,.35), transparent 55%), radial-gradient(ellipse at 0% 100%, rgba(7,84,235,.25), transparent 50%), var(--sx-dark); color: #fff; }
+.sl-black { background: var(--sx-black); color: #fff; }
+.sl-white { background: #fff; }
+
+/* ---------- типографика слайда ---------- */
+.sl-head { display: flex; align-items: flex-end; justify-content: space-between; gap: 48px; margin-bottom: 30px; }
+.sl-head > div { min-width: 0; }
+.sl-head--center { display: block; text-align: center; }
+.sl-head--center .sl-lead { margin-left: auto; margin-right: auto; }
+.sl-title { font-size: 56px; font-weight: 800; line-height: 1.06; letter-spacing: -.045em; }
+.sl-title span { color: var(--sx-blue); }
+.sl-title .sx-br { display: block; }
+.sl-dark .sl-title span, .sl-black .sl-title span { color: #4d8bff; }
+.sl-lead { max-width: 760px; margin-top: 14px; font-size: 20px; line-height: 1.45; color: var(--sx-text); }
+.sl-dark .sl-lead, .sl-black .sl-lead { color: #c9d6ec; }
+.sl-intro { flex: 0 0 340px; font-size: 16px; line-height: 1.5; color: #5b6f8d; }
+.slide .sx-eyebrow { font-size: 13px; margin-bottom: 16px; }
+.sl-dark .sx-eyebrow, .sl-black .sx-eyebrow { color: #5897ff; }
+.sl-body { flex: 1; min-height: 0; display: flex; flex-direction: column; justify-content: center; }
+
+/* ---------- сетки и карточки ---------- */
+.sl-grid { display: grid; gap: 20px; }
+.sl-grid-2 { grid-template-columns: repeat(2, minmax(0, 1fr)); }
+.sl-grid-3 { grid-template-columns: repeat(3, minmax(0, 1fr)); }
+.sl-grid-4 { grid-template-columns: repeat(4, minmax(0, 1fr)); }
+.sl-card { position: relative; display: flex; flex-direction: column; min-width: 0; padding: 28px; background: #fff; border: 1px solid var(--sx-line); border-radius: 24px; box-shadow: var(--sx-shadow-card); }
+.sl-card h3 { margin: 18px 0 10px; font-size: 26px; font-weight: 800; line-height: 1.12; letter-spacing: -.035em; }
+.sl-card p { font-size: 16px; line-height: 1.5; color: var(--sx-text); }
+.sl-card-top { display: flex; align-items: center; justify-content: space-between; gap: 12px; }
+.sl-card--dark { background: var(--sx-dark); border-color: #1672ff; color: #fff; box-shadow: 0 16px 40px rgba(7,84,235,.18); }
+.sl-card--dark p { color: #c9d6ec; }
+.sl-card--dark .sx-ico { background: rgba(255,255,255,.08); color: #6aa2ff; }
+.sl-card--soft { background: linear-gradient(145deg, #eaf3ff, #dceaff); border-color: #d5e3f8; }
+.sl-card .sx-ico { width: 52px; height: 52px; border-radius: 15px; font-size: 26px; }
+
+/* ---------- 01 обложка ---------- */
+.sl-cover { padding: 0; background: #ddeafb; }
+.sl-cover-media { position: absolute; inset: 0; z-index: -2; }
+.sl-cover-media img { width: 100%; height: 100%; object-fit: cover; object-position: right top; }
+.sl-cover-shade { position: absolute; inset: 0; z-index: -1; background: linear-gradient(90deg, rgba(250,252,255,.95) 0%, rgba(250,252,255,.82) 34%, rgba(250,252,255,.12) 60%, transparent 76%); }
+.sl-cover-main { flex: 1; display: flex; flex-direction: column; justify-content: center; padding: 56px 72px 0; max-width: 900px; }
+.sl-cover .sx-chip { min-height: 40px; font-size: 13px; }
+.sl-cover-title { margin-top: 30px; font-size: 104px; font-weight: 900; line-height: .95; letter-spacing: -.055em; text-transform: uppercase; white-space: nowrap; }
+.sl-cover-title span { background: linear-gradient(90deg, var(--sx-blue-deep), var(--sx-blue-light)); -webkit-background-clip: text; background-clip: text; -webkit-text-fill-color: transparent; padding-right: .04em; }
+.sl-cover-offer { margin-top: 22px; font-size: 44px; font-weight: 600; line-height: 1.12; letter-spacing: -.035em; color: var(--sx-head); }
+.sl-cover-offer span { display: block; }
+.sl-cover-desc { margin-top: 18px; max-width: 620px; font-size: 20px; line-height: 1.5; color: #364458; }
+.sl-cover-panel { margin: 0 72px 44px; display: grid; grid-template-columns: repeat(3, 1fr); padding: 22px 0; background: rgba(255,255,255,.86); border: 1px solid rgba(255,255,255,.7); border-radius: 26px; box-shadow: var(--sx-shadow-float); backdrop-filter: blur(16px); -webkit-backdrop-filter: blur(16px); }
+.sl-cover-panel .sx-feat { padding: 0 30px; }
+.sl-cover-panel .sx-feat-ico { width: 60px; height: 60px; border-radius: 18px; font-size: 28px; }
+.sl-cover-panel h3 { font-size: 16px; }
+.sl-cover-panel p { font-size: 14px; }
+.sl-avatar { width: 60px; height: 60px; border-radius: 18px; flex-shrink: 0; object-fit: cover; background: linear-gradient(135deg, #0750de, #77a7ff); color: #fff; display: flex; align-items: center; justify-content: center; font-size: 22px; font-weight: 800; letter-spacing: -.02em; }
+
+/* ---------- раздел (разделитель) ---------- */
+.sl-divider { justify-content: center; }
+.sl-divider-num { font-size: 260px; font-weight: 900; line-height: .8; letter-spacing: -.07em; background: linear-gradient(180deg, var(--sx-blue-deep), var(--sx-blue-light)); -webkit-background-clip: text; background-clip: text; -webkit-text-fill-color: transparent; }
+.sl-divider-row { display: grid; grid-template-columns: auto 1fr; align-items: end; gap: 56px; }
+.sl-divider .sl-title { font-size: 72px; }
+.sl-divider-list { display: flex; flex-wrap: wrap; gap: 10px; margin-top: 26px; }
+.sl-divider-list li { display: inline-flex; align-items: center; gap: 9px; min-height: 46px; padding: 0 18px; border-radius: 14px; background: #fff; border: 1px solid var(--sx-line); font-size: 15px; font-weight: 600; color: #274066; box-shadow: var(--sx-shadow-card); }
+.sl-divider-list .ti { color: var(--sx-blue); font-size: 19px; }
+
+/* ---------- план вебинара ---------- */
+.sl-agenda { display: grid; gap: 12px; }
+.sl-agenda li { display: grid; grid-template-columns: 64px 1fr auto; align-items: center; gap: 22px; padding: 16px 22px 16px 16px; background: #fff; border: 1px solid var(--sx-line); border-radius: 20px; box-shadow: var(--sx-shadow-card); }
+.sl-agenda .sx-num { width: 64px; height: 64px; border-radius: 18px; font-size: 24px; }
+.sl-agenda h4 { font-size: 22px; font-weight: 800; letter-spacing: -.03em; }
+.sl-agenda p { margin-top: 4px; font-size: 15px; color: var(--sx-text); }
+.sl-agenda .sx-pill { font-size: 12px; }
+.sl-agenda li.is-accent { background: var(--sx-blue); border-color: var(--sx-blue); color: #fff; box-shadow: var(--sx-shadow-blue); }
+.sl-agenda li.is-accent p { color: #dbe7ff; }
+.sl-agenda li.is-accent .sx-num { background: rgba(255,255,255,.18); color: #fff; }
+.sl-agenda li.is-accent .sx-pill { background: rgba(255,255,255,.18); color: #fff; }
+
+/* ---------- спикер ---------- */
+.sl-speaker { display: grid; grid-template-columns: 440px 1fr; gap: 44px; align-items: stretch; flex: 1; min-height: 0; }
+.sl-speaker-photo { position: relative; overflow: hidden; border-radius: 28px; background: radial-gradient(circle at 30% 20%, #2b5cc0, #0a1d40 70%); border: 1px solid #1672ff; box-shadow: 0 20px 50px rgba(7,84,235,.22); }
+.sl-speaker-photo img { width: 100%; height: 100%; object-fit: cover; }
+.sl-speaker-photo .sl-initials { position: absolute; inset: 0; display: flex; align-items: center; justify-content: center; font-size: 160px; font-weight: 900; letter-spacing: -.06em; color: rgba(255,255,255,.9); }
+.sl-speaker-photo .sx-live { top: 20px; right: 20px; left: auto; color: #fff; }
+.sl-speaker-tag { position: absolute; left: 20px; right: 20px; bottom: 20px; padding: 16px 18px; border-radius: 18px; background: rgba(6,21,45,.7); border: 1px solid rgba(145,187,255,.35); color: #fff; backdrop-filter: blur(10px); -webkit-backdrop-filter: blur(10px); }
+.sl-speaker-tag b { display: block; font-size: 20px; letter-spacing: -.02em; }
+.sl-speaker-tag span { font-size: 13px; color: #c9d6ec; }
+.sl-speaker-info { display: flex; flex-direction: column; justify-content: center; min-width: 0; }
+.sl-speaker-info .sl-title { font-size: 60px; }
+.sl-speaker-info .sx-results { margin-top: 26px; gap: 14px; }
+.sl-speaker-info .sx-results li { font-size: 18px; }
+.sl-metrics { display: grid; grid-template-columns: repeat(3, 1fr); gap: 16px; margin-top: 30px; }
+.sl-metric { padding: 20px 22px; border-radius: 20px; background: #fff; border: 1px solid var(--sx-line); box-shadow: var(--sx-shadow-card); }
+.sl-metric b { display: block; font-size: 40px; font-weight: 800; letter-spacing: -.045em; line-height: 1; color: var(--sx-blue); }
+.sl-metric span { display: block; margin-top: 8px; font-size: 14px; line-height: 1.35; color: var(--sx-text); }
+
+/* ---------- большая цифра ---------- */
+.sl-stat { display: grid; grid-template-columns: 1.15fr 1fr; gap: 56px; align-items: center; flex: 1; }
+.sl-stat-num { font-size: 230px; font-weight: 900; line-height: .85; letter-spacing: -.07em; background: linear-gradient(90deg, var(--sx-blue-deep), var(--sx-blue-light)); -webkit-background-clip: text; background-clip: text; -webkit-text-fill-color: transparent; white-space: nowrap; }
+.sl-stat-num small { font-size: .42em; letter-spacing: -.04em; }
+.sl-stat-caption { margin-top: 22px; font-size: 30px; font-weight: 700; line-height: 1.2; letter-spacing: -.03em; max-width: 620px; }
+.sl-stat-src { margin-top: 14px; font-size: 13px; color: var(--sx-muted); }
+.sl-stat-side { display: grid; gap: 14px; }
+.sl-dark .sl-stat-num { background: linear-gradient(90deg, #4d8bff, #b9d2ff); -webkit-background-clip: text; background-clip: text; }
+
+/* ---------- было / стало ---------- */
+.sl-compare { display: grid; grid-template-columns: 1fr 1fr; gap: 22px; flex: 1; min-height: 0; }
+.sl-compare .sl-card { padding: 32px; }
+.sl-compare h3 { margin: 0 0 22px; font-size: 30px; }
+.sl-compare .sx-label { display: block; margin-bottom: 10px; }
+.sl-list { display: flex; flex-direction: column; gap: 16px; }
+.sl-list li { display: flex; align-items: flex-start; gap: 14px; font-size: 18px; line-height: 1.4; }
+.sl-x { display: inline-flex; align-items: center; justify-content: center; flex-shrink: 0; width: 26px; height: 26px; border-radius: 50%; background: #f1f1f3; color: #8a93a3; font-size: 15px; margin-top: 1px; }
+.sl-list .sx-check { width: 26px; height: 26px; font-size: 15px; }
+.sl-card--dark .sx-check { background: var(--sx-blue); color: #fff; }
+.sl-card--muted { background: #f6f8fb; box-shadow: none; }
+.sl-card--muted li { color: #66748a; }
+
+/* ---------- шаги-процесс (горизонтальная лента) ---------- */
+.sl-flow { display: grid; grid-auto-flow: column; grid-auto-columns: 1fr; gap: 14px; }
+.sl-flow li { position: relative; display: flex; flex-direction: column; gap: 14px; padding: 22px 18px 20px; background: #fff; border: 1px solid var(--sx-line); border-radius: 22px; box-shadow: var(--sx-shadow-card); min-width: 0; }
+.sl-flow li:not(:last-child)::after { content: '\2192'; position: absolute; top: 38px; right: -14px; transform: translateX(50%); z-index: 1; width: 26px; height: 26px; border-radius: 50%; background: var(--sx-blue); color: #fff; display: flex; align-items: center; justify-content: center; font-size: 14px; font-weight: 700; box-shadow: 0 4px 10px rgba(7,84,235,.3); }
+.sl-flow .sx-ico { width: 48px; height: 48px; border-radius: 14px; font-size: 24px; }
+.sl-flow small { font-size: 11px; font-weight: 700; letter-spacing: .1em; text-transform: uppercase; color: var(--sx-blue); }
+.sl-flow h4 { font-size: 19px; font-weight: 800; line-height: 1.15; letter-spacing: -.03em; }
+.sl-flow p { font-size: 14px; line-height: 1.45; color: var(--sx-text); }
+.sl-flow li.is-accent { background: var(--sx-dark); border-color: #1672ff; color: #fff; }
+.sl-flow li.is-accent p { color: #c9d6ec; }
+.sl-flow li.is-accent .sx-ico { background: rgba(255,255,255,.1); color: #6aa2ff; }
+
+/* ---------- кейс ---------- */
+.sl-case { display: grid; grid-template-columns: 1.1fr 1fr; gap: 28px; flex: 1; min-height: 0; }
+.sl-case-shot { position: relative; overflow: hidden; border-radius: 26px; background: linear-gradient(135deg, #f3f8ff, #dcebff); border: 1px solid var(--sx-line); box-shadow: var(--sx-shadow-card); }
+.sl-case-shot > img { width: 100%; height: 100%; object-fit: cover; }
+.sl-case-shot .sx-win { inset: 28px 28px -14px; border-radius: 16px; }
+.sl-case-shot .sx-win-body { gap: 12px; padding: 18px; }
+.sl-case-shot .sx-win-row b { width: 28px; height: 28px; border-radius: 8px; }
+.sl-case-shot .sx-win-row i { height: 9px; }
+.sl-case-shot .sx-win-row em { font-size: 14px; }
+.sl-case-shot .sx-chat span { font-size: 14px; padding: 10px 14px; border-radius: 14px 14px 14px 4px; }
+.sl-case-shot .sx-chat span.me { border-radius: 14px 14px 4px 14px; }
+.sl-case-info { display: flex; flex-direction: column; justify-content: center; min-width: 0; }
+.sl-case-info .sl-metrics { grid-template-columns: repeat(2, 1fr); }
+.sl-quote { margin-top: 22px; padding: 20px 22px; border-radius: 18px; background: #f0f5fd; border-left: 4px solid var(--sx-blue); font-size: 17px; line-height: 1.5; color: #27364d; }
+.sl-quote cite { display: block; margin-top: 8px; font-style: normal; font-size: 13px; font-weight: 700; color: var(--sx-blue); }
+
+/* ---------- оффер / бонусы / дедлайн ---------- */
+.sl-offer { display: grid; grid-template-columns: 1fr 470px; gap: 26px; flex: 1; min-height: 0; }
+.sl-bonuses { display: grid; gap: 12px; }
+.sl-bonus { display: grid; grid-template-columns: auto 1fr auto; align-items: center; gap: 18px; padding: 18px 22px 18px 18px; border-radius: 20px; background: #fff; border: 1px solid var(--sx-line); box-shadow: var(--sx-shadow-card); }
+.sl-bonus .sx-ico { width: 54px; height: 54px; border-radius: 16px; font-size: 26px; }
+.sl-bonus h4 { font-size: 19px; font-weight: 800; letter-spacing: -.025em; }
+.sl-bonus p { margin-top: 3px; font-size: 14px; color: var(--sx-text); }
+.sl-bonus s { font-size: 15px; font-weight: 600; color: #8592a9; white-space: nowrap; }
+.sl-bonus em { display: block; font-style: normal; font-size: 13px; font-weight: 800; color: #0b9d7d; text-align: right; }
+.sl-deal { display: flex; flex-direction: column; padding: 30px; border-radius: 28px; background: var(--sx-dark); border: 1px solid #1672ff; color: #fff; box-shadow: 0 20px 50px rgba(7,84,235,.25); }
+.sl-deal .sx-label { color: #5897ff; }
+.sl-deal-price { display: flex; align-items: baseline; gap: 14px; margin-top: 14px; }
+.sl-deal-price strong { font-size: 64px; font-weight: 800; letter-spacing: -.05em; line-height: 1; }
+.sl-deal-price s { font-size: 24px; color: rgba(255,255,255,.45); }
+.sl-deal p { margin-top: 10px; font-size: 15px; color: #c9d6ec; }
+.sl-timer { display: grid; grid-template-columns: repeat(4, 1fr); gap: 10px; margin: 24px 0; }
+.sl-timer div { padding: 14px 6px 12px; border-radius: 16px; background: rgba(255,255,255,.07); border: 1px solid rgba(145,187,255,.25); text-align: center; }
+.sl-timer b { display: block; font-size: 40px; font-weight: 800; letter-spacing: -.04em; line-height: 1; font-variant-numeric: tabular-nums; }
+.sl-timer span { display: block; margin-top: 6px; font-size: 11px; font-weight: 700; letter-spacing: .1em; text-transform: uppercase; color: #8fb2ea; }
+.sl-deal .sx-btn { margin-top: auto; min-height: 66px; padding: 0 12px 0 24px; border-radius: 18px; font-size: 18px; border: 1px solid #3780ff; }
+
+/* ---------- CTA / QR ---------- */
+.sl-cta { justify-content: center; }
+.sl-cta-card { display: grid; grid-template-columns: 1fr 300px; gap: 48px; align-items: center; padding: 56px 60px; border-radius: 32px; background: var(--sx-black); color: #fff; box-shadow: 0 30px 90px rgba(17,17,17,.25); }
+.sl-cta-card .sx-label { display: block; margin-bottom: 14px; font-weight: 900; color: #5897ff; font-size: 13px; }
+.sl-cta-card h2 { font-size: 60px; font-weight: 900; line-height: 1.04; letter-spacing: -.035em; }
+.sl-cta-card p { margin-top: 16px; font-size: 20px; line-height: 1.45; color: rgba(255,255,255,.6); }
+.sl-code { display: inline-flex; align-items: center; gap: 14px; margin-top: 28px; padding: 14px 26px; border-radius: 20px; background: var(--sx-blue-deep); box-shadow: 0 16px 40px rgba(7,80,222,.35); font-size: 30px; font-weight: 900; letter-spacing: .02em; }
+.sl-code small { font-size: 14px; font-weight: 700; letter-spacing: .06em; text-transform: uppercase; color: rgba(255,255,255,.75); }
+.sl-qr { padding: 18px; border-radius: 26px; background: #fff; text-align: center; }
+.sl-qr [data-qr] { display: flex; justify-content: center; }
+.sl-qr [data-qr] img, .sl-qr [data-qr] canvas { width: 240px !important; height: 240px !important; }
+.sl-qr span { display: block; margin-top: 10px; font-size: 13px; font-weight: 700; color: var(--sx-ink); word-break: break-all; }
+
+/* ---------- вопросы (Q&A) и FAQ на слайде ---------- */
+.slide .sx-faq-list { margin-top: 0; max-width: none; }
+.slide .sx-faq-q { font-size: 20px; padding: 22px 28px; }
+.slide .sx-faq-a p { font-size: 17px; }
+.sl-thanks { align-items: center; justify-content: center; text-align: center; }
+.sl-thanks .sl-title { font-size: 96px; font-weight: 900; }
+
+/* ---------- масштабируемые версии компонентов сайта ---------- */
+.slide .sx-price-grid { gap: 20px; }
+.slide .sx-price-body { padding: 26px; }
+.slide .sx-features { gap: 10px; margin-bottom: 20px; }
+.slide .sx-price-desc { min-height: 0; margin-bottom: 16px; padding-bottom: 16px; }
+.slide .sx-prog-top { min-height: 210px; }
+.slide .sx-steps-card .sx-step-body { min-height: 360px; }
+.slide .sx-eco-grid { flex: 1; min-height: 0; }
+
+/* ---------- UI вне сцены: прогресс, подсказки, заметки ---------- */
+.sl-progress { position: fixed; left: 0; top: 0; height: 3px; background: var(--sx-blue); z-index: 20; transition: width .3s ease; box-shadow: 0 0 10px rgba(7,84,235,.6); }
+.sl-nav { position: fixed; right: 18px; bottom: 16px; z-index: 20; display: flex; gap: 8px; opacity: 0; transition: opacity .25s; }
+body:hover .sl-nav { opacity: 1; }
+.sl-nav button { width: 40px; height: 40px; border: 1px solid rgba(255,255,255,.15); border-radius: 12px; background: rgba(255,255,255,.08); color: #fff; font-size: 18px; cursor: pointer; backdrop-filter: blur(8px); }
+.sl-nav button:hover { background: rgba(255,255,255,.18); }
+.sl-notes-panel { position: fixed; left: 50%; bottom: 18px; transform: translateX(-50%); z-index: 30; width: min(900px, 92vw); max-height: 34vh; overflow: auto; padding: 18px 22px; border-radius: 18px; background: rgba(11,18,32,.94); border: 1px solid rgba(255,255,255,.12); color: #e7eefb; font: 500 16px/1.55 var(--sx-font); box-shadow: 0 20px 60px rgba(0,0,0,.4); display: none; }
+.sl-notes-panel.is-open { display: block; }
+.sl-notes-panel b { display: block; margin-bottom: 6px; font-size: 11px; letter-spacing: .1em; text-transform: uppercase; color: #5897ff; }
+.sl-notes { display: none; }
+.sl-help { position: fixed; left: 18px; bottom: 16px; z-index: 20; font: 500 12px/1.4 var(--sx-font); color: rgba(255,255,255,.45); opacity: 0; transition: opacity .25s; }
+body:hover .sl-help { opacity: 1; }
+.sl-overview .stage { transform: none; width: 100vw; height: 100vh; overflow: auto; display: grid; grid-template-columns: repeat(auto-fill, 288px); grid-auto-rows: 162px; gap: 18px; padding: 28px; justify-content: center; align-content: start; }
+.sl-overview .slide { display: flex !important; position: relative; inset: auto; width: 1440px; height: 810px; transform: scale(.2); transform-origin: 0 0; cursor: pointer; border-radius: 40px; animation: none; outline: 0 solid var(--sx-blue); }
+.sl-overview .slide.is-active { outline-width: 14px; }
+.sl-overview .fx { opacity: 1; transform: none; }
+
+/* ---------- печать / PDF: каждая сцена = страница 1440×810 ---------- */
+@page { size: 1440px 810px; margin: 0; }
+@media print {
+  html, body { overflow: visible; height: auto; background: #fff; }
+  .deck { position: static; display: block; }
+  .stage { transform: none !important; width: 1440px; height: auto; }
+  .slide { position: relative; display: flex !important; width: 1440px; height: 810px; break-after: page; page-break-after: always; animation: none !important; }
+  .fx { opacity: 1 !important; transform: none !important; }
+  .sl-progress, .sl-nav, .sl-help, .sl-notes-panel { display: none !important; }
+  * { -webkit-print-color-adjust: exact; print-color-adjust: exact; }
+  .sx-glass, .sx-orbit-line, .sx-map path, .sx-live i { animation: none !important; }
+}
+
+/* ---------- заполнение высоты слайда компонентами сайта ---------- */
+.slide .sx-prog-grid, .slide .sx-price-grid, .slide .sx-steps-card { flex: 1; min-height: 0; }
+.slide .sx-prog-card { padding: 26px 26px 24px; }
+.slide .sx-prog-card h3 { font-size: 40px; }
+.slide .sx-prog-desc { font-size: 16px; }
+.slide .sx-topics li { min-height: 50px; font-size: 15px; }
+.slide .sx-price-body { padding: 30px; }
+.slide .sx-prices strong { font-size: 52px; }
+.slide .sx-features { gap: 14px; margin: 6px 0 24px; }
+.slide .sx-features li { font-size: 17px; }
+.slide .sx-price .sx-access { margin: auto 0 0; font-size: 14px; }
+.slide .sx-steps-card { display: flex; flex-direction: column; }
+.slide .sx-step.is-active { display: flex; flex-direction: column; flex: 1; }
+.slide .sx-step-body { flex: 1; }
+.slide .sx-step-content { display: flex; flex-direction: column; justify-content: center; padding: 34px 40px; }
+.slide .sx-step h3 { font-size: 40px; }
+.slide .sx-step-desc { font-size: 17px; }
+.slide .sx-items { gap: 18px 28px; }
+.slide .sx-items h5 { font-size: 16px; }
+.slide .sx-items p { font-size: 14px; }
+.slide .sx-node { font-size: 13px; }
+.slide .sx-faq-list { flex: 1; justify-content: center; }
+.sl-compare .sl-card { justify-content: center; padding: 40px; }
+.sl-compare h3 { font-size: 36px; }
+.sl-list { gap: 20px; }
+.sl-list li { font-size: 21px; }
+.sl-flow li { padding: 28px 22px 26px; gap: 16px; min-height: 300px; }
+.sl-flow h4 { font-size: 23px; }
+.sl-flow p { font-size: 16px; }
+.sl-flow .sx-ico { width: 58px; height: 58px; border-radius: 16px; font-size: 28px; }
+.sl-flow li:not(:last-child)::after { top: 47px; }
+.sl-offer { grid-template-columns: 1fr 520px; }
+.sl-deal-price strong { font-size: 58px; white-space: nowrap; }
+.sl-deal-price s { white-space: nowrap; }
+
+/* PDF-движок Chrome плохо печатает размытие, градиентный текст и мягкие тени — в печати заменяем плоскими аналогами */
+@media print {
+  * { backdrop-filter: none !important; -webkit-backdrop-filter: none !important; box-shadow: none !important; filter: none !important; text-shadow: none !important; }
+  .sl-cover-title span, .sl-divider-num, .sl-stat-num, .sx-hero-title span { background: none !important; -webkit-text-fill-color: currentColor !important; color: var(--sx-blue) !important; }
+  .sl-dark .sl-divider-num, .sl-dark .sl-stat-num { color: #6aa2ff !important; }
+  .sl-cover-panel, .sx-hero-panel, .sx-topics, .sx-chip { background: #fff !important; }
+  .sx-prog-card--dark .sx-topics { background: #07142a !important; }
+  .sl-speaker-tag { background: #0b1d3d !important; }
+}
+.sl-flow li:not(:last-child)::after { right: -27px; transform: none; }
