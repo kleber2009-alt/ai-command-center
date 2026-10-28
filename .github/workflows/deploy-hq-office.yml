@@ -35,7 +35,7 @@ jobs:
 
       - name: Check data files
         run: |
-          for f in office.config.js dept-content.js agent-content.js tasks.js tasks.auto.js works.js; do node --check "apps/hq-office/$f"; done
+          for f in office.config.js dept-content.js agent-content.js skills-library.js tasks.js tasks.auto.js works.js; do node --check "apps/hq-office/$f"; done
           node -e '
             global.window = {}; for (const f of ["office.config.js", "dept-content.js", "agent-content.js", "tasks.js", "tasks.auto.js", "works.js"])
               require("vm").runInThisContext(require("fs").readFileSync("apps/hq-office/" + f, "utf8"));
