@@ -116,8 +116,17 @@ def _run(run_input: dict) -> list[dict]:
 
     client = ApifyClient(settings.apify_token)
     actor = settings.apify_threads_actor or DEFAULT_ACTOR
-    run = client.actor(actor).call(run_input=run_input, timeout_secs=600)
-    return list(client.dataset(run["defaultDatasetId"]).iterate_items())
+    run = client.actor(actor).call(run_input=run_input)
+    # apify-client 3.x возвращает модель Run, 1.x/2.x — dict.
+    if isinstance(run, dict):
+        status, dataset_id = run.get("status"), run.get("defaultDatasetId")
+    else:
+        status, dataset_id = getattr(run, "status", None), getattr(run, "default_dataset_id", None)
+    if run is None or not dataset_id:
+        raise RuntimeError(f"Apify: запуск {actor} не вернул данные")
+    if str(getattr(status, "value", status) or "").upper() not in ("SUCCEEDED", ""):
+        log.warning("Apify run %s finished with status %s", actor, status)
+    return [dict(i) for i in client.dataset(dataset_id).iterate_items()]
 
 
 def fetch_users(usernames: list[str], max_posts: int = 40) -> list[Post]:
