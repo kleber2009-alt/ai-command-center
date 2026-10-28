@@ -12,6 +12,10 @@
 - **Правая панель показывает только реальные задачи из `tasks.js`** — у каждой дата
   и ссылка-доказательство (PR/коммиты на GitHub, артефакт Claude, сайт, файл). Не добавлять
   туда выдуманные задачи; симуляция в 3D — только визуализация.
+- `tasks.auto.js` пишет только `sync/sync.mjs` (workflow `hq-office-history.yml`: новые PR после
+  каждого пуша в `main` и раз в сутки, ссылки из Run workflow). Новые PR руками не добавлять;
+  PR из `pr(…)` в `tasks.js` синк пропускает. Задача по ссылке от пользователя — скилл
+  `.claude/skills/hq-history`.
 - Неподвижная мебель сливается по материалам (`mergeStatic`); всё изменяемое помечено
   `userData.keep = true`.
 - Выкладка: `.github/workflows/deploy-hq-office.yml` → релиз в `/opt/hq-office/releases`, `deploy/server.sh`

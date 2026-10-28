@@ -4,6 +4,7 @@ name: deploy-hq-office
 # (vars.HETZNER_HOST, where *.aicex.club points). Each run uploads a release to
 # /opt/hq-office/releases/<id>, switches /opt/hq-office/current to it and keeps the
 # static container + edge Caddy site in place (apps/hq-office/deploy/server.sh).
+# Also started by hq-office-history.yml after it adds tasks to tasks.auto.js.
 #
 # Secret: HETZNER_SSH_KEY. Variables: HETZNER_HOST, HETZNER_USER, HETZNER_SSH_PORT,
 # HQ_OFFICE_DOMAIN (default hq2.aicex.club).
@@ -34,11 +35,11 @@ jobs:
 
       - name: Check data files
         run: |
-          for f in office.config.js dept-content.js agent-content.js tasks.js; do node --check "apps/hq-office/$f"; done
+          for f in office.config.js dept-content.js agent-content.js tasks.js tasks.auto.js; do node --check "apps/hq-office/$f"; done
           node -e '
-            global.window = {}; for (const f of ["office.config.js", "dept-content.js", "agent-content.js", "tasks.js"])
+            global.window = {}; for (const f of ["office.config.js", "dept-content.js", "agent-content.js", "tasks.js", "tasks.auto.js"])
               require("vm").runInThisContext(require("fs").readFileSync("apps/hq-office/" + f, "utf8"));
-            const t = window.OFFICE_TASKS, ids = new Set();
+            const t = [...window.OFFICE_TASKS, ...window.OFFICE_TASKS_AUTO.tasks], ids = new Set();
             for (const x of t) { if (ids.has(x.id)) throw new Error("duplicate task id " + x.id); ids.add(x.id);
               if (!/^\d{4}-\d{2}-\d{2}$/.test(x.date) || !x.proof?.length) throw new Error("bad task " + x.id); }
             console.log(t.length + " tasks ok");'
@@ -58,7 +59,7 @@ jobs:
         run: |
           REL="$(date -u +%Y%m%d%H%M%S)-${GITHUB_SHA::7}"
           echo "REL=$REL" >> "$GITHUB_ENV"
-          tar -C apps/hq-office --exclude=./deploy --exclude=./README.md --exclude=./CLAUDE.md -czf - . \
+          tar -C apps/hq-office --exclude=./deploy --exclude=./sync --exclude=./README.md --exclude=./CLAUDE.md -czf - . \
             | $SSH "mkdir -p /opt/hq-office/releases/$REL && tar -xzf - -C /opt/hq-office/releases/$REL"
 
       - name: Activate
@@ -66,7 +67,7 @@ jobs:
 
       - name: Smoke test
         run: |
-          for path in / /tasks.js; do
+          for path in / /tasks.js /tasks.auto.js; do
             code=$(curl -sS -o /dev/null -w '%{http_code}' --retry 8 --retry-delay 5 --retry-all-errors "https://$DOMAIN$path" || echo 000)
             echo "$code https://$DOMAIN$path"
             [ "$code" = 200 ] || exit 1
