@@ -12,7 +12,8 @@ from pydantic_settings import BaseSettings, SettingsConfigDict
 
 
 class Settings(BaseSettings):
-    model_config = SettingsConfigDict(env_file=".env", extra="ignore")
+    # env_ignore_empty: пустые `CHANNEL_ID=` и т.п. в .env = значение по умолчанию.
+    model_config = SettingsConfigDict(env_file=".env", extra="ignore", env_ignore_empty=True)
 
     # — Хранилище —
     database_url: str = "postgresql+psycopg://threads_viral:threads_viral@localhost:5432/threads_growth"
