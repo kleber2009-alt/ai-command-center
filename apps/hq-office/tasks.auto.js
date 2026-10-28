@@ -24,7 +24,8 @@ window.OFFICE_TASKS_AUTO = {
       ],
       "group": "hq-office|claude/affectionate-keller-qy05o4",
       "prs": [148, 149],
-      "auto": true
+      "auto": true,
+      "draft": "d2567f211e"
     }
   ]
 };

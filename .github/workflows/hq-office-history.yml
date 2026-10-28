@@ -9,7 +9,8 @@ name: hq-office-history
 # start this one again).
 #
 # Optional secret HQ_OFFICE_ANTHROPIC_API_KEY (falls back to WORKER_ANTHROPIC_API_KEY):
-# Claude writes Russian titles and summaries. Without a key the PR title is used.
+# Claude writes Russian titles and summaries. Without a key the PR title is used, and such
+# tasks are rewritten by Claude on the first run that has a key.
 
 on:
   push:
