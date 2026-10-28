@@ -259,6 +259,53 @@
   #lightbox img{max-width:calc(100% - 32px);max-height:calc(100% - 80px);border-radius:12px}
   #lightbox p{position:absolute;bottom:18px;left:0;right:0;text-align:center;font-size:13px;color:#ddd}
 
+  /* ---------- личный ассистент ---------- */
+  .asst{position:fixed;left:var(--gl);bottom:calc(var(--gb) + 66px);width:392px;height:min(580px,calc(100vh - var(--gt) - var(--gb) - 230px));min-height:340px;display:flex;flex-direction:column;z-index:8;overflow:hidden}
+  .asst[hidden]{display:none}
+  .asst-h{display:flex;align-items:center;gap:10px;padding:12px 12px 10px 14px;border-bottom:1px solid var(--line)}
+  .asst-h>div{flex:1;min-width:0}
+  .asst-h h2{font:800 16px var(--f-ui)}
+  .asst-h p{font-size:11.5px;color:var(--ink-2);white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+  .asst-orb{flex:none;width:30px;height:30px;border-radius:50%;background:radial-gradient(circle at 34% 30%,#fff 0 10%,#8fb8ff 34%,#2c4aa8 100%);box-shadow:0 0 16px rgba(143,184,255,.55)}
+  .asst-orb.talk{animation:orb 1s ease-in-out infinite}
+  .asst-orb.rec{background:radial-gradient(circle at 34% 30%,#fff 0 10%,#ff6b6b 34%,#a3262a 100%);box-shadow:0 0 18px rgba(255,90,90,.6);animation:orb .8s ease-in-out infinite}
+  @keyframes orb{50%{transform:scale(1.12)}}
+  .asst-x{flex:none;width:32px;height:32px;border-radius:10px;background:var(--glass-hi);color:var(--ink-2);font-size:18px;display:grid;place-items:center}
+  .asst-x:hover{color:var(--ink);background:rgba(255,255,255,.14)}
+  .asst-x svg{width:14px;height:14px;fill:currentColor}
+  .asst-x[hidden],.asst-mic[hidden]{display:none}
+  .asst-log{flex:1;overflow:auto;padding:12px;display:flex;flex-direction:column;gap:8px;scrollbar-width:thin;scrollbar-color:rgba(255,255,255,.18) transparent}
+  .am{max-width:88%;padding:9px 12px;border-radius:14px;font-size:13.5px;line-height:1.45;overflow-wrap:anywhere}
+  .am-u{align-self:flex-end;background:#2f7bff;color:#fff;border-bottom-right-radius:5px;white-space:pre-wrap}
+  .am-a{align-self:flex-start;background:rgba(255,255,255,.07);border:1px solid rgba(255,255,255,.07);border-bottom-left-radius:5px}
+  .am-a p+p,.am-a p+ul,.am-a ul+p{margin-top:6px}
+  .am-a ul{padding-left:18px}
+  .am-a a{color:#8fb8ff}
+  .am-e{align-self:center;font-size:12.5px;color:#ffc2b8;background:rgba(255,90,70,.12)}
+  .am-n{align-self:stretch;max-width:none;font-size:12.5px;color:var(--ink-2);background:rgba(255,255,255,.04);border:1px dashed rgba(255,255,255,.12)}
+  .am small{display:block;font:500 10px var(--f-mono);opacity:.6;margin-top:3px}
+  .dots3{display:inline-flex;gap:4px;padding:4px 0}
+  .dots3 i{width:6px;height:6px;border-radius:50%;background:var(--ink-2);animation:dot 1s infinite}
+  .dots3 i:nth-child(2){animation-delay:.15s}
+  .dots3 i:nth-child(3){animation-delay:.3s}
+  @keyframes dot{50%{opacity:.25;transform:translateY(-2px)}}
+  .asst-chips{display:flex;gap:6px;overflow-x:auto;padding:0 12px 8px;scrollbar-width:none}
+  .asst-chips button{flex:none;padding:6px 10px;border-radius:99px;background:rgba(255,255,255,.07);border:1px solid var(--line);font-size:12px;font-weight:700;color:var(--ink-2)}
+  .asst-chips button:hover{color:var(--ink);background:rgba(255,255,255,.12)}
+  .asst-in{display:flex;align-items:flex-end;gap:6px;padding:8px 10px;border-top:1px solid var(--line)}
+  .asst-in textarea{flex:1;min-width:0;resize:none;height:38px;max-height:120px;padding:9px 11px;border-radius:12px;border:1px solid var(--line);background:rgba(0,0,0,.25);color:var(--ink);font:500 13.5px/1.4 var(--f-ui);outline:none}
+  .asst-in textarea:focus{border-color:rgba(143,184,255,.6)}
+  .asst-mic,.asst-send{flex:none;width:38px;height:38px;border-radius:12px;display:grid;place-items:center}
+  .asst-mic svg,.asst-send svg{width:18px;height:18px;fill:none;stroke:currentColor;stroke-width:2;stroke-linecap:round;stroke-linejoin:round}
+  .asst-mic{background:rgba(255,255,255,.1)}
+  .asst-mic.rec{background:#ff4d4f;color:#fff;animation:orb .8s ease-in-out infinite}
+  .asst-send{background:#2f7bff;color:#fff}
+  .asst-send:disabled{opacity:.45;cursor:default}
+  .asst-foot{display:flex;flex-wrap:wrap;align-items:center;gap:6px 12px;padding:0 12px 10px;font-size:11.5px;color:var(--ink-3)}
+  .asst-foot button{color:#8fb8ff;font-weight:700;font-size:11.5px}
+  .asst-foot label{display:flex;align-items:center;gap:5px;cursor:pointer}
+  .asst-foot input[type=password],.asst-foot select{padding:6px 9px;border-radius:9px;border:1px solid var(--line);background:rgba(0,0,0,.3);color:var(--ink);font:500 12.5px var(--f-ui);min-width:0;flex:1}
+
   /* ---------- dock ---------- */
   .dock{position:fixed;left:50%;bottom:var(--gb);transform:translateX(-50%);display:flex;gap:2px;padding:5px;z-index:7;max-width:calc(100% - 32px);overflow-x:auto;scrollbar-width:none}
   .dock button{display:flex;align-items:center;gap:7px;padding:9px 13px;border-radius:12px;font-size:13.5px;font-weight:600;color:var(--ink-2);white-space:nowrap;transition:background .2s,color .2s}
@@ -320,6 +367,7 @@
     .dock{left:var(--gl);right:var(--gr);transform:none;max-width:none;justify-content:flex-start}
     .dock button{padding:9px 10px;font-size:12.5px}
     .tour{top:auto;bottom:calc(var(--gb) + 64px)}
+    .asst{right:var(--gr);width:auto;bottom:calc(var(--gb) + 60px);height:min(72vh,620px);min-height:0;z-index:9}
   }
   @media (prefers-reduced-motion:reduce){
     .modal,.dlg{animation:none}
@@ -362,6 +410,23 @@
 </aside>
 <button class="reopen glass" id="teamShow" hidden>История задач</button>
 
+<aside class="asst glass" id="asst" hidden aria-label="Личный ассистент">
+  <header class="asst-h">
+    <span class="asst-orb" id="aOrb"></span>
+    <div><h2>Ассистент</h2><p id="aSub">Подключаюсь…</p></div>
+    <button class="asst-x" id="aStop" hidden aria-label="Остановить голос" title="Остановить голос"><svg viewBox="0 0 24 24"><rect x="6" y="6" width="12" height="12" rx="2"/></svg></button>
+    <button class="asst-x" id="aClose" aria-label="Закрыть ассистента">×</button>
+  </header>
+  <div class="asst-log" id="aLog" aria-live="polite"></div>
+  <div class="asst-chips" id="aChips"></div>
+  <form class="asst-in" id="aForm">
+    <button type="button" class="asst-mic" id="aMic" hidden aria-label="Сказать голосом" title="Сказать голосом"><svg viewBox="0 0 24 24"><rect x="9" y="3" width="6" height="11" rx="3"/><path d="M5 11a7 7 0 0 0 14 0M12 18v3"/></svg></button>
+    <textarea id="aText" rows="1" placeholder="Спросите офис…" aria-label="Сообщение ассистенту"></textarea>
+    <button type="submit" class="asst-send" id="aSend" aria-label="Отправить"><svg viewBox="0 0 24 24"><path d="M12 19V5M5 12l7-7 7 7"/></svg></button>
+  </form>
+  <div class="asst-foot" id="aFoot"></div>
+</aside>
+
 <div class="tour glass" id="tour" hidden><div><b id="tourTitle"></b><p id="tourText"></p></div><button id="tourStop">Стоп</button></div>
 
 <div class="modal" id="taskModal" hidden role="dialog" aria-modal="true" aria-labelledby="tHead">
@@ -385,6 +450,7 @@
   <button data-cmd="desk"><svg viewBox="0 0 24 24"><circle cx="12" cy="8" r="4"/><path d="M4 21a8 8 0 0 1 16 0"/></svg>Мой стол</button>
   <button data-cmd="team" class="on"><svg viewBox="0 0 24 24"><path d="M9 6h11M9 12h11M9 18h11M4 6h.01M4 12h.01M4 18h.01"/></svg>Задачи</button>
   <button data-cmd="plan"><svg viewBox="0 0 24 24"><rect x="3" y="3" width="18" height="18" rx="2"/><path d="M3 9h18M9 21V9"/></svg>План</button>
+  <button data-cmd="assistant"><svg viewBox="0 0 24 24"><rect x="9" y="3" width="6" height="11" rx="3"/><path d="M5 11a7 7 0 0 0 14 0M12 18v3"/></svg>Ассистент</button>
   <span class="sep"></span>
   <button data-cmd="tour"><svg viewBox="0 0 24 24"><path d="M7 4.5v15l12-7.5z"/></svg>Экскурсия</button>
   <button data-cmd="labels" class="on"><svg viewBox="0 0 24 24"><path d="M4 7h16M4 12h16M4 17h10"/></svg>Подписи</button>
@@ -2865,6 +2931,276 @@ addEventListener('hashchange', routeHash);
 const modalOpen = () => !$('taskModal').hidden || !$('dossier').hidden;
 
 
+/* ======================= ЛИЧНЫЙ АССИСТЕНТ =======================
+   Разговор с офисом голосом или текстом — сервер assistant/server.mjs за /api/assistant.
+   Владелец входит паролем: на голосовой вопрос ответ озвучивается его клоном голоса
+   по предложениям, пока текст ещё печатается. Гости — текстовое демо по публичной истории. */
+
+const ASST_API = '/api/assistant';
+const asst = { state:null, loaded:false, busy:false, rec:null, recTimer:0, queue:[], playing:false, gen:0, ctx:null, src:null, speakAll:false };
+try { asst.speakAll = localStorage.getItem('hq:speakAll') === '1'; } catch (e) {}
+const ASST_CHIPS = {
+  owner:[['Доложи обстановку', true], ['Что сделали за неделю?'], ['У кого из агентов нет результатов?'], ['Что делать дальше по офису?']],
+  guest:[['Что умеет этот офис?'], ['Покажи лучшие работы агентов'], ['Кто работает в отделе маркетинга?']],
+};
+const canSpeak = () => Boolean(asst.state?.owner && asst.state.configured.voice && asst.state.voice);
+
+function asstOpen(open) {
+  $('asst').hidden = !open;
+  setDockOn('assistant', open);
+  if (open && !asst.loaded) asstLoad();
+  if (open && !isMobile) setTimeout(() => $('aText').focus(), 50);
+  if (!open) { asstStopVoice(); if (asst.rec) { asst.rec.cancelled = true; asst.rec.stop(); } }
+}
+async function asstLoad() {
+  asst.loaded = true;
+  try {
+    const r = await fetch(ASST_API + '/state');
+    if (!r.ok) throw new Error(r.status);
+    asst.state = await r.json();
+  } catch (e) { asst.state = null; }
+  asstRender();
+}
+function asstSub() {
+  const s = asst.state;
+  $('aSub').textContent = !s ? 'Сейчас недоступен'
+    : s.owner ? `Илья · ${s.configured.voice ? (s.voice ? 'голос и текст' : 'текст · голос не выбран') : 'текст'}` : 'Демо · рассказывает о работе офиса';
+}
+function asstRender() {
+  const s = asst.state;
+  $('aLog').innerHTML = '';
+  asstSub();
+  $('aMic').hidden = !(s?.owner && s.configured.voice);
+  if (!s) { addMsg('n', 'Ассистент сейчас недоступен — сервер не отвечает. Попробуйте позже.'); $('aChips').innerHTML = $('aFoot').innerHTML = ''; return; }
+  if (!s.configured.chat) addMsg('n', 'Ассистент ещё не подключён к Claude: на сервере нет ключа.');
+  else if (!s.history.length) addMsg('n', s.owner
+    ? 'Спросите что угодно о проекте или нажмите «Доложи обстановку». Микрофон — чтобы говорить голосом, ответ тогда тоже будет голосом.'
+    : 'Привет! Я рассказываю, что уже сделали ИИ-агенты и команда AICEX. Спросите про любой отдел, агента или работу.');
+  for (const t of s.history) addMsg(t.role === 'user' ? 'u' : 'a', t.text);
+  $('aChips').innerHTML = ASST_CHIPS[s.owner ? 'owner' : 'guest'].map(([q, v]) => `<button type="button" data-q="${esc(q)}"${v ? ' data-voice="1"' : ''}>${esc(q)}</button>`).join('');
+  asstFoot();
+}
+function asstFoot(mode) {
+  const s = asst.state, f = $('aFoot');
+  if (!s) return;
+  if (mode === 'login') { f.innerHTML = `<input type="password" id="aPass" placeholder="Пароль владельца" autocomplete="current-password"><button type="button" data-a="login">Войти</button><button type="button" data-a="cancel">Отмена</button>`; $('aPass').focus(); return; }
+  if (!s.owner) { f.innerHTML = `<span>Демо для гостей</span>${s.configured.login ? '<button type="button" data-a="ask-login">Войти как владелец</button>' : ''}`; return; }
+  f.innerHTML = (s.configured.voice
+    ? `<button type="button" data-a="voices">Голос: ${esc(s.voice?.name || 'выбрать')}</button><label><input type="checkbox" id="aSpeakAll"${asst.speakAll ? ' checked' : ''}>озвучивать и текст</label>`
+    : '<span>Голос не подключён</span>') + '<button type="button" data-a="logout">Выйти</button>';
+}
+// короткий markdown ответа: абзацы, списки, жирный, ссылки
+function mdLite(s) {
+  const inline = t => esc(t)
+    .replace(/\*\*(.+?)\*\*/g, '<b>$1</b>')
+    .replace(/\[([^\]]+)\]\((https?:\/\/[^\s)]+)\)/g, '<a href="$2" target="_blank" rel="noopener">$1</a>')
+    .replace(/(^|[\s(])(https?:\/\/[^\s<)]+?)([.,;:!?»]*)(?=$|[\s<)])/g, '$1<a href="$2" target="_blank" rel="noopener">$2</a>$3');
+  const out = [];
+  let list = null;
+  for (const line of String(s).split('\n')) {
+    const li = line.match(/^\s*(?:[-*•]|\d+[.)])\s+(.*)/);
+    if (li) { (list ||= []).push(`<li>${inline(li[1])}</li>`); continue; }
+    if (list) { out.push(`<ul>${list.join('')}</ul>`); list = null; }
+    if (line.trim()) out.push(`<p>${inline(line.replace(/^#+\s*/, ''))}</p>`);
+  }
+  if (list) out.push(`<ul>${list.join('')}</ul>`);
+  return out.join('');
+}
+function addMsg(kind, text) {
+  const el = document.createElement('div');
+  el.className = 'am am-' + kind;
+  if (kind === 'a') el.innerHTML = mdLite(text); else el.textContent = text;
+  $('aLog').append(el);
+  $('aLog').scrollTop = $('aLog').scrollHeight;
+  return el;
+}
+
+async function asstSend(text, voice = false) {
+  text = String(text || '').trim();
+  if (!text || asst.busy || !asst.state?.configured.chat) return;
+  voice = canSpeak() && (voice || asst.speakAll);
+  if (voice) audioCtx();
+  asstStopVoice();
+  const gen = asst.gen, log = $('aLog');
+  asst.busy = true; $('aSend').disabled = true;
+  log.querySelector('.am-n')?.remove();
+  addMsg('u', text);
+  const el = addMsg('a', '');
+  el.innerHTML = '<span class="dots3"><i></i><i></i><i></i></span>';
+  let full = '', pos = 0, frame = 0;
+  const render = () => {
+    const stick = log.scrollHeight - log.scrollTop - log.clientHeight < 60;
+    el.innerHTML = mdLite(full);
+    if (stick) log.scrollTop = log.scrollHeight;
+  };
+  // озвучка по готовым предложениям: первое — короткое, чтобы голос начал сразу
+  const feed = final => {
+    for (;;) {
+      if (gen !== asst.gen) return;
+      const rest = full.slice(pos), min = pos ? 140 : 30, re = /[.!?…](?=\s|$)|\n+/g;
+      let cut = final ? rest.length : -1, m;
+      while (!final && (m = re.exec(rest))) if (m.index + m[0].length >= min) { cut = m.index + m[0].length; break; }
+      if (cut <= 0) return;
+      enqueueSpeech(rest.slice(0, cut), gen);
+      pos += cut;
+      if (final) return;
+    }
+  };
+  try {
+    const r = await fetch(ASST_API + '/chat', { method:'POST', headers:{ 'content-type':'application/json' }, body:JSON.stringify({ text, voice }) });
+    if (!r.ok || !r.body) throw new Error((await r.json().catch(() => ({}))).error || 'Ассистент не ответил — попробуйте ещё раз.');
+    const reader = r.body.getReader(), dec = new TextDecoder();
+    let buf = '';
+    for (;;) {
+      const { value, done } = await reader.read();
+      if (done) break;
+      buf += dec.decode(value, { stream:true });
+      for (let i; (i = buf.indexOf('\n\n')) >= 0; buf = buf.slice(i + 2)) {
+        const line = buf.slice(0, i);
+        if (!line.startsWith('data: ')) continue;
+        const ev = JSON.parse(line.slice(6));
+        if (ev.t === 'error') throw new Error(ev.message);
+        if (ev.t === 'delta') {
+          full += ev.text;
+          if (!frame) frame = requestAnimationFrame(() => { frame = 0; render(); });
+          if (voice) feed(false);
+        }
+      }
+    }
+    cancelAnimationFrame(frame); render();
+    if (voice) feed(true);
+  } catch (e) {
+    cancelAnimationFrame(frame);
+    if (!full) el.remove(); else render();
+    addMsg('e', e.message || 'Нет связи с ассистентом.');
+  }
+  asst.busy = false; $('aSend').disabled = false;
+}
+
+// голос: Web Audio запускается от нажатия, дальше куски ответа играют без новых нажатий (и на iPhone)
+function audioCtx() {
+  if (!asst.ctx) asst.ctx = new (window.AudioContext || window.webkitAudioContext)();
+  if (asst.ctx.state === 'suspended') asst.ctx.resume();
+  return asst.ctx;
+}
+const speechText = t => t.replace(/\[([^\]]+)\]\([^)]*\)/g, '$1').replace(/https?:\/\/\S+/g, '').replace(/[*_#`>|]/g, '').replace(/\s+/g, ' ').trim();
+function enqueueSpeech(text, gen) {
+  const t = speechText(text);
+  if (!t) return;
+  asst.queue.push(fetch(ASST_API + '/tts', { method:'POST', headers:{ 'content-type':'application/json' }, body:JSON.stringify({ text:t }) })
+    .then(r => r.ok ? r.arrayBuffer() : null)
+    .then(b => b && audioCtx().decodeAudioData(b))
+    .catch(() => null));
+  if (!asst.playing) playSpeech(gen);
+}
+async function playSpeech(gen) {
+  asst.playing = true; $('aStop').hidden = false; $('aOrb').classList.add('talk');
+  while (asst.queue.length && gen === asst.gen) {
+    const buf = await asst.queue.shift();
+    if (!buf || gen !== asst.gen) continue;
+    await new Promise(done => {
+      const src = asst.ctx.createBufferSource();
+      src.buffer = buf; src.connect(asst.ctx.destination); src.onended = done;
+      asst.src = src; src.start();
+    });
+  }
+  if (gen === asst.gen) { asst.playing = false; $('aStop').hidden = true; $('aOrb').classList.remove('talk'); }
+}
+function asstStopVoice() {
+  asst.gen++;
+  asst.queue = [];
+  try { asst.src?.stop(); } catch (e) {}
+  asst.src = null; asst.playing = false;
+  $('aStop').hidden = true; $('aOrb').classList.remove('talk');
+}
+
+// микрофон: нажать — говорить, нажать ещё раз — отправить (не дольше двух минут)
+async function asstMic() {
+  if (asst.rec) return asst.rec.stop();
+  if (asst.busy) return;
+  audioCtx(); asstStopVoice();
+  let stream;
+  try { stream = await navigator.mediaDevices.getUserMedia({ audio:true }); }
+  catch (e) { addMsg('e', 'Нет доступа к микрофону — разрешите его для сайта в настройках браузера.'); return; }
+  const type = ['audio/webm;codecs=opus', 'audio/webm', 'audio/mp4'].find(t => window.MediaRecorder?.isTypeSupported?.(t)) || '';
+  const rec = new MediaRecorder(stream, type ? { mimeType:type } : undefined), chunks = [];
+  asst.rec = rec;
+  rec.ondataavailable = e => { if (e.data.size) chunks.push(e.data); };
+  rec.onstop = async () => {
+    stream.getTracks().forEach(t => t.stop());
+    clearInterval(asst.recTimer); asst.rec = null;
+    $('aMic').classList.remove('rec'); $('aOrb').classList.remove('rec'); asstSub();
+    if (rec.cancelled) return;
+    const blob = new Blob(chunks, { type:rec.mimeType || type || 'audio/webm' });
+    if (blob.size < 2000) return addMsg('e', 'Не расслышал — запись слишком короткая.');
+    $('aSub').textContent = 'Распознаю речь…';
+    try {
+      const r = await fetch(ASST_API + '/stt', { method:'POST', headers:{ 'content-type':blob.type }, body:blob });
+      const j = await r.json().catch(() => ({}));
+      if (!r.ok) throw new Error(j.error);
+      if (!j.text) throw new Error('Не расслышал — попробуйте ещё раз.');
+      asstSub(); asstSend(j.text, true);
+    } catch (e) { asstSub(); addMsg('e', e.message || 'Не удалось распознать речь.'); }
+  };
+  rec.start();
+  $('aMic').classList.add('rec'); $('aOrb').classList.add('rec');
+  const t0 = Date.now();
+  asst.recTimer = setInterval(() => {
+    const sec = Math.round((Date.now() - t0) / 1000);
+    $('aSub').textContent = `Слушаю · ${sec} с — нажмите микрофон, чтобы отправить`;
+    if (sec >= 120) rec.stop();
+  }, 250);
+}
+
+const asstAutosize = () => { const t = $('aText'); t.style.height = '38px'; t.style.height = Math.min(t.scrollHeight + 2, 120) + 'px'; };
+$('aForm').addEventListener('submit', e => { e.preventDefault(); const t = $('aText').value; $('aText').value = ''; asstAutosize(); asstSend(t); });
+$('aText').addEventListener('keydown', e => { if (e.key === 'Enter' && !e.shiftKey && !e.isComposing) { e.preventDefault(); $('aForm').requestSubmit(); } });
+$('aText').addEventListener('input', asstAutosize);
+$('aMic').onclick = asstMic;
+$('aStop').onclick = asstStopVoice;
+$('aClose').onclick = () => asstOpen(false);
+$('aChips').addEventListener('click', e => { const b = e.target.closest('[data-q]'); if (b) asstSend(b.dataset.q, Boolean(b.dataset.voice)); });
+// ссылки на задачи и досье открываются здесь же, без перезагрузки офиса
+$('aLog').addEventListener('click', e => {
+  const a = e.target.closest('a[href]');
+  if (!a) return;
+  const u = new URL(a.href, location.href);
+  if (!u.hash || (u.origin !== location.origin && u.hostname !== 'hq2.aicex.club')) return;
+  e.preventDefault();
+  if (location.hash === u.hash) routeHash(); else location.hash = u.hash;
+});
+$('aFoot').addEventListener('change', e => {
+  if (e.target.id !== 'aSpeakAll') return;
+  asst.speakAll = e.target.checked;
+  try { localStorage.setItem('hq:speakAll', asst.speakAll ? '1' : '0'); } catch (err) {}
+});
+$('aFoot').addEventListener('keydown', e => { if (e.key === 'Enter' && e.target.id === 'aPass') $('aFoot').querySelector('[data-a="login"]').click(); });
+$('aFoot').addEventListener('click', async e => {
+  const b = e.target.closest('[data-a]');
+  if (!b) return;
+  const post = (p, body) => fetch(ASST_API + p, { method:'POST', headers:{ 'content-type':'application/json' }, body:JSON.stringify(body || {}) });
+  const k = b.dataset.a;
+  if (k === 'ask-login') asstFoot('login');
+  if (k === 'cancel') asstFoot();
+  if (k === 'logout') { await post('/logout'); asstLoad(); }
+  if (k === 'login') {
+    const r = await post('/login', { password:$('aPass').value });
+    if (r.ok) return asstLoad();
+    addMsg('e', (await r.json().catch(() => ({}))).error || 'Не удалось войти.');
+  }
+  if (k === 'voices') {
+    const r = await fetch(ASST_API + '/voices'), j = await r.json().catch(() => ({}));
+    if (!r.ok || !j.voices?.length) return addMsg('e', j.error || 'В аккаунте ElevenLabs нет клонированных голосов.');
+    $('aFoot').innerHTML = `<select id="aVoice" aria-label="Голос ассистента">${j.voices.map(v => `<option value="${esc(v.id)}"${v.id === j.current ? ' selected' : ''}>${esc(v.name)}</option>`).join('')}</select><button type="button" data-a="voice-save">Сохранить</button><button type="button" data-a="cancel">Отмена</button>`;
+  }
+  if (k === 'voice-save') {
+    const r = await post('/voice', { id:$('aVoice').value });
+    if (r.ok) return asstLoad();
+    addMsg('e', (await r.json().catch(() => ({}))).error || 'Не удалось сохранить голос.');
+  }
+});
+
+
 /* ======================= КАМЕРА, ВИДЫ, ЭКСКУРСИЯ ======================= */
 
 let fly = null, mode = 'overview', labelsOn = true, tour = null;
@@ -2910,10 +3246,10 @@ function select(id, flyCam = false) {
   agents.forEach(paintLabel);
   renderPanel(); $('pbody').scrollTop = 0;
 }
-function setDock(k) { for (const b of $('dock').querySelectorAll('button')) if (!['team', 'labels', 'tour'].includes(b.dataset.cmd)) b.classList.toggle('on', b.dataset.cmd === k); }
+function setDock(k) { for (const b of $('dock').querySelectorAll('button')) if (!['team', 'labels', 'tour', 'assistant'].includes(b.dataset.cmd)) b.classList.toggle('on', b.dataset.cmd === k); }
 function setDockOn(k, on) { $('dock').querySelector(`[data-cmd="${k}"]`).classList.toggle('on', on); }
 function cmd(k) {
-  if (k !== 'tour' && k !== 'labels' && k !== 'team') stopTour();
+  if (!['tour', 'labels', 'team', 'assistant'].includes(k)) stopTour();
   if (k === 'overview') { mode = 'overview'; followId = null; setControls('free'); setDock('overview'); const v = overviewView(); flyTo(v.pos, v.target, 1.6); }
   if (k === 'plan') { mode = 'plan'; followId = null; setControls('free'); setDock('plan'); const zc = (FZ0 + FZ1) / 2; portrait() ? flyTo(V3(1.2, 62, zc), V3(0, 0, zc), 1.6) : flyTo(V3(0, 34, zc + 0.6), V3(0, 0, zc), 1.6); }
   if (k === 'desk' || k === 'deskview') {
@@ -2925,6 +3261,7 @@ function cmd(k) {
   if (k === 'team') setPanel($('team').hidden);
   if (k === 'labels') { labelsOn = !labelsOn; setDockOn('labels', labelsOn); }
   if (k === 'tour') tour ? stopTour() : startTour();
+  if (k === 'assistant') asstOpen($('asst').hidden);
 }
 $('dock').addEventListener('click', e => { const b = e.target.closest('[data-cmd]'); if (b) cmd(b.dataset.cmd); });
 
@@ -3001,6 +3338,7 @@ addEventListener('keydown', e => {
     return;
   }
   if (!$('dossier').hidden) { if (e.key === 'Escape') closeDossier(); return; }
+  if (!$('asst').hidden && e.key === 'Escape' && $('asst').contains(document.activeElement)) return asstOpen(false);
   if (e.key === 'Escape') { stopTour(); if (selectedId) { selectedId = null; pagent = null; followId = null; agents.forEach(paintLabel); renderPanel(); } }
 });
 
