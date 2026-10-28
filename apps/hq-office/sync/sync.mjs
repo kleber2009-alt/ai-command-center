@@ -223,7 +223,8 @@ ${examples}`;
 
 async function describeGroups(groups, office) {
   const out = new Map();
-  if (!groups.length || !process.env.ANTHROPIC_API_KEY) return out;
+  if (!groups.length) return out;
+  if (!process.env.ANTHROPIC_API_KEY) { note('Тексты: из описаний PR — нет ключа ANTHROPIC_API_KEY'); return out; }
   const client = new Anthropic();
   const system = systemPrompt(office), schema = cardsSchema(office);
   for (let i = 0; i < groups.length; i += 8) {
@@ -241,9 +242,10 @@ async function describeGroups(groups, office) {
       if (res.stop_reason !== 'end_turn') throw new Error(`stop_reason ${res.stop_reason}`);
       const text = res.content.filter(b => b.type === 'text').map(b => b.text).join('');
       for (const c of JSON.parse(text).cards || []) out.set(c.key, c);
+      note(`Тексты: Claude (${res.model})`);
     } catch (err) {
-      const why = err instanceof Anthropic.APIError ? `${err.status} ${err.message}` : err.message;
-      console.warn(`! Claude недоступен (${why}) — карточки из заголовков PR`);
+      const why = err instanceof Anthropic.APIError && err.status ? `${err.status} ${err.message}` : err.message;
+      note(`Тексты: из описаний PR — Claude недоступен (${why})`);
     }
   }
   return out;
@@ -387,6 +389,11 @@ async function addLink(opts, { dry }) {
 }
 
 /* ───────── report ───────── */
+function note(line) {
+  console.log(line);
+  if (process.env.GITHUB_STEP_SUMMARY) fs.appendFileSync(process.env.GITHUB_STEP_SUMMARY, line + '\n\n');
+}
+
 function report(added, updated, scanned) {
   const lines = [`История hq2: ${added.length} новых задач, ${updated.length} дополнено (просмотрено PR: ${scanned})`];
   for (const t of added) lines.push(`- новая: **${t.title}** — ${t.date}, https://hq2.aicex.club/#task-${t.id}`);
