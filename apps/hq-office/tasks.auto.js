@@ -4,8 +4,8 @@
    готовые задачи, только дописывает к ним новые PR той же ветки. Удалённая задача не вернётся —
    её PR остаются в seen. Чтобы задача стала «ручной», перенесите её в tasks.js. */
 window.OFFICE_TASKS_AUTO = {
-  "since": "2026-10-28T07:53:25Z",
-  "seen": [148, 149, 150, 152],
+  "since": "2026-10-28T07:56:58Z",
+  "seen": [148, 149, 150, 151, 152],
   "tasks": [
     {
       "id": "gh-148",
@@ -34,6 +34,28 @@ window.OFFICE_TASKS_AUTO = {
       ],
       "group": "hq-office|claude/affectionate-keller-qy05o4",
       "prs": [148, 149, 150, 152],
+      "auto": true
+    },
+    {
+      "id": "gh-151",
+      "date": "2026-10-28",
+      "dateNote": "слияние PR на GitHub",
+      "kind": "Сайт",
+      "dept": "ceo",
+      "people": ["ilia"],
+      "agents": ["product"],
+      "title": "Живой офис агентов: готовые работы каждого агента с превью",
+      "summary": "У каждого агента в досье теперь сами собираются его работы: ролики, сайты, документы, рассылки и код — с превью, датой и ссылкой на задачу. Новая вкладка «Работы» показывает всё по отделам.",
+      "proof": [
+        {
+          "kind": "github",
+          "label": "PR #151 · готовые работы каждого агента — с превью, из досье и истории задач",
+          "url": "https://github.com/kleber2009-alt/ai-command-center/pull/151"
+        },
+        { "kind": "site", "label": "Живой офис агентов — живой сайт", "url": "https://hq2.aicex.club" }
+      ],
+      "group": "hq-office|claude/determined-hawking-5lh954",
+      "prs": [151],
       "auto": true
     }
   ]
