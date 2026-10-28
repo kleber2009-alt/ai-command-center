@@ -41,7 +41,9 @@ jobs:
               require("vm").runInThisContext(require("fs").readFileSync("apps/hq-office/" + f, "utf8"));
             const t = [...window.OFFICE_TASKS, ...window.OFFICE_TASKS_AUTO.tasks], ids = new Set();
             for (const x of t) { if (ids.has(x.id)) throw new Error("duplicate task id " + x.id); ids.add(x.id);
-              if (!/^\d{4}-\d{2}-\d{2}$/.test(x.date) || !x.proof?.length) throw new Error("bad task " + x.id); }
+              if (!/^\d{4}-\d{2}-\d{2}$/.test(x.date) || !x.proof?.length) throw new Error("bad task " + x.id);
+              for (const m of [...(x.media || []), ...x.proof]) for (const u of [m.src, m.url, m.poster])
+                if (u && u.startsWith("media/") && !require("fs").existsSync("apps/hq-office/" + u)) throw new Error("missing " + u + " in " + x.id); }
             for (const p of Object.values(window.OFFICE_WORKS.previews))
               if (!/^https?:/.test(p) && !require("fs").existsSync("apps/hq-office/" + p)) throw new Error("missing preview " + p);
             console.log(t.length + " tasks ok");'

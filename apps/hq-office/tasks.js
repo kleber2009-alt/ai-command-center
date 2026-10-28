@@ -10,6 +10,9 @@
    kind    — тип работы для фильтра
    proof   — ссылки-доказательства, media — что показать прямо в окне задачи
 
+   media/ — сжатые копии работ из приватной библиотеки AICEX (kleber2009-alt/aicex-library),
+   выложенные на hq2: ролики, превью стилей, скриншоты мини-аппов, живые слайды.
+
    Новая задача = новый объект в массиве. Даты в формате ГГГГ-ММ-ДД.
    Новые PR попадают в историю сами — в tasks.auto.js (sync/sync.mjs). PR, упомянутые здесь
    через pr(…), синк пропускает, так что ручная задача и автоматическая не задвоятся. */
@@ -21,11 +24,39 @@ window.OFFICE_TASKS = (() => {
   const commit = (sha, label) => ({ kind:'github', label, url:`${GH}/commit/${sha}` });
   const art = (id, label) => ({ kind:'claude', label, url:'https://claude.ai/artifact/' + id });
   const site = (url, label) => ({ kind:'site', label, url });
-  const file = (p, label) => ({ kind:'file', label, url:MK + p });
-  const img = (p, title) => ({ type:'img', src:MK + p, title });
-  const vid = (p, title, poster) => ({ type:'video', src:MK + p, title, poster:poster ? MK + poster : '' });
-  const page = (p, title) => ({ type:'page', src:p.startsWith('http') ? p : MK + p, title });
+  const LIB = 'https://github.com/kleber2009-alt/aicex-library/tree/main/';
+  const at = p => /^(https?:|media\/)/.test(p) ? p : MK + p; // media/… лежит на самом hq2
+  const file = (p, label) => ({ kind:'file', label, url:at(p) });
+  const img = (p, title) => ({ type:'img', src:at(p), title });
+  const vid = (p, title, poster) => ({ type:'video', src:at(p), title, poster:poster ? at(poster) : '' });
+  const page = (p, title) => ({ type:'page', src:at(p), title });
+  const lib = (p, label) => ({ kind:'github', label, url:LIB + p });
+  const bot = (name, label) => ({ kind:'site', label, url:'https://t.me/' + name });
+  const styles = (dir, list) => list.map(([id, name]) => img(`media/${dir}/${id}.jpg`, name));
   const MERGED = 'слияние PR на GitHub', COMMIT = 'коммит на GitHub', UPD = 'последнее обновление артефакта в Claude';
+  const FILES = 'последнее изменение файлов проекта в библиотеке AICEX';
+  // превью стилей из мини-аппов ботов монтажа и каруселей — на нашем видео и наших текстах
+  const MONTAZH_STYLES = [
+    ['palii', 'Палий — лайм, светлый сплит'], ['sticker', 'Стикер — слова на наклейках'], ['journal', 'Журнал — антиква, ч/б'],
+    ['neon', 'Неон — тёмный, капс, свечение'], ['cream', 'Крем — мягкий, округлый шрифт'], ['apple', 'Apple — белый, субтитры в пилюле'],
+    ['tech', 'Тех-обзор — слово на плашке'], ['arena', 'Арена — бумага, пиксельные агенты'], ['kobalt', 'Кобальт — синие студии, караоке'],
+    ['uimotion', 'UI-моушн — стекло, тумблеры, 3D'], ['scheme', 'Схема — неоновая схема'], ['razbor', 'Разбор — сетка, окно запроса'],
+    ['montazhka', 'Монтажка — фиолет, зерно, UI монтажки'], ['promo', 'Промо-история — iOS-интерфейс, 3D-эмодзи'], ['dvoinik', 'Двойник — антиква за спиной, команды'],
+    ['shemaava', 'Схема + аватар — растущая схема, лайм'], ['duel', 'Дуэль — две версии, VS, раунды'], ['dueljournal', 'Дуэль-журнал — крем, антиква, две панели'],
+    ['pixel', 'Пиксель — обычный vs мой промпт'], ['bluecaps', 'Синий капс — перебивки, B-roll, мемы'], ['promostory', 'Промо без лица — промо 12 с без лица'],
+    ['pulse', 'Пульс — промо продукта, коралл на тёмном'], ['vibecode', 'Вайбкод — v2 · графит, караоке, UI-экраны'], ['aura', 'Аура — главы, цветное свечение, 3D'],
+    ['gloss', 'Глянец — Apple-стиль, плитки, лицо снизу'], ['hud', 'HUD — HUD-шапка, хром за головой, стекло'], ['youtube', 'YouTube · длинное — 16:9, скринкаст в окнах'],
+  ];
+  const KARUSEL_STYLES = [
+    ['palii', 'Палий — лайм, жирный гротеск'], ['sticker', 'Стикер — слова на наклейках'], ['journal', 'Журнал — антиква, курсив, ч/б'],
+    ['neon', 'Неон — тёмный, капс, свечение'], ['cream', 'Крем — мягкий, округлый'], ['apple', 'Apple — белый, синий акцент'],
+    ['tech', 'Тех-обзор — жёлтый капс со свечением'], ['arena', 'Арена — бумага, пиксельные агенты'], ['kobalt', 'Кобальт — синие студии, 3D'],
+    ['uimotion', 'UI-моушн — стекло, тумблеры, 3D-игрушки'], ['scheme', 'Схема — неоновая схема'], ['razbor', 'Разбор — сетка, окно запроса'],
+    ['montazhka', 'Монтажка — фиолет, зерно, UI монтажки'], ['promo', 'Промо-история — iOS-интерфейс, эмодзи'], ['dvoinik', 'Двойник — антиква за спиной, лайм'],
+    ['youtube', 'YouTube · ЭМ — окно macOS, зелёная цифра'], ['bluecaps', 'Синий капс — синий узкий капс, скрины'], ['duel', 'Дуэль — две версии, VS, раунды'],
+    ['dueljournal', 'Дуэль-журнал — крем, антиква, две панели'], ['pixel', 'Пиксель — обычный vs мой промпт'], ['shemaava', 'Схема + аватар — лаймовая схема-орбита, лицо'],
+    ['pulse', 'Пульс — промо, коралл на коричневом'], ['vibecode', 'Вайбкод — рамка Figma, UI-карточки'], ['aura', 'Аура — главы со свечением'],
+  ];
 
   return [
     /* ───────────── Стратегия и продукт ───────────── */
@@ -61,13 +92,30 @@ window.OFFICE_TASKS = (() => {
       media:[vid('video/dvoinik.mp4', 'Рилс «Двойник» — ИИ-аватар', 'img/shots/dvoinik.jpg'), vid('video/avatar-reel.mp4', 'Рилс с ИИ-аватаром', 'img/shots/avatar-reel.jpg')] },
     { id:'montage-miniapp', date:'2026-10-14', dateNote:UPD, kind:'Продукт', dept:'ceo', people:['ilia'], agents:['product', 'montage'],
       title:'Мини-апп монтажа: монтаж рилсов прямо в Telegram',
-      summary:'Мини-приложение, в котором монтаж по готовым стилям запускается из Telegram, и бот монтажа рядом.',
-      proof:[art('5MttqUph3kSsvi8iW5TDGs', 'Мини-апп монтажа'), site('https://montazh.aicex.club', 'montazh.aicex.club'), site('https://reels.aicex.club', 'Бот монтажа — reels.aicex.club')],
-      media:[img('img/sites/montazh.jpg', 'Мини-апп монтажа'), img('img/sites/reels.jpg', 'Бот монтажа')] },
+      summary:'Мини-приложение, в котором монтаж по готовым стилям запускается из Telegram, и бот монтажа рядом: загружаешь видео, выбираешь один из 27 стилей, референс или свой промпт — и следишь за монтажом. Ниже — каждый стиль на нашем видео.',
+      proof:[art('5MttqUph3kSsvi8iW5TDGs', 'Мини-апп монтажа'), site('https://montazh.aicex.club', 'montazh.aicex.club'), site('https://reels.aicex.club', 'Бот монтажа — reels.aicex.club'), bot('reelswithai_bot', '@reelswithai_bot — бот монтажа'), lib('results/montazh-bot', 'Код бота и мини-аппа — библиотека AICEX (закрыто)')],
+      media:[img('media/screens/montazh-miniapp.jpg', 'Мини-апп монтажа: стиль, референс или свой промпт'), img('img/sites/montazh.jpg', 'Мини-апп монтажа'), img('img/sites/reels.jpg', 'Бот монтажа'), ...styles('montazh-styles', MONTAZH_STYLES)] },
     { id:'silent-reels', date:'2026-10-01', dateNote:UPD, kind:'Документ', dept:'ceo', people:['ilia'], agents:['specs', 'montage'],
       title:'ТЗ: агент Silent Reels',
       summary:'Техническое задание на агента, который собирает рилсы без голоса: формат, сцены, титры.',
       proof:[art('GRJDBxDhoN7ncD8Bp7bCEH', 'ТЗ: агент Silent Reels')] },
+    { id:'creator-pack', date:'2026-10-27', dateNote:FILES, kind:'Продукт', dept:'marketing', people:['ilia'], agents:['montage', 'skills', 'product'],
+      title:'Creator Pack: 48 скиллов монтажа в мини-аппе — одно видео, любой стиль',
+      summary:'Каталог из 48 скиллов — рилсы, YouTube, клипы и тексты — с готовностью под бренд @ilia.paliy. Выбираешь скилл в мини-аппе бота, присылаешь видео, Claude Code монтирует, показывает превью и после «ок» отдаёт финал. Ниже одно и то же видео в двух новых стилях.',
+      proof:[bot('Productionskill_bot', '@Productionskill_bot — бот Creator Pack'), lib('results/creator-pack-miniapp', 'Мини-апп — библиотека AICEX (закрыто)'), lib('skills/claude-code', 'Скиллы монтажа — библиотека AICEX (закрыто)')],
+      media:[vid('media/videos/glass-explainer.mp4', 'Стиль «Стеклянная объяснялка» на нашем видео', 'media/videos/glass-explainer.jpg'),
+        vid('media/videos/explainer-panel.mp4', 'То же видео в стиле «Панель-объяснялка»', 'media/videos/explainer-panel.jpg'),
+        img('media/screens/creator-pack.jpg', 'Мини-апп Creator Pack: 48 скиллов, готовность под бренд')] },
+    { id:'studio-kadrik', date:'2026-10-27', dateNote:FILES, kind:'Продукт', dept:'ceo', people:['ilia'], agents:['product', 'montage'],
+      title:'«Студия Кадрика»: игровой мини-апп Prod Skills с монтажом прямо в боте',
+      summary:'Игра для всех: опыт, монеты, серия дней, квесты, карта стилей и лига. Владельцу — монтаж 48 скиллами Creator Pack в том же боте: превью → «ок» → финал, а готовый рилс прокачивает Кадрика.',
+      proof:[bot('studio_kadrik_bot', '@studio_kadrik_bot — бот и мини-апп'), art('8bFig9B5aX3RqzZqS5LdkZ', 'Prod Skills — игровые концепции'), lib('results/studio-kadrik-bot', 'Код бота — библиотека AICEX (закрыто)')] },
+    { id:'silent-reels-factory', date:'2026-10-23', dateNote:FILES, kind:'Видео', dept:'marketing', people:['ilia'], agents:['montage', 'scripts', 'publish'],
+      title:'Silent Reels: бот делает рилс из любого клипа из галереи — без лица и голоса',
+      summary:'Присылаешь клип или фото — Claude находит, где на кадре нет лица и шума, ставит хук текстом на экран, рендерит рилс 1080×1920 и пишет подпись с кодовым словом. Записывает каждый выпуск и помнит, какие хуки залетели.',
+      proof:[bot('Sielencemode_bot', '@Sielencemode_bot — бот фабрики'), art('GRJDBxDhoN7ncD8Bp7bCEH', 'ТЗ: агент Silent Reels'), lib('results/silent-reels', 'Код фабрики — библиотека AICEX (закрыто)')],
+      media:[vid('media/videos/silent-reel.mp4', 'Рилс фабрики: хук поверх клипа', 'media/videos/silent-reel.jpg'),
+        vid('media/videos/silent-reel-screen.mp4', 'Рилс фабрики: хук поверх записи экрана', 'media/videos/silent-reel-screen.jpg')] },
     { id:'vsl', date:'2026-09-24', dateNote:UPD, kind:'Стратегия', dept:'ceo', people:['ilia'], agents:['market', 'slides'],
       title:'VSL «Контент → Аудитория → Деньги»',
       summary:'Сценарий продающего видео: как контент превращается в аудиторию, а аудитория — в деньги.',
@@ -179,6 +227,11 @@ window.OFFICE_TASKS = (() => {
       title:'Threads на автопилоте: ветки по утрам в Telegram-бот и 3 тестовые ветки',
       summary:'Схема: агент каждое утро готовит 3 ветки, присылает их в бот на одобрение и публикует в 10:00, 13:00 и 18:00 МСК; без одобрения ничего не выходит. Первые три ветки для теста хуков уже написаны.',
       proof:[art('CkvtwSgioKAD4kAHS8tF9k', 'Автоматизация Threads → Telegram'), art('Xbngg9iN7rzBuwuWMBNDwd', 'Threads: 3 тестовые ветки')] },
+    { id:'praktikum-day1', date:'2026-10-17', dateNote:FILES, kind:'Презентация', dept:'marketing', people:['ilia'], agents:['slides'],
+      title:'Практикум «AI-контент: подписчики → клиенты → деньги» — слайды первого дня',
+      summary:'Живая презентация двухдневного практикума: пять рабочих связок (карусели, Reels, аватары, креативы, автомонтаж) и бонусы за кодовые слова. Листается стрелками прямо в окне задачи.',
+      proof:[site('media/praktikum-day1/index.html', 'Слайды практикума — открыть целиком'), lib('results/praktikum-day1', 'Исходники — библиотека AICEX (закрыто)')],
+      media:[page('media/praktikum-day1/index.html', 'Практикум · день 1 — живые слайды'), img('media/screens/praktikum-day1.jpg', 'Обложка практикума')] },
     { id:'presentations', date:'2026-10-19', dateNote:UPD, kind:'Презентация', dept:'marketing', people:['ilia'], agents:['slides'],
       title:'Презентации: «Спринт Чёрный», эфир «Монтаж рилсов с Claude», урок 2',
       summary:'Слайды для эфиров и вебинаров: стиль «Медь» для эфира про монтаж, урок «Блог с 0 до 10 000» и спринт «Чёрный».',
@@ -229,9 +282,9 @@ window.OFFICE_TASKS = (() => {
       media:[img('img/shots/claude-vs-gpt.jpg', 'Выпуск: Claude vs GPT'), img('img/shots/dvoinik.jpg', 'Выпуск: Двойник'), img('img/shots/claude-machine.jpg', 'Выпуск: Claude — машина для соцсетей')] },
     { id:'carousels', date:'2026-10-15', dateNote:COMMIT, kind:'Дизайн', dept:'marketing', people:['ilia'], agents:['carousel', 'skills'],
       title:'Карусели Instagram: 24 стиля и готовая карусель',
-      summary:'24 стиля каруселей, каждый — скилл; карусель-скилл встроен в Persona Studio.',
-      proof:[commit('01b265636e18d4059ccb3a3c433b7a9d969abd39', 'Коммит: карусели в продукте'), file('pages/karusel-v1.pdf', 'Готовая карусель (PDF)')],
-      media:[img('img/carousel/palii.jpg', 'Стиль «Палий»'), img('img/carousel/sticker.jpg', 'Стиль «Стикер»'), img('img/carousel/journal.jpg', 'Стиль «Журнал»')] },
+      summary:'24 стиля каруселей, каждый — скилл; карусель-скилл встроен в Persona Studio. Бот @caruselclaude_bot собирает карусель по тексту или теме и присылает слайды вместе с ZIP и PDF. Ниже — все 24 стиля.',
+      proof:[commit('01b265636e18d4059ccb3a3c433b7a9d969abd39', 'Коммит: карусели в продукте'), file('pages/karusel-v1.pdf', 'Готовая карусель (PDF)'), bot('caruselclaude_bot', '@caruselclaude_bot — бот каруселей'), lib('results/karusel-bot', 'Код бота и мини-аппа — библиотека AICEX (закрыто)')],
+      media:[img('media/screens/karusel-miniapp.jpg', 'Мини-апп каруселей'), ...styles('karusel-styles', KARUSEL_STYLES)] },
     { id:'svyazki', date:'2026-09-24', dateNote:UPD, kind:'Лид-магнит', dept:'marketing', people:['ilia'], agents:['leadmagnet', 'market'],
       title:'Лид-магнит «12 рабочих связок» и презентация «Первые 10 000»',
       summary:'Подарок за подписку: 12 связок с пошаговыми инструкциями и презентация о связке.',

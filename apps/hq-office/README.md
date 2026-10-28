@@ -23,6 +23,7 @@
 | `dept-content.js` | окна отделов и руководителей | копия с hq.aicex.club |
 | `skills-library.js` | названия скиллов из приватной библиотеки офиса | `aicex-library` |
 | `people/*.jpg` | фото руководителей | копия с hq.aicex.club |
+| `media/` | сжатые копии работ для задач: ролики, превью стилей, скриншоты мини-аппов, живые слайды | библиотека `aicex-library` |
 | `deploy/` | выкладка: блок Caddy и установка на свой сервер | — |
 | `sync/` | сборщик истории из GitHub (не выкладывается на сайт) | — |
 
@@ -89,6 +90,20 @@ node sync.mjs add --url https://claude.ai/artifact/… --title '…' --dept mark
 ```
 
 Задачи за последние 7 дней помечены в панели меткой «новое».
+
+## Работы из библиотеки (`media/`)
+
+Работы из приватной библиотеки `kleber2009-alt/aicex-library` попадают на сайт сжатыми
+копиями в `media/` и подключаются к задачам через `img('media/…')`, `vid('media/…', …, постер)`,
+`page('media/…/index.html')`. Ролики — 540×960, H.264, `+faststart` (1–2 МБ за минуту),
+картинки — JPEG до 1000 px. Только наши работы: демо-ролики сторонних наборов скиллов не
+выкладываем. Проверка выкладки падает, если файла из `media/` нет.
+
+```bash
+ffmpeg -i draft.mp4 -vf scale=540:-2 -c:v libx264 -preset slow -crf 30 -pix_fmt yuv420p \
+  -movflags +faststart -c:a aac -b:a 64k media/videos/x.mp4
+ffmpeg -ss 20 -i media/videos/x.mp4 -frames:v 1 -q:v 5 media/videos/x.jpg   # постер
+```
 
 ## Библиотека скиллов
 
