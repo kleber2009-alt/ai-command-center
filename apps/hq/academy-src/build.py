@@ -80,6 +80,16 @@ assert 'GAME.' not in html.replace('const GAME = null', ''), 'GAME leftovers'
 
 # 5. outputs
 dist = root / 'dist'; dist.mkdir(exist_ok=True)
+# задания для ИИ-проверки в Worker: промпт собирается на сервере по номеру шага, а не из того, что прислала страница
+import json, subprocess
+tasks = subprocess.run(['node', '-e', '''
+global.window = global;
+require(process.argv[1]); require(process.argv[2]);
+const out = {};
+for (const s of window.ACADEMY.steps) out[s.id] = { title: s.title, agent: !!s.agent, task: s.task.title, result: s.task.result, check: s.task.check };
+process.stdout.write(JSON.stringify(out));
+''', str(src / 'content-a.js'), str(src / 'content-b.js')], capture_output=True, text=True, check=True).stdout
+(hq / 'academy-tasks.json').write_text(json.dumps(json.loads(tasks), ensure_ascii=False, indent=1) + '\n', encoding='utf8')
 artifact = pathlib.Path(sys.argv[sys.argv.index('--artifact') + 1]) if '--artifact' in sys.argv else dist / 'artifact.html'
 artifact.write_text(html, encoding='utf8')
 head = ('<!doctype html>\n<html lang="ru">\n<head>\n<meta charset="utf-8">\n'

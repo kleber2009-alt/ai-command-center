@@ -25,6 +25,7 @@ node test/transfer.js dist/test.html test/shots       # перенос прог�
 node test/goal.js dist/test.html test/shots           # цель на входе, блок «Твоя цель», смена цели
 node test/week.js dist/test.html test/shots           # «Сегодня» и «Неделя офиса» по регламентам агентов
 node test/quick.js dist/test.html test/shots          # быстрая победа после входа: промпт, опыт, wins/first-win.md
+node test/site-ai.js <http://…/academy> test/shots     # ИИ-проверка через Worker (нужен wrangler dev)
 ```
 
 ## Деплой
@@ -47,6 +48,17 @@ python3 tools/pack_skills.py <папка со скиллами>   # → ../acade
 - Выдать коды: https://hq.aicex.club/academy-codes (секрет + имена → коды, считается в браузере) или `ACADEMY_SECRET=… python3 tools/codes.py Анна "Борис Петров"`.
 - Отозвать код: имя из кода (`anna`) в переменную `ACADEMY_REVOKED`, через запятую.
 - Новый секрет отзывает все коды сразу.
+
+## ИИ-проверка на сайте
+
+В claude.ai задания проверяет Claude самого ученика. На сайте — Worker: `POST /academy-api/check` в `../worker.js`.
+
+- Включается секретом `ANTHROPIC_API_KEY`: `npx wrangler secret put ANTHROPIC_API_KEY`. Без него сайт проверяет по простым правилам, как раньше.
+- Работает только с кодом ученика и не чаще 6 раз в минуту на код (`ratelimits` в `wrangler.jsonc`).
+- Промпт собирается на сервере по номеру шага из `../academy-tasks.json` (его пишет `build.py`). Страница присылает только ответы и результат.
+- Модель — `AI_MODEL` в `worker.js`: `claude-opus-5-5` с низким усилием. Дешевле примерно в 40 раз — `claude-haiku-5-5`.
+- Перед деплоем: `cd apps/hq && npm install` — SDK Anthropic собирается в Worker.
+- Проверка локально: `.dev.vars` с `ACADEMY_SECRET` и ключом, `npx wrangler dev`, затем `node test/site-ai.js http://127.0.0.1:8787/academy test/shots fallback` (или `ai` с настоящим ключом).
 
 ## Где что
 

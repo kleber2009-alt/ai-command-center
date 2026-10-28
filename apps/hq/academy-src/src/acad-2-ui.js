@@ -72,7 +72,7 @@ function trackPanel() {
           (d ? '' : '<em>+' + stepXP(s) + '</em>') + '</button>';
       }).join('') + '</div>';
   });
-  h += '</div><div class="apf"><span class="mut sm" style="flex:1">' + storeLine() + (RT.ready ? aiOn() ? ' · ИИ-проверка включена' : ' · ИИ выключен' : '') + '</span>' +
+  h += '</div><div class="apf"><span class="mut sm" style="flex:1">' + storeLine() + (RT.ready ? aiOn() || siteAI() ? ' · ИИ-проверка включена' : RT.site === 'on' ? ' · ИИ-проверка — с кодом ученика' : ' · ИИ выключен' : '') + '</span>' +
     (MODE === 'demo' ? '<button class="ab sm" data-act="exit-demo">Выйти из примера</button>' : '<button class="ab ghost sm" data-act="transfer" title="Продолжить на другом устройстве или в claude.ai">Перенести</button><button class="ab ghost sm" data-act="reset">Начать заново</button>') + '</div>';
   return h;
 }

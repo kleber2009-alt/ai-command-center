@@ -6,3 +6,7 @@ academy-src
 worker.js
 .dev.vars
 .gitignore
+node_modules
+package.json
+package-lock.json
+academy-tasks.json

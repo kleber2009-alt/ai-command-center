@@ -4031,6 +4031,20 @@ async function aiCheck(step, result) {
   const v = ['accepted', 'accepted_with_tips', 'revise'].includes(r && r.verdict) ? r.verdict : okN === 3 ? 'accepted' : okN === 2 ? 'accepted_with_tips' : 'revise';
   return { verdict: v, by: 'ai', criteria: crit.map((c) => ({ ok: !!(c && c.ok), note: String((c && c.note) || '') })), praise: String((r && r.praise) || ''), fixes: (Array.isArray(r && r.fixes) ? r.fixes : []).map(String).slice(0, 4) };
 }
+// на сайте (вне claude.ai) — ИИ-проверка через Worker hq.aicex.club, только с кодом ученика
+const siteAI = () => !window.claude && /^https?:$/.test(location.protocol) && RT.site === 'on' && !!(S.profile && S.profile.code);
+async function siteProbe() {
+  if (window.claude || !/^https?:$/.test(location.protocol)) return;
+  try { const r = await fetch('/academy-api/check'); RT.site = r.ok && (await r.json()).ready ? 'on' : 'off'; } catch (e) { RT.site = 'off'; }
+}
+async function siteCheck(step, result) {
+  const r = await fetch('/academy-api/check', { method: 'POST', headers: { 'content-type': 'application/json' }, body: JSON.stringify({ code: S.profile.code, step: step.id, answers: qaBlock(step), result: String(result).slice(0, 6000) }) });
+  const c = await r.json().catch(() => ({}));
+  if (r.status === 503) RT.site = 'off';
+  if (!r.ok) throw Object.assign(new Error(c.error || 'failed'), { code: c.error || 'failed' });
+  return { verdict: c.verdict, by: 'ai', criteria: c.criteria, praise: c.praise, fixes: c.fixes || [] };
+}
+const siteError = (e) => ({ code: 'Код ученика не подошёл.', rate_limited: 'Много проверок подряд — подожди минуту.', busy: 'ИИ сейчас занят — попробуй через минуту.', daily_limit: 'На сегодня ИИ-проверки закончились — завтра снова.' }[e && e.code] || 'ИИ-проверка не ответила.') + ' Пока проверили по простым правилам.';
 function localCheck(step, result) {
   const r = String(result || '').trim();
   const ok = step.task.resultType === 'link' ? isUrl(r.split(/\s/)[0]) || isUrl(r) : r.length >= 40;
@@ -4166,7 +4180,7 @@ function trackPanel() {
           (d ? '' : '<em>+' + stepXP(s) + '</em>') + '</button>';
       }).join('') + '</div>';
   });
-  h += '</div><div class="apf"><span class="mut sm" style="flex:1">' + storeLine() + (RT.ready ? aiOn() ? ' · ИИ-проверка включена' : ' · ИИ выключен' : '') + '</span>' +
+  h += '</div><div class="apf"><span class="mut sm" style="flex:1">' + storeLine() + (RT.ready ? aiOn() || siteAI() ? ' · ИИ-проверка включена' : RT.site === 'on' ? ' · ИИ-проверка — с кодом ученика' : ' · ИИ выключен' : '') + '</span>' +
     (MODE === 'demo' ? '<button class="ab sm" data-act="exit-demo">Выйти из примера</button>' : '<button class="ab ghost sm" data-act="transfer" title="Продолжить на другом устройстве или в claude.ai">Перенести</button><button class="ab ghost sm" data-act="reset">Начать заново</button>') + '</div>';
   return h;
 }
@@ -4876,6 +4890,8 @@ async function checkResult(id) {
   if (aiOn()) {
     try { c = await aiCheck(s, r); }
     catch (e) { const m = aiError(e); if (!aiOn()) c = localCheck(s, r); else { UI.busy['chk-' + id] = false; UI.err[id] = m; renderPanel(); return; } }
+  } else if (siteAI()) {
+    try { c = await siteCheck(s, r); } catch (e) { toast(siteError(e)); c = localCheck(s, r); }
   } else c = localCheck(s, r);
   c.at = Date.now(); x.check = c; UI.busy['chk-' + id] = false;
   if (accepted(c) && !x.xpTask) { x.xpTask = true; addXP(A.xp.task, 'задание принято'); }
@@ -5074,6 +5090,7 @@ async function boot() {
       else await mentorInbox();
     } catch (e) { if (MODE !== 'demo') MODE = 'local'; }
   }
+  await siteProbe();
   RT.ready = true;
   if (S.profile && $('#aModal').querySelector('#aOnb')) closeModal();
   if (RT.me && RT.me.name && $('#aon-name') && !$('#aon-name').value) $('#aon-name').value = RT.me.name.split(' ')[0];

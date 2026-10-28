@@ -381,6 +381,20 @@ async function aiCheck(step, result) {
   const v = ['accepted', 'accepted_with_tips', 'revise'].includes(r && r.verdict) ? r.verdict : okN === 3 ? 'accepted' : okN === 2 ? 'accepted_with_tips' : 'revise';
   return { verdict: v, by: 'ai', criteria: crit.map((c) => ({ ok: !!(c && c.ok), note: String((c && c.note) || '') })), praise: String((r && r.praise) || ''), fixes: (Array.isArray(r && r.fixes) ? r.fixes : []).map(String).slice(0, 4) };
 }
+// на сайте (вне claude.ai) — ИИ-проверка через Worker hq.aicex.club, только с кодом ученика
+const siteAI = () => !window.claude && /^https?:$/.test(location.protocol) && RT.site === 'on' && !!(S.profile && S.profile.code);
+async function siteProbe() {
+  if (window.claude || !/^https?:$/.test(location.protocol)) return;
+  try { const r = await fetch('/academy-api/check'); RT.site = r.ok && (await r.json()).ready ? 'on' : 'off'; } catch (e) { RT.site = 'off'; }
+}
+async function siteCheck(step, result) {
+  const r = await fetch('/academy-api/check', { method: 'POST', headers: { 'content-type': 'application/json' }, body: JSON.stringify({ code: S.profile.code, step: step.id, answers: qaBlock(step), result: String(result).slice(0, 6000) }) });
+  const c = await r.json().catch(() => ({}));
+  if (r.status === 503) RT.site = 'off';
+  if (!r.ok) throw Object.assign(new Error(c.error || 'failed'), { code: c.error || 'failed' });
+  return { verdict: c.verdict, by: 'ai', criteria: c.criteria, praise: c.praise, fixes: c.fixes || [] };
+}
+const siteError = (e) => ({ code: 'Код ученика не подошёл.', rate_limited: 'Много проверок подряд — подожди минуту.', busy: 'ИИ сейчас занят — попробуй через минуту.', daily_limit: 'На сегодня ИИ-проверки закончились — завтра снова.' }[e && e.code] || 'ИИ-проверка не ответила.') + ' Пока проверили по простым правилам.';
 function localCheck(step, result) {
   const r = String(result || '').trim();
   const ok = step.task.resultType === 'link' ? isUrl(r.split(/\s/)[0]) || isUrl(r) : r.length >= 40;

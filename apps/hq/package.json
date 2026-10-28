@@ -1,0 +1,8 @@
+{
+  "name": "hq-aicex",
+  "private": true,
+  "description": "hq.aicex.club: static office + Worker (skill downloads by student code, AI check for the academy)",
+  "dependencies": {
+    "@anthropic-ai/sdk": "1.3.0"
+  }
+}

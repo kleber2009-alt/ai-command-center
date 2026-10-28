@@ -61,6 +61,8 @@ async function checkResult(id) {
   if (aiOn()) {
     try { c = await aiCheck(s, r); }
     catch (e) { const m = aiError(e); if (!aiOn()) c = localCheck(s, r); else { UI.busy['chk-' + id] = false; UI.err[id] = m; renderPanel(); return; } }
+  } else if (siteAI()) {
+    try { c = await siteCheck(s, r); } catch (e) { toast(siteError(e)); c = localCheck(s, r); }
   } else c = localCheck(s, r);
   c.at = Date.now(); x.check = c; UI.busy['chk-' + id] = false;
   if (accepted(c) && !x.xpTask) { x.xpTask = true; addXP(A.xp.task, 'задание принято'); }
@@ -259,6 +261,7 @@ async function boot() {
       else await mentorInbox();
     } catch (e) { if (MODE !== 'demo') MODE = 'local'; }
   }
+  await siteProbe();
   RT.ready = true;
   if (S.profile && $('#aModal').querySelector('#aOnb')) closeModal();
   if (RT.me && RT.me.name && $('#aon-name') && !$('#aon-name').value) $('#aon-name').value = RT.me.name.split(' ')[0];
