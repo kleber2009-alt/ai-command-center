@@ -5,7 +5,8 @@
    (agents, works, the task history — office.mjs), the project map of the monorepo and its own
    long-term memory of earlier conversations, answers with streamed text and, for voice, in the
    owner's cloned voice (voice.mjs). Guests get a text-only demo that tells about the public task
-   history, with rate limits. It only talks: setting tasks for agents is a later step.
+   history, with rate limits. For the owner it also sets tasks for agents (the create_task tool →
+   desk.mjs: the dispatcher picks the agent, the runner on the server does the work).
 
      GET  state            who is talking, what is configured, recent history
      POST login {password} / logout
@@ -14,9 +15,11 @@
      POST tts  (owner, {text}) → audio/mpeg
      GET  voices / POST voice {id}  (owner) — pick the cloned voice once
      GET  health
+     *    desk/…  the working desk: tasks for agents (desk.mjs)
 
    Env: ANTHROPIC_API_KEY, ELEVENLABS_API_KEY, HQ_ASSISTANT_PASSWORD (no password — demo only),
-   ELEVENLABS_VOICE_ID (optional), OFFICE_DIR (data files of the site, default ..),
+   ELEVENLABS_VOICE_ID (optional), HQ_DESK_RUNNER_TOKEN (the runner of the desk),
+   OFFICE_DIR (data files of the site, default ..),
    DATA_DIR (history, memory, settings; default ./.data), PROJECT_MAP (monorepo CLAUDE.md),
    PORT (8787), SERVE_STATIC=1 — also serve the office itself, for local runs. */
 import http from 'node:http';
@@ -28,6 +31,7 @@ import { fileURLToPath } from 'node:url';
 import Anthropic from '@anthropic-ai/sdk';
 import { loadOffice, loadProjectMap, moscowDate, humanDate } from './office.mjs';
 import { voiceConfigured, transcribe, listVoices, guessOwnerVoice, speak } from './voice.mjs';
+import { createDesk } from './desk.mjs';
 
 const HERE = path.dirname(fileURLToPath(import.meta.url));
 const PORT = Number(process.env.PORT || 8787);
@@ -41,6 +45,7 @@ const PREFIX = '/api/assistant';
 const HISTORY = 40;          // last turns sent to Claude (20 exchanges)
 const COMPACT_AT = 60;       // beyond this the oldest turns go to long-term memory
 const claude = process.env.ANTHROPIC_API_KEY ? new Anthropic() : null;
+const desk = createDesk({ claude, model:MODEL, fallback:FALLBACK, dataDir:DATA_DIR, officeDir:OFFICE_DIR, runnerToken:process.env.HQ_DESK_RUNNER_TOKEN || '' });
 
 /* ---------- prompts ---------- */
 
@@ -53,7 +58,8 @@ const OWNER_PROMPT = `Ты — личный ассистент Ильи Пали
 - Опирайся на данные офиса, карту проектов и память. Не выдумывай задачи, цифры, даты и ссылки: если этого нет в данных — так и скажи и подскажи, где посмотреть.
 - На «что нового», «доложи», «как дела в офисе» давай сводку: что сделано за последние дни и в каких отделах, что свежего, у каких агентов пока нет результатов, на что обратить внимание. Заканчивай одним предложением, что сделать следующим.
 - Можно обсуждать стратегию, продукты, контент, продажи, вебинары: предлагай конкретные следующие шаги и опирайся на то, что уже сделано.
-- Ставить задачи агентам ты пока не умеешь. Если просят — сформулируй задачу так, чтобы её можно было сразу отдать агенту в Claude, и скажи, что запуск задач появится позже.
+- Задачи агентам ставишь инструментом create_task: когда Илья просит что-то сделать или подготовить — презентацию, лендинг, документ, сценарий, карусель, монтаж. Не переспрашивай лишнего: передай его слова и важные детали из разговора, диспетчер сам выберет агента и спросит, если чего-то не хватает. После вызова коротко скажи, кому передано и что дальше: агент принесёт результат на проверку к столу Ильи в офисе, вкладка «В работе». Если Илья только обсуждает идею, а не просит сделать, — не ставь задачу.
+- О том, что сейчас на рабочем столе, — в последней строке перед репликой («Задачи на рабочем столе офиса…»).
 - Ссылки: задача — https://hq2.aicex.club/#task-<id>, работы агента — https://hq2.aicex.club/#agent-<id>/works.`;
 
 const GUEST_PROMPT = `Ты — ассистент живого офиса агентов AICEX на сайте hq2.aicex.club. С тобой говорит гость сайта, а не владелец.
@@ -131,9 +137,34 @@ function knowledge(isOwnerTalk) {
   if (isOwnerTalk && owner.memory) blocks.push({ type:'text', text:'# Память о прошлых разговорах с Ильёй\n' + owner.memory, cache_control:{ type:'ephemeral' } });
   return blocks;
 }
-function nowNote(voice) {
+function nowNote(voice, isOwnerTalk) {
   const time = new Intl.DateTimeFormat('ru-RU', { timeZone:'Europe/Moscow', hour:'2-digit', minute:'2-digit' }).format(new Date());
-  return `Сейчас ${humanDate(moscowDate())}, ${time} по Москве. ${voice ? VOICE_NOTE : TEXT_NOTE}`;
+  return `Сейчас ${humanDate(moscowDate())}, ${time} по Москве. ${voice ? VOICE_NOTE : TEXT_NOTE}${isOwnerTalk ? '\n' + desk.summary() : ''}`;
+}
+
+/* ---------- the owner's tool: a task for an agent ---------- */
+
+const taskTool = ids => ({
+  name:'create_task', eager_input_streaming:true,
+  description:'Поставить задачу агенту живого офиса. Вызывай, когда Илья просит что-то сделать или подготовить. Диспетчер выберет агента и скилл (или задаст вопрос), агент сделает работу на сервере и принесёт результат на проверку в офис.',
+  input_schema:{ type:'object', required:['text', 'agent'], properties:{
+    text:{ type:'string', description:'Задача словами Ильи плюс важные детали из разговора.' },
+    agent:{ type:'string', enum:['', ...ids], description:'id агента, если Илья сам его назвал; иначе пустая строка.' } } },
+});
+async function runTaskTool(u, ids, send) {
+  const inp = u.input || {}, text = typeof inp.text === 'string' ? inp.text.trim() : '', agent = typeof inp.agent === 'string' ? inp.agent : '';
+  // eager input streaming: the input is not validated by the API, so check it before acting
+  if (!text || (agent && !ids.includes(agent))) return { type:'tool_result', tool_use_id:u.id, is_error:true, content:JSON.stringify({ INVALID_JSON:JSON.stringify(inp) }) };
+  const { task, routed } = desk.createTask({ text, agent });
+  send({ t:'task', id:task.id });
+  await Promise.race([routed, new Promise(r => setTimeout(r, 30e3))]);
+  const v = desk.view(task);
+  const content = v.status === 'queued' || v.status === 'work'
+    ? `Задача поставлена: «${v.route.title}». Исполнитель — агент «${v.agent.name}»${v.route.skill ? `, скилл ${v.route.skill}` : ''}. ${v.route.why} Место в очереди: ${v.queuePos || 1}. Результат он принесёт на проверку в офис.`
+    : v.status === 'question' ? `Задача заведена, но диспетчеру нужен ответ Ильи: ${v.question.text} Ответить можно здесь или во вкладке «В работе».`
+    : v.status === 'routing' ? 'Задача поставлена, диспетчер ещё выбирает исполнителя — статус появится во вкладке «В работе».'
+    : `Задачу поставить не удалось: ${v.error}`;
+  return { type:'tool_result', tool_use_id:u.id, content, ...(v.status === 'error' ? { is_error:true } : {}) };
 }
 function errorText(e) {
   if (e instanceof Anthropic.RateLimitError) return 'Claude сейчас перегружен — повторите через минуту.';
@@ -188,21 +219,33 @@ async function chat(req, res, isOwnerTalk) {
   if (!isOwnerTalk && (limited('g:' + clientIp(req), 20, 3600e3) || limited('g:all', 400, 864e5)))
     return json(res, 429, { error:'В демо-режиме лимит вопросов на сейчас исчерпан — загляните позже.' });
   const turns = isOwnerTalk ? owner.turns.slice(-HISTORY) : guest.turns.slice(-12);
-  const messages = [...turns.map(t => ({ role:t.role, content:t.text })), { role:'user', content:text }, { role:'system', content:nowNote(voice) }];
+  let messages = [...turns.map(t => ({ role:t.role, content:t.text })), { role:'user', content:text }, { role:'system', content:nowNote(voice, isOwnerTalk) }];
+  const ids = isOwnerTalk ? desk.agents().map(a => a.id) : [];
+  const tools = isOwnerTalk ? [taskTool(ids)] : undefined;
 
   res.writeHead(200, { 'content-type':'text/event-stream; charset=utf-8', 'cache-control':'no-store', 'x-accel-buffering':'no' });
   const send = o => res.write(`data: ${JSON.stringify(o)}\n\n`);
-  const stream = claude.beta.messages.stream({
-    model:MODEL, max_tokens:16000, ...FALLBACK, output_config:{ effort:'low' },
-    system:[{ type:'text', text:isOwnerTalk ? OWNER_PROMPT : GUEST_PROMPT }, ...knowledge(isOwnerTalk)], messages,
-  });
-  res.on('close', () => { if (!res.writableEnded) stream.abort(); });
+  let stream = null;
+  res.on('close', () => { if (!res.writableEnded) stream?.abort(); });
   let reply = '';
   try {
-    for await (const ev of stream) if (ev.type === 'content_block_delta' && ev.delta.type === 'text_delta') { reply += ev.delta.text; send({ t:'delta', text:ev.delta.text }); }
-    const msg = await stream.finalMessage();
-    if (msg.stop_reason === 'refusal') { reply = ''; send({ t:'error', message:'На этот вопрос я не отвечу.' }); }
-    else if (msg.stop_reason === 'max_tokens') reply += '…';
+    // the owner's turn may set tasks: stream, run create_task, stream the rest (at most 3 rounds)
+    for (let round = 0; round < 3; round++) {
+      stream = claude.beta.messages.stream({
+        model:MODEL, max_tokens:16000, ...FALLBACK, output_config:{ effort:'low' },
+        system:[{ type:'text', text:isOwnerTalk ? OWNER_PROMPT : GUEST_PROMPT }, ...knowledge(isOwnerTalk)], messages, ...(tools ? { tools } : {}),
+      });
+      for await (const ev of stream) if (ev.type === 'content_block_delta' && ev.delta.type === 'text_delta') { reply += ev.delta.text; send({ t:'delta', text:ev.delta.text }); }
+      const msg = await stream.finalMessage();
+      if (msg.stop_reason === 'refusal') { reply = ''; send({ t:'error', message:'На этот вопрос я не отвечу.' }); break; }
+      if (msg.stop_reason === 'max_tokens') { reply += '…'; break; }
+      const uses = msg.content.filter(b => b.type === 'tool_use');
+      if (msg.stop_reason !== 'tool_use' || !uses.length) break;
+      const results = [];
+      for (const u of uses) results.push(u.name === 'create_task' ? await runTaskTool(u, ids, send) : { type:'tool_result', tool_use_id:u.id, is_error:true, content:'Нет такого инструмента.' });
+      messages = [...messages, { role:'assistant', content:msg.content }, { role:'user', content:results }];
+      if (reply && !/\s$/.test(reply)) { reply += '\n\n'; send({ t:'delta', text:'\n\n' }); }
+    }
   } catch (e) {
     if (e instanceof Anthropic.APIUserAbortError) return;
     console.error('chat:', e.message);
@@ -277,7 +320,7 @@ const MIME = { '.html':'text/html; charset=utf-8', '.js':'text/javascript; chars
 function serveStatic(req, res, p) {
   const rel = path.normalize(decodeURIComponent(p === '/' ? '/index.html' : p)).replace(/^([/\\])+/, '');
   const file = path.join(OFFICE_DIR, rel);
-  if (!file.startsWith(OFFICE_DIR) || /^(assistant|sync|deploy)([/\\]|$)/.test(rel) || !fs.existsSync(file) || !fs.statSync(file).isFile()) return json(res, 404, { error:'not found' });
+  if (!file.startsWith(OFFICE_DIR) || /^(assistant|sync|deploy|runner)([/\\]|$)/.test(rel) || !fs.existsSync(file) || !fs.statSync(file).isFile()) return json(res, 404, { error:'not found' });
   res.writeHead(200, { 'content-type':MIME[path.extname(file)] || 'application/octet-stream' });
   fs.createReadStream(file).pipe(res);
 }
@@ -285,7 +328,8 @@ function serveStatic(req, res, p) {
 http.createServer(async (req, res) => {
   const p = new URL(req.url, 'http://x').pathname;
   if (!p.startsWith(PREFIX + '/')) return process.env.SERVE_STATIC === '1' ? serveStatic(req, res, p) : json(res, 404, { error:'not found' });
-  const route = ROUTES[`${req.method} ${p.slice(PREFIX.length + 1)}`];
+  const rest = p.slice(PREFIX.length + 1);
+  const route = rest.startsWith('desk/') ? (rq, rs, o) => desk.handle(rq, rs, rest.slice(5), o) : ROUTES[`${req.method} ${rest}`];
   if (!route) return json(res, 404, { error:'not found' });
   try { await route(req, res, isOwner(req)); }
   catch (e) {
@@ -293,4 +337,4 @@ http.createServer(async (req, res) => {
     if (!res.headersSent) json(res, e.code === 413 ? 413 : 502, { error:e.code === 413 ? 'Слишком большой запрос.' : 'Ошибка сервиса — попробуйте ещё раз.' });
     else res.end();
   }
-}).listen(PORT, () => console.log(`hq assistant :${PORT} · office ${OFFICE_DIR} · claude ${claude ? 'on' : 'off'} · voice ${voiceConfigured() ? 'on' : 'off'} · owner login ${PASSWORD ? 'on' : 'off'}`));
+}).listen(PORT, () => console.log(`hq assistant :${PORT} · office ${OFFICE_DIR} · claude ${claude ? 'on' : 'off'} · voice ${voiceConfigured() ? 'on' : 'off'} · owner login ${PASSWORD ? 'on' : 'off'} · desk runner ${process.env.HQ_DESK_RUNNER_TOKEN ? 'on' : 'off'}`));
