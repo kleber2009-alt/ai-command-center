@@ -18,6 +18,7 @@ from app.api import (
     analytics,
     competitors,
     content,
+    funnel,
     publishing,
     replies,
     viral_posts,
@@ -32,8 +33,11 @@ app = FastAPI(
 
 # Все доменные роутеры закрыты Telegram-авторизацией: мини-аппа отдаётся публично,
 # поэтому каждый /api/* требует валидный initData владельца.
-for r in (viral_posts, content, replies, publishing, analytics, competitors, accounts):
+for r in (viral_posts, content, replies, publishing, analytics, competitors, accounts, funnel):
     app.include_router(r.router, dependencies=[Depends(verify_tma)])
+
+# Кроны n8n воронки: свой секрет вместо Telegram-авторизации.
+app.include_router(funnel.cron_router)
 
 
 @app.get("/health", tags=["meta"])

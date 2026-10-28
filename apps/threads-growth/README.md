@@ -98,6 +98,68 @@ n8n дёргает воркеры (`docker compose run --rm api python -m app.wo
 | каждые 30мин | `app.workers.publish_worker` | публикация scheduled, чьё время настало |
 | каждый 1ч | `app.workers.analytics_worker collect` | сбор инсайтов + снимки подписчиков |
 | ежедн. 00:05 | `app.workers.analytics_worker daily` | warmup-tick + дневная петля |
+| см. ниже | `app.workers.funnel_worker <job>` | воронка Threads → Telegram (или `POST /cron/funnel/<job>`) |
+
+## Воронка Threads → Telegram (`app/funnel`)
+
+Система «ветка-инструмент» по скиллу `threads-telegram-funnel` (текст скилла —
+системный промпт агентов, `app/prompts/funnel_skill.md`). Каждое утро агент
+готовит 3 ветки и присылает карточками в тему «Threads» командной форум-группы.
+Вы одобряете, правите или просите другое; одобренные выходят в 10:00, 13:00 и
+18:00 МСК, бот приносит ссылку, черновики ответов на комментарии и через 48 часов
+— цифры и решение о перевыпуске. **Без ✅ ничего не публикуется.**
+
+```
+06:00 metrics ─ метрики веток + оценка 48 ч ─┐
+06:30 plan ──── темы на слоты (кластеры по весам, ~35% перевыпусков после 2 недель)
+07:00 generate ─ Writer → Editor → проверка §13 → карточка + черновик приёмника
+      ✅ ✏️ 🔄 ♻️ 📎 ⏰ 🗑 в Telegram
+*/5   publish ── материалы за час до слота → выход цепочкой через reply_to_id
+*/15  comments ─ черновики ответов первые 2 часа → ✅ Отправить
+пн    report ─── лучшие/худшие хуки, кластеры, клики, подписки → новые веса
+вс    token ──── продление токена Threads (60 дней)
+```
+
+| Модуль | Что |
+|---|---|
+| `schedule.py` | слоты, 6 кластеров и шаблоны A–D, доля перевыпусков (чистые функции) |
+| `qa.py` | чек-лист §13: ≤500 символов, ≥2 числа в хуке, мид-ролл на 60–75%, финал со ссылкой, `[уточнить]`, громкость |
+| `recycle.py` | победитель (топ-10% по шеры+ответы или ≥3× медианы лайков), перевыпуск 3–10 дней, архив 30–45 дней, веса кластеров |
+| `cards.py` | карточки и кнопки Telegram |
+| `agents.py` | агенты Claude: план, ветка, редактор, правка, новые хуки, приёмник, ответы (structured outputs) |
+| `threads_api.py` | цепочки, картинки/карусели, ответы, метрики, клики по ссылкам, лимиты, refresh токена |
+| `telegram_api.py` | Bot API: карточки, ссылки-приглашения, посты в канал, закреп |
+| `storage.py` / `stt.py` | MinIO для картинок · Whisper для голосовых правок |
+| `service.py` / `jobs.py` | оркестрация и задачи крона |
+| `bot/funnel_bot.py` | кнопки, правки ответом на карточку, `/plan /stats /story /receiver`, вступления в канал |
+
+Новые таблицы (миграция `0002_funnel`): `funnel_threads` (тело + 6 хуков, ссылка
+`{link}` подставляется своя на каждую ветку), `funnel_receivers` (библиотека
+постов-приёмников), `funnel_story_bank` (банк фактов — личные цифры агент берёт
+только отсюда), `funnel_comments`, `funnel_channel_joins`, `funnel_state`.
+
+### Запуск по этапам
+
+1. **Тексты** — `FUNNEL_AUTOPUBLISH=0`: 3 карточки утром, правки и смена хука;
+   в слот бот присылает посты по одному — публикуете сами. Нужно: тема в
+   форум-группе (`FUNNEL_CHAT_ID`, `FUNNEL_TOPIC_ID`), `ANTHROPIC_API_KEY`.
+2. **Автопубликация** — `FUNNEL_AUTOPUBLISH=1`: приложение в Meta for Developers
+   (`threads_basic`, `threads_content_publish`, `threads_manage_replies`,
+   `threads_manage_insights`), аккаунт с токеном в мини-аппе, MinIO для картинок.
+3. **Канал и замер** — бот админом в канале (`CHANNEL_ID`, `CHANNEL_MODE`):
+   приёмники от бота, ссылки по веткам, замер 48 ч, отчёт по понедельникам.
+4. **Перевыпуски** — включаются сами через 2 недели данных (`FUNNEL_START_DATE`).
+
+```bash
+docker compose run --rm api alembic upgrade head
+docker compose run --rm api python -m app.workers.funnel_worker seed   # факты, доноры, веса
+docker compose up -d api bot
+# n8n: импортировать n8n/threads-funnel.workflow.json, задать THREADS_FUNNEL_URL и THREADS_CRON_SECRET
+```
+
+Проверка без сети: `python -m app.funnel.{schedule,qa,recycle,cards}`; сквозной
+прогон дня на Postgres с фейками внешних сервисов — `python -m tests.funnel_smoke`
+(пишет в отдельную схему и удаляет её).
 
 ## Безопасность
 

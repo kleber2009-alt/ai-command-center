@@ -254,7 +254,8 @@ async def cmd_start(update, context) -> None:
     await update.message.reply_text(
         "Бот апрува AI Threads Growth Agent.\n"
         "/drafts — адаптации постов на ревью\n"
-        "/replies — реплаи на ревью"
+        "/replies — реплаи на ревью\n"
+        "/funnel — воронка Threads → Telegram (ветки, /plan, /stats, /story, /receiver)"
     )
 
 
@@ -349,18 +350,23 @@ def run() -> None:
 
     from telegram.ext import Application, CallbackQueryHandler, CommandHandler
 
-    app = Application.builder().token(settings.telegram_bot_token).build()
+    from app.bot import funnel_bot
+
+    # concurrent_updates: правка ветки агентом идёт минуту — остальные кнопки не ждут.
+    app = Application.builder().token(settings.telegram_bot_token).concurrent_updates(True).build()
+    funnel_bot.register(app)   # воронка Threads → Telegram: колбэки f:/r:/c:, ответы на карточки, /plan…
     app.add_handler(CommandHandler("start", cmd_start))
     app.add_handler(CommandHandler("drafts", cmd_drafts))
     app.add_handler(CommandHandler("replies", cmd_replies))
-    app.add_handler(CallbackQueryHandler(on_callback))
+    app.add_handler(CallbackQueryHandler(on_callback, pattern=r"^(approve|publish|reject|skip):"))
 
     if settings.review_daily_time:
         app.job_queue.run_daily(daily_job, time=_parse_hhmm(settings.review_daily_time))
         logger.info("daily review push scheduled at %s UTC", settings.review_daily_time)
 
     logger.info("approval-bot started; owner=%s", settings.owner_telegram_id)
-    app.run_polling(allowed_updates=["message", "callback_query"])
+    # chat_member — вступления в канал по ссылкам веток (бот — админ канала).
+    app.run_polling(allowed_updates=["message", "callback_query", "chat_member"])
 
 
 # ════════════════════════════════════════════════════════════════════════════
