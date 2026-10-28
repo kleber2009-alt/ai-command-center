@@ -229,7 +229,7 @@ def run_research(db: Session) -> dict:
     donors |= {c.username.lower() for c in db.scalars(select(Competitor).where(
         Competitor.platform == "threads", Competitor.is_active.is_(True))).all()}
     try:
-        users = research.fresh(research.fetch_users(sorted(donors), 40)) if donors else []
+        users = research.fresh(research.fetch_users(sorted(donors), 100)) if donors else []
         search = research.fresh(research.fetch_search(research_queries(), 25))
     except Exception as e:  # noqa: BLE001 — Apify: оплата, лимиты, сеть; план выйдет и без свежих хитов
         msg = str(e)

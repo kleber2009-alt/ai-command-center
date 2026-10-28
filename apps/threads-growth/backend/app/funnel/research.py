@@ -157,9 +157,36 @@ def fetch_thread_body(url: str) -> list[str]:
     return [p.text for p in mine]
 
 
-def fresh(posts: list[Post], days: int = 30) -> list[Post]:
-    since = datetime.now(timezone.utc) - timedelta(days=days)
-    return [p for p in posts if p.published_at is None or p.published_at >= since]
+CONTINUATION_GAP = timedelta(seconds=120)   # автопостинг выкладывает пост 2/N через ~13 с после хука
+MIN_AGE = timedelta(hours=20)               # моложе — ещё не набрал охват, сравнивать рано
+
+
+def drop_continuations(posts: list[Post]) -> list[Post]:
+    """Оставить только первые посты веток: продолжения (2/N…) выходят у того же автора
+    через секунды после хука и набирают единицы лайков — они занижают медиану."""
+    out: list[Post] = []
+    by_author: dict[str, list[Post]] = {}
+    for p in posts:
+        by_author.setdefault(p.author, []).append(p)
+    for items in by_author.values():
+        items.sort(key=lambda p: p.published_at or datetime.min.replace(tzinfo=timezone.utc))
+        prev: datetime | None = None
+        for p in items:
+            if p.published_at and prev and p.published_at - prev <= CONTINUATION_GAP:
+                prev = p.published_at
+                continue
+            prev = p.published_at
+            out.append(p)
+    return out
+
+
+def fresh(posts: list[Post], days: int = 30, now: datetime | None = None) -> list[Post]:
+    """Посты за `days` дней, но не моложе суток; продолжения веток отброшены."""
+    now = now or datetime.now(timezone.utc)
+    since, until = now - timedelta(days=days), now - MIN_AGE
+    kept = [p for p in drop_continuations(posts)
+            if p.published_at is None or since <= p.published_at <= until]
+    return kept
 
 
 def _selftest() -> None:
@@ -173,6 +200,13 @@ def _selftest() -> None:
     sc = score_batch(posts)
     assert sc["hit"][0] == 8.0 and sc["c0"][0] == 1.0
     assert category(8.0) == "A" and category(1.0) == "D"
+    t0 = datetime(2026, 10, 20, 10, 0, tzinfo=timezone.utc)
+    chain = [Post("h", "a", "хук", "", t0, likes=50), Post("h2", "a", "пост 2", "", t0 + timedelta(seconds=13), likes=1),
+             Post("h3", "a", "пост 3", "", t0 + timedelta(seconds=26), likes=1),
+             Post("old", "a", "старый", "", t0 - timedelta(days=90), likes=900),
+             Post("new", "a", "свежий", "", t0 + timedelta(days=8) - timedelta(hours=2), likes=2)]
+    kept = {p.code for p in fresh(chain, now=t0 + timedelta(days=8))}
+    assert kept == {"h"}, kept       # продолжения, старый закреп и пост младше суток — мимо
     print("research selftest OK")
 
 

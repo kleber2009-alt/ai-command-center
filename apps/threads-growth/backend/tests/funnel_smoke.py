@@ -158,9 +158,14 @@ from app.funnel import research  # noqa: E402
 _now = datetime.now(ZoneInfo("UTC"))
 
 
+_hours = itertools.count(30)
+
+
 def _rp(code, author, likes, text, shares=0, query=""):
+    # Разное время: посты одного автора с разницей в секунды — это продолжения одной ветки.
     return research.Post(code, author, text, f"https://www.threads.com/@{author}/post/{code}",
-                         _now - timedelta(days=3), likes=likes, replies=likes // 10, shares=shares, query=query)
+                         _now - timedelta(hours=next(_hours)), likes=likes, replies=likes // 10, shares=shares,
+                         query=query)
 
 
 research.fetch_users = lambda users, n=40: (  # type: ignore[assignment]
