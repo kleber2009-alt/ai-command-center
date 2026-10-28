@@ -405,6 +405,18 @@
   .mod-h{display:flex;align-items:baseline;justify-content:space-between;gap:8px}
   .mod-h b{font-size:13.5px;font-weight:800}
   .mod-h span{font-size:11.5px;color:var(--tx2)}
+  .lnk{background:none;border:0;padding:0;font:inherit;font-weight:700;color:var(--amber);cursor:pointer;text-decoration:underline;text-underline-offset:2px}
+  .lnk:focus-visible{outline:2px solid var(--amber);outline-offset:2px;border-radius:4px}
+  .needs{display:grid}
+  .need{display:grid;grid-template-columns:112px minmax(0,1fr);gap:4px 10px;align-items:start;padding:9px 0;border-top:1px solid rgba(255,255,255,.08)}
+  .need:first-child{border-top:0;padding-top:2px}
+  .need .pill{justify-content:center}
+  .needs.short .need{padding:5px 0;align-items:center;border-top:0}
+  .need > div{display:grid;gap:2px;min-width:0}
+  .need b{font-size:13.5px}
+  .need .alt{color:var(--tx2);font-style:italic}
+  .needline{display:grid;gap:3px;padding:8px 10px;border-radius:10px;background:rgba(255,255,255,.05)}
+  .needline .lnk{justify-self:start}
   .srow{width:100%;display:grid;grid-template-columns:26px minmax(0,1fr) auto;gap:10px;align-items:center;text-align:left;padding:8px 10px;border-radius:12px;background:rgba(255,255,255,.04);border:1px solid rgba(255,255,255,.06)}
   .srow:hover:not(:disabled){background:rgba(255,255,255,.09)}
   .srow:disabled{opacity:.45;cursor:default}
@@ -549,6 +561,9 @@
   @keyframes hot{0%,100%{box-shadow:0 0 0 2px #e79a00}50%{box-shadow:0 0 0 5px rgba(231,154,0,.35)}}
 
   @media (max-width:820px){
+    .need{grid-template-columns:minmax(0,1fr)}
+    .need .pill{justify-self:start}
+    .needs.short .need{grid-template-columns:auto minmax(0,1fr)}
     :root{--panel-w:100%}
     .apanel{top:auto;left:8px;right:8px;bottom:8px;width:auto;height:56vh}
     .ahud{top:8px;left:8px;right:8px;justify-content:space-between;padding:6px;gap:6px;flex-wrap:wrap}
@@ -823,7 +838,7 @@ window.DEPT_CONTENT = {
       { who: 'analytics-0', task: 'Отчёт по охватам', prompt: 'Собери охваты и входы по всем публикациям за месяц: рилсы против каруселей, топ-10 по входам, медиана по аккаунту.' },
       { who: 'analytics-1', task: 'ROMI по каналам', prompt: 'Посчитай ROMI по кампаниям Meta за период, сверь лиды с кабинетом, покажи, где теряются деньги.' },
     ],
-    artifacts: [{ title: 'Сквозная аналитика (claude.ai)', url: ART('UzeN9sagWbM8We1yTWTmGf') }],
+    artifacts: [],
   },
 
   carousel: {
@@ -972,7 +987,6 @@ window.DEPT_CONTENT = {
   // ——— Материалы, которые есть в Claude (артефакты claude.ai) ———
   const AR = {
     office:      art('Виртуальный офис агентов', '7FTMzSseUbDHJDfb5xgkEP'),
-    analytics:   art('Сквозная аналитика', 'UzeN9sagWbM8We1yTWTmGf'),
     prodSkills:  art('Prod Skills — игровые концепции', '8bFig9B5aX3RqzZqS5LdkZ'),
     psGuide:     art('Persona Studio — гайд для клиента', '2aVDVGGJfK9uSgSz4kgYyV'),
     ps2:         art('Persona Studio 2.0', 'D1kTgCx8mQCTV3utcJdxFq'),
@@ -1451,7 +1465,7 @@ window.DEPT_CONTENT = {
       templates: [
         { task: 'Отчёт за неделю', prompt: 'Выгрузи кампании Meta за 7 дней: расход, лиды, цена лида, CTR, частота. Отметь 3 лучших и 3 худших объявления и предложи, что выключить.' },
       ],
-      artifacts: [AR.analytics],
+      artifacts: [],
     },
   };
 
@@ -1503,7 +1517,7 @@ window.DEPT_CONTENT = {
         step('Масштаб', 'Бюджет в победителей'),
         step('Отчёт', 'Цифры в сквозную аналитику'),
       ],
-      materials: [AR.analytics],
+      materials: [],
     },
   };
   // ——— Карточки агентов: имя, роль, цвет, отдел по умолчанию, статус и задача для витрины ———
@@ -1975,10 +1989,10 @@ window.DEPT_CONTENT = {
       context: 'context/audience.md',
       brief: 'Открылся отдел маркетинга. Первый агент здесь — «Анализ аудитории». Он находит слова и боли твоих клиентов. Из них потом пишутся рилсы, лендинги и ответы в директ.',
       aicex: {
-        text: 'В AICEX агент изучает, что смотрят и комментируют в нише. Находки превращаются в темы и ТЗ для сценариев. Так появились разбор @bondar_idm и трек Юлии.',
+        text: 'В AICEX агент изучает, что смотрят и комментируют в нише. Находки превращаются в темы и ТЗ для сценариев. Так появились разбор @bondar_idm и трек эксперта до 10 000 подписчиков.',
         links: [
           { title: 'ТЗ на продающие рилсы — разбор @bondar_idm', url: 'https://claude.ai/artifact/FmuSoMWs8iVphWcC9AYgPL' },
-          { title: 'Трек Юлии: 0 → 10 000 подписчиков', url: 'https://claude.ai/artifact/BLULR8V3fsKhF7H7tWKyv9' }
+          { title: 'Трек эксперта: 0 → 10 000 подписчиков', url: 'https://claude.ai/artifact/RevJC3bqRkupbFCkyP3DrL' }
         ]
       },
       questions: [
@@ -2350,8 +2364,8 @@ window.DEPT_CONTENT = {
       aicex: {
         text: 'В AICEX контент-план собирают на неделю: 5 рилсов, 2 карусели и сторис каждый день. Темы берут из анализа аудитории. У каждого рилса своё кодовое слово.',
         links: [
-          { title: 'Контент Илья — органика', url: 'https://claude.ai/artifact/5LwBz4Y5Yhdxj6pDcTG6Wp' },
-          { title: 'Практикум по ИИ-контенту', url: 'https://claude.ai/artifact/AdPDqEVK6EdSsMwdnKMtgk' }
+          { title: 'Как AICEX строит контент', url: 'https://claude.ai/artifact/EU4GnpxYYs1851vP2uVU6m' },
+          { title: 'Трек эксперта: 0 → 10 000 подписчиков', url: 'https://claude.ai/artifact/RevJC3bqRkupbFCkyP3DrL' }
         ]
       },
       questions: [
@@ -2382,14 +2396,14 @@ window.DEPT_CONTENT = {
           rows: 3,
           help: [
             { type: 'skill', title: 'Найди темы скиллом niche-outlier-research', text: 'Скилл AICEX найдёт, что залетает в твоей нише прямо сейчас. Из этого — план на неделю.', prompt: 'Используй скилл niche-outlier-research. Найди, что залетает в нише [твоя ниша], и дай 10 тем на неделю. Для каждой — формат: рилс или карусель.' },
-            { type: 'example', title: 'Как AICEX строит контент', text: 'Пример контент-стратегии основателя.', url: 'https://claude.ai/artifact/5LwBz4Y5Yhdxj6pDcTG6Wp' }
+            { type: 'example', title: 'Как AICEX строит контент', text: 'Формула хука, правила рилсов и каруселей, ритм недели.', url: 'https://claude.ai/artifact/EU4GnpxYYs1851vP2uVU6m' }
           ]
         }
       ],
       gifts: [
         { type: 'connector', name: 'Chat Place', title: 'Virale: контент и аккаунты', what: 'Аналитика аккаунтов, рекомендации и генерация контента.', guide: 'claude-connector' },
         { type: 'product', title: 'Транскрибация', url: 'https://transcribe.aicex.club', what: 'Расшифрует твой ролик — из текста Claude сделает пост, рассылку и тред.' },
-        { type: 'artifact', title: 'Практикум по ИИ-контенту', url: 'https://claude.ai/artifact/AdPDqEVK6EdSsMwdnKMtgk', what: 'Как AICEX делает контент с ИИ.' },
+        { type: 'artifact', title: 'Как AICEX строит контент', url: 'https://claude.ai/artifact/EU4GnpxYYs1851vP2uVU6m', what: 'Формула хука, рилс из 4 блоков, карусель на 9 слайдов, призыв с кодовым словом.' },
         { type: 'template', title: 'Контент-план на неделю', what: 'Таблица, которую агент заполняет каждый понедельник.',
           text: '| День | Площадка | Формат | Тема | Кодовое слово | Готово |\n|---|---|---|---|---|---|\n| Пн | | рилс | | | |\n| Ср | | карусель | | | |\n| Пт | | рилс | | | |' }
       ],
@@ -3080,7 +3094,7 @@ window.DEPT_CONTENT = {
       brief: 'Агент «Рекламные кампании» работает с кабинетом Meta вместе с таргетологом. Он запускает тест креативов и следит за ценой заявки. Дорогое — выключает, но только после твоего «да».',
       aicex: {
         text: 'В AICEX рекламу ведёт таргетолог вместе с агентом. Тест — 6 креативов на 3 дня и правило отключения по цене лида. Бюджеты и статусы агент меняет через Windsor.ai только после подтверждения.',
-        links: [{ title: 'Сквозная аналитика — рабочий дашборд', url: 'https://claude.ai/artifact/UzeN9sagWbM8We1yTWTmGf' }]
+        links: []
       },
       questions: [
         {
@@ -3143,7 +3157,7 @@ window.DEPT_CONTENT = {
       brief: 'Агент «Отчёты по рекламе» собирает цифры кабинета. Расход, заявки, цена заявки и что выключить.',
       aicex: {
         text: 'В AICEX отчёт тянут из Meta через Windsor.ai: расход, лиды, цена лида, CTR и частота за 7 дней. Агент отмечает 3 лучших и 3 худших объявления. Цифры уходят в сквозную аналитику.',
-        links: [{ title: 'Сквозная аналитика — рабочий дашборд', url: 'https://claude.ai/artifact/UzeN9sagWbM8We1yTWTmGf' }]
+        links: []
       },
       questions: [
         {
@@ -3163,7 +3177,7 @@ window.DEPT_CONTENT = {
           rows: 2,
           help: [
             { type: 'recommendation', title: 'Как часто смотреть', text: 'Во время теста — каждый день. Когда кампании ровные — раз в неделю. Чаще не нужно: цифры скачут.' },
-            { type: 'material', title: 'Сквозная аналитика AICEX', text: 'Посмотри, как цифры рекламы сведены в один дашборд.', url: 'https://claude.ai/artifact/UzeN9sagWbM8We1yTWTmGf' }
+            { type: 'template', title: 'Отчёт недели', text: 'Когда: по понедельникам в 10:00\nКуда: в проект Claude и таргетологу\nЦифры: расход, заявки, цена заявки, CTR, частота\n3 лучших объявления: …\n3 худших — выключить: …' }
           ]
         }
       ],
@@ -3196,7 +3210,7 @@ window.DEPT_CONTENT = {
       brief: 'Агент «Аналитика» сводит рекламу, контент и продажи в один экран. Ты видишь, какой канал приносит деньги, а какой их ест.',
       aicex: {
         text: 'В AICEX есть сквозная аналитика: реклама, продажи, расходы и контент на одном дашборде. Там ROMI по кампаниям и воронка от клика до оплаты. Данные тянет Windsor.ai, графики собираются артефактом в Claude.',
-        links: [{ title: 'Сквозная аналитика — рабочий дашборд', url: 'https://claude.ai/artifact/UzeN9sagWbM8We1yTWTmGf' }]
+        links: []
       },
       questions: [
         {
@@ -3216,14 +3230,15 @@ window.DEPT_CONTENT = {
           rows: 3,
           help: [
             { type: 'instruction', title: 'Как подключить источники', text: '- Реклама и Instagram — через Windsor.ai.\n- Бот — выгрузка из Chat Place.\n- Продажи — таблица Google Sheets.\n- Подключи то, что есть. Остальное вписывай руками.' },
-            { type: 'material', title: 'Сквозная аналитика AICEX', text: 'Готовый дашборд AICEX — образец, как свести цифры.', url: 'https://claude.ai/artifact/UzeN9sagWbM8We1yTWTmGf' }
+            { type: 'template', title: 'Откуда какая цифра', text: 'Реклама: расход, заявки, цена заявки — кабинет Meta через Windsor.ai\nКонтент: охват и подписки — Instagram через Windsor.ai\nБот: подписчики и кто дошёл до оффера — Chat Place\nПродажи: оплаты и выручка с UTM-меткой — таблица оплат' }
           ]
         }
       ],
       gifts: [
         { type: 'skill', name: 'web-artifacts-builder', title: 'Дашборд ссылкой', what: 'Графики и цифры артефактом в Claude: открываются по ссылке, обновляются по запросу.' },
         { type: 'connector', name: 'Windsor.ai', title: 'Рекламные кабинеты и соцсети', what: 'Тянет Meta Ads, Instagram и другие источники в один отчёт.', guide: 'claude-connector' },
-        { type: 'artifact', title: 'Сквозная аналитика', url: 'https://claude.ai/artifact/UzeN9sagWbM8We1yTWTmGf', what: 'Рабочий дашборд AICEX — возьми за образец.' }
+        { type: 'template', title: 'Каркас сквозной аналитики', what: 'Что и в каком порядке свести на одном экране — как в дашборде AICEX.',
+          text: '1. Итог недели: выручка, расход, прибыль, ROMI\n2. Воронка: охват → клики → подписки в бота → оффер → оплаты\n3. Реклама: кампании и объявления — расход, заявки, цена заявки, оплаты по UTM\n4. Контент: публикации с наибольшим числом кодовых слов\n5. Что сделать: 3 действия на следующую неделю' }
       ],
       task: {
         title: 'Собери дашборд из 5 цифр',
@@ -3545,6 +3560,50 @@ window.DEPT_CONTENT = {
     aicex: { 'niche-outlier-research': 'Выбросы в нише', 'lead-magnet': 'Лид-магнит', 'landing-gold': 'Лендинг «Золото»', 'landing-light': 'Лендинг «Светлый»', 'landing-neon': 'Лендинг «Неон»', 'landing-emerald': 'Лендинг «Изумруд»', 'landing-poster': 'Лендинг «Постер»', 'threads-telegram-funnel': 'Трафик из Threads в Telegram' },
     soon: ['niche-outlier-research'],   // в аккаунте только SKILL.md, скрипты навыка — у Ильи на компьютере
     builtin: ['deep-research', 'docs', 'docx', 'pdf', 'pptx', 'xlsx', 'canvas-design', 'web-artifacts-builder', 'skill-creator', 'morning', 'theme-factory']
+  };
+
+  // что понадобится: до старта и в каждом модуле. k: need — обязательно, opt — по желанию, paid — платно отдельно
+  A.needs = {
+    start: [
+      { k: 'need', title: 'Подписка Claude Pro или выше', what: 'Проект Claude, скиллы и коннекторы — основа трека. На бесплатном тарифе мало сообщений и закрыта часть функций.' },
+      { k: 'need', title: 'Компьютер и телефон', what: 'На компьютере работаешь в Claude. Телефоном снимаешь рилсы и проверяешь лендинг.' },
+      { k: 'need', title: 'Блог в Instagram или Telegram', what: 'Нужен с модуля 2: туда выходят рилсы, оттуда приходят заявки.', alt: 'Блога пока нет — заведи профессиональный аккаунт Instagram до модуля 2.' },
+      { k: 'need', title: 'Код ученика', what: 'Открывает скачивание скиллов AICEX. Приходит после оплаты академии.' }
+    ],
+    modules: {
+      0: [
+        { k: 'opt', title: 'Сервисы, которыми уже пользуешься', what: 'Google Drive, Notion или Chat Place — подключишь 1–2 к Claude.', alt: 'Нет ни одного — шаг всё равно проходится.' }
+      ],
+      1: [
+        { k: 'need', title: '3–5 аккаунтов или сайтов конкурентов', what: 'Агент исследований разберёт, что у них работает.' },
+        { k: 'opt', title: 'Парсер «Залётный» и Транскрибация', what: 'Продукты AICEX: находят залетевшие ролики и расшифровывают видео.', alt: 'Без них — встроенный скилл deep-research в Claude.' }
+      ],
+      2: [
+        { k: 'need', title: 'Камера телефона или ИИ-аватар', what: 'Для рилсов: 5 в неделю по ритму AICEX, можно меньше.', alt: 'Не хочешь в кадр — аватар в HeyGen или Persona Train AICEX.' },
+        { k: 'opt', title: 'HeyGen или Higgsfield', what: 'Видео с аватаром и ИИ-персонаж через коннекторы Claude. Тарифы — у сервисов.' },
+        { k: 'opt', title: 'Бот монтажа AICEX', what: 'Монтирует рилс в Telegram примерно за 10 минут, 23 стиля.' },
+        { k: 'paid', title: 'Пак скиллов монтажа', what: 'Платно, в академию не входит. Для монтажа своими руками в Claude Code.' }
+      ],
+      3: [
+        { k: 'need', title: 'Аккаунт Chat Place', what: 'В нём живёт бот с прогревом (шаг 3.3). Подключается к Instagram или Telegram. Тарифы — на сайте сервиса.' },
+        { k: 'need', title: 'Где разместить лендинг', what: 'Скилл отдаёт 2 готовых файла: страницу и «Оплата прошла». Их выкладывают на свой домен.', alt: 'Домена нет — опубликуй страницу из Claude и вставь ссылку.' },
+        { k: 'opt', title: 'Higgsfield или AI Creative Hub', what: 'Картинки и видео для рекламных креативов (шаг 3.5).' }
+      ],
+      4: [
+        { k: 'need', title: 'Chat Place с твоим Instagram или Telegram', what: 'Через него работают все 5 агентов продаж: автоответы, директ, ИИ-консультант, рассылки, оплаты.', alt: 'Другой сервис ботов — сценарии те же, переносить их придётся вручную.' },
+        { k: 'need', title: 'Второй аккаунт Instagram', what: 'Чтобы проверить автоответ: написать кодовое слово, как будто ты клиент.' },
+        { k: 'need', title: 'Ссылка на оплату твоего продукта', what: 'Для закрытия сделок (шаг 4.5) — из платёжного сервиса, которым ты уже принимаешь деньги.' }
+      ],
+      5: [
+        { k: 'need', title: 'Рекламный кабинет Meta', what: 'В нём запускается тест 6 креативов.' },
+        { k: 'need', title: 'Бюджет на тест', what: 'Сумма, которую не жалко потратить за 3–7 дней на проверку. Например, 9 000 ₽ за неделю.', alt: 'Нет бюджета — пройди модуль как план: Claude соберёт медиаплан, запустишь позже.' },
+        { k: 'need', title: 'Коннектор Windsor.ai', what: 'Claude видит цифры кабинета и меняет бюджеты только после твоего подтверждения. Тарифы — у сервиса.', alt: 'Без Windsor — выгружай отчёт из кабинета таблицей и отдавай Claude файлом.' }
+      ],
+      6: [
+        { k: 'opt', title: 'Google Calendar и Gmail', what: 'Из них утренний брифинг берёт встречи и письма.' },
+        { k: 'opt', title: 'Windsor.ai или Chat Place', what: 'Источники цифр для еженедельной аналитики.' }
+      ]
+    }
   };
 })();
 
@@ -4001,7 +4060,7 @@ function trackPanel() {
     const m = MOD[cur.module];
     h += '<div class="box amber"><div class="spr"><span class="eb">Модуль ' + m.id + ' · ' + esc(m.title) + '</span><span class="pill amber">' + icon('clock', 12) + cur.minutes + ' мин</span></div>' +
       '<b class="h2">' + esc(cur.agent ? 'Нанять «' + cur.title + '»' : cur.title) + '</b>' +
-      '<div class="say"><i></i><div>' + rich(cur.brief) + '</div></div>' +
+      '<div class="say"><i></i><div>' + rich(cur.brief) + '</div></div>' + needLine(cur) +
       '<div class="row"><button class="ab pri" data-act="open-step" data-id="' + cur.id + '">' + (st(cur.id).answered ? 'Продолжить' : 'Начать шаг') + ' ' + icon('right') + '</button><button class="ab ghost" data-act="focus" data-id="' + cur.id + '">' + icon('pointer') + 'Показать место в офисе</button></div></div>';
   } else {
     h += '<div class="box ok"><b class="h2">Офис собран</b><p class="mut sm" style="margin:0">Все 24 агента на местах. Дальше офис работает по регламентам из папки regulations.</p><div class="row"><button class="ab pri" data-act="project">' + icon('folder') + 'Открыть проект</button></div></div>';
@@ -4010,7 +4069,7 @@ function trackPanel() {
   if (bosses.length) h += '<div class="stk"><span class="eb">Боссы ждут</span>' + bosses.map((s) => '<button class="srow cur" data-act="boss" data-id="' + s.id + '"><span class="n">' + icon('crown', 13) + '</span><span><b>' + esc(s.boss.task) + '</b><small>Босс шага ' + s.id + ' · доказательство: ' + esc(s.boss.proof) + '</small></span><em>+' + A.xp.boss + '</em></button>').join('') + '</div>';
   A.modules.forEach((m) => {
     const steps = STEPS.filter((s) => s.module === m.id), done = steps.filter((s) => isDone(s.id)).length;
-    h += '<div class="mod"><div class="mod-h"><b>' + m.id + ' · ' + esc(m.title) + '</b><span>' + done + ' из ' + steps.length + ' · ' + esc(roomName(m.room)) + '</span></div>' +
+    h += '<div class="mod"><div class="mod-h"><b>' + m.id + ' · ' + esc(m.title) + '</b><span>' + done + ' из ' + steps.length + ' · ' + esc(roomName(m.room)) + ' · <button class="lnk" data-act="needs" data-id="' + m.id + '">что нужно</button></span></div>' +
       steps.map((s) => {
         const d = isDone(s.id), c = cur && cur.id === s.id;
         return '<button class="srow' + (d ? ' done' : '') + (c ? ' cur' : '') + '" data-act="open-step" data-id="' + s.id + '"' + (d || c ? '' : ' disabled') + '>' +
@@ -4019,8 +4078,26 @@ function trackPanel() {
       }).join('') + '</div>';
   });
   h += '</div><div class="apf"><span class="mut sm" style="flex:1">' + storeLine() + (RT.ready ? aiOn() ? ' · ИИ-проверка включена' : ' · ИИ выключен' : '') + '</span>' +
-    (MODE === 'demo' ? '<button class="ab sm" data-act="exit-demo">Выйти из примера</button>' : '<button class="ab ghost sm" data-act="reset">Начать заново</button>') + '</div>';
+    (MODE === 'demo' ? '<button class="ab sm" data-act="exit-demo">Выйти из примера</button>' : '<button class="ab ghost sm" data-act="transfer" title="Продолжить на другом устройстве или в claude.ai">Перенести</button><button class="ab ghost sm" data-act="reset">Начать заново</button>') + '</div>';
   return h;
+}
+
+// ---------- Что понадобится ----------
+const NEED = { need: ['Нужно', 'blue'], opt: ['По желанию', ''], paid: ['Платно отдельно', 'amber'] };
+const firstOfModule = (s) => STEPS.find((x) => x.module === s.module) === s;
+const modMinutes = (mid) => STEPS.filter((s) => s.module === Number(mid)).reduce((a, s) => a + s.minutes, 0);
+const trackHours = () => Math.round(STEPS.reduce((a, s) => a + s.minutes, 0) / 60) * 60;
+const hours = (min) => { const h = Math.floor(min / 60), m = Math.round((min % 60) / 5) * 5; return [h ? h + ' ч' : '', m ? m + ' мин' : ''].filter(Boolean).join(' '); };
+// short — только названия (в приветствии), подробности в окне «Что понадобится»
+function needsHTML(list, short) {
+  return '<div class="needs' + (short ? ' short' : '') + '">' + list.map((n) => '<div class="need"><span class="pill ' + NEED[n.k][1] + '">' + NEED[n.k][0] + '</span><div><b>' + esc(n.title) + '</b>' +
+    (short ? '' : '<span class="mut sm">' + esc(n.what) + '</span>' + (n.alt ? '<span class="sm alt">' + esc(n.alt) + '</span>' : '')) + '</div></div>').join('') + '</div>';
+}
+// перед первым шагом модуля — что из обязательного понадобится
+function needLine(s) {
+  const need = (A.needs.modules[s.module] || []).filter((n) => n.k === 'need');
+  if (!firstOfModule(s) || st(s.id).seen || !need.length) return '';
+  return '<div class="needline"><span class="eb">Для модуля понадобится</span><span class="sm">' + need.map((n) => esc(n.title)).join(' · ') + '</span><button class="lnk sm" data-act="needs" data-id="' + s.module + '">Подробнее</button></div>';
 }
 
 // ---------- Step ----------
@@ -4067,6 +4144,7 @@ STAGE.task = (s) => {
   let h = '<div class="say"><i></i><div>' + rich(s.brief) + '</div></div>';
   h += '<div class="box blue"><span class="eb">Как это устроено в AICEX</span>' + rich(s.aicex.text) +
     (s.aicex.links.length ? '<div class="row">' + s.aicex.links.map((l) => '<a class="ab sm" href="' + esc(l.url) + '" target="_blank" rel="noopener">' + esc(l.title) + ' ' + icon('ext', 13) + '</a>').join('') + '</div>' : '') + '</div>';
+  if (firstOfModule(s) && (A.needs.modules[s.module] || []).length) h += '<div class="stk"><span class="eb">Что понадобится в модуле «' + esc(MOD[s.module].title) + '»</span>' + needsHTML(A.needs.modules[s.module]) + '</div>';
   h += '<div class="stk"><span class="eb">Что получишь</span><div class="row">' +
     (s.agent ? '<span class="pill blue">' + icon('user', 12) + 'Агент «' + esc(s.title) + '» в отдел «' + esc(roomName(s.room)) + '»</span>' : '<span class="pill blue">' + icon('folder', 12) + 'Твой офис и проект в Claude</span>') +
     '<span class="pill amber">' + icon('gift', 12) + gifts + ' ' + plural(gifts, 'готовое решение', 'готовых решения', 'готовых решений') + '</span>' +
@@ -4208,28 +4286,94 @@ STAGE.hire = (s) => {
 
 // ---------- Onboarding ----------
 function showOnboarding() {
-  const nm = RT.me && RT.me.name ? RT.me.name.split(' ')[0] : '';
+  const o = UI.onb || {}, nm = o.name != null ? o.name : RT.me && RT.me.name ? RT.me.name.split(' ')[0] : '';
   openModal('<div class="onb"><div class="stk" style="gap:14px"><span class="eb">Академия AICEX · трек «Свой ИИ-офис»</span>' +
     '<h1>Это твой офис.<br><em>Пока он пустой.</em></h1>' +
     '<p class="mut" style="margin:0;font-size:14.5px;line-height:1.55">Модули — это комнаты. Пустой стол с мигающей меткой — твой следующий шаг. На каждом шаге ты нанимаешь одного ИИ-агента: отвечаешь на вопросы про свой бизнес, получаешь готовое решение AICEX и запускаешь его в своём проекте Claude.</p>' +
     '<div class="how"><div><b>26 шагов</b><span class="mut">7 модулей-комнат</span></div><div><b>24 агента</b><span class="mut">4 отдела</span></div><div><b>Готовые решения</b><span class="mut">скиллы, артефакты, шаблоны</span></div></div>' +
-    '<p class="mut sm" style="margin:0">В конце у тебя рабочий бизнес: агенты, команда, регламенты и проект Claude, который знает твоё дело.</p></div>' +
+    '<p class="mut sm" style="margin:0">В конце у тебя рабочий бизнес: агенты, команда, регламенты и проект Claude, который знает твоё дело.</p>' +
+    '<div class="stk" style="gap:4px"><span class="eb">Что понадобится · весь трек ≈ ' + hours(trackHours()) + '</span>' + needsHTML(A.needs.start, true) + '<button class="lnk sm" type="button" data-act="needs" data-id="">Подробнее и что нужно в каждом модуле</button></div></div>' +
     '<form class="stk" id="aOnb" autocomplete="off"><div class="reg"><label for="aon-name">Как тебя зовут?</label><input class="in" id="aon-name" value="' + esc(nm) + '" placeholder="Например, Анна"></div>' +
-    '<div class="reg"><label for="aon-project">Как называется твой бизнес или проект?</label><input class="in" id="aon-project" placeholder="Например, Школа английского «Speak»"></div>' +
-    '<div class="reg"><label for="aon-niche">Чем занимаешься — одной фразой?</label><input class="in" id="aon-niche" placeholder="Например, учу взрослых говорить по-английски за 3 месяца"></div>' +
+    '<div class="reg"><label for="aon-project">Как называется твой бизнес или проект?</label><input class="in" id="aon-project" value="' + esc(o.project || '') + '" placeholder="Например, Школа английского «Speak»"></div>' +
+    '<div class="reg"><label for="aon-niche">Чем занимаешься — одной фразой?</label><input class="in" id="aon-niche" value="' + esc(o.niche || '') + '" placeholder="Например, учу взрослых говорить по-английски за 3 месяца"></div>' +
     '<button class="ab pri full" type="submit">Войти в свой офис ' + icon('right') + '</button>' +
     '<button class="ab full" type="button" data-act="demo">' + icon('eye') + 'Посмотреть пример: офис AICEX на середине трека</button>' +
-    '<a class="ab ghost full" href="' + A.officeUrl + '" target="_blank" rel="noopener">Как выглядит готовый офис AICEX ' + icon('ext', 13) + '</a></form></div>', true);
+    '<a class="ab ghost full" href="' + A.officeUrl + '" target="_blank" rel="noopener">Как выглядит готовый офис AICEX ' + icon('ext', 13) + '</a>' +
+    '<button class="lnk sm" type="button" data-act="transfer" style="justify-self:center">Уже начал трек на другом устройстве? Загрузить прогресс</button></form></div>', true);
 }
 function startProject() {
   const name = $('#aon-name').value.trim(), project = $('#aon-project').value.trim(), niche = $('#aon-niche').value.trim();
   if (!name || !project) { toast('Напиши имя и название проекта.'); (!name ? $('#aon-name') : $('#aon-project')).focus(); return; }
   S = fresh();
   S.profile = { name: name, project: project, niche: niche, started: Date.now() };
+  UI.onb = null;
   touch(); save(); closeModal();
   renderAll();
   if (window.OFFICE) window.OFFICE.sync();
   setTimeout(() => openStep('0.1'), 300);
+}
+
+// ---------- Что понадобится ----------
+function showNeeds(mid) {
+  const one = mid != null && mid !== '' && MOD[mid], back = S.profile || MODE === 'demo' ? 'close' : 'onb';
+  if ($('#aOnb')) UI.onb = { name: $('#aon-name').value, project: $('#aon-project').value, niche: $('#aon-niche').value };
+  openModal('<div class="adh"><div class="stk" style="gap:2px"><span class="eb">' + (one ? 'Модуль ' + one.id + ' · ' + esc(one.title) + ' · ≈ ' + hours(modMinutes(one.id)) : 'Весь трек · ≈ ' + hours(trackHours())) + '</span><b class="h2">Что понадобится</b></div><button class="icob" data-act="' + back + '" aria-label="Закрыть">' + icon('x') + '</button></div>' +
+    (one ? '' : '<div class="stk"><span class="eb">До старта</span>' + needsHTML(A.needs.start) + '</div>') +
+    (one ? [one] : A.modules).map((m) => '<div class="stk">' + (one ? '' : '<span class="eb">Модуль ' + m.id + ' · ' + esc(m.title) + ' · ≈ ' + hours(modMinutes(m.id)) + '</span>') + needsHTML(A.needs.modules[m.id] || []) + '</div>').join('') +
+    '<div class="row">' + (one ? '<button class="ab sm" data-act="needs" data-id="">Весь трек</button>' : '') + (back === 'onb' ? '<button class="ab pri sm" data-act="onb">' + icon('left', 13) + 'Назад к старту</button>' : '') + '</div>', true);
+}
+
+// ---------- Перенос прогресса: сайт ↔ claude.ai ↔ другое устройство ----------
+const PROG = 'aicex-academy';
+const doneIn = (s) => STEPS.filter((x) => s.steps[x.id] && s.steps[x.id].hired).length;
+function showTransfer() {
+  const has = !!S.profile, back = has ? 'close' : 'onb';
+  if ($('#aOnb')) UI.onb = { name: $('#aon-name').value, project: $('#aon-project').value, niche: $('#aon-niche').value };
+  openModal('<div class="adh"><div class="stk" style="gap:2px"><span class="eb">Перенос прогресса</span><b class="h2">Продолжить в другом месте</b></div><button class="icob" data-act="' + back + '" aria-label="Закрыть">' + icon('x') + '</button></div>' +
+    '<p class="mut sm" style="margin:0">Прогресс хранится там, где ты проходишь трек: на сайте — в этом браузере, в claude.ai — в облаке. Чтобы продолжить на другом устройстве или в claude.ai, забери его здесь и загрузи там.</p>' +
+    (has ? '<div class="box"><b>1. Забрать отсюда</b><span class="mut sm">' + esc(brand()) + ': ' + doneCount() + ' из ' + STEPS.length + ' шагов, ' + fmt(S.xp) + ' опыта. Файл можно отправить себе в Telegram или на почту.</span>' +
+      '<div class="row"><button class="ab pri sm" data-act="prog-file">' + icon('download', 13) + 'Скачать файл прогресса</button><button class="ab sm" data-act="prog-copy">' + icon('copy', 13) + 'Скопировать текстом</button></div></div>' : '') +
+    '<div class="box"><b>' + (has ? '2. ' : '') + 'Загрузить сюда</b><span class="mut sm">Выбери файл прогресса или вставь его текст.</span>' +
+    '<div class="row"><label class="ab sm pri" for="aprog-file" tabindex="0">' + icon('file', 13) + 'Выбрать файл</label><input type="file" id="aprog-file" accept=".json,application/json" hidden></div>' +
+    '<textarea class="ta" id="aprog-text" rows="3" placeholder="Или вставь сюда текст прогресса"></textarea>' +
+    '<div class="row"><button class="ab sm" data-act="prog-load">' + icon('check', 13) + 'Проверить текст и загрузить</button></div></div>', true);
+}
+function progressText() {
+  return JSON.stringify({ app: PROG, kind: 'progress', v: 2, exported: new Date().toISOString(), from: MODE === 'cloud' ? 'claude.ai' : 'site', state: clone(S) });
+}
+async function exportProgress(asText) {
+  if (asText) return copyText(progressText());
+  const name = slug(brand(), 'office') + '-progress-' + dateStr() + '.json';
+  if (await offerFile(name, new Blob([progressText()], { type: 'application/json;charset=utf-8' }))) toast('Файл прогресса сохранён');
+}
+function parseProgress(text) {
+  let o = null;
+  try { o = JSON.parse(String(text || '').trim()); } catch (e) { return null; }
+  const s = o && o.app === PROG ? o.state : o;
+  if (!s || typeof s !== 'object' || s.v !== 2 || !s.profile || !s.profile.project || !s.steps || typeof s.steps !== 'object') return null;
+  const n = Object.assign(fresh(), clone(s));
+  n.xp = Number(n.xp) || 0;
+  if (!Array.isArray(n.badges)) n.badges = [];
+  if (!n.streak || typeof n.streak !== 'object') n.streak = fresh().streak;
+  return { state: n, at: o && o.exported ? Date.parse(o.exported) : null };
+}
+function importProgress(text) {
+  const p = parseProgress(text);
+  if (!p) { toast('Это не файл прогресса академии. Скачай его заново на устройстве, где проходишь трек.'); return; }
+  UI.imp = p.state;
+  const n = p.state;
+  openModal('<div class="adh"><b class="h2">Загрузить прогресс?</b><button class="icob" data-act="transfer" aria-label="Назад">' + icon('x') + '</button></div>' +
+    '<div class="box"><b>Офис: ' + esc(n.profile.project) + '</b><span class="sm">' + doneIn(n) + ' из ' + STEPS.length + ' шагов · ' + fmt(n.xp) + ' опыта' + (p.at ? ' · сохранён ' + ago(p.at) : '') + '</span></div>' +
+    (S.profile ? '<p class="mut sm" style="margin:0">Прогресс здесь (' + esc(brand()) + ', ' + doneCount() + ' из ' + STEPS.length + ' шагов) заменится. Если он нужен — сначала скачай его файлом.</p>' : '') +
+    '<div class="row"><button class="ab pri" data-act="prog-ok">' + icon('check') + 'Загрузить</button><button class="ab ghost" data-act="transfer">Назад</button></div>');
+}
+function applyProgress() {
+  if (!UI.imp) return;
+  S = UI.imp; UI.imp = null; UI.onb = null;
+  UI.view = 'track'; UI.step = null; UI.stage = {};
+  save(); closeModal(); renderAll();
+  if (window.OFFICE) window.OFFICE.sync();
+  toast('Прогресс загружен: ' + doneCount() + ' из ' + STEPS.length + ' шагов', 'hire');
 }
 
 // ---------- Project ----------
@@ -4650,6 +4794,13 @@ const ACT = {
   file: (t) => showProject(t.dataset.path),
   'copy-file': (t) => { const f = fileByPath(t.dataset.path); if (f) copyText(f.text()); },
   'skill-code': (t) => showCode(t.getAttribute('data-skill')),
+  needs: (t) => showNeeds(t.getAttribute('data-id')),
+  transfer: () => showTransfer(),
+  'prog-file': () => exportProgress(false),
+  'prog-copy': () => exportProgress(true),
+  'prog-load': () => { const t = ($('#aprog-text') || {}).value || ''; if (t.trim()) importProgress(t); else toast('Выбери файл прогресса или вставь его текст.'); },
+  'prog-ok': () => applyProgress(),
+  onb: () => showOnboarding(),
   'dl-file': (t) => { const f = fileByPath(t.dataset.path); if (f) offerFile(f.path.split('/').pop(), f.text()); },
   zip: () => zipProject(),
   library: () => showLibrary(),
@@ -4681,13 +4832,17 @@ document.addEventListener('input', (e) => {
 });
 document.addEventListener('change', (e) => {
   const t = e.target;
+  if (t.id === 'aprog-file' && t.files && t.files[0]) { t.files[0].text().then(importProgress, () => toast('Не получилось прочитать файл.')); return; }
   if (t.hasAttribute('data-head')) { S.heads[t.getAttribute('data-head')] = t.value; save(); if (window.OFFICE) window.OFFICE.sync(); toast('Руководитель отдела «' + roomName(t.getAttribute('data-head')) + '» — ' + t.value); }
 });
 document.addEventListener('submit', (e) => {
   if (e.target.id === 'aOnb') { e.preventDefault(); startProject(); }
   if (e.target.id === 'aCode') { e.preventDefault(); saveCode(e.target); }
 });
-document.addEventListener('keydown', (e) => { if (e.key === 'Escape') { hidePop(); closeModal(); } });
+document.addEventListener('keydown', (e) => {
+  if (e.key === 'Escape') { hidePop(); closeModal(); }
+  if ((e.key === 'Enter' || e.key === ' ') && e.target.matches && e.target.matches('label[for="aprog-file"]')) { e.preventDefault(); $('#aprog-file').click(); }
+});
 $('#aModal').addEventListener('click', (e) => { if (e.target.id === 'aModal') closeModal(); });
 
 // ---------- Boot ----------

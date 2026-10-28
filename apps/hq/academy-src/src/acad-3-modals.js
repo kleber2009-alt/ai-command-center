@@ -1,27 +1,93 @@
 // ---------- Onboarding ----------
 function showOnboarding() {
-  const nm = RT.me && RT.me.name ? RT.me.name.split(' ')[0] : '';
+  const o = UI.onb || {}, nm = o.name != null ? o.name : RT.me && RT.me.name ? RT.me.name.split(' ')[0] : '';
   openModal('<div class="onb"><div class="stk" style="gap:14px"><span class="eb">Академия AICEX · трек «Свой ИИ-офис»</span>' +
     '<h1>Это твой офис.<br><em>Пока он пустой.</em></h1>' +
     '<p class="mut" style="margin:0;font-size:14.5px;line-height:1.55">Модули — это комнаты. Пустой стол с мигающей меткой — твой следующий шаг. На каждом шаге ты нанимаешь одного ИИ-агента: отвечаешь на вопросы про свой бизнес, получаешь готовое решение AICEX и запускаешь его в своём проекте Claude.</p>' +
     '<div class="how"><div><b>26 шагов</b><span class="mut">7 модулей-комнат</span></div><div><b>24 агента</b><span class="mut">4 отдела</span></div><div><b>Готовые решения</b><span class="mut">скиллы, артефакты, шаблоны</span></div></div>' +
-    '<p class="mut sm" style="margin:0">В конце у тебя рабочий бизнес: агенты, команда, регламенты и проект Claude, который знает твоё дело.</p></div>' +
+    '<p class="mut sm" style="margin:0">В конце у тебя рабочий бизнес: агенты, команда, регламенты и проект Claude, который знает твоё дело.</p>' +
+    '<div class="stk" style="gap:4px"><span class="eb">Что понадобится · весь трек ≈ ' + hours(trackHours()) + '</span>' + needsHTML(A.needs.start, true) + '<button class="lnk sm" type="button" data-act="needs" data-id="">Подробнее и что нужно в каждом модуле</button></div></div>' +
     '<form class="stk" id="aOnb" autocomplete="off"><div class="reg"><label for="aon-name">Как тебя зовут?</label><input class="in" id="aon-name" value="' + esc(nm) + '" placeholder="Например, Анна"></div>' +
-    '<div class="reg"><label for="aon-project">Как называется твой бизнес или проект?</label><input class="in" id="aon-project" placeholder="Например, Школа английского «Speak»"></div>' +
-    '<div class="reg"><label for="aon-niche">Чем занимаешься — одной фразой?</label><input class="in" id="aon-niche" placeholder="Например, учу взрослых говорить по-английски за 3 месяца"></div>' +
+    '<div class="reg"><label for="aon-project">Как называется твой бизнес или проект?</label><input class="in" id="aon-project" value="' + esc(o.project || '') + '" placeholder="Например, Школа английского «Speak»"></div>' +
+    '<div class="reg"><label for="aon-niche">Чем занимаешься — одной фразой?</label><input class="in" id="aon-niche" value="' + esc(o.niche || '') + '" placeholder="Например, учу взрослых говорить по-английски за 3 месяца"></div>' +
     '<button class="ab pri full" type="submit">Войти в свой офис ' + icon('right') + '</button>' +
     '<button class="ab full" type="button" data-act="demo">' + icon('eye') + 'Посмотреть пример: офис AICEX на середине трека</button>' +
-    '<a class="ab ghost full" href="' + A.officeUrl + '" target="_blank" rel="noopener">Как выглядит готовый офис AICEX ' + icon('ext', 13) + '</a></form></div>', true);
+    '<a class="ab ghost full" href="' + A.officeUrl + '" target="_blank" rel="noopener">Как выглядит готовый офис AICEX ' + icon('ext', 13) + '</a>' +
+    '<button class="lnk sm" type="button" data-act="transfer" style="justify-self:center">Уже начал трек на другом устройстве? Загрузить прогресс</button></form></div>', true);
 }
 function startProject() {
   const name = $('#aon-name').value.trim(), project = $('#aon-project').value.trim(), niche = $('#aon-niche').value.trim();
   if (!name || !project) { toast('Напиши имя и название проекта.'); (!name ? $('#aon-name') : $('#aon-project')).focus(); return; }
   S = fresh();
   S.profile = { name: name, project: project, niche: niche, started: Date.now() };
+  UI.onb = null;
   touch(); save(); closeModal();
   renderAll();
   if (window.OFFICE) window.OFFICE.sync();
   setTimeout(() => openStep('0.1'), 300);
+}
+
+// ---------- Что понадобится ----------
+function showNeeds(mid) {
+  const one = mid != null && mid !== '' && MOD[mid], back = S.profile || MODE === 'demo' ? 'close' : 'onb';
+  if ($('#aOnb')) UI.onb = { name: $('#aon-name').value, project: $('#aon-project').value, niche: $('#aon-niche').value };
+  openModal('<div class="adh"><div class="stk" style="gap:2px"><span class="eb">' + (one ? 'Модуль ' + one.id + ' · ' + esc(one.title) + ' · ≈ ' + hours(modMinutes(one.id)) : 'Весь трек · ≈ ' + hours(trackHours())) + '</span><b class="h2">Что понадобится</b></div><button class="icob" data-act="' + back + '" aria-label="Закрыть">' + icon('x') + '</button></div>' +
+    (one ? '' : '<div class="stk"><span class="eb">До старта</span>' + needsHTML(A.needs.start) + '</div>') +
+    (one ? [one] : A.modules).map((m) => '<div class="stk">' + (one ? '' : '<span class="eb">Модуль ' + m.id + ' · ' + esc(m.title) + ' · ≈ ' + hours(modMinutes(m.id)) + '</span>') + needsHTML(A.needs.modules[m.id] || []) + '</div>').join('') +
+    '<div class="row">' + (one ? '<button class="ab sm" data-act="needs" data-id="">Весь трек</button>' : '') + (back === 'onb' ? '<button class="ab pri sm" data-act="onb">' + icon('left', 13) + 'Назад к старту</button>' : '') + '</div>', true);
+}
+
+// ---------- Перенос прогресса: сайт ↔ claude.ai ↔ другое устройство ----------
+const PROG = 'aicex-academy';
+const doneIn = (s) => STEPS.filter((x) => s.steps[x.id] && s.steps[x.id].hired).length;
+function showTransfer() {
+  const has = !!S.profile, back = has ? 'close' : 'onb';
+  if ($('#aOnb')) UI.onb = { name: $('#aon-name').value, project: $('#aon-project').value, niche: $('#aon-niche').value };
+  openModal('<div class="adh"><div class="stk" style="gap:2px"><span class="eb">Перенос прогресса</span><b class="h2">Продолжить в другом месте</b></div><button class="icob" data-act="' + back + '" aria-label="Закрыть">' + icon('x') + '</button></div>' +
+    '<p class="mut sm" style="margin:0">Прогресс хранится там, где ты проходишь трек: на сайте — в этом браузере, в claude.ai — в облаке. Чтобы продолжить на другом устройстве или в claude.ai, забери его здесь и загрузи там.</p>' +
+    (has ? '<div class="box"><b>1. Забрать отсюда</b><span class="mut sm">' + esc(brand()) + ': ' + doneCount() + ' из ' + STEPS.length + ' шагов, ' + fmt(S.xp) + ' опыта. Файл можно отправить себе в Telegram или на почту.</span>' +
+      '<div class="row"><button class="ab pri sm" data-act="prog-file">' + icon('download', 13) + 'Скачать файл прогресса</button><button class="ab sm" data-act="prog-copy">' + icon('copy', 13) + 'Скопировать текстом</button></div></div>' : '') +
+    '<div class="box"><b>' + (has ? '2. ' : '') + 'Загрузить сюда</b><span class="mut sm">Выбери файл прогресса или вставь его текст.</span>' +
+    '<div class="row"><label class="ab sm pri" for="aprog-file" tabindex="0">' + icon('file', 13) + 'Выбрать файл</label><input type="file" id="aprog-file" accept=".json,application/json" hidden></div>' +
+    '<textarea class="ta" id="aprog-text" rows="3" placeholder="Или вставь сюда текст прогресса"></textarea>' +
+    '<div class="row"><button class="ab sm" data-act="prog-load">' + icon('check', 13) + 'Проверить текст и загрузить</button></div></div>', true);
+}
+function progressText() {
+  return JSON.stringify({ app: PROG, kind: 'progress', v: 2, exported: new Date().toISOString(), from: MODE === 'cloud' ? 'claude.ai' : 'site', state: clone(S) });
+}
+async function exportProgress(asText) {
+  if (asText) return copyText(progressText());
+  const name = slug(brand(), 'office') + '-progress-' + dateStr() + '.json';
+  if (await offerFile(name, new Blob([progressText()], { type: 'application/json;charset=utf-8' }))) toast('Файл прогресса сохранён');
+}
+function parseProgress(text) {
+  let o = null;
+  try { o = JSON.parse(String(text || '').trim()); } catch (e) { return null; }
+  const s = o && o.app === PROG ? o.state : o;
+  if (!s || typeof s !== 'object' || s.v !== 2 || !s.profile || !s.profile.project || !s.steps || typeof s.steps !== 'object') return null;
+  const n = Object.assign(fresh(), clone(s));
+  n.xp = Number(n.xp) || 0;
+  if (!Array.isArray(n.badges)) n.badges = [];
+  if (!n.streak || typeof n.streak !== 'object') n.streak = fresh().streak;
+  return { state: n, at: o && o.exported ? Date.parse(o.exported) : null };
+}
+function importProgress(text) {
+  const p = parseProgress(text);
+  if (!p) { toast('Это не файл прогресса академии. Скачай его заново на устройстве, где проходишь трек.'); return; }
+  UI.imp = p.state;
+  const n = p.state;
+  openModal('<div class="adh"><b class="h2">Загрузить прогресс?</b><button class="icob" data-act="transfer" aria-label="Назад">' + icon('x') + '</button></div>' +
+    '<div class="box"><b>Офис: ' + esc(n.profile.project) + '</b><span class="sm">' + doneIn(n) + ' из ' + STEPS.length + ' шагов · ' + fmt(n.xp) + ' опыта' + (p.at ? ' · сохранён ' + ago(p.at) : '') + '</span></div>' +
+    (S.profile ? '<p class="mut sm" style="margin:0">Прогресс здесь (' + esc(brand()) + ', ' + doneCount() + ' из ' + STEPS.length + ' шагов) заменится. Если он нужен — сначала скачай его файлом.</p>' : '') +
+    '<div class="row"><button class="ab pri" data-act="prog-ok">' + icon('check') + 'Загрузить</button><button class="ab ghost" data-act="transfer">Назад</button></div>');
+}
+function applyProgress() {
+  if (!UI.imp) return;
+  S = UI.imp; UI.imp = null; UI.onb = null;
+  UI.view = 'track'; UI.step = null; UI.stage = {};
+  save(); closeModal(); renderAll();
+  if (window.OFFICE) window.OFFICE.sync();
+  toast('Прогресс загружен: ' + doneCount() + ' из ' + STEPS.length + ' шагов', 'hire');
 }
 
 // ---------- Project ----------

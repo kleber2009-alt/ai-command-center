@@ -18,7 +18,6 @@
   // ——— Материалы, которые есть в Claude (артефакты claude.ai) ———
   const AR = {
     office:      art('Виртуальный офис агентов', '7FTMzSseUbDHJDfb5xgkEP'),
-    analytics:   art('Сквозная аналитика', 'UzeN9sagWbM8We1yTWTmGf'),
     prodSkills:  art('Prod Skills — игровые концепции', '8bFig9B5aX3RqzZqS5LdkZ'),
     psGuide:     art('Persona Studio — гайд для клиента', '2aVDVGGJfK9uSgSz4kgYyV'),
     ps2:         art('Persona Studio 2.0', 'D1kTgCx8mQCTV3utcJdxFq'),
@@ -497,7 +496,7 @@
       templates: [
         { task: 'Отчёт за неделю', prompt: 'Выгрузи кампании Meta за 7 дней: расход, лиды, цена лида, CTR, частота. Отметь 3 лучших и 3 худших объявления и предложи, что выключить.' },
       ],
-      artifacts: [AR.analytics],
+      artifacts: [],
     },
   };
 
@@ -549,7 +548,7 @@
         step('Масштаб', 'Бюджет в победителей'),
         step('Отчёт', 'Цифры в сквозную аналитику'),
       ],
-      materials: [AR.analytics],
+      materials: [],
     },
   };
   // ——— Карточки агентов: имя, роль, цвет, отдел по умолчанию, статус и задача для витрины ———

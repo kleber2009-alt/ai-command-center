@@ -403,10 +403,10 @@
       context: 'context/audience.md',
       brief: 'Открылся отдел маркетинга. Первый агент здесь — «Анализ аудитории». Он находит слова и боли твоих клиентов. Из них потом пишутся рилсы, лендинги и ответы в директ.',
       aicex: {
-        text: 'В AICEX агент изучает, что смотрят и комментируют в нише. Находки превращаются в темы и ТЗ для сценариев. Так появились разбор @bondar_idm и трек Юлии.',
+        text: 'В AICEX агент изучает, что смотрят и комментируют в нише. Находки превращаются в темы и ТЗ для сценариев. Так появились разбор @bondar_idm и трек эксперта до 10 000 подписчиков.',
         links: [
           { title: 'ТЗ на продающие рилсы — разбор @bondar_idm', url: 'https://claude.ai/artifact/FmuSoMWs8iVphWcC9AYgPL' },
-          { title: 'Трек Юлии: 0 → 10 000 подписчиков', url: 'https://claude.ai/artifact/BLULR8V3fsKhF7H7tWKyv9' }
+          { title: 'Трек эксперта: 0 → 10 000 подписчиков', url: 'https://claude.ai/artifact/RevJC3bqRkupbFCkyP3DrL' }
         ]
       },
       questions: [
@@ -778,8 +778,8 @@
       aicex: {
         text: 'В AICEX контент-план собирают на неделю: 5 рилсов, 2 карусели и сторис каждый день. Темы берут из анализа аудитории. У каждого рилса своё кодовое слово.',
         links: [
-          { title: 'Контент Илья — органика', url: 'https://claude.ai/artifact/5LwBz4Y5Yhdxj6pDcTG6Wp' },
-          { title: 'Практикум по ИИ-контенту', url: 'https://claude.ai/artifact/AdPDqEVK6EdSsMwdnKMtgk' }
+          { title: 'Как AICEX строит контент', url: 'https://claude.ai/artifact/EU4GnpxYYs1851vP2uVU6m' },
+          { title: 'Трек эксперта: 0 → 10 000 подписчиков', url: 'https://claude.ai/artifact/RevJC3bqRkupbFCkyP3DrL' }
         ]
       },
       questions: [
@@ -810,14 +810,14 @@
           rows: 3,
           help: [
             { type: 'skill', title: 'Найди темы скиллом niche-outlier-research', text: 'Скилл AICEX найдёт, что залетает в твоей нише прямо сейчас. Из этого — план на неделю.', prompt: 'Используй скилл niche-outlier-research. Найди, что залетает в нише [твоя ниша], и дай 10 тем на неделю. Для каждой — формат: рилс или карусель.' },
-            { type: 'example', title: 'Как AICEX строит контент', text: 'Пример контент-стратегии основателя.', url: 'https://claude.ai/artifact/5LwBz4Y5Yhdxj6pDcTG6Wp' }
+            { type: 'example', title: 'Как AICEX строит контент', text: 'Формула хука, правила рилсов и каруселей, ритм недели.', url: 'https://claude.ai/artifact/EU4GnpxYYs1851vP2uVU6m' }
           ]
         }
       ],
       gifts: [
         { type: 'connector', name: 'Chat Place', title: 'Virale: контент и аккаунты', what: 'Аналитика аккаунтов, рекомендации и генерация контента.', guide: 'claude-connector' },
         { type: 'product', title: 'Транскрибация', url: 'https://transcribe.aicex.club', what: 'Расшифрует твой ролик — из текста Claude сделает пост, рассылку и тред.' },
-        { type: 'artifact', title: 'Практикум по ИИ-контенту', url: 'https://claude.ai/artifact/AdPDqEVK6EdSsMwdnKMtgk', what: 'Как AICEX делает контент с ИИ.' },
+        { type: 'artifact', title: 'Как AICEX строит контент', url: 'https://claude.ai/artifact/EU4GnpxYYs1851vP2uVU6m', what: 'Формула хука, рилс из 4 блоков, карусель на 9 слайдов, призыв с кодовым словом.' },
         { type: 'template', title: 'Контент-план на неделю', what: 'Таблица, которую агент заполняет каждый понедельник.',
           text: '| День | Площадка | Формат | Тема | Кодовое слово | Готово |\n|---|---|---|---|---|---|\n| Пн | | рилс | | | |\n| Ср | | карусель | | | |\n| Пт | | рилс | | | |' }
       ],

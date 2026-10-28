@@ -172,6 +172,13 @@ const ACT = {
   file: (t) => showProject(t.dataset.path),
   'copy-file': (t) => { const f = fileByPath(t.dataset.path); if (f) copyText(f.text()); },
   'skill-code': (t) => showCode(t.getAttribute('data-skill')),
+  needs: (t) => showNeeds(t.getAttribute('data-id')),
+  transfer: () => showTransfer(),
+  'prog-file': () => exportProgress(false),
+  'prog-copy': () => exportProgress(true),
+  'prog-load': () => { const t = ($('#aprog-text') || {}).value || ''; if (t.trim()) importProgress(t); else toast('Выбери файл прогресса или вставь его текст.'); },
+  'prog-ok': () => applyProgress(),
+  onb: () => showOnboarding(),
   'dl-file': (t) => { const f = fileByPath(t.dataset.path); if (f) offerFile(f.path.split('/').pop(), f.text()); },
   zip: () => zipProject(),
   library: () => showLibrary(),
@@ -203,13 +210,17 @@ document.addEventListener('input', (e) => {
 });
 document.addEventListener('change', (e) => {
   const t = e.target;
+  if (t.id === 'aprog-file' && t.files && t.files[0]) { t.files[0].text().then(importProgress, () => toast('Не получилось прочитать файл.')); return; }
   if (t.hasAttribute('data-head')) { S.heads[t.getAttribute('data-head')] = t.value; save(); if (window.OFFICE) window.OFFICE.sync(); toast('Руководитель отдела «' + roomName(t.getAttribute('data-head')) + '» — ' + t.value); }
 });
 document.addEventListener('submit', (e) => {
   if (e.target.id === 'aOnb') { e.preventDefault(); startProject(); }
   if (e.target.id === 'aCode') { e.preventDefault(); saveCode(e.target); }
 });
-document.addEventListener('keydown', (e) => { if (e.key === 'Escape') { hidePop(); closeModal(); } });
+document.addEventListener('keydown', (e) => {
+  if (e.key === 'Escape') { hidePop(); closeModal(); }
+  if ((e.key === 'Enter' || e.key === ' ') && e.target.matches && e.target.matches('label[for="aprog-file"]')) { e.preventDefault(); $('#aprog-file').click(); }
+});
 $('#aModal').addEventListener('click', (e) => { if (e.target.id === 'aModal') closeModal(); });
 
 // ---------- Boot ----------

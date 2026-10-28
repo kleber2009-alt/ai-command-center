@@ -51,7 +51,7 @@ function trackPanel() {
     const m = MOD[cur.module];
     h += '<div class="box amber"><div class="spr"><span class="eb">Модуль ' + m.id + ' · ' + esc(m.title) + '</span><span class="pill amber">' + icon('clock', 12) + cur.minutes + ' мин</span></div>' +
       '<b class="h2">' + esc(cur.agent ? 'Нанять «' + cur.title + '»' : cur.title) + '</b>' +
-      '<div class="say"><i></i><div>' + rich(cur.brief) + '</div></div>' +
+      '<div class="say"><i></i><div>' + rich(cur.brief) + '</div></div>' + needLine(cur) +
       '<div class="row"><button class="ab pri" data-act="open-step" data-id="' + cur.id + '">' + (st(cur.id).answered ? 'Продолжить' : 'Начать шаг') + ' ' + icon('right') + '</button><button class="ab ghost" data-act="focus" data-id="' + cur.id + '">' + icon('pointer') + 'Показать место в офисе</button></div></div>';
   } else {
     h += '<div class="box ok"><b class="h2">Офис собран</b><p class="mut sm" style="margin:0">Все 24 агента на местах. Дальше офис работает по регламентам из папки regulations.</p><div class="row"><button class="ab pri" data-act="project">' + icon('folder') + 'Открыть проект</button></div></div>';
@@ -60,7 +60,7 @@ function trackPanel() {
   if (bosses.length) h += '<div class="stk"><span class="eb">Боссы ждут</span>' + bosses.map((s) => '<button class="srow cur" data-act="boss" data-id="' + s.id + '"><span class="n">' + icon('crown', 13) + '</span><span><b>' + esc(s.boss.task) + '</b><small>Босс шага ' + s.id + ' · доказательство: ' + esc(s.boss.proof) + '</small></span><em>+' + A.xp.boss + '</em></button>').join('') + '</div>';
   A.modules.forEach((m) => {
     const steps = STEPS.filter((s) => s.module === m.id), done = steps.filter((s) => isDone(s.id)).length;
-    h += '<div class="mod"><div class="mod-h"><b>' + m.id + ' · ' + esc(m.title) + '</b><span>' + done + ' из ' + steps.length + ' · ' + esc(roomName(m.room)) + '</span></div>' +
+    h += '<div class="mod"><div class="mod-h"><b>' + m.id + ' · ' + esc(m.title) + '</b><span>' + done + ' из ' + steps.length + ' · ' + esc(roomName(m.room)) + ' · <button class="lnk" data-act="needs" data-id="' + m.id + '">что нужно</button></span></div>' +
       steps.map((s) => {
         const d = isDone(s.id), c = cur && cur.id === s.id;
         return '<button class="srow' + (d ? ' done' : '') + (c ? ' cur' : '') + '" data-act="open-step" data-id="' + s.id + '"' + (d || c ? '' : ' disabled') + '>' +
@@ -69,8 +69,26 @@ function trackPanel() {
       }).join('') + '</div>';
   });
   h += '</div><div class="apf"><span class="mut sm" style="flex:1">' + storeLine() + (RT.ready ? aiOn() ? ' · ИИ-проверка включена' : ' · ИИ выключен' : '') + '</span>' +
-    (MODE === 'demo' ? '<button class="ab sm" data-act="exit-demo">Выйти из примера</button>' : '<button class="ab ghost sm" data-act="reset">Начать заново</button>') + '</div>';
+    (MODE === 'demo' ? '<button class="ab sm" data-act="exit-demo">Выйти из примера</button>' : '<button class="ab ghost sm" data-act="transfer" title="Продолжить на другом устройстве или в claude.ai">Перенести</button><button class="ab ghost sm" data-act="reset">Начать заново</button>') + '</div>';
   return h;
+}
+
+// ---------- Что понадобится ----------
+const NEED = { need: ['Нужно', 'blue'], opt: ['По желанию', ''], paid: ['Платно отдельно', 'amber'] };
+const firstOfModule = (s) => STEPS.find((x) => x.module === s.module) === s;
+const modMinutes = (mid) => STEPS.filter((s) => s.module === Number(mid)).reduce((a, s) => a + s.minutes, 0);
+const trackHours = () => Math.round(STEPS.reduce((a, s) => a + s.minutes, 0) / 60) * 60;
+const hours = (min) => { const h = Math.floor(min / 60), m = Math.round((min % 60) / 5) * 5; return [h ? h + ' ч' : '', m ? m + ' мин' : ''].filter(Boolean).join(' '); };
+// short — только названия (в приветствии), подробности в окне «Что понадобится»
+function needsHTML(list, short) {
+  return '<div class="needs' + (short ? ' short' : '') + '">' + list.map((n) => '<div class="need"><span class="pill ' + NEED[n.k][1] + '">' + NEED[n.k][0] + '</span><div><b>' + esc(n.title) + '</b>' +
+    (short ? '' : '<span class="mut sm">' + esc(n.what) + '</span>' + (n.alt ? '<span class="sm alt">' + esc(n.alt) + '</span>' : '')) + '</div></div>').join('') + '</div>';
+}
+// перед первым шагом модуля — что из обязательного понадобится
+function needLine(s) {
+  const need = (A.needs.modules[s.module] || []).filter((n) => n.k === 'need');
+  if (!firstOfModule(s) || st(s.id).seen || !need.length) return '';
+  return '<div class="needline"><span class="eb">Для модуля понадобится</span><span class="sm">' + need.map((n) => esc(n.title)).join(' · ') + '</span><button class="lnk sm" data-act="needs" data-id="' + s.module + '">Подробнее</button></div>';
 }
 
 // ---------- Step ----------
@@ -117,6 +135,7 @@ STAGE.task = (s) => {
   let h = '<div class="say"><i></i><div>' + rich(s.brief) + '</div></div>';
   h += '<div class="box blue"><span class="eb">Как это устроено в AICEX</span>' + rich(s.aicex.text) +
     (s.aicex.links.length ? '<div class="row">' + s.aicex.links.map((l) => '<a class="ab sm" href="' + esc(l.url) + '" target="_blank" rel="noopener">' + esc(l.title) + ' ' + icon('ext', 13) + '</a>').join('') + '</div>' : '') + '</div>';
+  if (firstOfModule(s) && (A.needs.modules[s.module] || []).length) h += '<div class="stk"><span class="eb">Что понадобится в модуле «' + esc(MOD[s.module].title) + '»</span>' + needsHTML(A.needs.modules[s.module]) + '</div>';
   h += '<div class="stk"><span class="eb">Что получишь</span><div class="row">' +
     (s.agent ? '<span class="pill blue">' + icon('user', 12) + 'Агент «' + esc(s.title) + '» в отдел «' + esc(roomName(s.room)) + '»</span>' : '<span class="pill blue">' + icon('folder', 12) + 'Твой офис и проект в Claude</span>') +
     '<span class="pill amber">' + icon('gift', 12) + gifts + ' ' + plural(gifts, 'готовое решение', 'готовых решения', 'готовых решений') + '</span>' +

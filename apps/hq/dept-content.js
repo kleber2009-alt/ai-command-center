@@ -137,7 +137,7 @@ window.DEPT_CONTENT = {
       { who: 'analytics-0', task: 'Отчёт по охватам', prompt: 'Собери охваты и входы по всем публикациям за месяц: рилсы против каруселей, топ-10 по входам, медиана по аккаунту.' },
       { who: 'analytics-1', task: 'ROMI по каналам', prompt: 'Посчитай ROMI по кампаниям Meta за период, сверь лиды с кабинетом, покажи, где теряются деньги.' },
     ],
-    artifacts: [{ title: 'Сквозная аналитика (claude.ai)', url: ART('UzeN9sagWbM8We1yTWTmGf') }],
+    artifacts: [],
   },
 
   carousel: {

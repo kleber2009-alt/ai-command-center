@@ -3,6 +3,7 @@
 Кабинет ученика внутри 3D-офиса hq. Модули — комнаты, шаги — найм агентов с готовыми решениями AICEX (скиллы, артефакты, продукты, коннекторы, шаблоны). Из ответов ученика собирается его проект Claude: `CLAUDE.md`, `context/`, `agents/`, `regulations/`, `skills/`.
 
 - Сайт: `apps/hq/academy.html` → https://hq.aicex.club/academy. Прогресс в браузере, проверка заданий без ИИ, архив проекта скачивается браузером.
+- Прогресс переносится файлом: «Перенести» в треке → скачать на одном устройстве, загрузить на другом или в claude.ai.
 - Артефакт claude.ai: тот же кабинет с ИИ-проверкой, облачным сохранением и наставником.
 
 ## Сборка
@@ -18,6 +19,9 @@ node src/validate.js src/content-a.js   # проверка шагов по сх�
 ```bash
 node test/flow.js dist/test.html test/shots   # онбординг → 0.1 → 0.2 → 1.1, файлы проекта, архив
 node test/demo.js dist/test.html test/shots   # пример «офис AICEX на середине трека», телефон
+node test/skills-visual.js dist/test.html test/shots  # карточки скиллов и окно кода ученика
+node test/needs-visual.js dist/test.html test/shots   # «Что понадобится»: приветствие, модуль, телефон
+node test/transfer.js dist/test.html test/shots       # перенос прогресса файлом в чистый браузер
 ```
 
 ## Деплой
