@@ -1,0 +1,78 @@
+const { chromium } = require('playwright');
+const path = require('path');
+const URL = /^https?:/.test(process.argv[2]) ? process.argv[2] : 'file://' + path.resolve(process.argv[2]);
+const OUT = path.resolve(process.argv[3]);
+const errors = [];
+const shot = (p, n, full) => p.screenshot({ path: OUT + '/' + n + '.png', fullPage: !!full });
+async function doStep(p, id, opts) {
+  opts = opts || {};
+  await p.evaluate(() => { const b = document.querySelector('[data-act="to-questions"]'); if (b) b.click(); });
+  await p.waitForTimeout(150);
+  const tas = await p.$$('#aPanel textarea[data-ans]');
+  for (const t of tas) await t.fill('Мой ответ про бизнес: онлайн-школа английского для взрослых, курс 24 900 ₽, 40 учеников в месяц.');
+  if (opts.dunno) { await p.click('#aPanel [data-act="dunno"]'); await p.waitForTimeout(150); await shot(p, opts.dunno); }
+  await p.click('#aPanel [data-act="answers-save"]'); await p.waitForTimeout(200);
+  if (opts.gifts) await shot(p, opts.gifts);
+  await p.click('#aPanel [data-act="gifts-take"]'); await p.waitForTimeout(200);
+  const res = await p.$('#aPanel [data-res]');
+  const isLink = await res.evaluate((e) => e.tagName === 'INPUT');
+  await res.fill(isLink ? 'https://claude.ai/artifact/test-result — лендинг готов' : 'Результат из Claude: 5 сценариев рилсов для онлайн-школы английского, каждый с кодовым словом и под мою аудиторию взрослых учеников.');
+  await p.click('#aPanel [data-act="check"]'); await p.waitForTimeout(300);
+  if (opts.work) await shot(p, opts.work);
+  await p.click('#aPanel [data-act="stage"][data-k="regulation"]'); await p.waitForTimeout(150);
+  if (opts.reg) await shot(p, opts.reg);
+  await p.click('#aPanel [data-act="reg-save"]'); await p.waitForTimeout(150);
+  await p.click('#aPanel [data-act="hire"]');
+  await p.waitForTimeout(opts.wait || 3500);
+}
+(async () => {
+  const browser = await chromium.launch({ args: ['--use-gl=swiftshader', '--enable-webgl', '--ignore-gpu-blocklist'] });
+  const ctx = await browser.newContext({ viewport: { width: 1440, height: 900 } });
+  const p = await ctx.newPage();
+  p.on('console', (m) => { if (m.type() === 'error') errors.push('console: ' + m.text()); });
+  p.on('pageerror', (e) => errors.push('pageerror: ' + e.message));
+  await p.goto(URL, { waitUntil: 'domcontentloaded', timeout: 90000 });
+  await p.waitForFunction(() => window.OFFICE && window.OFFICE.sync, null, { timeout: 60000 });
+  await p.waitForTimeout(1500);
+  await shot(p, '01-onboarding');
+  await p.fill('#aon-name', 'Анна');
+  await p.fill('#aon-project', 'Школа английского Speak');
+  await p.fill('#aon-niche', 'Учу взрослых говорить по-английски за 3 месяца');
+  await p.click('#aOnb button[type=submit]');
+  await p.waitForTimeout(1800);
+  await shot(p, '02-step01-task');
+  await doStep(p, '0.1', { dunno: '03-step01-dunno', gifts: '04-step01-gifts', work: '05-step01-work', reg: '06-step01-reg', wait: 4200 });
+  await shot(p, '07-after01');
+  await p.click('#aPanel [data-act="open-step"]'); await p.waitForTimeout(1500);
+  await shot(p, '08-step02');
+  await doStep(p, '0.2', { wait: 4200 });
+  await shot(p, '09-after02-ceo-unlocked');
+  await p.click('#aPanel [data-act="open-step"]'); await p.waitForTimeout(1800);
+  await shot(p, '10-step11-desk');
+  await doStep(p, '1.1', { work: '11-step11-work', wait: 2800 });
+  await shot(p, '12-hired-market');
+  await p.click('#aHud [data-act="project"]'); await p.waitForTimeout(300);
+  await shot(p, '13-project');
+  await p.keyboard.press('Escape');
+  await p.click('#aHud [data-act="team"]'); await p.waitForTimeout(300);
+  await shot(p, '14-team');
+  await p.keyboard.press('Escape');
+  await p.click('#aHud [data-act="library"]'); await p.waitForTimeout(300);
+  await shot(p, '15-library');
+  await p.keyboard.press('Escape');
+  await p.click('#aHud [data-act="guides"]'); await p.waitForTimeout(300);
+  await p.click('#aModal [data-act="guide"][data-id="claude-skill-upload"]'); await p.waitForTimeout(300);
+  await shot(p, '16-guide');
+  await p.keyboard.press('Escape');
+  const st = await p.evaluate(() => { try { const s = JSON.parse(localStorage.getItem('academy:v2')); return { xp: s.xp, hired: Object.keys(s.steps).filter((k) => s.steps[k].hired), badges: s.badges }; } catch (e) { return String(e); } });
+  console.log('state', JSON.stringify(st));
+
+  // архив проекта: вне claude.ai — обычное скачивание браузера
+  await p.evaluate(() => document.querySelector('#aHud [data-act="project"]').click());
+  await p.waitForSelector('#aModal [data-act="zip"]:not([disabled])', { timeout: 15000 });
+  const [dl] = await Promise.all([p.waitForEvent('download', { timeout: 15000 }), p.evaluate(() => document.querySelector('#aModal [data-act="zip"]').click())]);
+  console.log('download', dl.suggestedFilename());
+  await p.keyboard.press('Escape');
+  console.log(errors.length ? errors.join('\n') : 'no errors');
+  await browser.close();
+})().catch((e) => { console.log('FAILED', e.message); console.log(errors.join('\n')); process.exit(1); });
