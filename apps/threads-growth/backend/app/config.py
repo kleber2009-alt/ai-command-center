@@ -12,7 +12,8 @@ from pydantic_settings import BaseSettings, SettingsConfigDict
 
 
 class Settings(BaseSettings):
-    model_config = SettingsConfigDict(env_file=".env", extra="ignore")
+    # env_ignore_empty: пустые `CHANNEL_ID=` и т.п. в .env = значение по умолчанию.
+    model_config = SettingsConfigDict(env_file=".env", extra="ignore", env_ignore_empty=True)
 
     # — Хранилище —
     database_url: str = "postgresql+psycopg://threads_viral:threads_viral@localhost:5432/threads_growth"
@@ -64,6 +65,48 @@ class Settings(BaseSettings):
 
     # — Шифрование токенов аккаунтов (§13, access_token[encrypted]) —
     token_encryption_key: str = ""       # Fernet key: `python -c "from cryptography.fernet import Fernet;print(Fernet.generate_key().decode())"`
+
+    # — Воронка Threads → Telegram (app/funnel, скилл threads-telegram-funnel) —
+    funnel_model: str = "claude-opus-5-5"   # модель агентов воронки (план, ветки, QA, ответы)
+    funnel_fallbacks: bool = True        # server-side fallback при отказе модели (fallbacks="default")
+    funnel_tz: str = "Europe/Moscow"
+    funnel_slots: str = "10:00,13:00,18:00"   # решение 4
+    funnel_chat_id: int = 0              # командная форум-группа; 0 = личка владельца
+    funnel_topic_id: int = 0             # message_thread_id темы «Threads» в форум-группе
+    funnel_editor_ids: str = ""          # кроме владельца — кто ещё жмёт кнопки (id через запятую)
+    funnel_account_id: int = 0           # accounts.id, от имени которого публикуем; 0 = первый не-paused
+    funnel_autopublish: bool = False     # этап 2: выход по слотам через Threads API; 0 = этап 1 (публикуете сами)
+    funnel_unanswered: str = "skip"      # решение 2: ветка без ✅ к слоту — skip | publish
+    funnel_voice_level: int = 3          # решение 3: громкость 1–5
+    funnel_donors: str = "petkova_anjela"   # решение 5: аккаунты-доноры для тем (через запятую, без @)
+    funnel_reply_mode: str = "drafts"    # решение 6: ответы на комментарии — drafts | auto
+    funnel_start_date: str = ""          # YYYY-MM-DD старт системы (2 недели только новые); пусто = первая ветка
+    funnel_reply_window_hours: int = 2   # сколько часов после выхода собираем комментарии
+
+    # — Канал-приёмник (решение 1) —
+    channel_id: int = 0                  # id канала (-100…); бот должен быть админом
+    channel_username: str = ""           # @username публичного канала без @ (для mode=public)
+    channel_mode: str = "private"        # private — ссылка-приглашение под каждую ветку | public — ссылка на пост
+    channel_fallback_link: str = ""      # общая ссылка на канал, пока нет приёмника/прав бота
+
+    # — MinIO: картинки к посту 1 по временной ссылке —
+    minio_endpoint: str = ""             # внутренний host:port, напр. aisales-minio:9000
+    minio_public_endpoint: str = ""      # публичный host, которым Threads заберёт картинку (подпись ссылки)
+    minio_access_key: str = ""
+    minio_secret_key: str = ""
+    minio_bucket: str = "threads-funnel"
+    minio_secure: bool = False           # https до minio_endpoint
+    minio_public_secure: bool = True     # https у публичного host
+    minio_region: str = "us-east-1"
+
+    # — Распознавание голоса (правки и /story голосом) —
+    openai_api_key: str = ""             # Whisper API
+    whisper_service_url: str = ""        # self-hosted OpenAI-совместимый whisper (приоритетнее)
+    whisper_api_key: str = ""
+    whisper_model: str = "whisper-1"
+
+    # — Кроны n8n по HTTP (/cron/funnel/<job>) —
+    cron_secret: str = ""                # заголовок X-Cron-Secret; пусто = HTTP-кроны выключены
 
 
 @lru_cache

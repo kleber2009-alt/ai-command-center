@@ -18,9 +18,13 @@ backend/app/
   core/       # database.py(pgvector, ленивый engine), security.py(Fernet), llm.py(Claude/Voyage)
   models/     # 10 SQLAlchemy-моделей §13
   services/   # 9 сервисов §5–§12
-  workers/    # 5 воркеров (дёргает n8n)
-  prompts/    # *.md: style_profile / viral_analysis / rewrite_threads / reply_generation / scoring
-alembic/      # 0001_initial — extension vector + все таблицы
+  workers/    # 5 воркеров + funnel_worker (дёргает n8n)
+  funnel/     # воронка Threads → Telegram: schedule/qa/recycle/cards (чистые), agents, клиенты, service, jobs
+  bot/        # approval_bot (общий процесс бота) + funnel_bot (кнопки карточек веток)
+  prompts/    # *.md: style_profile / viral_analysis / ... + funnel_skill (скилл целиком) + funnel_<роль>
+alembic/      # 0001_initial — extension vector + все таблицы; 0002_funnel — таблицы воронки
+n8n/          # threads-funnel.workflow.json — расписание воронки (HTTP → /cron/funnel/<job>)
+tests/        # funnel_smoke.py — сквозной прогон дня воронки на Postgres с фейками
 ```
 
 ## Критичные инварианты
@@ -43,6 +47,19 @@ alembic/      # 0001_initial — extension vector + все таблицы
   API открытого токена нет. Любой воркер расшифровывает перед вызовом Threads API.
 - **Петля обучения** различает **follower-gaining** (weight×1.2), **reach-only**
   (вес не трогаем, флаг `reach_only`) и **fail** (×0.85) — `learning_service`.
+- **Воронка: без ✅ ничего не публикуется.** Ветка выходит только из `approved`
+  (исключение — `FUNNEL_UNANSWERED=publish`). `⛔`-проверки (`qa.blocking`: >500
+  символов, `[уточнить]`, нет финальной ссылки) блокируют и ✅, и публикацию.
+- **Ссылка в канал — плейсхолдер `{link}`** в текстах веток; реальная (своя
+  ссылка-приглашение на ветку в закрытом канале или пост-приёмник в публичном)
+  подставляется при показе и публикации. Перевыпуск получает свежую ссылку.
+- **Личные цифры автора — только из `funnel_story_bank`.** Чего нет — агент
+  ставит `[уточнить]` и задаёт вопрос в карточке.
+- **`publishing` коммитится до вызова Threads API** — сбой процесса не даёт
+  дубля; частично вышедшая цепочка допубликовывается повторным ✅.
+- **JSONB-поля (`hooks`, `posts`, `materials`…) присваиваются новым объектом** —
+  SQLAlchemy не видит мутаций списка на месте. Сессии с `autoflush=False`:
+  перед запросом после изменений — `db.flush()`.
 - **Ленивый engine.** `core/database.get_engine()` — `@lru_cache`; импорт моделей/
   сервисов не требует живого драйвера БД (важно для чистых selftest-ов и воркеров).
 
@@ -53,6 +70,8 @@ cd backend
 python -m app.services.scoring_service     # selftest
 python -m app.services.warmup_service      # selftest
 python -m app.services.learning_service    # selftest
+python -m app.funnel.schedule              # + qa / recycle / cards
+DATABASE_URL=... python -m tests.funnel_smoke   # сквозной прогон воронки (своя схема, без сети)
 ```
 
 ## Внешние вызовы — gated

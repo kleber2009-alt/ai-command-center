@@ -13,10 +13,10 @@ services:
     container_name: threads-growth-db
     environment:
       POSTGRES_USER: threads_viral
-      POSTGRES_PASSWORD: threads_viral
+      POSTGRES_PASSWORD: ${POSTGRES_PASSWORD:-threads_viral}
       POSTGRES_DB: threads_growth
     ports:
-      - "5439:5432"
+      - "127.0.0.1:5439:5432"   # только локально: на проде база наружу не смотрит
     volumes:
       - threads_growth_pgdata:/var/lib/postgresql/data
     restart: unless-stopped

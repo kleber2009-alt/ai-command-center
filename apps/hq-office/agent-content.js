@@ -52,6 +52,16 @@
 
   const edit = C.edit.results;
   const funnelBanners = C.funnel.results.find(r => r.type === 'gallery').items;
+
+  // ——— Библиотека бесплатных материалов (materials.js): на неё ведут Директ и Threads ———
+  const MAT = window.CHANNEL_MATERIALS || [];
+  const KIND = { skill: 'Скиллы для Claude', file: 'Файлы для Claude и GPT', prompts: 'Промпты', instruction: 'Инструкции и PDF',
+                 lesson: 'Уроки и подкасты', assistant: 'ИИ-ассистенты' };
+  const matLinks = (title, filter = () => true) => links(title,
+    MAT.filter(filter).map(m => ({ title: m.title, url: m.url, note: `${m.note} Когда давать: ${m.when}.` })));
+  const matByKind = Object.entries(KIND).map(([k, t]) => matLinks(`${t} · ${MAT.filter(m => m.kind === k).length}`, m => m.kind === k))
+    .filter(b => b.items.length);
+  const directCatalog = art('Каталог бесплатных материалов для ИИ в Директе', '5dj56wNJrKph3AYLbiibKH');
   const isAvatar = x => /аватар|Двойник/i.test(x.title);
 
   window.AGENT_CONTENT = {
@@ -330,6 +340,7 @@
       results: [
         { type: 'gallery', title: 'Лид-магниты Нейроворонки', items: funnelBanners.filter(x => /Лид-магнит/.test(x.title)) },
         { type: 'frames', title: 'Презентация-подарок', h: 640, items: [{ src: A + 'pages/presentation-svyazka.html', title: 'Лид-магнит «Первые 10 000»' }] },
+        ...matByKind,
       ],
       skills: [
         SK('lead-magnet', 'Лид-магнит', 'Подбирает формат под нишу и делает подарок целиком.', 'сделай лид-магнит для курса'),
@@ -339,7 +350,36 @@
       templates: [
         { task: 'Лид-магнит', prompt: 'Сделай лид-магнит «Как собрать нейроворонку за вечер»: 6 шагов, чек-лист и призыв забрать урок в боте. PDF и обложка 4:5.' },
       ],
-      artifacts: [AR.combos],
+      artifacts: [AR.combos, directCatalog],
+    },
+    threads: {
+      lead: 'Ведёт Threads → Telegram: каждое утро пишет 3 ветки-инструмента по скиллу threads-telegram-funnel и присылает карточками в тему «Threads». После одобрения ветка выходит в 10:00, 13:00 или 18:00 МСК и ведёт в канал на один бесплатный материал из библиотеки — тот же каталог, что у ИИ в Директе. Через 48 часов приносит цифры, победителей возвращает с новым хуком.',
+      zones: ['Темы и хуки', 'Ветки на апрув', 'Переходы в канал', 'Перевыпуск победителей'],
+      process: [
+        step('План', '06:30 — 3 темы по весам кластеров, ~35% перевыпусков'),
+        step('Ветка', 'Writer + редактор: 6 хуков, тело, мид-ролл и финал со ссылкой'),
+        step('Материал', 'Один пост из библиотеки: ссылка на подписку и на пост'),
+        step('Карточка', 'Одобрить, править, сменить хук, другая ветка, материалы, слот'),
+        step('Выход', 'Слоты 10/13/18, ответы на комментарии на апрув'),
+        step('48 часов', 'Шеры, ответы, клики, подписки → победитель или архив'),
+      ],
+      results: [
+        links('Как работает', [
+          { title: 'Воронка Threads → Telegram — код и README', url: 'https://github.com/kleber2009-alt/ai-command-center/tree/claude/optimistic-newton-qysfiz/apps/threads-growth', note: 'Агенты, бот с кнопками, публикация через Threads API, замер 48 ч' },
+          { ...directCatalog, note: 'Тот же каталог материалов, что у ИИ в Директе' },
+        ]),
+        ...matByKind,
+      ],
+      skills: [
+        SK('threads-telegram-funnel', 'Ветки Threads', 'Ветки-инструменты, 6 хуков, переходы в канал, перевыпуск победителей.', 'напиши 3 ветки на завтра'),
+        SK('direct-materials-catalog', 'Каталог материалов', 'Обновляет библиотеку бесплатных материалов канала для Директа и Threads.', 'обнови каталог'),
+        SK('lead-magnet', 'Новый приёмник', 'Если подходящего материала нет — делает лид-магнит под ветку.', 'сделай приёмник под ветку'),
+      ],
+      templates: [
+        { task: 'Ветки на завтра', prompt: 'В боте воронки: /plan — темы на завтра. Утром придут 3 карточки: одобри или поправь ответом на карточку.' },
+        { task: 'Новый материал', prompt: 'Выложил новый скилл в канал — обнови каталог и добавь его в приёмники Threads.' },
+      ],
+      artifacts: [directCatalog],
     },
     avatar: {
       lead: 'Делает ролики с ИИ-двойником эксперта: голос и лицо без съёмки. Подходит для рилсов, креативов и уроков.',
@@ -384,7 +424,8 @@
       templates: [
         { task: 'Скрипт ответов', prompt: 'Напиши скрипт переписки: приветствие, подарок, 3 вопроса квалификации, ответы на 5 возражений. Горячих помечай тегом «горячий».' },
       ],
-      artifacts: [AR.botSpec],
+      results: [matLinks(`Материалы, которые ИИ в Директе выдаёт по смыслу разговора · ${MAT.length}`)],
+      artifacts: [AR.botSpec, directCatalog],
     },
     comments: {
       lead: 'Отвечает на кодовые слова под рилсами и постами: пишет ответ в комментарии и сразу присылает подарок в директ.',
@@ -572,6 +613,7 @@
     carousel:   card('marketing', 'Карусели',         'Карусели Instagram в 24 стилях',             '#ffe08a', 'idle',     'Ждёт сценарий'),
     landings:   card('marketing', 'Лендинги',         'Сайты и лендинги на своём домене',           '#6366f1', 'working',  'Верстает лендинг'),
     leadmagnet: card('marketing', 'Лид-магниты',      'Подарки за подписку: PDF, уроки, чек-листы', '#2fb9a6', 'thinking', 'Придумывает подарок'),
+    threads:    card('marketing', 'Threads-ветки',    '3 ветки в день → материал в Telegram-канале', '#e8e8e8', 'working',  'Пишет 3 ветки на завтра'),
     avatar:     card('marketing', 'Видео с аватаром', 'Ролики с ИИ-двойником без съёмки',           '#e0559c', 'idle',     'Ждёт текст'),
 
     chats:      card('sales', 'Переписки',             'Ведёт переписки с клиентами',               '#5ad1ff', 'working',  'Отвечает в директ'),
