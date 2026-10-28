@@ -1,0 +1,68 @@
+name: deploy-hq-office
+
+# Living office of agents (apps/hq-office) → static files on Hetzner, served by Caddy.
+# Domains: repo variable HQ_OFFICE_DOMAINS, default "hq2.aicex.club, hq2.46-62-215-11.nip.io".
+# The nip.io address works right away. hq2.aicex.club needs a Cloudflare A record
+# hq2 → 46.62.215.11 (DNS only): today *.aicex.club falls through a wildcard to another server.
+# Alternative: run apps/hq-office/deploy/setup-server.sh on that server instead.
+#
+# Required secret: HETZNER_SSH_KEY
+
+on:
+  push:
+    branches: [main]
+    paths:
+      - 'apps/hq-office/**'
+      - '.github/workflows/deploy-hq-office.yml'
+  workflow_dispatch:
+
+concurrency:
+  group: deploy-hq-office
+  cancel-in-progress: false
+
+jobs:
+  deploy:
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+    env:
+      HOST: 46.62.215.11
+      WEB: /var/www/hq-office
+      DOMAINS: ${{ vars.HQ_OFFICE_DOMAINS || 'hq2.aicex.club, hq2.46-62-215-11.nip.io' }}
+    steps:
+      - uses: actions/checkout@v5
+
+      - name: Check data files
+        run: |
+          for f in office.config.js dept-content.js agent-content.js tasks.js; do node --check "apps/hq-office/$f"; done
+          node -e '
+            global.window = {}; for (const f of ["office.config.js", "dept-content.js", "agent-content.js", "tasks.js"])
+              require("vm").runInThisContext(require("fs").readFileSync("apps/hq-office/" + f, "utf8"));
+            const t = window.OFFICE_TASKS, ids = new Set();
+            for (const x of t) { if (ids.has(x.id)) throw new Error("duplicate task id " + x.id); ids.add(x.id);
+              if (!/^\d{4}-\d{2}-\d{2}$/.test(x.date) || !x.proof?.length) throw new Error("bad task " + x.id); }
+            console.log(t.length + " tasks ok");'
+
+      - name: Install SSH key
+        env:
+          KEY: ${{ secrets.HETZNER_SSH_KEY }}
+        run: |
+          mkdir -p ~/.ssh
+          printf '%s\n' "$KEY" > ~/.ssh/id_ed25519
+          chmod 600 ~/.ssh/id_ed25519
+          ssh-keyscan -H "$HOST" >> ~/.ssh/known_hosts 2>/dev/null
+
+      - name: Sync files
+        run: |
+          ssh root@"$HOST" "mkdir -p $WEB"
+          rsync -az --delete --exclude README.md --exclude CLAUDE.md --exclude deploy/ \
+            apps/hq-office/ root@"$HOST":"$WEB"/
+
+      - name: Caddy site block
+        run: ssh root@"$HOST" bash -s -- "'$DOMAINS'" "$WEB" < apps/hq-office/deploy/caddy-site.sh
+
+      - name: Smoke test
+        run: |
+          for d in $(echo "$DOMAINS" | tr ',' ' '); do
+            code=$(curl -sS -o /dev/null -w '%{http_code}' --retry 6 --retry-delay 5 --retry-all-errors "https://$d/" || true)
+            echo "https://$d/ → $code"
+          done

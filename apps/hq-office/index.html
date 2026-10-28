@@ -68,71 +68,156 @@
   .theme-note{display:none;font-size:12.5px;line-height:1.5;color:var(--ink-2);border-top:1px solid var(--line);padding-top:10px}
   .brand.open .theme-note{display:block}
 
-  /* ---------- team panel ---------- */
-  .team{position:fixed;top:var(--gt);right:var(--gr);bottom:calc(var(--gb) + 66px);width:350px;display:flex;flex-direction:column;z-index:6;overflow:hidden}
+  /* ---------- history panel ---------- */
+  .team{position:fixed;top:var(--gt);right:var(--gr);bottom:calc(var(--gb) + 66px);width:384px;display:flex;flex-direction:column;z-index:6;overflow:hidden}
   .team[hidden]{display:none}
-  .team-scroll{overflow:auto;padding:0 14px 16px;scrollbar-width:thin;scrollbar-color:rgba(255,255,255,.18) transparent}
-  .team-h{display:flex;align-items:center;justify-content:space-between;gap:10px;padding:16px 16px 12px;cursor:default}
+  .team-h{display:flex;align-items:flex-start;justify-content:space-between;gap:10px;padding:16px 14px 10px 16px;cursor:default}
   .team-h h2{font:800 19px var(--f-ui)}
-  .team-sum{display:grid;justify-items:end;font-size:11px;color:var(--ink-2);text-align:right;gap:1px}
-  .waitchip{color:var(--decide);font:600 11px var(--f-mono);padding:0}
-  .waitchip:hover{text-decoration:underline}
-  .waitchip[disabled]{color:var(--ink-3);cursor:default;text-decoration:none}
-  .filters{display:flex;gap:6px;flex-wrap:wrap;padding:0 16px 12px}
+  .team-h p{font-size:11px;color:var(--ink-2);margin-top:2px}
+  .hide-btn{flex:none;display:flex;align-items:center;gap:6px;padding:6px 10px;border-radius:10px;background:var(--glass-hi);color:var(--ink-2);font-size:12.5px;font-weight:700}
+  .hide-btn:hover{color:var(--ink);background:rgba(255,255,255,.12)}
+  .hide-btn svg{width:14px;height:14px}
+  .reopen{position:fixed;right:var(--gr);top:var(--gt);z-index:6;display:flex;align-items:center;gap:8px;padding:10px 14px;border-radius:14px;font-size:13.5px;font-weight:800;color:var(--ink)}
+  .reopen[hidden]{display:none}
+  .reopen::before{content:"";width:8px;height:8px;border-radius:50%;background:var(--ok);box-shadow:0 0 10px var(--ok)}
+  .ptabs{display:flex;gap:4px;margin:0 14px 10px;padding:4px;border-radius:12px;background:rgba(255,255,255,.05)}
+  .ptabs button{flex:1;padding:7px 8px;border-radius:9px;font-size:13px;font-weight:700;color:var(--ink-2)}
+  .ptabs button.on{background:rgba(255,255,255,.13);color:var(--ink)}
+  .filters{display:flex;gap:6px;flex-wrap:wrap;padding:0 14px 10px}
   .filters button{font-size:12px;font-weight:700;padding:5px 10px;border-radius:99px;background:var(--glass-hi);color:var(--ink-2);display:flex;align-items:center;gap:6px}
   .filters button i{width:7px;height:7px;border-radius:50%;background:var(--c)}
   .filters button.on{background:rgba(255,255,255,.16);color:var(--ink)}
+  .search{padding:0 14px 10px}
+  .search input{width:100%;padding:9px 12px;border-radius:11px;border:1px solid var(--line);background:rgba(0,0,0,.25);color:var(--ink);font:500 13.5px var(--f-ui);outline:none}
+  .search input:focus{border-color:rgba(143,184,255,.6)}
+  .team-scroll{overflow:auto;padding:0 12px 16px;scrollbar-width:thin;scrollbar-color:rgba(255,255,255,.18) transparent;flex:1;min-height:0}
+  .team-scroll .eyebrow{display:flex;align-items:center;gap:6px;padding:14px 4px 6px}
+  .team-scroll .eyebrow.mon{position:sticky;top:0;z-index:1;background:linear-gradient(rgba(22,24,30,.96) 70%,rgba(22,24,30,0));padding-bottom:10px}
+  .eyebrow .dd{width:7px;height:7px;border-radius:50%;background:var(--c)}
+  .note{font-size:12px;line-height:1.5;color:var(--ink-2);padding:2px 4px}
+  .empty{font-size:13px;color:var(--ink-2);padding:18px 6px}
 
-  .focus{min-width:0;border-radius:16px;background:rgba(255,255,255,.055);border:1px solid var(--line);padding:14px;display:grid;gap:10px;margin-bottom:6px}
+  .tasks{list-style:none;display:grid;grid-template-columns:minmax(0,1fr);gap:6px}
+  .task{width:100%;display:grid;gap:5px;text-align:left;padding:11px 12px 11px 14px;border-radius:13px;background:rgba(255,255,255,.045);border:1px solid rgba(255,255,255,.06);position:relative;transition:background .2s,border-color .2s}
+  .task::before{content:"";position:absolute;left:0;top:10px;bottom:10px;width:3px;border-radius:3px;background:var(--c)}
+  .task:hover{background:rgba(255,255,255,.09);border-color:rgba(255,255,255,.14)}
+  .t-meta{display:flex;gap:8px;align-items:center;font:600 10.5px var(--f-mono);color:var(--ink-3);text-transform:uppercase;letter-spacing:.06em;flex-wrap:wrap}
+  .t-meta em{font-style:normal;color:var(--ink-2);padding:1px 7px;border-radius:99px;background:rgba(255,255,255,.07)}
+  .task b{font-size:13.5px;font-weight:700;line-height:1.35;color:var(--ink)}
+  .t-who{display:flex;align-items:center;gap:4px;min-width:0}
+  .t-who .dots{display:flex;gap:3px;margin-left:2px}
+  .t-who .dots i{width:8px;height:8px;border-radius:50%;background:var(--c);box-shadow:0 0 6px color-mix(in srgb,var(--c) 70%,transparent)}
+  .t-dept{font-size:11.5px;color:var(--ink-2);margin-left:6px;white-space:nowrap}
+  .t-proof{font:500 10.5px var(--f-mono);color:#8fb8ff}
+
+  .focus{min-width:0;border-radius:16px;background:rgba(255,255,255,.055);border:1px solid var(--line);padding:14px;display:grid;gap:10px;margin:2px 0 4px}
+  .focus .eyebrow{padding:4px 0 0}
   .fh{display:flex;gap:12px;align-items:center}
-  .orb{flex:none;width:34px;height:34px;border-radius:50%;background:radial-gradient(circle at 34% 30%,#fff 0 10%,var(--c) 34%,color-mix(in srgb,var(--c) 55%,#000) 100%);box-shadow:0 0 18px color-mix(in srgb,var(--c) 70%,transparent)}
-  .face{flex:none;width:34px;height:34px;border-radius:50%;display:grid;place-items:center;font-weight:800;font-size:14px;background:var(--c);color:#0d0f14}
   .fh b{display:block;font-size:17px;font-weight:800;line-height:1.2}
   .fh small{display:block;font-size:12.5px;color:var(--ink-2);line-height:1.35}
-  .ask{display:grid;gap:4px}
-  .ask .eyebrow{color:var(--ink-3)}
-  .ask.need .eyebrow{color:var(--decide)}
-  .ask p{font-size:15px;font-weight:600;line-height:1.35}
-  .bar{height:4px;border-radius:4px;background:rgba(255,255,255,.1);overflow:hidden}
-  .bar i{display:block;height:100%;width:var(--p,0%);background:var(--c,#3ddc97);border-radius:4px;transition:width .4s linear}
-  .meta{display:flex;flex-wrap:wrap;gap:4px 14px;font:500 11px var(--f-mono);color:var(--ink-3)}
-  .meta b{color:var(--ink);font-weight:600}
+  .now p{font-size:13.5px;font-weight:600;line-height:1.4;margin-top:3px}
+  .orb{flex:none;display:inline-block;width:34px;height:34px;border-radius:50%;background:radial-gradient(circle at 34% 30%,#fff 0 10%,var(--c) 34%,color-mix(in srgb,var(--c) 55%,#000) 100%);box-shadow:0 0 18px color-mix(in srgb,var(--c) 70%,transparent)}
+  .face{flex:none;width:34px;height:34px;border-radius:50%;display:grid;place-items:center;font-weight:800;font-size:14px;background:var(--c) center/cover no-repeat;color:#0d0f14;border:1.5px solid rgba(255,255,255,.8)}
+  .face.xs,.orb.xs{width:20px;height:20px;font-size:9.5px;border-width:1px}
+  .face.lg,.orb.lg{width:52px;height:52px;font-size:20px}
   .acts{display:flex;flex-wrap:wrap;gap:8px}
-  .acts button{padding:9px 13px;border-radius:12px;background:rgba(255,255,255,.08);border:1px solid var(--line);font-size:13.5px;font-weight:700}
+  .acts button{padding:8px 12px;border-radius:11px;background:rgba(255,255,255,.08);border:1px solid var(--line);font-size:13px;font-weight:700}
   .acts button:hover{background:rgba(255,255,255,.14)}
-  .acts .yes{background:var(--decide);color:var(--decide-ink);border-color:transparent}
-  .acts .yes:hover{background:#ffc14d}
   .acts .on{background:rgba(143,184,255,.18);border-color:rgba(143,184,255,.4)}
-  .mats{display:grid;gap:6px}
-  .mats ul{list-style:none;display:grid;grid-template-columns:minmax(0,1fr);gap:4px}
-  .mats li{display:flex;gap:8px;align-items:baseline;font-size:12.5px;color:var(--ink-2);min-width:0}
-  .mats li i{flex:none;width:7px;height:7px;border-radius:2px;background:var(--c);transform:translateY(-1px)}
-  .mats li span{min-width:0;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;flex:1}
-  .mats li time{font:500 10.5px var(--f-mono);color:var(--ink-3)}
-  .mats a{color:var(--ink);text-decoration:none;border-bottom:1px solid rgba(255,255,255,.2)}
-  .mats a:hover{border-color:var(--ink)}
-  .decisions{list-style:none;display:grid;grid-template-columns:minmax(0,1fr);gap:6px}
-  .decisions li{display:grid;gap:6px;padding:10px;border-radius:12px;background:rgba(255,255,255,.05)}
-  .decisions li p{font-size:13px;font-weight:600}
-  .decisions li small{font-size:11.5px;color:var(--ink-2)}
 
-  .team-scroll>.eyebrow{display:block;padding:14px 4px 6px}
-  .agents{list-style:none;display:grid;grid-template-columns:minmax(0,1fr);gap:2px}
-  .agents li{display:flex;gap:10px;align-items:center;padding:8px;border-radius:12px;cursor:pointer;transition:background .2s}
-  .agents li:hover{background:rgba(255,255,255,.06)}
-  .agents li.on{background:rgba(255,255,255,.1)}
-  .agents li.wait{background:rgba(255,176,32,.07)}
+  .people,.agents{list-style:none;display:grid;grid-template-columns:minmax(0,1fr);gap:2px}
+  .people button,.agents button{width:100%;display:flex;gap:10px;align-items:center;padding:8px;border-radius:12px;text-align:left;transition:background .2s}
+  .people button:hover,.agents button:hover{background:rgba(255,255,255,.07)}
+  .people .txt,.agents .txt{flex:1;min-width:0}
+  .people b,.agents b{display:block;font-size:13.5px;font-weight:700;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+  .people small,.agents small{display:block;font-size:12px;color:var(--ink-2);white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+  .people em,.agents em{flex:none;font:600 10.5px var(--f-mono);font-style:normal;color:var(--ink-3)}
   .agents .dot{flex:none;width:9px;height:9px;border-radius:50%;background:var(--c);box-shadow:0 0 10px var(--c)}
-  .agents .face{width:22px;height:22px;font-size:10px}
-  .agents li>div{flex:1;min-width:0}
-  .agents b{display:block;font-size:13.5px;font-weight:700;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
-  .agents small{display:block;font-size:12px;color:var(--ink-2);white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
-  .st{flex:none;font:600 10.5px var(--f-mono);color:var(--s);white-space:nowrap}
-  .feed{list-style:none;display:grid;grid-template-columns:minmax(0,1fr);gap:8px;padding:2px 4px}
-  .feed li{display:grid;grid-template-columns:40px 1fr;gap:8px;font-size:12.5px;line-height:1.4;color:var(--ink-2);animation:feedin .5s both}
-  .feed li time{font:500 11px var(--f-mono);color:var(--ink-3);padding-top:1px}
-  .feed li b{color:var(--ink);font-weight:600}
-  @keyframes feedin{from{opacity:0;transform:translateY(-4px)}}
+  .skilllist{list-style:none;display:grid;grid-template-columns:minmax(0,1fr);gap:8px;margin-top:8px}
+  .skilllist li{padding:12px;border-radius:13px;background:rgba(255,255,255,.045);border:1px solid rgba(255,255,255,.06)}
+  .skilllist b{display:block;font-size:13.5px}
+  .skilllist code{display:block;font:600 11px var(--f-mono);color:#8fb8ff;margin-top:2px;word-break:break-word}
+  .skilllist p{font-size:12.5px;color:var(--ink-2);margin-top:6px;line-height:1.45}
+  .skilllist i{display:inline-block;margin-top:8px;font-style:normal;font-size:12px;padding:3px 8px;border-radius:8px;background:rgba(255,255,255,.07)}
+  .sk-ag{display:flex;flex-wrap:wrap;gap:4px;margin-top:8px}
+  .sk-ag button{display:flex;align-items:center;gap:5px;font-size:11.5px;font-weight:700;padding:3px 8px;border-radius:99px;background:rgba(255,255,255,.06);color:var(--ink-2)}
+  .sk-ag button i{width:6px;height:6px;border-radius:50%;background:var(--c)}
+
+  /* ---------- task + dossier windows ---------- */
+  .modal{position:fixed;inset:0;z-index:20;display:grid;place-items:center;background:rgba(6,8,12,.58);backdrop-filter:blur(6px);-webkit-backdrop-filter:blur(6px);animation:fade .25s;padding:16px}
+  .modal[hidden]{display:none}
+  @keyframes fade{from{opacity:0}}
+  .dlg{position:relative;width:min(1080px,100%);height:min(100%,920px);display:flex;flex-direction:column;background:#101218;border:1px solid var(--line);border-radius:22px;overflow:hidden;box-shadow:0 30px 80px rgba(0,0,0,.5);animation:rise .3s cubic-bezier(.2,.8,.2,1)}
+  @keyframes rise{from{transform:translateY(16px);opacity:0}}
+  .dh{display:flex;gap:16px;align-items:center;padding:20px 64px 14px 24px;border-bottom:1px solid rgba(255,255,255,.07)}
+  .dh h2{font-size:23px;font-weight:800;line-height:1.2;text-wrap:balance;margin-top:6px}
+  .dh p{font-size:13px;color:var(--ink-2);margin-top:3px}
+  .x{position:absolute;top:14px;right:16px;width:36px;height:36px;border-radius:11px;background:var(--glass-hi);font-size:20px;color:var(--ink-2)}
+  .x:hover{color:var(--ink);background:rgba(255,255,255,.14)}
+  .dtabs{display:flex;gap:4px;padding:10px 20px;border-bottom:1px solid rgba(255,255,255,.07);overflow-x:auto;scrollbar-width:none}
+  .dtabs button{padding:8px 14px;border-radius:11px;font-size:13px;font-weight:700;color:var(--ink-2);white-space:nowrap}
+  .dtabs button.on{background:rgba(255,255,255,.1);color:var(--ink)}
+  .dtabs button span{opacity:.55;margin-left:3px;font-weight:600}
+  .db{flex:1;overflow:auto;padding:20px 24px 36px}
+  .db h4{font:600 10.5px var(--f-mono);letter-spacing:.14em;text-transform:uppercase;color:var(--ink-3);margin:26px 0 12px}
+  .db h4:first-child{margin-top:0}
+  .lead{font-size:17px;line-height:1.55;max-width:760px}
+  .who{display:flex;flex-wrap:wrap;gap:6px;margin-top:14px}
+  .chip{display:flex;align-items:center;gap:7px;padding:4px 11px 4px 4px;border-radius:99px;background:rgba(255,255,255,.07);border:1px solid rgba(255,255,255,.08);font-size:12.5px;font-weight:700}
+  .chip:hover{background:rgba(255,255,255,.13)}
+  .proofs{display:grid;grid-template-columns:repeat(auto-fill,minmax(250px,1fr));gap:8px}
+  .proof{display:flex;gap:10px;align-items:center;padding:12px;border-radius:13px;background:rgba(255,255,255,.05);border:1px solid rgba(255,255,255,.08);color:var(--ink);text-decoration:none;min-width:0;transition:border-color .2s,background .2s}
+  .proof:hover{border-color:#8fb8ff;background:rgba(143,184,255,.08)}
+  .proof svg{flex:none;width:22px;height:22px;fill:none;stroke:currentColor;stroke-width:1.7;stroke-linecap:round;stroke-linejoin:round;color:#8fb8ff}
+  .proof.k-claude svg{color:#e3a77a}
+  .proof.k-site svg{color:var(--ok)}
+  .proof span{min-width:0}
+  .proof b{display:block;font-size:13px;line-height:1.3}
+  .proof small{display:block;font:500 10.5px var(--f-mono);color:var(--ink-3);margin-top:2px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+  .src{font-size:11.5px;color:var(--ink-3);margin-top:26px}
+  .df{display:flex;align-items:center;gap:8px;padding:12px 20px;border-top:1px solid rgba(255,255,255,.07)}
+  .df button{padding:9px 14px;border-radius:11px;background:var(--glass-hi);font-size:13px;font-weight:700}
+  .df button:hover{background:rgba(255,255,255,.14)}
+  .df>span{flex:1;text-align:center;font:500 12px var(--f-mono);color:var(--ink-3)}
+  .pipe{display:flex;flex-wrap:wrap;gap:10px;counter-reset:st}
+  .pipe div{flex:1 1 150px;max-width:220px;padding:14px;border-radius:14px;background:rgba(255,255,255,.05);border:1px solid rgba(255,255,255,.08);counter-increment:st}
+  .pipe div::before{content:counter(st);display:grid;place-items:center;width:24px;height:24px;border-radius:8px;background:#2f7bff;color:#fff;font-size:12px;font-weight:800;margin-bottom:10px}
+  .pipe b{display:block;font-size:14px}
+  .pipe small{display:block;font-size:12px;color:var(--ink-2);margin-top:3px;line-height:1.4}
+  .chipsrow{display:flex;gap:6px;flex-wrap:wrap}
+  .chipsrow span{font-size:12.5px;padding:5px 11px;border-radius:99px;background:rgba(255,255,255,.07);border:1px solid rgba(255,255,255,.1)}
+  .grid{display:grid;grid-template-columns:repeat(auto-fill,minmax(170px,1fr));gap:10px}
+  .grid.wide{grid-template-columns:repeat(auto-fill,minmax(230px,1fr))}
+  .fig{margin:0;border-radius:12px;overflow:hidden;background:#1a1d24;cursor:zoom-in;border:1px solid rgba(255,255,255,.06)}
+  .fig img{display:block;width:100%;aspect-ratio:4/5;object-fit:cover;transition:transform .4s}
+  .grid.wide .fig img{aspect-ratio:16/10}
+  .fig:hover img{transform:scale(1.04)}
+  .fig figcaption,.vids figcaption{font-size:12px;padding:8px 10px;color:var(--ink-2);background:#1a1d24}
+  .vids{display:grid;grid-template-columns:repeat(auto-fill,minmax(190px,1fr));gap:10px}
+  .vids figure{margin:0;border-radius:12px;overflow:hidden;background:#000}
+  .vids video{display:block;width:100%;aspect-ratio:9/16;object-fit:cover;background:#000}
+  .frames .chips{display:flex;gap:6px;flex-wrap:wrap;margin-bottom:10px}
+  .frames .chips button{padding:6px 12px;border-radius:99px;background:rgba(255,255,255,.07);font-size:12px;font-weight:700;color:var(--ink-2)}
+  .frames .chips button.on{background:#2f7bff;color:#fff}
+  .frame-wrap{height:150px;border-radius:14px;overflow:hidden;background:rgba(255,255,255,.04);border:1px dashed rgba(255,255,255,.15);display:grid;place-items:center}
+  .frame-wrap.on{height:min(62vh,620px);border-style:solid}
+  .frame-wrap iframe{width:100%;height:100%;border:0;background:#fff}
+  .frame-load{padding:12px 18px;border-radius:12px;background:#2f7bff;color:#fff;font-weight:800;font-size:14px}
+  .frames a.open{display:inline-block;margin-top:8px;font-size:12px;color:#8fb8ff;font-weight:700;text-decoration:none}
+  .links{display:grid;grid-template-columns:repeat(auto-fill,minmax(250px,1fr));gap:10px}
+  .links a{display:block;padding:14px;border-radius:14px;background:rgba(255,255,255,.05);border:1px solid rgba(255,255,255,.08);color:var(--ink);text-decoration:none;transition:border-color .2s}
+  .links a:hover{border-color:#8fb8ff}
+  .links b{display:block;font-size:13.5px}
+  .links small{display:block;font-size:12px;color:var(--ink-2);margin-top:4px}
+  .links a::after{content:'Открыть ↗';display:block;margin-top:8px;font-size:11.5px;font-weight:700;color:#8fb8ff}
+  .tpl{padding:16px;border-radius:14px;background:rgba(255,255,255,.05);border:1px solid rgba(255,255,255,.08);margin-bottom:10px}
+  .tpl b{font-size:14px}
+  .tpl p{font-size:13.5px;line-height:1.5;margin-top:8px;color:#dfe3ea}
+  .tpl button{margin-top:10px;padding:7px 12px;border-radius:10px;background:#2f7bff;color:#fff;font-size:12px;font-weight:700}
+  #lightbox{position:fixed;inset:0;z-index:40;background:rgba(0,0,0,.88);display:grid;place-items:center;cursor:zoom-out}
+  #lightbox[hidden]{display:none}
+  #lightbox img{max-width:calc(100% - 32px);max-height:calc(100% - 80px);border-radius:12px}
+  #lightbox p{position:absolute;bottom:18px;left:0;right:0;text-align:center;font-size:13px;color:#ddd}
 
   /* ---------- dock ---------- */
   .dock{position:fixed;left:50%;bottom:var(--gb);transform:translateX(-50%);display:flex;gap:2px;padding:5px;z-index:7;max-width:calc(100% - 32px);overflow-x:auto;scrollbar-width:none}
@@ -159,46 +244,45 @@
   .dchip b{display:block;font-size:13px;font-weight:800}
   .dchip small{display:block;font:500 10.5px var(--f-mono);color:var(--ink-2);margin-top:1px}
 
-  /* ---------- tour + toasts ---------- */
+  /* ---------- tour ---------- */
   .tour{position:fixed;top:var(--gt);left:50%;transform:translateX(-50%);width:min(520px,calc(100% - 32px));padding:12px 14px;display:flex;gap:14px;align-items:center;z-index:8}
   .tour[hidden]{display:none}
   .tour div{flex:1;min-width:0}
   .tour b{display:block;font-size:15px;font-weight:800}
   .tour p{font-size:12.5px;color:var(--ink-2);line-height:1.45;margin-top:2px}
   .tour button{flex:none;padding:8px 12px;border-radius:11px;background:var(--glass-hi);font-weight:700;font-size:13px}
-  .toasts{position:fixed;left:50%;top:calc(var(--gt) + 64px);transform:translateX(-50%);display:grid;gap:8px;justify-items:center;z-index:9;pointer-events:none}
-  .toast{display:flex;gap:8px;align-items:center;padding:9px 14px;border-radius:14px;background:rgba(16,18,24,.9);border:1px solid rgba(255,176,32,.45);font-size:13.5px;font-weight:700;animation:tin .35s both;transition:opacity .5s,transform .5s;pointer-events:auto;cursor:pointer}
-  .toast i{width:8px;height:8px;border-radius:50%;background:var(--c)}
-  .toast.out{opacity:0;transform:translateY(-8px)}
-  @keyframes tin{from{opacity:0;transform:translateY(-10px) scale(.97)}}
 
   #loader{position:fixed;inset:0;display:grid;place-items:center;background:var(--stage);color:#4a4f58;font:600 14px var(--f-ui);z-index:20;transition:opacity .6s}
   #loader.done{opacity:0;pointer-events:none}
 
-  @media (max-width:1100px){ .brand{width:300px} .team{width:320px} }
+  @media (max-width:1100px){ .brand{width:300px} .team{width:340px} }
   @media (max-width:820px){
     .brand{width:auto;right:var(--gr);padding:10px 12px;gap:8px}
     .brand h1{font-size:17px}
     .brand .themes button{padding:7px}
     .brand .themes b{font-size:12.5px}
-    .team{top:auto;left:var(--gl);right:var(--gr);width:auto;bottom:calc(var(--gb) + 60px);max-height:min(56vh,520px)}
-    .team.min .team-scroll>:not(.focus),.team.min .filters,.team.min .focus .meta,.team.min .focus .mats,.team.min .focus .bar,.team.min .focus .fh small{display:none}
-    .team.min .focus{padding:10px 12px;gap:8px}
-    .team.min .team-scroll{padding-bottom:12px}
-    .team.min .fh .orb,.team.min .fh .face{width:24px;height:24px}
-    .team.min .fh b{font-size:15px}
-    .team.min .ask p{font-size:14px}
-    .team.min .acts button{padding:8px 11px;font-size:13px}
-    .team-h{padding:12px 14px 10px;cursor:pointer}
+    .team{top:auto;left:var(--gl);right:var(--gr);width:auto;bottom:calc(var(--gb) + 60px);height:min(62vh,560px)}
+    .team.min{height:auto}
+    .team.min .ptabs,.team.min .filters,.team.min .search,.team.min .team-scroll{display:none}
+    .team-h{padding:12px 12px 10px 14px;cursor:pointer}
     .team-h h2{font-size:16px}
+    .reopen{top:auto;bottom:calc(var(--gb) + 62px)}
     .focus{padding:12px}
+    .modal{padding:0}
+    .dlg{height:100%;border-radius:0}
+    .dh{padding:16px 60px 12px 16px}
+    .dh h2{font-size:19px}
+    .db{padding:16px 16px 32px}
+    .lead{font-size:15.5px}
+    .df{padding:10px 12px}
+    .df .wide{display:none}
+    .df button{padding:9px 13px}
     .dock{left:var(--gl);right:var(--gr);transform:none;max-width:none;justify-content:flex-start}
     .dock button{padding:9px 10px;font-size:12.5px}
     .tour{top:auto;bottom:calc(var(--gb) + 64px)}
   }
   @media (prefers-reduced-motion:reduce){
-    .feed li,.toast{animation:none}
-    .bar i{transition:none}
+    .modal,.dlg{animation:none}
   }
 </style>
 <script type="importmap">
@@ -224,28 +308,42 @@
   <p class="theme-note" id="themeNote"></p>
 </section>
 
-<aside class="team glass" id="team" aria-label="Команда">
+<aside class="team glass" id="team" aria-label="История задач">
   <header class="team-h" id="teamHead">
-    <h2>Команда</h2>
-    <div class="team-sum"><span class="mono" id="teamSum"></span><button class="waitchip" id="waitChip"></button></div>
+    <div><h2>История задач</h2><p class="mono" id="teamSum"></p></div>
+    <button class="hide-btn" id="teamHide" aria-label="Скрыть панель"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><path d="m9 6 6 6-6 6"/></svg>Скрыть</button>
   </header>
+  <nav class="ptabs" id="ptabs" role="tablist" aria-label="Разделы">
+    <button data-tab="tasks" role="tab">Задачи</button><button data-tab="team" role="tab">Команда</button><button data-tab="skills" role="tab">Скиллы</button>
+  </nav>
   <nav class="filters" id="filters" aria-label="Отделы"></nav>
-  <div class="team-scroll">
-    <article class="focus" id="focus" aria-live="polite"></article>
-    <h3 class="eyebrow">Агенты</h3>
-    <ul class="agents" id="list"></ul>
-    <h3 class="eyebrow">Лента</h3>
-    <ol class="feed" id="feed"></ol>
-  </div>
+  <div class="search"><input id="q" type="search" placeholder="Найти: монтаж, воронка, PR…" aria-label="Поиск по задачам" autocomplete="off"></div>
+  <div class="team-scroll" id="pbody" aria-live="polite"></div>
 </aside>
+<button class="reopen glass" id="teamShow" hidden>История задач</button>
 
 <div class="tour glass" id="tour" hidden><div><b id="tourTitle"></b><p id="tourText"></p></div><button id="tourStop">Стоп</button></div>
-<div class="toasts" id="toasts"></div>
+
+<div class="modal" id="taskModal" hidden role="dialog" aria-modal="true" aria-labelledby="tHead">
+  <div class="dlg">
+    <div class="dh"><div id="tHead"></div><button class="x" id="tClose" aria-label="Закрыть">×</button></div>
+    <div class="db" id="tBody"></div>
+    <div class="df"><button id="tPrev" aria-label="Предыдущая задача">←<span class="wide"> Предыдущая</span></button><span id="tCount"></span><button id="tCopy">Ссылка на задачу</button><button id="tNext" aria-label="Следующая задача"><span class="wide">Следующая </span>→</button></div>
+  </div>
+</div>
+<div class="modal" id="dossier" hidden role="dialog" aria-modal="true" aria-labelledby="dName">
+  <div class="dlg">
+    <div class="dh"><span id="dAv"></span><div><h2 id="dName"></h2><p id="dRole"></p></div><button class="x" id="dClose" aria-label="Закрыть">×</button></div>
+    <div class="dtabs" id="dTabs"></div>
+    <div class="db" id="dBody"></div>
+  </div>
+</div>
+<div id="lightbox" hidden><img alt=""><p></p></div>
 
 <nav class="dock glass" id="dock" aria-label="Вид">
   <button data-cmd="overview" class="on"><svg viewBox="0 0 24 24"><path d="M3 10.5 12 3l9 7.5V20a1 1 0 0 1-1 1h-5v-6H9v6H4a1 1 0 0 1-1-1z"/></svg>Обзор</button>
   <button data-cmd="desk"><svg viewBox="0 0 24 24"><circle cx="12" cy="8" r="4"/><path d="M4 21a8 8 0 0 1 16 0"/></svg>Мой стол</button>
-  <button data-cmd="team" class="on"><svg viewBox="0 0 24 24"><circle cx="9" cy="8" r="3.5"/><path d="M2.5 20a6.5 6.5 0 0 1 13 0M16 4.6a3.5 3.5 0 0 1 0 6.8M18 14.3a6.5 6.5 0 0 1 3.5 5.7"/></svg>Команда</button>
+  <button data-cmd="team" class="on"><svg viewBox="0 0 24 24"><path d="M9 6h11M9 12h11M9 18h11M4 6h.01M4 12h.01M4 18h.01"/></svg>Задачи</button>
   <button data-cmd="plan"><svg viewBox="0 0 24 24"><rect x="3" y="3" width="18" height="18" rx="2"/><path d="M3 9h18M9 21V9"/></svg>План</button>
   <span class="sep"></span>
   <button data-cmd="tour"><svg viewBox="0 0 24 24"><path d="M7 4.5v15l12-7.5z"/></svg>Экскурсия</button>
@@ -253,6 +351,13 @@
 </nav>
 
 <div id="loader">Собираю офис…</div>
+
+<!-- Контент офиса — те же файлы, что на hq.aicex.club: отделы и руководители, досье и работы
+     агентов, окна отделов. tasks.js — история реальных задач для правой панели. -->
+<script src="office.config.js"></script>
+<script src="dept-content.js"></script>
+<script src="agent-content.js"></script>
+<script src="tasks.js"></script>
 
 <!-- ================== ДАННЫЕ ОФИСА ==================
      Состав отделов и руководители — как в office.config.js на hq.aicex.club.
@@ -443,6 +548,13 @@ const CFG = window.OFFICE_CONFIG || DATA.config;
 const CATALOG = { ...DATA.catalog };
 for (const [id, a] of Object.entries(window.AGENT_CATALOG || {})) CATALOG[id] = { ...(CATALOG[id] || { screen:'doc', tasks:[a.task || 'Работает'], out:[] }), ...a };
 const BRAND = CFG.brand || 'AI Office';
+// История реальных задач (tasks.js): в 3D агенты работают и носят именно эти задачи
+const TASKS = (window.OFFICE_TASKS || []).slice().sort((a, b) => b.date.localeCompare(a.date));
+const tasksOfAgent = id => TASKS.filter(t => (t.agents || []).includes(id));
+for (const [id, a] of Object.entries(CATALOG)) {
+  const real = tasksOfAgent(id).map(t => t.title);
+  if (real.length) { a.tasks = real.slice(0, 5); a.task = real[0]; a.real = true; }
+}
 const params = new URLSearchParams(location.search);
 const isMobile = matchMedia('(max-width: 820px)').matches || matchMedia('(pointer: coarse)').matches;
 const reduceMotion = matchMedia('(prefers-reduced-motion: reduce)').matches;
@@ -460,6 +572,7 @@ const mkRng = s => () => (s = s * 16807 % 2147483647) / 2147483647;
 let srnd = mkRng(7);
 document.title = `Живой офис ${BRAND}`;
 $('brandTitle').textContent = `Офис агентов ${BRAND}`;
+$('eyebrow').textContent = `${BRAND} HQ · версия 2`;
 
 const LOOKS = {
   m1:{ height:1.85, skin:'#e6b59b', hair:'#5a3420', hairStyle:'swept', suit:'#18191c', top:'#111113', cross:true },
@@ -468,6 +581,7 @@ const LOOKS = {
   f1:{ height:1.68, skin:'#ecc6ad', hair:'#3a1a12', hairStyle:'long', suit:'#151517', top:'#151517', necklace:'#a46cd6' },
 };
 const DEPT_ACCENT = ['#2f7bff', '#a46cd6', '#16c98a', '#ff7a3d'];
+const DEPT_SHORT = { ceo:'Стратегия', marketing:'Маркетинг', sales:'Продажи', traffic:'Реклама' };
 
 /* ======================= ПЛАНИРОВКА =======================
    Один зал 32 × 19,5 м, как на референсе: LED-стена и отдел маркетинга слева,
@@ -490,7 +604,7 @@ const SHELF = { x0:3.0, x1:11.9 };
 const DEPTS = CFG.depts.slice(0, 4).map((d, i) => {
   const slot = POD_SLOTS[i];
   return {
-    ...d, i, accent:d.accent || DEPT_ACCENT[i], short:d.short || d.name,
+    ...d, i, accent:d.accent || DEPT_ACCENT[i], short:d.short || DEPT_SHORT[d.id] || d.name,
     head:{ ...(LOOKS[d.head.look] || LOOKS.m3), ...d.head, owner: d.head.owner ?? i === 0 },
     agentIds:(d.agents || []).filter(id => CATALOG[id]).slice(0, 12),
     pod:{ x:slot.c[0], z:slot.c[1], R:slot.R, maxSpan:slot.maxSpan },
@@ -1564,7 +1678,7 @@ const ST = {
   working:  { label:'работает',    c:'#3ddc97' },
   thinking: { label:'думает',      c:'#ffb547' },
   carrying: { label:'несёт',       c:'#6fb2ff' },
-  waiting:  { label:'ждёт вас',    c:'#ffb020' },
+  presenting: { label:'у вашего стола', c:'#ffb020' },
   meeting:  { label:'планёрка',    c:'#b691ff' },
   break:    { label:'перерыв',     c:'#9aa3b5' },
   idle:     { label:'ждёт задачу', c:'#9aa3b5' },
@@ -1583,11 +1697,9 @@ const WKEYS = ['walk', 'type', 'think', 'talk', 'present', 'cheer', 'shrug', 're
 const agents = new Map();
 const bots = [];
 let NOW = 0;
-const feedLog = [];
-const pending = [];          // решения, которые ждут вас
-const archive = [];          // готовые работы на стеллаже
+const archive = [];          // папки на стеллаже — просто визуализация объёма
 const queueSpots = [];
-let selectedId = null, followId = null, filter = 'all';
+let selectedId = null, followId = null;
 
 const walkTo = (x, z, yaw, status, extra = {}) => ({ type:'walk', x, z, yaw, status, ...extra });
 const doFor = (dur, pose, status, extra = {}) => ({ type:'do', left:dur, pose, status, ...extra });
@@ -1674,7 +1786,7 @@ class Agent {
       const sel = selectedId === this.id;
       const s = this.sceneStatus();
       this.ring.material.color.set(ST[s].c).multiplyScalar(sel ? 4 : 2.6);
-      const pulse = s === 'working' ? Math.sin(t * 4 + this.ph) * 0.06 : s === 'waiting' ? Math.sin(t * 6) * 0.12 : 0;
+      const pulse = s === 'working' ? Math.sin(t * 4 + this.ph) * 0.06 : s === 'presenting' ? Math.sin(t * 6) * 0.12 : 0;
       this.ring.scale.setScalar((sel ? 1.25 : 1) + pulse);
     }
   }
@@ -1701,7 +1813,7 @@ class Agent {
   stepWork(dt) {
     if (this.waitInput) {
       this.idleFor = (this.idleFor || 0) + dt;
-      if (this.inbox.length || this.idleFor > 30) { this.waitInput = false; this.idleFor = 0; if (this.inbox.length) this.task = `${this.data.tasks[1] || this.data.task}: «${this.inbox.at(-1).item}»`; }
+      if (this.inbox.length || this.idleFor > 30) { this.waitInput = false; this.idleFor = 0; }
       else { this.status = 'idle'; return Math.sin(NOW * 0.4 + this.ph) > 0.6 ? 'type' : 'idle'; }
     }
     this.thinkT -= dt;
@@ -1722,7 +1834,7 @@ class Agent {
     const outs = this.data.out || [];
     for (let k = 0; k < outs.length; k++) {
       const o = outs[(this.outIdx + k) % outs.length];
-      if (o.to === 'you' && (pending.length >= 4 || freeQueueSpot() < 0)) continue;
+      if (o.to === 'you' && freeQueueSpot() < 0) continue;
       if (o.to === 'head' && this.dept.head.owner) continue;
       if (o.to !== 'you' && o.to !== 'head' && !agents.has(o.to)) continue;
       this.outIdx = (this.outIdx + k + 1) % outs.length;
@@ -1730,26 +1842,27 @@ class Agent {
     }
     return null;
   }
+  // В руках у агента — название настоящей задачи из истории (tasks.js), над которой он работал
   planDeliver() {
     const o = this.pickOutput();
     this.doneToday++;
     if (!o) { this.plan.push(call(() => this.nextTask())); return; }
-    this.carrying = { item:o.item, o };
+    this.carrying = { item:this.data.real ? this.task : 'Рабочие материалы', o };
     if (o.to === 'you') {
-      const q = claimQueueSpot(this);
-      const own = pods[0].owner.chair;
+      const q = claimQueueSpot(this), own = pods[0].owner.chair, yaw = Math.atan2(own.x - q.x, own.z - q.z);
       this.plan.push(
-        walkTo(q.x, q.z, Math.atan2(own.x - q.x, own.z - q.z), 'carrying', { target:'you' }),
-        call(() => createPending(this, o)),
-        doFor(42, 'present', 'waiting', { yaw:Math.atan2(own.x - q.x, own.z - q.z), until:() => this.pend?.resolved }),
-        call(() => this.afterDecision()));
+        walkTo(q.x, q.z, yaw, 'carrying', { target:'you' }),
+        doFor(rand(4, 6), 'present', 'presenting', { yaw }),
+        call(() => { releaseQueueSpot(this); this.carrying = null; pods[0].owner.stack.set(pods[0].owner.stack.n + 1, this.color); addArchive(this.color); }),
+        walkTo(this.home.x, this.home.z, this.home.yaw, 'walking'),
+        call(() => this.nextTask()));
     } else if (o.to === 'head') {
       const hd = this.dept.headAgent, f = this.dept.pod.headDesk.front;
       this.plan.push(
         walkTo(f.x, f.z, Math.PI, 'carrying', { target:hd }),
         call(() => hd.attend(this, 2.6)),
         doFor(2.4, 'talk', 'carrying', { face:() => hd }),
-        call(() => handOver(this, hd, o)),
+        call(() => handOver(this, hd)),
         walkTo(this.home.x, this.home.z, this.home.yaw, 'walking'),
         call(() => this.nextTask()));
     } else {
@@ -1758,45 +1871,23 @@ class Agent {
         walkTo(s.x, s.z, null, 'carrying', { target:b }),
         call(() => b.attend(this, 2.8)),
         doFor(2.4, 'talk', 'carrying', { face:() => b.atHome() ? b : b.home }),
-        call(() => handOver(this, b, o)),
+        call(() => handOver(this, b)),
         walkTo(this.home.x, this.home.z, this.home.yaw, 'walking'),
         call(() => this.nextTask()));
     }
-  }
-  afterDecision() {
-    const p = this.pend;
-    releaseQueueSpot(this);
-    if (p?.resolved) this.pend = null;
-    if (p && p.resolved === 'approve') {
-      this.carrying = null;
-      this.plan.push(doFor(1.4, 'cheer', 'done'), walkTo(this.home.x, this.home.z, this.home.yaw, 'walking'), call(() => this.nextTask()));
-    } else if (p && p.resolved === 'return') {
-      this.plan.push(doFor(1.3, 'shrug', 'walking'), walkTo(this.home.x, this.home.z, this.home.yaw, 'walking'), call(() => { this.carrying = null; this.rework(p.item); }));
-    } else {
-      // не дождался — оставляет документ во входящих на вашем столе
-      this.carrying = null;
-      pods[0].owner.stack.set(pods[0].owner.stack.n + 1, this.color);
-      if (p) p.onDesk = true;
-      addFeed(this, null, `оставил «${p?.item || 'материал'}» на вашем столе`);
-      this.plan.push(walkTo(this.home.x, this.home.z, this.home.yaw, 'walking'), call(() => this.nextTask()));
-    }
-  }
-  rework(item) {
-    this.task = `Дорабатывает: ${item}`; this.progress = 0.45; this.thinking = true; this.thinkT = 4;
   }
   nextTask() {
     this.carrying = null;
     const ts = this.data.tasks;
     this.taskIdx = (this.taskIdx + 1) % ts.length;
     this.task = ts[this.taskIdx]; this.progress = 0; this.rate = 1 / rand(30, 60);
-    if (this.data.needsInput && Math.random() < 0.6) { this.waitInput = true; this.idleFor = 0; this.task = ts[0]; }
+    if (this.data.needsInput && Math.random() < 0.6) { this.waitInput = true; this.idleFor = 0; }
     // иногда — за материалами, к принтеру или на перерыв
     const r = Math.random(), breaks = bots.filter(b => b.status === 'break').length;
     if (r < 0.14) {
       const x = rand(SHELF.x0 + 0.5, SHELF.x1 - 0.5), z = FZ0 + 0.95;
-      const it = pick(['Отчёт по конкурентам', 'Бренд-бук', 'Гайд по стилю', 'Архив сценариев', 'База кейсов']);
       this.plan.push(walkTo(x, z, Math.PI, 'research'), doFor(2.4, 'reach', 'research'),
-        call(() => { this.carrying = { item:it }; if (Math.random() < 0.5) addFeed(this, null, `взял со стеллажа «${it}»`); }),
+        call(() => { this.carrying = { item:'Материалы со стеллажа' }; }),
         walkTo(this.home.x, this.home.z, this.home.yaw, 'research'),
         call(() => { this.carrying = null; this.desk?.stack.set(this.desk.stack.n + 1, '#2a2c30'); }));
     } else if (r < 0.22) {
@@ -1816,29 +1907,17 @@ class Agent {
     }
   }
   attend(who, dur) { this.attendTo = who; this.attendUntil = NOW + dur; }
-  displayStatus() {
-    if (this.kind === 'head') return 'head';
-    if (this.pend && !this.pend.resolved) return 'waiting';
-    return this.status === 'waiting' ? 'done' : this.status;
-  }
-  // в 3D подпись показывает, что агент делает прямо сейчас; «ждёт вас» — только пока стоит у вашего стола
-  sceneStatus() {
-    if (this.kind === 'head') return 'head';
-    if (this.pend && !this.pend.resolved && this.act?.pose === 'present') return 'waiting';
-    return this.status === 'waiting' ? 'done' : this.status;
-  }
+  sceneStatus() { return this.kind === 'head' ? 'head' : this.status; }
+  // что агент делает в 3D прямо сейчас — визуализация, не история
   activity() {
-    const s = this.displayStatus();
+    const s = this.sceneStatus();
     if (this.kind === 'head') return this.data.title;
-    if (s === 'waiting') return this.pend?.ask || 'Ждёт вашего решения';
-    if (s === 'carrying' && this.carrying) { const tg = this.act?.target; const to = tg === 'you' ? 'на ваш стол' : tg ? `→ ${tg.name}` : ''; return `Несёт «${this.carrying.item}» ${to}`; }
+    if ((s === 'carrying' || s === 'presenting') && this.carrying) { const tg = this.act?.target; const to = tg === 'you' ? 'на ваш стол' : tg ? `→ ${tg.name}` : ''; return `Несёт «${this.carrying.item}» ${to}`; }
     if (s === 'meeting') return 'Планёрка у доски задач';
     if (s === 'break') return this.x > 13 ? 'Кофе у окна' : 'Отдыхает в лаунже';
     if (s === 'research') return this.carrying ? `Несёт «${this.carrying.item}» к себе` : 'Ищет материалы';
     if (s === 'walking') return 'Возвращается к столу';
-    if (s === 'rounds') return this.task;
-    if (s === 'done') return 'Работу приняли — несёт в архив';
-    if (s === 'idle') return this.task;
+    if (s === 'idle') return 'Ждёт входящий материал';
     return this.task;
   }
 
@@ -1867,12 +1946,11 @@ class Agent {
     this.task = `Обход: ${b.dept.short.toLowerCase()}`;
     this.plan.push(walkTo(s.x, s.z, null, 'rounds'),
       call(() => b.attend(this, 2.8)),
-      doFor(2.6, 'talk', 'rounds', { face:() => b }),
-      call(() => { if (Math.random() < 0.55) addFeed(this, b, pick(['уточнил дедлайн — сегодня до 19:00', 'забрал статус по задаче', 'поднял приоритет задачи', 'напомнил про согласование', 'передал правки от руководителя'])); }));
+      doFor(2.6, 'talk', 'rounds', { face:() => b }));
     return this.plan.shift();
   }
   planMeeting() {
-    const cand = bots.filter(b => b.kind === 'bot' && b.act?.type === 'work' && b.atHome() && !b.carrying && !b.pend);
+    const cand = bots.filter(b => b.kind === 'bot' && b.act?.type === 'work' && b.atHome() && !b.carrying);
     if (cand.length < 3) return null;
     const members = cand.sort(() => Math.random() - 0.5).slice(0, 3);
     const P = PLAN_TABLE, mt = { arrived:0, need:members.length + 1, held:0, over:false };
@@ -1887,8 +1965,7 @@ class Agent {
     this.task = 'Ведёт планёрку';
     this.plan.push(walkTo(s0.x, s0.z, s0.yaw, 'meeting'), call(() => mt.arrived++),
       doFor(40, 'talk', 'meeting', { yaw:s0.yaw, until:() => { if (mt.arrived >= mt.need) mt.held += 1 / 60; return mt.held > 8; } }),
-      call(() => { mt.over = true; addFeed(this, null, `провёл планёрку: ${members.map(m => m.name).join(', ')}`); this.task = 'Обход команды'; }));
-    addFeed(this, null, `собирает планёрку у доски задач`);
+      call(() => { mt.over = true; this.task = 'Обход команды'; }));
     return this.plan.shift();
   }
 }
@@ -1900,54 +1977,16 @@ function behindSpot(b) {
 function freeQueueSpot() { return queueSpots.findIndex(q => !q.by); }
 function claimQueueSpot(a) { const i = freeQueueSpot(); const q = queueSpots[Math.max(0, i)]; q.by = a; a.queue = q; return q; }
 function releaseQueueSpot(a) { if (a.queue) { a.queue.by = null; a.queue = null; } }
-function createPending(a, o) {
-  const p = { id:Math.random().toString(36).slice(2), agent:a, item:o.item, ask:o.ask || `Посмотрите: ${o.item}`, at:new Date(), resolved:null };
-  a.pend = p; pending.push(p);
-  addFeed(a, 'you', `ждёт решения — ${o.item.toLowerCase()}`);
-  toast(a, `${a.name}: ${p.ask}`);
-  refreshHUD(true);
-}
-function resolvePending(p, how) {
-  if (!p || p.resolved) return;
-  p.resolved = how;
-  pending.splice(pending.indexOf(p), 1);
-  const a = p.agent;
-  if (p.onDesk) pods[0].owner.stack.set(Math.max(0, pods[0].owner.stack.n - 1));
-  if (how === 'approve') {
-    addFeed('you', a, `одобрили «${p.item}»`);
-    addArchive(a.color, p.item);
-    a.flashPose = 'cheer'; a.flashUntil = a.atHome() ? NOW + 1.4 : 0;
-  } else {
-    addFeed('you', a, `вернули «${p.item}» на доработку`);
-    if (!a.queue) a.rework(p.item);
-  }
-  if (a.pend === p && a.act?.pose !== 'present') a.pend = null;
-  refreshHUD(true);
-}
-// Если решение лежит на столе дольше трёх минут, его принимает руководитель отдела по делегированию
-function delegateStale() {
-  for (const p of [...pending]) {
-    if (!p.onDesk || Date.now() - p.at.getTime() < 180000) continue;
-    const head = p.agent.dept.headAgent || agents.get('orchestrator');
-    p.resolved = 'approve';
-    pending.splice(pending.indexOf(p), 1);
-    pods[0].owner.stack.set(Math.max(0, pods[0].owner.stack.n - 1));
-    addFeed(head, p.agent, `согласовано по делегированию: «${p.item}»`);
-    addArchive(p.agent.color, p.item);
-    if (p.agent.pend === p) p.agent.pend = null;
-  }
-}
-function handOver(from, to, o) {
+function handOver(from, to) {
   const target = to.kind === 'head' ? to.dept.pod.headDesk.stack : to.desk?.stack;
   if (target) target.set(target.n + 1, from.color);
-  to.inbox.push({ item:o.item, from, at:new Date() });
+  to.inbox.push({ item:from.carrying?.item, from });
   if (to.inbox.length > 12) to.inbox.shift();
   from.carrying = null;
-  addFeed(from, to, o.say);
-  if (Math.random() < 0.35) addArchive(from.color, o.item);
+  if (Math.random() < 0.35) addArchive(from.color);
 }
-function addArchive(color, item) {
-  archive.push({ color, item, at:new Date() });
+function addArchive(color) {
+  archive.push(color);
   const i = Math.min(archive.length, ARCHIVE.max) - 1;
   const m = new THREE.Matrix4().makeRotationZ((Math.random() - 0.5) * 0.06);
   m.setPosition(ARCHIVE.x0 + i * ARCHIVE.step, ARCHIVE.y + 0.15, ARCHIVE.z);
@@ -1972,11 +2011,11 @@ function paintLabel(a) {
   a.labelSig = sig; a.lw = 0;
   const el = a.labelEl;
   el.classList.toggle('on', selectedId === a.id);
-  el.classList.toggle('need', s === 'waiting');
+  el.classList.toggle('need', s === 'presenting');
   el.style.setProperty('--c', a.color);
   el.style.setProperty('--s', ST[s].c);
   el.innerHTML = a.kind === 'head'
-    ? `<span class="face" style="--c:${a.color}">${esc(a.name[0])}</span><b>${esc(a.name)}</b><span>${esc(ST.head.label)}</span>`
+    ? `${faceHTML(PEOPLE[a.id] || { name:a.name, dept:a.dept }, 'xs')}<b>${esc(a.name)}</b><span>${esc(ST.head.label)}</span>`
     : `<i></i><b>${esc(a.name)}</b><span>${esc(ST[s].label)}</span>`;
 }
 
@@ -2006,7 +2045,8 @@ function spawnBot(id, data, d, home, extra = {}) {
 for (const d of DEPTS) {
   const pod = buildPod(d);
   pod.slots.forEach(s => {
-    const data = { ...CATALOG[s.id], ...(CFG.agents || {})[s.id] };
+    const ov = (CFG.agents || {})[s.id] || {};
+    const data = { ...CATALOG[s.id], ...(ov.name && { name:ov.name }), ...(ov.role && { role:ov.role }) };
     const a = spawnBot(s.id, data, d, { x:s.x, z:s.z, yaw:s.yaw }, { slotA:s.a });
     a.desk = pod.desks.get(s.id);
     a.desk.stack.set(1 + (Math.random() * 4 | 0), pick(['#2a2c30', data.color]));
@@ -2238,174 +2278,388 @@ function drawAgentScreen(a) {
   g.fillStyle = a.color; g.fillRect(8, H - 14, (W - 52) * p, 4);
   g.font = MONO(8); g.fillStyle = 'rgba(233,237,245,.6)'; g.textAlign = 'right'; g.fillText(`${Math.round(p * 100)}%`, W - 8, H - 9); g.textAlign = 'left';
 }
+const MON = ['января', 'февраля', 'марта', 'апреля', 'мая', 'июня', 'июля', 'августа', 'сентября', 'октября', 'ноября', 'декабря'];
+const MON_SHORT = ['янв', 'фев', 'мар', 'апр', 'мая', 'июн', 'июл', 'авг', 'сен', 'окт', 'ноя', 'дек'];
+const MON_TITLE = ['Январь', 'Февраль', 'Март', 'Апрель', 'Май', 'Июнь', 'Июль', 'Август', 'Сентябрь', 'Октябрь', 'Ноябрь', 'Декабрь'];
+const ymd = iso => iso.split('-').map(Number);
+const fmtDate = (iso, short = false) => { const [y, m, d] = ymd(iso); return `${d} ${(short ? MON_SHORT : MON)[m - 1]}${short ? '' : ' ' + y}`; };
+
 function drawOwnerScreen() {
   const S = pods[0].owner.scr, g = S.g, W = S.w, H = S.h;
   g.fillStyle = '#f4f2ec'; g.fillRect(0, 0, W, H);
   g.fillStyle = '#1f5cff'; g.fillRect(0, 0, W, 24);
-  g.fillStyle = '#fff'; g.font = FONT(800, 11); g.fillText('Входящие решения', 10, 16);
-  g.font = MONO(9); g.textAlign = 'right'; g.fillText(hhmm(), W - 10, 16); g.textAlign = 'left';
-  if (!pending.length) { g.fillStyle = '#20232a'; g.font = FONT(700, 12); g.fillText('Всё согласовано', 12, 60); g.font = FONT(500, 10); g.fillStyle = '#6a6f78'; g.fillText(`В архиве: ${archive.length} работ`, 12, 78); }
-  pending.slice(0, 4).forEach((p, i) => {
-    const y = 32 + i * 31;
+  g.fillStyle = '#fff'; g.font = FONT(800, 11); g.fillText('История задач', 10, 16);
+  g.font = MONO(9); g.textAlign = 'right'; g.fillText(`${TASKS.length}`, W - 10, 16); g.textAlign = 'left';
+  TASKS.slice(0, 4).forEach((t, i) => {
+    const y = 32 + i * 31, d = deptById(t.dept);
     g.fillStyle = '#fff'; rr(g, 8, y, W - 16, 26, 5); g.fill();
-    g.fillStyle = p.agent.color; g.fillRect(8, y, 4, 26);
-    g.fillStyle = '#20232a'; g.font = FONT(700, 9.5); g.fillText(fitText(g, p.ask, W - 40), 18, y + 11);
-    g.fillStyle = '#6a6f78'; g.font = FONT(500, 8.5); g.fillText(fitText(g, `${p.agent.name} · ${hhmm(p.at)}`, W - 40), 18, y + 21);
+    g.fillStyle = d?.accent || '#1f5cff'; g.fillRect(8, y, 4, 26);
+    g.fillStyle = '#20232a'; g.font = FONT(700, 9.5); g.fillText(fitText(g, t.title, W - 40), 18, y + 11);
+    g.fillStyle = '#6a6f78'; g.font = FONT(500, 8.5); g.fillText(fitText(g, `${fmtDate(t.date, true)} · ${t.kind}`, W - 40), 18, y + 21);
   });
   S.tex.needsUpdate = true;
 }
+// Доска на стене — последние реальные задачи по отделам
 function drawKanban() {
   const { g, c } = kanban, W = c.width, H = c.height;
   g.fillStyle = '#f6f6f3'; g.fillRect(0, 0, W, H);
-  g.fillStyle = '#20232a'; g.font = FONT(800, 26); g.fillText('Доска задач', 28, 44);
-  g.font = MONO(15); g.fillStyle = '#7a7f88'; g.textAlign = 'right'; g.fillText(`${BRAND} · ${hhmm()}`, W - 28, 42); g.textAlign = 'left';
-  const working = bots.filter(b => b.kind === 'bot' && (b.status === 'working' || b.status === 'thinking') && b.act?.type === 'work').sort((a, b) => b.progress - a.progress);
-  const cols = [
-    ['В работе', working.map(b => [b.color, b.name, b.task, b.progress])],
-    ['На согласовании', pending.map(p => [p.agent.color, p.agent.name, p.item, null])],
-    ['Готово сегодня', feedLog.filter(f => f.done).slice(0, 8).map(f => [f.color, f.who, f.item, 1])],
-  ];
-  const cw = (W - 56 - 32) / 3;
-  cols.forEach(([title, cards], ci) => {
-    const x = 28 + ci * (cw + 16);
+  g.fillStyle = '#20232a'; g.font = FONT(800, 26); g.fillText('История задач', 28, 44);
+  g.font = MONO(15); g.fillStyle = '#7a7f88'; g.textAlign = 'right'; g.fillText(`${BRAND} · ${TASKS.length} задач`, W - 28, 42); g.textAlign = 'left';
+  const cols = DEPTS.map(d => [d.short, d.accent, TASKS.filter(t => t.dept === d.id)]);
+  const gap = 12, cw = (W - 56 - gap * (cols.length - 1)) / cols.length;
+  cols.forEach(([title, col, list], ci) => {
+    const x = 28 + ci * (cw + gap);
     g.fillStyle = '#e9e9e4'; rr(g, x, 62, cw, H - 80, 12); g.fill();
-    g.fillStyle = '#20232a'; g.font = FONT(800, 17); g.fillText(title, x + 14, 88);
-    g.font = MONO(14); g.fillStyle = '#7a7f88'; g.textAlign = 'right'; g.fillText(String(cards.length), x + cw - 14, 88); g.textAlign = 'left';
-    cards.slice(0, 5).forEach(([col, who, what, prog], i) => {
+    g.fillStyle = col; g.fillRect(x + 12, 76, 10, 10);
+    g.fillStyle = '#20232a'; g.font = FONT(800, 16); g.fillText(fitText(g, title, cw - 70), x + 30, 87);
+    g.font = MONO(13); g.fillStyle = '#7a7f88'; g.textAlign = 'right'; g.fillText(String(list.length), x + cw - 12, 87); g.textAlign = 'left';
+    list.slice(0, 5).forEach((t, i) => {
       const y = 100 + i * 64;
-      g.fillStyle = '#fff'; rr(g, x + 10, y, cw - 20, 56, 8); g.fill();
-      g.fillStyle = col; g.fillRect(x + 10, y, 5, 56);
-      g.fillStyle = '#20232a'; g.font = FONT(800, 14); g.fillText(fitText(g, who, cw - 48), x + 24, y + 22);
-      g.fillStyle = '#5d626b'; g.font = FONT(500, 12.5); g.fillText(fitText(g, what, cw - 48), x + 24, y + 41);
-      if (prog != null && prog < 1) { g.fillStyle = '#e4e4df'; g.fillRect(x + 24, y + 48, cw - 58, 3); g.fillStyle = col; g.fillRect(x + 24, y + 48, (cw - 58) * prog, 3); }
+      g.fillStyle = '#fff'; rr(g, x + 8, y, cw - 16, 56, 8); g.fill();
+      g.fillStyle = col; g.fillRect(x + 8, y, 4, 56);
+      g.fillStyle = '#20232a'; g.font = FONT(700, 12.5); g.fillText(fitText(g, t.title, cw - 36), x + 20, y + 22);
+      g.fillStyle = '#6a6f78'; g.font = MONO(11); g.fillText(fitText(g, `${fmtDate(t.date, true)} · ${t.kind}`, cw - 36), x + 20, y + 42);
     });
   });
   kanban.tex.needsUpdate = true;
 }
 
-/* ======================= ЛЕНТА, ТОСТЫ ======================= */
+/* ======================= ИСТОРИЯ ЗАДАЧ, ДОСЬЕ =======================
+   Правая панель показывает только реальные задачи из tasks.js с доказательствами.
+   Движение агентов в 3D — визуализация того, как устроена работа. */
 
-function nameOf(x) { return x === 'you' ? 'Вы' : x?.name || ''; }
-function addFeed(from, to, text, at = new Date(), quiet = false) {
-  const done = /передал|отдал|выкатил|одобрили|положил|закрыл|подключил|обновил|собрал|выпустил|показал/.test(text) && from !== 'you';
-  const item = (text.match(/«([^»]+)»/) || [])[1] || text.replace(/^(передал|отдал|выкатил|положил|показал|собрал|подключил|обновил)\s+/, '');
-  const f = { time:hhmm(at), from:nameOf(from), to:to ? nameOf(to) : '', text, done, color:from === 'you' ? '#1f5cff' : from?.color, who:nameOf(from), item };
-  feedLog.unshift(f); if (feedLog.length > 40) feedLog.pop();
-  if (!quiet) renderFeed();
-}
-function renderFeed() {
-  $('feed').innerHTML = feedLog.slice(0, 18).map(f =>
-    `<li><time>${f.time}</time><p><b>${esc(f.from)}</b>${f.to ? ` → <b>${esc(f.to)}</b>` : ''}: ${esc(f.text)}</p></li>`).join('');
-}
-function toast(a, text) {
-  const el = document.createElement('div'); el.className = 'toast'; el.style.setProperty('--c', a.color);
-  el.innerHTML = `<i></i><span>${esc(text)}</span>`;
-  el.onclick = () => select(a.id, true);
-  $('toasts').append(el);
-  setTimeout(() => el.classList.add('out'), 4200); setTimeout(() => el.remove(), 4800);
-}
+const CONTENT = window.AGENT_CONTENT || {}, HEADS = window.HEAD_CONTENT || {};
+const deptById = id => DEPTS.find(d => d.id === id);
+const PEOPLE = Object.fromEntries(DEPTS.map(d => [d.head.id, { ...d.head, dept:d }]));
+const personOf = id => PEOPLE[id] || (id === 'ilia' ? { id, name:'Илья', title:'Основатель', dept:DEPTS[0] } : null);
+const agentMeta = id => ({ id, name:agents.get(id)?.name || CATALOG[id]?.name || id, color:CATALOG[id]?.color || '#9aa3b5', role:CATALOG[id]?.role || '', dept:DEPTS.find(d => d.agentIds.includes(id)) });
+const faceHTML = (p, size = '') => p.photo
+  ? `<span class="face ${size}" style="--c:${p.dept?.accent || '#1f5cff'};background-image:url('${encodeURI(p.photo)}')"></span>`
+  : `<span class="face ${size}" style="--c:${p.dept?.accent || '#1f5cff'}">${esc(p.name[0])}</span>`;
+const orbHTML = (color, size = '') => `<span class="orb ${size}" style="--c:${esc(color)}"></span>`;
+const KIND_LABEL = { github:'GitHub', claude:'Claude', site:'Сайт', file:'Файл' };
+const ICON = {
+  github:'<svg viewBox="0 0 24 24"><path d="M9 19c-4 1.3-4-2-6-2.5m12 5v-3.4a3 3 0 0 0-.8-2.3c2.7-.3 5.5-1.3 5.5-6A4.7 4.7 0 0 0 18.4 6 4.3 4.3 0 0 0 18.3 3s-1-.3-3.4 1.3a11.6 11.6 0 0 0-6 0C6.5 2.7 5.5 3 5.5 3a4.3 4.3 0 0 0-.1 3 4.7 4.7 0 0 0-1.3 3.3c0 4.6 2.8 5.6 5.5 6a3 3 0 0 0-.8 2.2V21"/></svg>',
+  claude:'<svg viewBox="0 0 24 24"><path d="M12 3v18M3 12h18M5.6 5.6l12.8 12.8M18.4 5.6 5.6 18.4"/></svg>',
+  site:'<svg viewBox="0 0 24 24"><circle cx="12" cy="12" r="9"/><path d="M3 12h18M12 3a14 14 0 0 1 0 18M12 3a14 14 0 0 0 0 18"/></svg>',
+  file:'<svg viewBox="0 0 24 24"><path d="M14 3H6a1 1 0 0 0-1 1v16a1 1 0 0 0 1 1h12a1 1 0 0 0 1-1V8z"/><path d="M14 3v5h5"/></svg>',
+};
+let ptab = 'tasks', pdept = 'all', pquery = '', pagent = null;
 
-/* ======================= БОКОВАЯ ПАНЕЛЬ ======================= */
-
-const allMembers = () => [...agents.values()];
-$('filters').innerHTML = `<button data-f="all" class="on">Все</button>` + DEPTS.map(d => `<button data-f="${d.id}" style="--c:${d.accent}"><i></i>${esc(d.short)}</button>`).join('');
-$('filters').addEventListener('click', e => {
-  const b = e.target.closest('[data-f]'); if (!b) return;
-  filter = b.dataset.f; [...$('filters').children].forEach(x => x.classList.toggle('on', x === b));
-  buildList(); refreshHUD(true);
-  const d = DEPTS.find(x => x.id === filter); if (d) flyToDept(d);
-});
-function buildList() {
-  const list = allMembers().filter(a => filter === 'all' || a.dept.id === filter).sort((a, b) => (a.kind === 'orch' ? -1 : 0) - (b.kind === 'orch' ? -1 : 0));
-  $('list').innerHTML = list.map(a => `<li data-id="${a.id}" tabindex="0">${a.kind === 'head' ? `<span class="face" style="--c:${a.color}">${esc(a.name[0])}</span>` : `<i class="dot" style="--c:${a.color}"></i>`}<div><b>${esc(a.name)}</b><small></small></div><em class="st"></em></li>`).join('');
-  for (const li of $('list').children) li._a = agents.get(li.dataset.id);
+function proofSummary(t) {
+  const n = k => (t.proof || []).filter(p => p.kind === k).length;
+  const vids = (t.media || []).filter(m => m.type === 'video').length, imgs = (t.media || []).filter(m => m.type === 'img').length, pages = (t.media || []).filter(m => m.type === 'page').length;
+  return [n('github') && `GitHub ${n('github')}`, n('claude') && `Claude ${n('claude')}`, n('site') && 'сайт', n('file') && 'файл', vids && `видео ${vids}`, imgs && `фото ${imgs}`, pages && `страниц ${pages}`].filter(Boolean).join(' · ');
 }
-$('list').addEventListener('click', e => { const li = e.target.closest('li'); if (li) select(li.dataset.id, true); });
-$('list').addEventListener('keydown', e => { if (e.key === 'Enter') { const li = e.target.closest('li'); if (li) select(li.dataset.id, true); } });
-
-let focusSig = '';
-function focusHTML() {
-  if (selectedId === 'you' || (!selectedId && !pending.length && false)) return ownerHTML();
-  let a = selectedId && agents.get(selectedId);
-  if (!a) {
-    const p = pending[0];
-    if (p) a = p.agent; else if (selectedId == null) return ownerHTML();
+function matchQuery(t) {
+  if (!pquery) return true;
+  const hay = [t.title, t.summary, t.kind, ...(t.agents || []).map(id => agentMeta(id).name), deptById(t.dept)?.name].join(' ').toLowerCase();
+  return pquery.toLowerCase().split(/\s+/).every(w => hay.includes(w));
+}
+function visibleTasks() {
+  return TASKS.filter(t => (pdept === 'all' || t.dept === pdept) && (!pagent || (t.agents || []).includes(pagent) || (PEOPLE[pagent] && t.dept === PEOPLE[pagent].dept.id)) && matchQuery(t));
+}
+function taskRowHTML(t) {
+  const d = deptById(t.dept), ag = (t.agents || []).map(agentMeta);
+  const ppl = (t.people || []).map(personOf).filter(Boolean);
+  const head = d && !d.head.owner ? PEOPLE[d.head.id] : null;
+  return `<li><button class="task" data-task="${esc(t.id)}" style="--c:${d?.accent || '#9aa3b5'}">
+    <span class="t-meta"><time datetime="${t.date}">${fmtDate(t.date, true)}</time><em>${esc(t.kind)}</em></span>
+    <b>${esc(t.title)}</b>
+    <span class="t-who">${ppl.map(p => faceHTML(p, 'xs')).join('')}${head ? faceHTML(head, 'xs') : ''}<span class="dots">${ag.slice(0, 5).map(a => `<i style="--c:${esc(a.color)}" title="${esc(a.name)}"></i>`).join('')}</span><span class="t-dept">${esc(d?.short || '')}</span></span>
+    <span class="t-proof">${esc(proofSummary(t))}</span></button></li>`;
+}
+function tasksHTML() {
+  const list = visibleTasks();
+  let html = '', month = '';
+  for (const t of list) {
+    const [y, m] = ymd(t.date), key = `${y}-${m}`;
+    if (key !== month) { if (month) html += '</ol>'; month = key; html += `<h3 class="eyebrow mon">${MON_TITLE[m - 1]} ${y}</h3><ol class="tasks">`; }
+    html += taskRowHTML(t);
   }
-  if (!a) return ownerHTML();
-  const s = a.displayStatus(), need = s === 'waiting';
-  const head = a.kind === 'head';
-  const av = head ? `<span class="face" style="--c:${a.color}">${esc(a.name[0])}</span>` : `<span class="orb" style="--c:${a.color}"></span>`;
-  const role = head ? a.data.title : a.data.role;
-  const inbox = (head ? a.inbox : a.inbox).slice(-4).reverse();
-  const works = (a.data.works || []).slice(0, 4);
-  const team = head ? a.dept.agentIds.map(id => agents.get(id)?.name).filter(Boolean).join(', ') : '';
-  return `
-    <div class="fh">${av}<div><b>${esc(a.name)}</b><small>${esc(role)}</small></div></div>
-    <div class="ask ${need ? 'need' : ''}"><span class="eyebrow">${need ? 'Нужно ваше решение' : head ? 'Команда' : 'Сейчас'}</span><p data-f="act">${esc(head ? team : a.activity())}</p></div>
-    ${head ? '' : `<div class="bar" style="--c:${a.color}"><i data-f="bar" style="--p:${Math.round((need ? 1 : a.progress) * 100)}%"></i></div>`}
-    <div class="meta">${head ? `<span>Отдел: <b>${esc(a.dept.name)}</b></span>` : `<span>Статус: <b data-f="st">${esc(ST[s].label)}</b></span><span>Сделано сегодня: <b data-f="done">${a.doneToday}</b></span>`}</div>
-    <div class="acts">${need ? `<button class="yes" data-do="approve">Одобрить</button><button data-do="return">Вернуть на доработку</button>` : ''}
-      <button data-do="follow" class="${followId === a.id ? 'on' : ''}">${followId === a.id ? 'Слежу за агентом' : 'Следить'}</button>
-      <button data-do="overview">К обзору</button></div>
-    ${inbox.length ? `<div class="mats"><span class="eyebrow">На столе</span><ul>${inbox.map(m => `<li style="--c:${m.from.color}"><i></i><span>${esc(m.item)} · от ${esc(m.from.name)}</span><time>${hhmm(m.at)}</time></li>`).join('')}</ul></div>` : ''}
-    ${works.length ? `<div class="mats"><span class="eyebrow">Готовые работы</span><ul>${works.map(([t, u]) => `<li style="--c:${a.color}"><i></i><span>${u ? `<a href="${esc(u)}" target="_blank" rel="noopener">${esc(t)}</a>` : esc(t)}</span></li>`).join('')}</ul></div>` : ''}`;
+  if (month) html += '</ol>';
+  return html || `<p class="empty">Задач с такими условиями нет. Снимите фильтр или измените поиск.</p>`;
 }
-function ownerHTML() {
-  const own = pods[0].d.head;
-  return `
-    <div class="fh"><span class="face" style="--c:#1f5cff;color:#fff">${esc(own.name[0])}</span><div><b>Ваш стол</b><small>${esc(own.name)} · ${esc(own.title)}</small></div></div>
-    <div class="ask ${pending.length ? 'need' : ''}"><span class="eyebrow">${pending.length ? `Ждут решения: ${pending.length}` : 'Входящие'}</span>
-      <p>${pending.length ? 'Агенты принесли материалы на согласование' : 'Всё согласовано — команда работает'}</p></div>
-    ${pending.length ? `<ul class="decisions">${pending.map(p => `<li style="--c:${p.agent.color}"><p>${esc(p.ask)}</p><small>${esc(p.agent.name)} · ${hhmm(p.at)}${p.onDesk ? ' · лежит на столе' : ' · ждёт у стола'}</small>
-      <div class="acts"><button class="yes" data-do="approve" data-p="${p.id}">Одобрить</button><button data-do="return" data-p="${p.id}">Вернуть</button></div></li>`).join('')}</ul>` : ''}
-    <div class="meta"><span>В архиве: <b>${archive.length}</b></span><span>Решений сегодня: <b>${feedLog.filter(f => f.from === 'Вы').length + 4}</b></span></div>
-    <div class="acts"><button data-do="desk">Сесть за стол</button><button data-do="overview">К обзору</button></div>`;
+function focusHTML() {
+  const id = selectedId;
+  if (!id) return '';
+  const a = agents.get(id), p = PEOPLE[id];
+  if (id === 'you' || (p && p.owner)) {
+    const own = DEPTS[0].head;
+    return `<article class="focus"><div class="fh">${faceHTML({ ...own, dept:DEPTS[0] })}<div><b>Ваш стол · ${esc(own.name)}</b><small>${esc(own.title)}</small></div></div>
+      <div class="acts"><button data-do="dossier" data-id="${esc(own.id)}">Досье</button><button data-do="desk">Сесть за стол</button><button data-do="clear">Все задачи</button></div></article>`;
+  }
+  if (!a) return '';
+  const head = a.kind === 'head', orch = a.kind === 'orch';
+  const n = head ? TASKS.filter(t => t.dept === a.dept.id).length : tasksOfAgent(id).length;
+  return `<article class="focus"><div class="fh">${head ? faceHTML(PEOPLE[id]) : orbHTML(a.color)}<div><b>${esc(a.name)}</b><small>${esc(head ? a.data.title : a.data.role)}</small></div></div>
+    <div class="now"><span class="eyebrow">В офисе сейчас</span><p data-f="act">${esc(a.activity())}</p></div>
+    ${orch ? '<p class="note">Оркестратор — персонаж визуализации: показывает, как задачи расходятся по отделам. В истории задач его нет.</p>' : ''}
+    <div class="acts">${orch ? '' : `<button data-do="dossier" data-id="${esc(id)}">Досье</button>`}
+      <button data-do="follow" class="${followId === id ? 'on' : ''}">${followId === id ? 'Слежу' : 'Следить'}</button>
+      <button data-do="clear">Все задачи</button></div>
+    ${orch ? '' : `<h3 class="eyebrow">${head ? 'Задачи отдела' : 'Задачи агента'} · ${n}</h3>`}</article>`;
 }
-$('focus').addEventListener('click', e => {
+function teamHTML() {
+  const rows = [];
+  const owner = DEPTS[0].head;
+  rows.push(`<h3 class="eyebrow">Люди</h3><ul class="people">`);
+  for (const d of DEPTS) {
+    if (pdept !== 'all' && pdept !== d.id) continue;
+    const h = PEOPLE[d.head.id], n = TASKS.filter(t => t.dept === d.id).length;
+    rows.push(`<li><button data-person="${esc(h.id)}">${faceHTML(h)}<span class="txt"><b>${esc(h.name)}</b><small>${esc(h.title)}</small></span><em>${n} ${word(n, 'задача', 'задачи', 'задач')}</em></button></li>`);
+  }
+  rows.push('</ul>');
+  for (const d of DEPTS) {
+    if (pdept !== 'all' && pdept !== d.id) continue;
+    rows.push(`<h3 class="eyebrow" style="--c:${d.accent}"><i class="dd"></i>${esc(d.name)} · ${esc(d.head.owner ? owner.name : d.head.name)}</h3><ul class="agents">`);
+    for (const id of d.agentIds) {
+      const m = agentMeta(id), n = tasksOfAgent(id).length;
+      if (pquery && !(m.name + ' ' + m.role).toLowerCase().includes(pquery.toLowerCase())) continue;
+      rows.push(`<li><button data-agent="${esc(id)}"><i class="dot" style="--c:${esc(m.color)}"></i><span class="txt"><b>${esc(m.name)}</b><small>${esc(m.role)}</small></span><em>${n} ${word(n, 'задача', 'задачи', 'задач')}</em></button></li>`);
+    }
+    rows.push('</ul>');
+  }
+  return rows.join('');
+}
+const SKILLS = (() => {
+  const map = new Map();
+  for (const [id, c] of Object.entries(CONTENT)) for (const s of c.skills || []) {
+    if (!map.has(s.name)) map.set(s.name, { ...s, agents:[] });
+    map.get(s.name).agents.push(id);
+  }
+  return [...map.values()];
+})();
+function skillsHTML() {
+  const q = pquery.toLowerCase();
+  const list = SKILLS.filter(s => (pdept === 'all' || s.agents.some(id => agentMeta(id).dept?.id === pdept)) && (!q || [s.name, s.title, s.desc, s.say].join(' ').toLowerCase().includes(q)));
+  return `<p class="note">Скиллы Claude, которыми работают агенты. Фраза «Скажи…» запускает скилл в проекте Claude.</p><ul class="skilllist">${list.map(s => `<li>
+    <b>${esc(s.title)}</b><code>${esc(s.name)}</code><p>${esc(s.desc || '')}</p>${s.say ? `<i>Скажи: «${esc(s.say)}»</i>` : ''}
+    <span class="sk-ag">${s.agents.map(id => { const m = agentMeta(id); return `<button data-agent="${esc(id)}" style="--c:${esc(m.color)}"><i></i>${esc(m.name)}</button>`; }).join('')}</span></li>`).join('')}</ul>`;
+}
+function renderPanel() {
+  for (const b of $('ptabs').children) { const on = b.dataset.tab === ptab; b.classList.toggle('on', on); b.setAttribute('aria-selected', on); }
+  for (const b of $('filters').children) b.classList.toggle('on', b.dataset.f === pdept);
+  const body = ptab === 'tasks' ? focusHTML() + tasksHTML() : ptab === 'team' ? teamHTML() : skillsHTML();
+  $('pbody').innerHTML = body;
+  const n = visibleTasks().length;
+  $('teamSum').textContent = ptab === 'tasks'
+    ? `${n} ${word(n, 'задача', 'задачи', 'задач')}${n !== TASKS.length ? ` из ${TASKS.length}` : ''} · с доказательствами`
+    : ptab === 'team' ? `${bots.filter(b => b.kind === 'bot').length} агентов · ${DEPTS.length} руководителя` : `${SKILLS.length} скиллов`;
+  $('teamShow').textContent = `История задач · ${TASKS.length}`;
+}
+$('filters').innerHTML = `<button data-f="all">Все</button>` + DEPTS.map(d => `<button data-f="${d.id}" style="--c:${d.accent}"><i></i>${esc(d.short)}</button>`).join('');
+$('filters').addEventListener('click', e => { const b = e.target.closest('[data-f]'); if (!b) return; pdept = b.dataset.f; renderPanel(); });
+$('ptabs').addEventListener('click', e => { const b = e.target.closest('[data-tab]'); if (!b) return; ptab = b.dataset.tab; renderPanel(); $('pbody').scrollTop = 0; });
+$('q').addEventListener('input', e => { pquery = e.target.value.trim(); renderPanel(); });
+$('pbody').addEventListener('click', e => {
+  const t = e.target.closest('[data-task]'); if (t) return openTask(t.dataset.task);
+  const ag = e.target.closest('[data-agent]'); if (ag) return openDossier(ag.dataset.agent);
+  const pp = e.target.closest('[data-person]'); if (pp) return openDossier(pp.dataset.person);
   const b = e.target.closest('[data-do]'); if (!b) return;
   const k = b.dataset.do;
-  const p = b.dataset.p ? pending.find(x => x.id === b.dataset.p) : (agents.get(selectedId)?.pend || pending[0]);
-  if (k === 'approve') resolvePending(p, 'approve');
-  if (k === 'return') resolvePending(p, 'return');
-  if (k === 'follow') { const id = selectedId || pending[0]?.agent.id; followId = followId === id ? null : id; if (followId) select(followId, true); refreshHUD(true); }
-  if (k === 'overview') cmd('overview');
+  if (k === 'dossier') openDossier(b.dataset.id);
+  if (k === 'follow') { followId = followId === selectedId ? null : selectedId; if (followId) select(followId, true); renderPanel(); }
+  if (k === 'clear') { selectedId = null; pagent = null; followId = null; agents.forEach(paintLabel); renderPanel(); }
   if (k === 'desk') cmd('desk');
 });
-$('waitChip').onclick = () => { if (pending[0]) select(pending[0].agent.id, true); };
-$('teamHead').addEventListener('click', e => { if (e.target.closest('button')) return; if (isMobile) $('team').classList.toggle('min'); });
-
-function refreshHUD(force = false) {
-  const all = bots, working = all.filter(b => b.status === 'working' || b.status === 'thinking').length;
-  $('teamSum').textContent = `${all.length} ${word(all.length, 'агент', 'агента', 'агентов')} · ${working} в работе`;
-  $('waitChip').textContent = pending.length ? `${pending.length} ${word(pending.length, 'ждёт', 'ждут', 'ждут')} вас` : 'нет решений';
-  $('waitChip').disabled = !pending.length;
-  // строки списка
-  for (const li of $('list').children) {
-    const a = li._a; if (!a) continue;
-    const s = a.displayStatus();
-    li.classList.toggle('on', selectedId === a.id);
-    li.classList.toggle('wait', s === 'waiting');
-    li.querySelector('small').textContent = a.activity();
-    const st = li.querySelector('.st'); st.textContent = ST[s].label; st.style.setProperty('--s', ST[s].c);
-  }
-  // карточка
-  const a = agents.get(selectedId) || (!selectedId && pending[0]?.agent) || null;
-  const sig = `${selectedId}|${a?.id}|${a?.displayStatus()}|${a?.inbox.length}|${a?.task}|${pending.length}|${followId}|${pending.map(p => p.onDesk).join()}`;
-  if (force || sig !== focusSig) { focusSig = sig; $('focus').innerHTML = focusHTML(); }
-  else if (a) {
-    const bar = $('focus').querySelector('[data-f="bar"]'); if (bar) bar.style.setProperty('--p', `${Math.round((a.displayStatus() === 'waiting' ? 1 : a.progress) * 100)}%`);
-    const act = $('focus').querySelector('[data-f="act"]'); if (act && a.kind !== 'head') act.textContent = a.activity();
-    const dn = $('focus').querySelector('[data-f="done"]'); if (dn) dn.textContent = a.doneToday;
-  }
-  const dl = pods[0].deskLabel;
-  dl.innerHTML = `<i></i>Ваш стол <span>управление</span>${pending.length ? `<em>${pending.length}</em>` : ''}`;
-  for (const d of DEPTS) {
-    const ag = d.agentIds.map(id => agents.get(id));
-    const w = ag.filter(x => x.status === 'working' || x.status === 'thinking').length, c = ag.filter(x => x.status === 'carrying').length;
-    d.chipEl.innerHTML = `<b>${esc(d.name)}</b><small>${esc(d.head.owner ? 'вы' : d.head.name)} · ${ag.length} ${word(ag.length, 'агент', 'агента', 'агентов')} · ${w} в работе${c ? ` · ${c} несут` : ''}</small>`;
-  }
-  $('clock').textContent = hhmm();
+function setPanel(open) {
+  $('team').hidden = !open; $('teamShow').hidden = open;
+  setDockOn('team', open);
+  try { localStorage.setItem('hq:panel', open ? '1' : '0'); } catch (e) {}
+  onResize();
 }
+$('teamHide').onclick = () => setPanel(false);
+$('teamShow').onclick = () => setPanel(true);
+$('teamHead').addEventListener('click', e => { if (e.target.closest('button')) return; if (isMobile) $('team').classList.toggle('min'); });
+// раз в полсекунды обновляем только строку «В офисе сейчас» у выбранного агента
+function refreshHUD() {
+  const a = agents.get(selectedId), act = $('pbody').querySelector('[data-f="act"]');
+  if (a && act) act.textContent = a.activity();
+  $('clock').textContent = hhmm();
+  const dl = pods[0].deskLabel;
+  if (!dl.innerHTML) dl.innerHTML = `<i></i>Ваш стол <span>управление</span>`;
+  for (const d of DEPTS) {
+    const n = TASKS.filter(t => t.dept === d.id).length;
+    d.chipEl.innerHTML = `<b>${esc(d.name)}</b><small>${esc(d.head.owner ? 'вы' : d.head.name)} · ${d.agentIds.length} ${word(d.agentIds.length, 'агент', 'агента', 'агентов')} · ${n} ${word(n, 'задача', 'задачи', 'задач')} в истории</small>`;
+  }
+}
+
+/* ---------- окно задачи ---------- */
+
+function mediaHTML(media) {
+  const imgs = media.filter(m => m.type === 'img'), vids = media.filter(m => m.type === 'video'), pages = media.filter(m => m.type === 'page');
+  let h = '';
+  if (vids.length) h += `<h4>Видео</h4><div class="vids">${vids.map(v => `<figure><video src="${esc(v.src)}" ${v.poster ? `poster="${esc(v.poster)}"` : ''} controls playsinline preload="none"></video><figcaption>${esc(v.title)}</figcaption></figure>`).join('')}</div>`;
+  if (imgs.length) h += `<h4>Материалы</h4><div class="grid">${imgs.map(i => `<figure class="fig" data-src="${esc(i.src)}" data-cap="${esc(i.title)}"><img loading="lazy" src="${esc(i.src)}" alt="${esc(i.title)}"><figcaption>${esc(i.title)}</figcaption></figure>`).join('')}</div>`;
+  if (pages.length) h += `<h4>Живые страницы</h4><div class="frames"><div class="chips">${pages.map((p, i) => `<button data-src="${esc(p.src)}" class="${i ? '' : 'on'}">${esc(p.title)}</button>`).join('')}</div>
+    <div class="frame-wrap"><button class="frame-load" data-src="${esc(pages[0].src)}">Показать страницу здесь</button></div>
+    <a class="open" href="${esc(pages[0].src)}" target="_blank" rel="noopener">Открыть в новой вкладке ↗</a></div>`;
+  return h;
+}
+function pipeHTML(steps) { return `<div class="pipe">${steps.map((s, i) => `<div style="--i:${i}"><b>${esc(s.t)}</b><small>${esc(s.d)}</small></div>`).join('')}</div>`; }
+let modalTask = null;
+function openTask(id, push = true) {
+  const i = TASKS.findIndex(t => t.id === id); if (i < 0) return;
+  const t = TASKS[i], d = deptById(t.dept);
+  modalTask = id;
+  const ppl = (t.people || []).map(personOf).filter(Boolean);
+  const head = d && !d.head.owner ? PEOPLE[d.head.id] : null;
+  const ag = (t.agents || []).map(agentMeta);
+  const main = ag.find(a => CONTENT[a.id]?.process?.length);
+  const skills = [...new Set(ag.flatMap(a => (CONTENT[a.id]?.skills || []).map(s => s.title)))].slice(0, 10);
+  $('tHead').innerHTML = `<span class="t-meta"><time datetime="${t.date}">${fmtDate(t.date)}</time><em style="--c:${d?.accent}">${esc(d?.name || '')}</em><em>${esc(t.kind)}</em></span><h2>${esc(t.title)}</h2>`;
+  $('tBody').innerHTML = `
+    <p class="lead">${esc(t.summary)}</p>
+    <div class="who">
+      ${ppl.map(p => `<button class="chip" data-person="${esc(p.id === 'ilia' ? DEPTS[0].head.id : p.id)}">${faceHTML(p, 'xs')}${esc(p.name)}</button>`).join('')}
+      ${head && !ppl.some(p => p.id === head.id) ? `<button class="chip" data-person="${esc(head.id)}">${faceHTML(head, 'xs')}${esc(head.name)} · ${esc(d.short.toLowerCase())}</button>` : ''}
+      ${ag.map(a => `<button class="chip" data-agent="${esc(a.id)}">${orbHTML(a.color, 'xs')}${esc(a.name)}</button>`).join('')}
+    </div>
+    <h4>Доказательства</h4>
+    <div class="proofs">${(t.proof || []).map(p => `<a class="proof k-${esc(p.kind)}" href="${esc(p.url)}" target="_blank" rel="noopener">${ICON[p.kind] || ICON.site}<span><b>${esc(p.label)}</b><small>${esc(KIND_LABEL[p.kind] || 'Ссылка')} · ${esc(p.url.replace(/^https?:\/\//, '').slice(0, 60))}</small></span></a>`).join('')}</div>
+    ${mediaHTML(t.media || [])}
+    ${main ? `<h4>Как работает «${esc(main.name)}»</h4>${pipeHTML(CONTENT[main.id].process)}` : ''}
+    ${skills.length ? `<h4>Скиллы агентов-исполнителей</h4><div class="chipsrow">${skills.map(s => `<span>${esc(s)}</span>`).join('')}</div>` : ''}
+    <p class="src">Дата: ${esc(t.dateNote || '')}. ${t.proof?.some(p => p.kind === 'claude') ? 'Артефакты Claude открываются под аккаунтом владельца или если им поделились.' : ''}</p>`;
+  $('tCount').textContent = `${i + 1} из ${TASKS.length}`;
+  $('taskModal').hidden = false;
+  $('tBody').scrollTop = 0;
+  if (push) setHash(`task-${id}`);
+}
+function stepTask(dir) {
+  const i = TASKS.findIndex(t => t.id === modalTask); if (i < 0) return;
+  openTask(TASKS[(i + dir + TASKS.length) % TASKS.length].id);
+}
+function closeTask() { $('taskModal').hidden = true; $('tBody').innerHTML = ''; modalTask = null; setHash(''); }
+$('tPrev').onclick = () => stepTask(-1);
+$('tNext').onclick = () => stepTask(1);
+$('tClose').onclick = closeTask;
+$('tCopy').onclick = () => {
+  const url = location.origin + location.pathname + '#task-' + modalTask;
+  navigator.clipboard?.writeText(url).then(() => { $('tCopy').textContent = 'Скопировано'; setTimeout(() => $('tCopy').textContent = 'Ссылка на задачу', 1600); }).catch(() => {});
+};
+$('taskModal').addEventListener('click', e => { if (e.target.id === 'taskModal') closeTask(); });
+
+/* ---------- досье агента и руководителя (как на hq.aicex.club) ---------- */
+
+const contentOf = id => CONTENT[id] || { lead:'', process:[], skills:[], templates:[] };
+function resultHTML(r) {
+  const head = `<h4>${esc(r.title)}</h4>`;
+  if (r.type === 'gallery' || r.type === 'strips')
+    return head + `<div class="grid ${r.type === 'strips' ? '' : 'wide'}">${r.items.map(it => `<figure class="fig" data-src="${esc(it.src)}" data-cap="${esc(it.title)}"><img loading="lazy" src="${esc(it.src)}" alt=""><figcaption>${esc(it.title)}</figcaption></figure>`).join('')}</div>`;
+  if (r.type === 'videos')
+    return head + `<div class="vids">${r.items.map(it => `<figure><video src="${esc(it.src)}" controls playsinline preload="none"></video><figcaption>${esc(it.title)}</figcaption></figure>`).join('')}</div>`;
+  if (r.type === 'frames' || (r.type === 'frame' && !r.private)) {
+    const items = r.items || [{ src:r.src, title:r.title }];
+    return head + `<div class="frames"><div class="chips">${items.map((it, i) => `<button data-src="${esc(it.src)}" class="${i ? '' : 'on'}">${esc(it.title)}</button>`).join('')}</div>
+      <div class="frame-wrap"><button class="frame-load" data-src="${esc(items[0].src)}">Показать страницу здесь</button></div>
+      <a class="open" href="${esc(items[0].src)}" target="_blank" rel="noopener">Открыть в новой вкладке ↗</a></div>`;
+  }
+  if (r.type === 'frame' && r.private && r.fallback)
+    return head + `<div class="grid wide"><figure class="fig" data-src="${esc(r.fallback.src)}" data-cap="${esc(r.fallback.title)}"><img loading="lazy" src="${esc(r.fallback.src)}" alt=""><figcaption>${esc(r.fallback.title)}</figcaption></figure></div>`;
+  if (r.type === 'links')
+    return head + `<div class="links">${r.items.map(it => `<a href="${esc(it.url)}" target="_blank" rel="noopener"><b>${esc(it.title)}</b>${it.note ? `<small>${esc(it.note)}</small>` : ''}</a>`).join('')}</div>`;
+  return '';
+}
+let dossierId = null;
+const DTABS = [['about', 'Что умеет'], ['tasks', 'Задачи'], ['works', 'Готовые работы'], ['skills', 'Скиллы'], ['howto', 'Как поставить задачу']];
+function openDossier(id, tab = 'about', push = true) {
+  const person = PEOPLE[id];
+  if (!person && !CATALOG[id]) return;
+  dossierId = id;
+  if (person) {
+    const d = person.dept;
+    $('dAv').innerHTML = faceHTML(person, 'lg');
+    $('dName').textContent = person.name;
+    $('dRole').textContent = `${person.title} · ${d.name}`;
+    $('dTabs').innerHTML = [['about', 'Зона ответственности'], ['tasks', `Задачи отдела <span>${TASKS.filter(t => t.dept === d.id).length}</span>`], ['team', `Агенты <span>${d.agentIds.length}</span>`]].map(([k, l]) => `<button data-tab="${k}">${l}</button>`).join('');
+  } else {
+    const m = agentMeta(id), c = contentOf(id);
+    $('dAv').innerHTML = orbHTML(m.color, 'lg');
+    $('dName').textContent = m.name;
+    $('dRole').textContent = `${m.role} · ${m.dept?.name || ''}${m.dept && !m.dept.head.owner ? ' · руководитель ' + m.dept.head.name : ''}`;
+    const counts = { tasks:tasksOfAgent(id).length, works:(c.results || []).length + (c.artifacts || []).length, skills:(c.skills || []).length, howto:(c.templates || []).length };
+    $('dTabs').innerHTML = DTABS.map(([k, l]) => `<button data-tab="${k}">${l}${counts[k] != null ? ` <span>${counts[k]}</span>` : ''}</button>`).join('');
+  }
+  $('dossier').hidden = false;
+  showDossierTab(tab);
+  if (push) setHash(`${person ? 'head' : 'agent'}-${id}`);
+}
+function showDossierTab(tab) {
+  const id = dossierId, person = PEOPLE[id];
+  [...$('dTabs').children].forEach(b => b.classList.toggle('on', b.dataset.tab === tab));
+  let h = '';
+  if (person) {
+    const d = person.dept, hc = HEADS[d.id] || {};
+    if (tab === 'about') h = `<p class="lead">${esc(hc.lead || person.title)}</p>
+      ${hc.zones?.length ? `<h4>Зоны</h4><div class="chipsrow">${hc.zones.map(z => `<span>${esc(z)}</span>`).join('')}</div>` : ''}
+      ${hc.process?.length ? `<h4>Как работает отдел</h4>${pipeHTML(hc.process)}` : ''}
+      ${hc.materials?.length ? `<h4>Материалы</h4><div class="links">${hc.materials.map(m => `<a href="${esc(m.url)}" target="_blank" rel="noopener"><b>${esc(m.title)}</b></a>`).join('')}</div>` : ''}`;
+    if (tab === 'tasks') h = `<ol class="tasks">${TASKS.filter(t => t.dept === d.id).map(taskRowHTML).join('')}</ol>`;
+    if (tab === 'team') h = `<ul class="agents">${d.agentIds.map(aid => { const m = agentMeta(aid), n = tasksOfAgent(aid).length; return `<li><button data-agent="${esc(aid)}"><i class="dot" style="--c:${esc(m.color)}"></i><span class="txt"><b>${esc(m.name)}</b><small>${esc(m.role)}</small></span><em>${n} ${word(n, 'задача', 'задачи', 'задач')}</em></button></li>`; }).join('')}</ul>`;
+  } else {
+    const c = contentOf(id);
+    if (tab === 'about') {
+      const imgs = (c.results || []).flatMap(r => r.type === 'gallery' || r.type === 'strips' ? r.items : []).slice(0, 4);
+      h = `<p class="lead">${esc(c.lead || CATALOG[id]?.role || '')}</p>${c.team ? `<p class="note">Внутри агента работают роли: ${esc(c.team)}</p>` : ''}
+        ${c.process?.length ? `<h4>Процесс работы</h4>${pipeHTML(c.process)}` : ''}
+        ${c.skills?.length ? `<h4>Ключевые скиллы</h4><div class="chipsrow">${c.skills.slice(0, 8).map(s => `<span>${esc(s.title)}</span>`).join('')}</div>` : ''}
+        ${imgs.length ? `<h4>Примеры работ</h4><div class="grid">${imgs.map(it => `<figure class="fig" data-src="${esc(it.src)}" data-cap="${esc(it.title)}"><img loading="lazy" src="${esc(it.src)}" alt=""><figcaption>${esc(it.title)}</figcaption></figure>`).join('')}</div>` : ''}`;
+    } else if (tab === 'tasks') {
+      const list = tasksOfAgent(id);
+      h = list.length ? `<ol class="tasks">${list.map(taskRowHTML).join('')}</ol>` : `<p class="empty">В истории пока нет задач с этим агентом.</p>`;
+    } else if (tab === 'works') {
+      h = (c.results || []).map(resultHTML).join('');
+      if (c.artifacts?.length) h += `<h4>Документы и артефакты</h4><div class="links">${c.artifacts.map(x => `<a href="${esc(x.url)}" target="_blank" rel="noopener"><b>${esc(x.title)}</b></a>`).join('')}</div>`;
+      if (!h) h = `<p class="empty">Готовых материалов пока нет.</p>`;
+    } else if (tab === 'skills') {
+      h = `<ul class="skilllist">${(c.skills || []).map(s => `<li><b>${esc(s.title)}</b><code>${esc(s.name)}</code><p>${esc(s.desc || '')}</p>${s.say ? `<i>Скажи: «${esc(s.say)}»</i>` : ''}</li>`).join('')}</ul>` || '';
+    } else {
+      h = (c.templates || []).map(t => `<div class="tpl"><b>${esc(t.task)}</b><p>${esc(t.prompt)}</p><button data-copy="${esc(t.prompt)}">Скопировать задачу</button></div>`).join('') || `<p class="empty">Примеры задач появятся позже.</p>`;
+    }
+  }
+  $('dBody').innerHTML = h;
+  $('dBody').scrollTop = 0;
+}
+function closeDossier() { $('dossier').hidden = true; $('dBody').innerHTML = ''; dossierId = null; setHash(''); }
+$('dTabs').addEventListener('click', e => { const b = e.target.closest('[data-tab]'); if (b) showDossierTab(b.dataset.tab); });
+$('dClose').onclick = closeDossier;
+$('dossier').addEventListener('click', e => { if (e.target.id === 'dossier') closeDossier(); });
+
+// общие клики внутри окон: задачи, агенты, люди, картинки, страницы, копирование
+for (const box of [$('tBody'), $('dBody')]) box.addEventListener('click', e => {
+  const t = e.target.closest('[data-task]'); if (t) { closeDossier(); return openTask(t.dataset.task); }
+  const ag = e.target.closest('[data-agent]'); if (ag) { closeTask(); return openDossier(ag.dataset.agent); }
+  const pp = e.target.closest('[data-person]'); if (pp) { closeTask(); return openDossier(pp.dataset.person); }
+  const fig = e.target.closest('.fig'); if (fig && !e.target.closest('a')) return openLightbox(fig.dataset.src, fig.dataset.cap);
+  const load = e.target.closest('.frame-load');
+  if (load) { const w = load.parentElement; w.classList.add('on'); w.innerHTML = `<iframe src="${esc(load.dataset.src)}" title="Страница" loading="lazy"></iframe>`; return; }
+  const chip = e.target.closest('.frames .chips button');
+  if (chip) {
+    const f = chip.closest('.frames');
+    f.querySelectorAll('.chips button').forEach(b => b.classList.toggle('on', b === chip));
+    const w = f.querySelector('.frame-wrap'), ifr = w.querySelector('iframe');
+    if (ifr) ifr.src = chip.dataset.src; else w.innerHTML = `<button class="frame-load" data-src="${esc(chip.dataset.src)}">Показать страницу здесь</button>`;
+    f.querySelector('a.open').href = chip.dataset.src;
+  }
+  const cp = e.target.closest('[data-copy]');
+  if (cp) navigator.clipboard?.writeText(cp.dataset.copy).then(() => { cp.textContent = 'Скопировано'; }).catch(() => {});
+});
+function openLightbox(src, cap) { const lb = $('lightbox'); lb.querySelector('img').src = src; lb.querySelector('p').textContent = cap || ''; lb.hidden = false; }
+$('lightbox').onclick = () => $('lightbox').hidden = true;
+
+// адрес задачи: hq2.aicex.club/#task-funnel-analytics — удобно открыть нужную задачу на вебинаре
+function setHash(h) { try { history.replaceState(null, '', location.pathname + location.search + (h ? '#' + h : '')); } catch (e) {} }
+function routeHash() {
+  const h = location.hash.slice(1);
+  if (h.startsWith('task-')) openTask(h.slice(5), false);
+  else if (h.startsWith('agent-')) openDossier(h.slice(6), 'about', false);
+  else if (h.startsWith('head-')) openDossier(h.slice(5), 'about', false);
+}
+addEventListener('hashchange', routeHash);
+const modalOpen = () => !$('taskModal').hidden || !$('dossier').hidden;
+
 
 /* ======================= КАМЕРА, ВИДЫ, ЭКСКУРСИЯ ======================= */
 
@@ -2444,10 +2698,13 @@ function select(id, flyCam = false) {
     const a = agents.get(id);
     if (a && flyCam) { mode = 'agent'; setControls('free'); setDock(null); focusAgent(a); followId = id; }
   }
+  // панель показывает задачи выбранного агента или отдела руководителя
+  pagent = id && id !== 'you' && (agents.get(id)?.kind !== 'orch') ? id : null;
+  ptab = 'tasks';
   if (isMobile) $('team').classList.remove('min');
-  if ($('team').hidden) { $('team').hidden = false; setDockOn('team', true); onResize(); }
+  if ($('team').hidden) setPanel(true);
   agents.forEach(paintLabel);
-  refreshHUD(true);
+  renderPanel(); $('pbody').scrollTop = 0;
 }
 function setDock(k) { for (const b of $('dock').querySelectorAll('button')) if (!['team', 'labels', 'tour'].includes(b.dataset.cmd)) b.classList.toggle('on', b.dataset.cmd === k); }
 function setDockOn(k, on) { $('dock').querySelector(`[data-cmd="${k}"]`).classList.toggle('on', on); }
@@ -2458,32 +2715,31 @@ function cmd(k) {
   if (k === 'desk' || k === 'deskview') {
     mode = 'desk'; followId = null; setControls('desk'); setDock('desk');
     const C = pods[0].C;
-    if (k === 'desk') { selectedId = 'you'; agents.forEach(paintLabel); refreshHUD(true); }
+    if (k === 'desk') { selectedId = 'you'; pagent = null; agents.forEach(paintLabel); renderPanel(); }
     flyTo(V3(C.x - 0.75, 1.95, C.z - 2.25), V3(C.x + 0.25, 0.95, C.z + 3.4), 1.8);
   }
-  if (k === 'team') { const t = $('team'); t.hidden = !t.hidden; setDockOn('team', !t.hidden); onResize(); }
+  if (k === 'team') setPanel($('team').hidden);
   if (k === 'labels') { labelsOn = !labelsOn; setDockOn('labels', labelsOn); }
   if (k === 'tour') tour ? stopTour() : startTour();
 }
 $('dock').addEventListener('click', e => { const b = e.target.closest('[data-cmd]'); if (b) cmd(b.dataset.cmd); });
 
 const deptInfo = d => {
-  const ag = d.agentIds.map(id => agents.get(id));
-  const w = ag.filter(x => x.status === 'working' || x.status === 'thinking').length, c = ag.filter(x => x.status === 'carrying').length;
-  return `${d.head.owner ? 'Ваш отдел' : d.head.name} и ${ag.length} ${word(ag.length, 'агент', 'агента', 'агентов')}: сейчас ${w} работают${c ? `, ${c} несут материалы коллегам` : ''}.`;
+  const list = TASKS.filter(t => t.dept === d.id), last = list[0];
+  return `${d.head.owner ? 'Ваш отдел' : d.head.name} и ${d.agentIds.length} ${word(d.agentIds.length, 'агент', 'агента', 'агентов')}. В истории ${list.length} ${word(list.length, 'задача', 'задачи', 'задач')}${last ? `, последняя — «${last.title}» (${fmtDate(last.date, true)})` : ''}.`;
 };
 function tourStops() {
   const D = DEPTS, P = PLAN_TABLE;
   const stop = (d, pos, tgt) => ({ title:d.name, text:() => deptInfo(d), pos, tgt });
   const mk = D[1], sl = D[2], tr = D[3], ceo = D[0];
   return [
-    { title:`${BRAND}: весь офис`, text:() => `${bots.length} агентов в четырёх отделах. Каждый сам носит готовые материалы тому, кто работает дальше.`, ...overviewView(), pos:overviewView().pos, tgt:overviewView().target },
+    { title:`${BRAND}: весь офис`, text:() => `${DEPTS.length} отдела и ${bots.filter(b => b.kind === 'bot').length} агентов. Справа — ${TASKS.length} реальных задач с доказательствами: PR на GitHub, артефакты Claude, сайты и ролики.`, pos:overviewView().pos, tgt:overviewView().target },
     mk && stop(mk, V3(mk.pod.C.x + 1, 4.4, mk.pod.C.z + 9.8), V3(mk.pod.C.x, 1.0, mk.pod.C.z + 2.5)),
-    { title:'Доска задач и планёрка', text:() => `В работе ${bots.filter(b => b.act?.type === 'work').length}, на согласовании ${pending.length}. Оркестратор собирает здесь короткие планёрки.`, pos:V3(P.x + 0.3, 2.5, P.z + 4.6), tgt:V3(P.x, 1.6, FZ0) },
+    { title:'Доска истории задач', text:() => `Последние реальные задачи по отделам. Всего в истории ${TASKS.length}, с ${fmtDate(TASKS.at(-1).date)} по ${fmtDate(TASKS[0].date)}.`, pos:V3(P.x + 0.3, 2.5, P.z + 4.6), tgt:V3(P.x, 1.6, FZ0) },
     sl && stop(sl, V3(sl.pod.C.x + 0.5, 3.6, sl.pod.C.z + 8.6), V3(sl.pod.C.x, 0.9, sl.pod.C.z + 1.8)),
     tr && stop(tr, V3(tr.pod.C.x + 2.2, 3.2, tr.pod.C.z + 7.4), V3(tr.pod.C.x, 0.9, tr.pod.C.z + 1.4)),
-    { title:'Ваш стол', text:() => pending.length ? `Ждут решения: ${pending.length}. Агенты приносят сюда то, что нужно согласовать, и ждут вашего ответа.` : 'Сюда агенты приносят всё, что нужно согласовать. Сейчас всё согласовано.', pos:V3(ceo.pod.C.x - 1.5, 3.4, ceo.pod.C.z + 6.4), tgt:V3(ceo.pod.C.x, 0.9, ceo.pod.C.z + 0.4) },
-    { title:'Лаунж и кофе у окна', text:() => `На перерыве: ${bots.filter(b => b.status === 'break').length}. Стеллаж с архивом готовых работ: ${archive.length} папок.`, pos:V3(LOUNGE.x - 3.5, 3.4, LOUNGE.z + 6), tgt:V3(LOUNGE.x + 1.2, 0.7, LOUNGE.z - 1.5) },
+    { title:'Ваш стол', text:() => `Сюда агенты приносят готовые работы. Последняя задача в истории: «${TASKS[0].title}».`, pos:V3(ceo.pod.C.x - 1.5, 3.4, ceo.pod.C.z + 6.4), tgt:V3(ceo.pod.C.x, 0.9, ceo.pod.C.z + 0.4) },
+    { title:'Лаунж и кофе у окна', text:() => `На перерыве: ${bots.filter(b => b.status === 'break').length}. На стеллаже копятся папки готовых работ.`, pos:V3(LOUNGE.x - 3.5, 3.4, LOUNGE.z + 6), tgt:V3(LOUNGE.x + 1.2, 0.7, LOUNGE.z - 1.5) },
   ].filter(Boolean);
 }
 function startTour() {
@@ -2526,64 +2782,37 @@ renderer.domElement.addEventListener('pointerup', e => {
   const p = pickAt(e);
   if (p?.type === 'agent') select(p.id, true);
   else if (p?.type === 'you') select('you', false);
-  else if (selectedId) { selectedId = null; followId = null; agents.forEach(paintLabel); refreshHUD(true); }
+  else if (selectedId) { selectedId = null; pagent = null; followId = null; agents.forEach(paintLabel); renderPanel(); }
 });
 renderer.domElement.addEventListener('pointermove', e => {
   if (e.pointerType !== 'mouse') return;
   renderer.domElement.style.cursor = pickAt(e) ? 'pointer' : '';
 });
 addEventListener('keydown', e => {
-  if (e.key === 'Escape') { stopTour(); if (selectedId) { selectedId = null; followId = null; agents.forEach(paintLabel); refreshHUD(true); } }
+  if (!$('lightbox').hidden) { if (e.key === 'Escape') $('lightbox').hidden = true; return; }
+  if (!$('taskModal').hidden) {
+    if (e.key === 'Escape') closeTask();
+    if (e.key === 'ArrowRight') stepTask(1);
+    if (e.key === 'ArrowLeft') stepTask(-1);
+    return;
+  }
+  if (!$('dossier').hidden) { if (e.key === 'Escape') closeDossier(); return; }
+  if (e.key === 'Escape') { stopTour(); if (selectedId) { selectedId = null; pagent = null; followId = null; agents.forEach(paintLabel); renderPanel(); } }
 });
 
 /* ======================= СТАРТОВАЯ СЦЕНА =======================
-   Офис открывается в рабочем моменте: двое уже ждут у вашего стола, трое
-   несут материалы, в ленте — последние события. */
+   Офис открывается в рабочем моменте: у всех разный прогресс, несколько агентов
+   уже несут готовые работы коллегам. */
 
 function seed() {
-  const now = Date.now(), ago = m => new Date(now - m * 60000);
   const A = id => agents.get(id);
-  const H = id => DEPTS.find(d => d.id === id)?.headAgent;
-  const hist = [
-    [11, 'audience', 'scripts', 'передал темы-выбросы'],
-    [9, 'scripts', 'montage', 'передал сценарий рилса «ИИ-офис за 30 секунд»'],
-    [8, 'analytics', H('marketing'), 'положил отчёт по ROMI'],
-    [7, 'orchestrator', 'audience', 'забрал статус по задаче'],
-    [6, 'chats', 'closer', 'передал 5 тёплых лидов'],
-    [4, 'product', 'chats', 'выкатил новую версию бота'],
-    [3, 'montage', 'publish', 'передал готовый рилс'],
-  ];
-  for (const [m, f, t, text] of hist) {
-    const fa = A(f), ta = typeof t === 'string' ? A(t) : t;
-    if (!fa || !ta) continue;
-    addFeed(fa, ta, text, ago(m), true);
-    if (ta.inbox) ta.inbox.push({ item:(text.match(/«([^»]+)»/) || [])[1] || text.split(' ').slice(1).join(' '), from:fa, at:ago(m) });
-  }
-  for (let i = 0; i < 18; i++) addArchive(pick(bots).color, 'Архив');
-  // прогресс у всех разный — офис живёт с первой секунды
+  for (let i = 0; i < 18; i++) addArchive(pick(bots).color);
   for (const b of bots) if (b.kind === 'bot') { b.progress = b.waitInput ? 0 : rand(0.05, 0.85); b.thinkT = rand(1, 12); }
-  // двое ждут решения у вашего стола
-  const waitAt = (id, outItem) => {
-    const a = A(id); if (!a) return;
-    const o = a.data.out.find(x => x.to === 'you' && (!outItem || x.item === outItem)); if (!o) return;
-    const q = claimQueueSpot(a), own = pods[0].owner.chair;
-    a.x = q.x; a.z = q.z; a.yaw = a.tyaw = Math.atan2(own.x - q.x, own.z - q.z);
-    a.carrying = { item:o.item, o }; a.progress = 1;
-    const pend = { id:Math.random().toString(36).slice(2), agent:a, item:o.item, ask:o.ask, at:ago(id === 'publish' ? 2 : 3), resolved:null };
-    a.pend = pend; pending.push(pend);
-    a.plan = [doFor(70, 'present', 'waiting', { yaw:a.yaw, until:() => a.pend?.resolved }), call(() => a.afterDecision())];
-    a.status = 'waiting';
-  };
-  waitAt('publish'); waitAt('creatives');
-  addFeed(A('creatives'), 'you', 'ждёт решения — креативы для meta ads', ago(3), true);
-  addFeed(A('publish'), 'you', 'ждёт решения — контент-план на ноябрь', ago(2), true);
-  // трое уже несут материалы
-  for (const [id, frac] of [['scripts', 0.45], ['comments', 0.55], ['metaads', 0.35], ['specs', 0.25]]) {
+  for (const [id, frac] of [['scripts', 0.45], ['comments', 0.55], ['metaads', 0.35], ['specs', 0.25], ['publish', 0.6]]) {
     const a = A(id); if (!a) continue;
     a.progress = 1; a.planDeliver();
     const w = a.plan.find(s => s.type === 'walk'); if (w) w.skip = frac;
   }
-  renderFeed();
 }
 
 /* ======================= ЦИКЛ ======================= */
@@ -2608,11 +2837,12 @@ if (params.get('theme') && THEMES[params.get('theme')]) theme0 = params.get('the
 applyTheme(theme0);
 if (isMobile) $('team').classList.add('min');
 $('brandFold').onclick = () => { const b = $('brand'); b.classList.toggle('open'); $('brandFold').setAttribute('aria-expanded', b.classList.contains('open')); };
-buildList();
 seed();
+{ let open = true; try { open = localStorage.getItem('hq:panel') !== '0'; } catch (e) {} $('team').hidden = !open; $('teamShow').hidden = open; setDockOn('team', open); }
 onResize();
 { const v = overviewView(); camera.position.copy(v.pos); controls.target.copy(v.target); setControls('free'); }
-refreshHUD(true);
+renderPanel(); refreshHUD();
+routeHash();
 drawKanban(); drawOwnerScreen();
 document.fonts?.ready.then(() => { drawKanban(); drawOwnerScreen(); });
 
@@ -2621,6 +2851,8 @@ const screenAgents = bots.filter(b => b.desk);
 let scrIdx = 0, hudT = 0, kbT = 0, frames = 0, fpsT = 0, lowQ = false;
 const tmpV = new THREE.Vector3();
 renderer.setAnimationLoop(() => {
+  // окно задачи или досье закрывает офис — не рисуем 3D под ним
+  if (modalOpen()) { clock.getDelta(); return; }
   const dt = Math.min(0.1, clock.getDelta());
   NOW += dt;
   const t = NOW;
@@ -2634,7 +2866,7 @@ renderer.setAnimationLoop(() => {
   }
   hudT += dt; kbT += dt;
   if (hudT > 0.4) { hudT = 0; refreshHUD(); agents.forEach(paintLabel); }
-  if (kbT > 1.2) { kbT = 0; drawKanban(); drawOwnerScreen(); delegateStale(); }
+  if (kbT > 6) { kbT = 0; drawKanban(); drawOwnerScreen(); }
   // камера
   if (fly) {
     const k = Math.min(1, (performance.now() - fly.s) / fly.d), e = ease(k);
@@ -2701,17 +2933,17 @@ function setAgent(id, patch) {
   if (patch.task) a.task = String(patch.task);
   if (patch.name) a.data.name = String(patch.name);
   if (patch.role) a.data.role = String(patch.role);
-  a.labelSig = ''; paintLabel(a); refreshHUD(true);
+  a.labelSig = ''; paintLabel(a); renderPanel();
 }
-window.VirtualOffice = { setAgent, select, theme:applyTheme, approve:id => resolvePending(pending.find(p => p.agent.id === id), 'approve'), view:cmd };
+window.VirtualOffice = { setAgent, select, theme:applyTheme, openTask, openDossier, view:cmd, tasks:TASKS };
 addEventListener('message', e => {
   const d = e.data; if (!d || typeof d !== 'object') return;
   if (d.type === 'office:agent') setAgent(d.id, d);
   if (d.type === 'office:focus') select(d.id, true);
   if (d.type === 'office:theme') applyTheme(d.theme);
 });
-if (params.has('debug')) window.__hq = { THREE, scene, agents, camera, controls, pending, NAV, findPath, bloom, grade, gtao, renderer, feedLog,
-  step(sec, dt = 1 / 30) { for (let k = 0; k < sec / dt; k++) { NOW += dt; for (const a of agents.values()) a.update(dt, NOW); } refreshHUD(true); agents.forEach(paintLabel); } };
+if (params.has('debug')) window.__hq = { THREE, scene, agents, camera, controls, NAV, findPath, bloom, grade, gtao, renderer, TASKS,
+  step(sec, dt = 1 / 30) { for (let k = 0; k < sec / dt; k++) { NOW += dt; for (const a of agents.values()) a.update(dt, NOW); } refreshHUD(); agents.forEach(paintLabel); } };
 </script>
 </body>
 </html>

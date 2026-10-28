@@ -20,7 +20,7 @@ env vars, and routes, see `CLAUDE.md` / `README.md` inside each `apps/<app>/`.
 │   ├── ai-content-factory/ # Autonomous IG content factory (Claude + Puppeteer + RAG)
 │   ├── ig-content/         # Next.js SaaS — Instagram Serial Content Automation (Supabase + 5 agents)
 │   ├── funnel-analytics/   # Сквозная аналитика: декомпозиция × Meta Ads × оплаты UTM → static HTML dashboard
-│   ├── hq-office/          # Концепт «живого офиса» для hq.aicex.club (Three.js, один HTML)
+│   ├── hq-office/          # Живой офис агентов v2 (hq2.aicex.club): 3D + история реальных задач
 │   └── voice-circle-bot/   # Python TG bot for video circles
 ├── landings/               # static landing pages (one folder per product)
 ├── supabase/               # SQL migrations shared across apps
@@ -59,7 +59,7 @@ env vars, and routes, see `CLAUDE.md` / `README.md` inside each `apps/<app>/`.
 | `apps/persona-train` | Forked voice-training stack (own domain) — **в Command Center НЕТ**, отдельная инициатива Ильи | `persona-train.46-62-215-11.nip.io`, `@ilia_pali0_bot`, `persona-train-web :3030` |
 | `apps/funnel-analytics` | Сквозная аналитика + доходы/расходы + контент (Python stdlib → один HTML), cron-обновление через `update-funnel-analytics.yml` | `dashboard.aicex.club` (свой сервер, cron из `deploy/setup-server.sh`), `/var/www/funnel-analytics` |
 | `apps/voice-circle-bot` | Python TG-bot prototype для видео-кружков — **в Command Center НЕТ**, не задеплоен | — |
-| `apps/hq-office` | Концепт «живого офиса» агентов для `hq.aicex.club`: open-space, агенты ходят с материалами, панель «Команда» + лента — **в Command Center НЕТ**, не задеплоен | — |
+| `apps/hq-office` | Живой офис агентов v2: 3D open-space + история реальных задач с доказательствами (PR, артефакты Claude, сайты), досье и скиллы с hq.aicex.club — **в Command Center НЕТ** | `hq2.aicex.club` (нужна A-запись hq2 → 46.62.215.11), `hq2.46-62-215-11.nip.io`; Caddy → `/var/www/hq-office`, деплой `deploy-hq-office.yml` |
 
 ## When Claude is asked to change something
 
@@ -195,7 +195,7 @@ When the task is scoped to a single app, read its `CLAUDE.md` first:
 - [`apps/ai-content-factory/CLAUDE.md`](apps/ai-content-factory/CLAUDE.md) — TS/ESM, Claude + Voyage + sqlite-vec + Puppeteer carousel pipeline, Telegram delivery
 - [`apps/ig-content/CLAUDE.md`](apps/ig-content/CLAUDE.md) — Next.js 14 + Supabase, 5 AI-agents (Strategist / Reels / Carousel / Analytics), pgvector RAG, port 3010, deploy `igcontent.46-62-215-11.nip.io`
 - [`apps/voice-circle-bot/CLAUDE.md`](apps/voice-circle-bot/CLAUDE.md) — prototype, not in prod
-- [`apps/hq-office/CLAUDE.md`](apps/hq-office/CLAUDE.md) — живой 3D-офис агентов (Three.js, один HTML): A*-маршруты, позы, панель «Команда» — не задеплоен
+- [`apps/hq-office/CLAUDE.md`](apps/hq-office/CLAUDE.md) — живой офис v2 (hq2.aicex.club): 3D-визуализация + история реальных задач (`tasks.js`), досье с hq.aicex.club
 - [`apps/threads-growth/CLAUDE.md`](apps/threads-growth/CLAUDE.md) — AI Threads Growth Agent (FastAPI + pgvector + Claude + Apify + n8n): relative-virality scoring (xn), Reply Engine, warmup-ramp, similarity-gated rewrite, learning loop — **WIP, не задеплоен**
 
 Per-app `README.md` / `DEPLOY.md` / `ROADMAP.md` remain authoritative for deep architecture and deploy steps. Each `apps/<app>/CLAUDE.md` is the orientation layer.
