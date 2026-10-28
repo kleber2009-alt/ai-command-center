@@ -13,7 +13,8 @@
 
    Env: GITHUB_TOKEN (public repo works without it, rate-limited), GITHUB_REPOSITORY,
    ANTHROPIC_API_KEY — optional: Claude writes Russian titles and summaries from the PRs;
-   without it (or if the call fails) the PR title and the first paragraph of its body are used.
+   without it (or if the call fails) the PR title and the first paragraph of its body are used,
+   and the task keeps a `draft` hash so a later run with a key rewrites it.
    Inputs of `add` may also come from env: LINK, TITLE, DEPT, SUMMARY, DATE. */
 import fs from 'node:fs';
 import path from 'node:path';
@@ -167,6 +168,9 @@ const day = iso => iso.slice(0, 10);
 const daysApart = (a, b) => Math.abs(Date.parse(a) - Date.parse(b)) / 864e5;
 const stripScope = t => t.replace(/^\s*(?:\w+\([^)]*\)|[\w./-]+)\s*:\s*/, '').trim();
 const cap = s => s.charAt(0).toUpperCase() + s.slice(1);
+// Texts written without Claude are a draft: `draft` holds their hash. Once a key is there,
+// the next run rewrites drafts nobody has edited by hand (the hash still matches).
+const textHash = t => crypto.createHash('sha1').update(`${t.title}\n${t.summary}`).digest('hex').slice(0, 10);
 const prProof = p => ({ kind:'github', label:clip(`PR #${p.number} · ${stripScope(p.title)}`, 90), url:`${GH}/pull/${p.number}` });
 
 function firstParagraph(md) {
@@ -296,7 +300,24 @@ async function syncPRs({ dry }) {
     if (g) { g.prs.push(p); g.date = date; } else groups.push({ key, date, product:productInfo(p.product), prs:[p] });
   }
 
-  const cards = await describeGroups(groups, office);
+  // Drafts to rewrite with Claude: re-read their PRs (a hand-edited draft is left as is)
+  const retext = [];
+  let dirty = false;
+  for (const t of process.env.ANTHROPIC_API_KEY ? data.tasks.filter(t => t.draft).slice(0, 16) : []) {
+    if (textHash(t) !== t.draft || !(t.prs || []).length) { delete t.draft; dirty = true; continue; }
+    const tprs = [];
+    for (const n of t.prs) { const p = await gh(`/pulls/${n}`); p.files = await prFiles(n); tprs.push(p); }
+    retext.push({ key:`retext:${t.id}`, date:t.date, product:productInfo((t.group || 'repo').split('|')[0]), prs:tprs, task:t });
+  }
+
+  const cards = await describeGroups([...groups, ...retext], office);
+  const rewritten = [];
+  for (const r of retext) {
+    const card = cards.get(r.key);
+    if (!card) continue;
+    applyCard(r.task, card, office, r.product.open);
+    delete r.task.draft; rewritten.push(r.task);
+  }
   const added = [];
   for (const g of groups) {
     const plain = plainCard(g), card = { ...plain, ...(cards.get(g.key) || {}) };
@@ -309,15 +330,18 @@ async function syncPRs({ dry }) {
       group:g.key, prs:g.prs.map(p => p.number), auto:true,
     };
     applyCard(task, card, office, g.product.open);
+    if (!cards.has(g.key)) task.draft = textHash(task);
     data.tasks.push(task); added.push(task);
   }
 
-  const changed = prs.length > 0;
-  if (changed) {
+  const changed = prs.length > 0 || rewritten.length > 0 || dirty;
+  if (prs.length) {
     data.seen = [...seen];
     data.since = prs.reduce((m, p) => p.merged_at > m ? p.merged_at : m, data.since);
   }
-  report(added, data.tasks.filter(t => updated.has(t.id)), prs.length);
+  const waiting = data.tasks.filter(t => t.draft).length;
+  if (waiting && !process.env.ANTHROPIC_API_KEY) note(`Ждут ключа Claude: ${waiting} задач с текстами из описаний PR — перепишутся сами, когда появится ключ`);
+  report(added, data.tasks.filter(t => updated.has(t.id)), prs.length, rewritten);
   if (changed && !dry) saveAuto(data);
   if (dry) console.log(JSON.stringify(added, null, 2));
 }
@@ -355,12 +379,13 @@ async function addLink(opts, { dry }) {
     if (!p.merged_at) throw new Error(`PR #${n} ещё не слит`);
     p.files = await prFiles(n); p.product = productOf(p.title, p.files);
     const g = { key:`${p.product}|${p.head?.ref || n}`, date:day(p.merged_at), product:productInfo(p.product), prs:[p] };
-    const card = { ...plainCard(g), ...((await describeGroups([g], office)).get(g.key) || {}) };
+    const llm = (await describeGroups([g], office)).get(g.key), card = { ...plainCard(g), ...(llm || {}) };
     task = { id:`gh-${n}`, date:opts.date || g.date, dateNote:MERGED, kind:'Разработка', dept:g.product.dept,
       people:[PEOPLE[p.user?.login] || 'ilia'], agents:g.product.agents, title:'', summary:'',
       proof:[prProof(p), ...(g.product.site ? [{ kind:'site', label:`${g.product.name} — живой сайт`, url:g.product.site }] : [])],
       group:g.key, prs:[n], auto:true };
     applyCard(task, card, office, g.product.open);
+    if (!llm && !opts.title && !opts.summary) task.draft = textHash(task);
     data.seen.push(n);
   } else {
     const claude = /claude\.ai\/(?:code\/)?artifact\//.test(url);
@@ -381,6 +406,7 @@ async function addLink(opts, { dry }) {
   }
   if (opts.title) task.title = clip(opts.title, 110);
   if (opts.summary) task.summary = clip(opts.summary, 300);
+  if (task.draft) task.draft = textHash(task);
   if (dept) task.dept = dept;
   if (all.some(t => t.id === task.id)) task.id += '-' + Date.now().toString(36);
   data.tasks.push(task);
@@ -394,10 +420,11 @@ function note(line) {
   if (process.env.GITHUB_STEP_SUMMARY) fs.appendFileSync(process.env.GITHUB_STEP_SUMMARY, line + '\n\n');
 }
 
-function report(added, updated, scanned) {
-  const lines = [`История hq2: ${added.length} новых задач, ${updated.length} дополнено (просмотрено PR: ${scanned})`];
+function report(added, updated, scanned, rewritten = []) {
+  const lines = [`История hq2: ${added.length} новых задач, ${updated.length} дополнено, ${rewritten.length} переписано Claude (просмотрено PR: ${scanned})`];
   for (const t of added) lines.push(`- новая: **${t.title}** — ${t.date}, https://hq2.aicex.club/#task-${t.id}`);
   for (const t of updated) lines.push(`- дополнена: **${t.title}** — ${t.proof.filter(p => p.kind === 'github').map(p => p.label.split(' ·')[0]).join(', ')}`);
+  for (const t of rewritten) lines.push(`- переписана: **${t.title}** — https://hq2.aicex.club/#task-${t.id}`);
   console.log(lines.join('\n'));
   if (process.env.GITHUB_STEP_SUMMARY) fs.appendFileSync(process.env.GITHUB_STEP_SUMMARY, lines.join('\n') + '\n');
 }
