@@ -1,12 +1,12 @@
 name: deploy-hq-office
 
-# Living office of agents (apps/hq-office) → static files on Hetzner, served by Caddy.
-# Domains: repo variable HQ_OFFICE_DOMAINS, default "hq2.aicex.club, hq2.46-62-215-11.nip.io".
-# The nip.io address works right away. hq2.aicex.club needs a Cloudflare A record
-# hq2 → 46.62.215.11 (DNS only): today *.aicex.club falls through a wildcard to another server.
-# Alternative: run apps/hq-office/deploy/setup-server.sh on that server instead.
+# Living office of agents (apps/hq-office) → https://hq2.aicex.club on the aicex box
+# (vars.HETZNER_HOST, where *.aicex.club points). Each run uploads a release to
+# /opt/hq-office/releases/<id>, switches /opt/hq-office/current to it and keeps the
+# static container + edge Caddy site in place (apps/hq-office/deploy/server.sh).
 #
-# Required secret: HETZNER_SSH_KEY
+# Secret: HETZNER_SSH_KEY. Variables: HETZNER_HOST, HETZNER_USER, HETZNER_SSH_PORT,
+# HQ_OFFICE_DOMAIN (default hq2.aicex.club).
 
 on:
   push:
@@ -25,9 +25,10 @@ jobs:
     runs-on: ubuntu-latest
     timeout-minutes: 10
     env:
-      HOST: 46.62.215.11
-      WEB: /var/www/hq-office
-      DOMAINS: ${{ vars.HQ_OFFICE_DOMAINS || 'hq2.aicex.club, hq2.46-62-215-11.nip.io' }}
+      HOST: ${{ vars.HETZNER_HOST }}
+      SSH_USER: ${{ vars.HETZNER_USER || 'root' }}
+      SSH_PORT: ${{ vars.HETZNER_SSH_PORT || '22' }}
+      DOMAIN: ${{ vars.HQ_OFFICE_DOMAIN || 'hq2.aicex.club' }}
     steps:
       - uses: actions/checkout@v5
 
@@ -46,23 +47,27 @@ jobs:
         env:
           KEY: ${{ secrets.HETZNER_SSH_KEY }}
         run: |
+          test -n "$HOST" || { echo "::error::vars.HETZNER_HOST is not set"; exit 1; }
           mkdir -p ~/.ssh
-          printf '%s\n' "$KEY" > ~/.ssh/id_ed25519
-          chmod 600 ~/.ssh/id_ed25519
-          ssh-keyscan -H "$HOST" >> ~/.ssh/known_hosts 2>/dev/null
+          printf '%s\n' "$KEY" > ~/.ssh/id_deploy
+          chmod 600 ~/.ssh/id_deploy
+          ssh-keyscan -p "$SSH_PORT" -H "$HOST" >> ~/.ssh/known_hosts 2>/dev/null
+          echo "SSH=ssh -i $HOME/.ssh/id_deploy -p $SSH_PORT $SSH_USER@$HOST" >> "$GITHUB_ENV"
 
-      - name: Sync files
+      - name: Upload release
         run: |
-          ssh root@"$HOST" "mkdir -p $WEB"
-          rsync -az --delete --exclude README.md --exclude CLAUDE.md --exclude deploy/ \
-            apps/hq-office/ root@"$HOST":"$WEB"/
+          REL="$(date -u +%Y%m%d%H%M%S)-${GITHUB_SHA::7}"
+          echo "REL=$REL" >> "$GITHUB_ENV"
+          tar -C apps/hq-office --exclude=./deploy --exclude=./README.md --exclude=./CLAUDE.md -czf - . \
+            | $SSH "mkdir -p /opt/hq-office/releases/$REL && tar -xzf - -C /opt/hq-office/releases/$REL"
 
-      - name: Caddy site block
-        run: ssh root@"$HOST" bash -s -- "'$DOMAINS'" "$WEB" < apps/hq-office/deploy/caddy-site.sh
+      - name: Activate
+        run: $SSH bash -s -- "$DOMAIN" "$REL" < apps/hq-office/deploy/server.sh
 
       - name: Smoke test
         run: |
-          for d in $(echo "$DOMAINS" | tr ',' ' '); do
-            code=$(curl -sS -o /dev/null -w '%{http_code}' --retry 6 --retry-delay 5 --retry-all-errors "https://$d/" || true)
-            echo "https://$d/ → $code"
+          for path in / /tasks.js; do
+            code=$(curl -sS -o /dev/null -w '%{http_code}' --retry 8 --retry-delay 5 --retry-all-errors "https://$DOMAIN$path" || echo 000)
+            echo "$code https://$DOMAIN$path"
+            [ "$code" = 200 ] || exit 1
           done
