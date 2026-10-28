@@ -57,6 +57,7 @@ function trackPanel() {
   } else {
     h += '<div class="box ok"><b class="h2">Офис собран</b><p class="mut sm" style="margin:0">Все 24 агента на местах. Дальше офис работает по регламентам из папки regulations.</p><div class="row"><button class="ab pri" data-act="project">' + icon('folder') + 'Открыть проект</button></div></div>';
   }
+  if (MODE !== 'demo' && S.profile && !(S.quick && S.quick.result) && !isDone('0.1')) h += '<div class="box"><span class="eb">Быстрая победа · 10 минут</span><b>' + esc(quickWin().title) + '</b><span class="mut sm">Первый результат для «' + esc(brand()) + '» ещё до ресепшна.</span><div class="row"><button class="ab sm" data-act="quick">' + icon('star', 13) + 'Получить</button></div></div>';
   if (hiredSet().size) h += todayBox();
   if (MODE !== 'demo' || myGoal()) h += goalBox();
   const bosses = STEPS.filter((s) => s.boss && isDone(s.id) && !(st(s.id).boss && st(s.id).boss.status === 'done'));

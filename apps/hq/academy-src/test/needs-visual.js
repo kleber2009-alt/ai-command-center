@@ -23,6 +23,7 @@ const click = (p, sel) => p.evaluate((s) => document.querySelector(s).click(), s
     const kept = await p.evaluate(() => [document.querySelector('#aon-name').value, document.querySelector('#aon-project').value]);
     if (kept[0] !== 'Анна' || kept[1] !== 'Школа «Speak»') errors.push(name + ': onboarding values lost ' + JSON.stringify(kept));
     await p.evaluate(() => document.querySelector('#aOnb').requestSubmit()); await p.waitForTimeout(1500);
+    await p.waitForTimeout(600); if (await p.$('#aModal [data-act="quick-skip"]')) await p.evaluate(() => document.querySelector('#aModal [data-act="quick-skip"]').click());
     await p.screenshot({ path: OUT + '/52-step01-needs-' + name + '.png' });
     await click(p, '#aPanel .aph [data-act="track"]'); await p.waitForTimeout(500);
     await p.screenshot({ path: OUT + '/53-track-' + name + '.png' });

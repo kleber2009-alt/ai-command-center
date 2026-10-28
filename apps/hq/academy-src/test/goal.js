@@ -17,6 +17,7 @@ const goalText = (p) => p.$eval('#aPanel .goal', (e) => e.textContent.replace(/\
   await p.selectOption('#aon-goal', 'ads');
   await p.screenshot({ path: OUT + '/70-onb-goal.png' });
   await p.evaluate(() => document.querySelector('#aOnb').requestSubmit()); await p.waitForTimeout(1500);
+  await p.waitForTimeout(600); if (await p.$('#aModal [data-act="quick-skip"]')) await p.evaluate(() => document.querySelector('#aModal [data-act="quick-skip"]').click());
   await click(p, '#aPanel .aph [data-act="track"]'); await p.waitForTimeout(500);
   let t = await goalText(p);
   console.log('ads:', t.slice(0, 140));

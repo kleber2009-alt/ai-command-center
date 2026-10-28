@@ -337,6 +337,8 @@ function projectFiles() {
   if (fin && isDone(fin.id)) out.push({ path: 'regulations/office-week.md', about: 'неделя офиса по дням', text: () => '# Неделя офиса — ' + brand() + '\n\n' + (String(answersOf(fin.id).week_plan || '').trim() || '—') + '\n' });
   const o = ownSkill();
   if (o) out.push({ path: 'skills/' + o.id + '/SKILL.md', about: 'твой первый скилл', text: () => skillMd(o) });
+  const q = S.quick && S.quick.result && A.quickWins[S.quick.id];
+  if (q) out.push({ path: 'wins/first-win.md', about: 'первая победа: ' + q.title.toLowerCase(), text: () => '# Первая победа — ' + q.title + '\n\n' + S.quick.result.trim() + '\n' });
   return out;
 }
 

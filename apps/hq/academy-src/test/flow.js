@@ -39,6 +39,7 @@ async function doStep(p, id, opts) {
   await p.fill('#aon-project', 'Школа английского Speak');
   await p.fill('#aon-niche', 'Учу взрослых говорить по-английски за 3 месяца');
   await p.click('#aOnb button[type=submit]');
+  await p.waitForTimeout(600); if (await p.$('#aModal [data-act="quick-skip"]')) await p.evaluate(() => document.querySelector('#aModal [data-act="quick-skip"]').click());
   await p.waitForTimeout(1800);
   await shot(p, '02-step01-task');
   await doStep(p, '0.1', { dunno: '03-step01-dunno', gifts: '04-step01-gifts', work: '05-step01-work', reg: '06-step01-reg', wait: 4200 });

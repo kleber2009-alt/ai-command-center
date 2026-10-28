@@ -25,7 +25,7 @@ function startProject() {
   touch(); save(); closeModal();
   renderAll();
   if (window.OFFICE) window.OFFICE.sync();
-  setTimeout(() => openStep('0.1'), 300);
+  setTimeout(showQuickWin, 300);
 }
 
 // ---------- Что понадобится ----------
@@ -36,6 +36,39 @@ function showNeeds(mid) {
     (one ? '' : '<div class="stk"><span class="eb">До старта</span>' + needsHTML(A.needs.start) + '</div>') +
     (one ? [one] : A.modules).map((m) => '<div class="stk">' + (one ? '' : '<span class="eb">Модуль ' + m.id + ' · ' + esc(m.title) + ' · ≈ ' + hours(modMinutes(m.id)) + '</span>') + needsHTML(A.needs.modules[m.id] || []) + '</div>').join('') +
     '<div class="row">' + (one ? '<button class="ab sm" data-act="needs" data-id="">Весь трек</button>' : '') + (back === 'onb' ? '<button class="ab pri sm" data-act="onb">' + icon('left', 13) + 'Назад к старту</button>' : '') + '</div>', true);
+}
+
+// ---------- Быстрая победа: первый результат за 10 минут, ещё до ресепшна ----------
+const quickWin = () => A.quickWins[(S.profile && S.profile.goal) || 'leads'] || A.quickWins.leads;
+function showQuickWin() {
+  if (!S.profile) return;
+  const q = quickWin(), busy = UI.busy.quick, done = !!(S.quick && S.quick.result);
+  openModal('<div class="adh"><div class="stk" style="gap:2px"><span class="eb">Быстрая победа · 10 минут</span><b class="h2">' + esc(q.title) + '</b></div><button class="icob" data-act="close" aria-label="Закрыть">' + icon('x') + '</button></div>' +
+    '<p class="mut sm" style="margin:0">Пока офис пустой — получи первый результат для «' + esc(brand()) + '». Получишь: ' + esc(q.result) + '</p>' +
+    '<ol class="nl"><li><span>Скопируй промпт — в нём уже твой проект.</span></li><li><span>Открой Claude, начни новый чат, вставь промпт и нажми Enter.</span></li><li><span>Вставь сюда, что получилось, — сохраню в проект.</span></li></ol>' +
+    '<div class="pre">' + esc(fill(q.prompt)) + '</div>' +
+    '<div class="row"><button class="ab sm pri" data-act="quick-copy">' + icon('copy', 13) + 'Скопировать промпт</button><a class="ab sm" href="https://claude.ai/new" target="_blank" rel="noopener">Открыть Claude ' + icon('ext', 13) + '</a>' +
+    (aiOn() ? '<button class="ab sm" data-act="quick-ai"' + (busy ? ' disabled' : '') + '>' + (busy ? '<span class="spin"></span>Claude пишет…' : icon('ai', 13) + 'Сделать прямо здесь') + '</button>' : '') + '</div>' +
+    '<textarea class="ta" id="aqw-res" rows="6" placeholder="Вставь сюда ответ Claude">' + esc((S.quick && S.quick.result) || UI.quickDraft || '') + '</textarea>' +
+    '<div class="row"><button class="ab amber" data-act="quick-done">' + icon('check') + (done ? 'Сохранить и к ресепшну' : 'Готово · +' + A.xp.quick + ' опыта') + '</button><button class="ab ghost sm" data-act="quick-skip">Пропустить — сразу к ресепшну</button></div>', true);
+}
+async function quickAI() {
+  const q = quickWin();
+  UI.busy.quick = true; showQuickWin();
+  try { const r = await RT.sample(fill(q.prompt), { modelTier: 'quick' }); UI.quickDraft = String((r && r.text) || '').trim(); }
+  catch (e) { const m = aiError(e); if (m) toast(m); }
+  UI.busy.quick = false;
+  if (!$('#aModal').hidden && $('#aqw-res')) showQuickWin();
+}
+function quickDone() {
+  const v = (($('#aqw-res') || {}).value || '').trim();
+  if (v.length < 40) { toast('Вставь ответ Claude целиком — хотя бы пару строк.'); return; }
+  const first = !(S.quick && S.quick.result);
+  S.quick = { id: (S.profile.goal || 'leads'), result: v, at: Date.now() }; UI.quickDraft = '';
+  if (first) { addXP(A.xp.quick, 'первая победа'); giveBadge('quick-win'); }
+  touch(); save(); renderAll();
+  toast('Сохранено в проект: wins/first-win.md');
+  openStep('0.1');
 }
 
 // ---------- Сегодня и неделя офиса ----------

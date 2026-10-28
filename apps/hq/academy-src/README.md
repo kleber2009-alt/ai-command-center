@@ -24,6 +24,7 @@ node test/needs-visual.js dist/test.html test/shots   # «Что понадоб�
 node test/transfer.js dist/test.html test/shots       # перенос прогресса файлом в чистый браузер
 node test/goal.js dist/test.html test/shots           # цель на входе, блок «Твоя цель», смена цели
 node test/week.js dist/test.html test/shots           # «Сегодня» и «Неделя офиса» по регламентам агентов
+node test/quick.js dist/test.html test/shots          # быстрая победа после входа: промпт, опыт, wins/first-win.md
 ```
 
 ## Деплой

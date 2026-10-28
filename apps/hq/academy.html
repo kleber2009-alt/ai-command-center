@@ -3441,9 +3441,10 @@ window.DEPT_CONTENT = {
     { name: 'Директор', xp: 2200 },
     { name: 'Основатель офиса', xp: 3000 }
   ];
-  A.xp = { answers: 30, gifts: 10, task: 50, regulation: 20, boss: 50, streak7: 50 };
+  A.xp = { answers: 30, gifts: 10, task: 50, regulation: 20, boss: 50, streak7: 50, quick: 30 };
 
   A.badges = [
+    { id: 'quick-win', name: 'Первая победа', desc: 'Первый результат за 10 минут' },
     { id: 'office-open', name: 'Офис открыт', desc: 'Паспорт бизнеса и проект в Claude' },
     { id: 'first-agent', name: 'Первый агент', desc: 'Нанял первого агента' },
     { id: 'content-factory', name: 'Контент-завод', desc: 'Нанят весь модуль «Контент-завод»' },
@@ -3582,6 +3583,20 @@ window.DEPT_CONTENT = {
     { id: 'ads', title: 'Реклама с понятной ценой заявки', what: 'Креативы, тест кампаний и отчёт, где видно, что выключить.', milestone: '5.2', key: ['3.5', '5.1', '5.2'] },
     { id: 'system', title: 'Офис на автопилоте', what: 'Аналитика, утренний брифинг и свои скиллы — офис работает по регламентам.', milestone: '6.3', key: ['6.1', '6.2', '6.3'] }
   ];
+
+  // быстрая победа сразу после входа: один промпт под цель, результат за 10 минут в обычном чате Claude
+  A.quickWins = {
+    content: { title: '5 тем для рилсов на эту неделю', result: '5 тем: хук первой фразой, 3 пункта и кодовое слово к каждой.',
+      prompt: 'Меня зовут {{@name}}. Мой проект — «{{@project}}»: {{@niche}}.\nПридумай 5 тем для рилсов на эту неделю по формуле: инструмент или способ + результат в цифрах + срок или лёгкость.\nДля каждой темы дай: хук — первую фразу рилса до 12 слов, 3 коротких пункта, что сказать, и кодовое слово для комментариев.\nПиши просто, как для пятнадцатилетнего. Без воды и общих слов.' },
+    leads: { title: 'Подарок за кодовое слово', result: '3 идеи подарка с кодовым словом и первой фразой рилса — и лучшая из них.',
+      prompt: 'Меня зовут {{@name}}. Мой проект — «{{@project}}»: {{@niche}}.\nПридумай 3 идеи подарка за кодовое слово под рилсом: чек-лист, шаблон или мини-гайд, который мой клиент получит в директ и сразу применит.\nДля каждой: название, что внутри (5 пунктов), кодовое слово и первая фраза рилса, который ведёт на подарок.\nВыбери лучшую и объясни одной фразой почему. Пиши просто, без воды.' },
+    sales: { title: 'Ответы на 3 главных возражения', result: '3 возражения клиентов и ответы на них в стиле переписки в директе.',
+      prompt: 'Меня зовут {{@name}}. Мой проект — «{{@project}}»: {{@niche}}.\nНазови 3 главных возражения моих клиентов перед покупкой и напиши ответ на каждое, как в переписке в директе: 2–3 коротких сообщения, спокойно, без давления, с вопросом в конце.\nВ конце — одно сообщение-напоминание для тех, кто не ответил сутки.' },
+    ads: { title: '6 заголовков для рекламы', result: '6 заголовков с подписями и 2, которые стоит запустить первыми.',
+      prompt: 'Меня зовут {{@name}}. Мой проект — «{{@project}}»: {{@niche}}.\nНапиши 6 заголовков для рекламы в Instagram: каждый до 8 слов, с цифрой или конкретным результатом. Под каждым — подпись на 2 строки и кнопка-призыв.\nОтметь 2 заголовка, которые запустил бы первыми, и объясни почему.' },
+    system: { title: 'Неделя с ИИ за час в день', result: 'План недели: что поручить Claude по дням и что проверять самому.',
+      prompt: 'Меня зовут {{@name}}. Мой проект — «{{@project}}»: {{@niche}}.\nСоставь план моей рабочей недели с ИИ: по дням, что поручить Claude (контент, ответы клиентам, отчёт, планирование), сколько минут это займёт и что я проверяю сам.\nУложись в 1 час в день. Таблицей: день · задача для Claude · минут · что проверить.' }
+  };
 
   // что понадобится: до старта и в каждом модуле. k: need — обязательно, opt — по желанию, paid — платно отдельно
   A.needs = {
@@ -3972,6 +3987,8 @@ function projectFiles() {
   if (fin && isDone(fin.id)) out.push({ path: 'regulations/office-week.md', about: 'неделя офиса по дням', text: () => '# Неделя офиса — ' + brand() + '\n\n' + (String(answersOf(fin.id).week_plan || '').trim() || '—') + '\n' });
   const o = ownSkill();
   if (o) out.push({ path: 'skills/' + o.id + '/SKILL.md', about: 'твой первый скилл', text: () => skillMd(o) });
+  const q = S.quick && S.quick.result && A.quickWins[S.quick.id];
+  if (q) out.push({ path: 'wins/first-win.md', about: 'первая победа: ' + q.title.toLowerCase(), text: () => '# Первая победа — ' + q.title + '\n\n' + S.quick.result.trim() + '\n' });
   return out;
 }
 
@@ -4134,6 +4151,7 @@ function trackPanel() {
   } else {
     h += '<div class="box ok"><b class="h2">Офис собран</b><p class="mut sm" style="margin:0">Все 24 агента на местах. Дальше офис работает по регламентам из папки regulations.</p><div class="row"><button class="ab pri" data-act="project">' + icon('folder') + 'Открыть проект</button></div></div>';
   }
+  if (MODE !== 'demo' && S.profile && !(S.quick && S.quick.result) && !isDone('0.1')) h += '<div class="box"><span class="eb">Быстрая победа · 10 минут</span><b>' + esc(quickWin().title) + '</b><span class="mut sm">Первый результат для «' + esc(brand()) + '» ещё до ресепшна.</span><div class="row"><button class="ab sm" data-act="quick">' + icon('star', 13) + 'Получить</button></div></div>';
   if (hiredSet().size) h += todayBox();
   if (MODE !== 'demo' || myGoal()) h += goalBox();
   const bosses = STEPS.filter((s) => s.boss && isDone(s.id) && !(st(s.id).boss && st(s.id).boss.status === 'done'));
@@ -4405,7 +4423,7 @@ function startProject() {
   touch(); save(); closeModal();
   renderAll();
   if (window.OFFICE) window.OFFICE.sync();
-  setTimeout(() => openStep('0.1'), 300);
+  setTimeout(showQuickWin, 300);
 }
 
 // ---------- Что понадобится ----------
@@ -4416,6 +4434,39 @@ function showNeeds(mid) {
     (one ? '' : '<div class="stk"><span class="eb">До старта</span>' + needsHTML(A.needs.start) + '</div>') +
     (one ? [one] : A.modules).map((m) => '<div class="stk">' + (one ? '' : '<span class="eb">Модуль ' + m.id + ' · ' + esc(m.title) + ' · ≈ ' + hours(modMinutes(m.id)) + '</span>') + needsHTML(A.needs.modules[m.id] || []) + '</div>').join('') +
     '<div class="row">' + (one ? '<button class="ab sm" data-act="needs" data-id="">Весь трек</button>' : '') + (back === 'onb' ? '<button class="ab pri sm" data-act="onb">' + icon('left', 13) + 'Назад к старту</button>' : '') + '</div>', true);
+}
+
+// ---------- Быстрая победа: первый результат за 10 минут, ещё до ресепшна ----------
+const quickWin = () => A.quickWins[(S.profile && S.profile.goal) || 'leads'] || A.quickWins.leads;
+function showQuickWin() {
+  if (!S.profile) return;
+  const q = quickWin(), busy = UI.busy.quick, done = !!(S.quick && S.quick.result);
+  openModal('<div class="adh"><div class="stk" style="gap:2px"><span class="eb">Быстрая победа · 10 минут</span><b class="h2">' + esc(q.title) + '</b></div><button class="icob" data-act="close" aria-label="Закрыть">' + icon('x') + '</button></div>' +
+    '<p class="mut sm" style="margin:0">Пока офис пустой — получи первый результат для «' + esc(brand()) + '». Получишь: ' + esc(q.result) + '</p>' +
+    '<ol class="nl"><li><span>Скопируй промпт — в нём уже твой проект.</span></li><li><span>Открой Claude, начни новый чат, вставь промпт и нажми Enter.</span></li><li><span>Вставь сюда, что получилось, — сохраню в проект.</span></li></ol>' +
+    '<div class="pre">' + esc(fill(q.prompt)) + '</div>' +
+    '<div class="row"><button class="ab sm pri" data-act="quick-copy">' + icon('copy', 13) + 'Скопировать промпт</button><a class="ab sm" href="https://claude.ai/new" target="_blank" rel="noopener">Открыть Claude ' + icon('ext', 13) + '</a>' +
+    (aiOn() ? '<button class="ab sm" data-act="quick-ai"' + (busy ? ' disabled' : '') + '>' + (busy ? '<span class="spin"></span>Claude пишет…' : icon('ai', 13) + 'Сделать прямо здесь') + '</button>' : '') + '</div>' +
+    '<textarea class="ta" id="aqw-res" rows="6" placeholder="Вставь сюда ответ Claude">' + esc((S.quick && S.quick.result) || UI.quickDraft || '') + '</textarea>' +
+    '<div class="row"><button class="ab amber" data-act="quick-done">' + icon('check') + (done ? 'Сохранить и к ресепшну' : 'Готово · +' + A.xp.quick + ' опыта') + '</button><button class="ab ghost sm" data-act="quick-skip">Пропустить — сразу к ресепшну</button></div>', true);
+}
+async function quickAI() {
+  const q = quickWin();
+  UI.busy.quick = true; showQuickWin();
+  try { const r = await RT.sample(fill(q.prompt), { modelTier: 'quick' }); UI.quickDraft = String((r && r.text) || '').trim(); }
+  catch (e) { const m = aiError(e); if (m) toast(m); }
+  UI.busy.quick = false;
+  if (!$('#aModal').hidden && $('#aqw-res')) showQuickWin();
+}
+function quickDone() {
+  const v = (($('#aqw-res') || {}).value || '').trim();
+  if (v.length < 40) { toast('Вставь ответ Claude целиком — хотя бы пару строк.'); return; }
+  const first = !(S.quick && S.quick.result);
+  S.quick = { id: (S.profile.goal || 'leads'), result: v, at: Date.now() }; UI.quickDraft = '';
+  if (first) { addXP(A.xp.quick, 'первая победа'); giveBadge('quick-win'); }
+  touch(); save(); renderAll();
+  toast('Сохранено в проект: wins/first-win.md');
+  openStep('0.1');
 }
 
 // ---------- Сегодня и неделя офиса ----------
@@ -4940,6 +4991,11 @@ const ACT = {
   transfer: () => showTransfer(),
   goal: () => showGoal(),
   today: () => showToday(),
+  quick: () => showQuickWin(),
+  'quick-copy': () => copyText(fill(quickWin().prompt)),
+  'quick-ai': () => { UI.quickDraft = ($('#aqw-res') || {}).value || ''; quickAI(); },
+  'quick-done': () => quickDone(),
+  'quick-skip': () => { UI.quickDraft = ($('#aqw-res') || {}).value || ''; openStep('0.1'); },
   week: () => showWeek(),
   'run-done': (t) => { markRun(t.getAttribute('data-id')); showToday(); renderAll(); },
   'goal-set': (t) => setGoal(t.getAttribute('data-id')),
