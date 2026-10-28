@@ -8,7 +8,7 @@ name: hq-office-history
 # (a push made with GITHUB_TOKEN does not start workflows by itself, and does not
 # start this one again).
 #
-# Optional secret HQ_OFFICE_ANTHROPIC_API_KEY (falls back to WORKER_ANTHROPIC_API_KEY):
+# Secret HQ_OFFICE_ANTHROPIC_API_KEY (a key of its own, created for this workflow):
 # Claude writes Russian titles and summaries. Without a key the PR title is used, and such
 # tasks are rewritten by Claude on the first run that has a key.
 
@@ -69,7 +69,7 @@ jobs:
       - name: Update history
         env:
           GITHUB_TOKEN: ${{ github.token }}
-          ANTHROPIC_API_KEY: ${{ secrets.HQ_OFFICE_ANTHROPIC_API_KEY || secrets.WORKER_ANTHROPIC_API_KEY }}
+          ANTHROPIC_API_KEY: ${{ secrets.HQ_OFFICE_ANTHROPIC_API_KEY }}
           LINK: ${{ inputs.link }}
           TITLE: ${{ inputs.title }}
           DEPT: ${{ inputs.dept }}
