@@ -4,8 +4,8 @@
    готовые задачи, только дописывает к ним новые PR той же ветки. Удалённая задача не вернётся —
    её PR остаются в seen. Чтобы задача стала «ручной», перенесите её в tasks.js. */
 window.OFFICE_TASKS_AUTO = {
-  "since": "2026-10-28T04:08:25Z",
-  "seen": [148],
+  "since": "2026-10-28T04:10:03Z",
+  "seen": [148, 149],
   "tasks": [
     {
       "id": "gh-148",
@@ -19,10 +19,11 @@ window.OFFICE_TASKS_AUTO = {
       "summary": "Правая панель hq2.aicex.club больше не устаревает. Новые работы попадают в историю без ручной правки tasks.js.",
       "proof": [
         { "kind": "github", "label": "PR #148 · история задач пополняется сама из GitHub и по ссылке", "url": "https://github.com/kleber2009-alt/ai-command-center/pull/148" },
+        { "kind": "github", "label": "PR #149 · в журнале синка видно, кто писал тексты задач", "url": "https://github.com/kleber2009-alt/ai-command-center/pull/149" },
         { "kind": "site", "label": "Живой офис агентов — живой сайт", "url": "https://hq2.aicex.club" }
       ],
       "group": "hq-office|claude/affectionate-keller-qy05o4",
-      "prs": [148],
+      "prs": [148, 149],
       "auto": true
     }
   ]
