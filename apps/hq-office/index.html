@@ -200,17 +200,53 @@
   .frames .chips{display:flex;gap:6px;flex-wrap:wrap;margin-bottom:10px}
   .frames .chips button{padding:6px 12px;border-radius:99px;background:rgba(255,255,255,.07);font-size:12px;font-weight:700;color:var(--ink-2)}
   .frames .chips button.on{background:#2f7bff;color:#fff}
-  .frame-wrap{height:150px;border-radius:14px;overflow:hidden;background:rgba(255,255,255,.04);border:1px dashed rgba(255,255,255,.15);display:grid;place-items:center}
-  .frame-wrap.on{height:min(62vh,620px);border-style:solid}
+  .frame-wrap{height:150px;border-radius:14px;overflow:hidden;background:rgba(255,255,255,.04) center top/cover no-repeat;border:1px dashed rgba(255,255,255,.15);display:grid;place-items:center}
+  .frame-wrap.pv{height:min(36vh,340px);border-style:solid}
+  .frame-wrap.on{height:min(62vh,620px);border-style:solid;background-image:none!important}
   .frame-wrap iframe{width:100%;height:100%;border:0;background:#fff}
   .frame-load{padding:12px 18px;border-radius:12px;background:#2f7bff;color:#fff;font-weight:800;font-size:14px}
   .frames a.open{display:inline-block;margin-top:8px;font-size:12px;color:#8fb8ff;font-weight:700;text-decoration:none}
-  .links{display:grid;grid-template-columns:repeat(auto-fill,minmax(250px,1fr));gap:10px}
-  .links a{display:block;padding:14px;border-radius:14px;background:rgba(255,255,255,.05);border:1px solid rgba(255,255,255,.08);color:var(--ink);text-decoration:none;transition:border-color .2s}
-  .links a:hover{border-color:#8fb8ff}
-  .links b{display:block;font-size:13.5px}
-  .links small{display:block;font-size:12px;color:var(--ink-2);margin-top:4px}
-  .links a::after{content:'Открыть ↗';display:block;margin-top:8px;font-size:11.5px;font-weight:700;color:#8fb8ff}
+  /* готовые работы: сводка, карточки с превью, код */
+  .wstat{display:flex;flex-wrap:wrap;gap:8px;margin-bottom:6px}
+  .wstat span{display:flex;align-items:baseline;gap:6px;padding:8px 12px;border-radius:12px;background:rgba(255,255,255,.05);border:1px solid rgba(255,255,255,.08);font-size:12.5px;color:var(--ink-2)}
+  .wstat b{font-size:18px;font-weight:800;color:var(--ink)}
+  .wcards{display:grid;grid-template-columns:repeat(auto-fill,minmax(220px,1fr));gap:10px}
+  .wcard{display:flex;flex-direction:column;border-radius:14px;overflow:hidden;background:rgba(255,255,255,.05);border:1px solid rgba(255,255,255,.08);min-width:0;transition:border-color .2s}
+  .wcard:hover{border-color:#8fb8ff}
+  .wcard>a{display:block;color:var(--ink);text-decoration:none;flex:1}
+  .wthumb{display:block;aspect-ratio:16/10;overflow:hidden;background:#1a1d24}
+  .wthumb img{display:block;width:100%;height:100%;object-fit:cover;object-position:top;transition:transform .4s}
+  .wcard:hover .wthumb img{transform:scale(1.04)}
+  .wcover{height:100%;display:flex;flex-direction:column;justify-content:space-between;padding:14px;background:radial-gradient(120% 90% at 85% 0%,color-mix(in srgb,var(--c,#8fb8ff) 38%,transparent),transparent 60%),linear-gradient(160deg,#1d212b,#13161d)}
+  .wcover svg{width:30px;height:30px;fill:none;stroke:currentColor;stroke-width:1.6;stroke-linecap:round;stroke-linejoin:round;color:#8fb8ff}
+  .wcover.k-claude svg{color:#e3a77a}
+  .wcover.k-site svg{color:var(--ok)}
+  .wcover b{font-size:15px;font-weight:800;line-height:1.25;display:-webkit-box;-webkit-line-clamp:3;-webkit-box-orient:vertical;overflow:hidden}
+  .wcover em{font:600 10px var(--f-mono);font-style:normal;letter-spacing:.12em;text-transform:uppercase;color:var(--ink-3)}
+  .wtxt{display:block;padding:10px 12px 4px}
+  .wtxt b{display:block;font-size:13px;line-height:1.3}
+  .wtxt small{display:block;font:500 10.5px var(--f-mono);color:var(--ink-3);margin-top:3px}
+  .wtask{display:block;width:100%;text-align:left;padding:4px 12px 10px;font-size:11.5px;font-weight:600;color:#8fb8ff;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+  .wtask:hover{text-decoration:underline}
+  .fig .wtask,.vids .wtask{padding:2px 0 0;background:none}
+  .wcode{list-style:none;display:grid;gap:6px}
+  .wcode li{display:flex;flex-wrap:wrap;align-items:center;gap:6px 10px;padding:10px 12px;border-radius:12px;background:rgba(255,255,255,.04);border:1px solid rgba(255,255,255,.07)}
+  .wcode button{font-size:13px;font-weight:700;text-align:left;flex:1 1 260px}
+  .wcode button:hover{color:#8fb8ff}
+  .wcode time{font:500 10.5px var(--f-mono);color:var(--ink-3)}
+  .wcode a{font:600 11px var(--f-mono);padding:3px 8px;border-radius:8px;background:rgba(143,184,255,.12);color:#8fb8ff;text-decoration:none;white-space:nowrap}
+  .wcode a:hover{background:rgba(143,184,255,.24)}
+  /* панель: вкладка «Работы» */
+  .wrows{list-style:none;display:grid;grid-template-columns:minmax(0,1fr);gap:4px}
+  .wrows button{width:100%;display:grid;grid-template-columns:auto minmax(0,1fr);gap:4px 10px;align-items:center;padding:9px 10px;border-radius:12px;text-align:left;background:rgba(255,255,255,.035);border:1px solid rgba(255,255,255,.05);transition:background .2s}
+  .wrows button:hover{background:rgba(255,255,255,.08)}
+  .wrows b{display:block;font-size:13.5px;font-weight:700;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+  .wrows small{display:block;font:500 10.5px var(--f-mono);color:var(--ink-2);margin-top:1px}
+  .wrows .none small{color:var(--ink-3)}
+  .wrows .dot{width:9px;height:9px;border-radius:50%;background:var(--c);box-shadow:0 0 10px var(--c)}
+  .wthumbs{grid-column:1/-1;display:grid;grid-template-columns:repeat(4,minmax(0,1fr));gap:4px}
+  .wthumbs i{display:block;aspect-ratio:4/3;border-radius:7px;background:#1a1d24 center top/cover no-repeat;border:1px solid rgba(255,255,255,.06)}
+  .more{margin-top:14px;padding:9px 14px;border-radius:11px;background:#2f7bff;color:#fff;font-size:13px;font-weight:700;text-align:left}
   .tpl{padding:16px;border-radius:14px;background:rgba(255,255,255,.05);border:1px solid rgba(255,255,255,.08);margin-bottom:10px}
   .tpl b{font-size:14px}
   .tpl p{font-size:13.5px;line-height:1.5;margin-top:8px;color:#dfe3ea}
@@ -315,7 +351,7 @@
     <button class="hide-btn" id="teamHide" aria-label="Скрыть панель"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><path d="m9 6 6 6-6 6"/></svg>Скрыть</button>
   </header>
   <nav class="ptabs" id="ptabs" role="tablist" aria-label="Разделы">
-    <button data-tab="tasks" role="tab">Задачи</button><button data-tab="team" role="tab">Команда</button><button data-tab="skills" role="tab">Скиллы</button>
+    <button data-tab="tasks" role="tab">Задачи</button><button data-tab="works" role="tab">Работы</button><button data-tab="team" role="tab">Команда</button><button data-tab="skills" role="tab">Скиллы</button>
   </nav>
   <nav class="filters" id="filters" aria-label="Отделы"></nav>
   <div class="search"><input id="q" type="search" placeholder="Найти: монтаж, воронка, PR…" aria-label="Поиск по задачам" autocomplete="off"></div>
@@ -361,6 +397,7 @@
 <script src="agent-content.js"></script>
 <script src="tasks.js"></script>
 <script src="tasks.auto.js"></script>
+<script src="works.js"></script>
 
 <!-- ================== ДАННЫЕ ОФИСА ==================
      Состав отделов и руководители — как в office.config.js на hq.aicex.club.
@@ -2336,6 +2373,10 @@ function drawKanban() {
    Движение агентов в 3D — визуализация того, как устроена работа. */
 
 const CONTENT = window.AGENT_CONTENT || {}, HEADS = window.HEAD_CONTENT || {};
+// добавки hq2 из works.js: свои блоки работ и скиллы агентов, превью сайтов и страниц
+const WORKS = window.OFFICE_WORKS || {}, PREVIEW = WORKS.previews || {};
+for (const [id, list] of Object.entries(WORKS.agents || {})) if (CONTENT[id]) CONTENT[id].results = [...(CONTENT[id].results || []), ...list];
+for (const [id, list] of Object.entries(WORKS.skills || {})) if (CONTENT[id]) CONTENT[id].skills = [...(CONTENT[id].skills || []), ...list];
 const deptById = id => DEPTS.find(d => d.id === id);
 const PEOPLE = Object.fromEntries(DEPTS.map(d => [d.head.id, { ...d.head, dept:d }]));
 const personOf = id => PEOPLE[id] || (id === 'ilia' ? { id, name:'Илья', title:'Основатель', dept:DEPTS[0] } : null);
@@ -2350,7 +2391,105 @@ const ICON = {
   claude:'<svg viewBox="0 0 24 24"><path d="M12 3v18M3 12h18M5.6 5.6l12.8 12.8M18.4 5.6 5.6 18.4"/></svg>',
   site:'<svg viewBox="0 0 24 24"><circle cx="12" cy="12" r="9"/><path d="M3 12h18M12 3a14 14 0 0 1 0 18M12 3a14 14 0 0 0 0 18"/></svg>',
   file:'<svg viewBox="0 0 24 24"><path d="M14 3H6a1 1 0 0 0-1 1v16a1 1 0 0 0 1 1h12a1 1 0 0 0 1-1V8z"/><path d="M14 3v5h5"/></svg>',
+  tg:'<svg viewBox="0 0 24 24"><path d="M21 4 3 11l6 2.5L19 7l-8 8 6.5 5z"/></svg>',
 };
+
+/* ---------- готовые работы: витрина досье + всё, что агент сделал в истории задач ---------- */
+
+const POSTER = {};          // видео → постер (из media задач)
+for (const t of TASKS) for (const m of t.media || []) if (m.type === 'video' && m.poster && !POSTER[m.src]) POSTER[m.src] = m.poster;
+const PROOF_TASK = {};      // ссылка → самая свежая задача, где она доказательство
+for (const t of TASKS) for (const p of t.proof || []) if (!PROOF_TASK[p.url]) PROOF_TASK[p.url] = t;
+const previewOf = url => PREVIEW[url] || PREVIEW[String(url).replace(/\/$/, '')] || '';
+const isClaude = url => /claude\.ai\//.test(url);
+const kindOf = url => isClaude(url) ? 'claude' : /\.pdf($|#)/.test(url) ? 'file' : /\/\/t\.me\//.test(url) ? 'tg' : 'site';
+const COVER_LABEL = { claude:'Документ Claude', site:'Сайт', file:'Файл', page:'Страница', tg:'Telegram' };
+// материалы задач по типам; то, что уже есть в витрине досье (blocks), не повторяем
+function collectWorks(tasks, blocks = [], artifacts = []) {
+  const seen = new Set();
+  for (const r of blocks) {
+    if (r.type === 'frame' && r.private) { if (r.fallback) seen.add(r.fallback.src); continue; }
+    for (const it of r.items || [r]) seen.add(it.src || it.url);
+  }
+  const W = { videos:[], images:[], pages:[], docs:[], sites:[], files:[], code:[] };
+  const put = (k, key, item) => { if (seen.has(key)) return; seen.add(key); W[k].push(item); };
+  for (const t of tasks) {
+    for (const m of t.media || []) put(m.type === 'video' ? 'videos' : m.type === 'img' ? 'images' : 'pages', m.src, { ...m, task:t });
+    const gh = (t.proof || []).filter(p => p.kind === 'github');
+    if (gh.length) W.code.push({ task:t, links:gh });
+    for (const p of t.proof || []) if (p.kind !== 'github') put(p.kind === 'claude' ? 'docs' : p.kind === 'file' ? 'files' : 'sites', p.url, { url:p.url, title:p.label, task:t });
+  }
+  for (const a of artifacts) { const k = kindOf(a.url); put(k === 'claude' ? 'docs' : k === 'file' ? 'files' : 'sites', a.url, { url:a.url, title:a.title, task:PROOF_TASK[a.url] }); }
+  return W;
+}
+function agentWorks(id) {
+  const c = CONTENT[id] || {}, blocks = c.results || [];
+  return { blocks, W:collectWorks(tasksOfAgent(id), blocks, c.artifacts || []) };
+}
+const STAT_WORDS = [['v', 'видео', 'видео', 'видео'], ['i', 'картинка', 'картинки', 'картинок'], ['p', 'страница', 'страницы', 'страниц'],
+  ['d', 'документ Claude', 'документа Claude', 'документов Claude'], ['s', 'сайт', 'сайта', 'сайтов'], ['f', 'файл', 'файла', 'файлов'], ['l', 'ссылка', 'ссылки', 'ссылок'], ['c', 'ссылка на код', 'ссылки на код', 'ссылок на код']];
+function worksStats(blocks, W) {
+  const s = { v:W.videos.length, i:W.images.length, p:W.pages.length, d:W.docs.length, s:W.sites.length, f:W.files.length, l:0, c:W.code.reduce((n, x) => n + x.links.length, 0) };
+  for (const r of blocks) {
+    const items = r.items || [];
+    if (r.type === 'videos') s.v += items.length;
+    else if (r.type === 'gallery' || r.type === 'strips') s.i += items.length;
+    else if (r.type === 'frames') s.p += items.length;
+    else if (r.type === 'frame') { if (!r.private) s.p++; else if (r.fallback) s.i++; }
+    else if (r.type === 'links') for (const it of items) s[{ claude:'d', file:'f', site:'s', tg:'l' }[kindOf(it.url)]]++;
+  }
+  return s;
+}
+const statTotal = s => Object.values(s).reduce((a, b) => a + b, 0);
+// строка сводки: самые крупные категории работ первыми
+const statLine = (s, max = 9) => STAT_WORDS.filter(([k]) => s[k]).sort((a, b) => s[b[0]] - s[a[0]]).slice(0, max).map(([k, ...w]) => `${s[k]} ${word(s[k], ...w)}`).join(' · ');
+// картинки-превью работ: витрина, постеры видео, картинки задач, превью страниц и сайтов
+function worksThumbs(blocks, W, n = 4) {
+  const out = [], push = (src, title) => { if (src && !out.some(x => x.src === src)) out.push({ src, title }); };
+  for (const r of blocks) {
+    if (r.type === 'gallery' || r.type === 'strips') r.items.forEach(i => push(i.src, i.title));
+    if (r.type === 'videos') r.items.forEach(i => push(POSTER[i.src], i.title));
+    if (r.type === 'frames') r.items.forEach(i => push(previewOf(i.src), i.title));
+    if (r.type === 'frame' && r.private && r.fallback) push(r.fallback.src, r.fallback.title);
+    if (r.type === 'links') r.items.forEach(i => push(previewOf(i.url), i.title));
+  }
+  W.videos.forEach(v => push(v.poster || POSTER[v.src], v.title));
+  W.images.forEach(i => push(i.src, i.title));
+  W.pages.forEach(p => push(previewOf(p.src), p.title));
+  W.sites.forEach(s => push(previewOf(s.url), s.title));
+  return out.slice(0, n);
+}
+const taskBtnHTML = t => t ? `<button class="wtask" data-task="${esc(t.id)}">Задача: ${esc(t.title)}</button>` : '';
+// карточка работы: превью (снимок страницы или обложка по типу), название, дата, ссылка на задачу
+function cardHTML({ url, title, note, task, kind, color }) {
+  const img = previewOf(url), host = url.replace(/^https?:\/\//, '').split('/')[0];
+  const meta = [kind === 'page' ? 'Страница' : kind === 'tg' ? 'Telegram' : KIND_LABEL[kind] || 'Ссылка', task ? fmtDate(task.date, true) : kind === 'claude' ? '' : host].filter(Boolean).join(' · ');
+  const thumb = img ? `<img loading="lazy" src="${esc(img)}" alt="">` : `<span class="wcover k-${kind}">${ICON[kind] || ICON.site}<b>${esc(title)}</b><em>${COVER_LABEL[kind] || 'Ссылка'}</em></span>`;
+  return `<div class="wcard"${color ? ` style="--c:${esc(color)}"` : ''}><a href="${esc(url)}" target="_blank" rel="noopener"><span class="wthumb">${thumb}</span>
+    <span class="wtxt">${img ? `<b>${esc(title)}</b>` : ''}${note ? `<small>${esc(note)}</small>` : ''}<small>${esc(meta)}</small></span></a>${taskBtnHTML(task)}</div>`;
+}
+function worksHTML(blocks, W, color) {
+  const s = worksStats(blocks, W);
+  if (!statTotal(s)) return '';
+  const sub = (title, body) => body ? `<h4>${title}</h4>${body}` : '';
+  const cards = (list, kind) => list.length && `<div class="wcards">${list.map(x => cardHTML({ url:x.url || x.src, title:x.title, task:x.task, kind:kind || kindOf(x.url), color })).join('')}</div>`;
+  return `<div class="wstat">${STAT_WORDS.filter(([k]) => s[k]).map(([k, ...w]) => `<span><b>${s[k]}</b>${word(s[k], ...w)}</span>`).join('')}</div>`
+    + blocks.map(r => resultHTML(r, color)).join('')
+    + sub('Видео из задач', W.videos.length && `<div class="vids">${W.videos.map(v => { const p = v.poster || POSTER[v.src]; return `<figure><video src="${esc(v.src)}" ${p ? `poster="${esc(p)}"` : ''} controls playsinline preload="none"></video><figcaption>${esc(v.title)}${taskBtnHTML(v.task)}</figcaption></figure>`; }).join('')}</div>`)
+    + sub('Картинки из задач', W.images.length && `<div class="grid">${W.images.map(i => `<figure class="fig" data-src="${esc(i.src)}" data-cap="${esc(i.title)}"><img loading="lazy" src="${esc(i.src)}" alt=""><figcaption>${esc(i.title)}${taskBtnHTML(i.task)}</figcaption></figure>`).join('')}</div>`)
+    + sub('Живые страницы', cards(W.pages, 'page'))
+    + sub('Документы в Claude', cards(W.docs, 'claude'))
+    + sub('Сайты и продукты', cards(W.sites))
+    + sub('Файлы', cards(W.files, 'file'))
+    + sub('Код на GitHub', W.code.length && `<ul class="wcode">${W.code.map(c => `<li><button data-task="${esc(c.task.id)}">${esc(c.task.title)}</button><time>${fmtDate(c.task.date, true)}</time>${c.links.map(l => `<a href="${esc(l.url)}" target="_blank" rel="noopener">${esc(l.label)}</a>`).join('')}</li>`).join('')}</ul>`)
+    + (s.d ? `<p class="src">Документы Claude открываются под аккаунтом владельца или если им поделились.</p>` : '');
+}
+// окно-просмотрщик страницы: до загрузки показывает снимок страницы, если он есть
+function frameWrapHTML(src) {
+  const pv = previewOf(src);
+  return `<div class="frame-wrap${pv ? ' pv' : ''}"${pv ? ` style="background-image:url('${esc(pv)}')"` : ''}><button class="frame-load" data-src="${esc(src)}">Показать страницу здесь</button></div>`;
+}
+
 let ptab = 'tasks', pdept = 'all', pquery = '', pagent = null;
 
 function proofSummary(t) {
@@ -2429,6 +2568,25 @@ function teamHTML() {
   }
   return rows.join('');
 }
+// вкладка «Работы»: у каждого агента — сколько и чего сделано и превью; клик открывает все работы
+function worksPanelHTML() {
+  const q = pquery.toLowerCase();
+  const rows = [`<p class="note">Что агенты уже сделали: ролики, картинки, страницы, документы и код — из досье и истории задач. Нажмите на агента, чтобы открыть все его работы.</p>`];
+  for (const d of DEPTS) {
+    if (pdept !== 'all' && pdept !== d.id) continue;
+    const ids = d.agentIds.filter(id => { const m = agentMeta(id); return !q || (m.name + ' ' + m.role).toLowerCase().includes(q); });
+    if (!ids.length) continue;
+    rows.push(`<h3 class="eyebrow" style="--c:${d.accent}"><i class="dd"></i>${esc(d.name)} · ${esc(d.head.owner ? DEPTS[0].head.name : d.head.name)}</h3><ul class="wrows">`);
+    for (const id of ids) {
+      const m = agentMeta(id), { blocks, W } = agentWorks(id), s = worksStats(blocks, W), th = worksThumbs(blocks, W, 4);
+      rows.push(`<li><button data-works="${esc(id)}" class="${statTotal(s) ? '' : 'none'}" style="--c:${esc(m.color)}"><i class="dot"></i>
+        <span class="txt"><b>${esc(m.name)}</b><small>${statTotal(s) ? esc(statLine(s, 3)) : 'Готовых работ пока нет'}</small></span>
+        ${th.length ? `<span class="wthumbs">${th.map(t => `<i style="background-image:url('${esc(t.src)}')" title="${esc(t.title)}"></i>`).join('')}</span>` : ''}</button></li>`);
+    }
+    rows.push('</ul>');
+  }
+  return rows.join('');
+}
 const SKILLS = (() => {
   const map = new Map();
   for (const [id, c] of Object.entries(CONTENT)) for (const s of c.skills || []) {
@@ -2447,12 +2605,18 @@ function skillsHTML() {
 function renderPanel() {
   for (const b of $('ptabs').children) { const on = b.dataset.tab === ptab; b.classList.toggle('on', on); b.setAttribute('aria-selected', on); }
   for (const b of $('filters').children) b.classList.toggle('on', b.dataset.f === pdept);
-  const body = ptab === 'tasks' ? focusHTML() + tasksHTML() : ptab === 'team' ? teamHTML() : skillsHTML();
+  const body = ptab === 'tasks' ? focusHTML() + tasksHTML() : ptab === 'works' ? worksPanelHTML() : ptab === 'team' ? teamHTML() : skillsHTML();
   $('pbody').innerHTML = body;
   const n = visibleTasks().length;
-  $('teamSum').textContent = ptab === 'tasks'
-    ? `${n} ${word(n, 'задача', 'задачи', 'задач')}${n !== TASKS.length ? ` из ${TASKS.length}` : ''} · с доказательствами`
-    : ptab === 'team' ? `${bots.filter(b => b.kind === 'bot').length} агентов · ${DEPTS.length} руководителя` : `${SKILLS.length} скиллов`;
+  let sum = `${SKILLS.length} скиллов`;
+  if (ptab === 'tasks') sum = `${n} ${word(n, 'задача', 'задачи', 'задач')}${n !== TASKS.length ? ` из ${TASKS.length}` : ''} · с доказательствами`;
+  if (ptab === 'team') sum = `${bots.filter(b => b.kind === 'bot').length} агентов · ${DEPTS.length} руководителя`;
+  if (ptab === 'works') {
+    const ids = DEPTS.flatMap(d => d.agentIds), totals = ids.map(id => { const { blocks, W } = agentWorks(id); return statTotal(worksStats(blocks, W)); });
+    const all = totals.reduce((a, b) => a + b, 0), busy = totals.filter(Boolean).length;
+    sum = `${all} ${word(all, 'работа', 'работы', 'работ')} · у ${busy} из ${ids.length} агентов`;
+  }
+  $('teamSum').textContent = sum;
   $('teamShow').textContent = `История задач · ${TASKS.length}`;
 }
 $('filters').innerHTML = `<button data-f="all">Все</button>` + DEPTS.map(d => `<button data-f="${d.id}" style="--c:${d.accent}"><i></i>${esc(d.short)}</button>`).join('');
@@ -2461,6 +2625,7 @@ $('ptabs').addEventListener('click', e => { const b = e.target.closest('[data-ta
 $('q').addEventListener('input', e => { pquery = e.target.value.trim(); renderPanel(); });
 $('pbody').addEventListener('click', e => {
   const t = e.target.closest('[data-task]'); if (t) return openTask(t.dataset.task);
+  const wk = e.target.closest('[data-works]'); if (wk) return openDossier(wk.dataset.works, 'works');
   const ag = e.target.closest('[data-agent]'); if (ag) return openDossier(ag.dataset.agent);
   const pp = e.target.closest('[data-person]'); if (pp) return openDossier(pp.dataset.person);
   const b = e.target.closest('[data-do]'); if (!b) return;
@@ -2500,7 +2665,7 @@ function mediaHTML(media) {
   if (vids.length) h += `<h4>Видео</h4><div class="vids">${vids.map(v => `<figure><video src="${esc(v.src)}" ${v.poster ? `poster="${esc(v.poster)}"` : ''} controls playsinline preload="none"></video><figcaption>${esc(v.title)}</figcaption></figure>`).join('')}</div>`;
   if (imgs.length) h += `<h4>Материалы</h4><div class="grid">${imgs.map(i => `<figure class="fig" data-src="${esc(i.src)}" data-cap="${esc(i.title)}"><img loading="lazy" src="${esc(i.src)}" alt="${esc(i.title)}"><figcaption>${esc(i.title)}</figcaption></figure>`).join('')}</div>`;
   if (pages.length) h += `<h4>Живые страницы</h4><div class="frames"><div class="chips">${pages.map((p, i) => `<button data-src="${esc(p.src)}" class="${i ? '' : 'on'}">${esc(p.title)}</button>`).join('')}</div>
-    <div class="frame-wrap"><button class="frame-load" data-src="${esc(pages[0].src)}">Показать страницу здесь</button></div>
+    ${frameWrapHTML(pages[0].src)}
     <a class="open" href="${esc(pages[0].src)}" target="_blank" rel="noopener">Открыть в новой вкладке ↗</a></div>`;
   return h;
 }
@@ -2551,27 +2716,27 @@ $('taskModal').addEventListener('click', e => { if (e.target.id === 'taskModal')
 /* ---------- досье агента и руководителя (как на hq.aicex.club) ---------- */
 
 const contentOf = id => CONTENT[id] || { lead:'', process:[], skills:[], templates:[] };
-function resultHTML(r) {
+function resultHTML(r, color) {
   const head = `<h4>${esc(r.title)}</h4>`;
   if (r.type === 'gallery' || r.type === 'strips')
     return head + `<div class="grid ${r.type === 'strips' ? '' : 'wide'}">${r.items.map(it => `<figure class="fig" data-src="${esc(it.src)}" data-cap="${esc(it.title)}"><img loading="lazy" src="${esc(it.src)}" alt=""><figcaption>${esc(it.title)}</figcaption></figure>`).join('')}</div>`;
   if (r.type === 'videos')
-    return head + `<div class="vids">${r.items.map(it => `<figure><video src="${esc(it.src)}" controls playsinline preload="none"></video><figcaption>${esc(it.title)}</figcaption></figure>`).join('')}</div>`;
+    return head + `<div class="vids">${r.items.map(it => `<figure><video src="${esc(it.src)}" ${POSTER[it.src] ? `poster="${esc(POSTER[it.src])}"` : ''} controls playsinline preload="none"></video><figcaption>${esc(it.title)}</figcaption></figure>`).join('')}</div>`;
   if (r.type === 'frames' || (r.type === 'frame' && !r.private)) {
     const items = r.items || [{ src:r.src, title:r.title }];
     return head + `<div class="frames"><div class="chips">${items.map((it, i) => `<button data-src="${esc(it.src)}" class="${i ? '' : 'on'}">${esc(it.title)}</button>`).join('')}</div>
-      <div class="frame-wrap"><button class="frame-load" data-src="${esc(items[0].src)}">Показать страницу здесь</button></div>
+      ${frameWrapHTML(items[0].src)}
       <a class="open" href="${esc(items[0].src)}" target="_blank" rel="noopener">Открыть в новой вкладке ↗</a></div>`;
   }
   if (r.type === 'frame' && r.private && r.fallback)
     return head + `<div class="grid wide"><figure class="fig" data-src="${esc(r.fallback.src)}" data-cap="${esc(r.fallback.title)}"><img loading="lazy" src="${esc(r.fallback.src)}" alt=""><figcaption>${esc(r.fallback.title)}</figcaption></figure></div>`;
   if (r.type === 'links')
-    return head + `<div class="links">${r.items.map(it => `<a href="${esc(it.url)}" target="_blank" rel="noopener"><b>${esc(it.title)}</b>${it.note ? `<small>${esc(it.note)}</small>` : ''}</a>`).join('')}</div>`;
+    return head + `<div class="wcards">${r.items.map(it => cardHTML({ url:it.url, title:it.title, note:it.note, task:PROOF_TASK[it.url], kind:kindOf(it.url), color })).join('')}</div>`;
   return '';
 }
 let dossierId = null;
 const DTABS = [['about', 'Что умеет'], ['tasks', 'Задачи'], ['works', 'Готовые работы'], ['skills', 'Скиллы'], ['howto', 'Как поставить задачу']];
-function openDossier(id, tab = 'about', push = true) {
+function openDossier(id, tab = 'about') {
   const person = PEOPLE[id];
   if (!person && !CATALOG[id]) return;
   dossierId = id;
@@ -2580,46 +2745,52 @@ function openDossier(id, tab = 'about', push = true) {
     $('dAv').innerHTML = faceHTML(person, 'lg');
     $('dName').textContent = person.name;
     $('dRole').textContent = `${person.title} · ${d.name}`;
-    $('dTabs').innerHTML = [['about', 'Зона ответственности'], ['tasks', `Задачи отдела <span>${TASKS.filter(t => t.dept === d.id).length}</span>`], ['team', `Агенты <span>${d.agentIds.length}</span>`]].map(([k, l]) => `<button data-tab="${k}">${l}</button>`).join('');
+    const dw = deptWorks(d), dn = statTotal(worksStats([], dw));
+    $('dTabs').innerHTML = [['about', 'Зона ответственности'], ['tasks', `Задачи отдела <span>${TASKS.filter(t => t.dept === d.id).length}</span>`], ['works', `Работы отдела <span>${dn}</span>`], ['team', `Агенты <span>${d.agentIds.length}</span>`]].map(([k, l]) => `<button data-tab="${k}">${l}</button>`).join('');
   } else {
-    const m = agentMeta(id), c = contentOf(id);
+    const m = agentMeta(id), c = contentOf(id), { blocks, W } = agentWorks(id);
     $('dAv').innerHTML = orbHTML(m.color, 'lg');
     $('dName').textContent = m.name;
     $('dRole').textContent = `${m.role} · ${m.dept?.name || ''}${m.dept && !m.dept.head.owner ? ' · руководитель ' + m.dept.head.name : ''}`;
-    const counts = { tasks:tasksOfAgent(id).length, works:(c.results || []).length + (c.artifacts || []).length, skills:(c.skills || []).length, howto:(c.templates || []).length };
+    const counts = { tasks:tasksOfAgent(id).length, works:statTotal(worksStats(blocks, W)), skills:(c.skills || []).length, howto:(c.templates || []).length };
     $('dTabs').innerHTML = DTABS.map(([k, l]) => `<button data-tab="${k}">${l}${counts[k] != null ? ` <span>${counts[k]}</span>` : ''}</button>`).join('');
   }
   $('dossier').hidden = false;
+  if (![...$('dTabs').children].some(b => b.dataset.tab === tab)) tab = 'about';
   showDossierTab(tab);
-  if (push) setHash(`${person ? 'head' : 'agent'}-${id}`);
 }
+// работы отдела для досье руководителя: всё из задач отдела + материалы руководителя
+const deptWorks = d => collectWorks(TASKS.filter(t => t.dept === d.id), [], HEADS[d.id]?.materials || []);
 function showDossierTab(tab) {
   const id = dossierId, person = PEOPLE[id];
   [...$('dTabs').children].forEach(b => b.classList.toggle('on', b.dataset.tab === tab));
+  // адрес окна: #agent-montage, #agent-montage/works — удобно открыть сразу работы агента
+  setHash(`${person ? 'head' : 'agent'}-${id}${tab === 'about' ? '' : '/' + tab}`);
   let h = '';
   if (person) {
     const d = person.dept, hc = HEADS[d.id] || {};
     if (tab === 'about') h = `<p class="lead">${esc(hc.lead || person.title)}</p>
       ${hc.zones?.length ? `<h4>Зоны</h4><div class="chipsrow">${hc.zones.map(z => `<span>${esc(z)}</span>`).join('')}</div>` : ''}
       ${hc.process?.length ? `<h4>Как работает отдел</h4>${pipeHTML(hc.process)}` : ''}
-      ${hc.materials?.length ? `<h4>Материалы</h4><div class="links">${hc.materials.map(m => `<a href="${esc(m.url)}" target="_blank" rel="noopener"><b>${esc(m.title)}</b></a>`).join('')}</div>` : ''}`;
+      ${hc.materials?.length ? resultHTML({ type:'links', title:'Материалы', items:hc.materials }, d.accent) : ''}`;
     if (tab === 'tasks') h = `<ol class="tasks">${TASKS.filter(t => t.dept === d.id).map(taskRowHTML).join('')}</ol>`;
+    if (tab === 'works') h = worksHTML([], deptWorks(d), d.accent) || `<p class="empty">Готовых работ отдела пока нет.</p>`;
     if (tab === 'team') h = `<ul class="agents">${d.agentIds.map(aid => { const m = agentMeta(aid), n = tasksOfAgent(aid).length; return `<li><button data-agent="${esc(aid)}"><i class="dot" style="--c:${esc(m.color)}"></i><span class="txt"><b>${esc(m.name)}</b><small>${esc(m.role)}</small></span><em>${n} ${word(n, 'задача', 'задачи', 'задач')}</em></button></li>`; }).join('')}</ul>`;
   } else {
-    const c = contentOf(id);
+    const c = contentOf(id), color = agentMeta(id).color;
     if (tab === 'about') {
-      const imgs = (c.results || []).flatMap(r => r.type === 'gallery' || r.type === 'strips' ? r.items : []).slice(0, 4);
+      const { blocks, W } = agentWorks(id), imgs = worksThumbs(blocks, W, 6);
       h = `<p class="lead">${esc(c.lead || CATALOG[id]?.role || '')}</p>${c.team ? `<p class="note">Внутри агента работают роли: ${esc(c.team)}</p>` : ''}
         ${c.process?.length ? `<h4>Процесс работы</h4>${pipeHTML(c.process)}` : ''}
         ${c.skills?.length ? `<h4>Ключевые скиллы</h4><div class="chipsrow">${c.skills.slice(0, 8).map(s => `<span>${esc(s.title)}</span>`).join('')}</div>` : ''}
-        ${imgs.length ? `<h4>Примеры работ</h4><div class="grid">${imgs.map(it => `<figure class="fig" data-src="${esc(it.src)}" data-cap="${esc(it.title)}"><img loading="lazy" src="${esc(it.src)}" alt=""><figcaption>${esc(it.title)}</figcaption></figure>`).join('')}</div>` : ''}`;
+        ${imgs.length ? `<h4>Примеры работ</h4><div class="grid">${imgs.map(it => `<figure class="fig" data-src="${esc(it.src)}" data-cap="${esc(it.title)}"><img loading="lazy" src="${esc(it.src)}" alt=""><figcaption>${esc(it.title)}</figcaption></figure>`).join('')}</div>` : ''}
+        ${statTotal(worksStats(blocks, W)) ? `<button class="more" data-dtab="works">Все работы: ${esc(statLine(worksStats(blocks, W)))} →</button>` : ''}`;
     } else if (tab === 'tasks') {
       const list = tasksOfAgent(id);
       h = list.length ? `<ol class="tasks">${list.map(taskRowHTML).join('')}</ol>` : `<p class="empty">В истории пока нет задач с этим агентом.</p>`;
     } else if (tab === 'works') {
-      h = (c.results || []).map(resultHTML).join('');
-      if (c.artifacts?.length) h += `<h4>Документы и артефакты</h4><div class="links">${c.artifacts.map(x => `<a href="${esc(x.url)}" target="_blank" rel="noopener"><b>${esc(x.title)}</b></a>`).join('')}</div>`;
-      if (!h) h = `<p class="empty">Готовых материалов пока нет.</p>`;
+      const { blocks, W } = agentWorks(id);
+      h = worksHTML(blocks, W, color) || `<p class="empty">Готовых работ пока нет — как только агент сделает задачу с доказательством, она появится здесь.</p>`;
     } else if (tab === 'skills') {
       h = `<ul class="skilllist">${(c.skills || []).map(s => `<li><b>${esc(s.title)}</b><code>${esc(s.name)}</code><p>${esc(s.desc || '')}</p>${s.say ? `<i>Скажи: «${esc(s.say)}»</i>` : ''}</li>`).join('')}</ul>` || '';
     } else {
@@ -2647,9 +2818,10 @@ for (const box of [$('tBody'), $('dBody')]) box.addEventListener('click', e => {
     const f = chip.closest('.frames');
     f.querySelectorAll('.chips button').forEach(b => b.classList.toggle('on', b === chip));
     const w = f.querySelector('.frame-wrap'), ifr = w.querySelector('iframe');
-    if (ifr) ifr.src = chip.dataset.src; else w.innerHTML = `<button class="frame-load" data-src="${esc(chip.dataset.src)}">Показать страницу здесь</button>`;
+    if (ifr) ifr.src = chip.dataset.src; else w.outerHTML = frameWrapHTML(chip.dataset.src);
     f.querySelector('a.open').href = chip.dataset.src;
   }
+  const dt = e.target.closest('[data-dtab]'); if (dt) return showDossierTab(dt.dataset.dtab);
   const cp = e.target.closest('[data-copy]');
   if (cp) navigator.clipboard?.writeText(cp.dataset.copy).then(() => { cp.textContent = 'Скопировано'; }).catch(() => {});
 });
@@ -2661,8 +2833,8 @@ function setHash(h) { try { history.replaceState(null, '', location.pathname + l
 function routeHash() {
   const h = location.hash.slice(1);
   if (h.startsWith('task-')) openTask(h.slice(5), false);
-  else if (h.startsWith('agent-')) openDossier(h.slice(6), 'about', false);
-  else if (h.startsWith('head-')) openDossier(h.slice(5), 'about', false);
+  else if (h.startsWith('agent-')) openDossier(...h.slice(6).split('/'));
+  else if (h.startsWith('head-')) openDossier(...h.slice(5).split('/'));
 }
 addEventListener('hashchange', routeHash);
 const modalOpen = () => !$('taskModal').hidden || !$('dossier').hidden;

@@ -35,13 +35,15 @@ jobs:
 
       - name: Check data files
         run: |
-          for f in office.config.js dept-content.js agent-content.js tasks.js tasks.auto.js; do node --check "apps/hq-office/$f"; done
+          for f in office.config.js dept-content.js agent-content.js tasks.js tasks.auto.js works.js; do node --check "apps/hq-office/$f"; done
           node -e '
-            global.window = {}; for (const f of ["office.config.js", "dept-content.js", "agent-content.js", "tasks.js", "tasks.auto.js"])
+            global.window = {}; for (const f of ["office.config.js", "dept-content.js", "agent-content.js", "tasks.js", "tasks.auto.js", "works.js"])
               require("vm").runInThisContext(require("fs").readFileSync("apps/hq-office/" + f, "utf8"));
             const t = [...window.OFFICE_TASKS, ...window.OFFICE_TASKS_AUTO.tasks], ids = new Set();
             for (const x of t) { if (ids.has(x.id)) throw new Error("duplicate task id " + x.id); ids.add(x.id);
               if (!/^\d{4}-\d{2}-\d{2}$/.test(x.date) || !x.proof?.length) throw new Error("bad task " + x.id); }
+            for (const p of Object.values(window.OFFICE_WORKS.previews))
+              if (!/^https?:/.test(p) && !require("fs").existsSync("apps/hq-office/" + p)) throw new Error("missing preview " + p);
             console.log(t.length + " tasks ok");'
 
       - name: Install SSH key
