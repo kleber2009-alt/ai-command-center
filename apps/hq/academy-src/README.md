@@ -22,6 +22,8 @@ node test/demo.js dist/test.html test/shots   # пример «офис AICEX н
 node test/skills-visual.js dist/test.html test/shots  # карточки скиллов и окно кода ученика
 node test/needs-visual.js dist/test.html test/shots   # «Что понадобится»: приветствие, модуль, телефон
 node test/transfer.js dist/test.html test/shots       # перенос прогресса файлом в чистый браузер
+node test/goal.js dist/test.html test/shots           # цель на входе, блок «Твоя цель», смена цели
+node test/week.js dist/test.html test/shots           # «Сегодня» и «Неделя офиса» по регламентам агентов
 ```
 
 ## Деплой

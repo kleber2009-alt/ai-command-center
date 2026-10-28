@@ -218,6 +218,53 @@ function fill(text, answers) {
 }
 const answersOf = (id) => (S.steps[id] && S.steps[id].answers) || {};
 const regOf = (id) => Object.assign({}, STEP[id].regulation || {}, (S.steps[id] && S.steps[id].reg) || {});
+
+// ---------- Неделя офиса: расписание агентов из поля «Когда запускать» ----------
+const WD = ['понедельник', 'вторник', 'среда', 'четверг', 'пятница', 'суббота', 'воскресенье'];
+const WD_RX = [/понедельн|(^|[^а-яё])пн([^а-яё]|$)/, /вторник|(^|[^а-яё])вт([^а-яё]|$)/, /сред[уаые]|(^|[^а-яё])ср([^а-яё]|$)/, /четверг|(^|[^а-яё])чт([^а-яё]|$)/, /пятниц|(^|[^а-яё])пт([^а-яё]|$)/, /суббот|(^|[^а-яё])сб([^а-яё]|$)/, /воскресен|(^|[^а-яё])вс([^а-яё]|$)/];
+const weekday = (d) => (new Date((d || dateStr()) + 'T12:00').getDay() + 6) % 7;
+// «Каждый вторник и четверг» → дни 1 и 3; «Работает всегда» — бот, не задача; «во время теста — …» — пояснение, не расписание
+function whenPlan(text) {
+  const p = { days: [], flex: 0, every: 0, always: false };
+  String(text || '').toLowerCase().split(/[.;]/).filter((x) => x.trim() && !/во время/.test(x)).forEach((x) => {
+    if (/всегда|круглосуточно/.test(x)) p.always = true;
+    if (/каждый день|ежедневно|каждое утро|каждый вечер/.test(x)) p.days = [0, 1, 2, 3, 4, 5, 6];
+    if (/по будням|в будни/.test(x)) p.days = p.days.concat([0, 1, 2, 3, 4]);
+    WD_RX.forEach((rx, i) => { if (rx.test(x)) p.days.push(i); });
+    const n = x.match(/(\d+)\s*раза?\s+в\s+неделю/);
+    if (n && !WD_RX.some((rx) => rx.test(x))) p.flex = Number(n[1]);
+    else if (/раз в неделю|еженедельно|каждую неделю/.test(x) && !WD_RX.some((rx) => rx.test(x))) p.days.push(0);
+    if (/раз в 2 недели|раз в две недели/.test(x)) p.every = 14;
+    if (/раз в месяц|ежемесячно/.test(x)) p.every = 30;
+  });
+  p.days = Array.from(new Set(p.days)).sort();
+  p.event = !p.days.length && !p.flex && !p.every && !p.always;
+  return p;
+}
+const runsOf = (id) => (S.runs && S.runs[id]) || [];
+const ranToday = (id) => runsOf(id).indexOf(dateStr()) >= 0;
+const runsThisWeek = (id) => runsOf(id).filter((d) => isoWeek(d) === isoWeek(dateStr())).length;
+const daysSinceRun = (id) => { const r = runsOf(id); return r.length ? daysBetween(r[r.length - 1], dateStr()) : Infinity; };
+function officeWeek() {
+  const today = weekday(), w = { days: WD.map(() => []), flex: [], every: [], event: [], always: [], today: [], may: [] };
+  STEPS.filter((s) => s.agent && isDone(s.id)).forEach((s) => {
+    const p = whenPlan(regOf(s.id).when);
+    p.days.forEach((d) => w.days[d].push(s));
+    if (p.flex) w.flex.push([s, p.flex]);
+    if (p.every) w.every.push([s, p.every]);
+    if (p.always) w.always.push(s);
+    if (p.event) w.event.push(s);
+    if (p.days.indexOf(today) >= 0) w.today.push(s);
+    else if ((p.flex || p.every) && (ranToday(s.id) || (p.flex && runsThisWeek(s.id) < p.flex) || (p.every && daysSinceRun(s.id) >= p.every))) w.may.push(s);
+  });
+  return w;
+}
+function markRun(id) {
+  S.runs = S.runs || {};
+  const t = dateStr(), r = runsOf(id).filter((d) => d !== t);
+  S.runs[id] = ranToday(id) ? r : r.concat(t).slice(-12);
+  touch(); save();
+}
 function agentPath(s) { return 'agents/' + (A.deptFolder[s.room] || s.room) + '/' + s.agent + '.md'; }
 function qaBlock(s) { const a = answersOf(s.id); return s.questions.map((q) => '### ' + plain(q.label) + '\n\n' + (String(a[q.id] || '').trim() || '— (ответ появится позже)')).join('\n\n'); }
 function giftLine(g) {

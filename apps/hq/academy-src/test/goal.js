@@ -1,0 +1,41 @@
+// цель на входе: выбор при старте → блок «Твоя цель» в треке → смена цели → пример AICEX с целью
+const { chromium } = require('playwright');
+const path = require('path');
+const URL = /^https?:/.test(process.argv[2]) ? process.argv[2] : 'file://' + path.resolve(process.argv[2]);
+const OUT = path.resolve(process.argv[3]);
+const click = (p, sel) => p.evaluate((s) => document.querySelector(s).click(), sel);
+const goalText = (p) => p.$eval('#aPanel .goal', (e) => e.textContent.replace(/\s+/g, ' '));
+(async () => {
+  const b = await chromium.launch({ args: ['--use-gl=swiftshader', '--enable-webgl', '--ignore-gpu-blocklist'] });
+  const errors = [];
+  const p = await (await b.newContext({ viewport: { width: 1440, height: 900 } })).newPage();
+  p.on('pageerror', (e) => errors.push(e.message));
+  await p.goto(URL, { waitUntil: 'domcontentloaded', timeout: 90000 });
+  await p.waitForFunction(() => window.OFFICE && window.OFFICE.sync, null, { timeout: 120000 });
+  await p.waitForSelector('#aOnb');
+  await p.fill('#aon-name', 'Анна'); await p.fill('#aon-project', 'Школа «Speak»');
+  await p.selectOption('#aon-goal', 'ads');
+  await p.screenshot({ path: OUT + '/70-onb-goal.png' });
+  await p.evaluate(() => document.querySelector('#aOnb').requestSubmit()); await p.waitForTimeout(1500);
+  await click(p, '#aPanel .aph [data-act="track"]'); await p.waitForTimeout(500);
+  let t = await goalText(p);
+  console.log('ads:', t.slice(0, 140));
+  if (!/Реклама с понятной ценой заявки/.test(t) || !/До цели 23 шага/.test(t)) errors.push('ads goal box wrong: ' + t);
+  await p.screenshot({ path: OUT + '/71-track-goal.png' });
+  await click(p, '#aPanel .goal [data-act="goal"]'); await p.waitForTimeout(300);
+  await p.screenshot({ path: OUT + '/72-goal-modal.png' });
+  await click(p, '#aModal [data-act="goal-set"][data-id="content"]'); await p.waitForTimeout(400);
+  t = await goalText(p);
+  console.log('content:', t.slice(0, 140));
+  if (!/Больше подписчиков/.test(t) || !/До цели 11 шагов/.test(t)) errors.push('content goal box wrong: ' + t);
+  // пример AICEX: цель «Заявки из блога», часть шагов уже пройдена
+  await click(p, '#aPanel [data-act="reset"]'); await p.waitForTimeout(200);
+  await click(p, '#aModal [data-act="reset-ok"]'); await p.waitForTimeout(600);
+  await click(p, '#aModal [data-act="demo"]'); await p.waitForTimeout(1500);
+  t = await goalText(p);
+  console.log('demo:', t.slice(0, 160));
+  if (!/Заявки из блога/.test(t)) errors.push('demo goal box missing: ' + t);
+  await p.screenshot({ path: OUT + '/73-demo-goal.png' });
+  console.log(errors.length ? errors.join('\n') : 'no errors');
+  await b.close();
+})();

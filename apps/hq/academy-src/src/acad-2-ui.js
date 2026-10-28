@@ -9,6 +9,7 @@ function renderHUD() {
     '<span class="chip" title="Агенты в офисе">' + icon('user', 13) + ' ' + hiredSet().size + '/24</span>' +
     '<span class="chip" title="Дней подряд">' + icon('flame', 13) + ' ' + S.streak.count + '</span>' +
     '<button data-act="plan" title="Весь офис сверху">' + icon('track') + '<span>План</span></button>' +
+    (hiredSet().size ? '<button data-act="today" title="Кого из агентов запустить сегодня">' + icon('clock') + '<span>Сегодня</span>' + (todayLeft() ? '<i class="cnt">' + todayLeft() + '</i>' : '') + '</button>' : '') +
     '<button data-act="project">' + icon('folder') + '<span>Проект</span></button>' +
     '<button data-act="library">' + icon('gift') + '<span>Решения</span></button>' +
     '<button data-act="team">' + icon('team') + '<span>Команда</span></button>' +
@@ -56,6 +57,8 @@ function trackPanel() {
   } else {
     h += '<div class="box ok"><b class="h2">Офис собран</b><p class="mut sm" style="margin:0">Все 24 агента на местах. Дальше офис работает по регламентам из папки regulations.</p><div class="row"><button class="ab pri" data-act="project">' + icon('folder') + 'Открыть проект</button></div></div>';
   }
+  if (hiredSet().size) h += todayBox();
+  if (MODE !== 'demo' || myGoal()) h += goalBox();
   const bosses = STEPS.filter((s) => s.boss && isDone(s.id) && !(st(s.id).boss && st(s.id).boss.status === 'done'));
   if (bosses.length) h += '<div class="stk"><span class="eb">Боссы ждут</span>' + bosses.map((s) => '<button class="srow cur" data-act="boss" data-id="' + s.id + '"><span class="n">' + icon('crown', 13) + '</span><span><b>' + esc(s.boss.task) + '</b><small>Босс шага ' + s.id + ' · доказательство: ' + esc(s.boss.proof) + '</small></span><em>+' + A.xp.boss + '</em></button>').join('') + '</div>';
   A.modules.forEach((m) => {
@@ -84,6 +87,28 @@ function needsHTML(list, short) {
   return '<div class="needs' + (short ? ' short' : '') + '">' + list.map((n) => '<div class="need"><span class="pill ' + NEED[n.k][1] + '">' + NEED[n.k][0] + '</span><div><b>' + esc(n.title) + '</b>' +
     (short ? '' : '<span class="mut sm">' + esc(n.what) + '</span>' + (n.alt ? '<span class="sm alt">' + esc(n.alt) + '</span>' : '')) + '</div></div>').join('') + '</div>';
 }
+// ---------- Сегодня в офисе ----------
+const todayLeft = () => officeWeek().today.filter((s) => !ranToday(s.id)).length;
+function todayBox() {
+  const w = officeWeek(), n = w.today.length, left = w.today.filter((s) => !ranToday(s.id)).length;
+  return '<div class="box"><div class="spr"><span class="eb">Сегодня в офисе · ' + WD[weekday()] + '</span><button class="lnk sm" data-act="week">неделя</button></div>' +
+    '<span class="sm">' + (n ? (left ? 'По регламенту ' + n + ' ' + plural(n, 'агент', 'агента', 'агентов') + ', осталось ' + left + ': ' + esc(w.today.filter((s) => !ranToday(s.id)).map((s) => s.title).join(', ')) + '.' : 'Все агенты на сегодня отработали.') : 'Сегодня по регламенту никого.' + (w.may.length ? ' Можно запустить: ' + esc(w.may.map((s) => s.title).join(', ')) + '.' : '')) + '</span>' +
+    '<div class="row"><button class="ab sm" data-act="today">' + icon('clock', 13) + 'Открыть «Сегодня»</button></div></div>';
+}
+
+// ---------- Цель и маршрут ----------
+const myGoal = () => A.goals.find((g) => S.profile && g.id === S.profile.goal) || null;
+function goalBox() {
+  const g = myGoal();
+  if (!g) return '<div class="box goal"><span class="eb">Твоя цель</span><span class="sm">Выбери, что хочешь получить первым, — покажу, сколько шагов до результата и какие главные.</span><div class="row"><button class="ab sm" data-act="goal">Выбрать цель</button></div></div>';
+  const m = STEP[g.milestone], route = STEPS.filter((s) => s.index <= m.index), left = route.filter((s) => !isDone(s.id));
+  const pct = Math.round((route.length - left.length) / route.length * 100), mins = left.reduce((a, s) => a + s.minutes, 0);
+  return '<div class="box goal"><div class="spr"><span class="eb">Твоя цель</span><button class="lnk sm" data-act="goal">сменить</button></div><b>' + esc(g.title) + '</b>' +
+    '<span class="mut sm">' + esc(g.what) + ' ' + (left.length ? 'До цели ' + left.length + ' ' + plural(left.length, 'шаг', 'шага', 'шагов') + ', ≈ ' + hours(mins) + '.' : 'Цель достигнута — дальше офис растёт сам.') + '</span>' +
+    '<div class="gbar"><i style="width:' + Math.max(3, pct) + '%"></i></div>' +
+    '<div class="row">' + g.key.map((id) => '<span class="pill' + (isDone(id) ? ' ok' : '') + '">' + (isDone(id) ? icon('check', 11) : '') + esc(id + ' ' + STEP[id].title) + '</span>').join('') + '</div></div>';
+}
+
 // перед первым шагом модуля — что из обязательного понадобится
 function needLine(s) {
   const need = (A.needs.modules[s.module] || []).filter((n) => n.k === 'need');
@@ -140,7 +165,8 @@ STAGE.task = (s) => {
     (s.agent ? '<span class="pill blue">' + icon('user', 12) + 'Агент «' + esc(s.title) + '» в отдел «' + esc(roomName(s.room)) + '»</span>' : '<span class="pill blue">' + icon('folder', 12) + 'Твой офис и проект в Claude</span>') +
     '<span class="pill amber">' + icon('gift', 12) + gifts + ' ' + plural(gifts, 'готовое решение', 'готовых решения', 'готовых решений') + '</span>' +
     '<span class="pill">' + icon('file', 12) + (s.agent ? agentPath(s) : s.context || 'CLAUDE.md') + '</span>' +
-    '<span class="pill amber">' + icon('star', 12) + '+' + stepXP(s) + ' опыта</span></div></div>';
+    '<span class="pill amber">' + icon('star', 12) + '+' + stepXP(s) + ' опыта</span>' +
+    (myGoal() && myGoal().key.indexOf(s.id) >= 0 ? '<span class="pill ok">' + icon('track', 12) + (s.id === myGoal().milestone ? 'Здесь твоя цель' : 'Главный шаг к цели') + '</span>' : '') + '</div></div>';
   h += '<div class="stk"><span class="eb">Что сделаешь</span><ol class="nl">' +
     '<li><span>Ответишь на ' + s.questions.length + ' ' + plural(s.questions.length, 'вопрос', 'вопроса', 'вопросов') + ' про свой бизнес. Не знаешь ответ — жми «Не знаю», там инструкция, пример и шаблон.</span></li>' +
     '<li><span>Заберёшь готовые решения AICEX: скиллы, артефакты, шаблоны.</span></li>' +

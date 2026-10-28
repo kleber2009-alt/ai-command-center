@@ -9,6 +9,7 @@ function showOnboarding() {
     '<div class="stk" style="gap:4px"><span class="eb">Что понадобится · весь трек ≈ ' + hours(trackHours()) + '</span>' + needsHTML(A.needs.start, true) + '<button class="lnk sm" type="button" data-act="needs" data-id="">Подробнее и что нужно в каждом модуле</button></div></div>' +
     '<form class="stk" id="aOnb" autocomplete="off"><div class="reg"><label for="aon-name">Как тебя зовут?</label><input class="in" id="aon-name" value="' + esc(nm) + '" placeholder="Например, Анна"></div>' +
     '<div class="reg"><label for="aon-project">Как называется твой бизнес или проект?</label><input class="in" id="aon-project" value="' + esc(o.project || '') + '" placeholder="Например, Школа английского «Speak»"></div>' +
+    '<div class="reg"><label for="aon-goal">Что хочешь получить первым?</label><select class="sel" id="aon-goal">' + A.goals.map((g) => '<option value="' + g.id + '"' + (g.id === (o.goal || 'leads') ? ' selected' : '') + '>' + esc(g.title) + '</option>').join('') + '</select></div>' +
     '<div class="reg"><label for="aon-niche">Чем занимаешься — одной фразой?</label><input class="in" id="aon-niche" value="' + esc(o.niche || '') + '" placeholder="Например, учу взрослых говорить по-английски за 3 месяца"></div>' +
     '<button class="ab pri full" type="submit">Войти в свой офис ' + icon('right') + '</button>' +
     '<button class="ab full" type="button" data-act="demo">' + icon('eye') + 'Посмотреть пример: офис AICEX на середине трека</button>' +
@@ -19,7 +20,7 @@ function startProject() {
   const name = $('#aon-name').value.trim(), project = $('#aon-project').value.trim(), niche = $('#aon-niche').value.trim();
   if (!name || !project) { toast('Напиши имя и название проекта.'); (!name ? $('#aon-name') : $('#aon-project')).focus(); return; }
   S = fresh();
-  S.profile = { name: name, project: project, niche: niche, started: Date.now() };
+  S.profile = { name: name, project: project, niche: niche, goal: ($('#aon-goal') || {}).value || 'leads', started: Date.now() };
   UI.onb = null;
   touch(); save(); closeModal();
   renderAll();
@@ -30,11 +31,58 @@ function startProject() {
 // ---------- Что понадобится ----------
 function showNeeds(mid) {
   const one = mid != null && mid !== '' && MOD[mid], back = S.profile || MODE === 'demo' ? 'close' : 'onb';
-  if ($('#aOnb')) UI.onb = { name: $('#aon-name').value, project: $('#aon-project').value, niche: $('#aon-niche').value };
+  if ($('#aOnb')) UI.onb = { name: $('#aon-name').value, project: $('#aon-project').value, niche: $('#aon-niche').value, goal: $('#aon-goal').value };
   openModal('<div class="adh"><div class="stk" style="gap:2px"><span class="eb">' + (one ? 'Модуль ' + one.id + ' · ' + esc(one.title) + ' · ≈ ' + hours(modMinutes(one.id)) : 'Весь трек · ≈ ' + hours(trackHours())) + '</span><b class="h2">Что понадобится</b></div><button class="icob" data-act="' + back + '" aria-label="Закрыть">' + icon('x') + '</button></div>' +
     (one ? '' : '<div class="stk"><span class="eb">До старта</span>' + needsHTML(A.needs.start) + '</div>') +
     (one ? [one] : A.modules).map((m) => '<div class="stk">' + (one ? '' : '<span class="eb">Модуль ' + m.id + ' · ' + esc(m.title) + ' · ≈ ' + hours(modMinutes(m.id)) + '</span>') + needsHTML(A.needs.modules[m.id] || []) + '</div>').join('') +
     '<div class="row">' + (one ? '<button class="ab sm" data-act="needs" data-id="">Весь трек</button>' : '') + (back === 'onb' ? '<button class="ab pri sm" data-act="onb">' + icon('left', 13) + 'Назад к старту</button>' : '') + '</div>', true);
+}
+
+// ---------- Сегодня и неделя офиса ----------
+function runCard(s, note) {
+  const r = regOf(s.id), done = ranToday(s.id);
+  return '<div class="gift run' + (done ? ' done' : '') + '"><span class="gi skill">' + icon(done ? 'check' : 'user', 18) + '</span><div><span class="k">' + esc(roomName(s.room)) + (r.owner ? ' · отвечает ' + esc(r.owner) : '') + '</span><b>' + esc(s.title) + '</b>' +
+    '<p>' + esc(note || r.when || '') + '</p><div class="row"><button class="ab sm' + (done ? '' : ' pri') + '" data-act="copy-prompt" data-id="' + s.id + '">' + icon('copy', 13) + 'Промпт запуска</button>' +
+    '<button class="ab sm" data-act="run-done" data-id="' + s.id + '">' + icon('check', 13) + (done ? 'Сделано сегодня' : 'Отметить: сделано') + '</button>' +
+    '<button class="ab ghost sm" data-act="agent" data-id="' + s.agent + '">Регламент</button></div></div></div>';
+}
+function showToday() {
+  const w = officeWeek(), d = new Date().toLocaleDateString('ru-RU', { weekday: 'long', day: 'numeric', month: 'long' });
+  openModal('<div class="adh"><div class="stk" style="gap:2px"><span class="eb">Сегодня · ' + esc(d) + '</span><b class="h2">Кого запустить сегодня</b></div><button class="icob" data-act="close" aria-label="Закрыть">' + icon('x') + '</button></div>' +
+    '<p class="mut sm" style="margin:0">Расписание взято из регламентов: поле «Когда запускать». Открой проект в Claude, вставь промпт агента и отметь, что сделано.</p>' +
+    (w.today.length ? '<div class="stk"><span class="eb">По регламенту · ' + w.today.length + '</span>' + w.today.map((s) => runCard(s)).join('') + '</div>' : '<div class="box"><span class="sm">Сегодня по регламенту никого. Хороший день, чтобы нанять следующего агента.</span></div>') +
+    (w.may.length ? '<div class="stk"><span class="eb">Можно сегодня</span>' + w.may.map((s) => runCard(s, whenNote(s))).join('') + '</div>' : '') +
+    (w.always.length ? '<div class="stk"><span class="eb">Работают сами</span><div class="row">' + w.always.map((s) => '<span class="pill ok">' + icon('check', 11) + esc(s.title) + '</span>').join('') + '</div><span class="mut sm">Боты и автоответы. Раз в неделю загляни в их отчёты.</span></div>' : '') +
+    '<div class="row"><button class="ab sm" data-act="week">' + icon('track', 13) + 'Вся неделя офиса</button></div>', true);
+}
+function whenNote(s) {
+  const p = whenPlan(regOf(s.id).when);
+  if (p.flex) return p.flex + ' ' + plural(p.flex, 'раз', 'раза', 'раз') + ' в неделю · на этой неделе ' + runsThisWeek(s.id);
+  const last = daysSinceRun(s.id);
+  return (p.every === 14 ? 'Раз в 2 недели' : 'Раз в месяц') + ' · ' + (last === Infinity ? 'ещё не запускали' : last === 0 ? 'запускали сегодня' : 'последний раз ' + last + ' ' + plural(last, 'день', 'дня', 'дней') + ' назад');
+}
+function showWeek() {
+  const w = officeWeek(), t = weekday(), chip = (s) => '<button class="pill chip' + (ranToday(s.id) ? ' ok' : '') + '" data-act="agent" data-id="' + s.agent + '">' + esc(s.title) + '</button>';
+  const list = (title, items) => items.length ? '<div class="stk"><span class="eb">' + title + '</span><div class="row">' + items.map(chip).join('') + '</div></div>' : '';
+  openModal('<div class="adh"><div class="stk" style="gap:2px"><span class="eb">Неделя офиса · ' + hiredSet().size + ' ' + plural(hiredSet().size, 'агент', 'агента', 'агентов') + '</span><b class="h2">Кто и когда работает</b></div><button class="icob" data-act="close" aria-label="Закрыть">' + icon('x') + '</button></div>' +
+    '<div class="wk">' + WD.map((name, i) => '<div class="wkd' + (i === t ? ' on' : '') + '"><b>' + name.slice(0, 1).toUpperCase() + name.slice(1) + '</b>' + (w.days[i].length ? w.days[i].map(chip).join('') : '<span class="mut sm">—</span>') + '</div>').join('') + '</div>' +
+    list('Несколько раз в неделю — в любой день', w.flex.map((x) => x[0])) + list('Раз в 2 недели или раз в месяц', w.every.map((x) => x[0])) +
+    list('По событию: новый продукт, рилс, эфир', w.event) + list('Работают сами', w.always) +
+    '<p class="mut sm" style="margin:0">Чтобы поменять день, открой агента и поправь «Когда запускать» в регламенте.</p>' +
+    '<div class="row"><button class="ab pri sm" data-act="today">' + icon('clock', 13) + 'Что сегодня</button></div>', true);
+}
+
+// ---------- Цель ----------
+function showGoal() {
+  const cur = (S.profile && S.profile.goal) || 'leads';
+  openModal('<div class="adh"><div class="stk" style="gap:2px"><span class="eb">Твой маршрут</span><b class="h2">Что хочешь получить первым?</b></div><button class="icob" data-act="close" aria-label="Закрыть">' + icon('x') + '</button></div>' +
+    '<p class="mut sm" style="margin:0">Трек тот же, меняется ориентир: сколько шагов до результата и какие из них главные.</p>' +
+    '<div class="lib">' + A.goals.map((g) => '<button class="box' + (g.id === cur ? ' amber' : '') + '" style="text-align:left" data-act="goal-set" data-id="' + g.id + '"><b>' + esc(g.title) + '</b><span class="mut sm">' + esc(g.what) + '</span><span class="pill">' + icon('track', 12) + 'Цель — шаг ' + g.milestone + ' «' + esc(STEP[g.milestone].title) + '»</span></button>').join('') + '</div>', true);
+}
+function setGoal(id) {
+  if (!S.profile || !A.goals.some((g) => g.id === id)) return;
+  S.profile.goal = id; save(); closeModal(); renderPanel();
+  toast('Цель: ' + myGoal().title);
 }
 
 // ---------- Перенос прогресса: сайт ↔ claude.ai ↔ другое устройство ----------
@@ -42,7 +90,7 @@ const PROG = 'aicex-academy';
 const doneIn = (s) => STEPS.filter((x) => s.steps[x.id] && s.steps[x.id].hired).length;
 function showTransfer() {
   const has = !!S.profile, back = has ? 'close' : 'onb';
-  if ($('#aOnb')) UI.onb = { name: $('#aon-name').value, project: $('#aon-project').value, niche: $('#aon-niche').value };
+  if ($('#aOnb')) UI.onb = { name: $('#aon-name').value, project: $('#aon-project').value, niche: $('#aon-niche').value, goal: $('#aon-goal').value };
   openModal('<div class="adh"><div class="stk" style="gap:2px"><span class="eb">Перенос прогресса</span><b class="h2">Продолжить в другом месте</b></div><button class="icob" data-act="' + back + '" aria-label="Закрыть">' + icon('x') + '</button></div>' +
     '<p class="mut sm" style="margin:0">Прогресс хранится там, где ты проходишь трек: на сайте — в этом браузере, в claude.ai — в облаке. Чтобы продолжить на другом устройстве или в claude.ai, забери его здесь и загрузи там.</p>' +
     (has ? '<div class="box"><b>1. Забрать отсюда</b><span class="mut sm">' + esc(brand()) + ': ' + doneCount() + ' из ' + STEPS.length + ' шагов, ' + fmt(S.xp) + ' опыта. Файл можно отправить себе в Telegram или на почту.</span>' +
@@ -290,7 +338,7 @@ function enterDemo() {
   RT.saved = { S: S, MODE: MODE };
   MODE = 'demo-build';
   S = fresh();
-  S.profile = { name: 'Илья', project: 'AICEX', niche: 'ИИ-офис и нейроворонки для экспертов', started: Date.now() - 24 * 864e5 };
+  S.profile = { name: 'Илья', project: 'AICEX', niche: 'ИИ-офис и нейроворонки для экспертов', goal: 'leads', started: Date.now() - 24 * 864e5 };
   S.heads = { ceo: 'Илья', marketing: 'Фируза', sales: 'Богдан', traffic: 'Нуркен' };
   const until = STEP['4.1'].index;
   STEPS.forEach((s, i) => {

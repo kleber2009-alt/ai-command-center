@@ -416,6 +416,17 @@
   .need b{font-size:13.5px}
   .need .alt{color:var(--tx2);font-style:italic}
   .needline{display:grid;gap:3px;padding:8px 10px;border-radius:10px;background:rgba(255,255,255,.05)}
+  .gbar{height:6px;border-radius:99px;background:rgba(255,255,255,.12);overflow:hidden}
+  .gbar i{display:block;height:100%;background:var(--ok);border-radius:99px;transition:width .6s}
+  .goal .pill{white-space:normal}
+  .run.done{opacity:.72}
+  .ahud .cnt{font-style:normal;font-size:10.5px;font-weight:800;min-width:17px;height:17px;padding:0 4px;border-radius:99px;background:var(--amber);color:#1c1300;display:inline-grid;place-items:center}
+  .wk{display:grid;grid-template-columns:repeat(7,minmax(0,1fr));gap:8px}
+  .wkd{display:grid;align-content:start;gap:6px;padding:10px;border-radius:12px;background:rgba(255,255,255,.04);border:1px solid rgba(255,255,255,.08);min-width:0}
+  .wkd.on{border-color:rgba(255,176,32,.55);background:rgba(255,176,32,.08)}
+  .wkd b{font-size:12.5px}
+  .pill.chip{white-space:normal;text-align:left;cursor:pointer;border:0;font:inherit;font-size:11.5px;font-weight:800;color:var(--tx)}
+  .pill.chip.ok{color:var(--ok)}
   .needline .lnk{justify-self:start}
   .srow{width:100%;display:grid;grid-template-columns:26px minmax(0,1fr) auto;gap:10px;align-items:center;text-align:left;padding:8px 10px;border-radius:12px;background:rgba(255,255,255,.04);border:1px solid rgba(255,255,255,.06)}
   .srow:hover:not(:disabled){background:rgba(255,255,255,.09)}
@@ -562,6 +573,7 @@
 
   @media (max-width:820px){
     .need{grid-template-columns:minmax(0,1fr)}
+    .wk{grid-template-columns:minmax(0,1fr)}
     .need .pill{justify-self:start}
     .needs.short .need{grid-template-columns:auto minmax(0,1fr)}
     :root{--panel-w:100%}
@@ -3562,6 +3574,15 @@ window.DEPT_CONTENT = {
     builtin: ['deep-research', 'docs', 'docx', 'pdf', 'pptx', 'xlsx', 'canvas-design', 'web-artifacts-builder', 'skill-creator', 'morning', 'theme-factory']
   };
 
+  // цель на входе: главный результат, ключевые шаги к нему и шаг, на котором цель достигнута
+  A.goals = [
+    { id: 'content', title: 'Больше подписчиков', what: 'Контент на потоке: рилсы, карусели и план публикаций.', milestone: '2.6', key: ['2.1', '2.2', '2.5', '2.6'] },
+    { id: 'leads', title: 'Заявки из блога', what: 'Кодовое слово под рилсом → подарок → бот с прогревом → заявка.', milestone: '4.1', key: ['2.2', '3.2', '3.3', '4.1'] },
+    { id: 'sales', title: 'Продажи без меня', what: 'ИИ отвечает в директе, консультирует по базе знаний и доводит до оплаты.', milestone: '4.5', key: ['4.2', '4.3', '4.4', '4.5'] },
+    { id: 'ads', title: 'Реклама с понятной ценой заявки', what: 'Креативы, тест кампаний и отчёт, где видно, что выключить.', milestone: '5.2', key: ['3.5', '5.1', '5.2'] },
+    { id: 'system', title: 'Офис на автопилоте', what: 'Аналитика, утренний брифинг и свои скиллы — офис работает по регламентам.', milestone: '6.3', key: ['6.1', '6.2', '6.3'] }
+  ];
+
   // что понадобится: до старта и в каждом модуле. k: need — обязательно, opt — по желанию, paid — платно отдельно
   A.needs = {
     start: [
@@ -3832,6 +3853,53 @@ function fill(text, answers) {
 }
 const answersOf = (id) => (S.steps[id] && S.steps[id].answers) || {};
 const regOf = (id) => Object.assign({}, STEP[id].regulation || {}, (S.steps[id] && S.steps[id].reg) || {});
+
+// ---------- Неделя офиса: расписание агентов из поля «Когда запускать» ----------
+const WD = ['понедельник', 'вторник', 'среда', 'четверг', 'пятница', 'суббота', 'воскресенье'];
+const WD_RX = [/понедельн|(^|[^а-яё])пн([^а-яё]|$)/, /вторник|(^|[^а-яё])вт([^а-яё]|$)/, /сред[уаые]|(^|[^а-яё])ср([^а-яё]|$)/, /четверг|(^|[^а-яё])чт([^а-яё]|$)/, /пятниц|(^|[^а-яё])пт([^а-яё]|$)/, /суббот|(^|[^а-яё])сб([^а-яё]|$)/, /воскресен|(^|[^а-яё])вс([^а-яё]|$)/];
+const weekday = (d) => (new Date((d || dateStr()) + 'T12:00').getDay() + 6) % 7;
+// «Каждый вторник и четверг» → дни 1 и 3; «Работает всегда» — бот, не задача; «во время теста — …» — пояснение, не расписание
+function whenPlan(text) {
+  const p = { days: [], flex: 0, every: 0, always: false };
+  String(text || '').toLowerCase().split(/[.;]/).filter((x) => x.trim() && !/во время/.test(x)).forEach((x) => {
+    if (/всегда|круглосуточно/.test(x)) p.always = true;
+    if (/каждый день|ежедневно|каждое утро|каждый вечер/.test(x)) p.days = [0, 1, 2, 3, 4, 5, 6];
+    if (/по будням|в будни/.test(x)) p.days = p.days.concat([0, 1, 2, 3, 4]);
+    WD_RX.forEach((rx, i) => { if (rx.test(x)) p.days.push(i); });
+    const n = x.match(/(\d+)\s*раза?\s+в\s+неделю/);
+    if (n && !WD_RX.some((rx) => rx.test(x))) p.flex = Number(n[1]);
+    else if (/раз в неделю|еженедельно|каждую неделю/.test(x) && !WD_RX.some((rx) => rx.test(x))) p.days.push(0);
+    if (/раз в 2 недели|раз в две недели/.test(x)) p.every = 14;
+    if (/раз в месяц|ежемесячно/.test(x)) p.every = 30;
+  });
+  p.days = Array.from(new Set(p.days)).sort();
+  p.event = !p.days.length && !p.flex && !p.every && !p.always;
+  return p;
+}
+const runsOf = (id) => (S.runs && S.runs[id]) || [];
+const ranToday = (id) => runsOf(id).indexOf(dateStr()) >= 0;
+const runsThisWeek = (id) => runsOf(id).filter((d) => isoWeek(d) === isoWeek(dateStr())).length;
+const daysSinceRun = (id) => { const r = runsOf(id); return r.length ? daysBetween(r[r.length - 1], dateStr()) : Infinity; };
+function officeWeek() {
+  const today = weekday(), w = { days: WD.map(() => []), flex: [], every: [], event: [], always: [], today: [], may: [] };
+  STEPS.filter((s) => s.agent && isDone(s.id)).forEach((s) => {
+    const p = whenPlan(regOf(s.id).when);
+    p.days.forEach((d) => w.days[d].push(s));
+    if (p.flex) w.flex.push([s, p.flex]);
+    if (p.every) w.every.push([s, p.every]);
+    if (p.always) w.always.push(s);
+    if (p.event) w.event.push(s);
+    if (p.days.indexOf(today) >= 0) w.today.push(s);
+    else if ((p.flex || p.every) && (ranToday(s.id) || (p.flex && runsThisWeek(s.id) < p.flex) || (p.every && daysSinceRun(s.id) >= p.every))) w.may.push(s);
+  });
+  return w;
+}
+function markRun(id) {
+  S.runs = S.runs || {};
+  const t = dateStr(), r = runsOf(id).filter((d) => d !== t);
+  S.runs[id] = ranToday(id) ? r : r.concat(t).slice(-12);
+  touch(); save();
+}
 function agentPath(s) { return 'agents/' + (A.deptFolder[s.room] || s.room) + '/' + s.agent + '.md'; }
 function qaBlock(s) { const a = answersOf(s.id); return s.questions.map((q) => '### ' + plain(q.label) + '\n\n' + (String(a[q.id] || '').trim() || '— (ответ появится позже)')).join('\n\n'); }
 function giftLine(g) {
@@ -4018,6 +4086,7 @@ function renderHUD() {
     '<span class="chip" title="Агенты в офисе">' + icon('user', 13) + ' ' + hiredSet().size + '/24</span>' +
     '<span class="chip" title="Дней подряд">' + icon('flame', 13) + ' ' + S.streak.count + '</span>' +
     '<button data-act="plan" title="Весь офис сверху">' + icon('track') + '<span>План</span></button>' +
+    (hiredSet().size ? '<button data-act="today" title="Кого из агентов запустить сегодня">' + icon('clock') + '<span>Сегодня</span>' + (todayLeft() ? '<i class="cnt">' + todayLeft() + '</i>' : '') + '</button>' : '') +
     '<button data-act="project">' + icon('folder') + '<span>Проект</span></button>' +
     '<button data-act="library">' + icon('gift') + '<span>Решения</span></button>' +
     '<button data-act="team">' + icon('team') + '<span>Команда</span></button>' +
@@ -4065,6 +4134,8 @@ function trackPanel() {
   } else {
     h += '<div class="box ok"><b class="h2">Офис собран</b><p class="mut sm" style="margin:0">Все 24 агента на местах. Дальше офис работает по регламентам из папки regulations.</p><div class="row"><button class="ab pri" data-act="project">' + icon('folder') + 'Открыть проект</button></div></div>';
   }
+  if (hiredSet().size) h += todayBox();
+  if (MODE !== 'demo' || myGoal()) h += goalBox();
   const bosses = STEPS.filter((s) => s.boss && isDone(s.id) && !(st(s.id).boss && st(s.id).boss.status === 'done'));
   if (bosses.length) h += '<div class="stk"><span class="eb">Боссы ждут</span>' + bosses.map((s) => '<button class="srow cur" data-act="boss" data-id="' + s.id + '"><span class="n">' + icon('crown', 13) + '</span><span><b>' + esc(s.boss.task) + '</b><small>Босс шага ' + s.id + ' · доказательство: ' + esc(s.boss.proof) + '</small></span><em>+' + A.xp.boss + '</em></button>').join('') + '</div>';
   A.modules.forEach((m) => {
@@ -4093,6 +4164,28 @@ function needsHTML(list, short) {
   return '<div class="needs' + (short ? ' short' : '') + '">' + list.map((n) => '<div class="need"><span class="pill ' + NEED[n.k][1] + '">' + NEED[n.k][0] + '</span><div><b>' + esc(n.title) + '</b>' +
     (short ? '' : '<span class="mut sm">' + esc(n.what) + '</span>' + (n.alt ? '<span class="sm alt">' + esc(n.alt) + '</span>' : '')) + '</div></div>').join('') + '</div>';
 }
+// ---------- Сегодня в офисе ----------
+const todayLeft = () => officeWeek().today.filter((s) => !ranToday(s.id)).length;
+function todayBox() {
+  const w = officeWeek(), n = w.today.length, left = w.today.filter((s) => !ranToday(s.id)).length;
+  return '<div class="box"><div class="spr"><span class="eb">Сегодня в офисе · ' + WD[weekday()] + '</span><button class="lnk sm" data-act="week">неделя</button></div>' +
+    '<span class="sm">' + (n ? (left ? 'По регламенту ' + n + ' ' + plural(n, 'агент', 'агента', 'агентов') + ', осталось ' + left + ': ' + esc(w.today.filter((s) => !ranToday(s.id)).map((s) => s.title).join(', ')) + '.' : 'Все агенты на сегодня отработали.') : 'Сегодня по регламенту никого.' + (w.may.length ? ' Можно запустить: ' + esc(w.may.map((s) => s.title).join(', ')) + '.' : '')) + '</span>' +
+    '<div class="row"><button class="ab sm" data-act="today">' + icon('clock', 13) + 'Открыть «Сегодня»</button></div></div>';
+}
+
+// ---------- Цель и маршрут ----------
+const myGoal = () => A.goals.find((g) => S.profile && g.id === S.profile.goal) || null;
+function goalBox() {
+  const g = myGoal();
+  if (!g) return '<div class="box goal"><span class="eb">Твоя цель</span><span class="sm">Выбери, что хочешь получить первым, — покажу, сколько шагов до результата и какие главные.</span><div class="row"><button class="ab sm" data-act="goal">Выбрать цель</button></div></div>';
+  const m = STEP[g.milestone], route = STEPS.filter((s) => s.index <= m.index), left = route.filter((s) => !isDone(s.id));
+  const pct = Math.round((route.length - left.length) / route.length * 100), mins = left.reduce((a, s) => a + s.minutes, 0);
+  return '<div class="box goal"><div class="spr"><span class="eb">Твоя цель</span><button class="lnk sm" data-act="goal">сменить</button></div><b>' + esc(g.title) + '</b>' +
+    '<span class="mut sm">' + esc(g.what) + ' ' + (left.length ? 'До цели ' + left.length + ' ' + plural(left.length, 'шаг', 'шага', 'шагов') + ', ≈ ' + hours(mins) + '.' : 'Цель достигнута — дальше офис растёт сам.') + '</span>' +
+    '<div class="gbar"><i style="width:' + Math.max(3, pct) + '%"></i></div>' +
+    '<div class="row">' + g.key.map((id) => '<span class="pill' + (isDone(id) ? ' ok' : '') + '">' + (isDone(id) ? icon('check', 11) : '') + esc(id + ' ' + STEP[id].title) + '</span>').join('') + '</div></div>';
+}
+
 // перед первым шагом модуля — что из обязательного понадобится
 function needLine(s) {
   const need = (A.needs.modules[s.module] || []).filter((n) => n.k === 'need');
@@ -4149,7 +4242,8 @@ STAGE.task = (s) => {
     (s.agent ? '<span class="pill blue">' + icon('user', 12) + 'Агент «' + esc(s.title) + '» в отдел «' + esc(roomName(s.room)) + '»</span>' : '<span class="pill blue">' + icon('folder', 12) + 'Твой офис и проект в Claude</span>') +
     '<span class="pill amber">' + icon('gift', 12) + gifts + ' ' + plural(gifts, 'готовое решение', 'готовых решения', 'готовых решений') + '</span>' +
     '<span class="pill">' + icon('file', 12) + (s.agent ? agentPath(s) : s.context || 'CLAUDE.md') + '</span>' +
-    '<span class="pill amber">' + icon('star', 12) + '+' + stepXP(s) + ' опыта</span></div></div>';
+    '<span class="pill amber">' + icon('star', 12) + '+' + stepXP(s) + ' опыта</span>' +
+    (myGoal() && myGoal().key.indexOf(s.id) >= 0 ? '<span class="pill ok">' + icon('track', 12) + (s.id === myGoal().milestone ? 'Здесь твоя цель' : 'Главный шаг к цели') + '</span>' : '') + '</div></div>';
   h += '<div class="stk"><span class="eb">Что сделаешь</span><ol class="nl">' +
     '<li><span>Ответишь на ' + s.questions.length + ' ' + plural(s.questions.length, 'вопрос', 'вопроса', 'вопросов') + ' про свой бизнес. Не знаешь ответ — жми «Не знаю», там инструкция, пример и шаблон.</span></li>' +
     '<li><span>Заберёшь готовые решения AICEX: скиллы, артефакты, шаблоны.</span></li>' +
@@ -4295,6 +4389,7 @@ function showOnboarding() {
     '<div class="stk" style="gap:4px"><span class="eb">Что понадобится · весь трек ≈ ' + hours(trackHours()) + '</span>' + needsHTML(A.needs.start, true) + '<button class="lnk sm" type="button" data-act="needs" data-id="">Подробнее и что нужно в каждом модуле</button></div></div>' +
     '<form class="stk" id="aOnb" autocomplete="off"><div class="reg"><label for="aon-name">Как тебя зовут?</label><input class="in" id="aon-name" value="' + esc(nm) + '" placeholder="Например, Анна"></div>' +
     '<div class="reg"><label for="aon-project">Как называется твой бизнес или проект?</label><input class="in" id="aon-project" value="' + esc(o.project || '') + '" placeholder="Например, Школа английского «Speak»"></div>' +
+    '<div class="reg"><label for="aon-goal">Что хочешь получить первым?</label><select class="sel" id="aon-goal">' + A.goals.map((g) => '<option value="' + g.id + '"' + (g.id === (o.goal || 'leads') ? ' selected' : '') + '>' + esc(g.title) + '</option>').join('') + '</select></div>' +
     '<div class="reg"><label for="aon-niche">Чем занимаешься — одной фразой?</label><input class="in" id="aon-niche" value="' + esc(o.niche || '') + '" placeholder="Например, учу взрослых говорить по-английски за 3 месяца"></div>' +
     '<button class="ab pri full" type="submit">Войти в свой офис ' + icon('right') + '</button>' +
     '<button class="ab full" type="button" data-act="demo">' + icon('eye') + 'Посмотреть пример: офис AICEX на середине трека</button>' +
@@ -4305,7 +4400,7 @@ function startProject() {
   const name = $('#aon-name').value.trim(), project = $('#aon-project').value.trim(), niche = $('#aon-niche').value.trim();
   if (!name || !project) { toast('Напиши имя и название проекта.'); (!name ? $('#aon-name') : $('#aon-project')).focus(); return; }
   S = fresh();
-  S.profile = { name: name, project: project, niche: niche, started: Date.now() };
+  S.profile = { name: name, project: project, niche: niche, goal: ($('#aon-goal') || {}).value || 'leads', started: Date.now() };
   UI.onb = null;
   touch(); save(); closeModal();
   renderAll();
@@ -4316,11 +4411,58 @@ function startProject() {
 // ---------- Что понадобится ----------
 function showNeeds(mid) {
   const one = mid != null && mid !== '' && MOD[mid], back = S.profile || MODE === 'demo' ? 'close' : 'onb';
-  if ($('#aOnb')) UI.onb = { name: $('#aon-name').value, project: $('#aon-project').value, niche: $('#aon-niche').value };
+  if ($('#aOnb')) UI.onb = { name: $('#aon-name').value, project: $('#aon-project').value, niche: $('#aon-niche').value, goal: $('#aon-goal').value };
   openModal('<div class="adh"><div class="stk" style="gap:2px"><span class="eb">' + (one ? 'Модуль ' + one.id + ' · ' + esc(one.title) + ' · ≈ ' + hours(modMinutes(one.id)) : 'Весь трек · ≈ ' + hours(trackHours())) + '</span><b class="h2">Что понадобится</b></div><button class="icob" data-act="' + back + '" aria-label="Закрыть">' + icon('x') + '</button></div>' +
     (one ? '' : '<div class="stk"><span class="eb">До старта</span>' + needsHTML(A.needs.start) + '</div>') +
     (one ? [one] : A.modules).map((m) => '<div class="stk">' + (one ? '' : '<span class="eb">Модуль ' + m.id + ' · ' + esc(m.title) + ' · ≈ ' + hours(modMinutes(m.id)) + '</span>') + needsHTML(A.needs.modules[m.id] || []) + '</div>').join('') +
     '<div class="row">' + (one ? '<button class="ab sm" data-act="needs" data-id="">Весь трек</button>' : '') + (back === 'onb' ? '<button class="ab pri sm" data-act="onb">' + icon('left', 13) + 'Назад к старту</button>' : '') + '</div>', true);
+}
+
+// ---------- Сегодня и неделя офиса ----------
+function runCard(s, note) {
+  const r = regOf(s.id), done = ranToday(s.id);
+  return '<div class="gift run' + (done ? ' done' : '') + '"><span class="gi skill">' + icon(done ? 'check' : 'user', 18) + '</span><div><span class="k">' + esc(roomName(s.room)) + (r.owner ? ' · отвечает ' + esc(r.owner) : '') + '</span><b>' + esc(s.title) + '</b>' +
+    '<p>' + esc(note || r.when || '') + '</p><div class="row"><button class="ab sm' + (done ? '' : ' pri') + '" data-act="copy-prompt" data-id="' + s.id + '">' + icon('copy', 13) + 'Промпт запуска</button>' +
+    '<button class="ab sm" data-act="run-done" data-id="' + s.id + '">' + icon('check', 13) + (done ? 'Сделано сегодня' : 'Отметить: сделано') + '</button>' +
+    '<button class="ab ghost sm" data-act="agent" data-id="' + s.agent + '">Регламент</button></div></div></div>';
+}
+function showToday() {
+  const w = officeWeek(), d = new Date().toLocaleDateString('ru-RU', { weekday: 'long', day: 'numeric', month: 'long' });
+  openModal('<div class="adh"><div class="stk" style="gap:2px"><span class="eb">Сегодня · ' + esc(d) + '</span><b class="h2">Кого запустить сегодня</b></div><button class="icob" data-act="close" aria-label="Закрыть">' + icon('x') + '</button></div>' +
+    '<p class="mut sm" style="margin:0">Расписание взято из регламентов: поле «Когда запускать». Открой проект в Claude, вставь промпт агента и отметь, что сделано.</p>' +
+    (w.today.length ? '<div class="stk"><span class="eb">По регламенту · ' + w.today.length + '</span>' + w.today.map((s) => runCard(s)).join('') + '</div>' : '<div class="box"><span class="sm">Сегодня по регламенту никого. Хороший день, чтобы нанять следующего агента.</span></div>') +
+    (w.may.length ? '<div class="stk"><span class="eb">Можно сегодня</span>' + w.may.map((s) => runCard(s, whenNote(s))).join('') + '</div>' : '') +
+    (w.always.length ? '<div class="stk"><span class="eb">Работают сами</span><div class="row">' + w.always.map((s) => '<span class="pill ok">' + icon('check', 11) + esc(s.title) + '</span>').join('') + '</div><span class="mut sm">Боты и автоответы. Раз в неделю загляни в их отчёты.</span></div>' : '') +
+    '<div class="row"><button class="ab sm" data-act="week">' + icon('track', 13) + 'Вся неделя офиса</button></div>', true);
+}
+function whenNote(s) {
+  const p = whenPlan(regOf(s.id).when);
+  if (p.flex) return p.flex + ' ' + plural(p.flex, 'раз', 'раза', 'раз') + ' в неделю · на этой неделе ' + runsThisWeek(s.id);
+  const last = daysSinceRun(s.id);
+  return (p.every === 14 ? 'Раз в 2 недели' : 'Раз в месяц') + ' · ' + (last === Infinity ? 'ещё не запускали' : last === 0 ? 'запускали сегодня' : 'последний раз ' + last + ' ' + plural(last, 'день', 'дня', 'дней') + ' назад');
+}
+function showWeek() {
+  const w = officeWeek(), t = weekday(), chip = (s) => '<button class="pill chip' + (ranToday(s.id) ? ' ok' : '') + '" data-act="agent" data-id="' + s.agent + '">' + esc(s.title) + '</button>';
+  const list = (title, items) => items.length ? '<div class="stk"><span class="eb">' + title + '</span><div class="row">' + items.map(chip).join('') + '</div></div>' : '';
+  openModal('<div class="adh"><div class="stk" style="gap:2px"><span class="eb">Неделя офиса · ' + hiredSet().size + ' ' + plural(hiredSet().size, 'агент', 'агента', 'агентов') + '</span><b class="h2">Кто и когда работает</b></div><button class="icob" data-act="close" aria-label="Закрыть">' + icon('x') + '</button></div>' +
+    '<div class="wk">' + WD.map((name, i) => '<div class="wkd' + (i === t ? ' on' : '') + '"><b>' + name.slice(0, 1).toUpperCase() + name.slice(1) + '</b>' + (w.days[i].length ? w.days[i].map(chip).join('') : '<span class="mut sm">—</span>') + '</div>').join('') + '</div>' +
+    list('Несколько раз в неделю — в любой день', w.flex.map((x) => x[0])) + list('Раз в 2 недели или раз в месяц', w.every.map((x) => x[0])) +
+    list('По событию: новый продукт, рилс, эфир', w.event) + list('Работают сами', w.always) +
+    '<p class="mut sm" style="margin:0">Чтобы поменять день, открой агента и поправь «Когда запускать» в регламенте.</p>' +
+    '<div class="row"><button class="ab pri sm" data-act="today">' + icon('clock', 13) + 'Что сегодня</button></div>', true);
+}
+
+// ---------- Цель ----------
+function showGoal() {
+  const cur = (S.profile && S.profile.goal) || 'leads';
+  openModal('<div class="adh"><div class="stk" style="gap:2px"><span class="eb">Твой маршрут</span><b class="h2">Что хочешь получить первым?</b></div><button class="icob" data-act="close" aria-label="Закрыть">' + icon('x') + '</button></div>' +
+    '<p class="mut sm" style="margin:0">Трек тот же, меняется ориентир: сколько шагов до результата и какие из них главные.</p>' +
+    '<div class="lib">' + A.goals.map((g) => '<button class="box' + (g.id === cur ? ' amber' : '') + '" style="text-align:left" data-act="goal-set" data-id="' + g.id + '"><b>' + esc(g.title) + '</b><span class="mut sm">' + esc(g.what) + '</span><span class="pill">' + icon('track', 12) + 'Цель — шаг ' + g.milestone + ' «' + esc(STEP[g.milestone].title) + '»</span></button>').join('') + '</div>', true);
+}
+function setGoal(id) {
+  if (!S.profile || !A.goals.some((g) => g.id === id)) return;
+  S.profile.goal = id; save(); closeModal(); renderPanel();
+  toast('Цель: ' + myGoal().title);
 }
 
 // ---------- Перенос прогресса: сайт ↔ claude.ai ↔ другое устройство ----------
@@ -4328,7 +4470,7 @@ const PROG = 'aicex-academy';
 const doneIn = (s) => STEPS.filter((x) => s.steps[x.id] && s.steps[x.id].hired).length;
 function showTransfer() {
   const has = !!S.profile, back = has ? 'close' : 'onb';
-  if ($('#aOnb')) UI.onb = { name: $('#aon-name').value, project: $('#aon-project').value, niche: $('#aon-niche').value };
+  if ($('#aOnb')) UI.onb = { name: $('#aon-name').value, project: $('#aon-project').value, niche: $('#aon-niche').value, goal: $('#aon-goal').value };
   openModal('<div class="adh"><div class="stk" style="gap:2px"><span class="eb">Перенос прогресса</span><b class="h2">Продолжить в другом месте</b></div><button class="icob" data-act="' + back + '" aria-label="Закрыть">' + icon('x') + '</button></div>' +
     '<p class="mut sm" style="margin:0">Прогресс хранится там, где ты проходишь трек: на сайте — в этом браузере, в claude.ai — в облаке. Чтобы продолжить на другом устройстве или в claude.ai, забери его здесь и загрузи там.</p>' +
     (has ? '<div class="box"><b>1. Забрать отсюда</b><span class="mut sm">' + esc(brand()) + ': ' + doneCount() + ' из ' + STEPS.length + ' шагов, ' + fmt(S.xp) + ' опыта. Файл можно отправить себе в Telegram или на почту.</span>' +
@@ -4576,7 +4718,7 @@ function enterDemo() {
   RT.saved = { S: S, MODE: MODE };
   MODE = 'demo-build';
   S = fresh();
-  S.profile = { name: 'Илья', project: 'AICEX', niche: 'ИИ-офис и нейроворонки для экспертов', started: Date.now() - 24 * 864e5 };
+  S.profile = { name: 'Илья', project: 'AICEX', niche: 'ИИ-офис и нейроворонки для экспертов', goal: 'leads', started: Date.now() - 24 * 864e5 };
   S.heads = { ceo: 'Илья', marketing: 'Фируза', sales: 'Богдан', traffic: 'Нуркен' };
   const until = STEP['4.1'].index;
   STEPS.forEach((s, i) => {
@@ -4796,6 +4938,11 @@ const ACT = {
   'skill-code': (t) => showCode(t.getAttribute('data-skill')),
   needs: (t) => showNeeds(t.getAttribute('data-id')),
   transfer: () => showTransfer(),
+  goal: () => showGoal(),
+  today: () => showToday(),
+  week: () => showWeek(),
+  'run-done': (t) => { markRun(t.getAttribute('data-id')); showToday(); renderAll(); },
+  'goal-set': (t) => setGoal(t.getAttribute('data-id')),
   'prog-file': () => exportProgress(false),
   'prog-copy': () => exportProgress(true),
   'prog-load': () => { const t = ($('#aprog-text') || {}).value || ''; if (t.trim()) importProgress(t); else toast('Выбери файл прогресса или вставь его текст.'); },
