@@ -30,15 +30,10 @@ window.OFFICE_TASKS_AUTO = {
           "label": "PR #152 · история пишет тексты только своим ключом HQ_OFFICE_ANTHROPIC_API_KEY",
           "url": "https://github.com/kleber2009-alt/ai-command-center/pull/152"
         },
-        {
-          "kind": "github",
-          "label": "PR #153 · библиотека AICEX на hq2 — скиллы, новые задачи, галереи стилей",
-          "url": "https://github.com/kleber2009-alt/ai-command-center/pull/153"
-        },
         { "kind": "site", "label": "Живой офис агентов — живой сайт", "url": "https://hq2.aicex.club" }
       ],
       "group": "hq-office|claude/affectionate-keller-qy05o4",
-      "prs": [148, 149, 150, 152, 153],
+      "prs": [148, 149, 150, 152],
       "auto": true
     },
     {
