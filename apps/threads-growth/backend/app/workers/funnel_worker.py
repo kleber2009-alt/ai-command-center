@@ -15,6 +15,9 @@ from datetime import date
 from app.funnel import jobs
 
 logging.basicConfig(format="%(asctime)s [%(levelname)s] %(name)s: %(message)s", level=logging.INFO)
+# httpx пишет URL запроса целиком — а в URL Bot API лежит токен бота.
+for _name in ("httpx", "httpx2"):
+    logging.getLogger(_name).setLevel(logging.WARNING)
 
 DATED = ("plan", "generate", "report")
 
