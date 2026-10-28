@@ -228,8 +228,14 @@ def run_research(db: Session) -> dict:
     donors = set(donor_handles())
     donors |= {c.username.lower() for c in db.scalars(select(Competitor).where(
         Competitor.platform == "threads", Competitor.is_active.is_(True))).all()}
-    users = research.fresh(research.fetch_users(sorted(donors), 40)) if donors else []
-    search = research.fresh(research.fetch_search(research_queries(), 25))
+    try:
+        users = research.fresh(research.fetch_users(sorted(donors), 40)) if donors else []
+        search = research.fresh(research.fetch_search(research_queries(), 25))
+    except Exception as e:  # noqa: BLE001 — Apify: оплата, лимиты, сеть; план выйдет и без свежих хитов
+        msg = str(e)
+        if "invoice" in msg.lower():
+            msg = "на аккаунте Apify неоплаченные счета — оплатите в console.apify.com → Billing"
+        raise FunnelError(f"Исследование Threads не выполнено: {msg}. Ветки выйдут по прошлым данным.") from e
     scores = {**research.score_batch(users), **research.score_batch(search, group_by_author=False)}
     saved = 0
     for p in users + search:
