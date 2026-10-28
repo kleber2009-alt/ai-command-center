@@ -59,7 +59,7 @@ env vars, and routes, see `CLAUDE.md` / `README.md` inside each `apps/<app>/`.
 | `apps/persona-train` | Forked voice-training stack (own domain) — **в Command Center НЕТ**, отдельная инициатива Ильи | `persona-train.46-62-215-11.nip.io`, `@ilia_pali0_bot`, `persona-train-web :3030` |
 | `apps/funnel-analytics` | Сквозная аналитика + доходы/расходы + контент (Python stdlib → один HTML), cron-обновление через `update-funnel-analytics.yml` | `dashboard.aicex.club` (свой сервер, cron из `deploy/setup-server.sh`), `/var/www/funnel-analytics` |
 | `apps/voice-circle-bot` | Python TG-bot prototype для видео-кружков — **в Command Center НЕТ**, не задеплоен | — |
-| `apps/hq-office` | Живой офис агентов v2: 3D open-space + история реальных задач с доказательствами (PR, артефакты Claude, сайты), досье и скиллы с hq.aicex.club — **в Command Center НЕТ** | `hq2.aicex.club` (сервер `*.aicex.club`), контейнеры `aicex-hq-office` (статика) и `aicex-hq-assistant` (голосовой ассистент, `/api/assistant/*`) + `/opt/edge/sites/hq-office.caddy`, деплой `deploy-hq-office.yml`, история из PR — `hq-office-history.yml` |
+| `apps/hq-office` | Живой офис агентов v2: 3D open-space + история реальных задач с доказательствами (PR, артефакты Claude, сайты), досье и скиллы с hq.aicex.club — **в Command Center НЕТ** | `hq2.aicex.club` (сервер `*.aicex.club`), контейнеры `aicex-hq-office` (статика) и `aicex-hq-assistant` (голосовой ассистент + рабочий стол задач агентам, `/api/assistant/*`), служба `hq-runner` (исполнитель задач: Claude Code со скиллами под пользователем ботов) + `/opt/edge/sites/hq-office.caddy`, деплой `deploy-hq-office.yml`, история из PR — `hq-office-history.yml` |
 
 ## When Claude is asked to change something
 
@@ -195,7 +195,7 @@ When the task is scoped to a single app, read its `CLAUDE.md` first:
 - [`apps/ai-content-factory/CLAUDE.md`](apps/ai-content-factory/CLAUDE.md) — TS/ESM, Claude + Voyage + sqlite-vec + Puppeteer carousel pipeline, Telegram delivery
 - [`apps/ig-content/CLAUDE.md`](apps/ig-content/CLAUDE.md) — Next.js 14 + Supabase, 5 AI-agents (Strategist / Reels / Carousel / Analytics), pgvector RAG, port 3010, deploy `igcontent.46-62-215-11.nip.io`
 - [`apps/voice-circle-bot/CLAUDE.md`](apps/voice-circle-bot/CLAUDE.md) — prototype, not in prod
-- [`apps/hq-office/CLAUDE.md`](apps/hq-office/CLAUDE.md) — живой офис v2 (hq2.aicex.club): 3D-визуализация + история реальных задач (`tasks.js`), досье с hq.aicex.club
+- [`apps/hq-office/CLAUDE.md`](apps/hq-office/CLAUDE.md) — живой офис v2 (hq2.aicex.club): 3D-визуализация + история реальных задач (`tasks.js`), досье с hq.aicex.club, рабочий стол: задачи агентам из офиса (`assistant/desk.mjs` + `runner/`)
 - [`apps/threads-growth/CLAUDE.md`](apps/threads-growth/CLAUDE.md) — AI Threads Growth Agent (FastAPI + pgvector + Claude + Apify + n8n): relative-virality scoring (xn), Reply Engine, warmup-ramp, similarity-gated rewrite, learning loop + воронка Threads → Telegram (`app/funnel`: 3 ветки/день карточками в TG, публикация через Threads API, перевыпуск победителей) — **WIP, не задеплоен**
 
 Per-app `README.md` / `DEPLOY.md` / `ROADMAP.md` remain authoritative for deep architecture and deploy steps. Each `apps/<app>/CLAUDE.md` is the orientation layer.
