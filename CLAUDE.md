@@ -218,6 +218,9 @@ Per-app `README.md` / `DEPLOY.md` / `ROADMAP.md` remain authoritative for deep a
   усиленный и уникализированный сценарий → аватар HeyGen голосом Ильи → монтаж стилем «Студии Кадрика»
   (стекло / панель / бизнес-рилс). Скрипты stdlib-Python; на Mac ставится в `~/.claude/skills` и в каталог
   мини-аппа Кадрика через `kadrik/install.sh`. Прогоны видны на `remake.aicex.club` (`apps/remake-site`).
+- `odna-storis` — «Одна сториз»: сторис 1080×1920 в формате самых конверсионных сторис Ильи (белые плашки поверх фото,
+  «Кто хочет ГОТОВОЕ…», кодовое слово в ответ на сторис). Серия под запуск, фото с Google Диска, вставки работ агентов
+  с hq2.aicex.club, рендер `scripts/render.mjs` (Playwright), цепочки ChatPlace.
 - `carousel-pro` — «Карусель Pro»: карусели из залётов — свои вышедшие (ремикс слайдов с новой обложкой, хуком, CTA;
   объединяет `ilia-carousel-style`: `scripts/remix.py`, `assemble.py`) и конкурентов (формат и рабочие скриншоты, слайды в
   стиле Ильи). Правила для Claude — `references/carousel-rules.md`; в Telegram — ветка «Instagram Карусели» (`apps/remake-site/carousel-bot.mjs`).
