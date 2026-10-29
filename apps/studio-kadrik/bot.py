@@ -116,6 +116,9 @@ RUN_LOCK = asyncio.Lock()  # одна работа Claude за раз, оста�
 PAUSE: dict = {"until": 0.0, "kind": "", "told": 0.0}  # исчерпан лимит Claude: очередь ждёт сброса (until — unix-время), told — когда писали владельцу
 LIMIT_RE = re.compile(r"usage limit|hit your (usage )?limit|limit reached|rate.?limit|limit will reset|out of (extra )?usage", re.I)
 LIMIT_RETRIES = 6  # сколько раз одна задача ждёт сброса лимита, потом — обычная ошибка
+AUTH_RE = re.compile(r"failed to authenticate|oauth (session|token)|could not be refreshed|authentication_error|invalid (api key|bearer)|not logged in|please run /login", re.I)
+AUTH_LINE = "Студия потеряла вход в Claude — владелец уже получил сигнал. Когда починит, нажми «Продолжить с места остановки»."
+AUTH: dict = {"told": 0.0}  # когда писали владельцу, что Claude на сервере разлогинился
 
 # ======================= Игра =======================
 REEL_XP, REEL_COINS = 50, 30
@@ -369,7 +372,8 @@ def jail(args: list, rw: list, ro: list = (), sandbox: bool = True) -> tuple:
     a += ["--bind", str(SANDBOX_HOME), home]
     for d in [*jail_ro(), *ro]:
         a += ["--ro-bind-try", str(d), str(d)]
-    if not API_KEY:  # без своего ключа — логин Claude Code владельца (токен виден задаче, но не секреты ботов)
+    oauth = os.environ.get("CLAUDE_CODE_OAUTH_TOKEN", "").strip()  # токен из claude setup-token (живёт год, без обновления)
+    if not API_KEY and not oauth:  # иначе — файл входа Claude Code владельца (виден задаче, но не секреты ботов)
         a += ["--bind-try", f"{home}/.claude/.credentials.json", f"{home}/.claude/.credentials.json"]
     for d in rw:
         a += ["--bind", str(d), str(d)]
@@ -377,6 +381,8 @@ def jail(args: list, rw: list, ro: list = (), sandbox: bool = True) -> tuple:
           "--setenv", "LANG", os.environ.get("LANG", "C.UTF-8"), "--setenv", "USER", os.environ.get("USER", "kadrik"), "--setenv", "TERM", "dumb"]
     if API_KEY:
         a += ["--setenv", "ANTHROPIC_API_KEY", API_KEY]
+    elif oauth:
+        a += ["--setenv", "CLAUDE_CODE_OAUTH_TOKEN", oauth]
     for k in SANDBOX_ENV:
         if os.environ.get(k):
             a += ["--setenv", k, os.environ[k]]
@@ -802,6 +808,25 @@ async def tell_owner(text: str):
             await bot.send_message(OWNER, text)
         except Exception as e:
             logging.warning("владельцу: %s", e)
+
+
+def auth_failed(final: str) -> bool:
+    """Claude не запустился, потому что на сервере слетел вход (истёк OAuth), — не баг монтажа."""
+    return len(final) < 800 and bool(AUTH_RE.search(final))
+
+
+async def auth_alarm(final: str):
+    """Владельцу — как вернуть вход; не чаще раза в 30 минут."""
+    logging.error("Claude без входа: %s", final[:300])
+    if time.time() - AUTH["told"] < 1800:
+        return
+    AUTH["told"] = time.time()
+    await tell_owner(f"🔑 Claude на сервере потерял вход: «{final.strip()[:200]}». Монтаж не запустится, пока вход не вернётся.\n\n"
+                     "Починить (на сервере, под iliapaliy):\n"
+                     "• надёжно — claude setup-token → токен в .env бота строкой CLAUDE_CODE_OAUTH_TOKEN=… → "
+                     "sudo systemctl restart studio-kadrik-bot (токен живёт год и не слетает от обновлений);\n"
+                     "• быстро — claude auth login (сразу для всех ботов, перезапуск не нужен).\n"
+                     "Проверка: claude auth status → \"loggedIn\": true.")
 
 
 @asynccontextmanager
@@ -2267,6 +2292,9 @@ async def run_job(j: Job, edit: str = "", approve: bool = False, resume: bool = 
         if not stopped and not j.cancel and limit_hit(rl, final) and j.waits < LIMIT_RETRIES:  # лимит подписки — ждать сброса, не возвращать оплату
             log_run(j, kind, usd, mins, False)
             return await hold_for_limit(j, rl, final, edit, approve, was)
+        if not stopped and auth_failed(final):  # вход Claude на сервере слетел: клиенту — по-русски, владельцу — как починить
+            await auth_alarm(final)
+            tail = AUTH_LINE
         j.status = "review" if (in_review and j.preview) else ("done" if j.versions else "error")
         j.line = "остановлено" if stopped else tail[-300:]
         log_run(j, kind, usd, mins, False)

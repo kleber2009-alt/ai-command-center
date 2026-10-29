@@ -29,7 +29,7 @@ cloudflared-туннель `kadrik.aicex.club`. Перенесён из `aicex-l
 
 ## Инварианты
 
-- `SELL_MONTAGE=1` открывает монтаж всем (пробный рилс + пакеты за Stars); без флага монтаж — только `OWNER_ID`,
+- `SELL_MONTAGE=1` (переменная GitHub `STUDIO_KADRIK_SELL`, применяется деплоем) открывает монтаж всем (пробный рилс + пакеты за Stars); без флага монтаж — только `OWNER_ID`,
   `ALLOWED_IDS` и выданным по заявке (`access.json`).
 - Платёж зачисляется один раз: `PAID_IDS` из `ledger.jsonl` по `telegram_payment_charge_id`. `ledger.jsonl` не обрезать.
 - Неудачный монтаж возвращает оплату (`refund`) — пробный снова доступен, монтажи на баланс.
@@ -41,8 +41,9 @@ cloudflared-туннель `kadrik.aicex.club`. Перенесён из `aicex-l
   удаляются `settings.json`, `CLAUDE.md`, hooks и т.п. — одна задача не настраивает следующую. При старте `jail_selftest()`
   проверяет песочницу; если она не работает, монтаж клиентов закрыт (`jail_blocked`, ничего не списывается), владельцу — сообщение.
   `UNSAFE_NO_SANDBOX=1` — осознанно пустить без неё. Параметр `folder` (папка на машине) — только своим.
-- Ключ API: `KADRIK_ANTHROPIC_API_KEY` — монтаж и разборы на нём; пусто — логин Claude Code на машине (в песочницу
-  тогда монтируется `~/.claude/.credentials.json`).
+- Вход Claude: `KADRIK_ANTHROPIC_API_KEY` (ключ API) → иначе `CLAUDE_CODE_OAUTH_TOKEN` из `.env` (`claude setup-token`,
+  живёт год) → иначе файл `~/.claude/.credentials.json` владельца, смонтированный в песочницу. Слетел вход (`AUTH_RE`
+  в ответе Claude) — `auth_alarm()` пишет владельцу, как починить (не чаще раза в 30 минут), клиенту — `AUTH_LINE`.
 - Оплата картой: `PAY_PROVIDER_TOKEN` (провайдер из @BotFather → Payments, например ЮKassa) + `PACKS_RUB`
   (`p1:490,p5:1790,…`); счёт `pr:<пакет>`, чек 54-ФЗ через `provider_data` (`PAY_RECEIPT`, `PAY_VAT_CODE`).
   Звёзды — счёт `pk:<пакет>`. `pay_ok()` сверяет пакет, валюту и сумму. Возврат картой — `/refund` снимает монтажи,

@@ -4,8 +4,8 @@
    готовые задачи, только дописывает к ним новые PR той же ветки. Удалённая задача не вернётся —
    её PR остаются в seen. Чтобы задача стала «ручной», перенесите её в tasks.js. */
 window.OFFICE_TASKS_AUTO = {
-  "since": "2026-10-29T03:02:02Z",
-  "seen": [148, 149, 150, 151, 152, 153, 154, 155, 156, 157, 158, 159],
+  "since": "2026-10-29T04:20:33Z",
+  "seen": [148, 149, 150, 151, 152, 153, 154, 155, 156, 157, 158, 159, 160, 161, 162],
   "tasks": [
     {
       "id": "gh-148",
@@ -57,10 +57,33 @@ window.OFFICE_TASKS_AUTO = {
           "kind": "github",
           "label": "PR #159 · Студия Кадрика в монорепо + песочница, оплата картой, бэкап, мониторинг",
           "url": "https://github.com/kleber2009-alt/ai-command-center/pull/159"
-        }
+        },
+        {
+          "kind": "github",
+          "label": "PR #161 · правка с сервера (сигнал о потере входа Claude) + режим деплоя fetch",
+          "url": "https://github.com/kleber2009-alt/ai-command-center/pull/161"
+        },
+        { "kind": "github", "label": "PR #162 · включение продаж переменной GitHub STUDIO_KADRIK_SELL", "url": "https://github.com/kleber2009-alt/ai-command-center/pull/162" }
       ],
       "group": "studio-kadrik|claude/laughing-einstein-l7bumr",
-      "prs": [159],
+      "prs": [159, 161, 162],
+      "auto": true
+    },
+    {
+      "id": "gh-160",
+      "date": "2026-10-29",
+      "dateNote": "слияние PR на GitHub",
+      "kind": "Продукт",
+      "dept": "ceo",
+      "people": ["ilia"],
+      "agents": ["skills", "product", "avatar"],
+      "title": "«Ремейк залёта»: скилл переснимает залетевшие рилсы цифровым двойником и сайт прогонов",
+      "summary": "Скилл находит залетевшие рилсы с кодовым словом, усиливает сценарий с тем же словом, озвучивает его двойником HeyGen с голосом Ильи и монтирует в стиле Кадрика. На remake.aicex.club видно каждый прогон.",
+      "proof": [
+        { "kind": "github", "label": "PR #160 · «Ремейк залёта»: скилл + сайт remake.aicex.club", "url": "https://github.com/kleber2009-alt/ai-command-center/pull/160" }
+      ],
+      "group": "remake-site|claude/dazzling-fermat-0inx8a",
+      "prs": [160],
       "auto": true
     },
     {

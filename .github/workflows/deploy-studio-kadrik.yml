@@ -12,7 +12,8 @@ name: deploy-studio-kadrik
 # Optional, written into the bot's .env on deploy (empty — left as is):
 #   secret STUDIO_KADRIK_ANTHROPIC_API_KEY → KADRIK_ANTHROPIC_API_KEY (own API key for montage instead of the Claude Code login),
 #   secret STUDIO_KADRIK_PAY_PROVIDER_TOKEN → PAY_PROVIDER_TOKEN (card payments, e.g. YooKassa via @BotFather → Payments),
-#   variable STUDIO_KADRIK_PACKS_RUB → PACKS_RUB (card prices, "p1:490,p5:1790,p15:3990,p40:7990").
+#   variable STUDIO_KADRIK_PACKS_RUB → PACKS_RUB (card prices, "p1:490,p5:1790,p15:3990,p40:7990"),
+#   variable STUDIO_KADRIK_SELL → SELL_MONTAGE (1 — montage on sale for everyone: trial reel + packs; 0 — by request only).
 
 on:
   push:
@@ -27,9 +28,9 @@ on:
   workflow_dispatch:
     inputs:
       mode:
-        description: 'check — only show the diff with the live bot; deploy — install and restart'
+        description: 'check — only show the diff with the live bot; fetch — print the live code to bring server edits into the repo; deploy — install and restart'
         type: choice
-        options: [check, deploy]
+        options: [check, fetch, deploy]
         default: check
 
 concurrency:
@@ -91,12 +92,13 @@ jobs:
           API: ${{ secrets.STUDIO_KADRIK_ANTHROPIC_API_KEY }}
           PAY: ${{ secrets.STUDIO_KADRIK_PAY_PROVIDER_TOKEN }}
           RUB: ${{ vars.STUDIO_KADRIK_PACKS_RUB }}
+          SELL: ${{ vars.STUDIO_KADRIK_SELL }}
         run: |
-          printf 'KADRIK_ANTHROPIC_API_KEY=%s\nPAY_PROVIDER_TOKEN=%s\nPACKS_RUB=%s\n' "$API" "$PAY" "$RUB" \
+          printf 'KADRIK_ANTHROPIC_API_KEY=%s\nPAY_PROVIDER_TOKEN=%s\nPACKS_RUB=%s\nSELL_MONTAGE=%s\n' "$API" "$PAY" "$RUB" "$SELL" \
             | $SSH "umask 077 && cat > /opt/studio-kadrik/env.add"
 
       - name: Activate
-        run: $SSH bash -s -- "$REL" "$( [ "$MODE" = deploy ] || echo check )" < apps/studio-kadrik/deploy/server.sh
+        run: $SSH bash -s -- "$REL" "$( [ "$MODE" = deploy ] && echo deploy || { [ "$MODE" = fetch ] && echo fetch || echo check; } )" < apps/studio-kadrik/deploy/server.sh
 
       - name: Smoke test
         if: inputs.mode == 'deploy'
