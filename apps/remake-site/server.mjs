@@ -21,6 +21,7 @@ import crypto from 'node:crypto';
 import { createStudio } from './studio.mjs';
 import { createReelsBot } from './reels-bot.mjs';
 import { createCarouselBot } from './carousel-bot.mjs';
+import { fixTopics } from './tg-branch.mjs';
 
 const PORT = Number(process.env.PORT || 8790);
 const DATA = path.resolve(process.env.DATA_DIR || './data');
@@ -137,6 +138,7 @@ const server = http.createServer(async (req, res) => {
   }
 });
 studio = createStudio({ data: DATA, media: MEDIA, send, receive });
+fixTopics(DATA);  // one-time repairs of the Telegram topic bindings, before the bots read their state
 reels = createReelsBot({ studio: studio.bot, data: DATA });
 carousels = createCarouselBot({ data: DATA, media: MEDIA });
 server.requestTimeout = 30 * 60 * 1000;  // a 700 MB reference over a slow uplink
