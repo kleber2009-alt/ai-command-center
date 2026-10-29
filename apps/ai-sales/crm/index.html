@@ -1,0 +1,50 @@
+<!doctype html>
+<html lang="ru">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1">
+<meta name="theme-color" content="#fdf4f8">
+<title>AI Sales CRM</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Manrope:wght@500;600;700;800&display=swap" rel="stylesheet">
+<link rel="stylesheet" href="assets/app.css">
+</head>
+<body>
+<div class="app">
+  <aside class="glass side">
+    <div class="brand"><span class="brand-mark">AI</span><div><b>AI Sales</b><small>CRM · продажи в директе</small></div></div>
+    <nav class="nav">
+      <div class="nav-h">Работа</div>
+      <a href="#/pulse" data-route="pulse"><em style="background:var(--violet-t);color:var(--violet)"><i data-lucide="activity"></i></em>Пульс</a>
+      <a href="#/inbox" data-route="inbox"><em style="background:var(--pink-t);color:#d6305f"><i data-lucide="bell"></i></em>Входящие<b class="hot" id="b-inbox"></b></a>
+      <a href="#/dialogs" data-route="dialogs"><em style="background:var(--blue-t);color:#3a6be0"><i data-lucide="messages-square"></i></em>Диалоги<b id="b-dialogs"></b></a>
+      <a href="#/pipeline" data-route="pipeline"><em style="background:var(--amber-t);color:#b06a00"><i data-lucide="kanban"></i></em>Воронка</a>
+      <div class="nav-h">Система</div>
+      <a href="#/agents" data-route="agents"><em style="background:var(--violet-t);color:var(--violet)"><i data-lucide="bot"></i></em>Агенты</a>
+      <a href="#/reports" data-route="reports"><em style="background:var(--green-t);color:#138066"><i data-lucide="chart-column"></i></em>Отчёты</a>
+      <a href="#/kb" data-route="kb"><em style="background:var(--blue-t);color:#3a6be0"><i data-lucide="library"></i></em>База знаний</a>
+      <a href="#/settings" data-route="settings"><em style="background:rgba(29,27,46,.06);color:var(--mute)"><i data-lucide="settings"></i></em>Настройки</a>
+    </nav>
+    <div class="side-foot">
+      <div class="row"><span class="dot live"></span>Автономно <b id="autonomy" style="color:var(--ink)"></b></div>
+      <div class="row" id="now"></div>
+    </div>
+  </aside>
+  <div class="scrim"></div>
+  <main class="main">
+    <header class="glass top">
+      <button class="btn ghost sm menu-btn" aria-label="Меню"><i data-lucide="menu"></i></button>
+      <div><h1 id="title"></h1><div class="sub" id="subtitle"></div></div>
+      <span class="sp"></span>
+      <label class="search"><i data-lucide="search"></i><input placeholder="Клиент, @ник или фраза"></label>
+      <a class="btn primary sm" href="#/dialogs"><i data-lucide="message-circle"></i>Диалоги</a>
+    </header>
+    <section class="view" id="view"></section>
+  </main>
+</div>
+<script src="https://unpkg.com/lucide@0.460.0/dist/umd/lucide.min.js"></script>
+<script src="assets/data.js"></script>
+<script src="assets/app.js"></script>
+</body>
+</html>

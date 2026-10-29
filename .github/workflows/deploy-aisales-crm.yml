@@ -1,0 +1,74 @@
+name: deploy-aisales-crm
+
+# AI Sales CRM (apps/ai-sales/crm) → https://crm.aicex.club on the aicex box (vars.HETZNER_HOST, where *.aicex.club
+# points). Static site: each run uploads a release to /opt/aisales-crm/releases/<id>; apps/ai-sales/crm/deploy/server.sh
+# switches /opt/aisales-crm/current and wires the edge Caddy site. If the domain is still served by the old
+# 06-dashboard-prototype config, server.sh prints that config and stops without touching the edge.
+#
+# Secrets: HETZNER_SSH_KEY. Variables: HETZNER_HOST, HETZNER_USER, HETZNER_SSH_PORT, AISALES_CRM_DOMAIN (default crm.aicex.club).
+
+on:
+  push:
+    branches: [main, claude/adoring-pasteur-zyf4pe]
+    paths:
+      - 'apps/ai-sales/crm/**'
+      - '.github/workflows/deploy-aisales-crm.yml'
+  workflow_dispatch:
+    inputs:
+      allow_takeover:
+        description: 'Replace an existing edge config for the domain (review it first)'
+        type: boolean
+        default: false
+
+concurrency:
+  group: deploy-aisales-crm
+  cancel-in-progress: false
+
+jobs:
+  deploy:
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+    env:
+      HOST: ${{ vars.HETZNER_HOST }}
+      SSH_USER: ${{ vars.HETZNER_USER || 'root' }}
+      SSH_PORT: ${{ vars.HETZNER_SSH_PORT || '22' }}
+      DOMAIN: ${{ vars.AISALES_CRM_DOMAIN || 'crm.aicex.club' }}
+      ALLOW_TAKEOVER: ${{ github.event.inputs.allow_takeover == 'true' && '1' || '0' }}
+    steps:
+      - uses: actions/checkout@v5
+
+      - name: Check
+        run: |
+          node --check apps/ai-sales/crm/assets/app.js
+          node --check apps/ai-sales/crm/assets/data.js
+          bash -n apps/ai-sales/crm/deploy/server.sh
+
+      - name: Install SSH key
+        env:
+          KEY: ${{ secrets.HETZNER_SSH_KEY }}
+        run: |
+          test -n "$HOST" || { echo "::error::vars.HETZNER_HOST is not set"; exit 1; }
+          mkdir -p ~/.ssh
+          printf '%s\n' "$KEY" > ~/.ssh/id_deploy
+          chmod 600 ~/.ssh/id_deploy
+          ssh-keyscan -p "$SSH_PORT" -H "$HOST" >> ~/.ssh/known_hosts 2>/dev/null
+          echo "SSH=ssh -i $HOME/.ssh/id_deploy -p $SSH_PORT $SSH_USER@$HOST" >> "$GITHUB_ENV"
+
+      - name: Upload release
+        run: |
+          REL="$(date -u +%Y%m%d%H%M%S)-${GITHUB_SHA::7}"
+          echo "REL=$REL" >> "$GITHUB_ENV"
+          tar -C apps/ai-sales/crm --exclude=deploy -czf - . \
+            | $SSH "mkdir -p /opt/aisales-crm/releases/$REL && tar -xzf - -C /opt/aisales-crm/releases/$REL"
+
+      - name: Activate
+        run: $SSH "ALLOW_TAKEOVER=$ALLOW_TAKEOVER bash -s -- '$DOMAIN' '$REL'" < apps/ai-sales/crm/deploy/server.sh
+
+      - name: Smoke test
+        run: |
+          for path in / /assets/app.js /assets/data.js; do
+            code=$(curl -sS -o /dev/null -w '%{http_code}' --retry 8 --retry-delay 5 --retry-all-errors "https://$DOMAIN$path" || echo 000)
+            echo "$code https://$DOMAIN$path"
+            [ "$code" = 200 ] || exit 1
+          done
+          curl -fsS "https://$DOMAIN/" | grep -q 'AI Sales CRM'
