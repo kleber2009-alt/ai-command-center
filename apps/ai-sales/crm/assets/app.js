@@ -13,7 +13,7 @@ window.CRM_START = function (D) {
   const AV_GRAD = ['#7c5cff,#9b6bff', '#ff4f81,#ff9f43', '#5b8cff,#7c5cff', '#1fae8c,#5b8cff', '#e0559c,#9b6bff', '#f5a524,#ff5d8f'];
   const stageById = Object.fromEntries(D.stages.map((s, i) => [s.id, { ...s, i }]));
   const clientById = Object.fromEntries(D.clients.map((c) => [c.id, c]));
-  const CH = { ig: { label: 'Instagram', icon: 'instagram', tone: 'p' }, tg: { label: 'Telegram', icon: 'send', tone: 'b' } };
+  const CH = { ig: { label: 'Instagram', icon: 'instagram', tone: 'p' }, tg: { label: 'Telegram', icon: 'send', tone: 'b' }, cp: { label: 'ChatPlace', icon: 'message-circle', tone: 'v' } };
   const SEG_TONE = { A: 'p', B: 'v', C: 'n' };
 
   const icoBox = (name, tone) => `<span class="ico" style="background:${TONE_BG[tone]};color:${TONE_FG[tone]}">${ico(name)}</span>`;

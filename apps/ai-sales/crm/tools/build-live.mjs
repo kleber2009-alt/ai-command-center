@@ -67,7 +67,7 @@ const clients = uniq.map((c) => {
     id: c.id,
     name: (c.client || 'Без имени').replace(/^@/, '') || 'Без имени',
     user,
-    ch: 'ig',
+    ch: 'cp',
     stage: KINDS.some(([k]) => k === c.kind) ? c.kind : 'other',
     priority: c.priority || 0,
     flags: [...f].map((k) => FLAG_LABEL[k] || k),
