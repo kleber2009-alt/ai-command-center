@@ -4,8 +4,8 @@
    готовые задачи, только дописывает к ним новые PR той же ветки. Удалённая задача не вернётся —
    её PR остаются в seen. Чтобы задача стала «ручной», перенесите её в tasks.js. */
 window.OFFICE_TASKS_AUTO = {
-  "since": "2026-10-29T04:20:33Z",
-  "seen": [148, 149, 150, 151, 152, 153, 154, 155, 156, 157, 158, 159, 160, 161, 162],
+  "since": "2026-10-29T04:42:32Z",
+  "seen": [148, 149, 150, 151, 152, 153, 154, 155, 156, 157, 158, 159, 160, 161, 162, 163],
   "tasks": [
     {
       "id": "gh-148",
@@ -80,10 +80,15 @@ window.OFFICE_TASKS_AUTO = {
       "title": "«Ремейк залёта»: скилл переснимает залетевшие рилсы цифровым двойником и сайт прогонов",
       "summary": "Скилл находит залетевшие рилсы с кодовым словом, усиливает сценарий с тем же словом, озвучивает его двойником HeyGen с голосом Ильи и монтирует в стиле Кадрика. На remake.aicex.club видно каждый прогон.",
       "proof": [
-        { "kind": "github", "label": "PR #160 · «Ремейк залёта»: скилл + сайт remake.aicex.club", "url": "https://github.com/kleber2009-alt/ai-command-center/pull/160" }
+        { "kind": "github", "label": "PR #160 · «Ремейк залёта»: скилл + сайт remake.aicex.club", "url": "https://github.com/kleber2009-alt/ai-command-center/pull/160" },
+        {
+          "kind": "github",
+          "label": "PR #163 · Студия на remake.aicex.club: референс → расшифровка → сценарий → аватар HeyGen…",
+          "url": "https://github.com/kleber2009-alt/ai-command-center/pull/163"
+        }
       ],
       "group": "remake-site|claude/dazzling-fermat-0inx8a",
-      "prs": [160],
+      "prs": [160, 163],
       "auto": true
     },
     {
