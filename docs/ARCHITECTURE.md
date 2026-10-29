@@ -60,7 +60,6 @@
 | `@parser_instaa_bot` | Залётный (онбординг и выдача) |
 | `@newnewnnn_bot` | TG Agent (+ уведомления владельцу от IG Agent) |
 | `@studio_kadrik_bot` | Студия Кадрика |
-| `@Productionskill_bot` | Creator Pack (48 стилей монтажа) |
 | `@reelswithai_bot` | Бот монтажа |
 | `@caruselclaude_bot` | Бот каруселей |
 | `@Sielencemode_bot` | Silent Reels |
