@@ -4,8 +4,8 @@
    готовые задачи, только дописывает к ним новые PR той же ветки. Удалённая задача не вернётся —
    её PR остаются в seen. Чтобы задача стала «ручной», перенесите её в tasks.js. */
 window.OFFICE_TASKS_AUTO = {
-  "since": "2026-10-29T04:06:46Z",
-  "seen": [148, 149, 150, 151, 152, 153, 154, 155, 156, 157, 158, 159, 160, 161],
+  "since": "2026-10-29T04:20:33Z",
+  "seen": [148, 149, 150, 151, 152, 153, 154, 155, 156, 157, 158, 159, 160, 161, 162],
   "tasks": [
     {
       "id": "gh-148",
@@ -62,10 +62,11 @@ window.OFFICE_TASKS_AUTO = {
           "kind": "github",
           "label": "PR #161 · правка с сервера (сигнал о потере входа Claude) + режим деплоя fetch",
           "url": "https://github.com/kleber2009-alt/ai-command-center/pull/161"
-        }
+        },
+        { "kind": "github", "label": "PR #162 · включение продаж переменной GitHub STUDIO_KADRIK_SELL", "url": "https://github.com/kleber2009-alt/ai-command-center/pull/162" }
       ],
       "group": "studio-kadrik|claude/laughing-einstein-l7bumr",
-      "prs": [159, 161],
+      "prs": [159, 161, 162],
       "auto": true
     },
     {
