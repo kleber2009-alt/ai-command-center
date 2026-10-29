@@ -29,7 +29,7 @@ cloudflared-туннель `kadrik.aicex.club`. Перенесён из `aicex-l
 
 ## Инварианты
 
-- `SELL_MONTAGE=1` открывает монтаж всем (пробный рилс + пакеты за Stars); без флага монтаж — только `OWNER_ID`,
+- `SELL_MONTAGE=1` (переменная GitHub `STUDIO_KADRIK_SELL`, применяется деплоем) открывает монтаж всем (пробный рилс + пакеты за Stars); без флага монтаж — только `OWNER_ID`,
   `ALLOWED_IDS` и выданным по заявке (`access.json`).
 - Платёж зачисляется один раз: `PAID_IDS` из `ledger.jsonl` по `telegram_payment_charge_id`. `ledger.jsonl` не обрезать.
 - Неудачный монтаж возвращает оплату (`refund`) — пробный снова доступен, монтажи на баланс.
