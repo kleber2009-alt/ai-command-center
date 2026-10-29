@@ -35,7 +35,13 @@ env vars, and routes, see `CLAUDE.md` / `README.md` inside each `apps/<app>/`.
 ## Product → path map
 
 **Source of truth for product status** — Command Center dashboard:
-`https://command-center.46-62-215-11.nip.io/dashboard` (API: `/api/projects` and `/api/projects/<slug>`).
+`https://projects.aicex.club/dashboard` (API: `/api/projects` and `/api/projects/<slug>`). Its data comes from the
+registry `apps/command-center/registry/projects.mjs` (all projects, domains, bots, links, architecture notes) —
+edit it and run `node apps/command-center/registry/sync.mjs --apply` (or let `sync-projects-registry.yml` do it on merge).
+**Full architecture map (servers, domains, bots, DBs, pipelines): [`docs/ARCHITECTURE.md`](docs/ARCHITECTURE.md).**
+
+> Prod moved to the aicex box `157.180.33.173` (`*.aicex.club`); the `46-62-215-11.nip.io` URLs below are legacy
+> and no longer respond — use the `*.aicex.club` domains from `docs/ARCHITECTURE.md`.
 
 | # | Product (slug) | Status | Milestones | Code path | Landing | Prod URL | Container(s) |
 |---|---|---|---|---|---|---|---|

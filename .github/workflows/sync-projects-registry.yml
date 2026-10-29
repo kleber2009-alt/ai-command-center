@@ -1,0 +1,70 @@
+name: sync-projects-registry
+
+# Заливает реестр проектов apps/command-center/registry/projects.mjs в дашборд
+# https://projects.aicex.club/dashboard. Снаружи запись в API закрыта Basic auth Caddy,
+# поэтому воркфлоу открывает SSH-туннель на сервер aicex (vars.HETZNER_HOST) к порту
+# контейнера command-center и вызывает API напрямую.
+# Секреты: HETZNER_SSH_KEY. Переменные: HETZNER_HOST, HETZNER_USER, HETZNER_SSH_PORT.
+
+on:
+  push:
+    branches: [main]
+    paths:
+      - 'apps/command-center/registry/**'
+      - '.github/workflows/sync-projects-registry.yml'
+  workflow_dispatch:
+    inputs:
+      apply:
+        description: 'Записать изменения (иначе только показать)'
+        type: boolean
+        default: true
+
+concurrency:
+  group: sync-projects-registry
+  cancel-in-progress: false
+
+jobs:
+  sync:
+    runs-on: ubuntu-latest
+    timeout-minutes: 5
+    env:
+      HOST: ${{ vars.HETZNER_HOST }}
+      SSH_USER: ${{ vars.HETZNER_USER || 'root' }}
+      SSH_PORT: ${{ vars.HETZNER_SSH_PORT || '22' }}
+    steps:
+      - uses: actions/checkout@v5
+
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 22
+
+      - name: Check registry
+        run: node -e 'import("./apps/command-center/registry/projects.mjs").then(({ projects }) => { const s = new Set(); for (const p of projects) { if (s.has(p.slug) || !p.name || !p.links?.length) throw new Error("bad project " + p.slug); s.add(p.slug) } console.log(projects.length + " projects ok") })'
+
+      - name: Open tunnel to command-center
+        env:
+          KEY: ${{ secrets.HETZNER_SSH_KEY }}
+        run: |
+          test -n "$HOST" || { echo "::error::vars.HETZNER_HOST is not set"; exit 1; }
+          mkdir -p ~/.ssh
+          printf '%s\n' "$KEY" > ~/.ssh/id_deploy
+          chmod 600 ~/.ssh/id_deploy
+          ssh-keyscan -p "$SSH_PORT" -H "$HOST" >> ~/.ssh/known_hosts 2>/dev/null
+          SSH="ssh -i $HOME/.ssh/id_deploy -p $SSH_PORT $SSH_USER@$HOST"
+          # host port of the container (deploy-command-center.yml publishes 127.0.0.1:3005 → 3003)
+          PORT=$($SSH "docker port command-center 3003 2>/dev/null || docker port aisales-command-center 3003 2>/dev/null" | head -1 | sed 's/.*://')
+          PORT=${PORT:-3005}
+          echo "command-center on 127.0.0.1:$PORT"
+          $SSH -f -N -o ExitOnForwardFailure=yes -L 18080:127.0.0.1:$PORT
+          for i in $(seq 1 10); do curl -sf -o /dev/null http://127.0.0.1:18080/api/projects && break; sleep 1; done
+          curl -sf -o /dev/null http://127.0.0.1:18080/api/projects
+
+      - name: Sync
+        env:
+          CC_URL: http://127.0.0.1:18080
+        run: |
+          if [ "${{ github.event_name }}" = "workflow_dispatch" ] && [ "${{ inputs.apply }}" != "true" ]; then
+            node apps/command-center/registry/sync.mjs
+          else
+            node apps/command-center/registry/sync.mjs --apply
+          fi
