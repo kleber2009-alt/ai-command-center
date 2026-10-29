@@ -1,9 +1,12 @@
 #!/usr/bin/env bash
 # Build the site release into apps/remake-site/dist/: index.html is the page body (the same file is published as the
-# claude.ai artifact, which adds its own document shell), so here it gets a plain document around it.
+# claude.ai artifact, which adds its own document shell), so here it gets a plain document around it. Next to it — the API
+# image context (Dockerfile, server.mjs, studio.mjs, package*.json) and skill/: the remake-top-reel files the studio runs
+# (config.json, scripts/*.py for the script gate and the code word, references/script-rules.md for Claude).
 #   bash apps/remake-site/deploy/build.sh
 set -euo pipefail
 APP="$(cd "$(dirname "$0")/.." && pwd)"
+SKILL="$APP/../../.claude/skills/remake-top-reel"
 OUT="$APP/dist"
 rm -rf "$OUT" && mkdir -p "$OUT"
 {
@@ -16,4 +19,9 @@ rm -rf "$OUT" && mkdir -p "$OUT"
   printf '\n</body>\n</html>\n'
 } > "$OUT/index.html"
 cp -R "$APP/seed" "$OUT/seed"
-echo "✓ $OUT/index.html ($(wc -c < "$OUT/index.html") bytes), seed: $(ls "$APP/seed/runs" | wc -l) run(s), $(ls "$APP/seed/media" | wc -l) media file(s)"
+cp "$APP/server.mjs" "$APP/studio.mjs" "$APP/package.json" "$APP/package-lock.json" "$APP/Dockerfile" "$APP/.dockerignore" "$OUT/"
+mkdir -p "$OUT/skill/scripts" "$OUT/skill/references"
+cp "$SKILL/config.json" "$OUT/skill/"
+cp "$SKILL"/scripts/*.py "$OUT/skill/scripts/"
+cp "$SKILL/references/script-rules.md" "$OUT/skill/references/"
+echo "✓ $OUT/index.html ($(wc -c < "$OUT/index.html") bytes), seed: $(ls "$APP/seed/runs" | wc -l) run(s), $(ls "$APP/seed/media" | wc -l) media file(s), api + studio, skill: $(ls "$OUT/skill/scripts" | wc -l) script(s)"

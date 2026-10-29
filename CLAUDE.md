@@ -22,7 +22,7 @@ env vars, and routes, see `CLAUDE.md` / `README.md` inside each `apps/<app>/`.
 │   ├── funnel-analytics/   # Сквозная аналитика: декомпозиция × Meta Ads × оплаты UTM → static HTML dashboard
 │   ├── hq-office/          # Живой офис агентов v2 (hq2.aicex.club): 3D + история реальных задач
 │   ├── studio-kadrik/      # «Студия Кадрика» @studio_kadrik_bot: игровой мини-апп + монтаж скиллами (Python, aicex box)
-│   ├── remake-site/        # «Ремейк залёта» (remake.aicex.club): прогоны скилла remake-top-reel по шагам
+│   ├── remake-site/        # «Ремейк залёта» (remake.aicex.club): прогоны скилла remake-top-reel + студия (референс → аватар → монтаж)
 │   └── voice-circle-bot/   # Python TG bot for video circles
 ├── landings/               # static landing pages (one folder per product)
 ├── supabase/               # SQL migrations shared across apps
@@ -62,7 +62,7 @@ env vars, and routes, see `CLAUDE.md` / `README.md` inside each `apps/<app>/`.
 | `apps/funnel-analytics` | Сквозная аналитика + доходы/расходы + контент (Python stdlib → один HTML), cron-обновление через `update-funnel-analytics.yml` | `dashboard.aicex.club` (свой сервер, cron из `deploy/setup-server.sh`), `/var/www/funnel-analytics` |
 | `apps/studio-kadrik` | «Студия Кадрика» `@studio_kadrik_bot`: игра + монтаж скиллами Creator Pack, оплата Stars — **в Command Center НЕТ** | `kadrik.aicex.club` (сервер `*.aicex.club`), systemd `studio-kadrik-bot` в `/home/iliapaliy/studio-kadrik-bot`, деплой `deploy-studio-kadrik.yml` |
 | `apps/voice-circle-bot` | Python TG-bot prototype для видео-кружков — **в Command Center НЕТ**, не задеплоен | — |
-| `apps/remake-site` | «Ремейк залёта»: страница прогонов скилла `remake-top-reel` (отбор → сценарий «было/стало» → аватар → монтаж) + API `/api/runs` — **в Command Center НЕТ**. Та же страница — артефакт claude.ai | `remake.aicex.club` (сервер `*.aicex.club`), контейнеры `aicex-remake-site` и `aicex-remake-api` + `/opt/edge/sites/remake-site.caddy`, деплой `deploy-remake-site.yml`, секрет `REMAKE_SITE_TOKEN` |
+| `apps/remake-site` | «Ремейк залёта»: страница прогонов скилла `remake-top-reel` (отбор → сценарий «было/стало» → аватар → монтаж) + API `/api/runs` и **студия** по паролю (`studio.mjs`: референс файлом или ссылкой → расшифровка ElevenLabs → «Сценарий 2.0» Claude с гейтом скилла → образ и голос из HeyGen → монтаж через API Студии Кадрика → скачать) — **в Command Center НЕТ**. Вкладка прогонов — также артефакт claude.ai | `remake.aicex.club` (сервер `*.aicex.club`), контейнеры `aicex-remake-site` и `aicex-remake-api` (образ `aicex-remake-api:<релиз>`: node + ffmpeg + python3 + yt-dlp) + `/opt/edge/sites/remake-site.caddy`, деплой `deploy-remake-site.yml`, секреты `REMAKE_SITE_TOKEN`, `REMAKE_SITE_PASSWORD`, ключи HeyGen/ElevenLabs/Anthropic (`REMAKE_*` или существующие), ключ монтажа — из `.env` Кадрика на сервере |
 | `apps/hq-office` | Живой офис агентов v2: 3D open-space + история реальных задач с доказательствами (PR, артефакты Claude, сайты), досье и скиллы с hq.aicex.club — **в Command Center НЕТ** | `hq2.aicex.club` (сервер `*.aicex.club`), контейнеры `aicex-hq-office` (статика) и `aicex-hq-assistant` (голосовой ассистент + рабочий стол задач агентам, `/api/assistant/*`), служба `hq-runner` (исполнитель задач: Claude Code со скиллами под пользователем ботов) + `/opt/edge/sites/hq-office.caddy`, деплой `deploy-hq-office.yml`, история из PR — `hq-office-history.yml` |
 
 ## When Claude is asked to change something

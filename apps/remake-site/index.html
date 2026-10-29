@@ -162,6 +162,73 @@ td.mono { white-space: nowrap; }
 .how li b { color: var(--fg); font-size: 14px; }
 .how li b::before { counter-increment: s; content: counter(s) "  "; font: 600 12px var(--f-mono); color: var(--accent); }
 
+/* студия: вкладки, поля, выбор образа и стиля */
+.view { display: grid; grid-template-columns: minmax(0, 1fr); gap: 22px; min-width: 0; }
+.view > * { grid-column: 1 / -1; }
+.tabs { display: inline-flex; gap: 4px; background: var(--panel); border: 1px solid var(--line); border-radius: 999px; padding: 4px; }
+.tabs a { color: var(--muted); text-decoration: none; font-weight: 700; font-size: 14px; padding: 6px 16px; border-radius: 999px; }
+.tabs a[aria-current="page"] { background: var(--accent); color: var(--accent-ink); }
+.sbar, .row { display: flex; flex-wrap: wrap; gap: 10px; align-items: center; min-width: 0; }
+.grow { flex: 1 1 auto; }
+.small { font-size: 12.5px; }
+.btn.primary { background: var(--accent); border-color: var(--accent); color: var(--accent-ink); }
+.btn.primary:hover { filter: brightness(1.08); }
+.btn:disabled { opacity: .5; cursor: not-allowed; filter: none; }
+.btn.big { font-size: 15px; padding: 12px 16px; }
+a.btn { text-decoration: none; display: inline-flex; align-items: center; justify-content: center; text-align: center; }
+.smsg, .err { font-size: 14px; padding: 10px 14px; border-radius: var(--r); overflow-wrap: anywhere; }
+.smsg { background: var(--ok-soft); color: var(--ok); }
+.smsg.bad, .err { background: var(--fail-soft); color: var(--fail); }
+.fields { display: flex; flex-wrap: wrap; gap: 12px; align-items: flex-end; }
+.field { display: grid; gap: 6px; min-width: 0; flex: 1 1 170px; }
+.field.wide { flex: 3 1 280px; }
+.studio input:not([type="checkbox"]):not([type="file"]), .studio textarea { font: inherit; font-size: 14.5px; color: var(--fg); background: var(--panel-2); border: 1px solid var(--line); border-radius: 8px; padding: 9px 12px; width: 100%; min-width: 0; }
+.studio textarea { resize: vertical; line-height: 1.6; }
+.studio textarea.big { min-height: 260px; }
+.studio input:focus-visible, .studio textarea:focus-visible { outline: 2px solid var(--accent); outline-offset: 1px; }
+.studio select { max-width: 100%; }
+.row > input { flex: 1 1 240px; width: auto; }
+.drop { display: grid; place-items: center; gap: 6px; text-align: center; border: 2px dashed var(--line); border-radius: 14px; padding: 34px 16px; cursor: pointer; background: var(--panel-2); transition: border-color .2s; }
+.drop:hover, .drop.over { border-color: var(--accent); }
+.drop b { font-size: 17px; } .drop span { color: var(--muted); font-size: 13.5px; }
+.drop.off { pointer-events: none; opacity: .5; }
+.up { display: grid; grid-template-columns: minmax(0, 1fr) auto; gap: 6px 12px; align-items: center; font-size: 13px; }
+.media.narrow { grid-template-columns: 180px minmax(0, 1fr); }
+.media.wide { grid-template-columns: minmax(0, 300px) minmax(0, 1fr); }
+.chips { display: flex; flex-wrap: wrap; gap: 6px; }
+.chipbtn { font: 600 13px var(--f-body); color: var(--fg); background: var(--panel-2); border: 1px solid var(--line); border-radius: 999px; padding: 5px 12px; cursor: pointer; }
+.chipbtn.on { border-color: var(--accent); background: var(--accent-soft); color: var(--accent); }
+.looks { display: grid; grid-template-columns: repeat(auto-fill, minmax(92px, 1fr)); gap: 10px; max-height: 430px; overflow: auto; padding: 3px; }
+.look { all: unset; cursor: pointer; display: grid; gap: 4px; font-size: 12px; color: var(--muted); text-align: center; min-width: 0; }
+.look img, .look .ph { width: 100%; aspect-ratio: 9 / 16; object-fit: cover; border-radius: 8px; border: 2px solid transparent; background: var(--panel-2); display: block; }
+.look.on img, .look.on .ph { border-color: var(--accent); }
+.look.on { color: var(--fg); font-weight: 700; }
+.look span { overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.look:focus-visible img, .look:focus-visible .ph { outline: 2px solid var(--accent); outline-offset: 2px; }
+.seg { display: inline-flex; flex-wrap: wrap; border: 1px solid var(--line); border-radius: 8px; overflow: hidden; }
+.seg button { font: 600 13px var(--f-body); color: var(--fg); background: var(--panel-2); border: 0; border-right: 1px solid var(--line); padding: 8px 12px; cursor: pointer; }
+.seg button:last-child { border-right: 0; }
+.seg button.on { background: var(--accent); color: var(--accent-ink); }
+.seg button:disabled { opacity: .4; cursor: not-allowed; }
+.sgrid { display: grid; grid-template-columns: repeat(auto-fill, minmax(150px, 1fr)); gap: 12px; }
+.sty { all: unset; cursor: pointer; display: grid; grid-template-rows: auto 1fr; border: 1px solid var(--line); border-radius: var(--r); overflow: hidden; background: var(--panel-2); min-width: 0; }
+.sty img, .sty .ph { width: 100%; aspect-ratio: 4 / 5; object-fit: cover; display: block; background: var(--line); }
+.sty-t { display: grid; gap: 3px; padding: 10px 12px; font-size: 12.5px; color: var(--muted); align-content: start; }
+.sty-t b { color: var(--fg); font-size: 14px; }
+.sty.on { border-color: var(--accent); box-shadow: inset 0 0 0 1px var(--accent); }
+.sty:focus-visible { outline: 2px solid var(--accent); outline-offset: 2px; }
+.topb { font: 700 10.5px var(--f-mono); color: var(--accent); letter-spacing: .06em; text-transform: uppercase; }
+.check { display: inline-flex; gap: 8px; align-items: center; font-size: 14px; cursor: pointer; padding: 8px 0; }
+.check input { accent-color: var(--accent); width: 16px; height: 16px; }
+.working { display: flex; gap: 12px; align-items: center; flex-wrap: wrap; background: var(--accent-soft); border-radius: var(--r); padding: 12px 14px; font-size: 14px; }
+.spin { width: 18px; height: 18px; border-radius: 50%; border: 2px solid var(--accent-soft); border-top-color: var(--accent); animation: spin 1s linear infinite; flex: none; }
+@keyframes spin { to { transform: rotate(360deg); } }
+.locked { opacity: .6; }
+.final { border-color: color-mix(in srgb, var(--ok) 45%, var(--line)); }
+.dl { display: grid; gap: 10px; align-content: start; min-width: 0; }
+.rail.five { grid-template-columns: repeat(5, minmax(0, 1fr)); }
+.login { max-width: 560px; }
+
 @media (max-width: 900px) {
   .hero { grid-template-columns: 110px minmax(0, 1fr); }
   .hero .res { display: none; }
@@ -174,6 +241,9 @@ td.mono { white-space: nowrap; }
   .gate { grid-template-columns: repeat(2, minmax(0, 1fr)); }
   .styles, .how { grid-template-columns: minmax(0, 1fr); }
   .media .frame { max-width: 220px; }
+  .rail.five { grid-template-columns: minmax(0, 1fr); }
+  .media.narrow, .media.wide { grid-template-columns: minmax(0, 1fr); }
+  .media.wide .frame { max-width: 300px; }
 }
 @media (max-width: 520px) {
   .hero { grid-template-columns: minmax(0, 1fr); }
@@ -188,13 +258,19 @@ td.mono { white-space: nowrap; }
       <h1>Ремейк <em>залёта</em></h1>
       <span class="handle">@ilia.paliy</span>
     </div>
-    <div class="runs">
+    <nav class="tabs" id="tabs" aria-label="Разделы" hidden>
+      <a href="#studio" data-tab="studio">Студия</a><a href="#runs" data-tab="runs">Прогоны</a>
+    </nav>
+    <div class="runs" id="runsBar">
       <span class="live" id="live"><span class="dot" id="liveDot"></span><span id="liveText">подключаюсь…</span></span>
       <label class="label" for="runSel" hidden>Прогон</label>
       <select id="runSel" aria-label="Прогон" hidden></select>
     </div>
   </header>
 
+  <section class="view studio" id="studio" hidden></section>
+
+  <div class="view" id="runsView">
   <section class="hero" id="hero" aria-live="polite"></section>
 
   <section class="track" aria-label="Цепочка">
@@ -206,6 +282,7 @@ td.mono { white-space: nowrap; }
   </section>
 
   <div class="grid" id="cards"></div>
+  </div>
 </div>
 
 <script>
@@ -245,7 +322,8 @@ td.mono { white-space: nowrap; }
   const dur = (a, b) => { const s = Math.max(0, Math.round(((b ? new Date(b) : new Date()) - new Date(a)) / 1000)); if (!isFinite(s)) return ""; const m = Math.floor(s / 60); return (m >= 60 ? Math.floor(m / 60) + ":" + String(m % 60).padStart(2, "0") : m) + ":" + String(s % 60).padStart(2, "0"); };
 
   let runs = [], state = {}, selected = null, dbOk = null, lastSnap = null;
-  try { selected = (location.hash || "").slice(1) || null; } catch (e) {}
+  const runHash = () => { const h = (location.hash || "").slice(1); return h && !/^(studio|runs)(\/|$)/.test(h) ? h : null; };
+  try { selected = runHash(); } catch (e) {}
 
   function current() {
     const want = selected || state.current;
@@ -460,7 +538,7 @@ td.mono { white-space: nowrap; }
     el.classList.add("flash"); setTimeout(() => el.classList.remove("flash"), 1200);
   });
   $("#runSel").addEventListener("change", (e) => { selected = e.target.value; try { history.replaceState(null, "", "#" + selected); } catch (x) {} render(); });
-  window.addEventListener("hashchange", () => { selected = (location.hash || "").slice(1) || null; render(); });
+  window.addEventListener("hashchange", () => { selected = runHash(); render(); });
 
   setInterval(() => {
     const run = current(), el = $("#elapsed");
@@ -500,6 +578,467 @@ td.mono { white-space: nowrap; }
       runs = snap.docs.map((d) => d.data()).filter(Boolean);
       render();
     }, () => { dbOk = false; render(); });
+  })();
+})();
+</script>
+<script>
+/* Студия (только на сайте, API /api/studio/*): референс → расшифровка → сценарий → аватар HeyGen → монтаж Кадрика → скачать */
+(() => {
+  if (window.claude && window.claude.use) return;  // claude.ai artifact: only runs, the studio needs the site's API
+  const $ = (s) => document.querySelector(s);
+  const esc = (v) => String(v ?? "").replace(/[&<>"']/g, (c) => ({ "&": "&amp;", "<": "&lt;", ">": "&gt;", '"': "&quot;", "'": "&#39;" }[c]));
+  const media = (u) => (typeof u === "string" && /^media\/[\w.-]+$/.test(u) ? u : "");
+  const ext = (u) => (typeof u === "string" && /^https:\/\/[^\s"'<>]+$/.test(u) ? u : "");
+  const num = (n) => (n == null || n === "" || isNaN(+n) ? "—" : +n >= 1e6 ? (+n / 1e6).toFixed(1).replace(".0", "") + "M" : +n >= 1e4 ? Math.round(+n / 1e3) + "K" : (+n).toLocaleString("ru-RU"));
+  const mb = (b) => (b ? (b / 1048576).toFixed(b > 1e8 ? 0 : 1) + " МБ" : "");
+  const dur = (a) => { const s = Math.max(0, Math.round((Date.now() - new Date(a)) / 1000)); if (!isFinite(s)) return ""; const m = Math.floor(s / 60); return (m >= 60 ? Math.floor(m / 60) + ":" + String(m % 60).padStart(2, "0") : m) + ":" + String(s % 60).padStart(2, "0"); };
+  const words = (t) => String(t || "").split(/\s+/).filter(Boolean).length;
+  const secOf = (t) => Math.round(words(t) / 2.5);
+  const STEPS = [["source", "Референс"], ["transcribe", "Расшифровка"], ["script", "Сценарий"], ["avatar", "Аватар"], ["montage", "Монтаж"]];
+  const ST_RU = { todo: "ждёт", run: "идёт", done: "готово", wait: "твой ход", fail: "ошибка" };
+  const ENGINE_RU = { avatar_iii: "Avatar III", avatar_iv: "Avatar IV", avatar_v: "Avatar V" };
+  const LENS = ["как есть", "до 60 с", "до 30 с"];
+  const view = $("#studio");
+  const S = { tab: "runs", me: null, hg: null, hgErr: "", styles: null, jobs: [], job: null, jobText: "", draft: {}, upload: null, msg: "", bad: false,
+    pick: { group: "", look: "", voice: "", engine: "", resolution: "1080p", speed: 1 }, mont: { skill: "", wish: "", len: "как есть", subs: true, music: true }, allStyles: false, deferred: false };
+
+  async function api(p, opts = {}) {
+    const r = await fetch("api/studio/" + p, { cache: "no-store", ...opts, headers: { ...(typeof opts.body === "string" ? { "content-type": "application/json" } : {}), ...(opts.headers || {}) } });
+    let d = {};
+    try { d = await r.json(); } catch (e) {}
+    if (r.status === 401 && p !== "login") { S.me = { ...(S.me || {}), auth: false }; render(); }
+    if (!r.ok) throw new Error(d.error || "ошибка " + r.status);
+    return d;
+  }
+  const post = (p, b) => api(p, { method: "POST", body: JSON.stringify(b || {}) });
+  const val = (sel) => { const el = $(sel); return el ? el.value : undefined; };
+  function say(msg, bad) { S.msg = msg; S.bad = !!bad; render(); clearTimeout(say.t); if (!bad) say.t = setTimeout(() => { S.msg = ""; render(); }, 6000); }
+
+  // ---------- tabs ----------
+  const tabs = $("#tabs");
+  tabs.hidden = false;
+  function showTab(t) {
+    S.tab = t;
+    $("#studio").hidden = t !== "studio";
+    $("#runsView").hidden = t === "studio";
+    $("#runsBar").hidden = t === "studio";
+    tabs.querySelectorAll("a").forEach((a) => a.setAttribute("aria-current", a.dataset.tab === t ? "page" : "false"));
+    if (t === "studio") render();
+  }
+  tabs.addEventListener("click", (e) => {
+    const a = e.target.closest("a[data-tab]"); if (!a) return;
+    e.preventDefault();
+    try { history.replaceState(null, "", a.dataset.tab === "studio" ? "#studio" + (S.job ? "/" + S.job.id : "") : location.pathname + location.search); } catch (x) {}
+    showTab(a.dataset.tab);
+    window.dispatchEvent(new HashChangeEvent("hashchange"));
+  });
+  const hashJob = () => ((location.hash || "").match(/^#studio\/(s\d{6}-[0-9a-f]{6})$/) || [])[1] || "";
+  window.addEventListener("hashchange", () => {
+    if (!/^#studio/.test(location.hash)) { if (location.hash.length > 1) showTab("runs"); return; }
+    showTab("studio");
+    const id = hashJob();
+    if (S.me && S.me.auth && id && (!S.job || S.job.id !== id)) openId(id);
+  });
+
+  // ---------- data ----------
+  function setJob(j) {
+    if (!j || !j.id) return;
+    const text = JSON.stringify(j);
+    if (S.job && S.job.id !== j.id) { S.draft = {}; S.mont.skill = ""; }
+    const prev = S.job;
+    S.job = j; S.jobText = text;
+    if (hashJob() !== j.id) try { history.replaceState(null, "", "#studio/" + j.id); } catch (x) {}
+    if (j.montage && j.montage.skill && !S.mont.skill) S.mont.skill = j.montage.skill;
+    if (j.avatar && j.avatar.look_id && (!prev || prev.id !== j.id)) Object.assign(S.pick, { look: j.avatar.look_id, voice: j.avatar.voice_id, engine: j.avatar.engine, resolution: j.avatar.resolution || "1080p", speed: j.avatar.speed || 1 }), groupOf();
+    const was = prev && prev.id === j.id ? STEPS.map(([id]) => (prev.steps[id] || {}).state).join() : "";
+    if (was && was !== STEPS.map(([id]) => (j.steps[id] || {}).state).join()) loadJobs();
+    render(); schedule();
+  }
+  async function openId(id) { try { setJob(await api("jobs/" + id)); } catch (e) { say(e.message, true); } }
+  async function loadJobs() { try { S.jobs = (await api("jobs")).jobs || []; render(); } catch (e) {} }
+  async function loadStyles() { try { S.styles = await api("styles"); if (!S.mont.skill && S.styles.styles[0]) S.mont.skill = S.styles.styles[0].id; render(); } catch (e) {} }
+  function groupOf() { const l = S.hg && S.hg.looks.find((x) => x.id === S.pick.look); if (l) S.pick.group = l.group || ""; }
+  function fitEngine() {
+    const l = S.hg && S.hg.looks.find((x) => x.id === S.pick.look);
+    const ok = l && l.engines.length ? l.engines.filter((e) => ENGINE_RU[e]) : Object.keys(ENGINE_RU);
+    if (!ok.includes(S.pick.engine)) S.pick.engine = ok.includes(S.hg.defaults.engine) ? S.hg.defaults.engine : ok[0];
+    if (S.pick.engine !== "avatar_iii") S.pick.resolution = "1080p";
+  }
+  async function loadHeygen(fresh) {
+    try {
+      S.hg = await api("heygen" + (fresh ? "?fresh=1" : "")); S.hgErr = "";
+      const d = S.hg.defaults, P = S.pick;
+      if (!P.look || !S.hg.looks.some((l) => l.id === P.look)) P.look = (S.hg.looks.find((l) => l.id === d.look_id) || S.hg.looks[0] || {}).id || "";
+      if (!P.voice || !S.hg.voices.some((v) => v.id === P.voice)) {
+        const l = S.hg.looks.find((x) => x.id === P.look);
+        P.voice = P.look === d.look_id && d.voice_id ? d.voice_id : (l && l.voice) || d.voice_id || (S.hg.voices[0] || {}).id || "";
+      }
+      if (!P.engine) P.engine = d.engine;
+      if (P.speed === 1 && d.speed) P.speed = d.speed;
+      groupOf(); fitEngine();
+    } catch (e) { S.hgErr = e.message; }
+    render();
+  }
+  let pollT = 0;
+  function schedule() {
+    clearTimeout(pollT);
+    const j = S.job;
+    if (j && Object.values(j.steps || {}).some((s) => s.state === "run")) pollT = setTimeout(poll, 4000);
+  }
+  async function poll() {
+    const id = S.job && S.job.id; if (!id) return;
+    try {
+      const r = await fetch("api/studio/jobs/" + id, { cache: "no-store" });
+      if (r.ok) { const text = await r.text(); if (S.job && S.job.id === id && text !== S.jobText) setJob(JSON.parse(text)); }
+    } catch (e) {}
+    schedule();
+  }
+
+  // ---------- views ----------
+  const st = (id) => (S.job && S.job.steps && S.job.steps[id]) || { state: "todo" };
+  const pill = (k) => ({ run: "run", done: "done", wait: "wait", fail: "fail" }[k] || "todo");
+  function head(n, title, id) {
+    const s = st(id);
+    return `<div class="card-head"><h3><span class="n">0${n}</span>${title}</h3><span class="pill ${pill(s.state)}">${ST_RU[s.state] || "ждёт"}${s.state === "run" && s.at ? ` · <span class="mono" data-since="${esc(s.at)}">${dur(s.at)}</span>` : ""}</span></div>
+      ${s.state === "fail" && s.note ? `<div class="err">${esc(s.note)}</div>` : s.state === "run" && s.note ? `<p class="what" style="color:var(--fg)">${esc(s.note)}</p>` : ""}`;
+  }
+  const locked = (n, title, id, why) => `<section class="card locked" id="s-${id}">${head(n, title, id)}<div class="empty">${why}</div></section>`;
+
+  function login() {
+    const me = S.me || {};
+    return `<section class="card login"><div class="card-head"><h3>Студия</h3></div>
+      <p class="what" style="color:var(--fg)">Скинь референс — получи расшифровку, сценарий 2.0, своего аватара HeyGen твоим голосом и монтаж скиллом Студии Кадрика. Готовый рилс скачиваешь здесь же.</p>
+      ${me.offline ? `<div class="err">Сервер студии не отвечает. Обнови страницу через минуту.</div>`
+        : !me.enabled ? `<div class="err">Студия закрыта: на сервере не задан пароль. Создай секрет REMAKE_SITE_PASSWORD в GitHub (Settings → Secrets → Actions) и перезапусти выкладку deploy-remake-site.</div>`
+        : `<form id="loginForm" class="row" autocomplete="on"><input id="pw" type="password" name="password" autocomplete="current-password" placeholder="Пароль студии" required aria-label="Пароль студии"><button class="btn primary" type="submit">Войти</button></form>
+           ${S.loginErr ? `<div class="err">${esc(S.loginErr)}</div>` : ""}<p class="what">Вход только для владельца: студия тратит кредиты HeyGen и Claude. Прогоны скилла видны всем во вкладке «Прогоны».</p>`}</section>`;
+  }
+
+  function bar() {
+    const hg = S.hg, cr = hg && hg.credits, acc = hg && hg.account;
+    const opts = S.jobs.map((x) => `<option value="${esc(x.id)}"${S.job && S.job.id === x.id ? " selected" : ""}>${esc(x.title || "Без названия")} · ${esc(new Date(x.created_at).toLocaleDateString("ru-RU", { day: "numeric", month: "short" }))} · ${x.state === "done" ? "готов" : x.state === "run" ? "в работе" : x.state === "fail" ? "ошибка" : ST_RU.wait}</option>`).join("");
+    return `<div class="sbar">
+        <button class="btn primary" type="button" data-act="new">+ Новый ролик</button>
+        ${S.jobs.length ? `<select id="sJobs" aria-label="Мои ролики"><option value="">Мои ролики · ${S.jobs.length}</option>${opts}</select>` : ""}
+        <span class="grow"></span>
+        ${acc && !acc.error ? `<span class="chip" title="Аккаунт HeyGen, к которому привязан ключ">HeyGen · ${esc(acc.email || acc.name)}${cr && cr.remaining != null ? ` · <b>${num(cr.remaining)}</b> кредитов` : ""}</span>` : S.hgErr ? `<span class="chip" style="color:var(--fail)">HeyGen: ${esc(S.hgErr.slice(0, 80))}</span>` : ""}
+        <button class="btn" type="button" data-act="logout">Выйти</button>
+      </div>${S.msg ? `<div class="smsg${S.bad ? " bad" : ""}" role="status">${esc(S.msg)}</div>` : ""}`;
+  }
+
+  function rail() {
+    return `<section class="track" aria-label="Шаги студии"><div class="track-head"><h3>${S.job ? esc(S.job.title || "Новый ролик") : "Новый ролик"}</h3><span class="muted small">${S.job ? esc(S.job.id) : "начни с референса"}</span></div>
+      <ol class="rail five">${STEPS.map(([id, nm], i) => { const s = st(id), k = s.state === "wait" ? "wait" : s.state || "todo";
+        return `<li class="st ${k}"><button type="button" data-go="s-${id}"><span class="node">${k === "done" ? "✓" : k === "fail" ? "!" : i + 1}</span><span class="nm">${nm}</span><span class="tm">${ST_RU[k] || ""}</span></button></li>`; }).join("")}</ol></section>`;
+  }
+
+  function cSource() {
+    const j = S.job, s = (j && j.source) || {}, k = st("source").state, up = S.upload;
+    if (s.file) {
+      const facts = [s.duration && `<span class="chip"><b>${Math.round(s.duration)} с</b></span>`, s.width && `<span class="chip">${s.width}×${s.height}</span>`, s.size && `<span class="chip">${mb(s.size)}</span>`,
+        s.author && `<span class="chip">@${esc(String(s.author).replace(/^@/, ""))}</span>`, s.views != null && `<span class="chip"><b>${num(s.views)}</b> просмотров</span>`,
+        s.comments != null && `<span class="chip"><b>${num(s.comments)}</b> комментариев</span>`, s.likes != null && `<span class="chip"><b>${num(s.likes)}</b> лайков</span>`].filter(Boolean).join("");
+      return `<section class="card" id="s-source">${head(1, "Референс", "source")}
+        <div class="media narrow"><div class="frame"><video src="${media(s.file)}"${media(s.thumb) ? ` poster="${media(s.thumb)}"` : ""} controls playsinline preload="none"></video><span class="tag">РЕФЕРЕНС</span></div>
+          <div style="display:grid;gap:10px;align-content:start;min-width:0"><div class="stats">${facts}</div>
+            ${ext(s.url) ? `<a href="${esc(s.url)}" target="_blank" rel="noopener" style="overflow-wrap:anywhere">${esc(s.url)}</a>` : s.name ? `<span class="muted">${esc(s.name)}</span>` : ""}
+            ${s.caption ? `<details><summary class="muted" style="cursor:pointer">Подпись оригинала</summary><div class="textbox" style="margin-top:6px">${esc(s.caption)}</div></details>` : ""}
+            <p class="what">Другой референс — «Новый ролик» сверху.</p></div></div></section>`;
+    }
+    const busy = k === "run" || !!up;
+    return `<section class="card" id="s-source">${head(1, "Референс", "source")}
+      <p class="what">Видео-говорящая голова: твой залетевший рилс или чужой, на любом языке. Из него берём речь — дальше сценарий 2.0 и твой аватар.</p>
+      <label class="drop${busy ? " off" : ""}" id="sDrop"><input type="file" id="sFile" accept="video/*,.mov,.mp4,.m4v,.webm,.mkv" hidden${busy ? " disabled" : ""}><b>Перетащи видео сюда</b><span>или нажми и выбери файл · mp4, mov · до 700 МБ</span></label>
+      ${up ? `<div class="up"><div class="progress"><i id="sUpBar" style="width:${up.pct}%"></i></div><span class="mono" id="sUpPct">${up.pct}%</span><span class="muted" style="grid-column:1/-1;overflow-wrap:anywhere">${esc(up.name)}</span></div>` : ""}
+      <div class="row"><input id="sLink" type="url" inputmode="url" placeholder="или ссылка: Instagram, TikTok, YouTube Shorts" value="${esc(S.draft.link ?? s.url ?? "")}" aria-label="Ссылка на видео"${busy ? " disabled" : ""}><button class="btn primary" type="button" data-act="link"${busy ? " disabled" : ""}>Забрать по ссылке</button></div></section>`;
+  }
+
+  function cTranscript() {
+    const j = S.job, t = (j && j.transcript) || {}, k = st("transcribe").state;
+    if (!j || (!t.text && k === "todo")) return locked(2, "Расшифровка", "transcribe", "Появится, как только референс загрузится.");
+    if (!t.text) return `<section class="card" id="s-transcribe">${head(2, "Расшифровка", "transcribe")}${k === "fail" ? `<div class="row"><button class="btn" type="button" data-act="retranscribe">Попробовать ещё раз</button></div>` : `<div class="working"><span class="spin"></span>Слушаю и расшифровываю — обычно меньше минуты.</div>`}</section>`;
+    return `<section class="card" id="s-transcribe">${head(2, "Расшифровка", "transcribe")}
+      <div class="stats"><span class="chip"><b>${t.words}</b> слов</span>${t.wps ? `<span class="chip"><b>${t.wps}</b> слова/с</span>` : ""}${t.language ? `<span class="chip">язык ${esc(t.language)}</span>` : ""}${t.code ? `<span class="chip code">${esc(t.code)}</span>` : ""}<span class="chip">${esc(t.engine || "")}</span>${t.edited ? `<span class="chip">поправлено вручную</span>` : ""}</div>
+      <textarea id="sTranscript" rows="7" aria-label="Расшифровка"${k === "run" || st("script").state === "run" ? " disabled" : ""}>${esc(S.draft.transcript ?? t.text)}</textarea>
+      <div class="row"><span class="muted small">Ошибся в словах — поправь прямо здесь: Claude и проверка возьмут исправленный текст.</span><span class="grow"></span><button class="btn" type="button" data-act="retranscribe"${k === "run" ? " disabled" : ""}>Расшифровать заново</button></div></section>`;
+  }
+
+  function meter(label, value, shown, limit, max, warnAt) {
+    const frac = Math.max(0, Math.min(1, (value || 0) / max)), bad = value > limit, meh = !bad && warnAt != null && value > warnAt;
+    return `<div class="meter ${bad ? "bad" : meh ? "meh" : ""}"><span class="label">${label}</span><span class="v">${shown}</span><div class="bar"><i style="width:${frac * 100}%"></i><b style="left:${(limit / max) * 100}%"></b></div></div>`;
+  }
+  function checkBlock(c) {
+    return `<div style="display:grid;gap:10px"><span class="label">Проверка скилла — подсказка, рендер не блокирует</span><div class="gate">
+        ${meter("из оригинала", c.overlap, Math.round((c.overlap || 0) * 100) + "%", 0.35, 1, 0.25)}
+        ${meter("кусок подряд", c.common_run, (c.common_run ?? "—") + " сл.", 8, 20)}
+        ${meter("длина", c.est_sec, Math.round(c.est_sec || 0) + " с", 90, 120)}
+        <div class="meter"><span class="label">итог</span><span class="v" style="color:var(${c.result === "PASS" ? "--ok" : "--fail"})">${esc(c.result)}</span><span class="muted small">${c.words ? esc(c.words) + " слов" : ""}</span></div></div>
+      <ul class="lines">${(c.lines || []).map((l) => `<li><span class="mark ${esc(l.kind)}">${{ ok: "OK", warn: "WARN", fail: "FAIL" }[l.kind] || ""}</span><span>${esc(l.text)}</span></li>`).join("")}</ul></div>`;
+  }
+
+  function cScript() {
+    const j = S.job, sc = (j && j.script) || {}, t = (j && j.transcript) || {}, k = st("script").state, run = k === "run", dis = run ? " disabled" : "";
+    if (!t.text) return locked(3, "Сценарий", "script", "Сначала расшифровка.");
+    const text = S.draft.script ?? sc.text ?? "", claude = S.me.services && S.me.services.claude;
+    const dirty = S.draft.script != null && S.draft.script !== sc.text;
+    return `<section class="card" id="s-script">${head(3, "Сценарий для аватара", "script")}
+      <p class="what">Возьми расшифровку как есть, поправь руками или нажми «Сценарий 2.0»: Claude по правилам скилла усилит хук и пункты, заменит примеры и формулировки, оставит кодовое слово. Проверка скилла покажет, сколько осталось от оригинала.</p>
+      <div class="fields"><label class="field"><span class="label">Кодовое слово</span><input id="sCode" value="${esc(S.draft.code ?? j.code ?? "")}" placeholder="например, СКИЛЛ" maxlength="24" autocapitalize="characters"${dis}></label>
+        <label class="field wide"><span class="label">Пожелание к сценарию 2.0</span><input id="sWish" value="${esc(S.draft.wish ?? sc.wish ?? "")}" placeholder="короче, жёстче хук, про Claude Code…" maxlength="1500"${dis}></label></div>
+      <div class="row"><button class="btn primary" type="button" data-act="rewrite"${run || !claude ? " disabled" : ""}>${sc.origin === "claude" ? "Переписать ещё раз" : "Сценарий 2.0 — усилить через Claude"}</button>
+        <button class="btn" type="button" data-act="asis"${dis}>Взять расшифровку как есть</button>
+        ${claude ? "" : `<span class="muted small">Claude недоступен: на сервере нет ключа Anthropic</span>`}</div>
+      ${run ? `<div class="working"><span class="spin"></span>Claude пишет сценарий 2.0 и сам прогоняет проверку скилла — обычно 1–3 минуты.</div>` : ""}
+      ${sc.origin && sc.origin.startsWith("claude") && (sc.analysis || []).length ? `<div class="cols"><div><span class="label">Почему залетел${sc.hook_from ? " · хук: " + esc(sc.hook_from) : ""}</span><ul class="bullets" style="margin-top:6px">${sc.analysis.map((x) => `<li>${esc(x)}</li>`).join("")}</ul></div>
+        <div><span class="label" style="color:var(--accent)">Что усилил${sc.hook_to ? " · хук: " + esc(sc.hook_to) : ""}</span><ul class="bullets" style="margin-top:6px">${(sc.changes || []).map((x) => `<li>${esc(x)}</li>`).join("")}</ul></div></div>` : ""}
+      <div style="display:grid;gap:6px"><div class="row"><span class="label">Текст для аватара — скажет слово в слово</span><span class="grow"></span><span class="mono small" id="sCount">${words(text)} слов · ≈${secOf(text)} с</span></div>
+        <textarea id="sScript" class="big" rows="12" aria-label="Текст для аватара"${dis}>${esc(text)}</textarea></div>
+      <div class="row"><button class="btn" type="button" data-act="save"${dis}>Сохранить и проверить</button><span class="muted small" id="sDirty">${dirty ? "есть несохранённые правки — они уйдут и при отправке аватару" : ""}</span></div>
+      ${j.check ? checkBlock(j.check) : ""}
+      ${j.caption ? `<details><summary class="muted" style="cursor:pointer">Подпись к посту</summary><div class="textbox" style="margin-top:6px">${esc(j.caption)}</div><div class="row" style="margin-top:8px"><button class="btn" type="button" data-act="copycap">Скопировать подпись</button></div></details>` : ""}</section>`;
+  }
+
+  function picker() {
+    const hg = S.hg, P = S.pick, look = hg.looks.find((l) => l.id === P.look);
+    const looks = hg.looks.filter((l) => !P.group || l.group === P.group);
+    const counts = {}; hg.looks.forEach((l) => { counts[l.group] = (counts[l.group] || 0) + 1; });
+    const groups = hg.groups.filter((g) => counts[g.id]);
+    const engines = look && look.engines.length ? look.engines.filter((e) => ENGINE_RU[e]) : Object.keys(ENGINE_RU);
+    const voice = hg.voices.find((v) => v.id === P.voice);
+    if (!hg.looks.length) return `<div class="err">В аккаунте HeyGen нет своих аватаров — заведи цифрового двойника в HeyGen.</div>`;
+    return `${groups.length > 1 ? `<div class="chips"><button type="button" class="chipbtn${!P.group ? " on" : ""}" data-group="">Все · ${hg.looks.length}</button>${groups.map((g) => `<button type="button" class="chipbtn${P.group === g.id ? " on" : ""}" data-group="${esc(g.id)}">${esc(g.name)} · ${counts[g.id]}</button>`).join("")}</div>` : ""}
+      <div class="looks" role="listbox" aria-label="Образ аватара">${looks.map((l) => `<button type="button" class="look${l.id === P.look ? " on" : ""}" data-look="${esc(l.id)}" role="option" aria-selected="${l.id === P.look}" title="${esc(l.name)}">${ext(l.preview) ? `<img src="${esc(l.preview)}" alt="" loading="lazy">` : `<span class="ph"></span>`}<span>${esc(l.name)}</span></button>`).join("")}</div>
+      <div class="fields">
+        <label class="field wide"><span class="label">Голос из HeyGen</span><select id="sVoice">${hg.voices.map((v) => `<option value="${esc(v.id)}"${v.id === P.voice ? " selected" : ""}>${esc(v.name)}${v.lang ? " · " + esc(v.lang) : ""}${look && look.voice === v.id ? " · голос образа" : ""}</option>`).join("")}${voice ? "" : `<option value="" selected>выбери голос</option>`}</select></label>
+        <button class="btn" type="button" data-act="playvoice"${voice && ext(voice.preview) ? "" : " disabled"}>Послушать</button>
+      </div>
+      <div class="fields">
+        <div class="field"><span class="label">Движок</span><div class="seg">${Object.keys(ENGINE_RU).filter((e) => e !== "avatar_iv" || engines.includes(e)).map((e) => `<button type="button" data-engine="${e}" class="${P.engine === e ? "on" : ""}"${engines.includes(e) ? "" : " disabled"}>${ENGINE_RU[e]}</button>`).join("")}</div></div>
+        <div class="field"><span class="label">Качество</span><div class="seg"><button type="button" data-res="1080p" class="${P.resolution === "1080p" ? "on" : ""}">1080p</button><button type="button" data-res="4k" class="${P.resolution === "4k" ? "on" : ""}"${P.engine === "avatar_iii" ? "" : " disabled"} title="4K — только Avatar III">4K</button></div></div>
+        <label class="field"><span class="label">Темп речи</span><select id="sSpeed">${[0.9, 1, 1.05, 1.1, 1.2].map((x) => `<option value="${x}"${+P.speed === x ? " selected" : ""}>${x === 1 ? "обычный" : "×" + x}</option>`).join("")}</select></label>
+      </div>
+      ${hg.defaults.switch && hg.defaults.switch.to && Date.now() < Date.parse(hg.defaults.switch.at) ? `<p class="what">По умолчанию ${ENGINE_RU[hg.defaults.engine]}; с ${esc(new Date(hg.defaults.switch.at).toLocaleDateString("ru-RU", { day: "numeric", month: "long" }))} — снова ${ENGINE_RU[hg.defaults.switch.to] || hg.defaults.switch.to}.</p>` : ""}`;
+  }
+
+  function cAvatar() {
+    const j = S.job, a = (j && j.avatar) || {}, k = st("avatar").state;
+    const text = S.draft.script ?? (j && j.script && j.script.text) ?? "";
+    if (!j || !text) return locked(4, "Аватар HeyGen", "avatar", "Сначала сценарий.");
+    const services = S.me.services || {}, run = k === "run";
+    let pick;
+    if (!services.heygen) pick = `<div class="err">На сервере нет ключа HeyGen — рендер недоступен.</div>`;
+    else if (!S.hg) pick = S.hgErr ? `<div class="err">${esc(S.hgErr)}</div><div class="row"><button class="btn" type="button" data-act="hgretry">Загрузить ещё раз</button></div>` : `<div class="working"><span class="spin"></span>Загружаю твоих аватаров и голоса из HeyGen…</div>`;
+    else pick = picker() + `<div class="row"><button class="btn primary" type="button" data-act="avatar"${run || st("script").state === "run" || st("montage").state === "run" ? " disabled" : ""}>${a.video ? "Сделать ещё вариант" : "Отправить аватару"}</button>
+      <span class="muted small">≈${secOf(text)} с видео · спишет кредиты HeyGen${S.hg.credits && S.hg.credits.remaining != null ? ` (осталось ${num(S.hg.credits.remaining)})` : ""}</span>
+      <span class="grow"></span><button class="btn" type="button" data-act="hgretry" title="Обновить список образов, голосов и кредиты">Обновить из HeyGen</button></div>`;
+    const res = a.video ? `<div class="media narrow"><div class="frame"><video src="${media(a.video)}"${media(a.thumb) ? ` poster="${media(a.thumb)}"` : ""} controls playsinline preload="metadata"></video><span class="tag">АВАТАР</span></div>
+        <div class="dl"><dl class="kv"><dt>Образ</dt><dd>${esc(a.look)}</dd><dt>Голос</dt><dd>${esc(a.voice)}</dd><dt>Движок</dt><dd>${esc(ENGINE_RU[a.engine] || a.engine)} · ${esc(a.resolution)}</dd>${a.duration ? `<dt>Длина</dt><dd class="mono">${Math.round(a.duration)} с · ${a.width}×${a.height}</dd>` : ""}</dl>
+          <a class="btn" href="${media(a.video)}" download="remake-${esc(j.id)}-avatar.mp4">Скачать аватара · MP4 ${a.width ? a.width + "×" + a.height : ""} ${mb(a.size)}</a></div></div>` : "";
+    const work = run ? `<div class="working"><span class="spin"></span><div>HeyGen рендерит: ${esc(a.look)} · ${esc(a.voice)} · ${esc(ENGINE_RU[a.engine] || "")} ${esc(a.resolution || "")}${a.status ? ` · <span class="mono">${esc(a.status)}</span>` : ""}<div class="muted small">Обычно 3–10 минут. Страницу можно закрыть — видео дорендерится и появится здесь.</div></div></div>` : "";
+    const again = k === "fail" && a.video_id && !a.video ? `<div class="row"><button class="btn primary" type="button" data-act="aresume">Забрать видео из HeyGen ещё раз</button><span class="muted small">без нового рендера и без новых кредитов</span></div>` : "";
+    return `<section class="card" id="s-avatar">${head(4, "Аватар HeyGen", "avatar")}${work}${again}${res}${run ? "" : a.video ? `<details><summary class="muted" style="cursor:pointer">Другой образ, голос или движок</summary><div style="display:grid;gap:14px;margin-top:12px">${pick}</div></details>` : pick}</section>`;
+  }
+
+  function cMontage() {
+    const j = S.job, m = (j && j.montage) || {}, a = (j && j.avatar) || {}, k = st("montage").state, M = S.mont;
+    if (!a.video) return locked(5, "Монтаж", "montage", "Сначала видео аватара.");
+    const sd = S.styles, run = k === "run";
+    let body = "";
+    if (!sd) body = `<div class="working"><span class="spin"></span>Загружаю стили из Студии Кадрика…</div>`;
+    else {
+      const top = sd.styles.filter((s) => s.top), rest = sd.styles.filter((s) => !s.top);
+      const list = S.allStyles || !top.length ? sd.styles : top.concat(rest.filter((s) => s.id === M.skill));
+      body = `${sd.ready ? "" : `<div class="err">Монтаж выключен: серверу не хватает ключа API Кадрика (PERSONA_API_KEY в .env Кадрика). Аватара уже можно скачать выше.</div>`}
+        <div class="sgrid" role="listbox" aria-label="Стиль монтажа">${list.map((s) => `<button type="button" class="sty${s.id === M.skill ? " on" : ""}" data-skill="${esc(s.id)}" role="option" aria-selected="${s.id === M.skill}">${ext(s.thumb) ? `<img src="${esc(s.thumb)}" alt="" loading="lazy">` : `<span class="ph"></span>`}<span class="sty-t">${s.top ? `<span class="topb">топ-${s.top}</span>` : ""}<b>${esc(s.name)}</b><span>${esc(s.sub || s.desc || "")}</span></span></button>`).join("")}</div>
+        ${rest.length && top.length ? `<div class="row"><button class="btn" type="button" data-act="allstyles">${S.allStyles ? "Только топ-3" : `Все стили монтажа · ${sd.styles.length}`}</button>${sd.source === "skill" ? `<span class="muted small">каталог Кадрика недоступен — показываю стили из скилла</span>` : ""}</div>` : ""}
+        <div class="fields"><div class="field"><span class="label">Длительность</span><div class="seg">${LENS.map((v) => `<button type="button" data-len="${v}" class="${M.len === v ? "on" : ""}">${v}</button>`).join("")}</div></div>
+          <label class="check"><input type="checkbox" id="mSubs"${M.subs ? " checked" : ""}> Субтитры</label><label class="check"><input type="checkbox" id="mMusic"${M.music ? " checked" : ""}> Музыка-подложка</label></div>
+        <label class="field"><span class="label">Пожелания к монтажу</span><textarea id="mWish" rows="2" maxlength="1500" placeholder="акценты, что показать графикой, цвета…">${esc(M.wish)}</textarea></label>
+        <div class="row"><button class="btn primary" type="button" data-act="montage"${!sd.ready || run || st("avatar").state === "run" ? " disabled" : ""}>${m.video ? "Смонтировать ещё вариант" : "Смонтировать"}</button><span class="muted small">Кадрик монтирует скиллом на сервере — обычно 10–30 минут, страницу можно закрыть.</span></div>`;
+    }
+    const work = run ? `<div class="working"><span class="spin"></span><div><b>«${esc(m.style)}»</b> · ${m.status === "queued" ? `в очереди${m.pos ? ": " + m.pos + "-й" : ""}` : "монтирую"}${m.stage ? " · этап " + esc(m.stage) : ""}${m.line ? `<div class="muted small mono" style="overflow-wrap:anywhere">${esc(m.line)}</div>` : ""}</div><span class="grow"></span><button class="btn" type="button" data-act="mcancel">Отменить</button></div>` : "";
+    const again = k === "fail" && m.kadrik_id && !m.video ? `<div class="row"><button class="btn" type="button" data-act="mresume">Забрать результат из Кадрика ещё раз</button></div>` : "";
+    return `<section class="card" id="s-montage">${head(5, "Монтаж скиллом Студии Кадрика", "montage")}${work}${again}${run ? "" : body}</section>`;
+  }
+
+  function cFinal() {
+    const j = S.job, m = (j && j.montage) || {}, a = (j && j.avatar) || {};
+    if (!m.video) return "";
+    const zip = /\.zip$/.test(m.video);
+    return `<section class="card final" id="s-final"><div class="card-head"><h3>Готовый рилс</h3><span class="pill done">готово</span></div>
+      <div class="media wide">${zip ? `<div class="empty">Скилл отдал набор файлов — скачай архив.</div>` : `<div class="frame"><video src="${media(m.video)}"${media(m.thumb) ? ` poster="${media(m.thumb)}"` : ""} controls playsinline preload="metadata"></video><span class="tag">РЕЗУЛЬТАТ</span></div>`}
+        <div class="dl"><a class="btn primary big" href="${media(m.video)}" download="remake-${esc(j.id)}-${zip ? "files.zip" : "reel.mp4"}">Скачать ${zip ? "архив" : `рилс · MP4 ${m.width ? m.width + "×" + m.height : ""}`} ${mb(m.size)}</a>
+          <a class="btn" href="${media(a.video)}" download="remake-${esc(j.id)}-avatar.mp4">Аватар без монтажа · MP4 ${a.width ? a.width + "×" + a.height : ""}</a>
+          <button class="btn" type="button" data-act="dlscript">Сценарий и подпись · .txt</button>
+          <dl class="kv"><dt>Стиль</dt><dd>${esc(m.style)}</dd>${m.duration ? `<dt>Длина</dt><dd class="mono">${Math.round(m.duration)} с</dd>` : ""}${j.code ? `<dt>Кодовое слово</dt><dd>${esc(j.code)}</dd>` : ""}</dl>
+          ${j.caption ? `<div><span class="label">Подпись к посту</span><div class="textbox" style="margin-top:6px;max-height:220px">${esc(j.caption)}</div><div class="row" style="margin-top:8px"><button class="btn" type="button" data-act="copycap">Скопировать подпись</button></div></div>` : ""}
+          ${m.report ? `<details><summary class="muted" style="cursor:pointer">Отчёт монтажа</summary><div class="textbox" style="margin-top:6px">${esc(m.report)}</div></details>` : ""}</div></div></section>`;
+  }
+
+  function render() {
+    if (S.tab !== "studio") return;
+    if ([...view.querySelectorAll("video,audio")].some((v) => !v.paused && !v.ended)) { S.deferred = true; return; }
+    S.deferred = false;
+    const a = document.activeElement;
+    const keep = a && a.id && view.contains(a) ? { id: a.id, s: a.selectionStart, e: a.selectionEnd, top: a.scrollTop } : null;
+    view.innerHTML = !S.me ? `<div class="empty">Подключаюсь к студии…</div>` : !S.me.auth ? login()
+      : bar() + rail() + cSource() + cTranscript() + cScript() + cAvatar() + cMontage() + cFinal();
+    if (keep) {
+      const el = document.getElementById(keep.id);
+      if (el && !el.disabled) { el.focus({ preventScroll: true }); try { if (keep.s != null) el.setSelectionRange(keep.s, keep.e); } catch (e) {} el.scrollTop = keep.top; }
+    }
+  }
+  view.addEventListener("pause", () => S.deferred && render(), true);
+  view.addEventListener("ended", () => S.deferred && render(), true);
+  setInterval(() => view.querySelectorAll("[data-since]").forEach((el) => { el.textContent = dur(el.dataset.since); }), 1000);
+
+  // ---------- actions ----------
+  async function upload(file) {
+    if (!file) return;
+    if (file.size > 700 * 1048576) return say("Файл больше 700 МБ — обрежь или сожми его", true);
+    try {
+      const j = S.job && !S.job.source.file && st("source").state !== "run" ? S.job : await post("jobs");
+      setJob(j);
+      S.upload = { name: file.name, pct: 0 }; render();
+      const d = await new Promise((resolve, reject) => {
+        const x = new XMLHttpRequest();
+        x.open("PUT", "api/studio/jobs/" + j.id + "/source?name=" + encodeURIComponent(file.name));
+        x.setRequestHeader("content-type", file.type || "application/octet-stream");
+        x.upload.onprogress = (e) => {
+          if (!e.lengthComputable || !S.upload) return;
+          S.upload.pct = Math.round((e.loaded / e.total) * 100);
+          const b = $("#sUpBar"), t = $("#sUpPct"); if (b) b.style.width = S.upload.pct + "%"; if (t) t.textContent = S.upload.pct + "%";
+        };
+        x.onload = () => { let r = {}; try { r = JSON.parse(x.responseText); } catch (e) {} x.status < 300 ? resolve(r) : reject(new Error(r.error || "загрузка не прошла: " + x.status)); };
+        x.onerror = () => reject(new Error("загрузка оборвалась — проверь интернет и попробуй ещё раз"));
+        x.send(file);
+      });
+      S.upload = null; S.draft = {}; setJob(d); loadJobs();
+    } catch (e) { S.upload = null; say(e.message, true); }
+  }
+
+  function download(name, text) {
+    const u = URL.createObjectURL(new Blob([text], { type: "text/plain;charset=utf-8" }));
+    const a = document.createElement("a"); a.href = u; a.download = name; document.body.appendChild(a); a.click(); a.remove();
+    setTimeout(() => URL.revokeObjectURL(u), 2000);
+  }
+
+  async function act(name, el) {
+    const j = S.job, id = j && j.id;
+    const common = () => ({ code: val("#sCode"), transcript: val("#sTranscript") });
+    if (el) el.disabled = true;
+    try {
+      if (name === "new") { S.job = null; S.jobText = ""; S.draft = {}; S.mont.skill = (S.styles && S.styles.styles[0] || {}).id || ""; clearTimeout(pollT); try { history.replaceState(null, "", "#studio"); } catch (x) {} render(); }
+      else if (name === "logout") { await post("logout"); S.me = { ...S.me, auth: false }; S.job = null; render(); }
+      else if (name === "link") {
+        const link = (val("#sLink") || "").trim();
+        if (!/^https?:\/\/\S+$/i.test(link)) return say("Вставь ссылку, которая начинается с https://", true);
+        const d = j && !j.source.file && st("source").state !== "run" ? await post("jobs/" + id + "/source", { link }) : await post("jobs", { link });
+        S.draft = {}; setJob(d); loadJobs(); say("Скачиваю видео по ссылке");
+      }
+      else if (name === "retranscribe") setJob(await post("jobs/" + id + "/transcribe"));
+      else if (name === "rewrite") { const d = await post("jobs/" + id + "/rewrite", { ...common(), wish: val("#sWish") }); S.draft.script = undefined; S.draft.transcript = undefined; setJob(d); }
+      else if (name === "asis") { const t = val("#sTranscript") || j.transcript.text; const d = await post("jobs/" + id + "/script", { ...common(), text: t }); S.draft.script = undefined; S.draft.transcript = undefined; setJob(d); say("Сценарий = расшифровка как есть"); }
+      else if (name === "save") { const d = await post("jobs/" + id + "/script", { ...common(), text: val("#sScript") }); S.draft.script = undefined; S.draft.transcript = undefined; setJob(d); say("Сохранил, проверка — ниже"); }
+      else if (name === "avatar") {
+        const P = S.pick, text = val("#sScript") ?? j.script.text;
+        if (!P.look || !P.voice) return say("Выбери образ и голос", true);
+        if (!confirm(`Отправить сценарий аватару?\n${ENGINE_RU[P.engine]} · ${P.resolution} · ≈${secOf(text)} с видео — HeyGen спишет кредиты.`)) return;
+        const d = await post("jobs/" + id + "/avatar", { ...common(), text, look_id: P.look, voice_id: P.voice, engine: P.engine, resolution: P.resolution, speed: +P.speed });
+        S.draft.script = undefined; S.draft.transcript = undefined; setJob(d); say("Ушло в HeyGen — видео появится здесь через несколько минут");
+      }
+      else if (name === "playvoice") {
+        const v = S.hg && S.hg.voices.find((x) => x.id === S.pick.voice);
+        if (S.audio) S.audio.pause();
+        if (v && ext(v.preview)) { S.audio = new Audio(v.preview); S.audio.play().catch(() => say("Браузер не дал включить звук", true)); }
+      }
+      else if (name === "hgretry") { S.hgErr = ""; await loadHeygen(true); }
+      else if (name === "allstyles") { S.allStyles = !S.allStyles; render(); }
+      else if (name === "montage") {
+        const M = S.mont;
+        if (!M.skill) return say("Выбери стиль монтажа", true);
+        const d = await post("jobs/" + id + "/montage", { skill: M.skill, wish: M.wish, len: M.len, subs: M.subs, music: M.music });
+        setJob(d); say("Монтаж ушёл в Студию Кадрика");
+      }
+      else if (name === "aresume") setJob(await post("jobs/" + id + "/avatar/resume"));
+      else if (name === "mresume") setJob(await post("jobs/" + id + "/montage/resume"));
+      else if (name === "mcancel") { if (!confirm("Отменить монтаж?")) return; setJob(await post("jobs/" + id + "/montage/cancel")); }
+      else if (name === "copycap") {
+        try { await navigator.clipboard.writeText(j.caption || ""); say("Подпись скопирована"); } catch (e) { say("Не вышло скопировать — выдели текст вручную", true); }
+      }
+      else if (name === "dlscript") {
+        const sp = (j.script.spelling || []).map((x) => `${x.say} → ${x.write}`).join("\n");
+        download(`remake-${id}-script.txt`, `${j.title || id}\n\nСЦЕНАРИЙ\n${j.script.text || ""}\n${j.code ? `\nКодовое слово: ${j.code}\n` : ""}${sp ? `\nНаписание в субтитрах:\n${sp}\n` : ""}${j.caption ? `\nПОДПИСЬ К ПОСТУ\n${j.caption}\n` : ""}`);
+      }
+    } catch (e) { say(e.message, true); }
+    finally { if (el && el.isConnected) el.disabled = false; }
+  }
+
+  view.addEventListener("click", (e) => {
+    const b = e.target.closest("button, [data-go]");
+    if (!b || !view.contains(b)) return;
+    const P = S.pick, M = S.mont;
+    if (b.dataset.act) return act(b.dataset.act, b);
+    if (b.dataset.go) { const el = document.getElementById(b.dataset.go); if (el) el.scrollIntoView({ behavior: matchMedia("(prefers-reduced-motion: reduce)").matches ? "auto" : "smooth", block: "start" }); return; }
+    if (b.dataset.group != null) { P.group = b.dataset.group; }
+    else if (b.dataset.look) { P.look = b.dataset.look; const l = S.hg.looks.find((x) => x.id === P.look); if (l && l.voice && S.hg.voices.some((v) => v.id === l.voice)) P.voice = l.voice; fitEngine(); }
+    else if (b.dataset.engine) { P.engine = b.dataset.engine; fitEngine(); }
+    else if (b.dataset.res) P.resolution = b.dataset.res;
+    else if (b.dataset.len) M.len = b.dataset.len;
+    else if (b.dataset.skill) M.skill = b.dataset.skill;
+    else return;
+    render();
+  });
+  view.addEventListener("input", (e) => {
+    const t = e.target, D = S.draft;
+    if (t.id === "sTranscript") D.transcript = t.value;
+    else if (t.id === "sScript") {
+      D.script = t.value;
+      const c = $("#sCount"), d = $("#sDirty");
+      if (c) c.textContent = `${words(t.value)} слов · ≈${secOf(t.value)} с`;
+      if (d) d.textContent = S.job && t.value !== S.job.script.text ? "есть несохранённые правки — они уйдут и при отправке аватару" : "";
+    }
+    else if (t.id === "sCode") D.code = t.value;
+    else if (t.id === "sWish") D.wish = t.value;
+    else if (t.id === "sLink") D.link = t.value;
+    else if (t.id === "mWish") S.mont.wish = t.value;
+  });
+  view.addEventListener("change", (e) => {
+    const t = e.target;
+    if (t.id === "sFile") upload(t.files && t.files[0]);
+    else if (t.id === "sJobs" && t.value) openId(t.value);
+    else if (t.id === "sVoice") S.pick.voice = t.value;
+    else if (t.id === "sSpeed") S.pick.speed = +t.value;
+    else if (t.id === "mSubs") S.mont.subs = t.checked;
+    else if (t.id === "mMusic") S.mont.music = t.checked;
+  });
+  view.addEventListener("dragover", (e) => { const d = e.target.closest && e.target.closest("#sDrop"); if (!d) return; e.preventDefault(); d.classList.add("over"); });
+  view.addEventListener("dragleave", (e) => { const d = e.target.closest && e.target.closest("#sDrop"); if (d) d.classList.remove("over"); });
+  view.addEventListener("drop", (e) => {
+    const d = e.target.closest && e.target.closest("#sDrop"); if (!d) return;
+    e.preventDefault(); d.classList.remove("over");
+    if (!d.classList.contains("off")) upload(e.dataTransfer.files && e.dataTransfer.files[0]);
+  });
+  view.addEventListener("submit", async (e) => {
+    if (e.target.id !== "loginForm") return;
+    e.preventDefault();
+    const btn = e.target.querySelector("button"); btn.disabled = true;
+    try { const d = await post("login", { password: val("#pw") }); S.me = { ...S.me, auth: true, services: d.services }; S.loginErr = ""; boot(); }
+    catch (er) { S.loginErr = er.message; btn.disabled = false; render(); }
+  });
+
+  function boot() {
+    render(); loadJobs(); loadStyles();
+    if (S.me.services && S.me.services.heygen) loadHeygen(false);
+    const id = hashJob();
+    if (id) openId(id);
+  }
+
+  (async () => {
+    try { S.me = await api("me"); } catch (e) { S.me = { enabled: true, auth: false, offline: true }; }
+    const h = location.hash || "";
+    showTab(/^#studio/.test(h) ? "studio" : h.length > 1 ? "runs" : S.me.auth ? "studio" : "runs");
+    if (S.me.auth) boot();
   })();
 })();
 </script>
