@@ -57,12 +57,14 @@ from app.funnel import agents, jobs, qa, service, storage  # noqa: E402
 from app.funnel import telegram_api as tg  # noqa: E402
 from app.funnel import threads_api as tapi  # noqa: E402
 from app.models.account import Account  # noqa: E402
-from app.models.funnel import FunnelComment, FunnelReceiver, FunnelThread, StoryFact  # noqa: E402
+from app.models.funnel import ChannelPostStat, FunnelComment, FunnelReceiver, FunnelThread, StoryFact  # noqa: E402
 
 jobs.get_engine = lambda: engine  # type: ignore[assignment]
 
 # ── фейк Claude ──────────────────────────────────────────────────────────────
 LLM_CALLS: list[str] = []
+FORECASTS: list[str] = []
+WRITES: list[str] = []
 MECHANICS = ["признание", "заявление", "мольба", "команда", "юмор", "замена"]
 
 
@@ -88,11 +90,13 @@ def fake_structured(role: str, payload: str, schema: dict, *, effort: str, max_t
     LLM_CALLS.append(role)
     if role == "funnel_plan":
         slots = [int(x) for x in re.findall(r'"slot": (\d+)', payload)]
+        hit_ids = [int(x) for x in re.findall(r'"id": (\d+)', payload.split("Исследование:", 1)[-1])][:2]
         return {"slots": [{"slot": s, "topic": f"Тема слота {s}: ИИ находит паттерн самосаботажа",
-                           "hypothesis": "признание vs юмор", "reserve_id": 0} for s in slots]}
+                           "hypothesis": "признание vs юмор", "reserve_id": 0, "evidence": hit_ids} for s in slots]}
     if schema is agents.HOOKS_SCHEMA:
         return {"hooks": fake_hooks("НОВЫЙ УГОЛ: ")}
     if role == "funnel_write":
+        WRITES.append(payload)
         return {"hooks": fake_hooks(), "posts": list(BODY), "mid_index": 7, "receiver_id": 0,
                 "receiver_brief": "план на неделю после сессии", "materials_request": "скрин ответа ИИ",
                 "facts_needed": [], "media_hint": "скрин диалога"}
@@ -110,6 +114,22 @@ def fake_structured(role: str, payload: str, schema: dict, *, effort: str, max_t
             return {"title": "План на неделю после сессии", "kind": "prompts",
                     "contents": "3 промпта + чек-лист", "clusters": [1], "text": "Что будет, если…\n«промпт»"}
         return {"title": "Готовый приёмник", "kind": "instruction", "contents": "инструкция", "clusters": [1, 2]}
+    if role == "funnel_forecast":
+        FORECASTS.append(payload)
+        hits = payload.split("Доказанные хиты за 30 дней:\n", 1)[1].split("\n\nПровалы", 1)[0]
+        ids = [int(x) for x in re.findall(r'"id": (\d+)', hits)][:1]
+        weak = len(FORECASTS) == 1                    # первая ветка дня — слабая, проверяем доработку
+        return {"score": 4.5 if weak else 7.6, "verdict": "повторяет механику хита донора",
+                "why": ["тема про самого читателя", "хит донора с xn 8"],
+                "evidence": [{"id": i, "note": "та же боль и механика признания"} for i in ids] + [{"id": 999999, "note": "выдуманный"}],
+                "risks": ["пост 4 длинный"], "boost": "добавить цифру в первую строку"}
+    if role == "funnel_channel":
+        posts = json.loads(payload.split(":\n", 1)[1])
+        return {"posts": [{"id": p["id"], "is_material": "PDF" in p["text"],
+                           "reason": "" if "PDF" in p["text"] else "продающий пост",
+                           "title": "PDF «30 промптов для контента»" if "PDF" in p["text"] else "",
+                           "kind": "prompts", "contents": "PDF с 30 промптами для контент-плана",
+                           "when": "нет идей для контента", "clusters": [3, 9]} for p in posts]}
     if role == "funnel_reply":
         return {"reply": "Спасибо! Попробуйте второй этап отдельно — там самое интересное.",
                 "skip": "спам" in payload}
@@ -140,6 +160,33 @@ tg._call = fake_tg  # type: ignore[assignment]
 tg.get_file_bytes = lambda file_id: (b"\xff\xd8fakejpeg", f"photos/{file_id}.jpg")  # type: ignore[assignment]
 tg.link_is_live = lambda url: True  # type: ignore[assignment]
 storage.configured = lambda: True  # type: ignore[assignment]
+
+# ── фейк Apify: исследование ──────────────────────────────────────────────────
+from app.funnel import research  # noqa: E402
+
+_now = datetime.now(ZoneInfo("UTC"))
+
+
+_hours = itertools.count(30)
+
+
+def _rp(code, author, likes, text, shares=0, query=""):
+    # Разное время: посты одного автора с разницей в секунды — это продолжения одной ветки.
+    return research.Post(code, author, text, f"https://www.threads.com/@{author}/post/{code}",
+                         _now - timedelta(hours=next(_hours)), likes=likes, replies=likes // 10, shares=shares,
+                         query=query)
+
+
+research.fetch_users = lambda users, n=40: (  # type: ignore[assignment]
+    [_rp(f"d{i}", "petkova_anjela", 10, f"обычный пост {i}") for i in range(8)]
+    + [_rp("hit1", "petkova_anjela", 900, "Я РЕАЛЬНО ОФИГЕЛА, КОГДА ИИ ПОКАЗАЛ ПАТТЕРН САМОСАБОТАЖА", shares=400),
+       _rp("flop1", "petkova_anjela", 1, "как продвигаться в Threads")])
+research.fetch_search = lambda kws, n=25: [_rp(f"s{i}", f"user{i}", 20, "промпт для ChatGPT", query="ChatGPT")
+                                           for i in range(5)] + [_rp("shit", "x", 600, "ChatGPT разобрал мой гардероб", query="ChatGPT")]
+research.fetch_thread_body = lambda url: ["хук ветки", "пост 2: промпт", "пост 3: финал"]  # type: ignore[assignment]
+from app.funnel import channel as chan  # noqa: E402
+
+chan.fetch = lambda src, limit=None: []   # type: ignore[assignment]  # каналы — в сценарии 16
 storage.put_image = lambda key, data, ct="image/jpeg": key  # type: ignore[assignment]
 storage.public_url = lambda key, ttl=None: f"https://minio.example/{key}?sig=1"  # type: ignore[assignment]
 
@@ -229,6 +276,17 @@ def main() -> None:
 def run() -> None:
     # 0. seed + аккаунт
     print(jobs.run("seed"))
+    with session_scope() as db:   # дни 1–15 — без каталога: проверяем черновик приёмника агентом
+        for r in db.scalars(select(FunnelReceiver).where(FunnelReceiver.source == "catalog")).all():
+            r.status = "archived"
+    res = jobs.run("research")
+    print(res)
+    assert res["hits"] >= 2 and res["expanded"] >= 1, res
+    with session_scope() as db:
+        hits = service.research_hits(db)
+        assert hits[0]["xn"] > 5 and "\n\n— " in hits[0]["text"]       # хит развёрнут в ветку
+        assert any(h["author"] == "x" for h in hits)                        # хит из поиска тоже найден
+        assert service.research_flops(db)
     with session_scope() as db:
         db.add(Account(handle="ilia.paliy", threads_user_id="u1", access_token=encrypt_token("tok-123"),
                        status="active"))
@@ -258,7 +316,15 @@ def run() -> None:
             assert rec is not None and rec.status == "draft"          # приёмника не было → черновик
             assert t.qa["passed"], qa.blocking(t.qa)
             assert t.qa.get("editor") == "проверил: ок"
+    with session_scope() as db:
+        for tid in ids:
+            t = db.get(FunnelThread, tid)
+            fc = t.qa["forecast"]
+            assert fc["score"] == 7.6, fc                                  # слабую (4.5) доработали до 7.6
+            assert fc["evidence"] and all(e["id"] != 999999 for e in fc["evidence"])   # выдуманные id отброшены
+            assert t.qa["evidence_ids"], t.qa
     texts = cards_sent()
+    assert any("Прогноз виральности: 7.6/10" in x for x in texts)
     assert any("Ветка №%d" % ids[0] in x for x in texts)
     assert any("Черновик поста-приёмника" in x for x in texts)
     assert any("<b>9/9</b>" in x for x in texts)
@@ -447,13 +513,77 @@ def run() -> None:
 
     tg_app = Application.builder().token("123:test").build()
     funnel_bot.register(tg_app)
-    assert len(tg_app.handlers[0]) == 8
+    assert len(tg_app.handlers[0]) == 11
 
     # 15. этап 1 (публикуете сами) + остальные кнопки + слой бота
     stage1(later + timedelta(days=1))
 
+    # 16. канал: ведём на ту пользу, что лучше всего зашла у подписчиков
+    channel_first(later + timedelta(days=10))
+
     print(f"\nLLM calls: {len(LLM_CALLS)} · Telegram calls: {len(TG_CALLS)}")
     print("funnel smoke OK")
+
+
+def channel_first(day: date) -> None:
+    old = _now - timedelta(days=10)
+
+    def fake_fetch(src, limit=None):
+        if src == "ai_razbory":
+            raise RuntimeError("t.me недоступен")
+        body = "Обычный пост канала с пользой и разбором, " * 3
+        posts = [chan.ChannelPost(src, i, chan.post_url(src, i), body, old, views=1000, reactions=10)
+                 for i in range(100, 106)]
+        posts += [
+            chan.ChannelPost(src, 2601, chan.post_url(src, 2601), "Скилл «Отдел маркетинга»: архив и PDF-инструкция. " * 4,
+                             old, views=5200, reactions=180, forwards=60, replies=12),
+            chan.ChannelPost(src, 3000, chan.post_url(src, 3000), "Забирайте PDF с 30 промптами для контента. " * 5,
+                             old, views=4100, reactions=120, forwards=45),
+            chan.ChannelPost(src, 3001, chan.post_url(src, 3001), "Старт продаж Мастер-группы, осталось 5 мест. " * 5,
+                             old, views=3900, reactions=90, forwards=2),
+        ]
+        return posts
+
+    chan.fetch = fake_fetch  # type: ignore[assignment]
+    with session_scope() as db:
+        for r in db.scalars(select(FunnelReceiver).where(FunnelReceiver.source == "catalog")).all():
+            r.status = "active"
+    TG_CALLS.clear()
+    res = jobs.run("channel")
+    assert res["sources"] == {"-1001843525349": 9} and res["errors"] and "ai_razbory" in res["errors"][0], res
+    assert res["linked"] == 1 and res["classified"] == 2 and res["new_materials"] == ["PDF «30 промптов для контента»"], res
+    assert any("Что зашло в канале" in p["text"] for m, p in TG_CALLS if m == "sendMessage")
+    with session_scope() as db:
+        skill = db.scalar(select(FunnelReceiver).where(FunnelReceiver.url == "https://t.me/c/1843525349/2601"))
+        assert skill.score > 3 and skill.stats["forwards"] == 60 and skill.stats["excerpt"].startswith("Скилл")
+        new = db.scalar(select(FunnelReceiver).where(FunnelReceiver.source == "channel"))
+        assert new.url == "https://t.me/c/1843525349/3000" and new.status == "active" and new.clusters == [3]
+        sales = db.scalar(select(ChannelPostStat).where(ChannelPostStat.msg_id == 3001))
+        assert sales.is_material is False and sales.receiver_id is None   # продажу не обещаем
+        assert jobs.run("channel")["classified"] == 0                    # разобранное не разбираем снова
+        # сильный материал выбирается заметно чаще обычного
+        wins = sum(skill.id in [m.id for m in service.pick_materials(db, day + timedelta(days=k), 3)]
+                   for k in range(40))
+        assert wins >= 20, wins
+        assert "×" in service.channel_text(db)
+
+    WRITES.clear()
+    res = jobs.run("generate", day=day)
+    assert len(res["generated"]) == 3, res
+    with session_scope() as db:
+        ts = [t for t in service.day_threads(db, day) if t.kind == "new"]   # перевыпуск ведёт туда же, что победитель
+        assert ts and all(t.receiver_id and not t.receiver_brief for t in ts), [(t.id, t.receiver_id) for t in ts]
+        assert len({t.receiver_id for t in ts}) == len(ts)
+        for t in ts:
+            rec = db.get(FunnelReceiver, t.receiver_id)
+            assert t.cluster in rec.clusters or not rec.clusters
+            # {link} — подписка на канал материала: основной — по приглашению, @ai_razbory — напрямую
+            want = "https://t.me/ai_razbory" if "/ai_razbory/" in rec.url else "https://t.me/+xP6G7c04QRZiY2My"
+            assert t.link_url == want and want in service.full_posts(t)[-1], (rec.url, t.link_url)
+        used = {t.receiver_id for t in ts}
+        assert not used & {r.id for r, _ in service.material_pool(db, day + timedelta(days=1))}   # пауза 7 дней
+    assert all("channel_post_text" in w or "channel_score" not in w for w in WRITES)
+    print("channel-first OK")
 
 
 def stage1(day: date) -> None:

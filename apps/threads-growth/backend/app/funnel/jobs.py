@@ -1,5 +1,6 @@
 """Задачи крона воронки. Расписание держит n8n (МСК):
 
+  research  05:00            исследование: что залетело у доноров и по темам за 30 дней
   metrics   06:00            метрики веток за 14 дней + оценка тех, кому 48 ч
   plan      06:30            темы на слоты дня (и сообщение с планом)
   generate  07:00            ветки → карточки в тему «Threads»
@@ -44,6 +45,29 @@ def job_lock(name: str) -> Iterator[bool]:
                 conn.commit()
     finally:
         conn.close()
+
+
+def job_channel() -> dict:
+    """Цифры постов каналов автора → сила материалов; новая польза — в библиотеку."""
+    with session_scope() as db:
+        res = service.sync_channel(db)
+    with session_scope() as db:
+        service.notify(service.channel_text(db, res))
+    return res
+
+
+def job_research() -> dict:
+    """05:00 МСК: сначала канал (на какую пользу вести), потом что залетает в Threads
+    у доноров и по темам за 30 дней — основа плана и прогноза."""
+    try:
+        job_channel()
+    except Exception:  # noqa: BLE001 — без свежих цифр канала план выйдет по прошлым
+        log.exception("channel sync failed")
+    with session_scope() as db:
+        res = service.run_research(db)
+    with session_scope() as db:
+        service.notify(service.research_text(db, res))
+    return res
 
 
 def job_metrics(now: datetime | None = None) -> dict:
@@ -135,6 +159,8 @@ def job_seed() -> dict:
 
 
 JOBS = {
+    "channel": job_channel,
+    "research": job_research,
     "metrics": job_metrics,
     "plan": job_plan,
     "generate": job_generate,
@@ -147,7 +173,7 @@ JOBS = {
 
 
 # Ежедневные задачи: их сбой — в тему «Threads» (частые publish/comments — только в лог).
-NOTIFY_ON_ERROR = ("metrics", "plan", "generate", "report", "token")
+NOTIFY_ON_ERROR = ("channel", "research", "metrics", "plan", "generate", "report", "token")
 
 
 def run(name: str, **kwargs) -> dict:

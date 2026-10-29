@@ -82,12 +82,23 @@ class Settings(BaseSettings):
     funnel_reply_mode: str = "drafts"    # решение 6: ответы на комментарии — drafts | auto
     funnel_start_date: str = ""          # YYYY-MM-DD старт системы (2 недели только новые); пусто = первая ветка
     funnel_reply_window_hours: int = 2   # сколько часов после выхода собираем комментарии
+    # Исследование (05:00 МСК): что залетает у доноров и по темам — основа плана и прогноза
+    funnel_research_queries: str = "нейросеть,ChatGPT,Claude,промпт,ИИ психолог,ИИ ассистент,нейрофото,контент план"
+    funnel_min_score: float = 6.0        # ниже — агент один раз дорабатывает ветку по подсказке аналитика
 
     # — Канал-приёмник (решение 1) —
     channel_id: int = 0                  # id канала (-100…); бот должен быть админом
     channel_username: str = ""           # @username публичного канала без @ (для mode=public)
     channel_mode: str = "private"        # private — ссылка-приглашение под каждую ветку | public — ссылка на пост
     channel_fallback_link: str = ""      # общая ссылка на канал, пока нет приёмника/прав бота
+    # Статистика каналов автора (app/funnel/channel.py): username публичного и -100… закрытого
+    channel_stats_sources: str = "ai_razbory,-1001843525349"
+    # Куда ведёт {link}: канал, где лежит материал ветки → ссылка подписки (источник=ссылка, через запятую)
+    channel_links: str = "-1001843525349=https://t.me/+xP6G7c04QRZiY2My,ai_razbory=https://t.me/ai_razbory"
+    channel_stats_limit: int = 300       # сколько последних постов каждого канала смотреть
+    tg_api_id: int = 0                   # my.telegram.org — для закрытого канала (Telethon)
+    tg_api_hash: str = ""
+    tg_session: str = ""                 # строка сессии из `python -m app.funnel.channel login`
 
     # — MinIO: картинки к посту 1 по временной ссылке —
     minio_endpoint: str = ""             # внутренний host:port, напр. aisales-minio:9000

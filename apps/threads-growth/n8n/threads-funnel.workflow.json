@@ -7,6 +7,50 @@
           "interval": [
             {
               "field": "cronExpression",
+              "expression": "0 5 * * *"
+            }
+          ]
+        }
+      },
+      "name": "⏰ 05:00 исследование",
+      "type": "n8n-nodes-base.scheduleTrigger",
+      "typeVersion": 1.2,
+      "position": [
+        0,
+        -160
+      ]
+    },
+    {
+      "parameters": {
+        "method": "POST",
+        "url": "={{ $env.THREADS_FUNNEL_URL }}/cron/funnel/research",
+        "sendHeaders": true,
+        "headerParameters": {
+          "parameters": [
+            {
+              "name": "X-Cron-Secret",
+              "value": "={{ $env.THREADS_CRON_SECRET }}"
+            }
+          ]
+        },
+        "options": {
+          "timeout": 30000
+        }
+      },
+      "name": "POST /cron/funnel/research",
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 4.2,
+      "position": [
+        300,
+        -160
+      ]
+    },
+    {
+      "parameters": {
+        "rule": {
+          "interval": [
+            {
+              "field": "cronExpression",
               "expression": "0 6 * * *"
             }
           ]
@@ -382,6 +426,17 @@
         [
           {
             "node": "POST /cron/funnel/token",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "⏰ 05:00 исследование": {
+      "main": [
+        [
+          {
+            "node": "POST /cron/funnel/research",
             "type": "main",
             "index": 0
           }

@@ -15,6 +15,7 @@ from __future__ import annotations
 
 import json
 import logging
+import random
 import re
 from datetime import date, datetime, timedelta, timezone
 from pathlib import Path
@@ -32,6 +33,7 @@ from app.models.account import Account
 from app.models.competitor import Competitor
 from app.models.funnel import (
     ChannelJoin,
+    ChannelPostStat,
     FunnelComment,
     FunnelReceiver,
     FunnelState,
@@ -187,9 +189,20 @@ def facts_texts(db: Session, query: str | None = None, limit: int = 40) -> list[
     return [r.text for r in ranked[:limit]]
 
 
-def receiver_dict(r: FunnelReceiver) -> dict:
-    return {"id": r.id, "title": r.title, "contents": r.contents, "kind": r.kind,
-            "clusters": r.clusters or [], "url": r.url, "status": r.status}
+def receiver_dict(r: FunnelReceiver, full: bool = False) -> dict:
+    """full — с цифрами канала и текстом поста: агент обещает ровно то, что там лежит."""
+    d = {"id": r.id, "title": r.title, "contents": r.contents, "kind": r.kind,
+         "clusters": r.clusters or [], "url": r.url, "status": r.status}
+    st = r.stats or {}
+    if r.score is not None:
+        d["channel_score"] = r.score
+    if st.get("views"):
+        d["channel_views"] = st["views"]
+    if full and st:
+        d["channel_stats"] = {k: st[k] for k in ("views", "reactions", "forwards", "replies") if st.get(k)}
+        if st.get("excerpt"):
+            d["channel_post_text"] = st["excerpt"]
+    return d
 
 
 def receivers_for(db: Session, cluster: int, topic: str, limit: int = 5) -> list[dict]:
@@ -198,7 +211,7 @@ def receivers_for(db: Session, cluster: int, topic: str, limit: int = 5) -> list
     qv = _embed(topic or "")
     fit.sort(key=lambda r: (_similarity(topic or "", qv, f"{r.title} {r.contents or ''}", r.embedding),
                             r.created_at or datetime.min.replace(tzinfo=timezone.utc)), reverse=True)
-    return [receiver_dict(r) for r in fit[:limit]]
+    return [receiver_dict(r, full=True) for r in fit[:limit]]
 
 
 def donor_handles() -> list[str]:
@@ -214,6 +227,136 @@ def donor_posts(db: Session, limit: int = 15) -> list[dict]:
     rows = db.scalars(stmt.order_by(ViralPost.xn_score.desc().nullslast()).limit(limit)).all()
     return [{"text": (p.text or "")[:700], "likes": p.likes, "views": p.views,
              "xn": float(p.xn_score) if p.xn_score is not None else None} for p in rows]
+
+
+# ── Исследование: что реально залетает (research.py) ─────────────────────────
+def research_queries() -> list[str]:
+    return [q.strip() for q in settings.funnel_research_queries.split(",") if q.strip()]
+
+
+def run_research(db: Session) -> dict:
+    """Сбор постов доноров и топа поиска за 30 дней → viral_posts(status='research') с xn."""
+    from app.funnel import research
+
+    donors = set(donor_handles())
+    donors |= {c.username.lower() for c in db.scalars(select(Competitor).where(
+        Competitor.platform == "threads", Competitor.is_active.is_(True))).all()}
+    try:
+        users = research.fresh(research.fetch_users(sorted(donors), 100)) if donors else []
+        search = research.fresh(research.fetch_search(research_queries(), 25))
+    except Exception as e:  # noqa: BLE001 — Apify: оплата, лимиты, сеть; план выйдет и без свежих хитов
+        msg = str(e)
+        if "invoice" in msg.lower():
+            msg = "на аккаунте Apify неоплаченные счета — оплатите в console.apify.com → Billing"
+        raise FunnelError(f"Исследование Threads не выполнено: {msg}. Ветки выйдут по прошлым данным.") from e
+    scores = {**research.score_batch(users), **research.score_batch(search, group_by_author=False)}
+    saved = 0
+    for p in users + search:
+        xn, med = scores.get(p.code, (0.0, 0.0))
+        row = db.scalar(select(ViralPost).where(ViralPost.external_id == p.code))
+        if row is None:
+            row = ViralPost(source="threads", external_id=p.code, status="research")
+            db.add(row)
+            saved += 1
+        elif row.status not in ("research",):
+            continue                     # пост уже в другом конвейере — не трогаем
+        row.author, row.url, row.published_at = p.author, p.url, p.published_at
+        if "\n\n— " not in (row.text or ""):       # развёрнутую ветку не затираем одним хуком
+            row.text = p.text
+        row.likes, row.comments, row.reposts, row.views = p.likes, p.replies, p.reposts + p.shares, p.views
+        row.author_median_views = med
+        row.xn_score = xn
+        row.category = research.category(xn)
+    db.flush()
+    # Лучшие посты разворачиваем в ветку целиком: агентам нужна структура, а не только хук.
+    expanded = 0
+    top = db.scalars(select(ViralPost).where(ViralPost.status == "research", ViralPost.xn_score >= research.PROVEN_XN)
+                     .order_by(ViralPost.xn_score.desc()).limit(research.THREAD_EXPAND_TOP * 3)).all()
+    for row in [r for r in top if "\n\n— " not in (r.text or "") and r.url][:research.THREAD_EXPAND_TOP]:
+        try:
+            body = research.fetch_thread_body(row.url)
+        except Exception as e:  # noqa: BLE001 — без тела ветки хит всё равно полезен
+            log.warning("thread body %s failed: %s", row.url, e)
+            continue
+        if len(body) > 1:
+            row.text = "\n\n— ".join(body)
+            expanded += 1
+    db.flush()
+    return {"donors": len(donors), "posts": len(users) + len(search), "new": saved, "expanded": expanded,
+            "hits": len(research_hits(db, 100))}
+
+
+def _research_row(p: ViralPost, n: int = 900) -> dict:
+    return {"id": p.id, "author": p.author, "xn": float(p.xn_score or 0), "likes": p.likes, "replies": p.comments,
+            "reposts_shares": p.reposts, "date": p.published_at.date().isoformat() if p.published_at else None,
+            "text": (p.text or "")[:n], "url": p.url}
+
+
+def research_hits(db: Session, limit: int = 25) -> list[dict]:
+    from app.funnel.research import PROVEN_XN
+
+    since = now_utc() - timedelta(days=30)
+    rows = db.scalars(select(ViralPost).where(
+        ViralPost.status == "research", ViralPost.xn_score >= PROVEN_XN,
+        (ViralPost.published_at >= since) | ViralPost.published_at.is_(None),
+    ).order_by(ViralPost.xn_score.desc()).limit(limit)).all()
+    return [_research_row(p) for p in rows]
+
+
+def research_text(db: Session, res: dict | None = None, limit: int = 5) -> str:
+    """Сводка исследования для темы «Threads» и команды /top."""
+    hits = research_hits(db, limit)
+    head = "🔎 <b>Что залетает в Threads за 30 дней</b>"
+    if res:
+        head += (f"\nСобрано {res.get('posts', 0)} постов ({res.get('donors', 0)} доноров + поиск), "
+                 f"хитов (xn ≥ 2): {res.get('hits', 0)}")
+    if not hits:
+        return head + "\nХитов пока нет — проверьте APIFY_TOKEN и список доноров (FUNNEL_DONORS)."
+    lines = [head]
+    for h in hits:
+        first = (h["text"] or "").strip().splitlines()[0][:140] if h["text"] else ""
+        lines.append(f"• xn {h['xn']:.1f} · {h['likes']} лайков · @{cards.esc(h['author'])}: {cards.esc(first)}"
+                     + (f' <a href="{cards.esc(h["url"])}">→</a>' if h.get("url") else ""))
+    return "\n".join(lines)
+
+
+def research_flops(db: Session, limit: int = 8) -> list[dict]:
+    since = now_utc() - timedelta(days=30)
+    rows = db.scalars(select(ViralPost).where(
+        ViralPost.status == "research", ViralPost.xn_score < 0.6, ViralPost.published_at >= since,
+    ).order_by(ViralPost.xn_score.asc()).limit(limit)).all()
+    return [_research_row(p, 300) for p in rows]
+
+
+def own_history(db: Session, limit: int = 30) -> list[dict]:
+    rows = db.scalars(select(FunnelThread).where(FunnelThread.status == "published",
+                                                 FunnelThread.verdict.is_not(None))
+                      .order_by(FunnelThread.published_at.desc()).limit(limit)).all()
+    return [{"topic": t.topic, "cluster": t.cluster, "hook": qa.first_line(active_hook_text(t)),
+             "forecast": ((t.qa or {}).get("forecast") or {}).get("score"), "verdict": t.verdict,
+             "metrics": {k: (t.metrics or {}).get(k) for k in ("likes", "replies", "shares", "clicks", "joins")}}
+            for t in rows]
+
+
+def forecast(db: Session, t: FunnelThread) -> dict | None:
+    """Прогноз виральности ветки 0–10 → t.qa['forecast']. None, если агент недоступен."""
+    ids = set((t.qa or {}).get("evidence_ids") or [])
+    hits = research_hits(db, 25)
+    hits.sort(key=lambda h: h["id"] not in ids)          # опорные хиты темы — первыми
+    try:
+        res = agents.forecast_thread(
+            {"topic": t.topic, "cluster": t.cluster, "template": t.template, "hypothesis": t.hypothesis,
+             "posts": full_posts(t, LINK_DISPLAY)},
+            hits=hits, flops=research_flops(db), history=own_history(db))
+    except agents.AgentError as e:
+        log.warning("forecast %s failed: %s", t.id, e)
+        return None
+    known = {h["id"]: h for h in hits}
+    res["evidence"] = [{**e, **{k: known[e["id"]][k] for k in ("author", "xn", "likes", "url")}}
+                       for e in res.get("evidence") or [] if e.get("id") in known]
+    t.qa = {**(t.qa or {}), "forecast": res}
+    db.flush()
+    return res
 
 
 def add_receiver(db: Session, url: str, description: str) -> FunnelReceiver:
@@ -258,6 +401,174 @@ def seed(db: Session) -> dict:
     return {"facts_added": facts, "donors_added": donors, "receivers_added": seed_receivers(db)}
 
 
+# ════════════════════════════════════════════════════════════════════════════
+#  Канал автора: какая бесплатная польза зашла — туда и ведём трафик
+# ════════════════════════════════════════════════════════════════════════════
+CHANNEL_MIN_SCORE = 1.2          # разбирать агентом только посты сильнее обычного
+CHANNEL_MIN_TEXT = 150
+CLASSIFY_PER_RUN = 12
+MATERIAL_COOLDOWN = 7            # дней: материал не ведём повторно чаще
+MATERIAL_SOFT = 21               # дней: до этого срока вес материала вдвое ниже
+
+
+def _access(source: str) -> str:
+    from app.funnel import channel as ch
+
+    if ch.is_private(source):
+        return "открывается только подписчикам основного канала"
+    return f"канал @{source}, открывается по прямой ссылке"
+
+
+def _post_stats(row: ChannelPostStat) -> dict:
+    return {"views": row.views, "reactions": row.reactions, "forwards": row.forwards, "replies": row.replies,
+            "posted_at": row.posted_at.isoformat() if row.posted_at else None,
+            "excerpt": (row.text or "")[:1500], "source": row.source}
+
+
+def sync_channel(db: Session) -> dict:
+    """Посты каналов → цифры и сила; сила переносится на материалы библиотеки;
+    новые сильные посты-польза становятся материалами (их проверяет агент)."""
+    from app.funnel import channel as ch
+
+    res: dict = {"sources": {}, "linked": 0, "classified": 0, "new_materials": [], "errors": []}
+    now = now_utc()
+    for src in ch.sources():
+        try:
+            posts = ch.fetch(src)
+        except Exception as e:  # noqa: BLE001 — один канал не мешает другому
+            log.warning("channel %s: %s", src, e)
+            res["errors"].append(f"{src}: {e}")
+            continue
+        scores = ch.score(posts, now)
+        known = {r.msg_id: r for r in db.scalars(select(ChannelPostStat).where(ChannelPostStat.source == src)).all()}
+        for p in posts:
+            row = known.get(p.msg_id)
+            if row is None:
+                row = ChannelPostStat(source=src, msg_id=p.msg_id)
+                db.add(row)
+            row.url, row.text, row.posted_at = p.url, p.text, p.posted_at
+            row.views, row.reactions, row.forwards, row.replies = p.views, p.reactions, p.forwards, p.replies
+            row.score = scores.get(p.msg_id)
+        res["sources"][src] = len(posts)
+    db.flush()
+
+    rows = {(r.source, r.msg_id): r for r in db.scalars(select(ChannelPostStat)).all()}
+    for rec in db.scalars(select(FunnelReceiver).where(FunnelReceiver.url.is_not(None))).all():
+        key = ch.parse_url(rec.url)
+        row = rows.get(key) if key else None
+        if row is None:
+            continue
+        rec.score, rec.stats = row.score, _post_stats(row)
+        row.receiver_id = rec.id
+        if row.is_material is None:
+            row.is_material = True
+        res["linked"] += 1
+
+    cand = sorted((r for r in rows.values() if r.receiver_id is None and r.is_material is None
+                   and (r.score or 0) >= CHANNEL_MIN_SCORE and len(r.text or "") >= CHANNEL_MIN_TEXT),
+                  key=lambda r: r.score or 0, reverse=True)[:CLASSIFY_PER_RUN]
+    if cand:
+        try:
+            verdicts = agents.classify_channel_posts([
+                {"id": r.id, "url": r.url, "score": r.score, "views": r.views, "reactions": r.reactions,
+                 "forwards": r.forwards, "text": (r.text or "")[:2500]} for r in cand])
+        except agents.AgentError as e:
+            res["errors"].append(f"разбор постов: {e}")
+            verdicts = []
+        by_id = {int(v.get("id") or 0): v for v in verdicts}
+        for row in cand:
+            v = by_id.get(row.id)
+            if not v:
+                continue
+            res["classified"] += 1
+            row.is_material = bool(v.get("is_material"))
+            row.note = (v.get("reason") or "").strip() or None
+            if not row.is_material or not (v.get("title") or "").strip():
+                continue
+            rec = FunnelReceiver(
+                url=row.url, channel_message_id=row.msg_id, title=v["title"].strip(), kind=v.get("kind"),
+                clusters=[int(c) for c in v.get("clusters") or [] if int(c) in schedule.CLUSTERS],
+                contents=f"{(v.get('contents') or '').strip()} Когда предлагать: {(v.get('when') or '').strip()}. "
+                         f"Доступ: {_access(row.source)}.",
+                status="active", source="channel", score=row.score, stats=_post_stats(row),
+                published_at=row.posted_at)
+            db.add(rec)
+            db.flush()
+            row.receiver_id = rec.id
+            res["new_materials"].append(rec.title)
+    db.flush()
+    return res
+
+
+def material_pool(db: Session, day: date) -> list[tuple[FunnelReceiver, float]]:
+    """Материалы с весом: сила в канале² (лучшее ведём чаще) × пауза после прошлой
+    ветки × вступления, которые материал уже приносил из Threads."""
+    last = dict(db.execute(select(FunnelThread.receiver_id, func.max(FunnelThread.plan_date))
+                           .where(FunnelThread.receiver_id.is_not(None),
+                                  FunnelThread.status.in_(PENDING + DONE))
+                           .group_by(FunnelThread.receiver_id)).all())
+    out = []
+    for r in db.scalars(select(FunnelReceiver).where(FunnelReceiver.status == "active",
+                                                     FunnelReceiver.url.is_not(None))).all():
+        used = last.get(r.id)
+        gap = (day - used).days if used else None
+        if gap is not None and gap < MATERIAL_COOLDOWN:
+            continue
+        base = r.score if r.score is not None else 1.0       # без цифр — как обычный пост
+        w = max(base, 0.05) ** 2 * (0.5 if gap is not None and gap < MATERIAL_SOFT else 1.0)
+        w *= 1 + 0.1 * min(r.joins or 0, 10)
+        out.append((r, w))
+    return out
+
+
+def pick_materials(db: Session, day: date, n: int) -> list[FunnelReceiver]:
+    rng = random.Random(f"materials-{day.isoformat()}")
+    pool = material_pool(db, day)
+    picked: list[FunnelReceiver] = []
+    while pool and len(picked) < n:
+        total = sum(w for _, w in pool)
+        x = rng.random() * total
+        for i, (r, w) in enumerate(pool):
+            x -= w
+            if x <= 0:
+                break
+        picked.append(pool.pop(i)[0])
+    return picked
+
+
+def channel_text(db: Session, res: dict | None = None, limit: int = 8) -> str:
+    """Сводка для темы «Threads» и команды /channel: на какую пользу ведём."""
+    from app.funnel import channel as ch
+
+    head = "📊 <b>Что зашло в канале — на это ведём из Threads</b>"
+    if res:
+        scanned = ", ".join(f"{('закрытый' if ch.is_private(s) else '@' + s)}: {n}" for s, n in res["sources"].items())
+        head += f"\nПостов просмотрено — {scanned or 'нет'}."
+        if res.get("new_materials"):
+            head += "\nНовая польза в библиотеке: " + "; ".join(cards.esc(t) for t in res["new_materials"])
+        for e in res.get("errors") or []:
+            head += f"\n⚠️ {cards.esc(e)}"
+    rows = db.scalars(select(FunnelReceiver).where(FunnelReceiver.status == "active",
+                                                   FunnelReceiver.score.is_not(None))
+                      .order_by(FunnelReceiver.score.desc()).limit(limit)).all()
+    if not rows:
+        return head + "\nЦифр по материалам пока нет."
+    used = dict(db.execute(select(FunnelThread.receiver_id, func.count()).where(
+        FunnelThread.receiver_id.in_([r.id for r in rows]), FunnelThread.status.in_(DONE))
+        .group_by(FunnelThread.receiver_id)).all())
+    lines = [head]
+    for r in rows:
+        st = r.stats or {}
+        nums = f"👁 {ch.human(st.get('views') or 0)}"
+        if st.get("reactions"):
+            nums += f" · ❤ {st['reactions']}"
+        if st.get("forwards"):
+            nums += f" · ↗ {st['forwards']}"
+        lines.append(f'• ×{r.score:.1f} · {nums} — <a href="{cards.esc(r.url)}">{cards.esc(r.title)}</a>'
+                     f" · веток: {used.get(r.id, 0)}, вступлений: {r.joins or 0}")
+    return "\n".join(lines)
+
+
 RECEIVERS_FILE = Path(__file__).resolve().parent / "data" / "receivers.json"
 
 
@@ -274,7 +585,7 @@ def seed_receivers(db: Session) -> int:
         db.add(FunnelReceiver(
             url=item["url"], title=item["title"], kind=item["kind"], clusters=item["clusters"],
             contents=f"{item['contents']} Когда предлагать: {item['when']}. Доступ: {access}.",
-            status="active", published_at=now_utc()))
+            status="active", source="catalog", published_at=now_utc()))
         added += 1
     db.flush()
     return added
@@ -317,6 +628,7 @@ def thread_view(db: Session, t: FunnelThread, note: str | None = None) -> dict:
         "autopublish": settings.funnel_autopublish, "link_url": t.link_url,
         "permalink": t.permalink, "note": note,
         "media_hint": (t.qa or {}).get("media_hint"), "editor": (t.qa or {}).get("editor"),
+        "forecast": (t.qa or {}).get("forecast"),
     }
 
 
@@ -327,7 +639,7 @@ def run_qa(db: Session, t: FunnelThread, check_link: bool = False) -> dict:
                            voice_level=settings.funnel_voice_level,
                            has_receiver=bool(rec and rec.status == "active"), link_live=live)
     result = qa.summarize(checks)
-    for key in ("editor", "media_hint"):          # заметки агентов переживают перепроверку
+    for key in ("editor", "media_hint", "evidence_ids", "forecast"):   # заметки агентов переживают перепроверку
         if (t.qa or {}).get(key):
             result[key] = t.qa[key]
     t.qa = result
@@ -338,12 +650,20 @@ def run_qa(db: Session, t: FunnelThread, check_link: bool = False) -> dict:
 def ensure_link(db: Session, t: FunnelThread) -> None:
     """Своя ссылка под ветку. Закрытый канал — ссылка-приглашение (бот считает по ней
     вступления); публичный — пост-приёмник. Пока ничего нет — общая ссылка на канал."""
+    from app.funnel import channel as ch
+
     rec = db.get(FunnelReceiver, t.receiver_id) if t.receiver_id else None
+    src = ch.parse_url(rec.url) if rec and rec.url else None
+    own = ch.subscribe_link(rec.url) if rec and rec.status == "active" else None
+    # Своя ссылка-приглашение на ветку — только в канал, где бот админ (CHANNEL_ID).
+    bot_channel = bool(settings.channel_id) and (src is None or src[0] == str(settings.channel_id))
     if settings.channel_mode == "public":
         if rec and rec.status == "active" and rec.url:
             t.link_url = rec.url
         elif not t.link_url:
             t.link_url = settings.channel_fallback_link or None
+    elif own and not bot_channel:
+        t.link_url = own                  # канал материала: основной — по приглашению, @ai_razbory — напрямую
     elif settings.channel_id and not t.invite_link:
         try:
             t.invite_link = tg.create_invite_link(settings.channel_id, f"thr{t.id} {t.plan_date:%d.%m}")
@@ -507,35 +827,56 @@ def plan_day(db: Session, day: date) -> list[FunnelThread]:
 
     new_idx = [i for i in range(len(slot_dts)) if i not in re_slots]
     if new_idx:
-        exclude = tuple(t.cluster for t in created)
-        clusters = schedule.pick_clusters(cluster_weights(db), len(new_idx), exclude=exclude, seed=day.isoformat())
+        # Сначала польза: лучшие по цифрам канала материалы, потом под них кластер и тема.
+        weights = cluster_weights(db)
+        used = [t.cluster for t in created]
+        mats = pick_materials(db, day, len(new_idx))
+        picked: list[tuple[FunnelReceiver | None, int | None]] = []
+        for m in mats:
+            options = [c for c in (m.clusters or []) if c in schedule.CLUSTERS]
+            options = [c for c in options if c not in used] or options
+            c = max(options, key=lambda c: weights.get(c, 0)) if options else None
+            if c is not None:
+                used.append(c)
+            picked.append((m, c))
+        picked += [(None, None)] * (len(new_idx) - len(picked))
+        free = schedule.pick_clusters(weights, sum(1 for _, c in picked if c is None),
+                                      exclude=tuple(used), seed=day.isoformat())
+        clusters = [c if c is not None else free.pop(0) for _, c in picked]
+        materials = {i: m for i, (m, _) in zip(new_idx, picked) if m is not None}
         spec = []
         for i, c in zip(new_idx, clusters):
-            spec.append({"slot": i, "time": f"{slot_dts[i].astimezone(tzinfo):%H:%M}", "cluster": c,
-                         "cluster_name": schedule.CLUSTERS[c].name,
-                         "template": schedule.pick_template(c, seed=f"{day}-{i}")})
+            item = {"slot": i, "time": f"{slot_dts[i].astimezone(tzinfo):%H:%M}", "cluster": c,
+                    "cluster_name": schedule.CLUSTERS[c].name,
+                    "template": schedule.pick_template(c, seed=f"{day}-{i}")}
+            if i in materials:
+                item["material"] = receiver_dict(materials[i], full=True)
+            spec.append(item)
         recent = db.scalars(select(FunnelThread.topic).where(
             FunnelThread.plan_date >= day - timedelta(days=14), FunnelThread.status.in_(DONE + PENDING))).all()
         reserve_rows = db.scalars(select(FunnelThread).where(FunnelThread.status == "reserve")
                                   .order_by(FunnelThread.id.desc()).limit(10)).all()
         reserve = [{"id": r.id, "topic": r.topic, "cluster": r.cluster} for r in reserve_rows]
+        library = [] if len(materials) == len(spec) else [receiver_dict(r) for r in db.scalars(
+            select(FunnelReceiver).where(FunnelReceiver.status == "active")).all()]
         topics = agents.plan_topics(
             day.isoformat(), spec, recent_topics=[t for t in recent if t], reserve=reserve,
-            donor_posts=donor_posts(db), receivers=[receiver_dict(r) for r in db.scalars(
-                select(FunnelReceiver).where(FunnelReceiver.status == "active")).all()],
-            facts=facts_texts(db))
+            donor_posts=research_hits(db), receivers=library, facts=facts_texts(db))
         by_slot = {int(x.get("slot", -1)): x for x in topics}
         reserve_ids = {r.id: r for r in reserve_rows}
         for s in spec:
             got = by_slot.get(s["slot"]) or {}
             rid = int(got.get("reserve_id") or 0)
-            if rid in reserve_ids:
+            mat = materials.get(s["slot"])
+            if rid in reserve_ids and mat is None:
                 reserve_ids[rid].status = "replaced"     # тема ушла из запаса в план
             t = FunnelThread(
                 account_id=acc.id if acc else None, plan_date=day, slot_at=slot_dts[s["slot"]],
                 cluster=s["cluster"], template=s["template"],
                 topic=got.get("topic") or f"[тема не предложена] {s['cluster_name']}",
                 hypothesis=got.get("hypothesis") or "", kind="new", status="planned",
+                qa={"evidence_ids": [int(x) for x in got.get("evidence") or []][:3]},
+                receiver_id=mat.id if mat else None,
             )
             db.add(t)
             created.append(t)
@@ -625,11 +966,17 @@ def generate_thread(db: Session, t: FunnelThread) -> FunnelThread:
     db.flush()
     facts = facts_texts(db, t.topic)
     voice = settings.funnel_voice_level
-    recs = receivers_for(db, t.cluster, t.topic or "")
+    preset = db.get(FunnelReceiver, t.receiver_id) if (t.kind == "new" and t.receiver_id) else None
+    if preset is not None and preset.status != "active":
+        preset = None
+    # Материал выбран в плане по цифрам канала — ветка ведёт ровно на него.
+    recs = [receiver_dict(preset, full=True)] if preset else receivers_for(db, t.cluster, t.topic or "")
     if t.kind == "new":
         cl = schedule.CLUSTERS[t.cluster]
+        ids = set((t.qa or {}).get("evidence_ids") or [])
         spec = {"topic": t.topic, "hypothesis": t.hypothesis, "cluster": t.cluster, "cluster_name": cl.name,
-                "template": t.template, "template_name": schedule.TEMPLATE_NAMES.get(t.template)}
+                "template": t.template, "template_name": schedule.TEMPLATE_NAMES.get(t.template),
+                "proven_hits_to_mirror": [h for h in research_hits(db, 50) if h["id"] in ids]}
         res = agents.write_thread(spec, facts=facts, receivers=recs, voice_level=voice)
         t.hooks = [dict(h) for h in (res.get("hooks") or [])][:6]
         t.active_hook = 0
@@ -638,16 +985,16 @@ def generate_thread(db: Session, t: FunnelThread) -> FunnelThread:
         t.materials_request = (res.get("materials_request") or "").strip() or None
         t.facts_needed = list(res.get("facts_needed") or [])
         rid = int(res.get("receiver_id") or 0)
-        t.receiver_id = rid if rid in {r["id"] for r in recs} else None
-        t.receiver_brief = (res.get("receiver_brief") or "").strip() or None
+        t.receiver_id = preset.id if preset else (rid if rid in {r["id"] for r in recs} else None)
+        t.receiver_brief = None if preset else ((res.get("receiver_brief") or "").strip() or None)
         if res.get("media_hint"):
-            t.qa = {"media_hint": res["media_hint"]}
+            t.qa = {**(t.qa or {}), "media_hint": res["media_hint"]}
         if not t.hooks or not t.posts:
             raise agents.AgentError("агент вернул пустую ветку")
         rec = db.get(FunnelReceiver, t.receiver_id) if t.receiver_id else None
         rev = agents.review_thread(_thread_payload(t), facts=facts,
-                                   receiver=receiver_dict(rec) if rec else None, voice_level=voice,
-                                   donor_texts=[p["text"] for p in donor_posts(db, 5)])
+                                   receiver=receiver_dict(rec, full=True) if rec else None, voice_level=voice,
+                                   donor_texts=[h["text"] for h in research_hits(db, 8)])
         _apply_review(t, rev)
     else:
         t.receiver_id = recs[0]["id"] if recs else None   # свежий приёмник под перевыпуск
@@ -658,6 +1005,23 @@ def generate_thread(db: Session, t: FunnelThread) -> FunnelThread:
         _shorten_if_needed(db, t, result)
     except agents.AgentError as e:   # останется ⛔ в проверке — автор сократит правкой
         log.warning("shorten %s failed: %s", t.id, e)
+    fc = forecast(db, t)
+    if fc and fc["score"] < settings.funnel_min_score and t.kind == "new" and fc.get("boost"):
+        # Слабую ветку агент один раз дорабатывает по главной подсказке аналитика.
+        try:
+            before = (list(t.posts), [dict(h) for h in t.hooks])
+            _apply_edit_result(t, agents.edit_thread(
+                {"topic": t.topic, "hook": active_hook_text(t), "posts": t.posts, "facts_needed": t.facts_needed},
+                f"Подними виральность ветки (сейчас {fc['score']}/10): {fc['boost']}",
+                facts=facts, voice_level=voice))
+            run_qa(db, t)
+            fc2 = forecast(db, t)
+            if fc2 is None or fc2["score"] < fc["score"] or not t.qa.get("passed", True):
+                t.posts, t.hooks = before                # доработка не помогла — оставляем первую версию
+                t.qa = {**t.qa, "forecast": fc}
+                run_qa(db, t)
+        except agents.AgentError as e:
+            log.warning("boost %s failed: %s", t.id, e)
     t.status = "draft"
     t.error = None
     db.flush()
@@ -755,6 +1119,7 @@ def apply_edit(db: Session, thread_id: int, text: str) -> str:
             add_fact(db, text, kind="fact", source="card")   # ответ автора про цифры — в банк
     t.status = "draft"
     run_qa(db, t)
+    forecast(db, t)
     send_card(db, t, note=f"Правка: {summary}. Новая версия — нужен ✅")
     return f"✏️ Ветка №{t.id}: {summary}."
 
@@ -773,6 +1138,7 @@ def swap_hook(db: Session, thread_id: int, idx: int) -> str:
     t.active_hook = idx
     t.status = "draft"
     run_qa(db, t)
+    forecast(db, t)
     send_card(db, t, note=f"Хук {idx + 1} ({t.hooks[idx].get('mechanic', '')}). Нужен ✅")
     return f"🔄 Ветка №{t.id}: хук {idx + 1}."
 
@@ -789,19 +1155,32 @@ def replace_thread(db: Session, thread_id: int) -> FunnelThread:
                                  cards.stale_keyboard(old.id, "♻️ Заменена — тема в запасе"))
         except tg.TelegramError:
             pass
-    busy = tuple(t.cluster for t in day_threads(db, old.plan_date))
-    cluster = schedule.pick_clusters(cluster_weights(db), 1, exclude=busy + (old.cluster,),
-                                     seed=f"{old.id}-{old.version}")[0]
+    today = day_threads(db, old.plan_date)
+    busy = tuple(t.cluster for t in today) + (old.cluster,)
+    weights = cluster_weights(db)
+    # Другой сильный материал канала, под который найдётся кластер не из сегодняшних.
+    taken = {t.receiver_id for t in today if t.receiver_id}
+    mat, cluster = None, None
+    for m in pick_materials(db, old.plan_date, 6):
+        free = [c for c in (m.clusters or []) if c in schedule.CLUSTERS and c not in busy]
+        if m.id not in taken and free:
+            mat, cluster = m, max(free, key=lambda c: weights.get(c, 0))
+            break
+    if cluster is None:
+        cluster = schedule.pick_clusters(weights, 1, exclude=busy, seed=f"{old.id}-{old.version}")[0]
     template = schedule.pick_template(cluster, seed=old.id)
     spec = [{"slot": 0, "time": f"{old.slot_at.astimezone(tz()):%H:%M}", "cluster": cluster,
              "cluster_name": schedule.CLUSTERS[cluster].name, "template": template}]
-    recent = [t.topic for t in day_threads(db, old.plan_date) if t.topic]
+    if mat is not None:
+        spec[0]["material"] = receiver_dict(mat, full=True)
+    recent = [t.topic for t in today if t.topic]
     topics = agents.plan_topics(old.plan_date.isoformat(), spec, recent_topics=recent, reserve=[],
-                                donor_posts=donor_posts(db), receivers=[], facts=facts_texts(db))
+                                donor_posts=research_hits(db), receivers=[], facts=facts_texts(db))
     got = topics[0] if topics else {}
     new = FunnelThread(account_id=old.account_id, plan_date=old.plan_date, slot_at=old.slot_at,
                        cluster=cluster, template=template, topic=got.get("topic") or schedule.CLUSTERS[cluster].name,
-                       hypothesis=got.get("hypothesis") or "", kind="new", status="planned")
+                       hypothesis=got.get("hypothesis") or "", kind="new", status="planned",
+                       receiver_id=mat.id if mat else None)
     db.add(new)
     db.flush()
     return generate_thread(db, new)
@@ -985,6 +1364,23 @@ def _image_urls(t: FunnelThread) -> tuple[list[str], str | None]:
     return urls, None
 
 
+def queue_now(db: Session, thread_id: int) -> str:
+    """/now N: ветка выходит при ближайшем прогоне publish, не дожидаясь слота.
+    Сама команда редактора и есть ✅: черновик одобряется (⛔-проверки в силе)."""
+    t = get_thread(db, thread_id)
+    if t.status in ("draft", "failed", "reserve"):
+        msg = approve(db, t.id)
+        db.refresh(t)
+        if t.status != "approved":
+            return msg
+    if t.status != "approved":
+        return f"Ветка №{t.id} в статусе «{t.status}» — опубликовать нельзя."
+    t.slot_at = now_utc()
+    t.plan_date = t.slot_at.astimezone(tz()).date()
+    db.flush()
+    return "queued"
+
+
 def process_due(db: Session, thread_id: int, now: datetime) -> str:
     """Слот наступил: одобренная — выходит; без ответа — по FUNNEL_UNANSWERED."""
     t = get_thread(db, thread_id)
@@ -1035,8 +1431,7 @@ def publish_thread(db: Session, t: FunnelThread, now: datetime) -> str:
     from app.funnel.threads_api import ChainError, ThreadsError
 
     blockers = qa.blocking(t.qa)
-    if not t.link_url:
-        ensure_link(db, t)
+    ensure_link(db, t)                    # материал могли сменить после ✅ — ссылка в его канал
     if not t.link_url:
         blockers.append("нет ссылки в канал (CHANNEL_ID / CHANNEL_FALLBACK_LINK)")
     if blockers:
@@ -1335,7 +1730,23 @@ def weekly(db: Session, today: date, update_weights: bool) -> str:
     period = f"{start:%d.%m}–{(end - timedelta(days=1)):%d.%m}"
     return cards.weekly_report(period, totals if rows else {}, best, worst, clusters,
                                old, new if update_weights else {},
-                               {c: cl.name for c, cl in schedule.CLUSTERS.items()})
+                               {c: cl.name for c, cl in schedule.CLUSTERS.items()},
+                               calibration=forecast_calibration(db))
+
+
+def forecast_calibration(db: Session, days: int = 30) -> str:
+    """Средний прогноз у победителей и у остальных за 30 дней — видно, угадывает ли аналитик."""
+    rows = db.scalars(select(FunnelThread).where(FunnelThread.verdict.is_not(None),
+                                                 FunnelThread.published_at >= now_utc() - timedelta(days=days))).all()
+    pairs = [(((t.qa or {}).get("forecast") or {}).get("score"), t.verdict) for t in rows]
+    pairs = [(s, v) for s, v in pairs if s is not None]
+    if len(pairs) < 3:
+        return ""
+    win = [s for s, v in pairs if v == "winner"]
+    rest = [s for s, v in pairs if v != "winner"]
+    avg = lambda xs: sum(xs) / len(xs) if xs else 0  # noqa: E731
+    return (f"победители в среднем получали {avg(win):.1f}/10, остальные {avg(rest):.1f}/10 "
+            f"({len(pairs)} веток за {days} дней)")
 
 
 def refresh_account_token(db: Session) -> dict:

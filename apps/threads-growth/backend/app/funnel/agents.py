@@ -34,7 +34,16 @@ _STRS = {"type": "array", "items": _STR}
 _HOOK = _obj({"text": _STR, "mechanic": _STR, "needs_proof": _BOOL})
 
 PLAN_SCHEMA = _obj({"slots": {"type": "array", "items": _obj({
-    "slot": _INT, "topic": _STR, "hypothesis": _STR, "reserve_id": _INT})}})
+    "slot": _INT, "topic": _STR, "hypothesis": _STR, "reserve_id": _INT,
+    "evidence": {"type": "array", "items": _INT}})}})
+FORECAST_SCHEMA = _obj({
+    "score": {"type": "number"},
+    "verdict": _STR,
+    "why": _STRS,
+    "evidence": {"type": "array", "items": _obj({"id": _INT, "note": _STR})},
+    "risks": _STRS,
+    "boost": _STR,
+})
 THREAD_SCHEMA = _obj({
     "hooks": {"type": "array", "items": _HOOK},
     "posts": _STRS,
@@ -68,6 +77,10 @@ CLASSIFY_SCHEMA = _obj({
     "clusters": {"type": "array", "items": _INT},
 })
 REPLY_SCHEMA = _obj({"reply": _STR, "skip": _BOOL})
+CHANNEL_SCHEMA = _obj({"posts": {"type": "array", "items": _obj({
+    "id": _INT, "is_material": _BOOL, "reason": _STR, "title": _STR,
+    "kind": {"type": "string", "enum": ["prompts", "instruction", "assistant", "skill", "lesson", "case", "other"]},
+    "contents": _STR, "when": _STR, "clusters": {"type": "array", "items": _INT}})}})
 
 
 def _system(role: str) -> list[dict]:
@@ -139,7 +152,9 @@ def plan_topics(day: str, slots: list[dict], *, recent_topics: list[str], reserv
         "Темы последних двух недель (не повторять):\n" + ("\n".join(f"- {t}" for t in recent_topics) or "(нет)"),
         "Запас — пропущенные темы, можно взять (тогда reserve_id = id, иначе 0):\n"
         + (_dump(reserve) if reserve else "(пусто)"),
-        "Посты доноров с высоким откликом (только механика):\n" + (_dump(donor_posts) if donor_posts else "(нет)"),
+        "Исследование: посты, которые залетели за 30 дней (xn — во сколько раз сильнее обычного у автора). "
+        "Каждую тему обоснуй 1–3 id отсюда в evidence; механику бери, формулировки нет:\n"
+        + (_dump(donor_posts) if donor_posts else "(исследования ещё нет — evidence пустой)"),
         _context(settings.funnel_voice_level, facts, receivers),
     ])
     res = _structured("funnel_plan", payload, PLAN_SCHEMA, effort="medium")
@@ -211,6 +226,14 @@ def classify_receiver(url: str, description: str) -> dict:
     return _structured("funnel_receiver", payload, CLASSIFY_SCHEMA, effort="low")
 
 
+def classify_channel_posts(posts: list[dict]) -> list[dict]:
+    """Посты канала, которые зашли лучше обычного → какие из них бесплатная польза,
+    на которую можно вести из Threads (и что именно человек там получит)."""
+    payload = ("Посты каналов автора, которые отработали сильнее обычного (score — во сколько раз):\n"
+               + _dump(posts))
+    return _structured("funnel_channel", payload, CHANNEL_SCHEMA, effort="medium").get("posts") or []
+
+
 def draft_reply(thread_topic: str, thread_excerpt: str, comment: str, author: str, *, facts: list[str]) -> dict:
     payload = "\n\n".join([
         f"Ветка автора: {thread_topic}\n{thread_excerpt[:1500]}",
@@ -218,3 +241,16 @@ def draft_reply(thread_topic: str, thread_excerpt: str, comment: str, author: st
         _context(settings.funnel_voice_level, facts),
     ])
     return _structured("funnel_reply", payload, REPLY_SCHEMA, effort="low")
+
+
+def forecast_thread(thread: dict, *, hits: list[dict], flops: list[dict], history: list[dict]) -> dict:
+    """Прогноз виральности 0–10 с обоснованием по данным исследования и истории автора."""
+    payload = "\n\n".join([
+        "Ветка:\n" + _dump(thread),
+        "Доказанные хиты за 30 дней:\n" + (_dump(hits) if hits else "(исследования ещё нет)"),
+        "Провалы тех же авторов:\n" + (_dump(flops) if flops else "(нет данных)"),
+        "История наших веток (прогноз → факт через 48 ч):\n" + (_dump(history) if history else "(веток ещё не было)"),
+    ])
+    res = _structured("funnel_forecast", payload, FORECAST_SCHEMA, effort="medium")
+    res["score"] = max(0.0, min(10.0, round(float(res.get("score") or 0), 1)))
+    return res
