@@ -4,8 +4,8 @@
    готовые задачи, только дописывает к ним новые PR той же ветки. Удалённая задача не вернётся —
    её PR остаются в seen. Чтобы задача стала «ручной», перенесите её в tasks.js. */
 window.OFFICE_TASKS_AUTO = {
-  "since": "2026-10-29T09:47:13Z",
-  "seen": [148, 149, 150, 151, 152, 153, 154, 155, 156, 157, 158, 159, 160, 161, 162, 163, 164, 165, 166, 167, 168, 169, 170, 171, 172, 173, 174, 175, 176, 177],
+  "since": "2026-10-29T09:59:00Z",
+  "seen": [148, 149, 150, 151, 152, 153, 154, 155, 156, 157, 158, 159, 160, 161, 162, 163, 164, 165, 166, 167, 168, 169, 170, 171, 172, 173, 174, 175, 176, 177, 178],
   "tasks": [
     {
       "id": "gh-148",
@@ -207,6 +207,23 @@ window.OFFICE_TASKS_AUTO = {
       ],
       "group": "remake-site|claude/great-heisenberg-thk6rj",
       "prs": [173, 176, 177],
+      "auto": true
+    },
+    {
+      "id": "gh-178",
+      "date": "2026-10-29",
+      "dateNote": "слияние PR на GitHub",
+      "kind": "Продукт",
+      "dept": "ceo",
+      "people": ["ilia"],
+      "agents": ["product"],
+      "title": "Persona Studio: боевой запуск с автодеплоем, монтажом и новым оформлением",
+      "summary": "Persona Studio готова к работе на своём сервере: автоматическое обновление при каждом изменении, вход по ссылке, новые шрифты и 3D-иконки разделов, а в базе появилась поддержка монтажа видео.",
+      "proof": [
+        { "kind": "github", "label": "PR #178 · Claude/persona studio status p u6 yd", "url": "https://github.com/kleber2009-alt/ai-command-center/pull/178" }
+      ],
+      "group": "persona-studio|claude/persona-studio-status-pU6YD",
+      "prs": [178],
       "auto": true
     },
     {
