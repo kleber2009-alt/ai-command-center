@@ -8,3 +8,4 @@ venv/
 *.bak.*
 _bak/
 backups/
+pack/

@@ -18,14 +18,19 @@ cloudflared-туннель `kadrik.aicex.club`. Перенесён из `aicex-l
 ## Прод
 
 - Сервер `*.aicex.club` (тот же, что hq-office), пользователь `iliapaliy`, папка `/home/iliapaliy/studio-kadrik-bot`,
-  systemd-юнит `studio-kadrik-bot`. Рядом `@Productionskill_bot` и другие боты — делят `heavy_slot` и Claude-логин.
+  systemd-юнит `studio-kadrik-bot` (drop-in `own-env.conf`: запуск через `start.sh` своим `venv/`). Рядом другие боты — делят
+  `heavy_slot` и Claude-логин. `@Productionskill_bot` (Creator Pack) выведен: его 48 стилей — во вкладке «Монтаж» Кадрика.
 - На сервере и только там: `.env` (BOT_TOKEN, OWNER_ID, ALLOWED_IDS, MINIAPP_PUBLIC_URL, TUNNEL_CONFIG, SELL_MONTAGE,
   PERSONA_API_KEY, …), `data/` (`users.json` игроки, `ledger.jsonl` платежи/списания, `access.json`, `stats.json`),
-  `.review-venv`, `bot.log`. Задачи монтажа — `JOBS_DIR`. Каталог скиллов — `PACK_DIR` (`~/creator-pack-miniapp`).
+  `.review-venv`, `venv/`, `bot.log`. Задачи монтажа — `JOBS_DIR`. Каталог стилей — `PACK_DIR` = `pack/` в папке бота
+  (`public/skills.json`, `samples/`, `img/`; отдаются как `/samples/*` и `/pack/*`), сами скиллы — `~/.claude/skills`.
 - Деплой: `.github/workflows/deploy-studio-kadrik.yml`, только вручную. Режим `check` показывает diff с живым кодом,
   `deploy` — бэкап кода и `.env` в `/opt/studio-kadrik/backups`, установка bubblewrap (и профиля AppArmor на Ubuntu),
   `SANDBOX=bwrap` в `.env`, ключи из секретов GitHub, замена кода, рестарт, проверка порта, откат при сбое.
   `data/` и окружение Python деплой не трогает.
+- Вывод `@Productionskill_bot`: `deploy/retire_productionskill.sh`, режимы `retire-check` (только показать) и `retire` деплоя —
+  каталог из `~/creator-pack-miniapp` в `pack/`, свой `venv/`, drop-in, проверка Кадрика (откат при сбое), затем стоп юнитов
+  старого бота, бэкап его кода/.env/данных без видео в `/opt/studio-kadrik/backups/productionskill-*.tgz` и удаление папок.
 - Место на диске: `.github/workflows/cleanup-studio-kadrik.yml` раз в 2 дня (03:17 UTC) удаляет папки монтажей в `JOBS_DIR`,
   не менявшиеся больше 2 дней (служебные `_*` и папки, где что-то менялось недавно, остаются), кэши pip/yt-dlp/npm и старые
   релизы — `deploy/cleanup.sh`. Вручную — тот же workflow (свой срок) или режим `cleanup` деплоя (удалить свежие за N дней).
