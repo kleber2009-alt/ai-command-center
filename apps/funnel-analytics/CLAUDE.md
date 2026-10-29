@@ -14,4 +14,5 @@ one self-contained HTML dashboard. Not deployed; not in Command Center. See `REA
 - `update.py` refreshes all configured sources and rebuilds; `getcourse.py` exports paid deals with UTM.
 - Prod: own server, `deploy/setup-server.sh` installs a cron (every 3h: git pull + update.py) → `https://dashboard.aicex.club`;
   the GitHub workflow is manual-only
-  (public, optional basic auth via FUNNEL_DASHBOARD_PASSWORD; managed block in `/etc/caddy/Caddyfile`). `private/*.enc` is encrypted real data.
+  (password-protected: `deploy/protect.sh` sets the login, `setup-server.sh` keeps it from `/etc/funnel-analytics.auth`
+  and refuses to publish without one unless `FUNNEL_PUBLIC=1`; managed block in `/etc/caddy/Caddyfile`). `private/*.enc` is encrypted real data.

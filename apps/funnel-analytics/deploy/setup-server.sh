@@ -1,7 +1,9 @@
 #!/usr/bin/env bash
 # Дашборд «Академия нейросетей» на этом сервере: dashboard.aicex.club
-# Запуск под root: FUNNEL_DATA_KEY=... bash setup-server.sh  (config.json заранее в /opt/funnel-analytics-data)
+# Запуск под root: FUNNEL_DATA_KEY=... FUNNEL_DASHBOARD_PASSWORD=... bash setup-server.sh  (config.json заранее в /opt/funnel-analytics-data)
 # Ставит код, cron-обновление каждые 3 часа и сайт в Caddy/nginx. Можно запускать повторно.
+# Сайт открывается только по паролю: в дашборде финансы и выплаты. Пароль один раз — дальше хеш берётся из
+# /etc/funnel-analytics.auth (Caddy) или /etc/nginx/funnel-analytics.htpasswd (nginx). Сменить пароль: deploy/protect.sh.
 set -euo pipefail
 DOMAIN="dashboard.aicex.club"
 REPO=/opt/ai-command-center
@@ -52,17 +54,32 @@ chmod 644 /etc/cron.d/funnel-analytics
 
 echo "── 5/5 веб-сервер для $DOMAIN"
 TS=$(date +%Y%m%d_%H%M%S)
+AUTH=/etc/funnel-analytics.auth             # «логин bcrypt-хеш» для Caddy
+HTP=/etc/nginx/funnel-analytics.htpasswd    # «логин:хеш» для nginx
+DASH_USER="${FUNNEL_DASHBOARD_USER:-aicex}"
+no_password() { echo "Нужен пароль для дашборда: FUNNEL_DASHBOARD_PASSWORD=... bash setup-server.sh (FUNNEL_PUBLIC=1 — открыть всем)"; exit 1; }
 caddy_block() {
-  CF=/etc/caddy/Caddyfile; touch "$CF"; cp "$CF" "$CF.bak.$TS"
-  python3 - "$CF" "$DOMAIN" "$WEB" <<'PY'
-import re, sys
-cf, domain, web = sys.argv[1:]
+  CF=/etc/caddy/Caddyfile; touch "$CF"
+  if [ -n "${FUNNEL_DASHBOARD_PASSWORD:-}" ]; then
+    HASH=$(caddy hash-password --plaintext "$FUNNEL_DASHBOARD_PASSWORD"); [ -n "$HASH" ] || no_password
+    (umask 077; printf '%s %s\n' "$DASH_USER" "$HASH" > "$AUTH")
+  fi
+  [ -s "$AUTH" ] || [ "${FUNNEL_PUBLIC:-}" = 1 ] || no_password
+  cp "$CF" "$CF.bak.$TS"
+  python3 - "$CF" "$DOMAIN" "$WEB" "$AUTH" <<'PY'
+import os, re, sys
+cf, domain, web, auth = sys.argv[1:]
 s = open(cf).read()
 s = re.sub(r"\n?# >>> funnel-analytics.*?# <<< funnel-analytics\n?", "\n", s, flags=re.S)
+login = ""
+if os.path.exists(auth) and os.path.getsize(auth):
+    user, h = open(auth).read().split()[:2]
+    login = f"\tbasic_auth {{\n\t\t{user} {h}\n\t}}\n"
 block = (f"\n# >>> funnel-analytics\n{domain} {{\n\troot * {web}\n\theader Cache-Control \"no-store\"\n"
-         f"\theader X-Robots-Tag \"noindex, nofollow\"\n\tfile_server\n}}\n# <<< funnel-analytics\n")
+         f"\theader X-Robots-Tag \"noindex, nofollow\"\n{login}\tfile_server\n}}\n# <<< funnel-analytics\n")
 open(cf, "w").write(s.rstrip("\n") + "\n" + block)
 PY
+  caddy validate --config "$CF" --adapter caddyfile >/dev/null 2>&1 || sed -i 's/^\tbasic_auth {/\tbasicauth {/' "$CF"
   if caddy validate --config "$CF" --adapter caddyfile >/dev/null 2>&1; then
     systemctl reload caddy || systemctl restart caddy
     echo "Caddy: $DOMAIN подключён (сертификат выпустится сам, когда DNS укажет на этот сервер)"
@@ -74,6 +91,13 @@ if command -v caddy >/dev/null; then
   caddy_block
 elif command -v nginx >/dev/null; then
   NG=/etc/nginx/conf.d/funnel-analytics.conf
+  if [ -n "${FUNNEL_DASHBOARD_PASSWORD:-}" ]; then
+    HASH=$(printf '%s' "$FUNNEL_DASHBOARD_PASSWORD" | openssl passwd -6 -stdin); [ -n "$HASH" ] || no_password
+    (umask 077; printf '%s:%s\n' "$DASH_USER" "$HASH" > "$HTP")
+    chown root:www-data "$HTP" 2>/dev/null || true; chmod 640 "$HTP"
+  fi
+  [ -s "$HTP" ] || [ "${FUNNEL_PUBLIC:-}" = 1 ] || no_password
+  LOGIN=""; [ -s "$HTP" ] && LOGIN="auth_basic \"AICEX\"; auth_basic_user_file $HTP;"
   [ -f "$NG" ] && cp "$NG" "$NG.bak.$TS"
   cat > "$NG" <<NGX
 server {
@@ -83,6 +107,7 @@ server {
   index index.html;
   add_header Cache-Control "no-store";
   add_header X-Robots-Tag "noindex, nofollow";
+  $LOGIN
 }
 NGX
   if nginx -t >/dev/null 2>&1; then systemctl reload nginx; echo "nginx: $DOMAIN подключён по http"

@@ -137,7 +137,10 @@ utm_source=facebook&utm_medium={{placement}}&utm_campaign={{campaign.id}}&utm_te
 `/opt/ai-command-center`, кладёт данные в `/opt/funnel-analytics-data` (0700), включает cron каждые 3 часа
 (`/usr/local/bin/funnel-analytics-update`: git pull → расшифровка данных контента → `update.py`) и подключает
 сайт в Caddy или nginx (бэкап конфига, проверка, при ошибке откат). Лог: `/var/log/funnel-analytics.log`.
-Ключи API (Meta, GetCourse) — в `/etc/funnel-analytics.env`. Сайт открыт без пароля, `noindex`.
+Ключи API (Meta, GetCourse) — в `/etc/funnel-analytics.env`. Сайт `noindex` и открывается только по паролю:
+в нём финансы и выплаты сотрудникам. Включить или сменить пароль — `deploy/protect.sh` на сервере (спросит пароль,
+хеш кладёт в `/etc/funnel-analytics.auth`, логин `aicex`). `setup-server.sh` берёт пароль из этого файла или из
+`FUNNEL_DASHBOARD_PASSWORD` и без него сайт не публикует (`FUNNEL_PUBLIC=1` — открыть всем).
 Данные вкладки «Контент» лежат в репо зашифрованными (`private/content.json.gz.enc`).
 
 DNS: зона `aicex.club` в Cloudflare — запись `A dashboard → <IP сервера>`, режим «DNS only».
