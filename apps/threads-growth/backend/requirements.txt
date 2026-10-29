@@ -11,6 +11,7 @@ cryptography>=42
 anthropic>=2.3
 apify-client>=1.7
 telethon>=1.36             # статистика закрытого канала автора (app/funnel/channel.py)
+qrcode>=7.4               # QR для входа в Telegram (python -m app.funnel.channel login)
 voyageai>=0.3
 python-dotenv>=1.0
 python-telegram-bot[job-queue]==22.8

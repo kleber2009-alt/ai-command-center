@@ -16,7 +16,7 @@
 просмотры ещё набираются.
 
 Источники — CHANNEL_STATS_SOURCES: «ai_razbory,-1001843525349».
-Вход в Telegram один раз:  docker compose run --rm api python -m app.funnel.channel login
+Вход в Telegram один раз (QR):  docker compose run --rm -it api python -m app.funnel.channel login
 Проверка чистой логики:     python -m app.funnel.channel
 """
 from __future__ import annotations
@@ -206,17 +206,54 @@ def human(n: int) -> str:
 
 
 # ── Вход в Telegram (один раз) ───────────────────────────────────────────────
-def login() -> None:
+def login(qr: bool = True) -> None:
+    """Вход в Telegram один раз. По умолчанию — QR-кодом (Telegram → Настройки →
+    Устройства → Подключить устройство): код в чат не нужен. `login code` — по коду."""
     if not (settings.tg_api_id and settings.tg_api_hash):
         raise SystemExit("Сначала TG_API_ID и TG_API_HASH в .env (my.telegram.org → API development tools).")
+    import getpass
+
+    from telethon.errors import SessionPasswordNeededError
     from telethon.sessions import StringSession
     from telethon.sync import TelegramClient
 
-    with TelegramClient(StringSession(), settings.tg_api_id, settings.tg_api_hash) as client:
+    client = TelegramClient(StringSession(), settings.tg_api_id, settings.tg_api_hash)
+    client.connect()
+    try:
+        if qr:
+            while True:
+                q = client.qr_login()
+                _print_qr(q.url)
+                print("Телефон: Telegram → Настройки → Устройства → «Подключить устройство» и наведите камеру "
+                      "на QR выше. Код обновляется раз в 30 секунд.")
+                try:
+                    client.loop.run_until_complete(q.wait(timeout=30))   # QRLogin telethon.sync не оборачивает
+                    break
+                except SessionPasswordNeededError:
+                    client.sign_in(password=getpass.getpass("Пароль двухэтапной проверки (ввод скрыт): "))
+                    break
+                except TimeoutError:
+                    print("\nНе успели — показываю новый QR.\n")
+        else:
+            client.start()
         me = client.get_me()
         session = client.session.save()
+    finally:
+        client.disconnect()
     print(f"\nВошли как {me.first_name} (@{me.username}). Добавьте в .env одну строку:\n\nTG_SESSION={session}\n\n"
           "Эта строка = доступ к вашему Telegram: не пересылайте её никому.")
+
+
+def _print_qr(url: str) -> None:
+    try:
+        import qrcode
+
+        q = qrcode.QRCode(border=2)
+        q.add_data(url)
+        q.make(fit=True)
+        q.print_ascii(invert=True)
+    except ImportError:
+        print(f"QR-ссылка (откройте в генераторе QR): {url}")
 
 
 def _selftest() -> None:
@@ -250,7 +287,7 @@ def _selftest() -> None:
 if __name__ == "__main__":
     import sys
 
-    if sys.argv[1:] == ["login"]:
-        login()
+    if sys.argv[1:2] == ["login"]:
+        login(qr=sys.argv[2:3] != ["code"])
     else:
         _selftest()
