@@ -1073,7 +1073,7 @@ const HAS={funnel:true,fin:FIN.length>0,content:!!(CT&&CT.pubs&&CT.pubs.length)}
 (D.embeds||[]).forEach((e,i)=>{const id='emb'+i;HAS[id]=true;
   $('embedTabs').insertAdjacentHTML('beforeend',`<button class="tab" data-t="${id}">${esc(e.title)}</button>`);
   $('embedPanes').insertAdjacentHTML('beforeend',`<section class="tabpane" id="tab-${id}">
-    <p class="h2note" style="margin:12px 0 8px">${e.note?esc(e.note)+' · ':''}копия от ${esc(e.fetched)}${e.url?` · <a class="prev" href="${esc(e.url)}" target="_blank" rel="noopener">открыть оригинал ↗</a>`:''}</p>
+    <p class="h2note" style="margin:12px 0 8px">${e.note?esc(e.note)+' · ':''}копия от ${esc(e.fetched)}</p>
     <iframe class="embed" title="${esc(e.title)}" sandbox="allow-scripts allow-popups allow-popups-to-escape-sandbox" referrerpolicy="no-referrer"></iframe></section>`);
   // sandboxed frames have no storage: give the page an in-memory localStorage so its scripts keep running
   const shim='<script>(function(){try{window.localStorage.length}catch(_){var d={};var s={getItem:function(k){return k in d?d[k]:null},setItem:function(k,v){d[k]=String(v)},removeItem:function(k){delete d[k]},clear:function(){d={}},key:function(i){return Object.keys(d)[i]||null},get length(){return Object.keys(d).length}};try{Object.defineProperty(window,"localStorage",{value:s});Object.defineProperty(window,"sessionStorage",{value:s})}catch(e){}}})()<\/script>';
