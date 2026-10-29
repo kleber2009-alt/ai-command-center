@@ -13,6 +13,6 @@
 
 Чтобы посмотреть локально, запусти `python3 -m http.server` в этой папке и открой `http://localhost:8000/#/pulse`.
 
-Деплой — `.github/workflows/deploy-aisales-crm.yml`, домен `crm.aicex.club` (переменная `AISALES_CRM_DOMAIN`). Если домен уже обслуживает старый конфиг, `server.sh` выводит этот конфиг и останавливается, ничего не меняя. Подменить его можно только ручным запуском workflow с `allow_takeover`.
+Деплой — `.github/workflows/deploy-aisales-crm.yml`, домен `crm.aicex.club` (переменная `AISALES_CRM_DOMAIN`). Раньше crm.aicex.club был описан в общем `/opt/edge/sites/aicex.caddy`. `server.sh` вырезает оттуда ровно этот блок (копия файла сохраняется в `/opt/aisales-crm/`) и пишет свой `/opt/edge/sites/aisales-crm.caddy`. В нём `/api/*` и `/webhooks/*` по-прежнему ведут на `aicex-sales-api`, а старые пути `/06-dashboard-prototype/`, `/01-portal/` — на старую статику. Если домен описан как-то иначе, скрипт останавливается и ничего не трогает. Если Caddy не принимает новый конфиг, оба файла возвращаются как были.
 
 Следующий шаг: заменить `data.js` живыми данными. Диалоги и клиенты будут приходить из ChatPlace через `apps/ig-agent` (синхронизация `chats_list` и `chats_messages`). Разметку при этом менять не нужно: экраны читают только `window.CRM_DATA`.

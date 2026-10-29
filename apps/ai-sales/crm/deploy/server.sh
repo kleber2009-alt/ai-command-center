@@ -7,9 +7,11 @@
 # Container aicex-aisales-crm (caddy, static) on the shared `edge` network.
 # The edge Caddy gets /opt/edge/sites/aisales-crm.caddy (validate → reload, restore on failure).
 #
-# Takeover guard: if <domain> is already served by another edge config (the old 06-dashboard-prototype
-# site), that config is printed and the script stops before touching the edge — nothing changes on prod.
-# Rerun with ALLOW_TAKEOVER=1 only after that config has been reviewed and moved aside.
+# Takeover: crm.aicex.club used to live in the shared /opt/edge/sites/aicex.caddy as
+#   crm.aicex.club { import aisales_routes; redir / /06-dashboard-prototype/pulse.html }
+# That exact block is cut out (aicex.caddy backed up first) and replaced by our site file, which keeps
+# /api/* and /webhooks/* on aicex-sales-api and the old prototype paths on aicex-sales-static.
+# Any other definition of the domain is printed and the script stops before touching the edge.
 set -euo pipefail
 DOMAIN="${1:?usage: server.sh <domain> <release>}"
 REL="${2:?usage: server.sh <domain> <release>}"
@@ -21,11 +23,17 @@ EDGE="${EDGE_CADDY:-persona-studio-caddy-1}"
 [ -f "$ROOT/releases/$REL/index.html" ] || { echo "✗ release $REL not uploaded"; exit 1; }
 
 # ── guard: who serves the domain today ──
+SHARED=/opt/edge/sites/aicex.caddy
+LEGACY_BLOCK=$(printf '%s {\n\timport aisales_routes\n\tredir / /06-dashboard-prototype/pulse.html\n}' "$DOMAIN")
+current_block() { awk -v d="$DOMAIN {" '$0 == d { on = 1 } on { print } on && $0 == "}" { exit }' "$SHARED" 2>/dev/null; }
 OTHERS=$(grep -rlF "$DOMAIN" /opt/edge 2>/dev/null | grep -vxF "$SITE" | grep -v '\.bak' || true)
 INLINE=$(docker exec "$EDGE" sh -c "grep -nF '$DOMAIN' /etc/caddy/Caddyfile" 2>/dev/null || true)
-if { [ -n "$OTHERS" ] || [ -n "$INLINE" ]; } && [ "${ALLOW_TAKEOVER:-0}" != 1 ]; then
-  echo "✗ $DOMAIN is already served by another edge config — not touching the edge."
-  for f in $OTHERS; do echo "=== $f"; cat "$f"; done
+CUT=0
+if [ "$OTHERS" = "$SHARED" ] && [ -z "$INLINE" ] && [ "$(current_block)" = "$LEGACY_BLOCK" ]; then
+  CUT=1
+elif [ -n "$OTHERS" ] || [ -n "$INLINE" ]; then
+  echo "✗ $DOMAIN is served by an edge config this script does not know — not touching the edge."
+  for f in $OTHERS; do echo "=== $f"; grep -nF -A4 "$DOMAIN" "$f"; done
   [ -n "$INLINE" ] && { echo "=== edge /etc/caddy/Caddyfile"; echo "$INLINE"; }
   exit 1
 fi
@@ -38,8 +46,6 @@ docker network inspect edge >/dev/null
 cat > "$ROOT/static.Caddyfile" <<'CADDY'
 :8080 {
 	root * /srv/current
-	@assets path /assets/*
-	header @assets Cache-Control "public, max-age=300"
 	header Cache-Control "no-cache"
 	file_server
 }
@@ -57,9 +63,40 @@ for i in $(seq 1 15); do
 done
 
 TMP=$(mktemp)
-printf '# AI Sales CRM — managed by .github/workflows/deploy-aisales-crm.yml\n%s {\n\tencode zstd gzip\n\treverse_proxy %s:8080\n}\n' "$DOMAIN" "$NAME" > "$TMP"
-if [ -f "$SITE" ] && cmp -s "$TMP" "$SITE"; then rm -f "$TMP"; echo "✓ edge site unchanged"; exit 0; fi
+cat > "$TMP" <<CADDY
+# AI Sales CRM — managed by .github/workflows/deploy-aisales-crm.yml
+$DOMAIN {
+	encode zstd gzip
+	handle_path /api/* {
+		reverse_proxy aicex-sales-api:8000
+	}
+	handle /webhooks/* {
+		reverse_proxy aicex-sales-api:8000
+	}
+	@legacy path /06-dashboard-prototype/* /01-portal/* /05-docs/* /carousels/* /reels/*
+	handle @legacy {
+		reverse_proxy aicex-sales-static:8080
+	}
+	handle {
+		reverse_proxy $NAME:8080
+	}
+}
+CADDY
+if [ "$CUT" = 0 ] && [ -f "$SITE" ] && cmp -s "$TMP" "$SITE"; then rm -f "$TMP"; echo "✓ edge site unchanged"; exit 0; fi
 [ -f "$SITE" ] && cp "$SITE" "$SITE.bak"
+if [ "$CUT" = 1 ]; then
+  BAK="$ROOT/aicex.caddy.bak.$(date -u +%Y%m%d_%H%M%S)"
+  cp "$SHARED" "$BAK"
+  # drop the legacy block (and its comment line) from the shared file
+  awk -v d="$DOMAIN {" '
+    $0 == d { skip = 1; if (held ~ /^# AI Sales CRM dashboard/) has = 0; next }
+    skip { if ($0 == "}") skip = 0; next }
+    { if (has) print held; held = $0; has = 1 }
+    END { if (has) print held }' "$BAK" > "$SHARED.tmp"
+  grep -qF "$DOMAIN" "$SHARED.tmp" && { rm -f "$SHARED.tmp"; echo "✗ could not cut $DOMAIN from $SHARED"; exit 1; }
+  install -m 644 "$SHARED.tmp" "$SHARED"; rm -f "$SHARED.tmp"
+  echo "✓ legacy $DOMAIN block cut from $SHARED (backup $BAK)"
+fi
 install -m 644 "$TMP" "$SITE"; rm -f "$TMP"
 if docker exec "$EDGE" caddy validate --config /etc/caddy/Caddyfile --adapter caddyfile >/dev/null 2>&1; then
   docker exec "$EDGE" caddy reload --config /etc/caddy/Caddyfile --adapter caddyfile
@@ -67,6 +104,7 @@ if docker exec "$EDGE" caddy validate --config /etc/caddy/Caddyfile --adapter ca
 else
   docker exec "$EDGE" caddy validate --config /etc/caddy/Caddyfile --adapter caddyfile 2>&1 | tail -5 || true
   if [ -f "$SITE.bak" ]; then mv "$SITE.bak" "$SITE"; else rm -f "$SITE"; fi
-  echo "✗ edge caddy config invalid — site file restored, nothing else changed"
+  [ "$CUT" = 1 ] && cp "$BAK" "$SHARED"
+  echo "✗ edge caddy config invalid — edge files restored, nothing else changed"
   exit 1
 fi
