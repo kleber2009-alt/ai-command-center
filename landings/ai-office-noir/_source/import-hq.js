@@ -32,9 +32,11 @@ for (const d of CFG.depts) {
   for (const id of d.agents) {
     const k = CAT[id], c = AC[id] || {}, ov = (CFG.agents || {})[id] || {};
     const g = pics(c).slice(0, 4), sk = c.skills || [];
+    // agents not seated in the 3D office (no render) fall back to their own work, then to the department shot
+    const own = `img/agent-${id}.jpg`, img = fs.existsSync(path.join(__dirname, '..', own)) ? own : g[0] || 'img/marketing.jpg';
     items.push({
       id, name: ov.name || k.name, role: ov.role || k.role, group: SHORT[d.id], dept: d.name, kind: 'agent', color: k.color,
-      img: `img/agent-${id}.jpg`, gallery: [`img/agent-${id}.jpg`].concat(g),
+      img, gallery: [img].concat(g.filter(x => x !== img)),
       tag: STATUS[ov.status || k.status], tagStyle: (ov.status || k.status) === 'working' ? '' : 'ghost',
       meta: [SHORT[d.id], `${sk.length} скиллов`], price: ov.task || k.task, sub: k.role,
       about: c.lead || k.role, features: sk.map(s => s.title), spec: (c.process || []).map(s => [s.t, s.d]),
@@ -54,7 +56,7 @@ const marquee = TASKS.slice(0, 10).map(t => {
   const who = (t.agents || []).find(id => CAT[id]), boss = (t.people || []).find(id => items.some(i => i.id === id));
   const label = t.proof[0].label.split(' · ')[0].slice(0, 42);
   return { text: t.title, name: SHORT[t.dept] || t.kind, sub: `${ru(t.date)} · ${label}`, url: t.proof[0].url,
-    img: who ? `img/agent-${who}.jpg` : boss ? `img/head-${boss}.jpg` : '', mono: (SHORT[t.dept] || 'A')[0] };
+    img: who && items.find(i => i.id === who) ? items.find(i => i.id === who).img : boss ? `img/head-${boss}.jpg` : '', mono: (SHORT[t.dept] || 'A')[0] };
 });
 const uniq = new Set(); Object.values(AC).forEach(c => (c.skills || []).forEach(k => uniq.add(k.name)));
 const stats = { depts: CFG.depts.length, agents: items.filter(i => i.kind === 'agent').length, heads: CFG.depts.length,
