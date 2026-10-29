@@ -9,6 +9,7 @@
      PUT  /api/runs/<slug>         документ прогона (JSON-объект до 1 МБ)       — Authorization: Bearer <REMAKE_SITE_TOKEN>
      PUT  /api/media/<file>        кадр или видео (jpg/png/webp/mp4, до 60 МБ)   — то же; отдаёт Caddy по /media/<file>
      /api/studio/*                 студия: референс → расшифровка → сценарий → аватар HeyGen → монтаж Кадрика (studio.mjs, вход по паролю)
+     Telegram                      ветка «Instagram Reels»: залёты → карточки → ✅ → готовый рилс файлом (reels-bot.mjs, REMAKE_TG_BOT_TOKEN)
 
    Env: REMAKE_SITE_TOKEN (без него запись выключена), DATA_DIR (runs/, media/, state.json; по умолчанию ./data),
    PORT (8790), SERVE_STATIC=<папка> — заодно отдавать страницу и /media для локального запуска. */
@@ -17,6 +18,7 @@ import fs from 'node:fs';
 import path from 'node:path';
 import crypto from 'node:crypto';
 import { createStudio } from './studio.mjs';
+import { createReelsBot } from './reels-bot.mjs';
 
 const PORT = Number(process.env.PORT || 8790);
 const DATA = path.resolve(process.env.DATA_DIR || './data');
@@ -30,7 +32,7 @@ const MAX_RUN = 1 << 20, MAX_MEDIA = 60 << 20, LIST = 30;
 const TYPES = { '.html': 'text/html; charset=utf-8', '.jpg': 'image/jpeg', '.jpeg': 'image/jpeg', '.png': 'image/png', '.webp': 'image/webp', '.mp4': 'video/mp4', '.json': 'application/json',
   '.mov': 'video/quicktime', '.m4v': 'video/mp4', '.webm': 'video/webm', '.mkv': 'video/x-matroska', '.zip': 'application/zip' };
 for (const d of [RUNS, MEDIA]) fs.mkdirSync(d, { recursive: true });
-let studio = null;  // assigned once send/receive exist
+let studio = null, reels = { enabled: false };  // assigned once send/receive exist
 
 const send = (res, code, body, type = 'application/json; charset=utf-8') => {
   res.writeHead(code, { 'Content-Type': type, 'Cache-Control': 'no-store', 'X-Content-Type-Options': 'nosniff' });
@@ -106,7 +108,7 @@ const server = http.createServer(async (req, res) => {
   const url = new URL(req.url, 'http://x');
   const p = decodeURIComponent(url.pathname);
   try {
-    if (p === '/api/health') return send(res, 200, { ok: true, runs: fs.readdirSync(RUNS).filter((f) => f.endsWith('.json')).length, writable: Boolean(TOKEN), studio: studio.enabled });
+    if (p === '/api/health') return send(res, 200, { ok: true, runs: fs.readdirSync(RUNS).filter((f) => f.endsWith('.json')).length, writable: Boolean(TOKEN), studio: studio.enabled, reels: reels.enabled ? reels.status() : false });
     if (p.startsWith('/api/studio/')) return await studio.handle(req, res, p, url);
     if (p === '/api/runs' && req.method === 'GET') return send(res, 200, listRuns());
     let m = /^\/api\/runs\/([^/]+)$/.exec(p);
@@ -133,5 +135,6 @@ const server = http.createServer(async (req, res) => {
   }
 });
 studio = createStudio({ data: DATA, media: MEDIA, send, receive });
+reels = createReelsBot({ studio: studio.bot, data: DATA });
 server.requestTimeout = 30 * 60 * 1000;  // a 700 MB reference over a slow uplink
-server.listen(PORT, () => console.log(`remake-site api :${PORT} · data ${DATA} · ${TOKEN ? 'запись по токену' : 'только чтение'} · студия ${studio.enabled ? 'по паролю' : 'закрыта'} ${JSON.stringify(studio.services())}`));
+server.listen(PORT, () => console.log(`remake-site api :${PORT} · ветка Reels ${reels.enabled ? 'включена' : 'выключена (нет REMAKE_TG_BOT_TOKEN)'} · data ${DATA} · ${TOKEN ? 'запись по токену' : 'только чтение'} · студия ${studio.enabled ? 'по паролю' : 'закрыта'} ${JSON.stringify(studio.services())}`));

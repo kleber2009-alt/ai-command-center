@@ -1,7 +1,7 @@
 #!/usr/bin/env bash
 # Build the site release into apps/remake-site/dist/: index.html is the page body (the same file is published as the
 # claude.ai artifact, which adds its own document shell), so here it gets a plain document around it. Next to it — the API
-# image context (Dockerfile, server.mjs, studio.mjs, package*.json) and skill/: the remake-top-reel files the studio runs
+# image context (Dockerfile, server.mjs, studio.mjs, reels-bot.mjs, package*.json) and skill/: the remake-top-reel files the studio runs
 # (config.json, scripts/*.py for the script gate and the code word, references/script-rules.md for Claude).
 #   bash apps/remake-site/deploy/build.sh
 set -euo pipefail
@@ -19,7 +19,7 @@ rm -rf "$OUT" && mkdir -p "$OUT"
   printf '\n</body>\n</html>\n'
 } > "$OUT/index.html"
 cp -R "$APP/seed" "$OUT/seed"
-cp "$APP/server.mjs" "$APP/studio.mjs" "$APP/package.json" "$APP/package-lock.json" "$APP/Dockerfile" "$APP/.dockerignore" "$OUT/"
+cp "$APP/server.mjs" "$APP/studio.mjs" "$APP/reels-bot.mjs" "$APP/package.json" "$APP/package-lock.json" "$APP/Dockerfile" "$APP/.dockerignore" "$OUT/"
 mkdir -p "$OUT/skill/scripts" "$OUT/skill/references"
 cp "$SKILL/config.json" "$OUT/skill/"
 cp "$SKILL"/scripts/*.py "$OUT/skill/scripts/"

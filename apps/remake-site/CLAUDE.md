@@ -8,6 +8,10 @@
   расшифровка → сценарий как есть, поправленный или «Сценарий 2.0» от Claude по правилам скилла → образ и голос из
   своего HeyGen → монтаж скиллом Студии Кадрика → скачать рилс 1080×1920 (и аватара без монтажа).
 
+- **Ветка «Instagram Reels»** в Telegram (`reels-bot.mjs`) — связка как у Threads: каждое утро ищет залёты у конкурентов
+  (нет конкурентов — в своём аккаунте), уникализирует хук и сценарий и шлёт карточки в ветку; «✅ Одобрено» → HeyGen →
+  монтаж Кадрика → готовое видео файлом в ветку.
+
 ## Файлы
 
 - `index.html` — одна страница на два места. Это **тело** документа: в claude.ai его публикуют как артефакт
@@ -32,6 +36,16 @@
   - монтаж: Студия Кадрика, `POST {KADRIK_URL}/api/ext/jobs` (Bearer = `PERSONA_API_KEY` Кадрика) с публичной ссылкой на
     видео аватара, сценарием, кодовым словом и пожеланиями; результат — `GET …/result`. Стили — каталог Кадрика
     (`skills.json` Creator Pack + установленные `~/.claude/skills`, только видео 9:16), топ-3 из `config.json` скилла первыми.
+- `reels-bot.mjs` — Telegram-ветка «Instagram Reels» поверх шагов студии (`studio.bot`: те же источник/расшифровка/сценарий/
+  аватар/монтаж, слушатель шагов `on`). Свой бот `REMAKE_TG_BOT_TOKEN`, long polling (токен нигде больше не поллить).
+  Поиск — Apify `instagram-scraper` по `REELS_COMPETITORS`/`/competitors add` (пусто → `instagram.username` скилла), сила =
+  просмотры / медиана автора (как xn в Threads), не младше 2 дней, 12–120 с, взятые за `scan.reuse_after_days` — мимо;
+  меньше 30 слов в расшифровке — не говорящая голова, берётся следующий. Карточка: залёт, разбор, хук «было → стало»,
+  сценарий 2.0, проверка скилла, стиль (ротация из `config.json`). Кнопки ✅ / 🔄 Другой хук / 🎨 Стиль / 🗑, ответ
+  текстом — переписать с пожеланием, ссылка на рилс в ветке — сразу в работу. Видео >49 МБ пережимается ffmpeg, не
+  вышло — ссылка `media/…`. `/bind` в ветке — привязать её и переименовать в `REELS_TOPIC_NAME` (боту нужен админ с
+  «Управлением темами»); кнопки жмут `REMAKE_TG_OWNER_IDS` или тот, кто первым сделал `/bind`. Состояние —
+  `DATA_DIR/reels/state.json`, ролики ветки видны и в студии сайта. Поиск — раз в день в `REELS_HOUR` (`REELS_TZ`), `/scan` — сейчас.
 - `Dockerfile` — образ API: node 22 + ffmpeg + python3 + свежий yt-dlp + `npm ci`; `skill/` кладёт `deploy/build.sh`
   (config.json, scripts/*.py, references/script-rules.md из скилла).
 - Пишет прогоны скилл: `report.py <slug> --media ключ=файл … --push` (токен — окружение или профиль оболочки).
@@ -57,4 +71,4 @@ REMAKE_SITE_PASSWORD=p REMAKE_SITE_TOKEN=t DATA_DIR=/tmp/rs SERVE_STATIC=dist no
 
 Ключи студии — те же переменные (`HEYGEN_API_KEY`, `ELEVENLABS_API_KEY`, `ANTHROPIC_API_KEY`, `KADRIK_URL`,
 `KADRIK_API_KEY`, `KADRIK_PACK`, `KADRIK_SKILLS`, `PUBLIC_URL`); для заглушек — `HEYGEN_API_BASE`, `ELEVENLABS_API_BASE`,
-`ANTHROPIC_BASE_URL`. Нужны ffmpeg, python3 и yt-dlp в `PATH`.
+`ANTHROPIC_BASE_URL`, `TELEGRAM_API_BASE`, `APIFY_API_BASE`. Нужны ffmpeg, python3 и yt-dlp в `PATH`.

@@ -150,6 +150,7 @@ export function createStudio({ data, media, send, receive }) {
   const busy = new Set();
   const fails = new Map();  // ip → {n, t}: login attempts
   const cache = {};
+  const listeners = [];  // the Telegram reels bot follows its clips' steps (reels-bot.mjs)
 
   for (const f of fs.readdirSync(DIR)) {
     if (!f.endsWith('.json')) continue;
@@ -174,6 +175,7 @@ export function createStudio({ data, media, send, receive }) {
     j.steps[id] = { state, note: String(note || '').slice(0, 400), at: now() };
     if (note) log(j, note);
     save(j);
+    for (const f of listeners) { try { f(j, id, state); } catch (e) { console.error('studio listener:', e.message); } }
   }
   const view = (j) => j && { ...j, key: undefined };
 
@@ -251,6 +253,21 @@ export function createStudio({ data, media, send, receive }) {
       } catch (e) { tried.push(e.message.slice(0, 200)); }
     }
     throw new Error(`по ссылке не скачалось (${tried.join('; ')}). Скачай видео и загрузи файлом.`);
+  }
+
+  // a direct video link (Apify's CDN url from the reels scan); the page link is the fallback
+  async function fromVideo(j, videoUrl, meta = {}) {
+    step(j, 'source', 'run', 'скачиваю видео');
+    if (videoUrl) {
+      try {
+        mclear(j, 'source');
+        const name = mfile(j, 'source', 'mp4');
+        await download(videoUrl, mpath(name), { max: MAX_SRC });
+        return await sourceReady(j, name, meta);
+      } catch (e) { log(j, `прямая ссылка не скачалась (${e.message}) — пробую по ссылке на рилс`); }
+    }
+    if (!meta.url) throw new Error('нет ссылки на видео');
+    return fromLink(j, meta.url);
   }
 
   // ---------- 2. transcript ----------
@@ -789,5 +806,20 @@ export function createStudio({ data, media, send, receive }) {
     return send(res, 404, { error: 'нет такого действия' });
   }
 
-  return { handle, services, enabled: Boolean(SECRET) };
+  // the same steps for the Telegram reels bot (reels-bot.mjs): no HTTP, the bot owns approval
+  const bot = {
+    get: (id) => jobs.get(id),
+    list: () => [...jobs.values()],
+    on: (f) => listeners.push(f),
+    save, log, newJob, removeJob, skillConfig, engineToday, styles,
+    busy: (j, id) => busy.has(`${j.id}:${id}`) || j.steps[id]?.state === 'run',
+    source: (j, videoUrl, meta) => bg(j, 'source', () => fromVideo(j, videoUrl, meta)),
+    rewrite: (j, wish = '') => bg(j, 'script', () => rewrite(j, wish)),
+    avatar: (j, b) => avatarStart(j, b),
+    montage: (j, b) => montageStart(j, b),
+    ready: { heygen: Boolean(HEYGEN), claude: Boolean(ANTHROPIC), kadrik: Boolean(KADRIK_KEY), apify: Boolean(APIFY) },
+    apify: APIFY, publicUrl: PUBLIC_URL, mpath, probe, run,
+  };
+
+  return { handle, services, enabled: Boolean(SECRET), bot };
 }

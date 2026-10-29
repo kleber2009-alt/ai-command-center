@@ -16,6 +16,10 @@ name: deploy-remake-site
 # REMAKE_OPENAI_API_KEY | TRANSCRIBE_OPENAI_API_KEY (fallback transcription); REMAKE_ANTHROPIC_API_KEY |
 # HQ_OFFICE_ANTHROPIC_API_KEY | STUDIO_KADRIK_ANTHROPIC_API_KEY (script 2.0); REMAKE_APIFY_TOKEN | WORKER_APIFY_API_TOKEN |
 # TRANSCRIBE_APIFY_API_TOKEN (Instagram links when yt-dlp is blocked).
+# Telegram topic «Instagram Reels» (reels-bot.mjs): secret REMAKE_TG_BOT_TOKEN — a bot of its own (it long-polls, so the
+# token must not be polled anywhere else); without it the topic is off. Variables: REMAKE_TG_OWNER_IDS (who may press the
+# buttons; falls back to TG_AGENT_OWNER_TELEGRAM_ID), REMAKE_TG_CHAT_ID / REMAKE_TG_TOPIC_ID (optional — /bind in the topic
+# does the same), REELS_COMPETITORS (@nicks, comma-separated starting list), REELS_PER_DAY, REELS_HOUR.
 # Variables: HETZNER_HOST, HETZNER_USER, HETZNER_SSH_PORT, REMAKE_SITE_DOMAIN (default remake.aicex.club).
 
 on:
@@ -50,6 +54,7 @@ jobs:
           bash apps/remake-site/deploy/build.sh
           node --check apps/remake-site/server.mjs
           node --check apps/remake-site/studio.mjs
+          node --check apps/remake-site/reels-bot.mjs
           python3 -c 'import ast, sys; [ast.parse(open(f).read(), f) for f in sys.argv[1:]]' apps/remake-site/dist/skill/scripts/*.py
           test -f apps/remake-site/dist/Dockerfile && test -f apps/remake-site/dist/skill/references/script-rules.md
           node -e '
@@ -90,11 +95,19 @@ jobs:
           OPENAI: ${{ secrets.REMAKE_OPENAI_API_KEY || secrets.TRANSCRIBE_OPENAI_API_KEY }}
           ANTHROPIC: ${{ secrets.REMAKE_ANTHROPIC_API_KEY || secrets.HQ_OFFICE_ANTHROPIC_API_KEY || secrets.STUDIO_KADRIK_ANTHROPIC_API_KEY }}
           APIFY: ${{ secrets.REMAKE_APIFY_TOKEN || secrets.WORKER_APIFY_API_TOKEN || secrets.TRANSCRIBE_APIFY_API_TOKEN }}
+          TG_TOKEN: ${{ secrets.REMAKE_TG_BOT_TOKEN }}
+          TG_OWNERS: ${{ vars.REMAKE_TG_OWNER_IDS || vars.TG_AGENT_OWNER_TELEGRAM_ID }}
+          TG_CHAT: ${{ vars.REMAKE_TG_CHAT_ID }}
+          TG_TOPIC: ${{ vars.REMAKE_TG_TOPIC_ID }}
+          COMPETITORS: ${{ vars.REELS_COMPETITORS }}
+          PER_DAY: ${{ vars.REELS_PER_DAY }}
+          HOUR: ${{ vars.REELS_HOUR }}
         run: |
           [ -n "$TOKEN" ] || echo "::warning::REMAKE_SITE_TOKEN is not set — the skill can't push runs (seed runs only)"
           [ -n "$PASSWORD$TOKEN" ] || echo "::warning::REMAKE_SITE_PASSWORD is not set — the studio stays closed"
           [ -n "$HEYGEN" ] || echo "::warning::no HeyGen key (REMAKE_HEYGEN_API_KEY) — the studio can't render the avatar"
           [ -n "$ANTHROPIC" ] || echo "::warning::no Anthropic key (REMAKE_ANTHROPIC_API_KEY) — no «Сценарий 2.0», manual script only"
+          [ -n "$TG_TOKEN" ] || echo "::warning::REMAKE_TG_BOT_TOKEN is not set — the «Instagram Reels» Telegram topic is off"
           line() { local x="${!2}"; printf '%s=%s\n' "$1" "${x//[$'\r\n']/}"; }  # a pasted secret may end with a line break
           {
             line REMAKE_SITE_TOKEN TOKEN
@@ -104,6 +117,13 @@ jobs:
             line OPENAI_API_KEY OPENAI
             line ANTHROPIC_API_KEY ANTHROPIC
             line APIFY_TOKEN APIFY
+            line REMAKE_TG_BOT_TOKEN TG_TOKEN
+            line REMAKE_TG_OWNER_IDS TG_OWNERS
+            line REMAKE_TG_CHAT_ID TG_CHAT
+            line REMAKE_TG_TOPIC_ID TG_TOPIC
+            line REELS_COMPETITORS COMPETITORS
+            line REELS_PER_DAY PER_DAY
+            line REELS_HOUR HOUR
           } | $SSH "mkdir -p /opt/remake-site && umask 077 && cat > /opt/remake-site/api.env"
 
       - name: Activate
