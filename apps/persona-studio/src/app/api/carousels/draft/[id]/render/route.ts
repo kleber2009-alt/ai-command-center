@@ -17,7 +17,7 @@ import { prisma } from '@/lib/prisma';
 import { renderSlide, type SlideKind } from '@/lib/carousel/render-slide';
 import { isValidStyle, DEFAULT_STYLE, skillOf } from '@/lib/carousel/styles';
 import { uploadBuffer } from '@/lib/storage';
-import { s3, BUCKET } from '@/lib/storage';
+import { s3, BUCKET, fetchMedia } from '@/lib/storage';
 import { GetObjectCommand } from '@aws-sdk/client-s3';
 
 export const runtime = 'nodejs';
@@ -50,7 +50,7 @@ async function avatarToDataUri(imageUrlOrKey: string): Promise<string | null> {
     let bytes: Buffer;
     let contentType = 'image/jpeg';
     if (/^https?:\/\//.test(imageUrlOrKey)) {
-      const res = await fetch(imageUrlOrKey, { signal: AbortSignal.timeout(15_000) });
+      const res = await fetchMedia(imageUrlOrKey, { signal: AbortSignal.timeout(15_000) });
       if (!res.ok) return null;
       contentType = res.headers.get('content-type') || contentType;
       bytes = Buffer.from(await res.arrayBuffer());

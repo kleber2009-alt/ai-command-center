@@ -23,6 +23,7 @@
 // Model slug — env KIE_OMNIHUMAN_MODEL (дефолт 'bytedance/omni-human').
 
 import { env } from './env';
+import { fetchMedia } from '@/lib/storage';
 
 const SUBMIT_TIMEOUT_MS = 30_000;
 const STATUS_TIMEOUT_MS = 15_000;
@@ -195,7 +196,7 @@ export async function waitForOmnihuman(opts: {
 }
 
 export async function downloadVideo(url: string): Promise<{ bytes: Buffer; mime: string }> {
-  const res = await fetch(url, { signal: AbortSignal.timeout(DOWNLOAD_TIMEOUT_MS) });
+  const res = await fetchMedia(url, { signal: AbortSignal.timeout(DOWNLOAD_TIMEOUT_MS) });
   if (!res.ok) throw new OmnihumanError(`DL_HTTP_${res.status}`, `download failed: ${url}`);
   const mime = res.headers.get('content-type') ?? 'video/mp4';
   const ab = await res.arrayBuffer();

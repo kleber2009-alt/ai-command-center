@@ -88,7 +88,7 @@ export async function POST(req: NextRequest, { params }: { params: Promise<{ id:
       data: { stage: 'error', status: 'failed', errorMsg: clientMsg, costCredits: 0 },
     });
     return NextResponse.json(
-      { ok: false, error: clientMsg, generation: serializeGeneration(failed) },
+      { ok: false, error: 'script_failed', message: clientMsg, generation: serializeGeneration(failed) },
       { status: 502 },
     );
   }

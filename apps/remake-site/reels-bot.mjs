@@ -35,7 +35,7 @@
    Состояние — DATA_DIR/reels/state.json. */
 import fs from 'node:fs';
 import path from 'node:path';
-import { takenBy, parse, progressText, wrongBind, BRANCHES, parseSlots, slotChoices, fmtSlot, hookVariants, voiceToText } from './tg-branch.mjs';
+import { takenBy, parse, progressText, wrongBind, laneOf, topicName, BRANCHES, parseSlots, slotChoices, fmtSlot, hookVariants, voiceToText } from './tg-branch.mjs';
 
 const env = (k, d = '') => (process.env[k] || d).trim();
 const TOKEN = env('REMAKE_TG_BOT_TOKEN');
@@ -545,16 +545,18 @@ export function createReelsBot({ studio, data }) {
       const here = st.chat_id === msg.chat.id && st.topic_id === topic;
       const reply = (t) => tg('sendMessage', { chat_id: msg.chat.id, ...(topic ? { message_thread_id: topic } : {}), text: t, parse_mode: 'HTML' }).catch(() => {});
       // a plain /bind is for a bot without a topic; moving this one — /bind@me
-      if (st.chat_id && !here && !forMe) return me && wrongBind({ data, self: 'reels', me, chat: msg.chat.id, topic, reply });
+      if (st.chat_id && !here && !forMe) return me && wrongBind({ data, self: 'reels', me, chat: msg.chat.id, topic, name: topicName(msg), reply });
       if (msg.chat.is_forum && !topic) return reply(`Привязать можно только ветку, не «Общий». Создайте ветку и напишите в ней /bind${me ? '@' + esc(me) : ''}.`);
       const other = takenBy(data, 'reels', msg.chat.id, topic);
       if (other) return forMe && reply(`Эта ветка уже за «${esc(BRANCHES[other])}». Для рилсов создайте свою ветку и напишите в ней /bind${me ? '@' + esc(me) : ''}.`);
+      const lane = laneOf(topicName(msg));  // the topic's name says whose it is
+      if (lane && lane.key !== 'reels') return reply(`Это ветка «${esc(topicName(msg))}» — она для другого. Я @${esc(me)}, бот рилсов: напишите /bind@${esc(me)} в ветке ${esc(BRANCHES['reels'])}.`);
       if (!owners().size) st.owners = [msg.from.id];
       st.chat_id = msg.chat.id;
       st.topic_id = topic;
       save();
       let renamed = '';
-      if (st.topic_id) {
+      if (st.topic_id && !lane) {  // the topic's name already fits — keep it
         try { await tg('editForumTopic', { chat_id: st.chat_id, message_thread_id: st.topic_id, name: TOPIC_NAME }); renamed = `Переименовал ветку в «${esc(TOPIC_NAME)}». `; }
         catch (e) { renamed = /NOT_MODIFIED/i.test(e.message) ? '' : `Переименовать ветку не смог (${esc(e.message)}) — дайте боту право «Управление темами». `; }
       }

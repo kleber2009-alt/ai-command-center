@@ -1,6 +1,8 @@
 'use client';
 
 import { useEffect, useState } from 'react';
+import { Icon3D } from '@/components/ui/icon3d';
+import { errorText, exceptionText } from '@/lib/error-text';
 
 export function TmaBootstrap() {
   const [status, setStatus] = useState<'init' | 'loading' | 'ok' | 'error' | 'no-tg'>('init');
@@ -33,7 +35,7 @@ export function TmaBootstrap() {
         if (!res.ok) {
           const j = (await res.json().catch(() => ({}))) as { error?: string; detail?: string };
           setStatus('error');
-          setMsg(j.detail ?? j.error ?? `HTTP ${res.status}`);
+          setMsg(errorText(j, res.status));
           return;
         }
         setStatus('ok');
@@ -41,45 +43,51 @@ export function TmaBootstrap() {
         window.location.replace('/dashboard');
       } catch (e) {
         setStatus('error');
-        setMsg(e instanceof Error ? e.message : String(e));
+        setMsg(exceptionText(e));
       }
     })();
   }, []);
 
   return (
-    <div className="w-full max-w-sm grid gap-6 text-center">
-      <div className="flex items-baseline justify-center gap-2.5">
-        <span className="inline-block w-[7px] h-[7px] rounded-full bg-lime translate-y-[-1px]" />
-        <span className="mono text-[12px] tracking-widest font-bold uppercase">Persona Studio</span>
+    <div className="panel w-full max-w-sm p-7 grid gap-5 justify-items-center text-center reveal">
+      <div className="flex items-center gap-3">
+        <Icon3D name="sparkles" size={24} tile="purple" />
+        <span className="text-[17px] font-semibold tracking-[-0.02em] lowercase">
+          persona <span className="text-gold">studio</span>
+        </span>
       </div>
       {status === 'init' && (
-        <p className="mono text-[11px] tracking-widest text-text-mute">/ INIT</p>
+        <p className="status-badge status-queued">/ запуск</p>
       )}
       {status === 'loading' && (
         <>
-          <p className="font-serif italic text-[18px]">Подключаем твой Telegram…</p>
-          <p className="mono text-[10px] tracking-widest text-cyan animate-pulse">/ VERIFYING</p>
+          <div className="pop-in"><Icon3D name="processing" size={44} tile sway /></div>
+          <p className="text-[18px] font-semibold tracking-[-0.02em]">Подключаем твой Telegram…</p>
+          <p className="status-badge status-processing">/ проверяем</p>
         </>
       )}
       {status === 'ok' && (
         <>
-          <p className="font-serif italic text-[18px]">Готово, заходим в студию.</p>
-          <p className="mono text-[10px] tracking-widest text-lime">/ REDIRECTING</p>
+          <div className="pop-in"><Icon3D name="done" size={44} tile /></div>
+          <p className="text-[18px] font-semibold tracking-[-0.02em]">Готово, заходим в студию.</p>
+          <p className="status-badge status-ready">/ переходим</p>
         </>
       )}
       {status === 'no-tg' && (
         <>
-          <p className="mono text-[10px] tracking-widest uppercase text-pink">/ NO-TELEGRAM</p>
-          <p className="font-serif italic text-[16px] text-text-dim">
+          <div className="pop-in"><Icon3D name="warning" size={44} tile /></div>
+          <p className="status-badge status-failed">/ нет Telegram</p>
+          <p className="text-[15px] leading-[1.55] text-text-dim">
             Эта страница работает только внутри Telegram Mini App. На вебе используй{' '}
-            <a href="/sign-in" className="text-cyan hover:underline">/sign-in</a>.
+            <a href="/sign-in" className="text-gold font-medium hover:underline">страницу входа</a>.
           </p>
         </>
       )}
       {status === 'error' && (
         <>
-          <p className="mono text-[10px] tracking-widest uppercase text-pink">/ ERROR</p>
-          <p className="font-serif italic text-[14px] text-text-dim break-words">{msg ?? 'unknown'}</p>
+          <div className="pop-in"><Icon3D name="warning" size={44} tile /></div>
+          <p className="status-badge status-failed">/ ошибка</p>
+          <p className="text-[14px] leading-[1.55] text-text-dim break-words">{msg ?? 'неизвестная ошибка'}</p>
         </>
       )}
     </div>

@@ -6,7 +6,7 @@
 // Намеренно НЕ вызывает analyze-reel per-ролик (это 5 кр./ролик и
 // долго). Работает только по captions + метрикам выборки.
 
-import { claudeChat, parseJsonResponse } from './claude';
+import { claudeChat, isClaudeConfigured, parseJsonResponse } from './claude';
 import { env } from '@/lib/env';
 
 export type NicheSummary = {
@@ -32,7 +32,7 @@ export async function summarizeNiche(opts: {
   reels: ReelDigest[];
   maxReels?: number;
 }): Promise<{ ok: true; data: NicheSummary } | { ok: false; error: string }> {
-  if (!env.ANTHROPIC_API_KEY) return { ok: false, error: 'no_api_key' };
+  if (!isClaudeConfigured()) return { ok: false, error: 'no_api_key' };
   if (opts.reels.length < 3) return { ok: false, error: 'not_enough_reels' };
 
   // Берём топ-N по виральности (не по абсолютным просмотрам — нам важна

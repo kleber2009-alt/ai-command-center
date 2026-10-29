@@ -2,6 +2,7 @@ import { NextRequest, NextResponse } from 'next/server';
 import { getCurrentUserOrApiKey } from '@/lib/auth';
 import { prisma } from '@/lib/prisma';
 import { coverQueue } from '@/lib/queue';
+import { chargeTokens, refundTokens, COSTS, InsufficientTokensError } from '@/lib/tokens';
 
 export const runtime = 'nodejs';
 
@@ -24,9 +25,19 @@ export async function POST(req: NextRequest, { params }: { params: Promise<{ id:
     return NextResponse.json({ error: 'avatar_not_ready' }, { status: 409 });
   }
 
+  // The failed attempt was refunded by the worker, so a retry is a new paid run.
+  try {
+    await chargeTokens({ userId: user.id, amount: COSTS.coverGeneration, reason: 'cover-generation:retry', refId: id });
+  } catch (e) {
+    if (e instanceof InsufficientTokensError) {
+      return NextResponse.json({ error: 'insufficient_tokens', have: e.have, need: e.need }, { status: 402 });
+    }
+    throw e;
+  }
+
   await prisma.cover.update({
     where: { id },
-    data: { status: 'pending', errorMsg: null, completedAt: null },
+    data: { status: 'pending', errorMsg: null, completedAt: null, tokensCost: COSTS.coverGeneration },
   });
 
   const q = coverQueue();
@@ -41,6 +52,12 @@ export async function POST(req: NextRequest, { params }: { params: Promise<{ id:
   try {
     await q.add('generate', { coverId: id, userId: user.id }, { jobId: id });
   } catch {
+    await refundTokens({
+      userId: user.id,
+      amount: COSTS.coverGeneration,
+      reason: 'cover-generation:retry-enqueue-failed',
+      refId: id,
+    });
     await prisma.cover.update({
       where: { id },
       data: { status: 'failed', errorMsg: 'retry_enqueue_failed' },

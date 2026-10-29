@@ -7,6 +7,58 @@ import type { ScoredPost, PostKind } from './types';
 
 const MIN_HOURS = 1;
 const COMMENT_WEIGHT = 3;
+// Instagram allows up to 20 slides per carousel; guard against junk payloads.
+const MAX_SLIDES = 20;
+
+type ChildLike = {
+  displayUrl?: unknown;
+  display_url?: unknown;
+  imageUrl?: unknown;
+  url?: unknown;
+  images?: unknown;
+};
+
+function firstHttpUrl(...vals: unknown[]): string | null {
+  for (const v of vals) {
+    if (typeof v === 'string' && /^https?:\/\//.test(v)) return v;
+  }
+  return null;
+}
+
+/**
+ * Carousel slide image URLs in slide order. apify~instagram-scraper gives
+ * `childPosts[]` (each with `displayUrl`; a video slide carries its poster in
+ * `displayUrl`) and, on most versions, a flat `images[]`. Older payloads use
+ * `sidecarChildren` / `children`. We prefer childPosts (true order, one entry
+ * per slide), fall back to images[], then to the single displayUrl.
+ */
+export function extractSlideImages(item: ApifyItem | null | undefined): string[] {
+  if (!item) return [];
+  const rec = item as Record<string, unknown>;
+  const children = [rec.childPosts, rec.sidecarChildren, rec.children].find(
+    (c): c is unknown[] => Array.isArray(c) && c.length > 0,
+  );
+  const out: string[] = [];
+  const push = (u: string | null) => {
+    if (u && !out.includes(u) && out.length < MAX_SLIDES) out.push(u);
+  };
+  if (children) {
+    for (const ch of children) {
+      if (typeof ch === 'string') {
+        push(firstHttpUrl(ch));
+        continue;
+      }
+      const c = (ch ?? {}) as ChildLike;
+      const imgs = Array.isArray(c.images) ? c.images : [];
+      push(firstHttpUrl(c.displayUrl, c.display_url, c.imageUrl, imgs[0], c.url));
+    }
+  }
+  if (out.length === 0 && Array.isArray(rec.images)) {
+    for (const u of rec.images) push(firstHttpUrl(u));
+  }
+  if (out.length === 0) push(firstHttpUrl(rec.displayUrl));
+  return out;
+}
 
 function normalize(item: ApifyItem | null | undefined): ScoredPost | null {
   if (!item) return null;
@@ -43,7 +95,8 @@ function normalize(item: ApifyItem | null | undefined): ScoredPost | null {
 
   const ageH = Math.max(MIN_HOURS, (Date.now() - postedAtMs) / 3_600_000);
   const plays = Number(item.videoPlayCount || item.videoViewCount || 0);
-  const likes = Number(item.likesCount || 0);
+  // Hidden likes come back as -1 from the actor — treat as unknown (0).
+  const likes = Math.max(0, Number(item.likesCount || 0));
   const comments = Number(item.commentsCount || 0);
   // Apify не всегда отдаёт shares — пробуем несколько имён полей.
   const shares = Number(
@@ -66,7 +119,9 @@ function normalize(item: ApifyItem | null | undefined): ScoredPost | null {
     ((item as { sidecarChildren?: unknown[] }).sidecarChildren) ||
     ((item as { children?: unknown[] }).children) ||
     null;
-  const hasChildren = Array.isArray(children) ? children.length > 1 : false;
+  const hasChildren =
+    (Array.isArray(children) && children.length > 1) ||
+    (Array.isArray(item.images) && item.images.length > 1);
   const hasVideo = Boolean(
     item.videoUrl ||
       ((item as { video_url?: string }).video_url) ||
@@ -95,13 +150,24 @@ function normalize(item: ApifyItem | null | undefined): ScoredPost | null {
     (Array.isArray(item.images) && item.images.length > 0 ? item.images[0] : null) ||
     null;
 
+  const videoUrl =
+    firstHttpUrl(
+      item.videoUrl,
+      (item as { video_url?: string }).video_url,
+      (item as { videoUrlBackup?: string }).videoUrlBackup,
+    ) ?? null;
+  const fullCaption = typeof item.caption === 'string' ? item.caption : '';
+
   return {
     url,
     shortcode,
     kind,
     owner: (item.ownerUsername as string | undefined) || null,
     thumbnailUrl,
-    caption: (item.caption || '').slice(0, 400),
+    // Competitor parser keeps a short caption (Claude rating prompt size);
+    // «Мой блог» needs the whole text (code word, structure) → fullCaption.
+    caption: fullCaption.slice(0, 400),
+    fullCaption,
     postedAtMs,
     ageHours: Math.round(ageH * 10) / 10,
     plays,
@@ -114,6 +180,8 @@ function normalize(item: ApifyItem | null | undefined): ScoredPost | null {
     engPerHour: engagement / ageH,
     engRatio: plays > 0 ? engagement / plays : 0,
     velocityScore: 0,
+    videoUrl: kind === 'reel' ? videoUrl : null,
+    slideImages: kind === 'carousel' ? extractSlideImages(item) : [],
   };
 }
 

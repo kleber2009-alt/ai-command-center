@@ -6,6 +6,7 @@
 import { readFile } from 'node:fs/promises';
 import { env } from '@/lib/env';
 import type { Word } from './edl';
+import { OPENAI_BASE } from '@/lib/provider-urls';
 
 export class TranscribeWordsError extends Error {
   constructor(public code: string, message: string) {
@@ -22,7 +23,7 @@ export function hasWordTranscriber(): boolean {
 
 export async function transcribeWords(audioPath: string, lang = 'ru'): Promise<Word[]> {
   const selfHosted = process.env.WHISPER_SERVICE_URL;
-  const baseUrl = selfHosted || 'https://api.openai.com';
+  const baseUrl = selfHosted || OPENAI_BASE;
   const apiKey = selfHosted ? process.env.WHISPER_API_KEY : env.OPENAI_API_KEY;
   const model = selfHosted ? process.env.WHISPER_MODEL || 'Systran/faster-whisper-small' : env.OPENAI_WHISPER_MODEL;
   if (!selfHosted && !apiKey) {

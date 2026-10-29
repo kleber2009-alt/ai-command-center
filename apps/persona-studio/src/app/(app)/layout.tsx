@@ -26,7 +26,7 @@ export default async function AppLayout({ children }: { children: React.ReactNod
         email={user.email}
         balance={user.tokenBalance}
         isAdmin={user.role === 'admin'}
-        plan={user.plan ?? 'Pro'}
+        plan={user.plan ?? 'free'}
         hiddenKeys={hiddenSidebarKeys}
         locale={locale}
       />
@@ -35,7 +35,7 @@ export default async function AppLayout({ children }: { children: React.ReactNod
         <TopActionBar signOutAction={doSignOut} locale={locale} />
 
         <main className="flex-1 px-4 sm:px-8 lg:px-10 pt-6 pb-2">
-          <div className="max-w-[1480px] mx-auto">
+          <div className="page-enter max-w-[1480px] mx-auto">
             {children}
           </div>
         </main>

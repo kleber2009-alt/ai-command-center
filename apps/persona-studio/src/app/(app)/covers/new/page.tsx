@@ -4,9 +4,12 @@ import { getCurrentUser } from '@/lib/auth';
 import { prisma } from '@/lib/prisma';
 import { CoverForm } from '@/components/cover-form';
 import { EmptyState } from '@/components/empty-state';
+import { PageHero } from '@/components/shell/page-hero';
+import { ArrowLeft } from 'lucide-react';
+import { COSTS } from '@/lib/tokens';
 
 export const dynamic = 'force-dynamic';
-export const metadata = { title: 'New cover — Persona Studio' };
+export const metadata = { title: 'Новая обложка — Persona Studio' };
 
 export default async function NewCoverPage({ searchParams }: { searchParams: Promise<{ avatarId?: string }> }) {
   const user = await getCurrentUser();
@@ -22,19 +25,24 @@ export default async function NewCoverPage({ searchParams }: { searchParams: Pro
 
   return (
     <div className="grid gap-8">
-      <header>
-        <div className="flex items-baseline gap-3 mb-4">
-          <span className="sec-num">/00</span>
-          <span className="sec-title">New carousel cover</span>
-          <span className="flex-1 border-b border-border translate-y-[-3px]" />
-          <Link href="/covers" className="mono text-[10px] tracking-widest uppercase text-text-mute hover:text-text">
-            ← all covers
-          </Link>
-        </div>
-        <h1 className="font-serif text-[44px] leading-tight max-w-[20ch]">
-          Виральная обложка <span className="italic text-warm">за один промпт.</span>
-        </h1>
-      </header>
+      <div className="-mb-4 flex flex-wrap items-center gap-3">
+        <Link href="/covers" className="btn-ghost !px-4 !py-2 text-[13px]">
+          <ArrowLeft size={14} aria-hidden />
+          все обложки
+        </Link>
+        <span className="sec-num">/00</span>
+        <span className="sec-title">Новая обложка карусели</span>
+      </div>
+
+      <PageHero
+        eyebrow="СОЗДАТЬ · ОБЛОЖКА"
+        icon="covers"
+        title={
+          <>
+            Виральная обложка <span className="italic">за один промпт.</span>
+          </>
+        }
+      />
 
       {avatars.length === 0 ? (
         <EmptyState
@@ -44,7 +52,7 @@ export default async function NewCoverPage({ searchParams }: { searchParams: Pro
           cta={{ href: '/generate?need=cover', label: 'Загрузить фото' }}
         />
       ) : (
-        <CoverForm avatars={avatars} initialAvatarId={avatarId} />
+        <CoverForm avatars={avatars} initialAvatarId={avatarId} cost={COSTS.coverGeneration} />
       )}
     </div>
   );

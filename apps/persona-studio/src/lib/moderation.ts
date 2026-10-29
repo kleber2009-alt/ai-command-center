@@ -10,6 +10,8 @@
 // upload isn't publicly reachable. Degrades gracefully: with no ANTHROPIC_API_KEY
 // it skips (logged) unless MODERATION_REQUIRED=true, in which case it fails closed.
 import { env } from './env';
+import { ANTHROPIC_BASE, OPENAI_BASE } from '@/lib/provider-urls';
+import { fetchMedia } from '@/lib/storage';
 
 export type ModerationCode = 'no_face' | 'multiple_faces' | 'not_human' | 'nsfw';
 
@@ -61,7 +63,7 @@ async function assessWithAnthropic(
   base64: string,
   mediaType: string,
 ): Promise<VisionAssessment | null> {
-  const r = await fetch('https://api.anthropic.com/v1/messages', {
+  const r = await fetch(`${ANTHROPIC_BASE}/v1/messages`, {
     method: 'POST',
     headers: {
       'x-api-key': apiKey,
@@ -101,7 +103,7 @@ async function assessWithOpenAI(
   base64: string,
   mediaType: string,
 ): Promise<VisionAssessment | null> {
-  const r = await fetch('https://api.openai.com/v1/chat/completions', {
+  const r = await fetch(`${OPENAI_BASE}/v1/chat/completions`, {
     method: 'POST',
     headers: {
       authorization: `Bearer ${apiKey}`,
@@ -156,7 +158,7 @@ export async function moderateAvatarSource(upload: {
   }
 
   try {
-    const res = await fetch(upload.fileUrl, { signal: AbortSignal.timeout(15_000) });
+    const res = await fetchMedia(upload.fileUrl, { signal: AbortSignal.timeout(15_000) });
     if (!res.ok) throw new Error(`fetch image ${res.status}`);
     const base64 = Buffer.from(await res.arrayBuffer()).toString('base64');
     const mediaType = /^image\//.test(upload.fileType) ? upload.fileType : 'image/jpeg';

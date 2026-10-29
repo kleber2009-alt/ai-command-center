@@ -1,8 +1,8 @@
 'use client';
 
 // Страница «Блогеры / Шпион + Анализ аккаунта».
-// UI — дизайн-система AI Mastery (#080808 / #f5f0e8 / lime·blue·pink, Georgia +
-// JetBrains Mono). Источник данных — существующий backend /research:
+// UI — дизайн-система UI-моушн (glass-карточки, Onest, токены tailwind).
+// Источник данных — существующий backend /research:
 //   - каталог авторов        GET  /api/research/authors
 //   - добавить блогера        POST /api/research/authors { username }
 //   - карточка + рилсы + разбор GET /api/research/authors/:id
@@ -13,14 +13,26 @@
 // Тайминг/AI-разбор» — из ResearchPageAnalysis (Claude) + рилсов.
 
 import React, { useCallback, useEffect, useMemo, useState } from 'react';
+import { createPortal } from 'react-dom';
 import { useRouter } from 'next/navigation';
+import {
+  ArrowRight, BarChart3, Check, ChevronRight, Copy, Eye, EyeOff, Folder as FolderIcon, Instagram,
+  Play, Plus, RefreshCw, Search, Sparkles, Star, TrendingDown, TrendingUp, X,
+} from 'lucide-react';
+import { Icon3D } from '@/components/ui/icon3d';
+import { PageHero } from '@/components/shell/page-hero';
 import { igProxy, type ResearchReelView } from './types';
 
-const C = {
-  bg: '#080808', panel: '#0e0e0e', card: '#121212', cardHover: '#181818',
-  border: '#1f1f1f', borderSoft: '#171717', text: '#f5f0e8', muted: '#8a857c',
-  faint: '#55514a', lime: '#c8f060', blue: '#60c8f0', pink: '#f06090',
+// Design tokens (tailwind.config.ts). Hex values are only used where SVG
+// charts need a raw colour; everything else uses token classes.
+type Tone = 'text' | 'blue' | 'lime' | 'pink' | 'mute';
+const TONE_TEXT: Record<Tone, string> = {
+  text: 'text-text', blue: 'text-gold', lime: 'text-lime', pink: 'text-pink', mute: 'text-text-mute',
 };
+const TONE_BG: Record<Tone, string> = {
+  text: 'bg-text', blue: 'bg-blue', lime: 'bg-lime', pink: 'bg-pink', mute: 'bg-white/20',
+};
+const HEX = { blue: '#3B8CFF', lime: '#B8F04A', pink: '#FF3D8B' };
 
 type BloggerRow = {
   id: string;
@@ -78,13 +90,16 @@ const fmt = (n: number): string => {
   if (n >= 1e3) return (n / 1e3).toFixed(1).replace(/\.0$/, '') + 'K';
   return String(Math.round(n));
 };
-const erColor = (er: number) => (er >= 5 ? C.lime : er >= 2 ? C.blue : C.muted);
-const xnColor = (x: number) => (x >= 2 ? C.lime : x >= 1.3 ? C.blue : C.muted);
+const erTone = (er: number): Tone => (er >= 5 ? 'lime' : er >= 2 ? 'blue' : 'mute');
+const xnTone = (x: number): Tone => (x >= 2 ? 'lime' : x >= 1.3 ? 'blue' : 'mute');
 
-const avatarGrad = (seed: number) => {
-  const p = [['#c8f060', '#1f3a12'], ['#60c8f0', '#0f2a3a'], ['#f06090', '#3a0f22'], ['#f5f0e8', '#2a2a2a']][seed % 4];
-  return `linear-gradient(135deg, ${p[0]} 0%, ${p[1]} 100%)`;
-};
+// Segmented / chip styles (UI-моушн pills).
+const chipCls = (active: boolean) =>
+  `rounded-full border px-3.5 py-1.5 text-[13px] transition-colors ${
+    active
+      ? 'border-transparent bg-blue text-white'
+      : 'border-border-soft bg-white/[0.04] text-text-dim hover:bg-white/[0.07]'
+  }`;
 
 const DAYS = ['Пн', 'Вт', 'Ср', 'Чт', 'Пт', 'Сб', 'Вс'];
 const SLOTS = ['Утро', 'День', 'Вечер', 'Ночь'];
@@ -204,28 +219,35 @@ function deriveAnalysis(d: AuthorDetail) {
 }
 
 /* ---------- atoms ---------- */
+const AVATAR_TINTS = ['bg-lime/25', 'bg-blue/30', 'bg-pink/30', 'bg-white/10'];
+
 function Avatar({ src, name, seed, size = 48 }: { src?: string; name: string; seed: number; size?: number }) {
   const [ok, setOk] = useState(Boolean(src));
   useEffect(() => setOk(Boolean(src)), [src]);
   const badge = Math.round(size * 0.42);
   return (
-    <div style={{ position: 'relative', width: size, height: size, flexShrink: 0 }}>
-      <div style={{ width: size, height: size, borderRadius: '50%', overflow: 'hidden', background: ok ? '#000' : avatarGrad(seed), display: 'flex', alignItems: 'center', justifyContent: 'center', fontFamily: 'Georgia', fontSize: size * 0.38, color: '#0a0a0a', fontWeight: 700, border: `1px solid ${C.border}` }}>
-        {ok ? <img src={src} alt={name} onError={() => setOk(false)} style={{ width: '100%', height: '100%', objectFit: 'cover', display: 'block' }} /> : (name[0] || '?').toUpperCase()}
+    <div className="relative flex-none" style={{ width: size, height: size }}>
+      <div
+        className={`flex h-full w-full items-center justify-center overflow-hidden rounded-full font-semibold text-text ring-1 ring-white/10 ${ok ? 'bg-white/[0.05]' : AVATAR_TINTS[seed % 4]}`}
+        style={{ fontSize: size * 0.38 }}
+      >
+        {/* eslint-disable-next-line @next/next/no-img-element */}
+        {ok ? <img src={src} alt={name} onError={() => setOk(false)} className="block h-full w-full object-cover" /> : (name[0] || '?').toUpperCase()}
       </div>
-      <span style={{ position: 'absolute', left: -2, bottom: -2, width: badge, height: badge, borderRadius: badge, background: 'linear-gradient(45deg,#f09433,#e6683c,#dc2743,#cc2366,#bc1888)', border: `2px solid ${C.bg}`, display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
-        <span style={{ width: badge * 0.46, height: badge * 0.46, border: '1.5px solid #fff', borderRadius: badge * 0.18, position: 'relative' }}>
-          <span style={{ position: 'absolute', top: '50%', left: '50%', transform: 'translate(-50%,-50%)', width: badge * 0.2, height: badge * 0.2, border: '1.5px solid #fff', borderRadius: '50%' }} />
-        </span>
+      <span
+        className="absolute -bottom-0.5 -left-0.5 flex items-center justify-center rounded-full bg-pink text-white ring-2 ring-surface"
+        style={{ width: badge, height: badge }}
+      >
+        <Instagram style={{ width: badge * 0.58, height: badge * 0.58 }} strokeWidth={2.2} />
       </span>
     </div>
   );
 }
-function Stat({ label, value, color }: { label: string; value: string; color?: string }) {
+function Stat({ label, value, tone = 'text' }: { label: string; value: string; tone?: Tone }) {
   return (
-    <div style={{ display: 'flex', flexDirection: 'column', gap: 3, minWidth: 0 }}>
-      <span className="mono" style={{ fontSize: 9, letterSpacing: '.09em', textTransform: 'uppercase', color: C.faint }}>{label}</span>
-      <span className="mono" style={{ fontSize: 15, fontWeight: 600, color: color || C.text }}>{value}</span>
+    <div className="flex min-w-0 flex-col gap-1">
+      <span className="text-[10px] font-semibold uppercase tracking-[0.06em] text-text-mute">{label}</span>
+      <span className={`text-[16px] font-bold tabular-nums tracking-[-0.01em] ${TONE_TEXT[tone]}`}>{value}</span>
     </div>
   );
 }
@@ -233,10 +255,10 @@ function Bars({ data, color }: { data: number[]; color: string }) {
   if (!data.length) return null;
   const max = Math.max(...data, 1);
   return (
-    <svg viewBox="0 0 120 36" style={{ width: '100%', height: 44 }}>
+    <svg viewBox="0 0 120 36" className="h-11 w-full">
       {data.map((d, i) => {
         const h = (d / max) * 32 + 2, w = 120 / data.length - 3;
-        return <rect key={i} x={i * (120 / data.length) + 1.5} y={36 - h} width={w} height={h} rx={1.5} fill={color} opacity={0.35 + (d / max) * 0.65} />;
+        return <rect key={i} x={i * (120 / data.length) + 1.5} y={36 - h} width={w} height={h} rx={2} fill={color} opacity={0.35 + (d / max) * 0.65} />;
       })}
     </svg>
   );
@@ -246,21 +268,21 @@ function Line({ data, color }: { data: number[]; color: string }) {
   const max = Math.max(...data), min = Math.min(...data);
   const pts = data.map((d, i) => `${(i / (data.length - 1)) * 120},${34 - ((d - min) / (max - min || 1)) * 30 - 2}`).join(' ');
   return (
-    <svg viewBox="0 0 120 36" style={{ width: '100%', height: 50 }}>
+    <svg viewBox="0 0 120 36" className="h-[50px] w-full">
       <polyline points={pts} fill="none" stroke={color} strokeWidth="1.6" strokeLinejoin="round" strokeLinecap="round" />
       {data.map((d, i) => i === data.length - 1 && <circle key={i} cx={(i / (data.length - 1)) * 120} cy={34 - ((d - min) / (max - min || 1)) * 30 - 2} r="2.2" fill={color} />)}
     </svg>
   );
 }
-function HBar({ label, value, max, suffix, color, sub }: { label: string; value: number; max: number; suffix: string; color: string; sub?: string }) {
+function HBar({ label, value, max, suffix, tone, sub }: { label: string; value: number; max: number; suffix: string; tone: Tone; sub?: string }) {
   return (
-    <div style={{ marginBottom: 9 }}>
-      <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'baseline', marginBottom: 4 }}>
-        <span style={{ fontSize: 12.5, color: C.text, fontFamily: 'Georgia' }}>{label}{sub && <span style={{ color: C.faint, fontSize: 11 }}>  ·  {sub}</span>}</span>
-        <span className="mono" style={{ fontSize: 12, color, fontWeight: 600 }}>{value}{suffix}</span>
+    <div className="mb-2.5">
+      <div className="mb-1 flex items-baseline justify-between">
+        <span className="text-[13px] text-text">{label}{sub && <span className="text-[11.5px] text-text-mute">  ·  {sub}</span>}</span>
+        <span className={`text-[12.5px] font-semibold tabular-nums ${TONE_TEXT[tone]}`}>{value}{suffix}</span>
       </div>
-      <div style={{ height: 5, background: '#1a1a1a', borderRadius: 4, overflow: 'hidden' }}>
-        <div style={{ width: `${Math.min(100, (value / max) * 100)}%`, height: '100%', background: color, borderRadius: 4 }} />
+      <div className="h-1.5 overflow-hidden rounded-full bg-white/[0.06]">
+        <div className={`h-full rounded-full ${TONE_BG[tone]}`} style={{ width: `${Math.min(100, (value / max) * 100)}%` }} />
       </div>
     </div>
   );
@@ -269,11 +291,12 @@ function Donut({ segs, size = 96 }: { segs: { value: number; color: string }[]; 
   const total = segs.reduce((s, x) => s + x.value, 0) || 1; let acc = 0; const r = 38, cir = 2 * Math.PI * r;
   return (
     <svg viewBox="0 0 96 96" style={{ width: size, height: size }}>
+      <circle cx="48" cy="48" r={r} fill="none" stroke="rgba(255,255,255,0.06)" strokeWidth="11" />
       {segs.map((s, i) => {
         const frac = s.value / total, dash = `${frac * cir} ${cir}`, off = -acc * cir; acc += frac;
         return <circle key={i} cx="48" cy="48" r={r} fill="none" stroke={s.color} strokeWidth="11" strokeDasharray={dash} strokeDashoffset={off} transform="rotate(-90 48 48)" />;
       })}
-      <text x="48" y="52" textAnchor="middle" fill={C.text} style={{ font: "600 16px 'JetBrains Mono'" }}>{segs[0].value}%</text>
+      <text x="48" y="53" textAnchor="middle" fill="currentColor" className="text-[16px] font-bold text-text">{segs[0].value}%</text>
     </svg>
   );
 }
@@ -285,22 +308,22 @@ function ReelCover({ reel }: { reel: ResearchReelView }) {
   const showThumb = src && !failed;
   const xn = reel.virality;
   return (
-    <a href={reel.url} target="_blank" rel="noreferrer" className="card-b" style={{ display: 'block', background: C.card, border: `1px solid ${C.border}`, borderRadius: 12, overflow: 'hidden', textDecoration: 'none' }}>
-      <div style={{ position: 'relative', width: '100%', aspectRatio: '4 / 5', background: showThumb ? '#000' : avatarGrad(reel.id.length + reel.views) }}>
+    <a href={reel.url} target="_blank" rel="noreferrer" className="card-editorial group block overflow-hidden !rounded-[20px] no-underline">
+      <div className={`relative aspect-[4/5] w-full ${showThumb ? 'bg-white/[0.03]' : AVATAR_TINTS[(reel.id.length + reel.views) % 4]}`}>
         {showThumb ? (
           // eslint-disable-next-line @next/next/no-img-element
-          <img src={src} alt={reel.caption?.slice(0, 40) || reel.author.username} onError={() => setFailed(true)} style={{ width: '100%', height: '100%', objectFit: 'cover', display: 'block' }} />
+          <img src={src} alt={reel.caption?.slice(0, 40) || reel.author.username} onError={() => setFailed(true)} className="block h-full w-full object-cover transition-transform duration-500 ease-settle group-hover:scale-[1.04]" />
         ) : (
-          <div style={{ width: '100%', height: '100%', display: 'flex', alignItems: 'center', justifyContent: 'center', fontFamily: 'Georgia', fontSize: 30, color: '#0a0a0a', fontWeight: 700 }}>{(reel.author.username[0] || '?').toUpperCase()}</div>
+          <div className="flex h-full w-full items-center justify-center text-[30px] font-bold text-text">{(reel.author.username[0] || '?').toUpperCase()}</div>
         )}
         {/* виральность badge */}
         {xn != null && xn > 0 && (
-          <span className="mono" style={{ position: 'absolute', top: 8, left: 8, padding: '3px 7px', borderRadius: 7, fontSize: 11, fontWeight: 700, background: xn >= 2 ? C.lime : 'rgba(8,8,8,.78)', color: xn >= 2 ? '#0a0a0a' : C.text }}>{xn.toFixed(1)}x</span>
+          <span className={`absolute left-2 top-2 rounded-full px-2 py-0.5 text-[11.5px] font-bold tabular-nums backdrop-blur-md ${xn >= 2 ? 'bg-lime text-bg' : 'bg-black/60 text-text'}`}>{xn.toFixed(1)}x</span>
         )}
         {/* views + author overlay */}
-        <div style={{ position: 'absolute', left: 0, right: 0, bottom: 0, padding: '18px 10px 9px', background: 'linear-gradient(180deg, transparent, rgba(8,8,8,.92))' }}>
-          <div className="mono" style={{ fontSize: 13, fontWeight: 600, color: '#fff' }}>▶ {fmt(reel.views)}</div>
-          <div className="mono" style={{ fontSize: 10, color: '#d8d2c8', marginTop: 2, whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis' }}>@{reel.author.username}</div>
+        <div className="absolute inset-x-0 bottom-0 bg-gradient-to-b from-transparent to-black/85 px-2.5 pb-2.5 pt-5">
+          <div className="flex items-center gap-1 text-[13px] font-semibold tabular-nums text-white"><Play className="h-3 w-3 fill-current" /> {fmt(reel.views)}</div>
+          <div className="mt-0.5 truncate text-[11px] text-text-dim">@{reel.author.username}</div>
         </div>
       </div>
     </a>
@@ -396,90 +419,108 @@ function Analysis({ author, seed, onClose, onToggleSpy, onToast }: {
   };
 
   const Sec = ({ title, right, children }: { title: string; right?: React.ReactNode; children: React.ReactNode }) => (
-    <div style={{ marginTop: 22 }}>
-      <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'baseline', marginBottom: 10 }}>
-        <span className="mono" style={{ fontSize: 10, letterSpacing: '.12em', textTransform: 'uppercase', color: C.faint }}>{title}</span>
+    <div className="mt-6">
+      <div className="mb-2.5 flex items-baseline justify-between gap-3">
+        <span className="label">{title}</span>
         {right}
       </div>
       {children}
     </div>
   );
 
+  const tile = 'rounded-[20px] border border-border-soft bg-white/[0.04]';
+
   return (
-    <div onClick={onClose} style={{ position: 'fixed', inset: 0, background: 'rgba(0,0,0,.72)', display: 'flex', justifyContent: 'flex-end', zIndex: 50, backdropFilter: 'blur(2px)' }}>
-      <div className="ps-scroll" onClick={(e) => e.stopPropagation()} style={{ width: 720, maxWidth: '96vw', height: '100%', background: C.panel, borderLeft: `1px solid ${C.border}`, overflowY: 'auto', padding: 26 }}>
+    <Portal>
+    <div onClick={onClose} className="fixed inset-0 z-50 flex justify-end bg-black/60 backdrop-blur-sm fade-in">
+      <div onClick={(e) => e.stopPropagation()} className="m-2 h-[calc(100%-16px)] w-[720px] max-w-[96vw] overflow-y-auto rounded-[24px] border border-border-soft bg-surface/95 p-6 shadow-glass backdrop-blur-2xl md:p-7 reveal">
         {/* head */}
-        <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start' }}>
-          <div style={{ display: 'flex', gap: 14, alignItems: 'center' }}>
+        <div className="flex items-start justify-between gap-3">
+          <div className="flex items-center gap-3.5">
             <Avatar src={igProxy(author.avatarUrl)} name={author.username} seed={seed} size={58} />
             <div>
-              <div className="mono" style={{ fontSize: 17, fontWeight: 700 }}>@{author.username}</div>
-              <div style={{ fontSize: 13, color: C.muted }}>{author.niche || 'без ниши'} · {author.platform}</div>
+              <div className="text-[19px] font-semibold tracking-[-0.02em] text-text">@{author.username}</div>
+              <div className="text-[13px] text-text-mute">{author.niche || 'без ниши'} · {author.platform}</div>
             </div>
           </div>
-          <button onClick={onClose} style={{ background: 'transparent', border: 'none', color: C.muted, fontSize: 24, cursor: 'pointer', lineHeight: 1 }}>×</button>
+          <button type="button" onClick={onClose} aria-label="Закрыть" className="btn-icon shrink-0">
+            <X className="h-4 w-4" />
+          </button>
         </div>
 
         {/* tabs */}
-        <div style={{ display: 'flex', gap: 4, marginTop: 20, borderBottom: `1px solid ${C.border}` }}>
+        <div className="mt-5 flex flex-wrap gap-1 rounded-full border border-border-soft bg-white/[0.04] p-1">
           {TABS.map((t) => (
-            <button key={t} onClick={() => setTab(t)} className="mono" style={{ background: 'transparent', border: 'none', borderBottom: `2px solid ${tab === t ? C.lime : 'transparent'}`, color: tab === t ? C.text : C.muted, padding: '9px 12px', fontSize: 11.5, letterSpacing: '.03em', cursor: 'pointer', textTransform: 'uppercase', marginBottom: -1 }}>{t}</button>
+            <button
+              key={t}
+              type="button"
+              onClick={() => setTab(t)}
+              className={`flex-1 whitespace-nowrap rounded-full px-3 py-1.5 text-[13px] transition-colors ${tab === t ? 'bg-blue font-semibold text-white' : 'text-text-dim hover:text-text'}`}
+            >
+              {t}
+            </button>
           ))}
         </div>
 
         {/* KPI row */}
-        <div style={{ display: 'grid', gridTemplateColumns: 'repeat(4,1fr)', gap: 2, marginTop: 20 }}>
-          {[
-            ['Подписчики', fmt(author.followers), C.text, a?.delta30 != null ? `${a.delta30 >= 0 ? '+' : ''}${a.delta30.toFixed(1)}% / 30д` : '—'],
-            ['Медиана', fmt(median), C.blue, `постов: ${author.postsCount || '—'}`],
-            ['Вовлечение', author.engagementAvg.toFixed(1) + '%', erColor(author.engagementAvg), a?.perWeek != null ? `${a.perWeek} постов/нед` : '—'],
-            ['Hit-rate', (a?.hitRate ?? 0) + '%', (a?.hitRate ?? 0) >= 45 ? C.lime : C.muted, 'выше медианы'],
-          ].map(([l, v, c, sub], k) => (
-            <div key={k} style={{ background: C.card, padding: '13px 14px', borderRadius: k === 0 ? '10px 0 0 10px' : k === 3 ? '0 10px 10px 0' : 0 }}>
-              <div className="mono" style={{ fontSize: 8.5, letterSpacing: '.1em', textTransform: 'uppercase', color: C.faint, marginBottom: 6 }}>{l as string}</div>
-              <div className="mono" style={{ fontSize: 19, fontWeight: 600, color: c as string }}>{v as string}</div>
-              <div className="mono" style={{ fontSize: 9.5, color: C.faint, marginTop: 4 }}>{sub as string}</div>
+        <div className="mt-5 grid grid-cols-2 gap-2 sm:grid-cols-4 stagger">
+          {([
+            ['Подписчики', fmt(author.followers), 'text', a?.delta30 != null ? `${a.delta30 >= 0 ? '+' : ''}${a.delta30.toFixed(1)}% / 30д` : '—'],
+            ['Медиана', fmt(median), 'blue', `постов: ${author.postsCount || '—'}`],
+            ['Вовлечение', author.engagementAvg.toFixed(1) + '%', erTone(author.engagementAvg), a?.perWeek != null ? `${a.perWeek} постов/нед` : '—'],
+            ['Доля хитов', (a?.hitRate ?? 0) + '%', (a?.hitRate ?? 0) >= 45 ? 'lime' : 'mute', 'выше медианы'],
+          ] as Array<[string, string, Tone, string]>).map(([l, v, c, sub], k) => (
+            <div key={k} className={`${tile} px-4 py-3.5`}>
+              <div className="label mb-1.5 !text-[10px]">{l}</div>
+              <div className={`text-[21px] font-extrabold leading-none tabular-nums tracking-[-0.02em] ${TONE_TEXT[c]}`}>{v}</div>
+              <div className="mt-1.5 text-[11.5px] text-text-mute">{sub}</div>
             </div>
           ))}
         </div>
 
-        {loading && <div className="mono" style={{ fontSize: 12, color: C.blue, textAlign: 'center', padding: '40px 0' }}>Загружаем аккаунт…</div>}
+        {loading && (
+          <div className="flex items-center justify-center gap-2 py-10 text-[13px] text-gold">
+            <RefreshCw className="h-4 w-4 animate-spin" />
+            Загружаем аккаунт…
+          </div>
+        )}
 
         {!loading && a && !a.hasReels && (
-          <div style={{ marginTop: 24, background: C.card, borderRadius: 10, padding: 20, textAlign: 'center' }}>
-            <div style={{ fontSize: 14, color: C.text, fontFamily: 'Georgia', marginBottom: 6 }}>Рилсы ещё не подтянулись</div>
-            <div className="mono" style={{ fontSize: 11.5, color: C.faint }}>Парсер собирает историю аккаунта в фоне — графики появятся после первого прохода.</div>
+          <div className={`${tile} mt-6 flex flex-col items-center p-6 text-center`}>
+            <Icon3D name="processing" size={36} tile />
+            <div className="mb-1.5 mt-3 text-[15px] font-semibold tracking-[-0.02em] text-text">Рилсы ещё не подтянулись</div>
+            <div className="text-[13px] text-text-mute">Парсер собирает историю аккаунта в фоне — графики появятся после первого прохода.</div>
           </div>
         )}
 
         {!loading && a && a.hasReels && (
-          <>
+          <div className="fade-in" key={tab}>
             {/* ОБЗОР */}
             {tab === 'Обзор' && (<>
-              <Sec title="Просмотры по рилсам · во времени" right={a.delta30 != null ? <span className="mono" style={{ fontSize: 11, color: a.delta30 >= 0 ? C.lime : C.pink }}>{a.delta30 >= 0 ? '▲' : '▼'} {Math.abs(a.delta30).toFixed(1)}%</span> : undefined}>
-                <div style={{ background: C.card, borderRadius: 10, padding: '12px 14px' }}>
-                  {a.growth.length >= 2 ? <Line data={a.growth} color={C.lime} /> : <div className="mono" style={{ fontSize: 11, color: C.faint, padding: '14px 0' }}>мало точек для графика</div>}
+              <Sec title="Просмотры по рилсам · во времени" right={a.delta30 != null ? <span className={`inline-flex items-center gap-1 text-[12px] font-semibold tabular-nums ${a.delta30 >= 0 ? 'text-lime' : 'text-pink'}`}>{a.delta30 >= 0 ? <TrendingUp className="h-3.5 w-3.5" /> : <TrendingDown className="h-3.5 w-3.5" />} {Math.abs(a.delta30).toFixed(1)}%</span> : undefined}>
+                <div className={`${tile} px-4 py-3`}>
+                  {a.growth.length >= 2 ? <Line data={a.growth} color={HEX.lime} /> : <div className="py-3.5 text-[12px] text-text-mute">мало точек для графика</div>}
                 </div>
               </Sec>
-              <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 16 }}>
+              <div className="grid gap-4 sm:grid-cols-2">
                 <Sec title="Форматы контента">
-                  <div style={{ display: 'flex', gap: 14, alignItems: 'center', background: C.card, borderRadius: 10, padding: 14 }}>
-                    <Donut segs={[{ value: a.reelsPct, color: C.blue }, { value: a.carouselPct, color: C.lime }, { value: a.photoPct, color: C.pink }]} />
-                    <div style={{ display: 'flex', flexDirection: 'column', gap: 8 }}>
-                      {[['Reels', a.reelsPct, C.blue], ['Карусели', a.carouselPct, C.lime], ['Фото', a.photoPct, C.pink]].map(([l, v, c]) => (
-                        <div key={l as string} style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
-                          <span style={{ width: 9, height: 9, borderRadius: 3, background: c as string }} />
-                          <span style={{ fontSize: 12.5, color: C.muted, fontFamily: 'Georgia', flex: 1 }}>{l as string}</span>
-                          <span className="mono" style={{ fontSize: 12, color: C.text }}>{v as number}%</span>
+                  <div className={`${tile} flex items-center gap-4 p-4`}>
+                    <Donut segs={[{ value: a.reelsPct, color: HEX.blue }, { value: a.carouselPct, color: HEX.lime }, { value: a.photoPct, color: HEX.pink }]} />
+                    <div className="flex flex-col gap-2">
+                      {([['Reels', a.reelsPct, 'bg-blue'], ['Карусели', a.carouselPct, 'bg-lime'], ['Фото', a.photoPct, 'bg-pink']] as Array<[string, number, string]>).map(([l, v, c]) => (
+                        <div key={l} className="flex items-center gap-2">
+                          <span className={`h-2.5 w-2.5 rounded-full ${c}`} />
+                          <span className="flex-1 text-[13px] text-text-dim">{l}</span>
+                          <span className="text-[13px] font-semibold tabular-nums text-text">{v}%</span>
                         </div>
                       ))}
                     </div>
                   </div>
                 </Sec>
                 <Sec title={`Просмотры · ${a.recentViews.length} Reels`}>
-                  <div style={{ background: C.card, borderRadius: 10, padding: '16px 14px' }}>
-                    <Bars data={a.recentViews} color={C.blue} />
-                    <div className="mono" style={{ fontSize: 9.5, color: C.faint, marginTop: 8 }}>медиана канала: {fmt(median)}</div>
+                  <div className={`${tile} px-4 py-4`}>
+                    <Bars data={a.recentViews} color={HEX.blue} />
+                    <div className="mt-2 text-[11.5px] text-text-mute">медиана канала: {fmt(median)}</div>
                   </div>
                 </Sec>
               </div>
@@ -487,31 +528,33 @@ function Analysis({ author, seed, onClose, onToggleSpy, onToast }: {
 
             {/* ВИРАЛЬНОСТЬ */}
             {tab === 'Виральность' && (<>
-              <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 2, marginTop: 22 }}>
-                <div style={{ background: C.card, padding: 16, borderRadius: '10px 0 0 10px' }}>
-                  <div className="mono" style={{ fontSize: 9, letterSpacing: '.1em', textTransform: 'uppercase', color: C.faint, marginBottom: 8 }}>Стабильность канала</div>
-                  <div className="mono" style={{ fontSize: 22, fontWeight: 600, color: a.cv < 0.8 ? C.lime : a.cv < 1.2 ? C.blue : C.pink }}>{a.cv}</div>
-                  <div style={{ fontSize: 12, color: C.muted, fontFamily: 'Georgia', marginTop: 6 }}>{a.cv < 0.8 ? 'Стабильно выстреливает' : a.cv < 1.2 ? 'Умеренный разброс' : '«Лотерея» — редкие хиты'}</div>
+              <div className="mt-6 grid grid-cols-2 gap-2">
+                <div className={`${tile} p-4`}>
+                  <div className="label mb-2 !text-[10px]">Стабильность канала</div>
+                  <div className={`text-[24px] font-extrabold tabular-nums tracking-[-0.02em] ${a.cv < 0.8 ? 'text-lime' : a.cv < 1.2 ? 'text-gold' : 'text-pink'}`}>{a.cv}</div>
+                  <div className="mt-1.5 text-[12.5px] text-text-dim">{a.cv < 0.8 ? 'Стабильно выстреливает' : a.cv < 1.2 ? 'Умеренный разброс' : '«Лотерея» — редкие хиты'}</div>
                 </div>
-                <div style={{ background: C.card, padding: 16, borderRadius: '0 10px 10px 0' }}>
-                  <div className="mono" style={{ fontSize: 9, letterSpacing: '.1em', textTransform: 'uppercase', color: C.faint, marginBottom: 8 }}>Hit-rate</div>
-                  <div className="mono" style={{ fontSize: 22, fontWeight: 600, color: a.hitRate >= 45 ? C.lime : C.muted }}>{a.hitRate}%</div>
-                  <div style={{ fontSize: 12, color: C.muted, fontFamily: 'Georgia', marginTop: 6 }}>постов выше медианы канала</div>
+                <div className={`${tile} p-4`}>
+                  <div className="label mb-2 !text-[10px]">Доля хитов</div>
+                  <div className={`text-[24px] font-extrabold tabular-nums tracking-[-0.02em] ${a.hitRate >= 45 ? 'text-lime' : 'text-text-mute'}`}>{a.hitRate}%</div>
+                  <div className="mt-1.5 text-[12.5px] text-text-dim">постов выше медианы канала</div>
                 </div>
               </div>
               <Sec title="Распределение постов по Xn">
-                <div style={{ background: C.card, borderRadius: 10, padding: 16 }}>
-                  {a.xnDist.map((d, i) => <HBar key={i} label={d.label} value={d.v} max={Math.max(...a.xnDist.map((x) => x.v), 1)} suffix="%" color={i >= 3 ? C.lime : i >= 1 ? C.blue : C.faint} />)}
+                <div className={`${tile} p-4`}>
+                  {a.xnDist.map((d, i) => <HBar key={i} label={d.label} value={d.v} max={Math.max(...a.xnDist.map((x) => x.v), 1)} suffix="%" tone={i >= 3 ? 'lime' : i >= 1 ? 'blue' : 'mute'} />)}
                 </div>
               </Sec>
-              <Sec title="Топ виральные · Xn = просмотры ÷ медиана" right={<span className="mono" style={{ fontSize: 11, color: C.muted }}>медиана {fmt(median)}</span>}>
-                {a.topViral.map(({ r, x }, k) => (
-                  <a key={r.id} href={r.url} target="_blank" rel="noreferrer" style={{ textDecoration: 'none', display: 'flex', alignItems: 'center', gap: 12, padding: '11px 12px', background: C.card, borderRadius: 9, marginBottom: 2 }}>
-                    <span className="mono" style={{ width: 34, height: 30, borderRadius: 7, background: x >= 2 ? C.lime : '#1c1c1c', color: x >= 2 ? '#0a0a0a' : C.text, display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: 11, fontWeight: 700, flexShrink: 0 }}>{x.toFixed(1)}x</span>
-                    <span style={{ flex: 1, fontSize: 12.5, color: C.muted, fontFamily: 'Georgia', whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis' }}>{r.caption?.slice(0, 60) || `Reel #${k + 1}`}</span>
-                    <span className="mono" style={{ fontSize: 13, color: C.blue, fontWeight: 600 }}>{fmt(r.views)}</span>
-                  </a>
-                ))}
+              <Sec title="Топ виральные · Xn = просмотры ÷ медиана" right={<span className="text-[12px] tabular-nums text-text-mute">медиана {fmt(median)}</span>}>
+                <div className="grid gap-1.5">
+                  {a.topViral.map(({ r, x }, k) => (
+                    <a key={r.id} href={r.url} target="_blank" rel="noreferrer" className={`${tile} flex items-center gap-3 px-3.5 py-2.5 no-underline transition-colors hover:border-gold/40 hover:bg-white/[0.06]`}>
+                      <span className={`flex h-8 w-11 flex-none items-center justify-center rounded-full text-[12px] font-bold tabular-nums ${x >= 2 ? 'bg-lime text-bg' : 'bg-white/[0.08] text-text'}`}>{x.toFixed(1)}x</span>
+                      <span className="flex-1 truncate text-[13px] text-text-dim">{r.caption?.slice(0, 60) || `Рилс №${k + 1}`}</span>
+                      <span className="text-[13px] font-semibold tabular-nums text-gold">{fmt(r.views)}</span>
+                    </a>
+                  ))}
+                </div>
               </Sec>
             </>)}
 
@@ -519,101 +562,113 @@ function Analysis({ author, seed, onClose, onToggleSpy, onToast }: {
             {tab === 'Контент' && (<>
               {pa ? (
                 <>
-                  <Sec title="Темы / рубрики, которые заходят" right={<span className="mono" style={{ fontSize: 10, color: C.faint }}>что копировать</span>}>
-                    <div style={{ display: 'flex', flexWrap: 'wrap', gap: 8 }}>
+                  <Sec title="Темы / рубрики, которые заходят" right={<span className="text-[11.5px] text-text-mute">что копировать</span>}>
+                    <div className="flex flex-wrap gap-2">
                       {pa.bestTopics.length ? pa.bestTopics.map((t, i) => (
-                        <span key={i} className="mono" style={{ fontSize: 12, color: C.text, background: C.card, border: `1px solid ${C.border}`, borderRadius: 8, padding: '8px 12px' }}>{t}</span>
-                      )) : <span className="mono" style={{ fontSize: 11.5, color: C.faint }}>—</span>}
+                        <span key={i} className="rounded-full border border-border-soft bg-white/[0.04] px-3.5 py-1.5 text-[13px] text-text">{t}</span>
+                      )) : <span className="text-[12px] text-text-mute">—</span>}
                     </div>
                   </Sec>
-                  <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 16 }}>
+                  <div className="grid gap-4 sm:grid-cols-2">
                     <Sec title="Повторяющиеся хуки">
-                      <div style={{ background: C.card, borderRadius: 10, padding: 14 }}>
+                      <div className={`${tile} px-4 py-2`}>
                         {pa.recurringHooks.length ? pa.recurringHooks.map((h, i) => (
-                          <div key={i} style={{ display: 'flex', gap: 10, padding: '7px 0', borderBottom: i < pa.recurringHooks.length - 1 ? `1px solid ${C.borderSoft}` : 'none' }}>
-                            <span className="mono" style={{ fontSize: 11, color: C.lime, fontWeight: 700 }}>›</span>
-                            <span style={{ flex: 1, fontSize: 12, color: C.muted, fontFamily: 'Georgia' }}>{h}</span>
+                          <div key={i} className={`flex gap-2.5 py-2 ${i < pa.recurringHooks.length - 1 ? 'border-b border-border-soft' : ''}`}>
+                            <ChevronRight className="mt-0.5 h-3.5 w-3.5 flex-none text-lime" />
+                            <span className="flex-1 text-[13px] text-text-dim">{h}</span>
                           </div>
-                        )) : <span className="mono" style={{ fontSize: 11.5, color: C.faint }}>—</span>}
+                        )) : <span className="text-[12px] text-text-mute">—</span>}
                       </div>
                     </Sec>
                     <Sec title="Длина видео → виральность">
-                      <div style={{ background: C.card, borderRadius: 10, padding: 16 }}>
+                      <div className={`${tile} p-4`}>
                         {a.hasLen ? <>
-                          {a.lenBuckets.filter((l) => l.n > 0).map((l, i) => <HBar key={i} label={l.label} value={l.xn} max={Math.max(...a.lenBuckets.map((x) => x.xn), 1)} suffix="x" color={xnColor(l.xn)} sub={`${l.n} рилс.`} />)}
-                          <div className="mono" style={{ fontSize: 9.5, color: C.faint, marginTop: 4 }}>оптимум: {[...a.lenBuckets].filter((l) => l.n > 0).sort((x, y) => y.xn - x.xn)[0]?.label ?? '—'}</div>
-                        </> : <span className="mono" style={{ fontSize: 11.5, color: C.faint }}>нет данных о длительности</span>}
+                          {a.lenBuckets.filter((l) => l.n > 0).map((l, i) => <HBar key={i} label={l.label} value={l.xn} max={Math.max(...a.lenBuckets.map((x) => x.xn), 1)} suffix="x" tone={xnTone(l.xn)} sub={`${l.n} рилс.`} />)}
+                          <div className="mt-1 text-[11.5px] text-text-mute">оптимум: {[...a.lenBuckets].filter((l) => l.n > 0).sort((x, y) => y.xn - x.xn)[0]?.label ?? '—'}</div>
+                        </> : <span className="text-[12px] text-text-mute">нет данных о длительности</span>}
                       </div>
                     </Sec>
                   </div>
                   {pa.bestFormats.length > 0 && (
                     <Sec title="Лучшие форматы">
-                      <div style={{ display: 'flex', flexWrap: 'wrap', gap: 8 }}>
-                        {pa.bestFormats.map((f, i) => <span key={i} className="mono" style={{ fontSize: 11.5, color: C.blue, background: C.card, border: `1px solid ${C.border}`, borderRadius: 8, padding: '7px 11px' }}>{f}</span>)}
+                      <div className="flex flex-wrap gap-2">
+                        {pa.bestFormats.map((f, i) => <span key={i} className="rounded-full border border-gold/30 bg-blue/[0.08] px-3.5 py-1.5 text-[13px] text-gold">{f}</span>)}
                       </div>
                     </Sec>
                   )}
                 </>
               ) : (
-                <div style={{ marginTop: 24, background: C.card, borderRadius: 10, padding: 20, textAlign: 'center' }}>
-                  <div style={{ fontSize: 13.5, color: C.muted, fontFamily: 'Georgia', marginBottom: 14 }}>Рубрики и хуки собираются из расшифровок при AI-разборе.</div>
-                  <button onClick={() => setTab('AI-разбор')} className="btn-prim mono" style={{ background: 'transparent', border: `1px solid ${C.lime}55`, color: C.lime, borderRadius: 9, padding: '10px 18px', fontSize: 11, fontWeight: 700, letterSpacing: '.04em', textTransform: 'uppercase', cursor: 'pointer' }}>Перейти к AI-разбору</button>
+                <div className={`${tile} mt-6 flex flex-col items-center p-6 text-center`}>
+                  <div className="mb-4 text-[14px] text-text-dim">Рубрики и хуки собираются из расшифровок при AI-разборе.</div>
+                  <button type="button" onClick={() => setTab('AI-разбор')} className="btn-ghost !border-lime/40 !text-lime">
+                    Перейти к AI-разбору
+                    <ArrowRight className="h-4 w-4" />
+                  </button>
                 </div>
               )}
             </>)}
 
             {/* ТАЙМИНГ */}
             {tab === 'Тайминг' && (
-              <Sec title="Лучшее время постинга" right={a.hasTiming ? <span className="mono" style={{ fontSize: 11, color: C.lime }}>★ {a.bestWindow}</span> : undefined}>
-                <div style={{ background: C.card, borderRadius: 10, padding: 16 }}>
+              <Sec title="Лучшее время постинга" right={a.hasTiming ? <span className="inline-flex items-center gap-1 text-[12px] font-semibold text-lime"><Star className="h-3.5 w-3.5 fill-current" /> {a.bestWindow}</span> : undefined}>
+                <div className={`${tile} p-4`}>
                   {a.hasTiming ? <>
-                    <div style={{ display: 'grid', gridTemplateColumns: '44px repeat(7,1fr)', gap: 3 }}>
+                    <div className="grid gap-1 [grid-template-columns:48px_repeat(7,1fr)]">
                       <span />
-                      {DAYS.map((d) => <span key={d} className="mono" style={{ fontSize: 9.5, color: C.faint, textAlign: 'center' }}>{d}</span>)}
+                      {DAYS.map((d) => <span key={d} className="text-center text-[11px] text-text-mute">{d}</span>)}
                       {SLOTS.map((s, si) => (
                         <React.Fragment key={s}>
-                          <span className="mono" style={{ fontSize: 9.5, color: C.faint, alignSelf: 'center' }}>{s}</span>
+                          <span className="self-center text-[11px] text-text-mute">{s}</span>
                           {DAYS.map((_, di) => {
                             const v = a.heat[si][di], isBest = a.best.d === di && a.best.s === si;
-                            return <span key={di} title={`${DAYS[di]} ${s}`} style={{ height: 26, borderRadius: 5, background: `rgba(96,200,240,${0.12 + v * 0.8})`, border: isBest ? `1.5px solid ${C.lime}` : 'none' }} />;
+                            return <span key={di} title={`${DAYS[di]} ${s}`} className={`h-7 rounded-lg ${isBest ? 'ring-2 ring-lime' : ''}`} style={{ background: `rgba(31,123,255,${0.1 + v * 0.8})` }} />;
                           })}
                         </React.Fragment>
                       ))}
                     </div>
-                    <div style={{ display: 'flex', alignItems: 'center', gap: 8, marginTop: 14 }}>
-                      <span className="mono" style={{ fontSize: 9.5, color: C.faint }}>меньше</span>
-                      <div style={{ flex: 1, height: 6, borderRadius: 4, background: 'linear-gradient(90deg, rgba(96,200,240,.12), rgba(96,200,240,.92))' }} />
-                      <span className="mono" style={{ fontSize: 9.5, color: C.faint }}>выше виральность</span>
+                    <div className="mt-4 flex items-center gap-2">
+                      <span className="text-[11px] text-text-mute">меньше</span>
+                      <div className="h-1.5 flex-1 rounded-full bg-gradient-to-r from-blue/10 to-blue/90" />
+                      <span className="text-[11px] text-text-mute">выше виральность</span>
                     </div>
-                  </> : <span className="mono" style={{ fontSize: 11.5, color: C.faint }}>нет дат публикаций для тепловой карты</span>}
-                  {pa?.cadence?.best_days?.length ? <div className="mono" style={{ fontSize: 10.5, color: C.muted, marginTop: 12 }}>Claude: лучшие дни — {pa.cadence.best_days.join(', ')}</div> : null}
+                  </> : <span className="text-[12px] text-text-mute">нет дат публикаций для тепловой карты</span>}
+                  {pa?.cadence?.best_days?.length ? <div className="mt-3 text-[12px] text-text-dim">Claude: лучшие дни — {pa.cadence.best_days.join(', ')}</div> : null}
                 </div>
               </Sec>
             )}
 
             {/* AI-РАЗБОР */}
             {tab === 'AI-разбор' && (
-              <Sec title="Стратегический разбор от Claude" right={pa ? <span className="mono" style={{ fontSize: 9.5, color: C.faint }}>{pa.model}</span> : undefined}>
-                <div style={{ background: C.card, borderRadius: 10, padding: 18 }}>
+              <Sec title="Стратегический разбор от Claude" right={pa ? <span className="text-[11px] text-text-mute">{pa.model}</span> : undefined}>
+                <div className={`${tile} p-5`}>
                   {!pa && !aiLoading && (
-                    <div style={{ textAlign: 'center', padding: '10px 0 16px' }}>
-                      <p style={{ margin: '0 0 16px', fontSize: 13, color: C.muted, fontFamily: 'Georgia', lineHeight: 1.5 }}>
+                    <div className="flex flex-col items-center py-2 text-center">
+                      <Icon3D name="brain" size={40} tile sway />
+                      <p className="mb-4 mt-3 text-[14px] leading-relaxed text-text-dim">
                         Claude соберёт из метрик готовый план: какие рубрики, хуки, длину и тайминг копировать, чтобы повторить виральность @{author.username} в твоём контенте.
                       </p>
-                      <button onClick={runAI} className="btn-prim mono" style={{ background: C.lime, color: '#0a0a0a', border: 'none', borderRadius: 9, padding: '11px 20px', fontSize: 11.5, fontWeight: 700, letterSpacing: '.04em', textTransform: 'uppercase', cursor: 'pointer' }}>✦ Сгенерировать разбор</button>
+                      <button type="button" onClick={runAI} className="btn-lime">
+                        <Sparkles className="h-4 w-4" />
+                        Сгенерировать разбор
+                      </button>
                     </div>
                   )}
-                  {aiLoading && <div className="mono" style={{ fontSize: 12, color: C.blue, textAlign: 'center', padding: '20px 0' }}>Claude анализирует аккаунт…</div>}
+                  {aiLoading && (
+                    <div className="flex items-center justify-center gap-2 py-5 text-[13px] text-gold">
+                      <RefreshCw className="h-4 w-4 animate-spin" />
+                      Claude анализирует аккаунт…
+                    </div>
+                  )}
                   {pa && !aiLoading && (
                     <div>
-                      <div style={{ fontSize: 13.5, color: C.text, fontFamily: 'Georgia', lineHeight: 1.65, whiteSpace: 'pre-wrap' }}>{pa.summary}</div>
+                      <div className="whitespace-pre-wrap text-[14px] leading-relaxed text-text">{pa.summary}</div>
                       {pa.recommendations.length > 0 && (
-                        <div style={{ marginTop: 16, paddingTop: 14, borderTop: `1px solid ${C.borderSoft}` }}>
-                          <div className="mono" style={{ fontSize: 9.5, letterSpacing: '.1em', textTransform: 'uppercase', color: C.faint, marginBottom: 10 }}>Что копировать</div>
+                        <div className="mt-4 border-t border-border-soft pt-4">
+                          <div className="label mb-2.5">Что копировать</div>
                           {pa.recommendations.map((rec, i) => (
-                            <div key={i} style={{ display: 'flex', gap: 10, marginBottom: 9 }}>
-                              <span className="mono" style={{ fontSize: 12, color: C.lime, fontWeight: 700 }}>{i + 1}.</span>
-                              <span style={{ flex: 1, fontSize: 13, color: C.text, fontFamily: 'Georgia', lineHeight: 1.5 }}>{rec}</span>
+                            <div key={i} className="mb-2.5 flex gap-2.5">
+                              <span className="inline-flex h-6 min-w-[24px] items-center justify-center rounded-full bg-lime/15 text-[11px] font-semibold tabular-nums text-lime">{i + 1}</span>
+                              <span className="flex-1 text-[13.5px] leading-relaxed text-text">{rec}</span>
                             </div>
                           ))}
                         </div>
@@ -623,21 +678,33 @@ function Analysis({ author, seed, onClose, onToggleSpy, onToast }: {
                 </div>
               </Sec>
             )}
-          </>
+          </div>
         )}
 
         {/* actions */}
-        <div style={{ display: 'flex', gap: 8, marginTop: 26 }}>
-          <button onClick={() => onToggleSpy(author.id)} className="btn-prim mono" style={{ flex: 1, padding: '13px 0', borderRadius: 10, cursor: 'pointer', fontSize: 12, fontWeight: 700, letterSpacing: '.05em', textTransform: 'uppercase', border: 'none', background: author.isWatching ? 'transparent' : C.pink, color: author.isWatching ? C.pink : '#0a0a0a', outline: author.isWatching ? `1px solid ${C.pink}55` : 'none' }}>
-            {author.isWatching ? 'Убрать из наблюдения' : '▶ Взять под наблюдение'}
+        <div className="mt-7 flex flex-wrap gap-2">
+          <button
+            type="button"
+            onClick={() => onToggleSpy(author.id)}
+            className={`flex-1 ${author.isWatching ? 'btn-ghost !border-pink/45 !text-pink' : 'btn-primary !bg-pink !shadow-[0_8px_24px_rgba(255,61,139,0.35)] hover:!bg-pink/90'}`}
+          >
+            {author.isWatching ? <EyeOff className="h-4 w-4" /> : <Eye className="h-4 w-4" />}
+            {author.isWatching ? 'Убрать из наблюдения' : 'Взять под наблюдение'}
           </button>
-          <button onClick={cloneTopFormat} className="btn-prim mono" style={{ padding: '13px 18px', borderRadius: 10, cursor: 'pointer', fontSize: 12, fontWeight: 700, letterSpacing: '.05em', textTransform: 'uppercase', border: `1px solid ${C.lime}55`, background: 'transparent', color: C.lime }}>
-            ⎘ Клонировать топ-формат
+          <button type="button" onClick={cloneTopFormat} className="btn-ghost !border-lime/40 !text-lime">
+            <Copy className="h-4 w-4" />
+            Клонировать топ-формат
           </button>
         </div>
-        {author.isWatching && <div className="mono" style={{ marginTop: 10, fontSize: 11, color: C.pink, display: 'flex', alignItems: 'center', gap: 7, justifyContent: 'center' }}><span className="live-dot" style={{ width: 6, height: 6, borderRadius: 6, background: C.pink }} />Парсер активен · обновление каждые {author.refreshInterval ?? 24} ч</div>}
+        {author.isWatching && (
+          <div className="mt-3 flex items-center justify-center gap-2 text-[12px] text-pink">
+            <span className="h-1.5 w-1.5 rounded-full bg-pink animate-pulse" />
+            Парсер активен · обновление каждые {author.refreshInterval ?? 24} ч
+          </div>
+        )}
       </div>
     </div>
+    </Portal>
   );
 }
 
@@ -663,20 +730,28 @@ function AddModal({ onClose, onAdded, onToast }: { onClose: () => void; onAdded:
     setBusy(false);
   };
   return (
-    <div onClick={onClose} style={{ position: 'fixed', inset: 0, background: 'rgba(0,0,0,.72)', display: 'flex', alignItems: 'center', justifyContent: 'center', zIndex: 60, backdropFilter: 'blur(2px)' }}>
-      <div onClick={(e) => e.stopPropagation()} style={{ width: 420, maxWidth: '92vw', background: C.panel, border: `1px solid ${C.border}`, borderRadius: 14, padding: 22 }}>
-        <div className="mono" style={{ fontSize: 11, letterSpacing: '.14em', textTransform: 'uppercase', color: C.muted, marginBottom: 14 }}>Добавить блогера</div>
-        <div style={{ position: 'relative', marginBottom: 14 }}>
-          <span style={{ position: 'absolute', left: 13, top: 12, color: C.faint, fontSize: 14 }}>@</span>
-          <input autoFocus value={username} onChange={(e) => setUsername(e.target.value)} onKeyDown={(e) => e.key === 'Enter' && submit()} placeholder="instagram username" className="mono" style={{ background: C.card, border: `1px solid ${C.border}`, color: C.text, borderRadius: 10, padding: '11px 14px 11px 28px', width: '100%', fontSize: 13, outline: 'none' }} />
+    <Portal>
+    <div onClick={onClose} className="fixed inset-0 z-[60] flex items-center justify-center bg-black/60 p-4 backdrop-blur-sm fade-in">
+      <div onClick={(e) => e.stopPropagation()} className="panel !bg-surface/95 w-[420px] max-w-[92vw] p-6 shadow-glass pop-in">
+        <div className="mb-4 flex items-center gap-3">
+          <Icon3D name="bloggers" size={22} tile />
+          <span className="text-[17px] font-semibold tracking-[-0.02em] text-text">Добавить блогера</span>
         </div>
-        <div style={{ display: 'flex', gap: 8 }}>
-          <button onClick={onClose} className="mono" style={{ flex: 1, padding: '11px 0', borderRadius: 9, background: 'transparent', border: `1px solid ${C.border}`, color: C.muted, fontSize: 11.5, cursor: 'pointer', textTransform: 'uppercase' }}>Отмена</button>
-          <button onClick={submit} disabled={busy} className="btn-prim mono" style={{ flex: 1, padding: '11px 0', borderRadius: 9, background: C.lime, border: 'none', color: '#0a0a0a', fontSize: 11.5, fontWeight: 700, cursor: busy ? 'wait' : 'pointer', textTransform: 'uppercase', opacity: busy ? 0.6 : 1 }}>{busy ? 'Парсим…' : 'Добавить'}</button>
+        <div className="relative mb-4">
+          <span className="pointer-events-none absolute left-4 top-1/2 -translate-y-1/2 text-[14px] text-text-mute">@</span>
+          <input autoFocus value={username} onChange={(e) => setUsername(e.target.value)} onKeyDown={(e) => e.key === 'Enter' && submit()} placeholder="username в Instagram" className="input !rounded-full !pl-9" />
         </div>
-        <div className="mono" style={{ fontSize: 10, color: C.faint, marginTop: 12, lineHeight: 1.5 }}>Первичный парс собирает последние рилсы и считает медиану. Списываются кредиты за скрейп.</div>
+        <div className="flex gap-2">
+          <button type="button" onClick={onClose} className="btn-ghost flex-1">Отмена</button>
+          <button type="button" onClick={submit} disabled={busy} className="btn-lime flex-1">
+            {busy && <RefreshCw className="h-4 w-4 animate-spin" />}
+            {busy ? 'Парсим…' : 'Добавить'}
+          </button>
+        </div>
+        <div className="mt-3.5 text-[12px] leading-relaxed text-text-mute">Первичный парс собирает последние рилсы и считает медиану. Списываются кредиты за скрейп.</div>
       </div>
     </div>
+    </Portal>
   );
 }
 
@@ -863,183 +938,265 @@ export function BloggersClient() {
   const activeFolderName = folder === 'spy' ? 'Шпион' : folders.find((f) => f.id === folder)?.name;
 
   const renderBloggerCard = (b: BloggerRow, i: number) => (
-    <div key={b.id} className="card-b" onClick={() => setSelected(b.id)} style={{ background: C.card, border: `1px solid ${b.isWatching ? C.pink + '44' : C.border}`, borderRadius: 14, padding: 16, cursor: 'pointer', position: 'relative' }}>
-      {b.isWatching && <div className="mono" style={{ position: 'absolute', top: 12, right: 12, display: 'flex', alignItems: 'center', gap: 6, fontSize: 9, letterSpacing: '.1em', textTransform: 'uppercase', color: C.pink }}><span className="live-dot" style={{ width: 6, height: 6, borderRadius: 6, background: C.pink, display: 'inline-block' }} />Парсинг</div>}
-      <div style={{ display: 'flex', gap: 12, alignItems: 'center', marginBottom: 16 }}>
+    <div
+      key={b.id}
+      onClick={() => setSelected(b.id)}
+      className={`card-editorial relative cursor-pointer p-5 ${b.isWatching ? '!border-pink/35' : ''}`}
+    >
+      {b.isWatching && (
+        <div className="absolute top-4 right-4 inline-flex items-center gap-1.5 rounded-full bg-pink/[0.12] px-2.5 py-1 text-[11px] font-semibold uppercase tracking-[0.06em] text-pink">
+          <span className="h-1.5 w-1.5 rounded-full bg-pink animate-pulse" />
+          Парсинг
+        </div>
+      )}
+      <div className="mb-4 flex items-center gap-3">
         <Avatar src={igProxy(b.avatarUrl)} name={b.username} seed={i} size={48} />
-        <div style={{ minWidth: 0 }}>
-          <div className="mono" style={{ fontSize: 14, fontWeight: 600, color: C.text, whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis' }}>@{b.username}</div>
-          <div style={{ fontSize: 12, color: C.muted, display: 'flex', gap: 7, alignItems: 'center', marginTop: 2 }}>
-            <span className="mono" style={{ fontSize: 9, padding: '2px 6px', borderRadius: 5, border: `1px solid ${C.border}`, color: C.faint }}>IG</span>{b.niche || 'без ниши'}
+        <div className="min-w-0">
+          <div className="truncate text-[15px] font-semibold tracking-[-0.01em] text-text">@{b.username}</div>
+          <div className="mt-0.5 flex items-center gap-1.5 text-[12.5px] text-text-mute">
+            <span className="rounded-full border border-border-soft px-1.5 py-px text-[10px] font-semibold text-text-mute">IG</span>
+            {b.niche || 'без ниши'}
           </div>
         </div>
       </div>
-      <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr 1fr', gap: 10, paddingTop: 14, borderTop: `1px solid ${C.borderSoft}` }}>
+      <div className="grid grid-cols-3 gap-2.5 border-t border-border-soft pt-4">
         <Stat label="Подписч." value={fmt(b.followers)} />
-        <Stat label="Медиана" value={fmt(b.medianViews)} color={C.blue} />
-        <Stat label="Вовлеч." value={b.engagementAvg.toFixed(1) + '%'} color={erColor(b.engagementAvg)} />
+        <Stat label="Медиана" value={fmt(b.medianViews)} tone="blue" />
+        <Stat label="Вовлеч." value={b.engagementAvg.toFixed(1) + '%'} tone={erTone(b.engagementAvg)} />
       </div>
-      <div style={{ display: 'flex', gap: 6, marginTop: 14 }}>
-        <button onClick={(e) => { e.stopPropagation(); setSelected(b.id); }} className="spy-add mono" style={{ flex: 1, padding: '9px 0', borderRadius: 9, cursor: 'pointer', fontSize: 11, letterSpacing: '.04em', textTransform: 'uppercase', background: 'transparent', border: `1px solid ${C.border}`, color: C.muted }}>Анализ</button>
-        <button onClick={(e) => { e.stopPropagation(); toggleSpy(b.id); }} className="spy-add mono" style={{ flex: 1, padding: '9px 0', borderRadius: 9, cursor: 'pointer', fontSize: 11, letterSpacing: '.04em', textTransform: 'uppercase', background: b.isWatching ? C.pink + '14' : 'transparent', border: `1px solid ${b.isWatching ? C.pink + '55' : C.border}`, color: b.isWatching ? C.pink : C.muted }}>{b.isWatching ? '✓ Шпион' : '+ Шпион'}</button>
+      <div className="mt-4 flex gap-2">
+        <button
+          type="button"
+          onClick={(e) => { e.stopPropagation(); setSelected(b.id); }}
+          className="btn-ghost flex-1 !px-3 !py-2 !text-[13px]"
+        >
+          <BarChart3 className="h-4 w-4" />
+          Анализ
+        </button>
+        <button
+          type="button"
+          onClick={(e) => { e.stopPropagation(); toggleSpy(b.id); }}
+          className={`btn-ghost flex-1 !px-3 !py-2 !text-[13px] ${b.isWatching ? '!border-pink/45 !bg-pink/[0.1] !text-pink' : 'hover:!border-pink/45 hover:!text-pink'}`}
+        >
+          {b.isWatching ? <Check className="h-4 w-4" /> : <Plus className="h-4 w-4" />}
+          Шпион
+        </button>
       </div>
     </div>
   );
 
   return (
-    <div style={{ color: C.text, fontFamily: 'Georgia, serif' }}>
-      <style>{`
-        @import url('https://fonts.googleapis.com/css2?family=JetBrains+Mono:wght@400;500;600;700&display=swap');
-        .ps-bloggers .mono{font-family:'JetBrains Mono',monospace;}
-        .ps-scroll::-webkit-scrollbar{width:8px;} .ps-scroll::-webkit-scrollbar-thumb{background:#2a2a2a;border-radius:8px;}
-        .card-b{transition:background .15s,border-color .15s;} .card-b:hover{background:${C.cardHover};border-color:#2c2c2c;}
-        .chip{transition:all .15s;} .chip:hover{border-color:#3a3a3a;color:${C.text};}
-        .fld:hover{background:#141414;}
-        .btn-prim{transition:filter .15s,transform .1s;} .btn-prim:hover{filter:brightness(1.08);} .btn-prim:active{transform:translateY(1px);}
-        .spy-add{transition:all .15s;} .spy-add:hover{background:${C.pink}1a;border-color:${C.pink};color:${C.pink};}
-        @keyframes pulse{0%,100%{opacity:1}50%{opacity:.25}} .live-dot{animation:pulse 1.6s ease-in-out infinite;}
-        @media(prefers-reduced-motion: reduce){.live-dot{animation:none;}}
-        @media(max-width:920px){.ps-side{display:none !important;} .ps-grid{grid-template-columns:1fr !important;} .ps-main{grid-template-columns:1fr !important;}}
-      `}</style>
-
-      <div className="ps-bloggers">
-        <div style={{ display: 'flex', alignItems: 'flex-end', justifyContent: 'space-between', gap: 24, flexWrap: 'wrap', marginBottom: 26 }}>
-          <div>
-            <div className="mono" style={{ fontSize: 10, letterSpacing: '.22em', color: C.faint, textTransform: 'uppercase', marginBottom: 8 }}>Persona Studio · Разведка</div>
-            <h1 style={{ margin: 0, fontSize: 42, fontWeight: 400, letterSpacing: '-.01em', lineHeight: 1 }}>Блогеры</h1>
-          </div>
-          <div style={{ display: 'flex', gap: 10, alignItems: 'center' }}>
-            <div style={{ position: 'relative' }}>
-              <input value={query} onChange={(e) => setQuery(e.target.value)} onKeyDown={(e) => e.key === 'Enter' && runSearch()} placeholder="Ниша, тема или @username" className="mono" style={{ background: C.card, border: `1px solid ${C.border}`, color: C.text, borderRadius: 10, padding: '11px 14px 11px 36px', width: 300, fontSize: 13, outline: 'none' }} />
-              <span style={{ position: 'absolute', left: 13, top: 11, color: C.faint, fontSize: 14 }}>⌕</span>
+    <div className="text-text">
+      <PageHero
+        eyebrow="Persona Studio · Разведка"
+        title="Блогеры"
+        icon="bloggers"
+        extra={
+          <div className="flex flex-wrap items-center gap-2">
+            <div className="relative w-full sm:w-[320px]">
+              <Search className="pointer-events-none absolute left-4 top-1/2 h-4 w-4 -translate-y-1/2 text-text-mute" />
+              <input
+                value={query}
+                onChange={(e) => setQuery(e.target.value)}
+                onKeyDown={(e) => e.key === 'Enter' && runSearch()}
+                placeholder="Ниша, тема или @username"
+                className="input !rounded-full !pl-11"
+              />
             </div>
-            <button onClick={runSearch} disabled={searching} className="btn-prim mono" style={{ background: C.blue, color: '#0a0a0a', border: 'none', borderRadius: 10, padding: '11px 20px', fontSize: 12, fontWeight: 700, letterSpacing: '.04em', cursor: searching ? 'wait' : 'pointer', textTransform: 'uppercase', opacity: searching ? 0.6 : 1 }}>{searching ? 'Ищем…' : 'Поиск'}</button>
-            <button onClick={() => setShowAdd(true)} className="btn-prim mono" style={{ background: C.lime, color: '#0a0a0a', border: 'none', borderRadius: 10, padding: '11px 18px', fontSize: 12, fontWeight: 700, letterSpacing: '.04em', cursor: 'pointer', textTransform: 'uppercase' }}>+ Добавить блогера</button>
+            <button type="button" onClick={runSearch} disabled={searching} className="btn-primary">
+              {searching ? <RefreshCw className="h-4 w-4 animate-spin" /> : <Search className="h-4 w-4" />}
+              {searching ? 'Ищем…' : 'Поиск'}
+            </button>
+            <button type="button" onClick={() => setShowAdd(true)} className="btn-lime">
+              <Plus className="h-4 w-4" />
+              Добавить блогера
+            </button>
           </div>
-        </div>
+        }
+      />
 
-        <div style={{ display: 'flex', gap: 8, flexWrap: 'wrap', alignItems: 'center', marginBottom: 22 }}>
-          {SORTS.map((s) => <button key={s.id} onClick={() => setSort(s.id)} className="chip mono" style={{ background: sort === s.id ? '#171717' : 'transparent', border: `1px solid ${sort === s.id ? '#333' : C.border}`, color: sort === s.id ? C.text : C.muted, borderRadius: 9, padding: '8px 13px', fontSize: 11.5, cursor: 'pointer' }}>{s.label}</button>)}
-          <div style={{ width: 1, height: 22, background: C.border, margin: '0 4px' }} />
-          {[{ v: 0, l: 'Все' }, { v: 1e6, l: '1M+' }, { v: 25e6, l: '25M+' }, { v: 50e6, l: '50M+' }].map((o) => <button key={o.v} onClick={() => setSizeMin(o.v)} className="chip mono" style={{ background: sizeMin === o.v ? '#171717' : 'transparent', border: `1px solid ${sizeMin === o.v ? '#333' : C.border}`, color: sizeMin === o.v ? C.text : C.muted, borderRadius: 9, padding: '8px 13px', fontSize: 11.5, cursor: 'pointer' }}>{o.l}</button>)}
-        </div>
+      <div className="mb-6 flex flex-wrap items-center gap-2">
+        {SORTS.map((s) => (
+          <button key={s.id} type="button" onClick={() => setSort(s.id)} className={chipCls(sort === s.id)}>
+            {s.label}
+          </button>
+        ))}
+        <div className="mx-1 h-6 w-px bg-border-soft" />
+        {[{ v: 0, l: 'Все' }, { v: 1e6, l: '1M+' }, { v: 25e6, l: '25M+' }, { v: 50e6, l: '50M+' }].map((o) => (
+          <button key={o.v} type="button" onClick={() => setSizeMin(o.v)} className={chipCls(sizeMin === o.v)}>
+            {o.l}
+          </button>
+        ))}
+      </div>
 
-        <div style={{ display: 'flex', alignItems: 'baseline', gap: 14, marginBottom: 18 }}>
-          <span className="mono" style={{ fontSize: 11, letterSpacing: '.12em', textTransform: 'uppercase', color: C.faint }}>{feed ? 'Лента поиска' : 'Найдено'}</span>
-          {feed ? (
-            <>
-              <span style={{ font: '400 34px/1 Georgia, serif', color: C.text }}>{searching ? '—' : feed.length}</span>
-              <span className="mono" style={{ fontSize: 11.5, color: C.muted }}>медиа · {topBloggers.length} блогеров</span>
-              <button onClick={clearSearch} className="mono" style={{ background: 'transparent', border: 'none', color: C.pink, fontSize: 11.5, cursor: 'pointer' }}>✕ Сбросить</button>
-            </>
-          ) : (
-            <>
-              <span style={{ font: '400 34px/1 Georgia, serif', color: C.text }}>{loading ? '—' : list.length}</span>
-              {folder && <button onClick={() => setFolder(null)} className="mono" style={{ background: 'transparent', border: 'none', color: C.pink, fontSize: 11.5, cursor: 'pointer' }}>✕ {activeFolderName}</button>}
-            </>
-          )}
-        </div>
+      <div className="mb-5 flex flex-wrap items-baseline gap-3">
+        <span className="label">{feed ? 'Лента поиска' : 'Найдено'}</span>
+        {feed ? (
+          <>
+            <span className="text-[34px] font-extrabold leading-none tabular-nums tracking-[-0.02em] text-text">{searching ? '—' : feed.length}</span>
+            <span className="text-[13px] text-text-mute">медиа · {topBloggers.length} блогеров</span>
+            <button type="button" onClick={clearSearch} className="inline-flex items-center gap-1 rounded-full px-2.5 py-1 text-[13px] text-pink transition-colors hover:bg-pink/[0.1]">
+              <X className="h-3.5 w-3.5" />
+              Сбросить
+            </button>
+          </>
+        ) : (
+          <>
+            <span className="text-[34px] font-extrabold leading-none tabular-nums tracking-[-0.02em] text-text">{loading ? '—' : list.length}</span>
+            {folder && (
+              <button type="button" onClick={() => setFolder(null)} className="inline-flex items-center gap-1 rounded-full px-2.5 py-1 text-[13px] text-pink transition-colors hover:bg-pink/[0.1]">
+                <X className="h-3.5 w-3.5" />
+                {activeFolderName}
+              </button>
+            )}
+          </>
+        )}
+      </div>
 
-        <div className="ps-main" style={{ display: 'grid', gridTemplateColumns: '1fr 280px', gap: 22, alignItems: 'start' }}>
-          {feed ? (
-            <div style={{ display: 'grid', gap: 26 }}>
-              {/* Топ блогеров ниши — главный результат поиска */}
-              <div>
-                <div className="mono" style={{ fontSize: 10, letterSpacing: '.12em', textTransform: 'uppercase', color: C.faint, marginBottom: 12 }}>Топ блогеров ниши · {searching ? '…' : topBloggers.length}</div>
-                {searching ? (
-                  <div className="ps-grid" style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fill, minmax(330px, 1fr))', gap: 12 }}>
-                    {Array.from({ length: 4 }).map((_, i) => <div key={i} style={{ background: C.card, border: `1px solid ${C.border}`, borderRadius: 14, height: 168 }} />)}
-                  </div>
-                ) : topBloggers.length ? (
-                  <div className="ps-grid" style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fill, minmax(330px, 1fr))', gap: 12 }}>
-                    {topBloggers.map((b, i) => renderBloggerCard(b, i))}
-                  </div>
-                ) : (
-                  <div style={{ padding: '40px 0', textAlign: 'center', color: C.muted }}>
-                    {searchNote === 'scraper' ? (
-                      <>
-                        <div style={{ fontSize: 15 }}>Поиск временно недоступен</div>
-                        <div className="mono" style={{ fontSize: 12, color: C.faint, marginTop: 6 }}>Парсер исчерпал месячный лимит или недоступен. Попробуйте позже</div>
-                      </>
-                    ) : (
-                      <>
-                        <div style={{ fontSize: 15 }}>Ничего не нашли</div>
-                        <div className="mono" style={{ fontSize: 12, color: C.faint, marginTop: 6 }}>Попробуй другой запрос</div>
-                      </>
-                    )}
-                  </div>
-                )}
-              </div>
-              {/* Медиа — обложки рилсов (доказательная база ниши) */}
-              {(searching || feed.length > 0) && (
-                <div>
-                  <div className="mono" style={{ fontSize: 10, letterSpacing: '.12em', textTransform: 'uppercase', color: C.faint, marginBottom: 12 }}>Медиа · {searching ? '…' : feed.length} обложек</div>
-                  {searching ? (
-                    <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fill, minmax(150px,1fr))', gap: 10 }}>
-                      {Array.from({ length: 8 }).map((_, i) => <div key={i} style={{ aspectRatio: '4 / 5', borderRadius: 12, background: '#161616' }} />)}
-                    </div>
+      <div className="grid items-start gap-6 lg:grid-cols-[1fr_280px]">
+        {feed ? (
+          <div className="grid gap-8">
+            {/* Топ блогеров ниши — главный результат поиска */}
+            <div>
+              <h2 className="mb-4 flex items-center gap-3">
+                <span className="sec-num">/01</span>
+                <span className="sec-title">Топ блогеров ниши · {searching ? '…' : topBloggers.length}</span>
+              </h2>
+              {searching ? (
+                <div className="grid gap-3 [grid-template-columns:repeat(auto-fill,minmax(300px,1fr))]">
+                  {Array.from({ length: 4 }).map((_, i) => <div key={i} className="skeleton h-[188px] !rounded-[24px]" />)}
+                </div>
+              ) : topBloggers.length ? (
+                <div className="grid gap-3 stagger [grid-template-columns:repeat(auto-fill,minmax(300px,1fr))]">
+                  {topBloggers.map((b, i) => renderBloggerCard(b, i))}
+                </div>
+              ) : (
+                <div className="panel flex flex-col items-center px-6 py-10 text-center">
+                  <Icon3D name={searchNote === 'scraper' ? 'warning' : 'research'} size={40} tile />
+                  {searchNote === 'scraper' ? (
+                    <>
+                      <div className="mt-4 text-[16px] font-semibold tracking-[-0.02em] text-text">Поиск временно недоступен</div>
+                      <div className="mt-1.5 text-[13px] text-text-mute">Парсер исчерпал месячный лимит или недоступен. Попробуйте позже</div>
+                    </>
                   ) : (
-                    <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fill, minmax(150px,1fr))', gap: 10 }}>
-                      {feed.map((r) => <ReelCover key={r.id} reel={r} />)}
-                    </div>
+                    <>
+                      <div className="mt-4 text-[16px] font-semibold tracking-[-0.02em] text-text">Ничего не нашли</div>
+                      <div className="mt-1.5 text-[13px] text-text-mute">Попробуй другой запрос</div>
+                    </>
                   )}
                 </div>
               )}
             </div>
-          ) : (
-            <div className="ps-grid" style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fill, minmax(330px, 1fr))', gap: 12 }}>
-              {loading && Array.from({ length: 6 }).map((_, i) => (
-                <div key={i} style={{ background: C.card, border: `1px solid ${C.border}`, borderRadius: 14, padding: 16, height: 168 }}>
-                  <div style={{ display: 'flex', gap: 12, alignItems: 'center' }}>
-                    <div style={{ width: 48, height: 48, borderRadius: '50%', background: '#1a1a1a' }} />
-                    <div style={{ flex: 1 }}><div style={{ height: 12, width: '60%', background: '#1a1a1a', borderRadius: 4, marginBottom: 8 }} /><div style={{ height: 10, width: '40%', background: '#161616', borderRadius: 4 }} /></div>
+            {/* Медиа — обложки рилсов (доказательная база ниши) */}
+            {(searching || feed.length > 0) && (
+              <div>
+                <h2 className="mb-4 flex items-center gap-3">
+                  <span className="sec-num">/02</span>
+                  <span className="sec-title">Медиа · {searching ? '…' : feed.length} обложек</span>
+                </h2>
+                {searching ? (
+                  <div className="grid gap-3 [grid-template-columns:repeat(auto-fill,minmax(150px,1fr))]">
+                    {Array.from({ length: 8 }).map((_, i) => <div key={i} className="skeleton aspect-[4/5] !rounded-[20px]" />)}
+                  </div>
+                ) : (
+                  <div className="grid gap-3 stagger [grid-template-columns:repeat(auto-fill,minmax(150px,1fr))]">
+                    {feed.map((r) => <ReelCover key={r.id} reel={r} />)}
+                  </div>
+                )}
+              </div>
+            )}
+          </div>
+        ) : (
+          <div className="grid gap-3 stagger [grid-template-columns:repeat(auto-fill,minmax(300px,1fr))]">
+            {loading && Array.from({ length: 6 }).map((_, i) => (
+              <div key={i} className="panel h-[188px] p-5">
+                <div className="flex items-center gap-3">
+                  <div className="skeleton h-12 w-12 !rounded-full" />
+                  <div className="flex-1">
+                    <div className="skeleton mb-2 h-3 w-3/5" />
+                    <div className="skeleton h-2.5 w-2/5" />
                   </div>
                 </div>
-              ))}
-              {!loading && list.map((b, i) => renderBloggerCard(b, i))}
-              {!loading && list.length === 0 && <div style={{ gridColumn: '1 / -1', padding: '60px 0', textAlign: 'center', color: C.muted }}><div style={{ fontSize: 16, marginBottom: 6 }}>Никого не нашли</div><div className="mono" style={{ fontSize: 12, color: C.faint }}>Введите нишу и нажмите «Поиск», либо добавьте блогера через «+ Добавить блогера»</div></div>}
-            </div>
-          )}
+              </div>
+            ))}
+            {!loading && list.map((b, i) => renderBloggerCard(b, i))}
+            {!loading && list.length === 0 && (
+              <div className="panel col-span-full flex flex-col items-center px-6 py-14 text-center">
+                <Icon3D name="bloggers" size={44} tile />
+                <div className="mt-4 text-[17px] font-semibold tracking-[-0.02em] text-text">Никого не нашли</div>
+                <div className="mt-1.5 text-[13px] text-text-mute">Введите нишу и нажмите «Поиск», либо добавьте блогера через «+ Добавить блогера»</div>
+              </div>
+            )}
+          </div>
+        )}
 
-          <aside className="ps-side" style={{ background: C.panel, border: `1px solid ${C.border}`, borderRadius: 14, padding: 16, position: 'sticky', top: 20 }}>
-            <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: 14 }}>
-              <span className="mono" style={{ fontSize: 11, letterSpacing: '.14em', textTransform: 'uppercase', color: C.muted }}>Папки</span>
-              <span className="mono" style={{ fontSize: 11, color: C.faint }}>{folders.length + 1}</span>
-            </div>
-            <button onClick={addFolder} className="btn-prim mono" style={{ width: '100%', background: 'transparent', border: `1px dashed ${C.lime}55`, color: C.lime, borderRadius: 9, padding: '9px 0', fontSize: 11, letterSpacing: '.05em', textTransform: 'uppercase', cursor: 'pointer', marginBottom: 12 }}>+ Добавить папку</button>
+        <aside className="panel !sticky top-5 hidden p-4 lg:block">
+          <div className="mb-3.5 flex items-center justify-between px-1">
+            <span className="flex items-center gap-2 text-[15px] font-semibold tracking-[-0.02em] text-text">
+              <Icon3D name="folders" size={20} />
+              Папки
+            </span>
+            <span className="rounded-full bg-white/[0.06] px-2 py-0.5 text-[12px] tabular-nums text-text-mute">{folders.length + 1}</span>
+          </div>
+          <button
+            type="button"
+            onClick={addFolder}
+            className="mb-3 flex w-full items-center justify-center gap-1.5 rounded-full border border-dashed border-lime/40 py-2 text-[13px] font-medium text-lime transition-colors hover:bg-lime/[0.08]"
+          >
+            <Plus className="h-4 w-4" />
+            Добавить папку
+          </button>
 
-            {/* Шпион = watchlist */}
-            <button onClick={() => setFolder(folder === 'spy' ? null : 'spy')} className="fld" style={{ width: '100%', display: 'flex', alignItems: 'center', gap: 10, padding: '11px 10px', background: folder === 'spy' ? '#161616' : 'transparent', border: 'none', borderRadius: 9, cursor: 'pointer', textAlign: 'left', marginBottom: 2, borderLeft: `2px solid ${folder === 'spy' ? C.pink : 'transparent'}` }}>
-              <span className="live-dot" style={{ width: 7, height: 7, borderRadius: 7, background: C.pink, flexShrink: 0 }} />
-              <span style={{ flex: 1, fontSize: 13.5, color: C.text, fontFamily: 'Georgia' }}>Шпион</span>
-              <span className="mono" style={{ fontSize: 11, color: C.pink, fontWeight: 600 }}>{spyCount}</span>
-            </button>
+          {/* Шпион = watchlist */}
+          <button
+            type="button"
+            onClick={() => setFolder(folder === 'spy' ? null : 'spy')}
+            className={`mb-1 flex w-full items-center gap-2.5 rounded-2xl px-3 py-2.5 text-left transition-colors ${folder === 'spy' ? 'bg-pink/[0.1]' : 'hover:bg-white/[0.05]'}`}
+          >
+            <span className="h-2 w-2 flex-none rounded-full bg-pink animate-pulse" />
+            <span className="flex-1 text-[14px] text-text">Шпион</span>
+            <span className="text-[12px] font-semibold tabular-nums text-pink">{spyCount}</span>
+          </button>
 
-            {folders.map((f) => {
-              const active = folder === f.id;
-              return (
-                <button key={f.id} onClick={() => setFolder(active ? null : f.id)} className="fld" style={{ width: '100%', display: 'flex', alignItems: 'center', gap: 10, padding: '11px 10px', background: active ? '#161616' : 'transparent', border: 'none', borderRadius: 9, cursor: 'pointer', textAlign: 'left', marginBottom: 2, borderLeft: `2px solid ${active ? C.muted : 'transparent'}` }}>
-                  <span style={{ width: 7, height: 7, borderRadius: 2, background: C.muted, opacity: 0.6, flexShrink: 0 }} />
-                  <span style={{ flex: 1, fontSize: 13.5, color: active ? C.text : C.muted, fontFamily: 'Georgia' }}>{f.name}</span>
-                  <span className="mono" style={{ fontSize: 11, color: C.faint, fontWeight: 600 }}>{f._count.items}</span>
-                </button>
-              );
-            })}
+          {folders.map((f) => {
+            const active = folder === f.id;
+            return (
+              <button
+                key={f.id}
+                type="button"
+                onClick={() => setFolder(active ? null : f.id)}
+                className={`mb-1 flex w-full items-center gap-2.5 rounded-2xl px-3 py-2.5 text-left transition-colors ${active ? 'bg-blue/[0.12]' : 'hover:bg-white/[0.05]'}`}
+              >
+                <FolderIcon className={`h-4 w-4 flex-none ${active ? 'text-gold' : 'text-text-mute'}`} />
+                <span className={`flex-1 truncate text-[14px] ${active ? 'text-text' : 'text-text-dim'}`}>{f.name}</span>
+                <span className="text-[12px] font-semibold tabular-nums text-text-mute">{f._count.items}</span>
+              </button>
+            );
+          })}
 
-            <div style={{ marginTop: 14, paddingTop: 14, borderTop: `1px solid ${C.borderSoft}` }}>
-              <div className="mono" style={{ fontSize: 9.5, letterSpacing: '.1em', textTransform: 'uppercase', color: C.faint, marginBottom: 8 }}>Папка «Шпион»</div>
-              <p style={{ margin: 0, fontSize: 12, lineHeight: 1.5, color: C.muted, fontFamily: 'Georgia' }}>Блогеры здесь под наблюдением: парсер забирает Reels, считает виральность по медиане и шлёт алёрты на всплески.</p>
-            </div>
-          </aside>
-        </div>
+          <div className="mt-3.5 border-t border-border-soft px-1 pt-3.5">
+            <div className="label mb-2">Папка «Шпион»</div>
+            <p className="m-0 text-[12.5px] leading-relaxed text-text-mute">Блогеры здесь под наблюдением: парсер забирает Reels, считает виральность по медиане и шлёт алёрты на всплески.</p>
+          </div>
+        </aside>
       </div>
 
       {detail && <Analysis author={detail} seed={detailSeed} onClose={() => setSelected(null)} onToggleSpy={toggleSpy} onToast={showToast} />}
       {showAdd && <AddModal onClose={() => setShowAdd(false)} onAdded={loadAuthors} onToast={showToast} />}
 
       {toast && (
-        <div className="mono" style={{ position: 'fixed', bottom: 24, left: '50%', transform: 'translateX(-50%)', background: C.panel, border: `1px solid ${C.border}`, color: C.text, borderRadius: 10, padding: '12px 18px', fontSize: 12, zIndex: 80, boxShadow: '0 8px 30px rgba(0,0,0,.5)' }}>{toast}</div>
+        <Portal>
+        <div className="fixed bottom-6 left-1/2 z-[80] -translate-x-1/2 rounded-full border border-border-soft bg-surface/90 px-5 py-3 text-[13px] text-text shadow-glass backdrop-blur-xl fade-in">
+          {toast}
+        </div>
+        </Portal>
       )}
     </div>
   );
+}
+
+// Overlays render into <body>: an animated ancestor (filter/transform) would
+// otherwise become the containing block for `position: fixed`.
+function Portal({ children }: { children: React.ReactNode }) {
+  return createPortal(children, document.body);
 }

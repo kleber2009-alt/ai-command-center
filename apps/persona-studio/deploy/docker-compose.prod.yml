@@ -1,0 +1,154 @@
+# Self-contained Persona Studio stack for a fresh server (no external
+# networks): Caddy (HTTPS) + web + 2 workers + Postgres + Redis + S3 (SeaweedFS)
+# + local Whisper (speech-to-text).
+# Started by deploy/bootstrap.sh; config comes from deploy/.env.prod.
+#
+#   docker compose -f deploy/docker-compose.prod.yml --env-file deploy/.env.prod up -d --build
+name: persona-studio
+
+x-app-env: &app-env
+  env_file: .env.prod
+
+services:
+  postgres:
+    image: postgres:16-alpine
+    restart: unless-stopped
+    environment:
+      POSTGRES_USER: persona
+      POSTGRES_PASSWORD: ${POSTGRES_PASSWORD:?set in .env.prod}
+      POSTGRES_DB: persona_studio
+    volumes: [pgdata:/var/lib/postgresql/data]
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U persona -d persona_studio"]
+      interval: 5s
+      retries: 20
+
+  redis:
+    image: redis:7-alpine
+    restart: unless-stopped
+    command: ["redis-server", "--appendonly", "yes"]
+    volumes: [redisdata:/data]
+
+  # S3-compatible storage (SeaweedFS — MinIO no longer ships Docker images).
+  # Credentials + anonymous read come from s3.json rendered by bootstrap.sh.
+  s3:
+    image: chrislusf/seaweedfs:4.48
+    restart: unless-stopped
+    # 1 GB volumes, grown one at a time: the defaults (30 GB volumes, 7 per
+    # grow) can't be allocated on a small disk and uploads fail with
+    # "No writable volumes".
+    command:
+      - server
+      - -dir=/data
+      - -s3
+      - -s3.port=8333
+      - -s3.config=/etc/seaweedfs/s3.json
+      - -volume.max=200
+      - -master.volumeSizeLimitMB=1024
+      - -master.defaultReplication=000
+    volumes:
+      - s3data:/data
+      - ./s3.json:/etc/seaweedfs/s3.json:ro
+
+  # One-shot: create the media bucket (idempotent).
+  s3-init:
+    image: chrislusf/seaweedfs:4.48
+    depends_on: [s3]
+    entrypoint: ["/bin/sh", "-c"]
+    command:
+      - >
+        for i in $$(seq 1 60); do
+          echo "s3.bucket.list" | weed shell -master=s3:9333 >/dev/null 2>&1 && break; sleep 2;
+        done;
+        echo "s3.bucket.list" | weed shell -master=s3:9333 | grep -q persona-studio-media ||
+        echo "s3.bucket.create -name persona-studio-media" | weed shell -master=s3:9333
+    restart: "no"
+
+  # Local speech-to-text (OpenAI-compatible, faster-whisper on CPU): word
+  # timestamps for skill montage and reel transcripts without an OpenAI key.
+  whisper:
+    image: ghcr.io/speaches-ai/speaches:0.8.3-cpu
+    restart: unless-stopped
+    volumes: [whispermodels:/home/ubuntu/.cache/huggingface]
+
+  # One-shot: download the model once (kept in the whispermodels volume).
+  whisper-init:
+    image: curlimages/curl:8.11.1
+    depends_on: [whisper]
+    entrypoint: ["/bin/sh", "-c"]
+    command:
+      - >
+        for i in $$(seq 1 90); do curl -sf http://whisper:8000/health >/dev/null && break; sleep 2; done;
+        curl -sf -X POST http://whisper:8000/v1/models/Systran/faster-whisper-small -m 1200
+    restart: "no"
+
+  # One-shot: create/align tables from prisma/schema.prisma (declarative; refuses
+  # destructive changes, so re-running on deploy is safe).
+  migrate:
+    <<: *app-env
+    image: persona-studio-worker
+    build: { context: .., target: worker }
+    depends_on:
+      postgres: { condition: service_healthy }
+    command: ["npx", "prisma", "db", "push", "--skip-generate"]
+    restart: "no"
+
+  web:
+    <<: *app-env
+    image: persona-studio-web
+    build: { context: .., target: web }
+    restart: unless-stopped
+    depends_on:
+      migrate: { condition: service_completed_successfully }
+      redis: { condition: service_started }
+      s3-init: { condition: service_completed_successfully }
+    environment:
+      WHISPER_SERVICE_URL: ${WHISPER_SERVICE_URL-http://whisper:8000}
+
+  worker-generation:
+    <<: *app-env
+    image: persona-studio-worker
+    restart: unless-stopped
+    environment:
+      WORKER_GROUP: generation
+      WHISPER_SERVICE_URL: ${WHISPER_SERVICE_URL-http://whisper:8000}
+    depends_on:
+      migrate: { condition: service_completed_successfully }
+
+  worker-cron:
+    <<: *app-env
+    image: persona-studio-worker
+    restart: unless-stopped
+    environment:
+      WORKER_GROUP: cron
+      WHISPER_SERVICE_URL: ${WHISPER_SERVICE_URL-http://whisper:8000}
+    depends_on:
+      migrate: { condition: service_completed_successfully }
+
+  caddy:
+    image: caddy:2.8-alpine
+    restart: unless-stopped
+    ports: ["80:80", "443:443", "443:443/udp"]
+    environment:
+      DOMAIN: ${DOMAIN:?set in .env.prod}
+    volumes:
+      - ./Caddyfile:/etc/caddy/Caddyfile:ro
+      - /opt/edge/sites:/etc/caddy/sites:ro
+      - /opt/edge/status:/srv/status:ro
+      - caddydata:/data
+      - caddyconfig:/config
+    depends_on: [web]
+    networks: [default, edge]
+
+networks:
+  # Shared with other projects' stacks so this Caddy can proxy to them.
+  edge:
+    name: edge
+
+volumes:
+  pgdata:
+  redisdata:
+  s3data:
+  whispermodels:
+  caddydata:
+  caddyconfig:

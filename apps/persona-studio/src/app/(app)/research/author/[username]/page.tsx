@@ -4,6 +4,7 @@
 
 import { redirect, notFound } from 'next/navigation';
 import Link from 'next/link';
+import { ArrowLeft } from 'lucide-react';
 import { getCurrentUser } from '@/lib/auth';
 import { prisma } from '@/lib/prisma';
 import { indexAuthor } from '@/lib/research/index-author';
@@ -61,9 +62,10 @@ export default async function AuthorPage({
       <div>
         <Link
           href="/research"
-          className="mono text-[10px] tracking-widest uppercase text-text-mute hover:text-text"
+          className="btn-ghost !px-4 !py-2 !text-[13px]"
         >
-          ← Назад к выдаче
+          <ArrowLeft className="h-4 w-4" />
+          Назад к выдаче
         </Link>
       </div>
 

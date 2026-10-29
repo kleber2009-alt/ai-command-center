@@ -22,8 +22,8 @@ export function LocaleSwitcher({ locale }: { locale: Locale }) {
   return (
     <div
       className="flex items-center gap-1 select-none"
-      aria-label="Language switcher"
-      title="Language"
+      aria-label="Язык интерфейса"
+      title="Язык · Language"
     >
       <button
         type="button"

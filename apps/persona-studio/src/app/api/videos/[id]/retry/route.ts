@@ -4,6 +4,7 @@ import { prisma } from '@/lib/prisma';
 import { chargeTokens, refundTokens, InsufficientTokensError } from '@/lib/tokens';
 import { queueForName } from '@/lib/queue';
 import { engineConfig, isEnabledEngine, type VideoEngine } from '@/lib/video-engines';
+import { heygenVoiceFor } from '@/lib/heygen-voices';
 
 export const runtime = 'nodejs';
 
@@ -19,16 +20,23 @@ export async function POST(req: NextRequest, { params }: { params: Promise<{ id:
     const prev = await prisma.videoGeneration.findFirst({ where: { id, userId: user.id } });
     if (!prev) return NextResponse.json({ error: 'not_found' }, { status: 404 });
 
-    if (!isEnabledEngine(prev.engine)) {
-      return NextResponse.json({ error: 'engine_disabled' }, { status: 409 });
-    }
-    const engine = prev.engine as VideoEngine;
+    // A row on a switched-off engine (OmniHuman) is retried on HeyGen Avatar V:
+    // its voice was ElevenLabs, so it gets a HeyGen voice for its language, and
+    // its ready-made audio is dropped (HeyGen speaks the script itself).
+    const moved = !isEnabledEngine(prev.engine);
+    const engine: VideoEngine = moved ? 'heygen-v5' : (prev.engine as VideoEngine);
     const cfg = engineConfig(engine);
+    const voiceId = moved ? heygenVoiceFor(prev.voiceId, prev.language) : prev.voiceId;
 
-    const avatar = await prisma.avatar.findFirst({ where: { id: prev.avatarId, userId: user.id } });
-    if (!avatar) return NextResponse.json({ error: 'avatar_not_found' }, { status: 404 });
-    if (avatar.status !== 'done' || !avatar.imageUrl) {
-      return NextResponse.json({ error: 'avatar_not_ready', status: avatar.status }, { status: 409 });
+    // A video of a HeyGen-account look has no local avatar — nothing to check here.
+    if (prev.avatarId) {
+      const avatar = await prisma.avatar.findFirst({ where: { id: prev.avatarId, userId: user.id } });
+      if (!avatar) return NextResponse.json({ error: 'avatar_not_found' }, { status: 404 });
+      if (avatar.status !== 'done' || !avatar.imageUrl) {
+        return NextResponse.json({ error: 'avatar_not_ready', status: avatar.status }, { status: 409 });
+      }
+    } else if (!prev.heygenAvatarId) {
+      return NextResponse.json({ error: 'avatar_not_found' }, { status: 404 });
     }
 
     try {
@@ -44,16 +52,20 @@ export async function POST(req: NextRequest, { params }: { params: Promise<{ id:
       data: {
         userId: user.id,
         avatarId: prev.avatarId,
+        heygenAvatarId: prev.heygenAvatarId,
+        heygenAvatarType: prev.heygenAvatarType,
+        heygenAvatarName: prev.heygenAvatarName,
+        heygenAvatarImage: prev.heygenAvatarImage,
         engine,
         script: prev.script,
-        audioUrl: prev.audioUrl,
-        voiceId: prev.voiceId,
+        audioUrl: moved ? null : prev.audioUrl,
+        voiceId,
         language: prev.language,
         aspect: prev.aspect,
         quality: prev.quality,
         background: prev.background,
         subtitles: prev.subtitles,
-        heygenVersion: prev.heygenVersion,
+        heygenVersion: moved ? (cfg.heygenVersion ?? 'V') : prev.heygenVersion,
         motionPrompt: prev.motionPrompt,
         status: 'pending',
         tokensCost: cfg.cost,

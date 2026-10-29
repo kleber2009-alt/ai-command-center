@@ -2,6 +2,10 @@
 
 import Link from 'next/link';
 import { useEffect, useState, useTransition } from 'react';
+import { createPortal } from 'react-dom';
+import { ArrowUpRight, Check, Copy, Flame, Plus, Sparkles, X } from 'lucide-react';
+import { Icon3D } from '@/components/ui/icon3d';
+import { errorText } from '@/lib/error-text';
 
 type Hook = {
   id: string;
@@ -70,7 +74,7 @@ export function HooksClient() {
   return (
     <div className="grid gap-5">
       {/* Filter chips */}
-      <section className="border border-border bg-surface p-4 grid gap-3">
+      <section className="panel p-5 grid gap-4 reveal">
         <div className="flex flex-wrap gap-1.5">
           {filterChips.map((c) => (
             <button
@@ -80,10 +84,10 @@ export function HooksClient() {
                 setSelected(c.slug);
                 load(c.slug, search);
               }}
-              className={`px-3 py-1.5 border mono text-[11px] tracking-wider ${
+              className={`rounded-full border px-3.5 py-1.5 text-[13px] transition-colors ${
                 selected === c.slug
-                  ? 'border-gold text-gold bg-gold/10'
-                  : 'border-border text-text-dim hover:border-text'
+                  ? 'border-transparent bg-blue text-white'
+                  : 'border-border-soft bg-white/[0.04] text-text-dim hover:bg-white/[0.07]'
               }`}
             >
               {c.label}
@@ -91,59 +95,64 @@ export function HooksClient() {
           ))}
         </div>
 
-        <div className="grid gap-2 sm:grid-cols-[1fr_1fr_auto_auto] items-end">
-          <div className="grid gap-1">
-            <span className="mono text-[9px] tracking-widest uppercase text-text-mute">Поиск</span>
+        <div className="grid gap-2.5 sm:grid-cols-[1fr_1fr_auto_auto] items-end">
+          <div className="grid gap-1.5">
+            <span className="text-[12px] text-text-mute">Поиск</span>
             <input
               type="text"
               value={search}
               onChange={(e) => setSearch(e.target.value)}
               onKeyDown={(e) => e.key === 'Enter' && load(selected, search)}
               placeholder="искать в тексте хука…"
-              className="bg-bg border border-border focus:border-gold outline-none px-2 py-1.5 font-serif text-[14px] text-text"
+              className="input"
             />
           </div>
-          <div className="grid gap-1">
-            <span className="mono text-[9px] tracking-widest uppercase text-text-mute">Ниша</span>
+          <div className="grid gap-1.5">
+            <span className="text-[12px] text-text-mute">Ниша</span>
             <input
               type="text"
               value={niche}
               onChange={(e) => setNiche(e.target.value)}
               onKeyDown={(e) => e.key === 'Enter' && load()}
               placeholder="опционально"
-              className="bg-bg border border-border focus:border-gold outline-none px-2 py-1.5 font-serif text-[14px] text-text"
+              className="input"
             />
           </div>
           <button
             type="button"
             onClick={() => setShowGenModal(true)}
-            className="btn-ghost text-[10px] tracking-widest uppercase whitespace-nowrap"
+            className="btn-ghost"
           >
+            <Sparkles className="h-4 w-4" />
             Сгенерировать
           </button>
           <button
             type="button"
             onClick={() => setShowAddModal(true)}
-            className="btn-primary text-[10px] tracking-widest uppercase whitespace-nowrap"
+            className="btn-primary"
           >
-            + Добавить хук
+            <Plus className="h-4 w-4" />
+            Добавить хук
           </button>
         </div>
       </section>
 
       {/* Hooks list */}
       {pending && (
-        <div className="mono text-[10px] tracking-widest uppercase text-text-mute">Загружаю…</div>
+        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-3">
+          {Array.from({ length: 6 }).map((_, i) => <div key={i} className="skeleton h-40 !rounded-[24px]" />)}
+        </div>
       )}
       {!pending && hooks.length === 0 && (
-        <div className="border border-border-soft bg-surface/50 p-8 text-center">
-          <div className="font-serif italic text-[16px] text-text-dim">
+        <div className="rounded-[24px] border border-dashed border-white/15 bg-white/[0.03] p-8 flex flex-col items-center gap-3 text-center fade-in">
+          <Icon3D name="hooks" size={40} tile />
+          <div className="text-[15px] text-text-dim max-w-prose">
             Хуков пока нет. Закажи анализ нескольких рилсов — они появятся здесь автоматически.
           </div>
         </div>
       )}
       {hooks.length > 0 && (
-        <section className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-3">
+        <section className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-3 stagger">
           {hooks.map((h) => (
             <HookCard key={h.id} hook={h} formulas={formulas} />
           ))}
@@ -182,37 +191,42 @@ function HookCard({ hook, formulas }: { hook: Hook; formulas: FormulaDef[] }) {
     navigator.clipboard.writeText(hook.text).then(() => {
       setCopied(true);
       setTimeout(() => setCopied(false), 1500);
+    }).catch(() => {
+      // Clipboard can be denied (insecure context, in-app browsers) — nothing to show.
     });
   }
   return (
-    <article className="border border-border bg-surface p-4 grid gap-3">
+    <article className="card-editorial p-5 grid gap-3 content-start">
       <div className="flex items-center justify-between">
-        <span className="mono text-[9px] tracking-widest uppercase text-cyan">
+        <span className="rounded-full bg-cyan/[0.1] px-2.5 py-0.5 text-[12px] font-medium text-cyan">
           {def?.label || hook.formula}
         </span>
-        <span className="mono text-[9px] tracking-widest uppercase text-text-mute">
+        <span className="text-[12px] text-text-mute">
           {hook.origin === 'auto' ? 'из ролика' : hook.origin === 'generated' ? 'AI' : 'своё'}
         </span>
       </div>
-      <p className="font-serif text-[15px] leading-snug text-text">«{hook.text}»</p>
+      <p className="text-[15.5px] font-medium leading-snug tracking-[-0.01em] text-text">«{hook.text}»</p>
       {hook.sourceReel && hook.sourceViews > 0 && (
         <Link
           href={`/research/${hook.sourceReel.id}`}
-          className="mono text-[10px] tracking-wider text-gold hover:text-lime flex items-center gap-1"
+          className="inline-flex items-center gap-1 text-[12.5px] tabular-nums text-gold transition-colors hover:text-lime"
         >
-          🔥 {fmt(hook.sourceViews)} просм. · @{hook.sourceReel.author?.username || '—'} ↗
+          <Flame className="h-3.5 w-3.5" />
+          {fmt(hook.sourceViews)} просм. · @{hook.sourceReel.author?.username || '—'}
+          <ArrowUpRight className="h-3.5 w-3.5" />
         </Link>
       )}
-      <div className="flex justify-between items-center pt-1 border-t border-border-soft">
+      <div className="flex justify-between items-center pt-2.5 border-t border-border-soft">
         <button
           type="button"
           onClick={copy}
-          className="mono text-[9px] tracking-widest uppercase text-text-mute hover:text-lime"
+          className="inline-flex items-center gap-1.5 rounded-full px-2 py-1 -ml-2 text-[12px] text-text-mute transition-colors hover:bg-white/[0.05] hover:text-lime"
         >
-          {copied ? '✓ скопировано' : 'копировать'}
+          {copied ? <Check className="h-3.5 w-3.5" /> : <Copy className="h-3.5 w-3.5" />}
+          {copied ? 'скопировано' : 'копировать'}
         </button>
         {hook.niche && (
-          <span className="mono text-[9px] tracking-widest uppercase text-text-mute">
+          <span className="text-[12px] text-text-mute">
             ниша: {hook.niche}
           </span>
         )}
@@ -247,7 +261,7 @@ function AddHookModal({
       });
       const json = await res.json();
       if (!res.ok) {
-        setError(json.message || json.error || `HTTP ${res.status}`);
+        setError(errorText(json, res.status));
         return;
       }
       onSaved();
@@ -259,12 +273,12 @@ function AddHookModal({
   return (
     <Modal title="Добавить свой хук" onClose={onClose}>
       <div className="grid gap-3">
-        <div className="grid gap-1">
-          <span className="mono text-[9px] tracking-widest uppercase text-text-mute">Формула</span>
+        <div className="grid gap-1.5">
+          <span className="text-[12px] text-text-mute">Формула</span>
           <select
             value={formula}
             onChange={(e) => setFormula(e.target.value)}
-            className="bg-bg border border-border px-2 py-1.5 mono text-[11px] text-text"
+            className="input"
           >
             <option value="свои">Свои</option>
             {formulas.map((f) => (
@@ -274,8 +288,8 @@ function AddHookModal({
             ))}
           </select>
         </div>
-        <div className="grid gap-1">
-          <span className="mono text-[9px] tracking-widest uppercase text-text-mute">
+        <div className="grid gap-1.5">
+          <span className="text-[12px] text-text-mute">
             Текст хука (можно с [переменными в квадратных скобках])
           </span>
           <textarea
@@ -283,30 +297,30 @@ function AddHookModal({
             onChange={(e) => setText(e.target.value)}
             rows={3}
             placeholder="Например: «А ты знал, что [неожиданный факт]?»"
-            className="bg-bg border border-border focus:border-gold outline-none px-2 py-2 font-serif text-[14px] text-text"
+            className="input"
           />
         </div>
-        <div className="grid gap-1">
-          <span className="mono text-[9px] tracking-widest uppercase text-text-mute">Ниша (опц.)</span>
+        <div className="grid gap-1.5">
+          <span className="text-[12px] text-text-mute">Ниша (опц.)</span>
           <input
             type="text"
             value={niche}
             onChange={(e) => setNiche(e.target.value)}
-            className="bg-bg border border-border px-2 py-1.5 font-serif text-[14px] text-text"
+            className="input"
           />
         </div>
         {error && (
-          <div className="border border-pink/40 bg-pink/5 px-2 py-1 mono text-[10px] text-pink">{error}</div>
+          <div className="rounded-2xl border border-pink/40 bg-pink/[0.06] px-3.5 py-2 text-[13px] text-pink">{error}</div>
         )}
         <div className="flex gap-2 justify-end pt-2">
-          <button type="button" onClick={onClose} className="btn-ghost text-[10px]">
+          <button type="button" onClick={onClose} className="btn-ghost !px-4 !py-2 !text-[13px]">
             Отмена
           </button>
           <button
             type="button"
             onClick={save}
             disabled={busy || text.length < 5}
-            className="btn-primary text-[10px]"
+            className="btn-primary !px-4 !py-2 !text-[13px]"
           >
             {busy ? 'Сохраняю…' : 'Сохранить'}
           </button>
@@ -357,7 +371,7 @@ function GenerateHooksModal({
       });
       const json = await res.json();
       if (!res.ok) {
-        setError(json.message || json.error || `HTTP ${res.status}`);
+        setError(errorText(json, res.status));
         return;
       }
       onDone();
@@ -369,31 +383,31 @@ function GenerateHooksModal({
   return (
     <Modal title="Сгенерировать хуки" onClose={onClose}>
       <div className="grid gap-3">
-        <p className="font-serif text-[13px] italic text-text-dim">
+        <p className="text-[13.5px] text-text-dim">
           Claude напишет по 5 хуков на каждую выбранную формулу. 1 кредит за формулу.
         </p>
-        <div className="grid gap-1">
-          <span className="mono text-[9px] tracking-widest uppercase text-text-mute">Ниша (опц.)</span>
+        <div className="grid gap-1.5">
+          <span className="text-[12px] text-text-mute">Ниша (опц.)</span>
           <input
             type="text"
             value={niche}
             onChange={(e) => setNiche(e.target.value)}
             placeholder="например: продажи B2B, психология отношений…"
-            className="bg-bg border border-border px-2 py-1.5 font-serif text-[14px] text-text"
+            className="input"
           />
         </div>
-        <div className="grid gap-1">
-          <span className="mono text-[9px] tracking-widest uppercase text-text-mute">Формулы</span>
+        <div className="grid gap-1.5">
+          <span className="text-[12px] text-text-mute">Формулы</span>
           <div className="flex flex-wrap gap-1.5 max-h-48 overflow-y-auto">
             {formulas.map((f) => (
               <button
                 key={f.slug}
                 type="button"
                 onClick={() => toggle(f.slug)}
-                className={`px-3 py-1.5 border mono text-[11px] tracking-wider ${
+                className={`rounded-full border px-3.5 py-1.5 text-[13px] transition-colors ${
                   selected.has(f.slug)
-                    ? 'border-lime text-lime bg-lime/10'
-                    : 'border-border text-text-dim hover:border-text'
+                    ? 'border-lime/50 bg-lime/[0.12] text-lime'
+                    : 'border-border-soft bg-white/[0.04] text-text-dim hover:bg-white/[0.07]'
                 }`}
               >
                 {f.label}
@@ -402,21 +416,21 @@ function GenerateHooksModal({
           </div>
         </div>
         {error && (
-          <div className="border border-pink/40 bg-pink/5 px-2 py-1 mono text-[10px] text-pink">{error}</div>
+          <div className="rounded-2xl border border-pink/40 bg-pink/[0.06] px-3.5 py-2 text-[13px] text-pink">{error}</div>
         )}
         <div className="flex items-center justify-between gap-2 pt-2">
-          <span className="mono text-[10px] tracking-widest uppercase text-text-mute">
-            Стоимость: <span className="text-gold">{cost} кр.</span>
+          <span className="text-[13px] text-text-mute">
+            Стоимость: <span className="font-semibold tabular-nums text-gold">{cost} кр.</span>
           </span>
           <div className="flex gap-2">
-            <button type="button" onClick={onClose} className="btn-ghost text-[10px]">
+            <button type="button" onClick={onClose} className="btn-ghost !px-4 !py-2 !text-[13px]">
               Отмена
             </button>
             <button
               type="button"
               onClick={generate}
               disabled={busy || cost === 0}
-              className="btn-primary text-[10px]"
+              className="btn-primary !px-4 !py-2 !text-[13px]"
             >
               {busy ? 'Генерирую…' : `Сгенерировать (${cost} кр.)`}
             </button>
@@ -429,26 +443,35 @@ function GenerateHooksModal({
 
 function Modal({ title, children, onClose }: { title: string; children: React.ReactNode; onClose: () => void }) {
   return (
+    <Portal>
     <div
-      className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/70 backdrop-blur-sm"
+      className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/60 backdrop-blur-sm fade-in"
       onClick={onClose}
     >
       <div
         onClick={(e) => e.stopPropagation()}
-        className="border border-border bg-bg max-w-md w-full p-5 grid gap-4"
+        className="panel !bg-surface/95 shadow-glass max-w-md w-full p-6 grid gap-4 pop-in"
       >
         <div className="flex justify-between items-center">
-          <h3 className="font-serif text-[18px] text-text">{title}</h3>
+          <h3 className="flex items-center gap-3 text-[18px] font-semibold tracking-[-0.02em] text-text"><Icon3D name="hooks" size={22} tile />{title}</h3>
           <button
             type="button"
             onClick={onClose}
-            className="mono text-[14px] text-text-mute hover:text-text"
+            aria-label="Закрыть"
+            className="btn-icon !h-8 !w-8 shrink-0"
           >
-            ×
+            <X className="h-4 w-4" />
           </button>
         </div>
         {children}
       </div>
     </div>
+    </Portal>
   );
+}
+
+// Overlays render into <body>: an animated ancestor (filter/transform) would
+// otherwise become the containing block for `position: fixed`.
+function Portal({ children }: { children: React.ReactNode }) {
+  return createPortal(children, document.body);
 }

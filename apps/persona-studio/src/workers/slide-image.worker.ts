@@ -3,6 +3,7 @@ import { connection, QUEUE_NAMES, type SlideImageJob } from '@/lib/queue';
 import { generateSlideImage } from '@/lib/carousel/image-gen';
 import { refundTokens } from '@/lib/tokens';
 import { env } from '@/lib/env';
+import { refreshAppSettings } from '@/lib/app-settings';
 
 /**
  * AI Carousel Engine — worker for slide-level image generation.
@@ -16,6 +17,7 @@ export function startSlideImageWorker() {
   const worker = new Worker<SlideImageJob>(
     QUEUE_NAMES.slideImage,
     async (job) => {
+      await refreshAppSettings(); // admin-set provider keys (see lib/app-settings.ts)
       const { draftId, userId, slideIndex, mode } = job.data;
       console.log(
         `[slide-image-worker] start draft=${draftId} idx=${slideIndex} mode=${mode}`,

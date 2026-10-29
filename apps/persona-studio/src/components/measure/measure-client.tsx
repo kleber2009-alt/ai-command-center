@@ -6,8 +6,11 @@
 
 import { useState } from 'react';
 import Link from 'next/link';
-import { BarChart3, ExternalLink, Pencil, RefreshCw } from 'lucide-react';
+import { BarChart3, Eye, ExternalLink, Flame, Heart, MessageCircle, Pencil, RefreshCw } from 'lucide-react';
+import { Icon3D } from '@/components/ui/icon3d';
+import { PageHero } from '@/components/shell/page-hero';
 import type { MeasureDashboard, MeasurePost } from '@/lib/measure/measure';
+import { errorText } from '@/lib/error-text';
 
 const fmt = (n: number | null) => {
   if (n == null) return '—';
@@ -17,10 +20,10 @@ const fmt = (n: number | null) => {
 };
 
 function xnClass(v: number | null): string {
-  if (v == null) return 'text-text-mute border-border';
-  if (v >= 10) return 'text-gold border-gold';
-  if (v >= 3) return 'text-lime border-lime';
-  return 'text-text border-border';
+  if (v == null) return 'bg-white/[0.06] text-text-mute';
+  if (v >= 10) return 'bg-blue text-white shadow-glow';
+  if (v >= 3) return 'bg-lime text-bg';
+  return 'bg-white/[0.06] text-text';
 }
 
 export function MeasureClient({ initial }: { initial: MeasureDashboard }) {
@@ -57,30 +60,31 @@ export function MeasureClient({ initial }: { initial: MeasureDashboard }) {
 
   return (
     <div className="grid gap-5">
-      <header className="flex items-end justify-between gap-3">
-        <div className="grid gap-1">
-          <h1 className="font-serif text-2xl text-text">Аналитика</h1>
-          <p className="mono text-[11px] tracking-widest uppercase text-text-mute">
-            что у меня залетает · твой Xn vs источник
-          </p>
-        </div>
-        <div className="grid gap-1 justify-items-end">
-          <button
-            onClick={collect}
-            disabled={collecting}
-            className="flex items-center gap-1.5 px-3 py-2 border border-gold/60 mono text-[10px] tracking-widest uppercase text-gold hover:bg-gold/10 disabled:opacity-50"
-          >
-            <RefreshCw size={12} className={collecting ? 'animate-spin' : ''} />
-            {collecting ? 'Сбор…' : 'Собрать метрики'}
-          </button>
-          {collectMsg && (
-            <span className="mono text-[9px] tracking-widest uppercase text-text-mute">{collectMsg}</span>
-          )}
-        </div>
-      </header>
+      <PageHero
+        eyebrow="ИЗМЕРЕНИЕ · АНАЛИТИКА"
+        title="Аналитика"
+        icon="analytics"
+        description="что у меня залетает · твой Xn vs источник"
+        extra={
+          <div className="flex flex-wrap items-center gap-3">
+            <button
+              type="button"
+              onClick={collect}
+              disabled={collecting}
+              className="btn-primary"
+            >
+              <RefreshCw size={16} className={collecting ? 'animate-spin' : ''} />
+              {collecting ? 'Сбор…' : 'Собрать метрики'}
+            </button>
+            {collectMsg && (
+              <span className="text-[13px] text-text-mute fade-in">{collectMsg}</span>
+            )}
+          </div>
+        }
+      />
 
       {/* Сводка */}
-      <div className="grid grid-cols-2 sm:grid-cols-4 gap-3">
+      <div className="grid grid-cols-2 sm:grid-cols-4 gap-3 stagger">
         <Stat label="Опубликовано" value={String(data.publishedCount)} />
         <Stat label="С метриками" value={String(data.withMetrics)} />
         <Stat label="Твоя медиана" value={fmt(data.myMedian)} />
@@ -88,16 +92,17 @@ export function MeasureClient({ initial }: { initial: MeasureDashboard }) {
       </div>
 
       {data.posts.length === 0 ? (
-        <div className="border border-border-soft bg-surface p-10 text-center grid gap-2">
-          <p className="mono text-[11px] tracking-widest uppercase text-text-mute">
+        <div className="rounded-[24px] border border-dashed border-white/15 bg-white/[0.03] p-10 flex flex-col items-center gap-2 text-center fade-in">
+          <Icon3D name="analytics" size={44} tile sway />
+          <p className="mt-2 text-[17px] font-semibold tracking-[-0.02em] text-text">
             Нет опубликованных постов
           </p>
-          <p className="font-serif text-[13px] text-text-dim">
+          <p className="text-[14px] text-text-dim">
             Опубликуйте материал из воркспейса — и метрики появятся здесь.
           </p>
         </div>
       ) : (
-        <div className="grid gap-3">
+        <div className="grid gap-3 stagger">
           {data.posts.map((p) => (
             <PostRow
               key={p.postTargetId}
@@ -119,9 +124,9 @@ export function MeasureClient({ initial }: { initial: MeasureDashboard }) {
 
 function Stat({ label, value }: { label: string; value: string }) {
   return (
-    <div className="border border-border bg-surface p-3 grid gap-1">
-      <span className="mono text-[9px] tracking-widest uppercase text-text-mute">{label}</span>
-      <span className="font-serif text-[20px] text-text">{value}</span>
+    <div className="panel p-4 grid gap-1.5">
+      <span className="label">{label}</span>
+      <span className="text-[26px] font-extrabold leading-none tabular-nums tracking-[-0.02em] text-text">{value}</span>
     </div>
   );
 }
@@ -140,11 +145,11 @@ function PostRow({
   onSaved: () => void;
 }) {
   return (
-    <div className="border border-border bg-surface p-4 grid gap-3">
+    <div className="panel p-5 grid gap-3">
       <div className="flex items-start gap-3">
         {/* источник-вдохновение */}
         <div
-          className="w-12 h-12 shrink-0 border border-border-soft bg-bg grid place-items-center"
+          className="w-12 h-12 shrink-0 rounded-2xl bg-white/[0.05] ring-1 ring-white/10 grid place-items-center overflow-hidden"
           style={
             post.source?.thumbnailUrl
               ? { backgroundImage: `url(${post.source.thumbnailUrl})`, backgroundSize: 'cover', backgroundPosition: 'center' }
@@ -156,21 +161,21 @@ function PostRow({
 
         <div className="min-w-0 flex-1 grid gap-1">
           <div className="flex items-center gap-2">
-            <span className="mono text-[10px] tracking-widest uppercase text-text-dim">
+            <span className="rounded-full bg-white/[0.06] px-2.5 py-0.5 text-[12px] font-medium text-text-dim">
               {post.platform}
               {post.channel ? ` · ${post.channel}` : ''}
             </span>
             {post.permalink && (
-              <a href={post.permalink} target="_blank" rel="noopener noreferrer" className="text-text-mute hover:text-gold">
+              <a href={post.permalink} target="_blank" rel="noopener noreferrer" className="text-text-mute hover:text-gold" aria-label="Открыть пост">
                 <ExternalLink size={12} />
               </a>
             )}
           </div>
           {post.caption && (
-            <p className="font-serif text-[12.5px] text-text-dim line-clamp-1">{post.caption}</p>
+            <p className="text-[13.5px] text-text-dim line-clamp-1">{post.caption}</p>
           )}
           {post.source && (
-            <p className="mono text-[9px] tracking-widest uppercase text-text-mute">
+            <p className="text-[12px] text-text-mute">
               вдохновение: {post.source.authorUsername ? `@${post.source.authorUsername}` : 'источник'}
               {post.source.sourceXn != null ? ` · источник ${post.source.sourceXn}×` : ''}
               {post.source.briefId ? (
@@ -187,28 +192,30 @@ function PostRow({
 
         {/* твой Xn */}
         <div className="text-right grid gap-1">
-          <span className={`mono text-[13px] tracking-wider border px-2 py-1 ${xnClass(post.myXn)}`}>
-            {post.myXn != null ? `🔥 ${post.myXn}×` : '—'}
+          <span className={`inline-flex items-center justify-end gap-1 rounded-full px-3 py-1 text-[14px] font-bold tabular-nums ${xnClass(post.myXn)}`}>
+            {post.myXn != null && <Flame className="h-3.5 w-3.5" />}
+            {post.myXn != null ? `${post.myXn}×` : '—'}
           </span>
-          <span className="mono text-[9px] tracking-widest uppercase text-text-mute">
+          <span className="text-[12px] tabular-nums text-text-mute">
             {fmt(post.views)} просм.
           </span>
         </div>
       </div>
 
       {/* метрики + редактор */}
-      <div className="flex items-center gap-4 pt-2 border-t border-border-soft">
-        <span className="mono text-[10px] tracking-wider text-text-dim">👁 {fmt(post.views)}</span>
-        <span className="mono text-[10px] tracking-wider text-text-dim">♥ {fmt(post.likes)}</span>
-        <span className="mono text-[10px] tracking-wider text-text-dim">💬 {fmt(post.comments)}</span>
+      <div className="flex flex-wrap items-center gap-4 pt-3 border-t border-border-soft">
+        <span className="inline-flex items-center gap-1.5 text-[12.5px] tabular-nums text-text-dim"><Eye className="h-3.5 w-3.5" /> {fmt(post.views)}</span>
+        <span className="inline-flex items-center gap-1.5 text-[12.5px] tabular-nums text-text-dim"><Heart className="h-3.5 w-3.5" /> {fmt(post.likes)}</span>
+        <span className="inline-flex items-center gap-1.5 text-[12.5px] tabular-nums text-text-dim"><MessageCircle className="h-3.5 w-3.5" /> {fmt(post.comments)}</span>
         {post.capturedAt && (
-          <span className="mono text-[9px] tracking-widest uppercase text-text-mute">снимок {post.capturedAt}</span>
+          <span className="text-[12px] text-text-mute">снимок {post.capturedAt}</span>
         )}
         <button
+          type="button"
           onClick={editing ? onClose : onEdit}
-          className="ml-auto flex items-center gap-1 mono text-[9px] tracking-widest uppercase text-text-mute hover:text-gold"
+          className="ml-auto inline-flex items-center gap-1.5 rounded-full border border-border-soft bg-white/[0.04] px-3 py-1.5 text-[12.5px] text-text-dim transition-colors hover:bg-white/[0.07] hover:text-gold"
         >
-          <Pencil size={11} /> {editing ? 'закрыть' : 'обновить метрики'}
+          <Pencil size={12} /> {editing ? 'закрыть' : 'обновить метрики'}
         </button>
       </div>
 
@@ -244,7 +251,7 @@ function MetricForm({ post, onSaved }: { post: MeasurePost; onSaved: () => void 
       });
       if (!res.ok) {
         const d = await res.json().catch(() => ({}));
-        throw new Error(d.error || 'save_failed');
+        throw new Error(errorText(d, res.status));
       }
       onSaved();
     } catch (e) {
@@ -255,17 +262,18 @@ function MetricForm({ post, onSaved }: { post: MeasurePost; onSaved: () => void 
   }
 
   return (
-    <div className="grid gap-2 border border-gold/30 bg-bg p-3">
+    <div className="grid gap-3 rounded-[20px] border border-gold/30 bg-blue/[0.05] p-4 pop-in">
       <div className="flex flex-wrap gap-2">
         <NumIn label="Просмотры" value={views} onChange={setViews} />
         <NumIn label="Лайки" value={likes} onChange={setLikes} />
         <NumIn label="Комменты" value={comments} onChange={setComments} />
       </div>
-      {error && <p className="mono text-[10px] text-pink">{error}</p>}
+      {error && <p className="text-[13px] text-pink">{error}</p>}
       <button
+        type="button"
         onClick={save}
         disabled={busy}
-        className="justify-self-start px-4 py-1.5 border border-gold bg-gold/10 mono text-[10px] tracking-widest uppercase text-gold hover:bg-gold/20 disabled:opacity-50"
+        className="btn-primary justify-self-start !px-4 !py-2 !text-[13px]"
       >
         {busy ? 'Сохранение…' : 'Сохранить снимок'}
       </button>
@@ -275,13 +283,13 @@ function MetricForm({ post, onSaved }: { post: MeasurePost; onSaved: () => void 
 
 function NumIn({ label, value, onChange }: { label: string; value: string; onChange: (v: string) => void }) {
   return (
-    <label className="grid gap-1">
-      <span className="mono text-[9px] tracking-widest uppercase text-text-mute">{label}</span>
+    <label className="grid gap-1.5">
+      <span className="text-[12px] text-text-mute">{label}</span>
       <input
         inputMode="numeric"
         value={value}
         onChange={(e) => onChange(e.target.value.replace(/[^\d]/g, ''))}
-        className="w-28 bg-surface border border-border px-2 py-1.5 mono text-[12px] text-text focus:border-gold outline-none"
+        className="input !w-32 !py-2 tabular-nums"
       />
     </label>
   );

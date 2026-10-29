@@ -1,6 +1,9 @@
 'use client';
 
 import { useState, useTransition } from 'react';
+import { errorText, jobErrorText } from '@/lib/error-text';
+
+const PUBLISH_FAILED = 'Не удалось опубликовать — проверьте подключение канала и попробуйте ещё раз.';
 import Link from 'next/link';
 import {
   Send,
@@ -13,6 +16,7 @@ import {
   Loader2,
   Link2,
 } from 'lucide-react';
+import { Icon3D } from '@/components/ui/icon3d';
 
 type Target = {
   id: string;
@@ -75,16 +79,18 @@ const STATUS_LABEL: Record<string, string> = {
 function StatusBadge({ status }: { status: string }) {
   const color =
     status === 'published'
-      ? 'text-emerald-400'
+      ? 'status-ready'
       : status === 'failed'
-        ? 'text-red-400'
+        ? 'status-failed'
         : status === 'partial'
-          ? 'text-amber-400'
+          ? 'status-partial'
           : status === 'publishing'
-            ? 'text-cyan-400'
-            : 'text-text-muted';
+            ? 'status-processing'
+            : status === 'scheduled'
+              ? 'status-scheduled'
+              : 'text-text-mute';
   return (
-    <span className={`mono text-[10px] uppercase tracking-[0.18em] ${color}`}>
+    <span className={`status-badge ${color}`}>
       {STATUS_LABEL[status] ?? status}
     </span>
   );
@@ -132,7 +138,7 @@ export function ScheduleClient({
     const json = await res.json().catch(() => ({}));
     setConnecting(false);
     if (!res.ok) {
-      setError(json.message || json.error || `HTTP ${res.status}`);
+      setError(errorText(json, res.status));
       return;
     }
     setAccounts((a) => [json.account, ...a.filter((x) => x.id !== json.account.id)]);
@@ -150,7 +156,7 @@ export function ScheduleClient({
       setError(
         json.error === 'not_configured'
           ? 'PostMyPost не настроен (нет POSTMYPOST_API_TOKEN)'
-          : json.message || json.error || `HTTP ${res.status}`,
+          : errorText(json, res.status),
       );
       return;
     }
@@ -173,7 +179,7 @@ export function ScheduleClient({
     const json = await res.json().catch(() => ({}));
     setConnecting(false);
     if (!res.ok) {
-      setError(json.message || json.error || `HTTP ${res.status}`);
+      setError(errorText(json, res.status));
       return;
     }
     setAccounts((a) => [json.account, ...a.filter((x) => x.id !== json.account.id)]);
@@ -181,11 +187,14 @@ export function ScheduleClient({
   }
 
   function disconnect(id: string) {
+    if (!window.confirm('Отключить канал? Запланированные публикации в него не уйдут.')) return;
     setBusy(id);
+    setError(null);
     startTransition(async () => {
       const res = await fetch(`/api/schedule/accounts/${id}`, { method: 'DELETE' });
       setBusy(null);
       if (res.ok) setAccounts((a) => a.filter((x) => x.id !== id));
+      else setError(errorText(await res.json().catch(() => null), res.status));
     });
   }
 
@@ -196,17 +205,23 @@ export function ScheduleClient({
       setBusy(null);
       if (res.ok) {
         setPosts((ps) => ps.map((p) => (p.id === id ? { ...p, status: 'publishing' } : p)));
+      } else {
+        setError(errorText(await res.json().catch(() => null), res.status));
       }
     });
   }
 
   function cancel(id: string) {
+    if (!window.confirm('Отменить публикацию?')) return;
     setBusy(id);
+    setError(null);
     startTransition(async () => {
       const res = await fetch(`/api/schedule/posts/${id}`, { method: 'DELETE' });
       setBusy(null);
       if (res.ok) {
         setPosts((ps) => ps.map((p) => (p.id === id ? { ...p, status: 'canceled' } : p)));
+      } else {
+        setError(errorText(await res.json().catch(() => null), res.status));
       }
     });
   }
@@ -216,47 +231,50 @@ export function ScheduleClient({
   const problems = posts.filter((p) => ['failed', 'canceled'].includes(p.status));
 
   return (
-    <div className="grid gap-10">
+    <div className="grid gap-8">
       {/* ── New post CTA (always reachable, not only on empty queue) ── */}
       <div className="flex justify-end">
-        <Link href="/schedule/new" className="btn-primary w-fit inline-flex items-center gap-1.5">
-          <Plus size={14} /> Запланировать пост
+        <Link href="/schedule/new" className="btn-primary w-fit">
+          <Plus size={16} /> Запланировать пост
         </Link>
       </div>
 
       {/* ── Channels ─────────────────────────── */}
-      <section className="grid gap-4">
-        <h2 className="sec-title">Каналы публикации</h2>
+      <section className="grid gap-4 reveal">
+        <h2 className="flex items-center gap-3"><span className="sec-num">/01</span><span className="sec-title">Каналы публикации</span></h2>
 
-        <div className="grid gap-3">
+        <div className="grid gap-3 stagger">
           {accounts.length === 0 && (
-            <p className="font-serif italic text-[14px] text-text-muted">
+            <p className="rounded-[24px] border border-dashed border-white/15 bg-white/[0.03] px-5 py-6 text-center text-[14px] text-text-mute">
               Каналы ещё не подключены. Добавьте Telegram-канал или Instagram-аккаунт ниже.
             </p>
           )}
           {accounts.map((a) => (
             <div
               key={a.id}
-              className="card flex items-center justify-between gap-4 p-4"
+              className="panel flex items-center justify-between gap-4 p-4"
             >
               <div className="flex items-center gap-3">
-                <PlatformIcon platform={a.platform} />
+                <span className="inline-flex h-10 w-10 flex-none items-center justify-center rounded-full bg-white/[0.06] text-text-dim">
+                  <PlatformIcon platform={a.platform} />
+                </span>
                 <div>
-                  <div className="text-[14px]">{a.displayName}</div>
-                  <div className="mono text-[10px] uppercase tracking-[0.18em] text-text-muted">
+                  <div className="text-[14px] font-semibold text-text">{a.displayName}</div>
+                  <div className="text-[12px] text-text-mute">
                     {a.platform}
                     {a.status !== 'active' && (
-                      <span className="text-amber-400"> · {a.status === 'expired' ? 'токен истёк' : a.status}</span>
+                      <span className="text-amber"> · {a.status === 'expired' ? 'токен истёк' : a.status}</span>
                     )}
                   </div>
                 </div>
               </div>
               <button
+                type="button"
                 onClick={() => disconnect(a.id)}
                 disabled={busy === a.id}
-                className="btn-ghost text-[12px] inline-flex items-center gap-1.5"
+                className="btn-ghost !px-4 !py-2 !text-[13px] hover:!text-pink hover:!border-pink/40"
               >
-                <Trash2 size={13} /> Отключить
+                <Trash2 size={14} /> Отключить
               </button>
             </div>
           ))}
@@ -264,20 +282,20 @@ export function ScheduleClient({
 
         <div className="grid gap-3 md:grid-cols-2">
           {/* Telegram connect */}
-          <div className="card p-4 grid gap-3">
-            <div className="flex items-center gap-2 text-[14px]">
-              <Send size={15} /> Telegram-канал
+          <div className="panel p-5 grid gap-3 content-start">
+            <div className="flex items-center gap-2.5 text-[15px] font-semibold tracking-[-0.01em] text-text">
+              <span className="inline-flex h-8 w-8 items-center justify-center rounded-full bg-cyan/15 text-cyan"><Send size={15} /></span> Telegram-канал
             </div>
             {tgReady ? (
               <>
-                <p className="font-serif italic text-[12px] text-text-muted leading-relaxed">
+                <p className="text-[13px] text-text-dim leading-relaxed">
                   Добавьте бота{' '}
                   {tgBotUsername ? (
                     <a
                       href={`https://t.me/${tgBotUsername}`}
                       target="_blank"
                       rel="noreferrer"
-                      className="mono not-italic text-gold underline"
+                      className="font-medium text-gold underline underline-offset-2"
                     >
                       @{tgBotUsername}
                     </a>
@@ -285,8 +303,8 @@ export function ScheduleClient({
                     'нашего бота'
                   )}{' '}
                   в канал как администратора (с правом «Публикация сообщений»), затем
-                  введите ID канала (<span className="mono">-100…</span>) или{' '}
-                  <span className="mono">@username</span>.
+                  введите ID канала (<span className="font-mono text-[12px] text-text">-100…</span>) или{' '}
+                  <span className="font-mono text-[12px] text-text">@username</span>.
                 </p>
                 <div className="flex gap-2">
                   <input
@@ -296,9 +314,10 @@ export function ScheduleClient({
                     onChange={(e) => setChatId(e.target.value)}
                   />
                   <button
+                    type="button"
                     onClick={connectTelegram}
                     disabled={connecting || !chatId.trim()}
-                    className="btn-primary inline-flex items-center gap-1.5"
+                    className="btn-primary"
                   >
                     {connecting ? <Loader2 size={14} className="animate-spin" /> : <Plus size={14} />}
                     Подключить
@@ -306,20 +325,20 @@ export function ScheduleClient({
                 </div>
               </>
             ) : (
-              <p className="font-serif italic text-[12px] text-amber-400/80">
+              <p className="rounded-2xl border border-amber/25 bg-amber/[0.06] px-3.5 py-2.5 text-[13px] text-amber">
                 Не настроен TELEGRAM_BOT_TOKEN — подключение Telegram недоступно.
               </p>
             )}
           </div>
 
           {/* Instagram connect — via PostMyPost */}
-          <div className="card p-4 grid gap-3">
-            <div className="flex items-center gap-2 text-[14px]">
-              <Instagram size={15} /> Instagram
+          <div className="panel p-5 grid gap-3 content-start">
+            <div className="flex items-center gap-2.5 text-[15px] font-semibold tracking-[-0.01em] text-text">
+              <span className="inline-flex h-8 w-8 items-center justify-center rounded-full bg-pink/15 text-pink"><Instagram size={15} /></span> Instagram
             </div>
             {igReady ? (
               <>
-                <p className="font-serif italic text-[12px] text-text-muted leading-relaxed">
+                <p className="text-[13px] text-text-dim leading-relaxed">
                   Публикация идёт через сервис{' '}
                   <a href="https://app.postmypost.io" target="_blank" rel="noreferrer" className="underline">
                     PostMyPost
@@ -328,15 +347,16 @@ export function ScheduleClient({
                 </p>
                 {!igPickerOpen ? (
                   <button
+                    type="button"
                     onClick={loadIgAccounts}
                     disabled={igLoading}
-                    className="btn-primary inline-flex items-center gap-1.5 w-fit"
+                    className="btn-primary w-fit"
                   >
                     {igLoading ? <Loader2 size={14} className="animate-spin" /> : <Instagram size={14} />}
                     Выбрать Instagram-аккаунт
                   </button>
                 ) : igAccounts.length === 0 ? (
-                  <p className="font-serif italic text-[12px] text-amber-400/80">
+                  <p className="rounded-2xl border border-amber/25 bg-amber/[0.06] px-3.5 py-2.5 text-[13px] text-amber">
                     В PostMyPost нет подключённых Instagram-аккаунтов. Подключите аккаунт в{' '}
                     <a href="https://app.postmypost.io" target="_blank" rel="noreferrer" className="underline">
                       кабинете PostMyPost
@@ -350,11 +370,12 @@ export function ScheduleClient({
                         key={`${acc.projectId}:${acc.accountId}`}
                         onClick={() => connectIg(acc)}
                         disabled={connecting}
-                        className="border border-border-soft hover:border-gold px-3 py-2 text-left text-[13px] flex items-center justify-between gap-2"
+                        type="button"
+                        className="rounded-2xl border border-border-soft bg-white/[0.04] hover:border-gold/50 hover:bg-blue/[0.06] px-3.5 py-2.5 text-left text-[13px] text-text flex items-center justify-between gap-2 transition-colors"
                       >
                         <span>
                           {acc.login ? `@${acc.login}` : acc.name}
-                          <span className="text-text-muted text-[11px]"> · {acc.projectName}</span>
+                          <span className="text-text-mute text-[12px]"> · {acc.projectName}</span>
                         </span>
                         <Plus size={13} />
                       </button>
@@ -363,7 +384,7 @@ export function ScheduleClient({
                 )}
               </>
             ) : (
-              <p className="font-serif italic text-[12px] text-amber-400/80">
+              <p className="rounded-2xl border border-amber/25 bg-amber/[0.06] px-3.5 py-2.5 text-[13px] text-amber">
                 Не настроен POSTMYPOST_API_TOKEN — подключение Instagram недоступно.
               </p>
             )}
@@ -371,7 +392,7 @@ export function ScheduleClient({
         </div>
 
         {error && (
-          <p className="mono text-[12px] text-red-400 flex items-center gap-1.5">
+          <p className="rounded-2xl border border-danger/40 bg-danger/[0.08] px-3.5 py-2.5 text-[13px] text-danger flex items-center gap-2">
             <AlertTriangle size={13} /> {error}
           </p>
         )}
@@ -383,12 +404,13 @@ export function ScheduleClient({
       <PostGroup title="Ошибки и отменённые" icon={<AlertTriangle size={14} />} posts={problems} busy={busy} />
 
       {posts.length === 0 && (
-        <div className="card p-8 text-center grid gap-3">
-          <p className="font-serif italic text-[15px] text-text-secondary">
+        <div className="rounded-[24px] border border-dashed border-white/15 bg-white/[0.03] p-10 flex flex-col items-center text-center gap-3 fade-in">
+          <Icon3D name="schedule" size={44} tile sway />
+          <p className="text-[16px] font-semibold tracking-[-0.02em] text-text">
             Запланированных постов пока нет.
           </p>
-          <Link href="/schedule/new" className="btn-primary w-fit mx-auto inline-flex items-center gap-1.5">
-            <Plus size={14} /> Запланировать первый пост
+          <Link href="/schedule/new" className="btn-primary w-fit">
+            <Plus size={16} /> Запланировать первый пост
           </Link>
         </div>
       )}
@@ -413,29 +435,30 @@ function PostGroup({
 }) {
   if (posts.length === 0) return null;
   return (
-    <section className="grid gap-4">
+    <section className="grid gap-4 reveal">
       <h2 className="sec-title flex items-center gap-2">
-        {icon} {title} <span className="text-text-muted">· {posts.length}</span>
+        <span className="inline-flex h-7 w-7 items-center justify-center rounded-full bg-blue/15 text-gold">{icon}</span>
+        {title} <span className="tabular-nums text-text-mute">· {posts.length}</span>
       </h2>
-      <div className="grid gap-3">
+      <div className="grid gap-3 stagger">
         {posts.map((p) => (
-          <div key={p.id} className="card p-4 flex gap-4">
+          <div key={p.id} className="panel p-4 flex gap-4">
             <video
               src={p.mediaUrl}
-              className="w-[88px] aspect-[9/16] object-cover bg-black/40 rounded-sm shrink-0"
+              className="w-[88px] aspect-[9/16] object-cover bg-black/40 rounded-2xl shrink-0"
               muted
               playsInline
               preload="metadata"
             />
             <div className="flex-1 min-w-0 grid gap-2">
               <div className="flex items-center justify-between gap-3">
-                <div className="flex items-center gap-2 text-[13px] text-text-secondary">
+                <div className="flex items-center gap-2 text-[13px] tabular-nums text-text-dim">
                   <Clock size={12} /> {fmtDate(p.scheduledAt)}
                 </div>
                 <StatusBadge status={p.status} />
               </div>
               {p.caption && (
-                <p className="text-[13px] text-text-secondary line-clamp-2 leading-relaxed">
+                <p className="text-[13.5px] text-text-dim line-clamp-2 leading-relaxed">
                   {p.caption}
                 </p>
               )}
@@ -443,12 +466,12 @@ function PostGroup({
                 {p.targets.map((t) => (
                   <span
                     key={t.id}
-                    className="inline-flex items-center gap-1.5 border border-border-soft px-2 py-0.5 text-[11px]"
-                    title={t.errorMsg ?? undefined}
+                    className="inline-flex items-center gap-1.5 rounded-full border border-border-soft bg-white/[0.04] py-0.5 pl-2.5 pr-1 text-[12px] text-text-dim"
+                    title={t.errorMsg ? jobErrorText(t.errorMsg, PUBLISH_FAILED) : undefined}
                   >
                     <PlatformIcon platform={t.platform} />
                     {t.permalink ? (
-                      <a href={t.permalink} target="_blank" rel="noreferrer" className="underline">
+                      <a href={t.permalink} target="_blank" rel="noreferrer" className="text-gold underline underline-offset-2">
                         {t.channel}
                       </a>
                     ) : (
@@ -458,27 +481,34 @@ function PostGroup({
                   </span>
                 ))}
               </div>
-              {p.errorMsg && (
-                <p className="mono text-[11px] text-red-400/90">{p.errorMsg}</p>
-              )}
+              {(() => {
+                // Post summary («1/2 каналов не опубликовано») + the first failed
+                // channel's reason, so the user sees why — not just a badge.
+                const reason = p.targets.find((t) => t.status === 'failed' && t.errorMsg)?.errorMsg;
+                const parts = [p.errorMsg ? jobErrorText(p.errorMsg, PUBLISH_FAILED) : null, reason ? jobErrorText(reason, PUBLISH_FAILED) : null]
+                  .filter((x, i, a): x is string => !!x && a.indexOf(x) === i);
+                return parts.length ? <p className="text-[12.5px] text-danger">{parts.join(' — ')}</p> : null;
+              })()}
               {(onPublishNow || onCancel) && (
                 <div className="flex gap-2 mt-1">
                   {onPublishNow && (
                     <button
+                      type="button"
                       onClick={() => onPublishNow(p.id)}
                       disabled={busy === p.id || p.status === 'publishing'}
-                      className="btn-primary text-[12px] inline-flex items-center gap-1.5"
+                      className="btn-primary !px-4 !py-2 !text-[13px]"
                     >
-                      <Send size={12} /> Опубликовать сейчас
+                      <Send size={14} /> Опубликовать сейчас
                     </button>
                   )}
                   {onCancel && (
                     <button
+                      type="button"
                       onClick={() => onCancel(p.id)}
                       disabled={busy === p.id}
-                      className="btn-ghost text-[12px] inline-flex items-center gap-1.5"
+                      className="btn-ghost !px-4 !py-2 !text-[13px]"
                     >
-                      <Trash2 size={12} /> Отменить
+                      <Trash2 size={14} /> Отменить
                     </button>
                   )}
                 </div>

@@ -11,6 +11,47 @@ import path from 'node:path';
 
 export const BRANCHES = { reels: 'Instagram Reels', carousels: 'Instagram Карусели' };
 
+// topic names of the «руководители» group by lane: a bot binds only a topic whose name is its own or unknown
+const LANES = [
+  { key: 'reels', name: 'Instagram Reels', re: /reels?|рилс/i },
+  { key: 'carousels', name: 'Карусели', re: /карус|carousel/i },
+  { key: 'threads', name: 'Threads', re: /threads|тредс/i },
+  { key: 'direct', name: 'Директ', re: /директ|direct/i },
+  { key: 'office', name: 'AI-офис', re: /офис|office/i },
+];
+// a lane by topic name (carousels before reels: «Карусели Instagram» is not reels)
+export function laneOf(name) {
+  const n = String(name || '');
+  if (!n) return null;
+  return [LANES[1], LANES[0], ...LANES.slice(2)].find((l) => l.re.test(n)) || null;
+}
+// the topic name Telegram attaches to a message inside a topic (its root «topic created» message), if known
+export const topicName = (msg) => msg.reply_to_message?.forum_topic_created?.name || '';
+
+// one-time repairs of the bindings, each applied once (DATA_DIR/fixes/<mark>)
+export function fixTopics(data) {
+  const fixes = [
+    // 2026-10-29: a plain /bind in the «Карусели» topic reached @instaoo_bot (Telegram gives a plain command to the bot
+    // that spoke last) and the reels branch moved there: the topic goes back to carousels, reels waits for /bind@ in its own
+    { mark: 'reels-out-of-carousels-18868', topic: 18868, from: 'reels', to: 'carousels' },
+  ];
+  const read = (k) => { try { return JSON.parse(fs.readFileSync(path.join(data, k, 'state.json'), 'utf8')); } catch { return null; } };
+  const write = (k, v) => { fs.mkdirSync(path.join(data, k), { recursive: true }); fs.writeFileSync(path.join(data, k, 'state.json'), JSON.stringify(v, null, 1)); };
+  fs.mkdirSync(path.join(data, 'fixes'), { recursive: true });
+  for (const f of fixes) {
+    const flag = path.join(data, 'fixes', f.mark);
+    if (fs.existsSync(flag)) continue;
+    const from = read(f.from);
+    if (from?.chat_id && from.topic_id === f.topic) {
+      const to = read(f.to) || {};
+      if (!to.chat_id) write(f.to, { ...to, chat_id: from.chat_id, topic_id: f.topic, owners: to.owners?.length ? to.owners : from.owners || [], announce: 'moved' });
+      write(f.from, { ...from, chat_id: 0, topic_id: 0, announce: '' });
+      console.log(`fix ${f.mark}: topic ${f.topic} ${f.from} → ${f.to}`);
+    }
+    fs.writeFileSync(flag, new Date().toISOString());
+  }
+}
+
 // topics bound by the other branches of this site
 export function takenBy(data, self, chat, topic) {
   for (const key of Object.keys(BRANCHES)) {
@@ -34,13 +75,16 @@ export function botsOf(data) {
 
 // a plain /bind reached a bot that already has a topic (Telegram gives a plain command to the bot that spoke last):
 // say which bot it is and how to bind the right one — unless the other branch took this topic meanwhile
-export async function wrongBind({ data, self, me, chat, topic, reply }) {
+export async function wrongBind({ data, self, me, chat, topic, name = '', reply }) {
   await new Promise((r) => setTimeout(r, 3000));
   if (takenBy(data, self, chat, topic)) return;
-  const bots = botsOf(data), lines = [];
-  for (const [key, bot] of Object.entries(bots)) if (key !== self) lines.push(`ветка «${BRANCHES[key]}» — /bind@${bot}`);
-  return reply(`Я @${me} — бот ветки «${BRANCHES[self]}», уже привязан к своей ветке, поэтому здесь не привязываюсь.\n` +
-    `${lines.length ? `Привязать эту ветку: ${lines.join(', ')}.` : 'Привязать эту ветку к другому боту — /bind@его_ник.'}\nПеренести меня сюда — /bind@${me}.`);
+  const bots = botsOf(data), lane = laneOf(name);
+  const head = `Я @${me} — бот ветки «${BRANCHES[self]}», уже привязан к своей ветке, поэтому здесь не привязываюсь.`;
+  let hint;
+  if (lane && BRANCHES[lane.key] && lane.key !== self) hint = `Эта ветка — ${BRANCHES[lane.key]}: ${bots[lane.key] ? `/bind@${bots[lane.key]}` : '/bind@ник её бота'}.`;
+  else if (lane && !BRANCHES[lane.key]) hint = `Ветку «${name}» ведёт не бот рилсов и не бот каруселей — здесь им делать нечего.`;
+  else hint = `Привязать эту ветку: ${Object.entries(bots).filter(([k]) => k !== self).map(([k, b]) => `${BRANCHES[k]} — /bind@${b}`).join(', ') || '/bind@ник нужного бота'}.`;
+  return reply(`${head}\n${hint}${lane && lane.key !== self ? '' : `\nПеренести меня сюда — /bind@${me}.`}`);
 }
 
 // what a message means for this bot: {cmd, mention, mine, topic}

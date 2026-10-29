@@ -16,6 +16,7 @@ import type { Word } from '@/lib/montage/edl';
 import { montagePreset } from '@/lib/montage/presets';
 import { DEFAULT_MONTAGE_OPTIONS, extractAudio, probe, renderMontage, type MontageOptions } from '@/lib/montage/render';
 import { transcribeWords, TranscribeWordsError } from '@/lib/montage/transcribe-words';
+import { refreshAppSettings } from '@/lib/app-settings';
 
 // Монтаж по скиллу: скачать исходник → Whisper word-timestamps (кэш в
 // Montage.transcript, чтобы ретрай не платил за распознавание повторно) →
@@ -44,6 +45,7 @@ export function startSkillMontageWorker() {
   const worker = new Worker<MontageJob>(
     QUEUE_NAMES.skillMontage,
     async (job) => {
+      await refreshAppSettings(); // admin-set provider keys (see lib/app-settings.ts)
       const { montageId, userId } = job.data;
       const row = await prisma.montage.findUnique({ where: { id: montageId } });
       if (!row) throw new UnrecoverableError('montage_missing');

@@ -1,4 +1,5 @@
 import Link from 'next/link';
+import { ArrowLeft } from 'lucide-react';
 import { redirect, notFound } from 'next/navigation';
 import { getCurrentUser } from '@/lib/auth';
 import { prisma } from '@/lib/prisma';
@@ -45,9 +46,10 @@ export default async function FolderDetail({ params }: { params: Promise<{ id: s
       <div>
         <Link
           href="/research/folders"
-          className="mono text-[10px] tracking-widest uppercase text-text-mute hover:text-text"
+          className="btn-ghost !px-4 !py-2 !text-[13px]"
         >
-          ← Все папки
+          <ArrowLeft className="h-4 w-4" />
+          Все папки
         </Link>
       </div>
       <FolderDetailClient

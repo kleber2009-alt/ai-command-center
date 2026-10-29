@@ -48,14 +48,16 @@ export function VoiceClone({
   }
 
   return (
-    <div className={`grid gap-2 ${compact ? '' : 'border border-border-soft bg-surface p-4'}`}>
+    <div className={`grid gap-3 ${compact ? '' : 'panel p-5 sm:p-6'}`}>
       {!compact && (
-        <div className="flex items-center gap-2">
-          <Mic size={14} className="text-gold" />
-          <span className="font-serif text-[14px] text-text">Клонировать свой голос</span>
+        <div className="flex items-center gap-3">
+          <span className="flex h-9 w-9 items-center justify-center rounded-full bg-blue/15 text-gold">
+            <Mic size={16} aria-hidden />
+          </span>
+          <span className="text-[16px] font-semibold tracking-[-0.02em] text-text">Клонировать свой голос</span>
         </div>
       )}
-      <p className="mono text-[10px] tracking-wider text-text-mute">
+      <p className="text-[12px] leading-relaxed text-text-mute">
         Загрузите запись своего голоса (30–90 сек, чистая речь) — создадим голос для озвучки видео.
       </p>
       <input
@@ -63,26 +65,29 @@ export function VoiceClone({
         type="file"
         accept="audio/*,video/mp4,video/webm"
         onChange={(e) => setFile(e.target.files?.[0] ?? null)}
-        className="block w-full text-[12px] text-text-dim file:mr-3 file:py-1.5 file:px-3 file:border file:border-border file:bg-bg file:text-text file:mono file:text-[10px] file:tracking-widest file:uppercase file:cursor-pointer"
+        className="block w-full rounded-2xl border border-dashed border-white/15 bg-white/[0.03] p-2 text-[13px] text-text-dim transition-colors hover:border-gold/60 hover:bg-blue/[0.06] file:mr-3 file:cursor-pointer file:rounded-full file:border file:border-border-soft file:bg-white/[0.08] file:px-4 file:py-1.5 file:text-[13px] file:font-semibold file:text-text hover:file:bg-white/[0.12]"
       />
       <input
         value={name}
         onChange={(e) => setName(e.target.value)}
         placeholder="Название голоса (необязательно)"
-        className="w-full bg-bg border border-border px-3 py-2 font-serif text-[13px] text-text placeholder:text-text-mute focus:border-gold outline-none"
+        className="input"
       />
-      {error && <p className="mono text-[11px] text-pink">{error}</p>}
+      {error && (
+        <p className="rounded-2xl border border-danger/30 bg-danger/10 px-4 py-2.5 text-[13px] text-danger">{error}</p>
+      )}
       {done && (
-        <p className="flex items-center gap-1.5 mono text-[11px] text-lime">
-          <CheckCircle2 size={13} /> Голос «{done}» готов — выберите его в списке голосов.
+        <p className="pop-in flex items-center gap-2 rounded-2xl border border-lime/30 bg-lime/10 px-4 py-2.5 text-[13px] text-lime">
+          <CheckCircle2 size={15} aria-hidden /> Голос «{done}» готов — выберите его в списке голосов.
         </p>
       )}
       <button
+        type="button"
         onClick={clone}
         disabled={busy}
-        className="justify-self-start flex items-center gap-2 px-4 py-2 border border-gold bg-gold/10 mono text-[10px] tracking-widest uppercase text-gold hover:bg-gold/20 disabled:opacity-50"
+        className="btn-primary justify-self-start"
       >
-        {busy ? <Loader2 size={13} className="animate-spin" /> : <Mic size={13} />}
+        {busy ? <Loader2 size={15} className="animate-spin" aria-hidden /> : <Mic size={15} aria-hidden />}
         {busy ? 'Клонирование…' : 'Клонировать голос'}
       </button>
     </div>

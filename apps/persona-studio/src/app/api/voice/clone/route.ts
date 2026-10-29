@@ -46,6 +46,7 @@ export async function POST(req: NextRequest) {
       name,
       files: files.map((f) => ({ blob: f, filename: f.name || 'sample.mp3' })),
       description: 'persona-studio voice',
+      ownerId: ctx.user.id,
     });
     return NextResponse.json({ ok: true, voiceId: clone.voiceId, name: clone.name });
   } catch (e) {

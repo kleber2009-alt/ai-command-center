@@ -14,6 +14,7 @@ import { refundTokens } from '@/lib/tokens';
 import { concatVideos, FfmpegError } from '@/lib/ffmpeg';
 import { segmentScript } from '@/lib/segment';
 import { env } from '@/lib/env';
+import { refreshAppSettings } from '@/lib/app-settings';
 
 function logEvent(event: string, data: Record<string, unknown> = {}) {
   console.log(JSON.stringify({ event, ts: new Date().toISOString(), ...data }));
@@ -63,6 +64,7 @@ export function startOmnihumanWorker() {
   const worker = new Worker<VideoJob>(
     QUEUE_NAMES.omnihumanVideo,
     async (job) => {
+      await refreshAppSettings(); // admin-set provider keys (see lib/app-settings.ts)
       const { videoId, userId } = job.data;
       const startMs = Date.now();
 
@@ -73,7 +75,7 @@ export function startOmnihumanWorker() {
       if (!row) throw new Error('video_missing');
       if (row.userId !== userId) throw new Error('user_mismatch');
       if (row.engine !== 'omnihuman-1.5') throw new Error(`wrong_engine:${row.engine}`);
-      if (!row.avatar.imageUrl) throw new Error('avatar_no_image');
+      if (!row.avatar?.imageUrl) throw new Error('avatar_no_image');
       if (!row.audioUrl && (!row.script || !row.voiceId)) {
         throw new Error('audio_or_script_required');
       }
@@ -96,7 +98,7 @@ export function startOmnihumanWorker() {
       // рендерится отдельным клипом, клипы склеиваются ffmpeg. Готовое аудио
       // (advanced override) сегментировать нельзя — рендерим одним клипом.
       const aspect = toOmniAspect(row.aspect);
-      const avatarImage = row.avatar.imageUrl;
+      const avatarImage = row.avatar.imageUrl; // narrowed by the check above
       let stage: 'tts' | 'engine' = row.audioUrl ? 'engine' : 'tts';
 
       try {
@@ -171,6 +173,14 @@ export function startOmnihumanWorker() {
       } catch (e) {
         const code = errCode(e);
         const msg = errMsg(e);
+        const errorMsg = `OMNIHUMAN_${stage.toUpperCase()}_${code}: ${msg}`.slice(0, 500);
+        // BullMQ retries the job (attempts: 3); refund and mark failed only once,
+        // on the last attempt — otherwise every attempt refunds the same charge.
+        const isFinal = job.attemptsMade + 1 >= (job.opts.attempts ?? 1);
+        if (!isFinal) {
+          await prisma.videoGeneration.update({ where: { id: videoId }, data: { errorMsg } });
+          throw e;
+        }
         await refundTokens({
           userId,
           amount: row.tokensCost,
@@ -179,10 +189,7 @@ export function startOmnihumanWorker() {
         });
         await prisma.videoGeneration.update({
           where: { id: videoId },
-          data: {
-            status: 'failed',
-            errorMsg: `OMNIHUMAN_${stage.toUpperCase()}_${code}: ${msg}`.slice(0, 500),
-          },
+          data: { status: 'failed', errorMsg },
         });
         logEvent('video_generation_failed', {
           videoGenId: videoId,

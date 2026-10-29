@@ -3,6 +3,7 @@
 // актора — классификацию reels/carousels делает scoring.ts.
 
 import { env } from '@/lib/env';
+import { APIFY_API_BASE } from '@/lib/provider-urls';
 
 type ScrapeOk = { ok: true; items: ApifyItem[] };
 type ScrapeFail = { ok: false; error: string };
@@ -52,7 +53,7 @@ async function runActor(
   if (!token) return { ok: false, error: 'APIFY_TOKEN missing' };
   const actor = actorId;
   const timeoutMs = opts.timeoutMs || env.APIFY_TIMEOUT_MS;
-  const url = `https://api.apify.com/v2/acts/${actor}/run-sync-get-dataset-items?token=${encodeURIComponent(
+  const url = `${APIFY_API_BASE}/v2/acts/${actor}/run-sync-get-dataset-items?token=${encodeURIComponent(
     token,
   )}&timeout=${Math.floor(timeoutMs / 1000)}`;
 

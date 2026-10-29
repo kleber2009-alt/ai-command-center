@@ -36,6 +36,7 @@ export const QUEUE_NAMES = {
   slideImage: 'slide-image',
   postPublish: 'post-publish',
   skillMontage: 'skill-montage',
+  kadrikMontage: 'kadrik-montage',
 } as const;
 
 export type AvatarGenerationJob = {
@@ -128,6 +129,14 @@ export function slideImageQueue() {
     _slideImageQueue = new Queue<SlideImageJob>(QUEUE_NAMES.slideImage, options());
   }
   return _slideImageQueue;
+}
+
+let _kadrikMontageQueue: Queue<MontageJob> | null = null;
+export function kadrikMontageQueue() {
+  if (!_kadrikMontageQueue) {
+    _kadrikMontageQueue = new Queue<MontageJob>(QUEUE_NAMES.kadrikMontage, options());
+  }
+  return _kadrikMontageQueue;
 }
 
 let _montageQueue: Queue<MontageJob> | null = null;

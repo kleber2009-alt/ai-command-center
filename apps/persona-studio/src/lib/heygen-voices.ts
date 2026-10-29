@@ -33,3 +33,14 @@ export const VOICE_PRESETS: VoicePreset[] = [
 export function voiceById(id: string): VoicePreset | null {
   return VOICE_PRESETS.find((v) => v.voice_id === id) ?? null;
 }
+
+/**
+ * A voice HeyGen can speak with: `voiceId` itself if it is a HeyGen preset,
+ * otherwise the preset for `lang` (Russian when unknown). Used where the voice
+ * comes from elsewhere — a persona's ElevenLabs clone, an old OmniHuman job.
+ */
+export function heygenVoiceFor(voiceId: string | null | undefined, lang: string | null | undefined): string {
+  if (voiceId && voiceById(voiceId)) return voiceId;
+  const byLang = VOICE_PRESETS.find((v) => v.language === lang) ?? VOICE_PRESETS.find((v) => v.language === 'ru');
+  return (byLang ?? VOICE_PRESETS[0]).voice_id;
+}

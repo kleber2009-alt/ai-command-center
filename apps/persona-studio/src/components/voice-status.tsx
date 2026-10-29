@@ -1,6 +1,7 @@
 'use client';
 
 import Link from 'next/link';
+import { ArrowRight } from 'lucide-react';
 import { useEffect, useState } from 'react';
 
 // Persona Train (внешний сервис) выдаёт voice_id; пользователь руками вставляет его
@@ -29,29 +30,31 @@ export function VoiceStatus() {
   if (voiceId) {
     const shortId = voiceId.length > 12 ? `${voiceId.slice(0, 8)}…${voiceId.slice(-4)}` : voiceId;
     return (
-      <div className="mt-4 inline-flex items-center gap-3 border border-lime/40 bg-lime/[0.05] px-3 py-2">
-        <span className="inline-block w-[6px] h-[6px] rounded-full bg-lime" />
-        <span className="mono text-[10px] tracking-widest uppercase text-lime">голос обучен</span>
-        <span className="mono text-[10px] tracking-wider text-text-dim">{shortId}</span>
+      <div className="pop-in mt-4 inline-flex flex-wrap items-center gap-3 rounded-full border border-lime/30 bg-lime/[0.08] py-1.5 pl-3 pr-1.5">
+        <span className="inline-block h-[6px] w-[6px] rounded-full bg-lime shadow-[0_0_8px_2px_rgba(184,240,74,0.45)]" />
+        <span className="text-[12px] font-semibold text-lime">голос обучен</span>
+        <span className="font-mono text-[11px] text-text-dim">{shortId}</span>
         <Link
           href="/voice"
-          className="mono text-[10px] tracking-widest uppercase text-text-mute hover:text-text"
+          className="inline-flex items-center gap-1 rounded-full bg-white/[0.06] px-3 py-1 text-[12px] font-medium text-text-dim transition-colors hover:bg-white/[0.1] hover:text-text"
         >
-          сменить →
+          сменить
+          <ArrowRight size={12} aria-hidden />
         </Link>
       </div>
     );
   }
 
   return (
-    <div className="mt-4 inline-flex items-center gap-3 border border-warm/50 bg-warm/[0.05] px-3 py-2">
-      <span className="inline-block w-[6px] h-[6px] rounded-full bg-warm" />
-      <span className="mono text-[10px] tracking-widest uppercase text-warm">голос: дефолтный</span>
+    <div className="pop-in mt-4 inline-flex flex-wrap items-center gap-3 rounded-full border border-amber/35 bg-amber/[0.08] py-1.5 pl-3 pr-1.5">
+      <span className="inline-block h-[6px] w-[6px] rounded-full bg-amber" />
+      <span className="text-[12px] font-semibold text-amber">голос: дефолтный</span>
       <Link
         href="/voice"
-        className="mono text-[10px] tracking-widest uppercase text-text hover:text-text-dim"
+        className="inline-flex items-center gap-1 rounded-full bg-blue px-3 py-1 text-[12px] font-semibold text-white transition-colors hover:bg-gold"
       >
-        обучить свой →
+        обучить свой
+        <ArrowRight size={12} aria-hidden />
       </Link>
     </div>
   );

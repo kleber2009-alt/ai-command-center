@@ -22,6 +22,12 @@ export type ScoredPost = {
   engPerHour: number;
   engRatio: number;
   velocityScore: number;
+  /** Untruncated caption (`caption` is capped at 400 chars for rating prompts). */
+  fullCaption: string;
+  /** Reel mp4 from the actor (Instagram CDN, expires). null for non-reels. */
+  videoUrl: string | null;
+  /** Carousel slide image URLs in order (Instagram CDN, expire). [] for non-carousels. */
+  slideImages: string[];
 };
 
 export type ClaudeRating = {

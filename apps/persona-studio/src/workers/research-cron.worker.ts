@@ -19,6 +19,7 @@ import { connection } from '@/lib/queue';
 import { prisma } from '@/lib/prisma';
 import { runRadar } from '@/lib/research/run-radar';
 import { indexAuthor } from '@/lib/research/index-author';
+import { refreshAppSettings } from '@/lib/app-settings';
 
 const QUEUE_NAME = 'research-cron';
 const TICK_RADAR_MS = 15 * 60 * 1000;
@@ -161,6 +162,7 @@ export function startResearchCronWorker() {
   const worker = new Worker<CronJob>(
     QUEUE_NAME,
     async (job) => {
+      await refreshAppSettings(); // admin-set provider keys (see lib/app-settings.ts)
       const data = job.data;
       switch (data.kind) {
         case 'radar-sweep': {

@@ -8,7 +8,7 @@ import { getBotUsername } from '@/lib/publish/telegram-channel';
 import { env } from '@/lib/env';
 
 export const dynamic = 'force-dynamic';
-export const metadata = { title: 'Schedule — Persona Studio' };
+export const metadata = { title: 'Расписание — Persona Studio' };
 
 export default async function SchedulePage() {
   const user = await getCurrentUser();
@@ -48,18 +48,19 @@ export default async function SchedulePage() {
   return (
     <div className="grid gap-8">
       <PageHero
-        eyebrow="AUTOMATION · SCHEDULE"
+        icon="schedule"
+        eyebrow="АВТОМАТИЗАЦИЯ · РАСПИСАНИЕ"
         title={
           <>
-            Plan &amp; autopost — <span className="italic text-gold">ваш контент выходит сам.</span>
+            План и автопостинг — <span className="italic text-gold">ваш контент выходит сам.</span>
           </>
         }
         description="Поставьте готовое видео в очередь на нужное время — Persona Studio опубликует его в подключённые каналы (Instagram Reels, Telegram) без вашего участия."
         actions={[{ label: 'Запланировать пост', href: '/schedule/new' }]}
         meta={
           <>
-            <div className="mono text-[9px] tracking-[0.28em] uppercase text-text-muted">В очереди</div>
-            <div className="font-serif text-[28px] text-gold leading-none">{upcoming}</div>
+            <div className="label">В очереди</div>
+            <div className="text-[32px] font-extrabold tabular-nums tracking-[-0.02em] text-gold leading-none">{upcoming}</div>
           </>
         }
       />

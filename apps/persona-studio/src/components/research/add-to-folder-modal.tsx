@@ -7,6 +7,10 @@
 // Сама грузит список папок нужного типа лениво при открытии.
 
 import { useEffect, useState } from 'react';
+import { createPortal } from 'react-dom';
+import { Plus, X } from 'lucide-react';
+import { Icon3D } from '@/components/ui/icon3d';
+import { errorText } from '@/lib/error-text';
 
 type ItemType = 'reel' | 'author' | 'idea';
 const ITEM_TYPE_TO_FOLDER_TYPE: Record<ItemType, 'bloggers' | 'videos' | 'ideas'> = {
@@ -66,7 +70,7 @@ export function AddToFolderModal({
       });
       const json = await res.json();
       if (!res.ok) {
-        setError(json.message || json.error || `HTTP ${res.status}`);
+        setError(errorText(json, res.status));
         return;
       }
       onAdded?.();
@@ -88,7 +92,7 @@ export function AddToFolderModal({
       });
       const crJson = await cr.json();
       if (!cr.ok) {
-        setError(crJson.message || crJson.error || `HTTP ${cr.status}`);
+        setError(errorText(crJson, cr.status));
         return;
       }
       await addToFolder(crJson.folder.id);
@@ -98,45 +102,50 @@ export function AddToFolderModal({
   }
 
   return (
+    <Portal>
     <div
-      className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/70 backdrop-blur-sm"
+      className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/60 backdrop-blur-sm fade-in"
       onClick={onClose}
     >
       <div
         onClick={(e) => e.stopPropagation()}
-        className="border border-border bg-bg max-w-md w-full p-5 grid gap-4"
+        className="panel !bg-surface/95 shadow-glass max-w-md w-full p-6 grid gap-4 pop-in"
       >
-        <div className="flex justify-between items-center">
-          <h3 className="font-serif text-[17px] text-text">
+        <div className="flex justify-between items-center gap-3">
+          <h3 className="flex items-center gap-3 text-[17px] font-semibold tracking-[-0.02em] text-text">
+            <Icon3D name="folders" size={22} tile />
             Добавить в папку «{folderType === 'bloggers' ? 'Блогеры' : folderType === 'videos' ? 'Видео' : 'Идеи'}»
           </h3>
-          <button onClick={onClose} className="mono text-[14px] text-text-mute hover:text-text">
-            ×
+          <button type="button" onClick={onClose} aria-label="Закрыть" className="btn-icon !h-8 !w-8 shrink-0">
+            <X className="h-4 w-4" />
           </button>
         </div>
 
         {loading && (
-          <div className="mono text-[10px] tracking-widest uppercase text-text-mute">Загружаю…</div>
+          <div className="grid gap-2">
+            <div className="skeleton h-11" />
+            <div className="skeleton h-11" />
+          </div>
         )}
 
         {!loading && folders.length === 0 && !creatingNew && (
-          <div className="font-serif italic text-[13px] text-text-mute">
+          <div className="text-[14px] text-text-mute">
             Папок этого типа ещё нет — создай первую.
           </div>
         )}
 
         {!loading && folders.length > 0 && (
-          <div className="grid gap-1 max-h-60 overflow-y-auto">
+          <div className="grid gap-1.5 max-h-60 overflow-y-auto">
             {folders.map((f) => (
               <button
                 key={f.id}
                 type="button"
                 onClick={() => addToFolder(f.id)}
                 disabled={Boolean(busy)}
-                className="text-left border border-border-soft hover:border-gold bg-surface p-2 flex justify-between items-center"
+                className="text-left rounded-2xl border border-border-soft bg-white/[0.04] px-4 py-3 flex justify-between items-center transition-colors hover:border-gold/50 hover:bg-blue/[0.08] disabled:opacity-60"
               >
-                <span className="font-serif text-[14px] text-text">{f.name}</span>
-                <span className="mono text-[9px] tracking-widest uppercase text-text-mute">
+                <span className="text-[14px] font-medium text-text">{f.name}</span>
+                <span className="text-[12px] tabular-nums text-text-mute">
                   {f.itemCount} {busy === f.id && '· …'}
                 </span>
               </button>
@@ -145,20 +154,20 @@ export function AddToFolderModal({
         )}
 
         {creatingNew ? (
-          <div className="grid gap-2">
+          <div className="grid gap-2.5">
             <input
               autoFocus
               value={newName}
               onChange={(e) => setNewName(e.target.value)}
               onKeyDown={(e) => e.key === 'Enter' && createAndAdd()}
               placeholder="Название новой папки"
-              className="bg-bg border border-border focus:border-gold outline-none px-2 py-1.5 font-serif text-[14px] text-text"
+              className="input"
             />
             <div className="flex justify-end gap-2">
               <button
                 type="button"
                 onClick={() => setCreatingNew(false)}
-                className="btn-ghost text-[10px] tracking-widest uppercase"
+                className="btn-ghost !px-4 !py-2 !text-[13px]"
               >
                 Отмена
               </button>
@@ -166,7 +175,7 @@ export function AddToFolderModal({
                 type="button"
                 onClick={createAndAdd}
                 disabled={busy === 'new' || newName.trim().length === 0}
-                className="btn-primary text-[10px] tracking-widest uppercase"
+                className="btn-primary !px-4 !py-2 !text-[13px]"
               >
                 {busy === 'new' ? '…' : 'Создать + добавить'}
               </button>
@@ -176,18 +185,26 @@ export function AddToFolderModal({
           <button
             type="button"
             onClick={() => setCreatingNew(true)}
-            className="mono text-[10px] tracking-widest uppercase text-lime hover:text-gold text-left"
+            className="inline-flex items-center gap-1.5 justify-self-start rounded-full px-3 py-1.5 text-[13px] font-medium text-lime transition-colors hover:bg-lime/[0.08]"
           >
-            + Создать новую папку
+            <Plus className="h-4 w-4" />
+            Создать новую папку
           </button>
         )}
 
         {error && (
-          <div className="border border-pink/40 bg-pink/5 px-2 py-1 mono text-[10px] text-pink">
+          <div className="rounded-2xl border border-pink/40 bg-pink/[0.06] px-3.5 py-2 text-[13px] text-pink">
             {error}
           </div>
         )}
       </div>
     </div>
+    </Portal>
   );
+}
+
+// Overlays render into <body>: an animated ancestor (filter/transform) would
+// otherwise become the containing block for `position: fixed`.
+function Portal({ children }: { children: React.ReactNode }) {
+  return createPortal(children, document.body);
 }

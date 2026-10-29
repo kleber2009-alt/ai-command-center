@@ -1,5 +1,6 @@
 'use client';
 
+import { ChevronDown, ChevronUp, Plus, X } from 'lucide-react';
 import type { CarouselAvatarOption, SlideShape } from './types';
 
 type Props = {
@@ -15,14 +16,14 @@ type Props = {
 
 const slideRoleFor = (index: number, total: number) => {
   if (index === 0) return 'ОБЛОЖКА';
-  if (index === total - 1) return 'CTA';
+  if (index === total - 1) return 'ПРИЗЫВ';
   return 'РАСКРЫТИЕ';
 };
 
 const roleColor = (role: string, active: boolean) => {
-  if (active) return 'text-lime';
-  if (role === 'ОБЛОЖКА') return 'text-lime/70';
-  if (role === 'CTA') return 'text-warm';
+  if (active) return 'text-gold';
+  if (role === 'ОБЛОЖКА') return 'text-lime';
+  if (role === 'ПРИЗЫВ') return 'text-pink';
   return 'text-text-dim';
 };
 
@@ -41,42 +42,40 @@ export function SlidesRail({
   hasErrorAt,
 }: Props) {
   return (
-    <aside className="border border-border bg-surface flex flex-col h-full overflow-hidden">
-      <header className="flex items-center justify-between px-3 py-3 border-b border-border shrink-0">
-        <span className="mono text-[10px] tracking-[0.18em] uppercase text-text-mute">
+    <aside className="panel flex h-full flex-col overflow-hidden">
+      <header className="flex shrink-0 items-center justify-between border-b border-border-soft px-4 py-3">
+        <span className="label">
           Слайды · {slides.length}
         </span>
         <button
           type="button"
           onClick={onAdd}
           disabled={slides.length >= 20}
-          className="mono text-[10px] tracking-[0.18em] uppercase text-lime hover:underline disabled:opacity-30"
+          className="flex items-center gap-1 rounded-full px-2.5 py-1 text-[13px] font-medium text-gold transition-colors hover:bg-blue/10 disabled:opacity-30"
         >
-          + добавить
+          <Plus size={14} /> добавить
         </button>
       </header>
 
       <div className="overflow-y-auto flex-1 min-h-0 [&::-webkit-scrollbar]:w-1.5 [&::-webkit-scrollbar-thumb]:bg-border-2 [&::-webkit-scrollbar-thumb]:rounded">
-        <ul className="grid gap-px bg-border">
+        <ul className="grid gap-1 p-2">
           {slides.map((s, i) => {
             const active = i === activeIndex;
             const role = slideRoleFor(i, slides.length);
             const error = hasErrorAt(i);
             return (
-              <li key={i} className="bg-surface">
+              <li key={i}>
                 <div
-                  className={`relative group cursor-pointer transition-colors ${
-                    active ? 'bg-lime/[0.04]' : 'hover:bg-surface-2'
+                  className={`group relative cursor-pointer rounded-2xl border transition-colors ${
+                    active ? 'border-gold/50 bg-blue/[0.10]' : 'border-transparent hover:bg-white/[0.05]'
                   }`}
                   onClick={() => onSelect(i)}
                 >
                   <div
-                    className={`flex items-stretch gap-3 p-2.5 border-l-2 ${
-                      active ? 'border-lime' : 'border-transparent'
-                    }`}
+                    className="flex items-stretch gap-3 p-2.5"
                   >
                     {/* Thumb */}
-                    <div className="w-9 h-14 shrink-0 bg-bg border border-border overflow-hidden flex items-center justify-center">
+                    <div className="flex h-14 w-10 shrink-0 items-center justify-center overflow-hidden rounded-lg border border-border-soft bg-white/[0.04]">
                       {i === 0 && coverAvatar?.imageUrl ? (
                         // eslint-disable-next-line @next/next/no-img-element
                         <img
@@ -86,7 +85,7 @@ export function SlidesRail({
                           loading="lazy"
                         />
                       ) : (
-                        <span className="mono text-[9px] tracking-wider text-text-mute">
+                        <span className="text-[11px] font-semibold tabular-nums text-text-mute">
                           {String(i + 1).padStart(2, '0')}
                         </span>
                       )}
@@ -95,7 +94,7 @@ export function SlidesRail({
                     <div className="grid gap-1 min-w-0 flex-1">
                       <div className="flex items-center gap-2">
                         <span
-                          className={`mono text-[9px] tracking-[0.18em] uppercase ${roleColor(
+                          className={`text-[10px] font-semibold uppercase tracking-[0.08em] ${roleColor(
                             role,
                             active,
                           )}`}
@@ -103,25 +102,25 @@ export function SlidesRail({
                           {role}
                         </span>
                         {active && (
-                          <span className="mono text-[8px] tracking-wider text-lime/70">
+                          <span className="text-[11px] text-gold/80">
                             · редактируется
                           </span>
                         )}
                         {error && (
                           <span
                             className="ml-auto inline-block w-1.5 h-1.5 rounded-full bg-pink"
-                            title="Пустой title или body"
+                            title="Пустой заголовок или текст"
                           />
                         )}
                       </div>
-                      <p className="font-serif text-[13px] leading-tight text-text line-clamp-2">
+                      <p className="line-clamp-2 text-[13px] font-medium leading-snug text-text">
                         {s.title || <span className="italic text-text-mute">Без заголовка</span>}
                       </p>
                     </div>
                   </div>
 
                   {/* Hover controls — right side */}
-                  <div className="absolute top-1 right-1 flex items-center gap-0.5 opacity-0 group-hover:opacity-100 transition-opacity">
+                  <div className="absolute right-1.5 top-1.5 flex items-center gap-1 opacity-0 transition-opacity group-hover:opacity-100">
                     <button
                       type="button"
                       onClick={(e) => {
@@ -129,10 +128,10 @@ export function SlidesRail({
                         onMove(i, -1);
                       }}
                       disabled={i === 0}
-                      className="w-6 h-6 mono text-[10px] text-text-mute hover:text-text bg-bg/80 border border-border disabled:opacity-20"
+                      className="flex h-6 w-6 items-center justify-center rounded-full border border-border-soft bg-bg/85 text-text-mute backdrop-blur hover:text-text disabled:opacity-20"
                       aria-label="Вверх"
                     >
-                      ▲
+                      <ChevronUp size={13} />
                     </button>
                     <button
                       type="button"
@@ -141,10 +140,10 @@ export function SlidesRail({
                         onMove(i, 1);
                       }}
                       disabled={i === slides.length - 1}
-                      className="w-6 h-6 mono text-[10px] text-text-mute hover:text-text bg-bg/80 border border-border disabled:opacity-20"
+                      className="flex h-6 w-6 items-center justify-center rounded-full border border-border-soft bg-bg/85 text-text-mute backdrop-blur hover:text-text disabled:opacity-20"
                       aria-label="Вниз"
                     >
-                      ▼
+                      <ChevronDown size={13} />
                     </button>
                     <button
                       type="button"
@@ -153,10 +152,10 @@ export function SlidesRail({
                         onRemove(i);
                       }}
                       disabled={slides.length <= 2}
-                      className="w-6 h-6 mono text-[10px] text-text-mute hover:text-pink bg-bg/80 border border-border disabled:opacity-20"
+                      className="flex h-6 w-6 items-center justify-center rounded-full border border-border-soft bg-bg/85 text-text-mute backdrop-blur hover:text-danger disabled:opacity-20"
                       aria-label="Удалить"
                     >
-                      ✕
+                      <X size={12} />
                     </button>
                   </div>
                 </div>

@@ -11,7 +11,9 @@
 import { createHash, createHmac, timingSafeEqual } from 'node:crypto';
 
 const TESTNET = process.env.CRYPTOBOT_TESTNET === 'true';
-const API_BASE = TESTNET ? 'https://testnet-pay.crypt.bot/api' : 'https://pay.crypt.bot/api';
+const API_BASE =
+  process.env.CRYPTOBOT_API_BASE?.replace(/\/+$/, '') ||
+  (TESTNET ? 'https://testnet-pay.crypt.bot/api' : 'https://pay.crypt.bot/api');
 
 export class CryptoBotError extends Error {
   constructor(public code: string, message: string) {

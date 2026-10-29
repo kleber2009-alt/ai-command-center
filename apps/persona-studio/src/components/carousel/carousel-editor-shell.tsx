@@ -1,6 +1,7 @@
 'use client';
 
 import { useCallback, useEffect, useRef, useState } from 'react';
+import { ArrowRight, CalendarPlus, Check, Download, Loader2, Palette, RefreshCw } from 'lucide-react';
 import { GlobalStepper } from './global-stepper';
 import { SlidesRail } from './slides-rail';
 import { SlideEditorPane } from './slide-editor-pane';
@@ -10,6 +11,7 @@ import type {
   CarouselDraftSerialized,
   SlideShape,
 } from './types';
+import { errorText } from '@/lib/error-text';
 
 type SaveStatus = 'idle' | 'saving' | 'saved' | 'error';
 type RenderStatus = 'idle' | 'rendering' | 'done' | 'error';
@@ -97,10 +99,10 @@ export function CarouselEditorShell({ initial, avatars }: Props) {
       });
       if (!res.ok) {
         const text = await res.text().catch(() => '');
-        let msg = `HTTP ${res.status}`;
+        let msg = errorText(null, res.status);
         try {
           const j = JSON.parse(text);
-          msg = j.message || j.error || msg;
+          msg = errorText(j, res.status);
         } catch {
           /* not json */
         }
@@ -111,7 +113,7 @@ export function CarouselEditorShell({ initial, avatars }: Props) {
       dirtyRef.current = false;
     } catch (e) {
       setSaveStatus('error');
-      setSaveError((e as Error).message || 'network error');
+      setSaveError((e as Error).message || 'Нет связи с сервером');
     }
   }, [initial.id]);
 
@@ -199,7 +201,11 @@ export function CarouselEditorShell({ initial, avatars }: Props) {
   };
 
   // Stepper + валидация для финального шага
-  const allFilled = slides.every((s) => !slideHasError(s)) && Boolean(coverAvatarId);
+  // AI-картинки слайдов: без аватара сервер просто пропустит обложку-портрет,
+  // остальные слайды генерируются. Скилл-стили рисуют только текст — им AI-фон
+  // не нужен, кнопки скрыты (иначе токены уходят впустую).
+  const allFilled = slides.every((s) => !slideHasError(s));
+  const usesAiImages = !styleId.startsWith('skill-');
   // Скилл-стили (karusel) рендерят обложку-хук и без фото — аватар не обязателен.
   const canRender = slides.every((s) => !slideHasError(s)) && (Boolean(coverAvatarId) || styleId.startsWith('skill-'));
   const renderStepStatus =
@@ -253,14 +259,14 @@ export function CarouselEditorShell({ initial, avatars }: Props) {
         /* leave default */
       }
       if (!res.ok) {
-        setRenderError(json.message || json.error || `HTTP ${res.status}`);
+        setRenderError(errorText(json, res.status));
         setRenderStatus('error');
         return;
       }
       setImageUrls(json.imageUrls ?? []);
       setRenderStatus('done');
     } catch (e) {
-      setRenderError((e as Error).message || 'network error');
+      setRenderError((e as Error).message || 'Нет связи с сервером');
       setRenderStatus('error');
     }
   }
@@ -297,7 +303,7 @@ export function CarouselEditorShell({ initial, avatars }: Props) {
       /* leave default */
     }
     if (!res.ok) {
-      throw new Error(json.message || json.error || `HTTP ${res.status}`);
+      throw new Error(errorText(json, res.status));
     }
     // Mark slide as pending locally — поллер уже стартанул.
     setSlides((prev) =>
@@ -401,7 +407,7 @@ export function CarouselEditorShell({ initial, avatars }: Props) {
       /* leave default */
     }
     if (!res.ok) {
-      throw new Error(json.message || json.error || `HTTP ${res.status}`);
+      throw new Error(errorText(json, res.status));
     }
     if (Array.isArray(json.slides)) {
       setSlides(json.slides);
@@ -457,7 +463,7 @@ export function CarouselEditorShell({ initial, avatars }: Props) {
         /* leave default */
       }
       if (!res.ok && res.status !== 402) {
-        setBatchMessage(json.message || json.error || `HTTP ${res.status}`);
+        setBatchMessage(errorText(json, res.status));
         return;
       }
       // Локально помечаем все enqueued индексы как pending, чтобы поллер
@@ -487,7 +493,7 @@ export function CarouselEditorShell({ initial, avatars }: Props) {
           .join(' · '),
       );
     } catch (e) {
-      setBatchMessage((e as Error).message || 'network error');
+      setBatchMessage((e as Error).message || 'Нет связи с сервером');
     } finally {
       setBatchBusy(false);
     }
@@ -522,12 +528,12 @@ export function CarouselEditorShell({ initial, avatars }: Props) {
         /* leave default */
       }
       if (!res.ok) {
-        setRenderError(json.message || json.error || `HTTP ${res.status}`);
+        setRenderError(errorText(json, res.status));
         return;
       }
       if (json.imageUrls) setImageUrls(json.imageUrls);
     } catch (e) {
-      setRenderError((e as Error).message || 'network error');
+      setRenderError((e as Error).message || 'Нет связи с сервером');
     } finally {
       setSingleRendering((s) => {
         const next = new Set(s);
@@ -549,14 +555,14 @@ export function CarouselEditorShell({ initial, avatars }: Props) {
   const pendingAiCount = slides.filter((s) => s.imageStatus === 'pending').length;
 
   return (
-    <div className="grid gap-3 min-h-[calc(100dvh-140px)]">
+    <div className="grid min-h-[calc(100dvh-140px)] gap-4">
       <GlobalStepper steps={steps} />
 
       <StyleSelector value={styleId} onChange={changeStyle} />
 
       <div
         ref={editorAnchorRef}
-        className="grid grid-cols-1 lg:grid-cols-[340px_1fr] gap-3 lg:h-[calc(100dvh-280px)] lg:min-h-[520px] scroll-mt-4"
+        className="grid grid-cols-1 gap-4 scroll-mt-4 lg:h-[calc(100dvh-280px)] lg:min-h-[520px] lg:grid-cols-[340px_1fr]"
       >
         <SlidesRail
           slides={slides}
@@ -569,7 +575,7 @@ export function CarouselEditorShell({ initial, avatars }: Props) {
           hasErrorAt={(i) => slideHasError(slides[i])}
         />
 
-        <div className="flex flex-col gap-3 min-h-0">
+        <div className="flex min-h-0 flex-col gap-4">
           {activeSlide ? (
             <SlideEditorPane
               slide={activeSlide}
@@ -585,72 +591,88 @@ export function CarouselEditorShell({ initial, avatars }: Props) {
               onDispatchImage={(mode) => dispatchSlideImage(activeIndex, mode)}
             />
           ) : (
-            <div className="border border-border bg-surface p-6 text-text-mute mono text-[11px]">
+            <div className="panel p-6 text-[14px] text-text-mute">
               Нет слайдов.
             </div>
           )}
 
           {/* Footer */}
-          <div className="border border-border bg-surface px-4 py-3 flex flex-wrap items-center gap-3 justify-between shrink-0">
-            <div className="mono text-[10px] tracking-[0.16em] uppercase flex flex-wrap items-center gap-3">
+          <div className="panel flex shrink-0 flex-wrap items-center justify-between gap-3 !rounded-[20px] px-4 py-3">
+            <div className="flex flex-wrap items-center gap-x-3 gap-y-1 text-[12px]">
               <SaveIndicator status={saveStatus} savedAt={savedAt} error={saveError} />
               {renderStatus === 'rendering' && (
                 <span className="text-lime">· рендерю PNG, 3–8 сек</span>
               )}
               {renderStatus === 'done' && imageUrls.length > 0 && (
-                <span className="text-text-dim">· готово {imageUrls.length} PNG</span>
+                <span className="flex items-center gap-2 text-text-dim">
+                  · готово {imageUrls.length} PNG
+                  {imageUrls.filter(Boolean).length === slides.length && (
+                    <a href={`/schedule/new?source=carousel&id=${initial.id}`} className="inline-flex items-center gap-1 font-medium text-gold hover:underline">
+                      <CalendarPlus size={13} /> в план публикаций
+                    </a>
+                  )}
+                </span>
               )}
               {renderStatus === 'error' && (
-                <span className="text-pink">· ошибка рендера · {renderError}</span>
+                <span className="text-danger">· ошибка рендера · {renderError}</span>
               )}
               {pendingAiCount > 0 && (
-                <span className="text-gold">· 🎨 {pendingAiCount} в очереди kie</span>
+                <span className="flex items-center gap-1 text-gold">
+                  · <Palette size={13} /> {pendingAiCount} в очереди
+                </span>
               )}
               {batchMessage && <span className="text-text-dim">· {batchMessage}</span>}
             </div>
             <div className="flex items-center gap-2 flex-wrap">
+              {usesAiImages && (
+              <>
               <button
                 type="button"
                 disabled={batchBusy || !allFilled}
                 title={
                   !allFilled
-                    ? 'Сначала заполни все слайды и выбери обложку'
-                    : 'Поставить в kie всю карусель (skip уже готовые)'
+                    ? 'Сначала заполни все слайды'
+                    : 'AI-картинки для всех слайдов (готовые пропускаются)'
                 }
-                className="mono text-[10px] tracking-[0.18em] uppercase px-3 py-1.5 border border-gold/60 text-gold hover:bg-gold hover:text-black transition disabled:opacity-30 disabled:cursor-not-allowed"
+                className="btn-ghost !px-4 !py-2.5 text-[13px]"
                 onClick={() => dispatchBatch({ skipExisting: true })}
               >
-                {batchBusy ? '🎨 enqueue…' : '🎨 Generate all'}
+                {batchBusy ? <Loader2 size={14} className="animate-spin" /> : <Palette size={14} />}
+                {batchBusy ? 'ставлю в очередь…' : 'AI-картинки для всех'}
               </button>
               <button
                 type="button"
                 disabled={batchBusy || !allFilled}
                 title="Перегенерировать ВСЕ слайды, даже те у которых уже есть AI-картинка"
-                className="mono text-[10px] tracking-[0.18em] uppercase px-2 py-1.5 border border-border text-text-mute hover:border-gold/60 hover:text-gold transition disabled:opacity-30 disabled:cursor-not-allowed"
+                className="btn-ghost !px-3.5 !py-2.5 text-[13px]"
                 onClick={() => dispatchBatch({ skipExisting: false })}
               >
-                ⟲ all
+                <RefreshCw size={14} /> заново все
               </button>
+              </>
+              )}
               <button
                 type="button"
                 disabled={!canRender || renderStatus === 'rendering'}
                 title={
                   !canRender
-                    ? 'Сначала заполни все слайды и выбери обложку'
+                    ? 'Сначала заполни все слайды (и выбери обложку для фото-стилей)'
                     : renderStatus === 'rendering'
                       ? 'Рендерится…'
                       : renderStatus === 'done'
                         ? 'Перерендерить с текущими текстами'
                         : 'Сгенерировать PNG для каждого слайда'
                 }
-                className="btn-primary disabled:opacity-40 disabled:cursor-not-allowed"
+                className="btn-primary"
                 onClick={runRender}
               >
+                {renderStatus === 'rendering' && <Loader2 size={15} className="animate-spin" />}
                 {renderStatus === 'rendering'
                   ? 'Рендерю PNG…'
                   : renderStatus === 'done'
-                    ? 'Перерендерить →'
-                    : 'Сгенерировать PNG →'}
+                    ? 'Перерендерить'
+                    : 'Сгенерировать PNG'}
+                {renderStatus !== 'rendering' && <ArrowRight size={15} />}
               </button>
             </div>
           </div>
@@ -659,16 +681,16 @@ export function CarouselEditorShell({ initial, avatars }: Props) {
 
       {/* Galery of rendered PNGs */}
       {imageUrls.length > 0 && (
-        <section className="grid gap-3 mt-2">
-          <div className="flex items-baseline gap-3">
+        <section className="mt-2 grid gap-3">
+          <div className="flex flex-wrap items-center gap-3">
             <span className="sec-num">/04</span>
             <span className="sec-title">Готовая карусель · {imageUrls.length} PNG</span>
-            <span className="flex-1 border-b border-border translate-y-[-3px]" />
-            <span className="mono text-[10px] tracking-[0.18em] uppercase text-text-mute">
-              1080×1350 · клик = править · ↻ = перерендер
+            <span className="hidden flex-1 border-b border-border-soft sm:block" />
+            <span className="flex items-center gap-1 text-[12px] text-text-mute">
+              1080×1350 · клик = править · <RefreshCw size={12} /> = перерендер
             </span>
           </div>
-          <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 lg:grid-cols-6 gap-2">
+          <div className="stagger grid grid-cols-2 gap-3 sm:grid-cols-3 md:grid-cols-4 lg:grid-cols-6">
             {imageUrls.map((url, i) => {
               if (!url) return null;
               const isRerendering = singleRendering.has(i);
@@ -676,14 +698,14 @@ export function CarouselEditorShell({ initial, avatars }: Props) {
               return (
                 <div
                   key={i}
-                  className={`relative aspect-[4/5] border bg-surface overflow-hidden group transition ${
-                    isActive ? 'border-lime' : 'border-border hover:border-lime/60'
+                  className={`group relative aspect-[4/5] overflow-hidden rounded-2xl border-2 bg-white/[0.04] transition-all ${
+                    isActive ? 'border-gold shadow-glow' : 'border-transparent hover:border-gold/50'
                   }`}
                 >
                   {/* eslint-disable-next-line @next/next/no-img-element */}
                   <img
                     src={url}
-                    alt={`Slide ${i + 1}`}
+                    alt={`Слайд ${i + 1}`}
                     loading="lazy"
                     className={`w-full h-full object-cover transition ${
                       isRerendering ? 'opacity-30' : ''
@@ -700,21 +722,21 @@ export function CarouselEditorShell({ initial, avatars }: Props) {
                   />
 
                   {/* Index badge */}
-                  <span className="absolute top-1 left-1 px-1.5 py-0.5 mono text-[9px] tracking-widest uppercase bg-black/80 text-lime pointer-events-none">
+                  <span className="pointer-events-none absolute left-2 top-2 rounded-full bg-black/70 px-2 py-0.5 text-[11px] font-semibold tabular-nums text-white backdrop-blur">
                     {String(i + 1).padStart(2, '0')}
                   </span>
 
                   {/* Rerender spinner overlay */}
                   {isRerendering && (
                     <div className="absolute inset-0 flex items-center justify-center pointer-events-none">
-                      <span className="mono text-[10px] tracking-widest uppercase bg-black/80 text-lime px-2 py-1">
-                        ↻ рендерю…
+                      <span className="flex items-center gap-1.5 rounded-full bg-black/75 px-3 py-1.5 text-[12px] text-white backdrop-blur">
+                        <Loader2 size={13} className="animate-spin text-gold" /> рендерю…
                       </span>
                     </div>
                   )}
 
                   {/* Action bar — поверх клик-зоны */}
-                  <div className="absolute bottom-1 right-1 flex items-center gap-1 opacity-0 group-hover:opacity-100 transition">
+                  <div className="absolute bottom-2 right-2 flex items-center gap-1.5 opacity-0 transition group-hover:opacity-100">
                     <button
                       type="button"
                       onClick={(e) => {
@@ -722,11 +744,11 @@ export function CarouselEditorShell({ initial, avatars }: Props) {
                         void rerenderOne(i);
                       }}
                       disabled={isRerendering}
-                      className="w-7 h-7 mono text-[12px] bg-black/85 text-lime hover:bg-lime hover:text-black border border-lime/40 disabled:opacity-30 disabled:cursor-not-allowed flex items-center justify-center"
+                      className="flex h-8 w-8 items-center justify-center rounded-full border border-white/15 bg-black/70 text-white backdrop-blur transition-colors hover:bg-blue disabled:cursor-not-allowed disabled:opacity-30"
                       title="Перерендерить только этот слайд"
                       aria-label="Перерендерить слайд"
                     >
-                      ↻
+                      <RefreshCw size={14} />
                     </button>
                     <a
                       href={url}
@@ -734,11 +756,11 @@ export function CarouselEditorShell({ initial, avatars }: Props) {
                       rel="noopener noreferrer"
                       download={`slide-${String(i + 1).padStart(2, '0')}.png`}
                       onClick={(e) => e.stopPropagation()}
-                      className="w-7 h-7 mono text-[11px] bg-black/85 text-lime hover:bg-lime hover:text-black border border-lime/40 flex items-center justify-center"
+                      className="flex h-8 w-8 items-center justify-center rounded-full border border-white/15 bg-black/70 text-white backdrop-blur transition-colors hover:bg-blue"
                       title="Скачать PNG"
                       aria-label="Скачать PNG"
                     >
-                      ↓
+                      <Download size={14} />
                     </a>
                   </div>
                 </div>
@@ -760,14 +782,22 @@ function SaveIndicator({
   savedAt: string | null;
   error: string | null;
 }) {
-  if (status === 'saving') return <span className="text-text-mute">сохраняю…</span>;
+  if (status === 'saving') return (
+      <span className="flex items-center gap-1.5 text-text-mute">
+        <Loader2 size={12} className="animate-spin" /> сохраняю…
+      </span>
+    );
   if (status === 'error')
     return (
-      <span className="text-pink">
+      <span className="text-danger">
         ошибка сохранения · {error}
       </span>
     );
   if (status === 'saved' && savedAt)
-    return <span className="text-text-dim">сохранено · {savedAt}</span>;
+    return (
+      <span className="flex items-center gap-1.5 text-text-dim">
+        <Check size={12} className="text-green" /> сохранено · {savedAt}
+      </span>
+    );
   return <span className="text-text-mute">не сохранено</span>;
 }

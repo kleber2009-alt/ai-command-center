@@ -9,6 +9,7 @@ import { avatarQueue } from '@/lib/queue';
 import { AVATAR_STYLES, type AvatarStyle } from '@/lib/styles';
 import { nicheBySlug } from '@/lib/niches';
 import { buildAvatarPrompt } from '@/lib/prompts';
+import { kieConfigured, PROVIDER_NOT_CONFIGURED } from '@/lib/providers';
 
 export const runtime = 'nodejs';
 
@@ -79,6 +80,7 @@ function customSlots(prompts: string[]): AvatarSlot[] {
 export async function POST(req: NextRequest) {
   const ctx = await getCurrentUserOrApiKey(req);
   if (!ctx) return NextResponse.json({ error: 'UNAUTHORIZED' }, { status: 401 });
+  if (!kieConfigured()) return NextResponse.json(PROVIDER_NOT_CONFIGURED, { status: 503 });
   const limited = await enforceRateLimit(ctx, 'generate');
   if (limited) return limited;
   const user = ctx.user;

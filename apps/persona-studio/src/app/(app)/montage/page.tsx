@@ -2,14 +2,15 @@ import { redirect } from 'next/navigation';
 import { getCurrentUser } from '@/lib/auth';
 import { prisma } from '@/lib/prisma';
 import { COSTS } from '@/lib/tokens';
+import { ArrowRight } from 'lucide-react';
 import { PageHero } from '@/components/shell/page-hero';
 import { MontageStudio } from '@/components/montage/montage-studio';
-import { MONTAGE_PRESETS } from '@/lib/montage/presets';
+import { KADRIK_STYLES } from '@/lib/montage/kadrik-styles';
 
 export const dynamic = 'force-dynamic';
 export const metadata = { title: 'Скиллы монтажа — Persona Studio' };
 
-const PIPELINE = ['Whisper · слова', 'паузы ≤ 0.2 c', 'субтитры 1–3 слова', 'хук + «пиши слово»', '−14 LUFS'];
+const PIPELINE = ['стиль Студии Кадрика', 'Claude Code + скилл', 'нарезка и титры', 'проверка кадров', 'mp4 / тексты'];
 
 export default async function MontagePage() {
   const user = await getCurrentUser();
@@ -32,43 +33,50 @@ export default async function MontagePage() {
   return (
     <div className="grid gap-8">
       <PageHero
-        eyebrow="SKILL MONTAGE · MONTAZH-RILS ENGINE"
+        eyebrow="монтаж по скиллам"
         title={
           <>
-            Монтаж по скиллам — <span className="italic text-gold">как в рилсах @ilia.paliy.</span>
+            Монтаж по скиллам — <span className="italic text-gold">стили Студии Кадрика.</span>
           </>
         }
-        description="Свой движок монтажа на ffmpeg по пайплайну скилла montazh-rils: пословные таймкоды, вырезка пауз, субтитры в стиле скилла, хук-титр сверху и призыв «пиши «слово»» в конце. Без внешнего монтажёра."
+        description="Те же 31 скилл и стиль, что в мини-аппе @studio_kadrik_bot: рилсы, стили @ilia.paliy, YouTube, клипы и тексты. Выбери стиль, дай видео — Кадрик смонтирует его скиллом через Claude Code и вернёт готовый ролик сюда."
         actions={[
           { label: 'Карусели', href: '/carousels' },
           { label: 'Submagic-монтаж', href: '/edits', tone: 'ghost' },
         ]}
+        icon="montage"
         meta={
           <>
-            <div className="mono text-[9px] tracking-[0.28em] uppercase text-text-muted">Стилей</div>
-            <div className="font-serif text-[28px] text-gold leading-none">{MONTAGE_PRESETS.length}</div>
-            <div className="mono text-[9px] tracking-[0.22em] uppercase text-text-muted mt-3">Ролики · {montages.length}</div>
+            <div className="label">Стилей</div>
+            <div className="text-[40px] font-extrabold leading-none tabular-nums tracking-[-0.02em] text-gold">{KADRIK_STYLES.length}</div>
+            <div className="label pt-3">Ролики · {montages.length}</div>
           </>
         }
         extra={
-          <div className="mono text-[10px] tracking-[0.22em] uppercase text-text-muted flex flex-wrap gap-x-3 gap-y-1.5 items-center">
+          <div className="flex flex-wrap items-center gap-1.5">
             {PIPELINE.map((step, i) => (
-              <span key={step} className="flex items-center gap-3">
-                <span className={i === 0 ? 'text-gold' : 'text-text-dim'}>{step}</span>
-                {i < PIPELINE.length - 1 && <span className="text-border">→</span>}
+              <span key={step} className="flex items-center gap-1.5">
+                <span
+                  className={`rounded-full border px-3 py-1 text-[12px] font-medium ${
+                    i === 0 ? 'border-transparent bg-blue text-white' : 'border-border-soft bg-white/[0.04] text-text-dim'
+                  }`}
+                >
+                  {step}
+                </span>
+                {i < PIPELINE.length - 1 && <ArrowRight size={13} className="text-text-mute" />}
               </span>
             ))}
           </div>
         }
       />
       <MontageStudio
-        cost={COSTS.skillMontage}
+        cost={COSTS.kadrikMontage}
         videos={videos.map((v) => ({
           id: v.id,
           videoUrl: v.videoUrl,
           aspect: v.aspect,
           createdAt: v.createdAt.toISOString(),
-          label: v.avatar?.styleLabel ?? 'Видео',
+          label: v.avatar?.styleLabel ?? v.heygenAvatarName ?? 'Видео',
         }))}
         initial={montages.map((m) => ({
           id: m.id,
@@ -80,6 +88,7 @@ export default async function MontagePage() {
           resultUrl: m.resultUrl,
           durationSec: m.durationSec,
           errorMsg: m.errorMsg,
+          progress: m.progress,
           createdAt: m.createdAt.toISOString(),
         }))}
       />

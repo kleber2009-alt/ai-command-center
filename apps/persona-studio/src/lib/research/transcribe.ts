@@ -8,9 +8,11 @@
 //      (source='caption'), чтобы analyze не блокировался.
 
 import { env } from '@/lib/env';
-import { claudeChat } from './claude';
+import { claudeChat, isClaudeConfigured } from './claude';
+import { OPENAI_BASE } from '@/lib/provider-urls';
+import { fetchMedia } from '@/lib/storage';
 
-const OPENAI_WHISPER_URL = 'https://api.openai.com';
+const OPENAI_WHISPER_URL = OPENAI_BASE;
 
 type WhisperConfig =
   | { kind: 'self-hosted'; baseUrl: string; apiKey?: string; model: string }
@@ -113,7 +115,7 @@ export async function improveTranscript(raw: string, lang = 'ru'): Promise<{
   text: string;
   improved: boolean;
 }> {
-  if (!env.ANTHROPIC_API_KEY || raw.length < 50) {
+  if (!isClaudeConfigured() || raw.length < 50) {
     return { ok: true, text: raw, improved: false };
   }
   const system = `Ты — редактор расшифровок. Тебе дают сырую транскрипцию короткого вертикального видео (Reels) на ${
@@ -163,7 +165,7 @@ async function transcribeViaWhisper(opts: {
   // добавляем общий заголовок, иногда помогает.
   let videoBuffer: ArrayBuffer;
   try {
-    const dl = await fetch(opts.videoUrl, {
+    const dl = await fetchMedia(opts.videoUrl, {
       headers: {
         'User-Agent':
           'Mozilla/5.0 (X11; Linux x86_64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/120 Safari/537.36',
