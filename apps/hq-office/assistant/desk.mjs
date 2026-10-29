@@ -58,7 +58,7 @@ export function createDesk({ claude, model, fallback, dataDir, officeDir, runner
   let tasks = [];
   try { tasks = JSON.parse(fs.readFileSync(STORE, 'utf8')); } catch {}
   const clients = new Set();
-  let runner = { seenAt:0, version:'' };
+  let runner = { seenAt:0, version:'', claude:null };
 
   const save = () => { fs.writeFileSync(STORE + '.tmp', JSON.stringify(tasks)); fs.renameSync(STORE + '.tmp', STORE); };
   const now = () => new Date().toISOString();
@@ -99,7 +99,7 @@ export function createDesk({ claude, model, fallback, dataDir, officeDir, runner
       id:t.id, created:t.created, updated:t.updated, text:t.text, files:t.files.map(f => f.name), askedAgent:t.agent || '',
       status:t.status, statusText:STATUS[t.status] || t.status, queuePos:t.status === 'queued' ? waiting.indexOf(t) + 1 : 0,
       agent:a ? { id:a.id, name:a.name, dept:a.dept } : null, route:t.route || null, question:t.question || null, answers:t.answers,
-      steps:t.steps.slice(-40), error:t.error || '', published:Boolean(t.published), versions:t.versions || 0,
+      steps:t.steps.slice(-40), error:t.error || '', log:t.status === 'error' ? t.log || '' : '', published:Boolean(t.published), versions:t.versions || 0,
       result:t.result ? { version:t.result.version, summary:t.result.summary, note:t.result.note || '', main:t.result.main, mainUrl:t.result.main ? fileUrl(t, t.result.main) : '',
         files:t.result.files.map(f => ({ path:f.path, size:f.size, url:fileUrl(t, f.path) })) } : null,
     };
@@ -113,7 +113,7 @@ export function createDesk({ claude, model, fallback, dataDir, officeDir, runner
     t.steps.push({ at:now(), text:String(text).slice(0, 300) });
     if (t.steps.length > STEPS_KEPT) t.steps.splice(0, t.steps.length - STEPS_KEPT);
   }
-  const runnerView = () => ({ online:Date.now() - runner.seenAt < 90e3, seenAt:runner.seenAt ? new Date(runner.seenAt).toISOString() : '' });
+  const runnerView = () => ({ online:Date.now() - runner.seenAt < 90e3, seenAt:runner.seenAt ? new Date(runner.seenAt).toISOString() : '', claude:runner.claude });
   // keeps the stream open through proxies and tells the office whether the runner is alive
   setInterval(() => { const line = `data: ${JSON.stringify({ t:'runner', runner:runnerView() })}\n\n`; for (const res of clients) res.write(line); }, 25e3).unref();
   // uploads of a form that was never sent
@@ -301,6 +301,8 @@ export function createDesk({ claude, model, fallback, dataDir, officeDir, runner
       if (M === 'POST' && seg[1] === 'hello') {
         // a (re)started runner has no running jobs: what it was doing goes back to the queue
         const b = await readJson(req); runner.version = String(b.version || '');
+        const c = b.claude && typeof b.claude === 'object' ? b.claude : null;
+        runner.claude = c ? { ok:Boolean(c.ok), error:String(c.error || '').slice(0, 300), auth:String(c.auth || '').slice(0, 80) } : null;
         for (const t of tasks) if (t.status === 'work') orphan(t, 'Исполнитель перезапустился — задача снова в очереди.');
         return json(res, 200, { ok:true });
       }
@@ -352,7 +354,7 @@ export function createDesk({ claude, model, fallback, dataDir, officeDir, runner
           t.status = 'question'; t.question = { from:'agent', text:String(b.question || 'Агенту не хватает данных — уточните задачу.').slice(0, 800) };
           step(t, `«${agentOf(t.route.agent)?.name}» спрашивает: ${t.question.text}`);
         } else {
-          t.status = 'error'; t.error = String(b.error || 'Агент не смог закончить задачу.').slice(0, 800);
+          t.status = 'error'; t.error = String(b.error || 'Агент не смог закончить задачу.').slice(0, 800); t.log = String(b.log || '').slice(-2000);
           step(t, t.error);
         }
         emit(t);

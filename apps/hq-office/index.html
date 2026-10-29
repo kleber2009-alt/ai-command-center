@@ -364,6 +364,7 @@
   .brief{margin-top:8px;font-size:13px;color:var(--ink-2)}
   .brief summary{cursor:pointer;color:#8fb8ff;font-weight:700}
   .brief p{margin-top:6px;line-height:1.5;white-space:pre-wrap}
+  .dk-log{margin-top:8px;max-height:220px;overflow:auto;padding:10px;border-radius:10px;background:rgba(0,0,0,.35);font:500 11px/1.5 var(--f-mono);color:var(--ink-2);white-space:pre-wrap;word-break:break-word}
   .note code{font:600 11.5px var(--f-mono);color:#8fb8ff}
   .steps{list-style:none;display:grid;gap:9px;border-left:2px solid var(--line);margin-left:5px;padding-left:16px}
   .steps li{position:relative;font-size:13px;line-height:1.45;color:var(--ink-2)}
@@ -3497,7 +3498,8 @@ function liveHTML() {
   const list = desk.tasks.filter(t => (pdept === 'all' || t.agent?.dept === pdept) && (!q || [t.text, t.route?.title, t.agent?.name].join(' ').toLowerCase().includes(q)));
   const open = list.filter(t => DESK_OPEN.includes(t.status)), closed = list.filter(t => !DESK_OPEN.includes(t.status)).slice(0, 20);
   return `<div class="dk-top"><button class="btn-go" data-do="newtask" data-id="">Новая задача агенту</button></div>
-    ${desk.runner && !desk.runner.online ? '<p class="note warn">Исполнитель на сервере сейчас не на связи — задачи подождут в очереди и начнутся, когда он вернётся.</p>' : ''}
+    ${desk.runner && !desk.runner.online ? '<p class="note warn">Исполнитель на сервере сейчас не на связи — задачи подождут в очереди и начнутся, когда он вернётся.</p>'
+      : desk.runner?.claude && !desk.runner.claude.ok ? `<p class="note warn">Исполнитель не может запустить Claude Code: ${esc(desk.runner.claude.error)}${desk.runner.claude.auth ? ` · вход: ${esc(desk.runner.claude.auth)}` : ''}</p>` : ''}
     ${open.length ? `<h3 class="eyebrow">В работе · ${open.length}</h3><ol class="tasks">${open.map(deskCardHTML).join('')}</ol>`
       : `<p class="empty">${list.length || !desk.tasks.length ? 'Сейчас у агентов нет ваших задач. Нажмите «Новая задача агенту» или скажите ассистенту: «поставь задачу…».' : 'Задач с такими условиями нет.'}</p>`}
     ${closed.length ? `<h3 class="eyebrow">Закрытые</h3><ol class="tasks">${closed.map(deskCardHTML).join('')}</ol>` : ''}`;
@@ -3619,7 +3621,7 @@ function renderDeskTask() {
   let acts = '';
   if (t.status === 'done') acts = `<p class="note">${t.published ? 'Принято и добавлено в историю офиса — задача видна в «Задачах» и в работах агента.' : 'Принято без публикации в истории офиса.'}</p>`;
   if (t.status === 'review' || t.status === 'done') acts += `<h4>Правка</h4><textarea id="kRevise" placeholder="Что поменять? Агент поправит в той же сессии и принесёт новую версию"></textarea><div class="acts dk-acts"><button data-k="revise">Отправить правку</button></div>`;
-  if (t.status === 'error') acts = `<div class="ask err"><b>Не получилось</b><p>${esc(t.error)}</p><div class="acts"><button class="btn-go" data-k="retry">Повторить</button></div></div>`;
+  if (t.status === 'error') acts = `<div class="ask err"><b>Не получилось</b><p>${esc(t.error)}</p>${t.log ? `<details class="brief"><summary>Подробности</summary><pre class="dk-log">${esc(t.log)}</pre></details>` : ''}<div class="acts"><button class="btn-go" data-k="retry">Повторить</button></div></div>`;
   setHTML($('kActs'), acts);
   setHTML($('kInfo'), `<h4>Ваша задача</h4><p class="lead sm">«${esc(t.text)}»</p>${t.files.length ? `<div class="chipsrow" style="margin-top:10px">${t.files.map(f => `<span>${esc(f)}</span>`).join('')}</div>` : ''}
     ${t.answers.length ? `<p class="note" style="margin-top:10px">${t.answers.map(a => `Вопрос: ${esc(a.q)} — ваш ответ: ${esc(a.a)}`).join('<br>')}</p>` : ''}

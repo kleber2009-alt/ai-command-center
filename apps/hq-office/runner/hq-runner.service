@@ -9,6 +9,9 @@ Wants=network-online.target
 User=@USER@
 WorkingDirectory=@HOME@/hq-runner
 EnvironmentFile=@HOME@/hq-runner/runner.env
+# optional: the Claude Code login of the runner, if it is not ~/.claude/.credentials.json
+# (CLAUDE_CODE_OAUTH_TOKEN=… from `claude setup-token`); written by the owner, never by the deploy
+EnvironmentFile=-@HOME@/hq-runner/claude.env
 Environment=PATH=@HOME@/.local/bin:@HOME@/.bun/bin:/usr/local/bin:/usr/bin:/bin
 ExecStart=/usr/bin/python3 -u @HOME@/hq-runner/runner.py
 Restart=always

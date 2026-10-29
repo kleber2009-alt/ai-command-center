@@ -36,12 +36,56 @@ JOBS = Path(os.environ.get("HQ_RUNNER_JOBS") or HOME / "hq-runner/jobs")
 LIMIT = int(os.environ.get("HQ_RUNNER_LIMIT_MIN", "60")) * 60
 SKILLS = HOME / ".claude/skills"
 ALLOWED_TOOLS = ["Bash", "Read", "Write", "Edit", "Glob", "Grep", "Skill", "TodoWrite", "WebFetch", "WebSearch"]
-VERSION = "1"
+VERSION = "2"
 FILE_LIMIT = 300_000_000
 
 
 def log(*a):
     print(time.strftime("%Y-%m-%d %H:%M:%S"), *a, flush=True)
+
+
+def redact(text):
+    return re.sub(r"(sk-ant-[a-z]+\d*-)[A-Za-z0-9_-]+", r"\1***", str(text))
+
+
+def auth_source():
+    """Откуда у Claude Code вход — только название источника, без значений."""
+    if os.environ.get("CLAUDE_CODE_OAUTH_TOKEN"):
+        return "CLAUDE_CODE_OAUTH_TOKEN (claude.env)"
+    if os.environ.get("ANTHROPIC_API_KEY"):
+        return "ANTHROPIC_API_KEY (claude.env)"
+    if (HOME / ".claude/.credentials.json").exists():
+        return "~/.claude/.credentials.json"
+    return "не найден"
+
+
+def claude_error(text):
+    """Строка ошибки Claude Code из лога: результат с is_error или последняя строка stderr."""
+    err = ""
+    for line in text.splitlines():
+        line = line.strip()
+        if not line:
+            continue
+        try:
+            ev = json.loads(line)
+        except ValueError:
+            err = line
+            continue
+        if isinstance(ev, dict) and ev.get("type") == "result" and ev.get("is_error"):
+            err = str(ev.get("result") or ev.get("subtype") or "ошибка")
+    return redact(err)[:300]
+
+
+def selftest():
+    """Короткий запуск Claude при старте — вход, модель и флаги те же, что у задач."""
+    try:
+        r = subprocess.run([CLAUDE, "-p", "Ответь одним словом: готов", "--output-format", "stream-json", "--verbose",
+                            "--model", MODEL, "--effort", "low", "--max-turns", "1"],
+                           cwd=JOBS, stdin=subprocess.DEVNULL, capture_output=True, text=True, timeout=180)
+    except Exception as e:
+        return {"ok": False, "error": redact(e)[:300]}
+    ok = r.returncode == 0 and '"is_error":false' in r.stdout.replace(" ", "")
+    return {"ok": ok, "error": "" if ok else (claude_error(r.stdout + "\n" + r.stderr) or f"код {r.returncode}")}
 
 
 def call(method, path, body=None, raw=None, headers=None, timeout=60):
@@ -209,7 +253,7 @@ def run_job(job):
         if job.get("session"):
             args += ["--resume", job["session"]]
         logf = open(d / "claude.log", "a", encoding="utf-8")
-        p = proc["p"] = subprocess.Popen(args, cwd=d, stdout=subprocess.PIPE, stderr=logf, text=True, bufsize=1)
+        p = proc["p"] = subprocess.Popen(args, cwd=d, stdin=subprocess.DEVNULL, stdout=subprocess.PIPE, stderr=logf, text=True, bufsize=1)
         timer = threading.Timer(LIMIT, p.kill)
         timer.start()
         threading.Thread(target=poll, daemon=True).start()
@@ -250,9 +294,11 @@ def run_job(job):
         return
     files = [f for f in sorted(out.rglob("*")) if f.is_file() and not any(x.startswith(".") for x in f.relative_to(out).parts)]
     if p.returncode != 0 and not files:
-        tail = (d / "claude.log").read_text(encoding="utf-8", errors="ignore")[-600:]
+        text = (d / "claude.log").read_text(encoding="utf-8", errors="ignore")
+        why = claude_error(text[-20000:])
         call_retry("POST", f"/runner/{jid}/finish", {"result": "error", "session": session,
-             "error": f"Агент не закончил ({mins:.0f} мин, код {p.returncode})." + (" Превышен лимит времени." if mins * 60 >= LIMIT - 5 else ""), "log": tail})
+             "error": f"Агент не закончил ({mins:.0f} мин, код {p.returncode})." + (" Превышен лимит времени." if mins * 60 >= LIMIT - 5 else f" Claude Code: {why}" if why else ""),
+             "log": redact(text[-1500:])})
         log(jid, "error code", p.returncode)
         return
     step(f"Отправляет результат: {len(files)} файл(ов).", force=True)
@@ -272,9 +318,13 @@ def main():
         raise SystemExit("HQ_DESK_RUNNER_TOKEN is not set")
     JOBS.mkdir(parents=True, exist_ok=True)
     log(f"hq runner {VERSION}: api {API}, claude {CLAUDE} ({'есть' if Path(CLAUDE).exists() else 'НЕ НАЙДЕН'}), skills {len(list(SKILLS.glob('*/SKILL.md'))) if SKILLS.exists() else 0}, model {MODEL}")
+    check = selftest()
+    check["auth"] = auth_source()
+    log(f"вход Claude: {check['auth']}")
+    log("проверка Claude: " + ("ок" if check["ok"] else "ошибка — " + check["error"]))
     while True:
         try:
-            call("POST", "/runner/hello", {"version": VERSION})
+            call("POST", "/runner/hello", {"version": VERSION, "claude": check})
             break
         except Exception as e:
             log("hello:", e)
