@@ -4,8 +4,8 @@
    готовые задачи, только дописывает к ним новые PR той же ветки. Удалённая задача не вернётся —
    её PR остаются в seen. Чтобы задача стала «ручной», перенесите её в tasks.js. */
 window.OFFICE_TASKS_AUTO = {
-  "since": "2026-10-29T07:15:34Z",
-  "seen": [148, 149, 150, 151, 152, 153, 154, 155, 156, 157, 158, 159, 160, 161, 162, 163, 164, 165, 166, 167],
+  "since": "2026-10-29T07:25:09Z",
+  "seen": [148, 149, 150, 151, 152, 153, 154, 155, 156, 157, 158, 159, 160, 161, 162, 163, 164, 165, 166, 167, 168],
   "tasks": [
     {
       "id": "gh-148",
@@ -129,6 +129,23 @@ window.OFFICE_TASKS_AUTO = {
       ],
       "group": "command-center|claude/great-goodall-2m5iae",
       "prs": [165, 167],
+      "auto": true
+    },
+    {
+      "id": "gh-168",
+      "date": "2026-10-29",
+      "dateNote": "слияние PR на GitHub",
+      "kind": "Продукт",
+      "dept": "ceo",
+      "people": ["ilia"],
+      "agents": ["product", "scripts", "avatar"],
+      "title": "Remake: ветка «Instagram Reels» в Telegram — от залёта конкурента до готового рилса",
+      "summary": "Каждое утро бот находит залетевшие рилсы конкурентов, пишет сценарий с новым хуком и шлёт карточку в Telegram. После «Одобрено» HeyGen-аватар и монтаж собирают ролик, готовый рилс приходит файлом.",
+      "proof": [
+        { "kind": "github", "label": "PR #168 · ветка «Instagram Reels» в Telegram — залёты → карточка с…", "url": "https://github.com/kleber2009-alt/ai-command-center/pull/168" }
+      ],
+      "group": "remake-site|claude/focused-goodall-fhjxeu",
+      "prs": [168],
       "auto": true
     },
     {
