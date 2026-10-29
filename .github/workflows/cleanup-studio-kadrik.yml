@@ -1,7 +1,8 @@
 name: cleanup-studio-kadrik
 
 # Frees disk space on the aicex box every 2 days: deletes montage jobs of @studio_kadrik_bot (sources and rendered
-# videos) not changed for more than 2 days, clears pip / yt-dlp / npm caches and old releases
+# videos) not changed for more than 2 days — and the same for dated jobs of other montage bots in ~/Movies/production
+# and ~/Movies/montazh/bot — clears pip / yt-dlp / npm caches and old releases
 # (apps/studio-kadrik/deploy/cleanup.sh). Players' data, .env and backups stay. Same SSH access as deploy-studio-kadrik.yml.
 # Manual run: pick how many days to keep; other_movies shows or deletes the rest of ~/Movies (not Kadrik's jobs).
 
