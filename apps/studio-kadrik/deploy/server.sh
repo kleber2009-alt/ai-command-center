@@ -6,7 +6,7 @@
 #
 # The release is unpacked to /opt/studio-kadrik/releases/<release>. Only the code is copied into the live folder
 # (KADRIK_DIR); everything the bot keeps there stays as is: .env, data/ (players, ledger, access), .review-venv,
-# bot.log, .miniapp_url. The systemd unit studio-kadrik-bot, the Python env and ~/creator-pack-miniapp are not touched.
+# bot.log, .miniapp_url. The systemd unit studio-kadrik-bot, the Python env (venv/) and the style catalog (pack/) are not touched.
 # Before the copy the current code is saved to /opt/studio-kadrik/backups/<release>.tgz; if the bot does not come back
 # (service inactive or the mini-app port does not answer), that backup is restored and the run fails.
 set -euo pipefail

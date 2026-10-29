@@ -6,6 +6,8 @@ name: deploy-studio-kadrik
 # live code; mode "deploy" backs up the live code, installs the release, restarts the service and rolls back if the bot
 # does not come back (apps/studio-kadrik/deploy/server.sh). Secrets (.env), players' data and the Python env stay on the server.
 # Mode "cleanup" frees disk space: deletes montage jobs of the last `days` days and clears caches (deploy/cleanup.sh).
+# Modes "retire-check" / "retire" retire @Productionskill_bot (deploy/retire_productionskill.sh): the style catalog and the
+# Python env move into the Kadrik folder, then the old bot's service, folder and jobs are deleted. "retire-check" changes nothing.
 #
 # The deploy also sets up the montage sandbox (bubblewrap, SANDBOX=bwrap in .env) — clients' montage runs only inside it.
 #
@@ -29,9 +31,9 @@ on:
   workflow_dispatch:
     inputs:
       mode:
-        description: 'check — only show the diff with the live bot; fetch — print the live code to bring server edits into the repo; deploy — install and restart; cleanup — delete recent montage videos and caches'
+        description: 'check — only show the diff with the live bot; fetch — print the live code to bring server edits into the repo; deploy — install and restart; cleanup — delete recent montage videos and caches; retire-check / retire — move the style catalog from @Productionskill_bot into Kadrik and delete that bot from the server'
         type: choice
-        options: [check, fetch, deploy, cleanup]
+        options: [check, fetch, deploy, cleanup, retire-check, retire]
         default: check
       days:
         description: 'cleanup only — delete montage jobs changed within this many days'
@@ -55,7 +57,7 @@ jobs:
         working-directory: apps/studio-kadrik
         run: |
           python -m py_compile bot.py heavy_slot.py review_tools.py
-          bash -n start.sh deploy/server.sh
+          bash -n start.sh deploy/server.sh deploy/cleanup.sh deploy/retire_productionskill.sh
           pip install -q -r requirements.txt
           # import the bot without starting it: a fake token in the right format, no network calls at import time
           BOT_TOKEN=123456:TEST JOBS_DIR="$RUNNER_TEMP/jobs" python -c 'import bot; print(len(bot.PACKS), "packs ok")'
@@ -92,8 +94,12 @@ jobs:
           [[ "$DAYS" =~ ^[0-9]+$ ]] || { echo "::error::days must be a number"; exit 1; }
           $SSH bash -s -- "$DAYS" < apps/studio-kadrik/deploy/cleanup.sh
 
+      - name: Retire @Productionskill_bot
+        if: startsWith(inputs.mode, 'retire')
+        run: $SSH bash -s -- "$( [ "$MODE" = retire ] && echo apply || echo inspect )" < apps/studio-kadrik/deploy/retire_productionskill.sh
+
       - name: Upload release
-        if: inputs.mode != 'cleanup'
+        if: inputs.mode != 'cleanup' && !startsWith(inputs.mode, 'retire')
         run: |
           REL="$(date -u +%Y%m%d%H%M%S)-${GITHUB_SHA::7}"
           echo "REL=$REL" >> "$GITHUB_ENV"
@@ -112,7 +118,7 @@ jobs:
             | $SSH "umask 077 && cat > /opt/studio-kadrik/env.add"
 
       - name: Activate
-        if: inputs.mode != 'cleanup'
+        if: inputs.mode != 'cleanup' && !startsWith(inputs.mode, 'retire')
         run: $SSH bash -s -- "$REL" "$( [ "$MODE" = deploy ] && echo deploy || { [ "$MODE" = fetch ] && echo fetch || echo check; } )" < apps/studio-kadrik/deploy/server.sh
 
       - name: Smoke test

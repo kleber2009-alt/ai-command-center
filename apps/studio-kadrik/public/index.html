@@ -169,7 +169,7 @@ const tg = window.Telegram && Telegram.WebApp;
 if (tg) { tg.ready(); tg.expand(); try { tg.setHeaderColor('#000000'); tg.setBackgroundColor('#000000'); } catch (e) {} }
 const INIT = tg ? tg.initData : '';
 let S = null, TAB = new URLSearchParams(location.search).get('tab') || (location.hash.match(/tab=(\w+)/) || [])[1] || 'studio';
-let M = null, KIND = 'reels';  // данные вкладки «Монтаж»: каталог, владелец, очередь @Productionskill_bot
+let M = null, KIND = 'reels';  // данные вкладки «Монтаж»: каталог стилей, владелец, очередь задач
 const KINDS = [['reels', 'Рилсы'], ['styles', 'Стили'], ['youtube', 'YouTube'], ['clips', 'Клипы'], ['content', 'Тексты']];
 const $ = s => document.querySelector(s);
 const esc = s => String(s).replace(/[&<>"']/g, c => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' }[c]));

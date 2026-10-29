@@ -421,15 +421,15 @@ export const projects = [
     ],
   },
   {
-    slug: 'creator-pack', name: 'Creator Pack', emoji: '🧰', status: 'production', sort_order: 35,
-    tagline: '48 скиллов монтажа в мини-аппе — одно видео, любой стиль',
+    slug: 'creator-pack', name: 'Creator Pack', emoji: '🧰', status: 'paused', sort_order: 35,
+    tagline: 'Выведен: 48 стилей монтажа теперь во вкладке «Монтаж» Студии Кадрика',
     description:
-      'Бот @Productionskill_bot с мини-аппом: загрузил видео — выбрал один из 48 стилей монтажа — получил рилс. Те же скиллы использует Студия Кадрика.\n\n' +
-      'Архитектура: бот на сервере ботов (systemd, пользователь iliapaliy), монтаж через Claude Code + скиллы из ~/.claude/skills, общая очередь heavy_slot. Код в закрытой библиотеке aicex-library.',
+      'Бот @Productionskill_bot выведен из работы: каталог из 48 стилей монтажа и движок перенесены в Студию Кадрика (@studio_kadrik_bot, вкладка «Монтаж»), бот и его папки удалены с сервера.\n\n' +
+      'Перенос и чистка: apps/studio-kadrik/deploy/retire_productionskill.sh (режимы retire-check / retire в deploy-studio-kadrik.yml). Скиллы монтажа — по-прежнему ~/.claude/skills.',
     technologies: ['Python', 'Telegram Mini App', 'Claude Code', 'Remotion', 'ffmpeg'],
     links: [
-      bot('Productionskill_bot'),
-      lib('results/creator-pack-miniapp', 'Мини-апп (aicex-library)'),
+      bot('studio_kadrik_bot'),
+      live('https://kadrik.aicex.club/?tab=montage', 'Стили в мини-аппе Кадрика'),
       lib('skills/claude-code', 'Скиллы монтажа (aicex-library)'),
     ],
   },

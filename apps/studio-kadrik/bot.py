@@ -2,7 +2,7 @@
 
 Игра — для всех: опыт, монеты, серия дней, квесты, карта стилей, лига.
 Монтаж — только владельцу (OWNER_ID) и ALLOWED_IDS: 48 скиллов и стилей из каталога Creator Pack (skills.json) запускаются через
-Claude Code на машине бота — движок перенесён из @Productionskill_bot (тот бот остаётся отдельно): очередь, файлы из чата
+Claude Code на машине бота — движок и каталог перенесены из @Productionskill_bot (бот выведен): очередь, файлы из чата
 или мини-аппа (куски до 16 МБ), превью → «ок» / правка → финал. Готовый рилс кормит Кадрика: +опыт, +монеты, серия дней.
 Мини-апп (public/) и его API отдаёт сам бот на 127.0.0.1:MINIAPP_PORT, наружу — постоянный туннель (TUNNEL_CONFIG) или trycloudflare.
 Каждый запрос к API подписан initData Telegram (HMAC); картинки и видео задач — по токену пользователя.
@@ -44,7 +44,8 @@ try:
 except Exception:
     ACCESS = {"granted": [], "asked": {}}
 ALLOWED = BASE_ALLOWED | {int(x) for x in ACCESS.get("granted", [])}  # кому доступен монтаж
-PACK = Path(os.environ.get("PACK_DIR", str(Path.home() / "creator-pack-miniapp"))).expanduser()  # skills.json и samples/ Creator Pack
+# каталог стилей Creator Pack (public/skills.json, samples/, img/) — своя папка pack/ рядом с ботом; ~/creator-pack-miniapp — до переезда
+PACK = Path(os.environ.get("PACK_DIR", "") or (HERE / "pack" if (HERE / "pack/public/skills.json").is_file() else Path.home() / "creator-pack-miniapp")).expanduser()
 JOBS = Path(os.environ.get("JOBS_DIR", str(Path.home() / "Movies/production-kadrik"))).expanduser()
 IMG_DIR = JOBS / "_img"  # стоп-кадры и обложки для мини-аппа
 STATE_FILE = JOBS / "_jobs.json"
@@ -646,13 +647,13 @@ def catalog() -> dict:
     for s in skills:
         if not s.get("installed") or not (SKILLS / s["id"]).is_dir():
             continue
-        thumb = f"/{s['sample']}.jpg" if s.get("sample") else ("/" + s["img"] if s.get("img") else "")
+        thumb = f"/{s['sample']}.jpg" if s.get("sample") else ("/pack/" + s["img"] if s.get("img") else "")
         out[s["id"]] = {**{k: s.get(k, "") for k in ("id", "name", "kind", "sub", "desc", "get", "need", "inp", "ask")},
                         "pick": s.get("pick", []), "files": s.get("files", 1), "ready": not s.get("missing"), "thumb": thumb, "video": f"/{s['sample']}.mp4" if s.get("sample") else ""}
     return out
 
 
-# ======================= Монтаж: задачи (движок @Productionskill_bot) =======================
+# ======================= Монтаж: задачи (движок из @Productionskill_bot) =======================
 @dataclass
 class Job:
     id: str
@@ -2720,7 +2721,7 @@ async def miniapp_server():
                     web.get("/api/ext/jobs/{id}/{act}", api_ext_job), web.post("/api/ext/jobs/{id}/{act}", api_ext_job),
                     web.get("/health", api_health), web.post("/api/job", api_job), web.post("/api/up", api_up), web.get("/api/img", api_img), web.get("/api/file", api_file),
                     web.post("/api/{act}", api_game),
-                    web.get("/samples/{p:.+}", static_from(PACK / "public/samples")), web.get("/card/{n}", api_card),
+                    web.get("/samples/{p:.+}", static_from(PACK / "public/samples")), web.get("/pack/{p:.+}", static_from(PACK / "public")), web.get("/card/{n}", api_card),
                     web.get("/", static_from(PUBLIC)), web.get("/{p:.+}", static_from(PUBLIC))])
     runner = web.AppRunner(app, access_log=None)
     await runner.setup()

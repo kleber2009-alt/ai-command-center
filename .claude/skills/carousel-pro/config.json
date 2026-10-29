@@ -1,0 +1,25 @@
+{
+ "_about": "Настройки «Карусель Pro» — ветка «Instagram Карусели» (apps/remake-site/carousel-bot.mjs) и ремикс в чате. Правка тут → пуш в main → выкладка remake-site.",
+ "instagram": {"username": "ilia.paliy"},
+ "scan": {
+  "own_days": 365,
+  "own_min_age_days": 14,
+  "competitor_days": 30,
+  "competitor_min_age_days": 2,
+  "reuse_after_days": 45,
+  "max_source_slides": 15,
+  "weights": {"comments": 3, "likes": 1}
+ },
+ "slides": {"min": 6, "max": 10, "default": 8},
+ "style": {
+  "name": "Тёмный стиль @ilia.paliy",
+  "bg": "#0B0B0B",
+  "text": "#FCFBFA",
+  "accent": "#DE984A",
+  "cta_accent": "#F0973E",
+  "font": "Jost",
+  "accent_font": "Tinos Italic",
+  "handle": "@ilia.paliy"
+ },
+ "caption": {"save_line": "Сохраняй, чтобы не потерять 🤝"}
+}
