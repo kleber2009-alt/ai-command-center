@@ -2,6 +2,7 @@
 
     docker compose run --rm api python -m app.funnel.connect
 
+Токен можно передать без вопросов: -e THREADS_TOKEN=… [-e THREADS_APP_SECRET=…].
 Спрашивает токен из приложения Meta (короткий или уже 60-дневный) и секрет
 приложения. Короткий токен меняет на 60-дневный (th_exchange_token), находит
 ID и ник аккаунта (/me), проверяет права и сохраняет аккаунт с зашифрованным
@@ -10,6 +11,7 @@ ID и ник аккаунта (/me), проверяет права и сохра
 from __future__ import annotations
 
 import getpass
+import os
 import sys
 
 from app.config import settings
@@ -65,7 +67,8 @@ def _clean(value: str) -> str:
 def main() -> None:
     if not settings.token_encryption_key:
         raise SystemExit("TOKEN_ENCRYPTION_KEY не задан в .env.")
-    token = _clean(getpass.getpass("Токен Threads из приложения Meta (ввод скрыт): "))
+    env_token = os.environ.get("THREADS_TOKEN", "")
+    token = _clean(env_token or getpass.getpass("Токен Threads из приложения Meta (ввод скрыт): "))
     if not token:
         raise SystemExit("Пустой токен.")
     print(f"Токен: {token[:4]}…{token[-4:]}, длина {len(token)}")
@@ -77,7 +80,8 @@ def main() -> None:
     except SystemExit as e:
         raise SystemExit(f"{e}\nТокен не принят. Сгенерируйте новый (старый мог отозваться при повторной генерации) "
                          "и вставьте его целиком, одной строкой.") from None
-    secret = _clean(getpass.getpass("Секрет приложения (App secret; Enter — пропустить): "))
+    secret = _clean(os.environ.get("THREADS_APP_SECRET", "") if env_token
+                    else getpass.getpass("Секрет приложения (App secret; Enter — пропустить): "))
     days = None
     if secret:
         try:
