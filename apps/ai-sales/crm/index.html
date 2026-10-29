@@ -11,7 +11,19 @@
 <link rel="stylesheet" href="assets/app.css">
 </head>
 <body>
-<div class="app">
+<div id="lock" hidden>
+  <form class="glass lock-card" autocomplete="on">
+    <span class="brand-mark">AI</span>
+    <h1>AI Sales CRM</h1>
+    <p class="muted">Здесь переписки твоего директа. Они зашифрованы и открываются только паролем, расшифровка идёт в браузере.</p>
+    <input type="text" name="username" value="crm" autocomplete="username" hidden>
+    <label class="field"><span class="label">Пароль</span><input name="pass" type="password" autocomplete="current-password" required></label>
+    <button class="btn primary" type="submit"><i data-lucide="lock-open"></i>Открыть</button>
+    <div class="err"></div>
+    <button class="btn ghost sm demo" type="button">Посмотреть демо без данных</button>
+  </form>
+</div>
+<div class="app" hidden>
   <aside class="glass side">
     <div class="brand"><span class="brand-mark">AI</span><div><b>AI Sales</b><small>CRM · продажи в директе</small></div></div>
     <nav class="nav">
@@ -27,7 +39,7 @@
       <a href="#/settings" data-route="settings"><em style="background:rgba(29,27,46,.06);color:var(--mute)"><i data-lucide="settings"></i></em>Настройки</a>
     </nav>
     <div class="side-foot">
-      <div class="row"><span class="dot live"></span>Автономно <b id="autonomy" style="color:var(--ink)"></b></div>
+      <div class="row"><span class="dot live"></span><span id="autonomy-label">Автономно</span> <b id="autonomy" style="color:var(--ink)"></b></div>
       <div class="row" id="now"></div>
     </div>
   </aside>
@@ -46,5 +58,7 @@
 <script src="https://unpkg.com/lucide@0.460.0/dist/umd/lucide.min.js"></script>
 <script src="assets/data.js"></script>
 <script src="assets/app.js"></script>
+<script src="assets/live.js"></script>
+<script src="assets/boot.js"></script>
 </body>
 </html>

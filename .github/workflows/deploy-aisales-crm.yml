@@ -35,6 +35,8 @@ jobs:
         run: |
           node --check apps/ai-sales/crm/assets/app.js
           node --check apps/ai-sales/crm/assets/data.js
+          node --check apps/ai-sales/crm/assets/live.js
+          node --check apps/ai-sales/crm/assets/boot.js
           bash -n apps/ai-sales/crm/deploy/server.sh
 
       - name: Install SSH key
@@ -52,7 +54,7 @@ jobs:
         run: |
           REL="$(date -u +%Y%m%d%H%M%S)-${GITHUB_SHA::7}"
           echo "REL=$REL" >> "$GITHUB_ENV"
-          tar -C apps/ai-sales/crm --exclude=deploy -czf - . \
+          tar -C apps/ai-sales/crm --exclude=deploy --exclude=tools --exclude=README.md -czf - . \
             | $SSH "mkdir -p /opt/aisales-crm/releases/$REL && tar -xzf - -C /opt/aisales-crm/releases/$REL"
 
       - name: Activate

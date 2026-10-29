@@ -1,7 +1,8 @@
 // AI Sales CRM — hash router + views. Each view is a function (params) → HTML string,
-// rendered into #view; data comes from window.CRM_DATA (assets/data.js).
-(function () {
-  const D = window.CRM_DATA;
+// rendered into #view. boot.js calls CRM_START with either the decrypted live snapshot of the
+// Direct (assets/live.enc) or the demo data (assets/data.js); live-only views come from live.js.
+window.CRM_START = function (D) {
+  if (D.live && !D.integrations) D.integrations = (window.CRM_DATA && window.CRM_DATA.integrations) || [];
   const $ = (s, el = document) => el.querySelector(s);
   const esc = (s) => String(s ?? '').replace(/[&<>"]/g, (c) => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;' }[c]));
   const ico = (name) => `<i data-lucide="${name}"></i>`;
@@ -26,6 +27,8 @@
   const segChip = (s) => `<span class="chip ${SEG_TONE[s] || 'n'}">Сегмент ${s}</span>`;
   const flagChip = (f) => ({ esc: '<span class="chip p">Эскалация</span>', hot: '<span class="chip a">Горячий</span>', paid: '<span class="chip g">Оплачено</span>' }[f] || '');
   const score = (n) => `<span class="score">${n}<i style="--w:${n}%"></i></span>`;
+  const PRIO = { 1: ['p', 'Срочно'], 2: ['a', 'Важно'], 3: ['b', 'К сведению'] };
+  const prioChip = (p) => (PRIO[p] ? `<span class="chip ${PRIO[p][0]}">${PRIO[p][1]}</span>` : '');
   const cardHead = (title, sub, right = '') => `<div class="card-h"><h2>${title}</h2>${sub ? `<small>${sub}</small>` : ''}<span class="sp"></span>${right}</div>`;
 
   // ===================== views =====================
@@ -111,20 +114,21 @@
     const id = p[0];
     const c = id && clientById[id];
     const f = q.ch || 'all';
-    const list = D.clients.filter((x) => f === 'all' || x.ch === f || (f === 'esc' && x.flag === 'esc')).map((x) => `
-      <div class="dlg-item ${c && x.id === c.id ? 'on' : ''}" data-go="#/dialogs/${x.id}${f !== 'all' ? `?ch=${f}` : ''}">
+    const match = (x) => f === 'all' || x.ch === f || (f === 'esc' && x.flag === 'esc') || (f === 'wait' && x.waiting) || (f === 'flag' && x.priority > 0);
+    const list = D.clients.filter(match).map((x) => `
+      <div class="dlg-item ${c && x.id === c.id ? 'on' : ''}" data-s="${esc(`${x.name} ${x.user} ${x.keyword || ''} ${x.last}`.toLowerCase())}" data-go="#/dialogs/${x.id}${f !== 'all' ? `?ch=${f}` : ''}">
         ${avatar(x)}
         <div class="grow">
           <div class="l1">${esc(x.name)}${x.unread ? `<b class="chip p" style="padding:1px 7px">${x.unread}</b>` : ''}<span>${x.ago}</span></div>
-          <div class="l2">${x.lastBy === 'agent' ? 'ИИ: ' : x.lastBy === 'me' ? 'Вы: ' : ''}${esc(x.last)}</div>
-          <div class="l3">${chChip(x.ch)}${stageChip(x.stage)}${flagChip(x.flag)}</div>
+          <div class="l2">${x.lastBy === 'agent' ? (D.live ? 'Бот: ' : 'ИИ: ') : x.lastBy === 'me' ? 'Вы: ' : ''}${esc(x.last)}</div>
+          <div class="l3">${D.live ? `${prioChip(x.priority)}${stageChip(x.stage)}${x.keyword ? `<span class="chip n">${esc(x.keyword)}</span>` : ''}` : `${chChip(x.ch)}${stageChip(x.stage)}${flagChip(x.flag)}`}</div>
         </div>
       </div>`).join('');
-    const tabs = [['all', 'Все'], ['ig', 'Instagram'], ['tg', 'Telegram'], ['esc', 'Эскалации']]
+    const tabs = (D.live ? [['all', 'Все'], ['flag', 'Нашёл агент'], ['wait', 'Ждут ответа'], ['esc', 'Срочно']] : [['all', 'Все'], ['ig', 'Instagram'], ['tg', 'Telegram'], ['esc', 'Эскалации']])
       .map(([k, l]) => `<button class="${k === f ? 'on' : ''}" data-go="#/dialogs${c ? '/' + c.id : ''}?ch=${k}">${l}</button>`).join('');
     const listPane = `
       <div class="glass dlg-list">
-        <div class="search" style="min-width:0;margin-bottom:10px">${ico('search')}<input placeholder="Поиск по диалогам"></div>
+        <div class="search" style="min-width:0;margin-bottom:10px">${ico('search')}<input data-filter=".dlg-item" placeholder="Поиск по диалогам"></div>
         <div class="seg" style="margin-bottom:8px">${tabs}</div>
         <div class="dlg-items">${list}</div>
       </div>`;
@@ -134,7 +138,7 @@
     const msgs = c.messages.map((m) => {
       if (m.day) return `<div class="day">${m.day}</div>`;
       if (m.stop) return `<div class="stop">${ico('hand')}${esc(m.stop)}</div>`;
-      const who = m.side === 'out' ? `ИИ · ${esc(m.tag || '')}` : m.side === 'me' ? 'Илья' : '';
+      const who = m.side === 'out' ? (m.tag ? `ИИ · ${esc(m.tag)}` : 'Бот') : m.side === 'me' ? 'Илья' : '';
       return `<div class="bub ${m.side}">${esc(m.text)}<div class="meta">${who ? `<span>${who}</span>·` : ''}<span>${m.t}</span></div></div>`;
     }).join('');
     const i = c.info || {};
@@ -148,25 +152,31 @@
             ${avatar(c, 'sm')}
             <div class="who"><b>${esc(c.name)}</b><div class="muted">${esc(c.user)} · ${CH[c.ch].label}</div></div>
             <span class="sp"></span>
-            ${flagChip(c.flag)}
-            <button class="btn sm pause">${ico('pause')}<span>Пауза ИИ</span></button>
+            ${D.live ? prioChip(c.priority) : flagChip(c.flag)}
+            ${D.live ? '' : `<button class="btn sm pause">${ico('pause')}<span>Пауза ИИ</span></button>`}
           </div>
           <div class="chat">${msgs}</div>
           <div class="composer">
             ${c.draft ? `<div class="draft">${ico('sparkles')}<div><b>Черновик ИИ.</b> ${esc(c.draft)}</div></div>` : ''}
-            <div class="acts">
+            ${D.live ? `<div class="muted" style="font-size:12.5px">Только чтение: ответить можно в ChatPlace или в Instagram. Черновик ИИ можно скопировать.</div>` : `<div class="acts">
               <button class="btn sm primary">${ico('sparkles')}Ответить с ИИ</button>
               <button class="btn sm">${ico('mic')}Голосовое</button>
               <button class="btn sm">${ico('file-text')}Скрипт на возражение</button>
               <button class="btn sm">${ico('bot')}Вернуть ИИ</button>
             </div>
-            <div class="inp"><textarea rows="1" placeholder="Написать клиенту…">${c.draft ? esc(c.draft) : ''}</textarea><button class="btn primary">${ico('send')}</button></div>
+            <div class="inp"><textarea rows="1" placeholder="Написать клиенту…">${c.draft ? esc(c.draft) : ''}</textarea><button class="btn primary">${ico('send')}</button></div>`}
           </div>
         </div>
         <div class="glass client">
           <div class="head">${avatar(c, 'lg')}<h2>${esc(c.name)}</h2><div class="muted">${esc(c.user)}</div>
-            <div style="display:flex;gap:6px;flex-wrap:wrap;justify-content:center;margin-top:6px">${segChip(c.seg)}${stageChip(c.stage)}</div></div>
+            <div style="display:flex;gap:6px;flex-wrap:wrap;justify-content:center;margin-top:6px">${D.live ? prioChip(c.priority) : segChip(c.seg)}${stageChip(c.stage)}</div></div>
           ${c.summary ? `<div class="sec"><span class="label">Сводка ИИ</span><div class="summary">${esc(c.summary)}</div></div>` : ''}
+          ${D.live ? `
+          ${c.suggestion ? `<div class="sec"><span class="label">Что сделать</span><div class="summary" style="background:var(--amber-t)">${esc(c.suggestion)}</div></div>` : ''}
+          ${c.flags && c.flags.length ? `<div class="sec"><span class="label">Флаги агента</span><div style="display:flex;gap:6px;flex-wrap:wrap">${c.flags.map((x) => `<span class="chip a">${esc(x)}</span>`).join('')}</div></div>` : ''}
+          <div class="sec"><span class="label">Диалог</span>
+            ${kv('Кодовое слово', c.keyword)}${kv('Последнее сообщение', c.ago)}${kv('Ждёт ответа', c.waiting ? 'да' : 'нет')}${kv('Ведёт', c.operator ? 'оператор' : 'бот ChatPlace')}${kv('Сообщений в выгрузке', i.msgs)}
+          </div>` : `
           <div class="sec"><span class="label">Сделка</span>
             ${kv('Скоринг', c.score)}${kv('Прогноз', c.forecast)}${kv('Ожидаемый чек', i.check)}
             ${i.progress ? `<div class="kv"><span>До закрытия</span><span>${i.progress}%</span></div><div class="progress"><i style="width:${i.progress}%"></i></div>` : ''}
@@ -174,7 +184,7 @@
           <div class="sec"><span class="label">Контакт</span>
             ${kv('Канал', CH[c.ch].label)}${kv('Источник', i.source)}${kv('Город', i.geo)}${kv('Совпадение с ЦА', i.icp ? i.icp + '%' : '')}${kv('Триггер', i.trigger)}${kv('Первый контакт', i.first)}${kv('Сообщений', i.msgs)}
           </div>
-          ${c.followup ? `<div class="sec"><span class="label">Запланировано</span><div class="summary" style="background:var(--amber-t)">${esc(c.followup)}</div></div>` : ''}
+          ${c.followup ? `<div class="sec"><span class="label">Запланировано</span><div class="summary" style="background:var(--amber-t)">${esc(c.followup)}</div></div>` : ''}`}
         </div>
       </div>`;
   };
@@ -305,6 +315,10 @@
       </div>`;
   };
 
+  if (D.live && window.CRM_LIVE) {
+    Object.assign(views, window.CRM_LIVE({ D, esc, ico, num, icoBox, avatar, stageChip, prioChip, cardHead, TONE_BG, TONE_FG }));
+  }
+
   // ===================== shell =====================
   const ROUTES = {
     pulse: ['Пульс', 'Главные цифры дня'],
@@ -330,7 +344,8 @@
     $('#title').textContent = ROUTES[name][0];
     $('#subtitle').textContent = ROUTES[name][1];
     document.title = `${ROUTES[name][0]} · AI Sales CRM`;
-    const note = D.demo ? `<div class="demo-note">${ico('info')}Демо-данные. Живые диалоги появятся после подключения ChatPlace.</div>` : '';
+    const note = D.demo ? `<div class="demo-note">${ico('info')}Демо-данные. Живые диалоги появятся после подключения ChatPlace.</div>`
+      : D.live ? `<div class="demo-note" style="background:var(--violet-t);color:#4a34b8">${ico('camera')}Снимок директа за ${esc(D.period)}. Обновляется по запросу, пока не подключена постоянная синхронизация.</div>` : '';
     $('#view').innerHTML = note + views[name](params, query);
     window.lucide && window.lucide.createIcons();
     const chat = $('.chat');
@@ -351,9 +366,28 @@
   // nav badges
   const unread = D.inbox.filter((i) => i.unread).length;
   const escN = D.clients.filter((c) => c.flag === 'esc').length;
-  $('#b-inbox').textContent = unread;
-  $('#b-dialogs').textContent = escN;
-  $('#autonomy').textContent = D.autonomy + '%';
+  $('#b-inbox').textContent = unread || '';
+  $('#b-dialogs').textContent = escN || '';
+  $('#autonomy').textContent = D.live ? `${D.total} диалогов` : D.autonomy + '%';
+  $('#autonomy-label').textContent = D.live ? 'Снимок директа:' : 'Автономно';
   $('#now').textContent = D.now;
+  if (D.live) {
+    Object.assign(ROUTES, {
+      pulse: ['Пульс', 'Директ за сутки глазами агента'],
+      inbox: ['Входящие', 'Что агент нашёл в директе'],
+      dialogs: ['Диалоги', 'Весь директ Instagram'],
+      pipeline: ['Все диалоги', 'Таблица с приоритетами и флагами'],
+      reports: ['Отчёты', 'Кодовые слова, нагрузка, выводы агента'],
+    });
+    document.querySelectorAll('.nav a[data-route="agents"], .nav a[data-route="kb"]').forEach((a) => (a.style.display = 'none'));
+    const pl = $('.nav a[data-route="pipeline"]');
+    pl.lastChild.textContent = 'Все диалоги';
+  }
+  document.addEventListener('input', (e) => {
+    const sel = e.target.dataset && e.target.dataset.filter;
+    if (!sel) return;
+    const q = e.target.value.trim().toLowerCase();
+    document.querySelectorAll(sel).forEach((el) => (el.style.display = !q || (el.dataset.s || el.textContent.toLowerCase()).includes(q) ? '' : 'none'));
+  });
   render();
-})();
+};
