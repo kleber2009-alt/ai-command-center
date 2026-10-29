@@ -1,7 +1,8 @@
 #!/bin/bash
 # Activate an uploaded release of @studio_kadrik_bot on the aicex box. Run as root by deploy-studio-kadrik.yml:
-#   ssh root@host bash -s -- <release> [check] < deploy/server.sh
+#   ssh root@host bash -s -- <release> [check|fetch|deploy] < deploy/server.sh
 # With "check" it only compares the release with the live code (diff of every file) and changes nothing.
+# With "fetch" it prints the live code (no .env, no data/) as a base64 tar.gz between markers, to bring server edits into the repo.
 #
 # The release is unpacked to /opt/studio-kadrik/releases/<release>. Only the code is copied into the live folder
 # (KADRIK_DIR); everything the bot keeps there stays as is: .env, data/ (players, ledger, access), .review-venv,
@@ -17,6 +18,17 @@ ROOT=/opt/studio-kadrik
 SRC="$ROOT/releases/$REL"
 CODE=(bot.py heavy_slot.py review_tools.py start.sh requirements.txt requirements.lock public assets)
 
+if [ "$MODE" = fetch ]; then
+  [ -d "$DIR" ] || { echo "no $DIR"; exit 1; }
+  cd "$DIR"
+  echo "live code of $DIR:"
+  find "${CODE[@]}" -type f ! -name '*.bak*' ! -path '*__pycache__*' 2>/dev/null | sort | xargs -r sha256sum || true
+  echo "-----BEGIN KADRIK LIVE-----"  # text code only: fonts in assets/ are compared by the hashes above
+  tar -czf - --ignore-failed-read --exclude='*.bak*' --exclude=__pycache__ --exclude=assets "${CODE[@]}" 2>/dev/null | base64 -w 160
+  echo "-----END KADRIK LIVE-----"
+  rm -f "$ROOT/env.add"
+  exit 0
+fi
 [ -d "$SRC" ] || { echo "no release $SRC"; exit 1; }
 [ -f "$DIR/.env" ] || { echo "no $DIR/.env — the bot is not installed here, nothing to update"; exit 1; }
 OWNER="$(stat -c %U "$DIR")"
