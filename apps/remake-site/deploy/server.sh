@@ -80,7 +80,7 @@ docker rm -f "$NAME" >/dev/null 2>&1 || true
 docker run -d --name "$NAME" --restart unless-stopped --network edge --memory 64m \
   -v "$ROOT":/srv:ro -v "$ROOT/static.Caddyfile":/etc/caddy/Caddyfile:ro caddy:2.8-alpine >/dev/null
 docker rm -f "$ANAME" >/dev/null 2>&1 || true
-docker run -d --name "$ANAME" --restart unless-stopped --network edge --memory 1g --user 1000:1000 \
+docker run -d --name "$ANAME" --restart unless-stopped --network edge --memory 1536m --user 1000:1000 \
   --env-file "$ROOT/api.env" --env-file "$ROOT/kadrik.env" -e DATA_DIR=/data -e PORT=8790 -e PUBLIC_URL="https://$DOMAIN" \
   -v "$ROOT/data":/data ${MOUNTS[@]+"${MOUNTS[@]}"} "$IMAGE:$REL" >/dev/null
 

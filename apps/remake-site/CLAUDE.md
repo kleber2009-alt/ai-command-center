@@ -11,6 +11,9 @@
 - **Ветка «Instagram Reels»** в Telegram (`reels-bot.mjs`) — связка как у Threads: каждое утро ищет залёты у конкурентов
   (нет конкурентов — в своём аккаунте), уникализирует хук и сценарий и шлёт карточки в ветку; «✅ Одобрено» → HeyGen →
   монтаж Кадрика → готовое видео файлом в ветку.
+- **Ветка «Instagram Карусели»** в Telegram (`carousel-bot.mjs`, бот «Карусель Pro») — то же для каруселей: каждый день
+  карусель-залёты свои и конкурентов → карточка с планом (разбор, новый хук, слайды с их числом, кодовое слово, подпись)
+  → «✅ Одобрено» → готовые слайды 1080×1350 альбомом и файлами без сжатия в ветку. Правила — скилл `.claude/skills/carousel-pro`.
 
 ## Файлы
 
@@ -46,8 +49,21 @@
   вышло — ссылка `media/…`. `/bind` в ветке — привязать её и переименовать в `REELS_TOPIC_NAME` (боту нужен админ с
   «Управлением темами»); кнопки жмут `REMAKE_TG_OWNER_IDS` или тот, кто первым сделал `/bind`. Состояние —
   `DATA_DIR/reels/state.json`, ролики ветки видны и в студии сайта. Поиск — раз в день в `REELS_HOUR` (`REELS_TZ`), `/scan` — сейчас.
-- `Dockerfile` — образ API: node 22 + ffmpeg + python3 + свежий yt-dlp + `npm ci`; `skill/` кладёт `deploy/build.sh`
-  (config.json, scripts/*.py, references/script-rules.md из скилла).
+- `carousel-bot.mjs` — Telegram-ветка «Instagram Карусели». Свой бот `CAROUSEL_TG_BOT_TOKEN` («Карусель Pro», long polling),
+  от студии не зависит. Поиск — Apify `instagram-scraper`, только карусели: свой аккаунт (`instagram.username` скилла
+  `carousel-pro`, не младше 14 дней — ремикс через 2–3 недели) и `CAROUSEL_COMPETITORS`/`/competitors add` (иначе
+  `REELS_COMPETITORS`), сила = (3×комментарии + лайки) / медиана автора, вперемешку «конкурент → свой». Слайды оригинала
+  скачиваются и идут картинками в Claude (`claude-opus-5-5`, structured output) с системой из `references/carousel-rules.md`
+  скилла + карусельных скиллов Кадрика (`KADRIK_SKILLS/*carousel*|*карусел*`). План — слайды трёх режимов: `keep` (свой
+  слайд как есть), `edit` (свой слайд: старый текст закрашивается цветом фона, новый — шрифтами Ильи), `new` (стиль Ильи:
+  cover/text/list/shot/caps/cta, `shot` — вырезанный скриншот из оригинала); у конкурентов `keep`/`edit` запрещены кодом.
+  Рендер — headless Chromium (страница на слайд, Jost + Tinos из `@fontsource`, автоподгонка текста) → JPEG q2.
+  Кнопки ✅ / 🔄 Другой хук / 🗑, после готовности 🔁 Пересобрать; ответ текстом — новый план с пожеланием, ссылка на пост —
+  в работу. `/bind`, `/scan`, `/competitors`, `/status` — как у Reels. Поиск — раз в день в `CAROUSEL_HOUR` (10),
+  `CAROUSEL_PER_DAY` (3) карточки. Состояние — `DATA_DIR/carousels/state.json`, карусели — `DATA_DIR/carousels/<id>/`,
+  слайды — `DATA_DIR/media/<id>-*.jpg`.
+- `Dockerfile` — образ API: node 22 + ffmpeg + python3 + chromium + свежий yt-dlp + `npm ci`; `skill/` кладёт `deploy/build.sh`
+  (config.json, scripts/*.py, references/script-rules.md из скилла), `carousel-skill/` — config.json и carousel-rules.md скилла carousel-pro.
 - Пишет прогоны скилл: `report.py <slug> --media ключ=файл … --push` (токен — окружение или профиль оболочки).
 - `seed/` — стартовые прогоны и их файлы; при выкладке докладываются в данные только тем, чего там ещё нет.
   Новый стартовый прогон — `report.py <slug> --media … --export apps/remake-site/seed`.
