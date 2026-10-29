@@ -30,6 +30,7 @@ HELP = (
     "Каждое утро — 3 карточки веток. Кнопки: ✅ ✏️ 🔄 ♻️ 📎 ⏰ 🗑\n"
     "Правка — ответом на карточку текстом или голосом («пост 3: …» — своя версия поста).\n"
     "/plan — темы на завтра\n"
+    "/now N — опубликовать ветку №N в Threads прямо сейчас\n"
     "/stats — цифры за неделю\n"
     "/top — что сейчас залетает в Threads (основа планов и прогнозов)\n"
     "/story текст — история или факт в банк (без текста — следующим сообщением или голосом)\n"
@@ -320,6 +321,28 @@ async def cmd_plan(update, context) -> None:
     await _say(update.effective_message, text, is_html=True)
 
 
+async def cmd_now(update, context) -> None:
+    from app.funnel import jobs, service
+
+    if not _is_editor(update):
+        return
+    msg = update.effective_message
+    if not context.args or not context.args[0].lstrip("№#").isdigit():
+        await msg.reply_text("Формат: /now 4 — номер ветки с карточки.")
+        return
+    tid = int(context.args[0].lstrip("№#"))
+    res = await _call(msg, service.queue_now, tid)
+    if res != "queued":
+        if res:
+            await _say(msg, res)
+        return
+    await msg.reply_text(f"🚀 Публикую ветку №{tid} в Threads…")
+    out = await asyncio.to_thread(jobs.run, "publish")
+    status = (out.get("due") or {}).get(tid) or out.get("skipped") or out.get("error") or "нет результата"
+    if status != "published":
+        await msg.reply_text(f"⚠️ Ветка №{tid}: {status}")
+
+
 async def cmd_stats(update, context) -> None:
     from app.funnel import service
 
@@ -402,6 +425,7 @@ def register(app) -> None:
     app.add_handler(CallbackQueryHandler(on_callback, pattern=r"^[frc]:"))
     app.add_handler(CommandHandler("funnel", cmd_funnel))
     app.add_handler(CommandHandler("plan", cmd_plan))
+    app.add_handler(CommandHandler("now", cmd_now))
     app.add_handler(CommandHandler("stats", cmd_stats))
     app.add_handler(CommandHandler("top", cmd_top))
     app.add_handler(CommandHandler("story", cmd_story))

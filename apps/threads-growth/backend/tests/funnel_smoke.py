@@ -498,7 +498,7 @@ def run() -> None:
 
     tg_app = Application.builder().token("123:test").build()
     funnel_bot.register(tg_app)
-    assert len(tg_app.handlers[0]) == 9
+    assert len(tg_app.handlers[0]) == 10
 
     # 15. этап 1 (публикуете сами) + остальные кнопки + слой бота
     stage1(later + timedelta(days=1))

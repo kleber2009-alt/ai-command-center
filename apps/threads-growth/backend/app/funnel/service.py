@@ -1138,6 +1138,23 @@ def _image_urls(t: FunnelThread) -> tuple[list[str], str | None]:
     return urls, None
 
 
+def queue_now(db: Session, thread_id: int) -> str:
+    """/now N: ветка выходит при ближайшем прогоне publish, не дожидаясь слота.
+    Сама команда редактора и есть ✅: черновик одобряется (⛔-проверки в силе)."""
+    t = get_thread(db, thread_id)
+    if t.status in ("draft", "failed", "reserve"):
+        msg = approve(db, t.id)
+        db.refresh(t)
+        if t.status != "approved":
+            return msg
+    if t.status != "approved":
+        return f"Ветка №{t.id} в статусе «{t.status}» — опубликовать нельзя."
+    t.slot_at = now_utc()
+    t.plan_date = t.slot_at.astimezone(tz()).date()
+    db.flush()
+    return "queued"
+
+
 def process_due(db: Session, thread_id: int, now: datetime) -> str:
     """Слот наступил: одобренная — выходит; без ответа — по FUNNEL_UNANSWERED."""
     t = get_thread(db, thread_id)
