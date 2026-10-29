@@ -1,41 +1,19 @@
-// /api/montages — монтаж по скиллам (montazh-rils / YouTube «Монтаж ЭМ»).
-// POST создаёт Montage, списывает токены и ставит задачу в очередь skill-montage.
-// Источник: готовое видео (videoGenerationId) или своя запись, загруженная через
-// /api/montages/upload (sourceUrl — только из своего S3-префикса, без SSRF).
+// /api/montages — монтаж по стилям Студии Кадрика (31 скилл Creator Pack).
+// POST создаёт Montage, списывает токены и ставит задачу в очередь kadrik-montage:
+// воркер отдаёт её боту Кадрика, тот монтирует скиллом через Claude Code.
+// Вход по стилю: видео — готовое (videoGenerationId) или своя запись через
+// /api/montages/upload (sourceUrl — только из своего S3-префикса, без SSRF);
+// ссылка (link) или текст (script) — для скиллов, которым видео не нужно.
 
 import { NextRequest, NextResponse } from 'next/server';
-import { z } from 'zod';
 import { getCurrentUserOrApiKey } from '@/lib/auth';
 import { enforceRateLimit } from '@/lib/ratelimit';
 import { prisma } from '@/lib/prisma';
-import { chargeTokens, refundTokens, InsufficientTokensError, COSTS } from '@/lib/tokens';
-import { montageQueue } from '@/lib/queue';
-import { publicUrl } from '@/lib/storage';
-import { findMontagePreset, MONTAGE_PRESETS } from '@/lib/montage/presets';
-import { hasWordTranscriber } from '@/lib/montage/transcribe-words';
+import { createKadrikMontage, MontageBody } from '@/lib/montage/create-kadrik';
 
 export const runtime = 'nodejs';
 
-const Body = z
-  .object({
-    videoGenerationId: z.string().min(1).optional(),
-    sourceUrl: z.string().url().optional(),
-    style: z.string().refine((s) => Boolean(findMontagePreset(s)), {
-      message: `unknown_style (allowed: ${MONTAGE_PRESETS.map((p) => p.id).join(', ')})`,
-    }),
-    hookTitle: z.string().trim().max(120).optional(),
-    ctaWord: z.string().trim().max(24).optional(),
-    options: z
-      .object({
-        cutSilence: z.boolean().default(true),
-        subtitles: z.boolean().default(true),
-        punch: z.boolean().default(true),
-      })
-      .default({}),
-  })
-  .refine((b) => Boolean(b.videoGenerationId) !== Boolean(b.sourceUrl), {
-    message: 'нужен ровно один источник: videoGenerationId или sourceUrl',
-  });
+const Body = MontageBody;
 
 export async function POST(req: NextRequest) {
   try {
@@ -49,68 +27,8 @@ export async function POST(req: NextRequest) {
     if (!parsed.success) {
       return NextResponse.json({ error: 'bad_body', issues: parsed.error.issues }, { status: 400 });
     }
-    const data = parsed.data;
-    const preset = findMontagePreset(data.style)!;
-
-    if ((data.options.cutSilence || data.options.subtitles) && !hasWordTranscriber()) {
-      return NextResponse.json(
-        { error: 'no_transcriber', message: 'Для чистки пауз и субтитров нужен Whisper (OPENAI_API_KEY или WHISPER_SERVICE_URL).' },
-        { status: 503 },
-      );
-    }
-
-    let sourceUrl: string;
-    let videoGenerationId: string | null = null;
-    if (data.videoGenerationId) {
-      const video = await prisma.videoGeneration.findFirst({ where: { id: data.videoGenerationId, userId: user.id } });
-      if (!video) return NextResponse.json({ error: 'video_not_found' }, { status: 404 });
-      if (video.status !== 'completed' || !video.videoUrl) {
-        return NextResponse.json({ error: 'video_not_ready', status: video.status }, { status: 409 });
-      }
-      sourceUrl = video.videoUrl;
-      videoGenerationId = video.id;
-    } else {
-      const own = publicUrl(`video/${user.id}/`);
-      if (!data.sourceUrl!.startsWith(own)) {
-        return NextResponse.json({ error: 'foreign_source', message: 'Источник должен быть загружен через /api/montages/upload.' }, { status: 400 });
-      }
-      sourceUrl = data.sourceUrl!;
-    }
-
-    const cost = COSTS.skillMontage;
-    try {
-      await chargeTokens({ userId: user.id, amount: cost, reason: `skill-montage:${preset.id}` });
-    } catch (e) {
-      if (e instanceof InsufficientTokensError) {
-        return NextResponse.json({ error: 'insufficient_tokens', have: e.have, need: e.need }, { status: 402 });
-      }
-      throw e;
-    }
-
-    const montage = await prisma.montage.create({
-      data: {
-        userId: user.id,
-        videoGenerationId,
-        sourceUrl,
-        style: preset.id,
-        format: preset.format,
-        hookTitle: data.hookTitle || null,
-        ctaWord: data.ctaWord || null,
-        options: data.options,
-        tokensCost: cost,
-      },
-    });
-
-    try {
-      await montageQueue().add('montage', { montageId: montage.id, userId: user.id }, { jobId: montage.id });
-    } catch (e) {
-      console.error('[api/montages] enqueue failed', e);
-      await refundTokens({ userId: user.id, amount: cost, reason: 'skill-montage:enqueue-failed', refId: montage.id });
-      await prisma.montage.update({ where: { id: montage.id }, data: { status: 'failed', errorMsg: 'enqueue_failed' } });
-      return NextResponse.json({ error: 'enqueue_failed' }, { status: 500 });
-    }
-
-    return NextResponse.json({ id: montage.id, status: montage.status });
+    const r = await createKadrikMontage(user.id, parsed.data);
+    return NextResponse.json(r.body, { status: r.status });
   } catch (e) {
     console.error('[api/montages] unhandled error', e);
     return NextResponse.json({ error: 'internal_error', message: e instanceof Error ? e.message : String(e) }, { status: 500 });
@@ -128,6 +46,7 @@ const LIST_SELECT = {
   durationSec: true,
   tokensCost: true,
   errorMsg: true,
+  progress: true,
   createdAt: true,
   completedAt: true,
   videoGenerationId: true,

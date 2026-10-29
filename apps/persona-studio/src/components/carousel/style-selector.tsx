@@ -1,5 +1,6 @@
 'use client';
 
+import { Check } from 'lucide-react';
 import { CAROUSEL_STYLES } from '@/lib/carousel/styles';
 
 type Props = {
@@ -15,22 +16,22 @@ type Props = {
 export function StyleSelector({ value, onChange }: Props) {
   const groups = [
     { key: 'skill', title: 'скиллы · стили рилсов', items: CAROUSEL_STYLES.filter((s) => s.group === 'skill') },
-    { key: 'persona', title: 'persona · 5 DNA', items: CAROUSEL_STYLES.filter((s) => s.group === 'persona') },
+    { key: 'persona', title: 'Persona · 5 ДНК-стилей', items: CAROUSEL_STYLES.filter((s) => s.group === 'persona') },
   ];
   return (
-    <div className="border border-border bg-surface px-3 py-2.5 grid gap-3">
-      <div className="flex items-baseline gap-3">
-        <span className="mono text-[10px] tracking-[0.18em] uppercase text-text-mute">
+    <div className="grid gap-4 rounded-[20px] border border-border-soft bg-white/[0.03] p-4">
+      <div className="flex flex-wrap items-center gap-3">
+        <span className="label">
           стиль рендера · {CAROUSEL_STYLES.length}
         </span>
-        <span className="flex-1 border-b border-border translate-y-[-3px]" />
-        <span className="mono text-[9px] tracking-wider text-text-mute">
+        <span className="hidden flex-1 border-b border-border-soft sm:block" />
+        <span className="text-[12px] text-text-mute">
           применяется при «Сгенерировать PNG»
         </span>
       </div>
       {groups.map((g) => (
         <div key={g.key} className="grid gap-2">
-          <span className="mono text-[9px] tracking-[0.18em] uppercase text-text-dim">{g.title}</span>
+          <span className="text-[13px] font-medium text-text-dim">{g.title}</span>
           <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-5 gap-2">
             {g.items.map((s) => {
               const active = s.id === value;
@@ -40,8 +41,10 @@ export function StyleSelector({ value, onChange }: Props) {
                   type="button"
                   onClick={() => onChange(s.id)}
                   title={s.description}
-                  className={`text-left border px-3 py-2.5 transition flex items-center gap-3 ${
-                    active ? 'border-lime bg-lime/[0.05]' : 'border-border hover:border-text-dim'
+                  className={`flex items-center gap-3 rounded-2xl border px-3 py-2.5 text-left transition-colors ${
+                    active
+                      ? 'border-gold bg-blue/[0.12] shadow-glow'
+                      : 'border-border-soft bg-white/[0.03] hover:border-border-2 hover:bg-white/[0.06]'
                   }`}
                 >
                   {s.group === 'skill' ? (
@@ -50,24 +53,27 @@ export function StyleSelector({ value, onChange }: Props) {
                     <img
                       src={`/skill-previews/${s.id.replace(/^skill-/, '')}.jpg`}
                       alt=""
-                      className="shrink-0 border border-border h-[40px] w-auto"
+                      className="h-[40px] w-auto shrink-0 rounded-lg border border-border-soft"
                       loading="lazy"
                     />
                   ) : (
-                    <div className="flex shrink-0 border border-border overflow-hidden">
+                    <div className="flex shrink-0 overflow-hidden rounded-lg border border-border-soft">
                       {s.swatch.map((c, i) => (
                         <span key={i} className="block" style={{ background: c, width: 14, height: 36 }} />
                       ))}
                     </div>
                   )}
                   <div className="grid gap-0.5 min-w-0 flex-1">
-                    <span className={`font-serif text-[14px] leading-tight ${active ? 'text-text' : 'text-text-dim'}`}>
+                    <span className={`text-[14px] font-medium leading-tight ${active ? 'text-text' : 'text-text-dim'}`}>
                       {s.label}
                     </span>
-                    <span className="mono text-[9px] tracking-wider text-text-mute uppercase truncate">{s.tag}</span>
+                    <span className="truncate text-[11px] text-text-mute">{s.tag}</span>
                   </div>
                   {active && (
-                    <span className="mono text-[9px] tracking-widest uppercase text-lime shrink-0">active</span>
+                    <span className="grid h-5 w-5 shrink-0 place-items-center rounded-full bg-blue text-white">
+                      <Check size={12} strokeWidth={3} />
+                      <span className="sr-only">выбран</span>
+                    </span>
                   )}
                 </button>
               );

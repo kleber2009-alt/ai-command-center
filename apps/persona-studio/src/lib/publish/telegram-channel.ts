@@ -77,3 +77,42 @@ export async function sendChannelVideo(opts: {
     : null;
   return { messageId: msg.message_id, permalink };
 }
+
+/**
+ * Send a carousel as a photo album (sendMediaGroup, 2–10 items per group;
+ * longer carousels are split into consecutive albums). The caption goes on
+ * the first photo. Returns the first message's id + permalink.
+ */
+export async function sendChannelAlbum(opts: {
+  chatId: string;
+  photoUrls: string[];
+  caption?: string;
+}): Promise<{ messageId: number; permalink: string | null }> {
+  if (opts.photoUrls.length === 0) throw new TelegramError('NO_MEDIA', 'album is empty');
+  let first: { message_id: number; chat: { id: number; username?: string } } | null = null;
+  for (let i = 0; i < opts.photoUrls.length; i += 10) {
+    const chunk = opts.photoUrls.slice(i, i + 10);
+    const media = chunk.map((url, j) => ({
+      type: 'photo',
+      media: url,
+      ...(i === 0 && j === 0 && opts.caption ? { caption: opts.caption.slice(0, 1024) } : {}),
+    }));
+    // A trailing single photo can't be a media group — send it on its own.
+    const msgs =
+      media.length === 1
+        ? [
+            await botCall<{ message_id: number; chat: { id: number; username?: string } }>('sendPhoto', {
+              chat_id: opts.chatId,
+              photo: chunk[0],
+              caption: media[0].caption,
+            }),
+          ]
+        : await botCall<{ message_id: number; chat: { id: number; username?: string } }[]>('sendMediaGroup', {
+            chat_id: opts.chatId,
+            media,
+          });
+    if (!first) first = msgs[0];
+  }
+  const permalink = first!.chat.username ? `https://t.me/${first!.chat.username}/${first!.message_id}` : null;
+  return { messageId: first!.message_id, permalink };
+}

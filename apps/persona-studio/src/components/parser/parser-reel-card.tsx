@@ -2,8 +2,11 @@
 
 import { useRouter } from 'next/navigation';
 import { useState } from 'react';
+import { ArrowRight, EyeOff, Heart, Instagram, MessageCircle, Play, RefreshCw } from 'lucide-react';
+import { Icon3D } from '@/components/ui/icon3d';
 import type { ParserItemSerialized } from './types';
 import { igProxy } from '../research/types';
+import { errorText } from '@/lib/error-text';
 
 type Props = {
   item: ParserItemSerialized;
@@ -25,7 +28,7 @@ const formatAge = (h: number) => {
 const fitColor = (score: number | null) => {
   if (score == null) return 'text-text-mute';
   if (score >= 8) return 'text-lime';
-  if (score >= 6) return 'text-warm';
+  if (score >= 6) return 'text-amber';
   return 'text-text-dim';
 };
 
@@ -70,7 +73,7 @@ export function ParserReelCard({ item, onUpdated, onRemoved }: Props) {
         });
         const json = await res.json();
         if (!res.ok) {
-          setError(json.message || json.error || `HTTP ${res.status}`);
+          setError(errorText(json, res.status));
           return;
         }
         onUpdated({ ...item, status: 'used' });
@@ -82,13 +85,13 @@ export function ParserReelCard({ item, onUpdated, onRemoved }: Props) {
       });
       const json = await res.json();
       if (!res.ok) {
-        setError(json.message || json.error || `HTTP ${res.status}`);
+        setError(errorText(json, res.status));
         return;
       }
       onUpdated({ ...item, status: 'used', rewrittenScript: json.script });
       router.push(`/videos/new?parserItemId=${item.id}`);
     } catch (e) {
-      setError((e as Error).message || 'network error');
+      setError((e as Error).message || 'Нет связи с сервером');
     } finally {
       setRewriting(false);
     }
@@ -99,21 +102,21 @@ export function ParserReelCard({ item, onUpdated, onRemoved }: Props) {
       ? 'Уникализирую слайды…'
       : 'Уникализирую сценарий…'
     : isCarousel
-      ? 'Создать карусель →'
+      ? 'Создать карусель'
       : item.rewrittenScript
-        ? 'К видео (готов сценарий) →'
-        : 'Создать видео →';
+        ? 'К видео (готов сценарий)'
+        : 'Создать видео';
 
   const showThumb = item.thumbnailUrl && !thumbFailed;
 
   return (
     <article
-      className={`border bg-surface flex items-stretch ${
-        isUsed ? 'border-lime/40' : 'border-border'
+      className={`card-editorial flex items-stretch overflow-hidden ${
+        isUsed ? '!border-lime/40' : ''
       } ${isUsed ? 'opacity-90' : ''}`}
     >
       {/* Thumbnail / placeholder */}
-      <div className="w-16 sm:w-20 shrink-0 bg-bg border-r border-border relative overflow-hidden">
+      <div className="m-2 w-16 sm:w-20 shrink-0 rounded-2xl bg-white/[0.04] relative overflow-hidden">
         {showThumb ? (
           // eslint-disable-next-line @next/next/no-img-element
           <img
@@ -125,14 +128,14 @@ export function ParserReelCard({ item, onUpdated, onRemoved }: Props) {
             className="w-full h-full object-cover aspect-[4/5]"
           />
         ) : (
-          <div className="w-full h-full aspect-[4/5] flex flex-col items-center justify-center gap-1 mono text-[8px] tracking-widest uppercase text-text-mute">
-            <span className="text-[16px] opacity-30">{isCarousel ? '🖼' : '🎬'}</span>
-            <span>{isCarousel ? 'CAR' : 'REEL'}</span>
+          <div className="w-full h-full aspect-[4/5] flex flex-col items-center justify-center gap-1 text-[10px] font-semibold uppercase tracking-[0.06em] text-text-mute">
+            <Icon3D name={isCarousel ? 'carousel' : 'video'} size={24} />
+            <span>{isCarousel ? 'КАРУСЕЛЬ' : 'РИЛС'}</span>
           </div>
         )}
         {item.fitScore != null && (
           <div
-            className={`absolute top-1 left-1 px-1 py-0.5 mono text-[9px] tracking-wider bg-black/80 ${fitColor(
+            className={`absolute top-1.5 left-1.5 rounded-full px-1.5 py-0.5 text-[10.5px] font-bold tabular-nums bg-black/65 backdrop-blur-md ${fitColor(
               item.fitScore,
             )}`}
           >
@@ -142,79 +145,86 @@ export function ParserReelCard({ item, onUpdated, onRemoved }: Props) {
       </div>
 
       {/* Body */}
-      <div className="flex-1 min-w-0 p-3 sm:p-4 grid grid-cols-1 sm:grid-cols-[1fr_auto] gap-3 items-center">
+      <div className="flex-1 min-w-0 p-3 sm:p-4 sm:pl-2 grid grid-cols-1 sm:grid-cols-[1fr_auto] gap-3 items-center">
         {/* Text block */}
         <div className="grid gap-1.5 min-w-0">
-          <div className="flex items-baseline flex-wrap gap-x-3 gap-y-1">
-            <span className="mono text-[11px] tracking-wider text-text">
+          <div className="flex items-center flex-wrap gap-x-3 gap-y-1">
+            <span className="text-[14px] font-semibold text-text">
               @{item.owner || '—'}
             </span>
-            <span className="mono text-[9px] tracking-widest uppercase text-text-mute">
+            <span className="text-[12px] text-text-mute">
               {formatAge(item.ageHours)}
             </span>
             {item.kind === 'reel' && item.plays > 0 && (
-              <span className="mono text-[10px] text-text-dim">
-                <span className="text-text">{formatCount(item.plays)}</span> просм.
+              <span className="inline-flex items-center gap-1 text-[12px] tabular-nums text-text-dim">
+                <Play className="h-3 w-3" />
+                <span className="font-semibold text-text">{formatCount(item.plays)}</span> просм.
               </span>
             )}
-            <span className="mono text-[10px] text-text-dim">
-              <span className="text-text">{formatCount(item.likes)}</span> ❤
+            <span className="inline-flex items-center gap-1 text-[12px] tabular-nums text-text-dim">
+              <Heart className="h-3 w-3" />
+              <span className="font-semibold text-text">{formatCount(item.likes)}</span>
             </span>
-            <span className="mono text-[10px] text-text-dim">
-              <span className="text-text">{formatCount(item.comments)}</span> 💬
+            <span className="inline-flex items-center gap-1 text-[12px] tabular-nums text-text-dim">
+              <MessageCircle className="h-3 w-3" />
+              <span className="font-semibold text-text">{formatCount(item.comments)}</span>
             </span>
             {isUsed && (
-              <span className="mono text-[8px] tracking-widest uppercase px-1.5 py-0.5 bg-lime text-black">
+              <span className="rounded-full bg-lime px-2 py-0.5 text-[10.5px] font-semibold uppercase tracking-[0.04em] text-bg">
                 в работе
               </span>
             )}
           </div>
 
           {item.fitWhy && (
-            <p className="font-serif italic text-[13px] leading-snug text-text-dim line-clamp-2">
+            <p className="text-[13.5px] leading-snug text-text-dim line-clamp-2">
               {item.fitWhy}
             </p>
           )}
           {!item.fitWhy && item.caption && (
-            <p className="font-serif text-[12.5px] leading-snug text-text-mute line-clamp-2">
+            <p className="text-[13px] leading-snug text-text-mute line-clamp-2">
               {item.caption}
             </p>
           )}
 
           {error && (
-            <div className="border border-pink/40 bg-pink/5 px-2 py-1 mono text-[10px] text-pink">
+            <div className="rounded-xl border border-pink/40 bg-pink/[0.06] px-3 py-1.5 text-[12.5px] text-pink">
               {error}
             </div>
           )}
         </div>
 
         {/* Actions */}
-        <div className="flex flex-col sm:flex-row sm:items-center gap-2 sm:gap-2 sm:shrink-0">
+        <div className="flex flex-col sm:flex-row sm:items-center gap-2 sm:shrink-0">
           <button
             type="button"
             onClick={rewriteAndGo}
             disabled={rewriting || busy}
-            className="btn-primary whitespace-nowrap text-[11px] sm:text-[12px]"
+            className="btn-primary !px-4 !py-2.5 !text-[13px]"
           >
+            {rewriting && <RefreshCw className="h-4 w-4 animate-spin" />}
             {ctaLabel}
+            {!rewriting && <ArrowRight className="h-4 w-4" />}
           </button>
           <div className="flex items-center gap-2">
             <a
               href={item.url}
               target="_blank"
               rel="noopener noreferrer"
-              className="btn-ghost text-[11px] px-2"
+              className="btn-icon"
               title="Открыть оригинал в Instagram"
+              aria-label="Открыть оригинал в Instagram"
             >
-              IG
+              <Instagram className="h-4 w-4" />
             </a>
             <button
               type="button"
               onClick={dismiss}
               disabled={busy || rewriting}
-              className="mono text-[9px] tracking-widest uppercase text-text-mute hover:text-pink whitespace-nowrap"
+              className="inline-flex items-center gap-1 rounded-full px-3 py-2 text-[12.5px] text-text-mute transition-colors hover:bg-pink/[0.08] hover:text-pink whitespace-nowrap"
               title="Скрыть из списка"
             >
+              <EyeOff className="h-3.5 w-3.5" />
               скрыть
             </button>
           </div>

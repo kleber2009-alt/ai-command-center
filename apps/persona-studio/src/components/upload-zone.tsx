@@ -2,7 +2,10 @@
 
 import { useCallback, useEffect, useRef, useState } from 'react';
 import { useRouter } from 'next/navigation';
+import { ArrowRight, Check, Loader2, X } from 'lucide-react';
 import { bytesHuman } from '@/lib/utils';
+import { Icon3D } from '@/components/ui/icon3d';
+import { errorText, exceptionText } from '@/lib/error-text';
 
 type UploadItem = {
   id: string;
@@ -32,12 +35,12 @@ function describeFailure(f: UploadFailure): string {
     case 'file_too_large': {
       const mb = f.bytes ? (f.bytes / 1024 / 1024).toFixed(1) : '?';
       const lim = f.max ? Math.round(f.max / 1024 / 1024) : '?';
-      return `${who}: слишком большой (${mb} MB, лимит ${lim} MB)`;
+      return `${who}: слишком большой (${mb} МБ, лимит ${lim} МБ)`;
     }
     case 'heic_decode_failed':
       return `${who}: HEIC не декодируется — пересохрани как JPG`;
     default:
-      return `${who}: ${f.error}`;
+      return `${who}: ${errorText(f.error)}`;
   }
 }
 
@@ -90,7 +93,7 @@ export function UploadZone({
           if ('errors' in json && Array.isArray(json.errors) && json.errors.length > 0) {
             setError(json.errors.map(describeFailure).join(' · '));
           } else {
-            setError(('error' in json && json.error) || `upload_failed_${res.status}`);
+            setError(errorText('error' in json ? json : null, res.status));
           }
           return;
         }
@@ -117,7 +120,7 @@ export function UploadZone({
     const res = await fetch(`/api/upload/${id}`, { method: 'DELETE' });
     if (!res.ok) {
       const j = await res.json().catch(() => ({}));
-      setError((j as { error?: string }).error ?? `delete_failed_${res.status}`);
+      setError(errorText(j as { error?: string }, res.status));
       return;
     }
     setUploads((prev) => prev.filter((u) => u.id !== id));
@@ -143,28 +146,28 @@ export function UploadZone({
       });
       const json = (await res.json()) as GenResp | { error: string; have?: number; need?: number };
       if (!res.ok || 'error' in json) {
-        const msg =
-          'error' in json
-            ? json.error === 'insufficient_tokens'
-              ? `Недостаточно токенов: ${json.have}/${json.need}`
-              : json.error
-            : `generate_failed_${res.status}`;
-        setError(msg);
+        setError(errorText('error' in json ? json : null, res.status));
         setBusy(null);
         return;
       }
       router.push(`/avatars?generationId=${json.id}`);
     } catch (e) {
-      setError(String(e));
+      setError(exceptionText(e));
       setBusy(null);
     }
   }, [router, primaryId, extraBody, consent]);
+
+  const label = busy === 'generating' ? 'Генерирую 10 аватаров…' : (generateLabel ?? 'Сгенерировать 10 аватаров →');
+  const labelText = label.replace(/\s*→\s*$/, '');
+  const hasArrow = labelText !== label;
 
   return (
     <div className="grid gap-6">
       {/* Dropzone */}
       <div
-        className="border border-border-2 border-dashed p-8 text-center bg-surface hover:bg-surface-2 cursor-pointer transition-colors"
+        className={`group rounded-[24px] border border-dashed border-white/15 bg-white/[0.03] p-8 text-center transition-colors sm:p-10 ${
+          slotsLeft > 0 ? 'cursor-pointer hover:border-gold/60 hover:bg-blue/[0.06]' : 'cursor-not-allowed opacity-80'
+        }`}
         onClick={() => slotsLeft > 0 && inputRef.current?.click()}
         onDragOver={(e) => e.preventDefault()}
         onDrop={(e) => {
@@ -183,18 +186,21 @@ export function UploadZone({
             if (e.target) e.target.value = '';
           }}
         />
-        <div className="sec-num mb-3">/00 · upload</div>
-        <div className="font-serif italic text-[26px] leading-tight mb-3">
+        <div className="mb-4 flex justify-center">
+          <Icon3D name={busy === 'uploading' ? 'processing' : 'assets'} size={34} tile sway />
+        </div>
+        <div className="sec-num mb-3">/00 · загрузка</div>
+        <div className="mx-auto mb-3 max-w-[34ch] text-[22px] font-semibold leading-tight tracking-[-0.02em] sm:text-[26px]">
           {slotsLeft > 0
             ? `Перетащи до ${slotsLeft} фото или нажми, чтобы выбрать.`
             : `Лимит ${MAX_PHOTOS} фото достигнут — удали лишние.`}
         </div>
-        <div className="mono text-[10px] tracking-widest uppercase text-text-mute">
-          JPG · PNG · WEBP · HEIC · до 20 MB · мин. 512×512 · до {MAX_PHOTOS} фото на аккаунт
+        <div className="text-[12px] text-text-mute">
+          JPG · PNG · WEBP · HEIC · до 20 МБ · мин. 512×512 · до {MAX_PHOTOS} фото на аккаунт
         </div>
         {busy === 'uploading' && (
-          <div className="mono text-[10px] tracking-widest uppercase text-cyan mt-3 animate-pulse">
-            /UPLOADING…
+          <div className="mt-5 flex justify-center">
+            <span className="status-badge status-processing">загружаем…</span>
           </div>
         )}
       </div>
@@ -202,17 +208,15 @@ export function UploadZone({
       {/* Gallery */}
       {uploads.length > 0 && (
         <div>
-          <div className="flex items-baseline gap-3 mb-3">
-            <span className="sec-num">/01 · pick primary</span>
-            <span className="font-serif italic text-[14px] text-text-dim">
-              выбери фото, по которому строим 10 аватаров
-            </span>
-            <span className="flex-1 border-b border-border translate-y-[-3px]" />
-            <span className="mono text-[10px] tracking-widest uppercase text-text-mute">
+          <div className="mb-4 flex flex-wrap items-center gap-3">
+            <span className="sec-num">/01 · основное фото</span>
+            <span className="sec-title">выбери фото, по которому строим 10 аватаров</span>
+            <span className="hidden h-px flex-1 bg-border-soft sm:block" />
+            <span className="text-[12px] text-text-mute tabular-nums">
               {uploads.length} / {MAX_PHOTOS}
             </span>
           </div>
-          <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-5 gap-[2px] bg-border border border-border">
+          <div className="stagger grid grid-cols-2 gap-3 sm:grid-cols-3 md:grid-cols-5">
             {uploads.map((u) => {
               const isPrimary = u.id === primaryId;
               return (
@@ -220,8 +224,11 @@ export function UploadZone({
                   key={u.id}
                   type="button"
                   onClick={() => setPrimaryId(u.id)}
-                  className={`relative bg-surface aspect-[4/5] overflow-hidden group transition-all ${
-                    isPrimary ? 'outline outline-2 outline-lime outline-offset-[-2px]' : ''
+                  aria-pressed={isPrimary}
+                  className={`group relative aspect-[4/5] overflow-hidden rounded-[20px] border bg-surface transition-all duration-300 ease-settle hover:-translate-y-0.5 ${
+                    isPrimary
+                      ? 'border-transparent ring-2 ring-blue shadow-glow'
+                      : 'border-border-soft hover:border-border-2'
                   }`}
                   style={{
                     backgroundImage: `url(${u.url})`,
@@ -229,17 +236,20 @@ export function UploadZone({
                     backgroundPosition: 'center',
                   }}
                 >
+                  <span className="pointer-events-none absolute inset-x-0 bottom-0 h-1/3 bg-gradient-to-t from-black/60 to-transparent" />
                   {isPrimary && (
-                    <span className="absolute top-2 left-2 mono text-[9px] tracking-widest uppercase text-[#0a1a00] bg-lime px-2 py-1 font-bold">
-                      /primary
+                    <span className="pop-in absolute left-2 top-2 inline-flex items-center gap-1 rounded-full bg-blue px-2.5 py-1 text-[11px] font-semibold text-white">
+                      <Check size={12} aria-hidden />
+                      основное
                     </span>
                   )}
-                  <span className="absolute bottom-2 left-2 mono text-[8px] tracking-widest uppercase text-text-mute">
+                  <span className="absolute bottom-2 left-2.5 text-[11px] font-medium text-white/80 tabular-nums">
                     {bytesHuman(u.bytes)}
                   </span>
                   <span
                     role="button"
                     tabIndex={0}
+                    aria-label="Удалить фото"
                     onClick={(e) => {
                       e.stopPropagation();
                       if (confirm('Удалить это фото?')) handleDelete(u.id);
@@ -250,9 +260,9 @@ export function UploadZone({
                         if (confirm('Удалить это фото?')) handleDelete(u.id);
                       }
                     }}
-                    className="absolute top-2 right-2 mono text-[10px] tracking-widest uppercase text-pink bg-[rgba(8,8,8,0.7)] px-2 py-1 opacity-0 group-hover:opacity-100 transition-opacity cursor-pointer"
+                    className="absolute right-2 top-2 flex h-8 w-8 cursor-pointer items-center justify-center rounded-full border border-white/15 bg-black/55 text-white opacity-0 backdrop-blur-md transition-opacity hover:bg-danger focus-visible:opacity-100 group-hover:opacity-100"
                   >
-                    ✕
+                    <X size={14} aria-hidden />
                   </span>
                 </button>
               );
@@ -262,10 +272,10 @@ export function UploadZone({
       )}
 
       {/* Consent — required before enqueuing an avatar batch */}
-      <label className="flex items-start gap-2 text-xs text-text-mute max-w-xl cursor-pointer">
+      <label className="panel flex max-w-xl cursor-pointer items-center gap-4 px-5 py-4 text-[13px] leading-snug text-text-dim">
         <input
           type="checkbox"
-          className="mt-0.5"
+          className="toggle"
           checked={consent}
           onChange={(e) => setConsent(e.target.checked)}
         />
@@ -283,13 +293,17 @@ export function UploadZone({
           disabled={!primaryId || !consent || busy === 'generating'}
           onClick={handleGenerate}
         >
-          {busy === 'generating' ? 'Generating 10 avatars…' : (generateLabel ?? 'Generate 10 Avatars →')}
+          {busy === 'generating' && <Loader2 size={16} className="animate-spin" aria-hidden />}
+          {labelText}
+          {hasArrow && <ArrowRight size={16} aria-hidden />}
         </button>
-        <span className="mono text-[10px] tracking-widest uppercase text-text-mute">
-          {costHint ?? 'Спишется 10 токенов · ~3-5 мин на Flux Kontext Pro'}
+        <span className="text-[12px] text-text-mute">
+          {costHint}
         </span>
         {error && (
-          <span className="mono text-[11px] tracking-wider text-pink">/ERROR — {error}</span>
+          <span className="fade-in w-full rounded-2xl border border-danger/30 bg-danger/10 px-4 py-2.5 text-[13px] text-danger">
+            Ошибка — {error}
+          </span>
         )}
       </div>
     </div>

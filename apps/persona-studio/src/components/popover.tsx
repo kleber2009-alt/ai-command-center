@@ -71,7 +71,7 @@ export function Popover({ open, onClose, anchorRef, align = 'right', placement =
   return (
     <div
       ref={ref}
-      className={`absolute z-50 ${verticalClasses} ${sideClasses} bg-bg border border-border-2 shadow-2xl`}
+      className={`pop-in absolute z-50 ${verticalClasses} ${sideClasses} overflow-hidden rounded-[20px] border border-border-2 bg-bg-card/95 shadow-glass backdrop-blur-xl`}
       style={{ width }}
       role="dialog"
     >

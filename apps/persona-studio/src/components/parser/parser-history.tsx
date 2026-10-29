@@ -6,8 +6,10 @@
 // через GET /api/parser/runs/[id] и показываются теми же карточками.
 
 import { useState } from 'react';
+import { ChevronDown, RefreshCw } from 'lucide-react';
 import { ParserReelCard } from './parser-reel-card';
 import type { ParserItemSerialized, ParserRunSerialized } from './types';
+import { errorText } from '@/lib/error-text';
 
 type Props = {
   runs: ParserRunSerialized[];
@@ -39,12 +41,12 @@ function HistoryRow({ run }: { run: ParserRunSerialized }) {
         const res = await fetch(`/api/parser/runs/${run.id}`);
         const json = await res.json();
         if (!res.ok) {
-          setError(json.message || json.error || `HTTP ${res.status}`);
+          setError(errorText(json, res.status));
           return;
         }
         setItems((json.items as ParserItemSerialized[]) || []);
       } catch (e) {
-        setError((e as Error).message || 'network error');
+        setError((e as Error).message || 'Нет связи с сервером');
       } finally {
         setLoading(false);
       }
@@ -55,51 +57,51 @@ function HistoryRow({ run }: { run: ParserRunSerialized }) {
   const visible = items?.filter((i) => i.status !== 'dismissed') ?? [];
 
   return (
-    <div className="border border-border bg-surface">
+    <div className="panel overflow-hidden">
       <button
         type="button"
         onClick={toggle}
-        className="w-full text-left p-3 sm:p-4 grid grid-cols-[auto_1fr_auto] gap-3 items-center hover:bg-bg/40 transition-colors"
+        className="w-full text-left p-4 sm:p-5 grid grid-cols-[auto_1fr_auto] gap-3 items-center hover:bg-white/[0.03] transition-colors"
       >
-        <span className="mono text-[10px] tracking-widest uppercase text-text-mute">
-          {open ? '−' : '+'}
+        <span className="inline-flex h-8 w-8 items-center justify-center rounded-full bg-white/[0.05] text-text-mute">
+          <ChevronDown className={`h-4 w-4 transition-transform duration-300 ease-settle ${open ? 'rotate-180' : ''}`} />
         </span>
         <div className="min-w-0 grid gap-1">
-          <div className="flex flex-wrap items-baseline gap-x-3 gap-y-1">
-            <span className="mono text-[11px] tracking-wider text-text">{fmtDate(run.startedAt)}</span>
-            <span className="mono text-[10px] text-text-dim">
-              <span className="text-text">{found}</span> постов
+          <div className="flex flex-wrap items-center gap-x-3 gap-y-1">
+            <span className="text-[14px] font-semibold text-text">{fmtDate(run.startedAt)}</span>
+            <span className="text-[12.5px] text-text-dim">
+              <span className="font-semibold tabular-nums text-text">{found}</span> постов
             </span>
-            <span className="mono text-[9px] tracking-widest uppercase text-text-mute">
+            <span className="text-[12px] tabular-nums text-text-mute">
               R{run.reelsFound} · C{run.carouselsFound}
             </span>
-            <span className="mono text-[9px] tracking-widest uppercase text-text-mute">
+            <span className="text-[12px] tabular-nums text-text-mute">
               скан {run.postsScanned}
             </span>
           </div>
           {run.claudeSummary && (
-            <p className="font-serif italic text-[12.5px] leading-snug text-text-dim line-clamp-1">
+            <p className="text-[13px] leading-snug text-text-dim line-clamp-1">
               {run.claudeSummary}
             </p>
           )}
         </div>
-        <span className="mono text-[9px] tracking-widest uppercase text-text-mute whitespace-nowrap">
+        <span className="text-[12.5px] text-text-mute whitespace-nowrap">
           {open ? 'свернуть' : 'открыть'}
         </span>
       </button>
 
       {open && (
-        <div className="border-t border-border p-3 sm:p-4 grid gap-2">
+        <div className="border-t border-border-soft p-3 sm:p-4 grid gap-2.5 fade-in">
           {loading && (
-            <div className="mono text-[11px] text-text-mute">Загружаю выдачу…</div>
+            <div className="inline-flex items-center gap-2 text-[13px] text-text-mute"><RefreshCw className="h-3.5 w-3.5 animate-spin" />Загружаю выдачу…</div>
           )}
           {error && (
-            <div className="border border-pink/40 bg-pink/5 px-2 py-1 mono text-[11px] text-pink">
+            <div className="rounded-2xl border border-pink/40 bg-pink/[0.06] px-3.5 py-2 text-[13px] text-pink">
               {error}
             </div>
           )}
           {!loading && !error && visible.length === 0 && (
-            <div className="mono text-[11px] text-text-mute">Пусто — все посты этого прогона скрыты.</div>
+            <div className="text-[13px] text-text-mute">Пусто — все посты этого прогона скрыты.</div>
           )}
           {visible.map((it) => (
             <ParserReelCard
@@ -124,12 +126,12 @@ export function ParserHistory({ runs }: Props) {
 
   return (
     <section className="grid gap-4">
-      <div className="flex items-baseline gap-3">
+      <div className="flex items-center gap-3">
         <span className="sec-num">/04</span>
         <span className="sec-title">История поиска · {runs.length}</span>
-        <span className="flex-1 border-b border-border translate-y-[-3px]" />
+        <span className="flex-1 h-px bg-border-soft" />
       </div>
-      <div className="grid gap-2">
+      <div className="grid gap-2.5 stagger">
         {runs.map((r) => (
           <HistoryRow key={r.id} run={r} />
         ))}

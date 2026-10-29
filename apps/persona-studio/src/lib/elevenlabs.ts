@@ -107,6 +107,9 @@ export async function cloneVoice(opts: {
   name: string;
   files: { blob: Blob; filename: string }[];
   description?: string;
+  /** Owner tag stored as an ElevenLabs label — the account is shared, so
+   *  listing filters by it. */
+  ownerId?: string;
 }): Promise<ClonedVoice> {
   const apiKey = env.ELEVENLABS_API_KEY;
   if (!apiKey) throw new ElevenlabsError('MISSING_KEY', 'ELEVENLABS_API_KEY is not set');
@@ -115,6 +118,7 @@ export async function cloneVoice(opts: {
   const fd = new FormData();
   fd.append('name', opts.name);
   if (opts.description) fd.append('description', opts.description);
+  if (opts.ownerId) fd.append('labels', JSON.stringify({ ps_owner: opts.ownerId }));
   for (const f of opts.files) fd.append('files', f.blob, f.filename);
 
   const res = await fetch(`${env.ELEVENLABS_API_BASE}/voices/add`, {
@@ -132,8 +136,14 @@ export async function cloneVoice(opts: {
   return { voiceId: data.voice_id, name: opts.name };
 }
 
-/** Список голосов пользователя (клоны). Ошибки/недоступность → пустой список. */
-export async function listClonedVoices(): Promise<ClonedVoice[]> {
+/** Список голосов пользователя (клоны). Ошибки/недоступность → пустой список.
+ *  The ElevenLabs account is shared by all users, so only voices labelled with
+ *  `ownerId` (or explicitly allowed via `alsoIds`, e.g. legacy clones already
+ *  attached to the user's personas) are returned. */
+export async function listClonedVoices(
+  ownerId: string,
+  alsoIds: Iterable<string> = [],
+): Promise<ClonedVoice[]> {
   const apiKey = env.ELEVENLABS_API_KEY;
   if (!apiKey) return [];
   try {
@@ -143,11 +153,18 @@ export async function listClonedVoices(): Promise<ClonedVoice[]> {
     });
     if (!res.ok) return [];
     const data = (await res.json().catch(() => ({}))) as {
-      voices?: { voice_id: string; name: string; category?: string }[];
+      voices?: {
+        voice_id: string;
+        name: string;
+        category?: string;
+        labels?: Record<string, string> | null;
+      }[];
     };
     const own = new Set(['cloned', 'professional', 'generated']);
+    const allowed = new Set(alsoIds);
     return (data.voices ?? [])
       .filter((v) => v.category && own.has(v.category))
+      .filter((v) => v.labels?.ps_owner === ownerId || allowed.has(v.voice_id))
       .map((v) => ({ voiceId: v.voice_id, name: v.name }));
   } catch {
     return [];

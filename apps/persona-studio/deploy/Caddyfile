@@ -1,0 +1,28 @@
+{$DOMAIN} {
+	encode zstd gzip
+
+	# Public media (avatars, covers, montages, carousel PNGs) straight from the S3 store.
+	handle_path /media/* {
+		rewrite * /persona-studio-media{uri}
+		reverse_proxy s3:8333
+	}
+
+	# Auto-deploy status (commit + result only, written by deploy/autodeploy.sh).
+	handle_path /__status/* {
+		root * /srv/status
+		file_server
+	}
+
+	handle {
+		reverse_proxy web:3020 {
+			transport http {
+				read_timeout 15m
+				write_timeout 15m
+			}
+		}
+	}
+}
+
+# Other projects on this server drop their site blocks into /opt/edge/sites
+# (e.g. transcribe.caddy) and join the `edge` Docker network.
+import /etc/caddy/sites/*.caddy

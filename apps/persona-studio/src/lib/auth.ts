@@ -22,6 +22,19 @@ if (process.env.EMAIL_SERVER_HOST) {
       from: process.env.EMAIL_FROM ?? 'noreply@persona-studio.local',
     }),
   );
+} else if (process.env.AUTH_LOG_MAGIC_LINKS === 'true') {
+  // Fresh server without SMTP yet: the sign-in link is written to the web
+  // container log instead of being emailed (`docker compose logs web | grep
+  // magic-link`). Only whoever can read server logs can use it.
+  providers.push(
+    Nodemailer({
+      server: 'smtp://localhost:25',
+      from: 'noreply@persona-studio.local',
+      async sendVerificationRequest({ identifier, url }) {
+        console.log(`[auth] magic-link for ${identifier}: ${url}`);
+      },
+    }),
+  );
 }
 
 if (process.env.AUTH_GOOGLE_ID && process.env.AUTH_GOOGLE_SECRET) {

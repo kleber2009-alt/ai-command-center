@@ -1,6 +1,7 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { getCurrentUserOrApiKey } from '@/lib/auth';
 import { prisma } from '@/lib/prisma';
+import { fetchMedia } from '@/lib/storage';
 
 export const runtime = 'nodejs';
 
@@ -29,7 +30,7 @@ export async function GET(req: NextRequest, { params }: { params: Promise<{ id: 
 
   let src: Response;
   try {
-    src = await fetch(video.videoUrl, {
+    src = await fetchMedia(video.videoUrl, {
       headers: rangeHeader ? { range: rangeHeader } : undefined,
       signal: AbortSignal.timeout(DOWNLOAD_TIMEOUT_MS),
     });

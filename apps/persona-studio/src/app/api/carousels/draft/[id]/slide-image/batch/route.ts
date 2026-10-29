@@ -29,6 +29,7 @@ import { slideImageQueue } from '@/lib/queue';
 import { chargeTokens, InsufficientTokensError, COSTS } from '@/lib/tokens';
 import { patchSlideStatus, type SlideImageMode } from '@/lib/carousel/image-gen';
 import { isValidCoverType, type CoverType } from '@/lib/carousel/prompts';
+import { kieConfigured, PROVIDER_NOT_CONFIGURED } from '@/lib/providers';
 
 export const runtime = 'nodejs';
 export const maxDuration = 60;
@@ -80,6 +81,7 @@ function decideMode(
 export async function POST(req: NextRequest, ctx: { params: Promise<{ id: string }> }) {
   const auth = await getCurrentUserOrApiKey(req);
   if (!auth) return NextResponse.json({ error: 'UNAUTHORIZED' }, { status: 401 });
+  if (!kieConfigured()) return NextResponse.json(PROVIDER_NOT_CONFIGURED, { status: 503 });
   const user = auth.user;
   const { id } = await ctx.params;
 

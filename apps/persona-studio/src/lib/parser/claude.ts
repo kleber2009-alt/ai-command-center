@@ -9,9 +9,10 @@ import {
   buildSlideRegenPrompt,
 } from '@/lib/carousel/prompts';
 import { DEFAULT_STYLE, isValidStyle, type CarouselStyleId } from '@/lib/carousel/styles';
+import { ANTHROPIC_BASE, OPENAI_BASE } from '@/lib/provider-urls';
 
-const ANTHROPIC_API = 'https://api.anthropic.com/v1/messages';
-const OPENAI_API = 'https://api.openai.com/v1/chat/completions';
+const ANTHROPIC_API = `${ANTHROPIC_BASE}/v1/messages`;
+const OPENAI_API = `${OPENAI_BASE}/v1/chat/completions`;
 const MAX_ATTEMPTS = 3;
 const BASE_BACKOFF_MS = 1000;
 const MAX_BACKOFF_MS = 8000;

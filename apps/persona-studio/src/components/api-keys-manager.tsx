@@ -1,6 +1,9 @@
 'use client';
 
 import { useState } from 'react';
+import { Check, Copy, EyeOff, KeyRound, RefreshCw } from 'lucide-react';
+import { Icon3D } from '@/components/ui/icon3d';
+import { errorText, exceptionText } from '@/lib/error-text';
 
 type ApiKeyRow = {
   id: string;
@@ -33,7 +36,7 @@ export function ApiKeysManager({ initialKeys }: { initialKeys: ApiKeyRow[] }) {
       });
       const j = (await res.json()) as CreatedKey | { error: string };
       if (!res.ok || 'error' in j) {
-        setError('error' in j ? j.error : `failed_${res.status}`);
+        setError(errorText('error' in j ? j : null, res.status));
         return;
       }
       setJustCreated(j);
@@ -51,7 +54,7 @@ export function ApiKeysManager({ initialKeys }: { initialKeys: ApiKeyRow[] }) {
       ]);
       setName('');
     } catch (e) {
-      setError(String(e));
+      setError(exceptionText(e));
     } finally {
       setBusy(false);
     }
@@ -69,95 +72,102 @@ export function ApiKeysManager({ initialKeys }: { initialKeys: ApiKeyRow[] }) {
 
   return (
     <div className="grid gap-6">
-      <form onSubmit={create} className="grid gap-3 sm:grid-cols-[1fr_auto] items-end">
-        <label className="grid gap-1">
-          <span className="label">Key name</span>
+      <form onSubmit={create} className="panel p-5 grid gap-3 sm:grid-cols-[1fr_auto] items-end reveal">
+        <label className="grid gap-1.5">
+          <span className="label">Название ключа</span>
           <input
             className="input"
             value={name}
             onChange={(e) => setName(e.target.value)}
-            placeholder="my-app / production / staging…"
+            placeholder="моё-приложение / прод / тест…"
             maxLength={80}
           />
         </label>
         <button type="submit" className="btn-primary" disabled={busy}>
-          {busy ? 'Creating…' : 'Create key →'}
+          {busy ? <RefreshCw className="h-4 w-4 animate-spin" /> : <KeyRound className="h-4 w-4" />}
+          {busy ? 'Создаём…' : 'Создать ключ'}
         </button>
       </form>
 
       {error && (
-        <div className="mono text-[11px] text-pink tracking-wider">/ERROR — {error}</div>
+        <div className="rounded-2xl border border-pink/40 bg-pink/[0.06] px-4 py-2.5 text-[13px] text-pink fade-in">{error}</div>
       )}
 
       {justCreated && (
-        <div className="border border-lime bg-surface p-4 grid gap-3">
-          <div className="mono text-[10px] tracking-widest uppercase text-lime">
-            ✓ key created — copy now, it will not be shown again
+        <div className="panel !border-lime/40 !bg-lime/[0.05] p-5 grid gap-3 pop-in">
+          <div className="flex items-center gap-2 text-[13px] font-semibold text-lime">
+            <Check className="h-4 w-4" />
+            ключ создан — скопируй сейчас, больше он не покажется
           </div>
-          <div className="grid gap-2">
-            <code className="mono text-[12px] break-all bg-bg border border-border p-3">
+          <div className="grid gap-2.5">
+            <code className="font-mono text-[12.5px] break-all rounded-2xl border border-border-soft bg-black/30 p-3.5 text-text">
               {justCreated.plaintext}
             </code>
-            <div className="flex items-center gap-3">
+            <div className="flex items-center gap-2">
               <button
                 type="button"
-                className="btn-ghost"
-                onClick={() => navigator.clipboard.writeText(justCreated.plaintext)}
+                className="btn-ghost !px-4 !py-2 !text-[13px]"
+                onClick={() => navigator.clipboard.writeText(justCreated.plaintext).catch(() => {})}
               >
-                ⎘ copy
+                <Copy className="h-4 w-4" />
+                копировать
               </button>
               <button
                 type="button"
-                className="btn-ghost"
+                className="btn-ghost !px-4 !py-2 !text-[13px]"
                 onClick={() => setJustCreated(null)}
               >
-                hide
+                <EyeOff className="h-4 w-4" />
+                скрыть
               </button>
             </div>
           </div>
         </div>
       )}
 
-      <div className="grid gap-[2px] bg-border border border-border">
-        <div className="bg-bg p-3 grid grid-cols-[1fr_auto_auto_auto_auto] gap-4 mono text-[10px] tracking-widest uppercase text-text-mute">
-          <span>name · prefix</span>
-          <span>scopes</span>
-          <span>last used</span>
-          <span>created</span>
+      <div className="panel overflow-x-auto">
+        <div className="min-w-[560px]">
+        <div className="px-5 py-3 grid grid-cols-[1fr_auto_auto_auto_auto] gap-4 border-b border-border-soft label">
+          <span>название · префикс</span>
+          <span>доступ</span>
+          <span>использован</span>
+          <span>создан</span>
           <span></span>
         </div>
         {keys.length === 0 && (
-          <div className="bg-bg p-6 font-serif italic text-[13px] text-text-dim text-center">
+          <div className="p-8 flex flex-col items-center gap-3 text-[14px] text-text-dim text-center">
+            <Icon3D name="keys" size={36} tile />
             Пока нет ключей. Создай первый — и используй его в SDK / curl.
           </div>
         )}
         {keys.map((k) => (
           <div
             key={k.id}
-            className="bg-bg p-3 grid grid-cols-[1fr_auto_auto_auto_auto] gap-4 items-center"
+            className="px-5 py-3 grid grid-cols-[1fr_auto_auto_auto_auto] gap-4 items-center border-b border-border-soft last:border-b-0 transition-colors hover:bg-white/[0.03]"
           >
             <div className="grid gap-0.5 min-w-0">
-              <span className={`font-serif text-[14px] ${k.revokedAt ? 'line-through text-text-mute' : ''}`}>
+              <span className={`text-[14px] font-medium ${k.revokedAt ? 'line-through text-text-mute' : 'text-text'}`}>
                 {k.name}
               </span>
-              <code className="mono text-[10px] text-text-mute truncate">{k.prefix}…</code>
+              <code className="font-mono text-[11px] text-text-mute truncate">{k.prefix}…</code>
             </div>
-            <span className="mono text-[10px] tracking-wider text-text-dim uppercase">{k.scopes}</span>
-            <span className="mono text-[10px] tracking-wider text-text-dim">
+            <span className="rounded-full bg-white/[0.06] px-2.5 py-0.5 text-[11px] font-medium uppercase tracking-[0.04em] text-text-dim">{k.scopes}</span>
+            <span className="text-[12px] tabular-nums text-text-dim">
               {k.lastUsedAt ? new Date(k.lastUsedAt).toISOString().slice(0, 10) : '—'}
             </span>
-            <span className="mono text-[10px] tracking-wider text-text-dim">
+            <span className="text-[12px] tabular-nums text-text-dim">
               {new Date(k.createdAt).toISOString().slice(0, 10)}
             </span>
             {k.revokedAt ? (
-              <span className="mono text-[10px] tracking-widest uppercase text-text-mute">revoked</span>
+              <span className="status-badge text-text-mute">отозван</span>
             ) : (
-              <button onClick={() => revoke(k.id)} className="btn-ghost text-[11px]">
-                revoke
+              <button type="button" onClick={() => revoke(k.id)} className="btn-ghost !px-3.5 !py-1.5 !text-[12px] hover:!text-pink hover:!border-pink/40">
+                отозвать
               </button>
             )}
           </div>
         ))}
+        </div>
       </div>
     </div>
   );

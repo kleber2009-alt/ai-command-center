@@ -16,42 +16,42 @@ export const NAV_GROUPS: NavGroup[] = [
     label: 'Создать',
     key: 'create',
     items: [
-      { href: '/generate', label: 'Generate', key: 'generate', hint: '1 фото → 10 аватаров' },
-      { href: '/voice', label: 'Voice', key: 'voice', hint: 'обучение голоса' },
+      { href: '/generate', label: 'Генерация', key: 'generate', hint: '1 фото → 10 аватаров' },
+      { href: '/voice', label: 'Голос', key: 'voice', hint: 'обучение голоса' },
     ],
   },
   {
     label: 'Контент',
     key: 'content',
     items: [
-      { href: '/avatars', label: 'Avatars', key: 'avatars', hint: 'все батчи' },
-      { href: '/covers', label: 'Covers', key: 'covers', hint: 'обложки карусели' },
-      { href: '/carousels', label: 'Carousels', key: 'carousels', hint: 'слайды' },
-      { href: '/videos', label: 'Videos', key: 'videos', hint: 'talking-photo' },
+      { href: '/avatars', label: 'Аватары', key: 'avatars', hint: 'все батчи' },
+      { href: '/covers', label: 'Обложки', key: 'covers', hint: 'обложки карусели' },
+      { href: '/carousels', label: 'Карусели', key: 'carousels', hint: 'слайды' },
+      { href: '/videos', label: 'Видео', key: 'videos', hint: 'говорящее фото' },
       { href: '/montage', label: 'Скиллы монтажа', key: 'skill-montage', hint: 'стили рилсов' },
-      { href: '/edits', label: 'Montage', key: 'edits', hint: 'Submagic-монтаж' },
+      { href: '/edits', label: 'Монтаж', key: 'edits', hint: 'Submagic-монтаж' },
     ],
   },
   {
     label: 'Источники',
     key: 'sources',
     items: [
-      { href: '/parser', label: 'Parser', key: 'parser', hint: 'IG-конкуренты' },
+      { href: '/parser', label: 'Парсер', key: 'parser', hint: 'IG-конкуренты' },
     ],
   },
   {
     label: 'Автопостинг',
     key: 'automation',
     items: [
-      { href: '/schedule', label: 'Schedule', key: 'schedule', hint: 'план и автопостинг' },
+      { href: '/schedule', label: 'Расписание', key: 'schedule', hint: 'план и автопостинг' },
     ],
   },
   {
     label: 'Аккаунт',
     key: 'account',
     items: [
-      { href: '/billing', label: 'Billing', key: 'billing', hint: 'токены и история' },
-      { href: '/settings/keys', label: 'API keys', key: 'keys', hint: 'SDK-доступ' },
+      { href: '/billing', label: 'Оплата', key: 'billing', hint: 'токены и история' },
+      { href: '/settings/keys', label: 'API-ключи', key: 'keys', hint: 'SDK-доступ' },
     ],
   },
 ];
@@ -82,7 +82,7 @@ export function TopNav({ email, balance, isAdmin }: Props) {
             href="/dashboard"
             className="px-3 py-2 text-text-dim hover:text-text transition-colors"
           >
-            Dashboard
+            Главная
           </Link>
           {NAV_GROUPS.map((g) => (
             <GroupDropdown key={g.key} group={g} />
@@ -92,7 +92,7 @@ export function TopNav({ email, balance, isAdmin }: Props) {
               href="/admin"
               className="px-3 py-2 text-pink hover:text-text transition-colors"
             >
-              Admin
+              Админка
             </Link>
           )}
         </nav>
@@ -100,14 +100,14 @@ export function TopNav({ email, balance, isAdmin }: Props) {
         <div className="flex items-center gap-2 sm:gap-3 shrink-0">
           {/* Token balance — visible on every screen */}
           <Link href="/billing" className="flex flex-col items-end leading-tight hover:opacity-80">
-            <span className="mono text-[8px] sm:text-[9px] tracking-[0.18em] sm:tracking-[0.22em] text-text-mute uppercase">tokens</span>
+            <span className="mono text-[8px] sm:text-[9px] tracking-[0.18em] sm:tracking-[0.22em] text-text-mute uppercase">токены</span>
             <span className="font-serif text-[16px] sm:text-[20px] text-lime">{balance}</span>
           </Link>
 
           {/* Desktop sign-out */}
           <form action={doSignOut} className="hidden md:block">
             <button className="btn-ghost" type="submit" title={email}>
-              Sign out
+              Выйти
             </button>
           </form>
 

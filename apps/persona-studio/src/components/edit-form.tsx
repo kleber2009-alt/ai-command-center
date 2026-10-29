@@ -2,9 +2,11 @@
 
 import { useEffect, useMemo, useRef, useState } from 'react';
 import { useRouter } from 'next/navigation';
-import { STYLE_TEMPLATES, SUBTITLE_LANGUAGES, previewUrl } from '@/lib/edit-templates';
+import { STYLE_TEMPLATES, SUBTITLE_LANGUAGES, previewUrl, templateSlug } from '@/lib/edit-templates';
+import { ArrowRight, ChevronDown, Loader2, Search, X } from 'lucide-react';
 import { Popover } from './popover';
 import { EditsStepper } from './edits-stepper';
+import { exceptionText } from '@/lib/error-text';
 
 type SourceVideo = {
   id: string;
@@ -30,10 +32,13 @@ export function EditForm({
   videos,
   initialVideoId,
   cost,
+  previews = [],
 }: {
   videos: SourceVideo[];
   initialVideoId?: string;
   cost: number;
+  /** Slugs that have a shipped /template-previews/<slug>.jpg — others use the gradient. */
+  previews?: string[];
 }) {
   const router = useRouter();
 
@@ -128,7 +133,7 @@ export function EditForm({
       router.push(`/edits?focus=${body.id}`);
       router.refresh();
     } catch (e) {
-      setError(e instanceof Error ? e.message : String(e));
+      setError(exceptionText(e));
     } finally {
       setBusy(false);
     }
@@ -139,10 +144,10 @@ export function EditForm({
       {/* Stepper */}
       <EditsStepper steps={steps} activeKey={activeStep} onJump={(k) => setActiveStep(k as StepKey)} />
 
-      <div className="grid lg:grid-cols-[1fr_380px] gap-5 items-start">
+      <div className="grid items-start gap-6 lg:grid-cols-[1fr_380px]">
         {/* PREVIEW */}
         <section className="relative">
-          <div className={`relative ${aspectClass} max-h-[calc(100vh-220px)] mx-auto bg-bg border border-border overflow-hidden`}>
+          <div className={`relative ${aspectClass} mx-auto max-h-[calc(100vh-220px)] overflow-hidden rounded-[24px] border border-border-soft bg-bg shadow-glass`}>
             {selected?.videoUrl ? (
               <video
                 src={selected.videoUrl}
@@ -160,35 +165,35 @@ export function EditForm({
                 style={{
                   background: selected?.avatar?.imageUrl
                     ? `linear-gradient(180deg, rgba(8,8,8,0) 0%, rgba(8,8,8,0.7) 100%), url(${selected.avatar.imageUrl})`
-                    : 'linear-gradient(170deg, #0a1820 0%, #051018 100%)',
+                    : 'linear-gradient(170deg, rgba(31,123,255,0.22) 0%, rgba(11,11,13,1) 100%)',
                   backgroundSize: 'cover',
                   backgroundPosition: 'center',
                 }}
               />
             )}
             {/* Overlay summary */}
-            <div className="absolute top-2 left-2 right-2 flex items-start justify-between gap-2">
-              <span className="mono text-[9px] tracking-widest uppercase font-bold bg-bg/80 backdrop-blur px-2 py-1">
-                /preview · {selected?.aspect ?? '9:16'}
+            <div className="absolute left-3 right-3 top-3 flex items-start justify-between gap-2">
+              <span className="rounded-full bg-bg/75 px-2.5 py-1 text-[11px] font-semibold text-text backdrop-blur">
+                /превью · {selected?.aspect ?? '9:16'}
               </span>
-              <span className="mono text-[9px] tracking-widest uppercase font-bold bg-bg/80 backdrop-blur px-2 py-1 text-lime">
+              <span className="rounded-full bg-blue px-2.5 py-1 text-[11px] font-semibold text-white">
                 {preset?.name ?? template}
               </span>
             </div>
-            <div className="absolute bottom-2 left-2 right-2 flex items-end justify-between gap-2 pointer-events-none">
+            <div className="pointer-events-none absolute bottom-3 left-3 right-3 flex items-end justify-between gap-2">
               <div className="flex flex-wrap gap-1.5">
                 {subtitlesEnabled && (
-                  <span className="mono text-[9px] tracking-widest uppercase bg-bg/80 backdrop-blur px-2 py-1">
-                    cc · {subtitleLanguage.toUpperCase()}
+                  <span className="rounded-full bg-bg/75 px-2.5 py-1 text-[11px] font-semibold uppercase text-text backdrop-blur">
+                    субт. · {subtitleLanguage.toUpperCase()}
                   </span>
                 )}
                 {brollsEnabled && (
-                  <span className="mono text-[9px] tracking-widest uppercase bg-lime/85 text-bg backdrop-blur px-2 py-1 font-bold">
-                    B-rolls
+                  <span className="rounded-full bg-lime px-2.5 py-1 text-[11px] font-semibold text-bg">
+                    перебивки
                   </span>
                 )}
               </div>
-              <span className="mono text-[9px] tracking-widest uppercase text-text-mute bg-bg/80 backdrop-blur px-2 py-1">
+              <span className="rounded-full bg-bg/75 px-2.5 py-1 text-[11px] text-text-dim backdrop-blur">
                 {selected?.avatar?.styleLabel ?? '—'}
               </span>
             </div>
@@ -196,7 +201,7 @@ export function EditForm({
         </section>
 
         {/* RIGHT COLUMN — карточки + CTA */}
-        <aside className="grid gap-2.5">
+        <aside className="stagger grid gap-3">
           {/* CARD 1 — Видео */}
           <div className="relative">
             <button
@@ -206,26 +211,30 @@ export function EditForm({
                 setActiveStep('video');
                 setOpenCard((c) => (c === 'video' ? null : 'video'));
               }}
-              className={`w-full text-left border bg-surface px-3 py-2.5 hover:border-border-2 transition-colors ${
-                activeStep === 'video' ? 'border-lime' : 'border-border'
+              className={`w-full rounded-[20px] border px-4 py-3 text-left backdrop-blur-xl transition-colors ${
+                activeStep === 'video'
+                  ? 'border-gold/60 bg-blue/[0.10] shadow-glow'
+                  : 'border-border-soft bg-white/[0.05] hover:border-border-2 hover:bg-white/[0.08]'
               }`}
             >
               <div className="flex items-center justify-between gap-2">
-                <div className="grid gap-0.5 min-w-0">
-                  <span className="mono text-[9px] tracking-widest uppercase text-text-mute">01 · Видео</span>
-                  <span className="font-serif text-[14px] truncate">
+                <div className="grid min-w-0 gap-1">
+                  <span className="label">01 · Видео</span>
+                  <span className="truncate text-[15px] font-medium">
                     {selected?.avatar?.styleLabel ?? '—'} · {selected ? selected.id.slice(0, 6) : '—'}
                   </span>
                 </div>
-                <span className="mono text-[10px] text-text-dim shrink-0">▾</span>
+                <ChevronDown size={16} className="shrink-0 text-text-mute" />
               </div>
             </button>
             <Popover open={openCard === 'video'} onClose={() => setOpenCard(null)} anchorRef={videoRef} width={320}>
-              <div className="p-3 border-b border-border flex items-center justify-between">
-                <span className="mono text-[10px] tracking-widest uppercase">Видео · {videos.length}</span>
-                <button onClick={() => setOpenCard(null)} className="mono text-[14px] text-text-mute hover:text-text">×</button>
+              <div className="flex items-center justify-between border-b border-border-soft px-4 py-2.5">
+                <span className="label">Видео · {videos.length}</span>
+                <button type="button" onClick={() => setOpenCard(null)} aria-label="Закрыть" className="flex h-7 w-7 items-center justify-center rounded-full text-text-mute transition-colors hover:bg-white/[0.08] hover:text-text">
+                  <X size={14} />
+                </button>
               </div>
-              <div className="p-2 max-h-[320px] overflow-auto grid grid-cols-3 gap-1.5">
+              <div className="grid max-h-[320px] grid-cols-3 gap-1.5 overflow-auto p-2">
                 {videos.map((v) => {
                   const active = v.id === videoId;
                   return (
@@ -237,8 +246,8 @@ export function EditForm({
                         setOpenCard(null);
                         setActiveStep('style');
                       }}
-                      className={`relative aspect-square overflow-hidden border ${
-                        active ? 'border-lime ring-2 ring-lime' : 'border-border hover:border-border-2'
+                      className={`relative aspect-square overflow-hidden rounded-xl ${
+                        active ? 'ring-2 ring-gold' : 'ring-1 ring-border-soft hover:ring-border-2'
                       }`}
                     >
                       {v.videoUrl ? (
@@ -256,7 +265,7 @@ export function EditForm({
                           style={{
                             background: v.avatar?.imageUrl
                               ? `url(${v.avatar.imageUrl}) center/cover`
-                              : 'linear-gradient(170deg, #0a1820, #051018)',
+                              : 'linear-gradient(170deg, rgba(31,123,255,0.22), rgba(11,11,13,1))',
                           }}
                         />
                       )}
@@ -276,36 +285,43 @@ export function EditForm({
                 setActiveStep('style');
                 setOpenCard((c) => (c === 'style' ? null : 'style'));
               }}
-              className={`w-full text-left border bg-surface px-3 py-2.5 hover:border-border-2 transition-colors ${
-                activeStep === 'style' ? 'border-lime' : 'border-border'
+              className={`w-full rounded-[20px] border px-4 py-3 text-left backdrop-blur-xl transition-colors ${
+                activeStep === 'style'
+                  ? 'border-gold/60 bg-blue/[0.10] shadow-glow'
+                  : 'border-border-soft bg-white/[0.05] hover:border-border-2 hover:bg-white/[0.08]'
               }`}
             >
               <div className="flex items-center justify-between gap-2">
-                <div className="grid gap-0.5 min-w-0">
-                  <span className="mono text-[9px] tracking-widest uppercase text-text-mute">02 · Стиль</span>
-                  <span className="font-serif text-[14px] truncate">
+                <div className="grid min-w-0 gap-1">
+                  <span className="label">02 · Стиль</span>
+                  <span className="truncate text-[15px] font-medium">
                     {preset?.name ?? template}
                     {preset && (
                       <span className="text-text-mute text-[12px]"> · {preset.tags.slice(0, 2).join(', ')}</span>
                     )}
                   </span>
                 </div>
-                <span className="mono text-[10px] text-text-dim shrink-0">▾</span>
+                <ChevronDown size={16} className="shrink-0 text-text-mute" />
               </div>
             </button>
             <Popover open={openCard === 'style'} onClose={() => setOpenCard(null)} anchorRef={styleRef} width={360}>
-              <div className="p-3 border-b border-border flex items-center gap-2">
-                <input
+              <div className="flex items-center gap-2 border-b border-border-soft p-2.5">
+                <div className="relative flex-1">
+                  <Search size={14} className="pointer-events-none absolute left-3.5 top-1/2 -translate-y-1/2 text-text-mute" />
+                  <input
                   type="search"
                   value={styleQuery}
                   onChange={(ev) => setStyleQuery(ev.target.value)}
                   placeholder="имя или тег…"
                   autoFocus
-                  className="flex-1 bg-bg border border-border px-2 py-1.5 mono text-[11px]"
+                  className="input !rounded-full !py-2 !pl-9 text-[13px]"
                 />
-                <button onClick={() => setOpenCard(null)} className="mono text-[14px] text-text-mute hover:text-text">×</button>
+                </div>
+                <button type="button" onClick={() => setOpenCard(null)} aria-label="Закрыть" className="flex h-7 w-7 shrink-0 items-center justify-center rounded-full text-text-mute transition-colors hover:bg-white/[0.08] hover:text-text">
+                  <X size={14} />
+                </button>
               </div>
-              <div className="p-2 max-h-[360px] overflow-auto grid grid-cols-3 gap-1.5">
+              <div className="grid max-h-[360px] grid-cols-3 gap-1.5 overflow-auto p-2">
                 {filteredStyles.map((t) => {
                   const active = t.name === template;
                   return (
@@ -317,23 +333,25 @@ export function EditForm({
                         setOpenCard(null);
                         setActiveStep('language');
                       }}
-                      className={`relative aspect-[4/5] overflow-hidden border text-left ${
-                        active ? 'border-lime ring-2 ring-lime' : 'border-border hover:border-border-2'
+                      className={`relative aspect-[4/5] overflow-hidden rounded-xl text-left ${
+                        active ? 'ring-2 ring-gold' : 'ring-1 ring-border-soft hover:ring-border-2'
                       }`}
                     >
                       <div className="absolute inset-0" style={{ background: gradientFor(t.name) }} />
-                      {/* eslint-disable-next-line @next/next/no-img-element */}
-                      <img
-                        src={previewUrl(t.name)}
-                        alt=""
-                        loading="lazy"
-                        onError={(ev) => ((ev.currentTarget as HTMLImageElement).style.display = 'none')}
-                        className="absolute inset-0 w-full h-full object-cover"
-                      />
+                      {previews.includes(templateSlug(t.name)) && (
+                        // eslint-disable-next-line @next/next/no-img-element
+                        <img
+                          src={previewUrl(t.name)}
+                          alt=""
+                          loading="lazy"
+                          onError={(ev) => ((ev.currentTarget as HTMLImageElement).style.display = 'none')}
+                          className="absolute inset-0 w-full h-full object-cover"
+                        />
+                      )}
                       <div className="absolute inset-0 bg-gradient-to-t from-black/85 via-transparent to-transparent" />
                       <div className="absolute inset-x-0 bottom-0 p-1.5">
-                        <div className="font-serif italic text-[12px] leading-tight">{t.name}</div>
-                        <div className="mono text-[7.5px] tracking-widest text-text-mute line-clamp-1">
+                        <div className="text-[12px] font-semibold leading-tight">{t.name}</div>
+                        <div className="line-clamp-1 text-[9px] text-text-dim">
                           {t.tags.join(' · ')}
                         </div>
                       </div>
@@ -341,7 +359,7 @@ export function EditForm({
                   );
                 })}
                 {filteredStyles.length === 0 && (
-                  <div className="col-span-full p-6 text-center mono text-[11px] text-text-mute">
+                  <div className="col-span-full p-6 text-center text-[13px] text-text-mute">
                     Ничего не найдено
                   </div>
                 )}
@@ -358,23 +376,25 @@ export function EditForm({
                 setActiveStep('language');
                 setOpenCard((c) => (c === 'language' ? null : 'language'));
               }}
-              className={`w-full text-left border bg-surface px-3 py-2.5 hover:border-border-2 transition-colors ${
-                activeStep === 'language' ? 'border-lime' : 'border-border'
+              className={`w-full rounded-[20px] border px-4 py-3 text-left backdrop-blur-xl transition-colors ${
+                activeStep === 'language'
+                  ? 'border-gold/60 bg-blue/[0.10] shadow-glow'
+                  : 'border-border-soft bg-white/[0.05] hover:border-border-2 hover:bg-white/[0.08]'
               }`}
             >
               <div className="flex items-center justify-between gap-2">
-                <div className="grid gap-0.5 min-w-0">
-                  <span className="mono text-[9px] tracking-widest uppercase text-text-mute">03 · Язык субтитров</span>
-                  <span className="font-serif text-[14px] truncate">
+                <div className="grid min-w-0 gap-1">
+                  <span className="label">03 · Язык субтитров</span>
+                  <span className="truncate text-[15px] font-medium">
                     {lang?.label ?? subtitleLanguage}
                     <span className="text-text-mute text-[12px]"> · {subtitleLanguage.toUpperCase()}</span>
                   </span>
                 </div>
-                <span className="mono text-[10px] text-text-dim shrink-0">▾</span>
+                <ChevronDown size={16} className="shrink-0 text-text-mute" />
               </div>
             </button>
             <Popover open={openCard === 'language'} onClose={() => setOpenCard(null)} anchorRef={langRef} width={220}>
-              <ul className="py-1 max-h-[280px] overflow-auto">
+              <ul className="max-h-[280px] overflow-auto p-1">
                 {SUBTITLE_LANGUAGES.map((l) => {
                   const active = l.code === subtitleLanguage;
                   return (
@@ -386,12 +406,12 @@ export function EditForm({
                           setOpenCard(null);
                           setActiveStep('options');
                         }}
-                        className={`w-full text-left px-3 py-2 mono text-[12px] flex items-center justify-between hover:bg-surface ${
-                          active ? 'text-lime' : 'text-text'
+                        className={`flex w-full items-center justify-between rounded-xl px-3 py-2 text-left text-[13px] transition-colors ${
+                          active ? 'bg-blue/[0.14] text-gold' : 'text-text hover:bg-white/[0.06]'
                         }`}
                       >
                         <span>{l.label}</span>
-                        <span className="text-text-mute text-[10px] tracking-widest">{l.code.toUpperCase()}</span>
+                        <span className="text-[11px] font-medium text-text-mute">{l.code.toUpperCase()}</span>
                       </button>
                     </li>
                   );
@@ -409,46 +429,48 @@ export function EditForm({
                 setActiveStep('options');
                 setOpenCard((c) => (c === 'options' ? null : 'options'));
               }}
-              className={`w-full text-left border bg-surface px-3 py-2.5 hover:border-border-2 transition-colors ${
-                activeStep === 'options' ? 'border-lime' : 'border-border'
+              className={`w-full rounded-[20px] border px-4 py-3 text-left backdrop-blur-xl transition-colors ${
+                activeStep === 'options'
+                  ? 'border-gold/60 bg-blue/[0.10] shadow-glow'
+                  : 'border-border-soft bg-white/[0.05] hover:border-border-2 hover:bg-white/[0.08]'
               }`}
             >
               <div className="flex items-center justify-between gap-2">
-                <div className="grid gap-0.5 min-w-0">
-                  <span className="mono text-[9px] tracking-widest uppercase text-text-mute">04 · Опции</span>
-                  <span className="font-serif text-[14px] truncate">
-                    {subtitlesEnabled ? 'CC on' : 'CC off'} · {brollsEnabled ? <span className="text-lime">B-rolls on</span> : 'B-rolls off'}
+                <div className="grid min-w-0 gap-1">
+                  <span className="label">04 · Опции</span>
+                  <span className="truncate text-[15px] font-medium">
+                    {subtitlesEnabled ? 'субтитры вкл' : 'субтитры выкл'} · {brollsEnabled ? <span className="text-lime">перебивки вкл</span> : 'перебивки выкл'}
                   </span>
                 </div>
-                <span className="mono text-[10px] text-text-dim shrink-0">▾</span>
+                <ChevronDown size={16} className="shrink-0 text-text-mute" />
               </div>
             </button>
             <Popover open={openCard === 'options'} onClose={() => setOpenCard(null)} anchorRef={optionsRef} width={300}>
-              <div className="p-3 grid gap-3">
-                <label className="flex items-start gap-3 cursor-pointer">
+              <div className="grid gap-3 p-4">
+                <label className="flex cursor-pointer items-start gap-3">
                   <input
                     type="checkbox"
                     checked={subtitlesEnabled}
                     onChange={(ev) => setSubtitlesEnabled(ev.target.checked)}
-                    className="w-4 h-4 mt-0.5"
+                    className="toggle"
                   />
-                  <div className="grid gap-1 min-w-0">
-                    <span className="mono text-[11px] tracking-widest uppercase">Субтитры</span>
-                    <span className="font-serif italic text-[11.5px] text-text-dim">
-                      Submagic всегда накладывает captions в стиле шаблона.
+                  <div className="grid min-w-0 gap-1">
+                    <span className="text-[14px] font-semibold">Субтитры</span>
+                    <span className="text-[12px] leading-snug text-text-dim">
+                      Submagic всегда накладывает субтитры в стиле шаблона.
                     </span>
                   </div>
                 </label>
-                <label className="flex items-start gap-3 cursor-pointer border-t border-border pt-3">
+                <label className="flex cursor-pointer items-start gap-3 border-t border-border-soft pt-3">
                   <input
                     type="checkbox"
                     checked={brollsEnabled}
                     onChange={(ev) => setBrollsEnabled(ev.target.checked)}
-                    className="w-4 h-4 mt-0.5"
+                    className="toggle"
                   />
-                  <div className="grid gap-1 min-w-0">
-                    <span className="mono text-[11px] tracking-widest uppercase">Magic B-rolls</span>
-                    <span className="font-serif italic text-[11.5px] text-text-dim">
+                  <div className="grid min-w-0 gap-1">
+                    <span className="text-[14px] font-semibold">Авто-перебивки</span>
+                    <span className="text-[12px] leading-snug text-text-dim">
                       Авто-вставка релевантных сток-кадров. +1–2 мин рендера.
                     </span>
                   </div>
@@ -458,21 +480,24 @@ export function EditForm({
           </div>
 
           {/* FOOTER */}
-          <div className="grid gap-2 mt-1">
+          <div className="mt-1 grid gap-3">
             {error && (
-              <div className="mono text-[11px] text-pink border border-pink/60 bg-pink/10 px-3 py-2">{error}</div>
+              <div className="rounded-2xl border border-danger/40 bg-danger/10 px-3.5 py-2.5 text-[13px] text-danger">{error}</div>
             )}
             <div className="flex items-center justify-between gap-3">
-              <span className="mono text-[10px] tracking-widest uppercase text-text-mute">
-                {cost} токенов · <kbd className="text-text-dim">⌘↵</kbd>
+              <span className="text-[13px] text-text-mute">
+                <span className="font-semibold tabular-nums text-text">{cost}</span> токенов ·{' '}
+                <kbd className="rounded-md border border-border-2 bg-white/[0.05] px-1.5 py-0.5 font-sans text-[11px] text-text-dim">⌘↵</kbd>
               </span>
               <button
                 type="button"
                 onClick={submit}
                 disabled={busy || !videoId}
-                className="btn-primary justify-center disabled:opacity-50 disabled:cursor-not-allowed"
+                className="btn-primary justify-center"
               >
-                {busy ? 'Запускаем…' : 'Запустить монтаж →'}
+                {busy && <Loader2 size={15} className="animate-spin" />}
+                {busy ? 'Запускаем…' : 'Запустить монтаж'}
+                {!busy && <ArrowRight size={15} />}
               </button>
             </div>
           </div>

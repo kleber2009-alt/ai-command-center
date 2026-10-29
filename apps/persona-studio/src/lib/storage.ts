@@ -56,6 +56,32 @@ export function keyFromPublicUrl(url: string): string | null {
   return decodeURIComponent(url.slice(base.length).split('?')[0]);
 }
 
+/**
+ * fetch() that reads our own media (URLs under S3_PUBLIC_URL) straight from S3.
+ * The public URL goes through the edge proxy and is often unreachable from
+ * inside the web/worker containers (hairpin NAT, DOMAIN=localhost, self-signed
+ * TLS). Any other URL is fetched as usual. Supports a `range` request header.
+ */
+export async function fetchMedia(url: string, init?: RequestInit): Promise<Response> {
+  const key = keyFromPublicUrl(url);
+  if (!key) return fetch(url, init);
+  const range = new Headers(init?.headers).get('range') ?? undefined;
+  try {
+    const obj = await s3.send(
+      new GetObjectCommand({ Bucket: bucket, Key: key, Range: range }),
+      { abortSignal: init?.signal ?? undefined },
+    );
+    const headers: Record<string, string> = { 'Content-Type': obj.ContentType ?? 'application/octet-stream' };
+    if (obj.ContentLength != null) headers['Content-Length'] = String(obj.ContentLength);
+    if (obj.ContentRange) headers['Content-Range'] = obj.ContentRange;
+    const body = obj.Body?.transformToWebStream() ?? null;
+    return new Response(body, { status: obj.ContentRange ? 206 : 200, headers });
+  } catch (e) {
+    const status = (e as { $metadata?: { httpStatusCode?: number } })?.$metadata?.httpStatusCode;
+    return new Response(null, { status: status && status >= 400 ? status : 502 });
+  }
+}
+
 export async function signedDownloadUrl(key: string, ttlSec = 60 * 10) {
   return getSignedUrl(s3, new GetObjectCommand({ Bucket: bucket, Key: key }), {
     expiresIn: ttlSec,

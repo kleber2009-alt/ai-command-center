@@ -12,7 +12,7 @@ export default function TmaPage() {
   return (
     <>
       <Script src="https://telegram.org/js/telegram-web-app.js?57" strategy="beforeInteractive" />
-      <main className="min-h-screen flex items-center justify-center px-6">
+      <main className="min-h-screen flex items-center justify-center px-4">
         <TmaBootstrap />
       </main>
     </>

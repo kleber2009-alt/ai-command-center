@@ -15,6 +15,12 @@
 //      public S3 mp4 itself, so no file streaming on our side.
 //   3. createReelPublication(...) — POST /publications, PENDING_PUBLICATION,
 //      publication_type=REELS, file_ids=[fileId]. Returns the publication id.
+//   4. createCarouselPublication(...) — Instagram carousel: one /upload/init per
+//      slide (images by URL), then publication_type=POST with all file_ids in
+//      slide order. The OpenAPI spec (CreatePublicationRequest →
+//      PublicationDetailEditRequest) types file_ids as an integer array
+//      (example [1001, 1002]); a multi-file Instagram POST is a carousel (only VK
+//      needs an explicit `vkontakte_carousel` flag). Instagram caps it at 10.
 //
 // Docs: https://help.postmypost.io/docs/api  ·  SDKs: github.com/postmypost
 //
@@ -44,7 +50,9 @@ const STATUS_PENDING_PUBLICATION = 5;
 // dashboard and never reaches Instagram on its own. We detect that and
 // auto-approve by re-submitting as pending_publication.
 const STATUS_APPROVAL = 12;
+const TYPE_POST = 1;
 const TYPE_REELS = 4;
+export const INSTAGRAM_CAROUSEL_MAX = 10;
 const UPLOAD_OK = 1;
 const UPLOAD_ERROR = 2;
 const CONNECTION_CONNECTED = 1;
@@ -161,7 +169,12 @@ export async function discoverInstagramAccounts(): Promise<AvailableIgAccount[]>
  * a publication. PostMyPost downloads the URL server-side; we poll until the
  * file is processed.
  */
-export async function uploadVideoByUrl(opts: {
+export async function uploadVideoByUrl(opts: Parameters<typeof uploadFileByUrl>[0]): Promise<number> {
+  return uploadFileByUrl(opts);
+}
+
+/** Upload any media (video or image) by public URL → PostMyPost file id. */
+export async function uploadFileByUrl(opts: {
   projectId: number;
   url: string;
   maxMs?: number;
@@ -206,14 +219,51 @@ export async function createReelPublication(opts: {
   caption?: string;
   postAt: Date;
 }): Promise<number> {
+  return createPublication({
+    projectId: opts.projectId,
+    accountId: opts.accountId,
+    caption: opts.caption,
+    postAt: opts.postAt,
+    detail: { publication_type: TYPE_REELS, file_ids: [opts.fileId], instagram_share_to_feed: true },
+  });
+}
+
+/**
+ * Create a scheduled Instagram carousel: a POST publication whose file_ids are
+ * the uploaded slides in order (2–10). Returns the publication id.
+ */
+export async function createCarouselPublication(opts: {
+  projectId: number;
+  accountId: number;
+  fileIds: number[];
+  caption?: string;
+  postAt: Date;
+}): Promise<number> {
+  if (opts.fileIds.length < 2 || opts.fileIds.length > INSTAGRAM_CAROUSEL_MAX) {
+    throw new PostMyPostError('CAROUSEL_SIZE', `Карусель Instagram — от 2 до ${INSTAGRAM_CAROUSEL_MAX} слайдов`);
+  }
+  return createPublication({
+    projectId: opts.projectId,
+    accountId: opts.accountId,
+    caption: opts.caption,
+    postAt: opts.postAt,
+    detail: { publication_type: TYPE_POST, file_ids: opts.fileIds },
+  });
+}
+
+async function createPublication(opts: {
+  projectId: number;
+  accountId: number;
+  caption?: string;
+  postAt: Date;
+  detail: { publication_type: number; file_ids: number[]; instagram_share_to_feed?: boolean };
+}): Promise<number> {
   // Body shared by the create (POST) and the auto-approve (PUT) — the update
   // endpoint replaces the publication, so it must carry the same fields.
   const detail = {
     account_id: opts.accountId,
-    publication_type: TYPE_REELS,
     content: opts.caption?.slice(0, 2200) ?? undefined,
-    file_ids: [opts.fileId],
-    instagram_share_to_feed: true,
+    ...opts.detail,
   };
   const body = {
     post_at: opts.postAt.toISOString(),

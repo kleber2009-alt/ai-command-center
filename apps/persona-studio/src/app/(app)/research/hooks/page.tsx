@@ -13,7 +13,8 @@ export default async function HooksPage() {
   return (
     <div className="grid gap-8">
       <PageHero
-        eyebrow="HOOK GALLERY · MILLIONS-OF-VIEWS"
+        icon="hooks"
+        eyebrow="ГАЛЕРЕЯ ХУКОВ · МИЛЛИОНЫ ПРОСМОТРОВ"
         title={
           <>
             Хуки, на которых <span className="italic text-gold">залетают рилсы.</span>

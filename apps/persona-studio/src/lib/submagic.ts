@@ -14,6 +14,7 @@
 // эмпирически: Bearer возвращает 401 UNAUTHORIZED, x-api-key — принимается).
 
 import { env } from './env';
+import { fetchMedia } from '@/lib/storage';
 
 export class SubmagicError extends Error {
   constructor(public code: string, message: string) {
@@ -98,7 +99,9 @@ export async function createProject(input: CreateProjectInput): Promise<Submagic
   return {
     id,
     status: ((data.status as string) ?? 'pending') as SubmagicProjectStatus,
-    downloadUrl: (data.downloadUrl as string) ?? (data.videoUrl as string) ?? null,
+    // No fallback to data.videoUrl: Submagic echoes the *source* URL there, so a
+    // missing downloadUrl must surface as SUBMAGIC_NO_URL, not the unedited video.
+    downloadUrl: (data.downloadUrl as string) ?? null,
   };
 }
 
@@ -114,7 +117,7 @@ export async function getProject(id: string): Promise<SubmagicProject> {
   return {
     id,
     status: ((data.status as string) ?? 'processing') as SubmagicProjectStatus,
-    downloadUrl: (data.downloadUrl as string) ?? (data.videoUrl as string) ?? null,
+    downloadUrl: (data.downloadUrl as string) ?? null,
     errorMessage: (data.errorMessage as string) ?? (data.error as string) ?? null,
   };
 }
@@ -134,7 +137,7 @@ export async function waitForProject(id: string): Promise<SubmagicProject> {
 }
 
 export async function downloadBytes(url: string): Promise<{ bytes: Buffer; mime: string }> {
-  const res = await fetch(url);
+  const res = await fetchMedia(url);
   if (!res.ok) {
     throw new SubmagicError(`SUBMAGIC_DOWNLOAD_${res.status}`, await readError(res));
   }

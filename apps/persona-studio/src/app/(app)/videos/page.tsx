@@ -1,5 +1,5 @@
-import Link from 'next/link';
 import { redirect } from 'next/navigation';
+import { ArrowDown } from 'lucide-react';
 import { getCurrentUser } from '@/lib/auth';
 import { prisma } from '@/lib/prisma';
 import { VideoCard } from '@/components/video-card';
@@ -7,7 +7,7 @@ import { EmptyState } from '@/components/empty-state';
 import { PageHero } from '@/components/shell/page-hero';
 
 export const dynamic = 'force-dynamic';
-export const metadata = { title: 'Videos — Persona Studio' };
+export const metadata = { title: 'Видео — Persona Studio' };
 
 export default async function VideosPage({ searchParams }: { searchParams: Promise<{ focus?: string }> }) {
   const user = await getCurrentUser();
@@ -30,28 +30,29 @@ export default async function VideosPage({ searchParams }: { searchParams: Promi
   return (
     <div className="grid gap-8">
       <PageHero
-        eyebrow="LIBRARY · VIDEOS"
+        eyebrow="БИБЛИОТЕКА · ВИДЕО"
         title={
           <>
-            Talking-photo <span className="italic text-gold">videos.</span>
+            Видео с <span className="italic">говорящим фото.</span>
           </>
         }
         description="HeyGen берёт выбранного аватара, оживляет губы под скрипт и выдаёт MP4 за 2–4 минуты."
         actions={
           selectedAvatar
             ? [
-                { label: `New video · ${selectedAvatar.styleLabel}`, href: `/videos/new?avatarId=${selectedAvatar.id}` },
-                { label: 'Montage →', href: '/edits', tone: 'ghost' },
+                { label: `Новое видео · ${selectedAvatar.styleLabel}`, href: `/videos/new?avatarId=${selectedAvatar.id}` },
+                { label: 'Монтаж', href: '/edits', tone: 'ghost' },
               ]
             : [
-                { label: 'Choose avatar', href: '/avatars' },
-                { label: 'Montage →', href: '/edits', tone: 'ghost' },
+                { label: 'Выбрать аватара', href: '/avatars' },
+                { label: 'Монтаж', href: '/edits', tone: 'ghost' },
               ]
         }
+        icon="videos"
         meta={
           <>
-            <div className="mono text-[9px] tracking-[0.28em] uppercase text-text-muted">Library</div>
-            <div className="font-serif text-[28px] text-gold leading-none">{videos.length}</div>
+            <div className="label">В библиотеке</div>
+            <div className="text-[40px] font-extrabold leading-none tracking-[-0.02em] tabular-nums text-gold">{videos.length}</div>
           </>
         }
       />
@@ -70,12 +71,12 @@ export default async function VideosPage({ searchParams }: { searchParams: Promi
           <EmptyState
             kind="need-avatar"
             title="Сначала выбери аватара, потом возвращайся."
-            description="Сними галочку «primary» на нужном портрете в списке аватаров — он станет лицом всех будущих видео."
+            description="Отметь нужный портрет основным в списке аватаров — он станет лицом всех будущих видео."
             cta={{ href: '/avatars', label: 'К аватарам' }}
           />
         )
       ) : (
-        <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4">
+        <div className="stagger grid grid-cols-1 gap-4 sm:grid-cols-2 lg:grid-cols-3">
           {videos.map((v) => (
             <VideoCard
               key={v.id}
@@ -90,8 +91,9 @@ export default async function VideosPage({ searchParams }: { searchParams: Promi
       )}
 
       {focus && (
-        <p className="mono text-[10px] tracking-widest uppercase text-text-mute text-center">
-          /scroll · карточка {focus.slice(0, 8)} ↓
+        <p className="flex items-center justify-center gap-1.5 text-center text-[12px] text-text-mute">
+          листай · карточка {focus.slice(0, 8)}
+          <ArrowDown size={13} aria-hidden />
         </p>
       )}
     </div>

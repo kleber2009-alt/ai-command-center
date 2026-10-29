@@ -6,7 +6,10 @@
 import { useState } from 'react';
 import { useRouter } from 'next/navigation';
 import { Plus, Sparkles, Film } from 'lucide-react';
+import { PageHero } from '@/components/shell/page-hero';
+import { Icon3D } from '@/components/ui/icon3d';
 import type { BriefView } from '@/lib/studio/types';
+import { errorText } from '@/lib/error-text';
 
 type PersonaOpt = { id: string; name: string; isDefault: boolean };
 
@@ -43,7 +46,7 @@ export function BriefsClient({
         body: JSON.stringify({ topic: topic.trim() || null, personaId: personaId || null }),
       });
       const data = await res.json();
-      if (!res.ok) throw new Error(data.error || 'create_failed');
+      if (!res.ok) throw new Error(errorText(data, res.status));
       router.push(`/briefs/${data.brief.id}`);
     } catch (e) {
       setError((e as Error).message);
@@ -52,41 +55,33 @@ export function BriefsClient({
   }
 
   return (
-    <div className="grid gap-5">
-      <header className="flex items-end justify-between gap-3">
-        <div className="grid gap-1">
-          <h1 className="font-serif text-2xl text-text">Воркспейс</h1>
-          <p className="mono text-[11px] tracking-widest uppercase text-text-mute">
-            бриф → сценарий → видео → монтаж
-          </p>
-        </div>
-        <button
-          onClick={() => setCreating((v) => !v)}
-          className="flex items-center gap-1.5 px-3 py-2 border border-gold/60 mono text-[10px] tracking-widest uppercase text-gold hover:bg-gold/10"
-        >
-          <Plus size={13} /> Новый бриф
-        </button>
-      </header>
+    <div className="grid gap-6">
+      <PageHero
+        eyebrow="бриф → сценарий → видео → монтаж"
+        title="Воркспейс"
+        icon="workspace"
+        extra={
+          <button type="button" onClick={() => setCreating((v) => !v)} className="btn-primary">
+            <Plus size={16} /> Новый бриф
+          </button>
+        }
+      />
 
       {creating && (
-        <div className="border border-gold/40 bg-surface p-4 grid gap-3">
+        <div className="panel reveal grid gap-4 border-gold/40 p-6">
           <label className="grid gap-1.5">
-            <span className="mono text-[9px] tracking-widest uppercase text-text-mute">Тема / угол</span>
+            <span className="label">Тема / угол</span>
             <input
               value={topic}
               onChange={(e) => setTopic(e.target.value)}
               placeholder="О чём видео — своими словами"
-              className="w-full bg-bg border border-border px-3 py-2 font-serif text-[14px] text-text placeholder:text-text-mute focus:border-gold outline-none"
+              className="input"
             />
           </label>
           {personas.length > 0 && (
             <label className="grid gap-1.5">
-              <span className="mono text-[9px] tracking-widest uppercase text-text-mute">Персона</span>
-              <select
-                value={personaId}
-                onChange={(e) => setPersonaId(e.target.value)}
-                className="bg-bg border border-border px-3 py-2 font-serif text-[13px] text-text focus:border-gold outline-none"
-              >
+              <span className="label">Персона</span>
+              <select value={personaId} onChange={(e) => setPersonaId(e.target.value)} className="input">
                 <option value="">— без персоны —</option>
                 {personas.map((p) => (
                   <option key={p.id} value={p.id}>
@@ -97,19 +92,12 @@ export function BriefsClient({
               </select>
             </label>
           )}
-          {error && <p className="mono text-[11px] text-pink">{error}</p>}
-          <div className="flex items-center gap-3">
-            <button
-              onClick={create}
-              disabled={busy}
-              className="px-5 py-2 border border-gold bg-gold/10 mono text-[10px] tracking-widest uppercase text-gold hover:bg-gold/20 disabled:opacity-50"
-            >
+          {error && <p className="text-[13px] text-danger">{error}</p>}
+          <div className="flex flex-wrap items-center gap-3">
+            <button type="button" onClick={create} disabled={busy} className="btn-primary">
               {busy ? 'Создание…' : 'Создать и открыть'}
             </button>
-            <button
-              onClick={() => setCreating(false)}
-              className="mono text-[10px] tracking-widest uppercase text-text-mute hover:text-text underline"
-            >
+            <button type="button" onClick={() => setCreating(false)} className="btn-ghost">
               Отмена
             </button>
           </div>
@@ -117,52 +105,54 @@ export function BriefsClient({
       )}
 
       {initialBriefs.length === 0 ? (
-        <div className="border border-border-soft bg-surface p-10 text-center grid gap-2">
-          <p className="mono text-[11px] tracking-widest uppercase text-text-mute">Пока нет брифов</p>
-          <p className="font-serif text-[13px] text-text-dim">
-            Создайте бриф с нуля или нажмите «Клонировать формат» на находке в Research.
+        <div className="panel reveal grid justify-items-center gap-3 p-10 text-center">
+          <Icon3D name="workspace" size={40} tile sway />
+          <p className="text-[17px] font-semibold tracking-[-0.02em] text-text">Пока нет брифов</p>
+          <p className="max-w-[52ch] text-[14px] leading-relaxed text-text-dim">
+            Создайте бриф с нуля или нажмите «Клонировать формат» на находке в «Ресёрче».
           </p>
         </div>
       ) : (
-        <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4">
+        <div className="stagger grid grid-cols-1 gap-4 sm:grid-cols-2 lg:grid-cols-3">
           {initialBriefs.map((b) => {
             const last = b.generations[0];
             return (
               <button
+                type="button"
                 key={b.id}
                 onClick={() => router.push(`/briefs/${b.id}`)}
-                className="text-left border border-border bg-surface p-4 grid gap-3 hover:border-gold/50"
+                className="card-editorial grid gap-4 p-5 text-left"
               >
-                <div className="flex items-start gap-3">
+                <div className="flex items-start gap-3.5">
                   <div
-                    className="w-12 h-12 shrink-0 border border-border-soft bg-bg grid place-items-center"
+                    className="grid h-14 w-14 shrink-0 place-items-center overflow-hidden rounded-2xl border border-border-soft bg-white/[0.04]"
                     style={
                       b.source?.thumbnailUrl
                         ? { backgroundImage: `url(${b.source.thumbnailUrl})`, backgroundSize: 'cover', backgroundPosition: 'center' }
                         : undefined
                     }
                   >
-                    {!b.source?.thumbnailUrl && <Sparkles size={16} className="text-text-mute" />}
+                    {!b.source?.thumbnailUrl && <Sparkles size={18} className="text-gold" />}
                   </div>
-                  <div className="min-w-0 grid gap-1">
-                    <h2 className="font-serif text-[14px] text-text line-clamp-2">
+                  <div className="grid min-w-0 gap-1.5">
+                    <h2 className="line-clamp-2 text-[16px] font-semibold leading-snug tracking-[-0.02em] text-text">
                       {b.topic || 'Без темы'}
                     </h2>
-                    <p className="mono text-[9px] tracking-widest uppercase text-text-mute">
+                    <p className="text-[12px] text-text-mute">
                       {b.source?.authorUsername ? `@${b.source.authorUsername}` : 'с нуля'} · {b.lang.toUpperCase()}
                     </p>
                   </div>
                 </div>
-                <div className="flex items-center gap-2 pt-1 border-t border-border-soft mt-1">
+                <div className="mt-1 flex items-center gap-2 border-t border-border-soft pt-3">
                   {last ? (
-                    <span className="flex items-center gap-1 mono text-[9px] tracking-widest uppercase text-text-dim">
-                      <Film size={11} /> {STAGE_LABEL[last.stage] ?? last.stage}
+                    <span className="flex items-center gap-1.5 rounded-full bg-white/[0.06] px-2.5 py-1 text-[12px] text-text-dim">
+                      <Film size={12} /> {STAGE_LABEL[last.stage] ?? last.stage}
                     </span>
                   ) : (
-                    <span className="mono text-[9px] tracking-widest uppercase text-text-mute">черновик</span>
+                    <span className="rounded-full border border-border-soft px-2.5 py-1 text-[12px] text-text-mute">черновик</span>
                   )}
                   {last?.finalUrl && (
-                    <span className="mono text-[8px] tracking-widest uppercase text-gold border border-gold/50 px-1 py-0.5 ml-auto">
+                    <span className="ml-auto rounded-full bg-lime px-2.5 py-0.5 text-[11px] font-semibold text-bg">
                       final
                     </span>
                   )}

@@ -101,8 +101,8 @@ export function MobileMenu({
               </div>
 
               <div className="grid gap-1.5">
-                <span className="mono text-[9px] tracking-[0.22em] text-text-mute uppercase">balance</span>
-                <span className="font-serif text-[28px] text-lime leading-none">{balance} tok</span>
+                <span className="mono text-[9px] tracking-[0.22em] text-text-mute uppercase">баланс</span>
+                <span className="font-serif text-[28px] text-lime leading-none">{balance} ток.</span>
                 <span className="mono text-[10px] tracking-wider text-text-dim truncate">{email}</span>
               </div>
 
@@ -116,7 +116,7 @@ export function MobileMenu({
                       : 'border-transparent text-text-dim hover:text-text hover:bg-surface'
                   }`}
                 >
-                  Dashboard
+                  Главная
                 </Link>
 
                 {groups.map((g) => (
@@ -154,14 +154,14 @@ export function MobileMenu({
                         : 'border-transparent text-pink hover:bg-surface'
                     }`}
                   >
-                    Admin
+                    Админка
                   </Link>
                 )}
               </nav>
 
               <form action={signOutAction} className="mt-auto pt-6 border-t border-border">
                 <button type="submit" className="btn-ghost w-full justify-center">
-                  Sign out
+                  Выйти
                 </button>
               </form>
             </div>

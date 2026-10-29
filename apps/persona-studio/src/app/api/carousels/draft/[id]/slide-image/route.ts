@@ -15,6 +15,7 @@ import { prisma } from '@/lib/prisma';
 import { slideImageQueue } from '@/lib/queue';
 import { chargeTokens, InsufficientTokensError, COSTS } from '@/lib/tokens';
 import { patchSlideStatus, type SlideImageMode } from '@/lib/carousel/image-gen';
+import { kieConfigured, PROVIDER_NOT_CONFIGURED } from '@/lib/providers';
 
 export const runtime = 'nodejs';
 
@@ -51,6 +52,7 @@ async function loadSlide(draftId: string, userId: string, index: number) {
 export async function POST(req: NextRequest, ctx: { params: Promise<{ id: string }> }) {
   const auth = await getCurrentUserOrApiKey(req);
   if (!auth) return NextResponse.json({ error: 'UNAUTHORIZED' }, { status: 401 });
+  if (!kieConfigured()) return NextResponse.json(PROVIDER_NOT_CONFIGURED, { status: 503 });
   const user = auth.user;
   const { id } = await ctx.params;
 

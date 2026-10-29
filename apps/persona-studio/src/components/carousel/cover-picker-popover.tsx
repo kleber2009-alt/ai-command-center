@@ -1,6 +1,7 @@
 'use client';
 
 import { useEffect, useRef } from 'react';
+import { X } from 'lucide-react';
 import type { CarouselAvatarOption } from './types';
 
 type Props = {
@@ -44,29 +45,29 @@ export function CoverPickerPopover({ open, avatars, selectedId, onSelect, onClos
     <div
       ref={ref}
       role="dialog"
-      className="absolute top-full right-0 mt-2 z-20 w-[min(90vw,360px)] bg-[#0f0f0f] border border-border-2 shadow-[0_8px_24px_rgba(0,0,0,0.6)]"
+      className="pop-in absolute right-0 top-full z-20 mt-2 w-[min(90vw,360px)] overflow-hidden rounded-[20px] border border-border-2 bg-bg-card/95 shadow-glass backdrop-blur-xl"
     >
-      <header className="flex items-center justify-between px-3 py-2.5 border-b border-border">
-        <span className="mono text-[10px] tracking-[0.18em] uppercase text-text-mute">
+      <header className="flex items-center justify-between border-b border-border-soft px-4 py-2.5">
+        <span className="label">
           Выбери фото · {avatars.length}
         </span>
         <button
           type="button"
           onClick={onClose}
-          className="mono text-[12px] text-text-dim hover:text-text leading-none w-6 h-6 flex items-center justify-center"
+          className="flex h-7 w-7 items-center justify-center rounded-full text-text-dim transition-colors hover:bg-white/[0.08] hover:text-text"
           aria-label="Закрыть"
         >
-          ✕
+          <X size={14} />
         </button>
       </header>
 
       {avatars.length === 0 ? (
-        <div className="p-4 mono text-[11px] text-text-mute">
-          У тебя нет готовых аватаров — сначала сделай хотя бы один в /generate.
+        <div className="p-4 text-[13px] text-text-mute">
+          У тебя нет готовых аватаров — сначала сделай хотя бы один в «Аватаре».
         </div>
       ) : (
         <div className="max-h-[260px] overflow-y-auto p-2 [&::-webkit-scrollbar]:w-1.5 [&::-webkit-scrollbar-thumb]:bg-border-2">
-          <div className="grid grid-cols-4 gap-1">
+          <div className="grid grid-cols-4 gap-1.5">
             {avatars.map((a) => {
               const isSelected = a.id === selectedId;
               return (
@@ -77,8 +78,8 @@ export function CoverPickerPopover({ open, avatars, selectedId, onSelect, onClos
                     onSelect(a.id);
                     onClose();
                   }}
-                  className={`relative aspect-[3/4] overflow-hidden bg-bg transition ${
-                    isSelected ? 'ring-2 ring-lime' : 'border border-transparent hover:border-text-dim'
+                  className={`relative aspect-[3/4] overflow-hidden rounded-xl bg-white/[0.04] transition ${
+                    isSelected ? 'ring-2 ring-gold' : 'ring-1 ring-transparent hover:ring-border-2'
                   }`}
                   title={a.styleLabel}
                 >
@@ -90,8 +91,8 @@ export function CoverPickerPopover({ open, avatars, selectedId, onSelect, onClos
                     loading="lazy"
                   />
                   {isSelected && (
-                    <span className="absolute bottom-0.5 right-0.5 px-1 mono text-[7px] tracking-widest uppercase bg-lime text-black">
-                      cover
+                    <span className="absolute bottom-1 right-1 rounded-full bg-blue px-1.5 py-0.5 text-[9px] font-semibold uppercase text-white">
+                      обложка
                     </span>
                   )}
                 </button>

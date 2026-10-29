@@ -2,6 +2,7 @@
 
 import { useEffect, useMemo, useState } from 'react';
 import { useRouter } from 'next/navigation';
+import { ArrowRight, ChevronDown, Loader2, RotateCcw } from 'lucide-react';
 import { VOICE_PRESETS as HEYGEN_VOICES } from '@/lib/heygen-voices';
 import { ELEVENLABS_VOICE_PRESETS } from '@/lib/elevenlabs-voices';
 import { MAX_REALISM_MOTION_PROMPT } from '@/lib/heygen-motion';
@@ -13,6 +14,8 @@ import {
   type EngineAspect,
   type VoiceProvider,
 } from '@/lib/video-engines';
+import { errorText, exceptionText } from '@/lib/error-text';
+import { statusLabel } from '@/lib/i18n';
 
 type Avatar = {
   id: string;
@@ -40,8 +43,11 @@ export function VideoForm({
   avatars,
   initialAvatarId,
   initialScript,
+  initialEngine = 'heygen-v5',
 }: {
   avatars: Avatar[];
+  /** Engine preselected in the form — the studio default (see defaultEngine()). */
+  initialEngine?: VideoEngine;
   initialAvatarId?: string;
   // Если страница пришла из парсера с уже переписанным сценарием — подставляем
   // его как стартовое значение textarea. Reset-кнопка всё равно возвращает к
@@ -49,7 +55,7 @@ export function VideoForm({
   initialScript?: string;
 }) {
   const router = useRouter();
-  const [engine, setEngine] = useState<VideoEngine>('heygen-v5');
+  const [engine, setEngine] = useState<VideoEngine>(initialEngine);
   // Если URL-параметр avatarId не соответствует ни одному из готовых аватаров
   // (удалён, ещё генерится, или принадлежит другому юзеру) — fallback на первый
   // доступный, чтобы не сабмитить заведомо невалидный id.
@@ -59,7 +65,9 @@ export function VideoForm({
       : (avatars[0]?.id ?? '');
   const [avatarId, setAvatarId] = useState<string>(resolvedInitial);
   const [script, setScript] = useState(initialScript?.trim() || DEFAULT_SCRIPT);
-  const [voiceId, setVoiceId] = useState<string>(HEYGEN_VOICES[0]?.voice_id ?? '');
+  const [voiceId, setVoiceId] = useState<string>(
+    VOICE_CATALOGS[VIDEO_ENGINES[initialEngine].voiceProvider][0]?.voice_id ?? '',
+  );
   const [customVoiceId, setCustomVoiceId] = useState<string>('');
   const [aspect, setAspect] = useState<EngineAspect>('9:16');
   const [quality, setQuality] = useState<'1080p' | '2k'>('2k');
@@ -157,18 +165,14 @@ export function VideoForm({
             : code === 'avatar_not_found'
               ? 'Аватар не найден — выбери другого из списка'
               : code === 'avatar_not_ready'
-                ? `Аватар ещё не готов (status: ${json?.status ?? 'unknown'})`
+                ? `Аватар ещё не готов (статус: ${statusLabel(json?.status) || 'неизвестен'})`
                 : code === 'script_required'
                   ? 'Скрипт обязателен (минимум 5 символов)'
                   : code === 'voice_required'
                     ? 'Выбери голос'
                     : code === 'UNAUTHORIZED'
                       ? 'Сессия истекла — перезайди в аккаунт'
-                      : code === 'internal_error'
-                        ? `Сервер: ${json?.message ?? 'internal_error'}`
-                        : code
-                          ? code
-                          : `HTTP ${res.status}${raw ? `: ${raw.slice(0, 200)}` : ''}`;
+                      : errorText(json, res.status);
         setError(msg);
         setBusy(false);
         return;
@@ -180,15 +184,15 @@ export function VideoForm({
       }
       router.push(`/videos?focus=${json.id}`);
     } catch (e) {
-      setError(e instanceof Error ? e.message : String(e));
+      setError(exceptionText(e));
       setBusy(false);
     }
   };
 
   return (
-    <form onSubmit={submit} className="grid lg:grid-cols-[1fr_360px] gap-6">
-      <div className="grid gap-5">
-        <Field label="Engine" hint={cfg.description}>
+    <form onSubmit={submit} className="grid items-start gap-6 lg:grid-cols-[1fr_360px]">
+      <div className="panel reveal grid gap-5 p-5 sm:p-6">
+        <Field label="Движок" hint={cfg.description}>
           <select
             className="input"
             value={engine}
@@ -205,13 +209,13 @@ export function VideoForm({
           >
             {VIDEO_ENGINE_LIST.map((slug) => (
               <option key={slug} value={slug}>
-                {VIDEO_ENGINES[slug].label} · {VIDEO_ENGINES[slug].cost} tok
+                {VIDEO_ENGINES[slug].label} · {VIDEO_ENGINES[slug].cost} ток.
               </option>
             ))}
           </select>
         </Field>
 
-        <Field label="Avatar" hint="Лицо, которое будет говорить">
+        <Field label="Аватар" hint="Лицо, которое будет говорить">
           <select className="input" value={avatarId} onChange={(e) => setAvatarId(e.target.value)}>
             {avatars.length === 0 && <option value="">Нет готовых аватаров</option>}
             {avatars.map((a) => (
@@ -223,10 +227,10 @@ export function VideoForm({
         </Field>
 
         <Field
-          label="Script"
+          label="Сценарий"
           hint={
             `Текст, который произнесёт аватар · ${script.length}/1500 · ` +
-            `шаблон оптимизирован под lipsync (~25 сек, естественные паузы, риторический вопрос для вариативности мимики)`
+            `шаблон оптимизирован под синхронизацию губ (~25 сек, естественные паузы, риторический вопрос для вариативности мимики)`
           }
         >
           <div className="grid gap-2">
@@ -242,18 +246,19 @@ export function VideoForm({
               type="button"
               onClick={() => setScript(DEFAULT_SCRIPT)}
               disabled={script === DEFAULT_SCRIPT}
-              className="mono text-[10px] tracking-widest uppercase text-text-mute hover:text-cyan disabled:opacity-40 disabled:hover:text-text-mute self-start"
+              className="inline-flex items-center gap-1.5 self-start rounded-full border border-border-soft bg-white/[0.04] px-3.5 py-1.5 text-[13px] text-text-dim transition-colors hover:bg-white/[0.07] hover:text-text disabled:opacity-40 disabled:hover:bg-white/[0.04]"
             >
-              ↺ вернуть realism-шаблон
+              <RotateCcw size={13} aria-hidden />
+              вернуть реалистичный шаблон
             </button>
           </div>
         </Field>
 
         <Field
-          label="Voice"
+          label="Голос"
           hint={
             customActive
-              ? '↓ используется свой голос — пресет из списка игнорируется'
+              ? 'используется свой голос — пресет из списка игнорируется'
               : cfg.voiceProvider === 'heygen'
                 ? 'Встроенный голос + язык'
                 : 'Голос · мультиязык (ru/en)'
@@ -278,7 +283,7 @@ export function VideoForm({
             label="Свой голос (ID)"
             hint={
               <>
-                Свой обученный голос — вставьте <code className="mono text-cyan">ID</code>, он перебьёт
+                Свой обученный голос — вставьте <code className="rounded-md bg-white/[0.06] px-1.5 py-0.5 font-mono text-cyan">ID</code>, он перебьёт
                 выбранный из списка. Сохраняется локально.
               </>
             }
@@ -301,17 +306,17 @@ export function VideoForm({
                     setCustomVoiceId('');
                     try { window.localStorage.removeItem(CUSTOM_VOICE_LS_KEY); } catch { /* ignore */ }
                   }}
-                  title="Сбросить и вернуться к preset"
+                  title="Сбросить и вернуться к голосу из списка"
                 >
-                  reset
+                  сбросить
                 </button>
               )}
             </div>
           </Field>
         )}
 
-        <div className="grid grid-cols-2 gap-3">
-          <Field label="Aspect">
+        <div className="grid gap-3 sm:grid-cols-2">
+          <Field label="Формат">
             <select
               className="input"
               value={aspect}
@@ -319,12 +324,12 @@ export function VideoForm({
             >
               {cfg.supportedAspects.map((a) => (
                 <option key={a} value={a}>
-                  {a === '9:16' ? '9:16 — Reels / TikTok / Shorts' : a === '1:1' ? '1:1 — Instagram square' : '16:9 — YouTube / Web'}
+                  {a === '9:16' ? '9:16 — Reels / TikTok / Shorts' : a === '1:1' ? '1:1 — квадрат для Instagram' : '16:9 — YouTube / сайт'}
                 </option>
               ))}
             </select>
           </Field>
-          <Field label="Quality" hint="Разрешение рендера (только HeyGen)">
+          <Field label="Качество" hint="Разрешение рендера (только HeyGen)">
             <select
               className="input"
               value={quality}
@@ -338,8 +343,8 @@ export function VideoForm({
         </div>
 
         {cfg.voiceProvider === 'heygen' && (
-          <div className="grid grid-cols-2 gap-3">
-            <Field label="Background" hint="HEX-цвет фона (только HeyGen)">
+          <div className="grid gap-3 sm:grid-cols-2">
+            <Field label="Фон" hint="HEX-цвет фона (только HeyGen)">
               <input
                 type="text"
                 className="input mono"
@@ -349,63 +354,64 @@ export function VideoForm({
                 placeholder="#0a0a0a"
               />
             </Field>
-            <Field label="Subtitles" hint="Включить субтитры (только HeyGen)">
-              <label className="flex items-center gap-3 input cursor-pointer">
+            <Field label="Субтитры" hint="Включить субтитры (только HeyGen)">
+              <span className="flex cursor-pointer items-center gap-3 rounded-[14px] border border-border-soft bg-white/[0.05] px-4 py-[7px]">
                 <input
                   type="checkbox"
                   checked={subtitles}
                   onChange={(e) => setSubtitles(e.target.checked)}
-                  className="accent-lime w-4 h-4"
+                  className="toggle"
                 />
-                <span className="mono text-xs tracking-widest uppercase">
-                  {subtitles ? 'on' : 'off'}
+                <span className={`text-[13px] font-semibold ${subtitles ? 'text-text' : 'text-text-mute'}`}>
+                  {subtitles ? 'вкл' : 'выкл'}
                 </span>
-              </label>
+              </span>
             </Field>
           </div>
         )}
 
         {cfg.heygenVersion === 'IV' && (
-          <div className="border border-border">
+          <div className="overflow-hidden rounded-[20px] border border-border-soft bg-white/[0.03]">
             <button
               type="button"
               onClick={() => setMotionAdvancedOpen((v) => !v)}
-              className="w-full flex items-center justify-between px-4 py-3 mono text-[10px] tracking-widest uppercase text-text-mute hover:text-cyan"
+              aria-expanded={motionAdvancedOpen}
+              className="flex w-full items-center justify-between px-4 py-3 text-[13px] font-medium text-text-dim transition-colors hover:bg-white/[0.04] hover:text-text"
             >
-              <span>/ advanced · motion prompt {motionPrompt.trim() ? '· custom' : '· default'}</span>
-              <span>{motionAdvancedOpen ? '−' : '+'}</span>
+              <span>/ дополнительно · промпт движения {motionPrompt.trim() ? '· свой' : '· по умолчанию'}</span>
+              <ChevronDown size={16} aria-hidden className={`transition-transform duration-300 ease-settle ${motionAdvancedOpen ? 'rotate-180' : ''}`} />
             </button>
             {motionAdvancedOpen && (
-              <div className="px-4 pb-4 space-y-2">
-                <p className="mono text-[10px] tracking-wider text-text-dim">
-                  Описание движения для Avatar IV motion engine (English).
-                  Пусто = использовать дефолт max-realism.
+              <div className="fade-in space-y-3 px-4 pb-4">
+                <p className="text-[12px] text-text-dim">
+                  Описание движения для движка Avatar IV (на английском).
+                  Пусто = максимально реалистичный вариант по умолчанию.
                 </p>
                 <textarea
-                  className="input mono text-[11px] leading-snug w-full min-h-[140px]"
+                  className="input !min-h-[140px] w-full !font-mono !text-[12px] !leading-snug"
                   value={motionPrompt}
                   onChange={(e) => setMotionPrompt(e.target.value.slice(0, 2000))}
                   placeholder={MAX_REALISM_MOTION_PROMPT}
                   maxLength={2000}
                 />
-                <div className="flex items-center justify-between mono text-[10px] tracking-widest uppercase">
+                <div className="flex flex-wrap items-center gap-2 text-[12px]">
                   <button
                     type="button"
                     onClick={() => setMotionPrompt(MAX_REALISM_MOTION_PROMPT)}
-                    className="text-cyan hover:underline"
+                    className="rounded-full border border-border-soft bg-white/[0.04] px-3.5 py-1.5 text-[13px] text-text-dim hover:bg-white/[0.07] hover:text-text"
                   >
-                    insert default
+                    вставить по умолчанию
                   </button>
                   {motionPrompt && (
                     <button
                       type="button"
                       onClick={() => setMotionPrompt('')}
-                      className="text-pink hover:underline"
+                      className="rounded-full border border-pink/30 bg-pink/10 px-3.5 py-1.5 text-[13px] text-pink hover:bg-pink/15"
                     >
-                      reset
+                      сбросить
                     </button>
                   )}
-                  <span className="text-text-mute">{motionPrompt.length}/2000</span>
+                  <span className="ml-auto tabular-nums text-text-mute">{motionPrompt.length}/2000</span>
                 </div>
               </div>
             )}
@@ -414,56 +420,65 @@ export function VideoForm({
 
         <div className="flex flex-wrap items-center gap-4 pt-2">
           <button type="submit" className="btn-primary" disabled={busy}>
-            {busy ? 'Submitting…' : `Generate video · ${cfg.cost} tokens →`}
+            {busy && <Loader2 size={16} className="animate-spin" aria-hidden />}
+            {busy ? 'Отправляю…' : `Создать видео · ${cfg.cost} токенов`}
+            {!busy && <ArrowRight size={16} aria-hidden />}
           </button>
-          <span className="mono text-[10px] tracking-widest uppercase text-text-mute">
-            {cfg.label} · voice: {cfg.voiceProvider}
+          <span className="text-[12px] text-text-mute">
+            {cfg.label} · голос: {cfg.voiceProvider}
           </span>
-          {error && <span className="mono text-[11px] text-pink tracking-wider">/ERROR — {error}</span>}
+          {error && (
+            <span className="fade-in w-full rounded-2xl border border-danger/30 bg-danger/10 px-4 py-2.5 text-[13px] text-danger">
+              Ошибка — {error}
+            </span>
+          )}
         </div>
       </div>
 
-      <aside className="bg-surface border border-border p-5">
-        <div className="mono text-[10px] tracking-widest uppercase text-cyan mb-3">/ preview · {aspect}</div>
+      <aside className="panel reveal p-5 lg:sticky lg:top-6" style={{ ['--i' as string]: 1 } as React.CSSProperties}>
+        <div className="mb-3 flex items-center gap-2">
+          <span className="sec-num">/ превью</span>
+          <span className="text-[12px] tabular-nums text-text-mute">{aspect}</span>
+        </div>
         <div
-          className={`relative overflow-hidden border border-border-2 ${
+          className={`relative overflow-hidden rounded-[20px] border border-border-2 transition-[aspect-ratio] ${
             aspect === '9:16' ? 'aspect-[9/16]' : aspect === '1:1' ? 'aspect-square' : 'aspect-video'
           }`}
           style={{
             background:
               selected?.imageUrl
-                ? `linear-gradient(180deg, rgba(8,8,8,0.0) 0%, rgba(8,8,8,0.7) 100%), url(${selected.imageUrl})`
-                : 'linear-gradient(170deg, #0a1820 0%, #051018 100%)',
+                ? `linear-gradient(180deg, rgba(11,11,13,0) 0%, rgba(11,11,13,0.75) 100%), url(${selected.imageUrl})`
+                : 'linear-gradient(170deg, rgba(31,123,255,0.22) 0%, rgba(11,11,13,0.9) 100%)',
             backgroundSize: 'cover',
             backgroundPosition: 'center',
           }}
         >
           <div className="absolute inset-0 p-4 flex flex-col justify-between">
-            <span className="mono text-[10px] tracking-widest uppercase text-text-mute">
-              / {selected?.styleLabel ?? '—'}
+            <span className="self-start rounded-full bg-black/50 px-2.5 py-1 text-[11px] font-medium text-white/85 backdrop-blur-md">
+              {selected?.styleLabel ?? '—'}
             </span>
-            <div className="font-serif italic text-[14px] text-cyan leading-tight max-w-[24ch]">
+            <div className="max-w-[24ch] text-[14px] font-semibold leading-tight tracking-[-0.01em] text-white">
               «{script.slice(0, 90)}{script.length > 90 ? '…' : ''}»
             </div>
           </div>
         </div>
-        <div className="mt-3 grid gap-1.5 mono text-[10px] tracking-wider text-text-dim">
-          <div className="flex justify-between"><span className="text-text-mute uppercase">engine</span><span>{cfg.label}</span></div>
+        <div className="mt-4 grid gap-2 text-[12px] text-text-dim [&>div]:gap-3">
+          <div className="flex justify-between"><span className="text-text-mute">движок</span><span>{cfg.label}</span></div>
           <div className="flex justify-between">
-            <span className="text-text-mute uppercase">voice</span>
+            <span className="text-text-mute">голос</span>
             <span className={customActive ? 'text-lime' : ''}>
               {voice?.label}{customActive ? ` · ${customVoiceId.slice(0, 8)}…` : ''}
             </span>
           </div>
-          <div className="flex justify-between"><span className="text-text-mute uppercase">aspect</span><span>{aspect}</span></div>
+          <div className="flex justify-between"><span className="text-text-mute">формат</span><span>{aspect}</span></div>
           {cfg.voiceProvider === 'heygen' && (
             <>
-              <div className="flex justify-between"><span className="text-text-mute uppercase">quality</span><span>{quality === '2k' ? '2K · QHD' : '1080p · FullHD'}</span></div>
-              <div className="flex justify-between"><span className="text-text-mute uppercase">bg</span><span>{background}</span></div>
+              <div className="flex justify-between"><span className="text-text-mute">качество</span><span>{quality === '2k' ? '2K · QHD' : '1080p · FullHD'}</span></div>
+              <div className="flex justify-between"><span className="text-text-mute">фон</span><span>{background}</span></div>
             </>
           )}
         </div>
-        <p className="mono text-[10px] tracking-widest uppercase text-text-mute mt-3">
+        <p className="mt-4 border-t border-border-soft pt-3 text-[12px] leading-relaxed text-text-mute">
           {cfg.description}
         </p>
       </aside>
@@ -473,10 +488,10 @@ export function VideoForm({
 
 function Field({ label, hint, children }: { label: string; hint?: React.ReactNode; children: React.ReactNode }) {
   return (
-    <label className="grid gap-1">
+    <label className="grid gap-1.5">
       <span className="label">{label}</span>
       {children}
-      {hint && <span className="mono text-[10px] tracking-wider text-text-mute mt-1">{hint}</span>}
+      {hint && <span className="mt-0.5 text-[12px] leading-snug text-text-mute">{hint}</span>}
     </label>
   );
 }

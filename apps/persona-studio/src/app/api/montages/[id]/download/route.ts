@@ -21,7 +21,8 @@ export async function GET(req: NextRequest, { params }: { params: Promise<{ id: 
   }
 
   const rangeHeader = req.headers.get('range') ?? undefined;
-  const filename = `persona-montage-${m.style}-${m.id.slice(0, 6)}.mp4`;
+  const ext = /\.([a-z0-9]{2,5})(?:\?|$)/i.exec(m.resultUrl)?.[1]?.toLowerCase() ?? 'mp4';
+  const filename = `persona-montage-${m.style}-${m.id.slice(0, 6)}.${ext}`;
 
   // Свой файл — читаем через S3-клиент (публичный URL может быть недоступен
   // изнутри контейнера web).

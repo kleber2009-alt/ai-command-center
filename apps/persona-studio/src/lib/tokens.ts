@@ -109,6 +109,7 @@ export const COSTS = {
   submagicEdit: env.COST_SUBMAGIC_EDIT,
   slideImage: env.COST_SLIDE_IMAGE,
   skillMontage: env.COST_SKILL_MONTAGE,
+  kadrikMontage: env.COST_KADRIK_MONTAGE,
   // ── Studio workspace ──
   studioScript: env.COST_STUDIO_SCRIPT,
   // ── Research (Badunga-style) ──

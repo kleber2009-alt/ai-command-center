@@ -2,6 +2,7 @@
 
 import { useState } from 'react';
 import type { CarouselAvatarOption, CarouselDraftSerialized, SlideShape } from './types';
+import { errorText } from '@/lib/error-text';
 
 type Props = {
   initial: CarouselDraftSerialized;
@@ -59,12 +60,12 @@ export function CarouselEditor({ initial, avatars }: Props) {
       });
       const json = await res.json();
       if (!res.ok) {
-        setError(json.message || json.error || `HTTP ${res.status}`);
+        setError(errorText(json, res.status));
         return;
       }
       setSavedAt(new Date().toLocaleTimeString('ru-RU'));
     } catch (e) {
-      setError((e as Error).message || 'network error');
+      setError((e as Error).message || 'Нет связи с сервером');
     } finally {
       setSaving(false);
     }
@@ -86,7 +87,7 @@ export function CarouselEditor({ initial, avatars }: Props) {
         </p>
         {avatars.length === 0 ? (
           <div className="border border-pink/40 bg-pink/5 p-3 mono text-[11px] text-pink">
-            У тебя нет готовых аватаров. Сначала зайди в /generate и сделай хотя бы один.
+            У тебя нет готовых аватаров. Сначала зайди в «Аватар» и сделай хотя бы один.
           </div>
         ) : (
           <div className="grid grid-cols-3 sm:grid-cols-5 md:grid-cols-7 gap-2">
@@ -104,7 +105,7 @@ export function CarouselEditor({ initial, avatars }: Props) {
                 <img src={a.imageUrl} alt={a.styleLabel} className="w-full h-full object-cover" loading="lazy" />
                 {coverAvatarId === a.id && (
                   <span className="absolute bottom-1 right-1 px-1.5 py-0.5 mono text-[8px] tracking-wider uppercase bg-lime text-black">
-                    cover
+                    обложка
                   </span>
                 )}
               </button>
@@ -132,7 +133,7 @@ export function CarouselEditor({ initial, avatars }: Props) {
         {slides.map((s, i) => {
           const isCover = i === 0;
           const isCTA = i === slides.length - 1;
-          const role = isCover ? 'обложка' : isCTA ? 'CTA' : 'раскрытие';
+          const role = isCover ? 'обложка' : isCTA ? 'призыв' : 'раскрытие';
           return (
             <article
               key={i}
@@ -143,7 +144,7 @@ export function CarouselEditor({ initial, avatars }: Props) {
               <header className="flex items-center justify-between gap-3">
                 <div className="flex items-baseline gap-3">
                   <span className="mono text-[10px] tracking-widest uppercase text-text-mute">
-                    /slide {String(i + 1).padStart(2, '0')}
+                    /слайд {String(i + 1).padStart(2, '0')}
                   </span>
                   <span
                     className={`mono text-[9px] tracking-widest uppercase ${
@@ -190,7 +191,7 @@ export function CarouselEditor({ initial, avatars }: Props) {
               </header>
 
               <label className="grid gap-1.5">
-                <span className="mono text-[9px] tracking-widest uppercase text-text-mute">title</span>
+                <span className="mono text-[9px] tracking-widest uppercase text-text-mute">заголовок</span>
                 <textarea
                   rows={1}
                   value={s.title}
@@ -202,13 +203,13 @@ export function CarouselEditor({ initial, avatars }: Props) {
               </label>
 
               <label className="grid gap-1.5">
-                <span className="mono text-[9px] tracking-widest uppercase text-text-mute">body</span>
+                <span className="mono text-[9px] tracking-widest uppercase text-text-mute">текст</span>
                 <textarea
                   rows={3}
                   value={s.body}
                   onChange={(e) => updateSlide(i, { body: e.target.value.slice(0, 500) })}
                   className="bg-bg border border-border px-3 py-2 font-serif text-[13px] leading-relaxed focus:outline-none focus:border-lime/60"
-                  placeholder={isCover ? 'Подзаголовок 10–20 слов' : isCTA ? 'Зачем юзеру нажать CTA — 10–25 слов' : 'Развёрнутая мысль 15–40 слов'}
+                  placeholder={isCover ? 'Подзаголовок 10–20 слов' : isCTA ? 'Зачем нажать на призыв — 10–25 слов' : 'Развёрнутая мысль 15–40 слов'}
                 />
                 <span className="mono text-[8px] text-text-mute self-end">{s.body.length}/500</span>
               </label>

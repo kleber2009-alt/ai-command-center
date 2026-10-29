@@ -2,11 +2,13 @@ import Link from 'next/link';
 import { redirect } from 'next/navigation';
 import { getCurrentUser } from '@/lib/auth';
 import { prisma } from '@/lib/prisma';
+import { ArrowLeft, ExternalLink } from 'lucide-react';
+import { Icon3D } from '@/components/ui/icon3d';
 import { CarouselEditorShell } from '@/components/carousel/carousel-editor-shell';
 import type { CarouselDraftSerialized, SlideShape } from '@/components/carousel/types';
 
 export const dynamic = 'force-dynamic';
-export const metadata = { title: 'Carousel — Persona Studio' };
+export const metadata = { title: 'Карусель — Persona Studio' };
 
 export default async function NewCarouselPage({
   searchParams,
@@ -53,35 +55,37 @@ export default async function NewCarouselPage({
   return (
     <div className="grid gap-3">
       {/* Compact top-bar */}
-      <div className="flex items-center justify-between gap-4 flex-wrap">
-        <div className="flex items-baseline gap-3 min-w-0">
+      <div className="panel flex flex-wrap items-center justify-between gap-4 !rounded-2xl px-4 py-3">
+        <div className="flex min-w-0 flex-wrap items-center gap-3">
+          <Icon3D name="carousel" size={20} tile />
           <span className="sec-num">/00</span>
-          <span className="sec-title">Carousel · черновик</span>
+          <span className="sec-title">Карусель · черновик</span>
           {draft.parserItem && (
-            <div className="hidden sm:flex items-center gap-2 mono text-[10px] tracking-[0.16em] uppercase text-text-mute ml-3">
-              <span className="text-lime">/parser</span>
+            <div className="ml-1 hidden items-center gap-2 text-[12px] text-text-mute sm:flex">
+              <span className="rounded-full bg-lime/15 px-2 py-0.5 font-medium text-lime">из парсера</span>
               {draft.parserItem.owner && (
                 <span className="text-text">@{draft.parserItem.owner}</span>
               )}
               {draft.parserItem.fitScore != null && (
-                <span className="text-warm">{draft.parserItem.fitScore}/10</span>
+                <span className="font-semibold text-gold">{draft.parserItem.fitScore}/10</span>
               )}
               <a
                 href={draft.parserItem.url}
                 target="_blank"
                 rel="noopener noreferrer"
-                className="text-lime hover:underline"
+                className="inline-flex h-7 w-7 items-center justify-center rounded-full text-lime hover:bg-lime/10"
+                aria-label="Открыть источник"
               >
-                ↗
+                <ExternalLink size={14} />
               </a>
             </div>
           )}
         </div>
         <Link
           href="/carousels"
-          className="mono text-[10px] tracking-[0.18em] uppercase text-text-mute hover:text-text"
+          className="btn-ghost !px-4 !py-2 text-[13px]"
         >
-          ← все черновики
+          <ArrowLeft size={14} /> все черновики
         </Link>
       </div>
 

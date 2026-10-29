@@ -19,8 +19,11 @@
 //   output_format: lowercase ("jpg","png")
 //   resolution:   uppercase ("1K","2K","4K")
 
-const KIE_BASE = process.env.KIE_BASE_URL ?? 'https://api.kie.ai/api/v1';
-const KIE_MODEL = process.env.KIE_IMAGE_MODEL ?? 'nano-banana-2';
+import { fetchMedia } from './storage';
+
+// `||` not `??`: an empty `KIE_BASE_URL=` in .env means default, not ''.
+const KIE_BASE = process.env.KIE_BASE_URL || 'https://api.kie.ai/api/v1';
+const KIE_MODEL = process.env.KIE_IMAGE_MODEL || 'nano-banana-2';
 
 const SUBMIT_TIMEOUT_MS = 30_000;
 const STATUS_TIMEOUT_MS = 15_000;
@@ -63,7 +66,8 @@ type KieCreateResp = {
   data?: { taskId: string; recordId?: string };
 };
 
-type KieState = 'waiting' | 'processing' | 'success' | 'failed';
+// Playground says 'failed', the jobs API says 'fail' — accept both.
+type KieState = 'waiting' | 'processing' | 'success' | 'failed' | 'fail';
 
 type KieRecordResp = {
   code: number;
@@ -170,7 +174,7 @@ export async function getTaskStatus(taskId: string): Promise<KieStatus> {
     return { state: 'success', taskId, urls, creditsConsumed: d.creditsConsumed };
   }
 
-  if (d.state === 'failed') {
+  if (d.state === 'failed' || d.state === 'fail') {
     return {
       state: 'failed',
       taskId,
@@ -247,8 +251,8 @@ export async function generateImage(opts: {
 //
 // Validated 2026-05-21 на Unsplash portrait → luxury founder edit.
 
-const FLUX_BASE = process.env.KIE_FLUX_BASE_URL ?? 'https://api.kie.ai/api/v1/flux/kontext';
-const FLUX_MODEL = process.env.KIE_FLUX_MODEL ?? 'flux-kontext-pro';
+const FLUX_BASE = process.env.KIE_FLUX_BASE_URL || 'https://api.kie.ai/api/v1/flux/kontext';
+const FLUX_MODEL = process.env.KIE_FLUX_MODEL || 'flux-kontext-pro';
 
 export type FluxAspect = '21:9' | '16:9' | '4:3' | '1:1' | '3:4' | '9:16';
 
@@ -421,7 +425,7 @@ export async function toKieReference(opts: {
   }
   // local dev — encode as data URI
   if (!opts.fetchBytes) {
-    const res = await fetch(opts.fileUrl);
+    const res = await fetchMedia(opts.fileUrl);
     if (!res.ok) throw new KieError(`REF_HTTP_${res.status}`, `failed to fetch ref for inlining`);
     const ab = await res.arrayBuffer();
     return `data:${opts.mime};base64,${Buffer.from(ab).toString('base64')}`;

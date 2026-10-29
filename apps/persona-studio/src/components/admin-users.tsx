@@ -2,6 +2,7 @@
 
 import { useCallback, useEffect, useState } from 'react';
 import { formatDate } from '@/lib/utils';
+import { errorText, exceptionText } from '@/lib/error-text';
 
 type AdminUser = {
   id: string;
@@ -58,13 +59,13 @@ export function AdminUsersPanel({ initialUsers, currentUserId }: { initialUsers:
       });
       const j = (await res.json()) as { ok?: boolean; user?: { email: string; tokenBalance: number }; error?: string };
       if (!res.ok || !j.ok) {
-        setErr(j.error ?? `http_${res.status}`);
+        setErr(errorText(j, res.status));
       } else if (j.user) {
         setFlash(`${j.user.email} → ${j.user.tokenBalance} токенов (${amount > 0 ? '+' : ''}${amount})`);
         setUsers((prev) => prev.map((u) => (u.id === userId ? { ...u, tokenBalance: j.user!.tokenBalance } : u)));
       }
     } catch (e) {
-      setErr(String(e));
+      setErr(exceptionText(e));
     } finally {
       setBusyId(null);
     }
@@ -83,63 +84,64 @@ export function AdminUsersPanel({ initialUsers, currentUserId }: { initialUsers:
 
   return (
     <div className="grid gap-4">
-      <div className="flex flex-wrap items-center gap-4 border border-border bg-surface p-4">
+      <div className="panel flex flex-wrap items-center gap-4 p-4">
         <input
           type="text"
           placeholder="Поиск: email, имя или id…"
           value={q}
           onChange={(e) => setQ(e.target.value)}
-          className="input flex-1 min-w-[200px]"
+          className="input !rounded-full flex-1 min-w-[200px]"
         />
-        <span className="mono text-[10px] tracking-widest uppercase text-text-mute">
-          {loading ? '/loading…' : `${users.length} users`}
+        <span className="text-[13px] tabular-nums text-text-mute">
+          {loading ? 'загрузка…' : `пользователей: ${users.length}`}
         </span>
       </div>
 
       {(err || flash) && (
-        <div className="border border-border bg-surface px-4 py-3 mono text-[11px] tracking-wider">
-          {flash && <span className="text-lime">/OK — {flash}</span>}
-          {err && <span className="text-pink">/ERROR — {err}</span>}
+        <div className="rounded-2xl border border-border-soft bg-white/[0.04] px-4 py-2.5 text-[13px] fade-in">
+          {flash && <span className="text-lime">Готово — {flash}</span>}
+          {err && <span className="text-pink">Ошибка — {err}</span>}
         </div>
       )}
 
-      <div className="border border-border">
-        <div className="grid grid-cols-[1fr_90px_90px_120px_1fr] gap-3 px-5 py-3 bg-surface border-b border-border mono text-[9px] tracking-widest uppercase text-text-mute">
-          <span>User</span>
-          <span className="text-right">Balance</span>
-          <span className="text-right">Plan</span>
-          <span>Activity</span>
-          <span>Grant tokens</span>
+      <div className="panel overflow-x-auto">
+        <div className="min-w-[760px]">
+        <div className="grid grid-cols-[1fr_90px_90px_120px_1fr] gap-3 px-5 py-3 border-b border-border-soft label">
+          <span>Пользователь</span>
+          <span className="text-right">Баланс</span>
+          <span className="text-right">План</span>
+          <span>Активность</span>
+          <span>Начислить токены</span>
         </div>
 
         {users.length === 0 ? (
-          <div className="px-5 py-6 mono text-[11px] text-text-mute tracking-widest uppercase">
-            /EMPTY
+          <div className="px-5 py-6 text-[13px] text-text-mute">
+            Никого не нашли
           </div>
         ) : (
           users.map((u) => (
             <div
               key={u.id}
-              className={`grid grid-cols-[1fr_90px_90px_120px_1fr] gap-3 px-5 py-3 items-center border-b border-border last:border-b-0 bg-surface hover:bg-surface-2 transition-colors ${
-                u.id === currentUserId ? 'border-l-2 border-l-lime' : ''
+              className={`grid grid-cols-[1fr_90px_90px_120px_1fr] gap-3 px-5 py-3 items-center border-b border-border-soft last:border-b-0 hover:bg-white/[0.03] transition-colors ${
+                u.id === currentUserId ? 'bg-lime/[0.04]' : ''
               }`}
             >
               <div className="grid">
-                <span className="font-serif italic text-[15px] truncate">
+                <span className="text-[14.5px] font-medium text-text truncate">
                   {u.name || u.email}
-                  {u.role === 'admin' && <span className="ml-2 mono text-[9px] tracking-widest text-pink">/ADMIN</span>}
-                  {u.id === currentUserId && <span className="ml-2 mono text-[9px] tracking-widest text-lime">/YOU</span>}
+                  {u.role === 'admin' && <span className="ml-2 rounded-full bg-pink/15 px-2 py-0.5 text-[10px] font-semibold text-pink">АДМИН</span>}
+                  {u.id === currentUserId && <span className="ml-2 rounded-full bg-lime/15 px-2 py-0.5 text-[10px] font-semibold text-lime">ВЫ</span>}
                 </span>
-                <span className="mono text-[10px] tracking-wider text-text-mute truncate">{u.email}</span>
-                <span className="mono text-[9px] tracking-widest text-text-faint">
+                <span className="text-[12px] text-text-mute truncate">{u.email}</span>
+                <span className="font-mono text-[10.5px] text-text-mute/70">
                   {u.id.slice(0, 14)} · {formatDate(u.createdAt)}
                 </span>
               </div>
 
-              <div className="font-serif text-[22px] text-lime text-right leading-none">{u.tokenBalance}</div>
-              <div className="mono text-[10px] tracking-widest uppercase text-text-dim text-right">{u.plan}</div>
-              <div className="mono text-[10px] tracking-wider text-text-mute">
-                {u._count.avatarGenerations}b · {u._count.covers}c · {u._count.videoGenerations}v
+              <div className="text-[22px] font-extrabold tabular-nums tracking-[-0.02em] text-lime text-right leading-none">{u.tokenBalance}</div>
+              <div className="text-[12px] font-medium uppercase text-text-dim text-right">{u.plan}</div>
+              <div className="text-[12px] tabular-nums text-text-mute">
+                {u._count.avatarGenerations} б · {u._count.covers} о · {u._count.videoGenerations} в
               </div>
 
               <div className="flex flex-wrap gap-1.5">
@@ -149,7 +151,7 @@ export function AdminUsersPanel({ initialUsers, currentUserId }: { initialUsers:
                     type="button"
                     disabled={busyId === u.id}
                     onClick={() => grant(u.id, amt)}
-                    className="mono text-[10px] tracking-widest uppercase px-2.5 py-1.5 border border-border-2 hover:border-lime hover:text-lime transition-colors disabled:opacity-40"
+                    className="rounded-full border border-border-soft bg-white/[0.04] px-3 py-1 text-[12px] font-medium tabular-nums text-text-dim hover:border-lime/50 hover:bg-lime/[0.08] hover:text-lime transition-colors disabled:opacity-40"
                   >
                     +{amt}
                   </button>
@@ -158,14 +160,15 @@ export function AdminUsersPanel({ initialUsers, currentUserId }: { initialUsers:
                   type="button"
                   disabled={busyId === u.id}
                   onClick={() => grantCustom(u.id)}
-                  className="mono text-[10px] tracking-widest uppercase px-2.5 py-1.5 border border-border-2 hover:border-text-dim transition-colors disabled:opacity-40"
+                  className="rounded-full border border-border-soft bg-white/[0.04] px-3 py-1 text-[12px] text-text-dim hover:bg-white/[0.08] hover:text-text transition-colors disabled:opacity-40"
                 >
-                  custom
+                  своё
                 </button>
               </div>
             </div>
           ))
         )}
+        </div>
       </div>
     </div>
   );

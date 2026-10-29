@@ -7,8 +7,8 @@
 // (чипы-подсказки под полем поиска, см. ТЗ §5).
 
 import { env } from '@/lib/env';
+import { claudeChat, isClaudeConfigured } from './claude';
 
-const ANTHROPIC_API = 'https://api.anthropic.com/v1/messages';
 const MAX_TOKENS = 600;
 const MAX_KEYWORDS = 12;
 const MAX_HASHTAGS = 10;
@@ -41,8 +41,7 @@ export async function expandNiche(niche: string): Promise<NicheExpansion> {
   const cleaned = (niche || '').trim();
   if (!cleaned) return { keywords: [], hashtags: [], source: 'fallback' };
 
-  const apiKey = env.ANTHROPIC_API_KEY;
-  if (!apiKey) return fallbackExpand(cleaned);
+  if (!isClaudeConfigured()) return fallbackExpand(cleaned);
 
   const system = `Ты — ассистент для ресёрча вирусного контента в Instagram. Тебе дают короткое описание ниши на любом языке, ты возвращаешь JSON:
 {"keywords": ["...", "..."], "hashtags": ["...", "..."]}
@@ -52,43 +51,20 @@ export async function expandNiche(niche: string): Promise<NicheExpansion> {
 - hashtags: 6-10 РЕАЛЬНЫХ популярных Instagram-хэштегов БЕЗ #, латиницей или транслитом, по которым реально публикуют контент в этой нише. Не выдумывай — если ниша русская и хэштеги обычно англоязычные, давай англоязычные.
 - Без пояснений, без markdown, без преамбулы. Только JSON.`;
 
-  let res: Response;
-  try {
-    res = await fetch(ANTHROPIC_API, {
-      method: 'POST',
-      headers: {
-        'Content-Type': 'application/json',
-        'x-api-key': apiKey,
-        'anthropic-version': '2023-06-01',
-      },
-      body: JSON.stringify({
-        model: env.ANTHROPIC_PARSER_MODEL,
-        max_tokens: MAX_TOKENS,
-        system,
-        messages: [{ role: 'user', content: cleaned }],
-      }),
-      signal: AbortSignal.timeout(20_000),
-    });
-  } catch (e) {
-    console.warn(`[expand-niche] fetch failed: ${(e as Error).message}`);
+  // claudeChat falls back to OpenAI when Anthropic fails (e.g. out of
+  // credits) — a naive word split would search #для / #мам.
+  const r = await claudeChat({
+    system,
+    user: cleaned,
+    model: env.ANTHROPIC_PARSER_MODEL,
+    maxTokens: MAX_TOKENS,
+    timeoutMs: 20_000,
+  });
+  if (!r.ok) {
+    console.warn(`[expand-niche] llm ${r.status} ${r.details.slice(0, 300)}`);
     return fallbackExpand(cleaned);
   }
-  if (!res.ok) {
-    // Полный body важен для отладки: 400 от Anthropic может означать что
-    // угодно (закончились кредиты, неверная модель, плохой ключ) — статус
-    // сам по себе бесполезен. Режем до 400 символов чтобы не засорить логи.
-    const body = await res.text().catch(() => '');
-    console.warn(`[expand-niche] claude ${res.status} ${body.slice(0, 400)}`);
-    return fallbackExpand(cleaned);
-  }
-
-  let data: { content?: Array<{ text?: string }> };
-  try {
-    data = await res.json();
-  } catch {
-    return fallbackExpand(cleaned);
-  }
-  const text = (data.content?.[0]?.text || '').trim();
+  const text = r.text.trim();
   let parsed: { keywords?: unknown; hashtags?: unknown };
   try {
     parsed = JSON.parse(text.replace(/^```(?:json)?\s*/i, '').replace(/```\s*$/, '').trim());

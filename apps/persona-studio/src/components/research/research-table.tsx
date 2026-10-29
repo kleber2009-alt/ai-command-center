@@ -5,6 +5,7 @@
 // сортируемых колонках. Используется как альтернатива grid'у.
 
 import Link from 'next/link';
+import { ArrowRight, Flame } from 'lucide-react';
 import type { ResearchReelView } from './types';
 
 const fmt = (n: number) => {
@@ -35,61 +36,64 @@ function viralityClass(v: number | null): string {
 
 export function ResearchTable({ reels }: { reels: ResearchReelView[] }) {
   return (
-    <div className="border border-border bg-surface overflow-x-auto">
+    <div className="panel overflow-x-auto fade-in">
       <table className="w-full text-left">
-        <thead className="bg-bg border-b border-border-soft">
-          <tr className="mono text-[9px] tracking-widest uppercase text-text-mute">
+        <thead className="border-b border-border-soft">
+          <tr className="label">
             <Th>#</Th>
-            <Th>🔥×</Th>
+            <Th>
+              <span className="inline-flex items-center gap-1"><Flame className="h-3 w-3" />×</span>
+            </Th>
             <Th>Автор</Th>
             <Th align="right">Просм.</Th>
             <Th align="right">Лайки</Th>
             <Th align="right">Комм.</Th>
             <Th align="right">Реп.</Th>
             <Th align="right">ER%</Th>
-            <Th align="right">VS</Th>
+            <Th align="right">Скор</Th>
             <Th align="right">Дата</Th>
             <Th>Описание</Th>
             <Th></Th>
           </tr>
         </thead>
-        <tbody>
+        <tbody className="tabular-nums">
           {reels.map((r, i) => (
-            <tr key={r.id} className="border-b border-border-soft hover:bg-bg">
-              <Td className="mono text-[10px] text-text-mute">{i + 1}</Td>
-              <Td className={`mono text-[12px] tracking-wider ${viralityClass(r.virality)}`}>
+            <tr key={r.id} className="border-b border-border-soft last:border-b-0 transition-colors hover:bg-white/[0.04]">
+              <Td className="text-[12px] text-text-mute">{i + 1}</Td>
+              <Td className={`text-[13px] font-bold ${viralityClass(r.virality)}`}>
                 {r.virality != null ? `${r.virality.toFixed(1)}×` : '—'}
               </Td>
               <Td>
                 <Link
                   href={`/research/author/${r.author.username}`}
-                  className="mono text-[11px] tracking-wider text-text hover:text-lime"
+                  className="text-[13px] font-medium text-text hover:text-gold transition-colors"
                 >
                   @{r.author.username}
                 </Link>
               </Td>
-              <Td align="right" className="mono text-[11px] text-text">{fmt(r.views)}</Td>
-              <Td align="right" className="mono text-[11px] text-text-dim">{fmt(r.likes)}</Td>
-              <Td align="right" className="mono text-[11px] text-text-dim">{fmt(r.comments)}</Td>
-              <Td align="right" className="mono text-[11px] text-text-dim">
+              <Td align="right" className="text-[13px] font-semibold text-text">{fmt(r.views)}</Td>
+              <Td align="right" className="text-[13px] text-text-dim">{fmt(r.likes)}</Td>
+              <Td align="right" className="text-[13px] text-text-dim">{fmt(r.comments)}</Td>
+              <Td align="right" className="text-[13px] text-text-dim">
                 {r.shares > 0 ? fmt(r.shares) : '—'}
               </Td>
-              <Td align="right" className="mono text-[11px] text-cyan">
+              <Td align="right" className="text-[13px] text-cyan">
                 {r.engagementRate != null ? r.engagementRate.toFixed(1) : '—'}
               </Td>
-              <Td align="right" className="mono text-[11px] text-text-dim">
+              <Td align="right" className="text-[13px] text-text-dim">
                 {r.viralScore != null ? r.viralScore.toFixed(0) : '—'}
               </Td>
-              <Td align="right" className="mono text-[10px] text-text-mute">{relDate(r.postedAt)}</Td>
-              <Td className="font-serif text-[12.5px] text-text-dim max-w-[40ch] truncate">
+              <Td align="right" className="text-[12px] text-text-mute">{relDate(r.postedAt)}</Td>
+              <Td className="text-[13px] text-text-dim max-w-[40ch] truncate">
                 {r.caption || '—'}
               </Td>
               <Td>
                 <Link
                   href={`/research/${r.id}`}
-                  className="mono text-[9px] tracking-widest uppercase text-text-mute hover:text-gold whitespace-nowrap"
+                  className="inline-flex items-center gap-1 whitespace-nowrap rounded-full px-2.5 py-1 text-[12px] font-medium text-gold transition-colors hover:bg-blue/[0.12]"
                 >
-                  Анализ →
+                  Анализ
+                  <ArrowRight className="h-3.5 w-3.5" />
                 </Link>
               </Td>
             </tr>
@@ -103,7 +107,7 @@ export function ResearchTable({ reels }: { reels: ResearchReelView[] }) {
 function Th({ children = null, align = 'left' }: { children?: React.ReactNode; align?: 'left' | 'right' }) {
   return (
     <th
-      className={`px-2 py-2 ${align === 'right' ? 'text-right' : 'text-left'} whitespace-nowrap`}
+      className={`px-3 py-3 font-semibold ${align === 'right' ? 'text-right' : 'text-left'} whitespace-nowrap`}
     >
       {children}
     </th>
@@ -121,7 +125,7 @@ function Td({
 }) {
   return (
     <td
-      className={`px-2 py-2 ${align === 'right' ? 'text-right' : 'text-left'} ${className}`}
+      className={`px-3 py-2.5 ${align === 'right' ? 'text-right' : 'text-left'} ${className}`}
     >
       {children}
     </td>

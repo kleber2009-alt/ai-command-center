@@ -2,12 +2,15 @@
 
 import { useEffect, useRef, useState } from 'react';
 import { useRouter } from 'next/navigation';
+import { ArrowRight, ExternalLink, Star } from 'lucide-react';
+import { Icon3D } from '@/components/ui/icon3d';
+import { errorText, exceptionText } from '@/lib/error-text';
 
 type Method = 'cryptobot' | 'stars';
 
 const TRIAL = {
   id: 'trial' as const,
-  label: 'Trial',
+  label: 'Пробный',
   tokens: 43,
   usdt: '1.00',
   stars: 75,
@@ -15,9 +18,9 @@ const TRIAL = {
 };
 
 const PACKS = [
-  { id: 'starter', label: 'Starter', tokens: 100, usdt: '9.00', stars: 650,  desc: '1 видео или ~8 батчей аватаров' },
-  { id: 'pro',     label: 'Pro',     tokens: 400, usdt: '29.00', stars: 2100, desc: '~4 видео + аватары и обложки', featured: true },
-  { id: 'agency',  label: 'Agency',  tokens: 1200, usdt: '79.00', stars: 5700, desc: '~12 видео — для команды' },
+  { id: 'starter', label: 'Старт', tokens: 100, usdt: '9.00', stars: 650,  desc: '1 видео или ~8 батчей аватаров' },
+  { id: 'pro',     label: 'Про',     tokens: 400, usdt: '29.00', stars: 2100, desc: '~4 видео + аватары и обложки', featured: true },
+  { id: 'agency',  label: 'Агентство',  tokens: 1200, usdt: '79.00', stars: 5700, desc: '~12 видео — для команды' },
 ] as const;
 
 type CreateResp = {
@@ -80,11 +83,11 @@ export function BillingActions({ trialUsed }: { trialUsed?: boolean }) {
       });
       const j = (await res.json().catch(() => ({}))) as Partial<CreateResp> & { error?: string; detail?: string; status?: string };
       if (res.status === 409 && j.error === 'trial_already_used') {
-        setError(j.status === 'paid' ? 'Trial уже активирован. Дальше — Starter и выше.' : 'У тебя уже есть открытый trial-инвойс.');
+        setError(j.status === 'paid' ? 'Пробный пакет уже активирован. Дальше — «Старт» и выше.' : 'У тебя уже есть открытый счёт на пробный пакет.');
         return;
       }
       if (!res.ok || !j.payUrl) {
-        setError(j.detail ?? j.error ?? `http_${res.status}`);
+        setError(errorText(j, res.status));
         return;
       }
       const inv = j as CreateResp;
@@ -103,7 +106,7 @@ export function BillingActions({ trialUsed }: { trialUsed?: boolean }) {
         setActiveInvoice(inv);
       }
     } catch (e) {
-      setError(e instanceof Error ? e.message : String(e));
+      setError(exceptionText(e));
     } finally {
       setBusy(null);
     }
@@ -111,32 +114,32 @@ export function BillingActions({ trialUsed }: { trialUsed?: boolean }) {
 
   const priceLabel = (usdt: string, stars: number) =>
     method === 'stars'
-      ? <>{stars} <span className="mono text-[12px] tracking-wider text-text-dim uppercase">★</span></>
-      : <>{usdt} <span className="mono text-[12px] tracking-wider text-text-dim uppercase">USDT</span></>;
+      ? <>{stars} <Star className="inline h-[0.55em] w-[0.55em] -translate-y-[0.1em] fill-amber text-amber" aria-label="звёзд" /></>
+      : <>{usdt} <span className="text-[0.4em] font-semibold tracking-[0.04em] text-text-dim">USDT</span></>;
 
   return (
     <div className="grid gap-4">
       {/* Method toggle */}
       <div className="flex flex-wrap items-center gap-3">
-        <span className="mono text-[10px] tracking-widest uppercase text-text-mute">Оплата</span>
-        <div className="inline-flex border border-border">
+        <span className="label">Оплата</span>
+        <div className="inline-flex rounded-full border border-border-soft bg-white/[0.04] p-1">
           <button
             type="button"
             onClick={() => setMethod('cryptobot')}
-            className={`mono text-[11px] tracking-widest uppercase px-3 py-1.5 ${method === 'cryptobot' ? 'bg-lime text-bg' : 'text-text-dim hover:text-text'}`}
+            className={`rounded-full px-3.5 py-1.5 text-[13px] transition-colors ${method === 'cryptobot' ? 'bg-blue font-semibold text-white' : 'text-text-dim hover:text-text'}`}
           >
             CryptoBot · USDT
           </button>
           <button
             type="button"
             onClick={() => setMethod('stars')}
-            className={`mono text-[11px] tracking-widest uppercase px-3 py-1.5 border-l border-border ${method === 'stars' ? 'bg-warm text-bg' : 'text-text-dim hover:text-text'}`}
+            className={`rounded-full px-3.5 py-1.5 text-[13px] transition-colors ${method === 'stars' ? 'bg-amber font-semibold text-bg' : 'text-text-dim hover:text-text'}`}
           >
             Telegram Stars
           </button>
         </div>
         {!inTma && method === 'stars' && (
-          <span className="mono text-[10px] text-pink tracking-wider">
+          <span className="text-[13px] text-pink fade-in">
             Stars работают только из Telegram Mini App
           </span>
         )}
@@ -144,78 +147,93 @@ export function BillingActions({ trialUsed }: { trialUsed?: boolean }) {
 
       {/* Trial card */}
       {!trialUsed && (
-        <div className="border-2 border-warm bg-[#1a0f05] p-5 flex flex-wrap items-center justify-between gap-4">
-          <div className="grid gap-1">
-            <div className="mono text-[10px] tracking-widest uppercase text-warm">/ TRIAL · one-time</div>
-            <div className="font-serif italic text-[24px] leading-tight">
-              {priceLabel(TRIAL.usdt, TRIAL.stars)}
-            </div>
-            <div className="font-serif italic text-[13px] text-text-dim">
-              +{TRIAL.tokens} токенов = {TRIAL.desc.toLowerCase()}.
+        <div className="panel relative overflow-hidden !border-amber/40 !bg-amber/[0.06] p-5 sm:p-6 flex flex-wrap items-center justify-between gap-4 reveal">
+          <div className="flex items-center gap-4">
+            <Icon3D name="sparkles" size={32} tile="yellow" sway />
+            <div className="grid gap-1">
+              <div className="label !text-amber">ПРОБНЫЙ · один раз</div>
+              <div className="text-[28px] font-extrabold leading-tight tabular-nums tracking-[-0.02em] text-text">
+                {priceLabel(TRIAL.usdt, TRIAL.stars)}
+              </div>
+              <div className="text-[13.5px] text-text-dim">
+                +{TRIAL.tokens} токенов = {TRIAL.desc.toLowerCase()}.
+              </div>
             </div>
           </div>
           <button
+            type="button"
             onClick={() => buy('trial')}
             disabled={busy !== null || (method === 'stars' && !inTma)}
-            className="btn-primary whitespace-nowrap"
+            className="btn-primary"
           >
-            {busy === 'trial' ? 'Создаём…' : `Попробовать ${method === 'stars' ? `за ${TRIAL.stars}★` : 'за 1$'} →`}
+            {busy === 'trial' ? 'Создаём…' : `Попробовать ${method === 'stars' ? `за ${TRIAL.stars} Stars` : 'за 1$'}`}
+            {busy !== 'trial' && <ArrowRight className="h-4 w-4" />}
           </button>
         </div>
       )}
 
       {/* Main packs */}
-      <div className="grid sm:grid-cols-2 lg:grid-cols-3 gap-[2px] bg-border border border-border">
-        {PACKS.map((p) => (
+      <div className="grid sm:grid-cols-2 lg:grid-cols-3 gap-4 stagger">
+        {PACKS.map((p) => {
+          const featured = 'featured' in p && p.featured;
+          return (
           <div
             key={p.id}
-            className={`bg-surface p-6 flex flex-col justify-between min-h-[220px] ${
-              'featured' in p && p.featured ? 'border-l-2 border-lime' : ''
+            className={`card-editorial p-6 flex flex-col justify-between min-h-[240px] ${
+              featured ? '!border-gold/50 !bg-blue/[0.07] shadow-glow' : ''
             }`}
           >
             <div>
-              <div className="flex items-baseline justify-between mb-3">
-                <span className="font-serif italic text-[22px]">{p.label}</span>
-                {'featured' in p && p.featured && (
-                  <span className="mono text-[9px] tracking-widest uppercase text-lime font-bold">recommended</span>
+              <div className="flex items-center justify-between mb-4">
+                <span className="flex items-center gap-2.5 text-[20px] font-semibold tracking-[-0.02em] text-text">
+                  <Icon3D name={p.id === 'starter' ? 'coin' : p.id === 'pro' ? 'bolt' : 'package'} size={24} tile />
+                  {p.label}
+                </span>
+                {featured && (
+                  <span className="rounded-full bg-lime px-2.5 py-0.5 text-[11px] font-semibold uppercase tracking-[0.04em] text-bg">советуем</span>
                 )}
               </div>
-              <div className="font-serif text-[42px] leading-none mb-1">
+              <div className="text-[44px] font-extrabold leading-none tabular-nums tracking-[-0.03em] text-text mb-1">
                 {priceLabel(p.usdt, p.stars)}
               </div>
-              <div className="mono text-[10px] tracking-widest text-text-mute uppercase mt-2">
+              <div className="mt-2.5 text-[13px] font-semibold tabular-nums text-gold">
                 +{p.tokens} токенов
               </div>
-              <div className="font-serif italic text-[13px] text-text-dim mt-2">{p.desc}</div>
+              <div className="text-[13.5px] text-text-dim mt-1.5">{p.desc}</div>
             </div>
             <button
+              type="button"
               onClick={() => buy(p.id)}
               disabled={busy !== null || (method === 'stars' && !inTma)}
-              className={`mt-5 justify-center ${
-                'featured' in p && p.featured ? 'btn-primary' : 'btn-ghost'
-              }`}
+              className={`mt-6 w-full ${featured ? 'btn-primary' : 'btn-ghost'}`}
             >
-              {busy === p.id ? 'Создаём…' : `Купить · +${p.tokens}t →`}
+              {busy === p.id ? 'Создаём…' : `Купить · +${p.tokens} ток.`}
+              {busy !== p.id && <ArrowRight className="h-4 w-4" />}
             </button>
           </div>
-        ))}
+          );
+        })}
       </div>
 
       {activeInvoice && (
-        <div className="border border-lime/40 bg-[#0a1305] p-5 flex flex-wrap items-center justify-between gap-3">
-          <div>
-            <div className="mono text-[10px] tracking-widest uppercase text-lime mb-1">
-              / waiting
-            </div>
-            <div className="font-serif italic text-[15px]">
-              Инвойс {activeInvoice.amount} {activeInvoice.asset === 'XTR' ? '★' : activeInvoice.asset} открыт.
-              После оплаты {activeInvoice.tokens} токенов зачислятся автоматически.
+        <div className="panel !border-lime/40 !bg-lime/[0.05] p-5 flex flex-wrap items-center justify-between gap-3 pop-in">
+          <div className="flex items-center gap-3.5">
+            <Icon3D name="processing" size={28} tile="lime" sway />
+            <div>
+              <div className="label !text-lime mb-1">
+                ждём оплату
+              </div>
+              <div className="text-[14.5px] text-text">
+                Инвойс {activeInvoice.amount} {activeInvoice.asset === 'XTR' ? '★' : activeInvoice.asset} открыт.
+                После оплаты {activeInvoice.tokens} токенов зачислятся автоматически.
+              </div>
             </div>
           </div>
           <div className="flex gap-2">
             {!inTma && (
               <a href={activeInvoice.payUrl} target="_blank" rel="noopener noreferrer" className="btn-ghost">
-                Открыть снова →
+                Открыть снова
+                <ExternalLink className="h-4 w-4" />
               </a>
             )}
             <button type="button" className="btn-ghost" onClick={() => setActiveInvoice(null)}>
@@ -226,16 +244,16 @@ export function BillingActions({ trialUsed }: { trialUsed?: boolean }) {
       )}
 
       {error && (
-        <div className="border border-pink/40 bg-[#1a0510] p-4">
-          <span className="mono text-[11px] text-pink tracking-wider">/ERROR — {error}</span>
+        <div className="rounded-2xl border border-pink/40 bg-pink/[0.06] px-4 py-3 text-[13px] text-pink fade-in">
+          {error}
         </div>
       )}
 
-      <p className="mono text-[10px] tracking-widest uppercase text-text-mute">
+      <p className="text-[12.5px] text-text-mute">
         {method === 'stars' ? (
-          <>Оплата Telegram Stars · мгновенное зачисление через бот-webhook</>
+          <>Оплата Telegram Stars · мгновенное зачисление через бота</>
         ) : (
-          <>Оплата через <a href="https://t.me/CryptoBot" target="_blank" rel="noopener noreferrer" className="text-cyan hover:underline">@CryptoBot</a> · USDT/TON/BTC · авто-зачисление в течение ~30 сек</>
+          <>Оплата через <a href="https://t.me/CryptoBot" target="_blank" rel="noopener noreferrer" className="text-gold hover:underline">@CryptoBot</a> · USDT/TON/BTC · автозачисление в течение ~30 сек</>
         )}
       </p>
     </div>

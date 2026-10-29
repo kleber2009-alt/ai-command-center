@@ -13,6 +13,7 @@
 //   5. expected === hash → valid. Also check `auth_date` is recent (within 24h).
 
 import { createHmac, timingSafeEqual } from 'node:crypto';
+import { TELEGRAM_API_BASE } from '@/lib/provider-urls';
 
 export class TelegramError extends Error {
   constructor(public code: string, message: string) {
@@ -97,7 +98,7 @@ export function verifyInitData(initData: string): VerifiedInitData {
 
 // ── Bot API client (createInvoiceLink for Stars) ─────────────
 
-const BOT_API = 'https://api.telegram.org';
+const BOT_API = TELEGRAM_API_BASE;
 
 export async function botCall<T = unknown>(method: string, body: Record<string, unknown>): Promise<T> {
   const token = botTokenOrThrow();

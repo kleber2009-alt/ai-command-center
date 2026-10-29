@@ -1,8 +1,6 @@
-import { Worker } from 'bullmq';
+import { UnrecoverableError, Worker } from 'bullmq';
 import { prisma } from '@/lib/prisma';
-import { connection, QUEUE_NAMES, omnihumanQueue, type HeygenVideoJob } from '@/lib/queue';
-import { isEnabledEngine } from '@/lib/video-engines';
-import { ELEVENLABS_VOICE_PRESETS } from '@/lib/elevenlabs-voices';
+import { connection, QUEUE_NAMES, type HeygenVideoJob } from '@/lib/queue';
 import {
   uploadTalkingPhoto,
   createVideoAvatarIV,
@@ -11,16 +9,18 @@ import {
   HeygenError,
   uploadPhotoAvatarV3,
   createVideoV3AvatarV,
+  createVideoV3Look,
   waitForVideoV3,
   type Aspect,
   type HeygenModelVersion,
   type Quality,
 } from '@/lib/heygen';
-import { keyFor, uploadBuffer } from '@/lib/storage';
+import { fetchMedia, keyFor, uploadBuffer } from '@/lib/storage';
 import { refundTokens } from '@/lib/tokens';
+import { refreshAppSettings } from '@/lib/app-settings';
 
 async function fetchBytes(url: string): Promise<{ bytes: Buffer; mime: string }> {
-  const res = await fetch(url);
+  const res = await fetchMedia(url);
   if (!res.ok) throw new Error(`fetch_${res.status}`);
   const mime = res.headers.get('content-type') ?? 'image/jpeg';
   const ab = await res.arrayBuffer();
@@ -31,6 +31,7 @@ export function startHeygenWorker() {
   const worker = new Worker<HeygenVideoJob>(
     QUEUE_NAMES.heygenVideo,
     async (job) => {
+      await refreshAppSettings(); // admin-set provider keys (see lib/app-settings.ts)
       const { videoId, userId } = job.data;
 
       const row = await prisma.videoGeneration.findUnique({
@@ -39,7 +40,11 @@ export function startHeygenWorker() {
       });
       if (!row) throw new Error('video_missing');
       if (row.userId !== userId) throw new Error('user_mismatch');
-      if (!row.avatar.imageUrl) throw new Error('avatar_no_image');
+      // Either a local avatar (its photo is uploaded to HeyGen here) or a look
+      // that already exists in the owner's HeyGen account (no upload at all).
+      const lookId = !row.avatarId ? row.heygenAvatarId : null;
+      const avatar = row.avatar;
+      if (!lookId && !avatar?.imageUrl) throw new Error('avatar_no_image');
       if (!row.voiceId) throw new Error('voice_missing');
       if (!row.script || row.script.trim().length < 5) throw new Error('script_missing');
 
@@ -59,36 +64,98 @@ export function startHeygenWorker() {
         // effectiveVersion может сдвинуться на IV если Avatar V отказался от фото
         // (HeyGen quality-gate: stylized аватары часто не проходят cross-reference).
         let effectiveVersion: HeygenModelVersion = (row.heygenVersion as HeygenModelVersion) ?? 'V';
+        // Account looks always go through v3 (/v3/videos + /v3/videos/{id});
+        // heygenVersion there only picks the engine (V → avatar_v, IV → avatar_iv).
+        const isLook = Boolean(lookId);
 
         const runIVPath = async (bytes: Buffer, mime: string): Promise<string> => {
+          // Reuse the talking_photo made for this image earlier: every new one
+          // counts against the HeyGen photo-avatar limit, and once it is hit
+          // every video fails.
+          const createIV = (talkingPhotoId: string) =>
+            createVideoAvatarIV({
+              talkingPhotoId,
+              voiceId: row.voiceId!,
+              script: row.script!,
+              aspect: (row.aspect as Aspect) ?? '9:16',
+              quality: (row.quality as Quality) ?? '2k',
+              background: row.background ?? '#000000',
+              motionPrompt: row.motionPrompt ?? undefined,
+            });
+          const cached = avatar!.heygenTalkingPhotoId;
+          if (cached) {
+            try {
+              console.log(`[heygen-worker] ${videoId} (IV) reusing talking_photo_id=${cached}`);
+              const id = await createIV(cached);
+              console.log(`[heygen-worker] ${videoId} heygen_video_id=${id}`);
+              return id;
+            } catch (e) {
+              // Deleted on the HeyGen side → upload a fresh one below.
+              const stale = e instanceof HeygenError && /not.?found|not exist|invalid.*talking/i.test(e.message);
+              if (!stale) throw e;
+              console.warn(`[heygen-worker] ${videoId} cached talking_photo gone (${e.message.slice(0, 120)}), re-uploading`);
+            }
+          }
           console.log(`[heygen-worker] ${videoId} (IV) uploading talking_photo…`);
           const asset = await uploadTalkingPhoto({ bytes, mime });
           console.log(`[heygen-worker] ${videoId} talking_photo_id=${asset.id}`);
-          const id = await createVideoAvatarIV({
-            talkingPhotoId: asset.id,
-            voiceId: row.voiceId!,
-            script: row.script!,
-            aspect: (row.aspect as Aspect) ?? '9:16',
-            quality: (row.quality as Quality) ?? '2k',
-            background: row.background ?? '#000000',
-            motionPrompt: row.motionPrompt ?? undefined,
-          });
+          await prisma.avatar.update({ where: { id: avatar!.id }, data: { heygenTalkingPhotoId: asset.id } });
+          const id = await createIV(asset.id);
           console.log(`[heygen-worker] ${videoId} heygen_video_id=${id}`);
           return id;
         };
 
-        if (!heygenVideoId) {
-          const ref = await fetchBytes(row.avatar.imageUrl);
+        if (!heygenVideoId && lookId) {
+          const createLook = (engine: 'avatar_v' | 'avatar_iv') =>
+            createVideoV3Look({
+              lookId,
+              voiceId: row.voiceId!,
+              script: row.script!,
+              aspect: (row.aspect as Aspect) ?? '9:16',
+              engine,
+              title: `persona-${videoId}`,
+            });
+          const engine = effectiveVersion === 'IV' ? 'avatar_iv' : 'avatar_v';
+          console.log(`[heygen-worker] ${videoId} account look ${lookId} engine=${engine}`);
+          try {
+            heygenVideoId = await createLook(engine);
+          } catch (e) {
+            // Avatar V needs a cross-reference look in the group; a photo look
+            // without one is rejected — the same look renders on Avatar IV.
+            const xref = engine === 'avatar_v' && e instanceof HeygenError && e.code === 'V3_VIDEO_HTTP_400'
+              && /cross-reference|instant avatar look|animation reference|not supported|engine/i.test(e.message);
+            if (!xref) throw e;
+            console.warn(`[heygen-worker] ${videoId} avatar_v rejected look (${e.message.slice(0, 120)}), using avatar_iv`);
+            heygenVideoId = await createLook('avatar_iv');
+            effectiveVersion = 'IV';
+          }
+          console.log(`[heygen-worker] ${videoId} v3 video_id=${heygenVideoId}`);
+          await prisma.videoGeneration.update({
+            where: { id: videoId },
+            data: { heygenJobId: heygenVideoId, heygenVersion: effectiveVersion },
+          });
+        } else if (!heygenVideoId) {
+          const ref = await fetchBytes(avatar!.imageUrl);
 
           if (effectiveVersion === 'V') {
-            // 1) v3: upload bytes → asset → photo avatar
-            console.log(`[heygen-worker] ${videoId} (V) uploading photo to v3…`);
-            const v3 = await uploadPhotoAvatarV3({
-              bytes: ref.bytes,
-              mime: ref.mime,
-              name: `pers-${userId}-${row.avatarId}`,
-            });
-            console.log(`[heygen-worker] ${videoId} v3 avatar_id=${v3.avatarId} engines=${v3.supportedEngines.join(',')}`);
+            // 1) v3: upload bytes → asset → photo avatar. Reuse the one created
+            // for this image earlier (each creation costs HeyGen credits).
+            let v3: { avatarId: string; supportedEngines: string[] };
+            if (avatar!.heygenAvatarId) {
+              v3 = { avatarId: avatar!.heygenAvatarId, supportedEngines: ['avatar_v'] };
+              console.log(`[heygen-worker] ${videoId} reusing v3 avatar_id=${v3.avatarId}`);
+            } else {
+              console.log(`[heygen-worker] ${videoId} (V) uploading photo to v3…`);
+              v3 = await uploadPhotoAvatarV3({
+                bytes: ref.bytes,
+                mime: ref.mime,
+                name: `pers-${userId}-${avatar!.id}`,
+              });
+              console.log(`[heygen-worker] ${videoId} v3 avatar_id=${v3.avatarId} engines=${v3.supportedEngines.join(',')}`);
+              if (v3.supportedEngines.includes('avatar_v')) {
+                await prisma.avatar.update({ where: { id: avatar!.id }, data: { heygenAvatarId: v3.avatarId } });
+              }
+            }
 
             // Pre-flight: HeyGen возвращает список поддерживаемых движков.
             // Если avatar_v отсутствует — сразу fallback на IV, не тратя API call.
@@ -98,15 +165,29 @@ export function startHeygenWorker() {
               effectiveVersion = 'IV';
             } else {
               try {
-                // 2) v3: create video with engine.type='avatar_v'
-                heygenVideoId = await createVideoV3AvatarV({
-                  avatarId: v3.avatarId,
-                  voiceId: row.voiceId,
-                  script: row.script,
-                  aspect: (row.aspect as Aspect) ?? '9:16',
-                  quality: (row.quality as Quality) ?? '2k',
-                  background: row.background ?? undefined,
-                });
+                // 2) v3: create video with engine.type='avatar_v'. A fresh photo
+                // avatar is still processing for a while → HeyGen answers
+                // resource_not_ready; wait instead of failing (and re-paying).
+                const createV = () =>
+                  createVideoV3AvatarV({
+                    avatarId: v3.avatarId,
+                    voiceId: row.voiceId!,
+                    script: row.script!,
+                    aspect: (row.aspect as Aspect) ?? '9:16',
+                    quality: (row.quality as Quality) ?? '2k',
+                    background: row.background ?? undefined,
+                  });
+                for (let attempt = 0; ; attempt++) {
+                  try {
+                    heygenVideoId = await createV();
+                    break;
+                  } catch (err) {
+                    const notReady = err instanceof HeygenError && /resource_not_ready|still processing/i.test(err.message);
+                    if (!notReady || attempt >= 30) throw err;
+                    if (attempt === 0) console.log(`[heygen-worker] ${videoId} v3 avatar still processing — waiting`);
+                    await new Promise((r) => setTimeout(r, 10_000));
+                  }
+                }
                 console.log(`[heygen-worker] ${videoId} v3 video_id=${heygenVideoId}`);
               } catch (e) {
                 // Runtime fallback: HeyGen иногда отдаёт avatar_v в supported_api_engines,
@@ -142,8 +223,8 @@ export function startHeygenWorker() {
         }
 
         // 3) Poll until completed or failed (10 min max) — v3 uses /v3/videos/{id}.
-        const result = effectiveVersion === 'V'
-          ? await waitForVideoV3(heygenVideoId)
+        const result = isLook || effectiveVersion === 'V'
+          ? await waitForVideoV3(heygenVideoId!)
           : await waitForVideo(heygenVideoId);
 
         if (result.state !== 'completed') {
@@ -176,32 +257,29 @@ export function startHeygenWorker() {
       } catch (e) {
         const msg = e instanceof HeygenError ? `${e.code}: ${e.message}` : (e instanceof Error ? e.message : String(e));
 
-        // HeyGen free-tier limits (photo-avatar count, video credits, voice quota)
-        // shouldn't hard-fail the user. Re-route the job to OmniHuman (KIE — no
-        // per-account limits) so it still completes. Voice provider differs
-        // (HeyGen voice → ElevenLabs TTS), so substitute a safe multilingual
-        // default voice for the OmniHuman TTS step. Keep the tokens (no refund).
+        // HeyGen plan limits (photo-avatar count, video credits, voice quota).
+        // The user picked HeyGen, so we don't silently switch to OmniHuman (a
+        // different face animation and a different voice). Fail at once with a
+        // clear reason and refund — retrying can't get past a plan limit.
         const isPlanLimit =
           e instanceof HeygenError &&
           /401028|exceeded your limit|photo avatar|insufficient credit|quota|upgrade your plan/i.test(
             `${e.code} ${e.message}`,
           );
-        if (isPlanLimit && row.engine !== 'omnihuman-1.5' && isEnabledEngine('omnihuman-1.5')) {
-          const fallbackVoice = ELEVENLABS_VOICE_PRESETS[0]?.voice_id ?? '';
-          console.warn(`[heygen-worker] ${videoId} HeyGen limit (${msg.slice(0, 90)}) → OmniHuman fallback`);
+        if (isPlanLimit) {
+          console.warn(`[heygen-worker] ${videoId} HeyGen plan limit: ${msg.slice(0, 300)}`);
           await prisma.videoGeneration.update({
             where: { id: videoId },
             data: {
-              engine: 'omnihuman-1.5',
-              heygenJobId: null,
-              audioUrl: null,
-              voiceId: fallbackVoice,
-              status: 'processing',
-              errorMsg: 'heygen limit → omnihuman fallback',
+              status: 'failed',
+              // API credits are a separate HeyGen balance from the web plan's.
+              errorMsg: /insufficient.?credit/i.test(msg)
+                ? 'HEYGEN_LIMIT: На API-балансе HeyGen закончились кредиты, токены возвращены. Пополните API-кредиты в HeyGen и повторите.'
+                : 'HEYGEN_LIMIT: Исчерпан лимит аккаунта HeyGen (фото-аватары или кредиты), токены возвращены. Освободите место в HeyGen и повторите.',
             },
           });
-          await omnihumanQueue().add('generate', { videoId, userId }, { jobId: `omni-${videoId}` });
-          return { ok: true, fallback: 'omnihuman' as const };
+          await refundTokens({ userId, amount: row.tokensCost, reason: 'heygen-video:plan-limit', refId: videoId });
+          throw new UnrecoverableError(msg);
         }
 
         const maxAttempts = job.opts.attempts ?? 1;

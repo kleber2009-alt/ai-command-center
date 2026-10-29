@@ -16,9 +16,13 @@
 // кнопке «Поиск» (новое ключевое слово) или Enter.
 
 import { useCallback, useEffect, useRef, useState } from 'react';
+import { EyeOff, Heart, LayoutGrid, RefreshCw, Search, Table2, X } from 'lucide-react';
+import { Icon3D } from '@/components/ui/icon3d';
+import { PageHero } from '@/components/shell/page-hero';
 import { ResearchReelCard } from './research-reel-card';
 import { ResearchTable } from './research-table';
 import type { ResearchReelView } from './types';
+import { errorText } from '@/lib/error-text';
 
 type MediaReel = ResearchReelView & { isFav: boolean };
 
@@ -137,7 +141,7 @@ export function MediaClient() {
     setError(null);
     try {
       const res = await fetch(`/api/research/media?${buildBrowseQuery(f, cur)}`);
-      if (!res.ok) throw new Error(`HTTP ${res.status}`);
+      if (!res.ok) throw new Error(errorText(null, res.status));
       const data = await res.json();
       if (rid !== reqRef.current) return;
       setItems((prev) => (more ? [...prev, ...data.items] : data.items));
@@ -183,7 +187,7 @@ export function MediaClient() {
       const json = await res.json();
       if (rid !== reqRef.current) return;
       if (!res.ok || !json.ok) {
-        setError(json.message || json.error || `HTTP ${res.status}`);
+        setError(errorText(json, res.status));
         setItems([]);
         setCount(0);
         return;
@@ -264,53 +268,58 @@ export function MediaClient() {
   return (
     <div className="grid gap-5">
       {/* ── Header ── */}
-      <header className="grid gap-1">
-        <h1 className="font-serif text-2xl text-text">Медиа</h1>
-        <p className="mono text-[11px] tracking-widest uppercase text-text-mute">
-          Поиск контента по постам · фильтры виральности и ниши
-        </p>
-      </header>
-
-      {/* ── Search ── */}
-      <form
-        className="grid gap-1.5"
-        onSubmit={(e) => {
-          e.preventDefault();
-          commitSearch();
-        }}
-      >
-        <div className="flex items-center gap-2">
-          <input
-            type="search"
-            value={search}
-            onChange={(e) => setSearch(e.target.value)}
-            placeholder="Ниша или ключевое слово · напр. психология, смм, продажи b2b"
-            className="flex-1 bg-surface border border-border px-3 py-2 font-serif text-[14px] text-text placeholder:text-text-mute focus:border-gold outline-none"
-          />
-          <button
-            type="submit"
-            disabled={loading}
-            className="px-4 py-2 border border-gold bg-gold/10 mono text-[10px] tracking-widest uppercase text-gold hover:bg-gold/20 disabled:opacity-50"
+      <PageHero
+        eyebrow="РЕСЁРЧ · МЕДИА"
+        title="Медиа"
+        icon="media"
+        description="Поиск контента по постам · фильтры виральности и ниши"
+        extra={
+          <form
+            className="grid gap-2"
+            onSubmit={(e) => {
+              e.preventDefault();
+              commitSearch();
+            }}
           >
-            {loading && isSearchMode ? 'Ищу…' : 'Поиск'}
-          </button>
-          <button
-            type="button"
-            onClick={() => setView(view === 'cards' ? 'table' : 'cards')}
-            className="px-3 py-2 border border-border mono text-[10px] tracking-widest uppercase text-text hover:border-gold"
-            title="Переключить вид"
-          >
-            {view === 'cards' ? 'Таблица' : 'Карточки'}
-          </button>
-        </div>
-        <p className="mono text-[9px] tracking-widest uppercase text-text-mute">
-          Каждый поиск — живой запрос ко всему Instagram (до ~60 сек на новую нишу).
-          Пустое поле — лента по уже накопленной базе.
-        </p>
-      </form>
+            <div className="flex flex-wrap items-center gap-2">
+              <div className="relative min-w-[240px] flex-1">
+                <Search className="pointer-events-none absolute left-4 top-1/2 h-4 w-4 -translate-y-1/2 text-text-mute" />
+                <input
+                  type="search"
+                  value={search}
+                  onChange={(e) => setSearch(e.target.value)}
+                  placeholder="Ниша или ключевое слово · напр. психология, смм, продажи b2b"
+                  className="input !rounded-full !pl-11"
+                />
+              </div>
+              <button
+                type="submit"
+                disabled={loading}
+                className="btn-primary"
+              >
+                {loading && isSearchMode ? <RefreshCw className="h-4 w-4 animate-spin" /> : <Search className="h-4 w-4" />}
+                {loading && isSearchMode ? 'Ищу…' : 'Поиск'}
+              </button>
+              <button
+                type="button"
+                onClick={() => setView(view === 'cards' ? 'table' : 'cards')}
+                className="btn-ghost"
+                title="Переключить вид"
+              >
+                {view === 'cards' ? <Table2 className="h-4 w-4" /> : <LayoutGrid className="h-4 w-4" />}
+                {view === 'cards' ? 'Таблица' : 'Карточки'}
+              </button>
+            </div>
+            <p className="text-[12px] text-text-mute">
+              Каждый поиск — живой запрос ко всему Instagram (до ~60 сек на новую нишу).
+              Пустое поле — лента по уже накопленной базе.
+            </p>
+          </form>
+        }
+      />
 
       {/* ── Filters ── */}
-      <div className="grid gap-2 border border-border-soft bg-surface p-3">
+      <div className="panel grid gap-3 p-5 reveal">
         <FilterRow label="Сорт.">
           {SORT_OPTS.map((o) => (
             <Chip key={o.v} active={filters.sort === o.v} onClick={() => update('sort', o.v)}>
@@ -345,30 +354,34 @@ export function MediaClient() {
             value={filters.blogger}
             onChange={(e) => update('blogger', e.target.value)}
             placeholder="@username"
-            className="bg-bg border border-border px-2 py-1 mono text-[11px] text-text placeholder:text-text-mute focus:border-gold outline-none w-44"
+            className="input !w-48 !rounded-full !py-1.5 !text-[13px]"
           />
           {!isSearchMode && (
             <Chip active={filters.fav} onClick={() => update('fav', !filters.fav)}>
-              ♥ Избранное
+              <Heart className={`h-3.5 w-3.5 ${filters.fav ? 'fill-current' : ''}`} />
+              Избранное
             </Chip>
           )}
           <button
             type="button"
             onClick={reset}
-            className="mono text-[10px] tracking-widest uppercase text-text-mute hover:text-text underline"
+            className="inline-flex items-center gap-1 rounded-full px-3 py-1.5 text-[13px] text-text-mute transition-colors hover:bg-white/[0.05] hover:text-text"
           >
+            <X className="h-3.5 w-3.5" />
             Сбросить
           </button>
         </FilterRow>
       </div>
 
       {/* ── Count ── */}
-      <div className="mono text-[11px] tracking-widest uppercase text-text-mute">
+      <div className="text-[13px] tabular-nums text-text-mute">
         {displayCount != null && (
           <span>
             {isSearchMode ? `Instagram · «${committedQ}» · найдено: ` : 'Найдено: '}
-            {countMode === 'estimated' && !isSearchMode ? '~' : ''}
-            {fmtCount(displayCount)}
+            <span className="font-semibold text-text">
+              {countMode === 'estimated' && !isSearchMode ? '~' : ''}
+              {fmtCount(displayCount)}
+            </span>
             {hidden.size > 0 && ` · скрыто ${hidden.size}`}
           </span>
         )}
@@ -376,36 +389,40 @@ export function MediaClient() {
 
       {/* ── Results ── */}
       {error ? (
-        <div className="border border-pink/40 bg-surface p-6 text-center grid gap-2">
-          <p className="mono text-[11px] tracking-widest uppercase text-pink">Ошибка</p>
-          <p className="font-serif text-[13px] text-text-dim">{error}</p>
+        <div className="panel !border-pink/40 flex flex-col items-center gap-2 p-8 text-center">
+          <Icon3D name="warning" size={36} tile />
+          <p className="mt-2 text-[15px] font-semibold text-pink">Ошибка</p>
+          <p className="text-[13px] text-text-dim">{error}</p>
           <button
             type="button"
             onClick={() => (isSearchMode ? runSearch(committedQ.trim()) : fetchBrowse(filters, null))}
-            className="mono text-[10px] tracking-widest uppercase text-text hover:text-gold underline justify-self-center"
+            className="btn-ghost mt-2 !px-4 !py-2 !text-[13px]"
           >
+            <RefreshCw className="h-4 w-4" />
             Повторить
           </button>
         </div>
       ) : loading && isSearchMode ? (
-        <div className="border border-border bg-surface p-12 text-center grid gap-2">
-          <p className="mono text-[11px] tracking-widest uppercase text-text-mute">
+        <div className="panel flex flex-col items-center gap-2 p-12 text-center fade-in">
+          <Icon3D name="processing" size={44} tile sway />
+          <p className="mt-3 text-[15px] font-semibold tracking-[-0.02em] text-text">
             Скрейп Instagram + индексация авторов…
           </p>
-          <p className="font-serif italic text-[15px] text-text-dim">
+          <p className="text-[14px] text-text-dim">
             Живой поиск по нише «{committedQ}». Это может занять до 60 секунд при первом запросе.
           </p>
         </div>
       ) : loading ? (
         <div className="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-4 gap-4">
           {Array.from({ length: 8 }).map((_, i) => (
-            <div key={i} className="border border-border bg-surface aspect-[3/4] animate-pulse" />
+            <div key={i} className="skeleton aspect-[3/4] !rounded-[24px]" />
           ))}
         </div>
       ) : visible.length === 0 ? (
-        <div className="border border-border-soft bg-surface p-10 text-center grid gap-2">
-          <p className="mono text-[11px] tracking-widest uppercase text-text-mute">Ничего не найдено</p>
-          <p className="font-serif text-[13px] text-text-dim">
+        <div className="panel flex flex-col items-center gap-2 p-10 text-center fade-in">
+          <Icon3D name="media" size={44} tile />
+          <p className="mt-3 text-[16px] font-semibold tracking-[-0.02em] text-text">Ничего не найдено</p>
+          <p className="max-w-prose text-[13px] text-text-dim">
             {isSearchMode
               ? 'По этому ключевому слову Instagram ничего не вернул или всё отсеяли фильтры. Попробуй другую формулировку или ослабь фильтры.'
               : 'Введи ключевое слово и нажми «Поиск» — это запустит живой поиск по Instagram.'}
@@ -414,7 +431,7 @@ export function MediaClient() {
       ) : view === 'table' ? (
         <ResearchTable reels={visible} />
       ) : (
-        <div className="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-4 gap-4">
+        <div className="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-4 gap-4 stagger">
           {visible.map((r) => (
             <div key={r.id} className="relative group">
               <ResearchReelCard reel={r} initialFavorited={r.isFav} />
@@ -422,10 +439,10 @@ export function MediaClient() {
                 type="button"
                 onClick={() => hide(r.id)}
                 title="Скрыть пост"
-                aria-label="hide"
-                className="absolute top-2 right-9 z-10 px-1.5 py-1 bg-black/80 border border-border hover:border-pink mono text-[10px] text-text opacity-0 group-hover:opacity-100 transition-opacity"
+                aria-label="Скрыть"
+                className="absolute top-2.5 right-12 z-10 inline-flex h-8 w-8 items-center justify-center rounded-full border border-white/15 bg-black/55 text-text opacity-0 backdrop-blur-md transition-opacity hover:border-pink/60 hover:text-pink group-hover:opacity-100"
               >
-                ✕
+                <EyeOff className="h-3.5 w-3.5" />
               </button>
             </div>
           ))}
@@ -438,8 +455,9 @@ export function MediaClient() {
           type="button"
           onClick={() => fetchBrowse(filters, cursor)}
           disabled={loadingMore}
-          className="justify-self-center px-6 py-2 border border-border mono text-[11px] tracking-widest uppercase text-text hover:border-gold disabled:opacity-50"
+          className="btn-ghost justify-self-center"
         >
+          {loadingMore && <RefreshCw className="h-4 w-4 animate-spin" />}
           {loadingMore ? 'Загрузка…' : 'Показать ещё'}
         </button>
       )}
@@ -450,7 +468,7 @@ export function MediaClient() {
 function FilterRow({ label, children }: { label: string; children: React.ReactNode }) {
   return (
     <div className="flex items-center gap-2 flex-wrap">
-      <span className="mono text-[9px] tracking-widest uppercase text-text-mute w-14 shrink-0">
+      <span className="label w-16 shrink-0">
         {label}
       </span>
       {children}
@@ -471,8 +489,8 @@ function Chip({
     <button
       type="button"
       onClick={onClick}
-      className={`px-2.5 py-1 border mono text-[10px] tracking-widest uppercase transition-colors ${
-        active ? 'border-gold text-gold bg-gold/5' : 'border-border text-text-dim hover:border-text'
+      className={`inline-flex items-center gap-1.5 rounded-full border px-3.5 py-1.5 text-[13px] transition-colors ${
+        active ? 'border-transparent bg-blue text-white' : 'border-border-soft bg-white/[0.04] text-text-dim hover:bg-white/[0.07]'
       }`}
     >
       {children}

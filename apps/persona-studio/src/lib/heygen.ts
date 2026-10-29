@@ -22,6 +22,8 @@
 //      states: pending | waiting | processing | completed | failed
 
 import { request as httpsRequest } from 'node:https';
+import { request as httpRequest } from 'node:http';
+import { fetchMedia } from '@/lib/storage';
 
 const HEYGEN_KEY_ENV = 'HEYGEN_API_KEY';
 const HEYGEN_BASE = process.env.HEYGEN_API_BASE || 'https://api.heygen.com';
@@ -110,11 +112,13 @@ function heygenGetWithBody<T>(urlString: string, body: object, timeoutMs: number
   const key = keyOrThrow();
   const payload = JSON.stringify(body);
   return new Promise((resolve, reject) => {
-    const req = httpsRequest(
+    // http: only for a configured non-TLS base (local fakes / proxies).
+    const send = url.protocol === 'http:' ? httpRequest : httpsRequest;
+    const req = send(
       {
         method: 'GET',
         hostname: url.hostname,
-        port: url.port || 443,
+        port: url.port || (url.protocol === 'http:' ? 80 : 443),
         path: url.pathname + (url.search || ''),
         headers: {
           'X-Api-Key': key,
@@ -442,7 +446,7 @@ export async function waitForVideo(videoId: string): Promise<HeygenVideoStatus> 
 }
 
 export async function downloadBytes(url: string): Promise<{ bytes: Buffer; mime: string }> {
-  const res = await fetch(url, { signal: AbortSignal.timeout(180_000) });
+  const res = await fetchMedia(url, { signal: AbortSignal.timeout(180_000) });
   if (!res.ok) throw new HeygenError(`DL_HTTP_${res.status}`, `download failed: ${url}`);
   const mime = res.headers.get('content-type') ?? 'video/mp4';
   const ab = await res.arrayBuffer();
@@ -602,6 +606,64 @@ export async function createVideoV3AvatarV(opts: CreateVideoV3AvatarVOpts): Prom
     method: 'POST',
     headers: { 'X-Api-Key': key, 'Content-Type': 'application/json' },
     body: JSON.stringify(body),
+    signal: AbortSignal.timeout(SUBMIT_TIMEOUT_MS),
+  });
+  const text = await res.text();
+  if (!res.ok) throw new HeygenError(`V3_VIDEO_HTTP_${res.status}`, text.slice(0, 400));
+  let parsed: V3CreateVideoResp;
+  try { parsed = JSON.parse(text) as V3CreateVideoResp; }
+  catch { throw new HeygenError('V3_VIDEO_NON_JSON', text.slice(0, 300)); }
+  const id = parsed.data?.video_id;
+  if (!id) throw new HeygenError('V3_VIDEO_NO_ID', text.slice(0, 300));
+  return id;
+}
+
+export type V3LookEngine = 'avatar_v' | 'avatar_iv';
+
+/** Request body for POST /v3/videos with a look from the HeyGen account. Pure — unit-tested. */
+export function buildV3LookVideoBody(opts: {
+  lookId: string;
+  voiceId: string;
+  script: string;
+  aspect?: Aspect;
+  engine: V3LookEngine;
+  title?: string;
+}): Record<string, unknown> {
+  return {
+    type: 'avatar',
+    avatar_id: opts.lookId,
+    script: opts.script.slice(0, 1500),
+    voice_id: opts.voiceId,
+    // 4k is only for Avatar III digital twins / studio avatars (per docs).
+    resolution: '1080p',
+    aspect_ratio: (opts.aspect ?? '9:16') as V3AspectRatio,
+    // Account looks are cropped to the frame rather than letter-boxed.
+    fit: 'cover',
+    engine: { type: opts.engine },
+    ...(opts.title ? { title: opts.title.slice(0, 100) } : {}),
+  };
+}
+
+/**
+ * Video from a look that already exists in the owner's HeyGen account
+ * (GET /v3/avatars/looks → id). No photo upload, no new avatar on HeyGen.
+ */
+export async function createVideoV3Look(opts: {
+  lookId: string;
+  voiceId: string;
+  script: string;
+  aspect?: Aspect;
+  engine: V3LookEngine;
+  title?: string;
+}): Promise<string> {
+  if (!opts.script || opts.script.trim().length < 5) throw new HeygenError('BAD_SCRIPT', 'script too short');
+  if (!opts.lookId) throw new HeygenError('MISSING_AVATAR_ID', 'lookId required');
+  if (!opts.voiceId) throw new HeygenError('MISSING_VOICE_ID', 'voiceId required');
+  const key = keyOrThrow();
+  const res = await fetch(`${HEYGEN_V3}/videos`, {
+    method: 'POST',
+    headers: { 'X-Api-Key': key, 'Content-Type': 'application/json' },
+    body: JSON.stringify(buildV3LookVideoBody(opts)),
     signal: AbortSignal.timeout(SUBMIT_TIMEOUT_MS),
   });
   const text = await res.text();

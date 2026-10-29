@@ -5,6 +5,8 @@ import { useRouter } from 'next/navigation';
 import { useState, useTransition } from 'react';
 import { igProxy, type ResearchReelView } from './types';
 import { AddToFolderModal } from './add-to-folder-modal';
+import { ArrowRight, Copy, ExternalLink, Flame, FolderPlus, Heart, RefreshCw } from 'lucide-react';
+import { Icon3D } from '@/components/ui/icon3d';
 
 type Props = {
   reel: ResearchReelView;
@@ -38,10 +40,10 @@ function relativeDate(iso: string | null): string {
  * иначе нейтральный.
  */
 function viralityClass(v: number | null): string {
-  if (v == null) return 'text-text-mute border-border';
-  if (v >= 10) return 'text-gold border-gold';
-  if (v >= 3) return 'text-lime border-lime';
-  return 'text-text border-border';
+  if (v == null) return 'bg-black/60 text-text-mute';
+  if (v >= 10) return 'bg-blue text-white shadow-glow';
+  if (v >= 3) return 'bg-lime text-bg';
+  return 'bg-black/60 text-text';
 }
 
 export function ResearchReelCard({ reel, blurred, initialFavorited = false }: Props) {
@@ -89,12 +91,12 @@ export function ResearchReelCard({ reel, blurred, initialFavorited = false }: Pr
   return (
     <>
     <article
-      className={`relative border border-border bg-surface flex flex-col overflow-hidden ${
+      className={`card-editorial group flex flex-col overflow-hidden ${
         blurred ? 'pointer-events-none select-none' : ''
       }`}
     >
       {/* Thumbnail */}
-      <div className="relative aspect-[4/5] bg-bg overflow-hidden">
+      <div className="relative aspect-[4/5] overflow-hidden rounded-t-[23px] bg-white/[0.03]">
         {showThumb ? (
           // eslint-disable-next-line @next/next/no-img-element
           <img
@@ -103,89 +105,89 @@ export function ResearchReelCard({ reel, blurred, initialFavorited = false }: Pr
             referrerPolicy="no-referrer"
             loading="lazy"
             onError={() => setThumbFailed(true)}
-            className={`w-full h-full object-cover ${blurred ? 'blur-md' : ''}`}
+            className={`w-full h-full object-cover transition-transform duration-500 ease-settle group-hover:scale-[1.03] ${blurred ? 'blur-md' : ''}`}
           />
         ) : (
-          <div className={`w-full h-full flex items-center justify-center mono text-[9px] tracking-widest uppercase text-text-mute ${blurred ? 'blur-md' : ''}`}>
-            REEL
+          <div className={`w-full h-full flex items-center justify-center ${blurred ? 'blur-md' : ''}`}>
+            <Icon3D name="video" size={40} />
           </div>
         )}
 
-        {/* Type badge top-left */}
-        <div className="absolute top-2 left-2 px-1.5 py-0.5 bg-black/80 mono text-[9px] tracking-widest uppercase text-text">
-          REEL
+        {/* Type badge + virality top-left */}
+        <div className="absolute top-2.5 left-2.5 flex items-center gap-1.5">
+          <span className="rounded-full bg-black/60 px-2.5 py-1 text-[11px] font-semibold tracking-[0.04em] text-text backdrop-blur-md">
+            REEL
+          </span>
+          {virality != null && (
+            <span
+              className={`inline-flex items-center gap-1 rounded-full px-2.5 py-1 text-[13px] font-bold tabular-nums backdrop-blur-md ${viralityClass(
+                virality,
+              )}`}
+              title={`Виральность: ${virality}× от медианы автора (${formatCount(reel.author.medianViews || 0)})`}
+            >
+              <Flame className="h-3.5 w-3.5" />
+              {virality.toFixed(1)}×
+            </span>
+          )}
         </div>
 
-        {/* Virality fire badge */}
-        {virality != null && (
-          <div
-            className={`absolute top-2 left-16 px-2 py-1 bg-black/85 border mono text-[12px] tracking-wider ${viralityClass(
-              virality,
-            )}`}
-            title={`Виральность: ${virality}× от медианы автора (${formatCount(reel.author.medianViews || 0)})`}
-          >
-            🔥 {virality.toFixed(1)}×
-          </div>
-        )}
-
         {/* Top-right actions */}
-        <div className="absolute top-2 right-2 flex flex-col gap-1.5">
+        <div className="absolute top-2.5 right-2.5 flex flex-col gap-1.5">
           <button
             type="button"
             onClick={toggleFavorite}
-            className={`px-1.5 py-1 bg-black/80 border mono text-[10px] ${
-              favorited ? 'border-pink text-pink' : 'border-border text-text hover:border-pink'
-            }`}
+            className={`${thumbBtn} ${favorited ? '!border-pink/60 !text-pink' : 'hover:!text-pink'}`}
             title={favorited ? 'В избранном (клик чтобы убрать)' : 'В избранное'}
-            aria-label="favorite"
+            aria-label="В избранное"
           >
-            {favorited ? '♥' : '♡'}
+            <Heart className={`h-3.5 w-3.5 ${favorited ? 'fill-current' : ''}`} />
           </button>
           <button
             type="button"
             onClick={() => setShowFolderModal(true)}
-            className="px-1.5 py-1 bg-black/80 border border-border hover:border-gold mono text-[10px] text-text"
+            className={thumbBtn}
             title="В папку"
-            aria-label="add to folder"
+            aria-label="Добавить в папку"
           >
-            +
+            <FolderPlus className="h-3.5 w-3.5" />
           </button>
           <a
             href={reel.url}
             target="_blank"
             rel="noopener noreferrer"
-            className="px-1.5 py-1 bg-black/80 border border-border hover:border-lime mono text-[10px] text-text"
+            className={thumbBtn}
             title="Открыть в Instagram"
+            aria-label="Открыть в Instagram"
           >
-            ↗
+            <ExternalLink className="h-3.5 w-3.5" />
           </a>
           <button
             type="button"
             onClick={cloneFormat}
             disabled={cloning}
-            className="px-1.5 py-1 bg-black/80 border border-border hover:border-gold mono text-[10px] text-text disabled:opacity-50"
+            className={`${thumbBtn} disabled:opacity-50`}
             title="Клонировать формат → бриф в воркспейсе"
-            aria-label="clone format"
+            aria-label="Повторить формат"
           >
-            {cloning ? '…' : '⎘'}
+            {cloning ? <RefreshCw className="h-3.5 w-3.5 animate-spin" /> : <Copy className="h-3.5 w-3.5" />}
           </button>
         </div>
 
         {/* ER + score footer over thumb */}
         {reel.engagementRate != null && (
-          <div className="absolute bottom-2 left-2 px-1.5 py-0.5 bg-black/85 mono text-[10px] tracking-wider text-cyan">
+          <div className="absolute bottom-2.5 left-2.5 rounded-full bg-black/60 px-2.5 py-1 text-[11px] font-semibold tabular-nums text-cyan backdrop-blur-md">
             ER {reel.engagementRate.toFixed(1)}%
           </div>
         )}
         {reel.viralScore != null && (
-          <div className="absolute bottom-2 right-2 px-1.5 py-0.5 bg-black/85 mono text-[10px] tracking-wider text-text-dim">
-            <span className="text-text">{reel.viralScore.toFixed(0)}</span>/100
+          <div className="absolute bottom-2.5 right-2.5 rounded-full bg-black/60 px-2.5 py-1 text-[11px] tabular-nums text-text-dim backdrop-blur-md">
+            <span className="font-semibold text-text">{reel.viralScore.toFixed(0)}</span>/100
           </div>
         )}
       </div>
 
       {/* Metrics row */}
-      <div className="px-3 py-2 grid grid-cols-4 gap-2 border-b border-border-soft">
+      <div className="px-4 py-3 grid grid-cols-4 gap-2 border-b border-border-soft">
         <Metric label="ПРОСМ." value={reel.views} />
         <Metric label="ЛАЙКИ" value={reel.likes} />
         <Metric label="КОММ." value={reel.comments} />
@@ -193,51 +195,54 @@ export function ResearchReelCard({ reel, blurred, initialFavorited = false }: Pr
       </div>
 
       {/* Author row */}
-      <div className="px-3 py-2 flex items-center gap-2 border-b border-border-soft">
+      <div className="px-4 py-2.5 flex items-center gap-2 border-b border-border-soft">
         {reel.author.avatarUrl ? (
           // eslint-disable-next-line @next/next/no-img-element
           <img
             src={igProxy(reel.author.avatarUrl)}
             alt={reel.author.username}
             referrerPolicy="no-referrer"
-            className="w-6 h-6 rounded-full object-cover bg-bg"
+            className="w-7 h-7 rounded-full object-cover bg-white/[0.05] ring-1 ring-white/10"
           />
         ) : (
-          <div className="w-6 h-6 rounded-full bg-bg border border-border" />
+          <div className="w-7 h-7 rounded-full bg-white/[0.05] ring-1 ring-white/10" />
         )}
         <Link
           href={`/research/author/${reel.author.username}`}
-          className="mono text-[11px] tracking-wider text-text hover:text-lime truncate flex-1"
+          className="text-[13px] font-medium text-text hover:text-gold truncate flex-1 transition-colors"
           title="Анализ профиля"
         >
           @{reel.author.username}
         </Link>
         {reel.author.followers != null && (
-          <span className="mono text-[9px] tracking-widest uppercase text-text-mute">
+          <span className="text-[12px] tabular-nums text-text-mute">
             {formatCount(reel.author.followers)}
           </span>
         )}
       </div>
 
       {/* Caption + date */}
-      <div className="px-3 py-2 flex-1 grid gap-1">
+      <div className="px-4 py-3 flex-1 grid gap-1.5 content-start">
         {reel.caption && (
-          <p className="font-serif text-[12.5px] leading-snug text-text-dim line-clamp-2">
+          <p className="text-[13px] leading-snug text-text-dim line-clamp-2">
             {reel.caption}
           </p>
         )}
-        <span className="mono text-[9px] tracking-widest uppercase text-text-mute">
+        <span className="text-[12px] text-text-mute">
           {relativeDate(reel.postedAt)}
         </span>
       </div>
 
       {/* CTA */}
-      <Link
-        href={`/research/${reel.id}`}
-        className="btn-primary w-full !rounded-none border-t border-border text-[11px] tracking-widest uppercase text-center"
-      >
-        Анализ видео →
-      </Link>
+      <div className="px-4 pb-4">
+        <Link
+          href={`/research/${reel.id}`}
+          className="btn-primary w-full !py-2.5 !text-[13px]"
+        >
+          Анализ видео
+          <ArrowRight className="h-4 w-4" />
+        </Link>
+      </div>
     </article>
     {showFolderModal && (
       <AddToFolderModal
@@ -250,12 +255,15 @@ export function ResearchReelCard({ reel, blurred, initialFavorited = false }: Pr
   );
 }
 
+const thumbBtn =
+  'inline-flex h-8 w-8 items-center justify-center rounded-full border border-white/15 bg-black/55 text-text backdrop-blur-md transition-colors hover:border-white/30 hover:bg-black/70';
+
 function Metric({ label, value, dashIfZero }: { label: string; value: number; dashIfZero?: boolean }) {
   const show = !(dashIfZero && (!value || value === 0));
   return (
     <div className="grid gap-0.5">
-      <span className="mono text-[8px] tracking-widest uppercase text-text-mute">{label}</span>
-      <span className="mono text-[12px] tracking-wider text-text">
+      <span className="text-[10px] font-semibold uppercase tracking-[0.06em] text-text-mute">{label}</span>
+      <span className="text-[14px] font-bold tabular-nums tracking-[-0.01em] text-text">
         {show ? formatCount(value) : '—'}
       </span>
     </div>
