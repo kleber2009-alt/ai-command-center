@@ -211,8 +211,6 @@ def login(qr: bool = True) -> None:
     Устройства → Подключить устройство): код в чат не нужен. `login code` — по коду."""
     if not (settings.tg_api_id and settings.tg_api_hash):
         raise SystemExit("Сначала TG_API_ID и TG_API_HASH в .env (my.telegram.org → API development tools).")
-    import getpass
-
     from telethon.errors import SessionPasswordNeededError
     from telethon.sessions import StringSession
     from telethon.sync import TelegramClient
@@ -230,7 +228,7 @@ def login(qr: bool = True) -> None:
                     client.loop.run_until_complete(q.wait(timeout=30))   # QRLogin telethon.sync не оборачивает
                     break
                 except SessionPasswordNeededError:
-                    client.sign_in(password=getpass.getpass("Пароль двухэтапной проверки (ввод скрыт): "))
+                    _password(client)
                     break
                 except TimeoutError:
                     print("\nНе успели — показываю новый QR.\n")
@@ -242,6 +240,31 @@ def login(qr: bool = True) -> None:
         client.disconnect()
     print(f"\nВошли как {me.first_name} (@{me.username}). Добавьте в .env одну строку:\n\nTG_SESSION={session}\n\n"
           "Эта строка = доступ к вашему Telegram: не пересылайте её никому.")
+
+
+def _password(client) -> None:
+    """Облачный пароль Telegram: 3 попытки, с подсказкой, без нового QR."""
+    import getpass
+
+    from telethon.errors import PasswordHashInvalidError
+    from telethon.tl.functions.account import GetPasswordRequest
+
+    try:
+        hint = client(GetPasswordRequest()).hint
+    except Exception:  # noqa: BLE001 — подсказка не обязательна
+        hint = None
+    print("\nВключена двухэтапная проверка: нужен облачный пароль Telegram "
+          "(Настройки → Конфиденциальность → Облачный пароль)." + (f" Подсказка: {hint}" if hint else ""))
+    print("Проверьте раскладку (EN/RU) и Caps Lock: при вводе ничего не видно — так и должно быть.")
+    for left in (2, 1, 0):
+        pwd = getpass.getpass("Пароль (ввод скрыт): ").strip("\r\n")
+        try:
+            client.sign_in(password=pwd)
+            return
+        except PasswordHashInvalidError:
+            if not left:
+                raise SystemExit("Пароль не подошёл. Если забыли — восстановите его в Telegram и запустите вход снова.")
+            print(f"Пароль не подошёл, осталось попыток: {left}.")
 
 
 def _print_qr(url: str) -> None:
