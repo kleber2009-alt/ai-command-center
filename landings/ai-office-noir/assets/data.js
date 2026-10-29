@@ -1599,9 +1599,8 @@ window.SITE_DATA = {
    "dept": "Отдел маркетинга",
    "kind": "agent",
    "color": "#e0559c",
-   "img": "img/agent-avatar.jpg",
+   "img": "https://marketing.aicex.club/assets/img/shots/dvoinik.jpg",
    "gallery": [
-    "img/agent-avatar.jpg",
     "https://marketing.aicex.club/assets/img/shots/dvoinik.jpg",
     "https://marketing.aicex.club/assets/img/shots/avatar-reel.jpg"
    ],

@@ -128,7 +128,8 @@ b,strong{font-weight:500}
 
 /* ---------- item cards ---------- */
 .pgrid{display:grid;grid-template-columns:repeat(auto-fill,minmax(300px,1fr));gap:48px 28px}
-@media(max-width:400px){.pgrid{grid-template-columns:1fr}}
+.pgrid.four{grid-template-columns:repeat(auto-fill,minmax(240px,1fr))}
+@media(max-width:400px){.pgrid,.pgrid.four{grid-template-columns:1fr}}
 .pc{display:block;color:inherit}
 .pc:hover{color:inherit}
 .pw{position:relative;overflow:hidden;border-radius:var(--r-card);background:var(--bg2)}
