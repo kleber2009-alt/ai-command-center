@@ -4,8 +4,8 @@
    готовые задачи, только дописывает к ним новые PR той же ветки. Удалённая задача не вернётся —
    её PR остаются в seen. Чтобы задача стала «ручной», перенесите её в tasks.js. */
 window.OFFICE_TASKS_AUTO = {
-  "since": "2026-10-29T09:08:51Z",
-  "seen": [148, 149, 150, 151, 152, 153, 154, 155, 156, 157, 158, 159, 160, 161, 162, 163, 164, 165, 166, 167, 168, 169, 170, 171, 172, 173],
+  "since": "2026-10-29T09:27:43Z",
+  "seen": [148, 149, 150, 151, 152, 153, 154, 155, 156, 157, 158, 159, 160, 161, 162, 163, 164, 165, 166, 167, 168, 169, 170, 171, 172, 173, 174],
   "tasks": [
     {
       "id": "gh-148",
@@ -161,10 +161,11 @@ window.OFFICE_TASKS_AUTO = {
       "proof": [
         { "kind": "github", "label": "PR #169 · очистка диска сервера — раз в 2 дня и вручную", "url": "https://github.com/kleber2009-alt/ai-command-center/pull/169" },
         { "kind": "github", "label": "PR #170 · очистка — показать или удалить остальное в ~/Movies", "url": "https://github.com/kleber2009-alt/ai-command-center/pull/170" },
-        { "kind": "github", "label": "PR #171 · очистка не падает на пустой папке в ~/Movies", "url": "https://github.com/kleber2009-alt/ai-command-center/pull/171" }
+        { "kind": "github", "label": "PR #171 · очистка не падает на пустой папке в ~/Movies", "url": "https://github.com/kleber2009-alt/ai-command-center/pull/171" },
+        { "kind": "github", "label": "PR #174 · очистка удаляет и старые задачи соседних ботов в ~/Movies", "url": "https://github.com/kleber2009-alt/ai-command-center/pull/174" }
       ],
       "group": "studio-kadrik|claude/friendly-tesla-4dcftg",
-      "prs": [169, 170, 171],
+      "prs": [169, 170, 171, 174],
       "auto": true
     },
     {
