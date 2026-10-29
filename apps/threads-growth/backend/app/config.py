@@ -91,6 +91,12 @@ class Settings(BaseSettings):
     channel_username: str = ""           # @username публичного канала без @ (для mode=public)
     channel_mode: str = "private"        # private — ссылка-приглашение под каждую ветку | public — ссылка на пост
     channel_fallback_link: str = ""      # общая ссылка на канал, пока нет приёмника/прав бота
+    # Статистика каналов автора (app/funnel/channel.py): username публичного и -100… закрытого
+    channel_stats_sources: str = "ai_razbory,-1001843525349"
+    channel_stats_limit: int = 300       # сколько последних постов каждого канала смотреть
+    tg_api_id: int = 0                   # my.telegram.org — для закрытого канала (Telethon)
+    tg_api_hash: str = ""
+    tg_session: str = ""                 # строка сессии из `python -m app.funnel.channel login`
 
     # — MinIO: картинки к посту 1 по временной ссылке —
     minio_endpoint: str = ""             # внутренний host:port, напр. aisales-minio:9000

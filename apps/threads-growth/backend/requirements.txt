@@ -10,6 +10,7 @@ httpx>=0.27
 cryptography>=42
 anthropic>=2.3
 apify-client>=1.7
+telethon>=1.36             # статистика закрытого канала автора (app/funnel/channel.py)
 voyageai>=0.3
 python-dotenv>=1.0
 python-telegram-bot[job-queue]==22.8

@@ -7,6 +7,7 @@ from app.models.follower_snapshot import FollowerSnapshot
 from app.models.funnel import (
     ChannelJoin,
     FunnelComment,
+    ChannelPostStat,
     FunnelReceiver,
     FunnelState,
     FunnelThread,
@@ -26,6 +27,7 @@ __all__ = [
     "ContentPattern",
     "FollowerSnapshot",
     "FunnelComment",
+    "ChannelPostStat",
     "FunnelReceiver",
     "FunnelState",
     "FunnelThread",

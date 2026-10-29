@@ -33,6 +33,7 @@ HELP = (
     "/now N — опубликовать ветку №N в Threads прямо сейчас\n"
     "/stats — цифры за неделю\n"
     "/top — что сейчас залетает в Threads (основа планов и прогнозов)\n"
+    "/channel — что лучше всего зашло в ваших каналах (на это ведут ветки); /channel обновить\n"
     "/story текст — история или факт в банк (без текста — следующим сообщением или голосом)\n"
     "/receiver t.me/канал/123 описание — добавить пост-приёмник"
 )
@@ -363,6 +364,23 @@ async def cmd_top(update, context) -> None:
                                                      lambda db: service.research_text(db, None, 10)), is_html=True)
 
 
+async def cmd_channel(update, context) -> None:
+    from app.funnel import service
+
+    if not _is_editor(update):
+        return
+    msg = update.effective_message
+    if context.args:                       # /channel обновить — пересобрать цифры сейчас
+        from app.funnel import jobs
+
+        await msg.reply_text("📊 Снимаю цифры каналов…")
+        out = await asyncio.to_thread(jobs.run, "channel")
+        if out.get("error") or out.get("skipped"):
+            await msg.reply_text(f"⚠️ {out.get('error') or out.get('skipped')}")
+        return                             # сводку задача сама пришлёт в тему
+    await _say(msg, await _call(msg, service.channel_text), is_html=True)
+
+
 async def cmd_story(update, context) -> None:
     from app.funnel import service
 
@@ -428,6 +446,7 @@ def register(app) -> None:
     app.add_handler(CommandHandler("now", cmd_now))
     app.add_handler(CommandHandler("stats", cmd_stats))
     app.add_handler(CommandHandler("top", cmd_top))
+    app.add_handler(CommandHandler("channel", cmd_channel))
     app.add_handler(CommandHandler("story", cmd_story))
     app.add_handler(CommandHandler("receiver", cmd_receiver))
     app.add_handler(ChatMemberHandler(on_chat_member, ChatMemberHandler.CHAT_MEMBER))

@@ -1,6 +1,6 @@
 """funnel_worker — задачи воронки Threads → Telegram (см. app/funnel/jobs.py).
 
-    python -m app.workers.funnel_worker <metrics|plan|generate|publish|comments|report|token|seed> [YYYY-MM-DD]
+    python -m app.workers.funnel_worker <channel|research|metrics|plan|generate|publish|comments|report|token|seed> [YYYY-MM-DD]
     python -m app.workers.funnel_worker now N     # ветка №N в Threads прямо сейчас
 
 Дата нужна только plan / generate / report (по умолчанию — сегодня по FUNNEL_TZ).

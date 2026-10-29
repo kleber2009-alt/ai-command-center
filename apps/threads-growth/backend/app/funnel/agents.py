@@ -77,6 +77,10 @@ CLASSIFY_SCHEMA = _obj({
     "clusters": {"type": "array", "items": _INT},
 })
 REPLY_SCHEMA = _obj({"reply": _STR, "skip": _BOOL})
+CHANNEL_SCHEMA = _obj({"posts": {"type": "array", "items": _obj({
+    "id": _INT, "is_material": _BOOL, "reason": _STR, "title": _STR,
+    "kind": {"type": "string", "enum": ["prompts", "instruction", "assistant", "skill", "lesson", "case", "other"]},
+    "contents": _STR, "when": _STR, "clusters": {"type": "array", "items": _INT}})}})
 
 
 def _system(role: str) -> list[dict]:
@@ -220,6 +224,14 @@ def classify_receiver(url: str, description: str) -> dict:
                f"Описание от автора:\n{description}\n\n"
                "Верни title, kind, contents (что внутри) и clusters. Текст поста не нужен.")
     return _structured("funnel_receiver", payload, CLASSIFY_SCHEMA, effort="low")
+
+
+def classify_channel_posts(posts: list[dict]) -> list[dict]:
+    """Посты канала, которые зашли лучше обычного → какие из них бесплатная польза,
+    на которую можно вести из Threads (и что именно человек там получит)."""
+    payload = ("Посты каналов автора, которые отработали сильнее обычного (score — во сколько раз):\n"
+               + _dump(posts))
+    return _structured("funnel_channel", payload, CHANNEL_SCHEMA, effort="medium").get("posts") or []
 
 
 def draft_reply(thread_topic: str, thread_excerpt: str, comment: str, author: str, *, facts: list[str]) -> dict:

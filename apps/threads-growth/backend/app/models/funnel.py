@@ -16,6 +16,7 @@ from sqlalchemy import (
     Boolean,
     Date,
     DateTime,
+    Float,
     Integer,
     String,
     Text,
@@ -107,8 +108,38 @@ class FunnelReceiver(Base):
     for_thread_id: Mapped[int | None] = mapped_column(BigInteger)  # черновик написан под эту ветку
     card_message_ids: Mapped[list] = mapped_column(JSONB, default=list)
     embedding: Mapped[list[float] | None] = mapped_column(Vector(settings.embedding_dim))
+    # Как пост отработал в самом канале (app/funnel/channel.py): сила относительно канала
+    # (1.0 — обычный пост) и цифры {views, reactions, forwards, replies, posted_at, excerpt}.
+    score: Mapped[float | None] = mapped_column(Float)
+    stats: Mapped[dict] = mapped_column(JSONB, default=dict)
+    source: Mapped[str | None] = mapped_column(String)            # catalog | channel | manual | agent
     created_at: Mapped[datetime] = mapped_column(DateTime(timezone=True), server_default=func.now())
     published_at: Mapped[datetime | None] = mapped_column(DateTime(timezone=True))
+
+
+class ChannelPostStat(Base):
+    """Пост канала автора и его цифры — база выбора, на какую пользу вести трафик."""
+
+    __tablename__ = "funnel_channel_posts"
+    __table_args__ = (UniqueConstraint("source", "msg_id", name="uq_funnel_channel_post"),)
+
+    id: Mapped[int] = mapped_column(BigInteger, primary_key=True)
+    source: Mapped[str] = mapped_column(String)                   # username или -100…
+    msg_id: Mapped[int] = mapped_column(BigInteger)
+    url: Mapped[str] = mapped_column(String)
+    text: Mapped[str | None] = mapped_column(Text)
+    posted_at: Mapped[datetime | None] = mapped_column(DateTime(timezone=True))
+    views: Mapped[int] = mapped_column(Integer, default=0)
+    reactions: Mapped[int] = mapped_column(Integer, default=0)
+    forwards: Mapped[int] = mapped_column(Integer, default=0)
+    replies: Mapped[int] = mapped_column(Integer, default=0)
+    score: Mapped[float | None] = mapped_column(Float)
+    is_material: Mapped[bool | None] = mapped_column(Boolean)     # None — ещё не разбирали
+    note: Mapped[str | None] = mapped_column(Text)                # почему не материал
+    receiver_id: Mapped[int | None] = mapped_column(BigInteger)
+    updated_at: Mapped[datetime] = mapped_column(
+        DateTime(timezone=True), server_default=func.now(), onupdate=func.now()
+    )
 
 
 class StoryFact(Base):

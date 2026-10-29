@@ -91,7 +91,12 @@ def thread_card(v: dict) -> list[str]:
     rec = v.get("receiver")
     if rec and rec.get("status") == "active":
         link = v.get("link_url") or rec.get("url") or ""
-        blocks.append(f"📥 Приёмник: {esc(rec.get('title'))}\n🔗 {esc(link)}")
+        proof = ""
+        if rec.get("channel_score") is not None:
+            proof = f"\n📊 В канале: ×{rec['channel_score']:.1f} к обычному посту"
+            if rec.get("channel_views"):
+                proof += f", {rec['channel_views']} просмотров"
+        blocks.append(f"📥 Приёмник: {esc(rec.get('title'))}{proof}\n🔗 {esc(link)}")
     elif rec:
         blocks.append(f"📥 Приёмник готовится — черновик №{rec.get('id')} «{esc(rec.get('title'))}» отдельной карточкой")
     else:
