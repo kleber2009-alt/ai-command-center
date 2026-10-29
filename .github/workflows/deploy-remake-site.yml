@@ -20,6 +20,10 @@ name: deploy-remake-site
 # token must not be polled anywhere else); without it the topic is off. Variables: REMAKE_TG_OWNER_IDS (who may press the
 # buttons; falls back to TG_AGENT_OWNER_TELEGRAM_ID), REMAKE_TG_CHAT_ID / REMAKE_TG_TOPIC_ID (optional — /bind in the topic
 # does the same), REELS_COMPETITORS (@nicks, comma-separated starting list), REELS_PER_DAY, REELS_HOUR.
+# Telegram topic «Instagram Карусели» (carousel-bot.mjs, skill .claude/skills/carousel-pro): secret CAROUSEL_TG_BOT_TOKEN —
+# the «Карусель Pro» bot (its own long polling); without it the topic is off. Variables: CAROUSEL_TG_OWNER_IDS (falls back to
+# the reels owners), CAROUSEL_TG_CHAT_ID / CAROUSEL_TG_TOPIC_ID (optional — /bind), CAROUSEL_COMPETITORS (falls back to
+# REELS_COMPETITORS), CAROUSEL_PER_DAY (3), CAROUSEL_HOUR (10).
 # Variables: HETZNER_HOST, HETZNER_USER, HETZNER_SSH_PORT, REMAKE_SITE_DOMAIN (default remake.aicex.club).
 
 on:
@@ -30,6 +34,8 @@ on:
       - '.claude/skills/remake-top-reel/config.json'
       - '.claude/skills/remake-top-reel/scripts/**'
       - '.claude/skills/remake-top-reel/references/script-rules.md'
+      - '.claude/skills/carousel-pro/config.json'
+      - '.claude/skills/carousel-pro/references/carousel-rules.md'
       - '.github/workflows/deploy-remake-site.yml'
   workflow_dispatch:
 
@@ -55,6 +61,8 @@ jobs:
           node --check apps/remake-site/server.mjs
           node --check apps/remake-site/studio.mjs
           node --check apps/remake-site/reels-bot.mjs
+          node --check apps/remake-site/carousel-bot.mjs
+          test -f apps/remake-site/dist/carousel-skill/config.json && test -f apps/remake-site/dist/carousel-skill/references/carousel-rules.md
           python3 -c 'import ast, sys; [ast.parse(open(f).read(), f) for f in sys.argv[1:]]' apps/remake-site/dist/skill/scripts/*.py
           test -f apps/remake-site/dist/Dockerfile && test -f apps/remake-site/dist/skill/references/script-rules.md
           node -e '
@@ -102,12 +110,20 @@ jobs:
           COMPETITORS: ${{ vars.REELS_COMPETITORS }}
           PER_DAY: ${{ vars.REELS_PER_DAY }}
           HOUR: ${{ vars.REELS_HOUR }}
+          C_TOKEN: ${{ secrets.CAROUSEL_TG_BOT_TOKEN }}
+          C_OWNERS: ${{ vars.CAROUSEL_TG_OWNER_IDS }}
+          C_CHAT: ${{ vars.CAROUSEL_TG_CHAT_ID }}
+          C_TOPIC: ${{ vars.CAROUSEL_TG_TOPIC_ID }}
+          C_COMPETITORS: ${{ vars.CAROUSEL_COMPETITORS }}
+          C_PER_DAY: ${{ vars.CAROUSEL_PER_DAY }}
+          C_HOUR: ${{ vars.CAROUSEL_HOUR }}
         run: |
           [ -n "$TOKEN" ] || echo "::warning::REMAKE_SITE_TOKEN is not set — the skill can't push runs (seed runs only)"
           [ -n "$PASSWORD$TOKEN" ] || echo "::warning::REMAKE_SITE_PASSWORD is not set — the studio stays closed"
           [ -n "$HEYGEN" ] || echo "::warning::no HeyGen key (REMAKE_HEYGEN_API_KEY) — the studio can't render the avatar"
           [ -n "$ANTHROPIC" ] || echo "::warning::no Anthropic key (REMAKE_ANTHROPIC_API_KEY) — no «Сценарий 2.0», manual script only"
           [ -n "$TG_TOKEN" ] || echo "::warning::REMAKE_TG_BOT_TOKEN is not set — the «Instagram Reels» Telegram topic is off"
+          [ -n "$C_TOKEN" ] || echo "::warning::CAROUSEL_TG_BOT_TOKEN is not set — the «Instagram Карусели» Telegram topic is off"
           line() { local x="${!2}"; printf '%s=%s\n' "$1" "${x//[$'\r\n']/}"; }  # a pasted secret may end with a line break
           {
             line REMAKE_SITE_TOKEN TOKEN
@@ -124,6 +140,13 @@ jobs:
             line REELS_COMPETITORS COMPETITORS
             line REELS_PER_DAY PER_DAY
             line REELS_HOUR HOUR
+            line CAROUSEL_TG_BOT_TOKEN C_TOKEN
+            line CAROUSEL_TG_OWNER_IDS C_OWNERS
+            line CAROUSEL_TG_CHAT_ID C_CHAT
+            line CAROUSEL_TG_TOPIC_ID C_TOPIC
+            line CAROUSEL_COMPETITORS C_COMPETITORS
+            line CAROUSEL_PER_DAY C_PER_DAY
+            line CAROUSEL_HOUR C_HOUR
           } | $SSH "mkdir -p /opt/remake-site && umask 077 && cat > /opt/remake-site/api.env"
 
       - name: Activate
