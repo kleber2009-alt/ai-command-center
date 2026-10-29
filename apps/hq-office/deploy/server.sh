@@ -88,11 +88,19 @@ if [ -f "$R/runner.py" ] && id "$RUSER" >/dev/null 2>&1; then
   rm -f "$ENVT" "$UNIT"
   systemctl daemon-reload
   systemctl enable hq-runner >/dev/null 2>&1 || true
-  if [ "$changed" = 1 ] || ! systemctl is-active -q hq-runner; then systemctl restart hq-runner; echo "✓ runner (re)started"; else echo "✓ runner unchanged"; fi
+  LS=$(stat -c %s "$RD/runner.log" 2>/dev/null || echo 0)
+  if [ "$changed" = 1 ] || ! systemctl is-active -q hq-runner; then systemctl restart hq-runner; echo "✓ runner (re)started"; else echo "✓ runner unchanged"; LS=; fi
   CL="$RH/.local/bin/claude"
   if [ -x "$CL" ]; then echo "  claude: $(timeout 30 runuser -u "$RUSER" -- "$CL" --version 2>&1 | head -1)"; else echo "::warning::claude not found at $CL — tasks will wait in the queue"; fi
   echo "  skills: $(ls -d "$RH"/.claude/skills/*/ 2>/dev/null | wc -l) · python: $(python3 --version 2>&1)"
-  sleep 4; systemctl is-active hq-runner >/dev/null && echo "  runner: $(tail -n 2 "$RD/runner.log" 2>/dev/null | tr '\n' ' ')" || { echo "::warning::hq-runner is not running"; tail -n 20 "$RD/runner.log" 2>/dev/null || true; }
+  [ -f "$RH/hq-runner/claude.env" ] && echo "  claude.env: есть (вход задан владельцем)"
+  # after a restart the runner checks Claude Code once: wait for the verdict (sign-in source and error text only)
+  if [ -n "$LS" ]; then
+    for i in $(seq 1 40); do tail -c +$((LS + 1)) "$RD/runner.log" 2>/dev/null | grep -q "проверка Claude" && break; sleep 3; done
+    tail -c +$((LS + 1)) "$RD/runner.log" 2>/dev/null | grep -E "hq runner|вход Claude|проверка Claude" | sed 's/^/  /' || true
+    tail -c +$((LS + 1)) "$RD/runner.log" 2>/dev/null | grep -q "проверка Claude: ок" || echo "::warning::Claude Code does not start for the runner — see the line above"
+  fi
+  systemctl is-active -q hq-runner || { echo "::warning::hq-runner is not running"; tail -n 20 "$RD/runner.log" 2>/dev/null || true; }
 else
   echo "::warning::desk runner not installed: no user $RUSER or no runner files — tasks will wait in the queue"
 fi
