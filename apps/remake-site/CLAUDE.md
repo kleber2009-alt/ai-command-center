@@ -55,7 +55,9 @@
   вышло — ссылка `media/…`. `/bind` в ветке — привязать её и переименовать в `REELS_TOPIC_NAME` (боту нужен админ с
   «Управлением темами»); кнопки жмут `REMAKE_TG_OWNER_IDS` или тот, кто первым сделал `/bind`. Состояние —
   `DATA_DIR/reels/state.json`, ролики ветки видны и в студии сайта. Поиск — раз в день в `REELS_HOUR` (`REELS_TZ`), `/scan` — сейчас.
-- `carousel-bot.mjs` — Telegram-ветка «Instagram Карусели». Свой бот `CAROUSEL_TG_BOT_TOKEN` («Карусель Pro», long polling),
+- `carousel-bot.mjs` — Telegram-ветка «Instagram Карусели». **Выключена в деплое**: все карусели — один бот `@caruselclaude_bot`
+  (`aicex-library/results/karusel-bot`, все стили и «Мой блог»); у ветки был тот же токен, два процесса делили его сообщения.
+  Вернуть — свой бот и строка `CAROUSEL_TG_BOT_TOKEN` в `deploy-remake-site.yml`. Свой бот `CAROUSEL_TG_BOT_TOKEN` («Карусель Pro», long polling),
   от студии не зависит. Поиск — Apify `instagram-scraper`, только карусели: свой аккаунт (`instagram.username` скилла
   `carousel-pro`, не младше 14 дней — ремикс через 2–3 недели) и `CAROUSEL_COMPETITORS`/`/competitors add` (иначе
   `REELS_COMPETITORS`), сила = (3×комментарии + лайки) / медиана автора, вперемешку «конкурент → свой». Слайды оригинала
