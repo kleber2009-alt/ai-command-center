@@ -9,8 +9,14 @@
        разбор, новый хук, слайды (свои: как есть / с новым текстом; чужие: в стиле Ильи + вырезанные скриншоты), CTA, подпись
      → карточка в ветку → ✅ → рендер (headless Chromium, шрифты Jost + Tinos) → альбом + файлы без сжатия + подпись.
 
-   Кнопки: ✅ Одобрено · 🔄 Другой хук · 🗑 Пропустить; после готовности — 🔁 Пересобрать. Ответ на карточку текстом — Claude
-   переписывает план с пожеланием. Ссылка на карусель в ветке — сразу в работу. Жмут CAROUSEL_TG_OWNER_IDS
+   Кнопки карточки — как в ветке Threads: ✅ Одобрить · ✏️ Править / 🔄 Хук · ♻️ Другая · 📎 Материалы / ⏰ Слот · 🎨 Стиль ·
+   🗑 Пропустить; после готовности — ✏️ Править · ⏰ Слот / 🔁 Пересобрать · 🎨 Стиль · 🔄 Хук.
+     ✏️ Править (кнопка → ответ текстом или голосом, или ответ на карточку/альбом): Claude вносит правку в текущий план,
+       остальное не трогает; до ✅ — новая карточка, после готовности — слайды сразу пересобираются;
+     🔄 Хук — несколько других хуков разными механиками, выбор кнопкой → обложка под выбранный хук;
+     ♻️ Другая — эта карусель в сторону, следующая из запаса поиска в тот же слот;
+     📎 Материалы — история, цифры (текстом или голосом) вплетаются в план, фото — фон обложки этой карусели;
+     ⏰ Слот — время публикации (CAROUSEL_SLOTS); слот ставится сам, в слот бот напоминает. Ссылка на карусель в ветке — сразу в работу. Жмут CAROUSEL_TG_OWNER_IDS
    (иначе REMAKE_TG_OWNER_IDS, иначе тот, кто первым сделал /bind).
 
    Команды в ветке: /bind — эта ветка теперь «Instagram Карусели» (бот переименует её; нужен админ с «Управлением темами»)
@@ -20,7 +26,8 @@
      CAROUSEL_TG_CHAT_ID / CAROUSEL_TG_TOPIC_ID (иначе — из /bind) · CAROUSEL_TOPIC_NAME (Instagram Карусели)
      CAROUSEL_COMPETITORS (иначе REELS_COMPETITORS) · CAROUSEL_PER_DAY (3) · CAROUSEL_HOUR (10, по CAROUSEL_TZ Europe/Moscow)
      ANTHROPIC_API_KEY · CAROUSEL_MODEL (STUDIO_MODEL, claude-opus-5-5) · APIFY_TOKEN · CHROMIUM_BIN (chromium-browser)
-     CAROUSEL_SKILL_DIR · KADRIK_SKILLS (/kadrik/skills) · для заглушек — TELEGRAM_API_BASE, APIFY_API_BASE, ANTHROPIC_BASE_URL.
+     CAROUSEL_SKILL_DIR · KADRIK_SKILLS (/kadrik/skills) · CAROUSEL_SLOTS (10:00,14:00,18:00 по CAROUSEL_TZ)
+     ELEVENLABS_API_KEY / OPENAI_API_KEY — голосовые правки · для заглушек — TELEGRAM_API_BASE, APIFY_API_BASE, ANTHROPIC_BASE_URL.
    Одна ветка — один бот (tg-branch.mjs): слышит только свою ветку, команды с @другим_ботом не его, ветку Reels не привязать,
    токен совпал с REMAKE_TG_BOT_TOKEN — ветка выключена. После ✅ под карточкой — статус шагов, обновляется сам.
    Состояние — DATA_DIR/carousels/state.json, карусели — DATA_DIR/carousels/<id>/, готовые слайды — DATA_DIR/media/<id>-*.jpg. */
@@ -29,7 +36,7 @@ import path from 'node:path';
 import crypto from 'node:crypto';
 import { spawn } from 'node:child_process';
 import { fileURLToPath } from 'node:url';
-import { takenBy, parse, progressText, wrongBind, laneOf, topicName, BRANCHES } from './tg-branch.mjs';
+import { takenBy, parse, progressText, wrongBind, laneOf, topicName, BRANCHES, parseSlots, slotChoices, fmtSlot, hookVariants, voiceToText } from './tg-branch.mjs';
 
 const env = (k, d = '') => (process.env[k] || d).trim();
 const HERE = path.dirname(fileURLToPath(import.meta.url));
@@ -52,6 +59,7 @@ const SKILL_DIR = [env('CAROUSEL_SKILL_DIR'), path.join(HERE, 'carousel-skill'),
 const W = 1080, H = 1350;
 const NICK = /^[a-z0-9._]{1,30}$/;
 const JOB_ID = /^c\d{6}-[0-9a-f]{6}$/;
+const SLOTS = parseSlots(env('CAROUSEL_SLOTS', '10:00,14:00,18:00')).length ? parseSlots(env('CAROUSEL_SLOTS', '10:00,14:00,18:00')) : [[10, 0], [14, 0], [18, 0]];
 
 const esc = (s) => String(s ?? '').replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;');
 const fmt = (n) => n == null || n < 0 ? '—' : n >= 1e6 ? `${(n / 1e6).toFixed(1).replace('.0', '')} млн` : n >= 1e3 ? `${Math.round(n / 1e3)} тыс.` : String(Math.round(n));
@@ -425,10 +433,12 @@ export function createCarouselBot({ data, media, publicUrl = env('PUBLIC_URL', '
   const photoSource = () => { const i = photoInfo(); return !fs.existsSync(PHOTO) ? 'фото пока нет — пришлите своё фото в эту ветку'
     : i.from === 'telegram' ? `ваше фото, присланное в ветку ${String(i.at || '').slice(0, 10)}` : `образ вашего цифрового двойника HeyGen «${i.name || ''}» — свой снимок можно прислать в ветку`; };
 
+  // 📎 a photo sent to this carousel is its own cover photo
+  const ownPhoto = (j) => { try { const b = fs.readFileSync(j.photo), sz = imageSize(b); return sz ? { file: j.photo, ...sz } : null; } catch { return null; } };
   async function renderWith(j, slides, opts) {
     const sty = styleOf(j);
     return renderSlides({ slides, src: j.src, handle: skillConfig().style?.handle || '@ilia.paliy', theme: sty.id,
-      photo: sty.id === 'photo' ? await coverPhoto() : null, ...opts });
+      photo: sty.id === 'photo' ? ownPhoto(j) || await coverPhoto() : null, ...opts });
   }
   // the new cover in the chosen style, as a photo under the card (the previous preview is replaced)
   async function preview(j) {
@@ -447,6 +457,7 @@ export function createCarouselBot({ data, media, publicUrl = env('PUBLIC_URL', '
   }
   async function ready(j) {
     j.state = 'card';
+    if (!j.slot) j.slot = freeSlots(j)[0] || 0;
     saveJob(j);
     await card(j);
     await preview(j).catch((e) => console.error('carousels preview:', e.message));
@@ -595,7 +606,7 @@ export function createCarouselBot({ data, media, publicUrl = env('PUBLIC_URL', '
     log(j, `слайдов оригинала: ${j.src.length}`);
   }
 
-  async function plan(j, wish = '') {
+  async function plan(j, wish = '', { edit = false } = {}) {
     if (!ANTHROPIC) throw new Error('нет ANTHROPIC_API_KEY — план карусели писать некому');
     const { default: Anthropic } = await import('@anthropic-ai/sdk');
     const client = new Anthropic({ apiKey: ANTHROPIC });
@@ -610,8 +621,14 @@ export function createCarouselBot({ data, media, publicUrl = env('PUBLIC_URL', '
       content.push({ type: 'text', text: `Слайд ${i + 1} (${s.w}×${s.h}):` });
       content.push({ type: 'image', source: { type: 'base64', media_type: s.type, data: fs.readFileSync(s.file).toString('base64') } });
     });
-    const prev = j.plan ? `\n\nПрошлый план (хук «${j.plan.hook_to}», обложка «${j.plan.slides?.[0]?.title || ''}»).` : '';
-    content.push({ type: 'text', text: `${wish ? `Пожелание Ильи:\n<wish>\n${wish}\n</wish>${prev}\n\n` : ''}Предложи новую карусель.` });
+    if (edit && j.plan) {  // a правка: change what Ilia asks about, keep the rest of the current plan
+      const { model, wish: _w, ...cur } = j.plan;
+      content.push({ type: 'text', text: `Текущий план карусели (JSON):\n<plan>\n${JSON.stringify(cur)}\n</plan>\n\nПравка Ильи:\n<wish>\n${wish}\n</wish>\n\n` +
+        'Внеси правку в текущий план: поменяй только то, о чём просит правка, остальные слайды, хук и подпись оставь как есть. Верни весь план целиком.' });
+    } else {
+      const prev = j.plan ? `\n\nПрошлый план (хук «${j.plan.hook_to}», обложка «${j.plan.slides?.[0]?.title || ''}»).` : '';
+      content.push({ type: 'text', text: `${wish ? `Пожелание Ильи:\n<wish>\n${wish}\n</wish>${prev}\n\n` : ''}Предложи новую карусель.` });
+    }
     const msg = await client.beta.messages.stream({
       model: MODEL, max_tokens: 32000,
       betas: ['server-side-fallback-2026-07-01'], fallbacks: 'default',
@@ -649,11 +666,13 @@ export function createCarouselBot({ data, media, publicUrl = env('PUBLIC_URL', '
     const list = (p.slides || []).map((s, i) => `${i + 1}. ${esc(s.note || s.title || '')} <i>(${esc(MODE(s))})</i>`).join('\n');
     const cover = p.slides?.[0] ? `<b>Обложка:</b> ${esc(String(p.slides[0].title || p.slides[0].note).replace(/\*/g, '').replace(/\n/g, ' / '))}` : '';
     const code = p.code_word ? `Кодовое слово: <b>${esc(p.code_word)}</b>${p.code_word_new ? ' — новое, подключи в Директе (ChatPlace)' : ''}` : 'CTA без кодового слова — «сохраняй»';
-    const state = { prep: '', card: '✅ — собираю слайды · ответьте на карточку текстом — переделаю план с пожеланием',
-      render: '⏳ <b>Одобрено.</b> Собираю слайды…', done: '✅ <b>Готово</b> — слайды ниже', skip: '🗑 Пропущено', fail: '⚠️ Сорвалось — см. сообщение ниже' }[j.state] || '';
+    const state = { prep: '', card: '✅ — собираю слайды · ✏️ — правка плана текстом или голосом',
+      render: '⏳ <b>Одобрено.</b> Собираю слайды…', done: '✅ <b>Готово</b> — слайды ниже · ✏️ Править — поправлю и пересоберу', skip: j.replaced ? '♻️ Заменена другой каруселью' : '🗑 Пропущено', fail: '⚠️ Сорвалось — см. сообщение ниже' }[j.state] || '';
     const top = [head, why && `<b>Почему залетело:</b>\n${why}`, hook, cover].filter(Boolean).join('\n\n');
     const look = `🎨 Стиль: <b>${esc(styleOf(j).name)}</b>${o.own && (p.slides || []).some((x) => x.mode !== 'new') ? ' · ваши слайды оригинала — как есть' : ''}`;
-    const bottom = [look, code, state].filter(Boolean).join('\n');
+    const slot = j.slot && j.state !== 'skip' ? `⏰ Публикация: <b>${esc(fmtSlot(j.slot, TZ))}</b>` : '';
+    const notes = (j.notes || []).length || j.photo ? `📎 Материалы: ${[(j.notes || []).length && `${j.notes.length} вплетено`, j.photo && 'своё фото на обложке'].filter(Boolean).join(', ')}` : '';
+    const bottom = [look, code, notes, slot, state].filter(Boolean).join('\n');
     let mid = n ? `<b>Слайдов: ${n}</b>\n<blockquote expandable>${list}</blockquote>` : '';
     if (top.length + mid.length + bottom.length > 4000) mid = `<b>Слайдов: ${n}</b>`;
     return [top, mid, bottom].filter(Boolean).join('\n\n');
@@ -662,12 +681,15 @@ export function createCarouselBot({ data, media, publicUrl = env('PUBLIC_URL', '
   function buttons(j, picking = false) {
     if (picking) return { inline_keyboard: [...carouselStyles().map((x) => [{ text: `${x.id === styleOf(j).id ? '✓ ' : ''}${x.name}`, callback_data: `c:st:${x.id}:${j.id}` }]),
       [{ text: '← Назад', callback_data: `c:back:${j.id}` }]] };
-    if (j.state === 'fail') return { inline_keyboard: [[{ text: '🔁 Повторить', callback_data: `c:retry:${j.id}` }]] };
-    if (j.state === 'done') return { inline_keyboard: [[{ text: '🔁 Пересобрать', callback_data: `c:ok:${j.id}` }, { text: '🎨 Стиль', callback_data: `c:style:${j.id}` }, { text: '🔄 Другой хук', callback_data: `c:hook:${j.id}` }]] };
+    // the same layout as the Threads topic: approve/edit · hook/other/materials · slot/style/skip
+    const b = (text, act) => ({ text, callback_data: `c:${act}:${j.id}` });
+    if (j.state === 'fail') return { inline_keyboard: [[b('🔁 Повторить', 'retry')], [b('♻️ Другая', 'ot'), b('🗑 Пропустить', 'skip')]] };
+    if (j.state === 'done') return { inline_keyboard: [[b('✏️ Править', 'ed'), b('⏰ Слот', 'sl')], [b('🔁 Пересобрать', 'ok'), b('🎨 Стиль', 'style'), b('🔄 Хук', 'hk')]] };
     if (j.state !== 'card') return { inline_keyboard: [] };
     return { inline_keyboard: [
-      [{ text: '✅ Одобрено', callback_data: `c:ok:${j.id}` }],
-      [{ text: '🔄 Другой хук', callback_data: `c:hook:${j.id}` }, { text: '🎨 Стиль', callback_data: `c:style:${j.id}` }, { text: '🗑 Пропустить', callback_data: `c:skip:${j.id}` }],
+      [b('✅ Одобрить', 'ok'), b('✏️ Править', 'ed')],
+      [b('🔄 Хук', 'hk'), b('♻️ Другая', 'ot'), b('📎 Материалы', 'mt')],
+      [b('⏰ Слот', 'sl'), b('🎨 Стиль', 'style'), b('🗑 Пропустить', 'skip')],
     ] };
   }
 
@@ -711,19 +733,22 @@ export function createCarouselBot({ data, media, publicUrl = env('PUBLIC_URL', '
   }
 
   async function group(files, type, caption) {
+    const ids = [];
     for (let i = 0; i < files.length; i += 10) {
       const part = files.slice(i, i + 10), fd = new FormData();
       for (const [k, v] of Object.entries(where())) fd.append(k, String(v));
       fd.append('media', JSON.stringify(part.map((f, k) => ({ type, media: `attach://f${k}`, ...(i + k === 0 && caption ? { caption } : {}) }))));
       for (const [k, f] of part.entries()) fd.append(`f${k}`, await fs.openAsBlob(f, { type: 'image/jpeg' }), path.basename(f));
-      await tg('sendMediaGroup', fd, { timeout: 5 * 60e3 });
+      const ms = await tg('sendMediaGroup', fd, { timeout: 5 * 60e3 });
+      for (const m of ms || []) ids.push(m.message_id);
     }
+    return ids;
   }
 
   async function deliver(j, files) {
     await progress(j, 1);
     const p = j.plan;
-    await group(files, 'photo', `📚 ${p.topic || 'Карусель'} · «${styleOf(j).name}» · ${files.length} ${plural(files.length, 'слайд', 'слайда', 'слайдов')} · по залёту @${j.origin.author}`.slice(0, 1024));
+    j.album = await group(files, 'photo', `📚 ${p.topic || 'Карусель'} · «${styleOf(j).name}» · ${files.length} ${plural(files.length, 'слайд', 'слайда', 'слайдов')} · по залёту @${j.origin.author}`.slice(0, 1024));
     try { await group(files, 'document', 'Файлы для публикации — без сжатия Telegram'); }
     catch (e) { await say(`Файлы без сжатия не отправились (${esc(e.message)}). Скачать: ${j.out.map((f) => esc(`${publicUrl}/media/${f}`)).join(' ')}`); }
     if (p.caption) await say(`<b>Подпись к посту:</b>\n${esc(p.caption).slice(0, 3800)}`);
@@ -732,6 +757,93 @@ export function createCarouselBot({ data, media, publicUrl = env('PUBLIC_URL', '
     saveJob(j);
     await card(j);
     await progress(j, 2);
+  }
+
+  // ---------- ✏️ Править · 📎 Материалы: the button asks, the answer (text, voice, photo) is a reply ----------
+  async function ask(j, mode) {
+    const q = mode === 'mt'
+      ? '📎 <b>Материалы</b> · карусель по залёту @' + esc(j.origin.author || '?') + '\nОтветьте на это сообщение: текстом или голосом — история, цифры, пример (вплету в слайды); фото — станет фоном обложки этой карусели.'
+      : '✏️ <b>Править</b> · карусель по залёту @' + esc(j.origin.author || '?') + '\n' + (j.state === 'done'
+        ? 'Что поправить в слайдах? Ответьте на это сообщение текстом или голосом — внесу правку в план и пришлю пересобранные слайды.'
+        : 'Что поправить в плане? Ответьте на это сообщение текстом или голосом — инструкцией («обложка короче») или своей версией: «слайд 3: …». Меняю только это.');
+    const m = await say(q, { ...replyTo(j), reply_markup: { force_reply: true, input_field_placeholder: mode === 'mt' ? 'История, цифры или фото' : 'Что поправить?' } });
+    if (m) { j.ask = m.message_id; j.ask_mode = mode; saveJob(j); }
+  }
+  // a change to the current plan; an approved carousel goes straight to new slides
+  async function edit(j, text, where, { note = '' } = {}) {
+    const re = { reply_parameters: { message_id: where, allow_sending_without_reply: true } };
+    if (!['card', 'done'].includes(j.state) || busy.has(j.id)) return say('Эта карусель сейчас в работе — подождите карточку.', re);
+    const was = j.state;
+    const old = j.out || [];
+    j.state = 'prep';
+    saveJob(j);
+    await card(j);
+    go(j, 'prep', async () => {
+      await plan(j, text, { edit: true });
+      if (was !== 'done') return ready(j);
+      j.out = old;  // already approved — straight to the slides; build() clears the old ones
+      await build(j).catch((e) => fail(j, 'render', e.message));
+    });
+    return say(note || (was === 'done' ? '✏️ Вношу правку и пересобираю слайды — статус под карточкой.' : '✏️ Вношу правку в план — карточка обновится.'), re);
+  }
+  async function materials(j, text, where) {
+    if (j.state !== 'card') return say('Материалы вплетаются до ✅. Для готовых слайдов — ✏️ Править.', { reply_parameters: { message_id: where, allow_sending_without_reply: true } });
+    (j.notes ||= []).push(text);
+    saveJob(j);
+    return edit(j, `Вплети в карусель материал Ильи — от первого лица, коротко и конкретно, туда, где он сильнее всего (отдельный слайд или в текст), не ломая хук: ${text}`,
+      where, { note: '📎 Вплетаю ваш материал в план — карточка обновится.' });
+  }
+  async function photoFor(j, msg) {
+    const re = { reply_parameters: { message_id: msg.message_id, allow_sending_without_reply: true } };
+    const f = await tg('getFile', { file_id: msg.photo[msg.photo.length - 1].file_id });
+    const b = Buffer.from(await (await fetch(`${env('TELEGRAM_API_BASE', 'https://api.telegram.org')}/file/bot${TOKEN}/${f.file_path}`, { signal: AbortSignal.timeout(60e3) })).arrayBuffer());
+    if (!imageSize(b)) throw new Error('не картинка');
+    j.photo = path.join(jdir(j), 'photo.jpg');
+    fs.writeFileSync(j.photo, b);
+    j.style = 'photo';
+    saveJob(j);
+    await card(j);
+    if (j.state === 'done') { await say('📸 Фото этой карусели сохранено — пересобираю слайды с ним на обложке.', re); return go(j, 'render', () => build(j)); }
+    await say('📸 Фото этой карусели сохранено — стиль «Обложка с вашим фото», превью ниже.', re);
+    return go(j, 'preview', () => preview(j));
+  }
+
+  // ---------- 🔄 Хук: other hooks with their mechanics, picked with a button ----------
+  async function hooks(j, more = false) {
+    if (!j.hooks?.length || more) {
+      let rules = '';
+      try { rules = fs.readFileSync(path.join(SKILL_DIR, 'references/carousel-rules.md'), 'utf8'); } catch {}
+      const p = j.plan || {};
+      j.hooks = await hookVariants({ apiKey: ANTHROPIC, model: MODEL, rules, what: 'карусель Instagram, хук — заголовок обложки (слайд 1)',
+        current: p.hook_to || p.slides?.[0]?.title || '', context: `Тема: ${p.topic || ''}\nСлайды:\n${(p.slides || []).map((x, i) => `${i + 1}. ${x.note || x.title || ''}`).join('\n')}\n\nПодпись оригинала:\n${j.origin.caption || ''}` });
+      saveJob(j);
+    }
+    const lines = [`🔄 <b>Хуки карусели по залёту @${esc(j.origin.author || '?')}</b> — выберите кнопкой:`, `\n<b>★ сейчас:</b> ${esc(j.plan?.hook_to || '—')}`];
+    j.hooks.forEach((h, i) => lines.push(`\n<b>${i + 1}.</b>${h.mechanic ? ` <i>(${esc(h.mechanic)})</i>` : ''}\n${esc(h.text.slice(0, 600))}`));
+    return say(lines.join('\n'), { ...replyTo(j), reply_markup: { inline_keyboard: [
+      j.hooks.map((_, i) => ({ text: String(i + 1), callback_data: `c:hs:${i}:${j.id}` })),
+      [{ text: '🔄 Ещё варианты', callback_data: `c:hm:${j.id}` }]] } });
+  }
+
+  // ---------- ⏰ Слот: when to publish; a reminder comes at that time ----------
+  function freeSlots(j, n = 8) {
+    const taken = [...jobs.values()].filter((x) => x.id !== j.id && x.state !== 'skip' && !x.slot_sent).map((x) => x.slot);
+    return slotChoices({ slots: SLOTS, tz: TZ, taken, n });
+  }
+  async function remind(j) {
+    j.slot_sent = true;
+    saveJob(j);
+    if (Date.now() - j.slot > 6 * 3600e3) return;  // the box was down through the slot — no late reminders
+    const re = { reply_parameters: { message_id: j.album?.[0] || j.card, allow_sending_without_reply: true } };
+    if (j.state === 'done') {
+      await say(`⏰ <b>Время публиковать</b> карусель «${esc(j.plan?.topic || 'по залёту @' + j.origin.author)}» — слайды выше.` +
+        `${j.plan?.code_word ? ` Кодовое слово: <b>${esc(j.plan.code_word)}</b>.` : ''}`, re);
+      if (j.plan?.caption) await say(esc(j.plan.caption).slice(0, 3800));
+      return;
+    }
+    const ru = { prep: 'план ещё пишется', card: 'ещё не одобрена', render: 'слайды собираются', fail: 'сорвалась' };
+    await say(`⏰ Слот карусели по залёту @${esc(j.origin.author || '?')} наступил, а она ${ru[j.state] || j.state}. ` +
+      `${j.state === 'card' ? '✅ — соберу, ⏰ Слот — перенести.' : 'Пришлю, как будет готова; ⏰ Слот — перенести.'}`, re);
   }
 
   // ---------- 4. buttons, replies, commands ----------
@@ -749,16 +861,59 @@ export function createCarouselBot({ data, media, publicUrl = env('PUBLIC_URL', '
       answer('Собираю слайды → пришлю альбом и файлы. Статус — под карточкой');
       return go(j, 'render', () => build(j));
     }
-    if (act === 'hook') {
+    if (act === 'ed' || act === 'edit') {
+      if (!['card', 'done'].includes(j.state)) return answer('Уже в работе — подождите');
+      answer('Напишите правку ответом на сообщение — текстом или голосом');
+      return ask(j, 'ed');
+    }
+    if (act === 'mt') {
+      if (j.state !== 'card') return answer('Материалы — до ✅');
+      answer('Пришлите материал ответом на сообщение');
+      return ask(j, 'mt');
+    }
+    if (act === 'hk' || act === 'hm' || act === 'hook') {
       if (!['card', 'done'].includes(j.state)) return answer('Уже в работе');
-      answer('Пишу другой хук…');
-      j.state = 'prep';
+      if (!ANTHROPIC) return answer('Нет ANTHROPIC_API_KEY', true);
+      answer(act === 'hm' ? 'Пишу ещё варианты…' : 'Подбираю хуки…');
+      return hooks(j, act === 'hm').catch((e) => say(`⚠️ Хуки не написались: ${esc(e.message)}`));
+    }
+    if (act === 'hs') {
+      const h = j.hooks?.[Number(parts[2])];
+      if (!h) return answer('Этого варианта уже нет — нажмите 🔄 Хук ещё раз');
+      if (!['card', 'done'].includes(j.state)) return answer('Уже в работе');
+      answer(`Хук ${Number(parts[2]) + 1}: переделываю обложку…`);
+      j.hooks = [];
       saveJob(j);
+      quiet(tg('editMessageReplyMarkup', { chat_id: st.chat_id, message_id: q.message.message_id, reply_markup: { inline_keyboard: [] } }));
+      return edit(j, `Новый хук карусели: «${h.text}» (механика: ${h.mechanic || '—'}). Перепиши обложку (слайд 1) и hook_to под этот хук, CTA и остальное оставь.`,
+        j.card, { note: j.state === 'done' ? '🔄 Ставлю новый хук и пересобираю слайды — статус под карточкой.' : '🔄 Ставлю новый хук — карточка обновится.' });
+    }
+    if (act === 'ot') {
+      if (!['card', 'fail'].includes(j.state)) return answer('Эта карусель уже в работе');
+      if (!st.pool.length) return answer('Запас пуст — /scan найдёт новые карусели', true);
+      j.state = 'skip';
+      j.replaced = true;
+      saveJob(j);
+      answer('Беру следующую карусель из запаса…');
       await card(j);
-      return go(j, 'prep', async () => {
-        await plan(j, `Нужен другой хук и другая обложка, не «${j.plan?.hook_to || ''}» и не «${String(j.plan?.slides?.[0]?.title || '').slice(0, 200)}». Возьми другой тип хука.`);
-        await ready(j);
-      });
+      const n = next();
+      if (n) { n.slot = j.slot; saveJob(n); }
+      return say(`♻️ Беру другую карусель${n ? ` @${esc(n.origin.author || '?')}` : ''} в тот же слот — карточка придёт, как будет готов план.`);
+    }
+    if (act === 'sl') {
+      const ch = freeSlots(j);
+      if (!ch.length) return answer('Свободных слотов в ближайшие дни нет', true);
+      answer();
+      return say(`⏰ Карусель по залёту @${esc(j.origin.author || '?')}: на какое время поставить публикацию?`, {
+        ...replyTo(j), reply_markup: { inline_keyboard: ch.map((t) => [{ text: fmtSlot(t, TZ), callback_data: `c:ss:${Math.round(t / 60e3)}:${j.id}` }]) } });
+    }
+    if (act === 'ss') {
+      j.slot = Number(parts[2]) * 60e3;
+      j.slot_sent = false;
+      saveJob(j);
+      answer(`Слот: ${fmtSlot(j.slot, TZ)}`);
+      quiet(tg('editMessageText', { chat_id: st.chat_id, message_id: q.message.message_id, text: `⏰ Публикация карусели — ${fmtSlot(j.slot, TZ)}.` }));
+      return card(j);
     }
     if (act === 'skip') { j.state = 'skip'; saveJob(j); answer('Пропустил'); return card(j); }
     if (act === 'style' || act === 'back') {
@@ -788,7 +943,10 @@ export function createCarouselBot({ data, media, publicUrl = env('PUBLIC_URL', '
     `присылаю ${PER_DAY} ${plural(PER_DAY, 'карточку', 'карточки', 'карточек')}: почему залетело, новый хук, план слайдов, кодовое слово и подпись. ` +
     `✅ Одобрено — готовые слайды альбомом и файлами без сжатия сюда.\n\n` +
     `/scan — найти сейчас\n/styles — стили каруселей и что в них из вашего блога\n/competitors — список конкурентов\n/competitors add @ник @ник — добавить\n/competitors del @ник — убрать\n/status — что в работе\n` +
-    `Ссылка на карусель сюда — сразу в работу. Ответ на карточку текстом — переделаю план с пожеланием. 🎨 на карточке — другой стиль с превью обложки. ` +
+    `Ссылка на карусель сюда — сразу в работу.\n\nКнопки карточки — как в ветке Threads:\n✅ Одобрить — слайды сюда\n` +
+    `✏️ Править — правка текстом или голосом: до ✅ — план, после — план и пересборка слайдов\n` +
+    `🔄 Хук — другие хуки на выбор · ♻️ Другая — следующая карусель в тот же слот · 📎 Материалы — история, цифры или фото для этой карусели\n` +
+    `⏰ Слот — время публикации (в слот напомню) · 🎨 Стиль · 🗑 Пропустить\nОтвет на карточку или альбом текстом — тоже правка. 🎨 на карточке — другой стиль с превью обложки. ` +
     `Фото сюда — оно станет фоном обложек в стиле «Обложка с вашим фото».`;
 
   async function onMessage(msg) {
@@ -821,6 +979,26 @@ export function createCarouselBot({ data, media, publicUrl = env('PUBLIC_URL', '
     if (!isOwner) return;
     if (cmd === 'help' || cmd === 'start') return say(HELP);
     if (cmd === 'styles') { await say('Рисую стили на одной обложке…'); return showStyles().catch((e) => say(`⚠️ Стили не нарисовались: ${esc(e.message)}`)); }
+    // a reply to a card, the album or a ✏️/📎 question — a правка or a material: text, voice or a photo for this carousel
+    const reply = msg.reply_to_message?.message_id;
+    const j = reply && [...jobs.values()].find((x) => x.card === reply || x.ask === reply || (x.album || []).includes(reply));
+    if (j && !cmd) {
+      if (msg.photo?.length) {
+        if (busy.has(j.id) || !['card', 'done'].includes(j.state)) return say('Эта карусель сейчас в работе — подождите карточку.');
+        return photoFor(j, msg).catch((e) => say(`⚠️ Фото не сохранилось: ${esc(e.message)}`));
+      }
+      const voice = msg.voice || msg.audio;
+      if (text || voice) {
+        let said = text;
+        if (voice) {
+          try { said = await voiceToText({ tg, api: `${env('TELEGRAM_API_BASE', 'https://api.telegram.org')}/file/bot${TOKEN}`, file_id: voice.file_id }); }
+          catch (e) { return say(`⚠️ Голос не распознан: ${esc(e.message)}`); }
+          await say(`🎙 Распознал: «${esc(said.slice(0, 500))}»`, { reply_parameters: { message_id: msg.message_id, allow_sending_without_reply: true } });
+        }
+        const mode = reply === j.ask ? j.ask_mode : 'ed';
+        return (mode === 'mt' ? materials : edit)(j, said.slice(0, 1500), msg.message_id);
+      }
+    }
     if (msg.photo?.length && !cmd) {  // Ilia's own photo for the «cover with your photo» style
       try {
         const f = await tg('getFile', { file_id: msg.photo[msg.photo.length - 1].file_id });
@@ -847,17 +1025,6 @@ export function createCarouselBot({ data, media, publicUrl = env('PUBLIC_URL', '
       return say((live.length ? live.map((j) => `• @${esc(j.origin.author)} — ${ru[j.state] || j.state}`).join('\n') + '\n\n' : 'Сейчас ничего не в работе. ') +
         `Последний поиск: ${esc(st.last_scan || 'ещё не было')}`);
     }
-    // a reply to a card — a wish for the plan
-    const reply = msg.reply_to_message?.message_id;
-    const j = reply && [...jobs.values()].find((x) => x.card === reply);
-    if (j && text && !cmd) {
-      if (!['card', 'done'].includes(j.state) || busy.has(j.id)) return say('Эта карусель сейчас в работе — подождите карточку.');
-      j.state = 'prep';
-      saveJob(j);
-      await card(j);
-      go(j, 'prep', async () => { await plan(j, text.slice(0, 1500)); await ready(j); });
-      return say('✏️ Переделываю план с пожеланием — карточка обновится.', { reply_parameters: { message_id: reply, allow_sending_without_reply: true } });
-    }
     const url = (text.match(/https?:\/\/(?:www\.)?instagram\.com\/[^\s]+/i) || [])[0];
     if (url && shortcode(url)) {
       if (!APIFY) return say('⚠️ Нет APIFY_TOKEN — забрать слайды по ссылке нечем.');
@@ -881,6 +1048,9 @@ export function createCarouselBot({ data, media, publicUrl = env('PUBLIC_URL', '
   (async function poll() {
     try { await tg('deleteWebhook', {}); } catch {}
     try { me = (await tg('getMe', {})).username || ''; if (me && st.bot !== me) { st.bot = me; save(); } } catch (e) { console.error('carousels getMe:', e.message); }
+    // the bound topic carries the branch's name
+    if (st.chat_id && st.topic_id) await tg('editForumTopic', { chat_id: st.chat_id, message_thread_id: st.topic_id, name: TOPIC_NAME })
+      .catch((e) => { if (!/NOT_MODIFIED/i.test(e.message)) console.error('carousels topic name:', e.message); });
     if (st.announce === 'moved' && st.chat_id) {
       st.announce = '';
       save();
@@ -901,6 +1071,10 @@ export function createCarouselBot({ data, media, publicUrl = env('PUBLIC_URL', '
       }
     }
   })();
+
+  setInterval(() => {  // ⏰ the publication slots
+    for (const j of jobs.values()) if (j.slot && !j.slot_sent && j.state !== 'skip' && j.slot <= Date.now()) remind(j).catch((e) => console.error('carousels slot:', e.message));
+  }, 60e3).unref();
 
   setInterval(() => {  // the status message shows how long the running step has been going
     for (const j of jobs.values()) if (j.state === 'render' && j.progress?.msg) progress(j, j.progress.cur, { detail: j.progress.detail }).catch(() => {});

@@ -20,8 +20,10 @@ name: deploy-remake-site
 # token must not be polled anywhere else); without it the topic is off. Variables: REMAKE_TG_OWNER_IDS (who may press the
 # buttons; falls back to TG_AGENT_OWNER_TELEGRAM_ID), REMAKE_TG_CHAT_ID / REMAKE_TG_TOPIC_ID (optional — /bind in the topic
 # does the same), REELS_COMPETITORS (@nicks, comma-separated starting list), REELS_PER_DAY, REELS_HOUR.
-# Telegram topic «Instagram Карусели» (carousel-bot.mjs, skill .claude/skills/carousel-pro): secret CAROUSEL_TG_BOT_TOKEN —
-# the «Карусель Pro» bot (its own long polling); without it the topic is off. Variables: CAROUSEL_TG_OWNER_IDS (falls back to
+# Telegram topic «Instagram Карусели» (carousel-bot.mjs, skill .claude/skills/carousel-pro) is OFF: carousels live in one bot,
+# @caruselclaude_bot (aicex-library/results/karusel-bot, every style incl. «Мой блог»), and CAROUSEL_TG_BOT_TOKEN held that same
+# token — two processes polling it split its updates. The token is not written to api.env any more; to bring the topic back,
+# give it a bot of its own and restore the CAROUSEL_TG_BOT_TOKEN line below. Variables: CAROUSEL_TG_OWNER_IDS (falls back to
 # the reels owners), CAROUSEL_TG_CHAT_ID / CAROUSEL_TG_TOPIC_ID (optional — /bind), CAROUSEL_COMPETITORS (falls back to
 # REELS_COMPETITORS), CAROUSEL_PER_DAY (3), CAROUSEL_HOUR (10).
 # Variables: HETZNER_HOST, HETZNER_USER, HETZNER_SSH_PORT, REMAKE_SITE_DOMAIN (default remake.aicex.club).
@@ -111,7 +113,6 @@ jobs:
           COMPETITORS: ${{ vars.REELS_COMPETITORS }}
           PER_DAY: ${{ vars.REELS_PER_DAY }}
           HOUR: ${{ vars.REELS_HOUR }}
-          C_TOKEN: ${{ secrets.CAROUSEL_TG_BOT_TOKEN }}
           C_OWNERS: ${{ vars.CAROUSEL_TG_OWNER_IDS }}
           C_CHAT: ${{ vars.CAROUSEL_TG_CHAT_ID }}
           C_TOPIC: ${{ vars.CAROUSEL_TG_TOPIC_ID }}
@@ -124,7 +125,6 @@ jobs:
           [ -n "$HEYGEN" ] || echo "::warning::no HeyGen key (REMAKE_HEYGEN_API_KEY) — the studio can't render the avatar"
           [ -n "$ANTHROPIC" ] || echo "::warning::no Anthropic key (REMAKE_ANTHROPIC_API_KEY) — no «Сценарий 2.0», manual script only"
           [ -n "$TG_TOKEN" ] || echo "::warning::REMAKE_TG_BOT_TOKEN is not set — the «Instagram Reels» Telegram topic is off"
-          [ -n "$C_TOKEN" ] || echo "::warning::CAROUSEL_TG_BOT_TOKEN is not set — the «Instagram Карусели» Telegram topic is off"
           line() { local x="${!2}"; printf '%s=%s\n' "$1" "${x//[$'\r\n']/}"; }  # a pasted secret may end with a line break
           {
             line REMAKE_SITE_TOKEN TOKEN
@@ -141,7 +141,6 @@ jobs:
             line REELS_COMPETITORS COMPETITORS
             line REELS_PER_DAY PER_DAY
             line REELS_HOUR HOUR
-            line CAROUSEL_TG_BOT_TOKEN C_TOKEN
             line CAROUSEL_TG_OWNER_IDS C_OWNERS
             line CAROUSEL_TG_CHAT_ID C_CHAT
             line CAROUSEL_TG_TOPIC_ID C_TOPIC
