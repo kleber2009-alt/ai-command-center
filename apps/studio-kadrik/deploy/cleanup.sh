@@ -1,12 +1,16 @@
 #!/bin/bash
 # Free disk space on the aicex box for @studio_kadrik_bot. Run as root by deploy-studio-kadrik.yml (mode "cleanup"):
-#   ssh root@host bash -s -- [days] < deploy/cleanup.sh
-# Deletes montage job folders (sources and rendered videos) changed within the last <days> days (default 7) in JOBS_DIR,
-# except folders touched in the last 30 minutes (a montage may be running there). Service entries of JOBS_DIR
+#   ssh root@host bash -s -- [days] [recent|older] < deploy/cleanup.sh
+# and every 2 days by cleanup-studio-kadrik.yml with "2 older".
+# Deletes montage job folders (sources and rendered videos) in JOBS_DIR: "recent" (default) — changed within the last
+# <days> days (default 7), "older" — not changed for more than <days> days. A folder with anything changed inside in the last
+# 30 minutes ("older": within <days>) is kept — a montage or an edit may be running there. Service entries of JOBS_DIR
 # (_jobs.json, _img, _reviews, … — names starting with "_") stay. Also clears pip / yt-dlp / npm caches of the bot user
 # and the sandbox, and old uploaded releases (the last 7 stay). Never touches .env, data/ (players, ledger) or backups.
 set -euo pipefail
 DAYS="${1:-7}"
+WHICH="${2:-recent}"
+case "$WHICH" in recent) AGE="-$DAYS" ;; older) AGE="+$((DAYS - 1))" ;; *) echo "recent or older, not $WHICH"; exit 1 ;; esac
 DIR="${KADRIK_DIR:-/home/iliapaliy/studio-kadrik-bot}"
 ROOT=/opt/studio-kadrik
 [ -f "$DIR/.env" ] || { echo "no $DIR/.env — the bot is not installed here"; exit 1; }
@@ -22,8 +26,13 @@ SBX="${SBX/#\~/$HOME_DIR}"
 echo "before:"; df -h / | tail -1
 if [ -d "$JOBS" ]; then
   echo "jobs folder: $JOBS ($(du -sh "$JOBS" | cut -f1))"
-  find "$JOBS" -mindepth 1 -maxdepth 1 -type d ! -name '_*' -mtime "-$DAYS" -mmin +30 -print0 \
-    | while IFS= read -r -d '' d; do echo "rm $(du -sh "$d" | cut -f1) $d"; rm -rf "$d"; done
+  find "$JOBS" -mindepth 1 -maxdepth 1 -type d ! -name '_*' -mtime "$AGE" -print0 \
+    | while IFS= read -r -d '' d; do
+        # anything inside changed in the last 30 minutes (or, for "older", within <days>) — a montage or an edit is running
+        recent="$( [ "$WHICH" = older ] && echo $((DAYS * 1440)) || echo 30 )"
+        [ -n "$(find "$d" -mmin "-$recent" -print -quit)" ] && { echo "keep $d (in use)"; continue; }
+        echo "rm $(du -sh "$d" | cut -f1) $d"; rm -rf "$d"
+      done
   rm -rf "$JOBS/_reviews"/* 2>/dev/null || true
 else
   echo "no jobs folder $JOBS"

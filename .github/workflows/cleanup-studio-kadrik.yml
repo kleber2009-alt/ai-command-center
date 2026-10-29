@@ -1,0 +1,47 @@
+name: cleanup-studio-kadrik
+
+# Frees disk space on the aicex box every 2 days: deletes montage jobs of @studio_kadrik_bot (sources and rendered
+# videos) not changed for more than 2 days, clears pip / yt-dlp / npm caches and old releases
+# (apps/studio-kadrik/deploy/cleanup.sh). Players' data, .env and backups stay. Same SSH access as deploy-studio-kadrik.yml.
+# Manual run: pick how many days to keep.
+
+on:
+  schedule:
+    - cron: '17 3 */2 * *'
+  workflow_dispatch:
+    inputs:
+      days:
+        description: 'delete montage jobs not changed for more than this many days'
+        type: string
+        default: '2'
+
+concurrency:
+  group: deploy-studio-kadrik
+  cancel-in-progress: false
+
+jobs:
+  cleanup:
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+    env:
+      HOST: ${{ vars.HETZNER_HOST }}
+      SSH_USER: ${{ vars.HETZNER_USER || 'root' }}
+      SSH_PORT: ${{ vars.HETZNER_SSH_PORT || '22' }}
+      DAYS: ${{ inputs.days || '2' }}
+    steps:
+      - uses: actions/checkout@v5
+
+      - name: Install SSH key
+        env:
+          KEY: ${{ secrets.HETZNER_SSH_KEY }}
+        run: |
+          test -n "$HOST" || { echo "::error::vars.HETZNER_HOST is not set"; exit 1; }
+          mkdir -p ~/.ssh
+          printf '%s\n' "$KEY" > ~/.ssh/id_deploy
+          chmod 600 ~/.ssh/id_deploy
+          ssh-keyscan -p "$SSH_PORT" -H "$HOST" >> ~/.ssh/known_hosts 2>/dev/null
+
+      - name: Cleanup
+        run: |
+          [[ "$DAYS" =~ ^[1-9][0-9]*$ ]] || { echo "::error::days must be a positive number"; exit 1; }
+          ssh -i ~/.ssh/id_deploy -p "$SSH_PORT" "$SSH_USER@$HOST" bash -s -- "$DAYS" older < apps/studio-kadrik/deploy/cleanup.sh
