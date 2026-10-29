@@ -8,8 +8,9 @@
      → ✅ Одобрено → аватар HeyGen (образ, голос и движок — из config.json скилла) → монтаж стилем Кадрика
      → видео файлом в ветку (больше 49 МБ — пережимаем; не вышло — ссылка на remake.aicex.club).
 
-   Кнопки карточки: ✅ Одобрено · 🔄 Другой хук · 🎨 Стиль · 🗑 Пропустить. Ответ на карточку текстом — Claude переписывает
-   сценарий с этим пожеланием. Жать кнопки и писать команды могут REMAKE_TG_OWNER_IDS (а если их нет — тот, кто первым
+   Кнопки карточки: ✅ Одобрено · ✏️ Правки · 🔄 Другой хук · 🎨 Стиль · 🗑 Пропустить; под готовым видео — ✏️ Правки.
+   Правка (кнопка → ответ текстом, или ответ на карточку/видео): до ✅ Claude правит сценарий; после готовности монтаж
+   переделывается с правкой на том же аватаре, а правка, начатая со слова «сценарий», — новый сценарий и после ✅ новый аватар. Жать кнопки и писать команды могут REMAKE_TG_OWNER_IDS (а если их нет — тот, кто первым
    сделал /bind).
 
    Команды в ветке: /bind — эта ветка теперь «Instagram Reels» (бот переименует её; нужен админ с правом «Управление темами»)
@@ -184,9 +185,9 @@ export function createReelsBot({ studio, data }) {
     const hook = sc.hook_from || sc.hook_to ? `<b>Хук:</b> ${esc(sc.hook_from || '?')} → <b>${esc(sc.hook_to || '?')}</b>` : '';
     const check = c ? `Проверка скилла: <b>${c.result}</b>${c.overlap != null ? ` · совпадение с оригиналом ${Math.round(c.overlap * 100)}%` : ''}${c.est_sec ? ` · ≈${Math.round(c.est_sec)} с` : ''}` +
       (c.result === 'FAIL' ? '\n' + c.lines.filter((l) => l.kind === 'fail').slice(0, 3).map((l) => '⛔ ' + esc(l.text)).join('\n') : '') : '';
-    const state = { prep: '', card: `Стиль монтажа: <b>${esc(styleOf(j).name)}</b>\n✅ — в HeyGen и монтаж · ответьте на карточку текстом — перепишу с пожеланием`,
+    const state = { prep: '', card: `Стиль монтажа: <b>${esc(styleOf(j).name)}</b>\n✅ — в HeyGen и монтаж · ✏️ Правки — поправлю сценарий`,
       avatar: '⏳ <b>Одобрено.</b> HeyGen рендерит аватара…', montage: `⏳ <b>Одобрено.</b> Монтаж «${esc(styleOf(j).name)}» в Студии Кадрика…`,
-      done: '✅ <b>Готово</b> — видео ниже', skip: '🗑 Пропущено', fail: '⚠️ Сорвалось — см. сообщение ниже' }[j.reels.state] || '';
+      done: '✅ <b>Готово</b> — видео ниже · ✏️ Правки — переделаю монтаж с вашей правкой', skip: '🗑 Пропущено', fail: '⚠️ Сорвалось — см. сообщение ниже' }[j.reels.state] || '';
     let script = sc.text || '';
     const top = [head, why && `<b>Почему залетел:</b>\n${why}`, hook].filter(Boolean).join('\n\n');
     const bottom = [check, j.code && `Кодовое слово: <b>${esc(j.code)}</b>`, state].filter(Boolean).join('\n');
@@ -196,9 +197,10 @@ export function createReelsBot({ studio, data }) {
   }
 
   function buttons(j) {
+    if (j.reels.state === 'done') return { inline_keyboard: [[{ text: '✏️ Правки', callback_data: `r:edit:${j.id}` }]] };
     if (j.reels.state !== 'card') return { inline_keyboard: j.reels.state === 'fail' ? [[{ text: '🔁 Повторить', callback_data: `r:retry:${j.id}` }]] : [] };
     return { inline_keyboard: [
-      [{ text: '✅ Одобрено', callback_data: `r:ok:${j.id}` }],
+      [{ text: '✅ Одобрено', callback_data: `r:ok:${j.id}` }, { text: '✏️ Правки', callback_data: `r:edit:${j.id}` }],
       [{ text: '🔄 Другой хук', callback_data: `r:hook:${j.id}` }, { text: '🎨 Стиль', callback_data: `r:style:${j.id}` }, { text: '🗑 Пропустить', callback_data: `r:skip:${j.id}` }],
     ] };
   }
@@ -230,6 +232,7 @@ export function createReelsBot({ studio, data }) {
     if (!S.ready.heygen) return fail(j, 'HeyGen', 'на сервере нет HEYGEN_API_KEY');
     if (!av.look_id || !av.voice_id) return fail(j, 'HeyGen', 'в config.json скилла не выбран образ или голос (avatar.look_id / voice_id)');
     j.reels.state = 'avatar';
+    j.reels.wish = '';  // a new avatar starts the montage clean
     j.reels.approved_at = new Date().toISOString();
     if (j.reels.progress?.failed || !j.reels.progress) j.reels.progress = { msg: j.reels.progress?.msg || 0, started: j.reels.progress?.started || new Date().toISOString() };
     S.save(j);
@@ -248,7 +251,7 @@ export function createReelsBot({ studio, data }) {
     const all = S.styles().styles;
     const style = all.find((s) => s.id === want) || all[0];
     if (!style) return fail(j, 'Монтаж', 'нет ни одного стиля Кадрика');
-    try { await S.montage(j, { skill: style.id, wish: '' }); }
+    try { await S.montage(j, { skill: style.id, wish: j.reels.wish || '' }); }
     catch (e) { await fail(j, 'Монтаж', e.message); }
   }
 
@@ -279,7 +282,8 @@ export function createReelsBot({ studio, data }) {
         if (m.duration) fd.append('duration', String(Math.round(m.duration)));
         if (j.reels.card) fd.append('reply_parameters', JSON.stringify({ message_id: j.reels.card, allow_sending_without_reply: true }));
         fd.append('video', await fs.openAsBlob(f, { type: 'video/mp4' }), 'reel.mp4');
-        await tg('sendVideo', fd, { timeout: 10 * 60e3 });
+        const v = await tg('sendVideo', fd, { timeout: 10 * 60e3 });
+        if (v) j.reels.video_msg = v.message_id;  // a reply to the video is a правка too
         sent = true;
       }
     } catch (e) { console.error('reels sendVideo:', e.message); }
@@ -325,6 +329,45 @@ export function createReelsBot({ studio, data }) {
     if (id === 'montage' && state === 'done' && j.reels.state === 'montage' && j.montage.video) return go(() => deliver(j));
   });
 
+  // ---------- правки: the ✏️ button, then a reply with text ----------
+  const ASK = {
+    card: 'Что поправить в сценарии? Ответьте на это сообщение текстом — Claude внесёт правку, карточка обновится.',
+    done: 'Что поправить в видео? Ответьте на это сообщение текстом — переделаю монтаж с правкой на том же аватаре (HeyGen не тратится).\n' +
+      'Поменять сам текст — начните со слова «сценарий»: перепишу сценарий, а после ✅ аватар запишется заново.',
+  };
+  async function ask(j) {
+    const m = await say(`✏️ <b>Правки</b> · рилс по залёту @${esc(j.reels.origin.author || '?')}\n${esc(ASK[j.reels.state])}`, {
+      reply_parameters: { message_id: (j.reels.state === 'done' && j.reels.video_msg) || j.reels.card, allow_sending_without_reply: true },
+      reply_markup: { force_reply: true, input_field_placeholder: 'Что поправить?' } });
+    if (m) { j.reels.ask = m.message_id; S.save(j); }
+  }
+  const scriptEdit = (j, text) => `Это правка к готовому сценарию: внеси её и не меняй остальное без нужды.\nПравка: ${text}\n\nТекущий сценарий:\n${j.script.text || ''}`;
+  async function edit(j, text, where) {
+    const re = { reply_parameters: { message_id: where, allow_sending_without_reply: true } };
+    if (j.reels.state === 'card') {
+      if (S.busy(j, 'script')) return say('Сценарий ещё переписывается — подождите карточку.', re);
+      S.rewrite(j, scriptEdit(j, text));
+      return say('✏️ Вношу правку в сценарий — карточка обновится.', re);
+    }
+    if (j.reels.state !== 'done') return say('Этот рилс сейчас в работе — правки можно на карточке до ✅ или под готовым видео.', re);
+    const m = text.match(/^\s*сценари[йяю]\s*[:,.—-]?\s*/i);
+    if (m) {
+      if (!S.ready.claude) return say('⚠️ Нет ANTHROPIC_API_KEY — сценарий править некому.', re);
+      j.reels.state = 'prep';
+      j.reels.progress = null;
+      S.save(j);
+      await card(j);
+      S.rewrite(j, scriptEdit(j, text.slice(m[0].length) || text));
+      return say('✏️ Переписываю сценарий с правкой — придёт карточка, после ✅ запишу аватара заново.', re);
+    }
+    if (!j.avatar?.video) return say('⚠️ Видео аватара не нашлось — правку монтажа не сделать.', re);
+    j.reels.wish = text;
+    j.reels.progress = { msg: 0, started: new Date().toISOString() };
+    S.save(j);
+    await say('✏️ Переделываю монтаж с правкой — новое видео придёт сюда, статус ниже.', re);
+    return montage(j);
+  }
+
   // ---------- 4. buttons, replies, commands ----------
   async function onCallback(q) {
     const [, act, id] = String(q.data || '').split(':');
@@ -337,6 +380,11 @@ export function createReelsBot({ studio, data }) {
       if (j.check?.result === 'FAIL') answer('Проверка скилла не прошла, но запускаю. Статус — под карточкой');
       else answer('Запускаю: аватар HeyGen → монтаж → видео сюда. Статус — под карточкой');
       return approve(j);
+    }
+    if (act === 'edit') {
+      if (!['card', 'done'].includes(j.reels.state)) return answer('Сейчас в работе — правки после готовности');
+      answer('Напишите правку ответом на сообщение');
+      return ask(j);
     }
     if (act === 'hook') {
       if (j.reels.state !== 'card' || S.busy(j, 'script')) return answer('Сценарий уже переписывается');
@@ -374,7 +422,8 @@ export function createReelsBot({ studio, data }) {
   const HELP = `<b>Instagram Reels</b> — связка как у Threads.\nКаждый день в ${HOUR}:00 (${esc(TZ)}) ищу залёты у конкурентов (нет конкурентов — в вашем аккаунте), ` +
     `уникализирую хук и сценарий и присылаю карточки. ✅ Одобрено — аватар HeyGen, монтаж Кадрика и готовое видео файлом сюда.\n\n` +
     `/scan — найти залёты сейчас\n/competitors — список конкурентов\n/competitors add @ник @ник — добавить\n/competitors del @ник — убрать\n/status — что в работе\n` +
-    `Ссылка на рилс сюда — сразу в работу. Ответ на карточку текстом — перепишу сценарий с пожеланием.`;
+    `Ссылка на рилс сюда — сразу в работу. ✏️ Правки на карточке — поправлю сценарий, под готовым видео — переделаю монтаж с правкой ` +
+    `(правка со слова «сценарий» — новый текст и новый аватар). Ответ на карточку или видео текстом — тоже правка.`;
 
   async function onMessage(msg) {
     const { text, cmd, forMe, forOther, topic } = parse(msg, me);
@@ -419,14 +468,12 @@ export function createReelsBot({ studio, data }) {
       return say(mine.length ? mine.map((j) => `• @${esc(j.reels.origin.author)} — ${ru[j.reels.state] || j.reels.state}`).join('\n') +
         `\n\nПоследний поиск: ${esc(st.last_scan || 'ещё не было')}` : `Сейчас ничего не в работе. Последний поиск: ${esc(st.last_scan || 'ещё не было')}`);
     }
-    // a reply to a card — a wish for the script
+    // a reply to a card, its ✏️ question or the finished video — a правка
     const reply = msg.reply_to_message?.message_id;
-    const j = reply && S.list().find((x) => x.reels?.card === reply);
+    const j = reply && S.list().find((x) => x.reels && [x.reels.card, x.reels.ask, x.reels.video_msg].includes(reply));
     if (j && text && !cmd) {
-      if (j.reels.state !== 'card') return say('Эта карточка уже в работе или закрыта.');
-      if (S.busy(j, 'script')) return say('Сценарий ещё переписывается — подождите карточку.');
-      S.rewrite(j, text.slice(0, 1500));
-      return say('✏️ Переписываю сценарий с пожеланием — карточка обновится.', { reply_parameters: { message_id: reply, allow_sending_without_reply: true } });
+      if (['skip', 'fail'].includes(j.reels.state)) return say('Эта карточка закрыта.');
+      return edit(j, text.slice(0, 1500), msg.message_id);
     }
     const url = (text.match(/https?:\/\/(?:www\.)?instagram\.com\/[^\s]+/i) || [])[0];
     if (url && shortcode(url)) {
