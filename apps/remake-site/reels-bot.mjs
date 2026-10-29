@@ -8,9 +8,16 @@
      → ✅ Одобрено → аватар HeyGen (образ, голос и движок — из config.json скилла) → монтаж стилем Кадрика
      → видео файлом в ветку (больше 49 МБ — пережимаем; не вышло — ссылка на remake.aicex.club).
 
-   Кнопки карточки: ✅ Одобрено · ✏️ Правки · 🔄 Другой хук · 🎨 Стиль · 🗑 Пропустить; под готовым видео — ✏️ Правки.
-   Правка (кнопка → ответ текстом, или ответ на карточку/видео): до ✅ Claude правит сценарий; после готовности монтаж
-   переделывается с правкой на том же аватаре, а правка, начатая со слова «сценарий», — новый сценарий и после ✅ новый аватар. Жать кнопки и писать команды могут REMAKE_TG_OWNER_IDS (а если их нет — тот, кто первым
+   Кнопки карточки — как в ветке Threads: ✅ Одобрить · ✏️ Править / 🔄 Хук · ♻️ Другой · 📎 Материалы / ⏰ Слот · 🎨 Стиль ·
+   🗑 Пропустить; под готовым видео — ✏️ Править и ⏰ Слот.
+     ✏️ Править (кнопка → ответ текстом или голосом, или ответ на карточку/видео): до ✅ Claude правит сценарий; после
+       готовности монтаж переделывается с правкой на том же аватаре, правка со слова «сценарий» — новый сценарий и после ✅
+       новый аватар;
+     🔄 Хук — несколько других хуков разными механиками, выбор кнопкой → сценарий под выбранный хук;
+     ♻️ Другой — этот залёт в сторону, следующий из запаса поиска в тот же слот;
+     📎 Материалы — ваша история, цифры, пример (текстом или голосом) вплетаются в сценарий;
+     ⏰ Слот — время публикации (REELS_SLOTS); карточке слот ставится сам, в слот бот напоминает: готово — видео и подпись
+       выше, не готово — что нажать. Жать кнопки и писать команды могут REMAKE_TG_OWNER_IDS (а если их нет — тот, кто первым
    сделал /bind).
 
    Команды в ветке: /bind — эта ветка теперь «Instagram Reels» (бот переименует её; нужен админ с правом «Управление темами»)
@@ -21,13 +28,14 @@
      REMAKE_TG_CHAT_ID / REMAKE_TG_TOPIC_ID (иначе — из /bind) · REELS_TOPIC_NAME (Instagram Reels) · REELS_COMPETITORS
      (@ники через запятую, стартовый список) · REELS_PER_DAY (2) · REELS_HOUR (9, по REELS_TZ Europe/Moscow)
      REELS_DAYS (30 — окно поиска у конкурентов; свой аккаунт — scan.days скилла) · REELS_MIN_AGE_DAYS (2) · APIFY_TOKEN
+     REELS_SLOTS (12:00,19:00 — время публикаций по REELS_TZ) · ELEVENLABS_API_KEY / OPENAI_API_KEY — голосовые правки
      для заглушек — TELEGRAM_API_BASE, APIFY_API_BASE.
    Одна ветка — один бот (tg-branch.mjs): бот слышит только свою ветку, команды с @другим_ботом не его, занятую веткой
    «Instagram Карусели» ветку не привязать. После ✅ под карточкой — статус: что сделано, что идёт сейчас и сколько, что дальше.
    Состояние — DATA_DIR/reels/state.json. */
 import fs from 'node:fs';
 import path from 'node:path';
-import { takenBy, parse, progressText, wrongBind, BRANCHES } from './tg-branch.mjs';
+import { takenBy, parse, progressText, wrongBind, BRANCHES, parseSlots, slotChoices, fmtSlot, hookVariants, voiceToText } from './tg-branch.mjs';
 
 const env = (k, d = '') => (process.env[k] || d).trim();
 const TOKEN = env('REMAKE_TG_BOT_TOKEN');
@@ -43,6 +51,7 @@ const ACTOR = env('APIFY_INSTAGRAM_ACTOR', 'apify~instagram-scraper');
 const TG_MAX = 49 * 1024 ** 2;
 const MIN_WORDS = 30;
 const NICK = /^[a-z0-9._]{1,30}$/;
+const SLOTS = parseSlots(env('REELS_SLOTS', '12:00,19:00')).length ? parseSlots(env('REELS_SLOTS', '12:00,19:00')) : [[12, 0], [19, 0]];
 
 const esc = (s) => String(s ?? '').replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;');
 const fmt = (n) => n == null ? '—' : n >= 1e6 ? `${(n / 1e6).toFixed(1).replace('.0', '')} млн` : n >= 1e3 ? `${Math.round(n / 1e3)} тыс.` : String(Math.round(n));
@@ -185,23 +194,29 @@ export function createReelsBot({ studio, data }) {
     const hook = sc.hook_from || sc.hook_to ? `<b>Хук:</b> ${esc(sc.hook_from || '?')} → <b>${esc(sc.hook_to || '?')}</b>` : '';
     const check = c ? `Проверка скилла: <b>${c.result}</b>${c.overlap != null ? ` · совпадение с оригиналом ${Math.round(c.overlap * 100)}%` : ''}${c.est_sec ? ` · ≈${Math.round(c.est_sec)} с` : ''}` +
       (c.result === 'FAIL' ? '\n' + c.lines.filter((l) => l.kind === 'fail').slice(0, 3).map((l) => '⛔ ' + esc(l.text)).join('\n') : '') : '';
-    const state = { prep: '', card: `Стиль монтажа: <b>${esc(styleOf(j).name)}</b>\n✅ — в HeyGen и монтаж · ✏️ Правки — поправлю сценарий`,
+    const slot = j.reels.slot ? `⏰ Публикация: <b>${esc(fmtSlot(j.reels.slot, TZ))}</b>` : '';
+    const notes = (j.reels.notes || []).length ? `📎 Материалов вплетено: ${j.reels.notes.length}` : '';
+    const state = { prep: '', card: `Стиль монтажа: <b>${esc(styleOf(j).name)}</b>\n✅ — в HeyGen и монтаж · ✏️ — правка сценария текстом или голосом`,
       avatar: '⏳ <b>Одобрено.</b> HeyGen рендерит аватара…', montage: `⏳ <b>Одобрено.</b> Монтаж «${esc(styleOf(j).name)}» в Студии Кадрика…`,
-      done: '✅ <b>Готово</b> — видео ниже · ✏️ Правки — переделаю монтаж с вашей правкой', skip: '🗑 Пропущено', fail: '⚠️ Сорвалось — см. сообщение ниже' }[j.reels.state] || '';
+      done: '✅ <b>Готово</b> — видео ниже · ✏️ Править — переделаю монтаж с вашей правкой', skip: j.reels.replaced ? '♻️ Заменён другим залётом' : '🗑 Пропущено', fail: '⚠️ Сорвалось — см. сообщение ниже' }[j.reels.state] || '';
     let script = sc.text || '';
     const top = [head, why && `<b>Почему залетел:</b>\n${why}`, hook].filter(Boolean).join('\n\n');
-    const bottom = [check, j.code && `Кодовое слово: <b>${esc(j.code)}</b>`, state].filter(Boolean).join('\n');
+    const bottom = [check, j.code && `Кодовое слово: <b>${esc(j.code)}</b>`, notes, j.reels.state !== 'skip' && slot, state].filter(Boolean).join('\n');
     const room = 4000 - top.length - bottom.length - 80;
     if (esc(script).length > room) script = script.slice(0, Math.max(0, room - (esc(script).length - script.length))) + '…';
     return [top, script && `<b>Сценарий 2.0:</b>\n<blockquote expandable>${esc(script)}</blockquote>`, bottom].filter(Boolean).join('\n\n');
   }
 
+  // the same layout as the Threads topic: approve/edit · hook/other/materials · slot/style/skip
   function buttons(j) {
-    if (j.reels.state === 'done') return { inline_keyboard: [[{ text: '✏️ Правки', callback_data: `r:edit:${j.id}` }]] };
-    if (j.reels.state !== 'card') return { inline_keyboard: j.reels.state === 'fail' ? [[{ text: '🔁 Повторить', callback_data: `r:retry:${j.id}` }]] : [] };
+    const b = (text, act) => ({ text, callback_data: `r:${act}:${j.id}` });
+    if (j.reels.state === 'done') return { inline_keyboard: [[b('✏️ Править', 'ed'), b('⏰ Слот', 'sl')]] };
+    if (j.reels.state === 'fail') return { inline_keyboard: [[b('🔁 Повторить', 'retry')], [b('♻️ Другой', 'ot'), b('🗑 Пропустить', 'skip')]] };
+    if (j.reels.state !== 'card') return { inline_keyboard: [] };
     return { inline_keyboard: [
-      [{ text: '✅ Одобрено', callback_data: `r:ok:${j.id}` }, { text: '✏️ Правки', callback_data: `r:edit:${j.id}` }],
-      [{ text: '🔄 Другой хук', callback_data: `r:hook:${j.id}` }, { text: '🎨 Стиль', callback_data: `r:style:${j.id}` }, { text: '🗑 Пропустить', callback_data: `r:skip:${j.id}` }],
+      [b('✅ Одобрить', 'ok'), b('✏️ Править', 'ed')],
+      [b('🔄 Хук', 'hk'), b('♻️ Другой', 'ot'), b('📎 Материалы', 'mt')],
+      [b('⏰ Слот', 'sl'), b('🎨 Стиль', 'style'), b('🗑 Пропустить', 'skip')],
     ] };
   }
 
@@ -322,6 +337,7 @@ export function createReelsBot({ studio, data }) {
     }
     if (id === 'script' && state === 'done' && j.script.origin === 'claude' && ['prep', 'card', 'fail'].includes(j.reels.state)) {
       j.reels.state = 'card';
+      if (!j.reels.slot) j.reels.slot = freeSlots(j)[0] || 0;
       S.save(j);
       return go(() => card(j));
     }
@@ -329,17 +345,20 @@ export function createReelsBot({ studio, data }) {
     if (id === 'montage' && state === 'done' && j.reels.state === 'montage' && j.montage.video) return go(() => deliver(j));
   });
 
-  // ---------- правки: the ✏️ button, then a reply with text ----------
+  // ---------- ✏️ Править · 📎 Материалы: the button asks, the answer (text or voice) is a reply ----------
   const ASK = {
-    card: 'Что поправить в сценарии? Ответьте на это сообщение текстом — Claude внесёт правку, карточка обновится.',
-    done: 'Что поправить в видео? Ответьте на это сообщение текстом — переделаю монтаж с правкой на том же аватаре (HeyGen не тратится).\n' +
-      'Поменять сам текст — начните со слова «сценарий»: перепишу сценарий, а после ✅ аватар запишется заново.',
+    ed: (j) => j.reels.state === 'done'
+      ? 'Что поправить в видео? Ответьте на это сообщение текстом или голосом — переделаю монтаж с правкой на том же аватаре (HeyGen не тратится).\n' +
+        'Поменять сам текст — начните со слова «сценарий»: перепишу сценарий, а после ✅ аватар запишется заново.'
+      : 'Что поправить в сценарии? Ответьте на это сообщение текстом или голосом — инструкцией («короче, хук жёстче») или своей версией куска. Меняю только это.',
+    mt: () => 'Пришлите ответом на это сообщение текст или голос: свою историю, цифры, пример из практики — вплету в сценарий от первого лица, не ломая хук.',
   };
-  async function ask(j) {
-    const m = await say(`✏️ <b>Правки</b> · рилс по залёту @${esc(j.reels.origin.author || '?')}\n${esc(ASK[j.reels.state])}`, {
+  async function ask(j, mode) {
+    const title = mode === 'mt' ? '📎 <b>Материалы</b>' : '✏️ <b>Править</b>';
+    const m = await say(`${title} · рилс по залёту @${esc(j.reels.origin.author || '?')}\n${esc(ASK[mode](j))}`, {
       reply_parameters: { message_id: (j.reels.state === 'done' && j.reels.video_msg) || j.reels.card, allow_sending_without_reply: true },
-      reply_markup: { force_reply: true, input_field_placeholder: 'Что поправить?' } });
-    if (m) { j.reels.ask = m.message_id; S.save(j); }
+      reply_markup: { force_reply: true, input_field_placeholder: mode === 'mt' ? 'Ваша история или факт' : 'Что поправить?' } });
+    if (m) { j.reels.ask = m.message_id; j.reels.ask_mode = mode; S.save(j); }
   }
   const scriptEdit = (j, text) => `Это правка к готовому сценарию: внеси её и не меняй остальное без нужды.\nПравка: ${text}\n\nТекущий сценарий:\n${j.script.text || ''}`;
   async function edit(j, text, where) {
@@ -349,7 +368,7 @@ export function createReelsBot({ studio, data }) {
       S.rewrite(j, scriptEdit(j, text));
       return say('✏️ Вношу правку в сценарий — карточка обновится.', re);
     }
-    if (j.reels.state !== 'done') return say('Этот рилс сейчас в работе — правки можно на карточке до ✅ или под готовым видео.', re);
+    if (j.reels.state !== 'done') return say('Этот рилс сейчас в работе — править можно на карточке до ✅ или под готовым видео.', re);
     const m = text.match(/^\s*сценари[йяю]\s*[:,.—-]?\s*/i);
     if (m) {
       if (!S.ready.claude) return say('⚠️ Нет ANTHROPIC_API_KEY — сценарий править некому.', re);
@@ -367,10 +386,56 @@ export function createReelsBot({ studio, data }) {
     await say('✏️ Переделываю монтаж с правкой — новое видео придёт сюда, статус ниже.', re);
     return montage(j);
   }
+  async function materials(j, text, where) {
+    const re = { reply_parameters: { message_id: where, allow_sending_without_reply: true } };
+    if (j.reels.state !== 'card') return say('Материалы вплетаются до ✅. Для готового видео — ✏️ Править со слова «сценарий».', re);
+    if (S.busy(j, 'script')) return say('Сценарий ещё переписывается — подождите карточку.', re);
+    (j.reels.notes ||= []).push(text);
+    S.save(j);
+    S.rewrite(j, `Вплети в сценарий материал владельца — от первого лица, коротко и конкретно, не ломая хук и структуру. Остальное оставь.\n` +
+      `Материал: ${text}\n\nТекущий сценарий:\n${j.script.text || ''}`);
+    return say('📎 Вплетаю ваш материал в сценарий — карточка обновится.', re);
+  }
+
+  // ---------- 🔄 Хук: other hooks with their mechanics, picked with a button ----------
+  async function hooks(j, more = false) {
+    if (!j.reels.hooks?.length || more) {
+      let rules = '';
+      try { rules = fs.readFileSync(path.join(S.skillDir, 'references/script-rules.md'), 'utf8'); } catch {}
+      j.reels.hooks = await hookVariants({ apiKey: S.anthropic, model: S.model, rules, what: 'сценарий рилса — говорящая голова, хук — первая фраза',
+        current: j.script.hook_to || (j.script.text || '').split('\n')[0], context: `Оригинал (расшифровка):\n${j.transcript?.text || ''}\n\nНаш сценарий:\n${j.script.text || ''}` });
+      S.save(j);
+    }
+    const lines = [`🔄 <b>Хуки рилса по залёту @${esc(j.reels.origin.author || '?')}</b> — выберите кнопкой:`, `\n<b>★ сейчас:</b> ${esc(j.script.hook_to || '—')}`];
+    j.reels.hooks.forEach((h, i) => lines.push(`\n<b>${i + 1}.</b>${h.mechanic ? ` <i>(${esc(h.mechanic)})</i>` : ''}\n${esc(h.text.slice(0, 600))}`));
+    return say(lines.join('\n'), { reply_parameters: { message_id: j.reels.card, allow_sending_without_reply: true }, reply_markup: { inline_keyboard: [
+      j.reels.hooks.map((_, i) => ({ text: String(i + 1), callback_data: `r:hs:${j.id}:${i}` })),
+      [{ text: '🔄 Ещё варианты', callback_data: `r:hm:${j.id}` }]] } });
+  }
+
+  // ---------- ⏰ Слот: when to publish; a reminder comes at that time ----------
+  function freeSlots(j, n = 8) {
+    const taken = S.list().filter((x) => x.reels && x.id !== j.id && !['skip'].includes(x.reels.state) && !x.reels.slot_sent).map((x) => x.reels.slot);
+    return slotChoices({ slots: SLOTS, tz: TZ, taken, n });
+  }
+  async function remind(j) {
+    j.reels.slot_sent = true;
+    S.save(j);
+    if (Date.now() - j.reels.slot > 6 * 3600e3) return;  // the box was down through the slot — no late reminders
+    const re = { reply_parameters: { message_id: j.reels.video_msg || j.reels.card, allow_sending_without_reply: true } };
+    if (j.reels.state === 'done') {
+      await say(`⏰ <b>Время публиковать</b> рилс по залёту @${esc(j.reels.origin.author || '?')} — видео выше.${j.code ? ` Кодовое слово: <b>${esc(j.code)}</b>.` : ''}`, re);
+      if (j.caption) await say(esc(j.caption).slice(0, 3800));
+      return;
+    }
+    const ru = { prep: 'сценарий ещё пишется', card: 'ещё не одобрен', avatar: 'аватар рендерится', montage: 'идёт монтаж', fail: 'сорвался' };
+    await say(`⏰ Слот рилса по залёту @${esc(j.reels.origin.author || '?')} наступил, а он ${ru[j.reels.state] || j.reels.state}. ` +
+      `${j.reels.state === 'card' ? '✅ — запущу, ⏰ Слот — перенести.' : 'Пришлю, как будет готов; ⏰ Слот — перенести.'}`, re);
+  }
 
   // ---------- 4. buttons, replies, commands ----------
   async function onCallback(q) {
-    const [, act, id] = String(q.data || '').split(':');
+    const [, act, id, arg] = String(q.data || '').split(':');
     const answer = (text = '', alert = false) => quiet(tg('answerCallbackQuery', { callback_query_id: q.id, text, show_alert: alert }));
     if (!owners().has(q.from.id)) return answer('Кнопки — только у владельца', true);
     const j = S.get(id);
@@ -381,15 +446,59 @@ export function createReelsBot({ studio, data }) {
       else answer('Запускаю: аватар HeyGen → монтаж → видео сюда. Статус — под карточкой');
       return approve(j);
     }
-    if (act === 'edit') {
-      if (!['card', 'done'].includes(j.reels.state)) return answer('Сейчас в работе — правки после готовности');
-      answer('Напишите правку ответом на сообщение');
-      return ask(j);
+    if (act === 'ed' || act === 'edit') {
+      if (!['card', 'done'].includes(j.reels.state)) return answer('Сейчас в работе — править можно после готовности');
+      answer('Напишите правку ответом на сообщение — текстом или голосом');
+      return ask(j, 'ed');
     }
-    if (act === 'hook') {
-      if (j.reels.state !== 'card' || S.busy(j, 'script')) return answer('Сценарий уже переписывается');
-      answer('Пишу другой хук…');
-      return S.rewrite(j, `Нужен другой хук, не «${j.script.hook_to || ''}» и не этот: «${(j.script.text || '').split('\n')[0].slice(0, 200)}». Возьми другой тип хука из банка.`);
+    if (act === 'mt') {
+      if (j.reels.state !== 'card') return answer('Материалы — до ✅');
+      answer('Пришлите материал ответом на сообщение');
+      return ask(j, 'mt');
+    }
+    if (act === 'hk' || act === 'hm' || act === 'hook') {
+      if (j.reels.state !== 'card' || S.busy(j, 'script')) return answer('Сценарий сейчас переписывается — подождите карточку');
+      if (!S.ready.claude) return answer('Нет ANTHROPIC_API_KEY', true);
+      answer(act === 'hm' ? 'Пишу ещё варианты…' : 'Подбираю хуки…');
+      return hooks(j, act === 'hm').catch((e) => say(`⚠️ Хуки не написались: ${esc(e.message)}`));
+    }
+    if (act === 'hs') {
+      const h = j.reels.hooks?.[Number(arg)];
+      if (!h) return answer('Этого варианта уже нет — нажмите 🔄 Хук ещё раз');
+      if (j.reels.state !== 'card' || S.busy(j, 'script')) return answer('Сценарий сейчас переписывается — подождите карточку');
+      answer(`Хук ${Number(arg) + 1}: переписываю сценарий…`);
+      j.reels.hooks = [];
+      S.save(j);
+      quiet(tg('editMessageReplyMarkup', { chat_id: st.chat_id, message_id: q.message.message_id, reply_markup: { inline_keyboard: [] } }));
+      return S.rewrite(j, `Поставь первой фразой этот хук: «${h.text}» (механика: ${h.mechanic || '—'}). Остальной сценарий сохрани, подгони связку после хука.\n\nТекущий сценарий:\n${j.script.text || ''}`);
+    }
+    if (act === 'ot') {
+      if (!['card', 'fail'].includes(j.reels.state)) return answer('Этот рилс уже в работе');
+      if (!st.pool.length) return answer('Запас пуст — /scan найдёт новые залёты', true);
+      j.reels.state = 'skip';
+      j.reels.replaced = true;
+      S.save(j);
+      answer('Беру следующий залёт из запаса…');
+      await card(j);
+      const n = next();
+      if (n) { n.reels.slot = j.reels.slot; S.save(n); }
+      return say(`♻️ Беру другой залёт${n ? ` @${esc(n.reels.origin.author || '?')}` : ''} в тот же слот — карточка придёт, как будет готов сценарий.`);
+    }
+    if (act === 'sl') {
+      const ch = freeSlots(j);
+      if (!ch.length) return answer('Свободных слотов в ближайшие дни нет', true);
+      answer();
+      return say(`⏰ Рилс по залёту @${esc(j.reels.origin.author || '?')}: на какое время поставить публикацию?`, {
+        reply_parameters: { message_id: j.reels.card, allow_sending_without_reply: true },
+        reply_markup: { inline_keyboard: ch.map((t) => [{ text: fmtSlot(t, TZ), callback_data: `r:ss:${j.id}:${Math.round(t / 60e3)}` }]) } });
+    }
+    if (act === 'ss') {
+      j.reels.slot = Number(arg) * 60e3;
+      j.reels.slot_sent = false;
+      S.save(j);
+      answer(`Слот: ${fmtSlot(j.reels.slot, TZ)}`);
+      quiet(tg('editMessageText', { chat_id: st.chat_id, message_id: q.message.message_id, text: `⏰ Публикация рилса — ${fmtSlot(j.reels.slot, TZ)}.` }));
+      return card(j);
     }
     if (act === 'style') {
       const list = S.skillConfig().styles || [];
@@ -422,8 +531,10 @@ export function createReelsBot({ studio, data }) {
   const HELP = `<b>Instagram Reels</b> — связка как у Threads.\nКаждый день в ${HOUR}:00 (${esc(TZ)}) ищу залёты у конкурентов (нет конкурентов — в вашем аккаунте), ` +
     `уникализирую хук и сценарий и присылаю карточки. ✅ Одобрено — аватар HeyGen, монтаж Кадрика и готовое видео файлом сюда.\n\n` +
     `/scan — найти залёты сейчас\n/competitors — список конкурентов\n/competitors add @ник @ник — добавить\n/competitors del @ник — убрать\n/status — что в работе\n` +
-    `Ссылка на рилс сюда — сразу в работу. ✏️ Правки на карточке — поправлю сценарий, под готовым видео — переделаю монтаж с правкой ` +
-    `(правка со слова «сценарий» — новый текст и новый аватар). Ответ на карточку или видео текстом — тоже правка.`;
+    `Ссылка на рилс сюда — сразу в работу.\n\nКнопки карточки — как в ветке Threads:\n✅ Одобрить — аватар, монтаж и видео сюда\n` +
+    `✏️ Править — правка текстом или голосом: до ✅ — сценарий, под готовым видео — монтаж (со слова «сценарий» — новый текст и новый аватар)\n` +
+    `🔄 Хук — другие хуки на выбор · ♻️ Другой — следующий залёт в тот же слот · 📎 Материалы — ваша история или цифры в сценарий\n` +
+    `⏰ Слот — время публикации (в слот напомню) · 🎨 Стиль монтажа · 🗑 Пропустить\nОтвет на карточку или видео текстом — тоже правка.`;
 
   async function onMessage(msg) {
     const { text, cmd, forMe, forOther, topic } = parse(msg, me);
@@ -468,12 +579,20 @@ export function createReelsBot({ studio, data }) {
       return say(mine.length ? mine.map((j) => `• @${esc(j.reels.origin.author)} — ${ru[j.reels.state] || j.reels.state}`).join('\n') +
         `\n\nПоследний поиск: ${esc(st.last_scan || 'ещё не было')}` : `Сейчас ничего не в работе. Последний поиск: ${esc(st.last_scan || 'ещё не было')}`);
     }
-    // a reply to a card, its ✏️ question or the finished video — a правка
+    // a reply to a card, the finished video or a ✏️/📎 question — a правка or a material, text or voice
     const reply = msg.reply_to_message?.message_id;
     const j = reply && S.list().find((x) => x.reels && [x.reels.card, x.reels.ask, x.reels.video_msg].includes(reply));
-    if (j && text && !cmd) {
+    const voice = msg.voice || msg.audio;
+    if (j && !cmd && (text || voice)) {
       if (['skip', 'fail'].includes(j.reels.state)) return say('Эта карточка закрыта.');
-      return edit(j, text.slice(0, 1500), msg.message_id);
+      let said = text;
+      if (voice) {
+        try { said = await voiceToText({ tg, api: `${env('TELEGRAM_API_BASE', 'https://api.telegram.org')}/file/bot${TOKEN}`, file_id: voice.file_id }); }
+        catch (e) { return say(`⚠️ Голос не распознан: ${esc(e.message)}`); }
+        await say(`🎙 Распознал: «${esc(said.slice(0, 500))}»`, { reply_parameters: { message_id: msg.message_id, allow_sending_without_reply: true } });
+      }
+      const mode = reply === j.reels.ask ? j.reels.ask_mode : 'ed';
+      return (mode === 'mt' ? materials : edit)(j, said.slice(0, 1500), msg.message_id);
     }
     const url = (text.match(/https?:\/\/(?:www\.)?instagram\.com\/[^\s]+/i) || [])[0];
     if (url && shortcode(url)) {
@@ -499,6 +618,9 @@ export function createReelsBot({ studio, data }) {
   (async function poll() {
     try { await tg('deleteWebhook', {}); } catch {}
     try { me = (await tg('getMe', {})).username || ''; if (me && st.bot !== me) { st.bot = me; save(); } } catch (e) { console.error('reels getMe:', e.message); }
+    // the bound topic carries the branch's name (an old «Instagram контент» becomes «Instagram Reels»)
+    if (st.chat_id && st.topic_id) await tg('editForumTopic', { chat_id: st.chat_id, message_thread_id: st.topic_id, name: TOPIC_NAME })
+      .catch((e) => { if (!/NOT_MODIFIED/i.test(e.message)) console.error('reels topic name:', e.message); });
     while (!stopped) {
       try {
         const ups = await tg('getUpdates', { offset: st.offset, timeout: 50, allowed_updates: ['message', 'callback_query'] }, { timeout: 70e3 });
@@ -514,6 +636,10 @@ export function createReelsBot({ studio, data }) {
       }
     }
   })();
+
+  setInterval(() => {  // ⏰ the publication slots
+    for (const j of S.list()) if (j.reels?.slot && !j.reels.slot_sent && j.reels.state !== 'skip' && j.reels.slot <= Date.now()) remind(j).catch((e) => console.error('reels slot:', e.message));
+  }, 60e3).unref();
 
   setInterval(() => {  // the status message shows how long the running step has been going
     for (const j of S.list()) if (j.reels?.progress?.msg && ['avatar', 'montage'].includes(j.reels.state)) progress(j, j.reels.progress.cur).catch(() => {});

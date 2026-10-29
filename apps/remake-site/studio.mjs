@@ -818,7 +818,7 @@ export function createStudio({ data, media, send, receive }) {
     avatar: (j, b) => avatarStart(j, b),
     montage: (j, b) => montageStart(j, b),
     ready: { heygen: Boolean(HEYGEN), claude: Boolean(ANTHROPIC), kadrik: Boolean(KADRIK_KEY), apify: Boolean(APIFY) },
-    apify: APIFY, publicUrl: PUBLIC_URL, mpath, probe, run,
+    apify: APIFY, publicUrl: PUBLIC_URL, mpath, probe, run, skillDir: SKILL_DIR, model: MODEL, anthropic: ANTHROPIC,
   };
 
   return { handle, services, enabled: Boolean(SECRET), bot };
