@@ -29,7 +29,7 @@ import path from 'node:path';
 import crypto from 'node:crypto';
 import { spawn } from 'node:child_process';
 import { fileURLToPath } from 'node:url';
-import { takenBy, parse, progressText, wrongBind, BRANCHES } from './tg-branch.mjs';
+import { takenBy, parse, progressText, wrongBind, laneOf, topicName, BRANCHES } from './tg-branch.mjs';
 
 const env = (k, d = '') => (process.env[k] || d).trim();
 const HERE = path.dirname(fileURLToPath(import.meta.url));
@@ -800,16 +800,18 @@ export function createCarouselBot({ data, media, publicUrl = env('PUBLIC_URL', '
       const here = st.chat_id === msg.chat.id && st.topic_id === topic;
       const reply = (t) => tg('sendMessage', { chat_id: msg.chat.id, ...(topic ? { message_thread_id: topic } : {}), text: t, parse_mode: 'HTML' }).catch(() => {});
       // a plain /bind is for a bot without a topic; moving this one — /bind@me
-      if (st.chat_id && !here && !forMe) return me && wrongBind({ data, self: 'carousels', me, chat: msg.chat.id, topic, reply });
+      if (st.chat_id && !here && !forMe) return me && wrongBind({ data, self: 'carousels', me, chat: msg.chat.id, topic, name: topicName(msg), reply });
       if (msg.chat.is_forum && !topic) return reply(`Привязать можно только ветку, не «Общий». Создайте ветку и напишите в ней /bind${me ? '@' + esc(me) : ''}.`);
       const other = takenBy(data, 'carousels', msg.chat.id, topic);
       if (other) return reply(`Эта ветка уже за «${esc(BRANCHES[other])}» — карусели здесь не живут. Создайте отдельную ветку и напишите в ней /bind${me ? '@' + esc(me) : ''}.`);
+      const lane = laneOf(topicName(msg));  // the topic's name says whose it is
+      if (lane && lane.key !== 'carousels') return reply(`Это ветка «${esc(topicName(msg))}» — она для другого. Я @${esc(me)}, бот каруселей: напишите /bind@${esc(me)} в ветке ${esc(BRANCHES['carousels'])}.`);
       if (!owners().size) st.owners = [msg.from.id];
       st.chat_id = msg.chat.id;
       st.topic_id = topic;
       save();
       let renamed = '';
-      if (st.topic_id) {
+      if (st.topic_id && !lane) {  // the topic's name already fits — keep it
         try { await tg('editForumTopic', { chat_id: st.chat_id, message_thread_id: st.topic_id, name: TOPIC_NAME }); renamed = `Переименовал ветку в «${esc(TOPIC_NAME)}». `; }
         catch (e) { renamed = /NOT_MODIFIED/i.test(e.message) ? '' : `Переименовать ветку не смог (${esc(e.message)}) — дайте боту право «Управление темами». `; }
       }
@@ -879,6 +881,11 @@ export function createCarouselBot({ data, media, publicUrl = env('PUBLIC_URL', '
   (async function poll() {
     try { await tg('deleteWebhook', {}); } catch {}
     try { me = (await tg('getMe', {})).username || ''; if (me && st.bot !== me) { st.bot = me; save(); } } catch (e) { console.error('carousels getMe:', e.message); }
+    if (st.announce === 'moved' && st.chat_id) {
+      st.announce = '';
+      save();
+      say(`Эта ветка снова за каруселями — я @${esc(me)}. Задачи по рилсам сюда больше не приходят: бот рилсов ждёт /bind в ветке Instagram Reels.\n\n${HELP}`);
+    }
     while (!stopped) {
       try {
         const ups = await tg('getUpdates', { offset: st.offset, timeout: 50, allowed_updates: ['message', 'callback_query'] }, { timeout: 70e3 });
