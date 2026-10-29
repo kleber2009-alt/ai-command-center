@@ -38,6 +38,7 @@ on:
       - '.claude/skills/remake-top-reel/references/script-rules.md'
       - '.claude/skills/carousel-pro/config.json'
       - '.claude/skills/carousel-pro/references/carousel-rules.md'
+      - '.claude/skills/carousel-lux/assets/**'
       - '.github/workflows/deploy-remake-site.yml'
   workflow_dispatch:
 
@@ -65,7 +66,7 @@ jobs:
           node --check apps/remake-site/reels-bot.mjs
           node --check apps/remake-site/carousel-bot.mjs
           node --check apps/remake-site/tg-branch.mjs
-          test -f apps/remake-site/dist/carousel-skill/config.json && test -f apps/remake-site/dist/carousel-skill/references/carousel-rules.md
+          test -f apps/remake-site/dist/carousel-skill/config.json && test -f apps/remake-site/dist/carousel-skill/references/carousel-rules.md && test -d apps/remake-site/dist/carousel-lux/assets/textures
           python3 -c 'import ast, sys; [ast.parse(open(f).read(), f) for f in sys.argv[1:]]' apps/remake-site/dist/skill/scripts/*.py
           test -f apps/remake-site/dist/Dockerfile && test -f apps/remake-site/dist/skill/references/script-rules.md
           node -e '

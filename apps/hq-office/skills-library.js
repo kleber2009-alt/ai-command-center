@@ -36,6 +36,8 @@ window.OFFICE_SKILLS_LIBRARY = {
   extra:[
     { name:'ilia-carousel-style', title:'Ремикс каруселей', agents:['carousel'],
       desc:'Берёт уже вышедшие слайды @ilia.paliy, сохраняет картинки, скриншоты и стиль, меняет обложку, хук, порядок и призыв.' },
+    { name:'carousel-lux', title:'Карусель Люкс', agents:['carousel'],
+      desc:'Дизайнерские карусели в редакционной подаче: кинопортрет на обложке, антиква с золотым курсивом, фактура, настоящие скрины и мокап подарка в призыве.' },
     { name:'threads-telegram-funnel', title:'Трафик Threads → Telegram', agents:['funnels', 'publish', 'scripts'],
       desc:'Ветки-инструменты, хуки, переходы в канал, план публикаций и переупаковка победителей — механика разобранного аккаунта на 143K.' },
     { name:'direct-ai-weekly-review', title:'Разбор ИИ-менеджера в Директе', agents:['chats', 'consult'],

@@ -56,6 +56,9 @@ const KADRIK_SKILLS = env('KADRIK_SKILLS', '/kadrik/skills');
 const FONTS = [path.join(HERE, 'node_modules/@fontsource'), path.join(HERE, '../../node_modules/@fontsource')].find((d) => fs.existsSync(d)) || '';
 const SKILL_DIR = [env('CAROUSEL_SKILL_DIR'), path.join(HERE, 'carousel-skill'), path.join(HERE, '../../.claude/skills/carousel-pro')]
   .find((d) => d && fs.existsSync(path.join(d, 'config.json'))) || '';
+// «Люкс-редакция»: фактуры и кинопортреты скилла carousel-lux (в образе — /app/carousel-lux, см. deploy/build.sh)
+const LUX_DIR = [env('CAROUSEL_LUX_DIR'), path.join(HERE, 'carousel-lux'), path.join(HERE, '../../.claude/skills/carousel-lux')]
+  .find((d) => d && fs.existsSync(path.join(d, 'assets/textures'))) || '';
 const W = 1080, H = 1350;
 const NICK = /^[a-z0-9._]{1,30}$/;
 const JOB_ID = /^c\d{6}-[0-9a-f]{6}$/;
@@ -110,7 +113,11 @@ const md = (s) => esc(s).replace(/\*\*(.+?)\*\*/g, '<b>$1</b>').replace(/\*(.+?)
 
 function fontsCss() {
   if (!FONTS) return '';
-  const faces = [...[300, 400, 500, 600].map((w) => ['Jost', 'jost', w, 'normal']), ['Tinos', 'tinos', 400, 'italic'], ['Tinos', 'tinos', 700, 'italic']];
+  const faces = [...[300, 400, 500, 600].map((w) => ['Jost', 'jost', w, 'normal']), ['Tinos', 'tinos', 400, 'italic'], ['Tinos', 'tinos', 700, 'italic'],
+    // «Люкс-редакция» (carousel-lux): антиква, гротеск, машинопись
+    ...[500, 600].flatMap((w) => [['Cormorant Garamond', 'cormorant-garamond', w, 'normal'], ['Cormorant Garamond', 'cormorant-garamond', w, 'italic']]),
+    ...[400, 700].map((w) => ['Manrope', 'manrope', w, 'normal']), ['JetBrains Mono', 'jetbrains-mono', 400, 'normal']]
+    .filter(([, slug]) => fs.existsSync(path.join(FONTS, slug)));
   return faces.flatMap(([fam, slug, w, st]) => ['latin', 'cyrillic'].map((sub) =>
     `@font-face{font-family:'${fam}';font-weight:${w};font-style:${st};src:url('file://${FONTS}/${slug}/files/${slug}-${sub}-${w}-${st}.woff2') format('woff2')}`)).join('\n');
 }
@@ -157,7 +164,29 @@ b{font-weight:600}
 .light .foot{color:rgba(11,11,11,.5)}
 .light .foot .arrow{color:#D27F2C}
 .light .shade{background:linear-gradient(180deg,rgba(244,244,244,.05) 0%,rgba(244,244,244,.5) 45%,rgba(244,244,244,.94) 75%,#F4F4F4 100%)}
-.photo .bg.portrait{object-position:50% 18%}`;
+.photo .bg.portrait{object-position:50% 18%}
+.lux.slide{background:#0c0c0c;font-feature-settings:'lnum' 1}
+.lux .bg.portrait{object-position:50% 30%}
+.lux .tex{filter:brightness(.42) saturate(.8)}
+.lux .grain{position:absolute;inset:0;opacity:.11;mix-blend-mode:overlay}
+.lux .shade{background:linear-gradient(180deg,rgba(0,0,0,.2) 0,rgba(0,0,0,0) 30%,rgba(0,0,0,.8) 66%,rgba(0,0,0,.95) 100%)}
+.lux .t{color:#F3EEE4;font-family:'Manrope','Jost',sans-serif}
+.lux em,.lux .it{font-family:'Cormorant Garamond','Tinos',serif;font-style:italic;font-weight:500;color:#E0B46A;letter-spacing:0}
+.lux .h{font-family:'Cormorant Garamond','Tinos',serif;font-weight:600;font-size:calc(72px*var(--k,1));line-height:1}
+.lux .it{font-size:calc(58px*var(--k,1))}
+.lux .cover{font-family:'Cormorant Garamond','Tinos',serif;font-weight:500;font-size:calc(118px*var(--k,1));line-height:.92;letter-spacing:-1px}
+.lux .cover em{font-size:.8em;text-transform:none;display:inline-block;border-bottom:3px solid #E0B46A;padding-bottom:6px}
+.lux .coversub{font-family:'Manrope','Jost',sans-serif;text-transform:none;font-size:calc(34px*var(--k,1));color:rgba(243,238,228,.9)}
+.lux .body{font-size:calc(34px*var(--k,1));line-height:1.35;color:rgba(243,238,228,.9)}
+.lux .caps{font-family:'JetBrains Mono',monospace;font-size:calc(34px*var(--k,1));letter-spacing:2px;color:#E0B46A}
+.lux .pills .t{border-radius:22px;border:1.5px solid rgba(255,255,255,.3);background:linear-gradient(160deg,rgba(255,255,255,.14),rgba(255,255,255,.05));
+ font-family:'Cormorant Garamond','Tinos',serif;font-style:italic;font-weight:500;font-size:calc(42px*var(--k,1));line-height:1.2;box-shadow:0 30px 80px rgba(0,0,0,.45)}
+.lux .shot{border-radius:16px;border:1.5px solid rgba(255,255,255,.14);box-shadow:0 50px 120px rgba(0,0,0,.65)}
+.lux .cta-word{font-family:'Cormorant Garamond','Tinos',serif;font-style:normal;font-weight:600;color:#111;background:#E0B46A;padding:8px 42px 20px;align-self:center;transform:rotate(-1.5deg);box-shadow:0 20px 50px rgba(0,0,0,.5)}
+.lux .foot{font-family:'Manrope','Jost',sans-serif;font-size:22px;color:rgba(243,238,228,.62)}
+.lux .foot .arrow{color:#E0B46A}`;
+const GRAIN = `<svg class="grain" width="${W}" height="${H}"><filter id="g"><feTurbulence type="fractalNoise" baseFrequency=".85" numOctaves="3" stitchTiles="stitch"/>` +
+  `<feColorMatrix values="0 0 0 0 1 0 0 0 0 1 0 0 0 0 1 0 0 0 .9 0"/></filter><rect width="100%" height="100%" filter="url(#g)"/></svg>`;
 
 // shrink the text of a slide (--k) until the content box fits
 const FIT = `<script>document.fonts.ready.then(()=>{const b=document.querySelector('.box');if(!b||!b.children.length)return;let k=1;
@@ -173,10 +202,12 @@ take(x0,Math.max(0,y0-3),x1-x0,3);take(x0,y1,x1-x0,3);take(Math.max(0,x0-3),y0,3
 const med=(a)=>a.length?a.sort((p,q)=>p-q)[a.length>>1]:11;x.fillStyle=\`rgb(\${med(r)},\${med(g)},\${med(bl)})\`;x.fillRect(x0,y0,x1-x0,y1-y0)}}
 if(im.complete)go();else im.onload=go;</script>`;
 
-// theme: dark | light | photo (dark slides, the cover on Ilia's photo); photo — {file, type} of that photo
-function slideHtml(slide, n, total, src, handle, theme = 'dark', photo = null) {
-  const head = `<!doctype html><html><head><meta charset="utf-8"><style>${fontsCss()}\n${CSS}</style></head><body><div class="slide ${theme === 'light' ? 'light' : theme === 'photo' ? 'photo' : ''}">`;
-  const tail = `</div>${FIT}</body></html>`;
+// theme: dark | light | photo (dark slides, the cover on Ilia's photo) | lux (carousel-lux: portrait cover, texture, serif + gold);
+// photo — {file, type} of the cover photo; texture — {file, type} of the lux background
+function slideHtml(slide, n, total, src, handle, theme = 'dark', photo = null, texture = null) {
+  const lux = theme === 'lux';
+  const head = `<!doctype html><html><head><meta charset="utf-8"><style>${fontsCss()}\n${CSS}</style></head><body><div class="slide ${theme === 'light' ? 'light' : theme === 'photo' ? 'photo' : lux ? 'lux' : ''}">`;
+  const tail = `${lux ? GRAIN : ''}</div>${FIT}</body></html>`;
   const img = (i) => src[i - 1];
   const dataUri = (s) => `data:${s.type};base64,${fs.readFileSync(s.file).toString('base64')}`;
   // own-slide coordinates are in the source image's pixels; the slide shows it cover-fitted into 1080×1350
@@ -205,8 +236,9 @@ function slideHtml(slide, n, total, src, handle, theme = 'dark', photo = null) {
       `background-size:${Math.round(sh.w * k)}px ${Math.round(sh.h * k)}px;background-position:${-Math.round(x0 * k)}px ${-Math.round(y0 * k)}px"></div>`;
   }
   const foot = `<div class="foot"><span>${esc(handle)}</span><span>${n < total ? '<span class="arrow">→</span>' : `${n}/${total}`}</span></div>`;
-  const cover = L === 'cover' && !shot && (theme === 'photo' && photo ? photo : s);
-  const bg = cover ? `<img class="bg${cover === photo ? ' portrait' : ''}" style="object-fit:cover" src="${dataUri(cover)}"><div class="shade"></div>` : '';
+  const cover = L === 'cover' && !shot && ((theme === 'photo' || lux) && photo ? photo : s);
+  const bg = cover ? `<img class="bg${cover === photo ? ' portrait' : ''}" style="object-fit:cover" src="${dataUri(cover)}"><div class="shade"></div>`
+    : lux && texture ? `<img class="bg tex" style="object-fit:cover" src="${dataUri(texture)}">` : '';
   let box;
   if (L === 'cover') box = `<div class="box ${bg ? 'end' : 'mid'}">${shot}${title}${sub}</div>`;
   else if (L === 'list') box = `<div class="box">${title}${sub}<div class="pills">${lines.map((l) => `<div class="t pill">${md(l)}</div>`).join('')}</div></div>`;
@@ -219,12 +251,32 @@ function slideHtml(slide, n, total, src, handle, theme = 'dark', photo = null) {
   return `${head}${bg}${box}${foot}${tail}`;
 }
 
-export async function renderSlides({ slides, src, dir, handle = '@ilia.paliy', prefix, theme = 'dark', photo = null, total = 0, onSlide = () => {} }) {
+// one lux texture per carousel, picked by its file prefix (stable between preview and the final render)
+function luxTexture(key) {
+  if (!LUX_DIR) return null;
+  const d = path.join(LUX_DIR, 'assets/textures');
+  const list = fs.readdirSync(d).filter((f) => /\.jpe?g$/i.test(f)).sort();
+  if (!list.length) return null;
+  let h = 0; for (const c of String(key)) h = (h * 31 + c.charCodeAt(0)) >>> 0;
+  return { file: path.join(d, list[h % list.length]), type: 'image/jpeg' };
+}
+// a lux cover portrait when Ilia sent no photo for the carousel
+export function luxPortrait(key) {
+  if (!LUX_DIR) return null;
+  const d = path.join(LUX_DIR, 'assets/covers');
+  const list = fs.existsSync(d) ? fs.readdirSync(d).filter((f) => /\.jpe?g$/i.test(f)).sort() : [];
+  if (!list.length) return null;
+  let h = 7; for (const c of String(key)) h = (h * 31 + c.charCodeAt(0)) >>> 0;
+  return { file: path.join(d, list[h % list.length]), type: 'image/jpeg' };
+}
+
+export async function renderSlides({ slides, src, dir, handle = '@ilia.paliy', prefix, theme = 'dark', photo = null, key = '', total = 0, onSlide = () => {} }) {
   fs.mkdirSync(dir, { recursive: true });
+  const texture = theme === 'lux' ? luxTexture(key || dir) : null;
   const out = [];
   for (let i = 0; i < slides.length; i++) {
     const n = i + 1, html = path.join(dir, `slide-${n}.html`), png = path.join(dir, `slide-${n}.png`), jpg = `${prefix}-${String(n).padStart(2, '0')}.jpg`;
-    fs.writeFileSync(html, slideHtml(slides[i], n, total || slides.length, src, handle, theme, photo));
+    fs.writeFileSync(html, slideHtml(slides[i], n, total || slides.length, src, handle, theme, photo, texture));
     fs.rmSync(png, { force: true });
     const r = await run(CHROME, ['--headless=new', '--no-sandbox', '--disable-gpu', '--disable-dev-shm-usage', '--hide-scrollbars', '--allow-file-access-from-files',
       '--force-device-scale-factor=1', `--window-size=${W},${H}`, '--virtual-time-budget=6000', `--screenshot=${png}`, `file://${html}`], { timeout: 90e3 });
@@ -438,7 +490,7 @@ export function createCarouselBot({ data, media, publicUrl = env('PUBLIC_URL', '
   async function renderWith(j, slides, opts) {
     const sty = styleOf(j);
     return renderSlides({ slides, src: j.src, handle: skillConfig().style?.handle || '@ilia.paliy', theme: sty.id,
-      photo: sty.id === 'photo' ? ownPhoto(j) || await coverPhoto() : null, ...opts });
+      photo: sty.id === 'photo' ? ownPhoto(j) || await coverPhoto() : sty.id === 'lux' ? ownPhoto(j) || luxPortrait(j.id || '') || await coverPhoto() : null, key: j.id || '', ...opts });
   }
   // the new cover in the chosen style, as a photo under the card (the previous preview is replaced)
   async function preview(j) {

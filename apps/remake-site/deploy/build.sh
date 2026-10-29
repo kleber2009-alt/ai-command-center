@@ -28,4 +28,7 @@ cp "$SKILL/references/script-rules.md" "$OUT/skill/references/"
 mkdir -p "$OUT/carousel-skill/references"
 cp "$APP/../../.claude/skills/carousel-pro/config.json" "$OUT/carousel-skill/"
 cp "$APP/../../.claude/skills/carousel-pro/references/carousel-rules.md" "$OUT/carousel-skill/references/"
+# style «Люкс-редакция»: textures and cover portraits of the carousel-lux skill
+mkdir -p "$OUT/carousel-lux/assets"
+cp -r "$APP/../../.claude/skills/carousel-lux/assets/textures" "$APP/../../.claude/skills/carousel-lux/assets/covers" "$OUT/carousel-lux/assets/"
 echo "✓ $OUT/index.html ($(wc -c < "$OUT/index.html") bytes), seed: $(ls "$APP/seed/runs" | wc -l) run(s), $(ls "$APP/seed/media" | wc -l) media file(s), api + studio, skill: $(ls "$OUT/skill/scripts" | wc -l) script(s)"

@@ -221,3 +221,6 @@ Per-app `README.md` / `DEPLOY.md` / `ROADMAP.md` remain authoritative for deep a
 - `carousel-pro` — «Карусель Pro»: карусели из залётов — свои вышедшие (ремикс слайдов с новой обложкой, хуком, CTA;
   объединяет `ilia-carousel-style`: `scripts/remix.py`, `assemble.py`) и конкурентов (формат и рабочие скриншоты, слайды в
   стиле Ильи). Правила для Claude — `references/carousel-rules.md`; в Telegram — ветка «Instagram Карусели» (`apps/remake-site/carousel-bot.mjs`).
+- `carousel-lux` — «Карусель Люкс»: дизайн-слой каруселей (кинопортрет-обложка, антиква + золотой курсив, фактуры, скрины в окнах,
+  стрелки, мокап подарка в CTA). Библиотека `scripts/lux.py` + `scripts/render.mjs` (PNG 3240×4050), пример — `examples/lisa10.py`;
+  в `carousel-pro` это стиль «Люкс-редакция» (`lux`), в боте каруселей — тема `lux` (ассеты в образ кладёт `apps/remake-site/deploy/build.sh`).
