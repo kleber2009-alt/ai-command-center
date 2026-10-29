@@ -21,9 +21,12 @@
      (@ники через запятую, стартовый список) · REELS_PER_DAY (2) · REELS_HOUR (9, по REELS_TZ Europe/Moscow)
      REELS_DAYS (30 — окно поиска у конкурентов; свой аккаунт — scan.days скилла) · REELS_MIN_AGE_DAYS (2) · APIFY_TOKEN
      для заглушек — TELEGRAM_API_BASE, APIFY_API_BASE.
+   Одна ветка — один бот (tg-branch.mjs): бот слышит только свою ветку, команды с @другим_ботом не его, занятую веткой
+   «Instagram Карусели» ветку не привязать. После ✅ под карточкой — статус: что сделано, что идёт сейчас и сколько, что дальше.
    Состояние — DATA_DIR/reels/state.json. */
 import fs from 'node:fs';
 import path from 'node:path';
+import { takenBy, parse, progressText, wrongBind, BRANCHES } from './tg-branch.mjs';
 
 const env = (k, d = '') => (process.env[k] || d).trim();
 const TOKEN = env('REMAKE_TG_BOT_TOKEN');
@@ -74,6 +77,28 @@ export function createReelsBot({ studio, data }) {
       .catch((e) => console.error('reels say:', e.message))
     : Promise.resolve(null);
   const quiet = (p) => p.catch((e) => { if (!/not modified/.test(e.message)) console.error('reels:', e.message); });
+  let me = '';  // the bot's @username (getMe)
+
+  // ---------- status after ✅: one message under the card, edited as the steps go ----------
+  const STEPS = (j) => [
+    { label: 'Аватар в HeyGen', eta: 'обычно 5–15 мин' },
+    { label: `Монтаж «${styleOf(j).name}» в Студии Кадрика`, eta: 'обычно 5–15 мин' },
+    { label: 'Видео, подпись и кодовое слово — сюда', eta: 'до 2 мин' },
+  ];
+  async function progress(j, cur, failed = '') {
+    const p = j.reels.progress ||= { msg: 0, started: new Date().toISOString() };
+    if (p.cur !== cur || p.failed !== failed) { if (p.cur !== cur) p.step_at = new Date().toISOString(); p.cur = cur; p.failed = failed; S.save(j); }
+    const id = ['avatar', 'montage'][cur];
+    const note = !failed && id && j.steps[id]?.state === 'run' ? j.steps[id].note || '' : '';
+    const detail = /^монтаж: «/.test(note) ? '' : esc(note);  // the montage note only repeats the step's label
+    const text = progressText({ title: `Рилс по залёту @${esc(j.reels.origin.author || '?')}`, steps: STEPS(j), cur, failed: esc(failed), detail, started: p.started, stepAt: p.step_at });
+    if (p.msg) {
+      try { await tg('editMessageText', { chat_id: st.chat_id, message_id: p.msg, text, parse_mode: 'HTML', link_preview_options: { is_disabled: true } }); return; }
+      catch (e) { if (/not modified/.test(e.message)) return; if (!/not found|can't be edited/i.test(e.message)) return console.error('reels progress:', e.message); }
+    }
+    const m = await say(text, j.reels.card ? { reply_parameters: { message_id: j.reels.card, allow_sending_without_reply: true } } : {});
+    if (m) { p.msg = m.message_id; S.save(j); }
+  }
 
   // ---------- 1. find the reels that took off ----------
   async function apify(input) {
@@ -190,10 +215,12 @@ export function createReelsBot({ studio, data }) {
   }
 
   async function fail(j, what, text) {
+    const was = j.reels.state;
     j.reels.state = 'fail';
     j.reels.failed = what;
     S.save(j);
     await card(j);
+    if (j.reels.progress && ['avatar', 'montage'].includes(was)) return progress(j, j.reels.progress.cur ?? 0, `${what}: ${text}`.slice(0, 300));
     await say(`⚠️ ${esc(what)}: ${esc(text)}`, j.reels.card ? { reply_parameters: { message_id: j.reels.card, allow_sending_without_reply: true } } : {});
   }
 
@@ -204,8 +231,10 @@ export function createReelsBot({ studio, data }) {
     if (!av.look_id || !av.voice_id) return fail(j, 'HeyGen', 'в config.json скилла не выбран образ или голос (avatar.look_id / voice_id)');
     j.reels.state = 'avatar';
     j.reels.approved_at = new Date().toISOString();
+    if (j.reels.progress?.failed || !j.reels.progress) j.reels.progress = { msg: j.reels.progress?.msg || 0, started: j.reels.progress?.started || new Date().toISOString() };
     S.save(j);
     await card(j);
+    await progress(j, 0);
     try { await S.avatar(j, { look_id: av.look_id, voice_id: av.voice_id, engine: S.engineToday(), speed: av.speed || 1 }); }
     catch (e) { await fail(j, 'HeyGen', e.message); }
   }
@@ -214,6 +243,7 @@ export function createReelsBot({ studio, data }) {
     j.reels.state = 'montage';
     S.save(j);
     await card(j);
+    await progress(j, 1);
     const want = styleOf(j).id;
     const all = S.styles().styles;
     const style = all.find((s) => s.id === want) || all[0];
@@ -231,6 +261,7 @@ export function createReelsBot({ studio, data }) {
   }
 
   async function deliver(j) {
+    await progress(j, 2);
     const m = j.montage, file = S.mpath(m.video.replace(/^media\//, ''));
     const link = `${S.publicUrl}/${m.video}`;
     const caption = [`🎬 Готово: «${m.style}» по залёту @${j.reels.origin.author || '?'}`, j.code ? `Кодовое слово: ${j.code}` : '', `Скачать в полном качестве: ${link}`]
@@ -258,6 +289,7 @@ export function createReelsBot({ studio, data }) {
     j.reels.state = 'done';
     S.save(j);
     await card(j);
+    await progress(j, 3);
   }
 
   // the studio reports every step of the bot's clips
@@ -301,9 +333,9 @@ export function createReelsBot({ studio, data }) {
     const j = S.get(id);
     if (!j?.reels) return answer('Этого ролика уже нет');
     if (act === 'ok') {
-      if (j.reels.state !== 'card') return answer('Уже в работе');
-      if (j.check?.result === 'FAIL') answer('Проверка скилла не прошла, но запускаю — так решили');
-      else answer('Запускаю HeyGen и монтаж');
+      if (j.reels.state !== 'card') return answer('Уже в работе — статус под карточкой');
+      if (j.check?.result === 'FAIL') answer('Проверка скилла не прошла, но запускаю. Статус — под карточкой');
+      else answer('Запускаю: аватар HeyGen → монтаж → видео сюда. Статус — под карточкой');
       return approve(j);
     }
     if (act === 'hook') {
@@ -345,14 +377,21 @@ export function createReelsBot({ studio, data }) {
     `Ссылка на рилс сюда — сразу в работу. Ответ на карточку текстом — перепишу сценарий с пожеланием.`;
 
   async function onMessage(msg) {
-    const text = String(msg.text || '').trim();
-    const cmd = (text.match(/^\/([a-z_]+)(?:@\w+)?/i) || [])[1]?.toLowerCase() || '';
+    const { text, cmd, forMe, forOther, topic } = parse(msg, me);
+    if (forOther) return;  // /scan@other_bot — not ours
     const isOwner = owners().has(msg.from?.id);
     if (cmd === 'bind') {
       if (!isOwner && owners().size) return;
+      const here = st.chat_id === msg.chat.id && st.topic_id === topic;
+      const reply = (t) => tg('sendMessage', { chat_id: msg.chat.id, ...(topic ? { message_thread_id: topic } : {}), text: t, parse_mode: 'HTML' }).catch(() => {});
+      // a plain /bind is for a bot without a topic; moving this one — /bind@me
+      if (st.chat_id && !here && !forMe) return me && wrongBind({ data, self: 'reels', me, chat: msg.chat.id, topic, reply });
+      if (msg.chat.is_forum && !topic) return reply(`Привязать можно только ветку, не «Общий». Создайте ветку и напишите в ней /bind${me ? '@' + esc(me) : ''}.`);
+      const other = takenBy(data, 'reels', msg.chat.id, topic);
+      if (other) return forMe && reply(`Эта ветка уже за «${esc(BRANCHES[other])}». Для рилсов создайте свою ветку и напишите в ней /bind${me ? '@' + esc(me) : ''}.`);
       if (!owners().size) st.owners = [msg.from.id];
       st.chat_id = msg.chat.id;
-      st.topic_id = msg.is_topic_message ? msg.message_thread_id : 0;
+      st.topic_id = topic;
       save();
       let renamed = '';
       if (st.topic_id) {
@@ -361,7 +400,7 @@ export function createReelsBot({ studio, data }) {
       }
       return say(`Готово: карточки рилсов теперь приходят сюда. ${renamed}\n\n${HELP}`);
     }
-    if (!st.chat_id || msg.chat.id !== st.chat_id || (st.topic_id && msg.message_thread_id !== st.topic_id)) return;
+    if (!st.chat_id || msg.chat.id !== st.chat_id || topic !== (st.topic_id || 0)) return;  // only its own topic
     if (!isOwner) return;
     if (cmd === 'help' || cmd === 'start') return say(HELP);
     if (cmd === 'scan') { if (!S.apify) return say('⚠️ Нет APIFY_TOKEN — искать залёты нечем.'); return scan(true); }
@@ -412,6 +451,7 @@ export function createReelsBot({ studio, data }) {
   let stopped = false;
   (async function poll() {
     try { await tg('deleteWebhook', {}); } catch {}
+    try { me = (await tg('getMe', {})).username || ''; if (me && st.bot !== me) { st.bot = me; save(); } } catch (e) { console.error('reels getMe:', e.message); }
     while (!stopped) {
       try {
         const ups = await tg('getUpdates', { offset: st.offset, timeout: 50, allowed_updates: ['message', 'callback_query'] }, { timeout: 70e3 });
@@ -428,6 +468,10 @@ export function createReelsBot({ studio, data }) {
     }
   })();
 
+  setInterval(() => {  // the status message shows how long the running step has been going
+    for (const j of S.list()) if (j.reels?.progress?.msg && ['avatar', 'montage'].includes(j.reels.state)) progress(j, j.reels.progress.cur).catch(() => {});
+  }, 60e3).unref();
+
   setInterval(() => {
     if (st.chat_id && S.apify && st.last_scan !== today() && hourNow() >= HOUR) scan(false).catch((e) => console.error('reels scan:', e.message));
   }, 5 * 60e3).unref();
@@ -440,5 +484,5 @@ export function createReelsBot({ studio, data }) {
     if (j.reels.state === 'montage' && j.steps.montage?.state === 'done' && j.montage.video) deliver(j);
   }
 
-  return { enabled: true, status: () => ({ bound: Boolean(st.chat_id), competitors: st.competitors.length, last_scan: st.last_scan }), stop: () => { stopped = true; } };
+  return { enabled: true, status: () => ({ bot: me ? '@' + me : '', bound: Boolean(st.chat_id), topic: st.topic_id || 0, competitors: st.competitors.length, last_scan: st.last_scan }), stop: () => { stopped = true; } };
 }

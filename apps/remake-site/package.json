@@ -6,7 +6,7 @@
   "scripts": {
     "build": "bash deploy/build.sh",
     "start": "node server.mjs",
-    "check": "node --check server.mjs && node --check studio.mjs && node --check reels-bot.mjs && node --check carousel-bot.mjs"
+    "check": "node --check server.mjs && node --check studio.mjs && node --check reels-bot.mjs && node --check carousel-bot.mjs && node --check tg-branch.mjs"
   },
   "dependencies": {
     "@anthropic-ai/sdk": "1.3.0",

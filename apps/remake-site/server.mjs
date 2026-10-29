@@ -110,7 +110,7 @@ const server = http.createServer(async (req, res) => {
   const url = new URL(req.url, 'http://x');
   const p = decodeURIComponent(url.pathname);
   try {
-    if (p === '/api/health') return send(res, 200, { ok: true, runs: fs.readdirSync(RUNS).filter((f) => f.endsWith('.json')).length, writable: Boolean(TOKEN), studio: studio.enabled, reels: reels.enabled ? reels.status() : false, carousels: carousels.enabled ? carousels.status() : false });
+    if (p === '/api/health') return send(res, 200, { ok: true, runs: fs.readdirSync(RUNS).filter((f) => f.endsWith('.json')).length, writable: Boolean(TOKEN), studio: studio.enabled, reels: reels.enabled ? reels.status() : false, carousels: carousels.enabled ? carousels.status() : carousels.error ? { error: carousels.error } : false });
     if (p.startsWith('/api/studio/')) return await studio.handle(req, res, p, url);
     if (p === '/api/runs' && req.method === 'GET') return send(res, 200, listRuns());
     let m = /^\/api\/runs\/([^/]+)$/.exec(p);

@@ -1,6 +1,8 @@
 {
  "_about": "Настройки «Карусель Pro» — ветка «Instagram Карусели» (apps/remake-site/carousel-bot.mjs) и ремикс в чате. Правка тут → пуш в main → выкладка remake-site.",
- "instagram": {"username": "ilia.paliy"},
+ "instagram": {
+  "username": "ilia.paliy"
+ },
  "scan": {
   "own_days": 365,
   "own_min_age_days": 14,
@@ -8,9 +10,16 @@
   "competitor_min_age_days": 2,
   "reuse_after_days": 45,
   "max_source_slides": 15,
-  "weights": {"comments": 3, "likes": 1}
+  "weights": {
+   "comments": 3,
+   "likes": 1
+  }
  },
- "slides": {"min": 6, "max": 10, "default": 8},
+ "slides": {
+  "min": 6,
+  "max": 10,
+  "default": 8
+ },
  "style": {
   "name": "Тёмный стиль @ilia.paliy",
   "bg": "#0B0B0B",
@@ -19,7 +28,32 @@
   "cta_accent": "#F0973E",
   "font": "Jost",
   "accent_font": "Tinos Italic",
-  "handle": "@ilia.paliy"
+  "handle": "@ilia.paliy",
+  "light": {
+   "bg": "#F4F4F4",
+   "text": "#0B0B0B",
+   "accent": "#D27F2C"
+  }
  },
- "caption": {"save_line": "Сохраняй, чтобы не потерять 🤝"}
+ "caption": {
+  "save_line": "Сохраняй, чтобы не потерять 🤝"
+ },
+ "styles": [
+  {
+   "id": "dark",
+   "name": "Тёмный @ilia.paliy",
+   "about": "ваш основной формат: чёрный фон, тёплое свечение, Jost вместо Futura PT, оранжевый курсив Tinos, капсулы, капс-выводы"
+  },
+  {
+   "id": "light",
+   "name": "Светлый @ilia.paliy",
+   "about": "ваш светлый формат: тёмный текст на #F4F4F4, белые карточки, капс-обложка"
+  },
+  {
+   "id": "photo",
+   "name": "Обложка с вашим фото",
+   "about": "обложка на вашем фото (присланном в ветку, иначе образ цифрового двойника HeyGen), дальше — тёмный формат"
+  }
+ ],
+ "default_style": "dark"
 }

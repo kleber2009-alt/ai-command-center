@@ -21,12 +21,15 @@
      CAROUSEL_COMPETITORS (иначе REELS_COMPETITORS) · CAROUSEL_PER_DAY (3) · CAROUSEL_HOUR (10, по CAROUSEL_TZ Europe/Moscow)
      ANTHROPIC_API_KEY · CAROUSEL_MODEL (STUDIO_MODEL, claude-opus-5-5) · APIFY_TOKEN · CHROMIUM_BIN (chromium-browser)
      CAROUSEL_SKILL_DIR · KADRIK_SKILLS (/kadrik/skills) · для заглушек — TELEGRAM_API_BASE, APIFY_API_BASE, ANTHROPIC_BASE_URL.
+   Одна ветка — один бот (tg-branch.mjs): слышит только свою ветку, команды с @другим_ботом не его, ветку Reels не привязать,
+   токен совпал с REMAKE_TG_BOT_TOKEN — ветка выключена. После ✅ под карточкой — статус шагов, обновляется сам.
    Состояние — DATA_DIR/carousels/state.json, карусели — DATA_DIR/carousels/<id>/, готовые слайды — DATA_DIR/media/<id>-*.jpg. */
 import fs from 'node:fs';
 import path from 'node:path';
 import crypto from 'node:crypto';
 import { spawn } from 'node:child_process';
 import { fileURLToPath } from 'node:url';
+import { takenBy, parse, progressText, wrongBind, BRANCHES } from './tg-branch.mjs';
 
 const env = (k, d = '') => (process.env[k] || d).trim();
 const HERE = path.dirname(fileURLToPath(import.meta.url));
@@ -137,7 +140,16 @@ b{font-weight:600}
 .lines{display:flex;flex-direction:column;gap:18px}
 .shot{align-self:center;border-radius:28px;border:1.5px solid rgba(252,251,250,.18);box-shadow:0 0 90px rgba(222,152,74,.22);background-repeat:no-repeat;flex:none}
 .foot{position:absolute;left:96px;right:96px;bottom:58px;display:flex;justify-content:space-between;font-family:'Jost',sans-serif;font-weight:400;font-size:30px;color:rgba(252,251,250,.55)}
-.foot .arrow{color:#DE984A;font-size:40px;line-height:30px}`;
+.foot .arrow{color:#DE984A;font-size:40px;line-height:30px}
+.light.slide{background:radial-gradient(ellipse 900px 700px at 85% 0%,rgba(222,152,74,.12),transparent 60%),#F4F4F4}
+.light .t{color:#0B0B0B}
+.light em,.light .it{color:#D27F2C}
+.light .pills .t{background:#FFFFFF;border:none;box-shadow:0 10px 34px rgba(11,11,11,.07)}
+.light .shot{border:none;box-shadow:0 22px 60px rgba(11,11,11,.16)}
+.light .foot{color:rgba(11,11,11,.5)}
+.light .foot .arrow{color:#D27F2C}
+.light .shade{background:linear-gradient(180deg,rgba(244,244,244,.05) 0%,rgba(244,244,244,.5) 45%,rgba(244,244,244,.94) 75%,#F4F4F4 100%)}
+.photo .bg.portrait{object-position:50% 18%}`;
 
 // shrink the text of a slide (--k) until the content box fits
 const FIT = `<script>document.fonts.ready.then(()=>{const b=document.querySelector('.box');if(!b||!b.children.length)return;let k=1;
@@ -153,8 +165,9 @@ take(x0,Math.max(0,y0-3),x1-x0,3);take(x0,y1,x1-x0,3);take(Math.max(0,x0-3),y0,3
 const med=(a)=>a.length?a.sort((p,q)=>p-q)[a.length>>1]:11;x.fillStyle=\`rgb(\${med(r)},\${med(g)},\${med(bl)})\`;x.fillRect(x0,y0,x1-x0,y1-y0)}}
 if(im.complete)go();else im.onload=go;</script>`;
 
-function slideHtml(slide, n, total, src, handle) {
-  const head = `<!doctype html><html><head><meta charset="utf-8"><style>${fontsCss()}\n${CSS}</style></head><body><div class="slide">`;
+// theme: dark | light | photo (dark slides, the cover on Ilia's photo); photo — {file, type} of that photo
+function slideHtml(slide, n, total, src, handle, theme = 'dark', photo = null) {
+  const head = `<!doctype html><html><head><meta charset="utf-8"><style>${fontsCss()}\n${CSS}</style></head><body><div class="slide ${theme === 'light' ? 'light' : theme === 'photo' ? 'photo' : ''}">`;
   const tail = `</div>${FIT}</body></html>`;
   const img = (i) => src[i - 1];
   const dataUri = (s) => `data:${s.type};base64,${fs.readFileSync(s.file).toString('base64')}`;
@@ -184,7 +197,8 @@ function slideHtml(slide, n, total, src, handle) {
       `background-size:${Math.round(sh.w * k)}px ${Math.round(sh.h * k)}px;background-position:${-Math.round(x0 * k)}px ${-Math.round(y0 * k)}px"></div>`;
   }
   const foot = `<div class="foot"><span>${esc(handle)}</span><span>${n < total ? '<span class="arrow">→</span>' : `${n}/${total}`}</span></div>`;
-  const bg = L === 'cover' && s && !shot ? `<img class="bg" style="object-fit:cover" src="${dataUri(s)}"><div class="shade"></div>` : '';
+  const cover = L === 'cover' && !shot && (theme === 'photo' && photo ? photo : s);
+  const bg = cover ? `<img class="bg${cover === photo ? ' portrait' : ''}" style="object-fit:cover" src="${dataUri(cover)}"><div class="shade"></div>` : '';
   let box;
   if (L === 'cover') box = `<div class="box ${bg ? 'end' : 'mid'}">${shot}${title}${sub}</div>`;
   else if (L === 'list') box = `<div class="box">${title}${sub}<div class="pills">${lines.map((l) => `<div class="t pill">${md(l)}</div>`).join('')}</div></div>`;
@@ -197,12 +211,12 @@ function slideHtml(slide, n, total, src, handle) {
   return `${head}${bg}${box}${foot}${tail}`;
 }
 
-export async function renderSlides({ slides, src, dir, handle = '@ilia.paliy', prefix }) {
+export async function renderSlides({ slides, src, dir, handle = '@ilia.paliy', prefix, theme = 'dark', photo = null, total = 0, onSlide = () => {} }) {
   fs.mkdirSync(dir, { recursive: true });
   const out = [];
   for (let i = 0; i < slides.length; i++) {
     const n = i + 1, html = path.join(dir, `slide-${n}.html`), png = path.join(dir, `slide-${n}.png`), jpg = `${prefix}-${String(n).padStart(2, '0')}.jpg`;
-    fs.writeFileSync(html, slideHtml(slides[i], n, slides.length, src, handle));
+    fs.writeFileSync(html, slideHtml(slides[i], n, total || slides.length, src, handle, theme, photo));
     fs.rmSync(png, { force: true });
     const r = await run(CHROME, ['--headless=new', '--no-sandbox', '--disable-gpu', '--disable-dev-shm-usage', '--hide-scrollbars', '--allow-file-access-from-files',
       '--force-device-scale-factor=1', `--window-size=${W},${H}`, '--virtual-time-budget=6000', `--screenshot=${png}`, `file://${html}`], { timeout: 90e3 });
@@ -210,9 +224,22 @@ export async function renderSlides({ slides, src, dir, handle = '@ilia.paliy', p
     const c = await run('ffmpeg', ['-v', 'error', '-y', '-i', png, '-vf', `crop=${W}:${H}:0:0`, '-q:v', '2', jpg], { timeout: 60e3 });
     if (c.code !== 0) throw new Error(`ffmpeg: ${c.err.slice(0, 200)}`);
     out.push(jpg);
+    await onSlide(n, slides.length);
   }
   return out;
 }
+
+// ---------- styles: Ilia's own carousel formats (the carousel-pro config) ----------
+const STYLES_DEFAULT = [
+  { id: 'dark', name: 'Тёмный @ilia.paliy', about: 'ваш основной формат: чёрный фон, Jost, оранжевый курсив Tinos' },
+  { id: 'light', name: 'Светлый @ilia.paliy', about: 'ваш светлый формат: тёмный текст на #F4F4F4, белые карточки' },
+  { id: 'photo', name: 'Обложка с вашим фото', about: 'обложка на вашем фото, дальше — тёмный формат' },
+];
+export const carouselStyles = (cfg = skillConfig()) => (cfg.styles || []).length ? cfg.styles : STYLES_DEFAULT;
+const HEYGEN = env('HEYGEN_API_KEY');
+const HG_BASE = env('HEYGEN_API_BASE', 'https://api.heygen.com');
+const REMAKE_SKILL = [env('SKILL_DIR'), path.join(HERE, 'skill'), path.join(HERE, '../../.claude/skills/remake-top-reel')]
+  .find((d) => d && fs.existsSync(path.join(d, 'config.json'))) || '';
 
 // ---------- the plan from Claude ----------
 const BOT_RULES = `Ты — «Карусель Pro» в Telegram-ветке «Instagram Карусели» Ильи Палия (@ilia.paliy). Тебе прислали карусель-залёт
@@ -264,6 +291,10 @@ const SCHEMA = obj({
   code_word: STR, code_word_new: { type: 'boolean' }, caption: STR,
 });
 
+function extraSkillNames() {
+  try { return fs.readdirSync(KADRIK_SKILLS).filter((d) => /carousel|карусел/i.test(d) && fs.existsSync(path.join(KADRIK_SKILLS, d, 'SKILL.md'))); } catch { return []; }
+}
+
 function extraSkills() {
   // carousel skills installed for Studio Kadrik («Карусель Pro» there) — added to the rules
   let out = '';
@@ -296,6 +327,11 @@ export function normalizePlan(p, { own, count, cfg = skillConfig() }) {
 // ---------- the bot ----------
 export function createCarouselBot({ data, media, publicUrl = env('PUBLIC_URL', 'https://remake.aicex.club') }) {
   if (!TOKEN) return { enabled: false };
+  // the same bot polling twice steals updates from the reels topic — one token, one branch
+  if (TOKEN === env('REMAKE_TG_BOT_TOKEN')) {
+    console.error('carousels: CAROUSEL_TG_BOT_TOKEN совпадает с REMAKE_TG_BOT_TOKEN — ветка «Instagram Карусели» выключена, нужен отдельный бот');
+    return { enabled: false, error: 'тот же токен, что у ветки Reels — нужен отдельный бот' };
+  }
   const ROOT = path.join(data, 'carousels');
   const FILE = path.join(ROOT, 'state.json');
   fs.mkdirSync(ROOT, { recursive: true });
@@ -303,7 +339,7 @@ export function createCarouselBot({ data, media, publicUrl = env('PUBLIC_URL', '
   try { st = JSON.parse(fs.readFileSync(FILE, 'utf8')); } catch {}
   st = { chat_id: Number(env('CAROUSEL_TG_CHAT_ID')) || 0, topic_id: Number(env('CAROUSEL_TG_TOPIC_ID')) || 0, owners: [], offset: 0,
     competitors: (env('CAROUSEL_COMPETITORS') || env('REELS_COMPETITORS')).split(/[\s,]+/).map(nick).filter((x) => NICK.test(x)),
-    used: {}, pool: [], last_scan: '', ...st };
+    used: {}, pool: [], last_scan: '', own_found: null, ...st };
   const save = () => { fs.writeFileSync(FILE + '.part', JSON.stringify(st, null, 1)); fs.renameSync(FILE + '.part', FILE); };
   const ownerEnv = env('CAROUSEL_TG_OWNER_IDS') || env('REMAKE_TG_OWNER_IDS');
   const owners = () => new Set([...ownerEnv.split(/[\s,]+/).filter(Boolean).map(Number), ...(st.owners || [])]);
@@ -332,6 +368,124 @@ export function createCarouselBot({ data, media, publicUrl = env('PUBLIC_URL', '
       .catch((e) => console.error('carousels say:', e.message))
     : Promise.resolve(null);
   const quiet = (p) => p.catch((e) => { if (!/not modified/.test(e.message)) console.error('carousels:', e.message); });
+  let me = '';  // the bot's @username (getMe)
+
+  // ---------- status after ✅: one message under the card, edited as the steps go ----------
+  const STEPS = [{ label: 'Собираю слайды', eta: 'обычно 1–2 мин' }, { label: 'Альбом, файлы без сжатия и подпись — сюда', eta: 'до минуты' }];
+  async function progress(j, cur, { failed = '', detail = '', fresh = false } = {}) {
+    if (fresh || !j.progress) j.progress = { msg: fresh ? 0 : j.progress?.msg || 0, started: new Date().toISOString() };
+    const p = j.progress;
+    if (p.cur !== cur) p.step_at = new Date().toISOString();
+    Object.assign(p, { cur, failed, detail });
+    saveJob(j);
+    const text = progressText({ title: `Карусель «${esc(j.plan?.topic || 'по залёту @' + j.origin.author)}»`, steps: STEPS, cur, failed: esc(failed), detail: esc(detail),
+      started: p.started, stepAt: p.step_at });
+    if (p.msg) {
+      try { await tg('editMessageText', { chat_id: st.chat_id, message_id: p.msg, text, parse_mode: 'HTML', link_preview_options: { is_disabled: true } }); return; }
+      catch (e) { if (/not modified/.test(e.message)) return; if (!/not found|can't be edited/i.test(e.message)) return console.error('carousels progress:', e.message); }
+    }
+    const m = await say(text, replyTo(j));
+    if (m) { p.msg = m.message_id; saveJob(j); }
+  }
+  // ---------- styles, Ilia's photo, cover previews ----------
+  const LIB = path.join(ROOT, 'library');
+  fs.mkdirSync(LIB, { recursive: true });
+  const PHOTO = path.join(LIB, 'photo.jpg');
+  const styleOf = (j) => { const list = carouselStyles(); return list.find((x) => x.id === j.style) || list.find((x) => x.id === skillConfig().default_style) || list[0]; };
+  const photoInfo = () => { try { return JSON.parse(fs.readFileSync(PHOTO + '.json', 'utf8')); } catch { return {}; } };
+  // the cover photo: one Ilia sent to the topic, else the preview of his HeyGen twin (the look the reels use), refreshed weekly
+  async function coverPhoto() {
+    const info = photoInfo();
+    const fresh = fs.existsSync(PHOTO) && (info.from === 'telegram' || Date.now() - Date.parse(info.at || 0) < 7 * 864e5);
+    if (!fresh && HEYGEN) {
+      try {
+        const look = JSON.parse(fs.readFileSync(path.join(REMAKE_SKILL, 'config.json'), 'utf8')).avatar || {};
+        let token = '', url = '';
+        for (let i = 0; i < 6 && !url && look.look_id; i++) {
+          const r = await fetch(`${HG_BASE}/v3/avatars/looks?ownership=private&limit=50${token ? '&token=' + encodeURIComponent(token) : ''}`,
+            { headers: { 'x-api-key': HEYGEN, accept: 'application/json' }, signal: AbortSignal.timeout(30e3) });
+          const d = await r.json().catch(() => ({}));
+          url = (d.data || []).find((l) => l.id === look.look_id)?.preview_image_url || '';
+          if (!d.has_more || !d.next_token) break;
+          token = d.next_token;
+        }
+        if (url) {
+          const b = Buffer.from(await (await fetch(url, { signal: AbortSignal.timeout(60e3) })).arrayBuffer());
+          if (imageSize(b)) {
+            fs.writeFileSync(PHOTO, b);
+            fs.writeFileSync(PHOTO + '.json', JSON.stringify({ from: 'heygen', name: look.look_name || look.look_id, at: new Date().toISOString() }));
+          }
+        }
+      } catch (e) { console.error('carousels photo:', e.message); }
+    }
+    if (!fs.existsSync(PHOTO)) return null;
+    const b = fs.readFileSync(PHOTO), sz = imageSize(b);
+    return sz ? { file: PHOTO, ...sz } : null;
+  }
+  const photoSource = () => { const i = photoInfo(); return !fs.existsSync(PHOTO) ? 'фото пока нет — пришлите своё фото в эту ветку'
+    : i.from === 'telegram' ? `ваше фото, присланное в ветку ${String(i.at || '').slice(0, 10)}` : `образ вашего цифрового двойника HeyGen «${i.name || ''}» — свой снимок можно прислать в ветку`; };
+
+  async function renderWith(j, slides, opts) {
+    const sty = styleOf(j);
+    return renderSlides({ slides, src: j.src, handle: skillConfig().style?.handle || '@ilia.paliy', theme: sty.id,
+      photo: sty.id === 'photo' ? await coverPhoto() : null, ...opts });
+  }
+  // the new cover in the chosen style, as a photo under the card (the previous preview is replaced)
+  async function preview(j) {
+    if (!j.plan?.slides?.length || !st.chat_id) return;
+    const dir = path.join(jdir(j), 'preview');
+    const [f] = await renderWith(j, j.plan.slides.slice(0, 1), { dir, prefix: path.join(dir, 'cover'), total: j.plan.slides.length });
+    if (j.preview) await quiet(tg('deleteMessage', { chat_id: st.chat_id, message_id: j.preview }));
+    const fd = new FormData();
+    for (const [k, v] of Object.entries(where())) fd.append(k, String(v));
+    const sty = styleOf(j);
+    fd.append('caption', `Обложка в стиле «${sty.name}»${sty.id === 'photo' ? ` — ${photoSource()}` : ''}. Остальные слайды — после ✅.`.slice(0, 1024));
+    if (j.card) fd.append('reply_parameters', JSON.stringify({ message_id: j.card, allow_sending_without_reply: true }));
+    fd.append('photo', await fs.openAsBlob(f, { type: 'image/jpeg' }), 'cover.jpg');
+    const m = await tg('sendPhoto', fd, { timeout: 120e3 }).catch((e) => { console.error('carousels preview:', e.message); return null; });
+    if (m) { j.preview = m.message_id; saveJob(j); }
+  }
+  async function ready(j) {
+    j.state = 'card';
+    saveJob(j);
+    await card(j);
+    await preview(j).catch((e) => console.error('carousels preview:', e.message));
+  }
+
+  // /styles: every style on one cover, plus what of the blog it is made of
+  async function showStyles() {
+    const last = [...jobs.values()].filter((j) => j.plan?.slides?.length).sort((a, b) => b.created_at.localeCompare(a.created_at))[0];
+    const z = { mode: 'new', from: 0, shot: { from: 0, x0: 0, y0: 0, x1: 0, y1: 0 }, erase: [], text: [], subtitle: '', lines: [] };
+    const c0 = last?.plan.slides[0];
+    const demo = c0 ? { ...z, layout: 'cover', title: c0.title || c0.text?.[0]?.html || c0.note || '', subtitle: c0.layout === 'cover' ? c0.subtitle : c0.text?.[1]?.html || '' }
+      : { ...z, layout: 'cover', title: 'Удаляй ChatGPT\n*если ведёшь блог*', subtitle: '4 вещи, которые Claude делает, а он — нет →' };
+    const inner = { ...z, layout: 'list', title: 'что умеет **Claude**', lines: ['Пишет сценарии по твоим залётам', 'Разбирает статистику аккаунта', 'Собирает карусель за 10 минут'] };
+    const files = [];
+    const dir = path.join(LIB, 'styles');
+    for (const sty of carouselStyles()) {
+      const fake = { src: [], style: sty.id };
+      const out = await renderWith(fake, [demo, inner], { dir: path.join(dir, sty.id), prefix: path.join(dir, sty.id), total: 8 });
+      files.push({ f: out[0], cap: `«${sty.name}» — обложка` }, ...(sty.id === 'photo' ? [] : [{ f: out[1], cap: `«${sty.name}» — слайд внутри` }]));
+    }
+    const fd = new FormData();
+    for (const [k, v] of Object.entries(where())) fd.append(k, String(v));
+    fd.append('media', JSON.stringify(files.map((x, k) => ({ type: 'photo', media: `attach://f${k}`, caption: x.cap }))));
+    for (const [k, x] of files.entries()) fd.append(`f${k}`, await fs.openAsBlob(x.f, { type: 'image/jpeg' }), path.basename(x.f));
+    await tg('sendMediaGroup', fd, { timeout: 5 * 60e3 });
+    const cfg = skillConfig(), sty = cfg.style || {};
+    const kadrik = extraSkillNames();
+    await say(`<b>Стили каруселей — из вашего блога</b>\n` +
+      carouselStyles().map((x) => `• <b>${esc(x.name)}</b> — ${esc(x.about || '')}`).join('\n') +
+      `\n\n<b>Что взято из ваших данных:</b>\n` +
+      `• Шрифты и цвета — сняты с ваших каруселей (скилл ilia-carousel-style): Futura PT → ${esc(sty.font || 'Jost')}, курсив ${esc(sty.accent_font || 'Tinos Italic')} ${esc(sty.accent || '#DE984A')}, текст ${esc(sty.text || '#FCFBFA')} на ${esc(sty.bg || '#0B0B0B')}, подпись ${esc(sty.handle || '@ilia.paliy')}.\n` +
+      `• Ваши карусели @${esc(nick(cfg.instagram?.username || 'ilia.paliy'))}: ${st.own_found == null ? 'поиск ещё не запускался — /scan' : `последний поиск нашёл залётов: ${st.own_found}`}. ` +
+      `В карточке «Своя карусель» оригинальные слайды, картинки и скриншоты остаются как есть — меняются обложка, хук и CTA.\n` +
+      `• Фото для обложки — ${esc(photoSource())}.\n` +
+      `• Подпись и CTA — ваш шаблон: кодовое слово первой строкой, «${esc(cfg.caption?.save_line || 'Сохраняй, чтобы не потерять 🤝')}».\n` +
+      `• Правила текста — скилл carousel-pro${kadrik.length ? ' + скиллы Кадрика: ' + esc(kadrik.join(', ')) : ''}.\n\n` +
+      `Стиль меняется кнопкой 🎨 на карточке — сразу приходит превью обложки. Своё фото для обложек — просто пришлите его сюда.`);
+  }
+
   const replyTo = (j) => (j.card ? { reply_parameters: { message_id: j.card, allow_sending_without_reply: true } } : {});
 
   // ---------- 1. find the carousels that took off ----------
@@ -382,6 +536,7 @@ export function createCarouselBot({ data, media, publicUrl = env('PUBLIC_URL', '
     ]);
     const errs = [mine, theirs].filter((x) => x.error).map((x) => x.error);
     const a = Array.isArray(theirs) ? theirs.filter(fresh) : [], b = Array.isArray(mine) ? mine.filter(fresh) : [];
+    if (Array.isArray(mine)) st.own_found = mine.length;
     // what works for competitors today first, then what already worked for Ilia — alternating
     const pool = [];
     for (let i = 0; i < Math.max(a.length, b.length); i++) { if (a[i]) pool.push(a[i]); if (b[i]) pool.push(b[i]); }
@@ -476,9 +631,7 @@ export function createCarouselBot({ data, media, publicUrl = env('PUBLIC_URL', '
   async function prepare(j) {
     if (!j.src.length) await download(j);
     await plan(j, '');
-    j.state = 'card';
-    saveJob(j);
-    await card(j);
+    await ready(j);
   }
 
   // ---------- 2. card ----------
@@ -499,19 +652,22 @@ export function createCarouselBot({ data, media, publicUrl = env('PUBLIC_URL', '
     const state = { prep: '', card: '✅ — собираю слайды · ответьте на карточку текстом — переделаю план с пожеланием',
       render: '⏳ <b>Одобрено.</b> Собираю слайды…', done: '✅ <b>Готово</b> — слайды ниже', skip: '🗑 Пропущено', fail: '⚠️ Сорвалось — см. сообщение ниже' }[j.state] || '';
     const top = [head, why && `<b>Почему залетело:</b>\n${why}`, hook, cover].filter(Boolean).join('\n\n');
-    const bottom = [code, state].filter(Boolean).join('\n');
+    const look = `🎨 Стиль: <b>${esc(styleOf(j).name)}</b>${o.own && (p.slides || []).some((x) => x.mode !== 'new') ? ' · ваши слайды оригинала — как есть' : ''}`;
+    const bottom = [look, code, state].filter(Boolean).join('\n');
     let mid = n ? `<b>Слайдов: ${n}</b>\n<blockquote expandable>${list}</blockquote>` : '';
     if (top.length + mid.length + bottom.length > 4000) mid = `<b>Слайдов: ${n}</b>`;
     return [top, mid, bottom].filter(Boolean).join('\n\n');
   }
 
-  function buttons(j) {
+  function buttons(j, picking = false) {
+    if (picking) return { inline_keyboard: [...carouselStyles().map((x) => [{ text: `${x.id === styleOf(j).id ? '✓ ' : ''}${x.name}`, callback_data: `c:st:${x.id}:${j.id}` }]),
+      [{ text: '← Назад', callback_data: `c:back:${j.id}` }]] };
     if (j.state === 'fail') return { inline_keyboard: [[{ text: '🔁 Повторить', callback_data: `c:retry:${j.id}` }]] };
-    if (j.state === 'done') return { inline_keyboard: [[{ text: '🔁 Пересобрать', callback_data: `c:ok:${j.id}` }, { text: '🔄 Другой хук', callback_data: `c:hook:${j.id}` }]] };
+    if (j.state === 'done') return { inline_keyboard: [[{ text: '🔁 Пересобрать', callback_data: `c:ok:${j.id}` }, { text: '🎨 Стиль', callback_data: `c:style:${j.id}` }, { text: '🔄 Другой хук', callback_data: `c:hook:${j.id}` }]] };
     if (j.state !== 'card') return { inline_keyboard: [] };
     return { inline_keyboard: [
       [{ text: '✅ Одобрено', callback_data: `c:ok:${j.id}` }],
-      [{ text: '🔄 Другой хук', callback_data: `c:hook:${j.id}` }, { text: '🗑 Пропустить', callback_data: `c:skip:${j.id}` }],
+      [{ text: '🔄 Другой хук', callback_data: `c:hook:${j.id}` }, { text: '🎨 Стиль', callback_data: `c:style:${j.id}` }, { text: '🗑 Пропустить', callback_data: `c:skip:${j.id}` }],
     ] };
   }
 
@@ -530,10 +686,12 @@ export function createCarouselBot({ data, media, publicUrl = env('PUBLIC_URL', '
     console.error(`carousels ${j.id} ${what}:`, text);
     // a found carousel that won't download is just replaced by the next one
     if (what === 'prep' && !j.src.length && !j.manual) { j.state = 'skip'; log(j, `не скачалась: ${text}`); next(); return; }
+    if (what === 'preview') return say(`⚠️ Превью обложки не нарисовалось: ${esc(text)}`, replyTo(j));
     j.state = 'fail';
     j.failed = what;
     log(j, `сорвалось (${what}): ${text}`);
     await card(j);
+    if (what === 'render' && j.progress) return progress(j, j.progress.cur || 0, { failed: text.slice(0, 300) });
     await say(`⚠️ ${esc({ prep: 'План', render: 'Сборка слайдов' }[what] || what)}: ${esc(text)}`, replyTo(j));
   }
 
@@ -542,9 +700,11 @@ export function createCarouselBot({ data, media, publicUrl = env('PUBLIC_URL', '
     j.state = 'render';
     saveJob(j);
     await card(j);
+    await progress(j, 0, { fresh: j.progress?.cur >= STEPS.length || !j.progress, detail: `готово 0 из ${j.plan.slides.length}` });
     const prefix = path.join(media, `${j.id}-${crypto.randomBytes(4).toString('hex')}`);
     for (const f of j.out) fs.rmSync(path.join(media, f), { force: true });
-    const files = await renderSlides({ slides: j.plan.slides, src: j.src, dir: path.join(jdir(j), 'render'), handle: skillConfig().style?.handle || '@ilia.paliy', prefix });
+    const files = await renderWith(j, j.plan.slides, { dir: path.join(jdir(j), 'render'), prefix,
+      onSlide: (n, total) => progress(j, 0, { detail: `готово ${n} из ${total}` }) });
     j.out = files.map((f) => path.basename(f));
     log(j, `собрано слайдов: ${files.length}`);
     await deliver(j, files);
@@ -561,8 +721,9 @@ export function createCarouselBot({ data, media, publicUrl = env('PUBLIC_URL', '
   }
 
   async function deliver(j, files) {
+    await progress(j, 1);
     const p = j.plan;
-    await group(files, 'photo', `📚 ${p.topic || 'Карусель'} · ${files.length} ${plural(files.length, 'слайд', 'слайда', 'слайдов')} · по залёту @${j.origin.author}`.slice(0, 1024));
+    await group(files, 'photo', `📚 ${p.topic || 'Карусель'} · «${styleOf(j).name}» · ${files.length} ${plural(files.length, 'слайд', 'слайда', 'слайдов')} · по залёту @${j.origin.author}`.slice(0, 1024));
     try { await group(files, 'document', 'Файлы для публикации — без сжатия Telegram'); }
     catch (e) { await say(`Файлы без сжатия не отправились (${esc(e.message)}). Скачать: ${j.out.map((f) => esc(`${publicUrl}/media/${f}`)).join(' ')}`); }
     if (p.caption) await say(`<b>Подпись к посту:</b>\n${esc(p.caption).slice(0, 3800)}`);
@@ -570,11 +731,13 @@ export function createCarouselBot({ data, media, publicUrl = env('PUBLIC_URL', '
     j.state = 'done';
     saveJob(j);
     await card(j);
+    await progress(j, 2);
   }
 
   // ---------- 4. buttons, replies, commands ----------
   async function onCallback(q) {
-    const [pre, act, id] = String(q.data || '').split(':');
+    const parts = String(q.data || '').split(':');
+    const [pre, act] = parts, id = parts[parts.length - 1];
     const answer = (text = '', alert = false) => quiet(tg('answerCallbackQuery', { callback_query_id: q.id, text, show_alert: alert }));
     if (pre !== 'c') return answer();
     if (!owners().has(q.from.id)) return answer('Кнопки — только у владельца', true);
@@ -582,8 +745,8 @@ export function createCarouselBot({ data, media, publicUrl = env('PUBLIC_URL', '
     if (!j) return answer('Этой карусели уже нет');
     if (busy.has(j.id)) return answer('Уже в работе — подождите');
     if (act === 'ok') {
-      if (!['card', 'done'].includes(j.state)) return answer('Уже в работе');
-      answer('Собираю слайды');
+      if (!['card', 'done'].includes(j.state)) return answer('Уже в работе — статус под карточкой');
+      answer('Собираю слайды → пришлю альбом и файлы. Статус — под карточкой');
       return go(j, 'render', () => build(j));
     }
     if (act === 'hook') {
@@ -594,10 +757,23 @@ export function createCarouselBot({ data, media, publicUrl = env('PUBLIC_URL', '
       await card(j);
       return go(j, 'prep', async () => {
         await plan(j, `Нужен другой хук и другая обложка, не «${j.plan?.hook_to || ''}» и не «${String(j.plan?.slides?.[0]?.title || '').slice(0, 200)}». Возьми другой тип хука.`);
-        j.state = 'card'; saveJob(j); await card(j);
+        await ready(j);
       });
     }
     if (act === 'skip') { j.state = 'skip'; saveJob(j); answer('Пропустил'); return card(j); }
+    if (act === 'style' || act === 'back') {
+      answer(act === 'style' ? 'Выберите стиль — пришлю превью обложки' : '');
+      return quiet(tg('editMessageReplyMarkup', { chat_id: st.chat_id, message_id: j.card, reply_markup: buttons(j, act === 'style') }));
+    }
+    if (act === 'st') {
+      const sty = carouselStyles().find((x) => x.id === parts[2]);
+      if (!sty) return answer('Нет такого стиля');
+      j.style = sty.id;
+      saveJob(j);
+      answer(`Стиль: ${sty.name}. Рисую превью обложки…`);
+      await card(j);
+      return go(j, 'preview', () => preview(j));
+    }
     if (act === 'retry') {
       if (j.state !== 'fail') return answer();
       answer('Повторяю');
@@ -611,18 +787,26 @@ export function createCarouselBot({ data, media, publicUrl = env('PUBLIC_URL', '
   const HELP = `<b>Instagram Карусели</b> — «Карусель Pro».\nКаждый день в ${HOUR}:00 (${esc(TZ)}) ищу карусели-залёты у конкурентов и в вашем аккаунте, ` +
     `присылаю ${PER_DAY} ${plural(PER_DAY, 'карточку', 'карточки', 'карточек')}: почему залетело, новый хук, план слайдов, кодовое слово и подпись. ` +
     `✅ Одобрено — готовые слайды альбомом и файлами без сжатия сюда.\n\n` +
-    `/scan — найти сейчас\n/competitors — список конкурентов\n/competitors add @ник @ник — добавить\n/competitors del @ник — убрать\n/status — что в работе\n` +
-    `Ссылка на карусель сюда — сразу в работу. Ответ на карточку текстом — переделаю план с пожеланием.`;
+    `/scan — найти сейчас\n/styles — стили каруселей и что в них из вашего блога\n/competitors — список конкурентов\n/competitors add @ник @ник — добавить\n/competitors del @ник — убрать\n/status — что в работе\n` +
+    `Ссылка на карусель сюда — сразу в работу. Ответ на карточку текстом — переделаю план с пожеланием. 🎨 на карточке — другой стиль с превью обложки. ` +
+    `Фото сюда — оно станет фоном обложек в стиле «Обложка с вашим фото».`;
 
   async function onMessage(msg) {
-    const text = String(msg.text || '').trim();
-    const cmd = (text.match(/^\/([a-z_]+)(?:@\w+)?/i) || [])[1]?.toLowerCase() || '';
+    const { text, cmd, forMe, forOther, topic } = parse(msg, me);
+    if (forOther) return;  // /scan@other_bot — not ours
     const isOwner = owners().has(msg.from?.id);
     if (cmd === 'bind') {
       if (!isOwner && owners().size) return;
+      const here = st.chat_id === msg.chat.id && st.topic_id === topic;
+      const reply = (t) => tg('sendMessage', { chat_id: msg.chat.id, ...(topic ? { message_thread_id: topic } : {}), text: t, parse_mode: 'HTML' }).catch(() => {});
+      // a plain /bind is for a bot without a topic; moving this one — /bind@me
+      if (st.chat_id && !here && !forMe) return me && wrongBind({ data, self: 'carousels', me, chat: msg.chat.id, topic, reply });
+      if (msg.chat.is_forum && !topic) return reply(`Привязать можно только ветку, не «Общий». Создайте ветку и напишите в ней /bind${me ? '@' + esc(me) : ''}.`);
+      const other = takenBy(data, 'carousels', msg.chat.id, topic);
+      if (other) return reply(`Эта ветка уже за «${esc(BRANCHES[other])}» — карусели здесь не живут. Создайте отдельную ветку и напишите в ней /bind${me ? '@' + esc(me) : ''}.`);
       if (!owners().size) st.owners = [msg.from.id];
       st.chat_id = msg.chat.id;
-      st.topic_id = msg.is_topic_message ? msg.message_thread_id : 0;
+      st.topic_id = topic;
       save();
       let renamed = '';
       if (st.topic_id) {
@@ -631,9 +815,20 @@ export function createCarouselBot({ data, media, publicUrl = env('PUBLIC_URL', '
       }
       return say(`Готово: карточки каруселей теперь приходят сюда. ${renamed}\n\n${HELP}`);
     }
-    if (!st.chat_id || msg.chat.id !== st.chat_id || (st.topic_id && msg.message_thread_id !== st.topic_id)) return;
+    if (!st.chat_id || msg.chat.id !== st.chat_id || topic !== (st.topic_id || 0)) return;  // only its own topic
     if (!isOwner) return;
     if (cmd === 'help' || cmd === 'start') return say(HELP);
+    if (cmd === 'styles') { await say('Рисую стили на одной обложке…'); return showStyles().catch((e) => say(`⚠️ Стили не нарисовались: ${esc(e.message)}`)); }
+    if (msg.photo?.length && !cmd) {  // Ilia's own photo for the «cover with your photo» style
+      try {
+        const f = await tg('getFile', { file_id: msg.photo[msg.photo.length - 1].file_id });
+        const b = Buffer.from(await (await fetch(`${env('TELEGRAM_API_BASE', 'https://api.telegram.org')}/file/bot${TOKEN}/${f.file_path}`, { signal: AbortSignal.timeout(60e3) })).arrayBuffer());
+        if (!imageSize(b)) throw new Error('не картинка');
+        fs.writeFileSync(PHOTO, b);
+        fs.writeFileSync(PHOTO + '.json', JSON.stringify({ from: 'telegram', at: new Date().toISOString() }));
+        return say('📸 Фото сохранено — теперь это фон обложек в стиле «Обложка с вашим фото». Посмотреть: /styles', { reply_parameters: { message_id: msg.message_id, allow_sending_without_reply: true } });
+      } catch (e) { return say(`⚠️ Фото не сохранилось: ${esc(e.message)}`); }
+    }
     if (cmd === 'scan') { if (!APIFY) return say('⚠️ Нет APIFY_TOKEN — искать залёты нечем.'); return scan(true).catch((e) => say(`⚠️ ${esc(e.message)}`)); }
     if (cmd === 'competitors') {
       const [, op, ...rest] = text.split(/\s+/);
@@ -658,7 +853,7 @@ export function createCarouselBot({ data, media, publicUrl = env('PUBLIC_URL', '
       j.state = 'prep';
       saveJob(j);
       await card(j);
-      go(j, 'prep', async () => { await plan(j, text.slice(0, 1500)); j.state = 'card'; saveJob(j); await card(j); });
+      go(j, 'prep', async () => { await plan(j, text.slice(0, 1500)); await ready(j); });
       return say('✏️ Переделываю план с пожеланием — карточка обновится.', { reply_parameters: { message_id: reply, allow_sending_without_reply: true } });
     }
     const url = (text.match(/https?:\/\/(?:www\.)?instagram\.com\/[^\s]+/i) || [])[0];
@@ -683,6 +878,7 @@ export function createCarouselBot({ data, media, publicUrl = env('PUBLIC_URL', '
   let stopped = false;
   (async function poll() {
     try { await tg('deleteWebhook', {}); } catch {}
+    try { me = (await tg('getMe', {})).username || ''; if (me && st.bot !== me) { st.bot = me; save(); } } catch (e) { console.error('carousels getMe:', e.message); }
     while (!stopped) {
       try {
         const ups = await tg('getUpdates', { offset: st.offset, timeout: 50, allowed_updates: ['message', 'callback_query'] }, { timeout: 70e3 });
@@ -699,9 +895,19 @@ export function createCarouselBot({ data, media, publicUrl = env('PUBLIC_URL', '
     }
   })();
 
+  setInterval(() => {  // the status message shows how long the running step has been going
+    for (const j of jobs.values()) if (j.state === 'render' && j.progress?.msg) progress(j, j.progress.cur, { detail: j.progress.detail }).catch(() => {});
+  }, 60e3).unref();
+
   setInterval(() => {
     if (st.chat_id && APIFY && st.last_scan !== today() && hourNow() >= HOUR) scan(false).catch((e) => console.error('carousels scan:', e.message));
   }, 5 * 60e3).unref();
+
+  // a topic the reels branch already owns is not ours: unbind, /bind in a topic of its own
+  if (st.chat_id && takenBy(data, 'carousels', st.chat_id, st.topic_id || 0)) {
+    console.error('carousels: ветка уже за Reels — привязка снята, нужен /bind в отдельной ветке');
+    st.chat_id = 0; st.topic_id = 0; save();
+  }
 
   // after a restart: whatever was in flight starts again
   for (const j of jobs.values()) {
@@ -709,5 +915,5 @@ export function createCarouselBot({ data, media, publicUrl = env('PUBLIC_URL', '
     if (j.state === 'render') go(j, 'render', () => build(j));
   }
 
-  return { enabled: true, status: () => ({ bound: Boolean(st.chat_id), competitors: st.competitors.length, last_scan: st.last_scan }), stop: () => { stopped = true; } };
+  return { enabled: true, status: () => ({ bot: me ? '@' + me : '', bound: Boolean(st.chat_id), topic: st.topic_id || 0, competitors: st.competitors.length, last_scan: st.last_scan }), stop: () => { stopped = true; } };
 }
