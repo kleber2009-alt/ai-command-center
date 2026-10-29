@@ -12,7 +12,7 @@
 import argparse, datetime, json, os, sys, time
 
 sys.path.insert(0, os.path.dirname(os.path.abspath(__file__)))  # и под python3 -I
-from common import HTTPError, config, download, http_json, job_dir, probe, read_json, secret, sheet, write_json
+from common import HTTPError, avatar_engine, config, download, http_json, job_dir, probe, read_json, secret, sheet, write_json
 
 API = "https://api.heygen.com"
 
@@ -95,7 +95,8 @@ def main():
     state = read_json(job / "heygen.json", {})
 
     if a.fetch:
-        state.update(route="mcp", video_id=a.id or state.get("video_id"), look_id=look, voice_id=voice)
+        state.update(route="mcp", video_id=a.id or state.get("video_id"), look_id=look, voice_id=voice,
+                     engine=state.get("engine") or avatar_engine())
         return finish(job, slug, a.fetch, state)
     if a.resume:
         if not state.get("video_id"):

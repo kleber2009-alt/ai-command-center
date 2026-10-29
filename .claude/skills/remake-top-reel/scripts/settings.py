@@ -4,18 +4,22 @@
   python3 settings.py show                                   итоговые настройки
   python3 settings.py set avatar.look_id=... avatar.voice_id=... avatar.confirmed=true
   python3 settings.py set style_mode=rotate                  больше не спрашивать стиль — чередовать
+  python3 settings.py engine                                 движок HeyGen на сегодня (с учётом avatar.engine_switch)
 
 Значение читается как JSON (true, 1.1, "текст"), иначе — как строка.
 """
 import json, os, sys
 
 sys.path.insert(0, os.path.dirname(os.path.abspath(__file__)))  # и под python3 -I
-from common import HOME_DIR, config, set_override
+from common import HOME_DIR, avatar_engine, config, set_override
 
 
 def main():
-    if len(sys.argv) < 2 or sys.argv[1] not in ("show", "set"):
+    if len(sys.argv) < 2 or sys.argv[1] not in ("show", "set", "engine"):
         sys.exit(__doc__)
+    if sys.argv[1] == "engine":
+        print(avatar_engine())
+        return
     if sys.argv[1] == "show":
         print(json.dumps(config(), ensure_ascii=False, indent=1))
         return

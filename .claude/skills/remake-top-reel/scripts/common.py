@@ -43,6 +43,18 @@ def config() -> dict:
     return base
 
 
+def avatar_engine(cfg: dict = None) -> str:
+    """Движок HeyGen на сегодня: avatar.engine, а после avatar.engine_switch.at — avatar.engine_switch.to
+    (например, Avatar III, пока не сбросились премиум-кредиты, потом снова Avatar V)."""
+    av = (cfg or config())["avatar"]
+    sw = av.get("engine_switch") or {}
+    if sw.get("at") and sw.get("to"):
+        at = datetime.datetime.fromisoformat(sw["at"].replace("Z", "+00:00"))
+        if datetime.datetime.now(datetime.timezone.utc) >= at:
+            return sw["to"]
+    return av.get("engine", "avatar_v")
+
+
 def set_override(path: str, value):
     """Записать одно значение в личный config.json: set_override("avatar.look_id", "...")."""
     over = HOME_DIR / "config.json"

@@ -91,8 +91,9 @@ PASS. WARN — решаешь сам (лишняя длина допустима
 **В чате (есть MCP HeyGen):**
 1. `get_current_user` — хватит ли кредитов (≈ 1 кредит на секунду видео); не хватает — стоп, скажи.
 2. `create_video_from_avatar(avatarId=<look_id>, script=<script.txt слово в слово>, voiceId=<voice_id>,
-   aspectRatio="9:16", resolution="1080p", engine={"type": "avatar_v"}, title="Ремейк · <slug>")`.
-   `avatar_v` — если он есть в `supported_api_engines` образа, иначе без `engine`.
+   aspectRatio="9:16", resolution="1080p", engine={"type": <python3 $S/settings.py engine>}, title="Ремейк · <slug>")`.
+   Движок — по настройкам на сегодня: сейчас `avatar_iii`, после сброса премиум-кредитов 1 ноября сам станет `avatar_v`
+   (`avatar.engine_switch`). 402 «insufficient credit» — стоп и вопрос Илье, на другой движок молча не переходить.
 3. `get_video(videoId)` до `completed`. Между опросами не простаивай: подпись, стиль (шаг 7), поручение монтажу.
    Делать больше нечего, а видео ещё `processing` — подожди тем, что позволяет среда (фоновая команда, монитор),
    и опроси снова; не пересоздавай видео. `failed` — объясни причину и остановись.

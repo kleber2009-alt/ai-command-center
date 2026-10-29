@@ -14,14 +14,15 @@
   "weights": {"views": 0.3, "comments": 0.25, "shares": 0.25, "leads": 0.1, "likes": 0.1}
  },
  "avatar": {
-  "_about": "Цифровой двойник в HeyGen. confirmed=false — при первом запуске в чате спросить Илью и запомнить выбор.",
+  "_about": "Цифровой двойник в HeyGen, выбран Ильёй 29.10. Движок на сегодня — settings.py engine (engine, а после engine_switch.at — engine_switch.to).",
   "look_id": "ac8e5818453b4e99a12e23ca124be57c",
   "look_name": "IMG_2672 · Motion Look (самый свежий двойник, октябрь 2026)",
   "voice_id": "009e58e8bf8d4ccc86a21873864d4244",
   "voice_name": "IMG_2672 (русский клон голоса)",
-  "engine": "avatar_v",
+  "engine": "avatar_iii",
+  "engine_switch": {"at": "2026-11-01T22:40:00Z", "to": "avatar_v", "why": "Илья 29.10: пока Avatar III, после сброса премиум-кредитов HeyGen 1 ноября — снова Avatar V"},
   "speed": 1.0,
-  "confirmed": false,
+  "confirmed": true,
   "alternatives": [
    {"look_id": "acacbe2973ac49ac89449ad55c6caf7a", "name": "IMG_2672", "voice_id": "d648b0bbe18147fda9b92a34f3956a6c"},
    {"look_id": "025cc7689ced4904b311c9a0829bf4ab", "name": "Ilia Paliy", "voice_id": "a18b77c30b944eb09f9e3d98eddd37c3"},
