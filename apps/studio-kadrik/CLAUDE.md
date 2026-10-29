@@ -23,8 +23,9 @@ cloudflared-туннель `kadrik.aicex.club`. Перенесён из `aicex-l
   PERSONA_API_KEY, …), `data/` (`users.json` игроки, `ledger.jsonl` платежи/списания, `access.json`, `stats.json`),
   `.review-venv`, `bot.log`. Задачи монтажа — `JOBS_DIR`. Каталог скиллов — `PACK_DIR` (`~/creator-pack-miniapp`).
 - Деплой: `.github/workflows/deploy-studio-kadrik.yml`, только вручную. Режим `check` показывает diff с живым кодом,
-  `deploy` — бэкап в `/opt/studio-kadrik/backups`, замена кода, рестарт, проверка порта, откат при сбое.
-  `.env`, `data/` и окружение Python деплой не трогает.
+  `deploy` — бэкап кода и `.env` в `/opt/studio-kadrik/backups`, установка bubblewrap (и профиля AppArmor на Ubuntu),
+  `SANDBOX=bwrap` в `.env`, ключи из секретов GitHub, замена кода, рестарт, проверка порта, откат при сбое.
+  `data/` и окружение Python деплой не трогает.
 
 ## Инварианты
 
@@ -33,8 +34,23 @@ cloudflared-туннель `kadrik.aicex.club`. Перенесён из `aicex-l
 - Платёж зачисляется один раз: `PAID_IDS` из `ledger.jsonl` по `telegram_payment_charge_id`. `ledger.jsonl` не обрезать.
 - Неудачный монтаж возвращает оплату (`refund`) — пробный снова доступен, монтажи на баланс.
 - Одна задача Claude за раз (`RUN_LOCK` + `heavy_slot`); при лимите Claude очередь ставится на паузу до сброса.
-- Монтаж запускает Claude Code с `Bash` в папке задачи. Тексты пользователя (пожелания, правки, сценарий) идут в промпт —
-  до открытия продаж всем (`SELL_MONTAGE=1`) монтаж должен работать в песочнице.
+- **Песочница.** Монтаж — Claude Code с `Bash`, а тексты клиентов (пожелания, правки, сценарий) идут в промпт. Поэтому задачи
+  всех, кроме `OWNER_ID`/`ALLOWED_IDS`/доступа по заявке (и задачи Persona `EXT_UID`), идут только через `jail()` — bubblewrap:
+  своя домашняя папка `SANDBOX_HOME`, на запись только папка задачи, на чтение система, Claude, скиллы, профиль, `PACK_DIR`,
+  `SANDBOX_RO`; окружение бота не передаётся (только `SANDBOX_ENV` и ключ API). Перед каждым запуском из `SANDBOX_HOME`
+  удаляются `settings.json`, `CLAUDE.md`, hooks и т.п. — одна задача не настраивает следующую. При старте `jail_selftest()`
+  проверяет песочницу; если она не работает, монтаж клиентов закрыт (`jail_blocked`, ничего не списывается), владельцу — сообщение.
+  `UNSAFE_NO_SANDBOX=1` — осознанно пустить без неё. Параметр `folder` (папка на машине) — только своим.
+- Ключ API: `KADRIK_ANTHROPIC_API_KEY` — монтаж и разборы на нём; пусто — логин Claude Code на машине (в песочницу
+  тогда монтируется `~/.claude/.credentials.json`).
+- Оплата картой: `PAY_PROVIDER_TOKEN` (провайдер из @BotFather → Payments, например ЮKassa) + `PACKS_RUB`
+  (`p1:490,p5:1790,…`); счёт `pr:<пакет>`, чек 54-ФЗ через `provider_data` (`PAY_RECEIPT`, `PAY_VAT_CODE`).
+  Звёзды — счёт `pk:<пакет>`. `pay_ok()` сверяет пакет, валюту и сумму. Возврат картой — `/refund` снимает монтажи,
+  деньги возвращаются в кабинете провайдера.
+- Бэкап: каждый день в `BACKUP_HOUR`:30 (BOT_TZ) zip `data/` + очереди в `backups/` (14 последних) и копия владельцу в Telegram;
+  вручную — `/backup`.
+- Мониторинг: `GET /health` (ok, очередь, пауза, песочница, продажи); `.github/workflows/monitor-studio-kadrik.yml`
+  проверяет его каждые 30 минут, упавший запуск — письмо от GitHub.
 
 ## Проверка локально
 

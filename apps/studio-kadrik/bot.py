@@ -8,7 +8,7 @@ Claude Code на машине бота — движок перенесён из 
 Каждый запрос к API подписан initData Telegram (HMAC); картинки и видео задач — по токену пользователя.
 Запуск: ./start.sh   ·   игроки — data/users.json   ·   задачи — JOBS_DIR (по умолчанию ~/Movies/production-kadrik)
 """
-import asyncio, hashlib, hmac, json, logging, os, re, shutil, subprocess, time, uuid
+import asyncio, hashlib, hmac, json, logging, os, re, shutil, subprocess, time, uuid, zipfile
 from contextlib import asynccontextmanager
 from dataclasses import asdict, dataclass, field, fields
 from datetime import date, datetime, timedelta
@@ -91,6 +91,23 @@ NUDGE_IDLE_DAYS = 14  # кто не заходил дольше — тем не 
 SRC_RE = re.compile(r"[a-z0-9_]{1,32}")
 EXT_KEY = os.environ.get("PERSONA_API_KEY", "").strip()  # ключ серверного API для Persona Studio (/api/ext/*); пусто — API выключено
 EXT_UID = -1  # задачи Persona: не пользователь Telegram — без сообщений в чат, без игры и без списания монтажей (платят токенами Persona)
+# песочница: Claude с Bash получает в промпт тексты клиентов, поэтому чужие задачи идут только внутри bwrap — без .env ботов, ключей и чужих папок
+SANDBOX = os.environ.get("SANDBOX", "").strip()  # "bwrap" — включить
+SANDBOX_HOME = Path(os.environ.get("SANDBOX_HOME", str(Path.home() / ".kadrik-sandbox"))).expanduser()  # домашняя папка Claude внутри песочницы
+SANDBOX_RO = [Path(x).expanduser() for x in os.environ.get("SANDBOX_RO", "").split(":") if x.strip()]  # ещё папки только на чтение (node, шрифты и т.п.)
+SANDBOX_ENV = [x for x in re.split(r"[\s,]+", os.environ.get("SANDBOX_ENV", "ELEVENLABS_API_KEY")) if x]  # переменные, которые видит Claude в песочнице
+UNSAFE = os.environ.get("UNSAFE_NO_SANDBOX", "").strip() == "1"  # осознанно пускать клиентов без песочницы
+API_KEY = os.environ.get("KADRIK_ANTHROPIC_API_KEY", "").strip()  # свой ключ API для монтажа и разборов; пусто — логин Claude Code на машине
+SANDBOX_OK = {"ok": False, "why": "песочница не включена (SANDBOX=bwrap)"}
+# оплата картой: Telegram Payments через провайдера (ЮKassa и т.п.), цены в рублях — "p1:490,p5:1790"
+PAY_TOKEN = os.environ.get("PAY_PROVIDER_TOKEN", "").strip()
+PAY_CUR = os.environ.get("PAY_CURRENCY", "RUB").strip() or "RUB"
+PRICES_RUB = {k: int(v) for k, v in re.findall(r"(p\d+)\s*:\s*(\d+)", os.environ.get("PACKS_RUB", "")) if k in PACKS}
+PAY_VAT = int(os.environ.get("PAY_VAT_CODE", 1))  # код НДС для чека 54-ФЗ (ЮKassa: 1 — без НДС)
+PAY_RECEIPT = os.environ.get("PAY_RECEIPT", "1").strip() != "0"  # чек: e-mail покупателя и provider_data с позицией
+BACKUP_DIR = HERE / "backups"  # ежедневные копии data/: 14 последних, копия уходит владельцу в Telegram
+BACKUP_HOUR = int(os.environ.get("BACKUP_HOUR", 4))  # по BOT_TZ
+STARTED = time.time()
 
 bot = Bot(TOKEN)
 dp = Dispatcher()
@@ -296,6 +313,103 @@ def can(uid: int) -> bool:
     return uid in ALLOWED or (SELL and bool(DB.get(str(uid), {}).get("client")))
 
 
+# ---------- песочница для Claude ----------
+ETC_RO = ["/etc/resolv.conf", "/etc/hosts", "/etc/nsswitch.conf", "/etc/passwd", "/etc/group", "/etc/ssl", "/etc/ca-certificates",
+          "/etc/pki", "/etc/fonts", "/etc/alternatives", "/etc/ld.so.cache", "/etc/ld.so.conf", "/etc/ld.so.conf.d", "/etc/localtime",
+          "/etc/mime.types", "/etc/ImageMagick-6", "/etc/ImageMagick-7"]
+JAIL_RESET = [".claude/settings.json", ".claude/settings.local.json", ".claude/CLAUDE.md", ".claude/hooks", ".claude/commands", ".claude/agents",
+              ".claude/plugins", ".bashrc", ".profile", ".bash_profile", ".bash_logout"]  # прошлая задача не должна настроить следующую
+
+
+def jailed(uid: int) -> bool:
+    """Задачу этого пользователя запускать в песочнице: все, кроме владельца и доступа из .env/по заявке."""
+    return uid not in ALLOWED
+
+
+def jail_blocked(uid: int) -> str:
+    """Почему задачу нельзя запускать ("" — можно): клиенту без рабочей песочницы монтаж не открываем."""
+    if not jailed(uid) or SANDBOX_OK["ok"] or UNSAFE:
+        return ""
+    return "Монтаж на техническом обслуживании — скоро вернётся. Ничего не списано."
+
+
+def jail_ro() -> list:
+    home = Path.home()
+    ro = [home / ".local/bin", home / ".local/share/claude", Path(CLAUDE).resolve().parent, SKILLS, PROFILE, PACK, *SANDBOX_RO]
+    for d in os.environ.get("PATH", "").split(":"):  # инструменты из домашней папки (nvm, bun, pyenv): их bin и папка версии
+        if d.startswith(str(home) + "/") and Path(d).is_dir():
+            ro += [Path(d), Path(d).parent]
+    try:  # скиллы часто ссылки на папки библиотеки — открыть и цели ссылок
+        ro += [p.resolve() for p in SKILLS.iterdir() if p.is_symlink()]
+    except OSError:
+        pass
+    return ro
+
+
+def jail(args: list, rw: list, ro: list = (), sandbox: bool = True) -> tuple:
+    """(argv, env) для запуска Claude. В песочнице: своя домашняя папка, на запись — только папка задачи, на чтение — система,
+    Claude, скиллы и профиль; окружение бота (BOT_TOKEN и прочее) не передаётся, сеть остаётся (API, скачивание)."""
+    env = {**os.environ, "ANTHROPIC_API_KEY": API_KEY} if API_KEY else None
+    if not sandbox:
+        return args, env
+    home = str(Path.home())
+    SANDBOX_HOME.mkdir(parents=True, exist_ok=True)
+    for rel in JAIL_RESET:
+        p = SANDBOX_HOME / rel
+        if p.is_dir() and not p.is_symlink():
+            shutil.rmtree(p, ignore_errors=True)
+        elif p.exists() or p.is_symlink():
+            p.unlink(missing_ok=True)
+    a = ["bwrap", "--die-with-parent", "--new-session", "--unshare-pid", "--unshare-ipc", "--unshare-uts", "--unshare-cgroup-try",
+         "--proc", "/proc", "--dev", "/dev", "--tmpfs", "/tmp", "--tmpfs", "/run"]
+    for d in ("/usr", "/bin", "/sbin", "/lib", "/lib32", "/lib64", "/opt"):
+        a += ["--ro-bind-try", d, d]
+    for f in ETC_RO:
+        a += ["--ro-bind-try", f, f]
+    a += ["--bind", str(SANDBOX_HOME), home]
+    for d in [*jail_ro(), *ro]:
+        a += ["--ro-bind-try", str(d), str(d)]
+    if not API_KEY:  # без своего ключа — логин Claude Code владельца (токен виден задаче, но не секреты ботов)
+        a += ["--bind-try", f"{home}/.claude/.credentials.json", f"{home}/.claude/.credentials.json"]
+    for d in rw:
+        a += ["--bind", str(d), str(d)]
+    a += ["--clearenv", "--setenv", "HOME", home, "--setenv", "PATH", os.environ.get("PATH", "/usr/local/bin:/usr/bin:/bin"),
+          "--setenv", "LANG", os.environ.get("LANG", "C.UTF-8"), "--setenv", "USER", os.environ.get("USER", "kadrik"), "--setenv", "TERM", "dumb"]
+    if API_KEY:
+        a += ["--setenv", "ANTHROPIC_API_KEY", API_KEY]
+    for k in SANDBOX_ENV:
+        if os.environ.get(k):
+            a += ["--setenv", k, os.environ[k]]
+    if rw:
+        a += ["--chdir", str(rw[0])]
+    return a + ["--"] + list(args), None
+
+
+async def jail_selftest():
+    """Проверка при старте: песочница запускается и не видит .env бота. Итог — SANDBOX_OK и сообщение владельцу, если сломано."""
+    if SANDBOX != "bwrap":
+        if SELL and not UNSAFE:
+            await tell_owner("⚠️ Продажи включены, а песочница — нет (SANDBOX=bwrap в .env): монтаж клиентов закрыт, пока её не включить.")
+        return
+    probe = JOBS / "_sandbox_probe"
+    probe.mkdir(parents=True, exist_ok=True)
+    tools = [t for t in ("ffmpeg", "ffprobe", "node", "npx", "python3") if shutil.which(t)]  # что есть у бота — должно быть и в песочнице
+    check = f"test ! -e {HERE / '.env'} && test -w {probe} && {CLAUDE} --version && for t in {' '.join(tools)}; do command -v $t >/dev/null || echo NO:$t; done"
+    argv, _ = jail(["/bin/sh", "-c", check], [probe])
+    try:
+        out, _ = await run_proc(argv, 60)
+        SANDBOX_OK.update(ok=True, why="")
+        logging.info("песочница: ок, %s", out.strip()[:200])
+        if miss := re.findall(r"NO:(\S+)", out):
+            await tell_owner(f"⚠️ В песочнице монтажа не видно: {', '.join(miss)}. Добавь их папки в SANDBOX_RO в .env — иначе скиллы с ними упадут.")
+    except Exception as e:
+        SANDBOX_OK.update(ok=False, why=str(e)[:300])
+        logging.error("песочница не работает: %s", e)
+        await tell_owner(f"⚠️ Песочница монтажа не работает — монтаж клиентов закрыт.\n{str(e)[:500]}")
+    finally:
+        shutil.rmtree(probe, ignore_errors=True)
+
+
 # ---------- баланс монтажей ----------
 def ledger(kind: str, **r):
     LEDGER.parent.mkdir(parents=True, exist_ok=True)
@@ -318,7 +432,8 @@ PAID_IDS = {r["charge"] for r in ledger_rows() if r.get("type") == "pay"}  # у�
 def balance(uid: int) -> dict:
     p = DB.get(str(uid), {})
     return {"sell": SELL, "free": uid in ALLOWED, "credits": p.get("credits", 0), "trial": SELL and not p.get("trial_used"),
-            "packs": [{"id": k, "name": PACK_NAMES.get(k, ""), "n": n, "stars": s} for k, (n, s) in PACKS.items()], "yt": YOUTUBE_PRICE, "edits": FREE_EDITS,
+            "packs": [{"id": k, "name": PACK_NAMES.get(k, ""), "n": n, "stars": s, "rub": PRICES_RUB.get(k, 0) if card_on() else 0} for k, (n, s) in PACKS.items()],
+            "card": card_on(), "yt": YOUTUBE_PRICE, "edits": FREE_EDITS,
             "trial_edits": TRIAL_EDITS, "trial_min": TRIAL_SRC_SEC // 60}
 
 
@@ -919,19 +1034,47 @@ async def grant_btn(c: CallbackQuery):
     await c.answer("Готово")
 
 
-# ---------- оплата: Telegram Stars ----------
+# ---------- оплата: Telegram Stars и карта (провайдер Telegram Payments) ----------
+def card_on() -> bool:
+    return bool(PAY_TOKEN and PRICES_RUB)
+
+
 def buy_kb():
-    return InlineKeyboardMarkup(inline_keyboard=[[InlineKeyboardButton(text=f"{n} {plural(n)} — {s} ⭐", callback_data=f"buy:{k}")] for k, (n, s) in PACKS.items()])
+    rows = [[InlineKeyboardButton(text=f"{n} {plural(n)} — {s} ⭐", callback_data=f"buy:{k}")] for k, (n, s) in PACKS.items()]
+    if card_on():
+        rows += [[InlineKeyboardButton(text=f"{PACKS[k][0]} {plural(PACKS[k][0])} — {r} ₽ картой", callback_data=f"buy:rub:{k}")] for k, r in PRICES_RUB.items()]
+    return InlineKeyboardMarkup(inline_keyboard=rows)
 
 
 def plural(n: int) -> str:
     return "монтаж" if n % 10 == 1 and n % 100 != 11 else "монтажа" if 2 <= n % 10 <= 4 and not 12 <= n % 100 <= 14 else "монтажей"
 
 
-def invoice_args(k: str) -> dict:
+def invoice_args(k: str, card: bool = False) -> dict:
     n, stars = PACKS[k]
-    return {"title": f"{n} {plural(n)} в Студии Кадрика", "payload": f"pk:{k}", "currency": "XTR", "prices": [LabeledPrice(label=f"{n} {plural(n)}", amount=stars)],
-            "description": f"{n} {plural(n)} на баланс, без срока. Рилс — 1 монтаж, YouTube-ролик — {YOUTUBE_PRICE}. {FREE_EDITS} правки в цене, сбой — монтаж вернётся."}
+    a = {"title": f"{n} {plural(n)} в Студии Кадрика", "payload": f"pk:{k}", "currency": "XTR", "prices": [LabeledPrice(label=f"{n} {plural(n)}", amount=stars)],
+         "description": f"{n} {plural(n)} на баланс, без срока. Рилс — 1 монтаж, YouTube-ролик — {YOUTUBE_PRICE}. {FREE_EDITS} правки в цене, сбой — монтаж вернётся."}
+    if card:
+        rub = PRICES_RUB[k]
+        a.update(payload=f"pr:{k}", currency=PAY_CUR, provider_token=PAY_TOKEN, prices=[LabeledPrice(label=f"{n} {plural(n)}", amount=rub * 100)])
+        if PAY_RECEIPT:  # чек 54-ФЗ: e-mail покупателя уходит провайдеру, позиция — в provider_data
+            a.update(need_email=True, send_email_to_provider=True, provider_data=json.dumps({"receipt": {"items": [{
+                "description": f"{n} {plural(n)} в Студии Кадрика"[:128], "quantity": "1.00",
+                "amount": {"value": f"{rub}.00", "currency": PAY_CUR}, "vat_code": PAY_VAT,
+                "payment_mode": "full_payment", "payment_subject": "service"}]}}, ensure_ascii=False))
+    return a
+
+
+def pay_ok(payload: str, currency: str, total: int) -> str:
+    """Пакет из payload, если счёт настоящий (пакет есть, валюта и сумма совпадают с текущими ценами); иначе ""."""
+    kind, _, k = payload.partition(":")
+    if not SELL or k not in PACKS:
+        return ""
+    if kind == "pk" and currency == "XTR" and total == PACKS[k][1]:
+        return k
+    if kind == "pr" and card_on() and k in PRICES_RUB and currency == PAY_CUR and total == PRICES_RUB[k] * 100:
+        return k
+    return ""
 
 
 def balance_text(uid: int) -> str:
@@ -951,33 +1094,37 @@ async def cmd_buy(m: Message):
 
 @dp.callback_query(F.data.startswith("buy:"))
 async def buy_btn(c: CallbackQuery):
-    k = c.data[4:]
-    if not SELL or k not in PACKS:
+    card, k = c.data.startswith("buy:rub:"), c.data.rpartition(":")[2]
+    if not SELL or k not in PACKS or (card and not (card_on() and k in PRICES_RUB)):
         return await c.answer("Пакет недоступен")
     await c.answer()
-    await bot.send_invoice(c.from_user.id, **invoice_args(k))
+    await bot.send_invoice(c.from_user.id, **invoice_args(k, card))
 
 
 @dp.pre_checkout_query()
 async def pre_checkout(q: PreCheckoutQuery):
-    k = q.invoice_payload[3:] if q.invoice_payload.startswith("pk:") else ""
-    ok = SELL and k in PACKS and q.currency == "XTR" and q.total_amount == PACKS[k][1]
+    ok = bool(pay_ok(q.invoice_payload, q.currency, q.total_amount))
     await q.answer(ok=ok, error_message=None if ok else "Этот счёт устарел — открой /buy и выбери пакет заново.")
 
 
 @dp.message(F.successful_payment)
 async def paid(m: Message):
     sp, uid = m.successful_payment, m.from_user.id
-    k = sp.invoice_payload[3:]
+    k = sp.invoice_payload.partition(":")[2]
     if sp.telegram_payment_charge_id in PAID_IDS or k not in PACKS:
         return
-    n = PACKS[k][0]
+    n, xtr = PACKS[k][0], sp.currency == "XTR"
     async with LOCK:
         p = player(uid, m.from_user.first_name or "")
         p["credits"] = p.get("credits", 0) + n
-        p["stars"] = p.get("stars", 0) + sp.total_amount
+        if xtr:
+            p["stars"] = p.get("stars", 0) + sp.total_amount
+            ledger("pay", uid=uid, charge=sp.telegram_payment_charge_id, pack=k, n=n, stars=sp.total_amount)
+        else:
+            p["rub"] = p.get("rub", 0) + sp.total_amount // 100
+            ledger("pay", uid=uid, charge=sp.telegram_payment_charge_id, provider=sp.provider_payment_charge_id, pack=k, n=n,
+                   rub=sp.total_amount // 100, cur=sp.currency)
         PAID_IDS.add(sp.telegram_payment_charge_id)
-        ledger("pay", uid=uid, charge=sp.telegram_payment_charge_id, pack=k, n=n, stars=sp.total_amount)
         inv = DB.get(str(p.get("ref", "")))
         ref = p["ref"] if inv and not p.get("ref_paid") else 0  # первая оплата приглашённого — монтаж обоим
         if ref:
@@ -993,7 +1140,8 @@ async def paid(m: Message):
         spawn(ref_notice(ref, f"Оплата от приглашённого игрока {m.from_user.first_name or ''} — тебе +{REF_BONUS} {plural(REF_BONUS)}. Спасибо, что зовёшь!"))
     await m.answer(f"Оплата прошла: +{n} {plural(n)}" + (f" и +{REF_BONUS} в подарок по приглашению" if ref else "") + f". На балансе: {p['credits']}.\nЗагрузи видео и выбери стиль.", reply_markup=open_kb("Смонтировать", tab="montage"))
     if OWNER and uid != OWNER:
-        await bot.send_message(OWNER, f"💫 Оплата: {m.from_user.full_name} (id {uid}) — {k}, {sp.total_amount} ⭐\nВозврат: /refund {sp.telegram_payment_charge_id}",
+        amount = f"{sp.total_amount} ⭐" if xtr else f"{sp.total_amount // 100} {sp.currency} картой"
+        await bot.send_message(OWNER, f"💫 Оплата: {m.from_user.full_name} (id {uid}) — {k}, {amount}\nВозврат: /refund {sp.telegram_payment_charge_id}",
                                disable_notification=True)
 
 
@@ -1010,7 +1158,7 @@ async def cmd_paysupport(m: Message):
 async def cmd_terms(m: Message):
     await m.answer("Условия Студии Кадрика.\n\nМонтаж делает ИИ по выбранному стилю. Пакеты монтажей — без срока. Рилс — 1 монтаж, YouTube-ролик — "
                    f"{YOUTUBE_PRICE}; в цене {FREE_EDITS} правки, дальше — 1 монтаж за правку. Если монтаж не получился по нашей вине, он сам вернётся на баланс. "
-                   "Неизрасходованные монтажи можно вернуть звёздами в течение 14 дней после оплаты — /paysupport.\n\n" + PRIVACY)
+                   "Неизрасходованные монтажи можно вернуть в течение 14 дней после оплаты — звёздами или на карту, смотря чем платил: /paysupport.\n\n" + PRIVACY)
 
 
 @dp.message(Command("give"))
@@ -1047,23 +1195,33 @@ async def cmd_refund(m: Message):
         return await m.answer("Платёж не найден. Формат: /refund <charge_id> — id приходит в уведомлении об оплате.")
     if any(r.get("type") == "unpay" and r.get("charge") == cid for r in ledger_rows()):
         return await m.answer("По этому платежу уже был возврат.")
-    try:
-        await bot.refund_star_payment(user_id=pay["uid"], telegram_payment_charge_id=cid)
-    except Exception as e:
-        return await m.answer(f"Telegram не принял возврат: {e}")
+    card = "rub" in pay
+    if not card:
+        try:
+            await bot.refund_star_payment(user_id=pay["uid"], telegram_payment_charge_id=cid)
+        except Exception as e:
+            return await m.answer(f"Telegram не принял возврат: {e}")
     async with LOCK:
         p = player(pay["uid"])
         p["credits"] = max(0, p.get("credits", 0) - pay["n"])
-        p["stars"] = max(0, p.get("stars", 0) - pay["stars"])
-        ledger("unpay", uid=pay["uid"], charge=cid, n=pay["n"], stars=pay["stars"])
+        if card:
+            p["rub"] = max(0, p.get("rub", 0) - pay["rub"])
+            ledger("unpay", uid=pay["uid"], charge=cid, n=pay["n"], rub=pay["rub"])
+        else:
+            p["stars"] = max(0, p.get("stars", 0) - pay["stars"])
+            ledger("unpay", uid=pay["uid"], charge=cid, n=pay["n"], stars=pay["stars"])
         save_db()
+    if card:  # деньги картой Bot API не возвращает — только в кабинете провайдера
+        return await m.answer(f"Снял {pay['n']} {plural(pay['n'])} у {pay['uid']} (на балансе: {p['credits']}). Деньги — {pay['rub']} ₽ — верни в кабинете "
+                              f"провайдера, платёж {pay.get('provider', '')}.")
     await m.answer(f"Вернул {pay['stars']} ⭐ пользователю {pay['uid']}, снял {pay['n']} {plural(pay['n'])}. На балансе: {p['credits']}.")
 
 
 def money_text(days: int = 30) -> str:
     rows = ledger_rows(days)
     pays, runs = [r for r in rows if r["type"] == "pay"], [r for r in rows if r["type"] == "run"]
-    stars = sum(r["stars"] for r in pays) - sum(r["stars"] for r in rows if r["type"] == "unpay")
+    stars = sum(r.get("stars", 0) for r in pays) - sum(r.get("stars", 0) for r in rows if r["type"] == "unpay")
+    rub = sum(r.get("rub", 0) for r in pays) - sum(r.get("rub", 0) for r in rows if r["type"] == "unpay")
     usd = sum(r.get("usd", 0) for r in runs)
     done = {r["job"] for r in runs if r.get("ok") and r.get("k") in ("start", "final", "resume")}
     paid_jobs = {r["job"] for r in rows if r["type"] == "charge" and r.get("pay") == "credits"}
@@ -1075,7 +1233,7 @@ def money_text(days: int = 30) -> str:
     return "\n".join([
         f"Деньги за {days} дн.",
         "",
-        f"Оплат: {len(pays)} · {stars} ⭐ (на вывод примерно ${stars * 0.013:.0f})" + (f" · возвратов: {sum(r['type'] == 'unpay' for r in rows)}" if any(r['type'] == 'unpay' for r in rows) else ""),
+        f"Оплат: {len(pays)} · {stars} ⭐ (на вывод примерно ${stars * 0.013:.0f})" + (f" · {rub} ₽ картой" if rub else "") + (f" · возвратов: {sum(r['type'] == 'unpay' for r in rows)}" if any(r['type'] == 'unpay' for r in rows) else ""),
         f"Списано монтажей: {sum(r['n'] for r in rows if r['type'] == 'charge' and r.get('pay') in ('credits', 'edit')) - sum(r['n'] for r in rows if r['type'] == 'refund' and r.get('pay') in ('credits', 'edit'))}"
         f" · пробных: {sum(r['type'] == 'charge' and r.get('pay') == 'trial' for r in rows) - sum(r['type'] == 'refund' and r.get('pay') == 'trial' for r in rows)}"
         f" · сбоев с возвратом: {sum(r['type'] == 'refund' for r in rows)}",
@@ -1206,8 +1364,8 @@ def review_blocker(v) -> str:
     return ""
 
 
-async def run_proc(args: list, timeout: int, cwd: str = None) -> tuple:
-    p = await asyncio.create_subprocess_exec(*args, cwd=cwd, stdin=asyncio.subprocess.DEVNULL, stdout=asyncio.subprocess.PIPE, stderr=asyncio.subprocess.PIPE)
+async def run_proc(args: list, timeout: int, cwd: str = None, env: dict = None) -> tuple:
+    p = await asyncio.create_subprocess_exec(*args, cwd=cwd, env=env, stdin=asyncio.subprocess.DEVNULL, stdout=asyncio.subprocess.PIPE, stderr=asyncio.subprocess.PIPE)
     try:
         out, err = await asyncio.wait_for(p.communicate(), timeout)
     except asyncio.TimeoutError:
@@ -1269,8 +1427,9 @@ async def review_video(uid: int, v):
             await bot.download(v, destination=src)
             await run_proc([REVIEW_PY, str(HERE / "review_tools.py"), "prep", str(src), str(work)], 300)
             src.unlink(missing_ok=True)
-            out, _ = await run_proc([CLAUDE, "-p", REVIEW_PROMPT, "--output-format", "json", "--model", REVIEW_MODEL,
-                                     "--allowedTools", "Read", "--add-dir", str(work)], 300, cwd=str(work))
+            argv, env = jail([CLAUDE, "-p", REVIEW_PROMPT, "--output-format", "json", "--model", REVIEW_MODEL,
+                              "--allowedTools", "Read", "--add-dir", str(work)], [work], sandbox=SANDBOX_OK["ok"])  # у разбора только Read — без песочницы он тоже безопасен
+            out, _ = await run_proc(argv, 300, cwd=str(work), env=env)
             res = json.loads(out)
             r = parse_review(res.get("result", ""))
             (work / "review.json").write_text(json.dumps(r, ensure_ascii=False))
@@ -1419,6 +1578,56 @@ async def week_rollover():
     if OWNER and not gift and not can(uid):
         kb = InlineKeyboardMarkup(inline_keyboard=[[InlineKeyboardButton(text="Дать доступ к монтажу", callback_data=f"gr:{uid}")]])
         await bot.send_message(OWNER, f"Лига недели {prev}: победил {w['name']} (id {uid}), {w['wxp']} XP. Приз — бесплатный монтаж?", reply_markup=kb)
+
+
+# ---------- бэкап данных: игроки, платежи, доступы, очередь ----------
+def make_backup() -> Path:
+    BACKUP_DIR.mkdir(parents=True, exist_ok=True)
+    out = BACKUP_DIR / f"kadrik-data-{datetime.now(TZ):%Y%m%d-%H%M}.zip"
+    with zipfile.ZipFile(out, "w", zipfile.ZIP_DEFLATED) as z:
+        for f in sorted((HERE / "data").glob("*")):
+            if f.is_file():
+                z.write(f, f"data/{f.name}")
+        if STATE_FILE.is_file():
+            z.write(STATE_FILE, "jobs/_jobs.json")
+    for old in sorted(BACKUP_DIR.glob("kadrik-data-*.zip"))[:-14]:
+        old.unlink(missing_ok=True)
+    return out
+
+
+async def backup(to: int = 0):
+    """Свежая копия в backups/ и её отправка в Telegram (to — кому, по умолчанию владельцу): сервер может пропасть целиком."""
+    f = await asyncio.to_thread(make_backup)
+    to = to or OWNER
+    if to and f.stat().st_size <= TG_LIMIT:
+        await bot.send_document(to, FSInputFile(f), caption=f"Бэкап Кадрика · игроков {len(DB)} · {f.stat().st_size // 1024} КБ\n"
+                                "Восстановить: распаковать data/ в папку бота при остановленном сервисе.", disable_notification=True)
+    return f
+
+
+async def backup_loop():
+    while True:
+        now = datetime.now(TZ)
+        nxt = now.replace(hour=BACKUP_HOUR, minute=30, second=0, microsecond=0)
+        if nxt <= now:
+            nxt += timedelta(days=1)
+        await asyncio.sleep((nxt - now).total_seconds())
+        try:
+            await backup()
+        except Exception as e:
+            logging.exception("бэкап")
+            await tell_owner(f"⚠️ Бэкап данных Кадрика не получился: {str(e)[:300]}")
+
+
+@dp.message(Command("backup"))
+async def cmd_backup(m: Message):
+    if m.from_user.id != OWNER:
+        return
+    try:
+        f = await backup(m.from_user.id)
+        await m.answer(f"Готово: {f.name}, копии лежат в {BACKUP_DIR} (14 последних).")
+    except Exception as e:
+        await m.answer(f"Бэкап не получился: {e}")
 
 
 async def growth_loop():
@@ -1719,6 +1928,12 @@ async def start_job(uid: int, d: dict, j: Job = None) -> Job:
     sk = catalog().get(str(d.get("skill", "")))
     if not sk:
         raise RuntimeError("неизвестный стиль")
+    if why := jail_blocked(uid):
+        raise RuntimeError(why)
+    if jailed(uid):  # папка и поиск по ней — на машине бота, это только для своих
+        if sk.get("inp") == "folder":
+            raise RuntimeError("этот стиль работает с папкой на машине студии — он доступен только владельцу")
+        d = {k: v for k, v in d.items() if k not in ("folder", "query")}
     j = j or focus(uid)
     if not j or j.status != "collect":
         j = new_job(uid)
@@ -1927,6 +2142,13 @@ async def hold_for_limit(j: Job, rl: dict, final: str, edit: str, approve: bool,
 async def run_job(j: Job, edit: str = "", approve: bool = False, resume: bool = False, again: bool = False):
     """again — та же работа после паузы из-за лимита: уже оплачена, правка уже посчитана."""
     uid = j.uid
+    if why := jail_blocked(uid):
+        if not edit and not approve:
+            refund(j, "песочница")
+        j.status = "review" if j.preview and not j.versions else ("done" if j.versions else "error")
+        j.line = why
+        save()
+        return await say(uid, f"{j.label}: {why}")
     resume = resume and bool(j.session)
     was = j.held.get("was", j.status) if again else j.status  # статус до запуска: после паузы задача стоит в queued
     in_review = was == "review" and not approve
@@ -1986,12 +2208,14 @@ async def run_job(j: Job, edit: str = "", approve: bool = False, resume: bool = 
                 "--add-dir", j.dir, str(SKILLS), str(PROFILE), "--model", MODEL, "--effort", EFFORT]
         if (edit or approve or resume) and j.session:
             args += ["--resume", j.session]
-        if j.data.get("folder"):
-            args += ["--add-dir", str(Path(j.data["folder"]).expanduser())]
+        folder = Path(j.data["folder"]).expanduser() if j.data.get("folder") and not jailed(uid) else None  # папка на машине — только своим
+        if folder:
+            args += ["--add-dir", str(folder)]
+        args, env = jail(args, [j.dir], sandbox=jailed(uid))
         log = open(j.path / "claude.log", "a")
         code, final, rl = -1, "", {}
         try:
-            p = PROC["p"] = await asyncio.create_subprocess_exec(*args, cwd=j.dir, stdin=asyncio.subprocess.DEVNULL, stdout=asyncio.subprocess.PIPE,
+            p = PROC["p"] = await asyncio.create_subprocess_exec(*args, cwd=j.dir, env=env, stdin=asyncio.subprocess.DEVNULL, stdout=asyncio.subprocess.PIPE,
                                                                  stderr=log, limit=16 * 1024 * 1024)
             last_edit, last_tick, last_line = 0.0, 0.0, ""
             async for raw in p.stdout:
@@ -2145,10 +2369,10 @@ async def api_game(request: web.Request) -> web.Response:
     if act == "montage":  # каталог — всем, монтаж — владельцу
         return web.json_response({"catalog": list(catalog().values()), "owner": can(uid), "bal": balance(uid)}, headers={"cache-control": "no-store"})
     if act == "invoice":  # ссылка на счёт Stars для Telegram.WebApp.openInvoice
-        k = str(body.get("pack", ""))
-        if not SELL or k not in PACKS:
+        k, card = str(body.get("pack", "")), body.get("cur") == "rub"
+        if not SELL or k not in PACKS or (card and not (card_on() and k in PRICES_RUB)):
             return err("пакет недоступен")
-        return web.json_response({"state": view(uid), "got": {"link": await bot.create_invoice_link(**invoice_args(k))}}, headers={"cache-control": "no-store"})
+        return web.json_response({"state": view(uid), "got": {"link": await bot.create_invoice_link(**invoice_args(k, card))}}, headers={"cache-control": "no-store"})
     async with LOCK:
         before = json.dumps(DB.get(str(uid)), ensure_ascii=False)  # файл игроков пишем, только если что-то поменялось
         p = player(uid, user.get("first_name", ""))
@@ -2445,6 +2669,13 @@ async def api_ext_job(request: web.Request) -> web.StreamResponse:
     return web.json_response(ext_view(j), headers={"cache-control": "no-store"})
 
 
+async def api_health(request: web.Request) -> web.Response:
+    """Для внешнего мониторинга: бот жив, очередь, пауза по лимиту, песочница."""
+    return web.json_response({"ok": True, "up": int(time.time() - STARTED), "queue": sum(1 for o in jobs() if o.status == "queued"),
+                              "running": bool(PROC.get("job")), "paused": paused(), "sandbox": SANDBOX_OK["ok"], "sell": SELL},
+                             headers={"cache-control": "no-store"})
+
+
 def static_from(root: Path):
     async def handler(request: web.Request) -> web.StreamResponse:
         rel = request.match_info.get("p", "") or "index.html"
@@ -2459,7 +2690,7 @@ async def miniapp_server():
     app = web.Application(client_max_size=20 * 1024 * 1024)
     app.add_routes([web.post("/api/ext/jobs", api_ext_create), web.get("/api/ext/jobs/{id}", api_ext_job),
                     web.get("/api/ext/jobs/{id}/{act}", api_ext_job), web.post("/api/ext/jobs/{id}/{act}", api_ext_job),
-                    web.post("/api/job", api_job), web.post("/api/up", api_up), web.get("/api/img", api_img), web.get("/api/file", api_file),
+                    web.get("/health", api_health), web.post("/api/job", api_job), web.post("/api/up", api_up), web.get("/api/img", api_img), web.get("/api/file", api_file),
                     web.post("/api/{act}", api_game),
                     web.get("/samples/{p:.+}", static_from(PACK / "public/samples")), web.get("/card/{n}", api_card),
                     web.get("/", static_from(PUBLIC)), web.get("/{p:.+}", static_from(PUBLIC))])
@@ -2544,7 +2775,8 @@ FULL_COMMANDS = GUEST_COMMANDS[:1] + [BotCommand(command="montage", description=
                 ([BotCommand(command="buy", description="Баланс и пополнение"), BotCommand(command="paysupport", description="Вопрос по оплате")] if SELL else []) + GUEST_COMMANDS[1:]
 OWNER_COMMANDS = [BotCommand(command="stats", description="Статистика"), BotCommand(command="broadcast", description="Рассылка всем игрокам"),
                   BotCommand(command="revoke", description="Доступ к монтажу по заявкам"), BotCommand(command="money", description="Оплаты и стоимость монтажей"),
-                  BotCommand(command="give", description="Подарить монтажи: /give id N"), BotCommand(command="refund", description="Вернуть звёзды за платёж")]
+                  BotCommand(command="give", description="Подарить монтажи: /give id N"), BotCommand(command="refund", description="Вернуть звёзды за платёж"),
+                  BotCommand(command="backup", description="Копия данных игроков и платежей")]
 
 
 async def notify_start():
@@ -2587,11 +2819,13 @@ async def main():
     except Exception as e:
         logging.warning("имя бота: %s", e)
     await notify_start()
+    await jail_selftest()
     await miniapp_server()
     for j in [o for o in jobs() if o.status == "queued" and o.held]:  # ждали сброса лимита до перезапуска — снова в очередь, по порядку
         spawn(run_job(j, edit=j.held.get("edit", ""), approve=j.held.get("approve", False), resume=j.held.get("resume", False), again=True))
     await resume_interrupted()
     spawn(growth_loop())
+    spawn(backup_loop())
     await asyncio.to_thread(kill_stale_tunnels)
     if MINIAPP_URL and TUNNEL_CONFIG:
         spawn(named_tunnel_loop())

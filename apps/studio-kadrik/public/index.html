@@ -418,7 +418,7 @@ function moneyBlock(b) {  // профиль: баланс и на что его 
 function tariffsBlock(b) {  // профиль: тарифы и пополнение звёздами
   if (!b || !b.packs) return '';
   const base = b.packs[0].stars / b.packs[0].n, best = 'p15';
-  return `<div class="sec" id="tariffs"><b>Тарифы</b><span class="small dim">оплата звёздами Telegram ⭐</span></div>
+  return `<div class="sec" id="tariffs"><b>Тарифы</b><span class="small dim">${b.card ? 'звёздами Telegram ⭐ или картой' : 'оплата звёздами Telegram ⭐'}</span></div>
   ${b.sell ? '' : '<div class="card row small muted" style="margin-top:10px">Оплата откроется совсем скоро — пока монтаж по заявке</div>'}
   <div class="list">${b.packs.map(p => {
     const per = Math.round(p.stars / p.n), save = Math.round((1 - per / base) * 100), yt = Math.floor(p.n / b.yt);
@@ -428,7 +428,8 @@ function tariffsBlock(b) {  // профиль: тарифы и пополнен�
       <div class="small muted" style="margin-top:4px">${p.n} ${plural(p.n)} · ${reelsN(p.n)}${yt ? ' или ' + ytN(yt) : ''}</div>
       <div style="display:flex;justify-content:space-between;align-items:center;gap:10px;margin-top:10px">
         <span class="small dim">${fmt(per)} ⭐ за монтаж${save > 0 ? ` · <span style="color:var(--primary)">−${save}%</span>` : ''}</span>
-        <button class="btn btn--sm ${p.id === best ? 'btn--cu' : ''}" data-buy="${esc(p.id)}" ${b.sell ? '' : 'disabled'}>Купить</button></div></div>`;
+        <span style="display:flex;gap:6px">${p.rub ? `<button class="btn btn--sm" data-buy="${esc(p.id)}" data-cur="rub" ${b.sell ? '' : 'disabled'}>${fmt(p.rub)} ₽</button>` : ''}
+        <button class="btn btn--sm ${p.id === best ? 'btn--cu' : ''}" data-buy="${esc(p.id)}" ${b.sell ? '' : 'disabled'}>${p.rub ? fmt(p.stars) + ' ⭐' : 'Купить'}</button></span></div></div>`;
   }).join('')}</div>
   <div class="card" style="margin-top:8px;padding:14px 16px"><div class="small muted" style="margin-bottom:6px">Что входит</div>
     <div class="small" style="line-height:1.9">Рилс — 1 монтаж · YouTube-ролик — ${b.yt}<br>${b.edits} правки в цене, дальше — 1 монтаж за правку<br>
@@ -440,10 +441,10 @@ function balBlock(b = M && M.bal) {  // монтаж: короткая стро�
     <div style="font-size:14.5px;font-weight:600;margin-top:2px">${b.credits} ${plural(b.credits)}${b.trial ? ' · пробный рилс бесплатно' : b.credits ? ' · хватит на ' + reelsN(b.credits) : ''}</div></div>
     <span class="small" style="color:var(--primary)">Пополнить ›</span></button>`;
 }
-async function buy(pack) {
+async function buy(pack, cur) {
   if (!tg || !tg.openInvoice) return toast('Оплата — в Telegram: /buy в чате с ботом');
   try {
-    const g = await call('invoice', { pack });
+    const g = await call('invoice', cur ? { pack, cur } : { pack });
     tg.openInvoice(g.link, st => {
       if (st === 'paid') { haptic('success'); toast('Оплата прошла — монтажи на балансе'); setTimeout(() => call('me').then(() => M ? loadMontage() : render()).catch(() => {}), 1500); }
       else if (st === 'failed') toast('Оплата не прошла');
@@ -691,7 +692,7 @@ function render() {
   document.querySelectorAll('.tabs button').forEach(b => b.classList.toggle('on', b.dataset.tab === (SUB[TAB] || TAB)));
   document.querySelectorAll('[data-go]').forEach(b => b.onclick = () => { TAB = b.dataset.go; render(); const t = b.dataset.to && $('#' + b.dataset.to); t ? t.scrollIntoView({ block: 'start' }) : window.scrollTo(0, 0); });
   const up = $('#topUp'); if (up) up.onclick = () => $('#tariffs').scrollIntoView({ behavior: 'smooth', block: 'start' });
-  document.querySelectorAll('[data-buy]').forEach(b => b.onclick = () => buy(b.dataset.buy));
+  document.querySelectorAll('[data-buy]').forEach(b => b.onclick = () => buy(b.dataset.buy, b.dataset.cur));
   if (TAB === 'partners') wirePartners();
   if (TAB === 'montage') wireMontage();
   const feed = $('#feed'); if (feed) feed.onclick = () => { if (S.owner) { TAB = 'montage'; render(); window.scrollTo(0, 0); } else if (tg) tg.close(); else toast('Отправь видео боту в чат'); };

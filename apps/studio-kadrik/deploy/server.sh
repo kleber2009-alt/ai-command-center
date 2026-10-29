@@ -29,10 +29,42 @@ rm -rf "$SRC/__pycache__"
 if [ "$MODE" = check ]; then
   echo "check only: live $DIR vs release $REL"
   for f in "${CODE[@]}"; do diff -ru "$DIR/$f" "$SRC/$f" | head -400 || true; done
+  rm -f "$ROOT/env.add"
   exit 0
 fi
 
 mkdir -p "$ROOT/backups"
+cp -a "$DIR/.env" "$ROOT/backups/$REL.env"
+[ -z "$(tail -c1 "$DIR/.env")" ] || echo >> "$DIR/.env"  # appended lines must not glue to the last one
+chmod 600 "$ROOT/backups/$REL.env"
+
+# --- montage sandbox (bubblewrap): clients' montage runs only inside it ---
+command -v bwrap >/dev/null || { apt-get update -qq && DEBIAN_FRONTEND=noninteractive apt-get install -y -qq bubblewrap; }
+bwrap_ok() { sudo -u "$OWNER" -H bwrap --ro-bind / / --proc /proc --dev /dev --unshare-pid --die-with-parent true 2>/dev/null; }
+if ! bwrap_ok && [ "$(sysctl -n kernel.apparmor_restrict_unprivileged_userns 2>/dev/null)" = 1 ] && [ ! -f /etc/apparmor.d/bwrap ]; then
+  # Ubuntu 23.10+: unprivileged user namespaces only for programs with an AppArmor profile that allows them
+  printf 'abi <abi/4.0>,\ninclude <tunables/global>\nprofile bwrap /usr/bin/bwrap flags=(unconfined) {\n  userns,\n  include if exists <local/bwrap>\n}\n' > /etc/apparmor.d/bwrap
+  apparmor_parser -r /etc/apparmor.d/bwrap
+fi
+if bwrap_ok; then
+  grep -q '^SANDBOX=' "$DIR/.env" || echo 'SANDBOX=bwrap' >> "$DIR/.env"
+  echo "sandbox: bwrap works for $OWNER"
+else
+  echo "::warning::bwrap does not start for $OWNER — clients' montage stays closed until the sandbox works"
+fi
+
+# --- settings from GitHub secrets (uploaded by the workflow as KEY=VALUE lines; empty values are skipped) ---
+if [ -f "$ROOT/env.add" ]; then
+  while IFS='=' read -r k v; do
+    [ -n "$k" ] && [ -n "$v" ] || continue
+    grep -v "^$k=" "$DIR/.env" > "$DIR/.env.tmp" || true
+    printf '%s=%s\n' "$k" "$v" >> "$DIR/.env.tmp"
+    cat "$DIR/.env.tmp" > "$DIR/.env" && rm -f "$DIR/.env.tmp"
+    echo "env: $k set"
+  done < "$ROOT/env.add"
+  rm -f "$ROOT/env.add"
+fi
+
 BAK="$ROOT/backups/$REL.tgz"
 ( cd "$DIR" && tar -czf "$BAK" --ignore-failed-read "${CODE[@]}" 2>/dev/null ) || true
 echo "backup: $BAK"
@@ -71,6 +103,7 @@ else
   tar -xzf "$BAK" -C "$OLD"
   install_code "$OLD"
   rm -rf "$OLD"
+  cat "$ROOT/backups/$REL.env" > "$DIR/.env"
   systemctl restart "$SVC"
   exit 1
 fi
@@ -78,3 +111,4 @@ fi
 # keep the last 7 releases and backups
 ls -1dt "$ROOT"/releases/* | tail -n +8 | xargs -r rm -rf
 ls -1t "$ROOT"/backups/*.tgz | tail -n +8 | xargs -r rm -f
+ls -1t "$ROOT"/backups/*.env | tail -n +8 | xargs -r rm -f

@@ -1,0 +1,28 @@
+name: monitor-studio-kadrik
+
+# Uptime check of «Студия Кадрика»: https://kadrik.aicex.club/health every 30 minutes (bot process + cloudflared tunnel).
+# A failed run is the alert — GitHub e-mails it. Also fails when sales are on but the montage sandbox is broken
+# (clients cannot start a montage then).
+
+on:
+  schedule:
+    - cron: '7,37 * * * *'
+  workflow_dispatch:
+
+jobs:
+  health:
+    runs-on: ubuntu-latest
+    timeout-minutes: 5
+    steps:
+      - name: Check /health
+        run: |
+          body=$(curl -sS --fail --retry 4 --retry-delay 15 --retry-all-errors --max-time 20 https://kadrik.aicex.club/health) || {
+            echo "::error::kadrik.aicex.club/health does not answer — the bot or its tunnel is down"; exit 1; }
+          echo "$body"
+          echo "$body" | jq -e '.ok == true' >/dev/null || { echo "::error::health is not ok"; exit 1; }
+          if echo "$body" | jq -e '.sell == true and .sandbox == false' >/dev/null; then
+            echo "::error::sales are on, but the montage sandbox is not working — clients cannot start a montage"; exit 1
+          fi
+          if echo "$body" | jq -e '.paused == true' >/dev/null; then
+            echo "::warning::queue is paused: the Claude limit is used up"
+          fi
