@@ -21,12 +21,15 @@
      CAROUSEL_COMPETITORS (иначе REELS_COMPETITORS) · CAROUSEL_PER_DAY (3) · CAROUSEL_HOUR (10, по CAROUSEL_TZ Europe/Moscow)
      ANTHROPIC_API_KEY · CAROUSEL_MODEL (STUDIO_MODEL, claude-opus-5-5) · APIFY_TOKEN · CHROMIUM_BIN (chromium-browser)
      CAROUSEL_SKILL_DIR · KADRIK_SKILLS (/kadrik/skills) · для заглушек — TELEGRAM_API_BASE, APIFY_API_BASE, ANTHROPIC_BASE_URL.
+   Одна ветка — один бот (tg-branch.mjs): слышит только свою ветку, команды с @другим_ботом не его, ветку Reels не привязать,
+   токен совпал с REMAKE_TG_BOT_TOKEN — ветка выключена. После ✅ под карточкой — статус шагов, обновляется сам.
    Состояние — DATA_DIR/carousels/state.json, карусели — DATA_DIR/carousels/<id>/, готовые слайды — DATA_DIR/media/<id>-*.jpg. */
 import fs from 'node:fs';
 import path from 'node:path';
 import crypto from 'node:crypto';
 import { spawn } from 'node:child_process';
 import { fileURLToPath } from 'node:url';
+import { takenBy, parse, progressText, BRANCHES } from './tg-branch.mjs';
 
 const env = (k, d = '') => (process.env[k] || d).trim();
 const HERE = path.dirname(fileURLToPath(import.meta.url));
@@ -197,7 +200,7 @@ function slideHtml(slide, n, total, src, handle) {
   return `${head}${bg}${box}${foot}${tail}`;
 }
 
-export async function renderSlides({ slides, src, dir, handle = '@ilia.paliy', prefix }) {
+export async function renderSlides({ slides, src, dir, handle = '@ilia.paliy', prefix, onSlide = () => {} }) {
   fs.mkdirSync(dir, { recursive: true });
   const out = [];
   for (let i = 0; i < slides.length; i++) {
@@ -210,6 +213,7 @@ export async function renderSlides({ slides, src, dir, handle = '@ilia.paliy', p
     const c = await run('ffmpeg', ['-v', 'error', '-y', '-i', png, '-vf', `crop=${W}:${H}:0:0`, '-q:v', '2', jpg], { timeout: 60e3 });
     if (c.code !== 0) throw new Error(`ffmpeg: ${c.err.slice(0, 200)}`);
     out.push(jpg);
+    await onSlide(n, slides.length);
   }
   return out;
 }
@@ -296,6 +300,11 @@ export function normalizePlan(p, { own, count, cfg = skillConfig() }) {
 // ---------- the bot ----------
 export function createCarouselBot({ data, media, publicUrl = env('PUBLIC_URL', 'https://remake.aicex.club') }) {
   if (!TOKEN) return { enabled: false };
+  // the same bot polling twice steals updates from the reels topic — one token, one branch
+  if (TOKEN === env('REMAKE_TG_BOT_TOKEN')) {
+    console.error('carousels: CAROUSEL_TG_BOT_TOKEN совпадает с REMAKE_TG_BOT_TOKEN — ветка «Instagram Карусели» выключена, нужен отдельный бот');
+    return { enabled: false, error: 'тот же токен, что у ветки Reels — нужен отдельный бот' };
+  }
   const ROOT = path.join(data, 'carousels');
   const FILE = path.join(ROOT, 'state.json');
   fs.mkdirSync(ROOT, { recursive: true });
@@ -332,6 +341,25 @@ export function createCarouselBot({ data, media, publicUrl = env('PUBLIC_URL', '
       .catch((e) => console.error('carousels say:', e.message))
     : Promise.resolve(null);
   const quiet = (p) => p.catch((e) => { if (!/not modified/.test(e.message)) console.error('carousels:', e.message); });
+  let me = '';  // the bot's @username (getMe)
+
+  // ---------- status after ✅: one message under the card, edited as the steps go ----------
+  const STEPS = [{ label: 'Собираю слайды', eta: 'обычно 1–2 мин' }, { label: 'Альбом, файлы без сжатия и подпись — сюда', eta: 'до минуты' }];
+  async function progress(j, cur, { failed = '', detail = '', fresh = false } = {}) {
+    if (fresh || !j.progress) j.progress = { msg: fresh ? 0 : j.progress?.msg || 0, started: new Date().toISOString() };
+    const p = j.progress;
+    if (p.cur !== cur) p.step_at = new Date().toISOString();
+    Object.assign(p, { cur, failed, detail });
+    saveJob(j);
+    const text = progressText({ title: `Карусель «${esc(j.plan?.topic || 'по залёту @' + j.origin.author)}»`, steps: STEPS, cur, failed: esc(failed), detail: esc(detail),
+      started: p.started, stepAt: p.step_at });
+    if (p.msg) {
+      try { await tg('editMessageText', { chat_id: st.chat_id, message_id: p.msg, text, parse_mode: 'HTML', link_preview_options: { is_disabled: true } }); return; }
+      catch (e) { if (/not modified/.test(e.message)) return; if (!/not found|can't be edited/i.test(e.message)) return console.error('carousels progress:', e.message); }
+    }
+    const m = await say(text, replyTo(j));
+    if (m) { p.msg = m.message_id; saveJob(j); }
+  }
   const replyTo = (j) => (j.card ? { reply_parameters: { message_id: j.card, allow_sending_without_reply: true } } : {});
 
   // ---------- 1. find the carousels that took off ----------
@@ -534,6 +562,7 @@ export function createCarouselBot({ data, media, publicUrl = env('PUBLIC_URL', '
     j.failed = what;
     log(j, `сорвалось (${what}): ${text}`);
     await card(j);
+    if (what === 'render' && j.progress) return progress(j, j.progress.cur || 0, { failed: text.slice(0, 300) });
     await say(`⚠️ ${esc({ prep: 'План', render: 'Сборка слайдов' }[what] || what)}: ${esc(text)}`, replyTo(j));
   }
 
@@ -542,9 +571,11 @@ export function createCarouselBot({ data, media, publicUrl = env('PUBLIC_URL', '
     j.state = 'render';
     saveJob(j);
     await card(j);
+    await progress(j, 0, { fresh: j.progress?.cur >= STEPS.length || !j.progress, detail: `готово 0 из ${j.plan.slides.length}` });
     const prefix = path.join(media, `${j.id}-${crypto.randomBytes(4).toString('hex')}`);
     for (const f of j.out) fs.rmSync(path.join(media, f), { force: true });
-    const files = await renderSlides({ slides: j.plan.slides, src: j.src, dir: path.join(jdir(j), 'render'), handle: skillConfig().style?.handle || '@ilia.paliy', prefix });
+    const files = await renderSlides({ slides: j.plan.slides, src: j.src, dir: path.join(jdir(j), 'render'), handle: skillConfig().style?.handle || '@ilia.paliy', prefix,
+      onSlide: (n, total) => progress(j, 0, { detail: `готово ${n} из ${total}` }) });
     j.out = files.map((f) => path.basename(f));
     log(j, `собрано слайдов: ${files.length}`);
     await deliver(j, files);
@@ -561,6 +592,7 @@ export function createCarouselBot({ data, media, publicUrl = env('PUBLIC_URL', '
   }
 
   async function deliver(j, files) {
+    await progress(j, 1);
     const p = j.plan;
     await group(files, 'photo', `📚 ${p.topic || 'Карусель'} · ${files.length} ${plural(files.length, 'слайд', 'слайда', 'слайдов')} · по залёту @${j.origin.author}`.slice(0, 1024));
     try { await group(files, 'document', 'Файлы для публикации — без сжатия Telegram'); }
@@ -570,6 +602,7 @@ export function createCarouselBot({ data, media, publicUrl = env('PUBLIC_URL', '
     j.state = 'done';
     saveJob(j);
     await card(j);
+    await progress(j, 2);
   }
 
   // ---------- 4. buttons, replies, commands ----------
@@ -582,8 +615,8 @@ export function createCarouselBot({ data, media, publicUrl = env('PUBLIC_URL', '
     if (!j) return answer('Этой карусели уже нет');
     if (busy.has(j.id)) return answer('Уже в работе — подождите');
     if (act === 'ok') {
-      if (!['card', 'done'].includes(j.state)) return answer('Уже в работе');
-      answer('Собираю слайды');
+      if (!['card', 'done'].includes(j.state)) return answer('Уже в работе — статус под карточкой');
+      answer('Собираю слайды → пришлю альбом и файлы. Статус — под карточкой');
       return go(j, 'render', () => build(j));
     }
     if (act === 'hook') {
@@ -615,14 +648,20 @@ export function createCarouselBot({ data, media, publicUrl = env('PUBLIC_URL', '
     `Ссылка на карусель сюда — сразу в работу. Ответ на карточку текстом — переделаю план с пожеланием.`;
 
   async function onMessage(msg) {
-    const text = String(msg.text || '').trim();
-    const cmd = (text.match(/^\/([a-z_]+)(?:@\w+)?/i) || [])[1]?.toLowerCase() || '';
+    const { text, cmd, forMe, forOther, topic } = parse(msg, me);
+    if (forOther) return;  // /scan@other_bot — not ours
     const isOwner = owners().has(msg.from?.id);
     if (cmd === 'bind') {
       if (!isOwner && owners().size) return;
+      const here = st.chat_id === msg.chat.id && st.topic_id === topic;
+      if (st.chat_id && !here && !forMe) return;  // a plain /bind is for a bot without a topic; moving this one — /bind@me
+      const reply = (t) => tg('sendMessage', { chat_id: msg.chat.id, ...(topic ? { message_thread_id: topic } : {}), text: t, parse_mode: 'HTML' }).catch(() => {});
+      if (msg.chat.is_forum && !topic) return reply(`Привязать можно только ветку, не «Общий». Создайте ветку и напишите в ней /bind${me ? '@' + esc(me) : ''}.`);
+      const other = takenBy(data, 'carousels', msg.chat.id, topic);
+      if (other) return reply(`Эта ветка уже за «${esc(BRANCHES[other])}» — карусели здесь не живут. Создайте отдельную ветку и напишите в ней /bind${me ? '@' + esc(me) : ''}.`);
       if (!owners().size) st.owners = [msg.from.id];
       st.chat_id = msg.chat.id;
-      st.topic_id = msg.is_topic_message ? msg.message_thread_id : 0;
+      st.topic_id = topic;
       save();
       let renamed = '';
       if (st.topic_id) {
@@ -631,7 +670,7 @@ export function createCarouselBot({ data, media, publicUrl = env('PUBLIC_URL', '
       }
       return say(`Готово: карточки каруселей теперь приходят сюда. ${renamed}\n\n${HELP}`);
     }
-    if (!st.chat_id || msg.chat.id !== st.chat_id || (st.topic_id && msg.message_thread_id !== st.topic_id)) return;
+    if (!st.chat_id || msg.chat.id !== st.chat_id || topic !== (st.topic_id || 0)) return;  // only its own topic
     if (!isOwner) return;
     if (cmd === 'help' || cmd === 'start') return say(HELP);
     if (cmd === 'scan') { if (!APIFY) return say('⚠️ Нет APIFY_TOKEN — искать залёты нечем.'); return scan(true).catch((e) => say(`⚠️ ${esc(e.message)}`)); }
@@ -683,6 +722,7 @@ export function createCarouselBot({ data, media, publicUrl = env('PUBLIC_URL', '
   let stopped = false;
   (async function poll() {
     try { await tg('deleteWebhook', {}); } catch {}
+    try { me = (await tg('getMe', {})).username || ''; } catch (e) { console.error('carousels getMe:', e.message); }
     while (!stopped) {
       try {
         const ups = await tg('getUpdates', { offset: st.offset, timeout: 50, allowed_updates: ['message', 'callback_query'] }, { timeout: 70e3 });
@@ -699,9 +739,19 @@ export function createCarouselBot({ data, media, publicUrl = env('PUBLIC_URL', '
     }
   })();
 
+  setInterval(() => {  // the status message shows how long the running step has been going
+    for (const j of jobs.values()) if (j.state === 'render' && j.progress?.msg) progress(j, j.progress.cur, { detail: j.progress.detail }).catch(() => {});
+  }, 60e3).unref();
+
   setInterval(() => {
     if (st.chat_id && APIFY && st.last_scan !== today() && hourNow() >= HOUR) scan(false).catch((e) => console.error('carousels scan:', e.message));
   }, 5 * 60e3).unref();
+
+  // a topic the reels branch already owns is not ours: unbind, /bind in a topic of its own
+  if (st.chat_id && takenBy(data, 'carousels', st.chat_id, st.topic_id || 0)) {
+    console.error('carousels: ветка уже за Reels — привязка снята, нужен /bind в отдельной ветке');
+    st.chat_id = 0; st.topic_id = 0; save();
+  }
 
   // after a restart: whatever was in flight starts again
   for (const j of jobs.values()) {
@@ -709,5 +759,5 @@ export function createCarouselBot({ data, media, publicUrl = env('PUBLIC_URL', '
     if (j.state === 'render') go(j, 'render', () => build(j));
   }
 
-  return { enabled: true, status: () => ({ bound: Boolean(st.chat_id), competitors: st.competitors.length, last_scan: st.last_scan }), stop: () => { stopped = true; } };
+  return { enabled: true, status: () => ({ bot: me ? '@' + me : '', bound: Boolean(st.chat_id), topic: st.topic_id || 0, competitors: st.competitors.length, last_scan: st.last_scan }), stop: () => { stopped = true; } };
 }

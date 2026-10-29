@@ -62,6 +62,7 @@ jobs:
           node --check apps/remake-site/studio.mjs
           node --check apps/remake-site/reels-bot.mjs
           node --check apps/remake-site/carousel-bot.mjs
+          node --check apps/remake-site/tg-branch.mjs
           test -f apps/remake-site/dist/carousel-skill/config.json && test -f apps/remake-site/dist/carousel-skill/references/carousel-rules.md
           python3 -c 'import ast, sys; [ast.parse(open(f).read(), f) for f in sys.argv[1:]]' apps/remake-site/dist/skill/scripts/*.py
           test -f apps/remake-site/dist/Dockerfile && test -f apps/remake-site/dist/skill/references/script-rules.md

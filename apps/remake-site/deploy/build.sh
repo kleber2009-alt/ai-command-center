@@ -19,7 +19,7 @@ rm -rf "$OUT" && mkdir -p "$OUT"
   printf '\n</body>\n</html>\n'
 } > "$OUT/index.html"
 cp -R "$APP/seed" "$OUT/seed"
-cp "$APP/server.mjs" "$APP/studio.mjs" "$APP/reels-bot.mjs" "$APP/carousel-bot.mjs" "$APP/package.json" "$APP/package-lock.json" "$APP/Dockerfile" "$APP/.dockerignore" "$OUT/"
+cp "$APP/server.mjs" "$APP/studio.mjs" "$APP/reels-bot.mjs" "$APP/carousel-bot.mjs" "$APP/tg-branch.mjs" "$APP/package.json" "$APP/package-lock.json" "$APP/Dockerfile" "$APP/.dockerignore" "$OUT/"
 mkdir -p "$OUT/skill/scripts" "$OUT/skill/references"
 cp "$SKILL/config.json" "$OUT/skill/"
 cp "$SKILL"/scripts/*.py "$OUT/skill/scripts/"
