@@ -4,8 +4,8 @@
    готовые задачи, только дописывает к ним новые PR той же ветки. Удалённая задача не вернётся —
    её PR остаются в seen. Чтобы задача стала «ручной», перенесите её в tasks.js. */
 window.OFFICE_TASKS_AUTO = {
-  "since": "2026-10-29T04:49:42Z",
-  "seen": [148, 149, 150, 151, 152, 153, 154, 155, 156, 157, 158, 159, 160, 161, 162, 163, 164],
+  "since": "2026-10-29T07:08:47Z",
+  "seen": [148, 149, 150, 151, 152, 153, 154, 155, 156, 157, 158, 159, 160, 161, 162, 163, 164, 165],
   "tasks": [
     {
       "id": "gh-148",
@@ -111,6 +111,23 @@ window.OFFICE_TASKS_AUTO = {
       ],
       "group": "remake-site|claude/dazzling-fermat-0inx8a",
       "prs": [160, 163],
+      "auto": true
+    },
+    {
+      "id": "gh-165",
+      "date": "2026-10-29",
+      "dateNote": "слияние PR на GitHub",
+      "kind": "Разработка",
+      "dept": "ceo",
+      "people": ["ilia"],
+      "agents": ["product", "specs"],
+      "title": "Command Center: все 39 проектов, домены и боты на одной карте в дашборде",
+      "summary": "Реестр всех проектов AICEX с архитектурой и ссылками на сайты, ботов, админки и код сам заливается в дашборд projects.aicex.club после каждого обновления. Добавлена схема серверов, доменов и связок.",
+      "proof": [
+        { "kind": "github", "label": "PR #165 · реестр всех проектов, карта архитектуры и синк в дашборд", "url": "https://github.com/kleber2009-alt/ai-command-center/pull/165" }
+      ],
+      "group": "command-center|claude/great-goodall-2m5iae",
+      "prs": [165],
       "auto": true
     },
     {
