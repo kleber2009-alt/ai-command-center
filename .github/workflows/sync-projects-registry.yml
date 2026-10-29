@@ -2,8 +2,8 @@ name: sync-projects-registry
 
 # Заливает реестр проектов apps/command-center/registry/projects.mjs в дашборд
 # https://projects.aicex.club/dashboard. Снаружи запись в API закрыта Basic auth Caddy,
-# поэтому воркфлоу открывает SSH-туннель на сервер aicex (vars.HETZNER_HOST) к порту
-# контейнера command-center и вызывает API напрямую.
+# поэтому воркфлоу открывает SSH-туннель на сервер aicex (vars.HETZNER_HOST) к тому адресу,
+# куда Caddy проксирует projects.aicex.club (registry/find-upstream.py), и вызывает API напрямую.
 # Секреты: HETZNER_SSH_KEY. Переменные: HETZNER_HOST, HETZNER_USER, HETZNER_SSH_PORT.
 
 on:
@@ -51,11 +51,13 @@ jobs:
           chmod 600 ~/.ssh/id_deploy
           ssh-keyscan -p "$SSH_PORT" -H "$HOST" >> ~/.ssh/known_hosts 2>/dev/null
           SSH="ssh -i $HOME/.ssh/id_deploy -p $SSH_PORT $SSH_USER@$HOST"
-          # host port of the container (deploy-command-center.yml publishes 127.0.0.1:3005 → 3003)
-          PORT=$($SSH "docker port command-center 3003 2>/dev/null || docker port aisales-command-center 3003 2>/dev/null" | head -1 | sed 's/.*://')
-          PORT=${PORT:-3005}
-          echo "command-center on 127.0.0.1:$PORT"
-          $SSH -f -N -o ExitOnForwardFailure=yes -L 18080:127.0.0.1:$PORT
+          UP=$($SSH python3 - < apps/command-center/registry/find-upstream.py)
+          echo "projects.aicex.club upstream: ${UP:-not found}"
+          if [ -z "$UP" ]; then
+            $SSH 'docker ps --format "{{.Names}}  {{.Ports}}"' || true
+            echo "::error::upstream for projects.aicex.club not found"; exit 1
+          fi
+          $SSH -f -N -o ExitOnForwardFailure=yes -L 18080:$UP
           for i in $(seq 1 10); do curl -sf -o /dev/null http://127.0.0.1:18080/api/projects && break; sleep 1; done
           curl -sf -o /dev/null http://127.0.0.1:18080/api/projects
 
