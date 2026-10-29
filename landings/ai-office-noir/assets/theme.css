@@ -1,0 +1,19 @@
+/* AI Growth Office — palette of the hq2 office, theme «Обсидиан» (apps/hq-office THEMES.obsidian):
+   night stone, glass panels, cyan screen light; eyebrows in JetBrains Mono like the office HUD. */
+:root{
+  --bg:#0b0d11; --bg2:#14161c; --bg3:#0e1015;
+  --ink:#f3f5f9; --ink-hi:#ffffff; --ink2:#c4c9d3; --mute:#8b91a0; --mute2:#6f7585;
+  --acc:#5ad1ff; --acc-hi:#8fe0ff; --on-acc:#04121a; --ok:#3ddc97;
+  --line:rgba(255,255,255,.10); --line2:rgba(255,255,255,.14); --field:rgba(243,245,249,.42);
+  --font-eb:'JetBrains Mono',ui-monospace,monospace;
+}
+.eb{font-weight:600;font-size:11.5px;letter-spacing:.16em}
+.hero .shade{background:linear-gradient(90deg,rgba(11,13,17,.9) 0%,rgba(11,13,17,.55) 38%,rgba(11,13,17,0) 70%),linear-gradient(180deg,rgba(11,13,17,.6) 0%,rgba(11,13,17,0) 18%,rgba(11,13,17,0) 70%,var(--bg) 100%)}
+.phero::before{background:linear-gradient(0deg,var(--bg) 0%,rgba(11,13,17,0) 45%),linear-gradient(90deg,rgba(11,13,17,.92) 0%,rgba(11,13,17,.5) 50%,rgba(11,13,17,.1) 100%)}
+.qband::before{background:rgba(11,13,17,.62)}
+.tmp{background:linear-gradient(165deg,#16202a,#0d0f14 70%)}
+/* glass panels, as in the office HUD */
+.qbar .box,.side,.panel,.pop,dialog.md{background:rgba(22,24,30,.82);backdrop-filter:blur(20px) saturate(1.4);-webkit-backdrop-filter:blur(20px) saturate(1.4);border-radius:18px}
+.qbar .box{overflow:visible}.dd .menu{border-radius:12px}
+.status-dot{display:inline-block;width:7px;height:7px;border-radius:50%;background:var(--ok);box-shadow:0 0 10px var(--ok);margin-right:8px;vertical-align:middle}
+.pc .pw::after{content:"";position:absolute;left:0;right:0;bottom:0;height:3px;background:var(--agent,transparent);opacity:.9}

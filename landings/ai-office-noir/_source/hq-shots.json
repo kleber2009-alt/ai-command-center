@@ -1,0 +1,374 @@
+{
+ "wide": [
+  {
+   "name": "wide",
+   "p": {
+    "x": -15,
+    "y": 19,
+    "z": 22
+   },
+   "t": {
+    "x": -1,
+    "y": 0,
+    "z": -1
+   }
+  },
+  {
+   "name": "ceo",
+   "p": {
+    "x": 12.5,
+    "y": 3.6,
+    "z": 3.5
+   },
+   "t": {
+    "x": 6.5,
+    "y": 1.1,
+    "z": -4
+   }
+  },
+  {
+   "name": "marketing",
+   "p": {
+    "x": -2.5,
+    "y": 4.2,
+    "z": 3.5
+   },
+   "t": {
+    "x": -9,
+    "y": 1,
+    "z": -4
+   }
+  },
+  {
+   "name": "sales",
+   "p": {
+    "x": -1.5,
+    "y": 3.4,
+    "z": 12
+   },
+   "t": {
+    "x": -8,
+    "y": 1,
+    "z": 5
+   }
+  },
+  {
+   "name": "led",
+   "p": {
+    "x": 1.5,
+    "y": 1.7,
+    "z": 6
+   },
+   "t": {
+    "x": -4,
+    "y": 2.6,
+    "z": -9
+   }
+  },
+  {
+   "name": "traffic",
+   "p": {
+    "x": 6.5,
+    "y": 3,
+    "z": 11
+   },
+   "t": {
+    "x": 1.5,
+    "y": 1,
+    "z": 5
+   }
+  },
+  {
+   "name": "og",
+   "p": {
+    "x": -15,
+    "y": 19,
+    "z": 22
+   },
+   "t": {
+    "x": -1,
+    "y": 0,
+    "z": -1
+   }
+  }
+ ],
+ "square": [
+  {
+   "name": "agent-product",
+   "agent": "product",
+   "d": -1.5,
+   "y": 1.95,
+   "side": 1.0,
+   "ty": 1.25,
+   "fwd": 0.45
+  },
+  {
+   "name": "agent-market",
+   "agent": "market",
+   "d": -1.5,
+   "y": 1.95,
+   "side": 1.0,
+   "ty": 1.25,
+   "fwd": 0.45
+  },
+  {
+   "name": "agent-briefing",
+   "agent": "briefing",
+   "d": -1.5,
+   "y": 1.95,
+   "side": 1.0,
+   "ty": 1.25,
+   "fwd": 0.45
+  },
+  {
+   "name": "agent-specs",
+   "agent": "specs",
+   "d": -1.5,
+   "y": 1.95,
+   "side": 1.0,
+   "ty": 1.25,
+   "fwd": 0.45
+  },
+  {
+   "name": "agent-skills",
+   "agent": "skills",
+   "d": -1.5,
+   "y": 1.95,
+   "side": 1.0,
+   "ty": 1.25,
+   "fwd": 0.45
+  },
+  {
+   "name": "head-firuza",
+   "agent": "firuza",
+   "d": 1.45,
+   "y": 2.05,
+   "side": 0.35,
+   "ty": 1.3
+  },
+  {
+   "name": "agent-slides",
+   "agent": "slides",
+   "d": -1.5,
+   "y": 1.95,
+   "side": 1.0,
+   "ty": 1.25,
+   "fwd": 0.45
+  },
+  {
+   "name": "agent-creatives",
+   "agent": "creatives",
+   "d": -1.5,
+   "y": 1.95,
+   "side": 1.0,
+   "ty": 1.25,
+   "fwd": 0.45
+  },
+  {
+   "name": "agent-funnels",
+   "agent": "funnels",
+   "d": -1.5,
+   "y": 1.95,
+   "side": 1.0,
+   "ty": 1.25,
+   "fwd": 0.45
+  },
+  {
+   "name": "agent-publish",
+   "agent": "publish",
+   "d": -1.5,
+   "y": 1.95,
+   "side": 1.0,
+   "ty": 1.25,
+   "fwd": 0.45
+  },
+  {
+   "name": "agent-analytics",
+   "agent": "analytics",
+   "d": -1.5,
+   "y": 1.95,
+   "side": 1.0,
+   "ty": 1.25,
+   "fwd": 0.45
+  },
+  {
+   "name": "agent-audience",
+   "agent": "audience",
+   "d": -1.5,
+   "y": 1.95,
+   "side": 1.0,
+   "ty": 1.25,
+   "fwd": 0.45
+  },
+  {
+   "name": "agent-scripts",
+   "agent": "scripts",
+   "d": -1.5,
+   "y": 1.95,
+   "side": 1.0,
+   "ty": 1.25,
+   "fwd": 0.45
+  },
+  {
+   "name": "agent-montage",
+   "agent": "montage",
+   "d": -1.5,
+   "y": 1.95,
+   "side": 1.0,
+   "ty": 1.25,
+   "fwd": 0.45
+  },
+  {
+   "name": "agent-carousel",
+   "agent": "carousel",
+   "d": -1.5,
+   "y": 1.95,
+   "side": 1.0,
+   "ty": 1.25,
+   "fwd": 0.45
+  },
+  {
+   "name": "agent-landings",
+   "agent": "landings",
+   "d": -1.5,
+   "y": 1.95,
+   "side": 1.0,
+   "ty": 1.25,
+   "fwd": 0.45
+  },
+  {
+   "name": "agent-leadmagnet",
+   "agent": "leadmagnet",
+   "d": -1.5,
+   "y": 1.95,
+   "side": 1.0,
+   "ty": 1.25,
+   "fwd": 0.45
+  },
+  {
+   "name": "agent-threads",
+   "agent": "threads",
+   "d": -1.5,
+   "y": 1.95,
+   "side": 1.0,
+   "ty": 1.25,
+   "fwd": 0.45
+  },
+  {
+   "name": "agent-avatar",
+   "agent": "avatar",
+   "d": -1.5,
+   "y": 1.95,
+   "side": 1.0,
+   "ty": 1.25,
+   "fwd": 0.45
+  },
+  {
+   "name": "head-bogdan",
+   "agent": "bogdan",
+   "d": 1.45,
+   "y": 2.05,
+   "side": 0.35,
+   "ty": 1.3
+  },
+  {
+   "name": "agent-chats",
+   "agent": "chats",
+   "d": -1.5,
+   "y": 1.95,
+   "side": 1.0,
+   "ty": 1.25,
+   "fwd": 0.45
+  },
+  {
+   "name": "agent-comments",
+   "agent": "comments",
+   "d": -1.5,
+   "y": 1.95,
+   "side": 1.0,
+   "ty": 1.25,
+   "fwd": 0.45
+  },
+  {
+   "name": "agent-consult",
+   "agent": "consult",
+   "d": -1.5,
+   "y": 1.95,
+   "side": 1.0,
+   "ty": 1.25,
+   "fwd": 0.45
+  },
+  {
+   "name": "agent-mailings",
+   "agent": "mailings",
+   "d": -1.5,
+   "y": 1.95,
+   "side": 1.0,
+   "ty": 1.25,
+   "fwd": 0.45
+  },
+  {
+   "name": "agent-closer",
+   "agent": "closer",
+   "d": -1.5,
+   "y": 1.95,
+   "side": 1.0,
+   "ty": 1.25,
+   "fwd": 0.45
+  },
+  {
+   "name": "head-nurken",
+   "agent": "nurken",
+   "d": 1.45,
+   "y": 2.05,
+   "side": 0.35,
+   "ty": 1.3
+  },
+  {
+   "name": "agent-metaads",
+   "agent": "metaads",
+   "d": -1.5,
+   "y": 1.95,
+   "side": 1.0,
+   "ty": 1.25,
+   "fwd": 0.45
+  },
+  {
+   "name": "agent-adreports",
+   "agent": "adreports",
+   "d": -1.5,
+   "y": 1.95,
+   "side": 1.0,
+   "ty": 1.25,
+   "fwd": 0.45
+  },
+  {
+   "name": "head-ilia",
+   "p": {
+    "x": 10.8,
+    "y": 2.6,
+    "z": 0.2
+   },
+   "t": {
+    "x": 6.6,
+    "y": 1.2,
+    "z": -5.5
+   }
+  }
+ ],
+ "portrait": [
+  {
+   "name": "founder",
+   "p": {
+    "x": 10.5,
+    "y": 2.3,
+    "z": -0.5
+   },
+   "t": {
+    "x": 6.8,
+    "y": 1.3,
+    "z": -5.6
+   }
+  }
+ ]
+}

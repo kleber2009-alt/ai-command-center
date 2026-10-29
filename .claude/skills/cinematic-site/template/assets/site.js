@@ -65,6 +65,17 @@
     }
   }
 
+  /* ---------- data-driven marquee rows and stats (optional) ---------- */
+  $$('[data-marquee]').forEach(function (row) {
+    var all = DATA.marquee || [], half = Math.ceil(all.length / 2), part = row.dataset.marquee === 'b' ? all.slice(half) : all.slice(0, half);
+    row.innerHTML = part.map(function (m) {
+      var pic = m.img ? '<img src="' + esc(m.img) + '" alt="" loading="lazy">' : '<b>' + esc(m.mono || (m.name || '?')[0]) + '</b>';
+      var tagName = m.url ? 'a' : 'article', href = m.url ? ' href="' + esc(m.url) + '" target="_blank" rel="noopener"' : '';
+      return '<' + tagName + ' class="tmc" tabindex="0" role="listitem"' + href + '><div class="tmp">' + pic + '</div><div class="tmb"><div class="tmq" aria-hidden="true">' + esc(m.mark || '\u201C') + '</div><p>' + esc(m.text) + '</p><div class="n">' + esc(m.name) + '</div><div class="i">' + esc(m.sub || '') + '</div></div></' + tagName + '>';
+    }).join('');
+  });
+  $$('[data-stat]').forEach(function (el) { var v = (DATA.stats || {})[el.dataset.stat]; if (v != null) el.textContent = v; });
+
   /* ---------- marquee: clone cards so the loop is seamless ---------- */
   $$('.tmt').forEach(function (t) {
     $$('.tmc', t).forEach(function (c) { var d = c.cloneNode(true); d.classList.add('dup'); d.setAttribute('aria-hidden', 'true'); d.removeAttribute('tabindex'); t.appendChild(d); });
@@ -138,7 +149,7 @@
   var detailHref = DATA.detailPage || 'item.html';
   function card(it) {
     var meta = (it.meta || []).map(function (m) { return '<span>' + esc(m) + '</span>'; }).join('<i class="dot"></i>');
-    return '<a class="pc rvl" href="' + detailHref + '?id=' + encodeURIComponent(it.id) + '"><div class="pw"><img src="' + esc(it.img) + '" alt="' + esc(it.name) + '" loading="lazy">' +
+    return '<a class="pc rvl" href="' + detailHref + '?id=' + encodeURIComponent(it.id) + '"><div class="pw"' + (it.color ? ' style="--agent:' + esc(it.color) + '"' : '') + '><img src="' + esc(it.img) + '" alt="' + esc(it.name) + '" loading="lazy">' +
       (it.tag ? '<span class="tag ' + esc(it.tagStyle || '') + '">' + esc(it.tag) + '</span>' : '') + '</div>' +
       '<div class="pm">' + meta + '</div><div class="pn">' + esc(it.name) + '</div><div class="pp"><b>' + esc(it.price) + '</b>' + (it.sub ? '<i class="dot"></i><span>' + esc(it.sub) + '</span>' : '') + '</div></a>';
   }
@@ -186,6 +197,8 @@
       var nums = $('[data-nums]'); if (nums) nums.innerHTML = (it.nums || []).map(function (n) { return '<div><b>' + esc(n[0]) + '</b><span>' + esc(n[1]) + '</span></div>'; }).join('');
       var ch = $('[data-chips]'); if (ch) ch.innerHTML = (it.features || []).map(function (x) { return '<span>' + esc(x) + '</span>'; }).join('');
       var sp = $('[data-spec]'); if (sp) sp.innerHTML = (it.spec || []).map(function (x) { return '<div><span>' + esc(x[0]) + '</span><b>' + esc(x[1]) + '</b></div>'; }).join('');
+      var lk = $('[data-links]'); if (lk) { if ((it.links || []).length) lk.innerHTML = it.links.map(function (x) { return '<a href="' + esc(x.url) + '" target="_blank" rel="noopener">' + esc(x.title) + '</a>'; }).join(''); else { var sec = lk.closest('section'); if (sec) sec.remove(); } }
+      $$('[data-hide-empty]').forEach(function (el) { var k = el.dataset.hideEmpty; if (!(it[k] && it[k].length)) el.remove(); });
       var tr = $('[data-terms]'); if (tr) tr.innerHTML = (it.terms || []).map(function (x) { return '<li>' + esc(x) + '</li>'; }).join('');
       $$('[data-open]', dt).forEach(function (b) { b.dataset.item = it.name; });
       var tag = $('[data-tag]'); if (tag) { if (it.tag) { tag.textContent = it.tag; tag.className = 'tag ' + (it.tagStyle || ''); } else tag.remove(); }
