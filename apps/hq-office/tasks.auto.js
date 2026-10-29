@@ -4,8 +4,8 @@
    готовые задачи, только дописывает к ним новые PR той же ветки. Удалённая задача не вернётся —
    её PR остаются в seen. Чтобы задача стала «ручной», перенесите её в tasks.js. */
 window.OFFICE_TASKS_AUTO = {
-  "since": "2026-10-29T04:42:32Z",
-  "seen": [148, 149, 150, 151, 152, 153, 154, 155, 156, 157, 158, 159, 160, 161, 162, 163],
+  "since": "2026-10-29T04:49:42Z",
+  "seen": [148, 149, 150, 151, 152, 153, 154, 155, 156, 157, 158, 159, 160, 161, 162, 163, 164],
   "tasks": [
     {
       "id": "gh-148",
@@ -40,6 +40,28 @@ window.OFFICE_TASKS_AUTO = {
       ],
       "group": "hq-office|claude/affectionate-keller-qy05o4",
       "prs": [148, 149, 150, 152, 157, 158],
+      "auto": true
+    },
+    {
+      "id": "gh-156",
+      "date": "2026-10-29",
+      "dateNote": "слияние PR на GitHub",
+      "kind": "Воронка",
+      "dept": "marketing",
+      "people": ["ilia"],
+      "agents": ["threads", "funnels", "product"],
+      "title": "Threads Growth: воронка из Threads в Telegram — 3 ветки в день с одобрением в боте",
+      "summary": "Каждое утро агент готовит 3 ветки со ссылками на 44 бесплатных материала канала и присылает их на одобрение в Telegram. Удачные ветки возвращаются с новым хуком, по понедельникам приходит отчёт. В офисе появился агент «Threads-ветки».",
+      "proof": [
+        {
+          "kind": "github",
+          "label": "PR #156 · Воронка Threads → Telegram на каталоге материалов + агент «Threads-ветки» в…",
+          "url": "https://github.com/kleber2009-alt/ai-command-center/pull/156"
+        },
+        { "kind": "github", "label": "PR #164 · ветки от пользы канала, автопубликация, прогноз виральности", "url": "https://github.com/kleber2009-alt/ai-command-center/pull/164" }
+      ],
+      "group": "threads-growth|claude/optimistic-newton-qysfiz",
+      "prs": [156, 164],
       "auto": true
     },
     {
@@ -112,27 +134,6 @@ window.OFFICE_TASKS_AUTO = {
       ],
       "group": "hq-office|claude/determined-hawking-5lh954",
       "prs": [151, 154],
-      "auto": true
-    },
-    {
-      "id": "gh-156",
-      "date": "2026-10-28",
-      "dateNote": "слияние PR на GitHub",
-      "kind": "Воронка",
-      "dept": "marketing",
-      "people": ["ilia"],
-      "agents": ["threads", "funnels", "product"],
-      "title": "Threads Growth: воронка из Threads в Telegram — 3 ветки в день с одобрением в боте",
-      "summary": "Каждое утро агент готовит 3 ветки со ссылками на 44 бесплатных материала канала и присылает их на одобрение в Telegram. Удачные ветки возвращаются с новым хуком, по понедельникам приходит отчёт. В офисе появился агент «Threads-ветки».",
-      "proof": [
-        {
-          "kind": "github",
-          "label": "PR #156 · Воронка Threads → Telegram на каталоге материалов + агент «Threads-ветки» в…",
-          "url": "https://github.com/kleber2009-alt/ai-command-center/pull/156"
-        }
-      ],
-      "group": "threads-growth|claude/optimistic-newton-qysfiz",
-      "prs": [156],
       "auto": true
     }
   ]
