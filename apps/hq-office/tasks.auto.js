@@ -4,8 +4,8 @@
    готовые задачи, только дописывает к ним новые PR той же ветки. Удалённая задача не вернётся —
    её PR остаются в seen. Чтобы задача стала «ручной», перенесите её в tasks.js. */
 window.OFFICE_TASKS_AUTO = {
-  "since": "2026-10-29T09:27:43Z",
-  "seen": [148, 149, 150, 151, 152, 153, 154, 155, 156, 157, 158, 159, 160, 161, 162, 163, 164, 165, 166, 167, 168, 169, 170, 171, 172, 173, 174],
+  "since": "2026-10-29T09:28:55Z",
+  "seen": [148, 149, 150, 151, 152, 153, 154, 155, 156, 157, 158, 159, 160, 161, 162, 163, 164, 165, 166, 167, 168, 169, 170, 171, 172, 173, 174, 175],
   "tasks": [
     {
       "id": "gh-148",
@@ -179,10 +179,15 @@ window.OFFICE_TASKS_AUTO = {
       "title": "Студия Кадрик: 48 стилей Creator Pack теперь внутри, старый бот выведен",
       "summary": "Каталог из 48 стилей Creator Pack с обложками переехал в Кадрик, а отдельный бот @Productionskill_bot безопасно отключён с бэкапом и проверкой. Всё производство контента — в одном боте вместо двух.",
       "proof": [
-        { "kind": "github", "label": "PR #172 · перенять стили @Productionskill_bot и вывести этот бот", "url": "https://github.com/kleber2009-alt/ai-command-center/pull/172" }
+        { "kind": "github", "label": "PR #172 · перенять стили @Productionskill_bot и вывести этот бот", "url": "https://github.com/kleber2009-alt/ai-command-center/pull/172" },
+        {
+          "kind": "github",
+          "label": "PR #175 · retire-скрипт находит папку задач старого бота и ждёт пустой очереди Кадрика",
+          "url": "https://github.com/kleber2009-alt/ai-command-center/pull/175"
+        }
       ],
       "group": "studio-kadrik|claude/focused-mayer-43bdk9",
-      "prs": [172],
+      "prs": [172, 175],
       "auto": true
     },
     {
