@@ -4,8 +4,8 @@
    готовые задачи, только дописывает к ним новые PR той же ветки. Удалённая задача не вернётся —
    её PR остаются в seen. Чтобы задача стала «ручной», перенесите её в tasks.js. */
 window.OFFICE_TASKS_AUTO = {
-  "since": "2026-10-29T09:28:55Z",
-  "seen": [148, 149, 150, 151, 152, 153, 154, 155, 156, 157, 158, 159, 160, 161, 162, 163, 164, 165, 166, 167, 168, 169, 170, 171, 172, 173, 174, 175],
+  "since": "2026-10-29T09:30:26Z",
+  "seen": [148, 149, 150, 151, 152, 153, 154, 155, 156, 157, 158, 159, 160, 161, 162, 163, 164, 165, 166, 167, 168, 169, 170, 171, 172, 173, 174, 175, 176],
   "tasks": [
     {
       "id": "gh-148",
@@ -201,10 +201,11 @@ window.OFFICE_TASKS_AUTO = {
       "title": "Карусель Pro: бот в Telegram находит залетевшие карусели и делает ремикс",
       "summary": "Каждый день бот ищет карусели-залёты у вас и у конкурентов, разбирает, почему они залетели, и присылает план с новым хуком, кодовым словом и подписью. После одобрения готовые слайды 1080×1350 приходят альбомом и файлами без сжатия.",
       "proof": [
-        { "kind": "github", "label": "PR #173 · ветка «Instagram Карусели» в Telegram + скилл carousel-pro", "url": "https://github.com/kleber2009-alt/ai-command-center/pull/173" }
+        { "kind": "github", "label": "PR #173 · ветка «Instagram Карусели» в Telegram + скилл carousel-pro", "url": "https://github.com/kleber2009-alt/ai-command-center/pull/173" },
+        { "kind": "github", "label": "PR #176 · Claude/great heisenberg thk6rj", "url": "https://github.com/kleber2009-alt/ai-command-center/pull/176" }
       ],
       "group": "remake-site|claude/great-heisenberg-thk6rj",
-      "prs": [173],
+      "prs": [173, 176],
       "auto": true
     },
     {
