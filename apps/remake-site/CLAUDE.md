@@ -62,6 +62,12 @@
   в работу. `/bind`, `/scan`, `/competitors`, `/status` — как у Reels. Поиск — раз в день в `CAROUSEL_HOUR` (10),
   `CAROUSEL_PER_DAY` (3) карточки. Состояние — `DATA_DIR/carousels/state.json`, карусели — `DATA_DIR/carousels/<id>/`,
   слайды — `DATA_DIR/media/<id>-*.jpg`.
+- `tg-branch.mjs` — общие правила веток: **одна ветка — один бот**. Бот слышит только свою ветку (в форуме — только
+  настоящую ветку, не «Общий»), команды с `@другим_ботом` не его, обычный `/bind` привязывает только бота без ветки
+  (перенести привязанного — `/bind@его_ник`), ветку, занятую другой веткой сайта (её `state.json`), не привязать. Токен
+  каруселей совпал с `REMAKE_TG_BOT_TOKEN` — ветка каруселей выключена (`/api/health` → `carousels.error`). После ✅ под
+  карточкой — одно сообщение-статус: шаги «сделано / сейчас (сколько идёт, сколько обычно) / дальше», правится на месте
+  раз в минуту и на каждом переходе, при сбое — где остановилось и что нажать. В `/api/health` — `bot` и `topic` каждой ветки.
 - `Dockerfile` — образ API: node 22 + ffmpeg + python3 + chromium + свежий yt-dlp + `npm ci`; `skill/` кладёт `deploy/build.sh`
   (config.json, scripts/*.py, references/script-rules.md из скилла), `carousel-skill/` — config.json и carousel-rules.md скилла carousel-pro.
 - Пишет прогоны скилл: `report.py <slug> --media ключ=файл … --push` (токен — окружение или профиль оболочки).

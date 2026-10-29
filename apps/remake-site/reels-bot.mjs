@@ -89,7 +89,8 @@ export function createReelsBot({ studio, data }) {
     const p = j.reels.progress ||= { msg: 0, started: new Date().toISOString() };
     if (p.cur !== cur || p.failed !== failed) { if (p.cur !== cur) p.step_at = new Date().toISOString(); p.cur = cur; p.failed = failed; S.save(j); }
     const id = ['avatar', 'montage'][cur];
-    const detail = !failed && id && j.steps[id]?.state === 'run' ? esc(j.steps[id].note || '') : '';
+    const note = !failed && id && j.steps[id]?.state === 'run' ? j.steps[id].note || '' : '';
+    const detail = /^монтаж: «/.test(note) ? '' : esc(note);  // the montage note only repeats the step's label
     const text = progressText({ title: `Рилс по залёту @${esc(j.reels.origin.author || '?')}`, steps: STEPS(j), cur, failed: esc(failed), detail, started: p.started, stepAt: p.step_at });
     if (p.msg) {
       try { await tg('editMessageText', { chat_id: st.chat_id, message_id: p.msg, text, parse_mode: 'HTML', link_preview_options: { is_disabled: true } }); return; }
