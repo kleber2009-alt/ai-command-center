@@ -577,6 +577,9 @@ def channel_first(day: date) -> None:
         for t in ts:
             rec = db.get(FunnelReceiver, t.receiver_id)
             assert t.cluster in rec.clusters or not rec.clusters
+            # {link} — подписка на канал материала: основной — по приглашению, @ai_razbory — напрямую
+            want = "https://t.me/ai_razbory" if "/ai_razbory/" in rec.url else "https://t.me/+xP6G7c04QRZiY2My"
+            assert t.link_url == want and want in service.full_posts(t)[-1], (rec.url, t.link_url)
         used = {t.receiver_id for t in ts}
         assert not used & {r.id for r, _ in service.material_pool(db, day + timedelta(days=1))}   # пауза 7 дней
     assert all("channel_post_text" in w or "channel_score" not in w for w in WRITES)

@@ -93,6 +93,8 @@ class Settings(BaseSettings):
     channel_fallback_link: str = ""      # общая ссылка на канал, пока нет приёмника/прав бота
     # Статистика каналов автора (app/funnel/channel.py): username публичного и -100… закрытого
     channel_stats_sources: str = "ai_razbory,-1001843525349"
+    # Куда ведёт {link}: канал, где лежит материал ветки → ссылка подписки (источник=ссылка, через запятую)
+    channel_links: str = "-1001843525349=https://t.me/+xP6G7c04QRZiY2My,ai_razbory=https://t.me/ai_razbory"
     channel_stats_limit: int = 300       # сколько последних постов каждого канала смотреть
     tg_api_id: int = 0                   # my.telegram.org — для закрытого канала (Telethon)
     tg_api_hash: str = ""

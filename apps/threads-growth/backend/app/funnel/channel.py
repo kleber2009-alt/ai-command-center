@@ -57,6 +57,22 @@ def sources() -> list[str]:
     return [s.strip().lstrip("@") for s in settings.channel_stats_sources.split(",") if s.strip()]
 
 
+def links() -> dict[str, str]:
+    """Канал → ссылка подписки из CHANNEL_LINKS («-100…=https://t.me/+…,name=https://t.me/name»)."""
+    out = {}
+    for part in settings.channel_links.split(","):
+        key, _, url = part.partition("=")
+        if key.strip() and url.strip():
+            out[key.strip().lstrip("@")] = url.strip()
+    return out
+
+
+def subscribe_link(post_url_: str | None) -> str | None:
+    """Ссылка подписки на тот канал, где лежит пост с материалом."""
+    key = parse_url(post_url_ or "")
+    return links().get(key[0]) if key else None
+
+
 def is_private(source: str) -> bool:
     return source.lstrip("-").isdigit()
 
@@ -304,6 +320,9 @@ def _selftest() -> None:
     sc = score(ps, now)
     assert sc[0] == 1.0 and sc[9] > 3 and sc[10] is None, sc
     assert human(2190) == "2.2K" and human(900) == "900"
+    assert subscribe_link("https://t.me/c/1843525349/2601") == "https://t.me/+xP6G7c04QRZiY2My"
+    assert subscribe_link("https://t.me/ai_razbory/205") == "https://t.me/ai_razbory"
+    assert subscribe_link("https://t.me/other/1") is None and subscribe_link(None) is None
     print("channel selftest OK")
 
 

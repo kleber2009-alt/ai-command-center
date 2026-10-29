@@ -650,12 +650,20 @@ def run_qa(db: Session, t: FunnelThread, check_link: bool = False) -> dict:
 def ensure_link(db: Session, t: FunnelThread) -> None:
     """Своя ссылка под ветку. Закрытый канал — ссылка-приглашение (бот считает по ней
     вступления); публичный — пост-приёмник. Пока ничего нет — общая ссылка на канал."""
+    from app.funnel import channel as ch
+
     rec = db.get(FunnelReceiver, t.receiver_id) if t.receiver_id else None
+    src = ch.parse_url(rec.url) if rec and rec.url else None
+    own = ch.subscribe_link(rec.url) if rec and rec.status == "active" else None
+    # Своя ссылка-приглашение на ветку — только в канал, где бот админ (CHANNEL_ID).
+    bot_channel = bool(settings.channel_id) and (src is None or src[0] == str(settings.channel_id))
     if settings.channel_mode == "public":
         if rec and rec.status == "active" and rec.url:
             t.link_url = rec.url
         elif not t.link_url:
             t.link_url = settings.channel_fallback_link or None
+    elif own and not bot_channel:
+        t.link_url = own                  # канал материала: основной — по приглашению, @ai_razbory — напрямую
     elif settings.channel_id and not t.invite_link:
         try:
             t.invite_link = tg.create_invite_link(settings.channel_id, f"thr{t.id} {t.plan_date:%d.%m}")
@@ -1423,8 +1431,7 @@ def publish_thread(db: Session, t: FunnelThread, now: datetime) -> str:
     from app.funnel.threads_api import ChainError, ThreadsError
 
     blockers = qa.blocking(t.qa)
-    if not t.link_url:
-        ensure_link(db, t)
+    ensure_link(db, t)                    # материал могли сменить после ✅ — ссылка в его канал
     if not t.link_url:
         blockers.append("нет ссылки в канал (CHANNEL_ID / CHANNEL_FALLBACK_LINK)")
     if blockers:
