@@ -52,10 +52,10 @@ if [ "$MOVIES" != keep ] && [ -d "$MOV" ]; then
       [ -n "$(find "$e" -mmin -30 -print -quit)" ] && { echo "keep $size $e (in use)"; continue; }
       echo "rm $size $e"; rm -rf "$e"
     else
-      echo "  $size $e"; [ -d "$e" ] && du -sh "$e"/* 2>/dev/null | sort -h | tail -5 | sed 's/^/      /'
+      echo "  $size $e"; [ -d "$e" ] && { du -sh "$e"/* 2>/dev/null | sort -h | tail -5 | sed 's/^/      /' || true; }
     fi
   done
 fi
 [ -d "$ROOT/releases" ] && ls -1dt "$ROOT"/releases/* 2>/dev/null | tail -n +8 | xargs -r rm -rf
 echo "after:"; df -h / | tail -1
-echo "largest folders in $HOME_DIR:"; du -xsh "$HOME_DIR"/* "$HOME_DIR"/.[!.]* 2>/dev/null | sort -h | tail -8
+echo "largest folders in $HOME_DIR:"; du -xsh "$HOME_DIR"/* "$HOME_DIR"/.[!.]* 2>/dev/null | sort -h | tail -8 || true
