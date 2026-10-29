@@ -61,6 +61,11 @@ PACKSRC="$(abs "$(envval PACK_DIR "$DIR/.env")")"
 [ -n "$(envval PACK_DIR "$DIR/.env")" ] || PACKSRC="$HOME_DIR/creator-pack-miniapp"
 PSJOBS=""
 [ -n "$PS" ] && [ -f "$PS/.env" ] && { j="$(envval JOBS_DIR "$PS/.env")"; [ -n "$j" ] && PSJOBS="$(abs "$j")"; }
+# no JOBS_DIR in its .env: take the default from its code — JOBS_DIR", str(Path.home() / "<dir>")
+if [ -z "$PSJOBS" ] && [ -n "$PS" ]; then
+  j="$(grep -ohE 'JOBS_DIR"[^)]*Path\.home\(\) / "[^"]+"' "$PS"/*.py 2>/dev/null | sed -E 's/.*Path\.home\(\) \/ "([^"]+)"/\1/' | head -1)"
+  [ -n "$j" ] && PSJOBS="$HOME_DIR/$j"
+fi
 KJOBS="$(abs "$(envval JOBS_DIR "$DIR/.env")")"; [ -n "$(envval JOBS_DIR "$DIR/.env")" ] || KJOBS="$HOME_DIR/Movies/production-kadrik"
 KSBX="$(abs "$(envval SANDBOX_HOME "$DIR/.env")")"; [ -n "$(envval SANDBOX_HOME "$DIR/.env")" ] || KSBX="$HOME_DIR/.kadrik-sandbox"
 
@@ -112,10 +117,18 @@ CF="$(grep -rlis 'productionskill\|creator-pack' "$HOME_DIR/.cloudflared" /etc/c
 [ -n "$CF" ] && echo "   cloudflared configs mention it (not changed, check by hand): $CF"
 echo "== apply would delete: ${DEL[*]:-nothing} and units: ${UNITS:-none}"
 echo "disk:"; df -h / | tail -1
+echo "largest folders in $HOME_DIR and ~/Movies:"
+du -xsh "$HOME_DIR"/* "$HOME_DIR"/.[!.]* "$HOME_DIR"/Movies/* 2>/dev/null | sort -h | tail -12
 
 if [ "$MODE" = inspect ]; then exit 0; fi
 [ "$BLOCK" = 0 ] || exit 1
 [ -n "$UNITS$PS" ] || [ -d "$PACKSRC" ] || { echo "nothing left of the old bot"; exit 0; }
+
+# --- 0. Kadrik restarts below: a running montage would be cut, so only when its queue is empty ---
+H="$(curl -s --max-time 5 "http://127.0.0.1:$PORT/health" || true)"
+if echo "$H" | grep -q '"running": true' || ! echo "$H" | grep -q '"queue": 0'; then
+  echo "::error::Kadrik is busy ($H) — run retire again when the montage queue is empty; nothing changed"; exit 1
+fi
 
 # --- 1. catalog into Kadrik ---
 if [ -f "$PACKSRC/public/skills.json" ]; then
