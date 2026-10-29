@@ -1,0 +1,87 @@
+name: deploy-remake-site
+
+# «Ремейк залёта» (apps/remake-site) → https://remake.aicex.club on the aicex box (vars.HETZNER_HOST, where
+# *.aicex.club points). The page shows how the remake-top-reel skill turns a viral reel into a new one, step by
+# step; runs arrive live through the site's API (PUT /api/runs, /api/media with REMAKE_SITE_TOKEN).
+# Each run uploads a release to /opt/remake-site/releases/<id>; apps/remake-site/deploy/server.sh switches
+# /opt/remake-site/current, keeps /opt/remake-site/data (live runs) and wires the edge Caddy site.
+#
+# Secrets: HETZNER_SSH_KEY, REMAKE_SITE_TOKEN (without it the site is read-only: seed runs only).
+# Variables: HETZNER_HOST, HETZNER_USER, HETZNER_SSH_PORT, REMAKE_SITE_DOMAIN (default remake.aicex.club).
+
+on:
+  push:
+    branches: [main]
+    paths:
+      - 'apps/remake-site/**'
+      - '.github/workflows/deploy-remake-site.yml'
+  workflow_dispatch:
+
+concurrency:
+  group: deploy-remake-site
+  cancel-in-progress: false
+
+jobs:
+  deploy:
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+    env:
+      HOST: ${{ vars.HETZNER_HOST }}
+      SSH_USER: ${{ vars.HETZNER_USER || 'root' }}
+      SSH_PORT: ${{ vars.HETZNER_SSH_PORT || '22' }}
+      DOMAIN: ${{ vars.REMAKE_SITE_DOMAIN || 'remake.aicex.club' }}
+    steps:
+      - uses: actions/checkout@v5
+
+      - name: Build and check
+        run: |
+          bash apps/remake-site/deploy/build.sh
+          node --check apps/remake-site/server.mjs
+          node -e '
+            const fs = require("fs"), html = fs.readFileSync("apps/remake-site/dist/index.html", "utf8");
+            const js = [...html.matchAll(/<script>([\s\S]*?)<\/script>/g)].map(m => m[1]).join("\n;\n");
+            new Function(js);
+            for (const f of fs.readdirSync("apps/remake-site/seed/runs")) {
+              const r = JSON.parse(fs.readFileSync("apps/remake-site/seed/runs/" + f, "utf8"));
+              const media = JSON.stringify(r).match(/media\/[\w.-]+/g) || [];
+              for (const m of media) if (!fs.existsSync("apps/remake-site/seed/" + m)) throw new Error("missing " + m + " in " + f);
+            }
+            console.log("page script ok, seed runs ok");'
+
+      - name: Install SSH key
+        env:
+          KEY: ${{ secrets.HETZNER_SSH_KEY }}
+        run: |
+          test -n "$HOST" || { echo "::error::vars.HETZNER_HOST is not set"; exit 1; }
+          mkdir -p ~/.ssh
+          printf '%s\n' "$KEY" > ~/.ssh/id_deploy
+          chmod 600 ~/.ssh/id_deploy
+          ssh-keyscan -p "$SSH_PORT" -H "$HOST" >> ~/.ssh/known_hosts 2>/dev/null
+          echo "SSH=ssh -i $HOME/.ssh/id_deploy -p $SSH_PORT $SSH_USER@$HOST" >> "$GITHUB_ENV"
+
+      - name: Upload release
+        run: |
+          REL="$(date -u +%Y%m%d%H%M%S)-${GITHUB_SHA::7}"
+          echo "REL=$REL" >> "$GITHUB_ENV"
+          cp apps/remake-site/server.mjs apps/remake-site/dist/
+          tar -C apps/remake-site/dist -czf - . \
+            | $SSH "mkdir -p /opt/remake-site/releases/$REL && tar -xzf - -C /opt/remake-site/releases/$REL"
+
+      - name: API token
+        env:
+          TOKEN: ${{ secrets.REMAKE_SITE_TOKEN }}
+        run: |
+          [ -n "$TOKEN" ] || echo "::warning::REMAKE_SITE_TOKEN is not set — the site is read-only (seed runs only)"
+          printf 'REMAKE_SITE_TOKEN=%s\n' "$TOKEN" | $SSH "mkdir -p /opt/remake-site && umask 077 && cat > /opt/remake-site/api.env"
+
+      - name: Activate
+        run: $SSH bash -s -- "$DOMAIN" "$REL" < apps/remake-site/deploy/server.sh
+
+      - name: Smoke test
+        run: |
+          for path in / /api/health /api/runs; do
+            code=$(curl -sS -o /dev/null -w '%{http_code}' --retry 8 --retry-delay 5 --retry-all-errors "https://$DOMAIN$path" || echo 000)
+            echo "$code https://$DOMAIN$path"
+            [ "$code" = 200 ] || exit 1
+          done
+          curl -sS "https://$DOMAIN/api/health"; echo
