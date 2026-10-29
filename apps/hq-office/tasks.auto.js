@@ -4,12 +4,12 @@
    готовые задачи, только дописывает к ним новые PR той же ветки. Удалённая задача не вернётся —
    её PR остаются в seen. Чтобы задача стала «ручной», перенесите её в tasks.js. */
 window.OFFICE_TASKS_AUTO = {
-  "since": "2026-10-28T09:28:17Z",
-  "seen": [148, 149, 150, 151, 152, 153, 154, 155, 156],
+  "since": "2026-10-29T03:02:02Z",
+  "seen": [148, 149, 150, 151, 152, 153, 154, 155, 156, 157, 158, 159],
   "tasks": [
     {
       "id": "gh-148",
-      "date": "2026-10-28",
+      "date": "2026-10-29",
       "dateNote": "слияние PR на GitHub",
       "kind": "Разработка",
       "dept": "ceo",
@@ -30,10 +30,37 @@ window.OFFICE_TASKS_AUTO = {
           "label": "PR #152 · история пишет тексты только своим ключом HQ_OFFICE_ANTHROPIC_API_KEY",
           "url": "https://github.com/kleber2009-alt/ai-command-center/pull/152"
         },
+        { "kind": "github", "label": "PR #157 · рабочий стол — задачи агентам прямо в офисе", "url": "https://github.com/kleber2009-alt/ai-command-center/pull/157" },
+        {
+          "kind": "github",
+          "label": "PR #158 · исполнитель проверяет Claude Code и показывает причину ошибки",
+          "url": "https://github.com/kleber2009-alt/ai-command-center/pull/158"
+        },
         { "kind": "site", "label": "Живой офис агентов — живой сайт", "url": "https://hq2.aicex.club" }
       ],
       "group": "hq-office|claude/affectionate-keller-qy05o4",
-      "prs": [148, 149, 150, 152],
+      "prs": [148, 149, 150, 152, 157, 158],
+      "auto": true
+    },
+    {
+      "id": "gh-159",
+      "date": "2026-10-29",
+      "dateNote": "слияние PR на GitHub",
+      "kind": "Продукт",
+      "dept": "ceo",
+      "people": ["ilia"],
+      "agents": ["product", "montage"],
+      "title": "Студия Кадрика: оплата картой, защищённый монтаж, ежедневный бэкап и мониторинг",
+      "summary": "Бот монтажа принимает оплату картой с чеком по 54-ФЗ, задачи клиентов выполняются в изолированной песочнице без доступа к чужим данным, данные копируются каждый день, а работа бота проверяется каждые 30 минут.",
+      "proof": [
+        {
+          "kind": "github",
+          "label": "PR #159 · Студия Кадрика в монорепо + песочница, оплата картой, бэкап, мониторинг",
+          "url": "https://github.com/kleber2009-alt/ai-command-center/pull/159"
+        }
+      ],
+      "group": "studio-kadrik|claude/laughing-einstein-l7bumr",
+      "prs": [159],
       "auto": true
     },
     {

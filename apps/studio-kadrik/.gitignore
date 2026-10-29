@@ -1,0 +1,10 @@
+.env
+.venv/
+data/
+bot.log
+.miniapp_url
+__pycache__/
+venv/
+*.bak.*
+_bak/
+backups/

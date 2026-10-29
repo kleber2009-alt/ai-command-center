@@ -306,6 +306,78 @@
   .asst-foot label{display:flex;align-items:center;gap:5px;cursor:pointer}
   .asst-foot input[type=password],.asst-foot select{padding:6px 9px;border-radius:9px;border:1px solid var(--line);background:rgba(0,0,0,.3);color:var(--ink);font:500 12.5px var(--f-ui);min-width:0;flex:1}
 
+  /* ---------- рабочий стол: задачи агентам ---------- */
+  .ptabs button[hidden],.dock button[hidden]{display:none}
+  .ptabs button{white-space:nowrap;padding:7px 4px;flex:1 1 auto}
+  #kFoot{flex-wrap:wrap;justify-content:flex-end}
+  #kFoot>span:empty{display:none}
+  .df .btn-go,.acts .btn-go{background:#2f7bff;border-color:transparent;color:#fff}
+  .df .btn-go:hover,.acts .btn-go:hover{background:#3d86ff}
+  @media (max-width:600px){#kFoot button{flex:1 1 auto}}
+  .ptabs button b{font:700 10.5px var(--f-mono);padding:1px 6px;border-radius:99px;background:var(--decide);color:var(--decide-ink);margin-left:4px}
+  .dock button.go{background:#2f7bff;color:#fff}
+  .dock button.go:hover{background:#3d86ff;color:#fff}
+  .btn-go{padding:9px 14px;border-radius:11px;background:#2f7bff;color:#fff;font-size:13px;font-weight:800}
+  .btn-go:hover{background:#3d86ff}
+  .btn-go:disabled{opacity:.5;cursor:default}
+  .dk-top{display:flex;gap:8px;padding:2px 0 4px}
+  .dk-top .btn-go{flex:1}
+  .note.warn{color:#ffd28a;background:rgba(255,176,32,.08);border-radius:10px;padding:8px 10px;margin-top:6px}
+  .st{font-style:normal;color:var(--s)!important;background:color-mix(in srgb,var(--s) 16%,transparent)!important}
+  .task.dk{--c:var(--s)}
+  .task.dk.need{border-color:rgba(255,176,32,.45);background:rgba(255,176,32,.07)}
+  .dk-step,.dk-q{font-size:12px;line-height:1.4;color:var(--ink-2);display:-webkit-box;-webkit-line-clamp:2;-webkit-box-orient:vertical;overflow:hidden}
+  .dk-q{color:#ffd28a}
+  .dlg.sm{width:min(780px,100%);height:auto;max-height:100%}
+  .dk-form{display:grid;gap:8px}
+  .dk-l{font:600 10.5px var(--f-mono);letter-spacing:.14em;text-transform:uppercase;color:var(--ink-3);margin-top:10px}
+  .dk-l:first-child{margin-top:0}
+  .dlg textarea,.dlg select{width:100%;padding:11px 13px;border-radius:12px;border:1px solid var(--line);background:rgba(0,0,0,.28);color:var(--ink);font:500 14px/1.45 var(--f-ui);outline:none}
+  .dlg textarea{min-height:84px;resize:vertical}
+  #kText{min-height:120px}
+  .dlg textarea:focus,.dlg select:focus{border-color:rgba(143,184,255,.6)}
+  .dk-ex button{font-size:12px;padding:5px 11px;border-radius:99px;background:rgba(255,255,255,.07);border:1px solid rgba(255,255,255,.1);color:var(--ink-2);text-align:left}
+  .dk-ex button:hover{color:var(--ink);background:rgba(255,255,255,.12)}
+  .drop{display:block;border:1px dashed rgba(255,255,255,.22);border-radius:14px;padding:16px;text-align:center;color:var(--ink-2);font-size:13px;cursor:pointer;transition:border-color .2s,background .2s}
+  .drop:hover,.drop.on{border-color:#8fb8ff;background:rgba(143,184,255,.07)}
+  .files{list-style:none;display:grid;gap:4px}
+  .files li{display:grid;grid-template-columns:minmax(0,1fr) auto auto;gap:4px 10px;align-items:center;font-size:12.5px;padding:7px 10px;border-radius:10px;background:rgba(255,255,255,.05)}
+  .files li span{white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+  .files li small{font:500 10.5px var(--f-mono);color:var(--ink-3)}
+  .files li small.err{color:#ff8f8f}
+  .files li button{color:var(--ink-3);font-size:16px;line-height:1}
+  .files li i{grid-column:1/-1;height:3px;border-radius:3px;background:linear-gradient(90deg,#2f7bff var(--p),rgba(255,255,255,.08) var(--p))}
+  .ask{padding:14px;border-radius:14px;background:rgba(255,176,32,.09);border:1px solid rgba(255,176,32,.35);display:grid;gap:10px;margin-bottom:6px}
+  .ask.err{background:rgba(255,90,70,.08);border-color:rgba(255,107,107,.35)}
+  .ask b{font-size:14px}
+  .ask p{font-size:14px;line-height:1.5}
+  .lead.sm{font-size:14.5px}
+  .dk-pv{border-radius:14px;overflow:hidden;background:#000;border:1px solid var(--line);margin-top:12px}
+  .dk-pv video,.dk-pv img{display:block;width:100%;max-height:64vh;object-fit:contain;background:#000}
+  .dk-pv.page{height:min(64vh,640px);background:#fff}
+  .dk-pv iframe{width:100%;height:100%;border:0;background:#fff}
+  .dk-files{display:flex;flex-wrap:wrap;gap:6px;margin-top:10px}
+  .dk-files a{font:600 11.5px var(--f-mono);padding:5px 9px;border-radius:8px;background:rgba(143,184,255,.12);color:#8fb8ff;text-decoration:none;max-width:100%;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+  .dk-files a small{opacity:.6}
+  a.open{display:inline-block;margin-top:8px;font-size:12px;color:#8fb8ff;font-weight:700;text-decoration:none}
+  .acts.dk-acts{margin-top:10px}
+  .brief{margin-top:8px;font-size:13px;color:var(--ink-2)}
+  .brief summary{cursor:pointer;color:#8fb8ff;font-weight:700}
+  .brief p{margin-top:6px;line-height:1.5;white-space:pre-wrap}
+  .dk-log{margin-top:8px;max-height:220px;overflow:auto;padding:10px;border-radius:10px;background:rgba(0,0,0,.35);font:500 11px/1.5 var(--f-mono);color:var(--ink-2);white-space:pre-wrap;word-break:break-word}
+  .note code{font:600 11.5px var(--f-mono);color:#8fb8ff}
+  .steps{list-style:none;display:grid;gap:9px;border-left:2px solid var(--line);margin-left:5px;padding-left:16px}
+  .steps li{position:relative;font-size:13px;line-height:1.45;color:var(--ink-2)}
+  .steps li::before{content:"";position:absolute;left:-22px;top:5px;width:10px;height:10px;border-radius:50%;background:#2a2e38;border:2px solid #101218}
+  .steps li:last-child{color:var(--ink)}
+  .steps li:last-child::before{background:var(--ok);box-shadow:0 0 10px var(--ok)}
+  .steps time{font:500 10.5px var(--f-mono);color:var(--ink-3);margin-right:8px}
+  .df .err{color:#ff8f8f}
+  .toast{position:fixed;left:50%;bottom:calc(var(--gb) + 70px);transform:translateX(-50%);z-index:9;display:flex;gap:12px;align-items:center;padding:9px 10px 9px 16px;max-width:calc(100% - 32px);font-size:13.5px;font-weight:600;animation:rise .3s cubic-bezier(.2,.8,.2,1)}
+  .toast[hidden]{display:none}
+  .toast span{min-width:0;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+  .toast button{flex:none}
+
   /* ---------- dock ---------- */
   .dock{position:fixed;left:50%;bottom:var(--gb);transform:translateX(-50%);display:flex;gap:2px;padding:5px;z-index:7;max-width:calc(100% - 32px);overflow-x:auto;scrollbar-width:none}
   .dock button{display:flex;align-items:center;gap:7px;padding:9px 13px;border-radius:12px;font-size:13.5px;font-weight:600;color:var(--ink-2);white-space:nowrap;transition:background .2s,color .2s}
@@ -402,7 +474,7 @@
     <button class="hide-btn" id="teamHide" aria-label="Скрыть панель"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><path d="m9 6 6 6-6 6"/></svg>Скрыть</button>
   </header>
   <nav class="ptabs" id="ptabs" role="tablist" aria-label="Разделы">
-    <button data-tab="tasks" role="tab">Задачи</button><button data-tab="works" role="tab">Работы</button><button data-tab="team" role="tab">Команда</button><button data-tab="skills" role="tab">Скиллы</button>
+    <button data-tab="live" role="tab" id="liveTab" hidden>В работе</button><button data-tab="tasks" role="tab">Задачи</button><button data-tab="works" role="tab">Работы</button><button data-tab="team" role="tab">Команда</button><button data-tab="skills" role="tab">Скиллы</button>
   </nav>
   <nav class="filters" id="filters" aria-label="Отделы"></nav>
   <div class="search"><input id="q" type="search" placeholder="Найти: монтаж, воронка, PR…" aria-label="Поиск по задачам" autocomplete="off"></div>
@@ -443,9 +515,18 @@
     <div class="db" id="dBody"></div>
   </div>
 </div>
+<div class="modal" id="deskModal" hidden role="dialog" aria-modal="true" aria-labelledby="kHead">
+  <div class="dlg sm">
+    <div class="dh"><div id="kHead"></div><button class="x" id="kClose" aria-label="Закрыть">×</button></div>
+    <div class="db" id="kBody"></div>
+    <div class="df" id="kFoot"></div>
+  </div>
+</div>
 <div id="lightbox" hidden><img alt=""><p></p></div>
+<div class="toast glass" id="toast" hidden role="status"><span id="toastText"></span><button class="btn-go" id="toastGo">Открыть</button></div>
 
 <nav class="dock glass" id="dock" aria-label="Вид">
+  <button data-cmd="newtask" class="go" id="dNew" hidden><svg viewBox="0 0 24 24"><path d="M12 5v14M5 12h14"/></svg>Задача агенту</button>
   <button data-cmd="overview" class="on"><svg viewBox="0 0 24 24"><path d="M3 10.5 12 3l9 7.5V20a1 1 0 0 1-1 1h-5v-6H9v6H4a1 1 0 0 1-1-1z"/></svg>Обзор</button>
   <button data-cmd="desk"><svg viewBox="0 0 24 24"><circle cx="12" cy="8" r="4"/><path d="M4 21a8 8 0 0 1 16 0"/></svg>Мой стол</button>
   <button data-cmd="team" class="on"><svg viewBox="0 0 24 24"><path d="M9 6h11M9 12h11M9 18h11M4 6h.01M4 12h.01M4 18h.01"/></svg>Задачи</button>
@@ -470,6 +551,8 @@
 <script src="tasks.js"></script>
 <script src="tasks.auto.js"></script>
 <script src="works.js"></script>
+<!-- задачи, которые владелец поставил и принял прямо в офисе (assistant/desk.mjs) -->
+<script src="/api/assistant/desk/history.js" defer></script>
 
 <!-- ================== ДАННЫЕ ОФИСА ==================
      Состав отделов и руководители — как в office.config.js на hq.aicex.club.
@@ -670,9 +753,9 @@ const CFG = window.OFFICE_CONFIG || DATA.config;
 const CATALOG = { ...DATA.catalog };
 for (const [id, a] of Object.entries(window.AGENT_CATALOG || {})) CATALOG[id] = { ...(CATALOG[id] || { screen:'doc', tasks:[a.task || 'Работает'], out:[] }), ...a };
 const BRAND = CFG.brand || 'AI Office';
-// История реальных задач (tasks.js + tasks.auto.js): в 3D агенты работают и носят именно эти задачи
+// История реальных задач (tasks.js + tasks.auto.js + принятые в офисе): в 3D агенты работают и носят именно эти задачи
 const MANUAL_TASKS = window.OFFICE_TASKS || [];
-const TASKS = [...MANUAL_TASKS, ...(window.OFFICE_TASKS_AUTO?.tasks || []).filter(t => !MANUAL_TASKS.some(m => m.id === t.id))]
+const TASKS = [...MANUAL_TASKS, ...[...(window.OFFICE_TASKS_AUTO?.tasks || []), ...(window.OFFICE_TASKS_DESK || [])].filter(t => !MANUAL_TASKS.some(m => m.id === t.id))]
   .sort((a, b) => b.date.localeCompare(a.date));
 const tasksOfAgent = id => TASKS.filter(t => (t.agents || []).includes(id));
 for (const [id, a] of Object.entries(CATALOG)) {
@@ -1803,6 +1886,9 @@ const ST = {
   thinking: { label:'думает',      c:'#ffb547' },
   carrying: { label:'несёт',       c:'#6fb2ff' },
   presenting: { label:'у вашего стола', c:'#ffb020' },
+  asking:   { label:'ждёт ответа', c:'#ffb020' },
+  queued:   { label:'в очереди',   c:'#8fb8ff' },
+  review:   { label:'на проверке', c:'#ffb020' },
   meeting:  { label:'планёрка',    c:'#b691ff' },
   break:    { label:'перерыв',     c:'#9aa3b5' },
   idle:     { label:'ждёт задачу', c:'#9aa3b5' },
@@ -1935,6 +2021,20 @@ class Agent {
     return true;
   }
   stepWork(dt) {
+    // задача владельца с рабочего стола: статус и экран — как у настоящей задачи
+    const L = this.live;
+    if (L) {
+      if (L.wait && NOW - L.since > 25) L.wait = false;
+      if (L.wait || L.status !== 'work') {
+        this.status = L.wait ? 'idle' : L.status === 'question' ? 'asking' : L.status === 'review' ? 'review' : 'queued';
+        return L.status === 'question' && Math.sin(NOW * 0.5 + this.ph) > 0.3 ? 'think' : 'idle';
+      }
+      this.thinkT -= dt;
+      if (this.thinkT <= 0) { this.thinking = !this.thinking; this.thinkT = this.thinking ? rand(3, 6) : rand(8, 16); }
+      this.status = this.thinking ? 'thinking' : 'working';
+      this.progress = Math.min(0.95, this.progress + dt * 0.004);
+      return this.thinking ? 'think' : 'type';
+    }
     if (this.waitInput) {
       this.idleFor = (this.idleFor || 0) + dt;
       if (this.inbox.length || this.idleFor > 30) { this.waitInput = false; this.idleFor = 0; }
@@ -1951,6 +2051,7 @@ class Agent {
     if (this.kind === 'head') return this.headBrain();
     if (this.kind === 'orch') return this.orchBrain();
     if (!this.atHome()) return walkTo(this.home.x, this.home.z, this.home.yaw, 'walking');
+    if (this.live) return { type:'work' };
     if (this.progress >= 1) { this.planDeliver(); return this.plan.shift(); }
     return { type:'work' };
   }
@@ -2036,6 +2137,10 @@ class Agent {
   activity() {
     const s = this.sceneStatus();
     if (this.kind === 'head') return this.data.title;
+    const L = this.live;
+    if (L && this.act?.type === 'work') return L.wait ? 'Ждёт задачу от оркестратора' : L.status === 'question' ? `Ждёт вашего ответа: «${L.title}»`
+      : L.status === 'review' ? `Результат на проверке: «${L.title}»` : L.status === 'queued' ? `Ваша задача в очереди: «${L.title}»` : `Делает вашу задачу: «${L.title}»`;
+    if (s === 'presenting' && this.carrying) return `У вашего стола: «${this.carrying.item}»`;
     if ((s === 'carrying' || s === 'presenting') && this.carrying) { const tg = this.act?.target; const to = tg === 'you' ? 'на ваш стол' : tg ? `→ ${tg.name}` : ''; return `Несёт «${this.carrying.item}» ${to}`; }
     if (s === 'meeting') return 'Планёрка у доски задач';
     if (s === 'break') return this.x > 13 ? 'Кофе у окна' : 'Отдыхает в лаунже';
@@ -2135,7 +2240,7 @@ function paintLabel(a) {
   a.labelSig = sig; a.lw = 0;
   const el = a.labelEl;
   el.classList.toggle('on', selectedId === a.id);
-  el.classList.toggle('need', s === 'presenting');
+  el.classList.toggle('need', s === 'presenting' || s === 'asking' || s === 'review');
   el.style.setProperty('--c', a.color);
   el.style.setProperty('--s', ST[s].c);
   el.innerHTML = a.kind === 'head'
@@ -2413,6 +2518,21 @@ const freshTag = t => isFresh(t) ? '<em class="fresh">новое</em>' : '';
 function drawOwnerScreen() {
   const S = pods[0].owner.scr, g = S.g, W = S.w, H = S.h;
   g.fillStyle = '#f4f2ec'; g.fillRect(0, 0, W, H);
+  const open = desk.on ? desk.tasks.filter(t => DESK_OPEN.includes(t.status)) : [];
+  if (open.length) {
+    g.fillStyle = '#1f5cff'; g.fillRect(0, 0, W, 24);
+    g.fillStyle = '#fff'; g.font = FONT(800, 11); g.fillText('Задачи агентам', 10, 16);
+    g.font = MONO(9); g.textAlign = 'right'; g.fillText(`${open.length} в работе`, W - 10, 16); g.textAlign = 'left';
+    open.slice(0, 4).forEach((t, i) => {
+      const y = 32 + i * 31;
+      g.fillStyle = '#fff'; rr(g, 8, y, W - 16, 26, 5); g.fill();
+      g.fillStyle = DST[t.status]; g.fillRect(8, y, 4, 26);
+      g.fillStyle = '#20232a'; g.font = FONT(700, 9.5); g.fillText(fitText(g, t.route?.title || t.text, W - 40), 18, y + 11);
+      g.fillStyle = '#6a6f78'; g.font = FONT(500, 8.5); g.fillText(fitText(g, `${t.agent?.name || 'диспетчер'} · ${t.statusText}`, W - 40), 18, y + 21);
+    });
+    S.tex.needsUpdate = true;
+    return;
+  }
   g.fillStyle = '#1f5cff'; g.fillRect(0, 0, W, 24);
   g.fillStyle = '#fff'; g.font = FONT(800, 11); g.fillText('История задач', 10, 16);
   g.font = MONO(9); g.textAlign = 'right'; g.fillText(`${TASKS.length}`, W - 10, 16); g.textAlign = 'left';
@@ -2615,15 +2735,17 @@ function focusHTML() {
   if (id === 'you' || (p && p.owner)) {
     const own = DEPTS[0].head;
     return `<article class="focus"><div class="fh">${faceHTML({ ...own, dept:DEPTS[0] })}<div><b>Ваш стол · ${esc(own.name)}</b><small>${esc(own.title)}</small></div></div>
-      <div class="acts"><button data-do="dossier" data-id="${esc(own.id)}">Досье</button><button data-do="desk">Сесть за стол</button><button data-do="clear">Все задачи</button></div></article>`;
+      ${desk.on ? deskWaitingHTML() : ''}
+      <div class="acts">${desk.on ? '<button data-do="newtask" data-id="" class="on">Новая задача агенту</button>' : ''}<button data-do="dossier" data-id="${esc(own.id)}">Досье</button><button data-do="desk">Сесть за стол</button><button data-do="clear">Все задачи</button></div></article>`;
   }
   if (!a) return '';
   const head = a.kind === 'head', orch = a.kind === 'orch';
   const n = head ? TASKS.filter(t => t.dept === a.dept.id).length : tasksOfAgent(id).length;
   return `<article class="focus"><div class="fh">${head ? faceHTML(PEOPLE[id]) : orbHTML(a.color)}<div><b>${esc(a.name)}</b><small>${esc(head ? a.data.title : a.data.role)}</small></div></div>
     <div class="now"><span class="eyebrow">В офисе сейчас</span><p data-f="act">${esc(a.activity())}</p></div>
-    ${orch ? '<p class="note">Оркестратор — персонаж визуализации: показывает, как задачи расходятся по отделам. В истории задач его нет.</p>' : ''}
-    <div class="acts">${orch ? '' : `<button data-do="dossier" data-id="${esc(id)}">Досье</button>`}
+    ${a.live ? `<div class="acts"><button data-desk="${esc(a.live.id)}" class="on">Ваша задача: ${esc(a.live.title)}</button></div>` : ''}
+    ${orch ? '<p class="note">Оркестратор — диспетчер офиса: разбирает задачи владельца, выбирает агента и скилл и относит задачу исполнителю. В истории задач его нет.</p>' : ''}
+    <div class="acts">${desk.on && !head ? `<button data-do="newtask" data-id="${orch ? '' : esc(id)}">Поставить задачу</button>` : ''}${orch ? '' : `<button data-do="dossier" data-id="${esc(id)}">Досье</button>`}
       <button data-do="follow" class="${followId === id ? 'on' : ''}">${followId === id ? 'Слежу' : 'Следить'}</button>
       <button data-do="clear">Все задачи</button></div>
     ${orch ? '' : `<h3 class="eyebrow">${head ? 'Задачи отдела' : 'Задачи агента'} · ${n}</h3>`}</article>`;
@@ -2707,12 +2829,14 @@ function skillsHTML() {
 function renderPanel() {
   for (const b of $('ptabs').children) { const on = b.dataset.tab === ptab; b.classList.toggle('on', on); b.setAttribute('aria-selected', on); }
   for (const b of $('filters').children) b.classList.toggle('on', b.dataset.f === pdept);
-  const body = ptab === 'tasks' ? focusHTML() + tasksHTML() : ptab === 'works' ? worksPanelHTML() : ptab === 'team' ? teamHTML() : skillsHTML();
+  if (ptab === 'live' && !desk.on) ptab = 'tasks';
+  const body = ptab === 'live' ? liveHTML() : ptab === 'tasks' ? focusHTML() + tasksHTML() : ptab === 'works' ? worksPanelHTML() : ptab === 'team' ? teamHTML() : skillsHTML();
   $('pbody').innerHTML = body;
   const n = visibleTasks().length;
   let sum = `${SKILLS.length} скиллов · ${LIB_NAMES.size} в библиотеке`;
   if (ptab === 'tasks') sum = `${n} ${word(n, 'задача', 'задачи', 'задач')}${n !== TASKS.length ? ` из ${TASKS.length}` : ''} · с доказательствами`;
   if (ptab === 'team') sum = `${bots.filter(b => b.kind === 'bot').length} агентов · ${DEPTS.length} руководителя`;
+  if (ptab === 'live') sum = deskSum();
   if (ptab === 'works') {
     const ids = DEPTS.flatMap(d => d.agentIds), totals = ids.map(id => { const { blocks, W } = agentWorks(id); return statTotal(worksStats(blocks, W)); });
     const all = totals.reduce((a, b) => a + b, 0), busy = totals.filter(Boolean).length;
@@ -2727,6 +2851,7 @@ $('ptabs').addEventListener('click', e => { const b = e.target.closest('[data-ta
 $('q').addEventListener('input', e => { pquery = e.target.value.trim(); renderPanel(); });
 $('pbody').addEventListener('click', e => {
   const t = e.target.closest('[data-task]'); if (t) return openTask(t.dataset.task);
+  const dk = e.target.closest('[data-desk]'); if (dk) return openDeskTask(dk.dataset.desk);
   const wk = e.target.closest('[data-works]'); if (wk) return openDossier(wk.dataset.works, 'works');
   const ag = e.target.closest('[data-agent]'); if (ag) return openDossier(ag.dataset.agent);
   const pp = e.target.closest('[data-person]'); if (pp) return openDossier(pp.dataset.person);
@@ -2736,6 +2861,8 @@ $('pbody').addEventListener('click', e => {
   if (k === 'follow') { followId = followId === selectedId ? null : selectedId; if (followId) select(followId, true); renderPanel(); }
   if (k === 'clear') { selectedId = null; pagent = null; followId = null; agents.forEach(paintLabel); renderPanel(); }
   if (k === 'desk') cmd('desk');
+  if (k === 'newtask') openDeskNew({ agent:b.dataset.id || '' });
+  if (k === 'live') { ptab = 'live'; renderPanel(); $('pbody').scrollTop = 0; }
 });
 function setPanel(open) {
   $('team').hidden = !open; $('teamShow').hidden = open;
@@ -2751,8 +2878,9 @@ function refreshHUD() {
   const a = agents.get(selectedId), act = $('pbody').querySelector('[data-f="act"]');
   if (a && act) act.textContent = a.activity();
   $('clock').textContent = hhmm();
-  const dl = pods[0].deskLabel;
-  if (!dl.innerHTML) dl.innerHTML = `<i></i>Ваш стол <span>управление</span>`;
+  const dl = pods[0].deskLabel, need = desk.on ? desk.tasks.filter(t => t.status === 'question' || t.status === 'review').length : 0;
+  const dh = `<i></i>Ваш стол <span>управление</span>${need ? `<em>${need} ${word(need, 'ждёт', 'ждут', 'ждут')} вас</em>` : ''}`;
+  if (dl._h !== dh) { dl._h = dh; dl.innerHTML = dh; }
   for (const d of DEPTS) {
     const n = TASKS.filter(t => t.dept === d.id).length;
     d.chipEl.innerHTML = `<b>${esc(d.name)}</b><small>${esc(d.head.owner ? 'вы' : d.head.name)} · ${d.agentIds.length} ${word(d.agentIds.length, 'агент', 'агента', 'агентов')} · ${n} ${word(n, 'задача', 'задачи', 'задач')} в истории</small>`;
@@ -2896,7 +3024,8 @@ function showDossierTab(tab) {
     } else if (tab === 'skills') {
       h = `<ul class="skilllist">${(c.skills || []).map(s => `<li><b>${esc(s.title)}</b><code>${esc(s.name)}</code><p>${esc(s.desc || '')}</p>${s.say ? `<i>Скажи: «${esc(s.say)}»</i>` : ''}</li>`).join('')}</ul>` || '';
     } else {
-      h = (c.templates || []).map(t => `<div class="tpl"><b>${esc(t.task)}</b><p>${esc(t.prompt)}</p><button data-copy="${esc(t.prompt)}">Скопировать задачу</button></div>`).join('') || `<p class="empty">Примеры задач появятся позже.</p>`;
+      const own = desk.on ? `<div class="acts" style="margin-bottom:14px"><button class="btn-go" data-nt="" data-nt-agent="${esc(id)}">Поставить задачу агенту «${esc(agentMeta(id).name)}»</button></div>` : '';
+      h = own + ((c.templates || []).map(t => `<div class="tpl"><b>${esc(t.task)}</b><p>${esc(t.prompt)}</p><button data-copy="${esc(t.prompt)}">Скопировать задачу</button>${desk.on ? ` <button data-nt="${esc(t.prompt)}" data-nt-agent="${esc(id)}">Поставить в работу</button>` : ''}</div>`).join('') || `<p class="empty">Примеры задач появятся позже.</p>`);
     }
   }
   $('dBody').innerHTML = h;
@@ -2909,6 +3038,7 @@ $('dossier').addEventListener('click', e => { if (e.target.id === 'dossier') clo
 
 // общие клики внутри окон: задачи, агенты, люди, картинки, страницы, копирование
 for (const box of [$('tBody'), $('dBody')]) box.addEventListener('click', e => {
+  const nt = e.target.closest('[data-nt]'); if (nt) { closeDossier(); return openDeskNew({ agent:nt.dataset.ntAgent || '', text:nt.dataset.nt }); }
   const t = e.target.closest('[data-task]'); if (t) { closeDossier(); return openTask(t.dataset.task); }
   const ag = e.target.closest('[data-agent]'); if (ag) { closeTask(); return openDossier(ag.dataset.agent); }
   const pp = e.target.closest('[data-person]'); if (pp) { closeTask(); return openDossier(pp.dataset.person); }
@@ -2937,9 +3067,10 @@ function routeHash() {
   if (h.startsWith('task-')) openTask(h.slice(5), false);
   else if (h.startsWith('agent-')) openDossier(...h.slice(6).split('/'));
   else if (h.startsWith('head-')) openDossier(...h.slice(5).split('/'));
+  else if (h.startsWith('desk-')) { if (desk.on) openDeskTask(h.slice(5)); else desk.hash = h.slice(5); }
 }
 addEventListener('hashchange', routeHash);
-const modalOpen = () => !$('taskModal').hidden || !$('dossier').hidden;
+const modalOpen = () => !$('taskModal').hidden || !$('dossier').hidden || !$('deskModal').hidden;
 
 
 /* ======================= ЛИЧНЫЙ АССИСТЕНТ =======================
@@ -2951,7 +3082,7 @@ const ASST_API = '/api/assistant';
 const asst = { state:null, loaded:false, busy:false, rec:null, recTimer:0, queue:[], playing:false, gen:0, ctx:null, src:null, speakAll:false };
 try { asst.speakAll = localStorage.getItem('hq:speakAll') === '1'; } catch (e) {}
 const ASST_CHIPS = {
-  owner:[['Доложи обстановку', true], ['Что сделали за неделю?'], ['У кого из агентов нет результатов?'], ['Что делать дальше по офису?']],
+  owner:[['Доложи обстановку', true], ['Что сейчас в работе у агентов?'], ['Что сделали за неделю?'], ['У кого из агентов нет результатов?'], ['Что делать дальше по офису?']],
   guest:[['Что умеет этот офис?'], ['Покажи лучшие работы агентов'], ['Кто работает в отделе маркетинга?']],
 };
 const canSpeak = () => Boolean(asst.state?.owner && asst.state.configured.voice && asst.state.voice);
@@ -2971,6 +3102,9 @@ async function asstLoad() {
     asst.state = await r.json();
   } catch (e) { asst.state = null; }
   asstRender();
+  // рабочий стол — только у владельца: после входа включается, после выхода прячется
+  if (asst.state?.owner && !desk.on) deskInit();
+  if (asst.state && !asst.state.owner && desk.on) deskOff();
 }
 function asstSub() {
   const s = asst.state;
@@ -2985,7 +3119,7 @@ function asstRender() {
   if (!s) { addMsg('n', 'Ассистент сейчас недоступен — сервер не отвечает. Попробуйте позже.'); $('aChips').innerHTML = $('aFoot').innerHTML = ''; return; }
   if (!s.configured.chat) addMsg('n', 'Ассистент ещё не подключён к Claude: на сервере нет ключа.');
   else if (!s.history.length) addMsg('n', s.owner
-    ? 'Спросите что угодно о проекте или нажмите «Доложи обстановку». Микрофон — чтобы говорить голосом, ответ тогда тоже будет голосом.'
+    ? 'Спросите что угодно о проекте, поставьте задачу агенту («сделай презентацию к эфиру…») или нажмите «Доложи обстановку». Микрофон — чтобы говорить голосом, ответ тогда тоже будет голосом.'
     : 'Привет! Я рассказываю, что уже сделали ИИ-агенты и команда AICEX. Спросите про любой отдел, агента или работу.');
   for (const t of s.history) addMsg(t.role === 'user' ? 'u' : 'a', t.text);
   $('aChips').innerHTML = ASST_CHIPS[s.owner ? 'owner' : 'guest'].map(([q, v]) => `<button type="button" data-q="${esc(q)}"${v ? ' data-voice="1"' : ''}>${esc(q)}</button>`).join('');
@@ -3071,6 +3205,7 @@ async function asstSend(text, voice = false) {
         if (!line.startsWith('data: ')) continue;
         const ev = JSON.parse(line.slice(6));
         if (ev.t === 'error') throw new Error(ev.message);
+        if (ev.t === 'task') deskFromAssistant(ev.id);
         if (ev.t === 'delta') {
           full += ev.text;
           if (!frame) frame = requestAnimationFrame(() => { frame = 0; render(); });
@@ -3212,6 +3347,410 @@ $('aFoot').addEventListener('click', async e => {
 });
 
 
+/* ======================= РАБОЧИЙ СТОЛ: ЗАДАЧИ АГЕНТАМ =======================
+   Владелец ставит задачу прямо в офисе — формой или словами ассистенту. Диспетчер на сервере
+   (assistant/desk.mjs) выбирает агента и скилл, исполнитель (runner/, Claude Code со скиллами
+   команды) делает работу. Здесь — форма, вкладка «В работе» с живыми карточками, окно задачи
+   (вопрос, превью, «Принять», правка) и 3D: оркестратор относит задачу агенту, агент работает
+   и несёт результат к вашему столу. Гости рабочего стола не видят. */
+
+const DESK_API = ASST_API + '/desk';
+const desk = { on:false, tasks:[], runner:null, es:null, retry:0, uploads:[], openId:null, form:false, hash:'', busy:false };
+const DESK_OPEN = ['routing', 'question', 'queued', 'work', 'review'];
+const DST = { routing:'#7fd3ff', question:'#ffb020', queued:'#8fb8ff', work:'#3ddc97', review:'#ffb020', done:'#3ddc97', cancelled:'#9aa3b5', error:'#ff6b6b' };
+const DESK_EXAMPLES = ['Презентация к эфиру: 10 слайдов про воронку из Threads в Telegram', 'Смонтируй рилс из моего видео — файл прикреплю', 'Лендинг под новый интенсив по ИИ-агентам',
+  'Карусель для Instagram: 7 слайдов про офис ИИ-агентов', 'Сценарии пяти рилсов на неделю'];
+const deskTask = id => desk.tasks.find(t => t.id === id);
+const deskTitle = t => t.route?.title || t.text;
+const sizeText = n => n >= 1e6 ? `${(n / 1e6).toFixed(n >= 1e8 ? 0 : 1)} МБ` : `${Math.max(1, Math.round(n / 1e3))} КБ`;
+function ago(iso) {
+  const s = (Date.now() - Date.parse(iso)) / 1000;
+  if (!(s >= 60)) return 'только что';
+  if (s < 3600) return `${Math.floor(s / 60)} мин назад`;
+  if (s < 86400) return `${Math.floor(s / 3600)} ч назад`;
+  return fmtDate(iso.slice(0, 10), true);
+}
+async function deskPost(p, body) {
+  try {
+    const r = await fetch(DESK_API + p, { method:'POST', headers:{ 'content-type':'application/json' }, body:JSON.stringify(body || {}) });
+    return { ok:r.ok, j:await r.json().catch(() => ({})) };
+  } catch (e) { return { ok:false, j:{ error:'Нет связи с офисом — проверьте интернет.' } }; }
+}
+
+/* ---------- состояние: снимок + живые события ---------- */
+
+async function deskInit() {
+  let r;
+  try { r = await fetch(DESK_API + '/tasks', { cache:'no-store' }); } catch (e) { return; }
+  if (!r.ok) return deskOff();
+  const j = await r.json().catch(() => null);
+  if (!j) return;
+  deskSnapshot(j.tasks, j.runner);
+  deskStream();
+}
+function deskStream() {
+  desk.es?.close();
+  const es = desk.es = new EventSource(DESK_API + '/events');
+  es.onopen = () => { desk.retry = 0; };
+  es.onmessage = e => {
+    let ev; try { ev = JSON.parse(e.data); } catch (err) { return; }
+    if (ev.t === 'snapshot') deskSnapshot(ev.tasks, ev.runner);
+    if (ev.t === 'task') deskUpsert(ev.task);
+    if (ev.t === 'runner') { const was = desk.runner?.online; desk.runner = ev.runner; if (was !== ev.runner.online) deskRefresh(); }
+  };
+  // обрыв сети браузер переподключает сам; закрытый поток (вышли, сервер перезапущен) — заново через паузу
+  es.onerror = () => {
+    if (es.readyState !== EventSource.CLOSED) return;
+    es.close(); if (desk.es === es) desk.es = null;
+    setTimeout(() => { if (!desk.es) deskInit(); }, Math.min(60e3, 5e3 * ++desk.retry));
+  };
+}
+function deskOff() {
+  desk.es?.close(); desk.es = null;
+  if (!desk.on) return;
+  desk.on = false; desk.tasks = [];
+  for (const b of bots) if (b.live) liveClear(b);
+  if (!$('deskModal').hidden) closeDesk();
+  deskRefresh();
+}
+function deskSnapshot(list, runner) {
+  desk.tasks = list || []; if (runner) desk.runner = runner;
+  const first = !desk.on;
+  desk.on = true;
+  for (const b of bots) liveApply(b, null, null, true);
+  deskRefresh();
+  if (first && desk.hash) { openDeskTask(desk.hash); desk.hash = ''; }
+}
+function deskUpsert(v) {
+  const i = desk.tasks.findIndex(t => t.id === v.id), prev = i >= 0 ? desk.tasks[i] : null;
+  if (prev && prev.updated > v.updated) return;
+  if (i >= 0) desk.tasks[i] = v; else desk.tasks.unshift(v);
+  for (const id of new Set([v.agent?.id, prev?.agent?.id].filter(Boolean))) liveApply(agents.get(id), v, prev, false);
+  liveOrch(v, prev);
+  if (v.status === 'done' && v.published && !(prev?.status === 'done' && prev.published)) deskHistory();
+  deskNotify(v, prev);
+  deskRefresh(v.id);
+}
+function deskRefresh(id) {
+  $('dNew').hidden = !desk.on;
+  const need = desk.tasks.filter(t => t.status === 'question' || t.status === 'review').length;
+  $('liveTab').hidden = !desk.on;
+  $('liveTab').innerHTML = `В работе${need ? ` <b>${need}</b>` : ''}`;
+  if (!$('team').hidden && (ptab === 'live' || (ptab === 'tasks' && selectedId)) || !desk.on) renderPanel();
+  if (desk.openId && (!id || id === desk.openId)) renderDeskTask();
+  drawOwnerScreen();
+}
+setInterval(() => { if (desk.on && ptab === 'live' && !$('team').hidden && !modalOpen()) renderPanel(); }, 30e3);
+// принятая задача сразу попадает в историю офиса — без перезагрузки
+async function deskHistory() {
+  try {
+    const r = await fetch(DESK_API + '/history.json', { cache:'no-store' });
+    if (!r.ok) return;
+    for (const t of await r.json()) if (!TASKS.some(x => x.id === t.id)) TASKS.push(t);
+    TASKS.sort((a, b) => b.date.localeCompare(a.date));
+    renderPanel(); drawKanban();
+  } catch (e) {}
+}
+function deskFromAssistant() {
+  if (!desk.on) deskInit();
+  ptab = 'live';
+  if ($('team').hidden) setPanel(true);
+  renderPanel(); $('pbody').scrollTop = 0;
+}
+
+/* ---------- уведомления: вопрос, готовый результат, ошибка ---------- */
+
+let toastT = 0, toastId = '';
+function toast(text, id, sec = 10) {
+  toastId = id || '';
+  $('toastText').textContent = text;
+  $('toastGo').hidden = !id;
+  $('toast').hidden = false;
+  clearTimeout(toastT); toastT = setTimeout(() => { $('toast').hidden = true; }, sec * 1e3);
+}
+$('toastGo').onclick = () => { $('toast').hidden = true; if (toastId) openDeskTask(toastId); };
+function deskNotify(v, prev) {
+  if (prev?.status === v.status || desk.openId === v.id) return;
+  const name = v.agent?.name || 'Агент', title = deskTitle(v);
+  if (v.status === 'question') toast(v.question?.from === 'agent' ? `«${name}» спрашивает: ${v.question.text}` : `Диспетчер уточняет: ${v.question?.text || ''}`, v.id, 30);
+  else if (v.status === 'review') toast(`«${name}» принёс результат: ${title}`, v.id, 30);
+  else if (v.status === 'error') toast(`Не получилось: ${title}`, v.id, 30);
+  else if (v.status === 'queued' && prev?.status === 'routing') toast(`Диспетчер передал задачу агенту «${name}»`, v.id);
+}
+
+/* ---------- вкладка «В работе» ---------- */
+
+function deskSum() {
+  const open = desk.tasks.filter(t => DESK_OPEN.includes(t.status)).length, need = desk.tasks.filter(t => t.status === 'question' || t.status === 'review').length;
+  return `${open} ${word(open, 'задача', 'задачи', 'задач')} в работе${need ? ` · ${need} ${word(need, 'ждёт', 'ждут', 'ждут')} вас` : ''}${desk.runner && !desk.runner.online ? ' · исполнитель не на связи' : ''}`;
+}
+function deskCardHTML(t) {
+  const m = t.agent ? agentMeta(t.agent.id) : null, last = t.steps.at(-1);
+  const st = t.status === 'queued' && t.queuePos > 1 ? `в очереди · ${t.queuePos}-я` : t.statusText;
+  return `<li><button class="task dk${t.status === 'question' || t.status === 'review' ? ' need' : ''}" data-desk="${esc(t.id)}" style="--s:${DST[t.status] || '#9aa3b5'}">
+    <span class="t-meta"><em class="st">${esc(st)}</em><time datetime="${esc(t.updated)}">${esc(ago(t.updated))}</time></span>
+    <b>${esc(deskTitle(t))}</b>
+    <span class="t-who">${m ? `${orbHTML(m.color, 'xs')}<span class="t-dept">${esc(m.name)}</span>` : '<span class="t-dept">диспетчер выбирает агента</span>'}</span>
+    ${t.status === 'question' ? `<span class="dk-q">${esc(t.question?.text || '')}</span>` : t.status === 'error' ? `<span class="dk-q">${esc(t.error)}</span>` : last ? `<span class="dk-step">${esc(last.text)}</span>` : ''}</button></li>`;
+}
+function liveHTML() {
+  const q = pquery.toLowerCase();
+  const list = desk.tasks.filter(t => (pdept === 'all' || t.agent?.dept === pdept) && (!q || [t.text, t.route?.title, t.agent?.name].join(' ').toLowerCase().includes(q)));
+  const open = list.filter(t => DESK_OPEN.includes(t.status)), closed = list.filter(t => !DESK_OPEN.includes(t.status)).slice(0, 20);
+  return `<div class="dk-top"><button class="btn-go" data-do="newtask" data-id="">Новая задача агенту</button></div>
+    ${desk.runner && !desk.runner.online ? '<p class="note warn">Исполнитель на сервере сейчас не на связи — задачи подождут в очереди и начнутся, когда он вернётся.</p>'
+      : desk.runner?.claude && !desk.runner.claude.ok ? `<p class="note warn">Исполнитель не может запустить Claude Code: ${esc(desk.runner.claude.error)}${desk.runner.claude.auth ? ` · вход: ${esc(desk.runner.claude.auth)}` : ''}</p>` : ''}
+    ${open.length ? `<h3 class="eyebrow">В работе · ${open.length}</h3><ol class="tasks">${open.map(deskCardHTML).join('')}</ol>`
+      : `<p class="empty">${list.length || !desk.tasks.length ? 'Сейчас у агентов нет ваших задач. Нажмите «Новая задача агенту» или скажите ассистенту: «поставь задачу…».' : 'Задач с такими условиями нет.'}</p>`}
+    ${closed.length ? `<h3 class="eyebrow">Закрытые</h3><ol class="tasks">${closed.map(deskCardHTML).join('')}</ol>` : ''}`;
+}
+// на карточке «Ваш стол»: что ждёт решения владельца
+function deskWaitingHTML() {
+  const need = desk.tasks.filter(t => t.status === 'question' || t.status === 'review');
+  if (!need.length) return '';
+  return `<div class="now"><span class="eyebrow">Ждут вашего решения · ${need.length}</span></div><ol class="tasks">${need.slice(0, 4).map(deskCardHTML).join('')}</ol>`;
+}
+
+/* ---------- окно: новая задача ---------- */
+
+function deskModalShow() { $('deskModal').hidden = false; $('kBody').scrollTop = 0; }
+function openDeskNew({ agent = '', text = '' } = {}) {
+  if (!desk.on) { asstOpen(true); return; }
+  closeTask(); closeDossier();
+  desk.openId = null; desk.form = true; desk.uploads = [];
+  $('kHead').innerHTML = `<span class="eyebrow">Рабочий стол офиса</span><h2>Задача агенту</h2>
+    <p>Опишите своими словами, что нужно. Диспетчер выберет агента и скилл, спросит, если чего-то не хватает, а готовый результат агент принесёт к вашему столу.</p>`;
+  const opts = DEPTS.map(d => `<optgroup label="${esc(d.name)}">${d.agentIds.map(id => { const m = agentMeta(id); return `<option value="${esc(id)}"${id === agent ? ' selected' : ''}>${esc(m.name)} — ${esc(m.role)}</option>`; }).join('')}</optgroup>`).join('');
+  $('kBody').innerHTML = `<div class="dk-form">
+    <label class="dk-l" for="kText">Что сделать</label>
+    <textarea id="kText" placeholder="Например: презентация к эфиру про воронку из Threads, 10 слайдов, в стиле AICEX">${esc(text)}</textarea>
+    <div class="chipsrow dk-ex">${DESK_EXAMPLES.map(x => `<button type="button" data-ex="${esc(x)}">${esc(x)}</button>`).join('')}</div>
+    <label class="dk-l" for="kAgent">Кому</label>
+    <select id="kAgent"><option value="">Диспетчер решит сам</option>${opts}</select>
+    <span class="dk-l">Материалы</span>
+    <label class="drop" id="kDrop"><input type="file" id="kFile" multiple hidden>Перетащите сюда видео, фото или документы — или нажмите, чтобы выбрать. До 300 МБ на файл.</label>
+    <ul class="files" id="kFiles"></ul></div>`;
+  $('kFoot').innerHTML = `<span id="kNote">${isMobile ? '' : 'Ctrl+Enter — поставить'}</span><button type="button" data-k="close">Отмена</button><button type="button" class="btn-go" data-k="submit">Поставить задачу</button>`;
+  deskModalShow();
+  const ta = $('kText'); ta.focus(); ta.setSelectionRange(ta.value.length, ta.value.length);
+  $('kFile').onchange = e => { [...e.target.files].forEach(deskUpload); e.target.value = ''; };
+  const drop = $('kDrop');
+  drop.ondragover = e => { e.preventDefault(); drop.classList.add('on'); };
+  drop.ondragleave = () => drop.classList.remove('on');
+  drop.ondrop = e => { e.preventDefault(); drop.classList.remove('on'); [...(e.dataTransfer?.files || [])].forEach(deskUpload); };
+}
+// файлы грузятся сразу при выборе — к нажатию «Поставить» они уже на сервере
+function deskUpload(file) {
+  const u = { name:file.name, size:file.size, loaded:0, id:'', error:'', xhr:null };
+  desk.uploads.push(u);
+  if (file.size > 300e6) { u.error = 'больше 300 МБ'; return renderUploads(); }
+  const x = u.xhr = new XMLHttpRequest();
+  x.open('PUT', `${DESK_API}/upload?name=${encodeURIComponent(file.name)}`);
+  x.upload.onprogress = e => { u.loaded = e.loaded; renderUploads(); };
+  x.onload = () => {
+    let j = {}; try { j = JSON.parse(x.responseText); } catch (e) {}
+    if (x.status === 200 && j.id) { u.id = j.id; u.loaded = u.size; } else u.error = j.error || 'не загрузился';
+    u.xhr = null; renderUploads();
+  };
+  x.onerror = () => { u.error = 'нет связи'; u.xhr = null; renderUploads(); };
+  x.send(file);
+  renderUploads();
+}
+function renderUploads() {
+  const box = $('kFiles'); if (!box) return;
+  box.innerHTML = desk.uploads.map((u, i) => `<li><span>${esc(u.name)}</span>
+    <small class="${u.error ? 'err' : ''}">${u.error ? esc(u.error) : u.id ? sizeText(u.size) : `${Math.round(u.loaded / Math.max(1, u.size) * 100)}%`}</small>
+    <button type="button" data-rm="${i}" aria-label="Убрать файл">×</button>${!u.id && !u.error ? `<i style="--p:${(u.loaded / Math.max(1, u.size) * 100).toFixed(1)}%"></i>` : ''}</li>`).join('');
+}
+async function deskSubmit() {
+  const text = $('kText').value.trim(), btn = $('kFoot').querySelector('[data-k="submit"]');
+  if (!text) { $('kText').focus(); return deskNote('Опишите задачу — хотя бы одной фразой.', true); }
+  if (desk.uploads.some(u => u.xhr)) return deskNote('Файлы ещё загружаются — подождите немного.', true);
+  if (desk.busy) return;
+  desk.busy = true; btn.disabled = true; deskNote('Ставлю задачу…');
+  const r = await deskPost('/tasks', { text, agent:$('kAgent').value, uploads:desk.uploads.filter(u => u.id).map(u => u.id) });
+  desk.busy = false; btn.disabled = false;
+  if (!r.ok || !r.j.task) return deskNote(r.j.error || 'Не получилось поставить задачу — попробуйте ещё раз.', true);
+  desk.uploads = [];
+  deskUpsert(r.j.task);
+  closeDesk();
+  ptab = 'live'; if ($('team').hidden) setPanel(true); renderPanel(); $('pbody').scrollTop = 0;
+  toast('Задача поставлена — диспетчер выбирает агента', r.j.task.id);
+}
+function deskNote(text, err = false) { const n = $('kNote'); if (n) { n.textContent = text; n.classList.toggle('err', err); } }
+
+/* ---------- окно: задача на рабочем столе ---------- */
+
+function openDeskTask(id) {
+  if (!deskTask(id)) return;
+  closeTask(); closeDossier();
+  if (desk.form) desk.uploads.forEach(u => u.xhr?.abort());
+  desk.form = false; desk.openId = id;
+  $('kHead').innerHTML = ''; $('kHead')._h = '';
+  $('kBody').innerHTML = `<div id="kAsk"></div><div id="kRes"></div><div id="kActs"></div><div id="kInfo"></div><h4>Ход работы</h4><ol class="steps" id="kSteps"></ol>`;
+  $('kFoot').innerHTML = ''; $('kFoot')._h = '';
+  renderDeskTask();
+  deskModalShow();
+  setHash('desk-' + id);
+}
+// окно обновляется по событиям частями: то, что владелец печатает, и открытое превью не сбрасываются
+const setHTML = (el, html) => { if (el && el._h !== html) { el._h = html; el.innerHTML = html; } };
+function previewHTML(res) {
+  const u = res.mainUrl, ext = (res.main.split('.').pop() || '').toLowerCase();
+  if (!u) return '';
+  const open = `<a class="open" href="${esc(u)}" target="_blank" rel="noopener">Открыть ${esc(res.main)} в новой вкладке ↗</a>`;
+  if (['mp4', 'webm', 'mov'].includes(ext)) return `<div class="dk-pv"><video src="${esc(u)}" controls playsinline preload="metadata"></video></div>${open}`;
+  if (['jpg', 'jpeg', 'png', 'webp', 'gif'].includes(ext)) return `<div class="dk-pv"><img src="${esc(u)}" alt=""></div>${open}`;
+  // страницы агента — в песочнице: им не достаются права владельца на сайте офиса
+  if (ext === 'html' || ext === 'htm') return `<div class="dk-pv page"><iframe src="${esc(u)}" title="Результат агента" sandbox="allow-scripts allow-popups allow-forms allow-downloads"></iframe></div>${open}`;
+  if (ext === 'pdf') return `<div class="dk-pv page"><iframe src="${esc(u)}" title="Результат агента"></iframe></div>${open}`;
+  return open;
+}
+function renderDeskTask() {
+  const t = deskTask(desk.openId);
+  if (!t) return;
+  const m = t.agent ? agentMeta(t.agent.id) : null, res = t.result;
+  const when = new Date(t.created);
+  setHTML($('kHead'), `<span class="t-meta"><em class="st" style="--s:${DST[t.status] || '#9aa3b5'}">${esc(t.statusText)}${t.status === 'queued' && t.queuePos > 1 ? ` · ${t.queuePos}-я в очереди` : ''}</em>
+    <time datetime="${esc(t.created)}">${fmtDate(t.created.slice(0, 10), true)}, ${hhmm(when)}</time>${m ? `<em>${esc(m.name)}</em>` : ''}</span><h2>${esc(deskTitle(t))}</h2>`);
+  setHTML($('kAsk'), t.status === 'question' ? `<div class="ask"><b>${t.question?.from === 'agent' ? `Вопрос от агента «${esc(m?.name || '')}»` : 'Диспетчер уточняет'}</b>
+    <p>${esc(t.question?.text || '')}</p><textarea id="kAnswer" placeholder="Ваш ответ"></textarea><div class="acts"><button class="btn-go" data-k="answer">Ответить</button></div></div>` : '');
+  setHTML($('kRes'), res && (t.status === 'review' || t.status === 'done') ? `<h4>Результат${t.versions > 1 ? ` · версия ${res.version}` : ''}</h4>
+    ${res.summary ? `<p class="lead sm">${esc(res.summary)}</p>` : ''}${previewHTML(res)}
+    <div class="dk-files">${res.files.slice(0, 40).map(f => `<a href="${esc(f.url)}" target="_blank" rel="noopener">${esc(f.path)} <small>${sizeText(f.size)}</small></a>`).join('')}${res.files.length > 40 ? `<a>ещё ${res.files.length - 40}</a>` : ''}</div>` : '');
+  let acts = '';
+  if (t.status === 'done') acts = `<p class="note">${t.published ? 'Принято и добавлено в историю офиса — задача видна в «Задачах» и в работах агента.' : 'Принято без публикации в истории офиса.'}</p>`;
+  if (t.status === 'review' || t.status === 'done') acts += `<h4>Правка</h4><textarea id="kRevise" placeholder="Что поменять? Агент поправит в той же сессии и принесёт новую версию"></textarea><div class="acts dk-acts"><button data-k="revise">Отправить правку</button></div>`;
+  if (t.status === 'error') acts = `<div class="ask err"><b>Не получилось</b><p>${esc(t.error)}</p>${t.log ? `<details class="brief"><summary>Подробности</summary><pre class="dk-log">${esc(t.log)}</pre></details>` : ''}<div class="acts"><button class="btn-go" data-k="retry">Повторить</button></div></div>`;
+  setHTML($('kActs'), acts);
+  setHTML($('kInfo'), `<h4>Ваша задача</h4><p class="lead sm">«${esc(t.text)}»</p>${t.files.length ? `<div class="chipsrow" style="margin-top:10px">${t.files.map(f => `<span>${esc(f)}</span>`).join('')}</div>` : ''}
+    ${t.answers.length ? `<p class="note" style="margin-top:10px">${t.answers.map(a => `Вопрос: ${esc(a.q)} — ваш ответ: ${esc(a.a)}`).join('<br>')}</p>` : ''}
+    ${t.route ? `<h4>Диспетчер</h4><p class="note">Исполнитель — «${esc(m?.name || t.route.agent)}»${t.route.skill ? ` · скилл <code>${esc(t.route.skill)}</code>` : ''}. ${esc(t.route.why)}</p>
+      ${t.route.brief ? `<details class="brief"><summary>ТЗ агенту</summary><p>${esc(t.route.brief)}</p></details>` : ''}` : ''}`);
+  setHTML($('kSteps'), t.steps.map(s => `<li><time>${hhmm(new Date(s.at))}</time>${esc(s.text)}</li>`).join(''));
+  // решение по результату — всегда внизу окна, без прокрутки
+  setHTML($('kFoot'), t.status === 'review'
+    ? `<span id="kNote"></span><button data-k="cancel">Отклонить</button><button data-k="approve-quiet">Принять без публикации</button><button class="btn-go" data-k="approve">Принять и добавить в историю</button>`
+    : `<span id="kNote">${t.status === 'work' ? 'Агент работает — шаги появляются здесь сами' : t.status === 'queued' && desk.runner && !desk.runner.online ? 'Исполнитель не на связи — задача начнётся, когда он вернётся' : ''}</span>
+    ${DESK_OPEN.includes(t.status) ? '<button data-k="cancel">Отменить задачу</button>' : ''}<button data-k="copy">Ссылка</button><button data-k="close">Закрыть</button>`);
+}
+async function deskAct(k) {
+  if (k === 'close') return closeDesk();
+  if (k === 'submit') return deskSubmit();
+  const t = deskTask(desk.openId);
+  if (!t) return;
+  if (k === 'copy') { navigator.clipboard?.writeText(location.origin + location.pathname + '#desk-' + t.id).then(() => deskNote('Ссылка скопирована — откроется у вас после входа')).catch(() => {}); return; }
+  let p = k, body = {};
+  if (k === 'answer' || k === 'revise') {
+    const box = $(k === 'answer' ? 'kAnswer' : 'kRevise'), text = box?.value.trim();
+    if (!text) { box?.focus(); return deskNote(k === 'answer' ? 'Напишите ответ.' : 'Напишите, что поменять.', true); }
+    body = { text };
+  }
+  if (k === 'approve' || k === 'approve-quiet') { p = 'approve'; body = { publish:k === 'approve' }; }
+  if (k === 'cancel' && !confirm(t.status === 'review' ? 'Отклонить результат и закрыть задачу? Если нужно переделать — лучше отправьте правку.' : 'Отменить задачу? Агент остановит работу.')) return;
+  if (desk.busy) return;
+  desk.busy = true; deskNote('Отправляю…');
+  const r = await deskPost(`/tasks/${t.id}/${p}`, body);
+  desk.busy = false;
+  if (!r.ok || !r.j.task) return deskNote(r.j.error || 'Не получилось — попробуйте ещё раз.', true);
+  deskUpsert(r.j.task);
+  if (p === 'approve') { closeDesk(); toast(body.publish ? `Принято: «${deskTitle(t)}» — в истории офиса` : `Принято: «${deskTitle(t)}»`); }
+}
+function deskEnter() {
+  const a = document.activeElement?.id;
+  if (desk.form) return deskSubmit();
+  if (a === 'kAnswer') deskAct('answer');
+  if (a === 'kRevise') deskAct('revise');
+}
+function closeDesk() {
+  if (desk.form) desk.uploads.forEach(u => u.xhr?.abort());
+  $('deskModal').hidden = true; $('kBody').innerHTML = ''; $('kHead')._h = $('kFoot')._h = '';
+  desk.openId = null; desk.form = false; desk.uploads = [];
+  if (location.hash.startsWith('#desk-')) setHash('');
+}
+$('kClose').onclick = closeDesk;
+$('deskModal').addEventListener('click', e => {
+  if (e.target.id === 'deskModal') return closeDesk();
+  const k = e.target.closest('[data-k]'); if (k) return deskAct(k.dataset.k);
+  const ex = e.target.closest('[data-ex]'); if (ex) { const ta = $('kText'); ta.value = ex.dataset.ex; ta.focus(); return; }
+  const rm = e.target.closest('[data-rm]');
+  if (rm) { const u = desk.uploads[+rm.dataset.rm]; u?.xhr?.abort(); desk.uploads.splice(+rm.dataset.rm, 1); renderUploads(); }
+});
+
+/* ---------- 3D: задачи владельца в офисе ----------
+   Оркестратор относит задачу агенту, агент работает за своим столом (экран и подпись — эта задача),
+   с вопросом или результатом идёт к вашему столу. У агента видна одна задача: в работе важнее. */
+
+const LIVE_PRI = { work:0, question:1, review:2, queued:3 };
+const isLive = t => t.route && LIVE_PRI[t.status] != null && !(t.status === 'question' && t.question?.from !== 'agent');
+function liveTaskOf(id) {
+  return desk.tasks.filter(t => t.agent?.id === id && isLive(t)).sort((a, b) => LIVE_PRI[a.status] - LIVE_PRI[b.status] || b.updated.localeCompare(a.updated))[0] || null;
+}
+function liveApply(b, v, prev, quiet) {
+  if (!b || b.kind !== 'bot') return;
+  const cur = desk.on ? liveTaskOf(b.id) : null;
+  if (!cur) {
+    if (!b.live) return;
+    const ended = v && v.id === b.live.id ? v.status : '';
+    return liveClear(b, ended === 'done' ? 'cheer' : ended === 'cancelled' || ended === 'error' ? 'shrug' : null);
+  }
+  if (!b.live || b.live.id !== cur.id) {
+    if (!b.live) b.taskBefore = b.task;
+    // свежая задача (только что от диспетчера) — её приносит оркестратор
+    const fresh = !quiet && v?.id === cur.id && (!prev || prev.status === 'routing' || (prev.status === 'question' && prev.question?.from !== 'agent'));
+    b.live = { id:cur.id, title:deskTitle(cur), status:cur.status, wait:fresh, since:NOW, shown:'' };
+    b.progress = 0.05; b.waitInput = false;
+    if (fresh) liveHandoff(b);
+  }
+  b.live.status = cur.status; b.live.title = deskTitle(cur); b.task = b.live.title;
+  const key = cur.status === 'review' ? `${cur.id}:${cur.result?.version || 0}` : cur.status === 'question' ? `${cur.id}:q${cur.answers.length}` : '';
+  if (key && b.live.shown !== key) {
+    b.live.shown = key;
+    const id = cur.id, st = cur.status;
+    liveVisitOwner(b, st === 'review' ? b.live.title : `Вопрос по задаче «${b.live.title}»`, () => !(b.live?.id === id && b.live.status === st));
+  }
+  b.labelSig = '';
+}
+function liveClear(b, pose) {
+  b.live = null; b.task = b.taskBefore || b.data.task; b.progress = 0; b.labelSig = '';
+  if (pose) { b.flashUntil = NOW + 2.4; b.flashPose = pose; }
+  if (pose === 'cheer') addArchive(b.color);
+}
+function liveHandoff(b) {
+  b.plan = []; b.act = null; b.carrying = null; releaseQueueSpot(b);
+  const o = agents.get('orchestrator'), id = b.live.id;
+  if (!o) { b.live.wait = false; return; }
+  const s = behindSpot(b);
+  releaseQueueSpot(o);
+  o.plan = []; o.act = null; o.carrying = { item:b.live.title };
+  o.task = `Несёт задачу агенту «${b.name}»`;
+  o.plan.push(walkTo(s.x, s.z, null, 'carrying', { target:b }),
+    call(() => b.attend(o, 3)),
+    doFor(2.8, 'talk', 'carrying', { face:() => b.atHome() ? b : b.home }),
+    call(() => {
+      o.carrying = null; o.task = 'Обход команды';
+      b.desk?.stack.set(b.desk.stack.n + 1, o.color);
+      if (b.live?.id === id) { b.live.wait = false; b.flashUntil = NOW + 1.6; b.flashPose = 'cheer'; }
+    }));
+}
+// к вашему столу: с результатом на проверку или с вопросом; стоит, пока вы не решите (до полутора минут)
+function liveVisitOwner(a, item, done) {
+  a.plan = []; a.act = null; releaseQueueSpot(a);
+  a.carrying = { item, o:{ to:'you' } };
+  const q = claimQueueSpot(a), own = pods[0].owner.chair, yaw = Math.atan2(own.x - q.x, own.z - q.z);
+  a.plan.push(walkTo(q.x, q.z, yaw, 'carrying', { target:'you' }),
+    doFor(90, 'present', 'presenting', { yaw, until:done }),
+    call(() => { releaseQueueSpot(a); a.carrying = null; pods[0].owner.stack.set(pods[0].owner.stack.n + 1, a.color); }),
+    walkTo(a.home.x, a.home.z, a.home.yaw, 'walking'));
+}
+// вопрос диспетчера несёт оркестратор
+function liveOrch(v, prev) {
+  const o = agents.get('orchestrator');
+  if (!o || v.status !== 'question' || v.question?.from === 'agent' || prev?.status === 'question') return;
+  liveVisitOwner(o, `Вопрос по задаче «${deskTitle(v)}»`, () => deskTask(v.id)?.status !== 'question');
+  o.task = 'Уточняет задачу у вас';
+}
+
 /* ======================= КАМЕРА, ВИДЫ, ЭКСКУРСИЯ ======================= */
 
 let fly = null, mode = 'overview', labelsOn = true, tour = null;
@@ -3273,6 +3812,7 @@ function cmd(k) {
   if (k === 'labels') { labelsOn = !labelsOn; setDockOn('labels', labelsOn); }
   if (k === 'tour') tour ? stopTour() : startTour();
   if (k === 'assistant') asstOpen($('asst').hidden);
+  if (k === 'newtask') openDeskNew();
 }
 $('dock').addEventListener('click', e => { const b = e.target.closest('[data-cmd]'); if (b) cmd(b.dataset.cmd); });
 
@@ -3342,6 +3882,11 @@ renderer.domElement.addEventListener('pointermove', e => {
 });
 addEventListener('keydown', e => {
   if (!$('lightbox').hidden) { if (e.key === 'Escape') $('lightbox').hidden = true; return; }
+  if (!$('deskModal').hidden) {
+    if (e.key === 'Escape') closeDesk();
+    if (e.key === 'Enter' && (e.ctrlKey || e.metaKey)) { e.preventDefault(); deskEnter(); }
+    return;
+  }
   if (!$('taskModal').hidden) {
     if (e.key === 'Escape') closeTask();
     if (e.key === 'ArrowRight') stepTask(1);
@@ -3396,6 +3941,7 @@ onResize();
 { const v = overviewView(); camera.position.copy(v.pos); controls.target.copy(v.target); setControls('free'); }
 renderPanel(); refreshHUD();
 routeHash();
+deskInit();
 drawKanban(); drawOwnerScreen();
 document.fonts?.ready.then(() => { drawKanban(); drawOwnerScreen(); });
 
@@ -3441,7 +3987,7 @@ renderer.setAnimationLoop(() => {
   for (const a of agents.values()) {
     if (!a.label) continue;
     const d = camera.position.distanceTo(tmpV.set(a.x, 1.2, a.z)), s = a.sceneStatus();
-    a.label.visible = labelsOn && (d < 15 || selectedId === a.id || s === 'waiting' || (s === 'carrying' && d < 30));
+    a.label.visible = labelsOn && (d < 15 || selectedId === a.id || a.live || s === 'presenting' || (s === 'carrying' && d < 30));
   }
   for (const d of DEPTS) d.chip.visible = labelsOn && mode === 'plan';
   composer.render();

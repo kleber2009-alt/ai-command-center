@@ -4,7 +4,9 @@ name: deploy-hq-office
 # (vars.HETZNER_HOST, where *.aicex.club points). Each run uploads a release to
 # /opt/hq-office/releases/<id>, switches /opt/hq-office/current to it and keeps the
 # static container + edge Caddy site in place (apps/hq-office/deploy/server.sh), and runs the
-# personal assistant (apps/hq-office/assistant, /api/assistant/*) next to it.
+# personal assistant (apps/hq-office/assistant, /api/assistant/*) next to it, with the working desk
+# (/api/assistant/desk/*: tasks for agents) and its runner (apps/hq-office/runner, a systemd
+# service under the bots' user that does the tasks with Claude Code and the team's skills).
 # Also started by hq-office-history.yml after it adds tasks to tasks.auto.js.
 #
 # Secret: HETZNER_SSH_KEY. Variables: HETZNER_HOST, HETZNER_USER, HETZNER_SSH_PORT,
@@ -39,7 +41,8 @@ jobs:
 
       - name: Check data files
         run: |
-          for f in office.config.js dept-content.js agent-content.js skills-library.js tasks.js tasks.auto.js works.js assistant/server.mjs assistant/office.mjs assistant/voice.mjs; do node --check "apps/hq-office/$f"; done
+          for f in office.config.js dept-content.js agent-content.js skills-library.js tasks.js tasks.auto.js works.js assistant/server.mjs assistant/office.mjs assistant/voice.mjs assistant/desk.mjs; do node --check "apps/hq-office/$f"; done
+          python3 -m py_compile apps/hq-office/runner/runner.py && rm -rf apps/hq-office/runner/__pycache__
           node -e '
             global.window = {}; for (const f of ["office.config.js", "dept-content.js", "agent-content.js", "tasks.js", "tasks.auto.js", "works.js"])
               require("vm").runInThisContext(require("fs").readFileSync("apps/hq-office/" + f, "utf8"));
@@ -74,10 +77,12 @@ jobs:
         run: |
           REL="$(date -u +%Y%m%d%H%M%S)-${GITHUB_SHA::7}"
           echo "REL=$REL" >> "$GITHUB_ENV"
-          tar -C apps/hq-office --exclude=./deploy --exclude=./sync --exclude=./assistant --exclude=./README.md --exclude=./CLAUDE.md -czf - . \
+          tar -C apps/hq-office --exclude=./deploy --exclude=./sync --exclude=./assistant --exclude=./runner --exclude=./README.md --exclude=./CLAUDE.md -czf - . \
             | $SSH "mkdir -p /opt/hq-office/releases/$REL && tar -xzf - -C /opt/hq-office/releases/$REL"
           tar -C apps/hq-office/assistant --exclude=./.data -czf - . \
             | $SSH "mkdir -p /opt/hq-office/assistant/releases/$REL && tar -xzf - -C /opt/hq-office/assistant/releases/$REL"
+          tar -C apps/hq-office/runner -czf - . \
+            | $SSH "mkdir -p /opt/hq-office/runner/releases/$REL && tar -xzf - -C /opt/hq-office/runner/releases/$REL"
 
       - name: Assistant secrets
         env:
@@ -96,7 +101,7 @@ jobs:
 
       - name: Smoke test
         run: |
-          for path in / /tasks.js /tasks.auto.js /api/assistant/health; do
+          for path in / /tasks.js /tasks.auto.js /api/assistant/health /api/assistant/desk/history.js; do
             code=$(curl -sS -o /dev/null -w '%{http_code}' --retry 8 --retry-delay 5 --retry-all-errors "https://$DOMAIN$path" || echo 000)
             echo "$code https://$DOMAIN$path"
             [ "$code" = 200 ] || exit 1

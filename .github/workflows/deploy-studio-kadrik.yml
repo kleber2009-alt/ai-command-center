@@ -1,0 +1,107 @@
+name: deploy-studio-kadrik
+
+# «Студия Кадрика» (@studio_kadrik_bot, apps/studio-kadrik) on the aicex box (vars.HETZNER_HOST), where it runs as the
+# systemd service studio-kadrik-bot from /home/iliapaliy/studio-kadrik-bot; the mini-app is kadrik.aicex.club (cloudflared).
+# Every push checks the code. Deploy is manual: mode "check" (default) only prints the diff between this repo and the
+# live code; mode "deploy" backs up the live code, installs the release, restarts the service and rolls back if the bot
+# does not come back (apps/studio-kadrik/deploy/server.sh). Secrets (.env), players' data and the Python env stay on the server.
+#
+# The deploy also sets up the montage sandbox (bubblewrap, SANDBOX=bwrap in .env) — clients' montage runs only inside it.
+#
+# Secret: HETZNER_SSH_KEY. Variables: HETZNER_HOST, HETZNER_USER, HETZNER_SSH_PORT.
+# Optional, written into the bot's .env on deploy (empty — left as is):
+#   secret STUDIO_KADRIK_ANTHROPIC_API_KEY → KADRIK_ANTHROPIC_API_KEY (own API key for montage instead of the Claude Code login),
+#   secret STUDIO_KADRIK_PAY_PROVIDER_TOKEN → PAY_PROVIDER_TOKEN (card payments, e.g. YooKassa via @BotFather → Payments),
+#   variable STUDIO_KADRIK_PACKS_RUB → PACKS_RUB (card prices, "p1:490,p5:1790,p15:3990,p40:7990").
+
+on:
+  push:
+    branches: [main]
+    paths:
+      - 'apps/studio-kadrik/**'
+      - '.github/workflows/deploy-studio-kadrik.yml'
+  pull_request:
+    paths:
+      - 'apps/studio-kadrik/**'
+      - '.github/workflows/deploy-studio-kadrik.yml'
+  workflow_dispatch:
+    inputs:
+      mode:
+        description: 'check — only show the diff with the live bot; deploy — install and restart'
+        type: choice
+        options: [check, deploy]
+        default: check
+
+concurrency:
+  group: deploy-studio-kadrik
+  cancel-in-progress: false
+
+jobs:
+  check:
+    runs-on: ubuntu-latest
+    timeout-minutes: 5
+    steps:
+      - uses: actions/checkout@v5
+      - uses: actions/setup-python@v5
+        with:
+          python-version: '3.12'
+      - name: Compile and import
+        working-directory: apps/studio-kadrik
+        run: |
+          python -m py_compile bot.py heavy_slot.py review_tools.py
+          bash -n start.sh deploy/server.sh
+          pip install -q -r requirements.txt
+          # import the bot without starting it: a fake token in the right format, no network calls at import time
+          BOT_TOKEN=123456:TEST JOBS_DIR="$RUNNER_TEMP/jobs" python -c 'import bot; print(len(bot.PACKS), "packs ok")'
+
+  deploy:
+    needs: check
+    if: github.event_name == 'workflow_dispatch'
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+    env:
+      HOST: ${{ vars.HETZNER_HOST }}
+      SSH_USER: ${{ vars.HETZNER_USER || 'root' }}
+      SSH_PORT: ${{ vars.HETZNER_SSH_PORT || '22' }}
+      MODE: ${{ inputs.mode }}
+    steps:
+      - uses: actions/checkout@v5
+
+      - name: Install SSH key
+        env:
+          KEY: ${{ secrets.HETZNER_SSH_KEY }}
+        run: |
+          test -n "$HOST" || { echo "::error::vars.HETZNER_HOST is not set"; exit 1; }
+          mkdir -p ~/.ssh
+          printf '%s\n' "$KEY" > ~/.ssh/id_deploy
+          chmod 600 ~/.ssh/id_deploy
+          ssh-keyscan -p "$SSH_PORT" -H "$HOST" >> ~/.ssh/known_hosts 2>/dev/null
+          echo "SSH=ssh -i $HOME/.ssh/id_deploy -p $SSH_PORT $SSH_USER@$HOST" >> "$GITHUB_ENV"
+
+      - name: Upload release
+        run: |
+          REL="$(date -u +%Y%m%d%H%M%S)-${GITHUB_SHA::7}"
+          echo "REL=$REL" >> "$GITHUB_ENV"
+          tar -C apps/studio-kadrik --exclude=./deploy --exclude=./CLAUDE.md -czf - . \
+            | $SSH "mkdir -p /opt/studio-kadrik/releases/$REL && tar -xzf - -C /opt/studio-kadrik/releases/$REL"
+
+      - name: Settings from secrets
+        if: inputs.mode == 'deploy'
+        env:
+          API: ${{ secrets.STUDIO_KADRIK_ANTHROPIC_API_KEY }}
+          PAY: ${{ secrets.STUDIO_KADRIK_PAY_PROVIDER_TOKEN }}
+          RUB: ${{ vars.STUDIO_KADRIK_PACKS_RUB }}
+        run: |
+          printf 'KADRIK_ANTHROPIC_API_KEY=%s\nPAY_PROVIDER_TOKEN=%s\nPACKS_RUB=%s\n' "$API" "$PAY" "$RUB" \
+            | $SSH "umask 077 && cat > /opt/studio-kadrik/env.add"
+
+      - name: Activate
+        run: $SSH bash -s -- "$REL" "$( [ "$MODE" = deploy ] || echo check )" < apps/studio-kadrik/deploy/server.sh
+
+      - name: Smoke test
+        if: inputs.mode == 'deploy'
+        run: |
+          code=$(curl -sS -o /dev/null -w '%{http_code}' --retry 6 --retry-delay 5 --retry-all-errors https://kadrik.aicex.club/ || echo 000)
+          echo "$code https://kadrik.aicex.club/"
+          [ "$code" = 200 ]
+          curl -sS https://kadrik.aicex.club/health
