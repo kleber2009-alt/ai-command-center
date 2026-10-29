@@ -37,6 +37,7 @@ model User {
   parserRuns           ParserRun[]
   parserItems          ParserItem[]
   carouselDrafts       CarouselDraft[]
+  pipelines            Pipeline[]
   researchSearches     ResearchSearch[]
   researchAnalyses     ResearchAnalysis[]
   researchHooks        ResearchHook[]
@@ -297,6 +298,7 @@ model ParserConfig {
   userId              String   @unique
   user                User     @relation(fields: [userId], references: [id], onDelete: Cascade)
   nicheDescription    String?  @db.Text // «коучинг продаж B2B, конфронтационный стиль»
+  ownHandle           String? // свой Instagram без @ — источник для «Мой блог»
   competitors         String[] @default([]) // ["expert_one", "expert_two"] (без @)
   hashtags            String[] @default([]) // ["salescoaching", "b2bsales"] (без #)
   postedWithinDays    Int      @default(7)
@@ -365,6 +367,13 @@ model ParserItem {
   // Генерится Claude по caption+niche, кэшируется здесь, чтобы повторный
   // переход не делал лишний rewrite.
   rewrittenScript   String?   @db.Text
+  // «Мой блог»: source=own — свои посты; для ремикса каруселей храним
+  // оригиналы слайдов, для рилсов — mp4 (транскрипт → новый сценарий).
+  source            String    @default("competitors") // competitors | own
+  shares            Int       @default(0)
+  durationSec       Float?
+  videoUrl          String?   @db.Text
+  slideImages       String[]  @default([])
   status            String    @default("new") // new | used | dismissed
   videoGenerationId String? // если уже отправлен в работу
   createdAt         DateTime  @default(now())
@@ -437,6 +446,9 @@ model CarouselDraft {
   status        String      @default("draft")
   // S3 URLs финальных PNG'ов в порядке слайдов (заполняется в Phase 2 render).
   imageUrls     String[]    @default([])
+  // Ремикс своей карусели (скилл ilia-carousel-style): оригинальные слайды
+  // (в нашем S3), которые остаются картинками, меняются обложка/хук/CTA.
+  sourceImages  String[]    @default([])
   tokensCost    Int         @default(0)
   errorMsg      String?
   createdAt     DateTime    @default(now())
@@ -1004,4 +1016,37 @@ model Generation {
 
   @@index([userId, createdAt])
   @@index([briefId])
+}
+
+// Pipeline — одна идея от источника до публикации («Мой блог» → уникализация →
+// Reels: HeyGen-аватар + голос → видео → скилл-монтаж; Carousel: ремикс →
+// рендер) → план/публикация. Ссылки на существующие сущности, сами артефакты
+// живут в своих таблицах.
+model Pipeline {
+  id                String   @id @default(cuid())
+  userId            String
+  user              User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+  kind              String // reel | carousel
+  stage             String   @default("source") // source | script | video | montage | ready | scheduled | published | error
+  parserItemId      String?
+  title             String?
+  sourceText        String?  @db.Text // транскрипт/подпись исходника
+  script            String?  @db.Text // уникализированный сценарий (reel)
+  similarity        Float?
+  gate              String? // pass | warn | block
+  heygenAvatarId    String? // look/avatar id из аккаунта HeyGen
+  heygenAvatarName  String?
+  heygenAvatarImage String?  @db.Text
+  voiceId           String? // HeyGen voice_id
+  voiceName         String?
+  montageStyle      String?
+  videoGenerationId String?
+  montageId         String?
+  carouselDraftId   String?
+  scheduledPostId   String?
+  errorMsg          String?
+  createdAt         DateTime @default(now())
+  updatedAt         DateTime @updatedAt
+
+  @@index([userId, createdAt])
 }
