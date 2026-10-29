@@ -1,0 +1,17 @@
+{
+  "name": "remake-site",
+  "private": true,
+  "description": "«Ремейк залёта» — remake.aicex.club: прогоны скилла remake-top-reel и студия (референс → сценарий → аватар HeyGen → монтаж Кадрика)",
+  "type": "module",
+  "scripts": {
+    "build": "bash deploy/build.sh",
+    "start": "node server.mjs",
+    "check": "node --check server.mjs && node --check studio.mjs"
+  },
+  "dependencies": {
+    "@anthropic-ai/sdk": "1.3.0"
+  },
+  "engines": {
+    "node": ">=22"
+  }
+}

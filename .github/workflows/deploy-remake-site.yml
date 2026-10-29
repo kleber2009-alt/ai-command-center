@@ -1,0 +1,120 @@
+name: deploy-remake-site
+
+# «Ремейк залёта» (apps/remake-site) → https://remake.aicex.club on the aicex box (vars.HETZNER_HOST, where
+# *.aicex.club points). Two tabs: «Прогоны» shows how the remake-top-reel skill turns a viral reel into a new one,
+# step by step (runs arrive through PUT /api/runs, /api/media with REMAKE_SITE_TOKEN); «Студия» is the owner's
+# workbench behind a password: reference → transcript → script 2.0 (Claude + the skill's gate) → HeyGen avatar →
+# montage by a Studio Kadrik skill → download.
+# Each run uploads a release to /opt/remake-site/releases/<id>; apps/remake-site/deploy/server.sh builds the API image
+# (ffmpeg, python3, yt-dlp, @anthropic-ai/sdk), switches /opt/remake-site/current, keeps /opt/remake-site/data (runs and
+# studio clips), takes the montage key from Studio Kadrik's .env on the box and wires the edge Caddy site.
+#
+# Secrets: HETZNER_SSH_KEY; REMAKE_SITE_TOKEN (skill → site; without it runs are read-only); REMAKE_SITE_PASSWORD (studio
+# login; falls back to REMAKE_SITE_TOKEN, without both the studio is closed). Studio keys — a REMAKE_* secret wins, else
+# one the repo already has: REMAKE_HEYGEN_API_KEY | PERSONA_TRAIN_HEYGEN_API_KEY | WORKER_HEYGEN_API_KEY;
+# REMAKE_ELEVENLABS_API_KEY | PERSONA_TRAIN_ELEVENLABS_API_KEY | WORKER_ELEVENLABS_API_KEY (else Kadrik's own on the box);
+# REMAKE_OPENAI_API_KEY | TRANSCRIBE_OPENAI_API_KEY (fallback transcription); REMAKE_ANTHROPIC_API_KEY |
+# HQ_OFFICE_ANTHROPIC_API_KEY | STUDIO_KADRIK_ANTHROPIC_API_KEY (script 2.0); REMAKE_APIFY_TOKEN | WORKER_APIFY_API_TOKEN |
+# TRANSCRIBE_APIFY_API_TOKEN (Instagram links when yt-dlp is blocked).
+# Variables: HETZNER_HOST, HETZNER_USER, HETZNER_SSH_PORT, REMAKE_SITE_DOMAIN (default remake.aicex.club).
+
+on:
+  push:
+    branches: [main]
+    paths:
+      - 'apps/remake-site/**'
+      - '.claude/skills/remake-top-reel/config.json'
+      - '.claude/skills/remake-top-reel/scripts/**'
+      - '.claude/skills/remake-top-reel/references/script-rules.md'
+      - '.github/workflows/deploy-remake-site.yml'
+  workflow_dispatch:
+
+concurrency:
+  group: deploy-remake-site
+  cancel-in-progress: false
+
+jobs:
+  deploy:
+    runs-on: ubuntu-latest
+    timeout-minutes: 25
+    env:
+      HOST: ${{ vars.HETZNER_HOST }}
+      SSH_USER: ${{ vars.HETZNER_USER || 'root' }}
+      SSH_PORT: ${{ vars.HETZNER_SSH_PORT || '22' }}
+      DOMAIN: ${{ vars.REMAKE_SITE_DOMAIN || 'remake.aicex.club' }}
+    steps:
+      - uses: actions/checkout@v5
+
+      - name: Build and check
+        run: |
+          bash apps/remake-site/deploy/build.sh
+          node --check apps/remake-site/server.mjs
+          node --check apps/remake-site/studio.mjs
+          python3 -c 'import ast, sys; [ast.parse(open(f).read(), f) for f in sys.argv[1:]]' apps/remake-site/dist/skill/scripts/*.py
+          test -f apps/remake-site/dist/Dockerfile && test -f apps/remake-site/dist/skill/references/script-rules.md
+          node -e '
+            const fs = require("fs"), html = fs.readFileSync("apps/remake-site/dist/index.html", "utf8");
+            const js = [...html.matchAll(/<script>([\s\S]*?)<\/script>/g)].map(m => m[1]).join("\n;\n");
+            new Function(js);
+            for (const f of fs.readdirSync("apps/remake-site/seed/runs")) {
+              const r = JSON.parse(fs.readFileSync("apps/remake-site/seed/runs/" + f, "utf8"));
+              const media = JSON.stringify(r).match(/media\/[\w.-]+/g) || [];
+              for (const m of media) if (!fs.existsSync("apps/remake-site/seed/" + m)) throw new Error("missing " + m + " in " + f);
+            }
+            console.log("page script ok, seed runs ok");'
+
+      - name: Install SSH key
+        env:
+          KEY: ${{ secrets.HETZNER_SSH_KEY }}
+        run: |
+          test -n "$HOST" || { echo "::error::vars.HETZNER_HOST is not set"; exit 1; }
+          mkdir -p ~/.ssh
+          printf '%s\n' "$KEY" > ~/.ssh/id_deploy
+          chmod 600 ~/.ssh/id_deploy
+          ssh-keyscan -p "$SSH_PORT" -H "$HOST" >> ~/.ssh/known_hosts 2>/dev/null
+          echo "SSH=ssh -i $HOME/.ssh/id_deploy -p $SSH_PORT $SSH_USER@$HOST" >> "$GITHUB_ENV"
+
+      - name: Upload release
+        run: |
+          REL="$(date -u +%Y%m%d%H%M%S)-${GITHUB_SHA::7}"
+          echo "REL=$REL" >> "$GITHUB_ENV"
+          tar -C apps/remake-site/dist -czf - . \
+            | $SSH "mkdir -p /opt/remake-site/releases/$REL && tar -xzf - -C /opt/remake-site/releases/$REL"
+
+      - name: API keys
+        env:
+          TOKEN: ${{ secrets.REMAKE_SITE_TOKEN }}
+          PASSWORD: ${{ secrets.REMAKE_SITE_PASSWORD }}
+          HEYGEN: ${{ secrets.REMAKE_HEYGEN_API_KEY || secrets.PERSONA_TRAIN_HEYGEN_API_KEY || secrets.WORKER_HEYGEN_API_KEY }}
+          ELEVEN: ${{ secrets.REMAKE_ELEVENLABS_API_KEY || secrets.PERSONA_TRAIN_ELEVENLABS_API_KEY || secrets.WORKER_ELEVENLABS_API_KEY }}
+          OPENAI: ${{ secrets.REMAKE_OPENAI_API_KEY || secrets.TRANSCRIBE_OPENAI_API_KEY }}
+          ANTHROPIC: ${{ secrets.REMAKE_ANTHROPIC_API_KEY || secrets.HQ_OFFICE_ANTHROPIC_API_KEY || secrets.STUDIO_KADRIK_ANTHROPIC_API_KEY }}
+          APIFY: ${{ secrets.REMAKE_APIFY_TOKEN || secrets.WORKER_APIFY_API_TOKEN || secrets.TRANSCRIBE_APIFY_API_TOKEN }}
+        run: |
+          [ -n "$TOKEN" ] || echo "::warning::REMAKE_SITE_TOKEN is not set — the skill can't push runs (seed runs only)"
+          [ -n "$PASSWORD$TOKEN" ] || echo "::warning::REMAKE_SITE_PASSWORD is not set — the studio stays closed"
+          [ -n "$HEYGEN" ] || echo "::warning::no HeyGen key (REMAKE_HEYGEN_API_KEY) — the studio can't render the avatar"
+          [ -n "$ANTHROPIC" ] || echo "::warning::no Anthropic key (REMAKE_ANTHROPIC_API_KEY) — no «Сценарий 2.0», manual script only"
+          line() { local x="${!2}"; printf '%s=%s\n' "$1" "${x//[$'\r\n']/}"; }  # a pasted secret may end with a line break
+          {
+            line REMAKE_SITE_TOKEN TOKEN
+            line REMAKE_SITE_PASSWORD PASSWORD
+            line HEYGEN_API_KEY HEYGEN
+            line ELEVENLABS_API_KEY ELEVEN
+            line OPENAI_API_KEY OPENAI
+            line ANTHROPIC_API_KEY ANTHROPIC
+            line APIFY_TOKEN APIFY
+          } | $SSH "mkdir -p /opt/remake-site && umask 077 && cat > /opt/remake-site/api.env"
+
+      - name: Activate
+        run: $SSH bash -s -- "$DOMAIN" "$REL" < apps/remake-site/deploy/server.sh
+
+      - name: Smoke test
+        run: |
+          for path in / /api/health /api/runs /api/studio/me; do
+            code=$(curl -sS -o /dev/null -w '%{http_code}' --retry 8 --retry-delay 5 --retry-all-errors "https://$DOMAIN$path" || echo 000)
+            echo "$code https://$DOMAIN$path"
+            [ "$code" = 200 ] || exit 1
+          done
+          curl -sS "https://$DOMAIN/api/health"; echo
+          curl -sS "https://$DOMAIN/api/studio/me"; echo

@@ -5,10 +5,13 @@
 # Layout:  /opt/hq-office/releases/<release>/   uploaded files
 #          /opt/hq-office/current → releases/<release>   switched atomically
 #          /opt/hq-office/assistant/releases/<release>/, assistant/current   assistant server
-#          /opt/hq-office/assistant.env (secrets, written by the workflow), assistant-data/ (history, memory)
+#          /opt/hq-office/assistant.env (secrets, written by the workflow), assistant-data/ (history, memory, desk)
+#          /opt/hq-office/runner/releases/<release>/   runner of the working desk → ~<bots' user>/hq-runner
+#          /opt/hq-office/desk-runner.token, desk.env   shared secret of the desk and its runner (made here)
 # A tiny static container (aicex-hq-office, caddy file-server) on the shared `edge` network
 # serves /opt/hq-office/current; the personal assistant (aicex-hq-assistant, node) answers
-# /api/assistant/*. The edge Caddy gets its own site file /opt/edge/sites/hq-office.caddy
+# /api/assistant/* (also the working desk, /api/assistant/desk/*); the desk's runner is a systemd
+# service under the bots' user (Claude Code with their login and skills). The edge Caddy gets its own site file /opt/edge/sites/hq-office.caddy
 # (validate → reload, restore on failure).
 set -euo pipefail
 DOMAIN="${1:?usage: server.sh <domain> <release>}"
@@ -39,6 +42,12 @@ for i in $(seq 1 15); do
   sleep 2
 done
 
+# working desk: a secret shared by the assistant (desk server) and the runner, made once
+TOKF="$ROOT/desk-runner.token"
+[ -s "$TOKF" ] || (umask 077; head -c 32 /dev/urandom | od -An -tx1 | tr -d ' \n' > "$TOKF")
+chmod 600 "$TOKF"
+(umask 077; printf 'HQ_DESK_RUNNER_TOKEN=%s\n' "$(cat "$TOKF")" > "$ROOT/desk.env")
+
 # personal assistant: recreated on every deploy so it picks up new code and secrets
 A="$ROOT/assistant"
 if [ -f "$A/releases/$REL/server.mjs" ]; then
@@ -48,7 +57,7 @@ if [ -f "$A/releases/$REL/server.mjs" ]; then
   touch "$ROOT/assistant.env" && chmod 600 "$ROOT/assistant.env"
   docker rm -f "$ANAME" >/dev/null 2>&1 || true
   docker run -d --name "$ANAME" --restart unless-stopped --network edge --memory 256m --user 1000:1000 \
-    --env-file "$ROOT/assistant.env" -e OFFICE_DIR=/srv/current -e DATA_DIR=/data -e PROJECT_MAP=/srv/assistant/current/project-map.md \
+    --env-file "$ROOT/assistant.env" --env-file "$ROOT/desk.env" -e OFFICE_DIR=/srv/current -e DATA_DIR=/data -e PROJECT_MAP=/srv/assistant/current/project-map.md \
     -v "$ROOT":/srv:ro -v "$ROOT/assistant-data":/data -w /srv/assistant/current node:22-alpine node server.mjs >/dev/null
   for i in $(seq 1 15); do
     if docker run --rm --network edge curlimages/curl:8.11.1 -fsS -o /dev/null --max-time 5 "http://$ANAME:8787/api/assistant/health" 2>/dev/null; then
@@ -57,6 +66,43 @@ if [ -f "$A/releases/$REL/server.mjs" ]; then
     [ "$i" = 15 ] && { echo "✗ $ANAME does not answer"; docker logs --tail=30 "$ANAME"; exit 1; }
     sleep 2
   done
+fi
+
+# runner of the working desk: under the bots' user, restarted only when its code changes
+# (a restart drops the task in progress — the desk puts it back in the queue)
+RUSER="${HQ_RUNNER_USER:-iliapaliy}"
+R="$ROOT/runner/releases/$REL"
+if [ -f "$R/runner.py" ] && id "$RUSER" >/dev/null 2>&1; then
+  ls -1dt "$ROOT"/runner/releases/* | tail -n +4 | xargs -r rm -rf
+  RH=$(getent passwd "$RUSER" | cut -d: -f6); RD="$RH/hq-runner"
+  install -d -o "$RUSER" -g "$RUSER" -m 755 "$RD" "$RD/jobs"
+  ENVT=$(mktemp); printf 'HQ_DESK_RUNNER_TOKEN=%s\nHQ_DESK_API=https://%s/api/assistant/desk\n' "$(cat "$TOKF")" "$DOMAIN" > "$ENVT"
+  UNIT=$(mktemp); sed -e "s#@USER@#$RUSER#g" -e "s#@HOME@#$RH#g" "$R/hq-runner.service" > "$UNIT"
+  changed=0
+  cmp -s "$R/runner.py" "$RD/runner.py" || changed=1
+  cmp -s "$ENVT" "$RD/runner.env" || changed=1
+  cmp -s "$UNIT" /etc/systemd/system/hq-runner.service || changed=1
+  install -o "$RUSER" -g "$RUSER" -m 644 "$R/runner.py" "$RD/runner.py"
+  install -o "$RUSER" -g "$RUSER" -m 600 "$ENVT" "$RD/runner.env"
+  install -m 644 "$UNIT" /etc/systemd/system/hq-runner.service
+  rm -f "$ENVT" "$UNIT"
+  systemctl daemon-reload
+  systemctl enable hq-runner >/dev/null 2>&1 || true
+  LS=$(stat -c %s "$RD/runner.log" 2>/dev/null || echo 0)
+  if [ "$changed" = 1 ] || ! systemctl is-active -q hq-runner; then systemctl restart hq-runner; echo "✓ runner (re)started"; else echo "✓ runner unchanged"; LS=; fi
+  CL="$RH/.local/bin/claude"
+  if [ -x "$CL" ]; then echo "  claude: $(timeout 30 runuser -u "$RUSER" -- "$CL" --version 2>&1 | head -1)"; else echo "::warning::claude not found at $CL — tasks will wait in the queue"; fi
+  echo "  skills: $(ls -d "$RH"/.claude/skills/*/ 2>/dev/null | wc -l) · python: $(python3 --version 2>&1)"
+  [ -f "$RH/hq-runner/claude.env" ] && echo "  claude.env: есть (вход задан владельцем)"
+  # after a restart the runner checks Claude Code once: wait for the verdict (sign-in source and error text only)
+  if [ -n "$LS" ]; then
+    for i in $(seq 1 40); do tail -c +$((LS + 1)) "$RD/runner.log" 2>/dev/null | grep -q "проверка Claude" && break; sleep 3; done
+    tail -c +$((LS + 1)) "$RD/runner.log" 2>/dev/null | grep -E "hq runner|вход Claude|проверка Claude" | sed 's/^/  /' || true
+    tail -c +$((LS + 1)) "$RD/runner.log" 2>/dev/null | grep -q "проверка Claude: ок" || echo "::warning::Claude Code does not start for the runner — see the line above"
+  fi
+  systemctl is-active -q hq-runner || { echo "::warning::hq-runner is not running"; tail -n 20 "$RD/runner.log" 2>/dev/null || true; }
+else
+  echo "::warning::desk runner not installed: no user $RUSER or no runner files — tasks will wait in the queue"
 fi
 
 TMP=$(mktemp)

@@ -1,0 +1,778 @@
+<!doctype html>
+<html lang="ru">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, maximum-scale=1, viewport-fit=cover">
+<title>Студия Кадрика</title>
+<script src="https://telegram.org/js/telegram-web-app.js"></script>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link href="https://fonts.googleapis.com/css2?family=Playfair+Display:ital,wght@0,400;0,500;1,400;1,500&family=Inter:wght@400;500;600&display=swap" rel="stylesheet">
+<style>
+:root {
+  --bg: #000; --fg: #fff; --card: #121212; --card-2: #0B0B0B; --secondary: #1C1C1C; --border: #2A2A2A;
+  --muted: #A3A3A3; --dim: #737373; --primary: #D17A3C; --primary-hover: #E08F55;
+  --primary-soft: rgba(209,122,60,.1); --primary-border: rgba(209,122,60,.38);
+  --serif: "Playfair Display", Georgia, serif; --sans: Inter, system-ui, -apple-system, sans-serif;
+}
+* { box-sizing: border-box; }
+html, body { margin: 0; background: var(--bg); color: var(--fg); font-family: var(--sans); font-size: 15px; line-height: 1.5; -webkit-font-smoothing: antialiased; }
+body { min-height: 100vh; background: radial-gradient(ellipse 120% 40% at 50% 0%, rgba(209,122,60,.13), transparent 70%), var(--bg); }
+button { font: inherit; color: inherit; cursor: pointer; }
+.app { max-width: 480px; margin: 0 auto; padding: 16px 16px calc(96px + env(safe-area-inset-bottom)); }
+.top { display: flex; justify-content: space-between; align-items: center; gap: 8px; }
+.logo { font-family: var(--serif); font-size: 20px; letter-spacing: -.02em; }
+.pills { display: flex; gap: 6px; }
+.pill { display: inline-flex; align-items: center; gap: 6px; height: 30px; padding: 0 12px; border-radius: 999px; border: 1px solid var(--border); font-size: 11.5px; color: #B8B8B8; white-space: nowrap; }
+.pill b { color: var(--fg); font-weight: 600; font-size: 13px; font-variant-numeric: tabular-nums; }
+.pill--cu { border-color: var(--primary-border); background: var(--primary-soft); }
+.pill--cu b { color: var(--primary); }
+.eyebrow { display: flex; align-items: center; gap: 10px; font-size: 11px; font-weight: 600; letter-spacing: .08em; text-transform: uppercase; color: var(--primary); margin-top: 22px; }
+.eyebrow::before { content: ""; width: 5px; height: 5px; border-radius: 50%; background: var(--primary); }
+.eyebrow.c { justify-content: center; }
+h1 { margin: 10px 0 0; font-family: var(--serif); font-weight: 400; font-size: 34px; line-height: 1.12; letter-spacing: -.03em; }
+h1 em, h2 em, .serif em { font-style: italic; color: var(--primary); }
+h1.c { text-align: center; }
+h2 { font-family: var(--serif); font-weight: 400; font-size: 20px; letter-spacing: -.02em; margin: 0; }
+.num { font-weight: 400; letter-spacing: -.04em; color: var(--primary); font-variant-numeric: tabular-nums; }
+.muted { color: var(--muted); } .dim { color: var(--dim); } .small { font-size: 12px; }
+.card { background: var(--card); border: 1px solid var(--border); border-radius: 14px; }
+.card--cu { border-color: var(--primary-border); background: linear-gradient(160deg, rgba(209,122,60,.12), var(--card) 60%); }
+.card--dark { background: var(--card-2); }
+.track { height: 6px; border-radius: 99px; background: var(--secondary); overflow: hidden; }
+.track i { display: block; height: 100%; border-radius: 99px; background: var(--primary); transition: width .8s cubic-bezier(.2,.7,.2,1); }
+.track i.w { background: #C8C8C8; }
+.btn { display: flex; align-items: center; justify-content: center; gap: 8px; width: 100%; height: 52px; border-radius: 12px; border: 1px solid var(--border); background: transparent; font-size: 15px; font-weight: 500; transition: transform .1s, background .2s; }
+.btn:active { transform: scale(.98); }
+.btn--cu { background: var(--primary); border-color: var(--primary); color: #000; }
+.btn--sm { width: auto; height: 40px; padding: 0 16px; font-size: 13.5px; border-radius: 10px; }
+.btn:disabled { opacity: .45; }
+.sec { margin-top: 18px; display: flex; justify-content: space-between; align-items: baseline; padding-bottom: 10px; border-bottom: 1px solid rgba(255,255,255,.07); }
+.sec b { font-size: 15px; font-weight: 600; }
+.list { display: flex; flex-direction: column; gap: 8px; margin-top: 10px; }
+.row { display: flex; align-items: center; gap: 12px; padding: 12px 14px; }
+.chk { width: 20px; height: 20px; border-radius: 50%; border: 1px solid #3A3A3A; flex: none; display: grid; place-items: center; }
+.chk.on { background: var(--primary-soft); border-color: var(--primary-border); }
+.done { color: var(--dim); text-decoration: line-through; }
+.grow { flex: 1; min-width: 0; }
+/* Студия */
+.stage { position: relative; height: 240px; margin-top: 14px; overflow: hidden; display: flex; align-items: flex-end; justify-content: center; }
+.stage .floor { position: absolute; left: 0; right: 0; bottom: 0; height: 54px; border-top: 1px solid var(--border); background: var(--card-2); }
+.stage .tv { position: absolute; left: 14px; top: 14px; width: 70px; height: 50px; border-radius: 8px; border: 1px solid var(--border); background: #000; display: grid; place-items: center; }
+.stage .say { position: absolute; left: 96px; right: 14px; top: 14px; padding: 10px 12px; border-radius: 12px; border: 1px solid var(--primary-border); background: var(--primary-soft); font-size: 12.5px; line-height: 1.4; color: #E5E5E5; }
+.kadrik { position: relative; margin-bottom: 18px; animation: bob 3.2s ease-in-out infinite; }
+.kadrik.sad { filter: grayscale(.8); animation-duration: 6s; }
+@keyframes bob { 50% { transform: translateY(-5px); } }
+.stats { display: grid; grid-template-columns: repeat(3, minmax(0,1fr)); gap: 8px; margin-top: 10px; }
+.stat { padding: 10px 12px; display: flex; flex-direction: column; gap: 8px; }
+.stat .h { display: flex; justify-content: space-between; font-size: 11px; color: var(--dim); }
+.stat .h b { color: var(--fg); font-weight: 500; }
+/* Путь */
+.path { position: relative; margin-top: 8px; }
+.node { position: relative; display: flex; align-items: center; gap: 14px; padding: 10px 0; }
+.node .dot { width: 56px; height: 56px; border-radius: 50%; display: grid; place-items: center; flex: none; border: 1px solid var(--border); background: var(--card-2); position: relative; z-index: 1; }
+.node.open .dot { background: var(--primary); border-color: var(--primary); }
+.node.now .dot { background: var(--card); border: 2px solid var(--primary); box-shadow: 0 0 0 8px var(--primary-soft), 0 0 30px rgba(209,122,60,.35); }
+.node.boss .dot { border-radius: 16px; border-color: var(--primary-border); }
+.node .t { font-family: var(--serif); font-size: 18px; letter-spacing: -.02em; }
+.node.lock .t { color: var(--dim); }
+.node:nth-child(odd) { padding-left: 0; } .node:nth-child(even) { padding-left: 64px; }
+.path::before { content: ""; position: absolute; left: 58px; top: 30px; bottom: 30px; border-left: 1px dashed var(--border); }
+/* Серия */
+.big { text-align: center; font-size: 96px; line-height: 1; margin-top: 10px; }
+.week { display: grid; grid-template-columns: repeat(7, minmax(0,1fr)); gap: 4px; padding: 14px 10px; margin-top: 18px; }
+.week div { display: flex; flex-direction: column; align-items: center; gap: 8px; font-size: 10.5px; color: var(--dim); }
+.week span { width: 32px; height: 32px; border-radius: 50%; display: grid; place-items: center; border: 1px solid var(--border); font-size: 13px; color: var(--fg); }
+.week span.on { background: var(--primary); border-color: var(--primary); color: #000; }
+.week span.today { border: 1px dashed var(--primary); color: var(--primary); }
+.days { display: grid; grid-template-columns: repeat(4, minmax(0,1fr)); gap: 8px; margin-top: 10px; }
+.day { height: 92px; border-radius: 12px; display: flex; flex-direction: column; align-items: center; justify-content: center; gap: 2px; text-align: center; background: var(--card); border: 1px solid var(--border); }
+.day small { font-size: 9.5px; letter-spacing: .06em; color: var(--dim); }
+.day b { font-size: 22px; font-weight: 400; letter-spacing: -.04em; }
+.day em { font-style: normal; font-size: 10.5px; color: var(--muted); }
+.day.got { opacity: .45; } .day.now { border-color: var(--primary); box-shadow: 0 0 0 4px rgba(209,122,60,.12); } .day.now b { color: var(--primary); }
+.day.d7 { grid-column: span 2; border-color: var(--primary-border); background: linear-gradient(160deg, rgba(209,122,60,.14), var(--card) 60%); }
+/* Лига */
+.lb { display: flex; align-items: center; gap: 12px; padding: 9px 12px; }
+.lb .r { width: 24px; text-align: center; font-family: var(--serif); font-style: italic; font-size: 18px; color: var(--dim); }
+.lb .r.top { color: var(--primary); }
+.ava { width: 34px; height: 34px; border-radius: 50%; display: grid; place-items: center; font-size: 13px; font-weight: 600; background: var(--secondary); border: 1px solid var(--border); flex: none; }
+.lb.me { border-color: rgba(209,122,60,.5); }
+/* Таббар */
+/* Монтаж */
+.seg { display: flex; gap: 6px; overflow-x: auto; margin-top: 14px; padding-bottom: 2px; scrollbar-width: none; }
+.seg::-webkit-scrollbar { display: none; }
+.seg button { flex: none; height: 32px; padding: 0 14px; border-radius: 999px; border: 1px solid var(--border); background: transparent; color: var(--muted); font-size: 12.5px; }
+.seg button.on { border-color: var(--primary-border); background: var(--primary-soft); color: var(--primary); }
+.grid { display: grid; grid-template-columns: repeat(2, minmax(0,1fr)); gap: 10px; margin-top: 12px; }
+.tile { text-align: left; padding: 0; overflow: hidden; border-radius: 14px; border: 1px solid var(--border); background: var(--card); display: flex; flex-direction: column; }
+.tile .th { position: relative; aspect-ratio: 9 / 12; background: linear-gradient(170deg, #3A2414, #0F0905); }
+.tile .th img { position: absolute; inset: 0; width: 100%; height: 100%; object-fit: cover; }
+.tile .th .k { position: absolute; top: 8px; left: 8px; font-size: 9px; letter-spacing: .06em; text-transform: uppercase; color: rgba(255,255,255,.8); background: rgba(0,0,0,.5); padding: 3px 7px; border-radius: 6px; }
+.tile .th .ph { position: absolute; inset: 0; display: grid; place-items: center; font-family: var(--serif); font-style: italic; font-size: 26px; color: var(--primary); }
+.tile b { display: block; padding: 10px 12px 2px; font-size: 13.5px; font-weight: 600; }
+.tile span.s { display: block; padding: 0 12px 12px; font-size: 11.5px; color: var(--dim); line-height: 1.4; }
+.sheet .hero { width: 100%; max-width: 280px; aspect-ratio: 9 / 16; border-radius: 14px; overflow: hidden; border: 1px solid var(--border); background: #0B0B0B; margin-top: 18px; }
+.sheet .hero video, .sheet .hero img { width: 100%; height: 100%; object-fit: cover; display: block; }
+.kv { width: 100%; max-width: 440px; display: flex; flex-direction: column; gap: 8px; margin-top: 14px; }
+.kv div { display: flex; gap: 12px; font-size: 13px; } .kv span:first-child { width: 90px; flex: none; color: var(--dim); }
+.job { display: flex; align-items: center; gap: 12px; padding: 10px 12px; }
+.job .pv { width: 42px; height: 56px; border-radius: 8px; background: var(--secondary); border: 1px solid var(--border); flex: none; object-fit: cover; }
+.st { font-size: 11px; padding: 2px 8px; border-radius: 99px; border: 1px solid var(--border); color: var(--muted); white-space: nowrap; }
+.st.done { color: var(--primary); border-color: var(--primary-border); background: var(--primary-soft); }
+.st.running, .st.review { color: #fff; border-color: #555; }
+.tile.sel { border-color: var(--primary); box-shadow: 0 0 0 3px var(--primary-soft); }
+.fl { display: flex; flex-direction: column; gap: 6px; margin-top: 12px; font-size: 12px; color: var(--dim); }
+.fl input, .fl textarea { font: inherit; font-size: 15px; color: var(--fg); background: var(--card-2); border: 1px solid var(--border); border-radius: 10px; padding: 10px 12px; resize: vertical; }
+.fl input:focus, .fl textarea:focus { outline: none; border-color: var(--primary-border); }
+.sw { width: 44px; height: 26px; border-radius: 99px; border: 1px solid var(--border); background: var(--secondary); position: relative; flex: none; padding: 0; }
+.sw::after { content: ""; position: absolute; top: 2px; left: 2px; width: 20px; height: 20px; border-radius: 50%; background: #737373; transition: transform .2s; }
+.sw.on { background: var(--primary-soft); border-color: var(--primary-border); } .sw.on::after { transform: translateX(18px); background: var(--primary); }
+.tabs { position: fixed; left: 0; right: 0; bottom: 0; z-index: 10; display: grid; grid-template-columns: repeat(4, 1fr); padding: 8px 8px calc(10px + env(safe-area-inset-bottom)); background: rgba(0,0,0,.88); backdrop-filter: blur(14px); -webkit-backdrop-filter: blur(14px); border-top: 1px solid rgba(255,255,255,.06); }
+.tabs button { background: none; border: 0; padding: 8px 0; font-size: 11.5px; color: var(--muted); display: flex; flex-direction: column; align-items: center; gap: 4px; }
+.tabs button svg { width: 20px; height: 20px; }
+.tabs button.on { color: var(--primary); }
+.back { background: none; border: 0; color: var(--muted); font-size: 13px; padding: 6px 0; display: inline-flex; align-items: center; gap: 6px; }
+.go { width: 100%; text-align: left; color: inherit; }
+.go .arr { color: var(--dim); font-size: 18px; }
+.ico { width: 38px; height: 38px; border-radius: 11px; display: grid; place-items: center; background: var(--primary-soft); border: 1px solid var(--primary-border); color: var(--primary); flex: none; }
+.ico svg { width: 19px; height: 19px; }
+.trio { display: grid; grid-template-columns: repeat(3, 1fr); gap: 8px; margin-top: 10px; }
+.trio .card { padding: 12px 10px; text-align: center; }
+.trio b { display: block; font-size: 22px; font-variant-numeric: tabular-nums; }
+.reflink { width: 100%; height: 44px; border-radius: 10px; border: 1px solid var(--border); background: var(--card-2); color: var(--fg); padding: 0 12px; font-size: 13px; }
+/* Награда */
+.modal { position: fixed; inset: 0; z-index: 20; background: radial-gradient(ellipse 110% 45% at 50% 30%, rgba(209,122,60,.22), transparent 65%), #000; display: none; flex-direction: column; align-items: center; padding: 40px 18px calc(24px + env(safe-area-inset-bottom)); overflow-y: auto; }
+.modal.show { display: flex; animation: up .5s cubic-bezier(.2,.7,.2,1) both; }
+@keyframes up { from { opacity: 0; transform: translateY(15px); } }
+.gains { width: 100%; max-width: 440px; display: grid; grid-template-columns: repeat(3, minmax(0,1fr)); gap: 8px; margin-top: 18px; }
+.gains div { text-align: center; padding: 14px 6px; }
+.gains b { display: block; font-size: 30px; font-weight: 400; letter-spacing: -.04em; color: var(--primary); }
+.toast { position: fixed; left: 50%; bottom: calc(90px + env(safe-area-inset-bottom)); transform: translateX(-50%); z-index: 30; padding: 10px 16px; border-radius: 12px; background: var(--card); border: 1px solid var(--primary-border); font-size: 13px; opacity: 0; pointer-events: none; transition: opacity .3s; max-width: 90vw; }
+.toast.show { opacity: 1; }
+.err { text-align: center; padding: 60px 20px; }
+@media (prefers-reduced-motion: reduce) { * { animation: none !important; transition: none !important; } }
+</style>
+</head>
+<body>
+<main class="app" id="app"><div class="err dim">Загружаю студию…</div></main>
+<nav class="tabs" id="tabs" hidden>
+  <button data-tab="studio" class="on"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8"><rect x="3" y="7" width="13" height="11" rx="3"/><path d="M16 11l5-3v9l-5-3z"/></svg>Студия</button>
+  <button data-tab="montage"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8"><rect x="3" y="4" width="18" height="16" rx="3"/><path d="M3 9h18M8 4l-2 5M14 4l-2 5"/></svg>Монтаж</button>
+  <button data-tab="partners"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8"><circle cx="9" cy="8" r="3.2"/><circle cx="17" cy="9.5" r="2.6"/><path d="M3 20a6 6 0 0 1 12 0M14.5 15.2A5 5 0 0 1 21 20"/></svg>Партнёры</button>
+  <button data-tab="profile"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8"><circle cx="12" cy="8" r="4"/><path d="M4 21a8 8 0 0 1 16 0"/></svg>Профиль</button>
+</nav>
+<div class="modal" id="modal" role="dialog" aria-modal="true" aria-labelledby="mt"></div>
+<div class="toast" id="toast" role="status"></div>
+
+<script>
+const tg = window.Telegram && Telegram.WebApp;
+if (tg) { tg.ready(); tg.expand(); try { tg.setHeaderColor('#000000'); tg.setBackgroundColor('#000000'); } catch (e) {} }
+const INIT = tg ? tg.initData : '';
+let S = null, TAB = new URLSearchParams(location.search).get('tab') || (location.hash.match(/tab=(\w+)/) || [])[1] || 'studio';
+let M = null, KIND = 'reels';  // данные вкладки «Монтаж»: каталог, владелец, очередь @Productionskill_bot
+const KINDS = [['reels', 'Рилсы'], ['styles', 'Стили'], ['youtube', 'YouTube'], ['clips', 'Клипы'], ['content', 'Тексты']];
+const $ = s => document.querySelector(s);
+const esc = s => String(s).replace(/[&<>"']/g, c => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' }[c]));
+const fmt = n => Number(n).toLocaleString('ru-RU');
+const haptic = t => { try { tg.HapticFeedback.notificationOccurred(t); } catch (e) {} };
+
+async function call(act, extra = {}) {
+  const r = await fetch('/api/' + act, { method: 'POST', headers: { 'content-type': 'application/json' }, body: JSON.stringify({ init: INIT, ...extra }) });
+  const j = await r.json().catch(() => ({}));
+  if (!r.ok) throw new Error(j.error || 'Ошибка сервера');
+  S = j.state; return j.got;
+}
+function toast(t) { const el = $('#toast'); el.textContent = t; el.classList.add('show'); clearTimeout(el._t); el._t = setTimeout(() => el.classList.remove('show'), 2600); }
+
+const KADRIK = (w, sad) => `<svg class="kadrik${sad ? ' sad' : ''}" width="${w}" height="${Math.round(w * 1.1)}" viewBox="0 0 190 210" role="img" aria-label="Кадрик">
+  <ellipse cx="95" cy="200" rx="60" ry="7" fill="#1C1C1C"/>
+  <rect x="30" y="54" width="130" height="128" rx="40" fill="#161616" stroke="#D17A3C" stroke-width="2.5"/>
+  <g transform="rotate(-10 40 46)"><rect x="30" y="30" width="130" height="26" rx="7" fill="#D17A3C"/>
+  <rect x="48" y="30" width="12" height="26" fill="#000" transform="skewX(-20)"/><rect x="86" y="30" width="12" height="26" fill="#000" transform="skewX(-20)"/><rect x="124" y="30" width="12" height="26" fill="#000" transform="skewX(-20)"/></g>
+  <circle cx="95" cy="112" r="36" fill="#000" stroke="#D17A3C" stroke-width="2"/><circle cx="95" cy="112" r="24" fill="#E5E5E5"/>
+  <circle cx="99" cy="${sad ? 116 : 110}" r="13" fill="#000"/><circle cx="103" cy="${sad ? 111 : 105}" r="4" fill="#fff"/>
+  <path d="${sad ? 'M80 164 q15 -9 30 0' : 'M80 158 q15 10 30 0'}" stroke="#D17A3C" stroke-width="3" fill="none" stroke-linecap="round"/></svg>`;
+const CHECK = '<svg width="11" height="11" viewBox="0 0 24 24"><path d="M5 12l5 5L20 7" stroke="#D17A3C" stroke-width="3" fill="none" stroke-linecap="round"/></svg>';
+const LOCKI = '<svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="#737373" stroke-width="1.8"><rect x="5" y="11" width="14" height="10" rx="2"/><path d="M8 11V8a4 4 0 0 1 8 0v3"/></svg>';
+const TICK = '<svg width="22" height="22" viewBox="0 0 24 24"><path d="M5 12l5 5L20 7" stroke="#000" stroke-width="3" fill="none" stroke-linecap="round"/></svg>';
+
+function header() {
+  return `<div class="top"><div class="logo">Prod Skills</div><div class="pills">
+    <span class="pill pill--cu">серия <b>${S.streak}</b></span><span class="pill">монеты <b>${fmt(S.coins)}</b></span></div></div>`;
+}
+function bar(n, v, white) { return `<div class="card stat"><div class="h"><span>${n}</span><b>${v}%</b></div><div class="track"><i class="${white ? 'w' : ''}" style="width:${v}%"></i></div></div>`; }
+
+function studio() {
+  const hungry = !S.reel_today;
+  const say = hungry ? (S.owner ? 'Выбери стиль во вкладке «Монтаж» — готовый рилс накормит меня' : 'Кинь мне видео в чат — смонтирую рилс и вырасту') : 'Сыт и доволен! Завтра жду новое видео — не сломай серию';
+  const title = hungry ? 'Кадрик <em>проголодался</em>' : 'Кадрик <em>доволен</em>';
+  return header() + `
+  <div class="eyebrow">Твой монтажёр · уровень ${S.level}</div>
+  <h1>${title}</h1>
+  <div class="card stage"><div class="floor"></div>
+    <div class="tv"><svg width="20" height="20" viewBox="0 0 24 24"><path d="M8 5v14l11-7z" fill="#D17A3C"/></svg></div>
+    <div class="say">${say}</div>${KADRIK(136, S.energy < 25)}</div>
+  <div class="stats">${bar('Энергия', S.energy)}${bar('Настрой', S.mood, 1)}${bar('Студия', S.studio, 1)}</div>
+  <div class="card card--dark" style="margin-top:8px;padding:14px">
+    <div style="display:flex;justify-content:space-between;font-size:12.5px"><span class="muted">До уровня ${S.level + 1}</span><span>${S.lvl_cur} / ${S.lvl_need} XP</span></div>
+    <div class="track" style="margin-top:10px"><i style="width:${Math.round(S.lvl_cur / S.lvl_need * 100)}%"></i></div>
+    ${S.next ? `<div class="small dim" style="margin-top:10px">${S.owner ? `Следующий стиль на карте — «${esc(S.next.t)}», нужно рилсов` : `Следующее звание — «${esc(S.next.t)}», нужно видео`}: ${S.next.need}</div>` : ''}
+  </div>
+  <div class="sec"><b>Квесты дня</b><span class="small dim">обновятся в полночь</span></div>
+  <div class="list">${S.quests.map(q => `<div class="card row"><div class="chk ${q.done ? 'on' : ''}">${q.done ? CHECK : ''}</div>
+    <div class="grow ${q.done ? 'done' : ''}" style="font-size:14px">${q.t}</div><div class="small" style="color:var(--primary)">${q.r}</div></div>`).join('')}</div>
+  <button class="btn btn--cu" style="margin-top:16px" id="feed">${S.owner ? 'Выбрать стиль монтажа →' : hungry ? 'Получить разбор рилса →' : 'Разобрать ещё видео →'}</button>
+  ${reviewsBlock()}`;
+}
+
+function reviewsBlock() {  // последние разборы рилсов: оценка, правки, карточка для сторис
+  const rs = S.reviews || [];
+  if (!rs.length) return S.owner ? '' : `<div class="card card--dark" style="margin-top:14px;padding:14px 16px">
+    <div class="small" style="color:var(--primary);font-weight:600;letter-spacing:.08em">РАЗБОР РИЛСА</div>
+    <div style="font-size:14px;margin-top:6px;line-height:1.5">Пришли боту видео — Кадрик оценит хук, темп и субтитры и даст 3 правки с таймкодами.</div></div>`;
+  const n = x => String((+x).toFixed(1)).replace('.', ',');
+  const r = rs[0];
+  return `<div class="sec" id="reviews"><b>Разбор рилса</b><span class="small dim">лучший: ${n(S.best_score || r.score)}/10</span></div>
+  <div class="card" style="padding:16px">
+    <div style="display:flex;align-items:baseline;gap:8px"><span class="serif" style="font-size:44px;line-height:1">${n(r.score)}</span><em class="serif" style="color:var(--primary);font-size:20px">/10</em>
+      <span class="small dim" style="margin-left:auto">${esc(r.date || '')}</span></div>
+    <div style="font-size:14px;margin-top:8px;line-height:1.5">${esc(r.verdict)}</div>
+    <div style="margin-top:12px;display:grid;gap:8px">${[['hook', 'Хук'], ['pace', 'Темп'], ['subs', 'Субтитры']].map(([k, l]) => `<div>
+      <div style="display:flex;justify-content:space-between;font-size:12.5px"><span class="muted">${l}</span><span>${(r[k] || {}).score || 0}/10</span></div>
+      <div class="track" style="margin-top:6px"><i style="width:${((r[k] || {}).score || 0) * 10}%"></i></div></div>`).join('')}</div>
+    ${(r.fixes || []).length ? `<div class="small muted" style="margin-top:14px;line-height:1.55">${r.fixes.map(f => `<div><b style="color:var(--primary)">${esc(f.t)}</b> — ${esc(f.text)}</div>`).join('')}</div>` : ''}
+    <div style="display:grid;grid-template-columns:1fr 1fr;gap:8px;margin-top:14px">
+      <button class="btn btn--cu btn--sm" id="rvStory" data-card="${esc(r.card || '')}" data-score="${n(r.score)}">В сторис</button>
+      <button class="btn btn--sm" id="rvShare" data-score="${n(r.score)}">Поделиться</button></div></div>
+  ${rs.length > 1 ? `<div class="small dim" style="margin-top:8px">Прошлые: ${rs.slice(1).map(x => `${n(x.score)}/10 · ${esc(x.date || '')}`).join(' · ')}</div>` : ''}`;
+}
+
+function shareText(score) { return `Кадрик оценил мой рилс на ${score}/10 — разбери свой`; }
+
+function wireReviews() {
+  const st = $('#rvStory'); if (st) st.onclick = () => {
+    const url = location.origin + st.dataset.card;
+    if (tg && tg.shareToStory && tg.isVersionAtLeast && tg.isVersionAtLeast('7.8')) {
+      tg.shareToStory(url, { text: shareText(st.dataset.score), widget_link: S.share_link ? { url: S.share_link, name: 'Кадрик' } : undefined });
+    } else if (tg && tg.openLink) tg.openLink(url); else window.open(url, '_blank');
+  };
+  const sh = $('#rvShare'); if (sh) sh.onclick = () => {
+    const u = `https://t.me/share/url?url=${encodeURIComponent(S.share_link || '')}&text=${encodeURIComponent(shareText(sh.dataset.score))}`;
+    if (tg && tg.openTelegramLink) tg.openTelegramLink(u); else window.open(u, '_blank');
+  };
+}
+
+function pathTab() {
+  const firstLocked = S.path.findIndex(n => !n.open), unit = S.owner ? 'рилсов' : 'видео';  // гостям — игровые звания вместо стилей монтажа
+  return back() + `<div class="top"><div class="logo">Путь</div><div class="pills"><span class="pill pill--cu">${unit} <b>${S.reels}</b></span></div></div>
+  <div class="card card--cu" style="margin-top:14px;padding:14px 16px">
+    <div class="small" style="color:var(--primary);font-weight:600;letter-spacing:.08em">${S.owner ? 'КАРТА СТИЛЕЙ' : 'ПУТЬ КАДРИКА'}</div>
+    <h2 style="margin-top:4px">${S.owner ? 'Каждый рилс <em>открывает</em> новый шаг' : 'Каждое видео — <em>новое звание</em>'}</h2>
+    ${S.owner ? '' : '<div class="small muted" style="margin-top:6px">Корми Кадрика видео: звания открываются по счёту съеденных видео, в сундуках — монеты.</div>'}</div>
+  <div class="path">${S.path.map((n, i) => {
+    const now = i === firstLocked, cls = n.open ? 'open' : now ? 'now' : 'lock';
+    const icon = n.open ? (n.chest && !n.claimed ? '<span class="serif" style="font-style:italic;color:#000">!</span>' : TICK) : now ? `<span class="num" style="font-size:18px">${n.need}</span>` : LOCKI;
+    const sub = n.chest ? (n.claimed ? 'открыт' : n.open ? '' : `после ${n.need} ${unit}`) : (n.d ? esc(n.d) + ' · ' : '') + (n.open ? 'пройдено' : `нужно ${unit}: ${n.need}`);
+    const act = n.chest && n.open && !n.claimed ? `<button class="btn btn--cu btn--sm" data-chest="${i}">Открыть</button>` : '';
+    return `<div class="node ${cls}${n.boss ? ' boss' : ''}"><div class="dot">${icon}</div><div class="grow"><div class="t">${n.chest ? '<em style="font-style:italic;color:var(--primary)">сундук</em>' : esc(n.t)}</div><div class="small dim">${sub}</div></div>${act}</div>`;
+  }).join('')}</div>`;
+}
+
+function streakTab() {
+  const names = ['Пн', 'Вт', 'Ср', 'Чт', 'Пт', 'Сб', 'Вс'];
+  const wd = (new Date().getDay() + 6) % 7;
+  const week = names.map((n, i) => {
+    const back = wd - i; let c = '', t = '';
+    if (back === 0) { c = S.reel_today ? 'on' : 'today'; t = S.reel_today ? '✓' : '?'; }
+    else if (back > 0) { const inStreak = S.reel_today ? back < S.streak : back <= S.streak; if (inStreak) { c = 'on'; t = '✓'; } }
+    return `<div>${n}<span class="${c}">${t}</span></div>`;
+  }).join('');
+  const d = S.daily;
+  const day = (r, i) => {
+    const k = i + 1, cls = k < d.day || (k === d.day && d.claimed) ? 'got' : k === d.day ? 'now' : '';
+    const v = r.coins ? [r.coins, 'монет'] : r.xp ? ['+' + r.xp, 'опыта'] : ['1', 'заморозка'];
+    return `<div class="day ${cls}"><small>ДЕНЬ ${k}</small><b>${v[0]}</b><em>${v[1]}</em></div>`;
+  };
+  const nextMile = S.miles.find(m => m > S.streak) || S.miles[S.miles.length - 1];
+  return back() + `<div class="eyebrow c">Серия</div>
+  <div class="big num">${S.streak}</div>
+  <div class="serif" style="text-align:center;font-family:var(--serif);font-size:26px;letter-spacing:-.03em;margin-top:6px">дней <em>подряд</em> с рилсами</div>
+  <div class="small muted" style="text-align:center;margin-top:6px">Лучшая серия — ${S.best} · до вехи ${nextMile} осталось ${Math.max(0, nextMile - S.streak)}</div>
+  <div class="card week">${week}</div>
+  <div class="card row" style="margin-top:8px"><div class="ava" style="border-radius:9px"><svg width="17" height="17" viewBox="0 0 24 24"><path d="M12 2v20M3.5 7l17 10M20.5 7l-17 10" stroke="#C8C8C8" stroke-width="1.8" stroke-linecap="round"/></svg></div>
+    <div class="grow"><div style="font-size:14px;font-weight:600">Заморозок: ${S.freezes}</div><div class="small muted">спасут серию, если пропустишь день</div></div></div>
+  <div class="sec"><b>Награда дня</b><span class="small dim">день ${d.day} из 7</span></div>
+  <div class="days">${d.rewards.slice(0, 6).map(day).join('')}
+    <div class="day d7 ${d.day === 7 && !d.claimed ? 'now' : ''}" style="flex-direction:row;gap:12px"><svg width="44" height="40" viewBox="0 0 70 60"><rect x="6" y="22" width="58" height="34" rx="8" fill="#121212" stroke="#D17A3C" stroke-width="2"/><path d="M6 26 Q35 0 64 26" fill="none" stroke="#D17A3C" stroke-width="2"/><rect x="29" y="28" width="12" height="14" rx="3" fill="#D17A3C"/></svg>
+      <div style="text-align:left"><small>ДЕНЬ 7</small><div style="font-family:var(--serif);font-size:16px;line-height:1.2">Эпический <em style="font-style:italic;color:var(--primary)">сундук</em></div></div></div></div>
+  <button class="btn btn--cu" style="margin-top:14px" id="daily" ${d.claimed ? 'disabled' : ''}>${d.claimed ? 'Награда забрана — приходи завтра' : 'Забрать награду дня →'}</button>`;
+}
+
+let LB_MODE = 'week';  // лига: неделя (обнуляется в понедельник) или всё время
+
+function weekLeagueBlock() {
+  const w = S.week || { top: [], rank: 0, players: 0, days_left: 7, prize: 500 };
+  const seg = `<div class="seg" style="margin-top:14px;justify-content:center">${[['week', 'Неделя'], ['all', 'Всё время']].map(([k, l]) => `<button data-lb="${k}" class="${LB_MODE === k ? 'on' : ''}">${l}</button>`).join('')}</div>`;
+  if (LB_MODE !== 'week') return seg;
+  const left = w.days_left === 1 ? 'последний день' : `ещё ${w.days_left} дн.`;
+  return seg + `<div class="small muted" style="text-align:center;margin-top:8px">${w.rank ? `Ты ${w.rank}-й из ${w.players}` : 'Набери опыт на этой неделе, чтобы попасть в лигу'} · ${left}</div>
+  <div class="card card--cu row" style="margin-top:12px"><div class="grow" style="font-size:13.5px">Победитель недели получает <span style="color:var(--primary)">+${w.prize} монет</span> и бесплатный монтаж рилса. Счёт обнуляется в понедельник.</div></div>
+  <div class="list" style="margin-top:12px">${w.top.map((p, i) => `<div class="card lb ${p.me ? 'me' : ''}"><div class="r ${i < 3 ? 'top' : ''}">${i + 1}</div>
+    <div class="ava">${esc((p.name || '?')[0])}</div><div class="grow"><div style="font-size:14px;font-weight:500">${p.me ? 'Ты' : esc(p.name)}</div></div>
+    <div style="font-size:14px;font-variant-numeric:tabular-nums">${fmt(p.xp)} XP</div></div>`).join('') || '<div class="small dim" style="text-align:center">На этой неделе пока никого — будь первым</div>'}</div>`;
+}
+
+function leagueTab() {
+  if (LB_MODE === 'week') return back() + `<div class="eyebrow c">Лига</div><h1 class="c">Лига <em>недели</em></h1>${weekLeagueBlock()}
+  <button class="btn" id="lbHide" style="margin-top:10px;width:100%">${S.hidden ? 'Показать моё имя в лиге' : 'Скрыть моё имя в лиге'}</button>`;
+  return back() + `<div class="eyebrow c">Лига</div><h1 class="c">Медная <em>лига</em></h1>${weekLeagueBlock()}
+  <div class="small muted" style="text-align:center;margin-top:6px">Ты на ${S.rank} месте из ${S.players} · рейтинг по опыту</div>
+  <div class="list" style="margin-top:16px">${S.top.map((p, i) => `<div class="card lb ${p.me ? 'me' : ''}"><div class="r ${i < 3 ? 'top' : ''}">${i + 1}</div>
+    <div class="ava">${esc((p.name || '?')[0])}</div><div class="grow"><div style="font-size:14px;font-weight:500">${p.me ? 'Ты' : esc(p.name)}</div><div class="small dim">рилсов: ${p.reels}</div></div>
+    <div style="font-size:14px;font-variant-numeric:tabular-nums">${fmt(p.xp)} XP</div></div>`).join('')}</div>
+  <div class="card card--cu row" style="margin-top:14px"><div class="grow" style="font-size:13.5px">Каждый рилс — <span style="color:var(--primary)">+50 XP</span>. Зови друзей — соревноваться веселее.</div></div>
+  <button class="btn" id="lbHide" style="margin-top:10px;width:100%">${S.hidden ? 'Показать моё имя в лиге' : 'Скрыть моё имя в лиге'}</button>`;
+}
+
+const SUB = { path: 'profile', streak: 'profile', league: 'profile' };  // экран → вкладка, куда ведёт «назад»
+function back() { return SUB[TAB] ? '<button class="back" data-go="profile">‹ Профиль</button>' : ''; }
+
+function profileTab() {
+  const opened = S.path.filter(n => n.open && !n.chest).length, total = S.path.filter(n => !n.chest).length, b = S.bal || {};
+  const item = (go, ico, t, sub) => `<button class="card row go" data-go="${go}"><div class="ico">${ico}</div><div class="grow"><div style="font-size:14.5px;font-weight:600">${t}</div><div class="small muted">${sub}</div></div><span class="arr">›</span></button>`;
+  return `<div class="top"><div class="logo">Профиль</div><div class="pills"><span class="pill">монеты <b>${fmt(S.coins)}</b></span></div></div>
+  <div class="card card--cu row" style="margin-top:14px;padding:16px"><div class="ava" style="width:48px;height:48px;font-size:20px">${esc((S.name || '?')[0])}</div>
+    <div class="grow"><div style="font-size:17px;font-weight:600">${esc(S.name || 'Креатор')}</div><div class="small muted">уровень ${S.level} · ${fmt(S.xp)} XP · ${S.owner ? 'рилсов' : 'видео'}: ${S.reels}</div></div></div>
+  ${moneyBlock(b)}
+  <div class="sec"><b>Прогресс</b><span class="small dim">${S.rank} место в лиге</span></div>
+  <div class="list">
+    ${item('path', '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8"><circle cx="6" cy="18" r="2.5"/><circle cx="18" cy="6" r="2.5"/><path d="M8.5 18H14a4 4 0 0 0 0-8h-4a4 4 0 0 1 0-8h5.5" stroke-dasharray="3 3"/></svg>', 'Путь', `открыто ${opened} из ${total}${S.next ? ' · дальше «' + esc(S.next.t) + '»' : ''}`)}
+    ${item('streak', '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8"><path d="M12 3c1 4 6 6 6 11a6 6 0 0 1-12 0c0-3 2-5 3-7 1 2 2 3 3 3 0-3-1-5 0-7z"/></svg>', 'Серия', `${S.streak} дн. подряд · лучшая ${S.best}${S.daily.claimed ? '' : ' · награда дня ждёт'}`)}
+    ${item('league', '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8"><path d="M7 4h10v5a5 5 0 0 1-10 0z"/><path d="M12 14v4M8 21h8"/></svg>', 'Лига', `${S.rank} место из ${S.players}`)}
+  </div>
+  ${tariffsBlock(b)}`;
+}
+
+function partnersTab() {
+  const r = S.ref;
+  return `<div class="top"><div class="logo">Партнёры</div><div class="pills"><span class="pill pill--cu">приглашено <b>${r.invited}</b></span></div></div>
+  <div class="eyebrow" style="margin-top:14px">Реферальная программа</div><h1>Зови друзей — <em>получай награды</em></h1>
+  <div class="list" style="margin-top:14px">
+    <div class="card row"><div class="ico">1</div><div class="grow" style="font-size:13.5px">Отправь другу свою ссылку</div></div>
+    <div class="card row"><div class="ico">2</div><div class="grow" style="font-size:13.5px">Друг пришлёт первое видео — тебе <span style="color:var(--primary)">+${r.coins} монет</span></div></div>
+    ${r.bonus ? `<div class="card row"><div class="ico">3</div><div class="grow" style="font-size:13.5px">Друг купит монтажи — <span style="color:var(--primary)">+${r.bonus} ${plural(r.bonus)}</span> вам обоим</div></div>` : ''}
+  </div>
+  <div class="sec"><b>Твоя ссылка</b></div>
+  ${r.link ? `<input class="reflink" id="refLink" readonly value="${esc(r.link)}" style="margin-top:10px">
+  <div style="display:grid;grid-template-columns:1fr 1fr;gap:8px;margin-top:8px">
+    <button class="btn btn--cu" id="refShare">Поделиться</button><button class="btn" id="refCopy">Скопировать</button></div>`
+  : '<div class="card row small muted" style="margin-top:10px">Ссылка появится через минуту — открой студию ещё раз</div>'}
+  <div class="sec"><b>Твои приглашения</b><span class="small dim">заработано ${fmt(r.earned)} монет</span></div>
+  <div class="trio"><div class="card"><b>${r.invited}</b><span class="small dim">пришли</span></div>
+    <div class="card"><b>${r.active}</b><span class="small dim">прислали видео</span></div>
+    <div class="card"><b>${r.paid}</b><span class="small dim">купили</span></div></div>`;
+}
+
+function wirePartners() {
+  const l = $('#refLink'); if (!l) return;
+  $('#refShare').onclick = () => {
+    const u = 'https://t.me/share/url?url=' + encodeURIComponent(l.value) + '&text=' + encodeURIComponent('Кадрик монтирует рилсы и растёт от каждого видео — заходи в студию');
+    if (tg && tg.openTelegramLink) tg.openTelegramLink(u); else window.open(u, '_blank');
+  };
+  $('#refCopy').onclick = async () => {
+    try { await navigator.clipboard.writeText(l.value); } catch (e) { l.select(); document.execCommand('copy'); }
+    haptic('success'); toast('Ссылка скопирована');
+  };
+}
+
+const ST = { collect: 'черновик', queued: 'в очереди', running: 'монтируется', review: 'ждёт ок', done: 'готово', error: 'ошибка', none: '' };
+const STEPS = ['Транскрипт', 'Нарезка', 'Кадры', 'Рендер'];
+let J = null, HIST = [], SEL = '', UPS = [], FORM = { preview: 1, subs: 1, clean: 1, music: 0, len: 'как есть', code: '', wish: '', link: '', script: '', folder: '', query: '' };
+const ACT = ['queued', 'running'];
+const img = (n) => `/api/img?n=${encodeURIComponent(n)}&t=${encodeURIComponent(S.t)}`;
+const vfile = (v) => `/api/file?job=${encodeURIComponent(J.job)}&v=${v}&t=${encodeURIComponent(S.t)}`;
+const sk = (id) => (M && M.catalog.find(x => x.id === id)) || null;
+
+async function jcall(cmd) {
+  const r = await fetch('/api/job', { method: 'POST', headers: { 'content-type': 'application/json' }, body: JSON.stringify({ init: INIT, cmd }) });
+  const j = await r.json().catch(() => ({}));
+  if (!r.ok) throw new Error(j.error || 'Ошибка сервера');
+  J = j.state; HIST = j.history || []; if (M && j.bal) M.bal = j.bal; if (j.msg) toast(j.msg); return j;
+}
+const plural = n => n % 10 === 1 && n % 100 !== 11 ? 'монтаж' : n % 10 >= 2 && n % 10 <= 4 && !(n % 100 >= 12 && n % 100 <= 14) ? 'монтажа' : 'монтажей';
+const pl = (n, a, b, c) => n % 10 === 1 && n % 100 !== 11 ? a : n % 10 >= 2 && n % 10 <= 4 && !(n % 100 >= 12 && n % 100 <= 14) ? b : c;
+const reelsN = n => `${n} ${pl(n, 'рилс', 'рилса', 'рилсов')}`, ytN = n => `${n} ${pl(n, 'YouTube-ролик', 'YouTube-ролика', 'YouTube-роликов')}`;
+function moneyBlock(b) {  // профиль: баланс и на что его хватит
+  if (!b || !b.packs) return '';
+  if (b.free) return `<div class="card row" style="margin-top:8px"><div class="grow"><div class="small muted">Баланс</div><div style="font-size:15px;font-weight:600;margin-top:2px">Монтаж без оплаты</div>
+    <div class="small dim" style="margin-top:2px">доступ выдан владельцем студии — монтажи не списываются</div></div></div>`;
+  const c = b.credits, yt = Math.floor(c / b.yt);
+  const enough = c ? `${reelsN(c)}${yt ? ' или ' + ytN(yt) : ''}` : b.trial ? 'пробный рилс — бесплатно' : 'пока ни на один монтаж';
+  return `<div class="card card--cu" style="margin-top:8px;padding:16px">
+    <div style="display:flex;justify-content:space-between;align-items:baseline"><span class="small muted">Баланс</span>${b.trial && c ? '<span class="small" style="color:var(--primary)">+ пробный рилс бесплатно</span>' : ''}</div>
+    <div style="display:flex;align-items:baseline;gap:8px;margin-top:4px"><span class="num" style="font-size:40px;line-height:1">${c}</span><span style="font-size:15px">${plural(c)}</span></div>
+    <div class="small" style="margin-top:8px">Хватит на: <b style="color:var(--primary)">${enough}</b></div>
+    ${c ? `<div class="small dim" style="margin-top:4px">в каждом монтаже ${b.edits} правки бесплатно, дальше — 1 монтаж за правку</div>` : ''}
+    <button class="btn btn--cu" style="margin-top:14px" id="topUp">${c ? 'Пополнить баланс' : 'Пополнить и монтировать'} →</button></div>`;
+}
+function tariffsBlock(b) {  // профиль: тарифы и пополнение звёздами
+  if (!b || !b.packs) return '';
+  const base = b.packs[0].stars / b.packs[0].n, best = 'p15';
+  return `<div class="sec" id="tariffs"><b>Тарифы</b><span class="small dim">${b.card ? 'звёздами Telegram ⭐ или картой' : 'оплата звёздами Telegram ⭐'}</span></div>
+  ${b.sell ? '' : '<div class="card row small muted" style="margin-top:10px">Оплата откроется совсем скоро — пока монтаж по заявке</div>'}
+  <div class="list">${b.packs.map(p => {
+    const per = Math.round(p.stars / p.n), save = Math.round((1 - per / base) * 100), yt = Math.floor(p.n / b.yt);
+    return `<div class="card ${p.id === best ? 'card--cu' : ''}" style="padding:14px 16px">
+      <div style="display:flex;justify-content:space-between;align-items:baseline;gap:8px"><div><b style="font-size:15px">${esc(p.name || plural(p.n))}</b>${p.id === best ? ' <span class="pill pill--cu" style="height:22px;margin-left:6px">выгодно</span>' : ''}</div>
+        <div style="font-size:17px;font-weight:600;font-variant-numeric:tabular-nums">${fmt(p.stars)} ⭐</div></div>
+      <div class="small muted" style="margin-top:4px">${p.n} ${plural(p.n)} · ${reelsN(p.n)}${yt ? ' или ' + ytN(yt) : ''}</div>
+      <div style="display:flex;justify-content:space-between;align-items:center;gap:10px;margin-top:10px">
+        <span class="small dim">${fmt(per)} ⭐ за монтаж${save > 0 ? ` · <span style="color:var(--primary)">−${save}%</span>` : ''}</span>
+        <span style="display:flex;gap:6px">${p.rub ? `<button class="btn btn--sm" data-buy="${esc(p.id)}" data-cur="rub" ${b.sell ? '' : 'disabled'}>${fmt(p.rub)} ₽</button>` : ''}
+        <button class="btn btn--sm ${p.id === best ? 'btn--cu' : ''}" data-buy="${esc(p.id)}" ${b.sell ? '' : 'disabled'}>${p.rub ? fmt(p.stars) + ' ⭐' : 'Купить'}</button></span></div></div>`;
+  }).join('')}</div>
+  <div class="card" style="margin-top:8px;padding:14px 16px"><div class="small muted" style="margin-bottom:6px">Что входит</div>
+    <div class="small" style="line-height:1.9">Рилс — 1 монтаж · YouTube-ролик — ${b.yt}<br>${b.edits} правки в цене, дальше — 1 монтаж за правку<br>
+    Первый рилс бесплатно: исходники до ${b.trial_min} мин, ${b.trial_edits} правка<br>Не получилось — монтаж вернётся на баланс<br>Монтажи без срока действия</div></div>`;
+}
+function balBlock(b = M && M.bal) {  // монтаж: короткая строка баланса, пополнение — в профиле
+  if (!b || !b.sell || b.free) return '';
+  return `<button class="card row go" style="margin-top:14px" data-go="profile" data-to="tariffs"><div class="grow"><div class="small muted">Баланс</div>
+    <div style="font-size:14.5px;font-weight:600;margin-top:2px">${b.credits} ${plural(b.credits)}${b.trial ? ' · пробный рилс бесплатно' : b.credits ? ' · хватит на ' + reelsN(b.credits) : ''}</div></div>
+    <span class="small" style="color:var(--primary)">Пополнить ›</span></button>`;
+}
+async function buy(pack, cur) {
+  if (!tg || !tg.openInvoice) return toast('Оплата — в Telegram: /buy в чате с ботом');
+  try {
+    const g = await call('invoice', cur ? { pack, cur } : { pack });
+    tg.openInvoice(g.link, st => {
+      if (st === 'paid') { haptic('success'); toast('Оплата прошла — монтажи на балансе'); setTimeout(() => call('me').then(() => M ? loadMontage() : render()).catch(() => {}), 1500); }
+      else if (st === 'failed') toast('Оплата не прошла');
+    });
+  } catch (e) { toast(e.message); }
+}
+async function loadMontage() {
+  try {
+    const r = await fetch('/api/montage', { method: 'POST', headers: { 'content-type': 'application/json' }, body: JSON.stringify({ init: INIT }) });
+    const j = await r.json(); if (!r.ok) throw new Error(j.error || 'Ошибка');
+    M = j;
+    if (M.owner) await jcall({ type: 'state' });
+    if (J && J.skill && !SEL) SEL = J.skill;
+    if (TAB === 'montage') render();
+  } catch (e) { toast(e.message); }
+}
+
+function filesBlock() {
+  const fs = (J && J.files) || [];
+  const ups = UPS.filter(u => u.st !== 'done');
+  return `<div class="sec"><b>Материалы</b><span class="small dim">${fs.length ? 'файлов: ' + fs.length : 'видео, скрины, звук'}</span></div>
+  <div class="list">${fs.map(f => `<div class="card row"><div class="ava" style="border-radius:9px;font-size:10px">${f.role === 'Видео' ? 'MP4' : f.role === 'Скрин' ? 'IMG' : 'AUD'}</div>
+    <div class="grow"><div style="font-size:13.5px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap">${esc(f.name)}</div><div class="small dim">${f.mb} МБ · ${f.role}</div></div>
+    <button class="btn btn--sm" data-drop="${esc(f.name)}" aria-label="Убрать ${esc(f.name)}" style="height:32px;padding:0 10px">✕</button></div>`).join('')}
+  ${ups.map(u => `<div class="card row"><div class="grow"><div style="font-size:13.5px">${esc(u.name)}</div>
+    <div class="track" style="margin-top:8px"><i style="width:${u.pct}%"></i></div><div class="small ${u.st === 'err' ? '' : 'dim'}" style="margin-top:6px;${u.st === 'err' ? 'color:#E5484D' : ''}">${u.st === 'err' ? esc(u.err) : u.pct + '%'}</div></div></div>`).join('')}
+  <label class="btn" style="cursor:pointer">+ Загрузить файлы (до 2 ГБ)<input type="file" id="upl" multiple accept="video/*,image/*,audio/*" style="display:none"></label>
+  <div class="small dim" style="text-align:center">или пришли видео в чат Кадрику (до 20 МБ)</div></div>`;
+}
+
+function optsBlock(s) {
+  if (!s) return `<div class="card row" style="margin-top:14px"><div class="grow small muted">Выбери стиль в каталоге ниже — потом запуск.</div></div>`;
+  const vid = s.inp === 'video' && ['reels', 'styles', 'youtube'].includes(s.kind);
+  const sw = (k, l) => `<div class="row" style="padding:8px 0"><div class="grow" style="font-size:14px">${l}</div><button class="sw ${FORM[k] ? 'on' : ''}" role="switch" aria-checked="${!!FORM[k]}" aria-label="${l}" data-sw="${k}"></button></div>`;
+  return `<div class="card card--cu" style="margin-top:14px;padding:14px">
+    <div style="display:flex;gap:12px;align-items:center">${s.thumb ? `<img src="${esc(s.thumb)}" alt="" style="width:44px;height:58px;object-fit:cover;border-radius:8px">` : ''}
+      <div class="grow"><div class="small" style="color:var(--primary);letter-spacing:.08em;font-weight:600">СТИЛЬ</div><div style="font-family:var(--serif);font-size:20px">${esc(s.name)}</div><div class="small dim">${esc(s.need)}</div></div>
+      <button class="btn btn--sm" data-skill="${esc(s.id)}" style="height:32px;font-size:12px">Сменить</button></div></div>
+  <div class="card" style="margin-top:8px;padding:6px 14px 14px">
+    ${s.inp === 'link' ? `<label class="fl">Ссылка<input id="f_link" value="${esc(FORM.link)}" placeholder="https://youtube.com/…"></label>` : ''}
+    ${s.inp === 'text' ? `<label class="fl">Текст / сценарий<textarea id="f_script" rows="4" placeholder="Что за продукт, фичи, призыв…">${esc(FORM.script)}</textarea></label>` : ''}
+    ${s.inp === 'folder' ? `<label class="fl">Папка с футажами на сервере<input id="f_folder" value="${esc(FORM.folder)}" placeholder="~/Movies/broll"></label><label class="fl">Что найти<input id="f_query" value="${esc(FORM.query)}"></label>` : ''}
+    ${vid ? `<label class="fl">Кодовое слово призыва<input id="f_code" value="${esc(FORM.code)}" placeholder="например, УРОК" autocapitalize="characters"></label>
+      ${s.kind !== 'youtube' ? `<div class="fl">Длительность<div class="seg" style="margin-top:6px">${['как есть', 'до 60 с', 'до 30 с'].map(v => `<button data-len="${v}" class="${FORM.len === v ? 'on' : ''}">${v}</button>`).join('')}</div></div>` : ''}
+      ${sw('preview', 'Сначала превью')}${sw('clean', 'Убрать паузы и оговорки')}${sw('subs', 'Субтитры')}${sw('music', 'Музыка-подложка')}` : ''}
+    <label class="fl">Пожелания<textarea id="f_wish" rows="2" placeholder="тон, акценты, что обязательно оставить">${esc(FORM.wish)}</textarea></label>
+  </div>
+  <button class="btn btn--cu" style="margin-top:12px" id="jStart">Запустить монтаж →</button>
+  ${J && J.queue && J.queue.running && !J.queue.mine ? '<div class="small dim" style="text-align:center;margin-top:8px">Сейчас идёт другая работа — задача встанет в очередь</div>' : ''}`;
+}
+
+function progressBlock() {
+  const mins = J.t0 ? Math.max(0, Math.round((J.now - J.t0) / 60)) : 0;
+  const st = Math.min(J.stage || 0, 4);
+  return `<div class="card card--cu" style="margin-top:14px;padding:16px">
+    <div style="display:flex;justify-content:space-between;align-items:center"><div class="small" style="color:var(--primary);letter-spacing:.08em;font-weight:600">${J.status === 'queued' ? 'В ОЧЕРЕДИ' + (J.pos ? ' · ' + J.pos + '-Я' : '') : 'МОНТИРУЕТСЯ · ' + mins + ' МИН'}</div><span class="st running">${ST[J.status]}</span></div>
+    <div style="font-family:var(--serif);font-size:24px;margin-top:6px">${esc(J.label)}</div>
+    ${J.status === 'queued' && J.queue && J.queue.pause ? `<div class="small" style="margin-top:8px;color:var(--primary);line-height:1.5">Студия на паузе до ${esc(J.queue.pause)} по Москве — закончился запас мощности. Монтаж продолжится сам, ничего делать не нужно.</div>` : ''}
+    <div style="display:grid;grid-template-columns:repeat(4,minmax(0,1fr));gap:6px;margin-top:14px">${STEPS.map((n, i) => `<div><div class="track"><i style="width:${i < st ? 100 : i === st && J.status === 'running' ? 45 : 0}%"></i></div><div class="small ${i < st ? '' : 'dim'}" style="margin-top:6px;font-size:11px">${n}</div></div>`).join('')}</div>
+    ${J.line ? `<div class="small muted" style="margin-top:12px;line-height:1.5">Сейчас: ${esc(J.line)}</div>` : ''}
+    ${(J.stills || []).length ? `<div style="display:grid;grid-template-columns:repeat(4,minmax(0,1fr));gap:6px;margin-top:12px">${J.stills.slice(-4).map(n => `<img src="${img(n)}" alt="стоп-кадр" style="width:100%;border-radius:8px;border:1px solid var(--border)">`).join('')}</div>` : ''}
+  </div>
+  <button class="btn" style="margin-top:10px" id="jCancel">${J.status === 'queued' ? 'Снять с очереди' : 'Остановить'}</button>
+  <div class="small dim" style="text-align:center;margin-top:8px">Можно закрыть студию — превью и результат придут в чат</div>`;
+}
+
+function reviewBlock() {
+  return `<div class="eyebrow">Превью готово</div><h1>${esc(J.label)} <em>на проверку</em></h1>
+  <div class="card" style="margin-top:14px;overflow:hidden"><video src="${vfile('preview')}" ${J.previewPoster ? `poster="${img(J.previewPoster)}"` : ''} controls playsinline style="width:100%;display:block;max-height:70vh;background:#000"></video></div>
+  ${J.report ? `<div class="card" style="margin-top:8px;padding:14px;white-space:pre-wrap;font-size:13px;line-height:1.55;color:var(--muted)">${esc(J.report)}</div>` : ''}
+  <button class="btn btn--cu" style="margin-top:12px" id="jApprove">Делай финал →</button>
+  <label class="fl" style="margin-top:12px">Или правка<textarea id="f_edit" rows="3" placeholder="например: убери паузу на 0:12, хук крупнее"></textarea></label>
+  <button class="btn" style="margin-top:8px" id="jEdit">Отправить правку</button>`;
+}
+
+function doneBlock() {
+  const n = (J.versions || []).length, i = n - 1;
+  return `<div class="eyebrow">Готово</div><h1>${esc(J.label)} <em>${n > 1 ? 'v' + n : 'готов'}</em></h1>
+  ${n ? `<div class="card" style="margin-top:14px;overflow:hidden"><video src="${vfile(i)}" ${J.posters[i] ? `poster="${img(J.posters[i])}"` : ''} controls playsinline style="width:100%;display:block;max-height:70vh;background:#000"></video></div>
+    <div class="small dim" style="margin-top:6px">Файл: ${esc(J.versions[i])} · отправлен в чат</div>` : ''}
+  ${J.report ? `<div class="card" style="margin-top:8px;padding:14px;white-space:pre-wrap;font-size:13px;line-height:1.55;color:var(--muted)">${esc(J.report)}</div>` : ''}
+  <label class="fl" style="margin-top:12px">Правка к результату<textarea id="f_edit" rows="3" placeholder="что изменить — соберу новую версию"></textarea></label>
+  <button class="btn" style="margin-top:8px" id="jEdit">Сделать новую версию</button>
+  <button class="btn btn--cu" style="margin-top:8px" id="jNew">Новый рилс →</button>`;
+}
+
+function errorBlock() {
+  return `<div class="card" style="margin-top:14px;padding:14px"><div class="small" style="color:#E5484D;font-weight:600;letter-spacing:.08em">НЕ ЗАВЕРШЕНО</div>
+    <div style="font-family:var(--serif);font-size:20px;margin-top:4px">${esc(J.label || 'Задача')}</div><div class="small muted" style="margin-top:8px;line-height:1.5;white-space:pre-wrap">${esc(J.line || '')}</div></div>
+  ${J.skill && !(J.versions || []).length ? `<button class="btn btn--cu" style="margin-top:10px" id="jResume">Продолжить с места остановки →</button>
+  <button class="btn" style="margin-top:8px" id="jRestart">Начать этот ролик заново</button>` : ''}
+  <button class="btn${J.skill ? '' : ' btn--cu'}" style="margin-top:8px" id="jNew">Новая задача</button>`;
+}
+
+// «Подобрать стиль»: что в видео → стили с этим тегом (теги — PICK в creator-pack-miniapp/build.py)
+const PICK = [['advice', 'Советы в камеру'], ['list', 'Длинный список'], ['rank', 'Рейтинг, тир-лист'], ['buckets', 'Делю на две стороны'],
+  ['chain', 'Цепочка «если → то»'], ['steps', 'Шаги, фреймворк'], ['story', 'Личная история'], ['quotes', 'Цепкие фразы'],
+  ['images', 'Нужны картинки'], ['numbers', 'Цифры и результаты'], ['tools', 'Сервисы, экран'], ['explain', 'Объясняю, как работает'],
+  ['argument', 'Довод с примерами'], ['broll', 'Мой B-roll'], ['two', 'Два персонажа / две записи'], ['trip', 'Клипы из поездки, дня'],
+  ['teach', 'Урок'], ['document', 'Документ на экране'], ['long', 'Длиннее 4 минут'], ['call', 'Созвон, подкаст, длинное видео'],
+  ['captions', 'Только субтитры'], ['launch', 'Промо продукта'], ['writing', 'Тексты, не видео']];
+let PICKED = '', PICK_OPEN = false;
+function pickBlock() {
+  const tags = PICK.filter(([k]) => M.catalog.some(s => (s.pick || []).includes(k)));
+  return `<button class="card row" id="pickToggle" style="width:100%;margin-top:14px;text-align:left;gap:10px;cursor:pointer">
+      <div class="grow"><div style="font-size:14px;font-weight:600">Подобрать стиль</div><div class="small dim">${PICKED ? 'показаны стили для «' + esc(PICK.find(p => p[0] === PICKED)[1]) + '»' : 'выбери, что в твоём видео'}</div></div>
+      <span class="small" style="color:var(--primary)">${PICK_OPEN ? 'скрыть ▴' : 'открыть ▾'}</span></button>
+    ${PICK_OPEN ? `<div style="display:flex;flex-wrap:wrap;gap:6px;margin-top:10px" class="seg">${tags.map(([k, l]) => `<button data-pick="${k}" class="${PICKED === k ? 'on' : ''}">${esc(l)}</button>`).join('')}</div>` : ''}`;
+}
+function catalogBlock() {
+  const list = PICKED ? M.catalog.filter(s => (s.pick || []).includes(PICKED)) : M.catalog.filter(s => s.kind === KIND);
+  return `<div class="sec"><b>Каталог · ${M.catalog.length}</b><span class="small dim">скиллы и стили</span></div>
+  ${pickBlock()}
+  ${PICKED ? '' : `<div class="seg">${KINDS.map(([k, l]) => `<button data-kind="${k}" class="${KIND === k ? 'on' : ''}">${l} · ${M.catalog.filter(s => s.kind === k).length}</button>`).join('')}</div>`}
+  <div class="grid">${list.map(s => `<button class="tile${SEL === s.id ? ' sel' : ''}" data-skill="${esc(s.id)}"><div class="th">${s.thumb ? `<img src="${esc(s.thumb)}" alt="" loading="lazy">` : `<div class="ph">${esc(s.name[0])}</div>`}<span class="k">${SEL === s.id ? 'выбран' : s.files > 1 ? s.files + ' записи' : s.ready ? 'готов' : 'настройка'}</span></div>
+    <b>${esc(s.name)}</b><span class="s">${esc(s.sub)}</span></button>`).join('') || '<div class="small dim">Пусто</div>'}</div>`;
+}
+
+function jobRow(h) {
+  return `<button class="card job" data-focus="${esc(h.id)}" style="text-align:left;width:100%">${h.poster ? `<img class="pv" src="${img(h.poster)}" alt="">` : '<div class="pv"></div>'}
+    <div class="grow"><div style="font-size:14px;font-weight:500">${esc(h.label)}</div><div class="small dim">${h.versions ? 'версий: ' + h.versions : ST[h.status]}</div></div><span class="st ${h.status}">${ST[h.status]}</span></button>`;
+}
+
+function historyBlock() {  // мои задачи — всё, что ещё не готово
+  const mine = HIST.filter(h => h.status !== 'done' && (!J || h.id !== J.job));
+  if (!mine.length) return '';
+  return `<div class="sec"><b>Мои задачи</b><span class="small dim">${mine.length}</span></div><div class="list">${mine.map(jobRow).join('')}</div>`;
+}
+
+let DONE_OPEN = (() => { try { return localStorage.getItem('kadrik_done_open') === '1'; } catch (e) { return false; } })();
+function setDoneOpen(v) { DONE_OPEN = v; try { localStorage.setItem('kadrik_done_open', v ? '1' : '0'); } catch (e) {} }
+
+function doneListBlock() {  // сделанные — внизу, сворачиваются; открытая готовая задача показывается здесь же
+  const cur = J && J.status === 'done';
+  const rest = HIST.filter(h => h.status === 'done' && (!J || h.id !== J.job));
+  const n = rest.length + (cur ? 1 : 0);
+  if (!n) return '';
+  const open = DONE_OPEN;
+  return `<button class="sec" id="doneToggle" aria-expanded="${open}" style="width:100%;background:none;border:0;color:inherit;font:inherit;cursor:pointer;text-align:left">
+      <b>Сделанные</b><span class="small dim">${n} · ${open ? 'свернуть ▴' : 'показать ▾'}</span></button>
+    ${open ? (cur ? doneBlock() : '') + (rest.length ? `<div class="list" style="margin-top:${cur ? 14 : 0}px">${rest.map(jobRow).join('')}</div>` : '') : ''}`;
+}
+
+function montageTab() {
+  if (!M) { loadMontage(); return `<div class="eyebrow">Монтаж</div><h1>Выбери <em>стиль</em></h1><div class="small dim" style="margin-top:20px">Загружаю каталог…</div>`; }
+  const head = `<div class="top"><div class="logo">Монтаж</div><div class="pills"><span class="pill pill--cu">рилсов <b>${S.reels}</b></span></div></div>`;
+  if (!M.owner) return head + `<div class="eyebrow">Каталог Prod Skills</div><h1>31 <em>стиль</em> монтажа</h1>` + (M.bal && M.bal.sell
+    ? `<div class="small muted" style="margin-top:6px">Кадрик смонтирует рилс в любом из стилей. Первый — бесплатно.</div>
+       <button class="btn btn--cu" style="margin-top:14px" id="jTry">Смонтировать бесплатно →</button>`
+    : `<div class="small muted" style="margin-top:6px">Монтаж доступен владельцу студии. Посмотри стили и примеры.</div>`) + catalogBlock();
+  const st = (J && J.status) || 'none';
+  let main;
+  if (ACT.includes(st)) main = `<div class="eyebrow">Монтаж</div>` + progressBlock();
+  else if (st === 'review') main = reviewBlock();
+  else if (st === 'done') main = `<div class="eyebrow">Монтаж</div><h1>Что <em>монтируем?</em></h1>
+    <button class="btn btn--cu" style="margin-top:14px" id="jNewTop">Новый рилс →</button>`;  // готовый ролик — в «Сделанных» внизу
+  else if (st === 'error') main = errorBlock();
+  else main = `<div class="eyebrow">Новый рилс</div><h1>Загрузи видео и <em>выбери стиль</em></h1>` + filesBlock() + optsBlock(sk(SEL));
+  return head + main + balBlock() + historyBlock() + catalogBlock() + doneListBlock();
+}
+
+function openSkill(id) {
+  const s = sk(id); if (!s) return;
+  const m = $('#modal');
+  const hero = s.video ? `<video src="${esc(s.video)}" poster="${esc(s.thumb)}" autoplay muted loop playsinline></video>` : s.thumb ? `<img src="${esc(s.thumb)}" alt="">` : '';
+  const busy = J && (ACT.includes(J.status) || J.status === 'review');
+  m.innerHTML = `<div class="eyebrow c">${esc((KINDS.find(k => k[0] === s.kind) || ['', ''])[1])}</div><h1 class="c" id="mt">${esc(s.name)}</h1>
+    <div class="small muted" style="text-align:center;margin-top:6px;max-width:440px">${esc(s.sub)}</div>
+    ${hero ? `<div class="hero">${hero}</div>` : ''}
+    <div class="small muted" style="max-width:440px;margin-top:14px;line-height:1.6">${esc(s.desc)}</div>
+    <div class="kv"><div><span>Получишь</span><span>${esc(s.get)}</span></div><div><span>Нужно</span><span>${esc(s.need)}</span></div></div>
+    <div style="width:100%;max-width:440px;display:flex;flex-direction:column;gap:8px;margin-top:auto;padding-top:18px">
+      ${M.owner ? (busy ? '<div class="card row small muted">Сейчас идёт задача — выбрать стиль можно после неё</div>' : `<button class="btn btn--cu" id="mPick">Выбрать «${esc(s.name)}» →</button>`) : (S.asked ? '<div class="card row small muted">Заявка на монтаж у владельца — ответ придёт в чат</div>' : `<button class="btn btn--cu" id="mAsk">${M.bal && M.bal.sell ? 'Смонтировать бесплатно →' : 'Хочу монтаж — оставить заявку'}</button>`)}
+      <button class="btn" id="mclose">Назад к стилям</button></div>`;
+  m.classList.add('sheet', 'show'); m.scrollTop = 0;
+  $('#mclose').onclick = () => m.classList.remove('show', 'sheet');
+  const ask = $('#mAsk'); if (ask) ask.onclick = () => { ask.disabled = true; call('ask').then(g => { haptic('success'); toast(g.msg); m.classList.remove('show', 'sheet'); if (M.bal && M.bal.sell) { M = null; SEL = s.id; } render(); }).catch(e => { ask.disabled = false; toast(e.message); }); };
+  const pick = $('#mPick'); if (pick) pick.onclick = async () => {
+    if (J && J.status && !['collect', 'none'].includes(J.status)) { try { await jcall({ type: 'new' }); } catch (e) { toast(e.message); return; } }
+    SEL = s.id; m.classList.remove('show', 'sheet'); haptic('success'); render(); window.scrollTo(0, 0);
+  };
+}
+
+function readForm() {
+  for (const k of ['link', 'script', 'folder', 'query', 'code', 'wish']) { const el = $('#f_' + k); if (el) FORM[k] = el.value; }
+}
+async function upload(files) {
+  for (const f of files) {
+    const u = { id: Math.random().toString(36).slice(2, 12), name: f.name, pct: 0, st: 'up' }; UPS.push(u); render();
+    const CS = 8 * 1024 * 1024, n = Math.max(1, Math.ceil(f.size / CS));
+    try {
+      for (let i = 0; i < n; i++) {
+        const r = await fetch(`/api/up?id=${u.id}&i=${i}&cs=${CS}&name=${encodeURIComponent(f.name)}`, { method: 'POST', headers: { 'X-Tg-Init': INIT }, body: f.slice(i * CS, (i + 1) * CS) });
+        if (!r.ok) throw new Error((await r.json().catch(() => ({}))).error || 'обрыв связи');
+        u.pct = Math.round((i + 1) / n * 100); render();
+      }
+      await jcall({ type: 'upload', id: u.id, size: f.size, name: f.name }); u.st = 'done'; haptic('success');
+    } catch (e) { u.st = 'err'; u.err = e.message; haptic('error'); }
+    render();
+  }
+}
+function wireMontage() {
+  const tr = $('#jTry'); if (tr) tr.onclick = () => { tr.disabled = true; call('ask').then(g => { haptic('success'); toast(g.msg); M = null; render(); }).catch(e => { tr.disabled = false; toast(e.message); }); };
+  document.querySelectorAll('[data-kind]').forEach(b => b.onclick = () => { readForm(); KIND = b.dataset.kind; PICKED = ''; render(); });
+  document.querySelectorAll('[data-pick]').forEach(b => b.onclick = () => { readForm(); PICKED = PICKED === b.dataset.pick ? '' : b.dataset.pick; haptic('success'); render(); });
+  const po = $('#pickToggle'); if (po) po.onclick = () => { readForm(); PICK_OPEN = !PICK_OPEN; if (!PICK_OPEN) PICKED = ''; render(); };
+  document.querySelectorAll('[data-skill]').forEach(b => b.onclick = () => { readForm(); openSkill(b.dataset.skill); });
+  document.querySelectorAll('[data-drop]').forEach(b => b.onclick = () => jcall({ type: 'drop', name: b.dataset.drop }).then(render).catch(e => toast(e.message)));
+  document.querySelectorAll('[data-focus]').forEach(b => b.onclick = () => jcall({ type: 'focus', job: b.dataset.focus }).then(() => {
+    SEL = J.skill || SEL;
+    if (J.status === 'done') { setDoneOpen(true); render(); const d = $('#doneToggle'); if (d) d.scrollIntoView({ block: 'start' }); }  // готовая — раскрыта внизу
+    else { render(); window.scrollTo(0, 0); }
+  }).catch(e => toast(e.message)));
+  document.querySelectorAll('[data-sw]').forEach(b => b.onclick = () => { readForm(); FORM[b.dataset.sw] = FORM[b.dataset.sw] ? 0 : 1; render(); });
+  document.querySelectorAll('[data-len]').forEach(b => b.onclick = () => { readForm(); FORM.len = b.dataset.len; render(); });
+  const upl = $('#upl'); if (upl) upl.onchange = () => { readForm(); upload([...upl.files]); };
+  const go = $('#jStart'); if (go) go.onclick = async () => {
+    readForm(); const s = sk(SEL); if (!s) return;
+    if (s.files > 1 && ((J && J.files) || []).filter(f => f.role === 'Видео').length < s.files) { haptic('error'); toast(`Для «${s.name}» нужно ${s.files} записи: ${s.need}`); return; }
+    const d = { skill: s.id, kind: s.kind, wish: FORM.wish.trim(), preview: !!FORM.preview };
+    if (s.inp === 'link') d.link = FORM.link.trim();
+    if (s.inp === 'text') d.script = FORM.script.trim();
+    if (s.inp === 'folder') { d.folder = FORM.folder.trim(); d.query = FORM.query.trim(); }
+    if (s.inp === 'video') Object.assign(d, { code: FORM.code.trim().toUpperCase(), len: FORM.len, subs: !!FORM.subs, clean: !!FORM.clean, music: !!FORM.music });
+    go.disabled = true;
+    try { await jcall({ type: 'start', data: d }); haptic('success'); UPS = []; render(); window.scrollTo(0, 0); } catch (e) { go.disabled = false; haptic('error'); toast(e.message); }
+  };
+  const cc = $('#jCancel'); if (cc) cc.onclick = () => jcall({ type: 'cancel' }).then(render).catch(e => toast(e.message));
+  const ap = $('#jApprove'); if (ap) ap.onclick = () => { ap.disabled = true; jcall({ type: 'approve' }).then(() => { haptic('success'); toast('Делаю финал — пришлю в чат'); render(); }).catch(e => { ap.disabled = false; toast(e.message); }); };
+  const ed = $('#jEdit'); if (ed) ed.onclick = () => { const t = ($('#f_edit').value || '').trim(); if (t.length < 3) { toast('Напиши, что поправить'); return; }
+    ed.disabled = true; jcall({ type: 'edit', text: t }).then(() => { haptic('success'); toast('Принял правку — пересобираю'); render(); }).catch(e => { ed.disabled = false; toast(e.message); }); };
+  [['#jResume', 'resume', 'Продолжаю с места остановки'], ['#jRestart', 'restart', 'Начинаю этот ролик заново']].forEach(([id, type, ok]) => {
+    const b = $(id); if (b) b.onclick = () => { b.disabled = true; jcall({ type, job: J.job }).then(() => { haptic('success'); toast(ok); render(); }).catch(e => { b.disabled = false; toast(e.message); }); };
+  });
+  ['#jNew', '#jNewTop'].forEach(id => { const nw = $(id); if (nw) nw.onclick = () => jcall({ type: 'new' }).then(() => { UPS = []; render(); window.scrollTo(0, 0); }).catch(e => toast(e.message)); });
+  const dt = $('#doneToggle'); if (dt) dt.onclick = () => {
+    setDoneOpen(!DONE_OPEN); render();
+  };
+}
+
+function render() {
+  if (!['studio', 'montage', 'profile', 'partners', 'path', 'streak', 'league'].includes(TAB)) TAB = 'studio';
+  const v = { studio, montage: montageTab, profile: profileTab, partners: partnersTab, path: pathTab, streak: streakTab, league: leagueTab }[TAB]();
+  $('#app').innerHTML = v;
+  document.querySelectorAll('.tabs button').forEach(b => b.classList.toggle('on', b.dataset.tab === (SUB[TAB] || TAB)));
+  document.querySelectorAll('[data-go]').forEach(b => b.onclick = () => { TAB = b.dataset.go; render(); const t = b.dataset.to && $('#' + b.dataset.to); t ? t.scrollIntoView({ block: 'start' }) : window.scrollTo(0, 0); });
+  const up = $('#topUp'); if (up) up.onclick = () => $('#tariffs').scrollIntoView({ behavior: 'smooth', block: 'start' });
+  document.querySelectorAll('[data-buy]').forEach(b => b.onclick = () => buy(b.dataset.buy, b.dataset.cur));
+  if (TAB === 'partners') wirePartners();
+  if (TAB === 'montage') wireMontage();
+  const feed = $('#feed'); if (feed) feed.onclick = () => { if (S.owner) { TAB = 'montage'; render(); window.scrollTo(0, 0); } else if (tg) tg.close(); else toast('Отправь видео боту в чат'); };
+  const daily = $('#daily'); if (daily) daily.onclick = () => claim('daily');
+  document.querySelectorAll('[data-chest]').forEach(b => b.onclick = () => claim('chest', { node: +b.dataset.chest }));
+  const hide = $('#lbHide'); if (hide) hide.onclick = () => call('hide').then(() => { toast(S.hidden ? 'Имя скрыто — в лиге ты «Игрок»' : 'Имя снова видно'); render(); }).catch(e => toast(e.message));
+  document.querySelectorAll('[data-lb]').forEach(b => b.onclick = () => { LB_MODE = b.dataset.lb; render(); });
+  wireReviews();
+}
+
+async function claim(act, extra) {
+  try {
+    const got = await call(act, extra); haptic('success'); render();
+    if (act === 'daily') reward('Награда дня', `День ${got.day} <em>из 7</em>`, [[got.coins ? '+' + got.coins : '—', 'монет'], ['+' + got.xp, 'опыта'], [got.freeze ? '+1' : S.freezes, 'заморозки']]);
+    else reward('Сундук на пути', 'Сундук <em>открыт</em>', [['+' + got.coins, 'монет'], [S.reels, 'рилсов'], [S.streak, 'дней подряд']]);
+  } catch (e) { haptic('error'); toast(e.message); }
+}
+
+function reward(eyebrow, title, gains) {
+  const m = $('#modal');
+  m.innerHTML = `<div class="eyebrow c">${eyebrow}</div><h1 class="c" id="mt">${title}</h1>
+    <svg width="200" height="160" viewBox="0 0 230 190" aria-hidden="true" style="margin-top:20px">
+      <g stroke="#D17A3C" stroke-width="2" stroke-linecap="round" opacity=".7"><path d="M115 6v24"/><path d="M62 26l12 18"/><path d="M168 26l-12 18"/><path d="M30 66l20 7"/><path d="M200 66l-20 7"/></g>
+      <path d="M48 90 L115 60 L182 90 L115 108 Z" fill="rgba(209,122,60,.35)"/><rect x="48" y="96" width="134" height="80" rx="12" fill="#121212" stroke="#D17A3C" stroke-width="2"/>
+      <rect x="104" y="106" width="22" height="28" rx="5" fill="#D17A3C"/><path d="M44 94 Q115 40 186 94" stroke="#D17A3C" stroke-width="2" fill="#161616"/></svg>
+    <div class="gains">${gains.map(g => `<div class="card"><b>${g[0]}</b><span class="small muted">${g[1]}</span></div>`).join('')}</div>
+    <div class="card card--dark" style="width:100%;max-width:440px;margin-top:10px;padding:14px">
+      <div style="display:flex;justify-content:space-between;font-size:12.5px"><span class="muted">До уровня ${S.level + 1}</span><span>${S.lvl_cur} / ${S.lvl_need} XP</span></div>
+      <div class="track" style="margin-top:10px"><i style="width:${Math.round(S.lvl_cur / S.lvl_need * 100)}%"></i></div></div>
+    <button class="btn btn--cu" style="max-width:440px;margin-top:auto" id="mclose">В студию →</button>`;
+  m.classList.add('show');
+  $('#mclose').onclick = () => m.classList.remove('show');
+}
+
+document.querySelectorAll('.tabs button').forEach(b => b.onclick = () => { TAB = b.dataset.tab; render(); window.scrollTo(0, 0); try { tg.HapticFeedback.selectionChanged(); } catch (e) {} });
+
+(async () => {
+  if (!INIT) { $('#app').innerHTML = '<div class="err"><h1 class="c">Студия <em>Кадрика</em></h1><p class="muted">Открой её из Telegram — кнопка «Студия» в @studio_kadrik_bot.</p></div>'; return; }
+  try {
+    await call('me');
+    $('#tabs').hidden = false; render();
+    let lastPoll = 0;  // монтаж: опрос состояния — чаще, пока идёт работа
+    setInterval(() => {
+      if (TAB !== 'montage' || !M || !M.owner || document.hidden || $('#modal').classList.contains('show') || UPS.some(u => u.st === 'up')) return;
+      const busy = J && ['queued', 'running'].includes(J.status), now = Date.now();
+      if (now - lastPoll < (busy ? 4000 : 20000) || document.activeElement && ['INPUT', 'TEXTAREA'].includes(document.activeElement.tagName)) return;
+      lastPoll = now; const was = J && J.status;
+      jcall({ type: 'state' }).then(() => { if (!J || J.status !== was || busy) render(); }).catch(() => {});
+    }, 2000);
+    if (new URLSearchParams(location.search).get('r') === '1' && S.reels) {
+      reward('Рилс принят', 'Кадрик сыт <br>и <em>прокачался</em>', [['+50', 'опыта'], ['+30', 'монет'], [S.streak, 'дней подряд']]);
+    } else if (new URLSearchParams(location.search).get('review') === '1') {  // из чата: «Карточка для сторис»
+      const rv = $('#reviews'); if (rv) rv.scrollIntoView({ block: 'start' });
+    } else if (S.intro && !S.owner) intro(0);
+  } catch (e) { $('#app').innerHTML = `<div class="err"><h1 class="c">Не <em>открылось</em></h1><p class="muted">${esc(e.message)}</p></div>`; }
+})();
+
+var INTRO = [  // подсказка первого входа гостя: три экрана
+  ['Шаг 1 из 3', 'Кидай <em>видео</em>', 'Отправь боту в чат свой рилс от 5 секунд — за пару минут получишь разбор: оценку хука, темпа и субтитров и 3 правки с таймкодами. До 3 видео в день.',
+   '<path d="M40 60h110a14 14 0 0 1 14 14v62a14 14 0 0 1-14 14H40a14 14 0 0 1-14-14V74a14 14 0 0 1 14-14z" fill="#121212" stroke="#D17A3C" stroke-width="2"/><path d="M164 92l40-20v76l-40-20z" fill="rgba(209,122,60,.35)" stroke="#D17A3C" stroke-width="2"/><path d="M84 86l32 19-32 19z" fill="#D17A3C"/>'],
+  ['Шаг 2 из 3', 'Получай <em>очки</em>', 'За каждое видео +50 опыта и +30 монет. Заходи каждый день: серия дней, награда дня и сундуки на «Пути». Вечером Кадрик напомнит, если серия под угрозой.',
+   '<circle cx="115" cy="105" r="52" fill="#121212" stroke="#D17A3C" stroke-width="2"/><circle cx="115" cy="105" r="36" fill="rgba(209,122,60,.35)"/><text x="115" y="116" text-anchor="middle" font-size="30" fill="#D17A3C" font-family="serif" font-style="italic">+50</text>'],
+  ['Шаг 3 из 3', 'Обгоняй в <em>лиге</em>', 'Лига недели обнуляется в понедельник — победитель получает монеты и бесплатный монтаж. Имя можно скрыть. Хочешь настоящий монтаж своего рилса — оставь заявку во вкладке «Монтаж».',
+   '<rect x="40" y="110" width="44" height="50" rx="6" fill="#121212" stroke="#D17A3C" stroke-width="2"/><rect x="93" y="70" width="44" height="90" rx="6" fill="rgba(209,122,60,.35)" stroke="#D17A3C" stroke-width="2"/><rect x="146" y="95" width="44" height="65" rx="6" fill="#121212" stroke="#D17A3C" stroke-width="2"/><text x="115" y="60" text-anchor="middle" font-size="22" fill="#D17A3C">1</text>'],
+];
+
+function intro(i) {
+  const m = $('#modal'), [eb, title, text, art] = INTRO[i], last = i === INTRO.length - 1;
+  const done = () => { m.classList.remove('show'); call('intro').catch(() => {}); };
+  m.innerHTML = `<div class="eyebrow c">${eb}</div><h1 class="c" id="mt">${title}</h1>
+    <svg width="200" height="170" viewBox="0 0 230 190" aria-hidden="true" style="margin-top:20px">${art}</svg>
+    <p class="muted" style="max-width:360px;text-align:center;line-height:1.6;margin-top:14px">${text}</p>
+    <div style="display:flex;gap:8px;margin-top:16px" aria-hidden="true">${INTRO.map((_, k) => `<i style="width:${k === i ? 22 : 8}px;height:8px;border-radius:4px;background:${k === i ? 'var(--primary)' : 'rgba(255,255,255,.18)'}"></i>`).join('')}</div>
+    <div style="width:100%;max-width:440px;display:flex;flex-direction:column;gap:8px;margin-top:auto;padding-top:20px">
+      <button class="btn btn--cu" id="inNext">${last ? 'Кинуть первое видео →' : 'Дальше →'}</button>
+      ${last ? '<button class="btn" id="inStay">Сначала осмотрюсь</button>' : '<button class="btn" id="inSkip">Пропустить</button>'}</div>`;
+  m.classList.add('show'); m.scrollTop = 0;
+  $('#inNext').onclick = () => { haptic('success'); if (!last) return intro(i + 1); done(); if (tg) tg.close(); };
+  const out = $('#inSkip') || $('#inStay'); out.onclick = done;
+}
+</script>
+</body>
+</html>

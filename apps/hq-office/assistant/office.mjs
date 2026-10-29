@@ -7,7 +7,7 @@ import fs from 'node:fs';
 import path from 'node:path';
 import vm from 'node:vm';
 
-const FILES = ['office.config.js', 'dept-content.js', 'agent-content.js', 'tasks.js', 'tasks.auto.js', 'works.js'];
+const FILES = ['office.config.js', 'dept-content.js', 'agent-content.js', 'skills-library.js', 'tasks.js', 'tasks.auto.js', 'works.js'];
 const SITE = 'https://hq2.aicex.club';
 const MON = ['января', 'февраля', 'марта', 'апреля', 'мая', 'июня', 'июля', 'августа', 'сентября', 'октября', 'ноября', 'декабря'];
 const KIND = { github:'GitHub', claude:'Claude', site:'сайт', file:'файл' };
@@ -15,7 +15,7 @@ const KIND = { github:'GitHub', claude:'Claude', site:'сайт', file:'файл
 export const moscowDate = (d = new Date()) => new Intl.DateTimeFormat('sv-SE', { timeZone:'Europe/Moscow' }).format(d);
 export const humanDate = iso => { const [y, m, d] = iso.split('-').map(Number); return `${d} ${MON[m - 1]} ${y}`; };
 
-let cache = { key:'', office:null };
+let cache = { key:'', office:null, W:null };
 
 export function loadOffice(dir) {
   const stamps = FILES.map(f => { try { return fs.statSync(path.join(dir, f)).mtimeMs; } catch { return 0; } });
@@ -28,8 +28,14 @@ export function loadOffice(dir) {
     const p = path.join(dir, f);
     if (fs.existsSync(p)) vm.runInContext(fs.readFileSync(p, 'utf8'), ctx, { filename:f });
   }
-  cache = { key, office:buildOffice(ctx.window) };
+  cache = { key, office:buildOffice(ctx.window), W:ctx.window };
   return cache.office;
+}
+
+// The raw data of the site (window.OFFICE_CONFIG, AGENT_CONTENT, …) — the desk dispatcher reads agents from it
+export function officeWindow(dir) {
+  loadOffice(dir);
+  return cache.W;
 }
 
 function buildOffice(W) {
