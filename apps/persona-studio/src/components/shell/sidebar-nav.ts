@@ -23,6 +23,15 @@ export const SIDEBAR_SECTIONS: SidebarSection[] = [
     items: [{ href: '/dashboard', label: 'Home', key: 'home', icon: 'home' }],
   },
   {
+    // The main path: own blog → uniquify → reel / carousel → publish.
+    label: 'Pipeline',
+    key: 'pipeline',
+    items: [
+      { href: '/blog', label: 'My Blog', key: 'pipe-blog', icon: 'research', hint: 'best reels & carousels' },
+      { href: '/pipeline', label: 'My Pipelines', key: 'pipe-list', icon: 'workspace', hint: 'idea → video → post' },
+    ],
+  },
+  {
     label: 'Create',
     key: 'create',
     items: [
@@ -32,7 +41,7 @@ export const SIDEBAR_SECTIONS: SidebarSection[] = [
       { href: '/voice', label: 'Voice', key: 'create-voice', icon: 'voice', hint: 'clone & train' },
       { href: '/videos/new', label: 'Video', key: 'create-video', icon: 'video', hint: 'talking-photo' },
       { href: '/carousels', label: 'Carousel', key: 'create-carousel', icon: 'carousel', hint: '25 styles · skills' },
-      { href: '/montage', label: 'Skill Montage', key: 'create-skill-montage', icon: 'skills', hint: 'reels styles · ffmpeg' },
+      { href: '/montage', label: 'Skill Montage', key: 'create-skill-montage', icon: 'skills', hint: 'Kadrik studio styles' },
       { href: '/edits/new', label: 'Montage', key: 'create-montage', icon: 'montage', hint: 'Submagic edit' },
     ],
   },

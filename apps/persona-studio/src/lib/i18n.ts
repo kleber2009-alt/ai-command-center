@@ -28,6 +28,12 @@ const RU_DICT: Record<string, string> = {
   Admin: 'Админ',
 
   // ── Sidebar items ──
+  Pipeline: 'Конвейер',
+  'My Blog': 'Мой блог',
+  'My Pipelines': 'Мои ветки',
+  'best reels & carousels': 'лучшие рилсы и карусели',
+  'idea → video → post': 'идея → видео → пост',
+  'Kadrik studio styles': 'стили Студии Кадрика',
   Personas: 'Персоны',
   Workspace: 'Воркспейс',
   Avatar: 'Аватар',
