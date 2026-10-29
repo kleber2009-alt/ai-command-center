@@ -4,8 +4,8 @@
    готовые задачи, только дописывает к ним новые PR той же ветки. Удалённая задача не вернётся —
    её PR остаются в seen. Чтобы задача стала «ручной», перенесите её в tasks.js. */
 window.OFFICE_TASKS_AUTO = {
-  "since": "2026-10-29T09:00:46Z",
-  "seen": [148, 149, 150, 151, 152, 153, 154, 155, 156, 157, 158, 159, 160, 161, 162, 163, 164, 165, 166, 167, 168, 169, 170, 171],
+  "since": "2026-10-29T09:08:21Z",
+  "seen": [148, 149, 150, 151, 152, 153, 154, 155, 156, 157, 158, 159, 160, 161, 162, 163, 164, 165, 166, 167, 168, 169, 170, 171, 172],
   "tasks": [
     {
       "id": "gh-148",
@@ -165,6 +165,23 @@ window.OFFICE_TASKS_AUTO = {
       ],
       "group": "studio-kadrik|claude/friendly-tesla-4dcftg",
       "prs": [169, 170, 171],
+      "auto": true
+    },
+    {
+      "id": "gh-172",
+      "date": "2026-10-29",
+      "dateNote": "слияние PR на GitHub",
+      "kind": "Продукт",
+      "dept": "ceo",
+      "people": ["ilia"],
+      "agents": ["product", "skills"],
+      "title": "Студия Кадрик: 48 стилей Creator Pack теперь внутри, старый бот выведен",
+      "summary": "Каталог из 48 стилей Creator Pack с обложками переехал в Кадрик, а отдельный бот @Productionskill_bot безопасно отключён с бэкапом и проверкой. Всё производство контента — в одном боте вместо двух.",
+      "proof": [
+        { "kind": "github", "label": "PR #172 · перенять стили @Productionskill_bot и вывести этот бот", "url": "https://github.com/kleber2009-alt/ai-command-center/pull/172" }
+      ],
+      "group": "studio-kadrik|claude/focused-mayer-43bdk9",
+      "prs": [172],
       "auto": true
     },
     {
