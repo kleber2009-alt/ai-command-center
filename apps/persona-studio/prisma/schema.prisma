@@ -154,26 +154,26 @@ model AvatarGeneration {
 
 // Каждый из 10 итоговых аватаров
 model Avatar {
-  id            String           @id @default(cuid())
-  userId        String
-  user          User             @relation(fields: [userId], references: [id], onDelete: Cascade)
-  generationId  String
-  generation    AvatarGeneration @relation(fields: [generationId], references: [id], onDelete: Cascade)
-  imageUrl      String // S3 key
-  imageThumbUrl String?
-  style         String // "luxury-founder" | ...
-  styleLabel    String // "Luxury Founder"
-  status        String           @default("pending") // pending | done | failed
-  promptUsed    String?          @db.Text
-  selected      Boolean          @default(false)
-  errorMsg      String?
+  id                   String           @id @default(cuid())
+  userId               String
+  user                 User             @relation(fields: [userId], references: [id], onDelete: Cascade)
+  generationId         String
+  generation           AvatarGeneration @relation(fields: [generationId], references: [id], onDelete: Cascade)
+  imageUrl             String // S3 key
+  imageThumbUrl        String?
+  style                String // "luxury-founder" | ...
+  styleLabel           String // "Luxury Founder"
+  status               String           @default("pending") // pending | done | failed
+  promptUsed           String?          @db.Text
+  selected             Boolean          @default(false)
+  errorMsg             String?
   // HeyGen v3 photo-avatar created from this image — reused by later videos
   // and job retries (creating one costs HeyGen credits).
-  heygenAvatarId String?
+  heygenAvatarId       String?
   // HeyGen v2 talking_photo (Avatar IV) for this image — same reuse reason:
   // each new one counts against the account's photo-avatar limit.
   heygenTalkingPhotoId String?
-  createdAt     DateTime         @default(now())
+  createdAt            DateTime         @default(now())
 
   videos         VideoGeneration[]
   covers         Cover[]
@@ -188,30 +188,38 @@ model Avatar {
 // omnihuman-1.5). Маршрутизация очереди и валидация полей — в
 // src/lib/video-engines.ts.
 model VideoGeneration {
-  id            String    @id @default(cuid())
-  userId        String
-  user          User      @relation(fields: [userId], references: [id], onDelete: Cascade)
-  avatarId      String
-  avatar        Avatar    @relation(fields: [avatarId], references: [id], onDelete: Cascade)
-  engine        String    @default("heygen-v5") // VideoEngine slug
-  script        String?   @db.Text // для engine.inputMode='script'
-  audioUrl      String? // synthesized mp3 (OmniHuman) или advanced override
-  language      String    @default("ru")
-  voiceId       String?
-  aspect        String    @default("9:16") // 9:16 | 1:1 | 16:9
-  quality       String    @default("2k") // 1080p | 2k
-  background    String?
-  subtitles     Boolean   @default(true)
-  heygenVersion String    @default("V") // legacy: V | IV (зеркалит engine.heygenVersion)
-  motionPrompt  String?   @db.Text // null → MAX_REALISM_MOTION_PROMPT
-  status        String    @default("pending") // pending | processing | completed | failed
-  engineJobId   String? // generic remote job id (kie/omnihuman)
-  heygenJobId   String? // legacy HeyGen video_id
-  videoUrl      String?
-  tokensCost    Int       @default(30)
-  errorMsg      String?
-  createdAt     DateTime  @default(now())
-  completedAt   DateTime?
+  id                String    @id @default(cuid())
+  userId            String
+  user              User      @relation(fields: [userId], references: [id], onDelete: Cascade)
+  // Local avatar (photo uploaded to HeyGen by the worker). Null when the video
+  // uses a look that already exists in the owner's HeyGen account — then the
+  // heygenAvatar* fields below are set instead.
+  avatarId          String?
+  avatar            Avatar?   @relation(fields: [avatarId], references: [id], onDelete: Cascade)
+  // HeyGen account look (GET /v3/avatars/looks) rendered via POST /v3/videos.
+  heygenAvatarId    String?
+  heygenAvatarType  String? // digital_twin | photo_avatar | studio_avatar
+  heygenAvatarName  String?
+  heygenAvatarImage String?   @db.Text // preview for cards (HeyGen URL)
+  engine            String    @default("heygen-v5") // VideoEngine slug
+  script            String?   @db.Text // для engine.inputMode='script'
+  audioUrl          String? // synthesized mp3 (OmniHuman) или advanced override
+  language          String    @default("ru")
+  voiceId           String?
+  aspect            String    @default("9:16") // 9:16 | 1:1 | 16:9
+  quality           String    @default("2k") // 1080p | 2k
+  background        String?
+  subtitles         Boolean   @default(true)
+  heygenVersion     String    @default("V") // legacy: V | IV (зеркалит engine.heygenVersion)
+  motionPrompt      String?   @db.Text // null → MAX_REALISM_MOTION_PROMPT
+  status            String    @default("pending") // pending | processing | completed | failed
+  engineJobId       String? // generic remote job id (kie/omnihuman)
+  heygenJobId       String? // legacy HeyGen video_id
+  videoUrl          String?
+  tokensCost        Int       @default(30)
+  errorMsg          String?
+  createdAt         DateTime  @default(now())
+  completedAt       DateTime?
 
   edits             VideoEdit[]
   scheduledPosts    ScheduledPost[]
@@ -328,6 +336,9 @@ model ParserRun {
   userId         String
   user           User      @relation(fields: [userId], references: [id], onDelete: Cascade)
   status         String    @default("pending") // pending | processing | completed | failed
+  // competitors — обычный парсер (/parser); own — «Мой блог» (/blog). Выдача
+  // /parser берёт только competitors, чтобы свои посты не смешивались.
+  source         String    @default("competitors")
   postsScanned   Int       @default(0)
   reelsFound     Int       @default(0)
   carouselsFound Int       @default(0)
@@ -374,6 +385,7 @@ model ParserItem {
   durationSec       Float?
   videoUrl          String?   @db.Text
   slideImages       String[]  @default([])
+  postedAt          DateTime? // время публикации оригинала (кулдаун ремикса 14 дней)
   status            String    @default("new") // new | used | dismissed
   videoGenerationId String? // если уже отправлен в работу
   createdAt         DateTime  @default(now())
@@ -449,6 +461,9 @@ model CarouselDraft {
   // Ремикс своей карусели (скилл ilia-carousel-style): оригинальные слайды
   // (в нашем S3), которые остаются картинками, меняются обложка/хук/CTA.
   sourceImages  String[]    @default([])
+  // Ремикс-спека (src/lib/carousel/remix.ts → RemixMeta): хуки A/B, кодовое
+  // слово, подпись, вид («как в оригинале» или id стиля). null — обычный черновик.
+  remix         Json?
   tokensCost    Int         @default(0)
   errorMsg      String?
   createdAt     DateTime    @default(now())

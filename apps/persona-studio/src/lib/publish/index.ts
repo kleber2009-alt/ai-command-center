@@ -6,7 +6,13 @@
 
 import { prisma } from '@/lib/prisma';
 import { publishQueue } from '@/lib/queue';
-import { uploadVideoByUrl, createReelPublication, PostMyPostError } from './postmypost';
+import {
+  uploadVideoByUrl,
+  uploadFileByUrl,
+  createReelPublication,
+  createCarouselPublication,
+  PostMyPostError,
+} from './postmypost';
 import { sendChannelAlbum, sendChannelVideo } from './telegram-channel';
 
 export class PublishError extends Error {
@@ -73,10 +79,30 @@ export async function publishTarget(targetId: string): Promise<'published' | 'fa
     let remoteId: string;
     let permalink: string | null = null;
 
-    if (post.sourceType === 'carousel') {
-      // mediaUrl holds the slide PNG URLs, newline-separated.
+    if (post.sourceType === 'carousel' && target.platform === 'instagram') {
+      // Instagram carousel via PostMyPost: upload every slide by URL (in
+      // order), then one POST publication with all file ids.
+      const meta = (account.meta ?? {}) as { projectId?: number };
+      const projectId = meta.projectId;
+      if (!projectId) {
+        throw new PublishError('NO_PROJECT', 'У Instagram-аккаунта нет project_id PostMyPost');
+      }
+      const urls = post.mediaUrl.split('\n').filter(Boolean);
+      const fileIds: number[] = [];
+      for (const url of urls) fileIds.push(await uploadFileByUrl({ projectId, url }));
+      const pubId = await createCarouselPublication({
+        projectId,
+        accountId: Number(account.externalId),
+        fileIds,
+        caption: post.caption ?? undefined,
+        postAt: new Date(Date.now() + 120_000),
+      });
+      remoteId = `pmp:${pubId}`;
+      permalink = null;
+    } else if (post.sourceType === 'carousel') {
+      // mediaUrl holds the slide image URLs, newline-separated.
       if (target.platform !== 'telegram') {
-        throw new PublishError('CAROUSEL_UNSUPPORTED', 'Карусели публикуются только в Telegram-каналы');
+        throw new PublishError('CAROUSEL_UNSUPPORTED', 'Карусели публикуются в Telegram-каналы и Instagram');
       }
       const res = await sendChannelAlbum({
         chatId: account.externalId,

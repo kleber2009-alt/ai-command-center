@@ -15,7 +15,7 @@ const SUGGESTIONS = [
 
 const STORAGE_KEY = 'ps.director.collapsed';
 /** Pages with their own full-height editors — the bar would cover their footer. */
-const HIDDEN_ON = [/^\/carousels\/new/, /^\/briefs\/[^/]+$/];
+const HIDDEN_ON = [/^\/carousels\/new/, /^\/briefs\/[^/]+$/, /^\/pipeline/, /^\/blog/];
 
 /**
  * AI Director (reels-ui-motion PromptInput): a glass capsule with a round blue

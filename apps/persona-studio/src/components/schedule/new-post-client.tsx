@@ -16,6 +16,8 @@ type Source = {
 
 type Account = { id: string; platform: string; displayName: string };
 
+const CAROUSEL_PLATFORMS = ['telegram', 'instagram'];
+
 function PlatformIcon({ platform }: { platform: string }) {
   if (platform === 'instagram') return <Instagram size={13} />;
   if (platform === 'telegram') return <Send size={13} />;
@@ -52,7 +54,7 @@ export function NewPostClient({
   const [selected, setSelected] = useState<Source>(initial);
   const [caption, setCaption] = useState('');
   const [accountIds, setAccountIds] = useState<string[]>(
-    accounts.filter((a) => initial.sourceType !== 'carousel' || a.platform === 'telegram').map((a) => a.id),
+    accounts.filter((a) => initial.sourceType !== 'carousel' || CAROUSEL_PLATFORMS.includes(a.platform)).map((a) => a.id),
   );
   const [when, setWhen] = useState(defaultWhen());
   const [publishNow, setPublishNow] = useState(false);
@@ -65,14 +67,15 @@ export function NewPostClient({
     montage: 'скилл-монтаж',
     carousel: 'карусель',
   };
-  // Carousels go out as a Telegram album only (see /api/schedule/posts).
+  // Carousels go out as a Telegram album or an Instagram carousel via
+  // PostMyPost (see src/lib/publish/create-post.ts).
   const isCarousel = selected.sourceType === 'carousel';
-  const accountAllowed = (a: Account) => !isCarousel || a.platform === 'telegram';
+  const accountAllowed = (a: Account) => !isCarousel || CAROUSEL_PLATFORMS.includes(a.platform);
 
   function selectSource(s: Source) {
     setSelected(s);
     if (s.sourceType === 'carousel') {
-      setAccountIds((ids) => ids.filter((id) => accounts.find((a) => a.id === id)?.platform === 'telegram'));
+      setAccountIds((ids) => ids.filter((id) => CAROUSEL_PLATFORMS.includes(accounts.find((a) => a.id === id)?.platform ?? '')));
     }
   }
 
@@ -177,7 +180,7 @@ export function NewPostClient({
           <h2 className="flex items-center gap-3"><span className="sec-num">/03</span><span className="sec-title">Каналы</span></h2>
           <div className="grid gap-2">
             {isCarousel && (
-              <p className="text-[12px] text-text-mute">Карусель уходит альбомом — только в Telegram-каналы.</p>
+              <p className="text-[12px] text-text-mute">Карусель уходит альбомом в Telegram или каруселью в Instagram (до 10 слайдов).</p>
             )}
             {accounts.map((a) => (
               <label

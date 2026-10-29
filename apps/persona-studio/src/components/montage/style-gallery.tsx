@@ -101,10 +101,22 @@ function StyleCard({ s, active, onPick }: { s: KadrikStyle; active: boolean; onP
   );
 }
 
-export function StyleGallery({ value, onChange }: { value: string; onChange: (id: string) => void }) {
+export function StyleGallery({
+  value,
+  onChange,
+  only,
+}: {
+  value: string;
+  onChange: (id: string) => void;
+  /** show only matching styles (e.g. video-input ones in the pipeline wizard) */
+  only?: (s: KadrikStyle) => boolean;
+}) {
+  const groups = only
+    ? GROUPS.map((g) => ({ ...g, styles: g.styles.filter(only) })).filter((g) => g.styles.length > 0)
+    : GROUPS;
   return (
     <div className="grid gap-[30px]">
-      {GROUPS.map((g) => {
+      {groups.map((g) => {
         const wide = g.format === '16:9';
         return (
           <div key={g.key} className="grid gap-4">

@@ -360,7 +360,7 @@ export default async function DashboardPage({
                 >
                   <div
                     className="aspect-[4/5] relative bg-white/[0.03]"
-                    style={v.avatar?.imageUrl ? { backgroundImage: `url(${v.avatar.imageUrl})`, backgroundSize: 'cover', backgroundPosition: 'center' } : undefined}
+                    style={(v.avatar?.imageUrl ?? v.heygenAvatarImage) ? { backgroundImage: `url(${v.avatar?.imageUrl ?? v.heygenAvatarImage})`, backgroundSize: 'cover', backgroundPosition: 'center' } : undefined}
                   >
                     <div className={`absolute top-3 left-3 ${MEDIA_TAG}`}>
                       Видео

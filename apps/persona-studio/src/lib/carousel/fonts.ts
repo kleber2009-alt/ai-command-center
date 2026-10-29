@@ -35,6 +35,11 @@ export const SKILL_FONT_FILES: [name: string, file: string][] = [
   ['MarckScript', 'MarckScript.ttf'],
   ['PTSerif', 'PTSerif.ttf'],
   ['MontserratAlternates 700', 'MontserratAlternates-700.ttf'],
+  // ilia-carousel-style remix (Futura PT → Jost): 300 pills, 500 headings, 600 cover caps.
+  ['Jost 300', 'Jost-300.ttf'],
+  ['Jost 400', 'Jost-400.ttf'],
+  ['Jost 500', 'Jost-500.ttf'],
+  ['Jost 600', 'Jost-600.ttf'],
 ];
 
 const FONTS_DIR = path.join(process.cwd(), 'public', 'fonts');

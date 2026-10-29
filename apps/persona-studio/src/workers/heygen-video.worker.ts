@@ -9,6 +9,7 @@ import {
   HeygenError,
   uploadPhotoAvatarV3,
   createVideoV3AvatarV,
+  createVideoV3Look,
   waitForVideoV3,
   type Aspect,
   type HeygenModelVersion,
@@ -39,7 +40,11 @@ export function startHeygenWorker() {
       });
       if (!row) throw new Error('video_missing');
       if (row.userId !== userId) throw new Error('user_mismatch');
-      if (!row.avatar.imageUrl) throw new Error('avatar_no_image');
+      // Either a local avatar (its photo is uploaded to HeyGen here) or a look
+      // that already exists in the owner's HeyGen account (no upload at all).
+      const lookId = !row.avatarId ? row.heygenAvatarId : null;
+      const avatar = row.avatar;
+      if (!lookId && !avatar?.imageUrl) throw new Error('avatar_no_image');
       if (!row.voiceId) throw new Error('voice_missing');
       if (!row.script || row.script.trim().length < 5) throw new Error('script_missing');
 
@@ -59,6 +64,9 @@ export function startHeygenWorker() {
         // effectiveVersion может сдвинуться на IV если Avatar V отказался от фото
         // (HeyGen quality-gate: stylized аватары часто не проходят cross-reference).
         let effectiveVersion: HeygenModelVersion = (row.heygenVersion as HeygenModelVersion) ?? 'V';
+        // Account looks always go through v3 (/v3/videos + /v3/videos/{id});
+        // heygenVersion there only picks the engine (V → avatar_v, IV → avatar_iv).
+        const isLook = Boolean(lookId);
 
         const runIVPath = async (bytes: Buffer, mime: string): Promise<string> => {
           // Reuse the talking_photo made for this image earlier: every new one
@@ -74,7 +82,7 @@ export function startHeygenWorker() {
               background: row.background ?? '#000000',
               motionPrompt: row.motionPrompt ?? undefined,
             });
-          const cached = row.avatar.heygenTalkingPhotoId;
+          const cached = avatar!.heygenTalkingPhotoId;
           if (cached) {
             try {
               console.log(`[heygen-worker] ${videoId} (IV) reusing talking_photo_id=${cached}`);
@@ -91,32 +99,61 @@ export function startHeygenWorker() {
           console.log(`[heygen-worker] ${videoId} (IV) uploading talking_photo…`);
           const asset = await uploadTalkingPhoto({ bytes, mime });
           console.log(`[heygen-worker] ${videoId} talking_photo_id=${asset.id}`);
-          await prisma.avatar.update({ where: { id: row.avatarId }, data: { heygenTalkingPhotoId: asset.id } });
+          await prisma.avatar.update({ where: { id: avatar!.id }, data: { heygenTalkingPhotoId: asset.id } });
           const id = await createIV(asset.id);
           console.log(`[heygen-worker] ${videoId} heygen_video_id=${id}`);
           return id;
         };
 
-        if (!heygenVideoId) {
-          const ref = await fetchBytes(row.avatar.imageUrl);
+        if (!heygenVideoId && lookId) {
+          const createLook = (engine: 'avatar_v' | 'avatar_iv') =>
+            createVideoV3Look({
+              lookId,
+              voiceId: row.voiceId!,
+              script: row.script!,
+              aspect: (row.aspect as Aspect) ?? '9:16',
+              engine,
+              title: `persona-${videoId}`,
+            });
+          const engine = effectiveVersion === 'IV' ? 'avatar_iv' : 'avatar_v';
+          console.log(`[heygen-worker] ${videoId} account look ${lookId} engine=${engine}`);
+          try {
+            heygenVideoId = await createLook(engine);
+          } catch (e) {
+            // Avatar V needs a cross-reference look in the group; a photo look
+            // without one is rejected — the same look renders on Avatar IV.
+            const xref = engine === 'avatar_v' && e instanceof HeygenError && e.code === 'V3_VIDEO_HTTP_400'
+              && /cross-reference|instant avatar look|animation reference|not supported|engine/i.test(e.message);
+            if (!xref) throw e;
+            console.warn(`[heygen-worker] ${videoId} avatar_v rejected look (${e.message.slice(0, 120)}), using avatar_iv`);
+            heygenVideoId = await createLook('avatar_iv');
+            effectiveVersion = 'IV';
+          }
+          console.log(`[heygen-worker] ${videoId} v3 video_id=${heygenVideoId}`);
+          await prisma.videoGeneration.update({
+            where: { id: videoId },
+            data: { heygenJobId: heygenVideoId, heygenVersion: effectiveVersion },
+          });
+        } else if (!heygenVideoId) {
+          const ref = await fetchBytes(avatar!.imageUrl);
 
           if (effectiveVersion === 'V') {
             // 1) v3: upload bytes → asset → photo avatar. Reuse the one created
             // for this image earlier (each creation costs HeyGen credits).
             let v3: { avatarId: string; supportedEngines: string[] };
-            if (row.avatar.heygenAvatarId) {
-              v3 = { avatarId: row.avatar.heygenAvatarId, supportedEngines: ['avatar_v'] };
+            if (avatar!.heygenAvatarId) {
+              v3 = { avatarId: avatar!.heygenAvatarId, supportedEngines: ['avatar_v'] };
               console.log(`[heygen-worker] ${videoId} reusing v3 avatar_id=${v3.avatarId}`);
             } else {
               console.log(`[heygen-worker] ${videoId} (V) uploading photo to v3…`);
               v3 = await uploadPhotoAvatarV3({
                 bytes: ref.bytes,
                 mime: ref.mime,
-                name: `pers-${userId}-${row.avatarId}`,
+                name: `pers-${userId}-${avatar!.id}`,
               });
               console.log(`[heygen-worker] ${videoId} v3 avatar_id=${v3.avatarId} engines=${v3.supportedEngines.join(',')}`);
               if (v3.supportedEngines.includes('avatar_v')) {
-                await prisma.avatar.update({ where: { id: row.avatarId }, data: { heygenAvatarId: v3.avatarId } });
+                await prisma.avatar.update({ where: { id: avatar!.id }, data: { heygenAvatarId: v3.avatarId } });
               }
             }
 
@@ -186,8 +223,8 @@ export function startHeygenWorker() {
         }
 
         // 3) Poll until completed or failed (10 min max) — v3 uses /v3/videos/{id}.
-        const result = effectiveVersion === 'V'
-          ? await waitForVideoV3(heygenVideoId)
+        const result = isLook || effectiveVersion === 'V'
+          ? await waitForVideoV3(heygenVideoId!)
           : await waitForVideo(heygenVideoId);
 
         if (result.state !== 'completed') {

@@ -76,7 +76,7 @@ export default async function MontagePage() {
           videoUrl: v.videoUrl,
           aspect: v.aspect,
           createdAt: v.createdAt.toISOString(),
-          label: v.avatar?.styleLabel ?? 'Видео',
+          label: v.avatar?.styleLabel ?? v.heygenAvatarName ?? 'Видео',
         }))}
         initial={montages.map((m) => ({
           id: m.id,

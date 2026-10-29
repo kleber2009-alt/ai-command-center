@@ -18,7 +18,7 @@ export default async function ParserPage() {
   // Все завершённые прогоны: самый свежий = текущая выдача, остальные —
   // «История поиска».
   const completedRuns = await prisma.parserRun.findMany({
-    where: { userId: user.id, status: 'completed' },
+    where: { userId: user.id, status: 'completed', source: { not: 'own' } },
     orderBy: { startedAt: 'desc' },
     take: 30,
   });

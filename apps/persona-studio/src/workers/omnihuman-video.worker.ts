@@ -75,7 +75,7 @@ export function startOmnihumanWorker() {
       if (!row) throw new Error('video_missing');
       if (row.userId !== userId) throw new Error('user_mismatch');
       if (row.engine !== 'omnihuman-1.5') throw new Error(`wrong_engine:${row.engine}`);
-      if (!row.avatar.imageUrl) throw new Error('avatar_no_image');
+      if (!row.avatar?.imageUrl) throw new Error('avatar_no_image');
       if (!row.audioUrl && (!row.script || !row.voiceId)) {
         throw new Error('audio_or_script_required');
       }
@@ -98,7 +98,7 @@ export function startOmnihumanWorker() {
       // рендерится отдельным клипом, клипы склеиваются ffmpeg. Готовое аудио
       // (advanced override) сегментировать нельзя — рендерим одним клипом.
       const aspect = toOmniAspect(row.aspect);
-      const avatarImage = row.avatar.imageUrl;
+      const avatarImage = row.avatar.imageUrl; // narrowed by the check above
       let stage: 'tts' | 'engine' = row.audioUrl ? 'engine' : 'tts';
 
       try {

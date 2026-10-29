@@ -16,7 +16,7 @@ export async function GET(req: NextRequest) {
   if (!ctx) return NextResponse.json({ error: 'UNAUTHORIZED' }, { status: 401 });
 
   const lastRun = await prisma.parserRun.findFirst({
-    where: { userId: ctx.user.id, status: 'completed' },
+    where: { userId: ctx.user.id, status: 'completed', source: { not: 'own' } },
     orderBy: { startedAt: 'desc' },
   });
 

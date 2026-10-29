@@ -28,10 +28,15 @@ export async function POST(req: NextRequest, { params }: { params: Promise<{ id:
     const cfg = engineConfig(engine);
     const voiceId = moved ? heygenVoiceFor(prev.voiceId, prev.language) : prev.voiceId;
 
-    const avatar = await prisma.avatar.findFirst({ where: { id: prev.avatarId, userId: user.id } });
-    if (!avatar) return NextResponse.json({ error: 'avatar_not_found' }, { status: 404 });
-    if (avatar.status !== 'done' || !avatar.imageUrl) {
-      return NextResponse.json({ error: 'avatar_not_ready', status: avatar.status }, { status: 409 });
+    // A video of a HeyGen-account look has no local avatar — nothing to check here.
+    if (prev.avatarId) {
+      const avatar = await prisma.avatar.findFirst({ where: { id: prev.avatarId, userId: user.id } });
+      if (!avatar) return NextResponse.json({ error: 'avatar_not_found' }, { status: 404 });
+      if (avatar.status !== 'done' || !avatar.imageUrl) {
+        return NextResponse.json({ error: 'avatar_not_ready', status: avatar.status }, { status: 409 });
+      }
+    } else if (!prev.heygenAvatarId) {
+      return NextResponse.json({ error: 'avatar_not_found' }, { status: 404 });
     }
 
     try {
@@ -47,6 +52,10 @@ export async function POST(req: NextRequest, { params }: { params: Promise<{ id:
       data: {
         userId: user.id,
         avatarId: prev.avatarId,
+        heygenAvatarId: prev.heygenAvatarId,
+        heygenAvatarType: prev.heygenAvatarType,
+        heygenAvatarName: prev.heygenAvatarName,
+        heygenAvatarImage: prev.heygenAvatarImage,
         engine,
         script: prev.script,
         audioUrl: moved ? null : prev.audioUrl,

@@ -20,6 +20,7 @@ const OPERATION: Array<[RegExp, string]> = [
   [/^research_refresh/, 'Ресёрч · обновление автора'],
   [/^research_add_author/, 'Ресёрч · добавление автора'],
   [/^research_hook_gen/, 'Ресёрч · генерация хуков'],
+  [/^blog_refresh/, 'Мой блог · обновление из Instagram'],
   [/^cryptobot/, 'Покупка · CryptoBot'],
   [/^stars/, 'Покупка · Telegram Stars'],
   [/^welcome|^signup/, 'Приветственный бонус'],

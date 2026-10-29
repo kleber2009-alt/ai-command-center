@@ -22,10 +22,14 @@ type Video = {
   errorMsg: string | null;
   createdAt: string;
   avatar: { id: string; styleLabel: string; imageUrl: string } | null;
+  // set instead of `avatar` when the video uses a look from the HeyGen account
+  heygenAvatarName?: string | null;
+  heygenAvatarImage?: string | null;
 };
 
 export function VideoCard({ initial, autopoll }: { initial: Video; autopoll: boolean }) {
   const [v, setV] = useState<Video>(initial);
+  const posterUrl = v.avatar?.imageUrl ?? v.heygenAvatarImage ?? null;
   const router = useRouter();
   const [retrying, setRetrying] = useState(false);
   const [retryError, setRetryError] = useState<string | null>(null);
@@ -103,15 +107,15 @@ export function VideoCard({ initial, autopoll }: { initial: Video; autopoll: boo
             playsInline
             preload="metadata"
             className="h-full w-full object-cover"
-            poster={v.avatar?.imageUrl ?? undefined}
+            poster={posterUrl ?? undefined}
           />
         ) : (
           <>
             <div
               className="absolute inset-0"
               style={{
-                background: v.avatar?.imageUrl
-                  ? `linear-gradient(180deg, rgba(11,11,13,0.15) 0%, rgba(11,11,13,0.8) 100%), url(${v.avatar.imageUrl})`
+                background: posterUrl
+                  ? `linear-gradient(180deg, rgba(11,11,13,0.15) 0%, rgba(11,11,13,0.8) 100%), url(${posterUrl})`
                   : 'linear-gradient(170deg, rgba(31,123,255,0.22) 0%, rgba(11,11,13,0.9) 100%)',
                 backgroundSize: 'cover',
                 backgroundPosition: 'center',
@@ -166,7 +170,7 @@ export function VideoCard({ initial, autopoll }: { initial: Video; autopoll: boo
         )}
       </div>
       <div className="flex items-center justify-between gap-2 text-[12px] text-text-mute">
-        <span className="truncate">{v.avatar?.styleLabel ?? '—'}</span>
+        <span className="truncate">{v.avatar?.styleLabel ?? v.heygenAvatarName ?? '—'}</span>
         <span className="shrink-0 tabular-nums">{formatDate(v.createdAt)}</span>
       </div>
       {v.status === 'completed' && v.videoUrl && (
