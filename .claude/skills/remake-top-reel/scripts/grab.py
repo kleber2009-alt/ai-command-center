@@ -73,7 +73,11 @@ def fetch_video(r: dict, dest: Path) -> str:
         x = subprocess.run(["yt-dlp", "-q", "-f", "mp4/best", "-o", str(dest), r["url"]], capture_output=True, text=True, timeout=300)
         if x.returncode == 0 and dest.exists():
             return "yt-dlp"
-        tried.append(f"yt-dlp: {(x.stderr or '').strip()[-200:]}")
+        err = (x.stderr or "").strip()
+        if "rate-limit" in err or "login page" in err:
+            sys.exit("Instagram ограничил анонимный доступ (слишком много запросов подряд). Повтори grab.py через 15–30 минут "
+                     "или попроси файл рилса и запусти grab.py с путём к нему.")
+        tried.append(f"yt-dlp: {err[-200:]}")
     sys.exit("не удалось скачать видео (" + "; ".join(tried or ["нет ни ссылки на видео, ни APIFY_TOKEN, ни yt-dlp"]) +
              "). Попроси файл рилса и запусти grab.py с путём к нему.")
 

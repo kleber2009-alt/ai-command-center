@@ -3,7 +3,8 @@
 
   python3 rank.py [--top 8] [--sheet 8] [--any-cta] [--include-used] [--min-age 3]
 
-Счёт = взвешенные процентили внутри выгрузки: просмотры, комментарии, репосты+шеры (веса — scan.weights в config.json;
+Счёт = взвешенные процентили внутри выгрузки: просмотры, комментарии, репосты+шеры, лиды по кодовому слову (ChatPlace)
+и лайки (веса — scan.weights в config.json;
 если метрики нет у источника, её вес делится между остальными). Процентили, а не сырые числа: один миллионник
 не перекрывает остальные сигналы, а рилс с сильными комментариями (кодовое слово сработало) поднимается.
 Сначала идут рилсы с кодовым словом в подписи (--any-cta — без этого правила). Рилсы, переделанные за последние
@@ -96,6 +97,8 @@ def main():
             continue  # свежий рилс ещё не набрал
         if r["id"] in used or (r.get("shortcode") and r["shortcode"] in used):
             continue
+        if r.get("restricted"):
+            continue  # Instagram прячет рилс от части аудитории — без входа его не скачать
         sh = [x for x in (r.get("shares"), r.get("reposts")) if x is not None]
         r["spread"] = sum(sh) if sh else None
         r["code"] = code_word(r.get("caption", ""))
@@ -105,9 +108,16 @@ def main():
 
     w = cfg["weights"]
     cols = {"views": pct([i.get("views") for i in items]), "comments": pct([i.get("comments") for i in items]),
-            "shares": pct([i.get("spread") for i in items])}
+            "shares": pct([i.get("spread") for i in items]), "leads": pct([i.get("leads") for i in items]),
+            "likes": pct([i.get("likes") for i in items])}
+    # метрика, которая у источника есть, но у этого рилса не подтянулась (yt-dlp не ответил) — нейтральная середина,
+    # иначе рилс без комментариев и лайков выигрывает за счёт одних лидов
+    # порог покрытия — от рилсов, у которых есть хоть одна метрика (у ChatPlace + yt-dlp метрики только у свежих)
+    measured = [k for k in range(len(items)) if any(cols[m][k] is not None for m in cols)]
+    covered = {m for m in cols if sum(cols[m][k] is not None for k in measured) >= max(2, 0.3 * len(measured))}
     for k, r in enumerate(items):
-        parts = [(w[m], cols[m][k]) for m in cols if cols[m][k] is not None]
+        parts = [(w.get(m, 0), cols[m][k] if cols[m][k] is not None else 0.5) for m in covered] if k in measured else []
+        r["missing"] = [m for m in covered if cols[m][k] is None]
         tw = sum(x for x, _ in parts)
         r["score"] = round(sum(x * v for x, v in parts) / tw, 3) if tw else 0.0
     items.sort(key=lambda r: (bool(r["code"]) or a.any_cta, r["score"]), reverse=True)
@@ -117,11 +127,11 @@ def main():
     write_json(SCAN / "candidates.json", {"made_at": datetime.datetime.now().isoformat(timespec="seconds"), "source": scan["source"],
                                           "items": top})
 
-    print(f"{'#':>2}  {'дата':10}  {'просм':>6}  {'комм':>5}  {'реп+шер':>7}  {'сохр':>5}  {'счёт':>5}  код-слово   подпись")
+    print(f"{'#':>2}  {'дата':10}  {'просм':>6}  {'комм':>5}  {'реп+шер':>7}  {'лиды':>5}  {'лайки':>5}  {'счёт':>5}  код-слово   подпись")
     for r in top:
         cap = " ".join((r.get("caption") or "").split())[:56]
         print(f"{r['rank']:>2}  {str(r.get('date') or '')[:10]:10}  {fmt_n(r.get('views')):>6}  {fmt_n(r.get('comments')):>5}  "
-              f"{fmt_n(r.get('spread')):>7}  {fmt_n(r.get('saves')):>5}  {r['score']:>5.2f}  {(r['code'] or '—'):10}  {cap}")
+              f"{fmt_n(r.get('spread')):>7}  {fmt_n(r.get('leads')):>5}  {fmt_n(r.get('likes')):>5}  {r['score']:>5.2f}  {(r['code'] or '—'):10}  {cap}")
     no_code = sum(1 for r in top if not r["code"])
     if no_code == len(top):
         print("NOTE ни в одной подписи не нашлось кодового слова — проверь после транскрибации (его могут говорить голосом)")

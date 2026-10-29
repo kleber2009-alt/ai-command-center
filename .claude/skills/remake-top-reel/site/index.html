@@ -1,0 +1,478 @@
+<title>Ремейк залёта</title>
+<meta name="claude:viewport-fit-sides" content="cover">
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Manrope:wght@400;500;600;700;800&family=Playfair+Display:ital,wght@1,500;1,600&family=IBM+Plex+Mono:wght@400;500&display=swap">
+<style>
+/* Layout: монтажный стол — шапка прогона (оригинал → результат), дорожка из 9 шагов как таймлайн, под ней карточки шагов */
+:root {
+  --bg: #0b0a09; --panel: #151311; --panel-2: #1c1916; --line: #2b2723; --fg: #f3eee8; --muted: #9b9188;
+  --accent: #ff5a36; --accent-ink: #120805; --accent-soft: rgba(255, 90, 54, .14);
+  --ok: #3fb27f; --ok-soft: rgba(63, 178, 127, .14); --warn: #e8b44a; --warn-soft: rgba(232, 180, 74, .14);
+  --fail: #ef5350; --fail-soft: rgba(239, 83, 80, .14);
+  --f-body: "Manrope", "Segoe UI", system-ui, sans-serif;
+  --f-display: "Playfair Display", Georgia, "Times New Roman", serif;
+  --f-mono: "IBM Plex Mono", ui-monospace, "SFMono-Regular", Menlo, monospace;
+  --r: 10px;
+  color-scheme: dark;
+}
+@media (prefers-color-scheme: light) {
+  :root:not([data-theme="dark"]) {
+    --bg: #f5f1ec; --panel: #ffffff; --panel-2: #f8f4ef; --line: #e3dbd2; --fg: #1b1714; --muted: #6f655c;
+    --accent: #e2451f; --accent-ink: #ffffff; --accent-soft: rgba(226, 69, 31, .1);
+    --ok: #1f8a5a; --ok-soft: rgba(31, 138, 90, .1); --warn: #a8720c; --warn-soft: rgba(168, 114, 12, .1);
+    --fail: #c62828; --fail-soft: rgba(198, 40, 40, .09);
+    color-scheme: light;
+  }
+}
+:root[data-theme="light"] {
+  --bg: #f5f1ec; --panel: #ffffff; --panel-2: #f8f4ef; --line: #e3dbd2; --fg: #1b1714; --muted: #6f655c;
+  --accent: #e2451f; --accent-ink: #ffffff; --accent-soft: rgba(226, 69, 31, .1);
+  --ok: #1f8a5a; --ok-soft: rgba(31, 138, 90, .1); --warn: #a8720c; --warn-soft: rgba(168, 114, 12, .1);
+  --fail: #c62828; --fail-soft: rgba(198, 40, 40, .09);
+  color-scheme: light;
+}
+
+* { box-sizing: border-box; }
+body { background: var(--bg); color: var(--fg); font: 15px/1.55 var(--f-body); -webkit-font-smoothing: antialiased; }
+.wrap { max-width: 1180px; margin: 0 auto; padding-left: max(16px, env(safe-area-inset-left, 0px)); padding-right: max(16px, env(safe-area-inset-right, 0px)); padding-block: 20px 56px; display: grid; gap: 22px; }
+a { color: var(--accent); text-underline-offset: 3px; }
+a:focus-visible, button:focus-visible, select:focus-visible { outline: 2px solid var(--accent); outline-offset: 2px; }
+h1, h2, h3 { margin: 0; text-wrap: balance; }
+.mono { font-family: var(--f-mono); font-variant-numeric: tabular-nums; }
+.muted { color: var(--muted); }
+.label { font-size: 11.5px; letter-spacing: .09em; text-transform: uppercase; color: var(--muted); font-weight: 600; }
+em.x { font-family: var(--f-display); font-style: italic; font-weight: 600; color: var(--accent); }
+
+/* шапка */
+.top { display: flex; flex-wrap: wrap; align-items: center; gap: 12px 20px; justify-content: space-between; }
+.brand { display: flex; align-items: baseline; gap: 12px; flex-wrap: wrap; }
+.brand h1 { font-size: clamp(26px, 4vw, 36px); font-weight: 800; letter-spacing: -.02em; }
+.brand h1 em { font-family: var(--f-display); font-style: italic; font-weight: 600; color: var(--accent); letter-spacing: 0; }
+.brand .handle { color: var(--muted); font-weight: 600; }
+.live { display: inline-flex; align-items: center; gap: 8px; font-size: 13px; color: var(--muted); }
+.dot { width: 8px; height: 8px; border-radius: 50%; background: var(--muted); flex: none; }
+.dot.on { background: var(--ok); box-shadow: 0 0 0 0 var(--ok); animation: ping 2s infinite; }
+@keyframes ping { 0% { box-shadow: 0 0 0 0 rgba(63,178,127,.5); } 70% { box-shadow: 0 0 0 8px rgba(63,178,127,0); } 100% { box-shadow: 0 0 0 0 rgba(63,178,127,0); } }
+.runs { display: flex; gap: 8px; align-items: center; }
+select { font: inherit; font-size: 13px; color: var(--fg); background: var(--panel); border: 1px solid var(--line); border-radius: 8px; padding: 7px 10px; max-width: 72vw; }
+
+/* герой прогона */
+.hero { display: grid; grid-template-columns: 150px minmax(0, 1fr) 150px; gap: 22px; align-items: center; background: var(--panel); border: 1px solid var(--line); border-radius: 14px; padding: 18px; }
+.frame { aspect-ratio: 9 / 16; width: 100%; max-width: 100%; border-radius: 10px; background: var(--panel-2); border: 1px solid var(--line); overflow: hidden; position: relative; display: grid; place-items: center; text-align: center; color: var(--muted); font-size: 12px; padding: 8px; }
+.frame img, .frame video { position: absolute; inset: 0; width: 100%; height: 100%; object-fit: cover; }
+.frame .tag { position: absolute; left: 8px; top: 8px; z-index: 1; background: rgba(0,0,0,.62); color: #fff; font-size: 11px; font-weight: 700; padding: 3px 7px; border-radius: 5px; letter-spacing: .04em; }
+.hero-mid { display: grid; gap: 10px; min-width: 0; }
+.hero-mid h2 { font-size: clamp(22px, 3vw, 30px); font-weight: 800; letter-spacing: -.015em; }
+.now { font-size: 16px; }
+.metrics { display: flex; flex-wrap: wrap; gap: 8px; }
+.chip { display: inline-flex; align-items: center; gap: 6px; padding: 4px 10px; border-radius: 999px; border: 1px solid var(--line); background: var(--panel-2); font-size: 13px; white-space: nowrap; }
+.chip b { font-weight: 700; }
+.chip.code { border-color: var(--accent); color: var(--accent); background: var(--accent-soft); font-weight: 700; letter-spacing: .03em; }
+.pill { display: inline-flex; align-items: center; gap: 7px; font-size: 12.5px; font-weight: 700; padding: 4px 11px; border-radius: 999px; letter-spacing: .02em; }
+.pill.run { background: var(--accent-soft); color: var(--accent); }
+.pill.done { background: var(--ok-soft); color: var(--ok); }
+.pill.wait { background: var(--warn-soft); color: var(--warn); }
+.pill.fail { background: var(--fail-soft); color: var(--fail); }
+.pill.todo { background: var(--panel-2); color: var(--muted); }
+.progress { height: 6px; background: var(--panel-2); border-radius: 999px; overflow: hidden; }
+.progress > i { display: block; height: 100%; background: var(--accent); border-radius: 999px; transition: width .6s ease; }
+.hero-meta { display: flex; flex-wrap: wrap; gap: 6px 16px; font-size: 13px; color: var(--muted); }
+
+/* дорожка */
+.track { background: var(--panel); border: 1px solid var(--line); border-radius: 14px; padding: 18px 18px 14px; display: grid; gap: 12px; }
+.track-head { display: flex; justify-content: space-between; align-items: baseline; flex-wrap: wrap; gap: 8px; }
+.track-head h3 { font-size: 15px; font-weight: 700; }
+.rail { list-style: none; margin: 0; padding: 0; display: grid; grid-template-columns: repeat(9, minmax(0, 1fr)); position: relative; }
+.rail::before { content: ""; position: absolute; left: 4%; right: 4%; top: 15px; height: 2px; background: var(--line); }
+.st { position: relative; display: grid; justify-items: center; text-align: center; gap: 6px; padding: 0 4px; cursor: pointer; }
+.st button { all: unset; display: grid; justify-items: center; gap: 6px; cursor: pointer; border-radius: 8px; padding: 2px; }
+.node { width: 32px; height: 32px; border-radius: 50%; display: grid; place-items: center; font: 600 12px var(--f-mono); background: var(--panel-2); border: 2px solid var(--line); color: var(--muted); position: relative; z-index: 1; }
+.st.done .node { background: var(--ok); border-color: var(--ok); color: var(--bg); }
+.st.run .node { background: var(--accent); border-color: var(--accent); color: var(--accent-ink); animation: pulse 1.6s ease-in-out infinite; }
+.st.wait .node { border-color: var(--warn); color: var(--warn); background: var(--warn-soft); }
+.st.fail .node { border-color: var(--fail); color: var(--fail); background: var(--fail-soft); }
+.st.skip .node { border-style: dashed; }
+@keyframes pulse { 50% { box-shadow: 0 0 0 6px var(--accent-soft); } }
+.st .nm { font-weight: 700; font-size: 13px; line-height: 1.25; }
+.st .tm { font: 11.5px var(--f-mono); color: var(--muted); min-height: 1.3em; }
+.st.todo .nm, .st.skip .nm { color: var(--muted); }
+.st.sel .nm { color: var(--accent); }
+
+/* карточки шагов */
+.grid { display: grid; grid-template-columns: repeat(12, minmax(0, 1fr)); gap: 18px; }
+.card { grid-column: span 12; background: var(--panel); border: 1px solid var(--line); border-radius: 14px; padding: 18px; display: grid; gap: 14px; align-content: start; min-width: 0; scroll-margin-top: 16px; }
+.card.half { grid-column: span 6; }
+.card.flash { box-shadow: 0 0 0 2px var(--accent); transition: box-shadow .3s; }
+.card-head { display: flex; justify-content: space-between; align-items: center; gap: 10px; flex-wrap: wrap; }
+.card-head h3 { font-size: 17px; font-weight: 800; display: flex; align-items: center; gap: 10px; }
+.card-head h3 .n { font: 600 12px var(--f-mono); color: var(--muted); }
+.what { font-size: 13.5px; color: var(--muted); max-width: 70ch; margin: 0; }
+.empty { border: 1px dashed var(--line); border-radius: var(--r); padding: 16px; color: var(--muted); font-size: 14px; }
+
+table { width: 100%; border-collapse: collapse; font-size: 13.5px; }
+.tbl { overflow-x: auto; }
+th { text-align: left; font-weight: 600; font-size: 11.5px; letter-spacing: .07em; text-transform: uppercase; color: var(--muted); padding: 6px 8px; border-bottom: 1px solid var(--line); white-space: nowrap; }
+td { padding: 8px; border-bottom: 1px solid var(--line); vertical-align: middle; }
+td.num { font-family: var(--f-mono); font-variant-numeric: tabular-nums; text-align: right; white-space: nowrap; }
+th.num { text-align: right; }
+tr.chosen td { background: var(--accent-soft); }
+tr.chosen td:first-child { box-shadow: inset 3px 0 0 var(--accent); }
+.thumb { width: 36px; aspect-ratio: 9/16; border-radius: 5px; background: var(--panel-2); object-fit: cover; display: block; }
+.cap { max-width: 34ch; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; color: var(--muted); }
+.why { font-size: 14px; background: var(--panel-2); border-radius: var(--r); padding: 12px 14px; }
+
+.cols { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 14px; }
+.textbox { background: var(--panel-2); border: 1px solid var(--line); border-radius: var(--r); padding: 14px; white-space: pre-wrap; font-size: 14.5px; line-height: 1.6; max-height: 460px; overflow: auto; min-width: 0; }
+.textbox.new { border-color: color-mix(in srgb, var(--accent) 45%, var(--line)); }
+.sheet { width: 100%; border-radius: var(--r); border: 1px solid var(--line); display: block; }
+.stats { display: flex; flex-wrap: wrap; gap: 8px; }
+.bullets { margin: 0; padding-left: 18px; display: grid; gap: 4px; font-size: 14px; }
+
+.gate { display: grid; grid-template-columns: repeat(4, minmax(0, 1fr)); gap: 12px; }
+.meter { background: var(--panel-2); border-radius: var(--r); padding: 12px 14px; display: grid; gap: 6px; }
+.meter .v { font: 600 22px var(--f-mono); font-variant-numeric: tabular-nums; }
+.meter .bar { height: 6px; border-radius: 999px; background: var(--line); position: relative; overflow: hidden; }
+.meter .bar i { position: absolute; inset: 0 auto 0 0; background: var(--ok); border-radius: 999px; }
+.meter .bar b { position: absolute; top: -2px; bottom: -2px; width: 2px; background: var(--fg); opacity: .55; }
+.meter.bad .bar i { background: var(--fail); } .meter.meh .bar i { background: var(--warn); }
+.lines { list-style: none; margin: 0; padding: 0; display: grid; gap: 6px; font-size: 14px; }
+.lines li { display: flex; gap: 10px; align-items: baseline; }
+.mark { font: 700 11px var(--f-mono); padding: 2px 6px; border-radius: 4px; flex: none; }
+.mark.ok { background: var(--ok-soft); color: var(--ok); } .mark.warn { background: var(--warn-soft); color: var(--warn); } .mark.fail { background: var(--fail-soft); color: var(--fail); }
+
+.media { display: grid; grid-template-columns: 220px minmax(0, 1fr); gap: 18px; align-items: start; }
+.kv { display: grid; grid-template-columns: max-content minmax(0, 1fr); gap: 6px 14px; font-size: 14px; margin: 0; }
+.kv dt { color: var(--muted); } .kv dd { margin: 0; min-width: 0; overflow-wrap: anywhere; }
+
+.styles { display: grid; grid-template-columns: repeat(3, minmax(0, 1fr)); gap: 12px; }
+.style { border: 1px solid var(--line); border-radius: var(--r); padding: 12px 14px; display: grid; gap: 4px; background: var(--panel-2); }
+.style.on { border-color: var(--accent); box-shadow: inset 0 0 0 1px var(--accent); }
+.style b { font-size: 14.5px; } .style span { font-size: 13px; color: var(--muted); }
+
+.log { list-style: none; margin: 0; padding: 0; display: grid; gap: 2px; max-height: 340px; overflow: auto; font-size: 13.5px; }
+.log li { display: grid; grid-template-columns: 54px minmax(0, 1fr); gap: 10px; padding: 5px 0; border-bottom: 1px dashed var(--line); }
+.log time { font: 12px var(--f-mono); color: var(--muted); padding-top: 1px; }
+.btn { font: 600 13px var(--f-body); color: var(--fg); background: var(--panel-2); border: 1px solid var(--line); border-radius: 8px; padding: 6px 12px; cursor: pointer; }
+.btn:hover { border-color: var(--accent); }
+
+.how { display: grid; grid-template-columns: repeat(3, minmax(0, 1fr)); gap: 12px 18px; margin: 0; padding: 0; list-style: none; counter-reset: s; }
+.how li { display: grid; gap: 2px; font-size: 13.5px; color: var(--muted); }
+.how li b { color: var(--fg); font-size: 14px; }
+.how li b::before { counter-increment: s; content: counter(s) "  "; font: 600 12px var(--f-mono); color: var(--accent); }
+
+@media (max-width: 900px) {
+  .hero { grid-template-columns: 110px minmax(0, 1fr); }
+  .hero .res { display: none; }
+  .rail { grid-template-columns: minmax(0, 1fr); gap: 4px; }
+  .rail::before { left: 15px; right: auto; top: 6px; bottom: 6px; width: 2px; height: auto; }
+  .st { justify-items: start; text-align: left; padding: 0; }
+  .st button { grid-template-columns: 32px minmax(0, 1fr) auto; align-items: center; justify-items: start; gap: 12px; width: 100%; }
+  .card.half { grid-column: span 12; }
+  .cols, .media { grid-template-columns: minmax(0, 1fr); }
+  .gate { grid-template-columns: repeat(2, minmax(0, 1fr)); }
+  .styles, .how { grid-template-columns: minmax(0, 1fr); }
+  .media .frame { max-width: 220px; }
+}
+@media (max-width: 520px) {
+  .hero { grid-template-columns: minmax(0, 1fr); }
+  .hero > .frame:first-child { max-width: 140px; }
+}
+@media (prefers-reduced-motion: reduce) { *, *::before { animation: none !important; transition: none !important; } }
+</style>
+
+<div class="wrap">
+  <header class="top">
+    <div class="brand">
+      <h1>Ремейк <em>залёта</em></h1>
+      <span class="handle">@ilia.paliy</span>
+    </div>
+    <div class="runs">
+      <span class="live" id="live"><span class="dot" id="liveDot"></span><span id="liveText">подключаюсь…</span></span>
+      <label class="label" for="runSel" hidden>Прогон</label>
+      <select id="runSel" aria-label="Прогон" hidden></select>
+    </div>
+  </header>
+
+  <section class="hero" id="hero" aria-live="polite"></section>
+
+  <section class="track" aria-label="Цепочка">
+    <div class="track-head">
+      <h3>Цепочка: от залетевшего рилса до готового</h3>
+      <span class="muted" id="trackNote" style="font-size:13px"></span>
+    </div>
+    <ol class="rail" id="rail"></ol>
+  </section>
+
+  <div class="grid" id="cards"></div>
+</div>
+
+<script>
+(() => {
+  const STEPS = [
+    { id: "scan", name: "Выгрузка", what: "Твои рилсы за полгода с метриками. Основной источник — Windsor (просмотры, комментарии, репосты); запасной — ChatPlace + yt-dlp (комментарии, лайки, сколько людей написали кодовое слово)." },
+    { id: "pick", name: "Отбор", what: "Счёт по процентилям: просмотры, комментарии, репосты, лиды по кодовому слову. Берём только говорящую голову с кодовым словом, уже переделанные — пропускаем." },
+    { id: "grab", name: "Оригинал", what: "Скачиваем видео-победителя, раскладываем на кадры и проверяем глазами, что это ты в кадре." },
+    { id: "transcribe", name: "Расшифровка", what: "Текст оригинала, темп речи, доля речи и кодовое слово, если его говорят голосом." },
+    { id: "script", name: "Сценарий 2.0", what: "Та же тема, каркас и кодовое слово. Сильнее хук, пары «не так → а вот так», новые примеры и формулировки." },
+    { id: "check", name: "Проверка", what: "Гейт до трат: не больше 35% связок из оригинала, ни одного куска длиннее 8 слов, длина 20–90 с, то же кодовое слово, текст годится для озвучки." },
+    { id: "avatar", name: "Аватар", what: "Цифровой двойник в HeyGen говорит новый сценарий твоим голосом-клоном." },
+    { id: "montage", name: "Монтаж", what: "Скилл «Студии Кадрика»: стеклянная объяснялка, панель или бизнес-рилс — по очереди или по твоему выбору." },
+    { id: "deliver", name: "Готово", what: "Мастер 9:16, копия для телефона, подпись к посту с тем же кодовым словом и отчёт." },
+  ];
+  const STATE_RU = { todo: "ждёт", run: "идёт", done: "готово", wait: "ждёт тебя", fail: "стоп", skip: "пропущен" };
+  const STYLES = [
+    { id: "glass-explainer-reel", name: "Стеклянная объяснялка", what: "Панель + бизнес-графика на стеклянных карточках, метафора на ролик, тихие SFX." },
+    { id: "explainer-panel-reel", name: "Панель-объяснялка", what: "Ты в панели снизу, сверху заголовки, пункты, схемы." },
+    { id: "business-short-form-reels", name: "Бизнес-рилс", what: "Текстовый хук и ротация «весь экран / сплит / анимация»." },
+  ];
+
+  const $ = (s) => document.querySelector(s);
+  const esc = (v) => String(v ?? "").replace(/[&<>"']/g, (c) => ({ "&": "&amp;", "<": "&lt;", ">": "&gt;", '"': "&quot;", "'": "&#39;" }[c]));
+  const blob = (id) => (typeof id === "string" && /^[0-9a-f]{32}$/i.test(id) ? "/_blob/" + id : "");
+  const safeUrl = (u) => (typeof u === "string" && /^https:\/\/(www\.)?instagram\.com\//.test(u) ? u : "");
+  const num = (n) => (n == null || n === "" || isNaN(+n) ? "—" : +n >= 1e6 ? (+n / 1e6).toFixed(1).replace(".0", "") + "M" : +n >= 1e4 ? Math.round(+n / 1e3) + "K" : (+n).toLocaleString("ru-RU"));
+  const pct = (x) => (x == null ? "—" : Math.round(x * 100) + "%");
+  const hhmm = (iso) => { const d = new Date(iso); return isNaN(d) ? "" : d.toLocaleTimeString("ru-RU", { hour: "2-digit", minute: "2-digit" }); };
+  const ago = (iso) => {
+    const s = Math.max(0, (Date.now() - new Date(iso)) / 1000);
+    if (!isFinite(s)) return "";
+    if (s < 60) return "только что"; if (s < 3600) return Math.floor(s / 60) + " мин назад";
+    if (s < 86400) return Math.floor(s / 3600) + " ч назад"; return new Date(iso).toLocaleDateString("ru-RU", { day: "numeric", month: "short" });
+  };
+  const dur = (a, b) => { const s = Math.max(0, Math.round(((b ? new Date(b) : new Date()) - new Date(a)) / 1000)); if (!isFinite(s)) return ""; const m = Math.floor(s / 60); return (m >= 60 ? Math.floor(m / 60) + ":" + String(m % 60).padStart(2, "0") : m) + ":" + String(s % 60).padStart(2, "0"); };
+
+  let runs = [], state = {}, selected = null, dbOk = null, lastSnap = null;
+  try { selected = (location.hash || "").slice(1) || null; } catch (e) {}
+
+  function current() {
+    const want = selected || state.current;
+    return runs.find((r) => r.slug === want) || runs[0] || null;
+  }
+
+  function stepState(run, id) { return (run && run.steps && run.steps[id]) || { state: "todo" }; }
+
+  function renderLive() {
+    const d = $("#liveDot"), t = $("#liveText");
+    if (dbOk === false) { d.className = "dot"; t.textContent = "база недоступна в этом просмотре — показываю схему"; return; }
+    if (dbOk === null) { d.className = "dot"; t.textContent = "подключаюсь…"; return; }
+    const run = current();
+    const active = run && (run.status === "running" || run.status === "waiting");
+    d.className = "dot" + (active ? " on" : "");
+    t.textContent = run ? (active ? "идёт прогон · обновлено " + ago(run.updated_at) : "обновлено " + ago(run.updated_at)) : "на связи";
+  }
+
+  function renderSelect() {
+    const sel = $("#runSel");
+    if (runs.length < 2) { sel.hidden = true; return; }
+    sel.hidden = false;
+    const cur = current();
+    sel.innerHTML = runs.map((r) => `<option value="${esc(r.slug)}"${cur && r.slug === cur.slug ? " selected" : ""}>${esc(r.title || r.slug)} · ${esc(new Date(r.started_at).toLocaleDateString("ru-RU", { day: "numeric", month: "short" }))}</option>`).join("");
+  }
+
+  function renderHero(run) {
+    const h = $("#hero");
+    if (!run) {
+      h.innerHTML = `
+        <div class="frame"><span>оригинал<br>9:16</span></div>
+        <div class="hero-mid">
+          <span class="label">Пока ни одного прогона</span>
+          <h2>Твой залетевший рилс <em class="x">→</em> новый рилс аватаром</h2>
+          <p class="what" style="max-width:none">Напиши Claude «сделай ремейк залёта» — прогон появится здесь и будет обновляться сам на каждом шаге: какой рилс выбран и почему, расшифровка, сценарий «было / стало», проверка уникальности, видео аватара и монтаж.</p>
+        </div>
+        <div class="frame res"><span>результат<br>9:16</span></div>`;
+      return;
+    }
+    const src = run.source || {}, done = STEPS.filter((s) => stepState(run, s.id).state === "done" || stepState(run, s.id).state === "skip").length;
+    const statusCls = { running: "run", waiting: "wait", done: "done", failed: "fail" }[run.status] || "todo";
+    const statusRu = { running: "идёт", waiting: "ждёт тебя", done: "готово", failed: "остановлен" }[run.status] || "—";
+    const thumb = blob(src.thumb) || blob(src.sheet);
+    const final = blob((run.montage || {}).video) || blob((run.avatar || {}).video);
+    const resLabel = blob((run.montage || {}).video) ? "готовый рилс" : blob((run.avatar || {}).video) ? "видео аватара" : "результат<br>9:16";
+    h.innerHTML = `
+      <div class="frame">${thumb ? `<img src="${thumb}" alt="Обложка оригинала">` : "<span>оригинал<br>9:16</span>"}<span class="tag">ОРИГИНАЛ</span></div>
+      <div class="hero-mid">
+        <div style="display:flex;gap:10px;align-items:center;flex-wrap:wrap"><span class="pill ${statusCls}">${statusRu}</span><span class="label">шаг ${Math.min(done + (statusCls === "done" ? 0 : 1), 9)} из 9</span></div>
+        <h2>${esc(run.title || run.slug)}</h2>
+        <div class="now">${esc(run.headline || "")}</div>
+        <div class="progress" aria-hidden="true"><i style="width:${Math.round((done / 9) * 100)}%"></i></div>
+        <div class="metrics">
+          ${src.code ? `<span class="chip code">${esc(src.code)}</span>` : ""}
+          ${src.views != null ? `<span class="chip"><b>${num(src.views)}</b> просмотров</span>` : ""}
+          ${src.comments != null ? `<span class="chip"><b>${num(src.comments)}</b> комментариев</span>` : ""}
+          ${src.shares != null ? `<span class="chip"><b>${num(src.shares)}</b> репостов</span>` : ""}
+          ${src.leads != null ? `<span class="chip"><b>${num(src.leads)}</b> написали слово</span>` : ""}
+          ${src.likes != null ? `<span class="chip"><b>${num(src.likes)}</b> лайков</span>` : ""}
+        </div>
+        <div class="hero-meta"><span>старт ${esc(hhmm(run.started_at))}</span><span>в работе <span class="mono" id="elapsed">${dur(run.started_at, run.status === "done" || run.status === "failed" ? run.updated_at : null)}</span></span>${safeUrl(src.url) ? `<a href="${esc(src.url)}" target="_blank" rel="noopener">оригинал в Instagram</a>` : ""}${run.data_source ? `<span>данные: ${esc(run.data_source)}</span>` : ""}</div>
+      </div>
+      <div class="frame res">${final ? `<video src="${final}" controls playsinline preload="metadata"></video>` : `<span>${resLabel}</span>`}${final ? `<span class="tag">${blob((run.montage || {}).video) ? "РЕЗУЛЬТАТ" : "АВАТАР"}</span>` : ""}</div>`;
+  }
+
+  function renderRail(run) {
+    $("#rail").innerHTML = STEPS.map((s, i) => {
+      const st = stepState(run, s.id);
+      const k = run ? st.state || "todo" : "todo";
+      return `<li class="st ${k}"><button type="button" data-step="${s.id}" title="${esc(s.what)}"><span class="node">${k === "done" ? "✓" : k === "fail" ? "!" : i + 1}</span><span class="nm">${s.name}</span><span class="tm">${run && st.at ? esc(hhmm(st.at)) : STATE_RU[k] || ""}</span></button></li>`;
+    }).join("");
+    const cur = run && STEPS.find((s) => ["run", "wait", "fail"].includes(stepState(run, s.id).state));
+    $("#trackNote").textContent = cur ? cur.name + ": " + (stepState(run, cur.id).note || STATE_RU[stepState(run, cur.id).state]) : run ? "" : "нажми на шаг — покажу, что в нём происходит";
+  }
+
+  const head = (n, title, run, id) => {
+    const st = run ? stepState(run, id) : { state: "todo" };
+    const k = st.state || "todo";
+    return `<div class="card-head"><h3><span class="n">${String(n).padStart(2, "0")}</span>${title}</h3><span class="pill ${k === "skip" ? "todo" : k}">${STATE_RU[k]}${st.at ? " · " + esc(hhmm(st.at)) : ""}</span></div>${st.note ? `<p class="what" style="color:var(--fg)">${esc(st.note)}</p>` : ""}`;
+  };
+  const what = (id) => `<p class="what">${STEPS.find((s) => s.id === id).what}</p>`;
+
+  function cardPick(run) {
+    const c = run.candidates || [];
+    const rows = c.map((r) => `<tr class="${r.chosen ? "chosen" : ""}">
+        <td>${blob(r.thumb) ? `<img class="thumb" src="${blob(r.thumb)}" alt="">` : `<span class="thumb"></span>`}</td>
+        <td class="mono">${esc(r.rank)}</td><td class="mono">${esc((r.date || "").slice(5, 10))}</td>
+        <td>${r.code ? `<span class="chip code" style="padding:2px 8px">${esc(r.code)}</span>` : `<span class="muted">—</span>`}</td>
+        <td class="num">${num(r.views)}</td><td class="num">${num(r.comments)}</td><td class="num">${num(r.shares)}</td><td class="num">${num(r.leads)}</td><td class="num">${num(r.likes)}</td>
+        <td class="num">${r.score == null ? "—" : (+r.score).toFixed(2)}</td>
+        <td><span class="cap" title="${esc(r.caption)}">${safeUrl(r.url) ? `<a href="${esc(r.url)}" target="_blank" rel="noopener">${esc(r.caption || "открыть")}</a>` : esc(r.caption)}</span>${r.note ? `<div class="muted" style="font-size:12px">${esc(r.note)}</div>` : ""}</td></tr>`).join("");
+    return `<section class="card" id="c-pick">${head(2, "Отбор залёта", run, "pick")}${what("pick")}
+      ${c.length ? `<div class="tbl"><table><thead><tr><th></th><th>#</th><th>дата</th><th>слово</th><th class="num">просм</th><th class="num">комм</th><th class="num">репост</th><th class="num">лиды</th><th class="num">лайки</th><th class="num">счёт</th><th>подпись</th></tr></thead><tbody>${rows}</tbody></table></div>` : `<div class="empty">Кандидаты появятся после выгрузки.</div>`}
+      ${(run.source || {}).why ? `<div class="why"><span class="label">Почему этот</span><br>${esc(run.source.why)}</div>` : ""}</section>`;
+  }
+
+  function cardOriginal(run) {
+    const s = run.source || {}, t = run.transcript || {};
+    return `<section class="card" id="c-grab">${head(3, "Оригинал и расшифровка", run, "grab")}
+      <div class="media">
+        <div class="frame">${blob(s.thumb) ? `<img src="${blob(s.thumb)}" alt="Обложка оригинала">` : "<span>оригинал</span>"}</div>
+        <div style="display:grid;gap:12px;min-width:0">
+          <div class="stats">
+            ${s.duration ? `<span class="chip"><b>${Math.round(s.duration)} с</b></span>` : ""}
+            ${t.wps ? `<span class="chip"><b>${t.wps}</b> слова/с</span>` : ""}
+            ${t.speech_ratio != null ? `<span class="chip">речь <b>${pct(t.speech_ratio)}</b> времени</span>` : ""}
+            ${t.engine ? `<span class="chip">${esc(t.engine)}</span>` : ""}
+            ${t.verdict ? `<span class="chip">${esc(t.verdict)}</span>` : ""}
+          </div>
+          ${blob(s.sheet) ? `<img class="sheet" src="${blob(s.sheet)}" alt="Кадры оригинала">` : ""}
+          ${t.text ? `<div><span class="label">Расшифровка</span><div class="textbox" style="margin-top:6px">${esc(t.text)}</div></div>` : `<div class="empty">Текст появится после расшифровки.</div>`}
+          ${s.caption ? `<details><summary class="muted" style="cursor:pointer">Подпись оригинала</summary><div class="textbox" style="margin-top:6px">${esc(s.caption)}</div></details>` : ""}
+        </div>
+      </div></section>`;
+  }
+
+  function cardScript(run) {
+    const sc = run.script || {}, t = run.transcript || {};
+    return `<section class="card" id="c-script">${head(5, "Сценарий 2.0", run, "script")}${what("script")}
+      ${(sc.analysis || []).length ? `<ul class="bullets">${sc.analysis.map((x) => `<li>${esc(x)}</li>`).join("")}</ul>` : ""}
+      <div class="cols">
+        <div style="min-width:0"><span class="label">Было${sc.hook_from ? " · хук: " + esc(sc.hook_from) : ""}</span><div class="textbox" style="margin-top:6px">${esc(sc.original || t.text || "—")}</div></div>
+        <div style="min-width:0"><span class="label" style="color:var(--accent)">Стало${sc.hook_to ? " · хук: " + esc(sc.hook_to) : ""}</span><div class="textbox new" style="margin-top:6px">${sc.remake ? esc(sc.remake) : '<span class="muted">Сценарий пишется…</span>'}</div></div>
+      </div>
+      ${(sc.changes || []).length ? `<div><span class="label">Что поменял</span><ul class="bullets" style="margin-top:6px">${sc.changes.map((x) => `<li>${esc(x)}</li>`).join("")}</ul></div>` : ""}</section>`;
+  }
+
+  function meter(label, value, shown, limit, max, lowerIsBetter, warnAt) {
+    const frac = Math.max(0, Math.min(1, (value || 0) / max));
+    const bad = lowerIsBetter ? value > limit : value < limit;
+    const meh = !bad && warnAt != null && lowerIsBetter && value > warnAt;
+    return `<div class="meter ${bad ? "bad" : meh ? "meh" : ""}"><span class="label">${label}</span><span class="v">${shown}</span><div class="bar"><i style="width:${frac * 100}%"></i><b style="left:${(limit / max) * 100}%"></b></div></div>`;
+  }
+
+  function cardCheck(run) {
+    const c = run.check || {};
+    const has = c.result != null;
+    return `<section class="card half" id="c-check">${head(6, "Проверка перед аватаром", run, "check")}${what("check")}
+      ${has ? `<div class="gate">
+          ${meter("из оригинала", c.overlap, pct(c.overlap), 0.35, 1, true, 0.25)}
+          ${meter("кусок подряд", c.common_run, (c.common_run ?? "—") + " сл.", 8, 20, true)}
+          ${meter("длина", c.est_sec, Math.round(c.est_sec || 0) + " с", 90, 120, true)}
+          <div class="meter"><span class="label">итог</span><span class="v" style="color:var(${c.result === "PASS" ? "--ok" : "--fail"})">${esc(c.result)}</span><span class="muted" style="font-size:12px">${c.words ? esc(c.words) + " слов" : ""}</span></div>
+        </div>
+        <ul class="lines">${(c.lines || []).map((l) => `<li><span class="mark ${esc(l.kind)}">${{ ok: "OK", warn: "WARN", fail: "FAIL" }[l.kind] || ""}</span><span>${esc(l.text)}</span></li>`).join("")}</ul>` : `<div class="empty">Проверка запустится, когда сценарий готов.</div>`}</section>`;
+  }
+
+  function cardAvatar(run) {
+    const a = run.avatar || {};
+    return `<section class="card half" id="c-avatar">${head(7, "Аватар HeyGen", run, "avatar")}${what("avatar")}
+      <div class="media" style="grid-template-columns:150px minmax(0,1fr)">
+        <div class="frame">${blob(a.video) ? `<video src="${blob(a.video)}" controls playsinline preload="metadata"></video>` : `<span>${esc(a.state_text || "ждёт сценарий")}</span>`}</div>
+        <dl class="kv">
+          ${a.look ? `<dt>Образ</dt><dd>${esc(a.look)}</dd>` : ""}
+          ${a.voice ? `<dt>Голос</dt><dd>${esc(a.voice)}</dd>` : ""}
+          ${a.duration ? `<dt>Длина</dt><dd class="mono">${Math.round(a.duration)} с</dd>` : ""}
+          ${a.credits != null ? `<dt>Кредиты</dt><dd class="mono">${esc(a.credits)}</dd>` : ""}
+          ${a.video_id ? `<dt>HeyGen</dt><dd class="mono" style="font-size:12px">${esc(a.video_id)}</dd>` : ""}
+        </dl>
+      </div></section>`;
+  }
+
+  function cardMontage(run) {
+    const m = run.montage || {};
+    return `<section class="card" id="c-montage">${head(8, "Монтаж", run, "montage")}${what("montage")}
+      <div class="styles">${STYLES.map((s) => `<div class="style ${m.style_id === s.id ? "on" : ""}"><b>${s.name}</b><span>${s.what}</span>${m.style_id === s.id && m.why ? `<span style="color:var(--accent)">${esc(m.why)}</span>` : ""}</div>`).join("")}</div>
+      ${blob(m.video) ? `<div class="frame" style="max-width:300px"><video src="${blob(m.video)}" controls playsinline preload="metadata"></video></div>` : ""}</section>`;
+  }
+
+  function cardDeliver(run) {
+    const cap = run.caption || "";
+    return `<section class="card half" id="c-deliver">${head(9, "Подпись к посту", run, "deliver")}
+      ${cap ? `<div class="textbox" id="capText">${esc(cap)}</div><div><button class="btn" type="button" id="copyCap">Скопировать подпись</button> <span class="muted" id="copyMsg" style="font-size:13px"></span></div>` : `<div class="empty">Подпись появится вместе со сценарием.</div>`}
+      ${(run.files || []).length ? `<div><span class="label">Файлы</span><ul class="bullets" style="margin-top:6px">${run.files.map((f) => `<li class="mono" style="font-size:12.5px;overflow-wrap:anywhere">${esc(f)}</li>`).join("")}</ul></div>` : ""}</section>`;
+  }
+
+  function cardLog(run) {
+    const log = (run.log || []).slice().reverse();
+    return `<section class="card half" id="c-log"><div class="card-head"><h3>Журнал</h3><span class="muted" style="font-size:13px">${log.length} событий</span></div>
+      ${log.length ? `<ul class="log">${log.map((l) => `<li><time>${esc(hhmm(l.at))}</time><span>${esc(l.text)}</span></li>`).join("")}</ul>` : `<div class="empty">События появятся по ходу прогона.</div>`}</section>`;
+  }
+
+  function cardHow() {
+    return `<section class="card" id="c-how"><div class="card-head"><h3>Как это работает</h3></div>
+      <ol class="how">${STEPS.map((s) => `<li><b>${s.name}</b>${s.what}</li>`).join("")}</ol>
+      <p class="what">Без человека (Студия Кадрика, расписание) вопросов нет: стиль чередуется, аватар — по умолчанию. В чате Claude спрашивает в начале только стиль и, один раз, твоего аватара.</p></section>`;
+  }
+
+  function render() {
+    const run = current();
+    renderLive(); renderSelect(); renderHero(run); renderRail(run);
+    $("#cards").innerHTML = run
+      ? cardPick(run) + cardOriginal(run) + cardScript(run) + cardCheck(run) + cardAvatar(run) + cardMontage(run) + cardDeliver(run) + cardLog(run) + cardHow()
+      : cardHow();
+    const cp = $("#copyCap");
+    if (cp) cp.addEventListener("click", async () => {
+      const txt = (run && run.caption) || "";
+      try { await navigator.clipboard.writeText(txt); $("#copyMsg").textContent = "Скопировано"; }
+      catch (e) { const r = document.createRange(); r.selectNodeContents($("#capText")); const s = getSelection(); s.removeAllRanges(); s.addRange(r); $("#copyMsg").textContent = "Выделил — нажми ⌘C"; }
+    });
+  }
+
+  const CARD_FOR = { scan: "c-pick", pick: "c-pick", grab: "c-grab", transcribe: "c-grab", script: "c-script", check: "c-check", avatar: "c-avatar", montage: "c-montage", deliver: "c-deliver" };
+  $("#rail").addEventListener("click", (e) => {
+    const b = e.target.closest("button[data-step]"); if (!b) return;
+    const el = document.getElementById(current() ? CARD_FOR[b.dataset.step] : "c-how"); if (!el) return;
+    el.scrollIntoView({ behavior: matchMedia("(prefers-reduced-motion: reduce)").matches ? "auto" : "smooth", block: "start" });
+    el.classList.add("flash"); setTimeout(() => el.classList.remove("flash"), 1200);
+  });
+  $("#runSel").addEventListener("change", (e) => { selected = e.target.value; try { history.replaceState(null, "", "#" + selected); } catch (x) {} render(); });
+  window.addEventListener("hashchange", () => { selected = (location.hash || "").slice(1) || null; render(); });
+
+  setInterval(() => {
+    const run = current(), el = $("#elapsed");
+    if (el && run && (run.status === "running" || run.status === "waiting")) el.textContent = dur(run.started_at);
+    renderLive();
+  }, 1000);
+
+  render();
+
+  (async () => {
+    const db = window.claude && window.claude.use ? await window.claude.use("db") : null;
+    if (!db) { dbOk = false; render(); return; }
+    dbOk = true; renderLive();
+    db.doc("remake/state").onSnapshot((snap) => { state = (snap.exists && snap.data()) || {}; render(); }, () => {});
+    db.collection("runs").orderBy("started_at", "desc").limit(30).onSnapshot((snap) => {
+      runs = snap.docs.map((d) => d.data()).filter(Boolean);
+      render();
+    }, () => { dbOk = false; render(); });
+  })();
+})();
+</script>

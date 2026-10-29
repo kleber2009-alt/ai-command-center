@@ -44,6 +44,9 @@ description: «Ремейк залёта» — берёт самые залет�
 `python3 $S/fetch_reels.py --windsor ~/reel-work/remake/_scan/windsor.json`.
 Без MCP: `python3 $S/fetch_reels.py` (сам возьмёт Graph API по `IG_ACCESS_TOKEN` или Apify по `APIFY_TOKEN`).
 Заглушка Windsor «Free plan includes 1 account» — скажи Илье, как починить (sources.md), и иди другим источником.
+Запасной путь в чате без токенов — **ChatPlace + yt-dlp**: посты из `automations_triggers_list_instagram_media`
+(бот @ilia.paliy), «лиды» по кодовым словам из `automations_list_with_stats`, лайки и комментарии свежих рилсов —
+yt-dlp (`fetch_reels.py --chatplace … --automations …`, подробно в sources.md). Просмотров и репостов там нет.
 
 ## Шаг 2. Отобрать: залёт + говорящая голова + кодовое слово
 
@@ -118,6 +121,19 @@ PASS. WARN — решаешь сам (лишняя длина допустима
 Запуск из «Студии Кадрика» — её поручение (превью → «ок» → финал) главнее.
 Скилла стиля нет на машине — см. конец styles.md.
 
+## Сайт-пульт (если в config.json есть `site.url`)
+
+Илья смотрит прогон на странице «Ремейк залёта» — она обновляется сама. После каждого шага:
+1. `python3 $S/report.py <slug> --status running|waiting|done|failed --headline "что сейчас" --step <шаг> <run|done|wait|fail> "заметка" --log "событие"`
+   (несколько `--step` и `--log` в одной команде). Шаги: scan pick grab transcribe script check avatar montage deliver.
+   Разбор сценария, «почему этот», образ аватара, стиль — в `<задача>/site_extra.json` (поля как в run.json).
+2. `ArtifactData set`, collection `runs`, doc_id = slug, `file_path` = `<задача>/run.json`, `if_version` — версия из прошлой
+   записи (первая запись без неё; в начале прогона ещё `remake/state` = `{"current": slug}`).
+3. Картинки и видео страница берёт только из своего хранилища: обложки кандидатов (уменьшить до 270 px), лист кадров,
+   видео аватара и финал (до 20 МБ — для страницы копия для телефона) загрузи `Artifact` publish с `url`, `asset: true`
+   (`file_paths` — пачкой), и передай id: `report.py <slug> --asset thumb_1=<id> sheet=<id> avatar=<id> final=<id>`.
+Ждёшь Илью или внешний сервис — `--status waiting` и причина в `--headline`, чтобы на странице было видно, почему стоим.
+
 ## Шаг 9. Сдать
 
 1. `python3 $S/style.py log <slug> --style <id> --result "<мастер.mp4>" --caption <задача>/caption.txt` —
@@ -146,6 +162,8 @@ PASS. WARN — решаешь сам (лишняя длина допустима
 | Windsor: «not your real numbers» | Отключить `instagram_public` в Windsor (sources.md) · пока — Graph API / Apify / ссылка |
 | Ни одной говорящей головы с кодовым словом | Расширить период (`fetch_reels.py --days 365`) · или лучшая говорящая голова + новый призыв |
 | `grab.py` не скачал видео | Ссылка CDN протухла → перезапусти fetch_reels · или файл от Ильи |
+| Instagram «rate-limit… login page» | Анонимный лимит (~40–50 запросов подряд): подожди 15–30 минут и повтори `grab.py`; не обогащай больше 24 рилсов |
+| HuggingFace 429 при расшифровке | Повтори через минуту; transcribe.py сам возьмёт уже скачанную модель поменьше |
 | Расшифровка не вышла | Нет ни скиллов монтажа, ни ключей → `pip install faster-whisper` и `--engine local` |
 | check_script FAIL по уникальности | Меняешь примеры и пары «не так → так», а не синонимы |
 | HeyGen: кредиты / квота голоса | Стоп, сказать пополнить (app.heygen.com/settings/subscriptions) или взять другой голос-клон |

@@ -102,9 +102,23 @@ def eng_local(audio: Path, lang: str):
     with wave.open(str(audio)) as w:  # сами читаем 16 кГц моно: декодер faster-whisper (PyAV) ломается на новых версиях av
         pcm = np.frombuffer(w.readframes(w.getnframes()), np.int16).astype(np.float32) / 32768.0
     name = os.environ.get("WHISPER_MODEL", "large-v3-turbo")
-    segs, _ = WhisperModel(name, device="cpu", compute_type="int8").transcribe(pcm, language=lang, vad_filter=True, word_timestamps=True)
+    try:
+        model = WhisperModel(name, device="cpu", compute_type="int8")
+    except Exception as e:  # HuggingFace не отдал модель (429, нет сети) — берём ту, что уже скачана
+        cached = [m for m in ("large-v3-turbo", "medium", "small", "base") if m != name and _cached(m)]
+        if not cached:
+            raise
+        print(f"NOTE модель {name} не скачалась ({str(e)[:80]}) — беру скачанную {cached[0]}")
+        name = cached[0]
+        model = WhisperModel(name, device="cpu", compute_type="int8", local_files_only=True)
+    segs, _ = model.transcribe(pcm, language=lang, vad_filter=True, word_timestamps=True)
     out = [{"text": w.word.strip(), "start": round(w.start, 2), "end": round(w.end, 2)} for s in segs for w in (s.words or [])]
     return out, f"faster-whisper {name}"
+
+
+def _cached(name: str) -> bool:
+    hub = Path(os.path.expanduser(os.environ.get("HF_HOME", "~/.cache/huggingface"))) / "hub"
+    return any(hub.glob(f"models--*--faster-whisper-{name}"))
 
 
 ENGINES = {"style": eng_style, "elevenlabs": eng_elevenlabs, "openai": eng_openai, "local": eng_local}

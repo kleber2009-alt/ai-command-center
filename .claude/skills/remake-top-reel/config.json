@@ -11,7 +11,7 @@
   "min_age_days": 3,
   "max_items": 200,
   "reuse_after_days": 60,
-  "weights": {"views": 0.4, "comments": 0.3, "shares": 0.3}
+  "weights": {"views": 0.3, "comments": 0.25, "shares": 0.25, "leads": 0.1, "likes": 0.1}
  },
  "avatar": {
   "_about": "Цифровой двойник в HeyGen. confirmed=false — при первом запуске в чате спросить Илью и запомнить выбор.",
@@ -33,6 +33,7 @@
   {"id": "explainer-panel-reel", "name": "Панель-объяснялка", "aka": ["панель", "панельная", "panel"]},
   {"id": "business-short-form-reels", "name": "Бизнес-рилс", "aka": ["бизнес", "business"]}
  ],
+ "site": {"url": "https://claude.ai/artifact/TzpSjDViTsbwJqjJ8bmRtf", "_about": "Пульт прогонов: report.py → ArtifactData set runs/<slug> + remake/state"},
  "style_mode": "ask",
  "language": "ru",
  "script": {

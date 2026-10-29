@@ -5,17 +5,23 @@
   python3 fetch_reels.py --source graph             Instagram Graph API: IG_ACCESS_TOKEN (+ IG_USER_ID, иначе из config.json)
   python3 fetch_reels.py --source apify             публичный скрейп apify~instagram-scraper: APIFY_TOKEN (без репостов и шеров)
   python3 fetch_reels.py --links <url> [<url> ...]  конкретные рилсы (метрики подтянет Apify, если есть токен)
+  python3 fetch_reels.py --chatplace posts.json [--automations autos.json] [--enrich 40]
+                                                    запасной путь без Windsor: рилсы и подписи из ChatPlace MCP
+                                                    (automations_triggers_list_instagram_media), «лиды» — сколько людей
+                                                    написали кодовое слово (automations_list_with_stats), лайки и
+                                                    комментарии последних --enrich рилсов — через yt-dlp
   python3 fetch_reels.py                            auto: graph, если есть токен, иначе apify; иначе — подсказка
   --days N  окно (по умолчанию scan.days из config.json)
 
-Запись: id, shortcode, url, date, caption, views, comments, likes, shares, reposts, saves, avg_watch_ms, duration,
+Запись: id, shortcode, url, date, caption, views, comments, likes, shares, reposts, saves, leads, avg_watch_ms, duration,
 video_url (прямая ссылка CDN, живёт несколько часов), thumb_url, source. Неизвестная метрика = null.
 """
-import argparse, datetime, json, os, re, sys
+import argparse, datetime, json, os, re, shutil, subprocess, sys
+from concurrent.futures import ThreadPoolExecutor
 from urllib.parse import urlencode
 
 sys.path.insert(0, os.path.dirname(os.path.abspath(__file__)))  # и под python3 -I
-from common import SCAN, HTTPError, config, http_json, secret, write_json
+from common import SCAN, HTTPError, code_word, config, http_json, secret, write_json
 
 WINDSOR_BLOCK = "not your real numbers"
 
@@ -33,8 +39,8 @@ def num(v):
 
 
 def rec(**kw) -> dict:
-    keys = ("id", "shortcode", "url", "date", "caption", "views", "comments", "likes", "shares", "reposts", "saves",
-            "avg_watch_ms", "duration", "video_url", "thumb_url", "source")
+    keys = ("id", "shortcode", "url", "date", "caption", "views", "comments", "likes", "shares", "reposts", "saves", "leads",
+            "restricted", "avg_watch_ms", "duration", "video_url", "thumb_url", "source")
     r = {k: (kw.get(k) if kw.get(k) != "" or k == "caption" else None) for k in keys}
     r["shortcode"] = r["shortcode"] or shortcode(r["url"])
     r["id"] = str(r["id"] or r["shortcode"] or r["url"])
@@ -160,18 +166,79 @@ def from_links(links: list) -> list:
     return [rec(url=u, source="link") for u in links]
 
 
+# ---------- ChatPlace + yt-dlp (без Windsor и токенов) ----------
+def norm_word(w: str) -> str:
+    return (w or "").strip().upper().replace("Ё", "Е")
+
+
+def ytdlp_meta(url: str) -> dict:
+    """Публичные метрики рилса через yt-dlp: лайки, комментарии, длительность (просмотры Instagram ему обычно не отдаёт)."""
+    if not shutil.which("yt-dlp"):
+        return {}
+    try:
+        x = subprocess.run(["yt-dlp", "-q", "--no-warnings", "--skip-download", "--dump-json", url],
+                           capture_output=True, text=True, timeout=90)
+        if "isn't available to everyone" in (x.stderr or "") or "login" in (x.stderr or "").lower():
+            return {"restricted": True}  # возрастное/гео-ограничение: без входа не скачать — не кандидат
+        d = json.loads((x.stdout or "{}").splitlines()[0] or "{}")
+    except (subprocess.TimeoutExpired, ValueError, IndexError):
+        return {}
+    return {"likes": num(d.get("like_count")), "comments": num(d.get("comment_count")), "views": num(d.get("view_count")),
+            "duration": num(d.get("duration"))}
+
+
+def from_chatplace(posts_path: str, autos_path: str, days: int, limit: int, enrich: int) -> list:
+    raw = json.load(open(posts_path))
+    posts = raw if isinstance(raw, list) else raw.get("data", raw.get("items", []))
+    leads = {}
+    if autos_path:
+        autos = json.load(open(autos_path))
+        for a in autos if isinstance(autos, list) else autos.get("data", []):
+            for w in a.get("startMessages") or []:
+                leads[norm_word(w)] = leads.get(norm_word(w), 0) + int(a.get("totalClients") or 0)
+    since = datetime.datetime.now().timestamp() - days * 86400
+    items = []
+    for p in posts:
+        if "/reel/" not in (p.get("permalink") or "") or (p.get("timestamp") or 0) < since:
+            continue
+        code = code_word(p.get("caption") or "")
+        items.append(rec(id=p.get("mediaId"), url=p["permalink"], caption=p.get("caption") or "",
+                         date=datetime.datetime.fromtimestamp(p["timestamp"], datetime.timezone.utc).isoformat(),
+                         leads=float(leads[norm_word(code)]) if code and norm_word(code) in leads else None,
+                         thumb_url=p.get("mediaUrl"), source="chatplace"))
+        if len(items) >= limit:
+            break
+    items.sort(key=lambda r: r["date"], reverse=True)
+    if enrich and shutil.which("yt-dlp"):
+        with ThreadPoolExecutor(2) as ex:
+            for r, m in zip(items[:enrich], ex.map(lambda r: ytdlp_meta(r["url"]), items[:enrich])):
+                for k, v in m.items():
+                    if v is not None:
+                        r[k] = v
+                r["source"] = "chatplace+yt-dlp"
+    elif enrich:
+        print("NOTE yt-dlp не установлен (pip install yt-dlp) — без лайков и комментариев")
+    return items
+
+
 def main():
     cfg = config()["scan"]
     ap = argparse.ArgumentParser(description=__doc__, formatter_class=argparse.RawDescriptionHelpFormatter)
     ap.add_argument("--source", choices=("auto", "graph", "apify"), default="auto")
     ap.add_argument("--windsor", help="JSON со строками Windsor get_data")
     ap.add_argument("--links", nargs="+")
+    ap.add_argument("--chatplace", help="JSON постов из ChatPlace (automations_triggers_list_instagram_media)")
+    ap.add_argument("--automations", help="JSON автоматизаций со статистикой (automations_list_with_stats)")
+    ap.add_argument("--enrich", type=int, default=24, help="скольким свежим рилсам подтянуть лайки и комментарии через yt-dlp "
+                    "(анонимный лимит Instagram — несколько десятков запросов в час, оставь запас на скачивание победителя)")
     ap.add_argument("--days", type=int, default=cfg["days"])
     ap.add_argument("--limit", type=int, default=cfg["max_items"])
     a = ap.parse_args()
 
     if a.links:
         src, items = "links", from_links(a.links)
+    elif a.chatplace:
+        src, items = "chatplace", from_chatplace(a.chatplace, a.automations, a.days, a.limit, a.enrich)
     elif a.windsor:
         src, items = "windsor", from_windsor(a.windsor)
     else:
@@ -187,7 +254,7 @@ def main():
     write_json(out, {"fetched_at": datetime.datetime.now().isoformat(timespec="seconds"), "source": src, "days": a.days, "items": items})
     has = lambda f: sum(1 for i in items if i.get(f) is not None)
     print(json.dumps({"ok": True, "source": src, "reels": len(items), "with_views": has("views"), "with_comments": has("comments"),
-                      "with_shares": has("shares"), "with_reposts": has("reposts"), "with_video_url": has("video_url"),
+                      "with_shares": has("shares"), "with_reposts": has("reposts"), "with_leads": has("leads"), "with_video_url": has("video_url"),
                       "file": str(out)}, ensure_ascii=False))
 
 

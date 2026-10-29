@@ -8,6 +8,7 @@
 | **Windsor MCP** (`instagram`) | чат с Claude (Desktop, Code, облако) | да | `media_url` | коннектор Windsor.ai, аккаунт 17841446275691322 |
 | **Graph API** | везде, в т.ч. Студия Кадрика | да | `media_url` | `IG_ACCESS_TOKEN` (+ `IG_USER_ID`) |
 | **Apify** | везде | нет (только просмотры, комменты, лайки) | `videoUrl` | `APIFY_TOKEN` (тот же, что у infra-worker) |
+| **ChatPlace + yt-dlp** | чат с Claude | нет; зато «лиды» — сколько написали кодовое слово | yt-dlp | MCP ChatPlace, `pip install yt-dlp` |
 | **Ссылки** | везде | — | через Apify или файл | Илья присылает ссылку(и) на рилс |
 
 ## Windsor MCP — основной путь в чате
@@ -28,6 +29,18 @@ mcp__Windsor_ai__get_data(
 подключено два аккаунта (`instagram` и `instagram_public`). Скажи Илье: отключить `instagram_public`
 на https://onboard.windsor.ai/app/ (или перейти на платный план) и через минуту повторить. `fetch_reels.py`
 сам узнаёт эту заглушку и останавливается с этой подсказкой. Пока не починили — Graph API, Apify или ссылки.
+
+## ChatPlace + yt-dlp — без Windsor и токенов
+
+1. `mcp__Chat_Place__automations_triggers_list_instagram_media(botId="01a18057-4ab5-7031-8b95-82612de8269c")` — 300 последних
+   постов @ilia.paliy (подпись, ссылка, обложка). Ответ большой: инструмент сам сохранит его в файл — бери этот путь.
+2. `mcp__Chat_Place__automations_list_with_stats(botId=…)` — сохрани компактно в `~/reel-work/remake/_scan/chatplace_automations.json`:
+   `[{"name", "startMessages", "totalClients"}]`. `totalClients` — сколько людей написали слово: прямой сигнал, что призыв сработал.
+3. `fetch_reels.py --chatplace <файл постов> --automations <файл автоматизаций>` — рилсы (ссылки `/reel/`), кодовое слово
+   из подписи, лиды по слову, лайки и комментарии 24 свежих через yt-dlp. Рилсы, которые Instagram прячет от части
+   аудитории, помечаются `restricted` и в кандидаты не идут (их без входа не скачать).
+Лимит: Instagram отдаёт анонимно несколько десятков запросов подряд, потом просит вход — 15–30 минут паузы.
+Обогащение и скачивание победителя делят этот лимит, поэтому `--enrich` не больше 24.
 
 ## Graph API
 
