@@ -58,18 +58,33 @@ def save(handle: str, user_id: str, token: str) -> int:
         return acc.id
 
 
+def _clean(value: str) -> str:
+    return value.strip().strip('"\'').replace(" ", "").replace("\n", "")
+
+
 def main() -> None:
     if not settings.token_encryption_key:
         raise SystemExit("TOKEN_ENCRYPTION_KEY не задан в .env.")
-    token = getpass.getpass("Токен Threads из приложения Meta (ввод скрыт): ").strip()
+    token = _clean(getpass.getpass("Токен Threads из приложения Meta (ввод скрыт): "))
     if not token:
         raise SystemExit("Пустой токен.")
-    secret = getpass.getpass("Секрет приложения (App secret; Enter — если токен уже 60-дневный): ").strip()
+    print(f"Токен: {token[:4]}…{token[-4:]}, длина {len(token)}")
+    if not token.startswith("TH"):
+        raise SystemExit("Это не токен Threads: он должен начинаться на THAA. Возьмите его в приложении Meta: "
+                         "Use cases → Access the Threads API → Settings → User Token Generator → Generate Access Token.")
+    try:
+        info = me(token)
+    except SystemExit as e:
+        raise SystemExit(f"{e}\nТокен не принят. Сгенерируйте новый (старый мог отозваться при повторной генерации) "
+                         "и вставьте его целиком, одной строкой.") from None
+    secret = _clean(getpass.getpass("Секрет приложения (App secret; Enter — пропустить): "))
     days = None
     if secret:
-        token, expires = exchange(token, secret)
-        days = round(expires / 86400)
-    info = me(token)
+        try:
+            token, expires = exchange(token, secret)
+            days = round(expires / 86400)
+        except SystemExit as e:
+            print(f"Обмен на 60-дневный не нужен или не удался ({e}) — сохраняю токен как есть.")
     acc_id = save(info["username"], info["id"], token)
     print(f"Готово: @{info['username']} (id {info['id']}) подключён как аккаунт №{acc_id}."
           + (f" Токен действует {days} дн., продлевается сам." if days else ""))
