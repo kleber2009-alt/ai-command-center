@@ -5,6 +5,7 @@ name: deploy-studio-kadrik
 # Every push checks the code. Deploy is manual: mode "check" (default) only prints the diff between this repo and the
 # live code; mode "deploy" backs up the live code, installs the release, restarts the service and rolls back if the bot
 # does not come back (apps/studio-kadrik/deploy/server.sh). Secrets (.env), players' data and the Python env stay on the server.
+# Mode "cleanup" frees disk space: deletes montage jobs of the last `days` days and clears caches (deploy/cleanup.sh).
 #
 # The deploy also sets up the montage sandbox (bubblewrap, SANDBOX=bwrap in .env) — clients' montage runs only inside it.
 #
@@ -28,10 +29,14 @@ on:
   workflow_dispatch:
     inputs:
       mode:
-        description: 'check — only show the diff with the live bot; fetch — print the live code to bring server edits into the repo; deploy — install and restart'
+        description: 'check — only show the diff with the live bot; fetch — print the live code to bring server edits into the repo; deploy — install and restart; cleanup — delete recent montage videos and caches'
         type: choice
-        options: [check, fetch, deploy]
+        options: [check, fetch, deploy, cleanup]
         default: check
+      days:
+        description: 'cleanup only — delete montage jobs changed within this many days'
+        type: string
+        default: '7'
 
 concurrency:
   group: deploy-studio-kadrik
@@ -79,7 +84,16 @@ jobs:
           ssh-keyscan -p "$SSH_PORT" -H "$HOST" >> ~/.ssh/known_hosts 2>/dev/null
           echo "SSH=ssh -i $HOME/.ssh/id_deploy -p $SSH_PORT $SSH_USER@$HOST" >> "$GITHUB_ENV"
 
+      - name: Cleanup
+        if: inputs.mode == 'cleanup'
+        env:
+          DAYS: ${{ inputs.days }}
+        run: |
+          [[ "$DAYS" =~ ^[0-9]+$ ]] || { echo "::error::days must be a number"; exit 1; }
+          $SSH bash -s -- "$DAYS" < apps/studio-kadrik/deploy/cleanup.sh
+
       - name: Upload release
+        if: inputs.mode != 'cleanup'
         run: |
           REL="$(date -u +%Y%m%d%H%M%S)-${GITHUB_SHA::7}"
           echo "REL=$REL" >> "$GITHUB_ENV"
@@ -98,6 +112,7 @@ jobs:
             | $SSH "umask 077 && cat > /opt/studio-kadrik/env.add"
 
       - name: Activate
+        if: inputs.mode != 'cleanup'
         run: $SSH bash -s -- "$REL" "$( [ "$MODE" = deploy ] && echo deploy || { [ "$MODE" = fetch ] && echo fetch || echo check; } )" < apps/studio-kadrik/deploy/server.sh
 
       - name: Smoke test
