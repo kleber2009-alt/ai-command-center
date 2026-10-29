@@ -23,6 +23,7 @@ for (const d of CFG.depts) {
   items.push({
     id: h.id, name: h.name, role: h.title, group: SHORT[d.id], dept: d.name, kind: 'head',
     img: `img/head-${h.id}.jpg`, tag: 'Руководитель', tagStyle: 'acc',
+    face: h.photo ? `img/face-${h.id}.jpg` : null, mono: h.photo ? null : h.name[0],
     meta: [SHORT[d.id], `${d.agents.length} агентов`], price: d.name, sub: h.title.split(' — ')[0],
     about: hc.lead || '', features: hc.zones || [], spec: (hc.process || []).map(s => [s.t, s.d]),
     links: links(hc.materials), nums: [[String(d.agents.length), 'агентов в отделе'], [String((hc.zones || []).length), 'зоны ответственности'], [String((hc.process || []).length), 'шагов процесса']],

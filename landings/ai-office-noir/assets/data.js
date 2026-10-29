@@ -33,6 +33,8 @@ window.SITE_DATA = {
    "img": "img/head-ilia.jpg",
    "tag": "Руководитель",
    "tagStyle": "acc",
+   "face": null,
+   "mono": "И",
    "meta": [
     "Стратегия",
     "5 агентов"
@@ -484,6 +486,8 @@ window.SITE_DATA = {
    "img": "img/head-firuza.jpg",
    "tag": "Руководитель",
    "tagStyle": "acc",
+   "face": "img/face-firuza.jpg",
+   "mono": null,
    "meta": [
     "Маркетинг",
     "13 агентов"
@@ -1678,6 +1682,8 @@ window.SITE_DATA = {
    "img": "img/head-bogdan.jpg",
    "tag": "Руководитель",
    "tagStyle": "acc",
+   "face": "img/face-bogdan.jpg",
+   "mono": null,
    "meta": [
     "Продажи",
     "5 агентов"
@@ -2114,6 +2120,8 @@ window.SITE_DATA = {
    "img": "img/head-nurken.jpg",
    "tag": "Руководитель",
    "tagStyle": "acc",
+   "face": "img/face-nurken.jpg",
+   "mono": null,
    "meta": [
     "Реклама",
     "2 агентов"

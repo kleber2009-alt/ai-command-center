@@ -150,7 +150,8 @@
   function card(it) {
     var meta = (it.meta || []).map(function (m) { return '<span>' + esc(m) + '</span>'; }).join('<i class="dot"></i>');
     return '<a class="pc rvl" href="' + detailHref + '?id=' + encodeURIComponent(it.id) + '"><div class="pw"' + (it.color ? ' style="--agent:' + esc(it.color) + '"' : '') + '><img src="' + esc(it.img) + '" alt="' + esc(it.name) + '" loading="lazy">' +
-      (it.tag ? '<span class="tag ' + esc(it.tagStyle || '') + '">' + esc(it.tag) + '</span>' : '') + '</div>' +
+      (it.tag ? '<span class="tag ' + esc(it.tagStyle || '') + '">' + esc(it.tag) + '</span>' : '') +
+      (it.face ? '<img class="face" src="' + esc(it.face) + '" alt="">' : it.mono ? '<span class="face">' + esc(it.mono) + '</span>' : '') + '</div>' +
       '<div class="pm">' + meta + '</div><div class="pn">' + esc(it.name) + '</div><div class="pp"><b>' + esc(it.price) + '</b>' + (it.sub ? '<i class="dot"></i><span>' + esc(it.sub) + '</span>' : '') + '</div></a>';
   }
   $$('[data-featured]').forEach(function (g) {
@@ -201,6 +202,7 @@
       $$('[data-hide-empty]').forEach(function (el) { var k = el.dataset.hideEmpty; if (!(it[k] && it[k].length)) el.remove(); });
       var tr = $('[data-terms]'); if (tr) tr.innerHTML = (it.terms || []).map(function (x) { return '<li>' + esc(x) + '</li>'; }).join('');
       $$('[data-open]', dt).forEach(function (b) { b.dataset.item = it.name; });
+      var av = $('[data-face]'); if (av && (it.face || it.mono)) av.innerHTML = it.face ? '<img src="' + esc(it.face) + '" alt="">' : esc(it.mono);
       var tag = $('[data-tag]'); if (tag) { if (it.tag) { tag.textContent = it.tag; tag.className = 'tag ' + (it.tagStyle || ''); } else tag.remove(); }
       // gallery + lightbox
       var G = it.gallery && it.gallery.length ? it.gallery : [it.img], gi = 0, main = $('.gal .main img'), th = $('.gal .th'), cn = $('.gal .cnt');

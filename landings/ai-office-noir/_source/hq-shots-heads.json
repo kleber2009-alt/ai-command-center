@@ -1,0 +1,5 @@
+{"square": [
+ {"name": "head-firuza", "agent": "firuza", "d": 1.25, "y": 1.85, "side": 1.3, "ty": 1.15},
+ {"name": "head-bogdan", "agent": "bogdan", "d": 1.25, "y": 1.85, "side": 1.3, "ty": 1.15},
+ {"name": "head-nurken", "agent": "nurken", "d": 1.25, "y": 1.85, "side": 1.3, "ty": 1.15}
+]}
