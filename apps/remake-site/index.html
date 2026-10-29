@@ -118,8 +118,9 @@ td.num { font-family: var(--f-mono); font-variant-numeric: tabular-nums; text-al
 th.num { text-align: right; }
 tr.chosen td { background: var(--accent-soft); }
 tr.chosen td:first-child { box-shadow: inset 3px 0 0 var(--accent); }
-.thumb { width: 36px; aspect-ratio: 9/16; border-radius: 5px; background: var(--panel-2); object-fit: cover; display: block; }
-.cap { max-width: 34ch; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; color: var(--muted); }
+.thumb { width: 36px; min-width: 36px; max-width: none; aspect-ratio: 9/16; border-radius: 5px; background: var(--panel-2); object-fit: cover; display: block; }
+td.mono { white-space: nowrap; }
+.cap { display: block; max-width: 34ch; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; color: var(--muted); }
 .why { font-size: 14px; background: var(--panel-2); border-radius: var(--r); padding: 12px 14px; }
 
 .cols { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 14px; }
@@ -229,7 +230,8 @@ tr.chosen td:first-child { box-shadow: inset 3px 0 0 var(--accent); }
 
   const $ = (s) => document.querySelector(s);
   const esc = (v) => String(v ?? "").replace(/[&<>"']/g, (c) => ({ "&": "&amp;", "<": "&lt;", ">": "&gt;", '"': "&quot;", "'": "&#39;" }[c]));
-  const blob = (id) => (typeof id === "string" && /^[0-9a-f]{32}$/i.test(id) ? "/_blob/" + id : "");
+  // media: an artifact asset id (claude.ai page) or "media/<file>" (the site remake.aicex.club)
+  const blob = (id) => (typeof id !== "string" ? "" : /^[0-9a-f]{32}$/i.test(id) ? "/_blob/" + id : /^media\/[\w.-]+$/.test(id) ? id : "");
   const safeUrl = (u) => (typeof u === "string" && /^https:\/\/(www\.)?instagram\.com\//.test(u) ? u : "");
   const num = (n) => (n == null || n === "" || isNaN(+n) ? "—" : +n >= 1e6 ? (+n / 1e6).toFixed(1).replace(".0", "") + "M" : +n >= 1e4 ? Math.round(+n / 1e3) + "K" : (+n).toLocaleString("ru-RU"));
   const pct = (x) => (x == null ? "—" : Math.round(x * 100) + "%");
@@ -254,7 +256,7 @@ tr.chosen td:first-child { box-shadow: inset 3px 0 0 var(--accent); }
 
   function renderLive() {
     const d = $("#liveDot"), t = $("#liveText");
-    if (dbOk === false) { d.className = "dot"; t.textContent = "база недоступна в этом просмотре — показываю схему"; return; }
+    if (dbOk === false) { d.className = "dot"; t.textContent = "прогоны сейчас недоступны — показываю схему"; return; }
     if (dbOk === null) { d.className = "dot"; t.textContent = "подключаюсь…"; return; }
     const run = current();
     const active = run && (run.status === "running" || run.status === "waiting");
@@ -432,7 +434,11 @@ tr.chosen td:first-child { box-shadow: inset 3px 0 0 var(--accent); }
       <p class="what">Без человека (Студия Кадрика, расписание) вопросов нет: стиль чередуется, аватар — по умолчанию. В чате Claude спрашивает в начале только стиль и, один раз, твоего аватара.</p></section>`;
   }
 
+  let deferred = false;
   function render() {
+    // a playing video would restart if its card were redrawn: wait for pause or end
+    if ([...document.querySelectorAll("video")].some((v) => !v.paused && !v.ended)) { deferred = true; return; }
+    deferred = false;
     const run = current();
     renderLive(); renderSelect(); renderHero(run); renderRail(run);
     $("#cards").innerHTML = run
@@ -464,8 +470,29 @@ tr.chosen td:first-child { box-shadow: inset 3px 0 0 var(--accent); }
 
   render();
 
+  document.addEventListener("pause", () => deferred && render(), true);
+  document.addEventListener("ended", () => deferred && render(), true);
+
+  // on the site: the run store behind /api/runs, polled; redraw only when something changed
+  async function poll() {
+    let last = "";
+    const pull = async () => {
+      try {
+        const r = await fetch("api/runs", { cache: "no-store" });
+        if (!r.ok) throw new Error(r.status);
+        const text = await r.text();
+        dbOk = true;
+        if (text !== last) { last = text; const d = JSON.parse(text); runs = d.runs || []; state = d.state || {}; render(); }
+        else renderLive();
+      } catch (e) { if (dbOk !== true) { dbOk = false; render(); } }
+    };
+    await pull();
+    setInterval(pull, 10000);
+  }
+
   (async () => {
-    const db = window.claude && window.claude.use ? await window.claude.use("db") : null;
+    if (!(window.claude && window.claude.use)) return poll();
+    const db = await window.claude.use("db");
     if (!db) { dbOk = false; render(); return; }
     dbOk = true; renderLive();
     db.doc("remake/state").onSnapshot((snap) => { state = (snap.exists && snap.data()) || {}; render(); }, () => {});

@@ -34,7 +34,8 @@
   {"id": "explainer-panel-reel", "name": "Панель-объяснялка", "aka": ["панель", "панельная", "panel"]},
   {"id": "business-short-form-reels", "name": "Бизнес-рилс", "aka": ["бизнес", "business"]}
  ],
- "site": {"url": "https://claude.ai/artifact/TzpSjDViTsbwJqjJ8bmRtf", "_about": "Пульт прогонов: report.py → ArtifactData set runs/<slug> + remake/state"},
+ "site": {"url": "https://claude.ai/artifact/TzpSjDViTsbwJqjJ8bmRtf", "public_url": "https://remake.aicex.club",
+          "_about": "Пульт прогонов: страница в claude.ai (report.py → ArtifactData set runs/<slug>) и сайт public_url (report.py --push, токен REMAKE_SITE_TOKEN). Код страницы — apps/remake-site/index.html"},
  "style_mode": "ask",
  "language": "ru",
  "script": {

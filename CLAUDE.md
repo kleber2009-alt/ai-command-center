@@ -21,6 +21,7 @@ env vars, and routes, see `CLAUDE.md` / `README.md` inside each `apps/<app>/`.
 │   ├── ig-content/         # Next.js SaaS — Instagram Serial Content Automation (Supabase + 5 agents)
 │   ├── funnel-analytics/   # Сквозная аналитика: декомпозиция × Meta Ads × оплаты UTM → static HTML dashboard
 │   ├── hq-office/          # Живой офис агентов v2 (hq2.aicex.club): 3D + история реальных задач
+│   ├── remake-site/        # «Ремейк залёта» (remake.aicex.club): прогоны скилла remake-top-reel по шагам
 │   └── voice-circle-bot/   # Python TG bot for video circles
 ├── landings/               # static landing pages (one folder per product)
 ├── supabase/               # SQL migrations shared across apps
@@ -59,6 +60,7 @@ env vars, and routes, see `CLAUDE.md` / `README.md` inside each `apps/<app>/`.
 | `apps/persona-train` | Forked voice-training stack (own domain) — **в Command Center НЕТ**, отдельная инициатива Ильи | `persona-train.46-62-215-11.nip.io`, `@ilia_pali0_bot`, `persona-train-web :3030` |
 | `apps/funnel-analytics` | Сквозная аналитика + доходы/расходы + контент (Python stdlib → один HTML), cron-обновление через `update-funnel-analytics.yml` | `dashboard.aicex.club` (свой сервер, cron из `deploy/setup-server.sh`), `/var/www/funnel-analytics` |
 | `apps/voice-circle-bot` | Python TG-bot prototype для видео-кружков — **в Command Center НЕТ**, не задеплоен | — |
+| `apps/remake-site` | «Ремейк залёта»: страница прогонов скилла `remake-top-reel` (отбор → сценарий «было/стало» → аватар → монтаж) + API `/api/runs` — **в Command Center НЕТ**. Та же страница — артефакт claude.ai | `remake.aicex.club` (сервер `*.aicex.club`), контейнеры `aicex-remake-site` и `aicex-remake-api` + `/opt/edge/sites/remake-site.caddy`, деплой `deploy-remake-site.yml`, секрет `REMAKE_SITE_TOKEN` |
 | `apps/hq-office` | Живой офис агентов v2: 3D open-space + история реальных задач с доказательствами (PR, артефакты Claude, сайты), досье и скиллы с hq.aicex.club — **в Command Center НЕТ** | `hq2.aicex.club` (сервер `*.aicex.club`), контейнеры `aicex-hq-office` (статика) и `aicex-hq-assistant` (голосовой ассистент, `/api/assistant/*`) + `/opt/edge/sites/hq-office.caddy`, деплой `deploy-hq-office.yml`, история из PR — `hq-office-history.yml` |
 
 ## When Claude is asked to change something
@@ -206,4 +208,4 @@ Per-app `README.md` / `DEPLOY.md` / `ROADMAP.md` remain authoritative for deep a
 - `remake-top-reel` — «Ремейк залёта»: топ-рилс Ильи (говорящая голова с кодовым словом) → расшифровка →
   усиленный и уникализированный сценарий → аватар HeyGen голосом Ильи → монтаж стилем «Студии Кадрика»
   (стекло / панель / бизнес-рилс). Скрипты stdlib-Python; на Mac ставится в `~/.claude/skills` и в каталог
-  мини-аппа Кадрика через `kadrik/install.sh`.
+  мини-аппа Кадрика через `kadrik/install.sh`. Прогоны видны на `remake.aicex.club` (`apps/remake-site`).
