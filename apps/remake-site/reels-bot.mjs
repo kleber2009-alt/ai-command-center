@@ -26,7 +26,7 @@
    Состояние — DATA_DIR/reels/state.json. */
 import fs from 'node:fs';
 import path from 'node:path';
-import { takenBy, parse, progressText, BRANCHES } from './tg-branch.mjs';
+import { takenBy, parse, progressText, wrongBind, BRANCHES } from './tg-branch.mjs';
 
 const env = (k, d = '') => (process.env[k] || d).trim();
 const TOKEN = env('REMAKE_TG_BOT_TOKEN');
@@ -383,8 +383,9 @@ export function createReelsBot({ studio, data }) {
     if (cmd === 'bind') {
       if (!isOwner && owners().size) return;
       const here = st.chat_id === msg.chat.id && st.topic_id === topic;
-      if (st.chat_id && !here && !forMe) return;  // a plain /bind is for a bot without a topic; moving this one — /bind@me
       const reply = (t) => tg('sendMessage', { chat_id: msg.chat.id, ...(topic ? { message_thread_id: topic } : {}), text: t, parse_mode: 'HTML' }).catch(() => {});
+      // a plain /bind is for a bot without a topic; moving this one — /bind@me
+      if (st.chat_id && !here && !forMe) return me && wrongBind({ data, self: 'reels', me, chat: msg.chat.id, topic, reply });
       if (msg.chat.is_forum && !topic) return reply(`Привязать можно только ветку, не «Общий». Создайте ветку и напишите в ней /bind${me ? '@' + esc(me) : ''}.`);
       const other = takenBy(data, 'reels', msg.chat.id, topic);
       if (other) return forMe && reply(`Эта ветка уже за «${esc(BRANCHES[other])}». Для рилсов создайте свою ветку и напишите в ней /bind${me ? '@' + esc(me) : ''}.`);
@@ -450,7 +451,7 @@ export function createReelsBot({ studio, data }) {
   let stopped = false;
   (async function poll() {
     try { await tg('deleteWebhook', {}); } catch {}
-    try { me = (await tg('getMe', {})).username || ''; } catch (e) { console.error('reels getMe:', e.message); }
+    try { me = (await tg('getMe', {})).username || ''; if (me && st.bot !== me) { st.bot = me; save(); } } catch (e) { console.error('reels getMe:', e.message); }
     while (!stopped) {
       try {
         const ups = await tg('getUpdates', { offset: st.offset, timeout: 50, allowed_updates: ['message', 'callback_query'] }, { timeout: 70e3 });

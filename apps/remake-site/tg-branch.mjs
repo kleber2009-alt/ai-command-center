@@ -23,6 +23,26 @@ export function takenBy(data, self, chat, topic) {
   return '';
 }
 
+// @usernames the branches saved in their state (each bot writes its own after getMe)
+export function botsOf(data) {
+  const out = {};
+  for (const key of Object.keys(BRANCHES)) {
+    try { const s = JSON.parse(fs.readFileSync(path.join(data, key, 'state.json'), 'utf8')); if (s.bot) out[key] = s.bot; } catch {}
+  }
+  return out;
+}
+
+// a plain /bind reached a bot that already has a topic (Telegram gives a plain command to the bot that spoke last):
+// say which bot it is and how to bind the right one — unless the other branch took this topic meanwhile
+export async function wrongBind({ data, self, me, chat, topic, reply }) {
+  await new Promise((r) => setTimeout(r, 3000));
+  if (takenBy(data, self, chat, topic)) return;
+  const bots = botsOf(data), lines = [];
+  for (const [key, bot] of Object.entries(bots)) if (key !== self) lines.push(`ветка «${BRANCHES[key]}» — /bind@${bot}`);
+  return reply(`Я @${me} — бот ветки «${BRANCHES[self]}», уже привязан к своей ветке, поэтому здесь не привязываюсь.\n` +
+    `${lines.length ? `Привязать эту ветку: ${lines.join(', ')}.` : 'Привязать эту ветку к другому боту — /bind@его_ник.'}\nПеренести меня сюда — /bind@${me}.`);
+}
+
 // what a message means for this bot: {cmd, mention, mine, topic}
 export function parse(msg, me) {
   const text = String(msg.text || '').trim();
