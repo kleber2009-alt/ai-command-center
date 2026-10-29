@@ -27,9 +27,9 @@ on:
   workflow_dispatch:
     inputs:
       mode:
-        description: 'check — only show the diff with the live bot; deploy — install and restart'
+        description: 'check — only show the diff with the live bot; fetch — print the live code to bring server edits into the repo; deploy — install and restart'
         type: choice
-        options: [check, deploy]
+        options: [check, fetch, deploy]
         default: check
 
 concurrency:
@@ -96,7 +96,7 @@ jobs:
             | $SSH "umask 077 && cat > /opt/studio-kadrik/env.add"
 
       - name: Activate
-        run: $SSH bash -s -- "$REL" "$( [ "$MODE" = deploy ] || echo check )" < apps/studio-kadrik/deploy/server.sh
+        run: $SSH bash -s -- "$REL" "$( [ "$MODE" = deploy ] && echo deploy || { [ "$MODE" = fetch ] && echo fetch || echo check; } )" < apps/studio-kadrik/deploy/server.sh
 
       - name: Smoke test
         if: inputs.mode == 'deploy'
