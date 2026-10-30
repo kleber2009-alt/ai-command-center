@@ -27,6 +27,9 @@
   на сервере `*.aicex.club`, Claude Code со скиллами команды, общий слот `~/.heavy-slot.lock`) → проверка
   владельцем → история (`/api/assistant/desk/history.js`, `window.OFFICE_TASKS_DESK`). В `index.html` —
   раздел «РАБОЧИЙ СТОЛ»: вкладка «В работе», окно `#desk-<id>`, 3D (`Agent.live`, оркестратор относит задачу).
+  Память исполнителя ограничена (`MemoryMax=4608M`, `OOMPolicy=continue` в `runner/hq-runner.service`): при нехватке
+  ядро убивает только тяжёлый процесс, исполнитель жив и сдаёт ошибку с причиной; проверка сервера — workflow
+  `hq-runner-diagnose.yml` (только чтение).
   Страницы агентов — только в песочнице (CSP `sandbox` + `iframe sandbox` без `allow-same-origin`).
 - `media/` — сжатые копии наших работ из приватной библиотеки `aicex-library` для задач
   (`img/vid/page('media/…')` в `tasks.js`); сторонние демо-ролики наборов скиллов не выкладывать.
