@@ -5,19 +5,19 @@ import {interpolate, useCurrentFrame} from 'remotion';
 import {T} from '../tokens';
 import {clamp, ease} from './core';
 
-const abs = (s: React.CSSProperties): React.CSSProperties => ({position: 'absolute', ...s});
-const pop = (f: number, at: number, d = 6) => {
+export const abs = (s: React.CSSProperties): React.CSSProperties => ({position: 'absolute', ...s});
+export const pop = (f: number, at: number, d = 6) => {
   const p = ease(f, at, d);
   return {opacity: p, transform: `scale(${0.6 + 0.4 * p})`, filter: `blur(${(1 - p) * 6}px)`};
 };
-const rise = (f: number, at: number, d = 6) => {
+export const rise = (f: number, at: number, d = 6) => {
   const p = ease(f, at, d);
   return {opacity: p, transform: `translateY(${(1 - p) * 18}px)`, filter: `blur(${(1 - p) * 10}px)`};
 };
-const typed = (f: number, at: number, text: string, cps = 26) => text.slice(0, Math.max(0, Math.floor(((f - at) / T.fps) * cps)));
+export const typed = (f: number, at: number, text: string, cps = 26) => text.slice(0, Math.max(0, Math.floor(((f - at) / T.fps) * cps)));
 
 // Orange block cursor of the typewriter.
-const Cursor: React.FC<{h: number}> = ({h}) => {
+export const Cursor: React.FC<{h: number}> = ({h}) => {
   const f = useCurrentFrame();
   return <span style={{display: 'inline-block', width: h * 0.5, height: h, marginLeft: 4, verticalAlign: 'bottom', background: T.orange, opacity: Math.floor(f / 8) % 2 ? 0.25 : 1}} />;
 };
