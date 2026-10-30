@@ -1,0 +1,77 @@
+name: hq-runner-diagnose
+
+# Read-only check of the office desk runner (hq-runner, apps/hq-office/runner) on the aicex box:
+# why tasks end with «Исполнитель дважды не смог закончить задачу» — restarts of the service,
+# OOM kills, memory, the runner log and the tail of the latest jobs. Changes nothing on the server.
+# Run by hand: Actions → hq-runner-diagnose → Run workflow.
+#
+# Secret: HETZNER_SSH_KEY. Variables: HETZNER_HOST, HETZNER_USER, HETZNER_SSH_PORT (as deploy-hq-office.yml).
+
+on:
+  workflow_dispatch:
+    inputs:
+      since:
+        description: 'С какой даты смотреть журнал (YYYY-MM-DD)'
+        required: false
+        default: ''
+
+permissions:
+  contents: read
+
+jobs:
+  diagnose:
+    runs-on: ubuntu-latest
+    timeout-minutes: 5
+    env:
+      HOST: ${{ vars.HETZNER_HOST }}
+      SSH_USER: ${{ vars.HETZNER_USER || 'root' }}
+      SSH_PORT: ${{ vars.HETZNER_SSH_PORT || '22' }}
+      SINCE: ${{ inputs.since }}
+    steps:
+      - name: Install SSH key
+        env:
+          KEY: ${{ secrets.HETZNER_SSH_KEY }}
+        run: |
+          test -n "$HOST" || { echo "::error::vars.HETZNER_HOST is not set"; exit 1; }
+          mkdir -p ~/.ssh
+          printf '%s\n' "$KEY" > ~/.ssh/id_deploy
+          chmod 600 ~/.ssh/id_deploy
+          ssh-keyscan -p "$SSH_PORT" -H "$HOST" >> ~/.ssh/known_hosts 2>/dev/null
+
+      - name: Diagnose hq-runner
+        run: |
+          ssh -i ~/.ssh/id_deploy -p "$SSH_PORT" "$SSH_USER@$HOST" bash -s -- "${SINCE:-$(date -u -d '3 days ago' +%F)}" <<'EOF' | sed -E 's/(sk-ant-[a-z]+[0-9]*-)[A-Za-z0-9_-]+/\1***/g'
+          SINCE="$1"
+          RUSER=iliapaliy
+          RH=$(getent passwd "$RUSER" | cut -d: -f6); RD="$RH/hq-runner"
+          sec() { echo; echo "===== $* ====="; }
+
+          sec "service"
+          systemctl status hq-runner --no-pager -l 2>&1 | head -15
+          systemctl show hq-runner -p NRestarts -p Result -p OOMPolicy -p MemoryMax -p MemoryCurrent -p ActiveEnterTimestamp 2>&1
+
+          sec "restarts / stops / OOM in the service journal since $SINCE"
+          journalctl -u hq-runner --since "$SINCE" --no-pager 2>&1 | grep -iE "oom|killed|Started|Stopped|Failed|Main process exited|Consumed" | tail -60
+
+          sec "kernel OOM killer since $SINCE"
+          journalctl -k --since "$SINCE" --no-pager 2>&1 | grep -iE "out of memory|oom-kill|Killed process" | tail -30
+
+          sec "memory"
+          free -h
+          nproc
+
+          sec "runner log: starts, jobs, results"
+          grep -E "hq runner|проверка Claude|вход Claude|job |job failed|review in|need:|error code|cancelled|claim:|hello:" "$RD/runner.log" 2>/dev/null | tail -80
+
+          sec "runner log: last lines"
+          tail -n 40 "$RD/runner.log" 2>/dev/null
+
+          sec "latest jobs"
+          ls -1dt "$RD"/jobs/*/ 2>/dev/null | head -5 | while read -r d; do
+            echo "--- $d ($(stat -c %y "$d" | cut -d. -f1)) out: $(find "$d/out" -type f 2>/dev/null | wc -l) files"
+            tail -c 3000 "$d/claude.log" 2>/dev/null | grep -vE '"type":"(stream_event|user)"' | tail -n 8 | cut -c1-400
+          done
+
+          sec "heavy slot"
+          cat "$RH/.heavy-slot.owner" 2>/dev/null; echo
+          EOF
