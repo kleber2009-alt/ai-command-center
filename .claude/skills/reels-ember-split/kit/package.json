@@ -1,0 +1,19 @@
+{
+  "name": "reels-ember-split-kit",
+  "private": true,
+  "scripts": {
+    "studio": "remotion studio",
+    "still": "remotion still Demo out/still.png --frame=60",
+    "render": "remotion render Demo out/demo.mp4 --codec=h264 --crf=18"
+  },
+  "dependencies": {
+    "@remotion/cli": "4.0.539",
+    "react": "18.3.1",
+    "react-dom": "18.3.1",
+    "remotion": "4.0.539"
+  },
+  "devDependencies": {
+    "@types/react": "18.3.12",
+    "typescript": "5.6.3"
+  }
+}
