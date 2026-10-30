@@ -78,17 +78,18 @@ class Reel:
                 + "</div>" + self._foot())
         self.items.append(dict(kind="cover", role="ОБЛОЖКА", html=html, say=say, title=f"{top} {accent}", shots=[]))
 
-    def insert(self, role, say, title, shots, url=None, note=""):
-        """shots: [(image, (x0, y0, x1, y1) crop box in image pixels or None)] — shown one after another in the window."""
+    def insert(self, role, say, title, shots, url=None, note="", length=None):
+        """shots: [(image, (x0, y0, x1, y1) crop box in image pixels or None)] — shown one after another in the window.
+        length: seconds on screen (default — from the words of `say`)."""
         html = (self._bg()
                 + f"<div class='abs' style='left:70px;right:70px;top:170px'><div class='tag'>{lux.md(self.tag)}</div>"
                 f"<div class='h1' style='margin-top:22px;font-size:88px;line-height:1.02'>{lux.md(title)}</div></div>"
                 f"<div class='win' style='left:{WX}px;top:{WY}px;width:{WW}px;height:{BAR + CH}px;background:#0e1013'>"
                 f"<div class='bar'><i></i><i></i><i></i><span>{url or self.url}</span></div></div>"
                 + self._foot())
-        self.items.append(dict(kind="insert", role=role, html=html, say=say, title=title, shots=shots, note=note))
+        self.items.append(dict(kind="insert", role=role, html=html, say=say, title=title, shots=shots, note=note, length=length))
 
-    def cta(self, word, when, line, say="", shot=None):
+    def cta(self, word, when, line, say="", shot=None, length=None):
         mock = (f"<div class='shot' style='left:150px;top:300px;width:780px;transform:rotate(-2deg);border-radius:18px'><img src='{lux.f(Path(shot).resolve())}'></div>"
                 if shot else "")
         html = (self._bg() + mock
@@ -98,7 +99,7 @@ class Reel:
                 f"padding:6px 48px 18px;margin-top:30px;transform:rotate(-1.5deg);box-shadow:0 24px 60px rgba(0,0,0,.6)'>{lux.md(word)}</div>"
                 f"<div class='mono' style='margin-top:46px;font-size:30px;letter-spacing:3px;color:#E0B46A'>{lux.md(when)}</div>"
                 f"<div class='p' style='margin-top:22px;font-size:36px'>{lux.md(line)}</div></div>" + self._foot())
-        self.items.append(dict(kind="cta", role="CTA", html=html, say=say, title=word, shots=[]))
+        self.items.append(dict(kind="cta", role="CTA", html=html, say=say, title=word, shots=[], length=length))
 
     # ---------- render ----------
     def _render_pngs(self):
@@ -153,7 +154,7 @@ class Reel:
         ins.mkdir(parents=True, exist_ok=True)
         clips, t, timeline = {"clean": [], "sub": []}, 0.0, []
         for i, it in enumerate(self.items, 1):
-            d = dur(it["say"]) if it["say"] else 2.0
+            d = it.get("length") or (dur(it["say"]) if it["say"] else 2.0)
             slug = re.sub(r"[^0-9A-Za-zА-Яа-яЁё]+", "-", it["role"]).strip("-").lower()
             content = None
             if it["shots"]:
