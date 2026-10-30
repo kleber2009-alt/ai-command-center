@@ -373,7 +373,7 @@ window.CRM_START = function (D) {
   $('#now').textContent = D.now;
   if (D.live) {
     Object.assign(ROUTES, {
-      pulse: ['Пульс', 'Директ за сутки глазами агента'],
+      pulse: ['Пульс', 'Директ глазами агента'],
       inbox: ['Входящие', 'Что агент нашёл в директе'],
       dialogs: ['Диалоги', 'Весь директ Instagram'],
       pipeline: ['Все диалоги', 'Таблица с приоритетами и флагами'],
