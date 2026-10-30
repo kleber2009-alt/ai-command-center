@@ -20,3 +20,6 @@
 - Таймер считает до первого эфира: 4 ноября 2026, 18:00 МСК.
 - Пиксели и Метрику этой странице не переносили: на отдельном хостинге их нужно добавить в `<head>`.
 - `index.html` — витрина для выбора версии.
+- Прод: `practicum1.aicex.club` … `practicum5.aicex.club` (версии v1…v5). Выкладка — `.github/workflows/deploy-practicum.yml`
+  при пуше в `main`: пути `../` меняются на `/`, релиз в `/opt/practicum`, контейнер `aicex-practicum`,
+  сайт `/opt/edge/sites/practicum.caddy` (`deploy/server.sh`). После правок текстов — `python3 build.py` и коммит `v*/`.

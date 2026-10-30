@@ -9,6 +9,7 @@ on:
     branches: [main]
     paths:
       - 'landings/**'
+      - '!landings/practicum-office/**'  # own deploy: deploy-practicum.yml
       - '.github/workflows/deploy-landings.yml'
   workflow_dispatch:
     inputs:

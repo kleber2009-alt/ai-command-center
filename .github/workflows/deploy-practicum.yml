@@ -1,0 +1,78 @@
+name: deploy-practicum
+
+# Five versions of the practicum page (landings/practicum-office) → https://practicum1.aicex.club …
+# https://practicum5.aicex.club on the aicex box (vars.HETZNER_HOST, where *.aicex.club points).
+# Each run uploads a release to /opt/practicum/releases/<id> with the pages pointing at /assets and
+# /shared.*, switches /opt/practicum/current and keeps the static container + edge Caddy site in place
+# (landings/practicum-office/deploy/server.sh).
+#
+# Secret: HETZNER_SSH_KEY. Variables: HETZNER_HOST, HETZNER_USER, HETZNER_SSH_PORT,
+# PRACTICUM_BASE_DOMAIN (default aicex.club).
+
+on:
+  push:
+    branches: [main]
+    paths:
+      - 'landings/practicum-office/**'
+      - '.github/workflows/deploy-practicum.yml'
+  workflow_dispatch:
+
+concurrency:
+  group: deploy-practicum
+  cancel-in-progress: false
+
+jobs:
+  deploy:
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+    env:
+      HOST: ${{ vars.HETZNER_HOST }}
+      SSH_USER: ${{ vars.HETZNER_USER || 'root' }}
+      SSH_PORT: ${{ vars.HETZNER_SSH_PORT || '22' }}
+      BASE: ${{ vars.PRACTICUM_BASE_DOMAIN || 'aicex.club' }}
+    steps:
+      - uses: actions/checkout@v5
+
+      - name: Build release
+        run: |
+          D=landings/practicum-office
+          python3 $D/build.py
+          git diff --exit-code -- $D/v1 $D/v2 $D/v3 $D/v4 $D/v5 || { echo "::error::v*/index.html are out of date — run python3 $D/build.py"; exit 1; }
+          mkdir -p dist
+          cp -r $D/assets $D/shared.css $D/shared.js dist/
+          for v in 1 2 3 4 5; do
+            mkdir -p dist/v$v
+            sed -e 's#\.\./assets/#/assets/#g' -e 's#\.\./shared\.#/shared.#g' $D/v$v/index.html > dist/v$v/index.html
+          done
+          grep -L '\.\./' dist/v*/index.html | wc -l | grep -qx 5 || { echo "::error::relative paths left"; exit 1; }
+
+      - name: Install SSH key
+        env:
+          KEY: ${{ secrets.HETZNER_SSH_KEY }}
+        run: |
+          test -n "$HOST" || { echo "::error::vars.HETZNER_HOST is not set"; exit 1; }
+          mkdir -p ~/.ssh
+          printf '%s\n' "$KEY" > ~/.ssh/id_deploy
+          chmod 600 ~/.ssh/id_deploy
+          ssh-keyscan -p "$SSH_PORT" -H "$HOST" >> ~/.ssh/known_hosts 2>/dev/null
+          echo "SSH=ssh -i $HOME/.ssh/id_deploy -p $SSH_PORT $SSH_USER@$HOST" >> "$GITHUB_ENV"
+
+      - name: Upload release
+        run: |
+          REL="$(date -u +%Y%m%d%H%M%S)-${GITHUB_SHA::7}"
+          echo "REL=$REL" >> "$GITHUB_ENV"
+          tar -C dist -czf - . | $SSH "mkdir -p /opt/practicum/releases/$REL && tar -xzf - -C /opt/practicum/releases/$REL"
+
+      - name: Activate
+        run: $SSH bash -s -- "$BASE" "$REL" < landings/practicum-office/deploy/server.sh
+
+      - name: Smoke test
+        run: |
+          for v in 1 2 3 4 5; do
+            for path in / /assets/ilya-hero.webp /shared.js; do
+              url="https://practicum$v.$BASE$path"
+              code=$(curl -sS -o /dev/null -w '%{http_code}' --retry 8 --retry-delay 5 --retry-all-errors "$url" || echo 000)
+              echo "$code $url"
+              [ "$code" = 200 ] || exit 1
+            done
+          done
