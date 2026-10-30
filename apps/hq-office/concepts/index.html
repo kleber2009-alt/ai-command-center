@@ -1,0 +1,1342 @@
+<!doctype html>
+<html lang="ru">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover">
+<title>Офис AICEX · концепты</title>
+<meta name="description" content="Шесть вариантов дизайна живого офиса агентов AICEX: комнаты отделов, агенты передают друг другу работу, рабочий стол и реальные задачи.">
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&family=JetBrains+Mono:wght@500;700&family=Playfair+Display:wght@600;700&family=Unbounded:wght@500;700&display=swap">
+<style>
+  :root{
+    --card:rgba(18,14,12,.78); --fg:#fff; --sub:#c9b9a6; --accent:#ffb45c; --border:rgba(255,200,140,.25);
+    --font:'Inter',system-ui,sans-serif; --title:'Inter',system-ui,sans-serif; --page:#0a0f1f;
+    --gap:16px;
+  }
+  *{box-sizing:border-box}
+  html,body{margin:0;height:100%;overflow:hidden;background:var(--page);color:var(--fg);font-family:var(--font);-webkit-font-smoothing:antialiased}
+  #stage,#labels{position:fixed;inset:0}
+  #labels{pointer-events:none}
+  .glass{background:var(--card);border:1px solid var(--border);border-radius:14px;backdrop-filter:blur(14px);-webkit-backdrop-filter:blur(14px);box-shadow:0 10px 30px rgba(0,0,0,.25)}
+  svg.i{width:16px;height:16px;fill:none;stroke:currentColor;stroke-width:2;stroke-linecap:round;stroke-linejoin:round;flex:none}
+
+  .brand{position:fixed;left:var(--gap);top:var(--gap);display:flex;align-items:center;gap:18px;padding:10px 16px;z-index:5}
+  .brand b{font-family:var(--title);font-size:17px;letter-spacing:.06em;display:block}
+  .brand small{color:var(--sub);font-size:11.5px}
+  .stats{display:flex;gap:14px;font-size:12.5px;color:var(--sub);flex-wrap:wrap}
+  .stats span{display:flex;align-items:center;gap:6px;white-space:nowrap}
+  .stats strong{color:var(--fg);font-variant-numeric:tabular-nums}
+  .dot{width:8px;height:8px;border-radius:50%;display:inline-block}
+
+  .tools{position:fixed;right:var(--gap);top:var(--gap);display:flex;gap:8px;z-index:5}
+  .tools button{width:38px;height:38px;display:grid;place-items:center;color:var(--fg);cursor:pointer}
+  .tools button[aria-pressed=true]{color:var(--accent);border-color:var(--accent)}
+
+  .lab{transform:translateX(50%)}
+  .room{pointer-events:auto;display:flex;align-items:center;gap:8px;padding:6px 8px 6px 6px;border-radius:10px;
+        background:var(--card);border:1px solid var(--border);backdrop-filter:blur(8px);-webkit-backdrop-filter:blur(8px);
+        color:var(--fg);white-space:nowrap;box-shadow:0 6px 18px rgba(0,0,0,.25)}
+  .room .ic{width:26px;height:26px;border-radius:8px;display:grid;place-items:center;border:1px solid var(--border);color:var(--accent)}
+  .room small{font-family:'Inter',sans-serif}
+  .room b{font-family:var(--title);font-size:12.5px;display:block;line-height:1.2}
+  .room small{font-size:10.5px;color:var(--sub);display:block;line-height:1.25}
+  .room .n{margin-left:4px;min-width:22px;height:22px;padding:0 6px;border-radius:6px;display:grid;place-items:center;font-size:11px;font-weight:700;
+           background:rgba(127,127,127,.18);font-variant-numeric:tabular-nums}
+  body.nolabels .room{display:none}
+  .name{font-size:10.5px;padding:2px 6px;border-radius:6px;background:var(--card);border:1px solid var(--border);color:var(--fg);white-space:nowrap;transform:translateY(-4px)}
+  body:not(.names) .name{display:none}
+  .bubble{font-size:11px;line-height:1.25;max-width:180px;padding:5px 8px;border-radius:9px;background:#fff;color:#111;white-space:normal;text-align:center;
+          box-shadow:0 4px 14px rgba(0,0,0,.3);transform:translateY(-10px);animation:pop .25s ease-out}
+  @keyframes pop{from{opacity:0;transform:translateY(-2px) scale(.9)}to{opacity:1;transform:translateY(-10px) scale(1)}}
+
+  .feed{position:fixed;left:var(--gap);bottom:calc(var(--gap) + 74px);width:300px;padding:12px 14px;z-index:4}
+  .feed h3,.tasks h3{margin:0 0 8px;font-size:11px;letter-spacing:.08em;text-transform:uppercase;color:var(--sub);font-weight:600}
+  .feed ol{list-style:none;margin:0;padding:0;display:grid;gap:7px;font-size:12px;line-height:1.35}
+  .feed li:nth-child(n+5){display:none}
+  .feed li{display:flex;gap:8px;animation:pop2 .3s ease-out}
+  .feed time{color:var(--sub);font-variant-numeric:tabular-nums;flex:none;font-size:11px;padding-top:1px}
+  @keyframes pop2{from{opacity:0;transform:translateX(-6px)}}
+
+  .tasks{position:fixed;right:var(--gap);top:calc(var(--gap) + 52px);width:330px;max-height:calc(100vh - 170px);overflow:auto;padding:12px 14px;z-index:4}
+  .tasks p{margin:0 0 10px;font-size:11.5px;color:var(--sub)}
+  .tasks ol{list-style:none;margin:0;padding:0;display:grid;gap:6px}
+  .tasks a{display:block;padding:8px 9px;border-radius:9px;color:var(--fg);text-decoration:none;font-size:12px;line-height:1.35;border:1px solid transparent}
+  .tasks a:hover,.tasks a:focus-visible{border-color:var(--border);background:rgba(127,127,127,.1);outline:none}
+  .tasks a small{display:block;color:var(--sub);font-size:10.5px;margin-top:3px}
+  body.notasks .tasks{display:none}
+
+  .variants{position:fixed;left:50%;bottom:var(--gap);transform:translateX(-50%);display:flex;flex-direction:column;gap:6px;align-items:center;z-index:5;max-width:calc(100vw - 2*var(--gap))}
+  .chips{display:flex;gap:6px;padding:6px;overflow-x:auto;max-width:100%;scrollbar-width:none}
+  .chips button{flex:none;padding:8px 12px;border-radius:9px;border:1px solid transparent;background:transparent;color:var(--sub);font:600 12.5px var(--font);cursor:pointer;white-space:nowrap}
+  .chips button[aria-current=true]{color:var(--fg);border-color:var(--accent);background:rgba(127,127,127,.14)}
+  .chips button:focus-visible{outline:2px solid var(--accent)}
+  .vdesc{font-size:12px;color:var(--sub);padding:6px 12px;text-align:center}
+
+  .tip{position:fixed;z-index:10;width:290px;padding:14px;font-size:12.5px;line-height:1.4}
+  .tip h4{margin:0 0 2px;font-family:var(--title);font-size:15px}
+  .tip .role{color:var(--sub);margin-bottom:10px}
+  .tip dl{margin:0;display:grid;gap:8px}
+  .tip dt{font-size:10.5px;letter-spacing:.06em;text-transform:uppercase;color:var(--sub)}
+  .tip dd{margin:2px 0 0}
+  .tip a{color:var(--accent)}
+
+  @media (max-width:820px){
+    :root{--gap:10px}
+    .brand{right:calc(var(--gap) + 136px);gap:10px;flex-wrap:wrap;padding:8px 12px}
+    .stats{gap:10px;font-size:11.5px}
+    .feed{width:auto;right:var(--gap);bottom:calc(var(--gap) + 86px);padding:10px 12px}
+    .feed li:nth-child(n+3){display:none}
+    .tasks{left:var(--gap);right:var(--gap);width:auto;top:auto;bottom:calc(var(--gap) + 86px);max-height:50vh}
+    body:not(.notasks) .feed{display:none}
+    .vdesc{display:none}
+    .room small,.room b{display:none}
+    .bubble{font-size:10px;max-width:120px}
+    .room{padding:4px 6px 4px 4px;gap:6px}
+    .room .ic{width:22px;height:22px}
+    .variants{left:var(--gap);right:var(--gap);transform:none}
+  }
+</style>
+<script type="importmap">
+{"imports":{
+  "three":"https://cdn.jsdelivr.net/npm/three@0.160.0/build/three.module.js",
+  "three/addons/":"https://cdn.jsdelivr.net/npm/three@0.160.0/examples/jsm/"
+}}
+</script>
+</head>
+<body class="notasks">
+<div id="stage"></div>
+<div id="labels"></div>
+
+<header class="brand glass">
+  <div><b>AICEX</b><small>Виртуальный офис агентов</small></div>
+  <div class="stats" aria-live="polite">
+    <span><i class="dot" style="background:#3ddc97"></i><strong id="s-work">0</strong> в работе</span>
+    <span><i class="dot" style="background:#ffc247"></i><strong id="s-think">0</strong> думают</span>
+    <span><i class="dot" style="background:#8a8f99"></i><strong id="s-pause">0</strong> на паузе</span>
+    <span><i class="dot" style="background:var(--accent)"></i><strong id="s-inbox">0</strong> ждут решения</span>
+  </div>
+</header>
+
+<div class="tools">
+  <button class="glass" id="b-reset" title="Вернуть обзор" aria-label="Вернуть обзор"><svg class="i" viewBox="0 0 24 24"><path d="M3 12a9 9 0 1 0 9-9 9.75 9.75 0 0 0-6.74 2.74L3 8"/><path d="M3 3v5h5"/></svg></button>
+  <button class="glass" id="b-names" title="Имена агентов" aria-label="Имена агентов" aria-pressed="false"><svg class="i" viewBox="0 0 24 24"><path d="M12.6 2.6A2 2 0 0 0 11.2 2H4a2 2 0 0 0-2 2v7.2a2 2 0 0 0 .6 1.4l8.7 8.7a2.4 2.4 0 0 0 3.4 0l6.6-6.6a2.4 2.4 0 0 0 0-3.4z"/><circle cx="7.5" cy="7.5" r=".5"/></svg></button>
+  <button class="glass" id="b-tasks" title="Реальные задачи" aria-label="Реальные задачи" aria-pressed="false"><svg class="i" viewBox="0 0 24 24"><path d="M8 6h13M8 12h13M8 18h13M3 6h.01M3 12h.01M3 18h.01"/></svg></button>
+</div>
+
+<aside class="tasks glass" id="tasks">
+  <h3>Реальные задачи</h3>
+  <p>Из истории офиса: у каждой дата и ссылка. Наведите — подсветятся агенты, которые её делали.</p>
+  <ol id="task-list"></ol>
+</aside>
+
+<aside class="feed glass">
+  <h3>Что происходит</h3>
+  <ol id="feed"></ol>
+</aside>
+
+<nav class="variants" aria-label="Варианты дизайна">
+  <div class="chips glass" id="chips"></div>
+  <div class="vdesc glass" id="vdesc"></div>
+</nav>
+
+<div class="tip glass" id="tip" hidden></div>
+
+<script src="../tasks.js"></script>
+<script src="../tasks.auto.js"></script>
+
+<script type="module">
+import * as THREE from 'three';
+import { OrbitControls } from 'three/addons/controls/OrbitControls.js';
+import { RoundedBoxGeometry } from 'three/addons/geometries/RoundedBoxGeometry.js';
+import { CSS2DRenderer, CSS2DObject } from 'three/addons/renderers/CSS2DRenderer.js';
+import { EffectComposer } from 'three/addons/postprocessing/EffectComposer.js';
+import { RenderPass } from 'three/addons/postprocessing/RenderPass.js';
+import { UnrealBloomPass } from 'three/addons/postprocessing/UnrealBloomPass.js';
+import { OutputPass } from 'three/addons/postprocessing/OutputPass.js';
+
+/* ───────────── Варианты дизайна ─────────────
+   Одна планировка и одна симуляция, разные материалы, свет, окружение и карточки. */
+const THEMES = [
+  { id:'night', name:'Ночной Сити', desc:'Как на референсе: тёплое дерево, янтарный свет, светящиеся кромки и ночной город за окнами',
+    sky:['#060a17','#1d1830'], env:'city', win:['#ffcf7a','#ffe2a8'], bld:'#0b0e18', fog:['#0d0f1a', .007],
+    base:'#21170f', edge:'#ffb45c', floor:'#3b2a1e', roomFloor:'#5c3e27', hubFloor:'#47311f', rug:'#ffb45c',
+    glass:['#ffd9a0', .1], frame:'#2b1e15', trim:['#ffb45c', 2.2], outer:'#1d140d', strip:'#ffcf8a',
+    desk:'#7a5234', chair:'#1d1d22', sofa:'#d8cdb8', leaf:'#3f7a36', pot:'#2a2420', screenBg:'#0b1220',
+    hemi:['#8090c0','#2a1c12', .55], sun:['#ffd9b0', .9], lamp:['#ffb066', 16], lamps:true,
+    bloom:[.75,.5,.72], exposure:1, sign:'#fff1d6',
+    ui:{ card:'rgba(18,14,12,.78)', fg:'#ffffff', sub:'#c9b9a6', accent:'#ffb45c', border:'rgba(255,200,140,.25)', page:'#0a0f1f' } },
+  { id:'neon', name:'Неон', desc:'Киберпанк: тёмный пол, стеклянные стены с неоновыми кромками, розово-бирюзовый город в дымке',
+    sky:['#04020c','#220838'], env:'city', win:['#ff3bd4','#3be8ff','#7a5cff'], bld:'#07060f', fog:['#14062c', .011],
+    base:'#0b0a14', edge:'#3be8ff', floor:'#15122a', roomFloor:'#1f1a3d', hubFloor:'#191535', rug:'#ff3bd4',
+    glass:['#3be8ff', .09], frame:'#1a1530', trim:['#ff3bd4', 2], outer:'#0c0a18', strip:'#3be8ff',
+    desk:'#1d1a33', chair:'#0b0a12', sofa:'#2d2257', leaf:'#22d39b', pot:'#151225', screenBg:'#080414',
+    hemi:['#8b6bff','#1a0c30', .95], sun:['#c9b7ff', .8], lamp:['#c04bff', 20], lamps:false,
+    bloom:[1,.55,.55], exposure:1.05, sign:'#9ff6ff',
+    ui:{ card:'rgba(10,6,24,.8)', fg:'#eafcff', sub:'#9aa6d8', accent:'#3be8ff', border:'rgba(59,232,255,.45)', page:'#05030f', font:"'JetBrains Mono',monospace", title:"'Inter',sans-serif" } },
+  { id:'loft', name:'Дневной лофт', desc:'Светлый день: бетон, дуб, кирпич и много зелени, мягкие тени и белые карточки',
+    sky:['#9fc6e8','#eef4f8'], env:'city', win:['#a9c9e6','#d6e6f2'], bld:'#c3c9d2', fog:['#e4ecf2', .006],
+    base:'#b9b2a6', edge:'#ffffff', floor:'#d6d0c6', roomFloor:'#c99c6c', hubFloor:'#e3ded4', rug:'#4f8f3a',
+    glass:['#d5ecfa', .22], frame:'#2b2b2b', trim:['#2b2b2b', 0], outer:'#a35a40', strip:null,
+    desk:'#ece5d9', chair:'#2f3640', sofa:'#7d8c6a', leaf:'#4f8f3a', pot:'#efece6', screenBg:'#f4f6f9',
+    hemi:['#ffffff','#b9a98f', 1], sun:['#fff4e0', 2.3], lamp:null, lamps:false,
+    bloom:null, exposure:1, sign:'#2b2b2b', light:true,
+    ui:{ card:'rgba(255,255,255,.9)', fg:'#1c1c1c', sub:'#676767', accent:'#2f7d32', border:'rgba(0,0,0,.09)', page:'#dfe9f1' } },
+  { id:'gold', name:'Золото AICEX', desc:'Пентхаус бренда: чёрный камень, золотые рамы и кромки, приглушённый тёплый свет',
+    sky:['#040404','#1a140a'], env:'city', win:['#d4af37','#8a6d1f'], bld:'#080706', fog:['#0a0806', .008],
+    base:'#0d0c0b', edge:'#d4af37', floor:'#221e1a', roomFloor:'#3a3027', hubFloor:'#2b241c', rug:'#d4af37',
+    glass:['#d4af37', .07], frame:'#c9a43a', trim:['#d4af37', 1.6], outer:'#0f0d0b', strip:'#e8c766', metal:true,
+    desk:'#2a221a', chair:'#3a3226', sofa:'#3b3024', leaf:'#2f5a35', pot:'#c9a43a', screenBg:'#0a0907',
+    hemi:['#c9b88f','#1a140c', .8], sun:['#ffe7b0', 1.2], lamp:['#ffcf70', 20], lamps:true,
+    bloom:[.9,.5,.68], exposure:1, sign:'#f3d77a',
+    ui:{ card:'rgba(10,9,8,.86)', fg:'#f6eedc', sub:'#b8a77f', accent:'#d4af37', border:'rgba(212,175,55,.45)', page:'#050505', title:"'Playfair Display',serif" } },
+  { id:'orbit', name:'Орбита', desc:'Офис на космической станции: белые панели, голубая подсветка, звёзды и планета внизу',
+    sky:['#01030c','#08183a'], env:'space', bld:'#000', fog:null,
+    base:'#d9e0ea', edge:'#5ac8ff', floor:'#c7d0de', roomFloor:'#e8edf4', hubFloor:'#d3dbe7', rug:'#5ac8ff',
+    glass:['#9fd8ff', .16], frame:'#f2f5f9', trim:['#5ac8ff', 2.2], outer:'#e1e7ef', strip:'#5ac8ff',
+    desk:'#f4f6f9', chair:'#8892a6', sofa:'#b8c4d8', leaf:'#4fc38a', pot:'#ffffff', screenBg:'#061428',
+    hemi:['#cfe3ff','#1a2a4a', .85], sun:['#ffffff', 1.5], lamp:['#7fd0ff', 9], lamps:false,
+    bloom:[.65,.4,.82], exposure:1, sign:'#bfeaff',
+    ui:{ card:'rgba(8,18,40,.74)', fg:'#eaf6ff', sub:'#9cc0e0', accent:'#5ac8ff', border:'rgba(90,200,255,.4)', page:'#020617' } },
+  { id:'blueprint', name:'Чертёж', desc:'Офис как схема архитектора: синий лист, белые контуры, агенты — светлые фигуры с цветом отдела',
+    sky:['#0d3b66','#0d3b66'], env:'grid', bld:'#000', fog:null,
+    base:'#134a7c', edge:'#ffffff', floor:'#15507f', roomFloor:'#1a5a8d', hubFloor:'#17548a', rug:'#ffffff',
+    glass:['#ffffff', .05], frame:'#dff0ff', trim:['#ffffff', 0], outer:'#15507f', strip:null, edges:true,
+    desk:'#1d629a', chair:'#1d629a', sofa:'#1d629a', leaf:'#2a7ab8', pot:'#1d629a', screenBg:'#0d3b66',
+    hemi:['#ffffff','#2a5d8f', 1.4], sun:['#ffffff', .5], lamp:null, lamps:false,
+    bloom:null, exposure:1, sign:'#ffffff', flatAgents:true,
+    ui:{ card:'rgba(13,59,102,.86)', fg:'#ffffff', sub:'#a9cbe8', accent:'#ffffff', border:'rgba(255,255,255,.55)', page:'#0d3b66', font:"'JetBrains Mono',monospace", title:"'Inter',sans-serif" } },
+];
+
+/* ───────────── Планировка ─────────────
+   r — [x0, z0, x1, z1]; двери — [сторона, координата вдоль стены]. Выход из двери лежит на коридоре. */
+const ICON = {
+  crown:'<path d="m2 4 3 12h14l3-12-6 7-4-7-4 7-6-7zm3 16h14"/>',
+  sofa:'<path d="M20 9V6a2 2 0 0 0-2-2H6a2 2 0 0 0-2 2v3"/><path d="M2 16a2 2 0 0 0 2 2h16a2 2 0 0 0 2-2v-5a2 2 0 0 0-4 0v1.5a.5.5 0 0 1-.5.5h-11a.5.5 0 0 1-.5-.5V11a2 2 0 0 0-4 0z"/><path d="M4 18v2M20 18v2"/>',
+  coffee:'<path d="M10 2v2M14 2v2M16 8a1 1 0 0 1 1 1v8a4 4 0 0 1-4 4H7a4 4 0 0 1-4-4V9a1 1 0 0 1 1-1h14a4 4 0 1 1 0 8h-1"/>',
+  users:'<path d="M16 21v-2a4 4 0 0 0-4-4H6a4 4 0 0 0-4 4v2"/><circle cx="9" cy="7" r="4"/><path d="M22 21v-2a4 4 0 0 0-3-3.87M16 3.13a4 4 0 0 1 0 7.75"/>',
+  megaphone:'<path d="m3 11 18-5v12L3 14v-3z"/><path d="M11.6 16.8a3 3 0 1 1-5.8-1.6"/>',
+  chart:'<path d="M3 3v18h18"/><path d="M18 17V9M13 17V5M8 17v-3"/>',
+  board:'<rect x="3" y="3" width="7" height="9" rx="1"/><rect x="14" y="3" width="7" height="5" rx="1"/><rect x="14" y="12" width="7" height="9" rx="1"/><rect x="3" y="16" width="7" height="5" rx="1"/>',
+  chat:'<path d="M7.9 20A9 9 0 1 0 4 16.1L2 22Z"/>',
+  cpu:'<rect x="4" y="4" width="16" height="16" rx="2"/><rect x="9" y="9" width="6" height="6"/><path d="M15 2v2M15 20v2M2 15h2M2 9h2M20 15h2M20 9h2M9 2v2M9 20v2"/>',
+  video:'<path d="m16 13 5.2 3.1a.5.5 0 0 0 .8-.4V8.3a.5.5 0 0 0-.8-.4L16 11"/><rect x="2" y="6" width="14" height="12" rx="2"/>',
+  target:'<circle cx="12" cy="12" r="10"/><circle cx="12" cy="12" r="6"/><circle cx="12" cy="12" r="2"/>',
+};
+const ROOMS = [
+  { id:'ceo',       name:'Кабинет основателя', sub:'Стратегия и продукт',        icon:'crown',     r:[-22,-14,-11,-7.5], doors:[['s',-14]] },
+  { id:'lounge',    name:'Lounge',             sub:'Отдых и разговоры',                   icon:'sofa',      r:[-11,-14,-1,-7.5],  doors:[['s',-6]], rest:true },
+  { id:'kitchen',   name:'Кухня',              sub:'Кофе и новости',              icon:'coffee',    r:[-1,-14,8,-7.5],    doors:[['s',3.5]], rest:true },
+  { id:'meet',      name:'Переговорная',       sub:'Планёрки и разборы',                  icon:'users',     r:[8,-14,22,-7.5],    doors:[['s',14]] },
+  { id:'marketing', name:'Маркетинг',          sub:'Креативы, воронки, лендинги', icon:'megaphone', r:[-22,-5.5,-12,4],   doors:[['e',-.5]] },
+  { id:'analytics', name:'Аналитика',          sub:'Охваты, ROMI, аудитория',             icon:'chart',     r:[-22,5.5,-12,14],   doors:[['e',9]] },
+  { id:'hub',       name:'Операционный зал',   sub:'Рабочий стол: задача → агент → проверка', icon:'board', r:[-10,-5.5,10,4],    doors:[['n',-7],['w',-.5],['e',-.5],['s',0]], open:true },
+  { id:'sales',     name:'Отдел продаж',       sub:'Директ, комментарии, сделки',         icon:'chat',      r:[12,-5.5,22,4],     doors:[['w',-.5]] },
+  { id:'tech',      name:'Технический отдел',  sub:'Продукты, скиллы, исполнитель', icon:'cpu',       r:[12,5.5,22,14],     doors:[['w',9]] },
+  { id:'studio',    name:'Контент-студия',     sub:'Сценарии, монтаж, аватар, карусели',  icon:'video',     r:[-10,5.5,-.5,14],   doors:[['n',-5]] },
+  { id:'ads',       name:'Реклама Meta',       sub:'Кампании и отчёты',                   icon:'target',    r:[.5,5.5,10,14],     doors:[['n',5]] },
+];
+const RM = Object.fromEntries(ROOMS.map(r => [r.id, r]));
+const CORRIDORS = [[[-14,-6.5],[14,-6.5]], [[-11,-6.5],[-11,9]], [[11,-6.5],[11,9]], [[-11,5],[11,5]]];
+
+/* ───────────── Команда ─────────────
+   Те же агенты, руководители и цепочки передач, что в hq2 (каталог OFFICE_DATA в ../index.html).
+   to: id агента | 'head' — свой руководитель | 'you' — на решение владельцу. */
+const o = (to, say, item) => ({ to, say, item });
+const TEAM = [
+  { id:'ilia', name:'Илья', role:'Основатель — стратегия, продукт', color:'#f5c26b', room:'ceo', head:true, hair:'#3b2a1e', skin:'#e3b497', screen:'chart', out:[] },
+  { id:'market', name:'Исследования рынка', role:'Рынок, конкуренты, тренды', color:'#9b6bff', room:'ceo', screen:'chart', boss:'ilia',
+    out:[o('product','передал выводы по конкурентам','Отчёт по конкурентам'), o('specs','отдал карту рынка для ТЗ','Карта рынка'), o('you','собрал сравнение офферов','Сравнение офферов')] },
+  { id:'briefing', name:'Утренний брифинг', role:'Почта, календарь, задачи дня', color:'#ffd166', room:'ceo', screen:'doc', boss:'ilia', waits:true,
+    out:[o('you','положил брифинг дня','Брифинг дня'), o('orchestrator','передал задачи на день','Задачи дня')] },
+  { id:'specs', name:'ТЗ и документы', role:'ТЗ, планы и гайды', color:'#5ad1ff', room:'ceo', screen:'doc', boss:'ilia',
+    out:[o('product','передал ТЗ на доработку бота','ТЗ на бота'), o('landings','отдал ТЗ на лендинг','ТЗ лендинга'), o('funnels','передал план воронки','План воронки')] },
+
+  { id:'product', name:'Разработка продуктов', role:'Собирает продукты кодом и выкладывает', color:'#4da3ff', room:'tech', screen:'code', boss:'ilia',
+    out:[o('you','выкатил релиз на тест','Релиз на проверку'), o('chats','выкатил новую версию бота','Новая версия бота'), o('landings','подключил оплату к лендингу','Оплата на лендинге')] },
+  { id:'skills', name:'Скиллы и автоматизации', role:'Скиллы, плагины и MCP для команды', color:'#3ddc97', room:'tech', screen:'code', boss:'ilia',
+    out:[o('montage','подключил новый скилл монтажа','Скилл монтажа'), o('product','собрал MCP-коннектор','MCP-коннектор'), o('carousel','обновил скилл каруселей','Скилл каруселей')] },
+  { id:'runner', name:'Исполнитель', role:'Claude Code со скиллами команды — выполняет задачи с рабочего стола', color:'#c8d2e0', room:'tech', screen:'code', boss:'ilia',
+    out:[o('orchestrator','сдал задачу на проверку','Результат задачи')] },
+
+  { id:'firuza', name:'Фируза', role:'Руководитель отдела маркетинга', color:'#ff8fb1', room:'marketing', head:true, hair:'#3a1a12', skin:'#ecc6ad', long:true, screen:'slides', out:[] },
+  { id:'creatives', name:'Креативы', role:'Рекламные креативы для Meta', color:'#ff7a59', room:'marketing', screen:'media', boss:'firuza',
+    out:[o('metaads','передал пачку креативов','12 креативов'), o('you','собрал креативы','Креативы для Meta Ads'), o('funnels','отдал баннеры для бота','Баннеры бота')] },
+  { id:'funnels', name:'Воронки', role:'Бот, прогрев по дням и оффер', color:'#3ddc97', room:'marketing', screen:'flow', boss:'firuza',
+    out:[o('mailings','передал прогрев по дням','Прогрев на 7 дней'), o('chats','обновил сценарии бота','Сценарии бота'), o('head','показал схему воронки','Схема воронки')] },
+  { id:'publish', name:'Публикации', role:'Контент-план и выпуск в соцсети', color:'#ffd166', room:'marketing', screen:'calendar', boss:'firuza',
+    out:[o('you','собрал контент-план','Контент-план'), o('comments','выпустил рилс — ловим кодовые слова','Рилс в 19:00'), o('analytics','отдал выпуски недели в аналитику','Выпуски недели')] },
+  { id:'landings', name:'Лендинги', role:'Сайты и лендинги на своём домене', color:'#6366f1', room:'marketing', screen:'code', boss:'firuza',
+    out:[o('metaads','отдал ссылку на лендинг','Лендинг'), o('you','собрал лендинг','Лендинг на проверку')] },
+  { id:'leadmagnet', name:'Лид-магниты', role:'Подарки за подписку: PDF, уроки, чек-листы', color:'#2fb9a6', room:'marketing', screen:'doc', boss:'firuza',
+    out:[o('funnels','передал подарок за подписку','Лид-магнит'), o('threads','выложил приёмник в канал','Пост-приёмник'), o('chats','добавил материал в каталог Директа','Новый материал')] },
+  { id:'threads', name:'Threads-ветки', role:'3 ветки в день → материал в Telegram-канале', color:'#e8e8e8', room:'marketing', screen:'flow', boss:'firuza',
+    out:[o('you','прислал 3 ветки на апрув','3 ветки Threads'), o('leadmagnet','просит приёмник под ветку','Задание на приёмник'), o('analytics','принёс цифры веток за 48 часов','Цифры веток')] },
+
+  { id:'scripts', name:'Сценарии', role:'Сценарии рилсов с кодовым словом', color:'#ff5d8f', room:'studio', screen:'doc', boss:'firuza',
+    out:[o('montage','передал сценарий рилса','Сценарий рилса'), o('carousel','отдал текст карусели','Текст карусели'), o('avatar','передал текст для аватара','Текст для аватара')] },
+  { id:'montage', name:'Монтаж видео', role:'Рилсы и YouTube кодом, 35+ стилей', color:'#ff9f43', room:'studio', screen:'timeline', boss:'firuza',
+    out:[o('publish','передал готовый рилс','Готовый рилс'), o('head','показал черновой монтаж','Черновой монтаж')] },
+  { id:'carousel', name:'Карусели', role:'Карусели Instagram в 24 стилях', color:'#ffe08a', room:'studio', screen:'slides', boss:'firuza', waits:true,
+    out:[o('publish','передал карусель на 10 слайдов','Карусель'), o('leadmagnet','отдал слайды в лид-магнит','Слайды карусели')] },
+  { id:'avatar', name:'Видео с аватаром', role:'Ролики с ИИ-двойником без съёмки', color:'#e0559c', room:'studio', screen:'video', boss:'firuza', waits:true,
+    out:[o('publish','передал ролик с аватаром','Ролик с аватаром')] },
+  { id:'slides', name:'Презентации', role:'Слайды вебинаров, эфиров и питчей', color:'#4da3ff', room:'studio', screen:'slides', boss:'firuza',
+    out:[o('head','показал структуру вебинара','Структура вебинара'), o('you','собрал презентацию эфира','Слайды эфира'), o('landings','отдал блоки для лендинга','Блоки слайдов')] },
+
+  { id:'analytics', name:'Аналитика', role:'Охваты, лиды, выручка и ROMI', color:'#5ad1ff', room:'analytics', screen:'chart', boss:'firuza',
+    out:[o('head','положил отчёт по ROMI','Отчёт по ROMI'), o('you','собрал сводку недели','Сводка недели'), o('audience','передал лучшие рилсы недели','Топ рилсов')] },
+  { id:'audience', name:'Анализ аудитории', role:'Аудитория, ниша и конкуренты', color:'#c38bff', room:'analytics', screen:'chart', boss:'firuza',
+    out:[o('scripts','передал темы-выбросы','Темы-выбросы'), o('creatives','отдал боли аудитории','Боли аудитории'), o('slides','передал портрет аудитории','Портрет аудитории')] },
+  { id:'adreports', name:'Отчёты по рекламе', role:'Расходы, лиды и цена лида по дням', color:'#7fd3ff', room:'analytics', screen:'chart', boss:'nurken',
+    out:[o('head','положил отчёт по рекламе','Отчёт по рекламе'), o('analytics','передал цену лида','Цена лида')] },
+
+  { id:'bogdan', name:'Богдан', role:'РОП — руководитель отдела продаж', color:'#7ad37a', room:'sales', head:true, hair:'#5a3420', skin:'#e6b59b', screen:'chart', out:[] },
+  { id:'chats', name:'Переписки', role:'Ведёт переписки с клиентами', color:'#5ad1ff', room:'sales', screen:'chat', boss:'bogdan',
+    out:[o('closer','передал 5 тёплых лидов','5 тёплых лидов'), o('threads','отдал боли из Директа для веток','Запросы Директа'), o('head','отдал сводку переписок','Сводка переписок')] },
+  { id:'comments', name:'Ответы на комментарии', role:'Отвечает на кодовые слова под постами', color:'#ffd166', room:'sales', screen:'chat', boss:'bogdan',
+    out:[o('chats','передал 12 заявок из комментариев','Заявки из комментариев'), o('analytics','отдал статистику кодовых слов','Кодовые слова')] },
+  { id:'consult', name:'ИИ-консультации', role:'Отвечает на вопросы по базе знаний', color:'#c38bff', room:'sales', screen:'chat', boss:'bogdan',
+    out:[o('chats','передал ответы по базе знаний','Ответы по базе'), o('head','показал вопросы без ответа','Вопросы без ответа')] },
+  { id:'mailings', name:'Рассылки', role:'Рассылки по базе в боте', color:'#ff7a59', room:'sales', screen:'chat', boss:'bogdan', waits:true,
+    out:[o('closer','передал откликнувшихся','Отклики на рассылку'), o('you','подготовил рассылку','Рассылка по базе')] },
+  { id:'closer', name:'Закрытие сделок', role:'Доводит тёплых лидов до оплаты', color:'#3ddc97', room:'sales', screen:'chat', boss:'bogdan',
+    out:[o('analytics','передал оплаты дня','Оплаты дня'), o('head','закрыл сделку и принёс отчёт','Отчёт по сделкам')] },
+
+  { id:'nurken', name:'Нуркен', role:'Таргетолог — реклама в Meta', color:'#ff9a6b', room:'ads', head:true, hair:'#1e1a17', skin:'#d9a37f', screen:'ads', out:[] },
+  { id:'metaads', name:'Рекламные кампании', role:'Запускает и ведёт кампании в Meta', color:'#ff7a59', room:'ads', screen:'ads', boss:'nurken',
+    out:[o('adreports','передал расход и лиды','Расход и лиды'), o('you','подготовил запуск кампании','Запуск кампании')] },
+
+  { id:'orchestrator', name:'Диспетчер', role:'Принимает задачи с рабочего стола и раздаёт агентам', color:'#ffffff', room:'hub', screen:'flow', out:[] },
+];
+const TM = Object.fromEntries(TEAM.map(a => [a.id, a]));
+
+/* Реальные задачи: tasks.js + tasks.auto.js, свежие сверху. */
+const REAL = [...(window.OFFICE_TASKS || []), ...((window.OFFICE_TASKS_AUTO || {}).tasks || [])]
+  .filter(t => t && t.title && t.date)
+  .sort((a, b) => b.date.localeCompare(a.date));
+
+/* ───────────── Утилиты ───────────── */
+const rand = (a, b) => a + Math.random() * (b - a);
+const pick = a => a[Math.floor(Math.random() * a.length)];
+const clip = (s, n) => s.length > n ? s.slice(0, n - 1).trimEnd() + '…' : s;
+const esc = s => String(s).replace(/[&<>"]/g, c => ({ '&':'&amp;', '<':'&lt;', '>':'&gt;', '"':'&quot;' }[c]));
+const svg = name => `<svg class="i" viewBox="0 0 24 24">${ICON[name]}</svg>`;
+const ddmm = d => d.slice(8, 10) + '.' + d.slice(5, 7);
+const nowHM = () => new Date().toTimeString().slice(0, 5);
+
+function canvasTex(w, h, draw) {
+  const c = document.createElement('canvas'); c.width = w; c.height = h;
+  draw(c.getContext('2d'), w, h);
+  const t = new THREE.CanvasTexture(c); t.colorSpace = THREE.SRGBColorSpace; t.anisotropy = 4;
+  t.userData.canvas = c;
+  return t;
+}
+function rr(x, X, Y, W, H, R) { x.beginPath(); x.roundRect(X, Y, W, H, R); x.fill(); }
+
+/* ───────────── Рендер ───────────── */
+const stage = document.getElementById('stage');
+const renderer = new THREE.WebGLRenderer({ antialias:true, powerPreference:'high-performance' });
+renderer.setPixelRatio(Math.min(devicePixelRatio, 2));
+renderer.setSize(innerWidth, innerHeight);
+renderer.shadowMap.enabled = true;
+renderer.shadowMap.type = THREE.PCFSoftShadowMap;
+renderer.toneMapping = THREE.ACESFilmicToneMapping;
+stage.appendChild(renderer.domElement);
+const labelRenderer = new CSS2DRenderer({ element:document.getElementById('labels') });
+labelRenderer.setSize(innerWidth, innerHeight);
+
+const camera = new THREE.PerspectiveCamera(30, innerWidth / innerHeight, 1, 600);
+const controls = new OrbitControls(camera, renderer.domElement);
+controls.enableDamping = true;
+controls.minPolarAngle = .45; controls.maxPolarAngle = 1.15;
+controls.minAzimuthAngle = -.8; controls.maxAzimuthAngle = .8;
+controls.minDistance = 18; controls.maxDistance = 280;
+controls.screenSpacePanning = false;
+function resetView() {
+  const d = Math.max(1, .95 / (innerWidth / innerHeight));
+  camera.position.set(0, 58 * d, 54 * d);
+  controls.target.set(0, 0, 3);
+  controls.update();
+}
+
+let scene, composer, bloomPass, T, sim;
+
+/* ───────────── Материалы ───────────── */
+let MATS;
+function M(color, o = {}) {
+  const key = color + JSON.stringify(o);
+  if (MATS.has(key)) return MATS.get(key);
+  let m;
+  if (o.basic) m = new THREE.MeshBasicMaterial({ color, transparent:!!o.opacity, opacity:o.opacity ?? 1, toneMapped:o.toneMapped ?? true, side:o.side ?? THREE.FrontSide });
+  else m = new THREE.MeshStandardMaterial({
+    color, roughness:o.rough ?? .75, metalness:o.metal ?? 0,
+    emissive:o.emissive ?? '#000', emissiveIntensity:o.ei ?? 1,
+    transparent:o.opacity != null, opacity:o.opacity ?? 1, depthWrite:o.opacity == null,
+  });
+  if (o.glow) m.color.multiplyScalar(o.glow);
+  MATS.set(key, m);
+  return m;
+}
+const GEO = {};
+function rbox(w, h, d, r = .04) {
+  const k = [w, h, d, r].join();
+  return GEO[k] ||= new RoundedBoxGeometry(w, h, d, 2, Math.min(r, w / 2, h / 2, d / 2));
+}
+function box(parent, w, h, d, mat, x, y, z, o = {}) {
+  const m = new THREE.Mesh(o.round === false ? new THREE.BoxGeometry(w, h, d) : rbox(w, h, d, o.r ?? .04), mat);
+  m.position.set(x, y, z);
+  if (o.ry) m.rotation.y = o.ry;
+  m.castShadow = o.shadow ?? true; m.receiveShadow = true;
+  if (o.noedge) m.userData.noedge = true;
+  parent.add(m);
+  return m;
+}
+function cyl(parent, rt, rb, h, mat, x, y, z, seg = 20) {
+  const m = new THREE.Mesh(new THREE.CylinderGeometry(rt, rb, h, seg), mat);
+  m.position.set(x, y, z); m.castShadow = true; m.receiveShadow = true;
+  parent.add(m); return m;
+}
+
+/* ───────────── Текстуры экранов ───────────── */
+const SCREEN_CACHE = new Map();
+const scrolling = [];
+function screenTex(kind, color) {
+  const key = kind + color + T.id;
+  if (SCREEN_CACHE.has(key)) return SCREEN_CACHE.get(key);
+  const light = T.light || T.id === 'blueprint';
+  const ink = light ? 'rgba(20,30,50,.35)' : 'rgba(255,255,255,.28)';
+  const tex = canvasTex(256, 160, (x, w, h) => {
+    x.fillStyle = T.screenBg; x.fillRect(0, 0, w, h);
+    x.fillStyle = color; x.fillRect(0, 0, w, 10);
+    const R = () => Math.random();
+    if (kind === 'code') {
+      for (let y = 18; y < h * 2; y += 9) { x.fillStyle = R() < .35 ? color : ink; rr(x, 10 + Math.floor(R() * 4) * 12, y, 30 + R() * 140, 4, 2); }
+    } else if (kind === 'chat') {
+      for (let y = 18; y < h * 2; y += 22) { const me = R() < .5; x.fillStyle = me ? color : ink; rr(x, me ? w - 130 : 12, y, 90 + R() * 28, 14, 7); }
+    } else if (kind === 'chart' || kind === 'ads') {
+      for (let i = 0; i < 10; i++) { const bh = 20 + R() * 90; x.fillStyle = i % 3 ? ink : color; rr(x, 14 + i * 23, h - 14 - bh, 15, bh, 3); }
+      x.strokeStyle = color; x.lineWidth = 3; x.beginPath();
+      for (let i = 0; i <= 10; i++) x.lineTo(14 + i * 23, 120 - i * 7 - R() * 18);
+      x.stroke();
+      if (kind === 'ads') { x.fillStyle = color; x.font = 'bold 22px sans-serif'; x.fillText('ROMI 312%', 14, 40); }
+    } else if (kind === 'doc') {
+      x.fillStyle = color; rr(x, 20, 22, 120, 10, 3);
+      for (let y = 44; y < h - 10; y += 11) { x.fillStyle = ink; rr(x, 20, y, 120 + R() * 100, 5, 2); }
+    } else if (kind === 'slides') {
+      x.fillStyle = ink; rr(x, 14, 20, 228, 128, 8);
+      x.fillStyle = color; rr(x, 30, 40, 110, 14, 4); rr(x, 150, 40, 76, 92, 8);
+      x.fillStyle = light ? 'rgba(20,30,50,.5)' : 'rgba(255,255,255,.5)'; rr(x, 30, 64, 100, 6, 3); rr(x, 30, 76, 80, 6, 3);
+    } else if (kind === 'media') {
+      for (let i = 0; i < 6; i++) { x.fillStyle = i % 2 ? color : ink; rr(x, 14 + (i % 3) * 78, 20 + Math.floor(i / 3) * 66, 70, 58, 6); }
+    } else if (kind === 'flow') {
+      const P = [[40, 50], [128, 40], [210, 60], [70, 120], [170, 118]];
+      x.strokeStyle = ink; x.lineWidth = 3;
+      [[0,1],[1,2],[0,3],[3,4],[1,4],[2,4]].forEach(([a, b]) => { x.beginPath(); x.moveTo(...P[a]); x.lineTo(...P[b]); x.stroke(); });
+      P.forEach((p, i) => { x.fillStyle = i % 2 ? ink : color; x.beginPath(); x.arc(p[0], p[1], 14, 0, 7); x.fill(); });
+    } else if (kind === 'calendar') {
+      for (let i = 0; i < 28; i++) { x.fillStyle = R() < .3 ? color : ink; rr(x, 14 + (i % 7) * 33, 22 + Math.floor(i / 7) * 33, 28, 28, 4); }
+    } else if (kind === 'timeline') {
+      x.fillStyle = ink; rr(x, 50, 18, 156, 70, 6);
+      for (let t = 0; t < 4; t++) for (let c = 0; c < 4; c++) { x.fillStyle = (t + c) % 3 ? ink : color; rr(x, 10 + c * 62 + R() * 8, 96 + t * 15, 40 + R() * 16, 11, 3); }
+      x.fillStyle = '#fff'; x.fillRect(120, 92, 2, 64);
+    } else if (kind === 'video') {
+      x.fillStyle = ink; rr(x, 40, 18, 176, 130, 10);
+      x.fillStyle = color; x.beginPath(); x.arc(128, 70, 26, 0, 7); x.fill(); rr(x, 84, 100, 88, 48, 24);
+    }
+  });
+  if (kind === 'code' || kind === 'chat') { tex.wrapT = THREE.RepeatWrapping; tex.repeat.y = .5; scrolling.push(tex); }
+  SCREEN_CACHE.set(key, tex);
+  return tex;
+}
+function textTex(text, color, font, w = 1024, h = 160) {
+  return canvasTex(w, h, (x) => {
+    x.font = font; x.fillStyle = color; x.textAlign = 'center'; x.textBaseline = 'middle';
+    x.fillText(text, w / 2, h / 2);
+  });
+}
+
+/* ───────────── Здание ───────────── */
+function buildSky() {
+  const [top, bottom] = T.sky;
+  scene.background = canvasTex(4, 512, (x, w, h) => {
+    const g = x.createLinearGradient(0, 0, 0, h); g.addColorStop(0, top); g.addColorStop(1, bottom);
+    x.fillStyle = g; x.fillRect(0, 0, w, h);
+  });
+  if (T.env === 'grid') {
+    scene.background = canvasTex(512, 512, (x, w, h) => {
+      x.fillStyle = top; x.fillRect(0, 0, w, h);
+      x.strokeStyle = 'rgba(255,255,255,.07)'; x.lineWidth = 1;
+      for (let i = 0; i <= w; i += 16) { x.beginPath(); x.moveTo(i, 0); x.lineTo(i, h); x.stroke(); x.beginPath(); x.moveTo(0, i); x.lineTo(w, i); x.stroke(); }
+      x.strokeStyle = 'rgba(255,255,255,.14)';
+      for (let i = 0; i <= w; i += 64) { x.beginPath(); x.moveTo(i, 0); x.lineTo(i, h); x.stroke(); x.beginPath(); x.moveTo(0, i); x.lineTo(w, i); x.stroke(); }
+    });
+  }
+  if (T.fog) scene.fog = new THREE.FogExp2(T.fog[0], T.fog[1]);
+
+  if (T.env === 'city') {
+    const winTex = canvasTex(128, 256, (x, w, h) => {
+      x.fillStyle = T.bld; x.fillRect(0, 0, w, h);
+      for (let y = 6; y < h; y += 12) for (let i = 4; i < w; i += 10) {
+        const lit = Math.random() < (T.light ? .9 : .42);
+        x.fillStyle = lit ? pick(T.win) : (T.light ? '#b9c1cb' : 'rgba(255,255,255,.04)');
+        x.globalAlpha = lit ? rand(.55, 1) : 1;
+        x.fillRect(i, y, 6, 7);
+      }
+      x.globalAlpha = 1;
+    });
+    const city = new THREE.Group();
+    for (let i = 0; i < 46; i++) {
+      const w = rand(5, 11), d = rand(5, 9), h = rand(14, 48);
+      const t = winTex.clone(); t.needsUpdate = true;
+      t.wrapS = t.wrapT = THREE.RepeatWrapping; t.repeat.set(w / 8, h / 16); t.offset.set(Math.random(), Math.random());
+      const m = new THREE.Mesh(new THREE.BoxGeometry(w, h, d), new THREE.MeshBasicMaterial({ map:t, color:T.light ? '#ffffff' : '#d8d8d8', fog:true }));
+      const row = i % 3;
+      m.position.set(rand(-95, 95), h / 2 - 6, -30 - row * 16 - rand(0, 10));
+      city.add(m);
+    }
+    scene.add(city);
+  } else if (T.env === 'space') {
+    const n = 1600, p = new Float32Array(n * 3);
+    for (let i = 0; i < n; i++) {
+      const v = new THREE.Vector3().randomDirection().multiplyScalar(rand(220, 300));
+      if (v.y < -40) v.y *= -1;
+      p.set([v.x, v.y, v.z], i * 3);
+    }
+    const g = new THREE.BufferGeometry(); g.setAttribute('position', new THREE.BufferAttribute(p, 3));
+    scene.add(new THREE.Points(g, new THREE.PointsMaterial({ color:'#ffffff', size:1.1, sizeAttenuation:false })));
+    const planet = new THREE.Mesh(new THREE.SphereGeometry(140, 64, 48), new THREE.MeshStandardMaterial({
+      map:canvasTex(512, 256, (x, w, h) => {
+        const g2 = x.createLinearGradient(0, 0, 0, h); g2.addColorStop(0, '#2b6cff'); g2.addColorStop(.5, '#0b3a8a'); g2.addColorStop(1, '#04122e');
+        x.fillStyle = g2; x.fillRect(0, 0, w, h);
+        for (let i = 0; i < 90; i++) { x.fillStyle = `rgba(255,255,255,${rand(.05, .25)})`; x.beginPath(); x.ellipse(rand(0, w), rand(0, h), rand(10, 60), rand(3, 10), 0, 0, 7); x.fill(); }
+      }), emissive:'#0b2a66', emissiveIntensity:.6, roughness:1 }));
+    planet.position.set(30, -170, -120);
+    scene.add(planet);
+  }
+}
+
+function buildShell(root) {
+  const W = 44, D = 28;
+  // плита и светящиеся кромки
+  box(root, W + 2, .6, D + 2, M(T.base, { rough:.9 }), 0, -.3, 0, { round:false });
+  box(root, W, .02, D, M(T.floor, { rough:.85 }), 0, .01, 0, { round:false, shadow:false, noedge:true });
+  if (T.trim[1] > 0) {
+    const em = M(T.edge, { basic:true, glow:1.6, toneMapped:false });
+    box(root, W + 2, .06, .06, em, 0, .02, D / 2 + 1, { round:false, shadow:false });
+    box(root, .06, .06, D + 2, em, -W / 2 - 1, .02, 0, { round:false, shadow:false });
+    box(root, .06, .06, D + 2, em, W / 2 + 1, .02, 0, { round:false, shadow:false });
+  }
+  // наружные стены: задняя и боковые
+  const outer = M(T.outer, { rough:.85 });
+  box(root, W, 3.4, .3, outer, 0, 1.7, -D / 2 - .15, { round:false });
+  box(root, .3, 3.4, D, outer, -W / 2 - .15, 1.7, 0, { round:false });
+  box(root, .3, 3.4, D, outer, W / 2 + .15, 1.7, 0, { round:false });
+  if (T.strip) {
+    const sm = M(T.strip, { basic:true, glow:1.8, toneMapped:false });
+    for (let z = -11; z <= 11; z += 4.4) {
+      box(root, .06, 2.4, .14, sm, -W / 2 + .02, 1.6, z, { shadow:false });
+      box(root, .06, 2.4, .14, sm, W / 2 - .02, 1.6, z, { shadow:false });
+    }
+  }
+  // вывески на задней стене
+  const s1 = new THREE.Mesh(new THREE.PlaneGeometry(10, 1.56), new THREE.MeshBasicMaterial({
+    map:textTex('AICEX', T.sign, `800 120px ${T.ui.title ? 'Unbounded' : 'Inter'}, sans-serif`), transparent:true, toneMapped:false }));
+  s1.material.color.setScalar(T.bloom ? 1.6 : 1);
+  s1.position.set(15, 2.75, -D / 2 + .02); root.add(s1);
+  const s2 = new THREE.Mesh(new THREE.PlaneGeometry(10, .6), new THREE.MeshBasicMaterial({
+    map:textTex('CREATE · AUTOMATE · SCALE', T.sign, '700 64px Inter, sans-serif', 1024, 64), transparent:true, toneMapped:false }));
+  s2.material.color.setScalar(T.bloom ? 1.4 : 1);
+  s2.position.set(-16.5, 2.85, -D / 2 + .02); root.add(s2);
+  // живая изгородь спереди
+  const hedge = M(T.leaf, { rough:.95 });
+  const planter = M(T.light ? '#e9e4da' : T.base, { rough:.9 });
+  box(root, W - 1, .45, .7, planter, 0, .22, D / 2 + .35, { round:false });
+  const sph = new THREE.SphereGeometry(.42, 12, 10);
+  for (let x = -W / 2 + 1; x <= W / 2 - 1; x += .78) {
+    if (Math.abs(x) < 1.8) continue; // вход
+    const m = new THREE.Mesh(sph, hedge); m.position.set(x, .62 + rand(0, .12), D / 2 + .35); m.scale.setScalar(rand(.85, 1.1));
+    m.castShadow = true; root.add(m);
+  }
+}
+
+function doorPoint(room, [side, c]) {
+  const [x0, z0, x1, z1] = room.r;
+  if (side === 's') return { at:[c, z1], inP:[c, z1 - .9], out:[c, z1 + 1] };
+  if (side === 'n') return { at:[c, z0], inP:[c, z0 + .9], out:[c, z0 - 1] };
+  if (side === 'w') return { at:[x0, c], inP:[x0 + .9, c], out:[x0 - 1, c] };
+  return { at:[x1, c], inP:[x1 - .9, c], out:[x1 + 1, c] };
+}
+
+function buildWalls(root) {
+  const segs = new Map();
+  for (const room of ROOMS) {
+    if (room.open) continue;
+    const [x0, z0, x1, z1] = room.r;
+    const edges = { n:[[x0, z0], [x1, z0]], s:[[x0, z1], [x1, z1]], w:[[x0, z0], [x0, z1]], e:[[x1, z0], [x1, z1]] };
+    for (const [side, [a, b]] of Object.entries(edges)) {
+      if ((side === 'n' && z0 === -14) || (side === 'w' && x0 === -22) || (side === 'e' && x1 === 22)) continue;
+      const key = [a, b].flat().join();
+      const gaps = room.doors.filter(d => d[0] === side).map(d => d[1]);
+      const prev = segs.get(key);
+      segs.set(key, { a, b, gaps:[...(prev?.gaps || []), ...gaps], low:side === 's' && z1 === 14 });
+    }
+  }
+  const glass = M(T.glass[0], { opacity:T.glass[1], rough:.08, metal:.1 });
+  const frame = M(T.frame, { rough:.4, metal:T.metal ? .9 : .1 });
+  const trim = T.trim[1] > 0 ? M(T.trim[0], { basic:true, glow:T.trim[1], toneMapped:false }) : frame;
+  for (const { a, b, gaps, low } of segs.values()) {
+    const horiz = a[1] === b[1];
+    const from = horiz ? a[0] : a[1], to = horiz ? b[0] : b[1];
+    const cuts = [[from, from]];
+    gaps.sort((p, q) => p - q).forEach(g => cuts.push([g - .85, g + .85]));
+    cuts.push([to, to]);
+    const H = low ? 1 : 2.3;
+    for (let i = 0; i < cuts.length - 1; i++) {
+      const s = cuts[i][1], e = cuts[i + 1][0], L = e - s;
+      if (L <= .05) continue;
+      const mid = (s + e) / 2;
+      const pos = horiz ? [mid, a[1]] : [a[0], mid];
+      const dims = (h, t) => horiz ? [L, h, t] : [t, h, L];
+      const g = box(root, ...dims(H, .05), glass, pos[0], H / 2, pos[1], { round:false, shadow:false, noedge:true });
+      g.renderOrder = 2;
+      box(root, ...dims(.07, .09), frame, pos[0], H, pos[1], { round:false, shadow:false });
+      box(root, ...dims(.06, .1), trim, pos[0], .04, pos[1], { round:false, shadow:false });
+      for (let p = s; p <= e + .01; p += Math.max(L / Math.ceil(L / 2.6), .1)) {
+        const pp = horiz ? [p, a[1]] : [a[0], p];
+        box(root, .07, H, .07, frame, pp[0], H / 2, pp[1], { round:false, shadow:false });
+      }
+    }
+  }
+  // полы комнат
+  for (const room of ROOMS) {
+    const [x0, z0, x1, z1] = room.r;
+    const col = room.open ? T.hubFloor : T.roomFloor;
+    const f = box(root, x1 - x0 - .1, .02, z1 - z0 - .1, M(col, { rough:T.metal ? .35 : .8, metal:T.metal ? .2 : 0 }),
+      (x0 + x1) / 2, .025, (z0 + z1) / 2, { round:false, shadow:false, noedge:!room.open });
+    f.castShadow = false;
+  }
+}
+
+/* ───────────── Мебель ───────────── */
+const SEATS = {};  // id агента → { x, z, face } — место за столом
+const SPOTS = { rest:[], meet:[], inbox:null, set:null };
+function plant(root, x, z, s = 1) {
+  cyl(root, .26 * s, .2 * s, .5 * s, M(T.pot, { rough:.6, metal:T.metal ? .8 : 0 }), x, .25 * s, z, 14);
+  const leaf = M(T.leaf, { rough:.95 });
+  for (let i = 0; i < 4; i++) {
+    const m = new THREE.Mesh(new THREE.IcosahedronGeometry(.3 * s, 0), leaf);
+    m.position.set(x + rand(-.15, .15) * s, (.7 + i * .2) * s, z + rand(-.15, .15) * s);
+    m.rotation.set(rand(0, 3), rand(0, 3), 0); m.castShadow = true; root.add(m);
+  }
+}
+function chair(root, x, z, ry = 0) {
+  const g = new THREE.Group(); g.position.set(x, 0, z); g.rotation.y = ry;
+  const c = M(T.chair, { rough:.6 });
+  box(g, .5, .08, .5, c, 0, .45, 0);
+  box(g, .5, .5, .07, c, 0, .75, .24);
+  cyl(g, .03, .03, .4, M('#444', { metal:.6, rough:.4 }), 0, .22, 0, 8);
+  root.add(g);
+}
+function monitor(root, x, z, kind, color, w = .62) {
+  const back = M(T.light ? '#2b2b2b' : '#121214', { rough:.4 });
+  box(root, .06, .2, .06, back, x, .86, z - .02);
+  box(root, w, .38, .035, back, x, 1.12, z - .03, { r:.02 });
+  const scr = new THREE.Mesh(new THREE.PlaneGeometry(w - .05, .33), new THREE.MeshBasicMaterial({ map:screenTex(kind, color), toneMapped:false }));
+  scr.material.color.setScalar(T.bloom ? 1.05 : 1);
+  scr.position.set(x, 1.12, z - .01); scr.userData.noedge = true;
+  root.add(scr);
+}
+function desk(root, a, x, z, big = false) {
+  const top = M(T.desk, { rough:.55, metal:T.metal ? .3 : 0 });
+  const W = big ? 2.1 : 1.4;
+  box(root, W, .06, .72, top, x, .74, z);
+  box(root, .05, .72, .62, top, x - W / 2 + .06, .37, z);
+  box(root, .05, .72, .62, top, x + W / 2 - .06, .37, z);
+  if (big) { monitor(root, x - .42, z - .12, a.screen, a.color); monitor(root, x + .42, z - .12, 'doc', a.color); }
+  else monitor(root, x, z - .12, a.screen, a.color);
+  box(root, .38, .02, .13, M(T.light ? '#d9d9d9' : '#2a2a2e'), x, .78, z + .12, { shadow:false });
+  chair(root, x, z + .78);
+  SEATS[a.id] = { x, z:z + .72, face:Math.PI, room:a.room, desk:[x, z] };
+}
+function gridSeats(area, n, cols) {
+  const [x0, z0, x1, z1] = area, rows = Math.ceil(n / cols), out = [];
+  for (let i = 0; i < n; i++) {
+    const c = i % cols, r = Math.floor(i / cols);
+    out.push([x0 + (x1 - x0) * (cols === 1 ? .5 : c / (cols - 1)), z0 + (z1 - z0) * (rows === 1 ? .5 : r / (rows - 1))]);
+  }
+  return out;
+}
+function wallScreen(root, x, y, z, w, h, kind, color, ry = 0) {
+  const g = new THREE.Group(); g.position.set(x, y, z); g.rotation.y = ry;
+  box(g, w + .1, h + .1, .06, M('#111'), 0, 0, 0, { r:.02 });
+  const s = new THREE.Mesh(new THREE.PlaneGeometry(w, h), new THREE.MeshBasicMaterial({ map:screenTex(kind, color), toneMapped:false }));
+  s.position.z = .035; s.userData.noedge = true; g.add(s);
+  root.add(g);
+  return g;
+}
+function sofa(root, x, z, ry, w = 2.2) {
+  const g = new THREE.Group(); g.position.set(x, 0, z); g.rotation.y = ry;
+  const m = M(T.sofa, { rough:.95 });
+  box(g, w, .4, .9, m, 0, .25, 0, { r:.12 });
+  box(g, w, .5, .22, m, 0, .6, -.36, { r:.1 });
+  box(g, .2, .35, .9, m, -w / 2 + .1, .5, 0, { r:.08 });
+  box(g, .2, .35, .9, m, w / 2 - .1, .5, 0, { r:.08 });
+  root.add(g);
+}
+function lampPoint(root, x, z, y = 3) {
+  if (!T.lamp) return;
+  const l = new THREE.PointLight(T.lamp[0], T.lamp[1], 15, 1.6);
+  l.position.set(x, y, z); root.add(l);
+  if (T.lamps) {
+    const b = new THREE.Mesh(new THREE.SphereGeometry(.16, 12, 10), M(T.lamp[0], { basic:true, glow:2, toneMapped:false }));
+    b.position.set(x, y - .3, z); b.userData.noedge = true; root.add(b);
+  }
+}
+
+function buildFurniture(root) {
+  const byRoom = id => TEAM.filter(a => a.room === id && !a.head && a.id !== 'orchestrator');
+  const headOf = id => TEAM.find(a => a.room === id && a.head);
+  const place = (roomId, area, cols, headAt) => {
+    const list = byRoom(roomId);
+    gridSeats(area, list.length, cols).forEach(([x, z], i) => desk(root, list[i], x, z));
+    const h = headOf(roomId);
+    if (h && headAt) desk(root, h, headAt[0], headAt[1], true);
+  };
+
+  // Кабинет основателя
+  place('ceo', [-17.2, -10.6, -12.8, -10.6], 3, [-19.4, -12.3]);
+  wallScreen(root, -15, 1.9, -13.78, 3, 1.3, 'chart', '#f5c26b');
+  sofa(root, -12.6, -12.9, 0, 1.8);
+  plant(root, -21.3, -8.3); plant(root, -11.7, -8.3, .9);
+  lampPoint(root, -16.5, -10.8);
+
+  // Lounge
+  sofa(root, -8.2, -12.6, 0); sofa(root, -3.6, -12.6, 0);
+  sofa(root, -9.9, -10.3, Math.PI / 2, 1.8);
+  const rug = new THREE.Mesh(new THREE.CircleGeometry(1.9, 40), M(T.rug, { rough:1, opacity:.35 }));
+  rug.rotation.x = -Math.PI / 2; rug.position.set(-6, .04, -10.6); rug.userData.noedge = true; root.add(rug);
+  cyl(root, .7, .7, .3, M(T.desk, { rough:.5 }), -6, .2, -10.6, 28);
+  for (const [x, z] of [[-4.2, -9.4], [-7.6, -9.2]]) {
+    const b = new THREE.Mesh(new THREE.SphereGeometry(.45, 16, 12), M(T.sofa, { rough:1 }));
+    b.scale.y = .6; b.position.set(x, .28, z); b.castShadow = true; root.add(b);
+  }
+  plant(root, -1.8, -13.2, 1.2); plant(root, -10.3, -13.2);
+  SPOTS.rest.push({ x:-8.2, z:-12, room:'lounge', face:0, sit:true }, { x:-3.6, z:-12, room:'lounge', face:0, sit:true },
+                  { x:-9.4, z:-10.3, room:'lounge', face:Math.PI / 2, sit:true }, { x:-4.2, z:-8.8, room:'lounge', face:Math.PI }, { x:-7.6, z:-8.6, room:'lounge', face:Math.PI });
+  lampPoint(root, -6, -10.6);
+
+  // Кухня
+  const counter = M(T.light ? '#f4f1ea' : T.desk, { rough:.4, metal:T.metal ? .5 : 0 });
+  box(root, 7.6, .95, .7, counter, 3.5, .48, -13.4);
+  box(root, 7.6, .9, .4, counter, 3.5, 2.1, -13.6);
+  if (T.trim[1] > 0) box(root, 7.4, .04, .05, M(T.trim[0], { basic:true, glow:1.6, toneMapped:false }), 3.5, 1.62, -13.45, { shadow:false });
+  box(root, .5, .45, .4, M('#1a1a1a', { rough:.3, metal:.6 }), 1.4, 1.18, -13.4);
+  box(root, 3.4, .95, 1.1, counter, 3.5, .48, -10.6);
+  for (let i = 0; i < 3; i++) for (const s of [-1, 1]) cyl(root, .2, .16, .7, M(T.chair), 2.3 + i * 1.2, .35, -10.6 + s * .9, 14);
+  plant(root, 7.3, -8.3);
+  SPOTS.rest.push({ x:2.3, z:-9.6, room:'kitchen', face:Math.PI }, { x:4.7, z:-9.6, room:'kitchen', face:Math.PI },
+                  { x:3.5, z:-11.6, room:'kitchen', face:0 }, { x:1.4, z:-12.7, room:'kitchen', face:Math.PI });
+  lampPoint(root, 3.5, -10.6);
+
+  // Переговорная
+  box(root, 7.4, .08, 1.7, M(T.desk, { rough:.4, metal:T.metal ? .4 : 0 }), 15, .76, -11);
+  box(root, 6.6, .7, .2, M(T.desk), 15, .38, -11);
+  wallScreen(root, 15, 1.9, -13.78, 3.6, 1.6, 'chart', '#5ad1ff');
+  for (let i = 0; i < 5; i++) for (const s of [-1, 1]) {
+    const x = 12.2 + i * 1.4, z = -11 + s * 1.25;
+    chair(root, x, z, s < 0 ? Math.PI : 0);
+    SPOTS.meet.push({ x, z:z + s * .05, room:'meet', face:s < 0 ? 0 : Math.PI, sit:true });
+  }
+  plant(root, 21.2, -8.3); plant(root, 8.8, -13.2);
+  lampPoint(root, 15, -11);
+
+  // Маркетинг
+  place('marketing', [-20.2, -1.6, -13.8, 2], 3, [-17, -3.9]);
+  wallScreen(root, -21.75, 1.5, -2, 2.2, 1.1, 'calendar', '#ff8fb1', Math.PI / 2);
+  plant(root, -12.7, 3.3); plant(root, -21.3, 3.3, .9);
+  lampPoint(root, -17, -1);
+
+  // Аналитика
+  place('analytics', [-20, 8.6, -14, 8.6], 3, null);
+  wallScreen(root, -19.5, 1.4, 6.4, 2.4, 1.2, 'chart', '#5ad1ff');
+  wallScreen(root, -16.3, 1.4, 6.4, 2.4, 1.2, 'chart', '#c38bff');
+  plant(root, -21.3, 13.2); plant(root, -12.8, 13.2);
+  box(root, 2.4, .45, .9, M(T.sofa, { rough:.95 }), -17, .25, 12.2, { r:.12 });
+  lampPoint(root, -17, 9.5);
+
+  // Операционный зал: рабочий стол диспетчера и доска задач
+  const orch = TM.orchestrator;
+  const ring = M(T.desk, { rough:.5, metal:T.metal ? .5 : 0 });
+  const rd = new THREE.Mesh(new THREE.TorusGeometry(1.25, .32, 10, 40, Math.PI * 1.3), ring);
+  rd.rotation.x = Math.PI / 2; rd.rotation.z = Math.PI * .85; rd.position.set(-.6, .62, -1.2); rd.castShadow = true; root.add(rd);
+  monitor(root, -.6, -2, orch.screen, '#ffffff', .7);
+  chair(root, -.6, -1.1);
+  SEATS.orchestrator = { x:-.6, z:-1.15, face:Math.PI, room:'hub', desk:[-.6, -2] };
+  const boardG = new THREE.Group(); boardG.position.set(2.4, 0, -4.7); root.add(boardG);
+  box(boardG, 7.2, 3.3, .12, M('#0d0d10', { rough:.4 }), 0, 1.95, 0, { r:.05 });
+  box(boardG, .12, .35, .12, M('#333'), -2.8, .17, 0); box(boardG, .12, .35, .12, M('#333'), 2.8, .17, 0);
+  sim.boardTex = canvasTex(1024, 460, () => {});
+  const bs = new THREE.Mesh(new THREE.PlaneGeometry(7, 3.1), new THREE.MeshBasicMaterial({ map:sim.boardTex, toneMapped:false }));
+  bs.position.set(0, 1.95, .07); bs.userData.noedge = true; boardG.add(bs);
+  SPOTS.inbox = { x:.9, z:-3.4, room:'hub', face:Math.PI };
+  const pr = new THREE.Mesh(new THREE.RingGeometry(2.6, 2.75, 64), M(T.rug, { basic:true, glow:T.bloom ? 1.4 : 1, toneMapped:false, opacity:.8, side:THREE.DoubleSide }));
+  pr.rotation.x = -Math.PI / 2; pr.position.set(-.6, .045, -1.2); pr.userData.noedge = true; root.add(pr);
+  for (const x of [-7, 6.4]) {
+    cyl(root, 1.3, 1.4, .5, M(T.light ? '#e9e4da' : T.desk, { rough:.7 }), x, .25, 1.6, 28);
+    for (let i = 0; i < 6; i++) {
+      const m = new THREE.Mesh(new THREE.IcosahedronGeometry(rand(.4, .55), 0), M(T.leaf, { rough:.95 }));
+      m.position.set(x + Math.cos(i) * .7, .8 + rand(0, .3), 1.6 + Math.sin(i) * .7); m.castShadow = true; root.add(m);
+    }
+    if (T.trim[1] > 0) {
+      const t = new THREE.Mesh(new THREE.TorusGeometry(1.42, .03, 6, 48), M(T.trim[0], { basic:true, glow:1.6, toneMapped:false }));
+      t.rotation.x = Math.PI / 2; t.position.set(x, .06, 1.6); t.userData.noedge = true; root.add(t);
+    }
+  }
+  plant(root, -9.4, -5); plant(root, 9.4, -5); plant(root, -9.4, 3.4); plant(root, 9.4, 3.4);
+  lampPoint(root, 0, -1);
+
+  // Продажи
+  place('sales', [13.8, -1.6, 20.2, 2], 3, [17, -3.9]);
+  wallScreen(root, 21.75, 1.5, -2, 2.2, 1.1, 'chat', '#7ad37a', -Math.PI / 2);
+  plant(root, 12.7, 3.3); plant(root, 21.3, 3.3, .9);
+  lampPoint(root, 17, -1);
+
+  // Технический отдел: столы и серверные стойки
+  place('tech', [13.6, 8.4, 18.4, 8.4], 3, null);
+  const rack = M(T.edges ? T.desk : T.light ? '#2f3640' : '#111216', { rough:.4, metal:T.edges ? 0 : .4 });
+  sim.leds = [];
+  for (let i = 0; i < 4; i++) {
+    const z = 7 + i * 1.6;
+    box(root, .8, 2.1, 1.2, rack, 21.1, 1.05, z);
+    for (let k = 0; k < 6; k++) {
+      const led = new THREE.Mesh(new THREE.BoxGeometry(.02, .05, .4), M(pick(['#3ddc97', '#4da3ff', '#ffb45c']), { basic:true, glow:2, toneMapped:false }));
+      led.position.set(20.69, .4 + k * .3, z); led.userData.noedge = true; root.add(led); sim.leds.push(led);
+    }
+  }
+  plant(root, 12.8, 13.2); plant(root, 18.2, 13.2);
+  lampPoint(root, 16.5, 9.5);
+
+  // Контент-студия: столы и съёмочная площадка
+  place('studio', [-9, 7.6, -5.6, 10.6], 3, null);
+  box(root, .12, 2.6, 3.4, M(T.light ? '#ffffff' : '#e8e8e8', { rough:.9 }), -1.1, 1.3, 10.8);
+  for (const z of [9, 12.6]) {
+    cyl(root, .03, .03, 1.8, M('#222'), -3.4, .9, z, 6);
+    const sb = box(root, .7, .6, .3, M('#ffffff', { basic:true, glow:T.bloom ? 1.5 : 1, toneMapped:false }), -3.4, 1.95, z, { shadow:false });
+    sb.rotation.y = -Math.PI / 4 * (z < 10 ? 1 : -1);
+  }
+  cyl(root, .03, .03, 1.2, M('#222'), -4.4, .6, 10.8, 6);
+  box(root, .45, .3, .3, M('#151515', { rough:.3 }), -4.4, 1.35, 10.8);
+  SPOTS.set = { x:-2, z:10.8, room:'studio', face:-Math.PI / 2 };
+  lampPoint(root, -5.5, 9.5);
+
+  // Реклама Meta
+  place('ads', [3, 9, 3, 9], 1, [7.2, 8.6]);
+  wallScreen(root, 3.4, 1.45, 6.4, 3, 1.35, 'ads', '#ff7a59');
+  wallScreen(root, 7.2, 1.45, 6.4, 2.6, 1.35, 'chart', '#ff9a6b');
+  plant(root, 1.3, 13.2); plant(root, 9.3, 13.2);
+  lampPoint(root, 5, 10);
+}
+
+function addEdges(root) {
+  const lm = new THREE.LineBasicMaterial({ color:'#ffffff', transparent:true, opacity:.75 });
+  const meshes = [];
+  root.traverse(m => { if (m.isMesh && !m.userData.noedge) meshes.push(m); });
+  for (const m of meshes) {
+    const e = new THREE.LineSegments(new THREE.EdgesGeometry(m.geometry, 35), lm);
+    m.add(e);
+  }
+}
+
+/* ───────────── Навигация по коридорам ───────────── */
+function buildGraph() {
+  const nodes = [], key = p => p[0].toFixed(2) + ',' + p[1].toFixed(2), idx = new Map();
+  const add = p => { const k = key(p); if (!idx.has(k)) { idx.set(k, nodes.length); nodes.push({ p, e:[] }); } return idx.get(k); };
+  CORRIDORS.forEach(([a, b]) => { add(a); add(b); });
+  ROOMS.forEach(r => r.doors.forEach(d => add(doorPoint(r, d).out)));
+  for (const [a, b] of CORRIDORS) {
+    const dx = b[0] - a[0], dz = b[1] - a[1], L2 = dx * dx + dz * dz;
+    const on = nodes.map((n, i) => {
+      const t = ((n.p[0] - a[0]) * dx + (n.p[1] - a[1]) * dz) / L2;
+      const px = a[0] + t * dx, pz = a[1] + t * dz;
+      return (t >= -1e-6 && t <= 1 + 1e-6 && Math.hypot(px - n.p[0], pz - n.p[1]) < .01) ? [t, i] : null;
+    }).filter(Boolean).sort((p, q) => p[0] - q[0]);
+    for (let i = 0; i < on.length - 1; i++) {
+      const A = on[i][1], B = on[i + 1][1];
+      const w = Math.hypot(nodes[A].p[0] - nodes[B].p[0], nodes[A].p[1] - nodes[B].p[1]);
+      nodes[A].e.push([B, w]); nodes[B].e.push([A, w]);
+    }
+  }
+  const shortest = (from, to) => {
+    const s = idx.get(key(from)), t = idx.get(key(to));
+    const dist = nodes.map(() => Infinity), prev = nodes.map(() => -1), done = new Set();
+    dist[s] = 0;
+    while (done.size < nodes.length) {
+      let u = -1;
+      for (let i = 0; i < nodes.length; i++) if (!done.has(i) && (u < 0 || dist[i] < dist[u])) u = i;
+      if (u < 0 || dist[u] === Infinity) break;
+      done.add(u);
+      if (u === t) break;
+      for (const [v, w] of nodes[u].e) if (dist[u] + w < dist[v]) { dist[v] = dist[u] + w; prev[v] = u; }
+    }
+    const path = [];
+    for (let u = t; u >= 0; u = prev[u]) path.unshift(nodes[u].p);
+    return { len:dist[t], path };
+  };
+  return { shortest };
+}
+let GRAPH;
+function route(from, fromRoom, to, toRoom) {
+  if (fromRoom === toRoom) return [[to.x, to.z]];
+  let best = null;
+  for (const da of RM[fromRoom].doors.map(d => doorPoint(RM[fromRoom], d)))
+    for (const db of RM[toRoom].doors.map(d => doorPoint(RM[toRoom], d))) {
+      const g = GRAPH.shortest(da.out, db.out);
+      const len = Math.hypot(from.x - da.inP[0], from.z - da.inP[1]) + g.len + Math.hypot(to.x - db.inP[0], to.z - db.inP[1]);
+      if (!best || len < best.len) best = { len, pts:[da.inP, ...g.path, db.inP, [to.x, to.z]] };
+    }
+  return best.pts;
+}
+
+/* ───────────── Люди ───────────── */
+const STATUS = { work:'#3ddc97', think:'#ffc247', pause:'#8a8f99' };
+class Agent {
+  constructor(def, root) {
+    this.def = def; this.id = def.id;
+    this.seat = SEATS[def.id];
+    this.room = def.room; this.state = 'sit'; this.status = 'work';
+    this.timer = rand(3, 14); this.busy = false; this.doing = TM[def.id].role;
+    this.t = Math.random() * 10; this.onArrive = null; this.path = [];
+    this.build(root);
+    this.place(this.seat.x, this.seat.z, this.seat.face, true);
+  }
+  build(root) {
+    const d = this.def, flat = T.flatAgents;
+    const g = this.g = new THREE.Group();
+    const shirt = M(flat ? '#f2f7ff' : d.color, { rough:.7 });
+    const accent = M(d.color, { rough:.6 });
+    const pants = M(flat ? '#cfe0f2' : (T.light ? '#3a4150' : '#24262e'), { rough:.8 });
+    const skin = M(flat ? '#ffffff' : (d.skin || pick(['#f0c7a8', '#e3b497', '#c98f6d', '#f5d3bc'])), { rough:.7 });
+    const legGeo = rbox(.17, .66, .2, .06);
+    this.legs = [-.11, .11].map(x => {
+      const p = new THREE.Group(); p.position.set(x, .7, 0);
+      const m = new THREE.Mesh(legGeo, pants); m.position.y = -.33; m.castShadow = true; p.add(m); g.add(p); return p;
+    });
+    const body = new THREE.Mesh(new THREE.CapsuleGeometry(.24, .42, 4, 12), shirt);
+    body.position.y = 1.08; body.castShadow = true; body.userData.agent = this; g.add(body);
+    if (flat) { const band = new THREE.Mesh(new THREE.CylinderGeometry(.25, .25, .1, 16), accent); band.position.y = 1.2; g.add(band); }
+    const armGeo = rbox(.1, .5, .12, .05);
+    this.arms = [-.33, .33].map(x => {
+      const p = new THREE.Group(); p.position.set(x, 1.32, 0);
+      const m = new THREE.Mesh(armGeo, shirt); m.position.y = -.24; m.castShadow = true; p.add(m); g.add(p); return p;
+    });
+    const head = new THREE.Mesh(new THREE.SphereGeometry(.2, 18, 14), skin);
+    head.position.y = 1.6; head.castShadow = true; head.userData.agent = this; g.add(head);
+    if (d.head) {
+      const hair = new THREE.Mesh(new THREE.SphereGeometry(.215, 18, 12, 0, Math.PI * 2, 0, Math.PI / 2), M(flat ? '#cfe0f2' : d.hair, { rough:.9 }));
+      hair.position.y = 1.62; hair.rotation.x = -.25; g.add(hair);
+      if (d.long) { const h2 = box(g, .4, .45, .12, M(flat ? '#cfe0f2' : d.hair, { rough:.9 }), 0, 1.45, -.14, { r:.05 }); h2.userData.noedge = true; }
+    } else {
+      // у агентов вместо волос — светящийся «визор» цвета зоны ответственности
+      const v = new THREE.Mesh(new THREE.BoxGeometry(.3, .06, .05), M(d.color, { basic:true, glow:T.bloom ? 1.6 : 1, toneMapped:false }));
+      v.position.set(0, 1.63, .18); g.add(v);
+    }
+    this.dot = new THREE.Mesh(new THREE.SphereGeometry(.075, 10, 8), new THREE.MeshBasicMaterial({ color:STATUS.work, toneMapped:false }));
+    this.dot.position.y = 2.02; g.add(this.dot);
+    this.item = box(g, .3, .22, .22, M(d.color, { basic:true, glow:T.bloom ? 1.5 : 1, toneMapped:false }), 0, 1, .38, { shadow:false });
+    this.item.visible = false;
+    this.ring = new THREE.Mesh(new THREE.RingGeometry(.45, .58, 32), new THREE.MeshBasicMaterial({ color:T.ui.accent, transparent:true, opacity:.9, toneMapped:false, side:THREE.DoubleSide }));
+    this.ring.rotation.x = -Math.PI / 2; this.ring.position.y = .05; this.ring.visible = false; g.add(this.ring);
+    const nm = document.createElement('div'); nm.className = 'name'; nm.textContent = d.name;
+    const lab = new CSS2DObject(nm); lab.position.y = 2.3; g.add(lab);
+    g.traverse(m => { if (m.isMesh) m.userData.noedge = true; });
+    root.add(g);
+  }
+  get pos() { return { x:this.g.position.x, z:this.g.position.z }; }
+  place(x, z, face, sit) {
+    this.g.position.set(x, 0, z); this.g.rotation.y = face; this.sitting = !!sit;
+  }
+  setStatus(s) { this.status = s; this.dot.material.color.set(STATUS[s]); }
+  walkTo(spot) {
+    return new Promise(res => {
+      this.path = route(this.pos, this.room, spot, spot.room).map(p => new THREE.Vector2(p[0], p[1]));
+      this.state = 'walk'; this.sitting = false; this.target = spot;
+      this.onArrive = () => { this.room = spot.room; this.state = 'idle'; this.g.rotation.y = spot.face ?? this.g.rotation.y; this.sitting = !!spot.sit; res(); };
+    });
+  }
+  goHome() { return this.walkTo({ ...this.seat, sit:true }).then(() => { this.state = 'sit'; this.busy = false; this.item.visible = false; }); }
+  faceTo(x, z) { this.g.rotation.y = Math.atan2(x - this.g.position.x, z - this.g.position.z); }
+  bubble(text, s = 3) {
+    const el = document.createElement('div'); el.className = 'bubble'; el.textContent = text;
+    const ob = new CSS2DObject(el); ob.position.y = 2.45; this.g.add(ob);
+    sim.after(s, () => { this.g.remove(ob); el.remove(); });
+  }
+  update(dt) {
+    this.t += dt;
+    const L = this.legs, A = this.arms;
+    if (this.state === 'walk') {
+      const target = this.path[0];
+      const p = this.g.position, dx = target.x - p.x, dz = target.y - p.z, d = Math.hypot(dx, dz);
+      const step = 2.4 * dt;
+      if (d <= step) { p.x = target.x; p.z = target.y; this.path.shift(); if (!this.path.length) { const f = this.onArrive; this.onArrive = null; f && f(); } }
+      else {
+        p.x += dx / d * step; p.z += dz / d * step;
+        const want = Math.atan2(dx, dz);
+        let diff = want - this.g.rotation.y; diff = Math.atan2(Math.sin(diff), Math.cos(diff));
+        this.g.rotation.y += diff * Math.min(1, dt * 12);
+      }
+      const s = Math.sin(this.t * 9);
+      L[0].rotation.x = s * .6; L[1].rotation.x = -s * .6;
+      const carry = this.item.visible;
+      A[0].rotation.x = carry ? -1.1 : -s * .5; A[1].rotation.x = carry ? -1.1 : s * .5;
+      this.g.position.y = Math.abs(Math.cos(this.t * 9)) * .05;
+    } else if (this.sitting) {
+      this.g.position.y = -.23;
+      L[0].rotation.x = L[1].rotation.x = -Math.PI / 2;
+      const typing = this.status === 'work' && this.state === 'sit';
+      A[0].rotation.x = -1 + (typing ? Math.sin(this.t * 14) * .08 : 0);
+      A[1].rotation.x = -1 + (typing ? Math.cos(this.t * 13) * .08 : 0);
+      if (this.status === 'think') A[1].rotation.x = -2.3;
+    } else {
+      this.g.position.y = 0;
+      L[0].rotation.x = L[1].rotation.x = 0;
+      const carry = this.item.visible;
+      A[0].rotation.x = carry ? -1.1 : Math.sin(this.t * 1.5) * .05;
+      A[1].rotation.x = carry ? -1.1 : -Math.sin(this.t * 1.5) * .05;
+    }
+    this.dot.position.y = 2.02 + Math.sin(this.t * 3) * .03;
+    if (this.ring.visible) this.ring.material.opacity = .55 + Math.sin(this.t * 5) * .35;
+  }
+}
+
+/* ───────────── Симуляция: передачи, перерывы, планёрки, рабочий стол ───────────── */
+function makeSim() {
+  return {
+    timers:[], agents:[], byId:{}, inbox:[], doneList:[], working:[], replayIdx:0, nextMeet:22, nextReplay:5, nextApprove:30,
+    after(s, f) { this.timers.push({ t:s, f }); },
+    wait(s) { return new Promise(r => this.after(s, r)); },
+  };
+}
+const feedEl = document.getElementById('feed');
+function log(html) {
+  const li = document.createElement('li');
+  li.innerHTML = `<time>${nowHM()}</time><span>${html}</span>`;
+  feedEl.prepend(li);
+  while (feedEl.children.length > 7) feedEl.lastChild.remove();
+}
+const nameOf = id => esc(TM[id]?.name || id);
+
+function idle(a) { return a && a.state === 'sit' && !a.busy; }
+function resolveTarget(a, to) {
+  if (to === 'you') return { kind:'inbox' };
+  const id = to === 'head' ? TM[a.id].boss : to;
+  return id && sim.byId[id] ? { kind:'agent', agent:sim.byId[id] } : null;
+}
+function visitorSpot(b) {
+  const s = b.seat;
+  return { x:s.x + .85, z:s.z - .15, room:b.seat.room, face:-Math.PI / 2 };
+}
+async function handoff(a) {
+  const opts = TM[a.id].out.map(x => ({ o:x, t:resolveTarget(a, x.to) })).filter(x => x.t);
+  if (!opts.length) return;
+  const { o:out, t } = pick(opts);
+  a.busy = true; a.setStatus('work'); a.state = 'go'; a.item.visible = true;
+  a.doing = `Несёт «${out.item}»`;
+  if (t.kind === 'agent') {
+    const b = t.agent;
+    await a.walkTo(visitorSpot(b));
+    a.faceTo(b.g.position.x, b.g.position.z);
+    a.item.visible = false; a.bubble(out.say);
+    if (idle(b)) { b.setStatus('think'); b.doing = `Принял: ${out.item}`; sim.after(4, () => idle(b) && b.setStatus('work')); }
+    log(`<b>${nameOf(a.id)}</b> → ${nameOf(b.id)}: ${esc(out.say)}`);
+  } else {
+    await a.walkTo(SPOTS.inbox);
+    a.item.visible = false; a.bubble('На решение: ' + out.item);
+    sim.inbox.push({ title:out.item, from:a.id, sim:true });
+    log(`<b>${nameOf(a.id)}</b> положил на решение: «${esc(out.item)}»`);
+    drawBoard();
+  }
+  await sim.wait(2.2);
+  a.doing = TM[a.id].role;
+  await a.goHome();
+}
+async function takeBreak(a) {
+  const free = SPOTS.rest.filter(s => !s.taken);
+  if (!free.length) return;
+  const s = pick(free); s.taken = true;
+  a.busy = true; a.setStatus('pause'); a.state = 'go';
+  a.doing = s.room === 'kitchen' ? 'Пьёт кофе на кухне' : 'Отдыхает в лаунже';
+  await a.walkTo(s);
+  await sim.wait(rand(7, 14));
+  s.taken = false;
+  a.setStatus('work'); a.doing = TM[a.id].role;
+  await a.goHome();
+}
+async function meeting() {
+  const heads = ['ilia', 'firuza', 'bogdan', 'nurken'].map(id => sim.byId[id]).filter(idle);
+  const extra = sim.agents.filter(a => idle(a) && !TM[a.id].head && a.id !== 'orchestrator');
+  const people = [...heads, ...extra.sort(() => Math.random() - .5).slice(0, 2)];
+  if (people.length < 2) return;
+  log(`Планёрка в переговорной: ${people.map(p => nameOf(p.id)).join(', ')}`);
+  const seats = [...SPOTS.meet].sort(() => Math.random() - .5);
+  await Promise.all(people.map(async (p, i) => {
+    p.busy = true; p.state = 'go'; p.setStatus('think'); p.doing = 'На планёрке';
+    await p.walkTo(seats[i]);
+    if (i === 0) p.bubble('Что выпускаем на этой неделе?', 4);
+    await sim.wait(14);
+    p.setStatus('work'); p.doing = TM[p.id].role;
+    await p.goHome();
+  }));
+}
+/* Повтор реальной задачи из истории: диспетчер несёт её агенту, тот делает и сдаёт на проверку,
+   Илья принимает — та же цепочка, что у рабочего стола hq2 (диспетчер → исполнитель → проверка). */
+async function replay() {
+  const orch = sim.byId.orchestrator;
+  if (!idle(orch) || !REAL.length) return;
+  const task = REAL[sim.replayIdx++ % Math.min(REAL.length, 24)];
+  const ids = (task.agents || []).filter(id => sim.byId[id] && !TM[id].head);
+  const a = sim.byId[ids.find(id => idle(sim.byId[id])) || 'runner'];
+  if (!idle(a)) return;
+  a.busy = true;
+  const title = clip(task.title, 64);
+  orch.busy = true; orch.state = 'go'; orch.item.visible = true; orch.doing = `Несёт задачу: ${title}`;
+  log(`Рабочий стол → <b>${nameOf(a.id)}</b>: «${esc(title)}»`);
+  await orch.walkTo(visitorSpot(a));
+  orch.faceTo(a.g.position.x, a.g.position.z);
+  orch.item.visible = false; orch.bubble('Новая задача');
+  const job = { title, agent:a.id, task };
+  sim.working.push(job); drawBoard();
+  a.ring.visible = true; a.setStatus('work'); a.doing = `Делает: ${title}`;
+  orch.goHome().then(() => { orch.doing = TM.orchestrator.role; });
+  await sim.wait(rand(11, 16));
+  a.state = 'go'; a.item.visible = true;
+  await a.walkTo(SPOTS.inbox);
+  a.item.visible = false; a.ring.visible = false; a.bubble('Готово на проверку');
+  sim.working = sim.working.filter(j => j !== job);
+  sim.inbox.push({ title, from:a.id, task });
+  log(`<b>${nameOf(a.id)}</b> сдал на проверку: «${esc(title)}»`);
+  drawBoard();
+  await sim.wait(1.5);
+  a.doing = TM[a.id].role;
+  await a.goHome();
+}
+async function approve() {
+  const ilia = sim.byId.ilia;
+  if (!idle(ilia) || !sim.inbox.length) return;
+  ilia.busy = true; ilia.state = 'go'; ilia.doing = 'Идёт принимать работы';
+  await ilia.walkTo(SPOTS.inbox);
+  const items = sim.inbox.splice(0, 3);
+  ilia.bubble(items.length > 1 ? `Принято: ${items.length}` : 'Принято');
+  sim.doneList.unshift(...items); sim.doneList.length = Math.min(sim.doneList.length, 6);
+  log(`<b>Илья</b> принял: ${items.map(i => '«' + esc(clip(i.title, 40)) + '»').join(', ')}`);
+  drawBoard();
+  await sim.wait(2);
+  ilia.doing = TM.ilia.role;
+  await ilia.goHome();
+}
+
+function drawBoard() {
+  const tex = sim.boardTex; if (!tex) return;
+  const c = tex.userData.canvas, x = c.getContext('2d'), w = c.width, h = c.height;
+  const light = T.light;
+  x.fillStyle = light ? '#ffffff' : '#0c0d12'; x.fillRect(0, 0, w, h);
+  x.fillStyle = light ? '#1c1c1c' : '#ffffff'; x.font = '700 30px Inter, sans-serif'; x.textBaseline = 'top';
+  x.fillText('Рабочий стол · задачи агентам', 28, 22);
+  const cols = [['В работе', sim.working, '#3ddc97'], ['На проверке', sim.inbox, '#ffc247'], ['Принято', sim.doneList, T.ui.accent === '#ffffff' ? '#9fd0ff' : T.ui.accent]];
+  cols.forEach(([name, list, col], i) => {
+    const X = 28 + i * 330;
+    x.fillStyle = col; x.font = '700 22px Inter, sans-serif'; x.fillText(`${name} · ${list.length}`, X, 76);
+    list.slice(0, 4).forEach((it, k) => {
+      const Y = 112 + k * 84;
+      x.fillStyle = light ? '#f1f1f1' : '#191b22'; rr(x, X, Y, 310, 74, 10);
+      x.fillStyle = col; x.fillRect(X, Y + 10, 4, 54);
+      x.fillStyle = light ? '#1c1c1c' : '#eaeaea'; x.font = '600 19px Inter, sans-serif';
+      const words = it.title.split(' '); let line = '', ln = 0;
+      for (const wd of words) {
+        if (x.measureText(line + wd).width > 280) { if (ln < 1) x.fillText(line, X + 16, Y + 10 + ln * 24); else { line += '…'; break; } line = ''; ln++; }
+        line += wd + ' ';
+      }
+      if (ln < 2) x.fillText(clip(line, 40), X + 16, Y + 10 + ln * 24);
+      x.fillStyle = light ? '#777' : '#8b90a0'; x.font = '500 15px Inter, sans-serif';
+      x.fillText(TM[it.agent || it.from]?.name || '', X + 16, Y + 52);
+    });
+  });
+  tex.needsUpdate = true;
+  document.getElementById('s-inbox').textContent = sim.inbox.length;
+}
+
+function think(a, dt) {
+  a.timer -= dt;
+  if (a.timer > 0 || !idle(a)) return;
+  a.timer = rand(6, 16);
+  if (a.id === 'orchestrator' || a.id === 'ilia') return;
+  const walkers = sim.agents.filter(x => x.state === 'walk').length;
+  const r = Math.random();
+  if (r < .3 && walkers < 9) handoff(a);
+  else if (r < .4 && walkers < 9) takeBreak(a);
+  else a.setStatus(TM[a.id].waits ? (Math.random() < .6 ? 'think' : 'work') : (Math.random() < .25 ? 'think' : 'work'));
+}
+
+/* ───────────── Сборка варианта ───────────── */
+const roomCounts = {};
+function build(themeIdx) {
+  T = THEMES[themeIdx];
+  if (scene) scene.traverse(o => {
+    if (o.isCSS2DObject) o.element.remove();
+    if (o.geometry) o.geometry.dispose();
+    if (o.material) [].concat(o.material).forEach(m => { m.map?.dispose(); m.dispose(); });
+  });
+  Object.keys(GEO).forEach(k => delete GEO[k]);
+  MATS = new Map(); SCREEN_CACHE.clear(); scrolling.length = 0;
+  for (const k of Object.keys(SEATS)) delete SEATS[k];
+  SPOTS.rest = []; SPOTS.meet = [];
+  feedEl.innerHTML = '';
+
+  const r = document.documentElement.style, u = T.ui;
+  r.setProperty('--card', u.card); r.setProperty('--fg', u.fg); r.setProperty('--sub', u.sub);
+  r.setProperty('--accent', u.accent); r.setProperty('--border', u.border); r.setProperty('--page', u.page);
+  r.setProperty('--font', u.font || "'Inter',system-ui,sans-serif");
+  r.setProperty('--title', u.title || u.font || "'Inter',system-ui,sans-serif");
+
+  scene = new THREE.Scene();
+  sim = makeSim();
+  buildSky();
+  const root = new THREE.Group(); scene.add(root);
+  const hemi = new THREE.HemisphereLight(T.hemi[0], T.hemi[1], T.hemi[2]); scene.add(hemi);
+  const sun = new THREE.DirectionalLight(T.sun[0], T.sun[1]);
+  sun.position.set(-18, 40, 22); sun.castShadow = true;
+  sun.shadow.mapSize.set(2048, 2048);
+  Object.assign(sun.shadow.camera, { left:-30, right:30, top:24, bottom:-24, near:5, far:110 });
+  sun.shadow.bias = -.0004; sun.shadow.normalBias = .03;
+  scene.add(sun);
+
+  buildShell(root);
+  buildWalls(root);
+  buildFurniture(root);
+  if (T.edges) addEdges(root);
+  GRAPH = buildGraph();
+
+  for (const room of ROOMS) {
+    const el = document.createElement('div'); el.className = 'lab';
+    el.innerHTML = `<div class="room"><span class="ic">${svg(room.icon)}</span><span><b>${esc(room.name)}</b><small>${esc(room.sub)}</small></span><span class="n" id="n-${room.id}">0</span></div>`;
+    const ob = new CSS2DObject(el);
+    const [x0, z0, x1] = room.r;
+    ob.position.set(room.id === 'hub' ? -9.4 : x0 + .4, room.open ? .4 : 2.6, room.id === 'hub' ? -3.6 : z0 + .3);
+    root.add(ob);
+  }
+
+  for (const def of TEAM) { const a = new Agent(def, root); sim.agents.push(a); sim.byId[def.id] = a; }
+
+  renderer.toneMappingExposure = T.exposure;
+  composer = new EffectComposer(renderer);
+  composer.addPass(new RenderPass(scene, camera));
+  bloomPass = new UnrealBloomPass(new THREE.Vector2(innerWidth, innerHeight), ...(T.bloom || [0, 0, 1]));
+  bloomPass.enabled = !!T.bloom;
+  composer.addPass(bloomPass);
+  composer.addPass(new OutputPass());
+  composer.setSize(innerWidth, innerHeight);
+
+  drawBoard();
+  log(`Вариант «${esc(T.name)}»: ${TEAM.length} сотрудников в ${ROOMS.length} зонах`);
+  document.querySelectorAll('#chips button').forEach((b, i) => b.setAttribute('aria-current', i === themeIdx));
+  document.getElementById('vdesc').textContent = `Вариант ${themeIdx + 1} из ${THEMES.length} · ${T.desc}`;
+  try { localStorage.setItem('hq-concept', T.id); } catch {}
+}
+
+/* ───────────── Интерфейс ───────────── */
+const chips = document.getElementById('chips');
+THEMES.forEach((t, i) => {
+  const b = document.createElement('button'); b.textContent = `${i + 1}. ${t.name}`;
+  b.onclick = () => { build(i); const u = new URL(location.href); u.searchParams.set('v', i + 1); history.replaceState(null, '', u); };
+  chips.appendChild(b);
+});
+const taskList = document.getElementById('task-list');
+REAL.slice(0, 16).forEach(t => {
+  const li = document.createElement('li'), a = document.createElement('a');
+  const url = t.proof?.[0]?.url || '#';
+  a.href = url; a.target = '_blank'; a.rel = 'noopener';
+  const who = (t.agents || []).map(id => TM[id]?.name).filter(Boolean).slice(0, 3).join(', ');
+  a.innerHTML = `${esc(t.title)}<small>${ddmm(t.date)} · ${esc(t.kind || '')}${who ? ' · ' + esc(who) : ''}</small>`;
+  const hl = on => (t.agents || []).forEach(id => { const ag = sim.byId[id]; if (ag && !sim.working.some(j => j.agent === id)) ag.ring.visible = on; });
+  a.onmouseenter = a.onfocus = () => hl(true);
+  a.onmouseleave = a.onblur = () => hl(false);
+  li.appendChild(a); taskList.appendChild(li);
+});
+const toggle = (btn, cls, invert) => {
+  const b = document.getElementById(btn);
+  b.onclick = () => { const on = document.body.classList.toggle(cls); b.setAttribute('aria-pressed', invert ? !on : on); };
+};
+toggle('b-names', 'names');
+toggle('b-tasks', 'notasks', true);
+document.getElementById('b-reset').onclick = resetView;
+
+// карточка агента по клику
+const tip = document.getElementById('tip');
+const ray = new THREE.Raycaster(), ndc = new THREE.Vector2();
+let down = null;
+renderer.domElement.addEventListener('pointerdown', e => { down = [e.clientX, e.clientY]; });
+renderer.domElement.addEventListener('pointerup', e => {
+  if (!down || Math.hypot(e.clientX - down[0], e.clientY - down[1]) > 5) return;
+  ndc.set(e.clientX / innerWidth * 2 - 1, -(e.clientY / innerHeight) * 2 + 1);
+  ray.setFromCamera(ndc, camera);
+  const hit = ray.intersectObjects(sim.agents.map(a => a.g), true).find(h => h.object.userData.agent);
+  if (!hit) { tip.hidden = true; return; }
+  const a = hit.object.userData.agent, d = TM[a.id];
+  const last = REAL.find(t => (t.agents || []).includes(a.id) || (t.people || []).includes(a.id));
+  const st = { work:'в работе', think:'думает', pause:'на паузе' }[a.status];
+  tip.innerHTML = `<h4>${esc(d.name)}</h4><div class="role">${esc(d.role)}</div><dl>
+    <div><dt>Где</dt><dd>${esc(RM[a.room].name)} · ${st}</dd></div>
+    <div><dt>Сейчас</dt><dd>${esc(a.doing)}</dd></div>
+    ${last ? `<div><dt>Последняя реальная задача</dt><dd>${esc(last.title)} <small>(${ddmm(last.date)})</small>${last.proof?.[0] ? ` · <a href="${esc(last.proof[0].url)}" target="_blank" rel="noopener">открыть</a>` : ''}</dd></div>` : ''}
+  </dl>`;
+  tip.hidden = false;
+  tip.style.left = Math.min(e.clientX + 14, innerWidth - 300) + 'px';
+  tip.style.top = Math.min(e.clientY + 14, innerHeight - tip.offsetHeight - 10) + 'px';
+});
+
+addEventListener('resize', () => {
+  camera.aspect = innerWidth / innerHeight; camera.updateProjectionMatrix();
+  renderer.setSize(innerWidth, innerHeight); labelRenderer.setSize(innerWidth, innerHeight);
+  composer.setSize(innerWidth, innerHeight);
+});
+
+/* ───────────── Цикл ───────────── */
+const clock = new THREE.Clock();
+let statT = 0;
+function step(dt) {
+  sim.timers = sim.timers.filter(t => (t.t -= dt) > 0 || (t.f(), false));
+  for (const a of sim.agents) { a.update(dt); think(a, dt); }
+  if ((sim.nextMeet -= dt) <= 0) { sim.nextMeet = rand(60, 80); meeting(); }
+  if ((sim.nextReplay -= dt) <= 0) { sim.nextReplay = rand(16, 24); replay(); }
+  if ((sim.nextApprove -= dt) <= 0) { sim.nextApprove = rand(18, 30); approve(); }
+  for (const t of scrolling) t.offset.y = (t.offset.y + dt * .05) % 1;
+  if (sim.leds && Math.random() < dt * 8) { const l = pick(sim.leds); l.visible = !l.visible; }
+  if ((statT -= dt) <= 0) {
+    statT = .5;
+    const c = { work:0, think:0, pause:0 };
+    for (const k of Object.keys(roomCounts)) roomCounts[k] = 0;
+    for (const a of sim.agents) { c[a.status]++; roomCounts[a.room] = (roomCounts[a.room] || 0) + 1; }
+    for (const k of Object.keys(c)) document.getElementById('s-' + k).textContent = c[k];
+    for (const room of ROOMS) { const el = document.getElementById('n-' + room.id); if (el) el.textContent = roomCounts[room.id] || 0; }
+  }
+}
+function loop() {
+  const dt = Math.min(clock.getDelta(), .05);
+  step(dt);
+  controls.update();
+  if (scene.fog) scene.fog.density = T.fog[1] * 79 / camera.position.distanceTo(controls.target);
+  composer.render();
+  labelRenderer.render(scene, camera);
+  requestAnimationFrame(loop);
+}
+
+const qv = +new URLSearchParams(location.search).get('v');
+let start = qv >= 1 && qv <= THEMES.length ? qv - 1 : 0;
+if (!qv) try { const s = THEMES.findIndex(t => t.id === localStorage.getItem('hq-concept')); if (s >= 0) start = s; } catch {}
+resetView();
+build(start);
+loop();
+window.__hq = { step:s => { for (let i = 0; i < s * 20; i++) step(.05); }, build };
+</script>
+</body>
+</html>

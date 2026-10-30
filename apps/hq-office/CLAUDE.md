@@ -43,3 +43,8 @@
 - Выкладка: `.github/workflows/deploy-hq-office.yml` → релиз в `/opt/hq-office/releases`, `deploy/server.sh`
   переключает `current`, контейнер `aicex-hq-office` в сети `edge`, сайт `/opt/edge/sites/hq-office.caddy`.
 - Проверка без GPU: `?debug&noao` + `__hq.step(секунды)`.
+- `concepts/index.html` — концепт нового дизайна (изометрический офис с комнатами, как на референсе): отдельная
+  страница `hq2.aicex.club/concepts/`, 6 вариантов оформления (`THEMES`, `?v=1…6`) на одной планировке (`ROOMS`,
+  коридоры `CORRIDORS`) и одной симуляции. Команда и цепочки передач — копия каталога `OFFICE_DATA` (`TEAM`);
+  рабочий стол проигрывает реальные задачи из `tasks.js`/`tasks.auto.js` (диспетчер → агент → проверка Ильёй).
+  Проверка без GPU: `__hq.step(секунды)`.
