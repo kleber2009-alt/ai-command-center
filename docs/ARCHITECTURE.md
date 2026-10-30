@@ -44,6 +44,7 @@
 | `ig.aicex.club` | IG Serial Content (демо) | `ig-content` :3017 |
 | `crm.aicex.club`, `sales.aicex.club`, `sales-api.aicex.club` | AI Sales System: CRM, портал, API v2 | статика + `aisales-api-v2` :8001 |
 | `tg.aicex.club` | TG Agent, админка | `tg-agent` |
+| `practicum1.aicex.club` … `practicum5.aicex.club` | 5 версий страницы практикума с ИИ-офисом (`landings/practicum-office`) | `aicex-practicum`, `/opt/practicum`, `deploy-practicum.yml` |
 | `landings.aicex.club/<name>/` | Лендинги из `landings/` | `/var/www/landings`, `deploy-landings.yml` |
 | `finance.aicex.club` | Finance OS | `/opt/finance-os` |
 | `course.aicex.club` | запланирован, TLS пока не поднят | — |

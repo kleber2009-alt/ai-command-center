@@ -1,0 +1,162 @@
+<!DOCTYPE html>
+<html lang="ru">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<title>Практикум по набору подписчиков, клиентов и продаж с помощью AI</title>
+<meta name="description" content="Бесплатный 2-дневный практикум Ильи Палия 4–5 ноября: покажу свой ИИ-офис, где маркетинговая команда из агентов приводит трафик, пишет сценарии, собирает воронки, креативы и презентации">
+<meta property="og:title" content="Практикум по набору подписчиков, клиентов и продаж с помощью AI">
+<meta property="og:description" content="Бесплатный 2-дневный практикум Ильи Палия 4–5 ноября: покажу свой ИИ-офис, где маркетинговая команда из агентов приводит трафик, пишет сценарии, собирает воронки, креативы и презентации">
+<meta name="color-scheme" content="dark">
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Unbounded:wght@500;600;700;800&family=Manrope:wght@400;500;600;700;800&display=swap">
+<link rel="stylesheet" href="../shared.css">
+<style>
+/* Layout: tech pipeline — hero with live office frame, 7 numbered stations on a vertical rail */
+:root { color-scheme: dark;
+  --bg:#05060a; --bg2:#0a0c13; --card:#0d111c; --fg:#edf0ff; --muted:#8a92b2; --line:rgba(110,135,255,.18);
+  --acc:#4b74ff; --acc-fg:#ffffff; --glow:rgba(75,116,255,.45); --display:Unbounded, "Arial Black", sans-serif; --body:Manrope, system-ui, sans-serif;
+  --h-weight:700; --h-lh:1.12; --h-track:-.01em; --radius:14px; --btn-radius:12px; }
+.h1 { font-size: clamp(30px, 5vw, 62px); }
+.h2 { font-size: clamp(26px, 3.8vw, 44px); }
+.h1 span, .h2 span { color: var(--acc); text-shadow: 0 0 28px var(--glow); }
+.hero { padding-block: clamp(28px, 5vw, 72px); background:
+  linear-gradient(var(--line) 1px, transparent 1px) 0 0/56px 56px, linear-gradient(90deg, var(--line) 1px, transparent 1px) 0 0/56px 56px, var(--bg);
+  mask-image: none; }
+.hero-grid { display: grid; grid-template-columns: minmax(0, 6fr) minmax(0, 6fr); gap: clamp(24px, 4vw, 56px); align-items: center; }
+.hero-copy { display: grid; gap: 24px; }
+.screen { border: 1px solid var(--line); border-radius: 18px; padding: 10px; background: var(--card);
+  box-shadow: 0 0 0 1px rgba(75,116,255,.15), 0 40px 120px -40px var(--glow); }
+.screen-bar { display: flex; align-items: center; gap: 6px; padding: 4px 6px 10px; font: 600 12px/1 var(--body); color: var(--muted); }
+.screen-bar i { width: 9px; height: 9px; border-radius: 50%; background: #2a3152; }
+.screen-bar i:first-child { background: var(--acc); }
+.screen-bar span { margin-left: auto; }
+.screen img { border-radius: 10px; width: 100%; cursor: zoom-in; }
+.rail { display: grid; gap: 0; position: relative; }
+.st { display: grid; grid-template-columns: 64px minmax(0, 1fr); gap: 0 20px; position: relative; padding-bottom: clamp(36px, 5vw, 56px); }
+.st::before { content: ""; position: absolute; left: 31px; top: 64px; bottom: 0; width: 2px; background: linear-gradient(var(--acc), var(--line)); }
+.st:last-child::before { display: none; }
+.num { width: 64px; height: 64px; border-radius: 16px; display: grid; place-items: center; font: 700 22px/1 var(--display);
+  background: var(--card); border: 1px solid var(--acc); color: var(--fg); box-shadow: 0 0 30px -8px var(--glow); }
+.st-body { display: grid; gap: 14px; min-width: 0; padding-top: 6px; }
+.st-body h3 { font-size: clamp(19px, 2.2vw, 25px); }
+.st-media { display: grid; grid-template-columns: repeat(3, minmax(0, 1fr)); gap: 12px; }
+.st-media.two { grid-template-columns: repeat(2, minmax(0, 1fr)); }
+.st-media.one { grid-template-columns: minmax(0, 1fr); max-width: 680px; }
+.st .reels { grid-auto-columns: minmax(170px, 210px); }
+.who { font: 600 12px/1.3 var(--body); letter-spacing: .08em; text-transform: uppercase; color: var(--muted); }
+.who b { color: var(--acc); font-weight: 700; }
+.pays { display: grid; grid-template-columns: repeat(4, minmax(0, 1fr)); gap: 12px; align-items: start; max-width: 760px; }
+.pays img { border-radius: 12px; border: 1px solid var(--line); cursor: zoom-in; }
+.callout { border: 1px solid var(--acc); border-radius: var(--radius); padding: clamp(22px, 4vw, 40px); background: radial-gradient(80% 120% at 0% 0%, rgba(75,116,255,.18), transparent 60%), var(--card);
+  display: grid; gap: 18px; }
+@media (max-width: 860px) { .hero-grid { grid-template-columns: 1fr; } .pays { grid-template-columns: repeat(2, minmax(0, 1fr)); } }
+@media (max-width: 520px) { .st { grid-template-columns: 44px minmax(0, 1fr); gap: 0 14px; } .num { width: 44px; height: 44px; font-size: 16px; border-radius: 12px; } .st::before { left: 21px; top: 44px; } .st-media, .st-media.two { grid-template-columns: repeat(2, minmax(0, 1fr)); } }
+</style>
+</head>
+<body>
+
+<header class="hero" data-hero><div class="wrap hero-grid">
+  <div class="hero-copy">
+    <span class="pill"><i></i>4–5 ноября · 18:00 МСК · только в прямом эфире</span>
+    <h1 class="h1">От ролика до оплаты — <span>конвейер из ИИ-агентов</span></h1>
+    <p class="lead">Мой ИИ-офис сам находит темы, пишет сценарии, монтирует креативы, ведёт трафик, прогревает в воронке и доводит до покупки. На практикуме разберу его по шагам и покажу, как за 15 минут в день делать контент, который приводит подписчиков, заявки и продажи.</p>
+    <div class="cta-row"><a class="btn" data-reg href="#popup:practicum">Принять участие бесплатно<svg viewBox="0 0 24 24" aria-hidden="true"><path d="M5 12h14M13 6l6 6-6 6" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"/></svg></a><span class="cta-note">Записи не будет — только для тех, кто придёт в эфир</span></div>
+  </div>
+  <div class="screen"><div class="screen-bar"><i></i><i></i><i></i><span>hq2.aicex.club · офис онлайн</span></div>
+    <img src="../assets/office-hq2.jpg" alt="Живой 3D-офис агентов" data-zoom></div>
+</div></header>
+
+<section class="sec alt"><div class="wrap"><div class="stats"><div class="stat"><b>≈300 000</b><span>аудитория в соцсетях без бюджета</span></div><div class="stat"><b>≈46 000</b><span>заявок на продукты без рекламы</span></div><div class="stat"><b>≈11 000</b><span>клиентов</span></div><div class="stat"><b>≈84 млн ₽</b><span>выручка за 1,5 года</span></div></div></div></section>
+
+<section class="sec"><div class="wrap stack">
+  <div class="head"><span class="eyebrow">Как работает маркетинговая команда</span><h2 class="h2">7 станций. <span>На каждой — агент</span></h2>
+    <p class="lead">Агент сдаёт работу следующему, человек проверяет только ключевые точки. Всё на скриншотах — настоящие работы офиса.</p></div>
+  <div class="rail"><div class="st"><span class="num">01</span><div class="st-body"><span class="who">Агент: <b>Анализ аудитории</b></span><h3>Находит, что уже залетело</h3><p class="muted">Парсер собирает залетевшие ролики ниши и конкурентов: те, что набрали в разы больше обычного. Это сырьё для сценариев.</p><div class="st-media two crop"><figure class=""><div class="shot"><img src="../assets/parser.jpg" alt="Парсер «Залётный»" loading="lazy"></div><figcaption>Парсер «Залётный»</figcaption></figure><figure class=""><div class="shot"><img src="../assets/marketing.jpg" alt="Витрина отдела маркетинга" loading="lazy"></div><figcaption>marketing.aicex.club — витрина работ отдела</figcaption></figure></div></div></div><div class="st"><span class="num">02</span><div class="st-body"><span class="who">Агент: <b>Сценарии</b></span><h3>Пишет сценарий</h3><p class="muted">Берёт скелет залёта и пишет новый сценарий с хуком и кодовым словом. За один заход — 10 продающих рилсов.</p></div></div><div class="st"><span class="num">03</span><div class="st-body"><span class="who">Агент: <b>Монтаж видео · Видео с аватаром</b></span><h3>Монтирует ролик</h3><p class="muted">Монтаж кодом в 35+ стилях: хук, пословные субтитры, вставки, музыка. Если не хочется сниматься — ролик озвучивает ИИ-двойник.</p><div class="reels"><div class="reel" aria-label="Двойник: рилс с ИИ-аватаром без съёмки"><video src="../assets/reel-dvoinik.mp4" poster="../assets/reel-dvoinik.jpg" preload="none" playsinline loop></video><span class="play">Двойник: рилс с ИИ-аватаром без съёмки</span></div><div class="reel" aria-label="Claude vs GPT: от сценария до ролика"><video src="../assets/reel-claude-vs-gpt.mp4" poster="../assets/reel-claude-vs-gpt.jpg" preload="none" playsinline loop></video><span class="play">Claude vs GPT: от сценария до ролика</span></div><div class="reel" aria-label="Рилс с ИИ-аватаром"><video src="../assets/reel-avatar-reel.mp4" poster="../assets/reel-avatar-reel.jpg" preload="none" playsinline loop></video><span class="play">Рилс с ИИ-аватаром</span></div><div class="reel" aria-label="Стиль «Стеклянная объяснялка»"><video src="../assets/reel-glass.mp4" poster="../assets/reel-glass.jpg" preload="none" playsinline loop></video><span class="play">Стиль «Стеклянная объяснялка»</span></div><div class="reel" aria-label="Silent Reels: хук поверх клипа"><video src="../assets/reel-silent.mp4" poster="../assets/reel-silent.jpg" preload="none" playsinline loop></video><span class="play">Silent Reels: хук поверх клипа</span></div></div></div></div><div class="st"><span class="num">04</span><div class="st-body"><span class="who">Агент: <b>Карусели · Креативы</b></span><h3>Делает карусели и креативы</h3><p class="muted">Карусели в 24 стилях и рекламные креативы под Meta: обложка-хук, пункты и призыв написать кодовое слово.</p><div class="st-media two"><figure class=""><div class="shot"><img src="../assets/carousel-neon.jpg" alt="Карусель Неон" loading="lazy"></div></figure><figure class=""><div class="shot"><img src="../assets/carousel-uimotion.jpg" alt="Карусель UI-моушн" loading="lazy"></div></figure></div></div></div><div class="st"><span class="num">05</span><div class="st-body"><span class="who">Агент: <b>Threads-ветки · Публикации · Реклама Meta</b></span><h3>Ведёт трафик</h3><p class="muted">Три ветки в Threads каждый день, выход роликов по контент-плану и рекламные кампании с отчётами по цене лида. Люди приходят в Telegram и бота.</p><div class="st-media one crop"><figure class=""><div class="shot"><img src="../assets/analytics.jpg" alt="Сквозная аналитика" loading="lazy"></div><figcaption>Сквозная аналитика: от клика до оплаты</figcaption></figure></div></div></div><div class="st"><span class="num">06</span><div class="st-body"><span class="who">Агент: <b>Воронки · Лид-магниты · Презентации · Лендинги</b></span><h3>Прогревает в воронке</h3><p class="muted">Лид-магнит → бот → прогрев по дням → вебинар → лендинг с оффером. Слайды и сайты агенты собирают за вечер.</p><div class="st-media crop"><figure class=""><div class="shot"><img src="../assets/funnel-voronka.jpg" alt="Лид-магнит Воронка" loading="lazy"></div></figure><figure class=""><div class="shot"><img src="../assets/funnel-day3.jpg" alt="Прогрев, день 3" loading="lazy"></div></figure><figure class=""><div class="shot"><img src="../assets/funnel-offer.jpg" alt="Оффер" loading="lazy"></div></figure><figure class=""><div class="shot"><img src="../assets/deck-practicum.jpg" alt="Слайды практикума" loading="lazy"></div></figure><figure class=""><div class="shot"><img src="../assets/landing-a3.jpg" alt="Лендинг в стиле Неон" loading="lazy"></div></figure><figure class=""><div class="shot"><img src="../assets/deck-svyazka.jpg" alt="Презентация Первые 10 000" loading="lazy"></div></figure></div></div></div><div class="st"><span class="num">07</span><div class="st-body"><span class="who">Агент: <b>Отдел продаж: 5 агентов</b></span><h3>Доводит до оплаты</h3><p class="muted">Отвечает на кодовые слова в комментариях, ведёт переписку в Direct, консультирует по базе знаний и закрывает сделку.</p><div class="pays"><img src="../assets/pay-1.webp" alt="Оплата ученика" loading="lazy" data-zoom><img src="../assets/pay-2.webp" alt="Оплата ученика" loading="lazy" data-zoom><img src="../assets/pay-3.webp" alt="Оплата ученика" loading="lazy" data-zoom><img src="../assets/pay-4.webp" alt="Оплата ученика" loading="lazy" data-zoom></div></div></div></div>
+  <div class="callout"><h3 class="h2" style="font-size:clamp(22px,3vw,34px)">Этот конвейер я покажу <span>вживую</span> на практикуме</h3>
+    <p class="muted">Откроем офис, посмотрим, кто над чем работает, и соберём ролик с нуля за 10 минут прямо в эфире.</p><div class="cta-row"><a class="btn" data-reg href="#popup:practicum">Принять участие бесплатно<svg viewBox="0 0 24 24" aria-hidden="true"><path d="M5 12h14M13 6l6 6-6 6" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"/></svg></a><span class="cta-note">Записи не будет — только для тех, кто придёт в эфир</span></div></div>
+</div></section>
+
+<section class="sec" id="program"><div class="wrap stack">
+  <div class="head"><span class="eyebrow">2 вечера · по 2 часа</span><h2 class="h2">Программа практикума</h2></div>
+  <div class="days">
+    <article class="day"><span class="day-tag">День 1 · 4 ноября · 18:00 МСК</span>
+      <h3>AI-контент и мой ИИ-офис изнутри</h3>
+      <ul>
+        <li class="office">Экскурсия по моему ИИ-офису: 3 человека и команда агентов, которые ведут маркетинг</li>
+        <li>Как агенты пишут сценарии, монтируют рилсы и собирают карусели</li>
+        <li>5 форматов AI-контента, которые сейчас дают от 10 000 подписчиков ежемесячно</li>
+        <li>Как система контента с ИИ сэкономила мне $54 000 и принесла $1 000 000</li>
+        <li>Практика: автомонтаж с Claude собирает готовый ролик с нуля за 10 минут</li>
+      </ul></article>
+    <article class="day"><span class="day-tag">День 2 · 5 ноября · 18:00 МСК</span>
+      <h3>От трафика к клиентам и деньгам</h3>
+      <ul>
+        <li class="office">Как устроены маркетинг и продажи внутри моего ИИ-офиса</li>
+        <li>Где агенты берут трафик: залёты конкурентов, Threads, реклама в Meta</li>
+        <li>Воронки и прогревы от агентов: лид-магнит → бот → прогрев по дням → оффер</li>
+        <li>Презентации и лендинги, которые агенты собирают за вечер</li>
+        <li>Как я с нуля набрал 300 000 подписчиков и заработал 84 млн ₽: полный разбор аккаунта</li>
+        <li>Как AI сам отвечает в Direct, квалифицирует и ведёт человека к покупке</li>
+        <li>ТОП-5 связок по заработку на AI-контенте</li>
+      </ul></article>
+  </div>
+  <div class="cta-row"><a class="btn" data-reg href="#popup:practicum">Принять участие бесплатно<svg viewBox="0 0 24 24" aria-hidden="true"><path d="M5 12h14M13 6l6 6-6 6" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"/></svg></a><span class="cta-note">Записи не будет — только для тех, кто придёт в эфир</span></div>
+</div></section>
+
+<section class="sec alt"><div class="wrap stack">
+  <div class="head"><span class="eyebrow">Тем, кто будет в эфире</span><h2 class="h2">Бонусы участникам</h2></div>
+  <div class="bonuses">
+    <div class="bonus"><small>Бонус 1</small><h3>Скилл по монтажу для Claude</h3><p>Тот же, которым работает агент монтажа в офисе. Монтирует Reels за 5 минут: паузы, хуки, субтитры, музыка.</p></div>
+    <div class="bonus"><small>Бонус 2</small><h3>Урок «Первая 1000 подписчиков»</h3><p>Пошаговый план, как набрать первую аудиторию с нуля.</p></div>
+    <div class="bonus"><small>Бонус 3</small><h3>Конспект практикума</h3><p>Все связки, сервисы и промпты из двух дней в одном файле.</p></div>
+  </div>
+</div></section>
+
+<section class="sec "><div class="wrap author">
+  <div class="author-photo"><img src="../assets/ilya-stage.webp" alt="Илья Палий на сцене" loading="lazy"></div>
+  <div class="stack">
+    <div class="head"><span class="eyebrow">Ведущий практикума</span>
+      <h2 class="h2">Илья Палий — эксперт по нейросетям и ИИ-маркетолог</h2></div>
+    <ul class="facts">
+      <li><b>300 000</b><span>подписчиков в Instagram* без вложений в рекламу</span></li>
+      <li><b>33 300</b><span>подписчиков в Telegram без вложений в трафик</span></li>
+      <li><b>11 000+</b><span>учеников, 87% из них уже заработали первые деньги на ИИ, а кто-то вышел на доход 1 млн+</span></li>
+      <li><b>2</b><span>выступления на международных конференциях: Майами и Нью-Йорк</span></li>
+    </ul>
+    <p class="legal-note">* деятельность организации Meta Platforms Inc., её продуктов Instagram и Facebook запрещена в Российской Федерации</p>
+  </div>
+</div></section>
+
+<section class="sec alt" id="reg"><div class="wrap">
+  <div class="final">
+    <span class="eyebrow">Открытый 2-дневный практикум · 4–5 ноября · 18:00 МСК</span>
+    <h2 class="h2">Запишись на практикум прямо сейчас</h2>
+    <p class="lead">Разберу конвейер агентов по шагам: от залетевшего ролика до оплаты в Direct.</p>
+    <div class="price"><s>270 $</s><b>Бесплатно</b></div>
+    <div class="stack" style="gap:10px">
+      <span class="muted" style="font-size:14px">До начала эфира</span>
+      <div class="count" data-countdown><div><b>00</b><span>дней</span></div><div><b>00</b><span>часов</span></div><div><b>00</b><span>минут</span></div><div><b>00</b><span>секунд</span></div></div>
+    </div>
+    <div class="cta-row"><a class="btn" data-reg href="#popup:practicum">Принять участие бесплатно<svg viewBox="0 0 24 24" aria-hidden="true"><path d="M5 12h14M13 6l6 6-6 6" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"/></svg></a><span class="cta-note">Регистрация займёт 30 секунд. Количество мест в эфире ограничено, записи не будет</span></div>
+  </div>
+</div></section>
+
+<section class="sec "><div class="wrap stack">
+  <div class="head"><h2 class="h2">Ответы на частые вопросы</h2></div>
+  <div class="faq"><details><summary>Что за ИИ-офис и смогу ли я собрать такой же?</summary><p>Это команда ИИ-агентов на Claude. У каждого свои скиллы и задачи: сценарии, монтаж, карусели, воронки, презентации, лендинги, ответы в Direct. Руководят ими три человека. На практикуме покажу офис изнутри и с каких агентов начать свой: первый агент собирается на обычном ноутбуке.</p></details><details><summary>У меня нет времени на длинные эфиры</summary><p>4 и 5 ноября, по 2 часа вечером, в 18:00 по Москве. А вся система, которую я покажу, как раз про то, как тратить на контент 15 минут в день вместо часов.</p></details><details><summary>Я не технарь, смогу ли я повторить?</summary><p>Да. 80% нейросетей работают в браузере, мощный компьютер не нужен — хватит обычного ноутбука или даже телефона. Весь процесс показываю пошагово, достаточно повторить.</p></details><details><summary>Нейросети недоступны в моей стране</summary><p>На практикуме покажу, как зарегистрироваться в нужных сервисах из любой страны — это займёт не больше 5 минут.</p></details><details><summary>У меня нет блога и подписчиков</summary><p>Система подходит и тем, кто начинает с нуля: на втором дне разберём, как набрать первую аудиторию и где искать первых клиентов.</p></details><details><summary>Я не хочу снимать себя на камеру</summary><p>Покажу связку с ИИ-аватаром и роликами без съёмок: Claude и Higgsfield собирают контент без вашего участия в кадре. В офисе этим занимается отдельный агент.</p></details><details><summary>Часть нейросетей на английском</summary><p>В браузере есть встроенный переводчик, а интерфейсы интуитивные. Всё показываю пошагово.</p></details><details><summary>Будет ли запись?</summary><p>Нет. Практикум идёт только в прямом эфире, поэтому смотреть можно только вживую.</p></details></div>
+</div></section>
+
+
+<footer class="foot"><div class="wrap">
+  <p>Индивидуальный предприниматель Палий Сергей Ремович · ИНН 930300909030 · ОГРНИП 324930100015659</p>
+  <p>Email: ilia.info.paliy@gmail.com</p>
+  <p>* деятельность организации Meta Platforms Inc., ее продуктов Instagram и Facebook запрещена в Российской Федерации</p>
+  <p>Результаты зависят от действий участника и не гарантируются.</p>
+  <p><a href="#">Договор оферты</a> · <a href="#">Политика конфиденциальности</a></p>
+</div></footer>
+<div class="sticky"><a class="btn" data-reg href="#popup:practicum">Принять участие бесплатно<svg viewBox="0 0 24 24" aria-hidden="true"><path d="M5 12h14M13 6l6 6-6 6" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"/></svg></a></div>
+<script src="../shared.js"></script>
+</body>
+</html>
