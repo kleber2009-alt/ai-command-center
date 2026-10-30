@@ -52,7 +52,7 @@
   .fold{flex:none;width:30px;height:30px;border-radius:10px;background:var(--glass-hi);display:grid;place-items:center;color:var(--ink-2)}
   .fold svg{width:16px;height:16px;transition:transform .25s;transform:rotate(180deg)}
   .brand.open .fold svg{transform:none}
-  .themes{display:grid;grid-template-columns:repeat(3,minmax(0,1fr));gap:4px}
+  .themes{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:4px}
   .themes button{display:flex;flex-direction:column;align-items:flex-start;gap:6px;padding:8px;border-radius:13px;text-align:left;border:1px solid transparent;transition:background .2s,border-color .2s;min-width:0}
   .brand.open .themes{grid-template-columns:1fr}
   .brand.open .themes button{flex-direction:row;align-items:center;gap:12px;padding:8px 10px}
@@ -417,6 +417,30 @@
   #loader{position:fixed;inset:0;display:grid;place-items:center;background:var(--stage);color:#4a4f58;font:600 14px var(--f-ui);z-index:20;transition:opacity .6s}
   #loader.done{opacity:0;pointer-events:none}
 
+  /* ---------- ночной офис (night.js): своя сцена, тёплая янтарная палитра панелей ---------- */
+  #nstage,#nlabels{position:fixed;inset:0;display:none}
+  #nstage canvas{display:block;touch-action:none}
+  #nlabels{pointer-events:none;overflow:hidden}
+  body.night #stage,body.night #labels{display:none}
+  body.night #nstage,body.night #nlabels{display:block}
+  body.night{--stage:#0a0f1f;--glass:rgba(20,15,11,.8);--glass-hi:rgba(255,200,140,.08);--line:rgba(255,200,140,.17)}
+  body.night #loader{color:#c9b9a6}
+  body.night .themes button.on{background:rgba(255,180,92,.12);border-color:rgba(255,180,92,.45)}
+  body.night .deskl{background:rgba(255,180,92,.95);color:#1b1305;box-shadow:0 6px 20px rgba(255,180,92,.35)}
+  body.night .deskl i{background:#1b1305}
+  .nroom{pointer-events:auto;cursor:pointer;display:flex;align-items:center;gap:8px;padding:6px 8px 6px 6px;border-radius:11px;background:rgba(18,14,12,.8);border:1px solid rgba(255,200,140,.25);
+         color:#fff;white-space:nowrap;box-shadow:0 6px 18px rgba(0,0,0,.25);transform:translateX(50%);transition:translate .2s}
+  .nroom:hover{translate:0 -3px}
+  .nroom .ic{width:26px;height:26px;border-radius:8px;display:grid;place-items:center;border:1px solid rgba(255,200,140,.25);color:#ffb45c}
+  .nroom svg{width:15px;height:15px;fill:none;stroke:currentColor;stroke-width:2;stroke-linecap:round;stroke-linejoin:round}
+  .nroom b{display:block;font-size:12.5px;font-weight:800;line-height:1.2}
+  .nroom small{display:block;font:500 10.5px var(--f-mono);color:#c9b9a6;line-height:1.25}
+  .nroom .n{margin-left:4px;min-width:22px;height:22px;padding:0 6px;border-radius:6px;display:grid;place-items:center;font:700 11px var(--f-mono);background:rgba(255,180,92,.16)}
+  .nbub{font:600 11px/1.25 var(--f-ui);max-width:190px;padding:5px 9px;border-radius:9px;background:#fff7ea;color:#1b1305;text-align:center;white-space:normal;
+        box-shadow:0 4px 14px rgba(0,0,0,.35);animation:nbub .25s ease-out}
+  @keyframes nbub{from{opacity:0;scale:.9}}
+  @media (max-width:820px){ .nroom small,.nroom b{display:none} .nroom{padding:4px} .nroom .ic{width:22px;height:22px} .nbub{font-size:10px;max-width:130px} }
+
   @media (max-width:1100px){ .brand{width:300px} .team{width:376px} }
   @media (max-width:820px){
     .brand{width:auto;right:var(--gr);padding:10px 12px;gap:8px}
@@ -460,6 +484,8 @@
 <body>
 <div id="stage"></div>
 <div id="labels"></div>
+<div id="nstage"></div>
+<div id="nlabels"></div>
 
 <section class="brand glass" id="brand">
   <div class="brand-h">
@@ -771,6 +797,14 @@ const params = new URLSearchParams(location.search);
 const isMobile = matchMedia('(max-width: 820px)').matches || matchMedia('(pointer: coarse)').matches;
 const reduceMotion = matchMedia('(prefers-reduced-motion: reduce)').matches;
 const $ = id => document.getElementById(id);
+// Стиль офиса: «Галерея» — сцена этого модуля, «Ночной Сити» — сцена из night.js поверх той же симуляции,
+// задач, рабочего стола и панелей. Переключение перезагружает страницу: каждый стиль собирается заново.
+let STYLE = 'wave';
+try { STYLE = localStorage.getItem('hq:theme') || 'wave'; } catch (e) {}
+if (params.get('theme')) STYLE = params.get('theme');
+if (!['wave', 'night'].includes(STYLE)) STYLE = 'wave';
+let night = STYLE === 'night', NIGHT = null;
+if (night) { document.body.classList.add('night'); $('loader').textContent = 'Собираю ночной офис…'; }
 const esc = s => String(s ?? '').replace(/[&<>"']/g, c => ({ '&':'&amp;', '<':'&lt;', '>':'&gt;', '"':'&quot;', "'":'&#39;' }[c]));
 const hhmm = (d = new Date()) => d.toTimeString().slice(0, 5);
 const rand = (a, b) => a + Math.random() * (b - a);
@@ -2348,21 +2382,13 @@ const THEMES = {
     bg:'#e3e5e8', wall:'#ececeb', floor:{ map:'carpet', color:'#767c86', rough:1 }, desk:'#f5f5f3',
     sun:['#fff3e3', 3.0, [34, 20, 6]], hemi:['#ffffff', '#8a8f99', 0.55], env:0.55, exposure:1.0,
     led:{ mode:0, deep:'#00030a', glow:'#1f5cff', spark:'#a6d8ff', light:'#3b6dff', li:3 }, shelf:'#ffc574', outside:'day', bloom:0.32, vig:0.18 },
-  obsidian: { name:'Обсидиан', sub:'Ночной штаб', sw:['#121419', '#2a2d34', '#2f7bff', '#5ad1ff'],
-    note:'Ночной штаб: тёмный камень, северное сияние на LED-панели и город в окнах. Главный свет дают экраны пультов и подсветка столов.',
-    bg:'#0b0d11', wall:'#2a2d34', floor:{ map:'concrete', color:'#2b2e35', rough:0.4 }, desk:'#e9eaec',
-    sun:['#9fb4ff', 0.55, [26, 26, -10]], hemi:['#8fa3ff', '#0b0d12', 0.32], env:0.32, exposure:1.1,
-    led:{ mode:1, deep:'#01030a', glow:'#16ffa0', spark:'#6f8bff', light:'#2bd99a', li:4 }, shelf:'#ffb35c', outside:'night', bloom:0.62, vig:0.32, board:0.42 },
-  atrium: { name:'Атриум', sub:'Тёплый дневной', sw:['#f3ebe0', '#5b3b2a', '#4f6b45', '#f2a65a'],
-    note:'Тёплый дневной свет, дубовый паркет и закатные дюны на панели. Длинные тени от окон и много зелени.',
-    bg:'#eee6da', wall:'#ebe2d6', floor:{ map:'parquet', color:'#ffffff', rough:0.6 }, desk:'#f7f3ec',
-    sun:['#ffd3a0', 3.6, [30, 12, 12]], hemi:['#fff4e6', '#9b8a74', 0.5], env:0.5, exposure:1.0,
-    led:{ mode:2, deep:'#1d0a12', glow:'#ff8a3d', spark:'#ffd58a', light:'#ff9a4a', li:3 }, shelf:'#ffc070', outside:'warm', bloom:0.3, vig:0.2 },
+  night: { name:'Ночной Сити', sub:'Комнаты отделов', sw:['#0a0f1f', '#3b2a1e', '#ffb45c', '#ffe2a8'],
+    note:'Ночное здание с комнатами отделов: тёплое дерево, янтарный свет, стеклянные стены и город за окнами. Та же команда, те же задачи и рабочий стол — агенты ходят по коридорам между комнатами. Загружается дольше.' },
 };
 const outsideCache = {};
-let themeId = 'wave';
-function applyTheme(id) {
-  const T = THEMES[id] || THEMES.wave; themeId = THEMES[id] ? id : 'wave';
+// сцена этого модуля всегда в «Галерее»; ночной стиль рисует night.js
+function applyTheme() {
+  const T = THEMES.wave;
   scene.background = new THREE.Color(T.bg);
   document.documentElement.style.setProperty('--stage', T.bg);
   M.wall.color.set(T.wall);
@@ -2379,13 +2405,19 @@ function applyTheme(id) {
   outside.material.map = outsideCache[T.outside] ||= outsideTex(T.outside); outside.material.needsUpdate = true;
   bloom.strength = T.bloom; grade.uniforms.uVig.value = T.vig;
   kanban.mat.color.setScalar(T.board ?? 1);
-  $('themeNote').textContent = T.note;
-  [...$('themes').children].forEach(b => { const on = b.dataset.theme === themeId; b.classList.toggle('on', on); b.setAttribute('aria-checked', on); });
-  try { localStorage.setItem('hq:theme', themeId); } catch (e) {}
+  $('themeNote').textContent = THEMES[STYLE].note;
+  [...$('themes').children].forEach(b => { const on = b.dataset.theme === STYLE; b.classList.toggle('on', on); b.setAttribute('aria-checked', on); });
+}
+function setStyle(id) {
+  if (!THEMES[id] || id === STYLE) return;
+  try { localStorage.setItem('hq:theme', id); } catch (e) {}
+  const u = new URL(location.href); u.searchParams.set('theme', id);
+  $('loader')?.classList.remove('done');
+  location.href = u.toString();
 }
 $('themes').innerHTML = Object.entries(THEMES).map(([id, T]) =>
   `<button data-theme="${id}" role="radio" aria-checked="false"><span class="sw">${T.sw.map(c => `<i style="--c:${c}"></i>`).join('')}</span><span><b>${esc(T.name)}</b><small>${esc(T.sub)}</small></span></button>`).join('');
-$('themes').addEventListener('click', e => { const b = e.target.closest('[data-theme]'); if (b) applyTheme(b.dataset.theme); });
+$('themes').addEventListener('click', e => { const b = e.target.closest('[data-theme]'); if (b) setStyle(b.dataset.theme); });
 
 /* ======================= ЭКРАНЫ НА СТОЛАХ ======================= */
 
@@ -3776,6 +3808,7 @@ function setControls(kind) {
 function flyToDept(d) {
   const C = d.pod.C;
   stopTour(); followId = null; mode = 'dept'; setControls('free'); setDock(null);
+  if (night) return NIGHT?.room(NIGHT.roomOfDept(d.id));
   flyTo(V3(C.x + 0.5, 6.2, C.z + d.pod.R + 6.5), V3(C.x, 0.8, C.z + d.pod.R * 0.45));
 }
 function focusAgent(a) {
@@ -3791,7 +3824,7 @@ function select(id, flyCam = false) {
   if (id === 'you') { followId = null; if (flyCam) cmd('deskview'); }
   else {
     const a = agents.get(id);
-    if (a && flyCam) { mode = 'agent'; setControls('free'); setDock(null); focusAgent(a); followId = id; }
+    if (a && flyCam) { mode = 'agent'; setControls('free'); setDock(null); night ? NIGHT?.focus(id) : focusAgent(a); followId = id; }
   }
   // панель показывает задачи выбранного агента или отдела руководителя
   pagent = id && id !== 'you' && (agents.get(id)?.kind !== 'orch') ? id : null;
@@ -3805,13 +3838,13 @@ function setDock(k) { for (const b of $('dock').querySelectorAll('button')) if (
 function setDockOn(k, on) { $('dock').querySelector(`[data-cmd="${k}"]`).classList.toggle('on', on); }
 function cmd(k) {
   if (!['tour', 'labels', 'team', 'assistant'].includes(k)) stopTour();
-  if (k === 'overview') { mode = 'overview'; followId = null; setControls('free'); setDock('overview'); const v = overviewView(); flyTo(v.pos, v.target, 1.6); }
-  if (k === 'plan') { mode = 'plan'; followId = null; setControls('free'); setDock('plan'); const zc = (FZ0 + FZ1) / 2; portrait() ? flyTo(V3(1.2, 62, zc), V3(0, 0, zc), 1.6) : flyTo(V3(0, 34, zc + 0.6), V3(0, 0, zc), 1.6); }
+  if (k === 'overview') { mode = 'overview'; followId = null; setControls('free'); setDock('overview'); if (night) NIGHT?.overview(); else { const v = overviewView(); flyTo(v.pos, v.target, 1.6); } }
+  if (k === 'plan') { mode = 'plan'; followId = null; setControls('free'); setDock('plan'); const zc = (FZ0 + FZ1) / 2; if (night) NIGHT?.plan(); else portrait() ? flyTo(V3(1.2, 62, zc), V3(0, 0, zc), 1.6) : flyTo(V3(0, 34, zc + 0.6), V3(0, 0, zc), 1.6); }
   if (k === 'desk' || k === 'deskview') {
     mode = 'desk'; followId = null; setControls('desk'); setDock('desk');
     const C = pods[0].C;
     if (k === 'desk') { selectedId = 'you'; pagent = null; agents.forEach(paintLabel); renderPanel(); }
-    flyTo(V3(C.x - 0.75, 1.95, C.z - 2.25), V3(C.x + 0.25, 0.95, C.z + 3.4), 1.8);
+    if (night) NIGHT?.desk(); else flyTo(V3(C.x - 0.75, 1.95, C.z - 2.25), V3(C.x + 0.25, 0.95, C.z + 3.4), 1.8);
   }
   if (k === 'team') setPanel($('team').hidden);
   if (k === 'labels') { labelsOn = !labelsOn; setDockOn('labels', labelsOn); }
@@ -3826,6 +3859,13 @@ const deptInfo = d => {
   return `${d.head.owner ? 'Ваш отдел' : d.head.name} и ${d.agentIds.length} ${word(d.agentIds.length, 'агент', 'агента', 'агентов')}. В истории ${list.length} ${word(list.length, 'задача', 'задачи', 'задач')}${last ? `, последняя — «${last.title}» (${fmtDate(last.date, true)})` : ''}.`;
 };
 function tourStops() {
+  if (night) return [
+    { title:`${BRAND}: всё здание`, text:() => `${NIGHT.rooms} ${word(NIGHT.rooms, 'комната', 'комнаты', 'комнат')}, ${DEPTS.length} отдела и ${bots.filter(b => b.kind === 'bot').length} агентов. Справа — ${TASKS.length} реальных задач с доказательствами.`, room:'all' },
+    ...DEPTS.map(d => ({ title:d.name, text:() => deptInfo(d), room:NIGHT.roomOfDept(d.id) })),
+    { title:'Контент-студия', text:() => 'Сценарии, монтаж, карусели и ролики с аватаром — столы и съёмочная площадка.', room:'studio' },
+    { title:'Операционный зал', text:() => `Рабочий стол: оркестратор принимает задачи и относит агентам. Последняя задача в истории: «${TASKS[0].title}».`, room:'hub' },
+    { title:'Лаунж и кухня', text:() => `На перерыве: ${bots.filter(b => b.status === 'break').length}. Здесь отдыхают между задачами.`, room:'lounge' },
+  ];
   const D = DEPTS, P = PLAN_TABLE;
   const stop = (d, pos, tgt) => ({ title:d.name, text:() => deptInfo(d), pos, tgt });
   const mk = D[1], sl = D[2], tr = D[3], ceo = D[0];
@@ -3852,7 +3892,7 @@ function nextStop() {
   const s = tour.stops[tour.i];
   $('tourTitle').textContent = `${s.title} · ${tour.i + 1}/${tour.stops.length}`;
   $('tourText').textContent = s.text();
-  flyTo(s.pos.clone(), s.tgt.clone(), 2.2);
+  if (s.room) NIGHT?.room(s.room); else flyTo(s.pos.clone(), s.tgt.clone(), 2.2);
   tour.timer = setTimeout(nextStop, 7500);
 }
 function stopTour() {
@@ -3924,9 +3964,12 @@ function onResize() {
   camera.aspect = innerWidth / innerHeight;
   camera.fov = portrait() ? 55 : 38;
   const teamOpen = !$('team').hidden;
-  if (!isMobile && teamOpen && innerWidth > 900) camera.setViewOffset(innerWidth, innerHeight, Math.min(185, innerWidth * 0.12), 0, innerWidth, innerHeight);
-  else if (isMobile && teamOpen && !$('team').classList.contains('min')) camera.setViewOffset(innerWidth, innerHeight, 0, Math.min(140, innerHeight * 0.16), innerWidth, innerHeight);
+  let ox = 0, oy = 0;
+  if (!isMobile && teamOpen && innerWidth > 900) ox = Math.min(185, innerWidth * 0.12);
+  else if (isMobile && teamOpen && !$('team').classList.contains('min')) oy = Math.min(140, innerHeight * 0.16);
+  if (ox || oy) camera.setViewOffset(innerWidth, innerHeight, ox, oy, innerWidth, innerHeight);
   else camera.clearViewOffset();
+  NIGHT?.resize(ox, oy);
   camera.updateProjectionMatrix();
   renderer.setSize(innerWidth, innerHeight);
   composer.setSize(innerWidth, innerHeight);
@@ -3937,10 +3980,7 @@ addEventListener('resize', onResize);
 addEventListener('wheel', e => { if (e.ctrlKey) e.preventDefault(); }, { passive:false });
 for (const ev of ['gesturestart', 'gesturechange']) addEventListener(ev, e => e.preventDefault(), { passive:false });
 
-let theme0 = 'wave';
-try { theme0 = localStorage.getItem('hq:theme') || (matchMedia('(prefers-color-scheme: dark)').matches ? 'obsidian' : 'wave'); } catch (e) {}
-if (params.get('theme') && THEMES[params.get('theme')]) theme0 = params.get('theme');
-applyTheme(theme0);
+applyTheme();
 if (isMobile) $('team').classList.add('min');
 $('brandFold').onclick = () => { const b = $('brand'); b.classList.toggle('open'); $('brandFold').setAttribute('aria-expanded', b.classList.contains('open')); };
 seed();
@@ -3963,6 +4003,14 @@ renderer.setAnimationLoop(() => {
   const dt = Math.min(0.1, clock.getDelta());
   NOW += dt;
   const t = NOW;
+  // ночной стиль: симуляция та же, картинку рисует night.js
+  if (night) {
+    for (const a of agents.values()) a.update(dt, t);
+    hudT += dt;
+    if (hudT > 0.4) { hudT = 0; refreshHUD(); agents.forEach(paintLabel); }
+    NIGHT?.frame(dt, NOW);
+    return;
+  }
   uTime.value = t; grade.uniforms.uTime.value = t;
   for (const a of agents.values()) a.update(dt, t);
   animated.forEach(f => f(t, dt));
@@ -4005,7 +4053,36 @@ renderer.setAnimationLoop(() => {
   frames++; fpsT += dt;
   if (fpsT > 3 && !lowQ) { if (frames / fpsT < 28 && gtao) { gtao.enabled = false; lowQ = true; } frames = 0; fpsT = 0; }
 });
-requestAnimationFrame(() => setTimeout(() => { $('loader').classList.add('done'); setTimeout(() => $('loader').remove(), 700); }, 300));
+const hideLoader = () => requestAnimationFrame(() => setTimeout(() => { $('loader').classList.add('done'); setTimeout(() => $('loader').remove(), 700); }, 300));
+if (!night) hideLoader();
+else import('./night.js').then(m => m.createNightOffice({
+  stage:$('nstage'), labels:$('nlabels'), agents, owner:DEPTS[0].head, brand:BRAND, mobile:isMobile, reduceMotion,
+  statusColor:s => (ST[s] || ST.idle).c,
+  ownerLabel:() => pods[0].deskLabel.innerHTML,
+  board:nightBoard,
+  follow:() => followId,
+  selected:() => selectedId,
+  onPick:id => {
+    if (id) return select(id, true);
+    if (selectedId) { selectedId = null; pagent = null; followId = null; agents.forEach(paintLabel); renderPanel(); }
+  },
+})).then(n => { NIGHT = n; onResize(); hideLoader(); }).catch(err => {
+  // ночная сцена не собралась — показываем обычный офис
+  console.error(err);
+  night = false; document.body.classList.remove('night'); hideLoader();
+});
+// доска в операционном зале ночного офиса: ваши задачи с рабочего стола и реальная история
+function nightBoard() {
+  const who = t => agents.get(t.agent?.id)?.name || t.agent?.name || '';
+  const hist = d => ({ name:d.short, color:d.accent, items:TASKS.filter(t => t.dept === d.id).map(t => ({ title:t.title, who:`${fmtDate(t.date, true)} · ${t.kind}` })) });
+  if (!desk.on) return { title:`История задач · ${TASKS.length}`, cols:DEPTS.map(hist) };
+  const live = desk.tasks.filter(isLive);
+  return { title:'Рабочий стол · задачи агентам', cols:[
+    { name:'В работе', color:'#3ddc97', items:live.filter(t => t.status === 'work' || t.status === 'queued').map(t => ({ title:deskTitle(t), who:who(t) })) },
+    { name:'Ждут вас', color:'#ffb020', items:live.filter(t => t.status === 'review' || t.status === 'question').map(t => ({ title:deskTitle(t), who:who(t) })) },
+    { name:'История', color:'#ffb45c', items:TASKS.map(t => ({ title:t.title, who:fmtDate(t.date, true) })) },
+  ] };
+}
 
 // Подписи не налезают друг на друга: ближние к камере остаются на месте, остальные поднимаются выше.
 const declV = new THREE.Vector3();
@@ -4042,14 +4119,14 @@ function setAgent(id, patch) {
   if (patch.role) a.data.role = String(patch.role);
   a.labelSig = ''; paintLabel(a); renderPanel();
 }
-window.VirtualOffice = { setAgent, select, theme:applyTheme, openTask, openDossier, view:cmd, tasks:TASKS };
+window.VirtualOffice = { setAgent, select, theme:setStyle, openTask, openDossier, view:cmd, tasks:TASKS };
 addEventListener('message', e => {
   const d = e.data; if (!d || typeof d !== 'object') return;
   if (d.type === 'office:agent') setAgent(d.id, d);
   if (d.type === 'office:focus') select(d.id, true);
-  if (d.type === 'office:theme') applyTheme(d.theme);
+  if (d.type === 'office:theme') setStyle(d.theme);
 });
-if (params.has('debug')) window.__hq = { THREE, scene, agents, camera, controls, NAV, findPath, bloom, grade, gtao, renderer, TASKS,
+if (params.has('debug')) window.__hq = { night:() => NIGHT, THREE, scene, agents, camera, controls, NAV, findPath, bloom, grade, gtao, renderer, TASKS,
   step(sec, dt = 1 / 30) { for (let k = 0; k < sec / dt; k++) { NOW += dt; for (const a of agents.values()) a.update(dt, NOW); } refreshHUD(); agents.forEach(paintLabel); } };
 </script>
 </body>
