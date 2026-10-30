@@ -14,6 +14,11 @@ EnvironmentFile=@HOME@/hq-runner/runner.env
 EnvironmentFile=-@HOME@/hq-runner/claude.env
 Environment=PATH=@HOME@/.local/bin:@HOME@/.bun/bin:/usr/local/bin:/usr/bin:/bin
 ExecStart=/usr/bin/python3 -u @HOME@/hq-runner/runner.py
+# rendering shares the box with the bots and sites: cap it, and when the cap is hit let the kernel
+# kill only the heavy process (the runner stays alive and reports the task as failed for memory)
+MemoryHigh=4G
+MemoryMax=4608M
+OOMPolicy=continue
 Restart=always
 RestartSec=10
 StandardOutput=append:@HOME@/hq-runner/runner.log

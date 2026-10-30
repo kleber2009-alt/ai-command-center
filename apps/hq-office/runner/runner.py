@@ -36,7 +36,7 @@ JOBS = Path(os.environ.get("HQ_RUNNER_JOBS") or HOME / "hq-runner/jobs")
 LIMIT = int(os.environ.get("HQ_RUNNER_LIMIT_MIN", "60")) * 60
 SKILLS = HOME / ".claude/skills"
 ALLOWED_TOOLS = ["Bash", "Read", "Write", "Edit", "Glob", "Grep", "Skill", "TodoWrite", "WebFetch", "WebSearch"]
-VERSION = "2"
+VERSION = "3"
 FILE_LIMIT = 300_000_000
 
 
@@ -119,6 +119,22 @@ def call_retry(method, path, body=None, file=None, timeout=60):
             if attempt == 7:
                 raise
         time.sleep(min(30, 3 * (attempt + 1)))
+
+
+def oom_kills():
+    """Сколько процессов службы ядро убило за нехватку памяти (memory.events своей cgroup v2)."""
+    try:
+        rel = Path("/proc/self/cgroup").read_text().strip().split("::", 1)[1]
+        for line in (Path("/sys/fs/cgroup" + rel) / "memory.events").read_text().splitlines():
+            k, v = line.split()
+            if k == "oom_kill":
+                return int(v)
+    except (OSError, IndexError, ValueError):
+        pass
+    return 0
+
+
+OOM_HINT = "Не хватило памяти сервера на рендер — процесс убит. Поставьте по одному видео на задачу или нажмите «Повторить»."
 
 
 # ---------- общий слот тяжёлых задач (как heavy_slot.py у ботов, только синхронно) ----------
@@ -257,7 +273,7 @@ def run_job(job):
         timer = threading.Timer(LIMIT, p.kill)
         timer.start()
         threading.Thread(target=poll, daemon=True).start()
-        session, final, started = job.get("session", ""), "", time.time()
+        session, final, started, ooms = job.get("session", ""), "", time.time(), oom_kills()
         try:
             for line in p.stdout:
                 logf.write(line)
@@ -269,6 +285,9 @@ def run_job(job):
                 except ValueError:
                     continue
                 session = ev.get("session_id") or session
+                if oom_kills() > ooms and not proc.get("oom"):
+                    proc["oom"] = True
+                    step("Не хватило памяти — ядро убило тяжёлый процесс, агент пробует продолжить.", force=True)
                 if ev.get("type") == "assistant":
                     for item in (ev.get("message") or {}).get("content") or []:
                         step(describe(item))
@@ -284,6 +303,7 @@ def run_job(job):
         log(jid, "cancelled by the owner")
         return
     mins = (time.time() - started) / 60
+    oom = oom_kills() > ooms
     need = re.search(r"^NEED:\s*(.+)$", final, re.M)
     res = re.search(r"^RESULT:\s*(\S+)", final, re.M)
     hist = re.search(r"^SUMMARY:\s*(.+)$", final, re.M)
@@ -297,9 +317,9 @@ def run_job(job):
         text = (d / "claude.log").read_text(encoding="utf-8", errors="ignore")
         why = claude_error(text[-20000:])
         call_retry("POST", f"/runner/{jid}/finish", {"result": "error", "session": session,
-             "error": f"Агент не закончил ({mins:.0f} мин, код {p.returncode})." + (" Превышен лимит времени." if mins * 60 >= LIMIT - 5 else f" Claude Code: {why}" if why else ""),
+             "error": f"Агент не закончил ({mins:.0f} мин, код {p.returncode})." + (" " + OOM_HINT if oom else " Превышен лимит времени." if mins * 60 >= LIMIT - 5 else f" Claude Code: {why}" if why else ""),
              "log": redact(text[-1500:])})
-        log(jid, "error code", p.returncode)
+        log(jid, "error code", p.returncode, "oom" if oom else "")
         return
     step(f"Отправляет результат: {len(files)} файл(ов).", force=True)
     for f in files[:300]:
