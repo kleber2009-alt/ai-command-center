@@ -68,12 +68,10 @@ const rnd = (n) => crypto.randomBytes(n).toString('hex');
 function skillConfig() {
   try { return JSON.parse(fs.readFileSync(path.join(SKILL_DIR, 'config.json'), 'utf8')); } catch { return {}; }
 }
-// HeyGen engine for today: avatar.engine, and after avatar.engine_switch.at — engine_switch.to (as common.avatar_engine)
-function engineToday(cfg = skillConfig()) {
-  const av = cfg.avatar || {}, sw = av.engine_switch || {};
-  if (sw.at && sw.to && Date.now() >= Date.parse(sw.at)) return sw.to;
-  return av.engine || 'avatar_v';
-}
+// Ilia 31.10: only the looks in avatar.allowed (ilia.paliy 55/56/57/58/61) with their own voice, engine Avatar V only, speed 1.1
+const ENGINE = 'avatar_v', SPEED = 1.1;
+function engineToday() { return ENGINE; }
+function allowedLooks(cfg = skillConfig()) { return (cfg.avatar || {}).allowed || []; }
 
 // ---------- processes and HTTP ----------
 function run(cmd, args, { timeout = 10 * 60e3, env: extra, cwd, input } = {}) {
@@ -454,6 +452,7 @@ export function createStudio({ data, media, send, receive }) {
   async function heygenInfo(fresh) {
     if (!fresh && cache.hg && Date.now() - cache.hg.t < 10 * 60e3) return cache.hg.v;
     const cfg = skillConfig(), av = cfg.avatar || {};
+    const allow = new Map(allowedLooks(cfg).map((x) => [x.look_id, x.voice_id])), allowVoices = new Set(allow.values());
     const [me, groups, looks, voices] = await Promise.all([
       hg('/v3/users/me').then((d) => d.data || d).catch((e) => ({ error: e.message })),
       hgAll('/v3/avatars?ownership=private&limit=50'),
@@ -465,11 +464,11 @@ export function createStudio({ data, media, send, receive }) {
       account: me.error ? { error: me.error } : { name: [me.first_name, me.last_name].filter(Boolean).join(' ') || me.username || '', email: me.email || '', plan: me.subscription?.plan || me.billing_type || '' },
       credits: me.wallet ? { remaining: me.wallet.remaining_balance, unit: me.wallet.currency } : me.usage_based ? { remaining: me.usage_based.remaining_credits }
         : { remaining: cr.premium_credits?.remaining ?? null, addon: cr.add_on_credits?.remaining ?? null, resets_at: cr.premium_credits?.resets_at || null },
-      groups: groups.map((g) => ({ id: g.id, name: g.name, preview: g.preview_image_url || '', looks: g.looks_count ?? null, voice: g.default_voice_id || '' })),
-      looks: looks.filter((l) => !l.status || l.status === 'completed').map((l) => ({ id: l.id, name: l.name, group: l.group_id || '', type: l.avatar_type || '',
-        preview: l.preview_image_url || '', video: l.preview_video_url || '', voice: l.default_voice_id || '', engines: l.supported_api_engines || [], orient: l.preferred_orientation || '' })),
-      voices: voices.map((x) => ({ id: x.voice_id || x.id, name: x.name, lang: x.language || '', gender: x.gender || '', preview: x.preview_audio_url || '' })),
-      defaults: { look_id: av.look_id || '', voice_id: av.voice_id || '', engine: engineToday(cfg), speed: av.speed || 1, switch: av.engine_switch || null },
+      groups: groups.filter((g) => looks.some((l) => l.group_id === g.id && allow.has(l.id))).map((g) => ({ id: g.id, name: g.name, preview: g.preview_image_url || '', looks: g.looks_count ?? null, voice: g.default_voice_id || '' })),
+      looks: looks.filter((l) => (!l.status || l.status === 'completed') && allow.has(l.id)).map((l) => ({ id: l.id, name: l.name, group: l.group_id || '', type: l.avatar_type || '',
+        preview: l.preview_image_url || '', video: l.preview_video_url || '', voice: allow.get(l.id), engines: [ENGINE], orient: l.preferred_orientation || '' })),
+      voices: voices.filter((x) => allowVoices.has(x.voice_id || x.id)).map((x) => ({ id: x.voice_id || x.id, name: x.name, lang: x.language || '', gender: x.gender || '', preview: x.preview_audio_url || '' })),
+      defaults: { look_id: av.look_id || '', voice_id: av.voice_id || '', engine: ENGINE, speed: SPEED, switch: null },
     };
     cache.hg = { t: Date.now(), v };
     return v;
@@ -477,9 +476,10 @@ export function createStudio({ data, media, send, receive }) {
 
   async function avatarStart(j, b) {
     for (const k of ['look_id', 'voice_id']) if (!HG_ID.test(String(b[k] || ''))) throw Object.assign(new Error(`не выбран ${k === 'look_id' ? 'образ' : 'голос'}`), { code: 400 });
-    const engine = ['avatar_iii', 'avatar_iv', 'avatar_v'].includes(b.engine) ? b.engine : engineToday();
-    const resolution = b.resolution === '4k' && engine === 'avatar_iii' ? '4k' : '1080p';
-    const speed = Math.min(1.5, Math.max(0.5, Number(b.speed) || 1));
+    const own = new Map(allowedLooks().map((x) => [x.look_id, x.voice_id]));
+    if (!own.has(b.look_id)) throw Object.assign(new Error('этот образ запрещён: только ilia.paliy № 55, 56, 57, 58, 61'), { code: 400 });
+    if (b.voice_id !== own.get(b.look_id)) throw Object.assign(new Error('голос запрещён: только родной голос выбранного образа'), { code: 400 });
+    const engine = ENGINE, resolution = '1080p', speed = SPEED;
     const text = j.script.text;
     const body = { type: 'avatar', avatar_id: b.look_id, voice_id: b.voice_id, script: text, title: `Ремейк · ${j.title || j.id}`.slice(0, 100),
       resolution, aspect_ratio: '9:16', engine: { type: engine }, ...(speed !== 1 ? { voice_settings: { speed } } : {}) };

@@ -84,16 +84,18 @@ PASS. WARN — решаешь сам (лишняя длина допустима
 
 ## Шаг 6. Аватар HeyGen говорит голосом Ильи
 
-Образ и голос — `avatar.look_id` / `avatar.voice_id` (`settings.py show`). Если `avatar.confirmed` = false и
-Илья в чате — в стартовом вопросе покажи варианты из `avatar.alternatives` + текущий (превью:
-`list_avatar_looks`), после ответа `python3 $S/settings.py set avatar.look_id=… avatar.voice_id=… avatar.confirmed=true`.
+**Жёсткое правило Ильи (31.10).** Аватар — ТОЛЬКО один из пяти образов группы `ilia.paliy` из `avatar.allowed`
+(№ 61, 56, 58, 55, 57) и ТОЛЬКО его родной голос (`8124c63842a04fceaf34661a804690f9`). Движок — ТОЛЬКО Avatar V
+(`avatar_v`), темп речи — 1.1. Другие образы, группы, фото-аватары, голоса и движки не предлагать и не брать, даже
+если они есть в HeyGen. Нет кредитов на Avatar V — стоп и вопрос Илье, на другой движок не переходить.
+По умолчанию образ `avatar.look_id` (№ 61); другой из пяти — если Илья попросил или чтобы чередовать одежду между роликами.
 
 **В чате (есть MCP HeyGen):**
 1. `get_current_user` — хватит ли кредитов (≈ 1 кредит на секунду видео); не хватает — стоп, скажи.
-2. `create_video_from_avatar(avatarId=<look_id>, script=<script.txt слово в слово>, voiceId=<voice_id>,
-   aspectRatio="9:16", resolution="1080p", engine={"type": <python3 $S/settings.py engine>}, title="Ремейк · <slug>")`.
-   Движок — по настройкам на сегодня: сейчас `avatar_iii`, после сброса премиум-кредитов 1 ноября сам станет `avatar_v`
-   (`avatar.engine_switch`). 402 «insufficient credit» — стоп и вопрос Илье, на другой движок молча не переходить.
+2. `create_video_from_avatar(avatarId=<look_id из avatar.allowed>, script=<script.txt слово в слово>, voiceId=<voice_id этого образа>,
+   aspectRatio="9:16", resolution="1080p", engine={"type": "avatar_v"}, voiceSettings={"speed": 1.1}, title="Ремейк · <slug>")`.
+   Движок только `avatar_v`, темп только 1.1. 402 «insufficient credit» —
+   стоп и вопрос Илье, на другой движок не переходить.
 3. `get_video(videoId)` до `completed`. Между опросами не простаивай: подпись, стиль (шаг 7), поручение монтажу.
    Делать больше нечего, а видео ещё `processing` — подожди тем, что позволяет среда (фоновая команда, монитор),
    и опроси снова; не пересоздавай видео. `failed` — объясни причину и остановись.

@@ -5,14 +5,15 @@
   python3 heygen_render.py <slug> --resume                                                    дождаться уже отправленного
   python3 heygen_render.py <slug> --fetch <video_url> [--id <video_id>]                       забрать результат из MCP HeyGen
 
-Без --force не отправляет, если check.json последней проверки с FAIL. Образ и голос — avatar.look_id / avatar.voice_id
-из config.json (личные правки — settings.py). Один вызов ждёт до --wait-min минут (по умолчанию 9 — влезает в лимит
+Без --force не отправляет, если check.json последней проверки с FAIL. Образ — только из avatar.allowed
+(ilia.paliy № 55, 56, 57, 58, 61; по умолчанию avatar.look_id), голос — только родной голос образа, движок — только
+Avatar V, темп 1.1. Другой образ, голос или движок скрипт не отправит. Один вызов ждёт до --wait-min минут (по умолчанию 9 — влезает в лимит
 команды Bash у Claude), опрос раз в 20 с; не успел — код выхода 3, повтори --resume. --no-wait — только отправить. Готовое видео: <задача>/<slug>.mp4 (это «сырьё» для скилла монтажа) и avatar_sheet.jpg.
 """
 import argparse, datetime, json, os, sys, time
 
 sys.path.insert(0, os.path.dirname(os.path.abspath(__file__)))  # и под python3 -I
-from common import HTTPError, avatar_engine, config, download, http_json, job_dir, probe, read_json, secret, sheet, write_json
+from common import HTTPError, avatar_engine, avatar_pick, config, download, http_json, job_dir, probe, read_json, secret, sheet, write_json
 
 API = "https://api.heygen.com"
 
@@ -90,8 +91,7 @@ def main():
 
     job = job_dir(a.job)
     slug = job.name
-    av = config()["avatar"]
-    look, voice = a.look or av["look_id"], a.voice or av["voice_id"]
+    look, voice, speed = avatar_pick(a.look, a.voice)
     state = read_json(job / "heygen.json", {})
 
     if a.fetch:
@@ -107,9 +107,8 @@ def main():
     chk = read_json(job / "check.json", {})
     if chk.get("fail") and not a.force:
         sys.exit("последняя check_script.py — FAIL. Исправь сценарий и проверь снова (или --force, если осознанно)")
-    body = {"video_inputs": [{"character": {"type": "avatar", "avatar_id": look, "avatar_style": "normal"},
-                              "voice": {"type": "text", "input_text": script, "voice_id": voice, "speed": av.get("speed", 1.0)}}],
-            "dimension": {"width": 1080, "height": 1920}, "title": f"Ремейк · {slug}"}
+    body = {"type": "avatar", "avatar_id": look, "voice_id": voice, "script": script, "title": f"Ремейк · {slug}"[:100],
+            "resolution": "1080p", "aspect_ratio": "9:16", "engine": {"type": avatar_engine()}, "voice_settings": {"speed": speed}}
     if a.dry_run:
         print(json.dumps(body, ensure_ascii=False, indent=1))
         return
@@ -121,13 +120,13 @@ def main():
         if isinstance(q, (int, float)) and q < est:
             sys.exit(f"мало квоты HeyGen ({q} < {est}) — пополни на app.heygen.com/settings/subscriptions")
     try:
-        d = http_json(f"{API}/v2/video/generate", method="POST", data=body, headers={"X-Api-Key": k}, timeout=60)
+        d = http_json(f"{API}/v3/videos", method="POST", data=body, headers={"X-Api-Key": k}, timeout=60)
     except HTTPError as e:
         sys.exit(f"HeyGen не принял задачу: {e}")
     vid = (d.get("data") or {}).get("video_id")
     if not vid:
         sys.exit(f"HeyGen не вернул video_id: {json.dumps(d, ensure_ascii=False)[:300]}")
-    state = {"route": "rest", "video_id": vid, "look_id": look, "voice_id": voice, "status": "submitted",
+    state = {"route": "rest", "video_id": vid, "look_id": look, "voice_id": voice, "engine": avatar_engine(), "speed": speed, "status": "submitted",
              "submitted_at": datetime.datetime.now().isoformat(timespec="seconds"), "est_sec": est}
     write_json(job / "heygen.json", state)
     print(f"SUBMITTED {vid} · ≈{est} с видео")

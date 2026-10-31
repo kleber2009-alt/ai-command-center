@@ -14,19 +14,20 @@
   "weights": {"views": 0.3, "comments": 0.25, "shares": 0.25, "leads": 0.1, "likes": 0.1}
  },
  "avatar": {
-  "_about": "Цифровой двойник в HeyGen, выбран Ильёй 29.10. Движок на сегодня — settings.py engine (engine, а после engine_switch.at — engine_switch.to).",
-  "look_id": "ac8e5818453b4e99a12e23ca124be57c",
-  "look_name": "IMG_2672 · Motion Look (самый свежий двойник, октябрь 2026)",
-  "voice_id": "009e58e8bf8d4ccc86a21873864d4244",
-  "voice_name": "IMG_2672 (русский клон голоса)",
-  "engine": "avatar_iii",
-  "engine_switch": {"at": "2026-11-01T22:40:00Z", "to": "avatar_v", "why": "Илья 29.10: пока Avatar III, после сброса премиум-кредитов HeyGen 1 ноября — снова Avatar V"},
-  "speed": 1.0,
+  "_about": "Илья 31.10: ТОЛЬКО образы из allowed (группа ilia.paliy, № 55, 56, 57, 58, 61) и их родной голос, движок ТОЛЬКО Avatar V, темп 1.1. Любые другие образы, голоса и движки запрещены — скрипты, студия и бот их отклоняют.",
+  "look_id": "ab67463ebda348a39b4c94d158212658",
+  "look_name": "ilia.paliy – 61",
+  "voice_id": "8124c63842a04fceaf34661a804690f9",
+  "voice_name": "ilia.paliy (родной голос образов 55–61)",
+  "engine": "avatar_v",
+  "speed": 1.1,
   "confirmed": true,
-  "alternatives": [
-   {"look_id": "acacbe2973ac49ac89449ad55c6caf7a", "name": "IMG_2672", "voice_id": "d648b0bbe18147fda9b92a34f3956a6c"},
-   {"look_id": "025cc7689ced4904b311c9a0829bf4ab", "name": "Ilia Paliy", "voice_id": "a18b77c30b944eb09f9e3d98eddd37c3"},
-   {"group_id": "03f90fce63174b48821a351d20576076", "name": "ilia.paliy (57 образов)", "voice_id": "90c0fc251ebf410dab41a77aa1b54ed6"}
+  "allowed": [
+   {"look_id": "ab67463ebda348a39b4c94d158212658", "name": "ilia.paliy – 61", "voice_id": "8124c63842a04fceaf34661a804690f9", "about": "белая футболка, кепка, зелёная студия"},
+   {"look_id": "a0b2e1f4ddcf41f5b1d345469e24c71d", "name": "ilia.paliy – 56", "voice_id": "8124c63842a04fceaf34661a804690f9", "about": "белая футболка, кепка, очки, синий фон"},
+   {"look_id": "31c02d1783494a3184a0fb396569684f", "name": "ilia.paliy – 58", "voice_id": "8124c63842a04fceaf34661a804690f9", "about": "голубая рубашка, кепка, зелёная студия"},
+   {"look_id": "03ebe967ffa14ef6829b01331229d0e0", "name": "ilia.paliy – 55", "voice_id": "8124c63842a04fceaf34661a804690f9", "about": "жёлтая рубашка, кепка, красная студия"},
+   {"look_id": "281f9318a63b4b8a9f6d1fda58cf6eda", "name": "ilia.paliy – 57", "voice_id": "8124c63842a04fceaf34661a804690f9", "about": "коричневая рубашка, очки, чёрный фон"}
   ]
  },
  "styles": [

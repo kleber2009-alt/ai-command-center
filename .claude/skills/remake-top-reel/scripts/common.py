@@ -43,16 +43,36 @@ def config() -> dict:
     return base
 
 
+ENGINE = "avatar_v"   # Илья 31.10: движок только Avatar V, без исключений
+SPEED = 1.1           # Илья 31.10: темп речи аватара
+
+
 def avatar_engine(cfg: dict = None) -> str:
-    """Движок HeyGen на сегодня: avatar.engine, а после avatar.engine_switch.at — avatar.engine_switch.to
-    (например, Avatar III, пока не сбросились премиум-кредиты, потом снова Avatar V)."""
-    av = (cfg or config())["avatar"]
-    sw = av.get("engine_switch") or {}
-    if sw.get("at") and sw.get("to"):
-        at = datetime.datetime.fromisoformat(sw["at"].replace("Z", "+00:00"))
-        if datetime.datetime.now(datetime.timezone.utc) >= at:
-            return sw["to"]
-    return av.get("engine", "avatar_v")
+    """Движок HeyGen — всегда Avatar V (решение Ильи 31.10; другие движки запрещены)."""
+    return ENGINE
+
+
+def allowed_looks() -> list:
+    """Разрешённые образы — только из config.json скилла (личные правки этот список не расширяют)."""
+    return json.loads((SKILL / "config.json").read_text())["avatar"]["allowed"]
+
+
+def avatar_pick(look: str = None, voice: str = None) -> tuple:
+    """(look_id, voice_id, speed) — только из avatar.allowed: образ № 55/56/57/58/61 и его родной голос.
+    Чужой образ или голос — выход с ошибкой; устаревший образ в личных настройках — берётся образ скилла по умолчанию."""
+    allowed = {x["look_id"]: x for x in allowed_looks()}
+    base = json.loads((SKILL / "config.json").read_text())["avatar"]
+    if look and look not in allowed:
+        sys.exit(f"образ {look} запрещён: можно только {', '.join(x['name'] for x in allowed.values())}")
+    if not look:
+        look = config()["avatar"].get("look_id")
+        if look not in allowed:
+            print(f"WARN в личных настройках образ {look} не из разрешённых — беру {base['look_name']}")
+            look = base["look_id"]
+    own = allowed[look]["voice_id"]
+    if voice and voice != own:
+        sys.exit(f"голос {voice} запрещён: у образа {allowed[look]['name']} только его родной голос {own}")
+    return look, own, SPEED
 
 
 def set_override(path: str, value):

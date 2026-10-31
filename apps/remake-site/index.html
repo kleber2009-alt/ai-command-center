@@ -596,11 +596,11 @@ a.btn { text-decoration: none; display: inline-flex; align-items: center; justif
   const secOf = (t) => Math.round(words(t) / 2.5);
   const STEPS = [["source", "Референс"], ["transcribe", "Расшифровка"], ["script", "Сценарий"], ["avatar", "Аватар"], ["montage", "Монтаж"]];
   const ST_RU = { todo: "ждёт", run: "идёт", done: "готово", wait: "твой ход", fail: "ошибка" };
-  const ENGINE_RU = { avatar_iii: "Avatar III", avatar_iv: "Avatar IV", avatar_v: "Avatar V" };
+  const ENGINE_RU = { avatar_v: "Avatar V" };  // Ilia 31.10: Avatar V only
   const LENS = ["как есть", "до 60 с", "до 30 с"];
   const view = $("#studio");
   const S = { tab: "runs", me: null, hg: null, hgErr: "", styles: null, jobs: [], job: null, jobText: "", draft: {}, upload: null, msg: "", bad: false,
-    pick: { group: "", look: "", voice: "", engine: "", resolution: "1080p", speed: 1 }, mont: { skill: "", wish: "", len: "как есть", subs: true, music: true }, allStyles: false, deferred: false };
+    pick: { group: "", look: "", voice: "", engine: "", resolution: "1080p", speed: 1.1 }, mont: { skill: "", wish: "", len: "как есть", subs: true, music: true }, allStyles: false, deferred: false };
 
   async function api(p, opts = {}) {
     const r = await fetch("api/studio/" + p, { cache: "no-store", ...opts, headers: { ...(typeof opts.body === "string" ? { "content-type": "application/json" } : {}), ...(opts.headers || {}) } });
@@ -815,7 +815,7 @@ a.btn { text-decoration: none; display: inline-flex; align-items: center; justif
       <div class="fields">
         <div class="field"><span class="label">Движок</span><div class="seg">${Object.keys(ENGINE_RU).filter((e) => e !== "avatar_iv" || engines.includes(e)).map((e) => `<button type="button" data-engine="${e}" class="${P.engine === e ? "on" : ""}"${engines.includes(e) ? "" : " disabled"}>${ENGINE_RU[e]}</button>`).join("")}</div></div>
         <div class="field"><span class="label">Качество</span><div class="seg"><button type="button" data-res="1080p" class="${P.resolution === "1080p" ? "on" : ""}">1080p</button><button type="button" data-res="4k" class="${P.resolution === "4k" ? "on" : ""}"${P.engine === "avatar_iii" ? "" : " disabled"} title="4K — только Avatar III">4K</button></div></div>
-        <label class="field"><span class="label">Темп речи</span><select id="sSpeed">${[0.9, 1, 1.05, 1.1, 1.2].map((x) => `<option value="${x}"${+P.speed === x ? " selected" : ""}>${x === 1 ? "обычный" : "×" + x}</option>`).join("")}</select></label>
+        <label class="field"><span class="label">Темп речи</span><select id="sSpeed">${[1.1].map((x) => `<option value="${x}"${+P.speed === x ? " selected" : ""}>${x === 1 ? "обычный" : "×" + x}</option>`).join("")}</select></label>
       </div>
       ${hg.defaults.switch && hg.defaults.switch.to && Date.now() < Date.parse(hg.defaults.switch.at) ? `<p class="what">По умолчанию ${ENGINE_RU[hg.defaults.engine]}; с ${esc(new Date(hg.defaults.switch.at).toLocaleDateString("ru-RU", { day: "numeric", month: "long" }))} — снова ${ENGINE_RU[hg.defaults.switch.to] || hg.defaults.switch.to}.</p>` : ""}`;
   }

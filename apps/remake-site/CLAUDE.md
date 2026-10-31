@@ -34,8 +34,9 @@
   - сценарий 2.0: `@anthropic-ai/sdk`, `claude-opus-5-5`, adaptive thinking, effort high, structured output, server-side
     fallback (`fallbacks: "default"`); система — `references/script-rules.md` скилла + правила студии. После ответа —
     `check_script.py` скилла; не прошёл — один раунд правки с причинами. Проверка в студии — подсказка, рендер не блокирует;
-  - аватар: HeyGen v3 (`/v3/avatars`, `/v3/avatars/looks`, `/v3/voices`, `/v3/users/me`, `POST /v3/videos` 9:16, 1080p или
-    4K для Avatar III, `Idempotency-Key`), движок по умолчанию — `avatar.engine`/`engine_switch` из `config.json` скилла;
+  - аватар: HeyGen v3 (`/v3/avatars`, `/v3/avatars/looks`, `/v3/voices`, `/v3/users/me`, `POST /v3/videos` 9:16, 1080p,
+    `Idempotency-Key`). Решение Ильи 31.10: в списке и в рендере — только образы `avatar.allowed` из `config.json` скилла
+    (ilia.paliy № 55, 56, 57, 58, 61) с их родным голосом, движок только Avatar V, темп 1.1; остальное сервер отклоняет (400);
   - монтаж: Студия Кадрика, `POST {KADRIK_URL}/api/ext/jobs` (Bearer = `PERSONA_API_KEY` Кадрика) с публичной ссылкой на
     видео аватара, сценарием, кодовым словом и пожеланиями; результат — `GET …/result`. Стили — каталог Кадрика
     (`skills.json` Creator Pack + установленные `~/.claude/skills`, только видео 9:16), топ-3 из `config.json` скилла первыми.
