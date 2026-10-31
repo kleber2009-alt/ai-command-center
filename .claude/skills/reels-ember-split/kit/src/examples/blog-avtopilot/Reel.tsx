@@ -7,7 +7,9 @@ import {CubeSwitch, ZoomSwitch} from '../../ui/transitions';
 import words from './words.json';
 import {Autopilot, Dialogs, DirectChat, Followers, Growth, Modules, Payments, ReelsFound, Render, Schedule, ScriptCard} from '../../ui/cards';
 
-export const REEL_FRAMES = 1648;
+import meta from './meta.json';
+
+export const REEL_FRAMES = meta.frames;
 
 const at = (i: number) => (words as {f: number}[])[i].f;
 // word i shown as `text` (spelling fixed by hand), `hl` = orange pill
@@ -65,34 +67,42 @@ const Face: React.FC<{to: number; groups: FaceLine[][]}> = ({to, groups}) => (
 
 type Block = {to: number; node: React.ReactNode; next?: 'cube' | 'zoom'};
 
+// block boundaries sit just before the first word of the next block
+const B1 = at(8) - 4;
+const B2 = at(19) - 4;
+const B3 = at(30) - 5;
+const B4 = at(96) - 2;
+const B5 = at(105) - 3;
+const B6 = at(153) - 5;
+
 const BLOCKS: Block[] = [
   {
-    to: 106,
+    to: B1,
     next: 'cube',
     node: (
       <Face
-        to={106}
+        to={B1}
         groups={[[{words: [w(0, 'В'), w(1, 'Америке'), w(2, 'сейчас')]}, {words: [w(3, 'вирусится'), w(4, 'тренд')]}, {words: [w(5, 'блог'), w(6, 'на'), w(7, 'автопилоте')], block: 'red'}]]}
       />
     ),
   },
   {
-    to: 210,
+    to: B2,
     next: 'cube',
     node: (
       <Split
-        to={210}
-        cards={[{from: 100, label: 'нейросети ведут блог', node: <Autopilot at={104} onAt={at(12)} />}]}
+        to={B2}
+        cards={[{from: B1 - 6, label: 'нейросети ведут блог', node: <Autopilot at={B1 - 2} onAt={at(12)} />}]}
         phrases={[[w(8, 'то'), w(9, 'есть'), w(10, 'нейросети')], [w(11, 'которые'), w(12, 'ведут'), w(13, 'его')], [w(14, 'за'), w(15, 'вас'), {text: '24/7', at: at(16), hl: true}]]}
       />
     ),
   },
   {
-    to: 330,
+    to: B3,
     next: 'cube',
     node: (
       <Face
-        to={330}
+        to={B3}
         groups={[
           [{words: [w(19, 'Я'), w(20, 'сделал'), w(21, 'себе')]}, {words: [w(22, 'такой'), w(23, 'же')]}],
           [{words: [w(24, 'и'), w(25, 'вырос'), w(26, 'до')]}, {words: [{text: '300 000', at: at(27)}, w(29, 'подписчиков')], block: 'red'}],
@@ -101,13 +111,13 @@ const BLOCKS: Block[] = [
     ),
   },
   {
-    to: 1026,
+    to: B4,
     next: 'cube',
     node: (
       <Split
-        to={1026}
+        to={B4}
         cards={[
-          {from: 324, label: 'мой блог', node: <Followers at={330} to={300000} minutesAt={at(32)} />},
+          {from: B3 - 6, label: 'мой блог', node: <Followers at={B3} to={300000} minutesAt={at(32)} />},
           {from: at(36), label: 'из чего состоит', node: <Modules at={at(36) + 4} />},
           {from: at(43), node: <Schedule at={at(46)} runAt={at(55)} />},
           {from: at(59), node: <ReelsFound at={at(60)} />},
@@ -143,23 +153,23 @@ const BLOCKS: Block[] = [
     ),
   },
   {
-    to: 1116,
+    to: B5,
     next: 'cube',
     node: (
       <Face
-        to={1116}
+        to={B5}
         groups={[[{words: [w(96, 'И'), w(97, 'моё'), w(98, 'любимое')]}, {words: [w(100, 'это')]}, {words: [w(101, 'ИИ-агент'), w(103, 'в'), w(104, 'Директе')], block: 'red'}]]}
       />
     ),
   },
   {
-    to: 1562,
+    to: B6,
     next: 'zoom',
     node: (
       <Split
-        to={1562}
+        to={B6}
         cards={[
-          {from: 1110, node: <DirectChat at={at(107)} materialAt={at(112)} sellAt={at(115)} />},
+          {from: B5 - 6, node: <DirectChat at={at(107)} materialAt={at(112)} sellAt={at(115)} />},
           {from: at(118), label: 'ИИ-агент сейчас', node: <Dialogs at={at(123)} to={1500} />},
           {from: at(129), label: 'оплаты', node: <Payments at={at(131)} />},
           {from: at(134), label: 'система', node: <Modules at={at(134) + 4} allOnAt={at(142)} />},
