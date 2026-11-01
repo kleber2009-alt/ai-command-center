@@ -3,11 +3,11 @@
 <head>
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
-<title>Окно двойника — 10 концептов</title>
+<title>Окно двойника — 11 концептов</title>
 <meta name="description" content="Десять вариантов дизайна окна диалога с цифровым двойником: HUD, терминал, RPG, квесты, нейрограф, колода карт, монтажный таймлайн и другие.">
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
-<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Manrope:wght@400;500;600;700;800&family=JetBrains+Mono:wght@400;500;700&family=Unbounded:wght@500;700&display=swap">
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Manrope:wght@400;500;600;700;800&family=JetBrains+Mono:wght@400;500;700&family=Unbounded:wght@500;700&family=Playfair+Display:ital,wght@0,500;0,600;1,500&display=swap">
 <style>
   :root{
     --bg:#0c0d10; --card:rgba(255,255,255,.045); --line:rgba(255,255,255,.09); --ink:#f3f1ee; --ink-2:rgba(243,241,238,.66); --ink-3:rgba(243,241,238,.42);
@@ -65,6 +65,26 @@
   @keyframes rise{from{opacity:0;transform:translateY(10px)}to{opacity:1;transform:none}}
   @keyframes pop{0%{opacity:0;transform:scale(.85)}60%{transform:scale(1.03)}100%{opacity:1;transform:none}}
   .cur::after{content:'▍';animation:blink 1s steps(1) infinite}
+
+  /* ===== 0. Nano ring (reference: jarvis.ceo) ===== */
+  .v-nano{background:#0a0a0a;color:#f4f1ec;font-family:var(--f-ui);display:flex;flex-direction:column}
+  .v-nano canvas{position:absolute;left:0;right:0;top:0;height:62%;width:100%}
+  .nano-top{position:relative;display:flex;align-items:center;gap:10px;padding:16px 22px;border-bottom:1px solid rgba(255,255,255,.07);font-size:14px;font-weight:700;z-index:1}
+  .nano-top i{width:14px;height:14px;border:1.5px solid #f4f1ec;transform:rotate(45deg);border-radius:3px}
+  .nano-top span{margin-left:auto;font:500 11px var(--f-mono);letter-spacing:.18em;color:rgba(244,241,236,.45);text-transform:uppercase}
+  .nano-top span b{display:inline-block;width:6px;height:6px;border-radius:50%;background:#e8d5b8;margin-right:8px;vertical-align:1px;box-shadow:0 0 8px #e8d5b8}
+  .nano-text{position:absolute;left:6%;right:6%;top:50%;text-align:center;z-index:1}
+  .nano-q{font:italic 500 17px 'Playfair Display',Georgia,serif;color:rgba(244,241,236,.5);min-height:24px}
+  .nano-a{font:500 34px/1.18 'Playfair Display',Georgia,serif;letter-spacing:-.015em;margin-top:8px;min-height:80px}
+  .nano-a span{opacity:0;filter:blur(6px);transition:opacity .45s, filter .45s}
+  .nano-a span.on{opacity:1;filter:none}
+  .nano-l{font:500 11px var(--f-mono);letter-spacing:.24em;color:rgba(244,241,236,.42);margin-top:12px;text-transform:uppercase}
+  .nano-cards{position:absolute;left:22px;right:22px;bottom:18px;display:grid;grid-template-columns:repeat(3,minmax(0,1fr));gap:10px;z-index:1}
+  .nano-c{border:1px solid rgba(255,255,255,.1);border-radius:16px;padding:12px 14px;background:rgba(255,255,255,.025);opacity:0;transform:translateY(8px);transition:opacity .5s, transform .5s}
+  .nano-c.on{opacity:1;transform:none}
+  .nano-c b{display:block;font-size:14px} .nano-c small{display:block;color:rgba(244,241,236,.5);font-size:12.5px;line-height:1.35;margin:2px 0 8px}
+  .nano-c em{font-style:normal;font-size:12.5px;font-weight:700}
+  @container (max-width:760px){ .nano-a{font-size:24px;min-height:90px} .nano-text{top:40%} .nano-cards{grid-template-columns:1fr;gap:6px} .nano-c{padding:8px 12px} .nano-c small{margin:0} .nano-c em{display:none} .v-nano canvas{height:48%} }
 
   /* ===== 1. HUD ===== */
   .v-hud{background:radial-gradient(800px 500px at 50% 45%, #0b2633, #03070b 70%);color:#bff6ff;font-family:var(--f-mono);display:flex;flex-direction:column}
@@ -188,7 +208,7 @@
   .halo-pills{position:absolute;left:0;right:0;bottom:26px;display:flex;justify-content:center;gap:8px;flex-wrap:wrap;padding:0 16px}
   .halo-pills span{padding:7px 12px;border-radius:99px;font-size:12.5px;font-weight:700;background:rgba(255,138,61,.12);border:1px solid rgba(255,138,61,.35);color:#ffc591;animation:pop .4s}
   .halo-st{position:absolute;top:50%;left:50%;transform:translate(-50%, 120px);font:600 11px var(--f-mono);letter-spacing:.2em;color:rgba(255,200,150,.6)}
-  @container (max-width:760px){ .halo-sub{font-size:20px;bottom:120px} .halo-st{transform:translate(-50%, 90px)} }
+  @container (max-width:760px){ .halo-sub{font-size:20px;bottom:120px} .halo-st{top:auto;bottom:250px;transform:translateX(-50%)} }
 
   /* ===== 6. Neural ===== */
   .v-neuro{background:radial-gradient(700px 400px at 50% 42%, #14102a, #07060d 75%);font-family:var(--f-ui);display:flex;flex-direction:column}
@@ -314,7 +334,7 @@
 <body>
 <header>
   <a class="back" href="./"><svg viewBox="0 0 24 24"><path d="M15 18l-6-6 6-6"/></svg>Двойник</a>
-  <div><h1>Окно двойника — 10 концептов</h1><p>Один и тот же разговор в десяти упаковках: из будущего, из игр, из монтажки. Выберите, что развивать.</p></div>
+  <div><h1>Окно двойника — 11 концептов</h1><p>Один и тот же разговор в одиннадцати упаковках: минимализм как jarvis.ceo, из будущего, из игр, из монтажки. Выберите, что развивать.</p></div>
 </header>
 <div class="wrap">
   <nav class="list" id="list"></nav>
@@ -386,6 +406,61 @@ function pixelOrb(c, t = 0) {
 
 /* ---------- the ten windows ---------- */
 const V = [
+{ id:'nano', name:'Нано-кольцо', pitch:'Минимализм в духе jarvis.ceo: облако частиц и антиква',
+  idea:'Почти чёрный экран, в центре кольцо из тысячи тёплых «наночастиц», под ним крупная антиква — фраза, которую двойник говорит прямо сейчас, и моноширинная подпись состояния. Ничего лишнего.',
+  mech:'Частицы и есть интерфейс: кольцо дышит голосом, на «думаю» схлопывается в сферу-рой, на «смотрю» вытягивается в линзу-глаз, на «слушаю» сжимается к центру. Карточки — три тонкие плашки внизу со ссылкой «→».',
+  good:'Самый «чистый» и дорогой вид, ощущение ИИ из будущего без перегруза. Хорошо ложится на телефон и в Mini App.', cost:2,
+  build(r) {
+    r.innerHTML = `<canvas></canvas><div class="nano-top"><i></i>Двойник<span><b></b><em class="st" style="font-style:normal">готов</em></span></div>
+      <div class="nano-text"><div class="nano-q"></div><div class="nano-a"></div><div class="nano-l">ДВОЙНИК · ГОТОВ</div></div><div class="nano-cards"></div>`;
+    const c = r.querySelector('canvas'), g = c.getContext('2d'), q = r.querySelector('.nano-q'), a = r.querySelector('.nano-a'), lab = r.querySelector('.nano-l'), st = r.querySelector('.st'), cards = r.querySelector('.nano-cards');
+    const N = 1100, P = Array.from({ length:N }, () => ({ u:Math.random() * 6.283, v:Math.random() * 6.283, j:Math.random(), s:Math.random() ** 3, k:Math.random() }));
+    const W = { torus:1, sphere:0, lens:0, tight:0 }, T = { ...W };
+    let shape = 'idle';
+    const want = { idle:'torus', speak:'torus', listen:'tight', think:'sphere', look:'lens' };
+    return {
+      me(t) { q.textContent = '«' + t + '»'; a.innerHTML = ''; cards.innerHTML = ''; },
+      async twin(t) {
+        const my = token; a.innerHTML = t.split(' ').map(w => `<span>${esc(w)}</span>`).join(' ');
+        for (const s of a.children) { if (!alive(my)) return; s.classList.add('on'); await sleep(150); }
+      },
+      card(k) { cards.innerHTML = CARDS[k].items.map(it => `<div class="nano-c"><b>${esc(it.t)}</b><small>${esc(it.s)}</small><em>${k === 'task' ? 'Статус' : 'Открыть'} →</em></div>`).join('');
+        [...cards.children].forEach((e, i) => setTimeout(() => e.classList.add('on'), 120 * i)); },
+      state(s) { shape = s; for (const key in T) T[key] = key === want[s] ? 1 : 0; const txt = ST[s]; st.textContent = txt; lab.textContent = 'ДВОЙНИК · ' + txt.toUpperCase(); },
+      frame(t, l) {
+        const dpr = devicePixelRatio || 1, w = c.width = c.clientWidth * dpr, h = c.height = c.clientHeight * dpr, cx = w / 2, cy = h * 0.52, S = Math.min(w, h) * 0.27;
+        for (const key in W) W[key] += (T[key] - W[key]) * 0.06;
+        g.clearRect(0, 0, w, h);
+        const glow = g.createRadialGradient(cx, cy, 0, cx, cy, S * 1.4); glow.addColorStop(0, 'rgba(120,80,40,.28)'); glow.addColorStop(1, 'rgba(120,80,40,0)');
+        g.fillStyle = glow; g.fillRect(0, 0, w, h);
+        const ry = t * 0.25, rx = 1.05 + Math.sin(t * 0.2) * 0.12, cyR = Math.cos(ry), syR = Math.sin(ry), cxR = Math.cos(rx), sxR = Math.sin(rx);
+        const breathe = 1 + l * 0.12 * Math.sin(t * 9);
+        for (const p of P) {
+          const u = p.u + t * (0.05 + p.k * 0.04), rr = 0.36 + p.j * 0.12;
+          // torus
+          let x1 = (1 + rr * Math.cos(p.v)) * Math.cos(u) * breathe, y1 = rr * Math.sin(p.v), z1 = (1 + rr * Math.cos(p.v)) * Math.sin(u) * breathe;
+          // swarm sphere
+          const lat = Math.acos(2 * p.k - 1), sw = 0.85 + 0.1 * Math.sin(t * 3 + p.u * 4);
+          const x2 = Math.sin(lat) * Math.cos(u * 2) * sw, y2 = Math.cos(lat) * sw, z2 = Math.sin(lat) * Math.sin(u * 2) * sw;
+          // tight ring (listening)
+          const x4 = 0.55 * Math.cos(u) * (1 + 0.05 * Math.sin(t * 12 + p.v)), y4 = (p.j - 0.5) * 0.12, z4 = 0.55 * Math.sin(u);
+          let x = x1 * W.torus + x2 * W.sphere + x4 * W.tight, y = y1 * W.torus + y2 * W.sphere + y4 * W.tight, z = z1 * W.torus + z2 * W.sphere + z4 * W.tight;
+          // rotate (Y then X)
+          let X = x * cyR - z * syR, Z = x * syR + z * cyR, Y = y * cxR - Z * sxR; Z = y * sxR + Z * cxR;
+          // lens (eye), drawn flat in screen space
+          if (W.lens > 0.001) {
+            const iris = p.k < 0.3, e = iris ? 0.32 + p.j * 0.08 : 1.25 + (p.j - 0.5) * 0.18;
+            const lx = Math.cos(u) * e, ly = Math.sin(u) * (iris ? e : e * 0.42 * (0.6 + 0.4 * Math.abs(Math.cos(u)))), lz = p.j - 0.5;
+            X = X * (1 - W.lens) + lx * W.lens; Y = Y * (1 - W.lens) + ly * W.lens; Z = Z * (1 - W.lens) + lz * W.lens;
+          }
+          const d = (Z + 2.2) / 3.2, a2 = 0.18 + d * 0.8, rad = (0.6 + p.s * 2.6) * d * dpr;
+          g.fillStyle = `rgba(${232 - (1 - d) * 60 | 0},${213 - (1 - d) * 70 | 0},${184 - (1 - d) * 80 | 0},${a2})`;
+          g.beginPath(); g.arc(cx + X * S, cy + Y * S, rad, 0, 6.283); g.fill();
+        }
+      },
+    };
+  } },
+
 { id:'hud', name:'HUD «Джарвис»', pitch:'Голографический интерфейс из фантастики',
   idea:'Окно как шлем-дисплей: в центре вращающееся ядро, слева бегущая расшифровка, справа всплывают панели данных, внизу — волна голоса.',
   mech:'Кольца ядра крутятся быстрее, когда двойник думает; телеметрия сверху — задержка, камера, сколько знаний подключено.',
