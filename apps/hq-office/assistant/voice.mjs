@@ -45,3 +45,10 @@ export function speak(voiceId, text) {
     body:JSON.stringify({ text, model_id:TTS_MODEL, language_code:'ru' }),
   });
 }
+
+// a single-use token for realtime Scribe in the browser (wss://api.elevenlabs.io/v1/speech-to-text/realtime)
+export async function realtimeToken() {
+  const data = await (await call('/single-use-token/realtime_scribe', { method:'POST' })).json();
+  if (!data.token) throw new Error('no token in response');
+  return data.token;
+}

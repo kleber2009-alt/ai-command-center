@@ -386,6 +386,7 @@
       <form class="login" id="loginForm" hidden><input type="password" id="pass" placeholder="Пароль владельца" autocomplete="current-password"><button class="btn" type="submit">Войти</button></form>
       <button class="btn" id="prev"><svg viewBox="0 0 24 24"><path d="M15 18l-6-6 6-6"/></svg>Дизайн</button>
       <button class="btn" id="next">Дизайн<svg viewBox="0 0 24 24"><path d="M9 18l6-6-6-6"/></svg></button>
+      <button class="btn" id="interview" hidden title="Двойник задаст вопросы и запомнит ответы"><svg viewBox="0 0 24 24"><path d="M4 19.5V5a2 2 0 0 1 2-2h12v18H6a2 2 0 0 1-2-1.5zM8 7h6M8 11h6"/></svg>Интервью <span id="profCnt"></span></button>
       <button class="btn" id="replay"><svg viewBox="0 0 24 24"><path d="M7 4.5v15l12-7.5z"/></svg>Демо</button>
       <span class="pos" id="pos"></span>
     </div>
@@ -966,6 +967,7 @@ async function ask(text, { look = false } = {}) {
           markLen(reply); flush(false);
         }
         if (ev.t === 'task') task = true;
+        if (ev.t === 'memory') { memFlash(ev.title); }
         if (ev.t === 'error') throw new Error(ev.message);
       }
     }
@@ -983,7 +985,7 @@ async function ask(text, { look = false } = {}) {
   await voiceDone();
   busy = false;
   setState(convo.on ? 'listen' : 'idle');
-  listenAgain();
+  listenAgain(); afterTurn();
 }
 
 /* ---------- conversation mode: speak freely, the end of a phrase sends it ----------
@@ -1011,7 +1013,7 @@ function startRec() {
 }
 const micLv = x => $('talkBtn').style.setProperty('--lv', Math.max(0, Math.min(1, x)).toFixed(2));
 async function startVad() {
-  try { convo.stream = await navigator.mediaDevices.getUserMedia({ audio:{ echoCancellation:true, noiseSuppression:true, autoGainControl:true } }); }
+  try { convo.stream = convo.stream?.active ? convo.stream : await navigator.mediaDevices.getUserMedia({ audio:{ echoCancellation:true, noiseSuppression:true, autoGainControl:true } }); }
   catch { convoOff(); return hint(MOBILE ? 'Нет доступа к микрофону. На iPhone: «аА» в адресной строке → Настройки веб-сайта → Микрофон → Разрешить, затем снова «Говорить».' : 'Нет доступа к микрофону — разрешите его в браузере.'); }
   const c = ctx(); try { await c.resume(); } catch {}
   const an = c.createAnalyser(); an.fftSize = 1024; c.createMediaStreamSource(convo.stream).connect(an);
@@ -1049,6 +1051,77 @@ async function startVad() {
     }
   }, 50);
 }
+/* phones: streaming recognition (ElevenLabs realtime Scribe) — words appear while you speak, the server's
+   VAD closes the phrase; the batch recording above stays as the fallback */
+const RT = { ws:null, proc:null, src:null, stream:null, pending:'', ok:false };
+function b64(int16) { let s = ''; const u8 = new Uint8Array(int16.buffer); for (let i = 0; i < u8.length; i += 0x8000) s += String.fromCharCode.apply(null, u8.subarray(i, i + 0x8000)); return btoa(s); }
+async function startRealtime() {
+  let token;
+  try { const r = await fetch(API + '/stt-token', { method:'POST' }); const d = await r.json(); token = d.token; if (!token) throw 0; } catch { return false; }
+  try { RT.stream = convo.stream || await navigator.mediaDevices.getUserMedia({ audio:{ echoCancellation:true, noiseSuppression:true, autoGainControl:true } }); convo.stream = RT.stream; }
+  catch { convoOff(); hint(MOBILE ? 'Нет доступа к микрофону. На iPhone: «аА» в адресной строке → Настройки веб-сайта → Микрофон → Разрешить, затем снова «Говорить».' : 'Нет доступа к микрофону — разрешите его в браузере.'); return true; }
+  const c = ctx(); try { await c.resume(); } catch {}
+  const q = new URLSearchParams({ model_id:'scribe_v2_realtime', token, audio_format:'pcm_16000', commit_strategy:'vad', language_code:'ru', vad_silence_threshold_secs:'0.7', min_speech_duration_ms:'200' });
+  const ws = RT.ws = new WebSocket('wss://api.elevenlabs.io/v1/speech-to-text/realtime?' + q);
+  const started = await new Promise(res => {
+    const to = setTimeout(() => res(false), 5000);
+    ws.onmessage = e => { let m; try { m = JSON.parse(e.data); } catch { return; } if (m.message_type === 'session_started') { clearTimeout(to); res(true); } else if (m.error) { clearTimeout(to); res(false); } };
+    ws.onerror = () => { clearTimeout(to); res(false); };
+  });
+  if (!started) { try { ws.close(); } catch {} RT.ws = null; return false; }
+  RT.ok = true;
+  // mic → 16 kHz PCM16, ~100 ms chunks
+  const src = RT.src = c.createMediaStreamSource(RT.stream), proc = RT.proc = c.createScriptProcessor(4096, 1, 1), an = c.createAnalyser(); an.fftSize = 512;
+  src.connect(an); src.connect(proc); const mute = c.createGain(); mute.gain.value = 0; proc.connect(mute); mute.connect(c.destination);
+  const ratio = c.sampleRate / 16000, lvBuf = new Float32Array(an.fftSize);
+  proc.onaudioprocess = e => {
+    if (ws.readyState !== 1) return;
+    const inp = e.inputBuffer.getChannelData(0), n = Math.floor(inp.length / ratio), out = new Int16Array(n);
+    for (let i = 0; i < n; i++) { const a = Math.floor(i * ratio), b = Math.min(inp.length, Math.floor((i + 1) * ratio)); let sum = 0; for (let j = a; j < b; j++) sum += inp[j]; const v = sum / Math.max(1, b - a); out[i] = Math.max(-1, Math.min(1, v)) * 0x7fff; }
+    ws.send(JSON.stringify({ message_type:'input_audio_chunk', audio_base_64:b64(out), commit:false, sample_rate:16000 }));
+    an.getFloatTimeDomainData(lvBuf); let sum = 0; for (const v of lvBuf) sum += v * v; micLv(Math.sqrt(sum / lvBuf.length) * 12);
+  };
+  ws.onmessage = e => {
+    let m; try { m = JSON.parse(e.data); } catch { return; }
+    if (m.message_type === 'partial_transcript' && m.text?.trim()) {
+      if (mode === 'speak') { if (m.text.trim().length >= 12) { RT.barged = true; interrupt(); } else return; }
+      if (busy && !RT.barged) return;
+      $('input').value = m.text; $('talkBtn').classList.add('hear'); if (!busy) setState('listen');
+    }
+    if (m.message_type === 'committed_transcript') {
+      const t = (m.text || '').trim(); $('talkBtn').classList.remove('hear');
+      if (!t) return;
+      $('input').value = '';
+      if (busy) { if (RT.barged) RT.pending = t; return; }   // only what you said over the twin, never its own echo
+      ask(t);
+    }
+    if (m.error && m.message_type !== 'session_started') { console.warn('scribe', m.message_type, m.error); if (/auth|quota|time_limit/.test(m.message_type)) hint('Распознавание: ' + m.error); }
+  };
+  ws.onclose = () => { RT.ok = false; stopRealtime(true); if (convo.on) setTimeout(() => convo.on && startRealtime().then(ok => ok || startVad()), 300); };
+  return true;
+}
+function stopRealtime(keepStream) {
+  try { RT.proc?.disconnect(); RT.src?.disconnect(); } catch {}
+  RT.proc = RT.src = null;
+  if (RT.ws) { const w = RT.ws; RT.ws = null; w.onclose = null; try { w.close(); } catch {} }
+  if (!keepStream) { RT.stream?.getTracks().forEach(t => t.stop()); RT.stream = null; }
+}
+// after a reply: what was said over the twin goes next
+function afterTurn() { RT.barged = false; if (RT.pending) { const t = RT.pending; RT.pending = ''; ask(t); } }
+
+/* the twin's memory: counter on «Интервью» and a short notice when it remembers */
+function showProfile() {
+  const p = server?.twin?.profile; $('interview').hidden = !live;
+  if (!p) { $('profCnt').textContent = ''; return; }
+  const gaps = ['audience', 'tone', 'content_plan', 'strategy'], done = gaps.filter(k => p[k]?.notes).length;
+  $('profCnt').textContent = `${done}/4`;
+}
+function memFlash(title) {
+  hint(`Запомнил: <b>${esc(title)}</b>`);
+  if (server?.twin?.profile) { const k = Object.keys(server.twin.profile).find(x => server.twin.profile[x].title === title); if (k) server.twin.profile[k].notes++; showProfile(); }
+}
+$('interview').onclick = () => { unlockAudio(); ask('Проведи со мной интервью, чтобы узнать меня лучше: задавай по одному короткому вопросу, начни с того, чего ты обо мне ещё не знаешь.'); };
+
 async function convoOn() {
   unlockAudio();
   if (!live) {
@@ -1057,10 +1130,12 @@ async function convoOn() {
   }
   convo.on = true; $('talkBtn').classList.add('on'); $('talkLbl').textContent = 'Слушаю';
   setState('listen'); hint(USE_SR ? 'Говорите — фраза отправится сама, когда вы замолчите. Ответ начнёт звучать сразу.' : 'Говорите как обычно — на паузе фраза уйдёт сама. Перебить: начните говорить или тапните по сцене.');
-  if (USE_SR) startRec(); else await startVad();
+  if (USE_SR) startRec();
+  else if (!(await startRealtime())) { if (convo.on) await startVad(); }
+  else hint('Говорите как обычно — слова появляются в поле, пока вы говорите. Перебить: начните говорить или тапните по сцене.');
 }
 function convoOff() {
-  convo.on = false; pauseListening(); clearInterval(convo.vad); convo.stream?.getTracks().forEach(t => t.stop()); convo.stream = null; micLv(0);
+  convo.on = false; pauseListening(); clearInterval(convo.vad); stopRealtime(); convo.stream?.getTracks().forEach(t => t.stop()); convo.stream = null; micLv(0);
   $('talkBtn').classList.remove('on', 'hear'); $('talkLbl').textContent = 'Говорить'; if (!busy) setState('idle'); hint('');
 }
 $('talkBtn').onclick = () => convo.on ? convoOff() : convoOn();
@@ -1073,6 +1148,7 @@ async function loadState() {
   live = Boolean(server?.owner && server.configured?.chat);
   $('chip').className = 'mchip' + (live ? ' live' : ''); $('chip').lastElementChild.textContent = live ? 'в эфире' : 'демо';
   $('loginForm').hidden = live || !server?.configured?.login;
+  showProfile();
 }
 $('loginForm').addEventListener('submit', async e => {
   e.preventDefault(); unlockAudio();
