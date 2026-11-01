@@ -3852,7 +3852,7 @@ function cmd(k) {
   if (k === 'tour') tour ? stopTour() : startTour();
   if (k === 'assistant') asstOpen($('asst').hidden);
   if (k === 'newtask') openDeskNew();
-  if (k === 'twin') location.href = 'twin/';
+  if (k === 'twin') location.href = 'twin/concepts.html';
 }
 $('dock').addEventListener('click', e => { const b = e.target.closest('[data-cmd]'); if (b) cmd(b.dataset.cmd); });
 
