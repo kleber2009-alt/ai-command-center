@@ -3,7 +3,7 @@
 <head>
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
-<title>Окно двойника — 11 концептов</title>
+<title>Двойник — 11 дизайнов</title>
 <meta name="description" content="Десять вариантов дизайна окна диалога с цифровым двойником: HUD, терминал, RPG, квесты, нейрограф, колода карт, монтажный таймлайн и другие.">
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
@@ -42,6 +42,41 @@
   .btn.sun{background:var(--sun);color:#1d0f05;border-color:transparent}
   .btn svg{width:15px;height:15px;fill:none;stroke:currentColor;stroke-width:2;stroke-linecap:round;stroke-linejoin:round}
   .ctl .pos{margin-left:auto;font:600 12.5px var(--f-mono);color:var(--ink-3)}
+  .talk{display:flex;gap:8px;align-items:center;flex-wrap:wrap}
+  .talk-go{position:relative;display:flex;align-items:center;gap:9px;height:48px;padding:0 18px 0 14px;border-radius:99px;background:#f4f1ec;color:#0a0a0a;font-weight:800;font-size:14.5px}
+  .talk-go svg{width:19px;height:19px;fill:none;stroke:currentColor;stroke-width:2;stroke-linecap:round}
+  .talk-go .ring{position:absolute;inset:-4px;border-radius:99px;border:2px solid #e8d5b8;opacity:0}
+  .talk-go.on{background:#e8d5b8}
+  .talk-go.on .ring{opacity:1;animation:ring 1.6s ease-out infinite}
+  .talk-go.hear .ring{animation-duration:.6s}
+  @keyframes ring{0%{transform:scale(1);opacity:.9}100%{transform:scale(1.25);opacity:0}}
+  .talk-in{flex:1;min-width:200px;display:flex;gap:6px}
+  .talk-in input{flex:1;min-width:0;height:48px;padding:0 16px;border-radius:99px;border:1px solid var(--line);background:rgba(255,255,255,.04);color:var(--ink);font:inherit;outline:none}
+  .talk-in input:focus{border-color:rgba(232,213,184,.6)}
+  .talk-in .btn{border-radius:99px;width:48px;justify-content:center}
+  .pip{width:64px;height:48px;border-radius:12px;overflow:hidden;border:1px solid rgba(232,213,184,.5);flex:none;position:relative}
+  .pip video{width:100%;height:100%;object-fit:cover;transform:scaleX(-1)}
+  .pip.look::after{content:'';position:absolute;inset:0;background:linear-gradient(180deg,transparent,rgba(232,213,184,.5) 50%,transparent 52%);background-size:100% 220%;animation:scanp 1s linear infinite}
+  @keyframes scanp{from{background-position:0 120%}to{background-position:0 -120%}}
+  .btn[disabled]{opacity:.4;cursor:not-allowed}
+  .btn.on{border-color:rgba(232,213,184,.6);color:#e8d5b8}
+  .sw{display:inline-flex;align-items:center;gap:7px;font-size:13px;color:var(--ink-2);cursor:pointer}
+  .sw input{accent-color:#e8d5b8;width:16px;height:16px}
+  .live-hint{min-height:20px;font-size:13px;color:var(--ink-3)}
+  .live-hint b{color:var(--ink)}
+  .mchip{display:inline-flex;align-items:center;gap:6px;font-size:12.5px;font-weight:700;padding:6px 11px;border-radius:99px;background:var(--card);border:1px solid var(--line);color:var(--ink-2)}
+  .mchip i{width:7px;height:7px;border-radius:50%;background:#ffb020}
+  .mchip.live i{background:#3ddc97;box-shadow:0 0 8px #3ddc97}
+  .login{display:flex;gap:6px} .login[hidden]{display:none}
+  .nano-a,.nn-a,.halo-sub,.deck-bub,.rpg-t,.q-m,.gl-m,.hud-l span,.nc-m span,.tl-prev .sub,.term-log span{white-space:pre-line}
+  .login input{width:170px;padding:9px 12px;border-radius:12px;border:1px solid var(--line);background:rgba(255,255,255,.04);color:var(--ink);font:inherit;outline:none}
+  .v-nano[data-len=long] .nano-a{font-size:19px;max-height:104px}
+  .nano-a{max-height:150px;overflow-y:auto;scrollbar-width:none}
+  .v-halo[data-len=long] .halo-sub{font-size:18px}
+  .halo-sub{max-height:40%;overflow-y:auto;scrollbar-width:none}
+  .rpg-box .rpg-t{max-height:120px;overflow-y:auto;scrollbar-width:none}
+  .deck-bub{max-height:120px;overflow-y:auto;scrollbar-width:none}
+  .tl-prev .sub{max-height:60%;overflow-y:auto;scrollbar-width:none}
   .about{display:grid;grid-template-columns:repeat(4,minmax(0,1fr));gap:12px}
   .about div{background:var(--card);border:1px solid var(--line);border-radius:16px;padding:14px}
   .about b{display:block;font:600 11px var(--f-mono);letter-spacing:.06em;text-transform:uppercase;color:var(--sun-2);margin-bottom:6px}
@@ -57,7 +92,7 @@
     .about{grid-template-columns:1fr 1fr}
     .stage{height:640px}
   }
-  @media (max-width: 560px){ .about{grid-template-columns:1fr} .title h2{font-size:20px} }
+  @media (max-width: 560px){ .about{grid-template-columns:1fr} .title h2{font-size:20px} .talk-in{order:-1;flex-basis:100%} .login input{width:130px} .ctl .pos{display:none} }
 
   /* shared bits */
   @keyframes spin{to{transform:rotate(360deg)}}
@@ -203,32 +238,28 @@
   .v-halo{background:#000;font-family:var(--f-ui);display:flex;flex-direction:column;align-items:center}
   .v-halo canvas{position:absolute;inset:0;width:100%;height:100%}
   .halo-q{position:relative;margin-top:22px;color:rgba(255,255,255,.45);font-size:14px;min-height:22px;text-align:center;padding:0 20px}
-  .halo-sub{position:absolute;left:8%;right:8%;bottom:96px;text-align:center;font-size:26px;font-weight:700;line-height:1.3;letter-spacing:-.01em;color:rgba(255,255,255,.18)}
+  .halo-sub{position:absolute;left:8%;right:8%;bottom:96px;text-align:center;font-size:26px;font-weight:700;line-height:1.3;letter-spacing:-.01em;color:#fff}
+  .halo-sub span{color:rgba(255,255,255,.18)}
   .halo-sub span.on{color:#fff;text-shadow:0 0 18px rgba(255,170,90,.6);transition:color .2s}
   .halo-pills{position:absolute;left:0;right:0;bottom:26px;display:flex;justify-content:center;gap:8px;flex-wrap:wrap;padding:0 16px}
   .halo-pills span{padding:7px 12px;border-radius:99px;font-size:12.5px;font-weight:700;background:rgba(255,138,61,.12);border:1px solid rgba(255,138,61,.35);color:#ffc591;animation:pop .4s}
   .halo-st{position:absolute;top:50%;left:50%;transform:translate(-50%, 120px);font:600 11px var(--f-mono);letter-spacing:.2em;color:rgba(255,200,150,.6)}
   @container (max-width:760px){ .halo-sub{font-size:20px;bottom:120px} .halo-st{top:auto;bottom:250px;transform:translateX(-50%)} }
 
-  /* ===== 6. Neural ===== */
-  .v-neuro{background:radial-gradient(700px 400px at 50% 42%, #14102a, #07060d 75%);font-family:var(--f-ui);display:flex;flex-direction:column}
-  .neuro-q{padding:14px 18px 0;font-size:13px;color:rgba(255,255,255,.5)} .neuro-q b{color:#c9b8ff;font:600 11px var(--f-mono);letter-spacing:.14em;margin-right:8px}
-  .neuro-g{flex:1;min-height:0;position:relative}
-  .neuro-g svg{position:absolute;inset:0;width:100%;height:100%}
-  .neuro-g line{stroke:rgba(201,184,255,.12);stroke-width:1.2}
-  .neuro-g line.on{stroke:#a98bff;stroke-width:2.2;stroke-dasharray:6 6;animation:flow .6s linear infinite;filter:drop-shadow(0 0 6px #a98bff)}
-  @keyframes flow{to{stroke-dashoffset:-12}}
-  .neuro-n{position:absolute;transform:translate(-50%,-50%);padding:7px 12px;border-radius:99px;font-size:12.5px;font-weight:700;background:rgba(255,255,255,.05);border:1px solid rgba(255,255,255,.12);color:rgba(255,255,255,.6);white-space:nowrap;transition:all .35s}
-  .neuro-n.on{background:rgba(169,139,255,.22);border-color:#a98bff;color:#fff;box-shadow:0 0 22px rgba(169,139,255,.55)}
-  .neuro-c{position:absolute;transform:translate(-50%,-50%);width:92px;height:92px;border-radius:50%;background:radial-gradient(circle at 35% 35%, #fff2e0, #ff8a3d 50%, #6b2bd6 100%);box-shadow:0 0 50px rgba(169,139,255,.6);display:flex;align-items:center;justify-content:center;font-size:11px;font-weight:800;color:#fff;text-shadow:0 1px 3px rgba(0,0,0,.6)}
-  .s-think .neuro-c{animation:pulse .7s ease-in-out infinite alternate}
-  @keyframes pulse{to{transform:translate(-50%,-50%) scale(1.08)}}
-  .neuro-a{margin:0 18px 16px;padding:14px 16px;border-radius:16px;background:rgba(255,255,255,.05);border:1px solid rgba(169,139,255,.3);min-height:96px}
-  .neuro-a .k{font:600 10.5px var(--f-mono);letter-spacing:.14em;color:#a98bff;margin-bottom:4px}
-  .neuro-a p{margin:0;font-size:15px}
-  .neuro-a .ch{display:flex;gap:6px;flex-wrap:wrap;margin-top:8px}
-  .neuro-a .ch span{font-size:12px;padding:3px 9px;border-radius:8px;background:rgba(169,139,255,.15);color:#d6caff;animation:pop .3s}
-  @container (max-width:760px){ .neuro-n{font-size:11px;padding:5px 9px} .neuro-c{width:66px;height:66px;font-size:10px} }
+  /* ===== 6. Neural, nano style ===== */
+  .v-neuro{background:#0a0a0a;color:#f4f1ec;font-family:var(--f-ui)}
+  .v-neuro canvas{position:absolute;inset:0;width:100%;height:100%}
+  .v-neuro .nano-top{position:absolute;left:0;right:0;top:0}
+  .nn-n{position:absolute;transform:translate(-50%,-50%);padding:6px 12px;border-radius:99px;font:500 10.5px var(--f-mono);letter-spacing:.16em;text-transform:uppercase;background:#0d0d0d;border:1px solid rgba(255,255,255,.1);color:rgba(244,241,236,.45);white-space:nowrap;transition:all .4s;z-index:1}
+  .nn-n.on{border-color:#e8d5b8;color:#f4f1ec;box-shadow:0 0 22px rgba(232,213,184,.22)}
+  .nn-text{position:absolute;left:6%;right:6%;top:61%;bottom:16px;text-align:center;z-index:1;display:flex;flex-direction:column;align-items:center}
+  .nn-q{font:italic 500 15px 'Playfair Display',Georgia,serif;color:rgba(244,241,236,.5);min-height:20px}
+  .nn-a{font:500 24px/1.22 'Playfair Display',Georgia,serif;letter-spacing:-.01em;margin-top:6px;max-height:96px;overflow-y:auto;scrollbar-width:none}
+  .v-neuro[data-len=long] .nn-a{font-size:17px}
+  .nn-l{font:500 10.5px var(--f-mono);letter-spacing:.22em;color:rgba(244,241,236,.42);margin-top:10px}
+  .nn-ch{display:flex;gap:6px;flex-wrap:wrap;justify-content:center;margin-top:10px}
+  .nn-ch span{font-size:12px;padding:4px 10px;border-radius:99px;border:1px solid rgba(255,255,255,.12);color:rgba(244,241,236,.75);animation:pop .3s}
+  @container (max-width:760px){ .nn-n{font-size:9px;padding:4px 7px;letter-spacing:.1em} .nn-a{font-size:19px} .nn-text{top:58%} }
 
   /* ===== 7. Card deck ===== */
   .v-deck{background:radial-gradient(900px 500px at 50% 110%, #1d3b2c, #0a1410 70%);font-family:var(--f-ui);display:flex;flex-direction:column;align-items:center}
@@ -334,17 +365,28 @@
 <body>
 <header>
   <a class="back" href="./"><svg viewBox="0 0 24 24"><path d="M15 18l-6-6 6-6"/></svg>Двойник</a>
-  <div><h1>Окно двойника — 11 концептов</h1><p>Один и тот же разговор в одиннадцати упаковках: минимализм как jarvis.ceo, из будущего, из игр, из монтажки. Выберите, что развивать.</p></div>
+  <div><h1>Двойник — 11 дизайнов</h1><p>Каждый дизайн рабочий: «Говорить» — разговор голосом без кнопок, ответ сразу, перебить — тап по сцене. Без входа — демо.</p></div>
 </header>
 <div class="wrap">
   <nav class="list" id="list"></nav>
   <div class="main">
     <div class="title"><h2 id="vName"></h2><span id="vPitch"></span></div>
     <div class="stage" id="stage"></div>
+    <div class="talk">
+      <button class="talk-go" id="talkBtn" title="Включить разговор голосом"><span class="ring"></span><svg viewBox="0 0 24 24"><rect x="9" y="3" width="6" height="11" rx="3"/><path d="M5 11a7 7 0 0 0 14 0M12 18v3"/></svg><b id="talkLbl">Говорить</b></button>
+      <form class="talk-in" id="compose"><input id="input" autocomplete="off" placeholder="Или напишите двойнику…"><button class="btn" type="submit" title="Отправить"><svg viewBox="0 0 24 24"><path d="M5 12h14M13 6l6 6-6 6"/></svg></button></form>
+      <div class="pip" id="pip" hidden><video id="video" playsinline muted></video></div>
+      <button class="btn" id="camBtn" title="Камера"><svg viewBox="0 0 24 24"><path d="M15 10l5-3v10l-5-3z"/><rect x="3" y="6" width="12" height="12" rx="2"/></svg><span>Камера</span></button>
+      <button class="btn" id="lookBtn" disabled title="Двойник посмотрит на кадр"><svg viewBox="0 0 24 24"><path d="M2 12s3.5-7 10-7 10 7 10 7-3.5 7-10 7S2 12 2 12z"/><circle cx="12" cy="12" r="3"/></svg>Посмотри</button>
+      <label class="sw"><input type="checkbox" id="sound" checked>Голос</label>
+    </div>
+    <div class="live-hint" id="hint"></div>
     <div class="ctl">
-      <button class="btn" id="prev"><svg viewBox="0 0 24 24"><path d="M15 18l-6-6 6-6"/></svg>Назад</button>
-      <button class="btn sun" id="replay"><svg viewBox="0 0 24 24"><path d="M3 12a9 9 0 1 0 3-6.7L3 8M3 3v5h5"/></svg>Повторить</button>
-      <button class="btn" id="next">Дальше<svg viewBox="0 0 24 24"><path d="M9 18l6-6-6-6"/></svg></button>
+      <span class="mchip" id="chip"><i></i><span>демо</span></span>
+      <form class="login" id="loginForm" hidden><input type="password" id="pass" placeholder="Пароль владельца" autocomplete="current-password"><button class="btn" type="submit">Войти</button></form>
+      <button class="btn" id="prev"><svg viewBox="0 0 24 24"><path d="M15 18l-6-6 6-6"/></svg>Дизайн</button>
+      <button class="btn" id="next">Дизайн<svg viewBox="0 0 24 24"><path d="M9 18l6-6-6-6"/></svg></button>
+      <button class="btn" id="replay"><svg viewBox="0 0 24 24"><path d="M7 4.5v15l12-7.5z"/></svg>Демо</button>
       <span class="pos" id="pos"></span>
     </div>
     <div class="about" id="about"></div>
@@ -358,13 +400,16 @@ const $ = id => document.getElementById(id);
 const esc = s => String(s).replace(/[&<>"]/g, c => ({ '&':'&amp;', '<':'&lt;', '>':'&gt;', '"':'&quot;' }[c]));
 const sleep = ms => new Promise(r => setTimeout(r, ms));
 const el = (tag, cls, html = '') => { const e = document.createElement(tag); if (cls) e.className = cls; e.innerHTML = html; return e; };
-let token = 0;
+let token = 0, PACE = 1;   // PACE 0 — instant (restoring the conversation after a design switch)
 const alive = t => t === token;
 async function type(node, text, speed = 18) {
-  const my = token; node.classList.add('cur');
+  const my = token;
+  if (!PACE) { node.textContent = text; scrollUp(node); return; }
+  node.classList.add('cur');
   for (let i = 0; i <= text.length; i += 2) { if (!alive(my)) return; node.textContent = text.slice(0, i); scrollUp(node); await sleep(speed); }
   node.textContent = text; node.classList.remove('cur');
 }
+const CTX = { uses:[] };
 const scrollUp = n => { const p = n.closest('[data-scroll]'); if (p) p.scrollTop = p.scrollHeight; };
 
 /* ---------- one conversation for all ten windows (an example, not real data) ---------- */
@@ -420,7 +465,8 @@ const V = [
     const want = { idle:'torus', speak:'torus', listen:'tight', think:'sphere', look:'lens' };
     return {
       me(t) { q.textContent = '«' + t + '»'; a.innerHTML = ''; cards.innerHTML = ''; },
-      async twin(t) {
+      open() { a.textContent = ''; return a; },
+      async say(t) {
         const my = token; a.innerHTML = t.split(' ').map(w => `<span>${esc(w)}</span>`).join(' ');
         for (const s of a.children) { if (!alive(my)) return; s.classList.add('on'); await sleep(150); }
       },
@@ -473,7 +519,7 @@ const V = [
     const log = r.querySelector('.hud-log'), side = r.querySelector('.hud-side'), bars = [...r.querySelectorAll('.hud-wave i')];
     return {
       me(t) { log.append(el('div', 'hud-l me', `<em>&gt; ИЛЬЯ</em>${esc(t)}`)); log.scrollTop = 1e6; },
-      async twin(t) { const d = el('div', 'hud-l tw', '<em>◆ ДВОЙНИК</em><span></span>'); log.append(d); await type(d.lastChild, t); },
+      open() { const d = el('div', 'hud-l tw', '<em>◆ ДВОЙНИК</em><span></span>'); log.append(d); return d.lastChild; },
       card(k) { side.prepend(el('div', 'hud-card', `<h5>[ ${CARDS[k].title.toUpperCase()} // 0${CARDS[k].items.length} ]</h5>` + cardRows(k, (it, i) => `<div><i>0${i + 1}</i><span>${esc(it.t)}<small>${esc(it.s)}</small></span></div>`))); while (side.children.length > 2) side.lastElementChild.remove(); },
       state(s) { r.querySelectorAll('.hud-st,.hud-st2').forEach(e => e.textContent = ST[s].toUpperCase()); },
       frame(t, l) { bars.forEach((b, i) => b.style.transform = `scaleY(${0.08 + l * Math.abs(Math.sin(t * 7 + i * 0.55) * Math.cos(t * 3 + i * 0.23))})`); },
@@ -492,7 +538,7 @@ const V = [
       return ['┌─ ' + c.title.toUpperCase() + ' ' + '─'.repeat(Math.max(0, W - c.title.length - 5)) + '┐', ...c.items.flatMap((it, i) => [line(`[${i + 1}] ${it.t}`), line(`    ${it.s}`)]), '└' + '─'.repeat(W - 2) + '┘'].join('\n'); };
     return {
       me(t) { log.append(el('div', '', `<span class="p">ilia@hq2</span>:<span class="dim">~</span>$ ${esc(t)}`)); log.scrollTop = 1e6; },
-      async twin(t) { const d = el('div', '', '<span class="dim">twin&gt; </span><span></span>'); log.append(d); await type(d.lastChild, t, 14); },
+      open() { const d = el('div', '', '<span class="dim">twin&gt; </span><span></span>'); log.append(d); return d.lastChild; },
       card(k) { log.append(el('div', 'term-box', esc(box(k)))); log.scrollTop = 1e6; },
       state(s) { st.textContent = `[ ${ST[s].toUpperCase()} ]`; },
       frame(t) { sp.textContent = '⠋⠙⠹⠸⠼⠴⠦⠧⠇⠏'[Math.floor(t * 10) % 10]; },
@@ -516,11 +562,11 @@ const V = [
         const s = SCRIPT[step++] || {}, opts = [t, ...(s.alt || [])];
         setMenu(`<h5>ТВОЙ ХОД</h5>` + opts.map((o, i) => `<div class="${i ? '' : 'sel'}">${esc(o)}</div>`).join(''));
       },
-      async twin(t) { menu?.remove(); menu = null; await type(tx, t, 26); },
+      open() { menu?.remove(); menu = null; tx.textContent = ''; return tx; },
       card(k) {
-        if (k === 'task') { const q = el('div', 'rpg-quest', '★ КВЕСТ ПРИНЯТ: МОНТАЖ ★'); r.append(q); r.querySelector('.xp').style.setProperty('--w', '70%'); setTimeout(() => q.remove(), 2600); return; }
+        if (k === 'task') { const q = el('div', 'rpg-quest', '★ КВЕСТ ПРИНЯТ ★'); r.append(q); r.querySelector('.xp').style.setProperty('--w', '70%'); setTimeout(() => q.remove(), 2600); return; }
         if (k === 'vision') r.querySelector('.fx').style.setProperty('--w', '85%');
-        setMenu(`<h5>${k === 'ideas' ? 'ВЫБЕРИ КВЕСТ' : 'ОСМОТР'}</h5>` + cardRows(k, (it, i) => `<div class="${i ? '' : 'sel'}">${esc(it.t)}<small>${esc(it.s)}</small></div>`));
+        setMenu(`<h5>${k === 'ideas' ? 'ВЫБЕРИ КВЕСТ' : k === 'vision' ? 'ОСМОТР' : 'ВАРИАНТЫ'}</h5>` + cardRows(k, (it, i) => `<div class="${i ? '' : 'sel'}">${esc(it.t)}<small>${esc(it.s)}</small></div>`));
       },
       state() {},
       frame(t) { pixelOrb(sprite, t); },
@@ -543,16 +589,17 @@ const V = [
     };
     return {
       me(t) { chat.append(el('div', 'q-m me', esc(t))); chat.scrollTop = 1e6; },
-      async twin(t) { const d = el('div', 'q-m tw'); chat.append(d); await type(d, t); },
+      open() { const d = el('div', 'q-m tw'); chat.append(d); return d; },
       card(k) {
+        if (k === 'live') { board.querySelector('h5').textContent = 'Квесты из ответа'; board.querySelectorAll('.q-card').forEach(c => c.remove()); CARDS.live.items.forEach((it, i) => board.append(el('div', 'q-card' + (i ? '' : ' best'), `<span class="ic">${i + 1}</span><div class="tx"><b>${esc(it.t)}</b><small>${esc(it.s)}</small></div><div class="rw">+${Math.max(40, 120 - i * 30)} XP</div>`))); }
         if (k === 'ideas') CARDS.ideas.items.forEach((it, i) => board.append(el('div', 'q-card' + (it.best ? ' best' : ''), `<span class="ic">${i + 1}</span><div class="tx"><b>${esc(it.t)}</b><small>${esc(it.s)}</small></div><div class="rw">+${[120, 80, 60][i]} XP<em>${['★★★', '★★☆', '★☆☆'][i]}</em></div>`)));
         if (k === 'vision') gain(50, 'Достижение: «Свет поставлен»', 'кадр проверен перед съёмкой');
         if (k === 'task') {
-          const q = board.querySelector('.q-card'); board.querySelector('h5').textContent = 'В работе у агентов';
+          const q = board.querySelector('.q-card') || board.appendChild(el('div', 'q-card best', `<span class="ic">1</span><div class="tx"><b>${esc(CARDS.task.items[0].t)}</b><small>${esc(CARDS.task.items[0].s)}</small></div><div class="rw">+120 XP</div>`)); board.querySelector('h5').textContent = 'В работе у агентов';
           [...board.querySelectorAll('.q-card')].slice(1).forEach(c => c.remove());
           q.querySelector('.tx').insertAdjacentHTML('beforeend', '<div class="q-prog"><i></i></div>');
           requestAnimationFrame(() => requestAnimationFrame(() => q.querySelector('.q-prog i').style.width = '70%'));
-          gain(120, 'Квест взят: «Ремейк залёта»', 'агент монтажа принесёт на проверку');
+          gain(120, 'Квест взят: ' + CARDS.task.items[0].t, 'агент принесёт на проверку');
         }
       },
       state() {},
@@ -569,7 +616,8 @@ const V = [
     const P = Array.from({ length:520 }, (_, i) => { const y = 1 - (i / 519) * 2, rr = Math.sqrt(1 - y * y), th = i * 2.39996; return [Math.cos(th) * rr, y, Math.sin(th) * rr]; });
     return {
       me(t) { q.textContent = '— ' + t; },
-      async twin(t) {
+      open() { pills.innerHTML = ''; sub.textContent = ''; return sub; },
+      async say(t) {
         const my = token; sub.innerHTML = t.split(' ').map(w => `<span>${esc(w)}</span>`).join(' '); pills.innerHTML = '';
         for (const s of sub.children) { if (!alive(my)) return; s.classList.add('on'); await sleep(170); }
       },
@@ -589,31 +637,67 @@ const V = [
     };
   } },
 
-{ id:'neuro', name:'Нейрограф', pitch:'Видно, откуда двойник знает ответ',
-  idea:'Вокруг ядра — узлы знаний: профиль, сценарии, карусели, монтаж, офис, память, камера, агенты. Перед ответом загораются те, из которых он собран.',
-  mech:'Прозрачность вместо «чёрного ящика»: нажал на узел — видишь, какой файл или задача использованы. Внизу — сам ответ и вывод карточками.',
-  good:'Доверие к двойнику и наглядная демонстрация «как устроен мой ИИ» для аудитории.', cost:3,
+{ id:'neuro', name:'Нейрограф', pitch:'Откуда двойник знает ответ — в стиле «Нано-кольца»',
+  idea:'Тот же минимализм, что у «Нано-кольца»: чёрный фон, тёплые частицы, антиква. Вокруг ядра-роя — узлы знаний: профиль, сценарии, карусели, монтаж, офис, память, камера, агенты.',
+  mech:'Перед ответом по нитям от нужных узлов к ядру текут частицы — видно, из чего собран ответ; внизу подпись «из: …». Ядро — то же кольцо: дышит голосом, сжимается в рой, когда думает.',
+  good:'Доверие к двойнику и наглядное «как устроен мой ИИ» для аудитории — без потери чистоты нано-стиля.', cost:3,
   build(r) {
     const NODES = ['Профиль', 'Сценарии', 'Карусели', 'Монтаж', 'Офис', 'Память', 'Камера', 'Агенты'];
-    r.innerHTML = `<div class="neuro-q"><b>ЗАПРОС</b><span>—</span></div><div class="neuro-g"><svg></svg>${NODES.map(n => `<span class="neuro-n" data-n="${n}">${n}</span>`).join('')}<div class="neuro-c">ДВОЙНИК</div></div>
-      <div class="neuro-a"><div class="k">ОТВЕТ</div><p>…</p><div class="ch"></div></div>`;
-    const G = r.querySelector('.neuro-g'), svg = r.querySelector('svg'), q = r.querySelector('.neuro-q span'), p = r.querySelector('.neuro-a p'), ch = r.querySelector('.neuro-a .ch');
-    const nodes = [...r.querySelectorAll('.neuro-n')], core = r.querySelector('.neuro-c');
+    r.innerHTML = `<canvas></canvas><div class="nano-top"><i></i>Двойник<span><b></b><em class="st" style="font-style:normal">готов</em></span></div>
+      ${NODES.map(n => `<span class="nn-n" data-n="${n}">${n}</span>`).join('')}
+      <div class="nn-text"><div class="nn-q"></div><div class="nn-a" data-scroll></div><div class="nn-l">ИЗ · —</div><div class="nn-ch"></div></div>`;
+    const c = r.querySelector('canvas'), g = c.getContext('2d'), q = r.querySelector('.nn-q'), a = r.querySelector('.nn-a'), lab = r.querySelector('.nn-l'), ch = r.querySelector('.nn-ch'), st = r.querySelector('.st');
+    const nodes = [...r.querySelectorAll('.nn-n')];
+    let G = { cx:0, cy:0, S:0, pts:[] }, on = new Set();
     function layout() {
-      const w = G.clientWidth, h = G.clientHeight, cx = w / 2, cy = h / 2, rx = Math.min(w * 0.4, 330), ry = h * 0.38;
-      core.style.left = cx + 'px'; core.style.top = cy + 'px'; svg.innerHTML = '';
-      nodes.forEach((n, i) => { const a = i / nodes.length * 6.283 - 1.2, x = cx + Math.cos(a) * rx, y = cy + Math.sin(a) * ry; n.style.left = x + 'px'; n.style.top = y + 'px';
-        svg.insertAdjacentHTML('beforeend', `<line x1="${cx}" y1="${cy}" x2="${x}" y2="${y}" data-n="${n.dataset.n}"/>`); });
+      const w = r.clientWidth, h = r.clientHeight, top = 56, gh = h * 0.6 - top, cx = w / 2, cy = top + gh / 2;
+      const rx = Math.min(w * 0.38, 360), ry = gh * 0.4;
+      G = { cx, cy, S:Math.min(w, gh) * 0.13, pts:nodes.map((n, i) => { const ang = i / nodes.length * 6.283 - 1.18, x = cx + Math.cos(ang) * rx, y = cy + Math.sin(ang) * ry; n.style.left = x + 'px'; n.style.top = y + 'px'; return { x, y, n:n.dataset.n }; }) };
     }
-    layout(); const ro = new ResizeObserver(layout); ro.observe(G);
-    let step = 0;
-    const light = uses => { for (const e of r.querySelectorAll('[data-n]')) e.classList.toggle('on', uses.includes(e.dataset.n)); };
+    layout(); const ro = new ResizeObserver(layout); ro.observe(r);
+    const P = Array.from({ length:420 }, () => ({ u:Math.random() * 6.283, v:Math.random() * 6.283, j:Math.random(), s:Math.random() ** 3, k:Math.random() }));
+    const FLOW = Array.from({ length:8 }, () => Array.from({ length:7 }, () => ({ o:Math.random(), sp:0.25 + Math.random() * 0.35, s:Math.random() })));
+    let think = 0, thinkT = 0;
+    const light = uses => { on = new Set(uses); nodes.forEach(n => n.classList.toggle('on', on.has(n.dataset.n))); lab.textContent = 'ИЗ · ' + (uses.length ? uses.join(' · ').toUpperCase() : '—'); };
     return {
-      me(t) { q.textContent = t; light([]); ch.innerHTML = ''; p.textContent = '…'; },
-      async twin(t) { await type(p, t); },
-      card(k) { CARDS[k].items.forEach(it => ch.append(el('span', '', esc(it.t)))); },
-      state(s) { if (s === 'think') light(SCRIPT[step++]?.uses || []); },
+      me(t) { q.textContent = '«' + t + '»'; a.textContent = ''; ch.innerHTML = ''; light([]); },
+      open() { a.textContent = ''; return a; },
+      card(k) { ch.innerHTML = CARDS[k].items.map(it => `<span>${esc(it.t)}</span>`).join(''); },
+      light,
+      state(s) { st.textContent = ST[s]; thinkT = s === 'think' || s === 'look' ? 1 : 0; if (s === 'think' || s === 'look') light(CTX.uses); },
       stop() { ro.disconnect(); },
+      frame(t, l) {
+        const dpr = devicePixelRatio || 1, w = c.width = r.clientWidth * dpr, h = c.height = r.clientHeight * dpr;
+        g.clearRect(0, 0, w, h); think += (thinkT - think) * 0.06;
+        const cx = G.cx * dpr, cy = G.cy * dpr, S = G.S * dpr;
+        const glow = g.createRadialGradient(cx, cy, 0, cx, cy, S * 2.4); glow.addColorStop(0, 'rgba(120,80,40,.3)'); glow.addColorStop(1, 'rgba(120,80,40,0)');
+        g.fillStyle = glow; g.fillRect(0, 0, w, h);
+        // threads and the particles flowing along the active ones
+        G.pts.forEach((p, i) => {
+          const px = p.x * dpr, py = p.y * dpr, act = on.has(p.n);
+          g.strokeStyle = act ? 'rgba(232,213,184,.32)' : 'rgba(232,213,184,.07)'; g.lineWidth = dpr;
+          g.beginPath(); g.moveTo(px, py); g.lineTo(cx, cy); g.stroke();
+          if (!act) return;
+          for (const f of FLOW[i]) {
+            const k = (f.o + t * f.sp) % 1, x = px + (cx - px) * k, y = py + (cy - py) * k;
+            g.fillStyle = `rgba(240,222,190,${0.35 + 0.6 * Math.sin(k * 3.14)})`;
+            g.beginPath(); g.arc(x, y, (0.8 + f.s * 2) * dpr, 0, 6.283); g.fill();
+          }
+        });
+        // the core: a small nano ring that turns into a swarm while thinking
+        const ry = t * 0.3, cyR = Math.cos(ry), syR = Math.sin(ry), rx = 1.05, cxR = Math.cos(rx), sxR = Math.sin(rx), br = 1 + l * 0.14 * Math.sin(t * 9);
+        for (const p of P) {
+          const u = p.u + t * (0.06 + p.k * 0.05), rr = 0.36 + p.j * 0.12;
+          const x1 = (1 + rr * Math.cos(p.v)) * Math.cos(u) * br, y1 = rr * Math.sin(p.v), z1 = (1 + rr * Math.cos(p.v)) * Math.sin(u) * br;
+          const lat = Math.acos(2 * p.k - 1), sw = 0.85 + 0.1 * Math.sin(t * 3 + p.u * 4);
+          const x2 = Math.sin(lat) * Math.cos(u * 2) * sw, y2 = Math.cos(lat) * sw, z2 = Math.sin(lat) * Math.sin(u * 2) * sw;
+          const x = x1 + (x2 - x1) * think, y = y1 + (y2 - y1) * think, z = z1 + (z2 - z1) * think;
+          let X = x * cyR - z * syR, Z = x * syR + z * cyR, Y = y * cxR - Z * sxR; Z = y * sxR + Z * cxR;
+          const d = (Z + 2.2) / 3.2;
+          g.fillStyle = `rgba(${232 - (1 - d) * 60 | 0},${213 - (1 - d) * 70 | 0},${184 - (1 - d) * 80 | 0},${0.2 + d * 0.8})`;
+          g.beginPath(); g.arc(cx + X * S, cy + Y * S, (0.5 + p.s * 2.2) * d * dpr, 0, 6.283); g.fill();
+        }
+      },
     };
   } },
 
@@ -632,11 +716,12 @@ const V = [
         setTimeout(() => c.style.transform = `rotate(${(i - (items.length - 1) / 2) * 14}deg) translateY(${Math.abs(i - 1) * 14}px)`, 120 + i * 160); }); };
     return {
       me(t) { me.textContent = 'Ты: ' + t; },
-      async twin(t) { await type(bub, t); },
+      open() { bub.textContent = ''; return bub; },
       card(k) {
+        if (k === 'live') deal(CARDS.live.items.slice(0, 3).map(it => ({ ...it, st:'<span>из ответа</span>' })), RAR);
         if (k === 'ideas') deal(CARDS.ideas.items.map((it, i) => ({ ...it, st:`<span>Охват <i>${['▮▮▮▮▯', '▮▮▮▯▯', '▮▮▯▯▯'][i]}</i></span><span>Усилия <i>${['▮▮▯▯▯', '▮▮▮▯▯', '▮▯▯▯▯'][i]}</i></span>` })), RAR);
         if (k === 'vision') deal(CARDS.vision.items.map(it => ({ t:'+ ' + it.t, s:it.s, st:'<span>усиление кадра</span>' })), [['Усиление', '#3ddc97'], ['Усиление', '#3ddc97'], ['Усиление', '#3ddc97']]);
-        if (k === 'task') { fan.querySelectorAll('.deck-c').forEach(c => c.classList.add('gone')); slot.classList.add('got'); slot.innerHTML = 'Стол агента<br>Ремейк залёта → монтаж'; }
+        if (k === 'task') { fan.querySelectorAll('.deck-c').forEach(c => c.classList.add('gone')); slot.classList.add('got'); slot.innerHTML = 'Стол агента<br>' + esc(CARDS.task.items[0].t); }
       },
       state() {},
     };
@@ -653,7 +738,7 @@ const V = [
     const log = r.querySelector('.nc-log'), st = r.querySelector('.nc-st');
     return {
       me(t) { log.append(el('div', 'nc-m me', `<small>ИЛЬЯ</small>${esc(t)}`)); log.scrollTop = 1e6; },
-      async twin(t) { const d = el('div', 'nc-m tw', '<small>ДВОЙНИК</small><span></span>'); log.append(d); await type(d.lastChild, t); },
+      open() { const d = el('div', 'nc-m tw', '<small>ДВОЙНИК</small><span></span>'); log.append(d); return d.lastChild; },
       card(k) { log.append(el('div', 'nc-m nc-card', `<h5>// ${CARDS[k].title.toUpperCase()}</h5>` + cardRows(k, (it, i) => `<div><i>0${i + 1}</i><span>${esc(it.t)} — ${esc(it.s)}</span></div>`))); log.scrollTop = 1e6; },
       state(s) { st.textContent = ST[s]; },
     };
@@ -671,7 +756,7 @@ const V = [
     r.addEventListener('pointermove', move);
     return {
       me(t) { log.append(el('div', 'gl-m me', esc(t))); log.scrollTop = 1e6; },
-      async twin(t) { const d = el('div', 'gl-m tw'); log.append(d); await type(d, t); },
+      open() { const d = el('div', 'gl-m tw'); log.append(d); return d; },
       card(k) {
         [...cards.children].forEach((c, i, a) => { const z = -(a.length - i) * 60; c.style.setProperty('--z', z + 'px'); c.style.opacity = 0.55; c.style.top = (a.length - i) * -14 + 'px'; });
         const c = el('div', 'gl-win gl-card', `<h6>${CARDS[k].title}</h6>` + cardRows(k, (it, i) => `<div><b>${i + 1}</b><span>${esc(it.t)}<small>${esc(it.s)}</small></span></div>`));
@@ -695,8 +780,9 @@ const V = [
     const clip = (lane, cls, label, w) => { const c = el('div', 'tl-clip ' + cls, esc(label)); c.style.left = x + 'px'; c.style.width = w + 'px'; lanes[lane].append(c); return w; };
     const off = () => lanes[0].getBoundingClientRect().left - r.querySelector('.tl-tracks').getBoundingClientRect().left;
     return {
-      me(t) { x += clip(0, 'me', t, Math.max(70, t.length * 4)) + 6; sub.innerHTML = esc(t); insp.innerHTML = `<h5>Клип · Илья</h5><b>${esc(t)}</b>`; },
-      async twin(t) { const w = Math.max(90, t.length * 3.2); clip(1, 'tw', t, w); sub.textContent = ''; await type(sub, t); x += w + 6; },
+      me(t) { x += clip(0, 'me', t, Math.min(260, Math.max(70, t.length * 4))) + 6; sub.innerHTML = esc(t); insp.innerHTML = `<h5>Клип · Илья</h5><b>${esc(t)}</b>`; },
+      open() { sub.textContent = ''; return sub; },
+      close(t) { const w = Math.min(360, Math.max(90, t.length * 3.2)); clip(1, 'tw', t, w); x += w + 6; },
       card(k) { const w = clip(k === 'task' ? 3 : 2, k === 'task' ? 'ag' : 'cd', CARDS[k].title, 120); x += 4;
         insp.innerHTML = `<h5>${k === 'task' ? 'Клип · Агенты' : 'Клип · Сцена'}</h5><b>${CARDS[k].title}</b>` + cardRows(k, (it, i) => `<div><i>${String(i + 1).padStart(2, '0')}</i><span>${esc(it.t)}<small>${esc(it.s)}</small></span></div>`); },
       state() {},
@@ -710,35 +796,271 @@ const V = [
   } },
 ];
 
-/* ---------- player ---------- */
-let cur = 0, api = null, mode = 'idle';
-function setState(s) { mode = s; const v = $('stage').firstElementChild; if (v) v.className = `v v-${V[cur].id} s-${s}`; api?.state?.(s); }
-async function play() {
+/* ---------- player: one engine for every design ---------- */
+const API = '/api/assistant';
+let cur = 0, api = null, mode = 'idle', live = false, server = null, busy = false, audioLv = null;
+const HIST = [];   // live exchanges, replayed into a design when it is switched
+const TASK_LIVE = { title:'Задача агенту', items:[{ t:'Задача поставлена', s:'диспетчер выбирает агента' }, { t:'Агент', s:'делает работу на сервере' }, { t:'Проверка', s:'вкладка «В работе» в офисе' }] };
+const root = () => $('stage').firstElementChild;
+function setState(s) { mode = s; const v = root(); if (v) v.className = `v v-${V[cur].id} s-${s}`; api?.state?.(s); }
+function hint(html) { $('hint').innerHTML = html || ''; }
+
+function build() {
   const my = ++token;
   api?.stop?.();
-  const v = V[cur], root = el('div', `v v-${v.id} s-idle`);
-  $('stage').replaceChildren(root);
-  api = v.build(root);
-  await sleep(700);
+  const v = V[cur], r = el('div', `v v-${v.id} s-idle`);
+  $('stage').replaceChildren(r);
+  api = v.build(r);
+  r.addEventListener('pointerdown', () => { if (mode === 'speak' && live) interrupt(); });
+  return my;
+}
+const markLen = t => { const r = root(); if (r) r.dataset.len = t.length > 140 || /\n/.test(t) ? 'long' : ''; };
+async function sayTwin(text) {   // demo and restored turns
+  markLen(text);
+  if (api.say && PACE) return api.say(text);
+  const n = api.open(); await type(n, text); api.close?.(text);
+}
+async function playDemo() {
+  const my = build(); await sleep(600);
   for (const s of SCRIPT) {
     if (!alive(my)) return;
     setState('listen'); await sleep(700); if (!alive(my)) return;
     await api.me(s.me); await sleep(600); if (!alive(my)) return;
-    setState(s.card === 'vision' ? 'look' : 'think'); await sleep(900); if (!alive(my)) return;
-    setState('speak'); await api.twin(s.twin); if (!alive(my)) return;
-    await sleep(250); api.card(s.card);
+    CTX.uses = s.uses; setState(s.card === 'vision' ? 'look' : 'think'); await sleep(900); if (!alive(my)) return;
+    setState('speak'); await sayTwin(s.twin); if (!alive(my)) return;
+    await sleep(250); api.card(s.card); api.light?.(s.uses);
     setState('idle'); await sleep(1700);
   }
+  if (alive(my) && live) hint('Демо закончилось — нажмите <b>«Говорить»</b> или напишите, двойник ответит вживую.');
 }
+async function restore() {
+  build(); PACE = 0;
+  for (const h of HIST.slice(-3)) {
+    await api.me(h.me); CTX.uses = h.uses; await sayTwin(h.twin);
+    if (h.live) { CARDS.live = h.live; api.card('live'); }
+    if (h.task) { CARDS.task = TASK_LIVE; api.card('task'); }
+    api.light?.(h.uses);
+  }
+  PACE = 1;
+  if (!HIST.length) { setState('speak'); await sayTwin('На связи. Нажми «Говорить» — и просто разговаривай, я отвечу сразу.'); }
+  setState(convo.on ? 'listen' : 'idle');
+}
+
+/* the knowledge nodes a turn touched (for the neurograph): a light guess from the words */
+function guess(q, a = '', seen = false, task = false) {
+  const t = (q + ' ' + a).toLowerCase(), u = ['Профиль'];
+  if (/сценар|хук|рилс|reels|ролик|снима/.test(t)) u.push('Сценарии');
+  if (/карусел|слайд/.test(t)) u.push('Карусели');
+  if (/монтаж|стил|кадрик|видео/.test(t)) u.push('Монтаж');
+  if (/офис|задач|агент|проект|продукт/.test(t)) u.push('Офис');
+  if (seen || /камер|кадр|вижу|свет|ракурс/.test(t)) u.push('Камера');
+  if (task || /агент|передал|постав/.test(t)) u.push('Агенты');
+  u.push('Память');
+  return [...new Set(u)];
+}
+// "- item" / "1. item" lines of an answer become a card
+function listOf(text) {
+  const items = text.split('\n').map(l => l.match(/^\s*(?:[-•*]|\d+[.)])\s+(.+)/)?.[1]).filter(Boolean).map(l => l.replace(/\*\*/g, ''))
+    .map(l => { const m = l.split(/\s+[—–-]\s+|:\s+/); return { t:m[0].slice(0, 60), s:m.slice(1).join(' — ').slice(0, 90) }; });
+  return items.length >= 2 ? { title:'Из ответа', items:items.slice(0, 5) } : null;
+}
+
+/* ---------- voice out: sentence by sentence, the first one while the rest is still being written ---------- */
+let actx = null, curAudio = null;
+const ctx = () => (actx = actx || new (window.AudioContext || window.webkitAudioContext)());
+const tts = { gen:0, q:[], running:null };
+function stopVoice() { tts.gen++; tts.q = []; try { speechSynthesis.cancel(); } catch {} if (curAudio) { curAudio.pause(); curAudio = null; } audioLv = null; }
+function speakPart(text) {
+  if (!$('sound').checked || !text.trim()) return;
+  const gen = tts.gen;
+  const job = server?.voice
+    ? fetch(API + '/tts', { method:'POST', headers:{ 'content-type':'application/json' }, body:JSON.stringify({ text }) }).then(r => r.ok ? r.blob() : null).catch(() => null)
+    : Promise.resolve(text);   // no cloned voice: the browser's voice
+  tts.q.push(job);
+  if (!tts.running) tts.running = (async () => {
+    while (tts.q.length && gen === tts.gen) {
+      const item = await tts.q.shift();
+      if (gen !== tts.gen || !item) continue;
+      if (typeof item === 'string') await browserSay(item); else await playBlob(item);
+    }
+    tts.running = null;
+  })();
+}
+function browserSay(text) {
+  return new Promise(res => {
+    if (!('speechSynthesis' in window)) return res();
+    const u = new SpeechSynthesisUtterance(text.replace(/[«»"*#]/g, '')); u.lang = 'ru-RU'; u.rate = 1.07;
+    const v = speechSynthesis.getVoices().find(x => /^ru/i.test(x.lang)); if (v) u.voice = v;
+    const iv = setInterval(() => { audioLv = 0.3 + Math.random() * 0.5; }, 90);
+    const done = () => { clearInterval(iv); audioLv = null; res(); };
+    u.onend = done; u.onerror = done; speechSynthesis.speak(u);
+    setTimeout(done, 1500 + text.length * 90);
+  });
+}
+async function playBlob(blob) {
+  const a = new Audio(URL.createObjectURL(blob)); curAudio = a;
+  try {
+    const src = ctx().createMediaElementSource(a), an = actx.createAnalyser(); an.fftSize = 256; src.connect(an); an.connect(actx.destination);
+    const buf = new Uint8Array(an.frequencyBinCount);
+    const tick = () => { if (curAudio !== a) return; an.getByteFrequencyData(buf); audioLv = Math.min(1, buf.reduce((x, y) => x + y, 0) / buf.length / 70); requestAnimationFrame(tick); };
+    await a.play(); tick();
+    await new Promise(r => { a.onended = r; a.onerror = r; a.onpause = r; });
+  } catch {}
+  if (curAudio === a) { curAudio = null; audioLv = null; }
+}
+const voiceDone = async () => { while (tts.running) await tts.running; };
+function interrupt() { stopVoice(); setState(convo.on ? 'listen' : 'idle'); hint('Перебили — слушаю.'); listenAgain(); }
+document.addEventListener('keydown', e => { if (e.key === 'Escape' && mode === 'speak') interrupt(); });
+
+/* ---------- camera ---------- */
+let cam = null;
+async function camToggle() {
+  if (cam) { cam.getTracks().forEach(t => t.stop()); cam = null; $('pip').hidden = true; $('lookBtn').disabled = true; $('camBtn').classList.remove('on'); return; }
+  try { cam = await navigator.mediaDevices.getUserMedia({ video:{ width:{ ideal:1280 }, facingMode:'user' }, audio:false }); }
+  catch { return hint('Нет доступа к камере — разрешите её в браузере.'); }
+  const v = $('video'); v.srcObject = cam; await v.play(); $('pip').hidden = false; $('lookBtn').disabled = false; $('camBtn').classList.add('on');
+  hint('Камера включена: скажите «посмотри на меня» или нажмите «Посмотри». Кадры не сохраняются.');
+}
+function frame() {
+  const v = $('video'); if (!cam || !v.videoWidth) return null;
+  const k = Math.min(1, 768 / v.videoWidth), c = document.createElement('canvas'); c.width = v.videoWidth * k | 0; c.height = v.videoHeight * k | 0;
+  c.getContext('2d').drawImage(v, 0, 0, c.width, c.height); return c.toDataURL('image/jpeg', 0.72);
+}
+$('camBtn').onclick = camToggle;
+
+/* ---------- one live turn: streamed text, voice from the first sentence ---------- */
+async function ask(text, { look = false } = {}) {
+  text = text.trim(); if (!text || busy) return;
+  if (!live) { hint(server?.configured?.login ? 'Вживую двойник отвечает владельцу офиса — <b>войдите паролем</b> внизу. Пока можно смотреть «Демо».' : 'Сервер ассистента недоступен — работает только демо.'); return; }
+  busy = true; token++; stopVoice(); pauseListening();
+  const image = (look || /посмотр|видишь|как я|в кадре|кадр/i.test(text)) ? frame() : null;
+  await api.me(text);
+  CTX.uses = guess(text, '', Boolean(image)); setState(image ? 'look' : 'think');
+  if (image) { $('pip').classList.add('look'); hint('Двойник смотрит на кадр…'); } else hint('');
+  let reply = '', node = null, buf = '', task = false;
+  const t0 = performance.now();
+  const flush = (all) => {   // cut finished sentences for the voice
+    for (;;) { const m = buf.match(/^([\s\S]*?[.!?…])(\s+)/); if (!m || (m[1].length < 14 && !all)) break; speakPart(m[1]); buf = buf.slice(m[0].length); }
+    if (all && buf.trim()) { speakPart(buf); buf = ''; }
+  };
+  try {
+    const r = await fetch(API + '/chat', { method:'POST', headers:{ 'content-type':'application/json' }, body:JSON.stringify({ text, voice:$('sound').checked, twin:true, ...(image ? { image } : {}) }) });
+    if (!r.ok || !/event-stream/.test(r.headers.get('content-type') || '')) { const d = await r.json().catch(() => ({})); throw new Error(d.error || 'Двойник не ответил.'); }
+    const rd = r.body.getReader(), dec = new TextDecoder(); let sse = '';
+    for (;;) {
+      const { value, done } = await rd.read(); if (done) break;
+      sse += dec.decode(value, { stream:true });
+      let i; while ((i = sse.indexOf('\n\n')) >= 0) {
+        const line = sse.slice(0, i).replace(/^data: /, ''); sse = sse.slice(i + 2);
+        let ev; try { ev = JSON.parse(line); } catch { continue; }
+        if (ev.t === 'delta') {
+          if (!node) { $('pip').classList.remove('look'); setState('speak'); node = api.open(); hint(`Ответ пошёл через ${((performance.now() - t0) / 1000).toFixed(1)} с · перебить — тап по сцене или Esc`); }
+          reply += ev.text; buf += ev.text; node.textContent = reply; scrollUp(node);
+          markLen(reply); flush(false);
+        }
+        if (ev.t === 'task') task = true;
+        if (ev.t === 'error') throw new Error(ev.message);
+      }
+    }
+    flush(true);
+  } catch (e) {
+    reply = e.message || 'Ошибка.'; if (!node) { setState('speak'); node = api.open(); } node.textContent = reply;
+  }
+  $('pip').classList.remove('look');
+  api.close?.(reply);
+  const card = listOf(reply);
+  if (card) { CARDS.live = card; api.card('live'); }
+  if (task) { CARDS.task = TASK_LIVE; api.card('task'); }
+  CTX.uses = guess(text, reply, Boolean(image), task); api.light?.(CTX.uses);
+  HIST.push({ me:text, twin:reply, uses:CTX.uses, live:card, task });
+  await voiceDone();
+  busy = false;
+  setState(convo.on ? 'listen' : 'idle');
+  listenAgain();
+}
+
+/* ---------- conversation mode: speak freely, the end of a phrase sends it ---------- */
+const SR = window.SpeechRecognition || window.webkitSpeechRecognition;
+const convo = { on:false, rec:null, stream:null, vad:null };
+function pauseListening() { try { convo.rec?.abort(); } catch {} convo.recOn = false; }
+function listenAgain() { if (!convo.on || busy) return; if (SR) startRec(); }
+function startRec() {
+  if (convo.recOn) return;
+  const rec = convo.rec = new SR(); rec.lang = 'ru-RU'; rec.interimResults = true; rec.continuous = false; rec.maxAlternatives = 1;
+  rec.onresult = e => {
+    let fin = '', inter = '';
+    for (const r of e.results) (r.isFinal ? (fin += r[0].transcript) : (inter += r[0].transcript));
+    $('input').value = fin || inter; $('talkBtn').classList.add('hear');
+    if (mode === 'speak') interrupt();
+    if (fin.trim()) { $('input').value = ''; $('talkBtn').classList.remove('hear'); ask(fin); }
+  };
+  rec.onend = () => { convo.recOn = false; $('talkBtn').classList.remove('hear'); if (convo.on && !busy) setTimeout(listenAgain, 120); };
+  rec.onerror = e => { convo.recOn = false; if (e.error === 'not-allowed') { convoOff(); hint('Нет доступа к микрофону — разрешите его в браузере.'); } };
+  try { rec.start(); convo.recOn = true; } catch {}
+}
+// browsers without speech recognition: record by voice activity, transcribe on the server (ElevenLabs)
+async function startVad() {
+  try { convo.stream = await navigator.mediaDevices.getUserMedia({ audio:{ echoCancellation:true, noiseSuppression:true } }); } catch { convoOff(); return hint('Нет доступа к микрофону.'); }
+  const an = ctx().createAnalyser(); an.fftSize = 512; actx.createMediaStreamSource(convo.stream).connect(an);
+  const buf = new Uint8Array(an.fftSize); let rec = null, chunks = [], loud = 0, quiet = 0;
+  convo.vad = setInterval(async () => {
+    an.getByteTimeDomainData(buf); let sum = 0; for (const v of buf) sum += (v - 128) ** 2; const rms = Math.sqrt(sum / buf.length);
+    if (busy || mode === 'speak') { loud = 0; return; }
+    if (rms > 9) { loud++; quiet = 0; } else quiet++;
+    if (!rec && loud > 3) { chunks = []; rec = new MediaRecorder(convo.stream); rec.ondataavailable = e => e.data.size && chunks.push(e.data); rec.start(); $('talkBtn').classList.add('hear'); setState('listen'); }
+    if (rec && quiet > 14) {
+      const r = rec; rec = null; loud = 0; $('talkBtn').classList.remove('hear');
+      await new Promise(x => { r.onstop = x; r.stop(); });
+      const blob = new Blob(chunks, { type:r.mimeType || 'audio/webm' }); if (blob.size < 3000) return;
+      setState('think');
+      try { const resp = await fetch(API + '/stt', { method:'POST', headers:{ 'content-type':blob.type }, body:blob }); const d = await resp.json(); if (d.text) ask(d.text); else setState('listen'); } catch { setState('listen'); }
+    }
+  }, 50);
+}
+async function convoOn() {
+  if (!live) return ask('…');
+  ctx().resume?.();
+  convo.on = true; $('talkBtn').classList.add('on'); $('talkLbl').textContent = 'Слушаю';
+  setState('listen'); hint(SR ? 'Говорите — фраза отправится сама, когда вы замолчите. Ответ начнёт звучать сразу.' : 'Говорите — запись остановится на паузе и уйдёт на распознавание.');
+  if (SR) startRec(); else startVad();
+}
+function convoOff() {
+  convo.on = false; pauseListening(); clearInterval(convo.vad); convo.stream?.getTracks().forEach(t => t.stop()); convo.stream = null;
+  $('talkBtn').classList.remove('on', 'hear'); $('talkLbl').textContent = 'Говорить'; if (!busy) setState('idle'); hint('');
+}
+$('talkBtn').onclick = () => convo.on ? convoOff() : convoOn();
+$('compose').addEventListener('submit', e => { e.preventDefault(); const t = $('input').value; $('input').value = ''; ctx().resume?.(); ask(t); });
+$('lookBtn').onclick = () => ask('Посмотри на меня и комнату: что поправить перед съёмкой — свет, ракурс, образ, фон?', { look:true });
+
+/* ---------- owner login (same password as the office assistant) ---------- */
+async function loadState() {
+  try { const r = await fetch(API + '/state', { credentials:'same-origin' }); server = r.ok ? await r.json() : null; } catch { server = null; }
+  live = Boolean(server?.owner && server.configured?.chat);
+  $('chip').className = 'mchip' + (live ? ' live' : ''); $('chip').lastElementChild.textContent = live ? 'в эфире' : 'демо';
+  $('loginForm').hidden = live || !server?.configured?.login;
+}
+$('loginForm').addEventListener('submit', async e => {
+  e.preventDefault();
+  try {
+    const r = await fetch(API + '/login', { method:'POST', headers:{ 'content-type':'application/json' }, body:JSON.stringify({ password:$('pass').value }) });
+    const d = await r.json().catch(() => ({}));
+    if (!r.ok) return hint(d.error || 'Не получилось войти.');
+    $('pass').value = ''; await loadState();
+    if (live) { token++; HIST.length = 0; await restore(); hint('Вы в эфире. Нажмите <b>«Говорить»</b> — и просто разговаривайте.'); }
+    else hint('Вход выполнен, но Claude на сервере не подключён.');
+  } catch { hint('Сервер ассистента недоступен.'); }
+});
+
 let lv = 0;
 (function loop(ms) {
-  const t = ms / 1000, tgt = mode === 'speak' ? 0.55 + 0.4 * Math.abs(Math.sin(t * 13) * Math.sin(t * 5.3)) : mode === 'listen' ? 0.25 + 0.2 * Math.abs(Math.sin(t * 9)) : mode === 'think' || mode === 'look' ? 0.2 : 0.05;
+  const t = ms / 1000;
+  const tgt = mode === 'speak' ? (audioLv ?? 0.55 + 0.4 * Math.abs(Math.sin(t * 13) * Math.sin(t * 5.3))) : mode === 'listen' ? 0.25 + 0.2 * Math.abs(Math.sin(t * 9)) : mode === 'think' || mode === 'look' ? 0.2 : 0.05;
   lv += (tgt - lv) * 0.2;
   try { api?.frame?.(t, lv); } catch {}
   requestAnimationFrame(loop);
 })(0);
 
-function select(i) {
+function select(i, demo = false) {
   cur = (i + V.length) % V.length;
   const v = V[cur];
   for (const b of $('list').children) b.classList.toggle('on', Number(b.dataset.i) === cur);
@@ -748,14 +1070,16 @@ function select(i) {
   const dots = n => `<span class="dots">${'●'.repeat(n)}<i>${'●'.repeat(3 - n)}</i></span>`;
   $('about').innerHTML = `<div><b>Идея</b><p>${esc(v.idea)}</p></div><div><b>Механика</b><p>${esc(v.mech)}</p></div><div><b>Чем хорош</b><p>${esc(v.good)}</p></div><div><b>Сложность</b><p>${dots(v.cost)} ${['', 'день-два: только вёрстка', 'неделя: вёрстка и анимации', 'две недели: нужна логика и данные'][v.cost]}</p></div>`;
   history.replaceState(null, '', '?v=' + (cur + 1));
-  play();
+  if (busy) { busy = false; stopVoice(); }
+  if (live && !demo) restore(); else playDemo();
 }
 $('list').innerHTML = V.map((v, i) => `<button data-i="${i}"><span class="n">${String(i + 1).padStart(2, '0')}</span><span><b>${esc(v.name)}</b><small>${esc(v.pitch)}</small></span></button>`).join('');
 $('list').addEventListener('click', e => { const b = e.target.closest('button'); if (b) select(Number(b.dataset.i)); });
-$('prev').onclick = () => select(cur - 1); $('next').onclick = () => select(cur + 1); $('replay').onclick = () => select(cur);
-document.addEventListener('keydown', e => { if (e.key === 'ArrowRight') select(cur + 1); if (e.key === 'ArrowLeft') select(cur - 1); });
-select(Math.max(0, Math.min(V.length - 1, (Number(new URLSearchParams(location.search).get('v')) || 1) - 1)));
-window.__concepts = { V, select };
+$('prev').onclick = () => select(cur - 1); $('next').onclick = () => select(cur + 1); $('replay').onclick = () => select(cur, true);
+document.addEventListener('keydown', e => { if (e.target.tagName === 'INPUT') return; if (e.key === 'ArrowRight') select(cur + 1); if (e.key === 'ArrowLeft') select(cur - 1); });
+const start = Math.max(0, Math.min(V.length - 1, (Number(new URLSearchParams(location.search).get('v')) || 1) - 1));
+loadState().then(() => select(start));
+window.__concepts = { V, select, ask, HIST };
 })();
 </script>
 </body>
