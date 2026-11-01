@@ -1,0 +1,721 @@
+<!doctype html>
+<html lang="ru">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<title>Двойник — живой офис AICEX</title>
+<meta name="description" content="Цифровой двойник Ильи и Claude: видит, слышит, говорит и знает проект, аудиторию, стиль и контент.">
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Manrope:wght@400;500;600;700;800&family=JetBrains+Mono:wght@500;600&display=swap">
+<style>
+  :root{
+    --bg:#0e0f12; --bg-2:#15171c; --card:rgba(255,255,255,.045); --card-hi:rgba(255,255,255,.08);
+    --line:rgba(255,255,255,.09); --ink:#f3f1ee; --ink-2:rgba(243,241,238,.66); --ink-3:rgba(243,241,238,.42);
+    --sun:#ff8a3d; --sun-2:#ffb35c; --sun-ink:#1d0f05; --ok:#3ddc97; --warn:#ffb020; --blue:#5aa2ff;
+    --f-ui:'Manrope',system-ui,-apple-system,'Segoe UI',sans-serif; --f-mono:'JetBrains Mono',ui-monospace,Menlo,monospace;
+    --gl:max(16px, env(safe-area-inset-left, 0px)); --gr:max(16px, env(safe-area-inset-right, 0px));
+  }
+  *{box-sizing:border-box}
+  html,body{margin:0;background:var(--bg);color:var(--ink);font:15px/1.5 var(--f-ui);-webkit-font-smoothing:antialiased}
+  body{min-height:100vh;background:radial-gradient(1200px 600px at 78% -10%, rgba(255,138,61,.12), transparent 60%), radial-gradient(900px 500px at -10% 110%, rgba(90,162,255,.07), transparent 60%), var(--bg)}
+  button,input,textarea{font:inherit;color:inherit}
+  button{cursor:pointer;border:0;background:none}
+  a{color:var(--sun-2)}
+  svg.i{width:16px;height:16px;flex:none;fill:none;stroke:currentColor;stroke-width:1.8;stroke-linecap:round;stroke-linejoin:round}
+
+  /* top bar */
+  header{display:flex;align-items:center;gap:14px;padding:14px var(--gr) 14px var(--gl);border-bottom:1px solid var(--line);position:sticky;top:0;z-index:5;background:rgba(14,15,18,.82);backdrop-filter:blur(14px)}
+  .back{display:flex;align-items:center;gap:6px;color:var(--ink-2);text-decoration:none;font-weight:600;font-size:13.5px;padding:7px 10px;border-radius:10px}
+  .back:hover{background:var(--card-hi);color:var(--ink)}
+  .brand{display:flex;align-items:center;gap:10px;min-width:0}
+  .brand .dot{width:22px;height:22px;border-radius:50%;background:radial-gradient(circle at 35% 35%, #ffd29a, var(--sun) 55%, #c44a12);box-shadow:0 0 18px rgba(255,138,61,.6);flex:none}
+  .brand b{font-weight:800;letter-spacing:-.01em}
+  .brand span{color:var(--ink-3);font-size:13px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+  .tabs{display:flex;gap:2px;margin-left:auto;background:var(--card);border:1px solid var(--line);padding:4px;border-radius:12px}
+  .tabs button{padding:7px 12px;border-radius:9px;font-weight:600;font-size:13.5px;color:var(--ink-2);white-space:nowrap}
+  .tabs button.on{background:var(--card-hi);color:var(--ink)}
+  .chip{display:inline-flex;align-items:center;gap:6px;font-size:12.5px;font-weight:700;padding:5px 10px;border-radius:99px;background:var(--card);border:1px solid var(--line);color:var(--ink-2);white-space:nowrap}
+  .chip i{width:7px;height:7px;border-radius:50%;background:var(--ink-3)}
+  .chip.live i{background:var(--ok);box-shadow:0 0 0 0 rgba(61,220,151,.6);animation:ping 1.6s infinite}
+  .chip.demo i{background:var(--warn)}
+  @keyframes ping{70%{box-shadow:0 0 0 7px rgba(61,220,151,0)}100%{box-shadow:0 0 0 0 rgba(61,220,151,0)}}
+
+  main{padding:18px var(--gr) 28px var(--gl);max-width:1360px;margin:0 auto}
+  section[data-tab]{display:none} section[data-tab].on{display:block}
+
+  /* talk layout */
+  .talk{display:grid;grid-template-columns:minmax(0,1fr) 380px;gap:16px;align-items:start}
+  .panel{background:var(--card);border:1px solid var(--line);border-radius:20px}
+  .stage{padding:16px;min-height:640px;display:flex;flex-direction:column;gap:14px}
+  .stage-head{display:flex;align-items:center;gap:10px;flex-wrap:wrap}
+  .stage-head h2{margin:0;font-size:15px;font-weight:700;color:var(--ink-2)}
+  .stage-head .chip{margin-left:auto}
+  .eye{display:grid;grid-template-columns:260px minmax(0,1fr);gap:14px}
+  .cam{position:relative;aspect-ratio:4/3;border-radius:16px;overflow:hidden;background:#07080a;border:1px solid var(--line)}
+  .cam video,.cam canvas,.cam img{position:absolute;inset:0;width:100%;height:100%;object-fit:cover}
+  .cam video{transform:scaleX(-1)}
+  .cam .off{position:absolute;inset:0;display:flex;flex-direction:column;align-items:center;justify-content:center;gap:8px;color:var(--ink-3);font-size:13px;text-align:center;padding:12px}
+  .cam .off svg{width:34px;height:34px;stroke-width:1.4}
+  .cam .scan{position:absolute;inset:0;pointer-events:none;background:linear-gradient(180deg, transparent 0%, rgba(255,138,61,.28) 50%, transparent 52%);background-size:100% 220%;opacity:0;animation:scan 1.4s linear infinite}
+  .cam.looking .scan{opacity:1}
+  @keyframes scan{from{background-position:0 120%}to{background-position:0 -120%}}
+  .cam .corner{position:absolute;width:18px;height:18px;border:2px solid var(--sun);opacity:.8}
+  .cam .c1{left:8px;top:8px;border-right:0;border-bottom:0;border-radius:6px 0 0 0}.cam .c2{right:8px;top:8px;border-left:0;border-bottom:0;border-radius:0 6px 0 0}
+  .cam .c3{left:8px;bottom:8px;border-right:0;border-top:0;border-radius:0 0 0 6px}.cam .c4{right:8px;bottom:8px;border-left:0;border-top:0;border-radius:0 0 6px 0}
+  .cam .tag{position:absolute;left:10px;bottom:10px;font:600 11px var(--f-mono);background:rgba(0,0,0,.55);padding:3px 7px;border-radius:6px;color:var(--sun-2)}
+  .camctl{display:flex;flex-direction:column;gap:8px}
+  .camctl p{margin:0;color:var(--ink-2);font-size:13.5px}
+  .row{display:flex;gap:8px;flex-wrap:wrap;align-items:center}
+  .btn{display:inline-flex;align-items:center;gap:7px;padding:9px 13px;border-radius:12px;font-weight:700;font-size:13.5px;background:var(--card-hi);border:1px solid var(--line);color:var(--ink)}
+  .btn:hover{background:rgba(255,255,255,.12)}
+  .btn.sun{background:var(--sun);color:var(--sun-ink);border-color:transparent}
+  .btn.sun:hover{background:var(--sun-2)}
+  .btn.on{border-color:rgba(255,138,61,.6);color:var(--sun-2)}
+  .btn[disabled]{opacity:.45;cursor:not-allowed}
+  .switch{display:inline-flex;align-items:center;gap:8px;font-size:13px;color:var(--ink-2);cursor:pointer;user-select:none}
+  .switch input{appearance:none;width:34px;height:20px;border-radius:99px;background:var(--card-hi);border:1px solid var(--line);position:relative;margin:0;cursor:pointer;transition:background .2s}
+  .switch input::after{content:'';position:absolute;top:2px;left:2px;width:14px;height:14px;border-radius:50%;background:var(--ink-2);transition:transform .2s}
+  .switch input:checked{background:var(--sun)} .switch input:checked::after{transform:translateX(14px);background:#fff}
+
+  .cards{display:flex;flex-direction:column;gap:12px;flex:1}
+  .empty{flex:1;display:flex;flex-direction:column;align-items:center;justify-content:center;gap:12px;text-align:center;color:var(--ink-2);padding:30px 10px;border:1px dashed var(--line);border-radius:16px}
+  .empty h3{margin:0;color:var(--ink);font-size:20px;letter-spacing:-.01em}
+  .empty p{margin:0;max-width:460px}
+  .card{background:var(--bg-2);border:1px solid var(--line);border-radius:16px;padding:16px;animation:rise .45s cubic-bezier(.2,.8,.2,1)}
+  @keyframes rise{from{opacity:0;transform:translateY(10px) scale(.985)}to{opacity:1;transform:none}}
+  .card .k{font:600 11px var(--f-mono);letter-spacing:.06em;text-transform:uppercase;color:var(--sun-2);display:flex;flex-wrap:wrap;gap:4px 8px;align-items:center}
+  .card .k em{font-style:normal;color:var(--ink-3)}
+  .card h4{margin:6px 0 10px;font-size:18px;letter-spacing:-.01em}
+  .card ol,.card ul{margin:0;padding:0;list-style:none;display:flex;flex-direction:column;gap:8px}
+  .card li{display:flex;gap:10px;align-items:flex-start}
+  .card li .n{flex:none;width:24px;height:24px;border-radius:8px;background:rgba(255,138,61,.15);color:var(--sun-2);font-weight:800;font-size:12.5px;display:flex;align-items:center;justify-content:center}
+  .card li small{display:block;color:var(--ink-3);font-size:12.5px}
+  .card .ok{color:var(--ok)}
+  .card .note{margin-top:10px;font-size:12.5px;color:var(--ink-3)}
+  .card .md p{margin:0 0 8px} .card .md p:last-child{margin:0}
+  .card .md ul{gap:4px;margin:0 0 8px} .card .md li::before{content:'—';color:var(--sun-2);flex:none}
+  .script{display:grid;grid-template-columns:110px 1fr;gap:8px 14px;font-size:14px}
+  .script dt{color:var(--ink-3);font-weight:700;font-size:12.5px;padding-top:2px}
+  .script dd{margin:0}
+  .script dd b{color:var(--sun-2)}
+  .week{display:grid;grid-template-columns:repeat(7,minmax(0,1fr));gap:6px}
+  .week div{background:var(--card);border:1px solid var(--line);border-radius:10px;padding:8px;font-size:12px;min-height:84px}
+  .week div b{display:block;font-size:11px;color:var(--ink-3);margin-bottom:4px}
+  .week i{display:block;font-style:normal;font-weight:700;font-size:11px;padding:2px 6px;border-radius:6px;margin-bottom:4px;width:max-content;max-width:100%}
+  .f-reel{background:rgba(255,138,61,.16);color:var(--sun-2)} .f-car{background:rgba(90,162,255,.16);color:#9cc6ff} .f-st{background:rgba(61,220,151,.14);color:var(--ok)}
+  .vision{display:grid;grid-template-columns:200px 1fr;gap:14px;align-items:start}
+  .vision .shot{position:relative;aspect-ratio:4/3;border-radius:12px;overflow:hidden;background:#07080a}
+  .vision .shot img{width:100%;height:100%;object-fit:cover;transform:scaleX(-1)}
+  .vision .shot .pin{position:absolute;width:22px;height:22px;border-radius:50%;background:var(--sun);color:var(--sun-ink);font-weight:800;font-size:12px;display:flex;align-items:center;justify-content:center;box-shadow:0 0 0 4px rgba(255,138,61,.25)}
+  .flow{display:flex;align-items:center;gap:6px;flex-wrap:wrap;font-size:13px}
+  .flow span{padding:6px 10px;border-radius:10px;background:var(--card);border:1px solid var(--line)}
+  .flow span.on{border-color:rgba(255,138,61,.6);color:var(--sun-2)}
+  .flow svg{width:14px;height:14px;color:var(--ink-3)}
+
+  /* conversation */
+  .conv{display:flex;flex-direction:column;height:calc(100vh - 110px);min-height:640px;position:sticky;top:78px;overflow:hidden}
+  .conv-head{display:flex;align-items:center;gap:10px;padding:14px 16px;border-bottom:1px solid var(--line)}
+  .conv-head h2{margin:0;font-size:16px}
+  .conv-head .chip{margin-left:auto}
+  .log{flex:1;overflow-y:auto;padding:14px 16px;display:flex;flex-direction:column;gap:12px;scrollbar-width:thin}
+  .msg{max-width:92%}
+  .msg .who{font-size:11.5px;font-weight:700;color:var(--ink-3);margin:0 0 3px 2px}
+  .msg .b{padding:10px 13px;border-radius:14px;background:var(--card-hi);border:1px solid var(--line);white-space:pre-wrap;word-wrap:break-word;font-size:14.5px}
+  .msg.me{align-self:flex-end} .msg.me .who{text-align:right}
+  .msg.me .b{background:var(--sun);color:var(--sun-ink);border-color:transparent;font-weight:600}
+  .msg .b.typing::after{content:'▍';animation:blink 1s steps(1) infinite;color:var(--sun-2)}
+  .msg .seen{font-size:11.5px;color:var(--sun-2);margin:3px 2px 0}
+  @keyframes blink{50%{opacity:0}}
+  .orbbox{display:flex;flex-direction:column;align-items:center;gap:4px;padding:6px 16px 4px}
+  #orb{width:150px;height:150px}
+  .orbbox .st{font-size:12.5px;color:var(--ink-3);font-weight:600;min-height:18px}
+  .compose{display:flex;gap:8px;padding:10px 12px 14px;border-top:1px solid var(--line);align-items:flex-end}
+  .compose textarea{flex:1;resize:none;min-height:44px;max-height:120px;padding:11px 13px;border-radius:14px;border:1px solid var(--line);background:var(--bg-2);outline:none;font-size:14.5px}
+  .compose textarea:focus{border-color:rgba(255,138,61,.55)}
+  .mic{width:44px;height:44px;border-radius:14px;background:var(--sun);color:var(--sun-ink);display:flex;align-items:center;justify-content:center;flex:none}
+  .mic.rec{background:#ff4d4d;color:#fff;animation:ping2 1.2s infinite}
+  @keyframes ping2{0%{box-shadow:0 0 0 0 rgba(255,77,77,.55)}70%{box-shadow:0 0 0 10px rgba(255,77,77,0)}100%{box-shadow:0 0 0 0 rgba(255,77,77,0)}}
+  .send{width:44px;height:44px;border-radius:14px;background:var(--card-hi);border:1px solid var(--line);display:flex;align-items:center;justify-content:center;flex:none}
+  .mic svg,.send svg{width:19px;height:19px}
+
+  .login{display:flex;gap:8px;margin-top:4px}
+  .login input{flex:1;min-width:0;padding:9px 12px;border-radius:12px;border:1px solid var(--line);background:var(--bg-2);outline:none}
+  .err{color:#ff8b8b;font-size:13px;min-height:18px}
+
+  /* knowledge + roadmap */
+  .grid2{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:14px}
+  .grid3{display:grid;grid-template-columns:repeat(3,minmax(0,1fr));gap:14px}
+  .box{padding:18px}
+  .box h3{margin:0 0 4px;font-size:17px;letter-spacing:-.01em}
+  .box > p{margin:0 0 12px;color:var(--ink-2);font-size:14px}
+  .lead{margin:4px 0 18px;max-width:760px;color:var(--ink-2)}
+  .lead b{color:var(--ink)}
+  h2.h{margin:0;font-size:26px;letter-spacing:-.02em}
+  .src{display:flex;gap:10px;align-items:flex-start;padding:10px 0;border-top:1px solid var(--line)}
+  .src:first-of-type{border-top:0}
+  .src .ic{width:30px;height:30px;border-radius:9px;background:rgba(255,138,61,.13);color:var(--sun-2);display:flex;align-items:center;justify-content:center;flex:none}
+  .src b{display:block;font-size:14px}
+  .src small{color:var(--ink-3);font-size:12.5px;display:block}
+  .src code{font:500 11.5px var(--f-mono);color:var(--ink-2)}
+  .badge{display:inline-block;font-size:11px;font-weight:800;padding:2px 7px;border-radius:6px;margin-left:6px;vertical-align:1px}
+  .b-ok{background:rgba(61,220,151,.15);color:var(--ok)} .b-con{background:rgba(255,176,32,.15);color:var(--warn)} .b-todo{background:rgba(255,255,255,.08);color:var(--ink-2)}
+  .cap{display:flex;flex-direction:column;gap:6px;padding:16px}
+  .cap .ic{width:36px;height:36px;border-radius:11px;background:rgba(255,138,61,.13);color:var(--sun-2);display:flex;align-items:center;justify-content:center}
+  .cap .ic svg{width:19px;height:19px}
+  .cap b{font-size:15px} .cap p{margin:0;color:var(--ink-2);font-size:13.5px}
+  .pipe{display:flex;align-items:stretch;gap:8px;overflow-x:auto;padding-bottom:4px}
+  .pipe > div{flex:1 0 150px;background:var(--bg-2);border:1px solid var(--line);border-radius:14px;padding:12px}
+  .pipe b{display:block;font-size:13.5px} .pipe small{color:var(--ink-3);font-size:12px}
+  .pipe .arr{flex:0 0 auto;display:flex;align-items:center;background:none;border:0;padding:0;color:var(--ink-3)}
+  .stages{display:flex;flex-direction:column;gap:12px}
+  .stg{display:grid;grid-template-columns:150px minmax(0,1fr);gap:18px;padding:18px}
+  .stg .when{display:flex;flex-direction:column;gap:6px}
+  .stg .when b{font:600 12px var(--f-mono);color:var(--sun-2);text-transform:uppercase;letter-spacing:.06em}
+  .stg .when span{font-size:13px;color:var(--ink-3)}
+  .stg h3{margin:0 0 4px;font-size:18px;letter-spacing:-.01em}
+  .stg > div > p{margin:0 0 10px;color:var(--ink-2);font-size:14px}
+  .stg ul{margin:0;padding:0;list-style:none;display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:6px 16px}
+  .stg li{font-size:13.5px;display:flex;gap:8px} .stg li::before{content:'';flex:none;width:6px;height:6px;border-radius:50%;background:var(--sun);margin-top:8px}
+  .stg.now{border-color:rgba(255,138,61,.45);background:linear-gradient(180deg, rgba(255,138,61,.08), var(--card))}
+  .stg li.done::before{background:var(--ok)}
+  .kpi{display:flex;flex-direction:column;gap:2px;padding:14px}
+  .kpi b{font-size:15px} .kpi span{font-size:13px;color:var(--ink-2)}
+
+  @media (max-width: 1000px){
+    .talk{grid-template-columns:1fr}
+    .conv{position:static;height:auto;min-height:0}
+    .log{max-height:420px}
+    .stage{min-height:0}
+    .grid3{grid-template-columns:1fr 1fr}
+  }
+  @media (max-width: 680px){
+    header{flex-wrap:wrap;gap:10px}
+    .tabs{order:3;width:100%;margin-left:0;overflow-x:auto}
+    .tabs button{flex:1}
+    .brand span{display:none}
+    .eye,.vision{grid-template-columns:1fr}
+    .cam{max-width:none}
+    .grid2,.grid3{grid-template-columns:1fr}
+    .stg{grid-template-columns:1fr;gap:8px}
+    .stg ul{grid-template-columns:1fr}
+    .week{grid-template-columns:repeat(2,minmax(0,1fr))}
+    .script{grid-template-columns:1fr;gap:2px}
+    .script dd{margin-bottom:8px}
+    h2.h{font-size:22px}
+  }
+</style>
+</head>
+<body>
+<header>
+  <a class="back" href="../"><svg class="i" viewBox="0 0 24 24"><path d="M15 18l-6-6 6-6"/></svg>Офис</a>
+  <div class="brand"><i class="dot"></i><div><b>Двойник</b> <span>· Илья × Claude, голосовой ИИ-ассистент</span></div></div>
+  <a class="back" href="concepts.html" style="margin-left:auto">Концепты окна</a>
+  <nav class="tabs" id="tabs" style="margin-left:0">
+    <button data-t="talk" class="on">Разговор</button>
+    <button data-t="know">Что знает</button>
+    <button data-t="plan">План развития</button>
+  </nav>
+</header>
+
+<main>
+<!-- ============ TALK ============ -->
+<section data-tab="talk" class="on">
+  <div class="talk">
+    <div class="panel stage">
+      <div class="stage-head">
+        <h2>Сцена</h2>
+        <span class="chip demo" id="modeChip"><i></i><span>демо</span></span>
+      </div>
+      <div class="eye">
+        <div class="cam" id="cam">
+          <div class="off" id="camOff"><svg class="i" viewBox="0 0 24 24"><path d="M15 10l5-3v10l-5-3z"/><rect x="3" y="6" width="12" height="12" rx="2"/></svg>Камера выключена.<br>Двойник видит вас и комнату, только когда вы разрешите.</div>
+          <video id="video" playsinline muted hidden></video>
+          <div class="scan"></div><i class="corner c1"></i><i class="corner c2"></i><i class="corner c3"></i><i class="corner c4"></i>
+          <span class="tag" id="camTag" hidden>видит</span>
+        </div>
+        <div class="camctl">
+          <p id="lead">Двойник знает ваш проект, аудиторию, стиль текстов, сценарии и контент-план — и говорит с вами голосом. Камера нужна, чтобы он видел вас и обстановку: свет, ракурс, образ перед съёмкой.</p>
+          <div class="row">
+            <button class="btn" id="camBtn"><svg class="i" viewBox="0 0 24 24"><path d="M15 10l5-3v10l-5-3z"/><rect x="3" y="6" width="12" height="12" rx="2"/></svg><span>Включить камеру</span></button>
+            <button class="btn" id="lookBtn" disabled><svg class="i" viewBox="0 0 24 24"><path d="M2 12s3.5-7 10-7 10 7 10 7-3.5 7-10 7S2 12 2 12z"/><circle cx="12" cy="12" r="3"/></svg>Посмотри на меня</button>
+          </div>
+          <label class="switch"><input type="checkbox" id="camAlways"> Показывать кадр с каждым сообщением</label>
+          <div class="row" id="demoRow">
+            <button class="btn sun" id="demoBtn"><svg class="i" viewBox="0 0 24 24"><path d="M7 4.5v15l12-7.5z"/></svg><span>Показать, как это работает</span></button>
+            <label class="switch"><input type="checkbox" id="sound" checked> Озвучивать</label>
+          </div>
+          <div id="loginBox" hidden>
+            <p style="margin:6px 0 0;font-size:13px;color:var(--ink-3)">Вживую двойник отвечает только владельцу офиса — тот же пароль, что у ассистента.</p>
+            <form class="login" id="loginForm"><input type="password" id="pass" placeholder="Пароль владельца" autocomplete="current-password"><button class="btn" type="submit">Войти</button></form>
+            <div class="err" id="loginErr"></div>
+          </div>
+        </div>
+      </div>
+      <div class="cards" id="cards">
+        <div class="empty" id="empty">
+          <h3>Здесь появляется то, что двойник показывает</h3>
+          <p>План дня, идеи, сценарии в вашем стиле, контент-план, разбор кадра перед съёмкой и задачи агентам. Нажмите «Показать, как это работает» или просто спросите.</p>
+        </div>
+      </div>
+    </div>
+
+    <div class="panel conv">
+      <div class="conv-head"><h2>Разговор</h2><span class="chip demo" id="airChip"><i></i><span>демо</span></span></div>
+      <div class="log" id="log"></div>
+      <div class="orbbox"><canvas id="orb" width="300" height="300" aria-hidden="true"></canvas><div class="st" id="orbSt">Готов слушать</div></div>
+      <form class="compose" id="compose">
+        <button type="button" class="mic" id="mic" title="Удерживайте и говорите"><svg class="i" viewBox="0 0 24 24"><rect x="9" y="3" width="6" height="11" rx="3"/><path d="M5 11a7 7 0 0 0 14 0M12 18v3"/></svg></button>
+        <textarea id="input" rows="1" placeholder="Спросите двойника…"></textarea>
+        <button class="send" type="submit" title="Отправить"><svg class="i" viewBox="0 0 24 24"><path d="M5 12h14M13 6l6 6-6 6"/></svg></button>
+      </form>
+    </div>
+  </div>
+</section>
+
+<!-- ============ KNOWLEDGE ============ -->
+<section data-tab="know">
+  <h2 class="h">Что знает и умеет двойник</h2>
+  <p class="lead">Двойник — это ваш личный ассистент офиса в особом режиме: <b>тот же мозг</b> (Claude, память разговоров, данные офиса, задачи агентам), плюс <b>знания о вас и вашем контенте</b> из скиллов команды и профиля, плюс <b>глаза</b> — кадр с камеры.</p>
+
+  <div class="grid3" style="margin-bottom:14px">
+    <div class="panel cap"><div class="ic"><svg class="i" viewBox="0 0 24 24"><rect x="9" y="3" width="6" height="11" rx="3"/><path d="M5 11a7 7 0 0 0 14 0M12 18v3"/></svg></div><b>Слышит <span class="badge b-ok">работает</span></b><p>Удерживаете кнопку — говорите. Распознавание речи ElevenLabs Scribe, как у ассистента офиса.</p></div>
+    <div class="panel cap"><div class="ic"><svg class="i" viewBox="0 0 24 24"><path d="M11 5L6 9H2v6h4l5 4zM15.5 8.5a5 5 0 0 1 0 7M19 5a10 10 0 0 1 0 14"/></svg></div><b>Говорит вашим голосом <span class="badge b-ok">работает</span></b><p>Ответ озвучивается клоном голоса из Persona Train (ElevenLabs). В демо — голосом браузера.</p></div>
+    <div class="panel cap"><div class="ic"><svg class="i" viewBox="0 0 24 24"><path d="M2 12s3.5-7 10-7 10 7 10 7-3.5 7-10 7S2 12 2 12z"/><circle cx="12" cy="12" r="3"/></svg></div><b>Видит <span class="badge b-con">первая версия</span></b><p>По кнопке «Посмотри на меня» или с каждым сообщением отправляет кадр с камеры. Кадры не сохраняются.</p></div>
+    <div class="panel cap"><div class="ic"><svg class="i" viewBox="0 0 24 24"><path d="M4 19.5V5a2 2 0 0 1 2-2h12v18H6a2 2 0 0 1-2-1.5zM8 7h6M8 11h6"/></svg></div><b>Знает ваш стиль <span class="badge b-con">частично</span></b><p>Формула сценариев, хуки, кодовые слова, стили монтажа, правила каруселей — из скиллов. Аудитория и tone of voice — ждут заполнения.</p></div>
+    <div class="panel cap"><div class="ic"><svg class="i" viewBox="0 0 24 24"><path d="M3 10.5 12 3l9 7.5V20a1 1 0 0 1-1 1h-5v-6H9v6H4a1 1 0 0 1-1-1z"/></svg></div><b>Знает офис и проекты <span class="badge b-ok">работает</span></b><p>Отделы, агенты, история реальных задач, карта проектов монорепозитория, долгая память прошлых разговоров.</p></div>
+    <div class="panel cap"><div class="ic"><svg class="i" viewBox="0 0 24 24"><path d="M12 5v14M5 12h14"/></svg></div><b>Ставит задачи агентам <span class="badge b-ok">работает</span></b><p>«Смонтируй», «сделай карусель», «собери лендинг» — уходит на рабочий стол офиса, результат приходит на проверку.</p></div>
+  </div>
+
+  <div class="panel box" style="margin-bottom:14px">
+    <h3>Как устроен один ответ</h3>
+    <p>Всё, кроме камеры на странице, уже работает на сервере ассистента <code style="font-family:var(--f-mono);font-size:12.5px">/api/assistant</code>.</p>
+    <div class="pipe">
+      <div><b>Камера и микрофон</b><small>кадр JPEG по запросу, запись голоса</small></div><div class="arr"><svg class="i" viewBox="0 0 24 24"><path d="M5 12h14M13 6l6 6-6 6"/></svg></div>
+      <div><b>Речь → текст</b><small>ElevenLabs Scribe</small></div><div class="arr"><svg class="i" viewBox="0 0 24 24"><path d="M5 12h14M13 6l6 6-6 6"/></svg></div>
+      <div><b>Claude</b><small>роль двойника + профиль + скиллы + офис + память</small></div><div class="arr"><svg class="i" viewBox="0 0 24 24"><path d="M5 12h14M13 6l6 6-6 6"/></svg></div>
+      <div><b>Ответ</b><small>карточка на сцене, задача агенту</small></div><div class="arr"><svg class="i" viewBox="0 0 24 24"><path d="M5 12h14M13 6l6 6-6 6"/></svg></div>
+      <div><b>Голос</b><small>клон голоса Ильи, ElevenLabs</small></div>
+    </div>
+  </div>
+
+  <div class="grid2">
+    <div class="panel box">
+      <h3>Источники знаний</h3>
+      <p>Что двойник читает перед каждым ответом.</p>
+      <div id="sources"></div>
+    </div>
+    <div class="panel box">
+      <h3>Чего двойник пока не знает</h3>
+      <p>Эти разделы профиля пустые — двойник не додумывает их, а честно говорит и просит рассказать. Заполняются в <code style="font-family:var(--f-mono);font-size:12.5px">assistant/twin-profile.md</code> или разговором (этап 1 плана).</p>
+      <div id="gaps"></div>
+    </div>
+  </div>
+</section>
+
+<!-- ============ ROADMAP ============ -->
+<section data-tab="plan">
+  <h2 class="h">План развития двойника</h2>
+  <p class="lead">От концепта к ассистенту, как в референсе: который <b>знает вас</b>, <b>говорит живо</b>, <b>видит</b> и <b>сам делает работу</b> — утром показывает, что агенты сделали за ночь. Каждый этап — отдельный PR, и после каждого двойник становится полезнее.</p>
+  <div class="stages" id="stages"></div>
+
+  <h3 style="margin:22px 0 10px;font-size:18px">Как поймём, что работает</h3>
+  <div class="grid3">
+    <div class="panel kpi"><b>Задержка ответа голосом</b><span>сейчас несколько секунд → цель меньше 1,5 с до первого звука (этап 2)</span></div>
+    <div class="panel kpi"><b>Сценарии без правок</b><span>доля сценариев от двойника, которые вы снимаете как есть или с мелкими правками</span></div>
+    <div class="panel kpi"><b>Рутина, снятая с вас</b><span>сколько задач в неделю двойник отдал агентам и сколько из них приняты с первого раза</span></div>
+  </div>
+  <h3 style="margin:22px 0 10px;font-size:18px">Принципы</h3>
+  <div class="grid3">
+    <div class="panel kpi"><b>Камера — только по разрешению</b><span>кадры не сохраняются, в историю пишется только текст; индикатор «видит» горит, пока камера включена, сканер — когда кадр уходит</span></div>
+    <div class="panel kpi"><b>Не выдумывает</b><span>цифры, кейсы и факты — только из данных; чего нет — так и говорит</span></div>
+    <div class="panel kpi"><b>Деньги под контролем</b><span>кадр — только по кнопке или переключателю, знания кешируются, голос и зрение можно выключить</span></div>
+  </div>
+</section>
+</main>
+
+<script>
+(() => {
+'use strict';
+const $ = id => document.getElementById(id);
+const API = '/api/assistant';
+const esc = s => String(s).replace(/[&<>"]/g, c => ({ '&':'&amp;', '<':'&lt;', '>':'&gt;', '"':'&quot;' }[c]));
+const sleep = ms => new Promise(r => setTimeout(r, ms));
+const ICON = {
+  check:'<svg class="i" viewBox="0 0 24 24"><path d="M5 12l5 5L20 7"/></svg>',
+  arrow:'<svg class="i" viewBox="0 0 24 24"><path d="M5 12h14M13 6l6 6-6 6"/></svg>',
+  doc:'<svg class="i" viewBox="0 0 24 24"><path d="M6 3h9l4 4v14H6zM14 3v5h5"/></svg>',
+  brain:'<svg class="i" viewBox="0 0 24 24"><circle cx="12" cy="12" r="9"/><path d="M12 7v5l3 2"/></svg>',
+  office:'<svg class="i" viewBox="0 0 24 24"><path d="M3 10.5 12 3l9 7.5V20a1 1 0 0 1-1 1h-5v-6H9v6H4a1 1 0 0 1-1-1z"/></svg>',
+  gap:'<svg class="i" viewBox="0 0 24 24"><circle cx="12" cy="12" r="9"/><path d="M12 8v4M12 16h.01"/></svg>',
+};
+
+/* ---------- tabs ---------- */
+function tab(t) {
+  for (const b of $('tabs').children) b.classList.toggle('on', b.dataset.t === t);
+  for (const s of document.querySelectorAll('section[data-tab]')) s.classList.toggle('on', s.dataset.tab === t);
+  if (location.hash.slice(1) !== t) history.replaceState(null, '', t === 'talk' ? location.pathname : '#' + t);
+}
+$('tabs').addEventListener('click', e => { const b = e.target.closest('button'); if (b) tab(b.dataset.t); });
+if (['know', 'plan'].includes(location.hash.slice(1))) tab(location.hash.slice(1));
+
+/* ---------- state: demo or live ---------- */
+let live = false, state = null;
+function setMode(isLive) {
+  live = isLive;
+  for (const id of ['modeChip', 'airChip']) {
+    const c = $(id); c.className = 'chip ' + (isLive ? 'live' : 'demo');
+    c.lastElementChild.textContent = isLive ? 'в эфире' : 'демо';
+  }
+  $('loginBox').hidden = isLive || !state?.configured?.login;
+  $('demoBtn').lastElementChild.textContent = isLive ? 'Показать демо' : 'Показать, как это работает';
+}
+async function loadState() {
+  try {
+    const r = await fetch(API + '/state', { credentials:'same-origin' });
+    state = r.ok ? await r.json() : null;
+  } catch { state = null; }
+  setMode(Boolean(state?.owner && state.configured?.chat));
+  renderKnowledge();
+}
+$('loginForm').addEventListener('submit', async e => {
+  e.preventDefault(); $('loginErr').textContent = '';
+  try {
+    const r = await fetch(API + '/login', { method:'POST', headers:{ 'content-type':'application/json' }, body:JSON.stringify({ password:$('pass').value }) });
+    const d = await r.json().catch(() => ({}));
+    if (!r.ok) { $('loginErr').textContent = d.error || 'Не получилось войти.'; return; }
+    $('pass').value = ''; await loadState();
+    say('twin', live ? 'Я на связи. Спрашивайте голосом или текстом — включите камеру, если хотите, чтобы я вас видел.' : 'Вход выполнен, но Claude на сервере ассистента ещё не подключён (ключ HQ_OFFICE_ANTHROPIC_API_KEY) — пока работает только демо.');
+  } catch { $('loginErr').textContent = 'Сервер ассистента недоступен.'; }
+});
+
+/* ---------- orb ---------- */
+const orb = { mode:'idle', level:0, target:0, t:0 };
+const ORB_ST = { idle:'Готов слушать', listen:'Слушаю…', think:'Думаю…', speak:'Говорю', look:'Смотрю…' };
+function orbMode(m) { orb.mode = m; $('orbSt').textContent = ORB_ST[m] || ''; }
+(function drawOrb() {
+  const c = $('orb'), g = c.getContext('2d'), W = c.width, H = c.height, cx = W / 2, cy = H / 2;
+  orb.t += 1 / 60;
+  const tgt = orb.mode === 'speak' ? 0.35 + orb.target : orb.mode === 'listen' ? 0.15 + orb.target : orb.mode === 'think' || orb.mode === 'look' ? 0.22 + 0.12 * Math.sin(orb.t * 5) : 0.06 + 0.04 * Math.sin(orb.t * 1.6);
+  orb.level += (tgt - orb.level) * 0.15;
+  g.clearRect(0, 0, W, H);
+  const R = 46 + orb.level * 10;
+  // rays
+  const rays = 44, spin = orb.mode === 'think' || orb.mode === 'look' ? orb.t * 1.4 : orb.t * 0.25;
+  for (let i = 0; i < rays; i++) {
+    const a = spin + i / rays * Math.PI * 2;
+    const wob = Math.sin(orb.t * 3 + i * 1.7) * 0.5 + 0.5;
+    const len = 14 + orb.level * 70 * (0.45 + wob * 0.55);
+    g.strokeStyle = `rgba(255,${140 + (i % 3) * 25},70,${0.35 + wob * 0.45})`;
+    g.lineWidth = 3; g.lineCap = 'round';
+    g.beginPath(); g.moveTo(cx + Math.cos(a) * (R + 8), cy + Math.sin(a) * (R + 8)); g.lineTo(cx + Math.cos(a) * (R + 8 + len), cy + Math.sin(a) * (R + 8 + len)); g.stroke();
+  }
+  const glow = g.createRadialGradient(cx, cy, R * 0.3, cx, cy, R * 2.1);
+  glow.addColorStop(0, 'rgba(255,150,70,.45)'); glow.addColorStop(1, 'rgba(255,150,70,0)');
+  g.fillStyle = glow; g.beginPath(); g.arc(cx, cy, R * 2.1, 0, Math.PI * 2); g.fill();
+  const body = g.createRadialGradient(cx - R * 0.35, cy - R * 0.35, R * 0.1, cx, cy, R);
+  body.addColorStop(0, '#ffe0b0'); body.addColorStop(0.5, '#ff8a3d'); body.addColorStop(1, '#b8420f');
+  g.fillStyle = body; g.beginPath(); g.arc(cx, cy, R, 0, Math.PI * 2); g.fill();
+  requestAnimationFrame(drawOrb);
+})();
+
+/* ---------- conversation log ---------- */
+function bubble(who, text, opts = {}) {
+  const m = document.createElement('div');
+  m.className = 'msg ' + (who === 'me' ? 'me' : 'twin');
+  m.innerHTML = `<div class="who">${who === 'me' ? 'Вы' : 'Двойник'}</div><div class="b"></div>${opts.seen ? '<div class="seen">видел кадр с камеры</div>' : ''}`;
+  m.querySelector('.b').textContent = text;
+  $('log').appendChild(m); $('log').scrollTop = $('log').scrollHeight;
+  return m.querySelector('.b');
+}
+async function typeInto(el, text, speed = 16) {
+  el.classList.add('typing'); el.textContent = '';
+  for (let i = 0; i < text.length; i += 2) { el.textContent = text.slice(0, i + 2); $('log').scrollTop = $('log').scrollHeight; await sleep(speed); }
+  el.classList.remove('typing');
+}
+const say = (who, text) => bubble(who, text);
+
+/* ---------- stage cards ---------- */
+function card(html) {
+  $('empty')?.remove();
+  const d = document.createElement('div'); d.className = 'card'; d.innerHTML = html;
+  $('cards').prepend(d);
+  while ($('cards').children.length > 6) $('cards').lastElementChild.remove();
+  return d;
+}
+const head = (k, title, tag) => `<div class="k">${esc(k)}${tag ? ` <em>· ${esc(tag)}</em>` : ''}</div><h4>${esc(title)}</h4>`;
+const list = items => `<ol>${items.map((it, i) => `<li><span class="n">${it.done ? ICON.check : i + 1}</span><div>${esc(it.t)}${it.s ? `<small>${esc(it.s)}</small>` : ''}</div></li>`).join('')}</ol>`;
+// a tiny markdown for live answers: paragraphs, "- " lists, **bold**
+function md(text) {
+  const inline = s => esc(s).replace(/\*\*(.+?)\*\*/g, '<b>$1</b>').replace(/(https?:\/\/[^\s)]+)/g, '<a href="$1" target="_blank" rel="noopener">$1</a>');
+  return text.trim().split(/\n{2,}/).map(block => {
+    const lines = block.split('\n');
+    if (lines.every(l => /^\s*([-•*]|\d+[.)])\s+/.test(l))) return `<ul>${lines.map(l => `<li><span>${inline(l.replace(/^\s*([-•*]|\d+[.)])\s+/, ''))}</span></li>`).join('')}</ul>`;
+    return `<p>${lines.map(inline).join('<br>')}</p>`;
+  }).join('');
+}
+
+/* ---------- camera ---------- */
+let stream = null;
+async function camOn() {
+  try {
+    stream = await navigator.mediaDevices.getUserMedia({ video:{ width:{ ideal:1280 }, height:{ ideal:720 }, facingMode:'user' }, audio:false });
+    const v = $('video'); v.srcObject = stream; v.hidden = false; await v.play();
+    $('camOff').hidden = true; $('camTag').hidden = false; $('lookBtn').disabled = false;
+    $('camBtn').classList.add('on'); $('camBtn').lastElementChild.textContent = 'Выключить камеру';
+  } catch (e) {
+    $('camOff').innerHTML = 'Нет доступа к камере.<br>Разрешите её в настройках браузера.';
+  }
+}
+function camOff() {
+  stream?.getTracks().forEach(t => t.stop()); stream = null;
+  $('video').hidden = true; $('camOff').hidden = false; $('camTag').hidden = true; $('lookBtn').disabled = true;
+  $('camBtn').classList.remove('on'); $('camBtn').lastElementChild.textContent = 'Включить камеру';
+}
+$('camBtn').onclick = () => stream ? camOff() : camOn();
+function frame(maxW = 768) {
+  const v = $('video'); if (!stream || !v.videoWidth) return null;
+  const k = Math.min(1, maxW / v.videoWidth), c = document.createElement('canvas');
+  c.width = Math.round(v.videoWidth * k); c.height = Math.round(v.videoHeight * k);
+  c.getContext('2d').drawImage(v, 0, 0, c.width, c.height);
+  return c.toDataURL('image/jpeg', 0.72);
+}
+async function flashLook() { $('cam').classList.add('looking'); orbMode('look'); await sleep(1300); $('cam').classList.remove('looking'); }
+
+/* ---------- voice out ---------- */
+let audio = null, actx = null;
+function stopVoice() { try { speechSynthesis.cancel(); } catch {} if (audio) { audio.pause(); audio = null; } }
+function speakBrowser(text) {
+  return new Promise(resolve => {
+    if (!$('sound').checked || !('speechSynthesis' in window)) return resolve();
+    const u = new SpeechSynthesisUtterance(text.replace(/[«»"*]/g, ''));
+    u.lang = 'ru-RU'; u.rate = 1.05;
+    const ru = speechSynthesis.getVoices().find(v => /^ru/i.test(v.lang)); if (ru) u.voice = ru;
+    let pulse = setInterval(() => { orb.target = 0.15 + Math.random() * 0.35; }, 90);
+    u.onboundary = () => { orb.target = 0.5 + Math.random() * 0.3; };
+    const done = () => { clearInterval(pulse); orb.target = 0; resolve(); };
+    u.onend = done; u.onerror = done;
+    orbMode('speak'); speechSynthesis.speak(u);
+    setTimeout(done, 400 + text.length * 95); // some browsers never fire onend
+  });
+}
+async function speakOwner(text) {
+  if (!$('sound').checked || !state?.voice) return;
+  try {
+    const r = await fetch(API + '/tts', { method:'POST', headers:{ 'content-type':'application/json' }, body:JSON.stringify({ text:text.slice(0, 800) }) });
+    if (!r.ok) return;
+    const url = URL.createObjectURL(await r.blob());
+    audio = new Audio(url);
+    actx = actx || new (window.AudioContext || window.webkitAudioContext)();
+    const src = actx.createMediaElementSource(audio), an = actx.createAnalyser(); an.fftSize = 256;
+    src.connect(an); an.connect(actx.destination);
+    const buf = new Uint8Array(an.frequencyBinCount);
+    orbMode('speak');
+    const tick = () => { if (!audio) return; an.getByteFrequencyData(buf); orb.target = Math.min(0.9, buf.reduce((a, b) => a + b, 0) / buf.length / 90); requestAnimationFrame(tick); };
+    await audio.play(); tick();
+    await new Promise(r => { audio.onended = r; audio.onerror = r; });
+  } catch {} finally { audio = null; orb.target = 0; }
+}
+
+/* ---------- voice in (owner): hold the button ---------- */
+let rec = null, chunks = [], micStream = null, micTick = null;
+async function recStart() {
+  if (!live) { tab('talk'); return demoNote('Вживую двойник слушает только владельца — войдите паролем. В демо ниже всё показано на примере.'); }
+  if (!state?.configured?.voice) return demoNote('Голос не подключён на сервере (ключ ElevenLabs) — пишите текстом.');
+  stopVoice();
+  try { micStream = await navigator.mediaDevices.getUserMedia({ audio:true }); } catch { return demoNote('Нет доступа к микрофону.'); }
+  const mime = ['audio/webm;codecs=opus', 'audio/mp4', 'audio/webm'].find(m => window.MediaRecorder?.isTypeSupported?.(m)) || '';
+  rec = new MediaRecorder(micStream, mime ? { mimeType:mime } : undefined); chunks = [];
+  rec.ondataavailable = e => e.data.size && chunks.push(e.data);
+  rec.start();
+  actx = actx || new (window.AudioContext || window.webkitAudioContext)();
+  const an = actx.createAnalyser(); actx.createMediaStreamSource(micStream).connect(an);
+  const buf = new Uint8Array(an.frequencyBinCount);
+  micTick = setInterval(() => { an.getByteFrequencyData(buf); orb.target = Math.min(0.8, buf.reduce((a, b) => a + b, 0) / buf.length / 70); }, 60);
+  $('mic').classList.add('rec'); orbMode('listen');
+}
+async function recStop() {
+  if (!rec) return;
+  const r = rec; rec = null; clearInterval(micTick); orb.target = 0;
+  $('mic').classList.remove('rec');
+  await new Promise(res => { r.onstop = res; r.stop(); });
+  micStream.getTracks().forEach(t => t.stop());
+  const blob = new Blob(chunks, { type:r.mimeType || 'audio/webm' });
+  if (blob.size < 2000) { orbMode('idle'); return; }
+  orbMode('think');
+  try {
+    const resp = await fetch(API + '/stt', { method:'POST', headers:{ 'content-type':blob.type }, body:blob });
+    const d = await resp.json();
+    if (!resp.ok || !d.text) { orbMode('idle'); return demoNote(d.error || 'Не расслышал — попробуйте ещё раз.'); }
+    await ask(d.text, { voice:true });
+  } catch { orbMode('idle'); demoNote('Сервер ассистента недоступен.'); }
+}
+const mic = $('mic');
+mic.addEventListener('pointerdown', e => { e.preventDefault(); mic.setPointerCapture?.(e.pointerId); recStart(); });
+mic.addEventListener('pointerup', recStop); mic.addEventListener('pointercancel', recStop);
+mic.addEventListener('keydown', e => { if ((e.key === ' ' || e.key === 'Enter') && !e.repeat) { e.preventDefault(); recStart(); } });
+mic.addEventListener('keyup', e => { if (e.key === ' ' || e.key === 'Enter') recStop(); });
+
+/* ---------- live chat ---------- */
+let busy = false;
+async function ask(text, { voice = false, look = false } = {}) {
+  if (busy || !text.trim()) return;
+  busy = true; stopVoice();
+  const image = (look || $('camAlways').checked) ? frame() : null;
+  bubble('me', text, { seen:Boolean(image) });
+  if (image) await flashLook();
+  orbMode('think');
+  const el = bubble('twin', ''); el.classList.add('typing');
+  let reply = '';
+  try {
+    const r = await fetch(API + '/chat', { method:'POST', headers:{ 'content-type':'application/json' }, body:JSON.stringify({ text, voice, twin:true, ...(image ? { image } : {}) }) });
+    if (!r.ok || !/event-stream/.test(r.headers.get('content-type') || '')) {
+      const d = await r.json().catch(() => ({})); throw new Error(d.error || 'Двойник не ответил.');
+    }
+    const rd = r.body.getReader(), dec = new TextDecoder(); let buf = '';
+    for (;;) {
+      const { value, done } = await rd.read(); if (done) break;
+      buf += dec.decode(value, { stream:true });
+      let i; while ((i = buf.indexOf('\n\n')) >= 0) {
+        const line = buf.slice(0, i).replace(/^data: /, ''); buf = buf.slice(i + 2);
+        let ev; try { ev = JSON.parse(line); } catch { continue; }
+        if (ev.t === 'delta') { reply += ev.text; el.textContent = reply; $('log').scrollTop = $('log').scrollHeight; }
+        if (ev.t === 'task') card(head('Задача агенту', 'Передано на рабочий стол офиса', 'вживую') + `<div class="flow"><span class="on">Двойник</span>${ICON.arrow}<span>Диспетчер</span>${ICON.arrow}<span>Агент</span>${ICON.arrow}<span>На проверку к вам</span></div><p class="note">Статус — в офисе, «Мой стол» → «В работе».</p>`);
+        if (ev.t === 'error') throw new Error(ev.message);
+      }
+    }
+  } catch (e) { reply = ''; el.textContent = e.message || 'Ошибка.'; }
+  el.classList.remove('typing');
+  if (reply && (image || reply.length > 280 || /\n\s*([-•*]|\d+[.)])\s/.test(reply))) card(head('Двойник', image ? 'Что я вижу' : 'Ответ', image ? 'по кадру с камеры' : 'вживую') + `<div class="md">${md(reply)}</div>`);
+  if (reply && (voice || $('sound').checked)) await speakOwner(reply);
+  orbMode('idle'); busy = false;
+}
+$('compose').addEventListener('submit', e => {
+  e.preventDefault();
+  const t = $('input').value.trim(); if (!t) return;
+  $('input').value = ''; autosize();
+  if (live) ask(t); else { tab('talk'); bubble('me', t); demoNote('Это демо: вживую двойник отвечает владельцу офиса после входа по паролю. Посмотрите сценарий — кнопка «Показать, как это работает».'); }
+});
+$('input').addEventListener('keydown', e => { if (e.key === 'Enter' && !e.shiftKey) { e.preventDefault(); $('compose').requestSubmit(); } });
+const autosize = () => { const t = $('input'); t.style.height = 'auto'; t.style.height = Math.min(120, t.scrollHeight) + 'px'; };
+$('input').addEventListener('input', autosize);
+$('lookBtn').onclick = () => live ? ask('Посмотри на меня и комнату: что поправить перед съёмкой рилса — свет, ракурс, образ, фон?', { look:true }) : demoStep(DEMO.find(s => s.vision));
+async function demoNote(text) { const el = bubble('twin', ''); await typeInto(el, text, 10); }
+
+/* ---------- demo scenario ---------- */
+// An example of a morning with the twin. The cards follow the real rules of the skills
+// (remake-top-reel, carousel-pro); topics and texts are examples, not Ilia's data.
+const DEMO = [
+  { me:'Доброе утро. Что у нас сегодня?',
+    twin:'Доброе утро! На сегодня три главных дела: снять рилс-ремейк по вашему залёту, принять у агентов то, что они сделали за ночь, и разобрать вопросы из Директа. Начнём со съёмки?',
+    card:() => head('План дня', 'Три главных дела', 'пример') + list([
+      { t:'Снять рилс-ремейк', s:'версия 2.0 вашего топового рилса — тот же каркас и кодовое слово, сильнее хук' },
+      { t:'Принять работы агентов', s:'рабочий стол офиса → «В работе»: что принесли на проверку' },
+      { t:'Разобрать Директ', s:'вопросы, на которые ИИ-менеджер не ответил сам' }]) },
+  { me:'Давай. Что снимаем?',
+    twin:'Предлагаю три варианта. Первый — ремейк залёта: та же тема и то же кодовое слово, но новый хук другого типа. Второй — карусель-ремикс вашей вышедшей карусели с новой обложкой. Третий — говорящая голова «три ошибки» с парами «антипример — пример».',
+    card:() => head('Идеи на сегодня', 'Что снять и выложить', 'пример') + list([
+      { t:'Ремейк залёта — рилс', s:'скилл remake-top-reel: отбор по просмотрам, комментариям и репостам → сценарий 2.0' },
+      { t:'Карусель-ремикс', s:'скилл carousel-pro: новая обложка, хук и CTA, 8 слайдов' },
+      { t:'Говорящая голова «3 ошибки»', s:'контракт в первые 8 секунд, пункты «антипример → пример», CTA с кодовым словом' }]) },
+  { me:'Покажи сценарий первого.',
+    twin:'Вот каркас. Хук другого типа, чем у оригинала, контракт в первые восемь секунд, три плотных пункта и то же кодовое слово — на нём держится воронка в Директе, его не меняем.',
+    card:() => head('Сценарий 2.0', 'Ремейк залёта — каркас', 'пример') + `<dl class="script">
+      <dt>Хук · запрет</dt><dd><b>«Удаляй ChatGPT, если ведёшь блог»</b> — другой тип хука, та же боль, что у оригинала</dd>
+      <dt>Контракт</dt><dd>«Вот три инструмента, которые делают это за тебя — досмотри до третьего»</dd>
+      <dt>Пункты</dt><dd>3 пункта, в каждом пара «антипример → пример», микро-крючок к следующему</dd>
+      <dt>Пруф</dt><dd>только реальные цифры оригинала — новые не выдумываем</dd>
+      <dt>CTA</dt><dd>«Напиши <b>КОДОВОЕ СЛОВО</b> — пришлю в Директ» — слово то же, что в оригинале</dd>
+      <dt>Длина</dt><dd>±25% от оригинала</dd></dl><p class="note">Правила — из скилла remake-top-reel (references/script-rules.md).</p>` },
+  { me:'Посмотри, нормально я в кадре?', vision:true,
+    twin:'Вижу вас. Свет из окна падает сбоку — повернитесь чуть к окну, на лице тень. Камеру поднимите до уровня глаз, а кружку с края кадра лучше убрать.',
+    card:shot => head('Кадр перед съёмкой', 'Что поправить', shot ? 'по вашему кадру · демо-подсказки' : 'пример') + `<div class="vision"><div class="shot">${shot ? `<img src="${shot}" alt="Кадр с камеры">` : '<div style="position:absolute;inset:0;background:linear-gradient(135deg,#2a2c33,#15171c)"></div>'}<span class="pin" style="left:22%;top:32%">1</span><span class="pin" style="left:48%;top:12%">2</span><span class="pin" style="left:80%;top:72%">3</span></div>` + list([
+      { t:'Свет', s:'повернитесь к окну на 15–20°, чтобы убрать тень с лица' },
+      { t:'Ракурс', s:'камера на уровне глаз, глаза — на верхней трети кадра' },
+      { t:'Фон', s:'уберите лишний предмет с края кадра' }]) + `<p class="note">${shot ? 'В демо подсказки примерные. Вживую двойник смотрит на этот кадр через Claude и говорит по нему.' : 'Включите камеру — и в демо двойник «посмотрит» на ваш кадр.'}</p>` },
+  { me:'Собери контент-план на неделю.',
+    twin:'Собрал черновик недели: рилсы через день, между ними карусели, сторис каждый день. Точнее подстрою, когда расскажете мне рубрики и дни публикаций — этого в профиле пока нет.',
+    card:() => head('Контент-план', 'Неделя — черновик', 'пример') + `<div class="week">${[['Пн', [['f-reel', 'Рилс'], ['f-st', 'Сторис']], 'ремейк залёта'], ['Вт', [['f-car', 'Карусель'], ['f-st', 'Сторис']], 'ремикс карусели'], ['Ср', [['f-reel', 'Рилс'], ['f-st', 'Сторис']], '3 ошибки'], ['Чт', [['f-car', 'Карусель'], ['f-st', 'Сторис']], 'залёт конкурента'], ['Пт', [['f-reel', 'Рилс'], ['f-st', 'Сторис']], 'кейс агента'], ['Сб', [['f-st', 'Сторис']], 'закулисье'], ['Вс', [['f-st', 'Сторис']], 'итоги недели']].map(([d, f, t]) => `<div><b>${d}</b>${f.map(([c, n]) => `<i class="${c}">${n}</i>`).join('')}${t}</div>`).join('')}</div><p class="note">Рубрики, частота и дни — после заполнения профиля (этап 1 плана).</p>` },
+  { me:'Отлично. Отдай первый сценарий в монтаж.',
+    twin:'Передал на рабочий стол офиса. Диспетчер выберет агента монтажа, он сделает рилс в стиле «Студии Кадрика» и принесёт вам на проверку — увидите во вкладке «В работе».',
+    card:() => head('Задача агенту', 'Монтаж рилса-ремейка', 'пример') + `<div class="flow"><span class="on">Двойник</span>${ICON.arrow}<span>Диспетчер</span>${ICON.arrow}<span>Агент монтажа</span>${ICON.arrow}<span>На проверку к вам</span></div><p class="note">Вживую это инструмент create_task ассистента: задача реально встаёт в очередь исполнителя на сервере.</p>` },
+];
+let demoRun = 0;
+async function demoStep(s, run = demoRun) {
+  if (!s) return;
+  bubble('me', s.me);
+  await sleep(500); if (run !== demoRun) return;
+  let shot = null;
+  if (s.vision) { shot = frame(640); await flashLook(); }
+  orbMode('think'); await sleep(700); if (run !== demoRun) return;
+  card(s.card(shot));
+  const el = bubble('twin', '');
+  const speech = speakBrowser(s.twin);
+  await typeInto(el, s.twin, 22);
+  await speech; orbMode('idle');
+}
+$('demoBtn').onclick = async () => {
+  const run = ++demoRun; stopVoice(); tab('talk');
+  $('log').innerHTML = ''; $('cards').innerHTML = '';
+  for (const s of DEMO) { if (run !== demoRun) return; await demoStep(s, run); await sleep(900); }
+  if (run === demoRun) await demoNote(live ? 'Это был сценарий-пример. Теперь спросите меня о чём угодно — отвечу вживую.' : 'Так выглядит утро с двойником. Вживую он отвечает владельцу офиса: войдите паролем — и говорите с ним голосом.');
+};
+
+/* ---------- knowledge tab ---------- */
+const STATIC_SOURCES = [
+  { title:'Профиль Ильи', file:'apps/hq-office/assistant/twin-profile.md' },
+  { title:'Как Илья пишет сценарии рилсов (скилл remake-top-reel)', file:'.claude/skills/remake-top-reel/references/script-rules.md' },
+  { title:'Стили монтажа «Студии Кадрика»', file:'.claude/skills/remake-top-reel/references/styles.md' },
+  { title:'Правила каруселей @ilia.paliy (скилл carousel-pro)', file:'.claude/skills/carousel-pro/references/carousel-rules.md' },
+];
+const STATIC_GAPS = ['Аудитория', 'Tone of voice', 'Контент-план и рубрики', 'Стратегия и цели'];
+const GAP_HINT = {
+  'Аудитория':'кто смотрит, их боли, что покупают, частые вопросы в Директе',
+  'Tone of voice':'на «ты» или «вы», любимые слова и запреты, 3–5 эталонных текстов',
+  'Контент-план и рубрики':'рубрики, частота, дни публикаций, текущие кодовые слова',
+  'Стратегия и цели':'цели квартала, продукт в фокусе, цифры, к которым идём',
+};
+function renderKnowledge() {
+  const t = state?.twin;
+  const base = [
+    { ic:ICON.office, title:'Данные живого офиса', sub:'отделы, агенты, история реальных задач с доказательствами', file:'office.config.js, agent-content.js, tasks.js…' },
+    { ic:ICON.doc, title:'Карта проектов', sub:'все продукты, домены, боты и серверы', file:'CLAUDE.md монорепозитория' },
+    { ic:ICON.brain, title:'Долгая память', sub:state?.owner ? (state.memory ? 'есть заметки о прошлых разговорах' : 'пока пусто — копится из разговоров') : 'копится из разговоров с владельцем', file:'assistant/.data (на сервере)' },
+  ];
+  const skills = (t?.sources || STATIC_SOURCES).map(s => ({ ic:ICON.doc, title:s.title, sub:s.chars ? `${Math.round(s.chars / 100) / 10} тыс. знаков` : 'читается на сервере перед ответом', file:s.file }));
+  $('sources').innerHTML = [...skills, ...base].map(s => `<div class="src"><span class="ic">${s.ic}</span><div><b>${esc(s.title)}</b><small>${esc(s.sub)}</small><code>${esc(s.file)}</code></div></div>`).join('');
+  const gaps = t?.empty || STATIC_GAPS;
+  $('gaps').innerHTML = gaps.length ? gaps.map(g => `<div class="src"><span class="ic" style="color:var(--warn);background:rgba(255,176,32,.13)">${ICON.gap}</span><div><b>${esc(g)} <span class="badge b-con">не заполнено</span></b><small>${esc(GAP_HINT[g] || '')}</small></div></div>`).join('')
+    : `<div class="src"><span class="ic">${ICON.check}</span><div><b>Профиль заполнен</b><small>двойник знает аудиторию, стиль, контент-план и стратегию</small></div></div>`;
+}
+
+/* ---------- roadmap ---------- */
+const STAGES = [
+  { when:'Этап 0', time:'сейчас', now:true, title:'Концепт: страница и первый мозг',
+    p:'Отдельная вкладка офиса, режим двойника в ассистенте, первые знания и зрение по кнопке.',
+    items:[['Страница «Двойник» в hq2: сцена, камера, разговор, орб', 1], ['Режим twin в /api/assistant/chat: роль двойника + знания', 1], ['Знания из скиллов: сценарии, стили монтажа, карусели', 1], ['Кадр с камеры по кнопке или с каждым сообщением', 1], ['Голос туда и обратно: ElevenLabs, клон голоса Ильи', 1], ['Демо-сценарий для вебинара: утро с двойником', 1]] },
+  { when:'Этап 1', time:'1–2 недели', title:'Знает меня по-настоящему',
+    p:'Двойник сам берёт у вас интервью и собирает профиль, а потом учится на ваших реальных текстах.',
+    items:[['Интервью-режим: двойник задаёт вопросы и заполняет профиль', 0], ['Библиотека эталонов: 30–50 лучших рилсов и каруселей с расшифровками (из remake-site)', 0], ['Метрики Instagram через Windsor: что залетело и почему', 0], ['Поиск по своим текстам и Telegram-каналу (RAG)', 0], ['Tone of voice как проверка: двойник сверяет текст со стилем перед отдачей', 0], ['Память о решениях и договорённостях — отдельным разделом', 0]] },
+  { when:'Этап 2', time:'2–3 недели', title:'Живой разговор без кнопки',
+    p:'Как в референсе: просто говорите, двойник отвечает почти сразу и его можно перебить.',
+    items:[['Потоковое распознавание речи и определение конца фразы', 0], ['Озвучка по предложениям, первый звук быстрее 1,5 с', 0], ['Перебивание: начали говорить — он замолкает', 0], ['Режим «громкая связь» на весь день, с паузой по слову', 0], ['Короткие голосовые ответы + подробная карточка на сцене', 0], ['Субтитры разговора — сразу заготовка для рилса', 0]] },
+  { when:'Этап 3', time:'3–4 недели', title:'Видит и помогает снимать',
+    p:'Двойник становится режиссёром съёмки: смотрит, подсказывает и сразу проверяет дубль.',
+    items:[['Зрение по изменению сцены: кадр уходит, только когда что-то поменялось', 0], ['Режим «Съёмка»: свет, ракурс, образ, фон — подсказки голосом', 0], ['Суфлёр: сценарий на экране в темпе вашей речи', 0], ['Запись дубля и разбор: хук, темп, слова-паразиты', 0], ['Показ экрана: двойник видит, что вы открыли, и помогает', 0], ['Дубль сразу в монтаж «Студии Кадрика»', 0]] },
+  { when:'Этап 4', time:'4–6 недель', title:'Действует сам: утро «что я сделал за ночь»',
+    p:'Ночью агенты работают по плану, утром двойник показывает готовое — как в референсе.',
+    items:[['Ночной прогон: ремейк залёта, карусель, разбор Директа — по расписанию', 0], ['Утренний бриф голосом: что готово, что на проверке, план дня', 0], ['Календарь и почта: съёмки, важные письма, напоминания', 0], ['Рассылки и автоматизации ChatPlace под инфоповоды', 0], ['Аналитика воронки: заявки и оплаты по UTM из funnel-analytics', 0], ['Всё через подтверждение: двойник предлагает — вы говорите «ок»', 0]] },
+  { when:'Этап 5', time:'дальше', title:'Лицо и везде с вами',
+    p:'У двойника появляется лицо, место в 3D-офисе и мобильная версия.',
+    items:[['Интерактивный аватар HeyGen с вашим лицом и голосом', 0], ['Двойник в 3D-офисе: сидит за вашим столом, к нему подходят агенты', 0], ['Telegram Mini App: двойник в телефоне', 0], ['Режим для команды: двойник отвечает руководителям от вашего имени в рамках правил', 0], ['Продукт для клиентов: «двойник эксперта» как услуга AI Growth Office', 0], ['Еженедельный отчёт: что двойник сделал и сколько времени сэкономил', 0]] },
+];
+$('stages').innerHTML = STAGES.map(s => `<div class="panel stg${s.now ? ' now' : ''}"><div class="when"><b>${s.when}</b><span>${s.time}</span>${s.now ? '<span class="badge b-ok" style="margin:0;width:max-content">готово в этом PR</span>' : ''}</div><div><h3>${esc(s.title)}</h3><p>${esc(s.p)}</p><ul>${s.items.map(([t, d]) => `<li${d ? ' class="done"' : ''}>${esc(t)}</li>`).join('')}</ul></div></div>`).join('');
+
+renderKnowledge();
+loadState();
+window.__twin = { DEMO, STAGES, ask, frame };
+})();
+</script>
+</body>
+</html>

@@ -10,11 +10,13 @@
 
      GET  state            who is talking, what is configured, recent history
      POST login {password} / logout
-     POST chat {text, voice}   → text/event-stream: {t:'delta',text} … {t:'done'} | {t:'error',message}
+     POST chat {text, voice, twin, image}   → text/event-stream: {t:'delta',text} … {t:'done'} | {t:'error',message}
      POST stt  (owner, raw audio body) → {text}
      POST tts  (owner, {text}) → audio/mpeg
      GET  voices / POST voice {id}  (owner) — pick the cloned voice once
      GET  health
+   twin:true (owner) — the «Двойник» page (twin/): the twin's prompt and knowledge of Ilia's content
+   (twin.mjs); image — a JPEG frame of the owner's camera (data URL), seen in this turn only.
      *    desk/…  the working desk: tasks for agents (desk.mjs)
 
    Env: ANTHROPIC_API_KEY, ELEVENLABS_API_KEY, HQ_ASSISTANT_PASSWORD (no password — demo only),
@@ -32,6 +34,7 @@ import Anthropic from '@anthropic-ai/sdk';
 import { loadOffice, loadProjectMap, moscowDate, humanDate } from './office.mjs';
 import { voiceConfigured, transcribe, listVoices, guessOwnerVoice, speak } from './voice.mjs';
 import { createDesk } from './desk.mjs';
+import { loadTwin, TWIN_PROMPT } from './twin.mjs';
 
 const HERE = path.dirname(fileURLToPath(import.meta.url));
 const PORT = Number(process.env.PORT || 8787);
@@ -210,16 +213,18 @@ async function compact() {
 /* ---------- chat ---------- */
 
 async function chat(req, res, isOwnerTalk) {
-  const b = await jsonBody(req);
+  const b = await jsonBody(req, isOwnerTalk ? 3e6 : 16e3);
   const text = String(b.text || '').trim().slice(0, isOwnerTalk ? 4000 : 600);
   const voice = isOwnerTalk && b.voice === true;
+  const twin = isOwnerTalk && b.twin === true;
+  const frame = twin && typeof b.image === 'string' ? /^data:image\/jpeg;base64,([A-Za-z0-9+/=]{100,2800000})$/.exec(b.image)?.[1] : null;
   if (!text) return json(res, 400, { error:'Пустое сообщение.' });
   if (!claude) return json(res, 503, { error:'Ассистент ещё не подключён к Claude.' });
   const guest = isOwnerTalk ? null : guestOf(req, res);
   if (!isOwnerTalk && (limited('g:' + clientIp(req), 20, 3600e3) || limited('g:all', 400, 864e5)))
     return json(res, 429, { error:'В демо-режиме лимит вопросов на сейчас исчерпан — загляните позже.' });
   const turns = isOwnerTalk ? owner.turns.slice(-HISTORY) : guest.turns.slice(-12);
-  let messages = [...turns.map(t => ({ role:t.role, content:t.text })), { role:'user', content:text }, { role:'system', content:nowNote(voice, isOwnerTalk) }];
+  let messages = [...turns.map(t => ({ role:t.role, content:t.text })), { role:'user', content:frame ? [{ type:'image', source:{ type:'base64', media_type:'image/jpeg', data:frame } }, { type:'text', text:'(кадр с камеры Ильи — сейчас)\n' + text }] : text }, { role:'system', content:nowNote(voice, isOwnerTalk) }];
   const ids = isOwnerTalk ? desk.agents().map(a => a.id) : [];
   const tools = isOwnerTalk ? [taskTool(ids)] : undefined;
 
@@ -233,7 +238,7 @@ async function chat(req, res, isOwnerTalk) {
     for (let round = 0; round < 3; round++) {
       stream = claude.beta.messages.stream({
         model:MODEL, max_tokens:16000, ...FALLBACK, output_config:{ effort:'low' },
-        system:[{ type:'text', text:isOwnerTalk ? OWNER_PROMPT : GUEST_PROMPT }, ...knowledge(isOwnerTalk)], messages, ...(tools ? { tools } : {}),
+        system:[{ type:'text', text:isOwnerTalk ? OWNER_PROMPT : GUEST_PROMPT }, ...(twin ? [{ type:'text', text:TWIN_PROMPT }] : []), ...knowledge(isOwnerTalk), ...(twin ? [{ type:'text', text:loadTwin().text, cache_control:{ type:'ephemeral' } }] : [])], messages, ...(tools ? { tools } : {}),
       });
       for await (const ev of stream) if (ev.type === 'content_block_delta' && ev.delta.type === 'text_delta') { reply += ev.delta.text; send({ t:'delta', text:ev.delta.text }); }
       const msg = await stream.finalMessage();
@@ -269,6 +274,7 @@ const ROUTES = {
     json(res, 200, {
       owner:o, configured:{ chat:Boolean(claude), voice:voiceConfigured(), login:Boolean(PASSWORD) },
       voice:v ? { id:v.id, name:v.name } : null, memory:o ? Boolean(owner.memory) : false,
+      twin:o ? (({ sources, empty }) => ({ sources, empty }))(loadTwin()) : null,
       history:(o ? owner.turns : guestOf(req, res).turns).slice(-30).map(t => ({ role:t.role, text:t.text, at:t.at })),
     });
   },
@@ -318,7 +324,7 @@ const ROUTES = {
 // local runs (SERVE_STATIC=1): the office itself on the same origin as the API
 const MIME = { '.html':'text/html; charset=utf-8', '.js':'text/javascript; charset=utf-8', '.css':'text/css', '.json':'application/json', '.jpg':'image/jpeg', '.png':'image/png', '.svg':'image/svg+xml', '.webp':'image/webp', '.mp4':'video/mp4', '.glb':'model/gltf-binary' };
 function serveStatic(req, res, p) {
-  const rel = path.normalize(decodeURIComponent(p === '/' ? '/index.html' : p)).replace(/^([/\\])+/, '');
+  const rel = path.normalize(decodeURIComponent(p.endsWith('/') ? p + 'index.html' : p)).replace(/^([/\\])+/, '');
   const file = path.join(OFFICE_DIR, rel);
   if (!file.startsWith(OFFICE_DIR) || /^(assistant|sync|deploy|runner)([/\\]|$)/.test(rel) || !fs.existsSync(file) || !fs.statSync(file).isFile()) return json(res, 404, { error:'not found' });
   res.writeHead(200, { 'content-type':MIME[path.extname(file)] || 'application/octet-stream' });
