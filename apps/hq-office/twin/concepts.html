@@ -46,7 +46,7 @@
   .talk-go{position:relative;display:flex;align-items:center;gap:9px;height:48px;padding:0 18px 0 14px;border-radius:99px;background:#f4f1ec;color:#0a0a0a;font-weight:800;font-size:14.5px}
   .talk-go svg{width:19px;height:19px;fill:none;stroke:currentColor;stroke-width:2;stroke-linecap:round}
   .talk-go .ring{position:absolute;inset:-4px;border-radius:99px;border:2px solid #e8d5b8;opacity:0}
-  .talk-go.on{background:#e8d5b8}
+  .talk-go.on{background:#e8d5b8;box-shadow:0 0 0 calc(var(--lv,0) * 12px) rgba(232,213,184,.35);transition:box-shadow .08s}
   .talk-go.on .ring{opacity:1;animation:ring 1.6s ease-out infinite}
   .talk-go.hear .ring{animation-duration:.6s}
   @keyframes ring{0%{transform:scale(1);opacity:.9}100%{transform:scale(1.25);opacity:0}}
@@ -866,16 +866,24 @@ function listOf(text) {
 }
 
 /* ---------- voice out: sentence by sentence, the first one while the rest is still being written ---------- */
-let actx = null, curAudio = null;
+let actx = null, curSrc = null;
 const ctx = () => (actx = actx || new (window.AudioContext || window.webkitAudioContext)());
 const tts = { gen:0, q:[], running:null };
-function stopVoice() { tts.gen++; tts.q = []; try { speechSynthesis.cancel(); } catch {} if (curAudio) { curAudio.pause(); curAudio = null; } audioLv = null; }
+function stopVoice() { tts.gen++; tts.q = []; try { speechSynthesis.cancel(); } catch {} try { curSrc?.stop(); } catch {} curSrc = null; audioLv = null; }
+// phones play sound only after a tap: unlock Web Audio and speech synthesis on the first one
+let unlocked = false;
+function unlockAudio() {
+  const c = ctx(); try { c.resume(); } catch {}
+  if (unlocked) return; unlocked = true;
+  try { const s = c.createBufferSource(); s.buffer = c.createBuffer(1, 1, 22050); s.connect(c.destination); s.start(0); } catch {}
+  try { if ('speechSynthesis' in window) { const u = new SpeechSynthesisUtterance(' '); u.volume = 0; speechSynthesis.speak(u); } } catch {}
+}
 function speakPart(text) {
   if (!$('sound').checked || !text.trim()) return;
   const gen = tts.gen;
   const job = server?.voice
-    ? fetch(API + '/tts', { method:'POST', headers:{ 'content-type':'application/json' }, body:JSON.stringify({ text }) }).then(r => r.ok ? r.blob() : null).catch(() => null)
-    : Promise.resolve(text);   // no cloned voice: the browser's voice
+    ? fetch(API + '/tts', { method:'POST', headers:{ 'content-type':'application/json' }, body:JSON.stringify({ text }) }).then(r => r.ok ? r.blob() : text).catch(() => text)
+    : Promise.resolve(text);   // no cloned voice (or it failed): the browser's voice
   tts.q.push(job);
   if (!tts.running) tts.running = (async () => {
     while (tts.q.length && gen === tts.gen) {
@@ -897,16 +905,15 @@ function browserSay(text) {
     setTimeout(done, 1500 + text.length * 90);
   });
 }
+// Web Audio, not <audio>: iOS lets an unlocked context play at any time, an <audio> element only from a tap
 async function playBlob(blob) {
-  const a = new Audio(URL.createObjectURL(blob)); curAudio = a;
-  try {
-    const src = ctx().createMediaElementSource(a), an = actx.createAnalyser(); an.fftSize = 256; src.connect(an); an.connect(actx.destination);
-    const buf = new Uint8Array(an.frequencyBinCount);
-    const tick = () => { if (curAudio !== a) return; an.getByteFrequencyData(buf); audioLv = Math.min(1, buf.reduce((x, y) => x + y, 0) / buf.length / 70); requestAnimationFrame(tick); };
-    await a.play(); tick();
-    await new Promise(r => { a.onended = r; a.onerror = r; a.onpause = r; });
-  } catch {}
-  if (curAudio === a) { curAudio = null; audioLv = null; }
+  const c = ctx(); if (c.state !== 'running') { try { await c.resume(); } catch {} }
+  let data; try { data = await c.decodeAudioData(await blob.arrayBuffer()); } catch { return; }
+  const src = c.createBufferSource(), an = c.createAnalyser(); an.fftSize = 256; src.buffer = data; src.connect(an); an.connect(c.destination);
+  curSrc = src; const buf = new Uint8Array(an.frequencyBinCount);
+  const tick = () => { if (curSrc !== src) return; an.getByteFrequencyData(buf); audioLv = Math.min(1, buf.reduce((x, y) => x + y, 0) / buf.length / 70); requestAnimationFrame(tick); };
+  await new Promise(r => { src.onended = r; src.start(0); tick(); });
+  if (curSrc === src) { curSrc = null; audioLv = null; }
 }
 const voiceDone = async () => { while (tts.running) await tts.running; };
 function interrupt() { stopVoice(); setState(convo.on ? 'listen' : 'idle'); hint('Перебили — слушаю.'); listenAgain(); }
@@ -979,11 +986,16 @@ async function ask(text, { look = false } = {}) {
   listenAgain();
 }
 
-/* ---------- conversation mode: speak freely, the end of a phrase sends it ---------- */
+/* ---------- conversation mode: speak freely, the end of a phrase sends it ----------
+   Desktop Chrome/Edge: the browser's speech recognition (instant). Phones and the rest: the page listens
+   by voice activity — speech starts a recording, a pause sends it to /stt (ElevenLabs Scribe). Phones
+   can't restart browser recognition without a tap, so they always use the second way. */
 const SR = window.SpeechRecognition || window.webkitSpeechRecognition;
+const MOBILE = /iPhone|iPad|iPod|Android/i.test(navigator.userAgent) || (navigator.maxTouchPoints > 1 && /Macintosh/.test(navigator.userAgent));
+const USE_SR = Boolean(SR) && !MOBILE;
 const convo = { on:false, rec:null, stream:null, vad:null };
 function pauseListening() { try { convo.rec?.abort(); } catch {} convo.recOn = false; }
-function listenAgain() { if (!convo.on || busy) return; if (SR) startRec(); }
+function listenAgain() { if (!convo.on || busy) return; if (USE_SR) startRec(); else if (mode !== 'speak') setState('listen'); }
 function startRec() {
   if (convo.recOn) return;
   const rec = convo.rec = new SR(); rec.lang = 'ru-RU'; rec.interimResults = true; rec.continuous = false; rec.maxAlternatives = 1;
@@ -991,46 +1003,69 @@ function startRec() {
     let fin = '', inter = '';
     for (const r of e.results) (r.isFinal ? (fin += r[0].transcript) : (inter += r[0].transcript));
     $('input').value = fin || inter; $('talkBtn').classList.add('hear');
-    if (mode === 'speak') interrupt();
     if (fin.trim()) { $('input').value = ''; $('talkBtn').classList.remove('hear'); ask(fin); }
   };
   rec.onend = () => { convo.recOn = false; $('talkBtn').classList.remove('hear'); if (convo.on && !busy) setTimeout(listenAgain, 120); };
-  rec.onerror = e => { convo.recOn = false; if (e.error === 'not-allowed') { convoOff(); hint('Нет доступа к микрофону — разрешите его в браузере.'); } };
+  rec.onerror = e => { convo.recOn = false; if (e.error === 'not-allowed' || e.error === 'service-not-allowed') { convoOff(); hint('Нет доступа к микрофону — разрешите его в браузере.'); } };
   try { rec.start(); convo.recOn = true; } catch {}
 }
-// browsers without speech recognition: record by voice activity, transcribe on the server (ElevenLabs)
+const micLv = x => $('talkBtn').style.setProperty('--lv', Math.max(0, Math.min(1, x)).toFixed(2));
 async function startVad() {
-  try { convo.stream = await navigator.mediaDevices.getUserMedia({ audio:{ echoCancellation:true, noiseSuppression:true } }); } catch { convoOff(); return hint('Нет доступа к микрофону.'); }
-  const an = ctx().createAnalyser(); an.fftSize = 512; actx.createMediaStreamSource(convo.stream).connect(an);
-  const buf = new Uint8Array(an.fftSize); let rec = null, chunks = [], loud = 0, quiet = 0;
+  try { convo.stream = await navigator.mediaDevices.getUserMedia({ audio:{ echoCancellation:true, noiseSuppression:true, autoGainControl:true } }); }
+  catch { convoOff(); return hint(MOBILE ? 'Нет доступа к микрофону. На iPhone: «аА» в адресной строке → Настройки веб-сайта → Микрофон → Разрешить, затем снова «Говорить».' : 'Нет доступа к микрофону — разрешите его в браузере.'); }
+  const c = ctx(); try { await c.resume(); } catch {}
+  const an = c.createAnalyser(); an.fftSize = 1024; c.createMediaStreamSource(convo.stream).connect(an);
+  const buf = new Float32Array(an.fftSize);
+  const mime = ['audio/mp4', 'audio/webm;codecs=opus', 'audio/webm'].find(m => window.MediaRecorder?.isTypeSupported?.(m)) || '';
+  let rec = null, chunks = [], loud = 0, quiet = 0, floor = 0.004, startedAt = 0, barge = 0;
   convo.vad = setInterval(async () => {
-    an.getByteTimeDomainData(buf); let sum = 0; for (const v of buf) sum += (v - 128) ** 2; const rms = Math.sqrt(sum / buf.length);
-    if (busy || mode === 'speak') { loud = 0; return; }
-    if (rms > 9) { loud++; quiet = 0; } else quiet++;
-    if (!rec && loud > 3) { chunks = []; rec = new MediaRecorder(convo.stream); rec.ondataavailable = e => e.data.size && chunks.push(e.data); rec.start(); $('talkBtn').classList.add('hear'); setState('listen'); }
-    if (rec && quiet > 14) {
-      const r = rec; rec = null; loud = 0; $('talkBtn').classList.remove('hear');
+    an.getFloatTimeDomainData(buf); let sum = 0; for (const v of buf) sum += v * v; const rms = Math.sqrt(sum / buf.length);
+    const on = Math.max(0.012, floor * 3);
+    if (!rec && mode !== 'speak' && rms < on) floor = floor * 0.95 + rms * 0.05;   // the room's own noise
+    micLv(rms / on / 2);
+    if (mode === 'speak') {   // barge-in: a loud, steady voice over the twin's own (the mic cancels the echo)
+      barge = rms > Math.max(0.06, on * 4) ? barge + 1 : 0;
+      if (barge > 8) { barge = 0; interrupt(); }
+      return;
+    }
+    if (busy) { loud = 0; return; }
+    if (rms > on) { loud++; quiet = 0; } else { quiet++; if (!rec) loud = 0; }
+    if (!rec && loud >= 2) {
+      chunks = []; rec = new MediaRecorder(convo.stream, mime ? { mimeType:mime } : undefined);
+      rec.ondataavailable = e => e.data.size && chunks.push(e.data); rec.start(); startedAt = Date.now();
+      setState('listen'); $('talkBtn').classList.add('hear'); hint('Слышу вас…');
+    }
+    if (rec && (quiet >= 16 || Date.now() - startedAt > 30000)) {
+      const r = rec, long = Date.now() - startedAt; rec = null; loud = 0; $('talkBtn').classList.remove('hear');
       await new Promise(x => { r.onstop = x; r.stop(); });
-      const blob = new Blob(chunks, { type:r.mimeType || 'audio/webm' }); if (blob.size < 3000) return;
-      setState('think');
-      try { const resp = await fetch(API + '/stt', { method:'POST', headers:{ 'content-type':blob.type }, body:blob }); const d = await resp.json(); if (d.text) ask(d.text); else setState('listen'); } catch { setState('listen'); }
+      if (long < 700) { hint(''); return; }   // a cough or a click
+      const blob = new Blob(chunks, { type:r.mimeType || mime || 'audio/webm' });
+      busy = true; setState('think'); hint('Распознаю…');
+      let text = '', err = '';
+      try { const resp = await fetch(API + '/stt', { method:'POST', headers:{ 'content-type':blob.type }, body:blob }); const d = await resp.json().catch(() => ({})); text = (d.text || '').trim(); if (!resp.ok) err = d.error || 'Не удалось распознать речь.'; }
+      catch { err = 'Сервер ассистента недоступен.'; }
+      busy = false;
+      if (text) ask(text); else { setState('listen'); hint(err || 'Не расслышал — скажите ещё раз.'); }
     }
   }, 50);
 }
 async function convoOn() {
-  if (!live) return ask('…');
-  ctx().resume?.();
+  unlockAudio();
+  if (!live) {
+    hint('Чтобы говорить вживую, <b>войдите паролем владельца</b> — поле ниже.');
+    $('loginForm').scrollIntoView({ block:'center', behavior:'smooth' }); $('pass').focus(); return;
+  }
   convo.on = true; $('talkBtn').classList.add('on'); $('talkLbl').textContent = 'Слушаю';
-  setState('listen'); hint(SR ? 'Говорите — фраза отправится сама, когда вы замолчите. Ответ начнёт звучать сразу.' : 'Говорите — запись остановится на паузе и уйдёт на распознавание.');
-  if (SR) startRec(); else startVad();
+  setState('listen'); hint(USE_SR ? 'Говорите — фраза отправится сама, когда вы замолчите. Ответ начнёт звучать сразу.' : 'Говорите как обычно — на паузе фраза уйдёт сама. Перебить: начните говорить или тапните по сцене.');
+  if (USE_SR) startRec(); else await startVad();
 }
 function convoOff() {
-  convo.on = false; pauseListening(); clearInterval(convo.vad); convo.stream?.getTracks().forEach(t => t.stop()); convo.stream = null;
+  convo.on = false; pauseListening(); clearInterval(convo.vad); convo.stream?.getTracks().forEach(t => t.stop()); convo.stream = null; micLv(0);
   $('talkBtn').classList.remove('on', 'hear'); $('talkLbl').textContent = 'Говорить'; if (!busy) setState('idle'); hint('');
 }
 $('talkBtn').onclick = () => convo.on ? convoOff() : convoOn();
-$('compose').addEventListener('submit', e => { e.preventDefault(); const t = $('input').value; $('input').value = ''; ctx().resume?.(); ask(t); });
-$('lookBtn').onclick = () => ask('Посмотри на меня и комнату: что поправить перед съёмкой — свет, ракурс, образ, фон?', { look:true });
+$('compose').addEventListener('submit', e => { e.preventDefault(); const t = $('input').value; $('input').value = ''; unlockAudio(); ask(t); });
+$('lookBtn').onclick = () => unlockAudio() || ask('Посмотри на меня и комнату: что поправить перед съёмкой — свет, ракурс, образ, фон?', { look:true });
 
 /* ---------- owner login (same password as the office assistant) ---------- */
 async function loadState() {
@@ -1040,7 +1075,7 @@ async function loadState() {
   $('loginForm').hidden = live || !server?.configured?.login;
 }
 $('loginForm').addEventListener('submit', async e => {
-  e.preventDefault();
+  e.preventDefault(); unlockAudio();
   try {
     const r = await fetch(API + '/login', { method:'POST', headers:{ 'content-type':'application/json' }, body:JSON.stringify({ password:$('pass').value }) });
     const d = await r.json().catch(() => ({}));
