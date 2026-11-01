@@ -387,6 +387,8 @@
       <button class="btn" id="prev"><svg viewBox="0 0 24 24"><path d="M15 18l-6-6 6-6"/></svg>Дизайн</button>
       <button class="btn" id="next">Дизайн<svg viewBox="0 0 24 24"><path d="M9 18l6-6-6-6"/></svg></button>
       <button class="btn" id="interview" hidden title="Двойник задаст вопросы и запомнит ответы"><svg viewBox="0 0 24 24"><path d="M4 19.5V5a2 2 0 0 1 2-2h12v18H6a2 2 0 0 1-2-1.5zM8 7h6M8 11h6"/></svg>Интервью <span id="profCnt"></span></button>
+      <button class="btn" id="kbBtn" hidden title="Загрузить свои материалы: файлы .md/.txt/.csv/.html/.json и выгрузку claude.ai (conversations.json, projects.json)"><svg viewBox="0 0 24 24"><path d="M12 16V4M7 9l5-5 5 5M4 20h16"/></svg>Материалы <span id="kbCnt"></span></button>
+      <input type="file" id="kbFile" multiple accept=".md,.txt,.csv,.html,.htm,.json" hidden>
       <button class="btn" id="replay"><svg viewBox="0 0 24 24"><path d="M7 4.5v15l12-7.5z"/></svg>Демо</button>
       <span class="pos" id="pos"></span>
     </div>
@@ -968,6 +970,7 @@ async function ask(text, { look = false } = {}) {
         }
         if (ev.t === 'task') task = true;
         if (ev.t === 'memory') { memFlash(ev.title); }
+        if (ev.t === 'kb') { hint(`${ev.name === 'read_document' ? 'Читаю' : 'Ищу в базе'}: <b>${esc(ev.query)}</b>`); if (!CTX.uses.includes('Офис')) { CTX.uses = [...CTX.uses, 'Офис']; api.light?.(CTX.uses); } }
         if (ev.t === 'error') throw new Error(ev.message);
       }
     }
@@ -1111,7 +1114,8 @@ function afterTurn() { RT.barged = false; if (RT.pending) { const t = RT.pending
 
 /* the twin's memory: counter on «Интервью» and a short notice when it remembers */
 function showProfile() {
-  const p = server?.twin?.profile; $('interview').hidden = !live;
+  const p = server?.twin?.profile; $('interview').hidden = !live; $('kbBtn').hidden = !live;
+  const kb = server?.twin?.kb; $('kbCnt').textContent = kb ? `${kb.repo + kb.mine}` : '';
   if (!p) { $('profCnt').textContent = ''; return; }
   const gaps = ['audience', 'tone', 'content_plan', 'strategy'], done = gaps.filter(k => p[k]?.notes).length;
   $('profCnt').textContent = `${done}/4`;
@@ -1120,6 +1124,17 @@ function memFlash(title) {
   hint(`Запомнил: <b>${esc(title)}</b>`);
   if (server?.twin?.profile) { const k = Object.keys(server.twin.profile).find(x => server.twin.profile[x].title === title); if (k) server.twin.profile[k].notes++; showProfile(); }
 }
+$('kbBtn').onclick = () => $('kbFile').click();
+$('kbFile').onchange = async () => {
+  const files = [...$('kbFile').files]; $('kbFile').value = ''; let docs = 0, fails = [];
+  for (const [i, f] of files.entries()) {
+    hint(`Загружаю ${i + 1} из ${files.length}: <b>${esc(f.name)}</b>…`);
+    try { const r = await fetch(API + '/twin/kb?name=' + encodeURIComponent(f.name), { method:'POST', body:f }); const d = await r.json().catch(() => ({})); if (r.ok) docs += d.saved; else fails.push(`${f.name}: ${d.error || r.status}`); }
+    catch { fails.push(f.name + ': сеть'); }
+  }
+  await loadState();
+  hint(`Добавлено документов: <b>${docs}</b> — двойник уже может по ним искать.${fails.length ? ' Не получилось: ' + esc(fails.join('; ')) : ''}`);
+};
 $('interview').onclick = () => { unlockAudio(); ask('Проведи со мной интервью, чтобы узнать меня лучше: задавай по одному короткому вопросу, начни с того, чего ты обо мне ещё не знаешь.'); };
 
 async function convoOn() {

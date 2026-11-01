@@ -35,6 +35,7 @@ import { loadOffice, loadProjectMap, moscowDate, humanDate } from './office.mjs'
 import { voiceConfigured, transcribe, listVoices, guessOwnerVoice, speak, realtimeToken } from './voice.mjs';
 import { createDesk } from './desk.mjs';
 import { loadTwin, initTwin, remember, rememberTool, SECTIONS, TWIN_PROMPT } from './twin.mjs';
+import { initKb, loadKb, kbTools, runKbTool, ingest, listPrivate, removePrivate } from './kb.mjs';
 
 const HERE = path.dirname(fileURLToPath(import.meta.url));
 const PORT = Number(process.env.PORT || 8787);
@@ -49,6 +50,7 @@ const HISTORY = 40;          // last turns sent to Claude (20 exchanges)
 const COMPACT_AT = 60;       // beyond this the oldest turns go to long-term memory
 const claude = process.env.ANTHROPIC_API_KEY ? new Anthropic() : null;
 initTwin(DATA_DIR);
+initKb(DATA_DIR);
 const desk = createDesk({ claude, model:MODEL, fallback:FALLBACK, dataDir:DATA_DIR, officeDir:OFFICE_DIR, runnerToken:process.env.HQ_DESK_RUNNER_TOKEN || '' });
 
 /* ---------- prompts ---------- */
@@ -236,8 +238,8 @@ async function chat(req, res, isOwnerTalk) {
   const turns = isOwnerTalk ? owner.turns.slice(-HISTORY) : guest.turns.slice(-12);
   let messages = [...turns.map(t => ({ role:t.role, content:t.text })), { role:'user', content:frame ? [{ type:'image', source:{ type:'base64', media_type:'image/jpeg', data:frame } }, { type:'text', text:'(кадр с камеры Ильи — сейчас)\n' + text }] : text }, { role:'system', content:nowNote(voice, isOwnerTalk) }];
   const ids = isOwnerTalk ? desk.agents().map(a => a.id) : [];
-  const tools = isOwnerTalk ? [taskTool(ids), ...(twin ? [rememberTool()] : [])] : undefined;
-  const twinKnowledge = twin ? loadTwin().text : '';   // fixed for the turn: a remember mid-turn must not change the cached prefix
+  const tools = isOwnerTalk ? [taskTool(ids), ...(twin ? [rememberTool(), ...kbTools()] : [])] : undefined;
+  const twinKnowledge = twin ? loadTwin().text + '\n\n# База знаний Ильи (сводка; подробности — search_knowledge / read_document)\n' + loadKb().digest : '';   // fixed for the turn: a remember mid-turn must not change the cached prefix
 
   res.writeHead(200, { 'content-type':'text/event-stream; charset=utf-8', 'cache-control':'no-store', 'x-accel-buffering':'no' });
   const send = o => res.write(`data: ${JSON.stringify(o)}\n\n`);
@@ -246,7 +248,7 @@ async function chat(req, res, isOwnerTalk) {
   let reply = '';
   try {
     // the owner's turn may set tasks: stream, run create_task, stream the rest (at most 3 rounds)
-    for (let round = 0; round < 3; round++) {
+    for (let round = 0; round < (twin ? 7 : 3); round++) {
       stream = claude.beta.messages.stream({
         model:MODEL, max_tokens:16000, ...FALLBACK, output_config:{ effort:'low' },
         system:[{ type:'text', text:isOwnerTalk ? OWNER_PROMPT : GUEST_PROMPT }, ...(twin ? [{ type:'text', text:TWIN_PROMPT }] : []), ...knowledge(isOwnerTalk), ...(twin ? [{ type:'text', text:twinKnowledge, cache_control:{ type:'ephemeral' } }] : [])], messages, ...(tools ? { tools } : {}),
@@ -258,7 +260,10 @@ async function chat(req, res, isOwnerTalk) {
       const uses = msg.content.filter(b => b.type === 'tool_use');
       if (msg.stop_reason !== 'tool_use' || !uses.length) break;
       const results = [];
-      for (const u of uses) results.push(u.name === 'create_task' ? await runTaskTool(u, ids, send) : u.name === 'remember' && twin ? runRemember(u, send) : { type:'tool_result', tool_use_id:u.id, is_error:true, content:'Нет такого инструмента.' });
+      for (const u of uses) {
+        if (twin && (u.name === 'search_knowledge' || u.name === 'read_document')) send({ t:'kb', name:u.name, query:String(u.input?.query || u.input?.path || '').slice(0, 120) });
+        results.push(u.name === 'create_task' ? await runTaskTool(u, ids, send) : u.name === 'remember' && twin ? runRemember(u, send) : twin && (u.name === 'search_knowledge' || u.name === 'read_document') ? runKbTool(u) : { type:'tool_result', tool_use_id:u.id, is_error:true, content:'Нет такого инструмента.' });
+      }
       messages = [...messages, { role:'assistant', content:msg.content }, { role:'user', content:results }];
       if (reply && !/\s$/.test(reply)) { reply += '\n\n'; send({ t:'delta', text:'\n\n' }); }
     }
@@ -285,7 +290,7 @@ const ROUTES = {
     json(res, 200, {
       owner:o, configured:{ chat:Boolean(claude), voice:voiceConfigured(), login:Boolean(PASSWORD) },
       voice:v ? { id:v.id, name:v.name } : null, memory:o ? Boolean(owner.memory) : false,
-      twin:o ? (({ sources, empty, profile }) => ({ sources, empty, profile }))(loadTwin()) : null,
+      twin:o ? { ...(({ sources, empty, profile }) => ({ sources, empty, profile }))(loadTwin()), kb:(({ counts, builtAt }) => ({ ...counts, builtAt }))(loadKb()) } : null,
       history:(o ? owner.turns : guestOf(req, res).turns).slice(-30).map(t => ({ role:t.role, text:t.text, at:t.at })),
     });
   },
@@ -300,6 +305,20 @@ const ROUTES = {
   },
   'POST logout': (req, res) => json(res, 200, { ok:true }, { 'set-cookie':cookie('hqa', '', 0) }),
   'POST chat': (req, res, o) => chat(req, res, o),
+  // the twin's knowledge base: Ilia's own materials (files, the claude.ai export) — owner only
+  'GET twin/kb': (req, res, o) => o ? json(res, 200, { ...loadKb().counts, builtAt:loadKb().builtAt, mine:listPrivate() }) : json(res, 403, { error:'Только для владельца.' }),
+  'POST twin/kb': async (req, res, o) => {
+    if (!o) return json(res, 403, { error:'Только для владельца.' });
+    const name = path.basename(String(new URL(req.url, 'http://x').searchParams.get('name') || 'file.txt')).slice(0, 120);
+    const buf = await body(req, 80e6);
+    try { const saved = ingest(name, buf); json(res, 200, { ok:true, saved:saved.length, titles:saved.slice(0, 20).map(s => s.title) }); }
+    catch (e) { json(res, 400, { error:e.message }); }
+  },
+  'POST twin/kb/delete': async (req, res, o) => {
+    if (!o) return json(res, 403, { error:'Только для владельца.' });
+    const { id } = await jsonBody(req);
+    json(res, removePrivate(String(id || '')) ? 200 : 404, { ok:true });
+  },
   // phones: streaming recognition straight from the browser to ElevenLabs with a single-use token (15 min)
   'POST stt-token': async (req, res, o) => {
     if (!o) return json(res, 403, { error:'Голос доступен только владельцу.' });
