@@ -38,6 +38,11 @@
   `POST /api/assistant/stt-token`, PCM 16 кГц, VAD сервера), при сбое — запись по паузе → `/stt`. Память двойника —
   инструмент `remember` (только `twin:true`): что Илья рассказал об аудитории, tone of voice, рубриках, стратегии, фактах —
   в `DATA_DIR/twin-memory.json` на сервере, попадает в знания двойника; кнопка «Интервью» со счётчиком заполненного профиля.
+  База знаний двойника — `assistant/kb.mjs`: при выкладке `node kb.mjs build` собирает `twin-kb/index.json` (реестр проектов
+  `apps/command-center/registry/projects.mjs`, все README/CLAUDE.md/спеки монорепо, тексты лендингов, скиллы); сводка (реестр
+  + архитектура + список документов) всегда в промпте двойника, остальное — инструменты `search_knowledge` / `read_document`.
+  Свои материалы Илья загружает кнопкой «Материалы» (`POST /api/assistant/twin/kb?name=…`: .md/.txt/.csv/.html/.json и выгрузка
+  claude.ai — каждый чат и проект отдельным документом) в `DATA_DIR/kb-private` на сервере, в git они не попадают.
 - Рабочий стол — `assistant/desk.mjs` (`/api/assistant/desk/*`, только владелец): диспетчер (Claude по
   каталогу агентов) → очередь → исполнитель `runner/runner.py` (служба `hq-runner` под пользователем ботов
   на сервере `*.aicex.club`, Claude Code со скиллами команды, общий слот `~/.heavy-slot.lock`) → проверка

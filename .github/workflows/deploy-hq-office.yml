@@ -22,6 +22,13 @@ on:
       - 'apps/hq-office/**'
       - '.claude/skills/remake-top-reel/references/**'
       - '.claude/skills/carousel-pro/references/**'
+      # the twin's knowledge base is rebuilt when the business docs change
+      - 'apps/**/*.md'
+      - 'docs/**'
+      - 'landings/**'
+      - 'CLAUDE.md'
+      - 'apps/command-center/registry/projects.mjs'
+      - '.claude/skills/**'
       - '.github/workflows/deploy-hq-office.yml'
   workflow_dispatch:
 
@@ -43,7 +50,7 @@ jobs:
 
       - name: Check data files
         run: |
-          for f in office.config.js dept-content.js agent-content.js skills-library.js tasks.js tasks.auto.js works.js assistant/server.mjs assistant/office.mjs assistant/voice.mjs assistant/desk.mjs assistant/twin.mjs; do node --check "apps/hq-office/$f"; done
+          for f in office.config.js dept-content.js agent-content.js skills-library.js tasks.js tasks.auto.js works.js assistant/server.mjs assistant/office.mjs assistant/voice.mjs assistant/desk.mjs assistant/twin.mjs assistant/kb.mjs; do node --check "apps/hq-office/$f"; done
           python3 -m py_compile apps/hq-office/runner/runner.py && rm -rf apps/hq-office/runner/__pycache__
           node -e '
             global.window = {}; for (const f of ["office.config.js", "dept-content.js", "agent-content.js", "tasks.js", "tasks.auto.js", "works.js"])
@@ -78,6 +85,8 @@ jobs:
             mkdir -p "twin-skills/$(dirname "$f")" && cp "../../../.claude/skills/$f" "twin-skills/$f"
           done
           node -e 'import("./twin.mjs").then(m => { const t = m.loadTwin(); if (t.sources.length < 4) throw new Error("twin knowledge is incomplete"); console.log(t.sources.length + " twin sources, " + t.text.length + " chars"); })'
+          # the twin's knowledge base: registry, docs of every product, landing texts, skills (twin-kb/index.json)
+          node kb.mjs build ../../..
           node -e 'import("./office.mjs").then(m => { const o = m.loadOffice(".."); if (!o.tasks) throw new Error("no tasks"); console.log(o.tasks + " tasks, " + o.text.length + " chars of office knowledge"); })'
 
       - name: Upload release

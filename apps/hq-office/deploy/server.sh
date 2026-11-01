@@ -56,7 +56,7 @@ if [ -f "$A/releases/$REL/server.mjs" ]; then
   mkdir -p "$ROOT/assistant-data" && chown 1000:1000 "$ROOT/assistant-data"
   touch "$ROOT/assistant.env" && chmod 600 "$ROOT/assistant.env"
   docker rm -f "$ANAME" >/dev/null 2>&1 || true
-  docker run -d --name "$ANAME" --restart unless-stopped --network edge --memory 256m --user 1000:1000 \
+  docker run -d --name "$ANAME" --restart unless-stopped --network edge --memory 768m --user 1000:1000 \
     --env-file "$ROOT/assistant.env" --env-file "$ROOT/desk.env" -e OFFICE_DIR=/srv/current -e DATA_DIR=/data -e PROJECT_MAP=/srv/assistant/current/project-map.md \
     -v "$ROOT":/srv:ro -v "$ROOT/assistant-data":/data -w /srv/assistant/current node:22-alpine node server.mjs >/dev/null
   for i in $(seq 1 15); do
