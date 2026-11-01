@@ -32,9 +32,9 @@ import { Readable } from 'node:stream';
 import { fileURLToPath } from 'node:url';
 import Anthropic from '@anthropic-ai/sdk';
 import { loadOffice, loadProjectMap, moscowDate, humanDate } from './office.mjs';
-import { voiceConfigured, transcribe, listVoices, guessOwnerVoice, speak } from './voice.mjs';
+import { voiceConfigured, transcribe, listVoices, guessOwnerVoice, speak, realtimeToken } from './voice.mjs';
 import { createDesk } from './desk.mjs';
-import { loadTwin, TWIN_PROMPT } from './twin.mjs';
+import { loadTwin, initTwin, remember, rememberTool, SECTIONS, TWIN_PROMPT } from './twin.mjs';
 
 const HERE = path.dirname(fileURLToPath(import.meta.url));
 const PORT = Number(process.env.PORT || 8787);
@@ -48,6 +48,7 @@ const PREFIX = '/api/assistant';
 const HISTORY = 40;          // last turns sent to Claude (20 exchanges)
 const COMPACT_AT = 60;       // beyond this the oldest turns go to long-term memory
 const claude = process.env.ANTHROPIC_API_KEY ? new Anthropic() : null;
+initTwin(DATA_DIR);
 const desk = createDesk({ claude, model:MODEL, fallback:FALLBACK, dataDir:DATA_DIR, officeDir:OFFICE_DIR, runnerToken:process.env.HQ_DESK_RUNNER_TOKEN || '' });
 
 /* ---------- prompts ---------- */
@@ -169,6 +170,15 @@ async function runTaskTool(u, ids, send) {
     : `Задачу поставить не удалось: ${v.error}`;
   return { type:'tool_result', tool_use_id:u.id, content, ...(v.status === 'error' ? { is_error:true } : {}) };
 }
+// the twin's memory of Ilia (twin.mjs): the tool input is not validated by the API (eager streaming) — check it
+function runRemember(u, send) {
+  const { section, text, mode } = u.input || {};
+  if (!SECTIONS[section] || typeof text !== 'string' || !text.trim() || (mode && !['add', 'replace'].includes(mode)))
+    return { type:'tool_result', tool_use_id:u.id, is_error:true, content:JSON.stringify({ INVALID_JSON:JSON.stringify(u.input) }) };
+  const n = remember(section, text, mode || 'add');
+  send({ t:'memory', section, title:SECTIONS[section] });
+  return { type:'tool_result', tool_use_id:u.id, content:`Сохранено в раздел «${SECTIONS[section]}» (записей: ${n}).` };
+}
 function errorText(e) {
   if (e instanceof Anthropic.RateLimitError) return 'Claude сейчас перегружен — повторите через минуту.';
   if (e instanceof Anthropic.AuthenticationError) return 'Ключ Claude не подходит — проверьте секрет HQ_OFFICE_ANTHROPIC_API_KEY.';
@@ -226,7 +236,8 @@ async function chat(req, res, isOwnerTalk) {
   const turns = isOwnerTalk ? owner.turns.slice(-HISTORY) : guest.turns.slice(-12);
   let messages = [...turns.map(t => ({ role:t.role, content:t.text })), { role:'user', content:frame ? [{ type:'image', source:{ type:'base64', media_type:'image/jpeg', data:frame } }, { type:'text', text:'(кадр с камеры Ильи — сейчас)\n' + text }] : text }, { role:'system', content:nowNote(voice, isOwnerTalk) }];
   const ids = isOwnerTalk ? desk.agents().map(a => a.id) : [];
-  const tools = isOwnerTalk ? [taskTool(ids)] : undefined;
+  const tools = isOwnerTalk ? [taskTool(ids), ...(twin ? [rememberTool()] : [])] : undefined;
+  const twinKnowledge = twin ? loadTwin().text : '';   // fixed for the turn: a remember mid-turn must not change the cached prefix
 
   res.writeHead(200, { 'content-type':'text/event-stream; charset=utf-8', 'cache-control':'no-store', 'x-accel-buffering':'no' });
   const send = o => res.write(`data: ${JSON.stringify(o)}\n\n`);
@@ -238,7 +249,7 @@ async function chat(req, res, isOwnerTalk) {
     for (let round = 0; round < 3; round++) {
       stream = claude.beta.messages.stream({
         model:MODEL, max_tokens:16000, ...FALLBACK, output_config:{ effort:'low' },
-        system:[{ type:'text', text:isOwnerTalk ? OWNER_PROMPT : GUEST_PROMPT }, ...(twin ? [{ type:'text', text:TWIN_PROMPT }] : []), ...knowledge(isOwnerTalk), ...(twin ? [{ type:'text', text:loadTwin().text, cache_control:{ type:'ephemeral' } }] : [])], messages, ...(tools ? { tools } : {}),
+        system:[{ type:'text', text:isOwnerTalk ? OWNER_PROMPT : GUEST_PROMPT }, ...(twin ? [{ type:'text', text:TWIN_PROMPT }] : []), ...knowledge(isOwnerTalk), ...(twin ? [{ type:'text', text:twinKnowledge, cache_control:{ type:'ephemeral' } }] : [])], messages, ...(tools ? { tools } : {}),
       });
       for await (const ev of stream) if (ev.type === 'content_block_delta' && ev.delta.type === 'text_delta') { reply += ev.delta.text; send({ t:'delta', text:ev.delta.text }); }
       const msg = await stream.finalMessage();
@@ -247,7 +258,7 @@ async function chat(req, res, isOwnerTalk) {
       const uses = msg.content.filter(b => b.type === 'tool_use');
       if (msg.stop_reason !== 'tool_use' || !uses.length) break;
       const results = [];
-      for (const u of uses) results.push(u.name === 'create_task' ? await runTaskTool(u, ids, send) : { type:'tool_result', tool_use_id:u.id, is_error:true, content:'Нет такого инструмента.' });
+      for (const u of uses) results.push(u.name === 'create_task' ? await runTaskTool(u, ids, send) : u.name === 'remember' && twin ? runRemember(u, send) : { type:'tool_result', tool_use_id:u.id, is_error:true, content:'Нет такого инструмента.' });
       messages = [...messages, { role:'assistant', content:msg.content }, { role:'user', content:results }];
       if (reply && !/\s$/.test(reply)) { reply += '\n\n'; send({ t:'delta', text:'\n\n' }); }
     }
@@ -274,7 +285,7 @@ const ROUTES = {
     json(res, 200, {
       owner:o, configured:{ chat:Boolean(claude), voice:voiceConfigured(), login:Boolean(PASSWORD) },
       voice:v ? { id:v.id, name:v.name } : null, memory:o ? Boolean(owner.memory) : false,
-      twin:o ? (({ sources, empty }) => ({ sources, empty }))(loadTwin()) : null,
+      twin:o ? (({ sources, empty, profile }) => ({ sources, empty, profile }))(loadTwin()) : null,
       history:(o ? owner.turns : guestOf(req, res).turns).slice(-30).map(t => ({ role:t.role, text:t.text, at:t.at })),
     });
   },
@@ -289,6 +300,12 @@ const ROUTES = {
   },
   'POST logout': (req, res) => json(res, 200, { ok:true }, { 'set-cookie':cookie('hqa', '', 0) }),
   'POST chat': (req, res, o) => chat(req, res, o),
+  // phones: streaming recognition straight from the browser to ElevenLabs with a single-use token (15 min)
+  'POST stt-token': async (req, res, o) => {
+    if (!o) return json(res, 403, { error:'Голос доступен только владельцу.' });
+    if (!voiceConfigured()) return json(res, 503, { error:'Голос не подключён (ключ ElevenLabs).' });
+    try { json(res, 200, { token:await realtimeToken() }); } catch (e) { console.error('stt-token:', e.message); json(res, 502, { error:'Не удалось получить токен распознавания.' }); }
+  },
   'POST stt': async (req, res, o) => {
     if (!o) return json(res, 403, { error:'Голос доступен только владельцу.' });
     if (!voiceConfigured()) return json(res, 503, { error:'Голос не подключён (ключ ElevenLabs).' });
