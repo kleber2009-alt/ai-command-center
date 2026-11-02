@@ -968,6 +968,7 @@ export async function createNightOffice(o) {
   return {
     frame, resize, overview, plan, desk:ownerDesk, focus, room:flyRoom, roomOfDept, rooms:ROOMS.length,
     labels(on) { labelsOn = on; },
+    look(x, z) { flyTo(V3(x + .8, 3.4, z + 9.5), V3(x, 1.3, z), 1.6); },   // голограмма двойника в центре зала
     stop() { fly = null; },
     __debug:{ scene, camera, controls, byId, owner, SEATS, renderer },
   };
