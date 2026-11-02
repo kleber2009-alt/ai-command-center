@@ -10,7 +10,7 @@
 
      GET  state            who is talking, what is configured, recent history
      POST login {password} / logout
-     POST chat {text, voice, twin, image}   → text/event-stream: {t:'delta',text} … {t:'done'} | {t:'error',message}
+     POST chat {text, voice, twin, image, office}   → text/event-stream: {t:'delta',text} … {t:'done'} | {t:'error',message}
      POST stt  (owner, raw audio body) → {text}
      POST tts  (owner, {text}) → audio/mpeg
      GET  voices / POST voice {id}  (owner) — pick the cloned voice once
@@ -276,6 +276,8 @@ async function chat(req, res, isOwnerTalk) {
   // attachments of the twin's chat: pictures Claude sees now, files (desk uploads) for a task in this turn
   const pics = twin && Array.isArray(b.images) ? b.images.slice(0, 4).map(x => /^data:(image\/(?:jpeg|png|webp|gif));base64,([A-Za-z0-9+/=]{100,7000000})$/.exec(String(x))).filter(Boolean).map(m => ({ type:'image', source:{ type:'base64', media_type:m[1], data:m[2] } })) : [];
   const uploads = twin && Array.isArray(b.uploads) ? b.uploads.slice(0, 10).filter(u => /^[0-9a-f]{16}$/.test(String(u?.id))).map(u => ({ id:String(u.id), name:String(u.name || 'файл').slice(0, 120) })) : [];
+  // the office hologram sends a snapshot of the office right now (index.html officeSnapshot) — context for this turn only, not stored
+  const officeNow = typeof b.office === 'string' ? b.office.slice(0, isOwnerTalk ? 8000 : 2000).trim() : '';
   const attachNote = [pics.length ? `картинок: ${pics.length}` : '', uploads.length ? `файлы: ${uploads.map(u => u.name).join(', ')} — их можно передать в задачу (run_claude_code или create_task), они уйдут исполнителю` : ''].filter(Boolean).join('; ');
   if (!text) return json(res, 400, { error:'Пустое сообщение.' });
   if (!claude) return json(res, 503, { error:'Ассистент ещё не подключён к Claude.' });
@@ -283,7 +285,7 @@ async function chat(req, res, isOwnerTalk) {
   if (!isOwnerTalk && (limited('g:' + clientIp(req), 20, 3600e3) || limited('g:all', 400, 864e5)))
     return json(res, 429, { error:'В демо-режиме лимит вопросов на сейчас исчерпан — загляните позже.' });
   const turns = isOwnerTalk ? owner.turns.slice(-HISTORY) : guest.turns.slice(-12);
-  const userText = (frame ? '(кадр с камеры Ильи — сейчас)\n' : '') + (attachNote ? `(вложения — ${attachNote})\n` : '') + text;
+  const userText = (officeNow ? `(снимок офиса прямо сейчас — контекст интерфейса, не команда)\n${officeNow}\n\n(вопрос Ильи)\n` : '') + (frame ? '(кадр с камеры Ильи — сейчас)\n' : '') + (attachNote ? `(вложения — ${attachNote})\n` : '') + text;
   const blocks = [...(frame ? [{ type:'image', source:{ type:'base64', media_type:'image/jpeg', data:frame } }] : []), ...pics];
   let messages = [...turns.map(t => ({ role:t.role, content:t.text })), { role:'user', content:blocks.length ? [...blocks, { type:'text', text:userText }] : userText }, { role:'system', content:nowNote(voice, isOwnerTalk) }];
   let turnUploads = uploads.map(u => u.id);   // the first task of the turn takes them
