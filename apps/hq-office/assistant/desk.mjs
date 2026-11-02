@@ -88,7 +88,14 @@ export function createDesk({ claude, model, fallback, dataDir, officeDir, runner
     }
     return { agents, text:lines.join('\n') };
   }
-  const agentOf = id => catalog().agents.find(a => a.id === id);
+  // Claude Code itself: the runner with every skill of the team, for tasks the twin sends directly (no dispatcher)
+  const CC = { id:'claude-code', name:'Claude Code', role:'универсальный исполнитель: все скиллы команды, код, файлы, интернет', dept:'ceo', deptName:'Штаб', lead:'' };
+  const agentOf = id => id === CC.id ? CC : catalog().agents.find(a => a.id === id);
+
+  /* ---------- skills installed on the runner's server (it reports them on start) ---------- */
+  const SKILLS_FILE = path.join(DIR, 'skills.json');
+  let serverSkills = [];
+  try { serverSkills = JSON.parse(fs.readFileSync(SKILLS_FILE, 'utf8')); } catch {}
 
   /* ---------- views and events ---------- */
 
@@ -178,6 +185,12 @@ export function createDesk({ claude, model, fallback, dataDir, officeDir, runner
 
   function jobPrompt(t) {
     const a = agentOf(t.route.agent), p = t.pending;
+    if (p.kind === 'run' && a.id === CC.id) return [`Ты — Claude Code на сервере офиса AICEX: универсальный исполнитель Ильи Палия. Задачу поставил сам Илья через своего цифрового двойника (hq2.aicex.club).`,
+      '', `Задача: ${t.route.title}`, `Слова Ильи: «${t.text}»`,
+      ...t.answers.map(x => `Уточнение. Вопрос: ${x.q} Ответ: ${x.a}`),
+      `У тебя все скиллы команды (${serverSkills.length || 'список'} в ~/.claude/skills) — сам выбери подходящие и вызывай их инструментом Skill; без подходящего делай сам.`,
+      `Материалы от Ильи: ${t.files.length ? t.files.map(f => 'in/' + f.name).join(', ') : 'нет'}.`,
+      'Если результат — ответ, исследование, план или текст, оформи его страницей out/index.html (аккуратно, по-русски) и коротко перескажи суть в отчёте.', '', RULES].join('\n');
     if (p.kind === 'revise') return `Владелец посмотрел результат и просит правку: «${p.text}»\n\nВнеси правку в файлы out/ (главный файл — тот же), коротко скажи, что изменил. Правила те же: если суть результата изменилась — строка SUMMARY: <одно предложение для истории офиса>; последней строкой RESULT: out/<главный файл>, или NEED: <вопрос>, если без ответа владельца правку не сделать.`;
     if (p.kind === 'answer') return `Ответ владельца на твой вопрос: «${p.text}»\n\nПродолжай задачу по тем же правилам: предпоследней строкой SUMMARY: <одно предложение для истории офиса>, последней строкой RESULT: out/<главный файл>, или NEED: <вопрос>, если всё ещё не хватает.`;
     return [`Ты — агент «${a.name}» (${a.role}) живого офиса AICEX, отдел «${a.deptName}». Задачу поставил владелец, Илья Палий, прямо в офисе hq2.aicex.club.`,
@@ -244,7 +257,7 @@ export function createDesk({ claude, model, fallback, dataDir, officeDir, runner
 
   /* ---------- create, used by the routes and by the assistant's tool ---------- */
 
-  function createTask({ text, agent = '', uploads = [] }) {
+  function createTask({ text, agent = '', uploads = [], direct = false, title = '' }) {
     const t = { id:crypto.randomBytes(4).toString('hex'), created:now(), updated:now(), text:String(text).trim().slice(0, 4000), agent:String(agent || ''),
       files:[], status:'routing', answers:[], steps:[], route:null, question:null, result:null, versions:0, published:false };
     for (const u of uploads.slice(0, 20)) {
@@ -257,10 +270,44 @@ export function createDesk({ claude, model, fallback, dataDir, officeDir, runner
       fs.rmSync(src, { recursive:true, force:true });
       t.files.push({ name, size:fs.statSync(path.join(taskDir(t.id), 'in', name)).size });
     }
-    step(t, 'Задача поставлена — диспетчер разбирает, кому её отдать.');
     tasks.unshift(t);
+    if (direct) {
+      t.route = { agent:CC.id, skill:'', title:String(title || t.text).trim().slice(0, 90), brief:t.text, deliverable:'other', why:'прямая задача Claude Code от двойника' };
+      queue(t, { kind:'run' });
+      step(t, 'Задача ушла напрямую Claude Code — со всеми скиллами команды.');
+      emit(t);
+      return { task:t, routed:Promise.resolve() };
+    }
+    step(t, 'Задача поставлена — диспетчер разбирает, кому её отдать.');
     emit(t);
     return { task:t, routed:route(t) };
+  }
+
+  // the same actions the owner has in the office, for the twin's tool
+  function act(id, action, text = '') {
+    const t = byId(id); text = String(text || '').trim().slice(0, 4000);
+    if (!t) return { error:'Нет такой задачи.' };
+    if (action === 'answer') {
+      if (t.status !== 'question' || !text) return { error:'Сейчас у задачи нет вопроса (или пустой ответ).' };
+      t.answers.push({ q:t.question.text, a:text });
+      if (t.question.from === 'agent') { queue(t, { kind:'answer', text }); step(t, `Ваш ответ: ${text}`); emit(t); }
+      else { t.status = 'routing'; t.question = null; step(t, `Ваш ответ: ${text}`); emit(t); route(t); }
+    } else if (action === 'revise') {
+      if (!['review', 'done'].includes(t.status) || !text) return { error:'Правку можно дать только к готовому результату и с текстом правки.' };
+      queue(t, { kind:'revise', text }); t.published = false; step(t, `Правка: ${text}`); emit(t);
+    } else if (action === 'approve') {
+      if (t.status !== 'review') return { error:'Принять можно только результат на проверке.' };
+      t.status = 'done'; t.doneAt = now(); t.published = true; step(t, 'Принято — задача добавлена в историю офиса.'); emit(t);
+    } else if (action === 'retry') {
+      if (t.status !== 'error') return { error:'Повторить можно только задачу с ошибкой.' };
+      t.error = ''; t.lost = 0;
+      if (t.route) { queue(t, t.pending || { kind:'run' }); step(t, 'Повтор — задача снова в очереди.'); emit(t); }
+      else { t.status = 'routing'; step(t, 'Повтор — диспетчер разбирает задачу заново.'); emit(t); route(t); }
+    } else if (action === 'cancel') {
+      if (!OPEN.includes(t.status)) return { error:'Задача уже закрыта.' };
+      t.status = 'cancelled'; t.pending = null; step(t, 'Задача отменена.'); emit(t);
+    } else return { error:'Неизвестное действие.' };
+    return { task:view(t) };
   }
 
   // a short status block for the assistant: what is on the desk right now
@@ -306,6 +353,16 @@ export function createDesk({ claude, model, fallback, dataDir, officeDir, runner
         runner.claude = c ? { ok:Boolean(c.ok), error:String(c.error || '').slice(0, 300), auth:String(c.auth || '').slice(0, 80) } : null;
         for (const t of tasks) if (t.status === 'work') orphan(t, 'Исполнитель перезапустился посреди задачи (выкладка или сбой сервера) — задача снова в очереди.');
         return json(res, 200, { ok:true });
+      }
+      if (M === 'POST' && seg[1] === 'skills') {
+        // every skill installed on the runner's server: name, description and the SKILL.md text (for the twin)
+        const parts = []; let size = 0;
+        for await (const c of req) { size += c.length; if (size > 12e6) return json(res, 413, { error:'too large' }); parts.push(c); }
+        let b; try { b = JSON.parse(Buffer.concat(parts).toString('utf8')); } catch { return json(res, 400, { error:'json' }); }
+        serverSkills = (Array.isArray(b.skills) ? b.skills : []).filter(x => x && x.name).slice(0, 500)
+          .map(x => ({ name:String(x.name).slice(0, 80), description:String(x.description || '').slice(0, 600), text:String(x.text || '').slice(0, 20000) }));
+        fs.writeFileSync(SKILLS_FILE + '.tmp', JSON.stringify(serverSkills)); fs.renameSync(SKILLS_FILE + '.tmp', SKILLS_FILE);
+        return json(res, 200, { ok:true, skills:serverSkills.length });
       }
       if (M === 'POST' && seg[1] === 'claim') {
         // the runner does one task at a time: when it asks for the next one, nothing is in work
@@ -423,5 +480,7 @@ export function createDesk({ claude, model, fallback, dataDir, officeDir, runner
     return notFound(res);
   }
 
-  return { handle, createTask, summary, agents:() => catalog().agents, view };
+  return { handle, createTask, summary, agents:() => catalog().agents, view, act,
+    list:(n = 15) => tasks.slice(0, n).map(view), get:id => { const t = byId(id); return t ? view(t) : null; },
+    skills:() => serverSkills, skillsFile:SKILLS_FILE };
 }

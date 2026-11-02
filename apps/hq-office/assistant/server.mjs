@@ -157,11 +157,11 @@ const taskTool = ids => ({
     text:{ type:'string', description:'Задача словами Ильи плюс важные детали из разговора.' },
     agent:{ type:'string', enum:['', ...ids], description:'id агента, если Илья сам его назвал; иначе пустая строка.' } } },
 });
-async function runTaskTool(u, ids, send) {
+async function runTaskTool(u, ids, send, uploads = []) {
   const inp = u.input || {}, text = typeof inp.text === 'string' ? inp.text.trim() : '', agent = typeof inp.agent === 'string' ? inp.agent : '';
   // eager input streaming: the input is not validated by the API, so check it before acting
   if (!text || (agent && !ids.includes(agent))) return { type:'tool_result', tool_use_id:u.id, is_error:true, content:JSON.stringify({ INVALID_JSON:JSON.stringify(inp) }) };
-  const { task, routed } = desk.createTask({ text, agent });
+  const { task, routed } = desk.createTask({ text, agent, uploads });
   send({ t:'task', id:task.id });
   await Promise.race([routed, new Promise(r => setTimeout(r, 30e3))]);
   const v = desk.view(task);
@@ -180,6 +180,49 @@ function runRemember(u, send) {
   const n = remember(section, text, mode || 'add');
   send({ t:'memory', section, title:SECTIONS[section] });
   return { type:'tool_result', tool_use_id:u.id, content:`Сохранено в раздел «${SECTIONS[section]}» (записей: ${n}).` };
+}
+/* the twin drives the working desk like Claude Code: direct tasks, statuses, answers, approvals */
+const SITE = 'https://hq2.aicex.club';
+const DESK_TOOLS = new Set(['run_claude_code', 'desk_tasks', 'desk_task', 'desk_action']);
+const deskTools = () => [
+  { name:'run_claude_code', eager_input_streaming:true,
+    description:'Поставить задачу напрямую Claude Code на сервере офиса — тот же Claude Code, что у Ильи, со ВСЕМИ скиллами команды (список — в базе знаний), файлами, кодом и интернетом. Для любой работы: тексты, сценарии, карусели, монтаж, сайты, презентации, исследования, анализ, документы. Вложения Ильи из этого сообщения уйдут исполнителю. Результат придёт на проверку; статус — desk_task.',
+    input_schema:{ type:'object', required:['task', 'title'], properties:{
+      task:{ type:'string', description:'Полное ТЗ: слова Ильи плюс всё важное из разговора и базы знаний (продукт, аудитория, стиль, формат, скилл, если он ясен).' },
+      title:{ type:'string', description:'Короткое название для доски, до 70 знаков.' } } } },
+  { name:'desk_tasks', eager_input_streaming:true, description:'Список последних задач рабочего стола: статус, исполнитель, вопросы исполнителя, результаты.', input_schema:{ type:'object', properties:{} } },
+  { name:'desk_task', eager_input_streaming:true, description:'Подробно одна задача: шаги исполнителя, вопрос, результат и файлы.', input_schema:{ type:'object', required:['id'], properties:{ id:{ type:'string' } } } },
+  { name:'desk_action', eager_input_streaming:true,
+    description:'Действие с задачей от имени Ильи — только когда он сам так сказал: answer — ответить на вопрос исполнителя; revise — отправить правку к готовому результату; approve — принять результат (попадёт в историю офиса); retry — повторить после ошибки; cancel — отменить.',
+    input_schema:{ type:'object', required:['id', 'action'], properties:{ id:{ type:'string' }, action:{ type:'string', enum:['answer', 'revise', 'approve', 'retry', 'cancel'] }, text:{ type:'string', description:'Текст ответа или правки.' } } } },
+];
+const taskLine = v => `[${v.id}] «${v.route?.title || v.text.slice(0, 70)}» — ${v.agent?.name || 'диспетчер'}, ${v.statusText}${v.question ? `; вопрос: ${v.question.text}` : ''}${v.result ? `; результат: ${v.result.summary || v.result.main} — ${SITE}${v.result.mainUrl}` : ''}${v.error ? `; ошибка: ${v.error}` : ''}`;
+function runDeskTool(u, send, take) {
+  const inp = u.input || {}, bad = () => ({ type:'tool_result', tool_use_id:u.id, is_error:true, content:JSON.stringify({ INVALID_JSON:JSON.stringify(inp) }) });
+  if (u.name === 'run_claude_code') {
+    if (typeof inp.task !== 'string' || !inp.task.trim()) return bad();
+    const files = take();
+    const { task } = desk.createTask({ text:inp.task, title:String(inp.title || ''), direct:true, uploads:files });
+    send({ t:'task', id:task.id });
+    const v = desk.view(task);
+    return { type:'tool_result', tool_use_id:u.id, content:`Задача поставлена Claude Code: [${v.id}] «${v.route.title}», место в очереди ${v.queuePos || 1}${v.files.length ? `, файлы: ${v.files.join(', ')}` : ''}. Результат придёт на проверку к Илье (вкладка «В работе» в офисе и список задач у двойника).` };
+  }
+  if (u.name === 'desk_tasks') { const list = desk.list(15); return { type:'tool_result', tool_use_id:u.id, content:list.length ? list.map(taskLine).join('\n') : 'Задач пока нет.' }; }
+  if (u.name === 'desk_task') {
+    if (typeof inp.id !== 'string') return bad();
+    const v = desk.get(inp.id.replace(/^\[|\]$/g, ''));
+    if (!v) return { type:'tool_result', tool_use_id:u.id, is_error:true, content:'Нет такой задачи — возьми id из desk_tasks.' };
+    return { type:'tool_result', tool_use_id:u.id, content:[taskLine(v), v.route?.brief ? 'ТЗ: ' + v.route.brief : '', 'Шаги:', ...v.steps.slice(-15).map(x => `- ${x.at.slice(11, 16)} ${x.text}`),
+      v.result ? 'Файлы результата: ' + v.result.files.map(f => `${f.path} — ${SITE}${f.url}`).join('; ') : '', v.result?.note ? 'Последняя правка: ' + v.result.note : ''].filter(Boolean).join('\n') };
+  }
+  if (u.name === 'desk_action') {
+    if (typeof inp.id !== 'string' || !['answer', 'revise', 'approve', 'retry', 'cancel'].includes(inp.action)) return bad();
+    const r = desk.act(inp.id.replace(/^\[|\]$/g, ''), inp.action, inp.text);
+    if (r.error) return { type:'tool_result', tool_use_id:u.id, is_error:true, content:r.error };
+    send({ t:'task', id:r.task.id });
+    return { type:'tool_result', tool_use_id:u.id, content:'Готово: ' + taskLine(r.task) };
+  }
+  return bad();
 }
 function errorText(e) {
   if (e instanceof Anthropic.RateLimitError) return 'Claude сейчас перегружен — повторите через минуту.';
@@ -225,20 +268,27 @@ async function compact() {
 /* ---------- chat ---------- */
 
 async function chat(req, res, isOwnerTalk) {
-  const b = await jsonBody(req, isOwnerTalk ? 3e6 : 16e3);
+  const b = await jsonBody(req, isOwnerTalk ? 30e6 : 16e3);
   const text = String(b.text || '').trim().slice(0, isOwnerTalk ? 4000 : 600);
   const voice = isOwnerTalk && b.voice === true;
   const twin = isOwnerTalk && b.twin === true;
   const frame = twin && typeof b.image === 'string' ? /^data:image\/jpeg;base64,([A-Za-z0-9+/=]{100,2800000})$/.exec(b.image)?.[1] : null;
+  // attachments of the twin's chat: pictures Claude sees now, files (desk uploads) for a task in this turn
+  const pics = twin && Array.isArray(b.images) ? b.images.slice(0, 4).map(x => /^data:(image\/(?:jpeg|png|webp|gif));base64,([A-Za-z0-9+/=]{100,7000000})$/.exec(String(x))).filter(Boolean).map(m => ({ type:'image', source:{ type:'base64', media_type:m[1], data:m[2] } })) : [];
+  const uploads = twin && Array.isArray(b.uploads) ? b.uploads.slice(0, 10).filter(u => /^[0-9a-f]{16}$/.test(String(u?.id))).map(u => ({ id:String(u.id), name:String(u.name || 'файл').slice(0, 120) })) : [];
+  const attachNote = [pics.length ? `картинок: ${pics.length}` : '', uploads.length ? `файлы: ${uploads.map(u => u.name).join(', ')} — их можно передать в задачу (run_claude_code или create_task), они уйдут исполнителю` : ''].filter(Boolean).join('; ');
   if (!text) return json(res, 400, { error:'Пустое сообщение.' });
   if (!claude) return json(res, 503, { error:'Ассистент ещё не подключён к Claude.' });
   const guest = isOwnerTalk ? null : guestOf(req, res);
   if (!isOwnerTalk && (limited('g:' + clientIp(req), 20, 3600e3) || limited('g:all', 400, 864e5)))
     return json(res, 429, { error:'В демо-режиме лимит вопросов на сейчас исчерпан — загляните позже.' });
   const turns = isOwnerTalk ? owner.turns.slice(-HISTORY) : guest.turns.slice(-12);
-  let messages = [...turns.map(t => ({ role:t.role, content:t.text })), { role:'user', content:frame ? [{ type:'image', source:{ type:'base64', media_type:'image/jpeg', data:frame } }, { type:'text', text:'(кадр с камеры Ильи — сейчас)\n' + text }] : text }, { role:'system', content:nowNote(voice, isOwnerTalk) }];
+  const userText = (frame ? '(кадр с камеры Ильи — сейчас)\n' : '') + (attachNote ? `(вложения — ${attachNote})\n` : '') + text;
+  const blocks = [...(frame ? [{ type:'image', source:{ type:'base64', media_type:'image/jpeg', data:frame } }] : []), ...pics];
+  let messages = [...turns.map(t => ({ role:t.role, content:t.text })), { role:'user', content:blocks.length ? [...blocks, { type:'text', text:userText }] : userText }, { role:'system', content:nowNote(voice, isOwnerTalk) }];
+  let turnUploads = uploads.map(u => u.id);   // the first task of the turn takes them
   const ids = isOwnerTalk ? desk.agents().map(a => a.id) : [];
-  const tools = isOwnerTalk ? [taskTool(ids), ...(twin ? [rememberTool(), ...kbTools()] : [])] : undefined;
+  const tools = isOwnerTalk ? [taskTool(ids), ...(twin ? [rememberTool(), ...kbTools(), ...deskTools()] : [])] : undefined;
   const twinKnowledge = twin ? loadTwin().text + '\n\n# База знаний Ильи (сводка; подробности — search_knowledge / read_document)\n' + loadKb().digest : '';   // fixed for the turn: a remember mid-turn must not change the cached prefix
 
   res.writeHead(200, { 'content-type':'text/event-stream; charset=utf-8', 'cache-control':'no-store', 'x-accel-buffering':'no' });
@@ -262,7 +312,12 @@ async function chat(req, res, isOwnerTalk) {
       const results = [];
       for (const u of uses) {
         if (twin && (u.name === 'search_knowledge' || u.name === 'read_document')) send({ t:'kb', name:u.name, query:String(u.input?.query || u.input?.path || '').slice(0, 120) });
-        results.push(u.name === 'create_task' ? await runTaskTool(u, ids, send) : u.name === 'remember' && twin ? runRemember(u, send) : twin && (u.name === 'search_knowledge' || u.name === 'read_document') ? runKbTool(u) : { type:'tool_result', tool_use_id:u.id, is_error:true, content:'Нет такого инструмента.' });
+        const take = () => { const x = turnUploads; turnUploads = []; return x; };
+        results.push(u.name === 'create_task' ? await runTaskTool(u, ids, send, twin ? take() : [])
+          : u.name === 'remember' && twin ? runRemember(u, send)
+          : twin && (u.name === 'search_knowledge' || u.name === 'read_document') ? runKbTool(u)
+          : twin && DESK_TOOLS.has(u.name) ? runDeskTool(u, send, take)
+          : { type:'tool_result', tool_use_id:u.id, is_error:true, content:'Нет такого инструмента.' });
       }
       messages = [...messages, { role:'assistant', content:msg.content }, { role:'user', content:results }];
       if (reply && !/\s$/.test(reply)) { reply += '\n\n'; send({ t:'delta', text:'\n\n' }); }
@@ -274,7 +329,7 @@ async function chat(req, res, isOwnerTalk) {
   }
   if (reply.trim()) {
     const at = new Date().toISOString(), list = isOwnerTalk ? owner.turns : guest.turns;
-    list.push({ role:'user', text, at, voice }, { role:'assistant', text:reply.trim(), at, voice });
+    list.push({ role:'user', text:attachNote ? `${text}\n[вложения — ${attachNote}]` : text, at, voice }, { role:'assistant', text:reply.trim(), at, voice });
     if (isOwnerTalk) { save('owner.json', owner); compact(); }
     else { guest.at = Date.now(); if (guest.turns.length > 24) guest.turns.splice(0, guest.turns.length - 24); }
   }
