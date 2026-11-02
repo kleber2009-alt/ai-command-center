@@ -3,7 +3,7 @@
 <head>
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
-<title>Двойник — 12 дизайнов</title>
+<title>Двойник — 17 дизайнов</title>
 <meta name="description" content="Десять вариантов дизайна окна диалога с цифровым двойником: HUD, терминал, RPG, квесты, нейрограф, колода карт, монтажный таймлайн и другие.">
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
@@ -405,12 +405,46 @@
   .tl-head{position:absolute;top:0;bottom:0;width:2px;background:#ff4d4d;box-shadow:0 0 8px #ff4d4d;left:92px;z-index:2}
   .tl-head::before{content:'';position:absolute;top:0;left:-6px;border:7px solid transparent;border-top:9px solid #ff4d4d}
   @container (max-width:760px){ .tl-top{grid-template-columns:1fr;grid-template-rows:1.2fr 1fr} .tl-row > span,.tl-ruler{width:64px} .tl-ruler{margin-left:64px} .tl-row > span{font-size:9px;padding-left:6px} }
+  /* ---------- living-organism designs (13–17) ---------- */
+  .og{position:absolute;inset:0;overflow:hidden;font-family:var(--f-ui);color:var(--og-ink);background:var(--og-bg)}
+  .og canvas{position:absolute;inset:0;width:100%;height:100%;display:block}
+  .og-top{position:absolute;top:16px;left:18px;right:18px;display:flex;align-items:center;gap:10px;font:600 11px var(--f-mono);letter-spacing:.18em;text-transform:uppercase;color:var(--og-dim);pointer-events:none}
+  .og-top i{width:7px;height:7px;border-radius:50%;background:var(--og-acc);box-shadow:0 0 10px var(--og-acc);animation:ogb 2.4s ease-in-out infinite}
+  .og-top em{margin-left:auto;font-style:normal;color:var(--og-acc)}
+  @keyframes ogb{50%{opacity:.35;transform:scale(.7)}}
+  .og-q{position:absolute;top:42px;left:18px;right:18px;text-align:center;font-size:14px;color:var(--og-dim);min-height:20px;pointer-events:none}
+  .og-a{position:absolute;left:8%;right:8%;bottom:66px;text-align:center;font-size:21px;font-weight:600;line-height:1.35;letter-spacing:-.005em;max-height:128px;overflow-y:auto;scrollbar-width:none;white-space:pre-line;text-shadow:0 1px 14px var(--og-bg)}
+  .og-a span{opacity:.22;transition:opacity .25s}
+  .og-a span.on{opacity:1}
+  .v[data-len=long] .og-a{font-size:16.5px}
+  .og-cards{position:absolute;left:0;right:0;bottom:18px;display:flex;justify-content:center;gap:8px;flex-wrap:wrap;padding:0 16px}
+  .og-c{padding:6px 12px;border-radius:99px;font-size:12.5px;border:1px solid var(--og-line);background:var(--og-chip);color:var(--og-ink);opacity:0;transform:translateY(10px) scale(.86);transition:opacity .45s,transform .55s cubic-bezier(.2,.9,.3,1.35)}
+  .og-c.on{opacity:1;transform:none}
+  .og-c small{opacity:.65;margin-left:7px}
+  .og-cell{--og-bg:#020d0d;--og-ink:#e9fff8;--og-dim:rgba(190,255,232,.5);--og-acc:#8ff5d2;--og-line:rgba(143,245,210,.35);--og-chip:rgba(143,245,210,.08)}
+  .og-myc{--og-bg:#050506;--og-ink:#f6efe4;--og-dim:rgba(246,239,228,.45);--og-acc:#ffc27a;--og-line:rgba(255,194,122,.35);--og-chip:rgba(255,194,122,.07)}
+  .og-sipho{--og-bg:#01040d;--og-ink:#eaf6ff;--og-dim:rgba(170,220,255,.5);--og-acc:#6ee7ff;--og-line:rgba(110,231,255,.35);--og-chip:rgba(110,231,255,.07)}
+  .og-turing{--og-bg:#07060a;--og-ink:#fff4e6;--og-dim:rgba(255,230,200,.55);--og-acc:#ff8a3d;--og-line:rgba(255,138,61,.45);--og-chip:rgba(10,6,8,.6)}
+  .og-turing .og-a{text-shadow:0 1px 3px #000,0 0 22px #000}
+  .og-anat{--og-bg:#f4f4f1;--og-ink:#1d1f21;--og-dim:#7a7e82;--og-acc:#ff6a1a;--og-line:#1d1f21;--og-chip:#fff}
+  .og-anat .og-top{color:var(--og-ink);border-bottom:1px solid #1d1f21;top:0;left:0;right:0;padding:12px 18px}
+  .og-anat .og-top i{border-radius:0;box-shadow:none}
+  .og-anat .og-q{top:46px;font:500 12px var(--f-mono);letter-spacing:.06em;text-transform:uppercase}
+  .og-anat .og-a{font:500 15px/1.45 var(--f-mono);text-shadow:none;bottom:58px;max-height:88px;left:20%;right:20%}
+  .v[data-len=long] .og-anat .og-a{font-size:13px}
+  .og-anat .og-c{border-radius:0;font:600 10.5px var(--f-mono);letter-spacing:.06em;text-transform:uppercase}
+  .og-anat .og-c b{background:var(--og-acc);color:#fff;padding:0 5px;margin-right:6px}
+  @container (max-width:760px){
+    .og-a{font-size:17px;left:5%;right:5%;bottom:92px}
+    .og-c small{display:none}
+    .og-anat .og-a{left:5%;right:5%;bottom:84px}
+  }
 </style>
 </head>
 <body>
 <header>
   <a class="back" href="./"><svg viewBox="0 0 24 24"><path d="M15 18l-6-6 6-6"/></svg>Двойник</a>
-  <div><h1>Двойник — 12 дизайнов</h1><p>Каждый дизайн рабочий: «Говорить» — разговор голосом без кнопок, ответ сразу, перебить — тап по сцене. Без входа — демо.</p></div>
+  <div><h1>Двойник — 17 дизайнов</h1><p>Каждый дизайн рабочий: «Говорить» — разговор голосом без кнопок, ответ сразу, перебить — тап по сцене. Без входа — демо.</p></div>
 </header>
 <div class="wrap">
   <nav class="list" id="list"></nav>
@@ -500,7 +534,38 @@ function pixelOrb(c, t = 0) {
   }
 }
 
-/* ---------- the ten windows ---------- */
+/* ---------- living-organism designs (13–17): one shell, five bodies ---------- */
+const KNOW = ['Профиль', 'Сценарии', 'Карусели', 'Монтаж', 'Офис', 'Память', 'Камера', 'Агенты'];
+const mix = (a, b, k) => a + (b - a) * k;
+function organism(r, theme, label) {
+  r.innerHTML = `<div class="og og-${theme}"><canvas></canvas><div class="og-top"><i></i>${label}<em class="st">готов</em></div><div class="og-q"></div><div class="og-a" data-scroll></div><div class="og-cards"></div></div>`;
+  const c = r.querySelector('canvas'), g = c.getContext('2d'), q = r.querySelector('.og-q'), a = r.querySelector('.og-a'), cards = r.querySelector('.og-cards'), st = r.querySelector('.st');
+  const fit = () => {
+    const d = Math.min(devicePixelRatio || 1, 2), w = Math.round(c.clientWidth * d), h = Math.round(c.clientHeight * d);
+    if (c.width !== w || c.height !== h) { c.width = w; c.height = h; }
+    return { w, h, d };
+  };
+  const lit = new Set();   // knowledge in use right now (names from KNOW)
+  const o = { c, g, fit, lit, S:'idle', root:r.firstElementChild };
+  o.api = {
+    me(t) { q.textContent = '«' + t + '»'; a.textContent = ''; cards.innerHTML = ''; lit.clear(); o.onMe?.(t); },
+    open() { a.textContent = ''; return a; },
+    async say(t) {
+      const my = token; a.innerHTML = t.split(' ').map(w => `<span>${esc(w)}</span>`).join(' ');
+      for (const s of a.children) { if (!alive(my)) return; s.classList.add('on'); await sleep(150); }
+    },
+    card(k) {
+      cards.innerHTML = CARDS[k].items.map(it => `<span class="og-c"><b>${esc(it.t)}</b>${it.s ? `<small>${esc(it.s)}</small>` : ''}</span>`).join('');
+      [...cards.children].forEach((e, i) => setTimeout(() => e.classList.add('on'), 160 * i));
+      o.onCard?.(k);
+    },
+    state(s) { o.S = s; st.textContent = ST[s]; if (s === 'think' || s === 'look') CTX.uses.forEach(u => lit.add(u)); },
+    light(u) { (u || []).forEach(x => lit.add(x)); },
+  };
+  return o;
+}
+
+/* ---------- the windows ---------- */
 const V = [
 { id:'claude', name:'Claude', pitch:'Полный чат как claude.ai + задачи Claude Code',
   idea:'Всё, что вы делаете в Claude и Claude Code, — в одном окне двойника: нормальный чат с форматированием, картинками и файлами, а слева — задачи, которые выполняет Claude Code на сервере со всеми скиллами команды.',
@@ -884,6 +949,381 @@ const V = [
         if (x > lim) lanes.forEach(L => L.style.transform = `translateX(${lim - x}px)`);
       },
     };
+  } },
+
+{ id:'cell', name:'Живая клетка', pitch:'ИИ как клетка: мембрана дышит голосом, ответы выходят пузырьками',
+  idea:'Двойник — одна живая клетка под микроскопом. Мембрана из двойного слоя дышит и волнуется от голоса, внутри течёт цитоплазма, в ядре — модель, вокруг ядра плавают органеллы-знания: профиль, сценарии, монтаж, память, камера, агенты.',
+  mech:'Слушает — мембрана выпускает ложноножку к вам (вниз, к микрофону). Думает — в ядре закручивается хроматин, нужные органеллы загораются. Смотрит — клетка вытягивается в глаз. Ответ выходит экзоцитозом: карточки отпочковываются от ядра пузырьками и проходят сквозь мембрану.',
+  good:'Самая понятная метафора «живого ИИ»: с первого взгляда видно, что он слушает, думает и из чего собирает ответ.', cost:3,
+  build(r) {
+    const o = organism(r, 'cell', 'Двойник · клетка'), { g, fit, lit } = o;
+    const M = 84;
+    const org = KNOW.map((n, i) => ({ n, a:i / KNOW.length * 6.283 + 0.2, r:0.5 + (i % 3) * 0.11, len:0.85 + (i % 2) * 0.3, glow:0 }));
+    const cyto = Array.from({ length:280 }, () => ({ a:Math.random() * 6.283, r:0.38 + Math.sqrt(Math.random()) * 0.52, v:0.4 + Math.random(), z:Math.random() }));
+    let ves = [], pod = 0, eye = 0, think = 0, last = 0;
+    o.onCard = () => { for (let i = 0; i < 3; i++) ves.push({ a:Math.PI / 2 + (i - 1) * 0.62, p:-i * 0.22 }); };
+    o.api.frame = (t, l) => {
+      const { w, h, d } = fit(), dt = Math.min(0.05, last ? t - last : 0.016); last = t;
+      const cx = w / 2, cy = h * 0.43, R = Math.min(w * 0.34, h * 0.27);
+      pod = mix(pod, o.S === 'listen' ? 1 : 0, 0.05); eye = mix(eye, o.S === 'look' ? 1 : 0, 0.06); think = mix(think, o.S === 'think' ? 1 : 0, 0.05);
+      g.clearRect(0, 0, w, h);
+      const bg = g.createRadialGradient(cx, cy, 0, cx, cy, R * 2.2); bg.addColorStop(0, 'rgba(30,120,100,.22)'); bg.addColorStop(1, 'rgba(0,0,0,0)'); g.fillStyle = bg; g.fillRect(0, 0, w, h);
+      const sx = 1 + eye * 0.3, sy = 1 - eye * 0.25;
+      const rad = a => {
+        let k = 1 + 0.035 * Math.sin(a * 3 + t * 0.9) + 0.025 * Math.sin(a * 5 - t * 1.3) + 0.02 * Math.sin(a * 2 + t * 0.4) + l * 0.05 * Math.sin(a * 9 + t * 12);
+        const da = Math.atan2(Math.sin(a - Math.PI / 2), Math.cos(a - Math.PI / 2));
+        k += pod * (0.3 + 0.04 * Math.sin(t * 5)) * Math.exp(-da * da / 0.07);   // pseudopod toward the speaker
+        return k * (1 - think * 0.04 * (1 + Math.sin(t * 4)));
+      };
+      const P = a => { const k = rad(a); return [cx + Math.cos(a) * R * k * sx, cy + Math.sin(a) * R * k * sy]; };
+      const pts = Array.from({ length:M }, (_, i) => P(i / M * 6.283));
+      const path = s => {
+        g.beginPath();
+        for (let i = 0; i <= M; i++) {
+          const p = pts[i % M], n = pts[(i + 1) % M], mx = cx + ((p[0] + n[0]) / 2 - cx) * s, my = cy + ((p[1] + n[1]) / 2 - cy) * s;
+          if (!i) g.moveTo(mx, my); else g.quadraticCurveTo(cx + (p[0] - cx) * s, cy + (p[1] - cy) * s, mx, my);
+        }
+        g.closePath();
+      };
+      // cytoplasm
+      path(1); const fill = g.createRadialGradient(cx, cy, R * 0.2, cx, cy, R * 1.2); fill.addColorStop(0, 'rgba(70,190,160,.16)'); fill.addColorStop(1, 'rgba(40,140,120,.06)'); g.fillStyle = fill; g.fill();
+      for (const p of cyto) {
+        p.a += dt * p.v * (0.12 + think * 0.5 + l * 0.3);
+        const k = rad(p.a) * p.r, x = cx + Math.cos(p.a) * R * k * sx, y = cy + Math.sin(p.a) * R * k * sy;
+        g.fillStyle = `rgba(170,255,225,${0.12 + p.z * 0.35})`; g.fillRect(x, y, (1 + p.z) * d, (1 + p.z) * d);
+      }
+      // lipid bilayer
+      g.lineWidth = 2 * d; g.strokeStyle = 'rgba(143,245,210,.9)'; path(1); g.stroke();
+      g.lineWidth = 1 * d; g.strokeStyle = 'rgba(143,245,210,.35)'; path(0.955); g.stroke();
+      g.fillStyle = 'rgba(143,245,210,.55)';
+      for (let i = 0; i < M; i += 2) { const p = pts[i]; g.beginPath(); g.arc(cx + (p[0] - cx) * 0.977, cy + (p[1] - cy) * 0.977, 1.3 * d, 0, 6.283); g.fill(); }
+      // organelles = knowledge
+      g.font = `600 ${10 * d}px JetBrains Mono, monospace`; g.textAlign = 'center';
+      for (const q of org) {
+        q.a += dt * (0.05 + think * 0.25); q.glow = mix(q.glow, lit.has(q.n) ? 1 : 0, 0.06);
+        const k = rad(q.a) * q.r, x = cx + Math.cos(q.a) * R * k * sx, y = cy + Math.sin(q.a) * R * k * sy, L = R * 0.12 * q.len;
+        g.save(); g.translate(x, y); g.rotate(q.a + Math.PI / 2 + Math.sin(t + q.r * 9) * 0.3);
+        g.beginPath(); g.ellipse(0, 0, L, L * 0.42, 0, 0, 6.283);
+        g.fillStyle = `rgba(${mix(60, 255, q.glow) | 0},${mix(170, 170, q.glow) | 0},${mix(140, 80, q.glow) | 0},${0.35 + q.glow * 0.45})`; g.fill();
+        g.strokeStyle = q.glow > 0.3 ? 'rgba(255,200,140,.95)' : 'rgba(143,245,210,.7)'; g.lineWidth = 1.2 * d; g.stroke();
+        g.beginPath(); for (let j = -3; j <= 3; j++) { g.moveTo(j * L * 0.22, -L * 0.3); g.lineTo(j * L * 0.22 + L * 0.08, L * 0.3); } g.lineWidth = 0.8 * d; g.stroke();
+        g.restore();
+        if (q.glow > 0.05) { const hg = g.createRadialGradient(x, y, 0, x, y, L * 2.4); hg.addColorStop(0, `rgba(255,170,80,${0.35 * q.glow})`); hg.addColorStop(1, 'rgba(255,170,80,0)'); g.fillStyle = hg; g.fillRect(x - L * 3, y - L * 3, L * 6, L * 6); }
+        g.fillStyle = `rgba(${q.glow > 0.3 ? '255,220,180' : '190,255,232'},${0.45 + q.glow * 0.5})`; g.fillText(q.n.toUpperCase(), x, y + L * 0.42 + 13 * d);
+      }
+      // nucleus = the model
+      const nx = cx + Math.sin(t * 0.3) * R * 0.04, ny = cy + Math.cos(t * 0.23) * R * 0.03, nr = R * 0.3 * (1 + 0.04 * Math.sin(t * 1.7) + l * 0.08);
+      const ng = g.createRadialGradient(nx - nr * 0.3, ny - nr * 0.3, nr * 0.1, nx, ny, nr * 1.05);
+      ng.addColorStop(0, 'rgba(255,214,150,.95)'); ng.addColorStop(0.6, 'rgba(255,140,60,.55)'); ng.addColorStop(1, 'rgba(160,60,20,.25)');
+      g.beginPath(); for (let i = 0; i <= 48; i++) { const a = i / 48 * 6.283, k = nr * (1 + 0.04 * Math.sin(a * 4 + t * 1.1)); i ? g.lineTo(nx + Math.cos(a) * k, ny + Math.sin(a) * k) : g.moveTo(nx + Math.cos(a) * k, ny + Math.sin(a) * k); }
+      g.fillStyle = ng; g.fill(); g.strokeStyle = 'rgba(255,200,140,.8)'; g.lineWidth = 1.2 * d; g.stroke();
+      g.fillStyle = `rgba(90,30,10,${0.25 + think * 0.6})`;
+      for (let j = 0; j < 4; j++) for (let s = 2; s < 36; s++) {   // chromatin twists faster while thinking
+        const a = s * 0.33 + t * (0.4 + think * 3) + j * 1.571, rr = s / 36 * nr * 0.82;
+        g.beginPath(); g.arc(nx + Math.cos(a) * rr, ny + Math.sin(a) * rr, (0.8 + think) * d, 0, 6.283); g.fill();
+      }
+      if (eye > 0.02) { g.fillStyle = `rgba(10,20,20,${eye * 0.9})`; g.beginPath(); g.ellipse(nx, ny, nr * 0.38, nr * 0.38 * (0.8 + 0.2 * Math.sin(t * 2)), 0, 0, 6.283); g.fill(); g.fillStyle = `rgba(255,255,255,${eye})`; g.beginPath(); g.arc(nx - nr * 0.12, ny - nr * 0.14, nr * 0.08, 0, 6.283); g.fill(); }
+      // vesicles: answers leave the cell by exocytosis
+      ves = ves.filter(v => v.p < 1.8);
+      for (const v of ves) {
+        v.p += dt * 0.55; if (v.p < 0) continue;
+        const edge = R * rad(v.a), dist = v.p < 1 ? mix(nr, edge, v.p) : edge + (v.p - 1) * R * 0.6;
+        const x = cx + Math.cos(v.a) * dist * sx, y = cy + Math.sin(v.a) * dist * sy, vr = R * 0.075, al = v.p > 1.3 ? 1 - (v.p - 1.3) / 0.5 : 1;
+        g.beginPath(); g.arc(x, y, vr, 0, 6.283); g.fillStyle = `rgba(255,170,90,${0.3 * al})`; g.fill();
+        g.strokeStyle = `rgba(143,245,210,${0.9 * al})`; g.lineWidth = 1.5 * d; g.stroke();
+      }
+    };
+    return o.api;
+  } },
+
+{ id:'mycel', name:'Мицелий', pitch:'Знания прорастают грибницей, сигналы бегут по нитям',
+  idea:'Двойник — грибница. Из плодового тела в центре во все стороны растут гифы и находят узлы знаний: профиль, сценарии, карусели, монтаж, офис, память, камера, агенты. Сеть никогда не бывает одинаковой: она растёт, ветвится и обновляется прямо на глазах.',
+  mech:'Ваши слова прорастают новыми нитями снизу, от вас к ядру. Думает — от нужных узлов к центру бегут янтарные импульсы. Говорит — голубые вспышки разлетаются по всей сети в такт голосу. Новая карточка — сигнал во все узлы сразу.',
+  good:'Ощущение «у моего ИИ есть нервная система», и каждый день она чуть другая. Отличный фон для рилса про то, как ИИ учится на ваших материалах.', cost:3,
+  build(r) {
+    const o = organism(r, 'myc', 'Двойник · мицелий'), { g, fit, lit } = o;
+    const off = document.createElement('canvas'), og = off.getContext('2d');
+    const nodes = KNOW.map((n, i) => ({ n, a:i / KNOW.length * 6.283 + 0.39, r:0.68 + (i % 2) * 0.16, glow:0, path:[[0, 0]] }));
+    nodes.forEach(nd => { nd.x = Math.cos(nd.a) * nd.r * 1.25; nd.y = Math.sin(nd.a) * nd.r * 0.72; });
+    let tips = nodes.map(nd => ({ x:0, y:0, a:nd.a, node:nd, life:999 })), segs = [], pulses = [], W = 0, H = 0, S = 1, CX = 0, CY = 0, D = 1;
+    const px = (x, y) => [CX + x * S, CY + y * S];
+    const drawSeg = s => { const [a, b] = [px(s[0], s[1]), px(s[2], s[3])]; og.strokeStyle = s[5] ? 'rgba(255,214,160,.42)' : 'rgba(236,224,204,.26)'; og.lineWidth = s[4] * D; og.beginPath(); og.moveTo(a[0], a[1]); og.lineTo(b[0], b[1]); og.stroke(); };
+    const sprout = (from, n, life = 70) => { for (let i = 0; i < n; i++) tips.push({ x:from[0], y:from[1], a:Math.random() * 6.283, life:life * (0.5 + Math.random()) }); };
+    o.onMe = () => { for (let i = 0; i < 7; i++) tips.push({ x:(Math.random() - 0.5) * 1.6, y:1.05, a:-Math.PI / 2, home:true, life:160 }); };
+    o.onCard = () => nodes.forEach(nd => pulses.push({ nd, i:0, dir:1, c:'125,249,255' }));
+    o.api.frame = (t, l) => {
+      const { w, h, d } = fit();
+      if (w !== W || h !== H) { W = off.width = w; H = off.height = h; D = d; S = Math.min(w / 2.9, h / 2.1); CX = w / 2; CY = h * 0.43; og.lineCap = 'round'; segs.forEach(drawSeg); }
+      const steps = o.S === 'think' ? 3 : o.S === 'listen' ? 2 : 1 + Math.round(l * 2);
+      for (let k = 0; k < steps; k++) {
+        const next = [];
+        for (const p of tips) {
+          p.a += (Math.random() - 0.5) * 0.55;
+          const tx = p.node ? p.node.x : 0, ty = p.node ? p.node.y : 0;
+          if (p.node || p.home) { let da = Math.atan2(ty - p.y, tx - p.x) - p.a; da = Math.atan2(Math.sin(da), Math.cos(da)); p.a += da * 0.12; }
+          const nx = p.x + Math.cos(p.a) * 0.013, ny = p.y + Math.sin(p.a) * 0.013;
+          const s = [p.x, p.y, nx, ny, p.node ? 1.5 : p.home ? 1.1 : 0.7, p.home ? 1 : 0]; segs.push(s); drawSeg(s);
+          p.x = nx; p.y = ny; p.life--;
+          if (p.node) { p.node.path.push([nx, ny]); if (Math.hypot(tx - nx, ty - ny) < 0.03) { p.node.glow = 1; sprout([nx, ny], 3, 50); continue; } }
+          if (p.home && Math.hypot(nx, ny) < 0.06) { pulses.push({ nd:nodes[Math.random() * nodes.length | 0], i:0, dir:1, c:'255,194,122' }); continue; }
+          if (!p.node && !p.home && Math.random() < 0.05 && tips.length < 260) next.push({ x:nx, y:ny, a:p.a + (Math.random() < 0.5 ? -1 : 1) * (0.5 + Math.random() * 0.5), life:p.life * 0.7 });
+          if (p.node && Math.random() < 0.04) next.push({ x:nx, y:ny, a:p.a + (Math.random() - 0.5) * 2.4, life:40 + Math.random() * 40 });
+          if (p.life > 0 && Math.abs(nx) < 1.5 && Math.abs(ny) < 1) next.push(p);
+        }
+        tips = next;
+      }
+      if (tips.length < 18) { const nd = nodes[Math.random() * nodes.length | 0], pt = nd.path[Math.random() * nd.path.length | 0]; sprout(pt, 2); }
+      if (segs.length > 7000) {   // the network renews itself: old hyphae fade away
+        segs.splice(0, 2500); og.clearRect(0, 0, W, H); segs.forEach(drawSeg);
+      }
+      if (o.S === 'speak' && Math.random() < 0.15 + l * 0.5) pulses.push({ nd:nodes[Math.random() * nodes.length | 0], i:0, dir:1, c:'125,249,255' });
+      if (o.S === 'think' && Math.random() < 0.2) { const hot = nodes.filter(n => lit.has(n.n)), nd = (hot.length ? hot : nodes)[Math.random() * (hot.length || nodes.length) | 0]; pulses.push({ nd, i:nd.path.length - 1, dir:-1, c:'255,194,122' }); }
+      g.clearRect(0, 0, w, h);
+      g.drawImage(off, 0, 0);
+      // pulses
+      pulses = pulses.filter(p => p.i >= 0 && p.i < p.nd.path.length);
+      for (const p of pulses) {
+        for (let j = 0; j < 7; j++) {
+          const pt = p.nd.path[Math.max(0, Math.min(p.nd.path.length - 1, Math.round(p.i - j * p.dir * 2)))], [x, y] = px(pt[0], pt[1]);
+          g.fillStyle = `rgba(${p.c},${(1 - j / 7) * 0.9})`; g.beginPath(); g.arc(x, y, (2.6 - j * 0.3) * d, 0, 6.283); g.fill();
+        }
+        p.i += p.dir * 2.4;
+        if (p.dir > 0 && p.i >= p.nd.path.length - 1) p.nd.glow = 1;
+      }
+      // fruiting body
+      const [cx, cy] = px(0, 0), cr = S * (0.07 + l * 0.03);
+      for (let k = 3; k >= 1; k--) { const rg = g.createRadialGradient(cx, cy, 0, cx, cy, cr * k * 1.4); rg.addColorStop(0, `rgba(255,190,110,${0.22 / k + l * 0.2})`); rg.addColorStop(1, 'rgba(255,190,110,0)'); g.fillStyle = rg; g.beginPath(); g.arc(cx, cy, cr * k * 1.4, 0, 6.283); g.fill(); }
+      g.strokeStyle = 'rgba(255,214,160,.8)'; g.lineWidth = 1.2 * d;
+      for (let k = 0; k < 3; k++) { g.beginPath(); g.arc(cx, cy, cr * (0.5 + k * 0.3) * (1 + 0.05 * Math.sin(t * 2 + k)), 0, 6.283); g.stroke(); }
+      // knowledge nodes
+      g.font = `600 ${10 * d}px JetBrains Mono, monospace`; g.textAlign = 'center';
+      for (const nd of nodes) {
+        nd.glow = Math.max(lit.has(nd.n) ? 0.6 : 0, nd.glow * 0.985);
+        const [x, y] = px(nd.x, nd.y), rr = (4 + nd.glow * 3) * d;
+        if (nd.glow > 0.05) { const hg = g.createRadialGradient(x, y, 0, x, y, rr * 5); hg.addColorStop(0, `rgba(255,194,122,${0.45 * nd.glow})`); hg.addColorStop(1, 'rgba(255,194,122,0)'); g.fillStyle = hg; g.beginPath(); g.arc(x, y, rr * 5, 0, 6.283); g.fill(); }
+        g.fillStyle = '#050506'; g.strokeStyle = `rgba(255,214,160,${0.5 + nd.glow * 0.5})`; g.lineWidth = 1.4 * d; g.beginPath(); g.arc(x, y, rr, 0, 6.283); g.fill(); g.stroke();
+        g.fillStyle = `rgba(246,239,228,${0.45 + nd.glow * 0.55})`; g.fillText(nd.n.toUpperCase(), x, y + (nd.y < 0 ? -12 : 20) * d);
+      }
+    };
+    return o.api;
+  } },
+
+{ id:'sipho', name:'Сифонофора', pitch:'Двойник — колония агентов, как глубоководный организм',
+  idea:'Сифонофора — существо из глубины океана, которое на самом деле колония: каждая часть — отдельная особь со своей работой. Так и двойник: купол наверху — сам Claude, а вдоль светящегося стебля висят агенты — сценарист, монтажёр, карусели, аналитик, память, исследователь, Claude Code.',
+  mech:'Купол пульсирует, как настоящая медуза, а говорит — сжимается в такт голосу и гонит световые волны вниз по стеблю. Думает — от нужных агентов вверх к куполу поднимаются искры. Ставит задачу — загорается тот агент, которому она ушла. Слушает — щупальца вытягиваются и расходятся. Смотрит — на куполе открываются глазки.',
+  good:'Честно показывает, как всё устроено: не один бот, а живая колония агентов с общим мозгом. Гипнотично смотрится на большом экране и в рилсах.', cost:3,
+  build(r) {
+    const o = organism(r, 'sipho', 'Двойник · колония'), { g, fit, lit } = o;
+    const ZO = [['Сценарист', ['Сценарии']], ['Монтажёр', ['Монтаж']], ['Карусели', ['Карусели']], ['Аналитик', ['Офис']], ['Память', ['Память', 'Профиль']], ['Исследователь', ['Агенты']], ['Claude Code', ['Агенты']]]
+      .map(([n, k], i) => ({ n, k, s:0.12 + i * 0.128, side:i % 2 ? 1 : -1, glow:0, ph:i * 1.3 }));
+    const snow = Array.from({ length:130 }, () => ({ x:Math.random(), y:Math.random(), v:0.004 + Math.random() * 0.01, z:Math.random() }));
+    const CARD_ZO = { ideas:['Сценарист', 'Карусели'], vision:[], task:['Сценарист', 'Монтажёр', 'Claude Code'], live:ZO.map(z => z.n) };
+    let sparks = [], listen = 0, eye = 0, last = 0, bell = 0;
+    o.onCard = k => { for (const z of ZO) if ((CARD_ZO[k] || []).includes(z.n)) z.glow = 1; if (k === 'vision') eye = 1.4; };
+    o.api.frame = (t, l) => {
+      const { w, h, d } = fit(), dt = Math.min(0.05, last ? t - last : 0.016); last = t;
+      listen = mix(listen, o.S === 'listen' ? 1 : 0, 0.04); eye = mix(eye, o.S === 'look' ? 1 : 0, 0.05);
+      const cx = w / 2, B = Math.min(w, h) * 0.1, top = h * 0.27, L = h * 0.38;
+      g.clearRect(0, 0, w, h);
+      const bg = g.createLinearGradient(0, 0, 0, h); bg.addColorStop(0, '#04122a'); bg.addColorStop(1, '#01040d'); g.fillStyle = bg; g.fillRect(0, 0, w, h);
+      for (const p of snow) { p.y -= p.v * dt * 3; p.x += Math.sin(t * 0.3 + p.z * 9) * 0.0002; if (p.y < 0) { p.y = 1; p.x = Math.random(); } g.fillStyle = `rgba(190,230,255,${0.08 + p.z * 0.22})`; g.fillRect(p.x * w, p.y * h, (0.6 + p.z) * d, (0.6 + p.z) * d); }
+      const idle = Math.pow((Math.sin(t * 2.4) + 1) / 2, 3);
+      bell = mix(bell, o.S === 'speak' ? Math.min(1, l * 1.3) : o.S === 'think' ? 0.5 + 0.5 * Math.sin(t * 9) : idle, 0.25);
+      const X = s => cx + B * 0.7 * s * Math.sin(s * 5 - t * 1.4) + B * 0.25 * Math.sin(t * 0.45);
+      const Y = s => top + B * 0.75 + s * L;
+      // stem with light waves running down
+      g.lineWidth = 1.6 * d; g.strokeStyle = 'rgba(140,230,255,.5)'; g.beginPath();
+      for (let i = 0; i <= 80; i++) { const s = i / 80; i ? g.lineTo(X(s), Y(s)) : g.moveTo(X(s), Y(s)); } g.stroke();
+      const waves = o.S === 'speak' ? 3 : 1;
+      for (let j = 0; j < waves; j++) {
+        const s0 = (t * (o.S === 'speak' ? 0.7 : 0.25) + j / waves) % 1;
+        for (let k = 0; k < 10; k++) { const s = s0 - k * 0.008; if (s < 0) continue; g.fillStyle = `rgba(160,240,255,${(1 - k / 10) * (o.S === 'speak' ? 0.4 + l * 0.6 : 0.35)})`; g.beginPath(); g.arc(X(s), Y(s), (3 - k * 0.2) * d, 0, 6.283); g.fill(); }
+      }
+      // zooids = agents
+      g.font = `600 ${10 * d}px JetBrains Mono, monospace`;
+      for (const z of ZO) {
+        const on = z.k.some(k => lit.has(k)); z.glow = Math.max(on && o.S !== 'idle' ? 0.7 : 0, z.glow * 0.992);
+        const sx = X(z.s), sy = Y(z.s), zx = sx + z.side * B * 0.55, zy = sy + B * 0.1, zr = B * 0.22 * (1 + 0.12 * Math.sin(t * 3 + z.ph));
+        g.strokeStyle = 'rgba(140,230,255,.4)'; g.lineWidth = 1 * d; g.beginPath(); g.moveTo(sx, sy); g.quadraticCurveTo(sx + z.side * B * 0.3, sy - B * 0.1, zx, zy); g.stroke();
+        for (let k = 0; k < 3; k++) {   // tentacles with stinging cells
+          g.beginPath(); let px0 = zx, py0 = zy;
+          for (let j = 0; j <= 16; j++) {
+            const f = j / 16, x = zx + (k - 1) * zr * 0.5 * (1 + listen * 1.5 * f) + Math.sin(j * 0.5 - t * 2 + z.ph + k) * B * 0.12 * f * (1 + listen * 0.6), y = zy + zr * 0.6 + j * B * 0.08 * (1 + listen * 0.7);
+            j ? g.lineTo(x, y) : g.moveTo(x, y); px0 = x; py0 = y;
+          }
+          g.strokeStyle = `rgba(${z.glow > 0.2 ? '255,170,120' : '150,220,255'},${0.25 + z.glow * 0.4})`; g.lineWidth = 0.8 * d; g.stroke();
+          g.fillStyle = `rgba(200,240,255,${0.5 + z.glow * 0.5})`; g.beginPath(); g.arc(px0, py0, 1.4 * d, 0, 6.283); g.fill();
+        }
+        const zg = g.createRadialGradient(zx, zy - zr * 0.3, 0, zx, zy, zr * 1.6);
+        zg.addColorStop(0, z.glow > 0.1 ? `rgba(255,200,150,${0.6 + z.glow * 0.4})` : 'rgba(190,240,255,.55)'); zg.addColorStop(1, 'rgba(110,231,255,0)');
+        g.fillStyle = zg; g.beginPath(); g.arc(zx, zy, zr * 1.6, 0, 6.283); g.fill();
+        g.strokeStyle = z.glow > 0.1 ? `rgba(255,170,120,${0.6 + z.glow * 0.4})` : 'rgba(170,235,255,.75)'; g.lineWidth = 1.2 * d;
+        g.beginPath(); g.ellipse(zx, zy, zr, zr * 0.75, 0, Math.PI, 0); g.quadraticCurveTo(zx, zy + zr * 0.5, zx - zr, zy); g.stroke();
+        g.textAlign = z.side > 0 ? 'left' : 'right'; g.fillStyle = `rgba(${z.glow > 0.1 ? '255,214,180' : '200,235,255'},${0.5 + z.glow * 0.5})`;
+        g.fillText(z.n.toUpperCase(), zx + z.side * (zr + 10 * d), zy + 3 * d);
+        if (z.glow > 0.3 && o.S === 'think' && Math.random() < 0.12) sparks.push({ s:z.s });
+      }
+      sparks = sparks.filter(p => (p.s -= dt * 0.5) > 0);
+      for (const p of sparks) { g.fillStyle = 'rgba(255,190,120,.95)'; g.beginPath(); g.arc(X(p.s), Y(p.s), 2.6 * d, 0, 6.283); g.fill(); }
+      // bell = Claude
+      const bw = B * (1 - 0.2 * bell), bh = B * (1.05 + 0.18 * bell), by = top;
+      const bellPath = () => { g.beginPath(); g.moveTo(cx - bw, by + bh * 0.45); g.bezierCurveTo(cx - bw * 1.05, by - bh * 0.5, cx - bw * 0.45, by - bh * 0.75, cx, by - bh * 0.75); g.bezierCurveTo(cx + bw * 0.45, by - bh * 0.75, cx + bw * 1.05, by - bh * 0.5, cx + bw, by + bh * 0.45); g.quadraticCurveTo(cx, by + bh * (0.15 + 0.2 * bell), cx - bw, by + bh * 0.45); };
+      const halo = g.createRadialGradient(cx, by, 0, cx, by, B * 3); halo.addColorStop(0, `rgba(110,231,255,${0.18 + l * 0.25})`); halo.addColorStop(1, 'rgba(110,231,255,0)'); g.fillStyle = halo; g.fillRect(cx - B * 3, by - B * 3, B * 6, B * 6);
+      bellPath(); const bf = g.createRadialGradient(cx, by - bh * 0.3, 0, cx, by, bw * 1.2); bf.addColorStop(0, `rgba(230,250,255,${0.55 + l * 0.35})`); bf.addColorStop(1, 'rgba(110,200,255,.12)'); g.fillStyle = bf; g.fill();
+      g.strokeStyle = 'rgba(200,245,255,.9)'; g.lineWidth = 1.6 * d; g.stroke();
+      g.strokeStyle = 'rgba(200,245,255,.35)'; g.lineWidth = 1 * d;
+      for (let k = -2; k <= 2; k++) { g.beginPath(); g.moveTo(cx + k * bw * 0.08, by - bh * 0.7); g.quadraticCurveTo(cx + k * bw * 0.35, by - bh * 0.2, cx + k * bw * 0.42, by + bh * 0.32); g.stroke(); }
+      if (eye > 0.05) for (let k = 0; k < 6; k++) { const a = Math.PI * (0.15 + k * 0.14); g.fillStyle = `rgba(255,150,70,${Math.min(1, eye)})`; g.beginPath(); g.arc(cx - Math.cos(a) * bw * 0.95, by + bh * 0.38 - Math.sin(a) * bh * 0.08, 2.4 * d, 0, 6.283); g.fill(); }
+      g.textAlign = 'left'; g.fillStyle = 'rgba(220,245,255,.75)'; g.fillText('CLAUDE · ОБЩИЙ МОЗГ', cx + bw + 14 * d, by);
+    };
+    return o.api;
+  } },
+
+{ id:'turing', name:'Морфогенез', pitch:'Мысль прорастает живым узором Тьюринга — из ваших же слов',
+  idea:'Экран — живая ткань: настоящая химическая модель Грея — Скотта, по которой Алан Тьюринг объяснял пятна леопарда и узоры кораллов. Узор не нарисован — он рождается и умирает сам, каждую секунду новый.',
+  mech:'Ваша фраза буквально впечатывается в ткань и прорастает: буквы расползаются в живой узор. Для каждого состояния — своя «химия»: в покое — коралл, слушает — точки, думает — клетки делятся (митоз), говорит — лабиринт, в который голос подбрасывает питание. Провести пальцем или мышью — подкормить ткань.',
+  good:'Ноу-хау, которого нет ни у кого: интерфейс ИИ, который физически растёт из ваших слов. Ни один кадр не повторяется — идеальный фон для съёмки и вебинара.', cost:3,
+  build(r) {
+    const o = organism(r, 'turing', 'Двойник · морфогенез'), { c, g, fit } = o;
+    const RX = { idle:[0.0545, 0.062], listen:[0.03, 0.062], think:[0.0367, 0.0649], speak:[0.029, 0.057], look:[0.039, 0.058] };
+    const small = document.createElement('canvas'), sg = small.getContext('2d'), txt = document.createElement('canvas'), tg = txt.getContext('2d', { willReadFrequently:true });
+    let GW = 0, GH = 0, U, V2, U2, Vb, img, F = 0.0545, K = 0.062, W = 0, H = 0;
+    const LUT = new Uint8ClampedArray(256 * 3);
+    const stops = [[0, 7, 6, 10], [0.22, 40, 10, 14], [0.45, 150, 40, 20], [0.68, 255, 138, 61], [0.86, 255, 205, 140], [1, 255, 244, 225]];
+    for (let i = 0; i < 256; i++) { const f = i / 255, j = stops.findIndex(s => s[0] >= f), a = stops[Math.max(0, j - 1)], b = stops[j], k = b[0] === a[0] ? 0 : (f - a[0]) / (b[0] - a[0]); for (let ch = 0; ch < 3; ch++) LUT[i * 3 + ch] = mix(a[ch + 1], b[ch + 1], k); }
+    const dab = (gx, gy, rad) => { for (let y = -rad; y <= rad; y++) for (let x = -rad; x <= rad; x++) { const X = gx + x | 0, Y = gy + y | 0; if (X > 0 && Y > 0 && X < GW - 1 && Y < GH - 1 && x * x + y * y <= rad * rad) { const i = Y * GW + X; U[i] = 0.5; V2[i] = 0.25 + Math.random() * 0.02; } } };
+    function init() {
+      GW = Math.max(130, Math.min(280, Math.round(W / (2 * Math.min(devicePixelRatio || 1, 2))))); GH = Math.max(80, Math.round(GW * H / W));
+      small.width = txt.width = GW; small.height = txt.height = GH; img = sg.createImageData(GW, GH);
+      U = new Float32Array(GW * GH).fill(1); V2 = new Float32Array(GW * GH); U2 = new Float32Array(GW * GH); Vb = new Float32Array(GW * GH);
+      for (let k = 0; k < 16; k++) dab(Math.random() * GW, Math.random() * GH, 3);
+      dab(GW / 2, GH * 0.45, 6);
+    }
+    function inject(text, fy) {   // the phrase itself becomes living tissue
+      const s = text.replace(/[«»"]/g, '').trim().slice(0, 26); if (!s || !GW) return;
+      tg.clearRect(0, 0, GW, GH); let fs = GH * 0.2; tg.font = `800 ${fs}px Manrope, sans-serif`;
+      const mw = tg.measureText(s).width; if (mw > GW * 0.9) { fs *= GW * 0.9 / mw; tg.font = `800 ${fs}px Manrope, sans-serif`; }
+      tg.fillStyle = '#fff'; tg.textAlign = 'center'; tg.textBaseline = 'middle'; tg.fillText(s, GW / 2, GH * fy);
+      const px = tg.getImageData(0, 0, GW, GH).data;
+      for (let i = 0; i < GW * GH; i++) if (px[i * 4 + 3] > 110) { U[i] = 0.45; V2[i] = 0.3; }
+    }
+    o.onMe = t => inject(t, 0.62);
+    o.onCard = k => inject(CARDS[k].items[0]?.t || '', 0.3);
+    o.root.addEventListener('pointermove', e => { if (!GW) return; const b = c.getBoundingClientRect(); dab((e.clientX - b.left) / b.width * GW, (e.clientY - b.top) / b.height * GH, 2); });
+    o.api.frame = (t, l) => {
+      const { w, h } = fit();
+      if (w !== W || h !== H) { W = w; H = h; init(); }
+      const [f0, k0] = RX[o.S] || RX.idle; F = mix(F, f0 + (o.S === 'speak' ? l * 0.006 : 0), 0.02); K = mix(K, k0, 0.02);
+      if (o.S === 'speak' && Math.random() < l * 0.35) dab(Math.random() * GW, Math.random() * GH, 2);
+      for (let it = 0; it < 9; it++) {
+        for (let y = 1; y < GH - 1; y++) {
+          const row = y * GW;
+          for (let x = 1; x < GW - 1; x++) {
+            const i = row + x, u = U[i], v = V2[i];
+            const lu = 0.2 * (U[i - 1] + U[i + 1] + U[i - GW] + U[i + GW]) + 0.05 * (U[i - GW - 1] + U[i - GW + 1] + U[i + GW - 1] + U[i + GW + 1]) - u;
+            const lv = 0.2 * (V2[i - 1] + V2[i + 1] + V2[i - GW] + V2[i + GW]) + 0.05 * (V2[i - GW - 1] + V2[i - GW + 1] + V2[i + GW - 1] + V2[i + GW + 1]) - v;
+            const uvv = u * v * v;
+            U2[i] = u + lu - uvv + F * (1 - u); Vb[i] = v + 0.5 * lv + uvv - (F + K) * v;
+          }
+        }
+        [U, U2] = [U2, U]; [V2, Vb] = [Vb, V2];
+        for (const A of [U, V2]) {   // wrap the edges: the tissue has no border
+          for (let x = 0; x < GW; x++) { A[x] = A[(GH - 2) * GW + x]; A[(GH - 1) * GW + x] = A[GW + x]; }
+          for (let y = 0; y < GH; y++) { A[y * GW] = A[y * GW + GW - 2]; A[y * GW + GW - 1] = A[y * GW + 1]; }
+        }
+      }
+      let mass = 0; const D = img.data;
+      for (let y = 1; y < GH - 1; y++) for (let x = 1; x < GW - 1; x++) {
+        const i = y * GW + x, v = V2[i]; mass += v;
+        const shade = 0.72 + Math.max(-0.4, Math.min(0.5, (V2[i - 1] - V2[i + 1] + V2[i - GW] - V2[i + GW]) * 5));   // lit from the top-left: wet tissue
+        const li = Math.max(0, Math.min(255, (v * 2.5) * 255 | 0)) * 3, o4 = i * 4;
+        D[o4] = LUT[li] * shade; D[o4 + 1] = LUT[li + 1] * shade; D[o4 + 2] = LUT[li + 2] * shade; D[o4 + 3] = 255;
+      }
+      if (mass < GW * GH * 0.002) for (let k = 0; k < 8; k++) dab(Math.random() * GW, Math.random() * GH, 3);   // never let it die
+      sg.putImageData(img, 0, 0);
+      g.imageSmoothingEnabled = true; g.imageSmoothingQuality = 'high'; g.drawImage(small, 1, 1, GW - 2, GH - 2, 0, 0, w, h);
+      const vg = g.createRadialGradient(w / 2, h / 2, Math.min(w, h) * 0.3, w / 2, h / 2, Math.max(w, h) * 0.75); vg.addColorStop(0, 'rgba(7,6,10,0)'); vg.addColorStop(1, 'rgba(7,6,10,.85)'); g.fillStyle = vg; g.fillRect(0, 0, w, h);
+    };
+    return o.api;
+  } },
+
+{ id:'anatomy', name:'Анатомия двойника', pitch:'Организм ИИ во взрыв-схеме, как страница инженерного мануала',
+  idea:'Светлый лист технической документации: двойник разобран на слои, как организм в атласе анатомии. Сверху вниз: кожа — интерфейс, мозг — модель Claude, нервы — инструменты, память, знания, мышцы — агенты офиса. У каждого слоя своя фактура, выноски и номер.',
+  mech:'Слои живые: края дышат, стопка раздвигается от голоса. Думает — оранжевый сигнал идёт по оси вниз: кожа → мозг → нервы → память → знания и обратно. Говорит — сигнал поднимается к коже, по ней расходятся волны. Нужные для ответа слои подсвечиваются зелёным. Смотрит — в коже открывается глаз.',
+  good:'Строгий «дорогой» вид в стиле скилла взрыв-схем: объясняет устройство ИИ клиентам и на вебинаре лучше любой схемы, при этом остаётся живым.', cost:3,
+  build(r) {
+    const o = organism(r, 'anat', 'FIG. 01 — АНАТОМИЯ ДВОЙНИКА'), { g, fit, lit } = o;
+    const LY = [
+      { n:'Кожа', s:'интерфейс: голос, камера, чат', k:['Камера'], p:'hex' },
+      { n:'Мозг', s:'модель Claude', k:[], p:'gyri' },
+      { n:'Нервы', s:'инструменты: Claude Code, задачи', k:['Агенты', 'Офис'], p:'nerve' },
+      { n:'Память', s:'профиль, интервью, история', k:['Профиль', 'Память'], p:'rings' },
+      { n:'Знания', s:'README, скиллы, лендинги', k:['Сценарии', 'Карусели', 'Монтаж'], p:'dots' },
+      { n:'Мышцы', s:'агенты офиса', k:['Агенты'], p:'fibres' },
+    ].map(x => ({ ...x, act:0, ok:0 }));
+    let sig = 0, gap = 1, eye = 0, ripples = [], lastRip = 0;
+    o.onMe = () => { ripples.push(0); };
+    o.api.frame = (t, l) => {
+      const { w, h, d } = fit(), narrow = w / d < 640;
+      eye = mix(eye, o.S === 'look' ? 1 : 0, 0.06);
+      g.fillStyle = '#f4f4f1'; g.fillRect(0, 0, w, h);
+      g.strokeStyle = '#e3e3dd'; g.lineWidth = 1; g.beginPath();
+      for (let x = (w / 2) % (24 * d); x < w; x += 24 * d) { g.moveTo(x, 0); g.lineTo(x, h); }
+      for (let y = 0; y < h; y += 24 * d) { g.moveTo(0, y); g.lineTo(w, y); } g.stroke();
+      const cardW = narrow ? 86 * d : 220 * d, cx = w / 2;
+      const rx = Math.max(60 * d, Math.min(w * 0.2, w / 2 - cardW - 56 * d, h * 0.3)), ry = rx * 0.32, th = 9 * d;
+      const top = 82 * d + ry, bottom = h - (narrow ? 200 : 168) * d;
+      gap = mix(gap, 1 + (o.S === 'speak' ? l * 0.18 : 0) + (o.S === 'think' ? 0.06 : 0), 0.1);
+      const step = (bottom - top) / (LY.length - 1) * (0.9 + 0.06 * Math.sin(t * 0.8)) * gap;
+      const yOf = i => top + i * step;
+      // signal along the assembly axis
+      if (o.S === 'think') sig = 2.5 + 2.5 * Math.sin(t * 2.2 - Math.PI / 2);          // skin → knowledge → skin
+      else if (o.S === 'speak') sig = 1 - ((t * 0.9) % 1);                             // brain → skin
+      else if (o.S === 'listen') sig = (t * 0.7) % 1 * 1;                              // skin → brain
+      else sig = mix(sig, 1, 0.05);
+      if (o.S === 'speak' && t - lastRip > 0.45 - l * 0.25) { ripples.push(0); lastRip = t; }
+      g.setLineDash([5 * d, 4 * d]); g.strokeStyle = '#9a9ea2'; g.lineWidth = 1 * d; g.beginPath(); g.moveTo(cx, top - ry - 40 * d); g.lineTo(cx, yOf(LY.length - 1) + ry + 30 * d); g.stroke(); g.setLineDash([]);
+      const rim = (i, a) => 1 + 0.045 * Math.sin(a * 3 + t * 0.7 + i) + 0.025 * Math.sin(a * 5 - t + i * 2) + (LY[i].act > 0.3 ? l * 0.05 * Math.sin(a * 9 + t * 10) : 0);
+      const shape = (i, y, dy = 0) => { g.beginPath(); for (let k = 0; k <= 64; k++) { const a = k / 64 * 6.283, m = rim(i, a), x = cx + Math.cos(a) * rx * m, yy = y + dy + Math.sin(a) * ry * m; k ? g.lineTo(x, yy) : g.moveTo(x, yy); } g.closePath(); };
+      for (let i = LY.length - 1; i >= 0; i--) {
+        const Ly = LY[i], y = yOf(i);
+        Ly.act = mix(Ly.act, Math.abs(sig - i) < 0.5 && o.S !== 'idle' ? 1 : 0, 0.15);
+        Ly.ok = mix(Ly.ok, Ly.k.some(k => lit.has(k)) || (i === 1 && o.S === 'think') ? 1 : 0, 0.08);
+        const ink = Ly.act > 0.4 ? '#ff6a1a' : Ly.ok > 0.4 ? '#2fb36b' : '#1d1f21';
+        shape(i, y, th); g.fillStyle = '#c9cbcc'; g.fill(); g.strokeStyle = '#55595d'; g.lineWidth = 1 * d; g.stroke();
+        shape(i, y); g.fillStyle = Ly.act > 0.4 ? '#fff4ec' : Ly.ok > 0.4 ? '#f1fbf5' : '#fbfbf9'; g.fill();
+        g.save(); g.clip(); g.translate(cx, y); g.scale(1, ry / rx);
+        g.strokeStyle = Ly.act > 0.4 ? 'rgba(255,106,26,.55)' : Ly.ok > 0.4 ? 'rgba(47,179,107,.5)' : 'rgba(150,154,158,.55)'; g.fillStyle = g.strokeStyle; g.lineWidth = 0.9 * d * rx / ry * 0.5;
+        g.beginPath();
+        if (Ly.p === 'hex') { const s = rx * 0.13; for (let yy = -rx; yy < rx; yy += s * 0.87) for (let xx = -rx; xx < rx; xx += s * 1.5) { const ox = xx + ((yy / (s * 0.87)) & 1 ? s * 0.75 : 0); for (let k = 0; k <= 6; k++) { const a = k / 6 * 6.283; k ? g.lineTo(ox + Math.cos(a) * s * 0.45, yy + Math.sin(a) * s * 0.45) : g.moveTo(ox + Math.cos(a) * s * 0.45, yy + Math.sin(a) * s * 0.45); } } }
+        if (Ly.p === 'gyri') for (let j = -7; j <= 7; j++) for (let x = -rx; x <= rx; x += 4 * d) { const yy = j * rx * 0.14 + Math.sin(x / rx * 9 + j * 1.7 + t * 0.6) * rx * 0.05; x === -rx ? g.moveTo(x, yy) : g.lineTo(x, yy); }
+        if (Ly.p === 'nerve') for (let k = 0; k < 9; k++) { const a = k / 9 * 6.283 + 0.2; let x = 0, yy = 0; g.moveTo(0, 0); for (let s = 1; s <= 6; s++) { x += Math.cos(a + Math.sin(s * 1.3 + k) * 0.4) * rx * 0.16; yy += Math.sin(a + Math.sin(s * 1.3 + k) * 0.4) * rx * 0.16; g.lineTo(x, yy); if (s % 2 === 0) { g.lineTo(x + Math.cos(a + 0.9) * rx * 0.12, yy + Math.sin(a + 0.9) * rx * 0.12); g.moveTo(x, yy); } } }
+        if (Ly.p === 'rings') for (let k = 1; k <= 7; k++) { g.moveTo(rx * k / 7.5, 0); g.arc(0, 0, rx * k / 7.5 * (1 + 0.02 * Math.sin(t + k)), 0, 6.283); }
+        if (Ly.p === 'fibres') for (let k = -14; k <= 14; k++) for (let s = -rx * 1.2; s <= rx * 1.2; s += 5 * d) { const x = s * 0.87 + k * rx * 0.075 * 0.5, yy = s * 0.5 - k * rx * 0.075 * 0.87 + Math.sin(s / rx * 6 + t * 1.5) * rx * 0.012; s === -rx * 1.2 ? g.moveTo(x, yy) : g.lineTo(x, yy); }
+        g.stroke();
+        if (Ly.p === 'dots') for (let yy = -rx; yy < rx; yy += rx * 0.11) for (let x = -rx; x < rx; x += rx * 0.11) { g.beginPath(); g.arc(x, yy, (1.4 + (Ly.ok > 0.4 ? Math.max(0, Math.sin(t * 3 + x * 0.05 + yy * 0.08)) * 1.6 : 0)) * d, 0, 6.283); g.fill(); }
+        if (i === 0) {
+          for (const p of ripples) { g.strokeStyle = `rgba(255,106,26,${Math.max(0, 0.7 - p * 0.7)})`; g.lineWidth = 1.5 * d * rx / ry * 0.5; g.beginPath(); g.arc(0, 0, rx * p, 0, 6.283); g.stroke(); }
+          if (eye > 0.02) { g.fillStyle = `rgba(255,106,26,${eye})`; g.beginPath(); g.arc(0, 0, rx * 0.22, 0, 6.283); g.fill(); g.fillStyle = `rgba(29,31,33,${eye})`; g.beginPath(); g.arc(Math.sin(t) * rx * 0.04, 0, rx * 0.09, 0, 6.283); g.fill(); }
+        }
+        g.restore();
+        shape(i, y); g.strokeStyle = ink; g.lineWidth = (Ly.act > 0.4 || Ly.ok > 0.4 ? 1.6 : 1) * d; g.stroke();
+        // callout
+        const left = i % 2 === 0, ax = cx + (left ? -1 : 1) * rx * rim(i, left ? Math.PI : 0), cy0 = y, bx = left ? 18 * d : w - 18 * d - cardW, bh = narrow ? 22 * d : 38 * d, by = cy0 - bh / 2;
+        g.strokeStyle = ink; g.lineWidth = 1 * d; g.beginPath(); g.moveTo(left ? bx + cardW : bx, cy0); g.lineTo(ax, cy0); g.stroke();
+        g.fillStyle = '#fff'; g.beginPath(); g.arc(ax, cy0, 3 * d, 0, 6.283); g.fill(); g.stroke();
+        g.fillStyle = '#fff'; g.fillRect(bx, by, cardW, bh); g.strokeStyle = '#1d1f21'; g.strokeRect(bx + 0.5, by + 0.5, cardW - 1, bh - 1);
+        g.fillStyle = ink === '#1d1f21' ? '#1d1f21' : ink; g.fillRect(bx + 6 * d, by + 6 * d, 20 * d, 12 * d);
+        g.fillStyle = '#fff'; g.font = `600 ${9 * d}px JetBrains Mono, monospace`; g.textAlign = 'center'; g.fillText('0' + (i + 1), bx + 16 * d, by + 15.5 * d);
+        g.textAlign = 'left'; g.fillStyle = '#1d1f21'; g.font = `600 ${10.5 * d}px JetBrains Mono, monospace`; g.fillText(Ly.n.toUpperCase(), bx + 32 * d, by + 16 * d);
+        if (!narrow) { g.fillStyle = '#7a7e82'; g.font = `500 ${9 * d}px JetBrains Mono, monospace`; g.fillText(Ly.s.toUpperCase().slice(0, 34), bx + 8 * d, by + 31 * d); }
+      }
+      ripples = ripples.map(p => p + 0.012).filter(p => p < 1);
+      // the signal itself
+      const sy = top + sig * step;
+      if (o.S !== 'idle') { g.fillStyle = '#ff6a1a'; g.beginPath(); g.arc(cx, sy, 4.5 * d, 0, 6.283); g.fill(); g.strokeStyle = 'rgba(255,106,26,.45)'; g.lineWidth = 1 * d; g.beginPath(); g.arc(cx, sy, (9 + 4 * Math.sin(t * 8)) * d, 0, 6.283); g.stroke(); }
+    };
+    return o.api;
   } },
 ];
 
