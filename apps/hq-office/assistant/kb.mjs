@@ -72,8 +72,10 @@ export async function build(root, out = BUILT) {
 }
 
 /* ---------- Ilia's own materials (server side) ---------- */
-let PRIV = '';
-export function initKb(dataDir) { PRIV = path.join(dataDir, 'kb-private'); fs.mkdirSync(PRIV, { recursive:true }); }
+let PRIV = '', SKILLS = '';
+export function initKb(dataDir) { PRIV = path.join(dataDir, 'kb-private'); SKILLS = path.join(dataDir, 'desk', 'skills.json'); fs.mkdirSync(PRIV, { recursive:true }); }
+// skills installed on the runner's server (the desk saves what the runner reports)
+function serverSkills() { try { return JSON.parse(fs.readFileSync(SKILLS, 'utf8')); } catch { return []; } }
 const privFiles = () => PRIV && fs.existsSync(PRIV) ? fs.readdirSync(PRIV).filter(f => f.endsWith('.json')) : [];
 
 // one uploaded file → documents (a claude.ai export becomes one document per chat / project)
@@ -133,12 +135,15 @@ function chunk(doc) {
 }
 export function loadKb() {
   const built = fs.existsSync(BUILT) ? BUILT : '';
-  const key = (built ? fs.statSync(built).mtimeMs : 0) + '|' + privFiles().join(',');
+  const skStamp = SKILLS && fs.existsSync(SKILLS) ? fs.statSync(SKILLS).mtimeMs : 0;
+  const key = (built ? fs.statSync(built).mtimeMs : 0) + '|' + skStamp + '|' + privFiles().join(',');
   if (cache.key === key) return cache;
   let base = { digest:'', docs:[] };
   if (built) try { base = JSON.parse(fs.readFileSync(built, 'utf8')); } catch (e) { console.error('kb:', e.message); }
   const priv = privFiles().map(f => { try { return JSON.parse(fs.readFileSync(path.join(PRIV, f), 'utf8')); } catch { return null; } }).filter(Boolean);
-  const docs = [...base.docs, ...priv];
+  const skills = serverSkills();
+  const skillDocs = skills.map(x => ({ path:'скиллы сервера/' + x.name, title:'Скилл ' + x.name, kind:'skill', text:x.text || x.description }));
+  const docs = [...base.docs, ...skillDocs, ...priv];
   const chunks = [], df = new Map();
   for (const d of docs) for (const c of chunk(d)) {
     const tf = new Map(); for (const t of tokens(c.head + ' ' + c.text)) tf.set(t, (tf.get(t) || 0) + 1);
@@ -146,10 +151,11 @@ export function loadKb() {
     chunks.push({ path:d.path, head:c.head, text:c.text, tf, len:[...tf.values()].reduce((a, b) => a + b, 0) });
   }
   const avg = chunks.reduce((n, c) => n + c.len, 0) / Math.max(1, chunks.length);
-  const list = docs.map(d => `- ${d.title} — ${d.path}`).join('\n');
-  const digest = (base.digest ? base.digest + '\n\n' : '') +
+  const list = [...base.docs, ...priv].map(d => `- ${d.title} — ${d.path}`).join('\n');
+  const skillList = skills.length ? `## Скиллы команды на сервере (${skills.length}) — их выполняет Claude Code (run_claude_code)\n` + skills.map(x => `- ${x.name} — ${x.description.slice(0, 220)}`).join('\n') + '\n\n' : '';
+  const digest = (base.digest ? base.digest + '\n\n' : '') + skillList +
     `## База знаний: все документы (ищи по ним search_knowledge, читай read_document по пути)\n${list}`;
-  cache = { key, digest, docs, chunks, df, avg, builtAt:base.builtAt || null, counts:{ repo:base.docs.length, mine:priv.length } };
+  cache = { key, digest, docs, chunks, df, avg, builtAt:base.builtAt || null, counts:{ repo:base.docs.length, mine:priv.length, skills:skills.length } };
   return cache;
 }
 export function search(query, k = 6) {

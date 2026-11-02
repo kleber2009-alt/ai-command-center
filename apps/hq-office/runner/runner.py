@@ -36,7 +36,7 @@ JOBS = Path(os.environ.get("HQ_RUNNER_JOBS") or HOME / "hq-runner/jobs")
 LIMIT = int(os.environ.get("HQ_RUNNER_LIMIT_MIN", "60")) * 60
 SKILLS = HOME / ".claude/skills"
 ALLOWED_TOOLS = ["Bash", "Read", "Write", "Edit", "Glob", "Grep", "Skill", "TodoWrite", "WebFetch", "WebSearch"]
-VERSION = "3"
+VERSION = "4"
 FILE_LIMIT = 300_000_000
 
 
@@ -333,6 +333,28 @@ def run_job(job):
     log(jid, f"review in {mins:.1f} min, {len(files)} files, main {main}")
 
 
+def skills_report():
+    """Все скиллы этого сервера (~/.claude/skills): имя, описание из шапки SKILL.md и сам текст — двойнику в офисе."""
+    out = []
+    for f in sorted(SKILLS.glob("*/SKILL.md")) if SKILLS.exists() else []:
+        try:
+            text = f.read_text(encoding="utf-8", errors="replace")
+        except OSError:
+            continue
+        name, desc = f.parent.name, ""
+        m = re.match(r"^---\s*\n(.*?)\n---", text, re.S)
+        if m:
+            head = m.group(1)
+            n = re.search(r"^name:\s*(.+)$", head, re.M)
+            if n:
+                name = n.group(1).strip().strip("'\"")
+            d = re.search(r"^description:\s*(.*(?:\n[ \t]+.*)*)", head, re.M)
+            if d:
+                desc = re.sub(r"\s+", " ", d.group(1).lstrip(">|-").strip()).strip("'\"")
+        out.append({"name": name, "description": desc[:600], "text": text[:20000]})
+    return out
+
+
 def main():
     if not TOKEN:
         raise SystemExit("HQ_DESK_RUNNER_TOKEN is not set")
@@ -349,6 +371,12 @@ def main():
         except Exception as e:
             log("hello:", e)
             time.sleep(15)
+    try:
+        sk = skills_report()
+        call("POST", "/runner/skills", {"skills": sk}, timeout=120)
+        log(f"скиллы отправлены в офис: {len(sk)}")
+    except Exception as e:
+        log("skills:", e)
     while True:
         try:
             status, job = call("POST", "/runner/claim", {})
