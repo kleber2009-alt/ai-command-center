@@ -221,3 +221,5 @@ Per-app `README.md` / `DEPLOY.md` / `ROADMAP.md` remain authoritative for deep a
 - `carousel-pro` — «Карусель Pro»: карусели из залётов — свои вышедшие (ремикс слайдов с новой обложкой, хуком, CTA;
   объединяет `ilia-carousel-style`: `scripts/remix.py`, `assemble.py`) и конкурентов (формат и рабочие скриншоты, слайды в
   стиле Ильи). Правила для Claude — `references/carousel-rules.md`; в Telegram — ветка «Instagram Карусели» (`apps/remake-site/carousel-bot.mjs`).
+- `three-technical-illustration` — 3D-взрыв-схема в стиле инженерного мануала (Three.js + HTML-оверлей подписей):
+  светлый фон, белый/серебристый металл, оранжевые и зелёные акценты, выноски. Шаблон — `assets/template.html`.

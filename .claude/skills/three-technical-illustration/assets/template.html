@@ -1,0 +1,337 @@
+<!doctype html>
+<html lang="ru">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Сборка в разборе</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link href="https://fonts.googleapis.com/css2?family=JetBrains+Mono:wght@400;600&display=swap" rel="stylesheet">
+<style>
+  :root {
+    --bg: #f5f5f2;
+    --ink: #1d1f21;
+    --muted: #7a7e82;
+    --line: #1d1f21;
+    --card: #ffffff;
+    --orange: #ff6a1a;
+    --green: #2fb36b;
+    --grid: #dcdcd6;
+  }
+  * { box-sizing: border-box; }
+  html, body { margin: 0; height: 100%; background: var(--bg); color: var(--ink);
+    font-family: 'JetBrains Mono', ui-monospace, monospace; }
+  body { overflow-x: hidden; }
+  .sheet { position: relative; width: 100%; min-height: 100vh; display: grid;
+    grid-template-rows: auto 1fr auto; }
+  header, footer { display: flex; justify-content: space-between; align-items: center; gap: 16px;
+    padding: 14px 24px; font-size: 11px; letter-spacing: .08em; text-transform: uppercase; }
+  header { border-bottom: 1px solid var(--line); }
+  footer { border-top: 1px solid var(--line); flex-wrap: wrap; }
+  header b { font-weight: 600; }
+  .stage-wrap { display: flex; flex-direction: column; min-height: 0; }
+  .stage { position: relative; flex: 1; min-height: 560px; }
+  .view { position: absolute; inset: 0; }
+  canvas { display: block; position: absolute; inset: 0; width: 100%; height: 100%; }
+  svg.leaders { position: absolute; inset: 0; width: 100%; height: 100%; pointer-events: none; }
+  .panel { position: absolute; top: 0; bottom: 0; width: 230px; display: flex; flex-direction: column;
+    justify-content: space-around; padding: 24px 0; pointer-events: none; }
+  .panel.left { left: 24px; } .panel.right { right: 24px; }
+  .card { pointer-events: auto; background: var(--card); border: 1px solid var(--line); padding: 10px 12px;
+    font-size: 10.5px; line-height: 1.45; letter-spacing: .06em; text-transform: uppercase; }
+  .card .hd { display: flex; align-items: center; gap: 8px; font-weight: 600; font-size: 11px; margin-bottom: 4px; }
+  .card .no { display: inline-block; min-width: 24px; padding: 1px 4px; text-align: center;
+    background: var(--ink); color: #fff; font-size: 10px; }
+  .card.orange .no { background: var(--orange); } .card.green .no { background: var(--green); }
+  .card .note { color: var(--muted); }
+  .bar { margin-top: 6px; height: 4px; background: #ececea; position: relative; }
+  .bar i { position: absolute; left: 0; top: 0; bottom: 0; background: var(--ink); }
+  .card.orange .bar i { background: var(--orange); } .card.green .bar i { background: var(--green); }
+  .legend { display: flex; gap: 16px; align-items: center; }
+  .sw { display: inline-block; width: 10px; height: 10px; border: 1px solid var(--line); vertical-align: -1px; margin-right: 6px; }
+  .ctrl { display: flex; align-items: center; gap: 10px; }
+  input[type=range] { accent-color: var(--orange); width: 160px; }
+  .tags { position: absolute; inset: 0; pointer-events: none; display: none; }
+  .tag { position: absolute; transform: translate(-50%, -50%); background: var(--ink); color: #fff;
+    font-size: 9px; padding: 1px 4px; }
+  .still footer .ctrl { display: none; }
+  @media (max-width: 760px) {
+    header, footer { padding: 12px 16px; }
+    .stage { min-height: 0; }
+    .view { position: relative; height: 440px; }
+    .panel { position: static; justify-content: flex-start; width: auto; padding: 0 16px 12px; gap: 8px; }
+    svg.leaders { display: none; }
+    .tags { display: block; }
+  }
+</style>
+</head>
+<body>
+<div class="sheet" id="sheet">
+  <header>
+    <span><b>FIG. 01</b> — МОДУЛЬ ПРИВОДА / РАЗНЕСЁННЫЙ ВИД</span>
+    <span>REV B · 2026</span>
+  </header>
+  <div class="stage-wrap">
+    <div class="stage" id="stage">
+      <div class="view" id="view">
+        <canvas id="c"></canvas>
+        <svg class="leaders" id="leaders"></svg>
+        <div class="tags" id="tags"></div>
+      </div>
+      <div class="panel left" id="panelLeft"></div>
+      <div class="panel right" id="panelRight"></div>
+    </div>
+  </div>
+  <footer>
+    <div class="legend">
+      <span><i class="sw" style="background:#f2f2ef"></i>КОРПУС</span>
+      <span><i class="sw" style="background:#3a3d40"></i>КРЕПЁЖ</span>
+      <span><i class="sw" style="background:var(--orange)"></i>АКТИВНЫЙ УЗЕЛ</span>
+      <span><i class="sw" style="background:var(--green)"></i>СТАТУС</span>
+    </div>
+    <label class="ctrl">РАЗНЕСЕНИЕ <input id="explode" type="range" min="0" max="1" step="0.01" value="0"></label>
+    <span>МАСШТАБ 1:4 · ММ</span>
+  </footer>
+</div>
+
+<script type="importmap">
+{ "imports": {
+  "three": "https://unpkg.com/three@0.160.0/build/three.module.js",
+  "three/addons/": "https://unpkg.com/three@0.160.0/examples/jsm/"
+} }
+</script>
+<script type="module">
+import * as THREE from 'three';
+import { OrbitControls } from 'three/addons/controls/OrbitControls.js';
+
+const params = new URLSearchParams(location.search);
+const STILL = params.has('still');
+const FIXED = params.has('explode') ? Math.min(1, Math.max(0, +params.get('explode'))) : null;
+if (STILL) document.getElementById('sheet').classList.add('still');
+
+// ---------- palette / materials ----------
+const C = { base: 0xf2f2ef, silver: 0xc9cbcc, dark: 0x3a3d40, orange: 0xff6a1a, green: 0x2fb36b, edge: 0x55595d };
+const mat = {
+  base:   new THREE.MeshStandardMaterial({ color: C.base,   metalness: .1,  roughness: .55 }),
+  silver: new THREE.MeshStandardMaterial({ color: C.silver, metalness: .25, roughness: .45 }),
+  dark:   new THREE.MeshStandardMaterial({ color: C.dark,   metalness: .3,  roughness: .6 }),
+  orange: new THREE.MeshStandardMaterial({ color: C.orange, metalness: .2,  roughness: .5 }),
+  green:  new THREE.MeshStandardMaterial({ color: C.green,  metalness: .2,  roughness: .5 }),
+};
+const edgeMat = new THREE.LineBasicMaterial({ color: C.edge, transparent: true, opacity: .55 });
+
+// mesh + crisp technical outline
+function solid(geo, m, edges = true) {
+  const g = new THREE.Group();
+  g.add(new THREE.Mesh(geo, m));
+  if (edges) g.add(new THREE.LineSegments(new THREE.EdgesGeometry(geo, 25), edgeMat));
+  return g;
+}
+// hollow cylinder (tube) via lathe: inner radius r1, outer r2, height h
+function tube(r1, r2, h, seg = 64) {
+  const p = [new THREE.Vector2(r1, -h/2), new THREE.Vector2(r2, -h/2), new THREE.Vector2(r2, h/2),
+             new THREE.Vector2(r1, h/2), new THREE.Vector2(r1, -h/2)];
+  return new THREE.LatheGeometry(p, seg);
+}
+function anchorAt(group, x, y, z) {
+  const a = new THREE.Object3D(); a.position.set(x, y, z); group.add(a); return a;
+}
+
+// ---------- renderer / scene ----------
+const canvas = document.getElementById('c');
+const stage = document.getElementById('view');
+const renderer = new THREE.WebGLRenderer({ canvas, antialias: true, preserveDrawingBuffer: true });
+renderer.setPixelRatio(Math.min(devicePixelRatio, 2));
+const scene = new THREE.Scene();
+scene.background = new THREE.Color(0xf5f5f2);
+
+const camera = new THREE.PerspectiveCamera(30, 1, 0.1, 200);
+camera.position.set(17, 12, 19);
+
+scene.add(new THREE.HemisphereLight(0xffffff, 0xd8d8d2, 0.9));
+const key = new THREE.DirectionalLight(0xffffff, 0.8); key.position.set(6, 12, 8); scene.add(key);
+const fill = new THREE.DirectionalLight(0xffffff, 0.35); fill.position.set(-8, 4, -6); scene.add(fill);
+
+const grid = new THREE.GridHelper(40, 40, 0xcfcfc8, 0xdcdcd6);
+grid.position.y = -4.2; grid.material.transparent = true; grid.material.opacity = .7;
+scene.add(grid);
+
+const assembly = new THREE.Group();
+scene.add(assembly);
+
+// ---------- parts (replace for your object) ----------
+// base: assembled position; dir: explode direction (multiplied by SPREAD * explode)
+const SPREAD = 1.6;
+const parts = [];
+function part(id, group, base, dir) {
+  group.position.copy(base); assembly.add(group);
+  parts.push({ id, group, base: base.clone(), dir: dir.clone() });
+  return group;
+}
+
+// 1. base plate
+const plate = solid(new THREE.BoxGeometry(6, 0.4, 6), mat.silver);
+part('plate', plate, new THREE.Vector3(0, -2, 0), new THREE.Vector3(0, -1.2, 0));
+const aPlate = anchorAt(plate, 3, 0, 3);
+
+// 2. housing
+const housing = solid(tube(1.5, 2.3, 2.2), mat.base);
+part('housing', housing, new THREE.Vector3(0, -0.7, 0), new THREE.Vector3(0, -0.4, 0));
+const aHousing = anchorAt(housing, -2.3, 0.4, 0);
+
+// 3. gear: disc + teeth
+const gear = new THREE.Group();
+gear.add(solid(new THREE.CylinderGeometry(1.6, 1.6, 0.5, 48), mat.silver));
+for (let i = 0; i < 18; i++) {
+  const t = solid(new THREE.BoxGeometry(0.28, 0.5, 0.36), mat.silver);
+  const a = i / 18 * Math.PI * 2;
+  t.position.set(Math.cos(a) * 1.72, 0, Math.sin(a) * 1.72); t.rotation.y = -a;
+  gear.add(t);
+}
+part('gear', gear, new THREE.Vector3(0, 0.65, 0), new THREE.Vector3(0, 0.6, 0));
+const aGear = anchorAt(gear, 1.85, 0, 0.3);
+
+// 4. rotor ring — active element (orange)
+const rotor = solid(new THREE.TorusGeometry(1.25, 0.18, 16, 64), mat.orange);
+rotor.rotation.x = Math.PI / 2;
+const rotorWrap = new THREE.Group(); rotorWrap.add(rotor);
+part('rotor', rotorWrap, new THREE.Vector3(0, 1.05, 0), new THREE.Vector3(0, 1.4, 0));
+const aRotor = anchorAt(rotorWrap, -1.25, 0, 0.2);
+
+// 5. cap disc
+const cap = solid(tube(0.35, 2.3, 0.3), mat.base);
+part('cap', cap, new THREE.Vector3(0, 1.35, 0), new THREE.Vector3(0, 1.9, 0));
+const aCap = anchorAt(cap, 2.0, 0.15, -1.0);
+
+// 6. bolts ×4
+const bolts = new THREE.Group();
+for (let i = 0; i < 4; i++) {
+  const b = new THREE.Group();
+  b.add(solid(new THREE.CylinderGeometry(0.12, 0.12, 1.2, 12), mat.dark));
+  const head = solid(new THREE.CylinderGeometry(0.22, 0.22, 0.16, 6), mat.dark);
+  head.position.y = 0.68; b.add(head);
+  const a = i / 4 * Math.PI * 2 + Math.PI / 4;
+  b.position.set(Math.cos(a) * 1.9, 0, Math.sin(a) * 1.9);
+  bolts.add(b);
+}
+part('bolts', bolts, new THREE.Vector3(0, 1.3, 0), new THREE.Vector3(0, 2.7, 0));
+const aBolts = anchorAt(bolts, Math.cos(Math.PI / 4) * 1.9, 0.76, Math.sin(Math.PI / 4) * 1.9);
+
+// 7. shaft
+const shaft = solid(new THREE.CylinderGeometry(0.3, 0.3, 4.4, 24), mat.dark);
+part('shaft', shaft, new THREE.Vector3(0, 0, 0), new THREE.Vector3(0, 0.9, 0));
+
+// 8. sensor module — status (green), explodes sideways
+const sensor = new THREE.Group();
+sensor.add(solid(new THREE.BoxGeometry(1.1, 0.7, 0.8), mat.base));
+const led = solid(new THREE.BoxGeometry(0.36, 0.12, 0.5), mat.green, false);
+led.position.y = 0.41; sensor.add(led);
+part('sensor', sensor, new THREE.Vector3(2.75, -0.7, 0), new THREE.Vector3(1.4, 0, 0));
+const aSensor = anchorAt(sensor, 0.3, 0.45, 0);
+
+// axis guide (dashed)
+const axisGeo = new THREE.BufferGeometry().setFromPoints([new THREE.Vector3(0, -6, 0), new THREE.Vector3(0, 8, 0)]);
+const axis = new THREE.Line(axisGeo, new THREE.LineDashedMaterial({ color: 0x9a9ea2, dashSize: .25, gapSize: .18 }));
+axis.computeLineDistances(); assembly.add(axis);
+
+// ---------- labels (replace text for your object) ----------
+const labels = [
+  { no: '01', side: 'left',  title: 'Крепёж M4 ×4',     note: 'Сталь, затяжка 2.5 Н·м', anchor: aBolts },
+  { no: '02', side: 'left',  title: 'Ротор',            note: 'Активный узел · 3200 об/мин', anchor: aRotor, tone: 'orange', bar: .78 },
+  { no: '03', side: 'left',  title: 'Корпус',           note: 'Алюминий 6061, анод.', anchor: aHousing },
+  { no: '04', side: 'right', title: 'Крышка',           note: 'Герметичная, IP65', anchor: aCap },
+  { no: '05', side: 'right', title: 'Шестерня Z18',     note: 'Модуль 0.5 · сталь 40Х', anchor: aGear, bar: .55 },
+  { no: '06', side: 'right', title: 'Датчик Холла',     note: 'Статус: норма', anchor: aSensor, tone: 'green', bar: .92 },
+  { no: '07', side: 'right', title: 'Основание',        note: '120 × 120 × 8 мм', anchor: aPlate },
+];
+const panels = { left: document.getElementById('panelLeft'), right: document.getElementById('panelRight') };
+const tagsEl = document.getElementById('tags');
+for (const l of labels) {
+  const el = document.createElement('div');
+  el.className = 'card' + (l.tone ? ' ' + l.tone : '');
+  el.innerHTML = `<div class="hd"><span class="no">${l.no}</span>${l.title}</div><div class="note">${l.note}</div>` +
+    (l.bar != null ? `<div class="bar"><i style="width:${l.bar * 100}%"></i></div>` : '');
+  panels[l.side].appendChild(el);
+  l.el = el;
+  const tag = document.createElement('div'); tag.className = 'tag'; tag.textContent = l.no;
+  tagsEl.appendChild(tag); l.tag = tag;
+}
+
+// ---------- controls ----------
+const controls = new OrbitControls(camera, canvas);
+controls.target.set(0, 1.0, 0);
+controls.enablePan = false; controls.enableDamping = true;
+controls.minDistance = 14; controls.maxDistance = 40;
+controls.enabled = !STILL;
+let interacting = false;
+controls.addEventListener('start', () => interacting = true);
+controls.addEventListener('end', () => interacting = false);
+
+const slider = document.getElementById('explode');
+let explode = 0, target = FIXED ?? 1, userSet = false;
+slider.addEventListener('input', () => { userSet = true; target = +slider.value; });
+
+// ---------- layout / leaders ----------
+const svg = document.getElementById('leaders');
+function resize() {
+  const w = stage.clientWidth, h = stage.clientHeight;
+  renderer.setSize(w, h, false);
+  camera.aspect = w / h;
+  // narrow screens: widen FOV so the whole assembly stays in frame
+  camera.fov = w / h < 1 ? 30 / Math.max(.55, w / h) : 30;
+  camera.updateProjectionMatrix();
+  svg.setAttribute('viewBox', `0 0 ${w} ${h}`);
+}
+new ResizeObserver(resize).observe(stage);
+resize();
+
+const v = new THREE.Vector3();
+function project(obj) {
+  obj.getWorldPosition(v).project(camera);
+  return { x: (v.x + 1) / 2 * stage.clientWidth, y: (1 - v.y) / 2 * stage.clientHeight };
+}
+function drawLeaders() {
+  const sr = stage.getBoundingClientRect();
+  let out = '';
+  for (const l of labels) {
+    const p = project(l.anchor);
+    l.tag.style.left = p.x + 'px'; l.tag.style.top = p.y + 'px';
+    const r = l.el.getBoundingClientRect();
+    const left = l.side === 'left';
+    const sx = left ? r.right - sr.left : r.left - sr.left;
+    const sy = r.top - sr.top + r.height / 2;
+    // horizontal run, then 45° elbow into the anchor
+    const dy = p.y - sy;
+    const ex = p.x + (left ? -1 : 1) * Math.abs(dy);
+    const kx = left ? Math.max(sx + 12, Math.min(ex, p.x)) : Math.min(sx - 12, Math.max(ex, p.x));
+    const color = l.tone === 'orange' ? 'var(--orange)' : l.tone === 'green' ? 'var(--green)' : 'var(--line)';
+    out += `<path d="M${sx},${sy} H${kx} L${p.x},${p.y}" fill="none" stroke="${color}" stroke-width="1"/>` +
+           `<circle cx="${p.x}" cy="${p.y}" r="3" fill="#fff" stroke="${color}" stroke-width="1"/>`;
+  }
+  svg.innerHTML = out;
+}
+
+// ---------- loop ----------
+const ease = t => t < .5 ? 4 * t * t * t : 1 - Math.pow(-2 * t + 2, 3) / 2;
+const t0 = performance.now();
+let last = t0;
+function tick(now) {
+  const dt = Math.min(.05, (now - last) / 1000); last = now;
+  if (!userSet && FIXED == null && !STILL) {
+    explode = ease(Math.min(1, (now - t0) / 1600)) * target;
+    slider.value = explode;
+  } else if (STILL) {
+    explode = FIXED ?? 1;
+  } else {
+    explode += (target - explode) * Math.min(1, dt * 8);
+  }
+  for (const p of parts) p.group.position.copy(p.base).addScaledVector(p.dir, explode * SPREAD);
+  if (!STILL && !interacting) assembly.rotation.y += dt * 0.08;
+  controls.update();
+  renderer.render(scene, camera);
+  drawLeaders();
+  requestAnimationFrame(tick);
+}
+requestAnimationFrame(tick);
+</script>
+</body>
+</html>
