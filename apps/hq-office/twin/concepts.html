@@ -546,7 +546,11 @@ function organism(r, theme, label) {
     return { w, h, d };
   };
   const lit = new Set();   // knowledge in use right now (names from KNOW)
-  const o = { c, g, fit, lit, S:'idle', root:r.firstElementChild };
+  const o = { c, g, fit, lit, S:'idle', root:r.firstElementChild, ptr:{ x:0, y:0, on:false } };
+  const pm = e => { const b = c.getBoundingClientRect(), k = c.width / (b.width || 1); o.ptr.x = (e.clientX - b.left) * k; o.ptr.y = (e.clientY - b.top) * k; o.ptr.on = true; };
+  o.root.addEventListener('pointermove', pm);
+  o.root.addEventListener('pointerleave', () => { o.ptr.on = false; });
+  o.root.addEventListener('pointerdown', e => { pm(e); o.onPoke?.(o.ptr.x, o.ptr.y); });
   o.api = {
     me(t) { q.textContent = '«' + t + '»'; a.textContent = ''; cards.innerHTML = ''; lit.clear(); o.onMe?.(t); },
     open() { a.textContent = ''; return a; },
@@ -960,11 +964,16 @@ const V = [
     const M = 84;
     const org = KNOW.map((n, i) => ({ n, a:i / KNOW.length * 6.283 + 0.2, r:0.5 + (i % 3) * 0.11, len:0.85 + (i % 2) * 0.3, glow:0 }));
     const cyto = Array.from({ length:280 }, () => ({ a:Math.random() * 6.283, r:0.38 + Math.sqrt(Math.random()) * 0.52, v:0.4 + Math.random(), z:Math.random() }));
-    let ves = [], pod = 0, eye = 0, think = 0, last = 0;
+    let ves = [], pod = 0, eye = 0, think = 0, last = 0, bulge = 0, ang = 0, wob = 0, lastVes = 0;
+    o.onPoke = () => { wob = 1; ves.push({ a:ang, p:0 }); org.forEach(q => q.kick = 1); };
     o.onCard = () => { for (let i = 0; i < 3; i++) ves.push({ a:Math.PI / 2 + (i - 1) * 0.62, p:-i * 0.22 }); };
     o.api.frame = (t, l) => {
       const { w, h, d } = fit(), dt = Math.min(0.05, last ? t - last : 0.016); last = t;
-      const cx = w / 2, cy = h * 0.43, R = Math.min(w * 0.34, h * 0.27);
+      const beat = Math.pow(Math.max(0, Math.sin(t * 2.1)), 14) + 0.6 * Math.pow(Math.max(0, Math.sin(t * 2.1 - 0.5)), 14);
+      const cx = w / 2 + Math.sin(t * 0.21) * w * 0.012, cy = h * 0.43 + Math.cos(t * 0.17) * h * 0.012, R = Math.min(w * 0.34, h * 0.27) * (1 + 0.022 * beat);
+      { let prox = 0; if (o.ptr.on) { const dx = o.ptr.x - cx, dy = o.ptr.y - cy; ang = Math.atan2(dy, dx); prox = Math.max(0, 1 - Math.max(0, Math.hypot(dx, dy) - R) / (R * 1.6)); } bulge = mix(bulge, prox, 0.06); }
+      wob *= 0.95;
+      if (o.S === 'idle' && t - lastVes > 4.5) { ves.push({ a:Math.random() * 6.283, p:0 }); lastVes = t; }
       pod = mix(pod, o.S === 'listen' ? 1 : 0, 0.05); eye = mix(eye, o.S === 'look' ? 1 : 0, 0.06); think = mix(think, o.S === 'think' ? 1 : 0, 0.05);
       g.clearRect(0, 0, w, h);
       const bg = g.createRadialGradient(cx, cy, 0, cx, cy, R * 2.2); bg.addColorStop(0, 'rgba(30,120,100,.22)'); bg.addColorStop(1, 'rgba(0,0,0,0)'); g.fillStyle = bg; g.fillRect(0, 0, w, h);
@@ -973,6 +982,8 @@ const V = [
         let k = 1 + 0.035 * Math.sin(a * 3 + t * 0.9) + 0.025 * Math.sin(a * 5 - t * 1.3) + 0.02 * Math.sin(a * 2 + t * 0.4) + l * 0.05 * Math.sin(a * 9 + t * 12);
         const da = Math.atan2(Math.sin(a - Math.PI / 2), Math.cos(a - Math.PI / 2));
         k += pod * (0.3 + 0.04 * Math.sin(t * 5)) * Math.exp(-da * da / 0.07);   // pseudopod toward the speaker
+        const dp = Math.atan2(Math.sin(a - ang), Math.cos(a - ang));
+        k += bulge * (0.14 + 0.02 * Math.sin(t * 3)) * Math.exp(-dp * dp / 0.12) + wob * 0.07 * Math.sin(a * 6 - t * 16);   // reaches for the cursor, shivers on touch
         return k * (1 - think * 0.04 * (1 + Math.sin(t * 4)));
       };
       const P = a => { const k = rad(a); return [cx + Math.cos(a) * R * k * sx, cy + Math.sin(a) * R * k * sy]; };
@@ -1000,7 +1011,7 @@ const V = [
       // organelles = knowledge
       g.font = `600 ${10 * d}px JetBrains Mono, monospace`; g.textAlign = 'center';
       for (const q of org) {
-        q.a += dt * (0.05 + think * 0.25); q.glow = mix(q.glow, lit.has(q.n) ? 1 : 0, 0.06);
+        q.kick = (q.kick || 0) * 0.94; q.a += dt * (0.05 + think * 0.25) + q.kick * 0.035; q.glow = mix(q.glow, lit.has(q.n) ? 1 : 0, 0.06);
         const k = rad(q.a) * q.r, x = cx + Math.cos(q.a) * R * k * sx, y = cy + Math.sin(q.a) * R * k * sy, L = R * 0.12 * q.len;
         g.save(); g.translate(x, y); g.rotate(q.a + Math.PI / 2 + Math.sin(t + q.r * 9) * 0.3);
         g.beginPath(); g.ellipse(0, 0, L, L * 0.42, 0, 0, 6.283);
@@ -1012,7 +1023,7 @@ const V = [
         g.fillStyle = `rgba(${q.glow > 0.3 ? '255,220,180' : '190,255,232'},${0.45 + q.glow * 0.5})`; g.fillText(q.n.toUpperCase(), x, y + L * 0.42 + 13 * d);
       }
       // nucleus = the model
-      const nx = cx + Math.sin(t * 0.3) * R * 0.04, ny = cy + Math.cos(t * 0.23) * R * 0.03, nr = R * 0.3 * (1 + 0.04 * Math.sin(t * 1.7) + l * 0.08);
+      const nx = cx + Math.sin(t * 0.3) * R * 0.04 + Math.cos(ang) * bulge * R * 0.07, ny = cy + Math.cos(t * 0.23) * R * 0.03 + Math.sin(ang) * bulge * R * 0.07, nr = R * 0.3 * (1 + 0.04 * Math.sin(t * 1.7) + l * 0.08);
       const ng = g.createRadialGradient(nx - nr * 0.3, ny - nr * 0.3, nr * 0.1, nx, ny, nr * 1.05);
       ng.addColorStop(0, 'rgba(255,214,150,.95)'); ng.addColorStop(0.6, 'rgba(255,140,60,.55)'); ng.addColorStop(1, 'rgba(160,60,20,.25)');
       g.beginPath(); for (let i = 0; i <= 48; i++) { const a = i / 48 * 6.283, k = nr * (1 + 0.04 * Math.sin(a * 4 + t * 1.1)); i ? g.lineTo(nx + Math.cos(a) * k, ny + Math.sin(a) * k) : g.moveTo(nx + Math.cos(a) * k, ny + Math.sin(a) * k); }
@@ -1051,16 +1062,25 @@ const V = [
     const sprout = (from, n, life = 70) => { for (let i = 0; i < n; i++) tips.push({ x:from[0], y:from[1], a:Math.random() * 6.283, life:life * (0.5 + Math.random()) }); };
     o.onMe = () => { for (let i = 0; i < 7; i++) tips.push({ x:(Math.random() - 0.5) * 1.6, y:1.05, a:-Math.PI / 2, home:true, life:160 }); };
     o.onCard = () => nodes.forEach(nd => pulses.push({ nd, i:0, dir:1, c:'125,249,255' }));
+    const toN = (x, y) => [(x - CX) / S, (y - CY) / S];
+    let lastBeat = 0;
+    o.onPoke = (x, y) => { nodes.forEach(nd => pulses.push({ nd, i:0, dir:1, c:'255,214,160' })); const [nx, ny] = toN(x, y); sprout([nx, ny], 6, 60); };
     o.api.frame = (t, l) => {
       const { w, h, d } = fit();
       if (w !== W || h !== H) { W = off.width = w; H = off.height = h; D = d; S = Math.min(w / 2.9, h / 2.1); CX = w / 2; CY = h * 0.43; og.lineCap = 'round'; segs.forEach(drawSeg); }
+      if (o.ptr.on && tips.length < 200 && Math.random() < 0.1) {   // hyphae reach for the cursor
+        const [tx, ty] = toN(o.ptr.x, o.ptr.y), nd = nodes.reduce((b, n) => Math.hypot(n.x - tx, n.y - ty) < Math.hypot(b.x - tx, b.y - ty) ? n : b), pt = nd.path[Math.random() * nd.path.length | 0];
+        tips.push({ x:pt[0], y:pt[1], a:Math.atan2(ty - pt[1], tx - pt[0]), tx, ty, life:90 });
+      }
+      if (t - lastBeat > 2.2) { lastBeat = t; const nd = nodes[Math.random() * nodes.length | 0]; pulses.push({ nd, i:0, dir:1, c:'255,194,122' }); }
       const steps = o.S === 'think' ? 3 : o.S === 'listen' ? 2 : 1 + Math.round(l * 2);
       for (let k = 0; k < steps; k++) {
         const next = [];
         for (const p of tips) {
           p.a += (Math.random() - 0.5) * 0.55;
-          const tx = p.node ? p.node.x : 0, ty = p.node ? p.node.y : 0;
-          if (p.node || p.home) { let da = Math.atan2(ty - p.y, tx - p.x) - p.a; da = Math.atan2(Math.sin(da), Math.cos(da)); p.a += da * 0.12; }
+          const tx = p.node ? p.node.x : p.tx ?? 0, ty = p.node ? p.node.y : p.ty ?? 0;
+          if (p.tx !== undefined && Math.hypot(tx - p.x, ty - p.y) < 0.04) { p.life = 0; continue; }
+          if (p.node || p.home || p.tx !== undefined) { let da = Math.atan2(ty - p.y, tx - p.x) - p.a; da = Math.atan2(Math.sin(da), Math.cos(da)); p.a += da * 0.12; }
           const nx = p.x + Math.cos(p.a) * 0.013, ny = p.y + Math.sin(p.a) * 0.013;
           const s = [p.x, p.y, nx, ny, p.node ? 1.5 : p.home ? 1.1 : 0.7, p.home ? 1 : 0]; segs.push(s); drawSeg(s);
           p.x = nx; p.y = ny; p.life--;
@@ -1118,17 +1138,22 @@ const V = [
       .map(([n, k], i) => ({ n, k, s:0.12 + i * 0.128, side:i % 2 ? 1 : -1, glow:0, ph:i * 1.3 }));
     const snow = Array.from({ length:130 }, () => ({ x:Math.random(), y:Math.random(), v:0.004 + Math.random() * 0.01, z:Math.random() }));
     const CARD_ZO = { ideas:['Сценарист', 'Карусели'], vision:[], task:['Сценарист', 'Монтажёр', 'Claude Code'], live:ZO.map(z => z.n) };
-    let sparks = [], listen = 0, eye = 0, last = 0, bell = 0;
+    let sparks = [], listen = 0, eye = 0, last = 0, bell = 0, ox = 0, oy = 0, kick = 0;
+    o.onPoke = () => { ZO.forEach(z => z.glow = 1); kick = 1; };
     o.onCard = k => { for (const z of ZO) if ((CARD_ZO[k] || []).includes(z.n)) z.glow = 1; if (k === 'vision') eye = 1.4; };
     o.api.frame = (t, l) => {
       const { w, h, d } = fit(), dt = Math.min(0.05, last ? t - last : 0.016); last = t;
       listen = mix(listen, o.S === 'listen' ? 1 : 0, 0.04); eye = mix(eye, o.S === 'look' ? 1 : 0, 0.05);
-      const cx = w / 2, B = Math.min(w, h) * 0.1, top = h * 0.27, L = h * 0.38;
+      ox = mix(ox, o.ptr.on ? (o.ptr.x - w / 2) * 0.35 : Math.sin(t * 0.13) * w * 0.06, 0.012); kick *= 0.96;
+      if (Math.random() < 0.006) ZO[Math.random() * ZO.length | 0].glow = 0.8;   // a member of the colony twitches on its own
+      const B = Math.min(w, h) * 0.1;
+      oy = mix(oy, -bell * B * 0.18 + Math.sin(t * 0.4) * B * 0.15, 0.08);
+      const cx = w / 2 + ox, top = h * 0.27 + oy, L = h * 0.38;
       g.clearRect(0, 0, w, h);
       const bg = g.createLinearGradient(0, 0, 0, h); bg.addColorStop(0, '#04122a'); bg.addColorStop(1, '#01040d'); g.fillStyle = bg; g.fillRect(0, 0, w, h);
       for (const p of snow) { p.y -= p.v * dt * 3; p.x += Math.sin(t * 0.3 + p.z * 9) * 0.0002; if (p.y < 0) { p.y = 1; p.x = Math.random(); } g.fillStyle = `rgba(190,230,255,${0.08 + p.z * 0.22})`; g.fillRect(p.x * w, p.y * h, (0.6 + p.z) * d, (0.6 + p.z) * d); }
       const idle = Math.pow((Math.sin(t * 2.4) + 1) / 2, 3);
-      bell = mix(bell, o.S === 'speak' ? Math.min(1, l * 1.3) : o.S === 'think' ? 0.5 + 0.5 * Math.sin(t * 9) : idle, 0.25);
+      bell = kick > 0.05 ? Math.max(bell, kick) : mix(bell, o.S === 'speak' ? Math.min(1, l * 1.3) : o.S === 'think' ? 0.5 + 0.5 * Math.sin(t * 9) : idle, 0.25);
       const X = s => cx + B * 0.7 * s * Math.sin(s * 5 - t * 1.4) + B * 0.25 * Math.sin(t * 0.45);
       const Y = s => top + B * 0.75 + s * L;
       // stem with light waves running down
@@ -1208,12 +1233,15 @@ const V = [
       for (let i = 0; i < GW * GH; i++) if (px[i * 4 + 3] > 110) { U[i] = 0.45; V2[i] = 0.3; }
     }
     o.onMe = t => inject(t, 0.62);
+    let lastSeed = 0;
+    o.onPoke = (x, y) => { if (GW) dab(x / W * GW, y / H * GH, 6); };
     o.onCard = k => inject(CARDS[k].items[0]?.t || '', 0.3);
     o.root.addEventListener('pointermove', e => { if (!GW) return; const b = c.getBoundingClientRect(); dab((e.clientX - b.left) / b.width * GW, (e.clientY - b.top) / b.height * GH, 2); });
     o.api.frame = (t, l) => {
       const { w, h } = fit();
       if (w !== W || h !== H) { W = w; H = h; init(); }
-      const [f0, k0] = RX[o.S] || RX.idle; F = mix(F, f0 + (o.S === 'speak' ? l * 0.006 : 0), 0.02); K = mix(K, k0, 0.02);
+      const [f0, k0] = RX[o.S] || RX.idle; F = mix(F, f0 + (o.S === 'speak' ? l * 0.006 : 0) + (o.S === 'idle' ? 0.003 * Math.sin(t * 0.06) : 0), 0.02);
+      if (t - lastSeed > 3) { lastSeed = t; dab(Math.random() * GW, Math.random() * GH, 2); } K = mix(K, k0, 0.02);
       if (o.S === 'speak' && Math.random() < l * 0.35) dab(Math.random() * GW, Math.random() * GH, 2);
       for (let it = 0; it < 9; it++) {
         for (let y = 1; y < GH - 1; y++) {
@@ -1261,7 +1289,8 @@ const V = [
       { n:'Знания', s:'README, скиллы, лендинги', k:['Сценарии', 'Карусели', 'Монтаж'], p:'dots' },
       { n:'Мышцы', s:'агенты офиса', k:['Агенты'], p:'fibres' },
     ].map(x => ({ ...x, act:0, ok:0 }));
-    let sig = 0, gap = 1, eye = 0, ripples = [], lastRip = 0;
+    let sig = 0, gap = 1, eye = 0, ripples = [], lastRip = 0, hov = -1, par = 0, probe = { t:-9, to:0 };
+    o.onPoke = () => { if (hov >= 0) probe = { t:performance.now() / 1000, to:hov }; ripples.push(0); };
     o.onMe = () => { ripples.push(0); };
     o.api.frame = (t, l) => {
       const { w, h, d } = fit(), narrow = w / d < 640;
@@ -1270,24 +1299,33 @@ const V = [
       g.strokeStyle = '#e3e3dd'; g.lineWidth = 1; g.beginPath();
       for (let x = (w / 2) % (24 * d); x < w; x += 24 * d) { g.moveTo(x, 0); g.lineTo(x, h); }
       for (let y = 0; y < h; y += 24 * d) { g.moveTo(0, y); g.lineTo(w, y); } g.stroke();
-      const cardW = narrow ? 86 * d : 220 * d, cx = w / 2;
+      par = mix(par, o.ptr.on ? (o.ptr.x - w / 2) * 0.04 : 0, 0.08);
+      const cardW = narrow ? 86 * d : 220 * d, cx = w / 2 + par;
       const rx = Math.max(60 * d, Math.min(w * 0.2, w / 2 - cardW - 56 * d, h * 0.3)), ry = rx * 0.32, th = 9 * d;
       const top = 82 * d + ry, bottom = h - (narrow ? 200 : 168) * d;
       gap = mix(gap, 1 + (o.S === 'speak' ? l * 0.18 : 0) + (o.S === 'think' ? 0.06 : 0), 0.1);
       const step = (bottom - top) / (LY.length - 1) * (0.9 + 0.06 * Math.sin(t * 0.8)) * gap;
-      const yOf = i => top + i * step;
+      const lift = LY.map(x => x.lift || 0), yOf = i => top + i * step - lift[i] * 14 * d;
+      hov = -1; if (o.ptr.on) LY.forEach((x, i) => { if (Math.abs(o.ptr.y - (top + i * step)) < step / 2) hov = i; });
+      LY.forEach((x, i) => x.lift = mix(x.lift || 0, hov === i ? 1 : 0, 0.15));
       // signal along the assembly axis
       if (o.S === 'think') sig = 2.5 + 2.5 * Math.sin(t * 2.2 - Math.PI / 2);          // skin → knowledge → skin
       else if (o.S === 'speak') sig = 1 - ((t * 0.9) % 1);                             // brain → skin
       else if (o.S === 'listen') sig = (t * 0.7) % 1 * 1;                              // skin → brain
-      else sig = mix(sig, 1, 0.05);
+      else {
+        const pt = performance.now() / 1000 - probe.t, hb = t % 4;
+        if (pt < 1.4) sig = probe.to * Math.min(1, pt / 0.6);                          // touched layer gets a probe
+        else if (hb < 1.3) sig = hb / 1.3 * (LY.length - 1);                            // heartbeat down the axis
+        else sig = mix(sig, 1, 0.05);
+      }
+      const moving = o.S !== 'idle' || performance.now() / 1000 - probe.t < 1.4 || t % 4 < 1.3;
       if (o.S === 'speak' && t - lastRip > 0.45 - l * 0.25) { ripples.push(0); lastRip = t; }
       g.setLineDash([5 * d, 4 * d]); g.strokeStyle = '#9a9ea2'; g.lineWidth = 1 * d; g.beginPath(); g.moveTo(cx, top - ry - 40 * d); g.lineTo(cx, yOf(LY.length - 1) + ry + 30 * d); g.stroke(); g.setLineDash([]);
       const rim = (i, a) => 1 + 0.045 * Math.sin(a * 3 + t * 0.7 + i) + 0.025 * Math.sin(a * 5 - t + i * 2) + (LY[i].act > 0.3 ? l * 0.05 * Math.sin(a * 9 + t * 10) : 0);
       const shape = (i, y, dy = 0) => { g.beginPath(); for (let k = 0; k <= 64; k++) { const a = k / 64 * 6.283, m = rim(i, a), x = cx + Math.cos(a) * rx * m, yy = y + dy + Math.sin(a) * ry * m; k ? g.lineTo(x, yy) : g.moveTo(x, yy); } g.closePath(); };
       for (let i = LY.length - 1; i >= 0; i--) {
         const Ly = LY[i], y = yOf(i);
-        Ly.act = mix(Ly.act, Math.abs(sig - i) < 0.5 && o.S !== 'idle' ? 1 : 0, 0.15);
+        Ly.act = mix(Ly.act, (Math.abs(sig - i) < 0.5 && moving) || hov === i ? 1 : 0, 0.15);
         Ly.ok = mix(Ly.ok, Ly.k.some(k => lit.has(k)) || (i === 1 && o.S === 'think') ? 1 : 0, 0.08);
         const ink = Ly.act > 0.4 ? '#ff6a1a' : Ly.ok > 0.4 ? '#2fb36b' : '#1d1f21';
         shape(i, y, th); g.fillStyle = '#c9cbcc'; g.fill(); g.strokeStyle = '#55595d'; g.lineWidth = 1 * d; g.stroke();
@@ -1320,8 +1358,8 @@ const V = [
       }
       ripples = ripples.map(p => p + 0.012).filter(p => p < 1);
       // the signal itself
-      const sy = top + sig * step;
-      if (o.S !== 'idle') { g.fillStyle = '#ff6a1a'; g.beginPath(); g.arc(cx, sy, 4.5 * d, 0, 6.283); g.fill(); g.strokeStyle = 'rgba(255,106,26,.45)'; g.lineWidth = 1 * d; g.beginPath(); g.arc(cx, sy, (9 + 4 * Math.sin(t * 8)) * d, 0, 6.283); g.stroke(); }
+      const sy = top + sig * step - (lift[Math.round(sig)] || 0) * 14 * d;
+      if (moving) { g.fillStyle = '#ff6a1a'; g.beginPath(); g.arc(cx, sy, 4.5 * d, 0, 6.283); g.fill(); g.strokeStyle = 'rgba(255,106,26,.45)'; g.lineWidth = 1 * d; g.beginPath(); g.arc(cx, sy, (9 + 4 * Math.sin(t * 8)) * d, 0, 6.283); g.stroke(); }
     };
     return o.api;
   } },
