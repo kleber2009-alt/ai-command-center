@@ -3,7 +3,7 @@
 <head>
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
-<title>Двойник — 17 дизайнов</title>
+<title>Двойник — 25 дизайнов</title>
 <meta name="description" content="Десять вариантов дизайна окна диалога с цифровым двойником: HUD, терминал, RPG, квесты, нейрограф, колода карт, монтажный таймлайн и другие.">
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
@@ -434,6 +434,14 @@
   .v[data-len=long] .og-anat .og-a{font-size:13px}
   .og-anat .og-c{border-radius:0;font:600 10.5px var(--f-mono);letter-spacing:.06em;text-transform:uppercase}
   .og-anat .og-c b{background:var(--og-acc);color:#fff;padding:0 5px;margin-right:6px}
+  .og-robot{--og-bg:#0c0f13;--og-ink:#f3f1ee;--og-dim:rgba(243,241,238,.5);--og-acc:#ff8a3d;--og-line:rgba(255,138,61,.4);--og-chip:rgba(255,138,61,.08)}
+  .og-android{--og-bg:#05070a;--og-ink:#eaf8ff;--og-dim:rgba(180,225,245,.5);--og-acc:#6ee7ff;--og-line:rgba(110,231,255,.35);--og-chip:rgba(110,231,255,.07)}
+  .og-grey{--og-bg:#03060a;--og-ink:#ecfff4;--og-dim:rgba(190,255,215,.5);--og-acc:#7dffb0;--og-line:rgba(125,255,176,.35);--og-chip:rgba(125,255,176,.07)}
+  .og-xeno{--og-bg:#05030c;--og-ink:#f6efff;--og-dim:rgba(225,205,255,.55);--og-acc:#c084fc;--og-line:rgba(192,132,252,.4);--og-chip:rgba(192,132,252,.08)}
+  .og-aura{--og-bg:#06050b;--og-ink:#f4f0ff;--og-dim:rgba(220,210,255,.55);--og-acc:#b18cff;--og-line:rgba(177,140,255,.4);--og-chip:rgba(177,140,255,.08)}
+  .og-field{--og-bg:#020306;--og-ink:#fff4e6;--og-dim:rgba(255,230,200,.5);--og-acc:#ffb35c;--og-line:rgba(255,179,92,.4);--og-chip:rgba(2,3,6,.6)}
+  .og-holo{--og-bg:#01070a;--og-ink:#e6fdff;--og-dim:rgba(150,240,255,.55);--og-acc:#5ef2ff;--og-line:rgba(94,242,255,.4);--og-chip:rgba(94,242,255,.07)}
+  .og-scan{--og-bg:#080503;--og-ink:#fff4e6;--og-dim:rgba(255,215,170,.55);--og-acc:#ffb35c;--og-line:rgba(255,179,92,.4);--og-chip:rgba(255,179,92,.07)}
   @container (max-width:760px){
     .og-a{font-size:17px;left:5%;right:5%;bottom:92px}
     .og-c small{display:none}
@@ -444,7 +452,7 @@
 <body>
 <header>
   <a class="back" href="./"><svg viewBox="0 0 24 24"><path d="M15 18l-6-6 6-6"/></svg>Двойник</a>
-  <div><h1>Двойник — 17 дизайнов</h1><p>Каждый дизайн рабочий: «Говорить» — разговор голосом без кнопок, ответ сразу, перебить — тап по сцене. Без входа — демо.</p></div>
+  <div><h1>Двойник — 25 дизайнов</h1><p>Каждый дизайн рабочий: «Говорить» — разговор голосом без кнопок, ответ сразу, перебить — тап по сцене. Без входа — демо.</p></div>
 </header>
 <div class="wrap">
   <nav class="list" id="list"></nav>
@@ -567,6 +575,35 @@ function organism(r, theme, label) {
     light(u) { (u || []).forEach(x => lit.add(x)); },
   };
   return o;
+}
+
+/* ---------- faces (18–25): shared helpers ---------- */
+function blinker(gap = 3.5) {   // returns t → eyelid 0..1, with an occasional double blink
+  let next = 1 + Math.random() * gap, st = -9;
+  return t => { if (t > next) { st = t; next = t + gap * (0.6 + Math.random() * 0.9); if (Math.random() < 0.2) next = t + 0.35; } const k = (t - st) / 0.17; return k >= 0 && k < 1 ? Math.sin(k * Math.PI) : 0; };
+}
+function lookAt(o, gz, cx, cy, w, h, t) {   // gaze follows the cursor; without one, the eyes wander on their own
+  const tx = o.ptr.on ? Math.max(-1, Math.min(1, (o.ptr.x - cx) / (w * 0.35))) : Math.sin(t * 0.37) * 0.35 + Math.sin(t * 0.11) * 0.2;
+  const ty = o.ptr.on ? Math.max(-1, Math.min(1, (o.ptr.y - cy) / (h * 0.4))) : Math.sin(t * 0.23) * 0.2 + (o.S === 'listen' ? 0.4 : 0);
+  gz.x = mix(gz.x, tx, 0.08); gz.y = mix(gz.y, ty, 0.08);
+}
+function rrect(g, x, y, w, h, r) {
+  r = Math.min(r, w / 2, h / 2); g.beginPath(); g.moveTo(x + r, y); g.arcTo(x + w, y, x + w, y + h, r); g.arcTo(x + w, y + h, x, y + h, r); g.arcTo(x, y + h, x, y, r); g.arcTo(x, y, x + w, y, r); g.closePath();
+}
+function headPt(th, ph, mouth) {   // procedural human head: th — around (0 = facing us), ph — from the crown down
+  const sp = Math.sin(ph); let x = sp * Math.sin(th) * 0.74, y = Math.cos(ph) * 1.02, z = sp * Math.cos(th) * 0.86;
+  const front = Math.max(0, Math.cos(th)), jaw = Math.max(0, Math.min(1, (-y - 0.15) / 0.8));
+  x *= 1 - jaw * 0.32; z *= 1 - jaw * 0.12;
+  const e = (a, b, sa, sb) => Math.exp(-(a * a) / sa - (b * b) / sb);
+  z += front * 0.2 * Math.exp(-th * th / 0.012) * Math.max(0, Math.min(1, (0.1 - y) / 0.4)) * Math.max(0, Math.min(1, (y + 0.4) / 0.06));   // nose
+  z -= front * 0.07 * (e(th - 0.36, y - 0.14, 0.014, 0.008) + e(th + 0.36, y - 0.14, 0.014, 0.008));                                   // eye sockets
+  z += front * 0.04 * e(th, y - 0.42, 0.25, 0.02) + front * 0.05 * e(th, y + 0.8, 0.05, 0.02);                                          // brow, chin
+  z -= front * (0.025 + mouth * 0.09) * e(th, y + 0.52, 0.05, 0.002 + mouth * 0.006);                                                   // mouth
+  return [x, y, z];
+}
+function headProj(cx, cy, S, yaw, pitch) {
+  const ca = Math.cos(yaw), sa = Math.sin(yaw), cb = Math.cos(pitch), sb = Math.sin(pitch);
+  return (x, y, z) => { const x1 = x * ca + z * sa, z1 = -x * sa + z * ca, y1 = y * cb - z1 * sb, z2 = y * sb + z1 * cb, p = 3.2 / (4 - z2); return [cx + x1 * S * p, cy - y1 * S * p, z2]; };
 }
 
 /* ---------- the windows ---------- */
@@ -1360,6 +1397,376 @@ const V = [
       // the signal itself
       const sy = top + sig * step - (lift[Math.round(sig)] || 0) * 14 * d;
       if (moving) { g.fillStyle = '#ff6a1a'; g.beginPath(); g.arc(cx, sy, 4.5 * d, 0, 6.283); g.fill(); g.strokeStyle = 'rgba(255,106,26,.45)'; g.lineWidth = 1 * d; g.beginPath(); g.arc(cx, sy, (9 + 4 * Math.sin(t * 8)) * d, 0, 6.283); g.stroke(); }
+    };
+    return o.api;
+  } },
+{ id:'robot', name:'Робот', pitch:'Добрый робот: глаза-объективы следят за вами, рот — светодиодный эквалайзер',
+  idea:'Металлическая голова робота с двумя глазами-объективами, антенной и шестерёнками в ушах. На лицевом экране — глаза и рот из светодиодов. Тёплый, дружелюбный, немного ретро.',
+  mech:'Глаза следят за курсором и моргают сами. Говорит — рот-эквалайзер прыгает в такт голосу. Думает — в глазах крутится загрузка, антенна мигает. Слушает — уши светятся. Смотрит — диафрагма объективов сужается, бежит луч сканера. Тап — робот радостно жмурится и подпрыгивает.',
+  good:'Сразу понятно и вызывает симпатию: «мой ИИ-помощник» без пафоса. Хорошо для детской и широкой аудитории, мерча и стикеров.', cost:2,
+  build(r) {
+    const o = organism(r, 'robot', 'Двойник · робот'), { g, fit } = o, blink = blinker();
+    const gaze = { x:0, y:0 }; let tilt = 0, ant = 0, antV = 0, joy = -9, bars = new Array(14).fill(0);
+    o.onPoke = () => { joy = performance.now() / 1000; antV += 0.25; };
+    o.api.frame = (t, l) => {
+      const { w, h, d } = fit(), S = Math.min(w * 0.24, h * 0.27), hop = Math.max(0, Math.sin(Math.min(1, (t - joy) / 0.5) * Math.PI)) * S * 0.12;
+      const cx = w / 2, cy = h * 0.4 - hop + Math.sin(t * 1.4) * S * 0.02;
+      lookAt(o, gaze, cx, cy, w, h, t);
+      const tt = mix(tilt, gaze.x * 0.1, 0.06); antV += (tt - tilt) * 2 - ant * 0.08; antV *= 0.9; ant += antV; tilt = tt;
+      g.clearRect(0, 0, w, h);
+      const bg = g.createRadialGradient(cx, cy, 0, cx, cy, S * 3); bg.addColorStop(0, 'rgba(255,138,61,.12)'); bg.addColorStop(1, 'rgba(0,0,0,0)'); g.fillStyle = bg; g.fillRect(0, 0, w, h);
+      g.save(); g.translate(cx, cy); g.rotate(tilt);
+      // neck and shoulders
+      g.fillStyle = '#3a4048'; for (let k = 0; k < 3; k++) rrect(g, -S * (0.28 - k * 0.03), S * (0.66 + k * 0.1), S * (0.56 - k * 0.06), S * 0.08, 3 * d), g.fill();
+      // antenna (springy)
+      g.save(); g.translate(0, -S * 0.66); g.rotate(ant); g.strokeStyle = '#aab2bb'; g.lineWidth = 3 * d; g.beginPath(); g.moveTo(0, 0); g.lineTo(0, -S * 0.38); g.stroke();
+      const ac = o.S === 'think' ? (Math.sin(t * 18) > 0 ? '#ffb35c' : '#5a3a20') : o.S === 'speak' ? '#ff8a3d' : o.S === 'listen' ? '#3ddc97' : `rgba(61,220,151,${0.4 + 0.6 * Math.abs(Math.sin(t * 1.5))})`;
+      const ag = g.createRadialGradient(0, -S * 0.42, 0, 0, -S * 0.42, S * 0.25); ag.addColorStop(0, ac); ag.addColorStop(1, 'rgba(0,0,0,0)'); g.fillStyle = ag; g.fillRect(-S * 0.3, -S * 0.7, S * 0.6, S * 0.6);
+      g.fillStyle = ac; g.beginPath(); g.arc(0, -S * 0.42, S * 0.07, 0, 6.283); g.fill(); g.restore();
+      // ears with gears
+      for (const sd of [-1, 1]) {
+        g.save(); g.translate(sd * S * 0.8, 0);
+        g.fillStyle = o.S === 'listen' ? '#3ddc97' : '#6b737c'; rrect(g, -S * 0.09, -S * 0.26, S * 0.18, S * 0.52, 6 * d); g.fill();
+        g.rotate(t * (o.S === 'think' ? 4 : 0.8) * sd); g.fillStyle = '#c9cfd6'; g.beginPath();
+        for (let k = 0; k < 20; k++) { const a = k / 20 * 6.283, rr = k % 2 ? S * 0.13 : S * 0.16; k ? g.lineTo(Math.cos(a) * rr, Math.sin(a) * rr) : g.moveTo(Math.cos(a) * rr, Math.sin(a) * rr); }
+        g.closePath(); g.fill(); g.fillStyle = '#3a4048'; g.beginPath(); g.arc(0, 0, S * 0.05, 0, 6.283); g.fill(); g.restore();
+      }
+      // head
+      const hg = g.createLinearGradient(0, -S * 0.66, 0, S * 0.66); hg.addColorStop(0, '#eef1f4'); hg.addColorStop(0.55, '#b9c0c8'); hg.addColorStop(1, '#7d8690');
+      rrect(g, -S * 0.75, -S * 0.66, S * 1.5, S * 1.32, S * 0.24); g.fillStyle = hg; g.fill(); g.strokeStyle = '#4a5058'; g.lineWidth = 2 * d; g.stroke();
+      g.fillStyle = '#7d8690'; for (const [x, y] of [[-0.64, -0.55], [0.64, -0.55], [-0.64, 0.55], [0.64, 0.55]]) { g.beginPath(); g.arc(x * S, y * S, S * 0.03, 0, 6.283); g.fill(); }
+      // face screen
+      rrect(g, -S * 0.6, -S * 0.46, S * 1.2, S * 0.98, S * 0.16); g.fillStyle = '#0b0f14'; g.fill();
+      const happy = t - joy < 1.3, b = blink(t);
+      for (const sd of [-1, 1]) {
+        const ex = sd * S * 0.27 + gaze.x * S * 0.05, ey = -S * 0.1 + gaze.y * S * 0.04, er = S * 0.17;
+        g.save(); g.translate(ex, ey);
+        if (happy) { g.strokeStyle = '#ffb35c'; g.lineWidth = 5 * d; g.lineCap = 'round'; g.beginPath(); g.arc(0, er * 0.35, er * 0.7, Math.PI * 1.15, Math.PI * 1.85); g.stroke(); g.restore(); continue; }
+        g.scale(1, Math.max(0.06, 1 - b));
+        const ig = g.createRadialGradient(0, 0, 0, 0, 0, er * 1.5); ig.addColorStop(0, 'rgba(255,138,61,.5)'); ig.addColorStop(1, 'rgba(255,138,61,0)'); g.fillStyle = ig; g.fillRect(-er * 1.5, -er * 1.5, er * 3, er * 3);
+        g.strokeStyle = '#ff8a3d'; g.lineWidth = 3 * d; g.beginPath(); g.arc(0, 0, er, 0, 6.283); g.stroke();
+        if (o.S === 'think') { g.strokeStyle = '#ffd29a'; g.lineWidth = 4 * d; g.beginPath(); g.arc(0, 0, er * 0.6, t * 7, t * 7 + 4); g.stroke(); }
+        else {
+          const ap = o.S === 'look' ? 0.32 : o.S === 'listen' ? 0.62 : 0.48 + l * 0.12;   // aperture
+          g.fillStyle = '#ffd29a'; g.beginPath(); g.arc(gaze.x * er * 0.25, gaze.y * er * 0.25, er * ap, 0, 6.283); g.fill();
+          g.fillStyle = '#0b0f14'; g.beginPath(); g.arc(gaze.x * er * 0.3, gaze.y * er * 0.3, er * ap * 0.45, 0, 6.283); g.fill();
+          g.fillStyle = '#fff'; g.beginPath(); g.arc(-er * 0.25, -er * 0.3, er * 0.1, 0, 6.283); g.fill();
+        }
+        g.restore();
+      }
+      if (o.S === 'look') { const sy = -S * 0.42 + ((t * 0.9) % 1) * S * 0.9; g.fillStyle = 'rgba(255,179,92,.35)'; g.fillRect(-S * 0.58, sy, S * 1.16, 2 * d); }
+      // LED mouth
+      const cols = bars.length, cw = S * 0.62 / cols;
+      for (let i = 0; i < cols; i++) {
+        const target = o.S === 'speak' ? l * (0.35 + 0.65 * Math.abs(Math.sin(t * 9 + i * 1.7) * Math.cos(t * 4 + i * 0.6))) : o.S === 'listen' ? 0.25 * Math.abs(Math.sin(t * 6 + i)) : happy ? 0.12 + 0.5 * Math.sin(i / (cols - 1) * Math.PI) : 0.08;
+        bars[i] = mix(bars[i], target, 0.35);
+        const n = Math.max(1, Math.round(bars[i] * 5));
+        for (let k = 0; k < n; k++) { g.fillStyle = k > 3 ? '#ffd29a' : '#ff8a3d'; g.fillRect(-S * 0.31 + i * cw + cw * 0.15, S * 0.3 - k * cw * 0.85 * (happy ? -1 : 1) - (happy ? S * 0.06 : 0), cw * 0.7, cw * 0.6); }
+      }
+      g.restore();
+    };
+    return o.api;
+  } },
+
+{ id:'android', name:'Андроид-визор', pitch:'Строгий андроид: тёмный шлем и светящийся визор вместо лица',
+  idea:'Гладкая чёрная голова андроида с одной светящейся полосой визора. По швам корпуса бегут огоньки, шея собрана из сегментов с кабелями. Холодный, дорогой, «как в кино про ИИ».',
+  mech:'В визоре — два световых глаза, они смотрят на курсор и моргают. Говорит — визор превращается в волну голоса. Думает — по визору бегут три точки. Слушает — визор светится от краёв к центру. Смотрит — по визору ходит луч сканера. Тап — глаза улыбаются.',
+  good:'Премиальный «технологичный» образ для B2B и вебинаров: серьёзный ИИ, а не игрушка.', cost:2,
+  build(r) {
+    const o = organism(r, 'android', 'Двойник · андроид'), { g, fit } = o, blink = blinker();
+    const gaze = { x:0, y:0 }; let joy = -9, turn = 0;
+    o.onPoke = () => { joy = performance.now() / 1000; };
+    o.api.frame = (t, l) => {
+      const { w, h, d } = fit(), S = Math.min(w * 0.22, h * 0.27), cx = w / 2, cy = h * 0.4 + Math.sin(t * 1.1) * S * 0.015;
+      lookAt(o, gaze, cx, cy, w, h, t); turn = mix(turn, gaze.x, 0.05);
+      g.clearRect(0, 0, w, h);
+      const bg = g.createRadialGradient(cx, cy, 0, cx, cy, S * 3.2); bg.addColorStop(0, `rgba(110,231,255,${0.1 + l * 0.08})`); bg.addColorStop(1, 'rgba(0,0,0,0)'); g.fillStyle = bg; g.fillRect(0, 0, w, h);
+      // neck segments + cables
+      for (let k = 0; k < 4; k++) { const y = cy + S * (0.72 + k * 0.12), ww = S * (0.36 - k * 0.02); const ng = g.createLinearGradient(cx - ww, 0, cx + ww, 0); ng.addColorStop(0, '#0d0f12'); ng.addColorStop(0.5, '#2b3038'); ng.addColorStop(1, '#0d0f12'); g.fillStyle = ng; rrect(g, cx - ww, y, ww * 2, S * 0.09, 3 * d); g.fill(); }
+      g.strokeStyle = 'rgba(110,231,255,.5)'; g.lineWidth = 1.5 * d; for (const sd of [-1, 1]) { g.beginPath(); g.moveTo(cx + sd * S * 0.2, cy + S * 0.6); g.bezierCurveTo(cx + sd * S * 0.42, cy + S * 0.8, cx + sd * S * 0.3, cy + S * 1, cx + sd * S * 0.45, cy + S * 1.2); g.stroke(); }
+      // helmet
+      const hx = cx + turn * S * 0.04;
+      const head = () => { g.beginPath(); g.moveTo(hx, cy - S * 0.95); g.bezierCurveTo(hx + S * 0.82, cy - S * 0.95, hx + S * 0.86, cy + S * 0.15, hx + S * 0.55, cy + S * 0.55); g.bezierCurveTo(hx + S * 0.35, cy + S * 0.8, hx - S * 0.35, cy + S * 0.8, hx - S * 0.55, cy + S * 0.55); g.bezierCurveTo(hx - S * 0.86, cy + S * 0.15, hx - S * 0.82, cy - S * 0.95, hx, cy - S * 0.95); g.closePath(); };
+      head(); const hg = g.createRadialGradient(hx - S * 0.25 - turn * S * 0.2, cy - S * 0.5, S * 0.05, hx, cy, S * 1.1); hg.addColorStop(0, '#4a525e'); hg.addColorStop(0.45, '#1d2128'); hg.addColorStop(1, '#090a0d'); g.fillStyle = hg; g.fill();
+      g.strokeStyle = 'rgba(160,190,210,.35)'; g.lineWidth = 1.2 * d; g.stroke();
+      g.strokeStyle = 'rgba(255,255,255,.18)'; g.lineWidth = 3 * d; g.beginPath(); g.arc(hx - S * 0.1 - turn * S * 0.15, cy - S * 0.2, S * 0.62, Math.PI * 1.15, Math.PI * 1.45); g.stroke();
+      // seams with travelling light
+      const seams = [[[hx, cy - S * 0.95], [hx, cy - S * 0.36]], [[hx - S * 0.62, cy + S * 0.22], [hx - S * 0.3, cy + S * 0.62]], [[hx + S * 0.62, cy + S * 0.22], [hx + S * 0.3, cy + S * 0.62]]];
+      for (const [i, [a, b2]] of seams.entries()) {
+        g.strokeStyle = 'rgba(0,0,0,.6)'; g.lineWidth = 1.5 * d; g.beginPath(); g.moveTo(a[0], a[1]); g.lineTo(b2[0], b2[1]); g.stroke();
+        const f = (t * (0.4 + (o.S === 'think' ? 1 : 0)) + i * 0.33) % 1, x = mix(a[0], b2[0], f), y = mix(a[1], b2[1], f);
+        const sg = g.createRadialGradient(x, y, 0, x, y, 8 * d); sg.addColorStop(0, 'rgba(255,138,61,.9)'); sg.addColorStop(1, 'rgba(255,138,61,0)'); g.fillStyle = sg; g.fillRect(x - 8 * d, y - 8 * d, 16 * d, 16 * d);
+      }
+      // visor
+      const vw = S * 1.32, vh = S * 0.3, vx = hx - vw / 2 + turn * S * 0.06, vy = cy - S * 0.22;
+      g.save(); rrect(g, vx, vy, vw, vh, vh / 2); g.fillStyle = '#020407'; g.fill(); g.clip();
+      const glow = o.S === 'listen' ? 0.5 + 0.3 * Math.sin(t * 8) : 0.25 + l * 0.4;
+      const vg = g.createLinearGradient(vx, 0, vx + vw, 0); vg.addColorStop(0, `rgba(110,231,255,${glow})`); vg.addColorStop(0.5, `rgba(110,231,255,${glow * 0.25})`); vg.addColorStop(1, `rgba(110,231,255,${glow})`); g.fillStyle = vg; g.fillRect(vx, vy, vw, vh);
+      const mx = hx + turn * S * 0.1 + gaze.x * S * 0.08, my = vy + vh / 2 + gaze.y * vh * 0.15;
+      g.shadowColor = '#6ee7ff'; g.shadowBlur = 14 * d; g.fillStyle = '#c8f6ff'; g.strokeStyle = '#c8f6ff'; g.lineWidth = 3 * d; g.lineCap = 'round';
+      if (o.S === 'speak') { g.beginPath(); for (let x = vx + vh * 0.5; x < vx + vw - vh * 0.5; x += 3 * d) { const k = (x - vx) / vw, yy = my + Math.sin(k * 30 - t * 14) * Math.sin(k * Math.PI) * vh * 0.38 * (0.2 + l); x === vx + vh * 0.5 ? g.moveTo(x, yy) : g.lineTo(x, yy); } g.stroke(); }
+      else if (o.S === 'think') for (let k = 0; k < 3; k++) { const a = Math.max(0, Math.sin(t * 6 - k * 0.8)); g.globalAlpha = 0.3 + a * 0.7; g.beginPath(); g.arc(mx + (k - 1) * vh * 0.7, my - a * vh * 0.12, vh * 0.12, 0, 6.283); g.fill(); g.globalAlpha = 1; }
+      else if (o.S === 'look') { const sx = vx + ((Math.sin(t * 2.4) + 1) / 2) * vw; g.fillRect(sx - 2 * d, vy, 4 * d, vh); }
+      else if (t - joy < 1.3) for (const sd of [-1, 1]) { g.beginPath(); g.arc(mx + sd * vh * 0.9, my + vh * 0.12, vh * 0.28, Math.PI * 1.15, Math.PI * 1.85); g.stroke(); }
+      else { const b = blink(t); for (const sd of [-1, 1]) { rrect(g, mx + sd * vh * 0.9 - vh * 0.36, my - vh * 0.16 * (1 - b), vh * 0.72, Math.max(2 * d, vh * 0.32 * (1 - b)), vh * 0.16); g.fill(); } }
+      g.shadowBlur = 0; g.restore();
+      g.strokeStyle = 'rgba(110,231,255,.5)'; g.lineWidth = 1 * d; rrect(g, vx, vy, vw, vh, vh / 2); g.stroke();
+      for (const sd of [-1, 1]) { g.fillStyle = o.S === 'listen' ? '#3ddc97' : `rgba(255,138,61,${0.4 + 0.6 * Math.abs(Math.sin(t * 2 + sd))})`; g.beginPath(); g.arc(hx + sd * S * 0.76, cy + S * 0.05, S * 0.03, 0, 6.283); g.fill(); }
+    };
+    return o.api;
+  } },
+
+{ id:'grey', name:'Пришелец', pitch:'Классический «серый»: огромные глаза и телепатические волны',
+  idea:'Большеголовый инопланетянин с огромными чёрными миндалевидными глазами на фоне звёзд. В глазах отражается свет, на лбу проступают светящиеся прожилки. Загадочный, спокойный, немного гипнотический.',
+  mech:'Отблески в глазах и зрачки-огоньки следят за курсором, глаза закрывает прозрачное третье веко. Говорит — от лба расходятся телепатические кольца, рот чуть приоткрывается. Слушает — кольца сходятся внутрь. Думает — прожилки на лбу светятся. Тап — глаза распахиваются.',
+  good:'Узнаваемый образ «ИИ не отсюда», вирусный для рилсов и обложек. Легко стать маскотом.', cost:2,
+  build(r) {
+    const o = organism(r, 'grey', 'Двойник · пришелец'), { g, fit } = o, blink = blinker(3);
+    const gaze = { x:0, y:0 }; let wide = 0, rings = [], lastRing = 0;
+    const stars = Array.from({ length:160 }, () => [Math.random(), Math.random(), Math.random()]);
+    const veins = Array.from({ length:7 }, (_, i) => { const pts = [[0, 0]]; let a = -Math.PI / 2 + (i - 3) * 0.35, x = 0, y = 0; for (let k = 0; k < 7; k++) { a += (Math.random() - 0.5) * 0.6; x += Math.cos(a) * 0.06; y += Math.sin(a) * 0.06; pts.push([x, y]); } return pts; });
+    o.onPoke = () => { wide = 1; for (let k = 0; k < 3; k++) rings.push({ r:k * -0.15, dir:1 }); };
+    o.api.frame = (t, l) => {
+      const { w, h, d } = fit(), S = Math.min(w * 0.24, h * 0.27), cx = w / 2, cy = h * 0.4 + Math.sin(t * 0.9) * S * 0.02;
+      lookAt(o, gaze, cx, cy, w, h, t); wide *= 0.97;
+      g.clearRect(0, 0, w, h);
+      for (const [x, y, z] of stars) { g.fillStyle = `rgba(200,255,230,${0.15 + z * 0.5 * (0.6 + 0.4 * Math.sin(t * 2 + z * 40))})`; g.fillRect(x * w, y * h, (0.6 + z) * d, (0.6 + z) * d); }
+      if (o.S === 'speak' && t - lastRing > 0.5 - l * 0.3) { rings.push({ r:0, dir:1 }); lastRing = t; }
+      if (o.S === 'listen' && t - lastRing > 0.6) { rings.push({ r:1.6, dir:-1 }); lastRing = t; }
+      rings = rings.filter(q => (q.r += q.dir * 0.012) > -0.5 && q.r < 1.7);
+      for (const q of rings) if (q.r > 0) { g.strokeStyle = `rgba(125,255,176,${Math.max(0, 0.5 - q.r * 0.3)})`; g.lineWidth = 1.5 * d; g.beginPath(); g.ellipse(cx, cy - S * 0.55, S * (0.3 + q.r * 1.4), S * (0.15 + q.r * 0.7), 0, 0, 6.283); g.stroke(); }
+      // neck
+      g.fillStyle = '#5d6862'; g.fillRect(cx - S * 0.12, cy + S * 0.6, S * 0.24, S * 0.6);
+      // head: big cranium, narrow chin
+      const head = () => { g.beginPath(); g.moveTo(cx, cy + S * 0.78); g.bezierCurveTo(cx + S * 0.35, cy + S * 0.75, cx + S * 0.62, cy + S * 0.2, cx + S * 0.74, cy - S * 0.25); g.bezierCurveTo(cx + S * 0.9, cy - S * 1.05, cx - S * 0.9, cy - S * 1.05, cx - S * 0.74, cy - S * 0.25); g.bezierCurveTo(cx - S * 0.62, cy + S * 0.2, cx - S * 0.35, cy + S * 0.75, cx, cy + S * 0.78); g.closePath(); };
+      head(); const hg = g.createRadialGradient(cx - S * 0.2, cy - S * 0.6, S * 0.1, cx, cy - S * 0.1, S * 1.1); hg.addColorStop(0, '#c7d0ca'); hg.addColorStop(0.6, '#8a968f'); hg.addColorStop(1, '#4b5550'); g.fillStyle = hg; g.fill();
+      g.save(); head(); g.clip();
+      const vein = o.S === 'think' ? 0.55 + 0.35 * Math.sin(t * 6) : 0.08 + l * 0.2;
+      g.strokeStyle = `rgba(125,255,176,${vein})`; g.lineWidth = 1.4 * d; g.shadowColor = '#7dffb0'; g.shadowBlur = vein > 0.3 ? 10 * d : 0;
+      for (const v of veins) { g.beginPath(); v.forEach(([x, y], k) => k ? g.lineTo(cx + x * S * 2, cy - S * 0.42 + y * S * 2) : g.moveTo(cx + x * S * 2, cy - S * 0.42 + y * S * 2)); g.stroke(); }
+      g.shadowBlur = 0; g.restore();
+      // eyes
+      const b = blink(t);
+      for (const sd of [-1, 1]) {
+        g.save(); g.translate(cx + sd * S * 0.33, cy - S * 0.05); g.rotate(-sd * 0.42); g.scale(sd, 1); const ew = S * 0.34 * (1 + wide * 0.12), eh = S * 0.17 * (1 + wide * 0.25);
+        const eye = () => { g.beginPath(); g.moveTo(-ew, 0); g.bezierCurveTo(-ew * 0.5, -eh * 1.4, ew * 0.7, -eh * 1.2, ew, 0); g.bezierCurveTo(ew * 0.6, eh * 1.1, -ew * 0.5, eh * 1.2, -ew, 0); g.closePath(); };
+        eye(); const eg = g.createRadialGradient(0, 0, 0, 0, 0, ew); eg.addColorStop(0, '#10161a'); eg.addColorStop(1, '#000'); g.fillStyle = eg; g.fill();
+        g.save(); eye(); g.clip();
+        const px = gaze.x * ew * 0.35 * sd, py = gaze.y * eh * 0.3;
+        const pg = g.createRadialGradient(px, py, 0, px, py, eh * 0.9); pg.addColorStop(0, `rgba(125,255,176,${0.35 + l * 0.4})`); pg.addColorStop(1, 'rgba(125,255,176,0)'); g.fillStyle = pg; g.fillRect(-ew, -eh * 2, ew * 2, eh * 4);
+        g.fillStyle = 'rgba(255,255,255,.85)'; g.beginPath(); g.ellipse(-ew * 0.35 - gaze.x * sd * ew * 0.15, -eh * 0.35 - gaze.y * eh * 0.15, ew * 0.16, eh * 0.18, -0.3, 0, 6.283); g.fill();
+        g.fillStyle = 'rgba(255,255,255,.4)'; g.beginPath(); g.arc(ew * 0.3 - gaze.x * sd * ew * 0.1, eh * 0.25, eh * 0.09, 0, 6.283); g.fill();
+        if (b > 0) { g.fillStyle = 'rgba(150,170,160,.55)'; g.fillRect(ew - 2 * ew * b, -eh * 2, 2 * ew * b, eh * 4); }   // third eyelid sweeps sideways
+        g.restore(); g.strokeStyle = 'rgba(30,40,35,.6)'; g.lineWidth = 1.5 * d; eye(); g.stroke(); g.restore();
+      }
+      g.fillStyle = '#3f4844'; for (const sd of [-1, 1]) { g.beginPath(); g.arc(cx + sd * S * 0.04, cy + S * 0.3, S * 0.012, 0, 6.283); g.fill(); }
+      g.strokeStyle = '#3f4844'; g.lineWidth = 1.5 * d; g.beginPath(); g.moveTo(cx - S * 0.1, cy + S * 0.47); g.quadraticCurveTo(cx, cy + S * 0.47 + S * 0.06 * l, cx + S * 0.1, cy + S * 0.47); g.stroke();
+    };
+    return o.api;
+  } },
+
+{ id:'xeno', name:'Звёздный медиум', pitch:'Светящееся существо с пятью глазами и щупальцами-антеннами',
+  idea:'Полупрозрачное переливающееся существо из глубин космоса: пять глаз разного размера, сквозь кожу видно, как вращается мысль-вихрь, а вместо волос — светящиеся щупальца-антенны. Цвет кожи всё время перетекает, как перламутр.',
+  mech:'Каждый глаз живёт сам: моргает в своё время, но все смотрят на курсор. Говорит — щупальца волнуются в такт голосу, кончики вспыхивают. Думает — вихрь внутри ускоряется. Слушает — щупальца тянутся к вам. Смотрит — центральный глаз расширяется. Тап — все глаза одновременно моргают.',
+  good:'Самый необычный и «неземной» образ — ИИ как другая форма жизни. Запоминается с первого кадра.', cost:3,
+  build(r) {
+    const o = organism(r, 'xeno', 'Двойник · медиум'), { g, fit } = o;
+    const gaze = { x:0, y:0 }; let blinkAll = -9;
+    const EYES = [[0, 0.02, 0.2], [-0.33, -0.12, 0.11], [0.33, -0.12, 0.11], [-0.22, 0.28, 0.08], [0.22, 0.28, 0.08]].map(([x, y, s]) => ({ x, y, s, bl:blinker(2.5 + Math.random() * 3) }));
+    const fr = Array.from({ length:9 }, (_, i) => ({ a:-Math.PI / 2 + (i - 4) * 0.27, len:0.75 + Math.random() * 0.4, ph:Math.random() * 6 }));
+    const swirl = Array.from({ length:140 }, () => ({ a:Math.random() * 6.283, r:Math.random(), v:0.5 + Math.random() }));
+    o.onPoke = () => { blinkAll = performance.now() / 1000; };
+    o.api.frame = (t, l) => {
+      const { w, h, d } = fit(), S = Math.min(w * 0.22, h * 0.24), cx = w / 2, cy = h * 0.45 + Math.sin(t * 0.8) * S * 0.05;
+      lookAt(o, gaze, cx, cy, w, h, t);
+      g.clearRect(0, 0, w, h);
+      const hue = (t * 18) % 360, hc = (k, a, lt = 65) => `hsla(${(hue + k) % 360},90%,${lt}%,${a})`;
+      const bg = g.createRadialGradient(cx, cy, 0, cx, cy, S * 3.5); bg.addColorStop(0, hc(0, 0.16)); bg.addColorStop(1, 'rgba(0,0,0,0)'); g.fillStyle = bg; g.fillRect(0, 0, w, h);
+      // fronds
+      const reach = o.S === 'listen' ? 1 : 0;
+      fr.forEach((f, i) => {
+        g.beginPath(); let x = cx + Math.cos(f.a) * S * 0.6, y = cy + Math.sin(f.a) * S * 0.55; g.moveTo(x, y); let a = f.a;
+        for (let k = 1; k <= 18; k++) {
+          a += Math.sin(t * (1.2 + l * 4) + k * 0.4 + f.ph) * (0.05 + l * 0.08) + (reach ? (Math.PI / 2 - a) * 0.02 : 0);
+          x += Math.cos(a) * S * 0.05 * f.len; y += Math.sin(a) * S * 0.05 * f.len; g.lineTo(x, y);
+        }
+        g.strokeStyle = hc(i * 25, 0.55); g.lineWidth = 2.2 * d; g.lineCap = 'round'; g.stroke();
+        const tg = g.createRadialGradient(x, y, 0, x, y, (6 + l * 10) * d); tg.addColorStop(0, hc(i * 25 + 60, 0.95, 80)); tg.addColorStop(1, hc(0, 0)); g.fillStyle = tg; g.beginPath(); g.arc(x, y, (6 + l * 10) * d, 0, 6.283); g.fill();
+      });
+      // translucent head
+      const body = () => { g.beginPath(); for (let k = 0; k <= 60; k++) { const a = k / 60 * 6.283, rr = S * 0.62 * (1 + 0.04 * Math.sin(a * 4 + t * 1.3) + 0.03 * Math.sin(a * 7 - t * 2) + l * 0.04 * Math.sin(a * 9 + t * 10)) * (a > 0.4 && a < 2.74 ? 1 - 0.08 * Math.sin((a - 0.4) / 2.34 * Math.PI) : 1); const x = cx + Math.cos(a) * rr, y = cy + Math.sin(a) * rr * 1.08; k ? g.lineTo(x, y) : g.moveTo(x, y); } g.closePath(); };
+      body(); const bf = g.createRadialGradient(cx - S * 0.2, cy - S * 0.25, S * 0.05, cx, cy, S * 0.75); bf.addColorStop(0, hc(40, 0.45, 80)); bf.addColorStop(0.7, hc(140, 0.22, 55)); bf.addColorStop(1, hc(220, 0.35, 45)); g.fillStyle = bf; g.fill();
+      g.strokeStyle = hc(80, 0.8, 75); g.lineWidth = 1.5 * d; g.stroke();
+      g.save(); body(); g.clip();
+      for (const p of swirl) { p.a += 0.01 * p.v * (1 + (o.S === 'think' ? 5 : 0) + l * 2); const rr = p.r * S * 0.5, x = cx + Math.cos(p.a + p.r * 3) * rr, y = cy + Math.sin(p.a + p.r * 3) * rr * 0.9; g.fillStyle = hc(p.r * 120, 0.5, 80); g.fillRect(x, y, 1.6 * d, 1.6 * d); }
+      g.restore();
+      // eyes
+      const all = Math.max(0, Math.sin(Math.min(1, (t - blinkAll) / 0.25) * Math.PI));
+      for (const e of EYES) {
+        const big = e.s * (e === EYES[0] && o.S === 'look' ? 1.25 : 1), ex = cx + e.x * S, ey = cy + e.y * S, er = big * S, b = Math.max(all, e.bl(t));
+        g.save(); g.translate(ex, ey); g.scale(1, Math.max(0.05, 1 - b));
+        g.fillStyle = '#f4f0ff'; g.beginPath(); g.arc(0, 0, er, 0, 6.283); g.fill();
+        const ix = gaze.x * er * 0.35, iy = gaze.y * er * 0.35, ig = g.createRadialGradient(ix, iy, 0, ix, iy, er * 0.62); ig.addColorStop(0, hc(200, 1, 30)); ig.addColorStop(0.6, hc(260, 1, 55)); ig.addColorStop(1, hc(300, 1, 35));
+        g.fillStyle = ig; g.beginPath(); g.arc(ix, iy, er * 0.62, 0, 6.283); g.fill();
+        g.fillStyle = '#05030c'; g.beginPath(); g.ellipse(ix, iy, er * 0.12 * (1 + l * 0.5), er * 0.42, 0, 0, 6.283); g.fill();
+        g.fillStyle = 'rgba(255,255,255,.9)'; g.beginPath(); g.arc(ix - er * 0.25, iy - er * 0.28, er * 0.12, 0, 6.283); g.fill();
+        g.restore();
+      }
+    };
+    return o.api;
+  } },
+
+{ id:'aura', name:'Аура', pitch:'Силуэт человека в живом многослойном свечении',
+  idea:'Тёмный силуэт по плечи, вокруг — живая аура из нескольких светящихся слоёв, как на снимках Кирлиан. Цвет ауры — настроение двойника. Вдоль центра силуэта горят три точки: макушка, горло, сердце.',
+  mech:'Аура всё время перетекает и тянется к курсору. Цвет меняется по состоянию: в покое фиолетово-синяя, слушает — изумрудная, думает — золотая, говорит — оранжево-розовая и пульсирует голосом, смотрит — холодно-белая. Над головой поднимаются искры. Тап — по ауре проходит волна.',
+  good:'Мягкий, «человечный» образ — двойник как продолжение вас самих. Подходит для личного бренда и тем про энергию и состояние.', cost:2,
+  build(r) {
+    const o = organism(r, 'aura', 'Двойник · аура'), { g, fit } = o;
+    const PAL = { idle:[[150, 110, 255], [70, 90, 255], [200, 140, 255]], listen:[[40, 220, 160], [20, 160, 200], [140, 255, 200]], think:[[255, 200, 80], [255, 150, 40], [255, 230, 150]], speak:[[255, 120, 60], [255, 60, 140], [255, 190, 110]], look:[[200, 240, 255], [120, 200, 255], [255, 255, 255]] };
+    const col = PAL.idle.map(c => [...c]); let wave = 0, pull = 0, pa = 0;
+    const sparks = Array.from({ length:70 }, () => ({ x:Math.random() - 0.5, y:Math.random(), v:0.002 + Math.random() * 0.004 }));
+    o.onPoke = () => { wave = 1; };
+    o.api.frame = (t, l) => {
+      const { w, h, d } = fit(), S = Math.min(w * 0.2, h * 0.24), cx = w / 2, cy = h * 0.38;
+      const P = PAL[o.S] || PAL.idle; col.forEach((c, i) => c.forEach((v, k) => c[k] = mix(v, P[i][k], 0.03)));
+      if (o.ptr.on) { pa = Math.atan2(o.ptr.y - cy, o.ptr.x - cx); pull = mix(pull, 1, 0.05); } else pull = mix(pull, 0, 0.03);
+      wave *= 0.96;
+      g.clearRect(0, 0, w, h);
+      g.globalCompositeOperation = 'lighter';
+      for (let i = 4; i >= 0; i--) {
+        const c = col[i % 3], base = S * (0.75 + i * 0.22) * (1 + 0.04 * Math.sin(t * 0.8 + i));
+        g.beginPath();
+        for (let k = 0; k <= 72; k++) {
+          const a = k / 72 * 6.283, dp = Math.atan2(Math.sin(a - pa), Math.cos(a - pa));
+          const rr = base * (1 + 0.07 * Math.sin(a * 3 + t * (0.7 + i * 0.25)) + 0.05 * Math.sin(a * 5 - t * (1 + i * 0.1)) + l * 0.1 * Math.sin(a * 8 + t * 9 + i) + pull * 0.16 * Math.exp(-dp * dp / 0.2) + wave * 0.12 * Math.sin(a * 6 - t * 12));
+          const x = cx + Math.cos(a) * rr, y = cy + S * 0.35 + Math.sin(a) * rr * 1.25; k ? g.lineTo(x, y) : g.moveTo(x, y);
+        }
+        const ag = g.createRadialGradient(cx, cy + S * 0.3, S * 0.3, cx, cy + S * 0.35, base * 1.3); ag.addColorStop(0, `rgba(${c},${0.2 + l * 0.1})`); ag.addColorStop(1, `rgba(${c},0)`);
+        g.fillStyle = ag; g.fill();
+      }
+      for (const p of sparks) { p.y -= p.v; if (p.y < 0) { p.y = 1; p.x = Math.random() - 0.5; } const x = cx + p.x * S * 2 * (0.4 + p.y * 0.6), y = cy + S * 0.2 - (1 - p.y) * S * 1.8; g.fillStyle = `rgba(${col[2]},${0.6 * p.y})`; g.fillRect(x, y, 2 * d, 2 * d); }
+      g.globalCompositeOperation = 'source-over';
+      // silhouette
+      const sil = () => { g.beginPath(); g.arc(cx, cy - S * 0.12, S * 0.4, 0, 6.283); g.moveTo(cx - S * 0.16, cy + S * 0.2); g.lineTo(cx - S * 0.17, cy + S * 0.42); g.bezierCurveTo(cx - S * 0.6, cy + S * 0.5, cx - S * 1.05, cy + S * 0.6, cx - S * 1.15, cy + S * 1.4); g.lineTo(cx + S * 1.15, cy + S * 1.4); g.bezierCurveTo(cx + S * 1.05, cy + S * 0.6, cx + S * 0.6, cy + S * 0.5, cx + S * 0.17, cy + S * 0.42); g.lineTo(cx + S * 0.16, cy + S * 0.2); g.closePath(); };
+      sil(); g.fillStyle = '#07060c'; g.fill('nonzero'); g.strokeStyle = `rgba(${col[2]},.6)`; g.lineWidth = 1.5 * d; g.stroke();
+      // three points along the centre line
+      [[cy - S * 0.55, 0], [cy + S * 0.3, 1], [cy + S * 0.75, 2]].forEach(([y, i]) => {
+        const rr = S * (0.06 + 0.03 * Math.sin(t * 2.4 - i) + (o.S === 'speak' && i === 1 ? l * 0.06 : 0) + (o.S === 'think' && i === 0 ? 0.04 : 0));
+        const pg = g.createRadialGradient(cx, y, 0, cx, y, rr * 3); pg.addColorStop(0, `rgba(255,255,255,.95)`); pg.addColorStop(0.3, `rgba(${col[i]},.8)`); pg.addColorStop(1, `rgba(${col[i]},0)`); g.fillStyle = pg; g.beginPath(); g.arc(cx, y, rr * 3, 0, 6.283); g.fill();
+      });
+    };
+    return o.api;
+  } },
+
+{ id:'field', name:'Энергетическое поле', pitch:'Чистая энергия: тысячи частиц текут по силовым линиям',
+  idea:'Никакого тела — только энергия. Вокруг светящегося ядра тысячи частиц текут по невидимым силовым линиям и оставляют светящиеся следы, как магнитное поле или полярное сияние.',
+  mech:'Поле закручивается вокруг ядра и всё время меняет рисунок. Курсор — второй полюс: частицы огибают его и закручиваются вокруг. Говорит — ядро и поток пульсируют голосом. Думает — поток ускоряется и сжимается. Слушает — частицы втягиваются к центру. Цвет — по состоянию. Тап — взрыв частиц от точки касания.',
+  good:'Гипнотический фон без лица — подходит, если не хочется очеловечивать ИИ. Отличная заставка для эфиров и экрана на сцене.', cost:2,
+  build(r) {
+    const o = organism(r, 'field', 'Двойник · поле'), { g, fit } = o;
+    const N = 1400, P = Array.from({ length:N }, () => ({ x:Math.random(), y:Math.random(), v:Math.random() }));
+    const HUE = { idle:30, listen:160, think:45, speak:20, look:195 }; let hue = 30, boom = null;
+    o.onPoke = (x, y) => { boom = { x, y, k:1 }; };
+    o.api.frame = (t, l) => {
+      const { w, h, d } = fit(), cx = w / 2, cy = h * 0.42, R = Math.min(w, h) * 0.22;
+      hue = mix(hue, HUE[o.S] ?? 30, 0.03);
+      g.fillStyle = 'rgba(2,3,6,.12)'; g.fillRect(0, 0, w, h);
+      const sp = (o.S === 'think' ? 2.2 : 1) * (1 + l * 0.8), inward = o.S === 'listen' ? 0.6 : 0;
+      if (boom) boom.k *= 0.92;
+      g.fillStyle = `hsla(${hue},95%,${62 + l * 15}%,.55)`;
+      for (const p of P) {
+        const x = p.x * w, y = p.y * h, dx = x - cx, dy = y - cy, dist = Math.hypot(dx, dy) + 1;
+        let vx = -dy / dist, vy = dx / dist;                              // swirl around the core
+        const ring = (dist - R * (1 + 0.15 * Math.sin(t * 0.7) + l * 0.2)) / R;
+        vx -= dx / dist * ring * (0.6 + inward); vy -= dy / dist * ring * (0.6 + inward);
+        const n = Math.sin(x * 0.006 / d + t * 0.4) + Math.cos(y * 0.007 / d - t * 0.3);    // drifting field lines
+        vx += Math.cos(n * 2) * 0.5; vy += Math.sin(n * 2) * 0.5;
+        if (o.ptr.on) { const mx = x - o.ptr.x, my = y - o.ptr.y, md = Math.hypot(mx, my) + 1, f = Math.min(1.5, R * 0.6 / md); vx += (-my / md + mx / md * 0.6) * f; vy += (mx / md + my / md * 0.6) * f; }
+        if (boom && boom.k > 0.05) { const bx = x - boom.x, by = y - boom.y, bd = Math.hypot(bx, by) + 1; vx += bx / bd * boom.k * 6 * Math.max(0, 1 - bd / (R * 2)); vy += by / bd * boom.k * 6 * Math.max(0, 1 - bd / (R * 2)); }
+        const s = (1.2 + p.v) * d * sp;
+        p.x += vx * s / w; p.y += vy * s / h;
+        if (p.x < 0 || p.x > 1 || p.y < 0 || p.y > 1 || Math.random() < 0.003) { const a = Math.random() * 6.283, rr = R * (0.6 + Math.random() * 1.2); p.x = (cx + Math.cos(a) * rr) / w; p.y = (cy + Math.sin(a) * rr) / h; }
+        g.fillRect(p.x * w, p.y * h, 1.3 * d, 1.3 * d);
+      }
+      const cr = R * (0.18 + l * 0.08 + 0.02 * Math.sin(t * 2));
+      const cg = g.createRadialGradient(cx, cy, 0, cx, cy, cr * 3); cg.addColorStop(0, 'rgba(255,255,255,.9)'); cg.addColorStop(0.25, `hsla(${hue},95%,65%,.6)`); cg.addColorStop(1, `hsla(${hue},95%,50%,0)`);
+      g.fillStyle = cg; g.beginPath(); g.arc(cx, cy, cr * 3, 0, 6.283); g.fill();
+    };
+    return o.api;
+  } },
+
+{ id:'holo', name:'Голограмма', pitch:'Лицо из светящихся точек над проектором',
+  idea:'Над круглым проектором парит голограмма головы, собранная из тысяч голубых точек: нос, скулы, глазницы, губы. По ней бегут строки развёртки, изредка проскакивают помехи — как сообщение из будущего.',
+  mech:'Голова поворачивается за курсором и чуть покачивается сама, глаза светятся и моргают. Говорит — губы двигаются в такт голосу. Думает — помехи чаще, по лицу бегут полосы. Слушает — голова наклоняется к вам. Смотрит — глаза вспыхивают. Тап — голограмма на миг рассыпается и собирается обратно.',
+  good:'Самый «киношный» образ цифрового двойника: лицо есть, но видно, что это ИИ. Сильная картинка для рилсов и вебинаров.', cost:3,
+  build(r) {
+    const o = organism(r, 'holo', 'Двойник · голограмма'), { g, fit } = o, blink = blinker();
+    const gaze = { x:0, y:0 }; let mouth = 0, scatter = 0, glitch = 0;
+    o.onPoke = () => { scatter = 1; };
+    const J = Array.from({ length:64 * 46 }, () => [Math.random() - 0.5, Math.random() - 0.5, Math.random() - 0.5]);
+    o.api.frame = (t, l) => {
+      const { w, h, d } = fit(), S = Math.min(w * 0.2, h * 0.25), cx = w / 2, cy = h * 0.37;
+      lookAt(o, gaze, cx, cy, w, h, t); mouth = mix(mouth, o.S === 'speak' ? l * (0.6 + 0.4 * Math.sin(t * 17)) : 0, 0.4); scatter *= 0.93;
+      if (Math.random() < (o.S === 'think' ? 0.08 : 0.01)) glitch = 1; glitch *= 0.8;
+      g.clearRect(0, 0, w, h);
+      // projector
+      const py = cy + S * 1.65; g.fillStyle = '#0b1a20'; g.beginPath(); g.ellipse(cx, py, S * 0.6, S * 0.12, 0, 0, 6.283); g.fill(); g.strokeStyle = 'rgba(94,242,255,.6)'; g.lineWidth = 1.5 * d; g.stroke();
+      const cone = g.createLinearGradient(0, py, 0, cy - S); cone.addColorStop(0, 'rgba(94,242,255,.22)'); cone.addColorStop(1, 'rgba(94,242,255,0)'); g.fillStyle = cone; g.beginPath(); g.moveTo(cx - S * 0.5, py); g.lineTo(cx - S * 1.1, cy - S); g.lineTo(cx + S * 1.1, cy - S); g.lineTo(cx + S * 0.5, py); g.fill();
+      const yaw = gaze.x * 0.6 + Math.sin(t * 0.4) * 0.12, pitch = gaze.y * 0.3 + (o.S === 'listen' ? 0.12 : 0) + Math.sin(t * 0.3) * 0.05;
+      const pr = headProj(cx, cy, S, yaw, pitch);
+      let k = 0;
+      for (let i = 0; i < 64; i++) for (let j = 0; j < 46; j++, k++) {
+        const th = -Math.PI + i / 64 * 6.283, ph = 0.1 + j / 45 * 2.45;
+        let [x, y, z] = headPt(th, ph, mouth); if (scatter > 0.02) { x += J[k][0] * scatter * 1.2; y += J[k][1] * scatter * 1.2; z += J[k][2] * scatter * 1.2; }
+        const [sx, sy, sz] = pr(x, y, z); if (sz < -0.35) continue;
+        const a = 0.15 + Math.max(0, sz) * 0.75, gl = glitch > 0.2 && Math.abs(sy - (cy + Math.sin(t * 50) * S)) < S * 0.12 ? glitch * S * 0.15 : 0;
+        g.fillStyle = `rgba(94,242,255,${a})`; g.fillRect(sx + gl, sy, (1 + sz) * 1.4 * d, (1 + sz) * 1.4 * d);
+      }
+      const b = blink(t);
+      for (const sd of [-1, 1]) {
+        const [ex, ey, ez] = pr(...headPt(sd * 0.36, Math.acos(0.13 / 1.02), 0)); if (ez < 0) continue;
+        const er = S * 0.06 * (o.S === 'look' ? 1.6 : 1) * (1 - b * 0.9);
+        const eg = g.createRadialGradient(ex, ey, 0, ex, ey, er * 3); eg.addColorStop(0, 'rgba(220,255,255,.95)'); eg.addColorStop(0.3, 'rgba(94,242,255,.7)'); eg.addColorStop(1, 'rgba(94,242,255,0)'); g.fillStyle = eg; g.fillRect(ex - er * 3, ey - er * 3, er * 6, er * 6);
+      }
+      g.fillStyle = 'rgba(94,242,255,.06)'; for (let y = (t * 40 * d) % (4 * d); y < h; y += 4 * d) g.fillRect(0, y, w, 1 * d);   // scanlines
+    };
+    return o.api;
+  } },
+
+{ id:'scan', name:'Голограмма-срез', pitch:'Лицо из светящихся контуров, как томограф будущего',
+  idea:'Та же голова, но собранная из горизонтальных срезов-контуров, как на МРТ или в топографической карте. Янтарные линии на чёрном, сквозь лицо проходит луч сканера и подсвечивает срез, который он читает прямо сейчас.',
+  mech:'Голова следит за курсором, губы двигаются в такт голосу. Думает — сканер бегает быстрее и по кругу, срезы разъезжаются. Слушает — срезы мягко колышутся. Смотрит — глаза-точки вспыхивают. Тап — срезы на миг разлетаются по вертикали, как «взрыв-схема», и собираются обратно.',
+  good:'Инженерный, «научный» вид — ИИ, который вас изучает и понимает. Связан по стилю со скиллом взрыв-схем и «Анатомией двойника».', cost:3,
+  build(r) {
+    const o = organism(r, 'scan', 'Двойник · срез'), { g, fit } = o, blink = blinker();
+    const gaze = { x:0, y:0 }; let mouth = 0, spread = 0;
+    o.onPoke = () => { spread = 1; };
+    o.api.frame = (t, l) => {
+      const { w, h, d } = fit(), S = Math.min(w * 0.2, h * 0.25), cx = w / 2, cy = h * 0.4;
+      lookAt(o, gaze, cx, cy, w, h, t); mouth = mix(mouth, o.S === 'speak' ? l * (0.6 + 0.4 * Math.sin(t * 17)) : 0, 0.4); spread = mix(spread * 0.95, o.S === 'think' ? 0.25 : 0, 0.05);
+      g.clearRect(0, 0, w, h);
+      const yaw = gaze.x * 0.6 + Math.sin(t * 0.35) * 0.15, pitch = gaze.y * 0.25 + Math.sin(t * 0.27) * 0.05;
+      const pr = headProj(cx, cy, S, yaw, pitch);
+      const scanPh = o.S === 'think' ? (t * 1.4) % 1 : (Math.sin(t * 0.7) + 1) / 2, SL = 40;
+      for (let j = 0; j < SL; j++) {
+        const ph = 0.12 + j / (SL - 1) * 2.4, near = 1 - Math.min(1, Math.abs(j / (SL - 1) - scanPh) * 8), off = (j - SL / 2) * spread * S * 0.03;
+        const wob = o.S === 'listen' ? Math.sin(t * 4 + j * 0.5) * S * 0.01 : 0;
+        let prev = null;
+        for (let i = 0; i <= 72; i++) {
+          const th = -Math.PI + i / 72 * 6.283, [sx, sy, sz] = pr(...headPt(th, ph, mouth));
+          if (prev) { const a = sz > 0 ? 0.25 + sz * 0.6 : 0.06; g.strokeStyle = near > 0 ? `rgba(255,${200 + near * 55 | 0},${120 + near * 120 | 0},${Math.min(1, a + near * 0.6)})` : `rgba(255,179,92,${a})`; g.lineWidth = (near > 0.5 ? 1.8 : 1) * d; g.beginPath(); g.moveTo(prev[0], prev[1] + off + wob); g.lineTo(sx, sy + off + wob); g.stroke(); }
+          prev = [sx, sy];
+        }
+      }
+      const sy = cy - S * 1.1 + scanPh * S * 2.4; g.fillStyle = 'rgba(255,179,92,.12)'; g.fillRect(cx - S * 1.3, sy - 2 * d, S * 2.6, 4 * d);
+      g.strokeStyle = 'rgba(255,179,92,.6)'; g.lineWidth = 1 * d; g.beginPath(); g.moveTo(cx - S * 1.3, sy); g.lineTo(cx + S * 1.3, sy); g.stroke();
+      g.font = `600 ${9 * d}px JetBrains Mono, monospace`; g.fillStyle = 'rgba(255,179,92,.7)'; g.textAlign = 'left'; g.fillText(`СРЕЗ ${String(Math.round(scanPh * SL)).padStart(2, '0')}/${SL}`, cx + S * 1.35, sy + 3 * d);
+      const b = blink(t);
+      for (const sd of [-1, 1]) {
+        const [ex, ey, ez] = pr(...headPt(sd * 0.36, Math.acos(0.13 / 1.02), 0)); if (ez < 0) continue;
+        const er = S * 0.05 * (o.S === 'look' ? 1.7 : 1) * (1 - b * 0.9);
+        const eg = g.createRadialGradient(ex, ey, 0, ex, ey, er * 3); eg.addColorStop(0, 'rgba(255,250,230,.95)'); eg.addColorStop(0.35, 'rgba(255,138,61,.7)'); eg.addColorStop(1, 'rgba(255,138,61,0)'); g.fillStyle = eg; g.fillRect(ex - er * 3, ey - er * 3, er * 6, er * 6);
+      }
     };
     return o.api;
   } },
