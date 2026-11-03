@@ -8,7 +8,7 @@
    The owner looks at the result in the office: «ок» publishes it to the task history, or a revision
    goes back to the same agent and session.
 
-     owner:  PUT upload?name=  · POST tasks {text, agent, uploads} · GET tasks · GET events (SSE)
+     owner:  PUT upload?name=  · POST tasks {text, agent, uploads} · POST tasks/<id>/{answer,revise} {text, uploads} · GET tasks · GET events (SSE)
              POST tasks/<id>/answer {text} · /approve {publish} · /revise {text} · /retry · /cancel
      runner: POST runner/hello · POST runner/claim · GET runner/<id>/input/<name>
              POST runner/<id>/step {text} · PUT runner/<id>/file?path= · POST runner/<id>/finish
@@ -297,15 +297,15 @@ export function createDesk({ claude, model, fallback, dataDir, officeDir, runner
     t.route.style = t.style;
     if (t.style.skill && !ORCHESTRATORS.has(t.route.skill)) t.route.skill = t.style.skill;
   }
-  function answerTask(t, text) {
-    t.answers.push({ q:t.question.text, a:text });
+  function answerTask(t, text, files = []) {
+    t.answers.push({ q:t.question.text, a:text + (files.length ? ` (приложил файлы: ${files.map(f => 'in/' + f).join(', ')})` : '') });
     if (t.question.from === 'style') {
       t.style = pickStyle(t.route.visual, text) || { label:text.slice(0, 120), skill:'', about:'' };
       applyStyle(t);
       startWork(t, `Стиль: «${t.style.label}». Диспетчер передал задачу агенту «${agentOf(t.route.agent)?.name}»${t.route.skill ? ` · скилл ${t.route.skill}` : ''}.`);
       emit(t);
-    } else if (t.question.from === 'agent') { queue(t, { kind:'answer', text }); step(t, `Ваш ответ: ${text}`); emit(t); }
-    else { t.status = 'routing'; t.question = null; step(t, `Ваш ответ: ${text}`); emit(t); route(t); }
+    } else if (t.question.from === 'agent') { queue(t, { kind:'answer', text, files }); step(t, `Ваш ответ: ${text}${filesStep(files)}`); emit(t); }
+    else { t.status = 'routing'; t.question = null; step(t, `Ваш ответ: ${text}${filesStep(files)}`); emit(t); route(t); }
   }
   const styleLine = t => {
     const s = t.style || t.route?.style;
@@ -338,8 +338,8 @@ export function createDesk({ claude, model, fallback, dataDir, officeDir, runner
       `Материалы от Ильи: ${t.files.length ? t.files.map(f => 'in/' + f.name).join(', ') : 'нет'}.`, ...transcriptNote(t),
       'Если результат — ответ, исследование, план или текст, оформи его страницей out/index.html (аккуратно, по-русски) и коротко перескажи суть в отчёте.', '', RULES].filter((x, i, a) => x || a[i - 1]).join('\n');
     if (p.kind === 'revise' && !t.session) return `Задача: ${t.route.title}. Слова владельца: «${t.text}». Результат лежит в out/ (главный файл ${t.result?.main || 'out/index.html'}).\n\n` + jobPrompt({ ...t, session:'x' });
-    if (p.kind === 'revise') return `Владелец посмотрел результат и просит правку: «${p.text}»\n\nВнеси правку в файлы out/ (главный файл — тот же), коротко скажи, что изменил. Правила те же: если суть результата изменилась — строка SUMMARY: <одно предложение для истории офиса>; последней строкой RESULT: out/<главный файл>, или NEED: <вопрос>, если без ответа владельца правку не сделать.`;
-    if (p.kind === 'answer') return `Ответ владельца на твой вопрос: «${p.text}»\n\nПродолжай задачу по тем же правилам: предпоследней строкой SUMMARY: <одно предложение для истории офиса>, последней строкой RESULT: out/<главный файл>, или NEED: <вопрос>, если всё ещё не хватает.`;
+    if (p.kind === 'revise') return `Владелец посмотрел результат и просит правку: «${p.text}»${filesNote(p.files)}\n\nВнеси правку в файлы out/ (главный файл — тот же), коротко скажи, что изменил. Правила те же: если суть результата изменилась — строка SUMMARY: <одно предложение для истории офиса>; последней строкой RESULT: out/<главный файл>, или NEED: <вопрос>, если без ответа владельца правку не сделать.`;
+    if (p.kind === 'answer') return `Ответ владельца на твой вопрос: «${p.text}»${filesNote(p.files)}\n\nПродолжай задачу по тем же правилам: предпоследней строкой SUMMARY: <одно предложение для истории офиса>, последней строкой RESULT: out/<главный файл>, или NEED: <вопрос>, если всё ещё не хватает.`;
     return [`Ты — агент «${a.name}» (${a.role}) живого офиса AICEX, отдел «${a.deptName}». Задачу поставил владелец, Илья Палий, прямо в офисе hq2.aicex.club.`,
       '', `Задача: ${t.route.title}`, `Слова владельца: «${t.text}»`, `ТЗ от диспетчера: ${t.route.brief}`,
       ...t.answers.map(x => `Уточнение. Вопрос: ${x.q} Ответ: ${x.a}`),
@@ -409,19 +409,35 @@ export function createDesk({ claude, model, fallback, dataDir, officeDir, runner
 
   /* ---------- create, used by the routes and by the assistant's tool ---------- */
 
+  // files the owner uploaded (PUT upload) → the task's in/; a name already taken gets a suffix. Returns the new names.
+  function takeUploads(t, uploads = []) {
+    const added = [];
+    for (const u of (Array.isArray(uploads) ? uploads : []).slice(0, 20)) {
+      const src = path.join(DIR, 'uploads', safeName(u));
+      if (!fs.existsSync(src)) continue;
+      const orig = fs.readdirSync(src)[0];
+      if (!orig) continue;
+      const dir = path.join(taskDir(t.id), 'in'), ext = path.extname(orig), base = orig.slice(0, orig.length - ext.length);
+      fs.mkdirSync(dir, { recursive:true });
+      let name = orig;
+      for (let i = 2; fs.existsSync(path.join(dir, name)) || t.files.some(f => f.name === name); i++) name = `${base}-${i}${ext}`;
+      fs.renameSync(path.join(src, orig), path.join(dir, name));
+      fs.rmSync(src, { recursive:true, force:true });
+      t.files.push({ name, size:fs.statSync(path.join(dir, name)).size });
+      added.push(name);
+    }
+    return added;
+  }
+  const filesNote = files => files?.length ? `\n\nНовые материалы от владельца к этому сообщению: ${files.map(f => 'in/' + f).join(', ')} — изучи их и используй.` : '';
+  const filesStep = files => files?.length ? ` · файлы: ${files.join(', ')}` : '';
+  function reviseTask(t, text, files = []) {
+    queue(t, { kind:'revise', text, files }); t.published = false; step(t, `Правка: ${text}${filesStep(files)}`); emit(t);
+  }
+
   function createTask({ text, agent = '', uploads = [], direct = false, title = '', routine = null }) {
     const t = { id:crypto.randomBytes(4).toString('hex'), created:now(), updated:now(), text:String(text).trim().slice(0, 4000), agent:String(agent || ''),
       files:[], status:'routing', answers:[], steps:[], route:null, question:null, result:null, versions:0, published:false };
-    for (const u of uploads.slice(0, 20)) {
-      const src = path.join(DIR, 'uploads', safeName(u));
-      if (!fs.existsSync(src)) continue;
-      const name = fs.readdirSync(src)[0];
-      if (!name) continue;
-      fs.mkdirSync(path.join(taskDir(t.id), 'in'), { recursive:true });
-      fs.renameSync(path.join(src, name), path.join(taskDir(t.id), 'in', name));
-      fs.rmSync(src, { recursive:true, force:true });
-      t.files.push({ name, size:fs.statSync(path.join(taskDir(t.id), 'in', name)).size });
-    }
+    takeUploads(t, uploads);
     tasks.unshift(t);
     if (routine) {
       const today = moscowDate(), yesterday = moscowDate(new Date(Date.now() - 864e5));
@@ -453,7 +469,7 @@ export function createDesk({ claude, model, fallback, dataDir, officeDir, runner
       answerTask(t, text);
     } else if (action === 'revise') {
       if (!['review', 'done'].includes(t.status) || !text) return { error:'Правку можно дать только к готовому результату и с текстом правки.' };
-      queue(t, { kind:'revise', text }); t.published = false; step(t, `Правка: ${text}`); emit(t);
+      reviseTask(t, text);
     } else if (action === 'approve') {
       if (t.status !== 'review') return { error:'Принять можно только результат на проверке.' };
       t.status = 'done'; t.doneAt = now(); t.published = true; step(t, 'Принято — задача добавлена в историю офиса.'); emit(t);
@@ -666,12 +682,12 @@ export function createDesk({ claude, model, fallback, dataDir, officeDir, runner
       const b = await readJson(req), text = String(b.text || '').trim().slice(0, 4000);
       if (seg[2] === 'answer') {
         if (t.status !== 'question' || !text) return json(res, 400, { error:'Сейчас вопроса нет.' });
-        answerTask(t, text);
+        answerTask(t, text, takeUploads(t, b.uploads));
         return json(res, 200, { task:view(t) });
       }
       if (seg[2] === 'revise') {
         if (!['review', 'done'].includes(t.status) || !text) return json(res, 400, { error:'Правку можно дать к готовому результату.' });
-        queue(t, { kind:'revise', text }); t.published = false; step(t, `Правка: ${text}`); emit(t);
+        reviseTask(t, text, takeUploads(t, b.uploads));
         return json(res, 200, { task:view(t) });
       }
       if (seg[2] === 'approve') {

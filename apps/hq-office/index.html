@@ -343,6 +343,8 @@
   .dk-ex button:hover{color:var(--ink);background:rgba(255,255,255,.12)}
   .drop{display:block;border:1px dashed rgba(255,255,255,.22);border-radius:14px;padding:16px;text-align:center;color:var(--ink-2);font-size:13px;cursor:pointer;transition:border-color .2s,background .2s}
   .drop:hover,.drop.on{border-color:#8fb8ff;background:rgba(143,184,255,.07)}
+  .drop.dk-attach{display:flex;align-items:center;justify-content:center;gap:8px;padding:10px 14px;margin:8px 0 4px}
+  .drop.dk-attach svg{width:16px;height:16px;flex:none;fill:none;stroke:currentColor;stroke-width:2;stroke-linecap:round;stroke-linejoin:round}
   .files{list-style:none;display:grid;gap:4px}
   .files li{display:grid;grid-template-columns:minmax(0,1fr) auto auto;gap:4px 10px;align-items:center;font-size:12.5px;padding:7px 10px;border-radius:10px;background:rgba(255,255,255,.05)}
   .files li span{white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
@@ -3834,11 +3836,19 @@ function openDeskNew({ agent = '', text = '' } = {}) {
   $('kFoot').innerHTML = `<span id="kNote">${isMobile ? '' : 'Ctrl+Enter — поставить'}</span><button type="button" data-k="close">Отмена</button><button type="button" class="btn-go" data-k="submit">Поставить задачу</button>`;
   deskModalShow();
   const ta = $('kText'); ta.focus(); ta.setSelectionRange(ta.value.length, ta.value.length);
-  $('kFile').onchange = e => { [...e.target.files].forEach(deskUpload); e.target.value = ''; };
-  const drop = $('kDrop');
+  deskBindDrop();
+}
+// материалы к правке или ответу — та же загрузка, что в форме новой задачи
+const deskAttachHTML = () => `<label class="drop dk-attach" id="kDrop"><input type="file" id="kFile" multiple hidden><svg viewBox="0 0 24 24"><path d="M21 11.5l-8.6 8.6a5.5 5.5 0 0 1-7.8-7.8l8.6-8.6a3.7 3.7 0 0 1 5.2 5.2l-8.6 8.6a1.8 1.8 0 0 1-2.6-2.6l7.9-7.9"/></svg>Прикрепить материалы — или перетащите файлы сюда</label><ul class="files" id="kFiles"></ul>`;
+function deskBindDrop() {
+  const drop = $('kDrop'), inp = $('kFile');
+  if (!drop || drop._bound) return renderUploads();
+  drop._bound = true;
+  inp.onchange = e => { [...e.target.files].forEach(deskUpload); e.target.value = ''; };
   drop.ondragover = e => { e.preventDefault(); drop.classList.add('on'); };
   drop.ondragleave = () => drop.classList.remove('on');
   drop.ondrop = e => { e.preventDefault(); drop.classList.remove('on'); [...(e.dataTransfer?.files || [])].forEach(deskUpload); };
+  renderUploads();
 }
 // файлы грузятся сразу при выборе — к нажатию «Поставить» они уже на сервере
 function deskUpload(file) {
@@ -3885,7 +3895,7 @@ function deskNote(text, err = false) { const n = $('kNote'); if (n) { n.textCont
 function openDeskTask(id) {
   if (!deskTask(id)) return;
   closeTask(); closeDossier();
-  if (desk.form) desk.uploads.forEach(u => u.xhr?.abort());
+  if (desk.openId !== id) { desk.uploads.forEach(u => u.xhr?.abort()); desk.uploads = []; }
   desk.form = false; desk.openId = id;
   $('kHead').innerHTML = ''; $('kHead')._h = '';
   $('kBody').innerHTML = `<div id="kAsk"></div><div id="kRes"></div><div id="kActs"></div><div id="kInfo"></div><h4>Ход работы</h4><ol class="steps" id="kSteps"></ol>`;
@@ -3916,15 +3926,16 @@ function renderDeskTask() {
     <time datetime="${esc(t.created)}">${fmtDate(t.created.slice(0, 10), true)}, ${hhmm(when)}</time>${m ? `<em>${esc(m.name)}</em>` : ''}</span><h2>${esc(deskTitle(t))}</h2>`);
   const styleQ = t.status === 'question' && t.question?.from === 'style' && t.question.options?.length;
   setHTML($('kAsk'), t.status === 'question' ? `<div class="ask"><b>${t.question?.from === 'agent' ? `Вопрос от агента «${esc(m?.name || '')}»` : styleQ ? 'Выберите стиль — агент начнёт после выбора' : 'Диспетчер уточняет'}</b>
-    <p>${esc(t.question?.text || '')}</p>${styleQ ? `<div class="dk-styles">${t.question.options.map(o => `<button type="button" data-k="style:${esc(o.id)}"><b>${esc(o.label)}</b>${o.about ? `<small>${esc(o.about)}</small>` : ''}</button>`).join('')}</div>` : ''}<textarea id="kAnswer" placeholder="${styleQ ? 'Или опишите стиль своими словами' : 'Ваш ответ'}"></textarea><div class="acts"><button class="btn-go" data-k="answer">Ответить</button></div></div>` : '');
+    <p>${esc(t.question?.text || '')}</p>${styleQ ? `<div class="dk-styles">${t.question.options.map(o => `<button type="button" data-k="style:${esc(o.id)}"><b>${esc(o.label)}</b>${o.about ? `<small>${esc(o.about)}</small>` : ''}</button>`).join('')}</div>` : ''}<textarea id="kAnswer" placeholder="${styleQ ? 'Или опишите стиль своими словами' : 'Ваш ответ'}"></textarea>${styleQ ? '' : deskAttachHTML()}<div class="acts"><button class="btn-go" data-k="answer">Ответить</button></div></div>` : '');
   setHTML($('kRes'), res && (t.status === 'review' || t.status === 'done') ? `<h4>Результат${t.versions > 1 ? ` · версия ${res.version}` : ''}</h4>
     ${res.summary ? `<p class="lead sm">${esc(res.summary)}</p>` : ''}${previewHTML(res)}
     <div class="dk-files">${(desk.allFiles === t.id ? res.files : res.files.slice(0, 40)).map(f => `<a href="${esc(f.url)}" target="_blank" rel="noopener">${esc(f.path)} <small>${sizeText(f.size)}</small></a>`).join('')}${res.files.length > 40 && desk.allFiles !== t.id ? `<button type="button" class="dk-more" data-k="files">ещё ${res.files.length - 40}</button>` : ''}</div>` : '');
   let acts = '';
   if (t.status === 'done') acts = `<p class="note">${t.published ? 'Принято и добавлено в историю офиса — задача видна в «Задачах» и в работах агента.' : 'Принято без публикации в истории офиса.'}</p>`;
-  if (t.status === 'review' || t.status === 'done') acts += `<h4>Правка</h4><textarea id="kRevise" placeholder="Что поменять? Агент поправит в той же сессии и принесёт новую версию"></textarea><div class="acts dk-acts"><button type="button" class="dk-mic" id="kReviseMic" data-k="mic" title="Надиктовать правку: нажать — говорить, нажать ещё раз — закончить"><svg viewBox="0 0 24 24"><rect x="9" y="3" width="6" height="11" rx="3"/><path d="M5 11a7 7 0 0 0 14 0M12 18v3"/></svg><span>Голосом</span></button><button data-k="revise">Отправить правку</button></div><p class="note" id="kMicNote" hidden></p>`;
+  if (t.status === 'review' || t.status === 'done') acts += `<h4>Правка</h4><textarea id="kRevise" placeholder="Что поменять? Агент поправит в той же сессии и принесёт новую версию"></textarea>${deskAttachHTML()}<div class="acts dk-acts"><button type="button" class="dk-mic" id="kReviseMic" data-k="mic" title="Надиктовать правку: нажать — говорить, нажать ещё раз — закончить"><svg viewBox="0 0 24 24"><rect x="9" y="3" width="6" height="11" rx="3"/><path d="M5 11a7 7 0 0 0 14 0M12 18v3"/></svg><span>Голосом</span></button><button data-k="revise">Отправить правку</button></div><p class="note" id="kMicNote" hidden></p>`;
   if (t.status === 'error') acts = `<div class="ask err"><b>Не получилось</b><p>${esc(t.error)}</p>${t.log ? `<details class="brief"><summary>Подробности</summary><pre class="dk-log">${esc(t.log)}</pre></details>` : ''}<div class="acts"><button class="btn-go" data-k="retry">Повторить</button></div></div>`;
   setHTML($('kActs'), acts);
+  deskBindDrop();
   setHTML($('kInfo'), `<h4>Ваша задача</h4><p class="lead sm">«${esc(t.text)}»</p>${t.files.length ? `<div class="chipsrow" style="margin-top:10px">${t.files.map(f => `<span>${esc(f)}</span>`).join('')}</div>` : ''}
     ${t.answers.length ? `<p class="note" style="margin-top:10px">${t.answers.map(a => `Вопрос: ${esc(a.q)} — ваш ответ: ${esc(a.a)}`).join('<br>')}</p>` : ''}
     ${t.route ? `<h4>Диспетчер</h4>${t.chain ? `<p class="note">Связка: «${esc(t.chain.from.name)}» ${t.chain.done ? 'расшифровал' : 'расшифровывает'} ${t.chain.sources.length ? t.chain.sources.map(u => `<a href="${esc(u)}" target="_blank" rel="noopener">референс</a>`).join(', ') : 'видео'} → «${esc(t.chain.to.name)}»${t.chain.note ? ` · ${esc(t.chain.note)}` : ''}</p>` : ''}<p class="note">Исполнитель — «${esc(agentMeta(t.route.agent)?.name || t.route.agent)}»${t.route.skill ? ` · скилл <code>${esc(t.route.skill)}</code>` : ''}. ${esc(t.route.why)}</p>
@@ -3995,7 +4006,8 @@ async function deskAct(k) {
   } else if (k === 'answer' || k === 'revise') {
     const box = $(k === 'answer' ? 'kAnswer' : 'kRevise'), text = box?.value.trim();
     if (!text) { box?.focus(); return deskNote(k === 'answer' ? 'Напишите ответ.' : 'Напишите, что поменять.', true); }
-    body = { text };
+    if (desk.uploads.some(u => u.xhr)) return deskNote('Файлы ещё загружаются — подождите немного.', true);
+    body = { text, uploads:desk.uploads.filter(u => u.id).map(u => u.id) };
   }
   if (k === 'approve' || k === 'approve-quiet') { p = 'approve'; body = { publish:k === 'approve' }; }
   if (k === 'cancel' && !confirm(t.status === 'review' ? 'Отклонить результат и закрыть задачу? Если нужно переделать — лучше отправьте правку.' : 'Отменить задачу? Агент остановит работу.')) return;
@@ -4004,6 +4016,7 @@ async function deskAct(k) {
   const r = await deskPost(`/tasks/${t.id}/${p}`, body);
   desk.busy = false;
   if (!r.ok || !r.j.task) return deskNote(r.j.error || 'Не получилось — попробуйте ещё раз.', true);
+  if (body.uploads) desk.uploads = [];
   deskUpsert(r.j.task);
   if (p === 'approve') { closeDesk(); toast(body.publish ? `Принято: «${deskTitle(t)}» — в истории офиса` : `Принято: «${deskTitle(t)}»`); }
 }
@@ -4014,7 +4027,7 @@ function deskEnter() {
   if (a === 'kRevise') deskAct('revise');
 }
 function closeDesk() {
-  if (desk.form) desk.uploads.forEach(u => u.xhr?.abort());
+  desk.uploads.forEach(u => u.xhr?.abort());
   $('deskModal').hidden = true; $('kBody').innerHTML = ''; $('kHead')._h = $('kFoot')._h = '';
   if (desk.rec) { desk.rec.cancelled = true; desk.rec.stop(); }
   desk.openId = null; desk.form = false; desk.uploads = [];
