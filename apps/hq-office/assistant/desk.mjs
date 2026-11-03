@@ -171,7 +171,7 @@ export function createDesk({ claude, model, fallback, dataDir, officeDir, runner
     const waiting = tasks.filter(x => x.status === 'queued').sort((x, y) => x.queuedAt.localeCompare(y.queuedAt));
     return {
       id:t.id, created:t.created, updated:t.updated, text:t.text, files:t.files.map(f => f.name), askedAgent:t.agent || '',
-      status:t.status, statusText:STATUS[t.status] || t.status, routine:t.routine || '', alerts:t.alerts || null, queuePos:t.status === 'queued' ? waiting.indexOf(t) + 1 : 0,
+      status:t.status, statusText:STATUS[t.status] || t.status, routine:t.routine || '', source:t.source || '', alerts:t.alerts || null, queuePos:t.status === 'queued' ? waiting.indexOf(t) + 1 : 0,
       agent:a ? { id:a.id, name:a.name, dept:a.dept } : null, route:t.route || null,
       chain:t.chain && tr && to && to.id !== TRANSCRIBER ? { from:{ id:tr.id, name:tr.name }, to:{ id:to.id, name:to.name }, sources:t.chain.sources, done:Boolean(t.transcribed), note:t.transcribed?.summary || '' } : null, question:t.question || null, style:t.style?.label || '', answers:t.answers,
       steps:t.steps.slice(-40), error:t.error || '', log:t.status === 'error' ? t.log || '' : '', published:Boolean(t.published), versions:t.versions || 0,
@@ -436,9 +436,10 @@ export function createDesk({ claude, model, fallback, dataDir, officeDir, runner
     queue(t, { kind:'revise', text, files }); t.published = false; step(t, `Правка: ${text}${filesStep(files)}`); emit(t);
   }
 
-  function createTask({ text, agent = '', uploads = [], direct = false, title = '', routine = null }) {
+  function createTask({ text, agent = '', uploads = [], direct = false, title = '', routine = null, source = '' }) {
     const t = { id:crypto.randomBytes(4).toString('hex'), created:now(), updated:now(), text:String(text).trim().slice(0, 4000), agent:String(agent || ''),
-      files:[], status:'routing', answers:[], steps:[], route:null, question:null, result:null, versions:0, published:false };
+      files:[], status:'routing', answers:[], steps:[], route:null, question:null, result:null, versions:0, published:false,
+      source:routine ? 'routine' : direct ? 'twin' : ['office', 'assistant', 'twin'].includes(source) ? source : 'office' };
     takeUploads(t, uploads);
     tasks.unshift(t);
     if (routine) {
@@ -675,7 +676,7 @@ export function createDesk({ claude, model, fallback, dataDir, officeDir, runner
     if (M === 'POST' && rest === 'tasks') {
       const b = await readJson(req);
       if (!String(b.text || '').trim()) return json(res, 400, { error:'Опишите задачу.' });
-      const { task } = createTask({ text:b.text, agent:b.agent, uploads:Array.isArray(b.uploads) ? b.uploads : [] });
+      const { task } = createTask({ text:b.text, agent:b.agent, uploads:Array.isArray(b.uploads) ? b.uploads : [], source:'office' });
       return json(res, 200, { task:view(task) });
     }
     if (seg[0] === 'tasks' && seg[1] && M === 'POST') {

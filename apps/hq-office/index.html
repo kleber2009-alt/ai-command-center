@@ -558,6 +558,166 @@
   .msheet .row button.on{background:rgba(47,123,255,.22);color:#fff}
   .msheet .acct{display:flex;align-items:center;justify-content:space-between;gap:10px;padding:12px 14px;border-radius:14px;background:rgba(255,255,255,.05);font-size:13.5px}
   @media (prefers-reduced-motion:reduce){ .msheet .sh{animation:none} }
+  /* ================= Рабочий стол: задачи владельца ================= */
+  /* маршрут задачи: Поставлена → Диспетчер → (Транскрибатор) → Агент → Ваша проверка → Готово */
+  .flow{list-style:none;display:grid;grid-auto-flow:column;grid-auto-columns:minmax(0,1fr);gap:0;margin:2px 0 6px;counter-reset:fl}
+  .flow li{position:relative;display:grid;justify-items:center;gap:6px;text-align:center;padding:0 4px;min-width:0}
+  .flow li::before{content:"";position:absolute;top:13px;left:calc(-50% + 16px);right:calc(50% + 16px);height:2px;border-radius:2px;background:rgba(255,255,255,.1)}
+  .flow li:first-child::before{display:none}
+  .flow li.done::before,.flow li.now::before,.flow li.need::before,.flow li.queue::before{background:linear-gradient(90deg,#3ddc97,var(--fc,#3ddc97))}
+  .flow .fd{width:28px;height:28px;border-radius:50%;display:grid;place-items:center;background:#171a22;border:1.5px solid rgba(255,255,255,.16);color:var(--ink-3);position:relative;z-index:1}
+  .flow .fd svg{width:14px;height:14px;fill:none;stroke:currentColor;stroke-width:2.4;stroke-linecap:round;stroke-linejoin:round}
+  .flow .fd i{width:7px;height:7px;border-radius:50%;background:currentColor}
+  .flow li.done .fd{background:#3ddc97;border-color:#3ddc97;color:#06140d}
+  .flow li.now .fd,.flow li.queue .fd{--fc:#7cb4ff;border-color:var(--fc);color:var(--fc);box-shadow:0 0 0 5px color-mix(in srgb,var(--fc) 18%,transparent)}
+  .flow li.now .fd i{animation:flp 1.3s ease-in-out infinite}
+  .flow li.need{--fc:#ffb020}
+  .flow li.need .fd{border-color:#ffb020;background:#ffb020;color:#1b1305;box-shadow:0 0 0 5px rgba(255,176,32,.2)}
+  .flow li.err .fd{border-color:#ff6b6b;background:#ff6b6b;color:#1b0505}
+  .flow li.off{opacity:.45}
+  .flow b{font-size:12.5px;font-weight:700;line-height:1.25;color:var(--ink-2);max-width:100%;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+  .flow li.done b{color:var(--ink)} .flow li.now b,.flow li.queue b{color:#9cc4ff} .flow li.need b{color:#ffcf6e} .flow li.err b{color:#ff9a9a}
+  .flow small{font:500 10.5px/1.3 var(--f-mono);color:var(--ink-3);max-width:100%;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+  @keyframes flp{50%{transform:scale(.55);opacity:.5}}
+  /* мини-маршрут на карточке — сегменты */
+  .fbar{display:flex;gap:3px;margin:2px 0 1px}
+  .fbar i{flex:1;height:4px;border-radius:3px;background:rgba(255,255,255,.1)}
+  .fbar i.done{background:#3ddc97} .fbar i.now,.fbar i.queue{background:linear-gradient(90deg,#7cb4ff,rgba(124,180,255,.35));animation:fbar 1.6s ease-in-out infinite alternate}
+  .fbar i.queue{animation:none;background:rgba(124,180,255,.45)} .fbar i.need{background:#ffb020} .fbar i.err{background:#ff6b6b}
+  @keyframes fbar{to{opacity:.55}}
+
+  /* карточки во вкладке «В работе» */
+  .dk-groups{display:grid;gap:4px}
+  .dk-gh{display:flex;align-items:center;gap:8px;margin:12px 2px 6px;font:600 10.5px var(--f-mono);letter-spacing:.14em;text-transform:uppercase;color:var(--ink-3)}
+  .dk-gh i{width:7px;height:7px;border-radius:50%;background:var(--g)}
+  .dk-gh span{margin-left:auto;font-weight:500;letter-spacing:.04em}
+  .dkc{width:100%;display:grid;grid-template-columns:auto minmax(0,1fr);gap:4px 11px;text-align:left;padding:12px 12px 12px 11px;border-radius:15px;
+    background:rgba(255,255,255,.045);border:1px solid rgba(255,255,255,.07);position:relative;transition:background .2s,border-color .2s,transform .2s}
+  .dkc:hover{background:rgba(255,255,255,.085);border-color:rgba(255,255,255,.16)}
+  .dkc:active{transform:scale(.99)}
+  .dkc.need{background:linear-gradient(180deg,rgba(255,176,32,.11),rgba(255,176,32,.04));border-color:rgba(255,176,32,.42)}
+  .dkc.bad{border-color:rgba(255,107,107,.4);background:rgba(255,90,70,.06)}
+  .dkc.closed{opacity:.72}
+  .dkc-av{grid-row:1/span 2;position:relative;width:38px;height:38px;display:grid;place-items:center}
+  .dkc-av .orb{width:30px;height:30px}
+  .dkc-av::after{content:"";position:absolute;inset:0;border-radius:50%;border:2px solid var(--s);opacity:.85}
+  .dkc.live .dkc-av::after{border-style:dashed;animation:spin 6s linear infinite}
+  @keyframes spin{to{transform:rotate(360deg)}}
+  .dkc-main{display:grid;gap:5px;min-width:0}
+  .dkc-top{display:flex;align-items:center;gap:8px;min-width:0;font:600 10.5px var(--f-mono);color:var(--ink-3);text-transform:uppercase;letter-spacing:.05em}
+  .pill{font-style:normal;flex:none;padding:2px 8px;border-radius:99px;color:var(--s);background:color-mix(in srgb,var(--s) 15%,transparent)}
+  .dkc-src{display:flex;align-items:center;gap:4px;min-width:0;overflow:hidden;white-space:nowrap;text-overflow:ellipsis;text-transform:none;letter-spacing:0;font:600 11px var(--f-ui);color:var(--ink-2)}
+  .dkc-src svg,.src-chip svg{width:12px;height:12px;flex:none;fill:none;stroke:currentColor;stroke-width:2;stroke-linecap:round;stroke-linejoin:round}
+  .dkc-top time{margin-left:auto;flex:none;text-transform:none;letter-spacing:0;font-weight:500}
+  .dkc-t{font-size:14px;font-weight:700;line-height:1.35;color:var(--ink);display:-webkit-box;-webkit-line-clamp:2;-webkit-box-orient:vertical;overflow:hidden}
+  .dkc-who{font-size:12px;color:var(--ink-2);white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+  .dkc-who code,.kv code{font:500 11px var(--f-mono);padding:1px 6px;border-radius:6px;background:rgba(255,255,255,.07);color:var(--ink-2)}
+  .dkc-last{font-size:12px;line-height:1.4;color:var(--ink-2);display:-webkit-box;-webkit-line-clamp:2;-webkit-box-orient:vertical;overflow:hidden}
+  .dkc-last.q{color:#ffd28a} .dkc-last.e{color:#ff9a9a}
+  .dkc-cta{grid-column:2;justify-self:start;margin-top:3px;font-size:12.5px;font-weight:800;padding:6px 11px;border-radius:10px;background:#ffb020;color:#1b1305}
+  .dkc.bad .dkc-cta{background:#ff6b6b;color:#1b0505}
+  .dk-hero{display:grid;grid-template-columns:repeat(3,1fr);gap:6px;margin:2px 0 6px}
+  .dk-hero div{padding:10px 11px;border-radius:13px;background:rgba(255,255,255,.045);border:1px solid rgba(255,255,255,.07)}
+  .dk-hero b{display:block;font-size:20px;font-weight:800;line-height:1.1;font-variant-numeric:tabular-nums}
+  .dk-hero small{font-size:11.5px;color:var(--ink-2)}
+  .dk-hero .w b{color:#ffcf6e} .dk-hero .r b{color:#9cc4ff} .dk-hero .d b{color:#3ddc97}
+
+  /* окно задачи */
+  .dlg.task-w{width:min(880px,100%)}
+  .kh{display:grid;grid-template-columns:auto minmax(0,1fr);gap:4px 14px;align-items:center;padding-right:44px}
+  .kh .orb{grid-row:1/span 3;width:48px;height:48px}
+  .kh h2{font-size:21px;line-height:1.25;text-wrap:balance}
+  .kh-meta{display:flex;flex-wrap:wrap;align-items:center;gap:6px}
+  .src-chip,.kh-meta .chip{display:inline-flex;align-items:center;gap:5px;font-size:12px;font-weight:700;padding:3px 9px;border-radius:99px;background:rgba(255,255,255,.07);color:var(--ink-2)}
+  .kh-meta time{font:500 11px var(--f-mono);color:var(--ink-3)}
+  .kh .pill{font:600 10.5px var(--f-mono);text-transform:uppercase;letter-spacing:.06em;padding:3px 9px}
+  .kcard .chipsrow{align-items:flex-start}
+  .kcard .chipsrow span{line-height:1.3;font-family:var(--f-mono);font-size:11.5px}
+  .kcard{border-radius:16px;background:rgba(255,255,255,.035);border:1px solid rgba(255,255,255,.08);padding:16px;display:grid;gap:10px;margin-top:14px}
+  .kcard>h4{margin:0!important;display:flex;align-items:center;gap:8px}
+  .kcard>h4 i{width:7px;height:7px;border-radius:50%;background:var(--g,#7cb4ff)}
+  .kcard.res{border-color:rgba(61,220,151,.28);background:linear-gradient(180deg,rgba(61,220,151,.07),rgba(255,255,255,.02))}
+  .kcard.res .md{font-size:15px;line-height:1.6}
+  .md p{margin:0 0 8px} .md p:last-child{margin-bottom:0}
+  .md ul{margin:4px 0 8px;padding-left:20px;display:grid;gap:4px} .md li::marker{color:#3ddc97}
+  .md b{color:#fff} .md a{color:#8fb8ff}
+  .knote{font-size:13px;color:var(--ink-2);padding:9px 12px;border-radius:11px;background:rgba(124,180,255,.08);border-left:3px solid #7cb4ff}
+  .kgrid{display:grid;grid-template-columns:1fr 1fr;gap:14px}
+  .kgrid .kcard{margin-top:0}
+  .quote{font-size:15px;line-height:1.55;padding-left:12px;border-left:3px solid rgba(255,255,255,.18);color:var(--ink)}
+  .kv{display:grid;grid-template-columns:auto minmax(0,1fr);gap:7px 12px;font-size:13px;margin:0}
+  .kv dt{font:600 10.5px/1.9 var(--f-mono);letter-spacing:.08em;text-transform:uppercase;color:var(--ink-3)}
+  .kv dd{margin:0;color:var(--ink);min-width:0;overflow-wrap:anywhere}
+  .kv dd .orb{width:16px;height:16px;vertical-align:-3px;margin-right:5px}
+  .ffiles{display:grid;grid-template-columns:repeat(auto-fill,minmax(180px,1fr));gap:6px}
+  .ffiles a,.ffiles button{display:flex;align-items:center;gap:9px;padding:9px 11px;border-radius:12px;background:rgba(255,255,255,.05);border:1px solid rgba(255,255,255,.07);min-width:0;color:var(--ink);font-size:12.5px;text-align:left}
+  .ffiles a:hover{background:rgba(255,255,255,.1)}
+  .ffiles a{text-decoration:none}
+  .ffiles .fi{flex:none;width:30px;height:30px;border-radius:9px;display:grid;place-items:center;background:color-mix(in srgb,var(--fc) 18%,transparent);color:var(--fc)}
+  .ffiles .fi svg{width:16px;height:16px;fill:none;stroke:currentColor;stroke-width:2;stroke-linecap:round;stroke-linejoin:round}
+  .ffiles span{min-width:0;display:grid}
+  .ffiles span b{font-weight:600;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+  .ffiles small{font:500 10.5px var(--f-mono);color:var(--ink-3)}
+  .ffiles .main{border-color:rgba(61,220,151,.35)}
+  .dk-pv{max-height:480px}
+  .tl{list-style:none;display:grid;gap:0;margin:0;padding:0}
+  .tl li{display:grid;grid-template-columns:44px 18px minmax(0,1fr);gap:0 8px;align-items:start;position:relative;padding-bottom:12px}
+  .tl li::before{content:"";position:absolute;left:60px;top:16px;bottom:-2px;width:2px;background:rgba(255,255,255,.08)}
+  .tl li:last-child::before{display:none}
+  .tl time{font:500 11px/18px var(--f-mono);color:var(--ink-3);text-align:right}
+  .tl .dot{width:12px;height:12px;margin:3px;border-radius:50%;background:var(--a);box-shadow:0 0 0 3px color-mix(in srgb,var(--a) 22%,transparent);position:relative;z-index:1}
+  .tl .tx{font-size:13px;line-height:1.45;color:var(--ink-2)}
+  .tl .tx b{display:block;font:700 11px var(--f-ui);color:var(--a);margin-bottom:1px}
+  .tl li.last .tx{color:var(--ink)}
+  .tl-day{font:600 10.5px var(--f-mono);letter-spacing:.1em;text-transform:uppercase;color:var(--ink-3);margin:4px 0 8px 52px}
+  .tl-more{margin:0 0 8px 52px;font-size:12.5px;font-weight:700;color:#8fb8ff}
+
+  /* форма новой задачи */
+  .nt{display:grid;gap:14px}
+  .nt-box{border-radius:16px;border:1px solid var(--line);background:rgba(0,0,0,.26);transition:border-color .2s,box-shadow .2s}
+  .nt-box.on{border-color:#8fb8ff;background:rgba(143,184,255,.07)}
+  .nt-box:focus-within{border-color:rgba(143,184,255,.6);box-shadow:0 0 0 4px rgba(47,123,255,.14)}
+  .nt-box textarea{border:0!important;background:transparent!important;min-height:130px;font-size:15.5px!important;padding:14px 16px!important}
+  .nt-bar{display:flex;align-items:center;gap:8px;padding:6px 8px 8px 10px;border-top:1px solid rgba(255,255,255,.06)}
+  .nt-bar label{display:flex;align-items:center;gap:6px;padding:7px 10px;border-radius:10px;font-size:12.5px;font-weight:700;color:var(--ink-2);cursor:pointer}
+  .nt-bar label:hover{background:rgba(255,255,255,.07);color:var(--ink)}
+  .nt-bar svg{width:16px;height:16px;fill:none;stroke:currentColor;stroke-width:2;stroke-linecap:round;stroke-linejoin:round}
+  .nt-bar .ln{margin-left:auto;display:flex;align-items:center;gap:6px;font-size:12px;color:#5fe0d4}
+  .nt-bar .ln[hidden]{display:none}
+  .nt-h{font:600 10.5px var(--f-mono);letter-spacing:.14em;text-transform:uppercase;color:var(--ink-3);display:flex;align-items:center;gap:10px}
+  .nt-who{display:flex;gap:6px;flex-wrap:wrap}
+  .nt-who button{display:flex;align-items:center;gap:7px;padding:8px 12px;border-radius:12px;background:rgba(255,255,255,.05);border:1px solid rgba(255,255,255,.08);font-size:13px;font-weight:700;color:var(--ink-2)}
+  .nt-who button.on{background:rgba(47,123,255,.18);border-color:rgba(124,180,255,.6);color:#fff}
+  .nt-who button .orb{width:16px;height:16px}
+  .nt-who svg{width:16px;height:16px;flex:none;fill:none;stroke:currentColor;stroke-width:2;stroke-linecap:round;stroke-linejoin:round}
+  .nt-bar .ln svg{width:14px;height:14px}
+  .nt-pick{display:grid;gap:8px;max-height:300px;overflow:auto;padding:2px;border-radius:14px}
+  .nt-pick input{padding:9px 12px;border-radius:11px;border:1px solid var(--line);background:rgba(0,0,0,.25);color:var(--ink);font:500 13.5px var(--f-ui);outline:none}
+  .nt-pick h5{margin:6px 2px 0;font:600 10px var(--f-mono);letter-spacing:.12em;text-transform:uppercase;color:var(--ink-3)}
+  .nt-grid{display:grid;grid-template-columns:repeat(auto-fill,minmax(200px,1fr));gap:6px}
+  .nt-grid button{display:grid;grid-template-columns:auto minmax(0,1fr);gap:1px 9px;align-items:center;text-align:left;padding:8px 10px;border-radius:12px;background:rgba(255,255,255,.04);border:1px solid rgba(255,255,255,.06)}
+  .nt-grid button:hover{background:rgba(255,255,255,.09)}
+  .nt-grid button.on{background:rgba(47,123,255,.18);border-color:rgba(124,180,255,.6)}
+  .nt-grid .orb{grid-row:1/span 2;width:22px;height:22px}
+  .nt-grid b{font-size:12.5px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+  .nt-grid small{font-size:11px;color:var(--ink-3);white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+  .nt-next{border-radius:14px;padding:14px 12px 10px;background:rgba(255,255,255,.03);border:1px dashed rgba(255,255,255,.12)}
+  .nt-next .flow{margin:10px 0 0}
+  @media (max-width:700px){
+    .kgrid{grid-template-columns:1fr}
+    .kh h2{font-size:18px} .kh .orb{width:38px;height:38px}
+    .flow li{padding:0 1px} .flow b{font-size:11px} .flow li:not(.now):not(.need):not(.err):not(.queue) b{visibility:hidden} .flow li.now b,.flow li.need b,.flow li.err b,.flow li.queue b{overflow:visible} .flow small{display:none} .flow .fd{width:24px;height:24px} .flow li::before{top:11px;left:calc(-50% + 13px);right:calc(50% + 13px)}
+    .tl li{grid-template-columns:38px 18px minmax(0,1fr)} .tl li::before{left:54px} .tl-day,.tl-more{margin-left:46px}
+    .nt-grid{grid-template-columns:1fr 1fr}
+    .nt-next .flow{grid-auto-flow:row;gap:8px}
+    .nt-next .flow li{display:flex;align-items:center;gap:10px;text-align:left;padding:0}
+    .nt-next .flow li::before{display:none}
+    .nt-next .flow li b{visibility:visible!important;font-size:13px;overflow:visible}
+    .nt-next .flow small{display:inline;font-size:11px}
+    .dk-ex{flex-wrap:nowrap;overflow-x:auto;scrollbar-width:none;margin:0 -2px}
+    .dk-ex button{flex:none;white-space:nowrap}
+  }
+  @media (prefers-reduced-motion:reduce){ .flow li.now .fd i,.fbar i.now,.dkc.live .dkc-av::after{animation:none} }
 </style>
 <script type="importmap">
 {"imports":{
@@ -3890,24 +4050,37 @@ function deskSum() {
   return `${open} ${word(open, 'задача', 'задачи', 'задач')} в работе${need ? ` · ${need} ${word(need, 'ждёт', 'ждут', 'ждут')} вас` : ''}${desk.runner && !desk.runner.online ? ' · исполнитель не на связи' : ''}`;
 }
 function deskCardHTML(t) {
-  const m = t.agent ? agentMeta(t.agent.id) : null, last = t.steps.at(-1);
+  const m = t.agent ? agentMeta(t.agent.id) : null, last = t.steps.at(-1), src = deskSource(t);
+  const need = t.status === 'question' || t.status === 'review', open = DESK_OPEN.includes(t.status);
   const st = t.status === 'queued' && t.queuePos > 1 ? `в очереди · ${t.queuePos}-я` : t.statusText;
-  return `<li><button class="task dk${t.status === 'question' || t.status === 'review' ? ' need' : ''}" data-desk="${esc(t.id)}" style="--s:${DST[t.status] || '#9aa3b5'}">
-    <span class="t-meta"><em class="st">${esc(st)}</em><time datetime="${esc(t.updated)}">${esc(ago(t.updated))}</time></span>
-    <b>${esc(deskTitle(t))}</b>
-    <span class="t-who">${m ? `${orbHTML(m.color, 'xs')}<span class="t-dept">${esc(m.name)}</span>` : '<span class="t-dept">диспетчер выбирает агента</span>'}</span>
-    ${t.status === 'question' ? `<span class="dk-q">${esc(t.question?.text || '')}</span>` : t.status === 'error' ? `<span class="dk-q">${esc(t.error)}</span>` : last ? `<span class="dk-step">${esc(last.text)}</span>` : ''}</button></li>`;
+  const cta = t.status === 'question' ? (t.question?.from === 'style' ? 'Выбрать стиль' : 'Ответить') : t.status === 'review' ? 'Посмотреть результат' : t.status === 'error' ? 'Разобраться' : '';
+  const line = t.status === 'question' ? t.question?.text : t.status === 'error' ? t.error : t.status === 'review' ? (t.result?.summary || last?.text) : last?.text;
+  return `<li><button class="dkc${need ? ' need' : ''}${t.status === 'error' ? ' bad' : ''}${t.status === 'work' || t.status === 'routing' ? ' live' : ''}${open ? '' : ' closed'}" data-desk="${esc(t.id)}" style="--s:${DST[t.status] || '#9aa3b5'}">
+    <span class="dkc-av">${orbHTML(m?.color || '#7fd3ff')}</span>
+    <span class="dkc-main">
+      <span class="dkc-top"><em class="pill">${esc(st)}</em><span class="dkc-src">${ico(src.icon)}${esc(src.label)}</span><time datetime="${esc(t.updated)}">${esc(ago(t.updated))}</time></span>
+      <b class="dkc-t">${esc(deskTitle(t))}</b>
+      <span class="dkc-who">${m ? esc(m.name) : 'Диспетчер выбирает агента'}${t.route?.skill ? ` · <code>${esc(t.route.skill)}</code>` : ''}${t.style ? ` · ${esc(t.style)}` : ''}</span>
+      ${open ? flowBar(t) : ''}
+      ${line ? `<span class="dkc-last${t.status === 'question' ? ' q' : t.status === 'error' ? ' e' : ''}">${esc(String(line).replace(/\n+/g, ' '))}</span>` : ''}
+    </span>${cta ? `<span class="dkc-cta">${cta} →</span>` : ''}</button></li>`;
 }
 function liveHTML() {
   const q = pquery.toLowerCase();
   const list = desk.tasks.filter(t => (pdept === 'all' || t.agent?.dept === pdept) && (!q || [t.text, t.route?.title, t.agent?.name].join(' ').toLowerCase().includes(q)));
-  const open = list.filter(t => DESK_OPEN.includes(t.status)), closed = list.filter(t => !DESK_OPEN.includes(t.status)).slice(0, 20);
-  return `<div class="dk-top"><button class="btn-go" data-do="newtask" data-id="">Новая задача агенту</button></div>
+  const G = [
+    ['Ждут вас', '#ffb020', list.filter(t => t.status === 'question' || t.status === 'review' || t.status === 'error')],
+    ['В работе', '#3ddc97', list.filter(t => t.status === 'work' || t.status === 'routing')],
+    ['В очереди', '#8fb8ff', list.filter(t => t.status === 'queued')],
+    ['Закрыто недавно', '#9aa3b5', list.filter(t => t.status === 'done' || t.status === 'cancelled').slice(0, 15)],
+  ];
+  const n = i => G[i][2].length;
+  return `<div class="dk-top"><button class="btn-go" data-do="newtask" data-id="">＋ Новая задача агенту</button></div>
     ${desk.runner && !desk.runner.online ? '<p class="note warn">Исполнитель на сервере сейчас не на связи — задачи подождут в очереди и начнутся, когда он вернётся.</p>'
       : desk.runner?.claude && !desk.runner.claude.ok ? `<p class="note warn">Исполнитель не может запустить Claude Code: ${esc(desk.runner.claude.error)}${desk.runner.claude.auth ? ` · вход: ${esc(desk.runner.claude.auth)}` : ''}</p>` : ''}
-    ${open.length ? `<h3 class="eyebrow">В работе · ${open.length}</h3><ol class="tasks">${open.map(deskCardHTML).join('')}</ol>`
-      : `<p class="empty">${list.length || !desk.tasks.length ? 'Сейчас у агентов нет ваших задач. Нажмите «Новая задача агенту» или скажите ассистенту: «поставь задачу…».' : 'Задач с такими условиями нет.'}</p>`}
-    ${closed.length ? `<h3 class="eyebrow">Закрытые</h3><ol class="tasks">${closed.map(deskCardHTML).join('')}</ol>` : ''}`;
+    <div class="dk-hero"><div class="w"><b>${n(0)}</b><small>ждут вас</small></div><div class="r"><b>${n(1) + n(2)}</b><small>в работе и очереди</small></div><div class="d"><b>${n(3)}</b><small>закрыто</small></div></div>
+    ${list.length ? `<div class="dk-groups">${G.filter(g => g[2].length).map(([h, c, l]) => `<h3 class="dk-gh" style="--g:${c}"><i></i>${h}<span>${l.length}</span></h3><ol class="tasks">${l.map(deskCardHTML).join('')}</ol>`).join('')}</div>`
+      : `<p class="empty">${desk.tasks.length ? 'Задач с такими условиями нет.' : 'Сейчас у агентов нет ваших задач. Нажмите «Новая задача агенту» или скажите ассистенту: «поставь задачу…».'}</p>`}`;
 }
 // на карточке «Ваш стол»: что ждёт решения владельца
 function deskWaitingHTML() {
@@ -3916,29 +4089,109 @@ function deskWaitingHTML() {
   return `<div class="now"><span class="eyebrow">Ждут вашего решения · ${need.length}</span></div><ol class="tasks">${need.slice(0, 4).map(deskCardHTML).join('')}</ol>`;
 }
 
+/* ---------- маршрут задачи, источник, иконки ---------- */
+
+const ico = p => `<svg viewBox="0 0 24 24">${p}</svg>`;
+const I = {
+  office:'<path d="M3 10.5 12 3l9 7.5V20a1 1 0 0 1-1 1H4a1 1 0 0 1-1-1z"/>', assistant:'<rect x="9" y="3" width="6" height="11" rx="3"/><path d="M5 11a7 7 0 0 0 14 0M12 18v3"/>',
+  twin:'<circle cx="12" cy="12" r="4"/><path d="M12 2v3M12 19v3M2 12h3M19 12h3"/>', routine:'<circle cx="12" cy="12" r="9"/><path d="M12 7v5l3 2"/>',
+  check:'<path d="m5 12 5 5 9-10"/>', x:'<path d="M6 6l12 12M18 6 6 18"/>', alert:'<path d="M12 8v5M12 16.5v.5"/>',
+  video:'<rect x="3" y="5" width="18" height="14" rx="2"/><path d="m10 9 5 3-5 3z"/>', image:'<rect x="3" y="4" width="18" height="16" rx="2"/><circle cx="9" cy="10" r="2"/><path d="m21 16-5-5-9 9"/>',
+  page:'<rect x="3" y="4" width="18" height="16" rx="2"/><path d="M3 9h18"/>', doc:'<path d="M7 3h7l5 5v13H7z"/><path d="M14 3v5h5M10 13h6M10 17h6"/>', file:'<path d="M7 3h7l5 5v13H7z"/><path d="M14 3v5h5"/>',
+};
+const DSRC = { office:'Вы · в офисе', assistant:'Ассистент', twin:'Двойник', routine:'По расписанию' };
+function deskSource(t) {
+  const k = t.source && DSRC[t.source] ? t.source : t.routine ? 'routine' : t.route?.agent === 'claude-code' ? 'twin' : 'office';
+  return { k, icon:I[k], label:k === 'routine' ? `По расписанию · ${hhmm(new Date(t.created))}` : DSRC[k] };
+}
+// этапы: Поставлена → Диспетчер → (Транскрибатор) → агент → ваша проверка → готово
+function deskStages(t) {
+  const st = t.status, q = t.question?.from, A = t.route ? agentMeta(t.route.agent) : null;
+  const tr = t.chain && t.route?.agent !== 'transcriber', onTr = tr && !t.chain.done && t.agent?.id === 'transcriber' && (st === 'queued' || st === 'work');
+  const src = deskSource(t), S = [];
+  S.push({ label:'Поставлена', note:src.label, s:'done' });
+  S.push({ label:'Диспетчер', note:st === 'routing' ? 'выбирает агента' : q === 'style' ? 'ждёт выбор стиля' : q === 'dispatcher' ? 'уточняет' : t.route ? 'передал задачу' : '',
+    s:st === 'routing' ? 'now' : st === 'question' && (q === 'style' || q === 'dispatcher') ? 'need' : t.route ? 'done' : 'wait' });
+  if (tr) S.push({ label:'Транскрибатор', note:t.chain.done ? 'расшифровал' : onTr ? (st === 'work' ? 'расшифровывает' : 'в очереди') : 'расшифрует ролик', s:t.chain.done ? 'done' : onTr ? (st === 'work' ? 'now' : 'queue') : 'wait' });
+  const ag = st === 'error' ? 'err' : st === 'question' && q === 'agent' ? 'need' : (st === 'work' || st === 'queued') && !onTr && t.route ? (st === 'work' ? 'now' : 'queue')
+    : ['review', 'done'].includes(st) ? 'done' : 'wait';
+  S.push({ label:A?.name || 'Агент', note:{ now:'работает', queue:t.queuePos > 1 ? `${t.queuePos}-я в очереди` : 'в очереди', need:'задал вопрос', err:'ошибка', done:t.versions > 1 ? `версия ${t.result?.version || t.versions}` : 'сдал результат' }[ag] || '', s:ag });
+  S.push({ label:'Ваша проверка', note:st === 'review' ? 'ждёт вас' : st === 'done' ? 'принято' : '', s:st === 'review' ? 'need' : st === 'done' ? 'done' : 'wait' });
+  S.push({ label:st === 'cancelled' ? 'Отменена' : t.published ? 'В истории' : 'Готово', note:st === 'done' ? (t.published ? 'в истории офиса' : 'без публикации') : '', s:st === 'done' ? 'done' : 'wait' });
+  if (st === 'cancelled') S.forEach(x => { if (x.s !== 'done') x.s = 'off'; });
+  return S;
+}
+const flowBar = t => `<span class="fbar" aria-hidden="true">${deskStages(t).map(x => `<i class="${x.s}"></i>`).join('')}</span>`;
+function flowHTML(t) {
+  const dot = s => s === 'done' ? ico(I.check) : s === 'err' ? ico(I.x) : s === 'need' ? ico(I.alert) : '<i></i>';
+  return `<ol class="flow">${deskStages(t).map(x => `<li class="${x.s}"><span class="fd">${dot(x.s)}</span><b>${esc(x.label)}</b>${x.note ? `<small>${esc(x.note)}</small>` : ''}</li>`).join('')}</ol>`;
+}
+// кто сделал шаг: вы, диспетчер, транскрибатор, агент или система — по тексту шага
+function stepActor(text, t) {
+  const A = t.route ? agentMeta(t.route.agent) : null;
+  if (/^(Ваш ответ|Правка|Принято|Стиль:|Задача отменена|Повтор)/.test(text)) return { who:'Вы', c:'#ffb020' };
+  if (/^Диспетчер/.test(text)) return { who:'Диспетчер', c:'#7fd3ff' };
+  if (/Транскрибатор/.test(text) && !/передал текст агенту/.test(text) || /^Скачивает|^Расшифровывает|^Ролик \d/.test(text)) return { who:'Транскрибатор', c:'#2fd3c6' };
+  if (/^(Задача поставлена|Утренняя задача|Исполнитель|Ждёт очереди|Не хватило памяти|Отправляет результат)/.test(text)) return { who:'Офис', c:'#9aa3b5' };
+  return { who:A?.name || 'Агент', c:A?.color || '#3ddc97' };
+}
+function fileKind(p) {
+  const e = (p.split('.').pop() || '').toLowerCase();
+  if (['mp4', 'webm', 'mov'].includes(e)) return ['video', '#ff7ab6'];
+  if (['jpg', 'jpeg', 'png', 'webp', 'gif', 'svg'].includes(e)) return ['image', '#ffd479'];
+  if (['html', 'htm'].includes(e)) return ['page', '#7cb4ff'];
+  if (['md', 'txt', 'pdf', 'docx', 'pptx', 'csv', 'json'].includes(e)) return ['doc', '#3ddc97'];
+  return ['file', '#9aa3b5'];
+}
+
 /* ---------- окно: новая задача ---------- */
 
 function deskModalShow() { $('deskModal').hidden = false; $('kBody').scrollTop = 0; }
 function openDeskNew({ agent = '', text = '' } = {}) {
   if (!desk.on) { asstOpen(true); return; }
   closeTask(); closeDossier();
-  desk.openId = null; desk.form = true; desk.uploads = [];
-  $('kHead').innerHTML = `<span class="eyebrow">Рабочий стол офиса</span><h2>Задача агенту</h2>
-    <p>Опишите своими словами, что нужно. Диспетчер выберет агента и скилл, спросит, если чего-то не хватает, а готовый результат агент принесёт к вашему столу.</p>`;
-  const opts = DEPTS.map(d => `<optgroup label="${esc(d.name)}">${d.agentIds.map(id => { const m = agentMeta(id); return `<option value="${esc(id)}"${id === agent ? ' selected' : ''}>${esc(m.name)} — ${esc(m.role)}</option>`; }).join('')}</optgroup>`).join('');
-  $('kBody').innerHTML = `<div class="dk-form">
-    <label class="dk-l" for="kText">Что сделать</label>
-    <textarea id="kText" placeholder="Например: презентация к эфиру про воронку из Threads, 10 слайдов, в стиле AICEX">${esc(text)}</textarea>
+  desk.openId = null; desk.form = true; desk.uploads = []; desk.pickOpen = Boolean(agent);
+  $('deskModal').querySelector('.dlg').classList.remove('task-w');
+  $('kHead').innerHTML = `<span class="eyebrow">Рабочий стол офиса</span><h2>Новая задача</h2>
+    <p>Опишите своими словами, что нужно. Остальное офис сделает сам — и принесёт результат к вашему столу.</p>`;
+  $('kBody').innerHTML = `<div class="nt">
+    <div class="nt-box" id="kDrop"><input type="file" id="kFile" multiple hidden><textarea id="kText" aria-label="Что сделать" placeholder="Например: вот рилс конкурента https://… — сделай сценарий в моём стиле с кодовым словом ОФИС">${esc(text)}</textarea>
+      <div class="nt-bar"><label for="kFile">${ico('<path d="M21 11.5l-8.6 8.6a5.5 5.5 0 0 1-7.8-7.8l8.6-8.6a3.7 3.7 0 0 1 5.2 5.2l-8.6 8.6a1.8 1.8 0 0 1-2.6-2.6l7.9-7.9"/>')}Материалы</label>
+        <span class="ln" id="kLink" hidden>${ico(I.video)}ссылка на ролик — сначала расшифровка</span></div></div>
+    <ul class="files" id="kFiles"></ul>
     <div class="chipsrow dk-ex">${DESK_EXAMPLES.map(x => `<button type="button" data-ex="${esc(x)}">${esc(x)}</button>`).join('')}</div>
-    <label class="dk-l" for="kAgent">Кому</label>
-    <select id="kAgent"><option value="">Диспетчер решит сам</option>${opts}</select>
-    <span class="dk-l">Материалы</span>
-    <label class="drop" id="kDrop"><input type="file" id="kFile" multiple hidden>Перетащите сюда видео, фото или документы — или нажмите, чтобы выбрать. До 300 МБ на файл.</label>
-    <ul class="files" id="kFiles"></ul></div>`;
+    <div class="nt-h">Кому</div>
+    <input type="hidden" id="kAgent" value="${esc(agent)}">
+    <div class="nt-who" id="kWho"></div>
+    <div class="nt-pick" id="kPick" hidden></div>
+    <div class="nt-next"><div class="nt-h">Что будет дальше</div><div id="kNext"></div></div></div>`;
   $('kFoot').innerHTML = `<span id="kNote">${isMobile ? '' : 'Ctrl+Enter — поставить'}</span><button type="button" data-k="close">Отмена</button><button type="button" class="btn-go" data-k="submit">Поставить задачу</button>`;
   deskModalShow();
   const ta = $('kText'); ta.focus(); ta.setSelectionRange(ta.value.length, ta.value.length);
-  deskBindDrop();
+  ta.addEventListener('input', ntRefresh);
+  deskBindDrop(); ntRefresh();
+}
+// «Кому» и «что будет дальше» — пересобираются при вводе и выборе агента
+function ntRefresh() {
+  const id = $('kAgent')?.value || '', m = id ? agentMeta(id) : null, txt = $('kText')?.value || '';
+  const link = /https?:\/\/[^\s]*(instagram\.com|youtu|tiktok\.com|vk\.com|rutube|vimeo|t\.me)/i.test(txt) || desk.uploads.some(u => /\.(mp4|mov|webm|m4a|mp3|wav)$/i.test(u.name));
+  $('kLink').hidden = !link;
+  $('kWho').innerHTML = `<button type="button" data-who=""${id ? '' : ' class="on"'}>${ico(I.twin)}Диспетчер выберет сам</button>
+    <button type="button" data-who="pick"${id ? ' class="on"' : ''}>${m ? `${orbHTML(m.color)}${esc(m.name)}` : 'Выбрать агента'} ▾</button>`;
+  const pick = $('kPick'); pick.hidden = !desk.pickOpen;
+  if (desk.pickOpen && !pick.firstChild) pick.innerHTML = `<input id="kPickQ" type="search" placeholder="Найти агента: монтаж, сценарии, финансы…" autocomplete="off"><div id="kPickL"></div>`;
+  if (desk.pickOpen) ntPickList();
+  const fake = { status:'routing', steps:[], route:m ? { agent:m.id } : null, chain:link && id !== 'transcriber' ? { done:false } : null, agent:null, created:new Date().toISOString(), source:'office', versions:0 };
+  const S = deskStages(fake).map((x, i) => ({ ...x, s:i === 0 ? 'done' : 'wait', note:i === 1 ? (m ? `отдаст «${m.name}»` : 'выберет агента и скилл') : i === 2 && link ? 'расшифрует ролик' : x.label === 'Ваша проверка' ? 'примете или поправите' : i === 0 ? 'сейчас' : '' }));
+  S[S.length - 3].note = m ? 'сделает работу' : 'по профилю задачи';
+  $('kNext').innerHTML = `<ol class="flow">${S.map(x => `<li class="${x.s}"><span class="fd">${x.s === 'done' ? ico(I.check) : '<i></i>'}</span><b>${esc(x.label)}</b>${x.note ? `<small>${esc(x.note)}</small>` : ''}</li>`).join('')}</ol>`;
+}
+function ntPickList() {
+  const q = ($('kPickQ')?.value || '').toLowerCase(), cur = $('kAgent').value;
+  $('kPickL').innerHTML = DEPTS.map(d => {
+    const ids = d.agentIds.filter(id => { const m = agentMeta(id); return !q || (m.name + ' ' + m.role).toLowerCase().includes(q); });
+    return ids.length ? `<h5>${esc(d.name)}</h5><div class="nt-grid">${ids.map(id => { const m = agentMeta(id); return `<button type="button" data-pick="${esc(id)}"${id === cur ? ' class="on"' : ''}>${orbHTML(m.color)}<b>${esc(m.name)}</b><small>${esc(m.role)}</small></button>`; }).join('')}</div>` : '';
+  }).join('') || '<p class="empty">Такого агента нет — оставьте выбор диспетчеру.</p>';
 }
 // материалы к правке или ответу — та же загрузка, что в форме новой задачи
 const deskAttachHTML = () => `<label class="drop dk-attach" id="kDrop"><input type="file" id="kFile" multiple hidden><svg viewBox="0 0 24 24"><path d="M21 11.5l-8.6 8.6a5.5 5.5 0 0 1-7.8-7.8l8.6-8.6a3.7 3.7 0 0 1 5.2 5.2l-8.6 8.6a1.8 1.8 0 0 1-2.6-2.6l7.9-7.9"/></svg>Прикрепить материалы — или перетащите файлы сюда</label><ul class="files" id="kFiles"></ul>`;
@@ -3971,6 +4224,7 @@ function deskUpload(file) {
 }
 function renderUploads() {
   const box = $('kFiles'); if (!box) return;
+  if (desk.form && $('kWho')) ntRefresh();
   box.innerHTML = desk.uploads.map((u, i) => `<li><span>${esc(u.name)}</span>
     <small class="${u.error ? 'err' : ''}">${u.error ? esc(u.error) : u.id ? sizeText(u.size) : `${Math.round(u.loaded / Math.max(1, u.size) * 100)}%`}</small>
     <button type="button" data-rm="${i}" aria-label="Убрать файл">×</button>${!u.id && !u.error ? `<i style="--p:${(u.loaded / Math.max(1, u.size) * 100).toFixed(1)}%"></i>` : ''}</li>`).join('');
@@ -3997,10 +4251,11 @@ function deskNote(text, err = false) { const n = $('kNote'); if (n) { n.textCont
 function openDeskTask(id) {
   if (!deskTask(id)) return;
   closeTask(); closeDossier();
-  if (desk.openId !== id) { desk.uploads.forEach(u => u.xhr?.abort()); desk.uploads = []; }
+  if (desk.openId !== id) { desk.uploads.forEach(u => u.xhr?.abort()); desk.uploads = []; desk.allSteps = false; }
   desk.form = false; desk.openId = id;
+  $('deskModal').querySelector('.dlg').classList.add('task-w');
   $('kHead').innerHTML = ''; $('kHead')._h = '';
-  $('kBody').innerHTML = `<div id="kAsk"></div><div id="kRes"></div><div id="kActs"></div><div id="kInfo"></div><h4>Ход работы</h4><ol class="steps" id="kSteps"></ol>`;
+  $('kBody').innerHTML = `<div id="kFlow"></div><div id="kAsk"></div><div id="kRes"></div><div id="kActs"></div><div id="kInfo"></div><div class="kcard"><h4 style="--g:#9aa3b5"><i></i>Ход работы</h4><div id="kSteps"></div></div>`;
   $('kFoot').innerHTML = ''; $('kFoot')._h = '';
   renderDeskTask();
   deskModalShow();
@@ -4022,27 +4277,47 @@ function previewHTML(res) {
 function renderDeskTask() {
   const t = deskTask(desk.openId);
   if (!t) return;
-  const m = t.agent ? agentMeta(t.agent.id) : null, res = t.result;
+  const m = t.agent ? agentMeta(t.agent.id) : null, A = t.route ? agentMeta(t.route.agent) : m, res = t.result, src = deskSource(t);
   const when = new Date(t.created);
-  setHTML($('kHead'), `<span class="t-meta"><em class="st" style="--s:${DST[t.status] || '#9aa3b5'}">${esc(t.statusText)}${t.status === 'queued' && t.queuePos > 1 ? ` · ${t.queuePos}-я в очереди` : ''}</em>
-    <time datetime="${esc(t.created)}">${fmtDate(t.created.slice(0, 10), true)}, ${hhmm(when)}</time>${m ? `<em>${esc(m.name)}</em>` : ''}</span><h2>${esc(deskTitle(t))}</h2>`);
+  setHTML($('kHead'), `<div class="kh">${orbHTML(A?.color || '#7fd3ff')}
+    <div class="kh-meta"><em class="pill" style="--s:${DST[t.status] || '#9aa3b5'}">${esc(t.statusText)}${t.status === 'queued' && t.queuePos > 1 ? ` · ${t.queuePos}-я` : ''}</em>
+      <span class="src-chip">${ico(src.icon)}${esc(src.label)}</span><time datetime="${esc(t.created)}">${fmtDate(t.created.slice(0, 10), true)}, ${hhmm(when)}</time></div>
+    <h2>${esc(deskTitle(t))}</h2>
+    <div class="kh-meta">${A ? `<span class="chip">${esc(A.name)}</span>` : '<span class="chip">диспетчер выбирает агента</span>'}${t.route?.skill ? `<span class="chip"><code>${esc(t.route.skill)}</code></span>` : ''}${t.style ? `<span class="chip">стиль: ${esc(t.style)}</span>` : ''}${t.versions > 1 ? `<span class="chip">версия ${t.result?.version || t.versions}</span>` : ''}</div></div>`);
+  setHTML($('kFlow'), flowHTML(t));
   const styleQ = t.status === 'question' && t.question?.from === 'style' && t.question.options?.length;
-  setHTML($('kAsk'), t.status === 'question' ? `<div class="ask"><b>${t.question?.from === 'agent' ? `Вопрос от агента «${esc(m?.name || '')}»` : styleQ ? 'Выберите стиль — агент начнёт после выбора' : 'Диспетчер уточняет'}</b>
+  setHTML($('kAsk'), t.status === 'question' ? `<div class="ask"><b>${t.question?.from === 'agent' ? `«${esc(A?.name || 'Агент')}» спрашивает` : styleQ ? 'Выберите стиль — агент начнёт сразу после выбора' : 'Диспетчер уточняет'}</b>
     <p>${esc(t.question?.text || '')}</p>${styleQ ? `<div class="dk-styles">${t.question.options.map(o => `<button type="button" data-k="style:${esc(o.id)}"><b>${esc(o.label)}</b>${o.about ? `<small>${esc(o.about)}</small>` : ''}</button>`).join('')}</div>` : ''}<textarea id="kAnswer" placeholder="${styleQ ? 'Или опишите стиль своими словами' : 'Ваш ответ'}"></textarea>${styleQ ? '' : deskAttachHTML()}<div class="acts"><button class="btn-go" data-k="answer">Ответить</button></div></div>` : '');
-  setHTML($('kRes'), res && (t.status === 'review' || t.status === 'done') ? `<h4>Результат${t.versions > 1 ? ` · версия ${res.version}` : ''}</h4>
-    ${res.summary ? `<p class="lead sm">${esc(res.summary)}</p>` : ''}${previewHTML(res)}
-    <div class="dk-files">${(desk.allFiles === t.id ? res.files : res.files.slice(0, 40)).map(f => `<a href="${esc(f.url)}" target="_blank" rel="noopener">${esc(f.path)} <small>${sizeText(f.size)}</small></a>`).join('')}${res.files.length > 40 && desk.allFiles !== t.id ? `<button type="button" class="dk-more" data-k="files">ещё ${res.files.length - 40}</button>` : ''}</div>` : '');
+  const files = res ? (desk.allFiles === t.id ? res.files : res.files.slice(0, 12)) : [];
+  setHTML($('kRes'), res && (t.status === 'review' || t.status === 'done') ? `<section class="kcard res"><h4 style="--g:#3ddc97"><i></i>Результат${t.versions > 1 ? ` · версия ${res.version}` : ''}</h4>
+    ${res.summary ? `<div class="md">${mdLite(res.summary)}</div>` : ''}${res.note ? `<p class="knote">Что изменил в правке: ${esc(res.note)}</p>` : ''}
+    ${previewHTML(res)}
+    ${res.files.length ? `<div class="ffiles">${files.map(f => { const [k, c] = fileKind(f.path); return `<a href="${esc(f.url)}" target="_blank" rel="noopener" class="${f.path === res.main ? 'main' : ''}" style="--fc:${c}"><span class="fi">${ico(I[k])}</span><span><b>${esc(f.path)}</b><small>${f.path === res.main ? 'главный · ' : ''}${sizeText(f.size)}</small></span></a>`; }).join('')}${res.files.length > 12 && desk.allFiles !== t.id ? `<button type="button" class="dk-more" data-k="files">ещё ${res.files.length - 12} файлов</button>` : ''}</div>` : ''}</section>` : '');
   let acts = '';
-  if (t.status === 'done') acts = `<p class="note">${t.published ? 'Принято и добавлено в историю офиса — задача видна в «Задачах» и в работах агента.' : 'Принято без публикации в истории офиса.'}</p>`;
-  if (t.status === 'review' || t.status === 'done') acts += `<h4>Правка</h4><textarea id="kRevise" placeholder="Что поменять? Агент поправит в той же сессии и принесёт новую версию"></textarea>${deskAttachHTML()}<div class="acts dk-acts"><button type="button" class="dk-mic" id="kReviseMic" data-k="mic" title="Надиктовать правку: нажать — говорить, нажать ещё раз — закончить"><svg viewBox="0 0 24 24"><rect x="9" y="3" width="6" height="11" rx="3"/><path d="M5 11a7 7 0 0 0 14 0M12 18v3"/></svg><span>Голосом</span></button><button data-k="revise">Отправить правку</button></div><p class="note" id="kMicNote" hidden></p>`;
+  if (t.status === 'done') acts = `<p class="knote">${t.published ? 'Принято и добавлено в историю офиса — задача видна в «Задачах» и в работах агента.' : 'Принято без публикации в истории офиса.'}</p>`;
+  if (t.status === 'review' || t.status === 'done') acts += `<section class="kcard"><h4 style="--g:#ffb020"><i></i>Нужна правка?</h4><textarea id="kRevise" placeholder="Что поменять? Агент поправит в той же сессии и принесёт новую версию"></textarea>${deskAttachHTML()}<div class="acts dk-acts"><button type="button" class="dk-mic" id="kReviseMic" data-k="mic" title="Надиктовать правку: нажать — говорить, нажать ещё раз — закончить"><svg viewBox="0 0 24 24"><rect x="9" y="3" width="6" height="11" rx="3"/><path d="M5 11a7 7 0 0 0 14 0M12 18v3"/></svg><span>Голосом</span></button><button data-k="revise">Отправить правку</button></div><p class="note" id="kMicNote" hidden></p></section>`;
   if (t.status === 'error') acts = `<div class="ask err"><b>Не получилось</b><p>${esc(t.error)}</p>${t.log ? `<details class="brief"><summary>Подробности</summary><pre class="dk-log">${esc(t.log)}</pre></details>` : ''}<div class="acts"><button class="btn-go" data-k="retry">Повторить</button></div></div>`;
   setHTML($('kActs'), acts);
   deskBindDrop();
-  setHTML($('kInfo'), `<h4>Ваша задача</h4><p class="lead sm">«${esc(t.text)}»</p>${t.files.length ? `<div class="chipsrow" style="margin-top:10px">${t.files.map(f => `<span>${esc(f)}</span>`).join('')}</div>` : ''}
-    ${t.answers.length ? `<p class="note" style="margin-top:10px">${t.answers.map(a => `Вопрос: ${esc(a.q)} — ваш ответ: ${esc(a.a)}`).join('<br>')}</p>` : ''}
-    ${t.route ? `<h4>Диспетчер</h4>${t.chain ? `<p class="note">Связка: «${esc(t.chain.from.name)}» ${t.chain.done ? 'расшифровал' : 'расшифровывает'} ${t.chain.sources.length ? t.chain.sources.map(u => `<a href="${esc(u)}" target="_blank" rel="noopener">референс</a>`).join(', ') : 'видео'} → «${esc(t.chain.to.name)}»${t.chain.note ? ` · ${esc(t.chain.note)}` : ''}</p>` : ''}<p class="note">Исполнитель — «${esc(agentMeta(t.route.agent)?.name || t.route.agent)}»${t.route.skill ? ` · скилл <code>${esc(t.route.skill)}</code>` : ''}. ${esc(t.route.why)}</p>
-      ${t.route.brief ? `<details class="brief"><summary>ТЗ агенту</summary><p>${esc(t.route.brief)}</p></details>` : ''}` : ''}`);
-  setHTML($('kSteps'), t.steps.map(s => `<li><time>${hhmm(new Date(s.at))}</time>${esc(s.text)}</li>`).join(''));
+  const chain = t.chain && t.route?.agent !== 'transcriber' ? `<dt>Связка</dt><dd>«${esc(t.chain.from.name)}» ${t.chain.done ? 'расшифровал' : 'расшифрует'} ${t.chain.sources.length ? t.chain.sources.map(u => `<a href="${esc(u)}" target="_blank" rel="noopener">референс</a>`).join(', ') : 'видео'} → «${esc(t.chain.to.name)}»${t.chain.note ? ` · ${esc(t.chain.note)}` : ''}</dd>` : '';
+  setHTML($('kInfo'), `<div class="kgrid">
+    <section class="kcard"><h4 style="--g:#ffb020"><i></i>Что вы просили</h4><p class="quote">${esc(t.text)}</p>
+      ${t.files.length ? `<div class="chipsrow">${t.files.map(f => `<span>${esc(f)}</span>`).join('')}</div>` : ''}
+      ${t.answers.length ? `<dl class="kv">${t.answers.map(a => `<dt>Вопрос</dt><dd>${esc(a.q)}</dd><dt>Ваш ответ</dt><dd>${esc(a.a)}</dd>`).join('')}</dl>` : ''}</section>
+    <section class="kcard"><h4 style="--g:#7fd3ff"><i></i>Как понял диспетчер</h4>${t.route ? `<dl class="kv">
+      <dt>Агент</dt><dd>${A ? `${orbHTML(A.color)}${esc(A.name)}` : esc(t.route.agent)}</dd>
+      ${t.route.skill ? `<dt>Скилл</dt><dd><code>${esc(t.route.skill)}</code></dd>` : ''}${t.style ? `<dt>Стиль</dt><dd>${esc(t.style)}</dd>` : ''}
+      ${chain}${t.route.why ? `<dt>Почему</dt><dd>${esc(t.route.why)}</dd>` : ''}</dl>
+      ${t.route.brief ? `<details class="brief"><summary>ТЗ агенту</summary><p>${esc(t.route.brief)}</p></details>` : ''}` : '<p class="note">Диспетчер ещё разбирает задачу.</p>'}</section></div>`);
+  // ход работы: по дням, кто сделал шаг — цветом; длинная лента сворачивается
+  const all = t.steps, shown = desk.allSteps === t.id || all.length <= 8 ? all : all.slice(-8);
+  let day = '', html = all.length > shown.length ? `<button type="button" class="tl-more" data-k="steps">Показать все ${all.length} шагов</button>` : '';
+  html += '<ol class="tl">' + shown.map((st, i) => {
+    const d = st.at.slice(0, 10), a = stepActor(st.text, t);
+    const hd = d !== day ? `</ol><p class="tl-day">${fmtDate(d, true)}</p><ol class="tl">` : ''; day = d;
+    return `${hd}<li class="${i === shown.length - 1 ? 'last' : ''}" style="--a:${a.c}"><time>${hhmm(new Date(st.at))}</time><span class="dot"></span><span class="tx"><b>${esc(a.who)}</b>${esc(st.text)}</span></li>`;
+  }).join('') + '</ol>';
+  setHTML($('kSteps'), html.replace('<ol class="tl"></ol>', ''));
   // решение по результату — всегда внизу окна, без прокрутки
   setHTML($('kFoot'), t.status === 'review'
     ? `<span id="kNote"></span><button data-k="cancel">Отклонить</button><button data-k="approve-quiet">Принять без публикации</button><button class="btn-go" data-k="approve">Принять и добавить в историю</button>`
@@ -4099,6 +4374,7 @@ async function deskAct(k) {
   if (!t) return;
   if (k === 'mic') return deskMic();
   if (k === 'files') { desk.allFiles = t.id; return renderDeskTask(); }
+  if (k === 'steps') { desk.allSteps = t.id; return renderDeskTask(); }
   if (k === 'copy') { navigator.clipboard?.writeText(location.origin + location.pathname + '#desk-' + t.id).then(() => deskNote('Ссылка скопирована — откроется у вас после входа')).catch(() => {}); return; }
   let p = k, body = {};
   if (k.startsWith('style:')) {
@@ -4136,10 +4412,14 @@ function closeDesk() {
   if (location.hash.startsWith('#desk-')) setHash('');
 }
 $('kClose').onclick = closeDesk;
+$('deskModal').addEventListener('input', e => { if (e.target.id === 'kPickQ') ntPickList(); });
 $('deskModal').addEventListener('click', e => {
   if (e.target.id === 'deskModal') return closeDesk();
   const k = e.target.closest('[data-k]'); if (k) return deskAct(k.dataset.k);
-  const ex = e.target.closest('[data-ex]'); if (ex) { const ta = $('kText'); ta.value = ex.dataset.ex; ta.focus(); return; }
+  const ex = e.target.closest('[data-ex]'); if (ex) { const ta = $('kText'); ta.value = ex.dataset.ex; ta.focus(); ntRefresh(); return; }
+  const who = e.target.closest('[data-who]');
+  if (who) { if (who.dataset.who === 'pick') desk.pickOpen = !desk.pickOpen; else { $('kAgent').value = ''; desk.pickOpen = false; } ntRefresh(); if (desk.pickOpen) $('kPickQ')?.focus(); return; }
+  const pk = e.target.closest('[data-pick]'); if (pk) { $('kAgent').value = pk.dataset.pick; desk.pickOpen = false; ntRefresh(); return; }
   const rm = e.target.closest('[data-rm]');
   if (rm) { const u = desk.uploads[+rm.dataset.rm]; u?.xhr?.abort(); desk.uploads.splice(+rm.dataset.rm, 1); renderUploads(); }
 });
