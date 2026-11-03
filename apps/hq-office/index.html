@@ -364,6 +364,10 @@
   .dk-files a small{opacity:.6}
   .dk-files .dk-more{font:600 11.5px var(--f-mono);padding:5px 9px;border-radius:8px;border:0;background:rgba(143,184,255,.22);color:#cfe0ff;cursor:pointer}
   .dk-files .dk-more:hover{background:rgba(143,184,255,.32)}
+  .dk-acts .dk-mic{display:inline-flex;align-items:center;gap:6px}
+  .dk-acts .dk-mic svg{width:16px;height:16px;fill:none;stroke:currentColor;stroke-width:2;stroke-linecap:round}
+  .dk-acts .dk-mic.rec{background:#ff4d4f;color:#fff;border-color:transparent;animation:orb .8s ease-in-out infinite}
+  #kMicNote.err{color:#ff8a8a}
   a.open{display:inline-block;margin-top:8px;font-size:12px;color:#8fb8ff;font-weight:700;text-decoration:none}
   .acts.dk-acts{margin-top:10px}
   .brief{margin-top:8px;font-size:13px;color:var(--ink-2)}
@@ -3895,7 +3899,7 @@ function renderDeskTask() {
     <div class="dk-files">${(desk.allFiles === t.id ? res.files : res.files.slice(0, 40)).map(f => `<a href="${esc(f.url)}" target="_blank" rel="noopener">${esc(f.path)} <small>${sizeText(f.size)}</small></a>`).join('')}${res.files.length > 40 && desk.allFiles !== t.id ? `<button type="button" class="dk-more" data-k="files">ещё ${res.files.length - 40}</button>` : ''}</div>` : '');
   let acts = '';
   if (t.status === 'done') acts = `<p class="note">${t.published ? 'Принято и добавлено в историю офиса — задача видна в «Задачах» и в работах агента.' : 'Принято без публикации в истории офиса.'}</p>`;
-  if (t.status === 'review' || t.status === 'done') acts += `<h4>Правка</h4><textarea id="kRevise" placeholder="Что поменять? Агент поправит в той же сессии и принесёт новую версию"></textarea><div class="acts dk-acts"><button data-k="revise">Отправить правку</button></div>`;
+  if (t.status === 'review' || t.status === 'done') acts += `<h4>Правка</h4><textarea id="kRevise" placeholder="Что поменять? Агент поправит в той же сессии и принесёт новую версию"></textarea><div class="acts dk-acts"><button type="button" class="dk-mic" id="kReviseMic" data-k="mic" title="Надиктовать правку: нажать — говорить, нажать ещё раз — закончить"><svg viewBox="0 0 24 24"><rect x="9" y="3" width="6" height="11" rx="3"/><path d="M5 11a7 7 0 0 0 14 0M12 18v3"/></svg><span>Голосом</span></button><button data-k="revise">Отправить правку</button></div><p class="note" id="kMicNote" hidden></p>`;
   if (t.status === 'error') acts = `<div class="ask err"><b>Не получилось</b><p>${esc(t.error)}</p>${t.log ? `<details class="brief"><summary>Подробности</summary><pre class="dk-log">${esc(t.log)}</pre></details>` : ''}<div class="acts"><button class="btn-go" data-k="retry">Повторить</button></div></div>`;
   setHTML($('kActs'), acts);
   setHTML($('kInfo'), `<h4>Ваша задача</h4><p class="lead sm">«${esc(t.text)}»</p>${t.files.length ? `<div class="chipsrow" style="margin-top:10px">${t.files.map(f => `<span>${esc(f)}</span>`).join('')}</div>` : ''}
@@ -3909,11 +3913,51 @@ function renderDeskTask() {
     : `<span id="kNote">${t.status === 'work' ? 'Агент работает — шаги появляются здесь сами' : t.status === 'queued' && desk.runner && !desk.runner.online ? 'Исполнитель не на связи — задача начнётся, когда он вернётся' : ''}</span>
     ${DESK_OPEN.includes(t.status) ? '<button data-k="cancel">Отменить задачу</button>' : ''}<button data-k="copy">Ссылка</button><button data-k="close">Закрыть</button>`);
 }
+// голосовая правка: нажать — говорить, нажать ещё раз — текст дописывается в поле «Правка» (не дольше двух минут)
+async function deskMic() {
+  const note = (txt, err) => { const n = $('kMicNote'); if (!n) return; n.hidden = !txt; n.textContent = txt || ''; n.classList.toggle('err', !!err); };
+  const btn = on => $('kReviseMic')?.classList.toggle('rec', on);
+  if (desk.rec) return desk.rec.stop();
+  if (desk.stt) return;
+  let stream;
+  try { stream = await navigator.mediaDevices.getUserMedia({ audio:true }); }
+  catch (e) { return note('Нет доступа к микрофону — разрешите его для сайта в настройках браузера.', true); }
+  const type = ['audio/webm;codecs=opus', 'audio/webm', 'audio/mp4'].find(t => window.MediaRecorder?.isTypeSupported?.(t)) || '';
+  const rec = new MediaRecorder(stream, type ? { mimeType:type } : undefined), chunks = [], taskId = desk.openId;
+  desk.rec = rec;
+  rec.ondataavailable = e => { if (e.data.size) chunks.push(e.data); };
+  rec.onstop = async () => {
+    stream.getTracks().forEach(t => t.stop());
+    clearInterval(desk.recTimer); desk.rec = null; btn(false);
+    if (rec.cancelled || desk.openId !== taskId) return note('');
+    const blob = new Blob(chunks, { type:rec.mimeType || type || 'audio/webm' });
+    if (blob.size < 2000) return note('Не расслышал — запись слишком короткая.', true);
+    desk.stt = true; note('Распознаю речь…');
+    try {
+      const r = await fetch(ASST_API + '/stt', { method:'POST', headers:{ 'content-type':blob.type }, body:blob });
+      const j = await r.json().catch(() => ({}));
+      if (!r.ok) throw new Error(j.error);
+      if (!j.text) throw new Error('Не расслышал — попробуйте ещё раз.');
+      const ta = $('kRevise');
+      if (ta && desk.openId === taskId) { ta.value = (ta.value.trim() ? ta.value.trim() + ' ' : '') + j.text.trim(); ta.focus(); }
+      note('Готово — проверьте текст и нажмите «Отправить правку».');
+    } catch (e) { note(e.message || 'Не удалось распознать речь.', true); }
+    finally { desk.stt = false; }
+  };
+  rec.start(); btn(true);
+  const t0 = Date.now();
+  desk.recTimer = setInterval(() => {
+    const sec = Math.round((Date.now() - t0) / 1000);
+    note(`Слушаю · ${sec} с — нажмите «Голосом» ещё раз, чтобы закончить`);
+    if (sec >= 120) rec.stop();
+  }, 250);
+}
 async function deskAct(k) {
   if (k === 'close') return closeDesk();
   if (k === 'submit') return deskSubmit();
   const t = deskTask(desk.openId);
   if (!t) return;
+  if (k === 'mic') return deskMic();
   if (k === 'files') { desk.allFiles = t.id; return renderDeskTask(); }
   if (k === 'copy') { navigator.clipboard?.writeText(location.origin + location.pathname + '#desk-' + t.id).then(() => deskNote('Ссылка скопирована — откроется у вас после входа')).catch(() => {}); return; }
   let p = k, body = {};
@@ -3941,6 +3985,7 @@ function deskEnter() {
 function closeDesk() {
   if (desk.form) desk.uploads.forEach(u => u.xhr?.abort());
   $('deskModal').hidden = true; $('kBody').innerHTML = ''; $('kHead')._h = $('kFoot')._h = '';
+  if (desk.rec) { desk.rec.cancelled = true; desk.rec.stop(); }
   desk.openId = null; desk.form = false; desk.uploads = [];
   if (location.hash.startsWith('#desk-')) setHash('');
 }
