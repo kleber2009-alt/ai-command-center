@@ -19,3 +19,4 @@ apps/persona-studio/sdk/node_modules/
 
 # transcribe local dev SQLite (the prod DB is Postgres; these are stale local files)
 apps/transcribe/data/
+__pycache__/
