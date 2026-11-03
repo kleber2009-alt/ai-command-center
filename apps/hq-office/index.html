@@ -3924,6 +3924,7 @@ async function deskMic() {
   const btn = on => $('kReviseMic')?.classList.toggle('rec', on);
   if (desk.rec) return desk.rec.stop();
   if (desk.stt) return;
+  asstStopVoice();
   let stream;
   try { stream = await navigator.mediaDevices.getUserMedia({ audio:true }); }
   catch (e) { return note('Нет доступа к микрофону — разрешите его для сайта в настройках браузера.', true); }
@@ -3935,22 +3936,25 @@ async function deskMic() {
     stream.getTracks().forEach(t => t.stop());
     clearInterval(desk.recTimer); desk.rec = null; btn(false);
     if (rec.cancelled || desk.openId !== taskId) return note('');
-    const blob = new Blob(chunks, { type:rec.mimeType || type || 'audio/webm' });
-    if (blob.size < 2000) return note('Не расслышал — запись слишком короткая.', true);
+    const blob = new Blob(chunks, { type:rec.mimeType || type || 'audio/webm' }), dur = (Date.now() - t0) / 1000;
+    const diag = `(${dur.toFixed(1)} с, ${Math.round(blob.size / 1024)} КБ, ${blob.type || 'без типа'})`;
+    if (dur < 0.8) return note('Запись слишком короткая — нажмите «Голосом», скажите правку и нажмите ещё раз.', true);
+    if (!blob.size) return note(`Браузер не передал звук с микрофона ${diag} — проверьте, что выбран нужный микрофон, и попробуйте ещё раз.`, true);
     desk.stt = true; note('Распознаю речь…');
     try {
       const r = await fetch(ASST_API + '/stt', { method:'POST', headers:{ 'content-type':blob.type }, body:blob });
       const j = await r.json().catch(() => ({}));
       if (!r.ok) throw new Error(j.error);
-      if (!j.text) throw new Error('Не расслышал — попробуйте ещё раз.');
+      if (!j.text) throw new Error(`Не расслышал ${diag} — попробуйте ещё раз, говорите ближе к микрофону.`);
       const ta = $('kRevise');
       if (ta && desk.openId === taskId) { ta.value = (ta.value.trim() ? ta.value.trim() + ' ' : '') + j.text.trim(); ta.focus(); }
       note('Готово — проверьте текст и нажмите «Отправить правку».');
     } catch (e) { note(e.message || 'Не удалось распознать речь.', true); }
     finally { desk.stt = false; }
   };
-  rec.start(); btn(true);
+  // куски каждые 250 мс: звук копится по ходу записи, а не одним блоком в конце (надёжнее в Safari)
   const t0 = Date.now();
+  rec.start(250); btn(true);
   desk.recTimer = setInterval(() => {
     const sec = Math.round((Date.now() - t0) / 1000);
     note(`Слушаю · ${sec} с — нажмите «Голосом» ещё раз, чтобы закончить`);
