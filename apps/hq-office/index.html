@@ -718,6 +718,52 @@
     .dk-ex button{flex:none;white-space:nowrap}
   }
   @media (prefers-reduced-motion:reduce){ .flow li.now .fd i,.fbar i.now,.dkc.live .dkc-av::after{animation:none} }
+  /* выдача результата */
+  .res-n{margin-left:auto;font-weight:500;letter-spacing:.04em;color:var(--ink-3)}
+  .report{display:grid;gap:2px}
+  .md .mh,.db .md h4.mh,.db .md h5.mh,.db .md h6.mh{text-transform:none;letter-spacing:.01em}
+  .md .mh{margin:14px 0 6px;font:800 13px var(--f-ui);letter-spacing:.02em;color:#fff;display:flex;align-items:center;gap:8px}
+  .md .mh::before{content:"";width:4px;height:14px;border-radius:2px;background:#3ddc97}
+  .md .mh:first-child{margin-top:0}
+  .md h3.mh{font-size:15.5px} .md h5.mh,.md h6.mh{font-size:12.5px;color:var(--ink-2)}
+  .md ol{margin:4px 0 8px;padding-left:22px;display:grid;gap:4px} .md ol li::marker{color:#3ddc97;font-weight:700}
+  .md code{font:500 .88em var(--f-mono);padding:1px 6px;border-radius:6px;background:rgba(255,255,255,.08)}
+  .md pre{font:500 12.5px/1.5 var(--f-mono);padding:12px 14px;border-radius:12px;background:rgba(0,0,0,.35);overflow:auto;white-space:pre-wrap;margin:6px 0}
+  .md blockquote{margin:6px 0;padding:8px 14px;border-left:3px solid #3ddc97;background:rgba(61,220,151,.06);border-radius:0 10px 10px 0;color:var(--ink)}
+  .md hr{border:0;border-top:1px solid var(--line);margin:12px 0}
+  .md i{font-style:italic;color:var(--ink)}
+  .mtab-w{overflow-x:auto;margin:6px 0 10px;border-radius:12px;border:1px solid var(--line)}
+  .mtab-w table{border-collapse:collapse;width:100%;font-size:13px}
+  .mtab-w th{text-align:left;font:600 10.5px var(--f-mono);letter-spacing:.08em;text-transform:uppercase;color:var(--ink-3);background:rgba(255,255,255,.04);padding:9px 12px}
+  .mtab-w td{padding:9px 12px;border-top:1px solid rgba(255,255,255,.06);vertical-align:top}
+  .vw{border-radius:16px;overflow:hidden;border:1px solid rgba(255,255,255,.1);background:#0b0d12}
+  .vw-bar{display:flex;align-items:center;gap:10px;padding:9px 10px 9px 12px;background:rgba(255,255,255,.04);border-bottom:1px solid rgba(255,255,255,.07)}
+  .vw-bar .fi{flex:none;width:30px;height:30px;border-radius:9px;display:grid;place-items:center;background:color-mix(in srgb,var(--fc) 18%,transparent);color:var(--fc)}
+  .vw-bar .fi svg{width:16px;height:16px;fill:none;stroke:currentColor;stroke-width:2;stroke-linecap:round;stroke-linejoin:round}
+  .vw-t{flex:1;min-width:0;display:grid}
+  .vw-t b{font-size:13px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+  .vw-t small{font-size:12px;color:var(--ink-2);white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+  .vw-bar a{flex:none;font-size:12.5px;font-weight:700;padding:6px 10px;border-radius:9px;background:rgba(255,255,255,.07);color:var(--ink);text-decoration:none}
+  .vw-bar a:hover{background:rgba(255,255,255,.14)}
+  .vw-body{display:grid;place-items:center;min-height:120px}
+  .vw-body iframe{width:100%;height:min(62vh,620px);border:0;background:#fff;display:block}
+  .vw-body video{width:100%;max-height:62vh;background:#000;display:block}
+  .vw-body img{max-width:100%;max-height:62vh;display:block;margin:0 auto}
+  .vw.text .vw-body{place-items:stretch}
+  .vw .doc{max-height:62vh;overflow:auto;padding:18px 22px;font-size:14.5px;line-height:1.65;color:var(--ink)}
+  .vw .doc pre{white-space:pre-wrap;font:500 12.5px/1.55 var(--f-mono);margin:0}
+  .mats{display:grid;gap:10px}
+  .mats-h{margin:4px 0 0!important}
+  .mg h5{margin:0 0 6px;font:600 10.5px var(--f-mono);letter-spacing:.1em;text-transform:uppercase;color:var(--ink-3)}
+  .mg h5 span{color:var(--ink-2)}
+  .ffiles button.on,.ffiles a.on{border-color:rgba(124,180,255,.65);background:rgba(47,123,255,.14)}
+  .ffiles button:hover{background:rgba(255,255,255,.1)}
+  .ffiles span small{white-space:nowrap;overflow:hidden;text-overflow:ellipsis;font:500 11.5px var(--f-ui);color:var(--ink-2)}
+  .thumbs{display:grid;grid-template-columns:repeat(auto-fill,minmax(92px,1fr));gap:6px}
+  .thumbs button{aspect-ratio:4/5;border-radius:11px;overflow:hidden;border:2px solid transparent;background:#0b0d12;padding:0}
+  .thumbs button.on{border-color:#7cb4ff}
+  .thumbs img{width:100%;height:100%;object-fit:cover;display:block}
+  @media (max-width:700px){ .vw-body iframe{height:56vh} .vw-bar a:first-of-type{display:none} .vw .doc{padding:14px} }
 </style>
 <script type="importmap">
 {"imports":{
@@ -3918,7 +3964,7 @@ $('aFoot').addEventListener('click', async e => {
    и несёт результат к вашему столу. Гости рабочего стола не видят. */
 
 const DESK_API = ASST_API + '/desk';
-const desk = { on:false, tasks:[], runner:null, es:null, retry:0, uploads:[], openId:null, form:false, hash:'', busy:false };
+const desk = { on:false, tasks:[], runner:null, es:null, retry:0, uploads:[], openId:null, form:false, hash:'', busy:false, pv:{}, txt:{} };
 const DESK_OPEN = ['routing', 'question', 'queued', 'work', 'review'];
 const DST = { routing:'#7fd3ff', question:'#ffb020', queued:'#8fb8ff', work:'#3ddc97', review:'#ffb020', done:'#3ddc97', cancelled:'#9aa3b5', error:'#ff6b6b' };
 const DESK_EXAMPLES = ['Презентация к эфиру: 10 слайдов про воронку из Threads в Telegram', 'Смонтируй рилс из моего видео — файл прикреплю', 'Лендинг под новый интенсив по ИИ-агентам',
@@ -4087,6 +4133,99 @@ function deskWaitingHTML() {
   const need = desk.tasks.filter(t => t.status === 'question' || t.status === 'review');
   if (!need.length) return '';
   return `<div class="now"><span class="eyebrow">Ждут вашего решения · ${need.length}</span></div><ol class="tasks">${need.slice(0, 4).map(deskCardHTML).join('')}</ol>`;
+}
+
+
+/* ---------- выдача результата: отчёт агента документом и материалы в просмотрщике ---------- */
+
+// markdown отчёта: заголовки, списки, таблицы, цитаты, код — без внешних библиотек
+function mdRich(src) {
+  const inline = t => esc(t)
+    .replace(/`([^`]+)`/g, '<code>$1</code>')
+    .replace(/\*\*(.+?)\*\*/g, '<b>$1</b>')
+    .replace(/(^|[\s(«])\*([^*\s][^*]*?)\*(?=$|[\s.,;:!?)»])/g, '$1<i>$2</i>')
+    .replace(/\[([^\]]+)\]\((https?:\/\/[^\s)]+)\)/g, '<a href="$2" target="_blank" rel="noopener">$1</a>')
+    .replace(/(^|[\s(])(https?:\/\/[^\s<)]+?)([.,;:!?»]*)(?=$|[\s<)])/g, '$1<a href="$2" target="_blank" rel="noopener">$2</a>$3');
+  const L = String(src || '').replace(/\r/g, '').split('\n'), out = [];
+  let i = 0;
+  const isTable = k => /^\s*\|.*\|\s*$/.test(L[k] || '') && /^\s*\|?\s*:?-{2,}/.test(L[k + 1] || '');
+  while (i < L.length) {
+    const l = L[i];
+    if (!l.trim()) { i++; continue; }
+    if (/^```/.test(l)) { const b = []; i++; while (i < L.length && !/^```/.test(L[i])) b.push(L[i++]); i++; out.push(`<pre>${esc(b.join('\n'))}</pre>`); continue; }
+    const h = l.match(/^(#{1,4})\s+(.*)/);
+    if (h) { out.push(`<h${Math.min(6, h[1].length + 2)} class="mh">${inline(h[2])}</h${Math.min(6, h[1].length + 2)}>`); i++; continue; }
+    if (/^\s*(---|\*\*\*)\s*$/.test(l)) { out.push('<hr>'); i++; continue; }
+    if (isTable(i)) {
+      const row = r => r.trim().replace(/^\||\|$/g, '').split('|').map(c => c.trim());
+      const head = row(L[i]); i += 2; const body = [];
+      while (i < L.length && /^\s*\|/.test(L[i])) body.push(row(L[i++]));
+      out.push(`<div class="mtab-w"><table><thead><tr>${head.map(c => `<th>${inline(c)}</th>`).join('')}</tr></thead><tbody>${body.map(r => `<tr>${r.map(c => `<td>${inline(c)}</td>`).join('')}</tr>`).join('')}</tbody></table></div>`);
+      continue;
+    }
+    if (/^\s*>/.test(l)) { const b = []; while (i < L.length && /^\s*>/.test(L[i])) b.push(L[i++].replace(/^\s*>\s?/, '')); out.push(`<blockquote>${inline(b.join(' '))}</blockquote>`); continue; }
+    const li = /^\s*(?:[-*•]|(\d+)[.)])\s+/;
+    if (li.test(l)) {
+      const ol = Boolean(l.match(li)[1]), items = [];
+      while (i < L.length && li.test(L[i])) { let t = L[i++].replace(li, ''); while (i < L.length && /^\s{2,}\S/.test(L[i]) && !li.test(L[i])) t += ' ' + L[i++].trim(); items.push(`<li>${inline(t)}</li>`); }
+      out.push(ol ? `<ol>${items.join('')}</ol>` : `<ul>${items.join('')}</ul>`); continue;
+    }
+    const p = []; while (i < L.length && L[i].trim() && !li.test(L[i]) && !/^(#{1,4}\s|```|\s*>|\s*\|)/.test(L[i])) p.push(L[i++].trim());
+    out.push(`<p>${inline(p.join(' '))}</p>`);
+  }
+  return out.join('');
+}
+// отчёт агента: раздел «Материалы» превращается в подписи к файлам, остальное — документ
+function parseReport(text, files) {
+  const desc = new Map(), have = new Set(files.map(f => f.path));
+  const rest = [];
+  let inMat = false;
+  for (const line of String(text || '').split('\n')) {
+    if (/^#{1,4}\s/.test(line)) inMat = /^#{1,4}\s*Материал/i.test(line);
+    const m = line.match(/^\s*[-*•]\s*`?(?:out\/)?([^\s`]+?)`?\s*[—–:-]\s+(.+)$/);
+    if (m && have.has(m[1])) { desc.set(m[1], m[2].trim()); if (inMat) continue; }
+    if (inMat && /^#{1,4}\s*Материал/i.test(line)) continue;
+    if (inMat && !line.trim()) continue;
+    rest.push(line);
+  }
+  return { html:mdRich(rest.join('\n')), desc };
+}
+const FKIND = { page:'Страницы', video:'Видео', image:'Изображения', doc:'Документы', file:'Другое' };
+const TEXT_EXT = /\.(md|txt|csv|json)$/i;
+// просмотр выбранного файла: страница и PDF — во встроенном окне, видео — плеер, картинка — целиком, текст — оформленным
+function viewerHTML(t, res, f, desc) {
+  if (!f) return '';
+  const [k] = fileKind(f.path), u = f.url, ext = (f.path.split('.').pop() || '').toLowerCase();
+  let body = '';
+  if (k === 'video') body = `<video src="${esc(u)}" controls playsinline preload="metadata"></video>`;
+  else if (k === 'image') body = `<img src="${esc(u)}" alt="${esc(f.path)}">`;
+  else if (k === 'page') body = `<iframe src="${esc(u)}" title="${esc(f.path)}" sandbox="allow-scripts allow-popups allow-forms allow-downloads"></iframe>`;
+  else if (ext === 'pdf') body = `<iframe src="${esc(u)}" title="${esc(f.path)}"></iframe>`;
+  else if (TEXT_EXT.test(f.path)) {
+    const txt = desk.txt[u];
+    if (txt == null) { desk.txt[u] = false; fetch(u, { cache:'no-store' }).then(r => r.ok ? r.text() : '').then(x => { desk.txt[u] = x || ''; renderDeskTask(); }).catch(() => { desk.txt[u] = ''; renderDeskTask(); }); }
+    body = txt ? `<article class="doc md">${ext === 'md' ? mdRich(txt) : `<pre>${esc(ext === 'json' ? (() => { try { return JSON.stringify(JSON.parse(txt), null, 2); } catch (e) { return txt; } })() : txt)}</pre>`}</article>`
+      : `<p class="empty">${txt === '' ? 'Не удалось открыть файл — откройте его в новой вкладке.' : 'Загружаю…'}</p>`;
+  } else body = `<p class="empty">Этот файл не открывается в окне — откройте или скачайте его.</p>`;
+  return `<div class="vw ${k}${TEXT_EXT.test(f.path) ? ' text' : ''}"><div class="vw-bar"><span class="fi" style="--fc:${fileKind(f.path)[1]}">${ico(I[k])}</span>
+    <span class="vw-t"><b>${esc(f.path)}</b>${desc ? `<small>${esc(desc)}</small>` : `<small>${sizeText(f.size)}</small>`}</span>
+    <a href="${esc(u)}" target="_blank" rel="noopener">Открыть ↗</a><a href="${esc(u)}" download="${esc(f.path.split('/').pop())}">Скачать</a></div><div class="vw-body">${body}</div></div>`;
+}
+function deskResultHTML(t) {
+  const res = t.result;
+  const { html, desc } = parseReport(res.summary, res.files);
+  const cur = res.files.find(f => f.path === desk.pv[t.id]) || res.files.find(f => f.path === res.main) || res.files[0];
+  const groups = {};
+  for (const f of res.files) (groups[fileKind(f.path)[0]] ||= []).push(f);
+  const order = ['page', 'video', 'image', 'doc', 'file'].filter(k => groups[k]);
+  const lim = desk.allFiles === t.id ? 1e9 : 24;
+  const mats = order.map(k => `<div class="mg"><h5>${FKIND[k]} <span>${groups[k].length}</span></h5>${k === 'image'
+    ? `<div class="thumbs">${groups[k].slice(0, lim).map(f => `<button type="button" data-pv="${esc(f.path)}" class="${f === cur ? 'on' : ''}" title="${esc(desc.get(f.path) || f.path)}"><img loading="lazy" src="${esc(f.url)}" alt=""></button>`).join('')}</div>`
+    : `<div class="ffiles">${groups[k].slice(0, lim).map(f => { const [kk, c] = fileKind(f.path); return `<button type="button" data-pv="${esc(f.path)}" class="${f === cur ? 'on' : ''}${f.path === res.main ? ' main' : ''}" style="--fc:${c}"><span class="fi">${ico(I[kk])}</span><span><b>${esc(f.path)}</b><small>${esc(desc.get(f.path) || (f.path === res.main ? 'главный файл' : ''))}${desc.get(f.path) ? '' : ` · ${sizeText(f.size)}`}</small></span></button>`; }).join('')}</div>`}</div>`).join('');
+  return `<section class="kcard res"><h4 style="--g:#3ddc97"><i></i>Результат${t.versions > 1 ? ` · версия ${res.version}` : ''}<span class="res-n">${res.files.length} ${word(res.files.length, 'файл', 'файла', 'файлов')}</span></h4>
+    ${html ? `<div class="md report">${html}</div>` : ''}${res.note ? `<p class="knote">Что изменил в правке: ${esc(res.note)}</p>` : ''}
+    ${viewerHTML(t, res, cur, cur ? desc.get(cur.path) : '')}
+    ${res.files.length > 1 ? `<div class="mats"><h4 class="mats-h">Материалы</h4>${mats}${res.files.length > lim ? `<button type="button" class="dk-more" data-k="files">Показать все ${res.files.length}</button>` : ''}</div>` : ''}</section>`;
 }
 
 /* ---------- маршрут задачи, источник, иконки ---------- */
@@ -4288,11 +4427,7 @@ function renderDeskTask() {
   const styleQ = t.status === 'question' && t.question?.from === 'style' && t.question.options?.length;
   setHTML($('kAsk'), t.status === 'question' ? `<div class="ask"><b>${t.question?.from === 'agent' ? `«${esc(A?.name || 'Агент')}» спрашивает` : styleQ ? 'Выберите стиль — агент начнёт сразу после выбора' : 'Диспетчер уточняет'}</b>
     <p>${esc(t.question?.text || '')}</p>${styleQ ? `<div class="dk-styles">${t.question.options.map(o => `<button type="button" data-k="style:${esc(o.id)}"><b>${esc(o.label)}</b>${o.about ? `<small>${esc(o.about)}</small>` : ''}</button>`).join('')}</div>` : ''}<textarea id="kAnswer" placeholder="${styleQ ? 'Или опишите стиль своими словами' : 'Ваш ответ'}"></textarea>${styleQ ? '' : deskAttachHTML()}<div class="acts"><button class="btn-go" data-k="answer">Ответить</button></div></div>` : '');
-  const files = res ? (desk.allFiles === t.id ? res.files : res.files.slice(0, 12)) : [];
-  setHTML($('kRes'), res && (t.status === 'review' || t.status === 'done') ? `<section class="kcard res"><h4 style="--g:#3ddc97"><i></i>Результат${t.versions > 1 ? ` · версия ${res.version}` : ''}</h4>
-    ${res.summary ? `<div class="md">${mdLite(res.summary)}</div>` : ''}${res.note ? `<p class="knote">Что изменил в правке: ${esc(res.note)}</p>` : ''}
-    ${previewHTML(res)}
-    ${res.files.length ? `<div class="ffiles">${files.map(f => { const [k, c] = fileKind(f.path); return `<a href="${esc(f.url)}" target="_blank" rel="noopener" class="${f.path === res.main ? 'main' : ''}" style="--fc:${c}"><span class="fi">${ico(I[k])}</span><span><b>${esc(f.path)}</b><small>${f.path === res.main ? 'главный · ' : ''}${sizeText(f.size)}</small></span></a>`; }).join('')}${res.files.length > 12 && desk.allFiles !== t.id ? `<button type="button" class="dk-more" data-k="files">ещё ${res.files.length - 12} файлов</button>` : ''}</div>` : ''}</section>` : '');
+  setHTML($('kRes'), res && (t.status === 'review' || t.status === 'done') ? deskResultHTML(t) : '');
   let acts = '';
   if (t.status === 'done') acts = `<p class="knote">${t.published ? 'Принято и добавлено в историю офиса — задача видна в «Задачах» и в работах агента.' : 'Принято без публикации в истории офиса.'}</p>`;
   if (t.status === 'review' || t.status === 'done') acts += `<section class="kcard"><h4 style="--g:#ffb020"><i></i>Нужна правка?</h4><textarea id="kRevise" placeholder="Что поменять? Агент поправит в той же сессии и принесёт новую версию"></textarea>${deskAttachHTML()}<div class="acts dk-acts"><button type="button" class="dk-mic" id="kReviseMic" data-k="mic" title="Надиктовать правку: нажать — говорить, нажать ещё раз — закончить"><svg viewBox="0 0 24 24"><rect x="9" y="3" width="6" height="11" rx="3"/><path d="M5 11a7 7 0 0 0 14 0M12 18v3"/></svg><span>Голосом</span></button><button data-k="revise">Отправить правку</button></div><p class="note" id="kMicNote" hidden></p></section>`;
@@ -4415,6 +4550,7 @@ $('kClose').onclick = closeDesk;
 $('deskModal').addEventListener('input', e => { if (e.target.id === 'kPickQ') ntPickList(); });
 $('deskModal').addEventListener('click', e => {
   if (e.target.id === 'deskModal') return closeDesk();
+  const pv = e.target.closest('[data-pv]'); if (pv && desk.openId) { desk.pv[desk.openId] = pv.dataset.pv; renderDeskTask(); $('kRes')?.querySelector('.vw')?.scrollIntoView({ block:'nearest', behavior:'smooth' }); return; }
   const k = e.target.closest('[data-k]'); if (k) return deskAct(k.dataset.k);
   const ex = e.target.closest('[data-ex]'); if (ex) { const ta = $('kText'); ta.value = ex.dataset.ex; ta.focus(); ntRefresh(); return; }
   const who = e.target.closest('[data-who]');
