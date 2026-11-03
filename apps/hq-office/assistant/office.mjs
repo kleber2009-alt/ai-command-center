@@ -59,6 +59,10 @@ function buildOffice(W) {
       out.push(`- ${agentName(id)} (${id}): ${CAT[id]?.role || ''}. ${c.lead || ''} Задач в истории: ${n}.${skills ? ' Скиллы: ' + skills + '.' : ''}`);
     }
   }
+  if (CFG.council?.agents?.length) {
+    out.push('', `## ${CFG.council.name} — отдельная комната: ИИ-советники по методам легенд бизнеса (скилл «Команда 8 легенд»). Туда отправляют на собеседование и на исправление деталей — задачей через create_task.`);
+    for (const id of [CFG.council.board, ...CFG.council.agents].filter(Boolean)) out.push(`- ${agentName(id)} (${id}): ${CAT[id]?.role || ''}. ${AC[id]?.lead || ''}`);
+  }
   if (CFG.products?.length) {
     out.push('', '## Продукты компании');
     for (const p of CFG.products) out.push(`- ${p.title} — ${p.url} — ${p.note || ''}`);
