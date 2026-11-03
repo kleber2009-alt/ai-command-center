@@ -622,7 +622,7 @@ const V = [
       if (!DESK.tasks.length) { list.innerHTML = '<div class="cl-t"><b>Задач пока нет</b><small>скажите «поставь задачу Claude Code: …»</small></div>'; return; }
       list.innerHTML = DESK.tasks.slice(0, 30).map(t => `<div class="cl-t" data-id="${t.id}" data-s="${t.status}"><b>${esc(t.route?.title || t.text.slice(0, 70))}</b><small><i></i>${esc(t.statusText)} · ${esc(t.agent?.name || 'диспетчер')}</small>${open.has(t.id) ? `<div class="cl-x">
         ${t.steps.slice(-4).map(x => `<p>${esc(x.text)}</p>`).join('')}
-        ${t.question ? `<p class="q">Вопрос: ${esc(t.question.text)}</p><input placeholder="Ваш ответ — Enter" data-act="answer">` : ''}
+        ${t.question ? `<p class="q">Вопрос: ${esc(t.question.text)}</p>${(t.question.options || []).length ? `<div class="acts">${t.question.options.map(o => `<button data-act="style" data-v="${esc(o.label)}" title="${esc(o.about || '')}">${esc(o.label)}</button>`).join('')}</div>` : ''}<input placeholder="${t.question.options ? 'Или свой стиль — Enter' : 'Ваш ответ — Enter'}" data-act="answer">` : ''}
         ${t.result?.summary ? `<p>${esc(t.result.summary)}</p>` : ''}
         <div class="acts">${t.result?.mainUrl ? `<a href="${esc(t.result.mainUrl)}" target="_blank" rel="noopener">Открыть результат</a>` : ''}${t.status === 'review' ? '<button class="ok" data-act="approve">Принять</button>' : ''}${['review', 'done'].includes(t.status) ? '<button data-act="revise">Правка…</button>' : ''}${t.status === 'error' ? '<button data-act="retry">Повторить</button>' : ''}${['routing', 'question', 'queued', 'work', 'review'].includes(t.status) ? '<button data-act="cancel">Отменить</button>' : ''}</div></div>` : ''}</div>`).join('');
     }
@@ -631,6 +631,7 @@ const V = [
       const id = card.dataset.id, act = e.target.closest('[data-act]')?.dataset.act;
       if (!act) { if (!e.target.closest('.cl-x')) { open.has(id) ? open.delete(id) : open.add(id); render(); } return; }
       if (act === 'answer') return;
+      if (act === 'style') return deskAct(id, 'answer', e.target.closest('[data-act]').dataset.v);
       let text = '';
       if (act === 'revise') { text = prompt('Что поправить?') || ''; if (!text.trim()) return; }
       await deskAct(id, act, text);

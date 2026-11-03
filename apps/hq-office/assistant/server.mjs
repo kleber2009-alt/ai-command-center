@@ -167,6 +167,7 @@ async function runTaskTool(u, ids, send, uploads = []) {
   const v = desk.view(task);
   const content = v.status === 'queued' || v.status === 'work'
     ? `Задача поставлена: «${v.route.title}». Исполнитель — агент «${v.agent.name}»${v.route.skill ? `, скилл ${v.route.skill}` : ''}. ${v.route.why} Место в очереди: ${v.queuePos || 1}. Результат он принесёт на проверку в офис.`
+    : v.status === 'question' && v.question.from === 'style' ? `Задача заведена, исполнитель — «${v.agent?.name}». Прежде чем он начнёт, Илья выбирает стиль: ${v.question.text} Варианты: ${v.question.options.map(o => `${o.label}${o.about ? ` (${o.about})` : ''}`).join('; ')}. Спроси Илью, какой стиль, и передай его ответ через desk_action answer [${v.id}] — или он выберет кнопкой во вкладке «В работе».`
     : v.status === 'question' ? `Задача заведена, но диспетчеру нужен ответ Ильи: ${v.question.text} Ответить можно здесь или во вкладке «В работе».`
     : v.status === 'routing' ? 'Задача поставлена, диспетчер ещё выбирает исполнителя — статус появится во вкладке «В работе».'
     : `Задачу поставить не удалось: ${v.error}`;
@@ -188,7 +189,7 @@ const deskTools = () => [
   { name:'run_claude_code', eager_input_streaming:true,
     description:'Поставить задачу напрямую Claude Code на сервере офиса — тот же Claude Code, что у Ильи, со ВСЕМИ скиллами команды (список — в базе знаний), файлами, кодом и интернетом. Для любой работы: тексты, сценарии, карусели, монтаж, сайты, презентации, исследования, анализ, документы. Вложения Ильи из этого сообщения уйдут исполнителю. Результат придёт на проверку; статус — desk_task.',
     input_schema:{ type:'object', required:['task', 'title'], properties:{
-      task:{ type:'string', description:'Полное ТЗ: слова Ильи плюс всё важное из разговора и базы знаний (продукт, аудитория, стиль, формат, скилл, если он ясен).' },
+      task:{ type:'string', description:'Полное ТЗ: слова Ильи плюс всё важное из разговора и базы знаний (продукт, аудитория, стиль, формат, скилл, если он ясен). Для монтажа, видео, рилсов и каруселей — обязательно стиль, который Илья сам выбрал.' },
       title:{ type:'string', description:'Короткое название для доски, до 70 знаков.' } } } },
   { name:'desk_tasks', eager_input_streaming:true, description:'Список последних задач рабочего стола: статус, исполнитель, вопросы исполнителя, результаты.', input_schema:{ type:'object', properties:{} } },
   { name:'desk_task', eager_input_streaming:true, description:'Подробно одна задача: шаги исполнителя, вопрос, результат и файлы.', input_schema:{ type:'object', required:['id'], properties:{ id:{ type:'string' } } } },
@@ -196,7 +197,7 @@ const deskTools = () => [
     description:'Действие с задачей от имени Ильи — только когда он сам так сказал: answer — ответить на вопрос исполнителя; revise — отправить правку к готовому результату; approve — принять результат (попадёт в историю офиса); retry — повторить после ошибки; cancel — отменить.',
     input_schema:{ type:'object', required:['id', 'action'], properties:{ id:{ type:'string' }, action:{ type:'string', enum:['answer', 'revise', 'approve', 'retry', 'cancel'] }, text:{ type:'string', description:'Текст ответа или правки.' } } } },
 ];
-const taskLine = v => `[${v.id}] «${v.route?.title || v.text.slice(0, 70)}» — ${v.agent?.name || 'диспетчер'}, ${v.statusText}${v.question ? `; вопрос: ${v.question.text}` : ''}${v.result ? `; результат: ${v.result.summary || v.result.main} — ${SITE}${v.result.mainUrl}` : ''}${v.error ? `; ошибка: ${v.error}` : ''}`;
+const taskLine = v => `[${v.id}] «${v.route?.title || v.text.slice(0, 70)}» — ${v.agent?.name || 'диспетчер'}, ${v.statusText}${v.question ? `; вопрос: ${v.question.text}${v.question.options ? ` (варианты: ${v.question.options.map(o => o.label).join(', ')})` : ''}` : ''}${v.style ? `; стиль: ${v.style}` : ''}${v.result ? `; результат: ${v.result.summary || v.result.main} — ${SITE}${v.result.mainUrl}` : ''}${v.error ? `; ошибка: ${v.error}` : ''}`;
 function runDeskTool(u, send, take) {
   const inp = u.input || {}, bad = () => ({ type:'tool_result', tool_use_id:u.id, is_error:true, content:JSON.stringify({ INVALID_JSON:JSON.stringify(inp) }) });
   if (u.name === 'run_claude_code') {
