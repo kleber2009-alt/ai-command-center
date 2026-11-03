@@ -221,5 +221,12 @@ Per-app `README.md` / `DEPLOY.md` / `ROADMAP.md` remain authoritative for deep a
 - `carousel-pro` — «Карусель Pro»: карусели из залётов — свои вышедшие (ремикс слайдов с новой обложкой, хуком, CTA;
   объединяет `ilia-carousel-style`: `scripts/remix.py`, `assemble.py`) и конкурентов (формат и рабочие скриншоты, слайды в
   стиле Ильи). Правила для Claude — `references/carousel-rules.md`; в Telegram — ветка «Instagram Карусели» (`apps/remake-site/carousel-bot.mjs`).
+- `transcribe-reference` — «Транскрибатор»: ролик по ссылке (Reels, YouTube, TikTok, VK) или файл → расшифровка с подписью,
+  автором и цифрами (`scripts/transcribe_ref.py`, stdlib). В офисе hq2 — агент `transcriber`: диспетчер ставит его первым, когда
+  Илья присылает ссылку на референс, и передаёт текст агентам контента.
+- `social-daily-stats` — «Статистика соцсетей»: цифры Instagram / Threads / YouTube / TikTok / Telegram за вчера
+  (`scripts/social_stats.py`) и разбор, что сработало и что нет. В hq2 — агент `socialstats`, каждое утро сам.
+- `service-balances` — «Балансы и подписки»: балансы, лимиты и даты продления сервисов офиса (`scripts/balances.py`),
+  предупреждения в Telegram. В hq2 — агент `billing`, каждое утро сам.
 - `three-technical-illustration` — 3D-взрыв-схема в стиле инженерного мануала (Three.js + HTML-оверлей подписей):
   светлый фон, белый/серебристый металл, оранжевые и зелёные акценты, выноски. Шаблон — `assets/template.html`.

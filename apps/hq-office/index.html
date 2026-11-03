@@ -658,6 +658,24 @@ window.OFFICE_DATA = (() => {
        o('specs', 'отдал карту рынка для ТЗ', 'Карта рынка'),
        o('you', 'собрал сравнение офферов', 'Сравнение офферов', 'Посмотрите сравнение офферов конкурентов')],
       [['Prod Skills — игровые концепции', ART('8bFig9B5aX3RqzZqS5LdkZ')], ['12 рабочих связок', ART('Xs6q7BfiHsmEdYxSAXt9DU')], ['VSL: Контент → Аудитория → Деньги', ART('3K2VLPCxZqQKu2oHTqTD69')]]),
+    transcriber: A('Транскрибатор', 'Расшифровывает ролики по ссылке и передаёт текст агентам', '#2fd3c6', 'doc',
+      ['Расшифровывает рилс конкурента', 'Текст эфира для сценариев', 'Разбор YouTube-ролика'],
+      [o('scripts', 'передал расшифровку рилса конкурента', 'Расшифровка референса'),
+       o('carousel', 'отдал текст ролика для карусели', 'Текст ролика'),
+       o('avatar', 'передал текст для аватара', 'Расшифровка'),
+       o('audience', 'отдал расшифровки залётов конкурентов', 'Расшифровки залётов')],
+      [['Транскрибация', 'https://transcribe.aicex.club']]),
+    socialstats: A('Статистика соцсетей', 'Каждое утро: охваты, просмотры и что сработало вчера', '#ff6fb5', 'chart',
+      ['Собирает статистику за вчера', 'Ищет, что залетело', 'Сравнивает с нормой аккаунта'],
+      [o('you', 'положил статистику за вчера', 'Статистика дня', 'Посмотрите статистику соцсетей за вчера'),
+       o('scripts', 'передал, какие темы залетели', 'Что залетело'),
+       o('publish', 'подсказал, что перевыпустить', 'Перевыпуск'),
+       o('analytics', 'отдал цифры соцсетей', 'Цифры соцсетей')]),
+    billing: A('Балансы и подписки', 'Следит за балансами и продлением сервисов офиса', '#ffb347', 'chart',
+      ['Проверяет балансы сервисов', 'Сверяет даты продления', 'Считает остаток лимитов'],
+      [o('you', 'предупредил о продлении подписки', 'Продление подписки', 'Продлите подписку до конца недели'),
+       o('product', 'проверил ключи сервисов', 'Ключи сервисов'),
+       o('orchestrator', 'сообщил: балансы в порядке', 'Балансы')]),
     briefing: A('Утренний брифинг', 'Сводка дня: почта, календарь, задачи', '#ffd166', 'doc',
       ['Соберёт брифинг утром', 'Разбирает почту и календарь', 'Сводит задачи команды'],
       [o('you', 'положил брифинг дня', 'Брифинг дня', 'Прочитайте брифинг и подтвердите приоритеты дня'),
@@ -791,7 +809,7 @@ window.OFFICE_DATA = (() => {
     depts: [
       { id:'ceo', name:'Стратегия и продукт', short:'Стратегия',
         head:{ id:'ilia', name:'Илья', title:'Основатель — стратегия, видение, продукт', look:'m3', owner:true },
-        agents:['product', 'market', 'briefing', 'specs', 'skills'] },
+        agents:['product', 'market', 'transcriber', 'socialstats', 'billing', 'briefing', 'specs', 'skills'] },
       { id:'marketing', name:'Отдел маркетинга', short:'Маркетинг',
         head:{ id:'firuza', name:'Фируза', title:'Руководитель отдела маркетинга', look:'f1' },
         agents:['slides', 'creatives', 'funnels', 'publish', 'analytics', 'audience', 'scripts', 'montage', 'carousel', 'landings', 'leadmagnet', 'threads', 'avatar'] },
@@ -3909,7 +3927,7 @@ function renderDeskTask() {
   setHTML($('kActs'), acts);
   setHTML($('kInfo'), `<h4>Ваша задача</h4><p class="lead sm">«${esc(t.text)}»</p>${t.files.length ? `<div class="chipsrow" style="margin-top:10px">${t.files.map(f => `<span>${esc(f)}</span>`).join('')}</div>` : ''}
     ${t.answers.length ? `<p class="note" style="margin-top:10px">${t.answers.map(a => `Вопрос: ${esc(a.q)} — ваш ответ: ${esc(a.a)}`).join('<br>')}</p>` : ''}
-    ${t.route ? `<h4>Диспетчер</h4><p class="note">Исполнитель — «${esc(m?.name || t.route.agent)}»${t.route.skill ? ` · скилл <code>${esc(t.route.skill)}</code>` : ''}. ${esc(t.route.why)}</p>
+    ${t.route ? `<h4>Диспетчер</h4>${t.chain ? `<p class="note">Связка: «${esc(t.chain.from.name)}» ${t.chain.done ? 'расшифровал' : 'расшифровывает'} ${t.chain.sources.length ? t.chain.sources.map(u => `<a href="${esc(u)}" target="_blank" rel="noopener">референс</a>`).join(', ') : 'видео'} → «${esc(t.chain.to.name)}»${t.chain.note ? ` · ${esc(t.chain.note)}` : ''}</p>` : ''}<p class="note">Исполнитель — «${esc(agentMeta(t.route.agent)?.name || t.route.agent)}»${t.route.skill ? ` · скилл <code>${esc(t.route.skill)}</code>` : ''}. ${esc(t.route.why)}</p>
       ${t.route.brief ? `<details class="brief"><summary>ТЗ агенту</summary><p>${esc(t.route.brief)}</p></details>` : ''}` : ''}`);
   setHTML($('kSteps'), t.steps.map(s => `<li><time>${hhmm(new Date(s.at))}</time>${esc(s.text)}</li>`).join(''));
   // решение по результату — всегда внизу окна, без прокрутки

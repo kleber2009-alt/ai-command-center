@@ -18,7 +18,7 @@ window.OFFICE_CONFIG = {
   depts: [
     { id: 'ceo', name: 'Стратегия и продукт',
       head: { id: 'ilia', name: 'Илья', title: 'Основатель — стратегия, видение, продукт', look: 'm3' },
-      agents: ['product', 'market', 'briefing', 'specs', 'skills'] },
+      agents: ['product', 'market', 'transcriber', 'socialstats', 'billing', 'briefing', 'specs', 'skills'] },
     { id: 'marketing', name: 'Отдел маркетинга',
       head: { id: 'firuza', name: 'Фируза', title: 'Руководитель отдела маркетинга', look: 'f1',
               photo: 'people/firuza-face.jpg', model: 'people/firuza.glb' },

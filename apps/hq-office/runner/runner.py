@@ -19,6 +19,7 @@ import os
 import re
 import shutil
 import subprocess
+import sys
 import threading
 import time
 import urllib.error
@@ -36,7 +37,10 @@ JOBS = Path(os.environ.get("HQ_RUNNER_JOBS") or HOME / "hq-runner/jobs")
 LIMIT = int(os.environ.get("HQ_RUNNER_LIMIT_MIN", "60")) * 60
 SKILLS = HOME / ".claude/skills"
 ALLOWED_TOOLS = ["Bash", "Read", "Write", "Edit", "Glob", "Grep", "Skill", "TodoWrite", "WebFetch", "WebSearch"]
-VERSION = "4"
+VERSION = "6"
+# расшифровка референсов (агент «Транскрибатор»): скрипт скилла transcribe-reference, выкладывается рядом с runner.py
+BALANCES = SKILLS / "service-balances/scripts/balances.py"
+TRANSCRIBER = next((p for p in (Path(__file__).with_name("transcribe_ref.py"), SKILLS / "transcribe-reference/scripts/transcribe_ref.py") if p.exists()), None)
 FILE_LIMIT = 300_000_000
 
 
@@ -203,9 +207,133 @@ def describe(item):
     return ""
 
 
+# ---------- Транскрибатор: ссылки и видео → расшифровка (без Claude, сразу скриптом) ----------
+
+def page_of(items, mds):
+    """out/index.html для владельца, когда расшифровка — сам результат задачи."""
+    esc = lambda x: str(x).replace("&", "&amp;").replace("<", "&lt;").replace(">", "&gt;")
+    blocks = "".join(f"<article><pre>{esc(md)}</pre></article>" for md in mds)
+    return ("<!doctype html><html lang=ru><meta charset=utf-8><meta name=viewport content='width=device-width,initial-scale=1'>"
+            "<title>Расшифровка</title><style>:root{color-scheme:light dark}body{margin:0;padding:24px 16px;font:16px/1.6 Manrope,system-ui,sans-serif;"
+            "background:#0e1016;color:#e8eaf0}main{max-width:760px;margin:auto}h1{font-size:22px}article{background:#171a23;border:1px solid #262b38;"
+            "border-radius:14px;padding:18px;margin:16px 0}pre{white-space:pre-wrap;font:inherit;margin:0}</style><main>"
+            f"<h1>Транскрибатор: {len(items)} расшифровк{'а' if len(items) == 1 else 'и'}</h1>{blocks}</main></html>")
+
+
+def run_transcribe(job):
+    """kind=transcribe — этап связки: расшифровка уходит на сервер как материалы следующему агенту.
+    kind=run у агента transcriber — расшифровка и есть результат: out/ + страница index.html на проверку."""
+    jid, final = job["id"], job["kind"] == "run"
+    d = JOBS / jid
+    (d / "in").mkdir(parents=True, exist_ok=True)
+    dest = d / ("out" if final else "transcripts")
+    shutil.rmtree(dest, ignore_errors=True)
+    dest.mkdir(parents=True)
+    media = []
+    for name in job.get("files") or []:
+        target = d / "in" / Path(name).name
+        if Path(name).suffix.lower() not in (".mp4", ".mov", ".webm", ".mkv", ".m4v", ".mp3", ".m4a", ".wav", ".ogg", ".oga", ".opus", ".aac", ".flac"):
+            continue
+        if not target.exists():
+            req = urllib.request.Request(f"{API}/runner/{jid}/input/{urllib.parse.quote(name)}", headers={"authorization": "Bearer " + TOKEN})
+            with urllib.request.urlopen(req, timeout=600) as r, open(target, "wb") as f:
+                shutil.copyfileobj(r, f)
+        media.append(str(target))
+    sources = [*(job.get("sources") or []), *media][:5]
+
+    def step(text):
+        try:
+            call("POST", f"/runner/{jid}/step", {"text": text})
+        except Exception as e:  # noqa: BLE001
+            log("step:", e)
+
+    if not TRANSCRIBER:
+        return call_retry("POST", f"/runner/{jid}/finish", {"result": "error", "error": "Транскрибатор не установлен на сервере: нет transcribe_ref.py рядом с исполнителем и скилла transcribe-reference."})
+    if not sources:
+        return call_retry("POST", f"/runner/{jid}/finish", {"result": "need", "question": "Пришлите ссылку на ролик или само видео — без него расшифровывать нечего."})
+    step(f"Транскрибатор взял {len(sources)} источник(а) — скачивает и расшифровывает.")
+    p = subprocess.Popen([sys.executable, "-I", str(TRANSCRIBER), *sources, "--out", str(dest)], cwd=d, stdin=subprocess.DEVNULL,
+                         stdout=subprocess.PIPE, stderr=subprocess.STDOUT, text=True, bufsize=1)
+    timer = threading.Timer(30 * 60, p.kill)
+    timer.start()
+    res, tail = {}, []
+    try:
+        for line in p.stdout:
+            line = line.strip()
+            tail = (tail + [line])[-20:]
+            if line.startswith("STEP "):
+                step(line[5:])
+            elif line.startswith("{"):
+                try:
+                    res = json.loads(line)
+                except ValueError:
+                    pass
+        p.wait()
+    finally:
+        timer.cancel()
+    items = res.get("items") or []
+    if not items:
+        return call_retry("POST", f"/runner/{jid}/finish", {"result": "error", "error": "Транскрибатор: " + str(res.get("error") or "расшифровать не вышло")[:700],
+                                                          "log": redact("\n".join(tail))[-1500:]})
+    mds = [(dest / it["file"]).read_text(encoding="utf-8") for it in items]
+    note = "; ".join(f"«{it['title'] or it['author'] or it['source'][:60]}» — {it['words']} слов" for it in items)
+    if res.get("errors"):
+        note += ". Не вышло: " + "; ".join(res["errors"])[:400]
+    if final:
+        (dest / "index.html").write_text(page_of(items, mds), encoding="utf-8")
+    files = [f for f in sorted(dest.iterdir()) if f.is_file()]
+    for f in files:
+        call_retry("PUT", f"/runner/{jid}/file?path={urllib.parse.quote(f.name)}", file=f, timeout=600)
+    if final:
+        call_retry("POST", f"/runner/{jid}/finish", {"result": "review", "main": "index.html", "summary": f"Расшифровал: {note}.",
+                                                     "history": f"Расшифровка {len(items)} ролик(ов) по ссылке — текст для сценариев и разборов."})
+    else:
+        call_retry("POST", f"/runner/{jid}/finish", {"result": "transcribed", "summary": note, "files": [f.name for f in files if f.suffix == ".md"]})
+    log(jid, f"transcribed {len(items)} source(s)")
+
+
+# ---------- Балансы и подписки: проверка скриптом (без Claude), каждое утро по расписанию офиса ----------
+
+def run_balances(job):
+    jid = job["id"]
+    out = JOBS / jid / "out"
+    shutil.rmtree(out, ignore_errors=True)
+    out.mkdir(parents=True)
+    if not BALANCES.exists():
+        return call_retry("POST", f"/runner/{jid}/finish", {"result": "error", "error": "Скилл service-balances не установлен на сервере исполнителя."})
+    try:
+        call("POST", f"/runner/{jid}/step", {"text": "Проверяет балансы и подписки сервисов по API."})
+    except Exception as e:  # noqa: BLE001
+        log("step:", e)
+    r = subprocess.run([sys.executable, "-I", str(BALANCES), "--out", str(out)], cwd=out.parent, stdin=subprocess.DEVNULL,
+                       capture_output=True, text=True, timeout=600)
+    res = {}
+    for line in reversed(r.stdout.splitlines()):
+        if line.startswith("{"):
+            try:
+                res = json.loads(line)
+                break
+            except ValueError:
+                pass
+    if not res.get("ok") or not (out / "index.html").exists():
+        return call_retry("POST", f"/runner/{jid}/finish", {"result": "error", "error": "Проверка балансов не удалась.", "log": redact(r.stdout + r.stderr)[-1500:]})
+    for f in sorted(out.iterdir()):
+        call_retry("PUT", f"/runner/{jid}/file?path={urllib.parse.quote(f.name)}", file=f, timeout=300)
+    crit, warn = res.get("critical") or [], res.get("warn") or []
+    summary = ("Срочно: " + "; ".join(crit) + ". " if crit else "") + ("Скоро: " + "; ".join(warn) + "." if warn else "") or \
+        f"Все {res.get('items', 0)} проверок в порядке — офис работает без перебоев."
+    call_retry("POST", f"/runner/{jid}/finish", {"result": "review", "main": "index.html", "summary": summary[:1200],
+                                                 "history": "Проверка балансов и подписок сервисов офиса.", "alerts": {"critical": crit, "warn": warn}})
+    log(jid, f"balances: {len(crit)} critical, {len(warn)} warn")
+
+
 # ---------- одна задача ----------
 
 def run_job(job):
+    if job["kind"] == "transcribe" or (job["kind"] == "run" and job.get("agent") == "transcriber"):
+        return run_transcribe(job)
+    if job["kind"] == "run" and job.get("agent") == "billing":
+        return run_balances(job)
     jid, kind = job["id"], job["kind"]
     d = JOBS / jid
     (d / "in").mkdir(parents=True, exist_ok=True)
