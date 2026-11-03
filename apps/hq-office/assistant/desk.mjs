@@ -144,6 +144,8 @@ export function createDesk({ claude, model, fallback, dataDir, officeDir, runner
         agents.push(a);
         lines.push(`- ${a.name} (${id}): ${a.role}. ${a.lead}`,
           skills.length ? `  Скиллы: ${skills.map(s => `${s.name} — ${s.title}`).join('; ')}` : '  Скиллы: нет',
+          ...[(c.results || []).filter(r => r.type === 'links' && /^Продукт/.test(r.title)).flatMap(r => r.items)].filter(x => x.length)
+            .map(items => `  Продукты и боты: ${items.map(x => `${x.title}${x.url ? ' (' + x.url + ')' : ''}`).join('; ')}`),
           ...(c.templates || []).slice(0, 2).map(x => `  Пример задачи: «${x.prompt}»`));
       }
     }
