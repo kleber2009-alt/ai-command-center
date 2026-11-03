@@ -14,7 +14,8 @@ name: deploy-hq-office
 # Assistant: secrets HQ_OFFICE_ANTHROPIC_API_KEY (Claude), PERSONA_TRAIN_ELEVENLABS_API_KEY (voice),
 # HQ_ASSISTANT_PASSWORD (owner login; without it the assistant is a guest demo only);
 # optional variable HQ_ASSISTANT_VOICE_ID (otherwise the owner picks the cloned voice on the site).
-# Morning agents: Telegram of the owner — WORKER_TELEGRAM_BOT_TOKEN + vars.WORKER_OWNER_TELEGRAM_ID (the Office Worker bot);
+# Morning agents: Telegram of the owner — secret HQ_NOTIFY_TG_BOT_TOKEN + vars.HQ_NOTIFY_TG_CHAT_ID, else the Office Worker
+# or «Ремейк залёта» bot with the owner's id (vars.REMAKE_TG_OWNER_IDS);
 # «Балансы и подписки» checks the existing service keys of the monorepo + vars.HQ_SUBSCRIPTIONS_JSON (subscriptions without API,
 # [{"name":"Claude Max","renews":15,"price":"$200"}]) and optional vars.HQ_META_AD_ACCOUNT; «Статистика соцсетей» — optional
 # secrets HQ_IG_ACCESS_TOKEN, HQ_THREADS_ACCESS_TOKEN, HQ_YOUTUBE_API_KEY and vars HQ_IG_USER_ID, HQ_SOCIAL_IG (default ilia.paliy),
@@ -113,12 +114,16 @@ jobs:
           ELEVEN: ${{ secrets.PERSONA_TRAIN_ELEVENLABS_API_KEY }}
           PASS: ${{ secrets.HQ_ASSISTANT_PASSWORD }}
           VOICE: ${{ vars.HQ_ASSISTANT_VOICE_ID }}
-          TG_TOKEN: ${{ secrets.WORKER_TELEGRAM_BOT_TOKEN }}
-          TG_CHAT: ${{ vars.WORKER_OWNER_TELEGRAM_ID }}
+          # the owner's Telegram: an explicit bot, else the Office Worker bot, else the «Ремейк залёта» bot (sending only —
+          # its long-polling on remake-site is not affected); the chat is the owner's id (the bot must have been started once)
+          TG_TOKEN: ${{ secrets.HQ_NOTIFY_TG_BOT_TOKEN || secrets.WORKER_TELEGRAM_BOT_TOKEN || secrets.REMAKE_TG_BOT_TOKEN }}
+          TG_CHAT: ${{ vars.HQ_NOTIFY_TG_CHAT_ID || vars.WORKER_OWNER_TELEGRAM_ID || vars.REMAKE_TG_OWNER_IDS || vars.TG_AGENT_OWNER_TELEGRAM_ID }}
         run: |
           [ -n "$ANTHROPIC" ] || echo "::warning::HQ_OFFICE_ANTHROPIC_API_KEY is not set — the assistant will not answer"
           [ -n "$PASS" ] || echo "::warning::HQ_ASSISTANT_PASSWORD is not set — the assistant runs as a guest demo only"
-          [ -n "$TG_TOKEN" ] && [ -n "$TG_CHAT" ] || echo "::warning::WORKER_TELEGRAM_BOT_TOKEN / WORKER_OWNER_TELEGRAM_ID not set — morning reports stay in the office only"
+          TG_CHAT=$(printf '%s' "$TG_CHAT" | grep -oE -- '-?[0-9]+' | head -1 || true)
+          [ -n "$TG_TOKEN" ] && [ -n "$TG_CHAT" ] && echo "morning reports → Telegram chat …${TG_CHAT: -3}" \
+            || echo "::warning::no Telegram bot or owner id (HQ_NOTIFY_TG_BOT_TOKEN + HQ_NOTIFY_TG_CHAT_ID) — morning reports stay in the office only"
           printf 'ANTHROPIC_API_KEY=%s\nELEVENLABS_API_KEY=%s\nHQ_ASSISTANT_PASSWORD=%s\nELEVENLABS_VOICE_ID=%s\nHQ_NOTIFY_TG_TOKEN=%s\nHQ_NOTIFY_TG_CHAT=%s\nHQ_PUBLIC_URL=https://%s\n' \
             "$ANTHROPIC" "$ELEVEN" "$PASS" "$VOICE" "$TG_TOKEN" "$TG_CHAT" "$DOMAIN" \
             | $SSH "umask 077 && cat > /opt/hq-office/assistant.env"
@@ -157,7 +162,7 @@ jobs:
           SOCIAL_YT: ${{ vars.HQ_SOCIAL_YT }}
           SOCIAL_TIKTOK: ${{ vars.HQ_SOCIAL_TIKTOK }}
           SOCIAL_TG_CHANNEL: ${{ vars.HQ_SOCIAL_TG_CHANNEL }}
-          SOCIAL_TG_BOT_TOKEN: ${{ secrets.WORKER_TELEGRAM_BOT_TOKEN }}
+          SOCIAL_TG_BOT_TOKEN: ${{ secrets.HQ_NOTIFY_TG_BOT_TOKEN || secrets.WORKER_TELEGRAM_BOT_TOKEN || secrets.REMAKE_TG_BOT_TOKEN }}
         run: |
           {
             for n in HQ_OFFICE_ANTHROPIC_API_KEY REMAKE_ANTHROPIC_API_KEY STUDIO_KADRIK_ANTHROPIC_API_KEY TRANSCRIBE_ANTHROPIC_API_KEY TG_AGENT_ANTHROPIC_API_KEY \

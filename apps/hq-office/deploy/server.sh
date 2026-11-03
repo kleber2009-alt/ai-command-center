@@ -92,7 +92,15 @@ if [ -f "$R/runner.py" ] && id "$RUSER" >/dev/null 2>&1; then
     [ -d "$sk" ] || continue
     n=$(basename "$sk"); rm -rf "$RH/.claude/skills/$n" && cp -r "$sk" "$RH/.claude/skills/$n" && chown -R "$RUSER:$RUSER" "$RH/.claude/skills/$n"
   done
-  command -v yt-dlp >/dev/null || runuser -u "$RUSER" -- python3 -c 'import yt_dlp' 2>/dev/null || echo "::warning::yt-dlp not found — the transcriber needs it to download by link"
+  # yt-dlp for the transcriber: the standalone zipapp (needs only python3) into the user's ~/.local/bin, on the service's PATH
+  if ! command -v yt-dlp >/dev/null && [ ! -x "$RH/.local/bin/yt-dlp" ]; then
+    install -d -o "$RUSER" -g "$RUSER" "$RH/.local" "$RH/.local/bin"
+    if curl -fsSL --max-time 120 -o "$RH/.local/bin/yt-dlp" https://github.com/yt-dlp/yt-dlp/releases/latest/download/yt-dlp; then
+      chown "$RUSER:$RUSER" "$RH/.local/bin/yt-dlp" && chmod 755 "$RH/.local/bin/yt-dlp" && echo "✓ yt-dlp installed for the transcriber"
+    else rm -f "$RH/.local/bin/yt-dlp"; echo "::warning::yt-dlp could not be downloaded — the transcriber needs it to download by link"; fi
+  fi
+  [ -x "$RH/.local/bin/yt-dlp" ] && echo "  yt-dlp: $(runuser -u "$RUSER" -- "$RH/.local/bin/yt-dlp" --version 2>&1 | head -1)"
+  command -v ffmpeg >/dev/null || echo "::warning::ffmpeg not found — the transcriber sends the whole video to ElevenLabs"
   # keys of the morning agents — read only by their scripts (HQ_KEYS_FILE), not put into the runner's environment
   [ -f "$ROOT/runner-keys.env" ] && install -o "$RUSER" -g "$RUSER" -m 600 "$ROOT/runner-keys.env" "$RD/keys.env"
   install -o "$RUSER" -g "$RUSER" -m 600 "$ENVT" "$RD/runner.env"
