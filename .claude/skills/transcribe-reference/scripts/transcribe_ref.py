@@ -100,18 +100,33 @@ def ytdlp_cmd():
     return None
 
 
+def has_audio(path):
+    """True if the file has an audio stream (or ffprobe is missing and we cannot tell)."""
+    if not shutil.which("ffprobe"):
+        return True
+    r = subprocess.run(["ffprobe", "-v", "error", "-select_streams", "a", "-show_entries", "stream=index", "-of", "csv=p=0", str(path)],
+                       capture_output=True, text=True, timeout=60)
+    return r.returncode != 0 or bool(r.stdout.strip())
+
+
 def fetch(url, work):
     """Ссылка → (файл, мета). Сначала yt-dlp, для Instagram запасной Apify."""
     tried = []
     cmd = ytdlp_cmd()
     if cmd:
-        args = cmd + ["--no-playlist", "--no-progress", "--no-warnings", "-f", "b[ext=mp4]/bv*+ba/b", "--merge-output-format", "mp4",
+        # only speech is needed: the audio track first. Instagram's progressive mp4s come with an "unknown" audio codec
+        # and are sometimes video-only, so "b[ext=mp4]" could fetch a silent file (ffmpeg -vn then fails).
+        args = cmd + ["--no-playlist", "--no-progress", "--no-warnings", "-f", "ba/bv*+ba/b", "--merge-output-format", "mp4",
                       "--max-filesize", "700M", "--write-info-json", "-o", str(work / "dl.%(ext)s")]
         cookies = Path(os.path.expanduser(os.environ.get("YTDLP_COOKIES", "~/.config/yt-dlp/cookies.txt")))
         if cookies.exists():
             args += ["--cookies", str(cookies)]
         r = subprocess.run(args + ["--", url], capture_output=True, text=True, timeout=900)
         got = next((f for f in sorted(work.iterdir()) if f.name.startswith("dl.") and f.suffix.lower() in MEDIA), None)
+        if got and not has_audio(got):
+            tried.append("yt-dlp: скачалось видео без звуковой дорожки")
+            got.unlink(missing_ok=True)
+            got = None
         if got:
             info = {}
             try:
@@ -121,8 +136,9 @@ def fetch(url, work):
             return got, {"via": "yt-dlp", "title": info.get("title") or "", "caption": info.get("description") or "",
                          "author": info.get("uploader") or info.get("channel") or "", "views": info.get("view_count"),
                          "likes": info.get("like_count"), "comments": info.get("comment_count"), "duration": info.get("duration")}
-        err = (re.search(r"ERROR:[^\n]*", r.stderr or "") or [((r.stderr or "").strip().split("\n") or ["не вышло"])[-1]])[0]
-        tried.append("yt-dlp: " + str(err)[:200])
+        if not tried:
+            err = (re.search(r"ERROR:[^\n]*", r.stderr or "") or [((r.stderr or "").strip().split("\n") or ["не вышло"])[-1]])[0]
+            tried.append("yt-dlp: " + str(err)[:200])
     else:
         tried.append("yt-dlp не установлен")
     token = secret("APIFY_TOKEN")
@@ -135,6 +151,8 @@ def fetch(url, work):
             if it.get("videoUrl"):
                 dest = work / "dl.mp4"
                 dest.write_bytes(http(it["videoUrl"], timeout=600))
+                if not has_audio(dest):
+                    raise RuntimeError("в ролике нет звуковой дорожки — расшифровывать нечего")
                 return dest, {"via": "apify", "title": "", "caption": it.get("caption") or "", "author": it.get("ownerUsername") or "",
                               "views": it.get("videoPlayCount") or it.get("videoViewCount"), "likes": it.get("likesCount"),
                               "comments": it.get("commentsCount"), "duration": it.get("videoDuration")}
@@ -149,6 +167,8 @@ def fetch(url, work):
 def audio_of(src, work):
     if not shutil.which("ffmpeg"):
         return src  # ElevenLabs и OpenAI примут и видео
+    if not has_audio(src):
+        raise RuntimeError("в файле нет звуковой дорожки — расшифровывать нечего")
     out = work / "audio.16k.wav"
     subprocess.run(["ffmpeg", "-v", "error", "-y", "-i", str(src), "-vn", "-ac", "1", "-ar", "16000", str(out)], check=True, timeout=600)
     return out
