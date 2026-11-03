@@ -285,7 +285,11 @@ def run_transcribe(job):
     for f in files:
         call_retry("PUT", f"/runner/{jid}/file?path={urllib.parse.quote(f.name)}", file=f, timeout=600)
     if final:
-        call_retry("POST", f"/runner/{jid}/finish", {"result": "review", "main": "index.html", "summary": f"Расшифровал: {note}.",
+        mats = "\n".join([f"- out/index.html — страница со всеми расшифровками"] + [f"- out/{it['file']} — текст ролика {it['n']}: {it['title'] or it['author'] or it['source'][:60]}" for it in items])
+        report = (f"## Что сделано\nРасшифровал {len(items)} ролик(ов) — текст, подпись к публикации, автор и цифры.\n\n## Главное\n"
+                  + "\n".join(f"- «{it['title'] or it['author'] or it['source'][:60]}» — {it['words']} слов, {it['engine']}" for it in items)
+                  + (f"\n- Не вышло: {'; '.join(res['errors'])[:400]}" if res.get("errors") else "") + f"\n\n## Материалы\n{mats}")
+        call_retry("POST", f"/runner/{jid}/finish", {"result": "review", "main": "index.html", "summary": report,
                                                      "history": f"Расшифровка {len(items)} ролик(ов) по ссылке — текст для сценариев и разборов."})
     else:
         call_retry("POST", f"/runner/{jid}/finish", {"result": "transcribed", "summary": note, "files": [f.name for f in files if f.suffix == ".md"]})
@@ -320,9 +324,10 @@ def run_balances(job):
     for f in sorted(out.iterdir()):
         call_retry("PUT", f"/runner/{jid}/file?path={urllib.parse.quote(f.name)}", file=f, timeout=300)
     crit, warn = res.get("critical") or [], res.get("warn") or []
-    summary = ("Срочно: " + "; ".join(crit) + ". " if crit else "") + ("Скоро: " + "; ".join(warn) + "." if warn else "") or \
-        f"Все {res.get('items', 0)} проверок в порядке — офис работает без перебоев."
-    call_retry("POST", f"/runner/{jid}/finish", {"result": "review", "main": "index.html", "summary": summary[:1200],
+    summary = (f"## Что сделано\nПроверил балансы, лимиты и подписки: {res.get('items', 0)} проверок.\n\n## Главное\n"
+               + ("\n".join([f"- **Срочно:** {x}" for x in crit] + [f"- Скоро: {x}" for x in warn]) or "- Всё в порядке — офис работает без перебоев.")
+               + "\n\n## Материалы\n- out/index.html — светофор по всем сервисам\n- out/balances.json — те же данные для разбора")
+    call_retry("POST", f"/runner/{jid}/finish", {"result": "review", "main": "index.html", "summary": summary[:4000],
                                                  "history": "Проверка балансов и подписок сервисов офиса.", "alerts": {"critical": crit, "warn": warn}})
     log(jid, f"balances: {len(crit)} critical, {len(warn)} warn")
 
@@ -435,7 +440,7 @@ def run_job(job):
     need = re.search(r"^NEED:\s*(.+)$", final, re.M)
     res = re.search(r"^RESULT:\s*(\S+)", final, re.M)
     hist = re.search(r"^SUMMARY:\s*(.+)$", final, re.M)
-    summary = re.sub(r"^(RESULT|NEED|SUMMARY):.*$", "", final, flags=re.M).strip()[-1200:]
+    summary = re.sub(r"^(RESULT|NEED|SUMMARY):.*$", "", final, flags=re.M).strip()[-8000:]
     if need and not res:
         call_retry("POST", f"/runner/{jid}/finish", {"result": "need", "question": need.group(1).strip(), "session": session})
         log(jid, "need:", need.group(1)[:80])
