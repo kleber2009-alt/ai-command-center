@@ -158,11 +158,11 @@ const taskTool = ids => ({
     text:{ type:'string', description:'Задача словами Ильи плюс важные детали из разговора.' },
     agent:{ type:'string', enum:['', ...ids], description:'id агента, если Илья сам его назвал; иначе пустая строка.' } } },
 });
-async function runTaskTool(u, ids, send, uploads = []) {
+async function runTaskTool(u, ids, send, uploads = [], source = 'assistant') {
   const inp = u.input || {}, text = typeof inp.text === 'string' ? inp.text.trim() : '', agent = typeof inp.agent === 'string' ? inp.agent : '';
   // eager input streaming: the input is not validated by the API, so check it before acting
   if (!text || (agent && !ids.includes(agent))) return { type:'tool_result', tool_use_id:u.id, is_error:true, content:JSON.stringify({ INVALID_JSON:JSON.stringify(inp) }) };
-  const { task, routed } = desk.createTask({ text, agent, uploads });
+  const { task, routed } = desk.createTask({ text, agent, uploads, source });
   send({ t:'task', id:task.id });
   await Promise.race([routed, new Promise(r => setTimeout(r, 30e3))]);
   const v = desk.view(task);
@@ -317,7 +317,7 @@ async function chat(req, res, isOwnerTalk) {
       for (const u of uses) {
         if (twin && (u.name === 'search_knowledge' || u.name === 'read_document')) send({ t:'kb', name:u.name, query:String(u.input?.query || u.input?.path || '').slice(0, 120) });
         const take = () => { const x = turnUploads; turnUploads = []; return x; };
-        results.push(u.name === 'create_task' ? await runTaskTool(u, ids, send, twin ? take() : [])
+        results.push(u.name === 'create_task' ? await runTaskTool(u, ids, send, twin ? take() : [], twin ? 'twin' : 'assistant')
           : u.name === 'remember' && twin ? runRemember(u, send)
           : twin && (u.name === 'search_knowledge' || u.name === 'read_document') ? runKbTool(u)
           : twin && DESK_TOOLS.has(u.name) ? runDeskTool(u, send, take)
