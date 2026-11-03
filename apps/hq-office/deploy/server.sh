@@ -77,12 +77,24 @@ if [ -f "$R/runner.py" ] && id "$RUSER" >/dev/null 2>&1; then
   RH=$(getent passwd "$RUSER" | cut -d: -f6); RD="$RH/hq-runner"
   install -d -o "$RUSER" -g "$RUSER" -m 755 "$RD" "$RD/jobs"
   ENVT=$(mktemp); printf 'HQ_DESK_RUNNER_TOKEN=%s\nHQ_DESK_API=https://%s/api/assistant/desk\n' "$(cat "$TOKF")" "$DOMAIN" > "$ENVT"
+  # the transcriber transcribes with the assistant's ElevenLabs key (without it — keys from the user's shell rc)
+  EK=$(grep -m1 '^ELEVENLABS_API_KEY=' "$ROOT/assistant.env" 2>/dev/null | cut -d= -f2- || true)
+  [ -n "$EK" ] && printf 'ELEVENLABS_API_KEY=%s\n' "$EK" >> "$ENVT"
   UNIT=$(mktemp); sed -e "s#@USER@#$RUSER#g" -e "s#@HOME@#$RH#g" "$R/hq-runner.service" > "$UNIT"
   changed=0
   cmp -s "$R/runner.py" "$RD/runner.py" || changed=1
   cmp -s "$ENVT" "$RD/runner.env" || changed=1
   cmp -s "$UNIT" /etc/systemd/system/hq-runner.service || changed=1
   install -o "$RUSER" -g "$RUSER" -m 644 "$R/runner.py" "$RD/runner.py"
+  # skills of the office's own agents (Транскрибатор, Статистика соцсетей, Балансы и подписки): for the runner and Claude Code of the bots' user
+  install -d -o "$RUSER" -g "$RUSER" "$RH/.claude" "$RH/.claude/skills"
+  for sk in "$R"/skills/*/; do
+    [ -d "$sk" ] || continue
+    n=$(basename "$sk"); rm -rf "$RH/.claude/skills/$n" && cp -r "$sk" "$RH/.claude/skills/$n" && chown -R "$RUSER:$RUSER" "$RH/.claude/skills/$n"
+  done
+  command -v yt-dlp >/dev/null || runuser -u "$RUSER" -- python3 -c 'import yt_dlp' 2>/dev/null || echo "::warning::yt-dlp not found — the transcriber needs it to download by link"
+  # keys of the morning agents — read only by their scripts (HQ_KEYS_FILE), not put into the runner's environment
+  [ -f "$ROOT/runner-keys.env" ] && install -o "$RUSER" -g "$RUSER" -m 600 "$ROOT/runner-keys.env" "$RD/keys.env"
   install -o "$RUSER" -g "$RUSER" -m 600 "$ENVT" "$RD/runner.env"
   install -m 644 "$UNIT" /etc/systemd/system/hq-runner.service
   rm -f "$ENVT" "$UNIT"

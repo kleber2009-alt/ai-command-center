@@ -71,6 +71,20 @@
   стили `carousel-pro`, «Выбери сам»), в офисе — кнопками, у двойника — кнопками и через `desk_action answer`. Если стиль
   назван в задаче (`style_named`), не спрашивает. Стиль-скилл заменяет обычный скилл, а `remake-top-reel`/`carousel-pro`
   остаются и получают стиль строкой в ТЗ.
+  **Связка с Транскрибатором** (агент `transcriber`, отдел «Стратегия», в «Ночном Сити» — в контент-студии): если в задаче
+  ссылка на ролик (Instagram, YouTube, TikTok, VK…) или видеофайл и результат строится на том, что в нём говорят, диспетчер
+  ставит `transcribe` — задача сначала уходит этапом `pending.kind = 'transcribe'`: исполнитель без Claude запускает скрипт
+  скилла `.claude/skills/transcribe-reference` (yt-dlp/Apify → ElevenLabs Scribe → OpenAI → stt.py → faster-whisper), расшифровки
+  ложатся в `in/transcript-<n>.md`, и задача сама переходит выбранному агенту (`t.transcribed`, в промпте — «строй на расшифровке,
+  не копируй»). Задача «просто расшифруй» — агенту `transcriber`, результат — страница `out/index.html`. Скилл ставится
+  выкладкой рядом с исполнителем и в `~/.claude/skills` пользователя ботов; ключ ElevenLabs — из `assistant.env` в `runner.env`.
+  **Утренние агенты** (`ROUTINES` в `desk.mjs`, время МСК, состояние `DATA_DIR/desk/routines.json`, выключить — `HQ_ROUTINES=off`):
+  «Балансы и подписки» (`billing`, 08:50 — исполнитель без Claude запускает скилл `service-balances`: ключи Anthropic/OpenAI/
+  ElevenLabs/HeyGen/Apify/Deepgram/kie.ai/Meta Ads + `HQ_SUBSCRIPTIONS_JSON`; нет предупреждений — задача закрывается сама,
+  без публикации) и «Статистика соцсетей» (`socialstats`, 09:10 — Claude Code по скиллу `social-daily-stats`, снимки для
+  приростов в `~/.local/state/aicex-social`). Итоги, предупреждения и ошибки утренних задач — в Telegram владельца ботом
+  Office Worker (`HQ_NOTIFY_TG_TOKEN`/`HQ_NOTIFY_TG_CHAT` в `assistant.env`). Ключи этих скриптов — `~/hq-runner/keys.env`
+  (`HQ_KEYS_FILE`, пишет шаг «Keys of the morning agents»), в окружение исполнителя и Claude Code не попадают.
   Страницы агентов — только в песочнице (CSP `sandbox` + `iframe sandbox` без `allow-same-origin`).
 - `media/` — сжатые копии наших работ из приватной библиотеки `aicex-library` для задач
   (`img/vid/page('media/…')` в `tasks.js`); сторонние демо-ролики наборов скиллов не выкладывать.

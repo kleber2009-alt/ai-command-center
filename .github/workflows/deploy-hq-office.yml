@@ -14,6 +14,11 @@ name: deploy-hq-office
 # Assistant: secrets HQ_OFFICE_ANTHROPIC_API_KEY (Claude), PERSONA_TRAIN_ELEVENLABS_API_KEY (voice),
 # HQ_ASSISTANT_PASSWORD (owner login; without it the assistant is a guest demo only);
 # optional variable HQ_ASSISTANT_VOICE_ID (otherwise the owner picks the cloned voice on the site).
+# Morning agents: Telegram of the owner — WORKER_TELEGRAM_BOT_TOKEN + vars.WORKER_OWNER_TELEGRAM_ID (the Office Worker bot);
+# «Балансы и подписки» checks the existing service keys of the monorepo + vars.HQ_SUBSCRIPTIONS_JSON (subscriptions without API,
+# [{"name":"Claude Max","renews":15,"price":"$200"}]) and optional vars.HQ_META_AD_ACCOUNT; «Статистика соцсетей» — optional
+# secrets HQ_IG_ACCESS_TOKEN, HQ_THREADS_ACCESS_TOKEN, HQ_YOUTUBE_API_KEY and vars HQ_IG_USER_ID, HQ_SOCIAL_IG (default ilia.paliy),
+# HQ_SOCIAL_YT, HQ_SOCIAL_TIKTOK, HQ_SOCIAL_TG_CHANNEL (without them — Instagram through Apify only).
 
 on:
   push:
@@ -97,6 +102,8 @@ jobs:
             | $SSH "mkdir -p /opt/hq-office/releases/$REL && tar -xzf - -C /opt/hq-office/releases/$REL"
           tar -C apps/hq-office/assistant --exclude=./.data -czf - . \
             | $SSH "mkdir -p /opt/hq-office/assistant/releases/$REL && tar -xzf - -C /opt/hq-office/assistant/releases/$REL"
+          # the transcriber (agent «Транскрибатор»): the skill goes with the runner and into the bots' user ~/.claude/skills
+          mkdir -p apps/hq-office/runner/skills && cp -r .claude/skills/transcribe-reference .claude/skills/social-daily-stats .claude/skills/service-balances apps/hq-office/runner/skills/
           tar -C apps/hq-office/runner -czf - . \
             | $SSH "mkdir -p /opt/hq-office/runner/releases/$REL && tar -xzf - -C /opt/hq-office/runner/releases/$REL"
 
@@ -106,11 +113,63 @@ jobs:
           ELEVEN: ${{ secrets.PERSONA_TRAIN_ELEVENLABS_API_KEY }}
           PASS: ${{ secrets.HQ_ASSISTANT_PASSWORD }}
           VOICE: ${{ vars.HQ_ASSISTANT_VOICE_ID }}
+          TG_TOKEN: ${{ secrets.WORKER_TELEGRAM_BOT_TOKEN }}
+          TG_CHAT: ${{ vars.WORKER_OWNER_TELEGRAM_ID }}
         run: |
           [ -n "$ANTHROPIC" ] || echo "::warning::HQ_OFFICE_ANTHROPIC_API_KEY is not set — the assistant will not answer"
           [ -n "$PASS" ] || echo "::warning::HQ_ASSISTANT_PASSWORD is not set — the assistant runs as a guest demo only"
-          printf 'ANTHROPIC_API_KEY=%s\nELEVENLABS_API_KEY=%s\nHQ_ASSISTANT_PASSWORD=%s\nELEVENLABS_VOICE_ID=%s\n' "$ANTHROPIC" "$ELEVEN" "$PASS" "$VOICE" \
+          [ -n "$TG_TOKEN" ] && [ -n "$TG_CHAT" ] || echo "::warning::WORKER_TELEGRAM_BOT_TOKEN / WORKER_OWNER_TELEGRAM_ID not set — morning reports stay in the office only"
+          printf 'ANTHROPIC_API_KEY=%s\nELEVENLABS_API_KEY=%s\nHQ_ASSISTANT_PASSWORD=%s\nELEVENLABS_VOICE_ID=%s\nHQ_NOTIFY_TG_TOKEN=%s\nHQ_NOTIFY_TG_CHAT=%s\nHQ_PUBLIC_URL=https://%s\n' \
+            "$ANTHROPIC" "$ELEVEN" "$PASS" "$VOICE" "$TG_TOKEN" "$TG_CHAT" "$DOMAIN" \
             | $SSH "umask 077 && cat > /opt/hq-office/assistant.env"
+
+      - name: Keys of the morning agents
+        # read only by the scripts of service-balances and social-daily-stats (~/hq-runner/keys.env), not by Claude Code's environment
+        env:
+          HQ_OFFICE_ANTHROPIC_API_KEY: ${{ secrets.HQ_OFFICE_ANTHROPIC_API_KEY }}
+          REMAKE_ANTHROPIC_API_KEY: ${{ secrets.REMAKE_ANTHROPIC_API_KEY }}
+          STUDIO_KADRIK_ANTHROPIC_API_KEY: ${{ secrets.STUDIO_KADRIK_ANTHROPIC_API_KEY }}
+          TRANSCRIBE_ANTHROPIC_API_KEY: ${{ secrets.TRANSCRIBE_ANTHROPIC_API_KEY }}
+          TG_AGENT_ANTHROPIC_API_KEY: ${{ secrets.TG_AGENT_ANTHROPIC_API_KEY }}
+          WORKER_ANTHROPIC_API_KEY: ${{ secrets.WORKER_ANTHROPIC_API_KEY }}
+          REMAKE_OPENAI_API_KEY: ${{ secrets.REMAKE_OPENAI_API_KEY }}
+          TRANSCRIBE_OPENAI_API_KEY: ${{ secrets.TRANSCRIBE_OPENAI_API_KEY }}
+          PERSONA_TRAIN_ELEVENLABS_API_KEY: ${{ secrets.PERSONA_TRAIN_ELEVENLABS_API_KEY }}
+          REMAKE_ELEVENLABS_API_KEY: ${{ secrets.REMAKE_ELEVENLABS_API_KEY }}
+          WORKER_ELEVENLABS_API_KEY: ${{ secrets.WORKER_ELEVENLABS_API_KEY }}
+          REMAKE_HEYGEN_API_KEY: ${{ secrets.REMAKE_HEYGEN_API_KEY }}
+          PERSONA_TRAIN_HEYGEN_API_KEY: ${{ secrets.PERSONA_TRAIN_HEYGEN_API_KEY }}
+          WORKER_HEYGEN_API_KEY: ${{ secrets.WORKER_HEYGEN_API_KEY }}
+          REMAKE_APIFY_TOKEN: ${{ secrets.REMAKE_APIFY_TOKEN }}
+          WORKER_APIFY_API_TOKEN: ${{ secrets.WORKER_APIFY_API_TOKEN }}
+          TRANSCRIBE_APIFY_API_TOKEN: ${{ secrets.TRANSCRIBE_APIFY_API_TOKEN }}
+          TRANSCRIBE_DEEPGRAM_API_KEY: ${{ secrets.TRANSCRIBE_DEEPGRAM_API_KEY }}
+          AI_HUB_KIE_API_KEY: ${{ secrets.AI_HUB_KIE_API_KEY }}
+          META_TOKEN: ${{ secrets.FUNNEL_META_TOKEN }}
+          META_AD_ACCOUNT: ${{ vars.HQ_META_AD_ACCOUNT }}
+          SUBS: ${{ vars.HQ_SUBSCRIPTIONS_JSON }}
+          APIFY_TOKEN: ${{ secrets.REMAKE_APIFY_TOKEN || secrets.WORKER_APIFY_API_TOKEN }}
+          IG_ACCESS_TOKEN: ${{ secrets.HQ_IG_ACCESS_TOKEN }}
+          IG_USER_ID: ${{ vars.HQ_IG_USER_ID }}
+          THREADS_ACCESS_TOKEN: ${{ secrets.HQ_THREADS_ACCESS_TOKEN }}
+          YOUTUBE_API_KEY: ${{ secrets.HQ_YOUTUBE_API_KEY }}
+          SOCIAL_IG: ${{ vars.HQ_SOCIAL_IG || 'ilia.paliy' }}
+          SOCIAL_YT: ${{ vars.HQ_SOCIAL_YT }}
+          SOCIAL_TIKTOK: ${{ vars.HQ_SOCIAL_TIKTOK }}
+          SOCIAL_TG_CHANNEL: ${{ vars.HQ_SOCIAL_TG_CHANNEL }}
+          SOCIAL_TG_BOT_TOKEN: ${{ secrets.WORKER_TELEGRAM_BOT_TOKEN }}
+        run: |
+          {
+            for n in HQ_OFFICE_ANTHROPIC_API_KEY REMAKE_ANTHROPIC_API_KEY STUDIO_KADRIK_ANTHROPIC_API_KEY TRANSCRIBE_ANTHROPIC_API_KEY TG_AGENT_ANTHROPIC_API_KEY \
+                     WORKER_ANTHROPIC_API_KEY REMAKE_OPENAI_API_KEY TRANSCRIBE_OPENAI_API_KEY PERSONA_TRAIN_ELEVENLABS_API_KEY REMAKE_ELEVENLABS_API_KEY \
+                     WORKER_ELEVENLABS_API_KEY REMAKE_HEYGEN_API_KEY PERSONA_TRAIN_HEYGEN_API_KEY WORKER_HEYGEN_API_KEY REMAKE_APIFY_TOKEN WORKER_APIFY_API_TOKEN \
+                     TRANSCRIBE_APIFY_API_TOKEN TRANSCRIBE_DEEPGRAM_API_KEY AI_HUB_KIE_API_KEY META_TOKEN META_AD_ACCOUNT APIFY_TOKEN IG_ACCESS_TOKEN IG_USER_ID \
+                     THREADS_ACCESS_TOKEN YOUTUBE_API_KEY SOCIAL_IG SOCIAL_YT SOCIAL_TIKTOK SOCIAL_TG_CHANNEL SOCIAL_TG_BOT_TOKEN; do
+              [ -n "${!n}" ] && printf '%s=%s\n' "$n" "${!n}"
+            done
+            [ -n "$SUBS" ] && printf 'SUBSCRIPTIONS_JSON=%s\n' "$(printf '%s' "$SUBS" | jq -c . 2>/dev/null || echo "::warning::HQ_SUBSCRIPTIONS_JSON is not valid JSON" >&2)"
+            true
+          } | $SSH "umask 077 && cat > /opt/hq-office/runner-keys.env"
 
       - name: Activate
         run: $SSH bash -s -- "$DOMAIN" "$REL" < apps/hq-office/deploy/server.sh

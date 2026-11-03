@@ -19,7 +19,19 @@
 
    Style first: a task on video montage, reels or carousels does not go to the agent until the owner
    picks the style — after the dispatcher, the task stops with a question {from:'style', options}
-   (the office shows the options as buttons; a free answer is taken as the style too). */
+   (the office shows the options as buttons; a free answer is taken as the style too).
+
+   Reference chain: when the owner brings a link to a video (a competitor's reel, a YouTube clip) or a video
+   file and the result is built on what is said in it, the dispatcher sets transcribe — the task first goes
+   to the «Транскрибатор» (pending kind 'transcribe', the runner runs the transcribe-reference skill without
+   Claude), its transcripts land in the task's in/ as in/transcript-<n>.md, and the task is handed on to the
+   chosen agent (kind 'run'). A task for the transcriber himself is just the transcript, as a page.
+
+   Routines: every morning (Moscow time) the desk sets the daily tasks itself, without the dispatcher —
+   «Балансы и подписки» (agent billing, the runner checks the APIs by a script) and «Статистика соцсетей»
+   (agent socialstats, Claude Code with the social-daily-stats skill). A balance check with nothing to warn
+   about closes itself quietly; everything else comes for review and, with HQ_NOTIFY_TG_TOKEN + HQ_NOTIFY_TG_CHAT,
+   to the owner's Telegram. HQ_ROUTINES=off switches them off; HQ_BILLING_AT / HQ_SOCIAL_AT — the time, HH:MM. */
 import fs from 'node:fs';
 import path from 'node:path';
 import crypto from 'node:crypto';
@@ -33,6 +45,26 @@ const STEPS_KEPT = 80;
 const KIND = { slides:'Презентация', document:'Документ', landing:'Сайт', script:'Сценарии', carousel:'Дизайн', video:'Видео', image:'Дизайн', research:'Исследование', other:'Разработка' };
 const STATUS = { routing:'диспетчер разбирает', question:'нужен ваш ответ', queued:'в очереди', work:'в работе', review:'на проверке', done:'готово', cancelled:'отменена', error:'ошибка' };
 const OPEN = ['routing', 'question', 'queued', 'work', 'review'];
+const TRANSCRIBER = 'transcriber';
+const ROUTINES = [
+  { id:'billing-daily', agent:'billing', at:process.env.HQ_BILLING_AT || '08:50', skill:'service-balances', deliverable:'research', quiet:true,
+    title:d => `Балансы и подписки на ${d}`, text:'Ежедневная проверка: балансы, лимиты и подписки сервисов офиса — что скоро кончится и что продлить, чтобы работа офиса не прекращалась.' },
+  { id:'social-daily', agent:'socialstats', at:process.env.HQ_SOCIAL_AT || '09:10', skill:'social-daily-stats', deliverable:'research',
+    title:(d, y) => `Статистика соцсетей за ${y}`, text:'Ежедневный отчёт за вчера по всем соцсетям: охваты, просмотры, вовлечения, прирост подписчиков, какой контент сработал лучше всего и какой нет, и что делать сегодня.' },
+];
+const PUBLIC_URL = (process.env.HQ_PUBLIC_URL || 'https://hq2.aicex.club').replace(/\/$/, '');
+const ruDate = iso => iso.split('-').reverse().join('.');
+// links to videos that the transcriber can download (yt-dlp; Instagram also through Apify)
+const VIDEO_HOSTS = /(^|\.)(instagram\.com|youtube\.com|youtu\.be|tiktok\.com|vk\.com|vkvideo\.ru|rutube\.ru|dzen\.ru|facebook\.com|fb\.watch|x\.com|twitter\.com|threads\.net|t\.me|loom\.com|vimeo\.com)$/i;
+const MEDIA_EXT = /\.(mp4|mov|webm|mkv|m4v|mp3|m4a|wav|ogg|oga|opus|aac|flac)$/i;
+function videoLinks(text) {
+  const out = [];
+  for (const m of String(text || '').matchAll(/https?:\/\/[^\s<>"'«»)\]]+/g)) {
+    const u = m[0].replace(/[.,;:!?]+$/, '');
+    try { if (VIDEO_HOSTS.test(new URL(u).hostname) && !out.includes(u)) out.push(u); } catch {}
+  }
+  return out.slice(0, 5);
+}
 const MIME = { '.html':'text/html; charset=utf-8', '.htm':'text/html; charset=utf-8', '.css':'text/css', '.js':'text/javascript', '.json':'application/json', '.md':'text/markdown; charset=utf-8',
   '.txt':'text/plain; charset=utf-8', '.pdf':'application/pdf', '.jpg':'image/jpeg', '.jpeg':'image/jpeg', '.png':'image/png', '.webp':'image/webp', '.gif':'image/gif', '.svg':'image/svg+xml',
   '.mp4':'video/mp4', '.webm':'video/webm', '.mov':'video/quicktime', '.mp3':'audio/mpeg', '.wav':'audio/wav', '.woff2':'font/woff2', '.ttf':'font/ttf', '.zip':'application/zip', '.pptx':'application/vnd.openxmlformats-officedocument.presentationml.presentation' };
@@ -48,6 +80,7 @@ const ROUTER_PROMPT = `Ты — диспетчер живого офиса аг�
 - why — одной фразой, почему этот агент.
 - visual — video, если задача про монтаж, видео, рилс, шортс или ролик; carousel — если про карусель; иначе none.
 - style_named — стиль, который владелец УЖЕ явно назвал в задаче или ответах («стекло», «бизнес-рилс», «светлая карусель», «как у Нейта»), иначе пустая строка. Не выбирай стиль за владельца — его спросят отдельно.
+- transcribe — true, если в просьбе есть ссылка на ролик или видео/аудиофайл (референс конкурента, свой рилс, YouTube) и результат строится на том, что в нём говорят: сценарий «как у конкурента», карусель или пост по ролику, разбор, текст для аватара. Тогда сначала Транскрибатор (transcriber) расшифрует ролик и сам передаст текст выбранному агенту — в agent укажи агента, который сделает итоговую работу, а не транскрибатора. Если владельцу нужна только сама расшифровка — agent = transcriber, transcribe = false. Без ссылки на видео и без медиафайла — false.
 - action = ask и question — только если без ответа результат точно выйдет не тем: нет видео для монтажа, неясно, о каком продукте или эфире речь, и т. п. Один конкретный вопрос. Иначе action = assign и question пустой.
 Пиши по-русски.`;
 
@@ -128,13 +161,17 @@ export function createDesk({ claude, model, fallback, dataDir, officeDir, runner
   /* ---------- views and events ---------- */
 
   const fileUrl = (t, p) => `/api/assistant/desk/files/${t.id}/v${t.result.version}/${p.split('/').map(encodeURIComponent).join('/')}`;
+  // the transcriber holds the task while its transcription stage is queued or in work
+  const onStage = t => t.pending?.kind === 'transcribe' && ['queued', 'work'].includes(t.status);
   function view(t) {
-    const a = t.route ? agentOf(t.route.agent) : t.agent ? agentOf(t.agent) : null;
+    const a = t.route ? agentOf(onStage(t) ? TRANSCRIBER : t.route.agent) : t.agent ? agentOf(t.agent) : null;
+    const tr = agentOf(TRANSCRIBER), to = t.route ? agentOf(t.route.agent) : null;
     const waiting = tasks.filter(x => x.status === 'queued').sort((x, y) => x.queuedAt.localeCompare(y.queuedAt));
     return {
       id:t.id, created:t.created, updated:t.updated, text:t.text, files:t.files.map(f => f.name), askedAgent:t.agent || '',
-      status:t.status, statusText:STATUS[t.status] || t.status, queuePos:t.status === 'queued' ? waiting.indexOf(t) + 1 : 0,
-      agent:a ? { id:a.id, name:a.name, dept:a.dept } : null, route:t.route || null, question:t.question || null, style:t.style?.label || '', answers:t.answers,
+      status:t.status, statusText:STATUS[t.status] || t.status, routine:t.routine || '', alerts:t.alerts || null, queuePos:t.status === 'queued' ? waiting.indexOf(t) + 1 : 0,
+      agent:a ? { id:a.id, name:a.name, dept:a.dept } : null, route:t.route || null,
+      chain:t.chain && tr && to && to.id !== TRANSCRIBER ? { from:{ id:tr.id, name:tr.name }, to:{ id:to.id, name:to.name }, sources:t.chain.sources, done:Boolean(t.transcribed), note:t.transcribed?.summary || '' } : null, question:t.question || null, style:t.style?.label || '', answers:t.answers,
       steps:t.steps.slice(-40), error:t.error || '', log:t.status === 'error' ? t.log || '' : '', published:Boolean(t.published), versions:t.versions || 0,
       result:t.result ? { version:t.result.version, summary:t.result.summary, note:t.result.note || '', main:t.result.main, mainUrl:t.result.main ? fileUrl(t, t.result.main) : '',
         files:t.result.files.map(f => ({ path:f.path, size:f.size, url:fileUrl(t, f.path) })) } : null,
@@ -165,12 +202,14 @@ export function createDesk({ claude, model, fallback, dataDir, officeDir, runner
     if (!claude) { t.status = 'error'; t.error = 'Диспетчер не подключён к Claude (нет ключа).'; return emit(t); }
     const cat = catalog(), ids = cat.agents.map(a => a.id);
     const asked = t.agent && ids.includes(t.agent) ? agentOf(t.agent) : null;
+    const links = videoLinks([t.text, ...t.answers.map(x => x.a)].join(' ')), media = t.files.filter(f => MEDIA_EXT.test(f.name));
     const request = [`Просьба владельца: «${t.text}»`,
+      links.length ? `Ссылки на видео в просьбе: ${links.join(', ')}.` : 'Ссылок на видео в просьбе нет.',
       asked ? `Владелец сам выбрал агента: ${asked.name} (${asked.id}).` : 'Агента владелец не выбирал — выбери сам.',
       `Материалы от владельца: ${t.files.length ? t.files.map(f => f.name).join(', ') : 'нет'}.`,
       ...t.answers.map(x => `Уточнение. Вопрос: ${x.q} Ответ владельца: ${x.a}`)].join('\n');
-    const schema = { type:'object', additionalProperties:false, required:['action', 'agent', 'skill', 'title', 'brief', 'deliverable', 'why', 'question', 'visual', 'style_named'], properties:{
-      visual:{ type:'string', enum:['video', 'carousel', 'none'] }, style_named:{ type:'string' },
+    const schema = { type:'object', additionalProperties:false, required:['action', 'agent', 'skill', 'title', 'brief', 'deliverable', 'why', 'question', 'visual', 'style_named', 'transcribe'], properties:{
+      visual:{ type:'string', enum:['video', 'carousel', 'none'] }, style_named:{ type:'string' }, transcribe:{ type:'boolean' },
       action:{ type:'string', enum:['assign', 'ask'] }, agent:{ type:'string', enum:ids }, skill:{ type:'string' }, title:{ type:'string' }, brief:{ type:'string' },
       deliverable:{ type:'string', enum:Object.keys(KIND) }, why:{ type:'string' }, question:{ type:'string' } } };
     try {
@@ -184,7 +223,7 @@ export function createDesk({ claude, model, fallback, dataDir, officeDir, runner
       if (!ids.includes(r.agent)) throw new Error('unknown agent ' + r.agent);
       const a = agentOf(r.agent);
       t.route = { agent:a.id, skill:String(r.skill || '').trim(), title:String(r.title || t.text).slice(0, 90), brief:String(r.brief || ''), deliverable:KIND[r.deliverable] ? r.deliverable : 'other', why:String(r.why || ''),
-        visual:visualOf(r), style:t.style || null };
+        visual:visualOf(r), style:t.style || null, transcribe:Boolean(r.transcribe) };
       const named = String(r.style_named || '').trim();
       if (t.route.visual && !t.style && named) t.style = pickStyle(t.route.visual, named) || { label:named.slice(0, 120), skill:'', about:'' };
       if (t.style) applyStyle(t);
@@ -197,16 +236,30 @@ export function createDesk({ claude, model, fallback, dataDir, officeDir, runner
         t.status = 'question';
         t.question = { from:'style', text:t.route.visual === 'carousel' ? 'В каком стиле сделать карусель?' : 'В каком стиле смонтировать ролик?', options };
         step(t, `Диспетчер: задачу возьмёт «${a.name}». Сначала выберите стиль — ${options.map(o => o.label).join(', ')}.`);
-      } else {
-        queue(t, { kind:'run' });
-        step(t, `Диспетчер передал задачу агенту «${a.name}»${t.route.skill ? ` · скилл ${t.route.skill}` : ''}${t.style ? ` · стиль «${t.style.label}»` : ''}. ${t.route.why}`);
-      }
+      } else if (a.id === TRANSCRIBER && !links.length && !media.length) {
+        t.status = 'question'; t.question = { from:'dispatcher', text:'Пришлите ссылку на ролик или само видео — что расшифровать?' };
+        step(t, `Диспетчер: задачу возьмёт «${a.name}», но нужна ссылка на ролик или видеофайл.`);
+      } else startWork(t, `Диспетчер передал задачу агенту «${a.name}»${t.route.skill ? ` · скилл ${t.route.skill}` : ''}${t.style ? ` · стиль «${t.style.label}»` : ''}. ${t.route.why}`);
     } catch (e) {
       console.error('desk route:', e.message);
       t.status = 'error';
       t.error = e instanceof Anthropic.APIError ? `Диспетчер: Claude ответил ошибкой${e.status ? ' ' + e.status : ''} — поставьте задачу ещё раз.` : 'Диспетчер не смог разобрать задачу — поставьте её ещё раз.';
     }
     emit(t);
+  }
+  // the task goes to work: through the transcriber first when it carries a video the result is built on
+  function startWork(t, how) {
+    const a = agentOf(t.route.agent), tr = agentOf(TRANSCRIBER);
+    const links = videoLinks([t.text, ...t.answers.map(x => x.a)].join(' ')), media = t.files.filter(f => MEDIA_EXT.test(f.name));
+    if (a.id === TRANSCRIBER) t.chain = { sources:links, media:media.map(f => f.name) };
+    if (a.id !== TRANSCRIBER && t.route.transcribe && (links.length || media.length) && !t.transcribed && tr) {
+      t.chain = { sources:links, media:media.map(f => f.name) };
+      queue(t, { kind:'transcribe' });
+      step(t, `${how} Сначала «${tr.name}» расшифрует ${links.length + media.length > 1 ? 'ролики' : 'ролик'} и сам передаст текст агенту «${a.name}».`);
+    } else {
+      queue(t, { kind:'run' });
+      step(t, how);
+    }
   }
   /* ---------- the style question ---------- */
 
@@ -249,8 +302,7 @@ export function createDesk({ claude, model, fallback, dataDir, officeDir, runner
     if (t.question.from === 'style') {
       t.style = pickStyle(t.route.visual, text) || { label:text.slice(0, 120), skill:'', about:'' };
       applyStyle(t);
-      queue(t, { kind:'run' });
-      step(t, `Стиль: «${t.style.label}». Диспетчер передал задачу агенту «${agentOf(t.route.agent)?.name}»${t.route.skill ? ` · скилл ${t.route.skill}` : ''}.`);
+      startWork(t, `Стиль: «${t.style.label}». Диспетчер передал задачу агенту «${agentOf(t.route.agent)?.name}»${t.route.skill ? ` · скилл ${t.route.skill}` : ''}.`);
       emit(t);
     } else if (t.question.from === 'agent') { queue(t, { kind:'answer', text }); step(t, `Ваш ответ: ${text}`); emit(t); }
     else { t.status = 'routing'; t.question = null; step(t, `Ваш ответ: ${text}`); emit(t); route(t); }
@@ -283,8 +335,9 @@ export function createDesk({ claude, model, fallback, dataDir, officeDir, runner
       ...t.answers.map(x => `Уточнение. Вопрос: ${x.q} Ответ: ${x.a}`),
       styleLine(t),
       `У тебя все скиллы команды (${serverSkills.length || 'список'} в ~/.claude/skills) — сам выбери подходящие и вызывай их инструментом Skill; без подходящего делай сам.`,
-      `Материалы от Ильи: ${t.files.length ? t.files.map(f => 'in/' + f.name).join(', ') : 'нет'}.`,
+      `Материалы от Ильи: ${t.files.length ? t.files.map(f => 'in/' + f.name).join(', ') : 'нет'}.`, ...transcriptNote(t),
       'Если результат — ответ, исследование, план или текст, оформи его страницей out/index.html (аккуратно, по-русски) и коротко перескажи суть в отчёте.', '', RULES].filter((x, i, a) => x || a[i - 1]).join('\n');
+    if (p.kind === 'revise' && !t.session) return `Задача: ${t.route.title}. Слова владельца: «${t.text}». Результат лежит в out/ (главный файл ${t.result?.main || 'out/index.html'}).\n\n` + jobPrompt({ ...t, session:'x' });
     if (p.kind === 'revise') return `Владелец посмотрел результат и просит правку: «${p.text}»\n\nВнеси правку в файлы out/ (главный файл — тот же), коротко скажи, что изменил. Правила те же: если суть результата изменилась — строка SUMMARY: <одно предложение для истории офиса>; последней строкой RESULT: out/<главный файл>, или NEED: <вопрос>, если без ответа владельца правку не сделать.`;
     if (p.kind === 'answer') return `Ответ владельца на твой вопрос: «${p.text}»\n\nПродолжай задачу по тем же правилам: предпоследней строкой SUMMARY: <одно предложение для истории офиса>, последней строкой RESULT: out/<главный файл>, или NEED: <вопрос>, если всё ещё не хватает.`;
     return [`Ты — агент «${a.name}» (${a.role}) живого офиса AICEX, отдел «${a.deptName}». Задачу поставил владелец, Илья Палий, прямо в офисе hq2.aicex.club.`,
@@ -292,7 +345,11 @@ export function createDesk({ claude, model, fallback, dataDir, officeDir, runner
       ...t.answers.map(x => `Уточнение. Вопрос: ${x.q} Ответ: ${x.a}`),
       t.route.skill ? `Скилл: ${t.route.skill} — вызови его инструментом Skill и работай по нему.` : 'Если среди твоих скиллов есть подходящий — работай по нему.',
       styleLine(t),
-      `Материалы от владельца: ${t.files.length ? t.files.map(f => 'in/' + f.name).join(', ') : 'нет'}.`, '', RULES].filter((x, i, a) => x || a[i - 1]).join('\n');
+      `Материалы от владельца: ${t.files.length ? t.files.map(f => 'in/' + f.name).join(', ') : 'нет'}.`, ...transcriptNote(t), '', RULES].filter((x, i, a) => x || a[i - 1]).join('\n');
+  }
+  function transcriptNote(t) {
+    if (!t.transcribed) return [];
+    return [`Референс уже расшифровал агент «Транскрибатор»: ${t.transcribed.files.map(f => 'in/' + f).join(', ')} (${t.transcribed.summary}). Прочитай расшифровку первой и строй работу на ней: бери структуру, хук, аргументы и приёмы, но пиши своё — в стиле и для аудитории Ильи, без копирования чужого текста.`];
   }
 
   /* ---------- files ---------- */
@@ -346,13 +403,13 @@ export function createDesk({ claude, model, fallback, dataDir, officeDir, runner
       : ['.jpg', '.jpeg', '.png', '.webp'].includes(ext) ? [{ type:'img', src:url, title }]
       : ext === '.html' ? [{ type:'page', src:url, title }] : [];
     return { id:'desk-' + t.id, date:moscowDate(new Date(t.doneAt)), dateNote:'задачу поставили и приняли прямо в офисе', kind:KIND[t.route.deliverable] || 'Разработка',
-      dept:a?.dept || 'ceo', people:['ilia'], agents:[t.route.agent], title, summary:t.result.history || t.result.summary || '',
+      dept:a?.dept || 'ceo', people:['ilia'], agents:t.transcribed && t.route.agent !== TRANSCRIBER ? [TRANSCRIBER, t.route.agent] : [t.route.agent], title, summary:t.result.history || t.result.summary || '',
       proof:[{ kind:'file', label:`Результат агента «${a?.name || t.route.agent}»`, url }], media, desk:true };
   }
 
   /* ---------- create, used by the routes and by the assistant's tool ---------- */
 
-  function createTask({ text, agent = '', uploads = [], direct = false, title = '' }) {
+  function createTask({ text, agent = '', uploads = [], direct = false, title = '', routine = null }) {
     const t = { id:crypto.randomBytes(4).toString('hex'), created:now(), updated:now(), text:String(text).trim().slice(0, 4000), agent:String(agent || ''),
       files:[], status:'routing', answers:[], steps:[], route:null, question:null, result:null, versions:0, published:false };
     for (const u of uploads.slice(0, 20)) {
@@ -366,6 +423,15 @@ export function createDesk({ claude, model, fallback, dataDir, officeDir, runner
       t.files.push({ name, size:fs.statSync(path.join(taskDir(t.id), 'in', name)).size });
     }
     tasks.unshift(t);
+    if (routine) {
+      const today = moscowDate(), yesterday = moscowDate(new Date(Date.now() - 864e5));
+      t.routine = routine.id;
+      t.route = { agent:routine.agent, skill:routine.skill, title:routine.title(ruDate(today), ruDate(yesterday)), brief:routine.text, deliverable:routine.deliverable, why:'ежедневная задача по расписанию' };
+      queue(t, { kind:'run' });
+      step(t, `Утренняя задача по расписанию — «${agentOf(routine.agent)?.name}» взялся за неё сам.`);
+      emit(t);
+      return { task:t, routed:Promise.resolve() };
+    }
     if (direct) {
       t.route = { agent:CC.id, skill:'', title:String(title || t.text).trim().slice(0, 90), brief:t.text, deliverable:'other', why:'прямая задача Claude Code от двойника' };
       queue(t, { kind:'run' });
@@ -412,6 +478,39 @@ export function createDesk({ claude, model, fallback, dataDir, officeDir, runner
 
   // restart: interrupted routing is redone
   for (const t of tasks) if (t.status === 'routing') route(t);
+
+  /* ---------- routines: the daily tasks the desk sets itself ---------- */
+
+  const ROUT_FILE = path.join(DIR, 'routines.json');
+  let routRuns = {};
+  try { routRuns = JSON.parse(fs.readFileSync(ROUT_FILE, 'utf8')); } catch {}
+  function tickRoutines(now = new Date()) {
+    if (/^(off|0|false)$/i.test(process.env.HQ_ROUTINES || '')) return [];
+    const today = moscowDate(now), hhmm = new Intl.DateTimeFormat('en-GB', { timeZone:'Europe/Moscow', hour:'2-digit', minute:'2-digit', hourCycle:'h23' }).format(now);
+    const made = [];
+    for (const r of ROUTINES) {
+      if (routRuns[r.id] === today || hhmm < r.at || !agentOf(r.agent)) continue;
+      routRuns[r.id] = today;
+      fs.writeFileSync(ROUT_FILE, JSON.stringify(routRuns));
+      if (tasks.some(t => t.routine === r.id && OPEN.includes(t.status))) continue;  // yesterday's is still open — no second one
+      made.push(createTask({ text:r.text, routine:r }).task);
+    }
+    return made;
+  }
+  setInterval(() => { try { tickRoutines(); } catch (e) { console.error('desk routines:', e.message); } }, 60e3).unref();
+
+  // the owner's Telegram (the Office Worker bot): daily results, warnings and errors of routines
+  async function notify(t) {
+    const tok = process.env.HQ_NOTIFY_TG_TOKEN, chat = process.env.HQ_NOTIFY_TG_CHAT;
+    if (!tok || !chat || !t.routine) return;
+    const a = agentOf(t.route.agent), crit = t.alerts?.critical?.length;
+    const head = t.status === 'error' ? `⚠️ ${a?.name}: не получилось` : crit ? `🔴 ${a?.name}: срочно` : t.alerts?.warn?.length ? `🟡 ${a?.name}: скоро продлить` : `📊 ${a?.name}`;
+    const body = t.status === 'error' ? t.error : t.alerts ? [...(t.alerts.critical || []).map(x => '• ' + x), ...(t.alerts.warn || []).map(x => '◦ ' + x)].join('\n') : (t.result?.history || t.result?.summary || '');
+    try {
+      await fetch(`https://api.telegram.org/bot${tok}/sendMessage`, { method:'POST', headers:{ 'content-type':'application/json' },
+        body:JSON.stringify({ chat_id:chat, text:`${head}\n${t.route.title}\n\n${String(body).slice(0, 3200)}\n\n${PUBLIC_URL}/#desk-${t.id}`, disable_web_page_preview:true }) });
+    } catch (e) { console.error('desk notify:', e.message); }
+  }
 
   /* ---------- routes ---------- */
 
@@ -462,12 +561,19 @@ export function createDesk({ claude, model, fallback, dataDir, officeDir, runner
         for (const t of tasks) if (t.status === 'work') orphan(t, 'Исполнитель не сдал задачу — она снова в очереди.');
         const t = tasks.filter(x => x.status === 'queued').sort((x, y) => x.queuedAt.localeCompare(y.queuedAt))[0];
         if (!t) { res.writeHead(204); return res.end(); }
+        if (t.pending.kind === 'transcribe') {
+          t.status = 'work'; t.error = '';
+          step(t, `«${agentOf(TRANSCRIBER)?.name || 'Транскрибатор'}» взял референс в работу.`);
+          emit(t);
+          return json(res, 200, { id:t.id, kind:'transcribe', agent:TRANSCRIBER, title:t.route.title, sources:t.chain?.sources || [], files:t.chain?.media || [] });
+        }
         const a = agentOf(t.route.agent);
         t.status = 'work'; t.versions = (t.versions || 0) + 1; t.workVersion = t.versions; t.error = '';
         step(t, t.pending.kind === 'revise' ? `«${a?.name}» вносит правку.` : t.pending.kind === 'answer' ? `«${a?.name}» получил ваш ответ и продолжает.` : `«${a?.name}» взял задачу в работу.`);
         emit(t);
         return json(res, 200, { id:t.id, kind:t.pending.kind, version:t.versions, agent:t.route.agent, skill:t.route.skill, title:t.route.title,
-          prompt:jobPrompt(t), session:t.pending.kind === 'run' ? '' : t.session || '', files:t.files.map(f => f.name) });
+          prompt:jobPrompt(t), session:t.pending.kind === 'run' ? '' : t.session || '', files:t.files.map(f => f.name),
+          ...(t.route.agent === TRANSCRIBER ? { sources:t.chain?.sources || videoLinks(t.text) } : {}) });
       }
       const t = byId(seg[1]);
       if (!t) return notFound(res);
@@ -480,6 +586,7 @@ export function createDesk({ claude, model, fallback, dataDir, officeDir, runner
       if (M === 'PUT' && seg[2] === 'file') {
         const rel = safeRel(url.searchParams.get('path'));
         if (!rel || t.status !== 'work') return json(res, 400, { error:'path' });
+        if (t.pending?.kind === 'transcribe') return json(res, 200, { ok:true, size:await saveBody(req, path.join(taskDir(t.id), 'in', safeName(rel))) });
         const size = await saveBody(req, path.join(taskDir(t.id), 'v' + t.workVersion, rel));
         return json(res, 200, { ok:true, size });
       }
@@ -488,6 +595,16 @@ export function createDesk({ claude, model, fallback, dataDir, officeDir, runner
         if (t.status !== 'work') return json(res, 200, { ok:true, ignored:true });
         if (b.session) t.session = String(b.session);
         t.lost = 0;
+        if (b.result === 'transcribed' && t.pending?.kind === 'transcribe') {
+          const names = (Array.isArray(b.files) ? b.files : []).map(safeName).filter(n => fs.existsSync(path.join(taskDir(t.id), 'in', n)));
+          if (!names.length) { t.status = 'error'; t.error = 'Транскрибатор закончил, но расшифровка не дошла — нажмите «Повторить».'; step(t, t.error); emit(t); return json(res, 200, { ok:true }); }
+          for (const n of names) if (!t.files.some(f => f.name === n)) t.files.push({ name:n, size:fs.statSync(path.join(taskDir(t.id), 'in', n)).size });
+          t.transcribed = { files:names, summary:String(b.summary || '').slice(0, 600) };
+          queue(t, { kind:'run' });
+          step(t, `«${agentOf(TRANSCRIBER)?.name || 'Транскрибатор'}» расшифровал: ${t.transcribed.summary || names.join(', ')} — и передал текст агенту «${agentOf(t.route.agent)?.name}».`);
+          emit(t);
+          return json(res, 200, { ok:true });
+        }
         if (b.result === 'review') {
           const root = path.join(taskDir(t.id), 'v' + t.workVersion), files = [];
           const walk = (d, pre) => { for (const e of fs.existsSync(d) ? fs.readdirSync(d, { withFileTypes:true }) : []) { const rel = pre ? pre + '/' + e.name : e.name; if (e.isDirectory()) walk(path.join(d, e.name), rel); else files.push({ path:rel, size:fs.statSync(path.join(d, e.name)).size }); } };
@@ -500,13 +617,22 @@ export function createDesk({ claude, model, fallback, dataDir, officeDir, runner
           t.result = { version:t.workVersion, main, files, summary:String((revised && before.summary) || b.summary || '').slice(0, 1200),
             note:revised ? String(b.summary || '').slice(0, 1200) : '', history:String(b.history || before?.history || '').slice(0, 400) };
           t.status = 'review'; t.pending = null;
-          step(t, `Готово превью: ${main}. Агент несёт результат к вашему столу.`);
+          if (b.alerts && typeof b.alerts === 'object') t.alerts = { critical:(b.alerts.critical || []).map(String).slice(0, 30), warn:(b.alerts.warn || []).map(String).slice(0, 30) };
+          const routine = ROUTINES.find(r => r.id === t.routine);
+          if (routine?.quiet && t.alerts && !t.alerts.critical.length && !t.alerts.warn.length) {
+            t.status = 'done'; t.doneAt = now(); t.published = false;
+            step(t, 'Всё в порядке — предупреждать не о чем, задача закрыта сама.');
+          } else {
+            step(t, `Готово превью: ${main}. Агент несёт результат к вашему столу.`);
+            notify(t);
+          }
         } else if (b.result === 'need') {
           t.status = 'question'; t.question = { from:'agent', text:String(b.question || 'Агенту не хватает данных — уточните задачу.').slice(0, 800) };
           step(t, `«${agentOf(t.route.agent)?.name}» спрашивает: ${t.question.text}`);
         } else {
           t.status = 'error'; t.error = String(b.error || 'Агент не смог закончить задачу.').slice(0, 800); t.log = String(b.log || '').slice(-2000);
           step(t, t.error);
+          notify(t);
         }
         emit(t);
         return json(res, 200, { ok:true });
@@ -571,7 +697,7 @@ export function createDesk({ claude, model, fallback, dataDir, officeDir, runner
     return notFound(res);
   }
 
-  return { handle, createTask, summary, agents:() => catalog().agents, view, act,
+  return { handle, createTask, summary, tickRoutines, agents:() => catalog().agents, view, act,
     list:(n = 15) => tasks.slice(0, n).map(view), get:id => { const t = byId(id); return t ? view(t) : null; },
     skills:() => serverSkills, skillsFile:SKILLS_FILE };
 }

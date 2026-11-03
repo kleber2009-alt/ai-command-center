@@ -273,6 +273,12 @@ const TEAM = [
   { id:'threads', name:'Threads-ветки', role:'3 ветки в день → материал в Telegram-канале', color:'#e8e8e8', room:'marketing', screen:'flow', boss:'firuza',
     out:[o('you','прислал 3 ветки на апрув','3 ветки Threads'), o('leadmagnet','просит приёмник под ветку','Задание на приёмник'), o('analytics','принёс цифры веток за 48 часов','Цифры веток')] },
 
+  { id:'socialstats', name:'Статистика соцсетей', role:'Каждое утро: что сработало вчера', color:'#ff6fb5', room:'analytics', screen:'chart', boss:'ilia',
+    out:[o('you','положил статистику за вчера','Статистика дня'), o('scripts','передал, какие темы залетели','Что залетело'), o('analytics','отдал цифры соцсетей','Цифры соцсетей')] },
+  { id:'billing', name:'Балансы и подписки', role:'Балансы и продление сервисов', color:'#ffb347', room:'tech', screen:'chart', boss:'ilia',
+    out:[o('you','предупредил о продлении подписки','Продление подписки'), o('product','проверил ключи сервисов','Ключи сервисов')] },
+  { id:'transcriber', name:'Транскрибатор', role:'Расшифровка роликов по ссылке', color:'#2fd3c6', room:'studio', screen:'doc', boss:'ilia',
+    out:[o('scripts','передал расшифровку рилса конкурента','Расшифровка референса'), o('carousel','отдал текст ролика для карусели','Текст ролика'), o('audience','отдал расшифровки залётов','Расшифровки')] },
   { id:'scripts', name:'Сценарии', role:'Сценарии рилсов с кодовым словом', color:'#ff5d8f', room:'studio', screen:'doc', boss:'firuza',
     out:[o('montage','передал сценарий рилса','Сценарий рилса'), o('carousel','отдал текст карусели','Текст карусели'), o('avatar','передал текст для аватара','Текст для аватара')] },
   { id:'montage', name:'Монтаж видео', role:'Рилсы и YouTube кодом, 35+ стилей', color:'#ff9f43', room:'studio', screen:'timeline', boss:'firuza',
