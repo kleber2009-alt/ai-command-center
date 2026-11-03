@@ -15,7 +15,11 @@
      public: GET history.js | history.json (accepted and published tasks, in the format of tasks.js)
              GET files/<id>/v<n>/<path> — the owner always, everyone once published
 
-   Statuses: routing → question | queued → work → review → done, plus cancelled and error. */
+   Statuses: routing → question | queued → work → review → done, plus cancelled and error.
+
+   Style first: a task on video montage, reels or carousels does not go to the agent until the owner
+   picks the style — after the dispatcher, the task stops with a question {from:'style', options}
+   (the office shows the options as buttons; a free answer is taken as the style too). */
 import fs from 'node:fs';
 import path from 'node:path';
 import crypto from 'node:crypto';
@@ -42,8 +46,32 @@ const ROUTER_PROMPT = `Ты — диспетчер живого офиса аг�
 - brief — ТЗ агенту: что сделать, для кого и зачем, что должно получиться (формат, объём, стиль бренда AICEX), из каких материалов. Подставь разумные значения по умолчанию вместо вопросов.
 - deliverable — тип результата.
 - why — одной фразой, почему этот агент.
+- visual — video, если задача про монтаж, видео, рилс, шортс или ролик; carousel — если про карусель; иначе none.
+- style_named — стиль, который владелец УЖЕ явно назвал в задаче или ответах («стекло», «бизнес-рилс», «светлая карусель», «как у Нейта»), иначе пустая строка. Не выбирай стиль за владельца — его спросят отдельно.
 - action = ask и question — только если без ответа результат точно выйдет не тем: нет видео для монтажа, неясно, о каком продукте или эфире речь, и т. п. Один конкретный вопрос. Иначе action = assign и question пустой.
 Пиши по-русски.`;
+
+/* Styles the owner picks from before a montage / reels / carousel task goes to work. The montage styles are the
+   Creator Pack skills of «Студия Кадрика» (.claude/skills/remake-top-reel/references/styles.md) plus the reels
+   skills on the runner's server; the carousel styles are the ones of carousel-pro (config.json → styles). */
+const STYLE_MENU = {
+  video:[
+    { label:'Стеклянная объяснялка', skill:'glass-explainer-reel', about:'крупные планы и панель снизу, сверху бизнес-графика на стеклянных карточках, уведомления, счётчики' },
+    { label:'Панель-объяснялка', skill:'explainer-panel-reel', about:'та же панель, графика чище: заголовки, нумерованные пункты, схемы — для пошаговых роликов' },
+    { label:'Бизнес-рилс', skill:'business-short-form-reels', about:'текстовый хук, ротация «ты на весь экран / сплит / анимация», стеклянные плашки, окна Docs и Notion' },
+    { label:'Как у Nate Herk', skill:'reels-herk', about:'сплит, тёмные боксовые титры, логотипы-плитки, 3D-скрины, терминал-карточки' },
+    { label:'Промо-история с лицом', skill:'reels-promo-face', about:'кинетический хук, поиск с шайбой, светлый iOS-интерфейс, 3D-эмодзи, кодовое слово' },
+  ],
+  carousel:[
+    { label:'Тёмный @ilia.paliy', skill:'carousel-pro', about:'основной формат: чёрный фон, тёплое свечение, Jost, оранжевый курсив, капсулы' },
+    { label:'Светлый @ilia.paliy', skill:'carousel-pro', about:'тёмный текст на светлом фоне, белые карточки, капс-обложка' },
+    { label:'Обложка с вашим фото', skill:'carousel-pro', about:'обложка на вашем фото (или образ двойника HeyGen), дальше — тёмный формат' },
+  ],
+};
+const STYLE_ANY = { label:'Выбери сам', skill:'', about:'агент выберет стиль под сценарий' };
+// skills that run the whole job and take the montage style as a parameter — the chosen style does not replace them
+const ORCHESTRATORS = new Set(['remake-top-reel', 'carousel-pro', 'ilia-carousel-style']);
+const STYLE_SKILL_RE = { video:/reel|rils|montazh|montage|монтаж|рилс/i, carousel:/carousel|karusel|карусел/i };
 
 const RULES = `Как работать:
 - Сначала проверь, твоя ли это задача и хватает ли материалов. Если задача не по твоему профилю или без ответа владельца результат выйдет не тем — ничего не делай, коротко объясни почему и последней строкой ответа напиши: NEED: <один конкретный вопрос владельцу>.
@@ -106,7 +134,7 @@ export function createDesk({ claude, model, fallback, dataDir, officeDir, runner
     return {
       id:t.id, created:t.created, updated:t.updated, text:t.text, files:t.files.map(f => f.name), askedAgent:t.agent || '',
       status:t.status, statusText:STATUS[t.status] || t.status, queuePos:t.status === 'queued' ? waiting.indexOf(t) + 1 : 0,
-      agent:a ? { id:a.id, name:a.name, dept:a.dept } : null, route:t.route || null, question:t.question || null, answers:t.answers,
+      agent:a ? { id:a.id, name:a.name, dept:a.dept } : null, route:t.route || null, question:t.question || null, style:t.style?.label || '', answers:t.answers,
       steps:t.steps.slice(-40), error:t.error || '', log:t.status === 'error' ? t.log || '' : '', published:Boolean(t.published), versions:t.versions || 0,
       result:t.result ? { version:t.result.version, summary:t.result.summary, note:t.result.note || '', main:t.result.main, mainUrl:t.result.main ? fileUrl(t, t.result.main) : '',
         files:t.result.files.map(f => ({ path:f.path, size:f.size, url:fileUrl(t, f.path) })) } : null,
@@ -141,7 +169,8 @@ export function createDesk({ claude, model, fallback, dataDir, officeDir, runner
       asked ? `Владелец сам выбрал агента: ${asked.name} (${asked.id}).` : 'Агента владелец не выбирал — выбери сам.',
       `Материалы от владельца: ${t.files.length ? t.files.map(f => f.name).join(', ') : 'нет'}.`,
       ...t.answers.map(x => `Уточнение. Вопрос: ${x.q} Ответ владельца: ${x.a}`)].join('\n');
-    const schema = { type:'object', additionalProperties:false, required:['action', 'agent', 'skill', 'title', 'brief', 'deliverable', 'why', 'question'], properties:{
+    const schema = { type:'object', additionalProperties:false, required:['action', 'agent', 'skill', 'title', 'brief', 'deliverable', 'why', 'question', 'visual', 'style_named'], properties:{
+      visual:{ type:'string', enum:['video', 'carousel', 'none'] }, style_named:{ type:'string' },
       action:{ type:'string', enum:['assign', 'ask'] }, agent:{ type:'string', enum:ids }, skill:{ type:'string' }, title:{ type:'string' }, brief:{ type:'string' },
       deliverable:{ type:'string', enum:Object.keys(KIND) }, why:{ type:'string' }, question:{ type:'string' } } };
     try {
@@ -154,13 +183,23 @@ export function createDesk({ claude, model, fallback, dataDir, officeDir, runner
       const r = JSON.parse(msg.content.filter(b => b.type === 'text').map(b => b.text).join(''));
       if (!ids.includes(r.agent)) throw new Error('unknown agent ' + r.agent);
       const a = agentOf(r.agent);
-      t.route = { agent:a.id, skill:String(r.skill || '').trim(), title:String(r.title || t.text).slice(0, 90), brief:String(r.brief || ''), deliverable:KIND[r.deliverable] ? r.deliverable : 'other', why:String(r.why || '') };
+      t.route = { agent:a.id, skill:String(r.skill || '').trim(), title:String(r.title || t.text).slice(0, 90), brief:String(r.brief || ''), deliverable:KIND[r.deliverable] ? r.deliverable : 'other', why:String(r.why || ''),
+        visual:visualOf(r), style:t.style || null };
+      const named = String(r.style_named || '').trim();
+      if (t.route.visual && !t.style && named) t.style = pickStyle(t.route.visual, named) || { label:named.slice(0, 120), skill:'', about:'' };
+      if (t.style) applyStyle(t);
       if (r.action === 'ask' && String(r.question || '').trim()) {
         t.status = 'question'; t.question = { from:'dispatcher', text:r.question.trim() };
         step(t, `Диспетчер: задачу возьмёт «${a.name}», но сначала нужен ответ — ${r.question.trim()}`);
+      } else if (t.route.visual && !t.style) {
+        // montage, reels and carousels: the owner picks the style before the agent starts
+        const options = styleOptions(t.route.visual);
+        t.status = 'question';
+        t.question = { from:'style', text:t.route.visual === 'carousel' ? 'В каком стиле сделать карусель?' : 'В каком стиле смонтировать ролик?', options };
+        step(t, `Диспетчер: задачу возьмёт «${a.name}». Сначала выберите стиль — ${options.map(o => o.label).join(', ')}.`);
       } else {
         queue(t, { kind:'run' });
-        step(t, `Диспетчер передал задачу агенту «${a.name}»${t.route.skill ? ` · скилл ${t.route.skill}` : ''}. ${t.route.why}`);
+        step(t, `Диспетчер передал задачу агенту «${a.name}»${t.route.skill ? ` · скилл ${t.route.skill}` : ''}${t.style ? ` · стиль «${t.style.label}»` : ''}. ${t.route.why}`);
       }
     } catch (e) {
       console.error('desk route:', e.message);
@@ -169,6 +208,60 @@ export function createDesk({ claude, model, fallback, dataDir, officeDir, runner
     }
     emit(t);
   }
+  /* ---------- the style question ---------- */
+
+  const visualOf = r => r.visual === 'video' || r.visual === 'carousel' ? r.visual
+    : r.deliverable === 'video' ? 'video' : r.deliverable === 'carousel' && STYLE_SKILL_RE.carousel.test(String(r.skill || '') + ' ' + String(r.title || '')) ? 'carousel' : '';
+  function styleOptions(visual) {
+    const list = [...STYLE_MENU[visual]], have = new Set(list.map(o => o.skill));
+    // the rest of the montage / carousel skills installed on the runner's server
+    for (const x of serverSkills) {
+      if (list.length >= 8) break;
+      if (have.has(x.name) || ORCHESTRATORS.has(x.name) || !STYLE_SKILL_RE[visual].test(x.name + ' ' + x.description.slice(0, 120))) continue;
+      if (visual === 'video' && /long|dlinn|youtube/i.test(x.name)) continue;
+      have.add(x.name);
+      list.push({ label:x.name, skill:x.name, about:x.description.replace(/\s+/g, ' ').slice(0, 140) });
+    }
+    return [...list, STYLE_ANY].map((o, i) => ({ id:String(i + 1), ...o }));
+  }
+  // the owner's answer: a button (its label), its number, or own words
+  function pickStyle(visual, text) {
+    const s = String(text).trim().toLowerCase().replace(/[«»"]/g, ''), opts = styleOptions(visual);
+    return opts.find(o => o.id === s || o.label.toLowerCase() === s || o.skill && o.skill === s)
+      || opts.find(o => o.label !== STYLE_ANY.label && s.includes(o.label.toLowerCase()))
+      || (/(стекл|glass)/.test(s) && opts.find(o => o.skill === 'glass-explainer-reel'))
+      || (/(панел|panel)/.test(s) && opts.find(o => o.skill === 'explainer-panel-reel'))
+      || (/(бизнес|business)/.test(s) && opts.find(o => o.skill === 'business-short-form-reels'))
+      || (/(нейт|herk)/.test(s) && opts.find(o => o.skill === 'reels-herk'))
+      || (/(тёмн|темн|dark)/.test(s) && opts.find(o => o.label.startsWith('Тёмный')))
+      || (/(светл|light)/.test(s) && opts.find(o => o.label.startsWith('Светлый')))
+      || (/фото/.test(s) && visual === 'carousel' && opts.find(o => o.label.startsWith('Обложка')))
+      || (/^(выбери сам|сам|сами|любой|без разницы|на твой|на ваш|на усмотрение)/.test(s) && opts.find(o => o.label === STYLE_ANY.label))
+      || null;
+  }
+  // the chosen style goes to the route: a style skill replaces a plain skill, an orchestrator (remake, carousel) keeps its own
+  function applyStyle(t) {
+    t.route.style = t.style;
+    if (t.style.skill && !ORCHESTRATORS.has(t.route.skill)) t.route.skill = t.style.skill;
+  }
+  function answerTask(t, text) {
+    t.answers.push({ q:t.question.text, a:text });
+    if (t.question.from === 'style') {
+      t.style = pickStyle(t.route.visual, text) || { label:text.slice(0, 120), skill:'', about:'' };
+      applyStyle(t);
+      queue(t, { kind:'run' });
+      step(t, `Стиль: «${t.style.label}». Диспетчер передал задачу агенту «${agentOf(t.route.agent)?.name}»${t.route.skill ? ` · скилл ${t.route.skill}` : ''}.`);
+      emit(t);
+    } else if (t.question.from === 'agent') { queue(t, { kind:'answer', text }); step(t, `Ваш ответ: ${text}`); emit(t); }
+    else { t.status = 'routing'; t.question = null; step(t, `Ваш ответ: ${text}`); emit(t); route(t); }
+  }
+  const styleLine = t => {
+    const s = t.style || t.route?.style;
+    if (!s) return '';
+    if (s.label === STYLE_ANY.label) return 'Стиль: владелец оставил выбор тебе — выбери подходящий под сценарий и назови его в отчёте.';
+    return `Стиль, который выбрал владелец: «${s.label}»${s.about ? ` (${s.about})` : ''}${s.skill && s.skill !== t.route.skill ? `. Для монтажа вызови скилл ${s.skill} инструментом Skill` : ''}. Делай строго в этом стиле, не спрашивай его заново и не меняй на ротацию.`;
+  };
+
   function queue(t, pending) {
     t.status = 'queued'; t.pending = pending; t.queuedAt = now(); t.question = null;
   }
@@ -188,16 +281,18 @@ export function createDesk({ claude, model, fallback, dataDir, officeDir, runner
     if (p.kind === 'run' && a.id === CC.id) return [`Ты — Claude Code на сервере офиса AICEX: универсальный исполнитель Ильи Палия. Задачу поставил сам Илья через своего цифрового двойника (hq2.aicex.club).`,
       '', `Задача: ${t.route.title}`, `Слова Ильи: «${t.text}»`,
       ...t.answers.map(x => `Уточнение. Вопрос: ${x.q} Ответ: ${x.a}`),
+      styleLine(t),
       `У тебя все скиллы команды (${serverSkills.length || 'список'} в ~/.claude/skills) — сам выбери подходящие и вызывай их инструментом Skill; без подходящего делай сам.`,
       `Материалы от Ильи: ${t.files.length ? t.files.map(f => 'in/' + f.name).join(', ') : 'нет'}.`,
-      'Если результат — ответ, исследование, план или текст, оформи его страницей out/index.html (аккуратно, по-русски) и коротко перескажи суть в отчёте.', '', RULES].join('\n');
+      'Если результат — ответ, исследование, план или текст, оформи его страницей out/index.html (аккуратно, по-русски) и коротко перескажи суть в отчёте.', '', RULES].filter((x, i, a) => x || a[i - 1]).join('\n');
     if (p.kind === 'revise') return `Владелец посмотрел результат и просит правку: «${p.text}»\n\nВнеси правку в файлы out/ (главный файл — тот же), коротко скажи, что изменил. Правила те же: если суть результата изменилась — строка SUMMARY: <одно предложение для истории офиса>; последней строкой RESULT: out/<главный файл>, или NEED: <вопрос>, если без ответа владельца правку не сделать.`;
     if (p.kind === 'answer') return `Ответ владельца на твой вопрос: «${p.text}»\n\nПродолжай задачу по тем же правилам: предпоследней строкой SUMMARY: <одно предложение для истории офиса>, последней строкой RESULT: out/<главный файл>, или NEED: <вопрос>, если всё ещё не хватает.`;
     return [`Ты — агент «${a.name}» (${a.role}) живого офиса AICEX, отдел «${a.deptName}». Задачу поставил владелец, Илья Палий, прямо в офисе hq2.aicex.club.`,
       '', `Задача: ${t.route.title}`, `Слова владельца: «${t.text}»`, `ТЗ от диспетчера: ${t.route.brief}`,
       ...t.answers.map(x => `Уточнение. Вопрос: ${x.q} Ответ: ${x.a}`),
       t.route.skill ? `Скилл: ${t.route.skill} — вызови его инструментом Skill и работай по нему.` : 'Если среди твоих скиллов есть подходящий — работай по нему.',
-      `Материалы от владельца: ${t.files.length ? t.files.map(f => 'in/' + f.name).join(', ') : 'нет'}.`, '', RULES].join('\n');
+      styleLine(t),
+      `Материалы от владельца: ${t.files.length ? t.files.map(f => 'in/' + f.name).join(', ') : 'нет'}.`, '', RULES].filter((x, i, a) => x || a[i - 1]).join('\n');
   }
 
   /* ---------- files ---------- */
@@ -289,9 +384,7 @@ export function createDesk({ claude, model, fallback, dataDir, officeDir, runner
     if (!t) return { error:'Нет такой задачи.' };
     if (action === 'answer') {
       if (t.status !== 'question' || !text) return { error:'Сейчас у задачи нет вопроса (или пустой ответ).' };
-      t.answers.push({ q:t.question.text, a:text });
-      if (t.question.from === 'agent') { queue(t, { kind:'answer', text }); step(t, `Ваш ответ: ${text}`); emit(t); }
-      else { t.status = 'routing'; t.question = null; step(t, `Ваш ответ: ${text}`); emit(t); route(t); }
+      answerTask(t, text);
     } else if (action === 'revise') {
       if (!['review', 'done'].includes(t.status) || !text) return { error:'Правку можно дать только к готовому результату и с текстом правки.' };
       queue(t, { kind:'revise', text }); t.published = false; step(t, `Правка: ${text}`); emit(t);
@@ -314,7 +407,7 @@ export function createDesk({ claude, model, fallback, dataDir, officeDir, runner
   function summary() {
     const open = tasks.filter(t => OPEN.includes(t.status)).slice(0, 8);
     if (!open.length) return 'Задач в работе у агентов сейчас нет.';
-    return 'Задачи на рабочем столе офиса: ' + open.map(t => `«${t.route?.title || t.text.slice(0, 60)}» — ${t.route ? (agentOf(t.route.agent)?.name || '') + ', ' : ''}${STATUS[t.status]}${t.question ? ` (вопрос: ${t.question.text})` : ''}`).join('; ') + '.';
+    return 'Задачи на рабочем столе офиса: ' + open.map(t => `«${t.route?.title || t.text.slice(0, 60)}» — ${t.route ? (agentOf(t.route.agent)?.name || '') + ', ' : ''}${STATUS[t.status]}${t.question ? ` (вопрос: ${t.question.text}${t.question.options ? ' Варианты: ' + t.question.options.map(o => o.label).join(', ') : ''})` : ''}`).join('; ') + '.';
   }
 
   // restart: interrupted routing is redone
@@ -447,9 +540,7 @@ export function createDesk({ claude, model, fallback, dataDir, officeDir, runner
       const b = await readJson(req), text = String(b.text || '').trim().slice(0, 4000);
       if (seg[2] === 'answer') {
         if (t.status !== 'question' || !text) return json(res, 400, { error:'Сейчас вопроса нет.' });
-        t.answers.push({ q:t.question.text, a:text });
-        if (t.question.from === 'agent') { queue(t, { kind:'answer', text }); step(t, `Ваш ответ: ${text}`); emit(t); }
-        else { t.status = 'routing'; t.question = null; step(t, `Ваш ответ: ${text}`); emit(t); route(t); }
+        answerTask(t, text);
         return json(res, 200, { task:view(t) });
       }
       if (seg[2] === 'revise') {

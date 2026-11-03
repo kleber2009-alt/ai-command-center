@@ -351,6 +351,10 @@
   .files li button{color:var(--ink-3);font-size:16px;line-height:1}
   .files li i{grid-column:1/-1;height:3px;border-radius:3px;background:linear-gradient(90deg,#2f7bff var(--p),rgba(255,255,255,.08) var(--p))}
   .ask{padding:14px;border-radius:14px;background:rgba(255,176,32,.09);border:1px solid rgba(255,176,32,.35);display:grid;gap:10px;margin-bottom:6px}
+  .dk-styles{display:grid;grid-template-columns:repeat(auto-fill,minmax(190px,1fr));gap:8px}
+  .dk-styles button{display:grid;gap:4px;text-align:left;padding:10px 12px;border-radius:12px;background:rgba(255,255,255,.04);border:1px solid rgba(255,176,32,.35);color:inherit;font:inherit;cursor:pointer}
+  .dk-styles button:hover,.dk-styles button:focus-visible{background:rgba(255,176,32,.14);border-color:#ffb020}
+  .dk-styles b{font-size:14px} .dk-styles small{font-size:12px;line-height:1.4;opacity:.7}
   .ask.err{background:rgba(255,90,70,.08);border-color:rgba(255,107,107,.35)}
   .ask b{font-size:14px}
   .ask p{font-size:14px;line-height:1.5}
@@ -3751,7 +3755,7 @@ $('toastGo').onclick = () => { $('toast').hidden = true; if (toastId) openDeskTa
 function deskNotify(v, prev) {
   if (prev?.status === v.status || desk.openId === v.id) return;
   const name = v.agent?.name || 'Агент', title = deskTitle(v);
-  if (v.status === 'question') toast(v.question?.from === 'agent' ? `«${name}» спрашивает: ${v.question.text}` : `Диспетчер уточняет: ${v.question?.text || ''}`, v.id, 30);
+  if (v.status === 'question') toast(v.question?.from === 'agent' ? `«${name}» спрашивает: ${v.question.text}` : v.question?.from === 'style' ? `${v.question.text} Агент «${name}» ждёт вашего выбора` : `Диспетчер уточняет: ${v.question?.text || ''}`, v.id, 30);
   else if (v.status === 'review') toast(`«${name}» принёс результат: ${title}`, v.id, 30);
   else if (v.status === 'error') toast(`Не получилось: ${title}`, v.id, 30);
   else if (v.status === 'queued' && prev?.status === 'routing') toast(`Диспетчер передал задачу агенту «${name}»`, v.id);
@@ -3892,8 +3896,9 @@ function renderDeskTask() {
   const when = new Date(t.created);
   setHTML($('kHead'), `<span class="t-meta"><em class="st" style="--s:${DST[t.status] || '#9aa3b5'}">${esc(t.statusText)}${t.status === 'queued' && t.queuePos > 1 ? ` · ${t.queuePos}-я в очереди` : ''}</em>
     <time datetime="${esc(t.created)}">${fmtDate(t.created.slice(0, 10), true)}, ${hhmm(when)}</time>${m ? `<em>${esc(m.name)}</em>` : ''}</span><h2>${esc(deskTitle(t))}</h2>`);
-  setHTML($('kAsk'), t.status === 'question' ? `<div class="ask"><b>${t.question?.from === 'agent' ? `Вопрос от агента «${esc(m?.name || '')}»` : 'Диспетчер уточняет'}</b>
-    <p>${esc(t.question?.text || '')}</p><textarea id="kAnswer" placeholder="Ваш ответ"></textarea><div class="acts"><button class="btn-go" data-k="answer">Ответить</button></div></div>` : '');
+  const styleQ = t.status === 'question' && t.question?.from === 'style' && t.question.options?.length;
+  setHTML($('kAsk'), t.status === 'question' ? `<div class="ask"><b>${t.question?.from === 'agent' ? `Вопрос от агента «${esc(m?.name || '')}»` : styleQ ? 'Выберите стиль — агент начнёт после выбора' : 'Диспетчер уточняет'}</b>
+    <p>${esc(t.question?.text || '')}</p>${styleQ ? `<div class="dk-styles">${t.question.options.map(o => `<button type="button" data-k="style:${esc(o.id)}"><b>${esc(o.label)}</b>${o.about ? `<small>${esc(o.about)}</small>` : ''}</button>`).join('')}</div>` : ''}<textarea id="kAnswer" placeholder="${styleQ ? 'Или опишите стиль своими словами' : 'Ваш ответ'}"></textarea><div class="acts"><button class="btn-go" data-k="answer">Ответить</button></div></div>` : '');
   setHTML($('kRes'), res && (t.status === 'review' || t.status === 'done') ? `<h4>Результат${t.versions > 1 ? ` · версия ${res.version}` : ''}</h4>
     ${res.summary ? `<p class="lead sm">${esc(res.summary)}</p>` : ''}${previewHTML(res)}
     <div class="dk-files">${(desk.allFiles === t.id ? res.files : res.files.slice(0, 40)).map(f => `<a href="${esc(f.url)}" target="_blank" rel="noopener">${esc(f.path)} <small>${sizeText(f.size)}</small></a>`).join('')}${res.files.length > 40 && desk.allFiles !== t.id ? `<button type="button" class="dk-more" data-k="files">ещё ${res.files.length - 40}</button>` : ''}</div>` : '');
@@ -3961,7 +3966,11 @@ async function deskAct(k) {
   if (k === 'files') { desk.allFiles = t.id; return renderDeskTask(); }
   if (k === 'copy') { navigator.clipboard?.writeText(location.origin + location.pathname + '#desk-' + t.id).then(() => deskNote('Ссылка скопирована — откроется у вас после входа')).catch(() => {}); return; }
   let p = k, body = {};
-  if (k === 'answer' || k === 'revise') {
+  if (k.startsWith('style:')) {
+    const o = t.question?.options?.find(x => x.id === k.slice(6));
+    if (!o) return;
+    p = 'answer'; body = { text:o.label };
+  } else if (k === 'answer' || k === 'revise') {
     const box = $(k === 'answer' ? 'kAnswer' : 'kRevise'), text = box?.value.trim();
     if (!text) { box?.focus(); return deskNote(k === 'answer' ? 'Напишите ответ.' : 'Напишите, что поменять.', true); }
     body = { text };
