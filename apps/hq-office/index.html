@@ -362,6 +362,8 @@
   .dk-files{display:flex;flex-wrap:wrap;gap:6px;margin-top:10px}
   .dk-files a{font:600 11.5px var(--f-mono);padding:5px 9px;border-radius:8px;background:rgba(143,184,255,.12);color:#8fb8ff;text-decoration:none;max-width:100%;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
   .dk-files a small{opacity:.6}
+  .dk-files .dk-more{font:600 11.5px var(--f-mono);padding:5px 9px;border-radius:8px;border:0;background:rgba(143,184,255,.22);color:#cfe0ff;cursor:pointer}
+  .dk-files .dk-more:hover{background:rgba(143,184,255,.32)}
   a.open{display:inline-block;margin-top:8px;font-size:12px;color:#8fb8ff;font-weight:700;text-decoration:none}
   .acts.dk-acts{margin-top:10px}
   .brief{margin-top:8px;font-size:13px;color:var(--ink-2)}
@@ -3890,7 +3892,7 @@ function renderDeskTask() {
     <p>${esc(t.question?.text || '')}</p><textarea id="kAnswer" placeholder="Ваш ответ"></textarea><div class="acts"><button class="btn-go" data-k="answer">Ответить</button></div></div>` : '');
   setHTML($('kRes'), res && (t.status === 'review' || t.status === 'done') ? `<h4>Результат${t.versions > 1 ? ` · версия ${res.version}` : ''}</h4>
     ${res.summary ? `<p class="lead sm">${esc(res.summary)}</p>` : ''}${previewHTML(res)}
-    <div class="dk-files">${res.files.slice(0, 40).map(f => `<a href="${esc(f.url)}" target="_blank" rel="noopener">${esc(f.path)} <small>${sizeText(f.size)}</small></a>`).join('')}${res.files.length > 40 ? `<a>ещё ${res.files.length - 40}</a>` : ''}</div>` : '');
+    <div class="dk-files">${(desk.allFiles === t.id ? res.files : res.files.slice(0, 40)).map(f => `<a href="${esc(f.url)}" target="_blank" rel="noopener">${esc(f.path)} <small>${sizeText(f.size)}</small></a>`).join('')}${res.files.length > 40 && desk.allFiles !== t.id ? `<button type="button" class="dk-more" data-k="files">ещё ${res.files.length - 40}</button>` : ''}</div>` : '');
   let acts = '';
   if (t.status === 'done') acts = `<p class="note">${t.published ? 'Принято и добавлено в историю офиса — задача видна в «Задачах» и в работах агента.' : 'Принято без публикации в истории офиса.'}</p>`;
   if (t.status === 'review' || t.status === 'done') acts += `<h4>Правка</h4><textarea id="kRevise" placeholder="Что поменять? Агент поправит в той же сессии и принесёт новую версию"></textarea><div class="acts dk-acts"><button data-k="revise">Отправить правку</button></div>`;
@@ -3912,6 +3914,7 @@ async function deskAct(k) {
   if (k === 'submit') return deskSubmit();
   const t = deskTask(desk.openId);
   if (!t) return;
+  if (k === 'files') { desk.allFiles = t.id; return renderDeskTask(); }
   if (k === 'copy') { navigator.clipboard?.writeText(location.origin + location.pathname + '#desk-' + t.id).then(() => deskNote('Ссылка скопирована — откроется у вас после входа')).catch(() => {}); return; }
   let p = k, body = {};
   if (k === 'answer' || k === 'revise') {
