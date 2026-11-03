@@ -1096,6 +1096,38 @@ window.OFFICE_DATA = (() => {
        o('closer', 'передал программу для продажи', 'Программа трека'),
        o('you', 'собрал трек для учеников', 'Трек обучения', 'Посмотрите трек «Свой ИИ-офис»')],
       [['Академия «Свой ИИ-офис»', 'https://hq.aicex.club/?game'], ['Пак скиллов', 'https://skills.aicex.club']]),
+    hormozi: A('Алекс Хормози', 'Оффер и ценность', '#ffd479', 'doc',
+      ['Ждёт приглашения в разговор', 'Разбирает задачу своим методом', 'Спорит с советом'],
+      [o('funnels', 'отдал усиленный оффер', 'Оффер'),
+       o('you', 'разобрал ваш оффер', 'Разбор оффера', 'Посмотрите разбор оффера')]),
+    garyvee: A('Гэри Вайнерчук', 'Контент и внимание', '#ff7a59', 'media',
+      ['Ждёт приглашения в разговор', 'Разбирает задачу своим методом', 'Спорит с советом'],
+      [o('scripts', 'подсказал форматы для рилсов', 'Форматы контента'),
+       o('publish', 'отдал план нарезки', 'План нарезки')]),
+    godin: A('Сет Годин', 'Бренд и позиционирование', '#c38bff', 'doc',
+      ['Ждёт приглашения в разговор', 'Разбирает задачу своим методом', 'Спорит с советом'],
+      [o('landings', 'отдал позиционирование для первого экрана', 'Позиционирование'),
+       o('you', 'сформулировал позиционирование', 'Позиционирование', 'Утвердите позиционирование')]),
+    brunson: A('Рассел Брансон', 'Воронки и лестница ценности', '#3ddc97', 'flow',
+      ['Ждёт приглашения в разговор', 'Разбирает задачу своим методом', 'Спорит с советом'],
+      [o('funnels', 'нарисовал лестницу ценности', 'Лестница ценности'),
+       o('slides', 'отдал структуру вебинара', 'Структура вебинара')]),
+    walker: A('Джефф Уокер', 'Запуски', '#5ad1ff', 'calendar',
+      ['Ждёт приглашения в разговор', 'Разбирает задачу своим методом', 'Спорит с советом'],
+      [o('launch', 'отдал план запуска по дням', 'План запуска'),
+       o('mailings', 'передал письма предзапуска', 'Письма предзапуска')]),
+    kennedy: A('Дэн Кеннеди', 'Прямой отклик и тексты', '#ff5d8f', 'doc',
+      ['Ждёт приглашения в разговор', 'Разбирает задачу своим методом', 'Спорит с советом'],
+      [o('landings', 'переписал тексты лендинга', 'Тексты лендинга'),
+       o('mailings', 'переписал письмо дожима', 'Письмо дожима')]),
+    cardone: A('Грант Кардон', 'Продажи и масштаб 10X', '#ff9f43', 'chat',
+      ['Ждёт приглашения в разговор', 'Разбирает задачу своим методом', 'Спорит с советом'],
+      [o('closer', 'отдал скрипт дожима', 'Скрипт дожима'),
+       o('chats', 'передал ответы на возражения', 'Ответы на возражения')]),
+    branson: A('Ричард Брэнсон', 'Стратегия и план на 90 дней', '#4da3ff', 'chart',
+      ['Ждёт приглашения в разговор', 'Разбирает задачу своим методом', 'Спорит с советом'],
+      [o('you', 'принёс план на 90 дней', 'План на 90 дней', 'Утвердите план на 90 дней'),
+       o('product', 'отдал приоритеты продуктов', 'Приоритеты')]),
     metaads: A('Рекламные кампании', 'Запускает и ведёт кампании в Meta', '#ff7a59', 'ads',
       ['Следит за ценой лида', 'Запускает тест креативов', 'Масштабирует связку'],
       [o('adreports', 'передал расход и лиды', 'Расход и лиды'),
@@ -1123,6 +1155,7 @@ window.OFFICE_DATA = (() => {
         head:{ id:'nurken', name:'Нуркен', title:'Таргетолог — реклама в Meta', look:'m2' },
         agents:['metaads', 'adreports'] },
     ],
+    council:{ id:'council', name:'Переговорная легенд', short:'Легенды', agents:['hormozi', 'garyvee', 'godin', 'brunson', 'walker', 'kennedy', 'cardone', 'branson'], board:'legends' },
     agents: {},
   };
   return { config, catalog };
@@ -1215,6 +1248,10 @@ const COFFEE = { x:15.2, z0:-4.6, z1:-1.2 };
 const PRINTER = { x:-3.4, z:8.6 };
 const SHELF = { x0:3.0, x1:11.9 };
 
+// Переговорная легенд — своя комната, не отдел: ИИ-советники по методам легенд бизнеса (office.config.js → council)
+const COUNCIL_ROOM = { x0:8.4, x1:13.2, z0:-2.0, z1:1.6 };
+const COUNCIL = CFG.council?.agents?.length ? { ...CFG.council, i:4, accent:'#ffd479', short:CFG.council.short || 'Легенды',
+  head:{ id:'council-host', name:'Переговорная', title:'ИИ-советники по методам легенд бизнеса', owner:true }, agentIds:CFG.council.agents.filter(id => CATALOG[id]) } : null;
 const DEPTS = CFG.depts.slice(0, 4).map((d, i) => {
   const slot = POD_SLOTS[i];
   return {
@@ -2148,7 +2185,7 @@ function hookah(x, z) {
   mesh(new THREE.BoxGeometry(0.36, 0.006, 0.26), M.paper).position.set(Pr.x, 0.7, Pr.z - 0.33);
   navRect(Pr.x - 0.5, Pr.x + 0.5, Pr.z - 0.3, Pr.z + 0.3);
 }
-for (const [x, z, s] of [[-15.2, -9.2, 1.2], [-15.2, 8.7, 1.1], [2.55, -9.25, 1], [15.2, 8.7, 1.25], [15.2, -9.2, 1.1], [-4.6, 8.7, 0.9], [5.6, 8.7, 0.95], [13.6, -0.2, 0.9]]) plant(x, z, s);
+for (const [x, z, s] of [[-15.2, -9.2, 1.2], [-15.2, 8.7, 1.1], [2.55, -9.25, 1], [15.2, 8.7, 1.25], [15.2, -9.2, 1.1], [-4.6, 8.7, 0.9], [5.6, 8.7, 0.95]]) plant(x, z, s);
 
 /* ======================= ЛЮДИ И РОБОТЫ =======================
    Сочленённые фигуры: таз → торс → шея/голова, плечо → локоть, бедро → колено.
@@ -2575,7 +2612,7 @@ class Agent {
   orchBrain() {
     this.round = (this.round || 0) + 1;
     if (this.round % 5 === 0) { const m = this.planMeeting(); if (m) return m; }
-    const cand = bots.filter(b => b.kind === 'bot' && b.act?.type === 'work' && b.atHome() && b !== this.lastVisit);
+    const cand = bots.filter(b => b.kind === 'bot' && b.dept?.pod && b.act?.type === 'work' && b.atHome() && b !== this.lastVisit);
     if (!cand.length) return doFor(2, 'idle', 'rounds');
     const b = pick(cand); this.lastVisit = b;
     const s = behindSpot(b);
@@ -2716,6 +2753,47 @@ if (CFG.orchestrator !== false) {
   const o = spawnBot('orchestrator', data, DEPTS[0], home, { slotA:0 });
   o.kind = 'orch'; o.status = 'rounds'; o.speed = 1.3;
   navCircle(home.x, home.z, 0.01);
+}
+// Переговорная легенд: стеклянная комната справа, высокий стол на восемь советников, вход с запада
+if (COUNCIL) {
+  const R = COUNCIL_ROOM, cx = (R.x0 + R.x1) / 2, cz = (R.z0 + R.z1) / 2, H = 2.5, door = [cz - 0.65, cz + 0.65];
+  // стены: стекло в тонкой раме, дверной проём на западе
+  const glass = (x0, x1, z0, z1) => { const w = Math.max(x1 - x0, z1 - z0), g = plane(building, w, H, M.glass, [(x0 + x1) / 2, H / 2, (z0 + z1) / 2], [0, x1 - x0 > z1 - z0 ? 0 : Math.PI / 2, 0]); g.userData.keep = true; g.userData.noAO = true; };
+  const post = (x, z) => boxMM(building, x - 0.03, x + 0.03, 0, H, z - 0.03, z + 0.03, M.frame);
+  glass(R.x0, R.x1, R.z0, R.z0); glass(R.x0, R.x1, R.z1, R.z1); glass(R.x1, R.x1, R.z0, R.z1);
+  glass(R.x0, R.x0, R.z0, door[0]); glass(R.x0, R.x0, door[1], R.z1);
+  for (const [x, z] of [[R.x0, R.z0], [R.x1, R.z0], [R.x0, R.z1], [R.x1, R.z1], [R.x0, door[0]], [R.x0, door[1]]]) post(x, z);
+  boxMM(building, R.x0, R.x1, H - 0.05, H, R.z0 - 0.03, R.z0 + 0.03, M.frame); boxMM(building, R.x0, R.x1, H - 0.05, H, R.z1 - 0.03, R.z1 + 0.03, M.frame);
+  boxMM(building, R.x1 - 0.03, R.x1 + 0.03, H - 0.05, H, R.z0, R.z1, M.frame); boxMM(building, R.x0 - 0.03, R.x0 + 0.03, H - 0.05, H, R.z0, R.z1, M.frame);
+  // ковёр и стол
+  const rug = mesh(new THREE.PlaneGeometry(R.x1 - R.x0 - 0.4, R.z1 - R.z0 - 0.4), M.rug, building, false); rug.rotation.x = -Math.PI / 2; rug.position.set(cx, 0.006, cz);
+  const tw = 3.3, td = 0.95;
+  const top = mesh(new RoundedBoxGeometry(tw, 0.05, td, 2, 0.02), M.desk); top.position.set(cx, 1.02, cz);
+  for (const sx of [-1, 1]) { const leg = mesh(new THREE.CylinderGeometry(0.06, 0.09, 1.0, 16), M.chrome); leg.position.set(cx + sx * (tw / 2 - 0.4), 0.5, cz); }
+  const edge = mesh(new THREE.BoxGeometry(tw, 0.012, 0.02), accentOf(COUNCIL.accent), building, false); edge.position.set(cx, 1.0, cz + td / 2);
+  navRect(cx - tw / 2, cx + tw / 2, cz - td / 2, cz + td / 2);
+  navRect(R.x0 - 0.04, R.x1 + 0.04, R.z0 - 0.04, R.z0 + 0.04); navRect(R.x0 - 0.04, R.x1 + 0.04, R.z1 - 0.04, R.z1 + 0.04); navRect(R.x1 - 0.04, R.x1 + 0.04, R.z0, R.z1);
+  navRect(R.x0 - 0.04, R.x0 + 0.04, R.z0, door[0]); navRect(R.x0 - 0.04, R.x0 + 0.04, door[1], R.z1);
+  // по четыре с каждой стороны стола; каждый — со своим блокнотом и стопкой разборов
+  const ids = COUNCIL.agentIds.slice(0, 8), n = Math.ceil(ids.length / 2);
+  COUNCIL.seats = ids.map((id, k) => {
+    const side = k < n ? -1 : 1, j = k < n ? k : k - n, x = cx - tw / 2 + 0.5 + j * ((tw - 1.0) / Math.max(1, n - 1));
+    return { id, x, z:cz + side * (td / 2 + 0.42), yaw:side < 0 ? 0 : Math.PI };
+  });
+  for (const st of COUNCIL.seats) {
+    const nb = mesh(new THREE.BoxGeometry(0.2, 0.012, 0.28), M.books[(st.x * 10 | 0) % 5], building); nb.position.set(st.x, 1.052, cz + Math.sign(st.z - cz) * 0.25);
+    const data = { ...CATALOG[st.id] };
+    const a = spawnBot(st.id, data, COUNCIL, { x:st.x, z:st.z, yaw:st.yaw }, { slotA:0 });
+    a.rate = 1 / rand(90, 160); a.legend = true;
+    navCircle(st.x, st.z, 0.2);
+  }
+  // табличка комнаты: клик — досье «Совета легенд»
+  const el = document.createElement('div');
+  el.className = 'dchip'; el.style.setProperty('--c', COUNCIL.accent);
+  el.innerHTML = `<b>${esc(COUNCIL.name)}</b><small>${COUNCIL.agentIds.length} советников · на собеседование и исправление деталей</small>`;
+  el.addEventListener('click', e => { e.stopPropagation(); openDossier(COUNCIL.board || COUNCIL.agentIds[0]); });
+  const chip = new CSS2DObject(el); chip.position.set(cx, 2.7, cz); scene.add(chip);
+  COUNCIL.chip = chip;
 }
 // места у вашего стола для тех, кто ждёт решения
 {
@@ -2987,7 +3065,7 @@ for (const [id, list] of Object.entries(WORKS.skills || {})) if (CONTENT[id]) CO
 const deptById = id => DEPTS.find(d => d.id === id);
 const PEOPLE = Object.fromEntries(DEPTS.map(d => [d.head.id, { ...d.head, dept:d }]));
 const personOf = id => PEOPLE[id] || (id === 'ilia' ? { id, name:'Илья', title:'Основатель', dept:DEPTS[0] } : null);
-const agentMeta = id => ({ id, name:agents.get(id)?.name || CATALOG[id]?.name || id, color:CATALOG[id]?.color || '#9aa3b5', role:CATALOG[id]?.role || '', dept:DEPTS.find(d => d.agentIds.includes(id)) });
+const agentMeta = id => ({ id, name:agents.get(id)?.name || CATALOG[id]?.name || id, color:CATALOG[id]?.color || '#9aa3b5', role:CATALOG[id]?.role || '', dept:DEPTS.find(d => d.agentIds.includes(id)) || (COUNCIL && (COUNCIL.agentIds.includes(id) || id === COUNCIL.board) ? COUNCIL : undefined) });
 const faceHTML = (p, size = '') => p.photo
   ? `<span class="face ${size}" style="--c:${p.dept?.accent || '#1f5cff'};background-image:url('${encodeURI(p.photo)}')"></span>`
   : `<span class="face ${size}" style="--c:${p.dept?.accent || '#1f5cff'}">${esc(p.name[0])}</span>`;
@@ -3175,6 +3253,10 @@ function teamHTML() {
       rows.push(`<li><button data-agent="${esc(id)}"><i class="dot" style="--c:${esc(m.color)}"></i><span class="txt"><b>${esc(m.name)}</b><small>${esc(m.role)}</small></span><em>${n} ${word(n, 'задача', 'задачи', 'задач')}</em></button></li>`);
     }
     rows.push('</ul>');
+  }
+  if (COUNCIL && pdept === 'all') {
+    const ids = [COUNCIL.board, ...COUNCIL.agentIds].filter(id => CATALOG[id] && (!pquery || (agentMeta(id).name + ' ' + agentMeta(id).role).toLowerCase().includes(pquery.toLowerCase())));
+    if (ids.length) rows.push(`<h3 class="eyebrow" style="--c:${COUNCIL.accent}"><i class="dd"></i>${esc(COUNCIL.name)} · на собеседование</h3><ul class="agents">${ids.map(id => { const m = agentMeta(id); return `<li><button data-agent="${esc(id)}"><i class="dot" style="--c:${esc(m.color)}"></i><span class="txt"><b>${esc(m.name)}</b><small>${esc(m.role)}</small></span><em>${id === COUNCIL.board ? 'все 8' : 'советник'}</em></button></li>`; }).join('')}</ul>`);
   }
   return rows.join('');
 }

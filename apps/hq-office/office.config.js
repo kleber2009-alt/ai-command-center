@@ -33,6 +33,10 @@ window.OFFICE_CONFIG = {
               photo: 'people/nurken-face.jpg' },
       agents: ['metaads', 'adreports'] },
   ],
+  // Переговорная легенд — ИИ-советники по методам легенд бизнеса (скилл «Команда 8 легенд»):
+  // свой стол в переговорной, на собеседование и исправление деталей их зовёт владелец или диспетчер
+  council: { id: 'council', name: 'Переговорная легенд', short: 'Легенды',
+             agents: ['hormozi', 'garyvee', 'godin', 'brunson', 'walker', 'kennedy', 'cardone', 'branson'], board: 'legends' },
   agents: {
     product: { task: 'Дорабатывает Persona Studio 2.0' },
     market:  { task: 'Собирает игровые концепции' },

@@ -46,7 +46,7 @@ const ROOMS = [
     desks:{ x0:-17.2, x1:-12.8, zA:-10.6, zB:-8.7, cols:3, rows:2 } },
   { id:'lounge',    name:'Лаунж',              sub:'Отдых и разговоры',                icon:'sofa',      r:[-11,-14,-1,-7.5],  doors:[['s',-6]] },
   { id:'kitchen',   name:'Кухня',              sub:'Кофе и новости',                   icon:'coffee',    r:[-1,-14,8,-7.5],    doors:[['s',3.5]] },
-  { id:'meet',      name:'Переговорная',       sub:'Планёрки оркестратора',            icon:'users',     r:[8,-14,22,-7.5],    doors:[['s',14]] },
+  { id:'meet',      name:'Переговорная легенд', sub:'8 советников · собеседования и разборы',            icon:'users',     r:[8,-14,22,-7.5],    doors:[['s',14]] },
   { id:'marketing', name:'Маркетинг',          sub:'Креативы, воронки, лендинги',      icon:'megaphone', r:[-22,-5.5,-12,4],   doors:[['e',-.5]], dept:'marketing',
     desks:{ x0:-20.2, x1:-13.8, zA:-1.6, zB:2, cols:3, rows:3 }, head:[-17, -3.9] },
   { id:'analytics', name:'Аналитика',          sub:'Охваты, ROMI, аудитория',          icon:'chart',     r:[-22,5.5,-12,14],   doors:[['e',9]],
@@ -68,6 +68,8 @@ const OVERFLOW = [[-4.6,2.3],[4.4,2.3],[-2.6,2.3],[2.4,2.3],[-7.6,-2.6],[7.4,-2.
 // комната агента: как в концепте; новые агенты — в комнату своего отдела
 const ROOM_OF = {
   market:'ceo', briefing:'ceo', specs:'ceo', transcriber:'studio', socialstats:'analytics', billing:'tech', finance:'ceo', viral:'analytics', remake:'studio', launch:'marketing', academy:'ceo',
+  // Переговорная легенд: ИИ-советники сидят за столом переговорной, два места у торца — гостям на собеседование
+  hormozi:'meet', garyvee:'meet', godin:'meet', brunson:'meet', walker:'meet', kennedy:'meet', cardone:'meet', branson:'meet',
   product:'tech', skills:'tech', runner:'tech',
   creatives:'marketing', funnels:'marketing', publish:'marketing', landings:'marketing', leadmagnet:'marketing', threads:'marketing',
   scripts:'studio', montage:'studio', carousel:'studio', avatar:'studio', slides:'studio',
@@ -389,6 +391,7 @@ export async function createNightOffice(o) {
     b.position.set(x, y - .3, z); root.add(b);
   }
 
+  const MEET_TAKEN = new Set();
   // кто где сидит: комнаты по отделам, лишние — в операционный зал
   const people = [...o.agents.values()];
   const roomOf = a => {
@@ -408,6 +411,11 @@ export async function createNightOffice(o) {
       if (heads[0]) deskAt(heads[0].id, room.id, heads[0].data.screen || 'chart', heads[0].color, room.head[0], room.head[1], true);
       const rest = list.filter(a => a !== heads[0]);
       const S = room.desks;
+      if (room.id === 'meet') {   // те же кресла, что у стола переговорной ниже: по четыре с каждой стороны
+        rest.slice(0, 8).forEach((a, k) => { const s = k % 2 ? 1 : -1, i = k >> 1, x = 12.2 + i * 1.4, z = -11 + s * 1.25;
+          SEATS[a.id] = { x, z:z + s * .05, face:s < 0 ? 0 : Math.PI, room:'meet', sit:true }; MEET_TAKEN.add(`${i}:${s}`); });
+        rest.slice(8).forEach(toHub); continue;
+      }
       if (!S) { rest.forEach(toHub); continue; }
       const cap = S.cols * S.rows, here = rest.slice(0, cap);
       const rows = Math.ceil(here.length / S.cols);
@@ -472,8 +480,10 @@ export async function createNightOffice(o) {
   for (let i = 0; i < 5; i++) for (const s of [-1, 1]) {
     const x = 12.2 + i * 1.4, z = -11 + s * 1.25;
     chair(x, z, s < 0 ? Math.PI : 0);
-    SPOTS.meet.push({ x, z:z + s * .05, room:'meet', face:s < 0 ? 0 : Math.PI, sit:true });
+    if (!MEET_TAKEN.has(`${i}:${s}`)) SPOTS.meet.push({ x, z:z + s * .05, room:'meet', face:s < 0 ? 0 : Math.PI, sit:true });
   }
+  // планёрка, когда за столом легенды: остальные стоят у экрана
+  if (MEET_TAKEN.size) for (let k = 0; k < 6; k++) SPOTS.meet.push({ x:10.6 + k * 1.75, z:-13.25, room:'meet', face:0 });
   plant(21.2, -8.3); plant(8.8, -13.2);
   lampPoint(15, -11);
 
