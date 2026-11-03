@@ -1231,36 +1231,67 @@ const DEPT_ACCENT = ['#2f7bff', '#a46cd6', '#16c98a', '#ff7a3d'];
 const DEPT_SHORT = { ceo:'Стратегия', marketing:'Маркетинг', sales:'Продажи', traffic:'Реклама' };
 
 /* ======================= ПЛАНИРОВКА =======================
-   Один зал 32 × 19,5 м, как на референсе: LED-стена и отдел маркетинга слева,
-   ваш стол со стеллажом справа, продажи и реклама ближе к камере, лаунж у окон. */
+   Этаж 52 × 25 м: отделы — в стеклянных комнатах, как в «Ночном Сити» (та же раскладка агентов по комнатам).
+   Сзади у стены: маркетинг с LED-стеной, контент-студия, общий зал с доской задач и стеллажом, технический отдел
+   и ваш кабинет у окон. Ближе к камере: аналитика, продажи, реклама, переговорная легенд и лаунж у окна.
+   Между рядами — широкий коридор: оркестратор, кофе у окна, голограмма. */
 
-const FX0 = -16, FX1 = 16, FZ0 = -10, FZ1 = 9.5, WALL_H = 4.2;
-const POD_SLOTS = [
-  { c:[7.0, -6.6],  R:3.0, maxSpan:0.9, owner:true },
-  { c:[-8.5, -6.4], R:4.0, maxSpan:1.2 },
-  { c:[-8.0, 2.7],  R:3.0, maxSpan:0.9 },
-  { c:[1.7, 2.9],   R:2.5, maxSpan:0.7 },
-];
+const FX0 = -26, FX1 = 26, FZ0 = -13, FZ1 = 12, WALL_H = 4.2;
 const SPACING = 1.02;
-const PLAN_TABLE = { x:0.3, z:-5.5 };
-const LOUNGE = { x:10.6, z:4.9 };
-const COFFEE = { x:15.2, z0:-4.6, z1:-1.2 };
-const PRINTER = { x:-3.4, z:8.6 };
-const SHELF = { x0:3.0, x1:11.9 };
+const BACK_Z = -4.6, FRONT_Z = 3.2;   // стеклянные стены комнат заднего и переднего ряда со стороны коридора
+// Комнаты «Волны». dept — отдел, чей руководитель сидит в комнате (его стол в центре дуги); без dept — стол-остров.
+// Агент попадает в комнату по WAVE_ROOM_OF (как ROOM_OF в night.js), иначе — в комнату своего отдела.
+const WAVE_ROOMS = [
+  { id:'ceo',       dept:'ceo',       name:'Кабинет основателя', sub:'Ваш стол, стратегия и продукт',      r:[17.5, FZ0, FX1, BACK_Z],  c:[21.6, -9.9], R:3.0, maxSpan:0.95, sides:'sw' },
+  { id:'tech',                         name:'Технический отдел',  sub:'Продукты, скиллы, исполнитель',      r:[9, FZ0, 17.5, BACK_Z],    c:[13.25, -9.9], R:2.6, maxSpan:0.9, sides:'sw', accent:'#38c3d6' },
+  { id:'studio',                       name:'Контент-студия',     sub:'Сценарии, монтаж, аватар, карусели', r:[-17.5, FZ0, -9, BACK_Z],  c:[-13.25, -10.1], R:3.0, maxSpan:0.95, sides:'sew', accent:'#ff5fa2' },
+  { id:'marketing', dept:'marketing', name:'Маркетинг',          sub:'Креативы, воронки, лендинги',        r:[FX0, FZ0, -17.5, BACK_Z], c:[-21.75, -10.3], R:3.0, maxSpan:0.95, sides:'s' },
+  { id:'analytics',                    name:'Аналитика',          sub:'Охваты, ROMI, аудитория',            r:[FX0, FRONT_Z, -17.5, FZ1], c:[-21.75, 5.7], R:2.7, maxSpan:0.9, sides:'ne', accent:'#ffb020' },
+  { id:'sales',     dept:'sales',     name:'Отдел продаж',       sub:'Директ, комментарии, сделки',        r:[-17.5, FRONT_Z, -8.5, FZ1], c:[-13, 5.9], R:3.0, maxSpan:0.95, sides:'ne' },
+  { id:'ads',       dept:'traffic',   name:'Реклама Meta',       sub:'Кампании и отчёты',                  r:[3.5, FRONT_Z, 10.5, FZ1],  c:[7, 5.9], R:2.5, maxSpan:0.8, sides:'nwe' },
+];
+const WAVE_ROOM_OF = {
+  market:'ceo', briefing:'ceo', specs:'ceo', finance:'ceo', academy:'ceo',
+  product:'tech', skills:'tech', billing:'tech', runner:'tech',
+  transcriber:'studio', remake:'studio', scripts:'studio', montage:'studio', carousel:'studio', avatar:'studio', slides:'studio',
+  socialstats:'analytics', viral:'analytics', analytics:'analytics', audience:'analytics', adreports:'analytics',
+  creatives:'marketing', funnels:'marketing', publish:'marketing', landings:'marketing', leadmagnet:'marketing', threads:'marketing', launch:'marketing',
+  chats:'sales', comments:'sales', consult:'sales', mailings:'sales', closer:'sales',
+  metaads:'ads',
+};
+const PLAN_TABLE = { x:-4.6, z:-8.4 };
+const LOUNGE = { x:22.4, z:7.4 };
+const COFFEE = { x:FX1 - 0.8, z0:-3.4, z1:0 };
+const PRINTER = { x:-1.5, z:11.1 };
+const SHELF = { x0:-1.6, x1:6.4 };
 
 // Переговорная легенд — своя комната, не отдел: ИИ-советники по методам легенд бизнеса (office.config.js → council)
-const COUNCIL_ROOM = { x0:8.4, x1:13.2, z0:-2.0, z1:1.6 };
+const COUNCIL_ROOM = { x0:12, x1:18, z0:4.6, z1:9.4 };
 const COUNCIL = CFG.council?.agents?.length ? { ...CFG.council, i:4, accent:'#ffd479', short:CFG.council.short || 'Легенды',
   head:{ id:'council-host', name:'Переговорная', title:'ИИ-советники по методам легенд бизнеса', owner:true }, agentIds:CFG.council.agents.filter(id => CATALOG[id]) } : null;
-const DEPTS = CFG.depts.slice(0, 4).map((d, i) => {
-  const slot = POD_SLOTS[i];
-  return {
-    ...d, i, accent:d.accent || DEPT_ACCENT[i], short:d.short || DEPT_SHORT[d.id] || d.name,
-    head:{ ...(LOOKS[d.head.look] || LOOKS.m3), ...d.head, owner: d.head.owner ?? i === 0 },
-    agentIds:(d.agents || []).filter(id => CATALOG[id]).slice(0, 16),
-    pod:{ x:slot.c[0], z:slot.c[1], R:slot.R, maxSpan:slot.maxSpan },
-  };
-});
+const DEPTS = CFG.depts.slice(0, 4).map((d, i) => ({
+  ...d, i, accent:d.accent || DEPT_ACCENT[i], short:d.short || DEPT_SHORT[d.id] || d.name,
+  head:{ ...(LOOKS[d.head.look] || LOOKS.m3), ...d.head, owner: d.head.owner ?? i === 0 },
+  agentIds:(d.agents || []).filter(id => CATALOG[id]),
+}));
+// комната каждого агента; отдел без своей комнаты получает свободную комнату по порядку
+{
+  const homeOf = {}, free = WAVE_ROOMS.filter(z => !z.dept);
+  for (const d of DEPTS) homeOf[d.id] = WAVE_ROOMS.find(z => z.dept === d.id) || free.shift() || WAVE_ROOMS[0];
+  WAVE_ROOMS.forEach(z => { z.agentIds = []; });
+  const byId = Object.fromEntries(WAVE_ROOMS.map(z => [z.id, z]));
+  for (const d of DEPTS) {
+    d.room = homeOf[d.id];
+    for (const id of d.agentIds) (byId[WAVE_ROOM_OF[id]] || d.room).agentIds.push(id);
+  }
+  for (const z of WAVE_ROOMS) {
+    z.home = DEPTS.find(d => d.room === z) || null;
+    z.accent ||= z.home?.accent || '#9aa3b5';
+    z.agentIds = z.agentIds.slice(0, 16);
+  }
+  // владелец — первым: pods[0] — ваш стол
+  WAVE_ROOMS.sort((a, b) => (b.home?.head.owner ? 1 : 0) - (a.home?.head.owner ? 1 : 0));
+}
 
 /* ======================= РЕНДЕР ======================= */
 
@@ -1339,7 +1370,7 @@ const TEX = {
       g.fillStyle = `rgba(${v},${v},${v + 4},${0.22 + r() * 0.35})`;
       g.fillRect(r() * w, r() * h, 5 + r() * 24, 1 + r() * 1.4);
     }
-  }), 9, 5.5),
+  }), (FX1 - FX0) / 3.55, (FZ1 - FZ0) / 3.55),
   concrete: repeatTex(canvasTex(512, 512, (g, w, h) => {
     const r = mkRng(5);
     g.fillStyle = '#8c8f95'; g.fillRect(0, 0, w, h);
@@ -1471,6 +1502,7 @@ const M = {
   lampGlow: new THREE.MeshBasicMaterial({ color:new THREE.Color(5, 3.6, 2.2) }),
   felt: std({ color:'#3a3d44', roughness:1 }),
   rug: std({ map:TEX.rug, color:'#ffffff', roughness:1 }),
+  roomFloor: new THREE.MeshBasicMaterial({ color:'#ffffff', transparent:true, opacity:0.07, depthWrite:false }),
   stone: std({ color:'#e9e8e4', roughness:0.25, envMapIntensity:0.7 }),
   books: ['#e9e6df', '#1b1b1d', '#8b8f96', '#c9c3b5', '#3a3d42', '#f4f2ee', '#a55a3c'].map(c => std({ color:c, roughness:0.8 })),
 };
@@ -1661,24 +1693,24 @@ boxMM(building, FX0 - 0.2, FX0, WALL_H, WALL_H + 0.012, FZ0, FZ1, M.wallTop);
 boxMM(building, FX0, FX1, 0, 0.08, FZ0, FZ0 + 0.015, M.wallTop, false);
 boxMM(building, FX0, FX0 + 0.015, 0, 0.08, FZ0, FZ1, M.wallTop, false);
 // акустические панели на левой стене
-for (const z of [-6.5, -3.4, 2.2, 5.3]) {
+for (const z of [-11, -7.8, -1.6, 1.6, 6.2, 9.4]) {
   const p = mesh(new RoundedBoxGeometry(0.05, 1.6, 2.4, 2, 0.02), M.felt);
   p.position.set(FX0 + 0.03, 2.1, z);
 }
 // окна во всю правую стену
-const outside = new THREE.Mesh(new THREE.PlaneGeometry(70, 26), new THREE.MeshBasicMaterial({ map:outsideTex('day') }));
-outside.position.set(FX1 + 9, 7, 0); outside.rotation.y = -Math.PI / 2; outside.userData.noAO = true; scene.add(outside);
+const outside = new THREE.Mesh(new THREE.PlaneGeometry(92, 30), new THREE.MeshBasicMaterial({ map:outsideTex('day') }));
+outside.position.set(FX1 + 11, 7, (FZ0 + FZ1) / 2); outside.rotation.y = -Math.PI / 2; outside.userData.noAO = true; scene.add(outside);
 boxMM(building, FX1, FX1 + 0.2, 0, 0.45, FZ0, FZ1, M.wall);
 boxMM(building, FX1, FX1 + 0.2, 3.75, WALL_H, FZ0, FZ1, M.wall);
 boxMM(building, FX1, FX1 + 0.2, WALL_H, WALL_H + 0.012, FZ0, FZ1, M.wallTop);
 boxMM(building, FX1 - 0.12, FX1, 0.43, 0.47, FZ0, FZ1, M.stone);
-for (let z = FZ0; z <= FZ1 + 0.01; z += (FZ1 - FZ0) / 10) boxMM(building, FX1 + 0.02, FX1 + 0.12, 0.45, 3.75, z - 0.035, z + 0.035, M.frame);
+for (let z = FZ0; z <= FZ1 + 0.01; z += (FZ1 - FZ0) / 16) boxMM(building, FX1 + 0.02, FX1 + 0.12, 0.45, 3.75, z - 0.035, z + 0.035, M.frame);
 boxMM(building, FX1 + 0.02, FX1 + 0.12, 2.6, 2.66, FZ0, FZ1, M.frame);
 {
   const g = plane(building, FZ1 - FZ0, 3.3, M.glass, [FX1 + 0.07, 2.1, (FZ0 + FZ1) / 2], [0, -Math.PI / 2, 0]);
   g.castShadow = false;
   // лёгкие шторы у двух простенков
-  for (const zc of [-8.2, 7.6]) {
+  for (const zc of [-11.4, -4.2, 10.6]) {
     const sw = 2.2, sh = new THREE.Mesh(new THREE.PlaneGeometry(sw, WALL_H - 0.3, 120, 1), M.sheer);
     const p = sh.geometry.attributes.position;
     for (let i = 0; i < p.count; i++) { const u = p.getX(i); p.setZ(i, 0.05 * Math.sin(u * 22) + 0.02 * Math.sin(u * 8 + 1.3)); }
@@ -1688,7 +1720,7 @@ boxMM(building, FX1 + 0.02, FX1 + 0.12, 2.6, 2.66, FZ0, FZ1, M.frame);
   }
 }
 // «гребешки» света на задней стене
-for (const x of [-12.5, -9, -5.5, 0.3, 4.2, 7.4, 10.6]) plane(building, 1.4, 1.2, M.wash, [x, WALL_H - 0.6, FZ0 + 0.006]);
+for (const x of [-22, -16.5, -13.2, -9.9, -4.6, 0.4, 3.4, 9.6, 13.2, 16.6, 21.6]) plane(building, 1.4, 1.2, M.wash, [x, WALL_H - 0.6, FZ0 + 0.006]);
 
 /* ---------- LED-стена ---------- */
 
@@ -1750,7 +1782,7 @@ const SCREEN_FRAG = `
     if(uMode<.5) c=ocean(p,t); else if(uMode<1.5) c=aurora(p,t); else c=dunes(p,t);
     gl_FragColor=vec4(c*uGain,1.);
   }`;
-const LED = { x0:-14.6, x1:-2.8, y0:0.95, y1:3.7 };
+const LED = { x0:-25.1, x1:-18.4, y0:0.95, y1:3.7 };   // в комнате маркетинга
 const ledU = { uTime, uGain:{ value:2.2 }, uMode:{ value:0 }, uAspect:{ value:(LED.x1 - LED.x0) / (LED.y1 - LED.y0) },
   uDeep:{ value:new THREE.Color() }, uGlow:{ value:new THREE.Color() }, uSpark:{ value:new THREE.Color() } };
 boxMM(building, LED.x0 - 0.04, LED.x1 + 0.04, LED.y0 - 0.04, LED.y1 + 0.04, FZ0, FZ0 + 0.04, M.bezel, false);
@@ -1795,7 +1827,7 @@ function decorateCell(P, x0, x1, y, z0, z1, r) {
     boxMM(P, (x0 + x1) / 2 - 0.03, (x0 + x1) / 2 + 0.03, y, y + 0.055, zc - 0.03, zc + 0.03, M.books[0]);
   }
 }
-const ARCHIVE = { y:0.92, z:FZ0 + 0.27, x0:SHELF.x0 + 0.12, step:0.105, max:80 };
+const ARCHIVE = { y:0.92, z:FZ0 + 0.27, x0:SHELF.x0 + 0.12, step:0.105, max:Math.floor((SHELF.x1 - SHELF.x0 - 0.24) / 0.105) };
 const archiveMesh = new THREE.InstancedMesh(new RoundedBoxGeometry(0.07, 0.3, 0.27, 2, 0.008), std({ roughness:0.45 }), ARCHIVE.max);
 archiveMesh.count = 0; archiveMesh.castShadow = true; archiveMesh.receiveShadow = true;
 scene.add(archiveMesh);
@@ -1818,15 +1850,15 @@ scene.add(archiveMesh);
     decorateCell(P, x0 + 0.04, x1 - 0.04, y0 + 0.012, ZB + 0.05, SZ - 0.06, r);
   }
   // колонна с синим кубом
-  boxMM(P, 12.05, 13.15, 0, 2.55, ZB, ZB + 0.6, M.shelf);
+  boxMM(P, X1 + 0.15, X1 + 1.25, 0, 2.55, ZB, ZB + 0.6, M.shelf);
   const cube = mesh(new RoundedBoxGeometry(1.1, 1.05, 0.62, 4, 0.03), M.cube, P);
-  cube.position.set(12.6, 2.55 + 0.525, ZB + 0.31);
-  navRect(SHELF.x0, 13.15, ZB, ZB + 0.6);
+  cube.position.set(X1 + 0.7, 2.55 + 0.525, ZB + 0.31);
+  navRect(SHELF.x0, X1 + 1.25, ZB, ZB + 0.6);
 }
 
 /* ---------- доска задач на задней стене ---------- */
 
-const KB = { x:0.3, y:1.9, w:4.3, h:1.9 };
+const KB = { x:PLAN_TABLE.x, y:1.9, w:4.3, h:1.9 };
 const kanban = (() => {
   const c = document.createElement('canvas'); c.width = 1024; c.height = Math.round(1024 * KB.h / KB.w);
   const tex = new THREE.CanvasTexture(c); tex.colorSpace = THREE.SRGBColorSpace; tex.anisotropy = 8;
@@ -1951,11 +1983,12 @@ function mug(P, x, y, z, color = '#f1efe9') {
   const h = mesh(new THREE.TorusGeometry(0.025, 0.007, 8, 16), m, P); h.position.set(x + 0.045, y + 0.05, z); h.rotation.y = Math.PI / 2;
 }
 
-function buildPod(d) {
-  const C = { x:d.pod.x, z:d.pod.z }, R = d.pod.R, n = d.agentIds.length;
+// Пульт комнаты: дуга столов агентов, в центре — стол руководителя отдела, ваш стол или стол-остров.
+function buildPod(z, idx) {
+  const C = { x:z.c[0], z:z.c[1] }, R = z.R, n = z.agentIds.length, d = { accent:z.accent, i:idx };
   const rStand = R + 0.78;
-  const span = n > 1 ? Math.min(d.pod.maxSpan, ((n - 1) * SPACING / 2) / rStand) : 0;
-  const slots = d.agentIds.map((id, k) => {
+  const span = n > 1 ? Math.min(z.maxSpan, ((n - 1) * SPACING / 2) / rStand) : 0;
+  const slots = z.agentIds.map((id, k) => {
     const a = n > 1 ? -span + 2 * span * k / (n - 1) : 0;
     const p = polar(C, rStand, a);
     return { id, a, x:p.x, z:p.z, yaw:a + Math.PI };
@@ -1998,9 +2031,9 @@ function buildPod(d) {
     else { const hp = mesh(new THREE.TorusGeometry(0.07, 0.014, 8, 24, Math.PI), M.dark, g); hp.position.set(0.42, 0.012, 0.02); hp.rotation.x = -Math.PI / 2; }
     desks.set(s.id, { scr, stack, g });
   }
-  const pod = { d, C, R, slots, desks, span, a0, a1 };
+  const pod = { room:z, C, R, slots, desks, span, a0, a1 };
 
-  if (d.head.owner) {
+  if (z.home?.head.owner) {
     const desk = ribbonDesk(); desk.position.set(C.x, 0, C.z); building.add(desk);
     const ch = chair(); ch.position.set(C.x, 0, C.z - 0.85); building.add(ch);
     navRect(C.x - 1.65, C.x + 1.65, C.z - 0.46, C.z + 0.46); navCircle(C.x, C.z - 0.85, 0.36);
@@ -2016,7 +2049,7 @@ function buildPod(d) {
     crystalBall(C.x + 0.85, 0.775, C.z + 0.1);
     const box = new THREE.Mesh(new THREE.BoxGeometry(3.2, 1.2, 1.0), new THREE.MeshBasicMaterial({ visible:false }));
     box.position.set(C.x, 0.6, C.z); box.userData.pick = { type:'you' }; scene.add(box); pickables.push(box);
-  } else {
+  } else if (z.home) {
     // стол руководителя: дубовая столешница, металлические боковины
     const top = mesh(new RoundedBoxGeometry(1.9, 0.05, 0.85, 3, 0.02), M.oak); top.position.set(C.x, 0.74, C.z);
     for (const s of [-1, 1]) boxMM(building, C.x + s * 0.9 - 0.02, C.x + s * 0.9 + 0.02, 0, 0.715, C.z - 0.38, C.z + 0.38, M.dark);
@@ -2032,10 +2065,51 @@ function buildPod(d) {
     const stack = paperStack(building, C.x - 0.35, 0.765, C.z + 0.08, 0.2);
     pod.headDesk = { stack, chair:{ x:C.x, z:C.z - 0.8 }, front:{ x:C.x, z:C.z + 1.05 } };
     navRect(C.x - 0.95, C.x + 0.95, C.z - 0.43, C.z + 0.43); navCircle(C.x, C.z - 0.8, 0.34);
+  } else {
+    // комната без руководителя: высокий стол-остров для разборов, на нём — материалы комнаты
+    const top = mesh(new THREE.CylinderGeometry(0.72, 0.72, 0.045, 48), M.oak); top.position.set(C.x, 1.02, C.z);
+    mesh(new THREE.CylinderGeometry(0.06, 0.06, 1.0, 16), M.chrome).position.set(C.x, 0.5, C.z);
+    mesh(new THREE.CylinderGeometry(0.34, 0.36, 0.03, 32), M.chrome).position.set(C.x, 0.015, C.z);
+    const ring = mesh(new THREE.TorusGeometry(0.72, 0.012, 8, 64), accentOf(z.accent), building, false); ring.rotation.x = Math.PI / 2; ring.position.set(C.x, 1.0, C.z);
+    paperStack(building, C.x - 0.2, 1.045, C.z + 0.1, 0.3).set(2 + (idx % 3), z.accent);
+    mug(building, C.x + 0.3, 1.045, C.z - 0.15, z.accent);
+    navCircle(C.x, C.z, 0.72);
   }
   pods.push(pod);
-  d.pod = pod;
+  z.pod = pod;
+  if (z.home) z.home.pod = pod;
   return pod;
+}
+
+// Стеклянные стены комнаты (как у переговорной): sides — какие стороны строить, на стороне коридора — дверь по центру.
+function glassRoom(z) {
+  const [x0, z0, x1, z1] = z.r, H = 2.5, DW = 0.85;
+  const corridor = z1 <= 0 ? 's' : 'n';
+  const seg = (ax, az, bx, bz) => {
+    const w = Math.hypot(bx - ax, bz - az); if (w < 0.05) return;
+    const g = plane(building, w, H, M.glass, [(ax + bx) / 2, H / 2, (az + bz) / 2], [0, az === bz ? 0 : Math.PI / 2, 0]); g.userData.keep = true; g.userData.noAO = true;
+    navRect(Math.min(ax, bx) - 0.04, Math.max(ax, bx) + 0.04, Math.min(az, bz) - 0.04, Math.max(az, bz) + 0.04);
+    if (az === bz) { boxMM(building, ax, bx, H - 0.05, H, az - 0.03, az + 0.03, M.frame); boxMM(building, ax, bx, 0, 0.06, az - 0.03, az + 0.03, M.frame); }
+    else { boxMM(building, ax - 0.03, ax + 0.03, H - 0.05, H, Math.min(az, bz), Math.max(az, bz), M.frame); boxMM(building, ax - 0.03, ax + 0.03, 0, 0.06, Math.min(az, bz), Math.max(az, bz), M.frame); }
+  };
+  const post = (x, zz) => boxMM(building, x - 0.035, x + 0.035, 0, H, zz - 0.035, zz + 0.035, M.frame);
+  const wall = (side, ax, az, bx, bz) => {
+    if (!z.sides.includes(side)) return;
+    if (side === corridor) {
+      const mx = z.door ?? (ax + bx) / 2;
+      seg(ax, az, mx - DW, bz); seg(mx + DW, az, bx, bz); post(mx - DW, az); post(mx + DW, az);
+      // световая полоса над дверью — в цвете комнаты
+      const strip = mesh(new THREE.BoxGeometry(2 * DW, 0.05, 0.08), accentOf(z.accent), building, false); strip.position.set(mx, H - 0.025, az);
+    } else seg(ax, az, bx, bz);
+    post(ax, az); post(bx, bz);
+  };
+  wall('n', x0, z0, x1, z0); wall('s', x0, z1, x1, z1);
+  wall('w', x0, z0, x0, z1); wall('e', x1, z0, x1, z1);
+  // пол комнаты чуть теплее коридора, по краю — тонкая линия цвета комнаты
+  const fl = plane(building, x1 - x0 - 0.1, z1 - z0 - 0.1, M.roomFloor, [(x0 + x1) / 2, 0.003, (z0 + z1) / 2], [-Math.PI / 2, 0, 0]); fl.receiveShadow = true;
+  const ez = corridor === 's' ? z1 - 0.12 : z0 + 0.12;
+  plane(building, x1 - x0 - 0.3, 0.05, accentOf(z.accent), [(x0 + x1) / 2, 0.006, ez], [-Math.PI / 2, 0, 0]);
+  return { door:{ x:z.door ?? (x0 + x1) / 2, z:corridor === 's' ? z1 : z0 } };
 }
 
 /* ---------- личные вещи из исходного офиса ---------- */
@@ -2185,7 +2259,7 @@ function hookah(x, z) {
   mesh(new THREE.BoxGeometry(0.36, 0.006, 0.26), M.paper).position.set(Pr.x, 0.7, Pr.z - 0.33);
   navRect(Pr.x - 0.5, Pr.x + 0.5, Pr.z - 0.3, Pr.z + 0.3);
 }
-for (const [x, z, s] of [[-15.2, -9.2, 1.2], [-15.2, 8.7, 1.1], [2.55, -9.25, 1], [15.2, 8.7, 1.25], [15.2, -9.2, 1.1], [-4.6, 8.7, 0.9], [5.6, 8.7, 0.95]]) plant(x, z, s);
+for (const [x, z, s] of [[-25.2, -0.6, 1.2], [-8.3, -12.2, 1.1], [8.3, -12.2, 1.05], [-7.8, 11.2, 1.1], [2.6, 11.2, 0.95], [25.2, 11.2, 1.25], [25.2, 2.4, 1.1], [-25.2, 2.4, 1.0], [11, 11.2, 0.9], [-7.6, -3.6, 0.9], [7.6, 2.4, 0.85]]) plant(x, z, s);
 
 /* ======================= ЛЮДИ И РОБОТЫ =======================
    Сочленённые фигуры: таз → торс → шея/голова, плечо → локоть, бедро → колено.
@@ -2587,7 +2661,7 @@ class Agent {
     if (s === 'presenting' && this.carrying) return `У вашего стола: «${this.carrying.item}»`;
     if ((s === 'carrying' || s === 'presenting') && this.carrying) { const tg = this.act?.target; const to = tg === 'you' ? 'на ваш стол' : tg ? `→ ${tg.name}` : ''; return `Несёт «${this.carrying.item}» ${to}`; }
     if (s === 'meeting') return 'Планёрка у доски задач';
-    if (s === 'break') return this.x > 13 ? 'Кофе у окна' : 'Отдыхает в лаунже';
+    if (s === 'break') return this.z < LOUNGE.z - 3 ? 'Кофе у окна' : 'Отдыхает в лаунже';
     if (s === 'research') return this.carrying ? `Несёт «${this.carrying.item}» к себе` : 'Ищет материалы';
     if (s === 'walking') return 'Возвращается к столу';
     if (s === 'idle') return 'Ждёт входящий материал';
@@ -2612,11 +2686,11 @@ class Agent {
   orchBrain() {
     this.round = (this.round || 0) + 1;
     if (this.round % 5 === 0) { const m = this.planMeeting(); if (m) return m; }
-    const cand = bots.filter(b => b.kind === 'bot' && b.dept?.pod && b.act?.type === 'work' && b.atHome() && b !== this.lastVisit);
+    const cand = bots.filter(b => b.kind === 'bot' && b.pod && b.act?.type === 'work' && b.atHome() && b !== this.lastVisit);
     if (!cand.length) return doFor(2, 'idle', 'rounds');
     const b = pick(cand); this.lastVisit = b;
     const s = behindSpot(b);
-    this.task = `Обход: ${b.dept.short.toLowerCase()}`;
+    this.task = `Обход: ${b.pod.room.name.toLowerCase()}`;
     this.plan.push(walkTo(s.x, s.z, null, 'rounds'),
       call(() => b.attend(this, 2.8)),
       doFor(2.6, 'talk', 'rounds', { face:() => b }));
@@ -2644,7 +2718,7 @@ class Agent {
 }
 
 function behindSpot(b) {
-  const pod = b.dept.pod, C = pod.C, a = b.slotA;
+  const pod = b.pod || b.dept.pod, C = pod.C, a = b.slotA;
   return polar(C, pod.R + 0.78 + 0.82, a);
 }
 function freeQueueSpot() { return queueSpots.findIndex(q => !q.by); }
@@ -2715,21 +2789,34 @@ function spawnBot(id, data, d, home, extra = {}) {
   return a;
 }
 
-for (const d of DEPTS) {
-  const pod = buildPod(d);
+const deptOfAgent = id => DEPTS.find(d => d.agentIds.includes(id));
+WAVE_ROOMS.forEach((z, idx) => {
+  const pod = buildPod(z, idx);
+  z.walls = glassRoom(z);
   pod.slots.forEach(s => {
     const ov = (CFG.agents || {})[s.id] || {};
     const data = { ...CATALOG[s.id], ...(ov.name && { name:ov.name }), ...(ov.role && { role:ov.role }) };
-    const a = spawnBot(s.id, data, d, { x:s.x, z:s.z, yaw:s.yaw }, { slotA:s.a });
+    const a = spawnBot(s.id, data, deptOfAgent(s.id), { x:s.x, z:s.z, yaw:s.yaw }, { slotA:s.a, pod });
     a.desk = pod.desks.get(s.id);
     a.desk.stack.set(1 + (Math.random() * 4 | 0), pick(['#2a2c30', data.color]));
     navCircle(s.x, s.z, 0.22);
   });
+  // табличка комнаты над дверью (видна на общем плане); у комнаты отдела — сводка отдела
+  const el = document.createElement('div');
+  el.className = 'dchip'; el.style.setProperty('--c', z.accent);
+  el.addEventListener('click', e => { e.stopPropagation(); flyToRoom(z); });
+  el.title = z.sub;
+  const dr = z.walls.door, chip = new CSS2DObject(el); chip.position.set(dr.x, 2.75, dr.z); scene.add(chip);
+  z.chip = chip; z.chipEl = el;
+  if (z.home) { z.home.chip = chip; z.home.chipEl = el; }
+});
+for (const d of DEPTS) {
+  const pod = d.pod;
   if (!d.head.owner) {
     const rig = makeHuman(d.head);
     people.add(rig.root);
     const ch = pod.headDesk.chair;
-    const h = new Agent({ id:d.head.id, data:d.head, dept:d, kind:'head', rig, home:{ x:ch.x, z:ch.z + 0.05, yaw:0 }, speed:1.0 });
+    const h = new Agent({ id:d.head.id, data:d.head, dept:d, kind:'head', rig, home:{ x:ch.x, z:ch.z + 0.05, yaw:0 }, speed:1.0, pod });
     h.breakAt = rand(40, 140);
     const proxy = new THREE.Mesh(new THREE.CapsuleGeometry(0.32, 0.8, 4, 8), new THREE.MeshBasicMaterial({ visible:false }));
     proxy.position.y = 0.8; proxy.userData.pick = { type:'agent', id:d.head.id }; rig.root.add(proxy); pickables.push(proxy);
@@ -2739,12 +2826,6 @@ for (const d of DEPTS) {
   }
   if (d.id === 'sales' || d.i === 2) dogs(pod.C);
   if (d.id === 'traffic' || d.i === 3) hookah(pod.C.x + 1.55, pod.C.z - 0.35);
-  // табличка отдела над пультом (видна на общем плане)
-  const el = document.createElement('div');
-  el.className = 'dchip'; el.style.setProperty('--c', d.accent);
-  el.addEventListener('click', e => { e.stopPropagation(); flyToDept(d); });
-  const chip = new CSS2DObject(el); chip.position.set(pod.C.x, 0.3, pod.C.z + pod.R * 0.45); scene.add(chip);
-  d.chip = chip; d.chipEl = el;
 }
 // оркестратор — из референса: распределяет задачи, обходит отделы, собирает планёрки
 if (CFG.orchestrator !== false) {
@@ -2816,8 +2897,8 @@ const sun = new THREE.DirectionalLight('#fff3e3', 3);
 sun.castShadow = true;
 const SM = isMobile ? 2048 : 4096;
 sun.shadow.mapSize.set(SM, SM);
-Object.assign(sun.shadow.camera, { left:-24, right:24, top:20, bottom:-20, near:1, far:90 });
-sun.shadow.bias = -0.00025; sun.shadow.normalBias = 0.03;
+Object.assign(sun.shadow.camera, { left:-32, right:32, top:24, bottom:-24, near:1, far:110 });
+sun.shadow.bias = -0.0004; sun.shadow.normalBias = 0.06;
 scene.add(sun, sun.target);
 
 /* ======================= ТЕМЫ ======================= */
@@ -3371,9 +3452,11 @@ function refreshHUD() {
   const dl = pods[0].deskLabel, need = desk.on ? desk.tasks.filter(t => t.status === 'question' || t.status === 'review').length : 0;
   const dh = `<i></i>Ваш стол <span>управление</span>${need ? `<em>${need} ${word(need, 'ждёт', 'ждут', 'ждут')} вас</em>` : ''}`;
   if (dl._h !== dh) { dl._h = dh; dl.innerHTML = dh; }
-  for (const d of DEPTS) {
-    const n = TASKS.filter(t => t.dept === d.id).length;
-    d.chipEl.innerHTML = `<b>${esc(d.name)}</b><small>${esc(d.head.owner ? 'вы' : d.head.name)} · ${d.agentIds.length} ${word(d.agentIds.length, 'агент', 'агента', 'агентов')} · ${n} ${word(n, 'задача', 'задачи', 'задач')} в истории</small>`;
+  // таблички комнат «Волны»: в комнате отдела — руководитель, агенты комнаты и задачи отдела в истории
+  for (const z of WAVE_ROOMS) {
+    const d = z.home, k = z.agentIds.length, n = d ? TASKS.filter(t => t.dept === d.id).length : 0;
+    const h = `<b>${esc(z.name)}</b><small>${d ? `${esc(d.head.owner ? 'вы' : d.head.name)} · ` : ''}${k} ${word(k, 'агент', 'агента', 'агентов')}${d ? ` · ${n} ${word(n, 'задача', 'задачи', 'задач')}` : ''}</small>`;
+    if (z.chipEl._h !== h) { z.chipEl._h = h; z.chipEl.innerHTML = h; }
   }
 }
 
@@ -4727,17 +4810,25 @@ function flyTo(pos, target, dur = 1.6) {
 }
 const portrait = () => innerWidth < innerHeight;
 function overviewView() {
-  return portrait() ? { pos:V3(29, 31, -0.3), target:V3(0.5, 0, -0.3) } : { pos:V3(0.3, 21, 23.5), target:V3(0, 0, -1.6) };
+  return portrait() ? { pos:V3(39, 42, -0.5), target:V3(0.5, 0, -0.5) } : { pos:V3(0.3, 35, 38), target:V3(0, 0, -1.4) };
 }
 function setControls(kind) {
   if (kind === 'desk') Object.assign(controls, { minDistance:0.6, maxDistance:8, minPolarAngle:0.9, maxPolarAngle:1.75, minAzimuthAngle:Math.PI - 1.3, maxAzimuthAngle:Math.PI + 1.3, enablePan:false });
-  else Object.assign(controls, { minDistance:2.5, maxDistance:portrait() ? 70 : 52, minPolarAngle:0, maxPolarAngle:1.3, minAzimuthAngle:-Infinity, maxAzimuthAngle:Infinity, enablePan:true });
+  else Object.assign(controls, { minDistance:2.5, maxDistance:portrait() ? 100 : 78, minPolarAngle:0, maxPolarAngle:1.3, minAzimuthAngle:-Infinity, maxAzimuthAngle:Infinity, enablePan:true });
 }
 function flyToDept(d) {
-  const C = d.pod.C;
+  if (night) { stopTour(); followId = null; mode = 'dept'; setControls('free'); setDock(null); return NIGHT?.room(NIGHT.roomOfDept(d.id)); }
+  flyToRoom(d.room);
+}
+// комната «Волны»: камера спереди-сверху, видно дугу агентов и стол в центре
+function flyToRoom(z) {
   stopTour(); followId = null; mode = 'dept'; setControls('free'); setDock(null);
-  if (night) return NIGHT?.room(NIGHT.roomOfDept(d.id));
-  flyTo(V3(C.x + 0.5, 6.2, C.z + d.pod.R + 6.5), V3(C.x, 0.8, C.z + d.pod.R * 0.45));
+  const { pos, tgt } = roomView(z);
+  flyTo(pos, tgt);
+}
+function roomView(z) {
+  const C = z.pod.C, R = z.pod.R;
+  return { pos:V3(C.x + 0.5, 7.4, C.z + R + 7.2), tgt:V3(C.x, 0.8, C.z + R * 0.5) };
 }
 function focusAgent(a) {
   const tgt = V3(a.x, a.kind === 'head' ? 0.9 : 1.0, a.z);
@@ -4768,7 +4859,7 @@ function setDockOn(k, on) { $('dock').querySelector(`[data-cmd="${k}"]`).classLi
 function cmd(k) {
   if (!['tour', 'labels', 'team', 'assistant', 'twin', 'holo'].includes(k)) stopTour();
   if (k === 'overview') { mode = 'overview'; followId = null; setControls('free'); setDock('overview'); if (night) NIGHT?.overview(); else { const v = overviewView(); flyTo(v.pos, v.target, 1.6); } }
-  if (k === 'plan') { mode = 'plan'; followId = null; setControls('free'); setDock('plan'); const zc = (FZ0 + FZ1) / 2; if (night) NIGHT?.plan(); else portrait() ? flyTo(V3(1.2, 62, zc), V3(0, 0, zc), 1.6) : flyTo(V3(0, 34, zc + 0.6), V3(0, 0, zc), 1.6); }
+  if (k === 'plan') { mode = 'plan'; followId = null; setControls('free'); setDock('plan'); const zc = (FZ0 + FZ1) / 2; if (night) NIGHT?.plan(); else portrait() ? flyTo(V3(1.2, 96, zc), V3(0, 0, zc), 1.6) : flyTo(V3(0, 50, zc + 0.6), V3(0, 0, zc), 1.6); }
   if (k === 'desk' || k === 'deskview') {
     mode = 'desk'; followId = null; setControls('desk'); setDock('desk');
     const C = pods[0].C;
@@ -4852,6 +4943,11 @@ const deptInfo = d => {
   const list = TASKS.filter(t => t.dept === d.id), last = list[0];
   return `${d.head.owner ? 'Ваш отдел' : d.head.name} и ${d.agentIds.length} ${word(d.agentIds.length, 'агент', 'агента', 'агентов')}. В истории ${list.length} ${word(list.length, 'задача', 'задачи', 'задач')}${last ? `, последняя — «${last.title}» (${fmtDate(last.date, true)})` : ''}.`;
 };
+// комната «Волны»: кто в ней сидит
+const roomInfo = z => {
+  const names = z.agentIds.map(id => agents.get(id)?.name || CATALOG[id]?.name || id);
+  return `${z.sub}. В комнате ${names.length} ${word(names.length, 'агент', 'агента', 'агентов')}: ${names.join(', ')}.`;
+};
 function tourStops() {
   if (night) return [
     { title:`${BRAND}: всё здание`, text:() => `${NIGHT.rooms} ${word(NIGHT.rooms, 'комната', 'комнаты', 'комнат')}, ${DEPTS.length} отдела и ${bots.filter(b => b.kind === 'bot').length} агентов. Справа — ${TASKS.length} реальных задач с доказательствами.`, room:'all' },
@@ -4860,15 +4956,14 @@ function tourStops() {
     { title:'Операционный зал', text:() => `Рабочий стол: оркестратор принимает задачи и относит агентам. Последняя задача в истории: «${TASKS[0].title}».`, room:'hub' },
     { title:'Лаунж и кухня', text:() => `На перерыве: ${bots.filter(b => b.status === 'break').length}. Здесь отдыхают между задачами.`, room:'lounge' },
   ];
-  const D = DEPTS, P = PLAN_TABLE;
-  const stop = (d, pos, tgt) => ({ title:d.name, text:() => deptInfo(d), pos, tgt });
-  const mk = D[1], sl = D[2], tr = D[3], ceo = D[0];
+  const P = PLAN_TABLE, ceo = DEPTS[0];
+  const roomStop = z => { const v = roomView(z); return { title:z.name, text:() => z.home ? deptInfo(z.home) : roomInfo(z), pos:v.pos, tgt:v.tgt }; };
+  const R = id => WAVE_ROOMS.find(z => z.id === id);
   return [
-    { title:`${BRAND}: весь офис`, text:() => `${DEPTS.length} отдела и ${bots.filter(b => b.kind === 'bot').length} агентов. Справа — ${TASKS.length} реальных задач с доказательствами: PR на GitHub, артефакты Claude, сайты и ролики.`, pos:overviewView().pos, tgt:overviewView().target },
-    mk && stop(mk, V3(mk.pod.C.x + 1, 4.4, mk.pod.C.z + 9.8), V3(mk.pod.C.x, 1.0, mk.pod.C.z + 2.5)),
+    { title:`${BRAND}: весь офис`, text:() => `${WAVE_ROOMS.length} ${word(WAVE_ROOMS.length, 'комната', 'комнаты', 'комнат')} отделов, ${DEPTS.length} отдела и ${bots.filter(b => b.kind === 'bot').length} агентов. Справа — ${TASKS.length} реальных задач с доказательствами: PR на GitHub, артефакты Claude, сайты и ролики.`, pos:overviewView().pos, tgt:overviewView().target },
+    ...['marketing', 'studio'].map(R).filter(Boolean).map(roomStop),
     { title:'Доска истории задач', text:() => `Последние реальные задачи по отделам. Всего в истории ${TASKS.length}, с ${fmtDate(TASKS.at(-1).date)} по ${fmtDate(TASKS[0].date)}.`, pos:V3(P.x + 0.3, 2.5, P.z + 4.6), tgt:V3(P.x, 1.6, FZ0) },
-    sl && stop(sl, V3(sl.pod.C.x + 0.5, 3.6, sl.pod.C.z + 8.6), V3(sl.pod.C.x, 0.9, sl.pod.C.z + 1.8)),
-    tr && stop(tr, V3(tr.pod.C.x + 2.2, 3.2, tr.pod.C.z + 7.4), V3(tr.pod.C.x, 0.9, tr.pod.C.z + 1.4)),
+    ...['tech', 'analytics', 'sales', 'ads'].map(R).filter(Boolean).map(roomStop),
     { title:'Ваш стол', text:() => `Сюда агенты приносят готовые работы. Последняя задача в истории: «${TASKS[0].title}».`, pos:V3(ceo.pod.C.x - 1.5, 3.4, ceo.pod.C.z + 6.4), tgt:V3(ceo.pod.C.x, 0.9, ceo.pod.C.z + 0.4) },
     { title:'Лаунж и кофе у окна', text:() => `На перерыве: ${bots.filter(b => b.status === 'break').length}. На стеллаже копятся папки готовых работ.`, pos:V3(LOUNGE.x - 3.5, 3.4, LOUNGE.z + 6), tgt:V3(LOUNGE.x + 1.2, 0.7, LOUNGE.z - 1.5) },
   ].filter(Boolean);
@@ -5044,7 +5139,7 @@ renderer.setAnimationLoop(() => {
     const d = camera.position.distanceTo(tmpV.set(a.x, 1.2, a.z)), s = a.sceneStatus();
     a.label.visible = labelsOn && (d < 15 || selectedId === a.id || a.live || s === 'presenting' || (s === 'carrying' && d < 30));
   }
-  for (const d of DEPTS) d.chip.visible = labelsOn && mode === 'plan';
+  for (const z of WAVE_ROOMS) z.chip.visible = labelsOn && (mode === 'plan' || (mode === 'overview' && !portrait()));
   if (HB.holo) { holoTick(t); HB.holo.update(dt, camera); }
   composer.render();
   labelRenderer.render(scene, camera);
@@ -5091,7 +5186,7 @@ function declutter() {
   const proj = obj => { obj.getWorldPosition(declV); declV.project(camera); return [declV.x * W2 + W2, -declV.y * H2 + H2]; };
   const dl = pods[0].deskLabelObj;
   if (dl?.visible) { const [x, y] = proj(dl); placed.push({ x, y, w:pods[0].deskLabel.offsetWidth || 170, h:26 }); }
-  for (const d of DEPTS) if (d.chip.visible) { const [x, y] = proj(d.chip); placed.push({ x, y, w:d.chipEl.offsetWidth || 200, h:d.chipEl.offsetHeight || 40 }); }
+  for (const z of WAVE_ROOMS) if (z.chip.visible) { const [x, y] = proj(z.chip); placed.push({ x, y, w:z.chipEl.offsetWidth || 200, h:z.chipEl.offsetHeight || 40 }); }
   for (const a of agents.values()) if (a.label?.visible) {
     if (!a.lw) { a.lw = a.labelEl.offsetWidth; a.lh = a.labelEl.offsetHeight; }
     const [x, y] = proj(a.label); a._sx = x; a._sy = y; items.push(a);
