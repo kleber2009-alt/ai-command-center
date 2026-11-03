@@ -195,10 +195,12 @@ const deskTools = () => [
   { name:'desk_tasks', eager_input_streaming:true, description:'Список последних задач рабочего стола: статус, исполнитель, вопросы исполнителя, результаты.', input_schema:{ type:'object', properties:{} } },
   { name:'desk_task', eager_input_streaming:true, description:'Подробно одна задача: шаги исполнителя, вопрос, результат и файлы.', input_schema:{ type:'object', required:['id'], properties:{ id:{ type:'string' } } } },
   { name:'desk_action', eager_input_streaming:true,
-    description:'Действие с задачей от имени Ильи — только когда он сам так сказал: answer — ответить на вопрос исполнителя; revise — отправить правку к готовому результату; approve — принять результат (попадёт в историю офиса); retry — повторить после ошибки; cancel — отменить.',
-    input_schema:{ type:'object', required:['id', 'action'], properties:{ id:{ type:'string' }, action:{ type:'string', enum:['answer', 'revise', 'approve', 'retry', 'cancel'] }, text:{ type:'string', description:'Текст ответа или правки.' } } } },
+    description:'Действие с задачей от имени Ильи — только когда он сам так сказал: answer — ответить на вопрос исполнителя (и на запрос разрешения действий во внешних системах: «Выполнить» или «Не выполнять» — только словами самого Ильи); revise — отправить правку к готовому результату (правка станет уроком агента); approve — принять результат (попадёт в историю офиса), с оценкой rating up/down и комментарием в text, если Илья его дал; retry — повторить после ошибки; cancel — отменить.',
+    input_schema:{ type:'object', required:['id', 'action'], properties:{ id:{ type:'string' }, action:{ type:'string', enum:['answer', 'revise', 'approve', 'retry', 'cancel'] }, text:{ type:'string', description:'Текст ответа, правки или комментарий к оценке.' },
+      rating:{ type:'string', enum:['', 'up', 'down'], description:'Оценка при approve: up — понравилось, down — есть замечания (тогда в text — что учесть).' } } } },
 ];
-const taskLine = v => `[${v.id}] «${v.route?.title || v.text.slice(0, 70)}» — ${v.agent?.name || 'диспетчер'}, ${v.statusText}${v.question ? `; вопрос: ${v.question.text}${v.question.options ? ` (варианты: ${v.question.options.map(o => o.label).join(', ')})` : ''}` : ''}${v.style ? `; стиль: ${v.style}` : ''}${v.result ? `; результат: ${v.result.summary || v.result.main} — ${SITE}${v.result.mainUrl}` : ''}${v.error ? `; ошибка: ${v.error}` : ''}`;
+const money = v => v.usage ? `; затраты: ${Math.max(1, Math.round(v.usage.ms / 60000))} мин${v.usage.cost ? `, $${v.usage.cost.toFixed(2)}` : ''}` : '';
+const taskLine = v => `[${v.id}] «${v.route?.title || v.text.slice(0, 70)}» — ${v.pipeline ? `конвейер «${v.pipeline.label}», этап ${v.pipeline.idx + 1}/${v.pipeline.stages.length}, ` : ''}${v.agent?.name || 'диспетчер'}, ${v.statusText}${money(v)}${v.qa?.verdict ? `; контролёр: ${v.qa.verdict === 'ok' ? 'проверено' : v.qa.verdict === 'fix' ? 'вернул на доработку' : 'не проверил'}` : ''}${v.question ? `; вопрос: ${v.question.text}${v.question.options ? ` (варианты: ${v.question.options.map(o => o.label).join(', ')})` : ''}` : ''}${v.style ? `; стиль: ${v.style}` : ''}${v.result ? `; результат: ${v.result.summary || v.result.main} — ${SITE}${v.result.mainUrl}` : ''}${v.error ? `; ошибка: ${v.error}` : ''}`;
 function runDeskTool(u, send, take) {
   const inp = u.input || {}, bad = () => ({ type:'tool_result', tool_use_id:u.id, is_error:true, content:JSON.stringify({ INVALID_JSON:JSON.stringify(inp) }) });
   if (u.name === 'run_claude_code') {
@@ -219,7 +221,7 @@ function runDeskTool(u, send, take) {
   }
   if (u.name === 'desk_action') {
     if (typeof inp.id !== 'string' || !['answer', 'revise', 'approve', 'retry', 'cancel'].includes(inp.action)) return bad();
-    const r = desk.act(inp.id.replace(/^\[|\]$/g, ''), inp.action, inp.text);
+    const r = desk.act(inp.id.replace(/^\[|\]$/g, ''), inp.action, inp.text, inp.rating);
     if (r.error) return { type:'tool_result', tool_use_id:u.id, is_error:true, content:r.error };
     send({ t:'task', id:r.task.id });
     return { type:'tool_result', tool_use_id:u.id, content:'Готово: ' + taskLine(r.task) };

@@ -94,6 +94,8 @@ jobs:
           # the twin's knowledge base: registry, docs of every product, landing texts, skills (twin-kb/index.json)
           node kb.mjs build ../../..
           node -e 'import("./office.mjs").then(m => { const o = m.loadOffice(".."); if (!o.tasks) throw new Error("no tasks"); console.log(o.tasks + " tasks, " + o.text.length + " chars of office knowledge"); })'
+          # the working desk with a fake runner: pipelines, the QA, approvals, lessons, usage
+          HQ_ROUTINES=off node desk.check.mjs
 
       - name: Upload release
         run: |
@@ -175,6 +177,18 @@ jobs:
             [ -n "$SUBS" ] && printf 'SUBSCRIPTIONS_JSON=%s\n' "$(printf '%s' "$SUBS" | jq -c . 2>/dev/null || echo "::warning::HQ_SUBSCRIPTIONS_JSON is not valid JSON" >&2)"
             true
           } | $SSH "umask 077 && cat > /opt/hq-office/runner-keys.env"
+
+      - name: Systems of the runner (MCP)
+        # agents read ChatPlace / Windsor (Meta Ads) / HeyGen right away; actions that change data run only after
+        # the owner's «Выполнить» on the desk. The secret is a Claude Code mcp-config, plus optional "policy"
+        # {"<server>": {"read": [...], "write": [...]}} — see apps/hq-office/README.md («Системы исполнителя»)
+        env:
+          MCP_JSON: ${{ secrets.HQ_RUNNER_MCP_JSON }}
+        run: |
+          if [ -z "$MCP_JSON" ]; then echo "no HQ_RUNNER_MCP_JSON — agents work without outside systems"; $SSH "rm -f /opt/hq-office/runner-mcp.json"; exit 0; fi
+          printf '%s' "$MCP_JSON" | jq -e '.mcpServers | type == "object"' >/dev/null || { echo "::warning::HQ_RUNNER_MCP_JSON is not a valid mcp-config (needs mcpServers) — skipped"; exit 0; }
+          echo "runner systems: $(printf '%s' "$MCP_JSON" | jq -r '.mcpServers | keys | join(", ")')"
+          printf '%s' "$MCP_JSON" | jq -c . | $SSH "umask 077 && cat > /opt/hq-office/runner-mcp.json"
 
       - name: Activate
         run: $SSH bash -s -- "$DOMAIN" "$REL" < apps/hq-office/deploy/server.sh

@@ -12,6 +12,14 @@
   HQ_DESK_API           https://hq2.aicex.club/api/assistant/desk
   CLAUDE_BIN            ~/.local/bin/claude      CLAUDE_MODEL  claude-opus-5-5     CLAUDE_EFFORT  high
   HQ_RUNNER_JOBS        ~/hq-runner/jobs         HQ_RUNNER_LIMIT_MIN  60
+  HQ_MCP_CONFIG         ~/hq-runner/mcp.json — подключения к внешним системам (ChatPlace, Windsor, HeyGen…):
+                        {"mcpServers": {...как у Claude Code...}, "policy": {"<сервер>": {"read": [...], "write": [...]}}}
+
+Подключения (MCP): инструменты на чтение разрешены в каждой задаче; инструменты, которые меняют данные
+(рассылка, бюджет, публикация), — только в задаче kind=execute, после «Выполнить» владельца на рабочем столе.
+Чтение/запись — по policy, иначе по readOnlyHint инструмента, иначе по имени (get/list/search… — чтение).
+
+Каждый запуск Claude сдаёт в офис usage: стоимость, время, число ходов и токены (событие result).
 """
 import fcntl
 import json
@@ -37,7 +45,11 @@ JOBS = Path(os.environ.get("HQ_RUNNER_JOBS") or HOME / "hq-runner/jobs")
 LIMIT = int(os.environ.get("HQ_RUNNER_LIMIT_MIN", "60")) * 60
 SKILLS = HOME / ".claude/skills"
 ALLOWED_TOOLS = ["Bash", "Read", "Write", "Edit", "Glob", "Grep", "Skill", "TodoWrite", "WebFetch", "WebSearch"]
-VERSION = "6"
+QA_TOOLS = ["Bash", "Read", "Glob", "Grep", "WebFetch"]
+VERSION = "7"
+MCP_FILE = Path(os.environ.get("HQ_MCP_CONFIG") or HOME / "hq-runner/mcp.json")
+MCP_CLAUDE = HOME / "hq-runner/mcp.claude.json"
+READ_RE = re.compile(r"(^|[_-])(get|list|search|query|read|fetch|status|analytics|report|reports|stats|estimate|predict|balance|describe|show|find|lookup|explore|view|count|check|whoami|me|options|fields|connectors|dashboard)([_-]|$)", re.I)
 # расшифровка референсов (агент «Транскрибатор»): скрипт скилла transcribe-reference, выкладывается рядом с runner.py
 BALANCES = SKILLS / "service-balances/scripts/balances.py"
 TRANSCRIBER = next((p for p in (Path(__file__).with_name("transcribe_ref.py"), SKILLS / "transcribe-reference/scripts/transcribe_ref.py") if p.exists()), None)
@@ -46,6 +58,18 @@ FILE_LIMIT = 300_000_000
 
 def log(*a):
     print(time.strftime("%Y-%m-%d %H:%M:%S"), *a, flush=True)
+
+
+def usage_of(ev, started):
+    """Стоимость и время одного запуска Claude Code — из события result (stream-json)."""
+    u = (ev or {}).get("usage") or {}
+    return {
+        "cost": round(float((ev or {}).get("total_cost_usd") or 0), 4),
+        "ms": int((ev or {}).get("duration_ms") or (time.time() - started) * 1000),
+        "turns": int((ev or {}).get("num_turns") or 0),
+        "tin": int(u.get("input_tokens") or 0) + int(u.get("cache_read_input_tokens") or 0) + int(u.get("cache_creation_input_tokens") or 0),
+        "tout": int(u.get("output_tokens") or 0),
+    }
 
 
 def redact(text):
@@ -141,6 +165,105 @@ def oom_kills():
 OOM_HINT = "Не хватило памяти сервера на рендер — процесс убит. Поставьте по одному видео на задачу или нажмите «Повторить»."
 
 
+# ---------- подключения к внешним системам (MCP): чтение сразу, действия — после разрешения владельца ----------
+
+def _rpc(url, headers, method, params=None, sid="", rid=1):
+    body = {"jsonrpc": "2.0", "method": method, "params": params or {}}
+    if rid is not None:
+        body["id"] = rid
+    h = {"content-type": "application/json", "accept": "application/json, text/event-stream", **headers}
+    if sid:
+        h["mcp-session-id"] = sid
+    req = urllib.request.Request(url, data=json.dumps(body).encode(), headers=h, method="POST")
+    with urllib.request.urlopen(req, timeout=30) as r:
+        sid = r.headers.get("mcp-session-id") or sid
+        ctype, raw = r.headers.get("content-type", ""), r.read().decode("utf-8", "replace")
+    if rid is None:
+        return None, sid
+    msgs = []
+    if "text/event-stream" in ctype:
+        for line in raw.splitlines():
+            if line.startswith("data:"):
+                try:
+                    msgs.append(json.loads(line[5:].strip()))
+                except ValueError:
+                    pass
+    elif raw.strip():
+        j = json.loads(raw)
+        msgs = j if isinstance(j, list) else [j]
+    for m in msgs:
+        if isinstance(m, dict) and m.get("id") == rid:
+            if m.get("error"):
+                raise RuntimeError(str((m["error"] or {}).get("message") or m["error"])[:200])
+            return m.get("result") or {}, sid
+    raise RuntimeError("сервер не ответил на " + method)
+
+
+def _expand(v):
+    if isinstance(v, str):
+        return os.path.expandvars(v)
+    if isinstance(v, dict):
+        return {k: _expand(x) for k, x in v.items()}
+    if isinstance(v, list):
+        return [_expand(x) for x in v]
+    return v
+
+
+def mcp_tools(cfg):
+    """Список инструментов HTTP-сервера MCP: имя и readOnlyHint."""
+    url, headers = cfg.get("url", ""), {k: str(v) for k, v in (cfg.get("headers") or {}).items()}
+    _, sid = _rpc(url, headers, "initialize", {"protocolVersion": "2025-06-18", "capabilities": {},
+                                               "clientInfo": {"name": "hq-runner", "version": VERSION}})
+    try:
+        _rpc(url, headers, "notifications/initialized", sid=sid, rid=None)
+    except Exception:  # noqa: BLE001 — уведомление без ответа, сервер может закрыть поток
+        pass
+    tools, cursor = [], None
+    for page in range(20):
+        res, sid = _rpc(url, headers, "tools/list", {"cursor": cursor} if cursor else {}, sid=sid, rid=page + 2)
+        tools += res.get("tools") or []
+        cursor = res.get("nextCursor")
+        if not cursor:
+            break
+    return tools
+
+
+def load_mcp():
+    """mcp.json → файл для --mcp-config (только mcpServers) и списки инструментов на чтение и на запись."""
+    if not MCP_FILE.exists():
+        return {"config": "", "servers": []}
+    try:
+        raw = json.loads(MCP_FILE.read_text(encoding="utf-8"))
+    except (OSError, ValueError) as e:
+        log("mcp.json:", e)
+        return {"config": "", "servers": [], "error": "mcp.json не читается"}
+    servers, policy = raw.get("mcpServers") or {}, raw.get("policy") or {}
+    if not servers:
+        return {"config": "", "servers": []}
+    MCP_CLAUDE.write_text(json.dumps({"mcpServers": servers}), encoding="utf-8")
+    os.chmod(MCP_CLAUDE, 0o600)
+    out = []
+    for name, cfg in servers.items():
+        key = re.sub(r"[^A-Za-z0-9_-]", "_", name)
+        pol, read, write, err = policy.get(name) or {}, [], [], ""
+        try:
+            tools = mcp_tools(_expand(cfg)) if (cfg.get("type") in ("http", "streamable-http") or (cfg.get("url") and cfg.get("type") != "sse")) else []
+        except Exception as e:  # noqa: BLE001
+            tools, err = [], redact(e)[:200]
+        names = {t.get("name") for t in tools if t.get("name")} | set(pol.get("read") or []) | set(pol.get("write") or [])
+        hints = {t.get("name"): (t.get("annotations") or {}) for t in tools}
+        for n in sorted(names):
+            ro = n in (pol.get("read") or []) or (n not in (pol.get("write") or []) and (
+                hints.get(n, {}).get("readOnlyHint") is True or (hints.get(n, {}).get("readOnlyHint") is None and bool(READ_RE.search(n)))))
+            (read if ro else write).append(f"mcp__{key}__{n}")
+        out.append({"name": name, "read": read, "write": write, "error": err})
+        log(f"mcp {name}: чтение {len(read)}, действия {len(write)}" + (f", ошибка: {err}" if err else ""))
+    return {"config": str(MCP_CLAUDE), "servers": out}
+
+
+MCP = {"config": "", "servers": []}
+
+
 # ---------- общий слот тяжёлых задач (как heavy_slot.py у ботов, только синхронно) ----------
 
 class HeavySlot:
@@ -200,6 +323,9 @@ def describe(item):
         return f"Ищет в интернете: {inp.get('query', '')[:100]}"
     if name == "WebFetch":
         return f"Читает страницу {urllib.parse.urlparse(inp.get('url', '')).netloc}"
+    if name.startswith("mcp__"):
+        _, server, tool = (name.split("__", 2) + ["", ""])[:3]
+        return f"Обращается к {server}: {tool}"
     if name == "TodoWrite":
         todos = inp.get("todos") or []
         cur = next((t.get("activeForm") or t.get("content") for t in todos if t.get("status") == "in_progress"), "")
@@ -252,6 +378,7 @@ def run_transcribe(job):
     if not sources:
         return call_retry("POST", f"/runner/{jid}/finish", {"result": "need", "question": "Пришлите ссылку на ролик или само видео — без него расшифровывать нечего."})
     step(f"Транскрибатор взял {len(sources)} источник(а) — скачивает и расшифровывает.")
+    started = time.time()
     p = subprocess.Popen([sys.executable, "-I", str(TRANSCRIBER), *sources, "--out", str(dest)], cwd=d, stdin=subprocess.DEVNULL,
                          stdout=subprocess.PIPE, stderr=subprocess.STDOUT, text=True, bufsize=1)
     timer = threading.Timer(30 * 60, p.kill)
@@ -289,10 +416,11 @@ def run_transcribe(job):
         report = (f"## Что сделано\nРасшифровал {len(items)} ролик(ов) — текст, подпись к публикации, автор и цифры.\n\n## Главное\n"
                   + "\n".join(f"- «{it['title'] or it['author'] or it['source'][:60]}» — {it['words']} слов, {it['engine']}" for it in items)
                   + (f"\n- Не вышло: {'; '.join(res['errors'])[:400]}" if res.get("errors") else "") + f"\n\n## Материалы\n{mats}")
-        call_retry("POST", f"/runner/{jid}/finish", {"result": "review", "main": "index.html", "summary": report,
+        call_retry("POST", f"/runner/{jid}/finish", {"result": "review", "main": "index.html", "summary": report, "usage": {"ms": int((time.time() - started) * 1000)},
                                                      "history": f"Расшифровка {len(items)} ролик(ов) по ссылке — текст для сценариев и разборов."})
     else:
-        call_retry("POST", f"/runner/{jid}/finish", {"result": "transcribed", "summary": note, "files": [f.name for f in files if f.suffix == ".md"]})
+        call_retry("POST", f"/runner/{jid}/finish", {"result": "transcribed", "summary": note, "files": [f.name for f in files if f.suffix == ".md"],
+                                                     "usage": {"ms": int((time.time() - started) * 1000)}})
     log(jid, f"transcribed {len(items)} source(s)")
 
 
@@ -309,6 +437,7 @@ def run_balances(job):
         call("POST", f"/runner/{jid}/step", {"text": "Проверяет балансы и подписки сервисов по API."})
     except Exception as e:  # noqa: BLE001
         log("step:", e)
+    started = time.time()
     r = subprocess.run([sys.executable, "-I", str(BALANCES), "--out", str(out)], cwd=out.parent, stdin=subprocess.DEVNULL,
                        capture_output=True, text=True, timeout=600)
     res = {}
@@ -328,7 +457,8 @@ def run_balances(job):
                + ("\n".join([f"- **Срочно:** {x}" for x in crit] + [f"- Скоро: {x}" for x in warn]) or "- Всё в порядке — офис работает без перебоев.")
                + "\n\n## Материалы\n- out/index.html — светофор по всем сервисам\n- out/balances.json — те же данные для разбора")
     call_retry("POST", f"/runner/{jid}/finish", {"result": "review", "main": "index.html", "summary": summary[:4000],
-                                                 "history": "Проверка балансов и подписок сервисов офиса.", "alerts": {"critical": crit, "warn": warn}})
+                                                 "history": "Проверка балансов и подписок сервисов офиса.", "alerts": {"critical": crit, "warn": warn},
+                                                 "usage": {"ms": int((time.time() - started) * 1000)}})
     log(jid, f"balances: {len(crit)} critical, {len(warn)} warn")
 
 
@@ -388,25 +518,37 @@ def run_job(job):
             elif time.time() - last["ping"] > 20:
                 send("")
 
-    busy = slot_busy()
+    # инструменты: контролёр только читает; действия во внешних системах — только после «Выполнить» владельца
+    qa = kind == "qa"
+    tools = list(QA_TOOLS if qa else ALLOWED_TOOLS)
+    for sv in MCP["servers"]:
+        tools += sv["read"] + (sv["write"] if kind == "execute" else [])
+    args = [CLAUDE, "-p", job["prompt"], "--output-format", "stream-json", "--verbose",
+            "--permission-mode", "default" if qa else "acceptEdits", "--allowedTools", *tools,
+            "--add-dir", str(d), str(SKILLS), "--model", MODEL, "--effort", job.get("effort") or EFFORT]
+    if MCP["config"]:
+        args += ["--mcp-config", MCP["config"]]
+    if job.get("session"):
+        args += ["--resume", job["session"]]
+
+    busy = slot_busy() if not qa else ""
     if busy:
         step(f"Ждёт очереди сервера: сейчас работает {busy}.", force=True)
-    with HeavySlot("офис hq2: " + job.get("title", "")[:60]):
-        step("Начал работу.", force=True)
+    # контролёр ничего не рендерит — ему общий слот тяжёлых задач не нужен
+    slot = HeavySlot("офис hq2: " + job.get("title", "")[:60]) if not qa else None
+    if slot:
+        slot.__enter__()
+    try:
+        step("Проверяет результат." if qa else "Начал работу.", force=True)
         if cancelled.is_set():
             log(jid, "cancelled before start")
             return
-        args = [CLAUDE, "-p", job["prompt"], "--output-format", "stream-json", "--verbose",
-                "--permission-mode", "acceptEdits", "--allowedTools", *ALLOWED_TOOLS,
-                "--add-dir", str(d), str(SKILLS), "--model", MODEL, "--effort", EFFORT]
-        if job.get("session"):
-            args += ["--resume", job["session"]]
         logf = open(d / "claude.log", "a", encoding="utf-8")
         p = proc["p"] = subprocess.Popen(args, cwd=d, stdin=subprocess.DEVNULL, stdout=subprocess.PIPE, stderr=logf, text=True, bufsize=1)
         timer = threading.Timer(LIMIT, p.kill)
         timer.start()
         threading.Thread(target=poll, daemon=True).start()
-        session, final, started, ooms = job.get("session", ""), "", time.time(), oom_kills()
+        session, final, started, ooms, result_ev = job.get("session", ""), "", time.time(), oom_kills(), None
         try:
             for line in p.stdout:
                 logf.write(line)
@@ -425,36 +567,53 @@ def run_job(job):
                     for item in (ev.get("message") or {}).get("content") or []:
                         step(describe(item))
                 elif ev.get("type") == "result":
-                    final = ev.get("result") or ""
+                    final, result_ev = ev.get("result") or "", ev
             p.wait()
         finally:
             timer.cancel()
             stop.set()
             logf.close()
+    finally:
+        if slot:
+            slot.__exit__()
 
     if cancelled.is_set():
         log(jid, "cancelled by the owner")
         return
+    usage = usage_of(result_ev, started)
     mins = (time.time() - started) / 60
     oom = oom_kills() > ooms
+
+    if qa:
+        verdict = re.search(r"^QA:\s*(ok|fix)\b", final, re.M | re.I)
+        notes = re.sub(r"^QA:.*$", "", final, flags=re.M).strip()[-3000:]
+        if p.returncode != 0 and not verdict:
+            why = claude_error((d / "claude.log").read_text(encoding="utf-8", errors="ignore")[-20000:])
+            return call_retry("POST", f"/runner/{jid}/finish", {"result": "error", "error": f"Контролёр не смог проверить (код {p.returncode}). {why}".strip(), "usage": usage})
+        call_retry("POST", f"/runner/{jid}/finish", {"result": "qa", "verdict": (verdict.group(1).lower() if verdict else "ok"), "notes": notes, "usage": usage})
+        log(jid, "qa:", verdict.group(1) if verdict else "no verdict", f"{mins:.1f} min")
+        return
+
     need = re.search(r"^NEED:\s*(.+)$", final, re.M)
     res = re.search(r"^RESULT:\s*(\S+)", final, re.M)
     hist = re.search(r"^SUMMARY:\s*(.+)$", final, re.M)
-    summary = re.sub(r"^(RESULT|NEED|SUMMARY):.*$", "", final, flags=re.M).strip()[-8000:]
-    if need and not res:
-        call_retry("POST", f"/runner/{jid}/finish", {"result": "need", "question": need.group(1).strip(), "session": session})
+    approve = [] if kind == "execute" else [m.strip() for m in re.findall(r"^APPROVE:\s*(.+)$", final, re.M) if m.strip()][:10]
+    summary = re.sub(r"^(RESULT|NEED|SUMMARY|APPROVE):.*$", "", final, flags=re.M).strip()[-8000:]
+    if need and not res and not approve:
+        call_retry("POST", f"/runner/{jid}/finish", {"result": "need", "question": need.group(1).strip(), "session": session, "usage": usage})
         log(jid, "need:", need.group(1)[:80])
         return
     files = [f for f in sorted(out.rglob("*")) if f.is_file() and not any(x.startswith(".") for x in f.relative_to(out).parts)]
-    if p.returncode != 0 and not files:
+    if p.returncode != 0 and not files and not approve:
         text = (d / "claude.log").read_text(encoding="utf-8", errors="ignore")
         why = claude_error(text[-20000:])
-        call_retry("POST", f"/runner/{jid}/finish", {"result": "error", "session": session,
+        call_retry("POST", f"/runner/{jid}/finish", {"result": "error", "session": session, "usage": usage,
              "error": f"Агент не закончил ({mins:.0f} мин, код {p.returncode})." + (" " + OOM_HINT if oom else " Превышен лимит времени." if mins * 60 >= LIMIT - 5 else f" Claude Code: {why}" if why else ""),
              "log": redact(text[-1500:])})
         log(jid, "error code", p.returncode, "oom" if oom else "")
         return
-    step(f"Отправляет результат: {len(files)} файл(ов).", force=True)
+    if files:
+        step(f"Отправляет результат: {len(files)} файл(ов).", force=True)
     for f in files[:300]:
         size = f.stat().st_size
         if size > FILE_LIMIT:
@@ -462,9 +621,13 @@ def run_job(job):
         rel = f.relative_to(out).as_posix()
         call_retry("PUT", f"/runner/{jid}/file?path={urllib.parse.quote(rel)}", file=f, timeout=900)
     main = res.group(1).strip() if res else ""
-    call_retry("POST", f"/runner/{jid}/finish", {"result": "review", "main": main, "summary": summary, "history": hist.group(1).strip() if hist else "", "session": session})
-    log(jid, f"review in {mins:.1f} min, {len(files)} files, main {main}")
-
+    body = {"main": main, "summary": summary, "history": hist.group(1).strip() if hist else "", "session": session, "usage": usage}
+    if approve:
+        call_retry("POST", f"/runner/{jid}/finish", {"result": "approve", "actions": approve, **body})
+        log(jid, f"approve: {len(approve)} action(s), {mins:.1f} min")
+        return
+    call_retry("POST", f"/runner/{jid}/finish", {"result": "review", **body})
+    log(jid, f"review in {mins:.1f} min, {len(files)} files, main {main}, ${usage['cost']}")
 
 def skills_report():
     """Все скиллы этого сервера (~/.claude/skills): имя, описание из шапки SKILL.md и сам текст — двойнику в офисе."""
@@ -493,13 +656,16 @@ def main():
         raise SystemExit("HQ_DESK_RUNNER_TOKEN is not set")
     JOBS.mkdir(parents=True, exist_ok=True)
     log(f"hq runner {VERSION}: api {API}, claude {CLAUDE} ({'есть' if Path(CLAUDE).exists() else 'НЕ НАЙДЕН'}), skills {len(list(SKILLS.glob('*/SKILL.md'))) if SKILLS.exists() else 0}, model {MODEL}")
+    global MCP
+    MCP = load_mcp()
     check = selftest()
     check["auth"] = auth_source()
     log(f"вход Claude: {check['auth']}")
     log("проверка Claude: " + ("ок" if check["ok"] else "ошибка — " + check["error"]))
     while True:
         try:
-            call("POST", "/runner/hello", {"version": VERSION, "claude": check})
+            call("POST", "/runner/hello", {"version": VERSION, "claude": check,
+                                           "mcp": [{"name": x["name"], "read": len(x["read"]), "write": len(x["write"]), "error": x["error"]} for x in MCP["servers"]]})
             break
         except Exception as e:
             log("hello:", e)
