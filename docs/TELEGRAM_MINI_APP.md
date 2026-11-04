@@ -24,8 +24,8 @@ and a blue "Получить текст" bar appears at the bottom of the screen
    - **Title**: `Транскрипция`
    - **Description**: short pitch (≤256 chars)
    - **Photo**: a 640×360 PNG/JPG (your icon/cover)
-   - **Web App URL**: your Vercel production URL (e.g.
-     `https://ai-command-center.vercel.app/transcribe`)
+   - **Web App URL**: the production URL on our server (e.g.
+     `https://tma.aicex.club/`)
    - **Short name**: short identifier (e.g. `transcribe`)
 5. BotFather replies with a `https://t.me/<bot>/app` or
    `https://t.me/<bot>?startapp` link — that's your mini app link.
