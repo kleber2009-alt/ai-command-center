@@ -519,8 +519,9 @@ async function askTwin(text, { voice = false, uploads = [] } = {}) {
   if (err && !out) throw new Error(err);
   return out.trim();
 }
+let bot = null;
 function startBot() {
-  startTelegram({ desk, dataDir:DATA_DIR, token:TG_TOKEN, owners:TG_OWNERS, site:(process.env.HQ_PUBLIC_URL || SITE).replace(/\/$/, ''),
+  bot = startTelegram({ desk, dataDir:DATA_DIR, token:TG_TOKEN, owners:TG_OWNERS, site:(process.env.HQ_PUBLIC_URL || SITE).replace(/\/$/, ''),
     ask:askTwin, ownerVoice, fileLink:file => desk.signedUrl(file) });
 }
 
@@ -538,6 +539,15 @@ http.createServer(async (req, res) => {
   const p = new URL(req.url, 'http://x').pathname;
   if (!p.startsWith(PREFIX + '/')) return process.env.SERVE_STATIC === '1' ? serveStatic(req, res, p) : json(res, 404, { error:'not found' });
   const rest = p.slice(PREFIX.length + 1);
+  // the mini app's «Прислать файлами в Telegram»: every file of a result, each separately, original quality
+  const sf = req.method === 'POST' && /^desk\/tasks\/([\w-]+)\/send-files$/.exec(rest);
+  if (sf) {
+    if (!isOwner(req)) return json(res, 403, { error:'Только для владельца.' });
+    if (!bot?.sendFiles) return json(res, 503, { error:'Telegram-бот офиса не подключён.' });
+    if (!desk.get(sf[1])?.result?.files?.length) return json(res, 404, { error:'У задачи нет файлов.' });
+    bot.sendFiles(sf[1]).catch(e => console.error('send-files:', e.message));
+    return json(res, 202, { ok:true });
+  }
   const route = rest.startsWith('desk/') ? rq => desk.handle(rq, res, rest.slice(5), whoOf(rq)) : ROUTES[`${req.method} ${rest}`];
   if (!route) return json(res, 404, { error:'not found' });
   try { await route(req, res, isOwner(req)); }

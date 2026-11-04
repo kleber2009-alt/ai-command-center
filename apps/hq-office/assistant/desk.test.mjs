@@ -11,7 +11,7 @@ import os from 'node:os';
 import path from 'node:path';
 import { fileURLToPath } from 'node:url';
 import { createDesk } from './desk.mjs';
-import { startTelegram } from './tg.mjs';
+import { startTelegram, wantsFiles } from './tg.mjs';
 
 process.env.HQ_ROUTINES = 'off';
 const OFFICE = path.resolve(path.dirname(fileURLToPath(import.meta.url)), '..');
@@ -659,7 +659,8 @@ test('Telegram: материалы результата — слайды аль�
     calls.length = 0;
     await d.claim(); await d.finish(id, { result:'qa', verdict:'ok' }); await wait(500);
     const seq = calls.map(c => c.method).filter(m => /^(send|delete)/.test(m));
-    assert.deepEqual(seq, ['deleteMessage', 'sendMediaGroup', 'sendVideo', 'sendDocument', 'sendMessage']);
+    assert.deepEqual(seq, ['deleteMessage', 'sendMediaGroup', 'sendVideo', 'sendDocument', 'sendMessage', 'sendMessage']);
+    assert.match(calls.filter(c => c.method === 'sendMessage').at(-2).body.text, /превью.*«📎 Файлы»/s);   // the album is a preview
     const g = calls.find(c => c.method === 'sendMediaGroup').body, album = JSON.parse(g.media);
     assert.equal(album.length, 3); assert.equal(album[0].caption, 'Задача');
     assert.deepEqual([g.f0, g.f1, g.f2], ['<file slide-1.png>', '<file slide-2.png>', '<file slide-10.png>']);
@@ -673,5 +674,18 @@ test('Telegram: материалы результата — слайды аль�
     d.desk.act(id, 'approve'); await wait(400);
     assert.ok(!calls.some(c => ['sendMediaGroup', 'sendVideo', 'sendDocument'].includes(c.method)));
     assert.match(calls.filter(c => c.method === 'sendMessage').at(-1).body.text, /В истории офиса|Принято/);
+    // «📎 Файлы»: every file separately, as a document, original bytes — the main video, slides in order, the PDF, the page last
+    calls.length = 0;
+    await bot.sendFiles(id);
+    const docs = calls.filter(c => /^send(Photo|Video|Document|MediaGroup)$/.test(c.method));
+    assert.ok(docs.every(c => c.method === 'sendDocument' && c.body.disable_content_type_detection === 'true'));
+    assert.deepEqual(docs.map(c => c.body.document), ['<file rils.mp4>', '<file slide-1.png>', '<file slide-2.png>', '<file slide-10.png>', '<file deck.pdf>', '<file index.html>']);
+    assert.match(docs[0].body.caption, /^1\/6 · /);
+    assert.match(calls.find(c => c.method === 'sendMessage').body.text, /6 файлов в исходном качестве/);
   } finally { bot.stop(); delete process.env.HQ_TG_API; }
+});
+
+test('Telegram: «пришли файлом» ответом на карточку — это просьба о файлах, а не правка', () => {
+  for (const t of ['файлом', 'Пришли файлами', 'скинь оригиналы', 'дай в лучшем качестве', 'без сжатия пришли']) assert.ok(wantsFiles(t), t);
+  for (const t of ['переделай третий слайд', 'добавь файл с ценами', 'сделай хук короче', '']) assert.ok(!wantsFiles(t), t);
 });

@@ -320,7 +320,8 @@ function resultBlock(t) {
     ${page && !vids.length && !imgs.length ? `<iframe class="page" src="${esc(page.url)}" sandbox="allow-scripts allow-popups" title="Результат"></iframe>` : ''}
     <div class="rep">${report(r.summary)}</div>
     ${t.qa?.verdict === 'ok' ? '<span class="sub" style="color:var(--greenInk)">✓ Контролёр качества: замечаний нет</span>' : t.qa?.verdict === 'fix' ? '<span class="sub" style="color:var(--greenInk)">✓ Доработано по замечаниям контролёра</span>' : ''}
-    <div class="files">${files.map(f => `<a href="${esc(f.url)}" target="_blank" rel="noopener" download="${esc(f.path.split('/').pop())}"><span style="flex:1">${esc(f.path)}</span><span class="sub">${f.size >= 1e6 ? (f.size / 1e6).toFixed(1) + ' МБ' : Math.max(1, Math.round(f.size / 1e3)) + ' КБ'}</span></a>`).join('')}</div></div>`;
+    ${files.length && TG ? `<div class="btns"><button class="b pri" data-a="send-files" data-id="${t.id}">Прислать файлами в Telegram</button></div><span class="sub">Каждый слайд и ролик — отдельным файлом, в исходном качестве, без сжатия</span>` : ''}
+    <div class="files">${files.map(f => `<a href="${esc(f.url)}" target="_blank" rel="noopener" data-dl="${esc(f.path.split('/').pop())}" download="${esc(f.path.split('/').pop())}"><span style="flex:1">${esc(f.path)}</span><span class="sub">${f.size >= 1e6 ? (f.size / 1e6).toFixed(1) + ' МБ' : Math.max(1, Math.round(f.size / 1e3)) + ' КБ'}</span></a>`).join('')}</div></div>`;
 }
 function detail(id) {
   const t = S.tasks.find(x => x.id === id);
@@ -469,6 +470,9 @@ async function mic(btn, to) {
   r.start(250);
 }
 document.addEventListener('click', e => {
+  // inside Telegram a link opens a viewer; downloadFile saves the original file itself (Bot API 8.0+)
+  const dl = e.target.closest('a[data-dl]');
+  if (dl && TG?.downloadFile && TG.isVersionAtLeast?.('8.0')) { e.preventDefault(); try { TG.downloadFile({ url:new URL(dl.getAttribute('href'), location.href).href, file_name:dl.dataset.dl }); } catch { location.href = dl.href; } return; }
   const b = e.target.closest('[data-a]'); if (!b) return;
   const a = b.dataset.a, id = b.dataset.id, v = b.dataset.v;
   if (a === 'tab') return go(v === 'home' ? '' : v);
@@ -485,6 +489,7 @@ document.addEventListener('click', e => {
   if (a === 'pause') return act(() => post(`/tasks/${id}/pause`), 'На паузе — агент сохранит работу');
   if (a === 'resume') return act(() => post(`/tasks/${id}/resume`), 'Продолжаем — задача снова в очереди');
   if (a === 'urgent') return act(() => post(`/tasks/${id}/urgent`, { on:v === 'on' }), v === 'on' ? 'Срочно — пойдёт первой' : 'Пометка «срочно» снята');
+  if (a === 'send-files') return act(() => post(`/tasks/${id}/send-files`), 'Отправляю в Telegram — каждый файл отдельно');
   if (a === 'later') { S.later = S.later === id ? '' : id; return render(); }
   if (a === 'later-at') { S.later = ''; return act(() => post(`/tasks/${id}/snooze`, { until:v }), `Отложено до ${dayHm(v)}`); }
   if (a === 'cancel') { if (!confirm('Отменить задачу?')) return; return act(() => post(`/tasks/${id}/cancel`), 'Задача отменена'); }
