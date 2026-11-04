@@ -360,6 +360,33 @@ test('руководитель управляет своими задачами,
   assert.ok(live.tasks.every(x => !('text' in x)));
 });
 
+/* ---------- the owner's admin panel: the patch over agents.js reaches the dispatcher ---------- */
+
+test('админ-панель: отпуск, новый агент и перевод в другой отдел сразу видны диспетчеру', async () => {
+  const { initAdmin } = await import('./admin.mjs');
+  const { setOfficePatch, officeWindow } = await import('./office.mjs');
+  const dir = fs.mkdtempSync(path.join(os.tmpdir(), 'admin-test-')); dirs.push(dir);
+  const admin = initAdmin(dir);
+  setOfficePatch(() => ({ patch:admin.patch(), stamp:admin.stamp() }));
+  try {
+    const d = setup();
+    const base = () => { const W = officeWindow(OFFICE); return { list:W.OFFICE_AGENTS.list, away:W.OFFICE_AGENTS.away }; };
+    const ids = () => d.desk.agents().map(a => a.id);
+    assert.ok(ids().includes('slides'));
+    admin.act({ action:'vacation', id:'slides', on:true }, 'Илья', base());
+    assert.ok(!ids().includes('slides'));
+    const { id } = admin.act({ action:'create', name:'Подкасты', role:'Монтирует выпуски подкаста', dept:'marketing', tasks:'Нарезает клипы' }, 'Илья', base());
+    assert.ok(ids().includes(id));
+    assert.equal(d.desk.agents().find(a => a.id === id).dept, 'marketing');
+    admin.act({ action:'edit', id:'landings', dept:'sales' }, 'Илья', base());
+    assert.equal(d.desk.agents().find(a => a.id === 'landings').dept, 'sales');
+    admin.act({ action:'remove', id }, 'Илья', base());
+    assert.ok(!ids().includes(id));
+    assert.match(admin.log()[0].text, /удалил агента «Подкасты»/);
+    assert.match(admin.script(), /OFFICE_AGENTS\.apply/);
+  } finally { setOfficePatch(null); }
+});
+
 /* ---------- Telegram, the queue, the disk ---------- */
 
 test('Telegram: сообщение на вопрос, результат и ошибку — по одному на каждое', async () => {
@@ -491,6 +518,29 @@ test('очередь: главный поток при лёгких соседя
   const reel = await d.task('смонтируй рилс');
   assert.equal((await d.claim({ worker:'w0', prefer_heavy:true })).id, reel);
   assert.equal((await d.claim({ worker:'w1', light:true })).id, deck);
+});
+
+/* ---------- control agents: the evening report for the owner ---------- */
+
+test('агент контроля: отчёт по отделу приходит владельцу на проверку, руководитель его не видит, в историю не попадает', async () => {
+  const d = setup();
+  const own = await d.toReview('сделай презентацию');               // slides — маркетинг
+  const t = await d.desk.controlReport('marketing', { manual:true });
+  assert.equal(t.status, 'review'); assert.ok(t.control); assert.equal(t.route.agent, 'mkcontrol');
+  assert.ok((await d.call('GET', `files/${t.id}/v1/index.html`)).status === 200);
+  const owner = (await d.call('GET', 'tasks')).j.tasks;
+  assert.ok(owner.some(x => x.id === t.id));
+  const head = (await d.call('GET', 'tasks', null, FIRUZA)).j.tasks;
+  assert.ok(!head.some(x => x.id === t.id)); assert.ok(head.some(x => x.id === own));
+  assert.equal((await d.call('POST', `tasks/${t.id}/approve`, { publish:true }, FIRUZA)).status, 403);
+  await d.call('POST', `tasks/${t.id}/approve`, { publish:true });
+  const done = await d.get(t.id);
+  assert.equal(done.status, 'done'); assert.equal(done.published, false);
+  assert.ok(!(await d.call('GET', 'history.json', null, { 'x-guest':'1' })).j.some(h => h.id === 'desk-' + t.id));
+  // the dispatcher never gets a control agent, and it is not among the agents a head can be given
+  assert.ok(!d.desk.agents().some(a => a.id === 'mkcontrol'));
+  // a quiet department makes no evening report
+  assert.equal(await d.desk.controlReport('traffic'), null);
 });
 
 test('Telegram: материалы результата — слайды альбомом по порядку, видео роликом, презентация файлом; карточка с кнопками после них', async () => {

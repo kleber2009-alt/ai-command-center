@@ -76,8 +76,8 @@ export function createTelegram({ token, chat, own, publicUrl, dataDir, act, get,
       head = q?.from === 'style' ? `🎨 Выберите стиль — «${esc(who)}» начнёт сразу` : q?.from === 'agent' ? `❓ «${esc(who)}» спрашивает` : '❓ Диспетчер уточняет';
       body = esc(q?.text || '');
     } else if (v.status === 'review') {
-      head = `✅ «${esc(who)}» принёс результат`;
-      body = esc(plain(v.result?.summary));
+      head = v.control ? `📋 «${esc(who)}»: отчёт по отделу` : `✅ «${esc(who)}» принёс результат`;
+      body = esc(plain(v.result?.summary, v.control ? 2400 : 700));
     } else if (v.status === 'error') {
       head = `⚠️ «${esc(who)}»: не получилось`;
       body = esc(v.error || '');
@@ -96,7 +96,8 @@ export function createTelegram({ token, chat, own, publicUrl, dataDir, act, get,
     if (own) {
       if (v.status === 'question' && q?.options?.length) rows = q.options.map(o => [{ text:o.label, callback_data:`op:${v.id}:${o.id}` }]);
       if (v.status === 'question' && q?.from !== 'approval') rows.push([{ text:'💬 Ответить своими словами', callback_data:`an:${v.id}` }]);
-      if (v.status === 'review') rows = [[{ text:'✅ Принять', callback_data:`ap:${v.id}` }, { text:'👍 Отлично', callback_data:`up:${v.id}` }], [{ text:'✏️ Правка', callback_data:`rv:${v.id}` }]];
+      if (v.status === 'review') rows = v.control ? [[{ text:'✅ Прочитано', callback_data:`ap:${v.id}` }]]
+        : [[{ text:'✅ Принять', callback_data:`ap:${v.id}` }, { text:'👍 Отлично', callback_data:`up:${v.id}` }], [{ text:'✏️ Правка', callback_data:`rv:${v.id}` }]];
       if (v.status === 'error') rows = [[{ text:'🔁 Повторить', callback_data:`rt:${v.id}` }]];
     }
     rows.push([openBtn(v.id, v.status === 'review' ? 'Открыть результат' : 'Открыть')]);
