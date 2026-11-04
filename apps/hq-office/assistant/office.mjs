@@ -7,7 +7,7 @@ import fs from 'node:fs';
 import path from 'node:path';
 import vm from 'node:vm';
 
-const FILES = ['office.config.js', 'dept-content.js', 'agent-content.js', 'skills-library.js', 'tasks.js', 'tasks.auto.js', 'works.js'];
+const FILES = ['agents.js', 'office.config.js', 'dept-content.js', 'agent-content.js', 'skills-library.js', 'tasks.js', 'tasks.auto.js', 'works.js'];
 const SITE = 'https://hq2.aicex.club';
 const MON = ['января', 'февраля', 'марта', 'апреля', 'мая', 'июня', 'июля', 'августа', 'сентября', 'октября', 'ноября', 'декабря'];
 const KIND = { github:'GitHub', claude:'Claude', site:'сайт', file:'файл' };
@@ -53,6 +53,7 @@ function buildOffice(W) {
   for (const d of CFG.depts) {
     out.push('', `## ${d.name} — ${d.head.name}, ${d.head.title}`);
     if (HC[d.id]?.lead) out.push(HC[d.id].lead);
+    if (HC[d.id]?.products?.length) out.push(`Продукты руководителя (${d.head.name}): ${HC[d.id].products.map(p => `${p.title} — ${p.url} — ${p.note || ''}`).join('; ')}`);
     for (const id of d.agents) {
       const c = AC[id] || {}, n = tasksOf(id).length;
       const skills = (c.skills || []).slice(0, 6).map(s => s.title).join(', ');

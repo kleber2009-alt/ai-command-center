@@ -816,6 +816,8 @@
         step('Дожим', 'Напоминания и рассылки'),
       ],
       materials: [AR.botSpec, AR.nf],
+      // продукты, за которые отвечает сам руководитель (досье руководителя, ассистент и диспетчер офиса)
+      products: [{ title:'CRM Директа', url:'https://direct-crm.aicex.club', note:'Хозяин — Богдан. Переписки ИИ-менеджера ChatPlace, очередь по приоритету, воронка, оценка ответов ИИ, ответ вручную' }],
     },
     traffic: {
       lead: 'Таргетолог. Отвечает за рекламу в Meta: запуск кампаний, тесты креативов, цену лида и бюджет.',
@@ -836,16 +838,20 @@
     product:    [P('AI Command Center', 'https://projects.aicex.club/dashboard', 'Статусы всех проектов и архитектура'),
                  P('Живой офис агентов', 'https://hq2.aicex.club', 'Этот офис: 3D, рабочий стол, двойник'),
                  P('AI Growth Office', 'https://office.aicex.club/', 'Сайт ИИ-офиса и мини-апп @AI_Growth_Office_Bot'),
-                 P('AI Creative Hub', 'https://aihub.aicex.club/', 'Нейросети в одном месте, кошелёк токенов · @aicex_one_bot')],
+                 P('AI Creative Hub', 'https://aihub.aicex.club/', 'Нейросети в одном месте, кошелёк токенов · @aicex_one_bot'),
+                 P('AI Office Mini App', 'https://office.aicex.club/mini-app/', 'Мини-апп AI Growth Office · @AI_Growth_Office_Bot (в разработке)'),
+                 P('Infra', 'https://github.com/kleber2009-alt/ai-command-center/tree/main/infra', 'Сервер aicex: Docker, Caddy, Postgres, бэкапы')],
     skills:     [P('Пак скиллов', 'https://skills.aicex.club', 'Готовые скиллы для Claude'),
                  P('Creator Pack', 'https://kadrik.aicex.club/?tab=montage', 'Скиллы монтажа для Студии Кадрика')],
     transcriber:[P('Транскрибация', 'https://transcribe.aicex.club/', 'Расшифровка аудио и видео'),
-                 P('Транскрибация в Telegram', 'https://tma.aicex.club/', 'Мини-апп и бот @your_transscribe_bot')],
+                 P('Транскрибация в Telegram', 'https://tma.aicex.club/', 'Мини-апп и бот @your_transscribe_bot'),
+                 P('yt-dlp service', 'https://github.com/kleber2009-alt/ai-command-center/tree/main/apps/ytdlp', 'Скачивание роликов YouTube / Instagram / TikTok по ссылке')],
     briefing:   [P('Office Worker', 'https://office.aicex.club/worker/health', 'Ежедневный брифинг, итоги недели, календарь')],
     montage:    [P('Бот монтажа', 'https://reels.aicex.club', 'Монтаж рилсов кодом · @reelswithai_bot'),
                  P('Мини-апп монтажа', 'https://montazh.aicex.club', 'Монтаж прямо в Telegram'),
                  P('Студия Кадрика', 'https://kadrik.aicex.club/', 'Игровой мини-апп и монтаж скиллами · @studio_kadrik_bot'),
-                 P('Silent Reels', 'https://t.me/Sielencemode_bot', 'Рилсы без голоса (в разработке)')],
+                 P('Silent Reels', 'https://t.me/Sielencemode_bot', 'Рилсы без голоса (в разработке)'),
+                 P('Voice Circle Bot', 'https://github.com/kleber2009-alt/ai-command-center/tree/main/apps/voice-circle-bot', 'Обработка видео-кружков в Telegram (на паузе)')],
     carousel:   [P('Бот каруселей', 'https://t.me/caruselclaude_bot', 'Карусели в 24 стилях'),
                  P('Карусель Pro', 'https://remake.aicex.club', 'Ветка «Instagram Карусели»: залёты → план → слайды')],
     avatar:     [P('Persona Studio', 'https://studio.aicex.club/', 'Аватары и обложки'),
@@ -857,8 +863,18 @@
     funnels:    [P('Нейроворонка', 'https://claude.ai/artifact/6z4UBbZhGNcCpVmJUp487P', 'Бот, прогрев и оффер')],
     chats:      [P('ИИ в Директе', 'https://claude.ai/artifact/5dj56wNJrKph3AYLbiibKH', 'ИИ-менеджер в Instagram Direct на ChatPlace'),
                  P('AI Sales System', 'https://sales.aicex.club/', 'Мультиагентные продажи Instagram + Telegram · CRM'),
-                 P('TG Agent', 'https://tg.aicex.club/', 'Агент Telegram-групп · @newnewnnn_bot')],
+                 P('TG Agent', 'https://tg.aicex.club/', 'Агент Telegram-групп · @newnewnnn_bot'),
+                 P('AI Sales v2', 'https://sales-api.aicex.club/', 'ИИ-продавец Алиса для IG/TG: диалоги, прогрев, эскалация (в разработке)'),
+                 P('AI Sales v1', 'https://github.com/kleber2009-alt/ai-command-center/tree/main/apps/ai-sales/code', 'Первая версия ИИ-продавца (на паузе)'),
+                 P('IG Agent', 'https://github.com/kleber2009-alt/ai-command-center/tree/main/apps/ig-agent', 'ИИ-ответы в Instagram Direct через SendPulse (в разработке)'),
+                 P('CRM Директа', 'https://direct-crm.aicex.club', 'Хозяин — Богдан (РОП): переписки ИИ-менеджера, очередь, воронка, оценка ИИ')],
     analytics:  [P('Сквозная аналитика', 'https://dashboard.aicex.club/', 'Декомпозиция × Meta Ads × оплаты')],
+    finance:    [P('Finance OS', 'https://finance.aicex.club/', 'Личные финансы: бот + мини-апп')],
+    viral:      [P('Залётный (Viral Discover)', 'https://parser.aicex.club/', 'Топ-5 рилсов и каруселей конкурентов утром в Telegram · @parser_instaa_bot'),
+                 P('TG Viral Parser', 'https://github.com/kleber2009-alt/ai-command-center/tree/main/apps/tg-viral-parser', 'Виральные посты TG-каналов → ревью → публикация (в разработке)')],
+    remake:     [P('Reels Cloner', 'https://landings.aicex.club/viral-clone/', 'Залёт конкурента → свой рилс за 5 минут · /clone в @your_transscribe_bot')],
+    landings:   [P('Legal Site', 'https://github.com/kleber2009-alt/ai-command-center/tree/claude/legal-company-site-Iy5a0/legal-site', 'Лендинг юридической компании (Next.js + Netlify)')],
+    academy:    [P('Академия «Свой ИИ-офис»', 'https://claude.ai/artifact/LAh6SFjhLJQcufXYjgDMWb', 'Методология, игровой трек обучения и внедрение офиса у клиента (в разработке)')],
     slides:     [P('Маркетинг: витрина', 'https://marketing.aicex.club', 'Презентации, лендинги и материалы отдела')],
   };
   for (const [id, items] of Object.entries(OWN_PRODUCTS)) {
@@ -877,58 +893,9 @@
     if (c) c.skills = [...(c.skills || []).filter(x => !list.some(y => y.name === x.name)), ...list];
   }
 
-  // ——— Карточки агентов: имя, роль, цвет, отдел по умолчанию, статус и задача для витрины ———
-  const card = (dept, name, role, color, status, task) => ({ dept, name, role, color, status, task });
-  window.AGENT_CATALOG = {
-    product:    card('ceo', 'Разработка продуктов',   'Собирает продукты кодом и выкладывает',      '#4da3ff', 'working',  'Дорабатывает продукт'),
-    market:     card('ceo', 'Исследования рынка',     'Изучает рынок, конкурентов и тренды',        '#9b6bff', 'thinking', 'Сравнивает офферы конкурентов'),
-    transcriber: card('ceo', 'Транскрибатор',     'Расшифровывает ролики по ссылке и передаёт текст агентам', '#2fd3c6', 'working', 'Расшифровывает рилс конкурента'),
-    socialstats: card('ceo', 'Статистика соцсетей', 'Каждое утро: охваты, просмотры и что сработало вчера', '#ff6fb5', 'working', 'Собирает статистику за вчера'),
-    qa:         card('ceo', 'Контролёр качества',  'Проверяет работу агентов до того, как её увидите вы', '#9be15d', 'working', 'Проверяет готовый ролик'),
-    billing:    card('ceo', 'Балансы и подписки',  'Следит за балансами и продлением сервисов офиса', '#ffb347', 'working', 'Проверяет балансы сервисов'),
-    finance:    card('ceo', 'Финансы',            'Выручка, расходы, P&L и юнит-экономика',     '#4fd18b', 'thinking', 'Сводит P&L за неделю'),
-    briefing:   card('ceo', 'Утренний брифинг',       'Сводка дня: почта, календарь, задачи',       '#ffd166', 'idle',     'Соберёт брифинг утром'),
-    specs:      card('ceo', 'ТЗ и документы',         'Пишет ТЗ, планы и гайды',                    '#5ad1ff', 'working',  'Пишет гайд для клиента'),
-    skills:     card('ceo', 'Скиллы и автоматизации', 'Создаёт скиллы, плагины и MCP для команды',  '#3ddc97', 'working',  'Упаковывает пакет скиллов'),
-
-    slides:     card('marketing', 'Презентации',      'Слайды вебинаров, эфиров и питчей',          '#4da3ff', 'thinking', 'Продумывает структуру вебинара'),
-    creatives:  card('marketing', 'Креативы',         'Рекламные креативы для Meta',                '#ff7a59', 'working',  'Генерирует креативы для теста'),
-    funnels:    card('marketing', 'Воронки',          'Бот, прогрев по дням и оффер',               '#3ddc97', 'working',  'Собирает прогрев в боте'),
-    publish:    card('marketing', 'Публикации',       'Контент-план и выпуск в соцсети',            '#ffd166', 'working',  'Ставит рилс в публикацию'),
-    analytics:  card('marketing', 'Аналитика',        'Охваты, лиды, выручка и ROMI',               '#5ad1ff', 'thinking', 'Считает ROMI за неделю'),
-    audience:   card('marketing', 'Анализ аудитории', 'Аудитория, ниша и конкуренты',               '#c38bff', 'working',  'Ищет выбросы в нише'),
-    scripts:    card('marketing', 'Сценарии',         'Сценарии рилсов с кодовым словом',           '#ff5d8f', 'working',  'Пишет продающие рилсы'),
-    montage:    card('marketing', 'Монтаж видео',     'Рилсы и YouTube кодом, 35+ стилей',          '#ff9f43', 'working',  'Монтирует рилс'),
-    carousel:   card('marketing', 'Карусели',         'Карусели Instagram в 24 стилях',             '#ffe08a', 'idle',     'Ждёт сценарий'),
-    landings:   card('marketing', 'Лендинги',         'Сайты и лендинги на своём домене',           '#6366f1', 'working',  'Верстает лендинг'),
-    leadmagnet: card('marketing', 'Лид-магниты',      'Подарки за подписку: PDF, уроки, чек-листы', '#2fb9a6', 'thinking', 'Придумывает подарок'),
-    threads:    card('marketing', 'Threads-ветки',    '3 ветки в день → материал в Telegram-канале', '#e8e8e8', 'working',  'Пишет 3 ветки на завтра'),
-    viral:      card('marketing', 'Поиск залётов',    'Залёты конкурентов в нише каждый день',      '#ff8a3d', 'working',  'Сканирует рилсы конкурентов'),
-    remake:     card('marketing', 'Ремейк залёта',    'Залёт → новый сценарий → аватар → монтаж',   '#b388ff', 'working',  'Делает ремейк топ-рилса'),
-    avatar:     card('marketing', 'Видео с аватаром', 'Ролики с ИИ-двойником без съёмки',           '#e0559c', 'idle',     'Ждёт текст'),
-
-    chats:      card('sales', 'Переписки',             'Ведёт переписки с клиентами',               '#5ad1ff', 'working',  'Отвечает в директ'),
-    comments:   card('sales', 'Ответы на комментарии', 'Отвечает на кодовые слова под постами',     '#ffd166', 'working',  'Разбирает комментарии под рилсом'),
-    consult:    card('sales', 'ИИ-консультации',       'Отвечает на вопросы по базе знаний',        '#c38bff', 'thinking', 'Учит новые ответы'),
-    mailings:   card('sales', 'Рассылки',              'Рассылки по базе в боте',                   '#ff7a59', 'idle',     'Ждёт запуск'),
-    closer:     card('sales', 'Закрытие сделок',       'Доводит тёплых лидов до оплаты',            '#3ddc97', 'working',  'Ведёт тёплых лидов'),
-
-    launch:     card('sales', 'Практикумы и запуски', 'Стратегия запуска, гипотезы и прогрев',     '#ff5d6c', 'working',  'Ведёт прогрев к практикуму'),
-    academy:    card('sales', 'Академия и внедрение', 'Треки обучения и офис агентов для клиентов', '#6ee7ff', 'thinking', 'Собирает трек «Свой ИИ-офис»'),
-
-    hormozi:  card('council', 'Алекс Хормози', 'Оффер и ценность', '#ffd479', 'working', 'Ждёт приглашения в разговор'),
-    garyvee:  card('council', 'Гэри Вайнерчук', 'Контент и внимание', '#ff7a59', 'working', 'Ждёт приглашения в разговор'),
-    godin:    card('council', 'Сет Годин', 'Бренд и позиционирование', '#c38bff', 'working', 'Ждёт приглашения в разговор'),
-    brunson:  card('council', 'Рассел Брансон', 'Воронки и лестница ценности', '#3ddc97', 'working', 'Ждёт приглашения в разговор'),
-    walker:   card('council', 'Джефф Уокер', 'Запуски', '#5ad1ff', 'working', 'Ждёт приглашения в разговор'),
-    kennedy:  card('council', 'Дэн Кеннеди', 'Прямой отклик и тексты', '#ff5d8f', 'working', 'Ждёт приглашения в разговор'),
-    cardone:  card('council', 'Грант Кардон', 'Продажи и масштаб 10X', '#ff9f43', 'working', 'Ждёт приглашения в разговор'),
-    branson:  card('council', 'Ричард Брэнсон', 'Стратегия и план на 90 дней', '#4da3ff', 'working', 'Ждёт приглашения в разговор'),
-    legends:    card('council', 'Совет легенд', 'Все восемь советников разбирают задачу вместе', '#ffe08a', 'idle', 'Совет собирается по вашей задаче'),
-
-    metaads:    card('traffic', 'Рекламные кампании', 'Запускает и ведёт кампании в Meta',          '#ff7a59', 'working',  'Следит за ценой лида'),
-    adreports:  card('traffic', 'Отчёты по рекламе',  'Расходы, лиды и цена лида по дням',          '#5ad1ff', 'thinking', 'Готовит отчёт за неделю'),
-  };
+  // карточки собираются из реестра agents.js: имя, роль, цвет, отдел, статус и «сейчас делает»
+  window.AGENT_CATALOG = Object.fromEntries(Object.entries(window.OFFICE_AGENTS.list)
+    .map(([id, a]) => [id, { dept:a.dept, name:a.name, role:a.role, color:a.color, status:a.status, task:a.now || a.tasks?.[0] || '' }]));
 
   // ——— Подстройка каталога под офис из office.config.js ———
   const AC = window.AGENT_CONTENT;

@@ -53,6 +53,15 @@
   .fold svg{width:16px;height:16px;transition:transform .25s;transform:rotate(180deg)}
   .brand.open .fold svg{transform:none}
   .themes{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:4px}
+  /* один стиль — «Волна»; «Ночной Сити» — в архиве (?theme=night), переключателя нет */
+  .themes,.theme-note,#brandFold{display:none!important}
+  .brand-lede{margin:8px 0 2px;font-size:13px;line-height:1.5;color:var(--ink-2);max-width:320px}
+  .brand-lede b{color:var(--ink)}
+  body.app .brand-lede{display:none}
+  .asst-mode{display:flex;gap:6px;padding:0 14px 8px;flex-wrap:wrap}
+  .asst-mode button,.asst-mode a{display:inline-flex;align-items:center;gap:6px;font-size:12px;font-weight:700;padding:6px 10px;border-radius:10px;background:rgba(255,255,255,.06);border:1px solid rgba(255,255,255,.1);color:var(--ink-2);text-decoration:none;cursor:pointer;font-family:inherit}
+  .asst-mode button:hover,.asst-mode a:hover{color:var(--ink);background:rgba(255,255,255,.1)}
+  .asst-mode svg{width:14px;height:14px;fill:none;stroke:currentColor;stroke-width:2;stroke-linecap:round;stroke-linejoin:round}
   .themes button{display:flex;flex-direction:column;align-items:flex-start;gap:6px;padding:8px;border-radius:13px;text-align:left;border:1px solid transparent;transition:background .2s,border-color .2s;min-width:0}
   .brand.open .themes{grid-template-columns:1fr}
   .brand.open .themes button{flex-direction:row;align-items:center;gap:12px;padding:8px 10px}
@@ -622,6 +631,21 @@
   .dk-hero small{font-size:11.5px;color:var(--ink-2)}
   .dk-hero .w b{color:#ffcf6e} .dk-hero .r b{color:#9cc4ff} .dk-hero .d b{color:#3ddc97}
   /* затраты месяца, подключённые системы, конвейеры, контролёр, оценка */
+  /* «Команда и доступы»: руководители, их агенты, ссылки-приглашения */
+  .ta-card{border-radius:14px;background:rgba(255,255,255,.035);border:1px solid rgba(255,255,255,.08);padding:14px;margin:0 0 12px;display:grid;gap:10px}
+  .ta-top{display:flex;gap:12px;align-items:center;flex-wrap:wrap}
+  .ta-top .txt{flex:1;min-width:160px}.ta-top b{display:block;font-size:15px}.ta-top small{color:var(--ink-2);font-size:12.5px}
+  .ta-st{font:600 11px var(--f-mono);padding:3px 9px;border-radius:99px;background:rgba(255,255,255,.07);color:var(--ink-2)}
+  .ta-st.on{background:rgba(61,220,151,.14);color:#3ddc97}.ta-st.off{background:rgba(255,107,107,.14);color:#ff9a9a}.ta-st.inv{background:rgba(255,176,32,.14);color:#ffcf6e}
+  .ta-acts{display:flex;gap:8px;flex-wrap:wrap}
+  .ta-acts button{padding:8px 13px;border-radius:11px;background:rgba(255,255,255,.06);border:1px solid rgba(255,255,255,.1);font-weight:700;font-size:13px}
+  .ta-acts button.go{background:#2f7bff;border-color:#2f7bff;color:#fff}
+  .ta-link{display:flex;gap:8px;align-items:center}.ta-link input{flex:1;min-width:0;padding:9px 11px;border-radius:10px;background:rgba(0,0,0,.3);border:1px solid rgba(255,255,255,.12);color:var(--ink);font:12px var(--f-mono)}
+  .ta-ags summary{cursor:pointer;font-size:13px;color:var(--ink-2)}
+  .ta-ags h5{margin:10px 0 6px;font-size:11.5px;letter-spacing:.06em;text-transform:uppercase;color:var(--ink-3)}
+  .ta-grid{display:grid;grid-template-columns:repeat(auto-fill,minmax(180px,1fr));gap:6px}
+  .ta-grid label{display:flex;gap:8px;align-items:center;padding:6px 9px;border-radius:10px;background:rgba(255,255,255,.03);font-size:13px;cursor:pointer}
+  .ta-grid label.on{background:rgba(47,123,255,.14)}
   /* гость: маршрут задачи точками на карточке «Сейчас» */
   .pubflow{display:flex;gap:4px;margin-top:6px}
   .pubflow i{flex:1;height:4px;border-radius:2px;background:rgba(255,255,255,.1)}
@@ -828,6 +852,7 @@
     <button class="fold" id="brandFold" aria-label="Подробнее о темах" aria-expanded="false"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><path d="m6 15 6-6 6 6"/></svg></button>
   </div>
   <button class="mstat" id="mstat" type="button" hidden></button>
+  <p class="brand-lede" id="brandLede"></p>
   <div class="themes" id="themes" role="radiogroup" aria-label="Оформление офиса"></div>
   <p class="theme-note" id="themeNote"></p>
 </section>
@@ -846,18 +871,19 @@
 </aside>
 <button class="reopen glass" id="teamShow" hidden>История задач</button>
 
-<aside class="asst glass" id="asst" hidden aria-label="Личный ассистент">
+<aside class="asst glass" id="asst" hidden aria-label="Двойник">
   <header class="asst-h">
     <span class="asst-orb" id="aOrb"></span>
-    <div><h2>Ассистент</h2><p id="aSub">Подключаюсь…</p></div>
+    <div><h2>Двойник</h2><p id="aSub">Подключаюсь…</p></div>
     <button class="asst-x" id="aStop" hidden aria-label="Остановить голос" title="Остановить голос"><svg viewBox="0 0 24 24"><rect x="6" y="6" width="12" height="12" rx="2"/></svg></button>
-    <button class="asst-x" id="aClose" aria-label="Закрыть ассистента">×</button>
+    <button class="asst-x" id="aClose" aria-label="Закрыть двойника">×</button>
   </header>
+  <div class="asst-mode"><button type="button" id="aHolo" title="Двойник появится голограммой в центре офиса"><svg viewBox="0 0 24 24"><ellipse cx="12" cy="20" rx="6" ry="1.6"/><path d="M8.5 18.5 7 9M15.5 18.5 17 9"/><circle cx="12" cy="7.5" r="4"/></svg>Голограмма в офисе</button><a href="twin/concepts.html" id="aFull" title="Двойник на весь экран: чат, голос, камера, задачи Claude Code"><svg viewBox="0 0 24 24"><path d="M4 9V4h5M20 9V4h-5M4 15v5h5M20 15v5h-5"/></svg>На весь экран</a></div>
   <div class="asst-log" id="aLog" aria-live="polite"></div>
   <div class="asst-chips" id="aChips"></div>
   <form class="asst-in" id="aForm">
     <button type="button" class="asst-mic" id="aMic" hidden aria-label="Сказать голосом" title="Сказать голосом"><svg viewBox="0 0 24 24"><rect x="9" y="3" width="6" height="11" rx="3"/><path d="M5 11a7 7 0 0 0 14 0M12 18v3"/></svg></button>
-    <textarea id="aText" rows="1" placeholder="Спросите офис…" aria-label="Сообщение ассистенту"></textarea>
+    <textarea id="aText" rows="1" placeholder="Спросите офис…" aria-label="Сообщение двойнику"></textarea>
     <button type="submit" class="asst-send" id="aSend" aria-label="Отправить"><svg viewBox="0 0 24 24"><path d="M12 19V5M5 12l7-7 7 7"/></svg></button>
   </form>
   <div class="asst-foot" id="aFoot"></div>
@@ -870,6 +896,12 @@
     <div class="dh"><div id="tHead"></div><button class="x" id="tClose" aria-label="Закрыть">×</button></div>
     <div class="db" id="tBody"></div>
     <div class="df"><button id="tPrev" aria-label="Предыдущая задача">←<span class="wide"> Предыдущая</span></button><span id="tCount"></span><button id="tCopy">Ссылка на задачу</button><button id="tNext" aria-label="Следующая задача"><span class="wide">Следующая </span>→</button></div>
+  </div>
+</div>
+<div class="modal" id="teamAdm" hidden role="dialog" aria-modal="true" aria-labelledby="taTitle">
+  <div class="dlg">
+    <div class="dh"><div><span class="eyebrow">Только для владельца</span><h2 id="taTitle">Команда и доступы</h2></div><button class="x" id="taClose" aria-label="Закрыть">×</button></div>
+    <div class="db" id="taBody"></div>
   </div>
 </div>
 <div class="modal" id="dossier" hidden role="dialog" aria-modal="true" aria-labelledby="dName">
@@ -890,7 +922,7 @@
   <button data-m="office" class="on"><svg viewBox="0 0 24 24"><path d="M3 10.5 12 3l9 7.5V20a1 1 0 0 1-1 1h-5v-6H9v6H4a1 1 0 0 1-1-1z"/></svg>Офис</button>
   <button data-m="tasks"><svg viewBox="0 0 24 24"><path d="M9 6h11M9 12h11M9 18h11M4 6h.01M4 12h.01M4 18h.01"/></svg>Задачи<span class="bd" id="mBadge" hidden></span></button>
   <button data-m="new" class="plus" id="mNew" aria-label="Новая задача агенту"><span class="c"><svg viewBox="0 0 24 24"><path d="M12 5v14M5 12h14"/></svg></span></button>
-  <button data-m="assistant"><svg viewBox="0 0 24 24"><rect x="9" y="3" width="6" height="11" rx="3"/><path d="M5 11a7 7 0 0 0 14 0M12 18v3"/></svg>Ассистент</button>
+  <button data-m="assistant"><svg viewBox="0 0 24 24"><circle cx="12" cy="12" r="4"/><path d="M12 2v3M12 19v3M2 12h3M19 12h3M4.9 4.9l2.1 2.1M17 17l2.1 2.1M4.9 19.1 7 17M17 7l2.1-2.1"/></svg>Двойник</button>
   <button data-m="more"><svg viewBox="0 0 24 24"><circle cx="5" cy="12" r="1.4"/><circle cx="12" cy="12" r="1.4"/><circle cx="19" cy="12" r="1.4"/></svg>Ещё</button>
 </nav>
 <div class="msheet" id="msheet" hidden><div class="sh glass" id="msh"></div></div>
@@ -904,9 +936,7 @@
   <button data-cmd="desk"><svg viewBox="0 0 24 24"><circle cx="12" cy="8" r="4"/><path d="M4 21a8 8 0 0 1 16 0"/></svg>Мой стол</button>
   <button data-cmd="team" class="on"><svg viewBox="0 0 24 24"><path d="M9 6h11M9 12h11M9 18h11M4 6h.01M4 12h.01M4 18h.01"/></svg>Задачи</button>
   <button data-cmd="plan"><svg viewBox="0 0 24 24"><rect x="3" y="3" width="18" height="18" rx="2"/><path d="M3 9h18M9 21V9"/></svg>План</button>
-  <button data-cmd="assistant"><svg viewBox="0 0 24 24"><rect x="9" y="3" width="6" height="11" rx="3"/><path d="M5 11a7 7 0 0 0 14 0M12 18v3"/></svg>Ассистент</button>
-  <button data-cmd="twin" title="Цифровой двойник: видит, слышит, знает ваш контент"><svg viewBox="0 0 24 24"><circle cx="12" cy="12" r="4"/><path d="M12 2v3M12 19v3M2 12h3M19 12h3M4.9 4.9l2.1 2.1M17 17l2.1 2.1M4.9 19.1 7 17M17 7l2.1-2.1"/></svg>Двойник</button>
-  <button data-cmd="holo" title="Вызвать голограмму двойника в центр офиса"><svg viewBox="0 0 24 24"><ellipse cx="12" cy="20" rx="6" ry="1.6"/><path d="M8.5 18.5 7 9M15.5 18.5 17 9"/><circle cx="12" cy="7.5" r="4"/></svg>Голограмма</button>
+  <button data-cmd="twin" title="Двойник: спросите офис голосом или текстом, поставьте задачу; внутри — голограмма и полный экран"><svg viewBox="0 0 24 24"><circle cx="12" cy="12" r="4"/><path d="M12 2v3M12 19v3M2 12h3M19 12h3M4.9 4.9l2.1 2.1M17 17l2.1 2.1M4.9 19.1 7 17M17 7l2.1-2.1"/></svg>Двойник</button>
   <span class="sep"></span>
   <button data-cmd="tour"><svg viewBox="0 0 24 24"><path d="M7 4.5v15l12-7.5z"/></svg>Экскурсия</button>
   <button data-cmd="labels" class="on"><svg viewBox="0 0 24 24"><path d="M4 7h16M4 12h16M4 17h10"/></svg>Подписи</button>
@@ -922,6 +952,7 @@
     <input id="hbText" placeholder="Спросите голограмму об офисе…" autocomplete="off">
     <button type="submit" id="hbSend" title="Отправить"><svg viewBox="0 0 24 24"><path d="M5 12h14M13 6l6 6-6 6"/></svg></button>
     <button type="button" id="hbStop" title="Остановить голос" hidden><svg viewBox="0 0 24 24"><rect x="6" y="6" width="12" height="12" rx="2"/></svg></button>
+    <button type="button" id="hbChat" title="Открыть чат двойника"><svg viewBox="0 0 24 24"><path d="M4 5h16v11H8l-4 4z"/></svg></button>
     <button type="button" id="hbClose" title="Отпустить голограмму"><svg viewBox="0 0 24 24"><path d="M6 6l12 12M18 6 6 18"/></svg></button>
   </form>
 </div>
@@ -932,6 +963,7 @@
      агентов, окна отделов. tasks.js — история реальных задач для правой панели,
      tasks.auto.js — задачи из новых PR и ссылок, которые добавляются сами (sync/sync.mjs),
      skills-library.js — названия скиллов из приватной библиотеки офиса. -->
+<script src="agents.js"></script>
 <script src="office.config.js"></script>
 <script src="dept-content.js"></script>
 <script src="materials.js"></script>
@@ -950,258 +982,31 @@
      передаёт результат (out) и готовые работы (works). to: id агента | 'head' — свой
      руководитель | 'you' — ваш стол (нужно решение) -->
 <script>
+// сцена и запасной config — из реестра агентов agents.js (там же: кому агент что носит, чем занят, готовые работы)
 window.OFFICE_DATA = (() => {
-  const o = (to, say, item, ask) => ({ to, say, item, ask });
-  const A = (name, role, color, screen, tasks, out, works = [], extra = {}) =>
-    ({ name, role, color, screen, task: tasks[0], tasks, out, works, ...extra });
-  const ART = id => 'https://claude.ai/artifact/' + id;
-  const MK = p => 'https://marketing.aicex.club/assets/pages/' + p;
-
-  const catalog = {
-    product: A('Разработка продуктов', 'Собирает продукты кодом и выкладывает', '#4da3ff', 'code',
-      ['Дорабатывает Persona Studio 2.0', 'Выкатывает обновление бота монтажа', 'Чинит оплату в мини-аппе'],
-      [o('you', 'выкатил Persona Studio 2.0 на тест', 'Релиз Persona Studio 2.0', 'Примите релиз Persona Studio 2.0'),
-       o('chats', 'выкатил новую версию бота', 'Новая версия бота'),
-       o('landings', 'подключил оплату к лендингу', 'Оплата на лендинге')],
-      [['Транскрибация', 'https://transcribe.aicex.club'], ['AI Creative Hub', 'https://aihub.aicex.club'], ['Бот монтажа', 'https://reels.aicex.club'], ['Пак скиллов', 'https://skills.aicex.club']]),
-    market: A('Исследования рынка', 'Изучает рынок, конкурентов и тренды', '#9b6bff', 'chart',
-      ['Сравнивает офферы конкурентов', 'Собирает игровые концепции', 'Ищет ниши для Нейроворонки'],
-      [o('product', 'передал выводы по конкурентам', 'Отчёт по конкурентам'),
-       o('specs', 'отдал карту рынка для ТЗ', 'Карта рынка'),
-       o('you', 'собрал сравнение офферов', 'Сравнение офферов', 'Посмотрите сравнение офферов конкурентов')],
-      [['Prod Skills — игровые концепции', ART('8bFig9B5aX3RqzZqS5LdkZ')], ['12 рабочих связок', ART('Xs6q7BfiHsmEdYxSAXt9DU')], ['VSL: Контент → Аудитория → Деньги', ART('3K2VLPCxZqQKu2oHTqTD69')]]),
-    transcriber: A('Транскрибатор', 'Расшифровывает ролики по ссылке и передаёт текст агентам', '#2fd3c6', 'doc',
-      ['Расшифровывает рилс конкурента', 'Текст эфира для сценариев', 'Разбор YouTube-ролика'],
-      [o('scripts', 'передал расшифровку рилса конкурента', 'Расшифровка референса'),
-       o('carousel', 'отдал текст ролика для карусели', 'Текст ролика'),
-       o('avatar', 'передал текст для аватара', 'Расшифровка'),
-       o('audience', 'отдал расшифровки залётов конкурентов', 'Расшифровки залётов')],
-      [['Транскрибация', 'https://transcribe.aicex.club']]),
-    socialstats: A('Статистика соцсетей', 'Каждое утро: охваты, просмотры и что сработало вчера', '#ff6fb5', 'chart',
-      ['Собирает статистику за вчера', 'Ищет, что залетело', 'Сравнивает с нормой аккаунта'],
-      [o('you', 'положил статистику за вчера', 'Статистика дня', 'Посмотрите статистику соцсетей за вчера'),
-       o('scripts', 'передал, какие темы залетели', 'Что залетело'),
-       o('publish', 'подсказал, что перевыпустить', 'Перевыпуск'),
-       o('remake', 'показал, что залетело, — в ремейк', 'Залёт дня'),
-       o('analytics', 'отдал цифры соцсетей', 'Цифры соцсетей')]),
-    qa: A('Контролёр качества', 'Проверяет работу агентов до того, как её увидите вы', '#9be15d', 'doc',
-      ['Сверяет результат с ТЗ', 'Смотрит главный файл', 'Возвращает на доработку'],
-      [o('you', 'проверил результат — можно смотреть', 'Проверенный результат'),
-       o('montage', 'вернул ролик на доработку', 'Замечания к ролику'),
-       o('landings', 'вернул лендинг на доработку', 'Замечания к лендингу')]),
-    billing: A('Балансы и подписки', 'Следит за балансами и продлением сервисов офиса', '#ffb347', 'chart',
-      ['Проверяет балансы сервисов', 'Сверяет даты продления', 'Считает остаток лимитов'],
-      [o('you', 'предупредил о продлении подписки', 'Продление подписки', 'Продлите подписку до конца недели'),
-       o('product', 'проверил ключи сервисов', 'Ключи сервисов'),
-       o('orchestrator', 'сообщил: балансы в порядке', 'Балансы')]),
-    finance: A('Финансы', 'Выручка, расходы, P&L и юнит-экономика', '#4fd18b', 'chart',
-      ['Сводит P&L за неделю', 'Разносит расходы по категориям', 'Считает окупаемость рекламы'],
-      [o('you', 'положил P&L за неделю', 'P&L недели', 'Посмотрите P&L: где теряем деньги'),
-       o('billing', 'сверил подписки с расходами', 'Расходы на сервисы'),
-       o('adreports', 'взял расход на рекламу', 'Расход на рекламу')],
-      [['Finance OS', 'https://finance.aicex.club/'], ['Сквозная аналитика', 'https://dashboard.aicex.club/']]),
-    briefing: A('Утренний брифинг', 'Сводка дня: почта, календарь, задачи', '#ffd166', 'doc',
-      ['Соберёт брифинг утром', 'Разбирает почту и календарь', 'Сводит задачи команды'],
-      [o('you', 'положил брифинг дня', 'Брифинг дня', 'Прочитайте брифинг и подтвердите приоритеты дня'),
-       o('orchestrator', 'передал задачи на день', 'Задачи дня')], [], { needsInput:true }),
-    specs: A('ТЗ и документы', 'Пишет ТЗ, планы и гайды', '#5ad1ff', 'doc',
-      ['Пишет гайд для клиента', 'ТЗ на Telegram-бота Нейроворонки', 'План реализации воронки'],
-      [o('product', 'передал ТЗ на доработку бота', 'ТЗ на бота'),
-       o('landings', 'отдал ТЗ на лендинг', 'ТЗ лендинга'),
-       o('funnels', 'передал план воронки', 'План воронки')],
-      [['Нейроворонка — план реализации', ART('Qc9ehZN7mvMrUGin99JbYT')], ['ТЗ: агент Silent Reels', ART('GRJDBxDhoN7ncD8Bp7bCEH')], ['Persona Studio — гайд для клиента', ART('2aVDVGGJfK9uSgSz4kgYyV')]]),
-    skills: A('Скиллы и автоматизации', 'Создаёт скиллы, плагины и MCP для команды', '#3ddc97', 'code',
-      ['Упаковывает пакет скиллов', 'Пишет MCP для дашборда', 'Собирает скилл монтажа'],
-      [o('montage', 'подключил новый скилл монтажа', 'Скилл монтажа'),
-       o('product', 'собрал MCP-коннектор', 'MCP-коннектор'),
-       o('carousel', 'обновил скилл каруселей', 'Скилл каруселей')],
-      [['Пакет скиллов по монтажу видео', ART('8Sx4z7NmqWs6CnjieSbEHJ')], ['skills.aicex.club', 'https://skills.aicex.club'], ['Лендинги эксперта: 5 стилей', ART('F5cjiWb2ss8AvaC3uF3CHi')]]),
-
-    slides: A('Презентации', 'Слайды вебинаров, эфиров и питчей', '#4da3ff', 'slides',
-      ['Продумывает структуру вебинара', 'Слайды эфира «Монтаж с Claude»', 'Питч для партнёров'],
-      [o('head', 'показал структуру вебинара', 'Структура вебинара'),
-       o('you', 'собрал презентацию эфира', 'Слайды эфира', 'Утвердите слайды эфира на четверг'),
-       o('landings', 'отдал блоки для лендинга', 'Блоки слайдов')],
-      [['Эфир «Монтаж рилсов с Claude»', MK('copper/deck/index.html')], ['Лид-магнит «Первые 10 000»', MK('presentation-svyazka.html')], ['Урок 2 — блог с 0 до 10 000', MK('webinar/index.html')], ['Спринт Чёрный', ART('R56YaWRpHrDHPD8n7ZjUny')]]),
-    creatives: A('Креативы', 'Рекламные креативы для Meta', '#ff7a59', 'media',
-      ['Генерирует креативы для теста', 'Баннеры для лид-магнита', 'Пачка из 12 креативов'],
-      [o('metaads', 'передал пачку креативов', '12 креативов'),
-       o('you', 'собрал креативы', 'Креативы для Meta Ads', 'Согласуйте креативы для Meta Ads'),
-       o('funnels', 'отдал баннеры для бота', 'Баннеры бота')],
-      [['Баннеры воронки — 6 штук', null]]),
-    funnels: A('Воронки', 'Бот, прогрев по дням и оффер', '#3ddc97', 'flow',
-      ['Собирает прогрев в боте', 'Цепочка на 7 дней', 'Оффер для Нейроворонки'],
-      [o('mailings', 'передал прогрев по дням', 'Прогрев на 7 дней'),
-       o('chats', 'обновил сценарии бота', 'Сценарии бота'),
-       o('head', 'показал схему воронки', 'Схема воронки')],
-      [['Нейроворонка', ART('6z4UBbZhGNcCpVmJUp487P')], ['Нейроворонка — ТЗ на Telegram-бота', ART('MEienkWZMA9dp3RugXzJRM')], ['NeuroFunnel (EN)', ART('UmhCiWJHjmKATyFKQKCUh3')]]),
-    publish: A('Публикации', 'Контент-план и выпуск в соцсети', '#ffd166', 'calendar',
-      ['Контент-план на ноябрь', 'Ставит рилс в публикацию на 19:00', 'Расписание каруселей'],
-      [o('you', 'собрал контент-план', 'Контент-план на ноябрь', 'Подтвердите контент-план на ноябрь'),
-       o('comments', 'выпустил рилс — ловим кодовые слова', 'Рилс в 19:00'),
-       o('analytics', 'отдал выпуски недели в аналитику', 'Выпуски недели')],
-      [['Контент Илья — органика', ART('5LwBz4Y5Yhdxj6pDcTG6Wp')], ['Практикум по ИИ-контенту', ART('AdPDqEVK6EdSsMwdnKMtgk')], ['Трек Юлии: 0 → 10 000', ART('BLULR8V3fsKhF7H7tWKyv9')]]),
-    analytics: A('Аналитика', 'Охваты, лиды, выручка и ROMI', '#5ad1ff', 'chart',
-      ['Считает ROMI за неделю', 'Сводка по охватам', 'Когорты оплат'],
-      [o('head', 'положил отчёт по ROMI', 'Отчёт по ROMI'),
-       o('you', 'собрал сводку недели', 'Сводка недели', 'Посмотрите сводку недели: ROMI 312%'),
-       o('audience', 'передал лучшие рилсы недели', 'Топ рилсов')],
-      [['Сквозная аналитика', ART('UzeN9sagWbM8We1yTWTmGf')]]),
-    audience: A('Анализ аудитории', 'Аудитория, ниша и конкуренты', '#c38bff', 'chart',
-      ['Ищет выбросы в нише', 'Разбирает конкурентов', 'Портрет аудитории'],
-      [o('scripts', 'передал темы-выбросы', 'Темы-выбросы'),
-       o('creatives', 'отдал боли аудитории', 'Боли аудитории'),
-       o('slides', 'передал портрет аудитории', 'Портрет аудитории')],
-      [['ТЗ на продающие рилсы — разбор', ART('FmuSoMWs8iVphWcC9AYgPL')], ['Трек Юлии: 0 → 10 000', ART('BLULR8V3fsKhF7H7tWKyv9')]]),
-    scripts: A('Сценарии', 'Сценарии рилсов с кодовым словом', '#ff5d8f', 'doc',
-      ['Пишет 10 продающих рилсов', 'Сценарий рилса про ИИ-офис', 'Хуки для серии «Claude vs GPT»'],
-      [o('montage', 'передал сценарий рилса', 'Сценарий рилса'),
-       o('carousel', 'отдал текст карусели', 'Текст карусели'),
-       o('avatar', 'передал текст для аватара', 'Текст для аватара')],
-      [['Нейроворонка — 10 продающих рилс', ART('MfLyqeAaZGw62HSUwuCCZd')], ['ТЗ на продающие рилсы', ART('FmuSoMWs8iVphWcC9AYgPL')], ['Рилс «Claude vs GPT»', ART('Cft7hmLVrPK9P9RA4A8NqM')]]),
-    montage: A('Монтаж видео', 'Рилсы и YouTube кодом, 35+ стилей', '#ff9f43', 'timeline',
-      ['Монтирует рилс «ИИ-офис»', 'Субтитры и биты', 'Обложка и переходы'],
-      [o('publish', 'передал готовый рилс', 'Готовый рилс'),
-       o('head', 'показал черновой монтаж', 'Черновой монтаж')],
-      [['Готовые ролики — 7', null], ['Стили монтажа — 17 листов', null], ['Пакет скиллов по монтажу', ART('8Sx4z7NmqWs6CnjieSbEHJ')]]),
-    carousel: A('Карусели', 'Карусели Instagram в 24 стилях', '#ffe08a', 'slides',
-      ['Ждёт сценарий', 'Карусель «12 связок»', 'Карусель в стиле «Стикер»'],
-      [o('publish', 'передал карусель на 10 слайдов', 'Карусель'),
-       o('leadmagnet', 'отдал слайды в лид-магнит', 'Слайды карусели')],
-      [['24 стиля каруселей', null], ['Готовая карусель (PDF)', MK('karusel-v1.pdf')]], { needsInput:true }),
-    landings: A('Лендинги', 'Сайты и лендинги на своём домене', '#6366f1', 'code',
-      ['Верстает лендинг «Медь»', 'Форма оплаты на лендинге', 'Адаптив под телефон'],
-      [o('metaads', 'отдал ссылку на лендинг', 'Лендинг'),
-       o('you', 'собрал лендинг', 'Лендинг «Медь»', 'Проверьте лендинг перед запуском рекламы')],
-      [['Медь — тёмная', MK('copper/site/index.html')], ['Медь — светлая', MK('copper/site-light/index.html')], ['Нейроворонка A1', MK('landing-a1.html')]]),
-    leadmagnet: A('Лид-магниты', 'Подарки за подписку: PDF, уроки, чек-листы', '#2fb9a6', 'doc',
-      ['Придумывает подарок за подписку', 'PDF «Первые 10 000»', 'Чек-лист связок'],
-      [o('funnels', 'передал подарок за подписку', 'Лид-магнит'),
-       o('threads', 'выложил приёмник в канал', 'Пост-приёмник'),
-       o('chats', 'добавил материал в каталог Директа', 'Новый материал'),
-       o('head', 'показал идею лид-магнита', 'Идея лид-магнита')],
-      [['Лид-магнит «Первые 10 000»', MK('presentation-svyazka.html')], ['12 рабочих связок', ART('Xs6q7BfiHsmEdYxSAXt9DU')]]),
-    threads: A('Threads-ветки', '3 ветки в день → материал в Telegram-канале', '#e8e8e8', 'flow',
-      ['Пишет 3 ветки на завтра', 'Ветка «скилл монтажа» с переходом в канал', 'Перевыпуск победителя с новым хуком'],
-      [o('you', 'прислал 3 ветки на апрув', '3 ветки Threads', 'Одобрите ветки Threads на завтра'),
-       o('leadmagnet', 'просит приёмник под ветку', 'Задание на приёмник'),
-       o('comments', 'ветка вышла — ловим комментарии', 'Ветка в 13:00'),
-       o('analytics', 'принёс цифры веток за 48 часов', 'Шеры, клики, подписки')],
-      [['Каталог бесплатных материалов', ART('5dj56wNJrKph3AYLbiibKH')], ['Код воронки Threads → Telegram', 'https://github.com/kleber2009-alt/ai-command-center/tree/claude/optimistic-newton-qysfiz/apps/threads-growth']]),
-    viral: A('Поиск залётов', 'Залёты конкурентов в нише каждый день', '#ff8a3d', 'chart',
-      ['Сканирует рилсы конкурентов', 'Ищет выбросы ×3 к норме', 'Карточки залётов недели'],
-      [o('transcriber', 'передал залёт на расшифровку', 'Залёт конкурента'),
-       o('remake', 'отдал залёт в ремейк', 'Залёт для ремейка'),
-       o('carousel', 'передал карусель-залёт', 'Карусель-залёт'),
-       o('scripts', 'передал темы-выбросы', 'Темы-выбросы')],
-      [['Залётный', 'https://parser.aicex.club/'], ['Reels Cloner', 'https://landings.aicex.club/viral-clone/']]),
-    remake: A('Ремейк залёта', 'Залёт → новый сценарий → аватар → монтаж', '#b388ff', 'video',
-      ['Делает ремейк топ-рилса', 'Сценарий 2.0 с кодовым словом', 'Ролик двойником HeyGen'],
-      [o('avatar', 'передал сценарий 2.0 для двойника', 'Сценарий 2.0'),
-       o('montage', 'отдал ролик аватара на монтаж', 'Ролик аватара'),
-       o('you', 'принёс готовый ремейк', 'Ремейк залёта', 'Посмотрите ремейк залетевшего рилса')],
-      [['Ремейк залёта', 'https://remake.aicex.club'], ['Студия Кадрика', 'https://kadrik.aicex.club/']]),
-    avatar: A('Видео с аватаром', 'Ролики с ИИ-двойником без съёмки', '#e0559c', 'video',
-      ['Ждёт текст', 'Ролик с аватаром', 'Озвучка клоном голоса'],
-      [o('publish', 'передал ролик с аватаром', 'Ролик с аватаром')],
-      [['Persona Studio 2.0', ART('D1kTgCx8mQCTV3utcJdxFq')], ['Ролики с аватаром — 2', null]], { needsInput:true }),
-
-    chats: A('Переписки', 'Ведёт переписки с клиентами', '#5ad1ff', 'chat',
-      ['Отвечает в директ', 'Квалифицирует лидов из Direct', 'Догоняет молчунов'],
-      [o('closer', 'передал 5 тёплых лидов', '5 тёплых лидов'),
-       o('threads', 'отдал боли из Директа для веток', 'Частые запросы Директа'),
-       o('head', 'отдал сводку переписок', 'Сводка переписок')],
-      [['Нейроворонка — ТЗ на Telegram-бота', ART('MEienkWZMA9dp3RugXzJRM')]]),
-    comments: A('Ответы на комментарии', 'Отвечает на кодовые слова под постами', '#ffd166', 'chat',
-      ['Разбирает комментарии под рилсом', 'Ловит кодовое слово «ОФИС»', 'Отвечает на вопросы под постом'],
-      [o('chats', 'передал 12 заявок из комментариев', 'Заявки из комментариев'),
-       o('analytics', 'отдал статистику кодовых слов', 'Кодовые слова')]),
-    consult: A('ИИ-консультации', 'Отвечает на вопросы по базе знаний', '#c38bff', 'chat',
-      ['Учит новые ответы', 'Отвечает по базе знаний', 'Разбирает сложный вопрос'],
-      [o('chats', 'передал ответы по базе знаний', 'Ответы по базе'),
-       o('head', 'показал вопросы без ответа', 'Вопросы без ответа')]),
-    mailings: A('Рассылки', 'Рассылки по базе в боте', '#ff7a59', 'chat',
-      ['Ждёт запуск', 'Рассылка по базе бота', 'Письмо дожима'],
-      [o('closer', 'передал откликнувшихся', 'Отклики на рассылку'),
-       o('you', 'подготовил рассылку', 'Рассылка по базе', 'Одобрите рассылку по базе 4 200 человек')], [], { needsInput:true }),
-    closer: A('Закрытие сделок', 'Доводит тёплых лидов до оплаты', '#3ddc97', 'chat',
-      ['Ведёт тёплых лидов', 'Дожимает до оплаты', 'Сообщения после оплаты'],
-      [o('analytics', 'передал оплаты дня', 'Оплаты дня'),
-       o('head', 'закрыл сделку и принёс отчёт', 'Отчёт по сделкам')],
-      [['Сообщения перед и после оплаты', null]]),
-
-    launch: A('Практикумы и запуски', 'Стратегия запуска, гипотезы и прогрев', '#ff5d6c', 'calendar',
-      ['Ведёт прогрев к практикуму', 'Гипотезы по регистрациям', 'План сторис по дням'],
-      [o('you', 'принёс стратегию запуска', 'Стратегия практикума', 'Утвердите стратегию практикума'),
-       o('scripts', 'заказал рилсы прогрева', 'Рилсы прогрева'),
-       o('landings', 'заказал лендинг практикума', 'Лендинг практикума'),
-       o('mailings', 'передал напоминания о практикуме', 'Напоминания')]),
-    academy: A('Академия и внедрение', 'Треки обучения и офис агентов для клиентов', '#6ee7ff', 'slides',
-      ['Собирает трек «Свой ИИ-офис»', 'Урок по связке', 'Внедрение офиса клиенту'],
-      [o('slides', 'заказал слайды урока', 'Слайды урока'),
-       o('closer', 'передал программу для продажи', 'Программа трека'),
-       o('you', 'собрал трек для учеников', 'Трек обучения', 'Посмотрите трек «Свой ИИ-офис»')],
-      [['Академия «Свой ИИ-офис»', 'https://hq.aicex.club/?game'], ['Пак скиллов', 'https://skills.aicex.club']]),
-    hormozi: A('Алекс Хормози', 'Оффер и ценность', '#ffd479', 'doc',
-      ['Ждёт приглашения в разговор', 'Разбирает задачу своим методом', 'Спорит с советом'],
-      [o('funnels', 'отдал усиленный оффер', 'Оффер'),
-       o('you', 'разобрал ваш оффер', 'Разбор оффера', 'Посмотрите разбор оффера')]),
-    garyvee: A('Гэри Вайнерчук', 'Контент и внимание', '#ff7a59', 'media',
-      ['Ждёт приглашения в разговор', 'Разбирает задачу своим методом', 'Спорит с советом'],
-      [o('scripts', 'подсказал форматы для рилсов', 'Форматы контента'),
-       o('publish', 'отдал план нарезки', 'План нарезки')]),
-    godin: A('Сет Годин', 'Бренд и позиционирование', '#c38bff', 'doc',
-      ['Ждёт приглашения в разговор', 'Разбирает задачу своим методом', 'Спорит с советом'],
-      [o('landings', 'отдал позиционирование для первого экрана', 'Позиционирование'),
-       o('you', 'сформулировал позиционирование', 'Позиционирование', 'Утвердите позиционирование')]),
-    brunson: A('Рассел Брансон', 'Воронки и лестница ценности', '#3ddc97', 'flow',
-      ['Ждёт приглашения в разговор', 'Разбирает задачу своим методом', 'Спорит с советом'],
-      [o('funnels', 'нарисовал лестницу ценности', 'Лестница ценности'),
-       o('slides', 'отдал структуру вебинара', 'Структура вебинара')]),
-    walker: A('Джефф Уокер', 'Запуски', '#5ad1ff', 'calendar',
-      ['Ждёт приглашения в разговор', 'Разбирает задачу своим методом', 'Спорит с советом'],
-      [o('launch', 'отдал план запуска по дням', 'План запуска'),
-       o('mailings', 'передал письма предзапуска', 'Письма предзапуска')]),
-    kennedy: A('Дэн Кеннеди', 'Прямой отклик и тексты', '#ff5d8f', 'doc',
-      ['Ждёт приглашения в разговор', 'Разбирает задачу своим методом', 'Спорит с советом'],
-      [o('landings', 'переписал тексты лендинга', 'Тексты лендинга'),
-       o('mailings', 'переписал письмо дожима', 'Письмо дожима')]),
-    cardone: A('Грант Кардон', 'Продажи и масштаб 10X', '#ff9f43', 'chat',
-      ['Ждёт приглашения в разговор', 'Разбирает задачу своим методом', 'Спорит с советом'],
-      [o('closer', 'отдал скрипт дожима', 'Скрипт дожима'),
-       o('chats', 'передал ответы на возражения', 'Ответы на возражения')]),
-    branson: A('Ричард Брэнсон', 'Стратегия и план на 90 дней', '#4da3ff', 'chart',
-      ['Ждёт приглашения в разговор', 'Разбирает задачу своим методом', 'Спорит с советом'],
-      [o('you', 'принёс план на 90 дней', 'План на 90 дней', 'Утвердите план на 90 дней'),
-       o('product', 'отдал приоритеты продуктов', 'Приоритеты')]),
-    metaads: A('Рекламные кампании', 'Запускает и ведёт кампании в Meta', '#ff7a59', 'ads',
-      ['Следит за ценой лида', 'Запускает тест креативов', 'Масштабирует связку'],
-      [o('adreports', 'передал расход и лиды', 'Расход и лиды'),
-       o('you', 'подготовил запуск кампании', 'Кампания на 30 000 ₽', 'Согласуйте запуск кампании на 30 000 ₽')]),
-    adreports: A('Отчёты по рекламе', 'Расходы, лиды и цена лида по дням', '#5ad1ff', 'chart',
-      ['Готовит отчёт за неделю', 'Цена лида по дням', 'Сводка по связкам'],
-      [o('head', 'положил отчёт по рекламе', 'Отчёт по рекламе'),
-       o('analytics', 'передал цену лида', 'Цена лида')],
-      [['Сквозная аналитика', ART('UzeN9sagWbM8We1yTWTmGf')]]),
-  };
+  const R = window.OFFICE_AGENTS;
+  const catalog = Object.fromEntries(R.ids.filter(id => R.list[id].figure !== false).map(id => {
+    const a = R.list[id];
+    return [id, { name:a.name, role:a.role, color:a.color, screen:a.screen, task:a.tasks[0], tasks:a.tasks, out:a.out, works:a.works || [], ...(a.needsInput ? { needsInput:true } : {}) }];
+  }));
 
   const config = {
     brand: 'AICEX',
     depts: [
       { id:'ceo', name:'Стратегия и продукт', short:'Стратегия',
         head:{ id:'ilia', name:'Илья', title:'Основатель — стратегия, видение, продукт', look:'m3', owner:true },
-        agents:['product', 'market', 'transcriber', 'qa', 'socialstats', 'billing', 'finance', 'briefing', 'specs', 'skills'] },
+        agents:R.of('ceo') },
       { id:'marketing', name:'Отдел маркетинга', short:'Маркетинг',
         head:{ id:'firuza', name:'Фируза', title:'Руководитель отдела маркетинга', look:'f1' },
-        agents:['slides', 'creatives', 'funnels', 'publish', 'analytics', 'audience', 'viral', 'scripts', 'remake', 'montage', 'carousel', 'landings', 'leadmagnet', 'threads', 'avatar'] },
+        agents:R.of('marketing') },
       { id:'sales', name:'Отдел продаж', short:'Продажи',
         head:{ id:'bogdan', name:'Богдан', title:'РОП — руководитель отдела продаж', look:'m1' },
-        agents:['launch', 'chats', 'comments', 'consult', 'mailings', 'closer', 'academy'] },
+        agents:R.of('sales') },
       { id:'traffic', name:'Реклама Meta', short:'Реклама',
         head:{ id:'nurken', name:'Нуркен', title:'Таргетолог — реклама в Meta', look:'m2' },
-        agents:['metaads', 'adreports'] },
+        agents:R.of('traffic') },
     ],
-    council:{ id:'council', name:'Переговорная легенд', short:'Легенды', agents:['hormozi', 'garyvee', 'godin', 'brunson', 'walker', 'kennedy', 'cardone', 'branson'], board:'legends' },
+    council:{ id:'council', name:'Переговорная легенд', short:'Легенды', agents:R.of('council'), board:'legends' },
     agents: {},
   };
   return { config, catalog };
@@ -1247,7 +1052,6 @@ const $ = id => document.getElementById(id);
 // Стиль офиса: «Галерея» — сцена этого модуля, «Ночной Сити» — сцена из night.js поверх той же симуляции,
 // задач, рабочего стола и панелей. Переключение перезагружает страницу: каждый стиль собирается заново.
 let STYLE = 'wave';
-try { STYLE = localStorage.getItem('hq:theme') || 'wave'; } catch (e) {}
 if (params.get('theme')) STYLE = params.get('theme');
 if (!['wave', 'night'].includes(STYLE)) STYLE = 'wave';
 let night = STYLE === 'night', NIGHT = null;
@@ -1265,6 +1069,9 @@ const mkRng = s => () => (s = s * 16807 % 2147483647) / 2147483647;
 let srnd = mkRng(7);
 document.title = `Живой офис ${BRAND}`;
 $('brandTitle').textContent = `Офис агентов ${BRAND}`;
+// за 10 секунд: кто здесь, что справа и что нажать
+const NAG = window.OFFICE_AGENTS.ids.filter(id => window.OFFICE_AGENTS.list[id].figure !== false).length;
+$('brandLede').innerHTML = `<b>${NAG} ${word(NAG, 'ИИ-агент', 'ИИ-агента', 'ИИ-агентов')}</b> работают по отделам. Справа — <b>реальные задачи</b> со ссылками-доказательствами. Внизу — <b>«Двойник»</b>: спросите офис голосом или текстом.`;
 $('eyebrow').textContent = `${BRAND} HQ · версия 2`;
 
 const LOOKS = {
@@ -1296,15 +1103,7 @@ const WAVE_ROOMS = [
   { id:'sales',     dept:'sales',     name:'Отдел продаж',       sub:'Директ, комментарии, сделки',        r:[-17.5, FRONT_Z, -8.5, FZ1], c:[-13, 5.9], R:3.0, maxSpan:0.95, sides:'ne' },
   { id:'ads',       dept:'traffic',   name:'Реклама Meta',       sub:'Кампании и отчёты',                  r:[3.5, FRONT_Z, 10.5, FZ1],  c:[7, 5.9], R:2.5, maxSpan:0.8, sides:'nwe' },
 ];
-const WAVE_ROOM_OF = {
-  market:'ceo', briefing:'ceo', specs:'ceo', finance:'ceo', academy:'ceo',
-  product:'tech', skills:'tech', billing:'tech', qa:'tech', runner:'tech',
-  transcriber:'studio', remake:'studio', scripts:'studio', montage:'studio', carousel:'studio', avatar:'studio', slides:'studio',
-  socialstats:'analytics', viral:'analytics', analytics:'analytics', audience:'analytics', adreports:'analytics',
-  creatives:'marketing', funnels:'marketing', publish:'marketing', landings:'marketing', leadmagnet:'marketing', threads:'marketing', launch:'marketing',
-  chats:'sales', comments:'sales', consult:'sales', mailings:'sales', closer:'sales',
-  metaads:'ads',
-};
+const WAVE_ROOM_OF = Object.fromEntries(Object.entries(window.OFFICE_AGENTS.list).filter(([, a]) => a.room).map(([id, a]) => [id, a.room]));
 const PLAN_TABLE = { x:-4.6, z:-8.4 };
 // Диспетчерская в центре коридора: подиум, пульт оркестратора, кольцевой экран рабочего стола, голограмма
 const HUB = { x:0, z:-0.7, R:3.3 };
@@ -3369,6 +3168,13 @@ const COVER_LABEL = { claude:'Документ Claude', site:'Сайт', file:'�
    вкладка и названия скиллов, шаблоны задач; в панели — только отделы, где больше всего готовых работ. */
 let OWNER_ON = false;               // = desk.on; отдельная переменная: функции работ зовутся и до объявления desk
 const guest = () => !OWNER_ON;
+// роль: владелец, руководитель отдела (вход по ссылке-приглашению) или гость; у руководителя — его агенты
+const role = () => asst?.state?.role || (asst?.state?.owner ? 'owner' : 'guest');
+const HEAD = () => role() === 'head' ? asst.state.user : null;
+const myAgent = id => !HEAD() || HEAD().agents.includes(id);
+// задачей управляет владелец; руководитель — своими: поставил сам или её делает его агент
+const canManageT = t => { const h = HEAD(); if (!h) return role() === 'owner';
+  return t.by?.id === h.id || h.agents.includes(t.route?.agent || t.agent?.id) || Boolean(t.pipeline?.stages?.some(x => h.agents.includes(x.agent))); };
 const guestUrlOk = url => kindOf(url) === 'site' && !/github\.com|githubusercontent|claude\.ai/.test(url);
 // витрина досье для гостя: ссылки — только на публичные сайты и страницы
 const guestBlocks = blocks => !guest() ? blocks : blocks.map(r => r.type === 'links' ? { ...r, items:r.items.filter(it => guestUrlOk(it.url)) } : r).filter(r => r.type !== 'links' || r.items.length);
@@ -3512,12 +3318,20 @@ function focusHTML() {
   const id = selectedId;
   if (!id) return '';
   const a = agents.get(id), p = PEOPLE[id];
+  if (id === 'you' && HEAD()) {
+    const h = HEAD(), d = deptById(h.dept), P = PEOPLE[h.id] || { name:h.name, dept:d };
+    const mine = desk.tasks.filter(t => canManageT(t) && DESK_OPEN.includes(t.status)).length;
+    return `<article class="focus"><div class="fh">${faceHTML(P)}<div><b>Вы · ${esc(h.name)}</b><small>Руководитель${d ? ' · ' + esc(d.name) : ''} · ${h.agents.length} ${word(h.agents.length, 'агент', 'агента', 'агентов')} в управлении</small></div></div>
+      ${deskWaitingHTML()}
+      <p class="note">Вы ставите задачи своим агентам, отвечаете на их вопросы, разрешаете действия во внешних системах и принимаете результат. Задачи других отделов видны только для просмотра. Сейчас ваших задач в работе: ${mine}.</p>
+      <div class="acts"><button data-do="newtask" data-id="" class="on">Новая задача агенту</button>${d ? `<button data-do="mydept">Мой отдел</button>` : ''}<button data-do="logout">Выйти</button></div></article>`;
+  }
   if (id === 'you' || (p && p.owner)) {
     const own = DEPTS[0].head;
     return `<article class="focus"><div class="fh">${faceHTML({ ...own, dept:DEPTS[0] })}<div><b>Ваш стол · ${esc(own.name)}</b><small>${esc(own.title)}</small></div></div>
       ${desk.on ? deskWaitingHTML() : asst.state && !asst.state.owner && asst.state.configured?.login
         ? '<div class="login-cta"><p>Чтобы ставить задачи агентам и видеть, что сейчас в работе, войдите как владелец — на этом устройстве один раз, вход помнится 90 дней.</p><button class="btn-go" data-do="login">Войти</button></div>' : ''}
-      <div class="acts">${desk.on ? '<button data-do="newtask" data-id="" class="on">Новая задача агенту</button>' : ''}<button data-do="dossier" data-id="${esc(own.id)}">Досье</button><button data-do="desk">Сесть за стол</button><button data-do="clear">Все задачи</button></div></article>`;
+      <div class="acts">${desk.on ? '<button data-do="newtask" data-id="" class="on">Новая задача агенту</button>' : ''}${role() === 'owner' ? '<button data-do="team-admin">Команда и доступы</button>' : ''}<button data-do="dossier" data-id="${esc(own.id)}">Досье</button><button data-do="desk">Сесть за стол</button><button data-do="clear">Все задачи</button></div></article>`;
   }
   if (!a) return '';
   const head = a.kind === 'head', orch = a.kind === 'orch';
@@ -3526,7 +3340,7 @@ function focusHTML() {
     <div class="now"><span class="eyebrow">В офисе сейчас</span><p data-f="act">${esc(a.activity())}</p></div>
     ${a.live ? desk.on ? `<div class="acts"><button data-desk="${esc(a.live.id)}" class="on">Ваша задача: ${esc(a.live.title)}</button></div>` : `<div class="now"><span class="eyebrow">Задача сейчас · ${esc(PUB_ST[a.live.status] || '')}</span><p>${esc(a.live.title)}</p></div>` : ''}
     ${orch ? '<p class="note">Оркестратор — диспетчер офиса: разбирает задачи владельца, выбирает агента и скилл и относит задачу исполнителю. В истории задач его нет.</p>' : ''}
-    <div class="acts">${desk.on && !head ? `<button data-do="newtask" data-id="${orch ? '' : esc(id)}">Поставить задачу</button>` : ''}${orch ? '' : `<button data-do="dossier" data-id="${esc(id)}">Досье</button>`}
+    <div class="acts">${desk.on && !head && (orch || myAgent(id)) ? `<button data-do="newtask" data-id="${orch ? '' : esc(id)}">Поставить задачу</button>` : ''}${orch ? '' : `<button data-do="dossier" data-id="${esc(id)}">Досье</button>`}
       <button data-do="follow" class="${followId === id ? 'on' : ''}">${followId === id ? 'Слежу' : 'Следить'}</button>
       <button data-do="clear">Все задачи</button></div>
     ${orch ? '' : `<h3 class="eyebrow">${head ? 'Задачи отдела' : 'Задачи агента'} · ${n}</h3>`}</article>`;
@@ -3656,6 +3470,9 @@ $('pbody').addEventListener('click', e => {
   if (k === 'newtask') openDeskNew({ agent:b.dataset.id || '' });
   if (k === 'live') { ptab = 'live'; renderPanel(); $('pbody').scrollTop = 0; }
   if (k === 'login') openLogin();
+  if (k === 'team-admin') openTeamAdmin();
+  if (k === 'mydept') { const d = deptById(HEAD()?.dept); if (d) flyToDept(d); }
+  if (k === 'logout') fetch(ASST_API + '/logout', { method:'POST' }).catch(() => {}).then(() => asstLoad());
 });
 function setPanel(open) {
   $('team').hidden = !open; $('teamShow').hidden = open;
@@ -3796,7 +3613,8 @@ function showDossierTab(tab) {
     if (tab === 'about') h = `<p class="lead">${esc(hc.lead || person.title)}</p>
       ${hc.zones?.length ? `<h4>Зоны</h4><div class="chipsrow">${hc.zones.map(z => `<span>${esc(z)}</span>`).join('')}</div>` : ''}
       ${hc.process?.length ? `<h4>Как работает отдел</h4>${pipeHTML(hc.process)}` : ''}
-      ${guestBlocks(hc.materials?.length ? [{ type:'links', title:'Материалы', items:hc.materials }] : []).map(r => resultHTML(r, d.accent)).join('')}`;
+      ${guestBlocks([...(hc.products?.length ? [{ type:'links', title:'Продукты руководителя', items:hc.products }] : []),
+        ...(hc.materials?.length ? [{ type:'links', title:'Материалы', items:hc.materials }] : [])]).map(r => resultHTML(r, d.accent)).join('')}`;
     if (tab === 'tasks') h = `<ol class="tasks">${TASKS.filter(t => t.dept === d.id).map(taskRowHTML).join('')}</ol>`;
     if (tab === 'works') h = worksHTML([], deptWorks(d), d.accent) || `<p class="empty">Готовых работ отдела пока нет.</p>`;
     if (tab === 'team') h = `<ul class="agents">${d.agentIds.map(aid => { const m = agentMeta(aid), n = tasksOfAgent(aid).length; return `<li><button data-agent="${esc(aid)}"><i class="dot" style="--c:${esc(m.color)}"></i><span class="txt"><b>${esc(m.name)}</b><small>${esc(m.role)}</small></span><em>${n} ${word(n, 'задача', 'задачи', 'задач')}</em></button></li>`; }).join('')}</ul>`;
@@ -3820,8 +3638,8 @@ function showDossierTab(tab) {
     } else if (tab === 'skills') {
       h = `<ul class="skilllist">${(c.skills || []).map(s => `<li><b>${esc(s.title)}</b><code>${esc(s.name)}</code><p>${esc(s.desc || '')}</p>${s.say ? `<i>Скажи: «${esc(s.say)}»</i>` : ''}</li>`).join('')}</ul>` || '';
     } else {
-      const own = desk.on ? `<div class="acts" style="margin-bottom:14px"><button class="btn-go" data-nt="" data-nt-agent="${esc(id)}">Поставить задачу агенту «${esc(agentMeta(id).name)}»</button></div>` : '';
-      h = own + ((c.templates || []).map(t => `<div class="tpl"><b>${esc(t.task)}</b><p>${esc(t.prompt)}</p><button data-copy="${esc(t.prompt)}">Скопировать задачу</button>${desk.on ? ` <button data-nt="${esc(t.prompt)}" data-nt-agent="${esc(id)}">Поставить в работу</button>` : ''}</div>`).join('') || `<p class="empty">Примеры задач появятся позже.</p>`);
+      const own = desk.on && myAgent(id) ? `<div class="acts" style="margin-bottom:14px"><button class="btn-go" data-nt="" data-nt-agent="${esc(id)}">Поставить задачу агенту «${esc(agentMeta(id).name)}»</button></div>` : '';
+      h = own + ((c.templates || []).map(t => `<div class="tpl"><b>${esc(t.task)}</b><p>${esc(t.prompt)}</p><button data-copy="${esc(t.prompt)}">Скопировать задачу</button>${desk.on && myAgent(id) ? ` <button data-nt="${esc(t.prompt)}" data-nt-agent="${esc(id)}">Поставить в работу</button>` : ''}</div>`).join('') || `<p class="empty">Примеры задач появятся позже.</p>`);
     }
   }
   $('dBody').innerHTML = h;
@@ -3866,7 +3684,7 @@ function routeHash() {
   else if (h.startsWith('desk-')) { if (desk.on) openDeskTask(h.slice(5)); else desk.hash = h.slice(5); }
 }
 addEventListener('hashchange', routeHash);
-const modalOpen = () => !$('taskModal').hidden || !$('dossier').hidden || !$('deskModal').hidden;
+const modalOpen = () => !$('taskModal').hidden || !$('dossier').hidden || !$('deskModal').hidden || !$('teamAdm').hidden;
 
 
 /* ======================= ЛИЧНЫЙ АССИСТЕНТ =======================
@@ -3885,7 +3703,7 @@ const canSpeak = () => Boolean(asst.state?.owner && asst.state.configured.voice 
 
 function asstOpen(open) {
   $('asst').hidden = !open;
-  setDockOn('assistant', open);
+  setDockOn('twin', open);
   if (open && !asst.loaded) asstLoad();
   if (open && !isMobile) setTimeout(() => $('aText').focus(), 50);
   if (!open) { asstStopVoice(); if (asst.rec) { asst.rec.cancelled = true; asst.rec.stop(); } }
@@ -3900,8 +3718,9 @@ async function asstLoad() {
   } catch (e) { asst.state = null; }
   asstRender();
   // рабочий стол — только у владельца: после входа включается, после выхода прячется
-  if (asst.state?.owner && !desk.on) deskInit();
-  if (asst.state && !asst.state.owner && desk.on) deskOff();
+  const staff = asst.state?.owner || asst.state?.role === 'head';
+  if (staff && !desk.on) deskInit();
+  if (asst.state && !staff && desk.on) deskOff();
   appShell();
   if (asst.state?.owner && selectedId === 'you') renderPanel();
 }
@@ -3915,8 +3734,8 @@ function asstRender() {
   $('aLog').innerHTML = '';
   asstSub();
   $('aMic').hidden = !(s?.owner && s.configured.voice);
-  if (!s) { addMsg('n', 'Ассистент сейчас недоступен — сервер не отвечает. Попробуйте позже.'); $('aChips').innerHTML = $('aFoot').innerHTML = ''; return; }
-  if (!s.configured.chat) addMsg('n', 'Ассистент ещё не подключён к Claude: на сервере нет ключа.');
+  if (!s) { addMsg('n', 'Двойник сейчас недоступен — сервер не отвечает. Попробуйте позже.'); $('aChips').innerHTML = $('aFoot').innerHTML = ''; return; }
+  if (!s.configured.chat) addMsg('n', 'Двойник ещё не подключён к Claude: на сервере нет ключа.');
   else if (!s.history.length) addMsg('n', s.owner
     ? 'Спросите что угодно о проекте, поставьте задачу агенту («сделай презентацию к эфиру…») или нажмите «Доложи обстановку». Микрофон — чтобы говорить голосом, ответ тогда тоже будет голосом.'
     : 'Привет! Я рассказываю, что уже сделали ИИ-агенты и команда AICEX. Спросите про любой отдел, агента или работу.');
@@ -3991,8 +3810,8 @@ async function asstSend(text, voice = false) {
     }
   };
   try {
-    const r = await fetch(ASST_API + '/chat', { method:'POST', headers:{ 'content-type':'application/json' }, body:JSON.stringify({ text, voice }) });
-    if (!r.ok || !r.body) throw new Error((await r.json().catch(() => ({}))).error || 'Ассистент не ответил — попробуйте ещё раз.');
+    const r = await fetch(ASST_API + '/chat', { method:'POST', headers:{ 'content-type':'application/json' }, body:JSON.stringify({ text, voice, ...(asst.state?.owner ? { twin:true, office:officeSnapshot() } : {}) }) });
+    if (!r.ok || !r.body) throw new Error((await r.json().catch(() => ({}))).error || 'Двойник не ответил — попробуйте ещё раз.');
     const reader = r.body.getReader(), dec = new TextDecoder();
     let buf = '';
     for (;;) {
@@ -4017,7 +3836,7 @@ async function asstSend(text, voice = false) {
   } catch (e) {
     cancelAnimationFrame(frame);
     if (!full) el.remove(); else render();
-    addMsg('e', e.message || 'Нет связи с ассистентом.');
+    addMsg('e', e.message || 'Нет связи с двойником.');
   }
   asst.busy = false; $('aSend').disabled = false;
 }
@@ -4291,6 +4110,9 @@ $('hbForm').addEventListener('submit', e => { e.preventDefault(); const t = $('h
 $('hbMic').onclick = hbMic;
 $('hbStop').onclick = asstStopVoice;
 $('hbClose').onclick = () => holoSummon(false);
+// из голограммы — обратно в чат двойника, из чата — в голограмму: это один и тот же двойник
+$('hbChat').onclick = () => { holoSummon(false); asstOpen(true); };
+$('aHolo').onclick = () => { if (isApp()) mtabOn('office'); asstOpen(false); holoSummon(true); };
 $('hbChips').addEventListener('click', e => { const b = e.target.closest('[data-q]'); if (b) hbSend(b.dataset.q); });
 $('hbSub').addEventListener('click', e => { if (e.target.id === 'hbLogin') { asstOpen(true); asstFoot('login'); } });
 $('aChips').addEventListener('click', e => { const b = e.target.closest('[data-q]'); if (b) asstSend(b.dataset.q, Boolean(b.dataset.voice)); });
@@ -4445,7 +4267,7 @@ function deskUpsert(v) {
 }
 function deskRefresh(id) {
   $('dNew').hidden = !desk.on;
-  const need = desk.tasks.filter(t => t.status === 'question' || t.status === 'review').length;
+  const need = desk.tasks.filter(t => (t.status === 'question' || t.status === 'review') && canManageT(t)).length;
   const pubOpen = desk.pub.filter(t => PUB_OPEN.includes(t.status)).length;
   $('liveTab').hidden = !desk.on && !desk.pubOk;
   $('liveTab').innerHTML = desk.on ? `В работе${need ? ` <b>${need}</b>` : ''}` : `Сейчас${pubOpen ? ` <b>${pubOpen}</b>` : ''}`;
@@ -4496,14 +4318,14 @@ function deskNotify(v, prev) {
 /* ---------- вкладка «В работе» ---------- */
 
 function deskSum() {
-  const open = desk.tasks.filter(t => DESK_OPEN.includes(t.status)).length, need = desk.tasks.filter(t => t.status === 'question' || t.status === 'review').length;
+  const open = desk.tasks.filter(t => DESK_OPEN.includes(t.status)).length, need = desk.tasks.filter(t => (t.status === 'question' || t.status === 'review') && canManageT(t)).length;
   return `${open} ${word(open, 'задача', 'задачи', 'задач')} в работе${need ? ` · ${need} ${word(need, 'ждёт', 'ждут', 'ждут')} вас` : ''}${desk.runner && !desk.runner.online ? ' · исполнитель не на связи' : ''}`;
 }
 function deskCardHTML(t) {
   const m = t.agent ? agentMeta(t.agent.id) : null, last = t.steps.at(-1), src = deskSource(t);
-  const need = t.status === 'question' || t.status === 'review', open = DESK_OPEN.includes(t.status);
+  const need = (t.status === 'question' || t.status === 'review') && canManageT(t), open = DESK_OPEN.includes(t.status);
   const st = t.status === 'queued' && t.queuePos > 1 ? `в очереди · ${t.queuePos}-я` : t.statusText;
-  const cta = t.status === 'question' ? (t.question?.from === 'style' ? 'Выбрать стиль' : t.question?.from === 'approval' ? 'Разрешить действия' : 'Ответить') : t.status === 'review' ? 'Посмотреть результат' : t.status === 'error' ? 'Разобраться' : '';
+  const cta = !canManageT(t) ? (t.by ? `ведёт ${esc(t.by.name)}` : '') : t.status === 'question' ? (t.question?.from === 'style' ? 'Выбрать стиль' : t.question?.from === 'approval' ? 'Разрешить действия' : 'Ответить') : t.status === 'review' ? 'Посмотреть результат' : t.status === 'error' ? 'Разобраться' : '';
   const line = t.status === 'question' ? t.question?.text : t.status === 'error' ? t.error : t.status === 'review' ? (t.result?.summary || last?.text) : last?.text;
   return `<li><button class="dkc${need ? ' need' : ''}${t.status === 'error' ? ' bad' : ''}${t.status === 'work' || t.status === 'routing' ? ' live' : ''}${open ? '' : ' closed'}" data-desk="${esc(t.id)}" style="--s:${DST[t.status] || '#9aa3b5'}">
     <span class="dkc-av">${orbHTML(m?.color || '#7fd3ff')}</span>
@@ -4519,8 +4341,8 @@ function liveHTML() {
   const q = pquery.toLowerCase();
   const list = desk.tasks.filter(t => (pdept === 'all' || t.agent?.dept === pdept) && (!q || [t.text, t.route?.title, t.agent?.name].join(' ').toLowerCase().includes(q)));
   const G = [
-    ['Ждут вас', '#ffb020', list.filter(t => t.status === 'question' || t.status === 'review' || t.status === 'error')],
-    ['В работе', '#3ddc97', list.filter(t => t.status === 'work' || t.status === 'routing')],
+    ['Ждут вас', '#ffb020', list.filter(t => (t.status === 'question' || t.status === 'review' || t.status === 'error') && canManageT(t))],
+    ['В работе', '#3ddc97', list.filter(t => t.status === 'work' || t.status === 'routing' || (!canManageT(t) && ['question', 'review', 'error'].includes(t.status)))],
     ['В очереди', '#8fb8ff', list.filter(t => t.status === 'queued')],
     ['Закрыто недавно', '#9aa3b5', list.filter(t => t.status === 'done' || t.status === 'cancelled').slice(0, 15)],
   ];
@@ -4531,7 +4353,7 @@ function liveHTML() {
     <div class="dk-hero"><div class="w"><b>${n(0)}</b><small>ждут вас</small></div><div class="r"><b>${n(1) + n(2)}</b><small>в работе и очереди</small></div><div class="d"><b>${n(3)}</b><small>закрыто</small></div></div>
     ${deskMonthHTML()}
     ${list.length ? `<div class="dk-groups">${G.filter(g => g[2].length).map(([h, c, l]) => `<h3 class="dk-gh" style="--g:${c}"><i></i>${h}<span>${l.length}</span></h3><ol class="tasks">${l.map(deskCardHTML).join('')}</ol>`).join('')}</div>`
-      : `<p class="empty">${desk.tasks.length ? 'Задач с такими условиями нет.' : 'Сейчас у агентов нет ваших задач. Нажмите «Новая задача агенту» или скажите ассистенту: «поставь задачу…».'}</p>`}`;
+      : `<p class="empty">${desk.tasks.length ? 'Задач с такими условиями нет.' : 'Сейчас у агентов нет ваших задач. Нажмите «Новая задача агенту» или скажите двойнику: «поставь задачу…».'}</p>`}`;
 }
 // раскрытые итоги месяца не сворачиваются при перерисовке панели
 document.addEventListener('toggle', e => { if (e.target.classList?.contains('dk-month')) desk.monthOpen = e.target.open; }, true);
@@ -4546,7 +4368,7 @@ function deskMonthHTML() {
 }
 // на карточке «Ваш стол»: что ждёт решения владельца
 function deskWaitingHTML() {
-  const need = desk.tasks.filter(t => t.status === 'question' || t.status === 'review');
+  const need = desk.tasks.filter(t => (t.status === 'question' || t.status === 'review') && canManageT(t));
   if (!need.length) return '';
   return `<div class="now"><span class="eyebrow">Ждут вашего решения · ${need.length}</span></div><ol class="tasks">${need.slice(0, 4).map(deskCardHTML).join('')}</ol>`;
 }
@@ -4650,11 +4472,11 @@ const ico = p => `<svg viewBox="0 0 24 24">${p}</svg>`;
 const I = {
   office:'<path d="M3 10.5 12 3l9 7.5V20a1 1 0 0 1-1 1H4a1 1 0 0 1-1-1z"/>', assistant:'<rect x="9" y="3" width="6" height="11" rx="3"/><path d="M5 11a7 7 0 0 0 14 0M12 18v3"/>',
   twin:'<circle cx="12" cy="12" r="4"/><path d="M12 2v3M12 19v3M2 12h3M19 12h3"/>', routine:'<circle cx="12" cy="12" r="9"/><path d="M12 7v5l3 2"/>',
-  check:'<path d="m5 12 5 5 9-10"/>', x:'<path d="M6 6l12 12M18 6 6 18"/>', alert:'<path d="M12 8v5M12 16.5v.5"/>',
+  telegram:'<path d="M21 4 3 11l6 2 2 6 3-4 5 4z"/><path d="m9 13 8-6"/>', check:'<path d="m5 12 5 5 9-10"/>', x:'<path d="M6 6l12 12M18 6 6 18"/>', alert:'<path d="M12 8v5M12 16.5v.5"/>',
   video:'<rect x="3" y="5" width="18" height="14" rx="2"/><path d="m10 9 5 3-5 3z"/>', image:'<rect x="3" y="4" width="18" height="16" rx="2"/><circle cx="9" cy="10" r="2"/><path d="m21 16-5-5-9 9"/>',
   page:'<rect x="3" y="4" width="18" height="16" rx="2"/><path d="M3 9h18"/>', doc:'<path d="M7 3h7l5 5v13H7z"/><path d="M14 3v5h5M10 13h6M10 17h6"/>', file:'<path d="M7 3h7l5 5v13H7z"/><path d="M14 3v5h5"/>',
 };
-const DSRC = { office:'Вы · в офисе', assistant:'Ассистент', twin:'Двойник', routine:'По расписанию' };
+const DSRC = { office:'Вы · в офисе', assistant:'Ассистент', twin:'Двойник', routine:'По расписанию', telegram:'Вы · в Telegram' };
 function deskSource(t) {
   const k = t.source && DSRC[t.source] ? t.source : t.routine ? 'routine' : t.route?.agent === 'claude-code' ? 'twin' : 'office';
   return { k, icon:I[k], label:k === 'routine' ? `По расписанию · ${hhmm(new Date(t.created))}` : DSRC[k] };
@@ -4745,7 +4567,8 @@ function openDeskNew({ agent = '', text = '' } = {}) {
 // «Кому» и «что будет дальше» — пересобираются при вводе и выборе агента
 function ntRefresh() {
   const pid = $('kPipe')?.value || '', P = desk.pipelines.find(x => x.id === pid);
-  if ($('kPipes')) $('kPipes').innerHTML = [{ id:'', label:'Одним агентом', about:'диспетчер выберет, кому отдать' }, ...desk.pipelines.map(x => ({ ...x, about:x.stages.map(s => s.name).join(' → ') }))]
+  const pipes = desk.pipelines.filter(x => !HEAD() || x.stages.every(st => myAgent(st.agent) || ['transcriber', 'qa'].includes(st.agent)));
+  if ($('kPipes')) $('kPipes').innerHTML = [{ id:'', label:'Одним агентом', about:HEAD() ? 'диспетчер выберет из ваших агентов' : 'диспетчер выберет, кому отдать' }, ...pipes.map(x => ({ ...x, about:x.stages.map(s => s.name).join(' → ') }))]
     .map(x => `<button type="button" data-pipe="${esc(x.id)}"${x.id === pid ? ' class="on"' : ''}><b>${esc(x.label)}</b><small>${esc(x.about)}</small></button>`).join('');
   for (const el of [$('kWhoH'), $('kWho')]) if (el) el.style.display = P ? 'none' : '';
   if (P) desk.pickOpen = false;
@@ -4766,7 +4589,7 @@ function ntRefresh() {
 function ntPickList() {
   const q = ($('kPickQ')?.value || '').toLowerCase(), cur = $('kAgent').value;
   $('kPickL').innerHTML = DEPTS.map(d => {
-    const ids = d.agentIds.filter(id => { const m = agentMeta(id); return !q || (m.name + ' ' + m.role).toLowerCase().includes(q); });
+    const ids = d.agentIds.filter(id => { const m = agentMeta(id); return myAgent(id) && (!q || (m.name + ' ' + m.role).toLowerCase().includes(q)); });
     return ids.length ? `<h5>${esc(d.name)}</h5><div class="nt-grid">${ids.map(id => { const m = agentMeta(id); return `<button type="button" data-pick="${esc(id)}"${id === cur ? ' class="on"' : ''}>${orbHTML(m.color)}<b>${esc(m.name)}</b><small>${esc(m.role)}</small></button>`; }).join('')}</div>` : '';
   }).join('') || '<p class="empty">Такого агента нет — оставьте выбор диспетчеру.</p>';
 }
@@ -4900,6 +4723,13 @@ function renderDeskTask() {
     ? `<span id="kNote"></span><button data-k="cancel">Отклонить</button><button data-k="approve-quiet">Принять без публикации</button><button class="btn-go" data-k="approve">Принять и добавить в историю</button>`
     : `<span id="kNote">${t.status === 'work' ? 'Агент работает — шаги появляются здесь сами' : t.status === 'queued' && desk.runner && !desk.runner.online ? 'Исполнитель не на связи — задача начнётся, когда он вернётся' : ''}</span>
     ${DESK_OPEN.includes(t.status) ? '<button data-k="cancel">Отменить задачу</button>' : ''}<button data-k="copy">Ссылка</button><button data-k="close">Закрыть</button>`);
+  // чужой отдел у руководителя: всё видно, но решать нечего — ни ответа, ни приёма, ни правки
+  if (!canManageT(t)) {
+    const owner = t.by ? t.by.name : 'Илья';
+    if (t.status === 'question') setHTML($('kAsk'), `<div class="ask"><b>Ждёт ответа: ${esc(owner)}</b><p>${esc(t.question?.text || '')}</p></div>`);
+    setHTML($('kActs'), `<p class="knote">Задача другого отдела — ею управляет ${esc(owner)}. Вам она видна только для просмотра.</p>`);
+    setHTML($('kFoot'), `<span id="kNote">Только просмотр</span><button data-k="copy">Ссылка</button><button data-k="close">Закрыть</button>`);
+  }
 }
 // конвейер по этапам, вердикт контролёра, затраты по запускам
 function deskExtraHTML(t) {
@@ -5017,6 +4847,76 @@ $('deskModal').addEventListener('click', e => {
   if (rm) { const u = desk.uploads[+rm.dataset.rm]; u?.xhr?.abort(); desk.uploads.splice(+rm.dataset.rm, 1); renderUploads(); }
 });
 
+/* ---------- команда: руководители отделов по ссылке-приглашению (экран владельца) ----------
+   Руководитель — человек из office.config.js (Фируза, Богдан, Нуркен). Владелец выдаёт одноразовую ссылку на 7 дней,
+   по ней руководитель входит на 90 дней. Отметки — агенты, которыми он управляет (по умолчанию — агенты его отдела);
+   снять отметку — забрать агента, отметить чужого — дать. «Отключить» сразу закрывает доступ. */
+const TA = { users:[], agents:[], links:{}, busy:false };
+async function openTeamAdmin() {
+  $('teamAdm').hidden = false; $('taBody').innerHTML = '<p class="note">Загружаю команду…</p>';
+  try { const r = await fetch(ASST_API + '/team', { cache:'no-store' }); if (!r.ok) throw new Error((await r.json().catch(() => ({}))).error || r.status); Object.assign(TA, await r.json()); }
+  catch (e) { $('taBody').innerHTML = `<p class="note warn">Не получилось загрузить команду: ${esc(e.message)}</p>`; return; }
+  renderTeamAdmin();
+}
+function renderTeamAdmin() {
+  const heads = DEPTS.filter(d => !d.head.owner).map(d => ({ d, h:d.head, u:TA.users.find(u => u.id === d.head.id) }));
+  const byDept = DEPTS.map(d => ({ d, ids:TA.agents.filter(a => a.dept === d.id).map(a => a.id) })).filter(x => x.ids.length);
+  $('taBody').innerHTML = `<p class="note">Руководитель входит по личной ссылке и управляет только отмеченными агентами: ставит им задачи, отвечает на вопросы, разрешает действия во внешних системах и принимает результат. Остальные отделы видит только для просмотра. Ссылка одноразовая и действует 7 дней; вход помнится 90 дней. Новая ссылка или «Отключить» сразу закрывают старый вход.</p>`
+    + heads.map(({ d, h, u }) => {
+      const st = !u ? ['', 'нет доступа'] : u.disabled ? ['off', 'отключён'] : u.lastSeen ? ['on', `заходил ${ago(u.lastSeen)}`] : u.invite ? ['inv', 'ссылка выдана, ещё не входил'] : ['', 'ссылка истекла'];
+      const sel = new Set(u ? u.agents : TA.agents.filter(a => a.dept === d.id).map(a => a.id));
+      const link = TA.links[h.id];
+      return `<section class="ta-card" data-u="${esc(h.id)}" data-dept="${esc(d.id)}" data-name="${esc(h.name)}">
+        <div class="ta-top">${faceHTML(PEOPLE[h.id] || { ...h, dept:d })}<span class="txt"><b>${esc(h.name)}</b><small>${esc(d.name)} · ${sel.size} ${word(sel.size, 'агент', 'агента', 'агентов')} в управлении</small></span><span class="ta-st ${st[0]}">${esc(st[1])}</span></div>
+        ${link ? `<div class="ta-link"><input readonly value="${esc(link)}"><div class="ta-acts"><button data-ta="copy">Скопировать</button></div></div>` : ''}
+        <div class="ta-acts"><button class="go" data-ta="invite">${u ? 'Новая ссылка' : 'Пригласить'}</button>${u ? `<button data-ta="toggle">${u.disabled ? 'Включить доступ' : 'Отключить доступ'}</button><button data-ta="save">Сохранить агентов</button>` : ''}</div>
+        <details class="ta-ags"${u ? '' : ' open'}><summary>Агенты в управлении — отметьте, кем руководит ${esc(h.name)}</summary>
+          ${byDept.map(({ d:dd, ids }) => `<h5>${esc(dd.name)}</h5><div class="ta-grid">${ids.map(id => { const m = agentMeta(id); return `<label class="${sel.has(id) ? 'on' : ''}"><input type="checkbox" value="${esc(id)}"${sel.has(id) ? ' checked' : ''}>${orbHTML(m.color, 'xs')}${esc(m.name)}</label>`; }).join('')}</div>`).join('')}
+        </details></section>`;
+    }).join('');
+}
+async function teamPost(body) {
+  const r = await fetch(ASST_API + '/team', { method:'POST', headers:{ 'content-type':'application/json' }, body:JSON.stringify(body) });
+  const j = await r.json().catch(() => ({}));
+  if (!r.ok) throw new Error(j.error || r.status);
+  return j;
+}
+$('taBody').addEventListener('change', e => { if (e.target.type === 'checkbox') e.target.closest('label').classList.toggle('on', e.target.checked); });
+$('taBody').addEventListener('click', async e => {
+  const b = e.target.closest('[data-ta]'); if (!b || TA.busy) return;
+  const card = b.closest('[data-u]'), id = card.dataset.u, k = b.dataset.ta;
+  const agentsSel = [...card.querySelectorAll('input[type=checkbox]:checked')].map(x => x.value);
+  if (k === 'copy') { const inp = card.querySelector('.ta-link input'); navigator.clipboard?.writeText(inp.value).then(() => { b.textContent = 'Скопировано'; }).catch(() => { inp.select(); }); return; }
+  TA.busy = true; b.disabled = true;
+  try {
+    if (k === 'invite') {
+      const j = await teamPost({ action:'invite', id, name:card.dataset.name, dept:card.dataset.dept, agents:agentsSel });
+      TA.links[id] = `${location.origin}${location.pathname}#invite-${j.code}`;
+    }
+    if (k === 'toggle') { const u = TA.users.find(x => x.id === id); await teamPost({ action:'update', id, disabled:!u.disabled }); }
+    if (k === 'save') await teamPost({ action:'update', id, agents:agentsSel });
+    const r = await fetch(ASST_API + '/team', { cache:'no-store' }); Object.assign(TA, await r.json());
+    renderTeamAdmin();
+    if (k === 'save') toast('Агенты руководителя сохранены — права меняются сразу', 'ta', 5);
+  } catch (err) { toast(`Не получилось: ${err.message}`, 'ta', 8); }
+  TA.busy = false; b.disabled = false;
+});
+$('taClose').onclick = () => { $('teamAdm').hidden = true; };
+$('teamAdm').addEventListener('click', e => { if (e.target.id === 'teamAdm') $('teamAdm').hidden = true; });
+// ссылка-приглашение: hq2.aicex.club/#invite-<код> → вход руководителя
+async function redeemInvite() {
+  const m = location.hash.match(/^#invite-([\w-]{10,})$/); if (!m) return;
+  history.replaceState(null, '', location.pathname + location.search);
+  try {
+    const r = await fetch(ASST_API + '/invite', { method:'POST', headers:{ 'content-type':'application/json' }, body:JSON.stringify({ code:m[1] }) });
+    const j = await r.json().catch(() => ({}));
+    if (!r.ok) return toast(j.error || 'Ссылка-приглашение не действует.', 'inv', 12);
+    await asstLoad();
+    toast(`Добро пожаловать, ${j.user.name}! Вы вошли как руководитель — задачи своим агентам ставьте в «Моём столе».`, 'inv', 12);
+    selectedId = 'you'; if ($('team').hidden) setPanel(true); renderPanel();
+  } catch (e) { toast('Нет связи с офисом — откройте ссылку ещё раз.', 'inv', 8); }
+}
+
 /* ---------- гость: что офис делает сейчас (GET desk/live.json — заголовок, агент, статус) ----------
    Те же агенты в 3D берут реальные текущие задачи и несут результат на стол владельца; в панели — вкладка «Сейчас»
    с маршрутом задачи. Текста запроса, файлов, ТЗ и вопросов гость не видит; принятый результат — в истории задач. */
@@ -5114,7 +5014,7 @@ function liveApply(b, v, prev, quiet) {
   if (key && b.live.shown !== key) {
     b.live.shown = key;
     const id = cur.id, st = cur.status;
-    liveVisitOwner(b, st === 'review' ? b.live.title : `Вопрос по задаче «${b.live.title}»`, () => !(b.live?.id === id && b.live.status === st));
+    liveVisitOwner(b, st === 'review' ? b.live.title : `Вопрос по задаче «${b.live.title}»`, () => !(b.live?.id === id && b.live.status === st), cur.by?.id);
   }
   b.labelSig = '';
 }
@@ -5141,8 +5041,19 @@ function liveHandoff(b) {
     }));
 }
 // к вашему столу: с результатом на проверку или с вопросом; стоит, пока вы не решите (до полутора минут)
-function liveVisitOwner(a, item, done) {
+function liveVisitOwner(a, item, done, headId) {
   a.plan = []; a.act = null; releaseQueueSpot(a);
+  // задачу поставил руководитель — результат и вопросы несут на его стол, он и принимает
+  const hd = headId && agents.get(headId);
+  if (hd?.kind === 'head' && hd.dept?.pod?.headDesk) {
+    const f = hd.dept.pod.headDesk.front;
+    a.carrying = { item, o:{ to:'head' } };
+    a.plan.push(walkTo(f.x, f.z, Math.PI, 'carrying', { target:hd }), call(() => hd.attend(a, 4)),
+      doFor(90, 'present', 'presenting', { face:() => hd, until:done }),
+      call(() => { a.carrying = null; hd.dept.pod.headDesk.stack.set(hd.dept.pod.headDesk.stack.n + 1, a.color); }),
+      walkTo(a.home.x, a.home.z, a.home.yaw, 'walking'));
+    return;
+  }
   a.carrying = { item, o:{ to:'you' } };
   const q = claimQueueSpot(a), own = pods[0].owner.chair, yaw = Math.atan2(own.x - q.x, own.z - q.z);
   a.plan.push(walkTo(q.x, q.z, yaw, 'carrying', { target:'you' }),
@@ -5214,7 +5125,7 @@ function select(id, flyCam = false) {
   renderPanel(); $('pbody').scrollTop = 0;
 }
 function setDock(k) { for (const b of $('dock').querySelectorAll('button')) if (!['team', 'labels', 'tour', 'assistant', 'twin', 'holo'].includes(b.dataset.cmd)) b.classList.toggle('on', b.dataset.cmd === k); }
-function setDockOn(k, on) { $('dock').querySelector(`[data-cmd="${k}"]`).classList.toggle('on', on); }
+function setDockOn(k, on) { $('dock').querySelector(`[data-cmd="${k}"]`)?.classList.toggle('on', on); }
 function cmd(k) {
   if (!['tour', 'labels', 'team', 'assistant', 'twin', 'holo'].includes(k)) stopTour();
   if (k === 'overview') { mode = 'overview'; followId = null; setControls('free'); setDock('overview'); if (night) NIGHT?.overview(); else { const v = overviewView(); flyTo(v.pos, v.target, 1.6); } }
@@ -5228,9 +5139,8 @@ function cmd(k) {
   if (k === 'team') setPanel($('team').hidden);
   if (k === 'labels') { labelsOn = !labelsOn; setDockOn('labels', labelsOn); }
   if (k === 'tour') tour ? stopTour() : startTour();
-  if (k === 'assistant') asstOpen($('asst').hidden);
+  if (k === 'assistant' || k === 'twin') asstOpen($('asst').hidden);
   if (k === 'newtask') openDeskNew();
-  if (k === 'twin') location.href = 'twin/concepts.html';
   if (k === 'holo') holoSummon();
   if (k === 'login') openLogin();
 }
@@ -5276,10 +5186,8 @@ function mOpen(k) {
 function moreSheet() {
   const s = asst.state, ic = p => `<svg viewBox="0 0 24 24">${p}</svg>`;
   const views = [['desk', 'Мой стол', '<circle cx="12" cy="8" r="4"/><path d="M4 21a8 8 0 0 1 16 0"/>'], ['plan', 'План', '<rect x="3" y="3" width="18" height="18" rx="2"/><path d="M3 9h18M9 21V9"/>'],
-    ['tour', 'Экскурсия', '<path d="m8 5 11 7-11 7z"/>'], ['twin', 'Двойник', '<circle cx="12" cy="12" r="4"/><path d="M12 2v3M12 19v3M2 12h3M19 12h3"/>'],
-    ['holo', 'Голограмма', '<ellipse cx="12" cy="20" rx="6" ry="1.6"/><circle cx="12" cy="8" r="4"/>'], ['labels', 'Подписи', '<path d="M4 6h16M4 12h10M4 18h7"/>']];
+    ['tour', 'Экскурсия', '<path d="m8 5 11 7-11 7z"/>'], ['holo', 'Голограмма', '<ellipse cx="12" cy="20" rx="6" ry="1.6"/><circle cx="12" cy="8" r="4"/>'], ['labels', 'Подписи', '<path d="M4 6h16M4 12h10M4 18h7"/>']];
   $('msh').innerHTML = `<i class="grip"></i><h3>Вид офиса</h3><div class="row">${views.map(([k, l, p]) => `<button data-mc="${k}"${k === 'labels' && labelsOn ? ' class="on"' : ''}>${ic(p)}${l}</button>`).join('')}</div>
-    <h3>Оформление</h3><div class="row">${Object.entries(THEMES).map(([id, T]) => `<button data-th="${id}"${id === STYLE ? ' class="on"' : ''}><span class="sw">${T.sw.map(c => `<i style="--c:${c}"></i>`).join('')}</span>${esc(T.name)}</button>`).join('')}</div>
     <h3>Аккаунт</h3><div class="acct">${s?.owner ? `<span>Вы вошли как владелец</span><button class="btn-go" data-mc="logout">Выйти</button>`
       : s?.configured?.login ? `<span>Войдите, чтобы ставить задачи и видеть, что в работе</span><button class="btn-go" data-mc="login">Войти</button>` : '<span>Демо для гостей</span>'}</div>`;
   $('msheet').hidden = false;
@@ -5386,6 +5294,7 @@ addEventListener('keydown', e => {
     if (e.key === 'ArrowLeft') stepTask(-1);
     return;
   }
+  if (!$('teamAdm').hidden) { if (e.key === 'Escape') $('teamAdm').hidden = true; return; }
   if (!$('dossier').hidden) { if (e.key === 'Escape') closeDossier(); return; }
   if (!$('asst').hidden && e.key === 'Escape' && $('asst').contains(document.activeElement)) return asstOpen(false);
   if (!$('holoBar').hidden && e.key === 'Escape') { if (asst.playing) return asstStopVoice(); return holoSummon(false); }
@@ -5440,7 +5349,8 @@ renderPanel(); refreshHUD();
 routeHash();
 deskInit();
 asstLoad();
-guestModeChanged();   // гость до входа: активные отделы, без скиллов, лента «Сейчас»
+guestModeChanged();
+redeemInvite();   // гость до входа: активные отделы, без скиллов, лента «Сейчас»
 appShell();
 if (isApp()) { $('team').classList.remove('min'); setPanel(false); }
 drawKanban(); drawOwnerScreen();
