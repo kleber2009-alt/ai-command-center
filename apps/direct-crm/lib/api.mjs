@@ -5,7 +5,7 @@ import { ISSUE_TYPES } from './analyze.mjs';
 const RANK = { hot:0, human:1, normal:2, low:3 };
 const CLIENT = "('client','user','contact')";
 
-export function createApi({ db, cp, auth, sync, analyzer, secure = false, log = console.log }) {
+export function createApi({ db, cp, auth, sync, analyzer, status = null, model = '', secure = false, log = console.log }) {
   const chat = db.prepare('SELECT * FROM chats WHERE id = ?');
   const msgs = db.prepare('SELECT * FROM messages WHERE chat_id = ? ORDER BY created_at, rowid');
   const events = db.prepare('SELECT * FROM events WHERE chat_id = ? ORDER BY at DESC LIMIT 50');
@@ -109,8 +109,12 @@ export function createApi({ db, cp, auth, sync, analyzer, secure = false, log = 
   return async function handle(req, res, url) {
     const p = url.pathname;
     const ip = String(req.headers['x-forwarded-for'] || req.socket.remoteAddress || '').split(',')[0].trim();
-    if (p === '/api/health') return json(res, 200, { ok:true, chats:db.prepare('SELECT COUNT(*) n FROM chats').get().n,
-      lastSync:Number(db.prepare("SELECT value FROM meta WHERE key = 'last_sync'").get()?.value) || null, chatplace:!!cp, claude:!!analyzer?.on });
+    if (p === '/api/health') {
+      const m = k => db.prepare('SELECT value FROM meta WHERE key = ?').get(k)?.value ?? null;
+      const c = db.prepare(`SELECT COUNT(*) n, SUM(analyzed_at IS NOT NULL) analyzed, SUM(client_count > 0 AND last_message_at > analyzed_upto) waiting FROM chats`).get();
+      return json(res, 200, { ok:true, chats:c.n, messages:db.prepare('SELECT COUNT(*) n FROM messages').get().n, analyzed:c.analyzed || 0, toAnalyze:c.waiting || 0,
+        lastSync:Number(m('last_sync')) || null, backfill:m('backfill_done') ? 'done' : 'running', chatplace:!!cp, claude:!!analyzer?.on, model, status });
+    }
     if (p === '/api/login' && req.method === 'POST') {
       const b = await body(req), r = auth.check(b.login, b.password, ip);
       if (r.error) return json(res, 401, { error:r.error });

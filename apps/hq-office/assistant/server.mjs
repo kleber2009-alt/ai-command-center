@@ -33,10 +33,11 @@ import crypto from 'node:crypto';
 import { Readable } from 'node:stream';
 import { fileURLToPath } from 'node:url';
 import Anthropic from '@anthropic-ai/sdk';
-import { loadOffice, loadProjectMap, moscowDate, humanDate } from './office.mjs';
+import { loadOffice, loadProjectMap, moscowDate, humanDate, officeWindow, setOfficePatch } from './office.mjs';
 import { voiceConfigured, transcribe, listVoices, guessOwnerVoice, speak, realtimeToken } from './voice.mjs';
 import { createDesk } from './desk.mjs';
 import { initTeam } from './team.mjs';
+import { initAdmin } from './admin.mjs';
 import { loadTwin, initTwin, remember, rememberTool, SECTIONS, TWIN_PROMPT } from './twin.mjs';
 import { initKb, loadKb, kbTools, runKbTool, ingest, listPrivate, removePrivate } from './kb.mjs';
 import { startTelegram } from './tg.mjs';
@@ -56,6 +57,8 @@ const claude = process.env.ANTHROPIC_API_KEY ? new Anthropic() : null;
 initTwin(DATA_DIR);
 initKb(DATA_DIR);
 const team = initTeam(DATA_DIR);
+const admin = initAdmin(DATA_DIR);
+setOfficePatch(() => ({ patch:admin.patch(), stamp:admin.stamp() }));
 
 /* ---------- prompts ---------- */
 
@@ -92,8 +95,8 @@ const SECRET = load('secret.json', null)?.key || (() => { const key = crypto.ran
 const owner = load('owner.json', { memory:'', turns:[] });   // turns: { role:'user'|'assistant', text, at, voice }
 const settings = load('settings.json', {});                  // { voiceId, voiceName }
 const guests = new Map();                                     // guest id → { turns, at } (memory only)
-const desk = createDesk({ claude, model:MODEL, fallback:FALLBACK, dataDir:DATA_DIR, officeDir:OFFICE_DIR, runnerToken:process.env.HQ_DESK_RUNNER_TOKEN || '',
-  linkKey:crypto.createHmac('sha256', SECRET).update('desk-links').digest('hex') });
+const desk = createDesk({ isHidden:id => admin.hiddenTask('desk-' + id), heads:() => team.list(), claude, model:MODEL, fallback:FALLBACK, dataDir:DATA_DIR,
+  officeDir:OFFICE_DIR, runnerToken:process.env.HQ_DESK_RUNNER_TOKEN || '', linkKey:crypto.createHmac('sha256', SECRET).update('desk-links').digest('hex') });
 
 /* ---------- auth and limits ---------- */
 
@@ -101,7 +104,7 @@ const sha = s => crypto.createHash('sha256').update(String(s)).digest();
 const sign = v => crypto.createHmac('sha256', SECRET).update(v + '|' + PASSWORD).digest('base64url');
 const same = (a, b) => a.length === b.length && crypto.timingSafeEqual(a, b);
 const cookies = req => Object.fromEntries((req.headers.cookie || '').split(/;\s*/).filter(Boolean).map(c => { const i = c.indexOf('='); return [c.slice(0, i), decodeURIComponent(c.slice(i + 1))]; }));
-const cookie = (name, value, maxAge) => `${name}=${encodeURIComponent(value)}; Path=${PREFIX}; Max-Age=${maxAge}; HttpOnly; SameSite=Lax${process.env.SERVE_STATIC === '1' ? '' : '; Secure'}`;
+const cookie = (name, value, maxAge, sameSite = 'Lax') => `${name}=${encodeURIComponent(value)}; Path=${PREFIX}; Max-Age=${maxAge}; HttpOnly; SameSite=${sameSite}${process.env.SERVE_STATIC === '1' && sameSite === 'Lax' ? '' : '; Secure'}`;
 const clientIp = req => String(req.headers['x-forwarded-for'] || req.socket.remoteAddress || '').split(',')[0].trim();
 
 const ownerToken = () => { const v = `owner.${Date.now() + 90 * 864e5}`; return `${v}.${sign(v)}`; };
@@ -109,21 +112,10 @@ const ownerToken = () => { const v = `owner.${Date.now() + 90 * 864e5}`; return 
 // the office's own bot — @AI_Growth_Office_Bot: HQ_TG_BOT_TOKEN, else the notify bot when it is the office's own (HQ_NOTIFY_TG_OWN=1)
 const TG_TOKEN = process.env.HQ_TG_BOT_TOKEN || (/^(1|true|yes)$/i.test(process.env.HQ_NOTIFY_TG_OWN || '') ? process.env.HQ_NOTIFY_TG_TOKEN || '' : '');
 const TG_OWNERS = String(process.env.HQ_TG_OWNER_IDS || (/^\d+$/.test(process.env.HQ_NOTIFY_TG_CHAT || '') ? process.env.HQ_NOTIFY_TG_CHAT : '')).split(/[\s,;]+/).filter(x => /^\d+$/.test(x));
-// Mini App login: Telegram signs initData with the bot token (HMAC "WebAppData") — an owner's id gets the owner cookie
-function telegramUser(initData) {
-  if (!TG_TOKEN || !initData) return null;
-  const p = new URLSearchParams(String(initData)), hash = p.get('hash') || '';
-  p.delete('hash');
-  const check = [...p.entries()].map(([k, v]) => `${k}=${v}`).sort().join('\n');
-  const key = crypto.createHmac('sha256', 'WebAppData').update(TG_TOKEN).digest();
-  const want = crypto.createHmac('sha256', key).update(check).digest('hex');
-  if (hash.length !== want.length || !crypto.timingSafeEqual(Buffer.from(hash), Buffer.from(want))) return null;
-  if (!(Number(p.get('auth_date')) * 1000 > Date.now() - 864e5)) return null;
-  try { return JSON.parse(p.get('user') || 'null'); } catch { return null; }
-}
-// the login cookie: `owner.<exp>` (the password) or `user.<id>.<ver>.<exp>` (a department head, invite link), signed
+// the login cookie: `owner.<exp>` (the password or Telegram) or `user.<id>.<ver>.<exp>` (a department head, invite link), signed.
+// The mini app may also send it as the x-hqa header — Telegram Web opens it in a frame where cookies can be blocked
 function signedValue(req) {
-  const t = cookies(req).hqa;
+  const t = cookies(req).hqa || String(req.headers['x-hqa'] || '');
   if (!t || !PASSWORD) return '';
   const i = t.lastIndexOf('.'), v = t.slice(0, i);
   return same(Buffer.from(t.slice(i + 1)), Buffer.from(sign(v))) ? v : '';
@@ -137,6 +129,17 @@ function whoOf(req) {
   if (isOwner(req)) return { owner:true };
   const u = team.check(signedValue(req));
   return u ? { head:{ id:u.id, name:u.name, dept:u.dept, agents:u.agents } } : null;
+}
+// Telegram Web App initData: the hash is an HMAC of the sorted fields by the key HMAC("WebAppData", bot token); a day at most
+function tgUser(initData, botToken) {
+  const p = new URLSearchParams(initData), hash = p.get('hash') || '';
+  p.delete('hash');
+  const check = [...p.entries()].sort(([a], [b]) => (a < b ? -1 : a > b ? 1 : 0)).map(([k, v]) => `${k}=${v}`).join('\n');
+  const key = crypto.createHmac('sha256', 'WebAppData').update(botToken).digest();
+  const h = crypto.createHmac('sha256', key).update(check).digest('hex');
+  if (!/^[0-9a-f]{64}$/.test(hash) || !same(Buffer.from(h), Buffer.from(hash))) return null;
+  if (!(Date.now() / 1000 - Number(p.get('auth_date')) < 86400)) return null;
+  try { return JSON.parse(p.get('user') || 'null'); } catch { return null; }
 }
 const hits = new Map();
 function limited(key, max, windowMs) {
@@ -397,14 +400,30 @@ const ROUTES = {
     if (!same(sha(password || ''), sha(PASSWORD))) return json(res, limited('login:fail', 60, 3600e3) ? 429 : 401, { error:'Неверный пароль.' });
     json(res, 200, { ok:true }, { 'set-cookie':cookie('hqa', ownerToken(), 90 * 86400) });
   },
-  'POST tg-login': async (req, res) => {
-    if (!PASSWORD) return json(res, 503, { error:'Вход владельца не настроен.' });
-    if (limited('tg:' + clientIp(req), 20, 900e3)) return json(res, 429, { error:'Слишком много попыток.' });
-    const u = telegramUser((await jsonBody(req)).initData);
-    if (!u || !TG_OWNERS.includes(String(u.id))) return json(res, 403, { error:'Это пульт владельца офиса.' });
-    json(res, 200, { ok:true }, { 'set-cookie':cookie('hqa', ownerToken(), 90 * 86400) });
-  },
   'POST logout': (req, res) => json(res, 200, { ok:true }, { 'set-cookie':cookie('hqa', '', 0) }),
+  // the mini app in Telegram (PUBLIC_URL/app/): the owner signs in by Telegram itself — the signed initData of the
+  // office's own bot, the owner's Telegram id. No password; a stranger who opens the app gets nothing.
+  'POST tg-login': async (req, res) => {
+    if (limited('tg:' + clientIp(req), 30, 900e3)) return json(res, 429, { error:'Слишком много попыток — подождите.' });
+    // the same bot and owners as the Telegram control panel (tg.mjs): TG_TOKEN, TG_OWNERS
+    if (!TG_TOKEN || !TG_OWNERS.length || !PASSWORD) return json(res, 503, { error:'Вход через Telegram не настроен.' });
+    const { initData } = await jsonBody(req, 8e3);
+    const user = tgUser(String(initData || ''), TG_TOKEN);
+    if (!user) return json(res, 401, { error:'Telegram не подтвердил вход — откройте приложение из бота заново.' });
+    if (!TG_OWNERS.includes(String(user.id))) return json(res, 403, { error:'Это приложение офиса — оно открывается только у владельца.' });
+    const v = `owner.${Date.now() + 30 * 864e5}`, signed = `${v}.${sign(v)}`;
+    // SameSite=None: Telegram Web opens the app in a frame; the token also goes back for the x-hqa header
+    json(res, 200, { ok:true, owner:true, name:user.first_name || '', token:signed }, { 'set-cookie':cookie('hqa', signed, 30 * 86400, 'None') });
+  },
+  // the admin panel: the patch over agents.js for the site (public — the same team every visitor sees), the owner's actions
+  'GET office/patch.js': (req, res) => { res.writeHead(200, { 'content-type':'text/javascript; charset=utf-8', 'cache-control':'no-cache' }); res.end(admin.script()); },
+  'GET admin': (req, res, o) => o ? json(res, 200, { patch:admin.patch(), log:admin.log() }) : json(res, 403, { error:'Только для владельца.' }),
+  'POST admin': async (req, res, o) => {
+    if (!o) return json(res, 403, { error:'Только для владельца.' });
+    const b = await jsonBody(req), W = officeWindow(OFFICE_DIR) || {};
+    try { const r = admin.act(b, 'Илья', { list:W.OFFICE_AGENTS?.list || {}, away:W.OFFICE_AGENTS?.away || {} }); json(res, 200, { ok:true, ...r, patch:admin.patch() }); }
+    catch (e) { json(res, 400, { error:e.message }); }
+  },
   // a department head opens the invite link: one-time code → their own login for 90 days
   'POST invite': async (req, res) => {
     if (!PASSWORD) return json(res, 503, { error:'Вход в офис ещё не настроен.' });
@@ -412,6 +431,7 @@ const ROUTES = {
     const { code } = await jsonBody(req);
     const r = team.redeem(code);
     if (!r) return json(res, 400, { error:'Ссылка-приглашение не действует: она уже открыта, устарела или доступ отключён. Попросите новую.' });
+    admin.note(r.user.name, 'вошёл в офис по ссылке-приглашению');
     json(res, 200, { ok:true, user:{ id:r.user.id, name:r.user.name, dept:r.user.dept } }, { 'set-cookie':cookie('hqa', `${r.value}.${sign(r.value)}`, team.LOGIN_DAYS * 86400) });
   },
   // the owner's team screen: heads, their agents, invite links, access on/off
@@ -420,9 +440,14 @@ const ROUTES = {
     if (!o) return json(res, 403, { error:'Только для владельца.' });
     const b = await jsonBody(req), ids = new Set(desk.agents().map(a => a.id));
     const agents = Array.isArray(b.agents) ? b.agents.filter(id => ids.has(id)) : undefined;
-    if (b.action === 'invite') { const r = team.invite({ id:b.id, name:b.name, dept:b.dept, agents }); return json(res, 200, { user:r.user, code:r.code }); }
-    if (b.action === 'update') { const u = team.update(b.id, { name:b.name, agents, disabled:typeof b.disabled === 'boolean' ? b.disabled : undefined }); return u ? json(res, 200, { user:u }) : json(res, 404, { error:'Нет такого сотрудника.' }); }
-    if (b.action === 'remove') return json(res, 200, { ok:team.remove(String(b.id || '')) });
+    const who = team.get(String(b.id || ''))?.name || b.name || b.id;
+    if (b.action === 'invite') { const r = team.invite({ id:b.id, name:b.name, dept:b.dept, agents }); admin.note('Илья', `выдал ссылку-приглашение: ${who}`); return json(res, 200, { user:r.user, code:r.code }); }
+    if (b.action === 'update') {
+      const u = team.update(b.id, { name:b.name, agents, disabled:typeof b.disabled === 'boolean' ? b.disabled : undefined });
+      if (u) admin.note('Илья', typeof b.disabled === 'boolean' ? `${b.disabled ? 'отключил' : 'включил'} доступ: ${who}` : `изменил агентов в управлении: ${who} — ${u.agents.length}`);
+      return u ? json(res, 200, { user:u }) : json(res, 404, { error:'Нет такого сотрудника.' });
+    }
+    if (b.action === 'remove') { admin.note('Илья', `удалил доступ: ${who}`); return json(res, 200, { ok:team.remove(String(b.id || '')) }); }
     json(res, 400, { error:'action' });
   },
   'POST chat': (req, res, o) => chat(req, res, o),

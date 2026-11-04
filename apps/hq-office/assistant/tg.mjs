@@ -36,6 +36,8 @@ export const TOPICS = [
   { k:'twin', name:'🎙 Двойник', color:0xCB86DB },
   { k:'errors', name:'⚠️ Ошибки', color:0xFB6F5F },
 ];
+const IMG = /\.(jpe?g|png|webp)$/i, VID = /\.(mp4|mov|m4v|webm)$/i, DOC = /\.(pdf|pptx?|docx?|xlsx?|key|csv|zip)$/i, PHOTO = 10e6;
+const natural = (a, b) => a.localeCompare(b, 'ru', { numeric:true });
 const ICON = { routing:'🧭', question:'❓', queued:'⏳', work:'⚙️', review:'👀', done:'✅', cancelled:'✖️', error:'⚠️', paused:'⏸' };
 
 export const esc = s => String(s ?? '').replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;');
@@ -113,7 +115,8 @@ export function cardText(v, site) {
 const B = (text, data) => ({ text, callback_data:data });
 export function cardKeyboard(v, { mode = '', site = '', webApp = false } = {}) {
   const id = v.id, rows = [];
-  const open = site ? (webApp ? { text:'🔍 Открыть', web_app:{ url:`${site}/?tg=1#desk-${id}` } } : { text:'🔍 Открыть', url:`${site}/#desk-${id}` }) : null;
+  // «Открыть» — the mini app of the office (app/index.html, #t=<id>); in a group Telegram allows web_app buttons only as links
+  const open = site ? (webApp ? { text:'🔍 Открыть', web_app:{ url:`${site}/app/#t=${id}` } } : { text:'🔍 Открыть', url:`${site}/app/#t=${id}` }) : null;
   if (mode === 'snooze') {
     rows.push([B('1 час', `zz:${id}:h1`), B('3 часа', `zz:${id}:h3`), B('Вечером', `zz:${id}:eve`)]);
     rows.push([B('Завтра 9:00', `zz:${id}:tom`), B('Пн 9:00', `zz:${id}:mon`)]);
@@ -193,6 +196,32 @@ export function startTelegram({ desk, dataDir, token, owners, site, ask, ownerVo
     return tg(method, fd, 300e3);
   }
 
+  // the materials of a result, the way Ilia asked: pictures and carousel slides — an album in their order (up to 20),
+  // videos (up to 3), PDF / PPTX / DOCX — as files (up to 5); the rest — «📎 Файлы» or the app
+  async function materials(v, k) {
+    const r = v.result;
+    const files = r.files.map(f => ({ ...f, abs:desk.resultFile(v.id, f.path) })).filter(f => f.abs);
+    const title = esc(cut(v.route?.title || '', 900));
+    const imgs = files.filter(f => IMG.test(f.path) && f.size <= PHOTO).sort((a, b) => natural(a.path, b.path)).slice(0, 20);
+    const vids = files.filter(f => VID.test(f.path)).sort((a, b) => (b.path === r.main) - (a.path === r.main)).slice(0, 3);
+    const docs = files.filter(f => DOC.test(f.path) || (IMG.test(f.path) && f.size > PHOTO)).slice(0, 5);
+    let first = true;
+    const caption = () => (first ? (first = false, title) : '');
+    for (let i = 0; i < imgs.length; i += 10) {
+      const part = imgs.slice(i, i + 10);
+      if (part.length === 1) { await sendFile(k, part[0].abs, caption(), { disable_notification:true }); continue; }
+      const fd = new FormData(), cap = caption();
+      for (const [a, b] of Object.entries({ ...where(k), disable_notification:true })) fd.append(a, String(b));
+      fd.append('media', JSON.stringify(part.map((f, n) => ({ type:'photo', media:`attach://f${n}`, ...(n === 0 && cap ? { caption:cap, parse_mode:'HTML' } : {}) }))));
+      for (const [n, f] of part.entries()) fd.append(`f${n}`, new Blob([fs.readFileSync(f.abs)]), path.basename(f.path));
+      await tg('sendMediaGroup', fd, 300e3);
+    }
+    for (const f of [...vids, ...docs]) await sendFile(k, f.abs, caption(), { disable_notification:true });
+    const sent = imgs.length + vids.length + docs.length, rest = r.files.length - sent - r.files.filter(f => /\.html?$/i.test(f.path)).length;
+    if (rest > 0 && sent) await quiet(send(k, `Ещё ${rest} ${rest === 1 ? 'файл' : 'файлов'} — кнопка «📎 Файлы» или «Открыть».`, { disable_notification:true }));
+    return sent;
+  }
+
   /* ----- cards ----- */
 
   const chains = new Map();   // one sync at a time per task
@@ -222,14 +251,16 @@ export function startTelegram({ desk, dataDir, token, owners, site, ask, ownerVo
     // a new place (or a new card): the old one goes, the new one comes with a notification
     if (c) await dropCard(c);
     const extra = [];
-    // a result to check: its main file comes right before the card
-    if (v.status === 'review' && v.result?.main && !v.routine) {
-      const f = desk.resultFile(id, v.result.main);
-      if (f) { const m = await quiet(sendFile(k, f, `📎 ${esc(v.result.main)}`)); if (m) { extra.push(m.message_id); remember(m.message_id, id); } }
+    let sentVersion = c?.sent || 0;
+    // a result to check: its materials come right before the card, once per version (pictures and slides — an album in
+    // order, videos, documents); in a group — into «Материалы», so they stay there when the card moves on
+    if (v.status === 'review' && v.result && !v.routine && c?.sent !== v.result.version) {
+      await quiet(materials(v, grouped() && st.topics.files ? 'files' : k));
+      sentVersion = v.result.version;
     }
     const m = await tg('sendMessage', { ...where(k), text, parse_mode:'HTML', disable_web_page_preview:true, reply_markup:kb, ...(k === 'done' || k === 'work' ? { disable_notification:true } : {}) });
     remember(m.message_id, id);
-    st.cards[id] = { chat:chatId(), mid:m.message_id, topic:k, sig, text, at:Date.now(), extra, since:k === 'inbox' ? Date.now() : 0, reminded:0 };
+    st.cards[id] = { chat:chatId(), mid:m.message_id, topic:k, sig, text, at:Date.now(), extra, since:k === 'inbox' ? Date.now() : 0, reminded:0, sent:sentVersion };
     save(); pultLater();
   }
   // a menu inside the card (snooze times, cancel confirmation) — the same message, other buttons
@@ -259,7 +290,7 @@ export function startTelegram({ desk, dataDir, token, owners, site, ask, ownerVo
     const n = counts();
     return { inline_keyboard:[[B(`📥 Ждут меня (${n.wait.length})`, 'l:wait'), B(`⚙️ В работе (${n.work.length + n.queued.length + n.paused.length})`, 'l:work')],
       [B('➕ Новая задача', 'new'), B('🔄 Обновить', 'pult'), ...(n.errors.length ? [B(`⚠️ ${n.errors.length}`, 'l:err')] : [])],
-      ...(site ? [[grouped() ? { text:'🏢 Офис', url:site } : { text:'🏢 Офис', web_app:{ url:`${site}/?tg=1` } }]] : [])] };
+      ...(site ? [[grouped() ? { text:'📱 Приложение', url:`${site}/app/` } : { text:'📱 Приложение', web_app:{ url:`${site}/app/` } }, { text:'🏢 3D-офис', url:site }]] : [])] };
   };
   let pultTimer = null;
   const pultLater = () => { clearTimeout(pultTimer); pultTimer = setTimeout(() => quiet(pultNow()), 4000); };
@@ -540,6 +571,19 @@ export function startTelegram({ desk, dataDir, token, owners, site, ask, ownerVo
 
   /* ----- start ----- */
 
+  // the earlier bot of the office (#219/#226) kept its cards in DATA_DIR/desk/tg.json: its messages go, the open tasks get cards here
+  async function migrate() {
+    const old = path.join(dataDir, 'desk', 'tg.json');
+    if (st.migrated || !fs.existsSync(old)) return;
+    st.migrated = true; save();
+    let o = {};
+    try { o = JSON.parse(fs.readFileSync(old, 'utf8')); } catch {}
+    if (o.offset > st.offset) st.offset = o.offset;
+    for (const c of Object.values(o.cards || {})) if (c?.msg) await quiet(tg('deleteMessage', { chat_id:owners[0], message_id:c.msg }));
+    await pultNow(true);
+    await firstSync();
+  }
+
   let running = true, conflicts = 0;
   const off = desk.onChange(t => { sync(t.id); pultLater(); });
   async function loop() {
@@ -550,14 +594,10 @@ export function startTelegram({ desk, dataDir, token, owners, site, ask, ownerVo
       if (hook.url) { console.error(`telegram: @${st.me} has a webhook (${hook.url.replace(/\/\/([^/]+).*/, '//$1')}) — it is another bot; give the office its own bot (HQ_TG_BOT_TOKEN). Off.`); running = false; off(); return; }
       await quiet(tg('setMyCommands', { commands:[{ command:'pult', description:'Пульт офиса' }, { command:'inbox', description:'Что ждёт меня' }, { command:'work', description:'Что в работе' },
         { command:'new', description:'Новая задача' }, { command:'bind', description:'Привязать группу с ветками' }, { command:'help', description:'Как пользоваться' }] }));
-      // the menu button opens the Mini App: HQ_TG_MINIAPP_URL, else the office itself. A Mini App already set on the bot
-      // for another address (its own design, BotFather) is kept — the office does not take its place
-      const app = (process.env.HQ_TG_MINIAPP_URL || (site ? `${site}/?tg=1` : '')).trim();
-      if (app) for (const o of owners) {
-        const cur = await quiet(tg('getChatMenuButton', { chat_id:Number(o) }));
-        if (cur?.type === 'web_app' && cur.web_app?.url && cur.web_app.url !== app && !process.env.HQ_TG_MINIAPP_URL) continue;
-        await quiet(tg('setChatMenuButton', { chat_id:Number(o), menu_button:{ type:'web_app', text:'Офис', web_app:{ url:app } } }));
-      }
+      // the menu button opens the mini app «Офис» (app/index.html), HQ_TG_MINIAPP_URL — another address
+      const app = (process.env.HQ_TG_MINIAPP_URL || (site ? `${site}/app/` : '')).trim();
+      if (app) for (const o of owners) await quiet(tg('setChatMenuButton', { chat_id:Number(o), menu_button:{ type:'web_app', text:'Офис', web_app:{ url:app } } }));
+      await migrate();
       console.log(`telegram: @${st.me} · ${grouped() ? 'group ' + st.chat : 'private chat'}`);
     } catch (e) { console.error('telegram start:', e.message); }
     while (running) {

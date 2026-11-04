@@ -58,7 +58,7 @@ jobs:
 
       - name: Check data files
         run: |
-          for f in agents.js office.config.js dept-content.js agent-content.js skills-library.js tasks.js tasks.auto.js works.js assistant/server.mjs assistant/office.mjs assistant/voice.mjs assistant/desk.mjs assistant/tg.mjs assistant/twin.mjs assistant/kb.mjs assistant/team.mjs; do node --check "apps/hq-office/$f"; done
+          for f in agents.js office.config.js dept-content.js agent-content.js skills-library.js tasks.js tasks.auto.js works.js assistant/server.mjs assistant/office.mjs assistant/voice.mjs assistant/desk.mjs assistant/tg.mjs assistant/twin.mjs assistant/kb.mjs assistant/team.mjs assistant/admin.mjs; do node --check "apps/hq-office/$f"; done
           python3 -m py_compile apps/hq-office/runner/runner.py && rm -rf apps/hq-office/runner/__pycache__
           node -e '
             global.window = {}; for (const f of ["agents.js", "office.config.js", "dept-content.js", "agent-content.js", "tasks.js", "tasks.auto.js", "works.js"])

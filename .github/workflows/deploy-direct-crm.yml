@@ -117,3 +117,10 @@ jobs:
           code=$(curl -sS -o /dev/null -w '%{http_code}' "https://$DOMAIN/api/chats")
           echo "$code https://$DOMAIN/api/chats (must be closed without login)"
           [ "$code" = 401 ]
+
+      - name: Log of the CRM
+        if: always() && env.SSH != ''
+        run: |
+          sleep 20
+          curl -sS "https://$DOMAIN/api/health" | jq . || true
+          $SSH "docker logs --tail=60 aicex-direct-crm 2>&1" || true

@@ -6,7 +6,7 @@ import { now, tx, meta } from './db.mjs';
 const num = v => Number(v) || 0;
 const isClient = side => side === 'client' || side === 'user' || side === 'contact';
 
-export function createSync({ db, cp, backfillDays = 14, maxPages = 40, backfillPages = 10, log = console.log }) {
+export function createSync({ db, cp, backfillDays = 14, maxPages = 40, backfillPages = 10, log = console.log, progress = () => {} }) {
   let running = null;
 
   const upsertChat = db.prepare(`
@@ -86,14 +86,17 @@ export function createSync({ db, cp, backfillDays = 14, maxPages = 40, backfillP
       if (older || !res?.hasNextItems || !items.length) break;
       cursor = { lastItemId:res.lastItemId, lastItemTimestamp:num(res.lastItemTimestamp) };
     }
-    let fresh = 0;
+    let fresh = 0, done = 0;
+    progress({ phase:'messages', done:0, total:changed.length });
     for (const chat of changed) {
+      progress({ done:done++ });
       try { fresh += await pullMessages(chat); }
       catch (e) { log(`sync: chat ${chat.id}: ${e.message}`); }
     }
     if (top) meta(db, 'watermark', Math.max(top, num(meta(db, 'watermark'))));
     meta(db, 'synced_once', 1);
     meta(db, 'last_sync', now());
+    progress({ phase:'backfill', done:0, total:0 });
     const back = await backfill();
     return { chats:changed.length + back.chats, messages:fresh + back.messages, firstRun, backfill:back.done ? 'done' : back.chats };
   }
@@ -111,6 +114,10 @@ export function createSync({ db, cp, backfillDays = 14, maxPages = 40, backfillP
       if (!o || o.last_message_at < floor) { done = true; break; }
       const res = await cp.listChats({ limit:50, lastItemId:o.id, lastItemTimestamp:o.last_message_at });
       const items = (res?.items || []).filter(c => c.id !== o.id);
+      // the cursor must move us older; if ChatPlace answers with chats no older than the one we asked from, stop instead of looping
+      if (items.length && !items.some(c => num(c.lastMessageAt) < o.last_message_at || (num(c.lastMessageAt) === o.last_message_at && c.id !== o.id && !getChat.get(c.id)))) {
+        log('backfill: ChatPlace did not page older than the oldest chat — stopped'); done = true; break;
+      }
       const rows = [];
       let older = false;
       tx(db, () => {
@@ -123,6 +130,7 @@ export function createSync({ db, cp, backfillDays = 14, maxPages = 40, backfillP
         }
       });
       for (const chat of rows) {
+        progress({ done:saved });
         try { fresh += await pullMessages(chat); saved++; }
         catch (e) { log(`backfill: chat ${chat.id}: ${e.message}`); }
       }

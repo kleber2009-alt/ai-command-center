@@ -440,11 +440,41 @@ test('руководитель управляет своими задачами,
   assert.ok(live.tasks.every(x => !('text' in x)));
 });
 
+/* ---------- the owner's admin panel: the patch over agents.js reaches the dispatcher ---------- */
+
+test('админ-панель: отпуск, новый агент и перевод в другой отдел сразу видны диспетчеру', async () => {
+  const { initAdmin } = await import('./admin.mjs');
+  const { setOfficePatch, officeWindow } = await import('./office.mjs');
+  const dir = fs.mkdtempSync(path.join(os.tmpdir(), 'admin-test-')); dirs.push(dir);
+  const admin = initAdmin(dir);
+  setOfficePatch(() => ({ patch:admin.patch(), stamp:admin.stamp() }));
+  try {
+    const d = setup();
+    const base = () => { const W = officeWindow(OFFICE); return { list:W.OFFICE_AGENTS.list, away:W.OFFICE_AGENTS.away }; };
+    const ids = () => d.desk.agents().map(a => a.id);
+    assert.ok(ids().includes('slides'));
+    admin.act({ action:'vacation', id:'slides', on:true }, 'Илья', base());
+    assert.ok(!ids().includes('slides'));
+    const { id } = admin.act({ action:'create', name:'Подкасты', role:'Монтирует выпуски подкаста', dept:'marketing', tasks:'Нарезает клипы' }, 'Илья', base());
+    assert.ok(ids().includes(id));
+    assert.equal(d.desk.agents().find(a => a.id === id).dept, 'marketing');
+    admin.act({ action:'edit', id:'landings', dept:'sales' }, 'Илья', base());
+    assert.equal(d.desk.agents().find(a => a.id === 'landings').dept, 'sales');
+    admin.act({ action:'remove', id }, 'Илья', base());
+    assert.ok(!ids().includes(id));
+    assert.match(admin.log()[0].text, /удалил агента «Подкасты»/);
+    assert.match(admin.script(), /OFFICE_AGENTS\.apply/);
+  } finally { setOfficePatch(null); }
+});
+
 /* ---------- Telegram, the queue, the disk ---------- */
 
 test('Telegram: сообщение на вопрос, результат и ошибку — по одному на каждое', async () => {
   const sent = [];
-  const d = setup({ telegram:{ notify:v => sent.push(`${v.status}:${v.question?.from || v.result?.version || ''}`) } });
+  // the card follows every status; the owner is called (a sound) only on a question, a result and an error — once each
+  let last = '';
+  const d = setup({ telegram:{ sync:v => { const k = `${v.status}:${v.question?.from || v.result?.version || ''}`;
+    if (['question', 'review', 'error'].includes(v.status) && k !== last) sent.push(k); last = k; } } });
   d.routes.push({ action:'ask', question:'Для какого эфира?' }, { action:'assign' });
   const id = await d.task('презентация');
   assert.deepEqual(sent, ['question:dispatcher']);
@@ -575,4 +605,73 @@ test('очередь: главный поток при лёгких соседя
   const reel = await d.task('смонтируй рилс');
   assert.equal((await d.claim({ worker:'w0', prefer_heavy:true })).id, reel);
   assert.equal((await d.claim({ worker:'w1', light:true })).id, deck);
+});
+
+/* ---------- control agents: the evening report for the owner ---------- */
+
+test('агент контроля: отчёт по отделу приходит владельцу на проверку, руководитель его не видит, в историю не попадает', async () => {
+  const d = setup();
+  const own = await d.toReview('сделай презентацию');               // slides — маркетинг
+  const t = await d.desk.controlReport('marketing', { manual:true });
+  assert.equal(t.status, 'review'); assert.ok(t.control); assert.equal(t.route.agent, 'mkcontrol');
+  assert.ok((await d.call('GET', `files/${t.id}/v1/index.html`)).status === 200);
+  const owner = (await d.call('GET', 'tasks')).j.tasks;
+  assert.ok(owner.some(x => x.id === t.id));
+  const head = (await d.call('GET', 'tasks', null, FIRUZA)).j.tasks;
+  assert.ok(!head.some(x => x.id === t.id)); assert.ok(head.some(x => x.id === own));
+  assert.equal((await d.call('POST', `tasks/${t.id}/approve`, { publish:true }, FIRUZA)).status, 403);
+  await d.call('POST', `tasks/${t.id}/approve`, { publish:true });
+  const done = await d.get(t.id);
+  assert.equal(done.status, 'done'); assert.equal(done.published, false);
+  assert.ok(!(await d.call('GET', 'history.json', null, { 'x-guest':'1' })).j.some(h => h.id === 'desk-' + t.id));
+  // the dispatcher never gets a control agent, and it is not among the agents a head can be given
+  assert.ok(!d.desk.agents().some(a => a.id === 'mkcontrol'));
+  // a quiet department makes no evening report
+  assert.equal(await d.desk.controlReport('traffic'), null);
+});
+
+test('Telegram: материалы результата — слайды альбомом по порядку, видео роликом, презентация файлом; карточка с кнопками после них', async () => {
+  const calls = []; let updates = [], mid = 900;
+  const api = http.createServer(async (req, res) => {
+    const parts = []; for await (const c of req) parts.push(c);
+    const method = req.url.split('/').pop(), raw = Buffer.concat(parts).toString('latin1');
+    let body = {};
+    if (/^multipart/.test(req.headers['content-type'] || '')) {
+      // the names of the fields and files of the form, in order
+      for (const m of raw.matchAll(/name="([^"]+)"(?:; filename="([^"]+)")?\r\n(?:[^\r\n]+\r\n)*\r\n([^\r]*)/g)) body[m[1]] = m[2] ? `<file ${m[2]}>` : Buffer.from(m[3], 'latin1').toString('utf8');
+    } else try { body = JSON.parse(Buffer.concat(parts).toString('utf8') || '{}'); } catch {}
+    if (method === 'getUpdates') { await new Promise(r => setTimeout(r, 20)); return res.end(JSON.stringify({ ok:true, result:updates.splice(0) })); }
+    calls.push({ method, body });
+    res.end(JSON.stringify({ ok:true, result:method === 'getWebhookInfo' ? { url:'' } : method === 'getMe' ? { username:'b' } : /^send/.test(method) ? (method === 'sendMediaGroup' ? [{ message_id:++mid }] : { message_id:++mid }) : true }));
+  }).listen(0);
+  servers.push(api);
+  process.env.HQ_TG_API = `http://127.0.0.1:${api.address().port}`;
+  const d = setup();
+  const bot = startTelegram({ desk:d.desk, dataDir:d.dataDir, token:'T', owners:['42'], site:'https://hq', ask:async () => '', ownerVoice:async () => null });
+  const wait = (ms = 250) => new Promise(r => setTimeout(r, ms));
+  try {
+    await wait();
+    const id = await d.task('карусель и ролик'); await wait();
+    const quiet = calls.filter(c => c.method === 'sendMessage').at(-1);
+    assert.equal(quiet.body.disable_notification, true);   // a quiet card while in work
+    const job = await d.claim();
+    await d.deliver(job, { 'slide-10.png':'p10', 'slide-2.png':'p2', 'slide-1.png':'p1', 'rils.mp4':'v', 'deck.pdf':'d', 'index.html':'<h1>x</h1>' }, { main:'index.html' });
+    calls.length = 0;
+    await d.claim(); await d.finish(id, { result:'qa', verdict:'ok' }); await wait(500);
+    const seq = calls.map(c => c.method).filter(m => /^(send|delete)/.test(m));
+    assert.deepEqual(seq, ['deleteMessage', 'sendMediaGroup', 'sendVideo', 'sendDocument', 'sendMessage']);
+    const g = calls.find(c => c.method === 'sendMediaGroup').body, album = JSON.parse(g.media);
+    assert.equal(album.length, 3); assert.equal(album[0].caption, 'Задача');
+    assert.deepEqual([g.f0, g.f1, g.f2], ['<file slide-1.png>', '<file slide-2.png>', '<file slide-10.png>']);
+    assert.equal(calls.find(c => c.method === 'sendVideo').body.video, '<file rils.mp4>');
+    assert.equal(calls.find(c => c.method === 'sendDocument').body.document, '<file deck.pdf>');
+    const card = calls.filter(c => c.method === 'sendMessage').at(-1).body;
+    assert.ok(!card.disable_notification); assert.ok(card.reply_markup.inline_keyboard.flat().some(b => b.callback_data === `ok:${id}`));
+    assert.equal(card.reply_markup.inline_keyboard.at(-1)[0].web_app.url, `https://hq/app/#t=${id}`);   // «Открыть» — the mini app
+    // accepted: the card moves to «Готово» — the materials are not sent again
+    calls.length = 0;
+    d.desk.act(id, 'approve'); await wait(400);
+    assert.ok(!calls.some(c => ['sendMediaGroup', 'sendVideo', 'sendDocument'].includes(c.method)));
+    assert.match(calls.filter(c => c.method === 'sendMessage').at(-1).body.text, /В истории офиса|Принято/);
+  } finally { bot.stop(); delete process.env.HQ_TG_API; }
 });

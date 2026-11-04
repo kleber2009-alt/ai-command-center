@@ -95,18 +95,18 @@ export function createAnalyzer({ db, claude, model, fallback = {}, quietSec = 90
 
   async function pass() {
     if (!claude) return { analyzed:0, off:true };
-    let analyzed = 0, failed = 0;
+    let analyzed = 0, failed = 0, lastError = null;
     for (const chat of due.all(now() - quietSec, batch + backoff.size)) {
       if ((backoff.get(chat.id) || 0) > now()) continue;
       if (analyzed + failed >= batch) break;
       try { await analyzeChat(chat); analyzed++; backoff.delete(chat.id); }
       catch (e) {
-        failed++; backoff.set(chat.id, now() + 1800);  // a chat that fails is not retried for 30 min
+        failed++; lastError = e.message; backoff.set(chat.id, now() + 1800);  // a chat that fails is not retried for 30 min
         log(`analyze: chat ${chat.id}: ${e.message}`);
         if (e.status === 429 || e.status === 401) break;
       }
     }
-    return { analyzed, failed };
+    return { analyzed, failed, lastError };
   }
 
   return { on:!!claude, run() { return running ||= pass().finally(() => { running = null; }); }, analyzeChat };
