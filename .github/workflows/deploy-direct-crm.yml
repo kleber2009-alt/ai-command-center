@@ -1,6 +1,9 @@
 name: deploy-direct-crm
 
-# «CRM Директа» (apps/direct-crm) → https://direct-crm.aicex.club on the aicex box (vars.HETZNER_HOST, where *.aicex.club points).
+# «CRM AICEX» (apps/direct-crm) → https://crm.aicex.club (and the old name direct-crm.aicex.club) on the aicex box (vars.HETZNER_HOST,
+# where *.aicex.club points). One project: «Аналитика» (dashboard, funnel, AI quality, chains) and «Директ» (queue, chats, teaching the AI).
+# crm.aicex.club used to serve a static «AI Sales CRM» prototype; deploy/server.sh takes the name over only if that site is a
+# separate /opt/edge/sites file serving nothing else (moved to /opt/edge/sites-disabled), else it says where the name is defined.
 # Chats of the ChatPlace AI manager (Instagram Direct and the Telegram bots) are pulled every minute into SQLite, Claude reads
 # each chat (priority, funnel stage, source, a grade of the AI's answers), the head of sales Bogdan works the queue and
 # answers from the CRM. apps/direct-crm/deploy/server.sh builds the image, keeps /opt/direct-crm/data and wires the edge Caddy.
@@ -10,7 +13,8 @@ name: deploy-direct-crm
 #   Claude — DIRECT_CRM_ANTHROPIC_API_KEY | HQ_OFFICE_ANTHROPIC_API_KEY (without it: chats only, no analysis);
 #   logins — DIRECT_CRM_BOGDAN_PASSWORD (login «bogdan»), DIRECT_CRM_OWNER_PASSWORD | HQ_ASSISTANT_PASSWORD (login «ilia»),
 #            or DIRECT_CRM_USERS_JSON {"login":{"name":"…","password":"…","role":"…"}} for more people.
-# Variables: HETZNER_HOST, HETZNER_USER, HETZNER_SSH_PORT, DIRECT_CRM_DOMAIN (default direct-crm.aicex.club),
+# Variables: HETZNER_HOST, HETZNER_USER, HETZNER_SSH_PORT, DIRECT_CRM_DOMAIN (names, primary first; default
+#   "crm.aicex.club direct-crm.aicex.club"),
 #   DIRECT_CRM_MODEL (default claude-opus-5-5), DIRECT_CRM_BACKFILL_DAYS (14 — history pulled on the first start).
 
 on:
@@ -33,7 +37,7 @@ jobs:
       HOST: ${{ vars.HETZNER_HOST }}
       SSH_USER: ${{ vars.HETZNER_USER || 'root' }}
       SSH_PORT: ${{ vars.HETZNER_SSH_PORT || '22' }}
-      DOMAIN: ${{ vars.DIRECT_CRM_DOMAIN || 'direct-crm.aicex.club' }}
+      DOMAINS: ${{ vars.DIRECT_CRM_DOMAIN || 'crm.aicex.club direct-crm.aicex.club' }}
     steps:
       - uses: actions/checkout@v5
 
@@ -104,23 +108,26 @@ jobs:
           } | grep -v '=$' | $SSH "mkdir -p /opt/direct-crm && umask 077 && cat > /opt/direct-crm/app.env"
 
       - name: Activate
-        run: $SSH bash -s -- "$DOMAIN" "$REL" < apps/direct-crm/deploy/server.sh
+        run: $SSH bash -s -- "$DOMAINS" "$REL" < apps/direct-crm/deploy/server.sh
 
       - name: Smoke test
         run: |
-          for path in / /api/health; do
-            code=$(curl -sS -o /dev/null -w '%{http_code}' --retry 8 --retry-delay 5 --retry-all-errors "https://$DOMAIN$path" || echo 000)
-            echo "$code https://$DOMAIN$path"
-            [ "$code" = 200 ] || exit 1
+          # the CRM must answer on at least one name; each name says whether it is the CRM or something else
+          served=""
+          for d in $DOMAINS; do
+            body=$(curl -sS --retry 8 --retry-delay 5 --retry-all-errors "https://$d/api/health" || true)
+            if printf '%s' "$body" | grep -q '"ok":true'; then echo "✓ https://$d — the CRM"; served="${served:-$d}"
+            else echo "! https://$d — not the CRM (another site or no answer)"; fi
           done
-          curl -sS "https://$DOMAIN/api/health"; echo
-          code=$(curl -sS -o /dev/null -w '%{http_code}' "https://$DOMAIN/api/chats")
-          echo "$code https://$DOMAIN/api/chats (must be closed without login)"
+          [ -n "$served" ] || exit 1
+          echo "DOMAIN=$served" >> "$GITHUB_ENV"
+          code=$(curl -sS -o /dev/null -w '%{http_code}' "https://$served/api/chats")
+          echo "$code https://$served/api/chats (must be closed without login)"
           [ "$code" = 401 ]
 
       - name: Log of the CRM
         if: always() && env.SSH != ''
         run: |
           sleep 20
-          curl -sS "https://$DOMAIN/api/health" | jq . || true
+          curl -sS "https://${DOMAIN:-${DOMAINS%% *}}/api/health" | jq . || true
           $SSH "docker logs --tail=60 aicex-direct-crm 2>&1" || true

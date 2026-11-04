@@ -203,6 +203,19 @@ assert.deepEqual(kbAnswers, [{ datasetId:'kq-1', answer:'Напиши «Богд
 r = await call('/learn'); assert.equal(r.body.open, 0); assert.equal(r.body.questions.find(q => q.id === 'kq-1').answeredBy, 'bogdan');
 r = await call('/learn/review', { days:7 }); assert.match(r.body.review.text, /Главное/);
 
+// 6c. the dashboard: touches by who, response to the bot, chains with launches, segments, the most active people
+r = await call('/dashboard?days=7');
+assert.equal(r.status, 200);
+assert.equal(r.body.touches.people.now, 3); assert.equal(r.body.touches.managers.now, 1); assert.ok(r.body.touches.ai.now >= 2);
+assert.equal(r.body.people, 2); assert.ok(r.body.byDay.length >= 7);
+assert.ok(r.body.response.reached >= 1);
+assert.equal(r.body.chains[0].launches, 1); assert.equal(r.body.chains[0].entered, 100);
+assert.equal(r.body.segments.find(x => x.key === 'customers').n, 1);
+assert.equal(r.body.top[0].id, 'c-hot'); assert.equal(r.body.top[0].touches, 2); assert.deepEqual(r.body.top[0].chains, ['МОНТАЖ']);
+assert.equal(r.body.heat.reduce((n, c) => n + c.n, 0), 3);
+r = await call('/chats?view=all&segment=customers'); assert.deepEqual(r.body.chats.map(c => c.id), ['c-hot']);
+r = await call('/chats?view=all&segment=material'); assert.ok(!r.body.chats.some(c => c.id === 'c-hot'));
+
 // 7. stats: funnel, sources, AI grades, manual answers
 r = await call('/stats?days=7');
 assert.equal(r.body.chats, 2);

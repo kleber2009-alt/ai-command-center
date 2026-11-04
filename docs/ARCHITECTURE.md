@@ -42,9 +42,9 @@
 | `parser.aicex.club` | Залётный (Viral Discover), кабинет | Office Worker |
 | `factory.aicex.club` | AI Content Factory, кабинет | `infra-ai-content-factory-1` |
 | `ig.aicex.club` | IG Serial Content (демо) | `ig-content` :3017 |
-| `crm.aicex.club`, `sales.aicex.club`, `sales-api.aicex.club` | AI Sales System: CRM, портал, API v2 | статика + `aisales-api-v2` :8001 |
+| `sales.aicex.club`, `sales-api.aicex.club` | AI Sales System: портал, API v2 | статика + `aisales-api-v2` :8001 |
 | `tg.aicex.club` | TG Agent, админка | `tg-agent` |
-| `direct-crm.aicex.club` | CRM Директа (хозяин — Богдан, РОП): переписки ChatPlace, очередь, оценка ИИ | `aicex-direct-crm` :8795, `/opt/direct-crm`, `deploy-direct-crm.yml` |
+| `crm.aicex.club` (и старое имя `direct-crm.aicex.club`) | CRM AICEX (хозяин — Богдан, РОП): аналитика Директа (дашборд, цепочки, сегменты) и работа с перепиской ChatPlace; заменила статичный прототип «AI Sales CRM» | `aicex-direct-crm` :8795, `/opt/direct-crm`, `deploy-direct-crm.yml` |
 | `practicum1.aicex.club` … `practicum5.aicex.club` | 5 версий страницы практикума с ИИ-офисом (`landings/practicum-office`) | `aicex-practicum`, `/opt/practicum`, `deploy-practicum.yml` |
 | `landings.aicex.club/<name>/` | Лендинги из `landings/` | `/var/www/landings`, `deploy-landings.yml` |
 | `finance.aicex.club` | Finance OS | `/opt/finance-os` |
@@ -89,9 +89,8 @@
 
 Продажи
   Рилс с кодовым словом ──► ИИ в Директе (ChatPlace) ──► бесплатный материал ──► Telegram-канал
-  Переписки ChatPlace ──► CRM Директа (разбор Claude: приоритет, этап, оценка ИИ) ──► очередь Богдана ──► ответ из CRM
+  Переписки ChatPlace ──► CRM AICEX crm.aicex.club (разбор Claude: приоритет, этап, квалификация, оценка ИИ; дашборд и сегменты) ──► очередь Богдана ──► ответ из CRM
   Нейроворонка: лид-магнит ──► бот с прогревом ──► лендинг (5 стилей) ──► оплата
-  AI Sales System (Алиса, IG+TG) ──► CRM crm.aicex.club
   Сквозная аналитика: декомпозиция × Meta Ads × оплаты GetCourse (UTM) ──► dashboard.aicex.club
 
 Голос и лицо

@@ -850,7 +850,7 @@
       ],
       materials: [AR.botSpec, AR.nf],
       // продукты, за которые отвечает сам руководитель (досье руководителя, ассистент и диспетчер офиса)
-      products: [{ title:'CRM Директа', url:'https://direct-crm.aicex.club', note:'Хозяин — Богдан. Переписки ИИ-менеджера ChatPlace, очередь по приоритету, воронка, оценка ответов ИИ, ответ вручную' }],
+      products: [{ title:'CRM AICEX', url:'https://crm.aicex.club', note:'Хозяин — Богдан. Аналитика (дашборд касаний, цепочки и отклик, сегменты аудитории, самые активные) и работа по Директу: очередь, ответ вручную, обучение ИИ-менеджера' }],
     },
     traffic: {
       lead: 'Таргетолог. Отвечает за рекламу в Meta: запуск кампаний, тесты креативов, цену лида и бюджет.',
@@ -900,7 +900,7 @@
                  P('AI Sales v2', 'https://sales-api.aicex.club/', 'ИИ-продавец Алиса для IG/TG: диалоги, прогрев, эскалация (в разработке)'),
                  P('AI Sales v1', 'https://github.com/kleber2009-alt/ai-command-center/tree/main/apps/ai-sales/code', 'Первая версия ИИ-продавца (на паузе)'),
                  P('IG Agent', 'https://github.com/kleber2009-alt/ai-command-center/tree/main/apps/ig-agent', 'ИИ-ответы в Instagram Direct через SendPulse (в разработке)'),
-                 P('CRM Директа', 'https://direct-crm.aicex.club', 'Хозяин — Богдан (РОП): переписки ИИ-менеджера, очередь, воронка, оценка ИИ')],
+                 P('CRM AICEX', 'https://crm.aicex.club', 'Хозяин — Богдан (РОП): аналитика Директа и работа с перепиской')],
     analytics:  [P('Сквозная аналитика', 'https://dashboard.aicex.club/', 'Декомпозиция × Meta Ads × оплаты')],
     finance:    [P('Finance OS', 'https://finance.aicex.club/', 'Личные финансы: бот + мини-апп')],
     viral:      [P('Залётный (Viral Discover)', 'https://parser.aicex.club/', 'Топ-5 рилсов и каруселей конкурентов утром в Telegram · @parser_instaa_bot'),
