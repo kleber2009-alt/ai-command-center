@@ -31,7 +31,7 @@ window.OFFICE_CONFIG = {
     { id: 'traffic', name: 'Реклама Meta',
       head: { id: 'nurken', name: 'Нуркен', title: 'Таргетолог — реклама в Meta', look: 'm2',
               photo: 'people/nurken-face.jpg' },
-      agents: ['metaads', 'adreports'] },
+      agents: ['metaads', 'metalive', 'adreports'] },
   ],
   // Переговорная легенд — ИИ-советники по методам легенд бизнеса (скилл «Команда 8 легенд»):
   // свой стол в переговорной, на собеседование и исправление деталей их зовёт владелец или диспетчер

@@ -39,6 +39,7 @@ import { pipeline } from 'node:stream/promises';
 import { Transform } from 'node:stream';
 import Anthropic from '@anthropic-ai/sdk';
 import { officeWindow, moscowDate } from './office.mjs';
+import { metaNote } from './meta.mjs';
 
 const FILE_LIMIT = 300e6;
 const STEPS_KEPT = 80;
@@ -587,7 +588,12 @@ export function createDesk({ claude, model, fallback, dataDir, officeDir, runner
       ...t.answers.map(x => `Уточнение. Вопрос: ${x.q} Ответ: ${x.a}`),
       t.route.skill ? `Скилл: ${t.route.skill} — вызови его инструментом Skill и работай по нему.` : 'Если среди твоих скиллов есть подходящий — работай по нему.',
       styleLine(t),
-      `Материалы от владельца: ${t.files.length ? t.files.map(f => 'in/' + f.name).join(', ') : 'нет'}.`, ...transcriptNote(t), ...pipelineNote(t), mcpNote(), lessonsNote(a.id).text, '', RULES].filter((x, i, arr) => x || arr[i - 1]).join('\n');
+      `Материалы от владельца: ${t.files.length ? t.files.map(f => 'in/' + f.name).join(', ') : 'нет'}.`, ...transcriptNote(t), ...pipelineNote(t), mcpNote(), ...adsNote(a), lessonsNote(a.id).text, '', RULES].filter((x, i, arr) => x || arr[i - 1]).join('\n');
+  }
+  // the advertising department (Nurken) gets the real numbers of the Meta account from the agent «Цифры Meta» (assistant/meta.mjs, cache)
+  function adsNote(a) {
+    const note = a.dept === 'traffic' ? metaNote().trim() : '';
+    return note ? [note + ' Это настоящие цифры кабинета — опирайся на них, не выдумывай другие; если нужно больше разрезов — бери их из подключённой системы Meta (Windsor) или попроси владельца.'] : [];
   }
   function transcriptNote(t) {
     if (!t.transcribed) return [];

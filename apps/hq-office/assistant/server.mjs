@@ -36,6 +36,7 @@ import { voiceConfigured, transcribe, listVoices, guessOwnerVoice, speak, realti
 import { createDesk } from './desk.mjs';
 import { loadTwin, initTwin, remember, rememberTool, SECTIONS, TWIN_PROMPT } from './twin.mjs';
 import { initKb, loadKb, kbTools, runKbTool, ingest, listPrivate, removePrivate } from './kb.mjs';
+import { metaLive, metaNote, metaConfigured } from './meta.mjs';
 
 const HERE = path.dirname(fileURLToPath(import.meta.url));
 const PORT = Number(process.env.PORT || 8787);
@@ -146,7 +147,7 @@ function knowledge(isOwnerTalk) {
 }
 function nowNote(voice, isOwnerTalk) {
   const time = new Intl.DateTimeFormat('ru-RU', { timeZone:'Europe/Moscow', hour:'2-digit', minute:'2-digit' }).format(new Date());
-  return `Сейчас ${humanDate(moscowDate())}, ${time} по Москве. ${voice ? VOICE_NOTE : TEXT_NOTE}${isOwnerTalk ? '\n' + desk.summary() : ''}`;
+  return `Сейчас ${humanDate(moscowDate())}, ${time} по Москве. ${voice ? VOICE_NOTE : TEXT_NOTE}${isOwnerTalk ? '\n' + desk.summary() + metaNote() : ''}`;
 }
 
 /* ---------- the owner's tool: a task for an agent ---------- */
@@ -366,6 +367,11 @@ const ROUTES = {
   },
   'POST logout': (req, res) => json(res, 200, { ok:true }, { 'set-cookie':cookie('hqa', '', 0) }),
   'POST chat': (req, res, o) => chat(req, res, o),
+  // live numbers of the Meta ad account (agent «Цифры Meta», department of Nurken) — owner only, read-only, cached 5 min
+  'GET meta/live': async (req, res, o) => {
+    if (!o) return json(res, 403, { error:'Цифры рекламного кабинета видит только владелец — войдите.' });
+    json(res, 200, await metaLive(new URL(req.url, 'http://x').searchParams.get('fresh') === '1'));
+  },
   // the twin's knowledge base: Ilia's own materials (files, the claude.ai export) — owner only
   'GET twin/kb': (req, res, o) => o ? json(res, 200, { ...loadKb().counts, builtAt:loadKb().builtAt, mine:listPrivate() }) : json(res, 403, { error:'Только для владельца.' }),
   'POST twin/kb': async (req, res, o) => {
@@ -440,4 +446,6 @@ http.createServer(async (req, res) => {
     if (!res.headersSent) json(res, e.code === 413 ? 413 : 502, { error:e.code === 413 ? 'Слишком большой запрос.' : 'Ошибка сервиса — попробуйте ещё раз.' });
     else res.end();
   }
-}).listen(PORT, () => console.log(`hq assistant :${PORT} · office ${OFFICE_DIR} · claude ${claude ? 'on' : 'off'} · voice ${voiceConfigured() ? 'on' : 'off'} · owner login ${PASSWORD ? 'on' : 'off'} · desk runner ${process.env.HQ_DESK_RUNNER_TOKEN ? 'on' : 'off'}`));
+}).listen(PORT, () => console.log(`hq assistant :${PORT} · office ${OFFICE_DIR} · claude ${claude ? 'on' : 'off'} · voice ${voiceConfigured() ? 'on' : 'off'} · owner login ${PASSWORD ? 'on' : 'off'} · desk runner ${process.env.HQ_DESK_RUNNER_TOKEN ? 'on' : 'off'} · meta ads ${metaConfigured() ? 'on' : 'off'}`));
+// warm the cache of the Meta numbers, so the assistant and the desk see them from the first question
+if (metaConfigured()) metaLive().catch(() => {});

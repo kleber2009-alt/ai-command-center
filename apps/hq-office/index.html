@@ -189,6 +189,35 @@
   .pipe b{display:block;font-size:14px}
   .pipe small{display:block;font-size:12px;color:var(--ink-2);margin-top:3px;line-height:1.4}
   .chipsrow{display:flex;gap:6px;flex-wrap:wrap}
+  /* «Цифры Meta» — живые цифры кабинета в досье агента */
+  .ml{display:grid;gap:12px;margin:0 0 18px;padding:14px;border-radius:16px;background:rgba(24,119,242,.07);border:1px solid rgba(24,119,242,.28)}
+  .ml-h{display:flex;align-items:center;gap:10px;flex-wrap:wrap}
+  .ml-h b{font-size:15px}
+  .ml-h small{color:var(--ink-3);font:500 11.5px var(--f-mono)}
+  .ml-h .sp{flex:1}
+  .ml-h button,.ml-h a{padding:6px 11px;border-radius:10px;background:rgba(255,255,255,.08);border:1px solid var(--line);font-size:12.5px;font-weight:700;text-decoration:none}
+  .ml-tabs{display:flex;gap:6px;flex-wrap:wrap}
+  .ml-tabs button{padding:5px 11px;border-radius:99px;border:1px solid var(--line);font-size:12.5px;font-weight:700;color:var(--ink-2)}
+  .ml-tabs button.on{background:#1877f2;border-color:#1877f2;color:#fff}
+  .ml-k{display:grid;grid-template-columns:repeat(auto-fill,minmax(118px,1fr));gap:8px}
+  .ml-k div{padding:9px 10px;border-radius:12px;background:rgba(0,0,0,.24);border:1px solid var(--line);min-width:0}
+  .ml-k span{display:block;font:600 10.5px var(--f-mono);color:var(--ink-3);text-transform:uppercase;letter-spacing:.04em}
+  .ml-k b{display:block;font-size:18px;margin-top:3px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+  .ml-k i{display:block;font-style:normal;font-size:11.5px;color:var(--ink-3);margin-top:2px}
+  .ml-k i.up{color:#ff8a7a}.ml-k i.down{color:var(--ok)}
+  .ml-chart{display:block;width:100%;height:120px}
+  .ml-legend{display:flex;gap:14px;font-size:11.5px;color:var(--ink-3)}
+  .ml-legend i{display:inline-block;width:10px;height:10px;border-radius:3px;margin-right:5px;vertical-align:-1px}
+  .ml-tbl{overflow-x:auto}
+  .ml-tbl table{width:100%;border-collapse:collapse;font-size:12.5px;min-width:560px}
+  .ml-tbl th{text-align:left;font:600 10.5px var(--f-mono);color:var(--ink-3);text-transform:uppercase;padding:6px 8px;border-bottom:1px solid var(--line)}
+  .ml-tbl td{padding:7px 8px;border-bottom:1px solid var(--line);white-space:nowrap}
+  .ml-tbl td:first-child{white-space:normal;max-width:260px}
+  .ml-tbl td.n{text-align:right;font-variant-numeric:tabular-nums}
+  .ml-st{display:inline-block;padding:2px 7px;border-radius:99px;font-size:11px;font-weight:700;background:rgba(255,255,255,.08)}
+  .ml-st.on{background:rgba(61,220,151,.16);color:var(--ok)}
+  .ml-note{font-size:13px;color:var(--ink-2);line-height:1.5}
+  .ml-err{font-size:13px;color:#ffb3a8;line-height:1.5}
   .chipsrow span{font-size:12.5px;padding:5px 11px;border-radius:99px;background:rgba(255,255,255,.07);border:1px solid rgba(255,255,255,.1)}
   .grid{display:grid;grid-template-columns:repeat(auto-fill,minmax(170px,1fr));gap:10px}
   .grid.wide{grid-template-columns:repeat(auto-fill,minmax(230px,1fr))}
@@ -1172,6 +1201,11 @@ window.OFFICE_DATA = (() => {
       ['Следит за ценой лида', 'Запускает тест креативов', 'Масштабирует связку'],
       [o('adreports', 'передал расход и лиды', 'Расход и лиды'),
        o('you', 'подготовил запуск кампании', 'Кампания на 30 000 ₽', 'Согласуйте запуск кампании на 30 000 ₽')]),
+    metalive: A('Цифры Meta', 'Живые цифры рекламного кабинета Meta', '#1877f2', 'metalive',
+      ['Показывает расход и лиды за сегодня', 'Следит за ценой лида по кампаниям', 'Обновляет цифры кабинета'],
+      [o('head', 'показал расход и лиды за сегодня', 'Цифры кабинета'),
+       o('adreports', 'передал цифры кабинета', 'Цифры кабинета'),
+       o('metaads', 'показал цену лида по кампаниям', 'Цена лида')]),
     adreports: A('Отчёты по рекламе', 'Расходы, лиды и цена лида по дням', '#5ad1ff', 'chart',
       ['Готовит отчёт за неделю', 'Цена лида по дням', 'Сводка по связкам'],
       [o('head', 'положил отчёт по рекламе', 'Отчёт по рекламе'),
@@ -1193,7 +1227,7 @@ window.OFFICE_DATA = (() => {
         agents:['launch', 'chats', 'comments', 'consult', 'mailings', 'closer', 'academy'] },
       { id:'traffic', name:'Реклама Meta', short:'Реклама',
         head:{ id:'nurken', name:'Нуркен', title:'Таргетолог — реклама в Meta', look:'m2' },
-        agents:['metaads', 'adreports'] },
+        agents:['metaads', 'metalive', 'adreports'] },
     ],
     council:{ id:'council', name:'Переговорная легенд', short:'Легенды', agents:['hormozi', 'garyvee', 'godin', 'brunson', 'walker', 'kennedy', 'cardone', 'branson'], board:'legends' },
     agents: {},
@@ -1297,7 +1331,7 @@ const WAVE_ROOM_OF = {
   socialstats:'analytics', viral:'analytics', analytics:'analytics', audience:'analytics', adreports:'analytics',
   creatives:'marketing', funnels:'marketing', publish:'marketing', landings:'marketing', leadmagnet:'marketing', threads:'marketing', launch:'marketing',
   chats:'sales', comments:'sales', consult:'sales', mailings:'sales', closer:'sales',
-  metaads:'ads',
+  metaads:'ads', metalive:'ads',
 };
 const PLAN_TABLE = { x:-4.6, z:-8.4 };
 // Диспетчерская в центре коридора: подиум, пульт оркестратора, кольцевой экран рабочего стола, голограмма
@@ -3186,6 +3220,25 @@ function drawAgentScreen(a) {
       g.fillStyle = i === 2 ? 'rgba(255,209,102,.6)' : 'rgba(32,35,42,.28)'; g.fillRect(X + 8, y0 + 30 + i * 9, w, 4);
     }
     if (Math.sin(t * 8) > 0) { const i = Math.min(lines - 1, Math.floor(done)), full = (BW - 20) * (0.6 + hash(seed + i) * 0.4); g.fillStyle = '#20232a'; g.fillRect(X + 8 + full * (done % 1), y0 + 28 + i * 9, 1.5, 7); }
+  } else if (SCR === 'metalive') {
+    // настоящие цифры кабинета: без входа или без доступа — честная заглушка, а не выдуманные числа
+    const D = META.data, m = D?.ok ? D.periods.today : null, cur = D?.account?.currency;
+    if (!m) {
+      g.font = FONT(700, 10); g.fillStyle = 'rgba(233,237,245,.7)'; g.textAlign = 'center';
+      g.fillText(!asst.state?.owner ? 'Цифры кабинета видит владелец' : D ? 'Нет доступа к кабинету Meta' : 'Загружаю кабинет Meta…', X + BW / 2, y0 + h0 / 2);
+      g.textAlign = 'left';
+    } else {
+      const sh = v => v == null ? '—' : v >= 1000 ? (v / 1000).toFixed(1).replace('.', ',') + 'к' : String(Math.round(v * 10) / 10).replace('.', ',');
+      const sym = { USD:'$', EUR:'€', RUB:'₽', KZT:'₸' }[cur] || '';
+      [['Расход сегодня', sh(m.spend) + sym], ['Лиды', String(m.leads)], ['Цена лида', m.cpl == null ? '—' : sh(m.cpl) + sym]].forEach(([k, v], i) => { const bx = X + i * (BW / 3); g.fillStyle = 'rgba(24,119,242,.16)'; rr(g, bx, y0, BW / 3 - 4, 26, 3); g.fill();
+        g.font = MONO(6.5); g.fillStyle = 'rgba(233,237,245,.55)'; g.fillText(fitText(g, k, BW / 3 - 10), bx + 5, y0 + 9); g.font = FONT(800, 11); g.fillStyle = '#e9edf5'; g.fillText(fitText(g, v, BW / 3 - 10), bx + 5, y0 + 22); });
+      const days = D.daily.slice(-14), n = Math.max(days.length, 1), cy = y0 + 32, ch = h0 - 34;
+      const ms = Math.max(...days.map(d => d.spend), 1), ml = Math.max(...days.map(d => d.leads), 1);
+      days.forEach((d, i) => { const bh = ch * d.spend / ms; g.fillStyle = i === n - 1 ? a.color : 'rgba(24,119,242,.45)'; g.fillRect(X + i * BW / n + 2, cy + ch - bh, BW / n - 4, bh); });
+      g.strokeStyle = '#3ddc97'; g.lineWidth = 2; g.beginPath();
+      days.forEach((d, i) => { const xx = X + i * BW / n + BW / n / 2, yy = cy + ch - ch * d.leads / ml; i ? g.lineTo(xx, yy) : g.moveTo(xx, yy); });
+      g.stroke();
+    }
   } else if (SCR === 'chart' || SCR === 'ads') {
     const kp = SCR === 'ads' ? [['CPL', `${180 + (hash(seed) * 90 | 0)} ₽`], ['CTR', `${(1.6 + hash(seed + 1) * 1.4).toFixed(1)}%`], ['Расход', `${(12 + p * 18).toFixed(1)}к`]]
       : [['ROMI', `${280 + (p * 60 | 0)}%`], ['Лиды', `${120 + (p * 80 | 0)}`], ['CR', `${(3 + hash(seed) * 2).toFixed(1)}%`]];
@@ -3769,7 +3822,7 @@ function showDossierTab(tab) {
     const c = contentOf(id), color = agentMeta(id).color;
     if (tab === 'about') {
       const { blocks, W } = agentWorks(id), imgs = worksThumbs(blocks, W, 6);
-      h = `<p class="lead">${esc(c.lead || CATALOG[id]?.role || '')}</p>${c.team ? `<p class="note">Внутри агента работают роли: ${esc(c.team)}</p>` : ''}
+      h = (id === 'metalive' ? metaBlockHTML() : '') + `<p class="lead">${esc(c.lead || CATALOG[id]?.role || '')}</p>${c.team ? `<p class="note">Внутри агента работают роли: ${esc(c.team)}</p>` : ''}
         ${c.process?.length ? `<h4>Процесс работы</h4>${pipeHTML(c.process)}` : ''}
         ${c.skills?.length ? `<h4>Ключевые скиллы</h4><div class="chipsrow">${c.skills.slice(0, 8).map(s => `<span>${esc(s.title)}</span>`).join('')}</div>` : ''}
         ${imgs.length ? `<h4>Примеры работ</h4><div class="grid">${imgs.map(it => `<figure class="fig" data-src="${esc(it.src)}" data-cap="${esc(it.title)}"><img loading="lazy" src="${esc(it.src)}" alt=""><figcaption>${esc(it.title)}</figcaption></figure>`).join('')}</div>` : ''}
@@ -3812,6 +3865,8 @@ for (const box of [$('tBody'), $('dBody')]) box.addEventListener('click', e => {
     if (ifr) ifr.src = chip.dataset.src; else w.outerHTML = frameWrapHTML(chip.dataset.src);
     f.querySelector('a.open').href = chip.dataset.src;
   }
+  const ml = e.target.closest('[data-ml]');
+  if (ml) { const k = ml.dataset.ml; if (k === 'login') { closeDossier(); return openLogin(); } if (k === 'refresh') return metaLoad(true); META.period = k; return metaPaint(); }
   const dt = e.target.closest('[data-dtab]'); if (dt) return showDossierTab(dt.dataset.dtab);
   const cp = e.target.closest('[data-copy]');
   if (cp) navigator.clipboard?.writeText(cp.dataset.copy).then(() => { cp.textContent = 'Скопировано'; }).catch(() => {});
@@ -3867,7 +3922,81 @@ async function asstLoad() {
   if (asst.state && !asst.state.owner && desk.on) deskOff();
   appShell();
   if (asst.state?.owner && selectedId === 'you') renderPanel();
+  if (asst.state?.owner) metaLoad(); else { META.data = null; metaPaint(); }
 }
+
+/* ======================= ЦИФРЫ META =======================
+   Агент «Цифры Meta» в отделе Нуркена: настоящие цифры рекламного кабинета с сервера
+   (assistant/meta.mjs → GET /api/assistant/meta/live, только владелец, кэш 5 минут).
+   Те же цифры — в досье агента, на его мониторе в 3D и у ассистента. Ничего не выдумываем:
+   без входа или без доступа к кабинету — так и пишем. */
+const META = { data:null, busy:false, at:0, period:'today' };
+const ML_PERIODS = [['today', 'Сегодня'], ['yesterday', 'Вчера'], ['d7', '7 дней'], ['d30', '30 дней']];
+async function metaLoad(fresh = false) {
+  if (!asst.state?.owner || META.busy) return;
+  META.busy = true; metaPaint();
+  try {
+    const r = await fetch(ASST_API + '/meta/live' + (fresh ? '?fresh=1' : ''));
+    META.data = r.ok || r.status === 403 ? await r.json() : { ok:false, error:'Сервер не ответил (' + r.status + ').' };
+  } catch (e) { META.data = { ok:false, error:'Нет связи с сервером офиса.' }; }
+  META.busy = false; META.at = Date.now();
+  metaPaint();
+}
+setInterval(() => { if (asst.state?.owner && document.visibilityState === 'visible') metaLoad(); }, 5 * 60e3);
+function metaPaint() { const box = document.getElementById('metaLive'); if (box) box.innerHTML = metaInnerHTML(); }
+function metaBlockHTML() {
+  if (asst.state?.owner && !META.busy && (!META.data || Date.now() - META.at > 5 * 60e3)) setTimeout(() => metaLoad(), 0);
+  return `<section class="ml" id="metaLive">${metaInnerHTML()}</section>`;
+}
+const mlMoney = (v, cur, d = 2) => v == null ? '—' : new Intl.NumberFormat('ru-RU', { style:'currency', currency:cur || 'USD', maximumFractionDigits:d, minimumFractionDigits:0 }).format(v);
+const mlNum = v => v == null ? '—' : new Intl.NumberFormat('ru-RU').format(v);
+const mlPct = v => v == null ? '—' : String(v).replace('.', ',') + '%';
+function mlDelta(cur, base, lowerIsBetter) {
+  if (cur == null || !base) return '';
+  const d = (cur - base) / base * 100;
+  if (!isFinite(d) || Math.abs(d) < 1) return '<i>как в среднем</i>';
+  const good = lowerIsBetter === null ? null : lowerIsBetter ? d < 0 : d > 0;
+  return `<i class="${good === null ? '' : good ? 'down' : 'up'}">${d > 0 ? '+' : ''}${Math.round(d)}% к среднему за 7 дн.</i>`;
+}
+function metaInnerHTML() {
+  const head = (sub, btns = '') => `<div class="ml-h"><b>Кабинет Meta — живые цифры</b><small>${sub}</small><span class="sp"></span>${btns}</div>`;
+  if (!asst.state) return head('') + `<p class="ml-note">Офис не видит свой сервер — цифры недоступны.</p>`;
+  if (!asst.state.owner) return head('') + `<p class="ml-note">Здесь — настоящие расходы, лиды и цена лида из рекламного кабинета. Их видит только владелец офиса.</p><div><button class="btn-go" data-ml="login">Войти и посмотреть цифры</button></div>`;
+  const D = META.data;
+  if (!D) return head('загружаю…') + `<p class="ml-note">Спрашиваю кабинет Meta…</p>`;
+  if (!D.ok) return head('', '<button data-ml="refresh">Повторить</button>') + `<p class="ml-err">${esc(D.error || 'Цифры недоступны.')}</p>`;
+  const cur = D.account.currency, P = D.periods, m = P[META.period] || P.today, avg = P.d7 && { spend:P.d7.spend / 7, leads:P.d7.leads / 7, cpl:P.d7.cpl, ctr:P.d7.ctr };
+  const daily = META.period === 'today' || META.period === 'yesterday';
+  const when = new Date(D.updatedAt).toLocaleTimeString('ru-RU', { hour:'2-digit', minute:'2-digit' });
+  const k = (label, val, extra = '') => `<div><span>${label}</span><b title="${esc(val)}">${val}</b>${extra}</div>`;
+  const kpis = [
+    k('Расход', mlMoney(m.spend, cur), daily ? mlDelta(m.spend, avg?.spend, null) : ''),
+    k('Лиды', mlNum(m.leads), daily ? mlDelta(m.leads, avg?.leads) : ''),
+    k('Цена лида', mlMoney(m.cpl, cur), daily ? mlDelta(m.cpl, avg?.cpl, true) : ''),
+    k('CTR', mlPct(m.ctr), daily ? mlDelta(m.ctr, avg?.ctr) : ''),
+    k('Клики', mlNum(m.clicks)), k('Показы', mlNum(m.impressions)), k('Охват', mlNum(m.reach)),
+    k('CPC', mlMoney(m.cpc, cur)), k('CPM', mlMoney(m.cpm, cur)),
+    ...(m.frequency != null ? [k('Частота', String(m.frequency).replace('.', ','))] : []),
+    ...(m.purchases ? [k('Покупки', mlNum(m.purchases)), k('ROAS', m.roas == null ? '—' : String(m.roas).replace('.', ','))] : []),
+  ].join('');
+  const camps = D.campaigns.length ? `<h4 style="margin:4px 0 0">Кампании за 7 дней</h4><div class="ml-tbl"><table><thead><tr><th>Кампания</th><th>Статус</th><th>Бюджет</th><th class="n">Расход</th><th class="n">Лиды</th><th class="n">Цена лида</th><th class="n">CTR</th></tr></thead><tbody>${D.campaigns.map(c => `<tr><td>${esc(c.name)}</td><td><span class="ml-st${c.status === 'ACTIVE' ? ' on' : ''}">${esc(c.statusRu)}</span></td><td>${c.budget ? mlMoney(c.budget.value, cur, 0) + ' / ' + c.budget.kind : '—'}</td><td class="n">${mlMoney(c.spend, cur)}</td><td class="n">${mlNum(c.leads)}</td><td class="n">${mlMoney(c.cpl, cur)}</td><td class="n">${mlPct(c.ctr)}</td></tr>`).join('')}</tbody></table></div>` : '<p class="ml-note">За 7 дней кампании не тратили бюджет.</p>';
+  return head(`${esc(D.account.name)} · ${esc(D.account.status)} · ${D.active} ${word(D.active, 'активная кампания', 'активные кампании', 'активных кампаний')} · обновлено ${when}${D.stale ? ' (Meta сейчас не отвечает)' : ''}`,
+      `<button data-ml="refresh">${META.busy ? 'Обновляю…' : 'Обновить'}</button><a href="${esc(D.link)}" target="_blank" rel="noopener">Ads Manager ↗</a>`)
+    + `<div class="ml-tabs">${ML_PERIODS.map(([id, l]) => `<button data-ml="${id}" class="${id === META.period ? 'on' : ''}">${l}</button>`).join('')}</div>`
+    + `<div class="ml-k">${kpis}</div>` + metaChartSVG(D.daily, cur) + camps
+    + (D.stale && D.error ? `<p class="ml-err">${esc(D.error)}</p>` : '');
+}
+function metaChartSVG(days, cur) {
+  if (!days?.length) return '';
+  const W = 600, H = 120, pad = 18, n = days.length, bw = (W - pad * 2) / n;
+  const ms = Math.max(...days.map(d => d.spend), 1), ml = Math.max(...days.map(d => d.leads), 1);
+  const bars = days.map((d, i) => { const h = (H - 34) * d.spend / ms; return `<rect x="${(pad + i * bw + 2).toFixed(1)}" y="${(H - 18 - h).toFixed(1)}" width="${(bw - 4).toFixed(1)}" height="${h.toFixed(1)}" rx="3" fill="rgba(24,119,242,.55)"><title>${esc(d.date)}: ${esc(mlMoney(d.spend, cur))}, лиды ${d.leads}</title></rect>`; }).join('');
+  const pts = days.map((d, i) => `${(pad + i * bw + bw / 2).toFixed(1)},${(H - 18 - (H - 34) * d.leads / ml).toFixed(1)}`).join(' ');
+  const labels = days.map((d, i) => i % 2 && i !== n - 1 ? '' : `<text x="${(pad + i * bw + bw / 2).toFixed(1)}" y="${H - 4}" text-anchor="middle" font-size="10" fill="rgba(243,245,249,.4)">${d.date.slice(8)}.${d.date.slice(5, 7)}</text>`).join('');
+  return `<div><svg class="ml-chart" viewBox="0 0 ${W} ${H}" preserveAspectRatio="none" role="img" aria-label="Расход и лиды по дням за 14 дней">${bars}<polyline points="${pts}" fill="none" stroke="#3ddc97" stroke-width="2" vector-effect="non-scaling-stroke"/>${labels}</svg>
+    <div class="ml-legend"><span><i style="background:rgba(24,119,242,.7)"></i>Расход по дням</span><span><i style="background:#3ddc97"></i>Лиды</span><span>14 дней</span></div></div>`;
+}
+
 function asstSub() {
   const s = asst.state;
   $('aSub').textContent = !s ? 'Сейчас недоступен'
@@ -5475,7 +5604,7 @@ addEventListener('message', e => {
   if (d.type === 'office:focus') select(d.id, true);
   if (d.type === 'office:theme') setStyle(d.theme);
 });
-if (params.has('debug')) window.__hq = { night:() => NIGHT, holo:() => HB, snapshot:() => officeSnapshot(), THREE, scene, agents, camera, controls, NAV, findPath, bloom, grade, gtao, renderer, TASKS,
+if (params.has('debug')) window.__hq = { night:() => NIGHT, holo:() => HB, snapshot:() => officeSnapshot(), drawScreen:id => { const a = agents.get(id); if (a?.desk) drawAgentScreen(a); return a?.desk?.scr.c; }, THREE, scene, agents, camera, controls, NAV, findPath, bloom, grade, gtao, renderer, TASKS,
   step(sec, dt = 1 / 30) { for (let k = 0; k < sec / dt; k++) { NOW += dt; for (const a of agents.values()) a.update(dt, NOW); } refreshHUD(); agents.forEach(paintLabel); } };
 </script>
 </body>

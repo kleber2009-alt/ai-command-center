@@ -75,7 +75,7 @@ const ROOM_OF = {
   scripts:'studio', montage:'studio', carousel:'studio', avatar:'studio', slides:'studio',
   analytics:'analytics', audience:'analytics', adreports:'analytics',
   chats:'sales', comments:'sales', consult:'sales', mailings:'sales', closer:'sales',
-  metaads:'ads', orchestrator:'hub',
+  metaads:'ads', metalive:'ads', orchestrator:'hub',
 };
 const DEPT_ROOM = { ceo:'ceo', marketing:'marketing', sales:'sales', traffic:'ads' };
 const OWNER_DESK = [-19.4, -12.3];
@@ -167,7 +167,7 @@ export async function createNightOffice(o) {
         for (let y = 18; y < h * 2; y += 9) { x.fillStyle = R() < .35 ? color : ink; rr(x, 10 + Math.floor(R() * 4) * 12, y, 30 + R() * 140, 4, 2); }
       } else if (kind === 'chat') {
         for (let y = 18; y < h * 2; y += 22) { const me = R() < .5; x.fillStyle = me ? color : ink; rr(x, me ? w - 130 : 12, y, 90 + R() * 28, 14, 7); }
-      } else if (kind === 'chart' || kind === 'ads') {
+      } else if (kind === 'chart' || kind === 'ads' || kind === 'metalive') {
         for (let i = 0; i < 10; i++) { const bh = 20 + R() * 90; x.fillStyle = i % 3 ? ink : color; rr(x, 14 + i * 23, h - 14 - bh, 15, bh, 3); }
         x.strokeStyle = color; x.lineWidth = 3; x.beginPath();
         for (let i = 0; i <= 10; i++) x.lineTo(14 + i * 23, 120 - i * 7 - R() * 18);

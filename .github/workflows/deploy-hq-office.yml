@@ -17,7 +17,7 @@ name: deploy-hq-office
 # Morning agents: Telegram of the owner — secret HQ_NOTIFY_TG_BOT_TOKEN + vars.HQ_NOTIFY_TG_CHAT_ID, else the Office Worker
 # or «Ремейк залёта» bot with the owner's id (vars.REMAKE_TG_OWNER_IDS);
 # «Балансы и подписки» checks the existing service keys of the monorepo + vars.HQ_SUBSCRIPTIONS_JSON (subscriptions without API,
-# [{"name":"Claude Max","renews":15,"price":"$200"}]) and optional vars.HQ_META_AD_ACCOUNT; «Статистика соцсетей» — optional
+# [{"name":"Claude Max","renews":15,"price":"$200"}]) and optional vars.HQ_META_AD_ACCOUNT (also the agent «Цифры Meta» with secrets.FUNNEL_META_TOKEN); «Статистика соцсетей» — optional
 # secrets HQ_IG_ACCESS_TOKEN, HQ_THREADS_ACCESS_TOKEN, HQ_YOUTUBE_API_KEY and vars HQ_IG_USER_ID, HQ_SOCIAL_IG (default ilia.paliy),
 # HQ_SOCIAL_YT, HQ_SOCIAL_TIKTOK, HQ_SOCIAL_TG_CHANNEL (without them — Instagram through Apify only).
 
@@ -120,14 +120,19 @@ jobs:
           # its long-polling on remake-site is not affected); the chat is the owner's id (the bot must have been started once)
           TG_TOKEN: ${{ secrets.HQ_NOTIFY_TG_BOT_TOKEN || secrets.WORKER_TELEGRAM_BOT_TOKEN || secrets.REMAKE_TG_BOT_TOKEN }}
           TG_CHAT: ${{ vars.HQ_NOTIFY_TG_CHAT_ID || vars.WORKER_OWNER_TELEGRAM_ID || vars.REMAKE_TG_OWNER_IDS || vars.TG_AGENT_OWNER_TELEGRAM_ID }}
+          # agent «Цифры Meta» (department of Nurken): live numbers of the ad account, read-only (right ads_read)
+          META_TOKEN: ${{ secrets.FUNNEL_META_TOKEN }}
+          META_AD_ACCOUNT: ${{ vars.HQ_META_AD_ACCOUNT }}
         run: |
           [ -n "$ANTHROPIC" ] || echo "::warning::HQ_OFFICE_ANTHROPIC_API_KEY is not set — the assistant will not answer"
           [ -n "$PASS" ] || echo "::warning::HQ_ASSISTANT_PASSWORD is not set — the assistant runs as a guest demo only"
           TG_CHAT=$(printf '%s' "$TG_CHAT" | grep -oE -- '-?[0-9]+' | head -1 || true)
           [ -n "$TG_TOKEN" ] && [ -n "$TG_CHAT" ] && echo "morning reports → Telegram chat …${TG_CHAT: -3}" \
             || echo "::warning::no Telegram bot or owner id (HQ_NOTIFY_TG_BOT_TOKEN + HQ_NOTIFY_TG_CHAT_ID) — morning reports stay in the office only"
-          printf 'ANTHROPIC_API_KEY=%s\nELEVENLABS_API_KEY=%s\nHQ_ASSISTANT_PASSWORD=%s\nELEVENLABS_VOICE_ID=%s\nHQ_NOTIFY_TG_TOKEN=%s\nHQ_NOTIFY_TG_CHAT=%s\nHQ_PUBLIC_URL=https://%s\n' \
-            "$ANTHROPIC" "$ELEVEN" "$PASS" "$VOICE" "$TG_TOKEN" "$TG_CHAT" "$DOMAIN" \
+          [ -n "$META_TOKEN" ] && [ -n "$META_AD_ACCOUNT" ] && echo "agent «Цифры Meta» → account …${META_AD_ACCOUNT: -4}" \
+            || echo "::warning::no FUNNEL_META_TOKEN or vars.HQ_META_AD_ACCOUNT — the agent «Цифры Meta» shows no numbers"
+          printf 'ANTHROPIC_API_KEY=%s\nELEVENLABS_API_KEY=%s\nHQ_ASSISTANT_PASSWORD=%s\nELEVENLABS_VOICE_ID=%s\nHQ_NOTIFY_TG_TOKEN=%s\nHQ_NOTIFY_TG_CHAT=%s\nHQ_PUBLIC_URL=https://%s\nMETA_TOKEN=%s\nMETA_AD_ACCOUNT=%s\n' \
+            "$ANTHROPIC" "$ELEVEN" "$PASS" "$VOICE" "$TG_TOKEN" "$TG_CHAT" "$DOMAIN" "$META_TOKEN" "$META_AD_ACCOUNT" \
             | $SSH "umask 077 && cat > /opt/hq-office/assistant.env"
 
       - name: Keys of the morning agents
