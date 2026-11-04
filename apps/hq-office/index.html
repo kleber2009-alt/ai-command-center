@@ -621,6 +621,41 @@
   .dk-hero b{display:block;font-size:20px;font-weight:800;line-height:1.1;font-variant-numeric:tabular-nums}
   .dk-hero small{font-size:11.5px;color:var(--ink-2)}
   .dk-hero .w b{color:#ffcf6e} .dk-hero .r b{color:#9cc4ff} .dk-hero .d b{color:#3ddc97}
+  /* затраты месяца, подключённые системы, конвейеры, контролёр, оценка */
+  .dk-month{border-radius:13px;background:rgba(255,255,255,.035);border:1px solid rgba(255,255,255,.07);padding:10px 12px;margin:0 0 8px;display:grid;gap:8px}
+  .dk-month summary{cursor:pointer;list-style:none;display:flex;flex-wrap:wrap;gap:4px 12px;align-items:baseline;font-size:12.5px;color:var(--ink-2)}
+  .dk-month summary::-webkit-details-marker{display:none}
+  .dk-month summary .eyebrow{flex-basis:100%}
+  .dk-month summary b{color:var(--ink);font-size:15px;font-variant-numeric:tabular-nums}
+  .dk-ag{display:grid;gap:5px;margin:4px 0 0;padding:0;list-style:none}
+  .dk-ag li{display:grid;grid-template-columns:minmax(0,1fr) auto;gap:2px 10px;font-size:12.5px;align-items:center}
+  .dk-ag li span{white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+  .dk-ag li em{font-style:normal;font-variant-numeric:tabular-nums;color:var(--ink-2);font-size:12px}
+  .dk-ag li i{grid-column:1/-1;height:3px;border-radius:2px;background:rgba(255,255,255,.06);overflow:hidden}
+  .dk-ag li i::after{content:"";display:block;height:100%;width:var(--w);background:#7cb4ff;border-radius:2px}
+  .dk-sys{font-size:12px;color:var(--ink-2);line-height:1.45}
+  .dk-sys b{color:var(--ink)} .dk-sys .err{color:#ff9a9a}
+  .dkc-cost{font:500 11px var(--f-mono);color:var(--ink-3)}
+  .ap-list{margin:2px 0 4px;padding-left:20px;display:grid;gap:5px;font-size:13.5px;line-height:1.45}
+  .dk-pipes{display:flex;flex-wrap:wrap;gap:6px}
+  .dk-pipes button{display:grid;gap:2px;text-align:left;padding:8px 11px;border-radius:12px;background:rgba(255,255,255,.04);border:1px solid rgba(255,255,255,.1);color:inherit;font:inherit;cursor:pointer;max-width:100%}
+  .dk-pipes button.on{border-color:#7cb4ff;background:rgba(124,180,255,.12)}
+  .dk-pipes b{font-size:13px} .dk-pipes small{font-size:11.5px;color:var(--ink-2)}
+  .pl{display:grid;gap:8px;margin:0;padding:0;list-style:none;counter-reset:pl}
+  .pl li{display:grid;gap:4px;padding:9px 11px;border-radius:12px;background:rgba(255,255,255,.035);border:1px solid rgba(255,255,255,.07)}
+  .pl li.now{border-color:rgba(61,220,151,.45)} .pl li.wait{opacity:.6}
+  .pl li>b{font-size:13px} .pl li>small{font-size:12px;color:var(--ink-2)}
+  .pl details summary{cursor:pointer;font-size:12px;color:var(--ink-2)}
+  .runs{width:100%;border-collapse:collapse;font-size:12.5px}
+  .runs td{padding:5px 4px;border-top:1px solid rgba(255,255,255,.06)} .runs td:nth-child(n+3){text-align:right;font-variant-numeric:tabular-nums;white-space:nowrap}
+  .runs tr.sum td{font-weight:800;border-top-color:rgba(255,255,255,.18)}
+  .qa-v{display:inline-flex;align-items:center;gap:6px;font-weight:800;font-size:13px}
+  .qa-v.ok{color:#9be15d} .qa-v.fix{color:#ffcf6e} .qa-v.skip{color:var(--ink-2)}
+  .rate{display:flex;flex-wrap:wrap;gap:8px}
+  .rate button{display:inline-flex;align-items:center;gap:7px;padding:8px 13px;border-radius:11px;background:rgba(255,255,255,.05);border:1px solid rgba(255,255,255,.12);color:inherit;font:inherit;font-weight:700;cursor:pointer}
+  .rate button svg{width:16px;height:16px;fill:none;stroke:currentColor;stroke-width:2;stroke-linecap:round;stroke-linejoin:round}
+  .rate button.on.up{border-color:#3ddc97;background:rgba(61,220,151,.14);color:#3ddc97}
+  .rate button.on.down{border-color:#ffb020;background:rgba(255,176,32,.14);color:#ffcf6e}
 
   /* окно задачи */
   .dlg.task-w{width:min(880px,100%)}
@@ -943,6 +978,11 @@ window.OFFICE_DATA = (() => {
        o('publish', 'подсказал, что перевыпустить', 'Перевыпуск'),
        o('remake', 'показал, что залетело, — в ремейк', 'Залёт дня'),
        o('analytics', 'отдал цифры соцсетей', 'Цифры соцсетей')]),
+    qa: A('Контролёр качества', 'Проверяет работу агентов до того, как её увидите вы', '#9be15d', 'doc',
+      ['Сверяет результат с ТЗ', 'Смотрит главный файл', 'Возвращает на доработку'],
+      [o('you', 'проверил результат — можно смотреть', 'Проверенный результат'),
+       o('montage', 'вернул ролик на доработку', 'Замечания к ролику'),
+       o('landings', 'вернул лендинг на доработку', 'Замечания к лендингу')]),
     billing: A('Балансы и подписки', 'Следит за балансами и продлением сервисов офиса', '#ffb347', 'chart',
       ['Проверяет балансы сервисов', 'Сверяет даты продления', 'Считает остаток лимитов'],
       [o('you', 'предупредил о продлении подписки', 'Продление подписки', 'Продлите подписку до конца недели'),
@@ -1144,7 +1184,7 @@ window.OFFICE_DATA = (() => {
     depts: [
       { id:'ceo', name:'Стратегия и продукт', short:'Стратегия',
         head:{ id:'ilia', name:'Илья', title:'Основатель — стратегия, видение, продукт', look:'m3', owner:true },
-        agents:['product', 'market', 'transcriber', 'socialstats', 'billing', 'finance', 'briefing', 'specs', 'skills'] },
+        agents:['product', 'market', 'transcriber', 'qa', 'socialstats', 'billing', 'finance', 'briefing', 'specs', 'skills'] },
       { id:'marketing', name:'Отдел маркетинга', short:'Маркетинг',
         head:{ id:'firuza', name:'Фируза', title:'Руководитель отдела маркетинга', look:'f1' },
         agents:['slides', 'creatives', 'funnels', 'publish', 'analytics', 'audience', 'viral', 'scripts', 'remake', 'montage', 'carousel', 'landings', 'leadmagnet', 'threads', 'avatar'] },
@@ -1252,7 +1292,7 @@ const WAVE_ROOMS = [
 ];
 const WAVE_ROOM_OF = {
   market:'ceo', briefing:'ceo', specs:'ceo', finance:'ceo', academy:'ceo',
-  product:'tech', skills:'tech', billing:'tech', runner:'tech',
+  product:'tech', skills:'tech', billing:'tech', qa:'tech', runner:'tech',
   transcriber:'studio', remake:'studio', scripts:'studio', montage:'studio', carousel:'studio', avatar:'studio', slides:'studio',
   socialstats:'analytics', viral:'analytics', analytics:'analytics', audience:'analytics', adreports:'analytics',
   creatives:'marketing', funnels:'marketing', publish:'marketing', landings:'marketing', leadmagnet:'marketing', threads:'marketing', launch:'marketing',
@@ -4241,13 +4281,18 @@ $('aFoot').addEventListener('click', async e => {
    и несёт результат к вашему столу. Гости рабочего стола не видят. */
 
 const DESK_API = ASST_API + '/desk';
-const desk = { on:false, tasks:[], runner:null, es:null, retry:0, uploads:[], openId:null, form:false, hash:'', busy:false, pv:{}, txt:{} };
+const desk = { on:false, tasks:[], runner:null, es:null, retry:0, uploads:[], openId:null, form:false, hash:'', busy:false, pv:{}, txt:{}, pipelines:[], stats:null, rate:{} };
 const DESK_OPEN = ['routing', 'question', 'queued', 'work', 'review'];
 const DST = { routing:'#7fd3ff', question:'#ffb020', queued:'#8fb8ff', work:'#3ddc97', review:'#ffb020', done:'#3ddc97', cancelled:'#9aa3b5', error:'#ff6b6b' };
 const DESK_EXAMPLES = ['Презентация к эфиру: 10 слайдов про воронку из Threads в Telegram', 'Смонтируй рилс из моего видео — файл прикреплю', 'Лендинг под новый интенсив по ИИ-агентам',
   'Карусель для Instagram: 7 слайдов про офис ИИ-агентов', 'Сценарии пяти рилсов на неделю'];
 const deskTask = id => desk.tasks.find(t => t.id === id);
 const deskTitle = t => t.route?.title || t.text;
+// затраты: время работы агентов и стоимость Claude — «14 мин · $1,80»
+const fmtDur = ms => { const m = Math.round((ms || 0) / 60000); return m < 1 ? 'меньше минуты' : m < 60 ? `${m} мин` : `${Math.floor(m / 60)} ч${m % 60 ? ` ${m % 60} мин` : ''}`; };
+const fmtUsd = c => '$' + (c >= 100 ? Math.round(c) : c.toFixed(2)).toString().replace('.', ',');
+const usageText = u => u && (u.ms || u.cost) ? `${fmtDur(u.ms)}${u.cost ? ' · ' + fmtUsd(u.cost) : ''}` : '';
+const RUNK = { run:'работа', revise:'правка', answer:'после ответа', execute:'действия', qa:'проверка', transcribe:'расшифровка' };
 const sizeText = n => n >= 1e6 ? `${(n / 1e6).toFixed(n >= 1e8 ? 0 : 1)} МБ` : `${Math.max(1, Math.round(n / 1e3))} КБ`;
 function ago(iso) {
   const s = (Date.now() - Date.parse(iso)) / 1000;
@@ -4271,8 +4316,23 @@ async function deskInit() {
   if (!r.ok) return deskOff();
   const j = await r.json().catch(() => null);
   if (!j) return;
+  desk.pipelines = j.pipelines || [];
   deskSnapshot(j.tasks, j.runner);
   deskStream();
+  deskStats();
+}
+// итоги месяца по агентам: время, стоимость, уроки — обновляются, когда задача сдана или закрыта
+let deskStatsT = 0;
+function deskStats(later = false) {
+  clearTimeout(deskStatsT);
+  deskStatsT = setTimeout(async () => {
+    try {
+      const r = await fetch(DESK_API + '/stats', { cache:'no-store' });
+      if (!r.ok) return;
+      desk.stats = await r.json();
+      if (!$('team').hidden && ptab === 'live' && !modalOpen()) renderPanel();
+    } catch (e) {}
+  }, later ? 3e3 : 0);
 }
 function deskStream() {
   desk.es?.close();
@@ -4314,6 +4374,7 @@ function deskUpsert(v) {
   for (const id of new Set([v.agent?.id, prev?.agent?.id].filter(Boolean))) liveApply(agents.get(id), v, prev, false);
   liveOrch(v, prev);
   if (v.status === 'done' && v.published && !(prev?.status === 'done' && prev.published)) deskHistory();
+  if (prev?.status !== v.status && ['review', 'done', 'error', 'question'].includes(v.status)) deskStats(true);
   deskNotify(v, prev);
   holoEvent(v, prev);
   deskRefresh(v.id);
@@ -4360,7 +4421,7 @@ $('toastGo').onclick = () => { $('toast').hidden = true; if (toastId) openDeskTa
 function deskNotify(v, prev) {
   if (prev?.status === v.status || desk.openId === v.id) return;
   const name = v.agent?.name || 'Агент', title = deskTitle(v);
-  if (v.status === 'question') toast(v.question?.from === 'agent' ? `«${name}» спрашивает: ${v.question.text}` : v.question?.from === 'style' ? `${v.question.text} Агент «${name}» ждёт вашего выбора` : `Диспетчер уточняет: ${v.question?.text || ''}`, v.id, 30);
+  if (v.status === 'question') toast(v.question?.from === 'approval' ? `«${name}» ждёт разрешения на действия во внешних системах` : v.question?.from === 'agent' ? `«${name}» спрашивает: ${v.question.text}` : v.question?.from === 'style' ? `${v.question.text} Агент «${name}» ждёт вашего выбора` : `Диспетчер уточняет: ${v.question?.text || ''}`, v.id, 30);
   else if (v.status === 'review') toast(`«${name}» принёс результат: ${title}`, v.id, 30);
   else if (v.status === 'error') toast(`Не получилось: ${title}`, v.id, 30);
   else if (v.status === 'queued' && prev?.status === 'routing') toast(`Диспетчер передал задачу агенту «${name}»`, v.id);
@@ -4376,14 +4437,14 @@ function deskCardHTML(t) {
   const m = t.agent ? agentMeta(t.agent.id) : null, last = t.steps.at(-1), src = deskSource(t);
   const need = t.status === 'question' || t.status === 'review', open = DESK_OPEN.includes(t.status);
   const st = t.status === 'queued' && t.queuePos > 1 ? `в очереди · ${t.queuePos}-я` : t.statusText;
-  const cta = t.status === 'question' ? (t.question?.from === 'style' ? 'Выбрать стиль' : 'Ответить') : t.status === 'review' ? 'Посмотреть результат' : t.status === 'error' ? 'Разобраться' : '';
+  const cta = t.status === 'question' ? (t.question?.from === 'style' ? 'Выбрать стиль' : t.question?.from === 'approval' ? 'Разрешить действия' : 'Ответить') : t.status === 'review' ? 'Посмотреть результат' : t.status === 'error' ? 'Разобраться' : '';
   const line = t.status === 'question' ? t.question?.text : t.status === 'error' ? t.error : t.status === 'review' ? (t.result?.summary || last?.text) : last?.text;
   return `<li><button class="dkc${need ? ' need' : ''}${t.status === 'error' ? ' bad' : ''}${t.status === 'work' || t.status === 'routing' ? ' live' : ''}${open ? '' : ' closed'}" data-desk="${esc(t.id)}" style="--s:${DST[t.status] || '#9aa3b5'}">
     <span class="dkc-av">${orbHTML(m?.color || '#7fd3ff')}</span>
     <span class="dkc-main">
       <span class="dkc-top"><em class="pill">${esc(st)}</em><span class="dkc-src">${ico(src.icon)}${esc(src.label)}</span><time datetime="${esc(t.updated)}">${esc(ago(t.updated))}</time></span>
       <b class="dkc-t">${esc(deskTitle(t))}</b>
-      <span class="dkc-who">${m ? esc(m.name) : 'Диспетчер выбирает агента'}${t.route?.skill ? ` · <code>${esc(t.route.skill)}</code>` : ''}${t.style ? ` · ${esc(t.style)}` : ''}</span>
+      <span class="dkc-who">${t.pipeline ? `${esc(t.pipeline.label)} · этап ${Math.min(t.pipeline.idx + 1, t.pipeline.stages.length)}/${t.pipeline.stages.length} · ` : ''}${m ? esc(m.name) : 'Диспетчер выбирает агента'}${t.route?.skill ? ` · <code>${esc(t.route.skill)}</code>` : ''}${t.style ? ` · ${esc(t.style)}` : ''}${t.usage ? ` · <span class="dkc-cost">${esc(usageText(t.usage))}</span>` : ''}</span>
       ${open ? flowBar(t) : ''}
       ${line ? `<span class="dkc-last${t.status === 'question' ? ' q' : t.status === 'error' ? ' e' : ''}">${esc(String(line).replace(/\n+/g, ' '))}</span>` : ''}
     </span>${cta ? `<span class="dkc-cta">${cta} →</span>` : ''}</button></li>`;
@@ -4402,8 +4463,20 @@ function liveHTML() {
     ${desk.runner && !desk.runner.online ? '<p class="note warn">Исполнитель на сервере сейчас не на связи — задачи подождут в очереди и начнутся, когда он вернётся.</p>'
       : desk.runner?.claude && !desk.runner.claude.ok ? `<p class="note warn">Исполнитель не может запустить Claude Code: ${esc(desk.runner.claude.error)}${desk.runner.claude.auth ? ` · вход: ${esc(desk.runner.claude.auth)}` : ''}</p>` : ''}
     <div class="dk-hero"><div class="w"><b>${n(0)}</b><small>ждут вас</small></div><div class="r"><b>${n(1) + n(2)}</b><small>в работе и очереди</small></div><div class="d"><b>${n(3)}</b><small>закрыто</small></div></div>
+    ${deskMonthHTML()}
     ${list.length ? `<div class="dk-groups">${G.filter(g => g[2].length).map(([h, c, l]) => `<h3 class="dk-gh" style="--g:${c}"><i></i>${h}<span>${l.length}</span></h3><ol class="tasks">${l.map(deskCardHTML).join('')}</ol>`).join('')}</div>`
       : `<p class="empty">${desk.tasks.length ? 'Задач с такими условиями нет.' : 'Сейчас у агентов нет ваших задач. Нажмите «Новая задача агенту» или скажите ассистенту: «поставь задачу…».'}</p>`}`;
+}
+// раскрытые итоги месяца не сворачиваются при перерисовке панели
+document.addEventListener('toggle', e => { if (e.target.classList?.contains('dk-month')) desk.monthOpen = e.target.open; }, true);
+const MONTHS = ['январь', 'февраль', 'март', 'апрель', 'май', 'июнь', 'июль', 'август', 'сентябрь', 'октябрь', 'ноябрь', 'декабрь'];
+function deskMonthHTML() {
+  const st = desk.stats, sys = (desk.runner?.mcp || []);
+  const sysHTML = sys.length ? `<p class="dk-sys">Системы исполнителя: ${sys.map(x => `<b>${esc(x.name)}</b> — ${x.error ? `<span class="err">не отвечает: ${esc(x.error)}</span>` : `чтение ${x.read}, действия ${x.write} по вашему разрешению`}`).join('; ')}</p>` : '';
+  if (!st || !st.total?.runs) return sysHTML ? `<div class="dk-month">${sysHTML}</div>` : '';
+  const T = st.total, max = Math.max(...st.agents.map(a => a.cost || a.ms / 6e5), 1e-9), mon = MONTHS[Number(st.month.slice(5)) - 1] || st.month;
+  return `<details class="dk-month"${desk.monthOpen ? ' open' : ''}><summary><span class="eyebrow">Затраты за ${mon}</span><span><b>${T.tasks}</b> ${word(T.tasks, 'задача', 'задачи', 'задач')}</span><span>работа агентов <b>${fmtDur(T.ms)}</b></span><span>Claude <b>${fmtUsd(T.cost)}</b></span>${T.done ? `<span>принято <b>${T.done}</b></span>` : ''}</summary>
+    <ol class="dk-ag">${st.agents.map(a => `<li title="${esc(`${a.runs} запусков, ${a.tasks} задач${a.lessons ? `, уроков: ${a.lessons}` : ''}`)}"><span>${esc(a.name)}${a.lessons ? ` <small class="dkc-cost">· уроков ${a.lessons}</small>` : ''}</span><em>${fmtDur(a.ms)}${a.cost ? ' · ' + fmtUsd(a.cost) : ''}</em><i style="--w:${Math.max(3, Math.round((a.cost || a.ms / 6e5) / max * 100))}%"></i></li>`).join('')}</ol>${sysHTML}</details>`;
 }
 // на карточке «Ваш стол»: что ждёт решения владельца
 function deskWaitingHTML() {
@@ -4499,7 +4572,7 @@ function deskResultHTML(t) {
   const mats = order.map(k => `<div class="mg"><h5>${FKIND[k]} <span>${groups[k].length}</span></h5>${k === 'image'
     ? `<div class="thumbs">${groups[k].slice(0, lim).map(f => `<button type="button" data-pv="${esc(f.path)}" class="${f === cur ? 'on' : ''}" title="${esc(desc.get(f.path) || f.path)}"><img loading="lazy" src="${esc(f.url)}" alt=""></button>`).join('')}</div>`
     : `<div class="ffiles">${groups[k].slice(0, lim).map(f => { const [kk, c] = fileKind(f.path); return `<button type="button" data-pv="${esc(f.path)}" class="${f === cur ? 'on' : ''}${f.path === res.main ? ' main' : ''}" style="--fc:${c}"><span class="fi">${ico(I[kk])}</span><span><b>${esc(f.path)}</b><small>${esc(desc.get(f.path) || (f.path === res.main ? 'главный файл' : ''))}${desc.get(f.path) ? '' : ` · ${sizeText(f.size)}`}</small></span></button>`; }).join('')}</div>`}</div>`).join('');
-  return `<section class="kcard res"><h4 style="--g:#3ddc97"><i></i>Результат${t.versions > 1 ? ` · версия ${res.version}` : ''}<span class="res-n">${res.files.length} ${word(res.files.length, 'файл', 'файла', 'файлов')}</span></h4>
+  return `<section class="kcard res"><h4 style="--g:#3ddc97"><i></i>Результат${t.versions > 1 && !t.pipeline ? ` · версия ${res.version}` : ''}<span class="res-n">${res.files.length} ${word(res.files.length, 'файл', 'файла', 'файлов')}</span></h4>
     ${html ? `<div class="md report">${html}</div>` : ''}${res.note ? `<p class="knote">Что изменил в правке: ${esc(res.note)}</p>` : ''}
     ${viewerHTML(t, res, cur, cur ? desc.get(cur.path) : '')}
     ${res.files.length > 1 ? `<div class="mats"><h4 class="mats-h">Материалы</h4>${mats}${res.files.length > lim ? `<button type="button" class="dk-more" data-k="files">Показать все ${res.files.length}</button>` : ''}</div>` : ''}</section>`;
@@ -4524,16 +4597,29 @@ function deskSource(t) {
 function deskStages(t) {
   const st = t.status, q = t.question?.from, A = t.route ? agentMeta(t.route.agent) : null;
   const tr = t.chain && t.route?.agent !== 'transcriber', onTr = tr && !t.chain.done && t.agent?.id === 'transcriber' && (st === 'queued' || st === 'work');
+  const onQA = t.agent?.id === 'qa' && ['queued', 'work'].includes(t.qa?.status) && (st === 'queued' || st === 'work');
   const src = deskSource(t), S = [];
-  S.push({ label:'Поставлена', note:src.label, s:'done' });
-  S.push({ label:'Диспетчер', note:st === 'routing' ? 'выбирает агента' : q === 'style' ? 'ждёт выбор стиля' : q === 'dispatcher' ? 'уточняет' : t.route ? 'передал задачу' : '',
+  S.push({ k:'src', label:'Поставлена', note:src.label, s:'done' });
+  S.push({ k:'disp', label:'Диспетчер', note:st === 'routing' ? 'выбирает агента' : q === 'style' ? 'ждёт выбор стиля' : q === 'dispatcher' ? 'уточняет' : t.route ? 'передал задачу' : '',
     s:st === 'routing' ? 'now' : st === 'question' && (q === 'style' || q === 'dispatcher') ? 'need' : t.route ? 'done' : 'wait' });
-  if (tr) S.push({ label:'Транскрибатор', note:t.chain.done ? 'расшифровал' : onTr ? (st === 'work' ? 'расшифровывает' : 'в очереди') : 'расшифрует ролик', s:t.chain.done ? 'done' : onTr ? (st === 'work' ? 'now' : 'queue') : 'wait' });
-  const ag = st === 'error' ? 'err' : st === 'question' && q === 'agent' ? 'need' : (st === 'work' || st === 'queued') && !onTr && t.route ? (st === 'work' ? 'now' : 'queue')
+  if (tr) S.push({ k:'tr', label:'Транскрибатор', note:t.chain.done ? 'расшифровал' : onTr ? (st === 'work' ? 'расшифровывает' : 'в очереди') : 'расшифрует ролик', s:t.chain.done ? 'done' : onTr ? (st === 'work' ? 'now' : 'queue') : 'wait' });
+  const ag = st === 'error' ? 'err' : st === 'question' && (q === 'agent' || q === 'approval') ? 'need' : onQA ? 'done' : (st === 'work' || st === 'queued') && !onTr && t.route ? (st === 'work' ? 'now' : 'queue')
     : ['review', 'done'].includes(st) ? 'done' : 'wait';
-  S.push({ label:A?.name || 'Агент', note:{ now:'работает', queue:t.queuePos > 1 ? `${t.queuePos}-я в очереди` : 'в очереди', need:'задал вопрос', err:'ошибка', done:t.versions > 1 ? `версия ${t.result?.version || t.versions}` : 'сдал результат' }[ag] || '', s:ag });
-  S.push({ label:'Ваша проверка', note:st === 'review' ? 'ждёт вас' : st === 'done' ? 'принято' : '', s:st === 'review' ? 'need' : st === 'done' ? 'done' : 'wait' });
-  S.push({ label:st === 'cancelled' ? 'Отменена' : t.published ? 'В истории' : 'Готово', note:st === 'done' ? (t.published ? 'в истории офиса' : 'без публикации') : '', s:st === 'done' ? 'done' : 'wait' });
+  const agNote = { now:'работает', queue:t.queuePos > 1 ? `${t.queuePos}-я в очереди` : 'в очереди', need:q === 'approval' ? 'ждёт разрешения' : 'задал вопрос', err:'ошибка', done:t.versions > 1 && !t.pipeline ? `версия ${t.result?.version || t.versions}` : 'сдал результат' };
+  // конвейер: каждый этап — свой агент; текущий этап живёт по статусу задачи
+  if (t.pipeline) t.pipeline.stages.forEach((x, i) => {
+    const M = agentMeta(x.agent), cur = i === t.pipeline.idx && x.status !== 'done';
+    const s = x.status === 'done' ? 'done' : cur && t.route ? ag : 'wait';
+    S.push({ k:'agent', label:x.title, note:cur && s !== 'wait' ? agNote[s] || '' : M?.name || x.name || x.agent, s });
+  });
+  else S.push({ k:'agent', label:A?.name || 'Агент', note:agNote[ag] || '', s:ag });
+  if (t.qa) {
+    const v = t.qa.verdict, qs = t.qa.status;
+    S.push({ k:'qa', label:'Контролёр', note:qs === 'planned' ? 'проверит до вас' : qs === 'queued' ? 'в очереди' : qs === 'work' ? 'проверяет' : v === 'ok' ? 'проверено' : v === 'fix' ? 'вернул на доработку' : 'не проверил',
+      s:qs === 'work' && onQA ? 'now' : qs === 'queued' && onQA ? 'queue' : qs === 'done' ? 'done' : 'wait' });
+  }
+  S.push({ k:'you', label:'Ваша проверка', note:st === 'review' ? 'ждёт вас' : st === 'done' ? 'принято' : '', s:st === 'review' ? 'need' : st === 'done' ? 'done' : 'wait' });
+  S.push({ k:'end', label:st === 'cancelled' ? 'Отменена' : t.published ? 'В истории' : 'Готово', note:st === 'done' ? (t.published ? 'в истории офиса' : 'без публикации') : '', s:st === 'done' ? 'done' : 'wait' });
   if (st === 'cancelled') S.forEach(x => { if (x.s !== 'done') x.s = 'off'; });
   return S;
 }
@@ -4547,6 +4633,8 @@ function stepActor(text, t) {
   const A = t.route ? agentMeta(t.route.agent) : null;
   if (/^(Ваш ответ|Правка|Принято|Стиль:|Задача отменена|Повтор)/.test(text)) return { who:'Вы', c:'#ffb020' };
   if (/^Диспетчер/.test(text)) return { who:'Диспетчер', c:'#7fd3ff' };
+  if (/Контролёр качества|^Контролёр|^Проверяет результат/.test(text)) return { who:'Контролёр', c:'#9be15d' };
+  if (/закончил этап/.test(text)) return { who:'Конвейер', c:'#7cb4ff' };
   if (/Транскрибатор/.test(text) && !/передал текст агенту/.test(text) || /^Скачивает|^Расшифровывает|^Ролик \d/.test(text)) return { who:'Транскрибатор', c:'#2fd3c6' };
   if (/^(Задача поставлена|Утренняя задача|Исполнитель|Ждёт очереди|Не хватило памяти|Отправляет результат)/.test(text)) return { who:'Офис', c:'#9aa3b5' };
   return { who:A?.name || 'Агент', c:A?.color || '#3ddc97' };
@@ -4576,7 +4664,8 @@ function openDeskNew({ agent = '', text = '' } = {}) {
         <span class="ln" id="kLink" hidden>${ico(I.video)}ссылка на ролик — сначала расшифровка</span></div></div>
     <ul class="files" id="kFiles"></ul>
     <div class="chipsrow dk-ex">${DESK_EXAMPLES.map(x => `<button type="button" data-ex="${esc(x)}">${esc(x)}</button>`).join('')}</div>
-    <div class="nt-h">Кому</div>
+    ${desk.pipelines.length ? `<div class="nt-h">Как сделать</div><input type="hidden" id="kPipe" value=""><div class="dk-pipes" id="kPipes"></div>` : ''}
+    <div class="nt-h" id="kWhoH">Кому</div>
     <input type="hidden" id="kAgent" value="${esc(agent)}">
     <div class="nt-who" id="kWho"></div>
     <div class="nt-pick" id="kPick" hidden></div>
@@ -4589,7 +4678,12 @@ function openDeskNew({ agent = '', text = '' } = {}) {
 }
 // «Кому» и «что будет дальше» — пересобираются при вводе и выборе агента
 function ntRefresh() {
-  const id = $('kAgent')?.value || '', m = id ? agentMeta(id) : null, txt = $('kText')?.value || '';
+  const pid = $('kPipe')?.value || '', P = desk.pipelines.find(x => x.id === pid);
+  if ($('kPipes')) $('kPipes').innerHTML = [{ id:'', label:'Одним агентом', about:'диспетчер выберет, кому отдать' }, ...desk.pipelines.map(x => ({ ...x, about:x.stages.map(s => s.name).join(' → ') }))]
+    .map(x => `<button type="button" data-pipe="${esc(x.id)}"${x.id === pid ? ' class="on"' : ''}><b>${esc(x.label)}</b><small>${esc(x.about)}</small></button>`).join('');
+  for (const el of [$('kWhoH'), $('kWho')]) if (el) el.style.display = P ? 'none' : '';
+  if (P) desk.pickOpen = false;
+  const id = P ? '' : $('kAgent')?.value || '', m = id ? agentMeta(id) : null, txt = $('kText')?.value || '';
   const link = /https?:\/\/[^\s]*(instagram\.com|youtu|tiktok\.com|vk\.com|rutube|vimeo|t\.me)/i.test(txt) || desk.uploads.some(u => /\.(mp4|mov|webm|m4a|mp3|wav)$/i.test(u.name));
   $('kLink').hidden = !link;
   $('kWho').innerHTML = `<button type="button" data-who=""${id ? '' : ' class="on"'}>${ico(I.twin)}Диспетчер выберет сам</button>
@@ -4597,9 +4691,10 @@ function ntRefresh() {
   const pick = $('kPick'); pick.hidden = !desk.pickOpen;
   if (desk.pickOpen && !pick.firstChild) pick.innerHTML = `<input id="kPickQ" type="search" placeholder="Найти агента: монтаж, сценарии, финансы…" autocomplete="off"><div id="kPickL"></div>`;
   if (desk.pickOpen) ntPickList();
-  const fake = { status:'routing', steps:[], route:m ? { agent:m.id } : null, chain:link && id !== 'transcriber' ? { done:false } : null, agent:null, created:new Date().toISOString(), source:'office', versions:0 };
-  const S = deskStages(fake).map((x, i) => ({ ...x, s:i === 0 ? 'done' : 'wait', note:i === 1 ? (m ? `отдаст «${m.name}»` : 'выберет агента и скилл') : i === 2 && link ? 'расшифрует ролик' : x.label === 'Ваша проверка' ? 'примете или поправите' : i === 0 ? 'сейчас' : '' }));
-  S[S.length - 3].note = m ? 'сделает работу' : 'по профилю задачи';
+  const fake = { status:'routing', steps:[], route:m ? { agent:m.id } : null, chain:link && id !== 'transcriber' ? { done:false } : null, agent:null, created:new Date().toISOString(), source:'office', versions:0,
+    qa:id === 'transcriber' ? null : { status:'planned' }, pipeline:P ? { label:P.label, idx:0, stages:P.stages.map(s => ({ ...s, status:'wait' })) } : null };
+  const NOTE = { src:'сейчас', disp:P ? 'запустит конвейер' : m ? `отдаст «${m.name}»` : 'выберет агента и скилл', tr:'расшифрует ролик', agent:P ? '' : m ? 'сделает работу' : 'по профилю задачи', qa:'проверит до вас', you:'примете или поправите', end:'' };
+  const S = deskStages(fake).map((x, i) => ({ ...x, s:i === 0 ? 'done' : 'wait', note:NOTE[x.k] || x.note || '' }));
   $('kNext').innerHTML = `<ol class="flow">${S.map(x => `<li class="${x.s}"><span class="fd">${x.s === 'done' ? ico(I.check) : '<i></i>'}</span><b>${esc(x.label)}</b>${x.note ? `<small>${esc(x.note)}</small>` : ''}</li>`).join('')}</ol>`;
 }
 function ntPickList() {
@@ -4651,7 +4746,8 @@ async function deskSubmit() {
   if (desk.uploads.some(u => u.xhr)) return deskNote('Файлы ещё загружаются — подождите немного.', true);
   if (desk.busy) return;
   desk.busy = true; btn.disabled = true; deskNote('Ставлю задачу…');
-  const r = await deskPost('/tasks', { text, agent:$('kAgent').value, uploads:desk.uploads.filter(u => u.id).map(u => u.id) });
+  const pipeline = $('kPipe')?.value || '';
+  const r = await deskPost('/tasks', { text, agent:pipeline ? '' : $('kAgent').value, pipeline, uploads:desk.uploads.filter(u => u.id).map(u => u.id) });
   desk.busy = false; btn.disabled = false;
   if (!r.ok || !r.j.task) return deskNote(r.j.error || 'Не получилось поставить задачу — попробуйте ещё раз.', true);
   desk.uploads = [];
@@ -4699,17 +4795,20 @@ function renderDeskTask() {
     <div class="kh-meta"><em class="pill" style="--s:${DST[t.status] || '#9aa3b5'}">${esc(t.statusText)}${t.status === 'queued' && t.queuePos > 1 ? ` · ${t.queuePos}-я` : ''}</em>
       <span class="src-chip">${ico(src.icon)}${esc(src.label)}</span><time datetime="${esc(t.created)}">${fmtDate(t.created.slice(0, 10), true)}, ${hhmm(when)}</time></div>
     <h2>${esc(deskTitle(t))}</h2>
-    <div class="kh-meta">${A ? `<span class="chip">${esc(A.name)}</span>` : '<span class="chip">диспетчер выбирает агента</span>'}${t.route?.skill ? `<span class="chip"><code>${esc(t.route.skill)}</code></span>` : ''}${t.style ? `<span class="chip">стиль: ${esc(t.style)}</span>` : ''}${t.versions > 1 ? `<span class="chip">версия ${t.result?.version || t.versions}</span>` : ''}</div></div>`);
+    <div class="kh-meta">${t.pipeline ? `<span class="chip">${esc(t.pipeline.label)}</span>` : ''}${A ? `<span class="chip">${esc(A.name)}</span>` : '<span class="chip">диспетчер выбирает агента</span>'}${t.route?.skill ? `<span class="chip"><code>${esc(t.route.skill)}</code></span>` : ''}${t.style ? `<span class="chip">стиль: ${esc(t.style)}</span>` : ''}${t.versions > 1 && !t.pipeline ? `<span class="chip">версия ${t.result?.version || t.versions}</span>` : ''}${t.usage ? `<span class="chip" title="Время работы агентов и стоимость Claude по этой задаче">${esc(usageText(t.usage))}</span>` : ''}${t.qa?.verdict === 'ok' ? '<span class="chip">проверено контролёром</span>' : t.qa?.verdict === 'fix' ? '<span class="chip">доработано по замечаниям контролёра</span>' : ''}${t.lessons ? `<span class="chip" title="Агент получил уроки из ваших прошлых правок и оценок">учёл уроков: ${t.lessons}</span>` : ''}</div></div>`);
   setHTML($('kFlow'), flowHTML(t));
-  const styleQ = t.status === 'question' && t.question?.from === 'style' && t.question.options?.length;
-  setHTML($('kAsk'), t.status === 'question' ? `<div class="ask"><b>${t.question?.from === 'agent' ? `«${esc(A?.name || 'Агент')}» спрашивает` : styleQ ? 'Выберите стиль — агент начнёт сразу после выбора' : 'Диспетчер уточняет'}</b>
-    <p>${esc(t.question?.text || '')}</p>${styleQ ? `<div class="dk-styles">${t.question.options.map(o => `<button type="button" data-k="style:${esc(o.id)}"><b>${esc(o.label)}</b>${o.about ? `<small>${esc(o.about)}</small>` : ''}</button>`).join('')}</div>` : ''}<textarea id="kAnswer" placeholder="${styleQ ? 'Или опишите стиль своими словами' : 'Ваш ответ'}"></textarea>${styleQ ? '' : deskAttachHTML()}<div class="acts"><button class="btn-go" data-k="answer">Ответить</button></div></div>` : '');
-  setHTML($('kRes'), res && (t.status === 'review' || t.status === 'done') ? deskResultHTML(t) : '');
+  const qf = t.question?.from, styleQ = t.status === 'question' && qf === 'style' && t.question.options?.length, apQ = t.status === 'question' && qf === 'approval';
+  const opts = t.status === 'question' && t.question?.options?.length ? t.question.options : null;
+  setHTML($('kAsk'), t.status === 'question' ? `<div class="ask"><b>${qf === 'agent' ? `«${esc(A?.name || 'Агент')}» спрашивает` : apQ ? `«${esc(A?.name || 'Агент')}» ждёт разрешения — без него во внешних системах ничего не меняется` : styleQ ? 'Выберите стиль — агент начнёт сразу после выбора' : 'Диспетчер уточняет'}</b>
+    ${apQ ? `<ol class="ap-list">${(t.approval?.actions || []).map(x => `<li>${esc(x)}</li>`).join('')}</ol>` : `<p>${esc(t.question?.text || '')}</p>`}${opts ? `<div class="dk-styles">${opts.map(o => `<button type="button" data-k="opt:${esc(o.id)}"><b>${esc(o.label)}</b>${o.about ? `<small>${esc(o.about)}</small>` : ''}</button>`).join('')}</div>` : ''}<textarea id="kAnswer" placeholder="${styleQ ? 'Или опишите стиль своими словами' : apQ ? 'Или напишите, что поменять — агент ничего не выполнит и учтёт ваши слова' : 'Ваш ответ'}"></textarea>${styleQ || apQ ? '' : deskAttachHTML()}<div class="acts"><button class="btn-go" data-k="answer">Ответить</button></div></div>` : '');
+  setHTML($('kRes'), res && (t.status === 'review' || t.status === 'done' || apQ) ? deskResultHTML(t) : '');
   let acts = '';
-  if (t.status === 'done') acts = `<p class="knote">${t.published ? 'Принято и добавлено в историю офиса — задача видна в «Задачах» и в работах агента.' : 'Принято без публикации в истории офиса.'}</p>`;
+  if (t.status === 'done') acts = `<p class="knote">${t.published ? 'Принято и добавлено в историю офиса — задача видна в «Задачах» и в работах агента.' : 'Принято без публикации в истории офиса.'}${t.rating ? ` Ваша оценка: ${t.rating.value === 'up' ? 'хорошо' : 'есть замечания'}${t.rating.comment ? ` — «${esc(t.rating.comment)}»` : ''}. Агент учтёт её в следующих задачах.` : ''}</p>`;
+  if (t.status === 'review') acts += `<section class="kcard"><h4 style="--g:#3ddc97"><i></i>Оценка агенту</h4><div class="rate"><button type="button" class="up" data-k="rate:up">${ico('<path d="M7 10v11H4V10zM7 10l4-7a2 2 0 0 1 3 2l-1 5h6a2 2 0 0 1 2 2.3l-1.4 7A2 2 0 0 1 17.6 21H7"/>')}Хорошо</button><button type="button" class="down" data-k="rate:down">${ico('<path d="M17 14V3h3v11zM17 14l-4 7a2 2 0 0 1-3-2l1-5H5a2 2 0 0 1-2-2.3l1.4-7A2 2 0 0 1 6.4 3H17"/>')}Есть замечания</button></div><textarea id="kRate" placeholder="Что учесть агенту в следующих задачах (необязательно). Оценка и комментарий станут его уроком — их сохранят при «Принять»"></textarea></section>`;
   if (t.status === 'review' || t.status === 'done') acts += `<section class="kcard"><h4 style="--g:#ffb020"><i></i>Нужна правка?</h4><textarea id="kRevise" placeholder="Что поменять? Агент поправит в той же сессии и принесёт новую версию"></textarea>${deskAttachHTML()}<div class="acts dk-acts"><button type="button" class="dk-mic" id="kReviseMic" data-k="mic" title="Надиктовать правку: нажать — говорить, нажать ещё раз — закончить"><svg viewBox="0 0 24 24"><rect x="9" y="3" width="6" height="11" rx="3"/><path d="M5 11a7 7 0 0 0 14 0M12 18v3"/></svg><span>Голосом</span></button><button data-k="revise">Отправить правку</button></div><p class="note" id="kMicNote" hidden></p></section>`;
   if (t.status === 'error') acts = `<div class="ask err"><b>Не получилось</b><p>${esc(t.error)}</p>${t.log ? `<details class="brief"><summary>Подробности</summary><pre class="dk-log">${esc(t.log)}</pre></details>` : ''}<div class="acts"><button class="btn-go" data-k="retry">Повторить</button></div></div>`;
   setHTML($('kActs'), acts);
+  document.querySelectorAll('#kActs [data-k^="rate:"]').forEach(b => b.classList.toggle('on', b.dataset.k === 'rate:' + desk.rate[t.id]));
   deskBindDrop();
   const chain = t.chain && t.route?.agent !== 'transcriber' ? `<dt>Связка</dt><dd>«${esc(t.chain.from.name)}» ${t.chain.done ? 'расшифровал' : 'расшифрует'} ${t.chain.sources.length ? t.chain.sources.map(u => `<a href="${esc(u)}" target="_blank" rel="noopener">референс</a>`).join(', ') : 'видео'} → «${esc(t.chain.to.name)}»${t.chain.note ? ` · ${esc(t.chain.note)}` : ''}</dd>` : '';
   setHTML($('kInfo'), `<div class="kgrid">
@@ -4720,7 +4819,7 @@ function renderDeskTask() {
       <dt>Агент</dt><dd>${A ? `${orbHTML(A.color)}${esc(A.name)}` : esc(t.route.agent)}</dd>
       ${t.route.skill ? `<dt>Скилл</dt><dd><code>${esc(t.route.skill)}</code></dd>` : ''}${t.style ? `<dt>Стиль</dt><dd>${esc(t.style)}</dd>` : ''}
       ${chain}${t.route.why ? `<dt>Почему</dt><dd>${esc(t.route.why)}</dd>` : ''}</dl>
-      ${t.route.brief ? `<details class="brief"><summary>ТЗ агенту</summary><p>${esc(t.route.brief)}</p></details>` : ''}` : '<p class="note">Диспетчер ещё разбирает задачу.</p>'}</section></div>`);
+      ${t.route.brief ? `<details class="brief"><summary>ТЗ агенту</summary><p>${esc(t.route.brief)}</p></details>` : ''}` : '<p class="note">Диспетчер ещё разбирает задачу.</p>'}</section></div>${deskExtraHTML(t)}`);
   // ход работы: по дням, кто сделал шаг — цветом; длинная лента сворачивается
   const all = t.steps, shown = desk.allSteps === t.id || all.length <= 8 ? all : all.slice(-8);
   let day = '', html = all.length > shown.length ? `<button type="button" class="tl-more" data-k="steps">Показать все ${all.length} шагов</button>` : '';
@@ -4735,6 +4834,14 @@ function renderDeskTask() {
     ? `<span id="kNote"></span><button data-k="cancel">Отклонить</button><button data-k="approve-quiet">Принять без публикации</button><button class="btn-go" data-k="approve">Принять и добавить в историю</button>`
     : `<span id="kNote">${t.status === 'work' ? 'Агент работает — шаги появляются здесь сами' : t.status === 'queued' && desk.runner && !desk.runner.online ? 'Исполнитель не на связи — задача начнётся, когда он вернётся' : ''}</span>
     ${DESK_OPEN.includes(t.status) ? '<button data-k="cancel">Отменить задачу</button>' : ''}<button data-k="copy">Ссылка</button><button data-k="close">Закрыть</button>`);
+}
+// конвейер по этапам, вердикт контролёра, затраты по запускам
+function deskExtraHTML(t) {
+  let h = '';
+  if (t.pipeline) h += `<section class="kcard"><h4 style="--g:#7cb4ff"><i></i>Конвейер «${esc(t.pipeline.label)}»</h4><ol class="pl">${t.pipeline.stages.map((x, i) => `<li class="${x.status}"><b>${i + 1}. ${esc(x.title)} · ${esc(x.name)}</b><small>${x.status === 'done' ? `готово${x.files.length ? ` · ${x.files.length} ${word(x.files.length, 'файл', 'файла', 'файлов')} передано дальше` : ''}` : x.status === 'now' ? 'сейчас на этом этапе' : 'ждёт своей очереди'}</small>${x.summary && i < t.pipeline.idx ? `<details><summary>Отчёт этапа</summary><div class="md report">${mdRich(x.summary)}</div></details>` : ''}</li>`).join('')}</ol></section>`;
+  if (t.qa?.verdict && t.qa.verdict !== 'skip') h += `<section class="kcard"><h4 style="--g:#9be15d"><i></i>Контролёр качества</h4><span class="qa-v ${t.qa.verdict}">${t.qa.verdict === 'ok' ? 'Проверено — замечаний нет' : 'Вернул на доработку — агент исправил'}</span>${t.qa.notes ? `<details class="brief"${t.qa.verdict === 'fix' ? ' open' : ''}><summary>Что проверил и нашёл</summary><div class="md report">${mdRich(t.qa.notes)}</div></details>` : ''}</section>`;
+  if (t.runs?.length) h += `<section class="kcard"><h4 style="--g:#9aa3b5"><i></i>Затраты</h4><table class="runs"><tbody>${t.runs.map(r => `<tr><td>${esc(r.name)}</td><td>${esc(RUNK[r.kind] || r.kind)}</td><td>${fmtDur(r.ms)}</td><td>${r.cost ? fmtUsd(r.cost) : '—'}</td></tr>`).join('')}<tr class="sum"><td>Итого</td><td>${t.usage.runs} ${word(t.usage.runs, 'запуск', 'запуска', 'запусков')}</td><td>${fmtDur(t.usage.ms)}</td><td>${t.usage.cost ? fmtUsd(t.usage.cost) : '—'}</td></tr></tbody></table></section>`;
+  return h;
 }
 // голосовая правка: нажать — говорить, нажать ещё раз — текст дописывается в поле «Правка» (не дольше двух минут)
 async function deskMic() {
@@ -4788,9 +4895,15 @@ async function deskAct(k) {
   if (k === 'files') { desk.allFiles = t.id; return renderDeskTask(); }
   if (k === 'steps') { desk.allSteps = t.id; return renderDeskTask(); }
   if (k === 'copy') { navigator.clipboard?.writeText(location.origin + location.pathname + '#desk-' + t.id).then(() => deskNote('Ссылка скопирована — откроется у вас после входа')).catch(() => {}); return; }
+  if (k.startsWith('rate:')) {
+    const v = k.slice(5); desk.rate[t.id] = desk.rate[t.id] === v ? '' : v;
+    document.querySelectorAll('#kActs [data-k^="rate:"]').forEach(b => b.classList.toggle('on', b.dataset.k === 'rate:' + desk.rate[t.id]));
+    if (desk.rate[t.id] === 'down') $('kRate')?.focus();
+    return;
+  }
   let p = k, body = {};
-  if (k.startsWith('style:')) {
-    const o = t.question?.options?.find(x => x.id === k.slice(6));
+  if (k.startsWith('style:') || k.startsWith('opt:')) {
+    const o = t.question?.options?.find(x => x.id === k.slice(k.indexOf(':') + 1));
     if (!o) return;
     p = 'answer'; body = { text:o.label };
   } else if (k === 'answer' || k === 'revise') {
@@ -4799,7 +4912,7 @@ async function deskAct(k) {
     if (desk.uploads.some(u => u.xhr)) return deskNote('Файлы ещё загружаются — подождите немного.', true);
     body = { text, uploads:desk.uploads.filter(u => u.id).map(u => u.id) };
   }
-  if (k === 'approve' || k === 'approve-quiet') { p = 'approve'; body = { publish:k === 'approve' }; }
+  if (k === 'approve' || k === 'approve-quiet') { p = 'approve'; body = { publish:k === 'approve', rating:desk.rate[t.id] || '', comment:$('kRate')?.value.trim() || '' }; }
   if (k === 'cancel' && !confirm(t.status === 'review' ? 'Отклонить результат и закрыть задачу? Если нужно переделать — лучше отправьте правку.' : 'Отменить задачу? Агент остановит работу.')) return;
   if (desk.busy) return;
   desk.busy = true; deskNote('Отправляю…');
@@ -4830,6 +4943,7 @@ $('deskModal').addEventListener('click', e => {
   const pv = e.target.closest('[data-pv]'); if (pv && desk.openId) { desk.pv[desk.openId] = pv.dataset.pv; renderDeskTask(); $('kRes')?.querySelector('.vw')?.scrollIntoView({ block:'nearest', behavior:'smooth' }); return; }
   const k = e.target.closest('[data-k]'); if (k) return deskAct(k.dataset.k);
   const ex = e.target.closest('[data-ex]'); if (ex) { const ta = $('kText'); ta.value = ex.dataset.ex; ta.focus(); ntRefresh(); return; }
+  const pipe = e.target.closest('[data-pipe]'); if (pipe) { $('kPipe').value = pipe.dataset.pipe; ntRefresh(); return; }
   const who = e.target.closest('[data-who]');
   if (who) { if (who.dataset.who === 'pick') desk.pickOpen = !desk.pickOpen; else { $('kAgent').value = ''; desk.pickOpen = false; } ntRefresh(); if (desk.pickOpen) $('kPickQ')?.focus(); return; }
   const pk = e.target.closest('[data-pick]'); if (pk) { $('kAgent').value = pk.dataset.pick; desk.pickOpen = false; ntRefresh(); return; }

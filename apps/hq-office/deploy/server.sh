@@ -103,6 +103,22 @@ if [ -f "$R/runner.py" ] && id "$RUSER" >/dev/null 2>&1; then
   command -v ffmpeg >/dev/null || echo "::warning::ffmpeg not found — the transcriber sends the whole video to ElevenLabs"
   # keys of the morning agents — read only by their scripts (HQ_KEYS_FILE), not put into the runner's environment
   [ -f "$ROOT/runner-keys.env" ] && install -o "$RUSER" -g "$RUSER" -m 600 "$ROOT/runner-keys.env" "$RD/keys.env"
+  # systems of the runner (MCP: ChatPlace, Windsor, HeyGen…) — read on start, so a change restarts the runner
+  if [ -f "$ROOT/runner-mcp.json" ]; then
+    cmp -s "$ROOT/runner-mcp.json" "$RD/mcp.json" || changed=1
+    install -o "$RUSER" -g "$RUSER" -m 600 "$ROOT/runner-mcp.json" "$RD/mcp.json"
+    # local MCP servers started by uvx (HeyGen's heygen-mcp): uv into the user's ~/.local/bin, on the service's PATH
+    if grep -q '"uvx"' "$RD/mcp.json" && ! command -v uvx >/dev/null && [ ! -x "$RH/.local/bin/uvx" ]; then
+      if runuser -u "$RUSER" -- sh -c 'curl -LsSf --max-time 120 https://astral.sh/uv/install.sh | env UV_NO_MODIFY_PATH=1 sh' >/dev/null 2>&1; then echo "✓ uv installed for local MCP servers"
+      else echo "::warning::uv could not be installed — MCP servers started by uvx (HeyGen) will not run"; fi
+    fi
+    if grep -q '"uvx"' "$RD/mcp.json"; then
+      # warm the package cache once, so the first task does not wait for the download
+      runuser -u "$RUSER" -- env PATH="$RH/.local/bin:$PATH" timeout 60 uvx heygen-mcp </dev/null >/dev/null 2>&1 || true
+    fi
+  elif [ -f "$RD/mcp.json" ]; then
+    rm -f "$RD/mcp.json" "$RD/mcp.claude.json"; changed=1
+  fi
   install -o "$RUSER" -g "$RUSER" -m 600 "$ENVT" "$RD/runner.env"
   install -m 644 "$UNIT" /etc/systemd/system/hq-runner.service
   rm -f "$ENVT" "$UNIT"
@@ -117,7 +133,7 @@ if [ -f "$R/runner.py" ] && id "$RUSER" >/dev/null 2>&1; then
   # after a restart the runner checks Claude Code once: wait for the verdict (sign-in source and error text only)
   if [ -n "$LS" ]; then
     for i in $(seq 1 40); do tail -c +$((LS + 1)) "$RD/runner.log" 2>/dev/null | grep -q "проверка Claude" && break; sleep 3; done
-    tail -c +$((LS + 1)) "$RD/runner.log" 2>/dev/null | grep -E "hq runner|вход Claude|проверка Claude" | sed 's/^/  /' || true
+    tail -c +$((LS + 1)) "$RD/runner.log" 2>/dev/null | grep -E "hq runner|вход Claude|проверка Claude|^[0-9: -]+ mcp " | sed 's/^/  /' || true
     tail -c +$((LS + 1)) "$RD/runner.log" 2>/dev/null | grep -q "проверка Claude: ок" || echo "::warning::Claude Code does not start for the runner — see the line above"
   fi
   systemctl is-active -q hq-runner || { echo "::warning::hq-runner is not running"; tail -n 20 "$RD/runner.log" 2>/dev/null || true; }
