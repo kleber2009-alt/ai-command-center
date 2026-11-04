@@ -34,6 +34,7 @@ import Anthropic from '@anthropic-ai/sdk';
 import { loadOffice, loadProjectMap, moscowDate, humanDate } from './office.mjs';
 import { voiceConfigured, transcribe, listVoices, guessOwnerVoice, speak, realtimeToken } from './voice.mjs';
 import { createDesk } from './desk.mjs';
+import { initTeam } from './team.mjs';
 import { loadTwin, initTwin, remember, rememberTool, SECTIONS, TWIN_PROMPT } from './twin.mjs';
 import { initKb, loadKb, kbTools, runKbTool, ingest, listPrivate, removePrivate } from './kb.mjs';
 
@@ -51,6 +52,7 @@ const COMPACT_AT = 60;       // beyond this the oldest turns go to long-term mem
 const claude = process.env.ANTHROPIC_API_KEY ? new Anthropic() : null;
 initTwin(DATA_DIR);
 initKb(DATA_DIR);
+const team = initTeam(DATA_DIR);
 const desk = createDesk({ claude, model:MODEL, fallback:FALLBACK, dataDir:DATA_DIR, officeDir:OFFICE_DIR, runnerToken:process.env.HQ_DESK_RUNNER_TOKEN || '' });
 
 /* ---------- prompts ---------- */
@@ -98,11 +100,22 @@ const cookies = req => Object.fromEntries((req.headers.cookie || '').split(/;\s*
 const cookie = (name, value, maxAge) => `${name}=${encodeURIComponent(value)}; Path=${PREFIX}; Max-Age=${maxAge}; HttpOnly; SameSite=Lax${process.env.SERVE_STATIC === '1' ? '' : '; Secure'}`;
 const clientIp = req => String(req.headers['x-forwarded-for'] || req.socket.remoteAddress || '').split(',')[0].trim();
 
-function isOwner(req) {
+// the login cookie: `owner.<exp>` (the password) or `user.<id>.<ver>.<exp>` (a department head, invite link), signed
+function signedValue(req) {
   const t = cookies(req).hqa;
-  if (!t || !PASSWORD) return false;
+  if (!t || !PASSWORD) return '';
   const i = t.lastIndexOf('.'), v = t.slice(0, i);
-  return same(Buffer.from(t.slice(i + 1)), Buffer.from(sign(v))) && Number(v.split('.')[1]) > Date.now();
+  return same(Buffer.from(t.slice(i + 1)), Buffer.from(sign(v))) ? v : '';
+}
+function isOwner(req) {
+  const v = signedValue(req);
+  return v.startsWith('owner.') && Number(v.split('.')[1]) > Date.now();
+}
+// who is asking: { owner:true } | { head:{ id, name, dept, agents } } | null (a guest)
+function whoOf(req) {
+  if (isOwner(req)) return { owner:true };
+  const u = team.check(signedValue(req));
+  return u ? { head:{ id:u.id, name:u.name, dept:u.dept, agents:u.agents } } : null;
 }
 const hits = new Map();
 function limited(key, max, windowMs) {
@@ -347,9 +360,9 @@ async function chat(req, res, isOwnerTalk) {
 const ROUTES = {
   'GET health': (req, res) => json(res, 200, { ok:true }),
   'GET state': async (req, res, o) => {
-    const v = o ? await ownerVoice() : null;
+    const v = o ? await ownerVoice() : null, w = o ? null : whoOf(req);
     json(res, 200, {
-      owner:o, configured:{ chat:Boolean(claude), voice:voiceConfigured(), login:Boolean(PASSWORD) },
+      owner:o, role:o ? 'owner' : w?.head ? 'head' : 'guest', user:w?.head || null, configured:{ chat:Boolean(claude), voice:voiceConfigured(), login:Boolean(PASSWORD) },
       voice:v ? { id:v.id, name:v.name } : null, memory:o ? Boolean(owner.memory) : false,
       twin:o ? { ...(({ sources, empty, profile }) => ({ sources, empty, profile }))(loadTwin()), kb:(({ counts, builtAt }) => ({ ...counts, builtAt }))(loadKb()) } : null,
       history:(o ? owner.turns : guestOf(req, res).turns).slice(-30).map(t => ({ role:t.role, text:t.text, at:t.at })),
@@ -365,6 +378,26 @@ const ROUTES = {
     json(res, 200, { ok:true }, { 'set-cookie':cookie('hqa', `${v}.${sign(v)}`, 90 * 86400) });
   },
   'POST logout': (req, res) => json(res, 200, { ok:true }, { 'set-cookie':cookie('hqa', '', 0) }),
+  // a department head opens the invite link: one-time code → their own login for 90 days
+  'POST invite': async (req, res) => {
+    if (!PASSWORD) return json(res, 503, { error:'Вход в офис ещё не настроен.' });
+    if (limited('invite:' + clientIp(req), 10, 900e3)) return json(res, 429, { error:'Слишком много попыток — подождите 15 минут.' });
+    const { code } = await jsonBody(req);
+    const r = team.redeem(code);
+    if (!r) return json(res, 400, { error:'Ссылка-приглашение не действует: она уже открыта, устарела или доступ отключён. Попросите новую.' });
+    json(res, 200, { ok:true, user:{ id:r.user.id, name:r.user.name, dept:r.user.dept } }, { 'set-cookie':cookie('hqa', `${r.value}.${sign(r.value)}`, team.LOGIN_DAYS * 86400) });
+  },
+  // the owner's team screen: heads, their agents, invite links, access on/off
+  'GET team': (req, res, o) => o ? json(res, 200, { users:team.list(), agents:desk.agents().map(a => ({ id:a.id, name:a.name, dept:a.dept, role:a.role })) }) : json(res, 403, { error:'Только для владельца.' }),
+  'POST team': async (req, res, o) => {
+    if (!o) return json(res, 403, { error:'Только для владельца.' });
+    const b = await jsonBody(req), ids = new Set(desk.agents().map(a => a.id));
+    const agents = Array.isArray(b.agents) ? b.agents.filter(id => ids.has(id)) : undefined;
+    if (b.action === 'invite') { const r = team.invite({ id:b.id, name:b.name, dept:b.dept, agents }); return json(res, 200, { user:r.user, code:r.code }); }
+    if (b.action === 'update') { const u = team.update(b.id, { name:b.name, agents, disabled:typeof b.disabled === 'boolean' ? b.disabled : undefined }); return u ? json(res, 200, { user:u }) : json(res, 404, { error:'Нет такого сотрудника.' }); }
+    if (b.action === 'remove') return json(res, 200, { ok:team.remove(String(b.id || '')) });
+    json(res, 400, { error:'action' });
+  },
   'POST chat': (req, res, o) => chat(req, res, o),
   // the twin's knowledge base: Ilia's own materials (files, the claude.ai export) — owner only
   'GET twin/kb': (req, res, o) => o ? json(res, 200, { ...loadKb().counts, builtAt:loadKb().builtAt, mine:listPrivate() }) : json(res, 403, { error:'Только для владельца.' }),
@@ -432,7 +465,7 @@ http.createServer(async (req, res) => {
   const p = new URL(req.url, 'http://x').pathname;
   if (!p.startsWith(PREFIX + '/')) return process.env.SERVE_STATIC === '1' ? serveStatic(req, res, p) : json(res, 404, { error:'not found' });
   const rest = p.slice(PREFIX.length + 1);
-  const route = rest.startsWith('desk/') ? (rq, rs, o) => desk.handle(rq, rs, rest.slice(5), o) : ROUTES[`${req.method} ${rest}`];
+  const route = rest.startsWith('desk/') ? rq => desk.handle(rq, res, rest.slice(5), whoOf(rq)) : ROUTES[`${req.method} ${rest}`];
   if (!route) return json(res, 404, { error:'not found' });
   try { await route(req, res, isOwner(req)); }
   catch (e) {

@@ -622,6 +622,21 @@
   .dk-hero small{font-size:11.5px;color:var(--ink-2)}
   .dk-hero .w b{color:#ffcf6e} .dk-hero .r b{color:#9cc4ff} .dk-hero .d b{color:#3ddc97}
   /* затраты месяца, подключённые системы, конвейеры, контролёр, оценка */
+  /* «Команда и доступы»: руководители, их агенты, ссылки-приглашения */
+  .ta-card{border-radius:14px;background:rgba(255,255,255,.035);border:1px solid rgba(255,255,255,.08);padding:14px;margin:0 0 12px;display:grid;gap:10px}
+  .ta-top{display:flex;gap:12px;align-items:center;flex-wrap:wrap}
+  .ta-top .txt{flex:1;min-width:160px}.ta-top b{display:block;font-size:15px}.ta-top small{color:var(--ink-2);font-size:12.5px}
+  .ta-st{font:600 11px var(--f-mono);padding:3px 9px;border-radius:99px;background:rgba(255,255,255,.07);color:var(--ink-2)}
+  .ta-st.on{background:rgba(61,220,151,.14);color:#3ddc97}.ta-st.off{background:rgba(255,107,107,.14);color:#ff9a9a}.ta-st.inv{background:rgba(255,176,32,.14);color:#ffcf6e}
+  .ta-acts{display:flex;gap:8px;flex-wrap:wrap}
+  .ta-acts button{padding:8px 13px;border-radius:11px;background:rgba(255,255,255,.06);border:1px solid rgba(255,255,255,.1);font-weight:700;font-size:13px}
+  .ta-acts button.go{background:#2f7bff;border-color:#2f7bff;color:#fff}
+  .ta-link{display:flex;gap:8px;align-items:center}.ta-link input{flex:1;min-width:0;padding:9px 11px;border-radius:10px;background:rgba(0,0,0,.3);border:1px solid rgba(255,255,255,.12);color:var(--ink);font:12px var(--f-mono)}
+  .ta-ags summary{cursor:pointer;font-size:13px;color:var(--ink-2)}
+  .ta-ags h5{margin:10px 0 6px;font-size:11.5px;letter-spacing:.06em;text-transform:uppercase;color:var(--ink-3)}
+  .ta-grid{display:grid;grid-template-columns:repeat(auto-fill,minmax(180px,1fr));gap:6px}
+  .ta-grid label{display:flex;gap:8px;align-items:center;padding:6px 9px;border-radius:10px;background:rgba(255,255,255,.03);font-size:13px;cursor:pointer}
+  .ta-grid label.on{background:rgba(47,123,255,.14)}
   /* гость: маршрут задачи точками на карточке «Сейчас» */
   .pubflow{display:flex;gap:4px;margin-top:6px}
   .pubflow i{flex:1;height:4px;border-radius:2px;background:rgba(255,255,255,.1)}
@@ -870,6 +885,12 @@
     <div class="dh"><div id="tHead"></div><button class="x" id="tClose" aria-label="Закрыть">×</button></div>
     <div class="db" id="tBody"></div>
     <div class="df"><button id="tPrev" aria-label="Предыдущая задача">←<span class="wide"> Предыдущая</span></button><span id="tCount"></span><button id="tCopy">Ссылка на задачу</button><button id="tNext" aria-label="Следующая задача"><span class="wide">Следующая </span>→</button></div>
+  </div>
+</div>
+<div class="modal" id="teamAdm" hidden role="dialog" aria-modal="true" aria-labelledby="taTitle">
+  <div class="dlg">
+    <div class="dh"><div><span class="eyebrow">Только для владельца</span><h2 id="taTitle">Команда и доступы</h2></div><button class="x" id="taClose" aria-label="Закрыть">×</button></div>
+    <div class="db" id="taBody"></div>
   </div>
 </div>
 <div class="modal" id="dossier" hidden role="dialog" aria-modal="true" aria-labelledby="dName">
@@ -3369,6 +3390,13 @@ const COVER_LABEL = { claude:'Документ Claude', site:'Сайт', file:'�
    вкладка и названия скиллов, шаблоны задач; в панели — только отделы, где больше всего готовых работ. */
 let OWNER_ON = false;               // = desk.on; отдельная переменная: функции работ зовутся и до объявления desk
 const guest = () => !OWNER_ON;
+// роль: владелец, руководитель отдела (вход по ссылке-приглашению) или гость; у руководителя — его агенты
+const role = () => asst?.state?.role || (asst?.state?.owner ? 'owner' : 'guest');
+const HEAD = () => role() === 'head' ? asst.state.user : null;
+const myAgent = id => !HEAD() || HEAD().agents.includes(id);
+// задачей управляет владелец; руководитель — своими: поставил сам или её делает его агент
+const canManageT = t => { const h = HEAD(); if (!h) return role() === 'owner';
+  return t.by?.id === h.id || h.agents.includes(t.route?.agent || t.agent?.id) || Boolean(t.pipeline?.stages?.some(x => h.agents.includes(x.agent))); };
 const guestUrlOk = url => kindOf(url) === 'site' && !/github\.com|githubusercontent|claude\.ai/.test(url);
 // витрина досье для гостя: ссылки — только на публичные сайты и страницы
 const guestBlocks = blocks => !guest() ? blocks : blocks.map(r => r.type === 'links' ? { ...r, items:r.items.filter(it => guestUrlOk(it.url)) } : r).filter(r => r.type !== 'links' || r.items.length);
@@ -3512,12 +3540,20 @@ function focusHTML() {
   const id = selectedId;
   if (!id) return '';
   const a = agents.get(id), p = PEOPLE[id];
+  if (id === 'you' && HEAD()) {
+    const h = HEAD(), d = deptById(h.dept), P = PEOPLE[h.id] || { name:h.name, dept:d };
+    const mine = desk.tasks.filter(t => canManageT(t) && DESK_OPEN.includes(t.status)).length;
+    return `<article class="focus"><div class="fh">${faceHTML(P)}<div><b>Вы · ${esc(h.name)}</b><small>Руководитель${d ? ' · ' + esc(d.name) : ''} · ${h.agents.length} ${word(h.agents.length, 'агент', 'агента', 'агентов')} в управлении</small></div></div>
+      ${deskWaitingHTML()}
+      <p class="note">Вы ставите задачи своим агентам, отвечаете на их вопросы, разрешаете действия во внешних системах и принимаете результат. Задачи других отделов видны только для просмотра. Сейчас ваших задач в работе: ${mine}.</p>
+      <div class="acts"><button data-do="newtask" data-id="" class="on">Новая задача агенту</button>${d ? `<button data-do="mydept">Мой отдел</button>` : ''}<button data-do="logout">Выйти</button></div></article>`;
+  }
   if (id === 'you' || (p && p.owner)) {
     const own = DEPTS[0].head;
     return `<article class="focus"><div class="fh">${faceHTML({ ...own, dept:DEPTS[0] })}<div><b>Ваш стол · ${esc(own.name)}</b><small>${esc(own.title)}</small></div></div>
       ${desk.on ? deskWaitingHTML() : asst.state && !asst.state.owner && asst.state.configured?.login
         ? '<div class="login-cta"><p>Чтобы ставить задачи агентам и видеть, что сейчас в работе, войдите как владелец — на этом устройстве один раз, вход помнится 90 дней.</p><button class="btn-go" data-do="login">Войти</button></div>' : ''}
-      <div class="acts">${desk.on ? '<button data-do="newtask" data-id="" class="on">Новая задача агенту</button>' : ''}<button data-do="dossier" data-id="${esc(own.id)}">Досье</button><button data-do="desk">Сесть за стол</button><button data-do="clear">Все задачи</button></div></article>`;
+      <div class="acts">${desk.on ? '<button data-do="newtask" data-id="" class="on">Новая задача агенту</button>' : ''}${role() === 'owner' ? '<button data-do="team-admin">Команда и доступы</button>' : ''}<button data-do="dossier" data-id="${esc(own.id)}">Досье</button><button data-do="desk">Сесть за стол</button><button data-do="clear">Все задачи</button></div></article>`;
   }
   if (!a) return '';
   const head = a.kind === 'head', orch = a.kind === 'orch';
@@ -3526,7 +3562,7 @@ function focusHTML() {
     <div class="now"><span class="eyebrow">В офисе сейчас</span><p data-f="act">${esc(a.activity())}</p></div>
     ${a.live ? desk.on ? `<div class="acts"><button data-desk="${esc(a.live.id)}" class="on">Ваша задача: ${esc(a.live.title)}</button></div>` : `<div class="now"><span class="eyebrow">Задача сейчас · ${esc(PUB_ST[a.live.status] || '')}</span><p>${esc(a.live.title)}</p></div>` : ''}
     ${orch ? '<p class="note">Оркестратор — диспетчер офиса: разбирает задачи владельца, выбирает агента и скилл и относит задачу исполнителю. В истории задач его нет.</p>' : ''}
-    <div class="acts">${desk.on && !head ? `<button data-do="newtask" data-id="${orch ? '' : esc(id)}">Поставить задачу</button>` : ''}${orch ? '' : `<button data-do="dossier" data-id="${esc(id)}">Досье</button>`}
+    <div class="acts">${desk.on && !head && (orch || myAgent(id)) ? `<button data-do="newtask" data-id="${orch ? '' : esc(id)}">Поставить задачу</button>` : ''}${orch ? '' : `<button data-do="dossier" data-id="${esc(id)}">Досье</button>`}
       <button data-do="follow" class="${followId === id ? 'on' : ''}">${followId === id ? 'Слежу' : 'Следить'}</button>
       <button data-do="clear">Все задачи</button></div>
     ${orch ? '' : `<h3 class="eyebrow">${head ? 'Задачи отдела' : 'Задачи агента'} · ${n}</h3>`}</article>`;
@@ -3656,6 +3692,9 @@ $('pbody').addEventListener('click', e => {
   if (k === 'newtask') openDeskNew({ agent:b.dataset.id || '' });
   if (k === 'live') { ptab = 'live'; renderPanel(); $('pbody').scrollTop = 0; }
   if (k === 'login') openLogin();
+  if (k === 'team-admin') openTeamAdmin();
+  if (k === 'mydept') { const d = deptById(HEAD()?.dept); if (d) flyToDept(d); }
+  if (k === 'logout') fetch(ASST_API + '/logout', { method:'POST' }).catch(() => {}).then(() => asstLoad());
 });
 function setPanel(open) {
   $('team').hidden = !open; $('teamShow').hidden = open;
@@ -3820,8 +3859,8 @@ function showDossierTab(tab) {
     } else if (tab === 'skills') {
       h = `<ul class="skilllist">${(c.skills || []).map(s => `<li><b>${esc(s.title)}</b><code>${esc(s.name)}</code><p>${esc(s.desc || '')}</p>${s.say ? `<i>Скажи: «${esc(s.say)}»</i>` : ''}</li>`).join('')}</ul>` || '';
     } else {
-      const own = desk.on ? `<div class="acts" style="margin-bottom:14px"><button class="btn-go" data-nt="" data-nt-agent="${esc(id)}">Поставить задачу агенту «${esc(agentMeta(id).name)}»</button></div>` : '';
-      h = own + ((c.templates || []).map(t => `<div class="tpl"><b>${esc(t.task)}</b><p>${esc(t.prompt)}</p><button data-copy="${esc(t.prompt)}">Скопировать задачу</button>${desk.on ? ` <button data-nt="${esc(t.prompt)}" data-nt-agent="${esc(id)}">Поставить в работу</button>` : ''}</div>`).join('') || `<p class="empty">Примеры задач появятся позже.</p>`);
+      const own = desk.on && myAgent(id) ? `<div class="acts" style="margin-bottom:14px"><button class="btn-go" data-nt="" data-nt-agent="${esc(id)}">Поставить задачу агенту «${esc(agentMeta(id).name)}»</button></div>` : '';
+      h = own + ((c.templates || []).map(t => `<div class="tpl"><b>${esc(t.task)}</b><p>${esc(t.prompt)}</p><button data-copy="${esc(t.prompt)}">Скопировать задачу</button>${desk.on && myAgent(id) ? ` <button data-nt="${esc(t.prompt)}" data-nt-agent="${esc(id)}">Поставить в работу</button>` : ''}</div>`).join('') || `<p class="empty">Примеры задач появятся позже.</p>`);
     }
   }
   $('dBody').innerHTML = h;
@@ -3866,7 +3905,7 @@ function routeHash() {
   else if (h.startsWith('desk-')) { if (desk.on) openDeskTask(h.slice(5)); else desk.hash = h.slice(5); }
 }
 addEventListener('hashchange', routeHash);
-const modalOpen = () => !$('taskModal').hidden || !$('dossier').hidden || !$('deskModal').hidden;
+const modalOpen = () => !$('taskModal').hidden || !$('dossier').hidden || !$('deskModal').hidden || !$('teamAdm').hidden;
 
 
 /* ======================= ЛИЧНЫЙ АССИСТЕНТ =======================
@@ -3900,8 +3939,9 @@ async function asstLoad() {
   } catch (e) { asst.state = null; }
   asstRender();
   // рабочий стол — только у владельца: после входа включается, после выхода прячется
-  if (asst.state?.owner && !desk.on) deskInit();
-  if (asst.state && !asst.state.owner && desk.on) deskOff();
+  const staff = asst.state?.owner || asst.state?.role === 'head';
+  if (staff && !desk.on) deskInit();
+  if (asst.state && !staff && desk.on) deskOff();
   appShell();
   if (asst.state?.owner && selectedId === 'you') renderPanel();
 }
@@ -4445,7 +4485,7 @@ function deskUpsert(v) {
 }
 function deskRefresh(id) {
   $('dNew').hidden = !desk.on;
-  const need = desk.tasks.filter(t => t.status === 'question' || t.status === 'review').length;
+  const need = desk.tasks.filter(t => (t.status === 'question' || t.status === 'review') && canManageT(t)).length;
   const pubOpen = desk.pub.filter(t => PUB_OPEN.includes(t.status)).length;
   $('liveTab').hidden = !desk.on && !desk.pubOk;
   $('liveTab').innerHTML = desk.on ? `В работе${need ? ` <b>${need}</b>` : ''}` : `Сейчас${pubOpen ? ` <b>${pubOpen}</b>` : ''}`;
@@ -4496,14 +4536,14 @@ function deskNotify(v, prev) {
 /* ---------- вкладка «В работе» ---------- */
 
 function deskSum() {
-  const open = desk.tasks.filter(t => DESK_OPEN.includes(t.status)).length, need = desk.tasks.filter(t => t.status === 'question' || t.status === 'review').length;
+  const open = desk.tasks.filter(t => DESK_OPEN.includes(t.status)).length, need = desk.tasks.filter(t => (t.status === 'question' || t.status === 'review') && canManageT(t)).length;
   return `${open} ${word(open, 'задача', 'задачи', 'задач')} в работе${need ? ` · ${need} ${word(need, 'ждёт', 'ждут', 'ждут')} вас` : ''}${desk.runner && !desk.runner.online ? ' · исполнитель не на связи' : ''}`;
 }
 function deskCardHTML(t) {
   const m = t.agent ? agentMeta(t.agent.id) : null, last = t.steps.at(-1), src = deskSource(t);
-  const need = t.status === 'question' || t.status === 'review', open = DESK_OPEN.includes(t.status);
+  const need = (t.status === 'question' || t.status === 'review') && canManageT(t), open = DESK_OPEN.includes(t.status);
   const st = t.status === 'queued' && t.queuePos > 1 ? `в очереди · ${t.queuePos}-я` : t.statusText;
-  const cta = t.status === 'question' ? (t.question?.from === 'style' ? 'Выбрать стиль' : t.question?.from === 'approval' ? 'Разрешить действия' : 'Ответить') : t.status === 'review' ? 'Посмотреть результат' : t.status === 'error' ? 'Разобраться' : '';
+  const cta = !canManageT(t) ? (t.by ? `ведёт ${esc(t.by.name)}` : '') : t.status === 'question' ? (t.question?.from === 'style' ? 'Выбрать стиль' : t.question?.from === 'approval' ? 'Разрешить действия' : 'Ответить') : t.status === 'review' ? 'Посмотреть результат' : t.status === 'error' ? 'Разобраться' : '';
   const line = t.status === 'question' ? t.question?.text : t.status === 'error' ? t.error : t.status === 'review' ? (t.result?.summary || last?.text) : last?.text;
   return `<li><button class="dkc${need ? ' need' : ''}${t.status === 'error' ? ' bad' : ''}${t.status === 'work' || t.status === 'routing' ? ' live' : ''}${open ? '' : ' closed'}" data-desk="${esc(t.id)}" style="--s:${DST[t.status] || '#9aa3b5'}">
     <span class="dkc-av">${orbHTML(m?.color || '#7fd3ff')}</span>
@@ -4519,8 +4559,8 @@ function liveHTML() {
   const q = pquery.toLowerCase();
   const list = desk.tasks.filter(t => (pdept === 'all' || t.agent?.dept === pdept) && (!q || [t.text, t.route?.title, t.agent?.name].join(' ').toLowerCase().includes(q)));
   const G = [
-    ['Ждут вас', '#ffb020', list.filter(t => t.status === 'question' || t.status === 'review' || t.status === 'error')],
-    ['В работе', '#3ddc97', list.filter(t => t.status === 'work' || t.status === 'routing')],
+    ['Ждут вас', '#ffb020', list.filter(t => (t.status === 'question' || t.status === 'review' || t.status === 'error') && canManageT(t))],
+    ['В работе', '#3ddc97', list.filter(t => t.status === 'work' || t.status === 'routing' || (!canManageT(t) && ['question', 'review', 'error'].includes(t.status)))],
     ['В очереди', '#8fb8ff', list.filter(t => t.status === 'queued')],
     ['Закрыто недавно', '#9aa3b5', list.filter(t => t.status === 'done' || t.status === 'cancelled').slice(0, 15)],
   ];
@@ -4546,7 +4586,7 @@ function deskMonthHTML() {
 }
 // на карточке «Ваш стол»: что ждёт решения владельца
 function deskWaitingHTML() {
-  const need = desk.tasks.filter(t => t.status === 'question' || t.status === 'review');
+  const need = desk.tasks.filter(t => (t.status === 'question' || t.status === 'review') && canManageT(t));
   if (!need.length) return '';
   return `<div class="now"><span class="eyebrow">Ждут вашего решения · ${need.length}</span></div><ol class="tasks">${need.slice(0, 4).map(deskCardHTML).join('')}</ol>`;
 }
@@ -4745,7 +4785,8 @@ function openDeskNew({ agent = '', text = '' } = {}) {
 // «Кому» и «что будет дальше» — пересобираются при вводе и выборе агента
 function ntRefresh() {
   const pid = $('kPipe')?.value || '', P = desk.pipelines.find(x => x.id === pid);
-  if ($('kPipes')) $('kPipes').innerHTML = [{ id:'', label:'Одним агентом', about:'диспетчер выберет, кому отдать' }, ...desk.pipelines.map(x => ({ ...x, about:x.stages.map(s => s.name).join(' → ') }))]
+  const pipes = desk.pipelines.filter(x => !HEAD() || x.stages.every(st => myAgent(st.agent) || ['transcriber', 'qa'].includes(st.agent)));
+  if ($('kPipes')) $('kPipes').innerHTML = [{ id:'', label:'Одним агентом', about:HEAD() ? 'диспетчер выберет из ваших агентов' : 'диспетчер выберет, кому отдать' }, ...pipes.map(x => ({ ...x, about:x.stages.map(s => s.name).join(' → ') }))]
     .map(x => `<button type="button" data-pipe="${esc(x.id)}"${x.id === pid ? ' class="on"' : ''}><b>${esc(x.label)}</b><small>${esc(x.about)}</small></button>`).join('');
   for (const el of [$('kWhoH'), $('kWho')]) if (el) el.style.display = P ? 'none' : '';
   if (P) desk.pickOpen = false;
@@ -4766,7 +4807,7 @@ function ntRefresh() {
 function ntPickList() {
   const q = ($('kPickQ')?.value || '').toLowerCase(), cur = $('kAgent').value;
   $('kPickL').innerHTML = DEPTS.map(d => {
-    const ids = d.agentIds.filter(id => { const m = agentMeta(id); return !q || (m.name + ' ' + m.role).toLowerCase().includes(q); });
+    const ids = d.agentIds.filter(id => { const m = agentMeta(id); return myAgent(id) && (!q || (m.name + ' ' + m.role).toLowerCase().includes(q)); });
     return ids.length ? `<h5>${esc(d.name)}</h5><div class="nt-grid">${ids.map(id => { const m = agentMeta(id); return `<button type="button" data-pick="${esc(id)}"${id === cur ? ' class="on"' : ''}>${orbHTML(m.color)}<b>${esc(m.name)}</b><small>${esc(m.role)}</small></button>`; }).join('')}</div>` : '';
   }).join('') || '<p class="empty">Такого агента нет — оставьте выбор диспетчеру.</p>';
 }
@@ -4900,6 +4941,13 @@ function renderDeskTask() {
     ? `<span id="kNote"></span><button data-k="cancel">Отклонить</button><button data-k="approve-quiet">Принять без публикации</button><button class="btn-go" data-k="approve">Принять и добавить в историю</button>`
     : `<span id="kNote">${t.status === 'work' ? 'Агент работает — шаги появляются здесь сами' : t.status === 'queued' && desk.runner && !desk.runner.online ? 'Исполнитель не на связи — задача начнётся, когда он вернётся' : ''}</span>
     ${DESK_OPEN.includes(t.status) ? '<button data-k="cancel">Отменить задачу</button>' : ''}<button data-k="copy">Ссылка</button><button data-k="close">Закрыть</button>`);
+  // чужой отдел у руководителя: всё видно, но решать нечего — ни ответа, ни приёма, ни правки
+  if (!canManageT(t)) {
+    const owner = t.by ? t.by.name : 'Илья';
+    if (t.status === 'question') setHTML($('kAsk'), `<div class="ask"><b>Ждёт ответа: ${esc(owner)}</b><p>${esc(t.question?.text || '')}</p></div>`);
+    setHTML($('kActs'), `<p class="knote">Задача другого отдела — ею управляет ${esc(owner)}. Вам она видна только для просмотра.</p>`);
+    setHTML($('kFoot'), `<span id="kNote">Только просмотр</span><button data-k="copy">Ссылка</button><button data-k="close">Закрыть</button>`);
+  }
 }
 // конвейер по этапам, вердикт контролёра, затраты по запускам
 function deskExtraHTML(t) {
@@ -5017,6 +5065,76 @@ $('deskModal').addEventListener('click', e => {
   if (rm) { const u = desk.uploads[+rm.dataset.rm]; u?.xhr?.abort(); desk.uploads.splice(+rm.dataset.rm, 1); renderUploads(); }
 });
 
+/* ---------- команда: руководители отделов по ссылке-приглашению (экран владельца) ----------
+   Руководитель — человек из office.config.js (Фируза, Богдан, Нуркен). Владелец выдаёт одноразовую ссылку на 7 дней,
+   по ней руководитель входит на 90 дней. Отметки — агенты, которыми он управляет (по умолчанию — агенты его отдела);
+   снять отметку — забрать агента, отметить чужого — дать. «Отключить» сразу закрывает доступ. */
+const TA = { users:[], agents:[], links:{}, busy:false };
+async function openTeamAdmin() {
+  $('teamAdm').hidden = false; $('taBody').innerHTML = '<p class="note">Загружаю команду…</p>';
+  try { const r = await fetch(ASST_API + '/team', { cache:'no-store' }); if (!r.ok) throw new Error((await r.json().catch(() => ({}))).error || r.status); Object.assign(TA, await r.json()); }
+  catch (e) { $('taBody').innerHTML = `<p class="note warn">Не получилось загрузить команду: ${esc(e.message)}</p>`; return; }
+  renderTeamAdmin();
+}
+function renderTeamAdmin() {
+  const heads = DEPTS.filter(d => !d.head.owner).map(d => ({ d, h:d.head, u:TA.users.find(u => u.id === d.head.id) }));
+  const byDept = DEPTS.map(d => ({ d, ids:TA.agents.filter(a => a.dept === d.id).map(a => a.id) })).filter(x => x.ids.length);
+  $('taBody').innerHTML = `<p class="note">Руководитель входит по личной ссылке и управляет только отмеченными агентами: ставит им задачи, отвечает на вопросы, разрешает действия во внешних системах и принимает результат. Остальные отделы видит только для просмотра. Ссылка одноразовая и действует 7 дней; вход помнится 90 дней. Новая ссылка или «Отключить» сразу закрывают старый вход.</p>`
+    + heads.map(({ d, h, u }) => {
+      const st = !u ? ['', 'нет доступа'] : u.disabled ? ['off', 'отключён'] : u.lastSeen ? ['on', `заходил ${ago(u.lastSeen)}`] : u.invite ? ['inv', 'ссылка выдана, ещё не входил'] : ['', 'ссылка истекла'];
+      const sel = new Set(u ? u.agents : TA.agents.filter(a => a.dept === d.id).map(a => a.id));
+      const link = TA.links[h.id];
+      return `<section class="ta-card" data-u="${esc(h.id)}" data-dept="${esc(d.id)}" data-name="${esc(h.name)}">
+        <div class="ta-top">${faceHTML(PEOPLE[h.id] || { ...h, dept:d })}<span class="txt"><b>${esc(h.name)}</b><small>${esc(d.name)} · ${sel.size} ${word(sel.size, 'агент', 'агента', 'агентов')} в управлении</small></span><span class="ta-st ${st[0]}">${esc(st[1])}</span></div>
+        ${link ? `<div class="ta-link"><input readonly value="${esc(link)}"><div class="ta-acts"><button data-ta="copy">Скопировать</button></div></div>` : ''}
+        <div class="ta-acts"><button class="go" data-ta="invite">${u ? 'Новая ссылка' : 'Пригласить'}</button>${u ? `<button data-ta="toggle">${u.disabled ? 'Включить доступ' : 'Отключить доступ'}</button><button data-ta="save">Сохранить агентов</button>` : ''}</div>
+        <details class="ta-ags"${u ? '' : ' open'}><summary>Агенты в управлении — отметьте, кем руководит ${esc(h.name)}</summary>
+          ${byDept.map(({ d:dd, ids }) => `<h5>${esc(dd.name)}</h5><div class="ta-grid">${ids.map(id => { const m = agentMeta(id); return `<label class="${sel.has(id) ? 'on' : ''}"><input type="checkbox" value="${esc(id)}"${sel.has(id) ? ' checked' : ''}>${orbHTML(m.color, 'xs')}${esc(m.name)}</label>`; }).join('')}</div>`).join('')}
+        </details></section>`;
+    }).join('');
+}
+async function teamPost(body) {
+  const r = await fetch(ASST_API + '/team', { method:'POST', headers:{ 'content-type':'application/json' }, body:JSON.stringify(body) });
+  const j = await r.json().catch(() => ({}));
+  if (!r.ok) throw new Error(j.error || r.status);
+  return j;
+}
+$('taBody').addEventListener('change', e => { if (e.target.type === 'checkbox') e.target.closest('label').classList.toggle('on', e.target.checked); });
+$('taBody').addEventListener('click', async e => {
+  const b = e.target.closest('[data-ta]'); if (!b || TA.busy) return;
+  const card = b.closest('[data-u]'), id = card.dataset.u, k = b.dataset.ta;
+  const agentsSel = [...card.querySelectorAll('input[type=checkbox]:checked')].map(x => x.value);
+  if (k === 'copy') { const inp = card.querySelector('.ta-link input'); navigator.clipboard?.writeText(inp.value).then(() => { b.textContent = 'Скопировано'; }).catch(() => { inp.select(); }); return; }
+  TA.busy = true; b.disabled = true;
+  try {
+    if (k === 'invite') {
+      const j = await teamPost({ action:'invite', id, name:card.dataset.name, dept:card.dataset.dept, agents:agentsSel });
+      TA.links[id] = `${location.origin}${location.pathname}#invite-${j.code}`;
+    }
+    if (k === 'toggle') { const u = TA.users.find(x => x.id === id); await teamPost({ action:'update', id, disabled:!u.disabled }); }
+    if (k === 'save') await teamPost({ action:'update', id, agents:agentsSel });
+    const r = await fetch(ASST_API + '/team', { cache:'no-store' }); Object.assign(TA, await r.json());
+    renderTeamAdmin();
+    if (k === 'save') toast('Агенты руководителя сохранены — права меняются сразу', 'ta', 5);
+  } catch (err) { toast(`Не получилось: ${err.message}`, 'ta', 8); }
+  TA.busy = false; b.disabled = false;
+});
+$('taClose').onclick = () => { $('teamAdm').hidden = true; };
+$('teamAdm').addEventListener('click', e => { if (e.target.id === 'teamAdm') $('teamAdm').hidden = true; });
+// ссылка-приглашение: hq2.aicex.club/#invite-<код> → вход руководителя
+async function redeemInvite() {
+  const m = location.hash.match(/^#invite-([\w-]{10,})$/); if (!m) return;
+  history.replaceState(null, '', location.pathname + location.search);
+  try {
+    const r = await fetch(ASST_API + '/invite', { method:'POST', headers:{ 'content-type':'application/json' }, body:JSON.stringify({ code:m[1] }) });
+    const j = await r.json().catch(() => ({}));
+    if (!r.ok) return toast(j.error || 'Ссылка-приглашение не действует.', 'inv', 12);
+    await asstLoad();
+    toast(`Добро пожаловать, ${j.user.name}! Вы вошли как руководитель — задачи своим агентам ставьте в «Моём столе».`, 'inv', 12);
+    selectedId = 'you'; if ($('team').hidden) setPanel(true); renderPanel();
+  } catch (e) { toast('Нет связи с офисом — откройте ссылку ещё раз.', 'inv', 8); }
+}
+
 /* ---------- гость: что офис делает сейчас (GET desk/live.json — заголовок, агент, статус) ----------
    Те же агенты в 3D берут реальные текущие задачи и несут результат на стол владельца; в панели — вкладка «Сейчас»
    с маршрутом задачи. Текста запроса, файлов, ТЗ и вопросов гость не видит; принятый результат — в истории задач. */
@@ -5114,7 +5232,7 @@ function liveApply(b, v, prev, quiet) {
   if (key && b.live.shown !== key) {
     b.live.shown = key;
     const id = cur.id, st = cur.status;
-    liveVisitOwner(b, st === 'review' ? b.live.title : `Вопрос по задаче «${b.live.title}»`, () => !(b.live?.id === id && b.live.status === st));
+    liveVisitOwner(b, st === 'review' ? b.live.title : `Вопрос по задаче «${b.live.title}»`, () => !(b.live?.id === id && b.live.status === st), cur.by?.id);
   }
   b.labelSig = '';
 }
@@ -5141,8 +5259,19 @@ function liveHandoff(b) {
     }));
 }
 // к вашему столу: с результатом на проверку или с вопросом; стоит, пока вы не решите (до полутора минут)
-function liveVisitOwner(a, item, done) {
+function liveVisitOwner(a, item, done, headId) {
   a.plan = []; a.act = null; releaseQueueSpot(a);
+  // задачу поставил руководитель — результат и вопросы несут на его стол, он и принимает
+  const hd = headId && agents.get(headId);
+  if (hd?.kind === 'head' && hd.dept?.pod?.headDesk) {
+    const f = hd.dept.pod.headDesk.front;
+    a.carrying = { item, o:{ to:'head' } };
+    a.plan.push(walkTo(f.x, f.z, Math.PI, 'carrying', { target:hd }), call(() => hd.attend(a, 4)),
+      doFor(90, 'present', 'presenting', { face:() => hd, until:done }),
+      call(() => { a.carrying = null; hd.dept.pod.headDesk.stack.set(hd.dept.pod.headDesk.stack.n + 1, a.color); }),
+      walkTo(a.home.x, a.home.z, a.home.yaw, 'walking'));
+    return;
+  }
   a.carrying = { item, o:{ to:'you' } };
   const q = claimQueueSpot(a), own = pods[0].owner.chair, yaw = Math.atan2(own.x - q.x, own.z - q.z);
   a.plan.push(walkTo(q.x, q.z, yaw, 'carrying', { target:'you' }),
@@ -5386,6 +5515,7 @@ addEventListener('keydown', e => {
     if (e.key === 'ArrowLeft') stepTask(-1);
     return;
   }
+  if (!$('teamAdm').hidden) { if (e.key === 'Escape') $('teamAdm').hidden = true; return; }
   if (!$('dossier').hidden) { if (e.key === 'Escape') closeDossier(); return; }
   if (!$('asst').hidden && e.key === 'Escape' && $('asst').contains(document.activeElement)) return asstOpen(false);
   if (!$('holoBar').hidden && e.key === 'Escape') { if (asst.playing) return asstStopVoice(); return holoSummon(false); }
@@ -5440,7 +5570,8 @@ renderPanel(); refreshHUD();
 routeHash();
 deskInit();
 asstLoad();
-guestModeChanged();   // гость до входа: активные отделы, без скиллов, лента «Сейчас»
+guestModeChanged();
+redeemInvite();   // гость до входа: активные отделы, без скиллов, лента «Сейчас»
 appShell();
 if (isApp()) { $('team').classList.remove('min'); setPanel(false); }
 drawKanban(); drawOwnerScreen();
