@@ -11,7 +11,7 @@ export const ISSUE_TYPES = {
 
 const SCHEMA = {
   type:'object', additionalProperties:false,
-  required:['priority', 'priority_reason', 'stage', 'intent', 'source', 'summary', 'next_step', 'ai_score', 'ai_verdict', 'ai_issues'],
+  required:['priority', 'priority_reason', 'stage', 'intent', 'source', 'summary', 'next_step', 'ai_score', 'ai_verdict', 'ai_issues', 'lead_score', 'interest', 'objection', 'contact'],
   properties:{
     priority:{ type:'string', enum:PRIORITIES },
     priority_reason:{ type:'string' },
@@ -21,6 +21,7 @@ const SCHEMA = {
     summary:{ type:'string' },
     next_step:{ type:'string' },
     ai_score:{ type:'integer' },
+    lead_score:{ type:'integer' }, interest:{ type:'string' }, objection:{ type:'string' }, contact:{ type:'string' },
     ai_verdict:{ type:'string' },
     ai_issues:{ type:'array', items:{ type:'object', additionalProperties:false, required:['type', 'text'], properties:{
       type:{ type:'string', enum:Object.keys(ISSUE_TYPES) }, text:{ type:'string' } } } },
@@ -49,7 +50,13 @@ next_step — что сделать Богдану (или «ничего — И
 ai_score — оценка работы ИИ-менеджера и автоматизаций в этой переписке: 5 — отлично, 4 — хорошо с мелочами, 3 — терпимо,
 2 — плохо, 1 — провал; 0 — если бот в переписке не отвечал.
 ai_verdict — одна фраза, как ИИ справился.
-ai_issues — конкретные ошибки ИИ (пусто, если их нет): тип и одна фраза с цитатой или моментом.`;
+ai_issues — конкретные ошибки ИИ (пусто, если их нет): тип и одна фраза с цитатой или моментом.
+Квалификация лида:
+lead_score — 0–100, насколько человек близок к покупке платного продукта: 0–20 просто забрал материал, 20–50 интересуется темой
+и задаёт вопросы, 50–80 обсуждает практикум, обучение, цену или условия, 80–100 готов платить или уже платит.
+interest — что его интересует (продукт, тема, задача) в 2–6 словах, или пустая строка.
+objection — главное возражение или препятствие (цена, время, «подумаю», нет VPN, не работает ссылка…), или пустая строка.
+contact — телефон, почта или ник в Telegram, если человек их написал, иначе пустая строка.`;
 
 const SIDE = { client:'Клиент', user:'Клиент', contact:'Клиент', bot:'Бот', operator:'Менеджер', manager:'Менеджер', admin:'Менеджер' };
 const fmt = ts => new Date(ts * 1000).toLocaleString('ru-RU', { timeZone:'Europe/Moscow', day:'2-digit', month:'2-digit', hour:'2-digit', minute:'2-digit' });
@@ -67,7 +74,8 @@ export function createAnalyzer({ db, claude, model, fallback = {}, quietSec = 90
   const due = db.prepare(`SELECT * FROM chats WHERE client_count > 0 AND last_message_at > analyzed_upto AND last_message_at <= ?
     ORDER BY last_client_at DESC LIMIT ?`);
   const msgs = db.prepare('SELECT * FROM messages WHERE chat_id = ? ORDER BY created_at, rowid');
-  const save = db.prepare(`UPDATE chats SET priority = ?, priority_reason = ?, stage = CASE WHEN stage_manual = 1 THEN stage ELSE ? END,
+  const save = db.prepare(`UPDATE chats SET lead_score = ?, interest = ?, objection = ?, contact = CASE WHEN ? <> '' THEN ? ELSE contact END,
+    priority = ?, priority_reason = ?, stage = CASE WHEN stage_manual = 1 THEN stage ELSE ? END,
     intent = ?, source = CASE WHEN ? <> '' THEN ? ELSE source END, summary = ?, next_step = ?, ai_score = ?, ai_verdict = ?, ai_issues = ?,
     analyzed_upto = ?, analyzed_at = ? WHERE id = ?`);
   let running = null;
@@ -86,7 +94,9 @@ export function createAnalyzer({ db, claude, model, fallback = {}, quietSec = 90
     const r = JSON.parse(msg.content.filter(b => b.type === 'text').map(b => b.text).join(''));
     const score = Math.max(0, Math.min(5, Math.round(Number(r.ai_score) || 0)));
     const issues = (r.ai_issues || []).filter(i => ISSUE_TYPES[i.type]).slice(0, 8);
-    save.run(PRIORITIES.includes(r.priority) ? r.priority : 'normal', String(r.priority_reason || ''), STAGES.includes(r.stage) ? r.stage : chat.stage,
+    const contact = String(r.contact || '').trim().slice(0, 120);
+    save.run(Math.max(0, Math.min(100, Math.round(Number(r.lead_score) || 0))), String(r.interest || '').slice(0, 120), String(r.objection || '').slice(0, 160), contact, contact,
+      PRIORITIES.includes(r.priority) ? r.priority : 'normal', String(r.priority_reason || ''), STAGES.includes(r.stage) ? r.stage : chat.stage,
       String(r.intent || '').slice(0, 80), String(r.source || '').trim().slice(0, 80), String(r.source || '').trim().slice(0, 80),
       String(r.summary || ''), String(r.next_step || ''), score || null, String(r.ai_verdict || ''), JSON.stringify(issues),
       chat.last_message_at, now(), chat.id);

@@ -9,7 +9,7 @@ import { now, tx, meta } from './db.mjs';
 const num = v => Number(v) || 0;
 const isClient = side => side === 'client' || side === 'user' || side === 'contact';
 
-export function createSync({ db, cp, backfillDays = 14, maxPages = 40, backfillPages = 2, pullsPerPass = 40, profilesPerPass = 10, log = console.log, progress = () => {} }) {
+export function createSync({ db, cp, backfillDays = 14, maxPages = 40, backfillPages = 1, pullsPerPass = 10, profilesPerPass = 3, log = console.log, progress = () => {} }) {
   let running = null;
 
   const upsertChat = db.prepare(`

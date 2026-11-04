@@ -16,6 +16,8 @@ import { createSync } from './lib/sync.mjs';
 import { createAnalyzer } from './lib/analyze.mjs';
 import { createAuth, loadUsers } from './lib/auth.mjs';
 import { createApi } from './lib/api.mjs';
+import { createCatalog } from './lib/catalog.mjs';
+import { createLearn } from './lib/learn.mjs';
 
 const HERE = path.dirname(fileURLToPath(import.meta.url));
 const env = process.env;
@@ -43,8 +45,11 @@ const status = { sync:{ phase:'idle', since:0, done:0, total:0, passes:0, pendin
 const progress = p => Object.assign(status.sync, p);
 const sync = cp ? createSync({ db, cp, backfillDays:Number(env.BACKFILL_DAYS) || 14, log, progress }) : { run:async () => ({ off:true }), pullMessages:async () => 0 };
 const analyzer = createAnalyzer({ db, claude, model:MODEL, fallback:FALLBACK, batch:Number(env.CRM_ANALYZE_BATCH) || 12, log });
+// both work from what the database already keeps; they ask ChatPlace / Claude only when those are connected
+const catalog = createCatalog({ db, cp, log });
+const learn = createLearn({ db, claude, model:MODEL, fallback:FALLBACK });
 const auth = createAuth({ db, users, secret:env.CRM_SESSION_SECRET });
-const api = createApi({ db, cp, auth, sync, analyzer, status, model:MODEL, secure:/^https:/.test(env.PUBLIC_URL || ''), log });
+const api = createApi({ db, cp, auth, sync, analyzer, catalog, learn, status, model:MODEL, secure:/^https:/.test(env.PUBLIC_URL || ''), log });
 
 const TYPES = { '.html':'text/html; charset=utf-8', '.js':'text/javascript; charset=utf-8', '.css':'text/css; charset=utf-8', '.svg':'image/svg+xml', '.png':'image/png', '.ico':'image/x-icon' };
 const SEC = { 'x-content-type-options':'nosniff', 'referrer-policy':'same-origin', 'x-frame-options':'DENY' };
@@ -72,9 +77,14 @@ const now = () => Math.floor(Date.now() / 1000);
 let pauseMin = 0;
 async function syncLoop() {
   Object.assign(status.sync, { phase:'sync', since:now(), pausedUntil:null });
-  let wait = (Number(env.SYNC_SEC) || 60) * 1000;
+  // near real time within ChatPlace's limit: a pass every 15 s (3 s while history is still being fetched); requests
+  // themselves are spaced by the client (one per 1.5 s), so the rate never goes above ~40 a minute
+  let wait = (Number(env.SYNC_SEC) || 15) * 1000;
   try {
     const s = await sync.run();
+    if (s.pending) wait = 3000;
+    const c = await catalog.step();   // at most one request: automations, buttons, AI questions
+    if (c) status.sync.catalog = c;
     status.sync.passes++; status.sync.pending = s.pending ?? null; pauseMin = 0;
     if (s.chats || s.listed || s.firstRun) log(`sync: listed ${s.listed ?? 0}, messages of ${s.chats} chats (+${s.messages}), ${s.pending ?? 0} chats still to fetch${s.firstRun ? ' (first pass)' : ''}${s.backfill && s.backfill !== 'done' ? `, backfill +${s.backfill}` : ''}`);
   } catch (e) {

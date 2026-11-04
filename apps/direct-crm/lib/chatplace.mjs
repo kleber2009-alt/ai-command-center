@@ -9,6 +9,7 @@ const VERSION = '1';
 export function createChatPlace({ url, headers = {}, fetchImpl = fetch, gapMs = 1500 }) {
   if (!url) throw new Error('ChatPlace: no MCP url');
   let sid = '', rid = 0, ready = null, last = 0;
+  const sent = [];   // times of the requests in the last minute — /api/health shows the rate
 
   async function rpc(method, params, { notify = false } = {}) {
     const body = { jsonrpc:'2.0', method, params:params || {} };
@@ -50,6 +51,7 @@ export function createChatPlace({ url, headers = {}, fetchImpl = fetch, gapMs = 
       const wait = last + gapMs - Date.now();
       if (wait > 0) await new Promise(r => setTimeout(r, wait));
       last = Date.now();
+      sent.push(last); while (sent.length && sent[0] < last - 60_000) sent.shift();
       try {
         const res = await rpc('tools/call', { name, arguments:args });
         if (res.isError) throw new Error(`ChatPlace ${name}: ${textOf(res).slice(0, 240)}`);
@@ -68,6 +70,15 @@ export function createChatPlace({ url, headers = {}, fetchImpl = fetch, gapMs = 
     open: chatId => call('chats_open', { chatId }),
     close: chatId => call('chats_close', { chatId }),
     send: (chatId, text) => call('chats_send_message', { chatId, text }),
+    // automations: their code words, steps, buttons and per-step / per-button counts
+    bots: () => call('bots_list'),
+    automations: botId => call('automations_list', { botId }),
+    automation: automationId => call('automations_get_detail', { automationId }),
+    // the AI agent's knowledge base: questions it could not answer, and answering them
+    kbQuestions: botId => call('ai_agent_knowledge_base_questions', { botId }),
+    kbAnswer: (datasetId, answer) => call('ai_agent_knowledge_base_add_answer', { datasetId, answer }),
+    rate: () => { const t = Date.now(); while (sent.length && sent[0] < t - 60_000) sent.shift(); return sent.length; },
+    gapMs,
   };
 }
 
