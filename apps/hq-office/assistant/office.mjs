@@ -7,7 +7,7 @@ import fs from 'node:fs';
 import path from 'node:path';
 import vm from 'node:vm';
 
-const FILES = ['office.config.js', 'dept-content.js', 'agent-content.js', 'skills-library.js', 'tasks.js', 'tasks.auto.js', 'works.js'];
+const FILES = ['agents.js', 'office.config.js', 'dept-content.js', 'agent-content.js', 'skills-library.js', 'tasks.js', 'tasks.auto.js', 'works.js'];
 const SITE = 'https://hq2.aicex.club';
 const MON = ['января', 'февраля', 'марта', 'апреля', 'мая', 'июня', 'июля', 'августа', 'сентября', 'октября', 'ноября', 'декабря'];
 const KIND = { github:'GitHub', claude:'Claude', site:'сайт', file:'файл' };
