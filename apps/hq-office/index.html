@@ -3574,7 +3574,8 @@ function showDossierTab(tab) {
     if (tab === 'about') h = `<p class="lead">${esc(hc.lead || person.title)}</p>
       ${hc.zones?.length ? `<h4>Зоны</h4><div class="chipsrow">${hc.zones.map(z => `<span>${esc(z)}</span>`).join('')}</div>` : ''}
       ${hc.process?.length ? `<h4>Как работает отдел</h4>${pipeHTML(hc.process)}` : ''}
-      ${guestBlocks(hc.materials?.length ? [{ type:'links', title:'Материалы', items:hc.materials }] : []).map(r => resultHTML(r, d.accent)).join('')}`;
+      ${guestBlocks([...(hc.products?.length ? [{ type:'links', title:'Продукты руководителя', items:hc.products }] : []),
+        ...(hc.materials?.length ? [{ type:'links', title:'Материалы', items:hc.materials }] : [])]).map(r => resultHTML(r, d.accent)).join('')}`;
     if (tab === 'tasks') h = `<ol class="tasks">${TASKS.filter(t => t.dept === d.id).map(taskRowHTML).join('')}</ol>`;
     if (tab === 'works') h = worksHTML([], deptWorks(d), d.accent) || `<p class="empty">Готовых работ отдела пока нет.</p>`;
     if (tab === 'team') h = `<ul class="agents">${d.agentIds.map(aid => { const m = agentMeta(aid), n = tasksOfAgent(aid).length; return `<li><button data-agent="${esc(aid)}"><i class="dot" style="--c:${esc(m.color)}"></i><span class="txt"><b>${esc(m.name)}</b><small>${esc(m.role)}</small></span><em>${n} ${word(n, 'задача', 'задачи', 'задач')}</em></button></li>`; }).join('')}</ul>`;

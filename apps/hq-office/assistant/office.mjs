@@ -53,6 +53,7 @@ function buildOffice(W) {
   for (const d of CFG.depts) {
     out.push('', `## ${d.name} — ${d.head.name}, ${d.head.title}`);
     if (HC[d.id]?.lead) out.push(HC[d.id].lead);
+    if (HC[d.id]?.products?.length) out.push(`Продукты руководителя (${d.head.name}): ${HC[d.id].products.map(p => `${p.title} — ${p.url} — ${p.note || ''}`).join('; ')}`);
     for (const id of d.agents) {
       const c = AC[id] || {}, n = tasksOf(id).length;
       const skills = (c.skills || []).slice(0, 6).map(s => s.title).join(', ');

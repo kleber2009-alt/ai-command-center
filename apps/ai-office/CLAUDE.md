@@ -6,14 +6,14 @@ AI Growth Office. Static "AI Business Command Center" marketing site +
 `voice_generations` таблицами и `voice-notes` storage bucket из
 `apps/ai-office/supabase/migrations/003_voice.sql`.
 
-Prod: `ai-office.46-62-215-11.nip.io` (Caddy → контейнер `infra-ai-office-1`).
+Prod: `office.aicex.club` (Caddy → контейнер `infra-ai-office-1`).
 Лиды → Make.com + Supabase (НЕ через `apps/transcribe/api/leads`).
 
 ## Деплой
 
-Hetzner через Caddy + статика. Часть voice-* endpoints — **Netlify
-Functions**, поэтому Netlify нужен (не Vercel; Netlify Drop без функций не
-работает). См. корневой `netlify.toml`.
+Сервер aicex через Caddy + статика. Все `/api/*` (бывшие Netlify Functions, в т.ч. voice-*) обслуживает
+свой бэкенд `infra/services/ai-office` (Fastify, контейнер `infra-ai-office-1`). Netlify и Vercel не используются:
+`netlify.toml` удалён, `netlify/functions/` — исходники, перенесённые в `infra/services/ai-office`, оставлены для истории.
 
 ## Legacy notice
 
