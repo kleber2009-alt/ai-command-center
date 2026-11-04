@@ -37,9 +37,14 @@ export const TOPICS = [
   { k:'errors', name:'⚠️ Ошибки', color:0xFB6F5F },
 ];
 const IMG = /\.(jpe?g|png|webp)$/i, VID = /\.(mp4|mov|m4v|webm)$/i, DOC = /\.(pdf|pptx?|docx?|xlsx?|key|csv|zip)$/i, PHOTO = 10e6;
+const FILES_MAX = 60;
+const plural = n => n % 10 === 1 && n % 100 !== 11 ? 'файл' : n % 10 >= 2 && n % 10 <= 4 && (n % 100 < 12 || n % 100 > 14) ? 'файла' : 'файлов';
+const mb = b => b >= 1e6 ? `${(b / 1e6).toFixed(1).replace('.', ',')} МБ` : `${Math.max(1, Math.round(b / 1e3))} КБ`;
 const natural = (a, b) => a.localeCompare(b, 'ru', { numeric:true });
 const ICON = { routing:'🧭', question:'❓', queued:'⏳', work:'⚙️', review:'👀', done:'✅', cancelled:'✖️', error:'⚠️', paused:'⏸' };
 
+// «пришли файлом», «скинь оригиналы», «файлы», «в исходном качестве» — a short reply asking for the files themselves
+export const wantsFiles = t => { t = String(t || '').trim().toLowerCase(); return t.length <= 80 && /(файл|оригинал|исходник|исходном качеств|лучшем качеств|высоком качеств|без сжатия)/.test(t) && !/(сделай|переделай|исправ|добав|убери|замени|поменяй)/.test(t); };
 export const esc = s => String(s ?? '').replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;');
 const cut = (s, n) => { s = String(s || ''); return s.length > n ? s.slice(0, n - 1).trimEnd() + '…' : s; };
 const plain = s => String(s || '').replace(/\*\*|__|`/g, '').replace(/^#+\s*/gm, '').replace(/\[([^\]]+)\]\([^)]+\)/g, '$1');
@@ -97,7 +102,7 @@ export function cardText(v, site) {
     else if (b.changed.length) L.push(`✏️ ${esc(b.changed.join('; '))}`, '');
     if (b.done) L.push(esc(b.done));
     if (b.main.length) L.push('', ...b.main.map(x => `• ${esc(x)}`));
-    if (v.result?.files?.length) L.push('', `📎 ${v.result.files.length} ${v.result.files.length === 1 ? 'файл' : 'файлов'}${v.result.main ? ` · главный: <code>${esc(v.result.main)}</code>` : ''}`);
+    if (v.result?.files?.length) L.push('', `📎 ${v.result.files.length} ${plural(v.result.files.length)}${v.result.main ? ` · главный: <code>${esc(v.result.main)}</code>` : ''}`);
     if (v.status === 'review') L.push('', '↩️ Правка — ответом на это сообщение, текстом или голосом.');
     else L.push('', v.rating ? `Оценка: ${v.rating.value === 'up' ? '👍' : '👎'}${v.rating.comment ? ' — ' + esc(cut(v.rating.comment, 200)) : ''}` : v.published ? 'В истории офиса.' : 'Принято без публикации.');
   } else if (v.status === 'error') {
@@ -183,15 +188,17 @@ export function startTelegram({ desk, dataDir, token, owners, site, ask, ownerVo
   const quiet = p => p.catch(e => { if (!/not modified|message to delete not found|message can't be deleted/i.test(e.message)) console.error('telegram:', e.message); return null; });
   const send = (k, text, extra = {}) => tg('sendMessage', { ...where(k), text, parse_mode:'HTML', disable_web_page_preview:true, ...extra });
 
-  async function sendFile(k, file, caption = '', extra = {}) {
+  // asFile — always a document with the original bytes (sendPhoto / sendVideo re-encode and shrink)
+  async function sendFile(k, file, caption = '', extra = {}, asFile = false) {
     const size = fs.statSync(file).size, name = path.basename(file), ext = path.extname(name).toLowerCase();
     if (size > SEND_LIMIT) return send(k, `📎 <b>${esc(name)}</b> — ${Math.round(size / 1e6)} МБ, больше лимита Telegram.${fileLink ? ` <a href="${esc(fileLink(file))}">Скачать по ссылке</a>` : ''}`, extra);
     const fd = new FormData(), w = where(k);
     for (const [a, b] of Object.entries({ ...w, ...extra })) fd.append(a, typeof b === 'object' ? JSON.stringify(b) : String(b));
     if (caption) { fd.append('caption', cut(caption, 1000)); fd.append('parse_mode', 'HTML'); }
-    const method = ext === '.mp4' && size < SEND_LIMIT ? 'sendVideo' : ['.jpg', '.jpeg', '.png', '.webp'].includes(ext) && size < 10e6 ? 'sendPhoto' : 'sendDocument';
+    const method = asFile ? 'sendDocument' : ext === '.mp4' && size < SEND_LIMIT ? 'sendVideo' : ['.jpg', '.jpeg', '.png', '.webp'].includes(ext) && size < 10e6 ? 'sendPhoto' : 'sendDocument';
     const field = { sendVideo:'video', sendPhoto:'photo', sendDocument:'document' }[method];
     if (method === 'sendVideo') fd.append('supports_streaming', 'true');
+    if (method === 'sendDocument') fd.append('disable_content_type_detection', 'true');
     fd.append(field, new Blob([fs.readFileSync(file)]), name);
     return tg(method, fd, 300e3);
   }
@@ -218,7 +225,7 @@ export function startTelegram({ desk, dataDir, token, owners, site, ask, ownerVo
     }
     for (const f of [...vids, ...docs]) await sendFile(k, f.abs, caption(), { disable_notification:true });
     const sent = imgs.length + vids.length + docs.length, rest = r.files.length - sent - r.files.filter(f => /\.html?$/i.test(f.path)).length;
-    if (rest > 0 && sent) await quiet(send(k, `Ещё ${rest} ${rest === 1 ? 'файл' : 'файлов'} — кнопка «📎 Файлы» или «Открыть».`, { disable_notification:true }));
+    if (sent && (imgs.length || vids.length || rest > 0)) await quiet(send(k, `${rest > 0 ? `Ещё ${rest} ${plural(rest)}. ` : ''}Это превью — Telegram сжимает картинки и видео. Оригиналы в лучшем качестве, каждый слайд и ролик отдельным файлом — кнопка «📎 Файлы» или напишите «файлом» ответом на карточку.`, { disable_notification:true }));
     return sent;
   }
 
@@ -390,6 +397,7 @@ export function startTelegram({ desk, dataDir, token, owners, site, ask, ownerVo
         d.uploads.push(...uploads); d.at = Date.now(); drafts.set(draftKey(m), d);
         return say(m, '📎 Файл принят. Теперь напишите или наговорите ответ / правку ответом на карточку — приложу файл к нему.');
       }
+      if (!prompt && !uploads.length && wantsFiles(text)) { if (desk.get(target)?.result?.files?.length) return files(target); }
       return onTaskText(m, target, text, [...takeDraft(m), ...uploads], prompt?.how || '');
     }
     const thread = m.message_thread_id;
@@ -529,15 +537,20 @@ export function startTelegram({ desk, dataDir, token, owners, site, ask, ownerVo
     return answer();
   }
 
-  // all files of the result → «Материалы» (documents to download and forward)
+  // «📎 Файлы» — every file of the result separately, as a document: the original bytes, no Telegram compression
+  // (photos and videos sent as media get re-encoded); the main file first, slides in their order
   async function files(id) {
     const v = desk.get(id);
     if (!v?.result?.files?.length) return send(st.topics.files ? 'files' : '', 'У этой задачи нет файлов.');
-    const k = st.topics.files ? 'files' : topicOf(v);
-    await send(k, `📁 <b>${esc(v.route?.title || v.text)}</b> — ${v.result.files.length} ${v.result.files.length === 1 ? 'файл' : 'файлов'}${v.result.files.length > 20 ? ' (первые 20)' : ''}`);
-    for (const f of v.result.files.slice(0, 20)) {
+    const k = st.topics.files ? 'files' : topicOf(v), main = v.result.main;
+    // slides and videos first (the main one ahead), then documents, the page last
+    const rank = f => /\.html?$/i.test(f.path) ? 3 : f.path === main ? 0 : IMG.test(f.path) || VID.test(f.path) ? 1 : 2;
+    const list = v.result.files.filter(f => !/\.html?$/i.test(f.path) || f.path === main).sort((a, b) => rank(a) - rank(b) || natural(a.path, b.path));
+    const all = list.slice(0, FILES_MAX);
+    await send(k, `📁 <b>${esc(v.route?.title || v.text)}</b> — ${list.length} ${plural(list.length)} в исходном качестве, каждый отдельно${list.length > FILES_MAX ? ` (первые ${FILES_MAX})` : ''}`);
+    for (const [n, f] of all.entries()) {
       const file = desk.resultFile(id, f.path);
-      if (file) await quiet(sendFile(k, file, esc(f.path), { disable_notification:true }));
+      if (file) await quiet(sendFile(k, file, `${all.length > 1 ? `${n + 1}/${all.length} · ` : ''}<code>${esc(f.path)}</code> · ${mb(f.size)}`, { disable_notification:true }, true));
     }
   }
 
@@ -617,5 +630,5 @@ export function startTelegram({ desk, dataDir, token, owners, site, ask, ownerVo
   }
   loop();
   const timer = setInterval(() => quiet(tick()), 5 * 60e3); timer.unref();
-  return { stop:() => { running = false; off(); clearInterval(timer); }, sync, state:() => st };
+  return { stop:() => { running = false; off(); clearInterval(timer); }, sync, state:() => st, sendFiles:files };
 }
