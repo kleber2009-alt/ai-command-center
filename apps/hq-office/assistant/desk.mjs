@@ -224,7 +224,7 @@ export function createDesk({ claude, model, fallback, dataDir, officeDir, runner
     const tr = agentOf(TRANSCRIBER), to = t.route ? agentOf(t.route.agent) : null;
     const waiting = tasks.filter(x => x.status === 'queued').sort((x, y) => x.queuedAt.localeCompare(y.queuedAt));
     return {
-      id:t.id, created:t.created, updated:t.updated, text:t.text, files:t.files.map(f => f.name), askedAgent:t.agent || '',
+      id:t.id, created:t.created, updated:t.updated, by:t.by || null, text:t.text, files:t.files.map(f => f.name), askedAgent:t.agent || '',
       status:t.status, statusText:STATUS[t.status] || t.status, routine:t.routine || '', source:t.source || '', alerts:t.alerts || null, queuePos:t.status === 'queued' ? waiting.indexOf(t) + 1 : 0,
       agent:a ? { id:a.id, name:a.name, dept:a.dept } : null, route:t.route || null,
       chain:t.chain && tr && to && to.id !== TRANSCRIBER ? { from:{ id:tr.id, name:tr.name }, to:{ id:to.id, name:to.name }, sources:t.chain.sources, done:Boolean(t.transcribed), note:t.transcribed?.summary || '' } : null, question:t.question || null, style:t.style?.label || '', answers:t.answers,
@@ -240,7 +240,7 @@ export function createDesk({ claude, model, fallback, dataDir, officeDir, runner
   }
   function publicView(t) {
     const v = view(t), pl = v.pipeline;
-    return { id:t.id, created:t.created, updated:t.updated, status:t.status, statusText:STATUS[t.status] || t.status, queuePos:v.queuePos,
+    return { id:t.id, created:t.created, updated:t.updated, by:t.by ? { id:t.by.id, name:t.by.name } : null, status:t.status, statusText:STATUS[t.status] || t.status, queuePos:v.queuePos,
       agent:v.agent, route:{ agent:t.route.agent, title:t.route.title || '' }, question:t.status === 'question' ? { from:t.question?.from || '' } : null,
       result:t.result ? { version:t.result.version } : null, answers:new Array((t.answers || []).length).fill(0), routine:Boolean(t.routine),
       pipeline:pl ? { label:pl.label, idx:pl.idx, n:pl.stages.length } : null, history:t.status === 'done' && t.published ? 'desk-' + t.id : '' };
@@ -423,17 +423,20 @@ export function createDesk({ claude, model, fallback, dataDir, officeDir, runner
 
   async function route(t) {
     if (!claude) { t.status = 'error'; t.error = 'Диспетчер не подключён к Claude (нет ключа).'; return emit(t); }
-    const cat = catalog(), ids = cat.agents.map(a => a.id);
+    const cat = catalog(), allow = t.allowed ? new Set([...t.allowed, TRANSCRIBER, QA]) : null;
+    const ids = cat.agents.map(a => a.id).filter(id => !allow || allow.has(id));
+    const pipes = Object.keys(PIPELINES).filter(id => !allow || PIPELINES[id].stages.every(s => allow.has(s.agent)));
     const asked = t.agent && ids.includes(t.agent) ? agentOf(t.agent) : null;
     const links = videoLinks([t.text, ...t.answers.map(x => x.a)].join(' ')), media = t.files.filter(f => MEDIA_EXT.test(f.name));
-    const request = [`Просьба владельца: «${t.text}»`,
+    const request = [t.by ? `Просьба руководителя ${t.by.name} (от имени владельца офиса): «${t.text}»` : `Просьба владельца: «${t.text}»`,
+      allow ? `Выбирай агента ТОЛЬКО из агентов этого руководителя: ${ids.map(id => `${agentOf(id)?.name} (${id})`).join(', ')}. Конвейеры — только: ${pipes.join(', ') || 'нет'}.` : '',
       links.length ? `Ссылки на видео в просьбе: ${links.join(', ')}.` : 'Ссылок на видео в просьбе нет.',
       asked ? `Владелец сам выбрал агента: ${asked.name} (${asked.id}).` : 'Агента владелец не выбирал — выбери сам.',
       PIPELINES[t.pipelinePick] ? `Владелец сам выбрал конвейер: ${t.pipelinePick} («${PIPELINES[t.pipelinePick].label}»).` : '',
       `Материалы от владельца: ${t.files.length ? t.files.map(f => f.name).join(', ') : 'нет'}.`,
       ...t.answers.map(x => `Уточнение. Вопрос: ${x.q} Ответ владельца: ${x.a}`)].filter(Boolean).join('\n');
     const schema = { type:'object', additionalProperties:false, required:['action', 'agent', 'skill', 'title', 'brief', 'deliverable', 'why', 'question', 'visual', 'style_named', 'transcribe', 'pipeline'], properties:{
-      pipeline:{ type:'string', enum:['none', ...Object.keys(PIPELINES)] },
+      pipeline:{ type:'string', enum:['none', ...pipes] },
       visual:{ type:'string', enum:['video', 'carousel', 'none'] }, style_named:{ type:'string' }, transcribe:{ type:'boolean' },
       action:{ type:'string', enum:['assign', 'ask'] }, agent:{ type:'string', enum:ids }, skill:{ type:'string' }, title:{ type:'string' }, brief:{ type:'string' },
       deliverable:{ type:'string', enum:Object.keys(KIND) }, why:{ type:'string' }, question:{ type:'string' } } };
@@ -450,7 +453,7 @@ export function createDesk({ claude, model, fallback, dataDir, officeDir, runner
       t.route = { agent:a.id, skill:String(r.skill || '').trim(), title:String(r.title || t.text).slice(0, 90), brief:String(r.brief || ''), deliverable:KIND[r.deliverable] ? r.deliverable : 'other', why:String(r.why || ''),
         visual:visualOf(r), style:t.style || null, transcribe:Boolean(r.transcribe) };
       // a pipeline: the owner's pick wins, else the dispatcher's
-      const pid = PIPELINES[t.pipelinePick] ? t.pipelinePick : !asked && PIPELINES[r.pipeline] ? r.pipeline : '';
+      const pid = PIPELINES[t.pipelinePick] ? t.pipelinePick : !asked && pipes.includes(r.pipeline) ? r.pipeline : '';
       if (pid && !t.pipeline) setPipeline(t, pid);
       else if (t.pipeline) { t.route.agent = curStage(t).agent; t.route.skill = ''; t.route.visual = PIPELINES[t.pipeline.id]?.visual || t.route.visual; }
       a = agentOf(t.route.agent);
@@ -658,7 +661,7 @@ export function createDesk({ claude, model, fallback, dataDir, officeDir, runner
       : ['.jpg', '.jpeg', '.png', '.webp'].includes(ext) ? [{ type:'img', src:url, title }]
       : ext === '.html' ? [{ type:'page', src:url, title }] : [];
     return { id:'desk-' + t.id, date:moscowDate(new Date(t.doneAt)), dateNote:'задачу поставили и приняли прямо в офисе', kind:KIND[t.route.deliverable] || 'Разработка',
-      dept:a?.dept || 'ceo', people:['ilia'], agents:[...new Set([...(t.transcribed && t.route.agent !== TRANSCRIBER ? [TRANSCRIBER] : []), ...(t.pipeline ? t.pipeline.stages.map(s => s.agent) : [t.route.agent])])], title, summary:t.result.history || t.result.summary || '',
+      dept:a?.dept || 'ceo', people:[...new Set([t.by?.id || 'ilia', t.approvedBy?.id || 'ilia'])], agents:[...new Set([...(t.transcribed && t.route.agent !== TRANSCRIBER ? [TRANSCRIBER] : []), ...(t.pipeline ? t.pipeline.stages.map(s => s.agent) : [t.route.agent])])], title, summary:t.result.history || t.result.summary || '',
       proof:[{ kind:'file', label:`Результат агента «${a?.name || t.route.agent}»`, url }], media, desk:true };
   }
 
@@ -702,11 +705,13 @@ export function createDesk({ claude, model, fallback, dataDir, officeDir, runner
     emit(t);
   }
 
-  function createTask({ text, agent = '', uploads = [], direct = false, title = '', routine = null, source = '', pipeline = '' }) {
+  function createTask({ text, agent = '', uploads = [], direct = false, title = '', routine = null, source = '', pipeline = '', by = null }) {
     const t = { id:crypto.randomBytes(4).toString('hex'), created:now(), updated:now(), text:String(text).trim().slice(0, 4000), agent:String(agent || ''),
       files:[], status:'routing', answers:[], steps:[], route:null, question:null, result:null, versions:0, published:false,
       source:routine ? 'routine' : direct ? 'twin' : ['office', 'assistant', 'twin'].includes(source) ? source : 'office',
-      ...(PIPELINES[pipeline] ? { pipelinePick:pipeline } : {}) };
+      ...(PIPELINES[pipeline] ? { pipelinePick:pipeline } : {}),
+      // a department head: the dispatcher picks only from their agents (+ the shared helpers)
+      ...(by ? { by:{ id:by.id, name:by.name }, allowed:[...by.agents] } : {}) };
     takeUploads(t, uploads);
     tasks.unshift(t);
     if (routine) {
@@ -801,7 +806,13 @@ export function createDesk({ claude, model, fallback, dataDir, officeDir, runner
 
   /* ---------- routes ---------- */
 
-  async function handle(req, res, rest, isOwner) {
+  // who: { owner:true } | { head:{ id, name, dept, agents } } | null (guest). A head sees every task read-only and
+  // manages the tasks they set and the tasks of their agents: answers, accepts, allows actions, revises, cancels.
+  const canManage = (head, t) => t.by?.id === head.id || head.agents.includes(t.route?.agent || t.agent)
+    || Boolean(t.pipeline?.stages.some(s => head.agents.includes(s.agent)));
+  async function handle(req, res, rest, who) {
+    if (typeof who === 'boolean') who = who ? { owner:true } : null;   // the old call: isOwner
+    const isOwner = Boolean(who?.owner), head = who?.head || null;
     const seg = rest.split('/').filter(Boolean), M = req.method;
     const url = new URL(req.url, 'http://x');
 
@@ -823,7 +834,7 @@ export function createDesk({ claude, model, fallback, dataDir, officeDir, runner
     if (M === 'GET' && seg[0] === 'files' && seg.length >= 4) {
       const t = byId(seg[1]), v = Number(String(seg[2]).replace(/^v/, ''));
       if (!t || !t.result) return notFound(res);
-      if (!isOwner && !(t.published && v === t.result.version)) return notFound(res);
+      if (!isOwner && !head && !(t.published && v === t.result.version)) return notFound(res);
       const rel = safeRel(seg.slice(3).map(decodeURIComponent).join('/'));
       if (!rel) return notFound(res);
       return sendFile(req, res, path.join(taskDir(t.id), 'v' + v, rel));
@@ -989,7 +1000,7 @@ export function createDesk({ claude, model, fallback, dataDir, officeDir, runner
     }
 
     /* owner */
-    if (!isOwner) return json(res, 403, { error:'Ставить задачи агентам может только владелец — войдите в ассистенте.' });
+    if (!isOwner && !head) return json(res, 403, { error:'Ставить задачи агентам могут владелец и руководители отделов — войдите.' });
     if (M === 'GET' && rest === 'tasks') return json(res, 200, { tasks:tasks.slice(0, 60).map(view), runner:runnerView(), agents:catalog().agents.map(a => ({ id:a.id, name:a.name, dept:a.dept, role:a.role })), pipelines:pipelinesView() });
     if (M === 'GET' && rest === 'stats') { const m = url.searchParams.get('month') || ''; return json(res, 200, stats(/^\d{4}-\d{2}$/.test(m) ? m : undefined)); }
     if (M === 'GET' && rest === 'lessons') {
@@ -1010,13 +1021,20 @@ export function createDesk({ claude, model, fallback, dataDir, officeDir, runner
     if (M === 'POST' && rest === 'tasks') {
       const b = await readJson(req);
       if (!String(b.text || '').trim()) return json(res, 400, { error:'Опишите задачу.' });
-      const { task } = createTask({ text:b.text, agent:b.agent, pipeline:String(b.pipeline || ''), uploads:Array.isArray(b.uploads) ? b.uploads : [], source:'office' });
+      if (head && b.agent && !head.agents.includes(b.agent)) return json(res, 403, { error:'Этот агент не в вашем отделе — поставить ему задачу может его руководитель или владелец.' });
+      if (head && PIPELINES[b.pipeline] && !PIPELINES[b.pipeline].stages.every(s => head.agents.includes(s.agent) || [TRANSCRIBER, QA].includes(s.agent)))
+        return json(res, 403, { error:'В этом конвейере есть агенты другого отдела — запустить его может владелец.' });
+      const { task } = createTask({ text:b.text, agent:b.agent, pipeline:String(b.pipeline || ''), uploads:Array.isArray(b.uploads) ? b.uploads : [], source:'office', by:head });
       return json(res, 200, { task:view(task) });
     }
     if (seg[0] === 'tasks' && seg[1] && M === 'POST') {
       const t = byId(seg[1]);
       if (!t) return notFound(res);
+      if (head && !canManage(head, t)) return json(res, 403, { error:'Это задача другого отдела — ею управляет её руководитель или владелец. Вам она видна только для просмотра.' });
       const b = await readJson(req), text = String(b.text || '').trim().slice(0, 4000);
+      // the history of the task names who acted when it is a head, not the owner
+      const ACT = { answer:'ответ', revise:'правка', approve:'принят результат', retry:'повтор', cancel:'отмена' };
+      if (head && ACT[seg[2]]) { step(t, `${head.name}, руководитель: ${ACT[seg[2]]}.`); if (seg[2] === 'approve') t.approvedBy = { id:head.id, name:head.name }; }
       if (seg[2] === 'answer') {
         if (t.status !== 'question' || !text) return json(res, 400, { error:'Сейчас вопроса нет.' });
         answerTask(t, text, takeUploads(t, b.uploads));
