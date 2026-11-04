@@ -56,6 +56,12 @@ jobs:
           sec "kernel OOM killer since $SINCE"
           journalctl -k --since "$SINCE" --no-pager 2>&1 | grep -iE "out of memory|oom-kill|Killed process" | tail -30
 
+          sec "disk"
+          df -h / "$RH" 2>&1 | uniq
+          echo "runner jobs: $(du -sh "$RD/jobs" 2>/dev/null | cut -f1)"
+          du -xsh "$RH"/* "$RH"/.[!.]* /opt/* /var/lib/docker /var/log 2>/dev/null | sort -h | tail -15
+          grep -E "disk:|диск:" "$RD/runner.log" 2>/dev/null | tail -15
+
           sec "memory"
           free -h
           nproc

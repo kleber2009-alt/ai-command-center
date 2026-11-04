@@ -1232,8 +1232,9 @@ h1{font-size:24px;margin:0 0 4px}small{color:#9aa3b5}h2{font-size:17px;margin:26
         }
         t.worker = worker; t.workAt = now();
         const extra = { purge:purge.map(x => x.id), heavy:isHeavy(t),
-          // the job folder was deleted on the runner: the accepted result comes back into out/ for a revision or a check
-          ...(t.runnerPurged && t.result && ['revise', 'answer', 'execute', 'qa'].includes(t.pending.kind) ? { restore:t.result.files.map(f => f.path) } : {}) };
+          // the result of a continuation: the runner downloads into out/ only what is missing there — its job folder may be
+          // gone (purge, or the runner freed disk space on its own); files that are there stay untouched
+          ...(t.result && ['revise', 'answer', 'execute', 'qa'].includes(t.pending.kind) ? { restore:t.result.files.map(f => f.path) } : {}) };
         if (t.runnerPurged) t.runnerPurged = false;
         if (t.pending.kind === 'transcribe') {
           t.status = 'work'; t.error = '';
