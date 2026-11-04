@@ -21,7 +21,8 @@ import fs from 'node:fs';
 import path from 'node:path';
 import { transcribe, speak, voiceConfigured } from './voice.mjs';
 
-const API = (process.env.HQ_TG_API || 'https://api.telegram.org').replace(/\/$/, '');   // HQ_TG_API — a local Bot API server or a fake one in tests
+// HQ_TG_API — a local Bot API server or a fake one in tests (read on every call)
+const apiBase = () => (process.env.HQ_TG_API || 'https://api.telegram.org').replace(/\/$/, '');
 const SEND_LIMIT = 49e6;        // the Bot API sends files up to 50 MB
 const GET_LIMIT = 20e6;         // and lets a bot download files up to 20 MB
 const REMIND_MS = 3 * 3600e3;   // a card waiting for the owner is reminded every 3 hours (09–22 MSK)
@@ -168,7 +169,7 @@ export function startTelegram({ desk, dataDir, token, owners, site, ask, ownerVo
 
   async function tg(method, body, timeout = 30e3) {
     const isForm = body instanceof FormData;
-    const r = await fetch(`${API}/bot${token}/${method}`, { method:'POST', ...(isForm ? { body } : { headers:{ 'content-type':'application/json' }, body:JSON.stringify(body || {}) }), signal:AbortSignal.timeout(timeout) });
+    const r = await fetch(`${apiBase()}/bot${token}/${method}`, { method:'POST', ...(isForm ? { body } : { headers:{ 'content-type':'application/json' }, body:JSON.stringify(body || {}) }), signal:AbortSignal.timeout(timeout) });
     const j = await r.json().catch(() => ({ ok:false, description:'bad json' }));
     if (!j.ok) {
       if (j.parameters?.retry_after) { await new Promise(res => setTimeout(res, (j.parameters.retry_after + 1) * 1000)); return tg(method, body, timeout); }
@@ -290,7 +291,7 @@ export function startTelegram({ desk, dataDir, token, owners, site, ask, ownerVo
   async function download(fileId, size, name) {
     if (size && size > GET_LIMIT) throw Object.assign(new Error('big'), { big:true });
     const f = await tg('getFile', { file_id:fileId });
-    const r = await fetch(`${API}/file/bot${token}/${f.file_path}`, { signal:AbortSignal.timeout(120e3) });
+    const r = await fetch(`${apiBase()}/file/bot${token}/${f.file_path}`, { signal:AbortSignal.timeout(120e3) });
     if (!r.ok) throw new Error('download ' + r.status);
     return { buf:Buffer.from(await r.arrayBuffer()), name:name || path.basename(f.file_path) };
   }
@@ -549,7 +550,14 @@ export function startTelegram({ desk, dataDir, token, owners, site, ask, ownerVo
       if (hook.url) { console.error(`telegram: @${st.me} has a webhook (${hook.url.replace(/\/\/([^/]+).*/, '//$1')}) — it is another bot; give the office its own bot (HQ_TG_BOT_TOKEN). Off.`); running = false; off(); return; }
       await quiet(tg('setMyCommands', { commands:[{ command:'pult', description:'Пульт офиса' }, { command:'inbox', description:'Что ждёт меня' }, { command:'work', description:'Что в работе' },
         { command:'new', description:'Новая задача' }, { command:'bind', description:'Привязать группу с ветками' }, { command:'help', description:'Как пользоваться' }] }));
-      if (site) for (const o of owners) await quiet(tg('setChatMenuButton', { chat_id:Number(o), menu_button:{ type:'web_app', text:'Офис', web_app:{ url:`${site}/?tg=1` } } }));
+      // the menu button opens the Mini App: HQ_TG_MINIAPP_URL, else the office itself. A Mini App already set on the bot
+      // for another address (its own design, BotFather) is kept — the office does not take its place
+      const app = (process.env.HQ_TG_MINIAPP_URL || (site ? `${site}/?tg=1` : '')).trim();
+      if (app) for (const o of owners) {
+        const cur = await quiet(tg('getChatMenuButton', { chat_id:Number(o) }));
+        if (cur?.type === 'web_app' && cur.web_app?.url && cur.web_app.url !== app && !process.env.HQ_TG_MINIAPP_URL) continue;
+        await quiet(tg('setChatMenuButton', { chat_id:Number(o), menu_button:{ type:'web_app', text:'Офис', web_app:{ url:app } } }));
+      }
       console.log(`telegram: @${st.me} · ${grouped() ? 'group ' + st.chat : 'private chat'}`);
     } catch (e) { console.error('telegram start:', e.message); }
     while (running) {

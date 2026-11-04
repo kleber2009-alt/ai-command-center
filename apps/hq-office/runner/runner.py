@@ -20,12 +20,21 @@
 Чтение/запись — по policy, иначе по readOnlyHint инструмента, иначе по имени (get/list/search… — чтение).
 
 Каждый запуск Claude сдаёт в офис usage: стоимость, время, число ходов и токены (событие result).
+
+Потоки (HQ_RUNNER_WORKERS, по умолчанию 2): первый берёт любые задачи, остальные — только лёгкие (без рендера видео),
+чтобы ответ, правка, проверка и расшифровка не ждали часового монтажа. Общий слот тяжёлых задач (~/.heavy-slot.lock) —
+только для задач с heavy (видео). Папки задач, закрытых давно, офис присылает в purge — они удаляются; для правки
+такой задачи офис присылает restore — принятый результат скачивается обратно в out/.
+
+Права: Claude Code и скрипты получают окружение без токена офиса; запрещены sudo/ssh/git push/docker/systemctl и
+чтение ключей (DENIED_TOOLS); служба systemd закрывает ~/.ssh и другие файлы ключей (hq-runner.service).
 """
 import fcntl
 import json
 import os
 import re
 import shutil
+import socket
 import subprocess
 import sys
 import threading
@@ -46,7 +55,15 @@ LIMIT = int(os.environ.get("HQ_RUNNER_LIMIT_MIN", "60")) * 60
 SKILLS = HOME / ".claude/skills"
 ALLOWED_TOOLS = ["Bash", "Read", "Write", "Edit", "Glob", "Grep", "Skill", "TodoWrite", "WebFetch", "WebSearch"]
 QA_TOOLS = ["Bash", "Read", "Glob", "Grep", "WebFetch"]
-VERSION = "8"
+# что агенту нельзя ни при каких указаниях из чужого текста (страницы, расшифровки, файлы): права сервера и ключи
+DENIED_TOOLS = ["Bash(sudo:*)", "Bash(su:*)", "Bash(ssh:*)", "Bash(scp:*)", "Bash(sftp:*)", "Bash(rsync:*)", "Bash(git push:*)",
+                "Bash(docker:*)", "Bash(systemctl:*)", "Bash(crontab:*)", "Bash(pkill:*)", "Bash(killall:*)", "Bash(shutdown:*)", "Bash(reboot:*)",
+                "Read(~/.ssh/**)", "Read(~/hq-runner/*.env)", "Read(~/hq-runner/mcp*.json)", "Read(~/.claude/.credentials.json)", "Read(**/.env)"]
+VERSION = "9"
+WORKERS = max(1, int(os.environ.get("HQ_RUNNER_WORKERS", "2") or 2))
+# окружение для Claude Code и скриптов: без токена офиса (им нельзя сдавать задачи от имени исполнителя)
+CHILD_ENV = {k: v for k, v in os.environ.items() if k not in ("HQ_DESK_RUNNER_TOKEN",)}
+RUNNING = set()   # id задач в работе у потоков этого исполнителя — их папки не удаляются
 MCP_FILE = Path(os.environ.get("HQ_MCP_CONFIG") or HOME / "hq-runner/mcp.json")
 MCP_CLAUDE = HOME / "hq-runner/mcp.claude.json"
 READ_RE = re.compile(r"(^|[_-])(get|list|search|query|read|fetch|status|analytics|report|reports|stats|estimate|predict|balance|describe|show|find|lookup|explore|view|count|check|whoami|me|options|fields|connectors|dashboard)([_-]|$)", re.I)
@@ -109,7 +126,7 @@ def selftest():
     try:
         r = subprocess.run([CLAUDE, "-p", "Ответь одним словом: готов", "--output-format", "stream-json", "--verbose",
                             "--model", MODEL, "--effort", "low", "--max-turns", "1"],
-                           cwd=JOBS, stdin=subprocess.DEVNULL, capture_output=True, text=True, timeout=180)
+                           cwd=JOBS, stdin=subprocess.DEVNULL, capture_output=True, text=True, timeout=180, env=CHILD_ENV)
     except Exception as e:
         return {"ok": False, "error": redact(e)[:300]}
     ok = r.returncode == 0 and '"is_error":false' in r.stdout.replace(" ", "")
@@ -380,7 +397,7 @@ def run_transcribe(job):
         return call_retry("POST", f"/runner/{jid}/finish", {"result": "need", "question": "Пришлите ссылку на ролик или само видео — без него расшифровывать нечего."})
     step(f"Транскрибатор взял {len(sources)} источник(а) — скачивает и расшифровывает.")
     started = time.time()
-    p = subprocess.Popen([sys.executable, "-I", str(TRANSCRIBER), *sources, "--out", str(dest)], cwd=d, stdin=subprocess.DEVNULL,
+    p = subprocess.Popen([sys.executable, "-I", str(TRANSCRIBER), *sources, "--out", str(dest)], cwd=d, stdin=subprocess.DEVNULL, env=CHILD_ENV,
                          stdout=subprocess.PIPE, stderr=subprocess.STDOUT, text=True, bufsize=1)
     timer = threading.Timer(30 * 60, p.kill)
     timer.start()
@@ -439,7 +456,7 @@ def run_balances(job):
     except Exception as e:  # noqa: BLE001
         log("step:", e)
     started = time.time()
-    r = subprocess.run([sys.executable, "-I", str(BALANCES), "--out", str(out)], cwd=out.parent, stdin=subprocess.DEVNULL,
+    r = subprocess.run([sys.executable, "-I", str(BALANCES), "--out", str(out)], cwd=out.parent, stdin=subprocess.DEVNULL, env=CHILD_ENV,
                        capture_output=True, text=True, timeout=600)
     res = {}
     for line in reversed(r.stdout.splitlines()):
@@ -477,6 +494,14 @@ def run_job(job):
     if kind == "run" and out.exists():
         shutil.rmtree(out)
     out.mkdir(exist_ok=True)
+    for rel in job.get("restore") or []:
+        target = out / rel
+        if target.exists() or ".." in Path(rel).parts:
+            continue
+        target.parent.mkdir(parents=True, exist_ok=True)
+        req = urllib.request.Request(f"{API}/runner/{jid}/result/{urllib.parse.quote(rel)}", headers={"authorization": "Bearer " + TOKEN})
+        with urllib.request.urlopen(req, timeout=600) as r, open(target, "wb") as f:
+            shutil.copyfileobj(r, f)
     for name in job.get("files") or []:
         target = d / "in" / Path(name).name
         if not target.exists():
@@ -526,17 +551,19 @@ def run_job(job):
         tools += sv["read"] + (sv["write"] if kind == "execute" else [])
     args = [CLAUDE, "-p", job["prompt"], "--output-format", "stream-json", "--verbose",
             "--permission-mode", "default" if qa else "acceptEdits", "--allowedTools", *tools,
+            "--disallowedTools", *DENIED_TOOLS,
             "--add-dir", str(d), str(SKILLS), "--model", MODEL, "--effort", job.get("effort") or EFFORT]
     if MCP["config"]:
         args += ["--mcp-config", MCP["config"]]
     if job.get("session"):
         args += ["--resume", job["session"]]
 
-    busy = slot_busy() if not qa else ""
+    # общий слот тяжёлых задач — только рендеру видео (heavy от офиса; старый офис без поля — как раньше, всем, кроме проверки)
+    heavy = job.get("heavy", True) and not qa
+    busy = slot_busy() if heavy else ""
     if busy:
         step(f"Ждёт очереди сервера: сейчас работает {busy}.", force=True)
-    # контролёр ничего не рендерит — ему общий слот тяжёлых задач не нужен
-    slot = HeavySlot("офис hq2: " + job.get("title", "")[:60]) if not qa else None
+    slot = HeavySlot("офис hq2: " + job.get("title", "")[:60]) if heavy else None
     if slot:
         slot.__enter__()
     try:
@@ -545,7 +572,7 @@ def run_job(job):
             log(jid, "cancelled before start")
             return
         logf = open(d / "claude.log", "a", encoding="utf-8")
-        p = proc["p"] = subprocess.Popen(args, cwd=d, stdin=subprocess.DEVNULL, stdout=subprocess.PIPE, stderr=logf, text=True, bufsize=1)
+        p = proc["p"] = subprocess.Popen(args, cwd=d, stdin=subprocess.DEVNULL, stdout=subprocess.PIPE, stderr=logf, text=True, bufsize=1, env=CHILD_ENV)
         timer = threading.Timer(LIMIT, p.kill)
         timer.start()
         threading.Thread(target=poll, daemon=True).start()
@@ -684,9 +711,31 @@ def main():
         log(f"скиллы отправлены в офис: {len(sk)}")
     except Exception as e:
         log("skills:", e)
+    workers = [threading.Thread(target=worker, args=(i,), daemon=True, name=f"w{i}") for i in range(WORKERS)]
+    for w in workers:
+        w.start()
+    log(f"потоков: {WORKERS} (первый — любые задачи, остальные — лёгкие)")
+    for w in workers:
+        w.join()
+
+
+def purge(ids):
+    """Папки задач, закрытых давно: офис хранит их результат сам, исполнителю они больше не нужны."""
+    for jid in ids or []:
+        d = JOBS / Path(str(jid)).name
+        if jid in RUNNING or not d.is_dir():
+            continue
+        shutil.rmtree(d, ignore_errors=True)
+        log(jid, "folder purged")
+
+
+def worker(i):
+    wid = f"{socket.gethostname()}-{os.getpid()}-{i}"
+    light = i > 0
     while True:
         try:
-            status, job = call("POST", "/runner/claim", {})
+            # первый поток при лёгких соседях сначала берёт рендер — лёгкая работа уходит им параллельно
+            status, job = call("POST", "/runner/claim", {"worker": wid, "light": light, "prefer_heavy": not light and WORKERS > 1})
         except urllib.error.HTTPError as e:
             log("claim:", e.code)
             time.sleep(30)
@@ -695,10 +744,13 @@ def main():
             log("claim:", e)
             time.sleep(15)
             continue
-        if status == 204 or not job:
-            time.sleep(5)
+        if job:
+            purge(job.get("purge"))
+        if status == 204 or not job or job.get("idle"):
+            time.sleep(5 if not light else 3)
             continue
-        log("job", job["id"], job["kind"], job.get("agent"), job.get("title", "")[:60])
+        log(f"[{i}] job", job["id"], job["kind"], job.get("agent"), job.get("title", "")[:60], "heavy" if job.get("heavy") else "light")
+        RUNNING.add(job["id"])
         try:
             run_job(job)
         except Exception as e:
@@ -707,6 +759,8 @@ def main():
                 call("POST", f"/runner/{job['id']}/finish", {"result": "error", "error": "Исполнитель упал: " + str(e)[:300]})
             except Exception:
                 pass
+        finally:
+            RUNNING.discard(job["id"])
 
 
 if __name__ == "__main__":

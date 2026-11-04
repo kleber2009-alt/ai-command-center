@@ -4,8 +4,8 @@
    готовые задачи, только дописывает к ним новые PR той же ветки. Удалённая задача не вернётся —
    её PR остаются в seen. Чтобы задача стала «ручной», перенесите её в tasks.js. */
 window.OFFICE_TASKS_AUTO = {
-  "since": "2026-11-04T04:05:38Z",
-  "seen": [148, 149, 150, 151, 152, 153, 154, 155, 156, 157, 158, 159, 160, 161, 162, 163, 164, 165, 166, 167, 168, 169, 170, 171, 172, 173, 174, 175, 176, 177, 178, 179, 180, 181, 182, 183, 184, 185, 186, 187, 188, 189, 190, 191, 192, 193, 194, 195, 196, 197, 198, 199, 200, 201, 202, 203, 204, 205, 206, 207, 208, 209, 210, 211, 212, 213, 214, 217],
+  "since": "2026-11-04T04:41:03Z",
+  "seen": [148, 149, 150, 151, 152, 153, 154, 155, 156, 157, 158, 159, 160, 161, 162, 163, 164, 165, 166, 167, 168, 169, 170, 171, 172, 173, 174, 175, 176, 177, 178, 179, 180, 181, 182, 183, 184, 185, 186, 187, 188, 189, 190, 191, 192, 193, 194, 195, 196, 197, 198, 199, 200, 201, 202, 203, 204, 205, 206, 207, 208, 209, 210, 211, 212, 213, 214, 215, 216, 217, 218, 219, 220, 221],
   "tasks": [
     {
       "id": "gh-209",
@@ -23,10 +23,15 @@ window.OFFICE_TASKS_AUTO = {
         { "kind": "github", "label": "PR #212 · «Волна» — диспетчерская в центре офиса", "url": "https://github.com/kleber2009-alt/ai-command-center/pull/212" },
         { "kind": "github", "label": "PR #214 · «Волна» — голограмму хорошо видно над диспетчерской", "url": "https://github.com/kleber2009-alt/ai-command-center/pull/214" },
         { "kind": "github", "label": "PR #217 · режим гостя — офис и готовые решения без кода и ноу-хау", "url": "https://github.com/kleber2009-alt/ai-command-center/pull/217" },
+        {
+          "kind": "github",
+          "label": "PR #218 · руководители отделов — вход по ссылке, свои агенты, остальное для просмотра",
+          "url": "https://github.com/kleber2009-alt/ai-command-center/pull/218"
+        },
         { "kind": "site", "label": "Живой офис агентов — живой сайт", "url": "https://hq2.aicex.club" }
       ],
       "group": "hq-office|claude/modest-gauss-yoq1n7",
-      "prs": [209, 211, 212, 214, 217],
+      "prs": [209, 211, 212, 214, 217, 218],
       "auto": true
     },
     {
@@ -50,10 +55,51 @@ window.OFFICE_TASKS_AUTO = {
           "label": "PR #213 · исполнитель — свой User-Agent для MCP (ChatPlace отвечал 403)",
           "url": "https://github.com/kleber2009-alt/ai-command-center/pull/213"
         },
+        {
+          "kind": "github",
+          "label": "PR #216 · один вход «Двойник», единый реестр агентов, тесты рабочего стола",
+          "url": "https://github.com/kleber2009-alt/ai-command-center/pull/216"
+        },
+        {
+          "kind": "github",
+          "label": "PR #219 · Telegram с кнопками, приоритеты и два потока исполнителя, чистка диска…",
+          "url": "https://github.com/kleber2009-alt/ai-command-center/pull/219"
+        },
+        {
+          "kind": "github",
+          "label": "PR #220 · бот офиса — @AI_Growth_Office_Bot (README) + повторная выкладка",
+          "url": "https://github.com/kleber2009-alt/ai-command-center/pull/220"
+        },
         { "kind": "site", "label": "Живой офис агентов — живой сайт", "url": "https://hq2.aicex.club" }
       ],
       "group": "hq-office|claude/upbeat-noether-pru5m5",
-      "prs": [210, 213],
+      "prs": [210, 213, 216, 219, 220],
+      "auto": true
+    },
+    {
+      "id": "gh-215",
+      "date": "2026-11-04",
+      "dateNote": "слияние PR на GitHub",
+      "kind": "Продукт",
+      "dept": "ceo",
+      "people": ["ilia"],
+      "agents": ["product", "chats"],
+      "title": "CRM Директа: все переписки ИИ-менеджера в одном месте с очередью и оценкой качества",
+      "summary": "CRM для отдела продаж забирает переписки из ChatPlace каждую минуту, Claude разбирает каждую: приоритет, этап воронки, оценка ИИ-менеджера 1–5. Очередь горячих лидов, ответ вручную и отчёты по кодовым словам.",
+      "proof": [
+        {
+          "kind": "github",
+          "label": "PR #215 · CRM Директа для Богдана; агенты-хозяева у всех проектов реестра; актуальное…",
+          "url": "https://github.com/kleber2009-alt/ai-command-center/pull/215"
+        },
+        {
+          "kind": "github",
+          "label": "PR #221 · CRM Директа подтягивает всю историю; история задач офиса снова пополняется",
+          "url": "https://github.com/kleber2009-alt/ai-command-center/pull/221"
+        }
+      ],
+      "group": "direct-crm|claude/hopeful-hopper-hkkd1d",
+      "prs": [215, 221],
       "auto": true
     },
     {
