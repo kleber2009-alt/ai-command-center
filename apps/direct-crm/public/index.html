@@ -76,6 +76,11 @@ main{min-width:0;display:flex;flex-direction:column;height:100%}
 .filters{display:flex;gap:6px;padding:10px;border-bottom:1px solid var(--line);flex-wrap:wrap;position:sticky;top:0;background:var(--panel);z-index:1}
 .filters input,.filters select{border:1px solid var(--line);border-radius:8px;padding:6px 8px;background:var(--bg);min-width:0}
 .filters input{flex:1 1 140px}
+.folders{display:flex;gap:6px;padding:10px 10px 0;overflow-x:auto;position:sticky;top:0;background:var(--panel);z-index:2;scrollbar-width:none}
+.folders button{flex:none;display:inline-flex;align-items:center;gap:6px;border:1px solid var(--line);background:var(--panel);border-radius:99px;padding:5px 11px;font-size:13px;color:var(--mute)}
+.folders button b{font-weight:600;color:var(--ink);font-variant-numeric:tabular-nums}
+.folders button.on{background:var(--ink);border-color:var(--ink);color:var(--panel)}
+.folders button.on b{color:var(--panel)}
 .card{display:block;width:100%;text-align:left;border:0;border-bottom:1px solid var(--line);background:none;padding:12px 14px;position:relative}
 .card:hover{background:var(--soft)}
 .card.on{background:var(--me)}
@@ -324,7 +329,7 @@ const ico = n => `<svg class="ico"><use href="#i-${n}"/></svg>`;
 const PRI = { hot:'Готов купить', human:'Нужен человек', normal:'Обычный', low:'Неважный' };
 const STAGE = { new:'Новый', warm:'Тёплый', hot:'Горячий', customer:'Купил', lost:'Потерян' };
 const TITLES = { dash:'Дашборд', chains:'Цепочки и кнопки', learn:'Обучение ИИ-менеджера', queue:'Очередь', all:'Все переписки', mine:'Мои переписки', funnel:'Воронка и итог', quality:'Качество ИИ-менеджера' };
-const S = { me:null, view:'queue', chats:[], open:null, detail:null, filters:{ q:'', stage:'', priority:'', days:'7' }, days:7, counts:{} };
+const S = { me:null, view:'queue', chats:[], open:null, detail:null, filters:{ q:'', stage:'', priority:'', days:'7', segment:'talk' }, folders:[], days:7, counts:{} };
 
 async function api(path, opts = {}) {
   const r = await fetch('/api' + path, { method:opts.method || 'GET', headers:opts.body ? { 'content-type':'application/json' } : {}, body:opts.body ? JSON.stringify(opts.body) : undefined, credentials:'same-origin' });
@@ -397,12 +402,12 @@ async function loadList() {
   const p = new URLSearchParams({ view:S.view });
   if (S.view !== 'queue') for (const [k, v] of Object.entries(S.filters)) if (v) p.set(k, v);
   const r = await api('/chats?' + p);
-  S.chats = r.chats; S.counts = r.counts;
+  S.chats = r.chats; S.counts = r.counts; S.folders = r.folders || [];
   renderCounts(); renderList();
 }
 
 function filtersHTML() {
-  const segChip = S.filters.segment ? `<div class="filters"><span class="chip st">Сегмент: ${esc(S.segName || S.filters.segment)}</span><button class="btn" id="segX">Сбросить</button></div>` : '';
+  const segChip = S.view === 'queue' ? '' : `<div class="folders" role="tablist" aria-label="Папки">${(S.folders || []).map(f => `<button data-folder="${esc(f.key)}" title="${esc(f.note || '')}" class="${(S.filters.segment || '') === f.key ? 'on' : ''}">${esc(f.name)} <b>${fmt(f.n)}</b></button>`).join('')}</div>`;
   if (S.view === 'queue') return `<div class="filters"><span class="ev">Сначала готовые купить, потом те, кому нужен человек; внутри — кто ждёт дольше. Сюда же попадают все, кто ждёт ответа больше 10 минут.</span></div>`;
   const f = S.filters;
   return segChip + `<div class="filters">
@@ -435,7 +440,7 @@ function renderList() {
     $('#fst').onchange = e => { S.filters.stage = e.target.value; loadList(); };
     $('#fpr').onchange = e => { S.filters.priority = e.target.value; loadList(); };
     $('#fd').onchange = e => { S.filters.days = e.target.value; loadList(); };
-    if ($('#segX')) $('#segX').onclick = () => { delete S.filters.segment; loadList(); };
+    document.querySelectorAll('[data-folder]').forEach(b => b.onclick = () => { S.filters.segment = b.dataset.folder; loadList(); });
   }
 }
 

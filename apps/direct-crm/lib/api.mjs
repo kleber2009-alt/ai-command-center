@@ -7,13 +7,14 @@ const RANK = { hot:0, human:1, normal:2, low:3 };
 // audience segments: a chat may be in several; the same SQL counts them on the dashboard and filters the list
 const FIRST = `(SELECT MIN(created_at) FROM messages m WHERE m.chat_id = chats.id AND m.side IN ('client','user','contact'))`;
 export const SEGMENTS = {
+  talk:{ name:'Разговоры', note:'писали своё — вопросы, просьбы, ответы, не только кодовое слово и кнопки', sql:() => `talk_count > 0` },
   customers:{ name:'Купили', note:'этап «купил»', sql:() => `stage = 'customer'` },
   ready:{ name:'Готовы купить', note:'балл 80+ или этап «горячий», ещё не купили', sql:() => `stage <> 'customer' AND (lead_score >= 80 OR stage = 'hot')` },
   waiting:{ name:'Тёплые ждут ответа', note:'балл 50+, последнее слово за клиентом', sql:() => `stage NOT IN ('customer','lost') AND lead_score >= 50 AND last_side IN ('client','user','contact')` },
   engaged:{ name:'Вовлечённые', note:'5 и больше сообщений от человека', sql:() => `client_count >= 5` },
   fresh:{ name:'Новые за 7 дней', note:'первое сообщение за последнюю неделю', sql:() => `${FIRST} >= ${Math.floor(Date.now() / 1000) - 7 * 86400}` },
   sleeping:{ name:'Остыли', note:'были тёплыми или горячими, молчат 14+ дней', sql:() => `stage IN ('warm','hot') AND last_client_at < ${Math.floor(Date.now() / 1000) - 14 * 86400}` },
-  material:{ name:'Только за материалом', note:'1–2 сообщения, балл ниже 20', sql:() => `client_count BETWEEN 1 AND 2 AND COALESCE(lead_score, 0) < 20` },
+  material:{ name:'Только за материалом', note:'кодовое слово и кнопки, своих вопросов не писали — Claude их не разбирает', sql:() => `talk_count = 0` },
   lost:{ name:'Потеряны', note:'отказались или пропали после цены', sql:() => `stage = 'lost'` },
 };
 const CLIENT = "('client','user','contact')";
@@ -40,7 +41,7 @@ export function createApi({ db, cp, auth, sync, analyzer, catalog = null, learn 
   function list(q) {
     const where = [], args = [];
     const v = q.get('view') || 'queue';
-    if (v === 'queue') where.push(`client_count > 0 AND reviewed_upto < last_client_at AND (priority IN ('hot','human') OR (last_side IN ${CLIENT} AND last_client_at < ?))`), args.push(now() - 600);
+    if (v === 'queue') where.push(`client_count > 0 AND reviewed_upto < last_client_at AND (priority IN ('hot','human') OR (last_side IN ${CLIENT} AND last_client_at < ? AND COALESCE(talk_count, 1) > 0))`), args.push(now() - 600);
     if (v === 'mine') where.push('handled_by = ?'), args.push(q.get('user') || '');
     if (v === 'taken') where.push('handled_by IS NOT NULL');
     const seg = SEGMENTS[q.get('segment')];
@@ -65,11 +66,18 @@ export function createApi({ db, cp, auth, sync, analyzer, catalog = null, learn 
     return rows;
   }
 
+  // folders of the «Директ» list: the segments with how many people are in each (a person may be in several)
+  function folders() {
+    const all = db.prepare('SELECT COUNT(*) n FROM chats WHERE client_count > 0').get().n;
+    return [{ key:'', name:'Все', n:all }, ...Object.entries(SEGMENTS).map(([key, sg]) => ({ key, name:sg.name, note:sg.note,
+      n:db.prepare(`SELECT COUNT(*) n FROM chats WHERE client_count > 0 AND (${sg.sql()})`).get().n }))];
+  }
+
   function counts() {
     const r = db.prepare(`SELECT
       SUM(client_count > 0 AND reviewed_upto < last_client_at AND priority = 'hot') hot,
       SUM(client_count > 0 AND reviewed_upto < last_client_at AND priority = 'human') human,
-      SUM(client_count > 0 AND reviewed_upto < last_client_at AND (priority IN ('hot','human') OR (last_side IN ${CLIENT} AND last_client_at < ?))) queue,
+      SUM(client_count > 0 AND reviewed_upto < last_client_at AND (priority IN ('hot','human') OR (last_side IN ${CLIENT} AND last_client_at < ? AND COALESCE(talk_count, 1) > 0))) queue,
       SUM(handled_by IS NOT NULL) taken, COUNT(*) total FROM chats`).get(now() - 600);
     return Object.fromEntries(Object.entries(r).map(([k, v]) => [k, v || 0]));
   }
@@ -211,7 +219,7 @@ export function createApi({ db, cp, auth, sync, analyzer, catalog = null, learn 
     if (p === '/api/chats' && req.method === 'GET') {
       const q = url.searchParams;
       if (q.get('view') === 'mine') q.set('user', user.login);
-      return json(res, 200, { chats:list(q), counts:counts() });
+      return json(res, 200, { chats:list(q), counts:counts(), folders:folders() });
     }
     if (p === '/api/stats') return json(res, 200, stats(Math.min(90, Math.max(1, Number(url.searchParams.get('days')) || 7))));
     if (p === '/api/dashboard') return json(res, 200, dashboard(Math.min(90, Math.max(1, Number(url.searchParams.get('days')) || 7))));
