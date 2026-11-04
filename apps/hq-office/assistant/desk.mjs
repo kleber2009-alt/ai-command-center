@@ -268,7 +268,7 @@ export function createDesk({ claude, model, fallback, dataDir, officeDir, runner
         summary:s.summary || '', files:s.files || [] })) } : null,
       approval:t.approval ? { actions:t.approval.actions, status:t.approval.status } : null, rating:t.rating || null, lessons:t.lessonsUsed || 0,
       urgent:Boolean(t.urgent), paused:t.status === 'paused' && t.paused ? { until:t.paused.until || '', from:t.paused.from || '' } : null,
-      snoozed:t.snoozed && Date.parse(t.snoozed) > Date.now() ? t.snoozed : '', doneAt:t.doneAt || '',
+      snoozed:t.snoozed && Date.parse(t.snoozed) > Date.now() ? t.snoozed : '', doneAt:t.doneAt || '', eta:etaOf(t),
     };
   }
   function publicView(t) {
@@ -276,7 +276,7 @@ export function createDesk({ claude, model, fallback, dataDir, officeDir, runner
     return { id:t.id, created:t.created, updated:t.updated, by:t.by ? { id:t.by.id, name:t.by.name } : null, status:t.status, statusText:STATUS[t.status] || t.status, queuePos:v.queuePos,
       agent:v.agent, route:{ agent:t.route.agent, title:t.route.title || '' }, question:t.status === 'question' ? { from:t.question?.from || '' } : null,
       result:t.result ? { version:t.result.version } : null, answers:new Array((t.answers || []).length).fill(0), routine:Boolean(t.routine),
-      pipeline:pl ? { label:pl.label, idx:pl.idx, n:pl.stages.length } : null, history:t.status === 'done' && t.published ? 'desk-' + t.id : '' };
+      pipeline:pl ? { label:pl.label, idx:pl.idx, n:pl.stages.length } : null, eta:v.eta ? { ms:v.eta.ms, at:v.eta.at, late:v.eta.late } : null, history:t.status === 'done' && t.published ? 'desk-' + t.id : '' };
   }
   // heavy: renders video (montage, reels) — needs the server's shared heavy slot
   const isHeavy = t => t.pending?.kind !== 'qa' && t.pending?.kind !== 'transcribe' && (t.route?.visual === 'video' || t.route?.deliverable === 'video' || curStage(t)?.visual === true);
@@ -288,6 +288,7 @@ export function createDesk({ claude, model, fallback, dataDir, officeDir, runner
   }
   function emit(t, { soon = false } = {}) {
     t.updated = now(); save(soon);
+    if (!soon) etaMemo.at = 0;
     // the owner's Telegram: the card of the task follows its status (steps of a running task — not)
     if (!soon) tg.sync(view(t));
     const line = `data: ${JSON.stringify({ t:'task', task:view(t) })}\n\n`;
@@ -307,10 +308,95 @@ export function createDesk({ claude, model, fallback, dataDir, officeDir, runner
     const r = { at:now(), agent, kind:String(kind || 'run'), cost:Math.max(0, Number(u.cost) || 0), ms:Math.max(0, Math.round(Number(u.ms) || 0)),
       turns:Math.max(0, Math.round(Number(u.turns) || 0)), tin:Math.max(0, Math.round(Number(u.tin) || 0)), tout:Math.max(0, Math.round(Number(u.tout) || 0)) };
     (t.runs ||= []).push(r);
+    durMemo.at = 0;
     if (t.runs.length > 60) t.runs.splice(0, t.runs.length - 60);
     const s = t.usage ||= { cost:0, ms:0, turns:0, runs:0 };
     s.cost = Math.round((s.cost + r.cost) * 1e4) / 1e4; s.ms += r.ms; s.turns += r.turns; s.runs += 1;
   }
+  /* ---------- how long until the result: an estimate for every task in work or in the queue ----------
+     A run of an agent takes about as long as its last runs of the same kind (median of up to 15);
+     without history — a typical time for the deliverable. The queue is played out on the runner's workers. */
+  const TYPICAL_MIN = { video:25, slides:15, landing:15, carousel:12, image:8, document:10, script:6, research:12, other:12 };
+  const KIND_MIN = { transcribe:3, qa:4, execute:5 };
+  const median = a => { const x = [...a].sort((p, q) => p - q), m = x.length >> 1; return x.length % 2 ? x[m] : (x[m - 1] + x[m]) / 2; };
+  let durMemo = { at:0, by:null };
+  function runSamples() {
+    if (durMemo.by && Date.now() - durMemo.at < 30e3) return durMemo.by;
+    const by = new Map(), add = (k, ms) => { const a = by.get(k) || []; a.push(ms); by.set(k, a); };
+    const list = [...tasks].sort((x, y) => String(x.created).localeCompare(String(y.created)));
+    for (const t of list) for (const r of t.runs || []) {
+      if (!(r.ms > 0)) continue;
+      const kind = ['answer', 'resume'].includes(r.kind) ? 'run' : r.kind;
+      add(`${r.agent}|${kind}`, r.ms); add(`*|${kind}`, r.ms);
+      if (kind === 'run' && t.route?.deliverable) add(`~${t.route.deliverable}|run`, r.ms);
+    }
+    for (const [k, a] of by) by.set(k, a.slice(-15));
+    durMemo = { at:Date.now(), by };
+    return by;
+  }
+  // expected duration of one run: { ms, basis:'history'|'typical', n }
+  function runDur(agent, kind = 'run', deliverable = '') {
+    const by = runSamples(), k = ['answer', 'resume'].includes(kind) ? 'run' : kind;
+    const keys = k === 'revise' ? [`${agent}|revise`, `*|revise`] : k === 'run' ? [`${agent}|run`, `~${deliverable}|run`] : [`${agent}|${k}`, `*|${k}`];
+    for (const key of keys) { const a = by.get(key); if (a?.length >= 2) return { ms:median(a), basis:'history', n:a.length }; }
+    const one = by.get(keys[0]);
+    const typ = (KIND_MIN[k] ?? (TYPICAL_MIN[deliverable] || TYPICAL_MIN.other) * (k === 'revise' ? 0.6 : 1)) * 60e3;
+    if (one?.length) return { ms:(one[0] + typ) / 2, basis:'history', n:1 };
+    return { ms:typ, basis:'typical', n:0 };
+  }
+  const delivOf = t => curStage(t)?.visual === true ? 'video' : t.pipeline ? '' : t.route?.deliverable || '';
+  // the step the runner does now (or will do next), then the steps after it up to the result for the owner
+  function plan(t) {
+    const kind = t.pending?.kind || 'run', agent = kind === 'transcribe' ? TRANSCRIBER : kind === 'qa' ? QA : t.route.agent;
+    const own = runDur(agent, kind, delivOf(t));
+    let rest = 0;
+    if (kind === 'transcribe') rest += runDur(t.route.agent, 'run', delivOf(t)).ms;
+    const pl = t.pipeline;
+    if (pl && kind !== 'qa') for (const st of pl.stages.slice(pl.idx + 1)) rest += runDur(st.agent, 'run', st.visual === true ? 'video' : '').ms;
+    if (kind !== 'qa' && (qaPlanned(t) || (kind === 'transcribe' && QA_ON && agentOf(QA) && !t.routine))) rest += runDur(QA, 'qa').ms;
+    return { own, rest };
+  }
+  // the runner's workers: those that asked for work in the last 15 minutes (two by default)
+  const workersSeen = new Map();
+  const workerCount = () => { const at = Date.now(); let n = 0; for (const v of workersSeen.values()) if (at - v < 15 * 60e3) n += 1; return Math.max(n, Number(process.env.HQ_RUNNER_WORKERS) || 2); };
+  let etaMemo = { at:0, map:null };
+  function etas() {
+    const at = Date.now();
+    if (etaMemo.map && at - etaMemo.at < 2000) return etaMemo.map;
+    const map = new Map(), slots = [];
+    for (const t of tasks) if (t.status === 'work' && t.route) {
+      const { own, rest } = plan(t), started = Date.parse(t.workAt || t.updated) || at, spent = at - started;
+      const late = spent > own.ms * 1.15;
+      // overdue: we do not know more than «a bit more» — a fifth of the usual time, at least two minutes
+      const left = late ? Math.max(2 * 60e3, own.ms * 0.2) : own.ms - spent;
+      slots.push(at + left);
+      map.set(t.id, { ms:Math.round(left + rest), late, basis:own.basis, n:own.n, start:'' });
+    }
+    const W = workerCount();
+    while (slots.length < W) slots.push(at);
+    slots.sort((x, y) => x - y);
+    for (const t of queueOrder()) {
+      if (!t.route) continue;
+      const { own, rest } = plan(t);
+      // more work than workers: a task waits for the first worker to free up
+      const i = slots.indexOf(Math.min(...slots)), start = Math.max(at, slots[i]);
+      slots[i] = start + own.ms;
+      map.set(t.id, { ms:Math.round(start - at + own.ms + rest), late:false, basis:own.basis, n:own.n, start:new Date(start).toISOString() });
+    }
+    for (const v of map.values()) v.at = new Date(at + v.ms).toISOString();
+    etaMemo = { at, map };
+    return map;
+  }
+  const etaOf = t => (['work', 'queued'].includes(t.status) && etas().get(t.id)) || null;
+  // «примерно 15 мин» / «примерно 1 ч 20 мин»
+  const durText = ms => { const m = Math.max(1, Math.round(ms / 60e3)); return m < 60 ? `${m} мин` : `${Math.floor(m / 60)} ч${m % 60 ? ` ${m % 60} мин` : ''}`; };
+  function etaNote(t) {
+    etaMemo.at = 0;
+    const e = etaOf(t);
+    return e ? ` Результат — примерно через ${durText(e.ms)} (к ${mskClock(e.at)} МСК).` : '';
+  }
+  const mskClock = iso => new Date(iso).toLocaleTimeString('ru-RU', { timeZone:'Europe/Moscow', hour:'2-digit', minute:'2-digit' });
+
   // totals of a month (Moscow date of each run) by agent: for the office panel and the assistant
   function stats(month = moscowDate().slice(0, 7)) {
     const by = new Map(), months = new Set(), total = { cost:0, ms:0, runs:0, tasks:0, done:0 };
@@ -534,10 +620,10 @@ export function createDesk({ claude, model, fallback, dataDir, officeDir, runner
     if (a.id !== TRANSCRIBER && t.route.transcribe && (links.length || media.length) && !t.transcribed && tr) {
       t.chain = { sources:links, media:media.map(f => f.name) };
       queue(t, { kind:'transcribe' });
-      step(t, `${how} Сначала «${tr.name}» расшифрует ${links.length + media.length > 1 ? 'ролики' : 'ролик'} и сам передаст текст агенту «${a.name}».`);
+      step(t, `${how} Сначала «${tr.name}» расшифрует ${links.length + media.length > 1 ? 'ролики' : 'ролик'} и сам передаст текст агенту «${a.name}».` + etaNote(t));
     } else {
       queue(t, { kind:'run' });
-      step(t, how);
+      step(t, how + etaNote(t));
     }
   }
   /* ---------- the style question ---------- */
@@ -1132,6 +1218,7 @@ h1{font-size:24px;margin:0 0 4px}small{color:#9aa3b5}h2{font-size:17px;margin:26
         // each worker of the runner does one task at a time: when it asks for the next one, its previous one is over.
         // A worker without an id (an old runner) — every task in work is its own.
         const b = await readJson(req), worker = String(b.worker || '').slice(0, 80), light = b.light === true, preferHeavy = b.prefer_heavy === true;
+        workersSeen.set(worker, Date.now());
         for (const t of tasks) if (t.status === 'work' && (t.worker || '') === worker) orphan(t, 'Исполнитель не сдал задачу — она снова в очереди.');
         // job folders of tasks closed long ago: the runner deletes them (the result stays here, a revision downloads it back)
         const purge = purgeList();
@@ -1143,14 +1230,14 @@ h1{font-size:24px;margin:0 0 4px}small{color:#9aa3b5}h2{font-size:17px;margin:26
           if (purge.length) return json(res, 200, { idle:true, purge:purge.map(x => x.id) });
           res.writeHead(204); return res.end();
         }
-        t.worker = worker;
+        t.worker = worker; t.workAt = now();
         const extra = { purge:purge.map(x => x.id), heavy:isHeavy(t),
           // the job folder was deleted on the runner: the accepted result comes back into out/ for a revision or a check
           ...(t.runnerPurged && t.result && ['revise', 'answer', 'execute', 'qa'].includes(t.pending.kind) ? { restore:t.result.files.map(f => f.path) } : {}) };
         if (t.runnerPurged) t.runnerPurged = false;
         if (t.pending.kind === 'transcribe') {
           t.status = 'work'; t.error = '';
-          step(t, `«${agentOf(TRANSCRIBER)?.name || 'Транскрибатор'}» взял референс в работу.`);
+          step(t, `«${agentOf(TRANSCRIBER)?.name || 'Транскрибатор'}» взял референс в работу.` + etaNote(t));
           emit(t);
           return json(res, 200, { id:t.id, kind:'transcribe', agent:TRANSCRIBER, title:t.route.title, sources:t.chain?.sources || [], files:t.chain?.media || [], ...extra });
         }
@@ -1163,7 +1250,7 @@ h1{font-size:24px;margin:0 0 4px}small{color:#9aa3b5}h2{font-size:17px;margin:26
         const a = agentOf(t.route.agent);
         t.status = 'work'; t.versions = (t.versions || 0) + 1; t.workVersion = t.versions; t.error = '';
         if (t.pending.kind === 'run') t.lessonsUsed = lessonsNote(t.route.agent).n;
-        step(t, t.pending.kind === 'execute' ? `«${a?.name}» выполняет разрешённые действия.` : t.pending.kind === 'revise' ? `«${a?.name}» вносит правку${t.pending.from === 'qa' ? ' по замечаниям контролёра' : ''}.` : t.pending.kind === 'answer' ? `«${a?.name}» получил ваш ответ и продолжает.` : t.pending.kind === 'resume' ? `«${a?.name}» продолжает после паузы.` : `«${a?.name}» взял задачу в работу.`);
+        step(t, (t.pending.kind === 'execute' ? `«${a?.name}» выполняет разрешённые действия.` : t.pending.kind === 'revise' ? `«${a?.name}» вносит правку${t.pending.from === 'qa' ? ' по замечаниям контролёра' : ''}.` : t.pending.kind === 'answer' ? `«${a?.name}» получил ваш ответ и продолжает.` : t.pending.kind === 'resume' ? `«${a?.name}» продолжает после паузы.` : `«${a?.name}» взял задачу в работу.`) + etaNote(t));
         emit(t);
         return json(res, 200, { id:t.id, kind:t.pending.kind, version:t.versions, agent:t.route.agent, skill:t.route.skill, title:t.route.title,
           prompt:jobPrompt(t), session:t.pending.kind === 'run' ? '' : t.session || '', files:t.files.map(f => f.name), ...extra,

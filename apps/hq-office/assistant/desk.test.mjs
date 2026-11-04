@@ -689,3 +689,28 @@ test('Telegram: «пришли файлом» ответом на карточк
   for (const t of ['файлом', 'Пришли файлами', 'скинь оригиналы', 'дай в лучшем качестве', 'без сжатия пришли']) assert.ok(wantsFiles(t), t);
   for (const t of ['переделай третий слайд', 'добавь файл с ценами', 'сделай хук короче', '']) assert.ok(!wantsFiles(t), t);
 });
+
+test('оценка времени: без истории — типичное время, очередь ждёт свободный поток, после запусков — по истории агента', async () => {
+  const d = setup();
+  const a = await d.task('первая'), b = await d.task('вторая'), c = await d.task('третья');
+  const ea = (await d.get(a)).eta, ec = (await d.get(c)).eta;
+  assert.ok(ea && ea.basis === 'typical' && ea.ms >= 15 * 60e3 && ea.ms <= 20 * 60e3, JSON.stringify(ea));
+  assert.ok(ec.ms > ea.ms, 'третья ждёт, пока освободится поток');
+  assert.match((await d.get(a)).steps.at(-1).text, /Результат — примерно через \d+ мин \(к \d\d:\d\d МСК\)/);
+  const job = await d.claim({ worker:'w1' });
+  assert.equal(job.id, a);
+  const w = await d.get(a);
+  assert.equal(w.status, 'work'); assert.ok(w.eta && w.eta.ms > 0 && !w.eta.late);
+  assert.match(w.steps.at(-1).text, /взял задачу в работу\. Результат — примерно через/);
+  // the public view has the estimate too, without details
+  const pub = (await d.call('GET', 'live.json', null, { 'x-guest':'1' })).j;
+  assert.ok(pub.tasks.find(t => t.id === a)?.eta?.at);
+  await d.deliver(job);
+  const j2 = await d.claim({ worker:'w1' });
+  if (j2?.kind === 'qa') await d.finish(j2.id, { result:'qa', verdict:'ok', notes:'ок' });
+  const j3 = await d.claim({ worker:'w1' }); await d.deliver(j3);
+  for (const t of [a, b, c]) assert.notEqual((await d.get(t)).status, 'question');
+  const e = (await d.get(c)).eta;
+  assert.ok(e && e.basis === 'history', JSON.stringify(e));
+  assert.equal((await d.get(a)).eta, null, 'на проверке у владельца — без оценки');
+});

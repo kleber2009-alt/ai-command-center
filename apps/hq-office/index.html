@@ -4028,7 +4028,7 @@ function officeSnapshot() {
   if (desk.on) {
     const open = desk.tasks.filter(t => DESK_OPEN.includes(t.status)), done = desk.tasks.filter(t => !DESK_OPEN.includes(t.status)).slice(0, 5);
     L.push('', `## Рабочий стол (настоящие задачи агентам): в работе ${open.length}`);
-    for (const t of open.slice(0, 15)) L.push(`- «${(t.route?.title || t.text).slice(0, 90)}» — ${t.agent?.name || 'диспетчер'}, ${t.statusText}${t.status === 'queued' && t.queuePos > 1 ? ` (${t.queuePos}-я в очереди)` : ''}${t.question ? `; вопрос к Илье: «${t.question.text.slice(0, 160)}»` : ''}${t.result?.summary ? `; итог: ${t.result.summary.slice(0, 160)}` : ''}`);
+    for (const t of open.slice(0, 15)) L.push(`- «${(t.route?.title || t.text).slice(0, 90)}» — ${t.agent?.name || 'диспетчер'}, ${t.statusText}${t.status === 'queued' && t.queuePos > 1 ? ` (${t.queuePos}-я в очереди)` : ''}${t.eta ? `; ${etaText(t.eta, true).toLowerCase()}` : ''}${t.question ? `; вопрос к Илье: «${t.question.text.slice(0, 160)}»` : ''}${t.result?.summary ? `; итог: ${t.result.summary.slice(0, 160)}` : ''}`);
     if (done.length) { L.push('Недавно закрытые:'); for (const t of done) L.push(`- «${(t.route?.title || t.text).slice(0, 90)}» — ${t.agent?.name || 'диспетчер'}, ${t.statusText}`); }
   }
   L.push('', '## Агенты в 3D прямо сейчас');
@@ -4224,6 +4224,10 @@ const deskTitle = t => t.route?.title || t.text || 'Новая задача';
 // затраты: время работы агентов и стоимость Claude — «14 мин · $1,80»
 const fmtDur = ms => { const m = Math.round((ms || 0) / 60000); return m < 1 ? 'меньше минуты' : m < 60 ? `${m} мин` : `${Math.floor(m / 60)} ч${m % 60 ? ` ${m % 60} мин` : ''}`; };
 const fmtUsd = c => '$' + (c >= 100 ? Math.round(c) : c.toFixed(2)).toString().replace('.', ',');
+// the desk's estimate of when the result comes (desk.mjs → eta): counted from its moment, so it stays right between updates
+const etaText = (e, long = false) => { if (!e?.at) return ''; const ms = Date.parse(e.at) - Date.now(), at = new Date(e.at).toLocaleTimeString('ru-RU', { hour:'2-digit', minute:'2-digit' });
+  if (e.late || ms < 60e3) return long ? `Дольше обычного — результат скоро, примерно к ${at}` : `≈ скоро · к ${at}`;
+  return long ? `Результат — примерно через ${fmtDur(ms)}, к ${at}` : `≈ ${fmtDur(ms)} · к ${at}`; };
 const usageText = u => u && (u.ms || u.cost) ? `${fmtDur(u.ms)}${u.cost ? ' · ' + fmtUsd(u.cost) : ''}` : '';
 const RUNK = { run:'работа', revise:'правка', answer:'после ответа', execute:'действия', qa:'проверка', transcribe:'расшифровка' };
 const sizeText = n => n >= 1e6 ? `${(n / 1e6).toFixed(n >= 1e8 ? 0 : 1)} МБ` : `${Math.max(1, Math.round(n / 1e3))} КБ`;
@@ -4381,7 +4385,7 @@ function deskCardHTML(t) {
     <span class="dkc-main">
       <span class="dkc-top"><em class="pill">${esc(st)}</em><span class="dkc-src">${ico(src.icon)}${esc(src.label)}</span><time datetime="${esc(t.updated)}">${esc(ago(t.updated))}</time></span>
       <b class="dkc-t">${esc(deskTitle(t))}</b>
-      <span class="dkc-who">${t.pipeline ? `${esc(t.pipeline.label)} · этап ${Math.min(t.pipeline.idx + 1, t.pipeline.stages.length)}/${t.pipeline.stages.length} · ` : ''}${m ? esc(m.name) : 'Диспетчер выбирает агента'}${t.route?.skill ? ` · <code>${esc(t.route.skill)}</code>` : ''}${t.style ? ` · ${esc(t.style)}` : ''}${t.usage ? ` · <span class="dkc-cost">${esc(usageText(t.usage))}</span>` : ''}</span>
+      <span class="dkc-who">${t.pipeline ? `${esc(t.pipeline.label)} · этап ${Math.min(t.pipeline.idx + 1, t.pipeline.stages.length)}/${t.pipeline.stages.length} · ` : ''}${m ? esc(m.name) : 'Диспетчер выбирает агента'}${t.route?.skill ? ` · <code>${esc(t.route.skill)}</code>` : ''}${t.style ? ` · ${esc(t.style)}` : ''}${t.usage ? ` · <span class="dkc-cost">${esc(usageText(t.usage))}</span>` : ''}${t.eta ? ` · <span class="dkc-cost" title="${esc(etaText(t.eta, true))} — оценка по прошлым задачам агента">${esc(etaText(t.eta))}</span>` : ''}</span>
       ${open ? flowBar(t) : ''}
       ${line ? `<span class="dkc-last${t.status === 'question' ? ' q' : t.status === 'error' ? ' e' : ''}">${esc(String(line).replace(/\n+/g, ' '))}</span>` : ''}
     </span>${cta ? `<span class="dkc-cta">${cta} →</span>` : ''}</button></li>`;
@@ -4751,7 +4755,7 @@ function renderDeskTask() {
     <div class="kh-meta"><em class="pill" style="--s:${DST[t.status] || '#9aa3b5'}">${esc(t.statusText)}${t.status === 'queued' && t.queuePos > 1 ? ` · ${t.queuePos}-я` : ''}</em>
       <span class="src-chip">${ico(src.icon)}${esc(src.label)}</span><time datetime="${esc(t.created)}">${fmtDate(t.created.slice(0, 10), true)}, ${hhmm(when)}</time></div>
     <h2>${esc(deskTitle(t))}</h2>
-    <div class="kh-meta">${t.pipeline ? `<span class="chip">${esc(t.pipeline.label)}</span>` : ''}${A ? `<span class="chip">${esc(A.name)}</span>` : '<span class="chip">диспетчер выбирает агента</span>'}${t.route?.skill ? `<span class="chip"><code>${esc(t.route.skill)}</code></span>` : ''}${t.style ? `<span class="chip">стиль: ${esc(t.style)}</span>` : ''}${t.versions > 1 && !t.pipeline ? `<span class="chip">версия ${t.result?.version || t.versions}</span>` : ''}${t.usage ? `<span class="chip" title="Время работы агентов и стоимость Claude по этой задаче">${esc(usageText(t.usage))}</span>` : ''}${t.qa?.verdict === 'ok' ? '<span class="chip">проверено контролёром</span>' : t.qa?.verdict === 'fix' ? '<span class="chip">доработано по замечаниям контролёра</span>' : ''}${t.lessons ? `<span class="chip" title="Агент получил уроки из ваших прошлых правок и оценок">учёл уроков: ${t.lessons}</span>` : ''}</div></div>`);
+    <div class="kh-meta">${t.pipeline ? `<span class="chip">${esc(t.pipeline.label)}</span>` : ''}${A ? `<span class="chip">${esc(A.name)}</span>` : '<span class="chip">диспетчер выбирает агента</span>'}${t.route?.skill ? `<span class="chip"><code>${esc(t.route.skill)}</code></span>` : ''}${t.style ? `<span class="chip">стиль: ${esc(t.style)}</span>` : ''}${t.versions > 1 && !t.pipeline ? `<span class="chip">версия ${t.result?.version || t.versions}</span>` : ''}${t.usage ? `<span class="chip" title="Время работы агентов и стоимость Claude по этой задаче">${esc(usageText(t.usage))}</span>` : ''}${t.eta ? `<span class="chip" title="Оценка по прошлым задачам этого агента и очереди исполнителя">${esc(etaText(t.eta, true))}</span>` : ''}${t.qa?.verdict === 'ok' ? '<span class="chip">проверено контролёром</span>' : t.qa?.verdict === 'fix' ? '<span class="chip">доработано по замечаниям контролёра</span>' : ''}${t.lessons ? `<span class="chip" title="Агент получил уроки из ваших прошлых правок и оценок">учёл уроков: ${t.lessons}</span>` : ''}</div></div>`);
   setHTML($('kFlow'), flowHTML(t));
   const qf = t.question?.from, styleQ = t.status === 'question' && qf === 'style' && t.question.options?.length, apQ = t.status === 'question' && qf === 'approval';
   const opts = t.status === 'question' && t.question?.options?.length ? t.question.options : null;
@@ -5128,7 +5132,7 @@ function pubCardHTML(t) {
     <span class="dkc-main">
       <span class="dkc-top"><em class="pill">${esc(st)}</em><time datetime="${esc(t.updated)}">${esc(ago(t.updated))}</time></span>
       <b class="dkc-t">${esc(title)}</b>
-      <span class="dkc-who">${t.pipeline ? `${esc(t.pipeline.label)} · этап ${Math.min(t.pipeline.idx + 1, t.pipeline.n)}/${t.pipeline.n} · ` : ''}${m ? esc(m.name) : 'Диспетчер выбирает агента'}${m?.dept && m.dept.name ? ` · ${esc(m.dept.short || m.dept.name)}` : ''}</span>
+      <span class="dkc-who">${t.pipeline ? `${esc(t.pipeline.label)} · этап ${Math.min(t.pipeline.idx + 1, t.pipeline.n)}/${t.pipeline.n} · ` : ''}${m ? esc(m.name) : 'Диспетчер выбирает агента'}${m?.dept && m.dept.name ? ` · ${esc(m.dept.short || m.dept.name)}` : ''}${t.eta ? ` · <span class="dkc-cost">${esc(etaText(t.eta))}</span>` : ''}</span>
       ${t.status === 'done' ? '' : pubFlow(t)}
     </span>${t.history ? '<span class="dkc-cta">Результат →</span>' : ''}</${tag}></li>`;
 }
