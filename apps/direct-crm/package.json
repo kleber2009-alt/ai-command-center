@@ -1,0 +1,14 @@
+{
+  "name": "direct-crm",
+  "private": true,
+  "description": "CRM Директа: переписки ИИ-менеджера ChatPlace, очередь по приоритету для отдела продаж, разбор и оценка ответов ИИ",
+  "type": "module",
+  "engines": { "node": ">=22.13" },
+  "scripts": {
+    "start": "node --disable-warning=ExperimentalWarning server.mjs",
+    "check": "node --disable-warning=ExperimentalWarning check.mjs"
+  },
+  "dependencies": {
+    "@anthropic-ai/sdk": "1.3.0"
+  }
+}

@@ -181,6 +181,8 @@ export function createDesk({ claude, model, fallback, dataDir, officeDir, runner
       name:`${CFG.council.name} — ИИ-советники по методам легенд бизнеса: сюда задачи «на собеседование» (оценить оффер, воронку, запуск, тексты, продажи, план) и «на исправление деталей» по их методу; «Совет легенд» — когда нужен взгляд всех восьми` }] : [])];
     for (const d of groups) {
       lines.push('', `## ${d.name}`);
+      const hp = (W.HEAD_CONTENT || {})[d.id]?.products || [];
+      if (hp.length) lines.push(`Руководитель ${d.head?.name || ''} сам отвечает за: ${hp.map(p => `${p.title} (${p.url}) — ${p.note || ''}`).join('; ')}. Задачи по этим продуктам — агентам этого отдела.`);
       for (const id of d.agents) {
         const c = AC[id] || {}, seen = new Set();
         const skills = [...(c.skills || []), ...(WS[id] || []), ...EXTRA.filter(s => (s.agents || []).includes(id))]

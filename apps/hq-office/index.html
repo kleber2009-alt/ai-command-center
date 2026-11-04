@@ -3761,6 +3761,7 @@ function showDossierTab(tab) {
     if (tab === 'about') h = `<p class="lead">${esc(hc.lead || person.title)}</p>
       ${hc.zones?.length ? `<h4>Зоны</h4><div class="chipsrow">${hc.zones.map(z => `<span>${esc(z)}</span>`).join('')}</div>` : ''}
       ${hc.process?.length ? `<h4>Как работает отдел</h4>${pipeHTML(hc.process)}` : ''}
+      ${hc.products?.length ? resultHTML({ type:'links', title:'Продукты руководителя', items:hc.products }, d.accent) : ''}
       ${hc.materials?.length ? resultHTML({ type:'links', title:'Материалы', items:hc.materials }, d.accent) : ''}`;
     if (tab === 'tasks') h = `<ol class="tasks">${TASKS.filter(t => t.dept === d.id).map(taskRowHTML).join('')}</ol>`;
     if (tab === 'works') h = worksHTML([], deptWorks(d), d.accent) || `<p class="empty">Готовых работ отдела пока нет.</p>`;

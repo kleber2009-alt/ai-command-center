@@ -115,6 +115,8 @@
   садится по `WAVE_ROOM_OF` (та же раскладка, что `ROOM_OF` ночью), иначе — в комнату своего отдела, дуга вмещает до 16; в «Ночном Сити» —
   `ROOM_OF`, лишние — `OVERFLOW`). Каждый проект реестра `apps/command-center/registry/projects.mjs` закреплён за агентом-хозяином:
   `OWN_PRODUCTS` в `agent-content.js` → блок «Продукты и боты» в досье и строка «Продукты и боты» в каталоге диспетчера (`desk.mjs`).
+  Продукты, за которые отвечает сам руководитель отдела, — `HEAD_CONTENT.<отдел>.products` (Богдан — «CRM Директа», `apps/direct-crm`):
+  блок «Продукты руководителя» в его досье, строка в знаниях ассистента (`office.mjs`) и в каталоге диспетчера.
   Скиллы последних недель — `MORE_SKILLS` там же. Новый агент = карточка `AGENT_CATALOG` + досье `AGENT_CONTENT` + отдел в
   `office.config.js` и в запасном `config` `index.html` + передачи `OFFICE_DATA.catalog` + комната `ROOM_OF` в `night.js` и `WAVE_ROOM_OF` в `index.html` + `TEAM` в `concepts/`.
 - **Переговорная легенд** (`council` в `office.config.js`, скилл «Команда 8 легенд»): ИИ-советники по методам Хормози (оффер),

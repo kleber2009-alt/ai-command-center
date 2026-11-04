@@ -524,7 +524,19 @@ export const projects = [
       'ИИ-менеджер в Instagram Direct на ChatPlace: воронки кодовых слов, каталог из 48 бесплатных материалов двух Telegram-каналов в базе знаний и тематических правилах агентов. ' +
       'Еженедельный разбор переписок — скилл direct-ai-weekly-review; обновление каталога — direct-materials-catalog. Самописная альтернатива — IG Agent (не задеплоен).',
     technologies: ['ChatPlace', 'Instagram Direct', 'Claude'],
-    links: [art('5dj56wNJrKph3AYLbiibKH', 'Каталог бесплатных материалов')],
+    links: [art('5dj56wNJrKph3AYLbiibKH', 'Каталог бесплатных материалов'), admin('https://direct-crm.aicex.club/', 'CRM Директа')],
+  },
+  {
+    slug: 'direct-crm', name: 'CRM Директа', emoji: '📥', status: 'dev', sort_order: 45,
+    tagline: 'Переписки ИИ-менеджера ChatPlace, очередь по приоритету и оценка ответов ИИ — продукт Богдана, РОП',
+    description:
+      'Хозяин — Богдан, руководитель отдела продаж. Каждую минуту забирает из ChatPlace все переписки (Instagram Direct @ilia.paliy и @paliy_ilya, Telegram-боты) и хранит их целиком. ' +
+      'Claude читает каждую переписку: приоритет (готов купить → нужен человек → обычный), этап воронки (новый → тёплый → горячий → купил / потерян), источник (кодовое слово), ' +
+      'что сделать менеджеру и оценка работы ИИ-менеджера 1–5 с типами ошибок. Очередь сортирует готовых купить и тех, кому нужен человек, по времени ожидания; ' +
+      'Богдан забирает переписку у ИИ и отвечает прямо из CRM (ChatPlace ставит ИИ на паузу), потом возвращает. Отчёты: воронка и конверсия по кодовым словам, качество ИИ по дням, где ИИ справился плохо.\n\n' +
+      'Архитектура: Node 22 + node:sqlite, контейнер aicex-direct-crm в сети edge, блок /opt/edge/sites/direct-crm.caddy; ChatPlace через MCP (сервер chatplace из HQ_RUNNER_MCP_JSON). Деплой deploy-direct-crm.yml.',
+    technologies: ['Node.js', 'SQLite', 'ChatPlace MCP', 'Claude', 'Caddy'],
+    links: [admin('https://direct-crm.aicex.club/', 'CRM Директа'), code('apps/direct-crm'), md('apps/direct-crm/CLAUDE.md', 'CLAUDE.md'), wf('deploy-direct-crm.yml')],
   },
   {
     slug: 'marketing', name: 'Маркетинг: витрина и материалы', emoji: '📣', status: 'production', sort_order: 46,
