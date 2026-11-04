@@ -56,7 +56,7 @@ jobs:
 
       - name: Check data files
         run: |
-          for f in agents.js office.config.js dept-content.js agent-content.js skills-library.js tasks.js tasks.auto.js works.js assistant/server.mjs assistant/office.mjs assistant/voice.mjs assistant/desk.mjs assistant/twin.mjs assistant/kb.mjs assistant/team.mjs assistant/admin.mjs; do node --check "apps/hq-office/$f"; done
+          for f in agents.js office.config.js dept-content.js agent-content.js skills-library.js tasks.js tasks.auto.js works.js assistant/server.mjs assistant/office.mjs assistant/voice.mjs assistant/desk.mjs assistant/tg.mjs assistant/twin.mjs assistant/kb.mjs assistant/team.mjs assistant/admin.mjs; do node --check "apps/hq-office/$f"; done
           python3 -m py_compile apps/hq-office/runner/runner.py && rm -rf apps/hq-office/runner/__pycache__
           node -e '
             global.window = {}; for (const f of ["agents.js", "office.config.js", "dept-content.js", "agent-content.js", "tasks.js", "tasks.auto.js", "works.js"])
@@ -130,14 +130,19 @@ jobs:
           # its long-polling on remake-site is not affected); the chat is the owner's id (the bot must have been started once)
           TG_TOKEN: ${{ secrets.HQ_NOTIFY_TG_BOT_TOKEN || secrets.WORKER_TELEGRAM_BOT_TOKEN || secrets.REMAKE_TG_BOT_TOKEN }}
           TG_CHAT: ${{ vars.HQ_NOTIFY_TG_CHAT_ID || vars.WORKER_OWNER_TELEGRAM_ID || vars.REMAKE_TG_OWNER_IDS || vars.TG_AGENT_OWNER_TELEGRAM_ID }}
+          # the office's own bot: the desk listens to it — buttons «Принять», «Правка», styles, approvals; a message is a new task.
+          # A shared bot (Office Worker, «Ремейк залёта») is listened to by its own service — links only, no buttons
+          OWN_BOT: ${{ secrets.HQ_NOTIFY_TG_BOT_TOKEN }}
         run: |
           [ -n "$ANTHROPIC" ] || echo "::warning::HQ_OFFICE_ANTHROPIC_API_KEY is not set — the assistant will not answer"
           [ -n "$PASS" ] || echo "::warning::HQ_ASSISTANT_PASSWORD is not set — the assistant runs as a guest demo only"
           TG_CHAT=$(printf '%s' "$TG_CHAT" | grep -oE -- '-?[0-9]+' | head -1 || true)
           [ -n "$TG_TOKEN" ] && [ -n "$TG_CHAT" ] && echo "morning reports → Telegram chat …${TG_CHAT: -3}" \
             || echo "::warning::no Telegram bot or owner id (HQ_NOTIFY_TG_BOT_TOKEN + HQ_NOTIFY_TG_CHAT_ID) — morning reports stay in the office only"
-          printf 'ANTHROPIC_API_KEY=%s\nELEVENLABS_API_KEY=%s\nHQ_ASSISTANT_PASSWORD=%s\nELEVENLABS_VOICE_ID=%s\nHQ_NOTIFY_TG_TOKEN=%s\nHQ_NOTIFY_TG_CHAT=%s\nHQ_PUBLIC_URL=https://%s\n' \
-            "$ANTHROPIC" "$ELEVEN" "$PASS" "$VOICE" "$TG_TOKEN" "$TG_CHAT" "$DOMAIN" \
+          OWN=$([ -n "$OWN_BOT" ] && echo 1 || echo 0)
+          [ "$OWN" = 1 ] && echo "Telegram: own bot — buttons on" || echo "Telegram: shared bot — links only (set secret HQ_NOTIFY_TG_BOT_TOKEN for buttons)"
+          printf 'ANTHROPIC_API_KEY=%s\nELEVENLABS_API_KEY=%s\nHQ_ASSISTANT_PASSWORD=%s\nELEVENLABS_VOICE_ID=%s\nHQ_NOTIFY_TG_TOKEN=%s\nHQ_NOTIFY_TG_CHAT=%s\nHQ_NOTIFY_TG_OWN=%s\nHQ_PUBLIC_URL=https://%s\n' \
+            "$ANTHROPIC" "$ELEVEN" "$PASS" "$VOICE" "$TG_TOKEN" "$TG_CHAT" "$OWN" "$DOMAIN" \
             | $SSH "umask 077 && cat > /opt/hq-office/assistant.env"
 
       - name: Keys of the morning agents
