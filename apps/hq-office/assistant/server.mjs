@@ -31,10 +31,11 @@ import crypto from 'node:crypto';
 import { Readable } from 'node:stream';
 import { fileURLToPath } from 'node:url';
 import Anthropic from '@anthropic-ai/sdk';
-import { loadOffice, loadProjectMap, moscowDate, humanDate } from './office.mjs';
+import { loadOffice, loadProjectMap, moscowDate, humanDate, officeWindow, setOfficePatch } from './office.mjs';
 import { voiceConfigured, transcribe, listVoices, guessOwnerVoice, speak, realtimeToken } from './voice.mjs';
 import { createDesk } from './desk.mjs';
 import { initTeam } from './team.mjs';
+import { initAdmin } from './admin.mjs';
 import { loadTwin, initTwin, remember, rememberTool, SECTIONS, TWIN_PROMPT } from './twin.mjs';
 import { initKb, loadKb, kbTools, runKbTool, ingest, listPrivate, removePrivate } from './kb.mjs';
 
@@ -53,7 +54,9 @@ const claude = process.env.ANTHROPIC_API_KEY ? new Anthropic() : null;
 initTwin(DATA_DIR);
 initKb(DATA_DIR);
 const team = initTeam(DATA_DIR);
-const desk = createDesk({ claude, model:MODEL, fallback:FALLBACK, dataDir:DATA_DIR, officeDir:OFFICE_DIR, runnerToken:process.env.HQ_DESK_RUNNER_TOKEN || '' });
+const admin = initAdmin(DATA_DIR);
+setOfficePatch(() => ({ patch:admin.patch(), stamp:admin.stamp() }));
+const desk = createDesk({ isHidden:id => admin.hiddenTask('desk-' + id), heads:() => team.list(), claude, model:MODEL, fallback:FALLBACK, dataDir:DATA_DIR, officeDir:OFFICE_DIR, runnerToken:process.env.HQ_DESK_RUNNER_TOKEN || '' });
 
 /* ---------- prompts ---------- */
 
@@ -378,6 +381,15 @@ const ROUTES = {
     json(res, 200, { ok:true }, { 'set-cookie':cookie('hqa', `${v}.${sign(v)}`, 90 * 86400) });
   },
   'POST logout': (req, res) => json(res, 200, { ok:true }, { 'set-cookie':cookie('hqa', '', 0) }),
+  // the admin panel: the patch over agents.js for the site (public — the same team every visitor sees), the owner's actions
+  'GET office/patch.js': (req, res) => { res.writeHead(200, { 'content-type':'text/javascript; charset=utf-8', 'cache-control':'no-cache' }); res.end(admin.script()); },
+  'GET admin': (req, res, o) => o ? json(res, 200, { patch:admin.patch(), log:admin.log() }) : json(res, 403, { error:'Только для владельца.' }),
+  'POST admin': async (req, res, o) => {
+    if (!o) return json(res, 403, { error:'Только для владельца.' });
+    const b = await jsonBody(req), W = officeWindow(OFFICE_DIR) || {};
+    try { const r = admin.act(b, 'Илья', { list:W.OFFICE_AGENTS?.list || {}, away:W.OFFICE_AGENTS?.away || {} }); json(res, 200, { ok:true, ...r, patch:admin.patch() }); }
+    catch (e) { json(res, 400, { error:e.message }); }
+  },
   // a department head opens the invite link: one-time code → their own login for 90 days
   'POST invite': async (req, res) => {
     if (!PASSWORD) return json(res, 503, { error:'Вход в офис ещё не настроен.' });
@@ -385,6 +397,7 @@ const ROUTES = {
     const { code } = await jsonBody(req);
     const r = team.redeem(code);
     if (!r) return json(res, 400, { error:'Ссылка-приглашение не действует: она уже открыта, устарела или доступ отключён. Попросите новую.' });
+    admin.note(r.user.name, 'вошёл в офис по ссылке-приглашению');
     json(res, 200, { ok:true, user:{ id:r.user.id, name:r.user.name, dept:r.user.dept } }, { 'set-cookie':cookie('hqa', `${r.value}.${sign(r.value)}`, team.LOGIN_DAYS * 86400) });
   },
   // the owner's team screen: heads, their agents, invite links, access on/off
@@ -393,9 +406,14 @@ const ROUTES = {
     if (!o) return json(res, 403, { error:'Только для владельца.' });
     const b = await jsonBody(req), ids = new Set(desk.agents().map(a => a.id));
     const agents = Array.isArray(b.agents) ? b.agents.filter(id => ids.has(id)) : undefined;
-    if (b.action === 'invite') { const r = team.invite({ id:b.id, name:b.name, dept:b.dept, agents }); return json(res, 200, { user:r.user, code:r.code }); }
-    if (b.action === 'update') { const u = team.update(b.id, { name:b.name, agents, disabled:typeof b.disabled === 'boolean' ? b.disabled : undefined }); return u ? json(res, 200, { user:u }) : json(res, 404, { error:'Нет такого сотрудника.' }); }
-    if (b.action === 'remove') return json(res, 200, { ok:team.remove(String(b.id || '')) });
+    const who = team.get(String(b.id || ''))?.name || b.name || b.id;
+    if (b.action === 'invite') { const r = team.invite({ id:b.id, name:b.name, dept:b.dept, agents }); admin.note('Илья', `выдал ссылку-приглашение: ${who}`); return json(res, 200, { user:r.user, code:r.code }); }
+    if (b.action === 'update') {
+      const u = team.update(b.id, { name:b.name, agents, disabled:typeof b.disabled === 'boolean' ? b.disabled : undefined });
+      if (u) admin.note('Илья', typeof b.disabled === 'boolean' ? `${b.disabled ? 'отключил' : 'включил'} доступ: ${who}` : `изменил агентов в управлении: ${who} — ${u.agents.length}`);
+      return u ? json(res, 200, { user:u }) : json(res, 404, { error:'Нет такого сотрудника.' });
+    }
+    if (b.action === 'remove') { admin.note('Илья', `удалил доступ: ${who}`); return json(res, 200, { ok:team.remove(String(b.id || '')) }); }
     json(res, 400, { error:'action' });
   },
   'POST chat': (req, res, o) => chat(req, res, o),

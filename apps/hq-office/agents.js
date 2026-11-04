@@ -10,7 +10,9 @@
      screen    что на мониторе в 3D: code | chart | doc | media | flow | chat | ads | calendar | …
      status    working | thinking | idle — состояние в карточке;  now — «сейчас делает» в карточке (иначе tasks[0])
      tasks     чем агент занят в 3D (по кругу);  out — кому и что он носит: o(кому, что сделал, предмет[, вопрос вам])
-     works     готовые работы-ссылки в досье;  needsInput — ждёт вашего ответа;  figure:false — без фигуры в 3D */
+     works     готовые работы-ссылки в досье;  needsInput — ждёт вашего ответа;  figure:false — без фигуры в 3D
+     control   id руководителя: агент контроля отдела — отчёт владельцу (assistant/desk.mjs → controlReport); задач не берёт,
+               руководителю не подчиняется и в его агенты не входит */
 (() => {
   const o = (to, say, item, ask) => ({ to, say, item, ask });
   const ART = id => 'https://claude.ai/artifact/' + id;
@@ -176,6 +178,11 @@
         o('chats', 'добавил материал в каталог Директа', 'Новый материал'),
         o('head', 'показал идею лид-магнита', 'Идея лид-магнита')],
       works:[['Лид-магнит «Первые 10 000»', 'https://marketing.aicex.club/assets/pages/presentation-svyazka.html'], ['12 рабочих связок', ART('Xs6q7BfiHsmEdYxSAXt9DU')]] },
+    mkcontrol: { dept:'marketing', name:'Контроль маркетинга', role:'Отчёт по отделу и контроль руководителя — владельцу', color:'#c7a4ff', screen:'chart', room:'marketing', night:'marketing', status:'thinking', control:'firuza',
+      now:'Собирает отчёт по отделу',
+      tasks:['Собирает отчёт по отделу', 'Смотрит, что ждёт руководителя', 'Сверяет сроки, правки и оценки'],
+      out:[
+        o('you', 'принёс отчёт по отделу', 'Отчёт по отделу', 'Посмотрите отчёт по отделу')] },
     threads: { dept:'marketing', name:'Threads-ветки', role:'3 ветки в день → материал в Telegram-канале', color:'#e8e8e8', screen:'flow', room:'marketing', night:'marketing', status:'working',
       tasks:['Пишет 3 ветки на завтра', 'Ветка «скилл монтажа» с переходом в канал', 'Перевыпуск победителя с новым хуком'],
       out:[
@@ -226,6 +233,11 @@
         o('analytics', 'передал оплаты дня', 'Оплаты дня'),
         o('head', 'закрыл сделку и принёс отчёт', 'Отчёт по сделкам')],
       works:[['Сообщения перед и после оплаты', null]] },
+    salescontrol: { dept:'sales', name:'Контроль продаж', role:'Отчёт по отделу и контроль руководителя — владельцу', color:'#7ee0b5', screen:'chart', room:'sales', night:'sales', status:'thinking', control:'bogdan',
+      now:'Собирает отчёт по отделу',
+      tasks:['Собирает отчёт по отделу', 'Смотрит, что ждёт руководителя', 'Сверяет сроки, правки и оценки'],
+      out:[
+        o('you', 'принёс отчёт по отделу', 'Отчёт по отделу', 'Посмотрите отчёт по отделу')] },
     academy: { dept:'sales', name:'Академия и внедрение', role:'Треки обучения и офис агентов для клиентов', color:'#6ee7ff', screen:'slides', room:'ceo', night:'ceo', status:'thinking',
       tasks:['Собирает трек «Свой ИИ-офис»', 'Урок по связке', 'Внедрение офиса клиенту'],
       out:[
@@ -240,6 +252,11 @@
       out:[
         o('adreports', 'передал расход и лиды', 'Расход и лиды'),
         o('you', 'подготовил запуск кампании', 'Кампания на 30 000 ₽', 'Согласуйте запуск кампании на 30 000 ₽')] },
+    adscontrol: { dept:'traffic', name:'Контроль рекламы', role:'Отчёт по отделу и контроль руководителя — владельцу', color:'#ffb08a', screen:'chart', room:'ads', night:'ads', status:'thinking', control:'nurken',
+      now:'Собирает отчёт по отделу',
+      tasks:['Собирает отчёт по отделу', 'Смотрит, что ждёт руководителя', 'Сверяет сроки, правки и оценки'],
+      out:[
+        o('you', 'принёс отчёт по отделу', 'Отчёт по отделу', 'Посмотрите отчёт по отделу')] },
     adreports: { dept:'traffic', name:'Отчёты по рекламе', role:'Расходы, лиды и цена лида по дням', color:'#5ad1ff', screen:'chart', room:'analytics', night:'analytics', status:'thinking',
       tasks:['Готовит отчёт за неделю', 'Цена лида по дням', 'Сводка по связкам'],
       out:[
@@ -296,5 +313,30 @@
     ids,
     // агенты отдела в порядке мест
     of:dept => ids.filter(id => list[id].dept === dept && list[id].figure !== false),
+    // изменения из админ-панели владельца (сервер: DATA_DIR/office-patch.json → /api/assistant/office/patch.js, сразу после
+    // этого файла; тот же патч накладывает assistant/office.mjs для диспетчера). Новые агенты — added; правки имени, роли,
+    // цвета, отдела — agents; «в отпуске» (vacation) и удалённые (removed) уходят из офиса и каталога диспетчера, но остаются
+    // в away — история задач и досье их помнят. hiddenTasks — задачи, скрытые от гостей.
+    away:{},
+    patch:null,
+    apply(p) {
+      if (!p || this.patch) return;
+      this.patch = p;
+      for (const [id, a] of Object.entries(p.added || {})) {
+        list[id] = { screen:'doc', status:'working', tasks:['Ждёт первую задачу'], out:[], works:[], ...a, added:true };
+        if (!ids.includes(id)) ids.push(id);
+      }
+      for (const [id, e] of Object.entries(p.agents || {})) {
+        const a = list[id]; if (!a) continue;
+        if (e.dept && e.dept !== a.dept) { delete a.room; delete a.night; }   // другой отдел — комната этого отдела
+        for (const k of ['name', 'role', 'color', 'dept']) if (e[k]) a[k] = e[k];
+      }
+      for (const id of [...(p.vacation || []), ...(p.removed || [])]) {
+        if (!list[id]) continue;
+        this.away[id] = { ...list[id], away:(p.removed || []).includes(id) ? 'removed' : 'vacation' };
+        delete list[id];
+        const i = ids.indexOf(id); if (i >= 0) ids.splice(i, 1);
+      }
+    },
   };
 })();
