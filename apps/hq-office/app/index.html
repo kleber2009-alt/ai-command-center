@@ -252,7 +252,7 @@ function workCard(t) {
     <span class="tt">${esc(t.route?.title || t.text)}</span><span class="sub">${esc(t.agent?.name || 'Диспетчер')} — ${esc(t.status === 'queued' ? (t.queuePos > 1 ? `${t.queuePos}-я в очереди` : 'в очереди') : lastStep(t) || 'работает')}</span></span></span>${bars(t)}</button>`;
 }
 function home() {
-  const need = S.tasks.filter(needOf), work = S.tasks.filter(t => t.status === 'work' || t.status === 'routing'), queue = S.tasks.filter(t => t.status === 'queued'), err = S.tasks.filter(t => t.status === 'error');
+  const need = S.tasks.filter(needOf), work = S.tasks.filter(t => t.status === 'work' || t.status === 'routing'), queue = S.tasks.filter(t => t.status === 'queued' || t.status === 'paused'), err = S.tasks.filter(t => t.status === 'error');
   const today = new Date().toDateString(), runs = S.tasks.flatMap(t => t.runs || []).filter(r => new Date(r.at).toDateString() === today);
   const doneToday = S.tasks.filter(t => t.status === 'done' && new Date(t.updated).toDateString() === today).length;
   const bill = S.tasks.find(t => t.routine === 'billing-daily'), alerts = bill?.alerts, warn = alerts && ((alerts.critical || []).length + (alerts.warn || []).length);
@@ -273,7 +273,7 @@ function home() {
     </div></main>`;
 }
 function tasksScreen() {
-  const G = { need:S.tasks.filter(needOf), work:S.tasks.filter(t => ['work', 'queued', 'routing'].includes(t.status)), done:S.tasks.filter(t => t.status === 'done' || t.status === 'cancelled'), all:S.tasks };
+  const G = { need:S.tasks.filter(needOf), work:S.tasks.filter(t => ['work', 'queued', 'routing', 'paused'].includes(t.status)), done:S.tasks.filter(t => t.status === 'done' || t.status === 'cancelled'), all:S.tasks };
   const F = [['need', 'Ждут'], ['work', 'Работа'], ['done', 'Готово'], ['all', 'Все']];
   const list = G[S.filter] || G.all;
   return header('Рабочий стол', 'Задачи') + `<main><div class="seg">${F.map(([k, l]) => `<button class="${S.filter === k ? 'on' : ''}" data-a="seg" data-f="${k}">${l} <span style="opacity:.75">${G[k].length}</span></button>`).join('')}</div>

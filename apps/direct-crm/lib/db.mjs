@@ -42,7 +42,23 @@ export function openDb(dir) {
     );
     CREATE INDEX IF NOT EXISTS events_chat ON events(chat_id, at);
     CREATE TABLE IF NOT EXISTS meta (key TEXT PRIMARY KEY, value TEXT);
+    -- ChatPlace automations (code words → steps → buttons) with their counts, refreshed one request at a time
+    CREATE TABLE IF NOT EXISTS bots (id TEXT PRIMARY KEY, name TEXT, username TEXT, platform TEXT, updated INTEGER);
+    CREATE TABLE IF NOT EXISTS automations (
+      id TEXT PRIMARY KEY, bot_id TEXT, name TEXT, status TEXT, start_messages TEXT, detail TEXT,
+      listed INTEGER, detailed INTEGER DEFAULT 0
+    );
+    -- a daily copy of every automation's counts: growth of each step and button over a period
+    CREATE TABLE IF NOT EXISTS funnel_days (automation_id TEXT, day TEXT, counts TEXT, PRIMARY KEY(automation_id, day));
+    -- questions the ChatPlace AI agent could not answer, and what we answered
+    CREATE TABLE IF NOT EXISTS kb_questions (
+      id TEXT PRIMARY KEY, bot_id TEXT, question TEXT, first_seen INTEGER, gone INTEGER DEFAULT 0,
+      draft TEXT, answer TEXT, answered_at INTEGER, answered_by TEXT, skipped INTEGER DEFAULT 0
+    );
   `);
+  // columns added after the first release
+  const have = new Set(db.prepare('PRAGMA table_info(chats)').all().map(c => c.name));
+  for (const [c, t] of [['lead_score', 'INTEGER'], ['interest', 'TEXT'], ['objection', 'TEXT'], ['contact', 'TEXT']]) if (!have.has(c)) db.exec(`ALTER TABLE chats ADD COLUMN ${c} ${t}`);
   return db;
 }
 
