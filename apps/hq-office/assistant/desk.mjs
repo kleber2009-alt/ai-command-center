@@ -182,7 +182,9 @@ export function createDesk({ claude, model, fallback, dataDir, officeDir, runner
   const taskDir = id => path.join(DIR, 'tasks', id);
   // the owner's Telegram (tg.mjs): questions, results and errors with buttons — created first, emit() uses it from the start
   const tg = telegram || createTelegram({ token:process.env.HQ_NOTIFY_TG_TOKEN, chat:process.env.HQ_NOTIFY_TG_CHAT, own:/^(1|true|yes)$/i.test(process.env.HQ_NOTIFY_TG_OWN || ''),
-    publicUrl:PUBLIC_URL, dataDir:DIR, act, get:id => { const t = byId(id); return t ? view(t) : null; }, createTask });
+    publicUrl:PUBLIC_URL, dataDir:DIR, act, get:id => { const t = byId(id); return t ? view(t) : null; }, createTask,
+    // the result's files on disk: the materials go to the chat as an album, a video or a document
+    fileOf:(id, v, p) => { const rel = safeRel(p); return rel ? path.join(taskDir(id), 'v' + v, rel) : ''; } });
 
   /* ---------- the catalog: agents of the office, their skills and example tasks ---------- */
 
@@ -209,7 +211,7 @@ export function createDesk({ claude, model, fallback, dataDir, officeDir, runner
         const c = AC[id] || {}, seen = new Set();
         const skills = [...(c.skills || []), ...(WS[id] || []), ...EXTRA.filter(s => (s.agents || []).includes(id))]
           .filter(s => s?.name && !seen.has(s.name) && seen.add(s.name));
-        const a = { id, name:CAT[id]?.name || id, role:CAT[id]?.role || '', dept:d.id, deptName:d.name, lead:c.lead || '' };
+        const a = { id, name:CAT[id]?.name || id, role:CAT[id]?.role || '', color:CAT[id]?.color || '', dept:d.id, deptName:d.name, lead:c.lead || '' };
         agents.push(a);
         lines.push(`- ${a.name} (${id}): ${a.role}. ${a.lead}`,
           skills.length ? `  Скиллы: ${skills.map(s => `${s.name} — ${s.title}`).join('; ')}` : '  Скиллы: нет',
@@ -275,9 +277,8 @@ export function createDesk({ claude, model, fallback, dataDir, officeDir, runner
   }
   function emit(t, { soon = false } = {}) {
     t.updated = now(); save(soon);
-    // the owner's Telegram: once per new question, result version or error
-    const key = ['question', 'review', 'error'].includes(t.status) ? `${t.status}:${t.question?.text || ''}:${t.result?.version || 0}:${t.error || ''}` : '';
-    if (key && t.notified !== key) { t.notified = key; tg.notify(view(t)); }
+    // the owner's Telegram: the card of the task follows its status (steps of a running task — not)
+    if (!soon) tg.sync(view(t));
     const line = `data: ${JSON.stringify({ t:'task', task:view(t) })}\n\n`;
     for (const res of clients) if (!(t.control && res.head)) res.write(line);
   }
@@ -1173,7 +1174,7 @@ h1{font-size:24px;margin:0 0 4px}small{color:#9aa3b5}h2{font-size:17px;margin:26
 
     /* owner */
     if (!isOwner && !head) return json(res, 403, { error:'Ставить задачи агентам могут владелец и руководители отделов — войдите.' });
-    if (M === 'GET' && rest === 'tasks') return json(res, 200, { tasks:tasks.filter(t => !(head && t.control)).slice(0, 60).map(view), runner:runnerView(), agents:catalog().agents.map(a => ({ id:a.id, name:a.name, dept:a.dept, role:a.role })), pipelines:pipelinesView() });
+    if (M === 'GET' && rest === 'tasks') return json(res, 200, { tasks:tasks.filter(t => !(head && t.control)).slice(0, 60).map(view), runner:runnerView(), agents:catalog().agents.map(a => ({ id:a.id, name:a.name, dept:a.dept, deptName:a.deptName, role:a.role, color:a.color })), pipelines:pipelinesView() });
     if (M === 'GET' && rest === 'stats') { const m = url.searchParams.get('month') || ''; return json(res, 200, stats(/^\d{4}-\d{2}$/.test(m) ? m : undefined)); }
     if (M === 'GET' && rest === 'lessons') {
       const id = url.searchParams.get('agent') || '';
