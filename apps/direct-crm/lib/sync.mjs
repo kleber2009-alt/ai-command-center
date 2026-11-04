@@ -6,7 +6,7 @@ import { now, tx, meta } from './db.mjs';
 const num = v => Number(v) || 0;
 const isClient = side => side === 'client' || side === 'user' || side === 'contact';
 
-export function createSync({ db, cp, backfillDays = 14, maxPages = 40, log = console.log }) {
+export function createSync({ db, cp, backfillDays = 14, maxPages = 40, backfillPages = 10, log = console.log }) {
   let running = null;
 
   const upsertChat = db.prepare(`
@@ -59,7 +59,7 @@ export function createSync({ db, cp, backfillDays = 14, maxPages = 40, log = con
       if (r.known || arr.length < 50) break;
     }
     refreshStats(chat.id, chat.last_message_at);
-    if (!chat.username) {
+    if (!chat.username && !chat.noProfile) {
       try { const d = await cp.getChat(chat.id); if (d?.username) setUsername.run(d.username, chat.id); } catch {}
     }
     return fresh;
@@ -94,7 +94,42 @@ export function createSync({ db, cp, backfillDays = 14, maxPages = 40, log = con
     if (top) meta(db, 'watermark', Math.max(top, num(meta(db, 'watermark'))));
     meta(db, 'synced_once', 1);
     meta(db, 'last_sync', now());
-    return { chats:changed.length, messages:fresh, firstRun };
+    const back = await backfill();
+    return { chats:changed.length + back.chats, messages:fresh + back.messages, firstRun, backfill:back.done ? 'done' : back.chats };
+  }
+
+  /* History older than what one pass takes (maxPages × 50 chats): every pass continues chats_list from the oldest chat
+     we keep, backfillPages pages at a time, until it reaches BACKFILL_DAYS back. Profiles (username) are not asked
+     for these old chats — one request less per chat. */
+  const oldest = db.prepare('SELECT id, last_message_at FROM chats ORDER BY last_message_at ASC, id ASC LIMIT 1');
+  async function backfill() {
+    if (meta(db, 'backfill_done')) return { chats:0, messages:0, done:true };
+    const floor = now() - backfillDays * 86400;
+    let pages = 0, saved = 0, fresh = 0, done = false;
+    while (pages++ < backfillPages) {
+      const o = oldest.get();
+      if (!o || o.last_message_at < floor) { done = true; break; }
+      const res = await cp.listChats({ limit:50, lastItemId:o.id, lastItemTimestamp:o.last_message_at });
+      const items = (res?.items || []).filter(c => c.id !== o.id);
+      const rows = [];
+      let older = false;
+      tx(db, () => {
+        for (const c of items) {
+          const at = num(c.lastMessageAt);
+          if (at < floor) { older = true; continue; }
+          upsertChat.run(c.id, c.clientId || null, c.clientName || null, c.username || null, num(c.status), num(c.type), at, now());
+          const row = getChat.get(c.id);
+          if (at > row.synced_upto) rows.push({ ...row, noProfile:true });
+        }
+      });
+      for (const chat of rows) {
+        try { fresh += await pullMessages(chat); saved++; }
+        catch (e) { log(`backfill: chat ${chat.id}: ${e.message}`); }
+      }
+      if (older || !res?.hasNextItems || !items.length) { done = true; break; }
+    }
+    if (done) { meta(db, 'backfill_done', 1); log('backfill: history is complete'); }
+    return { chats:saved, messages:fresh, done };
   }
 
   return {

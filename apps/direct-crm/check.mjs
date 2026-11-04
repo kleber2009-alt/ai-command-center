@@ -44,7 +44,13 @@ const mcp = http.createServer(async (req, res) => {
     const { name, arguments:a } = b.params;
     calls.push(name);
     let data;
-    if (name === 'chats_list') data = { items:[...chats].sort((x, y) => y.lastMessageAt - x.lastMessageAt), hasNextItems:false };
+    if (name === 'chats_list') {
+      // keyset pagination like ChatPlace: newest first, after (lastItemTimestamp, lastItemId)
+      let all = [...chats].sort((x, y) => y.lastMessageAt - x.lastMessageAt || (x.id < y.id ? -1 : 1));
+      if (a.lastItemId) { const i = all.findIndex(c => c.id === a.lastItemId); all = all.slice(i + 1); }
+      const page = all.slice(0, a.limit || 20), last = page.at(-1);
+      data = { items:page, hasNextItems:all.length > page.length, lastItemId:last?.id, lastItemTimestamp:String(last?.lastMessageAt || '') };
+    }
     if (name === 'chats_messages') data = (msgs[a.chatId] || []).slice((a.page - 1) * a.limit, a.page * a.limit);
     if (name === 'chats_get') data = { ...chats.find(c => c.id === a.chatId), username:'user_' + a.chatId };
     if (name === 'chats_open') { chats.find(c => c.id === a.chatId).type = 1; data = { ok:true }; }
@@ -167,6 +173,21 @@ assert.equal(r.body.ai.graded, 2); assert.equal(r.body.ai.issues.ignored_questio
 assert.equal(r.body.manual.replies, 1);
 const ev = db.prepare('SELECT kind FROM events ORDER BY id').all().map(e => e.kind);
 assert.deepEqual(ev, ['reply', 'stage', 'release']);
+
+// 8. a long history: one page per pass, the rest comes by backfill from the oldest chat we keep
+const saved = chats.splice(0);
+for (let i = 0; i < 120; i++) { chats.push({ id:'h' + i, clientId:'x' + i, clientName:'К' + i, status:1, type:2, lastMessageAt:T - 3600 - i * 600 }); msgs['h' + i] = [{ id:'hm' + i, side:'client', message:'слово ' + i, createdAt:T - 3600 - i * 600, mediaFiles:[] }]; }
+chats.push({ id:'h-old', clientId:'xo', clientName:'Старый', status:1, type:2, lastMessageAt:T - 30 * 86400 }); msgs['h-old'] = [];
+const dir2 = fs.mkdtempSync(path.join(os.tmpdir(), 'dcrm-')), db2 = openDb(dir2);
+const sync2 = createSync({ db:db2, cp, backfillDays:14, maxPages:1, backfillPages:1, log:() => {} });
+const count = () => db2.prepare('SELECT COUNT(*) n FROM chats').get().n;
+let p = await sync2.run(); assert.equal(count(), 100, 'first pass: one page + one backfill page'); assert.notEqual(p.backfill, 'done');
+p = await sync2.run(); assert.equal(count(), 120); assert.equal(p.backfill, 'done');
+assert.equal(db2.prepare('SELECT COUNT(*) n FROM messages').get().n, 120);
+assert.equal(db2.prepare("SELECT COUNT(*) n FROM chats WHERE id = 'h-old'").get().n, 0, 'older than BACKFILL_DAYS stays out');
+p = await sync2.run(); assert.equal(p.chats, 0);
+db2.close(); fs.rmSync(dir2, { recursive:true, force:true });
+chats.splice(0, chats.length, ...saved);
 
 await call('/logout', {}); cookie = '';
 assert.equal((await call('/me')).status, 401);
