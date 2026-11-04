@@ -68,13 +68,15 @@ export const projects = [
     description:
       'Расшифровка любого видео по ссылке в 4 артефакта: IG-карусель 8×PNG, Reels-сценарий, TG-пост, перевод на 50+ языков. Доп.фича: /clone <url> — viral_clone pipeline ' +
       '(yt-dlp → Whisper → Claude rewrite → HeyGen → Submagic Hormozi 2). Free 60 мин/мес, Pro 750⭐/30 дней через Telegram Stars.\n\n' +
-      'Архитектура: контейнер infra-transcribe-1 (Next.js), БД aio в infra-postgres-1, скачивание через yt-dlp service и Apify; Mini App tma.aicex.club. Деплой deploy-transcribe.yml.',
+      'Архитектура: контейнер infra-transcribe-1 (Next.js), БД aio в infra-postgres-1, скачивание через yt-dlp service и Apify; Mini App tma.aicex.club. Деплой deploy-transcribe.yml.\n\n' +
+      'Тот же модуль расшифровки для офиса и скиллов — скилл transcribe-reference (yt-dlp/Apify → ElevenLabs Scribe → OpenAI → faster-whisper): агент «Транскрибатор» в hq2 ставится первым, когда в задаче ссылка на ролик.',
     technologies: ['Next.js', 'Whisper', 'Claude', 'HeyGen', 'Submagic', 'Telegram Stars', 'TMA', 'Postgres'],
     links: [
       live('https://transcribe.aicex.club/', 'Приложение'),
       live('https://tma.aicex.club/', 'Mini App'),
       live('https://landings.aicex.club/transcribe/', 'Лендинг'),
       bot('your_transscribe_bot'),
+      code('.claude/skills/transcribe-reference', 'Скилл transcribe-reference (Транскрибатор офиса)'),
       code('apps/transcribe'), md('apps/transcribe/CLAUDE.md', 'CLAUDE.md'), wf('deploy-transcribe.yml'),
     ],
   },
@@ -93,11 +95,14 @@ export const projects = [
   },
   {
     slug: 'remake-site', name: 'Ремейк залёта', emoji: '🔁', status: 'production', sort_order: 32,
-    tagline: 'Свой залетевший рилс → новый сценарий → аватар HeyGen → монтаж Кадрика',
+    tagline: 'Залёт (свой или конкурента) → новый сценарий → аватар HeyGen → монтаж Кадрика; сайт + ветка в Telegram',
     description:
       'Скилл remake-top-reel и сайт remake.aicex.club. Вкладка «Прогоны» — как топ-рилс @ilia.paliy (говорящая голова с кодовым словом) превращается в новый: отбор, расшифровка, ' +
       'сценарий «было/стало», проверка, аватар, монтаж. Вкладка «Студия» (по паролю): референс файлом или ссылкой → расшифровка ElevenLabs → «Сценарий 2.0» Claude с гейтом скилла → ' +
       'образ и голос из HeyGen → монтаж через API Студии Кадрика → скачать 1080×1920.\n\n' +
+      'Ветка «Instagram Reels» в Telegram (reels-bot.mjs): каждое утро залёты конкурентов (сила = просмотры / медиана автора) → карточка с новым хуком и сценарием 2.0, ' +
+      'кнопки ✅ / ✏️ (текстом или голосом) / 🔄 Хук / ♻️ Другой / 📎 Материалы / ⏰ Слот / 🎨 Стиль → HeyGen → монтаж → готовое видео файлом в ветку и напоминание к слоту 12:00 / 19:00. ' +
+      'Ветка «Instagram Карусели» (carousel-bot.mjs, скилл carousel-pro) выключена в деплое: все карусели — в @caruselclaude_bot.\n\n' +
       'Архитектура: контейнеры aicex-remake-site (статика) и aicex-remake-api (node + ffmpeg + python3 + yt-dlp, server.mjs + studio.mjs), блок /opt/edge/sites/remake-site.caddy. ' +
       'Секреты REMAKE_SITE_TOKEN/PASSWORD, ключи HeyGen/ElevenLabs/Anthropic; ключ монтажа — из .env Кадрика. Деплой deploy-remake-site.yml.',
     technologies: ['Node.js', 'ffmpeg', 'yt-dlp', 'ElevenLabs', 'HeyGen', 'Claude', 'Caddy'],
@@ -105,6 +110,8 @@ export const projects = [
       live('https://remake.aicex.club', 'Сайт: прогоны и студия'),
       api('https://remake.aicex.club/api/health', 'API health'),
       art('TzpSjDViTsbwJqjJ8bmRtf', 'Ремейк залёта (прогоны)'),
+      live('https://projects.aicex.club/modules/remake-top-reel', 'Готовый модуль: Ремейк залёта'),
+      live('https://projects.aicex.club/modules/reels-telegram', 'Готовый модуль: ветка Reels в Telegram'),
       code('apps/remake-site'), code('.claude/skills/remake-top-reel', 'Скилл remake-top-reel'),
       md('apps/remake-site/CLAUDE.md', 'CLAUDE.md'), wf('deploy-remake-site.yml'),
     ],
@@ -294,12 +301,15 @@ export const projects = [
     slug: 'command-center', name: 'AI Command Center', emoji: '🎛', status: 'production', sort_order: 150,
     tagline: 'Этот дашборд — каталог всех проектов с roadmap',
     description:
-      'Хаб проектов: описание, статус, ссылки, архитектура и редактируемый roadmap каждого проекта. Единая точка входа во всю инфраструктуру.\n\n' +
+      'Хаб проектов: описание, статус, ссылки, архитектура и редактируемый roadmap каждого проекта. Единая точка входа во всю инфраструктуру. ' +
+      'Раздел «Готовые модули» (/modules) — каталог готовых связок «вход → результат» (ремейк залёта, Reels в Telegram, рилс под ключ, Карусель Pro, Транскрибатор, утренние агенты и др.) ' +
+      'с шагами, блоками, точками запуска и мини-презентацией каждой (/modules/<связка>); данные — src/modules/bundles.ts. Также разделы «Балансы» и «Боты».\n\n' +
       'Архитектура: Next.js 14 (контейнер command-center, :3005), таблицы projects / project_milestones в БД aisales. Реестр в репозитории — apps/command-center/registry/projects.mjs, ' +
       'заливается скриптом registry/sync.mjs. Деплой deploy-command-center.yml.',
     technologies: ['Next.js 14', 'TypeScript', 'pg', 'Postgres', 'Tailwind'],
     links: [
       live('https://projects.aicex.club/dashboard', 'Дашборд'),
+      live('https://projects.aicex.club/modules', 'Готовые модули'),
       api('https://projects.aicex.club/api/projects', 'API /api/projects'),
       code('apps/command-center'), code('apps/command-center/registry', 'Реестр проектов'), arch, wf('deploy-command-center.yml'),
     ],
@@ -366,23 +376,47 @@ export const projects = [
   // ── Офис агентов ─────────────────────────────────────────────────────────
   {
     slug: 'hq-office', name: 'Живой офис агентов', emoji: '🏙️', status: 'production', sort_order: 12,
-    tagline: '3D-офис: агенты носят друг другу работы, история реальных задач с доказательствами',
+    tagline: '34 ИИ-агента в 3D-офисе: задачи голосом, конвейеры, контроль качества, двойник, история реальных работ',
     description:
-      'hq2.aicex.club — open-space офиса AICEX: отделы (CEO, маркетинг, продажи, реклама Meta), руководители и агенты, досье и скиллы, история реальных задач с PR, артефактами Claude и сайтами. ' +
-      'hq.aicex.club — первая версия: отделы, досье агентов, демо-презентации, игровой режим «Офис растёт с тобой» (?game). Голосовой ассистент и рабочий стол: задачи агентам прямо из офиса.\n\n' +
+      'hq2.aicex.club — офис AICEX в двух стилях: «Волна» (7 стеклянных комнат отделов, диспетчерская с голограммой двойника в центре, переговорная 8 легенд бизнеса) и «Ночной Сити». ' +
+      '34 агента, у каждого свой стол, досье, скиллы и закреплённые продукты реестра; история реальных задач с PR, артефактами Claude и сайтами.\n\n' +
+      'Рабочий стол (только владелец): задача голосом или текстом → диспетчер выбирает агента и скилл → Claude Code со скиллами на сервере → контролёр качества → проверка владельцем → история. ' +
+      'Перед монтажом, рилсом или каруселью спрашивает стиль. Ссылка на ролик — сначала Транскрибатор (скилл transcribe-reference). Конвейеры: «Рилс под ключ» (сценарий → аватар HeyGen → монтаж → подпись) ' +
+      'и «Оффер → лендинг» (Хормози → совет легенд → лендинг). Затраты ($ и время) по задачам и за месяц, уроки агентов из правок и оценок, MCP-системы исполнителя с подтверждением действий, правки голосом, материалы к задачам. ' +
+      'Утренние агенты: «Балансы и подписки» 08:50 и «Статистика соцсетей» 09:10 МСК — итоги в Telegram. Режим гостя: офис и готовые решения без кода и ноу-хау; телефон — как мобильное приложение.\n\n' +
+      'hq.aicex.club — первая версия: отделы, досье агентов, демо-презентации, игровой режим «Офис растёт с тобой» (?game).\n\n' +
       'Архитектура: статика без сборки (Three.js), контейнеры aicex-hq-office (сайт) и aicex-hq-assistant (/api/assistant/*: Claude SDK + голос ElevenLabs), служба hq-runner ' +
       '(исполняет задачи рабочего стола через Claude Code со скиллами под пользователем ботов), блок /opt/edge/sites/hq-office.caddy. История из PR — воркфлоу hq-office-history.yml (sync/sync.mjs → tasks.auto.js). Деплой deploy-hq-office.yml.',
     technologies: ['Three.js', 'Node.js', 'Claude SDK', 'ElevenLabs', 'Claude Code', 'Caddy'],
     links: [
       live('https://hq2.aicex.club', 'Живой офис v2 (hq2)'),
+      live('https://hq2.aicex.club/twin/', 'Цифровой двойник'),
       live('https://hq.aicex.club', 'Виртуальный офис v1 (hq)'),
       live('https://hq.aicex.club/?game', 'Игровой режим «Офис растёт с тобой»'),
       art('USUnYCP83rryz642mYnFjc', 'Живой офис AICEX'),
       art('7FTMzSseUbDHJDfb5xgkEP', 'Виртуальный офис агентов'),
       art('LZDnz2r6xEpr2GkDZpz1J8', 'Офис растёт с тобой'),
       art('8aGHjCzKk6odhv6D6W4Aj2', 'Офис растёт с тобой 3D'),
+      live('https://projects.aicex.club/modules/office-desk', 'Готовый модуль: задача агенту'),
       code('apps/hq-office'), md('apps/hq-office/CLAUDE.md', 'CLAUDE.md'), code('.claude/skills/hq-history', 'Скилл hq-history'),
+      code('.claude/skills/social-daily-stats', 'Скилл social-daily-stats'), code('.claude/skills/service-balances', 'Скилл service-balances'),
       wf('deploy-hq-office.yml'), wf('hq-office-history.yml', 'История задач из PR'),
+    ],
+  },
+  {
+    slug: 'digital-twin', name: 'Цифровой двойник', emoji: '🧠', status: 'production', sort_order: 13,
+    tagline: 'Двойник Ильи и Claude: знает весь бизнес, говорит голосом, ставит задачи Claude Code',
+    description:
+      'hq2.aicex.club/twin/ — цифровой двойник: разговор голосом или текстом (потоковое распознавание ElevenLabs Scribe, ответ клоном голоса), камера по «посмотри», 25 дизайнов (twin/concepts.html). ' +
+      'Знает бизнес: база знаний из реестра проектов, README/CLAUDE.md монорепо, лендингов и скиллов + свои материалы Ильи (кнопка «Материалы», выгрузки claude.ai) и память «Интервью». ' +
+      'Пульт Claude Code: запускает задачи исполнителю, отвечает на вопросы агентов, принимает работу. В офисе — голограмма над диспетчерской, видит рабочий стол и агентов. Без входа — демо «утро с двойником».\n\n' +
+      'Архитектура: часть hq-office — страница twin/, сервер aicex-hq-assistant (/api/assistant/chat с twin:true, assistant/twin.mjs, kb.mjs), исполнитель hq-runner.',
+    technologies: ['Claude SDK', 'ElevenLabs', 'Web Speech', 'Three.js', 'Claude Code'],
+    links: [
+      live('https://hq2.aicex.club/twin/', 'Двойник'),
+      live('https://hq2.aicex.club/twin/concepts.html', '25 дизайнов двойника'),
+      live('https://projects.aicex.club/modules/digital-twin', 'Готовый модуль: двойник'),
+      md('apps/hq-office/CLAUDE.md', 'CLAUDE.md (раздел «Двойник»)'), code('apps/hq-office/assistant', 'Код ассистента'),
     ],
   },
   {
@@ -454,7 +488,9 @@ export const projects = [
     slug: 'karusel-bot', name: 'Бот каруселей', emoji: '🖼️', status: 'production', sort_order: 37,
     tagline: 'Карусели Instagram: 24 стиля, бот и мини-апп',
     description:
-      '@caruselclaude_bot: карусели в 24 стилях по тексту или теме, мини-апп выбора стиля. Скилл каруселей встроен в Persona Studio; ремикс своих каруселей — скилл ilia-carousel-style.\n\n' +
+      '@caruselclaude_bot: карусели в 24 стилях по тексту или теме и «Мой блог», мини-апп выбора стиля — единственный бот каруселей. Скилл каруселей встроен в Persona Studio. ' +
+      'Карусели из залётов — скилл carousel-pro («Карусель Pro»): свои вышедшие (ремикс с новой обложкой, хуком и CTA, объединил ilia-carousel-style) и конкурентов (их формат в стиле Ильи), ' +
+      'план → ✅ → слайды 1080×1350; в офисе hq2 — у агента каруселей.\n\n' +
       'Архитектура: бот на сервере ботов, код — aicex-library/results/karusel-bot.',
     technologies: ['Python', 'Telegram Mini App', 'Claude', 'HTML → PNG'],
     links: [
@@ -463,6 +499,8 @@ export const projects = [
       art('7BHNqZLNvpCpP9fLhkQiRv', 'Анализ публикаций и 5 идей каруселей'),
       art('Sou97jmxHzjre798egTRjC', '3 карусели: тексты по слайдам'),
       lib('results/karusel-bot', 'Код (aicex-library)'),
+      code('.claude/skills/carousel-pro', 'Скилл carousel-pro'),
+      live('https://projects.aicex.club/modules/carousel-pro', 'Готовый модуль: Карусель Pro'),
     ],
   },
   {
@@ -477,7 +515,9 @@ export const projects = [
     tagline: 'Готовые скиллы для Claude: монтаж, карусели, лендинги — skills.aicex.club',
     description:
       'Лендинг «Медь» пака скиллов и сама библиотека aicex-library (110 скиллов, 28 проектов, закрыто). Скиллы монтажа (Remotion: промо-история, неон-схема, UI-motion, длинное видео YouTube), ' +
-      'каруселей, 5 стилей лендингов эксперта (Золото, Светлый, Неон, Постер, Изумруд), лид-магнитов. Ставятся в ~/.claude/skills на сервере ботов и у клиента.',
+      'каруселей, 5 стилей лендингов эксперта (Золото, Светлый, Неон, Постер, Изумруд), лид-магнитов. Ставятся в ~/.claude/skills на сервере ботов и у клиента.\n\n' +
+      'Скиллы проекта в монорепо (.claude/skills): remake-top-reel (ремейк залёта), carousel-pro (карусели из залётов), transcribe-reference (Транскрибатор), social-daily-stats (статистика соцсетей), ' +
+      'service-balances (балансы и подписки), hq-history (история офиса), three-technical-illustration (3D взрыв-схемы на Three.js). Как скиллы складываются в готовые решения — раздел «Готовые модули» дашборда.',
     technologies: ['Claude Code', 'Skills', 'Remotion', 'Cloudflare'],
     links: [
       live('https://skills.aicex.club', 'skills.aicex.club'),
@@ -485,6 +525,7 @@ export const projects = [
       art('8Sx4z7NmqWs6CnjieSbEHJ', 'Пакет скиллов по монтажу видео'),
       art('F5cjiWb2ss8AvaC3uF3CHi', 'Лендинги эксперта: 5 стилей'),
       code('.claude/skills', 'Скиллы проекта в монорепо'),
+      live('https://projects.aicex.club/modules', 'Готовые модули (связки)'),
     ],
   },
 

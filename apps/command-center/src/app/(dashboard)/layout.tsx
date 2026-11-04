@@ -73,7 +73,8 @@ export default function DashboardLayout({ children }: { children: React.ReactNod
           {nav.map(({ href, icon: Icon, label }) => {
             const active =
               path === href ||
-              (href === '/dashboard' && path.startsWith('/projects'))
+              (href === '/dashboard' && path.startsWith('/projects')) ||
+              (href === '/modules' && path.startsWith('/modules/'))
             return (
               <Link key={href} href={href}
                 className={`flex items-center gap-3 px-3 py-2 rounded-lg text-sm transition-all ${
