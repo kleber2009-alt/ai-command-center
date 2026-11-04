@@ -758,6 +758,7 @@
   /* форма новой задачи */
   .nt{display:grid;gap:14px}
   .nt-box{border-radius:16px;border:1px solid var(--line);background:rgba(0,0,0,.26);transition:border-color .2s,box-shadow .2s}
+  .nt-hint{font-size:12.5px;color:var(--ink-3)}
   .nt-box.on{border-color:#8fb8ff;background:rgba(143,184,255,.07)}
   .nt-box:focus-within{border-color:rgba(143,184,255,.6);box-shadow:0 0 0 4px rgba(47,123,255,.14)}
   .nt-box textarea{border:0!important;background:transparent!important;min-height:130px;font-size:15.5px!important;padding:14px 16px!important}
@@ -4596,7 +4597,7 @@ function openDeskNew({ agent = '', text = '' } = {}) {
     <p>Опишите своими словами, что нужно. Остальное офис сделает сам — и принесёт результат к вашему столу.</p>`;
   $('kBody').innerHTML = `<div class="nt">
     <div class="nt-box" id="kDrop"><input type="file" id="kFile" multiple hidden><textarea id="kText" aria-label="Что сделать" placeholder="Например: вот рилс конкурента https://… — сделай сценарий в моём стиле с кодовым словом ОФИС">${esc(text)}</textarea>
-      <div class="nt-bar"><label for="kFile">${ico('<path d="M21 11.5l-8.6 8.6a5.5 5.5 0 0 1-7.8-7.8l8.6-8.6a3.7 3.7 0 0 1 5.2 5.2l-8.6 8.6a1.8 1.8 0 0 1-2.6-2.6l7.9-7.9"/>')}Материалы</label>
+      <div class="nt-bar"><label for="kFile">${ico('<path d="M21 11.5l-8.6 8.6a5.5 5.5 0 0 1-7.8-7.8l8.6-8.6a3.7 3.7 0 0 1 5.2 5.2l-8.6 8.6a1.8 1.8 0 0 1-2.6-2.6l7.9-7.9"/>')}Материалы</label><span class="nt-hint">${isMobile ? '' : 'или Ctrl+V — скриншот, файл'}</span>
         <span class="ln" id="kLink" hidden>${ico(I.video)}ссылка на ролик — сначала расшифровка</span></div></div>
     <ul class="files" id="kFiles"></ul>
     <div class="chipsrow dk-ex">${DESK_EXAMPLES.map(x => `<button type="button" data-ex="${esc(x)}">${esc(x)}</button>`).join('')}</div>
@@ -4642,7 +4643,7 @@ function ntPickList() {
   }).join('') || '<p class="empty">Такого агента нет — оставьте выбор диспетчеру.</p>';
 }
 // материалы к правке или ответу — та же загрузка, что в форме новой задачи
-const deskAttachHTML = () => `<label class="drop dk-attach" id="kDrop"><input type="file" id="kFile" multiple hidden><svg viewBox="0 0 24 24"><path d="M21 11.5l-8.6 8.6a5.5 5.5 0 0 1-7.8-7.8l8.6-8.6a3.7 3.7 0 0 1 5.2 5.2l-8.6 8.6a1.8 1.8 0 0 1-2.6-2.6l7.9-7.9"/></svg>Прикрепить материалы — или перетащите файлы сюда</label><ul class="files" id="kFiles"></ul>`;
+const deskAttachHTML = () => `<label class="drop dk-attach" id="kDrop"><input type="file" id="kFile" multiple hidden><svg viewBox="0 0 24 24"><path d="M21 11.5l-8.6 8.6a5.5 5.5 0 0 1-7.8-7.8l8.6-8.6a3.7 3.7 0 0 1 5.2 5.2l-8.6 8.6a1.8 1.8 0 0 1-2.6-2.6l7.9-7.9"/></svg>Прикрепить материалы — перетащите файлы сюда или вставьте Ctrl+V</label><ul class="files" id="kFiles"></ul>`;
 function deskBindDrop() {
   const drop = $('kDrop'), inp = $('kFile');
   if (!drop || drop._bound) return renderUploads();
@@ -4652,6 +4653,24 @@ function deskBindDrop() {
   drop.ondragleave = () => drop.classList.remove('on');
   drop.ondrop = e => { e.preventDefault(); drop.classList.remove('on'); [...(e.dataTransfer?.files || [])].forEach(deskUpload); };
   renderUploads();
+}
+// Ctrl+V / Cmd+V: скриншот или скопированный файл становится материалом задачи;
+// текст (и текст из Word/страниц, где рядом лежит картинка-копия) вставляется как обычно
+document.addEventListener('paste', e => deskPaste(e));
+function deskPaste(e) {
+  if (!$('kFile') || $('deskModal').hidden) return;
+  const cd = e.clipboardData; if (!cd) return;
+  const files = [...(cd.files || [])].length ? [...cd.files] : [...(cd.items || [])].filter(i => i.kind === 'file').map(i => i.getAsFile()).filter(Boolean);
+  if (!files.length || [...(cd.types || [])].includes('text/html')) return;
+  e.preventDefault();
+  const stamp = new Date().toISOString().slice(0, 19).replace(/[-:]/g, '').replace('T', '-');
+  files.forEach((f, i) => {
+    // скриншот из буфера приходит как «image.png» — даём ему своё имя, чтобы несколько не слились
+    const generic = !f.name || /^image\.(png|jpe?g|gif|webp)$/i.test(f.name);
+    const ext = (f.type.split('/')[1] || 'png').replace('jpeg', 'jpg');
+    deskUpload(generic ? new File([f], `screenshot-${stamp}${files.length > 1 ? '-' + (i + 1) : ''}.${ext}`, { type:f.type }) : f);
+  });
+  deskNote(files.length > 1 ? `Добавлено файлов из буфера: ${files.length}` : `Добавлен файл из буфера: ${files[0].name && !/^image\./i.test(files[0].name) ? files[0].name : 'скриншот'}`);
 }
 // файлы грузятся сразу при выборе — к нажатию «Поставить» они уже на сервере
 function deskUpload(file) {

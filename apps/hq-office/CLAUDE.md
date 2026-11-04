@@ -101,7 +101,7 @@
   приростов в `~/.local/state/aicex-social`). Итоги, предупреждения и ошибки утренних задач — в Telegram владельца ботом
   Office Worker (`HQ_NOTIFY_TG_TOKEN`/`HQ_NOTIFY_TG_CHAT` в `assistant.env`). Ключи этих скриптов — `~/hq-runner/keys.env`
   (`HQ_KEYS_FILE`, пишет шаг «Keys of the morning agents»), в окружение исполнителя и Claude Code не попадают.
-  **Материалы** — файлы прикрепляются к новой задаче, к правке и к ответу на вопрос (`PUT desk/upload` → `uploads` в
+  **Материалы** — файлы прикрепляются к новой задаче, к правке и к ответу на вопрос (кнопкой, перетаскиванием или Ctrl+V — скриншот/скопированный файл, `deskPaste`; текст из Word/страниц вставляется текстом; `PUT desk/upload` → `uploads` в
   `POST tasks`, `tasks/<id>/revise`, `tasks/<id>/answer`; `takeUploads` кладёт их в `in/` задачи, при совпадении имени — `-2`):
   исполнитель докачивает новые файлы перед каждым запуском, а промпт правки/ответа называет их отдельной строкой.
   Страницы агентов — только в песочнице (CSP `sandbox` + `iframe sandbox` без `allow-same-origin`).
