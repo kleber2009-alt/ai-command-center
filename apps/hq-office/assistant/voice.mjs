@@ -20,7 +20,8 @@ export async function transcribe(audio, mime) {
   const fd = new FormData();
   fd.append('model_id', STT_MODEL);
   fd.append('language_code', 'ru');
-  fd.append('file', new Blob([audio], { type:mime || 'audio/webm' }), /mp4|m4a|aac/.test(mime) ? 'speech.m4a' : 'speech.webm');
+  const ext = /mp4|m4a|aac/.test(mime) ? 'm4a' : /ogg|opus/.test(mime) ? 'ogg' : /mpeg|mp3/.test(mime) ? 'mp3' : /wav/.test(mime) ? 'wav' : 'webm';
+  fd.append('file', new Blob([audio], { type:mime || 'audio/webm' }), 'speech.' + ext);
   const data = await (await call('/speech-to-text', { method:'POST', body:fd })).json();
   return String(data.text || '').trim();
 }

@@ -435,6 +435,56 @@ test('Telegram: кнопки — принять с оценкой, вариан�
   } finally { globalThis.fetch = realFetch; }
 });
 
+test('Telegram: голосовое — правка ответом на «Что поправить?» и прямо на карточку результата, новая задача голосом', async () => {
+  const calls = [], heardMime = [], realFetch = globalThis.fetch;
+  let updates = [];
+  globalThis.fetch = async (url, opts) => {
+    if (String(url).startsWith('https://api.telegram.org/file/botT/')) return new Response(new Uint8Array([1, 2, 3]));
+    if (!String(url).startsWith('https://api.telegram.org/')) return realFetch(url, opts);
+    const method = String(url).split('/').pop(), body = JSON.parse(opts.body);
+    calls.push({ method, body });
+    const result = method === 'getUpdates' ? (await new Promise(r => setTimeout(r, 20)), updates.splice(0))
+      : method === 'sendMessage' ? { message_id:100 + calls.length } : method === 'getFile' ? { file_path:`voice/${body.file_id}.oga` } : true;
+    return new Response(JSON.stringify({ ok:true, result }), { headers:{ 'content-type':'application/json' } });
+  };
+  const said = { v1:'сделай обложку крупнее', v2:'убери третий кадр', v3:'сделай сторис про вебинар', v4:'' };
+  let tg;
+  try {
+    const d = setup({ telegram:null });
+    tg = createTelegram({ token:'T', chat:'42', own:true, publicUrl:'https://hq', dataDir:d.dataDir, act:d.desk.act, get:d.desk.get, createTask:d.desk.createTask, log:{ error(){} },
+      transcribe:async (buf, mime) => { heardMime.push(mime); assert.equal(buf.length, 3); return said[calls.filter(c => c.method === 'getFile').at(-1).body.file_id]; } });
+    const wait = () => new Promise(r => setTimeout(r, 120));
+    const sent = () => calls.filter(c => c.method === 'sendMessage');
+    const idOf = c => 100 + calls.indexOf(c) + 1;
+    // «Правка» → voice reply to the prompt → the revision goes to the agent, the bot shows what it heard
+    // two results on review (a revision queued first would be claimed before the second task)
+    const id = await d.toReview('сторис'), id2 = await d.toReview('ещё сторис');
+    await tg.notify(d.desk.get(id2));
+    const card = sent().at(-1);
+    updates.push({ update_id:1, callback_query:{ id:'c1', data:`rv:${id}`, message:{ message_id:7, chat:{ id:42 } } } });
+    await wait();
+    updates.push({ update_id:2, message:{ message_id:8, chat:{ id:42 }, voice:{ file_id:'v1', mime_type:'audio/ogg', duration:12 }, reply_to_message:{ message_id:idOf(sent().at(-1)) } } });
+    await wait();
+    let t = d.desk.get(id);
+    assert.equal(t.status, 'queued'); assert.match(t.steps.at(-1).text, /обложку крупнее/);
+    assert.match(sent().at(-1).body.text, /Правка ушла агенту[\s\S]*🎙 «сделай обложку крупнее»/);
+    assert.deepEqual(heardMime, ['audio/ogg']);
+    // a voice reply straight to the result card is a revision too
+    assert.match(card.body.text, /принёс результат/);
+    updates.push({ update_id:3, message:{ message_id:9, chat:{ id:42 }, voice:{ file_id:'v2', duration:3 }, reply_to_message:{ message_id:idOf(card) } } });
+    await wait();
+    assert.equal(d.desk.get(id2).status, 'queued'); assert.match(d.desk.get(id2).steps.at(-1).text, /убери третий кадр/);
+    // a plain voice message is a new task; silence is not
+    updates.push({ update_id:4, message:{ message_id:10, chat:{ id:42 }, voice:{ file_id:'v3', duration:4 } } });
+    await wait();
+    const fromTg = d.desk.list(30).find(x => x.text === 'сделай сторис про вебинар');
+    assert.ok(fromTg); assert.equal(fromTg.source, 'telegram');
+    updates.push({ update_id:5, message:{ message_id:11, chat:{ id:42 }, voice:{ file_id:'v4', duration:1 } } });
+    await wait();
+    assert.match(sent().at(-1).body.text, /не услышал слов/);
+  } finally { tg?.stop(); globalThis.fetch = realFetch; }
+});
+
 test('очередь: ответы и проверка раньше новой работы; лёгкий поток не берёт монтаж; монтаж — со слотом тяжёлых задач', async () => {
   const d = setup();
   d.routes.push({ agent:'montage', deliverable:'video', visual:'video', style_named:'стекло' });
