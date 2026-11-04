@@ -1340,13 +1340,14 @@ const bloom = new UnrealBloomPass(new THREE.Vector2(innerWidth, innerHeight), 0.
 composer.addPass(bloom);
 composer.addPass(new OutputPass());
 const grade = new ShaderPass({
-  uniforms:{ tDiffuse:{ value:null }, uTime:{ value:0 }, uVig:{ value:0.18 }, uGrain:{ value:0.022 } },
+  uniforms:{ tDiffuse:{ value:null }, uTime:{ value:0 }, uVig:{ value:0.18 }, uGrain:{ value:0.022 }, uDim:{ value:0 } },
   vertexShader:'varying vec2 vUv; void main(){ vUv=uv; gl_Position=projectionMatrix*modelViewMatrix*vec4(position,1.); }',
-  fragmentShader:`uniform sampler2D tDiffuse; uniform float uTime,uVig,uGrain; varying vec2 vUv;
+  fragmentShader:`uniform sampler2D tDiffuse; uniform float uTime,uVig,uGrain,uDim; varying vec2 vUv;
     float h(vec2 p){ return fract(sin(dot(p,vec2(12.9898,78.233)))*43758.5453); }
     void main(){ vec4 c=texture2D(tDiffuse,vUv); vec2 d=vUv-.5;
       float v=smoothstep(.95,.3,length(d*vec2(1.15,1.)));
       c.rgb*=mix(1.-uVig,1.,v);
+      float holo=smoothstep(.25,.55,c.b-c.r)*smoothstep(.35,.7,c.b); c.rgb*=mix(1.,mix(.5,1.,holo),uDim);   // приглушение под голограмму, её голубые точки не гаснут
       c.rgb+=(h(vUv*vec2(1733.,977.)+fract(uTime))-.5)*uGrain;
       gl_FragColor=c; }`,
 });
@@ -2914,12 +2915,35 @@ if (COUNCIL) {
   const SW = 4096, SH = 300, cv = document.createElement('canvas'); cv.width = SW; cv.height = SH;
   const tex = new THREE.CanvasTexture(cv); tex.colorSpace = THREE.SRGBColorSpace; tex.anisotropy = 8;
   const RS = 2.7, RY = 3.3, RH = 0.92;
-  const ring = new THREE.Mesh(new THREE.CylinderGeometry(RS, RS, RH, 128, 1, true), new THREE.MeshBasicMaterial({ map:tex }));
-  ring.position.set(HUB.x, RY, HUB.z); ring.userData.keep = true; ring.userData.pick = { type:'you' }; scene.add(ring); pickables.push(ring);
-  const back = new THREE.Mesh(new THREE.CylinderGeometry(RS - 0.01, RS - 0.01, RH, 96, 1, true), new THREE.MeshBasicMaterial({ color:'#05070d', side:THREE.BackSide }));
-  back.position.copy(ring.position); back.userData.keep = true; scene.add(back);
-  for (const y of [RY - RH / 2, RY + RH / 2]) { const t = mesh(new THREE.TorusGeometry(RS, 0.04, 8, 128), M.dark); t.rotation.x = Math.PI / 2; t.position.set(HUB.x, y, HUB.z); }
-  for (let k = 0; k < 3; k++) { const p = polar(HUB, RS, k * Math.PI * 2 / 3 + 0.5); boxMM(building, p.x - 0.012, p.x + 0.012, RY + RH / 2, WALL_H, p.z - 0.012, p.z + 0.012, M.dark); }
+  // экран с рамами и подвесами — одна группа: при вызове голограммы уезжает под потолок и гаснет (hubTick)
+  const ringG = new THREE.Group(); ringG.userData.keep = true; scene.add(ringG);
+  const ringMat = new THREE.MeshBasicMaterial({ map:tex, transparent:true }), backMat = new THREE.MeshBasicMaterial({ color:'#05070d', side:THREE.BackSide, transparent:true });
+  const frameMat = new THREE.MeshStandardMaterial({ color:'#1a1b1e', roughness:0.4, metalness:0.5, transparent:true });
+  const ring = new THREE.Mesh(new THREE.CylinderGeometry(RS, RS, RH, 128, 1, true), ringMat);
+  ring.position.set(HUB.x, RY, HUB.z); ring.userData.pick = { type:'you' }; ringG.add(ring); pickables.push(ring);
+  const back = new THREE.Mesh(new THREE.CylinderGeometry(RS - 0.01, RS - 0.01, RH, 96, 1, true), backMat);
+  back.position.copy(ring.position); ringG.add(back);
+  for (const y of [RY - RH / 2, RY + RH / 2]) { const t = new THREE.Mesh(new THREE.TorusGeometry(RS, 0.04, 8, 128), frameMat); t.rotation.x = Math.PI / 2; t.position.set(HUB.x, y, HUB.z); ringG.add(t); }
+  for (let k = 0; k < 3; k++) { const p = polar(HUB, RS, k * Math.PI * 2 / 3 + 0.5), h = WALL_H - RY - RH / 2; const r = new THREE.Mesh(new THREE.BoxGeometry(0.024, h, 0.024), frameMat); r.position.set(p.x, RY + RH / 2 + h / 2, p.z); ringG.add(r); }
+  // тёмный световой столб вокруг головы голограммы: на светлой сцене она светится на тёмном фоне
+  const colMat = new THREE.ShaderMaterial({
+    uniforms:{ uO:{ value:0 } }, transparent:true, depthWrite:false, side:THREE.DoubleSide,
+    vertexShader:'varying vec2 vUv; void main(){ vUv=uv; gl_Position=projectionMatrix*modelViewMatrix*vec4(position,1.); }',
+    fragmentShader:'uniform float uO; varying vec2 vUv; void main(){ float a=smoothstep(0.,.25,vUv.y)*smoothstep(1.,.7,vUv.y); gl_FragColor=vec4(.02,.06,.18,uO*a*.72); }',
+  });
+  const column = new THREE.Mesh(new THREE.CylinderGeometry(1.15, 1.25, 4.0, 64, 1, true), colMat);
+  column.position.set(HUB.x, 2.0, HUB.z); column.userData.keep = true; column.userData.noAO = true; column.visible = false; column.renderOrder = -1; scene.add(column);
+  let hubK = 0;
+  const hubTick = dt => {
+    if (night) return;
+    hubK = damp(hubK, HB.active ? 1 : 0, 2.2, dt);
+    ringG.position.y = hubK * 1.6;
+    const o = 1 - THREE.MathUtils.smoothstep(hubK, 0.35, 0.9);
+    ringMat.opacity = backMat.opacity = frameMat.opacity = o; ringG.visible = o > 0.01;
+    colMat.uniforms.uO.value = hubK; column.visible = hubK > 0.01;
+    // свет в зале приглушается, как в кинозале (в финальном проходе); самые яркие голубые точки — голограмма — не гаснут
+    grade.uniforms.uDim.value = hubK;
+  };
   let ringSig = '';
   const drawRing = () => {
     const open = desk.on ? desk.tasks.filter(t => DESK_OPEN.includes(t.status)) : [];
@@ -2950,7 +2974,7 @@ if (COUNCIL) {
     tex.needsUpdate = true;
   };
   let ringT = 0;
-  animated.push((t, dt) => { ring.rotation.y += (dt || 0.016) * 0.05; back.rotation.y = ring.rotation.y; if ((ringT -= dt || 0.016) <= 0) { ringT = 2; drawRing(); } });
+  animated.push((t, dt) => { hubTick(dt || 0.016); ring.rotation.y += (dt || 0.016) * 0.05; back.rotation.y = ring.rotation.y; if ((ringT -= dt || 0.016) <= 0) { ringT = 2; drawRing(); } });
 
   // дорожки: подиум → дверь комнаты; у соседних комнат — свои полосы, чтобы линии не сливались
   const routes = WAVE_ROOMS.map(z => ({ c:z.accent, room:z, door:z.walls.door }));
@@ -4012,7 +4036,7 @@ $('aClose').onclick = () => asstOpen(false);
    на экране, — поэтому голограмма отвечает про то, что происходит прямо сейчас. Об агентах, которых
    называет, она поворачивается к ним и тянет световой луч; события рабочего стола тоже видит сама. */
 
-const HB = { holo:null, spot:null, busy:false, streaming:false, rec:null, recTimer:0 };
+const HB = { active:false, holo:null, spot:null, busy:false, streaming:false, rec:null, recTimer:0 };
 const HB_CHIPS = [['Доложи обстановку'], ['Что сейчас происходит в офисе?'], ['Кто из агентов чем занят?'], ['Что ждёт моего ответа?']];
 const hbState = s => { $('hbState').textContent = s; };
 const agentPos = id => {
@@ -4029,6 +4053,7 @@ function holoGreet() {
 async function holoSummon(on) {
   if (on === undefined) on = !HB.holo?.visible;
   setDockOn('holo', on);
+  HB.active = on;
   $('holoBar').hidden = !on;
   if (!on) { HB.holo?.hide(); asstStopVoice(); if (HB.rec) { HB.rec.cancelled = true; HB.rec.stop(); } return; }
   if (night && !NIGHT) { $('hbSub').innerHTML = '<p>Офис ещё собирается — секунду.</p>'; setTimeout(() => holoSummon(true), 800); return; }
@@ -4041,7 +4066,7 @@ async function holoSummon(on) {
   HB.holo.show();
   const { x, z } = HB.spot;
   if (night) NIGHT.look?.(x, z);
-  else { mode = 'holo'; setControls('free'); setDock(null); flyTo(V3(x + 0.8, 2.6, z + 7.6), V3(x, 1.2, z), 1.8); }
+  else { mode = 'holo'; setControls('free'); setDock(null); flyTo(V3(x + 0.6, 2.75, z + 5.8), V3(x, 1.95, z), 1.8); }   // голова (≈2,5 м) — над панелью разговора
   $('hbChips').innerHTML = HB_CHIPS.map(([q]) => `<button type="button" data-q="${esc(q)}">${esc(q)}</button>`).join('');
   if (!asst.loaded) await asstLoad();
   $('hbMic').hidden = !(asst.state?.owner && asst.state.configured.voice);
