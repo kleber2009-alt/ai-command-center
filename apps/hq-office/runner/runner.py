@@ -59,10 +59,11 @@ QA_TOOLS = ["Bash", "Read", "Glob", "Grep", "WebFetch"]
 DENIED_TOOLS = ["Bash(sudo:*)", "Bash(su:*)", "Bash(ssh:*)", "Bash(scp:*)", "Bash(sftp:*)", "Bash(rsync:*)", "Bash(git push:*)",
                 "Bash(docker:*)", "Bash(systemctl:*)", "Bash(crontab:*)", "Bash(pkill:*)", "Bash(killall:*)", "Bash(shutdown:*)", "Bash(reboot:*)",
                 "Read(~/.ssh/**)", "Read(~/hq-runner/*.env)", "Read(~/hq-runner/mcp*.json)", "Read(~/.claude/.credentials.json)", "Read(**/.env)"]
-VERSION = "9"
+VERSION = "10"
 WORKERS = max(1, int(os.environ.get("HQ_RUNNER_WORKERS", "2") or 2))
 # окружение для Claude Code и скриптов: без токена офиса (им нельзя сдавать задачи от имени исполнителя)
 CHILD_ENV = {k: v for k, v in os.environ.items() if k not in ("HQ_DESK_RUNNER_TOKEN",)}
+DISK_LOCK = threading.Lock()
 RUNNING = set()   # id задач в работе у потоков этого исполнителя — их папки не удаляются
 MCP_FILE = Path(os.environ.get("HQ_MCP_CONFIG") or HOME / "hq-runner/mcp.json")
 MCP_CLAUDE = HOME / "hq-runner/mcp.claude.json"
@@ -71,6 +72,15 @@ READ_RE = re.compile(r"(^|[_-])(get|list|search|query|read|fetch|status|analytic
 BALANCES = SKILLS / "service-balances/scripts/balances.py"
 TRANSCRIBER = next((p for p in (Path(__file__).with_name("transcribe_ref.py"), SKILLS / "transcribe-reference/scripts/transcribe_ref.py") if p.exists()), None)
 FILE_LIMIT = 300_000_000
+# диск: перед задачей исполнитель проверяет свободное место; если меньше DISK_LOW — сам удаляет свои старые папки задач
+# (самые старые первыми, кроме тех, что в работе) и кэши; если и после этого меньше DISK_MIN — задача не начинается,
+# а возвращается с понятной ошибкой (раньше Claude Code падал посреди работы с «No space left on device»)
+DISK_LOW = int(float(os.environ.get("HQ_RUNNER_DISK_LOW_GB", "8") or 8) * 1e9)
+DISK_MIN = int(float(os.environ.get("HQ_RUNNER_DISK_MIN_GB", "2") or 2) * 1e9)
+DISK_KEEP_H = float(os.environ.get("HQ_RUNNER_DISK_KEEP_H", "6") or 6)   # папки моложе — не трогаются
+CACHES = [HOME / ".cache/pip", HOME / ".cache/yt-dlp", HOME / ".npm/_cacache"]
+NOSPACE = ("На сервере кончилось место на диске{}. Исполнитель уже удалил свои старые папки задач и кэши — "
+           "освободите место на сервере (workflow cleanup-studio-kadrik или hq-runner-diagnose покажет, что занимает диск) и нажмите «Повторить».")
 
 
 def log(*a):
@@ -482,6 +492,76 @@ def run_balances(job):
 
 # ---------- одна задача ----------
 
+def free_bytes():
+    try:
+        return shutil.disk_usage(JOBS).free
+    except OSError:
+        return 0
+
+
+def _size(p):
+    n = 0
+    for root, _, files in os.walk(p):
+        for f in files:
+            try:
+                n += os.lstat(os.path.join(root, f)).st_size
+            except OSError:
+                pass
+    return n
+
+
+def _newest(p):
+    t = p.stat().st_mtime
+    for root, dirs, files in os.walk(p):
+        for f in files + dirs:
+            try:
+                t = max(t, os.lstat(os.path.join(root, f)).st_mtime)
+            except OSError:
+                pass
+    return t
+
+
+def tidy_disk(need=DISK_LOW, keep=()):
+    """Мало места: кэши, затем свои папки задач — самые старые первыми, пока свободно меньше need.
+    Папки задач в работе и тронутые за DISK_KEEP_H часов остаются. Удалённую папку офис восстановит
+    при правке (restore — принятый результат скачивается обратно в out/). Возвращает освобождённые байты."""
+    if free_bytes() >= need:
+        return 0
+    freed = 0
+    for c in CACHES:
+        if c.exists():
+            n = _size(c)
+            shutil.rmtree(c, ignore_errors=True)
+            freed += n
+            log(f"disk: cache {c} removed, {n / 1e6:.0f} MB")
+    if free_bytes() >= need:
+        return freed
+    edge = time.time() - DISK_KEEP_H * 3600
+    dirs = []
+    for d in JOBS.iterdir() if JOBS.exists() else []:
+        if not d.is_dir() or d.name in RUNNING or d.name in keep:
+            continue
+        try:
+            t = _newest(d)
+        except OSError:
+            continue
+        if t < edge:
+            dirs.append((t, d))
+    for _, d in sorted(dirs):
+        if free_bytes() >= need:
+            break
+        n = _size(d)
+        shutil.rmtree(d, ignore_errors=True)
+        freed += n
+        log(d.name, f"disk: folder removed for space, {n / 1e6:.0f} MB")
+    log(f"disk: freed {freed / 1e9:.1f} GB, free {free_bytes() / 1e9:.1f} GB")
+    return freed
+
+
+def is_nospace(e):
+    return getattr(e, "errno", None) == 28 or "No space left on device" in str(e)
+
+
 def run_job(job):
     if job["kind"] == "transcribe" or (job["kind"] == "run" and job.get("agent") == "transcriber"):
         return run_transcribe(job)
@@ -500,8 +580,12 @@ def run_job(job):
             continue
         target.parent.mkdir(parents=True, exist_ok=True)
         req = urllib.request.Request(f"{API}/runner/{jid}/result/{urllib.parse.quote(rel)}", headers={"authorization": "Bearer " + TOKEN})
-        with urllib.request.urlopen(req, timeout=600) as r, open(target, "wb") as f:
-            shutil.copyfileobj(r, f)
+        try:
+            with urllib.request.urlopen(req, timeout=600) as r, open(target, "wb") as f:
+                shutil.copyfileobj(r, f)
+        except urllib.error.HTTPError as e:
+            target.unlink(missing_ok=True)
+            log(jid, "restore", rel, e.code)
     for name in job.get("files") or []:
         target = d / "in" / Path(name).name
         if not target.exists():
@@ -696,6 +780,8 @@ def main():
     check = selftest()
     check["auth"] = auth_source()
     log(f"вход Claude: {check['auth']}")
+    tidy_disk()
+    log(f"диск: свободно {free_bytes() / 1e9:.1f} ГБ")
     log("проверка Claude: " + ("ок" if check["ok"] else "ошибка — " + check["error"]))
     while True:
         try:
@@ -752,11 +838,24 @@ def worker(i):
         log(f"[{i}] job", job["id"], job["kind"], job.get("agent"), job.get("title", "")[:60], "heavy" if job.get("heavy") else "light")
         RUNNING.add(job["id"])
         try:
+            with DISK_LOCK:
+                tidy_disk(DISK_LOW, keep=(job["id"],))
+                left = free_bytes()
+            if left < DISK_MIN:
+                log(job["id"], f"disk: only {left / 1e9:.1f} GB free — not started")
+                call_retry("POST", f"/runner/{job['id']}/finish", {"result": "error", "error": NOSPACE.format(f" (свободно {left / 1e9:.1f} ГБ)")})
+                continue
             run_job(job)
         except Exception as e:
             log("job failed:", repr(e))
+            if is_nospace(e):
+                with DISK_LOCK:
+                    tidy_disk(DISK_LOW, keep=(job["id"],))
+                err = NOSPACE.format("")
+            else:
+                err = "Исполнитель упал: " + str(e)[:300]
             try:
-                call("POST", f"/runner/{job['id']}/finish", {"result": "error", "error": "Исполнитель упал: " + str(e)[:300]})
+                call("POST", f"/runner/{job['id']}/finish", {"result": "error", "error": err})
             except Exception:
                 pass
         finally:
