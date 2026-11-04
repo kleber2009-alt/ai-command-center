@@ -1288,6 +1288,11 @@ h1{font-size:24px;margin:0 0 4px}small{color:#9aa3b5}h2{font-size:17px;margin:26
     /* owner */
     if (!isOwner && !head) return json(res, 403, { error:'Ставить задачи агентам могут владелец и руководители отделов — войдите.' });
     if (M === 'GET' && rest === 'tasks') return json(res, 200, { tasks:tasks.filter(t => !(head && t.control)).slice(0, 60).map(view), runner:runnerView(), agents:catalog().agents.map(a => ({ id:a.id, name:a.name, dept:a.dept, deptName:a.deptName, role:a.role, color:a.color })), pipelines:pipelinesView() });
+    // one task by id — the mini app opens a card from Telegram even when the task is older than the last 60
+    if (M === 'GET' && seg[0] === 'tasks' && seg[1] && seg.length === 2) {
+      const t = byId(seg[1]);
+      return !t || (head && t.control) ? notFound(res) : json(res, 200, { task:view(t) });
+    }
     if (M === 'GET' && rest === 'stats') { const m = url.searchParams.get('month') || ''; return json(res, 200, stats(/^\d{4}-\d{2}$/.test(m) ? m : undefined)); }
     if (M === 'GET' && rest === 'lessons') {
       const id = url.searchParams.get('agent') || '';
