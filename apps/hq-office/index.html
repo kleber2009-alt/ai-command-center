@@ -4652,14 +4652,13 @@ function deskBindDrop() {
   drop.ondragover = e => { e.preventDefault(); drop.classList.add('on'); };
   drop.ondragleave = () => drop.classList.remove('on');
   drop.ondrop = e => { e.preventDefault(); drop.classList.remove('on'); [...(e.dataTransfer?.files || [])].forEach(deskUpload); };
-  const body = $('kBody');
-  if (!body._paste) { body._paste = true; body.addEventListener('paste', deskPaste); }
   renderUploads();
 }
 // Ctrl+V / Cmd+V: скриншот или скопированный файл становится материалом задачи;
 // текст (и текст из Word/страниц, где рядом лежит картинка-копия) вставляется как обычно
+document.addEventListener('paste', e => deskPaste(e));
 function deskPaste(e) {
-  if (!$('kFile')) return;
+  if (!$('kFile') || $('deskModal').hidden) return;
   const cd = e.clipboardData; if (!cd) return;
   const files = [...(cd.files || [])].length ? [...cd.files] : [...(cd.items || [])].filter(i => i.kind === 'file').map(i => i.getAsFile()).filter(Boolean);
   if (!files.length || [...(cd.types || [])].includes('text/html')) return;
