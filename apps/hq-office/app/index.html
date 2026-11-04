@@ -30,7 +30,7 @@
   .live{display:inline-flex;align-items:center;gap:6px;font-size:12px;font-weight:700;padding:6px 10px;border-radius:999px;background:var(--greenBg);color:var(--greenInk)}
   .live.off{background:var(--redBg);color:var(--red)}
   .live i{width:7px;height:7px;border-radius:50%;background:currentColor}
-  main{flex:1;padding:4px 16px 110px;display:flex;flex-direction:column;gap:14px}
+  main{flex:1;padding:4px 16px 190px;display:flex;flex-direction:column;gap:14px}
   .lbl{font:600 11px 'JetBrains Mono',monospace;letter-spacing:.1em;text-transform:uppercase;color:var(--ink3);margin-top:4px}
   .lbl.a{color:var(--amberInk)} .lbl.g{color:var(--greenInk)}
   .card{background:var(--card);border:1px solid var(--line);border-radius:18px;padding:14px;display:flex;flex-direction:column;gap:10px}
@@ -63,6 +63,9 @@
   .pill{font-size:12px;font-weight:800;padding:4px 10px;border-radius:999px;white-space:nowrap}
   .pill.need{background:var(--amberBg);color:var(--amberInk)} .pill.work{background:var(--greenBg);color:var(--greenInk)} .pill.queued{background:var(--blueBg);color:var(--blueInk)}
   .pill.done{background:var(--btn);color:var(--ink2)} .pill.error{background:var(--redBg);color:var(--red)}
+  .pill.paused{background:var(--btn);color:var(--ink2);border:1px dashed var(--ink3)} .pill.urgent{background:var(--redBg);color:var(--red)}
+  .step .c.p{background:var(--btn);color:var(--ink2);border:1px dashed var(--ink3)}
+  .ctl{display:flex;flex-wrap:wrap;gap:8px} .ctl .b{flex:1 1 calc(50% - 4px)}
   .chip{font-size:12px;color:var(--ink2);background:var(--btn);padding:4px 9px;border-radius:999px}
   .seg{display:grid;grid-template-columns:repeat(4,minmax(0,1fr));gap:4px;background:var(--card);border-radius:14px;padding:4px;border:1px solid var(--line)}
   .seg button{height:40px;border:0;border-radius:10px;background:transparent;font-size:13px;font-weight:700;color:var(--ink2)}
@@ -121,7 +124,7 @@
 'use strict';
 const API = '/api/assistant', DESK = API + '/desk';
 const TG = window.Telegram && window.Telegram.WebApp && window.Telegram.WebApp.initData ? window.Telegram.WebApp : null;
-const S = { auth:'', owner:false, tasks:[], agents:[], pipelines:[], runner:null, stats:null, filter:'need', how:'', agent:'', rate:{}, uploads:[], text:'', busy:false, revise:'' };
+const S = { later:'', auth:'', owner:false, tasks:[], agents:[], pipelines:[], runner:null, stats:null, filter:'need', how:'', agent:'', rate:{}, uploads:[], text:'', busy:false, revise:'' };
 const $ = id => document.getElementById(id);
 const esc = s => String(s ?? '').replace(/[&<>"']/g, c => ({ '&':'&amp;', '<':'&lt;', '>':'&gt;', '"':'&quot;', "'":'&#39;' }[c]));
 const word = (n, a, b, c) => n % 10 === 1 && n % 100 !== 11 ? a : [2, 3, 4].includes(n % 10) && ![12, 13, 14].includes(n % 100) ? b : c;
@@ -190,9 +193,15 @@ function toast(text) { const t = $('toast'); t.textContent = text; t.hidden = fa
 const agentOf = id => S.agents.find(a => a.id === id) || null;
 const colorOf = id => agentOf(id)?.color || '#7cb4ff';
 const initials = n => String(n || '?').split(/[\s«»—-]+/).filter(Boolean).slice(0, 2).map(w => w[0]).join('').toUpperCase();
-const needOf = t => t.status === 'question' || t.status === 'review';
-const statusKey = t => needOf(t) ? 'need' : t.status === 'routing' ? 'queued' : t.status === 'cancelled' ? 'done' : t.status;
-const STATUS = { need:'ждёт вас', work:'в работе', queued:'в очереди', done:'готово', error:'ошибка' };
+const needOf = t => (t.status === 'question' || t.status === 'review') && !t.snoozed;
+const statusKey = t => needOf(t) ? 'need' : t.snoozed ? 'paused' : t.status === 'routing' ? 'queued' : t.status === 'cancelled' ? 'done' : t.status;
+const STATUS = { need:'ждёт вас', work:'в работе', queued:'в очереди', done:'готово', error:'ошибка', paused:'на паузе' };
+// Moscow time for «отложить»: the office lives by it
+const hm = iso => new Date(iso).toLocaleTimeString('ru', { hour:'2-digit', minute:'2-digit', timeZone:'Europe/Moscow' });
+const dayHm = iso => { const d = new Date(iso), same = d.toDateString() === new Date().toDateString(); return (same ? '' : d.toLocaleDateString('ru', { day:'numeric', month:'short', timeZone:'Europe/Moscow' }) + ', ') + hm(iso); };
+function mskAt(h, days) { const n = new Date(), m = new Date(n.getTime() + 3 * 3600e3); let t = Date.UTC(m.getUTCFullYear(), m.getUTCMonth(), m.getUTCDate() + days, h - 3, 0); if (t <= n.getTime()) t += 864e5; return new Date(t).toISOString(); }
+const LATER = () => [['Через час', new Date(Date.now() + 3600e3).toISOString()], ['Через 3 часа', new Date(Date.now() + 3 * 3600e3).toISOString()], ['Вечером, 19:00', mskAt(19, 0)], ['Завтра, 9:00', mskAt(9, 1)]];
+const pausedNote = t => t.snoozed ? `отложено до ${dayHm(t.snoozed)}` : t.paused?.until ? `на паузе до ${dayHm(t.paused.until)}` : 'на паузе';
 function needLabel(t) {
   if (t.status === 'review') return 'Принёс результат';
   const f = t.question?.from;
@@ -206,7 +215,7 @@ function stages(t) {
   S2.push({ l:'Диспетчер', s:st === 'routing' ? 'n' : st === 'error' && !t.route ? 'e' : st === 'question' && (q === 'style' || q === 'dispatcher') ? 'w' : t.route ? 'd' : '' });
   if (t.chain && t.route?.agent !== 'transcriber') S2.push({ l:'Транскрибатор', s:t.chain.done ? 'd' : t.agent?.id === 'transcriber' ? (st === 'work' ? 'n' : 'q') : '' });
   const onQA = t.agent?.id === 'qa' && ['queued', 'work'].includes(st);
-  const agentState = st === 'error' ? (t.route ? 'e' : '') : st === 'question' && (q === 'agent' || q === 'approval') ? 'w' : onQA ? 'd' : st === 'work' ? 'n' : st === 'queued' && t.route ? 'q' : ['review', 'done'].includes(st) ? 'd' : '';
+  const agentState = st === 'paused' ? 'p' : st === 'error' ? (t.route ? 'e' : '') : st === 'question' && (q === 'agent' || q === 'approval') ? 'w' : onQA ? 'd' : st === 'work' ? 'n' : st === 'queued' && t.route ? 'q' : ['review', 'done'].includes(st) ? 'd' : '';
   if (t.pipeline) t.pipeline.stages.forEach((x, i) => S2.push({ l:x.title, s:x.status === 'done' ? 'd' : i === t.pipeline.idx ? agentState : '' }));
   else S2.push({ l:t.agent?.name && !onQA ? t.agent.name : agentOf(t.route?.agent)?.name || 'Агент', s:agentState });
   if (t.qa) S2.push({ l:'Контролёр', s:t.qa.status === 'done' ? 'd' : onQA ? (st === 'work' ? 'n' : 'q') : '' });
@@ -249,7 +258,7 @@ function needCard(t) {
 }
 function workCard(t) {
   return `<button class="card" style="text-align:left" data-a="open" data-id="${t.id}"><span class="row">${avatar(t)}<span class="col">
-    <span class="tt">${esc(t.route?.title || t.text)}</span><span class="sub">${esc(t.agent?.name || 'Диспетчер')} — ${esc(t.status === 'queued' ? (t.queuePos > 1 ? `${t.queuePos}-я в очереди` : 'в очереди') : lastStep(t) || 'работает')}</span></span></span>${bars(t)}</button>`;
+    <span class="tt">${t.urgent ? '<span class="pill urgent" style="margin-right:6px">срочно</span>' : ''}${esc(t.route?.title || t.text)}</span><span class="sub">${esc(t.agent?.name || 'Диспетчер')} — ${esc(t.status === 'paused' ? pausedNote(t) : t.status === 'queued' ? (t.queuePos > 1 ? `${t.queuePos}-я в очереди` : 'в очереди') : lastStep(t) || 'работает')}</span></span></span>${bars(t)}</button>`;
 }
 function home() {
   const need = S.tasks.filter(needOf), work = S.tasks.filter(t => t.status === 'work' || t.status === 'routing'), queue = S.tasks.filter(t => t.status === 'queued' || t.status === 'paused'), err = S.tasks.filter(t => t.status === 'error');
@@ -278,7 +287,7 @@ function tasksScreen() {
   const list = G[S.filter] || G.all;
   return header('Рабочий стол', 'Задачи') + `<main><div class="seg">${F.map(([k, l]) => `<button class="${S.filter === k ? 'on' : ''}" data-a="seg" data-f="${k}">${l} <span style="opacity:.75">${G[k].length}</span></button>`).join('')}</div>
     ${list.length ? list.map(t => { const k = statusKey(t); return `<button class="card" style="text-align:left" data-a="open" data-id="${t.id}">
-      <span style="display:flex;align-items:center;gap:8px"><span class="pill ${k}">${esc(t.status === 'cancelled' ? 'отменена' : STATUS[k] || t.statusText)}</span><span class="sub" style="margin-left:auto">${esc(ago(t.updated))}</span></span>
+      <span style="display:flex;align-items:center;gap:8px"><span class="pill ${k}">${esc(t.status === 'cancelled' ? 'отменена' : k === 'paused' ? pausedNote(t) : STATUS[k] || t.statusText)}</span>${t.urgent && !['done', 'cancelled'].includes(t.status) ? '<span class="pill urgent">срочно</span>' : ''}<span class="sub" style="margin-left:auto">${esc(ago(t.updated))}</span></span>
       <span class="tt">${esc(t.route?.title || t.text)}</span>
       <span style="display:flex;align-items:center;gap:8px"><span class="dot" style="background:${esc(colorOf(t.agent?.id || t.route?.agent))}"></span><span class="sub" style="flex:1">${esc(t.agent?.name || 'Диспетчер')}${t.pipeline ? ' · ' + esc(t.pipeline.label) : ''}</span>
       <span class="sub" style="font-family:'JetBrains Mono',monospace;font-size:11.5px">${t.usage ? fmtDur(t.usage.ms) + (t.usage.cost ? ' · ' + fmtUsd(t.usage.cost) : '') : ''}</span></span>${bars(t)}</button>`; }).join('') : '<p class="empty">Здесь пусто — всё разобрано.</p>'}</main>`;
@@ -317,12 +326,12 @@ function detail(id) {
   const t = S.tasks.find(x => x.id === id);
   if (!t) return header('Задача', 'Не найдена', true) + '<main><p class="empty">Задачи нет в последних 60 — откройте её в офисе.</p></main>';
   const k = statusKey(t), rate = S.rate[t.id] || '';
-  let body = `<div style="display:flex;gap:8px;flex-wrap:wrap;align-items:center"><span class="pill ${k}">${esc(STATUS[k] || t.statusText)}</span>
+  let body = `<div style="display:flex;gap:8px;flex-wrap:wrap;align-items:center"><span class="pill ${k}">${esc(k === 'paused' ? pausedNote(t) : STATUS[k] || t.statusText)}</span>${t.urgent && !['done', 'cancelled'].includes(t.status) ? '<span class="pill urgent">срочно</span>' : ''}
       ${t.source ? `<span class="chip">${esc({ office:'Вы · в офисе', assistant:'Ассистент', twin:'Двойник', routine:'По расписанию', telegram:'Вы · в Telegram' }[t.source] || t.source)}</span>` : ''}
       ${t.usage ? `<span class="chip">${fmtDur(t.usage.ms)}${t.usage.cost ? ' · ' + fmtUsd(t.usage.cost) : ''}</span>` : ''}${t.style ? `<span class="chip">стиль: ${esc(t.style)}</span>` : ''}</div>
     <span style="font-size:20px;font-weight:800;line-height:1.25">${esc(t.route?.title || t.text)}</span>
     <span class="row">${avatar(t)}<span class="col"><span style="font-size:14px;font-weight:700">${esc(t.agent?.name || 'Диспетчер')}</span><span class="sub">${esc(t.pipeline ? t.pipeline.label : DEPT[t.agent?.dept] || '')}</span></span></span>
-    <div class="card"><div class="steps">${stages(t).map(x => `<div class="step"><span class="c ${x.s}">${x.s === 'd' ? '✓' : x.s === 'e' ? '!' : x.s ? '●' : ''}</span><b>${esc(x.l)}</b></div>`).join('')}</div></div>`;
+    <div class="card"><div class="steps">${stages(t).map(x => `<div class="step"><span class="c ${x.s}">${x.s === 'd' ? '✓' : x.s === 'e' ? '!' : x.s === 'p' ? 'II' : x.s ? '●' : ''}</span><b>${esc(x.l)}</b></div>`).join('')}</div></div>`;
   if (t.status === 'question') body += `<div class="card need"><span class="need-l">${esc(needLabel(t))}</span>
       <span>${t.question.from === 'approval' ? (t.approval?.actions || []).map((a, i) => `${i + 1}. ${esc(a)}`).join('<br>') : esc(t.question.text)}</span>
       ${t.question.options?.length ? `<div class="btns">${t.question.options.map(o => `<button class="b opt${t.question.from === 'approval' && o.label === 'Выполнить' ? ' warn' : ''}" data-a="answer" data-id="${t.id}" data-v="${esc(o.label)}">${esc(o.label)}</button>`).join('')}</div>` : ''}
@@ -336,11 +345,26 @@ function detail(id) {
   if (S.revise === t.id) body += `<div class="card" id="rv"><span style="font-size:13px;font-weight:700">Правка — агент поправит в той же сессии</span>
       <label><span class="sr">Что поправить</span><textarea id="revText" placeholder="Что поменять?"></textarea></label>
       <div class="btns"><button class="b" data-a="mic" data-to="revText">Голосом</button><button class="b pri" data-a="revise" data-id="${t.id}">Отправить правку</button></div></div>`;
-  if (['work', 'queued', 'routing'].includes(t.status)) body += `<div class="card"><span class="lbl" style="margin:0">Ход работы</span>${(t.steps || []).slice(-10).map(s => `<div class="log"><time>${esc(new Date(s.at).toTimeString().slice(0, 5))}</time><span>${esc(s.text)}</span></div>`).join('')}
+  body += controls(t);
+  if (['work', 'queued', 'routing', 'paused'].includes(t.status)) body += `<div class="card"><span class="lbl" style="margin:0">Ход работы</span>${(t.steps || []).slice(-10).map(s => `<div class="log"><time>${esc(new Date(s.at).toTimeString().slice(0, 5))}</time><span>${esc(s.text)}</span></div>`).join('')}
       <div class="btns"><button class="b" data-a="cancel" data-id="${t.id}">Отменить задачу</button></div></div>`;
   const sticky = t.status === 'review' ? `<div class="sticky"><button class="b" data-a="revise-open" data-id="${t.id}">Правка</button><button class="b ok" data-a="accept" data-id="${t.id}">Принять</button></div>`
     : t.status === 'done' ? `<div class="sticky"><button class="b" data-a="revise-open" data-id="${t.id}">Нужна правка</button></div>` : '';
   return header('Задача', t.agent?.name || 'Задача', true) + `<main>${body}</main>${sticky}`;
+}
+// управление задачей: пауза и продолжение, срочно, отложить — те же действия, что в чате бота
+function controls(t) {
+  const st = t.status, run = st === 'queued' || st === 'work', waiting = st === 'question' || st === 'review';
+  if (!run && !waiting && st !== 'paused') return '';
+  const later = S.later === t.id ? `<div class="ctl">${LATER().map(([l, iso]) => `<button class="b" data-a="later-at" data-id="${t.id}" data-v="${esc(iso)}">${esc(l)}</button>`).join('')}</div>` : '';
+  if (st === 'paused') return `<div class="card"><span class="lbl" style="margin:0">Управление</span><span class="sub" style="color:var(--ink)">${esc(pausedNote(t))}${t.paused?.until ? ' — потом задача сама вернётся в очередь' : ''}</span>
+    <div class="ctl"><button class="b ok" data-a="resume" data-id="${t.id}">Продолжить сейчас</button><button class="b" data-a="later" data-id="${t.id}">Отложить на другое время</button></div>${later}</div>`;
+  if (waiting && t.snoozed) return `<div class="card"><span class="sub" style="color:var(--ink)">Отложено до ${esc(dayHm(t.snoozed))} — тогда задача снова появится в «Ждут вас».</span>
+    <div class="ctl"><button class="b" data-a="later" data-id="${t.id}">Перенести</button></div>${later}</div>`;
+  return `<div class="card"><span class="lbl" style="margin:0">Управление</span><div class="ctl">
+    ${run ? `<button class="b" data-a="pause" data-id="${t.id}">Пауза</button><button class="b${t.urgent ? ' on' : ''}" data-a="urgent" data-id="${t.id}" data-v="${t.urgent ? 'off' : 'on'}">${t.urgent ? 'Снять «срочно»' : 'Срочно — первой'}</button>` : ''}
+    <button class="b${S.later === t.id ? ' on' : ''}" data-a="later" data-id="${t.id}">${waiting ? 'Напомнить позже' : 'Отложить'}</button></div>${later}
+    ${run ? '<span class="sub">Пауза останавливает агента и сохраняет его работу — «Продолжить» начнёт с того же места.</span>' : ''}</div>`;
 }
 function newTask() {
   const hows = [{ id:'', label:'Одним агентом', about:'диспетчер выберет, кому отдать' }, ...S.pipelines.map(p => ({ id:p.id, label:p.label, about:p.stages.map(s => s.name).join(' → ') }))];
@@ -458,6 +482,11 @@ document.addEventListener('click', e => {
   if (a === 'answer') return act(() => post(`/tasks/${id}/answer`, { text:v }), v === 'Выполнить' ? 'Разрешено — агент выполняет' : v === 'Не выполнять' ? 'Агент сдаст результат без действия' : `Передал агенту: ${v}`);
   if (a === 'answer-text') { const text = $('ans')?.value.trim(); if (!text) return toast('Напишите ответ'); return act(() => post(`/tasks/${id}/answer`, { text }), 'Ответ передан'); }
   if (a === 'retry') return act(() => post(`/tasks/${id}/retry`), 'Снова в очереди');
+  if (a === 'pause') return act(() => post(`/tasks/${id}/pause`), 'На паузе — агент сохранит работу');
+  if (a === 'resume') return act(() => post(`/tasks/${id}/resume`), 'Продолжаем — задача снова в очереди');
+  if (a === 'urgent') return act(() => post(`/tasks/${id}/urgent`, { on:v === 'on' }), v === 'on' ? 'Срочно — пойдёт первой' : 'Пометка «срочно» снята');
+  if (a === 'later') { S.later = S.later === id ? '' : id; return render(); }
+  if (a === 'later-at') { S.later = ''; return act(() => post(`/tasks/${id}/snooze`, { until:v }), `Отложено до ${dayHm(v)}`); }
   if (a === 'cancel') { if (!confirm('Отменить задачу?')) return; return act(() => post(`/tasks/${id}/cancel`), 'Задача отменена'); }
   if (a === 'how') { S.how = v; return render(); }
   if (a === 'ask') { S.agent = id; S.how = ''; return go('new'); }
