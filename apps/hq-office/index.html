@@ -630,6 +630,34 @@
   .dk-hero small{font-size:11.5px;color:var(--ink-2)}
   .dk-hero .w b{color:#ffcf6e} .dk-hero .r b{color:#9cc4ff} .dk-hero .d b{color:#3ddc97}
   /* затраты месяца, подключённые системы, конвейеры, контролёр, оценка */
+  /* приветствие руководителя после входа по ссылке: 3 слайда, потом камера в его кабинет */
+  .intro{position:fixed;inset:0;z-index:40;display:grid;place-items:center;padding:16px;background:radial-gradient(120% 90% at 50% 40%,rgba(10,14,24,.72),rgba(4,6,10,.92));backdrop-filter:blur(10px);-webkit-backdrop-filter:blur(10px);animation:fade .4s}
+  .intro[hidden]{display:none}
+  .in-card{width:min(640px,100%);border-radius:24px;padding:28px 28px 22px;display:grid;gap:18px}
+  .in-slide{display:grid;gap:14px;animation:inUp .5s cubic-bezier(.2,.8,.2,1)}
+  @keyframes inUp{from{opacity:0;transform:translateY(14px)}to{opacity:1;transform:none}}
+  .in-hello{display:flex;gap:16px;align-items:center}
+  .in-card .eyebrow{color:var(--c,#7cb4ff)}
+  .in-card h2{margin:0;font-size:clamp(24px,4vw,32px);line-height:1.15}
+  .in-card p{margin:0;color:var(--ink-2);font-size:15px;line-height:1.5}
+  .in-room{display:flex;gap:10px;align-items:center;padding:10px 12px;border-radius:14px;background:rgba(255,255,255,.04);border:1px solid rgba(255,255,255,.08)}
+  .in-room i{width:10px;height:10px;border-radius:50%;background:var(--c)}
+  .in-ags{display:grid;grid-template-columns:repeat(auto-fill,minmax(150px,1fr));gap:8px;max-height:42vh;overflow:auto}
+  .in-ags span{display:flex;gap:8px;align-items:center;padding:8px 10px;border-radius:12px;background:rgba(255,255,255,.04);font-size:13px;font-weight:700;animation:inUp .45s both}
+  .in-ags span i{flex:none;width:10px;height:10px;border-radius:50%;background:var(--a);box-shadow:0 0 10px var(--a)}
+  .in-can{display:grid;gap:8px;margin:0;padding:0;list-style:none}
+  .in-can li{display:grid;grid-template-columns:170px minmax(0,1fr);gap:12px;align-items:start;padding:10px 12px;border-radius:12px;background:rgba(255,255,255,.04);font-size:14px;line-height:1.4;animation:inUp .45s both}
+  @media (max-width:520px){ .in-can li{grid-template-columns:1fr;gap:2px} }
+  .in-can li b{color:var(--c,#7cb4ff)}
+  .in-foot{display:flex;gap:10px;align-items:center;justify-content:space-between}
+  .in-dots{display:flex;gap:6px}.in-dots i{width:22px;height:4px;border-radius:2px;background:rgba(255,255,255,.14);overflow:hidden}
+  .in-dots i.on::after{content:"";display:block;height:100%;background:var(--c,#7cb4ff);animation:inBar var(--d,3.6s) linear forwards}
+  .in-dots i.done{background:var(--c,#7cb4ff)}
+  @keyframes inBar{from{width:0}to{width:100%}}
+  .in-foot .acts{display:flex;gap:8px}
+  .in-foot button{padding:10px 16px;border-radius:12px;font-weight:700;background:rgba(255,255,255,.06);border:1px solid rgba(255,255,255,.12)}
+  .in-foot button.btn-go{background:var(--c,#2f7bff);border-color:transparent;color:#fff}
+  @media (prefers-reduced-motion:reduce){ .in-slide,.in-ags span,.in-can li{animation:none} .in-dots i.on::after{animation:none;width:100%} }
   /* «Команда и доступы»: руководители, их агенты, ссылки-приглашения */
   .ta-tabs{display:flex;gap:6px;padding:0 22px 10px;flex-wrap:wrap}
   .ta-tabs button{padding:8px 14px;border-radius:11px;font-weight:700;font-size:13px;color:var(--ink-2);background:rgba(255,255,255,.04);border:1px solid rgba(255,255,255,.08)}
@@ -946,6 +974,7 @@
 </nav>
 <div class="msheet" id="msheet" hidden><div class="sh glass" id="msh"></div></div>
 <div id="lightbox" hidden><img alt=""><p></p></div>
+<div class="intro" id="intro" hidden role="dialog" aria-modal="true" aria-labelledby="inTitle"><div class="in-card glass" id="inCard"></div></div>
 <div class="toast glass" id="toast" hidden role="status"><span id="toastText"></span><button class="btn-go" id="toastGo">Открыть</button></div>
 
 <nav class="dock glass" id="dock" aria-label="Вид">
@@ -3719,7 +3748,7 @@ function routeHash() {
   else if (h.startsWith('desk-')) { if (desk.on) openDeskTask(h.slice(5)); else desk.hash = h.slice(5); }
 }
 addEventListener('hashchange', routeHash);
-const modalOpen = () => !$('taskModal').hidden || !$('dossier').hidden || !$('deskModal').hidden || !$('teamAdm').hidden;
+const modalOpen = () => !$('intro').hidden || !$('taskModal').hidden || !$('dossier').hidden || !$('deskModal').hidden || !$('teamAdm').hidden;
 
 
 /* ======================= ЛИЧНЫЙ АССИСТЕНТ =======================
@@ -3755,6 +3784,7 @@ async function asstLoad() {
   // рабочий стол — только у владельца: после входа включается, после выхода прячется
   const staff = asst.state?.owner || asst.state?.role === 'head';
   if (staff && !desk.on) deskInit();
+  if (asst.state?.role === 'head' && !location.hash.startsWith('#invite-')) setTimeout(() => headIntro(false), 600);
   if (asst.state && !staff && desk.on) deskOff();
   appShell();
   if (asst.state?.owner && selectedId === 'you') renderPanel();
@@ -5049,9 +5079,51 @@ async function redeemInvite() {
     const j = await r.json().catch(() => ({}));
     if (!r.ok) return toast(j.error || 'Ссылка-приглашение не действует.', 'inv', 12);
     await asstLoad();
-    toast(`Добро пожаловать, ${j.user.name}! Вы вошли как руководитель — задачи своим агентам ставьте в «Моём столе».`, 'inv', 12);
-    selectedId = 'you'; if ($('team').hidden) setPanel(true); renderPanel();
+    headIntro(true);
   } catch (e) { toast('Нет связи с офисом — откройте ссылку ещё раз.', 'inv', 8); }
+}
+
+/* ---------- приветствие руководителя: несколько секунд перед офисом ----------
+   После входа по ссылке (и один раз на новом устройстве): «Добро пожаловать, Фируза» → ваш отдел и ваши агенты → что вы
+   можете. Слайды сменяются сами (или «Дальше»), в конце — «Войти в офис»: камера садится за стол руководителя. */
+const INTRO_SEC = [3.2, 4.6, 4.6];
+let introT = 0;
+function headIntro(force = false, tries = 0) {
+  const h = HEAD(); if (!h) return;
+  // офис ещё собирается — приветствие ждёт, пока уйдёт экран загрузки (до 30 с)
+  const ld = $('loader'); if (ld && !ld.classList.contains('done') && tries < 100) return setTimeout(() => headIntro(force, tries + 1), 300);
+  const key = 'hq:intro:' + h.id;
+  try { if (!force && localStorage.getItem(key)) return; localStorage.setItem(key, '1'); } catch (e) { if (!force) return; }
+  const d = deptById(h.dept), P = PEOPLE[h.id] || { name:h.name, dept:d }, color = d?.accent || '#7cb4ff';
+  const ags = h.agents.filter(id => CATALOG[id]).map(agentMeta);
+  const room = d?.room?.name || d?.name || '';
+  const slides = [
+    `<div class="in-hello">${faceHTML(P, 'lg')}<div><span class="eyebrow">${esc(BRAND)} · живой офис агентов</span><h2 id="inTitle">Добро пожаловать, ${esc(h.name)}!</h2></div></div>
+      <p>Вы вошли как руководитель${d ? ` отдела «${esc(d.short || d.name)}»` : ''}. Здесь ваши ИИ-агенты работают в 3D-офисе: вы ставите задачу — диспетчер отдаёт её нужному агенту, а готовый результат приходит к вам на стол.</p>`,
+    `<span class="eyebrow">Вам доступен ваш отдел</span><h2>${esc(d?.name || 'Ваш отдел')}</h2>
+      ${room ? `<div class="in-room" style="--c:${esc(color)}"><i></i><span>Ваш кабинет — комната «${esc(room)}»: ваш стол в центре, агенты вокруг</span></div>` : ''}
+      <p>В управлении ${ags.length} ${word(ags.length, 'агент', 'агента', 'агентов')}:</p>
+      <div class="in-ags">${ags.map((m, i) => `<span style="animation-delay:${(i * 0.05).toFixed(2)}s;--a:${esc(m.color)}"><i></i>${esc(m.name)}</span>`).join('')}</div>`,
+    `<span class="eyebrow">Что вы можете</span><h2>Ваш стол — пульт отдела</h2>
+      <ul class="in-can">${[['Ставить задачи', 'своим агентам — кнопка «Задача агенту» или прямо из досье агента'],
+        ['Отвечать агентам', 'на вопросы, выбирать стиль, разрешать действия во внешних системах'],
+        ['Принимать результат', 'или отправлять на правку — агент доделает в той же сессии'],
+        ['Видеть весь офис', 'задачи других отделов открыты для просмотра']].map(([b, t], i) => `<li style="animation-delay:${(i * 0.08).toFixed(2)}s"><b>${b}</b><span>${t}</span></li>`).join('')}</ul>`,
+  ];
+  let i = 0;
+  const show = () => {
+    clearTimeout(introT);
+    const last = i === slides.length - 1;
+    $('inCard').style.setProperty('--c', color);
+    $('inCard').innerHTML = `<div class="in-slide">${slides[i]}</div>
+      <div class="in-foot"><span class="in-dots">${slides.map((_, k) => `<i class="${k < i ? 'done' : k === i ? 'on' : ''}" style="--d:${INTRO_SEC[k]}s"></i>`).join('')}</span>
+        <span class="acts">${last ? '' : '<button data-in="skip">Пропустить</button>'}<button class="btn-go" data-in="${last ? 'go' : 'next'}">${last ? 'Войти в офис' : 'Дальше'}</button></span></div>`;
+    if (!last && !reduceMotion) introT = setTimeout(() => { i++; show(); }, INTRO_SEC[i] * 1000);
+  };
+  const done = () => { clearTimeout(introT); $('intro').hidden = true; cmd('desk'); if ($('team').hidden) setPanel(true); };
+  $('inCard').onclick = e => { const b = e.target.closest('[data-in]'); if (!b) return; if (b.dataset.in === 'next') { i++; show(); } else done(); };
+  $('intro').hidden = false; show();
+  $('inCard').querySelector('.btn-go')?.focus();
 }
 
 /* ---------- гость: что офис делает сейчас (GET desk/live.json — заголовок, агент, статус) ----------
@@ -5269,9 +5341,11 @@ function cmd(k) {
   if (k === 'plan') { mode = 'plan'; followId = null; setControls('free'); setDock('plan'); const zc = (FZ0 + FZ1) / 2; if (night) NIGHT?.plan(); else portrait() ? flyTo(V3(1.2, 96, zc), V3(0, 0, zc), 1.6) : flyTo(V3(0, 50, zc + 0.6), V3(0, 0, zc), 1.6); }
   if (k === 'desk' || k === 'deskview') {
     mode = 'desk'; followId = null; setControls('desk'); setDock('desk');
-    const C = pods[0].C;
+    // руководитель садится за свой стол в комнате своего отдела, владелец — за свой
+    const hd = HEAD() && deptById(HEAD().dept), C = hd?.pod?.C || pods[0].C;
     if (k === 'desk') { selectedId = 'you'; pagent = null; agents.forEach(paintLabel); renderPanel(); }
-    if (night) NIGHT?.desk(); else flyTo(V3(C.x - 0.75, 1.95, C.z - 2.25), V3(C.x + 0.25, 0.95, C.z + 3.4), 1.8);
+    if (night) hd ? NIGHT?.room(NIGHT.roomOfDept(hd.id)) : NIGHT?.desk();
+    else flyTo(V3(C.x - 0.75, 1.95, C.z - 2.25), V3(C.x + 0.25, 0.95, C.z + 3.4), 1.8);
   }
   if (k === 'team') setPanel($('team').hidden);
   if (k === 'labels') { labelsOn = !labelsOn; setDockOn('labels', labelsOn); }
@@ -5435,6 +5509,7 @@ addEventListener('keydown', e => {
     if (e.key === 'ArrowLeft') stepTask(-1);
     return;
   }
+  if (!$('intro').hidden) { if (e.key === 'Escape' || e.key === 'Enter') $('inCard').querySelector('[data-in="go"],[data-in="skip"]')?.click(); return; }
   if (!$('teamAdm').hidden) { if (e.key === 'Escape') $('teamAdm').hidden = true; return; }
   if (!$('dossier').hidden) { if (e.key === 'Escape') closeDossier(); return; }
   if (!$('asst').hidden && e.key === 'Escape' && $('asst').contains(document.activeElement)) return asstOpen(false);
