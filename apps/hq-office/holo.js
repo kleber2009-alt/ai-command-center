@@ -62,7 +62,7 @@ export function createHologram({ scene, x = 0, z = 0, scale = 1.35, light = fals
   geo.setAttribute('position', new THREE.BufferAttribute(pos, 3)); geo.setAttribute('alpha', new THREE.BufferAttribute(alp, 1));
   // круглые точки с прозрачностью по глубине: лицо ярче, затылок едва виден; размер — в метрах
   const ptsMat = new THREE.ShaderMaterial({
-    uniforms:{ uC:{ value:new THREE.Color(light ? '#0790ad' : '#5ef2ff') }, uSize:{ value:light ? 0.02 : 0.016 }, uH:{ value:800 }, uO:{ value:1 } },
+    uniforms:{ uC:{ value:new THREE.Color(light ? '#1fc4ff' : '#5ef2ff') }, uSize:{ value:light ? 0.025 : 0.016 }, uH:{ value:800 }, uO:{ value:1 } },
     transparent:true, depthWrite:false, blending:light ? THREE.NormalBlending : THREE.AdditiveBlending,
     vertexShader:'attribute float alpha; uniform float uSize; uniform float uH; varying float vA; void main(){ vec4 mv = modelViewMatrix * vec4(position, 1.0); gl_Position = projectionMatrix * mv; gl_PointSize = uSize * projectionMatrix[1][1] * uH * 0.5 / -mv.z; vA = alpha; }',
     fragmentShader:'uniform vec3 uC; uniform float uO; varying float vA; void main(){ float d = length(gl_PointCoord - 0.5); if (d > 0.5) discard; gl_FragColor = vec4(uC, vA * uO * smoothstep(0.5, 0.15, d)); }',
