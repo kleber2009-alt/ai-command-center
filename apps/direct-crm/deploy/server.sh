@@ -1,6 +1,6 @@
 #!/usr/bin/env bash
 # Activate an uploaded release of «CRM Директа» on the aicex box (vars.HETZNER_HOST, where *.aicex.club points).
-# Run by .github/workflows/deploy-direct-crm.yml:  ssh … bash -s -- "<domain> [alias…]" <release> < server.sh
+# Run by .github/workflows/deploy-direct-crm.yml:  ssh … bash -s -- <domain>[,alias…] <release> < server.sh
 #
 # Layout:  /opt/direct-crm/releases/<release>/   image context (Dockerfile, server.mjs, lib/, public/, package*.json)
 #          /opt/direct-crm/current → releases/<release>
@@ -9,7 +9,9 @@
 # Container aicex-direct-crm (image aicex-direct-crm:<release>, port 8795) on the shared `edge` network; the edge Caddy
 # gets /opt/edge/sites/direct-crm.caddy (validate → reload, restore on failure).
 set -euo pipefail
-DOMAINS="${1:?usage: server.sh "<domain> [alias…]" <release>}"
+# names come comma-separated: ssh joins its arguments into one command line, so a space would split them
+DOMAINS="${1:?usage: server.sh <domain>[,alias…] <release>}"
+DOMAINS="${DOMAINS//,/ }"
 DOMAIN="${DOMAINS%% *}"
 REL="${2:?usage: server.sh <domain> <release>}"
 ROOT=/opt/direct-crm

@@ -108,7 +108,8 @@ jobs:
           } | grep -v '=$' | $SSH "mkdir -p /opt/direct-crm && umask 077 && cat > /opt/direct-crm/app.env"
 
       - name: Activate
-        run: $SSH bash -s -- "$DOMAINS" "$REL" < apps/direct-crm/deploy/server.sh
+        # comma-separated: ssh joins the arguments into one remote command line and a space would split the names
+        run: $SSH bash -s -- "$(echo $DOMAINS | tr ' ' ',')" "$REL" < apps/direct-crm/deploy/server.sh
 
       - name: Smoke test
         run: |
