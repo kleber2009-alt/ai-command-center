@@ -56,10 +56,10 @@ jobs:
 
       - name: Check data files
         run: |
-          for f in office.config.js dept-content.js agent-content.js skills-library.js tasks.js tasks.auto.js works.js assistant/server.mjs assistant/office.mjs assistant/voice.mjs assistant/desk.mjs assistant/twin.mjs assistant/kb.mjs; do node --check "apps/hq-office/$f"; done
+          for f in agents.js office.config.js dept-content.js agent-content.js skills-library.js tasks.js tasks.auto.js works.js assistant/server.mjs assistant/office.mjs assistant/voice.mjs assistant/desk.mjs assistant/twin.mjs assistant/kb.mjs; do node --check "apps/hq-office/$f"; done
           python3 -m py_compile apps/hq-office/runner/runner.py && rm -rf apps/hq-office/runner/__pycache__
           node -e '
-            global.window = {}; for (const f of ["office.config.js", "dept-content.js", "agent-content.js", "tasks.js", "tasks.auto.js", "works.js"])
+            global.window = {}; for (const f of ["agents.js", "office.config.js", "dept-content.js", "agent-content.js", "tasks.js", "tasks.auto.js", "works.js"])
               require("vm").runInThisContext(require("fs").readFileSync("apps/hq-office/" + f, "utf8"));
             const t = [...window.OFFICE_TASKS, ...window.OFFICE_TASKS_AUTO.tasks], ids = new Set();
             for (const x of t) { if (ids.has(x.id)) throw new Error("duplicate task id " + x.id); ids.add(x.id);
@@ -68,7 +68,17 @@ jobs:
                 if (u && u.startsWith("media/") && !require("fs").existsSync("apps/hq-office/" + u)) throw new Error("missing " + u + " in " + x.id); }
             for (const p of Object.values(window.OFFICE_WORKS.previews))
               if (!/^https?:/.test(p) && !require("fs").existsSync("apps/hq-office/" + p)) throw new Error("missing preview " + p);
-            console.log(t.length + " tasks ok");'
+            console.log(t.length + " tasks ok");
+            // the agents registry (agents.js): every agent has a dossier, a known department and handoffs to known agents
+            const R = window.OFFICE_AGENTS, depts = new Set([...window.OFFICE_CONFIG.depts.map(d => d.id), "council"]);
+            for (const [id, a] of Object.entries(R.list)) {
+              if (!depts.has(a.dept)) throw new Error("agent " + id + ": unknown dept " + a.dept);
+              if (!a.name || !a.role || !/^#[0-9a-f]{6}$/i.test(a.color)) throw new Error("agent " + id + ": name, role, color");
+              if (!window.AGENT_CONTENT[id]) throw new Error("agent " + id + ": no dossier in agent-content.js (AGENT_CONTENT)");
+              if (a.figure !== false && (!a.screen || !a.tasks?.length)) throw new Error("agent " + id + ": screen and tasks");
+              for (const x of a.out || []) if (!R.list[x.to] && !["you", "head", "orchestrator"].includes(x.to)) throw new Error("agent " + id + ": hands to unknown " + x.to);
+            }
+            console.log(R.ids.length + " agents ok");'
 
       - name: Install SSH key
         env:
@@ -94,8 +104,8 @@ jobs:
           # the twin's knowledge base: registry, docs of every product, landing texts, skills (twin-kb/index.json)
           node kb.mjs build ../../..
           node -e 'import("./office.mjs").then(m => { const o = m.loadOffice(".."); if (!o.tasks) throw new Error("no tasks"); console.log(o.tasks + " tasks, " + o.text.length + " chars of office knowledge"); })'
-          # the working desk with a fake runner: pipelines, the QA, approvals, lessons, usage
-          HQ_ROUTINES=off node desk.check.mjs
+          # tests of the working desk with a fake runner and a fake Claude (desk.test.mjs): the task's state machine
+          npm test
 
       - name: Upload release
         run: |
