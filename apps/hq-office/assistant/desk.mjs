@@ -13,6 +13,7 @@
      runner: POST runner/hello · POST runner/claim · GET runner/<id>/input/<name>
              POST runner/<id>/step {text} · PUT runner/<id>/file?path= · POST runner/<id>/finish
      public: GET history.js | history.json (accepted and published tasks, in the format of tasks.js)
+             GET live.json (guests: open tasks and the week's published ones — title, agent, status only)
              GET files/<id>/v<n>/<path> — the owner always, everyone once published
 
    Statuses: routing → question | queued → work → review → done, plus cancelled and error.
@@ -234,6 +235,13 @@ export function createDesk({ claude, model, fallback, dataDir, officeDir, runner
         summary:s.summary || '', files:s.files || [] })) } : null,
       approval:t.approval ? { actions:t.approval.actions, status:t.approval.status } : null, rating:t.rating || null, lessons:t.lessonsUsed || 0,
     };
+  }
+  function publicView(t) {
+    const v = view(t), pl = v.pipeline;
+    return { id:t.id, created:t.created, updated:t.updated, status:t.status, statusText:STATUS[t.status] || t.status, queuePos:v.queuePos,
+      agent:v.agent, route:{ agent:t.route.agent, title:t.route.title || '' }, question:t.status === 'question' ? { from:t.question?.from || '' } : null,
+      result:t.result ? { version:t.result.version } : null, answers:new Array((t.answers || []).length).fill(0), routine:Boolean(t.routine),
+      pipeline:pl ? { label:pl.label, idx:pl.idx, n:pl.stages.length } : null, history:t.status === 'done' && t.published ? 'desk-' + t.id : '' };
   }
   function emit(t) {
     t.updated = now(); save();
@@ -800,6 +808,15 @@ export function createDesk({ claude, model, fallback, dataDir, officeDir, runner
       if (rest === 'history.json') return json(res, 200, list);
       res.writeHead(200, { 'content-type':'text/javascript; charset=utf-8', 'cache-control':'no-cache' });
       return res.end(`window.OFFICE_TASKS_DESK = ${JSON.stringify(list)};\n`);
+    }
+    // public: what the office is doing right now, for guests — titles, agents and statuses only:
+    // no request text, files, brief, questions or results (a published result is in history.js)
+    if (M === 'GET' && rest === 'live.json') {
+      const since = Date.now() - 7 * 864e5;
+      const list = tasks.filter(t => t.route && t.routine !== 'billing' && (OPEN.includes(t.status) || (t.status === 'done' && t.published && Date.parse(t.doneAt || t.updated) > since)))
+        .sort((x, y) => y.updated.localeCompare(x.updated)).slice(0, 40).map(publicView);
+      res.writeHead(200, { 'content-type':'application/json; charset=utf-8', 'cache-control':'no-cache' });
+      return res.end(JSON.stringify({ tasks:list, online:Date.now() - runner.seenAt < 90e3 }));
     }
     if (M === 'GET' && seg[0] === 'files' && seg.length >= 4) {
       const t = byId(seg[1]), v = Number(String(seg[2]).replace(/^v/, ''));
