@@ -94,8 +94,8 @@ jobs:
           # the twin's knowledge base: registry, docs of every product, landing texts, skills (twin-kb/index.json)
           node kb.mjs build ../../..
           node -e 'import("./office.mjs").then(m => { const o = m.loadOffice(".."); if (!o.tasks) throw new Error("no tasks"); console.log(o.tasks + " tasks, " + o.text.length + " chars of office knowledge"); })'
-          # the working desk with a fake runner: pipelines, the QA, approvals, lessons, usage
-          HQ_ROUTINES=off node desk.check.mjs
+          # tests of the working desk with a fake runner and a fake Claude (desk.test.mjs): the task's state machine
+          npm test
 
       - name: Upload release
         run: |
