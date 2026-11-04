@@ -97,12 +97,13 @@ const sha = s => crypto.createHash('sha256').update(String(s)).digest();
 const sign = v => crypto.createHmac('sha256', SECRET).update(v + '|' + PASSWORD).digest('base64url');
 const same = (a, b) => a.length === b.length && crypto.timingSafeEqual(a, b);
 const cookies = req => Object.fromEntries((req.headers.cookie || '').split(/;\s*/).filter(Boolean).map(c => { const i = c.indexOf('='); return [c.slice(0, i), decodeURIComponent(c.slice(i + 1))]; }));
-const cookie = (name, value, maxAge) => `${name}=${encodeURIComponent(value)}; Path=${PREFIX}; Max-Age=${maxAge}; HttpOnly; SameSite=Lax${process.env.SERVE_STATIC === '1' ? '' : '; Secure'}`;
+const cookie = (name, value, maxAge, sameSite = 'Lax') => `${name}=${encodeURIComponent(value)}; Path=${PREFIX}; Max-Age=${maxAge}; HttpOnly; SameSite=${sameSite}${process.env.SERVE_STATIC === '1' && sameSite === 'Lax' ? '' : '; Secure'}`;
 const clientIp = req => String(req.headers['x-forwarded-for'] || req.socket.remoteAddress || '').split(',')[0].trim();
 
-// the login cookie: `owner.<exp>` (the password) or `user.<id>.<ver>.<exp>` (a department head, invite link), signed
+// the login cookie: `owner.<exp>` (the password or Telegram) or `user.<id>.<ver>.<exp>` (a department head, invite link), signed.
+// The mini app may also send it as the x-hqa header — Telegram Web opens it in a frame where cookies can be blocked
 function signedValue(req) {
-  const t = cookies(req).hqa;
+  const t = cookies(req).hqa || String(req.headers['x-hqa'] || '');
   if (!t || !PASSWORD) return '';
   const i = t.lastIndexOf('.'), v = t.slice(0, i);
   return same(Buffer.from(t.slice(i + 1)), Buffer.from(sign(v))) ? v : '';
@@ -116,6 +117,17 @@ function whoOf(req) {
   if (isOwner(req)) return { owner:true };
   const u = team.check(signedValue(req));
   return u ? { head:{ id:u.id, name:u.name, dept:u.dept, agents:u.agents } } : null;
+}
+// Telegram Web App initData: the hash is an HMAC of the sorted fields by the key HMAC("WebAppData", bot token); a day at most
+function tgUser(initData, botToken) {
+  const p = new URLSearchParams(initData), hash = p.get('hash') || '';
+  p.delete('hash');
+  const check = [...p.entries()].sort(([a], [b]) => (a < b ? -1 : a > b ? 1 : 0)).map(([k, v]) => `${k}=${v}`).join('\n');
+  const key = crypto.createHmac('sha256', 'WebAppData').update(botToken).digest();
+  const h = crypto.createHmac('sha256', key).update(check).digest('hex');
+  if (!/^[0-9a-f]{64}$/.test(hash) || !same(Buffer.from(h), Buffer.from(hash))) return null;
+  if (!(Date.now() / 1000 - Number(p.get('auth_date')) < 86400)) return null;
+  try { return JSON.parse(p.get('user') || 'null'); } catch { return null; }
 }
 const hits = new Map();
 function limited(key, max, windowMs) {
@@ -378,6 +390,20 @@ const ROUTES = {
     json(res, 200, { ok:true }, { 'set-cookie':cookie('hqa', `${v}.${sign(v)}`, 90 * 86400) });
   },
   'POST logout': (req, res) => json(res, 200, { ok:true }, { 'set-cookie':cookie('hqa', '', 0) }),
+  // the mini app in Telegram (PUBLIC_URL/app/): the owner signs in by Telegram itself — the signed initData of the
+  // office's own bot, the owner's Telegram id. No password; a stranger who opens the app gets nothing.
+  'POST tg-login': async (req, res) => {
+    if (limited('tg:' + clientIp(req), 30, 900e3)) return json(res, 429, { error:'Слишком много попыток — подождите.' });
+    const tok = process.env.HQ_NOTIFY_TG_TOKEN, chat = String(process.env.HQ_NOTIFY_TG_CHAT || '');
+    if (!tok || !chat || !/^(1|true|yes)$/i.test(process.env.HQ_NOTIFY_TG_OWN || '') || !PASSWORD) return json(res, 503, { error:'Вход через Telegram не настроен.' });
+    const { initData } = await jsonBody(req, 8e3);
+    const user = tgUser(String(initData || ''), tok);
+    if (!user) return json(res, 401, { error:'Telegram не подтвердил вход — откройте приложение из бота заново.' });
+    if (String(user.id) !== chat) return json(res, 403, { error:'Это приложение офиса — оно открывается только у владельца.' });
+    const v = `owner.${Date.now() + 30 * 864e5}`, signed = `${v}.${sign(v)}`;
+    // SameSite=None: Telegram Web opens the app in a frame; the token also goes back for the x-hqa header
+    json(res, 200, { ok:true, owner:true, name:user.first_name || '', token:signed }, { 'set-cookie':cookie('hqa', signed, 30 * 86400, 'None') });
+  },
   // a department head opens the invite link: one-time code → their own login for 90 days
   'POST invite': async (req, res) => {
     if (!PASSWORD) return json(res, 503, { error:'Вход в офис ещё не настроен.' });

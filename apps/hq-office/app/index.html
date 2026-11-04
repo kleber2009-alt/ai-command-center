@@ -1,0 +1,488 @@
+<!doctype html>
+<html lang="ru">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<title>Офис AICEX</title>
+<meta name="robots" content="noindex">
+<script src="https://telegram.org/js/telegram-web-app.js"></script>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link href="https://fonts.googleapis.com/css2?family=Manrope:wght@400;500;600;700;800&family=JetBrains+Mono:wght@500;600&display=swap" rel="stylesheet">
+<!-- Мини-приложение офиса в Telegram (кнопка «Офис» в боте): пульт, задачи, окно задачи, новая задача, команда.
+     Данные — тот же рабочий стол /api/assistant/desk/*. Вход — подписанные данные Telegram (POST /api/assistant/tg-login),
+     только владелец. Открыто в обычном браузере — вход по паролю на hq2.aicex.club. -->
+<style>
+  :root{--bg:#0f1218;--card:#181c25;--line:#232a36;--ink:#eef1f6;--ink2:#a3abbd;--ink3:#8b93a6;--field:#11151c;--btn:#1f2530;--btnline:#2c3442;
+    --amber:#ffb020;--amberInk:#ffc35c;--amberBg:rgba(245,165,36,.12);--green:#4ade80;--greenInk:#4ade80;--greenBg:rgba(74,222,128,.10);--blue:#3b82f6;--blueInk:#8ec1ff;--blueBg:rgba(124,180,255,.10);
+    --red:#ff6b6b;--redBg:rgba(255,107,107,.10);--bar:#2a313d;--tab:#0c0f14}
+  :root[data-theme="light"]{--bg:#f3f5f9;--card:#ffffff;--line:#e2e6ee;--ink:#10141b;--ink2:#4b5466;--ink3:#626b7d;--field:#f1f3f7;--btn:#eef1f6;--btnline:#d8dde7;
+    --amberInk:#8a5800;--amberBg:rgba(245,165,36,.14);--greenInk:#157a3a;--greenBg:rgba(74,222,128,.16);--blueInk:#1d5fbf;--blueBg:rgba(59,130,246,.10);--redBg:rgba(255,107,107,.12);--bar:#e2e6ee;--tab:#ffffff}
+  *{box-sizing:border-box}
+  html,body{margin:0;background:var(--bg);color:var(--ink);font:15px/1.45 Manrope,system-ui,sans-serif;-webkit-tap-highlight-color:transparent}
+  button,input,textarea,select{font:inherit;color:inherit}
+  button{cursor:pointer}
+  a{color:var(--blueInk)}
+  .app{min-height:100vh;display:flex;flex-direction:column;max-width:640px;margin:0 auto}
+  .hd{display:flex;align-items:center;gap:10px;padding:14px 16px 8px}
+  .hd .t{flex:1;min-width:0;display:flex;flex-direction:column;gap:2px}
+  .eb{font:600 11px 'JetBrains Mono',monospace;letter-spacing:.08em;text-transform:uppercase;color:var(--ink3)}
+  .h1{font-size:22px;font-weight:800;letter-spacing:-.01em;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+  .live{display:inline-flex;align-items:center;gap:6px;font-size:12px;font-weight:700;padding:6px 10px;border-radius:999px;background:var(--greenBg);color:var(--greenInk)}
+  .live.off{background:var(--redBg);color:var(--red)}
+  .live i{width:7px;height:7px;border-radius:50%;background:currentColor}
+  main{flex:1;padding:4px 16px 110px;display:flex;flex-direction:column;gap:14px}
+  .lbl{font:600 11px 'JetBrains Mono',monospace;letter-spacing:.1em;text-transform:uppercase;color:var(--ink3);margin-top:4px}
+  .lbl.a{color:var(--amberInk)} .lbl.g{color:var(--greenInk)}
+  .card{background:var(--card);border:1px solid var(--line);border-radius:18px;padding:14px;display:flex;flex-direction:column;gap:10px}
+  .card.need{border-color:rgba(245,165,36,.4)}
+  .kpis{display:grid;grid-template-columns:repeat(3,minmax(0,1fr));gap:8px}
+  .kpi{text-align:left;border-radius:16px;padding:12px;display:flex;flex-direction:column;gap:2px;border:1px solid var(--line);background:var(--card)}
+  .kpi b{font-size:30px;font-weight:800;line-height:1.1}
+  .kpi span{font-size:12.5px;color:var(--ink2)}
+  .kpi.ka{background:var(--amberBg);border-color:rgba(245,165,36,.35)} .kpi.ka b{color:var(--amberInk)}
+  .kpi.kg{background:var(--greenBg)} .kpi.kg b{color:var(--greenInk)}
+  .kpi.kb{background:var(--blueBg)} .kpi.kb b{color:var(--blueInk)}
+  .row{display:flex;gap:11px;align-items:flex-start;text-align:left;border:0;background:transparent;padding:0;width:100%}
+  .av{width:40px;height:40px;border-radius:13px;flex:none;display:flex;align-items:center;justify-content:center;font-size:13px;font-weight:800;color:#10141b}
+  .col{display:flex;flex-direction:column;gap:3px;min-width:0;flex:1}
+  .tt{font-size:15px;font-weight:700;line-height:1.3}
+  .sub{font-size:12.5px;color:var(--ink2)}
+  .need-l{font-size:12.5px;font-weight:700;color:var(--amberInk)}
+  .btns{display:flex;gap:8px;flex-wrap:wrap}
+  .b{height:44px;padding:0 14px;border-radius:12px;border:1px solid var(--btnline);background:var(--btn);font-size:14px;font-weight:700;flex:1;min-width:0}
+  .b.ok{background:var(--green);border:0;color:#06210f;font-weight:800;flex:1.4}
+  .b.warn{background:var(--amber);border:0;color:#2a1a00;font-weight:800;flex:1.4}
+  .b.pri{background:var(--blue);border:0;color:#fff;font-weight:800}
+  .b.opt{flex:0 1 auto}
+  .b.on{border:1.5px solid var(--blue);background:var(--blueBg)}
+  .pv{display:flex;align-items:center;gap:10px;background:var(--field);border-radius:12px;padding:10px}
+  .pv .th{width:46px;height:58px;border-radius:8px;background:var(--bar);flex:none;object-fit:cover;display:flex;align-items:center;justify-content:center}
+  .bars{display:grid;grid-auto-flow:column;grid-auto-columns:minmax(0,1fr);gap:4px}
+  .bars i{height:5px;border-radius:3px;background:var(--bar)}
+  .bars i.d{background:var(--green)} .bars i.n{background:var(--green);opacity:.55} .bars i.q{background:#7cb4ff} .bars i.w{background:var(--amber)} .bars i.e{background:var(--red)}
+  .pill{font-size:12px;font-weight:800;padding:4px 10px;border-radius:999px;white-space:nowrap}
+  .pill.need{background:var(--amberBg);color:var(--amberInk)} .pill.work{background:var(--greenBg);color:var(--greenInk)} .pill.queued{background:var(--blueBg);color:var(--blueInk)}
+  .pill.done{background:var(--btn);color:var(--ink2)} .pill.error{background:var(--redBg);color:var(--red)}
+  .chip{font-size:12px;color:var(--ink2);background:var(--btn);padding:4px 9px;border-radius:999px}
+  .seg{display:grid;grid-template-columns:repeat(4,minmax(0,1fr));gap:4px;background:var(--card);border-radius:14px;padding:4px;border:1px solid var(--line)}
+  .seg button{height:40px;border:0;border-radius:10px;background:transparent;font-size:13px;font-weight:700;color:var(--ink2)}
+  .seg button.on{background:var(--btn);color:var(--ink)}
+  .stats{display:grid;grid-template-columns:repeat(3,minmax(0,1fr));gap:8px}
+  .stats b{display:block;font-size:20px;font-weight:800} .stats span{font-size:12px;color:var(--ink2)}
+  .list{display:flex;flex-direction:column;border-radius:18px;border:1px solid var(--line);background:var(--card);overflow:hidden}
+  .list > *{display:flex;align-items:center;gap:10px;padding:12px 14px;border-bottom:1px solid var(--line);text-decoration:none;color:inherit;border-left:0;border-right:0;border-top:0;background:transparent;text-align:left;width:100%}
+  .list > *:last-child{border-bottom:0}
+  .dot{width:9px;height:9px;border-radius:50%;flex:none}
+  .steps{display:grid;grid-auto-flow:column;grid-auto-columns:minmax(0,1fr);gap:2px}
+  .step{display:flex;flex-direction:column;align-items:center;gap:6px;text-align:center}
+  .step .c{width:26px;height:26px;border-radius:50%;display:flex;align-items:center;justify-content:center;font-size:12px;font-weight:800;background:var(--bar);color:var(--ink3)}
+  .step .c.d{background:var(--greenBg);color:var(--greenInk)} .step .c.n{background:var(--green);color:#06210f} .step .c.w{background:var(--amber);color:#2a1a00} .step .c.q{background:#7cb4ff;color:#0b1b33} .step .c.e{background:var(--red);color:#fff}
+  .step b{font-size:11px;font-weight:600;line-height:1.25;color:var(--ink2)} .step small{font-size:10.5px;color:var(--ink3)}
+  .media{display:flex;gap:8px;overflow-x:auto;scroll-snap-type:x mandatory;padding-bottom:4px}
+  .media img{height:300px;border-radius:12px;scroll-snap-align:start;flex:none;background:var(--field)}
+  video{width:100%;max-height:460px;border-radius:12px;background:#000}
+  iframe.page{width:100%;height:440px;border:1px solid var(--line);border-radius:12px;background:#fff}
+  .rep h4{margin:6px 0 2px;font-size:12px;font-weight:800;letter-spacing:.06em;text-transform:uppercase;color:var(--greenInk)}
+  .rep p{margin:0 0 6px;font-size:14px;line-height:1.5}
+  .rep ul{margin:0 0 6px;padding-left:18px;font-size:14px;line-height:1.5}
+  .files a{display:flex;gap:10px;align-items:center;padding:10px 0;border-bottom:1px solid var(--line);text-decoration:none;color:inherit;font-size:13.5px}
+  .files a:last-child{border-bottom:0}
+  .log{display:flex;gap:10px;font-size:13.5px;line-height:1.4}
+  .log time{font:500 11.5px 'JetBrains Mono',monospace;color:var(--ink3);width:38px;flex:none;padding-top:2px}
+  textarea,input[type=text],select{width:100%;border-radius:14px;border:1px solid var(--btnline);background:var(--card);padding:12px 14px;font-size:15px}
+  textarea{resize:none;min-height:110px;line-height:1.45}
+  .how{text-align:left;display:flex;flex-direction:column;gap:3px;padding:12px 14px;border-radius:14px;border:1px solid var(--btnline);background:var(--card);width:100%}
+  .how.on{border:1.5px solid var(--blue);background:var(--blueBg)}
+  .how b{font-size:14.5px} .how span{font-size:12.5px;color:var(--ink2)}
+  .ups{display:flex;flex-wrap:wrap;gap:6px}
+  .grid2{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:6px}
+  .ag{display:flex;align-items:center;gap:8px;background:var(--field);border-radius:10px;padding:9px 10px;min-width:0;border:0;text-align:left}
+  .ag span{font-size:13px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+  .sticky{position:fixed;left:0;right:0;bottom:calc(70px + env(safe-area-inset-bottom));display:flex;gap:8px;padding:10px 16px;background:var(--bg);border-top:1px solid var(--line);max-width:640px;margin:0 auto}
+  .tabs{position:fixed;left:0;right:0;bottom:0;display:grid;grid-template-columns:repeat(5,minmax(0,1fr));align-items:center;padding:6px 8px calc(10px + env(safe-area-inset-bottom));background:var(--tab);border-top:1px solid var(--line);max-width:640px;margin:0 auto}
+  .tabs button{position:relative;height:56px;border:0;background:transparent;display:flex;flex-direction:column;align-items:center;justify-content:center;gap:3px;color:var(--ink3);font-size:11px;font-weight:700}
+  .tabs button.on{color:var(--blue)}
+  .tabs svg{width:22px;height:22px;fill:none;stroke:currentColor;stroke-width:2;stroke-linecap:round;stroke-linejoin:round}
+  .tabs .plus span{width:48px;height:48px;border-radius:16px;background:var(--blue);display:flex;align-items:center;justify-content:center}
+  .tabs .plus svg{stroke:#fff;stroke-width:2.4}
+  .badge{position:absolute;top:2px;right:calc(50% - 22px);min-width:18px;height:18px;border-radius:9px;background:var(--amber);color:#2a1a00;font-size:11px;font-weight:800;display:flex;align-items:center;justify-content:center;padding:0 4px}
+  .toast{position:fixed;left:16px;right:16px;bottom:calc(140px + env(safe-area-inset-bottom));background:var(--ink);color:var(--bg);border-radius:14px;padding:12px 14px;font-size:14px;font-weight:700;z-index:9;max-width:608px;margin:0 auto}
+  .empty{text-align:center;color:var(--ink2);font-size:14px;margin:28px 0}
+  .gate{margin:auto;padding:32px 20px;text-align:center;display:flex;flex-direction:column;gap:12px;max-width:380px}
+  .bk{width:44px;height:44px;margin-left:-10px;border:0;background:transparent;display:flex;align-items:center;justify-content:center}
+  .bk svg{width:22px;height:22px;fill:none;stroke:currentColor;stroke-width:2;stroke-linecap:round;stroke-linejoin:round}
+  .sr{position:absolute;width:1px;height:1px;overflow:hidden;clip:rect(0 0 0 0)}
+</style>
+</head>
+<body>
+<div class="app" id="app"><div class="gate"><b>Офис AICEX</b><span class="sub">Подключаюсь…</span></div></div>
+<div class="toast" id="toast" role="status" hidden></div>
+<script>
+'use strict';
+const API = '/api/assistant', DESK = API + '/desk';
+const TG = window.Telegram && window.Telegram.WebApp && window.Telegram.WebApp.initData ? window.Telegram.WebApp : null;
+const S = { auth:'', owner:false, tasks:[], agents:[], pipelines:[], runner:null, stats:null, filter:'need', how:'', agent:'', rate:{}, uploads:[], text:'', busy:false, revise:'' };
+const $ = id => document.getElementById(id);
+const esc = s => String(s ?? '').replace(/[&<>"']/g, c => ({ '&':'&amp;', '<':'&lt;', '>':'&gt;', '"':'&quot;', "'":'&#39;' }[c]));
+const word = (n, a, b, c) => n % 10 === 1 && n % 100 !== 11 ? a : [2, 3, 4].includes(n % 10) && ![12, 13, 14].includes(n % 100) ? b : c;
+const fmtDur = ms => { const m = Math.round((ms || 0) / 60000); return m < 1 ? '<1 мин' : m < 60 ? `${m} мин` : `${Math.floor(m / 60)} ч${m % 60 ? ' ' + (m % 60) + ' м' : ''}`; };
+const fmtUsd = c => '$' + (c >= 100 ? Math.round(c) : (c || 0).toFixed(2)).toString().replace('.', ',');
+const ago = iso => { const s = (Date.now() - Date.parse(iso)) / 1000; return s < 60 ? 'только что' : s < 3600 ? `${Math.floor(s / 60)} мин назад` : s < 86400 ? `${Math.floor(s / 3600)} ч назад` : new Date(iso).toLocaleDateString('ru', { day:'numeric', month:'short' }); };
+const haptic = k => { try { TG?.HapticFeedback?.notificationOccurred(k); } catch (e) {} };
+const IMG = /\.(jpe?g|png|webp|gif|svg)$/i, VID = /\.(mp4|mov|m4v|webm)$/i;
+const natural = (a, b) => a.localeCompare(b, 'ru', { numeric:true });
+const ICO = { home:'M3 10.5 12 3l9 7.5V20a1 1 0 0 1-1 1h-5v-6H9v6H4a1 1 0 0 1-1-1z', tasks:'M9 6h11M9 12h11M9 18h11M4 6h.01M4 12h.01M4 18h.01',
+  team:'M17 20v-2a4 4 0 0 0-4-4H7a4 4 0 0 0-4 4v2M10 10a4 4 0 1 0 0-8 4 4 0 0 0 0 8M21 20v-2a4 4 0 0 0-3-3.9M16 2.1a4 4 0 0 1 0 7.8', more:'M5 12h.01M12 12h.01M19 12h.01' };
+const DEPT = { ceo:'Стратегия и продукт', marketing:'Маркетинг', sales:'Продажи', traffic:'Реклама Meta', council:'Переговорная легенд' };
+
+/* ---------- theme and Telegram ---------- */
+function theme() { document.documentElement.dataset.theme = TG?.colorScheme === 'light' ? 'light' : 'dark'; }
+if (TG) { TG.ready(); TG.expand(); theme(); TG.onEvent('themeChanged', theme); try { TG.setHeaderColor('bg_color'); } catch (e) {} TG.BackButton.onClick(() => history.back()); }
+
+/* ---------- api ---------- */
+async function api(p, opts = {}) {
+  const r = await fetch(p, { ...opts, credentials:'include', headers:{ ...(opts.body && !(opts.body instanceof Blob) ? { 'content-type':'application/json' } : {}), ...(S.auth ? { 'x-hqa':S.auth } : {}), ...(opts.headers || {}) } });
+  const j = await r.json().catch(() => ({}));
+  if (!r.ok) throw Object.assign(new Error(j.error || 'Нет связи с офисом'), { status:r.status });
+  return j;
+}
+const post = (p, body) => api(DESK + p, { method:'POST', body:JSON.stringify(body || {}) });
+async function login() {
+  if (TG) {
+    const j = await api(API + '/tg-login', { method:'POST', body:JSON.stringify({ initData:TG.initData }) });
+    S.auth = j.token; S.owner = true; return;
+  }
+  const st = await api(API + '/state');
+  S.owner = Boolean(st.owner);
+}
+async function load() {
+  const j = await api(DESK + '/tasks');
+  S.tasks = j.tasks; S.agents = j.agents || []; S.pipelines = j.pipelines || []; S.runner = j.runner;
+  render();
+}
+async function loadStats() { try { S.stats = await api(DESK + '/stats'); if (route().s === 'more' || route().s === 'home') render(); } catch (e) {} }
+function live() {
+  let es;
+  try { es = new EventSource(DESK + '/events', { withCredentials:true }); } catch (e) { es = null; }
+  let got = false;
+  if (es) {
+    es.onmessage = e => {
+      got = true;
+      let ev; try { ev = JSON.parse(e.data); } catch (x) { return; }
+      if (ev.t === 'snapshot') { S.tasks = ev.tasks; S.runner = ev.runner || S.runner; }
+      if (ev.t === 'task') { const i = S.tasks.findIndex(t => t.id === ev.task.id); if (i >= 0) S.tasks[i] = ev.task; else S.tasks.unshift(ev.task); }
+      if (ev.t === 'runner') S.runner = ev.runner;
+      if (!editing()) render();
+    };
+    es.onerror = () => { if (!got) { es.close(); poll(); } };
+  } else poll();
+}
+let pollT = 0;
+function poll() { clearInterval(pollT); pollT = setInterval(() => { if (!editing()) load().catch(() => {}); }, 6000); }
+// do not redraw under the owner's fingers: a field in focus keeps its text
+const editing = () => ['TEXTAREA', 'INPUT', 'SELECT'].includes(document.activeElement?.tagName);
+
+/* ---------- toast ---------- */
+let toastT = 0;
+function toast(text) { const t = $('toast'); t.textContent = text; t.hidden = false; clearTimeout(toastT); toastT = setTimeout(() => { t.hidden = true; }, 2600); }
+
+/* ---------- model helpers ---------- */
+const agentOf = id => S.agents.find(a => a.id === id) || null;
+const colorOf = id => agentOf(id)?.color || '#7cb4ff';
+const initials = n => String(n || '?').split(/[\s«»—-]+/).filter(Boolean).slice(0, 2).map(w => w[0]).join('').toUpperCase();
+const needOf = t => t.status === 'question' || t.status === 'review';
+const statusKey = t => needOf(t) ? 'need' : t.status === 'routing' ? 'queued' : t.status === 'cancelled' ? 'done' : t.status;
+const STATUS = { need:'ждёт вас', work:'в работе', queued:'в очереди', done:'готово', error:'ошибка' };
+function needLabel(t) {
+  if (t.status === 'review') return 'Принёс результат';
+  const f = t.question?.from;
+  return f === 'style' ? 'Выберите стиль' : f === 'approval' ? 'Ждёт разрешения на действие' : f === 'agent' ? 'Агент спрашивает' : 'Диспетчер уточняет';
+}
+function avatar(t) { const id = t.agent?.id || t.route?.agent; return `<span class="av" style="background:${esc(colorOf(id))}">${esc(initials(t.agent?.name || 'Д'))}</span>`; }
+// the stages of a task: Поставлена → Диспетчер → (Транскрибатор) → agent(s) → Контролёр → Вы
+function stages(t) {
+  const st = t.status, q = t.question?.from, S2 = [];
+  S2.push({ l:'Поставлена', s:'d' });
+  S2.push({ l:'Диспетчер', s:st === 'routing' ? 'n' : st === 'error' && !t.route ? 'e' : st === 'question' && (q === 'style' || q === 'dispatcher') ? 'w' : t.route ? 'd' : '' });
+  if (t.chain && t.route?.agent !== 'transcriber') S2.push({ l:'Транскрибатор', s:t.chain.done ? 'd' : t.agent?.id === 'transcriber' ? (st === 'work' ? 'n' : 'q') : '' });
+  const onQA = t.agent?.id === 'qa' && ['queued', 'work'].includes(st);
+  const agentState = st === 'error' ? (t.route ? 'e' : '') : st === 'question' && (q === 'agent' || q === 'approval') ? 'w' : onQA ? 'd' : st === 'work' ? 'n' : st === 'queued' && t.route ? 'q' : ['review', 'done'].includes(st) ? 'd' : '';
+  if (t.pipeline) t.pipeline.stages.forEach((x, i) => S2.push({ l:x.title, s:x.status === 'done' ? 'd' : i === t.pipeline.idx ? agentState : '' }));
+  else S2.push({ l:t.agent?.name && !onQA ? t.agent.name : agentOf(t.route?.agent)?.name || 'Агент', s:agentState });
+  if (t.qa) S2.push({ l:'Контролёр', s:t.qa.status === 'done' ? 'd' : onQA ? (st === 'work' ? 'n' : 'q') : '' });
+  S2.push({ l:'Вы', s:st === 'review' ? 'w' : st === 'done' ? 'd' : '' });
+  return S2;
+}
+const bars = t => `<span class="bars">${stages(t).map(x => `<i class="${x.s}"></i>`).join('')}</span>`;
+function lastStep(t) { const s = t.steps?.[t.steps.length - 1]?.text || ''; return s.replace(/^«[^»]+»\s*/, ''); }
+
+/* ---------- router ---------- */
+function route() {
+  const h = location.hash.slice(1);
+  if (h.startsWith('t=')) return { s:'detail', id:h.slice(2) };
+  return { s:['tasks', 'new', 'team', 'more'].includes(h) ? h : 'home' };
+}
+function go(h) { if (location.hash.slice(1) !== h) location.hash = h; else render(); }
+addEventListener('hashchange', () => { S.revise = ''; render(); window.scrollTo(0, 0); });
+
+/* ---------- screens ---------- */
+function header(eyebrow, title, back) {
+  const on = S.runner?.online !== false;
+  return `<div class="hd">${back && !TG ? `<button class="bk" data-a="back" aria-label="Назад"><svg viewBox="0 0 24 24"><path d="M15 18l-6-6 6-6"/></svg></button>` : ''}
+    <div class="t"><span class="eb">${esc(eyebrow)}</span><span class="h1">${esc(title)}</span></div>
+    <span class="live${on ? '' : ' off'}"><i></i>${on ? 'исполнитель на связи' : 'исполнитель не на связи'}</span></div>`;
+}
+function needCard(t) {
+  let act = '';
+  if (t.status === 'review') {
+    const files = t.result?.files || [], img = files.find(f => IMG.test(f.path)), vid = files.find(f => VID.test(f.path));
+    act = `<div class="pv">${img ? `<img class="th" src="${esc(img.url)}" alt="">` : `<span class="th"><svg width="18" height="18" viewBox="0 0 24 24" fill="currentColor" aria-hidden="true"><path d="${vid ? 'M8 5v14l11-7z' : 'M7 3h7l5 5v13H7z'}"/></svg></span>`}
+      <span class="sub" style="color:var(--ink)">${esc(plainSummary(t.result?.summary, 140))}</span></div>
+      <div class="btns"><button class="b" data-a="open" data-id="${t.id}" data-rv="1">Правка</button><button class="b ok" data-a="accept" data-id="${t.id}">Принять</button></div>`;
+  } else if (t.question?.options?.length) {
+    const ap = t.question.from === 'approval';
+    act = (ap ? `<div class="pv"><span class="sub" style="color:var(--ink)">${esc((t.approval?.actions || []).join('; '))}</span></div>` : '') +
+      `<div class="btns">${t.question.options.map(o => `<button class="b opt${ap && o.label === 'Выполнить' ? ' warn' : ''}" data-a="answer" data-id="${t.id}" data-v="${esc(o.label)}">${esc(o.label)}</button>`).join('')}</div>`;
+  } else act = `<div class="pv"><span class="sub" style="color:var(--ink)">${esc(t.question?.text || '')}</span></div><div class="btns"><button class="b pri" data-a="open" data-id="${t.id}">Ответить</button></div>`;
+  return `<div class="card need"><button class="row" data-a="open" data-id="${t.id}">${avatar(t)}<span class="col"><span class="need-l">${esc(needLabel(t))}</span>
+    <span class="tt">${esc(t.route?.title || t.text)}</span><span class="sub">${esc(t.agent?.name || 'Диспетчер')} · ${esc(ago(t.updated))}${t.usage ? ' · ' + fmtDur(t.usage.ms) + (t.usage.cost ? ' · ' + fmtUsd(t.usage.cost) : '') : ''}</span></span></button>${act}</div>`;
+}
+function workCard(t) {
+  return `<button class="card" style="text-align:left" data-a="open" data-id="${t.id}"><span class="row">${avatar(t)}<span class="col">
+    <span class="tt">${esc(t.route?.title || t.text)}</span><span class="sub">${esc(t.agent?.name || 'Диспетчер')} — ${esc(t.status === 'queued' ? (t.queuePos > 1 ? `${t.queuePos}-я в очереди` : 'в очереди') : lastStep(t) || 'работает')}</span></span></span>${bars(t)}</button>`;
+}
+function home() {
+  const need = S.tasks.filter(needOf), work = S.tasks.filter(t => t.status === 'work' || t.status === 'routing'), queue = S.tasks.filter(t => t.status === 'queued'), err = S.tasks.filter(t => t.status === 'error');
+  const today = new Date().toDateString(), runs = S.tasks.flatMap(t => t.runs || []).filter(r => new Date(r.at).toDateString() === today);
+  const doneToday = S.tasks.filter(t => t.status === 'done' && new Date(t.updated).toDateString() === today).length;
+  const bill = S.tasks.find(t => t.routine === 'billing-daily'), alerts = bill?.alerts, warn = alerts && ((alerts.critical || []).length + (alerts.warn || []).length);
+  const sys = S.runner?.mcp || [];
+  return header(`AICEX HQ · ${new Date().toLocaleDateString('ru', { day:'numeric', month:'long' })}`, 'Офис') + `<main>
+    <div class="kpis"><button class="kpi ka" data-a="filter" data-f="need"><b>${need.length}</b><span>ждут вас</span></button>
+      <button class="kpi kg" data-a="filter" data-f="work"><b>${work.length}</b><span>работают</span></button>
+      <button class="kpi kb" data-a="filter" data-f="work"><b>${queue.length}</b><span>в очереди</span></button></div>
+    ${err.length ? `<button class="card" style="text-align:left;border-color:rgba(255,107,107,.45)" data-a="filter" data-f="all"><span class="need-l" style="color:var(--red)">Ошибки: ${err.length}</span><span class="sub">${esc(err[0].route?.title || err[0].text)} — нажмите, чтобы повторить</span></button>` : ''}
+    ${need.length ? `<span class="lbl a">Ждут вашего решения</span>${need.map(needCard).join('')}` : ''}
+    <span class="lbl g">Сейчас работают</span>
+    ${work.length + queue.length ? [...work, ...queue].slice(0, 6).map(workCard).join('') : '<p class="empty" style="margin:6px 0">Агенты свободны — поставьте задачу кнопкой «＋».</p>'}
+    <span class="lbl">Сегодня</span>
+    <div class="card stats"><div><b>${doneToday}</b><span>принято</span></div><div><b>${fmtDur(runs.reduce((a, r) => a + (r.ms || 0), 0))}</b><span>работа агентов</span></div><div><b>${fmtUsd(runs.reduce((a, r) => a + (r.cost || 0), 0))}</b><span>Claude</span></div></div>
+    <div class="list">
+      <a href="#t=${bill ? bill.id : ''}" ${bill ? '' : 'aria-disabled="true"'}><span class="dot" style="background:${warn ? 'var(--amber)' : 'var(--green)'}"></span><span style="flex:1">Балансы и подписки</span><span class="sub">${bill ? (warn ? `${warn} ${word(warn, 'предупреждение', 'предупреждения', 'предупреждений')}` : 'всё в порядке') : 'проверка в 08:50'}</span></a>
+      <a href="#more"><span class="dot" style="background:${sys.some(s => s.error) ? 'var(--amber)' : sys.length ? 'var(--green)' : 'var(--ink3)'}"></span><span style="flex:1">${esc(sys.map(s => s.name).join(' · ') || 'Внешние системы')}</span><span class="sub">${sys.length ? (sys.some(s => s.error) ? 'есть ошибка' : 'подключены') : 'не подключены'}</span></a>
+    </div></main>`;
+}
+function tasksScreen() {
+  const G = { need:S.tasks.filter(needOf), work:S.tasks.filter(t => ['work', 'queued', 'routing'].includes(t.status)), done:S.tasks.filter(t => t.status === 'done' || t.status === 'cancelled'), all:S.tasks };
+  const F = [['need', 'Ждут'], ['work', 'Работа'], ['done', 'Готово'], ['all', 'Все']];
+  const list = G[S.filter] || G.all;
+  return header('Рабочий стол', 'Задачи') + `<main><div class="seg">${F.map(([k, l]) => `<button class="${S.filter === k ? 'on' : ''}" data-a="seg" data-f="${k}">${l} <span style="opacity:.75">${G[k].length}</span></button>`).join('')}</div>
+    ${list.length ? list.map(t => { const k = statusKey(t); return `<button class="card" style="text-align:left" data-a="open" data-id="${t.id}">
+      <span style="display:flex;align-items:center;gap:8px"><span class="pill ${k}">${esc(t.status === 'cancelled' ? 'отменена' : STATUS[k] || t.statusText)}</span><span class="sub" style="margin-left:auto">${esc(ago(t.updated))}</span></span>
+      <span class="tt">${esc(t.route?.title || t.text)}</span>
+      <span style="display:flex;align-items:center;gap:8px"><span class="dot" style="background:${esc(colorOf(t.agent?.id || t.route?.agent))}"></span><span class="sub" style="flex:1">${esc(t.agent?.name || 'Диспетчер')}${t.pipeline ? ' · ' + esc(t.pipeline.label) : ''}</span>
+      <span class="sub" style="font-family:'JetBrains Mono',monospace;font-size:11.5px">${t.usage ? fmtDur(t.usage.ms) + (t.usage.cost ? ' · ' + fmtUsd(t.usage.cost) : '') : ''}</span></span>${bars(t)}</button>`; }).join('') : '<p class="empty">Здесь пусто — всё разобрано.</p>'}</main>`;
+}
+function plainSummary(md, max) {
+  const s = String(md || '').split(/^#{1,4}\s*Материал.*$/m)[0].split('\n').filter(l => l.trim() && !/^#/.test(l)).map(l => l.replace(/^\s*[-*•]\s*/, '').replace(/\*\*(.+?)\*\*/g, '$1')).join(' ');
+  return s.length > max ? s.slice(0, max) + '…' : s;
+}
+function report(md) {
+  const out = []; let list = null, skip = false;
+  for (const line of String(md || '').split('\n')) {
+    const h = line.match(/^#{1,4}\s*(.*)/);
+    if (h) { if (list) { out.push(`<ul>${list.join('')}</ul>`); list = null; } skip = /^Материал/i.test(h[1]); if (!skip) out.push(`<h4>${esc(h[1])}</h4>`); continue; }
+    if (skip || !line.trim()) continue;
+    const inl = s => esc(s).replace(/\*\*(.+?)\*\*/g, '<b>$1</b>').replace(/`([^`]+)`/g, '<code>$1</code>');
+    const li = line.match(/^\s*(?:[-*•]|\d+[.)])\s+(.*)/);
+    if (li) (list ||= []).push(`<li>${inl(li[1])}</li>`);
+    else { if (list) { out.push(`<ul>${list.join('')}</ul>`); list = null; } out.push(`<p>${inl(line)}</p>`); }
+  }
+  if (list) out.push(`<ul>${list.join('')}</ul>`);
+  return out.join('');
+}
+function resultBlock(t) {
+  const r = t.result; if (!r) return '';
+  const files = r.files || [], imgs = files.filter(f => IMG.test(f.path)).sort((a, b) => natural(a.path, b.path)), vids = files.filter(f => VID.test(f.path));
+  const main = files.find(f => f.path === r.main), page = main && /\.html?$/i.test(main.path) ? main : null;
+  return `<div class="card">
+    ${vids.map(f => `<video src="${esc(f.url)}" controls playsinline preload="metadata"></video>`).join('')}
+    ${imgs.length ? `<div class="media">${imgs.map(f => `<img src="${esc(f.url)}" alt="${esc(f.path)}" loading="lazy">`).join('')}</div>${imgs.length > 1 ? `<span class="sub">${imgs.length} ${word(imgs.length, 'картинка', 'картинки', 'картинок')} — листайте</span>` : ''}` : ''}
+    ${page && !vids.length && !imgs.length ? `<iframe class="page" src="${esc(page.url)}" sandbox="allow-scripts allow-popups" title="Результат"></iframe>` : ''}
+    <div class="rep">${report(r.summary)}</div>
+    ${t.qa?.verdict === 'ok' ? '<span class="sub" style="color:var(--greenInk)">✓ Контролёр качества: замечаний нет</span>' : t.qa?.verdict === 'fix' ? '<span class="sub" style="color:var(--greenInk)">✓ Доработано по замечаниям контролёра</span>' : ''}
+    <div class="files">${files.map(f => `<a href="${esc(f.url)}" target="_blank" rel="noopener" download="${esc(f.path.split('/').pop())}"><span style="flex:1">${esc(f.path)}</span><span class="sub">${f.size >= 1e6 ? (f.size / 1e6).toFixed(1) + ' МБ' : Math.max(1, Math.round(f.size / 1e3)) + ' КБ'}</span></a>`).join('')}</div></div>`;
+}
+function detail(id) {
+  const t = S.tasks.find(x => x.id === id);
+  if (!t) return header('Задача', 'Не найдена', true) + '<main><p class="empty">Задачи нет в последних 60 — откройте её в офисе.</p></main>';
+  const k = statusKey(t), rate = S.rate[t.id] || '';
+  let body = `<div style="display:flex;gap:8px;flex-wrap:wrap;align-items:center"><span class="pill ${k}">${esc(STATUS[k] || t.statusText)}</span>
+      ${t.source ? `<span class="chip">${esc({ office:'Вы · в офисе', assistant:'Ассистент', twin:'Двойник', routine:'По расписанию', telegram:'Вы · в Telegram' }[t.source] || t.source)}</span>` : ''}
+      ${t.usage ? `<span class="chip">${fmtDur(t.usage.ms)}${t.usage.cost ? ' · ' + fmtUsd(t.usage.cost) : ''}</span>` : ''}${t.style ? `<span class="chip">стиль: ${esc(t.style)}</span>` : ''}</div>
+    <span style="font-size:20px;font-weight:800;line-height:1.25">${esc(t.route?.title || t.text)}</span>
+    <span class="row">${avatar(t)}<span class="col"><span style="font-size:14px;font-weight:700">${esc(t.agent?.name || 'Диспетчер')}</span><span class="sub">${esc(t.pipeline ? t.pipeline.label : DEPT[t.agent?.dept] || '')}</span></span></span>
+    <div class="card"><div class="steps">${stages(t).map(x => `<div class="step"><span class="c ${x.s}">${x.s === 'd' ? '✓' : x.s === 'e' ? '!' : x.s ? '●' : ''}</span><b>${esc(x.l)}</b></div>`).join('')}</div></div>`;
+  if (t.status === 'question') body += `<div class="card need"><span class="need-l">${esc(needLabel(t))}</span>
+      <span>${t.question.from === 'approval' ? (t.approval?.actions || []).map((a, i) => `${i + 1}. ${esc(a)}`).join('<br>') : esc(t.question.text)}</span>
+      ${t.question.options?.length ? `<div class="btns">${t.question.options.map(o => `<button class="b opt${t.question.from === 'approval' && o.label === 'Выполнить' ? ' warn' : ''}" data-a="answer" data-id="${t.id}" data-v="${esc(o.label)}">${esc(o.label)}</button>`).join('')}</div>` : ''}
+      <label><span class="sr">Ваш ответ</span><textarea id="ans" placeholder="${t.question.options?.length ? 'Или своими словами' : 'Ваш ответ'}"></textarea></label>
+      <div class="btns"><button class="b" data-a="mic" data-to="ans">Голосом</button><button class="b pri" data-a="answer-text" data-id="${t.id}">Ответить</button></div></div>`;
+  if (t.status === 'error') body += `<div class="card" style="border-color:rgba(255,107,107,.45)"><span class="need-l" style="color:var(--red)">Не получилось</span><span class="sub" style="color:var(--ink)">${esc(t.error)}</span><div class="btns"><button class="b pri" data-a="retry" data-id="${t.id}">Повторить</button></div></div>`;
+  if (t.result && ['review', 'done', 'question'].includes(t.status)) body += resultBlock(t);
+  if (t.status === 'review') body += `<div class="card"><span style="font-size:13px;font-weight:700">Оценка агенту — станет его уроком</span>
+      <div class="btns"><button class="b${rate === 'up' ? ' on' : ''}" data-a="rate" data-id="${t.id}" data-v="up">Хорошо</button><button class="b${rate === 'down' ? ' on' : ''}" data-a="rate" data-id="${t.id}" data-v="down">Есть замечания</button></div>
+      ${rate === 'down' ? `<label><span class="sr">Что учесть</span><textarea id="rateText" placeholder="Что учесть агенту в следующий раз"></textarea></label>` : ''}</div>`;
+  if (S.revise === t.id) body += `<div class="card" id="rv"><span style="font-size:13px;font-weight:700">Правка — агент поправит в той же сессии</span>
+      <label><span class="sr">Что поправить</span><textarea id="revText" placeholder="Что поменять?"></textarea></label>
+      <div class="btns"><button class="b" data-a="mic" data-to="revText">Голосом</button><button class="b pri" data-a="revise" data-id="${t.id}">Отправить правку</button></div></div>`;
+  if (['work', 'queued', 'routing'].includes(t.status)) body += `<div class="card"><span class="lbl" style="margin:0">Ход работы</span>${(t.steps || []).slice(-10).map(s => `<div class="log"><time>${esc(new Date(s.at).toTimeString().slice(0, 5))}</time><span>${esc(s.text)}</span></div>`).join('')}
+      <div class="btns"><button class="b" data-a="cancel" data-id="${t.id}">Отменить задачу</button></div></div>`;
+  const sticky = t.status === 'review' ? `<div class="sticky"><button class="b" data-a="revise-open" data-id="${t.id}">Правка</button><button class="b ok" data-a="accept" data-id="${t.id}">Принять</button></div>`
+    : t.status === 'done' ? `<div class="sticky"><button class="b" data-a="revise-open" data-id="${t.id}">Нужна правка</button></div>` : '';
+  return header('Задача', t.agent?.name || 'Задача', true) + `<main>${body}</main>${sticky}`;
+}
+function newTask() {
+  const hows = [{ id:'', label:'Одним агентом', about:'диспетчер выберет, кому отдать' }, ...S.pipelines.map(p => ({ id:p.id, label:p.label, about:p.stages.map(s => s.name).join(' → ') }))];
+  const next = S.how ? (S.pipelines.find(p => p.id === S.how)?.stages || []).map(s => `${s.title} — «${s.name}»`).concat(['Контролёр проверит до вас', 'Вы примете или поправите — здесь или в чате'])
+    : ['Диспетчер выберет агента и скилл', 'Агент сделает работу на сервере', 'Контролёр проверит до вас', 'Вы примете или поправите — здесь или в чате'];
+  const groups = {};
+  for (const a of S.agents) (groups[a.dept] ||= []).push(a);
+  return header('Рабочий стол', 'Новая задача', true) + `<main>
+    <label style="display:flex;flex-direction:column;gap:8px"><span class="sub">Что сделать — своими словами</span><textarea id="nt" placeholder="Например: вот рилс конкурента — сделай сценарий в моём стиле с кодовым словом ОФИС">${esc(S.text)}</textarea></label>
+    <div class="btns"><button class="b" data-a="mic" data-to="nt">Голосом</button><label class="b" style="display:flex;align-items:center;justify-content:center;flex:0 0 auto">Файлы<input type="file" id="files" multiple hidden></label></div>
+    ${S.uploads.length ? `<div class="ups">${S.uploads.map((u, i) => `<span class="chip">${esc(u.name)} · ${u.error ? esc(u.error) : u.id ? 'готово' : Math.round(u.p * 100) + '%'} <button data-a="unup" data-i="${i}" aria-label="Убрать" style="border:0;background:none;padding:0 2px">×</button></span>`).join('')}</div>` : ''}
+    <span class="lbl">Как сделать</span>
+    ${hows.map(h => `<button class="how${S.how === h.id ? ' on' : ''}" data-a="how" data-v="${esc(h.id)}"><b>${esc(h.label)}</b><span>${esc(h.about)}</span></button>`).join('')}
+    ${S.how ? '' : `<label style="display:flex;flex-direction:column;gap:8px"><span class="lbl">Кому</span><select id="who"><option value="">Диспетчер выберет сам</option>${Object.entries(groups).map(([d, list]) => `<optgroup label="${esc(DEPT[d] || d)}">${list.map(a => `<option value="${esc(a.id)}"${S.agent === a.id ? ' selected' : ''}>${esc(a.name)}</option>`).join('')}</optgroup>`).join('')}</select></label>`}
+    <span class="lbl">Что будет дальше</span>
+    <div class="card" style="gap:8px">${next.map((x, i) => `<div style="display:flex;gap:10px;align-items:center;font-size:13.5px"><span class="step"><span class="c" style="width:22px;height:22px;font-size:11.5px">${i + 1}</span></span><span>${esc(x)}</span></div>`).join('')}</div>
+    <button class="b pri" style="height:54px;font-size:16px;flex:none" data-a="submit">Поставить задачу</button></main>`;
+}
+function team() {
+  const st = id => S.tasks.some(t => (t.agent?.id === id) && needOf(t)) ? 'var(--amber)' : S.tasks.some(t => t.agent?.id === id && t.status === 'work') ? 'var(--green)' : 'var(--ink3)';
+  const groups = {};
+  for (const a of S.agents) (groups[a.dept] ||= []).push(a);
+  return header(`${S.agents.length} ${word(S.agents.length, 'агент', 'агента', 'агентов')}`, 'Команда') + `<main>
+    <div class="btns" style="font-size:12.5px;color:var(--ink2);gap:14px"><span><span class="dot" style="display:inline-block;background:var(--green)"></span> работает</span><span><span class="dot" style="display:inline-block;background:var(--amber)"></span> ждёт вас</span><span><span class="dot" style="display:inline-block;background:var(--ink3)"></span> свободен</span></div>
+    ${Object.entries(groups).map(([d, list]) => `<div class="card"><span style="display:flex;align-items:baseline;gap:8px"><span style="font-size:15.5px;font-weight:800;flex:1">${esc(DEPT[d] || d)}</span><span class="sub">${list.length}</span></span>
+      <div class="grid2">${list.map(a => `<button class="ag" data-a="ask" data-id="${esc(a.id)}" title="${esc(a.role)}"><span class="dot" style="background:${st(a.id)}"></span><span>${esc(a.name)}</span></button>`).join('')}</div></div>`).join('')}</main>`;
+}
+function more() {
+  const s = S.stats, max = Math.max(...(s?.agents || []).map(a => a.cost || a.ms / 6e5), 1e-9), sys = S.runner?.mcp || [];
+  const mon = new Date().toLocaleDateString('ru', { month:'long' });
+  return header('Офис', 'Ещё') + `<main>
+    <div class="card"><span style="display:flex;align-items:baseline;gap:8px"><span style="font-size:15.5px;font-weight:800;flex:1">Затраты за ${esc(mon)}</span><span class="sub">${s ? `${s.total.tasks} ${word(s.total.tasks, 'задача', 'задачи', 'задач')} · ${fmtDur(s.total.ms)}` : ''}</span></span>
+      <span style="font-size:30px;font-weight:800">${s ? fmtUsd(s.total.cost) : '—'}</span>
+      ${(s?.agents || []).slice(0, 8).map(a => `<div style="display:flex;flex-direction:column;gap:4px"><span style="display:flex;font-size:13px"><span style="flex:1">${esc(a.name)}</span><span class="sub">${fmtDur(a.ms)}${a.cost ? ' · ' + fmtUsd(a.cost) : ''}</span></span>
+        <span class="bars" style="display:block;height:5px;background:var(--bar);border-radius:3px;overflow:hidden"><i style="display:block;height:5px;width:${Math.max(3, Math.round((a.cost || a.ms / 6e5) / max * 100))}%;background:var(--blue)"></i></span></div>`).join('') || '<span class="sub">Затрат в этом месяце пока нет.</span>'}</div>
+    <div class="list">
+      ${sys.map(x => `<div><span class="dot" style="background:${x.error ? 'var(--amber)' : 'var(--green)'}"></span><span style="flex:1"><b style="display:block;font-size:14.5px">${esc(x.name)}</b><span class="sub">${x.error ? 'не отвечает: ' + esc(x.error) : `чтение ${x.read} · действия ${x.write} по вашему разрешению`}</span></span></div>`).join('') || '<div><span class="sub">Внешние системы не подключены</span></div>'}
+    </div>
+    <div class="list">
+      <button data-a="link" data-v="/twin/concepts.html"><span style="flex:1"><b style="display:block;font-size:14.5px">Двойник</b><span class="sub">чат голосом и текстом</span></span>›</button>
+      <button data-a="link" data-v="/"><span style="flex:1"><b style="display:block;font-size:14.5px">Открыть 3D-офис</b><span class="sub">hq2.aicex.club</span></span>›</button>
+    </div></main>`;
+}
+function tabs(active) {
+  const need = S.tasks.filter(needOf).length;
+  const T = [['home', 'Главная'], ['tasks', 'Задачи'], ['new', 'Новая'], ['team', 'Команда'], ['more', 'Ещё']];
+  return `<nav class="tabs" aria-label="Разделы">${T.map(([k, l]) => k === 'new'
+    ? `<button class="plus" data-a="tab" data-v="new" aria-label="Новая задача"><span><svg viewBox="0 0 24 24"><path d="M12 5v14M5 12h14"/></svg></span></button>`
+    : `<button class="${active === k ? 'on' : ''}" data-a="tab" data-v="${k}"><svg viewBox="0 0 24 24" aria-hidden="true"><path d="${ICO[k]}"/></svg>${l}${k === 'tasks' && need ? `<span class="badge">${need}</span>` : ''}</button>`).join('')}</nav>`;
+}
+function render() {
+  if (!S.owner) return;
+  const r = route();
+  const html = r.s === 'detail' ? detail(r.id) : r.s === 'tasks' ? tasksScreen() : r.s === 'new' ? newTask() : r.s === 'team' ? team() : r.s === 'more' ? more() : home();
+  $('app').innerHTML = html + tabs(r.s === 'detail' ? 'tasks' : r.s);
+  if (TG) { if (r.s === 'detail' || r.s === 'new') TG.BackButton.show(); else TG.BackButton.hide(); }
+  const fi = $('files'); if (fi) fi.onchange = e => { [...e.target.files].forEach(upload); e.target.value = ''; };
+  const nt = $('nt'); if (nt) nt.oninput = () => { S.text = nt.value; };
+  const who = $('who'); if (who) who.onchange = () => { S.agent = who.value; };
+  if (S.revise && $('rv')) $('revText').focus();
+}
+
+/* ---------- actions ---------- */
+async function act(fn, ok) {
+  if (S.busy) return;
+  S.busy = true;
+  try { const j = await fn(); if (j?.task) { const i = S.tasks.findIndex(t => t.id === j.task.id); if (i >= 0) S.tasks[i] = j.task; else S.tasks.unshift(j.task); } haptic('success'); if (ok) toast(ok); render(); return j; }
+  catch (e) { haptic('error'); toast(e.message); }
+  finally { S.busy = false; }
+}
+function upload(file) {
+  const u = { name:file.name, p:0, id:'', error:'' };
+  S.uploads.push(u); render();
+  if (file.size > 300e6) { u.error = 'больше 300 МБ'; return render(); }
+  const x = new XMLHttpRequest();
+  x.open('PUT', `${DESK}/upload?name=${encodeURIComponent(file.name)}`); x.withCredentials = true;
+  if (S.auth) x.setRequestHeader('x-hqa', S.auth);
+  x.upload.onprogress = e => { u.p = e.loaded / Math.max(1, file.size); if (!editing()) render(); };
+  x.onload = () => { let j = {}; try { j = JSON.parse(x.responseText); } catch (e) {} if (x.status === 200 && j.id) u.id = j.id; else u.error = j.error || 'не загрузился'; render(); };
+  x.onerror = () => { u.error = 'нет связи'; render(); };
+  x.send(file);
+}
+// voice: press — speak, press again — the text lands in the field (the office's speech recognition)
+let rec = null;
+async function mic(btn, to) {
+  if (rec) return rec.stop();
+  let stream;
+  try { stream = await navigator.mediaDevices.getUserMedia({ audio:true }); } catch (e) { return toast('Нет доступа к микрофону'); }
+  const type = ['audio/webm;codecs=opus', 'audio/webm', 'audio/mp4'].find(t => window.MediaRecorder?.isTypeSupported?.(t)) || '';
+  const r = rec = new MediaRecorder(stream, type ? { mimeType:type } : undefined), chunks = [];
+  btn.textContent = 'Говорите… нажмите ещё раз';
+  r.ondataavailable = e => { if (e.data.size) chunks.push(e.data); };
+  r.onstop = async () => {
+    stream.getTracks().forEach(t => t.stop()); rec = null; btn.textContent = 'Распознаю…';
+    try {
+      const blob = new Blob(chunks, { type:r.mimeType || type || 'audio/webm' });
+      const j = await api(API + '/stt', { method:'POST', body:blob, headers:{ 'content-type':blob.type } });
+      const ta = $(to); if (ta && j.text) { ta.value = (ta.value.trim() ? ta.value.trim() + ' ' : '') + j.text.trim(); if (to === 'nt') S.text = ta.value; ta.focus(); }
+    } catch (e) { toast(e.message); }
+    btn.textContent = 'Голосом';
+  };
+  r.start(250);
+}
+document.addEventListener('click', e => {
+  const b = e.target.closest('[data-a]'); if (!b) return;
+  const a = b.dataset.a, id = b.dataset.id, v = b.dataset.v;
+  if (a === 'tab') return go(v === 'home' ? '' : v);
+  if (a === 'back') return history.back();
+  if (a === 'open') { if (b.dataset.rv) S.revise = id; return go('t=' + id); }
+  if (a === 'filter' || a === 'seg') { S.filter = b.dataset.f; return a === 'filter' ? go('tasks') : render(); }
+  if (a === 'accept') { const rate = S.rate[id] || '', comment = $('rateText')?.value.trim() || ''; return act(() => post(`/tasks/${id}/approve`, { publish:true, rating:rate, comment }), 'Принято — в истории офиса').then(j => { if (j && route().s === 'detail') history.back(); }); }
+  if (a === 'rate') { S.rate[id] = S.rate[id] === v ? '' : v; return render(); }
+  if (a === 'revise-open') { S.revise = id; render(); return $('rv')?.scrollIntoView({ behavior:'smooth' }); }
+  if (a === 'revise') { const text = $('revText')?.value.trim(); if (!text) return toast('Напишите, что поправить'); return act(() => post(`/tasks/${id}/revise`, { text }), 'Правка ушла агенту').then(() => { S.revise = ''; render(); }); }
+  if (a === 'answer') return act(() => post(`/tasks/${id}/answer`, { text:v }), v === 'Выполнить' ? 'Разрешено — агент выполняет' : v === 'Не выполнять' ? 'Агент сдаст результат без действия' : `Передал агенту: ${v}`);
+  if (a === 'answer-text') { const text = $('ans')?.value.trim(); if (!text) return toast('Напишите ответ'); return act(() => post(`/tasks/${id}/answer`, { text }), 'Ответ передан'); }
+  if (a === 'retry') return act(() => post(`/tasks/${id}/retry`), 'Снова в очереди');
+  if (a === 'cancel') { if (!confirm('Отменить задачу?')) return; return act(() => post(`/tasks/${id}/cancel`), 'Задача отменена'); }
+  if (a === 'how') { S.how = v; return render(); }
+  if (a === 'ask') { S.agent = id; S.how = ''; return go('new'); }
+  if (a === 'unup') { S.uploads.splice(Number(b.dataset.i), 1); return render(); }
+  if (a === 'mic') return mic(b, b.dataset.to);
+  if (a === 'link') { const u = location.origin + v; return TG ? TG.openLink(u) : window.open(u, '_blank'); }
+  if (a === 'submit') {
+    const text = ($('nt')?.value || '').trim();
+    if (!text) return toast('Опишите задачу — хотя бы одной фразой');
+    if (S.uploads.some(u => !u.id && !u.error)) return toast('Файлы ещё загружаются');
+    return act(() => post('/tasks', { text, agent:S.how ? '' : S.agent, pipeline:S.how, uploads:S.uploads.filter(u => u.id).map(u => u.id) }), 'Задача поставлена — диспетчер выбирает агента')
+      .then(j => { if (j?.task) { S.text = ''; S.uploads = []; S.how = ''; S.agent = ''; go('t=' + j.task.id); } });
+  }
+});
+
+/* ---------- start ---------- */
+(async () => {
+  try { await login(); } catch (e) { S.owner = false; }
+  if (!S.owner) {
+    $('app').innerHTML = `<div class="gate"><b style="font-size:20px">Офис AICEX</b><span class="sub">${TG ? 'Это приложение открывается только у владельца офиса.' : 'Откройте приложение кнопкой «Офис» в боте @AI_Growth_Office_Bot — или войдите на сайте офиса.'}</span>${TG ? '' : '<a class="b pri" style="display:flex;align-items:center;justify-content:center;text-decoration:none" href="/">Открыть hq2.aicex.club</a>'}</div>`;
+    return;
+  }
+  try { await load(); } catch (e) { $('app').innerHTML = `<div class="gate"><b>Нет связи с офисом</b><span class="sub">${esc(e.message)}</span></div>`; return; }
+  live(); loadStats(); setInterval(loadStats, 120e3);
+})();
+</script>
+</body>
+</html>

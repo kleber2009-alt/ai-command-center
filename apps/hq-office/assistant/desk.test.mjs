@@ -364,7 +364,10 @@ test('руководитель управляет своими задачами,
 
 test('Telegram: сообщение на вопрос, результат и ошибку — по одному на каждое', async () => {
   const sent = [];
-  const d = setup({ telegram:{ notify:v => sent.push(`${v.status}:${v.question?.from || v.result?.version || ''}`) } });
+  // the card follows every status; the owner is called (a sound) only on a question, a result and an error — once each
+  let last = '';
+  const d = setup({ telegram:{ sync:v => { const k = `${v.status}:${v.question?.from || v.result?.version || ''}`;
+    if (['question', 'review', 'error'].includes(v.status) && k !== last) sent.push(k); last = k; } } });
   d.routes.push({ action:'ask', question:'Для какого эфира?' }, { action:'assign' });
   const id = await d.task('презентация');
   assert.deepEqual(sent, ['question:dispatcher']);
@@ -385,7 +388,7 @@ test('Telegram: сообщение на вопрос, результат и ош
 
 test('Telegram: кнопки — принять с оценкой, вариант стиля, правка ответом на сообщение, новая задача сообщением', async () => {
   const calls = [], realFetch = globalThis.fetch;
-  let updates = [];
+  let updates = [], tg = null;
   globalThis.fetch = async (url, opts) => {
     if (!String(url).startsWith('https://api.telegram.org/')) return realFetch(url, opts);
     const method = String(url).split('/').pop(), body = JSON.parse(opts.body);
@@ -395,13 +398,13 @@ test('Telegram: кнопки — принять с оценкой, вариан�
   };
   try {
     const d = setup({ telegram:null });
-    const tg = createTelegram({ token:'T', chat:'42', own:true, publicUrl:'https://hq', dataDir:d.dataDir, act:d.desk.act, get:d.desk.get, createTask:d.desk.createTask, log:{ error(){} } });
+    tg = createTelegram({ token:'T', chat:'42', own:true, publicUrl:'https://hq', dataDir:d.dataDir, act:d.desk.act, get:d.desk.get, createTask:d.desk.createTask, log:{ error(){} } });
     const wait = () => new Promise(r => setTimeout(r, 120));
     // a review message carries the buttons and the office link
     const id = await d.toReview();
     const m = tg.message(d.desk.get(id));
     assert.match(m.text, /принёс результат/); assert.deepEqual(m.reply_markup.inline_keyboard[0].map(b => b.callback_data), [`ap:${id}`, `up:${id}`]);
-    assert.equal(m.reply_markup.inline_keyboard.at(-1)[0].url, `https://hq/#desk-${id}`);
+    assert.equal(m.reply_markup.inline_keyboard.at(-1)[0].web_app.url, `https://hq/app/#t=${id}`);   // the own bot opens the mini app
     // a stranger's chat is ignored; the owner's «Отлично» accepts with the rating up
     updates.push({ update_id:1, callback_query:{ id:'c0', data:`up:${id}`, message:{ message_id:5, chat:{ id:7 } } } });
     updates.push({ update_id:2, callback_query:{ id:'c1', data:`up:${id}`, message:{ message_id:5, chat:{ id:42 } } } });
@@ -431,8 +434,7 @@ test('Telegram: кнопки — принять с оценкой, вариан�
     await wait();
     const fromTg = d.desk.list(30).find(x => x.text === 'сделай карусель про офис');
     assert.ok(fromTg); assert.equal(fromTg.source, 'telegram');
-    tg.stop();
-  } finally { globalThis.fetch = realFetch; }
+  } finally { tg?.stop(); globalThis.fetch = realFetch; }
 });
 
 test('очередь: ответы и проверка раньше новой работы; лёгкий поток не берёт монтаж; монтаж — со слотом тяжёлых задач', async () => {
@@ -489,4 +491,39 @@ test('очередь: главный поток при лёгких соседя
   const reel = await d.task('смонтируй рилс');
   assert.equal((await d.claim({ worker:'w0', prefer_heavy:true })).id, reel);
   assert.equal((await d.claim({ worker:'w1', light:true })).id, deck);
+});
+
+test('Telegram: материалы результата — слайды альбомом по порядку, видео роликом, презентация файлом; карточка с кнопками после них', async () => {
+  const calls = [], realFetch = globalThis.fetch;
+  globalThis.fetch = async (url, opts) => {
+    if (!String(url).startsWith('https://api.telegram.org/')) return realFetch(url, opts);
+    const method = String(url).split('/').pop();
+    const body = opts.body instanceof FormData ? Object.fromEntries([...opts.body.entries()].map(([k, v]) => [k, typeof v === 'string' ? v : `<file ${v.name || ''}>`])) : JSON.parse(opts.body);
+    calls.push({ method, body });
+    return new Response(JSON.stringify({ ok:true, result:method === 'sendMessage' ? { message_id:calls.length } : true }), { headers:{ 'content-type':'application/json' } });
+  };
+  try {
+    const d = setup({ telegram:null });
+    const tg = createTelegram({ token:'T', chat:'42', own:false, publicUrl:'https://hq', dataDir:d.dataDir, act:d.desk.act, get:d.desk.get, createTask:d.desk.createTask,
+      fileOf:(id, v, p) => path.join(d.dataDir, 'desk', 'tasks', id, 'v' + v, p), log:{ error(){} } });
+    const id = await d.task('карусель и ролик');
+    await tg.sync(d.desk.get(id));
+    assert.equal(calls.at(-1).method, 'sendMessage'); assert.equal(calls.at(-1).body.disable_notification, true);   // a quiet card while in work
+    const job = await d.claim();
+    await d.deliver(job, { 'slide-10.png':'p10', 'slide-2.png':'p2', 'slide-1.png':'p1', 'rils.mp4':'v', 'deck.pdf':'d', 'index.html':'<h1>x</h1>' }, { main:'index.html' });
+    await d.claim(); await d.finish(id, { result:'qa', verdict:'ok' });
+    calls.length = 0;
+    await tg.sync(d.desk.get(id));
+    assert.deepEqual(calls.map(c => c.method), ['deleteMessage', 'sendMediaGroup', 'sendVideo', 'sendDocument', 'sendMessage']);
+    const album = JSON.parse(calls[1].body.media);
+    assert.equal(album.length, 3); assert.equal(album[0].caption, 'Задача');
+    assert.deepEqual([calls[1].body.f0, calls[1].body.f1, calls[1].body.f2], ['<file slide-1.png>', '<file slide-2.png>', '<file slide-10.png>']);
+    assert.equal(calls[2].body.video, '<file rils.mp4>'); assert.equal(calls[3].body.document, '<file deck.pdf>');
+    assert.match(calls[4].body.text, /принёс результат/); assert.ok(!calls[4].body.disable_notification);
+    // accepted: the same card turns final, nothing new is sent
+    await d.call('POST', `tasks/${id}/approve`, { publish:true });
+    calls.length = 0;
+    await tg.sync(d.desk.get(id));
+    assert.deepEqual(calls.map(c => c.method), ['editMessageText']); assert.match(calls[0].body.text, /Принято/);
+  } finally { globalThis.fetch = realFetch; }
 });
