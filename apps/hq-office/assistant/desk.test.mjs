@@ -517,3 +517,26 @@ test('очередь: главный поток при лёгких соседя
   assert.equal((await d.claim({ worker:'w0', prefer_heavy:true })).id, reel);
   assert.equal((await d.claim({ worker:'w1', light:true })).id, deck);
 });
+
+/* ---------- control agents: the evening report for the owner ---------- */
+
+test('агент контроля: отчёт по отделу приходит владельцу на проверку, руководитель его не видит, в историю не попадает', async () => {
+  const d = setup();
+  const own = await d.toReview('сделай презентацию');               // slides — маркетинг
+  const t = await d.desk.controlReport('marketing', { manual:true });
+  assert.equal(t.status, 'review'); assert.ok(t.control); assert.equal(t.route.agent, 'mkcontrol');
+  assert.ok((await d.call('GET', `files/${t.id}/v1/index.html`)).status === 200);
+  const owner = (await d.call('GET', 'tasks')).j.tasks;
+  assert.ok(owner.some(x => x.id === t.id));
+  const head = (await d.call('GET', 'tasks', null, FIRUZA)).j.tasks;
+  assert.ok(!head.some(x => x.id === t.id)); assert.ok(head.some(x => x.id === own));
+  assert.equal((await d.call('POST', `tasks/${t.id}/approve`, { publish:true }, FIRUZA)).status, 403);
+  await d.call('POST', `tasks/${t.id}/approve`, { publish:true });
+  const done = await d.get(t.id);
+  assert.equal(done.status, 'done'); assert.equal(done.published, false);
+  assert.ok(!(await d.call('GET', 'history.json', null, { 'x-guest':'1' })).j.some(h => h.id === 'desk-' + t.id));
+  // the dispatcher never gets a control agent, and it is not among the agents a head can be given
+  assert.ok(!d.desk.agents().some(a => a.id === 'mkcontrol'));
+  // a quiet department makes no evening report
+  assert.equal(await d.desk.controlReport('traffic'), null);
+});

@@ -4623,7 +4623,7 @@ function ntRefresh() {
 function ntPickList() {
   const q = ($('kPickQ')?.value || '').toLowerCase(), cur = $('kAgent').value;
   $('kPickL').innerHTML = DEPTS.map(d => {
-    const ids = d.agentIds.filter(id => { const m = agentMeta(id); return myAgent(id) && (!q || (m.name + ' ' + m.role).toLowerCase().includes(q)); });
+    const ids = d.agentIds.filter(id => { const m = agentMeta(id); return myAgent(id) && !window.OFFICE_AGENTS?.list[id]?.control && (!q || (m.name + ' ' + m.role).toLowerCase().includes(q)); });
     return ids.length ? `<h5>${esc(d.name)}</h5><div class="nt-grid">${ids.map(id => { const m = agentMeta(id); return `<button type="button" data-pick="${esc(id)}"${id === cur ? ' class="on"' : ''}>${orbHTML(m.color)}<b>${esc(m.name)}</b><small>${esc(m.role)}</small></button>`; }).join('')}</div>` : '';
   }).join('') || '<p class="empty">Такого агента нет — оставьте выбор диспетчеру.</p>';
 }
@@ -4727,8 +4727,8 @@ function renderDeskTask() {
   setHTML($('kRes'), res && (t.status === 'review' || t.status === 'done' || apQ) ? deskResultHTML(t) : '');
   let acts = '';
   if (t.status === 'done') acts = `<p class="knote">${t.published ? 'Принято и добавлено в историю офиса — задача видна в «Задачах» и в работах агента.' : 'Принято без публикации в истории офиса.'}${t.rating ? ` Ваша оценка: ${t.rating.value === 'up' ? 'хорошо' : 'есть замечания'}${t.rating.comment ? ` — «${esc(t.rating.comment)}»` : ''}. Агент учтёт её в следующих задачах.` : ''}</p>`;
-  if (t.status === 'review') acts += `<section class="kcard"><h4 style="--g:#3ddc97"><i></i>Оценка агенту</h4><div class="rate"><button type="button" class="up" data-k="rate:up">${ico('<path d="M7 10v11H4V10zM7 10l4-7a2 2 0 0 1 3 2l-1 5h6a2 2 0 0 1 2 2.3l-1.4 7A2 2 0 0 1 17.6 21H7"/>')}Хорошо</button><button type="button" class="down" data-k="rate:down">${ico('<path d="M17 14V3h3v11zM17 14l-4 7a2 2 0 0 1-3-2l1-5H5a2 2 0 0 1-2-2.3l1.4-7A2 2 0 0 1 6.4 3H17"/>')}Есть замечания</button></div><textarea id="kRate" placeholder="Что учесть агенту в следующих задачах (необязательно). Оценка и комментарий станут его уроком — их сохранят при «Принять»"></textarea></section>`;
-  if (t.status === 'review' || t.status === 'done') acts += `<section class="kcard"><h4 style="--g:#ffb020"><i></i>Нужна правка?</h4><textarea id="kRevise" placeholder="Что поменять? Агент поправит в той же сессии и принесёт новую версию"></textarea>${deskAttachHTML()}<div class="acts dk-acts"><button type="button" class="dk-mic" id="kReviseMic" data-k="mic" title="Надиктовать правку: нажать — говорить, нажать ещё раз — закончить"><svg viewBox="0 0 24 24"><rect x="9" y="3" width="6" height="11" rx="3"/><path d="M5 11a7 7 0 0 0 14 0M12 18v3"/></svg><span>Голосом</span></button><button data-k="revise">Отправить правку</button></div><p class="note" id="kMicNote" hidden></p></section>`;
+  if (t.status === 'review' && !t.control) acts += `<section class="kcard"><h4 style="--g:#3ddc97"><i></i>Оценка агенту</h4><div class="rate"><button type="button" class="up" data-k="rate:up">${ico('<path d="M7 10v11H4V10zM7 10l4-7a2 2 0 0 1 3 2l-1 5h6a2 2 0 0 1 2 2.3l-1.4 7A2 2 0 0 1 17.6 21H7"/>')}Хорошо</button><button type="button" class="down" data-k="rate:down">${ico('<path d="M17 14V3h3v11zM17 14l-4 7a2 2 0 0 1-3-2l1-5H5a2 2 0 0 1-2-2.3l1.4-7A2 2 0 0 1 6.4 3H17"/>')}Есть замечания</button></div><textarea id="kRate" placeholder="Что учесть агенту в следующих задачах (необязательно). Оценка и комментарий станут его уроком — их сохранят при «Принять»"></textarea></section>`;
+  if ((t.status === 'review' || t.status === 'done') && !t.control) acts += `<section class="kcard"><h4 style="--g:#ffb020"><i></i>Нужна правка?</h4><textarea id="kRevise" placeholder="Что поменять? Агент поправит в той же сессии и принесёт новую версию"></textarea>${deskAttachHTML()}<div class="acts dk-acts"><button type="button" class="dk-mic" id="kReviseMic" data-k="mic" title="Надиктовать правку: нажать — говорить, нажать ещё раз — закончить"><svg viewBox="0 0 24 24"><rect x="9" y="3" width="6" height="11" rx="3"/><path d="M5 11a7 7 0 0 0 14 0M12 18v3"/></svg><span>Голосом</span></button><button data-k="revise">Отправить правку</button></div><p class="note" id="kMicNote" hidden></p></section>`;
   if (t.status === 'error') acts = `<div class="ask err"><b>Не получилось</b><p>${esc(t.error)}</p>${t.log ? `<details class="brief"><summary>Подробности</summary><pre class="dk-log">${esc(t.log)}</pre></details>` : ''}<div class="acts"><button class="btn-go" data-k="retry">Повторить</button></div></div>`;
   setHTML($('kActs'), acts);
   document.querySelectorAll('#kActs [data-k^="rate:"]').forEach(b => b.classList.toggle('on', b.dataset.k === 'rate:' + desk.rate[t.id]));
@@ -4754,7 +4754,8 @@ function renderDeskTask() {
   setHTML($('kSteps'), html.replace('<ol class="tl"></ol>', ''));
   // решение по результату — всегда внизу окна, без прокрутки
   setHTML($('kFoot'), t.status === 'review'
-    ? `<span id="kNote"></span><button data-k="cancel">Отклонить</button><button data-k="approve-quiet">Принять без публикации</button><button class="btn-go" data-k="approve">Принять и добавить в историю</button>`
+    ? t.control ? `<span id="kNote">Отчёт агента контроля — только для вас, в историю офиса не попадает</span><button class="btn-go" data-k="approve-quiet">Прочитано</button>`
+    : `<span id="kNote"></span><button data-k="cancel">Отклонить</button><button data-k="approve-quiet">Принять без публикации</button><button class="btn-go" data-k="approve">Принять и добавить в историю</button>`
     : `<span id="kNote">${t.status === 'work' ? 'Агент работает — шаги появляются здесь сами' : t.status === 'queued' && desk.runner && !desk.runner.online ? 'Исполнитель не на связи — задача начнётся, когда он вернётся' : ''}</span>
     ${DESK_OPEN.includes(t.status) ? '<button data-k="cancel">Отменить задачу</button>' : ''}<button data-k="copy">Ссылка</button><button data-k="close">Закрыть</button>`);
   // чужой отдел у руководителя: всё видно, но решать нечего — ни ответа, ни приёма, ни правки
@@ -4946,7 +4947,7 @@ function renderTeamAdmin() {
 function renderPeople() {
   const heads = DEPTS.filter(d => !d.head.owner).map(d => ({ d, h:d.head, u:TA.users.find(u => u.id === d.head.id) }));
   const byDept = DEPTS.map(d => ({ d, ids:TA.agents.filter(a => a.dept === d.id).map(a => a.id) })).filter(x => x.ids.length);
-  $('taBody').innerHTML = `<p class="note">Руководитель входит по личной ссылке и управляет только отмеченными агентами: ставит им задачи, отвечает на вопросы, разрешает действия во внешних системах и принимает результат. Остальные отделы видит только для просмотра. Ссылка одноразовая и действует 7 дней; вход помнится 90 дней. Новая ссылка или «Отключить» сразу закрывают старый вход.</p>`
+  $('taBody').innerHTML = `<p class="note">За каждым руководителем стоит агент контроля отдела: каждый вечер он сам присылает вам отчёт по отделу и по работе руководителя (в «В работе» и в Telegram), руководитель этот отчёт не видит. Руководитель входит по личной ссылке и управляет только отмеченными агентами: ставит им задачи, отвечает на вопросы, разрешает действия во внешних системах и принимает результат. Остальные отделы видит только для просмотра. Ссылка одноразовая и действует 7 дней; вход помнится 90 дней. Новая ссылка или «Отключить» сразу закрывают старый вход.</p>`
     + heads.map(({ d, h, u }) => {
       const st = !u ? ['', 'нет доступа'] : u.disabled ? ['off', 'отключён'] : u.lastSeen ? ['on', `заходил ${ago(u.lastSeen)}`] : u.invite ? ['inv', 'ссылка выдана, ещё не входил'] : ['', 'ссылка истекла'];
       const sel = new Set(u ? u.agents : TA.agents.filter(a => a.dept === d.id).map(a => a.id));
@@ -4954,7 +4955,7 @@ function renderPeople() {
       return `<section class="ta-card" data-u="${esc(h.id)}" data-dept="${esc(d.id)}" data-name="${esc(h.name)}">
         <div class="ta-top">${faceHTML(PEOPLE[h.id] || { ...h, dept:d })}<span class="txt"><b>${esc(h.name)}</b><small>${esc(d.name)} · ${sel.size} ${word(sel.size, 'агент', 'агента', 'агентов')} в управлении</small></span><span class="ta-st ${st[0]}">${esc(st[1])}</span></div>
         ${link ? `<div class="ta-link"><input readonly value="${esc(link)}"><div class="ta-acts"><button data-ta="copy">Скопировать</button></div></div>` : ''}
-        <div class="ta-acts"><button class="go" data-ta="invite">${u ? 'Новая ссылка' : 'Пригласить'}</button>${u ? `<button data-ta="toggle">${u.disabled ? 'Включить доступ' : 'Отключить доступ'}</button><button data-ta="save">Сохранить агентов</button>` : ''}</div>
+        <div class="ta-acts"><button class="go" data-ta="invite">${u ? 'Новая ссылка' : 'Пригласить'}</button><button data-ta="report">Отчёт контроля сейчас</button>${u ? `<button data-ta="toggle">${u.disabled ? 'Включить доступ' : 'Отключить доступ'}</button><button data-ta="save">Сохранить агентов</button>` : ''}</div>
         <details class="ta-ags"${u ? '' : ' open'}><summary>Агенты в управлении — отметьте, кем руководит ${esc(h.name)}</summary>
           ${byDept.map(({ d:dd, ids }) => `<h5>${esc(dd.name)}</h5><div class="ta-grid">${ids.map(id => { const m = agentMeta(id); return `<label class="${sel.has(id) ? 'on' : ''}"><input type="checkbox" value="${esc(id)}"${sel.has(id) ? ' checked' : ''}>${orbHTML(m.color, 'xs')}${esc(m.name)}</label>`; }).join('')}</div>`).join('')}
         </details></section>`;
@@ -5016,6 +5017,14 @@ $('taBody').addEventListener('click', async e => {
   if (k === 'copy') { const inp = card.querySelector('.ta-link input'); navigator.clipboard?.writeText(inp.value).then(() => { b.textContent = 'Скопировано'; }).catch(() => { inp.select(); }); return; }
   TA.busy = true; b.disabled = true;
   try {
+    // агент контроля отдела собирает отчёт сейчас: он придёт на проверку в «В работе» и в Telegram
+    if (k === 'report') {
+      const r = await fetch(DESK_API + '/control', { method:'POST', headers:{ 'content-type':'application/json' }, body:JSON.stringify({ dept:card.dataset.dept }) });
+      const j = await r.json().catch(() => ({}));
+      if (!r.ok) throw new Error(j.error || r.status);
+      toast('Отчёт готов — он в «В работе» на проверке и в Telegram', 'ta', 8);
+      TA.busy = false; b.disabled = false; return;
+    }
     if (k === 'invite') {
       const j = await teamPost({ action:'invite', id, name:card.dataset.name, dept:card.dataset.dept, agents:agentsSel });
       TA.links[id] = `${location.origin}${location.pathname}#invite-${j.code}`;

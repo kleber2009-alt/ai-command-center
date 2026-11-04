@@ -56,7 +56,7 @@ initKb(DATA_DIR);
 const team = initTeam(DATA_DIR);
 const admin = initAdmin(DATA_DIR);
 setOfficePatch(() => ({ patch:admin.patch(), stamp:admin.stamp() }));
-const desk = createDesk({ isHidden:id => admin.hiddenTask('desk-' + id), claude, model:MODEL, fallback:FALLBACK, dataDir:DATA_DIR, officeDir:OFFICE_DIR, runnerToken:process.env.HQ_DESK_RUNNER_TOKEN || '' });
+const desk = createDesk({ isHidden:id => admin.hiddenTask('desk-' + id), heads:() => team.list(), claude, model:MODEL, fallback:FALLBACK, dataDir:DATA_DIR, officeDir:OFFICE_DIR, runnerToken:process.env.HQ_DESK_RUNNER_TOKEN || '' });
 
 /* ---------- prompts ---------- */
 
