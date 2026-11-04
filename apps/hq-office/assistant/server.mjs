@@ -23,7 +23,9 @@
    ELEVENLABS_VOICE_ID (optional), HQ_DESK_RUNNER_TOKEN (the runner of the desk),
    OFFICE_DIR (data files of the site, default ..),
    DATA_DIR (history, memory, settings; default ./.data), PROJECT_MAP (monorepo CLAUDE.md),
-   PORT (8787), SERVE_STATIC=1 — also serve the office itself, for local runs. */
+   PORT (8787), SERVE_STATIC=1 — also serve the office itself, for local runs.
+   Telegram (tg.mjs): HQ_TG_BOT_TOKEN — the bot «Офис» (its own, long polling), HQ_TG_OWNER_IDS — the owner's Telegram ids;
+   POST tg-login {initData} — the Mini App signs the owner in by Telegram. */
 import http from 'node:http';
 import fs from 'node:fs';
 import path from 'node:path';
@@ -36,6 +38,7 @@ import { voiceConfigured, transcribe, listVoices, guessOwnerVoice, speak, realti
 import { createDesk } from './desk.mjs';
 import { loadTwin, initTwin, remember, rememberTool, SECTIONS, TWIN_PROMPT } from './twin.mjs';
 import { initKb, loadKb, kbTools, runKbTool, ingest, listPrivate, removePrivate } from './kb.mjs';
+import { startTelegram } from './tg.mjs';
 
 const HERE = path.dirname(fileURLToPath(import.meta.url));
 const PORT = Number(process.env.PORT || 8787);
@@ -51,7 +54,6 @@ const COMPACT_AT = 60;       // beyond this the oldest turns go to long-term mem
 const claude = process.env.ANTHROPIC_API_KEY ? new Anthropic() : null;
 initTwin(DATA_DIR);
 initKb(DATA_DIR);
-const desk = createDesk({ claude, model:MODEL, fallback:FALLBACK, dataDir:DATA_DIR, officeDir:OFFICE_DIR, runnerToken:process.env.HQ_DESK_RUNNER_TOKEN || '' });
 
 /* ---------- prompts ---------- */
 
@@ -88,6 +90,8 @@ const SECRET = load('secret.json', null)?.key || (() => { const key = crypto.ran
 const owner = load('owner.json', { memory:'', turns:[] });   // turns: { role:'user'|'assistant', text, at, voice }
 const settings = load('settings.json', {});                  // { voiceId, voiceName }
 const guests = new Map();                                     // guest id → { turns, at } (memory only)
+const desk = createDesk({ claude, model:MODEL, fallback:FALLBACK, dataDir:DATA_DIR, officeDir:OFFICE_DIR, runnerToken:process.env.HQ_DESK_RUNNER_TOKEN || '',
+  linkKey:crypto.createHmac('sha256', SECRET).update('desk-links').digest('hex') });
 
 /* ---------- auth and limits ---------- */
 
@@ -98,6 +102,22 @@ const cookies = req => Object.fromEntries((req.headers.cookie || '').split(/;\s*
 const cookie = (name, value, maxAge) => `${name}=${encodeURIComponent(value)}; Path=${PREFIX}; Max-Age=${maxAge}; HttpOnly; SameSite=Lax${process.env.SERVE_STATIC === '1' ? '' : '; Secure'}`;
 const clientIp = req => String(req.headers['x-forwarded-for'] || req.socket.remoteAddress || '').split(',')[0].trim();
 
+const ownerToken = () => { const v = `owner.${Date.now() + 90 * 864e5}`; return `${v}.${sign(v)}`; };
+/* Telegram: the owner's ids (HQ_TG_OWNER_IDS, else the id the morning reports go to) and the bot of the office (tg.mjs) */
+const TG_TOKEN = process.env.HQ_TG_BOT_TOKEN || '';
+const TG_OWNERS = String(process.env.HQ_TG_OWNER_IDS || (/^\d+$/.test(process.env.HQ_NOTIFY_TG_CHAT || '') ? process.env.HQ_NOTIFY_TG_CHAT : '')).split(/[\s,;]+/).filter(x => /^\d+$/.test(x));
+// Mini App login: Telegram signs initData with the bot token (HMAC "WebAppData") — an owner's id gets the owner cookie
+function telegramUser(initData) {
+  if (!TG_TOKEN || !initData) return null;
+  const p = new URLSearchParams(String(initData)), hash = p.get('hash') || '';
+  p.delete('hash');
+  const check = [...p.entries()].map(([k, v]) => `${k}=${v}`).sort().join('\n');
+  const key = crypto.createHmac('sha256', 'WebAppData').update(TG_TOKEN).digest();
+  const want = crypto.createHmac('sha256', key).update(check).digest('hex');
+  if (hash.length !== want.length || !crypto.timingSafeEqual(Buffer.from(hash), Buffer.from(want))) return null;
+  if (!(Number(p.get('auth_date')) * 1000 > Date.now() - 864e5)) return null;
+  try { return JSON.parse(p.get('user') || 'null'); } catch { return null; }
+}
 function isOwner(req) {
   const t = cookies(req).hqa;
   if (!t || !PASSWORD) return false;
@@ -361,8 +381,14 @@ const ROUTES = {
     const { password } = await jsonBody(req);
     // wrong passwords from all addresses together: brute force through many IPs stalls too
     if (!same(sha(password || ''), sha(PASSWORD))) return json(res, limited('login:fail', 60, 3600e3) ? 429 : 401, { error:'Неверный пароль.' });
-    const v = `owner.${Date.now() + 90 * 864e5}`;
-    json(res, 200, { ok:true }, { 'set-cookie':cookie('hqa', `${v}.${sign(v)}`, 90 * 86400) });
+    json(res, 200, { ok:true }, { 'set-cookie':cookie('hqa', ownerToken(), 90 * 86400) });
+  },
+  'POST tg-login': async (req, res) => {
+    if (!PASSWORD) return json(res, 503, { error:'Вход владельца не настроен.' });
+    if (limited('tg:' + clientIp(req), 20, 900e3)) return json(res, 429, { error:'Слишком много попыток.' });
+    const u = telegramUser((await jsonBody(req)).initData);
+    if (!u || !TG_OWNERS.includes(String(u.id))) return json(res, 403, { error:'Это пульт владельца офиса.' });
+    json(res, 200, { ok:true }, { 'set-cookie':cookie('hqa', ownerToken(), 90 * 86400) });
   },
   'POST logout': (req, res) => json(res, 200, { ok:true }, { 'set-cookie':cookie('hqa', '', 0) }),
   'POST chat': (req, res, o) => chat(req, res, o),
@@ -418,6 +444,27 @@ const ROUTES = {
   },
 };
 
+/* the Telegram bot: the twin answers through this same server (the owner's turn, twin:true), so its memory,
+   tools and tasks are the same as on the site */
+async function askTwin(text, { voice = false, uploads = [] } = {}) {
+  if (!PASSWORD) throw new Error('Вход владельца не настроен (HQ_ASSISTANT_PASSWORD) — двойник недоступен.');
+  const r = await fetch(`http://127.0.0.1:${PORT}${PREFIX}/chat`, { method:'POST', signal:AbortSignal.timeout(300e3),
+    headers:{ 'content-type':'application/json', cookie:`hqa=${encodeURIComponent(ownerToken())}` },
+    body:JSON.stringify({ text:`(из Telegram${voice ? ', голосовое' : ''}) ${text}`, voice, twin:true, uploads:uploads.map(u => ({ id:u.id, name:u.name })) }) });
+  if (!r.ok) throw new Error((await r.json().catch(() => ({}))).error || 'Двойник не ответил.');
+  let out = '', err = '';
+  for (const block of (await r.text()).split('\n\n')) {
+    const line = block.replace(/^data: /, '');
+    try { const o = JSON.parse(line); if (o.t === 'delta') out += o.text; else if (o.t === 'error') err = o.message; } catch {}
+  }
+  if (err && !out) throw new Error(err);
+  return out.trim();
+}
+function startBot() {
+  startTelegram({ desk, dataDir:DATA_DIR, token:TG_TOKEN, owners:TG_OWNERS, site:(process.env.HQ_PUBLIC_URL || SITE).replace(/\/$/, ''),
+    ask:askTwin, ownerVoice, fileLink:file => desk.signedUrl(file) });
+}
+
 // local runs (SERVE_STATIC=1): the office itself on the same origin as the API
 const MIME = { '.html':'text/html; charset=utf-8', '.js':'text/javascript; charset=utf-8', '.css':'text/css', '.json':'application/json', '.jpg':'image/jpeg', '.png':'image/png', '.svg':'image/svg+xml', '.webp':'image/webp', '.mp4':'video/mp4', '.glb':'model/gltf-binary' };
 function serveStatic(req, res, p) {
@@ -440,4 +487,4 @@ http.createServer(async (req, res) => {
     if (!res.headersSent) json(res, e.code === 413 ? 413 : 502, { error:e.code === 413 ? 'Слишком большой запрос.' : 'Ошибка сервиса — попробуйте ещё раз.' });
     else res.end();
   }
-}).listen(PORT, () => console.log(`hq assistant :${PORT} · office ${OFFICE_DIR} · claude ${claude ? 'on' : 'off'} · voice ${voiceConfigured() ? 'on' : 'off'} · owner login ${PASSWORD ? 'on' : 'off'} · desk runner ${process.env.HQ_DESK_RUNNER_TOKEN ? 'on' : 'off'}`));
+}).listen(PORT, () => { startBot(); console.log(`hq assistant :${PORT} · office ${OFFICE_DIR} · claude ${claude ? 'on' : 'off'} · voice ${voiceConfigured() ? 'on' : 'off'} · owner login ${PASSWORD ? 'on' : 'off'} · desk runner ${process.env.HQ_DESK_RUNNER_TOKEN ? 'on' : 'off'}`); });

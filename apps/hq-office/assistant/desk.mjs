@@ -10,13 +10,19 @@
 
      owner:  PUT upload?name=  · POST tasks {text, agent, uploads} · POST tasks/<id>/{answer,revise} {text, uploads} · GET tasks · GET events (SSE)
              POST tasks/<id>/answer {text} · /approve {publish} · /revise {text} · /retry · /cancel
+             POST tasks/<id>/pause {until?} · /resume · /urgent {on} · /snooze {until} (the owner's controls, also from Telegram — tg.mjs)
      runner: POST runner/hello · POST runner/claim · GET runner/<id>/input/<name>
              POST runner/<id>/step {text} · PUT runner/<id>/file?path= · POST runner/<id>/finish
      public: GET history.js | history.json (accepted and published tasks, in the format of tasks.js)
              GET live.json (guests: open tasks and the week's published ones — title, agent, status only)
              GET files/<id>/v<n>/<path> — the owner always, everyone once published
 
-   Statuses: routing → question | queued → work → review → done, plus cancelled and error.
+   Statuses: routing → question | queued → work → review → done, plus cancelled, error and paused.
+
+   Owner's controls: pause (a queued task waits; a task in work — the runner stops Claude Code and keeps the session,
+   «Продолжить» resumes that session where it stopped), pause with until — «отложить до» (resumes by itself), urgent —
+   the task goes first in the queue, snooze {until} for a question or a result to check — it stays as it is, Telegram
+   reminds again at that time (t.snoozed).
 
    Style first: a task on video montage, reels or carousels does not go to the agent until the owner
    picks the style — after the dispatcher, the task stops with a question {from:'style', options}
@@ -44,8 +50,12 @@ import { officeWindow, moscowDate } from './office.mjs';
 const FILE_LIMIT = 300e6;
 const STEPS_KEPT = 80;
 const KIND = { slides:'Презентация', document:'Документ', landing:'Сайт', script:'Сценарии', carousel:'Дизайн', video:'Видео', image:'Дизайн', research:'Исследование', other:'Разработка' };
-const STATUS = { routing:'диспетчер разбирает', question:'нужен ваш ответ', queued:'в очереди', work:'в работе', review:'на проверке', done:'готово', cancelled:'отменена', error:'ошибка' };
-const OPEN = ['routing', 'question', 'queued', 'work', 'review'];
+const STATUS = { routing:'диспетчер разбирает', question:'нужен ваш ответ', queued:'в очереди', work:'в работе', review:'на проверке', done:'готово', cancelled:'отменена', error:'ошибка', paused:'на паузе' };
+const OPEN = ['routing', 'question', 'queued', 'work', 'review', 'paused'];
+const SOURCES = ['office', 'assistant', 'twin', 'telegram'];
+// the order of the queue: urgent tasks first, then by the time they were queued
+const queueOrder = (x, y) => (y.urgent ? 1 : 0) - (x.urgent ? 1 : 0) || x.queuedAt.localeCompare(y.queuedAt);
+const msk = iso => new Intl.DateTimeFormat('ru-RU', { timeZone:'Europe/Moscow', day:'numeric', month:'long', hour:'2-digit', minute:'2-digit' }).format(new Date(iso));
 const TRANSCRIBER = 'transcriber';
 // «Контролёр качества»: проверяет первую сдачу результата до владельца и один раз возвращает агенту на доработку
 const QA = 'qa';
@@ -146,13 +156,15 @@ const RULES = `Как работать:
   1–3 пункта: что проверить или какой следующий шаг (если нечего — раздел не пиши).
   Предпоследней строкой: SUMMARY: <одно предложение для истории офиса — что получилось и зачем, без имён файлов>. Последней строкой: RESULT: out/<главный файл>.`;
 
-export function createDesk({ claude, model, fallback, dataDir, officeDir, runnerToken }) {
+export function createDesk({ claude, model, fallback, dataDir, officeDir, runnerToken, linkKey = '' }) {
   const DIR = path.join(dataDir, 'desk');
   fs.mkdirSync(path.join(DIR, 'uploads'), { recursive:true });
   const STORE = path.join(DIR, 'tasks.json');
   let tasks = [];
   try { tasks = JSON.parse(fs.readFileSync(STORE, 'utf8')); } catch {}
   const clients = new Set();
+  // in-process subscribers of task changes (the Telegram bot, tg.mjs)
+  const listeners = new Set();
   const RUNNER_FILE = path.join(DIR, 'runner.json');
   let runner = { seenAt:0, version:'', claude:null, mcp:[] };
   // what the runner reported on start (its systems): kept across restarts of this server, which happen on every deploy
@@ -222,7 +234,7 @@ export function createDesk({ claude, model, fallback, dataDir, officeDir, runner
     const a = t.route ? agentOf(onStage(t) ? TRANSCRIBER : onQA(t) ? QA : t.route.agent) : t.agent ? agentOf(t.agent) : null;
     const pl = t.pipeline;
     const tr = agentOf(TRANSCRIBER), to = t.route ? agentOf(t.route.agent) : null;
-    const waiting = tasks.filter(x => x.status === 'queued').sort((x, y) => x.queuedAt.localeCompare(y.queuedAt));
+    const waiting = tasks.filter(x => x.status === 'queued').sort(queueOrder);
     return {
       id:t.id, created:t.created, updated:t.updated, text:t.text, files:t.files.map(f => f.name), askedAgent:t.agent || '',
       status:t.status, statusText:STATUS[t.status] || t.status, routine:t.routine || '', source:t.source || '', alerts:t.alerts || null, queuePos:t.status === 'queued' ? waiting.indexOf(t) + 1 : 0,
@@ -236,6 +248,8 @@ export function createDesk({ claude, model, fallback, dataDir, officeDir, runner
       pipeline:pl ? { id:pl.id, label:pl.label, idx:pl.idx, stages:pl.stages.map(s => ({ agent:s.agent, name:agentOf(s.agent)?.name || s.agent, title:s.title, status:s.status,
         summary:s.summary || '', files:s.files || [] })) } : null,
       approval:t.approval ? { actions:t.approval.actions, status:t.approval.status } : null, rating:t.rating || null, lessons:t.lessonsUsed || 0,
+      urgent:Boolean(t.urgent), paused:t.status === 'paused' && t.paused ? { until:t.paused.until || '', from:t.paused.from || '' } : null,
+      snoozed:t.snoozed && Date.parse(t.snoozed) > Date.now() ? t.snoozed : '', doneAt:t.doneAt || '',
     };
   }
   function publicView(t) {
@@ -249,6 +263,7 @@ export function createDesk({ claude, model, fallback, dataDir, officeDir, runner
     t.updated = now(); save();
     const line = `data: ${JSON.stringify({ t:'task', task:view(t) })}\n\n`;
     for (const res of clients) res.write(line);
+    for (const fn of listeners) try { fn(t); } catch (e) { console.error('desk listener:', e.message); }
   }
   function step(t, text) {
     t.steps.push({ at:now(), text:String(text).slice(0, 300) });
@@ -341,7 +356,8 @@ export function createDesk({ claude, model, fallback, dataDir, officeDir, runner
   const qaPlanned = t => QA_ON && Boolean(agentOf(QA)) && !t.qa && !t.routine && t.route && ![TRANSCRIBER, QA, 'billing'].includes(t.route.agent)
     && ['routing', 'question', 'queued', 'work'].includes(t.status) && t.pending?.kind !== 'revise';
   // the first delivery of a task goes to the controller; its rework and the owner's revisions do not
-  const needsQA = t => qaPlanned(t) && ['run', 'answer', 'execute'].includes(t.pending?.kind) && (!t.pipeline || t.pipeline.idx === t.pipeline.stages.length - 1);
+  const needsQA = t => qaPlanned(t) && (['run', 'answer', 'execute'].includes(t.pending?.kind) || (t.pending?.kind === 'resume' && t.pending.of !== 'revise'))
+    && (!t.pipeline || t.pipeline.idx === t.pipeline.stages.length - 1);
   const curStage = t => t.pipeline ? t.pipeline.stages[t.pipeline.idx] : null;
   function setPipeline(t, id) {
     const P = PIPELINES[id];
@@ -531,6 +547,7 @@ export function createDesk({ claude, model, fallback, dataDir, officeDir, runner
     if (t.style.skill && !ORCHESTRATORS.has(t.route.skill)) t.route.skill = t.style.skill;
   }
   function answerTask(t, text, files = []) {
+    t.snoozed = '';
     t.answers.push({ q:t.question.text, a:text + (files.length ? ` (приложил файлы: ${files.map(f => 'in/' + f).join(', ')})` : '') });
     if (t.question.from === 'style') {
       t.style = pickStyle(t.route.visual, text) || { label:text.slice(0, 120), skill:'', about:'' };
@@ -581,6 +598,7 @@ export function createDesk({ claude, model, fallback, dataDir, officeDir, runner
     if (p.kind === 'revise' && p.from === 'qa') return `«Контролёр качества» проверил твой результат до показа владельцу и просит доработать:\n${p.text}\n\nИсправь это в файлах out/ (главный файл — тот же). Отчёт сдай целиком в том же формате (Что сделано / Главное / Материалы / Что дальше), первым добавь раздел «## Что изменено» — что исправил по замечаниям. Предпоследней строкой SUMMARY: <одно предложение для истории офиса>, последней строкой RESULT: out/<главный файл>.`;
     if (p.kind === 'execute') return `Владелец разрешил действия во внешних системах:\n${(t.approval?.actions || []).map((x, i) => `${i + 1}. ${x}`).join('\n')}\n\nВыполни ровно их инструментами подключённых систем — ничего сверх и ничего не меняя в параметрах. Если какое-то действие не получилось — не повторяй вслепую, опиши ошибку. Затем отчёт целиком в том же формате; в «Главное» — что выполнено, с id, ссылками и цифрами из ответов систем. Обнови out/index.html под итог. Предпоследней строкой SUMMARY: <одно предложение для истории офиса>, последней строкой RESULT: out/<главный файл>.`;
     if (p.kind === 'revise') return `Владелец посмотрел результат и просит правку: «${p.text}»\n\nОтчёт сдай целиком в том же формате (Что сделано / Главное / Материалы / Что дальше) и первым добавь раздел «## Что изменено» — 1–3 пункта о правке.${filesNote(p.files)}\n\nВнеси правку в файлы out/ (главный файл — тот же), коротко скажи, что изменил. Правила те же: если суть результата изменилась — строка SUMMARY: <одно предложение для истории офиса>; последней строкой RESULT: out/<главный файл>, или NEED: <вопрос>, если без ответа владельца правку не сделать.`;
+    if (p.kind === 'resume') return `${p.text}${filesNote(p.files)}\n\nОтчёт сдай целиком в том же формате (Что сделано / Главное / Материалы / Что дальше). Предпоследней строкой SUMMARY: <одно предложение для истории офиса>, последней строкой RESULT: out/<главный файл>, или NEED: <вопрос>, если без ответа владельца не закончить.`;
     if (p.kind === 'answer') return `Ответ владельца на твой вопрос: «${p.text}»${filesNote(p.files)}\n\nПродолжай задачу по тем же правилам: предпоследней строкой SUMMARY: <одно предложение для истории офиса>, последней строкой RESULT: out/<главный файл>, или NEED: <вопрос>, если всё ещё не хватает.`;
     if (a.dept === 'council') return [a.id === 'legends'
         ? 'Ты — «Совет легенд» в переговорной живого офиса AICEX: восемь ИИ-советников по методам Алекса Хормози (оффер), Гэри Вайнерчука (контент), Сета Година (бренд), Рассела Брансона (воронки), Джеффа Уокера (запуски), Дэна Кеннеди (прямой отклик), Гранта Кардона (продажи) и Ричарда Брэнсона (стратегия, 90 дней).'
@@ -686,11 +704,13 @@ export function createDesk({ claude, model, fallback, dataDir, officeDir, runner
   const filesNote = files => files?.length ? `\n\nНовые материалы от владельца к этому сообщению: ${files.map(f => 'in/' + f).join(', ')} — изучи их и используй.` : '';
   const filesStep = files => files?.length ? ` · файлы: ${files.join(', ')}` : '';
   function reviseTask(t, text, files = []) {
+    t.snoozed = '';
     learn(t.route?.agent, 'revise', t.route?.title, text);
     queue(t, { kind:'revise', text, files }); t.published = false; step(t, `Правка: ${text}${filesStep(files)}`); emit(t);
   }
   // accept: the rating (up / down) and its comment become the agent's lessons
   function approveTask(t, publish = true, rating = '', comment = '') {
+    t.snoozed = '';
     rating = rating === 'up' || rating === 'down' ? rating : ''; comment = String(comment || '').trim().slice(0, 600);
     t.status = 'done'; t.doneAt = now(); t.published = publish !== false;
     if (rating) {
@@ -702,10 +722,64 @@ export function createDesk({ claude, model, fallback, dataDir, officeDir, runner
     emit(t);
   }
 
+  /* ---------- the owner's controls: pause, «отложить до», urgent, snooze ---------- */
+
+  const PAUSABLE = ['queued', 'work'];
+  function pauseTask(t, until = '') {
+    const at = until && Date.parse(until) > Date.now() ? new Date(until).toISOString() : '';
+    const wasWork = t.status === 'work';
+    t.paused = { from:t.status, until:at, at:now(), wasWork, session:'' };
+    t.status = 'paused';
+    step(t, at ? `Отложено до ${msk(at)} — задача сама вернётся в очередь.` : wasWork ? 'На паузе — исполнитель остановил работу, продолжит с того же места.' : 'На паузе — задача ждёт, пока вы её не продолжите.');
+    emit(t);
+  }
+  function resumeTask(t, why = 'Продолжено — задача снова в очереди.') {
+    const p = t.paused || {}, pending = t.pending || { kind:'run' };
+    t.paused = null;
+    if (p.session) t.session = p.session;
+    // stopped in the middle of the agent's work: the same session goes on (its out/ stays), not a fresh start
+    const cont = p.wasWork && t.session && !['transcribe', 'qa'].includes(pending.kind) && !(pending.kind === 'run' && t.route?.agent === 'billing');
+    queue(t, cont ? { kind:'resume', of:pending.kind === 'resume' ? pending.of : pending.kind, files:pending.files || [],
+      text:pending.kind === 'revise' || pending.of === 'revise' ? `Работу над правкой владельца («${pending.text || ''}») ставили на паузу. Продолжи её с того места, где остановился: проверь, что уже лежит в out/, и доделай.`
+        : 'Работа стояла на паузе у владельца. Продолжи задачу с того места, где остановился: проверь, что уже лежит в out/, и доделай целиком.' } : pending);
+    step(t, why); emit(t);
+  }
+  // paused with a time and snoozed questions: back at their time
+  function tickPauses() {
+    const n = Date.now();
+    for (const t of tasks) {
+      if (t.status === 'paused' && t.paused?.until && Date.parse(t.paused.until) <= n) resumeTask(t, 'Время, до которого отложили, пришло — задача снова в очереди.');
+      else if (t.snoozed && Date.parse(t.snoozed) <= n) { t.snoozed = ''; if (['question', 'review'].includes(t.status)) { step(t, 'Отложенное время пришло — задача снова ждёт вас.'); emit(t); } else save(); }
+    }
+  }
+  setInterval(() => { try { tickPauses(); } catch (e) { console.error('desk pauses:', e.message); } }, 30e3).unref();
+
+  // one control by name — the office routes, the twin's tool and the Telegram bot use the same rules
+  function control(t, action, b = {}) {
+    if (action === 'pause') {
+      if (!PAUSABLE.includes(t.status)) return { error:'На паузу можно поставить задачу в очереди или в работе.' };
+      pauseTask(t, b.until);
+    } else if (action === 'resume') {
+      if (t.status !== 'paused') return { error:'Задача не на паузе.' };
+      resumeTask(t);
+    } else if (action === 'urgent') {
+      if (!OPEN.includes(t.status)) return { error:'Задача уже закрыта.' };
+      t.urgent = b.on !== false;
+      step(t, t.urgent ? 'Срочно — задача пойдёт первой в очереди.' : 'Снята пометка «срочно».'); emit(t);
+    } else if (action === 'snooze') {
+      if (PAUSABLE.includes(t.status)) { pauseTask(t, b.until); return {}; }
+      if (!['question', 'review'].includes(t.status)) return { error:'Отложить можно задачу, которая ждёт вас, в очереди или в работе.' };
+      if (!(Date.parse(b.until) > Date.now())) return { error:'Нужно время в будущем.' };
+      t.snoozed = new Date(b.until).toISOString();
+      step(t, `Отложено до ${msk(t.snoozed)} — напомню тогда.`); emit(t);
+    } else return { error:'Неизвестное действие.' };
+    return {};
+  }
+
   function createTask({ text, agent = '', uploads = [], direct = false, title = '', routine = null, source = '', pipeline = '' }) {
     const t = { id:crypto.randomBytes(4).toString('hex'), created:now(), updated:now(), text:String(text).trim().slice(0, 4000), agent:String(agent || ''),
       files:[], status:'routing', answers:[], steps:[], route:null, question:null, result:null, versions:0, published:false,
-      source:routine ? 'routine' : direct ? 'twin' : ['office', 'assistant', 'twin'].includes(source) ? source : 'office',
+      source:routine ? 'routine' : direct ? (SOURCES.includes(source) ? source : 'twin') : SOURCES.includes(source) ? source : 'office',
       ...(PIPELINES[pipeline] ? { pipelinePick:pipeline } : {}) };
     takeUploads(t, uploads);
     tasks.unshift(t);
@@ -731,18 +805,21 @@ export function createDesk({ claude, model, fallback, dataDir, officeDir, runner
   }
 
   // the same actions the owner has in the office, for the twin's tool
-  function act(id, action, text = '', rating = '') {
+  function act(id, action, text = '', rating = '', opt = {}) {
     const t = byId(id); text = String(text || '').trim().slice(0, 4000);
     if (!t) return { error:'Нет такой задачи.' };
     if (action === 'answer') {
       if (t.status !== 'question' || !text) return { error:'Сейчас у задачи нет вопроса (или пустой ответ).' };
-      answerTask(t, text);
+      t.snoozed = '';
+      answerTask(t, text, takeUploads(t, opt.uploads));
     } else if (action === 'revise') {
       if (!['review', 'done'].includes(t.status) || !text) return { error:'Правку можно дать только к готовому результату и с текстом правки.' };
-      reviseTask(t, text);
+      t.snoozed = '';
+      reviseTask(t, text, takeUploads(t, opt.uploads));
     } else if (action === 'approve') {
       if (t.status !== 'review') return { error:'Принять можно только результат на проверке.' };
-      approveTask(t, true, rating, text);
+      t.snoozed = '';
+      approveTask(t, opt.publish !== false, rating, text);
     } else if (action === 'retry') {
       if (t.status !== 'error') return { error:'Повторить можно только задачу с ошибкой.' };
       t.error = ''; t.lost = 0;
@@ -750,9 +827,40 @@ export function createDesk({ claude, model, fallback, dataDir, officeDir, runner
       else { t.status = 'routing'; step(t, 'Повтор — диспетчер разбирает задачу заново.'); emit(t); route(t); }
     } else if (action === 'cancel') {
       if (!OPEN.includes(t.status)) return { error:'Задача уже закрыта.' };
-      t.status = 'cancelled'; t.pending = null; step(t, 'Задача отменена.'); emit(t);
+      t.status = 'cancelled'; t.pending = null; t.paused = null; step(t, 'Задача отменена.'); emit(t);
+    } else if (['pause', 'resume', 'urgent', 'snooze'].includes(action)) {
+      const r = control(t, action, opt);
+      if (r.error) return r;
     } else return { error:'Неизвестное действие.' };
     return { task:view(t) };
+  }
+  // a file from outside the office (Telegram): kept like a form upload, then given to a task by its id
+  function putUpload(name, buf) {
+    const id = crypto.randomBytes(8).toString('hex'), file = path.join(DIR, 'uploads', id, safeName(name));
+    if (buf.length > FILE_LIMIT) throw Object.assign(new Error('too large'), { code:413 });
+    fs.mkdirSync(path.dirname(file), { recursive:true });
+    fs.writeFileSync(file, buf);
+    return { id, name:path.basename(file), size:buf.length };
+  }
+  // signed download links to result files, for 30 days (HMAC with the assistant's secret)
+  const linkSig = (rel, e) => crypto.createHmac('sha256', linkKey).update(`${rel}|${e}`).digest('base64url').slice(0, 32);
+  function linkOk(rel, e, k) {
+    if (!linkKey || !e || !k || !(Number(e) > Date.now())) return false;
+    const a = Buffer.from(String(k)), b = Buffer.from(linkSig(rel, e));
+    return a.length === b.length && crypto.timingSafeEqual(a, b);
+  }
+  function signedUrl(file) {
+    const rel = path.relative(path.join(DIR, 'tasks'), file).split(path.sep);
+    if (!linkKey || rel.length < 3 || rel[0] === '..' || !/^v\d+$/.test(rel[1])) return '';
+    const e = Date.now() + 30 * 864e5;
+    return `${PUBLIC_URL}/api/assistant/desk/files/${rel.map(encodeURIComponent).join('/')}?e=${e}&k=${linkSig(rel.join('/'), e)}`;
+  }
+  // where the result files of a task lie (the bot sends them as documents)
+  function resultFile(id, rel) {
+    const t = byId(id), r = safeRel(rel);
+    if (!t?.result || !r) return '';
+    const f = path.join(taskDir(t.id), 'v' + t.result.version, r);
+    return fs.existsSync(f) ? f : '';
   }
 
   // a short status block for the assistant: what is on the desk right now
@@ -823,9 +931,11 @@ export function createDesk({ claude, model, fallback, dataDir, officeDir, runner
     if (M === 'GET' && seg[0] === 'files' && seg.length >= 4) {
       const t = byId(seg[1]), v = Number(String(seg[2]).replace(/^v/, ''));
       if (!t || !t.result) return notFound(res);
-      if (!isOwner && !(t.published && v === t.result.version)) return notFound(res);
       const rel = safeRel(seg.slice(3).map(decodeURIComponent).join('/'));
       if (!rel) return notFound(res);
+      // a signed link (Telegram: files above its 50 MB limit) works without the owner's cookie until it expires
+      const signed = linkOk(`${t.id}/v${v}/${rel}`, url.searchParams.get('e'), url.searchParams.get('k'));
+      if (!isOwner && !signed && !(t.published && v === t.result.version)) return notFound(res);
       return sendFile(req, res, path.join(taskDir(t.id), 'v' + v, rel));
     }
 
@@ -857,7 +967,7 @@ export function createDesk({ claude, model, fallback, dataDir, officeDir, runner
       if (M === 'POST' && seg[1] === 'claim') {
         // the runner does one task at a time: when it asks for the next one, nothing is in work
         for (const t of tasks) if (t.status === 'work') orphan(t, 'Исполнитель не сдал задачу — она снова в очереди.');
-        const t = tasks.filter(x => x.status === 'queued').sort((x, y) => x.queuedAt.localeCompare(y.queuedAt))[0];
+        const t = tasks.filter(x => x.status === 'queued').sort(queueOrder)[0];
         if (!t) { res.writeHead(204); return res.end(); }
         if (t.pending.kind === 'transcribe') {
           t.status = 'work'; t.error = '';
@@ -874,7 +984,7 @@ export function createDesk({ claude, model, fallback, dataDir, officeDir, runner
         const a = agentOf(t.route.agent);
         t.status = 'work'; t.versions = (t.versions || 0) + 1; t.workVersion = t.versions; t.error = '';
         if (t.pending.kind === 'run') t.lessonsUsed = lessonsNote(t.route.agent).n;
-        step(t, t.pending.kind === 'execute' ? `«${a?.name}» выполняет разрешённые действия.` : t.pending.kind === 'revise' ? `«${a?.name}» вносит правку${t.pending.from === 'qa' ? ' по замечаниям контролёра' : ''}.` : t.pending.kind === 'answer' ? `«${a?.name}» получил ваш ответ и продолжает.` : `«${a?.name}» взял задачу в работу.`);
+        step(t, t.pending.kind === 'execute' ? `«${a?.name}» выполняет разрешённые действия.` : t.pending.kind === 'revise' ? `«${a?.name}» вносит правку${t.pending.from === 'qa' ? ' по замечаниям контролёра' : ''}.` : t.pending.kind === 'answer' ? `«${a?.name}» получил ваш ответ и продолжает.` : t.pending.kind === 'resume' ? `«${a?.name}» продолжает после паузы.` : `«${a?.name}» взял задачу в работу.`);
         emit(t);
         return json(res, 200, { id:t.id, kind:t.pending.kind, version:t.versions, agent:t.route.agent, skill:t.route.skill, title:t.route.title,
           prompt:jobPrompt(t), session:t.pending.kind === 'run' ? '' : t.session || '', files:t.files.map(f => f.name),
@@ -882,6 +992,12 @@ export function createDesk({ claude, model, fallback, dataDir, officeDir, runner
       }
       const t = byId(seg[1]);
       if (!t) return notFound(res);
+      // a job stopped by the owner's pause: the runner reports the session, so «Продолжить» resumes it
+      if (M === 'POST' && seg[2] === 'session') {
+        const b = await readJson(req);
+        if (t.status === 'paused' && b.session && t.paused?.wasWork) { t.paused.session = String(b.session); save(); }
+        return json(res, 200, { ok:true });
+      }
       if (M === 'GET' && seg[2] === 'input' && seg[3]) return sendFile(req, res, path.join(taskDir(t.id), 'in', safeName(decodeURIComponent(seg[3]))));
       if (M === 'POST' && seg[2] === 'step') {
         const b = await readJson(req);
@@ -927,7 +1043,7 @@ export function createDesk({ claude, model, fallback, dataDir, officeDir, runner
           return json(res, 200, { ok:true });
         }
         // a middle stage of a pipeline: the work goes on to the next agent, the owner sees only the end
-        if (b.result === 'review' && t.pipeline && t.pipeline.idx < t.pipeline.stages.length - 1 && ['run', 'answer', 'execute'].includes(pk)) {
+        if (b.result === 'review' && t.pipeline && t.pipeline.idx < t.pipeline.stages.length - 1 && ['run', 'answer', 'execute', 'resume'].includes(pk)) {
           nextStage(t, b); emit(t);
           return json(res, 200, { ok:true });
         }
@@ -1041,14 +1157,19 @@ export function createDesk({ claude, model, fallback, dataDir, officeDir, runner
       }
       if (seg[2] === 'cancel') {
         if (!OPEN.includes(t.status)) return json(res, 400, { error:'Задача уже закрыта.' });
-        t.status = 'cancelled'; t.pending = null; step(t, 'Задача отменена.'); emit(t);
+        t.status = 'cancelled'; t.pending = null; t.paused = null; step(t, 'Задача отменена.'); emit(t);
         return json(res, 200, { task:view(t) });
+      }
+      if (['pause', 'resume', 'urgent', 'snooze'].includes(seg[2])) {
+        const r = control(t, seg[2], b);
+        return r.error ? json(res, 400, r) : json(res, 200, { task:view(t) });
       }
     }
     return notFound(res);
   }
 
-  return { handle, createTask, summary, tickRoutines, agents:() => catalog().agents, view, act, stats, lessonsOf, pipelines:pipelinesView,
+  return { handle, createTask, summary, tickRoutines, tickPauses, agents:() => catalog().agents, view, act, stats, lessonsOf, pipelines:pipelinesView,
+    onChange:fn => { listeners.add(fn); return () => listeners.delete(fn); }, putUpload, resultFile, signedUrl, all:() => tasks.map(view),
     list:(n = 15) => tasks.slice(0, n).map(view), get:id => { const t = byId(id); return t ? view(t) : null; },
     skills:() => serverSkills, skillsFile:SKILLS_FILE };
 }

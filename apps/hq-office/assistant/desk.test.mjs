@@ -319,3 +319,83 @@ test('правка владельца становится уроком в сл�
   assert.equal(st.total.runs, 2); assert.ok(st.agents.some(a => a.id === 'slides' && a.lessons === 1));
   assert.match(d.desk.summary(), /За этот месяц/);
 });
+
+/* ---------- the owner's controls (also the Telegram buttons): pause, resume, urgent, snooze ---------- */
+
+test('пауза в работе останавливает исполнителя, «Продолжить» идёт в той же сессии', async () => {
+  const d = setup();
+  const id = await d.task('сделай презентацию');
+  const job = await d.claim();
+  assert.equal(job.kind, 'run');
+  assert.equal((await d.call('POST', `tasks/${id}/pause`, {})).status, 200);
+  let t = await d.get(id); assert.equal(t.status, 'paused'); assert.equal(t.paused.from, 'work');
+  // the runner sees «cancelled» on its next step, stops and reports the session
+  assert.equal((await d.step(id, 'рендер')).j.cancelled, true);
+  await d.call('POST', `runner/${id}/session`, { session:'S-paused' }, R);
+  assert.equal(await d.claim(), null);   // nothing to do while paused
+  await d.call('POST', `tasks/${id}/resume`, {});
+  const again = await d.claim();
+  assert.equal(again.kind, 'resume'); assert.equal(again.session, 'S-paused'); assert.match(again.prompt, /паузе/);
+  await d.deliver(again);
+  t = await d.get(id); assert.ok(['queued', 'review'].includes(t.status));   // the first delivery still goes through QA
+});
+
+test('пауза в очереди и «отложить до» — задача возвращается сама; срочная идёт первой', async () => {
+  const d = setup();
+  const a = await d.task('первая'), b = await d.task('вторая'), c = await d.task('третья');
+  await d.call('POST', `tasks/${c}/urgent`, { on:true });
+  assert.equal((await d.get(c)).queuePos, 1);
+  await d.call('POST', `tasks/${a}/snooze`, { until:new Date(Date.now() + 50).toISOString() });
+  assert.equal((await d.get(a)).status, 'paused');
+  assert.equal((await d.claim()).id, c);
+  await new Promise(r => setTimeout(r, 80));
+  d.desk.tickPauses();
+  const t = await d.get(a); assert.equal(t.status, 'queued'); assert.equal(t.paused, null);
+  assert.ok(b);
+});
+
+test('отложить вопрос или результат: статус тот же, после времени снова ждёт владельца', async () => {
+  const d = setup();
+  const id = await d.toReview();
+  assert.equal((await d.call('POST', `tasks/${id}/snooze`, { until:new Date(Date.now() - 1000).toISOString() })).status, 400);
+  await d.call('POST', `tasks/${id}/snooze`, { until:new Date(Date.now() + 50).toISOString() });
+  let t = await d.get(id); assert.equal(t.status, 'review'); assert.ok(t.snoozed);
+  await new Promise(r => setTimeout(r, 80));
+  d.desk.tickPauses();
+  t = await d.get(id); assert.equal(t.snoozed, '');
+  assert.equal(d.desk.act(id, 'approve', '', 'up').task.status, 'done');
+  assert.match(d.desk.act(id, 'pause').error, /паузу/);
+});
+
+test('подписка на изменения и загрузка файла для задачи (как из Telegram)', async () => {
+  const d = setup(), seen = [];
+  d.desk.onChange(t => seen.push(t.status));
+  const up = d.desk.putUpload('ref.jpg', Buffer.from('jpg'));
+  const { task } = d.desk.createTask({ text:'обложка по фото', uploads:[up.id], source:'telegram' });
+  await new Promise(r => setTimeout(r, 30));
+  const v = d.desk.get(task.id);
+  assert.equal(v.source, 'telegram'); assert.deepEqual(v.files, ['ref.jpg']);
+  assert.ok(seen.includes('routing') && seen.includes('queued'));
+});
+
+test('карточка Telegram: ветка, кнопки и текст по статусу', async () => {
+  const { topicOf, cardKeyboard, cardText, snoozeUntil, reportBrief } = await import('./tg.mjs');
+  const base = { id:'ab12', text:'x', statusText:'s', agent:{ name:'Слайды' }, route:{ title:'Презентация' }, steps:[] };
+  const keys = v => cardKeyboard(v).inline_keyboard.flat().map(b => b.callback_data?.split(':')[0]);
+  assert.equal(topicOf({ ...base, status:'review' }), 'inbox');
+  assert.equal(topicOf({ ...base, status:'review', snoozed:'2030-01-01' }), 'work');
+  assert.equal(topicOf({ ...base, status:'error' }), 'errors');
+  assert.equal(topicOf({ ...base, status:'review', routine:'social-daily' }), 'morning');
+  assert.deepEqual(keys({ ...base, status:'review' }).slice(0, 3), ['ok', 'up', 'dn']);
+  assert.ok(keys({ ...base, status:'work' }).includes('p'));
+  assert.ok(keys({ ...base, status:'paused' }).includes('r'));
+  assert.ok(keys({ ...base, status:'queued' }).includes('u'));
+  assert.ok(keys({ ...base, status:'question', question:{ text:'?', options:[{ id:'1', label:'Стекло' }] } }).includes('o'));
+  assert.ok(cardKeyboard({ ...base, status:'review' }).inline_keyboard.flat().every(b => !b.callback_data || Buffer.byteLength(b.callback_data) <= 64));
+  const txt = cardText({ ...base, status:'review', result:{ summary:'## Что сделано\nСобрал <12> слайдов.\n## Главное\n- хук\n- цена', files:[{ path:'index.html' }], main:'index.html' } }, 'https://hq2.aicex.club');
+  assert.match(txt, /Собрал &lt;12&gt; слайдов/); assert.match(txt, /• хук/); assert.match(txt, /#desk-ab12/);
+  assert.equal(reportBrief('просто текст').done, 'просто текст');
+  const mon = snoozeUntil('mon', new Date('2026-11-04T12:00:00Z'));   // Wednesday → Monday 9:00 MSK = 06:00 UTC
+  assert.equal(mon.toISOString(), '2026-11-09T06:00:00.000Z');
+  assert.equal(snoozeUntil('eve', new Date('2026-11-04T17:00:00Z')).toISOString(), '2026-11-05T16:00:00.000Z');
+});
