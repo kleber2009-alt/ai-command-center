@@ -11,7 +11,7 @@ import os from 'node:os';
 import path from 'node:path';
 import { fileURLToPath } from 'node:url';
 import { createDesk } from './desk.mjs';
-import { createTelegram } from './tg.mjs';
+import { startTelegram, wantsFiles } from './tg.mjs';
 
 process.env.HQ_ROUTINES = 'off';
 const OFFICE = path.resolve(path.dirname(fileURLToPath(import.meta.url)), '..');
@@ -322,6 +322,86 @@ test('правка владельца становится уроком в сл�
   assert.match(d.desk.summary(), /За этот месяц/);
 });
 
+/* ---------- the owner's controls (also the Telegram buttons): pause, resume, urgent, snooze ---------- */
+
+test('пауза в работе останавливает исполнителя, «Продолжить» идёт в той же сессии', async () => {
+  const d = setup();
+  const id = await d.task('сделай презентацию');
+  const job = await d.claim();
+  assert.equal(job.kind, 'run');
+  assert.equal((await d.call('POST', `tasks/${id}/pause`, {})).status, 200);
+  let t = await d.get(id); assert.equal(t.status, 'paused'); assert.equal(t.paused.from, 'work');
+  // the runner sees «cancelled» on its next step, stops and reports the session
+  assert.equal((await d.step(id, 'рендер')).j.cancelled, true);
+  await d.call('POST', `runner/${id}/session`, { session:'S-paused' }, R);
+  assert.equal(await d.claim(), null);   // nothing to do while paused
+  await d.call('POST', `tasks/${id}/resume`, {});
+  const again = await d.claim();
+  assert.equal(again.kind, 'resume'); assert.equal(again.session, 'S-paused'); assert.match(again.prompt, /паузе/);
+  await d.deliver(again);
+  t = await d.get(id); assert.ok(['queued', 'review'].includes(t.status));   // the first delivery still goes through QA
+});
+
+test('пауза в очереди и «отложить до» — задача возвращается сама; срочная идёт первой', async () => {
+  const d = setup();
+  const a = await d.task('первая'), b = await d.task('вторая'), c = await d.task('третья');
+  await d.call('POST', `tasks/${c}/urgent`, { on:true });
+  assert.equal((await d.get(c)).queuePos, 1);
+  await d.call('POST', `tasks/${a}/snooze`, { until:new Date(Date.now() + 50).toISOString() });
+  assert.equal((await d.get(a)).status, 'paused');
+  assert.equal((await d.claim()).id, c);
+  await new Promise(r => setTimeout(r, 80));
+  d.desk.tickPauses();
+  const t = await d.get(a); assert.equal(t.status, 'queued'); assert.equal(t.paused, null);
+  assert.ok(b);
+});
+
+test('отложить вопрос или результат: статус тот же, после времени снова ждёт владельца', async () => {
+  const d = setup();
+  const id = await d.toReview();
+  assert.equal((await d.call('POST', `tasks/${id}/snooze`, { until:new Date(Date.now() - 1000).toISOString() })).status, 400);
+  await d.call('POST', `tasks/${id}/snooze`, { until:new Date(Date.now() + 50).toISOString() });
+  let t = await d.get(id); assert.equal(t.status, 'review'); assert.ok(t.snoozed);
+  await new Promise(r => setTimeout(r, 80));
+  d.desk.tickPauses();
+  t = await d.get(id); assert.equal(t.snoozed, '');
+  assert.equal(d.desk.act(id, 'approve', '', 'up').task.status, 'done');
+  assert.match(d.desk.act(id, 'pause').error, /паузу/);
+});
+
+test('подписка на изменения и загрузка файла для задачи (как из Telegram)', async () => {
+  const d = setup(), seen = [];
+  d.desk.onChange(t => seen.push(t.status));
+  const up = d.desk.putUpload('ref.jpg', Buffer.from('jpg'));
+  const { task } = d.desk.createTask({ text:'обложка по фото', uploads:[up.id], source:'telegram' });
+  await new Promise(r => setTimeout(r, 30));
+  const v = d.desk.get(task.id);
+  assert.equal(v.source, 'telegram'); assert.deepEqual(v.files, ['ref.jpg']);
+  assert.ok(seen.includes('routing') && seen.includes('queued'));
+});
+
+test('карточка Telegram: ветка, кнопки и текст по статусу', async () => {
+  const { topicOf, cardKeyboard, cardText, snoozeUntil, reportBrief } = await import('./tg.mjs');
+  const base = { id:'ab12', text:'x', statusText:'s', agent:{ name:'Слайды' }, route:{ title:'Презентация' }, steps:[] };
+  const keys = v => cardKeyboard(v).inline_keyboard.flat().map(b => b.callback_data?.split(':')[0]);
+  assert.equal(topicOf({ ...base, status:'review' }), 'inbox');
+  assert.equal(topicOf({ ...base, status:'review', snoozed:'2030-01-01' }), 'work');
+  assert.equal(topicOf({ ...base, status:'error' }), 'errors');
+  assert.equal(topicOf({ ...base, status:'review', routine:'social-daily' }), 'morning');
+  assert.deepEqual(keys({ ...base, status:'review' }).slice(0, 3), ['ok', 'up', 'dn']);
+  assert.ok(keys({ ...base, status:'work' }).includes('p'));
+  assert.ok(keys({ ...base, status:'paused' }).includes('r'));
+  assert.ok(keys({ ...base, status:'queued' }).includes('u'));
+  assert.ok(keys({ ...base, status:'question', question:{ text:'?', options:[{ id:'1', label:'Стекло' }] } }).includes('o'));
+  assert.ok(cardKeyboard({ ...base, status:'review' }).inline_keyboard.flat().every(b => !b.callback_data || Buffer.byteLength(b.callback_data) <= 64));
+  const txt = cardText({ ...base, status:'review', result:{ summary:'## Что сделано\nСобрал <12> слайдов.\n## Главное\n- хук\n- цена', files:[{ path:'index.html' }], main:'index.html' } }, 'https://hq2.aicex.club');
+  assert.match(txt, /Собрал &lt;12&gt; слайдов/); assert.match(txt, /• хук/); assert.match(txt, /#desk-ab12/);
+  assert.equal(reportBrief('просто текст').done, 'просто текст');
+  const mon = snoozeUntil('mon', new Date('2026-11-04T12:00:00Z'));   // Wednesday → Monday 9:00 MSK = 06:00 UTC
+  assert.equal(mon.toISOString(), '2026-11-09T06:00:00.000Z');
+  assert.equal(snoozeUntil('eve', new Date('2026-11-04T17:00:00Z')).toISOString(), '2026-11-05T16:00:00.000Z');
+});
+
 /* ---------- department heads: their agents only, the rest read-only ---------- */
 
 const FIRUZA = { 'x-head':encodeURIComponent(JSON.stringify({ id:'firuza', name:'Фируза', dept:'marketing', agents:['slides', 'landings'] })) };
@@ -391,7 +471,10 @@ test('админ-панель: отпуск, новый агент и перев
 
 test('Telegram: сообщение на вопрос, результат и ошибку — по одному на каждое', async () => {
   const sent = [];
-  const d = setup({ telegram:{ notify:v => sent.push(`${v.status}:${v.question?.from || v.result?.version || ''}`) } });
+  // the card follows every status; the owner is called (a sound) only on a question, a result and an error — once each
+  let last = '';
+  const d = setup({ telegram:{ sync:v => { const k = `${v.status}:${v.question?.from || v.result?.version || ''}`;
+    if (['question', 'review', 'error'].includes(v.status) && k !== last) sent.push(k); last = k; } } });
   d.routes.push({ action:'ask', question:'Для какого эфира?' }, { action:'assign' });
   const id = await d.task('презентация');
   assert.deepEqual(sent, ['question:dispatcher']);
@@ -410,56 +493,62 @@ test('Telegram: сообщение на вопрос, результат и ош
   assert.equal(sent.at(-1), 'error:');
 });
 
-test('Telegram: кнопки — принять с оценкой, вариант стиля, правка ответом на сообщение, новая задача сообщением', async () => {
-  const calls = [], realFetch = globalThis.fetch;
-  let updates = [];
-  globalThis.fetch = async (url, opts) => {
-    if (!String(url).startsWith('https://api.telegram.org/')) return realFetch(url, opts);
-    const method = String(url).split('/').pop(), body = JSON.parse(opts.body);
+test('Telegram: бот «Офис» — подтверждение задачи, карточка с кнопками, принять с оценкой, вариант стиля, правка ответом, чужие не слышны', async () => {
+  // a fake Bot API (HQ_TG_API): every call is recorded, getUpdates hands out what the test pushes
+  const calls = []; let updates = [], mid = 500;
+  const api = http.createServer(async (req, res) => {
+    const parts = []; for await (const c of req) parts.push(c);
+    const method = req.url.split('/').pop(); let body = {};
+    try { body = JSON.parse(Buffer.concat(parts).toString() || '{}'); } catch { body = { form:true }; }
+    if (method === 'getUpdates') { await new Promise(r => setTimeout(r, 20)); return res.end(JSON.stringify({ ok:true, result:updates.splice(0) })); }
     calls.push({ method, body });
-    const result = method === 'getUpdates' ? (await new Promise(r => setTimeout(r, 20)), updates.splice(0)) : method === 'sendMessage' ? { message_id:100 + calls.length } : true;
-    return new Response(JSON.stringify({ ok:true, result }), { headers:{ 'content-type':'application/json' } });
-  };
+    const result = method === 'getMe' ? { username:'AI_Growth_Office_Bot' } : method === 'getWebhookInfo' ? { url:'' }
+      : /^send/.test(method) ? { message_id:++mid } : true;
+    res.end(JSON.stringify({ ok:true, result }));
+  }).listen(0);
+  servers.push(api);
+  process.env.HQ_TG_API = `http://127.0.0.1:${api.address().port}`;
+  const d = setup();
+  const bot = startTelegram({ desk:d.desk, dataDir:d.dataDir, token:'T', owners:['42'], site:'https://hq', ask:async t => 'двойник: ' + t, ownerVoice:async () => null });
+  const chat = { id:42, type:'private' }, owner = { id:42 };
+  let uid = 1;
+  const push = u => updates.push({ update_id:uid++, ...u });
+  const wait = (ms = 200) => new Promise(r => setTimeout(r, ms));
+  const lastSend = () => calls.filter(c => c.method === 'sendMessage').at(-1).body;
+  const press = (data) => push({ callback_query:{ id:'q' + uid, from:owner, data, message:{ message_id:1, chat } } });
   try {
-    const d = setup({ telegram:null });
-    const tg = createTelegram({ token:'T', chat:'42', own:true, publicUrl:'https://hq', dataDir:d.dataDir, act:d.desk.act, get:d.desk.get, createTask:d.desk.createTask, log:{ error(){} } });
-    const wait = () => new Promise(r => setTimeout(r, 120));
-    // a review message carries the buttons and the office link
-    const id = await d.toReview();
-    const m = tg.message(d.desk.get(id));
-    assert.match(m.text, /принёс результат/); assert.deepEqual(m.reply_markup.inline_keyboard[0].map(b => b.callback_data), [`ap:${id}`, `up:${id}`]);
-    assert.equal(m.reply_markup.inline_keyboard.at(-1)[0].url, `https://hq/#desk-${id}`);
-    // a stranger's chat is ignored; the owner's «Отлично» accepts with the rating up
-    updates.push({ update_id:1, callback_query:{ id:'c0', data:`up:${id}`, message:{ message_id:5, chat:{ id:7 } } } });
-    updates.push({ update_id:2, callback_query:{ id:'c1', data:`up:${id}`, message:{ message_id:5, chat:{ id:42 } } } });
     await wait();
-    let t = d.desk.get(id);
-    assert.equal(t.status, 'done'); assert.equal(t.rating.value, 'up');
-    // a style option by its button
-    d.routes.push({ agent:'montage', deliverable:'video', visual:'video' });
-    const id2 = await d.task('смонтируй рилс');
-    const opt = d.desk.get(id2).question.options[0];
-    updates.push({ update_id:3, callback_query:{ id:'c2', data:`op:${id2}:${opt.id}`, message:{ message_id:6, chat:{ id:42 } } } });
-    await wait();
-    assert.equal(d.desk.get(id2).style, opt.label);
-    // «Правка» asks to reply; the reply goes to the agent as a revision
-    const id3 = await d.toReview('ещё презентация');
-    updates.push({ update_id:4, callback_query:{ id:'c3', data:`rv:${id3}`, message:{ message_id:7, chat:{ id:42 } } } });
-    await wait();
-    const prompt = calls.filter(c => c.method === 'sendMessage').at(-1);
-    assert.equal(prompt.body.reply_markup.force_reply, true);
-    const promptId = 100 + calls.indexOf(prompt) + 1;
-    updates.push({ update_id:5, message:{ message_id:8, chat:{ id:42 }, text:'добавь слайд с ценой', reply_to_message:{ message_id:promptId } } });
-    await wait();
-    t = d.desk.get(id3);
-    assert.equal(t.status, 'queued'); assert.match(t.steps.at(-1).text, /добавь слайд с ценой/);
-    // a plain message is a new task from Telegram
-    updates.push({ update_id:6, message:{ message_id:9, chat:{ id:42 }, text:'сделай карусель про офис' } });
-    await wait();
+    // a plain message → «Поставить задачу?» → the task, from Telegram
+    push({ message:{ message_id:2, from:owner, chat, text:'сделай карусель про офис' } }); await wait();
+    const key = lastSend().reply_markup.inline_keyboard[0][0].callback_data;
+    assert.match(key, /^nt:/);
+    press(key); await wait();
     const fromTg = d.desk.list(30).find(x => x.text === 'сделай карусель про офис');
     assert.ok(fromTg); assert.equal(fromTg.source, 'telegram');
-    tg.stop();
-  } finally { globalThis.fetch = realFetch; }
+    d.desk.act(fromTg.id, 'cancel');   // out of the queue: the next ones go through the fake runner in order
+    // a stranger is not heard
+    push({ message:{ message_id:3, from:{ id:7 }, chat:{ id:7, type:'private' }, text:'привет' } }); await wait();
+    assert.equal(d.desk.list(30).filter(x => x.text === 'привет').length, 0);
+    // a result to check: its card carries «Принять / 👍 / 👎»; 👍 accepts with the rating up
+    const id = await d.toReview('презентация для бота'); await wait(300);
+    const card = bot.state().cards[id];
+    assert.equal(card.topic, 'inbox');
+    press(`up:${id}`); await wait();
+    assert.equal(d.desk.get(id).status, 'done'); assert.equal(d.desk.get(id).rating.value, 'up');
+    // a style option by its button
+    d.routes.push({ agent:'montage', deliverable:'video', visual:'video' });
+    const id2 = await d.task('смонтируй рилс'); await wait();
+    const opt = d.desk.get(id2).question.options[0];
+    press(`o:${id2}:${opt.id}`); await wait();
+    assert.equal(d.desk.get(id2).style, opt.label);
+    // a reply to the card of a result is a revision
+    const id3 = await d.toReview('ещё презентация'); await wait(300);
+    push({ message:{ message_id:9, from:owner, chat, text:'добавь слайд с ценой', reply_to_message:{ message_id:bot.state().cards[id3].mid } } }); await wait();
+    assert.equal(d.desk.get(id3).status, 'queued'); assert.match(d.desk.get(id3).steps.at(-1).text, /добавь слайд с ценой/);
+    // pause and «Продолжить» from the card
+    press(`p:${id3}`); await wait(); assert.equal(d.desk.get(id3).status, 'paused');
+    press(`r:${id3}`); await wait(); assert.equal(d.desk.get(id3).status, 'queued');
+  } finally { bot.stop(); delete process.env.HQ_TG_API; }
 });
 
 test('очередь: ответы и проверка раньше новой работы; лёгкий поток не берёт монтаж; монтаж — со слотом тяжёлых задач', async () => {
@@ -539,4 +628,64 @@ test('агент контроля: отчёт по отделу приходит
   assert.ok(!d.desk.agents().some(a => a.id === 'mkcontrol'));
   // a quiet department makes no evening report
   assert.equal(await d.desk.controlReport('traffic'), null);
+});
+
+test('Telegram: материалы результата — слайды альбомом по порядку, видео роликом, презентация файлом; карточка с кнопками после них', async () => {
+  const calls = []; let updates = [], mid = 900;
+  const api = http.createServer(async (req, res) => {
+    const parts = []; for await (const c of req) parts.push(c);
+    const method = req.url.split('/').pop(), raw = Buffer.concat(parts).toString('latin1');
+    let body = {};
+    if (/^multipart/.test(req.headers['content-type'] || '')) {
+      // the names of the fields and files of the form, in order
+      for (const m of raw.matchAll(/name="([^"]+)"(?:; filename="([^"]+)")?\r\n(?:[^\r\n]+\r\n)*\r\n([^\r]*)/g)) body[m[1]] = m[2] ? `<file ${m[2]}>` : Buffer.from(m[3], 'latin1').toString('utf8');
+    } else try { body = JSON.parse(Buffer.concat(parts).toString('utf8') || '{}'); } catch {}
+    if (method === 'getUpdates') { await new Promise(r => setTimeout(r, 20)); return res.end(JSON.stringify({ ok:true, result:updates.splice(0) })); }
+    calls.push({ method, body });
+    res.end(JSON.stringify({ ok:true, result:method === 'getWebhookInfo' ? { url:'' } : method === 'getMe' ? { username:'b' } : /^send/.test(method) ? (method === 'sendMediaGroup' ? [{ message_id:++mid }] : { message_id:++mid }) : true }));
+  }).listen(0);
+  servers.push(api);
+  process.env.HQ_TG_API = `http://127.0.0.1:${api.address().port}`;
+  const d = setup();
+  const bot = startTelegram({ desk:d.desk, dataDir:d.dataDir, token:'T', owners:['42'], site:'https://hq', ask:async () => '', ownerVoice:async () => null });
+  const wait = (ms = 250) => new Promise(r => setTimeout(r, ms));
+  try {
+    await wait();
+    const id = await d.task('карусель и ролик'); await wait();
+    const quiet = calls.filter(c => c.method === 'sendMessage').at(-1);
+    assert.equal(quiet.body.disable_notification, true);   // a quiet card while in work
+    const job = await d.claim();
+    await d.deliver(job, { 'slide-10.png':'p10', 'slide-2.png':'p2', 'slide-1.png':'p1', 'rils.mp4':'v', 'deck.pdf':'d', 'index.html':'<h1>x</h1>' }, { main:'index.html' });
+    calls.length = 0;
+    await d.claim(); await d.finish(id, { result:'qa', verdict:'ok' }); await wait(500);
+    const seq = calls.map(c => c.method).filter(m => /^(send|delete)/.test(m));
+    assert.deepEqual(seq, ['deleteMessage', 'sendMediaGroup', 'sendVideo', 'sendDocument', 'sendMessage', 'sendMessage']);
+    assert.match(calls.filter(c => c.method === 'sendMessage').at(-2).body.text, /превью.*«📎 Файлы»/s);   // the album is a preview
+    const g = calls.find(c => c.method === 'sendMediaGroup').body, album = JSON.parse(g.media);
+    assert.equal(album.length, 3); assert.equal(album[0].caption, 'Задача');
+    assert.deepEqual([g.f0, g.f1, g.f2], ['<file slide-1.png>', '<file slide-2.png>', '<file slide-10.png>']);
+    assert.equal(calls.find(c => c.method === 'sendVideo').body.video, '<file rils.mp4>');
+    assert.equal(calls.find(c => c.method === 'sendDocument').body.document, '<file deck.pdf>');
+    const card = calls.filter(c => c.method === 'sendMessage').at(-1).body;
+    assert.ok(!card.disable_notification); assert.ok(card.reply_markup.inline_keyboard.flat().some(b => b.callback_data === `ok:${id}`));
+    assert.equal(card.reply_markup.inline_keyboard.at(-1)[0].web_app.url, `https://hq/app/#t=${id}`);   // «Открыть» — the mini app
+    // accepted: the card moves to «Готово» — the materials are not sent again
+    calls.length = 0;
+    d.desk.act(id, 'approve'); await wait(400);
+    assert.ok(!calls.some(c => ['sendMediaGroup', 'sendVideo', 'sendDocument'].includes(c.method)));
+    assert.match(calls.filter(c => c.method === 'sendMessage').at(-1).body.text, /В истории офиса|Принято/);
+    // «📎 Файлы»: every file separately, as a document, original bytes — the main video, slides in order, the PDF, the page last
+    calls.length = 0;
+    await bot.sendFiles(id);
+    const docs = calls.filter(c => /^send(Photo|Video|Document|MediaGroup)$/.test(c.method));
+    assert.ok(docs.every(c => c.method === 'sendDocument' && c.body.disable_content_type_detection === 'true'));
+    assert.deepEqual(docs.map(c => c.body.document), ['<file rils.mp4>', '<file slide-1.png>', '<file slide-2.png>', '<file slide-10.png>', '<file deck.pdf>', '<file index.html>']);
+    assert.match(docs[0].body.caption, /^1\/6 · /);
+    assert.match(calls.find(c => c.method === 'sendMessage').body.text, /6 файлов в исходном качестве/);
+  } finally { bot.stop(); delete process.env.HQ_TG_API; }
+});
+
+test('Telegram: «пришли файлом» ответом на карточку — это просьба о файлах, а не правка', () => {
+  for (const t of ['файлом', 'Пришли файлами', 'скинь оригиналы', 'дай в лучшем качестве', 'без сжатия пришли']) assert.ok(wantsFiles(t), t);
+  for (const t of ['переделай третий слайд', 'добавь файл с ценами', 'сделай хук короче', '']) assert.ok(!wantsFiles(t), t);
 });

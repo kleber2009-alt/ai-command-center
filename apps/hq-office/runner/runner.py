@@ -606,7 +606,14 @@ def run_job(job):
             slot.__exit__()
 
     if cancelled.is_set():
-        log(jid, "cancelled by the owner")
+        log(jid, "stopped by the owner (cancel or pause)")
+        # на паузе сервер хранит сессию, чтобы «Продолжить» шло с того же места
+        sid = locals().get("session") or job.get("session") or ""
+        if sid:
+            try:
+                call("POST", f"/runner/{jid}/session", {"session": sid})
+            except Exception as e:
+                log("session:", e)
         return
     usage = usage_of(result_ev, started)
     mins = (time.time() - started) / 60

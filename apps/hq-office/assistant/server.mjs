@@ -23,7 +23,9 @@
    ELEVENLABS_VOICE_ID (optional), HQ_DESK_RUNNER_TOKEN (the runner of the desk),
    OFFICE_DIR (data files of the site, default ..),
    DATA_DIR (history, memory, settings; default ./.data), PROJECT_MAP (monorepo CLAUDE.md),
-   PORT (8787), SERVE_STATIC=1 — also serve the office itself, for local runs. */
+   PORT (8787), SERVE_STATIC=1 — also serve the office itself, for local runs.
+   Telegram (tg.mjs): HQ_TG_BOT_TOKEN — the bot «Офис» (its own, long polling), HQ_TG_OWNER_IDS — the owner's Telegram ids;
+   POST tg-login {initData} — the Mini App signs the owner in by Telegram. */
 import http from 'node:http';
 import fs from 'node:fs';
 import path from 'node:path';
@@ -38,6 +40,7 @@ import { initTeam } from './team.mjs';
 import { initAdmin } from './admin.mjs';
 import { loadTwin, initTwin, remember, rememberTool, SECTIONS, TWIN_PROMPT } from './twin.mjs';
 import { initKb, loadKb, kbTools, runKbTool, ingest, listPrivate, removePrivate } from './kb.mjs';
+import { startTelegram } from './tg.mjs';
 
 const HERE = path.dirname(fileURLToPath(import.meta.url));
 const PORT = Number(process.env.PORT || 8787);
@@ -56,7 +59,6 @@ initKb(DATA_DIR);
 const team = initTeam(DATA_DIR);
 const admin = initAdmin(DATA_DIR);
 setOfficePatch(() => ({ patch:admin.patch(), stamp:admin.stamp() }));
-const desk = createDesk({ isHidden:id => admin.hiddenTask('desk-' + id), heads:() => team.list(), claude, model:MODEL, fallback:FALLBACK, dataDir:DATA_DIR, officeDir:OFFICE_DIR, runnerToken:process.env.HQ_DESK_RUNNER_TOKEN || '' });
 
 /* ---------- prompts ---------- */
 
@@ -93,6 +95,8 @@ const SECRET = load('secret.json', null)?.key || (() => { const key = crypto.ran
 const owner = load('owner.json', { memory:'', turns:[] });   // turns: { role:'user'|'assistant', text, at, voice }
 const settings = load('settings.json', {});                  // { voiceId, voiceName }
 const guests = new Map();                                     // guest id → { turns, at } (memory only)
+const desk = createDesk({ isHidden:id => admin.hiddenTask('desk-' + id), heads:() => team.list(), claude, model:MODEL, fallback:FALLBACK, dataDir:DATA_DIR,
+  officeDir:OFFICE_DIR, runnerToken:process.env.HQ_DESK_RUNNER_TOKEN || '', linkKey:crypto.createHmac('sha256', SECRET).update('desk-links').digest('hex') });
 
 /* ---------- auth and limits ---------- */
 
@@ -100,12 +104,18 @@ const sha = s => crypto.createHash('sha256').update(String(s)).digest();
 const sign = v => crypto.createHmac('sha256', SECRET).update(v + '|' + PASSWORD).digest('base64url');
 const same = (a, b) => a.length === b.length && crypto.timingSafeEqual(a, b);
 const cookies = req => Object.fromEntries((req.headers.cookie || '').split(/;\s*/).filter(Boolean).map(c => { const i = c.indexOf('='); return [c.slice(0, i), decodeURIComponent(c.slice(i + 1))]; }));
-const cookie = (name, value, maxAge) => `${name}=${encodeURIComponent(value)}; Path=${PREFIX}; Max-Age=${maxAge}; HttpOnly; SameSite=Lax${process.env.SERVE_STATIC === '1' ? '' : '; Secure'}`;
+const cookie = (name, value, maxAge, sameSite = 'Lax') => `${name}=${encodeURIComponent(value)}; Path=${PREFIX}; Max-Age=${maxAge}; HttpOnly; SameSite=${sameSite}${process.env.SERVE_STATIC === '1' && sameSite === 'Lax' ? '' : '; Secure'}`;
 const clientIp = req => String(req.headers['x-forwarded-for'] || req.socket.remoteAddress || '').split(',')[0].trim();
 
-// the login cookie: `owner.<exp>` (the password) or `user.<id>.<ver>.<exp>` (a department head, invite link), signed
+const ownerToken = () => { const v = `owner.${Date.now() + 90 * 864e5}`; return `${v}.${sign(v)}`; };
+/* Telegram: the owner's ids (HQ_TG_OWNER_IDS, else the id the morning reports go to) and the bot of the office (tg.mjs) */
+// the office's own bot — @AI_Growth_Office_Bot: HQ_TG_BOT_TOKEN, else the notify bot when it is the office's own (HQ_NOTIFY_TG_OWN=1)
+const TG_TOKEN = process.env.HQ_TG_BOT_TOKEN || (/^(1|true|yes)$/i.test(process.env.HQ_NOTIFY_TG_OWN || '') ? process.env.HQ_NOTIFY_TG_TOKEN || '' : '');
+const TG_OWNERS = String(process.env.HQ_TG_OWNER_IDS || (/^\d+$/.test(process.env.HQ_NOTIFY_TG_CHAT || '') ? process.env.HQ_NOTIFY_TG_CHAT : '')).split(/[\s,;]+/).filter(x => /^\d+$/.test(x));
+// the login cookie: `owner.<exp>` (the password or Telegram) or `user.<id>.<ver>.<exp>` (a department head, invite link), signed.
+// The mini app may also send it as the x-hqa header — Telegram Web opens it in a frame where cookies can be blocked
 function signedValue(req) {
-  const t = cookies(req).hqa;
+  const t = cookies(req).hqa || String(req.headers['x-hqa'] || '');
   if (!t || !PASSWORD) return '';
   const i = t.lastIndexOf('.'), v = t.slice(0, i);
   return same(Buffer.from(t.slice(i + 1)), Buffer.from(sign(v))) ? v : '';
@@ -119,6 +129,17 @@ function whoOf(req) {
   if (isOwner(req)) return { owner:true };
   const u = team.check(signedValue(req));
   return u ? { head:{ id:u.id, name:u.name, dept:u.dept, agents:u.agents } } : null;
+}
+// Telegram Web App initData: the hash is an HMAC of the sorted fields by the key HMAC("WebAppData", bot token); a day at most
+function tgUser(initData, botToken) {
+  const p = new URLSearchParams(initData), hash = p.get('hash') || '';
+  p.delete('hash');
+  const check = [...p.entries()].sort(([a], [b]) => (a < b ? -1 : a > b ? 1 : 0)).map(([k, v]) => `${k}=${v}`).join('\n');
+  const key = crypto.createHmac('sha256', 'WebAppData').update(botToken).digest();
+  const h = crypto.createHmac('sha256', key).update(check).digest('hex');
+  if (!/^[0-9a-f]{64}$/.test(hash) || !same(Buffer.from(h), Buffer.from(hash))) return null;
+  if (!(Date.now() / 1000 - Number(p.get('auth_date')) < 86400)) return null;
+  try { return JSON.parse(p.get('user') || 'null'); } catch { return null; }
 }
 const hits = new Map();
 function limited(key, max, windowMs) {
@@ -377,10 +398,23 @@ const ROUTES = {
     const { password } = await jsonBody(req);
     // wrong passwords from all addresses together: brute force through many IPs stalls too
     if (!same(sha(password || ''), sha(PASSWORD))) return json(res, limited('login:fail', 60, 3600e3) ? 429 : 401, { error:'Неверный пароль.' });
-    const v = `owner.${Date.now() + 90 * 864e5}`;
-    json(res, 200, { ok:true }, { 'set-cookie':cookie('hqa', `${v}.${sign(v)}`, 90 * 86400) });
+    json(res, 200, { ok:true }, { 'set-cookie':cookie('hqa', ownerToken(), 90 * 86400) });
   },
   'POST logout': (req, res) => json(res, 200, { ok:true }, { 'set-cookie':cookie('hqa', '', 0) }),
+  // the mini app in Telegram (PUBLIC_URL/app/): the owner signs in by Telegram itself — the signed initData of the
+  // office's own bot, the owner's Telegram id. No password; a stranger who opens the app gets nothing.
+  'POST tg-login': async (req, res) => {
+    if (limited('tg:' + clientIp(req), 30, 900e3)) return json(res, 429, { error:'Слишком много попыток — подождите.' });
+    // the same bot and owners as the Telegram control panel (tg.mjs): TG_TOKEN, TG_OWNERS
+    if (!TG_TOKEN || !TG_OWNERS.length || !PASSWORD) return json(res, 503, { error:'Вход через Telegram не настроен.' });
+    const { initData } = await jsonBody(req, 8e3);
+    const user = tgUser(String(initData || ''), TG_TOKEN);
+    if (!user) return json(res, 401, { error:'Telegram не подтвердил вход — откройте приложение из бота заново.' });
+    if (!TG_OWNERS.includes(String(user.id))) return json(res, 403, { error:'Это приложение офиса — оно открывается только у владельца.' });
+    const v = `owner.${Date.now() + 30 * 864e5}`, signed = `${v}.${sign(v)}`;
+    // SameSite=None: Telegram Web opens the app in a frame; the token also goes back for the x-hqa header
+    json(res, 200, { ok:true, owner:true, name:user.first_name || '', token:signed }, { 'set-cookie':cookie('hqa', signed, 30 * 86400, 'None') });
+  },
   // the admin panel: the patch over agents.js for the site (public — the same team every visitor sees), the owner's actions
   'GET office/patch.js': (req, res) => { res.writeHead(200, { 'content-type':'text/javascript; charset=utf-8', 'cache-control':'no-cache' }); res.end(admin.script()); },
   'GET admin': (req, res, o) => o ? json(res, 200, { patch:admin.patch(), log:admin.log() }) : json(res, 403, { error:'Только для владельца.' }),
@@ -469,6 +503,28 @@ const ROUTES = {
   },
 };
 
+/* the Telegram bot: the twin answers through this same server (the owner's turn, twin:true), so its memory,
+   tools and tasks are the same as on the site */
+async function askTwin(text, { voice = false, uploads = [] } = {}) {
+  if (!PASSWORD) throw new Error('Вход владельца не настроен (HQ_ASSISTANT_PASSWORD) — двойник недоступен.');
+  const r = await fetch(`http://127.0.0.1:${PORT}${PREFIX}/chat`, { method:'POST', signal:AbortSignal.timeout(300e3),
+    headers:{ 'content-type':'application/json', cookie:`hqa=${encodeURIComponent(ownerToken())}` },
+    body:JSON.stringify({ text:`(из Telegram${voice ? ', голосовое' : ''}) ${text}`, voice, twin:true, uploads:uploads.map(u => ({ id:u.id, name:u.name })) }) });
+  if (!r.ok) throw new Error((await r.json().catch(() => ({}))).error || 'Двойник не ответил.');
+  let out = '', err = '';
+  for (const block of (await r.text()).split('\n\n')) {
+    const line = block.replace(/^data: /, '');
+    try { const o = JSON.parse(line); if (o.t === 'delta') out += o.text; else if (o.t === 'error') err = o.message; } catch {}
+  }
+  if (err && !out) throw new Error(err);
+  return out.trim();
+}
+let bot = null;
+function startBot() {
+  bot = startTelegram({ desk, dataDir:DATA_DIR, token:TG_TOKEN, owners:TG_OWNERS, site:(process.env.HQ_PUBLIC_URL || SITE).replace(/\/$/, ''),
+    ask:askTwin, ownerVoice, fileLink:file => desk.signedUrl(file) });
+}
+
 // local runs (SERVE_STATIC=1): the office itself on the same origin as the API
 const MIME = { '.html':'text/html; charset=utf-8', '.js':'text/javascript; charset=utf-8', '.css':'text/css', '.json':'application/json', '.jpg':'image/jpeg', '.png':'image/png', '.svg':'image/svg+xml', '.webp':'image/webp', '.mp4':'video/mp4', '.glb':'model/gltf-binary' };
 function serveStatic(req, res, p) {
@@ -483,6 +539,15 @@ http.createServer(async (req, res) => {
   const p = new URL(req.url, 'http://x').pathname;
   if (!p.startsWith(PREFIX + '/')) return process.env.SERVE_STATIC === '1' ? serveStatic(req, res, p) : json(res, 404, { error:'not found' });
   const rest = p.slice(PREFIX.length + 1);
+  // the mini app's «Прислать файлами в Telegram»: every file of a result, each separately, original quality
+  const sf = req.method === 'POST' && /^desk\/tasks\/([\w-]+)\/send-files$/.exec(rest);
+  if (sf) {
+    if (!isOwner(req)) return json(res, 403, { error:'Только для владельца.' });
+    if (!bot?.sendFiles) return json(res, 503, { error:'Telegram-бот офиса не подключён.' });
+    if (!desk.get(sf[1])?.result?.files?.length) return json(res, 404, { error:'У задачи нет файлов.' });
+    bot.sendFiles(sf[1]).catch(e => console.error('send-files:', e.message));
+    return json(res, 202, { ok:true });
+  }
   const route = rest.startsWith('desk/') ? rq => desk.handle(rq, res, rest.slice(5), whoOf(rq)) : ROUTES[`${req.method} ${rest}`];
   if (!route) return json(res, 404, { error:'not found' });
   try { await route(req, res, isOwner(req)); }
@@ -491,4 +556,4 @@ http.createServer(async (req, res) => {
     if (!res.headersSent) json(res, e.code === 413 ? 413 : 502, { error:e.code === 413 ? 'Слишком большой запрос.' : 'Ошибка сервиса — попробуйте ещё раз.' });
     else res.end();
   }
-}).listen(PORT, () => console.log(`hq assistant :${PORT} · office ${OFFICE_DIR} · claude ${claude ? 'on' : 'off'} · voice ${voiceConfigured() ? 'on' : 'off'} · owner login ${PASSWORD ? 'on' : 'off'} · desk runner ${process.env.HQ_DESK_RUNNER_TOKEN ? 'on' : 'off'}`));
+}).listen(PORT, () => { startBot(); console.log(`hq assistant :${PORT} · office ${OFFICE_DIR} · claude ${claude ? 'on' : 'off'} · voice ${voiceConfigured() ? 'on' : 'off'} · owner login ${PASSWORD ? 'on' : 'off'} · desk runner ${process.env.HQ_DESK_RUNNER_TOKEN ? 'on' : 'off'}`); });

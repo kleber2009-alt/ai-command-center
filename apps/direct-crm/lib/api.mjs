@@ -1,11 +1,12 @@
 /* HTTP API of the CRM (all under /api, every route but health/login needs a session). */
 import { now, logEvent, STAGES } from './db.mjs';
 import { ISSUE_TYPES } from './analyze.mjs';
+import { funnels } from './catalog.mjs';
 
 const RANK = { hot:0, human:1, normal:2, low:3 };
 const CLIENT = "('client','user','contact')";
 
-export function createApi({ db, cp, auth, sync, analyzer, status = null, model = '', secure = false, log = console.log }) {
+export function createApi({ db, cp, auth, sync, analyzer, catalog = null, learn = null, status = null, model = '', secure = false, log = console.log }) {
   const chat = db.prepare('SELECT * FROM chats WHERE id = ?');
   const msgs = db.prepare('SELECT * FROM messages WHERE chat_id = ? ORDER BY created_at, rowid');
   const events = db.prepare('SELECT * FROM events WHERE chat_id = ? ORDER BY at DESC LIMIT 50');
@@ -20,6 +21,7 @@ export function createApi({ db, cp, auth, sync, analyzer, status = null, model =
       aiScore:c.ai_score, aiVerdict:c.ai_verdict, aiIssues:c.ai_issues ? JSON.parse(c.ai_issues) : [],
       analyzed:c.analyzed_upto >= c.last_message_at && !!c.analyzed_at, handledBy:c.handled_by,
       reviewed:c.reviewed_upto >= c.last_client_at && c.reviewed_upto > 0, reviewedBy:c.reviewed_by,
+      leadScore:c.lead_score ?? null, interest:c.interest || '', objection:c.objection || '', contact:c.contact || '',
     };
   };
 
@@ -79,8 +81,19 @@ export function createApi({ db, cp, auth, sync, analyzer, status = null, model =
     // how fast our people answer: from a client's message to the next message sent from the CRM
     const replies = db.prepare(`SELECT m.created_at at, m.by_user user, (SELECT MAX(c.created_at) FROM messages c WHERE c.chat_id = m.chat_id AND c.side IN ${CLIENT} AND c.created_at <= m.created_at) asked
       FROM messages m WHERE m.by_user IS NOT NULL AND m.created_at >= ?`).all(from).filter(r => r.asked).map(r => r.at - r.asked).sort((a, b) => a - b);
+    // qualification and what people pressed (from the chats: buttons and code words of the automations)
+    const q = db.prepare(`SELECT COUNT(lead_score) n, ROUND(AVG(lead_score)) avg, SUM(lead_score >= 80) l80, SUM(lead_score BETWEEN 50 AND 79) l50,
+      SUM(lead_score BETWEEN 20 AND 49) l20, SUM(lead_score < 20) l0, SUM(contact <> '') contacts FROM chats WHERE ${act} AND lead_score IS NOT NULL`).get(from);
+    const objections = db.prepare(`SELECT objection, COUNT(*) n FROM chats WHERE ${act} AND objection <> '' GROUP BY lower(objection) ORDER BY n DESC LIMIT 12`).all(from);
+    const pressed = new Map();
+    if (catalog) for (const m of db.prepare(`SELECT side, text FROM messages WHERE created_at >= ? AND side IN ${CLIENT}`).all(from)) {
+      const k = catalog.mark(m); if (!k) continue;
+      const key = `${k.kind}|${k.label}|${k.name}`; pressed.set(key, (pressed.get(key) || 0) + 1);
+    }
+    const actions = [...pressed].map(([k, n]) => { const [kind, label, name] = k.split('|'); return { kind, label, name, n }; }).sort((a, b) => b.n - a.n).slice(0, 40);
     return {
       days, chats:Object.values(funnel).reduce((a, b) => a + b, 0), messagesIn:msgsIn, funnel, priority, sources,
+      qualification:{ ...Object.fromEntries(Object.entries(q).map(([k, v]) => [k, v || 0])), objections }, actions,
       ai:{ graded:scored.length, avg:scored.length ? +(scored.reduce((a, r) => a + r.ai_score, 0) / scored.length).toFixed(2) : null, dist, issues, issueNames:ISSUE_TYPES, worst },
       byDay, manual:{ replies:replies.length, medianSec:replies.length ? replies[Math.floor(replies.length / 2)] : null },
     };
@@ -113,7 +126,8 @@ export function createApi({ db, cp, auth, sync, analyzer, status = null, model =
       const m = k => db.prepare('SELECT value FROM meta WHERE key = ?').get(k)?.value ?? null;
       const c = db.prepare(`SELECT COUNT(*) n, SUM(analyzed_at IS NOT NULL) analyzed, SUM(client_count > 0 AND last_message_at > analyzed_upto) waiting FROM chats`).get();
       return json(res, 200, { ok:true, chats:c.n, messages:db.prepare('SELECT COUNT(*) n FROM messages').get().n, analyzed:c.analyzed || 0, toAnalyze:c.waiting || 0,
-        lastSync:Number(m('last_sync')) || null, backfill:m('backfill_done') ? 'done' : 'running', chatplace:!!cp, claude:!!analyzer?.on, model, status });
+        lastSync:Number(m('last_sync')) || null, backfill:m('backfill_done') ? 'done' : 'running', chatplace:!!cp, claude:!!analyzer?.on, model,
+        requestsPerMin:cp?.rate?.() ?? null, automations:db.prepare('SELECT COUNT(*) n FROM automations WHERE detail IS NOT NULL').get().n, status });
     }
     if (p === '/api/login' && req.method === 'POST') {
       const b = await body(req), r = auth.check(b.login, b.password, ip);
@@ -131,6 +145,36 @@ export function createApi({ db, cp, auth, sync, analyzer, status = null, model =
       return json(res, 200, { chats:list(q), counts:counts() });
     }
     if (p === '/api/stats') return json(res, 200, stats(Math.min(90, Math.max(1, Number(url.searchParams.get('days')) || 7))));
+    if (p === '/api/funnels') return json(res, 200, { funnels:funnels(db, Math.min(90, Math.max(1, Number(url.searchParams.get('days')) || 7))) });
+    if (p === '/api/learn' && req.method === 'GET') {
+      const bots = Object.fromEntries(db.prepare('SELECT id, username, name FROM bots').all().map(b => [b.id, b.username || b.name]));
+      const rows = db.prepare(`SELECT * FROM kb_questions WHERE gone = 0 OR answered_at IS NOT NULL ORDER BY answered_at IS NOT NULL, skipped, first_seen DESC LIMIT 300`).all();
+      return json(res, 200, { review:learn?.last() || null, questions:rows.map(r => ({ id:r.id, bot:bots[r.bot_id] || '', question:r.question, seen:r.first_seen,
+        draft:r.draft || '', answer:r.answer || '', answeredAt:r.answered_at, answeredBy:r.answered_by, skipped:!!r.skipped, gone:!!r.gone })),
+        open:rows.filter(r => !r.gone && !r.answered_at && !r.skipped).length });
+    }
+    if (p === '/api/learn/review' && req.method === 'POST') {
+      const b = await body(req);
+      try { return json(res, 200, { review:await learn.review(Math.min(30, Math.max(1, Number(b.days) || 7))) }); }
+      catch (e) { return json(res, 502, { error:`Разбор не получился: ${e.message}`.slice(0, 300) }); }
+    }
+    const lm = p.match(/^\/api\/learn\/([\w-]+)\/(draft|answer|skip|unskip)$/);
+    if (lm && req.method === 'POST') {
+      const [, qid, act] = lm, row = db.prepare('SELECT * FROM kb_questions WHERE id = ?').get(qid);
+      if (!row) return json(res, 404, { error:'Нет такого вопроса' });
+      try {
+        if (act === 'draft') return json(res, 200, await learn.draft(qid));
+        if (act === 'skip' || act === 'unskip') { db.prepare('UPDATE kb_questions SET skipped = ? WHERE id = ?').run(act === 'skip' ? 1 : 0, qid); logEvent(db, null, user.login, 'kb_' + act, { id:qid }); return json(res, 200, { ok:true }); }
+        const answer = String((await body(req)).answer || '').trim();
+        if (answer.length < 3) return json(res, 400, { error:'Пустой ответ' });
+        if (answer.length > 2000) return json(res, 400, { error:'Слишком длинный ответ' });
+        if (!cp) throw new Error('ChatPlace не подключён');
+        await cp.kbAnswer(qid, answer);   // the answer goes into the AI agent's knowledge base — only on a person's button
+        db.prepare('UPDATE kb_questions SET answer = ?, answered_at = ?, answered_by = ? WHERE id = ?').run(answer, now(), user.login, qid);
+        logEvent(db, null, user.login, 'kb_answer', { id:qid, question:row.question.slice(0, 200) });
+        return json(res, 200, { ok:true });
+      } catch (e) { log(`learn ${act} ${qid}: ${e.message}`); return json(res, 502, { error:`Не получилось: ${e.message}`.slice(0, 300) }); }
+    }
     if (p === '/api/sync' && req.method === 'POST') {
       const r = await sync.run().catch(e => ({ error:e.message }));
       analyzer?.run().catch(() => {});
@@ -144,7 +188,7 @@ export function createApi({ db, cp, auth, sync, analyzer, status = null, model =
       const c = chat.get(id);
       if (!c) return json(res, 404, { error:'Нет такой переписки' });
       return json(res, 200, { chat:view(c), messages:msgs.all(id).map(x => ({ id:x.id, side:x.side, text:x.text, at:x.created_at, type:x.type_name,
-        media:x.media ? JSON.parse(x.media) : [], by:x.by_user })), events:events.all(id).map(e => ({ at:e.at, user:e.user, kind:e.kind, data:JSON.parse(e.data || '{}') })) });
+        media:x.media ? JSON.parse(x.media) : [], by:x.by_user, mark:catalog?.mark(x) || null })), events:events.all(id).map(e => ({ at:e.at, user:e.user, kind:e.kind, data:JSON.parse(e.data || '{}') })) });
     }
     if (req.method !== 'POST') return json(res, 405, { error:'method' });
     const b = await body(req);
