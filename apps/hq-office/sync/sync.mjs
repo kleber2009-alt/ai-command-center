@@ -71,7 +71,7 @@ const historyOnly = f => /^apps\/hq-office\/tasks(\.auto)?\.js$/.test(f) || f.st
 /* ───────── office data (same files the site loads) ───────── */
 function loadOffice() {
   const window = {};
-  for (const f of ['office.config.js', 'dept-content.js', 'agent-content.js', 'tasks.js'])
+  for (const f of ['agents.js', 'office.config.js', 'dept-content.js', 'agent-content.js', 'tasks.js'])
     vm.runInNewContext(fs.readFileSync(path.join(APP, f), 'utf8'), { window }, { filename:f });
   const depts = window.OFFICE_CONFIG.depts;
   const agents = window.AGENT_CATALOG;
