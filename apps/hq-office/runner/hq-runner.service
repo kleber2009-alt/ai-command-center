@@ -16,6 +16,18 @@ Environment=PATH=@HOME@/.local/bin:@HOME@/.bun/bin:/usr/local/bin:/usr/bin:/bin
 ExecStart=/usr/bin/python3 -u @HOME@/hq-runner/runner.py
 # rendering shares the box with the bots and sites: cap it, and when the cap is hit let the kernel
 # kill only the heavy process (the runner stays alive and reports the task as failed for memory)
+# агенты работают с чужим текстом (страницы, расшифровки, файлы): даже если их уговорят — без повышения прав,
+# системные папки только для чтения, ключи SSH, облаков и GitHub недоступны. Агенту нужен git push или gh — уберите
+# путь из InaccessiblePaths.
+NoNewPrivileges=yes
+PrivateTmp=yes
+ProtectSystem=full
+ProtectKernelTunables=yes
+ProtectKernelModules=yes
+ProtectControlGroups=yes
+RestrictSUIDSGID=yes
+LockPersonality=yes
+InaccessiblePaths=-@HOME@/.ssh -@HOME@/.aws -@HOME@/.git-credentials -@HOME@/.netrc -@HOME@/.config/gh -@HOME@/.docker -@HOME@/.kube
 MemoryHigh=4G
 MemoryMax=4608M
 OOMPolicy=continue

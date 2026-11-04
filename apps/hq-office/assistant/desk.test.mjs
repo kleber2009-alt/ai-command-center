@@ -11,6 +11,7 @@ import os from 'node:os';
 import path from 'node:path';
 import { fileURLToPath } from 'node:url';
 import { createDesk } from './desk.mjs';
+import { createTelegram } from './tg.mjs';
 
 process.env.HQ_ROUTINES = 'off';
 const OFFICE = path.resolve(path.dirname(fileURLToPath(import.meta.url)), '..');
@@ -22,12 +23,12 @@ after(() => { for (const s of servers) s.close(); for (const d of dirs) fs.rmSyn
 const ROUTE = { action:'assign', agent:'slides', skill:'', title:'Задача', brief:'сделай', deliverable:'slides', why:'по профилю', question:'',
   visual:'none', style_named:'', transcribe:false, pipeline:'none' };
 
-function setup({ claude = true } = {}) {
+function setup({ claude = true, telegram } = {}) {
   const dataDir = fs.mkdtempSync(path.join(os.tmpdir(), 'desk-test-')); dirs.push(dataDir);
   const routes = [];
   const fake = { beta:{ messages:{ create:async () => ({ stop_reason:'end_turn', content:[{ type:'text', text:JSON.stringify({ ...ROUTE, ...(routes.shift() || {}) }) }] }) } },
     messages:{ create:async () => ({ content:[{ type:'text', text:'- правило' }] }) } };
-  const desk = createDesk({ claude:claude ? fake : null, model:'m', fallback:{}, dataDir, officeDir:OFFICE, runnerToken:TOK });
+  const desk = createDesk({ claude:claude ? fake : null, model:'m', fallback:{}, dataDir, officeDir:OFFICE, runnerToken:TOK, telegram });
   const srv = http.createServer((req, res) => desk.handle(req, res, req.url.split('?')[0].replace(/^\/desk\/?/, ''), req.headers['x-head'] ? { head:JSON.parse(decodeURIComponent(req.headers['x-head'])) } : req.headers['x-guest'] !== '1')).listen(0);
   servers.push(srv);
   const base = `http://127.0.0.1:${srv.address().port}/desk/`;
@@ -42,7 +43,8 @@ function setup({ claude = true } = {}) {
     desk, routes, call, dataDir,
     async task(text, extra = {}) { const { j } = await call('POST', 'tasks', { text, ...extra }); await tick(); return j.task.id; },
     async get(id) { return (await call('GET', 'tasks')).j.tasks.find(t => t.id === id); },
-    async claim() { const r = await call('POST', 'runner/claim', {}, R); return r.status === 204 ? null : r.j; },
+    async claim(body = {}) { const r = await call('POST', 'runner/claim', body, R); return r.status === 204 || r.j?.idle ? null : r.j; },
+    claimRaw:(body = {}) => call('POST', 'runner/claim', body, R),
     async put(id, name, body) { const r = await fetch(`${base}runner/${id}/file?path=${encodeURIComponent(name)}`, { method:'PUT', headers:R, body }); return r.status; },
     finish:(id, body) => call('POST', `runner/${id}/finish`, body, R),
     step:(id, text) => call('POST', `runner/${id}/step`, { text }, R),
@@ -356,4 +358,135 @@ test('руководитель управляет своими задачами,
   // a guest sees who set it in the public feed, but not the text
   const live = (await d.call('GET', 'live.json', null, { 'x-guest':'1' })).j;
   assert.ok(live.tasks.every(x => !('text' in x)));
+});
+
+/* ---------- Telegram, the queue, the disk ---------- */
+
+test('Telegram: сообщение на вопрос, результат и ошибку — по одному на каждое', async () => {
+  const sent = [];
+  const d = setup({ telegram:{ notify:v => sent.push(`${v.status}:${v.question?.from || v.result?.version || ''}`) } });
+  d.routes.push({ action:'ask', question:'Для какого эфира?' }, { action:'assign' });
+  const id = await d.task('презентация');
+  assert.deepEqual(sent, ['question:dispatcher']);
+  await d.call('POST', `tasks/${id}/answer`, { text:'вторник' }); await new Promise(r => setTimeout(r, 30));
+  const job = await d.claim();
+  await d.step(id, 'работаю'); await d.step(id, 'ещё работаю');
+  await d.deliver(job);
+  assert.equal(sent.length, 1);  // the QA checks first — nothing for the owner yet
+  await d.claim(); await d.finish(id, { result:'qa', verdict:'ok' });
+  assert.deepEqual(sent, ['question:dispatcher', 'review:1']);
+  await d.call('POST', `tasks/${id}/revise`, { text:'крупнее' });
+  await d.deliver(await d.claim());
+  assert.deepEqual(sent.at(-1), 'review:2');
+  const id2 = await d.task('ещё');
+  await d.claim(); await d.finish(id2, { result:'error', error:'сломалось' });
+  assert.equal(sent.at(-1), 'error:');
+});
+
+test('Telegram: кнопки — принять с оценкой, вариант стиля, правка ответом на сообщение, новая задача сообщением', async () => {
+  const calls = [], realFetch = globalThis.fetch;
+  let updates = [];
+  globalThis.fetch = async (url, opts) => {
+    if (!String(url).startsWith('https://api.telegram.org/')) return realFetch(url, opts);
+    const method = String(url).split('/').pop(), body = JSON.parse(opts.body);
+    calls.push({ method, body });
+    const result = method === 'getUpdates' ? (await new Promise(r => setTimeout(r, 20)), updates.splice(0)) : method === 'sendMessage' ? { message_id:100 + calls.length } : true;
+    return new Response(JSON.stringify({ ok:true, result }), { headers:{ 'content-type':'application/json' } });
+  };
+  try {
+    const d = setup({ telegram:null });
+    const tg = createTelegram({ token:'T', chat:'42', own:true, publicUrl:'https://hq', dataDir:d.dataDir, act:d.desk.act, get:d.desk.get, createTask:d.desk.createTask, log:{ error(){} } });
+    const wait = () => new Promise(r => setTimeout(r, 120));
+    // a review message carries the buttons and the office link
+    const id = await d.toReview();
+    const m = tg.message(d.desk.get(id));
+    assert.match(m.text, /принёс результат/); assert.deepEqual(m.reply_markup.inline_keyboard[0].map(b => b.callback_data), [`ap:${id}`, `up:${id}`]);
+    assert.equal(m.reply_markup.inline_keyboard.at(-1)[0].url, `https://hq/#desk-${id}`);
+    // a stranger's chat is ignored; the owner's «Отлично» accepts with the rating up
+    updates.push({ update_id:1, callback_query:{ id:'c0', data:`up:${id}`, message:{ message_id:5, chat:{ id:7 } } } });
+    updates.push({ update_id:2, callback_query:{ id:'c1', data:`up:${id}`, message:{ message_id:5, chat:{ id:42 } } } });
+    await wait();
+    let t = d.desk.get(id);
+    assert.equal(t.status, 'done'); assert.equal(t.rating.value, 'up');
+    // a style option by its button
+    d.routes.push({ agent:'montage', deliverable:'video', visual:'video' });
+    const id2 = await d.task('смонтируй рилс');
+    const opt = d.desk.get(id2).question.options[0];
+    updates.push({ update_id:3, callback_query:{ id:'c2', data:`op:${id2}:${opt.id}`, message:{ message_id:6, chat:{ id:42 } } } });
+    await wait();
+    assert.equal(d.desk.get(id2).style, opt.label);
+    // «Правка» asks to reply; the reply goes to the agent as a revision
+    const id3 = await d.toReview('ещё презентация');
+    updates.push({ update_id:4, callback_query:{ id:'c3', data:`rv:${id3}`, message:{ message_id:7, chat:{ id:42 } } } });
+    await wait();
+    const prompt = calls.filter(c => c.method === 'sendMessage').at(-1);
+    assert.equal(prompt.body.reply_markup.force_reply, true);
+    const promptId = 100 + calls.indexOf(prompt) + 1;
+    updates.push({ update_id:5, message:{ message_id:8, chat:{ id:42 }, text:'добавь слайд с ценой', reply_to_message:{ message_id:promptId } } });
+    await wait();
+    t = d.desk.get(id3);
+    assert.equal(t.status, 'queued'); assert.match(t.steps.at(-1).text, /добавь слайд с ценой/);
+    // a plain message is a new task from Telegram
+    updates.push({ update_id:6, message:{ message_id:9, chat:{ id:42 }, text:'сделай карусель про офис' } });
+    await wait();
+    const fromTg = d.desk.list(30).find(x => x.text === 'сделай карусель про офис');
+    assert.ok(fromTg); assert.equal(fromTg.source, 'telegram');
+    tg.stop();
+  } finally { globalThis.fetch = realFetch; }
+});
+
+test('очередь: ответы и проверка раньше новой работы; лёгкий поток не берёт монтаж; монтаж — со слотом тяжёлых задач', async () => {
+  const d = setup();
+  d.routes.push({ agent:'montage', deliverable:'video', visual:'video', style_named:'стекло' });
+  const reel = await d.task('смонтируй рилс');
+  const deck = await d.task('презентация');
+  // a light worker skips the montage
+  let job = await d.claim({ worker:'w1', light:true });
+  assert.equal(job.id, deck); assert.equal(job.heavy, false);
+  await d.finish(deck, { result:'need', question:'Сколько слайдов?', session:'S1' });
+  await d.call('POST', `tasks/${deck}/answer`, { text:'десять' });
+  // the answer goes before the montage that waits longer
+  job = await d.claim({ worker:'w0' });
+  assert.equal(job.id, deck); assert.equal(job.kind, 'answer');
+  job = await d.claim({ worker:'w1', light:true });
+  assert.equal(job, null);
+  job = await d.claim({ worker:'w2' });
+  assert.equal(job.id, reel); assert.equal(job.heavy, true);
+  // a worker asking again gives back only its own unfinished task (and takes it again); the other worker's task stays in work
+  const again = await d.claim({ worker:'w0' });
+  assert.equal(again.id, deck); assert.ok((await d.get(deck)).steps.some(x => /не сдал/.test(x.text)));
+  assert.equal((await d.get(reel)).status, 'work'); assert.ok(!(await d.get(reel)).steps.some(x => /не сдал/.test(x.text)));
+});
+
+test('диск: через 30 дней — без материалов и старых версий, исполнитель получает purge, а для правки — restore', async () => {
+  const d = setup();
+  const id = await d.toReview();
+  await d.call('POST', `tasks/${id}/revise`, { text:'v2' });
+  await d.deliver(await d.claim(), { 'index.html':'<h1>v2</h1>' });
+  await d.call('POST', `tasks/${id}/approve`, { publish:true });
+  const dir = path.join(d.dataDir, 'desk', 'tasks', id);
+  assert.ok(fs.existsSync(path.join(dir, 'v1')) && fs.existsSync(path.join(dir, 'v2')));
+  assert.ok(d.desk.tidy(Date.now() + 40 * 864e5) > 0);
+  assert.ok(!fs.existsSync(path.join(dir, 'v1')) && fs.existsSync(path.join(dir, 'v2')));
+  assert.equal((await d.call('GET', `files/${id}/v2/index.html`, null, { 'x-guest':'1' })).status, 200);
+  const real = Date.now;
+  Date.now = () => real() + 10 * 864e5;
+  try {
+    const r = await d.claimRaw({ worker:'w' });
+    assert.deepEqual(r.j.purge, [id]); assert.equal(r.j.idle, true);
+  } finally { Date.now = real; }
+  await d.call('POST', `tasks/${id}/revise`, { text:'v3' });
+  const job = await d.claim({ worker:'w' });
+  assert.equal(job.kind, 'revise'); assert.deepEqual(job.restore, ['index.html']);
+  const got = await d.call('GET', `runner/${id}/result/index.html`, null, R);
+  assert.equal(got.status, 200); assert.match(String(got.j), /v2/);
+});
+
+test('очередь: главный поток при лёгких соседях берёт рендер первым', async () => {
+  const d = setup();
+  const deck = await d.task('презентация');
+  d.routes.push({ agent:'montage', deliverable:'video', visual:'video', style_named:'стекло' });
+  const reel = await d.task('смонтируй рилс');
+  assert.equal((await d.claim({ worker:'w0', prefer_heavy:true })).id, reel);
+  assert.equal((await d.claim({ worker:'w1', light:true })).id, deck);
 });
