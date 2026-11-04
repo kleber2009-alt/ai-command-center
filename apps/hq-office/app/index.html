@@ -129,6 +129,10 @@ const $ = id => document.getElementById(id);
 const esc = s => String(s ?? '').replace(/[&<>"']/g, c => ({ '&':'&amp;', '<':'&lt;', '>':'&gt;', '"':'&quot;', "'":'&#39;' }[c]));
 const word = (n, a, b, c) => n % 10 === 1 && n % 100 !== 11 ? a : [2, 3, 4].includes(n % 10) && ![12, 13, 14].includes(n % 100) ? b : c;
 const fmtDur = ms => { const m = Math.round((ms || 0) / 60000); return m < 1 ? '<1 мин' : m < 60 ? `${m} мин` : `${Math.floor(m / 60)} ч${m % 60 ? ' ' + (m % 60) + ' м' : ''}`; };
+// the desk's estimate of when the result comes (desk.mjs → eta)
+const etaText = (e, long = false) => { if (!e?.at) return ''; const ms = Date.parse(e.at) - Date.now(), at = new Date(e.at).toLocaleTimeString('ru-RU', { hour:'2-digit', minute:'2-digit' });
+  if (e.late || ms < 60e3) return long ? `Дольше обычного — результат примерно к ${at}` : `≈ скоро · к ${at}`;
+  return long ? `Результат через ~${fmtDur(ms)}, к ${at}` : `≈ ${fmtDur(ms)} · к ${at}`; };
 const fmtUsd = c => '$' + (c >= 100 ? Math.round(c) : (c || 0).toFixed(2)).toString().replace('.', ',');
 const ago = iso => { const s = (Date.now() - Date.parse(iso)) / 1000; return s < 60 ? 'только что' : s < 3600 ? `${Math.floor(s / 60)} мин назад` : s < 86400 ? `${Math.floor(s / 3600)} ч назад` : new Date(iso).toLocaleDateString('ru', { day:'numeric', month:'short' }); };
 const haptic = k => { try { TG?.HapticFeedback?.notificationOccurred(k); } catch (e) {} };
@@ -261,7 +265,7 @@ function needCard(t) {
 }
 function workCard(t) {
   return `<button class="card" style="text-align:left" data-a="open" data-id="${t.id}"><span class="row">${avatar(t)}<span class="col">
-    <span class="tt">${t.urgent ? '<span class="pill urgent" style="margin-right:6px">срочно</span>' : ''}${esc(t.route?.title || t.text)}</span><span class="sub">${esc(t.agent?.name || 'Диспетчер')} — ${esc(t.status === 'paused' ? pausedNote(t) : t.status === 'queued' ? (t.queuePos > 1 ? `${t.queuePos}-я в очереди` : 'в очереди') : lastStep(t) || 'работает')}</span></span></span>${bars(t)}</button>`;
+    <span class="tt">${t.urgent ? '<span class="pill urgent" style="margin-right:6px">срочно</span>' : ''}${esc(t.route?.title || t.text)}</span><span class="sub">${esc(t.agent?.name || 'Диспетчер')} — ${esc(t.status === 'paused' ? pausedNote(t) : t.status === 'queued' ? (t.queuePos > 1 ? `${t.queuePos}-я в очереди` : 'в очереди') : lastStep(t) || 'работает')}</span>${t.eta ? `<span class="sub" style="font-family:'JetBrains Mono',monospace;font-size:11.5px">${esc(etaText(t.eta))}</span>` : ''}</span></span>${bars(t)}</button>`;
 }
 function home() {
   const need = S.tasks.filter(needOf), work = S.tasks.filter(t => t.status === 'work' || t.status === 'routing'), queue = S.tasks.filter(t => t.status === 'queued' || t.status === 'paused'), err = S.tasks.filter(t => t.status === 'error');
@@ -378,7 +382,7 @@ function detail(id) {
   const k = statusKey(t), rate = S.rate[t.id] || '';
   let body = `<div style="display:flex;gap:8px;flex-wrap:wrap;align-items:center"><span class="pill ${k}">${esc(k === 'paused' ? pausedNote(t) : STATUS[k] || t.statusText)}</span>${t.urgent && !['done', 'cancelled'].includes(t.status) ? '<span class="pill urgent">срочно</span>' : ''}
       ${t.source ? `<span class="chip">${esc({ office:'Вы · в офисе', assistant:'Ассистент', twin:'Двойник', routine:'По расписанию', telegram:'Вы · в Telegram' }[t.source] || t.source)}</span>` : ''}
-      ${t.usage ? `<span class="chip">${fmtDur(t.usage.ms)}${t.usage.cost ? ' · ' + fmtUsd(t.usage.cost) : ''}</span>` : ''}${t.style ? `<span class="chip">стиль: ${esc(t.style)}</span>` : ''}</div>
+      ${t.usage ? `<span class="chip">${fmtDur(t.usage.ms)}${t.usage.cost ? ' · ' + fmtUsd(t.usage.cost) : ''}</span>` : ''}${t.style ? `<span class="chip">стиль: ${esc(t.style)}</span>` : ''}${t.eta ? `<span class="chip">${esc(etaText(t.eta, true))}</span>` : ''}</div>
     <span style="font-size:20px;font-weight:800;line-height:1.25">${esc(t.route?.title || t.text)}</span>
     <span class="row">${avatar(t)}<span class="col"><span style="font-size:14px;font-weight:700">${esc(t.agent?.name || 'Диспетчер')}</span><span class="sub">${esc(t.pipeline ? t.pipeline.label : DEPT[t.agent?.dept] || '')}</span></span></span>
     <div class="card"><div class="steps">${stages(t).map(x => `<div class="step"><span class="c ${x.s}">${x.s === 'd' ? '✓' : x.s === 'e' ? '!' : x.s === 'p' ? 'II' : x.s ? '●' : ''}</span><b>${esc(x.l)}</b></div>`).join('')}</div></div>`;

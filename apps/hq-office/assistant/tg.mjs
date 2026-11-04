@@ -51,6 +51,10 @@ const plain = s => String(s || '').replace(/\*\*|__|`/g, '').replace(/^#+\s*/gm,
 const MSK = 3 * 3600e3;
 const mskHour = (d = new Date()) => new Date(d.getTime() + MSK).getUTCHours();
 const mskDay = (d = new Date()) => new Date(d.getTime() + MSK).toISOString().slice(0, 10);
+// «⏳ Результат — примерно через 15 мин, к 14:35 МСК»: the estimate of the desk (desk.mjs → etas)
+const durRu = ms => { const m = Math.max(1, Math.round(ms / 60e3)); return m < 60 ? `${m} мин` : `${Math.floor(m / 60)} ч${m % 60 ? ` ${m % 60} мин` : ''}`; };
+const clockMsk = iso => new Intl.DateTimeFormat('ru-RU', { timeZone:'Europe/Moscow', hour:'2-digit', minute:'2-digit' }).format(new Date(iso));
+export const etaLine = e => e.late ? `⏳ Дольше обычного — результат примерно к ${clockMsk(e.at)} МСК` : `⏳ Результат — примерно через ${durRu(e.ms)}, к ${clockMsk(e.at)} МСК`;
 const mskText = iso => new Intl.DateTimeFormat('ru-RU', { timeZone:'Europe/Moscow', day:'numeric', month:'short', hour:'2-digit', minute:'2-digit' }).format(new Date(iso));
 // a moment in Moscow time: day offset from today and the hour
 function mskAt(offset, hour, base = new Date()) {
@@ -89,6 +93,7 @@ export function cardText(v, site) {
   const pos = v.status === 'queued' && v.queuePos > 1 ? ` · ${v.queuePos}-я в очереди` : '';
   L.push(`${ICON[v.status] || '•'} <b>${esc(title)}</b>${v.urgent ? ' ⚡' : ''}`);
   L.push(`<i>${esc(v.agent?.name || 'Диспетчер')} · ${esc(v.statusText)}${pos}${v.paused?.until ? ` до ${esc(mskText(v.paused.until))}` : ''}${v.snoozed ? ` · отложено до ${esc(mskText(v.snoozed))}` : ''}</i>`);
+  if (v.eta) L.push(etaLine(v.eta));
   if (v.pipeline) L.push(`🔗 ${esc(v.pipeline.label)} · этап ${Math.min(v.pipeline.idx + 1, v.pipeline.stages.length)}/${v.pipeline.stages.length}`);
   if (v.style) L.push(`🎨 ${esc(v.style)}`);
   L.push('');
