@@ -29,7 +29,7 @@ function setup({ claude = true, telegram } = {}) {
   const fake = { beta:{ messages:{ create:async () => ({ stop_reason:'end_turn', content:[{ type:'text', text:JSON.stringify({ ...ROUTE, ...(routes.shift() || {}) }) }] }) } },
     messages:{ create:async () => ({ content:[{ type:'text', text:'- правило' }] }) } };
   const desk = createDesk({ claude:claude ? fake : null, model:'m', fallback:{}, dataDir, officeDir:OFFICE, runnerToken:TOK, telegram });
-  const srv = http.createServer((req, res) => desk.handle(req, res, req.url.split('?')[0].replace(/^\/desk\/?/, ''), req.headers['x-guest'] !== '1')).listen(0);
+  const srv = http.createServer((req, res) => desk.handle(req, res, req.url.split('?')[0].replace(/^\/desk\/?/, ''), req.headers['x-head'] ? { head:JSON.parse(decodeURIComponent(req.headers['x-head'])) } : req.headers['x-guest'] !== '1')).listen(0);
   servers.push(srv);
   const base = `http://127.0.0.1:${srv.address().port}/desk/`;
   async function call(method, p, body, headers = {}) {
@@ -320,6 +320,44 @@ test('правка владельца становится уроком в сл�
   const st = (await d.call('GET', 'stats')).j;
   assert.equal(st.total.runs, 2); assert.ok(st.agents.some(a => a.id === 'slides' && a.lessons === 1));
   assert.match(d.desk.summary(), /За этот месяц/);
+});
+
+/* ---------- department heads: their agents only, the rest read-only ---------- */
+
+const FIRUZA = { 'x-head':encodeURIComponent(JSON.stringify({ id:'firuza', name:'Фируза', dept:'marketing', agents:['slides', 'landings'] })) };
+
+test('руководитель ставит задачи только своим агентам; диспетчер выбирает из них', async () => {
+  const d = setup();
+  let r = await d.call('POST', 'tasks', { text:'лендинг', agent:'landings' }, FIRUZA);
+  assert.equal(r.status, 200); assert.equal(r.j.task.by.name, 'Фируза');
+  r = await d.call('POST', 'tasks', { text:'ответь в директ', agent:'chats' }, FIRUZA);
+  assert.equal(r.status, 403);
+  r = await d.call('POST', 'tasks', { text:'оффер и лендинг', pipeline:'offer-landing' }, FIRUZA);
+  assert.equal(r.status, 403);
+  // the dispatcher is offered only her agents: an answer with another agent is refused and the task errs
+  d.routes.push({ agent:'chats' });
+  r = await d.call('POST', 'tasks', { text:'что-нибудь' }, FIRUZA);
+  await new Promise(res => setTimeout(res, 40));
+  assert.equal((await d.get(r.j.task.id)).status, 'error');
+});
+
+test('руководитель управляет своими задачами, чужие видит только для просмотра', async () => {
+  const d = setup();
+  const own = await d.toReview('сделай презентацию');            // slides — агент Фирузы
+  d.routes.push({ agent:'chats' });
+  const other = await d.task('скрипт продаж');                    // chats — не её
+  assert.equal((await d.call('GET', 'tasks', null, FIRUZA)).status, 200);
+  let r = await d.call('POST', `tasks/${other}/cancel`, {}, FIRUZA);
+  assert.equal(r.status, 403);
+  r = await d.call('POST', `tasks/${own}/approve`, { publish:true }, FIRUZA);
+  assert.equal(r.status, 200);
+  const t = await d.get(own);
+  assert.equal(t.status, 'done'); assert.match(t.steps.at(-2)?.text || t.steps.map(x => x.text).join(' '), /Фируза/);
+  const hist = (await d.call('GET', 'history.json', null, { 'x-guest':'1' })).j;
+  assert.ok(hist.find(h => h.id === 'desk-' + own).people.includes('firuza'));
+  // a guest sees who set it in the public feed, but not the text
+  const live = (await d.call('GET', 'live.json', null, { 'x-guest':'1' })).j;
+  assert.ok(live.tasks.every(x => !('text' in x)));
 });
 
 /* ---------- Telegram, the queue, the disk ---------- */
