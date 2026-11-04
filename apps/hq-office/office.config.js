@@ -4,7 +4,7 @@
    brand     — название компании (шапка сайта и демо)
    offer     — главный продукт: подставляется в шаблоны задач агентов
    examples  — показывать примеры работ AICEX в досье агентов (false — только свои материалы)
-   depts     — отделы по порядку комнат: руководитель и id агентов из каталога (agent-content.js)
+   depts     — отделы по порядку комнат: руководитель; агенты отдела — из реестра agents.js (поле dept)
    agents    — правки карточек агентов: { id: { name, role, task, status } }
    products  — ссылки на продукты компании (досье «Разработка продуктов» и демо офиса)
    materials — свои работы и документы агентов: { id: [{ title, url }] }
@@ -18,25 +18,24 @@ window.OFFICE_CONFIG = {
   depts: [
     { id: 'ceo', name: 'Стратегия и продукт',
       head: { id: 'ilia', name: 'Илья', title: 'Основатель — стратегия, видение, продукт', look: 'm3' },
-      agents: ['product', 'market', 'transcriber', 'qa', 'socialstats', 'billing', 'finance', 'briefing', 'specs', 'skills'] },
+      agents: window.OFFICE_AGENTS.of('ceo') },
     { id: 'marketing', name: 'Отдел маркетинга',
       head: { id: 'firuza', name: 'Фируза', title: 'Руководитель отдела маркетинга', look: 'f1',
               photo: 'people/firuza-face.jpg', model: 'people/firuza.glb' },
-      agents: ['slides', 'creatives', 'funnels', 'publish', 'analytics', 'audience',
-               'viral', 'scripts', 'remake', 'montage', 'carousel', 'landings', 'leadmagnet', 'threads', 'avatar'] },
+      agents: window.OFFICE_AGENTS.of('marketing') },
     { id: 'sales', name: 'Отдел продаж',
       head: { id: 'bogdan', name: 'Богдан', title: 'РОП — руководитель отдела продаж', look: 'm1',
               photo: 'people/bogdan-face.jpg' },
-      agents: ['launch', 'chats', 'comments', 'consult', 'mailings', 'closer', 'academy'] },
+      agents: window.OFFICE_AGENTS.of('sales') },
     { id: 'traffic', name: 'Реклама Meta',
       head: { id: 'nurken', name: 'Нуркен', title: 'Таргетолог — реклама в Meta', look: 'm2',
               photo: 'people/nurken-face.jpg' },
-      agents: ['metaads', 'adreports'] },
+      agents: window.OFFICE_AGENTS.of('traffic') },
   ],
   // Переговорная легенд — ИИ-советники по методам легенд бизнеса (скилл «Команда 8 легенд»):
   // свой стол в переговорной, на собеседование и исправление деталей их зовёт владелец или диспетчер
   council: { id: 'council', name: 'Переговорная легенд', short: 'Легенды',
-             agents: ['hormozi', 'garyvee', 'godin', 'brunson', 'walker', 'kennedy', 'cardone', 'branson'], board: 'legends' },
+             agents: window.OFFICE_AGENTS.of('council'), board: 'legends' },
   agents: {
     product: { task: 'Дорабатывает Persona Studio 2.0' },
     market:  { task: 'Собирает игровые концепции' },
