@@ -160,7 +160,7 @@ const RULES = `Как работать:
 const FLUSH = new Set();
 process.once('SIGTERM', () => { for (const f of FLUSH) try { f(); } catch {} process.exit(0); });
 
-export function createDesk({ claude, model, fallback, dataDir, officeDir, runnerToken, telegram }) {
+export function createDesk({ claude, model, fallback, dataDir, officeDir, runnerToken, telegram, isHidden = () => false, heads = () => [] }) {
   const DIR = path.join(dataDir, 'desk');
   fs.mkdirSync(path.join(DIR, 'uploads'), { recursive:true });
   const STORE = path.join(DIR, 'tasks.json');
@@ -245,7 +245,7 @@ export function createDesk({ claude, model, fallback, dataDir, officeDir, runner
     const tr = agentOf(TRANSCRIBER), to = t.route ? agentOf(t.route.agent) : null;
     const waiting = queueOrder();
     return {
-      id:t.id, created:t.created, updated:t.updated, by:t.by || null, text:t.text, files:t.files.map(f => f.name), askedAgent:t.agent || '',
+      id:t.id, created:t.created, updated:t.updated, by:t.by || null, control:Boolean(t.control), text:t.text, files:t.files.map(f => f.name), askedAgent:t.agent || '',
       status:t.status, statusText:STATUS[t.status] || t.status, routine:t.routine || '', source:t.source || '', alerts:t.alerts || null, queuePos:t.status === 'queued' ? waiting.indexOf(t) + 1 : 0,
       agent:a ? { id:a.id, name:a.name, dept:a.dept } : null, route:t.route || null,
       chain:t.chain && tr && to && to.id !== TRANSCRIBER ? { from:{ id:tr.id, name:tr.name }, to:{ id:to.id, name:to.name }, sources:t.chain.sources, done:Boolean(t.transcribed), note:t.transcribed?.summary || '' } : null, question:t.question || null, style:t.style?.label || '', answers:t.answers,
@@ -279,7 +279,7 @@ export function createDesk({ claude, model, fallback, dataDir, officeDir, runner
     const key = ['question', 'review', 'error'].includes(t.status) ? `${t.status}:${t.question?.text || ''}:${t.result?.version || 0}:${t.error || ''}` : '';
     if (key && t.notified !== key) { t.notified = key; tg.notify(view(t)); }
     const line = `data: ${JSON.stringify({ t:'task', task:view(t) })}\n\n`;
-    for (const res of clients) res.write(line);
+    for (const res of clients) if (!(t.control && res.head)) res.write(line);
   }
   function step(t, text) {
     t.steps.push({ at:now(), text:String(text).slice(0, 300) });
@@ -455,7 +455,7 @@ export function createDesk({ claude, model, fallback, dataDir, officeDir, runner
   async function route(t) {
     if (!claude) { t.status = 'error'; t.error = 'Диспетчер не подключён к Claude (нет ключа).'; return emit(t); }
     const cat = catalog(), allow = t.allowed ? new Set([...t.allowed, TRANSCRIBER, QA]) : null;
-    const ids = cat.agents.map(a => a.id).filter(id => !allow || allow.has(id));
+    const ids = cat.agents.map(a => a.id).filter(id => (!allow || allow.has(id)) && !CONTROLS().has(id));
     const pipes = Object.keys(PIPELINES).filter(id => !allow || PIPELINES[id].stages.every(s => allow.has(s.agent)));
     const asked = t.agent && ids.includes(t.agent) ? agentOf(t.agent) : null;
     const links = videoLinks([t.text, ...t.answers.map(x => x.a)].join(' ')), media = t.files.filter(f => MEDIA_EXT.test(f.name));
@@ -725,6 +725,7 @@ export function createDesk({ claude, model, fallback, dataDir, officeDir, runner
   }
   // accept: the rating (up / down) and its comment become the agent's lessons
   function approveTask(t, publish = true, rating = '', comment = '') {
+    if (t.control) publish = false;   // a control report is for the owner only, never in the public history
     rating = rating === 'up' || rating === 'down' ? rating : ''; comment = String(comment || '').trim().slice(0, 600);
     t.status = 'done'; t.doneAt = now(); t.published = publish !== false;
     if (rating) {
@@ -807,6 +808,108 @@ export function createDesk({ claude, model, fallback, dataDir, officeDir, runner
   const ROUT_FILE = path.join(DIR, 'routines.json');
   let routRuns = {};
   try { routRuns = JSON.parse(fs.readFileSync(ROUT_FILE, 'utf8')); } catch {}
+  /* ---------- control agents: the evening report on a department and its head, for the owner only ----------
+     agents.js marks them with control:<head id>. They take no tasks (the dispatcher skips them, a head cannot manage
+     them). The facts come from the desk itself — tasks of the department's agents, what waits for the head and how long,
+     what the head accepted or sent back, quality, costs, idle agents; Claude writes them up. The report is a task «на
+     проверке» for the owner (office + Telegram), never published and invisible to heads. */
+  const CONTROLS = () => new Set(Object.entries(officeWindow(officeDir)?.OFFICE_AGENTS?.list || {}).filter(([, a]) => a.control).map(([id]) => id));
+  // dept → { id, head } of its control agent
+  function controlAgents() {
+    const L = officeWindow(officeDir)?.OFFICE_AGENTS?.list || {}, m = new Map();
+    for (const [id, a] of Object.entries(L)) if (a.control && !m.has(a.dept)) m.set(a.dept, { id, head:a.control, name:a.name });
+    return m;
+  }
+  const hoursAgo = iso => Math.max(0, Math.round((Date.now() - Date.parse(iso)) / 36e5 * 10) / 10);
+  function controlFacts(dept, since) {
+    const W = officeWindow(officeDir) || {}, CFG = W.OFFICE_CONFIG || { depts:[] }, d = CFG.depts.find(x => x.id === dept);
+    const ctl = controlAgents().get(dept), ctlIds = CONTROLS();
+    const agents = (d?.agents || []).filter(id => !ctlIds.has(id));
+    const H = heads().find(h => h.id === ctl?.head) || null;
+    const headName = d?.head?.name || H?.name || ctl?.head || '';
+    const mine = t => !t.control && (agents.includes(t.route?.agent) || (H && t.by?.id === H.id));
+    const inPeriod = iso => iso && Date.parse(iso) >= since;
+    const rel = tasks.filter(mine);
+    const name = id => agentOf(id)?.name || id;
+    const line = t => `«${t.route?.title || t.text.slice(0, 80)}» — ${name(t.route?.agent)}`;
+    const runs = rel.flatMap(t => (t.runs || []).filter(r => inPeriod(r.at)).map(r => ({ ...r, t })));
+    const waiting = rel.filter(t => t.status === 'review' || (t.status === 'question' && t.question?.from !== 'dispatcher'))
+      .map(t => ({ what:line(t), status:t.status === 'review' ? 'результат на проверке' : t.question?.from === 'approval' ? 'ждёт разрешения на действия' : t.question?.from === 'style' ? 'ждёт выбора стиля' : 'агент задал вопрос', hours:hoursAgo(t.updated), by:t.by?.name || 'владелец' }));
+    const done = rel.filter(t => t.status === 'done' && inPeriod(t.doneAt));
+    return {
+      dept:d?.name || dept, head:headName, period_hours:Math.round((Date.now() - since) / 36e5),
+      head_access:H ? (H.disabled ? 'доступ отключён' : H.lastSeen ? `последний вход ${hoursAgo(H.lastSeen)} ч назад` : 'ссылку выдали, ещё не входил') : 'доступа в офис пока нет — задачи отдела ведёт владелец',
+      created:rel.filter(t => inPeriod(t.created)).map(line),
+      created_by_head:H ? rel.filter(t => inPeriod(t.created) && t.by?.id === H.id).length : 0,
+      done:done.map(t => `${line(t)}; принял ${t.approvedBy?.name || 'владелец'}${t.rating ? `, оценка ${t.rating.value === 'up' ? '«хорошо»' : '«есть замечания»'}${t.rating.comment ? ': ' + t.rating.comment : ''}` : ''}`),
+      accepted_by_head:H ? done.filter(t => t.approvedBy?.id === H.id).length : 0,
+      waiting_now:waiting, waiting_over_24h:waiting.filter(w => w.hours > 24).length,
+      revisions:runs.filter(r => r.kind === 'revise').length, qa_returns:rel.filter(t => t.qa?.verdict === 'fix' && inPeriod(t.updated)).length,
+      errors:rel.filter(t => t.status === 'error' && inPeriod(t.updated)).map(t => `${line(t)}: ${String(t.error || '').slice(0, 160)}`),
+      in_work:rel.filter(t => ['queued', 'work', 'routing'].includes(t.status)).map(line),
+      cost_usd:Math.round(runs.reduce((n, r) => n + (r.cost || 0), 0) * 100) / 100, work_minutes:Math.round(runs.reduce((n, r) => n + (r.ms || 0), 0) / 60000),
+      idle_agents_7d:agents.filter(id => !rel.some(t => t.route?.agent === id && Date.parse(t.updated) > Date.now() - 7 * 864e5)).map(name),
+    };
+  }
+  const CONTROL_PROMPT = `Ты — агент контроля отдела в живом офисе ИИ-агентов AICEX. Пишешь вечерний отчёт владельцу офиса Илье Палию о работе отдела и его руководителя. Руководитель этот отчёт не видит.
+Пиши только по фактам из данных: ничего не выдумывай, цифры бери как есть. По-русски, коротко, без воды и без канцелярита.
+Структура (markdown):
+## Итог — 2–3 предложения: как прошёл день отдела и главное, что нужно знать владельцу.
+## Что сделано — принятые работы (кто принял), что в работе.
+## Что ждёт руководителя — что и сколько часов ждёт его ответа или проверки; больше суток — отметь как задержку.
+## Как работает руководитель — входы в офис, сколько задач поставил и принял сам, правки и оценки, задержки. Честно и уважительно: факты, без оценок личности.
+## Качество и деньги — правки, возвраты контролёра качества, ошибки, время и стоимость работы агентов.
+## Что предлагаю — 1–3 конкретных шага владельцу или руководителю.
+Если за период ничего не происходило — так и скажи одной строкой в «Итоге» и предложи, что поручить отделу (агенты без работы перечислены в данных).`;
+  const mdHtml = (md, title) => {
+    const e = x => String(x).replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;');
+    const inl = x => e(x).replace(/\*\*(.+?)\*\*/g, '<b>$1</b>');
+    let html = '', list = false;
+    for (const l of String(md).split('\n')) {
+      const h = l.match(/^#{1,3}\s+(.*)/), li = l.match(/^\s*[-*•]\s+(.*)/);
+      if (!li && list) { html += '</ul>'; list = false; }
+      if (h) html += `<h2>${inl(h[1])}</h2>`; else if (li) { if (!list) { html += '<ul>'; list = true; } html += `<li>${inl(li[1])}</li>`; } else if (l.trim()) html += `<p>${inl(l)}</p>`;
+    }
+    if (list) html += '</ul>';
+    return `<!doctype html><html lang="ru"><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1"><title>${e(title)}</title>
+<style>body{margin:0;background:#0f1115;color:#e9ecf2;font:16px/1.55 system-ui,-apple-system,Segoe UI,sans-serif}main{max-width:760px;margin:0 auto;padding:28px 20px 48px}
+h1{font-size:24px;margin:0 0 4px}small{color:#9aa3b5}h2{font-size:17px;margin:26px 0 8px;color:#fff}ul{padding-left:20px}li{margin:4px 0}p{margin:6px 0}b{color:#fff}</style>
+<main><h1>${e(title)}</h1><small>Отчёт агента контроля · только для владельца</small>${html}</main></html>`;
+  };
+  async function controlReport(dept, { manual = false } = {}) {
+    const ctl = controlAgents().get(dept);
+    if (!ctl) throw new Error('У этого отдела нет агента контроля.');
+    const last = tasks.find(t => t.control?.dept === dept);
+    const since = Math.max(Date.now() - (manual ? 7 : 1) * 864e5, last ? Date.parse(last.created) : 0, Date.now() - 7 * 864e5);
+    const f = controlFacts(dept, manual && last ? Math.min(since, Date.now() - 864e5) : since);
+    const quiet = !f.created.length && !f.done.length && !f.waiting_now.length && !f.errors.length && !f.in_work.length;
+    if (quiet && !manual) return null;
+    let md = '';
+    try {
+      if (!claude) throw new Error('no claude');
+      const msg = await claude.messages.create({ model, max_tokens:3000, system:CONTROL_PROMPT, messages:[{ role:'user', content:'Данные отдела за период (JSON):\n' + JSON.stringify(f, null, 1) }] });
+      md = msg.content.filter(b => b.type === 'text').map(b => b.text).join('\n').trim();
+    } catch {
+      md = [`## Итог`, `${f.dept}: принято ${f.done.length}, поставлено ${f.created.length}, ждут руководителя ${f.waiting_now.length}.`,
+        `## Что ждёт руководителя`, ...(f.waiting_now.length ? f.waiting_now.map(w => `- ${w.what} — ${w.status}, ${w.hours} ч`) : ['- ничего']),
+        `## Как работает руководитель`, `- ${f.head}: ${f.head_access}; поставил сам ${f.created_by_head}, принял сам ${f.accepted_by_head}`,
+        `## Качество и деньги`, `- правок ${f.revisions}, возвратов контролёра ${f.qa_returns}, ошибок ${f.errors.length}; ${f.work_minutes} мин, $${f.cost_usd}`].join('\n');
+    }
+    const date = ruDate(moscowDate()), title = `Отчёт: ${f.dept} · ${date}`;
+    const t = { id:crypto.randomBytes(4).toString('hex'), created:now(), updated:now(), text:`Отчёт агента контроля по отделу «${f.dept}» за ${f.period_hours} ч`, agent:ctl.id,
+      files:[], status:'review', answers:[], steps:[], question:null, versions:1, workVersion:1, published:false, source:'routine', routine:'control',
+      control:{ dept, head:ctl.head }, route:{ agent:ctl.id, skill:'', title, brief:'', deliverable:'research', why:'вечерний отчёт отдела и его руководителя' } };
+    const dir = path.join(taskDir(t.id), 'v1');
+    fs.mkdirSync(dir, { recursive:true });
+    const html = mdHtml(md, title);
+    fs.writeFileSync(path.join(dir, 'index.html'), html); fs.writeFileSync(path.join(dir, 'report.md'), md);
+    t.result = { version:1, main:'index.html', files:[{ path:'index.html', size:Buffer.byteLength(html) }, { path:'report.md', size:Buffer.byteLength(md) }], summary:md.slice(0, 8000), note:'', history:'' };
+    step(t, `«${ctl.name}» собрал отчёт по отделу${f.waiting_now.length ? ` — ждут руководителя: ${f.waiting_now.length}` : ''}.`);
+    tasks.unshift(t);
+    emit(t);
+    return t;
+  }
+
   function tickRoutines(now = new Date()) {
     if (/^(off|0|false)$/i.test(process.env.HQ_ROUTINES || '')) return [];
     const today = moscowDate(now), hhmm = new Intl.DateTimeFormat('en-GB', { timeZone:'Europe/Moscow', hour:'2-digit', minute:'2-digit', hourCycle:'h23' }).format(now);
@@ -817,6 +920,14 @@ export function createDesk({ claude, model, fallback, dataDir, officeDir, runner
       fs.writeFileSync(ROUT_FILE, JSON.stringify(routRuns));
       if (tasks.some(t => t.routine === r.id && OPEN.includes(t.status))) continue;  // yesterday's is still open — no second one
       made.push(createTask({ text:r.text, routine:r }).task);
+    }
+    // evening reports of the control agents, one per department; a quiet day without anything waiting — no report
+    const at = process.env.HQ_CONTROL_AT || '19:40';
+    for (const [dept] of controlAgents()) {
+      const key = 'control-' + dept;
+      if (routRuns[key] === today || hhmm < at) continue;
+      routRuns[key] = today; fs.writeFileSync(ROUT_FILE, JSON.stringify(routRuns));
+      controlReport(dept).catch(e => console.error('control report:', dept, e.message));
     }
     return made;
   }
@@ -852,8 +963,8 @@ export function createDesk({ claude, model, fallback, dataDir, officeDir, runner
 
   // who: { owner:true } | { head:{ id, name, dept, agents } } | null (guest). A head sees every task read-only and
   // manages the tasks they set and the tasks of their agents: answers, accepts, allows actions, revises, cancels.
-  const canManage = (head, t) => t.by?.id === head.id || head.agents.includes(t.route?.agent || t.agent)
-    || Boolean(t.pipeline?.stages.some(s => head.agents.includes(s.agent)));
+  const canManage = (head, t) => !t.control && (t.by?.id === head.id || head.agents.includes(t.route?.agent || t.agent)
+    || Boolean(t.pipeline?.stages.some(s => head.agents.includes(s.agent))));
   async function handle(req, res, rest, who) {
     if (typeof who === 'boolean') who = who ? { owner:true } : null;   // the old call: isOwner
     const isOwner = Boolean(who?.owner), head = who?.head || null;
@@ -870,7 +981,7 @@ export function createDesk({ claude, model, fallback, dataDir, officeDir, runner
     // no request text, files, brief, questions or results (a published result is in history.js)
     if (M === 'GET' && rest === 'live.json') {
       const since = Date.now() - 7 * 864e5;
-      const list = tasks.filter(t => t.route && t.routine !== 'billing' && (OPEN.includes(t.status) || (t.status === 'done' && t.published && Date.parse(t.doneAt || t.updated) > since)))
+      const list = tasks.filter(t => t.route && t.routine !== 'billing' && !t.control && !isHidden(t.id) && (OPEN.includes(t.status) || (t.status === 'done' && t.published && Date.parse(t.doneAt || t.updated) > since)))
         .sort((x, y) => y.updated.localeCompare(x.updated)).slice(0, 40).map(publicView);
       res.writeHead(200, { 'content-type':'application/json; charset=utf-8', 'cache-control':'no-cache' });
       return res.end(JSON.stringify({ tasks:list, online:Date.now() - runner.seenAt < 90e3 }));
@@ -1062,7 +1173,7 @@ export function createDesk({ claude, model, fallback, dataDir, officeDir, runner
 
     /* owner */
     if (!isOwner && !head) return json(res, 403, { error:'Ставить задачи агентам могут владелец и руководители отделов — войдите.' });
-    if (M === 'GET' && rest === 'tasks') return json(res, 200, { tasks:tasks.slice(0, 60).map(view), runner:runnerView(), agents:catalog().agents.map(a => ({ id:a.id, name:a.name, dept:a.dept, role:a.role })), pipelines:pipelinesView() });
+    if (M === 'GET' && rest === 'tasks') return json(res, 200, { tasks:tasks.filter(t => !(head && t.control)).slice(0, 60).map(view), runner:runnerView(), agents:catalog().agents.map(a => ({ id:a.id, name:a.name, dept:a.dept, role:a.role })), pipelines:pipelinesView() });
     if (M === 'GET' && rest === 'stats') { const m = url.searchParams.get('month') || ''; return json(res, 200, stats(/^\d{4}-\d{2}$/.test(m) ? m : undefined)); }
     if (M === 'GET' && rest === 'lessons') {
       const id = url.searchParams.get('agent') || '';
@@ -1070,14 +1181,21 @@ export function createDesk({ claude, model, fallback, dataDir, officeDir, runner
     }
     if (M === 'GET' && rest === 'events') {
       res.writeHead(200, { 'content-type':'text/event-stream; charset=utf-8', 'cache-control':'no-store', 'x-accel-buffering':'no' });
-      res.write(`data: ${JSON.stringify({ t:'snapshot', tasks:tasks.slice(0, 60).map(view), runner:runnerView() })}\n\n`);
-      clients.add(res); req.on('close', () => clients.delete(res));
+      res.write(`data: ${JSON.stringify({ t:'snapshot', tasks:tasks.filter(t => !(head && t.control)).slice(0, 60).map(view), runner:runnerView() })}\n\n`);
+      res.head = Boolean(head); clients.add(res); req.on('close', () => clients.delete(res));
       return;
     }
     if (M === 'PUT' && rest === 'upload') {
       const id = crypto.randomBytes(8).toString('hex'), name = safeName(url.searchParams.get('name'));
       const size = await saveBody(req, path.join(DIR, 'uploads', id, name));
       return json(res, 200, { id, name, size });
+    }
+    // the owner asks a control agent for the report now (the admin panel)
+    if (M === 'POST' && rest === 'control') {
+      if (!isOwner) return json(res, 403, { error:'Только для владельца.' });
+      const b = await readJson(req);
+      try { const t = await controlReport(String(b.dept || ''), { manual:true }); return json(res, 200, { task:t ? view(t) : null }); }
+      catch (e) { return json(res, 400, { error:e.message }); }
     }
     if (M === 'POST' && rest === 'tasks') {
       const b = await readJson(req);
@@ -1127,7 +1245,7 @@ export function createDesk({ claude, model, fallback, dataDir, officeDir, runner
     return notFound(res);
   }
 
-  return { handle, createTask, summary, tickRoutines, tidy, purgeList, tg, agents:() => catalog().agents, view, act, stats, lessonsOf, pipelines:pipelinesView,
+  return { handle, createTask, summary, tickRoutines, tidy, purgeList, tg, controlReport, agents:() => catalog().agents.filter(a => !CONTROLS().has(a.id)), view, act, stats, lessonsOf, pipelines:pipelinesView,
     list:(n = 15) => tasks.slice(0, n).map(view), get:id => { const t = byId(id); return t ? view(t) : null; },
     skills:() => serverSkills, skillsFile:SKILLS_FILE };
 }
