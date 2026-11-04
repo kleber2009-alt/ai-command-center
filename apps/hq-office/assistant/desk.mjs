@@ -146,7 +146,7 @@ const RULES = `Как работать:
   1–3 пункта: что проверить или какой следующий шаг (если нечего — раздел не пиши).
   Предпоследней строкой: SUMMARY: <одно предложение для истории офиса — что получилось и зачем, без имён файлов>. Последней строкой: RESULT: out/<главный файл>.`;
 
-export function createDesk({ claude, model, fallback, dataDir, officeDir, runnerToken }) {
+export function createDesk({ claude, model, fallback, dataDir, officeDir, runnerToken, isHidden = () => false }) {
   const DIR = path.join(dataDir, 'desk');
   fs.mkdirSync(path.join(DIR, 'uploads'), { recursive:true });
   const STORE = path.join(DIR, 'tasks.json');
@@ -826,7 +826,7 @@ export function createDesk({ claude, model, fallback, dataDir, officeDir, runner
     // no request text, files, brief, questions or results (a published result is in history.js)
     if (M === 'GET' && rest === 'live.json') {
       const since = Date.now() - 7 * 864e5;
-      const list = tasks.filter(t => t.route && t.routine !== 'billing' && (OPEN.includes(t.status) || (t.status === 'done' && t.published && Date.parse(t.doneAt || t.updated) > since)))
+      const list = tasks.filter(t => t.route && t.routine !== 'billing' && !isHidden(t.id) && (OPEN.includes(t.status) || (t.status === 'done' && t.published && Date.parse(t.doneAt || t.updated) > since)))
         .sort((x, y) => y.updated.localeCompare(x.updated)).slice(0, 40).map(publicView);
       res.writeHead(200, { 'content-type':'application/json; charset=utf-8', 'cache-control':'no-cache' });
       return res.end(JSON.stringify({ tasks:list, online:Date.now() - runner.seenAt < 90e3 }));

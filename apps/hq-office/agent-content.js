@@ -894,7 +894,8 @@
   }
 
   // карточки собираются из реестра agents.js: имя, роль, цвет, отдел, статус и «сейчас делает»
-  window.AGENT_CATALOG = Object.fromEntries(Object.entries(window.OFFICE_AGENTS.list)
+  // в каталоге и агенты «в отпуске» / удалённые (away): их имя и цвет нужны истории задач
+  window.AGENT_CATALOG = Object.fromEntries(Object.entries({ ...window.OFFICE_AGENTS.away, ...window.OFFICE_AGENTS.list })
     .map(([id, a]) => [id, { dept:a.dept, name:a.name, role:a.role, color:a.color, status:a.status, task:a.now || a.tasks?.[0] || '' }]));
 
   // ——— Подстройка каталога под офис из office.config.js ———

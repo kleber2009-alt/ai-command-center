@@ -357,3 +357,30 @@ test('руководитель управляет своими задачами,
   const live = (await d.call('GET', 'live.json', null, { 'x-guest':'1' })).j;
   assert.ok(live.tasks.every(x => !('text' in x)));
 });
+
+/* ---------- the owner's admin panel: the patch over agents.js reaches the dispatcher ---------- */
+
+test('админ-панель: отпуск, новый агент и перевод в другой отдел сразу видны диспетчеру', async () => {
+  const { initAdmin } = await import('./admin.mjs');
+  const { setOfficePatch, officeWindow } = await import('./office.mjs');
+  const dir = fs.mkdtempSync(path.join(os.tmpdir(), 'admin-test-')); dirs.push(dir);
+  const admin = initAdmin(dir);
+  setOfficePatch(() => ({ patch:admin.patch(), stamp:admin.stamp() }));
+  try {
+    const d = setup();
+    const base = () => { const W = officeWindow(OFFICE); return { list:W.OFFICE_AGENTS.list, away:W.OFFICE_AGENTS.away }; };
+    const ids = () => d.desk.agents().map(a => a.id);
+    assert.ok(ids().includes('slides'));
+    admin.act({ action:'vacation', id:'slides', on:true }, 'Илья', base());
+    assert.ok(!ids().includes('slides'));
+    const { id } = admin.act({ action:'create', name:'Подкасты', role:'Монтирует выпуски подкаста', dept:'marketing', tasks:'Нарезает клипы' }, 'Илья', base());
+    assert.ok(ids().includes(id));
+    assert.equal(d.desk.agents().find(a => a.id === id).dept, 'marketing');
+    admin.act({ action:'edit', id:'landings', dept:'sales' }, 'Илья', base());
+    assert.equal(d.desk.agents().find(a => a.id === 'landings').dept, 'sales');
+    admin.act({ action:'remove', id }, 'Илья', base());
+    assert.ok(!ids().includes(id));
+    assert.match(admin.log()[0].text, /удалил агента «Подкасты»/);
+    assert.match(admin.script(), /OFFICE_AGENTS\.apply/);
+  } finally { setOfficePatch(null); }
+});

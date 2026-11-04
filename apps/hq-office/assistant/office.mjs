@@ -16,17 +16,22 @@ export const moscowDate = (d = new Date()) => new Intl.DateTimeFormat('sv-SE', {
 export const humanDate = iso => { const [y, m, d] = iso.split('-').map(Number); return `${d} ${MON[m - 1]} ${y}`; };
 
 let cache = { key:'', office:null, W:null };
+// the owner's admin panel patch over agents.js (assistant/admin.mjs): () => ({ patch, stamp })
+let patchSource = null;
+export function setOfficePatch(fn) { patchSource = fn; }
 
 export function loadOffice(dir) {
   const stamps = FILES.map(f => { try { return fs.statSync(path.join(dir, f)).mtimeMs; } catch { return 0; } });
   let real = dir;
   try { real = fs.realpathSync(dir); } catch {}
-  const key = [real, ...stamps, moscowDate()].join('|');
+  const P = patchSource?.() || null;
+  const key = [real, ...stamps, moscowDate(), P?.stamp || 0].join('|');
   if (cache.key === key) return cache.office;
   const ctx = vm.createContext({ window:{} });
   for (const f of FILES) {
     const p = path.join(dir, f);
     if (fs.existsSync(p)) vm.runInContext(fs.readFileSync(p, 'utf8'), ctx, { filename:f });
+    if (f === 'agents.js' && P?.patch) ctx.window.OFFICE_AGENTS?.apply?.(JSON.parse(JSON.stringify(P.patch)));
   }
   cache = { key, office:buildOffice(ctx.window), W:ctx.window };
   return cache.office;

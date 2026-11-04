@@ -296,5 +296,30 @@
     ids,
     // агенты отдела в порядке мест
     of:dept => ids.filter(id => list[id].dept === dept && list[id].figure !== false),
+    // изменения из админ-панели владельца (сервер: DATA_DIR/office-patch.json → /api/assistant/office/patch.js, сразу после
+    // этого файла; тот же патч накладывает assistant/office.mjs для диспетчера). Новые агенты — added; правки имени, роли,
+    // цвета, отдела — agents; «в отпуске» (vacation) и удалённые (removed) уходят из офиса и каталога диспетчера, но остаются
+    // в away — история задач и досье их помнят. hiddenTasks — задачи, скрытые от гостей.
+    away:{},
+    patch:null,
+    apply(p) {
+      if (!p || this.patch) return;
+      this.patch = p;
+      for (const [id, a] of Object.entries(p.added || {})) {
+        list[id] = { screen:'doc', status:'working', tasks:['Ждёт первую задачу'], out:[], works:[], ...a, added:true };
+        if (!ids.includes(id)) ids.push(id);
+      }
+      for (const [id, e] of Object.entries(p.agents || {})) {
+        const a = list[id]; if (!a) continue;
+        if (e.dept && e.dept !== a.dept) { delete a.room; delete a.night; }   // другой отдел — комната этого отдела
+        for (const k of ['name', 'role', 'color', 'dept']) if (e[k]) a[k] = e[k];
+      }
+      for (const id of [...(p.vacation || []), ...(p.removed || [])]) {
+        if (!list[id]) continue;
+        this.away[id] = { ...list[id], away:(p.removed || []).includes(id) ? 'removed' : 'vacation' };
+        delete list[id];
+        const i = ids.indexOf(id); if (i >= 0) ids.splice(i, 1);
+      }
+    },
   };
 })();
