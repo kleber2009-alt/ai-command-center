@@ -66,17 +66,7 @@ const CORRIDORS = [[[-14,-6.5],[14,-6.5]], [[-11,-6.5],[-11,9]], [[11,-6.5],[11,
 // свободные места в операционном зале — для новых агентов, которым не хватило стола в комнате
 const OVERFLOW = [[-4.6,2.3],[4.4,2.3],[-2.6,2.3],[2.4,2.3],[-7.6,-2.6],[7.4,-2.6],[-4.6,-.4],[4.4,-.4],[-7.6,-.6],[7.4,-.6],[-2.6,-3.4],[-4.6,-3.4]];
 // комната агента: как в концепте; новые агенты — в комнату своего отдела
-const ROOM_OF = {
-  market:'ceo', briefing:'ceo', specs:'ceo', transcriber:'studio', qa:'tech', socialstats:'analytics', billing:'tech', finance:'ceo', viral:'analytics', remake:'studio', launch:'marketing', academy:'ceo',
-  // Переговорная легенд: ИИ-советники сидят за столом переговорной, два места у торца — гостям на собеседование
-  hormozi:'meet', garyvee:'meet', godin:'meet', brunson:'meet', walker:'meet', kennedy:'meet', cardone:'meet', branson:'meet',
-  product:'tech', skills:'tech', runner:'tech',
-  creatives:'marketing', funnels:'marketing', publish:'marketing', landings:'marketing', leadmagnet:'marketing', threads:'marketing',
-  scripts:'studio', montage:'studio', carousel:'studio', avatar:'studio', slides:'studio',
-  analytics:'analytics', audience:'analytics', adreports:'analytics',
-  chats:'sales', comments:'sales', consult:'sales', mailings:'sales', closer:'sales',
-  metaads:'ads', orchestrator:'hub',
-};
+const ROOM_OF = { ...Object.fromEntries(Object.entries(window.OFFICE_AGENTS.list).filter(([, a]) => a.night).map(([id, a]) => [id, a.night])), orchestrator:'hub' };
 const DEPT_ROOM = { ceo:'ceo', marketing:'marketing', sales:'sales', traffic:'ads' };
 const OWNER_DESK = [-19.4, -12.3];
 
