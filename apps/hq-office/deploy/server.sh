@@ -107,6 +107,15 @@ if [ -f "$R/runner.py" ] && id "$RUSER" >/dev/null 2>&1; then
   if [ -f "$ROOT/runner-mcp.json" ]; then
     cmp -s "$ROOT/runner-mcp.json" "$RD/mcp.json" || changed=1
     install -o "$RUSER" -g "$RUSER" -m 600 "$ROOT/runner-mcp.json" "$RD/mcp.json"
+    # local MCP servers started by uvx (HeyGen's heygen-mcp): uv into the user's ~/.local/bin, on the service's PATH
+    if grep -q '"uvx"' "$RD/mcp.json" && ! command -v uvx >/dev/null && [ ! -x "$RH/.local/bin/uvx" ]; then
+      if runuser -u "$RUSER" -- sh -c 'curl -LsSf --max-time 120 https://astral.sh/uv/install.sh | env UV_NO_MODIFY_PATH=1 sh' >/dev/null 2>&1; then echo "✓ uv installed for local MCP servers"
+      else echo "::warning::uv could not be installed — MCP servers started by uvx (HeyGen) will not run"; fi
+    fi
+    if grep -q '"uvx"' "$RD/mcp.json"; then
+      # warm the package cache once, so the first task does not wait for the download
+      runuser -u "$RUSER" -- env PATH="$RH/.local/bin:$PATH" timeout 60 uvx heygen-mcp </dev/null >/dev/null 2>&1 || true
+    fi
   elif [ -f "$RD/mcp.json" ]; then
     rm -f "$RD/mcp.json" "$RD/mcp.claude.json"; changed=1
   fi

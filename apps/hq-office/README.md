@@ -257,12 +257,22 @@ ANTHROPIC_API_KEY=… ELEVENLABS_API_KEY=… HQ_ASSISTANT_PASSWORD=… npm run d
 ```json
 {
   "mcpServers": {
-    "chatplace": { "type": "http", "url": "https://…/mcp", "headers": { "Authorization": "Bearer …" } },
-    "windsor":   { "type": "http", "url": "https://…/mcp", "headers": { "Authorization": "Bearer …" } }
+    "chatplace": { "type": "http", "url": "https://mcp.chatplace.io/mcp", "headers": { "Authorization": "Bearer <ключ ChatPlace>" } },
+    "windsor":   { "type": "http", "url": "https://mcp.windsor.ai/", "headers": { "Authorization": "Bearer <ключ Windsor>" } },
+    "heygen":    { "command": "uvx", "args": ["heygen-mcp"], "env": { "HEYGEN_API_KEY": "<ключ HeyGen>" } }
   },
-  "policy": { "chatplace": { "read": ["mailings_predict_clients"], "write": ["chats_close"] } }
+  "policy": {
+    "heygen": { "read": ["get_remaining_credits", "get_voices", "get_avatar_groups", "get_avatars_in_avatar_group",
+                         "get_avatar_video_status", "generate_avatar_video"] }
+  }
 }
 ```
+
+- ChatPlace: ключ — в ChatPlace «Настройки → MCP → Создать ключ» (платный тариф). Windsor: «Settings → API Access».
+  Удалённый сервер HeyGen (`mcp.heygen.com`) пускает только через вход в браузере (OAuth), поэтому HeyGen
+  подключается локальным сервером `heygen-mcp` с ключом API (выкладка сама ставит `uv`). Список инструментов
+  локального сервера исполнитель не спрашивает — их перечисляет `policy`; `generate_avatar_video` в `read`, чтобы
+  конвейер «Рилс под ключ» не останавливался на разрешении (он тратит кредиты HeyGen, но ничего не отправляет людям).
 
 - Выкладка кладёт его в `~/hq-runner/mcp.json` (права 600) и перезапускает исполнителя. При старте
   исполнитель запрашивает у каждого HTTP-сервера список инструментов и делит их на **чтение** и
