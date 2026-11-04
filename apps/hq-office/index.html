@@ -1260,6 +1260,8 @@ const WAVE_ROOM_OF = {
   metaads:'ads',
 };
 const PLAN_TABLE = { x:-4.6, z:-8.4 };
+// Диспетчерская в центре коридора: подиум, пульт оркестратора, кольцевой экран рабочего стола, голограмма
+const HUB = { x:0, z:-0.7, R:3.3 };
 const LOUNGE = { x:22.4, z:7.4 };
 const COFFEE = { x:FX1 - 0.8, z0:-3.4, z1:0 };
 const PRINTER = { x:-1.5, z:11.1 };
@@ -1503,6 +1505,8 @@ const M = {
   lampGlow: new THREE.MeshBasicMaterial({ color:new THREE.Color(5, 3.6, 2.2) }),
   felt: std({ color:'#3a3d44', roughness:1 }),
   rug: std({ map:TEX.rug, color:'#ffffff', roughness:1 }),
+  street: std({ color:'#aaa69f', roughness:0.85, envMapIntensity:0.3 }),
+  podium: std({ color:'#cfceca', roughness:0.45, envMapIntensity:0.35 }),
   roomFloor: new THREE.MeshBasicMaterial({ color:'#ffffff', transparent:true, opacity:0.07, depthWrite:false }),
   stone: std({ color:'#e9e8e4', roughness:0.25, envMapIntensity:0.7 }),
   books: ['#e9e6df', '#1b1b1d', '#8b8f96', '#c9c3b5', '#3a3d42', '#f4f2ee', '#a55a3c'].map(c => std({ color:c, roughness:0.8 })),
@@ -2832,7 +2836,7 @@ for (const d of DEPTS) {
 // оркестратор — из референса: распределяет задачи, обходит отделы, собирает планёрки
 if (CFG.orchestrator !== false) {
   const data = { name:'Оркестратор', role:'Распределяет задачи и следит за сроками', color:'#7fd3ff', task:'Обход команды', tasks:['Обход команды'], out:[], works:[] };
-  const P = PLAN_TABLE, home = { x:P.x + 1.3, z:P.z + 0.6, yaw:-2 };
+  const home = { x:HUB.x, z:HUB.z - 1.0, yaw:0 };   // за пультом диспетчерской, лицом к коридору
   const o = spawnBot('orchestrator', data, DEPTS[0], home, { slotA:0 });
   o.kind = 'orch'; o.status = 'rounds'; o.speed = 1.3;
   navCircle(home.x, home.z, 0.01);
@@ -2877,6 +2881,122 @@ if (COUNCIL) {
   el.addEventListener('click', e => { e.stopPropagation(); openDossier(COUNCIL.board || COUNCIL.agentIds[0]); });
   const chip = new CSS2DObject(el); chip.position.set(cx, 2.7, cz); scene.add(chip);
   COUNCIL.chip = chip;
+}
+
+/* ---------- диспетчерская: центр офиса ----------
+   Светлый пол коридора, подиум с кольцевым пультом оркестратора, над ним кольцевой экран с задачами рабочего стола,
+   от подиума к дверям комнат — дорожки цвета комнаты: загораются, когда агент из комнаты несёт работу. */
+{
+  const lift = (m, y) => { m.position.y = y; return m; };
+  const floorPatch = (x0, x1, z0, z1) => { const m = plane(building, x1 - x0, z1 - z0, M.street, [(x0 + x1) / 2, 0.012, (z0 + z1) / 2], [-Math.PI / 2, 0, 0]); m.receiveShadow = true; };
+  floorPatch(FX0, FX1, BACK_Z, FRONT_Z);
+  floorPatch(-9, 9, FZ0, BACK_Z);
+  floorPatch(-8.5, 3.5, FRONT_Z, FZ1);
+  // подиум
+  const pod = mesh(new THREE.CylinderGeometry(HUB.R, HUB.R + 0.06, 0.05, 96), M.podium); pod.position.set(HUB.x, 0.025, HUB.z);
+  const rim = mesh(new THREE.TorusGeometry(HUB.R + 0.02, 0.025, 8, 128), accentOf('#3b6dff'), building, false); rim.rotation.x = Math.PI / 2; rim.position.set(HUB.x, 0.05, HUB.z);
+  // кольцевой пульт с проходом к коридору (спереди, по +z)
+  const G0 = 0.62, a0 = G0, a1 = Math.PI * 2 - G0;
+  lift(mesh(sectorGeo(HUB.x, HUB.z, 1.45, 2.05, a0, a1, 0.045), M.desk), 0.92);
+  lift(mesh(sectorGeo(HUB.x, HUB.z, 1.5, 1.62, a0 + 0.03, a1 - 0.03, 0.88, 0.006), M.deskSide), 0.04);
+  lift(mesh(sectorGeo(HUB.x, HUB.z, 2.02, 2.06, a0, a1, 0.012, 0), accentOf('#3b6dff'), building, false), 0.905);
+  navSector(HUB.x, HUB.z, 1.45, 2.05, a0, a1);
+  // мониторы пульта смотрят внутрь, на оркестратора
+  for (let k = 0; k < 7; k++) {
+    const a = Math.PI - 1.5 + k * 0.5, p = polar(HUB, 1.62, a), g = new THREE.Group();
+    g.position.set(p.x, 0.965, p.z); g.rotation.y = a + Math.PI; building.add(g);
+    mesh(new THREE.BoxGeometry(0.05, 0.16, 0.04), M.chrome, g).position.set(0, 0.08, 0.06);
+    mesh(new RoundedBoxGeometry(0.62, 0.38, 0.03, 2, 0.01), M.bezel, g).position.set(0, 0.33, 0.06);
+    const sc = new THREE.Mesh(new THREE.PlaneGeometry(0.58, 0.34), accentOf(['#2f7bff', '#16c98a', '#ff7a3d', '#a46cd6', '#38c3d6', '#ff5fa2', '#ffb020'][k]));
+    sc.position.set(0, 0.33, 0.076); sc.userData.keep = true; g.add(sc);
+  }
+  // кольцевой экран над подиумом: сводка рабочего стола и задачи (обновляется раз в 2 с)
+  const SW = 4096, SH = 300, cv = document.createElement('canvas'); cv.width = SW; cv.height = SH;
+  const tex = new THREE.CanvasTexture(cv); tex.colorSpace = THREE.SRGBColorSpace; tex.anisotropy = 8;
+  const RS = 2.7, RY = 3.3, RH = 0.92;
+  const ring = new THREE.Mesh(new THREE.CylinderGeometry(RS, RS, RH, 128, 1, true), new THREE.MeshBasicMaterial({ map:tex }));
+  ring.position.set(HUB.x, RY, HUB.z); ring.userData.keep = true; ring.userData.pick = { type:'you' }; scene.add(ring); pickables.push(ring);
+  const back = new THREE.Mesh(new THREE.CylinderGeometry(RS - 0.01, RS - 0.01, RH, 96, 1, true), new THREE.MeshBasicMaterial({ color:'#05070d', side:THREE.BackSide }));
+  back.position.copy(ring.position); back.userData.keep = true; scene.add(back);
+  for (const y of [RY - RH / 2, RY + RH / 2]) { const t = mesh(new THREE.TorusGeometry(RS, 0.04, 8, 128), M.dark); t.rotation.x = Math.PI / 2; t.position.set(HUB.x, y, HUB.z); }
+  for (let k = 0; k < 3; k++) { const p = polar(HUB, RS, k * Math.PI * 2 / 3 + 0.5); boxMM(building, p.x - 0.012, p.x + 0.012, RY + RH / 2, WALL_H, p.z - 0.012, p.z + 0.012, M.dark); }
+  let ringSig = '';
+  const drawRing = () => {
+    const open = desk.on ? desk.tasks.filter(t => DESK_OPEN.includes(t.status)) : [];
+    const n = st => open.filter(t => st.includes(t.status)).length;
+    const stats = desk.on
+      ? [[`${n(['question', 'review'])} ждут вас`, '#ffb020'], [`${n(['work', 'routing'])} в работе`, '#5aa9ff'], [`${n(['queued'])} в очереди`, '#8fb8ff'], [`${TASKS.length} в истории`, '#ffffff']]
+      : [[`${TASKS.length} задач в истории`, '#ffffff'], [`${bots.filter(b => b.kind === 'bot' && !b.legend).length} агентов`, '#5aa9ff'], [`${WAVE_ROOMS.length} комнат`, '#16c98a']];
+    const name = id => agents.get(id)?.name || CATALOG[id]?.name || '';
+    const lines = (open.length ? open : TASKS).slice(0, 8).map(t => [t.title, name(t.agent || (t.agents || [])[0])]);
+    const sig = JSON.stringify([stats, lines]);
+    if (sig === ringSig) return; ringSig = sig;
+    const g = cv.getContext('2d');
+    const gr = g.createLinearGradient(0, 0, 0, SH); gr.addColorStop(0, '#04122e'); gr.addColorStop(1, '#00030a');
+    g.fillStyle = gr; g.fillRect(0, 0, SW, SH);
+    g.strokeStyle = 'rgba(90,169,255,.35)'; g.lineWidth = 3;
+    for (let i = 0; i < 3; i++) { g.beginPath(); for (let x = 0; x <= SW; x += 16) g.lineTo(x, 236 + Math.sin(x / 170 + i * 1.7) * 22 + i * 16); g.stroke(); }
+    const PW = SW / 4;
+    for (let k = 0; k < 4; k++) {
+      const x0 = k * PW + 56;
+      g.font = '800 54px Manrope, system-ui, sans-serif'; let x = x0;
+      for (const [txt, c] of stats.slice(0, 3)) { g.fillStyle = c; g.beginPath(); g.arc(x + 12, 88, 11, 0, 7); g.fill(); g.fillStyle = '#fff'; g.fillText(txt, x + 34, 106); x += g.measureText(txt).width + 76; }
+      const ln = lines[k % Math.max(1, lines.length)] || ['', ''];
+      g.font = '500 42px Manrope, system-ui, sans-serif'; g.fillStyle = 'rgba(255,255,255,.78)';
+      let title = ln[0]; while (title && g.measureText(title + (ln[1] ? ` → ${ln[1]}` : '')).width > PW - 110) title = title.slice(0, -2);
+      g.fillText((title !== ln[0] ? title + '…' : title) + (ln[1] ? ` → ${ln[1]}` : ''), x0, 188);
+      g.fillStyle = 'rgba(255,255,255,.12)'; g.fillRect((k + 1) * PW - 2, 30, 2, SH - 60);
+    }
+    tex.needsUpdate = true;
+  };
+  let ringT = 0;
+  animated.push((t, dt) => { ring.rotation.y += (dt || 0.016) * 0.05; back.rotation.y = ring.rotation.y; if ((ringT -= dt || 0.016) <= 0) { ringT = 2; drawRing(); } });
+
+  // дорожки: подиум → дверь комнаты; у соседних комнат — свои полосы, чтобы линии не сливались
+  const routes = WAVE_ROOMS.map(z => ({ c:z.accent, room:z, door:z.walls.door }));
+  if (COUNCIL) routes.push({ c:COUNCIL.accent, room:COUNCIL, door:{ x:COUNCIL_ROOM.x0, z:(COUNCIL_ROOM.z0 + COUNCIL_ROOM.z1) / 2 }, side:true });
+  const groups = {};
+  for (const r of routes) { const k = (r.door.x < 0 ? 'L' : 'R') + (r.door.z < HUB.z ? 'B' : 'F'); (groups[k] ||= []).push(r); }
+  for (const [k, list] of Object.entries(groups)) {
+    list.sort((a, b) => Math.abs(a.door.x) - Math.abs(b.door.x));
+    list.forEach((r, i) => { r.lane = HUB.z + (k[1] === 'B' ? -1 : 1) * (1.15 + i * 0.4); });
+  }
+  const W = 0.1, Y = 0.03;
+  for (const r of routes) {
+    const sx = Math.sign(r.door.x), dz = r.lane - HUB.z, hx = HUB.x + sx * Math.sqrt(Math.max(0, HUB.R * HUB.R - dz * dz));
+    const pts = [[hx, r.lane]];
+    if (r.side) { const cx = r.door.x - 0.75; pts.push([cx, r.lane], [cx, r.door.z], [r.door.x, r.door.z]); }
+    else pts.push([r.door.x, r.lane], [r.door.x, r.door.z]);
+    r.mat = new THREE.MeshBasicMaterial({ color:r.c, transparent:true, opacity:0.55, depthWrite:false });
+    r.len = 0; r.segs = [];
+    for (let i = 1; i < pts.length; i++) {
+      const [ax, az] = pts[i - 1], [bx, bz] = pts[i], L = Math.hypot(bx - ax, bz - az);
+      const m = new THREE.Mesh(new THREE.PlaneGeometry(ax === bx ? W : L + W, ax === bx ? L + W : W), r.mat);
+      m.rotation.x = -Math.PI / 2; m.position.set((ax + bx) / 2, Y, (az + bz) / 2); m.userData.keep = true; m.userData.noAO = true; scene.add(m);
+      r.segs.push({ ax, az, bx, bz, L, at:r.len }); r.len += L;
+    }
+    // «задача в пути»: светящаяся точка бежит по дорожке, пока агент комнаты несёт работу
+    r.dot = new THREE.Mesh(new THREE.SphereGeometry(0.11, 16, 12), new THREE.MeshBasicMaterial({ color:new THREE.Color(r.c).multiplyScalar(2.2) }));
+    r.dot.userData.keep = true; r.dot.userData.noAO = true; r.dot.visible = false; scene.add(r.dot);
+    r.u = Math.random();
+  }
+  const dim = new THREE.Color('#ffffff');
+  animated.push((t, dt) => {
+    for (const r of routes) {
+      const busy = bots.some(b => (r.room === COUNCIL ? b.legend : b.pod?.room === r.room) && (b.status === 'carrying' || b.status === 'presenting'));
+      r.mat.opacity = damp(r.mat.opacity, busy ? 0.95 : 0.4, 3, dt || 0.016);
+      r.dot.visible = busy;
+      if (!busy) continue;
+      r.u = (r.u + (dt || 0.016) * 3.2 / r.len) % 1;
+      const d = r.u * r.len, s = r.segs.find(q => d <= q.at + q.L) || r.segs.at(-1), f = (d - s.at) / s.L;
+      r.dot.position.set(lerp(s.ax, s.bx, f), 0.14 + Math.sin(t * 6) * 0.02, lerp(s.az, s.bz, f));
+    }
+  });
+  // деревья вдоль коридора
+  for (const x of [-20.5, -16, -9.6, 9.6, 16, 20.5]) plant(x, HUB.z, 1.25);
+  // низкий парапет по переднему краю этажа — кадр выглядит законченным
+  boxMM(building, FX0 - 0.2, FX1 + 0.2, -0.08, 0.42, FZ1 + 0.06, FZ1 + 0.32, M.wall);
+  boxMM(building, FX0 - 0.22, FX1 + 0.22, 0.42, 0.45, FZ1 + 0.04, FZ1 + 0.34, M.wallTop, false);
 }
 // места у вашего стола для тех, кто ждёт решения
 {
@@ -3895,16 +4015,6 @@ $('aClose').onclick = () => asstOpen(false);
 const HB = { holo:null, spot:null, busy:false, streaming:false, rec:null, recTimer:0 };
 const HB_CHIPS = [['Доложи обстановку'], ['Что сейчас происходит в офисе?'], ['Кто из агентов чем занят?'], ['Что ждёт моего ответа?']];
 const hbState = s => { $('hbState').textContent = s; };
-function holoSpot() {   // свободное место на полу поближе к центру зала
-  const zc = (FZ0 + FZ1) / 2;
-  for (let r = 0; r < 10; r += 0.3) for (let a = 0; a < 6.283; a += 0.3) {
-    const x = r * Math.cos(a), z = zc + r * Math.sin(a);
-    let ok = freeAt(x, z);
-    for (let q = 0; q < 16 && ok; q++) ok = freeAt(x + Math.cos(q * 0.393) * 0.8, z + Math.sin(q * 0.393) * 0.8) && freeAt(x + Math.cos(q * 0.393) * 1.5, z + Math.sin(q * 0.393) * 1.5);
-    if (ok) return { x, z };
-  }
-  return { x:0, z:zc };
-}
 const agentPos = id => {
   if (night) { const p = NIGHT?.__debug.byId.get(id); return p ? V3(p.x, 1.4, p.z) : null; }
   const a = agents.get(id); return a ? V3(a.x, a.kind === 'head' ? 1.5 : 1.3, a.z) : null;
@@ -3923,7 +4033,7 @@ async function holoSummon(on) {
   if (!on) { HB.holo?.hide(); asstStopVoice(); if (HB.rec) { HB.rec.cancelled = true; HB.rec.stop(); } return; }
   if (night && !NIGHT) { $('hbSub').innerHTML = '<p>Офис ещё собирается — секунду.</p>'; setTimeout(() => holoSummon(true), 800); return; }
   if (!HB.holo) {
-    HB.spot = night ? { x:-0.6, z:-1.2 } : holoSpot();   // ночью — над круглым столом оркестратора в центре зала
+    HB.spot = night ? { x:-0.6, z:-1.2 } : { x:HUB.x, z:HUB.z };   // ночью — над круглым столом оркестратора в центре зала
     HB.holo = createHologram({ scene:night ? NIGHT.__debug.scene : scene, light:!night, scale:night ? 1.25 : 1.1, ...HB.spot });
   }
   stopTour(); followId = null;
